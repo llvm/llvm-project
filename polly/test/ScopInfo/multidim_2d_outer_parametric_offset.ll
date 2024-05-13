@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 ; Derived from the following code:
@@ -25,7 +25,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:             [m, p] -> { Stmt_for_j[i0, i1] -> MemRef_A[p + i0, i1] };
 ; CHECK-NEXT: }
 
-define void @foo(i64 %n, i64 %m, i64 %p, double* %A) {
+define void @foo(i64 %n, i64 %m, i64 %p, ptr %A) {
 entry:
   br label %for.i
 
@@ -38,8 +38,8 @@ for.i:
 for.j:
   %j = phi i64 [ 0, %for.i ], [ %j.inc, %for.j ]
   %vlaarrayidx.sum = add i64 %j, %tmp
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %vlaarrayidx.sum
-  store double 1.0, double* %arrayidx
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %vlaarrayidx.sum
+  store double 1.0, ptr %arrayidx
   %j.inc = add nsw i64 %j, 1
   %j.exitcond = icmp eq i64 %j.inc, %m
   br i1 %j.exitcond, label %for.i.inc, label %for.j

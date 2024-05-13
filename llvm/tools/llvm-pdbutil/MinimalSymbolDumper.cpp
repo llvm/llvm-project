@@ -8,17 +8,20 @@
 
 #include "MinimalSymbolDumper.h"
 
-#include "FormatUtil.h"
-#include "InputFile.h"
-#include "LinePrinter.h"
-
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
+#include "llvm/DebugInfo/PDB/Native/InputFile.h"
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -207,6 +210,12 @@ static std::string formatSourceLanguage(SourceLanguage Lang) {
     RETURN_CASE(SourceLanguage, HLSL, "hlsl");
     RETURN_CASE(SourceLanguage, D, "d");
     RETURN_CASE(SourceLanguage, Swift, "swift");
+    RETURN_CASE(SourceLanguage, Rust, "rust");
+    RETURN_CASE(SourceLanguage, ObjC, "objc");
+    RETURN_CASE(SourceLanguage, ObjCpp, "objc++");
+    RETURN_CASE(SourceLanguage, AliasObj, "aliasobj");
+    RETURN_CASE(SourceLanguage, Go, "go");
+    RETURN_CASE(SourceLanguage, OldSwift, "swift");
   }
   return formatUnknownEnum(Lang);
 }
@@ -261,6 +270,9 @@ static std::string formatMachineType(CPUType Cpu) {
     RETURN_CASE(CPUType, ARM_WMMX, "arm wmmx");
     RETURN_CASE(CPUType, ARM7, "arm 7");
     RETURN_CASE(CPUType, ARM64, "arm64");
+    RETURN_CASE(CPUType, ARM64EC, "arm64ec");
+    RETURN_CASE(CPUType, ARM64X, "arm64x");
+    RETURN_CASE(CPUType, HybridX86ARM64, "hybrid x86 arm64");
     RETURN_CASE(CPUType, Omni, "omni");
     RETURN_CASE(CPUType, Ia64, "intel itanium ia64");
     RETURN_CASE(CPUType, Ia64_2, "intel itanium ia64 2");
@@ -273,6 +285,7 @@ static std::string formatMachineType(CPUType Cpu) {
     RETURN_CASE(CPUType, Thumb, "thumb");
     RETURN_CASE(CPUType, ARMNT, "arm nt");
     RETURN_CASE(CPUType, D3D11_Shader, "d3d11 shader");
+    RETURN_CASE(CPUType, Unknown, "unknown");
   }
   return formatUnknownEnum(Cpu);
 }
@@ -347,6 +360,23 @@ static std::string formatGaps(uint32_t IndentLevel,
     GapStrs.push_back(formatv("({0},{1})", G.GapStartOffset, G.Range).str());
   }
   return typesetItemList(GapStrs, 7, IndentLevel, ", ");
+}
+
+static std::string formatJumpTableEntrySize(JumpTableEntrySize EntrySize) {
+  switch (EntrySize) {
+    RETURN_CASE(JumpTableEntrySize, Int8, "int8");
+    RETURN_CASE(JumpTableEntrySize, UInt8, "uin8");
+    RETURN_CASE(JumpTableEntrySize, Int16, "int16");
+    RETURN_CASE(JumpTableEntrySize, UInt16, "uint16");
+    RETURN_CASE(JumpTableEntrySize, Int32, "int32");
+    RETURN_CASE(JumpTableEntrySize, UInt32, "uint32");
+    RETURN_CASE(JumpTableEntrySize, Pointer, "pointer");
+    RETURN_CASE(JumpTableEntrySize, UInt8ShiftLeft, "uint8shl");
+    RETURN_CASE(JumpTableEntrySize, UInt16ShiftLeft, "uint16shl");
+    RETURN_CASE(JumpTableEntrySize, Int8ShiftLeft, "int8shl");
+    RETURN_CASE(JumpTableEntrySize, Int16ShiftLeft, "int16shl");
+  }
+  return formatUnknownEnum(EntrySize);
 }
 
 Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record) {
@@ -559,7 +589,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.format(" `{0}`", Constant.Name);
   AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, value = {1}", typeIndex(Constant.Type),
-               Constant.Value.toString(10));
+               toString(Constant.Value, 10));
   return Error::success();
 }
 
@@ -582,8 +612,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   AutoIndent Indent(P, 7);
   P.formatLine("offset = {0}, range = {1}", Def.Hdr.Offset,
                formatRange(Def.Range));
-  P.formatLine("gaps = {2}", Def.Hdr.Offset,
-               formatGaps(P.getIndentLevel() + 9, Def.Gaps));
+  P.formatLine("gaps = [{0}]", formatGaps(P.getIndentLevel() + 9, Def.Gaps));
   return Error::success();
 }
 
@@ -595,7 +624,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                formatRegisterId(Def.Hdr.Register, CompilationCPU),
                int32_t(Def.Hdr.BasePointerOffset), Def.offsetInParent(),
                Def.hasSpilledUDTMember());
-  P.formatLine("range = {0}, gaps = {1}", formatRange(Def.Range),
+  P.formatLine("range = {0}, gaps = [{1}]", formatRange(Def.Range),
                formatGaps(P.getIndentLevel() + 9, Def.Gaps));
   return Error::success();
 }
@@ -622,7 +651,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.formatLine("register = {0}, may have no name = {1}, offset in parent = {2}",
                formatRegisterId(Def.Hdr.Register, CompilationCPU), NoName,
                uint32_t(Def.Hdr.OffsetInParent));
-  P.formatLine("range = {0}, gaps = {1}", formatRange(Def.Range),
+  P.formatLine("range = {0}, gaps = [{1}]", formatRange(Def.Range),
                formatGaps(P.getIndentLevel() + 9, Def.Gaps));
   return Error::success();
 }
@@ -632,7 +661,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   AutoIndent Indent(P, 7);
   P.formatLine("program = {0}, offset in parent = {1}, range = {2}",
                Def.Program, Def.OffsetInParent, formatRange(Def.Range));
-  P.formatLine("gaps = {0}", formatGaps(P.getIndentLevel() + 9, Def.Gaps));
+  P.formatLine("gaps = [{0}]", formatGaps(P.getIndentLevel() + 9, Def.Gaps));
   return Error::success();
 }
 
@@ -640,7 +669,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, DefRangeSym &Def) {
   AutoIndent Indent(P, 7);
   P.formatLine("program = {0}, range = {1}", Def.Program,
                formatRange(Def.Range));
-  P.formatLine("gaps = {0}", formatGaps(P.getIndentLevel() + 9, Def.Gaps));
+  P.formatLine("gaps = [{0}]", formatGaps(P.getIndentLevel() + 9, Def.Gaps));
   return Error::success();
 }
 
@@ -850,9 +879,24 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, CallerSym &Caller) {
+  const char *Format;
+  switch (CVR.kind()) {
+  case S_CALLEES:
+    Format = "callee: {0}";
+    break;
+  case S_CALLERS:
+    Format = "caller: {0}";
+    break;
+  case S_INLINEES:
+    Format = "inlinee: {0}";
+    break;
+  default:
+    return llvm::make_error<CodeViewError>(
+        "Unknown CV Record type for a CallerSym object!");
+  }
   AutoIndent Indent(P, 7);
   for (const auto &I : Caller.Indices) {
-    P.formatLine("callee: {0}", idIndex(I));
+    P.formatLine(Format, idIndex(I));
   }
   return Error::success();
 }
@@ -895,5 +939,19 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.formatLine("addr = {0}", formatSegmentOffset(Annot.Segment, Annot.CodeOffset));
   P.formatLine("strings = {0}", typesetStringList(P.getIndentLevel() + 9 + 2,
                                                    Annot.Strings));
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            JumpTableSym &JumpTable) {
+  AutoIndent Indent(P, 7);
+  P.formatLine(
+      "base = {0}, switchtype = {1}, branch = {2}, table = {3}, entriescount = "
+      "{4}",
+      formatSegmentOffset(JumpTable.BaseSegment, JumpTable.BaseOffset),
+      formatJumpTableEntrySize(JumpTable.SwitchType),
+      formatSegmentOffset(JumpTable.BranchSegment, JumpTable.BranchOffset),
+      formatSegmentOffset(JumpTable.TableSegment, JumpTable.TableOffset),
+      JumpTable.EntriesCount);
   return Error::success();
 }

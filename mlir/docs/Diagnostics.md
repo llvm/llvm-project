@@ -26,7 +26,7 @@ the diagnostic should be propagated to any previously registered handlers. It
 can be interfaced with via an `MLIRContext` instance.
 
 ```c++
-DiagnosticEngine engine = ctx->getDiagEngine();
+DiagnosticEngine& engine = ctx->getDiagEngine();
 
 /// Handle the reported diagnostic.
 // Return success to signal that the diagnostic has either been fully processed,
@@ -107,6 +107,26 @@ op->emitError() << "Compose an interesting error: " << fooAttr << ", " << fooTyp
 "Compose an interesting error: @foo, i32, (0, 1, 2)"
 ```
 
+Operations attached to a diagnostic will be printed in generic form if the
+severity level is `Error`, otherwise custom operation printers will be used.
+```c++
+// `anotherOp` will be printed in generic form,
+// e.g. %3 = "arith.addf"(%arg4, %2) : (f32, f32) -> f32
+op->emitError() << anotherOp;
+
+// `anotherOp` will be printed using the custom printer,
+// e.g. %3 = arith.addf %arg4, %2 : f32
+op->emitRemark() << anotherOp;
+```
+
+To make a custom type compatible with Diagnostics, one must implement the
+following friend function.
+
+```c++
+friend mlir::Diagnostic &operator<<(
+    mlir::Diagnostic &diagnostic, const MyType &foo);
+```
+
 ### Attaching notes
 
 Unlike many other compiler frameworks, notes in MLIR cannot be emitted directly.
@@ -155,7 +175,7 @@ operation that may be invalid, especially when debugging verifier failures. An
 example output is shown below:
 
 ```shell
-test.mlir:3:3: error: 'module_terminator' op expects parent op 'module'
+test.mlir:3:3: error: 'module_terminator' op expects parent op 'builtin.module'
   "module_terminator"() : () -> ()
   ^
 test.mlir:3:3: note: see current operation: "module_terminator"() : () -> ()
@@ -172,7 +192,7 @@ diagnostic. This option is useful for understanding which part of the compiler
 generated certain diagnostics. An example output is shown below:
 
 ```shell
-test.mlir:3:3: error: 'module_terminator' op expects parent op 'module'
+test.mlir:3:3: error: 'module_terminator' op expects parent op 'builtin.module'
   "module_terminator"() : () -> ()
   ^
 test.mlir:3:3: note: diagnostic emitted with trace:
@@ -182,7 +202,7 @@ test.mlir:3:3: note: diagnostic emitted with trace:
  #3 0x000055dd3f998e87 mlir::Operation::emitError(llvm::Twine const&) /lib/IR/Operation.cpp:324:29
  #4 0x000055dd3f99d21c mlir::Operation::emitOpError(llvm::Twine const&) /lib/IR/Operation.cpp:652:10
  #5 0x000055dd3f96b01c mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl<mlir::ModuleTerminatorOp>::verifyTrait(mlir::Operation*) /mlir/IR/OpDefinition.h:897:18
- #6 0x000055dd3f96ab38 mlir::Op<mlir::ModuleTerminatorOp, mlir::OpTrait::ZeroOperands, mlir::OpTrait::ZeroResult, mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl, mlir::OpTrait::IsTerminator>::BaseVerifier<mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl<mlir::ModuleTerminatorOp>, mlir::OpTrait::IsTerminator<mlir::ModuleTerminatorOp> >::verifyTrait(mlir::Operation*) /mlir/IR/OpDefinition.h:1052:29
+ #6 0x000055dd3f96ab38 mlir::Op<mlir::ModuleTerminatorOp, mlir::OpTrait::ZeroOperands, mlir::OpTrait::ZeroResults, mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl, mlir::OpTrait::IsTerminator>::BaseVerifier<mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl<mlir::ModuleTerminatorOp>, mlir::OpTrait::IsTerminator<mlir::ModuleTerminatorOp> >::verifyTrait(mlir::Operation*) /mlir/IR/OpDefinition.h:1052:29
  #  ...
   "module_terminator"() : () -> ()
   ^
@@ -231,7 +251,7 @@ diagnostic. Example usage of this handler can be seen in the `mlir-opt` tool.
 $ mlir-opt foo.mlir
 
 /tmp/test.mlir:6:24: error: expected non-function type
-func @foo() -> (index, ind) {
+func.func @foo() -> (index, ind) {
                        ^
 ```
 
@@ -243,39 +263,88 @@ MLIRContext context;
 SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
 ```
 
+#### Filtering Locations
+
+In some situations, a diagnostic may be emitted with a callsite location in a
+very deep call stack in which many frames are unrelated to the user source code.
+These situations often arise when the user source code is intertwined with that
+of a large framework or library. The context of the diagnostic in these cases is
+often obfuscated by the unrelated framework source locations. To help alleviate
+this obfuscation, the `SourceMgrDiagnosticHandler` provides support for
+filtering which locations are shown to the user. To enable filtering, a user
+must simply provide a filter function to the `SourceMgrDiagnosticHandler` on
+construction that indicates which locations should be shown. A quick example is
+shown below:
+
+```c++
+// Here we define the functor that controls which locations are shown to the
+// user. This functor should return true when a location should be shown, and
+// false otherwise. When filtering a container location, such as a NameLoc, this
+// function should not recurse into the child location. Recursion into nested
+// location is performed as necessary by the caller.
+auto shouldShowFn = [](Location loc) -> bool {
+  FileLineColLoc fileLoc = loc.dyn_cast<FileLineColLoc>();
+
+  // We don't perform any filtering on non-file locations.
+  // Reminder: The caller will recurse into any necessary child locations.
+  if (!fileLoc)
+    return true;
+
+  // Don't show file locations that contain our framework code.
+  return !fileLoc.getFilename().strref().contains("my/framework/source/");
+};
+
+SourceMgr sourceMgr;
+MLIRContext context;
+SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context, shouldShowFn);
+```
+
+Note: In the case where all locations are filtered out, the first location in
+the stack will still be shown.
+
 ### SourceMgr Diagnostic Verifier Handler
 
 This handler is a wrapper around a llvm::SourceMgr that is used to verify that
 certain diagnostics have been emitted to the context. To use this handler,
 annotate your source file with expected diagnostics in the form of:
 
-*   `expected-(error|note|remark|warning) {{ message }}`
+*   `expected-(error|note|remark|warning)(-re)? {{ message }}`
 
-A few examples are shown below:
+The provided `message` is a string expected to be contained within the generated
+diagnostic. The `-re` suffix may be used to enable regex matching within the
+`message`. When present, the `message` may define regex match sequences within
+`{{` `}}` blocks. The regular expression matcher supports Extended POSIX regular
+expressions (ERE). A few examples are shown below:
 
 ```mlir
 // Expect an error on the same line.
-func @bad_branch() {
-  br ^missing  // expected-error {{reference to an undefined block}}
+func.func @bad_branch() {
+  cf.br ^missing  // expected-error {{reference to an undefined block}}
 }
 
 // Expect an error on an adjacent line.
-func @foo(%a : f32) {
+func.func @foo(%a : f32) {
   // expected-error@+1 {{unknown comparison predicate "foo"}}
-  %result = cmpf "foo", %a, %a : f32
+  %result = arith.cmpf "foo", %a, %a : f32
   return
 }
 
 // Expect an error on the next line that does not contain a designator.
 // expected-remark@below {{remark on function below}}
 // expected-remark@below {{another remark on function below}}
-func @bar(%a : f32)
+func.func @bar(%a : f32)
 
 // Expect an error on the previous line that does not contain a designator.
-func @baz(%a : f32)
+func.func @baz(%a : f32)
 // expected-remark@above {{remark on function above}}
 // expected-remark@above {{another remark on function above}}
 
+// Expect an error mentioning the parent function, but use regex to avoid
+// hardcoding the name.
+func.func @foo() -> i32 {
+  // expected-error-re@+1 {{'func.return' op has 0 operands, but enclosing function (@{{.*}}) returns 1}}
+  return
+}
 ```
 
 The handler will report an error if any unexpected diagnostics were seen, or if
@@ -285,7 +354,7 @@ any expected diagnostics weren't.
 $ mlir-opt foo.mlir
 
 /tmp/test.mlir:6:24: error: unexpected error: expected non-function type
-func @foo() -> (index, ind) {
+func.func @foo() -> (index, ind) {
                        ^
 
 /tmp/test.mlir:15:4: error: expected remark "expected some remark" was not produced
@@ -330,7 +399,7 @@ ParallelDiagnosticHandler handler(context);
 
 // Process a list of operations in parallel.
 std::vector<Operation *> opsToProcess = ...;
-llvm::parallelForEachN(0, opsToProcess.size(), [&](size_t i) {
+llvm::parallelFor(0, opsToProcess.size(), [&](size_t i) {
   // Notify the handler that we are processing the i'th operation.
   handler.setOrderIDForThread(i);
   auto *op = opsToProcess[i];

@@ -5,7 +5,7 @@
 - (void)proto_method __attribute__((availability(macosx,introduced=10.1,deprecated=10.2))); // expected-note 2 {{'proto_method' has been explicitly marked deprecated here}}
 
 #if defined(WARN_PARTIAL)
-// expected-note@+2 2 {{'partial_proto_method' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
+// expected-note@+2 2 {{'partial_proto_method' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
 #endif
 - (void)partial_proto_method __attribute__((availability(macosx,introduced=10.8)));
 @end
@@ -13,7 +13,7 @@
 @interface A <P>
 - (void)method __attribute__((availability(macosx,introduced=10.1,deprecated=10.2))); // expected-note {{'method' has been explicitly marked deprecated here}}
 #if defined(WARN_PARTIAL)
-// expected-note@+2 2 {{'partialMethod' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
+// expected-note@+2 2 {{'partialMethod' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
 #endif
 - (void)partialMethod __attribute__((availability(macosx,introduced=10.8)));
 
@@ -26,7 +26,6 @@
 - (void)unavailableMethod __attribute__((unavailable));
 @end
 
-// rdar://11475360
 @interface B : A
 - (void)method; // NOTE: we expect 'method' to *not* inherit availability.
 - (void)partialMethod; // Likewise.
@@ -75,8 +74,7 @@ void f_after_redecl(A *a, B *b) {
   [b partial_proto_method]; // no warning
 }
 
-// Test case for <rdar://problem/11627873>.  Warn about
-// using a deprecated method when that method is re-implemented in a
+// Warn about using a deprecated method when that method is re-implemented in a
 // subclass where the redeclared method is not deprecated.
 @interface C
 - (void) method __attribute__((availability(macosx,introduced=10.1,deprecated=10.2))); // expected-note {{'method' has been explicitly marked deprecated here}}
@@ -102,7 +100,6 @@ void f_after_redecl(A *a, B *b) {
 }
 @end
 
-// rdar://18059669
 @class NSMutableArray;
 
 @interface NSDictionary
@@ -137,8 +134,8 @@ id NSNibOwner, topNibObjects;
 
 @interface PartialI <PartialProt>
 #ifdef WARN_PARTIAL
-// expected-note@+3{{'partialMethod' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
-// expected-note@+3{{'partialMethod' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
+// expected-note@+3{{'partialMethod' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
+// expected-note@+3{{'partialMethod' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
 #endif
 - (void)partialMethod __attribute__((availability(macosx,introduced=10.8)));
 + (void)partialMethod __attribute__((availability(macosx,introduced=10.8)));
@@ -147,12 +144,12 @@ id NSNibOwner, topNibObjects;
 @interface PartialI ()
 - (void)ipartialMethod1 __attribute__((availability(macosx,introduced=10.8)));
 #if defined(WARN_PARTIAL)
-// expected-note@+2 {{'ipartialMethod2' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
+// expected-note@+2 {{'ipartialMethod2' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
 #endif
 - (void)ipartialMethod2 __attribute__((availability(macosx,introduced=10.8)));
 + (void)ipartialMethod1 __attribute__((availability(macosx,introduced=10.8)));
 #if defined(WARN_PARTIAL)
-// expected-note@+2 {{'ipartialMethod2' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
+// expected-note@+2 {{'ipartialMethod2' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
 #endif
 + (void)ipartialMethod2 __attribute__((availability(macosx,introduced=10.8)));
 @end
@@ -190,7 +187,7 @@ void partialfun(PartialI* a) {
 }
 
 #if defined(WARN_PARTIAL)
-// expected-note@+2 2 {{'PartialI2' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
+// expected-note@+2 2 {{'PartialI2' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
 #endif
 __attribute__((availability(macosx, introduced = 10.8))) @interface PartialI2
 @end
@@ -211,7 +208,7 @@ void partialinter2(PartialI2* p) {
 
 
 // Test that both the use of the 'typedef' and the enum constant
-// produces an error. rdar://problem/20903588
+// produces an error.
 #define UNAVAILABLE __attribute__((unavailable("not available")))
 
 typedef enum MyEnum : int MyEnum;
@@ -219,10 +216,10 @@ enum MyEnum : int { // expected-note {{'MyEnum' has been explicitly marked unava
   MyEnum_Blah UNAVAILABLE, // expected-note {{'MyEnum_Blah' has been explicitly marked unavailable here}}
 } UNAVAILABLE;
 
-void use_myEnum() {
+void use_myEnum(void) {
   // expected-error@+2 {{'MyEnum' is unavailable: not available}}
   // expected-error@+1 {{MyEnum_Blah' is unavailable: not available}}
-  MyEnum e = MyEnum_Blah; 
+  MyEnum e = MyEnum_Blah;
 }
 
 // Test that the availability of (optional) protocol methods is not
@@ -312,9 +309,9 @@ __attribute__((objc_root_class))
 
 #if defined(WARN_PARTIAL)
 
-int fn_10_5() __attribute__((availability(macosx, introduced=10.5)));
-int fn_10_7() __attribute__((availability(macosx, introduced=10.7))); // expected-note{{'fn_10_7' has been marked as being introduced in macOS 10.7 here, but the deployment target is macOS 10.5.0}}
-int fn_10_8() __attribute__((availability(macosx, introduced=10.8))) { // expected-note{{'fn_10_8' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
+int fn_10_5(void) __attribute__((availability(macosx, introduced=10.5)));
+int fn_10_7(void) __attribute__((availability(macosx, introduced=10.7))); // expected-note{{'fn_10_7' has been marked as being introduced in macOS 10.7 here, but the deployment target is macOS 10.5}}
+int fn_10_8(void) __attribute__((availability(macosx, introduced=10.8))) { // expected-note{{'fn_10_8' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
   return fn_10_7();
 }
 
@@ -340,7 +337,7 @@ __attribute__((availability(macosx, introduced=10.7)))
 -(void)method4 { fn_10_8(); }
 @end
 
-int old_func() __attribute__((availability(macos, introduced=10.4))) {
+int old_func(void) __attribute__((availability(macos, introduced=10.4))) {
   fn_10_5();
 }
 

@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <type_traits>
+#include <utility>
 #include <cassert>
 
 #include "test_macros.h"
@@ -53,6 +54,23 @@ struct C
 };
 
 int C::count = 0;
+
+// https://llvm.org/PR60258
+// Invalid constructor SFINAE for std::shared_ptr's array ctors
+static_assert(!std::is_constructible<std::shared_ptr<int>,     std::shared_ptr<long>&&>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<B>,       std::shared_ptr<A>&&>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<const A>, std::shared_ptr<A>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<A>,       std::shared_ptr<const A>&&>::value, "");
+
+#if TEST_STD_VER >= 17
+static_assert(!std::is_constructible<std::shared_ptr<int>,     std::shared_ptr<int[]>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int>,     std::shared_ptr<int[5]>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,   std::shared_ptr<int>&&>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[]>,   std::shared_ptr<int[5]>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::shared_ptr<int>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::shared_ptr<int[]>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[7]>,  std::shared_ptr<int[5]>&&>::value, "");
+#endif
 
 int main(int, char**)
 {
@@ -96,7 +114,7 @@ int main(int, char**)
         assert(B::count == 0);
         assert(A::count == 0);
         {
-            std::shared_ptr<B> pB(pA);
+            std::shared_ptr<B> pB(std::move(pA));
             assert(B::count == 0);
             assert(A::count == 0);
             assert(pB.use_count() == 0);
@@ -109,6 +127,31 @@ int main(int, char**)
     }
     assert(B::count == 0);
     assert(A::count == 0);
+
+#if TEST_STD_VER > 14
+    {
+        std::shared_ptr<A[]> p1;
+        assert(p1.use_count() == 0);
+        assert(A::count == 0);
+        {
+            std::shared_ptr<const A[]> p2(p1);
+            assert(A::count == 0);
+            assert(p2.use_count() == 0);
+            assert(p1.use_count() == 0);
+            assert(p1.get() == p2.get());
+        }
+        assert(p1.use_count() == 0);
+        assert(A::count == 0);
+    }
+    assert(A::count == 0);
+#endif
+
+    {
+        std::shared_ptr<A const> pA(new A);
+        B const* p = pA.get();
+        std::shared_ptr<B const> pB(std::move(pA));
+        assert(pB.get() == p);
+    }
 
   return 0;
 }

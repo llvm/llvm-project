@@ -51,7 +51,7 @@ public:
   virtual Status WriteRegister(const RegisterInfo *reg_info,
                                const RegisterValue &reg_value) = 0;
 
-  virtual Status ReadAllRegisterValues(lldb::DataBufferSP &data_sp) = 0;
+  virtual Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) = 0;
 
   virtual Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) = 0;
 

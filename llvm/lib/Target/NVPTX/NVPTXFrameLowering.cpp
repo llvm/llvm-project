@@ -33,8 +33,11 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   if (MF.getFrameInfo().hasStackObjects()) {
     assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
-    MachineInstr *MI = &MBB.front();
+    MachineBasicBlock::iterator MBBI = MBB.begin();
     MachineRegisterInfo &MR = MF.getRegInfo();
+
+    const NVPTXRegisterInfo *NRI =
+        MF.getSubtarget<NVPTXSubtarget>().getRegisterInfo();
 
     // This instruction really occurs before first instruction
     // in the BB, so giving it no debug location.
@@ -47,19 +50,22 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
     bool Is64Bit =
         static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit();
     unsigned CvtaLocalOpcode =
-        (Is64Bit ? NVPTX::cvta_local_yes_64 : NVPTX::cvta_local_yes);
+        (Is64Bit ? NVPTX::cvta_local_64 : NVPTX::cvta_local);
     unsigned MovDepotOpcode =
         (Is64Bit ? NVPTX::MOV_DEPOT_ADDR_64 : NVPTX::MOV_DEPOT_ADDR);
-    if (!MR.use_empty(NVPTX::VRFrame)) {
+    if (!MR.use_empty(NRI->getFrameRegister(MF))) {
       // If %SP is not used, do not bother emitting "cvta.local %SP, %SPL".
-      MI = BuildMI(MBB, MI, dl,
-                   MF.getSubtarget().getInstrInfo()->get(CvtaLocalOpcode),
-                   NVPTX::VRFrame)
-               .addReg(NVPTX::VRFrameLocal);
+      MBBI = BuildMI(MBB, MBBI, dl,
+                     MF.getSubtarget().getInstrInfo()->get(CvtaLocalOpcode),
+                     NRI->getFrameRegister(MF))
+                 .addReg(NRI->getFrameLocalRegister(MF));
     }
-    BuildMI(MBB, MI, dl, MF.getSubtarget().getInstrInfo()->get(MovDepotOpcode),
-            NVPTX::VRFrameLocal)
-        .addImm(MF.getFunctionNumber());
+    if (!MR.use_empty(NRI->getFrameLocalRegister(MF))) {
+      BuildMI(MBB, MBBI, dl,
+              MF.getSubtarget().getInstrInfo()->get(MovDepotOpcode),
+              NRI->getFrameLocalRegister(MF))
+          .addImm(MF.getFunctionNumber());
+    }
   }
 }
 

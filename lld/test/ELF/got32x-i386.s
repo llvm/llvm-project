@@ -29,7 +29,7 @@
 ## is only allowed for non-PIC code.
 ##
 # RUN: ld.lld %S/Inputs/i386-got32x-baseless.elf -o %t1
-# RUN: llvm-objdump --section-headers -d %t1 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --section-headers -d %t1 | FileCheck %s
 
 ## 73728 == 0x12000 == ADDR(.got)
 # CHECK: Sections:
@@ -43,4 +43,4 @@
 
 # RUN: not ld.lld %S/Inputs/i386-got32x-baseless.elf -o /dev/null -pie 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR
-# ERR-COUNT-2: error: symbol 'foo' cannot be preempted; recompile with -fPIE
+# ERR-COUNT-2: error: relocation R_386_GOT32X cannot be used against symbol 'foo'; recompile with -fPIC

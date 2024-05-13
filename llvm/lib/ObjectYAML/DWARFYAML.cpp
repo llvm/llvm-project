@@ -52,6 +52,8 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
     SecNames.insert("debug_rnglists");
   if (DebugLoclists)
     SecNames.insert("debug_loclists");
+  if (DebugNames)
+    SecNames.insert("debug_names");
   return SecNames;
 }
 
@@ -59,22 +61,20 @@ Expected<DWARFYAML::Data::AbbrevTableInfo>
 DWARFYAML::Data::getAbbrevTableInfoByID(uint64_t ID) const {
   if (AbbrevTableInfoMap.empty()) {
     uint64_t AbbrevTableOffset = 0;
-    for (auto &AbbrevTable : enumerate(DebugAbbrev)) {
+    for (const auto &[Index, AbbrevTable] : enumerate(DebugAbbrev)) {
       // If the abbrev table's ID isn't specified, we use the index as its ID.
-      uint64_t AbbrevTableID =
-          AbbrevTable.value().ID.getValueOr(AbbrevTable.index());
+      uint64_t AbbrevTableID = AbbrevTable.ID.value_or(Index);
       auto It = AbbrevTableInfoMap.insert(
-          {AbbrevTableID, AbbrevTableInfo{/*Index=*/AbbrevTable.index(),
+          {AbbrevTableID, AbbrevTableInfo{/*Index=*/Index,
                                           /*Offset=*/AbbrevTableOffset}});
       if (!It.second)
         return createStringError(
             errc::invalid_argument,
             "the ID (%" PRIu64 ") of abbrev table with index %zu has been used "
             "by abbrev table with index %" PRIu64,
-            AbbrevTableID, AbbrevTable.index(), It.first->second.Index);
+            AbbrevTableID, Index, It.first->second.Index);
 
-      AbbrevTableOffset +=
-          getAbbrevTableContentByIndex(AbbrevTable.index()).size();
+      AbbrevTableOffset += getAbbrevTableContentByIndex(Index).size();
     }
   }
 
@@ -107,6 +107,7 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.mapOptional("debug_str_offsets", DWARF.DebugStrOffsets);
   IO.mapOptional("debug_rnglists", DWARF.DebugRnglists);
   IO.mapOptional("debug_loclists", DWARF.DebugLoclists);
+  IO.mapOptional("debug_names", DWARF.DebugNames);
   IO.setContext(OldContext);
 }
 
@@ -122,6 +123,32 @@ void MappingTraits<DWARFYAML::Abbrev>::mapping(IO &IO,
   IO.mapRequired("Tag", Abbrev.Tag);
   IO.mapRequired("Children", Abbrev.Children);
   IO.mapOptional("Attributes", Abbrev.Attributes);
+}
+
+void MappingTraits<DWARFYAML::IdxForm>::mapping(IO &IO,
+                                                DWARFYAML::IdxForm &IdxForm) {
+  IO.mapRequired("Idx", IdxForm.Idx);
+  IO.mapRequired("Form", IdxForm.Form);
+}
+
+void MappingTraits<DWARFYAML::DebugNameAbbreviation>::mapping(
+    IO &IO, DWARFYAML::DebugNameAbbreviation &DebugNameAbbreviation) {
+  IO.mapRequired("Code", DebugNameAbbreviation.Code);
+  IO.mapRequired("Tag", DebugNameAbbreviation.Tag);
+  IO.mapRequired("Indices", DebugNameAbbreviation.Indices);
+}
+
+void MappingTraits<DWARFYAML::DebugNameEntry>::mapping(
+    IO &IO, DWARFYAML::DebugNameEntry &DebugNameEntry) {
+  IO.mapRequired("Name", DebugNameEntry.NameStrp);
+  IO.mapRequired("Code", DebugNameEntry.Code);
+  IO.mapOptional("Values", DebugNameEntry.Values);
+}
+
+void MappingTraits<DWARFYAML::DebugNamesSection>::mapping(
+    IO &IO, DWARFYAML::DebugNamesSection &DebugNames) {
+  IO.mapRequired("Abbreviations", DebugNames.Abbrevs);
+  IO.mapRequired("Entries", DebugNames.Entries);
 }
 
 void MappingTraits<DWARFYAML::AttributeAbbrev>::mapping(

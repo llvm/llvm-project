@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 !Tests for SELECT RANK Construct(R1148)
 program select_rank
@@ -109,7 +109,8 @@ contains
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 3))
     !ERROR: The value of the selector must be between zero and 15
     RANK(-1)
-      print *, "rank: -ve"
+      print *, "rank: negative"
+      !ERROR: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == -1))
     END SELECT
    end subroutine
@@ -119,8 +120,8 @@ contains
    integer :: i,j
    integer, dimension(..), pointer :: arg
    integer, pointer :: arg2
-   !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
    select RANK(arg)
+   !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
    RANK (*)
       print *, arg(1:1)
    RANK (1)
@@ -145,12 +146,11 @@ contains
     Rank(2)
       print *, "Now it's rank 2 "
     RANK (*)
-      print *, "Going for a other rank"
+      print *, "Going for another rank"
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 1))
     !ERROR: Not more than one of the selectors of SELECT RANK statement may be '*'
     RANK (*)
       print *, "This is Wrong"
-      j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 1))
     END SELECT
    end subroutine
 
@@ -219,6 +219,7 @@ contains
     SELECT RANK(ptr=>x)
     RANK (3)
       PRINT *, "PRINT RANK 3"
+      !ERROR: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(ptr) == 0))
     RANK (1)
       PRINT *, "PRINT RANK 1"
@@ -235,7 +236,7 @@ contains
         RANK(1.0)
     !ERROR: Must be a constant value
         RANK(RANK(x))
-    !ERROR: Must have INTEGER type, but is CHARACTER(1)
+    !ERROR: Must have INTEGER type, but is CHARACTER(KIND=1,LEN=6_8)
         RANK("STRING")
     END SELECT
    end subroutine

@@ -1,15 +1,15 @@
 // Check no warnings/errors
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 // Check AST and unparsing
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -ast-dump  %s | FileCheck %s --check-prefix=DUMP
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -ast-print %s | FileCheck %s --check-prefix=PRINT
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump  %s | FileCheck %s --check-prefix=DUMP
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-print %s | FileCheck %s --check-prefix=PRINT
 
 // Check same results after serialization round-trip
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -ast-dump-all %s | FileCheck %s --check-prefix=DUMP
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -ast-print    %s | FileCheck %s --check-prefix=PRINT
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -include-pch %t -ast-dump-all %s | FileCheck %s --check-prefix=DUMP
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -include-pch %t -ast-print    %s | FileCheck %s --check-prefix=PRINT
 
 #ifndef HEADER
 #define HEADER
@@ -159,6 +159,27 @@ void foo6(T start, T end) {
 // Also test instantiating the template.
 void tfoo6() {
   foo6<int,3,5>(0, 42);
+}
+
+
+// PRINT-LABEL: template <int Tile> void foo7(int start, int stop, int step) {
+// DUMP-LABEL: FunctionTemplateDecl {{.*}} foo7
+template <int Tile>
+void foo7(int start, int stop, int step) {
+  // PRINT: #pragma omp tile sizes(Tile)
+  // DUMP:      OMPTileDirective
+  // DUMP-NEXT:   OMPSizesClause
+  // DUMP-NEXT:     DeclRefExpr {{.*}} 'Tile' 'int'
+  #pragma omp tile sizes(Tile)
+    // PRINT-NEXT:  for (int i = start; i < stop; i += step)
+    // DUMP-NEXT: ForStmt
+    for (int i = start; i < stop; i += step)
+      // PRINT-NEXT: body(i);
+      // DUMP:  CallExpr
+      body(i);
+}
+void tfoo7() {
+  foo7<5>(0, 42, 2);
 }
 
 

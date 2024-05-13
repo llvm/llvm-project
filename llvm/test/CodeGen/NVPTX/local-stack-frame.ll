@@ -1,5 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix=PTX32
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix=PTX64
+; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=PTX32
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=PTX64
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
 ; Ensure we access the local stack properly
 
@@ -13,7 +15,7 @@
 ; PTX64:        st.volatile.u32  [%SP+0], %r{{[0-9]+}};
 define void @foo(i32 %a) {
   %local = alloca i32, align 4
-  store volatile i32 %a, i32* %local
+  store volatile i32 %a, ptr %local
   ret void
 }
 
@@ -29,15 +31,15 @@ define void @foo(i32 %a) {
 ; PTX64:        st.local.u32  [%rd[[SP_REG]]], %r{{[0-9]+}};
 define void @foo2(i32 %a) {
   %local = alloca i32, align 4
-  store i32 %a, i32* %local
-  call void @bar(i32* %local)
+  store i32 %a, ptr %local
+  call void @bar(ptr %local)
   ret void
 }
 
-declare void @bar(i32* %a)
+declare void @bar(ptr %a)
 
 !nvvm.annotations = !{!0}
-!0 = !{void (i32)* @foo2, !"kernel", i32 1}
+!0 = !{ptr @foo2, !"kernel", i32 1}
 
 ; PTX32:        mov.u32          %SPL, __local_depot{{[0-9]+}};
 ; PTX32-NOT:    cvta.local.u32   %SP, %SPL;
@@ -51,9 +53,8 @@ declare void @bar(i32* %a)
 ; PTX64:        st.local.u32  [%rd{{[0-9]+}}], %r{{[0-9]+}};
 define void @foo3(i32 %a) {
   %local = alloca [3 x i32], align 4
-  %1 = bitcast [3 x i32]* %local to i32*
-  %2 = getelementptr inbounds i32, i32* %1, i32 %a
-  store i32 %a, i32* %2
+  %1 = getelementptr inbounds i32, ptr %local, i32 %a
+  store i32 %a, ptr %1
   ret void
 }
 
@@ -74,9 +75,9 @@ define void @foo3(i32 %a) {
 define void @foo4() {
   %A = alloca i32
   %B = alloca i32
-  store i32 0, i32* %A
-  store i32 0, i32* %B
-  call void @bar(i32* %A)
-  call void @bar(i32* %B)
+  store i32 0, ptr %A
+  store i32 0, ptr %B
+  call void @bar(ptr %A)
+  call void @bar(ptr %B)
   ret void
 }

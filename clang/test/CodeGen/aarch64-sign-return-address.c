@@ -1,11 +1,11 @@
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -msign-return-address=none     %s | FileCheck %s --check-prefix=CHECK --check-prefix=NONE
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -msign-return-address=all      %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -msign-return-address=non-leaf %s | FileCheck %s --check-prefix=CHECK --check-prefix=PART
+// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -msign-return-address=none     %s | FileCheck %s --check-prefix=CHECK --check-prefix=NONE
+// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -msign-return-address=all      %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL
+// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -msign-return-address=non-leaf %s | FileCheck %s --check-prefix=CHECK --check-prefix=PART
 
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -mbranch-protection=none %s          | FileCheck %s --check-prefix=CHECK --check-prefix=NONE
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -mbranch-protection=pac-ret+leaf  %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -mbranch-protection=pac-ret+b-key %s | FileCheck %s --check-prefix=CHECK --check-prefix=B-KEY
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -mbranch-protection=bti %s           | FileCheck %s --check-prefix=CHECK --check-prefix=BTE
+// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=none %s          | FileCheck %s --check-prefix=CHECK --check-prefix=NONE
+// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=pac-ret+leaf  %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL
+// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=pac-ret+b-key %s | FileCheck %s --check-prefix=CHECK --check-prefix=B-KEY
+// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=bti %s           | FileCheck %s --check-prefix=CHECK --check-prefix=BTE
 
 // REQUIRES: aarch64-registered-target
 
@@ -19,28 +19,28 @@
 
 // Check module attributes
 
-// NONE:  !{i32 1, !"branch-target-enforcement", i32 0}
-// ALL:   !{i32 1, !"branch-target-enforcement", i32 0}
-// PART:  !{i32 1, !"branch-target-enforcement", i32 0}
-// BTE:   !{i32 1, !"branch-target-enforcement", i32 1}
-// B-KEY: !{i32 1, !"branch-target-enforcement", i32 0}
+// NONE-NOT:  !"branch-target-enforcement"
+// ALL-NOT:   !"branch-target-enforcement"
+// PART-NOT:  !"branch-target-enforcement"
+// BTE:       !{i32 8, !"branch-target-enforcement", i32 1}
+// B-KEY-NOT: !"branch-target-enforcement"
 
-// NONE:  !{i32 1, !"sign-return-address", i32 0}
-// ALL:   !{i32 1, !"sign-return-address", i32 1}
-// PART:  !{i32 1, !"sign-return-address", i32 1}
-// BTE:   !{i32 1, !"sign-return-address", i32 0}
-// B-KEY: !{i32 1, !"sign-return-address", i32 1}
+// NONE-NOT:  !"sign-return-address"
+// ALL:   !{i32 8, !"sign-return-address", i32 1}
+// PART:  !{i32 8, !"sign-return-address", i32 1}
+// BTE-NOT:   !"sign-return-address"
+// B-KEY: !{i32 8, !"sign-return-address", i32 1}
 
-// NONE:  !{i32 1, !"sign-return-address-all", i32 0}
-// ALL:   !{i32 1, !"sign-return-address-all", i32 1}
-// PART:  !{i32 1, !"sign-return-address-all", i32 0}
-// BTE:   !{i32 1, !"sign-return-address-all", i32 0}
-// B-KEY: !{i32 1, !"sign-return-address-all", i32 0}
+// NONE-NOT:  !"sign-return-address-all"
+// ALL:   !{i32 8, !"sign-return-address-all", i32 1}
+// PART-NOT:  !"sign-return-address-all"
+// BTE-NOT:   !"sign-return-address-all"
+// B-KEY-NOT: !"sign-return-address-all"
 
-// NONE:  !{i32 1, !"sign-return-address-with-bkey", i32 0}
-// ALL:   !{i32 1, !"sign-return-address-with-bkey", i32 0}
-// PART:  !{i32 1, !"sign-return-address-with-bkey", i32 0}
-// BTE:   !{i32 1, !"sign-return-address-with-bkey", i32 0}
-// B-KEY: !{i32 1, !"sign-return-address-with-bkey", i32 1}
+// NONE-NOT:  !"sign-return-address-with-bkey"
+// ALL-NOT:   !"sign-return-address-with-bkey"
+// PART-NOT:  !"sign-return-address-with-bkey"
+// BTE-NOT:   !"sign-return-address-with-bkey"
+// B-KEY: !{i32 8, !"sign-return-address-with-bkey", i32 1}
 
 void foo() {}

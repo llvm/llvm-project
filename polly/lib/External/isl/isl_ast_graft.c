@@ -14,6 +14,7 @@
 
 #include <isl/id.h>
 #include <isl/space.h>
+#include <isl/stream.h>
 #include <isl_ast_private.h>
 #include <isl_ast_build_expr.h>
 #include <isl_ast_build_private.h>
@@ -22,11 +23,14 @@
 
 static __isl_give isl_ast_graft *isl_ast_graft_copy(
 	__isl_keep isl_ast_graft *graft);
+static __isl_give isl_ast_graft *isl_stream_read_ast_graft(
+	__isl_keep isl_stream *s);
 
 #undef EL_BASE
 #define EL_BASE ast_graft
 
 #include <isl_list_templ.c>
+#include <isl_list_read_templ.c>
 
 #undef BASE
 #define BASE ast_graft
@@ -45,37 +49,54 @@ __isl_give isl_ast_node *isl_ast_graft_get_node(
 	return graft ? isl_ast_node_copy(graft->node) : NULL;
 }
 
-/* Create a graft for "node" with no guards and no enforced conditions.
+/* Create a graft for "node" with guards "guard" and
+ * enforced conditions "enforced".
  */
-__isl_give isl_ast_graft *isl_ast_graft_alloc(
-	__isl_take isl_ast_node *node, __isl_keep isl_ast_build *build)
+static isl_ast_graft *graft_alloc(__isl_take isl_ast_node *node,
+	__isl_take isl_set *guard, __isl_take isl_basic_set *enforced)
 {
 	isl_ctx *ctx;
-	isl_space *space;
 	isl_ast_graft *graft;
 
-	if (!node)
-		return NULL;
+	if (!node || !guard || !enforced)
+		goto error;
 
 	ctx = isl_ast_node_get_ctx(node);
 	graft = isl_calloc_type(ctx, isl_ast_graft);
 	if (!graft)
 		goto error;
 
-	space = isl_ast_build_get_space(build, 1);
-
 	graft->ref = 1;
 	graft->node = node;
-	graft->guard = isl_set_universe(isl_space_copy(space));
-	graft->enforced = isl_basic_set_universe(space);
-
-	if (!graft->guard || !graft->enforced)
-		return isl_ast_graft_free(graft);
+	graft->guard = guard;
+	graft->enforced = enforced;
 
 	return graft;
 error:
 	isl_ast_node_free(node);
+	isl_set_free(guard);
+	isl_basic_set_free(enforced);
 	return NULL;
+}
+
+/* Create a graft for "node" with no guards and no enforced conditions.
+ */
+__isl_give isl_ast_graft *isl_ast_graft_alloc(
+	__isl_take isl_ast_node *node, __isl_keep isl_ast_build *build)
+{
+	isl_space *space;
+	isl_set *guard;
+	isl_basic_set *enforced;
+
+	if (!node)
+		return NULL;
+
+	space = isl_ast_build_get_space(build, 1);
+
+	guard = isl_set_universe(isl_space_copy(space));
+	enforced = isl_basic_set_universe(space);
+
+	return graft_alloc(node, guard, enforced);
 }
 
 /* Create a graft with no guards and no enforced conditions
@@ -110,24 +131,24 @@ static isl_bool equal_independent_guards(__isl_keep isl_ast_graft_list *list,
 {
 	int i;
 	isl_size n;
-	int depth;
+	isl_size depth;
 	isl_size dim;
 	isl_ast_graft *graft_0;
 	isl_bool equal = isl_bool_true;
 	isl_bool skip;
 
 	n = isl_ast_graft_list_n_ast_graft(list);
-	if (n < 0)
+	depth = isl_ast_build_get_depth(build);
+	if (n < 0 || depth < 0)
 		return isl_bool_error;
 	graft_0 = isl_ast_graft_list_get_ast_graft(list, 0);
 	if (!graft_0)
 		return isl_bool_error;
 
-	depth = isl_ast_build_get_depth(build);
 	dim = isl_set_dim(graft_0->guard, isl_dim_set);
 	if (dim < 0)
-		return isl_bool_error;
-	if (dim <= depth)
+		skip = isl_bool_error;
+	else if (dim <= depth)
 		skip = isl_bool_false;
 	else
 		skip = isl_set_involves_dims(graft_0->guard,
@@ -161,12 +182,12 @@ static isl_bool equal_independent_guards(__isl_keep isl_ast_graft_list *list,
 static __isl_give isl_set *hoist_guard(__isl_take isl_set *guard,
 	__isl_keep isl_ast_build *build)
 {
-	int depth;
+	isl_size depth;
 	isl_size dim;
 
 	depth = isl_ast_build_get_depth(build);
 	dim = isl_set_dim(guard, isl_dim_set);
-	if (dim < 0)
+	if (depth < 0 || dim < 0)
 		return isl_set_free(guard);
 	if (depth < dim) {
 		guard = isl_set_remove_divs_involving_dims(guard,
@@ -364,9 +385,7 @@ static __isl_give isl_ast_graft *insert_if_node(
 		return graft;
 	}
 
-	build = isl_ast_build_copy(build);
 	graft->node = ast_node_insert_if(graft->node, guard, build);
-	isl_ast_build_free(build);
 
 	if (!graft->node)
 		return isl_ast_graft_free(graft);
@@ -473,13 +492,14 @@ static __isl_give isl_ast_graft_list *graft_extend_body(
 	__isl_keep isl_ast_build *build)
 {
 	isl_size n;
-	int depth;
+	isl_size depth;
 	isl_ast_graft *last;
 	isl_space *space;
 	isl_basic_set *enforced;
 
 	n = isl_ast_graft_list_n_ast_graft(list);
-	if (n < 0 || !graft)
+	depth = isl_ast_build_get_depth(build);
+	if (n < 0 || depth < 0 || !graft)
 		goto error;
 	extend_body(body, isl_ast_node_copy(graft->node));
 	if (!*body)
@@ -487,7 +507,6 @@ static __isl_give isl_ast_graft_list *graft_extend_body(
 
 	last = isl_ast_graft_list_get_ast_graft(list, n - 1);
 
-	depth = isl_ast_build_get_depth(build);
 	space = isl_ast_build_get_space(build, 1);
 	enforced = isl_basic_set_empty(space);
 	enforced = update_enforced(enforced, last, depth);
@@ -760,18 +779,18 @@ __isl_give isl_basic_set *isl_ast_graft_list_extract_shared_enforced(
 {
 	int i;
 	isl_size n;
-	int depth;
+	isl_size depth;
 	isl_space *space;
 	isl_basic_set *enforced;
 
 	n = isl_ast_graft_list_n_ast_graft(list);
-	if (n < 0)
+	depth = isl_ast_build_get_depth(build);
+	if (n < 0 || depth < 0)
 		return NULL;
 
 	space = isl_ast_build_get_space(build, 1);
 	enforced = isl_basic_set_empty(space);
 
-	depth = isl_ast_build_get_depth(build);
 	for (i = 0; i < n; ++i) {
 		isl_ast_graft *graft;
 
@@ -1443,6 +1462,25 @@ __isl_give isl_ast_graft_list *isl_ast_graft_list_group_on_guard(
 	return list;
 }
 
+/* An enumeration of the keys that appear in the textual representation
+ * of an isl_sat_graft object.
+ */
+enum isl_graft_key {
+	isl_graft_key_error = -1,
+	isl_graft_key_guard,
+	isl_graft_key_enforced,
+	isl_graft_key_node,
+	isl_graft_key_end
+};
+
+/* Textual representations of the keys for an isl_sat_graft object.
+ */
+static char *key_str[] = {
+	[isl_graft_key_guard] = "guard",
+	[isl_graft_key_enforced] = "enforced",
+	[isl_graft_key_node] = "node",
+};
+
 __isl_give isl_printer *isl_printer_print_ast_graft(__isl_take isl_printer *p,
 	__isl_keep isl_ast_graft *graft)
 {
@@ -1452,15 +1490,91 @@ __isl_give isl_printer *isl_printer_print_ast_graft(__isl_take isl_printer *p,
 		return isl_printer_free(p);
 
 	p = isl_printer_print_str(p, "(");
-	p = isl_printer_print_str(p, "guard: ");
+	p = isl_printer_print_str(p, key_str[isl_graft_key_guard]);
+	p = isl_printer_print_str(p, ": ");
 	p = isl_printer_print_set(p, graft->guard);
 	p = isl_printer_print_str(p, ", ");
-	p = isl_printer_print_str(p, "enforced: ");
+	p = isl_printer_print_str(p, key_str[isl_graft_key_enforced]);
+	p = isl_printer_print_str(p, ": ");
 	p = isl_printer_print_basic_set(p, graft->enforced);
 	p = isl_printer_print_str(p, ", ");
-	p = isl_printer_print_str(p, "node: ");
+	p = isl_printer_print_str(p, key_str[isl_graft_key_node]);
+	p = isl_printer_print_str(p, ": ");
 	p = isl_printer_print_ast_node(p, graft->node);
 	p = isl_printer_print_str(p, ")");
 
 	return p;
+}
+
+#undef KEY
+#define KEY enum isl_graft_key
+#undef KEY_ERROR
+#define KEY_ERROR isl_graft_key_error
+#undef KEY_END
+#define KEY_END isl_graft_key_end
+#undef KEY_STR
+#define KEY_STR key_str
+#undef KEY_EXTRACT
+#define KEY_EXTRACT extract_key
+#undef KEY_GET
+#define KEY_GET get_key
+#include "extract_key.c"
+
+/* Read the key "key" from "s", along with the subsequent colon.
+ */
+static isl_stat read_key(__isl_keep isl_stream *s, enum isl_graft_key key)
+{
+	enum isl_graft_key extracted;
+
+	extracted = get_key(s);
+	if (extracted < 0)
+		return isl_stat_error;
+	if (extracted != key)
+		isl_die(isl_stream_get_ctx(s), isl_error_invalid,
+			"expecting different field", return isl_stat_error);
+	if (isl_stream_eat(s, ':') < 0)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
+/* Read an isl_ast_graft object from "s".
+ *
+ * Read the pieces in the way they are printed in isl_printer_print_ast_graft.
+ */
+static __isl_give isl_ast_graft *isl_stream_read_ast_graft(
+	__isl_keep isl_stream *s)
+{
+	isl_set *guard;
+	isl_basic_set *enforced = NULL;
+	isl_ast_node *node = NULL;
+
+	if (isl_stream_eat(s, '(') < 0)
+		return NULL;
+	if (read_key(s, isl_graft_key_guard) < 0)
+		return NULL;
+	guard = isl_stream_read_set(s);
+	if (!guard)
+		goto error;
+	if (isl_stream_eat(s, ',') < 0)
+		goto error;
+	if (read_key(s, isl_graft_key_enforced) < 0)
+		goto error;
+	enforced = isl_stream_read_basic_set(s);
+	if (!enforced)
+		goto error;
+	if (isl_stream_eat(s, ',') < 0)
+		goto error;
+	if (read_key(s, isl_graft_key_node) < 0)
+		goto error;
+	node = isl_stream_read_ast_node(s);
+	if (!node)
+		goto error;
+	if (isl_stream_eat(s, ')') < 0)
+		goto error;
+	return graft_alloc(node, guard, enforced);
+error:
+	isl_set_free(guard);
+	isl_basic_set_free(enforced);
+	isl_ast_node_free(node);
+	return NULL;
 }

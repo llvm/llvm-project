@@ -22,6 +22,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private.h"
@@ -107,7 +108,7 @@ AppleGetThreadItemInfoHandler::AppleGetThreadItemInfoHandler(Process *process)
       m_get_thread_item_info_return_buffer_addr(LLDB_INVALID_ADDRESS),
       m_get_thread_item_info_retbuffer_mutex() {}
 
-AppleGetThreadItemInfoHandler::~AppleGetThreadItemInfoHandler() {}
+AppleGetThreadItemInfoHandler::~AppleGetThreadItemInfoHandler() = default;
 
 void AppleGetThreadItemInfoHandler::Detach() {
 
@@ -140,7 +141,7 @@ lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
   ExecutionContext exe_ctx(thread_sp);
   Address impl_code_address;
   DiagnosticManager diagnostics;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
+  Log *log = GetLog(LLDBLog::SystemRuntime);
   lldb::addr_t args_addr = LLDB_INVALID_ADDRESS;
   FunctionCaller *get_thread_item_info_caller = nullptr;
 
@@ -170,10 +171,10 @@ lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
 
       // Also make the FunctionCaller for this UtilityFunction:
 
-      TypeSystemClang *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
+      TypeSystemClangSP scratch_ts_sp = ScratchTypeSystemClang::GetForTarget(
           thread.GetProcess()->GetTarget());
       CompilerType get_thread_item_info_return_type =
-          clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+          scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
       get_thread_item_info_caller =
           m_get_thread_item_info_impl_code->MakeFunctionCaller(
@@ -222,9 +223,9 @@ AppleGetThreadItemInfoHandler::GetThreadItemInfo(Thread &thread,
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());
-  TypeSystemClang *clang_ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*target_sp);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
+  Log *log = GetLog(LLDBLog::SystemRuntime);
 
   GetThreadItemInfoReturnInfo return_value;
   return_value.item_buffer_ptr = LLDB_INVALID_ADDRESS;
@@ -260,18 +261,18 @@ AppleGetThreadItemInfoHandler::GetThreadItemInfo(Thread &thread,
   // already allocated by lldb in the inferior process.
 
   CompilerType clang_void_ptr_type =
-      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
   Value return_buffer_ptr_value;
   return_buffer_ptr_value.SetValueType(Value::ValueType::Scalar);
   return_buffer_ptr_value.SetCompilerType(clang_void_ptr_type);
 
-  CompilerType clang_int_type = clang_ast_context->GetBasicType(eBasicTypeInt);
+  CompilerType clang_int_type = scratch_ts_sp->GetBasicType(eBasicTypeInt);
   Value debug_value;
   debug_value.SetValueType(Value::ValueType::Scalar);
   debug_value.SetCompilerType(clang_int_type);
 
   CompilerType clang_uint64_type =
-      clang_ast_context->GetBasicType(eBasicTypeUnsignedLongLong);
+      scratch_ts_sp->GetBasicType(eBasicTypeUnsignedLongLong);
   Value thread_id_value;
   thread_id_value.SetValueType(Value::ValueType::Scalar);
   thread_id_value.SetCompilerType(clang_uint64_type);

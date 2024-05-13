@@ -1,20 +1,18 @@
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestWriteMemory(GDBRemoteTestBase):
-
-    @skipIfReproducer # SBProcess::WriteMemory is not instrumented.
     def test(self):
-
         class MyResponder(MockGDBServerResponder):
             def setBreakpoint(self, packet):
                 return "OK"
 
         self.server.responder = MyResponder()
-        target = self.dbg.CreateTargetWithFileAndTargetTriple('', 'x86_64-pc-linux')
+        target = self.dbg.CreateTargetWithFileAndTargetTriple("", "x86_64-pc-linux")
         process = self.connect(target)
 
         bp = target.BreakpointCreateByAddress(0x1000)

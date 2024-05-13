@@ -1,4 +1,3 @@
-; RUN: opt < %s -S -sancov -sanitizer-coverage-level=3 -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -S -passes='module(sancov-module)' -sanitizer-coverage-level=3 | FileCheck %s
 
 ; The critical edges to unreachable_bb should not be split.

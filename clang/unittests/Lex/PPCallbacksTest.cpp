@@ -35,9 +35,10 @@ class InclusionDirectiveCallbacks : public PPCallbacks {
 public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     this->HashLoc = HashLoc;
     this->IncludeTok = IncludeTok;
@@ -47,7 +48,8 @@ public:
     this->File = File;
     this->SearchPath = SearchPath.str();
     this->RelativePath = RelativePath.str();
-    this->Imported = Imported;
+    this->SuggestedModule = SuggestedModule;
+    this->ModuleImported = ModuleImported;
     this->FileType = FileType;
   }
 
@@ -56,10 +58,11 @@ public:
   SmallString<16> FileName;
   bool IsAngled;
   CharSourceRange FilenameRange;
-  const FileEntry* File;
+  OptionalFileEntryRef File;
   SmallString<16> SearchPath;
   SmallString<16> RelativePath;
-  const Module* Imported;
+  const Module *SuggestedModule;
+  bool ModuleImported;
   SrcMgr::CharacteristicKind FileType;
 };
 
@@ -110,6 +113,20 @@ public:
   SmallString<16> Name;
   SourceLocation StateLoc;
   unsigned State;
+};
+
+class PragmaMarkCallbacks : public PPCallbacks {
+public:
+  struct Mark {
+    SourceLocation Location;
+    std::string Trivia;
+  };
+
+  std::vector<Mark> Marks;
+
+  void PragmaMark(SourceLocation Loc, StringRef Trivia) override {
+    Marks.emplace_back(Mark{Loc, Trivia.str()});
+  }
 };
 
 // PPCallbacks test fixture.
@@ -215,13 +232,7 @@ protected:
 
     // Lex source text.
     PP.EnterMainSourceFile();
-
-    while (true) {
-      Token Tok;
-      PP.Lex(Tok);
-      if (Tok.is(tok::eof))
-        break;
-    }
+    PP.LexTokensUntilEOF();
 
     // Callbacks have been executed at this point -- return filename range.
     return Callbacks;
@@ -245,15 +256,34 @@ protected:
 
     // Lex source text.
     PP.EnterMainSourceFile();
-
-    while (true) {
-      Token Tok;
-      PP.Lex(Tok);
-      if (Tok.is(tok::eof))
-        break;
-    }
+    PP.LexTokensUntilEOF();
 
     return Callbacks->Results;
+  }
+
+  std::vector<PragmaMarkCallbacks::Mark>
+  PragmaMarkCall(const char *SourceText) {
+    std::unique_ptr<llvm::MemoryBuffer> SourceBuf =
+        llvm::MemoryBuffer::getMemBuffer(SourceText, "test.c");
+    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
+
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, LangOpts, Target.get());
+    TrivialModuleLoader ModLoader;
+
+    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                    SourceMgr, HeaderInfo, ModLoader, /*IILookup=*/nullptr,
+                    /*OwnsHeaderSearch=*/false);
+    PP.Initialize(*Target);
+
+    auto *Callbacks = new PragmaMarkCallbacks;
+    PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(Callbacks));
+
+    // Lex source text.
+    PP.EnterMainSourceFile();
+    PP.LexTokensUntilEOF();
+
+    return Callbacks->Marks;
   }
 
   PragmaOpenCLExtensionCallbacks::CallbackParameters
@@ -279,7 +309,7 @@ protected:
     // according to LangOptions, so we init Parser to register opencl
     // pragma handlers
     ASTContext Context(OpenCLLangOpts, SourceMgr, PP.getIdentifierTable(),
-                       PP.getSelectorTable(), PP.getBuiltinInfo());
+                       PP.getSelectorTable(), PP.getBuiltinInfo(), PP.TUKind);
     Context.InitBuiltinTypes(*Target);
 
     ASTConsumer Consumer;
@@ -290,12 +320,7 @@ protected:
 
     // Lex source text.
     PP.EnterMainSourceFile();
-    while (true) {
-      Token Tok;
-      PP.Lex(Tok);
-      if (Tok.is(tok::eof))
-        break;
-    }
+    PP.LexTokensUntilEOF();
 
     PragmaOpenCLExtensionCallbacks::CallbackParameters RetVal = {
       Callbacks->Name,
@@ -400,6 +425,45 @@ TEST_F(PPCallbacksTest, TrigraphInMacro) {
   ASSERT_EQ("\"tri\?\?-graph.h\"", GetSourceString(Range));
 }
 
+TEST_F(PPCallbacksTest, FileNotFoundSkipped) {
+  const char *SourceText = "#include \"skipped.h\"\n";
+
+  std::unique_ptr<llvm::MemoryBuffer> SourceBuf =
+      llvm::MemoryBuffer::getMemBuffer(SourceText);
+  SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
+
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, Target.get());
+  TrivialModuleLoader ModLoader;
+
+  DiagnosticConsumer *DiagConsumer = new DiagnosticConsumer;
+  DiagnosticsEngine FileNotFoundDiags(DiagID, DiagOpts.get(), DiagConsumer);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), FileNotFoundDiags,
+                  LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr,
+                  /*OwnsHeaderSearch=*/false);
+  PP.Initialize(*Target);
+
+  class FileNotFoundCallbacks : public PPCallbacks {
+  public:
+    unsigned int NumCalls = 0;
+    bool FileNotFound(StringRef FileName) override {
+      NumCalls++;
+      return FileName == "skipped.h";
+    }
+  };
+
+  auto *Callbacks = new FileNotFoundCallbacks;
+  PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(Callbacks));
+
+  // Lex source text.
+  PP.EnterMainSourceFile();
+  PP.LexTokensUntilEOF();
+
+  ASSERT_EQ(1u, Callbacks->NumCalls);
+  ASSERT_EQ(0u, DiagConsumer->getNumErrors());
+}
+
 TEST_F(PPCallbacksTest, OpenCLExtensionPragmaEnabled) {
   const char* Source =
     "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n";
@@ -422,6 +486,24 @@ TEST_F(PPCallbacksTest, OpenCLExtensionPragmaDisabled) {
   ASSERT_EQ("cl_khr_fp16", Parameters.Name);
   unsigned ExpectedState = 0;
   ASSERT_EQ(ExpectedState, Parameters.State);
+}
+
+TEST_F(PPCallbacksTest, CollectMarks) {
+  const char *Source =
+    "#pragma mark\n"
+    "#pragma mark\r\n"
+    "#pragma mark - trivia\n"
+    "#pragma mark - trivia\r\n";
+
+  auto Marks = PragmaMarkCall(Source);
+
+  ASSERT_EQ(4u, Marks.size());
+  ASSERT_TRUE(Marks[0].Trivia.empty());
+  ASSERT_TRUE(Marks[1].Trivia.empty());
+  ASSERT_FALSE(Marks[2].Trivia.empty());
+  ASSERT_FALSE(Marks[3].Trivia.empty());
+  ASSERT_EQ(" - trivia", Marks[2].Trivia);
+  ASSERT_EQ(" - trivia", Marks[3].Trivia);
 }
 
 TEST_F(PPCallbacksTest, DirectiveExprRanges) {

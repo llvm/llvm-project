@@ -19,7 +19,6 @@
 #include "MipsMCNaCl.h"
 #include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -29,13 +28,15 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MachineLocation.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "MipsGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -103,15 +104,14 @@ static MCInstPrinter *createMipsMCInstPrinter(const Triple &T,
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                     std::unique_ptr<MCObjectWriter> &&OW,
-                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                    bool RelaxAll) {
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
   MCStreamer *S;
   if (!T.isOSNaCl())
     S = createMipsELFStreamer(Context, std::move(MAB), std::move(OW),
-                              std::move(Emitter), RelaxAll);
+                              std::move(Emitter));
   else
     S = createMipsNaClELFStreamer(Context, std::move(MAB), std::move(OW),
-                                  std::move(Emitter), RelaxAll);
+                                  std::move(Emitter));
   return S;
 }
 
@@ -142,7 +142,7 @@ public:
     unsigned NumOps = Inst.getNumOperands();
     if (NumOps == 0)
       return false;
-    switch (Info->get(Inst.getOpcode()).OpInfo[NumOps - 1].OperandType) {
+    switch (Info->get(Inst.getOpcode()).operands()[NumOps - 1].OperandType) {
     case MCOI::OPERAND_UNKNOWN:
     case MCOI::OPERAND_IMMEDIATE: {
       // j, jal, jalx, jals

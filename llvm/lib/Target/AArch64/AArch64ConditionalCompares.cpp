@@ -18,8 +18,6 @@
 
 #include "AArch64.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -247,8 +245,8 @@ void SSACCmpConv::updateTailPHIs() {
     for (unsigned oi = I.getNumOperands(); oi > 2; oi -= 2) {
       // PHI operands are (Reg, MBB) at (oi-2, oi-1).
       if (I.getOperand(oi - 1).getMBB() == CmpBB) {
-        I.RemoveOperand(oi - 1);
-        I.RemoveOperand(oi - 2);
+        I.removeOperand(oi - 1);
+        I.removeOperand(oi - 2);
       }
     }
   }
@@ -301,7 +299,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
   if (I == MBB->end())
     return nullptr;
   // The terminator must be controlled by the flags.
-  if (!I->readsRegister(AArch64::NZCV)) {
+  if (!I->readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
     switch (I->getOpcode()) {
     case AArch64::CBZW:
     case AArch64::CBZX:
@@ -333,7 +331,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
         ++NumImmRangeRejs;
         return nullptr;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AArch64::SUBSWrr:
     case AArch64::SUBSXrr:
     case AArch64::ADDSWrr:
@@ -856,7 +854,7 @@ bool AArch64ConditionalCompares::shouldConvert() {
   if (Stress)
     return true;
   if (!MinInstr)
-    MinInstr = Traces->getEnsemble(MachineTraceMetrics::TS_MinInstrCount);
+    MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
 
   // Head dominates CmpBB, so it is always included in its trace.
   MachineTraceMetrics::Trace Trace = MinInstr->getTrace(CmpConv.CmpBB);
@@ -936,7 +934,7 @@ bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   SchedModel = MF.getSubtarget().getSchedModel();
   MRI = &MF.getRegInfo();
   DomTree = &getAnalysis<MachineDominatorTree>();
-  Loops = getAnalysisIfAvailable<MachineLoopInfo>();
+  Loops = &getAnalysis<MachineLoopInfo>();
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;

@@ -13,8 +13,8 @@ define fp128 @test_add() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    b __addtf3
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fadd fp128 %lhs, %rhs
   ret fp128 %val
@@ -29,8 +29,8 @@ define fp128 @test_sub() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    b __subtf3
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fsub fp128 %lhs, %rhs
   ret fp128 %val
@@ -45,8 +45,8 @@ define fp128 @test_mul() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    b __multf3
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fmul fp128 %lhs, %rhs
   ret fp128 %val
@@ -61,8 +61,8 @@ define fp128 @test_div() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    b __divtf3
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fdiv fp128 %lhs, %rhs
   ret fp128 %val
@@ -74,7 +74,7 @@ define fp128 @test_div() {
 define dso_local void @test_fptosi() {
 ; CHECK-LABEL: test_fptosi:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -89,15 +89,15 @@ define dso_local void @test_fptosi() {
 ; CHECK-NEXT:    adrp x8, var64
 ; CHECK-NEXT:    str x0, [x8, :lo12:var64]
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
-  %val = load fp128, fp128* @lhs, align 16
+  %val = load fp128, ptr @lhs, align 16
 
   %val32 = fptosi fp128 %val to i32
-  store i32 %val32, i32* @var32
+  store i32 %val32, ptr @var32
 
   %val64 = fptosi fp128 %val to i64
-  store i64 %val64, i64* @var64
+  store i64 %val64, ptr @var64
 
   ret void
 }
@@ -105,7 +105,7 @@ define dso_local void @test_fptosi() {
 define dso_local void @test_fptoui() {
 ; CHECK-LABEL: test_fptoui:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -120,15 +120,15 @@ define dso_local void @test_fptoui() {
 ; CHECK-NEXT:    adrp x8, var64
 ; CHECK-NEXT:    str x0, [x8, :lo12:var64]
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
-  %val = load fp128, fp128* @lhs, align 16
+  %val = load fp128, ptr @lhs, align 16
 
   %val32 = fptoui fp128 %val to i32
-  store i32 %val32, i32* @var32
+  store i32 %val32, ptr @var32
 
   %val64 = fptoui fp128 %val to i64
-  store i64 %val64, i64* @var64
+  store i64 %val64, ptr @var64
 
   ret void
 }
@@ -152,13 +152,13 @@ define dso_local void @test_sitofp() {
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %src32 = load i32, i32* @var32
+  %src32 = load i32, ptr @var32
   %val32 = sitofp i32 %src32 to fp128
-  store volatile fp128 %val32, fp128* @lhs
+  store volatile fp128 %val32, ptr @lhs
 
-  %src64 = load i64, i64* @var64
+  %src64 = load i64, ptr @var64
   %val64 = sitofp i64 %src64 to fp128
-  store volatile fp128 %val64, fp128* @lhs
+  store volatile fp128 %val64, ptr @lhs
 
   ret void
 }
@@ -182,13 +182,13 @@ define dso_local void @test_uitofp() {
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %src32 = load i32, i32* @var32
+  %src32 = load i32, ptr @var32
   %val32 = uitofp i32 %src32 to fp128
-  store volatile fp128 %val32, fp128* @lhs
+  store volatile fp128 %val32, ptr @lhs
 
-  %src64 = load i64, i64* @var64
+  %src64 = load i64, ptr @var64
   %val64 = uitofp i64 %src64 to fp128
-  store volatile fp128 %val64, fp128* @lhs
+  store volatile fp128 %val64, ptr @lhs
 
   ret void
 }
@@ -204,13 +204,13 @@ define dso_local i1 @test_setcc1() {
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    bl __letf2
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
 ; Technically, everything after the call to __letf2 is redundant, but we'll let
 ; LLVM have its fun for now.
@@ -230,13 +230,13 @@ define dso_local i1 @test_setcc2() {
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    bl __letf2
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fcmp ugt fp128 %lhs, %rhs
 
@@ -246,7 +246,7 @@ define dso_local i1 @test_setcc2() {
 define dso_local i1 @test_setcc3() {
 ; CHECK-LABEL: test_setcc3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
@@ -257,19 +257,18 @@ define dso_local i1 @test_setcc3() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
 ; CHECK-NEXT:    bl __eqtf2
-; CHECK-NEXT:    cmp w0, #0 // =0
-; CHECK-NEXT:    cset w19, eq
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    bl __unordtf2
-; CHECK-NEXT:    cmp w0, #0 // =0
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    orr w0, w8, w19
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ccmp w19, #0, #4, eq
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fcmp ueq fp128 %lhs, %rhs
 
@@ -277,30 +276,36 @@ define dso_local i1 @test_setcc3() {
 }
 
 
-define dso_local i32 @test_br_cc() {
+define dso_local i32 @test_br_cc() uwtable {
 ; CHECK-LABEL: test_br_cc:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    bl __lttf2
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    b.ge .LBB11_2
 ; CHECK-NEXT:  // %bb.1: // %iftrue
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB11_2: // %iffalse
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    mov w0, #29
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   ; olt == !uge, which LLVM optimizes this to.
   %cond = fcmp olt fp128 %lhs, %rhs
@@ -325,7 +330,7 @@ define dso_local void @test_select(i1 %cond, fp128 %lhs, fp128 %rhs) {
 ; CHECK-NEXT:    ret
 
   %val = select i1 %cond, fp128 %lhs, fp128 %rhs
-  store fp128 %val, fp128* @lhs, align 16
+  store fp128 %val, ptr @lhs, align 16
   ret void
 }
 
@@ -336,7 +341,7 @@ define dso_local void @test_select(i1 %cond, fp128 %lhs, fp128 %rhs) {
 define dso_local void @test_round() {
 ; CHECK-LABEL: test_round:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -355,19 +360,19 @@ define dso_local void @test_round() {
 ; CHECK-NEXT:    adrp x8, vardouble
 ; CHECK-NEXT:    str d0, [x8, :lo12:vardouble]
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 
-  %val = load fp128, fp128* @lhs, align 16
+  %val = load fp128, ptr @lhs, align 16
 
   %half = fptrunc fp128 %val to half
-  store half %half, half* @varhalf, align 2
+  store half %half, ptr @varhalf, align 2
 
   %float = fptrunc fp128 %val to float
-  store float %float, float* @varfloat, align 4
+  store float %float, ptr @varfloat, align 4
 
   %double = fptrunc fp128 %val to double
-  store double %double, double* @vardouble, align 8
+  store double %double, ptr @vardouble, align 8
 
   ret void
 }
@@ -395,19 +400,19 @@ define dso_local void @test_extend() {
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %val = load fp128, fp128* @lhs, align 16
+  %val = load fp128, ptr @lhs, align 16
 
-  %half = load half, half* @varhalf
+  %half = load half, ptr @varhalf
   %fromhalf = fpext half %half to fp128
-  store volatile fp128 %fromhalf, fp128* @lhs, align 16
+  store volatile fp128 %fromhalf, ptr @lhs, align 16
 
-  %float = load float, float* @varfloat
+  %float = load float, ptr @varfloat
   %fromfloat = fpext float %float to fp128
-  store volatile fp128 %fromfloat, fp128* @lhs, align 16
+  store volatile fp128 %fromfloat, ptr @lhs, align 16
 
-  %double = load double, double* @vardouble
+  %double = load double, ptr @vardouble
   %fromdouble = fpext double %double to fp128
-  store volatile fp128 %fromdouble, fp128* @lhs, align 16
+  store volatile fp128 %fromdouble, ptr @lhs, align 16
 
   ret void
 }
@@ -415,8 +420,8 @@ define dso_local void @test_extend() {
 define fp128 @test_neg(fp128 %in) {
 ; CHECK-LABEL: test_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    str q0, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldrb w8, [sp, #15]
 ; CHECK-NEXT:    eor w8, w8, #0x80
 ; CHECK-NEXT:    strb w8, [sp, #15]

@@ -11,6 +11,7 @@
 // template <class InputIterator>
 //   void assign(InputIterator f, InputIterator l);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -49,8 +50,10 @@ void
 test(C& c1, const C& c2)
 {
     c1.assign(c2.begin(), c2.end());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     assert(c1 == c2);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
 }
 
 template <class C>
@@ -69,8 +72,10 @@ testI(C& c1, const C& c2)
     typedef typename C::const_iterator CI;
     typedef cpp17_input_iterator<CI> ICI;
     c1.assign(ICI(c2.begin()), ICI(c2.end()));
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     assert(c1 == c2);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
 }
 
 template <class C>
@@ -103,16 +108,25 @@ void basic_test()
                 testN<std::deque<int, min_allocator<int>> >(rng[i], rng[j], rng[k]);
     testNI<std::deque<int, min_allocator<int>> >(1500, 2000, 1000);
     }
+    {
+    int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+    const int N = sizeof(rng)/sizeof(rng[0]);
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+            for (int k = 0; k < N; ++k)
+                testN<std::deque<int, safe_allocator<int>> >(rng[i], rng[j], rng[k]);
+    testNI<std::deque<int, safe_allocator<int>> >(1500, 2000, 1000);
+    }
 #endif
 }
 
+template <class It>
 void test_emplacable_concept() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
   {
     using T = EmplaceConstructibleMoveableAndAssignable<int>;
-    using It = random_access_iterator<int*>;
     {
       std::deque<T> v;
       v.assign(It(arr1), It(std::end(arr1)));
@@ -123,35 +137,25 @@ void test_emplacable_concept() {
       v.assign(It(arr2), It(std::end(arr2)));
       assert(v[0].value == 1);
       assert(v[1].value == 101);
-      assert(v[2].value == 42);
-    }
-  }
-  {
-    using T = EmplaceConstructibleMoveableAndAssignable<int>;
-    using It = cpp17_input_iterator<int*>;
-    {
-      std::deque<T> v;
-      v.assign(It(arr1), It(std::end(arr1)));
-      assert(v[0].copied == 0);
-      assert(v[0].value == 42);
-    }
-    {
-      std::deque<T> v;
-      v.assign(It(arr2), It(std::end(arr2)));
-      //assert(v[0].copied == 0);
-      assert(v[0].value == 1);
-      //assert(v[1].copied == 0);
-      assert(v[1].value == 101);
-      assert(v[2].copied == 0);
       assert(v[2].value == 42);
     }
   }
 #endif
 }
 
+void test_iterators() {
+  test_emplacable_concept<cpp17_input_iterator<int*> >();
+  test_emplacable_concept<forward_iterator<int*> >();
+  test_emplacable_concept<bidirectional_iterator<int*> >();
+  test_emplacable_concept<random_access_iterator<int*> >();
+#if TEST_STD_VER > 17
+  test_emplacable_concept<contiguous_iterator<int*> >();
+#endif
+  test_emplacable_concept<int*>();
+}
+
 int main(int, char**) {
   basic_test();
-  test_emplacable_concept();
 
   return 0;
 }

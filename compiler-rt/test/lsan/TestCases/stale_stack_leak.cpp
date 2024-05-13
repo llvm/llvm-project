@@ -1,5 +1,4 @@
 // Test that out-of-scope local variables are ignored by LSan.
-// RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=1"
 
 // LSan-in-ASan fails at -O0 on aarch64, because the stack use-after-return
 // instrumentation stashes the argument to `PutPointerOnStaleStack` on the stack
@@ -10,12 +9,12 @@
 // callee-saved register for rematerialization instead.
 // RUN: %clangxx_lsan -O1 %s -o %t
 
-// RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
-// RUN: %env_lsan_opts=$LSAN_BASE":exitcode=0" %run %t 2>&1 | FileCheck --check-prefix=CHECK-sanity %s
+// RUN: %env_lsan_opts="report_objects=1:use_registers=0:use_stacks=1" not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts="report_objects=1:use_registers=0:use_stacks=1:exitcode=0" %run %t 2>&1 | FileCheck --check-prefix=CHECK-sanity %s
 //
 // x86 passes parameters through stack that may lead to false negatives
 // The same applies to s390x register save areas.
-// UNSUPPORTED: x86,i686,powerpc64,arm,s390x
+// UNSUPPORTED: i686,target={{(x86|powerpc64|arm|s390x).*}}
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +45,7 @@ int main() {
 // Otherwise, we need a different method.
 __attribute__((destructor))
 __attribute__((no_sanitize_address))
+__attribute__((no_sanitize("hwaddress")))
 void ConfirmPointerHasSurvived() {
   print_address("Value after LSan: ", 1, *pp);
 }
@@ -53,5 +53,5 @@ void ConfirmPointerHasSurvived() {
 // CHECK-sanity: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:
 // CHECK-sanity: Value after LSan: [[ADDR]]

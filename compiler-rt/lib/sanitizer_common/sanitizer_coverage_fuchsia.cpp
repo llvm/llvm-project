@@ -33,8 +33,9 @@
 
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
+#include "sanitizer_interface_internal.h"
 #include "sanitizer_internal_defs.h"
-#include "sanitizer_symbolizer_fuchsia.h"
+#  include "sanitizer_symbolizer_markup_constants.h"
 
 using namespace __sanitizer;
 
@@ -51,6 +52,8 @@ constexpr const char kSancovSinkName[] = "sancov";
 // This class relies on zero-initialization.
 class TracePcGuardController final {
  public:
+  constexpr TracePcGuardController() {}
+
   // For each PC location being tracked, there is a u32 reserved in global
   // data called the "guard".  At startup, we assign each guard slot a
   // unique index into the big results array.  Later during runtime, the
@@ -87,7 +90,7 @@ class TracePcGuardController final {
   }
 
   void Dump() {
-    BlockingMutexLock locked(&setup_lock_);
+    Lock locked(&setup_lock_);
     if (array_) {
       CHECK_NE(vmo_, ZX_HANDLE_INVALID);
 
@@ -114,7 +117,7 @@ class TracePcGuardController final {
   // We can always spare the 32G of address space.
   static constexpr size_t MappingSize = sizeof(uptr) << 32;
 
-  BlockingMutex setup_lock_ = BlockingMutex(LINKER_INITIALIZED);
+  Mutex setup_lock_;
   uptr *array_ = nullptr;
   u32 next_index_ = 0;
   zx_handle_t vmo_ = {};
@@ -123,7 +126,7 @@ class TracePcGuardController final {
   size_t DataSize() const { return next_index_ * sizeof(uintptr_t); }
 
   u32 Setup(u32 num_guards) {
-    BlockingMutexLock locked(&setup_lock_);
+    Lock locked(&setup_lock_);
     DCHECK(common_flags()->coverage);
 
     if (next_index_ == 0) {

@@ -17,12 +17,12 @@ define dso_local signext i32 @caller1(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    .cfi_offset r15, -136
 ; CHECK-PWR8-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
 ; CHECK-PWR8-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
-; CHECK-PWR8-NEXT:    std r0, 16(r1)
 ; CHECK-PWR8-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
 ; CHECK-PWR8-NEXT:    extsw r3, r3
+; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176
@@ -41,12 +41,12 @@ define dso_local signext i32 @caller1(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR9-NEXT:    .cfi_offset r15, -136
 ; CHECK-PWR9-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
 ; CHECK-PWR9-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR9-NEXT:    #APP
 ; CHECK-PWR9-NEXT:    add r3, r3, r4
 ; CHECK-PWR9-NEXT:    #NO_APP
 ; CHECK-PWR9-NEXT:    extsw r3, r3
+; CHECK-PWR9-NEXT:    std r0, 192(r1)
 ; CHECK-PWR9-NEXT:    bl callee
 ; CHECK-PWR9-NEXT:    nop
 ; CHECK-PWR9-NEXT:    addi r1, r1, 176
@@ -71,12 +71,12 @@ define dso_local signext i32 @caller2(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    .cfi_offset f15, -136
 ; CHECK-PWR8-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
 ; CHECK-PWR8-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
-; CHECK-PWR8-NEXT:    std r0, 16(r1)
 ; CHECK-PWR8-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
 ; CHECK-PWR8-NEXT:    extsw r3, r3
+; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176
@@ -95,12 +95,12 @@ define dso_local signext i32 @caller2(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR9-NEXT:    .cfi_offset f15, -136
 ; CHECK-PWR9-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
 ; CHECK-PWR9-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR9-NEXT:    #APP
 ; CHECK-PWR9-NEXT:    add r3, r3, r4
 ; CHECK-PWR9-NEXT:    #NO_APP
 ; CHECK-PWR9-NEXT:    extsw r3, r3
+; CHECK-PWR9-NEXT:    std r0, 192(r1)
 ; CHECK-PWR9-NEXT:    bl callee
 ; CHECK-PWR9-NEXT:    nop
 ; CHECK-PWR9-NEXT:    addi r1, r1, 176
@@ -119,8 +119,8 @@ define dso_local signext i32 @caller3(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-LABEL: caller3:
 ; CHECK-PWR8:       # %bb.0: # %entry
 ; CHECK-PWR8-NEXT:    mflr r0
-; CHECK-PWR8-NEXT:    std r0, 16(r1)
 ; CHECK-PWR8-NEXT:    stdu r1, -240(r1)
+; CHECK-PWR8-NEXT:    std r0, 256(r1)
 ; CHECK-PWR8-NEXT:    .cfi_def_cfa_offset 240
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset v20, -192
@@ -147,8 +147,8 @@ define dso_local signext i32 @caller3(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR9-LABEL: caller3:
 ; CHECK-PWR9:       # %bb.0: # %entry
 ; CHECK-PWR9-NEXT:    mflr r0
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
 ; CHECK-PWR9-NEXT:    stdu r1, -224(r1)
+; CHECK-PWR9-NEXT:    std r0, 240(r1)
 ; CHECK-PWR9-NEXT:    .cfi_def_cfa_offset 224
 ; CHECK-PWR9-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR9-NEXT:    .cfi_offset v20, -192
@@ -177,8 +177,8 @@ define dso_local signext i32 @caller4(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-LABEL: caller4:
 ; CHECK-PWR8:       # %bb.0: # %entry
 ; CHECK-PWR8-NEXT:    mflr r0
-; CHECK-PWR8-NEXT:    std r0, 16(r1)
 ; CHECK-PWR8-NEXT:    stdu r1, -240(r1)
+; CHECK-PWR8-NEXT:    std r0, 256(r1)
 ; CHECK-PWR8-NEXT:    .cfi_def_cfa_offset 240
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset v20, -192
@@ -205,8 +205,8 @@ define dso_local signext i32 @caller4(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR9-LABEL: caller4:
 ; CHECK-PWR9:       # %bb.0: # %entry
 ; CHECK-PWR9-NEXT:    mflr r0
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
 ; CHECK-PWR9-NEXT:    stdu r1, -224(r1)
+; CHECK-PWR9-NEXT:    std r0, 240(r1)
 ; CHECK-PWR9-NEXT:    .cfi_def_cfa_offset 224
 ; CHECK-PWR9-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR9-NEXT:    .cfi_offset v20, -192
@@ -235,8 +235,8 @@ define dso_local signext i32 @caller_mixed(i32 signext %a, i32 signext %b) local
 ; CHECK-PWR8-LABEL: caller_mixed:
 ; CHECK-PWR8:       # %bb.0: # %entry
 ; CHECK-PWR8-NEXT:    mflr r0
-; CHECK-PWR8-NEXT:    std r0, 16(r1)
 ; CHECK-PWR8-NEXT:    stdu r1, -528(r1)
+; CHECK-PWR8-NEXT:    std r0, 544(r1)
 ; CHECK-PWR8-NEXT:    .cfi_def_cfa_offset 528
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset r14, -288
@@ -269,8 +269,8 @@ define dso_local signext i32 @caller_mixed(i32 signext %a, i32 signext %b) local
 ; CHECK-PWR9-LABEL: caller_mixed:
 ; CHECK-PWR9:       # %bb.0: # %entry
 ; CHECK-PWR9-NEXT:    mflr r0
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
 ; CHECK-PWR9-NEXT:    stdu r1, -512(r1)
+; CHECK-PWR9-NEXT:    std r0, 528(r1)
 ; CHECK-PWR9-NEXT:    .cfi_def_cfa_offset 512
 ; CHECK-PWR9-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR9-NEXT:    .cfi_offset r14, -288

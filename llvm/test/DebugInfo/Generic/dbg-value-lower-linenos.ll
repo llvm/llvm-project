@@ -1,4 +1,5 @@
-; RUN: opt < %s -S -mem2reg -instcombine | FileCheck %s
+; RUN: opt < %s -S -passes=mem2reg,instcombine | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -S -passes=mem2reg,instcombine | FileCheck %s
 
 ; The '%bar' alloca will be promoted to an SSA register by mem2reg: test that
 ; zero line number are assigned to the dbg.value intrinsics that are inserted
@@ -26,24 +27,24 @@
 ; CHECK-NEXT:  dbg.value(metadata i32 %toret, {{.*}}), !dbg ![[UNKNOWN]]
 ; CHECK-NEXT:  ret i32 %toret
 
-define i32 @foo(i32 *%bees, i32 *%output) {
+define i32 @foo(ptr %bees, ptr %output) {
 entry:
   %bar = alloca i32
-  call void @llvm.dbg.declare(metadata i32 *%bar, metadata !7, metadata !DIExpression()), !dbg !6
-  store i32 0, i32 *%bar
+  call void @llvm.dbg.declare(metadata ptr %bar, metadata !7, metadata !DIExpression()), !dbg !6
+  store i32 0, ptr %bar
   br label %bb1, !dbg !6
 
 bb1:
-  %totest = load i32, i32 *%bees, !dbg !8
-  %load1 = load i32, i32 *%bar, !dbg !9
+  %totest = load i32, ptr %bees, !dbg !8
+  %load1 = load i32, ptr %bar, !dbg !9
   %add = add i32 %load1, 1, !dbg !10
-  store i32 %add, i32 *%bar, !dbg !11
+  store i32 %add, ptr %bar, !dbg !11
   %toret = add i32 %add, 2, !dbg !12
   %cond = icmp ult i32 %totest, %load1, !dbg !13
   br i1 %cond, label %bb1, label %bb2, !dbg !14
 
 bb2:
-  store i32 %toret, i32 *%bar, !dbg !16
+  store i32 %toret, ptr %bar, !dbg !16
   ret i32 %toret
 }
 
@@ -54,7 +55,7 @@ bb2:
 ; CHECK:      dbg.value(metadata i32 %map, metadata ![[MAPVAR:[0-9]+]],{{.*}}),
 ; CHECK-SAME:           !dbg ![[UNKNOWN2:[0-9]+]]
 ; CHECK-NEXT: store
-; CHECK-NEXT: dbg.value(metadata i32* %map.addr, metadata ![[MAPVAR]],
+; CHECK-NEXT: dbg.value(metadata ptr %map.addr, metadata ![[MAPVAR]],
 ; CHECK-SAME:           metadata !DIExpression(DW_OP_deref)),
 ; CHECK-SAME:           !dbg ![[UNKNOWN2]]
 ; CHECK-NEXT: call
@@ -65,11 +66,11 @@ bb2:
 define void @bar(i32 %map) !dbg !20 {
 entry:
   %map.addr = alloca i32, align 4
-  store i32 %map, i32* %map.addr, align 4, !dbg !27
-  call void @llvm.dbg.declare(metadata i32* %map.addr, metadata !21, metadata !DIExpression()), !dbg !22
-  %call = call i32 (i32*, ...) bitcast (i32 (...)* @lookup to i32 (i32*, ...)*)(i32* %map.addr), !dbg !23
-%0 = load i32, i32* %map.addr, align 4, !dbg !24
-  %call1 = call i32 (i32, ...) bitcast (i32 (...)* @verify to i32 (i32, ...)*)(i32 %0), !dbg !25
+  store i32 %map, ptr %map.addr, align 4, !dbg !27
+  call void @llvm.dbg.declare(metadata ptr %map.addr, metadata !21, metadata !DIExpression()), !dbg !22
+  %call = call i32 (ptr, ...) @lookup(ptr %map.addr), !dbg !23
+%0 = load i32, ptr %map.addr, align 4, !dbg !24
+  %call1 = call i32 (i32, ...) @verify(i32 %0), !dbg !25
   ret void, !dbg !26
 }
 

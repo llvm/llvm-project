@@ -8,17 +8,18 @@
 
 #include "X86Counter.h"
 
+#if defined(__linux__) && defined(HAVE_LIBPFM) &&                              \
+    defined(LIBPFM_HAS_FIELD_CYCLES)
+
 // FIXME: Use appropriate wrappers for poll.h and mman.h
 // to support Windows and remove this linux-only guard.
-#ifdef __linux__
+
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 
-#ifdef HAVE_LIBPFM
-#include "perfmon/perf_event.h"
-#include "perfmon/pfmlib.h"
-#include "perfmon/pfmlib_perf_event.h"
-#endif // HAVE_LIBPFM
+#include <perfmon/perf_event.h>
+#include <perfmon/pfmlib.h>
+#include <perfmon/pfmlib_perf_event.h>
 
 #include <atomic>
 #include <chrono>
@@ -32,7 +33,6 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#if defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES)
 namespace llvm {
 namespace exegesis {
 
@@ -40,6 +40,10 @@ namespace exegesis {
 static constexpr int kLbrEntries = 16;
 static constexpr size_t kBufferPages = 8;
 static const size_t kDataBufferSize = kBufferPages * getpagesize();
+
+// First page is reserved for perf_event_mmap_page. Data buffer starts on
+// the next page, so we allocate one more page.
+static const size_t kMappedBufferSize = (kBufferPages + 1) * getpagesize();
 
 // Waits for the LBR perf events.
 static int pollLbrPerfEvent(const int FileDescriptor) {
@@ -70,9 +74,9 @@ static void copyDataBuffer(void *MMappedBuffer, char *Buf, uint64_t Tail,
 // Parses the given data-buffer for stats and fill the CycleArray.
 // If data has been extracted successfully, also modifies the code to jump
 // out the benchmark loop.
-static llvm::Error parseDataBuffer(const char *DataBuf, size_t DataSize,
-                                   const void *From, const void *To,
-                                   llvm::SmallVector<int64_t, 4> *CycleArray) {
+static Error parseDataBuffer(const char *DataBuf, size_t DataSize,
+                             const void *From, const void *To,
+                             SmallVector<int64_t, 4> *CycleArray) {
   const char *DataPtr = DataBuf;
   while (DataPtr < DataBuf + DataSize) {
     struct perf_event_header Header;
@@ -83,7 +87,7 @@ static llvm::Error parseDataBuffer(const char *DataBuf, size_t DataSize,
       continue;
     }
     DataPtr += sizeof(Header);
-    uint64_t Count = llvm::support::endian::read64(DataPtr, support::native);
+    uint64_t Count = support::endian::read64(DataPtr, endianness::native);
     DataPtr += sizeof(Count);
 
     struct perf_branch_entry Entry;
@@ -103,15 +107,14 @@ static llvm::Error parseDataBuffer(const char *DataBuf, size_t DataSize,
 
       if (i == Count - 1)
         // We've reached the last entry.
-        return llvm::Error::success();
+        return Error::success();
 
       // Advance to next entry
       DataPtr += sizeof(Entry);
       memcpy(&Entry, DataPtr, sizeof(struct perf_branch_entry));
     }
   }
-  return llvm::make_error<llvm::StringError>("Unable to parse databuffer.",
-                                             llvm::errc::io_error);
+  return make_error<StringError>("Unable to parse databuffer.", errc::io_error);
 }
 
 X86LbrPerfEvent::X86LbrPerfEvent(unsigned SamplingPeriod) {
@@ -136,22 +139,23 @@ X86LbrPerfEvent::X86LbrPerfEvent(unsigned SamplingPeriod) {
 }
 
 X86LbrCounter::X86LbrCounter(pfm::PerfEvent &&NewEvent)
-    : Counter(std::move(NewEvent)) {
-  // First page is reserved for perf_event_mmap_page. Data buffer starts on
-  // the next page, so we allocate one more page.
-  MMappedBuffer = mmap(nullptr, (kBufferPages + 1) * getpagesize(),
-                       PROT_READ | PROT_WRITE, MAP_SHARED, FileDescriptor, 0);
+    : CounterGroup(std::move(NewEvent), {}) {
+  MMappedBuffer = mmap(nullptr, kMappedBufferSize, PROT_READ | PROT_WRITE,
+                       MAP_SHARED, getFileDescriptor(), 0);
   if (MMappedBuffer == MAP_FAILED)
-    llvm::errs() << "Failed to mmap buffer.";
+    errs() << "Failed to mmap buffer.";
 }
 
-X86LbrCounter::~X86LbrCounter() { close(FileDescriptor); }
+X86LbrCounter::~X86LbrCounter() {
+  if (0 != munmap(MMappedBuffer, kMappedBufferSize))
+    errs() << "Failed to munmap buffer.";
+}
 
 void X86LbrCounter::start() {
-  ioctl(FileDescriptor, PERF_EVENT_IOC_REFRESH, 1024 /* kMaxPollsPerFd */);
+  ioctl(getFileDescriptor(), PERF_EVENT_IOC_REFRESH, 1024 /* kMaxPollsPerFd */);
 }
 
-llvm::Error X86LbrCounter::checkLbrSupport() {
+Error X86LbrCounter::checkLbrSupport() {
   // Do a sample read and check if the results contain non-zero values.
 
   X86LbrCounter counter(X86LbrPerfEvent(123));
@@ -173,6 +177,7 @@ llvm::Error X86LbrCounter::checkLbrSupport() {
   }
 
   counter.stop();
+  (void)Sum;
 
   auto ResultOrError = counter.doReadCounter(nullptr, nullptr);
   if (ResultOrError)
@@ -182,50 +187,50 @@ llvm::Error X86LbrCounter::checkLbrSupport() {
         if (Value != 0)
           return Error::success();
 
-  return llvm::make_error<llvm::StringError>(
+  return make_error<StringError>(
       "LBR format with cycles is not suppported on the host.",
-      llvm::errc::not_supported);
+      errc::not_supported);
 }
 
-llvm::Expected<llvm::SmallVector<int64_t, 4>>
+Expected<SmallVector<int64_t, 4>>
 X86LbrCounter::readOrError(StringRef FunctionBytes) const {
   // Disable the event before reading
-  ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, 0);
+  ioctl(getFileDescriptor(), PERF_EVENT_IOC_DISABLE, 0);
 
   // Find the boundary of the function so that we could filter the LBRs
   // to keep only the relevant records.
   if (FunctionBytes.empty())
-    return llvm::make_error<llvm::StringError>("Empty function bytes",
-                                               llvm::errc::invalid_argument);
+    return make_error<StringError>("Empty function bytes",
+                                   errc::invalid_argument);
   const void *From = reinterpret_cast<const void *>(FunctionBytes.data());
   const void *To = reinterpret_cast<const void *>(FunctionBytes.data() +
                                                   FunctionBytes.size());
   return doReadCounter(From, To);
 }
 
-llvm::Expected<llvm::SmallVector<int64_t, 4>>
+Expected<SmallVector<int64_t, 4>>
 X86LbrCounter::doReadCounter(const void *From, const void *To) const {
   // The max number of time-outs/retries before we give up.
   static constexpr int kMaxTimeouts = 160;
 
   // Parses the LBR buffer and fills CycleArray with the sequence of cycle
   // counts from the buffer.
-  llvm::SmallVector<int64_t, 4> CycleArray;
+  SmallVector<int64_t, 4> CycleArray;
   auto DataBuf = std::make_unique<char[]>(kDataBufferSize);
   int NumTimeouts = 0;
   int PollResult = 0;
 
   while (PollResult <= 0) {
-    PollResult = pollLbrPerfEvent(FileDescriptor);
+    PollResult = pollLbrPerfEvent(getFileDescriptor());
     if (PollResult > 0)
       break;
     if (PollResult == -1)
-      return llvm::make_error<llvm::StringError>("Cannot poll LBR perf event.",
-                                                 llvm::errc::io_error);
+      return make_error<StringError>("Cannot poll LBR perf event.",
+                                     errc::io_error);
     if (NumTimeouts++ >= kMaxTimeouts)
-      return llvm::make_error<llvm::StringError>(
+      return make_error<StringError>(
           "LBR polling still timed out after max number of attempts.",
-          llvm::errc::device_or_resource_busy);
+          errc::device_or_resource_busy);
   }
 
   struct perf_event_mmap_page Page;
@@ -237,12 +242,11 @@ X86LbrCounter::doReadCounter(const void *From, const void *To) const {
   std::atomic_thread_fence(std::memory_order_acq_rel);
   const size_t DataSize = DataHead - DataTail;
   if (DataSize > kDataBufferSize)
-    return llvm::make_error<llvm::StringError>(
-        "DataSize larger than buffer size.", llvm::errc::invalid_argument);
+    return make_error<StringError>("DataSize larger than buffer size.",
+                                   errc::invalid_argument);
 
   copyDataBuffer(MMappedBuffer, DataBuf.get(), DataTail, DataSize);
-  llvm::Error error =
-      parseDataBuffer(DataBuf.get(), DataSize, From, To, &CycleArray);
+  Error error = parseDataBuffer(DataBuf.get(), DataSize, From, To, &CycleArray);
   if (!error)
     return CycleArray;
   return std::move(error);
@@ -251,5 +255,5 @@ X86LbrCounter::doReadCounter(const void *From, const void *To) const {
 } // namespace exegesis
 } // namespace llvm
 
-#endif //  defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES)
-#endif // __linux__
+#endif // defined(__linux__) && defined(HAVE_LIBPFM) &&
+       // defined(LIBPFM_HAS_FIELD_CYCLES)

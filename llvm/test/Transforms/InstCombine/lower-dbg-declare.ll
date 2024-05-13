@@ -1,4 +1,5 @@
-; RUN: opt -instcombine < %s -S | FileCheck %s
+; RUN: opt -passes=instcombine < %s -S | FileCheck %s
+; RUN: opt -passes=instcombine < %s -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; This tests dbg.declare lowering for CallInst users of an alloca. The
 ; resulting dbg.value expressions should add a deref to the declare's expression.
@@ -25,36 +26,34 @@ define dso_local i32 @main() !dbg !12 {
 entry:
   %retval = alloca i32, align 4
   %d1 = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %0 = bitcast i32* %d1 to i8*, !dbg !17
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #4, !dbg !17
+  store i32 0, ptr %retval, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr %d1) #4, !dbg !17
 ; CHECK: dbg.value(metadata i32 42, metadata [[METADATA_IDX1:![0-9]+]], metadata !DIExpression())
 ; CHECK-NEXT: store
-  call void @llvm.dbg.declare(metadata i32* %d1, metadata !16, metadata !DIExpression()), !dbg !17
-  store i32 42, i32* %d1, align 4, !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %d1, metadata !16, metadata !DIExpression()), !dbg !17
+  store i32 42, ptr %d1, align 4, !dbg !17
   br label %while.cond, !dbg !22
 
 while.cond:                                       ; preds = %while.body, %entry
-; CHECK: dbg.value(metadata i32 %1, metadata [[METADATA_IDX1]], metadata !DIExpression())
+; CHECK: dbg.value(metadata i32 %0, metadata [[METADATA_IDX1]], metadata !DIExpression())
 ; CHECK-NEXT: call zeroext i1 @_ZL5emptyi
-  %1 = load i32, i32* %d1, align 4, !dbg !22
-  %call = call zeroext i1 @_ZL5emptyi(i32 %1), !dbg !22
+  %0 = load i32, ptr %d1, align 4, !dbg !22
+  %call = call zeroext i1 @_ZL5emptyi(i32 %0), !dbg !22
   %lnot = xor i1 %call, true, !dbg !22
   br i1 %lnot, label %while.body, label %while.end, !dbg !22
 
 while.body:                                       ; preds = %while.cond
-; CHECK: dbg.value(metadata i32* %d1, metadata [[METADATA_IDX1]], metadata !DIExpression(DW_OP_deref))
+; CHECK: dbg.value(metadata ptr %d1, metadata [[METADATA_IDX1]], metadata !DIExpression(DW_OP_deref))
 ; CHECK-NEXT: call void @_ZL6escapeRi
-  call void @_ZL6escapeRi(i32* dereferenceable(4) %d1), !dbg !23
+  call void @_ZL6escapeRi(ptr dereferenceable(4) %d1), !dbg !23
   br label %while.cond, !dbg !22, !llvm.loop !24
 
 while.end:                                        ; preds = %while.cond
-  %2 = bitcast i32* %d1 to i8*, !dbg !25
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %2) #4, !dbg !25
+  call void @llvm.lifetime.end.p0(i64 4, ptr %d1) #4, !dbg !25
   ret i32 0, !dbg !26
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
@@ -62,11 +61,11 @@ define internal zeroext i1 @_ZL5emptyi(i32 %p1) !dbg !27 {
   ret i1 false
 }
 
-define internal void @_ZL6escapeRi(i32* dereferenceable(4) %c) #3 !dbg !34 {
+define internal void @_ZL6escapeRi(ptr dereferenceable(4) %c) #3 !dbg !34 {
   ret void
 }
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!8, !9, !10}

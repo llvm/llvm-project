@@ -9,11 +9,11 @@
 #ifndef LLVM_SUPPORT_LINEITERATOR_H
 #define LLVM_SUPPORT_LINEITERATOR_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <iterator>
+#include <optional>
 
 namespace llvm {
 
@@ -31,7 +31,7 @@ class MemoryBuffer;
 ///
 /// Note that this iterator requires the buffer to be nul terminated.
 class line_iterator {
-  Optional<MemoryBufferRef> Buffer;
+  std::optional<MemoryBufferRef> Buffer;
   char CommentMarker = '\0';
   bool SkipBlanks = true;
 

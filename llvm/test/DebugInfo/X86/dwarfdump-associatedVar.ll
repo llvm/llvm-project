@@ -8,7 +8,7 @@
 ; CHECK: [[ALCDIE:0x.+]]:       DW_TAG_variable
 ; CHECK:                          DW_AT_type    ({{0x[0-9]+}} "logical")
 ; CHECK: [[LOCDIE:0x.+]]:       DW_TAG_variable
-; CHECK:                          DW_AT_type    ({{0x[0-9]+}} "integer*")
+; CHECK:                          DW_AT_type    ({{0x[0-9]+}} "integer *")
 ; CHECK:                          DW_AT_artificial    (true)
 ; CHECK:  DW_TAG_variable
 ; CHECK:    DW_AT_name  ("arr")
@@ -33,11 +33,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @MAIN_() !dbg !5 {
 L.entry:
-  %.Z0640_333 = alloca i32*, align 8
+  %.Z0640_333 = alloca ptr, align 8
   %"arr$sd1_349" = alloca [16 x i64], align 8
-  call void @llvm.dbg.declare(metadata [16 x i64]* %"arr$sd1_349", metadata !8, metadata !DIExpression()), !dbg !17
-  call void @llvm.dbg.declare(metadata i32** %.Z0640_333, metadata !13, metadata !DIExpression()), !dbg !17
-  call void @llvm.dbg.declare(metadata i32** %.Z0640_333, metadata !15, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %"arr$sd1_349", metadata !8, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %.Z0640_333, metadata !13, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %.Z0640_333, metadata !15, metadata !DIExpression()), !dbg !17
   ret void, !dbg !18
 }
 

@@ -1,6 +1,7 @@
+RUN: export LSAN_OPTIONS=detect_leaks=0
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-empty.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-EMPTY %s
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-ENCODING %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=BAD-ABBREV %s
@@ -14,14 +15,6 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-bitwidth.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=BAD-BITWIDTH %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-align.bc  2>&1 | \
 RUN:   FileCheck --check-prefix=BAD-ALIGN %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-mismatched-explicit-type.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-GEP %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-load-mismatched-explicit-type.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-LOAD %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-operator-mismatched-explicit-type.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-GEP-OPERATOR %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-call-mismatched-explicit-type.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-CALL %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-call-non-function-explicit-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NON-FUNCTION-EXPLICIT-CALL %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-invoke-mismatched-explicit-type.bc 2>&1 | \
@@ -37,12 +30,8 @@ BAD-ABBREV-NUMBER: error: can't skip to bit
 BAD-TYPE-TABLE-FORWARD-REF: Invalid TYPE table: Only named structs can be forward referenced
 BAD-BITWIDTH: error: can't skip to bit
 BAD-ALIGN: Invalid alignment value
-MISMATCHED-EXPLICIT-GEP: Explicit gep type does not match pointee type of pointer operand
-MISMATCHED-EXPLICIT-LOAD: Explicit load/store type does not match pointee type of pointer operand
-MISMATCHED-EXPLICIT-GEP-OPERATOR: Explicit gep operator type does not match pointee type of pointer operand
-MISMATCHED-EXPLICIT-CALL: Explicit call type does not match pointee type of callee operand
 NON-FUNCTION-EXPLICIT-CALL: Explicit call type is not a function type
-MISMATCHED-EXPLICIT-INVOKE: Explicit invoke type does not match pointee type of callee operand
+MISMATCHED-EXPLICIT-INVOKE: Insufficient operands to call
 NON-FUNCTION-EXPLICIT-INVOKE: Explicit invoke type is not a function type
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-extractval-array-idx.bc 2>&1 | \
@@ -71,14 +60,14 @@ RUN:   FileCheck --check-prefix=FP-SHIFT %s
 
 FP-SHIFT: Invalid record
 
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-abbrev-vbr-size-too-big.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-vbr-size-too-big.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=HUGE-ABBREV-OP %s
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-abbrev-fixed-size-too-big.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-fixed-size-too-big.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=HUGE-ABBREV-OP %s
 
 HUGE-ABBREV-OP: Fixed or VBR abbrev record with size > MaxChunkData
 
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-array-type.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ARRAY-TYPE %s
 
 ARRAY-TYPE: Array element type can't be an Array or a Blob
@@ -116,7 +105,7 @@ RUN:   FileCheck --check-prefix=INVALID-CAST %s
 
 INVALID-CAST: Invalid cast
 
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-array-op-not-2nd-to-last.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-op-not-2nd-to-last.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ARRAY-NOT-2LAST %s
 
 ARRAY-NOT-2LAST: Array op not second to last
@@ -176,7 +165,7 @@ RUN:   FileCheck --check-prefix=INVALID-GVCOMDAT-ID %s
 
 INVALID-GVCOMDAT-ID: Invalid global variable comdat ID
 
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-abbrev-no-operands.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-no-operands.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ABBREV-NO-OPS %s
 
 ABBREV-NO-OPS: Abbrev record with no operands
@@ -199,7 +188,7 @@ VECTOR-LENGTH: Invalid vector length
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-alias-type-mismatch.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ALIAS-TYPE-MISMATCH %s
 
-ALIAS-TYPE-MISMATCH: Alias and aliasee types don't match
+ALIAS-TYPE-MISMATCH: Insufficient function protos
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-no-function-block.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NO-FUNCTION-BLOCK %s
@@ -219,7 +208,12 @@ VOID-CONSTANT-TYPE: Invalid constant type
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-no-operands.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=GEP-NO-OPERANDS %s
 
-GEP-NO-OPERANDS: Invalid gep with no operands
+GEP-NO-OPERANDS: Constant GEP record must have at least two elements
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-constant-gep.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CONSTANT-GEP %s
+
+INVALID-CONSTANT-GEP: Constant GEP record must have at least two elements
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-storeatomic.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NONPOINTER-STOREATOMIC %s
@@ -246,3 +240,48 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering-4.bc 2>&1 |
 RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
 
 CMPXCHG-ORDERING: Invalid cmpxchg {{failure|success}} ordering
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-number.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ABBREV-NUMBER %s
+
+INVALID-ABBREV-NUMBER: Invalid abbrev number
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-attribute-group-entry.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ATTRIBUTE-GROUP-ENTRY %s
+
+INVALID-ATTRIBUTE-GROUP-ENTRY: Invalid attribute group entry
+
+RUN: not llvm-dis -disable-output %p/Inputs/unterminated-blob.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=UNTERMINATED-BLOB %s
+
+UNTERMINATED-BLOB: Blob ends too soon
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-value-symbol-table.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-VALUE-SYMBOL-TABLE %s
+
+INVALID-VALUE-SYMBOL-TABLE: Invalid value reference in symbol table
+
+RUN: not llvm-dis -disable-output %p/Inputs/unterminated-vbr.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=UNTERMINATED-VBR %s
+
+UNTERMINATED-VBR: Failed to read size: Unterminated VBR
+
+RUN: not llvm-dis -disable-output %p/Inputs/comdat-name-too-large.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=COMDAT-NAME-TOO-LARGE %s
+
+COMDAT-NAME-TOO-LARGE: Comdat name size too large
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-chunk-size.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CHUNK-SIZE %s
+
+INVALID-CHUNK-SIZE: Fixed or VBR abbrev record with size > MaxChunkData
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-diimportedentity-record.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-DIIMPORTEDENTITY-RECORD %s
+
+INVALID-DIIMPORTEDENTITY-RECORD: Invalid DIImportedEntity record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-forward-declare.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-FORWARD-DECLARE %s
+
+INVALID-FORWARD-DECLARE: Assigned value does not match type of forward declaration

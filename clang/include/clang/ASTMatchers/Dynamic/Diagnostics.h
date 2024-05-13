@@ -28,9 +28,9 @@ namespace ast_matchers {
 namespace dynamic {
 
 struct SourceLocation {
-  SourceLocation() : Line(), Column() {}
-  unsigned Line;
-  unsigned Column;
+  SourceLocation() = default;
+  unsigned Line = 0;
+  unsigned Column = 0;
 };
 
 struct SourceRange {
@@ -40,7 +40,7 @@ struct SourceRange {
 
 /// A VariantValue instance annotated with its parser context.
 struct ParserValue {
-  ParserValue() : Text(), Range(), Value() {}
+  ParserValue() {}
   StringRef Text;
   SourceRange Range;
   VariantValue Value;
@@ -186,4 +186,4 @@ private:
 }  // namespace ast_matchers
 }  // namespace clang
 
-#endif  // LLVM_CLANG_AST_MATCHERS_DYNAMIC_DIAGNOSTICS_H
+#endif // LLVM_CLANG_ASTMATCHERS_DYNAMIC_DIAGNOSTICS_H

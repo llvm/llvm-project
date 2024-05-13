@@ -20,7 +20,6 @@
 #include "memprof_internal.h"
 #include "memprof_thread.h"
 #include "sanitizer_common/sanitizer_flags.h"
-#include "sanitizer_common/sanitizer_freebsd.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 
@@ -39,8 +38,6 @@
 #include <unistd.h>
 #include <unwind.h>
 
-extern ElfW(Dyn) _DYNAMIC[];
-
 typedef enum {
   MEMPROF_RT_VERSION_UNDEFINED = 0,
   MEMPROF_RT_VERSION_DYNAMIC,
@@ -58,21 +55,10 @@ namespace __memprof {
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 
-void *MemprofDoesNotSupportStaticLinkage() {
-  // This will fail to link with -static.
-  return &_DYNAMIC;
-}
-
 uptr FindDynamicShadowStart() {
   uptr shadow_size_bytes = MemToShadowSize(kHighMemEnd);
   return MapDynamicShadow(shadow_size_bytes, SHADOW_SCALE,
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd);
-}
-
-void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
-  ucontext_t *ucp = (ucontext_t *)context;
-  *stack = (uptr)ucp->uc_stack.ss_sp;
-  *ssize = ucp->uc_stack.ss_size;
 }
 
 void *MemprofDlSymNext(const char *sym) { return dlsym(RTLD_NEXT, sym); }

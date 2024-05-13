@@ -111,7 +111,7 @@ size_t FileSize(const std::string &Path) {
 }
 
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
-                             Vector<std::string> *V, bool TopDir) {
+                             std::vector<std::string> *V, bool TopDir) {
   auto E = GetEpoch(Dir);
   if (Epoch)
     if (E && *Epoch >= E) return;
@@ -158,7 +158,6 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
   if (Epoch && TopDir)
     *Epoch = E;
 }
-
 
 void IterateDirRecursive(const std::string &Dir,
                          void (*DirPreCallback)(const std::string &Dir),
@@ -297,9 +296,8 @@ static size_t ParseServerAndShare(const std::string &FileName,
   return Pos - Offset;
 }
 
-// Parse the given Ref string from the position Offset, to exactly match the given
-// string Patt.
-// Returns number of characters considered if successful.
+// Parse the given Ref string from the position Offset, to exactly match the
+// given string Patt. Returns number of characters considered if successful.
 static size_t ParseCustomString(const std::string &Ref, size_t Offset,
                                 const char *Patt) {
   size_t Len = strlen(Patt);

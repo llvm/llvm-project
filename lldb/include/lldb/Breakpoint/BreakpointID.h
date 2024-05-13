@@ -12,8 +12,8 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -25,6 +25,10 @@ public:
                lldb::break_id_t loc_id = LLDB_INVALID_BREAK_ID);
 
   virtual ~BreakpointID();
+
+  bool operator==(BreakpointID rhs) const {
+    return m_break_id == rhs.m_break_id && m_location_id == rhs.m_location_id;
+  }
 
   lldb::break_id_t GetBreakpointID() const { return m_break_id; }
 
@@ -55,9 +59,9 @@ public:
   ///     A string containing JUST the breakpoint description.
   /// \return
   ///     If \p input was not a valid breakpoint ID string, returns
-  ///     \b llvm::None.  Otherwise returns a BreakpointID with members filled
+  ///     \b std::nullopt.  Otherwise returns a BreakpointID with members filled
   ///     out accordingly.
-  static llvm::Optional<BreakpointID>
+  static std::optional<BreakpointID>
   ParseCanonicalReference(llvm::StringRef input);
 
   /// Takes an input string and checks to see whether it is a breakpoint name.

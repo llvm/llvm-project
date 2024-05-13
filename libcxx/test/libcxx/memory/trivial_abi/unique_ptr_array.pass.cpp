@@ -10,10 +10,9 @@
 
 // Test unique_ptr<T[]> with trivial_abi as parameter type.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
 
-// There were assertion failures in both parse and codegen, which are fixed in clang 11.
-// UNSUPPORTED: gcc, clang-4, clang-5, clang-6, clang-7, clang-8, clang-9, clang-10
+// XFAIL: gcc
 // UNSUPPORTED: c++03
 
 #include <memory>
@@ -25,6 +24,8 @@ struct Node {
   int* shared_val;
 
   explicit Node(int* ptr) : shared_val(ptr) {}
+  Node(const Node&) = default;
+  Node& operator=(const Node&) = default;
   ~Node() { ++(*shared_val); }
 };
 

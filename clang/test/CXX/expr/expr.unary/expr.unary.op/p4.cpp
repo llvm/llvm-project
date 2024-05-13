@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-// rdar://problem/8347416
 namespace test0 {
   struct A {
     void foo(void (A::*)(int)); // expected-note {{passing argument to parameter here}}
@@ -26,7 +25,6 @@ namespace test1 {
   };
 }
 
-// Also rdar://problem/8347416
 namespace test2 {
   struct A {
     static int foo(short);
@@ -41,5 +39,22 @@ namespace test2 {
     // FIXME: The error message in this case is less than clear, we can do
     // better.
     int (A::*ptr)(int) = &(A::foo); // expected-error {{cannot create a non-constant pointer to member function}}
+  }
+}
+
+namespace GH40906 {
+  struct A {
+    int val;
+    void func() {}
+  };
+
+  void test() {
+    decltype(&(A::val)) ptr1; // expected-error {{cannot form pointer to member from a parenthesized expression; did you mean to remove the parentheses?}}
+    int A::* ptr2 = &(A::val); // expected-error {{invalid use of non-static data member 'val'}}
+
+    // FIXME: Error messages in these cases are less than clear, we can do
+    // better.
+    int size = sizeof(&(A::func)); // expected-error {{call to non-static member function without an object argument}}
+    void (A::* ptr3)() = &(A::func); // expected-error {{call to non-static member function without an object argument}}
   }
 }

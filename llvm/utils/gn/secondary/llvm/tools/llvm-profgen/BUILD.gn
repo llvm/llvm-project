@@ -10,14 +10,15 @@ executable("llvm-profgen") {
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/IPO",
   ]
   sources = [
     "CSPreInliner.cpp",
+    "MissingFrameInferrer.cpp",
     "PerfReader.cpp",
     "ProfileGenerator.cpp",
     "ProfiledBinary.cpp",
-    "PseudoProbe.cpp",
     "llvm-profgen.cpp",
   ]
 }

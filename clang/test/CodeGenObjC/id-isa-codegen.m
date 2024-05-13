@@ -27,7 +27,6 @@ typedef struct objc_object {
 @end
 
 
-// rdar 7470820
 static Class MyClass;
 
 Class Test(const void *inObject1) {
@@ -36,7 +35,6 @@ Class Test(const void *inObject1) {
   return (id)0;
 }
 
-// rdar 7609722
 @interface Foo { 
 @public 
   id isa; 
@@ -44,13 +42,12 @@ Class Test(const void *inObject1) {
 +(id)method;
 @end
 
-id Test2() {
+id Test2(void) {
     if([Foo method]->isa)
       return (*[Foo method]).isa;
     return [Foo method]->isa;
 }
 
-// rdar 7709015
 @interface Cat   {}
 @end
 
@@ -64,10 +61,8 @@ id Test2() {
     ((id)cat)->isa = dynamicSubclass;
 }
 @end
-// CHECK-LP64: %{{.*}} = load i8*, i8** %
-// CHECK-NEXT: %{{.*}} = bitcast i8* %{{.*}} to i8**
-// CHECK-NEXT: store i8* %{{.*}}, i8** %{{.*}}
+// CHECK-LP64: %{{.*}} = load ptr, ptr %
+// CHECK-NEXT: store ptr %{{.*}}, ptr %{{.*}}
 
-// CHECK-LP32: %{{.*}} = load i8*, i8** %
-// CHECK-NEXT: %{{.*}} = bitcast i8* %{{.*}} to i8**
-// CHECK-NEXT: store i8* %{{.*}}, i8** %{{.*}}
+// CHECK-LP32: %{{.*}} = load ptr, ptr %
+// CHECK-NEXT: store ptr %{{.*}}, ptr %{{.*}}

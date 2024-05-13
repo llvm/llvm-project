@@ -120,8 +120,8 @@ private:
     return g_option_names[(size_t) enum_value];
   }
 
-  uint32_t m_index;
-  lldb::tid_t m_tid;
+  uint32_t m_index = UINT32_MAX;
+  lldb::tid_t m_tid = LLDB_INVALID_THREAD_ID;
   std::string m_name;
   std::string m_queue_name;
 };

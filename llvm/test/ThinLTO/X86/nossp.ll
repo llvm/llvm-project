@@ -23,7 +23,8 @@ declare void @ssp_callee() ssp
 
 ; nossp caller should be able to inline nossp callee.
 define void @nossp_caller() {
-; CHECK-LABEL: @nossp_caller
+; CHECK-LABEL: define void @nossp_caller()
+; CHECK-NOT: #0
 ; CHECK-NEXT: tail call void @foo
   tail call void @nossp_callee()
   ret void
@@ -31,27 +32,33 @@ define void @nossp_caller() {
 
 ; ssp caller should be able to inline ssp callee.
 define void @ssp_caller() ssp {
-; CHECK-LABEL: @ssp_caller
+; CHECK-LABEL: define void @ssp_caller()
+; CHECK-SAME: #0
 ; CHECK-NEXT: tail call void @foo
   tail call void @ssp_callee()
   ret void
 }
 
-; nossp caller should *NOT* be able to inline ssp callee.
+; nossp caller should be able to inline ssp callee.
+; the ssp attribute is not propagated.
 define void @nossp_caller2() {
-; CHECK-LABEL: @nossp_caller2
-; CHECK-NEXT: tail call void @ssp_callee
+; CHECK-LABEL: define void @nossp_caller2()
+; CHECK-NOT: #0
+; CHECK-NEXT: tail call void @foo
   tail call void @ssp_callee()
   ret void
 }
 
-; ssp caller should *NOT* be able to inline nossp callee.
+; ssp caller should be able to inline nossp callee.
 define void @ssp_caller2() ssp {
-; CHECK-LABEL: @ssp_caller2
-; CHECK-NEXT: tail call void @nossp_callee
+; CHECK-LABEL: define void @ssp_caller2()
+; CHECK-SAME: #0
+; CHECK-NEXT: tail call void @foo
   tail call void @nossp_callee()
   ret void
 }
+
+; CHECK: attributes #0 = { ssp }
 
 ;--- b.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

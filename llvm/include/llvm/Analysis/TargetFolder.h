@@ -21,12 +21,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IRBuilderFolder.h"
+#include "llvm/IR/Operator.h"
 
 namespace llvm {
 
+class Constant;
 class DataLayout;
+class Type;
 
 /// TargetFolder - Create constants with target dependent folding.
 class TargetFolder final : public IRBuilderFolder {
@@ -43,181 +45,169 @@ public:
   explicit TargetFolder(const DataLayout &DL) : DL(DL) {}
 
   //===--------------------------------------------------------------------===//
-  // Binary Operators
+  // Value-based folders.
+  //
+  // Return an existing value or a constant if the operation can be simplified.
+  // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
 
-  Constant *CreateAdd(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return Fold(ConstantExpr::getAdd(LHS, RHS, HasNUW, HasNSW));
-  }
-  Constant *CreateFAdd(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getFAdd(LHS, RHS));
-  }
-  Constant *CreateSub(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return Fold(ConstantExpr::getSub(LHS, RHS, HasNUW, HasNSW));
-  }
-  Constant *CreateFSub(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getFSub(LHS, RHS));
-  }
-  Constant *CreateMul(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return Fold(ConstantExpr::getMul(LHS, RHS, HasNUW, HasNSW));
-  }
-  Constant *CreateFMul(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getFMul(LHS, RHS));
-  }
-  Constant *CreateUDiv(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return Fold(ConstantExpr::getUDiv(LHS, RHS, isExact));
-  }
-  Constant *CreateSDiv(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return Fold(ConstantExpr::getSDiv(LHS, RHS, isExact));
-  }
-  Constant *CreateFDiv(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getFDiv(LHS, RHS));
-  }
-  Constant *CreateURem(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getURem(LHS, RHS));
-  }
-  Constant *CreateSRem(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getSRem(LHS, RHS));
-  }
-  Constant *CreateFRem(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getFRem(LHS, RHS));
-  }
-  Constant *CreateShl(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return Fold(ConstantExpr::getShl(LHS, RHS, HasNUW, HasNSW));
-  }
-  Constant *CreateLShr(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return Fold(ConstantExpr::getLShr(LHS, RHS, isExact));
-  }
-  Constant *CreateAShr(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return Fold(ConstantExpr::getAShr(LHS, RHS, isExact));
-  }
-  Constant *CreateAnd(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getAnd(LHS, RHS));
-  }
-  Constant *CreateOr(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getOr(LHS, RHS));
-  }
-  Constant *CreateXor(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getXor(LHS, RHS));
+  Value *FoldBinOp(Instruction::BinaryOps Opc, Value *LHS,
+                   Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc))
+        return Fold(ConstantExpr::get(Opc, LC, RC));
+      return ConstantFoldBinaryOpOperands(Opc, LC, RC, DL);
+    }
+    return nullptr;
   }
 
-  Constant *CreateBinOp(Instruction::BinaryOps Opc,
-                        Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::get(Opc, LHS, RHS));
+  Value *FoldExactBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                        bool IsExact) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc))
+        return Fold(ConstantExpr::get(
+            Opc, LC, RC, IsExact ? PossiblyExactOperator::IsExact : 0));
+      return ConstantFoldBinaryOpOperands(Opc, LC, RC, DL);
+    }
+    return nullptr;
   }
 
-  //===--------------------------------------------------------------------===//
-  // Unary Operators
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateNeg(Constant *C,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return Fold(ConstantExpr::getNeg(C, HasNUW, HasNSW));
-  }
-  Constant *CreateFNeg(Constant *C) const override {
-    return Fold(ConstantExpr::getFNeg(C));
-  }
-  Constant *CreateNot(Constant *C) const override {
-    return Fold(ConstantExpr::getNot(C));
-  }
-
-  Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {
-    return Fold(ConstantExpr::get(Opc, C));
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Memory Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                ArrayRef<Constant *> IdxList) const override {
-    return Fold(ConstantExpr::getGetElementPtr(Ty, C, IdxList));
-  }
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return Fold(ConstantExpr::getGetElementPtr(Ty, C, Idx));
-  }
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                ArrayRef<Value *> IdxList) const override {
-    return Fold(ConstantExpr::getGetElementPtr(Ty, C, IdxList));
+  Value *FoldNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                         bool HasNUW, bool HasNSW) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc)) {
+        unsigned Flags = 0;
+        if (HasNUW)
+          Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
+        if (HasNSW)
+          Flags |= OverflowingBinaryOperator::NoSignedWrap;
+        return Fold(ConstantExpr::get(Opc, LC, RC, Flags));
+      }
+      return ConstantFoldBinaryOpOperands(Opc, LC, RC, DL);
+    }
+    return nullptr;
   }
 
-  Constant *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Constant *> IdxList) const override {
-    return Fold(ConstantExpr::getInBoundsGetElementPtr(Ty, C, IdxList));
+  Value *FoldBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                      FastMathFlags FMF) const override {
+    return FoldBinOp(Opc, LHS, RHS);
   }
-  Constant *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
-                                        Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return Fold(ConstantExpr::getInBoundsGetElementPtr(Ty, C, Idx));
+
+  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return Fold(ConstantExpr::getCompare(P, LC, RC));
+    return nullptr;
   }
-  Constant *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Value *> IdxList) const override {
-    return Fold(ConstantExpr::getInBoundsGetElementPtr(Ty, C, IdxList));
+
+  Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
+                      FastMathFlags FMF) const override {
+    if (Constant *C = dyn_cast<Constant>(V))
+      return ConstantFoldUnaryOpOperand(Opc, C, DL);
+    return nullptr;
+  }
+
+  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                 bool IsInBounds = false) const override {
+    if (!ConstantExpr::isSupportedGetElementPtr(Ty))
+      return nullptr;
+
+    if (auto *PC = dyn_cast<Constant>(Ptr)) {
+      // Every index must be constant.
+      if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
+        return nullptr;
+      if (IsInBounds)
+        return Fold(ConstantExpr::getInBoundsGetElementPtr(Ty, PC, IdxList));
+      else
+        return Fold(ConstantExpr::getGetElementPtr(Ty, PC, IdxList));
+    }
+    return nullptr;
+  }
+
+  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+    auto *CC = dyn_cast<Constant>(C);
+    auto *TC = dyn_cast<Constant>(True);
+    auto *FC = dyn_cast<Constant>(False);
+    if (CC && TC && FC)
+      return ConstantFoldSelectInstruction(CC, TC, FC);
+
+    return nullptr;
+  }
+
+  Value *FoldExtractValue(Value *Agg,
+                          ArrayRef<unsigned> IdxList) const override {
+    if (auto *CAgg = dyn_cast<Constant>(Agg))
+      return ConstantFoldExtractValueInstruction(CAgg, IdxList);
+    return nullptr;
+  };
+
+  Value *FoldInsertValue(Value *Agg, Value *Val,
+                         ArrayRef<unsigned> IdxList) const override {
+    auto *CAgg = dyn_cast<Constant>(Agg);
+    auto *CVal = dyn_cast<Constant>(Val);
+    if (CAgg && CVal)
+      return ConstantFoldInsertValueInstruction(CAgg, CVal, IdxList);
+    return nullptr;
+  }
+
+  Value *FoldExtractElement(Value *Vec, Value *Idx) const override {
+    auto *CVec = dyn_cast<Constant>(Vec);
+    auto *CIdx = dyn_cast<Constant>(Idx);
+    if (CVec && CIdx)
+      return Fold(ConstantExpr::getExtractElement(CVec, CIdx));
+    return nullptr;
+  }
+
+  Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                           Value *Idx) const override {
+    auto *CVec = dyn_cast<Constant>(Vec);
+    auto *CNewElt = dyn_cast<Constant>(NewElt);
+    auto *CIdx = dyn_cast<Constant>(Idx);
+    if (CVec && CNewElt && CIdx)
+      return Fold(ConstantExpr::getInsertElement(CVec, CNewElt, CIdx));
+    return nullptr;
+  }
+
+  Value *FoldShuffleVector(Value *V1, Value *V2,
+                           ArrayRef<int> Mask) const override {
+    auto *C1 = dyn_cast<Constant>(V1);
+    auto *C2 = dyn_cast<Constant>(V2);
+    if (C1 && C2)
+      return Fold(ConstantExpr::getShuffleVector(C1, C2, Mask));
+    return nullptr;
+  }
+
+  Value *FoldCast(Instruction::CastOps Op, Value *V,
+                  Type *DestTy) const override {
+    if (auto *C = dyn_cast<Constant>(V))
+      return ConstantFoldCastOperand(Op, C, DestTy, DL);
+    return nullptr;
+  }
+
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                             Instruction *FMFSource) const override {
+    auto *C1 = dyn_cast<Constant>(LHS);
+    auto *C2 = dyn_cast<Constant>(RHS);
+    if (C1 && C2)
+      return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty, FMFSource);
+    return nullptr;
   }
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
 
-  Constant *CreateCast(Instruction::CastOps Op, Constant *C,
-                       Type *DestTy) const override {
-    if (C->getType() == DestTy)
-      return C; // avoid calling Fold
-    return Fold(ConstantExpr::getCast(Op, C, DestTy));
-  }
-  Constant *CreateIntCast(Constant *C, Type *DestTy,
-                          bool isSigned) const override {
-    if (C->getType() == DestTy)
-      return C; // avoid calling Fold
-    return Fold(ConstantExpr::getIntegerCast(C, DestTy, isSigned));
-  }
   Constant *CreatePointerCast(Constant *C, Type *DestTy) const override {
     if (C->getType() == DestTy)
       return C; // avoid calling Fold
     return Fold(ConstantExpr::getPointerCast(C, DestTy));
-  }
-  Constant *CreateFPCast(Constant *C, Type *DestTy) const override {
-    if (C->getType() == DestTy)
-      return C; // avoid calling Fold
-    return Fold(ConstantExpr::getFPCast(C, DestTy));
-  }
-  Constant *CreateBitCast(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::BitCast, C, DestTy);
-  }
-  Constant *CreateIntToPtr(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::IntToPtr, C, DestTy);
-  }
-  Constant *CreatePtrToInt(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::PtrToInt, C, DestTy);
-  }
-  Constant *CreateZExtOrBitCast(Constant *C, Type *DestTy) const override {
-    if (C->getType() == DestTy)
-      return C; // avoid calling Fold
-    return Fold(ConstantExpr::getZExtOrBitCast(C, DestTy));
-  }
-  Constant *CreateSExtOrBitCast(Constant *C, Type *DestTy) const override {
-    if (C->getType() == DestTy)
-      return C; // avoid calling Fold
-    return Fold(ConstantExpr::getSExtOrBitCast(C, DestTy));
-  }
-  Constant *CreateTruncOrBitCast(Constant *C, Type *DestTy) const override {
-    if (C->getType() == DestTy)
-      return C; // avoid calling Fold
-    return Fold(ConstantExpr::getTruncOrBitCast(C, DestTy));
   }
 
   Constant *CreatePointerBitCastOrAddrSpaceCast(Constant *C,
@@ -231,46 +221,9 @@ public:
   // Compare Instructions
   //===--------------------------------------------------------------------===//
 
-  Constant *CreateICmp(CmpInst::Predicate P, Constant *LHS,
-                       Constant *RHS) const override {
-    return Fold(ConstantExpr::getCompare(P, LHS, RHS));
-  }
   Constant *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                        Constant *RHS) const override {
     return Fold(ConstantExpr::getCompare(P, LHS, RHS));
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateSelect(Constant *C, Constant *True,
-                         Constant *False) const override {
-    return Fold(ConstantExpr::getSelect(C, True, False));
-  }
-
-  Constant *CreateExtractElement(Constant *Vec, Constant *Idx) const override {
-    return Fold(ConstantExpr::getExtractElement(Vec, Idx));
-  }
-
-  Constant *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                                Constant *Idx) const override {
-    return Fold(ConstantExpr::getInsertElement(Vec, NewElt, Idx));
-  }
-
-  Constant *CreateShuffleVector(Constant *V1, Constant *V2,
-                                ArrayRef<int> Mask) const override {
-    return Fold(ConstantExpr::getShuffleVector(V1, V2, Mask));
-  }
-
-  Constant *CreateExtractValue(Constant *Agg,
-                               ArrayRef<unsigned> IdxList) const override {
-    return Fold(ConstantExpr::getExtractValue(Agg, IdxList));
-  }
-
-  Constant *CreateInsertValue(Constant *Agg, Constant *Val,
-                              ArrayRef<unsigned> IdxList) const override {
-    return Fold(ConstantExpr::getInsertValue(Agg, Val, IdxList));
   }
 };
 

@@ -168,6 +168,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::Float128:
     ID = PREDEF_TYPE_FLOAT128_ID;
     break;
+  case BuiltinType::Ibm128:
+    ID = PREDEF_TYPE_IBM128_ID;
+    break;
   case BuiltinType::NullPtr:
     ID = PREDEF_TYPE_NULLPTR_ID;
     break;
@@ -182,6 +185,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     break;
   case BuiltinType::Overload:
     ID = PREDEF_TYPE_OVERLOAD_ID;
+    break;
+  case BuiltinType::UnresolvedTemplate:
+    ID = PREDEF_TYPE_UNRESOLVED_TEMPLATE;
     break;
   case BuiltinType::BoundMember:
     ID = PREDEF_TYPE_BOUND_MEMBER;
@@ -247,14 +253,19 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     ID = PREDEF_TYPE_##Id##_ID;                                                \
     break;
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId)                                       \
+  case BuiltinType::Id:                                                        \
+    ID = PREDEF_TYPE_##Id##_ID;                                                \
+    break;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
   case BuiltinType::BuiltinFn:
     ID = PREDEF_TYPE_BUILTIN_FN;
     break;
   case BuiltinType::IncompleteMatrixIdx:
     ID = PREDEF_TYPE_INCOMPLETE_MATRIX_IDX;
     break;
-  case BuiltinType::OMPArraySection:
-    ID = PREDEF_TYPE_OMP_ARRAY_SECTION;
+  case BuiltinType::ArraySection:
+    ID = PREDEF_TYPE_ARRAY_SECTION;
     break;
   case BuiltinType::OMPArrayShaping:
     ID = PREDEF_TYPE_OMP_ARRAY_SHAPING;
@@ -276,7 +287,7 @@ unsigned serialization::ComputeHash(Selector Sel) {
     ++N;
   unsigned R = 5381;
   for (unsigned I = 0; I != N; ++I)
-    if (IdentifierInfo *II = Sel.getIdentifierInfoForSlot(I))
+    if (const IdentifierInfo *II = Sel.getIdentifierInfoForSlot(I))
       R = llvm::djbHash(II->getName(), R);
   return R;
 }
@@ -388,12 +399,14 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Field:
   case Decl::MSProperty:
   case Decl::MSGuid:
+  case Decl::UnnamedGlobalConstant:
   case Decl::TemplateParamObject:
   case Decl::ObjCIvar:
   case Decl::ObjCAtDefsField:
   case Decl::NonTypeTemplateParm:
   case Decl::TemplateTemplateParm:
   case Decl::Using:
+  case Decl::UsingEnum:
   case Decl::UsingPack:
   case Decl::ObjCMethod:
   case Decl::ObjCCategory:
@@ -407,13 +420,13 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::PragmaComment:
   case Decl::PragmaDetectMismatch:
   case Decl::FileScopeAsm:
+  case Decl::TopLevelStmt:
   case Decl::AccessSpec:
   case Decl::Friend:
   case Decl::FriendTemplate:
   case Decl::StaticAssert:
   case Decl::Block:
   case Decl::Captured:
-  case Decl::ClassScopeFunctionSpecialization:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
   case Decl::OMPAllocate:
@@ -425,9 +438,11 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Decomposition:
   case Decl::Binding:
   case Decl::Concept:
+  case Decl::ImplicitConceptSpecialization:
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::HLSLBuffer:
     return false;
 
   // These indirectly derive from Redeclarable<T> but are not actually
@@ -467,13 +482,14 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
     if (auto *VD = dyn_cast<VarDecl>(D))
       return VD->isStaticLocal();
     // FIXME: What about CapturedDecls (and declarations nested within them)?
-    return isa<TagDecl>(D) || isa<BlockDecl>(D);
+    return isa<TagDecl, BlockDecl>(D);
   }
 
   // Otherwise, we only care about anonymous class members / block-scope decls.
-  // FIXME: We need to handle lambdas and blocks within inline / templated
-  // variables too.
-  if (D->getDeclName() || !isa<CXXRecordDecl>(D->getLexicalDeclContext()))
+  // FIXME: We need to handle blocks within inline / templated variables too.
+  if (D->getDeclName())
     return false;
-  return isa<TagDecl>(D) || isa<FieldDecl>(D);
+  if (!isa<RecordDecl, ObjCInterfaceDecl>(D->getLexicalDeclContext()))
+    return false;
+  return isa<TagDecl, FieldDecl>(D);
 }

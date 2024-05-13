@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/DenseMap.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Checks for near miss of virtual methods.
 ///
@@ -22,7 +20,7 @@ namespace bugprone {
 /// very similar name and an identical signature defined in a base class.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-virtual-near-miss.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/virtual-near-miss.html
 class VirtualNearMissCheck : public ClangTidyCheck {
 public:
   VirtualNearMissCheck(StringRef Name, ClangTidyContext *Context)
@@ -60,8 +58,6 @@ private:
   const unsigned EditDistanceThreshold = 1;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_VIRTUAL_NEAR_MISS_H

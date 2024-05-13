@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Portable 128-bit unsigned integer arithmetic for use in impoverished
-// C++ implementations lacking __uint128_t.
+// Portable 128-bit integer arithmetic for use in impoverished C++
+// implementations lacking __uint128_t & __int128_t.
 
 #ifndef FORTRAN_COMMON_UINT128_H_
 #define FORTRAN_COMMON_UINT128_H_
@@ -20,6 +20,7 @@
 #endif
 
 #include "leading-zero-bit-count.h"
+#include "flang/Common/api-attrs.h"
 #include <cstdint>
 #include <type_traits>
 
@@ -33,19 +34,27 @@ public:
   constexpr Int128(unsigned n) : low_{n} {}
   constexpr Int128(unsigned long n) : low_{n} {}
   constexpr Int128(unsigned long long n) : low_{n} {}
-  constexpr Int128(int n)
-      : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
-                                                 n < 0)} {}
-  constexpr Int128(long n)
-      : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
-                                                 n < 0)} {}
-  constexpr Int128(long long n)
-      : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
-                                                 n < 0)} {}
+  constexpr Int128(int n) {
+    low_ = static_cast<std::uint64_t>(n);
+    high_ = -static_cast<std::uint64_t>(n < 0);
+  }
+  constexpr Int128(long n) {
+    low_ = static_cast<std::uint64_t>(n);
+    high_ = -static_cast<std::uint64_t>(n < 0);
+  }
+  constexpr Int128(long long n) {
+    low_ = static_cast<std::uint64_t>(n);
+    high_ = -static_cast<std::uint64_t>(n < 0);
+  }
   constexpr Int128(const Int128 &) = default;
   constexpr Int128(Int128 &&) = default;
   constexpr Int128 &operator=(const Int128 &) = default;
   constexpr Int128 &operator=(Int128 &&) = default;
+
+  explicit constexpr Int128(const Int128<!IS_SIGNED> &n)
+      : low_{n.low()}, high_{n.high()} {}
+  explicit constexpr Int128(Int128<!IS_SIGNED> &&n)
+      : low_{n.low()}, high_{n.high()} {}
 
   constexpr Int128 operator+() const { return *this; }
   constexpr Int128 operator~() const { return {~high_, ~low_}; }
@@ -241,7 +250,10 @@ public:
   }
 
 private:
-  constexpr Int128(std::uint64_t hi, std::uint64_t lo) : low_{lo}, high_{hi} {}
+  constexpr Int128(std::uint64_t hi, std::uint64_t lo) {
+    low_ = lo;
+    high_ = hi;
+  }
   constexpr int LeadingZeroes() const {
     if (high_ == 0) {
       return 64 + LeadingZeroBitCount(low_);
@@ -249,14 +261,22 @@ private:
       return LeadingZeroBitCount(high_);
     }
   }
+  RT_VAR_GROUP_BEGIN
   static constexpr std::uint64_t topBit{std::uint64_t{1} << 63};
+  RT_VAR_GROUP_END
+#if FLANG_LITTLE_ENDIAN
   std::uint64_t low_{0}, high_{0};
+#elif FLANG_BIG_ENDIAN
+  std::uint64_t high_{0}, low_{0};
+#else
+#error host endianness is not known
+#endif
 };
 
 using UnsignedInt128 = Int128<false>;
 using SignedInt128 = Int128<true>;
 
-#if !AVOID_NATIVE_UINT128_t && (defined __GNUC__ || defined __clang__) && \
+#if !AVOID_NATIVE_UINT128_T && (defined __GNUC__ || defined __clang__) && \
     defined __SIZEOF_INT128__
 using uint128_t = __uint128_t;
 using int128_t = __int128_t;

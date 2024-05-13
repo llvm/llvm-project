@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine-branches \
-; RUN:                -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void f(int *A) {
 ;      for (int i = 0; i < 1024; i++)
@@ -26,7 +25,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A) {
+define void @f(ptr %A) {
 bb:
   br label %bb1
 
@@ -36,24 +35,24 @@ bb1:                                              ; preds = %bb17, %bb
   br i1 %exitcond, label %bb2, label %bb18
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp3 = load i32, i32* %tmp, align 4
+  %tmp = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp3 = load i32, ptr %tmp, align 4
   %tmp4 = icmp eq i32 %tmp3, 0
   br i1 %tmp4, label %bb16, label %bb5
 
 bb5:                                              ; preds = %bb2
   %tmp6 = add nsw i64 %indvars.iv, -1
-  %tmp7 = getelementptr inbounds i32, i32* %A, i64 %tmp6
-  %tmp8 = load i32, i32* %tmp7, align 4
+  %tmp7 = getelementptr inbounds i32, ptr %A, i64 %tmp6
+  %tmp8 = load i32, ptr %tmp7, align 4
   %tmp9 = icmp eq i32 %tmp8, 0
   br i1 %tmp9, label %bb15, label %bb10
 
 bb10:                                             ; preds = %bb5
   %tmp11 = add nsw i64 %indvars.iv, -2
-  %tmp12 = getelementptr inbounds i32, i32* %A, i64 %tmp11
-  %tmp13 = load i32, i32* %tmp12, align 4
-  %tmp14 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %tmp13, i32* %tmp14, align 4
+  %tmp12 = getelementptr inbounds i32, ptr %A, i64 %tmp11
+  %tmp13 = load i32, ptr %tmp12, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %tmp13, ptr %tmp14, align 4
   br label %bb15
 
 bb15:                                             ; preds = %bb5, %bb10

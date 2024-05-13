@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Check that we do not create a SCoP if there is no statement executed.
 ;
@@ -12,7 +12,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* %A, i32* %B) {
+define void @jd(ptr %A, ptr %B) {
 entry:
   br label %for.cond
 
@@ -31,10 +31,10 @@ for.cond1:                                        ; preds = %for.inc, %for.body
   br i1 %cmp2, label %for.body3, label %for.end
 
 for.body3:                                        ; preds = %for.cond1
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %tmp1 = load i32, i32* %arrayidx, align 4
-  %arrayidx5 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %tmp1, i32* %arrayidx5, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %tmp1 = load i32, ptr %arrayidx, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %tmp1, ptr %arrayidx5, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3

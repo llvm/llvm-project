@@ -15,6 +15,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -40,22 +41,33 @@ static const size_t TabStop = 8;
 unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
                                    SMLoc IncludeLoc,
                                    std::string &IncludedFile) {
-  IncludedFile = Filename;
   ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
-      MemoryBuffer::getFile(IncludedFile);
-
-  // If the file didn't exist directly, see if it's in an include path.
-  for (unsigned i = 0, e = IncludeDirectories.size(); i != e && !NewBufOrErr;
-       ++i) {
-    IncludedFile =
-        IncludeDirectories[i] + sys::path::get_separator().data() + Filename;
-    NewBufOrErr = MemoryBuffer::getFile(IncludedFile);
-  }
-
+      OpenIncludeFile(Filename, IncludedFile);
   if (!NewBufOrErr)
     return 0;
 
   return AddNewSourceBuffer(std::move(*NewBufOrErr), IncludeLoc);
+}
+
+ErrorOr<std::unique_ptr<MemoryBuffer>>
+SourceMgr::OpenIncludeFile(const std::string &Filename,
+                           std::string &IncludedFile) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
+      MemoryBuffer::getFile(Filename);
+
+  SmallString<64> Buffer(Filename);
+  // If the file didn't exist directly, see if it's in an include path.
+  for (unsigned i = 0, e = IncludeDirectories.size(); i != e && !NewBufOrErr;
+       ++i) {
+    Buffer = IncludeDirectories[i];
+    sys::path::append(Buffer, Filename);
+    NewBufOrErr = MemoryBuffer::getFile(Buffer);
+  }
+
+  if (NewBufOrErr)
+    IncludedFile = static_cast<std::string>(Buffer);
+
+  return NewBufOrErr;
 }
 
 unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
@@ -105,7 +117,7 @@ unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
   return llvm::lower_bound(Offsets, PtrOffset) - Offsets.begin() + 1;
 }
 
-/// Look up a given \p Ptr in in the buffer, determining which line it came
+/// Look up a given \p Ptr in the buffer, determining which line it came
 /// from.
 unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
   size_t Sz = Buffer->getBufferSize();
@@ -292,8 +304,7 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
 
     // Convert any ranges to column ranges that only intersect the line of the
     // location.
-    for (unsigned i = 0, e = Ranges.size(); i != e; ++i) {
-      SMRange R = Ranges[i];
+    for (SMRange R : Ranges) {
       if (!R.isValid())
         continue;
 
@@ -539,9 +550,8 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
   // Add any fix-its.
   // FIXME: Find the beginning of the line properly for multibyte characters.
   std::string FixItInsertionLine;
-  buildFixItLine(
-      CaretLine, FixItInsertionLine, FixIts,
-      makeArrayRef(Loc.getPointer() - ColumnNo, LineContents.size()));
+  buildFixItLine(CaretLine, FixItInsertionLine, FixIts,
+                 ArrayRef(Loc.getPointer() - ColumnNo, LineContents.size()));
 
   // Finally, plop on the caret.
   if (unsigned(ColumnNo) <= NumColumns)

@@ -4,7 +4,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck --check-prefix=DIS %s
+# RUN: llvm-objdump --no-print-imm-hex -d -t --no-show-raw-insn %t.exe | FileCheck --check-prefix=DIS %s
 # RUN: llvm-readobj -r -A %t.exe | FileCheck %s
 
 # RUN: not ld.lld %t.o -shared -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:

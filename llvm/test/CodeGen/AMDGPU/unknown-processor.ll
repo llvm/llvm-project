@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=GCN %s
-; RUN: llc -march=r600 -mtriple=r600-- -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=R600 %s
+; RUN: not llc -mtriple=amdgcn-- -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=GCN %s
+; RUN: llc -mtriple=r600-- -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=R600 %s
 target datalayout = "A5"
 
 ; Should not crash when the processor is not recognized and the
@@ -16,6 +16,6 @@ target datalayout = "A5"
 ; R600: MOV
 define amdgpu_kernel void @foo() {
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   ret void
 }

@@ -1,8 +1,12 @@
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify | FileCheck %s
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.1 | FileCheck %s
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.2 | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++ | FileCheck %s --check-prefix=CHECK20
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++1.0 | FileCheck %s --check-prefix=CHECK20
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL3.0 | FileCheck %s
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++2021 | FileCheck %s
+
+// RUN: %clang_cc1 -O0 -triple spirv32-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify | FileCheck %s
+
 
 // Test including the default header as a module.
 // The module should be compiled only once and loaded from cache afterwards.
@@ -57,7 +61,7 @@
 // CHECK20: _Z16convert_char_rtec
 char f(char x) {
 // Check functionality from OpenCL 2.0 onwards
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
+#if (__OPENCL_CPP_VERSION__ == 100) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
   ndrange_t t;
   x = ctz(x);
 #endif //__OPENCL_C_VERSION__
@@ -82,7 +86,7 @@ void test_atomics(__generic volatile unsigned int* a) {
 #endif
 
 // Verify that ATOMIC_VAR_INIT is defined.
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
+#if (__OPENCL_CPP_VERSION__ == 100) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
 global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif //__OPENCL_C_VERSION__
 // CHECK-MOD: Reading modules
@@ -90,13 +94,13 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 // Check that extension macros are defined correctly.
 
 // For SPIR all extensions are supported.
-#if defined(__SPIR__)
+#if defined(__SPIR__) || defined(__SPIRV__)
 
 // Verify that cl_intel_planar_yuv extension is defined from OpenCL 1.2 onwards.
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 // expected-no-diagnostics
 #else //__OPENCL_C_VERSION__
-// expected-warning@+2{{unknown OpenCL extension 'cl_intel_planar_yuv' - ignoring}}
+// expected-warning@+2{{OpenCL extension 'cl_intel_planar_yuv' unknown or does not require pragma - ignoring}}
 #endif //__OPENCL_C_VERSION__
 #pragma OPENCL EXTENSION cl_intel_planar_yuv : enable
 
@@ -123,6 +127,69 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #if cl_khr_subgroup_clustered_reduce != 1
 #error "Incorrectly defined cl_khr_subgroup_clustered_reduce"
 #endif
+#if cl_khr_subgroup_rotate != 1
+#error "Incorrectly defined cl_khr_subgroup_rotate"
+#endif
+#if cl_khr_extended_bit_ops != 1
+#error "Incorrectly defined cl_khr_extended_bit_ops"
+#endif
+#if cl_khr_integer_dot_product != 1
+#error "Incorrectly defined cl_khr_integer_dot_product"
+#endif
+#if __opencl_c_integer_dot_product_input_4x8bit != 1
+#error "Incorrectly defined __opencl_c_integer_dot_product_input_4x8bit"
+#endif
+#if __opencl_c_integer_dot_product_input_4x8bit_packed != 1
+#error "Incorrectly defined __opencl_c_integer_dot_product_input_4x8bit_packed"
+#endif
+#if cl_ext_float_atomics != 1
+#error "Incorrectly defined cl_ext_float_atomics"
+#endif
+#if __opencl_c_ext_fp16_global_atomic_load_store != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_global_atomic_load_store"
+#endif
+#if __opencl_c_ext_fp16_local_atomic_load_store != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_local_atomic_load_store"
+#endif
+#if __opencl_c_ext_fp16_global_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_global_atomic_add"
+#endif
+#if __opencl_c_ext_fp32_global_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp32_global_atomic_add"
+#endif
+#if __opencl_c_ext_fp64_global_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp64_global_atomic_add"
+#endif
+#if __opencl_c_ext_fp16_local_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_local_atomic_add"
+#endif
+#if __opencl_c_ext_fp32_local_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp32_local_atomic_add"
+#endif
+#if __opencl_c_ext_fp64_local_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp64_local_atomic_add"
+#endif
+#if __opencl_c_ext_fp16_global_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_global_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp32_global_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp32_global_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp64_global_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp64_global_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp16_local_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_local_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp32_local_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp32_local_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp64_local_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp64_local_atomic_min_max"
+#endif
+#if __opencl_c_ext_image_raw10_raw12 != 1
+#error "Incorrectly defined __opencl_c_ext_image_raw10_raw12"
+#endif
 
 #else
 
@@ -147,11 +214,80 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #ifdef cl_khr_subgroup_clustered_reduce
 #error "Incorrect cl_khr_subgroup_clustered_reduce define"
 #endif
+#ifdef cl_khr_subgroup_rotate
+#error "Incorrect cl_khr_subgroup_rotate define"
+#endif
+#ifdef cl_khr_extended_bit_ops
+#error "Incorrect cl_khr_extended_bit_ops define"
+#endif
+#ifdef cl_khr_integer_dot_product
+#error "Incorrect cl_khr_integer_dot_product define"
+#endif
+#ifdef __opencl_c_integer_dot_product_input_4x8bit
+#error "Incorrect __opencl_c_integer_dot_product_input_4x8bit define"
+#endif
+#ifdef __opencl_c_integer_dot_product_input_4x8bit_packed
+#error "Incorrect __opencl_c_integer_dot_product_input_4x8bit_packed define"
+#endif
+#ifdef cl_ext_float_atomics
+#error "Incorrect cl_ext_float_atomics define"
+#endif
+#ifdef __opencl_c_ext_fp16_global_atomic_load_store
+#error "Incorrect __opencl_c_ext_fp16_global_atomic_load_store define"
+#endif
+#ifdef __opencl_c_ext_fp16_local_atomic_load_store
+#error "Incorrect __opencl_c_ext_fp16_local_atomic_load_store define"
+#endif
+#ifdef __opencl_c_ext_fp16_global_atomic_add
+#error "Incorrect __opencl_c_ext_fp16_global_atomic_add define"
+#endif
+#ifdef __opencl_c_ext_fp32_global_atomic_add
+#error "Incorrect __opencl_c_ext_fp32_global_atomic_add define"
+#endif
+#ifdef __opencl_c_ext_fp64_global_atomic_add
+#error "Incorrect __opencl_c_ext_fp64_global_atomic_add define"
+#endif
+#ifdef __opencl_c_ext_fp16_local_atomic_add
+#error "Incorrect __opencl_c_ext_fp16_local_atomic_add define"
+#endif
+#ifdef __opencl_c_ext_fp32_local_atomic_add
+#error "Incorrect __opencl_c_ext_fp32_local_atomic_add define"
+#endif
+#ifdef __opencl_c_ext_fp64_local_atomic_add
+#error "Incorrect __opencl_c_ext_fp64_local_atomic_add define"
+#endif
+#ifdef __opencl_c_ext_fp16_global_atomic_min_max
+#error "Incorrect __opencl_c_ext_fp16_global_atomic_min_max define"
+#endif
+#ifdef __opencl_c_ext_fp32_global_atomic_min_max
+#error "Incorrect __opencl_c_ext_fp32_global_atomic_min_max define"
+#endif
+#ifdef __opencl_c_ext_fp64_global_atomic_min_max
+#error "Incorrect __opencl_c_ext_fp64_global_atomic_min_max define"
+#endif
+#ifdef __opencl_c_ext_fp16_local_atomic_min_max
+#error "Incorrect __opencl_c_ext_fp16_local_atomic_min_max define"
+#endif
+#ifdef __opencl_c_ext_fp32_local_atomic_min_max
+#error "Incorrect __opencl_c_ext_fp32_local_atomic_min_max define"
+#endif
+#ifdef __opencl_c_ext_fp64_local_atomic_min_max
+#error "Incorrect __opencl_c_ext_fp64_local_atomic_min_max define"
+#endif
+#ifdef __opencl_c_ext_image_raw10_raw12
+#error "Incorrect __opencl_c_ext_image_raw10_raw12 define"
+#endif
 
 #endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 
 // OpenCL C features.
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200)
+#if (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+
+#if __opencl_c_atomic_scope_all_devices != 1
+#error "Incorrectly defined feature macro __opencl_c_atomic_scope_all_devices"
+#endif
+
+#elif (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
 
 #ifndef  __opencl_c_pipes
 #error "Feature macro __opencl_c_pipes should be defined"
@@ -232,6 +368,6 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #error "Incorrect feature macro __opencl_c_subgroups define"
 #endif
 
-#endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200)
+#endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
 
 #endif // defined(__SPIR__)

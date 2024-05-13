@@ -68,11 +68,19 @@
 ; OBJ:     FunctionType: main (0x1005)
 ; OBJ:     CodeOffset: _main+0x0
 ; OBJ:     Segment: 0x0
-; OBJ:     Flags [ (0x0)
+; OBJ:     Flags [ (0x80)
+; OBJ:       HasOptimizedDebugInfo (0x80)
 ; OBJ:     ]
 ; OBJ:     DisplayName: main
 ; OBJ:     LinkageName: _main
 ; OBJ:   }
+
+; OBJ:        InlineesSym {
+; OBJ-NEXT:     Kind: S_INLINEES (0x1168)
+; OBJ-NEXT:     Inlinees [
+; OBJ-NEXT:       FuncID: g (0x1002)
+; OBJ-NEXT:     ]
+; OBJ-NEXT:   }
 
 ; Previously, g's InlineSiteSym referenced t.h, which was wasteful.
 ; OBJ:        InlineSiteSym {
@@ -110,22 +118,22 @@ target triple = "x86_64-pc-windows-msvc19.0.24210"
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @main() local_unnamed_addr #0 !dbg !12 {
 entry:
-  %0 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !15, !tbaa !16
+  %0 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !15, !tbaa !16
   %add = add nsw i32 %0, 1, !dbg !15
-  store volatile i32 %add, i32* @"\01?x@@3HC", align 4, !dbg !15, !tbaa !16
-  %1 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !20, !tbaa !16
+  store volatile i32 %add, ptr @"\01?x@@3HC", align 4, !dbg !15, !tbaa !16
+  %1 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !20, !tbaa !16
   %add.i = add nsw i32 %1, 2, !dbg !20
-  store volatile i32 %add.i, i32* @"\01?x@@3HC", align 4, !dbg !20, !tbaa !16
-  %2 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !25, !tbaa !16
+  store volatile i32 %add.i, ptr @"\01?x@@3HC", align 4, !dbg !20, !tbaa !16
+  %2 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !25, !tbaa !16
   %add.i.i = add nsw i32 %2, 3, !dbg !25
-  store volatile i32 %add.i.i, i32* @"\01?x@@3HC", align 4, !dbg !25, !tbaa !16
-  %3 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !29, !tbaa !16
+  store volatile i32 %add.i.i, ptr @"\01?x@@3HC", align 4, !dbg !25, !tbaa !16
+  %3 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !29, !tbaa !16
   %add1.i = add nsw i32 %3, 2, !dbg !29
-  store volatile i32 %add1.i, i32* @"\01?x@@3HC", align 4, !dbg !29, !tbaa !16
-  %4 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !30, !tbaa !16
+  store volatile i32 %add1.i, ptr @"\01?x@@3HC", align 4, !dbg !29, !tbaa !16
+  %4 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !30, !tbaa !16
   %add1 = add nsw i32 %4, 1, !dbg !30
-  store volatile i32 %add1, i32* @"\01?x@@3HC", align 4, !dbg !30, !tbaa !16
-  %5 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !31, !tbaa !16
+  store volatile i32 %add1, ptr @"\01?x@@3HC", align 4, !dbg !30, !tbaa !16
+  %5 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !31, !tbaa !16
   ret i32 %5, !dbg !32
 }
 

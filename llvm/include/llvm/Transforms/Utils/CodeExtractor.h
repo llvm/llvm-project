@@ -17,11 +17,11 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include <limits>
 
 namespace llvm {
 
+template <typename PtrType> class SmallPtrSetImpl;
 class AllocaInst;
 class BasicBlock;
 class BlockFrequency;
@@ -92,6 +92,11 @@ public:
     BranchProbabilityInfo *BPI;
     AssumptionCache *AC;
 
+    // A block outside of the extraction set where any intermediate
+    // allocations will be placed inside. If this is null, allocations
+    // will be placed in the entry block of the function.
+    BasicBlock *AllocationBlock;
+
     // If true, varargs functions can be extracted.
     bool AllowVarArgs;
 
@@ -100,10 +105,18 @@ public:
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
     Type *RetTy;
 
+    // Mapping from the original exit blocks, to the new blocks inside
+    // the function.
+    SmallVector<BasicBlock *, 4> OldTargets;
+
     // Suffix to use when creating extracted function (appended to the original
     // function name + "."). If empty, the default is to use the entry block
     // label, if non-empty, otherwise "extracted".
     std::string Suffix;
+
+    // If true, the outlined function has aggregate argument in zero address
+    // space.
+    bool ArgsInZeroAddressSpace;
 
   public:
     /// Create a code extractor for a sequence of blocks.
@@ -116,12 +129,19 @@ public:
     /// code is extracted, including vastart. If AllowAlloca is true, then
     /// extraction of blocks containing alloca instructions would be possible,
     /// however code extractor won't validate whether extraction is legal.
+    /// Any new allocations will be placed in the AllocationBlock, unless
+    /// it is null, in which case it will be placed in the entry block of
+    /// the function from which the code is being extracted.
+    /// If ArgsInZeroAddressSpace param is set to true, then the aggregate
+    /// param pointer of the outlined function is declared in zero address
+    /// space.
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
-                  AssumptionCache *AC = nullptr,
-                  bool AllowVarArgs = false, bool AllowAlloca = false,
-                  std::string Suffix = "");
+                  AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
+                  bool AllowAlloca = false,
+                  BasicBlock *AllocationBlock = nullptr,
+                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false);
 
     /// Create a code extractor for a loop body.
     ///
@@ -139,6 +159,20 @@ public:
     /// returns false.
     Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
 
+    /// Perform the extraction, returning the new function and providing an
+    /// interface to see what was categorized as inputs and outputs.
+    ///
+    /// \param CEAC - Cache to speed up operations for the CodeExtractor when
+    /// hoisting, and extracting lifetime values and assumes.
+    /// \param Inputs [out] - filled with  values marked as inputs to the
+    /// newly outlined function.
+     /// \param Outputs [out] - filled with values marked as outputs to the
+    /// newly outlined function.
+    /// \returns zero when called on a CodeExtractor instance where isEligible
+    /// returns false.
+    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
+                                ValueSet &Inputs, ValueSet &Outputs);
+
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as
     /// parameter to make this function stateless.
@@ -150,7 +184,7 @@ public:
     ///
     /// Based on the blocks used when constructing the code extractor,
     /// determine whether it is eligible for extraction.
-    /// 
+    ///
     /// Checks that varargs handling (with vastart and vaend) is only done in
     /// the outlined blocks.
     bool isEligible() const;
@@ -196,6 +230,10 @@ public:
     /// original block will be added to the outline region.
     BasicBlock *findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
 
+    /// Exclude a value from aggregate argument passing when extracting a code
+    /// region, passing it instead as a scalar.
+    void excludeArgFromAggregate(Value *Arg);
+
   private:
     struct LifetimeMarkerInfo {
       bool SinkLifeStart = false;
@@ -204,12 +242,14 @@ public:
       Instruction *LifeEnd = nullptr;
     };
 
+    ValueSet ExcludeArgsFromAggregate;
+
     LifetimeMarkerInfo
     getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                        Instruction *Addr, BasicBlock *ExitBlock) const;
 
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
-    void severSplitPHINodesOfExits(const SmallPtrSetImpl<BasicBlock *> &Exits);
+    void severSplitPHINodesOfExits(const SetVector<BasicBlock *> &Exits);
     void splitReturnBlocks();
 
     Function *constructFunction(const ValueSet &inputs,

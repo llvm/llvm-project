@@ -9,13 +9,10 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAMBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAMBUILDER_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
-#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/BinaryByteStream.h"
-#include "llvm/Support/BinaryItemStream.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Error.h"
 
@@ -23,7 +20,7 @@
 
 namespace llvm {
 class BinaryByteStream;
-class WritableBinaryStreamRef;
+template <typename T> struct BinaryItemTraits;
 
 template <> struct BinaryItemTraits<llvm::codeview::CVType> {
   static size_t length(const codeview::CVType &Item) { return Item.length(); }
@@ -32,16 +29,11 @@ template <> struct BinaryItemTraits<llvm::codeview::CVType> {
   }
 };
 
-namespace codeview {
-class TypeRecord;
-}
 namespace msf {
 class MSFBuilder;
 struct MSFLayout;
 }
 namespace pdb {
-class PDBFile;
-class TpiStream;
 struct TpiStreamHeader;
 
 class TpiStreamBuilder {
@@ -53,7 +45,7 @@ public:
   TpiStreamBuilder &operator=(const TpiStreamBuilder &) = delete;
 
   void setVersionHeader(PdbRaw_TpiVer Version);
-  void addTypeRecord(ArrayRef<uint8_t> Type, Optional<uint32_t> Hash);
+  void addTypeRecord(ArrayRef<uint8_t> Type, std::optional<uint32_t> Hash);
   void addTypeRecords(ArrayRef<uint8_t> Types, ArrayRef<uint16_t> Sizes,
                       ArrayRef<uint32_t> Hashes);
 
@@ -88,7 +80,7 @@ private:
   const TpiStreamHeader *Header;
   uint32_t Idx;
 };
-}
+} // namespace pdb
 }
 
 #endif

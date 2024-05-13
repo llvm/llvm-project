@@ -1,5 +1,15 @@
 ; RUN: llc < %s -stop-after=virtregrewriter -o - | FileCheck %s
 ;
+; NVPTX produces a different order of the BBs
+; XFAIL: target=nvptx{{.*}}
+; Both RISC-V and AMDGPU(GCN) deploy two VirtRegRewriter in their codegen
+; pipeline. This test prematurely stops at the first one, which doesn't cleanup
+; the virtual register map and cause an assertion failure. Ideally we can solve
+; this by teaching `-stop-after` how to stop at the last instance of a Pass,
+; but we're just marking XFAIL for these two targets for now.
+; XFAIL: target=riscv{{.*}}
+; XFAIL: target=amdgcn-{{.*}}
+
 ; Generated with "clang++ -g -O1 -S -emit-llvm"
 ;
 ; inline bool bar(char c) {
@@ -44,9 +54,9 @@
 $_Z3barc = comdat any
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @_Z3fooPKciPi(i8* nocapture readonly %data, i32 %length, i32* nocapture %parsing_result) local_unnamed_addr !dbg !4 {
+define dso_local i32 @_Z3fooPKciPi(ptr nocapture readonly %data, i32 %length, ptr nocapture %parsing_result) local_unnamed_addr !dbg !4 {
 entry:
-  %0 = load i8, i8* %data, align 1
+  %0 = load i8, ptr %data, align 1
   %call23 = tail call zeroext i1 @_Z3barc(i8 signext %0), !dbg !15
   br i1 %call23, label %while.body, label %while.end
 
@@ -61,7 +71,7 @@ while.body:                                       ; preds = %entry, %while.body
   %2 = xor i8 %1, 1
   %3 = zext i8 %2 to i32
   %value.1 = add i32 %value.024, %3
-  %4 = load i8, i8* %data, align 1
+  %4 = load i8, ptr %data, align 1
   %call = tail call zeroext i1 @_Z3barc(i8 signext %4), !dbg !15
   br i1 %call, label %while.body, label %while.end.loopexit
 
@@ -80,7 +90,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 
 bye.thread21:                                     ; preds = %while.end
   call void @llvm.dbg.label(metadata !14), !dbg !16
-  store i32 1, i32* %parsing_result, align 4
+  store i32 1, ptr %parsing_result, align 4
   br label %6
 
 if.then5:                                         ; preds = %while.end
@@ -90,11 +100,11 @@ if.then5:                                         ; preds = %while.end
   br i1 %tobool6, label %bye.thread, label %bye
 
 bye.thread:                                       ; preds = %if.then5
-  store i32 0, i32* %parsing_result, align 4
+  store i32 0, ptr %parsing_result, align 4
   br label %5
 
 bye:                                              ; preds = %if.then5
-  store i32 %result.0.lcssa, i32* %parsing_result, align 4
+  store i32 %result.0.lcssa, ptr %parsing_result, align 4
   %cmp10 = icmp eq i32 %result.0.lcssa, 0
   br i1 %cmp10, label %5, label %6
 

@@ -1,15 +1,15 @@
-; RUN: opt -tbaa -sink -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=tbaa -passes=sink -S < %s | FileCheck %s
 
 ; CHECK: a:
-; CHECK:   %f = load float, float* %p, align 4, !tbaa [[TAGA:!.*]]
-; CHECK:   store float %f, float* %q
+; CHECK:   %f = load float, ptr %p, align 4, !tbaa [[TAGA:!.*]]
+; CHECK:   store float %f, ptr %q
 
-define void @foo(float* %p, i1 %c, float* %q, float* %r) {
-  %f = load float, float* %p, !tbaa !0
-  store float 0.0, float* %r, !tbaa !1
+define void @foo(ptr %p, i1 %c, ptr %q, ptr %r) {
+  %f = load float, ptr %p, !tbaa !0
+  store float 0.0, ptr %r, !tbaa !1
   br i1 %c, label %a, label %b
 a:
-  store float %f, float* %q
+  store float %f, ptr %q
   br label %b
 b:
   ret void

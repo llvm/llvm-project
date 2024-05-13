@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -emit-llvm -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -emit-llvm -fexceptions -fcxx-exceptions -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm -fexceptions -fcxx-exceptions -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 int main() {
@@ -10,7 +10,7 @@ int main() {
 #pragma omp for
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd
   for(int i = 0; i < 10; ++i);
@@ -20,7 +20,7 @@ int main() {
 #pragma omp for schedule(static)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd schedule(static)
   for(int i = 0; i < 10; ++i);
@@ -30,7 +30,7 @@ int main() {
 #pragma omp for schedule(static, 2)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd schedule(static, 2)
   for(int i = 0; i < 10; ++i);
@@ -72,7 +72,7 @@ int main() {
 #pragma omp for schedule(monotonic: static)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd schedule(monotonic: static)
   for(int i = 0; i < 10; ++i);
@@ -82,7 +82,7 @@ int main() {
 #pragma omp for schedule(monotonic: static, 2)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd schedule(monotonic: static, 2)
   for(int i = 0; i < 10; ++i);
@@ -91,7 +91,7 @@ int main() {
 #pragma omp for schedule(monotonic: auto)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 #pragma omp for simd schedule(monotonic: auto)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
@@ -99,7 +99,7 @@ int main() {
 #pragma omp for schedule(monotonic: runtime)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 #pragma omp for simd schedule(monotonic: runtime)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
@@ -107,7 +107,7 @@ int main() {
 #pragma omp for schedule(monotonic: guided)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 #pragma omp for simd schedule(monotonic: guided)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
@@ -115,7 +115,7 @@ int main() {
 #pragma omp for schedule(monotonic: dynamic)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 #pragma omp for simd schedule(monotonic: dynamic)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
@@ -134,15 +134,15 @@ int main() {
 // CHECK: !llvm.access.group
 #pragma omp for simd schedule(nonmonotonic: dynamic)
   for(int i = 0; i < 10; ++i);
-// CHECK: call void @__kmpc_for_static_init_4(%struct.ident_t* {{.+}}, i32 %{{.+}}, i32 1073741858,
+// CHECK: call void @__kmpc_for_static_init_4(ptr {{.+}}, i32 %{{.+}}, i32 1073741858,
 // CHECK: !llvm.access.group
 #pragma omp for simd schedule(nonmonotonic: static)
   for(int i = 0; i < 10; ++i);
-// CHECK: call void @__kmpc_dispatch_init_4(%struct.ident_t* {{.+}}, i32 %{{.+}}, i32 1073741862,
+// CHECK: call void @__kmpc_dispatch_init_4(ptr {{.+}}, i32 %{{.+}}, i32 1073741862,
 // CHECK: !llvm.access.group
 #pragma omp for schedule(nonmonotonic: auto)
   for(int i = 0; i < 10; ++i);
-// CHECK: call void @__kmpc_dispatch_init_4(%struct.ident_t* {{.+}}, i32 %{{.+}}, i32 1073741861,
+// CHECK: call void @__kmpc_dispatch_init_4(ptr {{.+}}, i32 %{{.+}}, i32 1073741861,
 // CHECK: !llvm.access.group
 #pragma omp for simd schedule(nonmonotonic: runtime)
   for(int i = 0; i < 10; ++i);

@@ -14,13 +14,18 @@
 #ifndef MLIR_TOOLS_MLIRTBLGEN_DOCGENUTILITIES_H_
 #define MLIR_TOOLS_MLIRTBLGEN_DOCGENUTILITIES_H_
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 class raw_ostream;
-class StringRef;
 } // namespace llvm
 
 namespace mlir {
 namespace tblgen {
+
+// Emit the summary. To avoid confusion, the summary is styled differently from
+// the description.
+void emitSummary(llvm::StringRef summary, llvm::raw_ostream &os);
 
 // Emit the description by aligning the text to the left per line (e.g.
 // removing the minimum indentation across the block).
@@ -29,6 +34,10 @@ namespace tblgen {
 // in a way the user wanted but has some additional indenting due to being
 // nested.
 void emitDescription(llvm::StringRef description, llvm::raw_ostream &os);
+
+// Emit the description as a C++ comment while realigning it.
+void emitDescriptionComment(llvm::StringRef description, llvm::raw_ostream &os,
+                            llvm::StringRef prefix = "");
 
 } // namespace tblgen
 } // namespace mlir

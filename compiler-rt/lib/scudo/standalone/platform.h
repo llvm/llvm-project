@@ -12,7 +12,7 @@
 // Transitive includes of stdint.h specify some of the defines checked below.
 #include <stdint.h>
 
-#if defined(__linux__)
+#if defined(__linux__) && !defined(__TRUSTY__)
 #define SCUDO_LINUX 1
 #else
 #define SCUDO_LINUX 0
@@ -31,7 +31,19 @@
 #define SCUDO_FUCHSIA 0
 #endif
 
-#if __LP64__
+#if defined(__TRUSTY__)
+#define SCUDO_TRUSTY 1
+#else
+#define SCUDO_TRUSTY 0
+#endif
+
+#if defined(__riscv) && (__riscv_xlen == 64)
+#define SCUDO_RISCV64 1
+#else
+#define SCUDO_RISCV64 0
+#endif
+
+#if defined(__LP64__)
 #define SCUDO_WORDSIZE 64U
 #else
 #define SCUDO_WORDSIZE 32U
@@ -45,6 +57,14 @@
 
 #ifndef SCUDO_CAN_USE_PRIMARY64
 #define SCUDO_CAN_USE_PRIMARY64 (SCUDO_WORDSIZE == 64U)
+#endif
+
+#ifndef SCUDO_CAN_USE_MTE
+#define SCUDO_CAN_USE_MTE (SCUDO_LINUX || SCUDO_TRUSTY)
+#endif
+
+#ifndef SCUDO_ENABLE_HOOKS
+#define SCUDO_ENABLE_HOOKS 0
 #endif
 
 #ifndef SCUDO_MIN_ALIGNMENT_LOG

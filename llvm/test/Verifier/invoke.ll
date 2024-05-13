@@ -27,9 +27,9 @@ declare i32 @__gxx_personality_v0(...)
 declare void @llvm.donothing()
 declare void @llvm.trap()
 declare i8 @llvm.expect.i8(i8,i8)
-declare i32 @fn(i8 (i8, i8)*)
+declare i32 @fn(ptr)
 
-define void @f1() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @f1() personality ptr @__gxx_personality_v0 {
 entry:
 ; OK
   invoke void @llvm.donothing()
@@ -39,14 +39,14 @@ conta:
   ret void
 
 contb:
-  %0 = landingpad { i8*, i32 }
-          filter [0 x i8*] zeroinitializer
+  %0 = landingpad { ptr, i32 }
+          filter [0 x ptr] zeroinitializer
   ret void
 }
 
-define i8 @f2() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i8 @f2() personality ptr @__gxx_personality_v0 {
 entry:
-; CHECK: Cannot invoke an intrinsic other than donothing, patchpoint, statepoint, coro_resume or coro_destroy
+; CHECK: Cannot invoke an intrinsic other than donothing, patchpoint, statepoint, coro_resume, coro_destroy or clang.arc.attachedcall
   invoke void @llvm.trap()
   to label %cont unwind label %lpad
 
@@ -54,26 +54,26 @@ cont:
   ret i8 3
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          filter [0 x i8*] zeroinitializer
+  %0 = landingpad { ptr, i32 }
+          filter [0 x ptr] zeroinitializer
   ret i8 2
 }
 
 define i32 @f3() {
 entry:
 ; CHECK: Cannot take the address of an intrinsic
-  %call = call i32 @fn(i8 (i8, i8)* @llvm.expect.i8)
+  %call = call i32 @fn(ptr @llvm.expect.i8)
   ret i32 %call
 }
 
-define void @f4() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @f4() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @llvm.donothing()
   to label %cont unwind label %cont
 
 cont:
 ; CHECK: Block containing LandingPadInst must be jumped to only by the unwind edge of an invoke.
-  %0 = landingpad { i8*, i32 }
-          filter [0 x i8*] zeroinitializer
+  %0 = landingpad { ptr, i32 }
+          filter [0 x ptr] zeroinitializer
   ret void
 }

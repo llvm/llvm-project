@@ -224,14 +224,14 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
   unsigned NumRegs = MRI->getNumVirtRegs();
   BitVector DoubleRegs(NumRegs);
   for (unsigned i = 0; i < NumRegs; ++i) {
-    unsigned R = Register::index2VirtReg(i);
+    Register R = Register::index2VirtReg(i);
     if (MRI->getRegClass(R) == DoubleRC)
       DoubleRegs.set(i);
   }
 
   BitVector FixedRegs(NumRegs);
   for (int x = DoubleRegs.find_first(); x >= 0; x = DoubleRegs.find_next(x)) {
-    unsigned R = Register::index2VirtReg(x);
+    Register R = Register::index2VirtReg(x);
     MachineInstr *DefI = MRI->getVRegDef(R);
     // In some cases a register may exist, but never be defined or used.
     // It should never appear anywhere, but mark it as "fixed", just to be
@@ -244,7 +244,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
   for (int x = DoubleRegs.find_first(); x >= 0; x = DoubleRegs.find_next(x)) {
     if (FixedRegs[x])
       continue;
-    unsigned R = Register::index2VirtReg(x);
+    Register R = Register::index2VirtReg(x);
     LLVM_DEBUG(dbgs() << printReg(R, TRI) << " ~~");
     USet &Asc = AssocMap[R];
     for (auto U = MRI->use_nodbg_begin(R), Z = MRI->use_nodbg_end();
@@ -253,8 +253,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
       MachineInstr *UseI = Op.getParent();
       if (isFixedInstr(UseI))
         continue;
-      for (unsigned i = 0, n = UseI->getNumOperands(); i < n; ++i) {
-        MachineOperand &MO = UseI->getOperand(i);
+      for (MachineOperand &MO : UseI->operands()) {
         // Skip non-registers or registers with subregisters.
         if (&MO == &Op || !MO.isReg() || MO.getSubReg())
           continue;
@@ -281,7 +280,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
   unsigned NextP = 1;
   USet Visited;
   for (int x = DoubleRegs.find_first(); x >= 0; x = DoubleRegs.find_next(x)) {
-    unsigned R = Register::index2VirtReg(x);
+    Register R = Register::index2VirtReg(x);
     if (Visited.count(R))
       continue;
     // Create a new partition for R.
@@ -350,7 +349,7 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
     case Hexagon::A4_combineri:
       ImmX++;
       // Fall through into A4_combineir.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Hexagon::A4_combineir: {
       ImmX++;
       const MachineOperand &OpX = MI->getOperand(ImmX);
@@ -360,7 +359,7 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
           return 10;
       }
       // Fall through into A2_combinew.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case Hexagon::A2_combinew:
       return 2;
@@ -508,7 +507,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
   while (CmpI->getOpcode() == Hexagon::C2_not)
     CmpI = MRI->getVRegDef(CmpI->getOperand(1).getReg());
 
-  int Mask = 0, Val = 0;
+  int64_t Mask = 0, Val = 0;
   bool OkCI = TII->analyzeCompare(*CmpI, CmpR1, CmpR2, Mask, Val);
   if (!OkCI)
     return;
@@ -578,8 +577,7 @@ void HexagonSplitDoubleRegs::collectIndRegs(LoopRegMap &IRM) {
     append_range(WorkQ, *WorkQ[i]);
 
   USet Rs;
-  for (unsigned i = 0, n = WorkQ.size(); i < n; ++i) {
-    MachineLoop *L = WorkQ[i];
+  for (MachineLoop *L : WorkQ) {
     Rs.clear();
     collectIndRegsForLoop(L, Rs);
     if (!Rs.empty())
@@ -1151,7 +1149,7 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
   }
 
   MISet Erase;
-  for (auto MI : SplitIns) {
+  for (auto *MI : SplitIns) {
     if (isFixedInstr(MI)) {
       collapseRegPairs(MI, PairMap);
     } else {
@@ -1170,11 +1168,11 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
     for (auto U = MRI->use_nodbg_begin(DR), W = MRI->use_nodbg_end();
          U != W; ++U)
       Uses.insert(U->getParent());
-    for (auto M : Uses)
+    for (auto *M : Uses)
       replaceSubregUses(M, PairMap);
   }
 
-  for (auto MI : Erase) {
+  for (auto *MI : Erase) {
     MachineBasicBlock *B = MI->getParent();
     B->erase(MI);
   }

@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 declare float @llvm.sqrt.f32(float)
 declare double @llvm.sqrt.f64(double)
@@ -149,10 +150,23 @@ define float @repeated_div_recip_allowed(i1 %pred, float %a, float %b, float %di
 ; CHECK: rcp.rn.f32
 ; CHECK: mul.rn.f32
 ; CHECK: mul.rn.f32
+; CHECK: mul.rn.f32
+; CHECK: selp.f32
   %x = fdiv arcp float %a, %divisor
   %y = fdiv arcp float %b, %divisor
-  %z = select i1 %pred, float %x, float %y
-  ret float %z
+  %z = fmul float %x, %y
+  %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_recip_allowed_sel
+define float @repeated_div_recip_allowed_sel(i1 %pred, float %a, float %b, float %divisor) {
+; CHECK: selp.f32
+; CHECK: div.rn.f32
+  %x = fdiv arcp float %a, %divisor
+  %y = fdiv arcp float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
 }
 
 ; CHECK-LABEL: repeated_div_recip_allowed_ftz
@@ -160,10 +174,23 @@ define float @repeated_div_recip_allowed_ftz(i1 %pred, float %a, float %b, float
 ; CHECK: rcp.rn.ftz.f32
 ; CHECK: mul.rn.ftz.f32
 ; CHECK: mul.rn.ftz.f32
+; CHECK: mul.rn.ftz.f32
+; CHECK: selp.f32
   %x = fdiv arcp float %a, %divisor
   %y = fdiv arcp float %b, %divisor
-  %z = select i1 %pred, float %x, float %y
-  ret float %z
+  %z = fmul float %x, %y
+  %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_recip_allowed_ftz_sel
+define float @repeated_div_recip_allowed_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #1 {
+; CHECK: selp.f32
+; CHECK: div.rn.ftz.f32
+  %x = fdiv arcp float %a, %divisor
+  %y = fdiv arcp float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
 }
 
 ; CHECK-LABEL: repeated_div_fast
@@ -171,10 +198,23 @@ define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) #0
 ; CHECK: rcp.approx.f32
 ; CHECK: mul.f32
 ; CHECK: mul.f32
+; CHECK: mul.f32
+; CHECK: selp.f32
   %x = fdiv float %a, %divisor
   %y = fdiv float %b, %divisor
-  %z = select i1 %pred, float %x, float %y
-  ret float %z
+  %z = fmul float %x, %y
+  %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_fast_sel
+define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor) #0 {
+; CHECK: selp.f32
+; CHECK: div.approx.f32
+  %x = fdiv float %a, %divisor
+  %y = fdiv float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
 }
 
 ; CHECK-LABEL: repeated_div_fast_ftz
@@ -182,10 +222,44 @@ define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor
 ; CHECK: rcp.approx.ftz.f32
 ; CHECK: mul.ftz.f32
 ; CHECK: mul.ftz.f32
+; CHECK: mul.ftz.f32
+; CHECK: selp.f32
   %x = fdiv float %a, %divisor
   %y = fdiv float %b, %divisor
-  %z = select i1 %pred, float %x, float %y
-  ret float %z
+  %z = fmul float %x, %y
+  %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_fast_ftz_sel
+define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #0 #1 {
+; CHECK: selp.f32
+; CHECK: div.approx.ftz.f32
+  %x = fdiv float %a, %divisor
+  %y = fdiv float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: frem
+define float @frem(float %a, float %b) #0 {
+  ; CHECK-NOT: testp.infinite
+  %rem = frem float %a, %b
+  ret float %rem
+}
+
+; CHECK-LABEL: frem_ftz
+define float @frem_ftz(float %a, float %b) #0 #1 {
+  ; CHECK-NOT: testp.infinite
+  %rem = frem float %a, %b
+  ret float %rem
+}
+
+; CHECK-LABEL: frem_f64
+define double @frem_f64(double %a, double %b) #0 {
+  ; CHECK-NOT: testp.infinite
+  %rem = frem double %a, %b
+  ret double %rem
 }
 
 attributes #0 = { "unsafe-fp-math" = "true" }

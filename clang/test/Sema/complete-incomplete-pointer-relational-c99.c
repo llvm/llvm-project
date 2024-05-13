@@ -4,7 +4,7 @@
 int incomplete[]; // expected-warning {{tentative array definition assumed to have one element}}
 int complete[6];
 
-int test_comparison_between_incomplete_and_complete_pointer() {
+int test_comparison_between_incomplete_and_complete_pointer(void) {
   return (&incomplete < &complete) &&  // expected-warning {{pointer comparisons before C11 need to be between two complete or two incomplete types; 'int (*)[]' is incomplete and 'int (*)[6]' is complete}}
          (&incomplete <= &complete) && // expected-warning {{pointer comparisons before C11 need to be between two complete or two incomplete types; 'int (*)[]' is incomplete and 'int (*)[6]' is complete}}
          (&incomplete > &complete) &&  // expected-warning {{pointer comparisons before C11 need to be between two complete or two incomplete types; 'int (*)[]' is incomplete and 'int (*)[6]' is complete}}

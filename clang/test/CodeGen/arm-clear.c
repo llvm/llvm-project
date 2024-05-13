@@ -3,7 +3,7 @@
 
 void clear(void *ptr, void *ptr2) {
   // CHECK: clear
-  // CHECK: load i8*, i8**
-  // CHECK: load i8*, i8**
+  // CHECK: load ptr, ptr
+  // CHECK: load ptr, ptr
   __clear_cache(ptr, ptr2);
 }

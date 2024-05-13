@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-define zeroext i32 @test1(i64 %0, i64* %1) {
+define zeroext i32 @test1(i64 %0, ptr %1) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stdu 1, -720(1)
@@ -433,23 +433,23 @@ define zeroext i32 @test1(i64 %0, i64* %1) {
 ; CHECK-NEXT:    ld 14, 576(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi 1, 1, 720
 ; CHECK-NEXT:    blr
-  %3 = getelementptr inbounds i64, i64* %1, i64 144115188075855
-  %4 = getelementptr i64, i64* %1, i64 144115586875855
-  %5 = getelementptr i64, i64* %1, i64 144115587175855
-  %6 = getelementptr i64, i64* %1, i64 144115587075855
-  %7 = getelementptr i64, i64* %1, i64 144115586975855
-  %8 = getelementptr i64, i64* %1, i64 144115587275855
-  %9 = getelementptr i64, i64* %1, i64 144115587575855
-  %10 = getelementptr i64, i64* %1, i64 144115587475855
-  %11 = getelementptr i64, i64* %1, i64 144115587375855
-  %12 = getelementptr i64, i64* %1, i64 144115587675855
-  %13 = getelementptr i64, i64* %1, i64 144115587975855
-  %14 = getelementptr i64, i64* %1, i64 144115587875855
-  %15 = getelementptr i64, i64* %1, i64 144115587775855
-  %16 = getelementptr i64, i64* %1, i64 144115588075855
-  %17 = getelementptr i64, i64* %1, i64 144115588375855
-  %18 = getelementptr i64, i64* %1, i64 144115588275855
-  %19 = getelementptr i64, i64* %1, i64 144115588175855
+  %3 = getelementptr inbounds i64, ptr %1, i64 144115188075855
+  %4 = getelementptr i64, ptr %1, i64 144115586875855
+  %5 = getelementptr i64, ptr %1, i64 144115587175855
+  %6 = getelementptr i64, ptr %1, i64 144115587075855
+  %7 = getelementptr i64, ptr %1, i64 144115586975855
+  %8 = getelementptr i64, ptr %1, i64 144115587275855
+  %9 = getelementptr i64, ptr %1, i64 144115587575855
+  %10 = getelementptr i64, ptr %1, i64 144115587475855
+  %11 = getelementptr i64, ptr %1, i64 144115587375855
+  %12 = getelementptr i64, ptr %1, i64 144115587675855
+  %13 = getelementptr i64, ptr %1, i64 144115587975855
+  %14 = getelementptr i64, ptr %1, i64 144115587875855
+  %15 = getelementptr i64, ptr %1, i64 144115587775855
+  %16 = getelementptr i64, ptr %1, i64 144115588075855
+  %17 = getelementptr i64, ptr %1, i64 144115588375855
+  %18 = getelementptr i64, ptr %1, i64 144115588275855
+  %19 = getelementptr i64, ptr %1, i64 144115588175855
   br label %20
 
 20:                                               ; preds = %2, %109
@@ -459,157 +459,157 @@ define zeroext i32 @test1(i64 %0, i64* %1) {
 22:                                               ; preds = %22, %20
   %23 = phi i64 [ 0, %20 ], [ %107, %22 ]
   %24 = mul i64 %23, 400000
-  %25 = getelementptr i64, i64* %3, i64 %24
-  %26 = or i64 %23, 1
+  %25 = getelementptr i64, ptr %3, i64 %24
+  %26 = or disjoint i64 %23, 1
   %27 = mul i64 %26, 400000
-  %28 = getelementptr i64, i64* %3, i64 %27
-  %29 = or i64 %23, 2
+  %28 = getelementptr i64, ptr %3, i64 %27
+  %29 = or disjoint i64 %23, 2
   %30 = mul i64 %29, 400000
-  %31 = getelementptr i64, i64* %3, i64 %30
-  %32 = or i64 %23, 3
+  %31 = getelementptr i64, ptr %3, i64 %30
+  %32 = or disjoint i64 %23, 3
   %33 = mul i64 %32, 400000
-  %34 = getelementptr i64, i64* %3, i64 %33
+  %34 = getelementptr i64, ptr %3, i64 %33
   %35 = mul i64 %23, 400000
   %36 = add i64 %35, 1600000
-  %37 = getelementptr i64, i64* %3, i64 %36
+  %37 = getelementptr i64, ptr %3, i64 %36
   %38 = mul i64 %23, 400000
   %39 = add i64 %38, 2000000
-  %40 = getelementptr i64, i64* %3, i64 %39
+  %40 = getelementptr i64, ptr %3, i64 %39
   %41 = mul i64 %23, 400000
   %42 = add i64 %41, 2400000
-  %43 = getelementptr i64, i64* %3, i64 %42
+  %43 = getelementptr i64, ptr %3, i64 %42
   %44 = mul i64 %23, 400000
   %45 = add i64 %44, 2800000
-  %46 = getelementptr i64, i64* %3, i64 %45
+  %46 = getelementptr i64, ptr %3, i64 %45
   %47 = mul i64 %23, 400000
   %48 = add i64 %47, 3200000
-  %49 = getelementptr i64, i64* %3, i64 %48
+  %49 = getelementptr i64, ptr %3, i64 %48
   %50 = mul i64 %23, 400000
   %51 = add i64 %50, 3600000
-  %52 = getelementptr i64, i64* %3, i64 %51
+  %52 = getelementptr i64, ptr %3, i64 %51
   %53 = mul i64 %23, 400000
   %54 = add i64 %53, 4000000
-  %55 = getelementptr i64, i64* %3, i64 %54
+  %55 = getelementptr i64, ptr %3, i64 %54
   %56 = mul i64 %23, 400000
   %57 = add i64 %56, 4400000
-  %58 = getelementptr i64, i64* %3, i64 %57
-  %59 = getelementptr inbounds i64, i64* %25, i64 400000
-  %60 = getelementptr inbounds i64, i64* %28, i64 400000
-  %61 = getelementptr inbounds i64, i64* %31, i64 400000
-  %62 = getelementptr inbounds i64, i64* %34, i64 400000
-  %63 = getelementptr inbounds i64, i64* %37, i64 400000
-  %64 = getelementptr inbounds i64, i64* %40, i64 400000
-  %65 = getelementptr inbounds i64, i64* %43, i64 400000
-  %66 = getelementptr inbounds i64, i64* %46, i64 400000
-  %67 = getelementptr inbounds i64, i64* %49, i64 400000
-  %68 = getelementptr inbounds i64, i64* %52, i64 400000
-  %69 = getelementptr inbounds i64, i64* %55, i64 400000
-  %70 = getelementptr inbounds i64, i64* %58, i64 400000
-  store i64 %0, i64* %59, align 8
-  store i64 %0, i64* %60, align 8
-  store i64 %0, i64* %61, align 8
-  store i64 %0, i64* %62, align 8
-  store i64 %0, i64* %63, align 8
-  store i64 %0, i64* %64, align 8
-  store i64 %0, i64* %65, align 8
-  store i64 %0, i64* %66, align 8
-  store i64 %0, i64* %67, align 8
-  store i64 %0, i64* %68, align 8
-  store i64 %0, i64* %69, align 8
-  store i64 %0, i64* %70, align 8
-  %71 = getelementptr inbounds i64, i64* %25, i64 700000
-  %72 = getelementptr inbounds i64, i64* %28, i64 700000
-  %73 = getelementptr inbounds i64, i64* %31, i64 700000
-  %74 = getelementptr inbounds i64, i64* %34, i64 700000
-  %75 = getelementptr inbounds i64, i64* %37, i64 700000
-  %76 = getelementptr inbounds i64, i64* %40, i64 700000
-  %77 = getelementptr inbounds i64, i64* %43, i64 700000
-  %78 = getelementptr inbounds i64, i64* %46, i64 700000
-  %79 = getelementptr inbounds i64, i64* %49, i64 700000
-  %80 = getelementptr inbounds i64, i64* %52, i64 700000
-  %81 = getelementptr inbounds i64, i64* %55, i64 700000
-  %82 = getelementptr inbounds i64, i64* %58, i64 700000
-  store i64 %0, i64* %71, align 8
-  store i64 %0, i64* %72, align 8
-  store i64 %0, i64* %73, align 8
-  store i64 %0, i64* %74, align 8
-  store i64 %0, i64* %75, align 8
-  store i64 %0, i64* %76, align 8
-  store i64 %0, i64* %77, align 8
-  store i64 %0, i64* %78, align 8
-  store i64 %0, i64* %79, align 8
-  store i64 %0, i64* %80, align 8
-  store i64 %0, i64* %81, align 8
-  store i64 %0, i64* %82, align 8
-  %83 = getelementptr inbounds i64, i64* %25, i64 600000
-  %84 = getelementptr inbounds i64, i64* %28, i64 600000
-  %85 = getelementptr inbounds i64, i64* %31, i64 600000
-  %86 = getelementptr inbounds i64, i64* %34, i64 600000
-  %87 = getelementptr inbounds i64, i64* %37, i64 600000
-  %88 = getelementptr inbounds i64, i64* %40, i64 600000
-  %89 = getelementptr inbounds i64, i64* %43, i64 600000
-  %90 = getelementptr inbounds i64, i64* %46, i64 600000
-  %91 = getelementptr inbounds i64, i64* %49, i64 600000
-  %92 = getelementptr inbounds i64, i64* %52, i64 600000
-  %93 = getelementptr inbounds i64, i64* %55, i64 600000
-  %94 = getelementptr inbounds i64, i64* %58, i64 600000
-  store i64 %0, i64* %83, align 8
-  store i64 %0, i64* %84, align 8
-  store i64 %0, i64* %85, align 8
-  store i64 %0, i64* %86, align 8
-  store i64 %0, i64* %87, align 8
-  store i64 %0, i64* %88, align 8
-  store i64 %0, i64* %89, align 8
-  store i64 %0, i64* %90, align 8
-  store i64 %0, i64* %91, align 8
-  store i64 %0, i64* %92, align 8
-  store i64 %0, i64* %93, align 8
-  store i64 %0, i64* %94, align 8
-  %95 = getelementptr inbounds i64, i64* %25, i64 500000
-  %96 = getelementptr inbounds i64, i64* %28, i64 500000
-  %97 = getelementptr inbounds i64, i64* %31, i64 500000
-  %98 = getelementptr inbounds i64, i64* %34, i64 500000
-  %99 = getelementptr inbounds i64, i64* %37, i64 500000
-  %100 = getelementptr inbounds i64, i64* %40, i64 500000
-  %101 = getelementptr inbounds i64, i64* %43, i64 500000
-  %102 = getelementptr inbounds i64, i64* %46, i64 500000
-  %103 = getelementptr inbounds i64, i64* %49, i64 500000
-  %104 = getelementptr inbounds i64, i64* %52, i64 500000
-  %105 = getelementptr inbounds i64, i64* %55, i64 500000
-  %106 = getelementptr inbounds i64, i64* %58, i64 500000
-  store i64 %0, i64* %95, align 8
-  store i64 %0, i64* %96, align 8
-  store i64 %0, i64* %97, align 8
-  store i64 %0, i64* %98, align 8
-  store i64 %0, i64* %99, align 8
-  store i64 %0, i64* %100, align 8
-  store i64 %0, i64* %101, align 8
-  store i64 %0, i64* %102, align 8
-  store i64 %0, i64* %103, align 8
-  store i64 %0, i64* %104, align 8
-  store i64 %0, i64* %105, align 8
-  store i64 %0, i64* %106, align 8
+  %58 = getelementptr i64, ptr %3, i64 %57
+  %59 = getelementptr inbounds i64, ptr %25, i64 400000
+  %60 = getelementptr inbounds i64, ptr %28, i64 400000
+  %61 = getelementptr inbounds i64, ptr %31, i64 400000
+  %62 = getelementptr inbounds i64, ptr %34, i64 400000
+  %63 = getelementptr inbounds i64, ptr %37, i64 400000
+  %64 = getelementptr inbounds i64, ptr %40, i64 400000
+  %65 = getelementptr inbounds i64, ptr %43, i64 400000
+  %66 = getelementptr inbounds i64, ptr %46, i64 400000
+  %67 = getelementptr inbounds i64, ptr %49, i64 400000
+  %68 = getelementptr inbounds i64, ptr %52, i64 400000
+  %69 = getelementptr inbounds i64, ptr %55, i64 400000
+  %70 = getelementptr inbounds i64, ptr %58, i64 400000
+  store i64 %0, ptr %59, align 8
+  store i64 %0, ptr %60, align 8
+  store i64 %0, ptr %61, align 8
+  store i64 %0, ptr %62, align 8
+  store i64 %0, ptr %63, align 8
+  store i64 %0, ptr %64, align 8
+  store i64 %0, ptr %65, align 8
+  store i64 %0, ptr %66, align 8
+  store i64 %0, ptr %67, align 8
+  store i64 %0, ptr %68, align 8
+  store i64 %0, ptr %69, align 8
+  store i64 %0, ptr %70, align 8
+  %71 = getelementptr inbounds i64, ptr %25, i64 700000
+  %72 = getelementptr inbounds i64, ptr %28, i64 700000
+  %73 = getelementptr inbounds i64, ptr %31, i64 700000
+  %74 = getelementptr inbounds i64, ptr %34, i64 700000
+  %75 = getelementptr inbounds i64, ptr %37, i64 700000
+  %76 = getelementptr inbounds i64, ptr %40, i64 700000
+  %77 = getelementptr inbounds i64, ptr %43, i64 700000
+  %78 = getelementptr inbounds i64, ptr %46, i64 700000
+  %79 = getelementptr inbounds i64, ptr %49, i64 700000
+  %80 = getelementptr inbounds i64, ptr %52, i64 700000
+  %81 = getelementptr inbounds i64, ptr %55, i64 700000
+  %82 = getelementptr inbounds i64, ptr %58, i64 700000
+  store i64 %0, ptr %71, align 8
+  store i64 %0, ptr %72, align 8
+  store i64 %0, ptr %73, align 8
+  store i64 %0, ptr %74, align 8
+  store i64 %0, ptr %75, align 8
+  store i64 %0, ptr %76, align 8
+  store i64 %0, ptr %77, align 8
+  store i64 %0, ptr %78, align 8
+  store i64 %0, ptr %79, align 8
+  store i64 %0, ptr %80, align 8
+  store i64 %0, ptr %81, align 8
+  store i64 %0, ptr %82, align 8
+  %83 = getelementptr inbounds i64, ptr %25, i64 600000
+  %84 = getelementptr inbounds i64, ptr %28, i64 600000
+  %85 = getelementptr inbounds i64, ptr %31, i64 600000
+  %86 = getelementptr inbounds i64, ptr %34, i64 600000
+  %87 = getelementptr inbounds i64, ptr %37, i64 600000
+  %88 = getelementptr inbounds i64, ptr %40, i64 600000
+  %89 = getelementptr inbounds i64, ptr %43, i64 600000
+  %90 = getelementptr inbounds i64, ptr %46, i64 600000
+  %91 = getelementptr inbounds i64, ptr %49, i64 600000
+  %92 = getelementptr inbounds i64, ptr %52, i64 600000
+  %93 = getelementptr inbounds i64, ptr %55, i64 600000
+  %94 = getelementptr inbounds i64, ptr %58, i64 600000
+  store i64 %0, ptr %83, align 8
+  store i64 %0, ptr %84, align 8
+  store i64 %0, ptr %85, align 8
+  store i64 %0, ptr %86, align 8
+  store i64 %0, ptr %87, align 8
+  store i64 %0, ptr %88, align 8
+  store i64 %0, ptr %89, align 8
+  store i64 %0, ptr %90, align 8
+  store i64 %0, ptr %91, align 8
+  store i64 %0, ptr %92, align 8
+  store i64 %0, ptr %93, align 8
+  store i64 %0, ptr %94, align 8
+  %95 = getelementptr inbounds i64, ptr %25, i64 500000
+  %96 = getelementptr inbounds i64, ptr %28, i64 500000
+  %97 = getelementptr inbounds i64, ptr %31, i64 500000
+  %98 = getelementptr inbounds i64, ptr %34, i64 500000
+  %99 = getelementptr inbounds i64, ptr %37, i64 500000
+  %100 = getelementptr inbounds i64, ptr %40, i64 500000
+  %101 = getelementptr inbounds i64, ptr %43, i64 500000
+  %102 = getelementptr inbounds i64, ptr %46, i64 500000
+  %103 = getelementptr inbounds i64, ptr %49, i64 500000
+  %104 = getelementptr inbounds i64, ptr %52, i64 500000
+  %105 = getelementptr inbounds i64, ptr %55, i64 500000
+  %106 = getelementptr inbounds i64, ptr %58, i64 500000
+  store i64 %0, ptr %95, align 8
+  store i64 %0, ptr %96, align 8
+  store i64 %0, ptr %97, align 8
+  store i64 %0, ptr %98, align 8
+  store i64 %0, ptr %99, align 8
+  store i64 %0, ptr %100, align 8
+  store i64 %0, ptr %101, align 8
+  store i64 %0, ptr %102, align 8
+  store i64 %0, ptr %103, align 8
+  store i64 %0, ptr %104, align 8
+  store i64 %0, ptr %105, align 8
+  store i64 %0, ptr %106, align 8
   %107 = add i64 %23, 12
   %108 = icmp eq i64 %107, 996
   br i1 %108, label %109, label %22
 
 109:                                              ; preds = %22
-  store i64 %0, i64* %4, align 8
-  store i64 %0, i64* %5, align 8
-  store i64 %0, i64* %6, align 8
-  store i64 %0, i64* %7, align 8
-  store i64 %0, i64* %8, align 8
-  store i64 %0, i64* %9, align 8
-  store i64 %0, i64* %10, align 8
-  store i64 %0, i64* %11, align 8
-  store i64 %0, i64* %12, align 8
-  store i64 %0, i64* %13, align 8
-  store i64 %0, i64* %14, align 8
-  store i64 %0, i64* %15, align 8
-  store i64 %0, i64* %16, align 8
-  store i64 %0, i64* %17, align 8
-  store i64 %0, i64* %18, align 8
-  store i64 %0, i64* %19, align 8
+  store i64 %0, ptr %4, align 8
+  store i64 %0, ptr %5, align 8
+  store i64 %0, ptr %6, align 8
+  store i64 %0, ptr %7, align 8
+  store i64 %0, ptr %8, align 8
+  store i64 %0, ptr %9, align 8
+  store i64 %0, ptr %10, align 8
+  store i64 %0, ptr %11, align 8
+  store i64 %0, ptr %12, align 8
+  store i64 %0, ptr %13, align 8
+  store i64 %0, ptr %14, align 8
+  store i64 %0, ptr %15, align 8
+  store i64 %0, ptr %16, align 8
+  store i64 %0, ptr %17, align 8
+  store i64 %0, ptr %18, align 8
+  store i64 %0, ptr %19, align 8
   %110 = add nuw nsw i32 %21, 1
   %111 = icmp eq i32 %110, 400000
   br i1 %111, label %112, label %20

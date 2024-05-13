@@ -1,0 +1,169 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgcn-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS-COUNT-15: V_MOV_B32
+
+# RESULT: frameInfo:
+# RESULT-NEXT: isFrameAddressTaken: true
+# RESULT-NEXT: isReturnAddressTaken: true
+# RESULT-NEXT: hasStackMap:     true
+# RESULT-NEXT: hasPatchPoint:   true
+# RESULT-NEXT: offsetAdjustment: 128
+# RESULT-NEXT: maxAlignment:    64
+# RESULT-NEXT: adjustsStack:    true
+# RESULT-NEXT: hasCalls:        true
+# RESULT-NEXT: stackProtector: '%stack.9.guard'
+# RESULT-NEXT: maxCallFrameSize: 420
+# RESULT-NEXT: cvBytesOfCalleeSavedRegisters: 48
+# RESULT-NEXT: hasOpaqueSPAdjustment: true
+# RESULT-NEXT: hasVAStart:      true
+# RESULT-NEXT: hasMustTailInVarArgFunc: true
+# RESULT-NEXT: hasTailCall:     true
+# RESULT-NEXT: savePoint:       '%bb.1'
+# RESULT-NEXT: restorePoint:    '%bb.2'
+
+# RESULT-NEXT: fixedStack:
+# RESULT-NEXT:  - { id: 0, offset: 56, size: 4, alignment: 8, callee-saved-register: '$sgpr44',
+# RESULT-NEXT:      callee-saved-restored: false }
+# RESULT-NEXT:  - { id: 1, offset: 52, size: 4, alignment: 4, callee-saved-register: '$sgpr43' }
+# RESULT-NEXT:  - { id: 2, offset: 48, size: 8, alignment: 16, isAliased: true }
+# RESULT-NEXT:  - { id: 3, offset: 16, size: 16, alignment: 16 }
+# RESULT-NEXT:  - { id: 4, size: 8, alignment: 16 }
+
+# RESULT-NEXT: stack:
+# RESULT-NEXT:  - { id: 0, name: bigalloca, offset: 16, size: 16, alignment: 8 }
+# RESULT-NEXT:  - { id: 1, offset: 64, size: 4, alignment: 16, debug-info-variable: '!8',
+# RESULT-NEXT:      debug-info-expression: '!DIExpression()', debug-info-location: '!10' }
+# RESULT-NEXT:  - { id: 2, type: spill-slot, offset: 32, size: 4, alignment: 4 }
+# RESULT-NEXT:  - { id: 3, type: spill-slot, offset: 36, size: 4, alignment: 4, stack-id: sgpr-spill }
+# RESULT-NEXT:  - { id: 4, name: dynamic_alloca, type: variable-sized, alignment: 64 }
+# RESULT-NEXT:  - { id: 5, name: m1, size: 2052, alignment: 4, local-offset: 0 }
+# RESULT-NEXT:  - { id: 6, name: m2, size: 2060, alignment: 32, local-offset: 2080 }
+# RESULT-NEXT:  - { id: 7, offset: 48, size: 4, alignment: 4, callee-saved-register: '$sgpr40' }
+# RESULT-NEXT:  - { id: 8, offset: 52, size: 4, alignment: 4, callee-saved-register: '$sgpr41',
+# RESULT-NEXT:      callee-saved-restored: false }
+# RESULT-NEXT:  - { id: 9, name: guard, offset: 128, size: 4, alignment: 4 }
+
+
+# RESULT: bb.0:
+# RESULT-NEXT: [[FI0:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.1, implicit $exec
+# RESULT-NEXT: [[FI1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0.bigalloca, implicit $exec
+# RESULT-NEXT: [[FI2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.2, implicit $exec
+# RESULT-NEXT: [[FI3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.3, implicit $exec
+# RESULT-NEXT: [[FI4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.4.dynamic_alloca, implicit $exec
+# RESULT-NEXT: [[FI5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.5.m1, implicit $exec
+# RESULT-NEXT: [[FI6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.6.m2, implicit $exec
+# RESULT-NEXT: [[FI7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.7, implicit $exec
+# RESULT-NEXT: [[FI8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.8, implicit $exec
+# RESULT-NEXT: [[FI9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %fixed-stack.2, implicit $exec
+# RESULT-NEXT: [[FI10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %fixed-stack.3, implicit $exec
+# RESULT-NEXT: [[FI11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %fixed-stack.4, implicit $exec
+# RESULT-NEXT: [[FI12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %fixed-stack.1, implicit $exec
+# RESULT-NEXT: [[FI13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %fixed-stack.0, implicit $exec
+# RESULT-NEXT: [[FI14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.9.guard, implicit $exec
+# RESULT-NEXT: S_ENDPGM 0, implicit [[FI0]], implicit [[FI1]], implicit [[FI2]], implicit [[FI3]], implicit [[FI4]], implicit [[FI5]], implicit [[FI6]], implicit [[FI7]], implicit [[FI8]], implicit [[FI9]], implicit [[FI10]], implicit [[FI11]], implicit [[FI12]], implicit [[FI13]], implicit [[FI14]]
+--- |
+  define void @func(i32 %size) !dbg !5 {
+    %bigalloca = alloca [4 x i32], align 1, addrspace(5)
+    %dynamic_alloca = alloca i32, i32 %size, align 1, addrspace(5)
+    %dead = alloca i64, align 1, addrspace(5)
+    %m1 = alloca [513 x float], align 1, addrspace(5)
+    %m2 = alloca [513 x float], align 1, addrspace(5)
+    %guard = alloca i32, align 4, addrspace(5)
+    call void @llvm.dbg.declare(metadata i32 addrspace(5)* undef, metadata !8, metadata !DIExpression()), !dbg !10
+    ret void
+  }
+
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
+
+  attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "tmp.c", directory: "/dev/null")
+  !2 = !{i32 2, !"Dwarf Version", i32 4}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{i32 7, !"PIC Level", i32 2}
+  !5 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{null}
+  !8 = !DILocalVariable(name: "in", arg: 1, scope: !5, file: !1, line: 1, type: !9)
+  !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !10 = !DILocation(line: 1, column: 14, scope: !5)
+
+...
+---
+name: func
+tracksRegLiveness: true
+frameInfo:
+  isFrameAddressTaken: true
+  isReturnAddressTaken: true
+  hasStackMap:     true
+  hasPatchPoint:   true
+  stackSize:       0
+  offsetAdjustment: 128
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  '%stack.9'
+  maxCallFrameSize: 420
+  cvBytesOfCalleeSavedRegisters: 48
+  hasOpaqueSPAdjustment: true
+  hasVAStart:      true
+  hasMustTailInVarArgFunc: true
+  hasTailCall:     true
+  localFrameSize:  0
+  savePoint:       '%bb.1'
+  restorePoint:    '%bb.2'
+
+fixedStack:
+  - { id: 0, offset: 0, size: 8, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 1, offset: 16, size: 16, alignment: 8, isImmutable: false, isAliased: false }
+  - { id: 2, offset: 48, size: 8, alignment: 4, isImmutable: false, isAliased: true }
+  - { id: 3, offset: 52, size: 4, alignment: 4, callee-saved-register: '$sgpr43', callee-saved-restored: true  }
+  - { id: 4, offset: 56, size: 4, alignment: 4, callee-saved-register: '$sgpr44', callee-saved-restored: false  }
+stack:
+  - { id: 1, offset: 16, size: 16, alignment: 8, name: bigalloca }
+  - { id: 0, offset: 64, size: 4, alignment: 16,
+      debug-info-variable: '!8', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!10' }
+  - { id: 2, offset: 32, size: 4, alignment: 4, type: spill-slot }
+  - { id: 3, offset: 36, size: 4, alignment: 4, type: spill-slot, stack-id: sgpr-spill }
+  - { id: 4, type: variable-sized, alignment: 64, name: dynamic_alloca }
+  - { id: 5, name: m1, size: 2052, alignment: 4, local-offset: 0 }
+  - { id: 6, name: m2, size: 2060, alignment: 32, local-offset: 2080 }
+  - { id: 7, offset: 48, size: 4, alignment: 4, callee-saved-register: '$sgpr40', callee-saved-restored: true}
+  - { id: 8, offset: 52, size: 4, alignment: 4, callee-saved-register: '$sgpr41', callee-saved-restored: false}
+  - { id: 9, offset: 128, size: 4, alignment: 4, name: guard }
+body:             |
+  bb.0:
+    S_NOP 0
+    %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 %stack.1, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_e32 %stack.2, implicit $exec
+    %3:vgpr_32 = V_MOV_B32_e32 %stack.3, implicit $exec
+    %4:vgpr_32 = V_MOV_B32_e32 %stack.4, implicit $exec
+    %5:vgpr_32 = V_MOV_B32_e32 %stack.5, implicit $exec
+    %6:vgpr_32 = V_MOV_B32_e32 %stack.6, implicit $exec
+    %7:vgpr_32 = V_MOV_B32_e32 %stack.7, implicit $exec
+    %8:vgpr_32 = V_MOV_B32_e32 %stack.8, implicit $exec
+    %9:vgpr_32 = V_MOV_B32_e32 %fixed-stack.2, implicit $exec
+    %10:vgpr_32 = V_MOV_B32_e32 %fixed-stack.1, implicit $exec
+    %11:vgpr_32 = V_MOV_B32_e32 %fixed-stack.0, implicit $exec
+    %12:vgpr_32 = V_MOV_B32_e32 %fixed-stack.3, implicit $exec
+    %13:vgpr_32 = V_MOV_B32_e32 %fixed-stack.4, implicit $exec
+    %14:vgpr_32 = V_MOV_B32_e32 %stack.9.guard, implicit $exec
+    S_ENDPGM 0, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %5, implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %13, implicit %14
+
+  bb.1:
+    S_NOP 0
+    S_WAITCNT 0
+
+  bb.2:
+    S_WAITCNT 0
+    S_NOP 0
+
+...

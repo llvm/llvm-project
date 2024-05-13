@@ -13,14 +13,15 @@
 #include "support/Threading.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <vector>
 
 namespace clang {
+class CompilerInstance;
 namespace clangd {
 struct Diag;
 class LSPBinder;
@@ -106,6 +107,11 @@ public:
     /// Listeners are destroyed once the AST is built.
     virtual ~ASTListener() = default;
 
+    /// Called before every AST build, both for main file and preamble. The call
+    /// happens immediately before FrontendAction::Execute(), with Preprocessor
+    /// set up already and after BeginSourceFile() on main file was called.
+    virtual void beforeExecute(CompilerInstance &CI) {}
+
     /// Called everytime a diagnostic is encountered. Modules can use this
     /// modify the final diagnostic, or store some information to surface code
     /// actions later on.
@@ -132,7 +138,7 @@ protected:
   using OutgoingMethod = llvm::unique_function<void(const P &, Callback<R>)>;
 
 private:
-  llvm::Optional<Facilities> Fac;
+  std::optional<Facilities> Fac;
 };
 
 /// A FeatureModuleSet is a collection of feature modules installed in clangd.

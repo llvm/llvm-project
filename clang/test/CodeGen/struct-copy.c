@@ -4,14 +4,14 @@ struct x { int a[100]; };
 
 void foo(struct x *P, struct x *Q) {
 // CHECK-LABEL: @foo(
-// CHECK:    call void @llvm.memcpy.p0i8.p0i8
+// CHECK:    call void @llvm.memcpy.p0.p0
   *P = *Q;
 }
 
-// CHECK: declare void @llvm.memcpy.p0i8.p0i8{{.*}}(i8* noalias nocapture writeonly, i8* noalias nocapture readonly
+// CHECK: declare void @llvm.memcpy.p0.p0{{.*}}(ptr noalias nocapture writeonly, ptr noalias nocapture readonly
 
 void bar(struct x *P, struct x *Q) {
 // CHECK-LABEL: @bar(
-// CHECK:    call void @llvm.memcpy.p0i8.p0i8
+// CHECK:    call void @llvm.memcpy.p0.p0
   __builtin_memcpy(P, Q, sizeof(struct x));
 }

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; Register-promoted reduction but without preheader.
 ;
@@ -11,7 +11,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -21,8 +21,8 @@ outer.preheader:
 outer.for:
   %j = phi i32 [0, %outer.preheader], [%j.inc, %outer.inc]
   %j.cmp = icmp slt i32 %j, 2
-  %A_idx = getelementptr inbounds double, double* %A, i32 %j
-  %init = load double, double* %A_idx
+  %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+  %init = load double, ptr %A_idx
   br i1 %j.cmp, label %reduction.for, label %outer.exit
 
 
@@ -46,7 +46,7 @@ outer.for:
       br i1 %i.cmp, label %reduction.for, label %reduction.exit
 
     reduction.exit:
-      store double %add, double* %A_idx
+      store double %add, ptr %A_idx
       br label %outer.inc
 
 

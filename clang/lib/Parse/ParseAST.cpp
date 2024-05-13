@@ -18,6 +18,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/TemplateInstCallback.h"
@@ -154,8 +155,12 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
     llvm::TimeTraceScope TimeScope("Frontend");
     P.Initialize();
     Parser::DeclGroupPtrTy ADecl;
-    for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl); !AtEOF;
-         AtEOF = P.ParseTopLevelDecl(ADecl)) {
+    Sema::ModuleImportState ImportState;
+    EnterExpressionEvaluationContext PotentiallyEvaluated(
+        S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+
+    for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
+         AtEOF = P.ParseTopLevelDecl(ADecl, ImportState)) {
       // If we got a null return and something *was* parsed, ignore it.  This
       // is due to a top-level semicolon, an action override, or a parse error
       // skipping something.

@@ -1,0 +1,2855 @@
+add_custom_target(libc-math-smoke-tests)
+add_dependencies(libc-math-unittests libc-math-smoke-tests)
+
+add_fp_unittest(
+  cosf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cosf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.cosf
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sinf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sinf
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sincosf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sincosf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sincosf
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  tanf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tanf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.tanf
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fabs_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabs_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabs
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fabsf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsf_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fabsl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsl_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fabsf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsf128_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  trunc_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    trunc_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.trunc
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  truncf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    truncf_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  truncl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    truncl_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  truncf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    truncf128_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  canonicalize_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalize_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.src.math.canonicalize
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
+)
+
+add_fp_unittest(
+  canonicalizef_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalizef_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.src.math.canonicalizef
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
+)
+
+add_fp_unittest(
+  canonicalizef128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalizef128_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.src.math.canonicalizef128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
+)
+
+add_fp_unittest(
+  canonicalizel_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalizel_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.src.math.canonicalizel
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
+)
+
+add_fp_unittest(
+  ceil_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ceil_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceil
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  ceilf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ceilf_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  ceill_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ceill_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceill
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  ceilf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ceilf128_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floor_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    floor_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floor
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floorf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    floorf_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floorl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    floorl_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floorf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    floorf128_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  round_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    round_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.round
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundf_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundl_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundf128_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundeven_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundeven_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundeven
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundevenf_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundevenl_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundevenf128_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lround_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lround_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lround
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lroundf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lroundf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lroundf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lroundl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lroundl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lroundl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lroundf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lroundf128_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lroundf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llround_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llround_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llround
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llroundf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llroundf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llroundf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llroundl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llroundl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llroundl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llroundf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llroundf128_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llroundf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  rint_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rint_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.src.math.rint
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  rintf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rintf_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.src.math.rintf
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  rintl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rintl_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.src.math.rintl
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  rintf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rintf128_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.src.math.rintf128
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lrint_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lrint_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.lrint
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lrintf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lrintf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.lrintf
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lrintl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lrintl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.lrintl
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lrintf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lrintf128_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.lrintf128
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llrint_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llrint_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.llrint
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llrintf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llrintf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.llrintf
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llrintl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llrintl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.llrintl
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llrintf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llrintf128_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.llrintf128
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  expf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.expf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+ exp_test
+ SUITE
+   libc-math-smoke-tests
+ SRCS
+   exp_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.src.math.exp
+   libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  exp2f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp2f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp2f
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+ exp2_test
+ SUITE
+   libc-math-smoke-tests
+ SRCS
+   exp2_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.src.math.exp2
+   libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  exp2m1f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp2m1f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp2m1f
+)
+
+add_fp_unittest(
+  exp10f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp10f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp10f
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+ exp10_test
+ SUITE
+   libc-math-smoke-tests
+ SRCS
+   exp10_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.src.math.exp10
+   libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  copysign_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    copysign_test.cpp
+  HDRS
+    CopySignTest.h
+  DEPENDS
+    libc.src.math.copysign
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  copysignf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    copysignf_test.cpp
+  HDRS
+    CopySignTest.h
+  DEPENDS
+    libc.src.math.copysignf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  copysignl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    copysignl_test.cpp
+  HDRS
+    CopySignTest.h
+  DEPENDS
+    libc.src.math.copysignl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  copysignf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    copysignf128_test.cpp
+  HDRS
+    CopySignTest.h
+  DEPENDS
+    libc.src.math.copysignf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  frexp_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexp_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexp
+)
+
+add_fp_unittest(
+  frexpf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexpf_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf
+)
+
+add_fp_unittest(
+  frexpl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexpl_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpl
+)
+
+add_fp_unittest(
+  frexpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexpf128_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf128
+)
+
+add_fp_unittest(
+  fromfp_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfp_test.cpp
+  HDRS
+    FromfpTest.h
+  DEPENDS
+    libc.src.math.fromfp
+)
+
+add_fp_unittest(
+  fromfpf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpf_test.cpp
+  HDRS
+    FromfpTest.h
+  DEPENDS
+    libc.src.math.fromfpf
+)
+
+add_fp_unittest(
+  fromfpl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpl_test.cpp
+  HDRS
+    FromfpTest.h
+  DEPENDS
+    libc.src.math.fromfpl
+)
+
+add_fp_unittest(
+  fromfpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpf128_test.cpp
+  HDRS
+    FromfpTest.h
+  DEPENDS
+    libc.src.math.fromfpf128
+)
+
+add_fp_unittest(
+  fromfpx_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpx_test.cpp
+  HDRS
+    FromfpxTest.h
+  DEPENDS
+    libc.src.math.fromfpx
+)
+
+add_fp_unittest(
+  fromfpxf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpxf_test.cpp
+  HDRS
+    FromfpxTest.h
+  DEPENDS
+    libc.src.math.fromfpxf
+)
+
+add_fp_unittest(
+  fromfpxl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpxl_test.cpp
+  HDRS
+    FromfpxTest.h
+  DEPENDS
+    libc.src.math.fromfpxl
+)
+
+add_fp_unittest(
+  fromfpxf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpxf128_test.cpp
+  HDRS
+    FromfpxTest.h
+  DEPENDS
+    libc.src.math.fromfpxf128
+)
+
+add_fp_unittest(
+  ufromfp_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfp_test.cpp
+  HDRS
+    UfromfpTest.h
+  DEPENDS
+    libc.src.math.ufromfp
+)
+
+add_fp_unittest(
+  ufromfpf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpf_test.cpp
+  HDRS
+    UfromfpTest.h
+  DEPENDS
+    libc.src.math.ufromfpf
+)
+
+add_fp_unittest(
+  ufromfpl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpl_test.cpp
+  HDRS
+    UfromfpTest.h
+  DEPENDS
+    libc.src.math.ufromfpl
+)
+
+add_fp_unittest(
+  ufromfpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpf128_test.cpp
+  HDRS
+    UfromfpTest.h
+  DEPENDS
+    libc.src.math.ufromfpf128
+)
+
+add_fp_unittest(
+  ufromfpx_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpx_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpx
+)
+
+add_fp_unittest(
+  ufromfpxf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpxf_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpxf
+)
+
+add_fp_unittest(
+  ufromfpxl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpxl_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpxl
+)
+
+add_fp_unittest(
+  ufromfpxf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpxf128_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpxf128
+)
+
+add_fp_unittest(
+  ilogb_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogb_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogb
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  ilogbf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogbf_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbf
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  ilogbl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogbl_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbl
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  ilogbf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogbf128_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbf128
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  llogb_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogb_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogb
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  llogbf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogbf_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogbf
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  llogbl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogbl_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogbl
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  llogbf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogbf128_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogbf128
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  ldexp_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ldexp_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexp
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  ldexpf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ldexpf_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpf
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  ldexpl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ldexpl_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpl
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  ldexpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ldexpf128_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpf128
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  logb_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logb_test.cpp
+  DEPENDS
+    libc.src.math.logb
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  logbf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logbf_test.cpp
+  DEPENDS
+    libc.src.math.logbf
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  logbl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logbl_test.cpp
+  HDRS
+    LogbTest.h
+  DEPENDS
+    libc.src.math.logbl
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  logbf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logbf128_test.cpp
+  DEPENDS
+    libc.src.math.logbf128
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  modf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    modf_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modf
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_fp_unittest(
+  modff_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    modff_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modff
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_fp_unittest(
+  modfl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    modfl_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modfl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_fp_unittest(
+  modff128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    modff128_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modff128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_fp_unittest(
+  fdimf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdimf_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdimf
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fdim_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdim_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdim
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fdiml_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdiml_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdiml
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fdimf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdimf128_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdimf128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminf_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.math.fminf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmin_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmin_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.math.fmin
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminl_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.math.fminl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminf128_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.math.fminf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaxf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaxf_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.math.fmaxf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmax_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmax_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.math.fmax
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaxl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaxl_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.math.fmaxl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaxf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaxf128_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.math.fmaxf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximuml_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximuml_test.cpp
+  HDRS
+    FMaximumTest.h
+  DEPENDS
+    libc.src.math.fmaximuml
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximumf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximumf128_test.cpp
+  HDRS
+    FMaximumTest.h
+  DEPENDS
+    libc.src.math.fmaximumf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_test.cpp
+  HDRS
+    FMaximumTest.h
+  DEPENDS
+    libc.src.math.fmaximum
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximumf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximumf_test.cpp
+  HDRS
+    FMaximumTest.h
+  DEPENDS
+    libc.src.math.fmaximumf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_numf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_numf_test.cpp
+  HDRS
+    FMaximumNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_numf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_num_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_num_test.cpp
+  HDRS
+    FMaximumNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_num
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_numl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_numl_test.cpp
+  HDRS
+    FMaximumNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_numl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_numf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_numf128_test.cpp
+  HDRS
+    FMaximumNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_numf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_magf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_magf_test.cpp
+  HDRS
+    FMaximumMagTest.h
+  DEPENDS
+    libc.src.math.fmaximum_magf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_mag_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_mag_test.cpp
+  HDRS
+    FMaximumMagTest.h
+  DEPENDS
+    libc.src.math.fmaximum_mag
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_magl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_magl_test.cpp
+  HDRS
+    FMaximumMagTest.h
+  DEPENDS
+    libc.src.math.fmaximum_magl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_magf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_magf128_test.cpp
+  HDRS
+    FMaximumMagTest.h
+  DEPENDS
+    libc.src.math.fmaximum_magf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+
+add_fp_unittest(
+  fmaximum_mag_numf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_mag_numf_test.cpp
+  HDRS
+    FMaximumMagNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_mag_numf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_mag_num_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_mag_num_test.cpp
+  HDRS
+    FMaximumMagNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_mag_num
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_mag_numl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_mag_numl_test.cpp
+  HDRS
+    FMaximumMagNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_mag_numl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximum_mag_numf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_mag_numf128_test.cpp
+  HDRS
+    FMaximumMagNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_mag_numf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimuml_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimuml_test.cpp
+  HDRS
+    FMinimumTest.h
+  DEPENDS
+    libc.src.math.fminimuml
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimumf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimumf128_test.cpp
+  HDRS
+    FMinimumTest.h
+  DEPENDS
+    libc.src.math.fminimumf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_test.cpp
+  HDRS
+    FMinimumTest.h
+  DEPENDS
+    libc.src.math.fminimum
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimumf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimumf_test.cpp
+  HDRS
+    FMinimumTest.h
+  DEPENDS
+    libc.src.math.fminimumf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_numf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_numf_test.cpp
+  HDRS
+    FMinimumNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_numf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_num_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_num_test.cpp
+  HDRS
+    FMinimumNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_num
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_numl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_numl_test.cpp
+  HDRS
+    FMinimumNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_numl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_numf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_numf128_test.cpp
+  HDRS
+    FMinimumNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_numf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_magf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_magf_test.cpp
+  HDRS
+    FMinimumMagTest.h
+  DEPENDS
+    libc.src.math.fminimum_magf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_mag_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_mag_test.cpp
+  HDRS
+    FMinimumMagTest.h
+  DEPENDS
+    libc.src.math.fminimum_mag
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_magl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_magl_test.cpp
+  HDRS
+    FMinimumMagTest.h
+  DEPENDS
+    libc.src.math.fminimum_magl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_magf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_magf128_test.cpp
+  HDRS
+    FMinimumMagTest.h
+  DEPENDS
+    libc.src.math.fminimum_magf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+
+add_fp_unittest(
+  fminimum_mag_numf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_mag_numf_test.cpp
+  HDRS
+    FMinimumMagNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_mag_numf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_mag_num_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_mag_num_test.cpp
+  HDRS
+    FMinimumMagNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_mag_num
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_mag_numl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_mag_numl_test.cpp
+  HDRS
+    FMinimumMagNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_mag_numl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_mag_numf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_mag_numf128_test.cpp
+  HDRS
+    FMinimumMagNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_mag_numf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sqrtf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sqrtf_test.cpp
+  DEPENDS
+    libc.src.math.sqrtf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sqrt_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sqrt_test.cpp
+  DEPENDS
+    libc.src.math.sqrt
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sqrtl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sqrtl_test.cpp
+  DEPENDS
+    libc.src.math.sqrtl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sqrtf128_test.cpp
+  DEPENDS
+    libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  generic_sqrtf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    generic_sqrtf_test.cpp
+  DEPENDS
+    libc.src.math.sqrtf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_fp_unittest(
+  generic_sqrt_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    generic_sqrt_test.cpp
+  DEPENDS
+    libc.src.math.sqrt
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_fp_unittest(
+  generic_sqrtl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    generic_sqrtl_test.cpp
+  DEPENDS
+    libc.src.math.sqrtl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_fp_unittest(
+  generic_sqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    generic_sqrtf128_test.cpp
+  DEPENDS
+    libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_fp_unittest(
+  remquof_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    remquof_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquof
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  remquo_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    remquo_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquo
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  remquol_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    remquol_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquol
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  hypotf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    hypotf_test.cpp
+  DEPENDS
+    libc.src.math.hypotf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  hypot_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    hypot_test.cpp
+  DEPENDS
+    libc.src.math.hypot
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nanf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanf_test.cpp
+  DEPENDS
+    libc.include.signal
+    libc.src.math.nanf
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  nan_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nan_test.cpp
+  DEPENDS
+    libc.include.signal
+    libc.src.math.nan
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  nanl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanl_test.cpp
+  DEPENDS
+    libc.include.signal
+    libc.src.math.nanl
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  nanf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanf128_test.cpp
+  DEPENDS
+    libc.include.signal
+    libc.src.math.nanf128
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  nearbyint_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyint_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyint
+)
+
+add_fp_unittest(
+  nearbyintf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintf_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintf
+)
+
+add_fp_unittest(
+  nearbyintl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintl_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintl
+)
+
+add_fp_unittest(
+  nearbyintf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintf128_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintf128
+)
+
+add_fp_unittest(
+  nextafter_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafter_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.src.math.nextafter
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nextafterf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterf_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.src.math.nextafterf
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nextafterl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterl_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.src.math.nextafterl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nextafterf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterf128_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.src.math.nextafterf128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+# FIXME: These tests are currently spurious for the GPU.
+if(NOT LIBC_TARGET_OS_IS_GPU)
+  add_fp_unittest(
+    nexttoward_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      nexttoward_test.cpp
+    HDRS
+      NextTowardTest.h
+    DEPENDS
+      libc.src.math.nexttoward
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
+
+  add_fp_unittest(
+    nexttowardf_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      nexttowardf_test.cpp
+    HDRS
+      NextTowardTest.h
+    DEPENDS
+      libc.src.math.nexttowardf
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
+endif()
+
+add_fp_unittest(
+  nexttowardl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nexttowardl_test.cpp
+  HDRS
+    NextTowardTest.h
+  DEPENDS
+    libc.src.math.nexttowardl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nextdown_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdown_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.src.math.nextdown
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextdownf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownf_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.src.math.nextdownf
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextdownl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownl_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.src.math.nextdownl
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextdownf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownf128_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.src.math.nextdownf128
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextup_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextup_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.src.math.nextup
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextupf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupf_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.src.math.nextupf
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextupl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupl_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.src.math.nextupl
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextupf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupf128_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.src.math.nextupf128
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+# TODO(lntue): The current implementation of fputil::general::fma<float> is only
+# correctly rounded for the default rounding mode round-to-nearest tie-to-even.
+add_fp_unittest(
+  fmaf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaf_test.cpp
+  DEPENDS
+    libc.src.math.fmaf
+    libc.src.__support.FPUtil.fp_bits
+  FLAGS
+    FMA_OPT__ONLY
+)
+
+add_fp_unittest(
+  fma_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fma_test.cpp
+  DEPENDS
+    libc.src.math.fma
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  expm1f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expm1f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.expm1f
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  expm1_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expm1_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.expm1
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  log_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.log
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  logf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.logf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  log2_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log2_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.log2
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  log2f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log2f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.log2f
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  log10_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log10_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.log10
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  log10f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log10f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.log10f
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  log1p_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log1p_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.log1p
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  log1pf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log1pf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.log1pf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmodf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmodf_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.fmodf
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  fmod_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmod_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.fmod
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  fmodl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmodl_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.fmodl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  fmodf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmodf128_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.fmodf128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  coshf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    coshf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.coshf
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sinhf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinhf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sinhf
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  tanhf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tanhf_test.cpp
+  DEPENDS
+    libc.src.math.tanhf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  atanhf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atanhf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.atanhf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  asinhf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinhf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.asinhf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  acoshf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acoshf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.acoshf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  asinf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.asinf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  acosf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acosf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.acosf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  atanf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atanf_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.atanf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  atan2f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atan2f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.atan2f
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  scalbn_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalbn_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbn
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  scalbnf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalbnf_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbnf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  scalbnl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalbnl_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbnl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  scalbnf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalbnf128_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbnf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  erff_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    erff_test.cpp
+  DEPENDS
+    libc.src.math.erff
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  powf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    powf_test.cpp
+  DEPENDS
+    libc.src.math.powf
+    libc.src.__support.FPUtil.fp_bits
+)

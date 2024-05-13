@@ -65,7 +65,6 @@ void use(X0 *x0, X1<int> *x1, X2 *x2, X1<float> *x3) {
   x3->f2();
 }
 
-// rdar://problem/8614470
 namespace test1 {
   struct __attribute__((visibility("default"))) A {
     inline void foo();
@@ -106,7 +105,7 @@ namespace PR11642 {
   };
   extern template class Foo<int>;
   template class Foo<int>;
-  // CHECK-LABEL: define weak_odr i32 @_ZN7PR116423FooIiE3fooEi
+  // CHECK-LABEL: define weak_odr noundef i32 @_ZN7PR116423FooIiE3fooEi
 }
 
 // Test that clang implements the new gcc behaviour for inline functions.
@@ -166,7 +165,7 @@ namespace test6 {
 namespace PR34811 {
   template <typename T> void tf() {}
   
-  // CHECK-LABEL: define linkonce_odr hidden i8* @_ZN7PR348111fEv(
+  // CHECK-LABEL: define linkonce_odr hidden noundef ptr @_ZN7PR348111fEv(
   inline void *f() {
     auto l = []() {};
     // CHECK-LABEL: define linkonce_odr hidden void @_ZN7PR348112tfIZNS_1fEvEUlvE_EEvv(

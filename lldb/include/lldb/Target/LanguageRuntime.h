@@ -21,6 +21,7 @@
 #include "lldb/Target/Runtime.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -66,10 +67,42 @@ public:
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
+  /// Return the preferred language runtime instance, which in most cases will
+  /// be the current instance.
+  virtual LanguageRuntime *GetPreferredLanguageRuntime(ValueObject &in_value) {
+    return nullptr;
+  }
+
   virtual bool GetObjectDescription(Stream &str, ValueObject &object) = 0;
 
   virtual bool GetObjectDescription(Stream &str, Value &value,
                                     ExecutionContextScope *exe_scope) = 0;
+
+
+  struct VTableInfo {
+    Address addr; /// Address of the vtable's virtual function table
+    Symbol *symbol; /// The vtable symbol from the symbol table
+  };
+  /// Get the vtable information for a given value.
+  ///
+  /// \param[in] in_value
+  ///     The value object to try and extract the VTableInfo from.
+  ///
+  /// \param[in] check_type
+  ///     If true, the compiler type of \a in_value will be checked to see if
+  ///     it is an instance to, or pointer or reference to a class or struct
+  ///     that has a vtable. If the type doesn't meet the requirements, an
+  ///     error will be returned explaining why the type isn't suitable.
+  ///
+  /// \return
+  ///     An error if anything goes wrong while trying to extract the vtable
+  ///     or if \a check_type is true and the type doesn't have a vtable.
+  virtual llvm::Expected<VTableInfo> GetVTableInfo(ValueObject &in_value,
+                                                   bool check_type) {
+    return llvm::createStringError(
+        std::errc::invalid_argument,
+        "language doesn't support getting vtable information");
+  }
 
   // this call should return true if it could set the name and/or the type
   virtual bool GetDynamicTypeAndAddress(ValueObject &in_value,
@@ -141,7 +174,7 @@ public:
     return false;
   }
 
-  virtual void SymbolsDidLoad(const ModuleList &module_list) { return; }
+  virtual void SymbolsDidLoad(const ModuleList &module_list) {}
 
   virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                           bool stop_others) = 0;
@@ -150,11 +183,11 @@ public:
   /// from the user interface.
   virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
 
-  virtual llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) {
-    return llvm::None;
+  virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
+    return std::nullopt;
   }
 
-  virtual void ModulesDidLoad(const ModuleList &module_list) override {}
+  void ModulesDidLoad(const ModuleList &module_list) override {}
 
   // Called by ClangExpressionParser::PrepareForExecution to query for any
   // custom LLVM IR passes that need to be run before an expression is

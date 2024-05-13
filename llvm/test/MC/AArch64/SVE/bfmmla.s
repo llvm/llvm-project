@@ -14,7 +14,7 @@ bfmmla z0.S, z1.H, z2.H
 movprfx z0, z7
 // CHECK-INST: movprfx z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: sve or sme
 
 bfmmla z0.S, z1.H, z2.H
 // CHECK-INST: bfmmla z0.s, z1.h, z2.h

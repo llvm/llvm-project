@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 
 // Member function declarations with the same name and the same
 // parameter-type-list as well as mem- ber function template
@@ -22,3 +23,63 @@ class Y {
   void k(); // expected-note{{previous declaration}}
   void k() &&; // expected-error{{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
 };
+
+struct GH76358 {
+    template<int> void f() && {}
+    template<typename T> void f() const {}
+};
+
+
+#if __cplusplus >= 202002L
+namespace GH58962 {
+
+template<typename T>
+__add_rvalue_reference(T) declval();
+
+template<unsigned R>
+struct type
+{
+    void func() requires (R == 0);
+    void func() & requires (R == 1);
+    void func() && requires (R == 2);
+};
+
+template<typename T>
+concept test = requires { declval<T>().func(); };
+
+static_assert(test<type<0>&>);
+static_assert(test<type<0>&&>);
+static_assert(test<type<1>&>);
+static_assert(not test<type<1>&&>);
+static_assert(not test<type<2>&>);
+static_assert(test<type<2>&&>);
+
+}
+
+namespace GH78101 {
+
+template<typename T, typename U, int i>
+concept True = true;
+
+template<typename T, int I>
+struct Template {
+    static constexpr int i = I;
+    friend constexpr auto operator+(True<T, i> auto f) {
+        return i;
+    }
+};
+
+template<int I>
+struct Template<float, I> {
+    static constexpr int i = I;
+    friend constexpr auto operator+(True<float, i> auto f) {
+        return i;
+    }
+};
+
+Template<void, 4> f{};
+static_assert(+Template<float, 5>{} == 5);
+
+}
+
+#endif

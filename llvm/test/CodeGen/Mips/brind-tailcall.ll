@@ -1,22 +1,22 @@
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1 \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1 \
 ; RUN:   -relocation-model=pic < %s 2>&1 | FileCheck --check-prefix=PIC %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static < %s 2>&1 | FileCheck --check-prefix=STATIC %s
-; RUN: llc -march=mips64 -debug-only=isel -mips-tail-calls=1 \
+; RUN: llc -mtriple=mips64 -debug-only=isel -mips-tail-calls=1 \
 ; RUN:   -relocation-model=pic < %s 2>&1 | FileCheck --check-prefix=PIC64 %s
-; RUN: llc -march=mips64 -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips64 -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static < %s 2>&1 | FileCheck --check-prefix=STATIC64 %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1 \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1 \
 ; RUN:   -relocation-model=pic -mattr=+micromips < %s 2>&1 | FileCheck --check-prefix=PIC %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static -mattr=+micromips < %s 2>&1 | FileCheck --check-prefix=STATIC-MM %s
-; RUN: llc -march=mips -mcpu=mips32r6 -debug-only=isel -mips-tail-calls=1 \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -debug-only=isel -mips-tail-calls=1 \
 ; RUN:   -relocation-model=pic -mattr=+micromips < %s 2>&1 | FileCheck --check-prefix=PIC %s
-; RUN: llc -march=mips -mcpu=mips32r6 -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static -mattr=+micromips < %s 2>&1 | FileCheck --check-prefix=STATIC-MM %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=pic    -mattr=+mips16 < %s 2>&1 | FileCheck --check-prefix=MIPS16 %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static -mattr=+mips16 < %s 2>&1 | FileCheck --check-prefix=MIPS16 %s
 
 ; REQUIRES: asserts
@@ -31,9 +31,9 @@ define void @test1(i32 %a) {
 entry:
   %0 = trunc i32 %a to i1
   %1 = select i1 %0,
-              i8* blockaddress(@test1, %bb),
-              i8* blockaddress(@test1, %bb6)
-  indirectbr i8* %1, [label %bb, label %bb6]
+              ptr blockaddress(@test1, %bb),
+              ptr blockaddress(@test1, %bb6)
+  indirectbr ptr %1, [label %bb, label %bb6]
 
 ; STATIC:     PseudoIndirectBranch
 ; STATIC-MM:  PseudoIndirectBranch

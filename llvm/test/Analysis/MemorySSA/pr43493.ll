@@ -1,4 +1,4 @@
-; RUN: opt -enable-mssa-loop-dependency=true -loop-rotate -verify-memoryssa -S %s | FileCheck %s
+; RUN: opt -passes=loop-rotate -verify-memoryssa -S %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @func_35()
@@ -13,7 +13,7 @@ for.cond1704:                                     ; preds = %for.cond1704.prehea
   br i1 false, label %for.body1707, label %return.loopexit
 
 for.body1707:                                     ; preds = %for.cond1704
-  store i32 1712, i32* undef, align 1
+  store i32 1712, ptr undef, align 1
   br label %for.cond1704
 
 for.body1102:                                     ; preds = %for.body1102

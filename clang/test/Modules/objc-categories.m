@@ -1,15 +1,13 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_top -emit-module %S/Inputs/module.map
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_left -emit-module %S/Inputs/module.map
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_right -emit-module %S/Inputs/module.map
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_bottom -emit-module %S/Inputs/module.map
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_other -emit-module %S/Inputs/module.map
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_top -emit-module %S/Inputs/module.modulemap
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_left -emit-module %S/Inputs/module.modulemap
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_right -emit-module %S/Inputs/module.modulemap
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_bottom -emit-module %S/Inputs/module.modulemap
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x objective-c -fmodule-name=category_other -emit-module %S/Inputs/module.modulemap
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs %s -verify
 
 @import category_bottom;
 
-// expected-note@Inputs/category_left.h:14 {{previous definition}}
-// expected-warning@Inputs/category_right.h:12 {{duplicate definition of category}}
 // expected-note@Inputs/category_top.h:1 {{receiver is instance of class declared here}}
 
 @interface Foo(Source)

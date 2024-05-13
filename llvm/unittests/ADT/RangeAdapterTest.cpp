@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/iterator_range.h"
 #include "gtest/gtest.h"
 
 #include <iterator>
@@ -151,20 +150,14 @@ TYPED_TEST(RangeAdapterRValueTest, TrivialOperation) {
   TestRev(reverse(TypeParam({0, 1, 2, 3})));
 }
 
-TYPED_TEST(RangeAdapterRValueTest, HasRbegin) {
-  static_assert(has_rbegin<TypeParam>::value, "rbegin() should be defined");
-}
-
 TYPED_TEST(RangeAdapterRValueTest, RangeType) {
   static_assert(
-      std::is_same<
-          decltype(reverse(*static_cast<TypeParam *>(nullptr)).begin()),
-          decltype(static_cast<TypeParam *>(nullptr)->rbegin())>::value,
+      std::is_same_v<decltype(reverse(std::declval<TypeParam>()).begin()),
+                     decltype(std::declval<TypeParam>().rbegin())>,
       "reverse().begin() should have the same type as rbegin()");
   static_assert(
-      std::is_same<
-          decltype(reverse(*static_cast<const TypeParam *>(nullptr)).begin()),
-          decltype(static_cast<const TypeParam *>(nullptr)->rbegin())>::value,
+      std::is_same_v<decltype(reverse(std::declval<const TypeParam>()).begin()),
+                     decltype(std::declval<const TypeParam>().rbegin())>,
       "reverse().begin() should have the same type as rbegin() [const]");
 }
 

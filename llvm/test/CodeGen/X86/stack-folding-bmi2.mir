@@ -25,7 +25,7 @@
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { nounwind "target-features"="+bmi2" }
   attributes #1 = { nounwind }
@@ -50,11 +50,11 @@ body:             |
 
     ; CHECK-LABEL: name: stack_fold_mulx_u32
     ; CHECK: liveins: $edi, $esi
-    ; CHECK: MOV32mr %stack.0, 1, $noreg, 0, $noreg, $esi :: (store 4 into %stack.0)
-    ; CHECK: MOV32mr %stack.1, 1, $noreg, 0, $noreg, $edi :: (store 4 into %stack.1)
+    ; CHECK: MOV32mr %stack.0, 1, $noreg, 0, $noreg, $esi :: (store (s32) into %stack.0)
+    ; CHECK: MOV32mr %stack.1, 1, $noreg, 0, $noreg, $edi :: (store (s32) into %stack.1)
     ; CHECK: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
-    ; CHECK: $edx = MOV32rm %stack.1, 1, $noreg, 0, $noreg :: (load 4 from %stack.1)
-    ; CHECK: %3:gr32, dead %4:gr32 = MULX32rm %stack.0, 1, $noreg, 0, $noreg, implicit $edx :: (load 4 from %stack.0)
+    ; CHECK: $edx = MOV32rm %stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %stack.1)
+    ; CHECK: %3:gr32, dead %4:gr32 = MULX32rm %stack.0, 1, $noreg, 0, $noreg, implicit $edx :: (load (s32) from %stack.0)
     ; CHECK: $eax = COPY %3
     ; CHECK: RET 0, $eax
     %1:gr32 = COPY $esi
@@ -85,11 +85,11 @@ body:             |
 
     ; CHECK-LABEL: name: stack_fold_mulx_u64
     ; CHECK: liveins: $rdi, $rsi
-    ; CHECK: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rsi :: (store 8 into %stack.0)
-    ; CHECK: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdi :: (store 8 into %stack.1)
+    ; CHECK: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rsi :: (store (s64) into %stack.0)
+    ; CHECK: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.1)
     ; CHECK: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
-    ; CHECK: $rdx = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load 8 from %stack.1)
-    ; CHECK: %3:gr64, dead %4:gr64 = MULX64rm %stack.0, 1, $noreg, 0, $noreg, implicit $rdx :: (load 8 from %stack.0)
+    ; CHECK: $rdx = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
+    ; CHECK: %3:gr64, dead %4:gr64 = MULX64rm %stack.0, 1, $noreg, 0, $noreg, implicit $rdx :: (load (s64) from %stack.0)
     ; CHECK: $rax = COPY %3
     ; CHECK: RET 0, $rax
     %1:gr64 = COPY $rsi

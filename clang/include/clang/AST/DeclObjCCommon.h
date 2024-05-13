@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_DECLOBJC_COMMON_H
-#define LLVM_CLANG_AST_DECLOBJC_COMMON_H
+#ifndef LLVM_CLANG_AST_DECLOBJCCOMMON_H
+#define LLVM_CLANG_AST_DECLOBJCCOMMON_H
 
 namespace clang {
 
@@ -52,4 +52,4 @@ enum {
 
 } // namespace clang
 
-#endif // LLVM_CLANG_AST_DECLOBJC_COMMON_H
+#endif // LLVM_CLANG_AST_DECLOBJCCOMMON_H

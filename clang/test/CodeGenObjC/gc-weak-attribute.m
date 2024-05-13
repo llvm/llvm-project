@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-gc -emit-llvm -o - %s | FileCheck %s
-// rdar://10073896
 
 @interface I
 {
@@ -17,12 +16,12 @@
 @synthesize wRandom;
 @synthesize wAnother;
 @end
-// CHECK:  call i8* @objc_read_weak
-// CHECK:  call i8* @objc_assign_weak
-// CHECK:  call i8* @objc_read_weak
-// CHECK:  call i8* @objc_assign_weak
-// CHECK:  call i8* @objc_read_weak
-// CHECK:  call i8* @objc_assign_weak
-// CHECK:  call i8* @objc_read_weak
-// CHECK:  call i8* @objc_assign_weak
+// CHECK:  call ptr @objc_read_weak
+// CHECK:  call ptr @objc_assign_weak
+// CHECK:  call ptr @objc_read_weak
+// CHECK:  call ptr @objc_assign_weak
+// CHECK:  call ptr @objc_read_weak
+// CHECK:  call ptr @objc_assign_weak
+// CHECK:  call ptr @objc_read_weak
+// CHECK:  call ptr @objc_assign_weak
 

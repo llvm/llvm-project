@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck %s --check-prefix=DEFAULT
 // RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -fwrapv | FileCheck %s --check-prefix=WRAPV
 // RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -ftrapv | FileCheck %s --check-prefix=TRAPV
-// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -fsanitize=signed-integer-overflow | FileCheck %s --check-prefix=CATCH_UB
+// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -fsanitize=signed-integer-overflow | FileCheck %s --check-prefixes=CATCH_UB,CATCH_UB_POINTER
+// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -fsanitize=signed-integer-overflow -fwrapv | FileCheck %s --check-prefixes=CATCH_UB,NOCATCH_UB_POINTER
 // RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -ftrapv -ftrapv-handler foo | FileCheck %s --check-prefix=TRAPV_HANDLER
 
 
 // Tests for signed integer overflow stuff.
-// rdar://7432000 rdar://7221421
-void test1() {
+void test1(void) {
   // DEFAULT-LABEL: define{{.*}} void @test1
   // WRAPV-LABEL: define{{.*}} void @test1
   // TRAPV-LABEL: define{{.*}} void @test1
@@ -60,10 +60,11 @@ void test1() {
   // -fwrapv should turn off inbounds for GEP's, PR9256
   extern int* P;
   ++P;
-  // DEFAULT: getelementptr inbounds i32, i32*
-  // WRAPV: getelementptr i32, i32*
-  // TRAPV: getelementptr inbounds i32, i32*
-  // CATCH_UB: getelementptr inbounds i32, i32*
+  // DEFAULT: getelementptr inbounds i32, ptr
+  // WRAPV: getelementptr i32, ptr
+  // TRAPV: getelementptr inbounds i32, ptr
+  // CATCH_UB_POINTER: getelementptr inbounds i32, ptr
+  // NOCATCH_UB_POINTER: getelementptr i32, ptr
 
   // PR9350: char pre-increment never overflows.
   extern volatile signed char PR9350_char_inc;
@@ -99,8 +100,8 @@ void test1() {
 
   // PR24256: don't instrument __builtin_frame_address.
   __builtin_frame_address(0 + 0);
-  // DEFAULT:  call i8* @llvm.frameaddress.p0i8(i32 0)
-  // WRAPV:    call i8* @llvm.frameaddress.p0i8(i32 0)
-  // TRAPV:    call i8* @llvm.frameaddress.p0i8(i32 0)
-  // CATCH_UB: call i8* @llvm.frameaddress.p0i8(i32 0)
+  // DEFAULT:  call ptr @llvm.frameaddress.p0(i32 0)
+  // WRAPV:    call ptr @llvm.frameaddress.p0(i32 0)
+  // TRAPV:    call ptr @llvm.frameaddress.p0(i32 0)
+  // CATCH_UB: call ptr @llvm.frameaddress.p0(i32 0)
 }

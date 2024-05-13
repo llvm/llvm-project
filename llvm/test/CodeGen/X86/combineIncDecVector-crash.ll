@@ -16,9 +16,9 @@ define void @TestvMeth(i32 %0, i64 %1) gc "statepoint-example" !prof !1 {
 ; CHECK-NEXT:    movl $10, %esi
 ; CHECK-NEXT:    movl $10, %edx
 ; CHECK-NEXT:    movl $400, %ecx # imm = 0x190
-; CHECK-NEXT:    callq newarray
+; CHECK-NEXT:    callq newarray@PLT
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [1.5E+1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    addss (%rax), %xmm0
 ; CHECK-NEXT:    movdqu (%rax), %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -26,27 +26,27 @@ define void @TestvMeth(i32 %0, i64 %1) gc "statepoint-example" !prof !1 {
 ; CHECK-NEXT:    movdqu %xmm1, (%rax)
 ; CHECK-NEXT:    movss %xmm0, (%rax)
 bci_0:
-   %token418 = call token (i64, i32, i8 * (i64, i32, i32, i32)*, i32,
-i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64
-2882400000, i32 0, i8 * (i64, i32, i32, i32)* nonnull @newarray, i32 4,
+   %token418 = call token (i64, i32, ptr, i32,
+i32, ...) @llvm.experimental.gc.statepoint.p0(i64
+2882400000, i32 0, ptr nonnull elementtype(ptr (i64, i32, i32, i32)) @newarray, i32 4,
 i32 0, i64 undef, i32 10, i32 10, i32 400, i32 0, i32 0) ["deopt"
 (i32 35, i32 0, i32 1, i32 0, i32 43, i32 1, i32 13, i32 0, i32 3,
-i32 400, i32 3, i32 %0, i32 4, i64 %1, i32 7, i8* null, i32 3,
-i32 -11464, i32 7, i8* null, i32 3, i32 -243, i32 3, i32 14, i32 3,
+i32 400, i32 3, i32 %0, i32 4, i64 %1, i32 7, ptr null, i32 3,
+i32 -11464, i32 7, ptr null, i32 3, i32 -243, i32 3, i32 14, i32 3,
 i32 117, i32 3, i32 -13, i32 3, i32 -15, i32 3, i32 -210, i32 3,
-i32 541, i32 7, i8* null)]
-   %v2 = load atomic float, float * undef unordered, align 4
-   %v3 = load <4 x i32>, <4 x i32> * undef, align 4
+i32 541, i32 7, ptr null)]
+   %v2 = load atomic float, ptr undef unordered, align 4
+   %v3 = load <4 x i32>, ptr undef, align 4
    %v4 = add <4 x i32> %v3, <i32 1, i32 1, i32 1, i32 1>
-   store <4 x i32> %v4, <4 x i32> * undef, align 4
+   store <4 x i32> %v4, ptr undef, align 4
    %v5 = fadd float %v2, 1.500000e+01
-   store atomic float %v5, float * undef unordered, align 4
+   store atomic float %v5, ptr undef unordered, align 4
    unreachable
 }
 
-declare i32* @personality_function()
-declare i8 * @newarray(i64, i32, i32, i32)
-declare token @llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64
-immarg, i32 immarg, i8 * (i64, i32, i32, i32)*, i32 immarg, i32 immarg, ...)
+declare ptr @personality_function()
+declare ptr @newarray(i64, i32, i32, i32)
+declare token @llvm.experimental.gc.statepoint.p0(i64
+immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
 
 !1 = !{!"function_entry_count", i64 32768}

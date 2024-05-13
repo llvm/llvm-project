@@ -1,4 +1,4 @@
-; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -enable-if-conversion
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -enable-if-conversion
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -39,7 +39,7 @@ if.end25:                                         ; preds = %entry
 
 ; PR15990
 ; We can have basic blocks with single entry PHI nodes.
-define void @single_entry_phi(i32* %a, i32 *%b) {
+define void @single_entry_phi(ptr %a, ptr %b) {
 entry:
   br label %for.cond1.preheader
 
@@ -55,6 +55,6 @@ for.end:
 
 for.cond.for.end5:
   %and.lcssa = phi i32 [ %malicious.phi, %for.end ]
-  store i32 %and.lcssa, i32* %a, align 4
+  store i32 %and.lcssa, ptr %a, align 4
   ret void
 }

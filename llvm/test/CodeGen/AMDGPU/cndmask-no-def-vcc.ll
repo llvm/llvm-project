@@ -1,11 +1,12 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare i1 @llvm.amdgcn.class.f32(float, i32)
 
 ; Produces error after adding an implicit def to v_cndmask_b32
 
 ; GCN-LABEL: {{^}}vcc_shrink_vcc_def:
-; GCN: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
+; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
+; GCN: s_cselect_b64 vcc, -1, 0
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, vcc
 define amdgpu_kernel void @vcc_shrink_vcc_def(float %arg, i32 %arg1, float %arg2, i32 %arg3) {
 bb0:
@@ -20,7 +21,7 @@ bb0:
   br i1 %tmp9, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   br label %bb2
 
 bb2:
@@ -45,7 +46,7 @@ bb0:
   br i1 %tmp9, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   br label %bb2
 
 bb2:

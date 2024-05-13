@@ -1,24 +1,22 @@
 // RUN: mlir-opt %s \
-// RUN: -gpu-kernel-outlining \
-// RUN: -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm{index-bitwidth=32},gpu-to-cubin{chip=sm_70})' \
-// RUN: --convert-scf-to-std -gpu-to-llvm \
+// RUN: | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_70 cubin-format=%gpu_compilation_format" \
 // RUN: | mlir-cpu-runner \
-// RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
-// RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:   --shared-libs=%mlir_cuda_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %0 = memref.alloc() : memref<16x16xf16>
   %22 = memref.alloc() : memref<16x16xf32>
   %1 = memref.alloc() : memref<16x16xf32>
 
-  %f1 = constant 1.0e+00 : f16
-  %f0 = constant 0.0e+00 : f32
-  %c0 = constant 0 : index
-  %c16 = constant 16 : index
-  %c32 = constant 32 : index
-  %c1 = constant 1 : index
+  %f1 = arith.constant 1.0e+00 : f16
+  %f0 = arith.constant 0.0e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %c1 = arith.constant 1 : index
 
   // Intialize the Input matrix with ones.
   scf.for %arg0 = %c0 to %c16 step %c1 {
@@ -51,7 +49,7 @@ func @main() {
     gpu.terminator
   }
   // Print the memref after computation.
-  call @print_memref_f32(%33) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%33) : (memref<*xf32>) -> ()
   // CHECK: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
   // CHECK-NEXT: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
   // CHECK-NEXT: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
@@ -71,4 +69,4 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)

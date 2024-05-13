@@ -7,7 +7,7 @@
 
 // expected-no-diagnostics
 
-void func() {
+void func(void) {
  TestPCH *xx;
  TestForwardClassDecl *yy;
 // FIXME:

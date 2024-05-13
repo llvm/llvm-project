@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass that sets the spv.entry_point_abi attribute on
+// This file implements a pass that sets the spirv.entry_point_abi attribute on
 // functions that are to be lowered as entry point functions.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Pass/Pass.h"
@@ -19,11 +19,21 @@
 using namespace mlir;
 
 namespace {
-/// Pass to set the spv.entry_point_abi
-class TestSpirvEntryPointABIPass
+/// Pass to set the spirv.entry_point_abi
+struct TestSpirvEntryPointABIPass
     : public PassWrapper<TestSpirvEntryPointABIPass,
                          OperationPass<gpu::GPUModuleOp>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSpirvEntryPointABIPass)
+
+  StringRef getArgument() const final { return "test-spirv-entry-point-abi"; }
+  StringRef getDescription() const final {
+    return "Set the spirv.entry_point_abi attribute on GPU kernel function "
+           "within the "
+           "module, intended for testing only";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<spirv::SPIRVDialect>();
+  }
   TestSpirvEntryPointABIPass() = default;
   TestSpirvEntryPointABIPass(const TestSpirvEntryPointABIPass &) {}
   void runOnOperation() override;
@@ -34,8 +44,17 @@ private:
       llvm::cl::desc(
           "Workgroup size to use for all gpu.func kernels in the module, "
           "specified with x-dimension first, y-dimension next and z-dimension "
-          "last. Unspecified dimensions will be set to 1"),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+          "last. Unspecified dimensions will be set to 1")};
+  Pass::Option<int> subgroupSize{
+      *this, "subgroup-size",
+      llvm::cl::desc(
+          "Subgroup size to use for all gpu.func kernels in the module"),
+      llvm::cl::init(0)};
+  Pass::Option<int> targetWidth{
+      *this, "target-width",
+      llvm::cl::desc(
+          "Specify the component width of floating-point instructions"),
+      llvm::cl::init(0)};
 };
 } // namespace
 
@@ -44,21 +63,24 @@ void TestSpirvEntryPointABIPass::runOnOperation() {
   MLIRContext *context = &getContext();
   StringRef attrName = spirv::getEntryPointABIAttrName();
   for (gpu::GPUFuncOp gpuFunc : gpuModule.getOps<gpu::GPUFuncOp>()) {
-    if (!gpu::GPUDialect::isKernel(gpuFunc) || gpuFunc->getAttr(attrName))
+    if (!gpu::GPUDialect::isKernel(gpuFunc) ||
+        gpuFunc->getDiscardableAttr(attrName))
       continue;
     SmallVector<int32_t, 3> workgroupSizeVec(workgroupSize.begin(),
                                              workgroupSize.end());
     workgroupSizeVec.resize(3, 1);
     gpuFunc->setAttr(attrName,
-                     spirv::getEntryPointABIAttr(workgroupSizeVec, context));
+                     spirv::getEntryPointABIAttr(
+                         context, workgroupSizeVec,
+                         (subgroupSize == 0) ? std::nullopt
+                                             : std::optional<int>(subgroupSize),
+                         (targetWidth == 0) ? std::nullopt
+                                            : std::optional<int>(targetWidth)));
   }
 }
 
 namespace mlir {
 void registerTestSpirvEntryPointABIPass() {
-  PassRegistration<TestSpirvEntryPointABIPass> registration(
-      "test-spirv-entry-point-abi",
-      "Set the spv.entry_point_abi attribute on GPU kernel function within the "
-      "module, intended for testing only");
+  PassRegistration<TestSpirvEntryPointABIPass>();
 }
 } // namespace mlir

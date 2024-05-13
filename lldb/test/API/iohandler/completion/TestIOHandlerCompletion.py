@@ -9,17 +9,17 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 
+
 class IOHandlerCompletionTest(PExpectTest):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr49408')
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr49408")
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_completion(self):
-        self.launch(dimensions=(100,500))
+        self.build()
+        self.launch(dimensions=(100, 500), executable=self.getBuildArtifact("a.out"))
 
         # Start tab completion, go to the next page and then display all with 'a'.
         self.child.send("\t\ta")
@@ -29,7 +29,13 @@ class IOHandlerCompletionTest(PExpectTest):
         self.child.send("regi\t")
         # editline might move the cursor back to the start of the line and
         # then back to its original position.
-        self.child.expect(re.compile(b"regi(\r" + self.cursor_forward_escape_seq(len(self.PROMPT + "regi")) + b")?ster"))
+        self.child.expect(
+            re.compile(
+                b"regi(\r"
+                + self.cursor_forward_escape_seq(len(self.PROMPT + "regi"))
+                + b")?ster"
+            )
+        )
         self.child.send("\n")
         self.expect_prompt()
 
@@ -46,7 +52,20 @@ class IOHandlerCompletionTest(PExpectTest):
         # then back to its original position. We only care about the fact
         # that this is completing a partial completion, so skip the exact cursor
         # position calculation.
-        self.child.expect(re.compile(b"TestIOHandler(\r" + self.cursor_forward_escape_seq("\d+") + b")?Completion.py"))
+        self.child.expect(
+            re.compile(
+                b"TestIOHandler(\r"
+                + self.cursor_forward_escape_seq("\d+")
+                + b")?Completion.py"
+            )
+        )
+        self.child.send("\n")
+        self.expect_prompt()
+
+        # Complete a file path.
+        # FIXME: This should complete to './main.c' and not 'main.c'
+        self.child.send("breakpoint set --file ./main\t")
+        self.child.expect_exact("main.c")
         self.child.send("\n")
         self.expect_prompt()
 
@@ -54,6 +73,12 @@ class IOHandlerCompletionTest(PExpectTest):
         self.child.send("\t")
         self.child.expect_exact("More (Y/n/a)")
         self.child.send("n")
+        self.expect_prompt()
+
+        # Start tab completion and abort showing more commands with '^C'.
+        self.child.send("\t")
+        self.child.expect_exact("More (Y/n/a)")
+        self.child.sendcontrol("c")
         self.expect_prompt()
 
         # Shouldn't crash or anything like that.

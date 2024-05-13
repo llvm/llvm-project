@@ -18,7 +18,7 @@
 
 static __inline fixint_t __mulvXi3(fixint_t a, fixint_t b) {
   const int N = (int)(sizeof(fixint_t) * CHAR_BIT);
-  const fixint_t MIN = (fixint_t)1 << (N - 1);
+  const fixint_t MIN = (fixint_t)((fixuint_t)1 << (N - 1));
   const fixint_t MAX = ~MIN;
   if (a == MIN) {
     if (b == 0 || b == 1)

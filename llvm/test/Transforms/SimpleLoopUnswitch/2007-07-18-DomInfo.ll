@@ -1,11 +1,10 @@
-; RUN: opt < %s -simple-loop-unswitch -disable-output
-; RUN: opt < %s -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output
+; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -disable-output
 ; PR1559
 
 target triple = "i686-pc-linux-gnu"
-	%struct.re_pattern_buffer = type { i8*, i32, i32, i32, i8*, i8*, i32, i8 }
+	%struct.re_pattern_buffer = type { ptr, i32, i32, i32, ptr, ptr, i32, i8 }
 
-define fastcc i32 @byte_regex_compile(i8* %pattern, i32 %size, i32 %syntax, %struct.re_pattern_buffer* %bufp) {
+define fastcc i32 @byte_regex_compile(ptr %pattern, i32 %size, i32 %syntax, ptr %bufp) {
 entry:
         br i1 false, label %bb147, label %cond_next123
 
@@ -34,16 +33,16 @@ cond_true1849:          ; preds = %cond_next1844
         br label %bb1855.outer.outer
 
 bb1855.outer.outer:             ; preds = %cond_true1849, %bb1734
-        %b.10.ph.ph = phi i8* [ null, %cond_true1849 ], [ null, %bb1734 ]               ; <i8*> [#uses=1]
+        %b.10.ph.ph = phi ptr [ null, %cond_true1849 ], [ null, %bb1734 ]               ; <ptr> [#uses=1]
         br label %bb1855.outer
 
 bb1855.outer:           ; preds = %bb1855.outer.outer, %cond_next1844
-        %b.10.ph = phi i8* [ null, %cond_next1844 ], [ %b.10.ph.ph, %bb1855.outer.outer ]               ; <i8*> [#uses=1]
-        %tmp1837 = icmp eq i8* null, null               ; <i1> [#uses=2]
+        %b.10.ph = phi ptr [ null, %cond_next1844 ], [ %b.10.ph.ph, %bb1855.outer.outer ]               ; <ptr> [#uses=1]
+        %tmp1837 = icmp eq ptr null, null               ; <i1> [#uses=2]
         br i1 false, label %cond_true1831, label %cond_next1915
 
 cond_next1915:          ; preds = %cond_next1961, %bb1855.outer
-        store i8* null, i8** null
+        store ptr null, ptr null
         br i1 %tmp1837, label %cond_next1929, label %cond_true1923
 
 cond_true1923:          ; preds = %cond_next1915
@@ -53,7 +52,7 @@ cond_next1929:          ; preds = %cond_next1915
         br i1 false, label %cond_next1961, label %cond_next2009
 
 cond_next1961:          ; preds = %cond_next1929
-        %tmp1992 = getelementptr i8, i8* %b.10.ph, i32 0            ; <i8*> [#uses=0]
+        %tmp1992 = getelementptr i8, ptr %b.10.ph, i32 0            ; <ptr> [#uses=0]
         br label %cond_next1915
 
 cond_next2009:          ; preds = %cond_next1929

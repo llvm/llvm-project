@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Finds function calls where it is possible to cause a not null-terminated
 /// result. Usually the proper length of a string is 'strlen(src) + 1' or
@@ -22,7 +20,7 @@ namespace bugprone {
 /// when the string is read.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-not-null-terminated-result.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/not-null-terminated-result.html
 class NotNullTerminatedResultCheck : public ClangTidyCheck {
 public:
   NotNullTerminatedResultCheck(StringRef Name, ClangTidyContext *Context);
@@ -52,7 +50,7 @@ private:
                  const ast_matchers::MatchFinder::MatchResult &Result);
   void memmoveFix(StringRef Name,
                   const ast_matchers::MatchFinder::MatchResult &Result,
-                  DiagnosticBuilder &Diag);
+                  DiagnosticBuilder &Diag) const;
   void strerror_sFix(const ast_matchers::MatchFinder::MatchResult &Result);
   void ncmpFix(StringRef Name,
                const ast_matchers::MatchFinder::MatchResult &Result);
@@ -60,8 +58,6 @@ private:
                const ast_matchers::MatchFinder::MatchResult &Result);
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOT_NULL_TERMINATED_RESULT_H

@@ -11,18 +11,18 @@ define float @pr26491(<4 x float> %a0) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[3,3]
-; SSE2-NEXT:    addps %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE2-NEXT:    addps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-SLOW-LABEL: pr26491:
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movaps %xmm1, %xmm0
-; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
+; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSSE3-SLOW-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
@@ -37,7 +37,7 @@ define float @pr26491(<4 x float> %a0) {
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX1-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX1-SLOW-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX1-SLOW-NEXT:    retq
 ;
@@ -52,7 +52,7 @@ define float @pr26491(<4 x float> %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX2-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
   %1 = shufflevector <4 x float> %a0, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
@@ -70,7 +70,7 @@ define <4 x double> @PR41414(i64 %x, <4 x double> %y) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %rdi, %xmm2
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[1],mem[1]
-; SSE2-NEXT:    subpd {{.*}}(%rip), %xmm2
+; SSE2-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    movapd %xmm2, %xmm3
 ; SSE2-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
@@ -86,7 +86,7 @@ define <4 x double> @PR41414(i64 %x, <4 x double> %y) {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movq %rdi, %xmm2
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[1],mem[1]
-; SSSE3-NEXT:    subpd {{.*}}(%rip), %xmm2
+; SSSE3-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSSE3-NEXT:    haddpd %xmm2, %xmm2
 ; SSSE3-NEXT:    divpd %xmm2, %xmm1
 ; SSSE3-NEXT:    divpd %xmm2, %xmm0
@@ -99,7 +99,7 @@ define <4 x double> @PR41414(i64 %x, <4 x double> %y) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq %rdi, %xmm1
 ; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; AVX1-NEXT:    vsubpd {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vhaddpd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
@@ -111,8 +111,8 @@ define <4 x double> @PR41414(i64 %x, <4 x double> %y) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovq %rdi, %xmm1
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; AVX2-NEXT:    vsubpd {{.*}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX2-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX2-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vbroadcastsd %xmm1, %ymm1
 ; AVX2-NEXT:    vdivpd %ymm1, %ymm0, %ymm0

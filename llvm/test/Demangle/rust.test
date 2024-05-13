@@ -9,6 +9,11 @@ CHECK: hello::rust
 CHECK: a::b::c
        _RNvNvC1a1b1c
 
+; Instantiating crate
+
+CHECK: crate
+       _RC5crateC3foo
+
 ; Closure namespace
 
 CHECK: crate::{closure#0}
@@ -232,6 +237,45 @@ CHECK: function::<extern "cdecl" fn()>
 CHECK: function::<unsafe extern "C-cmse-nonsecure-call" fn()>
        _RIC8functionFUK21C_cmse_nonsecure_callEuE
 
+; Invalid ABI with punycode.
+
+CHECK: _RIC8functionFKu3n3hEuE
+       _RIC8functionFKu3n3hEuE
+
+; Trait objects
+
+CHECK: trait::<dyn >
+       _RIC5traitDEL_E
+
+CHECK: trait::<dyn for<'a> >
+       _RIC5traitDG_EL_E
+
+CHECK: trait::<for<'a> fn(dyn for<'b> + 'a)>
+       _RIC5traitFG_DG_EL0_EuE
+
+CHECK: trait::<dyn Display>
+       _RIC5traitDC7DisplayEL_E
+
+CHECK: trait::<dyn Display + Send + Sync>
+       _RIC5traitDC7DisplayC4SendC4SyncEL_E
+
+CHECK: trait::<dyn for<'a> Display>
+       _RIC5traitDG_C7DisplayEL_E
+
+CHECK: trait::<dyn IntoIterator<_, Item = _>>
+       _RIC5traitDIC12IntoIteratorpEp4ItempEL_E
+
+CHECK: trait::<dyn IntoIterator<Item = _>>
+       _RIC5traitDC12IntoIteratorp4ItempEL_E
+
+CHECK: trait::<dyn IntoIterator<Item = _, IntoIter = _>>
+       _RIC5traitDC12IntoIteratorp4Itempp8IntoIterpEL_E
+
+; Invalid trait object, missing lifetime.
+
+CHECK: _RIC5traitDEE
+       _RIC5traitDEE
+
 ; Binders
 
 CHECK: binders::<for<'a> fn(&'a _)>
@@ -380,6 +424,80 @@ CHECK: char::<'\u{10ffff}'>
 
 CHECK: _RIC4charKc1234567_E
        _RIC4charKc1234567_E
+
+; Backreferences
+
+CHECK: backref::<backref::ident>
+       _RIC7backrefNvB0_5identE
+
+CHECK: backref::<(), ()>
+       _RIC7backrefuB9_E
+
+CHECK: backref::<7, 7>
+       _RIC7backrefKi7_KBa_E
+
+; Invalid backreferences
+
+CHECK: _RB_
+       _RB_
+
+CHECK: _RB5_
+       _RB5_
+
+CHECK: _RNvB_1a
+       _RNvB_1a
+
+CHECK: _RIC7backrefSB9_E
+       _RIC7backrefSB9_E
+
+CHECK: _RIC7backrefKBa_E
+       _RIC7backrefKBa_E
+
+; Dot suffix
+
+CHECK: dot (.llvm.1234)
+       _RC3dot.llvm.1234
+
+CHECK: dot (.llvm.6789)
+       _RC3dotC5crate.llvm.6789
+
+; Punycode
+
+CHECK: punycode::東京
+       _RNvC8punycodeu7_1lqs71d
+
+CHECK: punycode::zażółć_gęślą_jaźń
+       _RNvC8punycodeu29za_gl_ja_w3a7psa2tqtgb10airva
+
+CHECK: punycode::საჭმელად_გემრიელი_სადილი
+       _RNvC8punycodeu30____7hkackfecea1cbdathfdh9hlq6y
+
+CHECK: Gödel::Escher::Bach
+       _RNtNvCu8Gdel_5qa6Escher4Bach
+
+CHECK: punycode::🦁🐅
+       _RNvC8punycodeu7wn8hx1g
+
+; Punycode - invalid code point
+
+CHECK: _RCu5r731r
+       _RCu5r731r
+
+CHECK: _RCu8b44444yy
+       _RCu8b44444yy
+
+CHECK: _RNvC1au25zzzzzzzzzzzzzzzzzzzzzzzzz
+       _RNvC1au25zzzzzzzzzzzzzzzzzzzzzzzzz
+
+; Punycode - early EOF
+
+CHECK: _RCu8_CCCAR_u4
+       _RCu8_CCCAR_u4
+
+; Punycode - overflow
+
+CHECK: _RNvC1au21p18888888888888888888
+       _RNvC1au21p18888888888888888888
 
 ; Invalid mangled characters
 

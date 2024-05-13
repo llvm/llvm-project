@@ -1,11 +1,10 @@
 ;; For a global constructor, _GLOBAL__sub_I_ only has artificial lines.
 ;; Test that we don't instrument those functions.
 ; RUN: mkdir -p %t && cd %t
-; RUN: opt -S -insert-gcov-profiling < %s | FileCheck %s
 ; RUN: opt -S -passes=insert-gcov-profiling < %s | FileCheck %s
 
 @var = dso_local global i32 0, align 4
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_a.cc, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_a.cc, ptr null }]
 
 define internal void @__cxx_global_var_init() section ".text.startup" !dbg !7 {
 ; CHECK: define internal void @__cxx_global_var_init()
@@ -13,7 +12,7 @@ define internal void @__cxx_global_var_init() section ".text.startup" !dbg !7 {
 ; CHECK: call i32 @_Z3foov()
 entry:
   %call = call i32 @_Z3foov(), !dbg !9
-  store i32 %call, i32* @var, align 4, !dbg !9
+  store i32 %call, ptr @var, align 4, !dbg !9
   ret void, !dbg !9
 }
 

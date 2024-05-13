@@ -20,6 +20,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 using namespace llvm;
@@ -455,7 +456,7 @@ void ASTPropsEmitter::emitPropertiedReaderWriterBody(HasProperties node,
   // Emit code to read all the properties.
   visitAllProperties(node, nodeInfo, [&](Property prop) {
     // Verify that the creation code refers to this property.
-    if (info.IsReader && creationCode.find(prop.getName()) == StringRef::npos)
+    if (info.IsReader && !creationCode.contains(prop.getName()))
       PrintFatalError(nodeInfo.Creator.getLoc(),
                       "creation code for " + node.getName()
                         + " doesn't refer to property \""
@@ -525,7 +526,8 @@ void ASTPropsEmitter::emitReadOfProperty(StringRef readerName,
   // get a pr-value back from read(), and we should be able to forward
   // that in the creation rule.
   Out << "    ";
-  if (!condition.empty()) Out << "llvm::Optional<";
+  if (!condition.empty())
+    Out << "std::optional<";
   type.emitCXXValueTypeName(true, Out);
   if (!condition.empty()) Out << ">";
   Out << " " << name;
@@ -591,7 +593,7 @@ void ASTPropsEmitter::emitWriteOfProperty(StringRef writerName,
 template <class NodeClass>
 static void emitASTReader(RecordKeeper &records, raw_ostream &out,
                           StringRef description) {
-  emitSourceFileHeader(description, out);
+  emitSourceFileHeader(description, out, records);
 
   ASTPropsEmitter(records, out).emitNodeReaderClass<NodeClass>();
 }
@@ -605,7 +607,7 @@ void clang::EmitClangTypeReader(RecordKeeper &records, raw_ostream &out) {
 template <class NodeClass>
 static void emitASTWriter(RecordKeeper &records, raw_ostream &out,
                           StringRef description) {
-  emitSourceFileHeader(description, out);
+  emitSourceFileHeader(description, out, records);
 
   ASTPropsEmitter(records, out).emitNodeWriterClass<NodeClass>();
 }
@@ -662,9 +664,7 @@ ASTPropsEmitter::emitDispatcherTemplate(const ReaderWriterInfo &info) {
   declareSpecialization("<class T>",
                         "llvm::ArrayRef<T>",
                         "Array");
-  declareSpecialization("<class T>",
-                        "llvm::Optional<T>",
-                        "Optional");
+  declareSpecialization("<class T>", "std::optional<T>", "Optional");
   Out << "\n";
 }
 
@@ -677,15 +677,20 @@ ASTPropsEmitter::emitPackUnpackOptionalTemplate(const ReaderWriterInfo &info) {
   Out << "template <class ValueType>\n"
          "struct " << classPrefix << "OptionalValue;\n";
 
-  auto declareSpecialization = [&](const Twine &typeName,
-                                   StringRef code) {
+  auto declareSpecialization = [&](const Twine &typeName, StringRef code) {
     Out << "template <>\n"
-           "struct " << classPrefix << "OptionalValue<" << typeName << "> {\n"
-           "  static " << (info.IsReader ? "Optional<" : "") << typeName
-                       << (info.IsReader ? "> " : " ") << methodName << "("
-                       << (info.IsReader ? "" : "Optional<") << typeName
-                       << (info.IsReader ? "" : ">") << " value) {\n"
-           "    return " << code << ";\n"
+           "struct "
+        << classPrefix << "OptionalValue<" << typeName
+        << "> {\n"
+           "  static "
+        << (info.IsReader ? "std::optional<" : "") << typeName
+        << (info.IsReader ? "> " : " ") << methodName << "("
+        << (info.IsReader ? "" : "std::optional<") << typeName
+        << (info.IsReader ? "" : ">")
+        << " value) {\n"
+           "    return "
+        << code
+        << ";\n"
            "  }\n"
            "};\n";
   };
@@ -847,7 +852,7 @@ void ASTPropsEmitter::emitBasicReaderWriterFile(const ReaderWriterInfo &info) {
 /// Emit an .inc file that defines some helper classes for reading
 /// basic values.
 void clang::EmitClangBasicReader(RecordKeeper &records, raw_ostream &out) {
-  emitSourceFileHeader("Helper classes for BasicReaders", out);
+  emitSourceFileHeader("Helper classes for BasicReaders", out, records);
 
   // Use any property, we won't be using those properties.
   auto info = ReaderWriterInfo::forReader<TypeNode>();
@@ -857,7 +862,7 @@ void clang::EmitClangBasicReader(RecordKeeper &records, raw_ostream &out) {
 /// Emit an .inc file that defines some helper classes for writing
 /// basic values.
 void clang::EmitClangBasicWriter(RecordKeeper &records, raw_ostream &out) {
-  emitSourceFileHeader("Helper classes for BasicWriters", out);
+  emitSourceFileHeader("Helper classes for BasicWriters", out, records);
 
   // Use any property, we won't be using those properties.
   auto info = ReaderWriterInfo::forWriter<TypeNode>();

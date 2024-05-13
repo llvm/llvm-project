@@ -9,10 +9,12 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: endpgm_with_successors
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   S_ENDPGM 0
-  ; CHECK: bb.1:
-  ; CHECK:   S_NOP 0
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_ENDPGM 0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   S_NOP 0
   bb.0:
     successors: %bb.1
     S_ENDPGM 0
@@ -28,11 +30,13 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: setpc_with_successors
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $sgpr30_sgpr31
-  ; CHECK:   S_SETPC_B64 $sgpr30_sgpr31
-  ; CHECK: bb.1:
-  ; CHECK:   S_NOP 0
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr30_sgpr31
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SETPC_B64 $sgpr30_sgpr31
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   S_NOP 0
   bb.0:
     liveins: $sgpr30_sgpr31
     successors: %bb.1

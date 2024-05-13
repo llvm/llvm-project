@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=aarch64-windows -filetype=obj -o - %s | \
-; RUN: llvm-readobj --codeview - | FileCheck %s
+; RUN: llvm-readobj --codeview - | FileCheck %s --check-prefixes=CHECK,CHECK-STDOUT
+; RUN: llc -mtriple=aarch64-windows -filetype=obj -o %t.o %s
+; RUN: llvm-readobj --codeview %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-FILE
 
 ; ModuleID = 'a.c'
 source_filename = "a.c"
@@ -10,7 +12,7 @@ target triple = "aarch64--windows-msvc18.0.0"
 define i32 @main() #0 !dbg !7 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   ret i32 1, !dbg !11
 }
 
@@ -66,10 +68,17 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; CHECK:   Magic: 0x4
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
+; CHECK:     ObjNameSym {
+; CHECK:       Kind: S_OBJNAME (0x1101)
+; CHECK:       Signature: 0x0
+; CHECK-STDOUT: ObjectName: {{$}}
+; CHECK-FILE:   ObjectName: {{.*}}.o
+; CHECK:     }
 ; CHECK:     Compile3Sym {
 ; CHECK:       Kind: S_COMPILE3 (0x113C)
 ; CHECK:       Language: C (0x0)
-; CHECK:       Flags [ (0x0)
+; CHECK:       Flags [ (0x4000
+; CHECK:        HotPatch (0x4000)
 ; CHECK:       ]
 ; CHECK:     }
 ; CHECK:   ]
@@ -86,7 +95,9 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; CHECK:       FunctionType: main (0x1002)
 ; CHECK:       CodeOffset: main+0x0
 ; CHECK:       Segment: 0x0
-; CHECK:       Flags [ (0x0)
+; CHECK:       Flags [ (0xC0)
+; CHECK:         HasOptimizedDebugInfo (0x80)
+; CHECK:         IsNoInline (0x40)
 ; CHECK:       ]
 ; CHECK:       DisplayName: main
 ; CHECK:       LinkageName: main

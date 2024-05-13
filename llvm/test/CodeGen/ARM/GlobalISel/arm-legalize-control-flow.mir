@@ -147,24 +147,20 @@ body:             |
     %5(s8) = G_TRUNC %4(s32)
     ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY $r2
 
-    ; CHECK: [[V1:%[0-9]+]]:_(s32) = COPY [[R1]]
-
     G_BRCOND %1(s1), %bb.1
     G_BR %bb.2
 
   bb.1:
-    ; CHECK: [[V2:%[0-9]+]]:_(s32) = COPY [[R2]]
     G_BR %bb.2
 
   bb.2:
     %6(s8) = G_PHI %3(s8), %bb.0, %5(s8), %bb.1
     ; G_PHI with s8 should widen, and all the truncs and exts should be combined
     ; away into a bunch of redundant copies
-    ; CHECK: [[V:%[0-9]+]]:_(s32) = G_PHI [[V1]](s32), %bb.0, [[V2]](s32), %bb.1
+    ; CHECK: [[V:%[0-9]+]]:_(s32) = G_PHI [[R1]](s32), %bb.0, [[R2]](s32), %bb.1
 
     %7(s32) = G_ANYEXT %6(s8)
     $r0 = COPY %7(s32)
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = COPY [[V]]
-    ; CHECK: $r0 = COPY [[R]](s32)
+    ; CHECK: $r0 = COPY [[V]](s32)
     BX_RET 14, $noreg, implicit $r0
 ...

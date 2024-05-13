@@ -10,9 +10,10 @@
 
 // template <class charT, class moneyT> T8 put_money(const moneyT& mon, bool intl = false);
 
-// REQUIRES: locale.en_US.UTF-8
+// Bionic has minimal locale support, investigate this later.
+// XFAIL: LIBCXX-ANDROID-FIXME
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// REQUIRES: locale.en_US.UTF-8
 
 #include <iomanip>
 #include <ostream>
@@ -59,38 +60,56 @@ int main(int, char**)
         testbuf<char> sb;
         std::ostream os(&sb);
         os.imbue(std::locale(LOCALE_en_US_UTF_8));
-        showbase(os);
+        std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, false);
+#if defined(_WIN32)
+        assert(sb.str() == "($1,234,567.89)");
+#else
         assert(sb.str() == "-$1,234,567.89");
+#endif
     }
     {
         testbuf<char> sb;
         std::ostream os(&sb);
         os.imbue(std::locale(LOCALE_en_US_UTF_8));
-        showbase(os);
+        std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, true);
+#if defined(_WIN32)
+        assert(sb.str() == "(USD1,234,567.89)");
+#else
         assert(sb.str() == "-USD 1,234,567.89");
+#endif
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
         os.imbue(std::locale(LOCALE_en_US_UTF_8));
-        showbase(os);
+        std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, false);
+#if defined(_WIN32)
+        assert(sb.str() == L"($1,234,567.89)");
+#else
         assert(sb.str() == L"-$1,234,567.89");
+#endif
     }
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
         os.imbue(std::locale(LOCALE_en_US_UTF_8));
-        showbase(os);
+        std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, true);
+#if defined(_WIN32)
+        assert(sb.str() == L"(USD1,234,567.89)");
+#else
         assert(sb.str() == L"-USD 1,234,567.89");
+#endif
     }
+#endif
 
   return 0;
 }

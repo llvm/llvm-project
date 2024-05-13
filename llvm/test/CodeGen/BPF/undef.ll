@@ -10,10 +10,10 @@
 @test1 = global %struct.bpf_map_def { i32 2, i32 4, i32 8, i32 1024 }, section "maps", align 4
 @test1_miss_4 = global %struct.bpf_map_def { i32 2, i32 1, i32 8, i32 1 }, section "maps", align 4
 @_license = global [4 x i8] c"GPL\00", section "license", align 1
-@llvm.used = appending global [6 x i8*] [i8* getelementptr inbounds ([4 x i8], [4 x i8]* @_license, i32 0, i32 0), i8* bitcast (i32 (%struct.__sk_buff*)* @ebpf_filter to i8*), i8* bitcast (%struct.bpf_map_def* @routing to i8*), i8* bitcast (%struct.bpf_map_def* @routing_miss_0 to i8*), i8* bitcast (%struct.bpf_map_def* @test1 to i8*), i8* bitcast (%struct.bpf_map_def* @test1_miss_4 to i8*)], section "llvm.metadata"
+@llvm.used = appending global [6 x ptr] [ptr @_license, ptr @ebpf_filter, ptr @routing, ptr @routing_miss_0, ptr @test1, ptr @test1_miss_4], section "llvm.metadata"
 
 ; Function Attrs: nounwind uwtable
-define i32 @ebpf_filter(%struct.__sk_buff* nocapture readnone %ebpf_packet) #0 section "socket1" {
+define i32 @ebpf_filter(ptr nocapture readnone %ebpf_packet) #0 section "socket1" {
 
 ; EL: r1 = 11033905661445 ll
 ; EB: r1 = 361984551142686720 ll
@@ -40,26 +40,25 @@ define i32 @ebpf_filter(%struct.__sk_buff* nocapture readnone %ebpf_packet) #0 s
 ; CHECK: r1 = routing
 ; CHECK: call bpf_map_lookup_elem
 ; CHECK: exit
-  %key = alloca %struct.routing_key_2, align 1
-  %1 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 0
-  store i8 5, i8* %1, align 1
-  %2 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 1
-  store i8 6, i8* %2, align 1
-  %3 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 2
-  store i8 7, i8* %3, align 1
-  %4 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 3
-  store i8 8, i8* %4, align 1
-  %5 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 4
-  store i8 9, i8* %5, align 1
-  %6 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 5
-  store i8 10, i8* %6, align 1
-  %7 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 1, i32 0, i64 0
-  call void @llvm.memset.p0i8.i64(i8* %7, i8 0, i64 30, i1 false)
-  %8 = call i32 (%struct.bpf_map_def*, %struct.routing_key_2*, ...) bitcast (i32 (...)* @bpf_map_lookup_elem to i32 (%struct.bpf_map_def*, %struct.routing_key_2*, ...)*)(%struct.bpf_map_def* nonnull @routing, %struct.routing_key_2* nonnull %key) #3
+  %key = alloca %struct.routing_key_2, align 8
+  store i8 5, ptr %key, align 1
+  %1 = getelementptr inbounds %struct.routing_key_2, ptr %key, i64 0, i32 0, i64 1
+  store i8 6, ptr %1, align 1
+  %2 = getelementptr inbounds %struct.routing_key_2, ptr %key, i64 0, i32 0, i64 2
+  store i8 7, ptr %2, align 1
+  %3 = getelementptr inbounds %struct.routing_key_2, ptr %key, i64 0, i32 0, i64 3
+  store i8 8, ptr %3, align 1
+  %4 = getelementptr inbounds %struct.routing_key_2, ptr %key, i64 0, i32 0, i64 4
+  store i8 9, ptr %4, align 1
+  %5 = getelementptr inbounds %struct.routing_key_2, ptr %key, i64 0, i32 0, i64 5
+  store i8 10, ptr %5, align 1
+  %6 = getelementptr inbounds %struct.routing_key_2, ptr %key, i64 1, i32 0, i64 0
+  call void @llvm.memset.p0.i64(ptr %6, i8 0, i64 30, i1 false)
+  %7 = call i32 (ptr, ptr, ...) @bpf_map_lookup_elem(ptr nonnull @routing, ptr nonnull %key) #3
   ret i32 undef
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #1
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) #1
 
 declare i32 @bpf_map_lookup_elem(...) #2

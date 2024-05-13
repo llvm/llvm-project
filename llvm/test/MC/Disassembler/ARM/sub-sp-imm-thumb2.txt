@@ -6,8 +6,8 @@
 
 # CHECK:      subw sp, sp, #1148
 # CHECK-SAME: <MCInst #{{[0-9]+}} t2SUBspImm12
-# CHECK-NEXT: <MCOperand Reg:15>
-# CHECK-NEXT: <MCOperand Reg:15>
+# CHECK-NEXT: <MCOperand Reg:[[SP:[0-9]+]]>
+# CHECK-NEXT: <MCOperand Reg:[[SP]]>
 # CHECK-NEXT: <MCOperand Imm:1148>
 # CHECK-NEXT: <MCOperand Imm:14>
 # CHECK-NEXT: <MCOperand Reg:0>>
@@ -16,8 +16,8 @@
 
 # CHECK:      sub.w   sp, sp, #1024
 # CHECK-SAME: <MCInst #{{[0-9]+}} t2SUBspImm
-# CHECK-NEXT: <MCOperand Reg:15>
-# CHECK-NEXT: <MCOperand Reg:15>
+# CHECK-NEXT: <MCOperand Reg:[[SP]]>
+# CHECK-NEXT: <MCOperand Reg:[[SP]]>
 # CHECK-NEXT: <MCOperand Imm:1024>
 # CHECK-NEXT: <MCOperand Imm:14>
 # CHECK-NEXT: <MCOperand Reg:0>
@@ -27,8 +27,8 @@
 
 # CHECK:      subs.w  sp, sp, #1024
 # CHECK-SAME: <MCInst #{{[0-9]+}} t2SUBspImm
-# CHECK-NEXT: <MCOperand Reg:15>
-# CHECK-NEXT: <MCOperand Reg:15>
+# CHECK-NEXT: <MCOperand Reg:[[SP]]>
+# CHECK-NEXT: <MCOperand Reg:[[SP]]>
 # CHECK-NEXT: <MCOperand Imm:1024>
 # CHECK-NEXT: <MCOperand Imm:14>
 # CHECK-NEXT: <MCOperand Reg:0>

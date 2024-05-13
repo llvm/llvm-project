@@ -1,4 +1,4 @@
-//===- DeltaManager.h - Runs Delta Passes to reduce Input -----------------===//
+//===- DeltaManager.h - Runs Delta Passes to reduce Input -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ class raw_ostream;
 class TestRunner;
 
 void printDeltaPasses(raw_ostream &OS);
-void runDeltaPasses(TestRunner &Tester);
+void runDeltaPasses(TestRunner &Tester, int MaxPassIterations);
 } // namespace llvm
 
 #endif

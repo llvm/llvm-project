@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s
 
 namespace test1 {
@@ -263,4 +263,64 @@ int _ = sizeof(G);
 // CHECK-NEXT:          8 |       int e
 // CHECK-NEXT:            | [sizeof=12, align=4,
 // CHECK-NEXT:            |  nvsize=12, nvalign=4]
+}
+
+namespace test5 {
+
+struct A {
+  int a;
+};
+struct B {
+  int b;
+};
+struct C {};
+struct __declspec(align(16)) D {};
+struct E {
+  [[msvc::no_unique_address]] C c;
+};
+struct __declspec(empty_bases) X : A, D, B, C, E {
+};
+
+// CHECK: *** Dumping AST Record Layout
+// CHECK-NEXT:          0 | struct test5::A
+// CHECK-NEXT:          0 |   int a
+// CHECK-NEXT:            | [sizeof=4, align=4,
+// CHECK-NEXT:            |  nvsize=4, nvalign=4]
+
+// CHECK: *** Dumping AST Record Layout
+// CHECK-NEXT:          0 | struct test5::D (empty)
+// CHECK-NEXT:            | [sizeof=16, align=16,
+// CHECK-NEXT:            |  nvsize=0, nvalign=16]
+
+// CHECK: *** Dumping AST Record Layout
+// CHECK-NEXT:          0 | struct test5::B
+// CHECK-NEXT:          0 |   int b
+// CHECK-NEXT:            | [sizeof=4, align=4,
+// CHECK-NEXT:            |  nvsize=4, nvalign=4]
+
+// CHECK: *** Dumping AST Record Layout
+// CHECK-NEXT:          0 | struct test5::C (empty)
+// CHECK-NEXT:            | [sizeof=1, align=1,
+// CHECK-NEXT:            |  nvsize=0, nvalign=1]
+
+// CHECK: *** Dumping AST Record Layout
+// CHECK-NEXT:          0 | struct test5::E (empty)
+// CHECK-NEXT:          0 |   struct test5::C c (empty)
+// CHECK-NEXT:            | [sizeof=1, align=1,
+// CHECK-NEXT:            |  nvsize=1, nvalign=1]
+
+// CHECK: *** Dumping AST Record Layout
+// CHECK-NEXT:          0 | struct test5::X
+// CHECK-NEXT:          0 |   struct test5::A (base)
+// CHECK-NEXT:          0 |     int a
+// CHECK-NEXT:          0 |   struct test5::D (base) (empty)
+// CHECK-NEXT:          0 |   struct test5::C (base) (empty)
+// CHECK-NEXT:          4 |   struct test5::B (base)
+// CHECK-NEXT:          4 |     int b
+// CHECK-NEXT:          8 |   struct test5::E (base) (empty)
+// CHECK-NEXT:          8 |     struct test5::C c (empty)
+// CHECK-NEXT:            | [sizeof=16, align=16,
+// CHECK-NEXT:            |  nvsize=16, nvalign=16]
+
+int _ = sizeof(X);
 }

@@ -15,7 +15,9 @@ int main(void) {
 void bar(void) {
 }
 
-$ clang-cl -Xclang -fdebug-compilation-dir -Xclang . -c -Z7 pdb_lines*.c
+$ clang-cl -fdebug-compilation-dir . -no-canonical-prefixes -c -Z7 pdb_lines*.c
+$ obj2yaml pdb_lines_1.obj > pdb_lines_1_relative.yaml
+$ obj2yaml pdb_lines_2.obj > pdb_lines_2_relative.yaml
 
 /pdbsourcepath: only sets the directory that relative paths are considered
 relative to, so this test needs to pass relative paths to lld-link for:
@@ -33,9 +35,16 @@ RUN: cd %t
 RUN: yaml2obj %S/Inputs/pdb_lines_1_relative.yaml -o %t/pdb_lines_1_relative.obj
 RUN: yaml2obj %S/Inputs/pdb_lines_2_relative.yaml -o %t/pdb_lines_2_relative.obj
 RUN: ./lld-link -debug "-pdbsourcepath:c:\src" -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj
-RUN: llvm-pdbutil pdb2yaml -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck %s
+RUN: llvm-pdbutil pdb2yaml -ipi-stream -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck %s
 RUN: ./lld-link -debug "-pdbsourcepath:/usr/src" -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj
-RUN: llvm-pdbutil pdb2yaml -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck --check-prefix=POSIX %s
+RUN: llvm-pdbutil pdb2yaml -ipi-stream -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck --check-prefix=POSIX %s
+
+Also check without -pdbsourcepath
+RUN: ./lld-link -debug -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj
+RUN: llvm-pdbutil pdb2yaml -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck --check-prefix=ABSOLUTE %s
+
+Clean up copy of large binary copied into temp directory to avoid bloat.
+RUN: rm -f ./lld-link || true
 
 CHECK-LABEL:  - Module:          'c:\src\pdb_lines_1_relative.obj'
 CHECK-NEXT:     ObjFile:         'c:\src\pdb_lines_1_relative.obj'
@@ -68,8 +77,22 @@ CHECK-NEXT:         - 'c:\src\lld-link'
 CHECK-NEXT:         - pdb 
 CHECK-NEXT:         - 'c:\src\out.pdb'
 CHECK-NEXT:         - cmd
-CHECK-NEXT:         - '-debug -pdbsourcepath:c:\src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj'
+CHECK-NEXT:         - '-debug -pdbsourcepath:c:\src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb'
 
+CHECK-LABEL: IpiStream:
+
+CHECK:    - Kind:            LF_STRING_ID
+CHECK-NEXT:      StringId:
+CHECK-NEXT:        Id:              0
+CHECK-NEXT:        String:          .
+CHECK-NEXT:     - Kind:            LF_STRING_ID
+CHECK-NEXT:       StringId:
+CHECK-NEXT:         Id:              0
+CHECK-NEXT:         String:          pdb_lines_1.c
+CHECK-NEXT:     - Kind:            LF_STRING_ID
+CHECK-NEXT:       StringId:
+CHECK-NEXT:         Id:              0
+CHECK-NEXT:         String:          'buildninjaRel\bin\clang-cl.exe'
 
 POSIX-LABEL:  - Module:          '/usr/src/pdb_lines_1_relative.obj'
 POSIX-NEXT:     ObjFile:         '/usr/src/pdb_lines_1_relative.obj'
@@ -102,4 +125,21 @@ POSIX-NEXT:         - '/usr/src/lld-link'
 POSIX-NEXT:         - pdb 
 POSIX-NEXT:         - '/usr/src/out.pdb'
 POSIX-NEXT:         - cmd
-POSIX-NEXT:         - '-debug -pdbsourcepath:/usr/src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj'
+POSIX-NEXT:         - '-debug -pdbsourcepath:/usr/src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb'
+
+ABSOLUTE-LABEL: StringTable:
+ABSOLUTE-NOT: {{/|\\}}.{{/|\\}}pdb_lines_1.c
+
+POSIX-LABEL: IpiStream:
+POSIX:    - Kind:            LF_STRING_ID
+POSIX-NEXT:      StringId:
+POSIX-NEXT:        Id:              0
+POSIX-NEXT:        String:          .
+POSIX-NEXT:     - Kind:            LF_STRING_ID
+POSIX-NEXT:       StringId:
+POSIX-NEXT:         Id:              0
+POSIX-NEXT:         String:          pdb_lines_1.c
+POSIX-NEXT:     - Kind:            LF_STRING_ID
+POSIX-NEXT:       StringId:
+POSIX-NEXT:         Id:              0
+POSIX-NEXT:         String:          'buildninjaRel\bin\clang-cl.exe'

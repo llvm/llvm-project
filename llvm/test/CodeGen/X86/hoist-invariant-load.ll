@@ -18,11 +18,11 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.7.2"
 
 @"\01L_OBJC_METH_VAR_NAME_" = internal global [4 x i8] c"foo\00", section "__TEXT,__objc_methname,cstring_literals", align 1
-@"\01L_OBJC_SELECTOR_REFERENCES_" = internal global i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_METH_VAR_NAME_", i64 0, i64 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
+@"\01L_OBJC_SELECTOR_REFERENCES_" = internal global ptr @"\01L_OBJC_METH_VAR_NAME_", section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
 @"\01L_OBJC_IMAGE_INFO" = internal constant [2 x i32] [i32 0, i32 16], section "__DATA, __objc_imageinfo, regular, no_dead_strip"
-@llvm.used = appending global [3 x i8*] [i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_METH_VAR_NAME_", i32 0, i32 0), i8* bitcast (i8** @"\01L_OBJC_SELECTOR_REFERENCES_" to i8*), i8* bitcast ([2 x i32]* @"\01L_OBJC_IMAGE_INFO" to i8*)], section "llvm.metadata"
+@llvm.used = appending global [3 x ptr] [ptr @"\01L_OBJC_METH_VAR_NAME_", ptr @"\01L_OBJC_SELECTOR_REFERENCES_", ptr @"\01L_OBJC_IMAGE_INFO"], section "llvm.metadata"
 
-define void @test(i8* %x) uwtable ssp {
+define void @test(ptr %x) uwtable ssp {
 ; CHECK-LABEL: test:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -41,8 +41,8 @@ define void @test(i8* %x) uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $10000, %ebp ## imm = 0x2710
-; CHECK-NEXT:    movq {{.*}}(%rip), %r14
-; CHECK-NEXT:    movq _objc_msgSend@{{.*}}(%rip), %r15
+; CHECK-NEXT:    movq L_OBJC_SELECTOR_REFERENCES_(%rip), %r14
+; CHECK-NEXT:    movq _objc_msgSend@GOTPCREL(%rip), %r15
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_1: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -63,8 +63,8 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %0 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8, !invariant.load !0
-  %call = tail call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %x, i8* %0)
+  %0 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_", align 8, !invariant.load !0
+  %call = tail call ptr @objc_msgSend(ptr %x, ptr %0)
   %inc = add i32 %i.01, 1
   %exitcond = icmp eq i32 %inc, 10000
   br i1 %exitcond, label %for.end, label %for.body
@@ -73,7 +73,7 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-define void @test_unordered(i8* %x) uwtable ssp {
+define void @test_unordered(ptr %x) uwtable ssp {
 ; CHECK-LABEL: test_unordered:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -92,8 +92,8 @@ define void @test_unordered(i8* %x) uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $10000, %ebp ## imm = 0x2710
-; CHECK-NEXT:    movq {{.*}}(%rip), %r14
-; CHECK-NEXT:    movq _objc_msgSend@{{.*}}(%rip), %r15
+; CHECK-NEXT:    movq L_OBJC_SELECTOR_REFERENCES_(%rip), %r14
+; CHECK-NEXT:    movq _objc_msgSend@GOTPCREL(%rip), %r15
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB1_1: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -114,8 +114,8 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %0 = load atomic i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_" unordered, align 8, !invariant.load !0
-  %call = tail call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %x, i8* %0)
+  %0 = load atomic ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_" unordered, align 8, !invariant.load !0
+  %call = tail call ptr @objc_msgSend(ptr %x, ptr %0)
   %inc = add i32 %i.01, 1
   %exitcond = icmp eq i32 %inc, 10000
   br i1 %exitcond, label %for.end, label %for.body
@@ -124,7 +124,7 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-define void @test_volatile(i8* %x) uwtable ssp {
+define void @test_volatile(ptr %x) uwtable ssp {
 ; CHECK-LABEL: test_volatile:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -138,11 +138,11 @@ define void @test_volatile(i8* %x) uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $10000, %ebp ## imm = 0x2710
-; CHECK-NEXT:    movq _objc_msgSend@{{.*}}(%rip), %r14
+; CHECK-NEXT:    movq _objc_msgSend@GOTPCREL(%rip), %r14
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB2_1: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq L_OBJC_SELECTOR_REFERENCES_(%rip), %rsi
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    callq *%r14
 ; CHECK-NEXT:    decl %ebp
@@ -157,8 +157,8 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %0 = load volatile i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8, !invariant.load !0
-  %call = tail call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %x, i8* %0)
+  %0 = load volatile ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_", align 8, !invariant.load !0
+  %call = tail call ptr @objc_msgSend(ptr %x, ptr %0)
   %inc = add i32 %i.01, 1
   %exitcond = icmp eq i32 %inc, 10000
   br i1 %exitcond, label %for.end, label %for.body
@@ -167,7 +167,7 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-define void @test_seq_cst(i8* %x) uwtable ssp {
+define void @test_seq_cst(ptr %x) uwtable ssp {
 ; CHECK-LABEL: test_seq_cst:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -181,11 +181,11 @@ define void @test_seq_cst(i8* %x) uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $10000, %ebp ## imm = 0x2710
-; CHECK-NEXT:    movq _objc_msgSend@{{.*}}(%rip), %r14
+; CHECK-NEXT:    movq _objc_msgSend@GOTPCREL(%rip), %r14
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB3_1: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq L_OBJC_SELECTOR_REFERENCES_(%rip), %rsi
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    callq *%r14
 ; CHECK-NEXT:    decl %ebp
@@ -200,8 +200,8 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %0 = load atomic i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_" seq_cst, align 8, !invariant.load !0
-  %call = tail call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %x, i8* %0)
+  %0 = load atomic ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_" seq_cst, align 8, !invariant.load !0
+  %call = tail call ptr @objc_msgSend(ptr %x, ptr %0)
   %inc = add i32 %i.01, 1
   %exitcond = icmp eq i32 %inc, 10000
   br i1 %exitcond, label %for.end, label %for.body
@@ -210,20 +210,20 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-declare i8* @objc_msgSend(i8*, i8*, ...) nonlazybind
+declare ptr @objc_msgSend(ptr, ptr, ...) nonlazybind
 
-define void @test_multi_def(i64* dereferenceable(8) %x1,
+define void @test_multi_def(ptr dereferenceable(8) align(8) %x1,
 ; CHECK-LABEL: test_multi_def:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    movq (%rdi), %rdx
-; CHECK-NEXT:    movq (%rsi), %r9
+; CHECK-NEXT:    movq (%rsi), %rsi
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB4_2: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mulxq %r9, %rsi, %rdi
-; CHECK-NEXT:    addq %rsi, (%rax)
+; CHECK-NEXT:    mulxq %rsi, %r9, %rdi
+; CHECK-NEXT:    addq %r9, (%rax)
 ; CHECK-NEXT:    adcq %rdi, 8(%rax)
 ; CHECK-NEXT:  ## %bb.1: ## %for.check
 ; CHECK-NEXT:    ## in Loop: Header=BB4_2 Depth=1
@@ -233,8 +233,8 @@ define void @test_multi_def(i64* dereferenceable(8) %x1,
 ; CHECK-NEXT:    jl LBB4_2
 ; CHECK-NEXT:  ## %bb.3: ## %exit
 ; CHECK-NEXT:    retq
-                            i64* dereferenceable(8) %x2,
-                            i128* %y, i64 %count) nounwind {
+                            ptr dereferenceable(8) align(8) %x2,
+                            ptr %y, i64 %count) nounwind nofree nosync {
 entry:
   br label %for.body
 
@@ -245,22 +245,22 @@ for.check:
 
 for.body:
   %i = phi i64 [ 0, %entry ], [ %inc, %for.check ]
-  %x1_load = load i64, i64* %x1, align 8, !invariant.load !0
+  %x1_load = load i64, ptr %x1, align 8, !invariant.load !0
   %x1_zext = zext i64 %x1_load to i128
-  %x2_load = load i64, i64* %x2, align 8, !invariant.load !0
+  %x2_load = load i64, ptr %x2, align 8, !invariant.load !0
   %x2_zext = zext i64 %x2_load to i128
   %x_prod = mul i128 %x1_zext, %x2_zext
-  %y_elem = getelementptr inbounds i128, i128* %y, i64 %i
-  %y_load = load i128, i128* %y_elem, align 8
+  %y_elem = getelementptr inbounds i128, ptr %y, i64 %i
+  %y_load = load i128, ptr %y_elem, align 8
   %y_plus = add i128 %x_prod, %y_load
-  store i128 %y_plus, i128* %y_elem, align 8
+  store i128 %y_plus, ptr %y_elem, align 8
   br label %for.check
 
 exit:
   ret void
 }
 
-define void @test_div_def(i32* dereferenceable(8) %x1,
+define void @test_div_def(ptr dereferenceable(8) align(8) %x1,
 ; CHECK-LABEL: test_div_def:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdx, %r8
@@ -281,8 +281,8 @@ define void @test_div_def(i32* dereferenceable(8) %x1,
 ; CHECK-NEXT:    jl LBB5_2
 ; CHECK-NEXT:  ## %bb.3: ## %exit
 ; CHECK-NEXT:    retq
-                          i32* dereferenceable(8) %x2,
-                          i32* %y, i32 %count) nounwind {
+                          ptr dereferenceable(8) align(8) %x2,
+                          ptr %y, i32 %count) nounwind nofree nosync {
 entry:
   br label %for.body
 
@@ -293,13 +293,13 @@ for.check:
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.check ]
-  %x1_load = load i32, i32* %x1, align 8, !invariant.load !0
-  %x2_load = load i32, i32* %x2, align 8, !invariant.load !0
+  %x1_load = load i32, ptr %x1, align 8, !invariant.load !0
+  %x2_load = load i32, ptr %x2, align 8, !invariant.load !0
   %x_quot = udiv i32 %x1_load, %x2_load
-  %y_elem = getelementptr inbounds i32, i32* %y, i32 %i
-  %y_load = load i32, i32* %y_elem, align 8
+  %y_elem = getelementptr inbounds i32, ptr %y, i32 %i
+  %y_load = load i32, ptr %y_elem, align 8
   %y_plus = add i32 %x_quot, %y_load
-  store i32 %y_plus, i32* %y_elem, align 8
+  store i32 %y_plus, ptr %y_elem, align 8
   br label %for.check
 
 exit:

@@ -30,6 +30,8 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <sstream>
@@ -155,7 +157,7 @@ public:
       return false;
 
     // Ignore anonymous functions.
-    if (!dyn_cast_or_null<NamedDecl>(AC.getDecl()))
+    if (!isa_and_nonnull<NamedDecl>(AC.getDecl()))
       return false;
 
     SortedGraph = AC.getAnalysis<PostOrderCFGView>();
@@ -269,28 +271,36 @@ private:
 // translateAttrExpr needs it, but that should be moved too.
 class CapabilityExpr {
 private:
-  /// The capability expression.
-  const til::SExpr* CapExpr;
+  /// The capability expression and whether it's negated.
+  llvm::PointerIntPair<const til::SExpr *, 1, bool> CapExpr;
 
-  /// True if this is a negative capability.
-  bool Negated;
+  /// The kind of capability as specified by @ref CapabilityAttr::getName.
+  StringRef CapKind;
 
 public:
-  CapabilityExpr(const til::SExpr *E, bool Neg) : CapExpr(E), Negated(Neg) {}
+  CapabilityExpr() : CapExpr(nullptr, false) {}
+  CapabilityExpr(const til::SExpr *E, StringRef Kind, bool Neg)
+      : CapExpr(E, Neg), CapKind(Kind) {}
 
-  const til::SExpr* sexpr() const { return CapExpr; }
-  bool negative() const { return Negated; }
+  // Don't allow implicitly-constructed StringRefs since we'll capture them.
+  template <typename T> CapabilityExpr(const til::SExpr *, T, bool) = delete;
+
+  const til::SExpr *sexpr() const { return CapExpr.getPointer(); }
+  StringRef getKind() const { return CapKind; }
+  bool negative() const { return CapExpr.getInt(); }
 
   CapabilityExpr operator!() const {
-    return CapabilityExpr(CapExpr, !Negated);
+    return CapabilityExpr(CapExpr.getPointer(), CapKind, !CapExpr.getInt());
   }
 
   bool equals(const CapabilityExpr &other) const {
-    return (Negated == other.Negated) && sx::equals(CapExpr, other.CapExpr);
+    return (negative() == other.negative()) &&
+           sx::equals(sexpr(), other.sexpr());
   }
 
   bool matches(const CapabilityExpr &other) const {
-    return (Negated == other.Negated) && sx::matches(CapExpr, other.CapExpr);
+    return (negative() == other.negative()) &&
+           sx::matches(sexpr(), other.sexpr());
   }
 
   bool matchesUniv(const CapabilityExpr &CapE) const {
@@ -298,27 +308,27 @@ public:
   }
 
   bool partiallyMatches(const CapabilityExpr &other) const {
-    return (Negated == other.Negated) &&
-            sx::partiallyMatches(CapExpr, other.CapExpr);
+    return (negative() == other.negative()) &&
+           sx::partiallyMatches(sexpr(), other.sexpr());
   }
 
   const ValueDecl* valueDecl() const {
-    if (Negated || CapExpr == nullptr)
+    if (negative() || sexpr() == nullptr)
       return nullptr;
-    if (const auto *P = dyn_cast<til::Project>(CapExpr))
+    if (const auto *P = dyn_cast<til::Project>(sexpr()))
       return P->clangDecl();
-    if (const auto *P = dyn_cast<til::LiteralPtr>(CapExpr))
+    if (const auto *P = dyn_cast<til::LiteralPtr>(sexpr()))
       return P->clangDecl();
     return nullptr;
   }
 
   std::string toString() const {
-    if (Negated)
-      return "!" + sx::toString(CapExpr);
-    return sx::toString(CapExpr);
+    if (negative())
+      return "!" + sx::toString(sexpr());
+    return sx::toString(sexpr());
   }
 
-  bool shouldIgnore() const { return CapExpr == nullptr; }
+  bool shouldIgnore() const { return sexpr() == nullptr; }
 
   bool isInvalid() const { return sexpr() && isa<til::Undefined>(sexpr()); }
 
@@ -345,13 +355,13 @@ public:
     const NamedDecl *AttrDecl;
 
     // Implicit object argument -- e.g. 'this'
-    const Expr *SelfArg = nullptr;
+    llvm::PointerUnion<const Expr *, til::SExpr *> SelfArg = nullptr;
 
     // Number of funArgs
     unsigned NumArgs = 0;
 
     // Function arguments
-    const Expr *const *FunArgs = nullptr;
+    llvm::PointerUnion<const Expr *const *, til::SExpr *> FunArgs = nullptr;
 
     // is Self referred to with -> or .?
     bool SelfArrow = false;
@@ -369,9 +379,17 @@ public:
   // Translate a clang expression in an attribute to a til::SExpr.
   // Constructs the context from D, DeclExp, and SelfDecl.
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, const NamedDecl *D,
-                                   const Expr *DeclExp, VarDecl *SelfD=nullptr);
+                                   const Expr *DeclExp,
+                                   til::SExpr *Self = nullptr);
 
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, CallingContext *Ctx);
+
+  // Translate a variable reference.
+  til::LiteralPtr *createVariable(const VarDecl *VD);
+
+  // Create placeholder for this: we don't know the VarDecl on construction yet.
+  std::pair<til::LiteralPtr *, StringRef>
+  createThisPlaceholder(const Expr *Exp);
 
   // Translate a clang statement or expression to a TIL expression.
   // Also performs substitution of variables; Ctx provides the context.
@@ -466,8 +484,6 @@ private:
     SMap.insert(std::make_pair(S, E));
   }
 
-  til::SExpr *getCurrentLVarDefinition(const ValueDecl *VD);
-
   til::SExpr *addStatement(til::SExpr *E, const Stmt *S,
                            const ValueDecl *VD = nullptr);
   til::SExpr *lookupVarDecl(const ValueDecl *VD);
@@ -511,10 +527,12 @@ private:
   BlockInfo *CurrentBlockInfo = nullptr;
 };
 
+#ifndef NDEBUG
 // Dump an SCFG to llvm::errs().
 void printSCFG(CFGWalker &Walker);
+#endif // NDEBUG
 
 } // namespace threadSafety
 } // namespace clang
 
-#endif // LLVM_CLANG_THREAD_SAFETY_COMMON_H
+#endif // LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYCOMMON_H

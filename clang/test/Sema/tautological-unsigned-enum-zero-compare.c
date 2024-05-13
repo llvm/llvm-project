@@ -11,7 +11,7 @@
 // Then default enum sigdness is target-specific.
 // On windows, it is signed by default. We do not want to warn in that case.
 
-int main() {
+int main(void) {
   enum A { A_a = 0 };
   enum A a;
   enum B { B_a = -1 };

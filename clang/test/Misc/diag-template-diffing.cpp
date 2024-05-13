@@ -850,7 +850,7 @@ namespace rdar12931988 {
 
   void foo(A::X<int> &ax, B::X<int> bx) {
     // CHECK-ELIDE-NOTREE: no viable overloaded '='
-    // CHECK-ELIDE-NOTREE: no known conversion from 'B::X<int>' to 'const rdar12931988::A::X<int>'
+    // CHECK-ELIDE-NOTREE: no known conversion from 'B::X<int>' to 'const X<int>'
     ax = bx;
   }
 
@@ -1041,7 +1041,7 @@ namespace DependentInt {
     using T2 = M<C<N>>;
     T2 p;
     T1 x = p;
-    // CHECK-ELIDE-NOTREE: no viable conversion from 'M<C<DependentInt::N, INT<1>>>' to 'M<C<int, INT<0>>>'
+    // CHECK-ELIDE-NOTREE: no viable conversion from 'M<C<N, INT<1>>>' to 'M<C<int, INT<0>>>'
   }
 }
 
@@ -1058,7 +1058,7 @@ template <typename T, typename A = allocator<const Atom *> > class vector {};
 void foo() {
   vector<Atom *> v;
   AtomVector v2(v);
-  // CHECK-ELIDE-NOTREE: no known conversion from 'vector<PR17510::Atom *, [...]>' to 'const vector<const PR17510::Atom *, [...]>'
+  // CHECK-ELIDE-NOTREE: no known conversion from 'vector<Atom *, [...]>' to 'const vector<const PR17510::Atom *, [...]>'
 }
 }
 
@@ -1415,8 +1415,8 @@ B<> b3 = B<const A<>>();
 B<const A<>> b4 = B<>();
 // CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<(default) 0>' to 'A<1>'
 // CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<1>' to 'A<(default) 0>'
-// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<int>' to 'B<(default) ZeroArgs::A<0>>'
-// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<(default) ZeroArgs::A<0>>' to 'B<int>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<int>' to 'B<(default) ZeroArgs::A<>>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<(default) ZeroArgs::A<>>' to 'B<int>'
 // CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<const A<...>>' to 'B<A<...>>'
 // CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<A<...>>' to 'B<const A<...>>'
 }
@@ -1454,7 +1454,7 @@ void run() {
   D<X::X1>(VectorType<X::X2>());
 }
 // CHECK-ELIDE-NOTREE: error: no matching function for call to 'D'
-// CHECK-ELIDE-NOTREE: note: candidate function template not viable: no known conversion from 'VectorType<X::X2>' to 'const VectorType<(TypeAlias::X)0>' for 1st argument
+// CHECK-ELIDE-NOTREE: note: candidate function template not viable: no known conversion from 'VectorType<X::X2>' to 'const VectorType<(X)0>' for 1st argument
 }
 
 namespace TypeAlias2 {
@@ -1486,6 +1486,32 @@ void run(A_reg<float> reg, A_ptr<float> ptr, A_ref<float> ref) {
 // CHECK-ELIDE-NOTREE: error: no matching function for call to 'take_ref'
 // CHECK-ELIDE-NOTREE: note: candidate function not viable: no known conversion from 'const A<float>' to 'const A<int>' for 1st argument
 }
+}
+
+namespace SubstTemplateTypeParmType {
+template <typename T>
+class Array {};
+
+template <class T>
+class S {};
+
+template <class T>
+Array<T> Make();
+
+void Call() {
+  Array<S<int>> v = Make<const S<int>>();
+}
+}
+
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Array<const S<...>>' to 'Array<S<...>>'
+// CHECK-NOELIDE-NOTREE: no viable conversion from 'Array<const S<int>>' to 'Array<S<int>>'
+// CHECK-ELIDE-TREE: no viable conversion
+// CHECK-ELIDE-TREE:   Array<
+// CHECK-ELIDE-TREE:     [const != (no qualifiers)] S<...>>
+// CHECK-NOELIDE-TREE: no viable conversion
+// CHECK-NOELIDE-TREE:   Array<
+// CHECK-NOELIDE-TREE:     [const != (no qualifiers)] S<
+// CHECK-NOELIDE-TREE:       int>>
 }
 
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.

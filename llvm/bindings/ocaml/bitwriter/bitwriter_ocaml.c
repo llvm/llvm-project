@@ -15,20 +15,21 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include "caml/alloc.h"
+#include "caml/memory.h"
+#include "caml/mlvalues.h"
+#include "llvm_ocaml.h"
 #include "llvm-c/BitWriter.h"
 #include "llvm-c/Core.h"
-#include "caml/alloc.h"
-#include "caml/mlvalues.h"
-#include "caml/memory.h"
 
 /* Llvm.llmodule -> string -> bool */
-value llvm_write_bitcode_file(LLVMModuleRef M, value Path) {
-  int Result = LLVMWriteBitcodeToFile(M, String_val(Path));
+value llvm_write_bitcode_file(value M, value Path) {
+  int Result = LLVMWriteBitcodeToFile(Module_val(M), String_val(Path));
   return Val_bool(Result == 0);
 }
 
 /* ?unbuffered:bool -> Llvm.llmodule -> Unix.file_descr -> bool */
-value llvm_write_bitcode_to_fd(value U, LLVMModuleRef M, value FD) {
+value llvm_write_bitcode_to_fd(value U, value M, value FD) {
   int Unbuffered;
   int Result;
 
@@ -38,11 +39,11 @@ value llvm_write_bitcode_to_fd(value U, LLVMModuleRef M, value FD) {
     Unbuffered = Bool_val(Field(U, 0));
   }
 
-  Result = LLVMWriteBitcodeToFD(M, Int_val(FD), 0, Unbuffered);
+  Result = LLVMWriteBitcodeToFD(Module_val(M), Int_val(FD), 0, Unbuffered);
   return Val_bool(Result == 0);
 }
 
 /* Llvm.llmodule -> Llvm.llmemorybuffer */
-LLVMMemoryBufferRef llvm_write_bitcode_to_memory_buffer(LLVMModuleRef M) {
-  return LLVMWriteBitcodeToMemoryBuffer(M);
+value llvm_write_bitcode_to_memory_buffer(value M) {
+  return to_val(LLVMWriteBitcodeToMemoryBuffer(Module_val(M)));
 }

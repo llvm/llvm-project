@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! 10.2.3.1(2) All masks and LHS of assignments in a WHERE must conform
 
 subroutine s1
@@ -50,5 +50,28 @@ subroutine s3
     !ERROR: Dimension 2 must have extent 4 to match prior mask or assignment of WHERE construct
     where(m2)
     end where
+  end where
+end
+
+subroutine s4
+  integer :: x1 = 0, x2(2) = 0
+  logical :: l1 = .false., l2(2) = (/.true., .false./), l3 = .false.
+  !ERROR: The mask or variable must not be scalar
+  where (l1)
+    !ERROR: The mask or variable must not be scalar
+    x1 = 1
+  end where
+  !ERROR: The mask or variable must not be scalar
+  where (l1)
+    !ERROR: The mask or variable must not be scalar
+    where (l3)
+      !ERROR: The mask or variable must not be scalar
+      x1 = 1
+    end where
+  end where
+  !ERROR: The mask or variable must not be scalar
+  where (l2(2))
+    !ERROR: The mask or variable must not be scalar
+    x2(2) = 1
   end where
 end

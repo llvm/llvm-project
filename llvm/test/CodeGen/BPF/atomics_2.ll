@@ -67,9 +67,9 @@
 ; CHECK: w0 = w2
 ; CHECK: w0 = atomic_fetch_add((u32 *)(r1 + 0), w0)
 ; CHECK: encoding: [0xc3,0x01,0x00,0x00,0x01,0x00,0x00,0x00]
-define dso_local i32 @test_load_add_32(i32* nocapture %p, i32 %v) local_unnamed_addr {
+define dso_local i32 @test_load_add_32(ptr nocapture %p, i32 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw add i32* %p, i32 %v seq_cst
+  %0 = atomicrmw add ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -77,9 +77,9 @@ entry:
 ; CHECK: r0 = r2
 ; CHECK: r0 = atomic_fetch_add((u64 *)(r1 + 0), r0)
 ; CHECK: encoding: [0xdb,0x01,0x00,0x00,0x01,0x00,0x00,0x00]
-define dso_local i32 @test_load_add_64(i64* nocapture %p, i64 %v) local_unnamed_addr {
+define dso_local i32 @test_load_add_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw add i64* %p, i64 %v seq_cst
+  %0 = atomicrmw add ptr %p, i64 %v seq_cst
   %conv = trunc i64 %0 to i32
   ret i32 %conv
 }
@@ -89,9 +89,9 @@ entry:
 ; CHECK: w0 = -w0
 ; CHECK: w0 = atomic_fetch_add((u32 *)(r1 + 0), w0)
 ; CHECK: encoding: [0xc3,0x01,0x00,0x00,0x01,0x00,0x00,0x00]
-define dso_local i32 @test_load_sub_32(i32* nocapture %p, i32 %v) local_unnamed_addr {
+define dso_local i32 @test_load_sub_32(ptr nocapture %p, i32 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw sub i32* %p, i32 %v seq_cst
+  %0 = atomicrmw sub ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -100,9 +100,9 @@ entry:
 ; CHECK: r0 = -r0
 ; CHECK: r0 = atomic_fetch_add((u64 *)(r1 + 0), r0)
 ; CHECK: encoding: [0xdb,0x01,0x00,0x00,0x01,0x00,0x00,0x00]
-define dso_local i32 @test_load_sub_64(i64* nocapture %p, i64 %v) local_unnamed_addr {
+define dso_local i32 @test_load_sub_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw sub i64* %p, i64 %v seq_cst
+  %0 = atomicrmw sub ptr %p, i64 %v seq_cst
   %conv = trunc i64 %0 to i32
   ret i32 %conv
 }
@@ -111,9 +111,9 @@ entry:
 ; CHECK: w0 = w2
 ; CHECK: w0 = xchg32_32(r1 + 0, w0)
 ; CHECK: encoding: [0xc3,0x01,0x00,0x00,0xe1,0x00,0x00,0x00]
-define dso_local i32 @test_xchg_32(i32* nocapture %p, i32 %v) local_unnamed_addr {
+define dso_local i32 @test_xchg_32(ptr nocapture %p, i32 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw xchg i32* %p, i32 %v seq_cst
+  %0 = atomicrmw xchg ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -121,9 +121,9 @@ entry:
 ; CHECK: r0 = r2
 ; CHECK: r0 = xchg_64(r1 + 0, r0)
 ; CHECK: encoding: [0xdb,0x01,0x00,0x00,0xe1,0x00,0x00,0x00]
-define dso_local i32 @test_xchg_64(i64* nocapture %p, i64 %v) local_unnamed_addr {
+define dso_local i32 @test_xchg_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw xchg i64* %p, i64 %v seq_cst
+  %0 = atomicrmw xchg ptr %p, i64 %v seq_cst
   %conv = trunc i64 %0 to i32
   ret i32 %conv
 }
@@ -132,9 +132,9 @@ entry:
 ; CHECK: w0 = w2
 ; CHECK: w0 = cmpxchg32_32(r1 + 0, w0, w3)
 ; CHECK: encoding: [0xc3,0x31,0x00,0x00,0xf1,0x00,0x00,0x00]
-define dso_local i32 @test_cas_32(i32* nocapture %p, i32 %old, i32 %new) local_unnamed_addr {
+define dso_local i32 @test_cas_32(ptr nocapture %p, i32 %old, i32 %new) local_unnamed_addr {
 entry:
-  %0 = cmpxchg i32* %p, i32 %old, i32 %new seq_cst seq_cst
+  %0 = cmpxchg ptr %p, i32 %old, i32 %new seq_cst seq_cst
   %1 = extractvalue { i32, i1 } %0, 0
   ret i32 %1
 }
@@ -143,9 +143,9 @@ entry:
 ; CHECK: r0 = r2
 ; CHECK: r0 = cmpxchg_64(r1 + 0, r0, r3)
 ; CHECK: encoding: [0xdb,0x31,0x00,0x00,0xf1,0x00,0x00,0x00]
-define dso_local i64 @test_cas_64(i64* nocapture %p, i64 %old, i64 %new) local_unnamed_addr {
+define dso_local i64 @test_cas_64(ptr nocapture %p, i64 %old, i64 %new) local_unnamed_addr {
 entry:
-  %0 = cmpxchg i64* %p, i64 %old, i64 %new seq_cst seq_cst
+  %0 = cmpxchg ptr %p, i64 %old, i64 %new seq_cst seq_cst
   %1 = extractvalue { i64, i1 } %0, 0
   ret i64 %1
 }
@@ -154,9 +154,9 @@ entry:
 ; CHECK: w0 = w2
 ; CHECK: w0 = atomic_fetch_and((u32 *)(r1 + 0), w0)
 ; CHECK: encoding: [0xc3,0x01,0x00,0x00,0x51,0x00,0x00,0x00]
-define dso_local i32 @test_load_and_32(i32* nocapture %p, i32 %v) local_unnamed_addr {
+define dso_local i32 @test_load_and_32(ptr nocapture %p, i32 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw and i32* %p, i32 %v seq_cst
+  %0 = atomicrmw and ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -164,9 +164,9 @@ entry:
 ; CHECK: r0 = r2
 ; CHECK: r0 = atomic_fetch_and((u64 *)(r1 + 0), r0)
 ; CHECK: encoding: [0xdb,0x01,0x00,0x00,0x51,0x00,0x00,0x00]
-define dso_local i32 @test_load_and_64(i64* nocapture %p, i64 %v) local_unnamed_addr {
+define dso_local i32 @test_load_and_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw and i64* %p, i64 %v seq_cst
+  %0 = atomicrmw and ptr %p, i64 %v seq_cst
   %conv = trunc i64 %0 to i32
   ret i32 %conv
 }
@@ -175,9 +175,9 @@ entry:
 ; CHECK: w0 = w2
 ; CHECK: w0 = atomic_fetch_or((u32 *)(r1 + 0), w0)
 ; CHECK: encoding: [0xc3,0x01,0x00,0x00,0x41,0x00,0x00,0x00]
-define dso_local i32 @test_load_or_32(i32* nocapture %p, i32 %v) local_unnamed_addr {
+define dso_local i32 @test_load_or_32(ptr nocapture %p, i32 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw or i32* %p, i32 %v seq_cst
+  %0 = atomicrmw or ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -185,9 +185,9 @@ entry:
 ; CHECK: r0 = r2
 ; CHECK: r0 = atomic_fetch_or((u64 *)(r1 + 0), r0)
 ; CHECK: encoding: [0xdb,0x01,0x00,0x00,0x41,0x00,0x00,0x00]
-define dso_local i32 @test_load_or_64(i64* nocapture %p, i64 %v) local_unnamed_addr {
+define dso_local i32 @test_load_or_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw or i64* %p, i64 %v seq_cst
+  %0 = atomicrmw or ptr %p, i64 %v seq_cst
   %conv = trunc i64 %0 to i32
   ret i32 %conv
 }
@@ -196,9 +196,9 @@ entry:
 ; CHECK: w0 = w2
 ; CHECK: w0 = atomic_fetch_xor((u32 *)(r1 + 0), w0)
 ; CHECK: encoding: [0xc3,0x01,0x00,0x00,0xa1,0x00,0x00,0x00]
-define dso_local i32 @test_load_xor_32(i32* nocapture %p, i32 %v) local_unnamed_addr {
+define dso_local i32 @test_load_xor_32(ptr nocapture %p, i32 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw xor i32* %p, i32 %v seq_cst
+  %0 = atomicrmw xor ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -206,9 +206,9 @@ entry:
 ; CHECK: r0 = r2
 ; CHECK: r0 = atomic_fetch_xor((u64 *)(r1 + 0), r0)
 ; CHECK: encoding: [0xdb,0x01,0x00,0x00,0xa1,0x00,0x00,0x00]
-define dso_local i32 @test_load_xor_64(i64* nocapture %p, i64 %v) local_unnamed_addr {
+define dso_local i32 @test_load_xor_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw xor i64* %p, i64 %v seq_cst
+  %0 = atomicrmw xor ptr %p, i64 %v seq_cst
   %conv = trunc i64 %0 to i32
   ret i32 %conv
 }
@@ -217,9 +217,9 @@ entry:
 ; CHECK: lock *(u32 *)(r1 + 0) ^= w2
 ; CHECK: encoding: [0xc3,0x21,0x00,0x00,0xa0,0x00,0x00,0x00]
 ; CHECK: w0 = 0
-define dso_local i32 @test_atomic_xor_32(i32* nocapture %p, i32 %v) local_unnamed_addr {
+define dso_local i32 @test_atomic_xor_32(ptr nocapture %p, i32 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw xor i32* %p, i32 %v seq_cst
+  %0 = atomicrmw xor ptr %p, i32 %v seq_cst
   ret i32 0
 }
 
@@ -227,9 +227,9 @@ entry:
 ; CHECK: lock *(u64 *)(r1 + 0) ^= r2
 ; CHECK: encoding: [0xdb,0x21,0x00,0x00,0xa0,0x00,0x00,0x00]
 ; CHECK: w0 = 0
-define dso_local i32 @test_atomic_xor_64(i64* nocapture %p, i64 %v) local_unnamed_addr {
+define dso_local i32 @test_atomic_xor_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw xor i64* %p, i64 %v seq_cst
+  %0 = atomicrmw xor ptr %p, i64 %v seq_cst
   ret i32 0
 }
 
@@ -237,9 +237,9 @@ entry:
 ; CHECK: lock *(u64 *)(r1 + 0) &= r2
 ; CHECK: encoding: [0xdb,0x21,0x00,0x00,0x50,0x00,0x00,0x00]
 ; CHECK: w0 = 0
-define dso_local i32 @test_atomic_and_64(i64* nocapture %p, i64 %v) local_unnamed_addr {
+define dso_local i32 @test_atomic_and_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw and i64* %p, i64 %v seq_cst
+  %0 = atomicrmw and ptr %p, i64 %v seq_cst
   ret i32 0
 }
 
@@ -247,8 +247,8 @@ entry:
 ; CHECK: lock *(u64 *)(r1 + 0) |= r2
 ; CHECK: encoding: [0xdb,0x21,0x00,0x00,0x40,0x00,0x00,0x00]
 ; CHECK: w0 = 0
-define dso_local i32 @test_atomic_or_64(i64* nocapture %p, i64 %v) local_unnamed_addr {
+define dso_local i32 @test_atomic_or_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
-  %0 = atomicrmw or i64* %p, i64 %v seq_cst
+  %0 = atomicrmw or ptr %p, i64 %v seq_cst
   ret i32 0
 }

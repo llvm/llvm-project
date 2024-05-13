@@ -16,13 +16,11 @@
 #ifndef LLVM_IR_STATEPOINT_H
 #define LLVM_IR_STATEPOINT_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -31,6 +29,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -55,7 +54,6 @@ enum class StatepointFlags {
 // These two are defined in IntrinsicInst since they're part of the
 // IntrinsicInst class hierarchy.
 class GCRelocateInst;
-class GCResultInst;
 
 /// Represents a gc.statepoint intrinsic call.  This extends directly from
 /// CallBase as the IntrinsicInst only supports calls and gc.statepoint is
@@ -122,9 +120,8 @@ public:
   /// Return the type of the value returned by the call underlying the
   /// statepoint.
   Type *getActualReturnType() const {
-    auto *CalleeTy =
-      cast<PointerType>(getActualCalledOperand()->getType())->getElementType();
-    return cast<FunctionType>(CalleeTy)->getReturnType();
+    auto *FT = cast<FunctionType>(getParamElementType(CalledFunctionPos));
+    return FT->getReturnType();
   }
 
 
@@ -204,11 +201,6 @@ public:
   /// For example this could happen due to relocations on unwinding
   /// path of invoke.
   inline std::vector<const GCRelocateInst *> getGCRelocates() const;
-
-  /// Returns pair of boolean flags. The first one is true is there is
-  /// a gc.result intrinsic in the same block as statepoint. The second flag
-  /// is true if there is an intrinsic outside of the block with statepoint.
-  inline std::pair<bool, bool> getGCResultLocality() const;
 };
 
 std::vector<const GCRelocateInst *> GCStatepointInst::getGCRelocates() const {
@@ -236,25 +228,13 @@ std::vector<const GCRelocateInst *> GCStatepointInst::getGCRelocates() const {
   return Result;
 }
 
-std::pair<bool, bool> GCStatepointInst::getGCResultLocality() const {
-  std::pair<bool, bool> Res(false, false);
-  for (auto *U : users())
-    if (auto *GRI = dyn_cast<GCResultInst>(U)) {
-      if (GRI->getParent() == this->getParent())
-        Res.first = true;
-      else
-        Res.second = true;
-    }
-  return Res;
-}
-
 /// Call sites that get wrapped by a gc.statepoint (currently only in
 /// RewriteStatepointsForGC and potentially in other passes in the future) can
 /// have attributes that describe properties of gc.statepoint call they will be
 /// eventually be wrapped in.  This struct is used represent such directives.
 struct StatepointDirectives {
-  Optional<uint32_t> NumPatchBytes;
-  Optional<uint64_t> StatepointID;
+  std::optional<uint32_t> NumPatchBytes;
+  std::optional<uint64_t> StatepointID;
 
   static const uint64_t DefaultStatepointID = 0xABCDEF00;
   static const uint64_t DeoptBundleStatepointID = 0xABCDEF0F;

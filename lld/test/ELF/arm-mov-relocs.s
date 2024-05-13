@@ -1,10 +1,22 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-unknown-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d %t2 --triple=armv7a-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --triple=armv7a-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
 // RUN: llvm-mc -filetype=obj -triple=thumbv7a-unknown-linux-gnueabi %s -o %t3
 // RUN: ld.lld %t3 -o %t4
-// RUN: llvm-objdump -d %t4 --triple=thumbv7a-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t4 --triple=thumbv7a-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
+
+// RUN: llvm-mc -filetype=obj -triple=armv7aeb-unknown-linux-gnueabi -mcpu=cortex-a8 %s -o %t
+// RUN: ld.lld %t -o %t2
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --triple=armv7aeb-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple=thumbv7aeb-unknown-linux-gnueabi -mcpu=cortex-a8 %s -o %t3
+// RUN: ld.lld %t3 -o %t4
+// RUN: llvm-objdump --no-print-imm-hex -d %t4 --triple=thumbv7aeb-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
+
+// RUN: ld.lld --be8 %t -o %t2
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --triple=armv7aeb-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
+// RUN: ld.lld --be8 %t3 -o %t4
+// RUN: llvm-objdump --no-print-imm-hex -d %t4 --triple=thumbv7aeb-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
 
 /// Test the following relocation pairs:
 ///  * R_ARM_MOVW_ABS_NC and R_ARM_MOVT_ABS

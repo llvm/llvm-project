@@ -3,6 +3,7 @@
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
 config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
 config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@
+config.test_compiler_has_omp_h = @OPENMP_TEST_COMPILER_HAS_OMP_H@
 config.test_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
 config.test_not = "@OPENMP_NOT_EXECUTABLE@"
 config.test_openmp_flags = "@OPENMP_TEST_OPENMP_FLAGS@"
@@ -14,8 +15,12 @@ config.operating_system = "@CMAKE_SYSTEM_NAME@"
 config.hwloc_library_dir = "@LIBOMP_HWLOC_LIBRARY_DIR@"
 config.using_hwloc = @LIBOMP_USE_HWLOC@
 config.has_ompt = @LIBOMP_OMPT_SUPPORT@ and @LIBOMP_OMPT_OPTIONAL@
+config.has_ompx_taskgraph = @LIBOMP_OMPX_TASKGRAPH@
 config.has_libm = @LIBOMP_HAVE_LIBM@
 config.has_libatomic = @LIBOMP_HAVE_LIBATOMIC@
+config.is_standalone_build = @OPENMP_STANDALONE_BUILD@
+config.has_omit_frame_pointer_flag = @OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS@
+config.target_arch = "@LIBOMP_ARCH@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@LIBOMP_BASE_DIR@/test/lit.cfg")

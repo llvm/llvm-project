@@ -36,7 +36,7 @@ BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
   BranchInst::Create(Body, Header);
   BranchInst::Create(Latch, Body);
   PHINode *IV =
-      PHINode::Create(I32Ty, 2, Name + ".iv", Header->getTerminator());
+      PHINode::Create(I32Ty, 2, Name + ".iv", Header->getTerminator()->getIterator());
   IV->addIncoming(ConstantInt::get(I32Ty, 0), Preheader);
 
   B.SetInsertPoint(Latch);
@@ -70,35 +70,35 @@ BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
 BasicBlock *TileInfo::CreateTiledLoops(BasicBlock *Start, BasicBlock *End,
                                        IRBuilderBase &B, DomTreeUpdater &DTU,
                                        LoopInfo &LI) {
-  Loop *ColLoop = LI.AllocateLoop();
-  Loop *RowLoop = LI.AllocateLoop();
-  Loop *InnerLoop = LI.AllocateLoop();
-  RowLoop->addChildLoop(InnerLoop);
-  ColLoop->addChildLoop(RowLoop);
+  Loop *ColumnLoopInfo = LI.AllocateLoop();
+  Loop *RowLoopInfo = LI.AllocateLoop();
+  Loop *KLoopInfo = LI.AllocateLoop();
+  RowLoopInfo->addChildLoop(KLoopInfo);
+  ColumnLoopInfo->addChildLoop(RowLoopInfo);
   if (Loop *ParentL = LI.getLoopFor(Start))
-    ParentL->addChildLoop(ColLoop);
+    ParentL->addChildLoop(ColumnLoopInfo);
   else
-    LI.addTopLevelLoop(ColLoop);
+    LI.addTopLevelLoop(ColumnLoopInfo);
 
   BasicBlock *ColBody =
       CreateLoop(Start, End, B.getInt64(NumColumns), B.getInt64(TileSize),
-                 "cols", B, DTU, ColLoop, LI);
-  BasicBlock *ColLatch = ColBody->getSingleSuccessor();
+                 "cols", B, DTU, ColumnLoopInfo, LI);
+  ColumnLoop.Latch = ColBody->getSingleSuccessor();
   BasicBlock *RowBody =
-      CreateLoop(ColBody, ColLatch, B.getInt64(NumRows), B.getInt64(TileSize),
-                 "rows", B, DTU, RowLoop, LI);
-  RowLoopLatch = RowBody->getSingleSuccessor();
+      CreateLoop(ColBody, ColumnLoop.Latch, B.getInt64(NumRows),
+                 B.getInt64(TileSize), "rows", B, DTU, RowLoopInfo, LI);
+  RowLoop.Latch = RowBody->getSingleSuccessor();
 
   BasicBlock *InnerBody =
-      CreateLoop(RowBody, RowLoopLatch, B.getInt64(NumInner),
-                 B.getInt64(TileSize), "inner", B, DTU, InnerLoop, LI);
-  InnerLoopLatch = InnerBody->getSingleSuccessor();
-  ColumnLoopHeader = ColBody->getSinglePredecessor();
-  RowLoopHeader = RowBody->getSinglePredecessor();
-  InnerLoopHeader = InnerBody->getSinglePredecessor();
-  CurrentRow = &*RowLoopHeader->begin();
-  CurrentCol = &*ColumnLoopHeader->begin();
-  CurrentK = &*InnerLoopHeader->begin();
+      CreateLoop(RowBody, RowLoop.Latch, B.getInt64(NumInner),
+                 B.getInt64(TileSize), "inner", B, DTU, KLoopInfo, LI);
+  KLoop.Latch = InnerBody->getSingleSuccessor();
+  ColumnLoop.Header = ColBody->getSinglePredecessor();
+  RowLoop.Header = RowBody->getSinglePredecessor();
+  KLoop.Header = InnerBody->getSinglePredecessor();
+  RowLoop.Index = &*RowLoop.Header->begin();
+  ColumnLoop.Index = &*ColumnLoop.Header->begin();
+  KLoop.Index = &*KLoop.Header->begin();
 
   return InnerBody;
 }

@@ -17,10 +17,10 @@ define void @draw_llvm_vs_variant0(<4 x float> %x) {
 ; CHECK-NEXT:    xvcvsxwsp vs0, v3
 ; CHECK-NEXT:    xxspltw vs0, vs0, 2
 ; CHECK-NEXT:    xvmaddasp vs0, v2, v2
-; CHECK-NEXT:    stxvx vs0, 0, r3
+; CHECK-NEXT:    stxv vs0, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %.size = load i32, i32* undef
+  %.size = load i32, ptr undef
   %0 = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %.size, i32 7)
   %1 = extractvalue { i32, i1 } %0, 0
   %2 = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %1, i32 0)
@@ -28,7 +28,7 @@ entry:
   %4 = select i1 false, i32 0, i32 %3
   %5 = xor i1 false, true
   %6 = sext i1 %5 to i32
-  %7 = load <4 x i16>, <4 x i16>* undef, align 2
+  %7 = load <4 x i16>, ptr undef, align 2
   %8 = extractelement <4 x i16> %7, i32 0
   %9 = sext i16 %8 to i32
   %10 = insertelement <4 x i32> undef, i32 %9, i32 0
@@ -49,6 +49,6 @@ entry:
   %25 = bitcast <4 x i32> %24 to <4 x float>
   %26 = shufflevector <4 x float> %25, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %27 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %x, <4 x float> %x, <4 x float> %26)
-  store <4 x float> %27, <4 x float>* undef
+  store <4 x float> %27, ptr undef
   ret void
 }

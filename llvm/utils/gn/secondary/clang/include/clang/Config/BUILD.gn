@@ -4,26 +4,19 @@ import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
-config("Config_config") {
-  visibility = [ ":Config" ]
-  include_dirs = [ "$target_gen_dir/clang/include" ]
-}
-
 write_cmake_config("Config") {
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
   values = [
-    "BUG_REPORT_URL=https://bugs.llvm.org/",
+    "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
+    "CLANG_DEFAULT_PIE_ON_LINUX=1",
     "CLANG_DEFAULT_LINKER=",
-    "CLANG_DEFAULT_STD_C=",
-    "CLANG_DEFAULT_STD_CXX=",
     "CLANG_DEFAULT_CXX_STDLIB=",
     "CLANG_DEFAULT_RTLIB=",
     "CLANG_DEFAULT_OBJCOPY=objcopy",
     "CLANG_DEFAULT_OPENMP_RUNTIME=libomp",
     "CLANG_DEFAULT_UNWINDLIB=",
-    "CLANG_OPENMP_NVPTX_DEFAULT_ARCH=sm_35",
-    "CLANG_LIBDIR_SUFFIX=",
+    "CLANG_INSTALL_LIBDIR_BASENAME=lib",
     "CLANG_RESOURCE_DIR=",
     "C_INCLUDE_DIRS=",
     "CLANG_CONFIG_FILE_SYSTEM_DIR=",
@@ -31,11 +24,12 @@ write_cmake_config("Config") {
     "CLANG_SPAWN_CC1=",
     "DEFAULT_SYSROOT=",
     "GCC_INSTALL_PREFIX=",
-    "BACKEND_PACKAGE_STRING=LLVM ${llvm_version}git",
     "ENABLE_LINKER_BUILD_ID=",
     "ENABLE_X86_RELAX_RELOCATIONS=1",
     "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
+    "CLANG_ENABLE_CIR=",
     "CLANG_SYSTEMZ_DEFAULT_ARCH=z10",
+    "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=",
   ]
 
   if (clang_enable_arcmt) {
@@ -51,9 +45,17 @@ write_cmake_config("Config") {
   }
 
   if (host_os != "win") {
-    values += [ "CLANG_HAVE_RLIMITS=1" ]
+    values += [
+      "CLANG_HAVE_DLADDR=1",
+      "CLANG_HAVE_DLFCN_H=1",
+      "CLANG_HAVE_RLIMITS=1",
+    ]
   } else {
-    values += [ "CLANG_HAVE_RLIMITS=" ]
+    values += [
+      "CLANG_HAVE_DLADDR=",
+      "CLANG_HAVE_DLFCN_H=",
+      "CLANG_HAVE_RLIMITS=",
+    ]
   }
 
   if (llvm_enable_libxml2) {
@@ -70,7 +72,4 @@ write_cmake_config("Config") {
   } else {
     values += [ "HOST_LINK_VERSION=" ]
   }
-
-  # Let targets depending on this find the generated file.
-  public_configs = [ ":Config_config" ]
 }

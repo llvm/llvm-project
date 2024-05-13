@@ -24,15 +24,17 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -107,7 +109,7 @@ namespace {
     const ARMSubtarget *STI;
     const TargetLowering *TL;
     ARMFunctionInfo *AFI;
-    LivePhysRegs LiveRegs;
+    LiveRegUnits LiveRegs;
     RegisterClassInfo RegClassInfo;
     MachineBasicBlock::const_iterator LiveRegPos;
     bool LiveRegsValid;
@@ -493,7 +495,7 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
     bool InsertSub = false;
     unsigned Opc = MBBI->getOpcode();
 
-    if (MBBI->readsRegister(Base)) {
+    if (MBBI->readsRegister(Base, /*TRI=*/nullptr)) {
       int Offset;
       bool IsLoad =
         Opc == ARM::tLDRi || Opc == ARM::tLDRHi || Opc == ARM::tLDRBi;
@@ -558,13 +560,14 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
       return;
     }
 
-    if (MBBI->killsRegister(Base) || MBBI->definesRegister(Base))
+    if (MBBI->killsRegister(Base, /*TRI=*/nullptr) ||
+        MBBI->definesRegister(Base, /*TRI=*/nullptr))
       // Register got killed. Stop updating.
       return;
   }
 
   // End of block was reached.
-  if (MBB.succ_size() > 0) {
+  if (!MBB.succ_empty()) {
     // FIXME: Because of a bug, live registers are sometimes missing from
     // the successor blocks' live-in sets. This means we can't trust that
     // information and *always* have to reset at the end of a block.
@@ -587,7 +590,7 @@ unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
   }
 
   for (unsigned Reg : RegClassInfo.getOrder(&RegClass))
-    if (!LiveRegs.contains(Reg))
+    if (LiveRegs.available(Reg) && !MF->getRegInfo().isReserved(Reg))
       return Reg;
   return 0;
 }
@@ -886,7 +889,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
         if (is_contained(ImpDefs, DefReg))
           continue;
         // We can ignore cases where the super-reg is read and written.
-        if (MI->readsRegister(DefReg))
+        if (MI->readsRegister(DefReg, /*TRI=*/nullptr))
           continue;
         ImpDefs.push_back(DefReg);
       }
@@ -901,7 +904,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
   MachineBasicBlock &MBB = *LatestMI->getParent();
   unsigned Offset = getMemoryOpOffset(*First);
   Register Base = getLoadStoreBaseOp(*First).getReg();
-  bool BaseKill = LatestMI->killsRegister(Base);
+  bool BaseKill = LatestMI->killsRegister(Base, /*TRI=*/nullptr);
   Register PredReg;
   ARMCC::CondCodes Pred = getInstrPredicate(*First, PredReg);
   DebugLoc DL = First->getDebugLoc();
@@ -1298,8 +1301,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
 
   // Can't use an updating ld/st if the base register is also a dest
   // register. e.g. ldmdb r0!, {r0, r1, r2}. The behavior is undefined.
-  for (unsigned i = 2, e = MI->getNumOperands(); i != e; ++i)
-    if (MI->getOperand(i).getReg() == Base)
+  for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
+    if (MO.getReg() == Base)
       return false;
 
   int Bytes = getLSMultipleTransferSize(MI);
@@ -1326,8 +1329,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
         return false;
 
       bool HighRegsUsed = false;
-      for (unsigned i = 2, e = MI->getNumOperands(); i != e; ++i)
-        if (MI->getOperand(i).getReg() >= ARM::R8) {
+      for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
+        if (MO.getReg() >= ARM::R8) {
           HighRegsUsed = true;
           break;
         }
@@ -1350,8 +1353,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
     .addImm(Pred).addReg(PredReg);
 
   // Transfer the rest of operands.
-  for (unsigned OpNum = 3, e = MI->getNumOperands(); OpNum != e; ++OpNum)
-    MIB.add(MI->getOperand(OpNum));
+  for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 3))
+    MIB.add(MO);
 
   // Transfer memoperands.
   MIB.setMemRefs(MI->memoperands());
@@ -2060,17 +2063,6 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
       MO.setReg(ARM::PC);
       PrevMI.copyImplicitOps(*MBB.getParent(), *MBBI);
       MBB.erase(MBBI);
-      // We now restore LR into PC so it is not live-out of the return block
-      // anymore: Clear the CSI Restored bit.
-      MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
-      // CSI should be fixed after PrologEpilog Insertion
-      assert(MFI.isCalleeSavedInfoValid() && "CSI should be valid");
-      for (CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
-        if (Info.getReg() == ARM::LR) {
-          Info.setRestored(false);
-          break;
-        }
-      }
       return true;
     }
   }
@@ -2085,7 +2077,8 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
 
   MachineBasicBlock::iterator Prev = MBBI;
   --Prev;
-  if (Prev->getOpcode() != ARM::tMOVr || !Prev->definesRegister(ARM::LR))
+  if (Prev->getOpcode() != ARM::tMOVr ||
+      !Prev->definesRegister(ARM::LR, /*TRI=*/nullptr))
     return false;
 
   for (auto Use : Prev->uses())
@@ -2108,7 +2101,7 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   MF = &Fn;
-  STI = &static_cast<const ARMSubtarget &>(Fn.getSubtarget());
+  STI = &Fn.getSubtarget<ARMSubtarget>();
   TL = STI->getTargetLowering();
   AFI = Fn.getInfo<ARMFunctionInfo>();
   TII = STI->getInstrInfo();
@@ -2118,16 +2111,22 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   isThumb2 = AFI->isThumb2Function();
   isThumb1 = AFI->isThumbFunction() && !isThumb2;
 
-  bool Modified = false;
-  for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
-       ++MFI) {
-    MachineBasicBlock &MBB = *MFI;
+  bool Modified = false, ModifiedLDMReturn = false;
+  for (MachineBasicBlock &MBB : Fn) {
     Modified |= LoadStoreMultipleOpti(MBB);
-    if (STI->hasV5TOps())
-      Modified |= MergeReturnIntoLDM(MBB);
+    if (STI->hasV5TOps() && !AFI->shouldSignReturnAddress())
+      ModifiedLDMReturn |= MergeReturnIntoLDM(MBB);
     if (isThumb1)
       Modified |= CombineMovBx(MBB);
   }
+  Modified |= ModifiedLDMReturn;
+
+  // If we merged a BX instruction into an LDM, we need to re-calculate whether
+  // LR is restored. This check needs to consider the whole function, not just
+  // the instruction(s) we changed, because there may be other BX returns which
+  // still need LR to be restored.
+  if (ModifiedLDMReturn)
+    ARMFrameLowering::updateLRRestored(Fn);
 
   Allocator.DestroyAll();
   return Modified;
@@ -2172,10 +2171,10 @@ namespace {
                           unsigned &NewOpc, Register &EvenReg, Register &OddReg,
                           Register &BaseReg, int &Offset, Register &PredReg,
                           ARMCC::CondCodes &Pred, bool &isT2);
-    bool RescheduleOps(MachineBasicBlock *MBB,
-                       SmallVectorImpl<MachineInstr *> &Ops,
-                       unsigned Base, bool isLd,
-                       DenseMap<MachineInstr*, unsigned> &MI2LocMap);
+    bool RescheduleOps(
+        MachineBasicBlock *MBB, SmallVectorImpl<MachineInstr *> &Ops,
+        unsigned Base, bool isLd, DenseMap<MachineInstr *, unsigned> &MI2LocMap,
+        SmallDenseMap<Register, SmallVector<MachineInstr *>, 8> &RegisterMap);
     bool RescheduleLoadStoreInstrs(MachineBasicBlock *MBB);
     bool DistributeIncrements();
     bool DistributeIncrements(Register Base);
@@ -2201,7 +2200,7 @@ bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   TD = &Fn.getDataLayout();
-  STI = &static_cast<const ARMSubtarget &>(Fn.getSubtarget());
+  STI = &Fn.getSubtarget<ARMSubtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MRI = &Fn.getRegInfo();
@@ -2289,10 +2288,7 @@ bool ARMPreAllocLoadStoreOpt::CanFormLdStDWord(
     return false;
 
   Align Alignment = (*Op0->memoperands_begin())->getAlign();
-  const Function &Func = MF->getFunction();
-  Align ReqAlign =
-      STI->hasV6Ops() ? TD->getABITypeAlign(Type::getInt64Ty(Func.getContext()))
-                      : Align(8); // Pre-v6 need 8-byte align
+  Align ReqAlign = STI->getDualLoadStoreAlignment();
   if (Alignment < ReqAlign)
     return false;
 
@@ -2324,10 +2320,10 @@ bool ARMPreAllocLoadStoreOpt::CanFormLdStDWord(
   return true;
 }
 
-bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
-                                 SmallVectorImpl<MachineInstr *> &Ops,
-                                 unsigned Base, bool isLd,
-                                 DenseMap<MachineInstr*, unsigned> &MI2LocMap) {
+bool ARMPreAllocLoadStoreOpt::RescheduleOps(
+    MachineBasicBlock *MBB, SmallVectorImpl<MachineInstr *> &Ops, unsigned Base,
+    bool isLd, DenseMap<MachineInstr *, unsigned> &MI2LocMap,
+    SmallDenseMap<Register, SmallVector<MachineInstr *>, 8> &RegisterMap) {
   bool RetVal = false;
 
   // Sort by offset (in reverse order).
@@ -2351,9 +2347,8 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
     unsigned LastOpcode = 0;
     unsigned LastBytes = 0;
     unsigned NumMove = 0;
-    for (int i = Ops.size() - 1; i >= 0; --i) {
+    for (MachineInstr *Op : llvm::reverse(Ops)) {
       // Make sure each operation has the same kind.
-      MachineInstr *Op = Ops[i];
       unsigned LSMOpcode
         = getLoadStoreMultipleOpcode(Op->getOpcode(), ARM_AM::ia);
       if (LastOpcode && LSMOpcode != LastOpcode)
@@ -2476,8 +2471,13 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
           }
         } else {
           for (unsigned i = 0; i != NumMove; ++i) {
-            MachineInstr *Op = Ops.back();
-            Ops.pop_back();
+            MachineInstr *Op = Ops.pop_back_val();
+            if (isLd) {
+              // Populate RegisterMap with all Registers defined by loads.
+              Register Reg = Op->getOperand(0).getReg();
+              RegisterMap[Reg];
+            }
+
             MBB->splice(InsertPos, MBB, Op);
           }
         }
@@ -2489,6 +2489,44 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
   }
 
   return RetVal;
+}
+
+static void forEachDbgRegOperand(MachineInstr *MI,
+                                 std::function<void(MachineOperand &)> Fn) {
+  if (MI->isNonListDebugValue()) {
+    auto &Op = MI->getOperand(0);
+    if (Op.isReg())
+      Fn(Op);
+  } else {
+    for (unsigned I = 2; I < MI->getNumOperands(); I++) {
+      auto &Op = MI->getOperand(I);
+      if (Op.isReg())
+        Fn(Op);
+    }
+  }
+}
+
+// Update the RegisterMap with the instruction that was moved because a
+// DBG_VALUE_LIST may need to be moved again.
+static void updateRegisterMapForDbgValueListAfterMove(
+    SmallDenseMap<Register, SmallVector<MachineInstr *>, 8> &RegisterMap,
+    MachineInstr *DbgValueListInstr, MachineInstr *InstrToReplace) {
+
+  forEachDbgRegOperand(DbgValueListInstr, [&](MachineOperand &Op) {
+    auto RegIt = RegisterMap.find(Op.getReg());
+    if (RegIt == RegisterMap.end())
+      return;
+    auto &InstrVec = RegIt->getSecond();
+    for (unsigned I = 0; I < InstrVec.size(); I++)
+      if (InstrVec[I] == InstrToReplace)
+        InstrVec[I] = DbgValueListInstr;
+  });
+}
+
+static DebugVariable createDebugVariableFromMachineInstr(MachineInstr *MI) {
+  auto DbgVar = DebugVariable(MI->getDebugVariable(), MI->getDebugExpression(),
+                              MI->getDebugLoc()->getInlinedAt());
+  return DbgVar;
 }
 
 bool
@@ -2503,6 +2541,10 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
   Base2InstMap Base2StsMap;
   BaseVec LdBases;
   BaseVec StBases;
+  // This map is used to track the relationship between the virtual
+  // register that is the result of a load that is moved and the DBG_VALUE
+  // MachineInstr pointer that uses that virtual register.
+  SmallDenseMap<Register, SmallVector<MachineInstr *>, 8> RegisterMap;
 
   unsigned Loc = 0;
   MachineBasicBlock::iterator MBBI = MBB->begin();
@@ -2561,19 +2603,17 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
     }
 
     // Re-schedule loads.
-    for (unsigned i = 0, e = LdBases.size(); i != e; ++i) {
-      unsigned Base = LdBases[i];
+    for (unsigned Base : LdBases) {
       SmallVectorImpl<MachineInstr *> &Lds = Base2LdsMap[Base];
       if (Lds.size() > 1)
-        RetVal |= RescheduleOps(MBB, Lds, Base, true, MI2LocMap);
+        RetVal |= RescheduleOps(MBB, Lds, Base, true, MI2LocMap, RegisterMap);
     }
 
     // Re-schedule stores.
-    for (unsigned i = 0, e = StBases.size(); i != e; ++i) {
-      unsigned Base = StBases[i];
+    for (unsigned Base : StBases) {
       SmallVectorImpl<MachineInstr *> &Sts = Base2StsMap[Base];
       if (Sts.size() > 1)
-        RetVal |= RescheduleOps(MBB, Sts, Base, false, MI2LocMap);
+        RetVal |= RescheduleOps(MBB, Sts, Base, false, MI2LocMap, RegisterMap);
     }
 
     if (MBBI != E) {
@@ -2584,6 +2624,253 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
     }
   }
 
+  // Reschedule DBG_VALUEs to match any loads that were moved. When a load is
+  // sunk beyond a DBG_VALUE that is referring to it, the DBG_VALUE becomes a
+  // use-before-def, resulting in a loss of debug info.
+
+  // Example:
+  // Before the Pre Register Allocation Load Store Pass
+  // inst_a
+  // %2 = ld ...
+  // inst_b
+  // DBG_VALUE %2, "x", ...
+  // %3 = ld ...
+
+  // After the Pass:
+  // inst_a
+  // inst_b
+  // DBG_VALUE %2, "x", ...
+  // %2 = ld ...
+  // %3 = ld ...
+
+  // The code below addresses this by moving the DBG_VALUE to the position
+  // immediately after the load.
+
+  // Example:
+  // After the code below:
+  // inst_a
+  // inst_b
+  // %2 = ld ...
+  // DBG_VALUE %2, "x", ...
+  // %3 = ld ...
+
+  // The algorithm works in two phases: First RescheduleOps() populates the
+  // RegisterMap with registers that were moved as keys, there is no value
+  // inserted. In the next phase, every MachineInstr in a basic block is
+  // iterated over. If it is a valid DBG_VALUE or DBG_VALUE_LIST and it uses one
+  // or more registers in the RegisterMap, the RegisterMap and InstrMap are
+  // populated with the MachineInstr. If the DBG_VALUE or DBG_VALUE_LIST
+  // describes debug information for a variable that already exists in the
+  // DbgValueSinkCandidates, the MachineInstr in the DbgValueSinkCandidates must
+  // be set to undef. If the current MachineInstr is a load that was moved,
+  // undef the corresponding DBG_VALUE or DBG_VALUE_LIST and clone it to below
+  // the load.
+
+  // To illustrate the above algorithm visually let's take this example.
+
+  // Before the Pre Register Allocation Load Store Pass:
+  // %2 = ld ...
+  // DBG_VALUE %2, A, .... # X
+  // DBG_VALUE 0, A, ... # Y
+  // %3 = ld ...
+  // DBG_VALUE %3, A, ..., # Z
+  // %4 = ld ...
+
+  // After Pre Register Allocation Load Store Pass:
+  // DBG_VALUE %2, A, .... # X
+  // DBG_VALUE 0, A, ... # Y
+  // DBG_VALUE %3, A, ..., # Z
+  // %2 = ld ...
+  // %3 = ld ...
+  // %4 = ld ...
+
+  // The algorithm below does the following:
+
+  // In the beginning, the RegisterMap will have been populated with the virtual
+  // registers %2, and %3, the DbgValueSinkCandidates and the InstrMap will be
+  // empty. DbgValueSinkCandidates = {}, RegisterMap = {2 -> {}, 3 -> {}},
+  // InstrMap {}
+  // -> DBG_VALUE %2, A, .... # X
+  // DBG_VALUE 0, A, ... # Y
+  // DBG_VALUE %3, A, ..., # Z
+  // %2 = ld ...
+  // %3 = ld ...
+  // %4 = ld ...
+
+  // After the first DBG_VALUE (denoted with an X) is processed, the
+  // DbgValueSinkCandidates and InstrMap will be populated and the RegisterMap
+  // entry for %2 will be populated as well. DbgValueSinkCandidates = {A -> X},
+  // RegisterMap = {2 -> {X}, 3 -> {}}, InstrMap {X -> 2}
+  // DBG_VALUE %2, A, .... # X
+  // -> DBG_VALUE 0, A, ... # Y
+  // DBG_VALUE %3, A, ..., # Z
+  // %2 = ld ...
+  // %3 = ld ...
+  // %4 = ld ...
+
+  // After the DBG_VALUE Y is processed, the DbgValueSinkCandidates is updated
+  // to now hold Y for A and the RegisterMap is also updated to remove X from
+  // %2, this is because both X and Y describe the same debug variable A. X is
+  // also updated to have a $noreg as the first operand.
+  // DbgValueSinkCandidates = {A -> {Y}}, RegisterMap = {2 -> {}, 3 -> {}},
+  // InstrMap = {X-> 2}
+  // DBG_VALUE $noreg, A, .... # X
+  // DBG_VALUE 0, A, ... # Y
+  // -> DBG_VALUE %3, A, ..., # Z
+  // %2 = ld ...
+  // %3 = ld ...
+  // %4 = ld ...
+
+  // After DBG_VALUE Z is processed, the DbgValueSinkCandidates is updated to
+  // hold Z fr A, the RegisterMap is updated to hold Z for %3, and the InstrMap
+  // is updated to have Z mapped to %3. This is again because Z describes the
+  // debug variable A, Y is not updated to have $noreg as first operand because
+  // its first operand is an immediate, not a register.
+  // DbgValueSinkCandidates = {A -> {Z}}, RegisterMap = {2 -> {}, 3 -> {Z}},
+  // InstrMap = {X -> 2, Z -> 3}
+  // DBG_VALUE $noreg, A, .... # X
+  // DBG_VALUE 0, A, ... # Y
+  // DBG_VALUE %3, A, ..., # Z
+  // -> %2 = ld ...
+  // %3 = ld ...
+  // %4 = ld ...
+
+  // Nothing happens here since the RegisterMap for %2 contains no value.
+  // DbgValueSinkCandidates = {A -> {Z}}, RegisterMap = {2 -> {}, 3 -> {Z}},
+  // InstrMap = {X -> 2, Z -> 3}
+  // DBG_VALUE $noreg, A, .... # X
+  // DBG_VALUE 0, A, ... # Y
+  // DBG_VALUE %3, A, ..., # Z
+  // %2 = ld ...
+  // -> %3 = ld ...
+  // %4 = ld ...
+
+  // Since the RegisterMap contains Z as a value for %3, the MachineInstr
+  // pointer Z is copied to come after the load for %3 and the old Z's first
+  // operand is changed to $noreg the Basic Block iterator is moved to after the
+  // DBG_VALUE Z's new position.
+  // DbgValueSinkCandidates = {A -> {Z}}, RegisterMap = {2 -> {}, 3 -> {Z}},
+  // InstrMap = {X -> 2, Z -> 3}
+  // DBG_VALUE $noreg, A, .... # X
+  // DBG_VALUE 0, A, ... # Y
+  // DBG_VALUE $noreg, A, ..., # Old Z
+  // %2 = ld ...
+  // %3 = ld ...
+  // DBG_VALUE %3, A, ..., # Z
+  // -> %4 = ld ...
+
+  // Nothing happens for %4 and the algorithm exits having processed the entire
+  // Basic Block.
+  // DbgValueSinkCandidates = {A -> {Z}}, RegisterMap = {2 -> {}, 3 -> {Z}},
+  // InstrMap = {X -> 2, Z -> 3}
+  // DBG_VALUE $noreg, A, .... # X
+  // DBG_VALUE 0, A, ... # Y
+  // DBG_VALUE $noreg, A, ..., # Old Z
+  // %2 = ld ...
+  // %3 = ld ...
+  // DBG_VALUE %3, A, ..., # Z
+  // %4 = ld ...
+
+  // This map is used to track the relationship between
+  // a Debug Variable and the DBG_VALUE MachineInstr pointer that describes the
+  // debug information for that Debug Variable.
+  SmallDenseMap<DebugVariable, MachineInstr *, 8> DbgValueSinkCandidates;
+  // This map is used to track the relationship between a DBG_VALUE or
+  // DBG_VALUE_LIST MachineInstr pointer and Registers that it uses.
+  SmallDenseMap<MachineInstr *, SmallVector<Register>, 8> InstrMap;
+  for (MBBI = MBB->begin(), E = MBB->end(); MBBI != E; ++MBBI) {
+    MachineInstr &MI = *MBBI;
+
+    auto PopulateRegisterAndInstrMapForDebugInstr = [&](Register Reg) {
+      auto RegIt = RegisterMap.find(Reg);
+      if (RegIt == RegisterMap.end())
+        return;
+      auto &InstrVec = RegIt->getSecond();
+      InstrVec.push_back(&MI);
+      InstrMap[&MI].push_back(Reg);
+    };
+
+    if (MI.isDebugValue()) {
+      assert(MI.getDebugVariable() &&
+             "DBG_VALUE or DBG_VALUE_LIST must contain a DILocalVariable");
+
+      auto DbgVar = createDebugVariableFromMachineInstr(&MI);
+      // If the first operand is a register and it exists in the RegisterMap, we
+      // know this is a DBG_VALUE that uses the result of a load that was moved,
+      // and is therefore a candidate to also be moved, add it to the
+      // RegisterMap and InstrMap.
+      forEachDbgRegOperand(&MI, [&](MachineOperand &Op) {
+        PopulateRegisterAndInstrMapForDebugInstr(Op.getReg());
+      });
+
+      // If the current DBG_VALUE describes the same variable as one of the
+      // in-flight DBG_VALUEs, remove the candidate from the list and set it to
+      // undef. Moving one DBG_VALUE past another would result in the variable's
+      // value going back in time when stepping through the block in the
+      // debugger.
+      auto InstrIt = DbgValueSinkCandidates.find(DbgVar);
+      if (InstrIt != DbgValueSinkCandidates.end()) {
+        auto *Instr = InstrIt->getSecond();
+        auto RegIt = InstrMap.find(Instr);
+        if (RegIt != InstrMap.end()) {
+          const auto &RegVec = RegIt->getSecond();
+          // For every Register in the RegVec, remove the MachineInstr in the
+          // RegisterMap that describes the DbgVar.
+          for (auto &Reg : RegVec) {
+            auto RegIt = RegisterMap.find(Reg);
+            if (RegIt == RegisterMap.end())
+              continue;
+            auto &InstrVec = RegIt->getSecond();
+            auto IsDbgVar = [&](MachineInstr *I) -> bool {
+              auto Var = createDebugVariableFromMachineInstr(I);
+              return Var == DbgVar;
+            };
+
+            llvm::erase_if(InstrVec, IsDbgVar);
+          }
+          forEachDbgRegOperand(Instr,
+                               [&](MachineOperand &Op) { Op.setReg(0); });
+        }
+      }
+      DbgValueSinkCandidates[DbgVar] = &MI;
+    } else {
+      // If the first operand of a load matches with a DBG_VALUE in RegisterMap,
+      // then move that DBG_VALUE to below the load.
+      auto Opc = MI.getOpcode();
+      if (!isLoadSingle(Opc))
+        continue;
+      auto Reg = MI.getOperand(0).getReg();
+      auto RegIt = RegisterMap.find(Reg);
+      if (RegIt == RegisterMap.end())
+        continue;
+      auto &DbgInstrVec = RegIt->getSecond();
+      if (!DbgInstrVec.size())
+        continue;
+      for (auto *DbgInstr : DbgInstrVec) {
+        MachineBasicBlock::iterator InsertPos = std::next(MBBI);
+        auto *ClonedMI = MI.getMF()->CloneMachineInstr(DbgInstr);
+        MBB->insert(InsertPos, ClonedMI);
+        MBBI++;
+        //  Erase the entry into the DbgValueSinkCandidates for the DBG_VALUE
+        //  that was moved.
+        auto DbgVar = createDebugVariableFromMachineInstr(DbgInstr);
+        auto DbgIt = DbgValueSinkCandidates.find(DbgVar);
+        // If the instruction is a DBG_VALUE_LIST, it may have already been
+        // erased from the DbgValueSinkCandidates. Only erase if it exists in
+        // the DbgValueSinkCandidates.
+        if (DbgIt != DbgValueSinkCandidates.end())
+          DbgValueSinkCandidates.erase(DbgIt);
+        // Zero out original dbg instr
+        forEachDbgRegOperand(DbgInstr,
+                             [&](MachineOperand &Op) { Op.setReg(0); });
+        // Update RegisterMap with ClonedMI because it might have to be moved
+        // again.
+        if (DbgInstr->isDebugValueList())
+          updateRegisterMapForDbgValueListAfterMove(RegisterMap, ClonedMI,
+                                                    DbgInstr);
+      }
+    }
+  }
   return RetVal;
 }
 
@@ -2711,13 +2998,13 @@ static bool isLegalOrConvertableAddressImm(unsigned Opcode, int Imm,
   if (isLegalAddressImm(Opcode, Imm, TII))
     return true;
 
-  // We can convert AddrModeT2_i12 to AddrModeT2_i8.
+  // We can convert AddrModeT2_i12 to AddrModeT2_i8neg.
   const MCInstrDesc &Desc = TII->get(Opcode);
   unsigned AddrMode = (Desc.TSFlags & ARMII::AddrModeMask);
   switch (AddrMode) {
   case ARMII::AddrModeT2_i12:
     CodesizeEstimate += 1;
-    return std::abs(Imm) < (((1 << 8) * 1) - 1);
+    return Imm < 0 && -Imm < ((1 << 8) * 1);
   }
   return false;
 }
@@ -2726,9 +3013,18 @@ static bool isLegalOrConvertableAddressImm(unsigned Opcode, int Imm,
 // by -Offset. This can either happen in-place or be a replacement as MI is
 // converted to another instruction type.
 static void AdjustBaseAndOffset(MachineInstr *MI, Register NewBaseReg,
-                                int Offset, const TargetInstrInfo *TII) {
+                                int Offset, const TargetInstrInfo *TII,
+                                const TargetRegisterInfo *TRI) {
+  // Set the Base reg
   unsigned BaseOp = getBaseOperandIndex(*MI);
   MI->getOperand(BaseOp).setReg(NewBaseReg);
+  // and constrain the reg class to that required by the instruction.
+  MachineFunction *MF = MI->getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const MCInstrDesc &MCID = TII->get(MI->getOpcode());
+  const TargetRegisterClass *TRC = TII->getRegClass(MCID, BaseOp, TRI, *MF);
+  MRI.constrainRegClass(NewBaseReg, TRC);
+
   int OldOffset = MI->getOperand(BaseOp + 1).getImm();
   if (isLegalAddressImm(MI->getOpcode(), OldOffset - Offset, TII))
     MI->getOperand(BaseOp + 1).setImm(OldOffset - Offset);
@@ -2802,6 +3098,7 @@ static MachineInstr *createPostIncLoadStore(MachineInstr *MI, int Offset,
         .addImm(Offset)
         .add(MI->getOperand(3))
         .add(MI->getOperand(4))
+        .add(MI->getOperand(5))
         .cloneMemRefs(*MI);
   case ARMII::AddrModeT2_i8:
     if (MI->mayLoad()) {
@@ -2881,17 +3178,19 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
     if (PrePostInc || BaseAccess->getParent() != Increment->getParent())
       return false;
     Register PredReg;
-    if (Increment->definesRegister(ARM::CPSR) ||
+    if (Increment->definesRegister(ARM::CPSR, /*TRI=*/nullptr) ||
         getInstrPredicate(*Increment, PredReg) != ARMCC::AL)
       return false;
 
     LLVM_DEBUG(dbgs() << "\nAttempting to distribute increments on VirtualReg "
                       << Base.virtRegIndex() << "\n");
 
-    // Make sure that Increment has no uses before BaseAccess.
+    // Make sure that Increment has no uses before BaseAccess that are not PHI
+    // uses.
     for (MachineInstr &Use :
         MRI->use_nodbg_instructions(Increment->getOperand(0).getReg())) {
-      if (!DT->dominates(BaseAccess, &Use) || &Use == BaseAccess) {
+      if (&Use == BaseAccess || (Use.getOpcode() != TargetOpcode::PHI &&
+                                 !DT->dominates(BaseAccess, &Use))) {
         LLVM_DEBUG(dbgs() << "  BaseAccess doesn't dominate use of increment\n");
         return false;
       }
@@ -2971,7 +3270,7 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
 
   for (auto *Use : SuccessorAccesses) {
     LLVM_DEBUG(dbgs() << "Changing: "; Use->dump());
-    AdjustBaseAndOffset(Use, NewBaseReg, IncrementOffset, TII);
+    AdjustBaseAndOffset(Use, NewBaseReg, IncrementOffset, TII, TRI);
     LLVM_DEBUG(dbgs() << "  To    : "; Use->dump());
   }
 

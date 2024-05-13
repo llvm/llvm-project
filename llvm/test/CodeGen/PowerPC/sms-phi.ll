@@ -4,19 +4,19 @@
 ; RUN:       >/dev/null | FileCheck %s
 define dso_local void @sha512() #0 {
 ;CHECK: prolog:
-;CHECK:        %18:g8rc = ADD8 %24:g8rc, %23:g8rc
+;CHECK:        %{{[0-9]+}}:g8rc = ADD8 %{{[0-9]+}}:g8rc, %{{[0-9]+}}:g8rc
 ;CHECK: epilog:
-;CHECK:        %28:g8rc_and_g8rc_nox0 = PHI %6:g8rc_and_g8rc_nox0, %bb.3, %22:g8rc_and_g8rc_nox0, %bb.4
-;CHECK-NEXT:   %29:g8rc = PHI %12:g8rc, %bb.3, %16:g8rc, %bb.4
-;CHECK-NEXT:   %30:g8rc = PHI %15:g8rc, %bb.3, %19:g8rc, %bb.4
+;CHECK:        %{{[0-9]+}}:g8rc_and_g8rc_nox0 = PHI %{{[0-9]+}}:g8rc_and_g8rc_nox0, %bb.3, %{{[0-9]+}}:g8rc_and_g8rc_nox0, %bb.4
+;CHECK-NEXT:   %{{[0-9]+}}:g8rc = PHI %{{[0-9]+}}:g8rc, %bb.3, %{{[0-9]+}}:g8rc, %bb.4
+;CHECK-NEXT:   %{{[0-9]+}}:g8rc = PHI %{{[0-9]+}}:g8rc, %bb.3, %{{[0-9]+}}:g8rc, %bb.4
   br label %1
 
 1:                                                ; preds = %1, %0
   %2 = phi i64 [ 0, %0 ], [ %12, %1 ]
   %3 = phi i64 [ undef, %0 ], [ %11, %1 ]
   %4 = phi i64 [ undef, %0 ], [ %3, %1 ]
-  %5 = getelementptr inbounds [80 x i64], [80 x i64]* null, i64 0, i64 %2
-  %6 = load i64, i64* %5, align 8
+  %5 = getelementptr inbounds [80 x i64], ptr null, i64 0, i64 %2
+  %6 = load i64, ptr %5, align 8
   %7 = add i64 0, %6
   %8 = and i64 %3, %4
   %9 = or i64 0, %8
@@ -28,7 +28,7 @@ define dso_local void @sha512() #0 {
 
 14:                                               ; preds = %1
   %15 = add i64 %4, 0
-  store i64 %15, i64* undef, align 8
+  store i64 %15, ptr undef, align 8
   ret void
 }
 

@@ -8,7 +8,7 @@
 // REQUIRES: osx-ld64-live_support
 
 // RUN: %clang_asan %min_macos_deployment_target=10.11 -Xlinker -dead_strip -o %t %s
-// RUN: llvm-nm -format=posix %t | FileCheck --check-prefix NM-CHECK %s
+// RUN: llvm-nm --format=posix %t | FileCheck --check-prefix NM-CHECK %s
 // RUN: not %run %t 2>&1 | FileCheck --check-prefix ASAN-CHECK %s
 
 int alive[1] = {};
@@ -18,6 +18,6 @@ int dead[1] = {};
 
 int main(int argc, char *argv[]) {
   alive[argc] = 0;
-  // ASAN-CHECK: {{0x.* is located 0 bytes to the right of global variable}}
+  // ASAN-CHECK: {{0x.* is located 0 bytes after global variable}}
   return 0;
 }

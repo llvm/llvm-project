@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-store=region -verify \
+// RUN: %clang_analyze_cc1 -verify \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \
@@ -30,53 +30,53 @@ struct stuff {
 };
 struct stuff myglobalstuff;
 
-void f1() {
+void f1(void) {
   int *p = malloc(12);
   return; // expected-warning{{Potential leak of memory pointed to by}}
 }
 
-void f2() {
+void f2(void) {
   int *p = malloc(12);
   free(p);
   free(p); // expected-warning{{Attempt to free released memory}}
 }
 
-void f2_realloc_0() {
+void f2_realloc_0(void) {
   int *p = malloc(12);
   realloc(p,0);
   realloc(p,0); // expected-warning{{Attempt to free released memory}}
 }
 
-void f2_realloc_1() {
+void f2_realloc_1(void) {
   int *p = malloc(12);
   int *q = realloc(p,0); // no-warning
 }
 
 // ownership attributes tests
-void naf1() {
+void naf1(void) {
   int *p = my_malloc3(12);
   return; // no-warning
 }
 
-void n2af1() {
+void n2af1(void) {
   int *p = my_malloc2(12);
   return; // expected-warning{{Potential leak of memory pointed to by}}
 }
 
-void af1() {
+void af1(void) {
   int *p = my_malloc(12);
   return; // expected-warning{{Potential leak of memory pointed to by}}
 }
 
-void af1_b() {
+void af1_b(void) {
   int *p = my_malloc(12);
 } // expected-warning{{Potential leak of memory pointed to by}}
 
-void af1_c() {
+void af1_c(void) {
   myglobalpointer = my_malloc(12); // no-warning
 }
 
-void af1_d() {
+void af1_d(void) {
   struct stuff mystuff;
   mystuff.somefield = my_malloc(12);
 } // expected-warning{{Potential leak of memory pointed to by}}
@@ -96,32 +96,32 @@ void af1_g(struct stuff **pps) {
   (*pps)->somefield = my_malloc(42); // no-warning
 }
 
-void af2() {
+void af2(void) {
   int *p = my_malloc(12);
   my_free(p);
   free(p); // expected-warning{{Attempt to free released memory}}
 }
 
-void af2b() {
+void af2b(void) {
   int *p = my_malloc(12);
   free(p);
   my_free(p); // expected-warning{{Attempt to free released memory}}
 }
 
-void af2c() {
+void af2c(void) {
   int *p = my_malloc(12);
   free(p);
   my_hold(p); // expected-warning{{Attempt to free released memory}}
 }
 
-void af2d() {
+void af2d(void) {
   int *p = my_malloc(12);
   free(p);
   my_hold2(0, 0, p); // expected-warning{{Attempt to free released memory}}
 }
 
 // No leak if malloc returns null.
-void af2e() {
+void af2e(void) {
   int *p = my_malloc(12);
   if (!p)
     return; // no-warning
@@ -129,20 +129,20 @@ void af2e() {
 }
 
 // This case inflicts a possible double-free.
-void af3() {
+void af3(void) {
   int *p = my_malloc(12);
   my_hold(p);
   free(p); // expected-warning{{Attempt to free non-owned memory}}
 }
 
-int * af4() {
+int * af4(void) {
   int *p = my_malloc(12);
   my_free(p);
   return p; // expected-warning{{Use of memory after it is freed}}
 }
 
 // This case is (possibly) ok, be conservative
-int * af5() {
+int * af5(void) {
   int *p = my_malloc(12);
   my_hold(p);
   return p; // no-warning
@@ -153,7 +153,7 @@ int * af5() {
 // This case tests that storing malloc'ed memory to a static variable which is
 // then returned is not leaked.  In the absence of known contracts for functions
 // or inter-procedural analysis, this is a conservative answer.
-int *f3() {
+int *f3(void) {
   static int *p = 0;
   p = malloc(12);
   return p; // no-warning
@@ -163,18 +163,18 @@ int *f3() {
 // which is then returned is not leaked.  In the absence of known contracts for
 // functions or inter-procedural analysis, this is a conservative answer.
 static int *p_f4 = 0;
-int *f4() {
+int *f4(void) {
   p_f4 = malloc(12);
   return p_f4; // no-warning
 }
 
-int *f5() {
+int *f5(void) {
   int *q = malloc(12);
   q = realloc(q, 20);
   return q; // no-warning
 }
 
-void f6() {
+void f6(void) {
   int *p = malloc(12);
   if (!p)
     return; // no-warning
@@ -182,7 +182,7 @@ void f6() {
     free(p);
 }
 
-void f6_realloc() {
+void f6_realloc(void) {
   int *p = malloc(12);
   if (!p)
     return; // no-warning
@@ -191,51 +191,51 @@ void f6_realloc() {
 }
 
 
-char *doit2();
-void pr6069() {
+char *doit2(void);
+void pr6069(void) {
   char *buf = doit2();
   free(buf);
 }
 
-void pr6293() {
+void pr6293(void) {
   free(0);
 }
 
-void f7() {
+void f7(void) {
   char *x = (char*) malloc(4);
   free(x);
   x[0] = 'a'; // expected-warning{{Use of memory after it is freed}}
 }
 
-void f7_realloc() {
+void f7_realloc(void) {
   char *x = (char*) malloc(4);
   realloc(x,0);
   x[0] = 'a'; // expected-warning{{Use of memory after it is freed}}
 }
 
-void PR6123() {
+void PR6123(void) {
   int *x = malloc(11); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
 }
 
-void PR7217() {
+void PR7217(void) {
   int *buf = malloc(2); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
   buf[1] = 'c'; // not crash
 }
 
-void mallocCastToVoid() {
+void mallocCastToVoid(void) {
   void *p = malloc(2);
   const void *cp = p; // not crash
   free(p);
 }
 
-void mallocCastToFP() {
+void mallocCastToFP(void) {
   void *p = malloc(2);
-  void (*fp)() = p; // not crash
+  void (*fp)(void) = p; // not crash
   free(p);
 }
 
 // This tests that malloc() buffers are undefined by default
-char mallocGarbage () {
+char mallocGarbage (void) {
   char *buf = malloc(2);
   char result = buf[1]; // expected-warning{{undefined}}
   free(buf);
@@ -243,13 +243,13 @@ char mallocGarbage () {
 }
 
 // This tests that calloc() buffers need to be freed
-void callocNoFree () {
+void callocNoFree (void) {
   char *buf = calloc(2,2);
   return; // expected-warning{{Potential leak of memory pointed to by}}
 }
 
 // These test that calloc() buffers are zeroed by default
-char callocZeroesGood () {
+char callocZeroesGood (void) {
   char *buf = calloc(2,2);
   char result = buf[3]; // no-warning
   if (buf[1] == 0) {
@@ -258,7 +258,7 @@ char callocZeroesGood () {
   return result; // no-warning
 }
 
-char callocZeroesBad () {
+char callocZeroesBad (void) {
   char *buf = calloc(2,2);
   char result = buf[3]; // no-warning
   if (buf[1] != 0) {
@@ -267,7 +267,7 @@ char callocZeroesBad () {
   return result; // expected-warning{{Potential leak of memory pointed to by}}
 }
 
-void testMultipleFreeAnnotations() {
+void testMultipleFreeAnnotations(void) {
   int *p = malloc(12);
   int *q = malloc(12);
   my_freeBoth(p, q);

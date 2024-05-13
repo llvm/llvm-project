@@ -7,26 +7,24 @@
 define void @print_res() nounwind {
 ; CHECK-LABEL: print_res:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
-; CHECK-NEXT:    stdu 1, -128(1)
 ; CHECK-NEXT:    lwz 3, 0(3)
+; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    addi 3, 3, -1
 ; CHECK-NEXT:    clrldi 4, 3, 32
-; CHECK-NEXT:    cmplwi 3, 1
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    iselgt 3, 4, 3
-; CHECK-NEXT:    li 4, 2
-; CHECK-NEXT:    addi 3, 3, -1
-; CHECK-NEXT:    cmpldi 3, 2
-; CHECK-NEXT:    isellt 3, 3, 4
+; CHECK-NEXT:    cmplwi 3, 3
+; CHECK-NEXT:    li 3, 3
+; CHECK-NEXT:    isellt 3, 4, 3
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    cmpldi 3, 1
+; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    li 7, -1
 ; CHECK-NEXT:    mtctr 3
-; CHECK-NEXT:    lbz 5, 0(5)
+; CHECK-NEXT:    stdu 1, -128(1)
+; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    std 0, 144(1)
 ; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    li 7, -1
+; CHECK-NEXT:    lbz 5, 0(5)
 ; CHECK-NEXT:    bdz .LBB0_6
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xori 6, 5, 84
@@ -82,7 +80,7 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    bl printf
 ; CHECK-NEXT:    nop
-  %1 = load i32, i32* undef, align 4
+  %1 = load i32, ptr undef, align 4
   %2 = add i32 %1, -1
   %3 = zext i32 %2 to i64
   %4 = zext i32 3 to i64
@@ -94,8 +92,8 @@ define void @print_res() nounwind {
   %8 = trunc i64 %6 to i32
   %9 = sub i32 0, %8
   %10 = zext i32 %9 to i64
-  %11 = getelementptr inbounds i8, i8* null, i64 %10
-  %12 = load i8, i8* %11, align 1
+  %11 = getelementptr inbounds i8, ptr null, i64 %10
+  %12 = load i8, ptr %11, align 1
   %13 = icmp eq i8 %12, 84
   %14 = zext i1 %13 to i32
   %15 = add i32 %7, %14
@@ -107,8 +105,8 @@ define void @print_res() nounwind {
 
 20:                                               ; preds = %5
   %21 = trunc i64 %16 to i32
-  call void (i8*, ...) @printf(i8* getelementptr inbounds ([69 x i8], [69 x i8]* @.str.28, i64 0, i64 0), i32 zeroext 3, i32 zeroext undef, i32 zeroext %15, i32 zeroext undef, i32 zeroext 3, i8* undef, i32 zeroext undef, i32 zeroext 3, i32 zeroext %21, i8* undef, i32 zeroext undef) #1
+  call void (ptr, ...) @printf(ptr @.str.28, i32 zeroext 3, i32 zeroext undef, i32 zeroext %15, i32 zeroext undef, i32 zeroext 3, ptr undef, i32 zeroext undef, i32 zeroext 3, i32 zeroext %21, ptr undef, i32 zeroext undef) #1
   unreachable
 }
 
-declare void @printf(i8*, ...) local_unnamed_addr #0
+declare void @printf(ptr, ...) local_unnamed_addr #0

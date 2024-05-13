@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86, llvm-64-bits
 
 # RUN: rm -rf %t; split-file %s %t
 
@@ -7,7 +7,6 @@
 
 ## Check that .private_extern symbols are marked as local in the symbol table
 ## and aren't in the export trie.
-## Dead-stripped symbols should also not be in a map file output.
 # RUN: %lld -lSystem -dead_strip -map %t/map -u _ref_private_extern_u \
 # RUN:     %t/basics.o -o %t/basics
 # RUN: llvm-objdump --syms --section-headers %t/basics | \
@@ -16,7 +15,6 @@
 # RUN:     --exports-trie --indirect-symbols %t/basics | \
 # RUN:     FileCheck --check-prefix=EXECDATA --implicit-check-not _unref %s
 # RUN: llvm-otool -l %t/basics | grep -q 'segname __PAGEZERO'
-# RUN: FileCheck --check-prefix=MAP --implicit-check-not _unref %s < %t/map
 # EXEC-LABEL: Sections:
 # EXEC-LABEL: Name
 # EXEC-NEXT:  __text
@@ -24,27 +22,53 @@
 # EXEC-NEXT:  __ref_section
 # EXEC-NEXT:  __common
 # EXEC-LABEL: SYMBOL TABLE:
-# EXEC-NEXT:   l {{.*}} _ref_data
-# EXEC-NEXT:   l {{.*}} _ref_local
-# EXEC-NEXT:   l {{.*}} _ref_from_no_dead_strip_globl
-# EXEC-NEXT:   l {{.*}} _no_dead_strip_local
-# EXEC-NEXT:   l {{.*}} _ref_from_no_dead_strip_local
-# EXEC-NEXT:   l {{.*}} _ref_private_extern_u
-# EXEC-NEXT:   l {{.*}} _main
-# EXEC-NEXT:   l {{.*}} _ref_private_extern
-# EXEC-NEXT:   g {{.*}} _ref_com
-# EXEC-NEXT:   g {{.*}} _no_dead_strip_globl
-# EXEC-NEXT:   g {{.*}} __mh_execute_header
+# EXEC-DAG:   l {{.*}} _ref_data
+# EXEC-DAG:   l {{.*}} _ref_local
+# EXEC-DAG:   l {{.*}} _ref_from_no_dead_strip_globl
+# EXEC-DAG:   l {{.*}} _no_dead_strip_local
+# EXEC-DAG:   l {{.*}} _ref_from_no_dead_strip_local
+# EXEC-DAG:   l {{.*}} _ref_private_extern_u
+# EXEC-DAG:   l {{.*}} _main
+# EXEC-DAG:   l {{.*}} _ref_private_extern
+# EXEC-DAG:   g {{.*}} _no_dead_strip_globl
+# EXEC-DAG:   g {{.*}} _ref_com
+# EXEC-DAG:   g {{.*}} __mh_execute_header
 # EXECDATA-LABEL: Indirect symbols
 # EXECDATA-NEXT:  name
 # EXECDATA-NEXT:  _ref_com
 # EXECDATA-LABEL: Contents of (__DATA,__ref_section) section
 # EXECDATA-NEXT:   04 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
 # EXECDATA-LABEL: Exports trie:
-# EXECDATA-NEXT:   __mh_execute_header
-# EXECDATA-NEXT:   _ref_com
-# EXECDATA-NEXT:   _no_dead_strip_globl
-# MAP: _main
+# EXECDATA-DAG:   _ref_com
+# EXECDATA-DAG:   _no_dead_strip_globl
+# EXECDATA-DAG:   __mh_execute_header
+
+## Check that dead stripped symbols get listed properly.
+# RUN: FileCheck --check-prefix=MAP %s < %t/map
+
+# MAP:        _main
+# MAP-LABEL: Dead Stripped Symbols
+# MAP-DAG:   <<dead>> 0x00000001 [ 2] _unref_com
+# MAP-DAG:   <<dead>> 0x00000008 [ 2] _unref_data
+# MAP-DAG:   <<dead>> 0x00000006 [ 2] _unref_extern
+# MAP-DAG:   <<dead>> 0x00000001 [ 2] _unref_local
+# MAP-DAG:   <<dead>> 0x00000007 [ 2] _unref_private_extern
+# MAP-DAG:   <<dead>> 0x00000008 [ 2] l_unref_data
+
+## Run dead stripping on code without any dead symbols.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/no-dead-symbols.s -o %t/no-dead-symbols.o
+# RUN: %lld -lSystem -dead_strip -map %t/no-dead-symbols-map \
+# RUN:     %t/no-dead-symbols.o -o %t/no-dead-symbols
+## Mark the end of the file with a string.
+# RUN: FileCheck --check-prefix=NODEADSYMBOLS %s < %t/no-dead-symbols-map
+
+# NODEADSYMBOLS-LABEL: # Symbols:
+# NODEADSYMBOLS-NEXT:  # Address Size File Name
+# NODEADSYMBOLS-NEXT:  _main
+# NODEADSYMBOLS-LABEL: # Dead Stripped Symbols:
+# NODEADSYMBOLS-NEXT:  # Size File Name
+# NODEADSYMBOLS-EMPTY:
 
 # RUN: %lld -dylib -dead_strip -u _ref_private_extern_u %t/basics.o -o %t/basics.dylib
 # RUN: llvm-objdump --syms %t/basics.dylib | \
@@ -53,17 +77,43 @@
 # RUN: llvm-objdump --syms %t/basics.dylib | \
 # RUN:     FileCheck --check-prefix=DYLIB --implicit-check-not _unref %s
 # DYLIB-LABEL: SYMBOL TABLE:
-# DYLIB-NEXT:   l {{.*}} _ref_data
-# DYLIB-NEXT:   l {{.*}} _ref_local
-# DYLIB-NEXT:   l {{.*}} _ref_from_no_dead_strip_globl
-# DYLIB-NEXT:   l {{.*}} _no_dead_strip_local
-# DYLIB-NEXT:   l {{.*}} _ref_from_no_dead_strip_local
-# DYLIB-NEXT:   l {{.*}} _ref_private_extern_u
-# DYLIB-NEXT:   l {{.*}} _ref_private_extern
-# DYLIB-NEXT:   g {{.*}} _ref_com
-# DYLIB-NEXT:   g {{.*}} _unref_com
-# DYLIB-NEXT:   g {{.*}} _unref_extern
-# DYLIB-NEXT:   g {{.*}} _no_dead_strip_globl
+# DYLIB-DAG:   l {{.*}} _ref_data
+# DYLIB-DAG:   l {{.*}} _ref_local
+# DYLIB-DAG:   l {{.*}} _ref_from_no_dead_strip_globl
+# DYLIB-DAG:   l {{.*}} _no_dead_strip_local
+# DYLIB-DAG:   l {{.*}} _ref_from_no_dead_strip_local
+# DYLIB-DAG:   l {{.*}} _ref_private_extern_u
+# DYLIB-DAG:   l {{.*}} _ref_private_extern
+# DYLIB-DAG:   g {{.*}} _ref_com
+# DYLIB-DAG:   g {{.*}} _unref_com
+# DYLIB-DAG:   g {{.*}} _unref_extern
+# DYLIB-DAG:   g {{.*}} _no_dead_strip_globl
+
+## Extern symbols aren't stripped from executables with -export_dynamic
+# RUN: %lld -lSystem -dead_strip -export_dynamic -u _ref_private_extern_u \
+# RUN:     %t/basics.o -o %t/basics-export-dyn
+# RUN: llvm-objdump --syms --section-headers %t/basics-export-dyn | \
+# RUN:     FileCheck --check-prefix=EXECDYN %s
+# EXECDYN-LABEL: Sections:
+# EXECDYN-LABEL: Name
+# EXECDYN-NEXT:  __text
+# EXECDYN-NEXT:  __got
+# EXECDYN-NEXT:  __ref_section
+# EXECDYN-NEXT:  __common
+# EXECDYN-LABEL: SYMBOL TABLE:
+# EXECDYN-DAG:   l {{.*}} _ref_data
+# EXECDYN-DAG:   l {{.*}} _ref_local
+# EXECDYN-DAG:   l {{.*}} _ref_from_no_dead_strip_globl
+# EXECDYN-DAG:   l {{.*}} _no_dead_strip_local
+# EXECDYN-DAG:   l {{.*}} _ref_from_no_dead_strip_local
+# EXECDYN-DAG:   l {{.*}} _ref_private_extern_u
+# EXECDYN-DAG:   l {{.*}} _main
+# EXECDYN-DAG:   l {{.*}} _ref_private_extern
+# EXECDYN-DAG:   g {{.*}} _ref_com
+# EXECDYN-DAG:   g {{.*}} _unref_com
+# EXECDYN-DAG:   g {{.*}} _unref_extern
+# EXECDYN-DAG:   g {{.*}} _no_dead_strip_globl
+# EXECDYN-DAG:   g {{.*}} __mh_execute_header
 
 ## Absolute symbol handling.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
@@ -121,9 +171,9 @@
 # STRIPDYLIB-NEXT:  l {{.*}} __dyld_private
 # STRIPDYLIB-NEXT:  g {{.*}} _main
 # STRIPDYLIB-NEXT:  g {{.*}} __mh_execute_header
-# STRIPDYLIB-NEXT:  *UND* _ref_undef_fun
 # STRIPDYLIB-NEXT:  *UND* dyld_stub_binder
 # STRIPDYLIB-NEXT:  *UND* _ref_dylib_fun
+# STRIPDYLIB-NEXT:  *UND* _ref_undef_fun
 # STRIPDYLIB:      Bind table:
 # STRIPDYLIB:      Lazy bind table:
 # STRIPDYLIB:       __DATA   __la_symbol_ptr {{.*}} flat-namespace _ref_undef_fun
@@ -147,6 +197,18 @@
 # RUN: %lld -lSystem -dead_strip %t/strip-dylib-ref.o %t/dylib.dylib \
 # RUN:     -o %t/strip-dylib-ref -U _ref_undef_fun
 
+## Check that referenced undefs are kept with -undefined dynamic_lookup.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/ref-undef.s -o %t/ref-undef.o
+# RUN: %lld -lSystem -dead_strip %t/ref-undef.o \
+# RUN:     -o %t/ref-undef -undefined dynamic_lookup
+# RUN: llvm-objdump --syms --lazy-bind %t/ref-undef | \
+# RUN:     FileCheck --check-prefix=STRIPDYNLOOKUP %s
+# STRIPDYNLOOKUP: SYMBOL TABLE:
+# STRIPDYNLOOKUP:   *UND* _ref_undef_fun
+# STRIPDYNLOOKUP: Lazy bind table:
+# STRIPDYNLOOKUP:   __DATA   __la_symbol_ptr {{.*}} flat-namespace _ref_undef_fun
+
 ## S_ATTR_LIVE_SUPPORT tests.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/live-support.s -o %t/live-support.o
@@ -164,9 +226,9 @@
 # LIVESUPP-NEXT:   g {{.*}} _bar
 # LIVESUPP-NEXT:   g {{.*}} _foo
 # LIVESUPP-NEXT:   g {{.*}} __mh_execute_header
-# LIVESUPP-NEXT:   *UND* _ref_undef_fun
 # LIVESUPP-NEXT:   *UND* dyld_stub_binder
 # LIVESUPP-NEXT:   *UND* _ref_dylib_fun
+# LIVESUPP-NEXT:   *UND* _ref_undef_fun
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/live-support-iterations.s -o %t/live-support-iterations.o
@@ -203,13 +265,14 @@
 # UNWIND-NEXT:   l O __DATA,__data __dyld_private
 # UNWIND-NEXT:   g F __TEXT,__text _main
 # UNWIND-NEXT:   g F __TEXT,__text __mh_execute_header
+# UNWIND-NEXT:   *UND* dyld_stub_binder
 # UNWIND-NEXT:   *UND* ___cxa_allocate_exception
 # UNWIND-NEXT:   *UND* ___cxa_end_catch
 # UNWIND-NEXT:   *UND* __ZTIi
 # UNWIND-NEXT:   *UND* ___cxa_throw
 # UNWIND-NEXT:   *UND* ___gxx_personality_v0
 # UNWIND-NEXT:   *UND* ___cxa_begin_catch
-# UNWIND-NEXT:   *UND* dyld_stub_binder
+# UNWIND-NOT:    GCC_except_table0
 
 ## If a dead stripped function has a strong ref to a dylib symbol but
 ## a live function only a weak ref, the dylib is still not a WEAK_DYLIB.
@@ -252,6 +315,58 @@
 # EXECSTABS-NOT: N_FUN {{.*}} '_unref'
 # EXECSTABS:     N_FUN {{.*}} '_main'
 # EXECSTABS-NOT: N_FUN {{.*}} '_unref'
+
+# RUN: llvm-mc -g -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/literals.s -o %t/literals.o
+# RUN: %lld -dylib -dead_strip %t/literals.o -o %t/literals
+# RUN: llvm-objdump --macho --section="__TEXT,__cstring" --section="__DATA,str_ptrs" \
+# RUN:   --section="__TEXT,__literals" %t/literals | FileCheck %s --check-prefix=LIT
+# LIT:      Contents of (__TEXT,__cstring) section
+# LIT-NEXT: foobar
+# LIT-NEXT: Contents of (__DATA,str_ptrs) section
+# LIT-NEXT: __TEXT:__cstring:bar
+# LIT-NEXT: __TEXT:__cstring:bar
+# LIT-NEXT: Contents of (__TEXT,__literals) section
+# LIT-NEXT: ef be ad de {{$}}
+
+## Duplicate symbols that will be dead stripped later should not fail when using
+## the --dead-stripped-duplicates flag
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/duplicate1.s -o %t/duplicate1.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/duplicate2.s -o %t/duplicate2.o
+# RUN: %lld -lSystem -dead_strip --dead-strip-duplicates -map %t/stripped-duplicate-map \
+# RUN:     %t/duplicate1.o %t/duplicate2.o -o %t/duplicate
+# RUN: llvm-objdump --syms %t/duplicate | FileCheck %s --check-prefix=DUP
+# DUP-LABEL: SYMBOL TABLE:
+# DUP-NEXT:   g F __TEXT,__text _main
+# DUP-NEXT:   g F __TEXT,__text __mh_execute_header
+# DUP-NEXT:   *UND* dyld_stub_binder
+
+## Check that the duplicate dead stripped symbols get listed properly.
+# RUN: FileCheck --check-prefix=DUPMAP %s < %t/stripped-duplicate-map
+# DUPMAP: _main
+# DUPMAP-LABEL: Dead Stripped Symbols
+# DUPMAP: <<dead>> 0x00000001 [ 3] _foo
+
+#--- duplicate1.s
+.text
+.globl _main, _foo
+_foo:
+  retq
+
+_main:
+  retq
+
+.subsections_via_symbols
+
+#--- duplicate2.s
+.text
+.globl _foo
+_foo:
+  retq
+
+.subsections_via_symbols
 
 #--- basics.s
 .comm _ref_com, 1
@@ -584,7 +699,13 @@ _baz_refd:
 #--- unwind.s
 ## This is the output of `clang -O2 -S throw.cc` where throw.cc
 ## looks like this:
-##     void unref() {}
+##     int unref() {
+##       try {
+##         throw 0;
+##       } catch (int i) {
+##         return i + 1;
+##       }
+##     }
 ##     int main() {
 ##       try {
 ##         throw 0;
@@ -593,92 +714,175 @@ _baz_refd:
 ##       }
 ##     }
 .section __TEXT,__text,regular,pure_instructions
-
-.globl __Z5unrefv
+.globl __Z5unrefv                      ## -- Begin function _Z5unrefv
 .p2align 4, 0x90
-__Z5unrefv:
-.cfi_startproc
-  pushq %rbp
-  .cfi_def_cfa_offset 16
-  .cfi_offset %rbp, -16
-  movq %rsp, %rbp
-  .cfi_def_cfa_register %rbp
-  popq %rbp
-  retq
-  .cfi_endproc
-
-.globl _main
-.p2align 4, 0x90
-_main:
+__Z5unrefv:                             ## @_Z5unrefv
 Lfunc_begin0:
   .cfi_startproc
   .cfi_personality 155, ___gxx_personality_v0
   .cfi_lsda 16, Lexception0
-  pushq %rbp
+## %bb.0:
+  pushq  %rbp
   .cfi_def_cfa_offset 16
   .cfi_offset %rbp, -16
-  movq %rsp, %rbp
+  movq  %rsp, %rbp
   .cfi_def_cfa_register %rbp
-  pushq %rbx
-  pushq %rax
-  .cfi_offset %rbx, -24
-  movl $4, %edi
-  callq ___cxa_allocate_exception
-  movl $0, (%rax)
+  subq  $16, %rsp
+  movl  $4, %edi
+  callq  ___cxa_allocate_exception
+  movl  $0, (%rax)
 Ltmp0:
-  movq __ZTIi@GOTPCREL(%rip), %rsi
-  movq %rax, %rdi
-  xorl %edx, %edx
-  callq ___cxa_throw
+  movq  __ZTIi@GOTPCREL(%rip), %rsi
+  movq  %rax, %rdi
+  xorl  %edx, %edx
+  callq  ___cxa_throw
 Ltmp1:
+## %bb.1:
   ud2
-LBB1_2:
+LBB0_2:
 Ltmp2:
-  movq %rax, %rdi
-  callq ___cxa_begin_catch
-  movl (%rax), %ebx
-  callq ___cxa_end_catch
-  movl %ebx, %eax
-  addq $8, %rsp
-  popq %rbx
-  popq %rbp
+  leaq  -4(%rbp), %rcx
+  movq  %rax, %rdi
+  movl  %edx, %esi
+  movq  %rcx, %rdx
+  callq  __Z5unrefv.cold.1
+  movl  -4(%rbp), %eax
+  addq  $16, %rsp
+  popq  %rbp
   retq
 Lfunc_end0:
-.cfi_endproc
-
-.section __TEXT,__gcc_except_tab
-.p2align 2
-GCC_except_table1:
+  .cfi_endproc
+  .section  __TEXT,__gcc_except_tab
+  .p2align 2
+GCC_except_table0:
 Lexception0:
-  .byte 255                     ## @LPStart Encoding = omit
-  .byte 155                     ## @TType Encoding = indirect pcrel sdata4
+  .byte 255                             ## @LPStart Encoding = omit
+  .byte 155                             ## @TType Encoding = indirect pcrel sdata4
   .uleb128 Lttbase0-Lttbaseref0
 Lttbaseref0:
-  .byte 1                       ## Call site Encoding = uleb128
+  .byte 1                               ## Call site Encoding = uleb128
   .uleb128 Lcst_end0-Lcst_begin0
 Lcst_begin0:
-  .uleb128 Lfunc_begin0-Lfunc_begin0 ## >> Call Site 1 <<
-  .uleb128 Ltmp0-Lfunc_begin0   ##   Call between Lfunc_begin0 and Ltmp0
-  .byte 0                       ##     has no landing pad
-  .byte 0                       ##   On action: cleanup
-  .uleb128 Ltmp0-Lfunc_begin0   ## >> Call Site 2 <<
-  .uleb128 Ltmp1-Ltmp0          ##   Call between Ltmp0 and Ltmp1
-  .uleb128 Ltmp2-Lfunc_begin0   ##     jumps to Ltmp2
-  .byte 1                       ##   On action: 1
-  .uleb128 Ltmp1-Lfunc_begin0   ## >> Call Site 3 <<
-  .uleb128 Lfunc_end0-Ltmp1     ##   Call between Ltmp1 and Lfunc_end0
-  .byte 0                       ##     has no landing pad
-  .byte 0                       ##   On action: cleanup
+  .uleb128 Lfunc_begin0-Lfunc_begin0    ## >> Call Site 1 <<
+  .uleb128 Ltmp0-Lfunc_begin0           ##   Call between Lfunc_begin0 and Ltmp0
+  .byte 0                               ##     has no landing pad
+  .byte 0                               ##   On action: cleanup
+  .uleb128 Ltmp0-Lfunc_begin0           ## >> Call Site 2 <<
+  .uleb128 Ltmp1-Ltmp0                  ##   Call between Ltmp0 and Ltmp1
+  .uleb128 Ltmp2-Lfunc_begin0           ##     jumps to Ltmp2
+  .byte 1                               ##   On action: 1
+  .uleb128 Ltmp1-Lfunc_begin0           ## >> Call Site 3 <<
+  .uleb128 Lfunc_end0-Ltmp1             ##   Call between Ltmp1 and Lfunc_end0
+  .byte 0                               ##     has no landing pad
+  .byte 0                               ##   On action: cleanup
 Lcst_end0:
-  .byte 1                       ## >> Action Record 1 <<
-                                         ##   Catch TypeInfo 1
-  .byte 0                       ##   No further actions
+  .byte 1                               ## >> Action Record 1 <<
+                                        ##   Catch TypeInfo 1
+  .byte 0                               ##   No further actions
   .p2align 2
-                                ## >> Catch TypeInfos <<
-  .long __ZTIi@GOTPCREL+4       ## TypeInfo 1
+                                        ## >> Catch TypeInfos <<
+  .long  __ZTIi@GOTPCREL+4              ## TypeInfo 1
 Lttbase0:
   .p2align 2
-                                ## -- End function
+                                        ## -- End function
+  .section  __TEXT,__text,regular,pure_instructions
+  .globl  _main                         ## -- Begin function main
+  .p2align 4, 0x90
+_main:                                  ## @main
+Lfunc_begin1:
+  .cfi_startproc
+  .cfi_personality 155, ___gxx_personality_v0
+  .cfi_lsda 16, Lexception1
+## %bb.0:
+  pushq  %rbp
+  .cfi_def_cfa_offset 16
+  .cfi_offset %rbp, -16
+  movq  %rsp, %rbp
+  .cfi_def_cfa_register %rbp
+  pushq  %rbx
+  pushq  %rax
+  .cfi_offset %rbx, -24
+  movl  $4, %edi
+  callq  ___cxa_allocate_exception
+  movl  $0, (%rax)
+Ltmp3:
+  movq  __ZTIi@GOTPCREL(%rip), %rsi
+  movq  %rax, %rdi
+  xorl  %edx, %edx
+  callq ___cxa_throw
+Ltmp4:
+## %bb.1:
+  ud2
+LBB1_2:
+Ltmp5:
+  movq  %rax, %rdi
+  callq ___cxa_begin_catch
+  movl  (%rax), %ebx
+  callq ___cxa_end_catch
+  movl  %ebx, %eax
+  addq  $8, %rsp
+  popq  %rbx
+  popq  %rbp
+  retq
+Lfunc_end1:
+  .cfi_endproc
+  .section  __TEXT,__gcc_except_tab
+  .p2align  2
+GCC_except_table1:
+Lexception1:
+  .byte 255                             ## @LPStart Encoding = omit
+  .byte 155                             ## @TType Encoding = indirect pcrel sdata4
+  .uleb128 Lttbase1-Lttbaseref1
+Lttbaseref1:
+  .byte 1                               ## Call site Encoding = uleb128
+  .uleb128 Lcst_end1-Lcst_begin1
+Lcst_begin1:
+  .uleb128 Lfunc_begin1-Lfunc_begin1    ## >> Call Site 1 <<
+  .uleb128 Ltmp3-Lfunc_begin1           ##   Call between Lfunc_begin1 and Ltmp3
+  .byte 0                               ##     has no landing pad
+  .byte 0                               ##   On action: cleanup
+  .uleb128 Ltmp3-Lfunc_begin1           ## >> Call Site 2 <<
+  .uleb128 Ltmp4-Ltmp3                  ##   Call between Ltmp3 and Ltmp4
+  .uleb128 Ltmp5-Lfunc_begin1           ##     jumps to Ltmp5
+  .byte 1                               ##   On action: 1
+  .uleb128 Ltmp4-Lfunc_begin1           ## >> Call Site 3 <<
+  .uleb128 Lfunc_end1-Ltmp4             ##   Call between Ltmp4 and Lfunc_end1
+  .byte 0                               ##     has no landing pad
+  .byte 0                               ##   On action: cleanup
+Lcst_end1:
+  .byte 1                               ## >> Action Record 1 <<
+                                        ##   Catch TypeInfo 1
+  .byte 0                               ##   No further actions
+  .p2align 2
+                                        ## >> Catch TypeInfos <<
+  .long __ZTIi@GOTPCREL+4               ## TypeInfo 1
+Lttbase1:
+  .p2align 2
+                                        ## -- End function
+  .section __TEXT,__text,regular,pure_instructions
+  .p2align 4, 0x90                      ## -- Begin function _Z5unrefv.cold.1
+__Z5unrefv.cold.1:                      ## @_Z5unrefv.cold.1
+  .cfi_startproc
+## %bb.0:
+  pushq  %rbp
+  .cfi_def_cfa_offset 16
+  .cfi_offset %rbp, -16
+  movq  %rsp, %rbp
+  .cfi_def_cfa_register %rbp
+  pushq  %rbx
+  pushq  %rax
+  .cfi_offset %rbx, -24
+  movq  %rdx, %rbx
+  callq  ___cxa_begin_catch
+  movl  (%rax), %eax
+  incl  %eax
+  movl  %eax, (%rbx)
+  addq  $8, %rsp
+  popq  %rbx
+  popq  %rbp
+  jmp  ___cxa_end_catch                 ## TAILCALL
+  .cfi_endproc
+                                        ## -- End function
 .subsections_via_symbols
 
 #--- weak-ref.s
@@ -735,4 +939,52 @@ _unref:
 _main:
   retq
 
+.subsections_via_symbols
+
+#--- no-dead-symbols.s
+.text
+.globl _main
+_main:
+  retq
+
+#--- literals.s
+.cstring
+_unref_foo:
+  .ascii "foo"
+_bar:
+Lbar:
+  .asciz "bar"
+_unref_baz:
+  .asciz "baz"
+
+.literal4
+.p2align 2
+L._foo4:
+  .long 0xdeadbeef
+L._bar4:
+  .long 0xdeadbeef
+L._unref:
+  .long 0xfeedface
+
+.section __DATA,str_ptrs,literal_pointers
+.globl _data
+_data:
+  .quad _bar
+  .quad Lbar
+
+## The output binary has these integer literals put into a section that isn't
+## marked with a S_*BYTE_LITERALS flag, so we don't mark word_ptrs with the
+## S_LITERAL_POINTERS flag in order not to confuse llvm-objdump.
+.section __DATA,word_ptrs
+.globl _more_data
+_more_data:
+  .quad L._foo4
+  .quad L._bar4
+
+.subsections_via_symbols
+
+#--- ref-undef.s
+.globl _main
+_main:
+  callq _ref_undef_fun
 .subsections_via_symbols

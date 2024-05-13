@@ -1,0 +1,198 @@
+# RUN: llc -o - -run-pass=machine-scheduler -misched=shuffle %s | FileCheck %s
+# RUN: llc -o - -run-pass=postmisched %s | FileCheck %s
+
+# REQUIRES: asserts
+# -misched=shuffle is only available with assertions enabled
+
+# Check that instructions that are recognized as branch targets by BTI
+# are not reordered by machine instruction schedulers.
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+
+  define i32 @f_pac_pseudo(i32 %a, i32 %b, i32 %c) #0 "sign-return-address"="all" {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @f_pac(i32 %a, i32 %b, i32 %c) #0 "sign-return-address"="all" {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @f_bti(i32 %a, i32 %b, i32 %c) #0 {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @f_brk(i32 %a, i32 %b, i32 %c) #0 {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @f_hlt(i32 %a, i32 %b, i32 %c) #0 {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @f_nop(i32 %a, i32 %b, i32 %c) #0 {
+  entry:
+    ret i32 0
+  }
+
+  attributes #0 = { nounwind memory(none) "target-features"="+v8.2a" }
+
+...
+---
+name:            f_pac_pseudo
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $lr
+
+    frame-setup PAUTH_PROLOGUE implicit-def $lr, implicit $lr, implicit $sp
+    $w8 = ADDWrs $w0, $w1, 0
+    $w0 = MADDWrrr $w8, $w2, $wzr
+    RET undef $lr, implicit $w0
+
+# PAUTH_EPILOGUE instruction is omitted for simplicity as it is technically possible
+# to move it, so it may end up at a less obvious position in a basic block.
+
+# CHECK-LABEL: name: f_pac_pseudo
+# CHECK:       body:             |
+# CHECK-NEXT:    bb.0.entry:
+# CHECK-NEXT:      liveins: $w0, $w1, $w2, $lr
+#
+# CHECK:           frame-setup PAUTH_PROLOGUE implicit-def $lr, implicit {{.*}}$lr, implicit $sp
+# CHECK-NEXT:      $w8 = ADDWrs {{.*}}$w0, {{.*}}$w1, 0
+# CHECK-NEXT:      $w0 = MADDWrrr {{.*}}$w8, {{.*}}$w2, $wzr
+# CHECK-NEXT:      RET undef $lr, implicit {{.*}}$w0
+
+...
+---
+name:            f_pac
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $lr
+
+    frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
+    $w8 = ADDWrs $w0, $w1, 0
+    $w0 = MADDWrrr $w8, $w2, $wzr
+    RET undef $lr, implicit $w0
+
+# AUTIASP is omitted, see above.
+
+# CHECK-LABEL: name: f_pac
+# CHECK:       body:             |
+# CHECK-NEXT:    bb.0.entry:
+# CHECK-NEXT:      liveins: $w0, $w1, $w2, $lr
+#
+# CHECK:           frame-setup PACIASP implicit-def $lr, implicit {{.*}}$lr, implicit $sp
+# CHECK-NEXT:      $w8 = ADDWrs {{.*}}$w0, {{.*}}$w1, 0
+# CHECK-NEXT:      $w0 = MADDWrrr {{.*}}$w8, {{.*}}$w2, $wzr
+# CHECK-NEXT:      RET undef $lr, implicit {{.*}}$w0
+
+...
+---
+name:            f_bti
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $lr
+
+    HINT 34
+    $w8 = ADDWrs $w0, $w1, 0
+    $w0 = MADDWrrr $w8, $w2, $wzr
+    RET undef $lr, implicit $w0
+
+# CHECK-LABEL: name: f_bti
+# CHECK:       body:             |
+# CHECK-NEXT:    bb.0.entry:
+# CHECK-NEXT:      liveins: $w0, $w1, $w2, $lr
+#
+# CHECK:           HINT 34
+# CHECK-NEXT:      $w8 = ADDWrs {{.*}}$w0, {{.*}}$w1, 0
+# CHECK-NEXT:      $w0 = MADDWrrr {{.*}}$w8, {{.*}}$w2, $wzr
+# CHECK-NEXT:      RET undef $lr, implicit {{.*}}$w0
+
+...
+---
+name:            f_brk
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $lr
+
+    BRK 1
+    $w8 = ADDWrs $w0, $w1, 0
+    $w0 = MADDWrrr $w8, $w2, $wzr
+    RET undef $lr, implicit $w0
+
+# CHECK-LABEL: name: f_brk
+# CHECK:       body:             |
+# CHECK-NEXT:    bb.0.entry:
+# CHECK-NEXT:      liveins: $w0, $w1, $w2, $lr
+#
+# CHECK:           BRK 1
+# CHECK-NEXT:      $w8 = ADDWrs {{.*}}$w0, {{.*}}$w1, 0
+# CHECK-NEXT:      $w0 = MADDWrrr {{.*}}$w8, {{.*}}$w2, $wzr
+# CHECK-NEXT:      RET undef $lr, implicit {{.*}}$w0
+
+...
+---
+name:            f_hlt
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $lr
+
+    HLT 1
+    $w8 = ADDWrs $w0, $w1, 0
+    $w0 = MADDWrrr $w8, $w2, $wzr
+    RET undef $lr, implicit $w0
+
+# CHECK-LABEL: name: f_hlt
+# CHECK:       body:             |
+# CHECK-NEXT:    bb.0.entry:
+# CHECK-NEXT:      liveins: $w0, $w1, $w2, $lr
+#
+# CHECK:           HLT 1
+# CHECK-NEXT:      $w8 = ADDWrs {{.*}}$w0, {{.*}}$w1, 0
+# CHECK-NEXT:      $w0 = MADDWrrr {{.*}}$w8, {{.*}}$w2, $wzr
+# CHECK-NEXT:      RET undef $lr, implicit {{.*}}$w0
+
+...
+---
+name:            f_nop
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $lr
+
+    HINT 0
+    $w8 = ADDWrs $w0, $w1, 0
+    $w0 = MADDWrrr $w8, $w2, $wzr
+    RET undef $lr, implicit $w0
+
+# Check that BTI-related instructions are left intact not because *anything*
+# is left intact.
+
+# CHECK-LABEL: name: f_nop
+# CHECK:       body:             |
+# CHECK-NEXT:    bb.0.entry:
+# CHECK-NEXT:      liveins: $w0, $w1, $w2, $lr
+#
+# CHECK:           $w8 = ADDWrs {{.*}}$w0, {{.*}}$w1, 0
+# CHECK-DAG:       $w0 = MADDWrrr {{.*}}$w8, {{.*}}$w2, $wzr
+# CHECK-DAG:       HINT 0
+# CHECK-NEXT:      RET undef $lr, implicit {{.*}}$w0
+
+...

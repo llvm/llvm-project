@@ -9,24 +9,15 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_DUMPOUTPUTSTYLE_H
 #define LLVM_TOOLS_LLVMPDBDUMP_DUMPOUTPUTSTYLE_H
 
-#include "LinePrinter.h"
 #include "OutputStyle.h"
 #include "StreamUtil.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 
-#include <string>
-
 namespace llvm {
-class BitVector;
-
-namespace codeview {
-class LazyRandomTypeCollection;
-}
-
 namespace object {
 class COFFObjectFile;
 }

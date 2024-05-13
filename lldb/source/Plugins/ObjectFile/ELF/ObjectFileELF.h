@@ -11,6 +11,7 @@
 
 #include <cstdint>
 
+#include <optional>
 #include <vector>
 
 #include "lldb/Symbol/ObjectFile.h"
@@ -22,13 +23,13 @@
 #include "ELFHeader.h"
 
 struct ELFNote {
-  elf::elf_word n_namesz;
-  elf::elf_word n_descsz;
-  elf::elf_word n_type;
+  elf::elf_word n_namesz = 0;
+  elf::elf_word n_descsz = 0;
+  elf::elf_word n_type = 0;
 
   std::string n_name;
 
-  ELFNote() : n_namesz(0), n_descsz(0), n_type(0) {}
+  ELFNote() = default;
 
   /// Parse an ELFNote entry from the given DataExtractor starting at position
   /// \p offset.
@@ -61,17 +62,19 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "elf"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic() {
+    return "ELF object file reader.";
+  }
 
   static lldb_private::ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
                  lldb::offset_t data_offset, const lldb_private::FileSpec *file,
                  lldb::offset_t file_offset, lldb::offset_t length);
 
   static lldb_private::ObjectFile *CreateMemoryInstance(
-      const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+      const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
@@ -85,9 +88,7 @@ public:
                               lldb::addr_t length);
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // LLVM RTTI support
   static char ID;
@@ -110,7 +111,7 @@ public:
 
   lldb_private::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
 
-  lldb_private::Symtab *GetSymtab() override;
+  void ParseSymtab(lldb_private::Symtab &symtab) override;
 
   bool IsStripped() override;
 
@@ -123,8 +124,8 @@ public:
   lldb_private::UUID GetUUID() override;
 
   /// Return the contents of the .gnu_debuglink section, if the object file
-  /// contains it. 
-  llvm::Optional<lldb_private::FileSpec> GetDebugLink();
+  /// contains it.
+  std::optional<lldb_private::FileSpec> GetDebugLink();
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
@@ -159,13 +160,17 @@ protected:
   std::vector<LoadableData>
   GetLoadableData(lldb_private::Target &target) override;
 
+  static lldb::WritableDataBufferSP
+  MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
+                      uint64_t Offset);
+
 private:
-  ObjectFileELF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+  ObjectFileELF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
                 lldb::offset_t offset, lldb::offset_t length);
 
   ObjectFileELF(const lldb::ModuleSP &module_sp,
-                lldb::DataBufferSP &header_data_sp,
+                lldb::DataBufferSP header_data_sp,
                 const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   typedef std::vector<elf::ELFProgramHeader> ProgramHeaderColl;
@@ -182,6 +187,9 @@ private:
   typedef DynamicSymbolColl::iterator DynamicSymbolCollIter;
   typedef DynamicSymbolColl::const_iterator DynamicSymbolCollConstIter;
 
+  /// An ordered map of file address to address class. Used on architectures
+  /// like Arm where there is an alternative ISA mode like Thumb. The container
+  /// is ordered so that it can be binary searched.
   typedef std::map<lldb::addr_t, lldb_private::AddressClass>
       FileAddressToAddressClassMap;
 
@@ -278,19 +286,21 @@ private:
   /// number of dynamic symbols parsed.
   size_t ParseDynamicSymbols();
 
-  /// Populates m_symtab_up will all non-dynamic linker symbols.  This method
-  /// will parse the symbols only once.  Returns the number of symbols parsed.
-  unsigned ParseSymbolTable(lldb_private::Symtab *symbol_table,
-                            lldb::user_id_t start_id,
-                            lldb_private::Section *symtab);
+  /// Populates the symbol table with all non-dynamic linker symbols.  This
+  /// method will parse the symbols only once.  Returns the number of symbols
+  /// parsed and a map of address types (used by targets like Arm that have
+  /// an alternative ISA mode like Thumb).
+  std::pair<unsigned, FileAddressToAddressClassMap>
+  ParseSymbolTable(lldb_private::Symtab *symbol_table, lldb::user_id_t start_id,
+                   lldb_private::Section *symtab);
 
   /// Helper routine for ParseSymbolTable().
-  unsigned ParseSymbols(lldb_private::Symtab *symbol_table,
-                        lldb::user_id_t start_id,
-                        lldb_private::SectionList *section_list,
-                        const size_t num_symbols,
-                        const lldb_private::DataExtractor &symtab_data,
-                        const lldb_private::DataExtractor &strtab_data);
+  std::pair<unsigned, FileAddressToAddressClassMap>
+  ParseSymbols(lldb_private::Symtab *symbol_table, lldb::user_id_t start_id,
+               lldb_private::SectionList *section_list,
+               const size_t num_symbols,
+               const lldb_private::DataExtractor &symtab_data,
+               const lldb_private::DataExtractor &strtab_data);
 
   /// Scans the relocation entries and adds a set of artificial symbols to the
   /// given symbol table for each PLT slot.  Returns the number of symbols
@@ -384,7 +394,7 @@ private:
                               lldb_private::UUID &uuid);
 
   bool AnySegmentHasPhysicalAddress();
-  
+
   /// Takes the .gnu_debugdata and returns the decompressed object file that is
   /// stored within that section.
   ///

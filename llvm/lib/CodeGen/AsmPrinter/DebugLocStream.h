@@ -18,7 +18,6 @@ namespace llvm {
 class AsmPrinter;
 class DbgVariable;
 class DwarfCompileUnit;
-class MachineInstr;
 class MCSymbol;
 
 /// Byte stream of .debug_loc entries.
@@ -49,7 +48,7 @@ private:
   SmallVector<Entry, 32> Entries;
   SmallString<256> DWARFBytes;
   std::vector<std::string> Comments;
-  MCSymbol *Sym;
+  MCSymbol *Sym = nullptr;
 
   /// Only verbose textual output needs comments.  This will be set to
   /// true for that case, and false otherwise.
@@ -109,19 +108,18 @@ public:
 
   ArrayRef<Entry> getEntries(const List &L) const {
     size_t LI = getIndex(L);
-    return makeArrayRef(Entries)
-        .slice(Lists[LI].EntryOffset, getNumEntries(LI));
+    return ArrayRef(Entries).slice(Lists[LI].EntryOffset, getNumEntries(LI));
   }
 
   ArrayRef<char> getBytes(const Entry &E) const {
     size_t EI = getIndex(E);
-    return makeArrayRef(DWARFBytes.begin(), DWARFBytes.end())
+    return ArrayRef(DWARFBytes.begin(), DWARFBytes.end())
         .slice(Entries[EI].ByteOffset, getNumBytes(EI));
   }
   ArrayRef<std::string> getComments(const Entry &E) const {
     size_t EI = getIndex(E);
-    return makeArrayRef(Comments)
-        .slice(Entries[EI].CommentOffset, getNumComments(EI));
+    return ArrayRef(Comments).slice(Entries[EI].CommentOffset,
+                                    getNumComments(EI));
   }
 
 private:
@@ -157,15 +155,14 @@ class DebugLocStream::ListBuilder {
   DebugLocStream &Locs;
   AsmPrinter &Asm;
   DbgVariable &V;
-  const MachineInstr &MI;
   size_t ListIndex;
-  Optional<uint8_t> TagOffset;
+  std::optional<uint8_t> TagOffset;
 
 public:
   ListBuilder(DebugLocStream &Locs, DwarfCompileUnit &CU, AsmPrinter &Asm,
-              DbgVariable &V, const MachineInstr &MI)
-      : Locs(Locs), Asm(Asm), V(V), MI(MI), ListIndex(Locs.startList(&CU)),
-        TagOffset(None) {}
+              DbgVariable &V)
+      : Locs(Locs), Asm(Asm), V(V), ListIndex(Locs.startList(&CU)),
+        TagOffset(std::nullopt) {}
 
   void setTagOffset(uint8_t TO) {
     TagOffset = TO;

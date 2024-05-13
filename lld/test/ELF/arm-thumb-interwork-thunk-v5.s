@@ -1,9 +1,15 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv5-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d %t2 --triple=armv5-none-linux-gnueabi | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --triple=armv5-none-linux-gnueabi | FileCheck %s
 // RUN: ld.lld %t -o %t3 --shared
-// RUN: llvm-objdump -d %t3 --triple=armv5-none-linux-gnueabi | FileCheck --check-prefix=CHECK-PI %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t3 --triple=armv5-none-linux-gnueabi | FileCheck --check-prefix=CHECK-PI %s
+
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv5eb-none-linux-gnueabi %s -o %t
+// RUN: ld.lld %t -o %t2
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --triple=armv5eb-none-linux-gnueabi | FileCheck --check-prefix=CHECK-EB %s
+// RUN: ld.lld %t -o %t3 --shared
+// RUN: llvm-objdump --no-print-imm-hex -d %t3 --triple=armv5eb-none-linux-gnueabi | FileCheck --check-prefix=CHECK-EB-PI %s
 
 // Test ARM Thumb Interworking on older Arm architectures using Thunks that do
 // not use MOVT/MOVW instructions.
@@ -27,35 +33,60 @@ _start:
         bx lr
 
 // CHECK: <_start>:
-// CHECK-NEXT: 21000: 03 00 00 ea     b       #12 <__ARMv5ABSLongThunk_thumb_func>
-// CHECK-NEXT: 21004: 01 00 00 fa     blx     #4 <thumb_func>
-// CHECK-NEXT: 21008: 00 00 00 fa     blx     #0 <thumb_func>
-// CHECK-NEXT: 2100c: 1e ff 2f e1     bx      lr
+// CHECK-NEXT: 21000: ea000003        b       0x21014 <__ARMv5LongLdrPcThunk_thumb_func>
+// CHECK-NEXT: 21004: fa000001        blx     0x21010 <thumb_func>
+// CHECK-NEXT: 21008: fa000000        blx     0x21010 <thumb_func>
+// CHECK-NEXT: 2100c: e12fff1e        bx      lr
 
 // CHECK: <thumb_func>:
-// CHECK-NEXT: 21010: 70 47   bx      lr
+// CHECK-NEXT: 21010: 4770    bx      lr
 
-// CHECK: <__ARMv5ABSLongThunk_thumb_func>:
-// CHECK-NEXT: 21014: 04 f0 1f e5     ldr     pc, [pc, #-4]
-// CHECK: <$d>:
+// CHECK: <__ARMv5LongLdrPcThunk_thumb_func>:
+// CHECK-NEXT: 21014: e51ff004        ldr     pc, [pc, #-4]
 // CHECK-NEXT: 21018: 11 10 02 00     .word   0x00021011
 
+// CHECK-EB: <_start>:
+// CHECK-EB-NEXT: 21000: ea000003        b       0x21014 <__ARMv5LongLdrPcThunk_thumb_func>
+// CHECK-EB-NEXT: 21004: fa000001        blx     0x21010 <thumb_func>
+// CHECK-EB-NEXT: 21008: fa000000        blx     0x21010 <thumb_func>
+// CHECK-EB-NEXT: 2100c: e12fff1e        bx      lr
+
+// CHECK-EB: <thumb_func>:
+// CHECK-EB-NEXT: 21010: 4770    bx      lr
+
+// CHECK-EB: <__ARMv5LongLdrPcThunk_thumb_func>:
+// CHECK-EB-NEXT: 21014: e51ff004        ldr     pc, [pc, #-4]
+// CHECK-EB-NEXT: 21018: 00 02 10 11     .word   0x00021011
+
 // CHECK-PI: <_start>:
-// CHECK-PI-NEXT: 11000: 03 00 00 ea     b       #12 <__ARMV5PILongThunk_thumb_func>
-// CHECK-PI-NEXT: 11004: 01 00 00 fa     blx     #4 <thumb_func>
-// CHECK-PI-NEXT: 11008: 00 00 00 fa     blx     #0 <thumb_func>
-// CHECK-PI-NEXT: 1100c: 1e ff 2f e1     bx      lr
+// CHECK-PI-NEXT: 11000: ea000003        b       0x11014 <__ARMv4PILongBXThunk_thumb_func>
+// CHECK-PI-NEXT: 11004: fa000001        blx     0x11010 <thumb_func>
+// CHECK-PI-NEXT: 11008: fa000000        blx     0x11010 <thumb_func>
+// CHECK-PI-NEXT: 1100c: e12fff1e        bx      lr
 
 // CHECK-PI: <thumb_func>:
-// CHECK-PI-NEXT: 11010: 70 47   bx      lr
+// CHECK-PI-NEXT: 11010: 4770    bx      lr
 
-// CHECK-PI: <__ARMV5PILongThunk_thumb_func>:
-// CHECK-PI-NEXT: 11014: 04 c0 9f e5     ldr     r12, [pc, #4]
-// CHECK-PI-NEXT: 11018: 0c c0 8f e0     add     r12, pc, r12
-// CHECK-PI-NEXT: 1101c: 1c ff 2f e1     bx      r12
-// CHECK-PI: <$d>:
+// CHECK-PI: <__ARMv4PILongBXThunk_thumb_func>:
+// CHECK-PI-NEXT: 11014: e59fc004        ldr     r12, [pc, #4]
+// CHECK-PI-NEXT: 11018: e08fc00c        add     r12, pc, r12
+// CHECK-PI-NEXT: 1101c: e12fff1c        bx      r12
 // CHECK-PI-NEXT: 11020: f1 ff ff ff     .word   0xfffffff1
 
+// CHECK-EB-PI: <_start>:
+// CHECK-EB-PI-NEXT: 11000: ea000003        b       0x11014 <__ARMv4PILongBXThunk_thumb_func>
+// CHECK-EB-PI-NEXT: 11004: fa000001        blx     0x11010 <thumb_func>
+// CHECK-EB-PI-NEXT: 11008: fa000000        blx     0x11010 <thumb_func>
+// CHECK-EB-PI-NEXT: 1100c: e12fff1e        bx      lr
+
+// CHECK-EB-PI: <thumb_func>:
+// CHECK-EB-PI-NEXT: 11010: 4770    bx      lr
+
+// CHECK-EB-PI: <__ARMv4PILongBXThunk_thumb_func>:
+// CHECK-EB-PI-NEXT: 11014: e59fc004        ldr     r12, [pc, #4]
+// CHECK-EB-PI-NEXT: 11018: e08fc00c        add     r12, pc, r12
+// CHECK-EB-PI-NEXT: 1101c: e12fff1c        bx      r12
+// CHECK-EB-PI-NEXT: 11020: ff ff ff f1     .word   0xfffffff1
         .section .text.1, "ax", %progbits
         .thumb
         .hidden thumb_func

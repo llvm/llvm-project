@@ -26,7 +26,7 @@ namespace default_args {
     f(ups).f(); // expected-note {{in instantiation of member function 'default_args::unique_ptr<default_args::basic_string<char>>::f' requested here}}
   }
 
-  template<int A, int B = A> struct Z { int error[B]; }; // expected-error {{negative size}}
+  template<int A, int B = A, int C = 42> struct Z { int error[B]; }; // expected-error {{negative size}}
   Z<-1> z; // expected-note {{in instantiation of template class 'default_args::Z<-1>' requested here}}
 
   template<template<typename> class A = allocator, template<typename> class B = A> struct Q {};
@@ -34,8 +34,8 @@ namespace default_args {
     f(Q<>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<>'}}
     f(Q<allocator>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<>'}}
     f(Q<allocator, allocator>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<>'}}
-    f(Q<char_traits>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<char_traits>'}}
-    f(Q<char_traits, char_traits>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<char_traits>'}}
-    f(Q<char_traits, allocator>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<char_traits, allocator>'}}
+    f(Q<char_traits>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<default_args::char_traits>'}}
+    f(Q<char_traits, char_traits>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<default_args::char_traits>'}}
+    f(Q<char_traits, allocator>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<default_args::char_traits, default_args::allocator>'}}
   }
 }

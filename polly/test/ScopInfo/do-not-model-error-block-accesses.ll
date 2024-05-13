@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s
 
 ; Check that we do not crash on this input. Earlier this indeed crashed as
 ; we tried to model the access functions in an error block.
@@ -14,8 +14,8 @@ entry.split:                                      ; preds = %entry
   br i1 false, label %if.end.38, label %if.else
 
 if.else:                                          ; preds = %entry.split
-  call void (i32, i32, i32*, ...) bitcast (void (...)* @BYTES_TO_BITS to void (i32, i32, i32*, ...)*)(i32 undef, i32 1, i32* undef) #2
-  %0 = load i32, i32* null, align 4
+  call void (i32, i32, ptr, ...) @BYTES_TO_BITS(i32 undef, i32 1, ptr undef) #2
+  %0 = load i32, ptr null, align 4
   br label %if.end.38
 
 if.end.38:                                        ; preds = %if.else, %entry.split

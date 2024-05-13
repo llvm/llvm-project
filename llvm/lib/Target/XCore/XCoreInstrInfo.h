@@ -38,7 +38,7 @@ public:
   /// the destination along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than loading from the stack slot.
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
 
   /// isStoreToStackSlot - If the specified machine instruction is a direct
@@ -46,7 +46,7 @@ public:
   /// the source reg along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than storing to the stack slot.
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
@@ -67,16 +67,17 @@ public:
                    bool KillSrc) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI,
-                           Register SrcReg, bool isKill, int FrameIndex,
+                           MachineBasicBlock::iterator MI, Register SrcReg,
+                           bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override;
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI,
-                            Register DestReg, int FrameIndex,
-                            const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override;
+                            MachineBasicBlock::iterator MI, Register DestReg,
+                            int FrameIndex, const TargetRegisterClass *RC,
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
 
   bool reverseBranchCondition(
                           SmallVectorImpl<MachineOperand> &Cond) const override;

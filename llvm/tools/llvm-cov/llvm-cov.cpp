@@ -14,7 +14,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,7 +59,7 @@ int main(int argc, const char **argv) {
   InitLLVM X(argc, argv);
 
   // If argv[0] is or ends with 'gcov', always be gcov compatible
-  if (sys::path::stem(argv[0]).endswith_lower("gcov"))
+  if (sys::path::stem(argv[0]).ends_with_insensitive("gcov"))
     return gcovMain(argc, argv);
 
   // Check if we are invoking a specific tool command.

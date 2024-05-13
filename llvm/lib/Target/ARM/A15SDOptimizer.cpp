@@ -135,7 +135,7 @@ bool A15SDOptimizer::usesRegClass(MachineOperand &MO,
     return false;
   Register Reg = MO.getReg();
 
-  if (Register::isVirtualRegister(Reg))
+  if (Reg.isVirtual())
     return MRI->getRegClass(Reg)->hasSuperClassEq(TRC);
   else
     return TRC->contains(Reg);
@@ -156,7 +156,7 @@ unsigned A15SDOptimizer::getPrefSPRLane(unsigned SReg) {
 
   MachineInstr *MI = MRI->getVRegDef(SReg);
   if (!MI) return ARM::ssub_0;
-  MachineOperand *MO = MI->findRegisterDefOperand(SReg);
+  MachineOperand *MO = MI->findRegisterDefOperand(SReg, /*TRI=*/nullptr);
   if (!MO) return ARM::ssub_0;
   assert(MO->isReg() && "Non-register operand found!");
 
@@ -182,8 +182,7 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
   Front.push_back(MI);
 
   while (Front.size() != 0) {
-    MI = Front.back();
-    Front.pop_back();
+    MI = Front.pop_back_val();
 
     // MI is already known to be dead. We need to see
     // if other instructions can also be removed.
@@ -191,9 +190,9 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
       if ((!MO.isReg()) || (!MO.isUse()))
         continue;
       Register Reg = MO.getReg();
-      if (!Register::isVirtualRegister(Reg))
+      if (!Reg.isVirtual())
         continue;
-      MachineOperand *Op = MI->findRegisterDefOperand(Reg);
+      MachineOperand *Op = MI->findRegisterDefOperand(Reg, /*TRI=*/nullptr);
 
       if (!Op)
         continue;
@@ -213,7 +212,7 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
         if ((!MODef.isReg()) || (!MODef.isDef()))
           continue;
         Register DefReg = MODef.getReg();
-        if (!Register::isVirtualRegister(DefReg)) {
+        if (!DefReg.isVirtual()) {
           IsDead = false;
           break;
         }
@@ -247,7 +246,7 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
     Register DPRReg = MI->getOperand(1).getReg();
     Register SPRReg = MI->getOperand(2).getReg();
 
-    if (Register::isVirtualRegister(DPRReg) && Register::isVirtualRegister(SPRReg)) {
+    if (DPRReg.isVirtual() && SPRReg.isVirtual()) {
       MachineInstr *DPRMI = MRI->getVRegDef(MI->getOperand(1).getReg());
       MachineInstr *SPRMI = MRI->getVRegDef(MI->getOperand(2).getReg());
 
@@ -291,13 +290,13 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
     unsigned NumImplicit = 0, NumTotal = 0;
     unsigned NonImplicitReg = ~0U;
 
-    for (unsigned I = 1; I < MI->getNumExplicitOperands(); ++I) {
-      if (!MI->getOperand(I).isReg())
+    for (MachineOperand &MO : llvm::drop_begin(MI->explicit_operands())) {
+      if (!MO.isReg())
         continue;
       ++NumTotal;
-      Register OpReg = MI->getOperand(I).getReg();
+      Register OpReg = MO.getReg();
 
-      if (!Register::isVirtualRegister(OpReg))
+      if (!OpReg.isVirtual())
         break;
 
       MachineInstr *Def = MRI->getVRegDef(OpReg);
@@ -306,7 +305,7 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
       if (Def->isImplicitDef())
         ++NumImplicit;
       else
-        NonImplicitReg = MI->getOperand(I).getReg();
+        NonImplicitReg = MO.getReg();
     }
 
     if (NumImplicit == NumTotal - 1)
@@ -341,7 +340,7 @@ bool A15SDOptimizer::hasPartialWrite(MachineInstr *MI) {
 MachineInstr *A15SDOptimizer::elideCopies(MachineInstr *MI) {
   if (!MI->isFullCopy())
     return MI;
-  if (!Register::isVirtualRegister(MI->getOperand(1).getReg()))
+  if (!MI->getOperand(1).getReg().isVirtual())
     return nullptr;
   MachineInstr *Def = MRI->getVRegDef(MI->getOperand(1).getReg());
   if (!Def)
@@ -362,13 +361,12 @@ void A15SDOptimizer::elideCopiesAndPHIs(MachineInstr *MI,
      MI = Front.pop_back_val();
 
      // If we have already explored this MachineInstr, ignore it.
-     if (Reached.find(MI) != Reached.end())
+     if (!Reached.insert(MI).second)
        continue;
-     Reached.insert(MI);
      if (MI->isPHI()) {
        for (unsigned I = 1, E = MI->getNumOperands(); I != E; I += 2) {
          Register Reg = MI->getOperand(I).getReg();
-         if (!Register::isVirtualRegister(Reg)) {
+         if (!Reg.isVirtual()) {
            continue;
          }
          MachineInstr *NewMI = MRI->getVRegDef(Reg);
@@ -377,7 +375,7 @@ void A15SDOptimizer::elideCopiesAndPHIs(MachineInstr *MI,
          Front.push_back(NewMI);
        }
      } else if (MI->isFullCopy()) {
-       if (!Register::isVirtualRegister(MI->getOperand(1).getReg()))
+       if (!MI->getOperand(1).getReg().isVirtual())
          continue;
        MachineInstr *NewMI = MRI->getVRegDef(MI->getOperand(1).getReg());
        if (!NewMI)
@@ -593,16 +591,15 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
   SmallVector<unsigned, 8> Defs = getReadDPRs(MI);
   bool Modified = false;
 
-  for (SmallVectorImpl<unsigned>::iterator I = Defs.begin(), E = Defs.end();
-     I != E; ++I) {
+  for (unsigned I : Defs) {
     // Follow the def-use chain for this DPR through COPYs, and also through
     // PHIs (which are essentially multi-way COPYs). It is because of PHIs that
     // we can end up with multiple defs of this DPR.
 
     SmallVector<MachineInstr *, 8> DefSrcs;
-    if (!Register::isVirtualRegister(*I))
+    if (!Register::isVirtualRegister(I))
       continue;
-    MachineInstr *Def = MRI->getVRegDef(*I);
+    MachineInstr *Def = MRI->getVRegDef(I);
     if (!Def)
       continue;
 
@@ -621,27 +618,25 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
       // Collect all the uses of this MI's DPR def for updating later.
       SmallVector<MachineOperand*, 8> Uses;
       Register DPRDefReg = MI->getOperand(0).getReg();
-      for (MachineRegisterInfo::use_iterator I = MRI->use_begin(DPRDefReg),
-             E = MRI->use_end(); I != E; ++I)
-        Uses.push_back(&*I);
+      for (MachineOperand &MO : MRI->use_operands(DPRDefReg))
+        Uses.push_back(&MO);
 
       // We can optimize this.
       unsigned NewReg = optimizeSDPattern(MI);
 
       if (NewReg != 0) {
         Modified = true;
-        for (SmallVectorImpl<MachineOperand *>::const_iterator I = Uses.begin(),
-               E = Uses.end(); I != E; ++I) {
+        for (MachineOperand *Use : Uses) {
           // Make sure to constrain the register class of the new register to
           // match what we're replacing. Otherwise we can optimize a DPR_VFP2
           // reference into a plain DPR, and that will end poorly. NewReg is
           // always virtual here, so there will always be a matching subclass
           // to find.
-          MRI->constrainRegClass(NewReg, MRI->getRegClass((*I)->getReg()));
+          MRI->constrainRegClass(NewReg, MRI->getRegClass(Use->getReg()));
 
-          LLVM_DEBUG(dbgs() << "Replacing operand " << **I << " with "
+          LLVM_DEBUG(dbgs() << "Replacing operand " << *Use << " with "
                             << printReg(NewReg) << "\n");
-          (*I)->substVirtReg(NewReg, 0, *TRI);
+          Use->substVirtReg(NewReg, 0, *TRI);
         }
       }
       Replacements[MI] = NewReg;

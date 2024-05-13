@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core,deadcode.DeadStores -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core,deadcode.DeadStores -verify %s
 
 // These declarations were reduced using Delta-Debugging from Foundation.h
 // on Mac OS X.  The test cases are below.
@@ -44,7 +44,7 @@ extern NSString *NSWindowDidBecomeKeyNotification;
 
 // Test cases.
 
-void f1() {
+void f1(void) {
   NSWindow *window = [[NSWindow alloc]
                       initWithContentRect:NSMakeRect(0,0,100,100) 
                         styleMask:NSTitledWindowMask|NSClosableWindowMask
@@ -54,7 +54,7 @@ void f1() {
   [window orderFrontRegardless]; // no-warning
 }
 
-void f2() {
+void f2(void) {
   NSWindow *window = [[NSWindow alloc]
                       initWithContentRect:NSMakeRect(0,0,100,100) 
                         styleMask:NSTitledWindowMask|NSClosableWindowMask
@@ -65,7 +65,7 @@ void f2() {
   [window orderFrontRegardless]; // no-warning
 }
 
-void f2b() {
+void f2b(void) {
   // FIXME: NSWindow doesn't own itself until it is displayed.
   NSWindow *window = [[NSWindow alloc] // no-warning
                       initWithContentRect:NSMakeRect(0,0,100,100) 
@@ -80,7 +80,7 @@ void f2b() {
 }
 
 
-void f3() {
+void f3(void) {
   // FIXME: For now we don't track NSWindow.
   NSWindow *window = [NSWindow alloc];  // expected-warning{{never read}}
 }

@@ -78,7 +78,7 @@ struct B1 {
   const int a; // expected-note 2{{field 'a' is of const-qualified type}}
 };
 struct B2 {
-  const void *const a[3][9][2]; // expected-note 2{{field 'a' is of const-qualified type 'const void *const [3][9][2]'}}
+  const void *const a[3][9][2]; // expected-note 2{{field 'a' is of const-qualified type 'const void *const[3][9][2]'}}
 };
 struct B3 {
   const void *a[3];
@@ -171,7 +171,7 @@ namespace PR13381 {
   };
   void g() {
     T t;
-    t = T(); // expected-error{{object of type 'PR13381::T' cannot be assigned because its copy assignment operator is implicitly deleted}}
+    t = T(); // expected-error{{object of type 'T' cannot be assigned because its copy assignment operator is implicitly deleted}}
   }
 }
 

@@ -13,7 +13,6 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/lldb-enumerations.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
@@ -103,8 +102,8 @@ struct SegmentOffsetLength {
 struct VariableInfo {
   llvm::StringRef name;
   llvm::codeview::TypeIndex type;
-  llvm::Optional<DWARFExpression> location;
-  llvm::Optional<Variable::RangeList> ranges;
+  DWARFExpressionList location;
+  bool is_param;
 };
 
 llvm::pdb::PDB_SymType CVSymToPDBSym(llvm::codeview::SymbolKind kind);
@@ -141,8 +140,8 @@ LookThroughModifierRecord(llvm::codeview::CVType modifier);
 llvm::StringRef DropNameScope(llvm::StringRef name);
 
 VariableInfo GetVariableNameInfo(llvm::codeview::CVSymbol symbol);
-VariableInfo GetVariableLocationInfo(PdbIndex &index, PdbCompilandSymId var_id, Block& block,
-                                     lldb::ModuleSP module);
+VariableInfo GetVariableLocationInfo(PdbIndex &index, PdbCompilandSymId var_id,
+                                     Block &func_block, lldb::ModuleSP module);
 
 size_t GetTypeSizeForSimpleKind(llvm::codeview::SimpleTypeKind kind);
 lldb::BasicType

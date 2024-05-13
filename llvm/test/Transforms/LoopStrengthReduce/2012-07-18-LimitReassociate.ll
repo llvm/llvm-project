@@ -23,7 +23,7 @@ target datalayout = "n8:16:32:64"
 
 %struct.snork = type { %struct.fuga, i32, i32, i32, i32, i32, i32 }
 %struct.fuga = type { %struct.gork, i64 }
-%struct.gork = type { i8*, i32, i32, %struct.noot* }
+%struct.gork = type { ptr, i32, i32, ptr }
 %struct.noot = type opaque
 %struct.jim = type { [5120 x i8], i32, i32, [2048 x i8], i32, [256 x i8] }
 
@@ -47,18 +47,18 @@ bb:
   br i1 %tmp4, label %bb6, label %bb5
 
 bb5:                                              ; preds = %bb
-  tail call void (...) @snork(i8* getelementptr inbounds ([52 x i8], [52 x i8]* @global1, i64 0, i64 0), i32 2021) nounwind
-  tail call void (...) @snork(i8* getelementptr inbounds (%struct.jim, %struct.jim* @global3, i64 0, i32 3, i64 1), i32 -2146631418) nounwind
+  tail call void (...) @snork(ptr @global1, i32 2021) nounwind
+  tail call void (...) @snork(ptr getelementptr inbounds (%struct.jim, ptr @global3, i64 0, i32 3, i64 1), i32 -2146631418) nounwind
   unreachable
 
 bb6:                                              ; preds = %bb
-  tail call void @zot(i8* getelementptr inbounds (%struct.jim, %struct.jim* @global3, i64 0, i32 5, i64 0), i8* getelementptr inbounds (%struct.jim, %struct.jim* @global3, i64 0, i32 3, i64 1), i64 undef, i32 1, i1 false) nounwind
-  %tmp7 = getelementptr inbounds %struct.jim, %struct.jim* @global3, i64 0, i32 5, i64 undef
-  store i8 0, i8* %tmp7, align 1
+  tail call void @zot(ptr getelementptr inbounds (%struct.jim, ptr @global3, i64 0, i32 5, i64 0), ptr getelementptr inbounds (%struct.jim, ptr @global3, i64 0, i32 3, i64 1), i64 undef, i32 1, i1 false) nounwind
+  %tmp7 = getelementptr inbounds %struct.jim, ptr @global3, i64 0, i32 5, i64 undef
+  store i8 0, ptr %tmp7, align 1
   %tmp8 = add nsw i32 0, 1
   %tmp9 = sext i32 %tmp8 to i64
   %tmp10 = add i64 %tmp9, 1
-  %tmp11 = getelementptr inbounds %struct.jim, %struct.jim* @global3, i64 0, i32 3, i64 %tmp10
+  %tmp11 = getelementptr inbounds %struct.jim, ptr @global3, i64 0, i32 3, i64 %tmp10
   %tmp12 = sub i64 2047, %tmp9
   %tmp13 = icmp eq i32 undef, 1
   br i1 %tmp13, label %bb14, label %bb15
@@ -79,8 +79,8 @@ bb17:                                             ; preds = %bb26, %bb15
   br i1 %tmp21, label %bb22, label %bb32
 
 bb22:                                             ; preds = %bb17
-  %tmp23 = getelementptr inbounds %struct.jim, %struct.jim* @global3, i64 0, i32 3, i64 0
-  %tmp24 = load i8, i8* %tmp23, align 1
+  %tmp23 = getelementptr inbounds %struct.jim, ptr @global3, i64 0, i32 3, i64 0
+  %tmp24 = load i8, ptr %tmp23, align 1
   %tmp25 = icmp eq i8 %tmp24, 58
   br i1 %tmp25, label %bb30, label %bb26
 
@@ -95,18 +95,18 @@ bb30:                                             ; preds = %bb22
   br i1 %tmp31, label %bb33, label %bb32
 
 bb32:                                             ; preds = %bb30, %bb26, %bb17
-  tail call void (...) @snork(i8* getelementptr inbounds ([52 x i8], [52 x i8]* @global1, i64 0, i64 0), i32 2038) nounwind
-  tail call void (...) @snork(i8* %tmp11, i32 -2146631418) nounwind
+  tail call void (...) @snork(ptr @global1, i32 2038) nounwind
+  tail call void (...) @snork(ptr %tmp11, i32 -2146631418) nounwind
   unreachable
 
 bb33:                                             ; preds = %bb30
-  tail call void @zot(i8* getelementptr inbounds (%struct.jim, %struct.jim* @global3, i64 0, i32 5, i64 0), i8* %tmp11, i64 undef, i32 1, i1 false) nounwind
-  %tmp34 = getelementptr inbounds %struct.jim, %struct.jim* @global3, i64 0, i32 5, i64 undef
-  store i8 0, i8* %tmp34, align 1
+  tail call void @zot(ptr getelementptr inbounds (%struct.jim, ptr @global3, i64 0, i32 5, i64 0), ptr %tmp11, i64 undef, i32 1, i1 false) nounwind
+  %tmp34 = getelementptr inbounds %struct.jim, ptr @global3, i64 0, i32 5, i64 undef
+  store i8 0, ptr %tmp34, align 1
   %tmp35 = add nsw i32 %tmp19, 1
   %tmp36 = sext i32 %tmp35 to i64
   %tmp37 = add i64 %tmp36, %tmp10
-  %tmp38 = getelementptr inbounds %struct.jim, %struct.jim* @global3, i64 0, i32 3, i64 %tmp37
+  %tmp38 = getelementptr inbounds %struct.jim, ptr @global3, i64 0, i32 3, i64 %tmp37
   %tmp39 = sub i64 %tmp12, %tmp36
   br i1 false, label %bb40, label %bb41
 
@@ -126,7 +126,7 @@ bb43:                                             ; preds = %bb52, %bb41
 
 bb48:                                             ; preds = %bb43
   %tmp49 = add i64 %tmp44, %tmp37
-  %tmp50 = load i8, i8* undef, align 1
+  %tmp50 = load i8, ptr undef, align 1
   %tmp51 = icmp eq i8 %tmp50, 58
   br i1 %tmp51, label %bb55, label %bb52
 
@@ -141,15 +141,15 @@ bb55:                                             ; preds = %bb48
   br i1 %tmp57, label %bb59, label %bb58
 
 bb58:                                             ; preds = %bb55, %bb52, %bb43
-  tail call void (...) @snork(i8* getelementptr inbounds ([52 x i8], [52 x i8]* @global1, i64 0, i64 0), i32 2055) nounwind
-  tail call void (...) @snork(i8* %tmp38, i32 -2146631418) nounwind
+  tail call void (...) @snork(ptr @global1, i32 2055) nounwind
+  tail call void (...) @snork(ptr %tmp38, i32 -2146631418) nounwind
   br label %bb247
 
 bb59:                                             ; preds = %bb55
   %tmp60 = sext i32 %tmp45 to i64
-  tail call void @zot(i8* getelementptr inbounds (%struct.jim, %struct.jim* @global3, i64 0, i32 5, i64 0), i8* %tmp38, i64 %tmp60, i32 1, i1 false) nounwind
-  %tmp61 = getelementptr inbounds %struct.jim, %struct.jim* @global3, i64 0, i32 5, i64 %tmp60
-  store i8 0, i8* %tmp61, align 1
+  tail call void @zot(ptr getelementptr inbounds (%struct.jim, ptr @global3, i64 0, i32 5, i64 0), ptr %tmp38, i64 %tmp60, i32 1, i1 false) nounwind
+  %tmp61 = getelementptr inbounds %struct.jim, ptr @global3, i64 0, i32 5, i64 %tmp60
+  store i8 0, ptr %tmp61, align 1
   %tmp62 = add nsw i32 %tmp45, 1
   %tmp63 = sext i32 %tmp62 to i64
   %tmp64 = add i64 %tmp63, %tmp37
@@ -168,12 +168,12 @@ bb68:                                             ; preds = %bb59
   ]
 
 bb69:                                             ; preds = %bb68
-  tail call void (...) @snork(i8* getelementptr inbounds ([52 x i8], [52 x i8]* @global1, i64 0, i64 0), i32 2071) nounwind
-  %tmp70 = load i32, i32* getelementptr inbounds (%struct.snork, %struct.snork* @global, i64 0, i32 2), align 4
+  tail call void (...) @snork(ptr @global1, i32 2071) nounwind
+  %tmp70 = load i32, ptr getelementptr inbounds (%struct.snork, ptr @global, i64 0, i32 2), align 4
   unreachable
 
 bb71:                                             ; preds = %bb68
-  %tmp72 = load i32, i32* getelementptr inbounds (%struct.snork, %struct.snork* @global, i64 0, i32 4), align 4
+  %tmp72 = load i32, ptr getelementptr inbounds (%struct.snork, ptr @global, i64 0, i32 4), align 4
   %tmp73 = icmp eq i32 undef, 0
   br i1 %tmp73, label %bb247, label %bb74
 
@@ -464,8 +464,8 @@ bb221:                                            ; preds = %bb230, %bb219
 
 bb226:                                            ; preds = %bb221
   %tmp227 = add i64 %tmp222, %tmp216
-  %tmp228 = getelementptr inbounds %struct.jim, %struct.jim* @global3, i64 0, i32 3, i64 %tmp227
-  %tmp229 = load i8, i8* %tmp228, align 1
+  %tmp228 = getelementptr inbounds %struct.jim, ptr @global3, i64 0, i32 3, i64 %tmp227
+  %tmp229 = load i8, ptr %tmp228, align 1
   br i1 false, label %bb233, label %bb230
 
 bb230:                                            ; preds = %bb226
@@ -515,4 +515,4 @@ bb247:                                            ; preds = %bb234, %bb144, %bb1
   ret void
 }
 
-declare void @zot(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @zot(ptr nocapture, ptr nocapture, i64, i32, i1) nounwind

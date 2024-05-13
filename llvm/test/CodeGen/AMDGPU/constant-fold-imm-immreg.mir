@@ -37,7 +37,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_AND_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -126,7 +126,7 @@ body:             |
     %10:sgpr_128 = REG_SEQUENCE killed %7, %subreg.hi16, killed %6, %subreg.lo16, killed %9, %subreg.sub0, killed %8, %subreg.sub0_sub1
     %12:sreg_32_xm0 = S_LSHL_B32 killed %5, 12, implicit-def dead $scc
     %13:vgpr_32 = COPY %12
-    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -153,7 +153,7 @@ body:             |
     %8:sgpr_128 = REG_SEQUENCE killed %5, %subreg.hi16, killed %4, %subreg.lo16, killed %7, %subreg.sub0, killed %6, %subreg.sub0_sub1
     %10:sreg_32_xm0 = S_ASHR_I32 killed %3, 12, implicit-def dead $scc
     %11:vgpr_32 = COPY %10
-    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -276,7 +276,7 @@ body:             |
     %8:sgpr_128 = REG_SEQUENCE killed %5, %subreg.hi16, killed %4, %subreg.lo16, killed %7, %subreg.sub0, killed %6, %subreg.sub0_sub1
     %10:sreg_32_xm0 = S_LSHR_B32 killed %3, 12, implicit-def dead $scc
     %11:vgpr_32 = COPY %10
-    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -444,7 +444,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_ANDN2_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -477,7 +477,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_OR_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -570,7 +570,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_ORN2_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -603,7 +603,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_NAND_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -636,7 +636,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_NOR_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -669,7 +669,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_XNOR_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -723,7 +723,7 @@ body:             |
 
     %2:vgpr_32 = COPY $vgpr0
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, addrspace 4)
+    %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`, addrspace 4)
     %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %15, %subreg.sub1
     %17:vreg_64 = V_LSHLREV_B64_e64 2, killed %16, implicit $exec
@@ -788,5 +788,141 @@ body:             |
     %3:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
     %4:vgpr_32 = V_LSHRREV_B32_e64 %3:vgpr_32, %2:vgpr_32, implicit $exec
     S_ENDPGM 0, implicit %4
+
+...
+
+---
+name:            constant_s_and_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_and_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sgpr_32 = S_AND_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_AND_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_s_and_b32_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_and_b32_implicit_def_scc_is_used
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sgpr_32 = S_AND_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]], implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_AND_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit %2, implicit $scc
+
+...
+
+---
+name:            constant_s_and_b32_only_implicit_def_scc_is_dead
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_and_b32_only_implicit_def_scc_is_dead
+    ; GCN: S_ENDPGM 0, implicit undef $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_AND_B32 %0, %1, implicit-def dead $scc
+    S_ENDPGM 0, implicit undef $scc
+
+...
+
+---
+name:            constant_s_or_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_or_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_OR_B32_:%[0-9]+]]:sgpr_32 = S_OR_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_OR_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_s_xor_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_xor_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_XOR_B32_:%[0-9]+]]:sgpr_32 = S_XOR_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_XOR_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_s_not_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_not_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_NOT_B32_:%[0-9]+]]:sgpr_32 = S_NOT_B32 32, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_NOT_B32 %0, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+# Really really implicit operand
+---
+name:            constant_v_and_b32_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_and_b32_implicit_def_scc_is_used
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    ; GCN-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 32, [[V_MOV_B32_e32_]], implicit $exec, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:vgpr_32 = V_MOV_B32_e32 32, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    %2:vgpr_32 = V_AND_B32_e32 %0, %1, implicit $exec, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_v_and_b32_implicit_def_vreg_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_and_b32_implicit_def_vreg_is_used
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    ; GCN-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 32, [[V_MOV_B32_e32_]], implicit $exec, implicit-def %3
+    ; GCN-NEXT: S_ENDPGM 0, implicit %3
+    %0:vgpr_32 = V_MOV_B32_e32 32, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    %2:vgpr_32 = V_AND_B32_e32 %0, %1, implicit $exec, implicit-def %3:vgpr_32
+    S_ENDPGM 0, implicit %3
+
+...
+---
+name:            constant_v_and_b32_implicit_use
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_and_b32_implicit_use
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
+    %0:vgpr_32 = V_MOV_B32_e32 32, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_e32 24, implicit $exec
+    %3:vgpr_32 = V_AND_B32_e32 %0, %1, implicit $exec, implicit %2:vgpr_32
+    S_ENDPGM 0, implicit %3
 
 ...

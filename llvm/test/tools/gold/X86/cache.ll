@@ -8,8 +8,8 @@
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     -o %t3.o %t2.o %t.o
 
-; We should just get the timestamp file
-; RUN: ls %t.cache | count 1
+; Since nothing was added to the cache, there shouldn't be a timestamp file yet.
+; RUN: not ls %t.cache
 
 
 ; Verify that enabling caching is working with module with hash.

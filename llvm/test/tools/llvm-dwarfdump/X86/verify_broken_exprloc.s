@@ -9,7 +9,7 @@
 # RUN: not llvm-dwarfdump -verify %t 2>&1 | FileCheck %s --check-prefix=VERIFY
 # VERIFY:      DIE contains invalid DWARF expression:
 # VERIFY:      DW_TAG_GNU_call_site_parameter
-# VERIFY-NEXT:   DW_AT_location    (<decoding error> ff)
+# VERIFY-NEXT:   DW_AT_location    [DW_FORM_exprloc] (<decoding error> ff)
 
 .section  .debug_info,"",@progbits
   .long  0x12

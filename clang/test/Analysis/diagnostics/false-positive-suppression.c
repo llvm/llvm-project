@@ -6,7 +6,7 @@
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
 
-int radar12491259() {
+int radar12491259(void) {
     int *p = malloc(12);
     FREE_POINTER(p);
     FREE_POINTER(p); // no-warning: we are suppressing errors coming from sys/queue macros.
@@ -15,7 +15,7 @@ int radar12491259() {
 
 #define MYMACRO(p) FREE_POINTER(p)
 
-int radar12491259_inside_macro() {
+int radar12491259_inside_macro(void) {
     int *p = malloc(12);
     MYMACRO(p);
     MYMACRO(p); // no-warning: we are suppressing errors coming from sys/queue macros.

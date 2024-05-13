@@ -1,4 +1,4 @@
-// RUN: not %clang -fsyntax-only -fmacro-backtrace-limit=0 %s 2>&1 | FileCheck %s
+// RUN: not %clang -fsyntax-only -fno-diagnostics-show-line-numbers -fmacro-backtrace-limit=0 %s 2>&1 | FileCheck %s
 
 #define FOO 1+"hi" 
 #define BAR FOO

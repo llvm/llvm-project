@@ -17,95 +17,81 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/ViewOpGraph.h"
-#include "mlir/Transforms/ViewRegionGraph.h"
+#include "llvm/Support/Debug.h"
 #include <limits>
+#include <memory>
 
 namespace mlir {
 
-class AffineForOp;
 class GreedyRewriteConfig;
 
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
 
-/// Creates an instance of the BufferDeallocation pass to free all allocated
-/// buffers.
-std::unique_ptr<Pass> createBufferDeallocationPass();
-
-/// Creates a pass that moves allocations upwards to reduce the number of
-/// required copies that are inserted during the BufferDeallocation pass.
-std::unique_ptr<Pass> createBufferHoistingPass();
-
-/// Creates a pass that moves allocations upwards out of loops. This avoids
-/// reallocations inside of loops.
-std::unique_ptr<Pass> createBufferLoopHoistingPass();
-
-/// Creates a pass that promotes heap-based allocations to stack-based ones.
-/// Only buffers smaller than the provided size are promoted.
-/// Dynamic shaped buffers are promoted up to the given rank.
-std::unique_ptr<Pass>
-createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
-                                unsigned bitwidthOfIndexType = 64,
-                                unsigned maxRankOfAllocatedMemRef = 1);
-
-/// Creates a pass that promotes heap-based allocations to stack-based ones.
-/// Only buffers smaller with `isSmallAlloc(alloc) == true` are promoted.
-std::unique_ptr<Pass>
-createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
-
-/// Creates a pass that finalizes a partial bufferization by removing remaining
-/// tensor_load and buffer_cast operations.
-std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
-
-/// Creates a pass that converts memref function results to out-params.
-std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
+#define GEN_PASS_DECL_CANONICALIZER
+#define GEN_PASS_DECL_CONTROLFLOWSINK
+#define GEN_PASS_DECL_CSEPASS
+#define GEN_PASS_DECL_INLINER
+#define GEN_PASS_DECL_LOOPINVARIANTCODEMOTION
+#define GEN_PASS_DECL_MEM2REG
+#define GEN_PASS_DECL_PRINTIRPASS
+#define GEN_PASS_DECL_PRINTOPSTATS
+#define GEN_PASS_DECL_SROA
+#define GEN_PASS_DECL_STRIPDEBUGINFO
+#define GEN_PASS_DECL_SCCP
+#define GEN_PASS_DECL_SYMBOLDCE
+#define GEN_PASS_DECL_SYMBOLPRIVATIZE
+#define GEN_PASS_DECL_TOPOLOGICALSORT
+#define GEN_PASS_DECL_COMPOSITEFIXEDPOINTPASS
+#include "mlir/Transforms/Passes.h.inc"
 
 /// Creates an instance of the Canonicalizer pass, configured with default
 /// settings (which can be overridden by pass options on the command line).
 std::unique_ptr<Pass> createCanonicalizerPass();
 
 /// Creates an instance of the Canonicalizer pass with the specified config.
+/// `disabledPatterns` is a set of labels used to filter out input patterns with
+/// a debug label or debug name in this set. `enabledPatterns` is a set of
+/// labels used to filter out input patterns that do not have one of the labels
+/// in this set. Debug labels must be set explicitly on patterns or when adding
+/// them with `RewritePatternSet::addWithLabel`. Debug names may be empty, but
+/// patterns created with `RewritePattern::create` have their default debug name
+/// set to their type name.
 std::unique_ptr<Pass>
-createCanonicalizerPass(const GreedyRewriteConfig &config);
+createCanonicalizerPass(const GreedyRewriteConfig &config,
+                        ArrayRef<std::string> disabledPatterns = std::nullopt,
+                        ArrayRef<std::string> enabledPatterns = std::nullopt);
+
+/// Creates a pass to perform control-flow sinking.
+std::unique_ptr<Pass> createControlFlowSinkPass();
 
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();
 
-/// Creates a loop fusion pass which fuses loops. Buffers of size less than or
-/// equal to `localBufSizeThreshold` are promoted to memory space
-/// `fastMemorySpace'.
-std::unique_ptr<OperationPass<FuncOp>>
-createLoopFusionPass(unsigned fastMemorySpace = 0,
-                     uint64_t localBufSizeThreshold = 0,
-                     bool maximalFusion = false);
+/// Creates a pass to print IR on the debug stream.
+std::unique_ptr<Pass> createPrintIRPass(const PrintIRPassOptions & = {});
+
+/// Creates a pass that generates IR to verify ops at runtime.
+std::unique_ptr<Pass> createGenerateRuntimeVerificationPass();
 
 /// Creates a loop invariant code motion pass that hoists loop invariant
 /// instructions out of the loop.
 std::unique_ptr<Pass> createLoopInvariantCodeMotionPass();
 
-/// Creates a pass to pipeline explicit movement of data across levels of the
-/// memory hierarchy.
-std::unique_ptr<OperationPass<FuncOp>> createPipelineDataTransferPass();
-
-/// Creates a pass that transforms perfectly nested loops with independent
-/// bounds into a single loop.
-std::unique_ptr<OperationPass<FuncOp>> createLoopCoalescingPass();
-
-/// Creates a pass that transforms a single ParallelLoop over N induction
-/// variables into another ParallelLoop over less than N induction variables.
-std::unique_ptr<Pass> createParallelLoopCollapsingPass();
-
-/// Creates a pass to perform optimizations relying on memref dataflow such as
-/// store to load forwarding, elimination of dead stores, and dead allocs.
-std::unique_ptr<OperationPass<FuncOp>> createMemRefDataFlowOptPass();
+/// Creates a pass that hoists loop-invariant subset ops.
+std::unique_ptr<Pass> createLoopInvariantSubsetHoistingPass();
 
 /// Creates a pass to strip debug information from a function.
 std::unique_ptr<Pass> createStripDebugInfoPass();
 
 /// Creates a pass which prints the list of ops and the number of occurrences in
 /// the module.
-std::unique_ptr<Pass> createPrintOpStatsPass();
+std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os = llvm::errs());
+
+/// Creates a pass which prints the list of ops and the number of occurrences in
+/// the module with the output format option.
+std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os, bool printAsJSON);
 
 /// Creates a pass which inlines calls and callable operations as defined by
 /// the CallGraph.
@@ -124,6 +110,9 @@ std::unique_ptr<Pass>
 createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
                   std::function<void(OpPassManager &)> defaultPipelineBuilder);
 
+/// Creates an optimization pass to remove dead values.
+std::unique_ptr<Pass> createRemoveDeadValuesPass();
+
 /// Creates a pass which performs sparse conditional constant propagation over
 /// nested operations.
 std::unique_ptr<Pass> createSCCPPass();
@@ -132,9 +121,21 @@ std::unique_ptr<Pass> createSCCPPass();
 /// pass may *only* be scheduled on an operation that defines a SymbolTable.
 std::unique_ptr<Pass> createSymbolDCEPass();
 
-/// Creates an interprocedural pass to normalize memrefs to have a trivial
-/// (identity) layout map.
-std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
+/// Creates a pass which marks top-level symbol operations as `private` unless
+/// listed in `excludeSymbols`.
+std::unique_ptr<Pass>
+createSymbolPrivatizePass(ArrayRef<std::string> excludeSymbols = {});
+
+/// Creates a pass that recursively sorts nested regions without SSA dominance
+/// topologically such that, as much as possible, users of values appear after
+/// their producers.
+std::unique_ptr<Pass> createTopologicalSortPass();
+
+/// Create composite pass, which runs provided set of passes until fixed point
+/// or maximum number of iterations reached.
+std::unique_ptr<Pass> createCompositeFixedPointPass(
+    std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
+    int maxIterations = 10);
 
 //===----------------------------------------------------------------------===//
 // Registration
@@ -144,6 +145,6 @@ std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
 #define GEN_PASS_REGISTRATION
 #include "mlir/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_PASSES_H

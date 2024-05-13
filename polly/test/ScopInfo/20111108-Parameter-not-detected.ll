@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 declare void @foo()
 
-define i32 @main(i8* %A) nounwind uwtable {
+define i32 @main(ptr %A) nounwind uwtable {
 entry:
   br label %for.cond
 
@@ -28,8 +28,8 @@ for.body3:                                        ; preds = %for.cond1
   br i1 %cmp4, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body3
-  %arrayidx = getelementptr i8, i8* %A, i64 %indvar
-  store i8 5, i8* %arrayidx
+  %arrayidx = getelementptr i8, ptr %A, i64 %indvar
+  store i8 5, ptr %arrayidx
   br label %if.end
 
 if.end:                                           ; preds = %if.end.single_exit
@@ -50,7 +50,7 @@ for.end7:                                         ; preds = %for.cond
   ret i32 0
 }
 
-; CHECK:      p0: {0,+,1}<%for.cond>
+; CHECK:      p0: {0,+,1}<nuw><nsw><%for.cond>
 ;
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_if_then

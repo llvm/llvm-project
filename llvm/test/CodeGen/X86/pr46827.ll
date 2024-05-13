@@ -3,8 +3,8 @@
 ; CHECK: body:             |
 ; CHECK:   bb.0.bb107:
 ; CHECK:     successors: %bb.3(0x40000000), %bb.4(0x40000000)
-; CHECK:     %0:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.0, align 16)
-; CHECK:     %1:gr32 = SUB32ri8 %0, 1, implicit-def $eflags
+; CHECK:     %0:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0, align 16)
+; CHECK:     %1:gr32 = SUB32ri %0, 1, implicit-def $eflags
 ; CHECK:     XBEGIN_4 %bb.4, implicit-def $eax
 ; CHECK:   bb.3.bb107:
 ; CHECK:     successors: %bb.5(0x80000000)

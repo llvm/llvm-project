@@ -32,15 +32,13 @@ struct ResumeAction {
 // send a signal to the thread when the action is run or step.
 class ResumeActionList {
 public:
-  ResumeActionList() : m_actions(), m_signal_handled() {}
+  ResumeActionList() = default;
 
-  ResumeActionList(lldb::StateType default_action, int signal)
-      : m_actions(), m_signal_handled() {
+  ResumeActionList(lldb::StateType default_action, int signal) {
     SetDefaultThreadActionIfNeeded(default_action, signal);
   }
 
-  ResumeActionList(const ResumeAction *actions, size_t num_actions)
-      : m_actions(), m_signal_handled() {
+  ResumeActionList(const ResumeAction *actions, size_t num_actions) {
     if (actions && num_actions) {
       m_actions.assign(actions, actions + num_actions);
       m_signal_handled.assign(num_actions, false);
@@ -132,12 +130,8 @@ protected:
 
 struct ThreadStopInfo {
   lldb::StopReason reason;
+  uint32_t signo;
   union {
-    // eStopReasonSignal
-    struct {
-      uint32_t signo;
-    } signal;
-
     // eStopReasonException
     struct {
       uint64_t type;

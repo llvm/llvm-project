@@ -2,12 +2,12 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -mcpu=mips32r5 -mattr=msa,+fp64 -mattr=nan2008 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=P5600
 --- |
 
-  define void @load_store_v16i8(<16 x i8>* %a, <16 x i8>* %b) { entry: ret void }
-  define void @load_store_v8i16(<8 x i16>* %a, <8 x i16>* %b) { entry: ret void }
-  define void @load_store_v4i32(<4 x i32>* %a, <4 x i32>* %b) { entry: ret void }
-  define void @load_store_v2i64(<2 x i64>* %a, <2 x i64>* %b) { entry: ret void }
-  define void @load_store_v4f32(<4 x float>* %a, <4 x float>* %b) { entry: ret void }
-  define void @load_store_v2f64(<2 x double>* %a, <2 x double>* %b) { entry: ret void }
+  define void @load_store_v16i8(ptr %a, ptr %b) { entry: ret void }
+  define void @load_store_v8i16(ptr %a, ptr %b) { entry: ret void }
+  define void @load_store_v4i32(ptr %a, ptr %b) { entry: ret void }
+  define void @load_store_v2i64(ptr %a, ptr %b) { entry: ret void }
+  define void @load_store_v4f32(ptr %a, ptr %b) { entry: ret void }
+  define void @load_store_v2f64(ptr %a, ptr %b) { entry: ret void }
 
 ...
 ---
@@ -24,13 +24,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; P5600: [[LD_B:%[0-9]+]]:msa128b = LD_B [[COPY1]], 0 :: (load 16 from %ir.b)
-    ; P5600: ST_B [[LD_B]], [[COPY]], 0 :: (store 16 into %ir.a)
+    ; P5600: [[LD_B:%[0-9]+]]:msa128b = LD_B [[COPY1]], 0 :: (load (<16 x s8>) from %ir.b)
+    ; P5600: ST_B [[LD_B]], [[COPY]], 0 :: (store (<16 x s8>) into %ir.a)
     ; P5600: RetRA
     %0:gprb(p0) = COPY $a0
     %1:gprb(p0) = COPY $a1
-    %2:fprb(<16 x s8>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<16 x s8>), %0(p0) :: (store 16 into %ir.a)
+    %2:fprb(<16 x s8>) = G_LOAD %1(p0) :: (load (<16 x s8>) from %ir.b)
+    G_STORE %2(<16 x s8>), %0(p0) :: (store (<16 x s8>) into %ir.a)
     RetRA
 
 ...
@@ -48,13 +48,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; P5600: [[LD_H:%[0-9]+]]:msa128h = LD_H [[COPY1]], 0 :: (load 16 from %ir.b)
-    ; P5600: ST_H [[LD_H]], [[COPY]], 0 :: (store 16 into %ir.a)
+    ; P5600: [[LD_H:%[0-9]+]]:msa128h = LD_H [[COPY1]], 0 :: (load (<8 x s16>) from %ir.b)
+    ; P5600: ST_H [[LD_H]], [[COPY]], 0 :: (store (<8 x s16>) into %ir.a)
     ; P5600: RetRA
     %0:gprb(p0) = COPY $a0
     %1:gprb(p0) = COPY $a1
-    %2:fprb(<8 x s16>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<8 x s16>), %0(p0) :: (store 16 into %ir.a)
+    %2:fprb(<8 x s16>) = G_LOAD %1(p0) :: (load (<8 x s16>) from %ir.b)
+    G_STORE %2(<8 x s16>), %0(p0) :: (store (<8 x s16>) into %ir.a)
     RetRA
 
 ...
@@ -72,13 +72,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; P5600: [[LD_W:%[0-9]+]]:msa128w = LD_W [[COPY1]], 0 :: (load 16 from %ir.b)
-    ; P5600: ST_W [[LD_W]], [[COPY]], 0 :: (store 16 into %ir.a)
+    ; P5600: [[LD_W:%[0-9]+]]:msa128w = LD_W [[COPY1]], 0 :: (load (<4 x s32>) from %ir.b)
+    ; P5600: ST_W [[LD_W]], [[COPY]], 0 :: (store (<4 x s32>) into %ir.a)
     ; P5600: RetRA
     %0:gprb(p0) = COPY $a0
     %1:gprb(p0) = COPY $a1
-    %2:fprb(<4 x s32>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<4 x s32>), %0(p0) :: (store 16 into %ir.a)
+    %2:fprb(<4 x s32>) = G_LOAD %1(p0) :: (load (<4 x s32>) from %ir.b)
+    G_STORE %2(<4 x s32>), %0(p0) :: (store (<4 x s32>) into %ir.a)
     RetRA
 
 ...
@@ -96,13 +96,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; P5600: [[LD_D:%[0-9]+]]:msa128d = LD_D [[COPY1]], 0 :: (load 16 from %ir.b)
-    ; P5600: ST_D [[LD_D]], [[COPY]], 0 :: (store 16 into %ir.a)
+    ; P5600: [[LD_D:%[0-9]+]]:msa128d = LD_D [[COPY1]], 0 :: (load (<2 x s64>) from %ir.b)
+    ; P5600: ST_D [[LD_D]], [[COPY]], 0 :: (store (<2 x s64>) into %ir.a)
     ; P5600: RetRA
     %0:gprb(p0) = COPY $a0
     %1:gprb(p0) = COPY $a1
-    %2:fprb(<2 x s64>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<2 x s64>), %0(p0) :: (store 16 into %ir.a)
+    %2:fprb(<2 x s64>) = G_LOAD %1(p0) :: (load (<2 x s64>) from %ir.b)
+    G_STORE %2(<2 x s64>), %0(p0) :: (store (<2 x s64>) into %ir.a)
     RetRA
 
 ...
@@ -120,13 +120,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; P5600: [[LD_W:%[0-9]+]]:msa128w = LD_W [[COPY1]], 0 :: (load 16 from %ir.b)
-    ; P5600: ST_W [[LD_W]], [[COPY]], 0 :: (store 16 into %ir.a)
+    ; P5600: [[LD_W:%[0-9]+]]:msa128w = LD_W [[COPY1]], 0 :: (load (<4 x s32>) from %ir.b)
+    ; P5600: ST_W [[LD_W]], [[COPY]], 0 :: (store (<4 x s32>) into %ir.a)
     ; P5600: RetRA
     %0:gprb(p0) = COPY $a0
     %1:gprb(p0) = COPY $a1
-    %2:fprb(<4 x s32>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<4 x s32>), %0(p0) :: (store 16 into %ir.a)
+    %2:fprb(<4 x s32>) = G_LOAD %1(p0) :: (load (<4 x s32>) from %ir.b)
+    G_STORE %2(<4 x s32>), %0(p0) :: (store (<4 x s32>) into %ir.a)
     RetRA
 
 ...
@@ -144,13 +144,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; P5600: [[LD_D:%[0-9]+]]:msa128d = LD_D [[COPY1]], 0 :: (load 16 from %ir.b)
-    ; P5600: ST_D [[LD_D]], [[COPY]], 0 :: (store 16 into %ir.a)
+    ; P5600: [[LD_D:%[0-9]+]]:msa128d = LD_D [[COPY1]], 0 :: (load (<2 x s64>) from %ir.b)
+    ; P5600: ST_D [[LD_D]], [[COPY]], 0 :: (store (<2 x s64>) into %ir.a)
     ; P5600: RetRA
     %0:gprb(p0) = COPY $a0
     %1:gprb(p0) = COPY $a1
-    %2:fprb(<2 x s64>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<2 x s64>), %0(p0) :: (store 16 into %ir.a)
+    %2:fprb(<2 x s64>) = G_LOAD %1(p0) :: (load (<2 x s64>) from %ir.b)
+    G_STORE %2(<2 x s64>), %0(p0) :: (store (<2 x s64>) into %ir.a)
     RetRA
 
 ...

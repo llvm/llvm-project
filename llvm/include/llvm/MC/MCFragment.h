@@ -17,7 +17,6 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 #include <utility>
@@ -76,6 +75,7 @@ private:
 
 protected:
   bool HasInstructions;
+  bool LinkerRelaxable = false;
 
   MCFragment(FragmentType Kind, bool HasInstructions,
              MCSection *Parent = nullptr);
@@ -247,6 +247,9 @@ public:
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Data;
   }
+
+  bool isLinkerRelaxable() const { return LinkerRelaxable; }
+  void setLinkerRelaxable() { LinkerRelaxable = true; }
 };
 
 /// This is a compact (memory-size-wise) fragment for holding an encoded
@@ -294,7 +297,7 @@ public:
 
 class MCAlignFragment : public MCFragment {
   /// The alignment to ensure, in bytes.
-  unsigned Alignment;
+  Align Alignment;
 
   /// Flag to indicate that (optimal) NOPs should be emitted instead
   /// of using the provided value. The exact interpretation of this flag is
@@ -311,13 +314,16 @@ class MCAlignFragment : public MCFragment {
   /// cannot be satisfied in this width then this fragment is ignored.
   unsigned MaxBytesToEmit;
 
+  /// When emitting Nops some subtargets have specific nop encodings.
+  const MCSubtargetInfo *STI = nullptr;
+
 public:
-  MCAlignFragment(unsigned Alignment, int64_t Value, unsigned ValueSize,
+  MCAlignFragment(Align Alignment, int64_t Value, unsigned ValueSize,
                   unsigned MaxBytesToEmit, MCSection *Sec = nullptr)
       : MCFragment(FT_Align, false, Sec), Alignment(Alignment), EmitNops(false),
         Value(Value), ValueSize(ValueSize), MaxBytesToEmit(MaxBytesToEmit) {}
 
-  unsigned getAlignment() const { return Alignment; }
+  Align getAlignment() const { return Alignment; }
 
   int64_t getValue() const { return Value; }
 
@@ -326,7 +332,12 @@ public:
   unsigned getMaxBytesToEmit() const { return MaxBytesToEmit; }
 
   bool hasEmitNops() const { return EmitNops; }
-  void setEmitNops(bool Value) { EmitNops = Value; }
+  void setEmitNops(bool Value, const MCSubtargetInfo *STI) {
+    EmitNops = Value;
+    this->STI = STI;
+  }
+
+  const MCSubtargetInfo *getSubtargetInfo() const { return STI; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Align;
@@ -369,16 +380,21 @@ class MCNopsFragment : public MCFragment {
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
+  /// When emitting Nops some subtargets have specific nop encodings.
+  const MCSubtargetInfo &STI;
+
 public:
   MCNopsFragment(int64_t NumBytes, int64_t ControlledNopLength, SMLoc L,
-                 MCSection *Sec = nullptr)
+                 const MCSubtargetInfo &STI, MCSection *Sec = nullptr)
       : MCFragment(FT_Nops, false, Sec), Size(NumBytes),
-        ControlledNopLength(ControlledNopLength), Loc(L) {}
+        ControlledNopLength(ControlledNopLength), Loc(L), STI(STI) {}
 
   int64_t getNumBytes() const { return Size; }
   int64_t getControlledNopLength() const { return ControlledNopLength; }
 
   SMLoc getLoc() const { return Loc; }
+
+  const MCSubtargetInfo *getSubtargetInfo() const { return &STI; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Nops;
@@ -412,27 +428,24 @@ public:
   }
 };
 
-class MCLEBFragment : public MCFragment {
+class MCLEBFragment final : public MCEncodedFragmentWithFixups<8, 0> {
   /// True if this is a sleb128, false if uleb128.
   bool IsSigned;
 
   /// The value this fragment should contain.
   const MCExpr *Value;
 
-  SmallString<8> Contents;
-
 public:
-  MCLEBFragment(const MCExpr &Value_, bool IsSigned_, MCSection *Sec = nullptr)
-      : MCFragment(FT_LEB, false, Sec), IsSigned(IsSigned_), Value(&Value_) {
-    Contents.push_back(0);
+  MCLEBFragment(const MCExpr &Value, bool IsSigned, MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<8, 0>(FT_LEB, false, Sec),
+        IsSigned(IsSigned), Value(&Value) {
+    getContents().push_back(0);
   }
 
   const MCExpr &getValue() const { return *Value; }
+  void setValue(const MCExpr *Expr) { Value = Expr; }
 
   bool isSigned() const { return IsSigned; }
-
-  SmallString<8> &getContents() { return Contents; }
-  const SmallString<8> &getContents() const { return Contents; }
 
   /// @}
 
@@ -476,6 +489,7 @@ public:
         AddrDelta(&AddrDelta) {}
 
   const MCExpr &getAddrDelta() const { return *AddrDelta; }
+  void setAddrDelta(const MCExpr *E) { AddrDelta = E; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_DwarfFrame;
@@ -553,7 +567,7 @@ public:
     return Ranges;
   }
 
-  StringRef getFixedSizePortion() const { return FixedSizePortion; }
+  StringRef getFixedSizePortion() const { return FixedSizePortion.str(); }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_CVDefRange;
@@ -572,10 +586,14 @@ class MCBoundaryAlignFragment : public MCFragment {
   /// is not meaningful before that.
   uint64_t Size = 0;
 
+  /// When emitting Nops some subtargets have specific nop encodings.
+  const MCSubtargetInfo &STI;
+
 public:
-  MCBoundaryAlignFragment(Align AlignBoundary, MCSection *Sec = nullptr)
-      : MCFragment(FT_BoundaryAlign, false, Sec), AlignBoundary(AlignBoundary) {
-  }
+  MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI,
+                          MCSection *Sec = nullptr)
+      : MCFragment(FT_BoundaryAlign, false, Sec), AlignBoundary(AlignBoundary),
+        STI(STI) {}
 
   uint64_t getSize() const { return Size; }
   void setSize(uint64_t Value) { Size = Value; }
@@ -588,6 +606,8 @@ public:
     assert(!F || getParent() == F->getParent());
     LastFragment = F;
   }
+
+  const MCSubtargetInfo *getSubtargetInfo() const { return &STI; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_BoundaryAlign;

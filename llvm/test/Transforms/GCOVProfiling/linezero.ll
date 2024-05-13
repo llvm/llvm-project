@@ -1,10 +1,5 @@
 ; RUN: rm -rf %t && mkdir -p %t
-
-; RUN: sed -e 's|PATTERN|%/t|g' %s | opt -insert-gcov-profiling -disable-output
-; RUN: rm %t/linezero.gcno
-
 ; RUN: sed -e 's|PATTERN|%/t|g' %s | opt -passes=insert-gcov-profiling -disable-output
-; RUN: rm %t/linezero.gcno
 
 ; This is a crash test.
 
@@ -17,45 +12,45 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @_Z4testv() #0 !dbg !15 {
 entry:
   %retval = alloca i32, align 4
-  %__range = alloca %struct.vector*, align 8
+  %__range = alloca ptr, align 8
   %ref.tmp = alloca %struct.vector, align 1
   %undef.agg.tmp = alloca %struct.vector, align 1
-  %__begin = alloca i8*, align 8
-  %__end = alloca i8*, align 8
+  %__begin = alloca ptr, align 8
+  %__end = alloca ptr, align 8
   %spec = alloca i8, align 1
-  call void @llvm.dbg.declare(metadata %struct.vector** %__range, metadata !27, metadata !DIExpression()), !dbg !30
+  call void @llvm.dbg.declare(metadata ptr %__range, metadata !27, metadata !DIExpression()), !dbg !30
   br label %0
 
 ; <label>:0                                       ; preds = %entry
   call void @_Z13TagFieldSpecsv(), !dbg !31
-  store %struct.vector* %ref.tmp, %struct.vector** %__range, align 8, !dbg !31
-  call void @llvm.dbg.declare(metadata i8** %__begin, metadata !32, metadata !DIExpression()), !dbg !30
-  %1 = load %struct.vector*, %struct.vector** %__range, align 8, !dbg !31
-  %call = call i8* @_ZN6vector5beginEv(%struct.vector* %1), !dbg !31
-  store i8* %call, i8** %__begin, align 8, !dbg !31
-  call void @llvm.dbg.declare(metadata i8** %__end, metadata !33, metadata !DIExpression()), !dbg !30
-  %2 = load %struct.vector*, %struct.vector** %__range, align 8, !dbg !31
-  %call1 = call i8* @_ZN6vector3endEv(%struct.vector* %2), !dbg !31
-  store i8* %call1, i8** %__end, align 8, !dbg !31
+  store ptr %ref.tmp, ptr %__range, align 8, !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %__begin, metadata !32, metadata !DIExpression()), !dbg !30
+  %1 = load ptr, ptr %__range, align 8, !dbg !31
+  %call = call ptr @_ZN6vector5beginEv(ptr %1), !dbg !31
+  store ptr %call, ptr %__begin, align 8, !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %__end, metadata !33, metadata !DIExpression()), !dbg !30
+  %2 = load ptr, ptr %__range, align 8, !dbg !31
+  %call1 = call ptr @_ZN6vector3endEv(ptr %2), !dbg !31
+  store ptr %call1, ptr %__end, align 8, !dbg !31
   br label %for.cond, !dbg !31
 
 for.cond:                                         ; preds = %for.inc, %0
-  %3 = load i8*, i8** %__begin, align 8, !dbg !34
-  %4 = load i8*, i8** %__end, align 8, !dbg !34
-  %cmp = icmp ne i8* %3, %4, !dbg !34
+  %3 = load ptr, ptr %__begin, align 8, !dbg !34
+  %4 = load ptr, ptr %__end, align 8, !dbg !34
+  %cmp = icmp ne ptr %3, %4, !dbg !34
   br i1 %cmp, label %for.body, label %for.end, !dbg !34
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.dbg.declare(metadata i8* %spec, metadata !37, metadata !DIExpression()), !dbg !31
-  %5 = load i8*, i8** %__begin, align 8, !dbg !38
-  %6 = load i8, i8* %5, align 1, !dbg !38
-  store i8 %6, i8* %spec, align 1, !dbg !38
+  call void @llvm.dbg.declare(metadata ptr %spec, metadata !37, metadata !DIExpression()), !dbg !31
+  %5 = load ptr, ptr %__begin, align 8, !dbg !38
+  %6 = load i8, ptr %5, align 1, !dbg !38
+  store i8 %6, ptr %spec, align 1, !dbg !38
   br label %for.inc, !dbg !38
 
 for.inc:                                          ; preds = %for.body
-  %7 = load i8*, i8** %__begin, align 8, !dbg !40
-  %incdec.ptr = getelementptr inbounds i8, i8* %7, i32 1, !dbg !40
-  store i8* %incdec.ptr, i8** %__begin, align 8, !dbg !40
+  %7 = load ptr, ptr %__begin, align 8, !dbg !40
+  %incdec.ptr = getelementptr inbounds i8, ptr %7, i32 1, !dbg !40
+  store ptr %incdec.ptr, ptr %__begin, align 8, !dbg !40
   br label %for.cond, !dbg !40
 
 for.end:                                          ; preds = %for.cond
@@ -63,7 +58,7 @@ for.end:                                          ; preds = %for.cond
   unreachable, !dbg !42
 
 return:                                           ; No predecessors!
-  %8 = load i32, i32* %retval, !dbg !44
+  %8 = load i32, ptr %retval, !dbg !44
   ret i32 %8, !dbg !44
 }
 
@@ -72,9 +67,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 declare void @_Z13TagFieldSpecsv() #2
 
-declare i8* @_ZN6vector5beginEv(%struct.vector*) #2
+declare ptr @_ZN6vector5beginEv(ptr) #2
 
-declare i8* @_ZN6vector3endEv(%struct.vector*) #2
+declare ptr @_ZN6vector3endEv(ptr) #2
 
 ; Function Attrs: noreturn nounwind
 declare void @llvm.trap() #3

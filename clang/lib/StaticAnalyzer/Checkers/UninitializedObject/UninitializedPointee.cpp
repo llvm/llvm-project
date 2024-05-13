@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::ento;
@@ -34,20 +35,20 @@ public:
   LocField(const FieldRegion *FR, const bool IsDereferenced = true)
       : FieldNode(FR), IsDereferenced(IsDereferenced) {}
 
-  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+  void printNoteMsg(llvm::raw_ostream &Out) const override {
     if (IsDereferenced)
       Out << "uninitialized pointee ";
     else
       Out << "uninitialized pointer ";
   }
 
-  virtual void printPrefix(llvm::raw_ostream &Out) const override {}
+  void printPrefix(llvm::raw_ostream &Out) const override {}
 
-  virtual void printNode(llvm::raw_ostream &Out) const override {
+  void printNode(llvm::raw_ostream &Out) const override {
     Out << getVariableName(getDecl());
   }
 
-  virtual void printSeparator(llvm::raw_ostream &Out) const override {
+  void printSeparator(llvm::raw_ostream &Out) const override {
     if (getDecl()->getType()->isPointerType())
       Out << "->";
     else
@@ -64,11 +65,11 @@ public:
   NeedsCastLocField(const FieldRegion *FR, const QualType &T)
       : FieldNode(FR), CastBackType(T) {}
 
-  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+  void printNoteMsg(llvm::raw_ostream &Out) const override {
     Out << "uninitialized pointee ";
   }
 
-  virtual void printPrefix(llvm::raw_ostream &Out) const override {
+  void printPrefix(llvm::raw_ostream &Out) const override {
     // If this object is a nonloc::LocAsInteger.
     if (getDecl()->getType()->isIntegerType())
       Out << "reinterpret_cast";
@@ -78,13 +79,11 @@ public:
     Out << '<' << CastBackType.getAsString() << ">(";
   }
 
-  virtual void printNode(llvm::raw_ostream &Out) const override {
+  void printNode(llvm::raw_ostream &Out) const override {
     Out << getVariableName(getDecl()) << ')';
   }
 
-  virtual void printSeparator(llvm::raw_ostream &Out) const override {
-    Out << "->";
-  }
+  void printSeparator(llvm::raw_ostream &Out) const override { Out << "->"; }
 };
 
 /// Represents a Loc field that points to itself.
@@ -93,17 +92,17 @@ class CyclicLocField final : public FieldNode {
 public:
   CyclicLocField(const FieldRegion *FR) : FieldNode(FR) {}
 
-  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+  void printNoteMsg(llvm::raw_ostream &Out) const override {
     Out << "object references itself ";
   }
 
-  virtual void printPrefix(llvm::raw_ostream &Out) const override {}
+  void printPrefix(llvm::raw_ostream &Out) const override {}
 
-  virtual void printNode(llvm::raw_ostream &Out) const override {
+  void printNode(llvm::raw_ostream &Out) const override {
     Out << getVariableName(getDecl());
   }
 
-  virtual void printSeparator(llvm::raw_ostream &Out) const override {
+  void printSeparator(llvm::raw_ostream &Out) const override {
     llvm_unreachable("CyclicLocField objects must be the last node of the "
                      "fieldchain!");
   }
@@ -123,9 +122,9 @@ struct DereferenceInfo {
 
 /// Dereferences \p FR and returns with the pointee's region, and whether it
 /// needs to be casted back to it's location type. If for whatever reason
-/// dereferencing fails, returns with None.
-static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
-                                                   const FieldRegion *FR);
+/// dereferencing fails, returns std::nullopt.
+static std::optional<DereferenceInfo> dereference(ProgramStateRef State,
+                                                  const FieldRegion *FR);
 
 /// Returns whether \p T can be (transitively) dereferenced to a void pointer
 /// type (void*, void**, ...).
@@ -141,10 +140,10 @@ bool FindUninitializedFields::isDereferencableUninit(
   SVal V = State->getSVal(FR);
 
   assert((isDereferencableType(FR->getDecl()->getType()) ||
-          V.getAs<nonloc::LocAsInteger>()) &&
+          isa<nonloc::LocAsInteger>(V)) &&
          "This method only checks dereferenceable objects!");
 
-  if (V.isUnknown() || V.getAs<loc::ConcreteInt>()) {
+  if (V.isUnknown() || isa<loc::ConcreteInt>(V)) {
     IsAnyFieldInitialized = true;
     return false;
   }
@@ -161,7 +160,7 @@ bool FindUninitializedFields::isDereferencableUninit(
 
   // At this point the pointer itself is initialized and points to a valid
   // location, we'll now check the pointee.
-  llvm::Optional<DereferenceInfo> DerefInfo = dereference(State, FR);
+  std::optional<DereferenceInfo> DerefInfo = dereference(State, FR);
   if (!DerefInfo) {
     IsAnyFieldInitialized = true;
     return false;
@@ -219,8 +218,8 @@ bool FindUninitializedFields::isDereferencableUninit(
 //                           Utility functions.
 //===----------------------------------------------------------------------===//
 
-static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
-                                                   const FieldRegion *FR) {
+static std::optional<DereferenceInfo> dereference(ProgramStateRef State,
+                                                  const FieldRegion *FR) {
 
   llvm::SmallSet<const TypedValueRegion *, 5> VisitedRegions;
 
@@ -230,13 +229,13 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
   // If the static type of the field is a void pointer, or it is a
   // nonloc::LocAsInteger, we need to cast it back to the dynamic type before
   // dereferencing.
-  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType()) ||
-                       V.getAs<nonloc::LocAsInteger>();
+  bool NeedsCastBack =
+      isVoidPointer(FR->getDecl()->getType()) || isa<nonloc::LocAsInteger>(V);
 
   // The region we'd like to acquire.
   const auto *R = V.getAsRegion()->getAs<TypedValueRegion>();
   if (!R)
-    return None;
+    return std::nullopt;
 
   VisitedRegions.insert(R);
 
@@ -247,7 +246,7 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
 
     R = Tmp->getAs<TypedValueRegion>();
     if (!R)
-      return None;
+      return std::nullopt;
 
     // We found a cyclic pointer, like int *ptr = (int *)&ptr.
     if (!VisitedRegions.insert(R).second)

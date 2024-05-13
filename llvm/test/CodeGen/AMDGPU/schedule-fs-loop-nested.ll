@@ -1,9 +1,9 @@
-; RUN: llc -march=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs < %s
+; RUN: llc -mtriple=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs < %s
 ; REQUIRES: asserts
 
 define amdgpu_kernel void @main() #0 {
 main_body:
-  %tmp = load <4 x float>, <4 x float> addrspace(9)* null
+  %tmp = load <4 x float>, ptr addrspace(9) null
   %tmp5 = extractelement <4 x float> %tmp, i32 3
   %tmp6 = fptosi float %tmp5 to i32
   %tmp7 = bitcast i32 %tmp6 to float
@@ -20,11 +20,11 @@ main_body:
   %tmp18 = bitcast float %tmp16 to i32
   %tmp19 = add i32 %tmp17, %tmp18
   %tmp20 = bitcast i32 %tmp19 to float
-  %tmp21 = load <4 x float>, <4 x float> addrspace(9)* null
+  %tmp21 = load <4 x float>, ptr addrspace(9) null
   %tmp22 = extractelement <4 x float> %tmp21, i32 0
-  %tmp23 = load <4 x float>, <4 x float> addrspace(9)* null
+  %tmp23 = load <4 x float>, ptr addrspace(9) null
   %tmp24 = extractelement <4 x float> %tmp23, i32 1
-  %tmp25 = load <4 x float>, <4 x float> addrspace(9)* null
+  %tmp25 = load <4 x float>, ptr addrspace(9) null
   %tmp26 = extractelement <4 x float> %tmp25, i32 2
   br label %LOOP
 

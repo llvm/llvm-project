@@ -2,7 +2,7 @@
 
 define i8 @test_atomic_load_add_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i8:
-  %old = atomicrmw add i8* @var8, i8 %offset seq_cst
+  %old = atomicrmw add ptr @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -25,7 +25,7 @@ define i8 @test_atomic_load_add_i8(i8 %offset) nounwind {
 
 define i16 @test_atomic_load_add_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i16:
-  %old = atomicrmw add i16* @var16, i16 %offset acquire
+  %old = atomicrmw add ptr @var16, i16 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -48,7 +48,7 @@ define i16 @test_atomic_load_add_i16(i16 %offset) nounwind {
 
 define i32 @test_atomic_load_add_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32:
-  %old = atomicrmw add i32* @var32, i32 %offset release
+  %old = atomicrmw add ptr @var32, i32 %offset release
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -71,65 +71,65 @@ define i32 @test_atomic_load_add_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_add_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64:
-; CHECK: bl __sync_fetch_and_add_8
-   %old = atomicrmw add i64* @var64, i64 %offset monotonic
-  store i64 %old, i64* @var64
+; CHECK: bl __atomic_fetch_add_8
+   %old = atomicrmw add ptr @var64, i64 %offset monotonic
+  store i64 %old, ptr @var64
   ret void
 }
 
-define i8 @test_load_acquire_i8(i8* %ptr) {
+define i8 @test_load_acquire_i8(ptr %ptr) {
 ; CHECK-LABEL: test_load_acquire_i8:
 ; CHECK: ldab r0, [r0]
-  %val = load atomic i8, i8* %ptr seq_cst, align 1
+  %val = load atomic i8, ptr %ptr seq_cst, align 1
   ret i8 %val
 }
 
-define i16 @test_load_acquire_i16(i16* %ptr) {
+define i16 @test_load_acquire_i16(ptr %ptr) {
 ; CHECK-LABEL: test_load_acquire_i16:
 ; CHECK: ldah r0, [r0]
-  %val = load atomic i16, i16* %ptr acquire, align 2
+  %val = load atomic i16, ptr %ptr acquire, align 2
   ret i16 %val
 }
 
-define i32 @test_load_acquire_i32(i32* %ptr) {
+define i32 @test_load_acquire_i32(ptr %ptr) {
 ; CHECK-LABEL: test_load_acquire_i32:
 ; CHECK: lda r0, [r0]
-  %val = load atomic i32, i32* %ptr acquire, align 4
+  %val = load atomic i32, ptr %ptr acquire, align 4
   ret i32 %val
 }
 
-define i64 @test_load_acquire_i64(i64* %ptr) {
+define i64 @test_load_acquire_i64(ptr %ptr) {
 ; CHECK-LABEL: test_load_acquire_i64:
 ; CHECK: bl __atomic_load
-  %val = load atomic i64, i64* %ptr acquire, align 4
+  %val = load atomic i64, ptr %ptr acquire, align 4
   ret i64 %val
 }
 
-define void @test_store_release_i8(i8 %val, i8* %ptr) {
+define void @test_store_release_i8(i8 %val, ptr %ptr) {
 ; CHECK-LABEL: test_store_release_i8:
 ; CHECK: stlb r0, [r1]
-  store atomic i8 %val, i8* %ptr seq_cst, align 1
+  store atomic i8 %val, ptr %ptr seq_cst, align 1
   ret void
 }
 
-define void @test_store_release_i16(i16 %val, i16* %ptr) {
+define void @test_store_release_i16(i16 %val, ptr %ptr) {
 ; CHECK-LABEL: test_store_release_i16:
 ; CHECK: stlh r0, [r1]
-  store atomic i16 %val, i16* %ptr release, align 2
+  store atomic i16 %val, ptr %ptr release, align 2
   ret void
 }
 
-define void @test_store_release_i32(i32 %val, i32* %ptr) {
+define void @test_store_release_i32(i32 %val, ptr %ptr) {
 ; CHECK-LABEL: test_store_release_i32:
 ; CHECK: stl r0, [r1]
-  store atomic i32 %val, i32* %ptr seq_cst, align 4
+  store atomic i32 %val, ptr %ptr seq_cst, align 4
   ret void
 }
 
-define void @test_store_release_i64(i64 %val, i64* %ptr) {
+define void @test_store_release_i64(i64 %val, ptr %ptr) {
 ; CHECK-LABEL: test_store_release_i64:
 ; CHECK: bl __atomic_store
-  store atomic i64 %val, i64* %ptr seq_cst, align 4
+  store atomic i64 %val, ptr %ptr seq_cst, align 4
   ret void
 }
 

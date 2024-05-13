@@ -13,19 +13,16 @@
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
-#include "llvm/Support/MathExtras.h"
 #include <algorithm>
-#include <map>
 
 using namespace llvm;
 using namespace LegalizeActions;
@@ -80,15 +77,13 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
 }
 
 raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
-  OS << Opcode << ", Tys={";
+  OS << "Opcode=" << Opcode << ", Tys={";
   for (const auto &Type : Types) {
     OS << Type << ", ";
   }
-  OS << "}, Opcode=";
-
-  OS << Opcode << ", MMOs={";
+  OS << "}, MMOs={";
   for (const auto &MMODescr : MMODescrs) {
-    OS << MMODescr.SizeInBits << ", ";
+    OS << MMODescr.MemoryTy << ", ";
   }
   OS << "}";
 
@@ -105,6 +100,7 @@ static bool hasNoSimpleLoops(const LegalizeRule &Rule, const LegalityQuery &Q,
   case Lower:
   case MoreElements:
   case FewerElements:
+  case Libcall:
     break;
   default:
     return Q.Types[Mutation.first] != Mutation.second;
@@ -121,6 +117,10 @@ static bool mutationIsSane(const LegalizeRule &Rule,
   if (Rule.getAction() == Custom || Rule.getAction() == Legal)
     return true;
 
+  // Skip null mutation.
+  if (!Mutation.second.isValid())
+    return true;
+
   const unsigned TypeIdx = Mutation.first;
   const LLT OldTy = Q.Types[TypeIdx];
   const LLT NewTy = Mutation.second;
@@ -129,18 +129,19 @@ static bool mutationIsSane(const LegalizeRule &Rule,
   case FewerElements:
     if (!OldTy.isVector())
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MoreElements: {
     // MoreElements can go from scalar to vector.
-    const unsigned OldElts = OldTy.isVector() ? OldTy.getNumElements() : 1;
+    const ElementCount OldElts = OldTy.isVector() ?
+      OldTy.getElementCount() : ElementCount::getFixed(1);
     if (NewTy.isVector()) {
       if (Rule.getAction() == FewerElements) {
         // Make sure the element count really decreased.
-        if (NewTy.getNumElements() >= OldElts)
+        if (ElementCount::isKnownGE(NewTy.getElementCount(), OldElts))
           return false;
       } else {
         // Make sure the element count really increased.
-        if (NewTy.getNumElements() <= OldElts)
+        if (ElementCount::isKnownLE(NewTy.getElementCount(), OldElts))
           return false;
       }
     } else if (Rule.getAction() == MoreElements)
@@ -153,7 +154,8 @@ static bool mutationIsSane(const LegalizeRule &Rule,
   case WidenScalar: {
     if (OldTy.isVector()) {
       // Number of elements should not change.
-      if (!NewTy.isVector() || OldTy.getNumElements() != NewTy.getNumElements())
+      if (!NewTy.isVector() ||
+          OldTy.getElementCount() != NewTy.getElementCount())
         return false;
     } else {
       // Both types must be vectors
@@ -298,7 +300,7 @@ LegalizeRuleSet &LegalizerInfo::getActionDefinitionsBuilder(
     std::initializer_list<unsigned> Opcodes) {
   unsigned Representative = *Opcodes.begin();
 
-  assert(!llvm::empty(Opcodes) && Opcodes.begin() + 1 != Opcodes.end() &&
+  assert(Opcodes.size() >= 2 &&
          "Initializer list must have at least two opcodes");
 
   for (unsigned Op : llvm::drop_begin(Opcodes))
@@ -332,7 +334,7 @@ LegalizerInfo::getAction(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI) const {
   SmallVector<LLT, 8> Types;
   SmallBitVector SeenTypes(8);
-  const MCOperandInfo *OpInfo = MI.getDesc().OpInfo;
+  ArrayRef<MCOperandInfo> OpInfo = MI.getDesc().operands();
   // FIXME: probably we'll need to cache the results here somehow?
   for (unsigned i = 0; i < MI.getDesc().getNumOperands(); ++i) {
     if (!OpInfo[i].isGenericType())
@@ -352,8 +354,7 @@ LegalizerInfo::getAction(const MachineInstr &MI,
 
   SmallVector<LegalityQuery::MemDesc, 2> MemDescrs;
   for (const auto &MMO : MI.memoperands())
-    MemDescrs.push_back({8 * MMO->getSize() /* in bits */,
-                         8 * MMO->getAlign().value(), MMO->getOrdering()});
+    MemDescrs.push_back({*MMO});
 
   return getAction({MI.getOpcode(), Types, MemDescrs});
 }
@@ -382,14 +383,14 @@ void LegalizerInfo::verify(const MCInstrInfo &MII) const {
   for (unsigned Opcode = FirstOp; Opcode <= LastOp; ++Opcode) {
     const MCInstrDesc &MCID = MII.get(Opcode);
     const unsigned NumTypeIdxs = std::accumulate(
-        MCID.opInfo_begin(), MCID.opInfo_end(), 0U,
+        MCID.operands().begin(), MCID.operands().end(), 0U,
         [](unsigned Acc, const MCOperandInfo &OpInfo) {
           return OpInfo.isGenericType()
                      ? std::max(OpInfo.getGenericTypeIndex() + 1U, Acc)
                      : Acc;
         });
     const unsigned NumImmIdxs = std::accumulate(
-        MCID.opInfo_begin(), MCID.opInfo_end(), 0U,
+        MCID.operands().begin(), MCID.operands().end(), 0U,
         [](unsigned Acc, const MCOperandInfo &OpInfo) {
           return OpInfo.isGenericImm()
                      ? std::max(OpInfo.getGenericImmIndex() + 1U, Acc)

@@ -1,9 +1,8 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=-nontrapping-fptoint | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=-nontrapping-fptoint | FileCheck %s
 
 ; Test that basic conversion operations assemble as expected using
 ; the trapping opcodes and explicit code to suppress the trapping.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: i32_trunc_s_f32:

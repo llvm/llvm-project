@@ -1,4 +1,4 @@
-; RUN: not opt -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
 declare i8 @llvm.experimental.deoptimize.i8(...)
 declare void @llvm.experimental.deoptimize.isVoid(...)
@@ -30,8 +30,8 @@ ok:
   ret void
 
 not_ok:
-  %0 = landingpad { i8*, i32 }
-          filter [0 x i8*] zeroinitializer
+  %0 = landingpad { ptr, i32 }
+          filter [0 x ptr] zeroinitializer
   ret void
 }
 

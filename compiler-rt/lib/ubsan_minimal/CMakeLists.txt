@@ -6,7 +6,9 @@ set(UBSAN_MINIMAL_SOURCES
 
 include_directories(..)
 
-set(UBSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+set(UBSAN_CFLAGS
+  ${SANITIZER_COMMON_CFLAGS}
+  -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS)
 append_rtti_flag(OFF UBSAN_CFLAGS)
 
 set(UBSAN_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
@@ -26,7 +28,7 @@ if(COMPILER_RT_HAS_UBSAN_MINIMAL)
   # Standalone minimal UBSan runtimes.
   add_compiler_rt_runtime(clang_rt.ubsan_minimal
     STATIC
-    OS ${SANITIZER_COMMON_SUPPORTED_OS}
+    OS ${UBSAN_SUPPORTED_OS}
     ARCHS ${UBSAN_SUPPORTED_ARCH}
     OBJECT_LIBS RTUbsan_minimal
     CFLAGS ${UBSAN_CFLAGS}
@@ -34,7 +36,7 @@ if(COMPILER_RT_HAS_UBSAN_MINIMAL)
 
   add_compiler_rt_runtime(clang_rt.ubsan_minimal
     SHARED
-    OS ${SANITIZER_COMMON_SUPPORTED_OS}
+    OS ${UBSAN_SUPPORTED_OS}
     ARCHS ${UBSAN_SUPPORTED_ARCH}
     OBJECT_LIBS RTUbsan_minimal
     CFLAGS ${UBSAN_CFLAGS}

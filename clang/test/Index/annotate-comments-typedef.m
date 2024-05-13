@@ -2,7 +2,6 @@
 // RUN: mkdir %t
 // RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng %s > %t/out
 // RUN: FileCheck %s < %t/out
-// rdar://13067629
 
 // Ensure that XML we generate is not invalid.
 // RUN: FileCheck %s -check-prefix=WRONG < %t/out
@@ -36,7 +35,7 @@ typedef struct {
          int iii;
         } Foo;
 // CHECK: TypedefDecl=Foo:[[@LINE-1]]:11 (Definition) {{.*}} FullCommentAsHTML=[<p class="para-brief"> Comment about Foo </p>] FullCommentAsXML=[<Typedef file="{{[^"]+}}annotate-comments-typedef.m" line="[[@LINE-1]]" column="11"><Name>Foo</Name><USR>c:@T@Foo</USR><Declaration>typedef struct Foo Foo</Declaration><Abstract><Para> Comment about Foo </Para></Abstract></Typedef>]
-// CHECK: StructDecl=:[[@LINE-4]]:9 (Definition) {{.*}} BriefComment=[Comment about Foo] FullCommentAsHTML=[<p class="para-brief"> Comment about Foo </p>] FullCommentAsXML=[<Class file="{{[^"]+}}annotate-comments-typedef.m" line="[[@LINE-4]]" column="9"><Name>&lt;anonymous&gt;</Name><USR>c:@SA@Foo</USR><Declaration>struct {}</Declaration><Abstract><Para> Comment about Foo </Para></Abstract></Class>]
+// CHECK: StructDecl=Foo:[[@LINE-4]]:9 (Definition) {{.*}} BriefComment=[Comment about Foo] FullCommentAsHTML=[<p class="para-brief"> Comment about Foo </p>] FullCommentAsXML=[<Class file="{{[^"]+}}annotate-comments-typedef.m" line="[[@LINE-4]]" column="9"><Name>&lt;anonymous&gt;</Name><USR>c:@SA@Foo</USR><Declaration>struct {}</Declaration><Abstract><Para> Comment about Foo </Para></Abstract></Class>]
 
 
 struct Foo1 {

@@ -13,10 +13,10 @@
 #ifndef LLVM_LIB_TARGET_LANAI_MCTARGETDESC_LANAIINSTPRINTER_H
 #define LLVM_LIB_TARGET_LANAI_MCTARGETDESC_LANAIINSTPRINTER_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
+class StringRef;
 
 class LanaiInstPrinter : public MCInstPrinter {
 public:
@@ -36,7 +36,6 @@ public:
   void printMemSplsOperand(const MCInst *MI, int OpNo, raw_ostream &O,
                            const char *Modifier = nullptr);
   void printCCOperand(const MCInst *MI, int OpNo, raw_ostream &O);
-  void printAluOperand(const MCInst *MI, int OpNo, raw_ostream &O);
   void printHi16ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printHi16AndImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printLo16AndImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
@@ -49,8 +48,8 @@ public:
   void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
                                unsigned OpIdx, unsigned PrintMethodIdx,
                                raw_ostream &O);
-  static const char *getRegisterName(unsigned RegNo);
-  void printRegName(raw_ostream &OS, unsigned RegNo) const override;
+  static const char *getRegisterName(MCRegister Reg);
+  void printRegName(raw_ostream &OS, MCRegister Reg) const override;
 
 private:
   bool printAlias(const MCInst *MI, raw_ostream &Ostream);

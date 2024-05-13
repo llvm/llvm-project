@@ -22,7 +22,7 @@ struct S {
 
 // Clang should generate a packed LLVM struct for S (denoted by the <>s),
 // otherwise this test isn't interesting.
-// CHECK: %struct.S = type <{ i32*, i8, %struct.U, [5 x i8] }>
+// CHECK: %struct.S = type <{ ptr, i8, %struct.U, [5 x i8] }>
 
 static_assert(alignof(S) == 8, "Unexpected alignment.");
 
@@ -36,5 +36,5 @@ static_assert(alignof(S) == 8, "Unexpected alignment.");
 // HOST-OLD: call i32 @cudaSetupArgument({{[^,]*}}, i64 8, i64 24)
 
 // DEVICE-LABEL: @_Z6kernelc1SPi
-// DEVICE-SAME: i8{{[^,]*}}, %struct.S* byval(%struct.S) align 8{{[^,]*}}, i32*
+// DEVICE-SAME: i8{{[^,]*}}, ptr noundef byval(%struct.S) align 8{{[^,]*}}, ptr
 __global__ void kernel(char a, S s, int *b) {}

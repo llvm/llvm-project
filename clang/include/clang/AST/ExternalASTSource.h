@@ -20,18 +20,16 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <string>
+#include <optional>
 #include <utility>
 
 namespace clang {
@@ -101,7 +99,7 @@ public:
   /// passes back decl sets as VisibleDeclaration objects.
   ///
   /// The default implementation of this method is a no-op.
-  virtual Decl *GetExternalDecl(uint32_t ID);
+  virtual Decl *GetExternalDecl(GlobalDeclID ID);
 
   /// Resolve a selector ID into a selector.
   ///
@@ -140,7 +138,7 @@ public:
   virtual CXXBaseSpecifier *GetExternalCXXBaseSpecifiers(uint64_t Offset);
 
   /// Update an out-of-date identifier.
-  virtual void updateOutOfDateIdentifier(IdentifierInfo &II) {}
+  virtual void updateOutOfDateIdentifier(const IdentifierInfo &II) {}
 
   /// Find all declarations with the given name in the given context,
   /// and add them to the context by calling SetExternalVisibleDeclsForName
@@ -162,7 +160,7 @@ public:
   virtual Module *getModule(unsigned ID) { return nullptr; }
 
   /// Return a descriptor for the corresponding module, if one exists.
-  virtual llvm::Optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID);
+  virtual std::optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID);
 
   enum ExtKind { EK_Always, EK_Never, EK_ReplyHazy };
 
@@ -373,13 +371,21 @@ public:
   /// \param Source the external AST source.
   ///
   /// \returns a pointer to the AST node.
-  T* get(ExternalASTSource *Source) const {
+  T *get(ExternalASTSource *Source) const {
     if (isOffset()) {
       assert(Source &&
              "Cannot deserialize a lazy pointer without an AST source");
-      Ptr = reinterpret_cast<uint64_t>((Source->*Get)(Ptr >> 1));
+      Ptr = reinterpret_cast<uint64_t>((Source->*Get)(OffsT(Ptr >> 1)));
     }
     return reinterpret_cast<T*>(Ptr);
+  }
+
+  /// Retrieve the address of the AST node pointer. Deserializes the pointee if
+  /// necessary.
+  T **getAddressOfPointer(ExternalASTSource *Source) const {
+    // Ensure the integer is in pointer form.
+    (void)get(Source);
+    return reinterpret_cast<T**>(&Ptr);
   }
 };
 
@@ -573,7 +579,7 @@ using LazyDeclStmtPtr =
 
 /// A lazy pointer to a declaration.
 using LazyDeclPtr =
-    LazyOffsetPtr<Decl, uint32_t, &ExternalASTSource::GetExternalDecl>;
+    LazyOffsetPtr<Decl, GlobalDeclID, &ExternalASTSource::GetExternalDecl>;
 
 /// A lazy pointer to a set of CXXCtorInitializers.
 using LazyCXXCtorInitializersPtr =

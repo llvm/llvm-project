@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
   omp_nest_lock_t lock;
   omp_init_nest_lock(&lock);
 
-#pragma omp parallel num_threads(2) shared(var)
+#pragma omp parallel num_threads(8) shared(var)
   {
     omp_set_nest_lock(&lock);
     omp_set_nest_lock(&lock);
@@ -44,4 +44,4 @@ int main(int argc, char *argv[]) {
 // CHECK:   Previous write of size 4
 // CHECK-NEXT: #0 {{.*}}lock-nested-unrelated.c:33
 // CHECK: DONE
-// CHECK: ThreadSanitizer: reported 1 warnings
+// CHECK: ThreadSanitizer: reported {{[1-7]}} warnings

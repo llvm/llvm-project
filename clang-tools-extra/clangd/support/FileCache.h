@@ -11,10 +11,9 @@
 
 #include "Path.h"
 #include "ThreadsafeFS.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Chrono.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -58,7 +57,7 @@ protected:
   //   - steady_clock::now() + seconds(1) means we accept 1 second of staleness
   void read(const ThreadsafeFS &TFS,
             std::chrono::steady_clock::time_point FreshTime,
-            llvm::function_ref<void(llvm::Optional<llvm::StringRef>)> Parse,
+            llvm::function_ref<void(std::optional<llvm::StringRef>)> Parse,
             llvm::function_ref<void()> Read) const;
 
   PathRef path() const { return Path; }

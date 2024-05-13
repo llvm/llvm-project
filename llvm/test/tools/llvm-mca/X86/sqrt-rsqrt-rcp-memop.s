@@ -7,6 +7,7 @@
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=haswell -iterations=1 -all-views=false -timeline < %s | FileCheck %s -check-prefixes=ALL,HASWELL
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=broadwell -iterations=1 -all-views=false -timeline < %s | FileCheck %s -check-prefixes=ALL,BROADWELL
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -all-views=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -iterations=1 -all-views=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
 
 #LLVM-MCA-BEGIN  test_sqrtss
 leaq 8(%rsp, %rdi, 2), %rax
@@ -50,11 +51,11 @@ rcpss (%rax), %xmm1
 # SKYLAKE-NEXT:                       0123456789
 # SKYLAKE-NEXT:   Index     0123456789          0
 
-# ZNVER1-NEXT:                        0123456789          0
-# ZNVER1-NEXT:    Index     0123456789          0123456789
+# ZNVER1-NEXT:                        0123456789
+# ZNVER1-NEXT:    Index     0123456789          01234
 
-# ZNVER2-NEXT:                        0123456789          0
-# ZNVER2-NEXT:    Index     0123456789          0123456789
+# ZNVER2-NEXT:                        0123456789
+# ZNVER2-NEXT:    Index     0123456789          01234
 
 # BARCELONA:      [0,0]     DeER .    .    .    .  .   leaq	8(%rsp,%rdi,2), %rax
 # BARCELONA-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
@@ -74,11 +75,11 @@ rcpss (%rax), %xmm1
 # SKYLAKE:        [0,0]     DeER .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
 # SKYLAKE-NEXT:   [0,1]     D=eeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
-# ZNVER1:         [0,0]     DeER .    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# ZNVER1:         [0,0]     DeER .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
+# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
-# ZNVER2:         [0,0]     DeER .    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER2-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# ZNVER2:         [0,0]     DeER .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
+# ZNVER2-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions

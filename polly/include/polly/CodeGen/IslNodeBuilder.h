@@ -58,7 +58,7 @@ struct SubtreeReferences {
 ///                         SubtreeReferences structure.
 /// @param CreateScalarRefs Should the result include allocas of scalar
 ///                         references?
-void addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+void addReferencesFromStmt(ScopStmt *Stmt, void *UserPtr,
                            bool CreateScalarRefs = true);
 
 class IslNodeBuilder {
@@ -77,13 +77,6 @@ public:
   virtual ~IslNodeBuilder() = default;
 
   void addParameters(__isl_take isl_set *Context);
-
-  /// Create Values which hold the sizes of the outermost dimension of all
-  /// Fortran arrays in the current scop.
-  ///
-  /// @returns False, if a problem occurred and a Fortran array was not
-  /// materialized. True otherwise.
-  bool materializeFortranArrayOutermostDimension();
 
   /// Generate code that evaluates @p Condition at run-time.
   ///
@@ -217,7 +210,8 @@ protected:
   //    of loop iterations.
   //
   // 3. With the existing code, upper bounds have been easier to implement.
-  isl::ast_expr getUpperBound(isl::ast_node For, CmpInst::Predicate &Predicate);
+  isl::ast_expr getUpperBound(isl::ast_node_for For,
+                              CmpInst::Predicate &Predicate);
 
   /// Return non-negative number of iterations in case of the following form
   /// of a loop and -1 otherwise.
@@ -228,7 +222,7 @@ protected:
   ///
   /// NumIter is a non-negative integer value. Condition can have
   /// isl_ast_op_lt type.
-  int getNumberOfIterations(isl::ast_node For);
+  int getNumberOfIterations(isl::ast_node_for For);
 
   /// Compute the values and loops referenced in this subtree.
   ///
@@ -316,8 +310,7 @@ protected:
   /// @returns False, iff a problem occurred and the load was not preloaded.
   bool preloadInvariantEquivClass(InvariantEquivClassTy &IAClass);
 
-  void createForVector(__isl_take isl_ast_node *For, int VectorWidth);
-  void createForSequential(isl::ast_node For, bool MarkParallel);
+  void createForSequential(isl::ast_node_for For, bool MarkParallel);
 
   /// Create LLVM-IR that executes a for node thread parallel.
   ///
@@ -381,10 +374,6 @@ protected:
                                  std::vector<Value *> &IVS,
                                  __isl_take isl_id *IteratorID);
   virtual void createIf(__isl_take isl_ast_node *If);
-  void createUserVector(__isl_take isl_ast_node *User,
-                        std::vector<Value *> &IVS,
-                        __isl_take isl_id *IteratorID,
-                        __isl_take isl_union_map *Schedule);
   virtual void createUser(__isl_take isl_ast_node *User);
   virtual void createBlock(__isl_take isl_ast_node *Block);
 

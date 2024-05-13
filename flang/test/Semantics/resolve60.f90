@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Testing 7.6 enum
 
   ! OK
@@ -32,6 +32,7 @@
 
   enum, bind(C)
     !ERROR: Enumerator value could not be computed from the given expression
+    !WARNING: INTEGER(4) division by zero
     !ERROR: Must be a constant value
     enumerator :: wrong = 0/0
   end enum

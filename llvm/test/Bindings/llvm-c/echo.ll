@@ -1,19 +1,19 @@
 ; RUN: llvm-as < %s | llvm-dis > %t.orig
 ; RUN: llvm-as < %s | llvm-c-test --echo > %t.echo
 ; RUN: diff -w %t.orig %t.echo
-
+;
 source_filename = "/test/Bindings/echo.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
 module asm "classical GAS"
 
-%S = type { i64, %S* }
+%S = type { i64, ptr }
 
 @var = global i32 42
-@ext = external global i32*
-@cst = constant %S { i64 1, %S* @cst }
-@tl = thread_local global { i64, %S* } { i64 1, %S* @cst }
+@ext = external global ptr
+@cst = constant %S { i64 1, ptr @cst }
+@tl = thread_local global { i64, ptr } { i64 1, ptr @cst }
 @arr = linkonce_odr global [5 x i8] [ i8 2, i8 3, i8 5, i8 7, i8 11 ]
 @str = private unnamed_addr constant [13 x i8] c"hello world\0A\00"
 @locStr = private local_unnamed_addr constant [13 x i8] c"hello world\0A\00"
@@ -21,27 +21,30 @@ module asm "classical GAS"
 @protected = protected global i32 23
 @section = global i32 27, section ".custom"
 @align = global i32 31, align 4
-@nullptr = global i32* null
+@nullptr = global ptr null
 
-@aliased1 = alias i32, i32* @var
-@aliased2 = internal alias i32, i32* @var
-@aliased3 = external alias i32, i32* @var
-@aliased4 = weak alias i32, i32* @var
-@aliased5 = weak_odr alias i32, i32* @var
+@const_gep = global ptr getelementptr (i32, ptr @var, i64 2)
+@const_inbounds_gep = global ptr getelementptr inbounds (i32, ptr @var, i64 1)
 
-@ifunc = ifunc i32 (i32), i64 ()* @ifunc_resolver
+@aliased1 = alias i32, ptr @var
+@aliased2 = internal alias i32, ptr @var
+@aliased3 = external alias i32, ptr @var
+@aliased4 = weak alias i32, ptr @var
+@aliased5 = weak_odr alias i32, ptr @var
 
-define i64 @ifunc_resolver() {
+@ifunc = ifunc i32 (i32), ptr @ifunc_resolver
+
+define ptr @ifunc_resolver() {
 entry:
-  ret i64 0
+  ret ptr null
 }
 
-define { i64, %S* } @unpackrepack(%S %s) {
+define { i64, ptr } @unpackrepack(%S %s) {
   %1 = extractvalue %S %s, 0
   %2 = extractvalue %S %s, 1
-  %3 = insertvalue { i64, %S* } undef, %S* %2, 1
-  %4 = insertvalue { i64, %S* } %3, i64 %1, 0
-  ret { i64, %S* } %4
+  %3 = insertvalue { i64, ptr } undef, ptr %2, 1
+  %4 = insertvalue { i64, ptr } %3, i64 %1, 0
+  ret { i64, ptr } %4
 }
 
 declare void @decl()
@@ -55,10 +58,10 @@ define void @types() {
   %5 = alloca fp128, align 16
   %6 = alloca ppc_fp128, align 16
   %7 = alloca i7, align 1
-  %8 = alloca void (i1)*, align 8
+  %8 = alloca ptr, align 8
   %9 = alloca [3 x i22], align 4
-  %10 = alloca i328 addrspace(5)*, align 8
-  %11 = alloca <5 x i23*>, align 64
+  %10 = alloca ptr addrspace(5), align 8
+  %11 = alloca <5 x ptr>, align 64
   %12 = alloca x86_mmx, align 8
   ret void
 }
@@ -77,12 +80,56 @@ define i32 @iops(i32 %a, i32 %b) {
   %11 = and i32 %9, %10
   %12 = or i32 %2, %11
   %13 = xor i32 %12, %4
-  ret i32 %13
+  %14 = add nuw i32 %13, %a
+  %15 = add nsw i32 %14, %b
+  %16 = add nuw nsw i32 %15, %a
+  %17 = shl nuw i32 %16, %a
+  %18 = shl nsw i32 %17, %b
+  %19 = shl nuw nsw i32 %18, %a
+  %20 = udiv exact i32 %19, %1
+  %21 = sdiv exact i32 %20, %2
+  %22 = lshr exact i32 %21, %4
+  %23 = ashr exact i32 %22, %14
+  %24 = zext i32 %23 to i64
+  %25 = zext nneg i32 %23 to i64
+  %26 = or disjoint i32 %23, %a
+  ret i32 %26
 }
 
 define i32 @call() {
   %1 = call i32 @iops(i32 23, i32 19)
   ret i32 %1
+}
+
+define i32 @tailcall() {
+  %1 = tail call i32 @call()
+  ret i32 %1
+}
+
+define i32 @musttailcall() {
+  %1 = musttail call i32 @call()
+  ret i32 %1
+}
+
+define i32 @notailcall() {
+  %1 = notail call i32 @call()
+  ret i32 %1
+}
+
+define i32 @call_inline_asm(i32 %0) {
+	; Test Intel syntax
+	%2 = tail call i32 asm sideeffect inteldialect "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %0)
+	%3 = tail call i32 asm sideeffect inteldialect "lea $0, [$1+$2]", "=r,r,r,~{dirflag},~{fpsr},~{flags}"(i32 %0, i32 %2)
+	%4 = tail call i32 asm inteldialect "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %3)
+	%5 = tail call i32 asm inteldialect unwind "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %4)
+	%6 = tail call i32 asm alignstack inteldialect "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %5)
+
+	; Test AT&T syntax
+	%7 = tail call i32 asm "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %6)
+	%8 = tail call i32 asm sideeffect "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %7)
+	%9 = tail call i32 asm alignstack "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %8)
+	%10 = tail call i32 asm alignstack unwind "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %9)
+	ret i32 %10
 }
 
 define i32 @cond(i32 %a, i32 %b) {
@@ -139,20 +186,20 @@ done:
   ret i32 %p
 }
 
-define void @memops(i8* %ptr) {
-  %a = load i8, i8* %ptr
-  %b = load volatile i8, i8* %ptr
-  %c = load i8, i8* %ptr, align 8
-  %d = load atomic i8, i8* %ptr acquire, align 32
-  store i8 0, i8* %ptr
-  store volatile i8 0, i8* %ptr
-  store i8 0, i8* %ptr, align 8
-  store atomic i8 0, i8* %ptr release, align 32
-  %e = atomicrmw add i8* %ptr, i8 0 monotonic, align 1
-  %f = atomicrmw volatile xchg i8* %ptr, i8 0 acq_rel, align 8
-  %g = cmpxchg i8* %ptr, i8 1, i8 2 seq_cst acquire, align 1
-  %h = cmpxchg weak i8* %ptr, i8 1, i8 2 seq_cst acquire, align 8
-  %i = cmpxchg volatile i8* %ptr, i8 1, i8 2 monotonic monotonic, align 16
+define void @memops(ptr %ptr) {
+  %a = load i8, ptr %ptr
+  %b = load volatile i8, ptr %ptr
+  %c = load i8, ptr %ptr, align 8
+  %d = load atomic i8, ptr %ptr acquire, align 32
+  store i8 0, ptr %ptr
+  store volatile i8 0, ptr %ptr
+  store i8 0, ptr %ptr, align 8
+  store atomic i8 0, ptr %ptr release, align 32
+  %e = atomicrmw add ptr %ptr, i8 0 monotonic, align 1
+  %f = atomicrmw volatile xchg ptr %ptr, i8 0 acq_rel, align 8
+  %g = cmpxchg ptr %ptr, i8 1, i8 2 seq_cst acquire, align 1
+  %h = cmpxchg weak ptr %ptr, i8 1, i8 2 seq_cst acquire, align 8
+  %i = cmpxchg volatile ptr %ptr, i8 1, i8 2 monotonic monotonic, align 16
   ret void
 }
 
@@ -189,7 +236,7 @@ define i32 @scalablevectorops(i32, <vscale x 4 x i32>) {
 
 declare void @personalityFn()
 
-define void @exn() personality void ()* @personalityFn {
+define void @exn() personality ptr @personalityFn {
 entry:
   invoke void @decl()
           to label %via.cleanup unwind label %exn.dispatch
@@ -222,23 +269,108 @@ exit:
   ret void
 }
 
+define void @operandbundles() personality ptr @personalityFn {
+  call void @decl() [ "foo"(), "bar\00x"(i32 0, ptr null, token none) ]
+  invoke void @decl() [ "baz"(label %bar) ] to label %foo unwind label %bar
+foo:
+  ret void
+bar:
+  %1 = landingpad { ptr, i32 }
+          cleanup
+  ret void
+}
+
 define void @with_debuginfo() !dbg !4 {
   ret void, !dbg !7
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
-declare void @llvm.lifetime.start.p0i8(i64, i8*)
-declare void @llvm.lifetime.end.p0i8(i64, i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
+declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.end.p0(i64, ptr)
 
 define void @test_intrinsics() {
 entry:
-  %sp = call i8* @llvm.stacksave()
-  %x = alloca i32, align 4
-  %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0)
-  call void @llvm.stackrestore(i8* %sp)
+  %sp = call ptr @llvm.stacksave()
+  %0 = alloca i8, align 1
+  call void @llvm.lifetime.start.p0(i64 1, ptr %0)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %0)
+  call void @llvm.stackrestore(ptr %sp)
+  ret void
+}
+
+define void @test_fast_math_flags(i1 %c, float %a, float %b) {
+entry:
+  %select.f.1 = select i1 %c, float %a, float %b
+  %select.f.2 = select nsz i1 %c, float %a, float %b
+  %select.f.3 = select fast i1 %c, float %a, float %b
+  %select.f.4 = select nnan arcp afn i1 %c, float %a, float %b
+
+  br i1 %c, label %choose_a, label %choose_b
+
+choose_a:
+  br label %final
+
+choose_b:
+  br label %final
+
+final:
+  %phi.f.1 = phi float  [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.2 = phi nsz float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.3 = phi fast float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.4 = phi nnan arcp afn float [ %a, %choose_a ], [ %b, %choose_b ]
+  ret void
+}
+
+define float @test_fast_math_flags_call_inner(float %a) {
+  ret float %a
+}
+
+define void @test_fast_math_flags_call_outer(float %a) {
+  %a.1 = call float @test_fast_math_flags_call_inner(float %a)
+  %a.2 = call nsz float @test_fast_math_flags_call_inner(float %a)
+  %a.3 = call fast float @test_fast_math_flags_call_inner(float %a)
+  %a.4 = call nnan arcp afn float @test_fast_math_flags_call_inner(float %a)
+  ret void
+}
+
+define void @test_func_prefix_data_01() prefix i32 123 {
+  ret void
+}
+
+define void @test_func_prefix_data_02() prefix i64 2000 {
+  ret void
+}
+
+%func_prolog_struct = type <{ i8, i8, ptr }>
+
+define void @test_func_prologue_data_01() prologue %func_prolog_struct <{ i8 235, i8 8, ptr zeroinitializer}> {
+  ret void
+}
+
+
+define void @test_call_br_01(i32 %input) {
+entry:
+  callbr void asm "nop", "r,!i"(i32 %input) to label %bb_01 [label %bb_02]
+
+bb_01:
+  ret void
+bb_02:
+  ret void
+}
+
+define void @test_call_br_02(i32 %input0, i32 %input1) {
+entry:
+  ; Multiple indirect destinations, operand bundles, and arguments
+  callbr void asm "nop", "r,r,!i,!i"(i32 %input0, i32 %input1)
+    ["op0"(i32 %input1), "op1"(label %bb_02)]
+    to label %bb_01 [label %bb_03, label %bb_02]
+
+bb_01:
+  ret void
+bb_02:
+  ret void
+bb_03:
   ret void
 }
 

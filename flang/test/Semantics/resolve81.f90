@@ -1,13 +1,13 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C801 The same attr-spec shall not appear more than once in a given
 ! type-declaration-stmt.
 !
 ! R801 type-declaration-stmt ->
 !        declaration-type-spec [[, attr-spec]... ::] entity-decl-list
 !  attr-spec values are:
-!    PUBLIC, PRIVATE, ALLOCATABLE, ASYNCHRONOUS, CODIMENSION, CONTIGUOUS, 
-!    DIMENSION (array-spec), EXTERNAL, INTENT (intent-spec), INTRINSIC, 
-!    BIND(C), OPTIONAL, PARAMETER, POINTER, PROTECTED, SAVE, TARGET, VALUE, 
+!    PUBLIC, PRIVATE, ALLOCATABLE, ASYNCHRONOUS, CODIMENSION, CONTIGUOUS,
+!    DIMENSION (array-spec), EXTERNAL, INTENT (intent-spec), INTRINSIC,
+!    BIND(C), OPTIONAL, PARAMETER, POINTER, PROTECTED, SAVE, TARGET, VALUE,
 !    VOLATILE
 module m
 
@@ -28,6 +28,7 @@ module m
   !WARNING: Attribute 'EXTERNAL' cannot be used more than once
   real, external, external :: externFunc
   !WARNING: Attribute 'INTRINSIC' cannot be used more than once
+  !ERROR: 'cos' may not have both the BIND(C) and INTRINSIC attributes
   real, intrinsic, bind(c), intrinsic :: cos
   !WARNING: Attribute 'BIND(C)' cannot be used more than once
   integer, bind(c), volatile, bind(c) :: bindVar

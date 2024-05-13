@@ -24,11 +24,15 @@ int main(int, char**)
     assert(static_cast<bool>(ios) == !ios.fail());
     ios.setstate(std::ios::failbit);
     assert(static_cast<bool>(ios) == !ios.fail());
-    static_assert((!std::is_convertible<std::ios, void*>::value), "");
     static_assert((!std::is_convertible<std::ios, int>::value), "");
     static_assert((!std::is_convertible<std::ios const&, int>::value), "");
 #if TEST_STD_VER >= 11
-    static_assert((!std::is_convertible<std::ios, bool>::value), "");
+    static_assert(!std::is_convertible<std::ios, void*>::value, "");
+    static_assert(!std::is_convertible<std::ios, bool>::value, "");
+#else
+    static_assert(std::is_convertible<std::ios, void*>::value, "");
+    static_assert(std::is_convertible<std::ios, bool>::value, "");
+    (void)(ios == 0);  // SPEC2006 apparently relies on this to compile
 #endif
 
   return 0;

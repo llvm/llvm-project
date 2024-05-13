@@ -1,4 +1,3 @@
-; RUN: opt -S -rewrite-statepoints-for-gc < %s | FileCheck %s
 ; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
 ;
 ; A test to make sure that we can look through bitcasts of
@@ -7,7 +6,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare i8 addrspace(1)* @foo()
+declare ptr addrspace(1) @foo()
 
 ; Function Attrs: uwtable
 define i32 @test() gc "statepoint-example" {
@@ -15,15 +14,15 @@ define i32 @test() gc "statepoint-example" {
 entry:
 ; CHECK-LABEL: entry
 ; CHECK: %bc = bitcast
-; CHECK: %[[p1:[A-Za-z0-9_]+]] = extractelement
+; CHECK: %[[p1:[A-Za-z0-9_.]+]] = extractelement
 ; CHECK: %[[p2:[A-Za-z0-9_]+]] = extractelement
 ; CHECK: llvm.experimental.gc.statepoint
 ; CHECK: %[[p2]].relocated = {{.+}} @llvm.experimental.gc.relocate
 ; CHECK: %[[p1]].relocated = {{.+}} @llvm.experimental.gc.relocate
 ; CHECK: load atomic
-  %bc = bitcast <8 x i8 addrspace(1)*> undef to <8 x i32 addrspace(1)*>
-  %ptr= extractelement <8 x i32 addrspace(1)*> %bc, i32 7
-  %0 = call i8 addrspace(1)* @foo() [ "deopt"() ]
-  %1 = load atomic i32, i32 addrspace(1)* %ptr unordered, align 4
+  %bc = bitcast <8 x ptr addrspace(1)> undef to <8 x ptr addrspace(1)>
+  %ptr= extractelement <8 x ptr addrspace(1)> %bc, i32 7
+  %0 = call ptr addrspace(1) @foo() [ "deopt"() ]
+  %1 = load atomic i32, ptr addrspace(1) %ptr unordered, align 4
   ret i32 %1
 }

@@ -18,28 +18,6 @@
 namespace llvm {
 namespace jitlink {
 
-namespace MachO_arm64_Edges {
-
-enum MachOARM64RelocationKind : Edge::Kind {
-  Branch26 = Edge::FirstRelocation,
-  Pointer32,
-  Pointer64,
-  Pointer64Anon,
-  Page21,
-  PageOffset12,
-  GOTPage21,
-  GOTPageOffset12,
-  PointerToGOT,
-  PairedAddend,
-  LDRLiteral19,
-  Delta32,
-  Delta64,
-  NegDelta32,
-  NegDelta64,
-};
-
-} // namespace MachO_arm64_Edges
-
 /// Create a LinkGraph from a MachO/arm64 relocatable object.
 ///
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
@@ -60,8 +38,13 @@ createLinkGraphFromMachOObject_arm64(MemoryBufferRef ObjectBuffer);
 void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
                       std::unique_ptr<JITLinkContext> Ctx);
 
-/// Return the string name of the given MachO arm64 edge kind.
-const char *getMachOARM64RelocationKindName(Edge::Kind R);
+/// Returns a pass suitable for splitting __eh_frame sections in MachO/x86-64
+/// objects.
+LinkGraphPassFunction createEHFrameSplitterPass_MachO_arm64();
+
+/// Returns a pass suitable for fixing missing edges in an __eh_frame section
+/// in a MachO/x86-64 object.
+LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_arm64();
 
 } // end namespace jitlink
 } // end namespace llvm

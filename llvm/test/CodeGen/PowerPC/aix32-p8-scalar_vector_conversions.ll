@@ -25,9 +25,9 @@ entry:
 define <8 x i16> @builds(i16 zeroext %a) {
 ; CHECK-LABEL: builds:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi 4, 1, -16
 ; CHECK-NEXT:    sth 3, -16(1)
-; CHECK-NEXT:    lxvw4x 34, 0, 4
+; CHECK-NEXT:    addi 3, 1, -16
+; CHECK-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-NEXT:    vsplth 2, 2, 0
 ; CHECK-NEXT:    blr
 entry:
@@ -40,9 +40,9 @@ entry:
 define <4 x i32> @buildi(i32 zeroext %a) {
 ; CHECK-LABEL: buildi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi 4, 1, -16
 ; CHECK-NEXT:    stw 3, -16(1)
-; CHECK-NEXT:    lxvw4x 0, 0, 4
+; CHECK-NEXT:    addi 3, 1, -16
+; CHECK-NEXT:    lxvw4x 0, 0, 3
 ; CHECK-NEXT:    xxspltw 34, 0, 0
 ; CHECK-NEXT:    blr
 entry:
@@ -55,15 +55,15 @@ entry:
 define <2 x i64> @buildl(i64 %a) {
 ; CHECK-LABEL: buildl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stw 4, -16(1)
 ; CHECK-NEXT:    stw 3, -32(1)
-; CHECK-NEXT:    addi 3, 1, -16
-; CHECK-NEXT:    addi 4, 1, -32
+; CHECK-NEXT:    lwz 3, L..C0(2) # %const.0
+; CHECK-NEXT:    stw 4, -16(1)
 ; CHECK-NEXT:    lxvw4x 34, 0, 3
-; CHECK-NEXT:    lxvw4x 35, 0, 4
-; CHECK-NEXT:    vmrghw 2, 3, 2
-; CHECK-NEXT:    xxswapd 0, 34
-; CHECK-NEXT:    xxsldwi 34, 0, 34, 2
+; CHECK-NEXT:    addi 3, 1, -16
+; CHECK-NEXT:    lxvw4x 35, 0, 3
+; CHECK-NEXT:    addi 3, 1, -32
+; CHECK-NEXT:    lxvw4x 36, 0, 3
+; CHECK-NEXT:    vperm 2, 4, 3, 2
 ; CHECK-NEXT:    blr
 entry:
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %a, i32 0
@@ -90,11 +90,11 @@ entry:
 define <2 x double> @buildd() {
 ; CHECK-LABEL: buildd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz 3, L..C0(2)
+; CHECK-NEXT:    lwz 3, L..C1(2) # @d
 ; CHECK-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load double, double* @d, align 8
+  %0 = load double, ptr @d, align 8
   %splat.splatinsert = insertelement <2 x double> undef, double %0, i32 0
   %splat.splat = shufflevector <2 x double> %splat.splatinsert, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %splat.splat
@@ -990,11 +990,11 @@ entry:
 define i64 @getvelsl(<2 x i64> %vsl, i32 signext %i) {
 ; CHECK-LABEL: getvelsl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    add 3, 3, 3
+; CHECK-NEXT:    add 5, 3, 3
 ; CHECK-NEXT:    addi 4, 1, -16
-; CHECK-NEXT:    addi 5, 3, 1
+; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-NEXT:    addi 5, 5, 1
 ; CHECK-NEXT:    stxvw4x 34, 0, 4
-; CHECK-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-NEXT:    lwzx 3, 4, 3
 ; CHECK-NEXT:    lwzx 4, 4, 5
@@ -1008,11 +1008,11 @@ entry:
 define i64 @getvelul(<2 x i64> %vul, i32 signext %i) {
 ; CHECK-LABEL: getvelul:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    add 3, 3, 3
+; CHECK-NEXT:    add 5, 3, 3
 ; CHECK-NEXT:    addi 4, 1, -16
-; CHECK-NEXT:    addi 5, 3, 1
+; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-NEXT:    addi 5, 5, 1
 ; CHECK-NEXT:    stxvw4x 34, 0, 4
-; CHECK-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-NEXT:    lwzx 3, 4, 3
 ; CHECK-NEXT:    lwzx 4, 4, 5

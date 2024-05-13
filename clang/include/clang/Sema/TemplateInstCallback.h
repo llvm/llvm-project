@@ -11,8 +11,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TEMPLATE_INST_CALLBACK_H
-#define LLVM_CLANG_TEMPLATE_INST_CALLBACK_H
+#ifndef LLVM_CLANG_SEMA_TEMPLATEINSTCALLBACK_H
+#define LLVM_CLANG_SEMA_TEMPLATEINSTCALLBACK_H
 
 #include "clang/Sema/Sema.h"
 

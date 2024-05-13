@@ -227,6 +227,14 @@ namespace llvm {
     const_vni_iterator vni_begin() const { return valnos.begin(); }
     const_vni_iterator vni_end() const   { return valnos.end(); }
 
+    iterator_range<vni_iterator> vnis() {
+      return make_range(vni_begin(), vni_end());
+    }
+
+    iterator_range<const_vni_iterator> vnis() const {
+      return make_range(vni_begin(), vni_end());
+    }
+
     /// Constructs a new LiveRange object.
     LiveRange(bool UseSegmentSet = false)
         : segmentSet(UseSegmentSet ? std::make_unique<SegmentSet>()
@@ -318,11 +326,11 @@ namespace llvm {
       return VNI && VNI->id < getNumValNums() && VNI == getValNumInfo(VNI->id);
     }
 
-    /// getNextValue - Create a new value number and return it.  MIIdx specifies
-    /// the instruction that defines the value number.
-    VNInfo *getNextValue(SlotIndex def, VNInfo::Allocator &VNInfoAllocator) {
+    /// getNextValue - Create a new value number and return it.
+    /// @p Def is the index of instruction that defines the value number.
+    VNInfo *getNextValue(SlotIndex Def, VNInfo::Allocator &VNInfoAllocator) {
       VNInfo *VNI =
-        new (VNInfoAllocator) VNInfo((unsigned)valnos.size(), def);
+        new (VNInfoAllocator) VNInfo((unsigned)valnos.size(), Def);
       valnos.push_back(VNI);
       return VNI;
     }
@@ -512,8 +520,9 @@ namespace llvm {
         endIndex() < End.getBoundaryIndex();
     }
 
-    /// Remove the specified segment from this range.  Note that the segment
-    /// must be a single Segment in its entirety.
+    /// Remove the specified interval from this live range.
+    /// Does nothing if interval is not part of this live range.
+    /// Note that the interval must be within a single Segment in its entirety.
     void removeSegment(SlotIndex Start, SlotIndex End,
                        bool RemoveDeadValNo = false);
 
@@ -521,11 +530,11 @@ namespace llvm {
       removeSegment(S.start, S.end, RemoveDeadValNo);
     }
 
-    /// Remove segment pointed to by iterator @p I from this range.  This does
-    /// not remove dead value numbers.
-    iterator removeSegment(iterator I) {
-      return segments.erase(I);
-    }
+    /// Remove segment pointed to by iterator @p I from this range.
+    iterator removeSegment(iterator I, bool RemoveDeadValNo = false);
+
+    /// Mark \p ValNo for deletion if no segments in this range use it.
+    void removeValNoIfDead(VNInfo *ValNo);
 
     /// Query Liveness at Idx.
     /// The sub-instruction slot of Idx doesn't matter, only the instruction
@@ -625,10 +634,8 @@ namespace llvm {
         // if the Seg is lower find first segment that is above Idx using binary
         // search
         if (Seg->end <= *Idx) {
-          Seg = std::upper_bound(
-              ++Seg, EndSeg, *Idx,
-              [=](std::remove_reference_t<decltype(*Idx)> V,
-                  const std::remove_reference_t<decltype(*Seg)> &S) {
+          Seg =
+              std::upper_bound(++Seg, EndSeg, *Idx, [=](auto V, const auto &S) {
                 return V < S.end;
               });
           if (Seg == EndSeg)
@@ -724,7 +731,13 @@ namespace llvm {
       T *P;
 
     public:
-      SingleLinkedListIterator<T>(T *P) : P(P) {}
+      using difference_type = ptrdiff_t;
+      using value_type = T;
+      using pointer = T *;
+      using reference = T &;
+      using iterator_category = std::forward_iterator_tag;
+
+      SingleLinkedListIterator(T *P) : P(P) {}
 
       SingleLinkedListIterator<T> &operator++() {
         P = P->Next;
@@ -851,7 +864,7 @@ namespace llvm {
     /// V2: sub0 sub1 sub2 sub3
     /// V1: <offset>  sub0 sub1
     ///
-    /// This offset will look like a composed subregidx in the the class:
+    /// This offset will look like a composed subregidx in the class:
     ///     V1.(composed sub2 with sub1):<4 x s32> = COPY V2.sub3:<4 x s32>
     /// =>  V1.(composed sub2 with sub1):<4 x s32> = COPY V2.sub3:<4 x s32>
     ///

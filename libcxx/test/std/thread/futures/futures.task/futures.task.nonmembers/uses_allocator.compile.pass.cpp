@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 // packaged_task allocator support was removed in C++17 (LWG 2976)
 // REQUIRES: c++11 || c++14

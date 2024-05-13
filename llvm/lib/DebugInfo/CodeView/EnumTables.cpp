@@ -14,7 +14,7 @@ using namespace llvm;
 using namespace codeview;
 
 #define CV_ENUM_CLASS_ENT(enum_class, enum)                                    \
-  { #enum, std::underlying_type < enum_class > ::type(enum_class::enum) }
+  { #enum, std::underlying_type_t<enum_class>(enum_class::enum) }
 
 #define CV_ENUM_ENT(ns, enum)                                                  \
   { #enum, ns::enum }
@@ -95,16 +95,19 @@ static const EnumEntry<uint8_t> FrameCookieKinds[] = {
 };
 
 static const EnumEntry<codeview::SourceLanguage> SourceLanguages[] = {
-    CV_ENUM_ENT(SourceLanguage, C),       CV_ENUM_ENT(SourceLanguage, Cpp),
-    CV_ENUM_ENT(SourceLanguage, Fortran), CV_ENUM_ENT(SourceLanguage, Masm),
-    CV_ENUM_ENT(SourceLanguage, Pascal),  CV_ENUM_ENT(SourceLanguage, Basic),
-    CV_ENUM_ENT(SourceLanguage, Cobol),   CV_ENUM_ENT(SourceLanguage, Link),
-    CV_ENUM_ENT(SourceLanguage, Cvtres),  CV_ENUM_ENT(SourceLanguage, Cvtpgd),
-    CV_ENUM_ENT(SourceLanguage, CSharp),  CV_ENUM_ENT(SourceLanguage, VB),
-    CV_ENUM_ENT(SourceLanguage, ILAsm),   CV_ENUM_ENT(SourceLanguage, Java),
-    CV_ENUM_ENT(SourceLanguage, JScript), CV_ENUM_ENT(SourceLanguage, MSIL),
-    CV_ENUM_ENT(SourceLanguage, HLSL),    CV_ENUM_ENT(SourceLanguage, D),
-    CV_ENUM_ENT(SourceLanguage, Swift),
+    CV_ENUM_ENT(SourceLanguage, C),        CV_ENUM_ENT(SourceLanguage, Cpp),
+    CV_ENUM_ENT(SourceLanguage, Fortran),  CV_ENUM_ENT(SourceLanguage, Masm),
+    CV_ENUM_ENT(SourceLanguage, Pascal),   CV_ENUM_ENT(SourceLanguage, Basic),
+    CV_ENUM_ENT(SourceLanguage, Cobol),    CV_ENUM_ENT(SourceLanguage, Link),
+    CV_ENUM_ENT(SourceLanguage, Cvtres),   CV_ENUM_ENT(SourceLanguage, Cvtpgd),
+    CV_ENUM_ENT(SourceLanguage, CSharp),   CV_ENUM_ENT(SourceLanguage, VB),
+    CV_ENUM_ENT(SourceLanguage, ILAsm),    CV_ENUM_ENT(SourceLanguage, Java),
+    CV_ENUM_ENT(SourceLanguage, JScript),  CV_ENUM_ENT(SourceLanguage, MSIL),
+    CV_ENUM_ENT(SourceLanguage, HLSL),     CV_ENUM_ENT(SourceLanguage, D),
+    CV_ENUM_ENT(SourceLanguage, Swift),    CV_ENUM_ENT(SourceLanguage, Rust),
+    CV_ENUM_ENT(SourceLanguage, ObjC),     CV_ENUM_ENT(SourceLanguage, ObjCpp),
+    CV_ENUM_ENT(SourceLanguage, AliasObj), CV_ENUM_ENT(SourceLanguage, Go),
+    {"Swift", SourceLanguage::OldSwift},
 };
 
 static const EnumEntry<uint32_t> CompileSym2FlagNames[] = {
@@ -201,6 +204,10 @@ static const EnumEntry<unsigned> CPUTypeNames[] = {
     CV_ENUM_CLASS_ENT(CPUType, Thumb),
     CV_ENUM_CLASS_ENT(CPUType, ARMNT),
     CV_ENUM_CLASS_ENT(CPUType, ARM64),
+    CV_ENUM_CLASS_ENT(CPUType, HybridX86ARM64),
+    CV_ENUM_CLASS_ENT(CPUType, ARM64EC),
+    CV_ENUM_CLASS_ENT(CPUType, ARM64X),
+    CV_ENUM_CLASS_ENT(CPUType, Unknown),
     CV_ENUM_CLASS_ENT(CPUType, D3D11_Shader),
 };
 
@@ -417,6 +424,7 @@ static const EnumEntry<uint8_t> CallingConventions[] = {
     CV_ENUM_CLASS_ENT(CallingConvention, ClrCall),
     CV_ENUM_CLASS_ENT(CallingConvention, Inline),
     CV_ENUM_CLASS_ENT(CallingConvention, NearVector),
+    CV_ENUM_CLASS_ENT(CallingConvention, Swift),
 };
 
 static const EnumEntry<uint8_t> FunctionOptionEnum[] = {
@@ -430,129 +438,147 @@ static const EnumEntry<uint16_t> LabelTypeEnum[] = {
     CV_ENUM_CLASS_ENT(LabelType, Far),
 };
 
+static const EnumEntry<uint16_t> JumpTableEntrySizeNames[] = {
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int8),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt8),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int16),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt16),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int32),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt32),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Pointer),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt8ShiftLeft),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt16ShiftLeft),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int8ShiftLeft),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int16ShiftLeft),
+};
+
 namespace llvm {
 namespace codeview {
 
 ArrayRef<EnumEntry<SymbolKind>> getSymbolTypeNames() {
-  return makeArrayRef(SymbolTypeNames);
+  return ArrayRef(SymbolTypeNames);
 }
 
 ArrayRef<EnumEntry<TypeLeafKind>> getTypeLeafNames() {
-  return makeArrayRef(TypeLeafNames);
+  return ArrayRef(TypeLeafNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getRegisterNames(CPUType Cpu) {
   if (Cpu == CPUType::ARMNT) {
-    return makeArrayRef(RegisterNames_ARM);
+    return ArrayRef(RegisterNames_ARM);
   } else if (Cpu == CPUType::ARM64) {
-    return makeArrayRef(RegisterNames_ARM64);
+    return ArrayRef(RegisterNames_ARM64);
   }
-  return makeArrayRef(RegisterNames_X86);
+  return ArrayRef(RegisterNames_X86);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getPublicSymFlagNames() {
-  return makeArrayRef(PublicSymFlagNames);
+  return ArrayRef(PublicSymFlagNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getProcSymFlagNames() {
-  return makeArrayRef(ProcSymFlagNames);
+  return ArrayRef(ProcSymFlagNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getLocalFlagNames() {
-  return makeArrayRef(LocalFlags);
+  return ArrayRef(LocalFlags);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getFrameCookieKindNames() {
-  return makeArrayRef(FrameCookieKinds);
+  return ArrayRef(FrameCookieKinds);
 }
 
 ArrayRef<EnumEntry<SourceLanguage>> getSourceLanguageNames() {
-  return makeArrayRef(SourceLanguages);
+  return ArrayRef(SourceLanguages);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getCompileSym2FlagNames() {
-  return makeArrayRef(CompileSym2FlagNames);
+  return ArrayRef(CompileSym2FlagNames);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getCompileSym3FlagNames() {
-  return makeArrayRef(CompileSym3FlagNames);
+  return ArrayRef(CompileSym3FlagNames);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getFileChecksumNames() {
-  return makeArrayRef(FileChecksumNames);
+  return ArrayRef(FileChecksumNames);
 }
 
 ArrayRef<EnumEntry<unsigned>> getCPUTypeNames() {
-  return makeArrayRef(CPUTypeNames);
+  return ArrayRef(CPUTypeNames);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getFrameProcSymFlagNames() {
-  return makeArrayRef(FrameProcSymFlagNames);
+  return ArrayRef(FrameProcSymFlagNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getExportSymFlagNames() {
-  return makeArrayRef(ExportSymFlagNames);
+  return ArrayRef(ExportSymFlagNames);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getModuleSubstreamKindNames() {
-  return makeArrayRef(ModuleSubstreamKindNames);
+  return ArrayRef(ModuleSubstreamKindNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getThunkOrdinalNames() {
-  return makeArrayRef(ThunkOrdinalNames);
+  return ArrayRef(ThunkOrdinalNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getTrampolineNames() {
-  return makeArrayRef(TrampolineNames);
+  return ArrayRef(TrampolineNames);
 }
 
 ArrayRef<EnumEntry<COFF::SectionCharacteristics>>
 getImageSectionCharacteristicNames() {
-  return makeArrayRef(ImageSectionCharacteristicNames);
+  return ArrayRef(ImageSectionCharacteristicNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getClassOptionNames() {
-  return makeArrayRef(ClassOptionNames);
+  return ArrayRef(ClassOptionNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getMemberAccessNames() {
-  return makeArrayRef(MemberAccessNames);
+  return ArrayRef(MemberAccessNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getMethodOptionNames() {
-  return makeArrayRef(MethodOptionNames);
+  return ArrayRef(MethodOptionNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getMemberKindNames() {
-  return makeArrayRef(MemberKindNames);
+  return ArrayRef(MemberKindNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getPtrKindNames() {
-  return makeArrayRef(PtrKindNames);
+  return ArrayRef(PtrKindNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getPtrModeNames() {
-  return makeArrayRef(PtrModeNames);
+  return ArrayRef(PtrModeNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getPtrMemberRepNames() {
-  return makeArrayRef(PtrMemberRepNames);
+  return ArrayRef(PtrMemberRepNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getTypeModifierNames() {
-  return makeArrayRef(TypeModifierNames);
+  return ArrayRef(TypeModifierNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getCallingConventions() {
-  return makeArrayRef(CallingConventions);
+  return ArrayRef(CallingConventions);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getFunctionOptionEnum() {
-  return makeArrayRef(FunctionOptionEnum);
+  return ArrayRef(FunctionOptionEnum);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getLabelTypeEnum() {
-  return makeArrayRef(LabelTypeEnum);
+  return ArrayRef(LabelTypeEnum);
+}
+
+ArrayRef<EnumEntry<uint16_t>> getJumpTableEntrySizeNames() {
+  return ArrayRef(JumpTableEntrySizeNames);
 }
 
 } // end namespace codeview

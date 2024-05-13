@@ -80,10 +80,8 @@ def OP_QDMULH_N : Op<(call "vqdmulh", $p0, (dup $p1))>;
 def OP_QDMULH_LN : Op<(call "vqdmulh", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QRDMULH_LN : Op<(call "vqrdmulh", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QRDMULH_N : Op<(call "vqrdmulh", $p0, (dup $p1))>;
-def OP_QRDMLAH : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, $p2))>;
-def OP_QRDMLSH : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, $p2))>;
-def OP_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
-def OP_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_QRDMLAH_LN : Op<(call "vqrdmlah", $p0, $p1, (call_mangled "splat_lane", $p2, $p3))>;
+def OP_QRDMLSH_LN : Op<(call "vqrdmlsh", $p0, $p1, (call_mangled "splat_lane", $p2, $p3))>;
 def OP_FMS_LN   : Op<(call "vfma_lane", $p0, (op "-", $p1), $p2, $p3)>;
 def OP_FMS_LNQ  : Op<(call "vfma_laneq", $p0, (op "-", $p1), $p2, $p3)>;
 def OP_TRN1     : Op<(shuffle $p0, $p1, (interleave (decimate mask0, 2),
@@ -185,10 +183,10 @@ def OP_SCALAR_QDMULL_LN : ScalarMulOp<"vqdmull">;
 def OP_SCALAR_QDMULH_LN : ScalarMulOp<"vqdmulh">;
 def OP_SCALAR_QRDMULH_LN : ScalarMulOp<"vqrdmulh">;
 
-def OP_SCALAR_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1,
-                              (call "vget_lane", $p2, $p3)))>;
-def OP_SCALAR_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1,
-                              (call "vget_lane", $p2, $p3)))>;
+def OP_SCALAR_QRDMLAH_LN : Op<(call "vqrdmlah", $p0, $p1,
+                                (call "vget_lane", $p2, $p3))>;
+def OP_SCALAR_QRDMLSH_LN : Op<(call "vqrdmlsh", $p0, $p1,
+                                (call "vget_lane", $p2, $p3))>;
 
 def OP_SCALAR_HALF_GET_LN : Op<(bitcast "float16_t",
                                    (call "vget_lane",
@@ -277,7 +275,7 @@ def OP_VCVT_BF16_F32_HI_A32
                            (call "vget_low", $p0))>;
 
 def OP_CVT_F32_BF16
-    : Op<(bitcast "R", (op "<<", (bitcast "int32_t", $p0),
+    : Op<(bitcast "R", (op "<<", (cast "int32_t", (bitcast "int16_t", $p0)),
                                  (literal "int32_t", "16")))>;
 
 //===----------------------------------------------------------------------===//
@@ -291,7 +289,7 @@ def SPLATQ : WInst<"splat_laneq", ".(!Q)I",
                    "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPl"> {
   let isLaneQ = 1;
 }
-let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
+let TargetGuard = "bf16" in {
   def SPLAT_BF  : WInst<"splat_lane", ".(!q)I", "bQb">;
   def SPLATQ_BF : WInst<"splat_laneq", ".(!Q)I", "bQb"> {
     let isLaneQ = 1;
@@ -325,9 +323,9 @@ def VMLSL    : SOpInst<"vmlsl", "(>Q)(>Q)..", "csiUcUsUi", OP_MLSL>;
 def VQDMULH  : SInst<"vqdmulh", "...", "siQsQi">;
 def VQRDMULH : SInst<"vqrdmulh", "...", "siQsQi">;
 
-let ArchGuard = "defined(__ARM_FEATURE_QRDMX)" in {
-def VQRDMLAH : SOpInst<"vqrdmlah", "....", "siQsQi", OP_QRDMLAH>;
-def VQRDMLSH : SOpInst<"vqrdmlsh", "....", "siQsQi", OP_QRDMLSH>;
+let TargetGuard = "v8.1a" in {
+def VQRDMLAH : SInst<"vqrdmlah", "....", "siQsQi">;
+def VQRDMLSH : SInst<"vqrdmlsh", "....", "siQsQi">;
 }
 
 def VQDMLAL  : SInst<"vqdmlal", "(>Q)(>Q)..", "si">;
@@ -532,7 +530,7 @@ def VMOV_N   : WOpInst<"vmov_n", ".1",
 }
 let InstName = "" in
 def VDUP_LANE: WOpInst<"vdup_lane", ".qI",
-                       "UcUsUicsiPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUl",
+                       "UcUsUicsiPcPshfQUcQUsQUiQcQsQiQPcQPsQhQflUlQlQUl",
                        OP_DUP_LN>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -607,16 +605,16 @@ def VQDMULL_LANE  : SOpInst<"vqdmull_lane", "(>Q)..I", "si", OP_QDMULL_LN>;
 def VQDMULH_N     : SOpInst<"vqdmulh_n", "..1", "siQsQi", OP_QDMULH_N>;
 def VQRDMULH_N    : SOpInst<"vqrdmulh_n", "..1", "siQsQi", OP_QRDMULH_N>;
 
-let ArchGuard = "!defined(__aarch64__)" in {
+let ArchGuard = "!defined(__aarch64__) && !defined(__arm64ec__)" in {
 def VQDMULH_LANE  : SOpInst<"vqdmulh_lane", "..qI", "siQsQi", OP_QDMULH_LN>;
 def VQRDMULH_LANE : SOpInst<"vqrdmulh_lane", "..qI", "siQsQi", OP_QRDMULH_LN>;
 }
-let ArchGuard = "defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)" in {
 def A64_VQDMULH_LANE  : SInst<"vqdmulh_lane", "..(!q)I", "siQsQi">;
 def A64_VQRDMULH_LANE : SInst<"vqrdmulh_lane", "..(!q)I", "siQsQi">;
 }
 
-let ArchGuard = "defined(__ARM_FEATURE_QRDMX)" in {
+let TargetGuard = "v8.1a" in {
 def VQRDMLAH_LANE : SOpInst<"vqrdmlah_lane", "...qI", "siQsQi", OP_QRDMLAH_LN>;
 def VQRDMLSH_LANE : SOpInst<"vqrdmlsh_lane", "...qI", "siQsQi", OP_QRDMLSH_LN>;
 }
@@ -688,7 +686,7 @@ multiclass REINTERPRET_CROSS_TYPES<string TypesA, string TypesB> {
 
 // E.3.31 Vector reinterpret cast operations
 def VREINTERPRET : REINTERPRET_CROSS_SELF<"csilUcUsUiUlhfPcPsQcQsQiQlQUcQUsQUiQUlQhQfQPcQPs"> {
-  let ArchGuard = "!defined(__aarch64__)";
+  let ArchGuard = "!defined(__aarch64__) && !defined(__arm64ec__)";
   let BigEndianSafe = 1;
 }
 
@@ -716,7 +714,7 @@ def VADDP   : WInst<"vadd", "...", "PcPsPlQPcQPsQPl">;
 ////////////////////////////////////////////////////////////////////////////////
 // AArch64 Intrinsics
 
-let ArchGuard = "defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)" in {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Load/Store
@@ -959,8 +957,10 @@ def VQDMLAL_HIGH : SOpInst<"vqdmlal_high", "(>Q)(>Q)QQ", "si", OP_QDMLALHi>;
 def VQDMLAL_HIGH_N : SOpInst<"vqdmlal_high_n", "(>Q)(>Q)Q1", "si", OP_QDMLALHi_N>;
 def VQDMLSL_HIGH : SOpInst<"vqdmlsl_high", "(>Q)(>Q)QQ", "si", OP_QDMLSLHi>;
 def VQDMLSL_HIGH_N : SOpInst<"vqdmlsl_high_n", "(>Q)(>Q)Q1", "si", OP_QDMLSLHi_N>;
-def VMULL_P64    : SInst<"vmull", "(1>)11", "Pl">;
-def VMULL_HIGH_P64 : SOpInst<"vmull_high", "(1>)..", "HPl", OP_MULLHi_P64>;
+let TargetGuard = "aes" in {
+  def VMULL_P64    : SInst<"vmull", "(1>)11", "Pl">;
+  def VMULL_HIGH_P64 : SOpInst<"vmull_high", "(1>)..", "HPl", OP_MULLHi_P64>;
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -982,7 +982,7 @@ def COPYQ_LANEQ : IOpInst<"vcopy_laneq", "..I.I",
 
 ////////////////////////////////////////////////////////////////////////////////
 // Set all lanes to same value
-def VDUP_LANE1: WOpInst<"vdup_lane", ".qI", "hdQhQdPlQPl", OP_DUP_LN>;
+def VDUP_LANE1: WOpInst<"vdup_lane", ".qI", "dQdPlQPl", OP_DUP_LN>;
 def VDUP_LANE2: WOpInst<"vdup_laneq", ".QI",
                   "csilUcUsUiUlPcPshfdQcQsQiQlQPcQPsQUcQUsQUiQUlQhQfQdPlQPl",
                         OP_DUP_LN> {
@@ -1091,14 +1091,14 @@ let isLaneQ = 1 in {
 def VQDMULH_LANEQ  : SInst<"vqdmulh_laneq", "..QI", "siQsQi">;
 def VQRDMULH_LANEQ : SInst<"vqrdmulh_laneq", "..QI", "siQsQi">;
 }
-let ArchGuard = "defined(__ARM_FEATURE_QRDMX) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "v8.1a" in {
 def VQRDMLAH_LANEQ : SOpInst<"vqrdmlah_laneq", "...QI", "siQsQi", OP_QRDMLAH_LN> {
   let isLaneQ = 1;
 }
 def VQRDMLSH_LANEQ : SOpInst<"vqrdmlsh_laneq", "...QI", "siQsQi", OP_QRDMLSH_LN> {
   let isLaneQ = 1;
 }
-}
+} // ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "v8.1a"
 
 // Note: d type implemented by SCALAR_VMULX_LANE
 def VMULX_LANE : IOpInst<"vmulx_lane", "..qI", "fQfQd", OP_MULX_LN>;
@@ -1122,14 +1122,14 @@ def VEXT_A64 : WInst<"vext", "...I", "dQdPlQPl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Crypto
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_AES)" in {
+let ArchGuard = "__ARM_ARCH >= 8", TargetGuard = "aes" in {
 def AESE : SInst<"vaese", "...", "QUc">;
 def AESD : SInst<"vaesd", "...", "QUc">;
 def AESMC : SInst<"vaesmc", "..", "QUc">;
 def AESIMC : SInst<"vaesimc", "..", "QUc">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SHA2)" in {
+let ArchGuard = "__ARM_ARCH >= 8", TargetGuard = "sha2" in {
 def SHA1H : SInst<"vsha1h", "11", "Ui">;
 def SHA1SU1 : SInst<"vsha1su1", "...", "QUi">;
 def SHA256SU0 : SInst<"vsha256su0", "...", "QUi">;
@@ -1143,7 +1143,7 @@ def SHA256H2 : SInst<"vsha256h2", "....", "QUi">;
 def SHA256SU1 : SInst<"vsha256su1", "....", "QUi">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SHA3) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "sha3" in {
 def BCAX : SInst<"vbcax", "....", "QUcQUsQUiQUlQcQsQiQl">;
 def EOR3 : SInst<"veor3", "....", "QUcQUsQUiQUlQcQsQiQl">;
 def RAX1 : SInst<"vrax1", "...", "QUl">;
@@ -1153,15 +1153,14 @@ def XAR :  SInst<"vxar", "...I", "QUl">;
 }
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SHA512) && defined(__aarch64__)" in {
-
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "sha3" in {
 def SHA512SU0 : SInst<"vsha512su0", "...", "QUl">;
 def SHA512su1 : SInst<"vsha512su1", "....", "QUl">;
 def SHA512H : SInst<"vsha512h", "....", "QUl">;
 def SHA512H2 : SInst<"vsha512h2", "....", "QUl">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SM3) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "sm4" in {
 def SM3SS1 : SInst<"vsm3ss1", "....", "QUi">;
 def SM3TT1A : SInst<"vsm3tt1a", "....I", "QUi">;
 def SM3TT1B : SInst<"vsm3tt1b", "....I", "QUi">;
@@ -1171,7 +1170,7 @@ def SM3PARTW1 : SInst<"vsm3partw1", "....", "QUi">;
 def SM3PARTW2 : SInst<"vsm3partw2", "....", "QUi">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SM4) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "sm4" in {
 def SM4E : SInst<"vsm4e", "...", "QUi">;
 def SM4EKEY : SInst<"vsm4ekey", "...", "QUi">;
 }
@@ -1194,7 +1193,7 @@ def FCVTAS_S32 : SInst<"vcvta_s32", "S.", "fQf">;
 def FCVTAU_S32 : SInst<"vcvta_u32", "U.", "fQf">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)" in {
 def FCVTNS_S64 : SInst<"vcvtn_s64", "S.", "dQd">;
 def FCVTNU_S64 : SInst<"vcvtn_u64", "U.", "dQd">;
 def FCVTPS_S64 : SInst<"vcvtp_s64", "S.", "dQd">;
@@ -1218,7 +1217,7 @@ def FRINTZ_S32 : SInst<"vrnd", "..", "fQf">;
 def FRINTI_S32 : SInst<"vrndi", "..", "fQf">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__) && defined(__ARM_FEATURE_DIRECTED_ROUNDING)" in {
+let ArchGuard = "(defined(__aarch64__) || defined(__arm64ec__)) && defined(__ARM_FEATURE_DIRECTED_ROUNDING)" in {
 def FRINTN_S64 : SInst<"vrndn", "..", "dQd">;
 def FRINTA_S64 : SInst<"vrnda", "..", "dQd">;
 def FRINTP_S64 : SInst<"vrndp", "..", "dQd">;
@@ -1228,11 +1227,16 @@ def FRINTZ_S64 : SInst<"vrnd", "..", "dQd">;
 def FRINTI_S64 : SInst<"vrndi", "..", "dQd">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__) && defined(__ARM_FEATURE_FRINT)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "v8.5a" in {
 def FRINT32X_S32 : SInst<"vrnd32x", "..", "fQf">;
 def FRINT32Z_S32 : SInst<"vrnd32z", "..", "fQf">;
 def FRINT64X_S32 : SInst<"vrnd64x", "..", "fQf">;
 def FRINT64Z_S32 : SInst<"vrnd64z", "..", "fQf">;
+
+def FRINT32X_S64 : SInst<"vrnd32x", "..", "dQd">;
+def FRINT32Z_S64 : SInst<"vrnd32z", "..", "dQd">;
+def FRINT64X_S64 : SInst<"vrnd64x", "..", "dQd">;
+def FRINT64Z_S64 : SInst<"vrnd64z", "..", "dQd">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1243,7 +1247,7 @@ def FMAXNM_S32 : SInst<"vmaxnm", "...", "fQf">;
 def FMINNM_S32 : SInst<"vminnm", "...", "fQf">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__) && defined(__ARM_FEATURE_NUMERIC_MAXMIN)" in {
+let ArchGuard = "(defined(__aarch64__)  || defined(__arm64ec__)) && defined(__ARM_FEATURE_NUMERIC_MAXMIN)" in {
 def FMAXNM_S64 : SInst<"vmaxnm", "...", "dQd">;
 def FMINNM_S64 : SInst<"vminnm", "...", "dQd">;
 }
@@ -1285,7 +1289,7 @@ def VQTBX4_A64 : WInst<"vqtbx4", "..(4Q)U", "UccPcQUcQcQPc">;
 // itself during generation so, unlike all other intrinsics, this one should
 // include *all* types, not just additional ones.
 def VVREINTERPRET : REINTERPRET_CROSS_SELF<"csilUcUsUiUlhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQdQPcQPsQPlQPk"> {
-  let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__)";
+  let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)";
   let BigEndianSafe = 1;
 }
 
@@ -1350,9 +1354,9 @@ let isScalarNarrowShift = 1 in {
   // Signed/Unsigned Saturating Rounded Shift Right Narrow (Immediate)
   def SCALAR_SQRSHRN_N: SInst<"vqrshrn_n", "(1<)1I", "SsSiSlSUsSUiSUl">;
   // Signed Saturating Shift Right Unsigned Narrow (Immediate)
-  def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "(1<)1I", "SsSiSl">;
+  def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "(1<U)1I", "SsSiSl">;
   // Signed Saturating Rounded Shift Right Unsigned Narrow (Immediate)
-  def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "(1<)1I", "SsSiSl">;
+  def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "(1<U)1I", "SsSiSl">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1397,15 +1401,15 @@ def SCALAR_SQDMULH : SInst<"vqdmulh", "111", "SsSi">;
 // Scalar Integer Saturating Rounding Doubling Multiply Half High
 def SCALAR_SQRDMULH : SInst<"vqrdmulh", "111", "SsSi">;
 
-let ArchGuard = "defined(__ARM_FEATURE_QRDMX) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "v8.1a" in {
 ////////////////////////////////////////////////////////////////////////////////
 // Signed Saturating Rounding Doubling Multiply Accumulate Returning High Half
-def SCALAR_SQRDMLAH : SOpInst<"vqrdmlah", "1111", "SsSi", OP_QRDMLAH>;
+def SCALAR_SQRDMLAH : SInst<"vqrdmlah", "1111", "SsSi">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Signed Saturating Rounding Doubling Multiply Subtract Returning High Half
-def SCALAR_SQRDMLSH : SOpInst<"vqrdmlsh", "1111", "SsSi", OP_QRDMLSH>;
-}
+def SCALAR_SQRDMLSH : SInst<"vqrdmlsh", "1111", "SsSi">;
+} // ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "v8.1a"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Floating-point Multiply Extended
@@ -1628,7 +1632,7 @@ def SCALAR_SQRDMULH_LANEQ : SOpInst<"vqrdmulh_laneq", "11QI", "SsSi", OP_SCALAR_
   let isLaneQ = 1;
 }
 
-let ArchGuard = "defined(__ARM_FEATURE_QRDMX) && defined(__aarch64__)" in {
+let TargetGuard = "v8.1a" in {
 // Signed Saturating Rounding Doubling Multiply Accumulate Returning High Half
 def SCALAR_SQRDMLAH_LANE : SOpInst<"vqrdmlah_lane", "111.I", "SsSi", OP_SCALAR_QRDMLAH_LN>;
 def SCALAR_SQRDMLAH_LANEQ : SOpInst<"vqrdmlah_laneq", "111QI", "SsSi", OP_SCALAR_QRDMLAH_LN> {
@@ -1640,16 +1644,17 @@ def SCALAR_SQRDMLSH_LANE : SOpInst<"vqrdmlsh_lane", "111.I", "SsSi", OP_SCALAR_Q
 def SCALAR_SQRDMLSH_LANEQ : SOpInst<"vqrdmlsh_laneq", "111QI", "SsSi", OP_SCALAR_QRDMLSH_LN> {
   let isLaneQ = 1;
 }
-}
+} // TargetGuard = "v8.1a"
 
 def SCALAR_VDUP_LANE : IInst<"vdup_lane", "1.I", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs">;
 def SCALAR_VDUP_LANEQ : IInst<"vdup_laneq", "1QI", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs"> {
   let isLaneQ = 1;
 }
-}
+
+} // ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)"
 
 // ARMv8.2-A FP16 vector intrinsics for A32/A64.
-let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
+let TargetGuard = "fullfp16" in {
 
   // ARMv8.2-A FP16 one-operand vector intrinsics.
 
@@ -1674,7 +1679,7 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
   def VCVTP_U16    : SInst<"vcvtp_u16", "U.", "hQh">;
 
   // Vector rounding
-  let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_DIRECTED_ROUNDING) && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
+  let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_DIRECTED_ROUNDING)", TargetGuard = "fullfp16" in {
     def FRINTZH      : SInst<"vrnd",  "..", "hQh">;
     def FRINTNH      : SInst<"vrndn", "..", "hQh">;
     def FRINTAH      : SInst<"vrnda", "..", "hQh">;
@@ -1723,7 +1728,7 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
   // Max/Min
   def VMAXH         : SInst<"vmax", "...", "hQh">;
   def VMINH         : SInst<"vmin", "...", "hQh">;
-  let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_NUMERIC_MAXMIN) && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
+  let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_NUMERIC_MAXMIN)", TargetGuard = "fullfp16" in {
     def FMAXNMH       : SInst<"vmaxnm", "...", "hQh">;
     def FMINNMH       : SInst<"vminnm", "...", "hQh">;
   }
@@ -1753,36 +1758,24 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
   // Mul lane
   def VMUL_LANEH    : IOpInst<"vmul_lane", "..qI", "hQh", OP_MUL_LN>;
   def VMUL_NH       : IOpInst<"vmul_n", "..1", "hQh", OP_MUL_N>;
-
-  // Data processing intrinsics - section 5
-
-  // Logical operations
-  let isHiddenLInst = 1 in
-  def VBSLH    : SInst<"vbsl", ".U..", "hQh">;
-
-  // Transposition operations
-  def VZIPH    : WInst<"vzip", "2..", "hQh">;
-  def VUZPH    : WInst<"vuzp", "2..", "hQh">;
-  def VTRNH    : WInst<"vtrn", "2..", "hQh">;
-
-
-  let ArchGuard = "!defined(__aarch64__)" in {
-    // Set all lanes to same value.
-    // Already implemented prior to ARMv8.2-A.
-    def VMOV_NH  : WOpInst<"vmov_n", ".1", "hQh", OP_DUP>;
-    def VDUP_NH  : WOpInst<"vdup_n", ".1", "hQh", OP_DUP>;
-    def VDUP_LANE1H : WOpInst<"vdup_lane", ".qI", "hQh", OP_DUP_LN>;
-  }
-
-  // Vector Extract
-  def VEXTH      : WInst<"vext", "...I", "hQh">;
-
-  // Reverse vector elements
-  def VREV64H    : WOpInst<"vrev64", "..", "hQh", OP_REV64>;
 }
 
+// Data processing intrinsics - section 5. Do not require fullfp16.
+
+// Logical operations
+let isHiddenLInst = 1 in
+def VBSLH    : SInst<"vbsl", ".U..", "hQh">;
+// Transposition operations
+def VZIPH    : WInst<"vzip", "2..", "hQh">;
+def VUZPH    : WInst<"vuzp", "2..", "hQh">;
+def VTRNH    : WInst<"vtrn", "2..", "hQh">;
+// Vector Extract
+def VEXTH      : WInst<"vext", "...I", "hQh">;
+// Reverse vector elements
+def VREV64H    : WOpInst<"vrev64", "..", "hQh", OP_REV64>;
+
 // ARMv8.2-A FP16 vector intrinsics for A64 only.
-let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "fullfp16" in {
 
   // Vector rounding
   def FRINTIH      : SInst<"vrndi", "..", "hQh">;
@@ -1861,7 +1854,9 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && defined(__aarc
   def VMINVH   : SInst<"vminv", "1.", "hQh">;
   def FMAXNMVH : SInst<"vmaxnmv", "1.", "hQh">;
   def FMINNMVH : SInst<"vminnmv", "1.", "hQh">;
+}
 
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)" in {
   // Permutation
   def VTRN1H     : SOpInst<"vtrn1", "...", "hQh", OP_TRN1>;
   def VZIP1H     : SOpInst<"vzip1", "...", "hQh", OP_ZIP1>;
@@ -1877,11 +1872,11 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && defined(__aarc
 }
 
 // v8.2-A dot product instructions.
-let ArchGuard = "defined(__ARM_FEATURE_DOTPROD)" in {
+let TargetGuard = "dotprod" in {
   def DOT : SInst<"vdot", "..(<<)(<<)", "iQiUiQUi">;
   def DOT_LANE : SOpInst<"vdot_lane", "..(<<)(<<q)I", "iUiQiQUi", OP_DOT_LN>;
 }
-let ArchGuard = "defined(__ARM_FEATURE_DOTPROD) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "dotprod" in {
   // Variants indexing into a 128-bit vector are A64 only.
   def UDOT_LANEQ : SOpInst<"vdot_laneq", "..(<<)(<<Q)I", "iUiQiQUi", OP_DOT_LNQ> {
     let isLaneQ = 1;
@@ -1889,7 +1884,7 @@ let ArchGuard = "defined(__ARM_FEATURE_DOTPROD) && defined(__aarch64__)" in {
 }
 
 // v8.2-A FP16 fused multiply-add long instructions.
-let ArchGuard = "defined(__ARM_FEATURE_FP16_FML) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "fp16fml" in {
   def VFMLAL_LOW  : SInst<"vfmlal_low",  ">>..", "hQh">;
   def VFMLSL_LOW  : SInst<"vfmlsl_low",  ">>..", "hQh">;
   def VFMLAL_HIGH : SInst<"vfmlal_high", ">>..", "hQh">;
@@ -1914,7 +1909,7 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_FML) && defined(__aarch64__)" in {
   }
 }
 
-let ArchGuard = "defined(__ARM_FEATURE_MATMUL_INT8)" in {
+let TargetGuard = "i8mm" in {
   def VMMLA   : SInst<"vmmla", "..(<<)(<<)", "QUiQi">;
   def VUSMMLA : SInst<"vusmmla", "..(<<U)(<<)", "Qi">;
 
@@ -1923,7 +1918,7 @@ let ArchGuard = "defined(__ARM_FEATURE_MATMUL_INT8)" in {
   def VUSDOT_LANE  : SOpInst<"vusdot_lane", "..(<<U)(<<q)I", "iQi", OP_USDOT_LN>;
   def VSUDOT_LANE  : SOpInst<"vsudot_lane", "..(<<)(<<qU)I", "iQi", OP_SUDOT_LN>;
 
-  let ArchGuard = "defined(__aarch64__)" in {
+  let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)" in {
     let isLaneQ = 1 in {
       def VUSDOT_LANEQ  : SOpInst<"vusdot_laneq", "..(<<U)(<<Q)I", "iQi", OP_USDOT_LNQ>;
       def VSUDOT_LANEQ  : SOpInst<"vsudot_laneq", "..(<<)(<<QU)I", "iQi", OP_SUDOT_LNQ>;
@@ -1931,7 +1926,7 @@ let ArchGuard = "defined(__ARM_FEATURE_MATMUL_INT8)" in {
   }
 }
 
-let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
+let TargetGuard = "bf16" in {
   def VDOT_BF : SInst<"vbfdot", "..BB", "fQf">;
   def VDOT_LANE_BF : SOpInst<"vbfdot_lane", "..B(Bq)I", "fQf", OP_BFDOT_LN>;
   def VDOT_LANEQ_BF : SOpInst<"vbfdot_laneq", "..B(BQ)I", "fQf", OP_BFDOT_LNQ> {
@@ -1975,7 +1970,7 @@ multiclass VCMLA_ROTS<string type, string lanety, string laneqty> {
 }
 
 // v8.3-A Vector complex addition intrinsics
-let ArchGuard = "defined(__ARM_FEATURE_COMPLEX) && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
+let TargetGuard = "v8.3a,fullfp16" in {
   def VCADD_ROT90_FP16   : SInst<"vcadd_rot90", "...", "h">;
   def VCADD_ROT270_FP16  : SInst<"vcadd_rot270", "...", "h">;
   def VCADDQ_ROT90_FP16  : SInst<"vcaddq_rot90", "QQQ", "h">;
@@ -1983,7 +1978,7 @@ let ArchGuard = "defined(__ARM_FEATURE_COMPLEX) && defined(__ARM_FEATURE_FP16_VE
 
   defm VCMLA_FP16  : VCMLA_ROTS<"h", "uint32x2_t", "uint32x4_t">;
 }
-let ArchGuard = "defined(__ARM_FEATURE_COMPLEX)" in {
+let TargetGuard = "v8.3a" in {
   def VCADD_ROT90   : SInst<"vcadd_rot90", "...", "f">;
   def VCADD_ROT270  : SInst<"vcadd_rot270", "...", "f">;
   def VCADDQ_ROT90  : SInst<"vcaddq_rot90", "QQQ", "f">;
@@ -1991,7 +1986,7 @@ let ArchGuard = "defined(__ARM_FEATURE_COMPLEX)" in {
 
   defm VCMLA_F32        : VCMLA_ROTS<"f", "uint64x1_t", "uint64x2_t">;
 }
-let ArchGuard = "defined(__ARM_FEATURE_COMPLEX) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "v8.3a" in {
   def VCADDQ_ROT90_FP64  : SInst<"vcaddq_rot90", "QQQ", "d">;
   def VCADDQ_ROT270_FP64 : SInst<"vcaddq_rot270", "QQQ", "d">;
 
@@ -1999,7 +1994,7 @@ let ArchGuard = "defined(__ARM_FEATURE_COMPLEX) && defined(__aarch64__)" in {
 }
 
 // V8.2-A BFloat intrinsics
-let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
+let TargetGuard = "bf16" in {
   def VCREATE_BF : NoTestOpInst<"vcreate", ".(IU>)", "b", OP_CAST> {
     let BigEndianSafe = 1;
   }
@@ -2063,14 +2058,14 @@ let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
   def SCALAR_CVT_F32_BF16 : SOpInst<"vcvtah_f32", "(1F>)(1!)", "b", OP_CVT_F32_BF16>;
 }
 
-let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC) && !defined(__aarch64__)" in {
+let ArchGuard = "!defined(__aarch64__) && !defined(__arm64ec__)", TargetGuard = "bf16" in {
   def VCVT_BF16_F32_A32_INTERNAL : WInst<"__a32_vcvt_bf16", "BQ", "f">;
   def VCVT_BF16_F32_A32 : SOpInst<"vcvt_bf16", "BQ", "f", OP_VCVT_BF16_F32_A32>;
   def VCVT_LOW_BF16_F32_A32 : SOpInst<"vcvt_low_bf16",  "BQ", "Qf", OP_VCVT_BF16_F32_LO_A32>;
   def VCVT_HIGH_BF16_F32_A32 : SOpInst<"vcvt_high_bf16", "BBQ", "Qf", OP_VCVT_BF16_F32_HI_A32>;
 }
 
-let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "bf16" in {
   def VCVT_LOW_BF16_F32_A64_INTERNAL : WInst<"__a64_vcvtq_low_bf16", "BQ", "Hf">;
   def VCVT_LOW_BF16_F32_A64 : SOpInst<"vcvt_low_bf16", "BQ", "Qf", OP_VCVT_BF16_F32_LO_A64>;
   def VCVT_HIGH_BF16_F32_A64 : SInst<"vcvt_high_bf16", "BBQ", "Qf">;
@@ -2082,16 +2077,22 @@ let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC) && defined(__aarc
   def COPYQ_LANEQ_BF16 : IOpInst<"vcopy_laneq", "..I.I", "Qb", OP_COPY_LN>;
 }
 
-let ArchGuard = "defined(__ARM_FEATURE_BF16) && !defined(__aarch64__)" in {
+let ArchGuard = "!defined(__aarch64__) && !defined(__arm64ec__)", TargetGuard = "bf16" in {
   let BigEndianSafe = 1 in {
     defm VREINTERPRET_BF : REINTERPRET_CROSS_TYPES<
         "csilUcUsUiUlhfPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQPcQPsQPl", "bQb">;
   }
 }
 
-let ArchGuard = "defined(__ARM_FEATURE_BF16) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "bf16" in {
   let BigEndianSafe = 1 in {
     defm VVREINTERPRET_BF : REINTERPRET_CROSS_TYPES<
         "csilUcUsUiUlhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQdQPcQPsQPlQPk", "bQb">;
   }
+}
+
+// v8.9a/v9.4a LRCPC3 intrinsics
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "rcpc3" in {
+  def VLDAP1_LANE : WInst<"vldap1_lane", ".(c*!).I", "QUlQlUlldQdPlQPl">;
+  def VSTL1_LANE  : WInst<"vstl1_lane", "v*(.!)I", "QUlQlUlldQdPlQPl">;
 }

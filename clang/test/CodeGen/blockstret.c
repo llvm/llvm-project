@@ -2,18 +2,14 @@
 // RUN: %clang_cc1 -fblocks -triple i686-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X32
 // RUN: %clang_cc1 -fblocks -triple arm64-apple-darwin %s -emit-llvm -o - | FileCheck %s -check-prefix=ARM64
 
-// X64:   internal constant {{.*}} { i8** @_NSConcreteGlobalBlock, i32 1879048192
-// X64:   store i32 1610612736, i32* %want
+// X64:   internal constant {{.*}} { ptr @_NSConcreteGlobalBlock, i32 1879048192
+// X64:   store i32 1610612736, ptr %want
 
 // X32:   @_NSConcreteGlobalBlock, i32 1879048192, i32 0,
-// X32:   store i32 1610612736, i32* %want
-
-// rdar://7677537
+// X32:   store i32 1610612736, ptr %want
 
 // ARM64: @_NSConcreteGlobalBlock, i32 1342177280, i32 0,
-// ARM64: store i32 1610612736, i32* %want
-
-// rdar://9757126
+// ARM64: store i32 1610612736, ptr %want
 
 int printf(const char *, ...);
 void *malloc(__SIZE_TYPE__ size);

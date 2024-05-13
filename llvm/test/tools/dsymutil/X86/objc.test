@@ -1,5 +1,16 @@
-RUN: dsymutil -f -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o - \
-RUN:   | llvm-dwarfdump -apple-types -apple-objc - | FileCheck %s
+RUN: dsymutil --verify-dwarf=output -f -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.d4
+RUN: llvm-dwarfdump -apple-types -apple-objc %t.d4 | FileCheck %s
+
+; Test DWARF 5 tables
+RUN: dsymutil --verify-dwarf=output --accelerator='Dwarf' -f -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.d5
+RUN: llvm-dwarfdump -debug-names %t.d5 | FileCheck %s --check-prefix=D5
+
+D5: String: {{.*}} "method1:"
+D5: String: {{.*}} "method2:"
+D5: String: {{.*}} "A"
+D5: String: {{.*}} "-[A(Category) method2:]"
+D5: String: {{.*}} "-[A method1:]"
+D5: String: {{.*}} "-[Amethod2:]"
 
 CHECK: .apple_types contents:
 CHECK: String: 0x00000066 "A"
@@ -21,6 +32,7 @@ CHECK-NEXT:   HeaderData length: 12
 CHECK-NEXT: }
 CHECK-NEXT: DIE offset base: 0
 CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Size of each hash data entry: 4
 CHECK-NEXT: Atoms [
 CHECK-NEXT:   Atom 0 {
 CHECK-NEXT:     Type: DW_ATOM_die_offset

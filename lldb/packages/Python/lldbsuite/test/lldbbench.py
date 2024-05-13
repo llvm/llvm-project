@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 # System modules
 import time
 
@@ -12,7 +10,7 @@ from .lldbtest import *
 class Stopwatch(object):
     """Stopwatch provides a simple utility to start/stop your stopwatch multiple
     times.  Each start/stop is equal to a lap, with its elapsed time accumulated
-    while measurment is in progress.
+    while measurement is in progress.
 
     When you're ready to start from scratch for another round of measurements,
     be sure to call the reset() method.
@@ -65,8 +63,7 @@ class Stopwatch(object):
         if self.__start__ is None:
             self.__start__ = time.time()
         else:
-            raise Exception(
-                "start() already called, did you forget to stop() first?")
+            raise Exception("start() already called, did you forget to stop() first?")
         # Return self to facilitate the context manager __enter__ protocol.
         return self
 
@@ -96,8 +93,13 @@ class Stopwatch(object):
     #    return numpy.std(self.__nums__)
 
     def __str__(self):
-        return "Avg: %f (Laps: %d, Total Elapsed Time: %f, min=%f, max=%f)" % (self.avg(
-        ), self.__laps__, self.__total_elapsed__, min(self.__nums__), max(self.__nums__))
+        return "Avg: %f (Laps: %d, Total Elapsed Time: %f, min=%f, max=%f)" % (
+            self.avg(),
+            self.__laps__,
+            self.__total_elapsed__,
+            min(self.__nums__),
+            max(self.__nums__),
+        )
 
 
 class BenchBase(TestBase):

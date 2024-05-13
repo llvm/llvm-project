@@ -15,12 +15,11 @@
 //     : public integral_constant<size_t, sizeof...(Types)> { };
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-structured-bindings
 
-#include <tuple>
 #include <array>
-#include <type_traits>
 #include <cassert>
+#include <tuple>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -114,7 +113,7 @@ struct Test {
   int x;
 };
 
-template <size_t N>
+template <std::size_t N>
 int get(Test const&) { static_assert(N == 0, ""); return -1; }
 
 template <>
@@ -131,7 +130,7 @@ void test_before_tuple_size_specialization() {
 template <>
 struct std::tuple_size<Test> {
 public:
-  static const size_t value = 1;
+  static const std::size_t value = 1;
 };
 
 void test_after_tuple_size_specialization() {

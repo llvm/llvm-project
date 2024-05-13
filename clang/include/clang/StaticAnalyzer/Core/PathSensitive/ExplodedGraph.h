@@ -30,14 +30,15 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -161,15 +162,13 @@ public:
     return getLocationContext()->getParentMap();
   }
 
-  template <typename T>
-  T &getAnalysis() const {
+  template <typename T> T &getAnalysis() const {
     return *getLocationContext()->getAnalysis<T>();
   }
 
   const ProgramStateRef &getState() const { return State; }
 
-  template <typename T>
-  Optional<T> getLocationAs() const LLVM_LVALUE_FUNCTION {
+  template <typename T> std::optional<T> getLocationAs() const & {
     return Location.getAs<T>();
   }
 
@@ -397,13 +396,9 @@ public:
   using node_iterator = AllNodesTy::iterator;
   using const_node_iterator = AllNodesTy::const_iterator;
 
-  node_iterator nodes_begin() { return Nodes.begin(); }
+  llvm::iterator_range<node_iterator> nodes() { return Nodes; }
 
-  node_iterator nodes_end() { return Nodes.end(); }
-
-  const_node_iterator nodes_begin() const { return Nodes.begin(); }
-
-  const_node_iterator nodes_end() const { return Nodes.end(); }
+  llvm::iterator_range<const_node_iterator> nodes() const { return Nodes; }
 
   roots_iterator roots_begin() { return Roots.begin(); }
 

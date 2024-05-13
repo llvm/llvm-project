@@ -31,7 +31,7 @@ extern "C" __global__ void ckernel(int *a) {
 }
 
 // Kernel symbol for launching kernel.
-// CHECK: @[[SYM:ckernel]] = constant void (i32*)* @__device_stub__ckernel, align 8
+// CHECK: @[[SYM:ckernel]] = constant ptr @__device_stub__ckernel, align 8
 
 // Device side kernel names
 // CHECK: @[[CKERN:[0-9]*]] = {{.*}} c"ckernel\00"

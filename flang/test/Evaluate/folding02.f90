@@ -1,4 +1,5 @@
-! RUN: %S/test_folding.sh %s %t %flang_fc1
+! RUN: %python %S/test_folding.py %s %flang_fc1
+
 ! Check intrinsic function folding with host runtime library
 
 module m
@@ -21,8 +22,8 @@ module m
   ! Expected values come from libpgmath-precise for Real(4) and Real(8) and
   ! were computed on X86_64.
 
-  logical, parameter :: test_sign_i4 = sign(1_4,2_4) == 1_4 .and. sign(1_4,-3_4) == -1_4
-  logical, parameter :: test_sign_i8 = sign(1_8,2_8) == 1_8 .and. sign(1_8,-3_8) == -1_8
+  logical, parameter :: test_sign_i4 = sign(1_4,2) == 1_4 .and. sign(1_4,-3_8) == -1_4
+  logical, parameter :: test_sign_i8 = sign(1_8,2) == 1_8 .and. sign(1_8,-3_8) == -1_8
 
 ! Real scalar intrinsic function tests
 #define TEST_FLOATING(name, result, expected, t, k) \
@@ -66,7 +67,7 @@ module m
   TEST_R4(log_gamma, log_gamma(3.5_4), 1.20097362995147705078125_4)
   TEST_R4(mod, mod(-8.1_4, 5._4), (-3.1000003814697265625_4))
   TEST_R4(real, real(z'3f800000'), 1._4)
-  logical, parameter :: test_sign_r4 = sign(1._4,2._4) == 1._4 .and. sign(1._4,-2._4) == -1._4
+  logical, parameter :: test_sign_r4 = sign(1._4,2._8) == 1._4 .and. sign(1._4,-2._4) == -1._4
   TEST_R4(sin, sin(1.6_4), 0.99957358837127685546875_4)
   TEST_R4(sinh, sinh(0.9_4), 1.0265166759490966796875_4)
   TEST_R4(sqrt, sqrt(1.1_4), 1.0488088130950927734375_4)
@@ -115,7 +116,7 @@ module m
   TEST_R8(mod, mod(-8.1_8, 5._8), &
     (-3.0999999999999996447286321199499070644378662109375_8))
   TEST_R8(real, real(z'3ff0000000000000',8), 1._8)
-  logical, parameter :: test_sign_r8 = sign(1._8,2._8) == 1._8 .and. sign(1._8,-2._8) == -1._8
+  logical, parameter :: test_sign_r8 = sign(1._8,2._8) == 1._8 .and. sign(1._8,-2._4) == -1._8
   TEST_R8(sin, sin(1.6_8), &
     0.99957360304150510987852840116829611361026763916015625_8)
   TEST_R8(sinh, sinh(0.9_8), &
@@ -248,6 +249,22 @@ module m
     (-0.93219375976297402797143831776338629424571990966796875_8))
    TEST_R8(erfc_scaled, erfc_scaled(0.1_8), &
     0.89645697996912654392787089818739332258701324462890625_8)
+
+  real(4), parameter :: bessel_jn_transformational(*) = bessel_jn(1,3, 3.2_4)
+  logical, parameter :: test_bessel_jn_shape = size(bessel_jn_transformational, 1).eq.3
+  logical, parameter :: test_bessel_jn_t1 = bessel_jn_transformational(1).eq.bessel_jn(1, 3.2_4)
+  logical, parameter :: test_bessel_jn_t2 = bessel_jn_transformational(2).eq.bessel_jn(2, 3.2_4)
+  logical, parameter :: test_bessel_jn_t3 = bessel_jn_transformational(3).eq.bessel_jn(3, 3.2_4)
+  real(4), parameter :: bessel_jn_empty(*) = bessel_jn(3,1, 3.2_4)
+  logical, parameter :: test_bessel_jn_empty = size(bessel_jn_empty, 1).eq.0
+
+  real(4), parameter :: bessel_yn_transformational(*) = bessel_yn(1,3, 1.6_4)
+  logical, parameter :: test_bessel_yn_shape = size(bessel_yn_transformational, 1).eq.3
+  logical, parameter :: test_bessel_yn_t1 = bessel_yn_transformational(1).eq.bessel_yn(1, 1.6_4)
+  logical, parameter :: test_bessel_yn_t2 = bessel_yn_transformational(2).eq.bessel_yn(2, 1.6_4)
+  logical, parameter :: test_bessel_yn_t3 = bessel_yn_transformational(3).eq.bessel_yn(3, 1.6_4)
+  real(4), parameter :: bessel_yn_empty(*) = bessel_yn(3,1, 3.2_4)
+  logical, parameter :: test_bessel_yn_empty = size(bessel_yn_empty, 1).eq.0
 #endif
 
 ! Test exponentiation by real or complex folding (it is using host runtime)
@@ -259,5 +276,23 @@ module m
   TEST_C8(pow, ((0.5_8, 0.6_8)**(0.74_8, -1.1_8)), &
     (1.3223499632715445262221010125358588993549346923828125_8, &
      1.7371201007364975854585509296157397329807281494140625_8))
+
+! Extension specific intrinsic variants
+  logical, parameter :: test_babs1 = kind(babs(-1_1)) == 1
+  logical, parameter :: test_babs2 = babs(-1_1) == 1_1
+  logical, parameter :: test_iiabs1 = kind(iiabs(-1_2)) == 2
+  logical, parameter :: test_iiabs2 = iiabs(-1_2) == 1_2
+  logical, parameter :: test_jiabs1 = kind(jiabs(-1_4)) == 4
+  logical, parameter :: test_jiabs2 = jiabs(-1_4) == 1_4
+  logical, parameter :: test_kiabs1 = kind(kiabs(-1_8)) == 8
+  logical, parameter :: test_kiabs2 = kiabs(-1_8) == 1_8
+  logical, parameter :: test_zabs1 = kind(zabs((3._8,4._8))) == 8
+  logical, parameter :: test_zabs2 = zabs((3._8,4._8)) == 5_8
+  logical, parameter :: test_cdabs1 = kind(cdabs((3._8,4._8))) == kind(1.d0)
+  logical, parameter :: test_cdabs2 = cdabs((3._8,4._8)) == real(5, kind(1.d0))
+  logical, parameter :: test_kidnnt1 = kind(kidnnt(2.5d0)) == 8
+  logical, parameter :: test_kidnnt2 = kidnnt(2.5d0) == 3
+  logical, parameter :: test_knint1 = kind(knint(2.5)) == 8
+  logical, parameter :: test_knint2 = knint(2.5) == 3
 
 end

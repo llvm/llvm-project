@@ -609,15 +609,15 @@ struct Z {
 
 struct W : Z {
   // CHECK-LABEL: VFTable for 'return_adjustment::Z' in 'return_adjustment::W' (2 entries).
-  // CHECK-NEXT: 0 | return_adjustment::X *return_adjustment::W::foo()
+  // CHECK-NEXT: 0 | X *return_adjustment::W::foo()
   // CHECK-NEXT:     [return adjustment (to type 'struct A *'): vbase #1, 0 non-virtual]
-  // CHECK-NEXT: 1 | return_adjustment::X *return_adjustment::W::foo()
+  // CHECK-NEXT: 1 | X *return_adjustment::W::foo()
 
-  // CHECK-LABEL: Thunks for 'return_adjustment::X *return_adjustment::W::foo()' (1 entry).
+  // CHECK-LABEL: Thunks for 'X *return_adjustment::W::foo()' (1 entry).
   // CHECK-NEXT: 0 | [return adjustment (to type 'struct A *'): vbase #1, 0 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'return_adjustment::W' (1 entry).
-  // CHECK-NEXT: 1 | return_adjustment::X *return_adjustment::W::foo()
+  // CHECK-NEXT: 1 | X *return_adjustment::W::foo()
 
   virtual X* foo();
 };
@@ -627,18 +627,18 @@ void use(W *obj) { obj->foo(); }
 
 struct T : W {
   // CHECK-LABEL: VFTable for 'return_adjustment::Z' in 'return_adjustment::W' in 'return_adjustment::T' (3 entries).
-  // CHECK-NEXT: 0 | return_adjustment::Y *return_adjustment::T::foo()
+  // CHECK-NEXT: 0 | Y *return_adjustment::T::foo()
   // CHECK-NEXT:     [return adjustment (to type 'struct A *'): vbase #1, 0 non-virtual]
-  // CHECK-NEXT: 1 | return_adjustment::Y *return_adjustment::T::foo()
+  // CHECK-NEXT: 1 | Y *return_adjustment::T::foo()
   // CHECK-NEXT:     [return adjustment (to type 'struct return_adjustment::X *'): vbase #2, 0 non-virtual]
-  // CHECK-NEXT: 2 | return_adjustment::Y *return_adjustment::T::foo()
+  // CHECK-NEXT: 2 | Y *return_adjustment::T::foo()
 
-  // CHECK-LABEL: Thunks for 'return_adjustment::Y *return_adjustment::T::foo()' (2 entries).
+  // CHECK-LABEL: Thunks for 'Y *return_adjustment::T::foo()' (2 entries).
   // CHECK-NEXT: 0 | [return adjustment (to type 'struct A *'): vbase #1, 0 non-virtual]
   // CHECK-NEXT: 1 | [return adjustment (to type 'struct return_adjustment::X *'): vbase #2, 0 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'return_adjustment::T' (1 entry).
-  // CHECK-NEXT: 2 | return_adjustment::Y *return_adjustment::T::foo()
+  // CHECK-NEXT: 2 | Y *return_adjustment::T::foo()
 
   virtual Y* foo();
 };
@@ -652,15 +652,15 @@ struct U : virtual A {
 
 struct V : Z {
   // CHECK-LABEL: VFTable for 'return_adjustment::Z' in 'return_adjustment::V' (2 entries).
-  // CHECK-NEXT: 0 | return_adjustment::U *return_adjustment::V::foo()
+  // CHECK-NEXT: 0 | U *return_adjustment::V::foo()
   // CHECK-NEXT:     [return adjustment (to type 'struct A *'): vbptr at offset 4, vbase #1, 0 non-virtual]
-  // CHECK-NEXT: 1 | return_adjustment::U *return_adjustment::V::foo()
+  // CHECK-NEXT: 1 | U *return_adjustment::V::foo()
 
-  // CHECK-LABEL: Thunks for 'return_adjustment::U *return_adjustment::V::foo()' (1 entry).
+  // CHECK-LABEL: Thunks for 'U *return_adjustment::V::foo()' (1 entry).
   // CHECK-NEXT: 0 | [return adjustment (to type 'struct A *'): vbptr at offset 4, vbase #1, 0 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'return_adjustment::V' (1 entry).
-  // CHECK-NEXT: 1 | return_adjustment::U *return_adjustment::V::foo()
+  // CHECK-NEXT: 1 | U *return_adjustment::V::foo()
 
   virtual U* foo();
 };
@@ -771,7 +771,7 @@ struct A {
 };
 struct __declspec(dllexport) B : virtual A {
   virtual void f() = 0;
-  // MANGLING-DAG: @"??_7B@Test13@@6B@" = weak_odr dllexport unnamed_addr constant { [1 x i8*] } { [1 x i8*] [i8* bitcast (void ()* @_purecall to i8*)] }
+  // MANGLING-DAG: @"??_7B@Test13@@6B@" = weak_odr dllexport unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @_purecall] }
 };
 }
 
@@ -788,8 +788,8 @@ C::C() {}
 // CHECK-LABEL: VFTable for 'pr21031_1::B' in 'pr21031_1::C' (1 entry)
 // CHECK-NEXT:   0 | void pr21031_1::B::g()
 
-// MANGLING-DAG: @"??_7C@pr21031_1@@6BB@1@@" = {{.*}} constant { [1 x i8*] }
-// MANGLING-DAG: @"??_7C@pr21031_1@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7C@pr21031_1@@6BB@1@@" = {{.*}} constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7C@pr21031_1@@6B@" = {{.*}} constant { [1 x ptr] }
 }
 
 namespace pr21031_2 {
@@ -804,8 +804,8 @@ C::C() {}
 // CHECK-LABEL: VFTable for 'pr21031_2::A' in 'pr21031_2::B' in 'pr21031_2::C' (1 entry)
 // CHECK-NEXT:   0 | void pr21031_2::A::f()
 
-// MANGLING-DAG: @"??_7C@pr21031_2@@6BA@1@@" = {{.*}} constant { [1 x i8*] }
-// MANGLING-DAG: @"??_7C@pr21031_2@@6BB@1@@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7C@pr21031_2@@6BA@1@@" = {{.*}} constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7C@pr21031_2@@6BB@1@@" = {{.*}} constant { [1 x ptr] }
 }
 
 namespace pr21062_1 {
@@ -818,7 +818,7 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21062_1::A' in 'pr21062_1::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21062_1::A::f()
 
-// MANGLING-DAG: @"??_7D@pr21062_1@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7D@pr21062_1@@6B@" = {{.*}} constant { [1 x ptr] }
 }
 
 namespace pr21062_2 {
@@ -831,7 +831,7 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21062_2::A' in 'pr21062_2::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21062_2::A::f()
 
-// MANGLING-DAG: @"??_7D@pr21062_2@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7D@pr21062_2@@6B@" = {{.*}} constant { [1 x ptr] }
 }
 
 namespace pr21064 {
@@ -843,5 +843,5 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21064::B' in 'pr21064::C' in 'pr21064::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21064::B::f()
 
-// MANGLING-DAG: @"??_7D@pr21064@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7D@pr21064@@6B@" = {{.*}} constant { [1 x ptr] }
 }

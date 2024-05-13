@@ -32,13 +32,17 @@
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include <cassert>
 #include <utility>
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
+
 class MachineInstr;
+class MachineFunction;
 class MachineOperand;
 class MachineRegisterInfo;
 class raw_ostream;
@@ -79,9 +83,8 @@ public:
   void addReg(MCPhysReg Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
     assert(Reg <= TRI->getNumRegs() && "Expected a physical register.");
-    for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-         SubRegs.isValid(); ++SubRegs)
-      LiveRegs.insert(*SubRegs);
+    for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+      LiveRegs.insert(SubReg);
   }
 
   /// Removes a physical register, all its sub-registers, and all its
@@ -132,6 +135,10 @@ public:
   /// Live in registers are the registers in the blocks live-in list and the
   /// pristine registers.
   void addLiveIns(const MachineBasicBlock &MBB);
+
+  /// Adds all live-in registers of basic block \p MBB but skips pristine
+  /// registers.
+  void addLiveInsNoPristines(const MachineBasicBlock &MBB);
 
   /// Adds all live-out registers of basic block \p MBB.
   /// Live out registers are the union of the live-in registers of the successor
@@ -188,12 +195,36 @@ void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
 void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
                           MachineBasicBlock &MBB);
 
-/// Convenience function for recomputing live-in's for \p MBB.
-static inline void recomputeLiveIns(MachineBasicBlock &MBB) {
+/// Convenience function for recomputing live-in's for a MBB. Returns true if
+/// any changes were made.
+static inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
   LivePhysRegs LPR;
-  MBB.clearLiveIns();
+  std::vector<MachineBasicBlock::RegisterMaskPair> OldLiveIns;
+
+  MBB.clearLiveIns(OldLiveIns);
   computeAndAddLiveIns(LPR, MBB);
+  MBB.sortUniqueLiveIns();
+
+  const std::vector<MachineBasicBlock::RegisterMaskPair> &NewLiveIns =
+      MBB.getLiveIns();
+  return OldLiveIns != NewLiveIns;
 }
+
+/// Convenience function for recomputing live-in's for a set of MBBs until the
+/// computation converges.
+inline void fullyRecomputeLiveIns(ArrayRef<MachineBasicBlock *> MBBs) {
+  MachineBasicBlock *const *Data = MBBs.data();
+  const size_t Len = MBBs.size();
+  while (true) {
+    bool AnyChange = false;
+    for (size_t I = 0; I < Len; ++I)
+      if (recomputeLiveIns(*Data[I]))
+        AnyChange = true;
+    if (!AnyChange)
+      return;
+  }
+}
+
 
 } // end namespace llvm
 

@@ -32,7 +32,7 @@ segment1:
   .text
   .section    .text.main,"",@
 main:
-  .functype   main () -> (i32)
+  .functype   main () -> (i32, i32, i32, i32, i32)
 // Expressions involving symbols within the same sections can be evaluated
 // prior to writing the object file.
 // CHECK-NOT: foo

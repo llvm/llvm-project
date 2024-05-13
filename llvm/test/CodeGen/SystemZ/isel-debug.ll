@@ -5,15 +5,15 @@
 ;
 ; Check that some debug output is printed without problems.
 ; CHECK: SystemZAddressingMode
-; CHECK: Base t5: i64,ch = load<(load 8 from %ir.0)>
+; CHECK: Base t5: i64,ch = load<(load (s64) from %ir.0)>
 ; CHECK: Index
 ; CHECK: Disp
 
-define void @fun(i64* %ptr) {
+define void @fun(ptr %ptr) {
 entry:
-  %0 = bitcast i64* %ptr to i32**
-  %1 = load i32*, i32** %0, align 8
-  %xpv_pv = getelementptr inbounds i32, i32* %1
-  store i32 0, i32* %xpv_pv
+  %0 = bitcast ptr %ptr to ptr
+  %1 = load ptr, ptr %0, align 8
+  %xpv_pv = getelementptr inbounds i32, ptr %1
+  store i32 0, ptr %xpv_pv
   ret void
 }

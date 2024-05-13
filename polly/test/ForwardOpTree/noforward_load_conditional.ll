@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; B[j] is overwritten by at least one statement between the
 ; definition of %val and its use. Hence, it cannot be forwarded.
@@ -15,7 +15,7 @@
 ;   A[j] = val;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -25,18 +25,18 @@ for:
   br i1 %j.cmp, label %bodyA, label %exit
 
     bodyA:
-      %B_idx = getelementptr inbounds double, double* %B, i32 %j
-      %val = load double, double* %B_idx
+      %B_idx = getelementptr inbounds double, ptr %B, i32 %j
+      %val = load double, ptr %B_idx
       %cond = icmp slt i32 %j, 1
       br i1 %cond, label %bodyA_true, label %bodyB
 
     bodyA_true:
-      store double 0.0, double* %B_idx
+      store double 0.0, ptr %B_idx
       br label %bodyB
 
     bodyB:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %val, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %val, ptr %A_idx
       br label %inc
 
 inc:

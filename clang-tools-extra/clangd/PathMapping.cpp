@@ -9,26 +9,24 @@
 #include "Transport.h"
 #include "URI.h"
 #include "support/Logger.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
+#include <optional>
 #include <tuple>
 
 namespace clang {
 namespace clangd {
-llvm::Optional<std::string> doPathMapping(llvm::StringRef S,
-                                          PathMapping::Direction Dir,
-                                          const PathMappings &Mappings) {
+std::optional<std::string> doPathMapping(llvm::StringRef S,
+                                         PathMapping::Direction Dir,
+                                         const PathMappings &Mappings) {
   // Return early to optimize for the common case, wherein S is not a file URI
-  if (!S.startswith("file://"))
-    return llvm::None;
+  if (!S.starts_with("file://"))
+    return std::nullopt;
   auto Uri = URI::parse(S);
   if (!Uri) {
     llvm::consumeError(Uri.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
   for (const auto &Mapping : Mappings) {
     const std::string &From = Dir == PathMapping::Direction::ClientToServer
@@ -40,11 +38,11 @@ llvm::Optional<std::string> doPathMapping(llvm::StringRef S,
     llvm::StringRef Body = Uri->body();
     if (Body.consume_front(From) && (Body.empty() || Body.front() == '/')) {
       std::string MappedBody = (To + Body).str();
-      return URI(Uri->scheme(), Uri->authority(), MappedBody.c_str())
+      return URI(Uri->scheme(), Uri->authority(), MappedBody)
           .toString();
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 void applyPathMappings(llvm::json::Value &V, PathMapping::Direction Dir,
@@ -56,7 +54,7 @@ void applyPathMappings(llvm::json::Value &V, PathMapping::Direction Dir,
     llvm::json::Object MappedObj;
     // 1. Map all the Keys
     for (auto &KV : *Obj) {
-      if (llvm::Optional<std::string> MappedKey =
+      if (std::optional<std::string> MappedKey =
               doPathMapping(KV.first.str(), Dir, Mappings)) {
         MappedObj.try_emplace(std::move(*MappedKey), std::move(KV.second));
       } else {
@@ -71,7 +69,7 @@ void applyPathMappings(llvm::json::Value &V, PathMapping::Direction Dir,
     for (llvm::json::Value &Val : *V.getAsArray())
       applyPathMappings(Val, Dir, Mappings);
   } else if (K == Kind::String) {
-    if (llvm::Optional<std::string> Mapped =
+    if (std::optional<std::string> Mapped =
             doPathMapping(*V.getAsString(), Dir, Mappings))
       V = std::move(*Mapped);
   }
@@ -151,7 +149,8 @@ llvm::Expected<std::string> parsePath(llvm::StringRef Path) {
   namespace path = llvm::sys::path;
   if (path::is_absolute(Path, path::Style::posix)) {
     return std::string(Path);
-  } else if (path::is_absolute(Path, path::Style::windows)) {
+  }
+  if (path::is_absolute(Path, path::Style::windows)) {
     std::string Converted = path::convert_to_slash(Path, path::Style::windows);
     if (Converted.front() != '/')
       Converted = "/" + Converted;

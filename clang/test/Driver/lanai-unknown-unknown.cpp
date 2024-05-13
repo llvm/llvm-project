@@ -1,6 +1,6 @@
-// RUN: %clang -target lanai-unknown-unknown -### %s -emit-llvm-only -c 2>&1 \
+// RUN: %clang --target=lanai-unknown-unknown -### %s -c 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=ECHO
-// RUN: %clang -target lanai-unknown-unknown %s -emit-llvm -S -o - \
+// RUN: %clang --target=lanai-unknown-unknown %s -emit-llvm -S -o - \
 // RUN:   | FileCheck %s
 
 // ECHO: {{.*}} "-cc1" {{.*}}lanai-unknown-unknown.c

@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
-// template<range _Rp>
+// template<class R>
 // concept random_access_range;
 
 #include <ranges>
@@ -38,3 +36,21 @@ static_assert(!check_range<forward_iterator>());
 static_assert(!check_range<bidirectional_iterator>());
 static_assert(check_range<random_access_iterator>());
 static_assert(check_range<contiguous_iterator>());
+
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+
+static_assert(!std::ranges::random_access_range<Holder<Incomplete>*>);
+static_assert(!std::ranges::random_access_range<Holder<Incomplete>*&>);
+static_assert(!std::ranges::random_access_range<Holder<Incomplete>*&&>);
+static_assert(!std::ranges::random_access_range<Holder<Incomplete>* const>);
+static_assert(!std::ranges::random_access_range<Holder<Incomplete>* const&>);
+static_assert(!std::ranges::random_access_range<Holder<Incomplete>* const&&>);
+
+static_assert( std::ranges::random_access_range<Holder<Incomplete>*[10]>);
+static_assert( std::ranges::random_access_range<Holder<Incomplete>*(&)[10]>);
+static_assert( std::ranges::random_access_range<Holder<Incomplete>*(&&)[10]>);
+static_assert( std::ranges::random_access_range<Holder<Incomplete>* const[10]>);
+static_assert( std::ranges::random_access_range<Holder<Incomplete>* const(&)[10]>);
+static_assert( std::ranges::random_access_range<Holder<Incomplete>* const(&&)[10]>);

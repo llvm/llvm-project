@@ -1,5 +1,6 @@
 ;;; clang-format.el --- Format code using clang-format  -*- lexical-binding: t; -*-
 
+;; Version: 0.1.0
 ;; Keywords: tools, c
 ;; Package-Requires: ((cl-lib "0.3"))
 ;; SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -82,7 +83,7 @@ in such buffers."
         (let* ((children (xml-node-children node))
                (text (car children)))
           (cl-case (xml-node-name node)
-            ('replacement
+            (replacement
              (let* ((offset (xml-get-attribute-or-nil node 'offset))
                     (length (xml-get-attribute-or-nil node 'length)))
                (when (or (null offset) (null length))
@@ -93,7 +94,7 @@ in such buffers."
                (setq offset (string-to-number offset))
                (setq length (string-to-number length))
                (push (list offset length text) replacements)))
-            ('cursor
+            (cursor
              (setq cursor (string-to-number text)))))))
 
     ;; Sort by decreasing offset, length.
@@ -147,7 +148,7 @@ uses the function `buffer-file-name'."
     (setq style clang-format-style))
 
   (unless assume-file-name
-    (setq assume-file-name buffer-file-name))
+    (setq assume-file-name (buffer-file-name (buffer-base-buffer))))
 
   (let ((file-start (clang-format--bufferpos-to-filepos start 'approximate
                                                         'utf-8-unix))

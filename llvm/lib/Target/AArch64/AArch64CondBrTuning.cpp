@@ -61,7 +61,8 @@ public:
 
 private:
   MachineInstr *getOperandDef(const MachineOperand &MO);
-  MachineInstr *convertToFlagSetting(MachineInstr &MI, bool IsFlagSetting);
+  MachineInstr *convertToFlagSetting(MachineInstr &MI, bool IsFlagSetting,
+                                     bool Is64Bit);
   MachineInstr *convertToCondBr(MachineInstr &MI);
   bool tryToTuneBranch(MachineInstr &MI, MachineInstr &DefMI);
 };
@@ -78,34 +79,31 @@ void AArch64CondBrTuning::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 MachineInstr *AArch64CondBrTuning::getOperandDef(const MachineOperand &MO) {
-  if (!Register::isVirtualRegister(MO.getReg()))
+  if (!MO.getReg().isVirtual())
     return nullptr;
   return MRI->getUniqueVRegDef(MO.getReg());
 }
 
 MachineInstr *AArch64CondBrTuning::convertToFlagSetting(MachineInstr &MI,
-                                                        bool IsFlagSetting) {
+                                                        bool IsFlagSetting,
+                                                        bool Is64Bit) {
   // If this is already the flag setting version of the instruction (e.g., SUBS)
   // just make sure the implicit-def of NZCV isn't marked dead.
   if (IsFlagSetting) {
-    for (unsigned I = MI.getNumExplicitOperands(), E = MI.getNumOperands();
-         I != E; ++I) {
-      MachineOperand &MO = MI.getOperand(I);
+    for (MachineOperand &MO : MI.implicit_operands())
       if (MO.isReg() && MO.isDead() && MO.getReg() == AArch64::NZCV)
         MO.setIsDead(false);
-    }
     return &MI;
   }
-  bool Is64Bit;
-  unsigned NewOpc = TII->convertToFlagSettingOpc(MI.getOpcode(), Is64Bit);
+  unsigned NewOpc = TII->convertToFlagSettingOpc(MI.getOpcode());
   Register NewDestReg = MI.getOperand(0).getReg();
   if (MRI->hasOneNonDBGUse(MI.getOperand(0).getReg()))
     NewDestReg = Is64Bit ? AArch64::XZR : AArch64::WZR;
 
   MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                     TII->get(NewOpc), NewDestReg);
-  for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
-    MIB.add(MI.getOperand(I));
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+    MIB.add(MO);
 
   return MIB;
 }
@@ -165,7 +163,7 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
   case AArch64::SUBWrs:
   case AArch64::SUBWrx:
     IsFlagSetting = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::ADDSWri:
   case AArch64::ADDSWrr:
   case AArch64::ADDSWrs:
@@ -201,7 +199,7 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
       LLVM_DEBUG(dbgs() << "    ");
       LLVM_DEBUG(MI.print(dbgs()));
 
-      NewCmp = convertToFlagSetting(DefMI, IsFlagSetting);
+      NewCmp = convertToFlagSetting(DefMI, IsFlagSetting, /*Is64Bit=*/false);
       NewBr = convertToCondBr(MI);
       break;
     }
@@ -221,7 +219,7 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
   case AArch64::SUBXrs:
   case AArch64::SUBXrx:
     IsFlagSetting = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::ADDSXri:
   case AArch64::ADDSXrr:
   case AArch64::ADDSXrs:
@@ -256,7 +254,7 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
       LLVM_DEBUG(dbgs() << "    ");
       LLVM_DEBUG(MI.print(dbgs()));
 
-      NewCmp = convertToFlagSetting(DefMI, IsFlagSetting);
+      NewCmp = convertToFlagSetting(DefMI, IsFlagSetting, /*Is64Bit=*/true);
       NewBr = convertToCondBr(MI);
       break;
     }
@@ -295,10 +293,7 @@ bool AArch64CondBrTuning::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     bool LocalChange = false;
-    for (MachineBasicBlock::iterator I = MBB.getFirstTerminator(),
-                                     E = MBB.end();
-         I != E; ++I) {
-      MachineInstr &MI = *I;
+    for (MachineInstr &MI : MBB.terminators()) {
       switch (MI.getOpcode()) {
       default:
         break;

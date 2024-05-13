@@ -23,8 +23,8 @@ Prerequisites
 -------------
 
 CUDA is supported since llvm 3.9. Clang currently supports CUDA 7.0 through
-10.1. If clang detects a newer CUDA version, it will issue a warning and will
-attempt to use detected CUDA SDK it as if it were CUDA-10.1.
+12.1. If clang detects a newer CUDA version, it will issue a warning and will
+attempt to use detected CUDA SDK it as if it were CUDA 12.1.
 
 Before you build CUDA code, you'll need to have installed the CUDA SDK.  See
 `NVIDIA's CUDA installation guide
@@ -144,9 +144,9 @@ device side.
 ----------------------------
 
 In clang, ``math.h`` and ``cmath`` are available and `pass
-<https://github.com/llvm/llvm-test-suite/blob/master/External/CUDA/math_h.cu>`_
+<https://github.com/llvm/llvm-test-suite/blob/main/External/CUDA/math_h.cu>`_
 `tests
-<https://github.com/llvm/llvm-test-suite/blob/master/External/CUDA/cmath.cu>`_
+<https://github.com/llvm/llvm-test-suite/blob/main/External/CUDA/cmath.cu>`_
 adapted from libc++'s test suite.
 
 In nvcc ``math.h`` and ``cmath`` are mostly available.  Versions of ``::foof``

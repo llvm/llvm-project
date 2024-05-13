@@ -14,14 +14,14 @@
 ; Function Attrs: uwtable
 define void @_Z3bazi(i32) #0 !dbg !6 {
   %2 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4
-  call void @llvm.dbg.declare(metadata i32* %2, metadata !10, metadata !11), !dbg !12
-  %3 = load i32, i32* %2, align 4, !dbg !13
+  store i32 %0, ptr %2, align 4
+  call void @llvm.dbg.declare(metadata ptr %2, metadata !10, metadata !11), !dbg !12
+  %3 = load i32, ptr %2, align 4, !dbg !13
   %4 = icmp ne i32 %3, 0, !dbg !13
   br i1 %4, label %5, label %8, !dbg !15
 
 ; <label>:5:                                      ; preds = %1
-  %6 = load i32, i32* %2, align 4, !dbg !16
+  %6 = load i32, ptr %2, align 4, !dbg !16
   %7 = add nsw i32 %6, 1, !dbg !19
   call void @_Z3fooi(i32 %7), !dbg !20
   br label %8, !dbg !21
@@ -67,8 +67,8 @@ attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "fra
 !21 = !DILocation(line: 3, column: 21, scope: !17)
 !22 = !DILocation(line: 4, column: 1, scope: !6)
 
-; CHECK: Address            Line   Column File   ISA Discriminator Flags
-; CHECK: ------------------ ------ ------ ------ --- ------------- -------------
-; CHECK: {{.*}}      3     15      1   0             1 
-; CHECK: {{.*}}      3     16      1   0             1 
-; CHECK: {{.*}}      3     11      1   0             1 
+; CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+; CHECK: ------------------ ------ ------ ------ --- ------------- ------- -------------
+; CHECK: {{.*}}                  3     15      1   0             1       0
+; CHECK: {{.*}}                  3     16      1   0             1       0
+; CHECK: {{.*}}                  3     11      1   0             1       0

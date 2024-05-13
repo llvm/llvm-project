@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512bf16 -mattr=+avx512vl --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bf16 -mattr=+avx512vl --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64
 
-declare <8 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.128(<4 x float>, <4 x float>) #1
+declare <8 x bfloat> @llvm.x86.avx512bf16.cvtne2ps2bf16.128(<4 x float>, <4 x float>) #1
 
 define <2 x i64> @test_mm_cvtne2ps2bf16_128(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_mm_cvtne2ps2bf16_128:
@@ -10,8 +10,8 @@ define <2 x i64> @test_mm_cvtne2ps2bf16_128(<4 x float> %A, <4 x float> %B) loca
 ; CHECK-NEXT:    vcvtne2ps2bf16 %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7f,0x08,0x72,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.128(<4 x float> %A, <4 x float> %B) #2
-  %1 = bitcast <8 x i16> %0 to <2 x i64>
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.cvtne2ps2bf16.128(<4 x float> %A, <4 x float> %B) #2
+  %1 = bitcast <8 x bfloat> %0 to <2 x i64>
   ret <2 x i64> %1
 }
 
@@ -29,10 +29,10 @@ define <2 x i64> @test_mm_maskz_cvtne2ps2bf16_128(<4 x float> %A, <4 x float> %B
 ; X64-NEXT:    vcvtne2ps2bf16 %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7f,0x89,0x72,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.128(<4 x float> %A, <4 x float> %B) #2
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.cvtne2ps2bf16.128(<4 x float> %A, <4 x float> %B) #2
   %1 = bitcast i8 %U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x i16> %0, <8 x i16> zeroinitializer
-  %3 = bitcast <8 x i16> %2 to <2 x i64>
+  %2 = select <8 x i1> %1, <8 x bfloat> %0, <8 x bfloat> zeroinitializer
+  %3 = bitcast <8 x bfloat> %2 to <2 x i64>
   ret <2 x i64> %3
 }
 
@@ -50,15 +50,15 @@ define <2 x i64> @test_mm_mask_cvtne2ps2bf16_128(<2 x i64> %C, i8 zeroext %U, <4
 ; X64-NEXT:    vcvtne2ps2bf16 %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x77,0x09,0x72,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.128(<4 x float> %A, <4 x float> %B) #2
-  %1 = bitcast <2 x i64> %C to <8 x i16>
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.cvtne2ps2bf16.128(<4 x float> %A, <4 x float> %B) #2
+  %1 = bitcast <2 x i64> %C to <8 x bfloat>
   %2 = bitcast i8 %U to <8 x i1>
-  %3 = select <8 x i1> %2, <8 x i16> %0, <8 x i16> %1
-  %4 = bitcast <8 x i16> %3 to <2 x i64>
+  %3 = select <8 x i1> %2, <8 x bfloat> %0, <8 x bfloat> %1
+  %4 = bitcast <8 x bfloat> %3 to <2 x i64>
   ret <2 x i64> %4
 }
 
-declare <16 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float>, <8 x float>) #3
+declare <16 x bfloat> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float>, <8 x float>) #3
 
 define <4 x i64> @test_mm256_cvtne2ps2bf16_256(<8 x float> %A, <8 x float> %B) local_unnamed_addr #1 {
 ; CHECK-LABEL: test_mm256_cvtne2ps2bf16_256:
@@ -66,8 +66,8 @@ define <4 x i64> @test_mm256_cvtne2ps2bf16_256(<8 x float> %A, <8 x float> %B) l
 ; CHECK-NEXT:    vcvtne2ps2bf16 %ymm1, %ymm0, %ymm0 # encoding: [0x62,0xf2,0x7f,0x28,0x72,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float> %A, <8 x float> %B) #4
-  %1 = bitcast <16 x i16> %0 to <4 x i64>
+  %0 = tail call <16 x bfloat> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float> %A, <8 x float> %B) #4
+  %1 = bitcast <16 x bfloat> %0 to <4 x i64>
   ret <4 x i64> %1
 }
 
@@ -84,10 +84,10 @@ define <4 x i64> @test_mm256_maskz_cvtne2ps2bf16_256(<8 x float> %A, <8 x float>
 ; X64-NEXT:    vcvtne2ps2bf16 %ymm1, %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x7f,0xa9,0x72,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float> %A, <8 x float> %B) #4
+  %0 = tail call <16 x bfloat> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float> %A, <8 x float> %B) #4
   %1 = bitcast i16 %U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x i16> %0, <16 x i16> zeroinitializer
-  %3 = bitcast <16 x i16> %2 to <4 x i64>
+  %2 = select <16 x i1> %1, <16 x bfloat> %0, <16 x bfloat> zeroinitializer
+  %3 = bitcast <16 x bfloat> %2 to <4 x i64>
   ret <4 x i64> %3
 }
 
@@ -104,15 +104,15 @@ define <4 x i64> @test_mm256_mask_cvtne2ps2bf16_256(<4 x i64> %C, i16 zeroext %U
 ; X64-NEXT:    vcvtne2ps2bf16 %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x77,0x29,0x72,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float> %A, <8 x float> %B) #4
-  %1 = bitcast <4 x i64> %C to <16 x i16>
+  %0 = tail call <16 x bfloat> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float> %A, <8 x float> %B) #4
+  %1 = bitcast <4 x i64> %C to <16 x bfloat>
   %2 = bitcast i16 %U to <16 x i1>
-  %3 = select <16 x i1> %2, <16 x i16> %0, <16 x i16> %1
-  %4 = bitcast <16 x i16> %3 to <4 x i64>
+  %3 = select <16 x i1> %2, <16 x bfloat> %0, <16 x bfloat> %1
+  %4 = bitcast <16 x bfloat> %3 to <4 x i64>
   ret <4 x i64> %4
 }
 
-declare <8 x i16> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float>) #3
+declare <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float>) #3
 
 define <2 x i64> @test_mm256_cvtneps2bf16_256(<8 x float> %A) local_unnamed_addr #2 {
 ; CHECK-LABEL: test_mm256_cvtneps2bf16_256:
@@ -121,8 +121,8 @@ define <2 x i64> @test_mm256_cvtneps2bf16_256(<8 x float> %A) local_unnamed_addr
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> %A) #4
-  %1 = bitcast <8 x i16> %0 to <2 x i64>
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> %A) #4
+  %1 = bitcast <8 x bfloat> %0 to <2 x i64>
   ret <2 x i64> %1
 }
 
@@ -142,10 +142,10 @@ define <2 x i64> @test_mm256_maskz_cvtneps2bf16_256(<8 x float> %A, i8 zeroext %
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> %A) #4
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> %A) #4
   %1 = bitcast i8 %U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x i16> %0, <8 x i16> zeroinitializer
-  %3 = bitcast <8 x i16> %2 to <2 x i64>
+  %2 = select <8 x i1> %1, <8 x bfloat> %0, <8 x bfloat> zeroinitializer
+  %3 = bitcast <8 x bfloat> %2 to <2 x i64>
   ret <2 x i64> %3
 }
 
@@ -165,15 +165,15 @@ define <2 x i64> @test_mm256_mask_cvtneps2bf16_256(<2 x i64> %C, i8 zeroext %U, 
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> %A) #4
-  %1 = bitcast <2 x i64> %C to <8 x i16>
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> %A) #4
+  %1 = bitcast <2 x i64> %C to <8 x bfloat>
   %2 = bitcast i8 %U to <8 x i1>
-  %3 = select <8 x i1> %2, <8 x i16> %0, <8 x i16> %1
-  %4 = bitcast <8 x i16> %3 to <2 x i64>
+  %3 = select <8 x i1> %2, <8 x bfloat> %0, <8 x bfloat> %1
+  %4 = bitcast <8 x bfloat> %3 to <2 x i64>
   ret <2 x i64> %4
 }
 
-declare <8 x i16> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float>, <8 x i16>, <4 x i1>) #3
+declare <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float>, <8 x bfloat>, <4 x i1>) #3
 
 define <2 x i64> @test_mm128_cvtneps2bf16_128(<4 x float> %A) local_unnamed_addr #2 {
 ; CHECK-LABEL: test_mm128_cvtneps2bf16_128:
@@ -181,8 +181,8 @@ define <2 x i64> @test_mm128_cvtneps2bf16_128(<4 x float> %A) local_unnamed_addr
 ; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x08,0x72,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x i16> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>) #4
-  %1 = bitcast <8 x i16> %0 to <2 x i64>
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>) #4
+  %1 = bitcast <8 x bfloat> %0 to <2 x i64>
   ret <2 x i64> %1
 }
 
@@ -202,8 +202,8 @@ define <2 x i64> @test_mm128_maskz_cvtneps2bf16_128(<4 x float> %A, i8 zeroext %
 entry:
   %0 = bitcast i8 %U to <8 x i1>
   %1 = shufflevector <8 x i1> %0, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %2 = tail call <8 x i16> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x i16> zeroinitializer, <4 x i1> %1) #4
-  %3 = bitcast <8 x i16> %2 to <2 x i64>
+  %2 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> zeroinitializer, <4 x i1> %1) #4
+  %3 = bitcast <8 x bfloat> %2 to <2 x i64>
   ret <2 x i64> %3
 }
 
@@ -223,9 +223,9 @@ define <2 x i64> @test_mm128_mask_cvtneps2bf16_128(<2 x i64> %C, i8 zeroext %U, 
 entry:
   %0 = bitcast i8 %U to <8 x i1>
   %1 = shufflevector <8 x i1> %0, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %2 = bitcast <2 x i64> %C to <8 x i16>
-  %3 = tail call <8 x i16> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x i16> %2, <4 x i1> %1) #4
-  %4 = bitcast <8 x i16> %3 to <2 x i64>
+  %2 = bitcast <2 x i64> %C to <8 x bfloat>
+  %3 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> %2, <4 x i1> %1) #4
+  %4 = bitcast <8 x bfloat> %3 to <2 x i64>
   ret <2 x i64> %4
 }
 
@@ -248,26 +248,26 @@ define <2 x i64> @test_mm128_cvtneps2bf16_128_select(<2 x i64> %C, i8 zeroext %U
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = bitcast i8 %U to <8 x i1>
-  %1 = bitcast <2 x i64> %C to <8 x i16>
-  %2 = tail call <8 x i16> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x i16> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>) #4
-  %3 = select <8 x i1> %0, <8 x i16> %2, <8 x i16> %1
-  %4 = bitcast <8 x i16> %3 to <2 x i64>
+  %1 = bitcast <2 x i64> %C to <8 x bfloat>
+  %2 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>) #4
+  %3 = select <8 x i1> %0, <8 x bfloat> %2, <8 x bfloat> %1
+  %4 = bitcast <8 x bfloat> %3 to <2 x i64>
   ret <2 x i64> %4
 }
 
-declare <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float>, <8 x i32>, <8 x i32>) #3
+declare <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float>, <16 x bfloat>, <16 x bfloat>) #3
 
-define <8 x float> @test_mm256_dpbf16ps_256(<8 x float> %E, <8 x i32> %A, <8 x i32> %B) local_unnamed_addr #2 {
+define <8 x float> @test_mm256_dpbf16ps_256(<8 x float> %E, <16 x bfloat> %A, <16 x bfloat> %B) local_unnamed_addr #2 {
 ; CHECK-LABEL: test_mm256_dpbf16ps_256:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vdpbf16ps %ymm2, %ymm1, %ymm0 # encoding: [0x62,0xf2,0x76,0x28,0x52,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float> %E, <8 x i32> %A, <8 x i32> %B) #4
+  %0 = tail call <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float> %E, <16 x bfloat> %A, <16 x bfloat> %B) #4
   ret <8 x float> %0
 }
 
-define <8 x float> @test_mm256_maskz_dpbf16ps_256(<8 x float> %E, <8 x i32> %A, <8 x i32> %B, i8 zeroext %U) local_unnamed_addr #2 {
+define <8 x float> @test_mm256_maskz_dpbf16ps_256(<8 x float> %E, <16 x bfloat> %A, <16 x bfloat> %B, i8 zeroext %U) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm256_maskz_dpbf16ps_256:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
@@ -281,12 +281,12 @@ define <8 x float> @test_mm256_maskz_dpbf16ps_256(<8 x float> %E, <8 x i32> %A, 
 ; X64-NEXT:    vdpbf16ps %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xa9,0x52,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float> %E, <8 x i32> %A, <8 x i32> %B) #4
+  %0 = tail call <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float> %E, <16 x bfloat> %A, <16 x bfloat> %B) #4
   %1 = bitcast i8 %U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x float> %0, <8 x float> zeroinitializer
   ret <8 x float> %2
 }
-define <8 x float> @test_mm256_mask_dpbf16ps_256(i8 zeroext %U, <8 x float> %E, <8 x i32> %A, <8 x i32> %B) local_unnamed_addr #2 {
+define <8 x float> @test_mm256_mask_dpbf16ps_256(i8 zeroext %U, <8 x float> %E, <16 x bfloat> %A, <16 x bfloat> %B) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm256_mask_dpbf16ps_256:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
@@ -300,28 +300,28 @@ define <8 x float> @test_mm256_mask_dpbf16ps_256(i8 zeroext %U, <8 x float> %E, 
 ; X64-NEXT:    vdpbf16ps %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x76,0x29,0x52,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float> %E, <8 x i32> %A, <8 x i32> %B) #4
+  %0 = tail call <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float> %E, <16 x bfloat> %A, <16 x bfloat> %B) #4
   %1 = bitcast i8 %U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x float> %0, <8 x float> %E
   ret <8 x float> %2
 }
 
-declare <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float>, <4 x i32>, <4 x i32>) #3
+declare <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float>, <8 x bfloat>, <8 x bfloat>) #3
 
-define <4 x float> @test_mm128_dpbf16ps_128(<4 x float> %E, <4 x i32> %A, <4 x i32> %B) local_unnamed_addr #2 {
+define <4 x float> @test_mm128_dpbf16ps_128(<4 x float> %E, <8 x bfloat> %A, <8 x bfloat> %B) local_unnamed_addr #2 {
 ; CHECK-LABEL: test_mm128_dpbf16ps_128:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vdpbf16ps %xmm2, %xmm1, %xmm0 # encoding: [0x62,0xf2,0x76,0x08,0x52,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float> %E, <4 x i32> %A, <4x i32> %B) #4
+  %0 = tail call <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float> %E, <8 x bfloat> %A, <8 x bfloat> %B) #4
   ret <4 x float> %0
 }
 
-define <4 x float> @test_mm128_maskz_dpbf16ps_128(<4 x float> %E, <4 x i32> %A, <4 x i32> %B, i4 zeroext %U) local_unnamed_addr #2 {
+define <4 x float> @test_mm128_maskz_dpbf16ps_128(<4 x float> %E, <8 x bfloat> %A, <8 x bfloat> %B, i4 zeroext %U) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm128_maskz_dpbf16ps_128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovd %eax, %k1 # encoding: [0xc5,0xfb,0x92,0xc8]
 ; X86-NEXT:    vdpbf16ps %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0x89,0x52,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -332,15 +332,15 @@ define <4 x float> @test_mm128_maskz_dpbf16ps_128(<4 x float> %E, <4 x i32> %A, 
 ; X64-NEXT:    vdpbf16ps %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0x89,0x52,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float> %E, <4 x i32> %A, <4 x i32> %B) #4
+  %0 = tail call <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float> %E, <8 x bfloat> %A, <8 x bfloat> %B) #4
   %1 = bitcast i4 %U to <4 x i1>
   %2 = select <4 x i1> %1, <4 x float> %0, <4 x float> zeroinitializer
   ret <4 x float> %2
 }
-define <4 x float> @test_mm128_mask_dpbf16ps_128(i4 zeroext %U, <4 x float> %E, <4 x i32> %A, <4 x i32> %B) local_unnamed_addr #2 {
+define <4 x float> @test_mm128_mask_dpbf16ps_128(i4 zeroext %U, <4 x float> %E, <8 x bfloat> %A, <8 x bfloat> %B) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm128_mask_dpbf16ps_128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovd %eax, %k1 # encoding: [0xc5,0xfb,0x92,0xc8]
 ; X86-NEXT:    vdpbf16ps %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x09,0x52,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -351,8 +351,55 @@ define <4 x float> @test_mm128_mask_dpbf16ps_128(i4 zeroext %U, <4 x float> %E, 
 ; X64-NEXT:    vdpbf16ps %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x09,0x52,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = tail call <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float> %E, <4 x i32> %A, <4 x i32> %B) #4
+  %0 = tail call <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float> %E, <8 x bfloat> %A, <8 x bfloat> %B) #4
   %1 = bitcast i4 %U to <4 x i1>
   %2 = select <4 x i1> %1, <4 x float> %0, <4 x float> %E
   ret <4 x float> %2
+}
+
+define <16 x i16> @test_no_vbroadcast1() {
+; CHECK-LABEL: test_no_vbroadcast1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x08,0x72,0xc0]
+; CHECK-NEXT:    vpbroadcastw %xmm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x79,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> poison, <8 x bfloat> zeroinitializer, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %1 = bitcast <8 x bfloat> %0 to <8 x i16>
+  %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <16 x i32> zeroinitializer
+  ret <16 x i16> %2
+}
+
+define <16 x bfloat> @test_no_vbroadcast2() nounwind {
+; CHECK-LABEL: test_no_vbroadcast2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x08,0x72,0xc0]
+; CHECK-NEXT:    vpbroadcastw %xmm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x79,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> poison, <8 x bfloat> zeroinitializer, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %1 = shufflevector <8 x bfloat> %0, <8 x bfloat> undef, <16 x i32> zeroinitializer
+  ret <16 x bfloat> %1
+}
+
+define <16 x i32> @pr83358() {
+; X86-LABEL: pr83358:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvtneps2bf16y {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # encoding: [0x62,0xf2,0x7e,0x28,0x72,0x05,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-NEXT:    vshufi64x2 $0, %zmm0, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0x43,0xc0,0x00]
+; X86-NEXT:    # zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: pr83358:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvtneps2bf16y {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x62,0xf2,0x7e,0x28,0x72,0x05,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-NEXT:    vshufi64x2 $0, %zmm0, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0x43,0xc0,0x00]
+; X64-NEXT:    # zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %1 = call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 5.000000e+00, float 6.000000e+00, float 7.000000e+00, float 8.000000e+00>)
+  %2 = bitcast <8 x bfloat> %1 to <4 x i32>
+  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  ret <16 x i32> %3
 }

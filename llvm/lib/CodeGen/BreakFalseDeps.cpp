@@ -17,13 +17,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegister.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -32,9 +35,9 @@ namespace llvm {
 
 class BreakFalseDeps : public MachineFunctionPass {
 private:
-  MachineFunction *MF;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
+  MachineFunction *MF = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   RegisterClassInfo RegClassInfo;
 
   /// List of undefined register reads in this block in forward order.
@@ -43,7 +46,7 @@ private:
   /// Storage for register unit liveness.
   LivePhysRegs LiveRegSet;
 
-  ReachingDefAnalysis *RDA;
+  ReachingDefAnalysis *RDA = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -121,9 +124,9 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   MCRegister OriginalReg = MO.getReg().asMCReg();
 
   // Update only undef operands that have reg units that are mapped to one root.
-  for (MCRegUnitIterator Unit(OriginalReg, TRI); Unit.isValid(); ++Unit) {
+  for (MCRegUnit Unit : TRI->regunits(OriginalReg)) {
     unsigned NumRoots = 0;
-    for (MCRegUnitRootIterator Root(*Unit, TRI); Root.isValid(); ++Root) {
+    for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
       NumRoots++;
       if (NumRoots > 1)
         return false;
@@ -133,12 +136,12 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   // Get the undef operand's register class
   const TargetRegisterClass *OpRC =
     TII->getRegClass(MI->getDesc(), OpIdx, TRI, *MF);
+  assert(OpRC && "Not a valid register class");
 
   // If the instruction has a true dependency, we can hide the false depdency
   // behind it.
-  for (MachineOperand &CurrMO : MI->operands()) {
-    if (!CurrMO.isReg() || CurrMO.isDef() || CurrMO.isUndef() ||
-      !OpRC->contains(CurrMO.getReg()))
+  for (MachineOperand &CurrMO : MI->all_uses()) {
+    if (CurrMO.isUndef() || !OpRC->contains(CurrMO.getReg()))
       continue;
     // We found a true dependency - replace the undef register with the true
     // dependency.
@@ -244,7 +247,7 @@ void BreakFalseDeps::processUndefReads(MachineBasicBlock *MBB) {
   MachineInstr *UndefMI = UndefReads.back().first;
   unsigned OpIdx = UndefReads.back().second;
 
-  for (MachineInstr &I : make_range(MBB->rbegin(), MBB->rend())) {
+  for (MachineInstr &I : llvm::reverse(*MBB)) {
     // Update liveness, including the current instruction's defs.
     LiveRegSet.stepBackward(I);
 
@@ -287,10 +290,16 @@ bool BreakFalseDeps::runOnMachineFunction(MachineFunction &mf) {
 
   LLVM_DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");
 
+  // Skip Dead blocks due to ReachingDefAnalysis has no idea about instructions
+  // in them.
+  df_iterator_default_set<MachineBasicBlock *> Reachable;
+  for (MachineBasicBlock *MBB : depth_first_ext(&mf, Reachable))
+    (void)MBB /* Mark all reachable blocks */;
+
   // Traverse the basic blocks.
-  for (MachineBasicBlock &MBB : mf) {
-    processBasicBlock(&MBB);
-  }
+  for (MachineBasicBlock &MBB : mf)
+    if (Reachable.count(&MBB))
+      processBasicBlock(&MBB);
 
   return false;
 }

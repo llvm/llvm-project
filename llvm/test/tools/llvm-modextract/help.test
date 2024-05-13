@@ -1,0 +1,7 @@
+# RUN: llvm-modextract --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
+
+# HELP: OVERVIEW: Module extractor
+# HELP: USAGE
+# HELP: Color Options
+# HELP: Generic Options
+# HELP: Modextract Options

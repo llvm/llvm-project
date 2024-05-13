@@ -1,5 +1,6 @@
 import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
@@ -19,13 +20,12 @@ template("write_lit_config") {
       "CLANG_BINARY_DIR=" +
           rebase_path(get_label_info("//clang", "target_out_dir"), dir),
       "CLANG_SOURCE_DIR=" + rebase_path("//clang", dir),
-      "ENABLE_SHARED=0",
       "LLVM_BINARY_DIR=" +
           rebase_path(get_label_info("//llvm", "target_out_dir"), dir),
       "LLVM_LIBS_DIR=",  # needed only for shared builds
       "LLVM_SOURCE_DIR=" + rebase_path("//llvm", dir),
       "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
-      "TARGET_TRIPLE=$llvm_target_triple",
+      "LLVM_TARGET_TRIPLE=$llvm_target_triple",
     ]
     if (host_os == "win") {
       # See comment for Windows solink in llvm/utils/gn/build/toolchain/BUILD.gn
@@ -43,10 +43,14 @@ write_lit_config("lit_site_cfg") {
   output = clang_lit_site_cfg_file
   dir = get_path_info(output, "dir")
   extra_values = [
-    "LLVM_WITH_Z3=",  # Must be empty, not 0.
+    "LLVM_WITH_Z3=0",
     "CLANG_BUILD_EXAMPLES=0",
+    "CLANG_BUILT_STANDALONE=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
-    "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
+    "CLANG_DEFAULT_PIE_ON_LINUX=0",
+    "CLANG_ENABLE_CIR=0",
+    "CLANG_PLUGIN_SUPPORT=0",  # FIXME: Analysis/plugins need global -fPIC
+    "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
     "CLANG_VENDOR_UTI=org.llvm.clang",
 
     # This is only used if LLVM_USE_SANITIZER includes lsan and the host
@@ -58,12 +62,16 @@ write_lit_config("lit_site_cfg") {
     "CMAKE_CXX_COMPILER=c++",
     "CMAKE_C_COMPILER=cc",
     "ENABLE_BACKTRACES=1",
-    "LLVM_ENABLE_NEW_PASS_MANAGER=1",
+    "ENABLE_SHARED=0",
+    "LLVM_ENABLE_ZSTD=0",
+    "LLVM_EXTERNAL_LIT=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
+    "LLVM_TOOL_LLVM_DRIVER_BUILD=0",  # FIXME: Add actual support for this.
     "LLVM_USE_SANITIZER=",
     "Python3_EXECUTABLE=$python_path",
     "USE_Z3_SOLVER=",
+    "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=0",
   ]
 
   if (clang_enable_arcmt) {
@@ -104,15 +112,24 @@ write_lit_config("lit_site_cfg") {
 
   if (host_os == "win") {
     extra_values += [
-      "LLVM_ENABLE_PLUGINS=0",
+      # See comment for Windows solink in llvm/utils/gn/build/toolchain/BUILD.gn
+      "CMAKE_LIBRARY_OUTPUT_DIRECTORY=" + rebase_path("$root_out_dir/bin", dir),
       "LLVM_LIT_ERRC_MESSAGES=no such file or directory;is a directory;" +
           "invalid argument;permission denied",
+      "PERL_EXECUTABLE="
     ]
   } else {
     extra_values += [
-      "LLVM_ENABLE_PLUGINS=0",  # FIXME: Analysis/plugins need global -fPIC
+      "CMAKE_LIBRARY_OUTPUT_DIRECTORY=" + rebase_path("$root_out_dir/lib", dir),
       "LLVM_LIT_ERRC_MESSAGES=",
+      "PERL_EXECUTABLE=/usr/bin/perl"
     ]
+  }
+
+  if (llvm_enable_reverse_iteration) {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=0" ]  # Must be 0.
   }
 
   if (llvm_enable_threads) {
@@ -141,7 +158,9 @@ group("test") {
     "//clang/tools/c-index-test",
     "//clang/tools/clang-diff",
     "//clang/tools/clang-format",
+    "//clang/tools/clang-fuzzer/dictionary:clang-fuzzer-dictionary",
     "//clang/tools/clang-import-test",
+    "//clang/tools/clang-installapi",
     "//clang/tools/clang-offload-bundler",
     "//clang/tools/clang-refactor",
     "//clang/tools/clang-rename",
@@ -153,6 +172,7 @@ group("test") {
     "//clang/utils/TableGen:clang-tblgen",
     "//clang/utils/hmaptool",
     "//llvm/tools/llc",
+    "//llvm/tools/llvm-ar:symlinks",
     "//llvm/tools/llvm-as",
     "//llvm/tools/llvm-bcanalyzer",
     "//llvm/tools/llvm-cat",
@@ -167,17 +187,19 @@ group("test") {
     "//llvm/tools/llvm-nm:symlinks",
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
+    "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-profdata",
     "//llvm/tools/llvm-rc:symlinks",
     "//llvm/tools/llvm-readobj:symlinks",
+    "//llvm/tools/llvm-readtapi:symlinks",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/opt",
-    "//llvm/tools/split-file",
     "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
+    "//llvm/utils/split-file",
   ]
   if (clang_enable_arcmt) {
     deps += [

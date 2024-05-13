@@ -2,7 +2,7 @@
 // RUN: %clangxx_lsan %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 /// Fails on clang-cmake-aarch64-full (glibc 2.27-3ubuntu1.4).
-// UNSUPPORTED: aarch64
+// UNSUPPORTED: target=aarch64{{.*}}
 
 #include <assert.h>
 #include <stdlib.h>
@@ -18,7 +18,8 @@ int main() {
     assert(WIFEXITED(status));
     return WEXITSTATUS(status);
   } else {
-    malloc(1337);
+    for (int i = 0; i < 10; ++i)
+      malloc(1337);
     // CHECK: LeakSanitizer: detected memory leaks
   }
   return 0;

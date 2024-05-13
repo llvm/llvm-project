@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-detect -analyze < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 
 ; #define N 1024
 ; double invalidCall(double A[N]);
@@ -11,7 +11,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @a(double* %A, i32 %n) #0 !dbg !4 {
+define void @a(ptr %A, i32 %n) #0 !dbg !4 {
 entry:
   %cmp1 = icmp sgt i32 %n, 0, !dbg !10
   br i1 %cmp1, label %for.body.lr.ph, label %for.end, !dbg !10
@@ -22,9 +22,9 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvar = phi i64 [ 0, %for.body.lr.ph ], [ %indvar.next, %for.body ]
-  %arrayidx = getelementptr double, double* %A, i64 %indvar, !dbg !12
-  %call = tail call double @invalidCall(double* %A) #2, !dbg !12
-  store double %call, double* %arrayidx, align 8, !dbg !12, !tbaa !14
+  %arrayidx = getelementptr double, ptr %A, i64 %indvar, !dbg !12
+  %call = tail call double @invalidCall(ptr %A) #2, !dbg !12
+  store double %call, ptr %arrayidx, align 8, !dbg !12, !tbaa !14
   %indvar.next = add i64 %indvar, 1, !dbg !10
   %exitcond = icmp eq i64 %indvar.next, %0, !dbg !10
   br i1 %exitcond, label %for.end.loopexit, label %for.body, !dbg !10
@@ -36,7 +36,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void, !dbg !18
 }
 
-declare double @invalidCall(double*) #1
+declare double @invalidCall(ptr) #1
 
 ; CHECK: remark: ReportFuncCall.c:4:8: The following errors keep this region from being a Scop.
 ; CHECK: remark: ReportFuncCall.c:5:12: This function call cannot be handled. Try to inline it.

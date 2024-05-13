@@ -1,5 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -O3 | FileCheck %s --check-prefix=OPT
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -O0 | FileCheck %s --check-prefix=NOOPT
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -O3 | FileCheck %s --check-prefix=OPT
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -O0 | FileCheck %s --check-prefix=NOOPT
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -O3 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -O0 | %ptxas-verify %}
 
 ; OPT-LABEL: @mulwide16
 ; NOOPT-LABEL: @mulwide16
@@ -87,4 +89,24 @@ define i64 @mulwides7(i7 %a, i7 %b) {
   %val1 = sext i7 %b to i64
   %val2 = mul i64 %val0, %val1
   ret i64 %val2
+}
+
+; OPT-LABEL: @shl30
+; NOOPT-LABEL: @shl30
+define i64 @shl30(i32 %a) {
+; OPT: mul.wide
+; NOOPT: shl.b64
+  %conv = sext i32 %a to i64
+  %shl = shl i64 %conv, 30
+  ret i64 %shl
+}
+
+; OPT-LABEL: @shl31
+; NOOPT-LABEL: @shl31
+define i64 @shl31(i32 %a) {
+; OPT-NOT: mul.wide
+; NOOPT-NOT: mul.wide
+  %conv = sext i32 %a to i64
+  %shl = shl i64 %conv, 31
+  ret i64 %shl
 }

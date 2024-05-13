@@ -5,15 +5,18 @@
 // RUN: %clangxx_asan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
-// XFAIL: freebsd
+// XFAIL: target={{.*freebsd.*}}
 
-// On Windows, defining strtoll in a static build results in linker errors, but
-// it works with the dynamic runtime.
-// XFAIL: win32-static-asan
+// On Windows, the static runtime build _will_ intercept static copies of libc
+// functions, making this test invalid.
+// In addition, defining strtol in a static build used to result in linker
+// errors with libucrt.lib, but this stopped happening somewhere between WinSDK
+// 10.0.19041.0 and 10.0.22621.0 due to some changes in its implementation.
+// UNSUPPORTED: win32-static-asan
 
 // On NetBSD, defining strtol in a static build results in linker errors, but
 // it works with the dynamic runtime.
-// XFAIL: netbsd && !asan-dynamic-runtime
+// XFAIL: target={{.*netbsd.*}} && !asan-dynamic-runtime
 
 #include <stdlib.h>
 #include <stdio.h>

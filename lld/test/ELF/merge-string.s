@@ -54,7 +54,7 @@ zed:
 // NOTAIL-NEXT: AddressAlignment: 1
 // NOTAIL-NEXT: EntrySize: 1
 // NOTAIL-NEXT: SectionData (
-// NOTAIL-NEXT:   0000: 62630061 626300                     |bc.abc.|
+// NOTAIL-NEXT:   0000: 61626300 626300                     |abc.bc.|
 // NOTAIL-NEXT: )
 
 // NOMERGE:      Name:    .rodata1

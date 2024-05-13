@@ -29,8 +29,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -40,6 +40,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 
 using namespace clang;
 
@@ -58,15 +59,17 @@ static void printIntegral(const TemplateArgument &TemplArg, raw_ostream &Out,
   const Type *T = TemplArg.getIntegralType().getTypePtr();
   const llvm::APSInt &Val = TemplArg.getAsIntegral();
 
-  if (const EnumType *ET = T->getAs<EnumType>()) {
-    for (const EnumConstantDecl* ECD : ET->getDecl()->enumerators()) {
-      // In Sema::CheckTemplateArugment, enum template arguments value are
-      // extended to the size of the integer underlying the enum type.  This
-      // may create a size difference between the enum value and template
-      // argument value, requiring isSameValue here instead of operator==.
-      if (llvm::APSInt::isSameValue(ECD->getInitVal(), Val)) {
-        ECD->printQualifiedName(Out, Policy);
-        return;
+  if (Policy.UseEnumerators) {
+    if (const EnumType *ET = T->getAs<EnumType>()) {
+      for (const EnumConstantDecl *ECD : ET->getDecl()->enumerators()) {
+        // In Sema::CheckTemplateArugment, enum template arguments value are
+        // extended to the size of the integer underlying the enum type.  This
+        // may create a size difference between the enum value and template
+        // argument value, requiring isSameValue here instead of operator==.
+        if (llvm::APSInt::isSameValue(ECD->getInitVal(), Val)) {
+          ECD->printQualifiedName(Out, Policy);
+          return;
+        }
       }
     }
   }
@@ -86,19 +89,20 @@ static void printIntegral(const TemplateArgument &TemplArg, raw_ostream &Out,
       else if (T->isSpecificBuiltinType(BuiltinType::UChar))
         Out << "(unsigned char)";
     }
-    CharacterLiteral::print(Val.getZExtValue(), CharacterLiteral::Ascii, Out);
+    CharacterLiteral::print(Val.getZExtValue(), CharacterLiteralKind::Ascii,
+                            Out);
   } else if (T->isAnyCharacterType() && !Policy.MSVCFormatting) {
-    CharacterLiteral::CharacterKind Kind;
+    CharacterLiteralKind Kind;
     if (T->isWideCharType())
-      Kind = CharacterLiteral::Wide;
+      Kind = CharacterLiteralKind::Wide;
     else if (T->isChar8Type())
-      Kind = CharacterLiteral::UTF8;
+      Kind = CharacterLiteralKind::UTF8;
     else if (T->isChar16Type())
-      Kind = CharacterLiteral::UTF16;
+      Kind = CharacterLiteralKind::UTF16;
     else if (T->isChar32Type())
-      Kind = CharacterLiteral::UTF32;
+      Kind = CharacterLiteralKind::UTF32;
     else
-      Kind = CharacterLiteral::Ascii;
+      Kind = CharacterLiteralKind::Ascii;
     CharacterLiteral::print(Val.getExtValue(), Kind, Out);
   } else if (IncludeType) {
     if (const auto *BT = T->getAs<BuiltinType>()) {
@@ -157,9 +161,27 @@ static bool needsAmpersandOnTemplateArg(QualType paramType, QualType argType) {
 // TemplateArgument Implementation
 //===----------------------------------------------------------------------===//
 
-TemplateArgument::TemplateArgument(ASTContext &Ctx, const llvm::APSInt &Value,
-                                   QualType Type) {
+void TemplateArgument::initFromType(QualType T, bool IsNullPtr,
+                                    bool IsDefaulted) {
+  TypeOrValue.Kind = IsNullPtr ? NullPtr : Type;
+  TypeOrValue.IsDefaulted = IsDefaulted;
+  TypeOrValue.V = reinterpret_cast<uintptr_t>(T.getAsOpaquePtr());
+}
+
+void TemplateArgument::initFromDeclaration(ValueDecl *D, QualType QT,
+                                           bool IsDefaulted) {
+  assert(D && "Expected decl");
+  DeclArg.Kind = Declaration;
+  DeclArg.IsDefaulted = IsDefaulted;
+  DeclArg.QT = QT.getAsOpaquePtr();
+  DeclArg.D = D;
+}
+
+void TemplateArgument::initFromIntegral(const ASTContext &Ctx,
+                                        const llvm::APSInt &Value,
+                                        QualType Type, bool IsDefaulted) {
   Integer.Kind = Integral;
+  Integer.IsDefaulted = IsDefaulted;
   // Copy the APSInt value into our decomposed form.
   Integer.BitWidth = Value.getBitWidth();
   Integer.IsUnsigned = Value.isUnsigned();
@@ -174,6 +196,56 @@ TemplateArgument::TemplateArgument(ASTContext &Ctx, const llvm::APSInt &Value,
   }
 
   Integer.Type = Type.getAsOpaquePtr();
+}
+
+void TemplateArgument::initFromStructural(const ASTContext &Ctx, QualType Type,
+                                          const APValue &V, bool IsDefaulted) {
+  Value.Kind = StructuralValue;
+  Value.IsDefaulted = IsDefaulted;
+  Value.Value = new (Ctx) APValue(V);
+  Ctx.addDestruction(Value.Value);
+  Value.Type = Type.getAsOpaquePtr();
+}
+
+TemplateArgument::TemplateArgument(const ASTContext &Ctx,
+                                   const llvm::APSInt &Value, QualType Type,
+                                   bool IsDefaulted) {
+  initFromIntegral(Ctx, Value, Type, IsDefaulted);
+}
+
+static const ValueDecl *getAsSimpleValueDeclRef(const ASTContext &Ctx,
+                                                QualType T, const APValue &V) {
+  // Pointers to members are relatively easy.
+  if (V.isMemberPointer() && V.getMemberPointerPath().empty())
+    return V.getMemberPointerDecl();
+
+  // We model class non-type template parameters as their template parameter
+  // object declaration.
+  if (V.isStruct() || V.isUnion())
+    return Ctx.getTemplateParamObjectDecl(T, V);
+
+  // Pointers and references with an empty path use the special 'Declaration'
+  // representation.
+  if (V.isLValue() && V.hasLValuePath() && V.getLValuePath().empty() &&
+      !V.isLValueOnePastTheEnd())
+    return V.getLValueBase().dyn_cast<const ValueDecl *>();
+
+  // Everything else uses the 'structural' representation.
+  return nullptr;
+}
+
+TemplateArgument::TemplateArgument(const ASTContext &Ctx, QualType Type,
+                                   const APValue &V, bool IsDefaulted) {
+  if (Type->isIntegralOrEnumerationType() && V.isInt())
+    initFromIntegral(Ctx, V.getInt(), Type, IsDefaulted);
+  else if ((V.isLValue() && V.isNullPointer()) ||
+           (V.isMemberPointer() && !V.getMemberPointerDecl()))
+    initFromType(Type, /*isNullPtr=*/true, IsDefaulted);
+  else if (const ValueDecl *VD = getAsSimpleValueDeclRef(Ctx, Type, V))
+    // FIXME: The Declaration form should expose a const ValueDecl*.
+    initFromDeclaration(const_cast<ValueDecl *>(VD), Type, IsDefaulted);
+  else
+    initFromStructural(Ctx, Type, V, IsDefaulted);
 }
 
 TemplateArgument
@@ -216,6 +288,7 @@ TemplateArgumentDependence TemplateArgument::getDependence() const {
 
   case NullPtr:
   case Integral:
+  case StructuralValue:
     return TemplateArgumentDependence::None;
 
   case Expression:
@@ -246,6 +319,7 @@ bool TemplateArgument::isPackExpansion() const {
   case Null:
   case Declaration:
   case Integral:
+  case StructuralValue:
   case Pack:
   case Template:
   case NullPtr:
@@ -268,12 +342,12 @@ bool TemplateArgument::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateArgumentDependence::UnexpandedPack;
 }
 
-Optional<unsigned> TemplateArgument::getNumTemplateExpansions() const {
+std::optional<unsigned> TemplateArgument::getNumTemplateExpansions() const {
   assert(getKind() == TemplateExpansion);
   if (TemplateArg.NumExpansions)
     return TemplateArg.NumExpansions - 1;
 
-  return None;
+  return std::nullopt;
 }
 
 QualType TemplateArgument::getNonTypeTemplateArgumentType() const {
@@ -296,6 +370,9 @@ QualType TemplateArgument::getNonTypeTemplateArgumentType() const {
 
   case TemplateArgument::NullPtr:
     return getNullPtrType();
+
+  case TemplateArgument::StructuralValue:
+    return getStructuralValueType();
   }
 
   llvm_unreachable("Invalid TemplateArgument Kind!");
@@ -318,30 +395,24 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
 
   case Declaration:
     getParamTypeForDecl().Profile(ID);
-    ID.AddPointer(getAsDecl()? getAsDecl()->getCanonicalDecl() : nullptr);
+    ID.AddPointer(getAsDecl());
     break;
 
+  case TemplateExpansion:
+    ID.AddInteger(TemplateArg.NumExpansions);
+    [[fallthrough]];
   case Template:
-  case TemplateExpansion: {
-    TemplateName Template = getAsTemplateOrTemplatePattern();
-    if (TemplateTemplateParmDecl *TTP
-          = dyn_cast_or_null<TemplateTemplateParmDecl>(
-                                                Template.getAsTemplateDecl())) {
-      ID.AddBoolean(true);
-      ID.AddInteger(TTP->getDepth());
-      ID.AddInteger(TTP->getPosition());
-      ID.AddBoolean(TTP->isParameterPack());
-    } else {
-      ID.AddBoolean(false);
-      ID.AddPointer(Context.getCanonicalTemplateName(Template)
-                                                          .getAsVoidPointer());
-    }
+    ID.AddPointer(TemplateArg.Name);
     break;
-  }
 
   case Integral:
-    getAsIntegral().Profile(ID);
     getIntegralType().Profile(ID);
+    getAsIntegral().Profile(ID);
+    break;
+
+  case StructuralValue:
+    getStructuralValueType().Profile(ID);
+    getAsStructuralValue().Profile(ID);
     break;
 
   case Expression:
@@ -371,11 +442,23 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
            TemplateArg.NumExpansions == Other.TemplateArg.NumExpansions;
 
   case Declaration:
-    return getAsDecl() == Other.getAsDecl();
+    return getAsDecl() == Other.getAsDecl() &&
+           getParamTypeForDecl() == Other.getParamTypeForDecl();
 
   case Integral:
     return getIntegralType() == Other.getIntegralType() &&
            getAsIntegral() == Other.getAsIntegral();
+
+  case StructuralValue: {
+    if (getStructuralValueType().getCanonicalType() !=
+        Other.getStructuralValueType().getCanonicalType())
+      return false;
+
+    llvm::FoldingSetNodeID A, B;
+    getAsStructuralValue().Profile(A);
+    Other.getAsStructuralValue().Profile(B);
+    return A == B;
+  }
 
   case Pack:
     if (Args.NumArgs != Other.Args.NumArgs) return false;
@@ -403,6 +486,7 @@ TemplateArgument TemplateArgument::getPackExpansionPattern() const {
 
   case Declaration:
   case Integral:
+  case StructuralValue:
   case Pack:
   case Null:
   case Template:
@@ -429,11 +513,11 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
   }
 
   case Declaration: {
-    // FIXME: Include the type if it's not obvious from the context.
     NamedDecl *ND = getAsDecl();
     if (getParamTypeForDecl()->isRecordType()) {
       if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
-        TPO->printAsInit(Out);
+        TPO->getType().getUnqualifiedType().print(Out, Policy);
+        TPO->printAsInit(Out, Policy);
         break;
       }
     }
@@ -445,13 +529,17 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
     break;
   }
 
+  case StructuralValue:
+    getAsStructuralValue().printPretty(Out, Policy, getStructuralValueType());
+    break;
+
   case NullPtr:
     // FIXME: Include the type if it's not obvious from the context.
     Out << "nullptr";
     break;
 
   case Template:
-    getAsTemplate().print(Out, Policy);
+    getAsTemplate().print(Out, Policy, TemplateName::Qualified::Fully);
     break;
 
   case TemplateExpansion:
@@ -528,6 +616,9 @@ SourceRange TemplateArgumentLoc::getSourceRange() const {
   case TemplateArgument::Integral:
     return getSourceIntegralExpression()->getSourceRange();
 
+  case TemplateArgument::StructuralValue:
+    return getSourceStructuralValueExpression()->getSourceRange();
+
   case TemplateArgument::Pack:
   case TemplateArgument::Null:
     return SourceRange();
@@ -554,7 +645,19 @@ static const T &DiagTemplateArg(const T &DB, const TemplateArgument &Arg) {
     return DB << "nullptr";
 
   case TemplateArgument::Integral:
-    return DB << Arg.getAsIntegral().toString(10);
+    return DB << toString(Arg.getAsIntegral(), 10);
+
+  case TemplateArgument::StructuralValue: {
+    // FIXME: We're guessing at LangOptions!
+    SmallString<32> Str;
+    llvm::raw_svector_ostream OS(Str);
+    LangOptions LangOpts;
+    LangOpts.CPlusPlus = true;
+    PrintingPolicy Policy(LangOpts);
+    Arg.getAsStructuralValue().printPretty(OS, Policy,
+                                           Arg.getStructuralValueType());
+    return DB << OS.str();
+  }
 
   case TemplateArgument::Template:
     return DB << Arg.getAsTemplate();
@@ -614,6 +717,17 @@ ASTTemplateArgumentListInfo::Create(const ASTContext &C,
   return new (Mem) ASTTemplateArgumentListInfo(List);
 }
 
+const ASTTemplateArgumentListInfo *
+ASTTemplateArgumentListInfo::Create(const ASTContext &C,
+                                    const ASTTemplateArgumentListInfo *List) {
+  if (!List)
+    return nullptr;
+  std::size_t size =
+      totalSizeToAlloc<TemplateArgumentLoc>(List->getNumTemplateArgs());
+  void *Mem = C.Allocate(size, alignof(ASTTemplateArgumentListInfo));
+  return new (Mem) ASTTemplateArgumentListInfo(List);
+}
+
 ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
     const TemplateArgumentListInfo &Info) {
   LAngleLoc = Info.getLAngleLoc();
@@ -623,6 +737,17 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
   TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
   for (unsigned i = 0; i != NumTemplateArgs; ++i)
     new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
+}
+
+ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
+    const ASTTemplateArgumentListInfo *Info) {
+  LAngleLoc = Info->getLAngleLoc();
+  RAngleLoc = Info->getRAngleLoc();
+  NumTemplateArgs = Info->getNumTemplateArgs();
+
+  TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
+  for (unsigned i = 0; i != NumTemplateArgs; ++i)
+    new (&ArgBuffer[i]) TemplateArgumentLoc((*Info)[i]);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(

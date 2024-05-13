@@ -71,24 +71,24 @@ define dso_local void @test_iless_store(i16 signext %a, i16 signext %b) {
 ; CHECK-BE-LABEL: test_iless_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sub r3, r4, r3
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    xori r3, r3, 1
-; CHECK-BE-NEXT:    sth r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_iless_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sub r3, r4, r3
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-LE-NEXT:    xori r3, r3, 1
-; CHECK-LE-NEXT:    sth r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sle i16 %a, %b
   %conv3 = zext i1 %cmp to i16
-  store i16 %conv3, i16* @glob, align 2
+  store i16 %conv3, ptr @glob, align 2
   ret void
 }
 
@@ -104,23 +104,23 @@ define dso_local void @test_iless_sext_store(i16 signext %a, i16 signext %b) {
 ; CHECK-BE-LABEL: test_iless_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sub r3, r4, r3
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    addi r3, r3, -1
-; CHECK-BE-NEXT:    sth r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_iless_sext_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sub r3, r4, r3
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-LE-NEXT:    addi r3, r3, -1
-; CHECK-LE-NEXT:    sth r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sle i16 %a, %b
   %conv3 = sext i1 %cmp to i16
-  store i16 %conv3, i16* @glob, align 2
+  store i16 %conv3, ptr @glob, align 2
   ret void
 }

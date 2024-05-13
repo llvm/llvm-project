@@ -10,8 +10,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <algorithm>
 
-namespace clang {
-namespace ast_matchers {
+namespace clang::ast_matchers {
 
 /// Matches AST nodes that were found within Abseil files.
 ///
@@ -35,8 +34,8 @@ AST_POLYMORPHIC_MATCHER(
   SourceLocation Loc = SourceManager.getSpellingLoc(Node.getBeginLoc());
   if (Loc.isInvalid())
     return false;
-  const FileEntry *FileEntry =
-      SourceManager.getFileEntryForID(SourceManager.getFileID(Loc));
+  OptionalFileEntryRef FileEntry =
+      SourceManager.getFileEntryRefForID(SourceManager.getFileID(Loc));
   if (!FileEntry)
     return false;
   // Determine whether filepath contains "absl/[absl-library]" substring, where
@@ -47,19 +46,14 @@ AST_POLYMORPHIC_MATCHER(
   if (PrefixPosition == StringRef::npos)
     return false;
   Path = Path.drop_front(PrefixPosition + AbslPrefix.size());
-  static const char *AbseilLibraries[] = {"algorithm", "base",
-                                          "container", "debugging",
-                                          "flags",     "hash",
-                                          "iterator",  "memory",
-                                          "meta",      "numeric",
-                                          "random",    "status",
-                                          "strings",   "synchronization",
-                                          "time",      "types",
-                                          "utility"};
+  static const char *AbseilLibraries[] = {
+      "algorithm", "base",     "container", "debugging", "flags",
+      "hash",      "iterator", "memory",    "meta",      "numeric",
+      "profiling", "random",   "status",    "strings",   "synchronization",
+      "time",      "types",    "utility"};
   return llvm::any_of(AbseilLibraries, [&](const char *Library) {
-    return Path.startswith(Library);
+    return Path.starts_with(Library);
   });
 }
 
-} // namespace ast_matchers
-} // namespace clang
+} // namespace clang::ast_matchers

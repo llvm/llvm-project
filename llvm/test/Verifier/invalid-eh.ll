@@ -4,28 +4,28 @@
 ; RUN: sed -e s/.T2:// %s | not llvm-as -disable-output 2>&1 | FileCheck --check-prefix=CHECK2 %s
 ; RUN: sed -e s/.T3:// %s | not llvm-as -disable-output 2>&1 | FileCheck --check-prefix=CHECK3 %s
 ; RUN: sed -e s/.T4:// %s | not llvm-as -disable-output 2>&1 | FileCheck --check-prefix=CHECK4 %s
-; RUN: sed -e s/.T5:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK5 %s
-; RUN: sed -e s/.T6:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK6 %s
-; RUN: sed -e s/.T7:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK7 %s
-; RUN: sed -e s/.T8:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK8 %s
-; RUN: sed -e s/.T9:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK9 %s
-; RUN: sed -e s/.T10:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK10 %s
-; RUN: sed -e s/.T11:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK11 %s
-; RUN: sed -e s/.T12:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK12 %s
-; RUN: sed -e s/.T13:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK13 %s
-; RUN: sed -e s/.T14:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK14 %s
-; RUN: sed -e s/.T15:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK15 %s
-; RUN: sed -e s/.T16:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK16 %s
-; RUN: sed -e s/.T17:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK17 %s
-; RUN: sed -e s/.T18:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK18 %s
-; RUN: sed -e s/.T19:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK19 %s
-; RUN: sed -e s/.T20:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK20 %s
-; RUN: sed -e s/.T21:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK21 %s
-; RUN: sed -e s/.T22:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK22 %s
-; RUN: sed -e s/.T23:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK23 %s
-; RUN: sed -e s/.T24:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK24 %s
-; RUN: sed -e s/.T25:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK25 %s
-; RUN: sed -e s/.T26:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK26 %s
+; RUN: sed -e s/.T5:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK5 %s
+; RUN: sed -e s/.T6:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK6 %s
+; RUN: sed -e s/.T7:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK7 %s
+; RUN: sed -e s/.T8:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK8 %s
+; RUN: sed -e s/.T9:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK9 %s
+; RUN: sed -e s/.T10:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK10 %s
+; RUN: sed -e s/.T11:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK11 %s
+; RUN: sed -e s/.T12:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK12 %s
+; RUN: sed -e s/.T13:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK13 %s
+; RUN: sed -e s/.T14:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK14 %s
+; RUN: sed -e s/.T15:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK15 %s
+; RUN: sed -e s/.T16:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK16 %s
+; RUN: sed -e s/.T17:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK17 %s
+; RUN: sed -e s/.T18:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK18 %s
+; RUN: sed -e s/.T19:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK19 %s
+; RUN: sed -e s/.T20:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK20 %s
+; RUN: sed -e s/.T21:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK21 %s
+; RUN: sed -e s/.T22:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK22 %s
+; RUN: sed -e s/.T23:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK23 %s
+; RUN: sed -e s/.T24:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK24 %s
+; RUN: sed -e s/.T25:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK25 %s
+; RUN: sed -e s/.T26:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK26 %s
 
 declare void @g()
 
@@ -63,7 +63,7 @@ declare void @g()
 ;T4:     ; CHECK4: CleanupReturnInst needs to be provided a CleanupPad
 ;T4: }
 
-;T5: define void @f() personality void ()* @g {
+;T5: define void @f() personality ptr @g {
 ;T5:   entry:
 ;T5:     ret void
 ;T5:   switch:
@@ -77,7 +77,7 @@ declare void @g()
 ;T5:     unreachable
 ;T5: }
 
-;T6: define void @f() personality void ()* @g {
+;T6: define void @f() personality ptr @g {
 ;T6:   entry:
 ;T6:     ret void
 ;T6:   switch1:
@@ -93,7 +93,7 @@ declare void @g()
 ;T6:     unreachable
 ;T6: }
 
-;T7: define void @f() personality void ()* @g {
+;T7: define void @f() personality ptr @g {
 ;T7:   entry:
 ;T7:     ret void
 ;T7:   switch1:
@@ -109,7 +109,7 @@ declare void @g()
 ;T7:     unreachable
 ;T7: }
 
-;T8: define void @f() personality void ()* @g {
+;T8: define void @f() personality ptr @g {
 ;T8:   entry:
 ;T8:     ret void
 ;T8:   switch1:
@@ -117,7 +117,7 @@ declare void @g()
 ;T8:     ; CHECK8: CatchSwitchInst handlers must be catchpads
 ;T8: }
 
-;T9: define void @f() personality void ()* @g {
+;T9: define void @f() personality ptr @g {
 ;T9:   entry:
 ;T9:     ret void
 ;T9:   cleanup:
@@ -131,7 +131,7 @@ declare void @g()
 ;T9:     ret void
 ;T9: }
 
-;T10: define void @f() personality void ()* @g {
+;T10: define void @f() personality ptr @g {
 ;T10:   entry:
 ;T10:     ret void
 ;T10:   cleanup1:
@@ -153,7 +153,7 @@ declare void @g()
 ;T10:       ; CHECK10-NEXT: cleanupret from %cp3 unwind label %switch
 ;T10: }
 
-;T11: define void @f() personality void ()* @g {
+;T11: define void @f() personality ptr @g {
 ;T11:   entry:
 ;T11:     ret void
 ;T11:   cleanup1:
@@ -171,7 +171,7 @@ declare void @g()
 ;T11:     unreachable
 ;T11: }
 
-;T12: define void @f() personality void ()* @g {
+;T12: define void @f() personality ptr @g {
 ;T12:   entry:
 ;T12:     ret void
 ;T12:   cleanup:
@@ -186,7 +186,7 @@ declare void @g()
 ;T12:     unreachable
 ;T12: }
 
-;T13: define void @f() personality void ()* @g {
+;T13: define void @f() personality ptr @g {
 ;T13:   entry:
 ;T13:     ret void
 ;T13:   switch:
@@ -198,7 +198,7 @@ declare void @g()
 ;T13:     unreachable
 ;T13: }
 
-;T14: define void @f() personality void ()* @g {
+;T14: define void @f() personality ptr @g {
 ;T14:   entry:
 ;T14:     ret void
 ;T14:   cleanup:
@@ -219,7 +219,7 @@ declare void @g()
 ;T14:     unreachable
 ;T14: }
 
-;T15: define void @f() personality void ()* @g {
+;T15: define void @f() personality ptr @g {
 ;T15:   entry:
 ;T15:     ret void
 ;T15:   switch:
@@ -249,7 +249,7 @@ declare void @g()
 ;T15:     ; CHECK15-NEXT:   to label %unreachable unwind label %target1
 ;T15: }
 
-;T16: define void @f() personality void ()* @g {
+;T16: define void @f() personality ptr @g {
 ;T16:   entry:
 ;T16:     ret void
 ;T16:   switch:
@@ -270,7 +270,7 @@ declare void @g()
 ;T16:     unreachable
 ;T16: }
 
-;T17: define void @f() personality void ()* @g {
+;T17: define void @f() personality ptr @g {
 ;T17:   entry:
 ;T17:     ret void
 ;T17:   switch:
@@ -294,7 +294,7 @@ declare void @g()
 ;T17:     unreachable
 ;T17: }
 
-;T18: define void @f() personality void ()* @g {
+;T18: define void @f() personality ptr @g {
 ;T18:   entry:
 ;T18:     invoke void @g()
 ;T18:       to label %invoke.cont unwind label %left
@@ -320,7 +320,7 @@ declare void @g()
 ;T18:     unreachable
 ;T18: }
 
-;T19: define void @f() personality void ()* @g {
+;T19: define void @f() personality ptr @g {
 ;T19:   entry:
 ;T19:     ret void
 ;T19:   red:
@@ -349,7 +349,7 @@ declare void @g()
 ;T19:     unreachable
 ;T19: }
 
-;T20: define void @f() personality void ()* @g {
+;T20: define void @f() personality ptr @g {
 ;T20:   entry:
 ;T20:     ret void
 ;T20:   switch:
@@ -362,7 +362,7 @@ declare void @g()
 ;T20:     unreachable
 ;T20: }
 
-;T21: define void @f() personality void ()* @g {
+;T21: define void @f() personality ptr @g {
 ;T21:   entry:
 ;T21:     ret void
 ;T21:   switch:
@@ -378,7 +378,7 @@ declare void @g()
 ;T21:     unreachable
 ;T21: }
 
-;T22: define void @f() personality void ()* @g {
+;T22: define void @f() personality ptr @g {
 ;T22:   invoke void @g()
 ;T22:           to label %merge unwind label %cleanup
 ;T22:
@@ -394,7 +394,7 @@ declare void @g()
 ;T22:   unreachable
 ;T22: }
 
-;T23: define void @f() personality void ()* @g {
+;T23: define void @f() personality ptr @g {
 ;T23:   invoke void @g()
 ;T23:           to label %exit unwind label %pad
 ;T23:
@@ -408,7 +408,7 @@ declare void @g()
 ;T23:   unreachable
 ;T23: }
 
-;T24: define void @f() personality void ()* @g {
+;T24: define void @f() personality ptr @g {
 ;T24:   invoke void @g()
 ;T24:           to label %exit unwind label %pad
 ;T24:   ; CHECK24: A single unwind edge may only enter one EH pad
@@ -425,7 +425,7 @@ declare void @g()
 ;T24:   unreachable
 ;T24: }
 
-;T25: define void @f() personality void ()* @g {
+;T25: define void @f() personality ptr @g {
 ;T25: entry:
 ;T25:   unreachable
 ;T25:
@@ -435,7 +435,7 @@ declare void @g()
 ;T25:   ; CHECK25:   %cs = catchswitch within %cp2 [label %catch] unwind label %ehcleanup
 ;T25:
 ;T25: catch:
-;T25:   %cp2 = catchpad within %cs [i8* null, i32 64, i8* null]
+;T25:   %cp2 = catchpad within %cs [ptr null, i32 64, ptr null]
 ;T25:   unreachable
 ;T25:
 ;T25: ehcleanup:
@@ -443,7 +443,7 @@ declare void @g()
 ;T25:   cleanupret from %cp3 unwind to caller
 ;T25: }
 
-;T26: define void @f() personality void ()* @g {
+;T26: define void @f() personality ptr @g {
 ;T26: entry:
 ;T26:   ret void
 ;T26:

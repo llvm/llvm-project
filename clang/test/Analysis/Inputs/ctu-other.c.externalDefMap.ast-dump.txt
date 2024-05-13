@@ -1,7 +1,7 @@
-c:@F@inlineAsm ctu-other.c.ast
-c:@F@g ctu-other.c.ast
-c:@F@f ctu-other.c.ast
-c:@F@enumCheck ctu-other.c.ast
-c:@F@identImplicit ctu-other.c.ast
-c:@F@structInProto ctu-other.c.ast
-c:@F@switchWithoutCases ctu-other.c.ast
+14:c:@F@inlineAsm ctu-other.c.ast
+6:c:@F@g ctu-other.c.ast
+6:c:@F@f ctu-other.c.ast
+14:c:@F@enumCheck ctu-other.c.ast
+18:c:@F@identImplicit ctu-other.c.ast
+18:c:@F@structInProto ctu-other.c.ast
+23:c:@F@switchWithoutCases ctu-other.c.ast

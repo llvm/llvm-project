@@ -32,14 +32,14 @@ define void @g(i16 signext  %a1, i16 signext  %a2, i16 signext  %a3,
 ; X64-NEXT:    rep;movsq (%rsi), %es:(%rdi)
 ; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; X64-NEXT:    callq f
+; X64-NEXT:    callq f@PLT
 ; X64-NEXT:    movl $16, %ecx
 ; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    movq %rbx, %rsi
 ; X64-NEXT:    rep;movsq (%rsi), %es:(%rdi)
 ; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; X64-NEXT:    callq f
+; X64-NEXT:    callq f@PLT
 ; X64-NEXT:    addq $288, %rsp # imm = 0x120
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
@@ -72,14 +72,14 @@ define void @g(i16 signext  %a1, i16 signext  %a2, i16 signext  %a3,
 ; X86-NEXT:    rep;movsl (%esi), %es:(%edi)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    calll f
+; X86-NEXT:    calll f@PLT
 ; X86-NEXT:    movl $32, %ecx
 ; X86-NEXT:    movl %esp, %edi
 ; X86-NEXT:    movl %ebx, %esi
 ; X86-NEXT:    rep;movsl (%esi), %es:(%edi)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    calll f
+; X86-NEXT:    calll f@PLT
 ; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -89,21 +89,20 @@ define void @g(i16 signext  %a1, i16 signext  %a2, i16 signext  %a3,
 	 i16 signext  %a4, i16 signext  %a5, i16 signext  %a6) nounwind {
 entry:
         %a = alloca %struct.s, align 16
-        %tmp = getelementptr %struct.s, %struct.s* %a, i32 0, i32 0
-        store i16 %a1, i16* %tmp, align 16
-        %tmp2 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 1
-        store i16 %a2, i16* %tmp2, align 16
-        %tmp4 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 2
-        store i16 %a3, i16* %tmp4, align 16
-        %tmp6 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 3
-        store i16 %a4, i16* %tmp6, align 16
-        %tmp8 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 4
-        store i16 %a5, i16* %tmp8, align 16
-        %tmp10 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 5
-        store i16 %a6, i16* %tmp10, align 16
-        call void @f(%struct.s* byval(%struct.s) %a)
-        call void @f(%struct.s* byval(%struct.s) %a)
+        store i16 %a1, ptr %a, align 16
+        %tmp2 = getelementptr %struct.s, ptr %a, i32 0, i32 1
+        store i16 %a2, ptr %tmp2, align 16
+        %tmp4 = getelementptr %struct.s, ptr %a, i32 0, i32 2
+        store i16 %a3, ptr %tmp4, align 16
+        %tmp6 = getelementptr %struct.s, ptr %a, i32 0, i32 3
+        store i16 %a4, ptr %tmp6, align 16
+        %tmp8 = getelementptr %struct.s, ptr %a, i32 0, i32 4
+        store i16 %a5, ptr %tmp8, align 16
+        %tmp10 = getelementptr %struct.s, ptr %a, i32 0, i32 5
+        store i16 %a6, ptr %tmp10, align 16
+        call void @f(ptr byval(%struct.s) %a)
+        call void @f(ptr byval(%struct.s) %a)
         ret void
 }
 
-declare void @f(%struct.s* byval(%struct.s))
+declare void @f(ptr byval(%struct.s))

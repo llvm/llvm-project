@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C712 The value of scalar-int-constant-expr shall be nonnegative and 
 ! shall specify a representation method that exists on the processor.
 ! C714 The value of kind-param shall be nonnegative.
@@ -82,6 +82,8 @@ character(len=*), parameter :: cvar9 = 3_"abcd"
 character(len=*), parameter :: cvar10 = 4_"abcd"
 !ERROR: CHARACTER(KIND=8) is not a supported type
 character(len=*), parameter :: cvar11 = 8_"abcd"
+!ERROR: Unsupported type kind value (5000000000)
+print *, 123_5000000000
 end program
 
 subroutine s(a, b)

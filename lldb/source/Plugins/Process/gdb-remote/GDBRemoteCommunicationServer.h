@@ -31,8 +31,7 @@ public:
       std::function<PacketResult(StringExtractorGDBRemote &packet,
                                  Status &error, bool &interrupt, bool &quit)>;
 
-  GDBRemoteCommunicationServer(const char *comm_name,
-                               const char *listener_name);
+  GDBRemoteCommunicationServer();
 
   ~GDBRemoteCommunicationServer() override;
 
@@ -43,10 +42,6 @@ public:
   PacketResult GetPacketAndSendResponse(Timeout<std::micro> timeout,
                                         Status &error, bool &interrupt,
                                         bool &quit);
-
-  // After connecting, do a little handshake with the client to make sure
-  // we are at least communicating
-  bool HandshakeWithClient();
 
 protected:
   std::map<StringExtractorGDBRemote::ServerPacketType, PacketHandler>

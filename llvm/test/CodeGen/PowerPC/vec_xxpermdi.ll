@@ -159,7 +159,7 @@ define <2 x double> @test_le_vec_xxpermdi_v2f64_undef_2(<2 x double> %VA) {
       %0 = shufflevector <2 x double> %VA, <2 x double> undef, <2 x i32> <i32 1, i32 0>
       ret <2 x double> %0
 ; CHECK-LE-LABEL: @test_le_vec_xxpermdi_v2f64_undef_2
-; CHCECK-LE: xxswapd 34, 34
+; CHECK-LE: xxswapd 34, 34
 }
 
 define <2 x double> @test_le_vec_xxpermdi_v2f64_undef_3(<2 x double> %VA) {
@@ -266,7 +266,7 @@ define <2 x double> @test_be_vec_xxpermdi_v2f64_undef_2(<2 x double> %VA) {
       %0 = shufflevector <2 x double> %VA, <2 x double> undef, <2 x i32> <i32 1, i32 0>
       ret <2 x double> %0
 ; CHECK-BE-LABEL: @test_be_vec_xxpermdi_v2f64_undef_2
-; CHCECK-LE: xxswapd 34, 34
+; CHECK-LE: xxswapd 34, 34
 }
 
 define <2 x double> @test_be_vec_xxpermdi_v2f64_undef_3(<2 x double> %VA) {

@@ -20,9 +20,9 @@ name:            foo
 body: |
   bb.0.entry:
     ; CHECK:      $eax = MOV32ri 42
-    ; CHECK-NEXT: RETQ $eax
+    ; CHECK-NEXT: RET64 $eax
     $eax = MOV32ri 42
-    RETQ $eax
+    RET64 $eax
 ...
 ---
 # CHECK: name: bar
@@ -30,7 +30,7 @@ name:            bar
 body: |
   bb.0.entry:
     ; CHECK:      $eax = MOV32ri -11
-    ; CHECK-NEXT: RETQ $eax
+    ; CHECK-NEXT: RET64 $eax
     $eax = MOV32ri -11
-    RETQ $eax
+    RET64 $eax
 ...

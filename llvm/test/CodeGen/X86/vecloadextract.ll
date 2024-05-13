@@ -7,40 +7,40 @@
 
 ; CHECK: name: const_index
 ; CHECK:  bb.0 (%ir-block.0):
-; CHECK:    [[POINTER:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.0)
-; CHECK:    [[LOAD:%[0-9]+]]:gr32 = MOV32rm killed [[POINTER]], 1, $noreg, 4, $noreg :: (load 4 from %ir.v + 4)
+; CHECK:    [[POINTER:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
+; CHECK:    [[LOAD:%[0-9]+]]:gr32 = MOV32rm killed [[POINTER]], 1, $noreg, 4, $noreg :: (load (s32) from %ir.v + 4)
 ; CHECK:    $eax = COPY [[LOAD]]
 ; CHECK:    RET 0, $eax
-define i32 @const_index(<8 x i32>* %v) {
-  %a = load <8 x i32>, <8 x i32>* %v
+define i32 @const_index(ptr %v) {
+  %a = load <8 x i32>, ptr %v
   %b = extractelement <8 x i32> %a, i32 1
   ret i32 %b
 }
 
 ; CHECK: name: variable_index
 ; CHECK:  bb.0 (%ir-block.0):
-; CHECK:    [[INDEX:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.0)
-; CHECK:    [[MASKED_INDEX:%[0-9]+]]:gr32_nosp = AND32ri8 [[INDEX]], 7, implicit-def dead $eflags
-; CHECK:    [[POINTER:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.1)
-; CHECK:    [[LOAD:%[0-9]+]]:gr32 = MOV32rm killed [[POINTER]], 4, killed [[MASKED_INDEX]], 0, $noreg :: (load 4)
+; CHECK:    [[INDEX:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
+; CHECK:    [[MASKED_INDEX:%[0-9]+]]:gr32_nosp = AND32ri [[INDEX]], 7, implicit-def dead $eflags
+; CHECK:    [[POINTER:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1)
+; CHECK:    [[LOAD:%[0-9]+]]:gr32 = MOV32rm killed [[POINTER]], 4, killed [[MASKED_INDEX]], 0, $noreg :: (load (s32))
 ; CHECK:    $eax = COPY [[LOAD]]
 ; CHECK:    RET 0, $eax
-define i32 @variable_index(<8 x i32>* %v, i32 %i) {
-  %a = load <8 x i32>, <8 x i32>* %v
+define i32 @variable_index(ptr %v, i32 %i) {
+  %a = load <8 x i32>, ptr %v
   %b = extractelement <8 x i32> %a, i32 %i
   ret i32 %b
 }
 
 ; CHECK: name: variable_index_with_addrspace
 ; CHECK:  bb.0 (%ir-block.0):
-; CHECK:    [[INDEX:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.0)
-; CHECK:    [[MASKED_INDEX:%[0-9]+]]:gr32_nosp = AND32ri8 [[INDEX]], 7, implicit-def dead $eflags
-; CHECK:    [[POINTER:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.1)
-; CHECK:    [[LOAD:%[0-9]+]]:gr32 = MOV32rm killed [[POINTER]], 4, killed [[MASKED_INDEX]], 0, $noreg :: (load 4, addrspace 1)
+; CHECK:    [[INDEX:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
+; CHECK:    [[MASKED_INDEX:%[0-9]+]]:gr32_nosp = AND32ri [[INDEX]], 7, implicit-def dead $eflags
+; CHECK:    [[POINTER:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1)
+; CHECK:    [[LOAD:%[0-9]+]]:gr32 = MOV32rm killed [[POINTER]], 4, killed [[MASKED_INDEX]], 0, $noreg :: (load (s32), addrspace 1)
 ; CHECK:    $eax = COPY [[LOAD]]
 ; CHECK:    RET 0, $eax
-define i32 @variable_index_with_addrspace(<8 x i32> addrspace(1)* %v, i32 %i) {
-  %a = load <8 x i32>, <8 x i32> addrspace(1)* %v
+define i32 @variable_index_with_addrspace(ptr addrspace(1) %v, i32 %i) {
+  %a = load <8 x i32>, ptr addrspace(1) %v
   %b = extractelement <8 x i32> %a, i32 %i
   ret i32 %b
 }

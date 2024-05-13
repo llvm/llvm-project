@@ -19,6 +19,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 #include <cstddef>
 
@@ -36,7 +37,7 @@ class ValueObjectSynthetic : public ValueObject {
 public:
   ~ValueObjectSynthetic() override;
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 
@@ -46,16 +47,17 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   lldb::ValueType GetValueType() const override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx,
+                                      bool can_create = true) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
-                                             bool can_create) override;
+  lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
+                                             bool can_create = true) override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  size_t GetIndexOfChildWithName(llvm::StringRef name) override;
 
   lldb::ValueObjectSP
   GetDynamicValue(lldb::DynamicValueType valueType) override;
@@ -79,6 +81,10 @@ public:
   virtual lldb::DynamicValueType GetDynamicValueType() {
     return ((m_parent != nullptr) ? m_parent->GetDynamicValueType()
                                   : lldb::eNoDynamicValues);
+  }
+
+  lldb::VariableSP GetVariable() override {
+    return m_parent != nullptr ? m_parent->GetVariable() : nullptr;
   }
 
   ValueObject *GetParent() override {

@@ -1,5 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix=SM20
-; RUN: llc < %s -march=nvptx -mcpu=sm_30 | FileCheck %s --check-prefix=SM30
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=SM20
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -verify-machineinstrs | FileCheck %s --check-prefix=SM30
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -verify-machineinstrs | %ptxas-verify %}
 
 target triple = "nvptx-unknown-cuda"
 
@@ -10,7 +12,7 @@ declare i32 @llvm.nvvm.txq.width(i64)
 declare i32 @llvm.nvvm.txq.height(i64)
 declare i32 @llvm.nvvm.suq.width(i64)
 declare i32 @llvm.nvvm.suq.height(i64)
-declare i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)*)
+declare i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1))
 
 
 ; SM20-LABEL: @t0
@@ -26,7 +28,7 @@ define i32 @t0(i64 %texHandle) {
 ; SM30-LABEL: @t1
 define i32 @t1() {
 ; SM30: mov.u64 %rd[[HANDLE:[0-9]+]], tex0
-  %texHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @tex0)
+  %texHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @tex0)
 ; SM20: txq.width.b32 %r{{[0-9]+}}, [tex0]
 ; SM30: txq.width.b32 %r{{[0-9]+}}, [%rd[[HANDLE:[0-9]+]]]
   %width = tail call i32 @llvm.nvvm.txq.width(i64 %texHandle)
@@ -47,7 +49,7 @@ define i32 @t2(i64 %texHandle) {
 ; SM30-LABEL: @t3
 define i32 @t3() {
 ; SM30: mov.u64 %rd[[HANDLE:[0-9]+]], tex0
-  %texHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @tex0)
+  %texHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @tex0)
 ; SM20: txq.height.b32 %r{{[0-9]+}}, [tex0]
 ; SM30: txq.height.b32 %r{{[0-9]+}}, [%rd[[HANDLE:[0-9]+]]]
   %height = tail call i32 @llvm.nvvm.txq.height(i64 %texHandle)
@@ -68,7 +70,7 @@ define i32 @s0(i64 %surfHandle) {
 ; SM30-LABEL: @s1
 define i32 @s1() {
 ; SM30: mov.u64 %rd[[HANDLE:[0-9]+]], surf0
-  %surfHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @surf0)
+  %surfHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @surf0)
 ; SM20: suq.width.b32 %r{{[0-9]+}}, [surf0]
 ; SM30: suq.width.b32 %r{{[0-9]+}}, [%rd[[HANDLE:[0-9]+]]]
   %width = tail call i32 @llvm.nvvm.suq.width(i64 %surfHandle)
@@ -89,7 +91,7 @@ define i32 @s2(i64 %surfHandle) {
 ; SM30-LABEL: @s3
 define i32 @s3() {
 ; SM30: mov.u64 %rd[[HANDLE:[0-9]+]], surf0
-  %surfHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @surf0)
+  %surfHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @surf0)
 ; SM20: suq.height.b32 %r{{[0-9]+}}, [surf0]
 ; SM30: suq.height.b32 %r{{[0-9]+}}, [%rd[[HANDLE:[0-9]+]]]
   %height = tail call i32 @llvm.nvvm.suq.height(i64 %surfHandle)
@@ -99,5 +101,5 @@ define i32 @s3() {
 
 
 !nvvm.annotations = !{!1, !2}
-!1 = !{i64 addrspace(1)* @tex0, !"texture", i32 1}
-!2 = !{i64 addrspace(1)* @surf0, !"surface", i32 1}
+!1 = !{ptr addrspace(1) @tex0, !"texture", i32 1}
+!2 = !{ptr addrspace(1) @surf0, !"surface", i32 1}

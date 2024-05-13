@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; void f(int N, int * restrict sums, int * restrict escape) {
 ;   int i, j;
@@ -22,7 +22,7 @@
 ; CHECK: escape
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @f(i32 %N, i32* noalias %sums, i32* noalias %escape) {
+define void @f(i32 %N, ptr noalias %sums, ptr noalias %escape) {
 entry:
   br label %for.cond
 
@@ -40,20 +40,20 @@ for.cond1:                                        ; preds = %for.inc, %for.body
   br i1 %exitcond, label %for.body3, label %for.end
 
 for.body3:                                        ; preds = %for.cond1
-  %arrayidx = getelementptr inbounds i32, i32* %sums, i32 %i.0
-  %tmp = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %sums, i32 %i.0
+  %tmp = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %tmp, 5
-  store i32 %add, i32* %arrayidx, align 4
-  %arrayidx4 = getelementptr inbounds i32, i32* %escape, i32 %i.0
-  %tmp2 = load i32, i32* %arrayidx4, align 4
+  store i32 %add, ptr %arrayidx, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %escape, i32 %i.0
+  %tmp2 = load i32, ptr %arrayidx4, align 4
   %sub = add nsw i32 %i.0, -1
-  %arrayidx5 = getelementptr inbounds i32, i32* %sums, i32 %sub
-  %tmp3 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %sums, i32 %sub
+  %tmp3 = load i32, ptr %arrayidx5, align 4
   %add6 = add nsw i32 %tmp2, %tmp3
   %sub7 = sub nsw i32 %N, %i.0
   %add8 = add nsw i32 %sub7, %j.0
-  %arrayidx9 = getelementptr inbounds i32, i32* %escape, i32 %add8
-  store i32 %add6, i32* %arrayidx9, align 4
+  %arrayidx9 = getelementptr inbounds i32, ptr %escape, i32 %add8
+  store i32 %add6, ptr %arrayidx9, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3

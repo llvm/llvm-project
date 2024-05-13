@@ -37,6 +37,7 @@ public:
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &DL,
                                   SDValue Chain, SDValue Op1, SDValue Op2,
                                   SDValue Op3, Align Alignment, bool IsVolatile,
+                                  bool AlwaysInline,
                                   MachinePointerInfo DstPtrInfo) const override;
 };
 

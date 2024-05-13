@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <functional>
 
 // template <class T>
@@ -28,8 +30,10 @@ void
 test()
 {
     typedef std::hash<T> H;
-    static_assert((std::is_same<typename H::argument_type, T>::value), "" );
-    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+#if TEST_STD_VER <= 17
+    static_assert((std::is_same<typename H::argument_type, T>::value), "");
+    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
+#endif
     ASSERT_NOEXCEPT(H()(T()));
     H h;
 
@@ -40,7 +44,7 @@ test()
         if (small)
         {
             const std::size_t result = h(t);
-            LIBCPP_ASSERT(result == static_cast<size_t>(t));
+            LIBCPP_ASSERT(result == static_cast<std::size_t>(t));
             ((void)result); // Prevent unused warning
         }
     }
@@ -54,7 +58,9 @@ int main(int, char**)
     test<unsigned char>();
     test<char16_t>();
     test<char32_t>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>();
+#endif
     test<short>();
     test<unsigned short>();
     test<int>();
@@ -66,45 +72,45 @@ int main(int, char**)
 
 //  LWG #2119
     test<std::ptrdiff_t>();
-    test<size_t>();
+    test<std::size_t>();
 
-    test<int8_t>();
-    test<int16_t>();
-    test<int32_t>();
-    test<int64_t>();
+    test<std::int8_t>();
+    test<std::int16_t>();
+    test<std::int32_t>();
+    test<std::int64_t>();
 
-    test<int_fast8_t>();
-    test<int_fast16_t>();
-    test<int_fast32_t>();
-    test<int_fast64_t>();
+    test<std::int_fast8_t>();
+    test<std::int_fast16_t>();
+    test<std::int_fast32_t>();
+    test<std::int_fast64_t>();
 
-    test<int_least8_t>();
-    test<int_least16_t>();
-    test<int_least32_t>();
-    test<int_least64_t>();
+    test<std::int_least8_t>();
+    test<std::int_least16_t>();
+    test<std::int_least32_t>();
+    test<std::int_least64_t>();
 
-    test<intmax_t>();
-    test<intptr_t>();
+    test<std::intmax_t>();
+    test<std::intptr_t>();
 
-    test<uint8_t>();
-    test<uint16_t>();
-    test<uint32_t>();
-    test<uint64_t>();
+    test<std::uint8_t>();
+    test<std::uint16_t>();
+    test<std::uint32_t>();
+    test<std::uint64_t>();
 
-    test<uint_fast8_t>();
-    test<uint_fast16_t>();
-    test<uint_fast32_t>();
-    test<uint_fast64_t>();
+    test<std::uint_fast8_t>();
+    test<std::uint_fast16_t>();
+    test<std::uint_fast32_t>();
+    test<std::uint_fast64_t>();
 
-    test<uint_least8_t>();
-    test<uint_least16_t>();
-    test<uint_least32_t>();
-    test<uint_least64_t>();
+    test<std::uint_least8_t>();
+    test<std::uint_least16_t>();
+    test<std::uint_least32_t>();
+    test<std::uint_least64_t>();
 
-    test<uintmax_t>();
-    test<uintptr_t>();
+    test<std::uintmax_t>();
+    test<std::uintptr_t>();
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__int128_t>();
     test<__uint128_t>();
 #endif

@@ -20,6 +20,7 @@
 #include <queue>
 #include <vector>
 
+#include "mlir/IR/OwningOpRef.h"
 #include "mlir/Reducer/Tester.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -47,7 +48,7 @@ public:
 
   using Range = std::pair<int, int>;
 
-  ReductionNode(ReductionNode *parent, std::vector<Range> range,
+  ReductionNode(ReductionNode *parent, const std::vector<Range> &range,
                 llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator);
 
   ReductionNode *getParent() const { return parent; }
@@ -57,7 +58,7 @@ public:
   /// will have been applied certain reduction strategies. Note that it's not
   /// necessary to be an interesting case or a reduced module (has smaller size
   /// than parent's).
-  ModuleOp getModule() const { return module; }
+  ModuleOp getModule() const { return module.get(); }
 
   /// Return the region we're reducing.
   Region &getRegion() const { return *region; }
@@ -141,25 +142,25 @@ private:
 
   /// This is a copy of module from parent node. All the reducer patterns will
   /// be applied to this instance.
-  ModuleOp module;
+  OwningOpRef<ModuleOp> module;
 
   /// The region of certain operation we're reducing in the module
-  Region *region;
+  Region *region = nullptr;
 
   /// The node we are reduced from. It means we will be in variants of parent
   /// node.
-  ReductionNode *parent;
+  ReductionNode *parent = nullptr;
 
   /// The size of module after applying the reducer patterns with range
   /// constraints. This is only valid while the interestingness has been tested.
-  size_t size;
+  size_t size = 0;
 
   /// This is true if the module has been evaluated and it exhibits the
   /// interesting behavior.
-  Tester::Interestingness interesting;
+  Tester::Interestingness interesting = Tester::Interestingness::Untested;
 
   /// `ranges` represents the selected subset of operations in the region. We
-  /// implictly number each operation in the region and ReductionTreePass will
+  /// implicitly number each operation in the region and ReductionTreePass will
   /// apply reducer patterns on the operation falls into the `ranges`. We will
   /// generate new ReductionNode with subset of `ranges` to see if we can do
   /// further reduction. we may split the element in the `ranges` so that we can
@@ -191,6 +192,6 @@ class ReductionNode::iterator<SinglePath>
   ArrayRef<ReductionNode *> getNeighbors(ReductionNode *node);
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_REDUCER_REDUCTIONNODE_H

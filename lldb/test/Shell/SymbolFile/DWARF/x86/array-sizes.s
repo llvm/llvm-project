@@ -10,7 +10,7 @@
 # RUN: lldb-test symbols %t | FileCheck %s
 
 # CHECK: Variable{0x0000001e}, name = "X"
-# CHECK-SAME: type = {0000000000000033} 0x{{[0-9A-F]*}} (char [56])
+# CHECK-SAME: type = {0000000000000033} 0x{{[0-9A-F]*}} (char[56])
 
 
 # Generated from "char X[47];"

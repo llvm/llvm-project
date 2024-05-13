@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -mcpu=mips32r6 -relocation-model=static \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -relocation-model=static \
 ; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=STATIC32
-; RUN: llc -march=mipsel -mcpu=mips64r6 -relocation-model=pic -target-abi n64 \
+; RUN: llc -mtriple=mipsel -mcpu=mips64r6 -relocation-model=pic -target-abi n64 \
 ; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=PIC
 
 ; Function Attrs: nounwind
@@ -183,10 +183,10 @@ if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
-define i32 @l9(i8* ()* %i) #0 {
+define i32 @l9(ptr %i) #0 {
 entry:
-  %i.addr = alloca i8* ()*, align 4
-  store i8* ()* %i, i8* ()** %i.addr, align 4
+  %i.addr = alloca ptr, align 4
+  store ptr %i, ptr %i.addr, align 4
 ; STATIC32: jal
 ; STATIC32: nop
 ; PIC: jalrc $25
@@ -197,9 +197,9 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %0 = load i8* ()*, i8* ()** %i.addr, align 4
+  %0 = load ptr, ptr %i.addr, align 4
 ; CHECK: jalrc $25
-  %call1 = call i8* %0()
+  %call1 = call ptr %0()
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

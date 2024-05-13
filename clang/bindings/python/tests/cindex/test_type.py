@@ -1,7 +1,8 @@
 import os
 from clang.cindex import Config
-if 'CLANG_LIBRARY_PATH' in os.environ:
-    Config.set_library_path(os.environ['CLANG_LIBRARY_PATH'])
+
+if "CLANG_LIBRARY_PATH" in os.environ:
+    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import gc
 import unittest
@@ -31,7 +32,7 @@ struct teststruct {
 """
 
 
-constarrayInput="""
+constarrayInput = """
 struct teststruct {
   void *A[2];
 };
@@ -42,81 +43,85 @@ class TestType(unittest.TestCase):
     def test_a_struct(self):
         tu = get_tu(kInput)
 
-        teststruct = get_cursor(tu, 'teststruct')
+        teststruct = get_cursor(tu, "teststruct")
         self.assertIsNotNone(teststruct, "Could not find teststruct.")
         fields = list(teststruct.get_children())
 
         self.assertEqual(fields[0].kind, CursorKind.FIELD_DECL)
         self.assertIsNotNone(fields[0].translation_unit)
-        self.assertEqual(fields[0].spelling, 'a')
+        self.assertEqual(fields[0].spelling, "a")
         self.assertFalse(fields[0].type.is_const_qualified())
         self.assertEqual(fields[0].type.kind, TypeKind.INT)
         self.assertEqual(fields[0].type.get_canonical().kind, TypeKind.INT)
-        self.assertEqual(fields[0].type.get_typedef_name(), '')
+        self.assertEqual(fields[0].type.get_typedef_name(), "")
 
         self.assertEqual(fields[1].kind, CursorKind.FIELD_DECL)
         self.assertIsNotNone(fields[1].translation_unit)
-        self.assertEqual(fields[1].spelling, 'b')
+        self.assertEqual(fields[1].spelling, "b")
         self.assertFalse(fields[1].type.is_const_qualified())
-        self.assertEqual(fields[1].type.kind, TypeKind.TYPEDEF)
+        self.assertEqual(fields[1].type.kind, TypeKind.ELABORATED)
         self.assertEqual(fields[1].type.get_canonical().kind, TypeKind.INT)
-        self.assertEqual(fields[1].type.get_declaration().spelling, 'I')
-        self.assertEqual(fields[1].type.get_typedef_name(), 'I')
+        self.assertEqual(fields[1].type.get_declaration().spelling, "I")
+        self.assertEqual(fields[1].type.get_typedef_name(), "I")
 
         self.assertEqual(fields[2].kind, CursorKind.FIELD_DECL)
         self.assertIsNotNone(fields[2].translation_unit)
-        self.assertEqual(fields[2].spelling, 'c')
+        self.assertEqual(fields[2].spelling, "c")
         self.assertFalse(fields[2].type.is_const_qualified())
         self.assertEqual(fields[2].type.kind, TypeKind.LONG)
         self.assertEqual(fields[2].type.get_canonical().kind, TypeKind.LONG)
-        self.assertEqual(fields[2].type.get_typedef_name(), '')
+        self.assertEqual(fields[2].type.get_typedef_name(), "")
 
         self.assertEqual(fields[3].kind, CursorKind.FIELD_DECL)
         self.assertIsNotNone(fields[3].translation_unit)
-        self.assertEqual(fields[3].spelling, 'd')
+        self.assertEqual(fields[3].spelling, "d")
         self.assertFalse(fields[3].type.is_const_qualified())
         self.assertEqual(fields[3].type.kind, TypeKind.ULONG)
         self.assertEqual(fields[3].type.get_canonical().kind, TypeKind.ULONG)
-        self.assertEqual(fields[3].type.get_typedef_name(), '')
+        self.assertEqual(fields[3].type.get_typedef_name(), "")
 
         self.assertEqual(fields[4].kind, CursorKind.FIELD_DECL)
         self.assertIsNotNone(fields[4].translation_unit)
-        self.assertEqual(fields[4].spelling, 'e')
+        self.assertEqual(fields[4].spelling, "e")
         self.assertFalse(fields[4].type.is_const_qualified())
         self.assertEqual(fields[4].type.kind, TypeKind.LONG)
         self.assertEqual(fields[4].type.get_canonical().kind, TypeKind.LONG)
-        self.assertEqual(fields[4].type.get_typedef_name(), '')
+        self.assertEqual(fields[4].type.get_typedef_name(), "")
 
         self.assertEqual(fields[5].kind, CursorKind.FIELD_DECL)
         self.assertIsNotNone(fields[5].translation_unit)
-        self.assertEqual(fields[5].spelling, 'f')
+        self.assertEqual(fields[5].spelling, "f")
         self.assertTrue(fields[5].type.is_const_qualified())
         self.assertEqual(fields[5].type.kind, TypeKind.INT)
         self.assertEqual(fields[5].type.get_canonical().kind, TypeKind.INT)
-        self.assertEqual(fields[5].type.get_typedef_name(), '')
+        self.assertEqual(fields[5].type.get_typedef_name(), "")
 
         self.assertEqual(fields[6].kind, CursorKind.FIELD_DECL)
         self.assertIsNotNone(fields[6].translation_unit)
-        self.assertEqual(fields[6].spelling, 'g')
+        self.assertEqual(fields[6].spelling, "g")
         self.assertFalse(fields[6].type.is_const_qualified())
         self.assertEqual(fields[6].type.kind, TypeKind.POINTER)
         self.assertEqual(fields[6].type.get_pointee().kind, TypeKind.INT)
-        self.assertEqual(fields[6].type.get_typedef_name(), '')
+        self.assertEqual(fields[6].type.get_typedef_name(), "")
 
         self.assertEqual(fields[7].kind, CursorKind.FIELD_DECL)
         self.assertIsNotNone(fields[7].translation_unit)
-        self.assertEqual(fields[7].spelling, 'h')
+        self.assertEqual(fields[7].spelling, "h")
         self.assertFalse(fields[7].type.is_const_qualified())
         self.assertEqual(fields[7].type.kind, TypeKind.POINTER)
         self.assertEqual(fields[7].type.get_pointee().kind, TypeKind.POINTER)
-        self.assertEqual(fields[7].type.get_pointee().get_pointee().kind, TypeKind.POINTER)
-        self.assertEqual(fields[7].type.get_pointee().get_pointee().get_pointee().kind, TypeKind.INT)
-        self.assertEqual(fields[7].type.get_typedef_name(), '')
+        self.assertEqual(
+            fields[7].type.get_pointee().get_pointee().kind, TypeKind.POINTER
+        )
+        self.assertEqual(
+            fields[7].type.get_pointee().get_pointee().get_pointee().kind, TypeKind.INT
+        )
+        self.assertEqual(fields[7].type.get_typedef_name(), "")
 
     def test_references(self):
         """Ensure that a Type maintains a reference to a TranslationUnit."""
 
-        tu = get_tu('int x;')
+        tu = get_tu("int x;")
         children = list(tu.cursor.get_children())
         self.assertGreater(len(children), 0)
 
@@ -136,10 +141,10 @@ class TestType(unittest.TestCase):
     def testConstantArray(self):
         tu = get_tu(constarrayInput)
 
-        teststruct = get_cursor(tu, 'teststruct')
+        teststruct = get_cursor(tu, "teststruct")
         self.assertIsNotNone(teststruct, "Didn't find teststruct??")
         fields = list(teststruct.get_children())
-        self.assertEqual(fields[0].spelling, 'A')
+        self.assertEqual(fields[0].spelling, "A")
         self.assertEqual(fields[0].type.kind, TypeKind.CONSTANTARRAY)
         self.assertIsNotNone(fields[0].type.get_array_element_type())
         self.assertEqual(fields[0].type.get_array_element_type().kind, TypeKind.POINTER)
@@ -147,12 +152,12 @@ class TestType(unittest.TestCase):
 
     def test_equal(self):
         """Ensure equivalence operators work on Type."""
-        source = 'int a; int b; void *v;'
+        source = "int a; int b; void *v;"
         tu = get_tu(source)
 
-        a = get_cursor(tu, 'a')
-        b = get_cursor(tu, 'b')
-        v = get_cursor(tu, 'v')
+        a = get_cursor(tu, "a")
+        b = get_cursor(tu, "b")
+        v = get_cursor(tu, "v")
 
         self.assertIsNotNone(a)
         self.assertIsNotNone(b)
@@ -162,36 +167,36 @@ class TestType(unittest.TestCase):
         self.assertNotEqual(a.type, v.type)
 
         self.assertNotEqual(a.type, None)
-        self.assertNotEqual(a.type, 'foo')
+        self.assertNotEqual(a.type, "foo")
 
     def test_type_spelling(self):
         """Ensure Type.spelling works."""
-        tu = get_tu('int c[5]; void f(int i[]); int x; int v[x];')
-        c = get_cursor(tu, 'c')
-        i = get_cursor(tu, 'i')
-        x = get_cursor(tu, 'x')
-        v = get_cursor(tu, 'v')
+        tu = get_tu("int c[5]; void f(int i[]); int x; int v[x];")
+        c = get_cursor(tu, "c")
+        i = get_cursor(tu, "i")
+        x = get_cursor(tu, "x")
+        v = get_cursor(tu, "v")
         self.assertIsNotNone(c)
         self.assertIsNotNone(i)
         self.assertIsNotNone(x)
         self.assertIsNotNone(v)
-        self.assertEqual(c.type.spelling, "int [5]")
-        self.assertEqual(i.type.spelling, "int []")
+        self.assertEqual(c.type.spelling, "int[5]")
+        self.assertEqual(i.type.spelling, "int[]")
         self.assertEqual(x.type.spelling, "int")
-        self.assertEqual(v.type.spelling, "int [x]")
+        self.assertEqual(v.type.spelling, "int[x]")
 
     def test_typekind_spelling(self):
         """Ensure TypeKind.spelling works."""
-        tu = get_tu('int a;')
-        a = get_cursor(tu, 'a')
+        tu = get_tu("int a;")
+        a = get_cursor(tu, "a")
 
         self.assertIsNotNone(a)
-        self.assertEqual(a.type.kind.spelling, 'Int')
+        self.assertEqual(a.type.kind.spelling, "Int")
 
     def test_function_argument_types(self):
         """Ensure that Type.argument_types() works as expected."""
-        tu = get_tu('void f(int, int);')
-        f = get_cursor(tu, 'f')
+        tu = get_tu("void f(int, int);")
+        f = get_cursor(tu, "f")
         self.assertIsNotNone(f)
 
         args = f.type.argument_types()
@@ -213,20 +218,20 @@ class TestType(unittest.TestCase):
 
     def test_argument_types_string_key(self):
         """Ensure that non-int keys raise a TypeError."""
-        tu = get_tu('void f(int, int);')
-        f = get_cursor(tu, 'f')
+        tu = get_tu("void f(int, int);")
+        f = get_cursor(tu, "f")
         self.assertIsNotNone(f)
 
         args = f.type.argument_types()
         self.assertEqual(len(args), 2)
 
         with self.assertRaises(TypeError):
-            args['foo']
+            args["foo"]
 
     def test_argument_types_negative_index(self):
         """Ensure that negative indexes on argument_types Raises an IndexError."""
-        tu = get_tu('void f(int, int);')
-        f = get_cursor(tu, 'f')
+        tu = get_tu("void f(int, int);")
+        f = get_cursor(tu, "f")
         args = f.type.argument_types()
 
         with self.assertRaises(IndexError):
@@ -234,8 +239,8 @@ class TestType(unittest.TestCase):
 
     def test_argument_types_overflow_index(self):
         """Ensure that indexes beyond the length of Type.argument_types() raise."""
-        tu = get_tu('void f(int, int);')
-        f = get_cursor(tu, 'f')
+        tu = get_tu("void f(int, int);")
+        f = get_cursor(tu, "f")
         args = f.type.argument_types()
 
         with self.assertRaises(IndexError):
@@ -243,8 +248,8 @@ class TestType(unittest.TestCase):
 
     def test_argument_types_invalid_type(self):
         """Ensure that obtaining argument_types on a Type without them raises."""
-        tu = get_tu('int i;')
-        i = get_cursor(tu, 'i')
+        tu = get_tu("int i;")
+        i = get_cursor(tu, "i")
         self.assertIsNotNone(i)
 
         with self.assertRaises(Exception):
@@ -252,9 +257,9 @@ class TestType(unittest.TestCase):
 
     def test_is_pod(self):
         """Ensure Type.is_pod() works."""
-        tu = get_tu('int i; void f();')
-        i = get_cursor(tu, 'i')
-        f = get_cursor(tu, 'f')
+        tu = get_tu("int i; void f();")
+        i = get_cursor(tu, "i")
+        f = get_cursor(tu, "f")
 
         self.assertIsNotNone(i)
         self.assertIsNotNone(f)
@@ -265,7 +270,7 @@ class TestType(unittest.TestCase):
     def test_function_variadic(self):
         """Ensure Type.is_function_variadic works."""
 
-        source ="""
+        source = """
 #include <stdarg.h>
 
     void foo(int a, ...);
@@ -273,8 +278,8 @@ class TestType(unittest.TestCase):
     """
 
         tu = get_tu(source)
-        foo = get_cursor(tu, 'foo')
-        bar = get_cursor(tu, 'bar')
+        foo = get_cursor(tu, "foo")
+        bar = get_cursor(tu, "bar")
 
         self.assertIsNotNone(foo)
         self.assertIsNotNone(bar)
@@ -285,10 +290,10 @@ class TestType(unittest.TestCase):
 
     def test_element_type(self):
         """Ensure Type.element_type works."""
-        tu = get_tu('int c[5]; void f(int i[]); int x; int v[x];')
-        c = get_cursor(tu, 'c')
-        i = get_cursor(tu, 'i')
-        v = get_cursor(tu, 'v')
+        tu = get_tu("int c[5]; void f(int i[]); int x; int v[x];")
+        c = get_cursor(tu, "c")
+        i = get_cursor(tu, "i")
+        v = get_cursor(tu, "v")
         self.assertIsNotNone(c)
         self.assertIsNotNone(i)
         self.assertIsNotNone(v)
@@ -302,17 +307,17 @@ class TestType(unittest.TestCase):
 
     def test_invalid_element_type(self):
         """Ensure Type.element_type raises if type doesn't have elements."""
-        tu = get_tu('int i;')
-        i = get_cursor(tu, 'i')
+        tu = get_tu("int i;")
+        i = get_cursor(tu, "i")
         self.assertIsNotNone(i)
         with self.assertRaises(Exception):
             i.element_type
 
     def test_element_count(self):
         """Ensure Type.element_count works."""
-        tu = get_tu('int i[5]; int j;')
-        i = get_cursor(tu, 'i')
-        j = get_cursor(tu, 'j')
+        tu = get_tu("int i[5]; int j;")
+        i = get_cursor(tu, "i")
+        j = get_cursor(tu, "j")
 
         self.assertIsNotNone(i)
         self.assertIsNotNone(j)
@@ -325,10 +330,10 @@ class TestType(unittest.TestCase):
     def test_is_volatile_qualified(self):
         """Ensure Type.is_volatile_qualified works."""
 
-        tu = get_tu('volatile int i = 4; int j = 2;')
+        tu = get_tu("volatile int i = 4; int j = 2;")
 
-        i = get_cursor(tu, 'i')
-        j = get_cursor(tu, 'j')
+        i = get_cursor(tu, "i")
+        j = get_cursor(tu, "j")
 
         self.assertIsNotNone(i)
         self.assertIsNotNone(j)
@@ -340,10 +345,10 @@ class TestType(unittest.TestCase):
     def test_is_restrict_qualified(self):
         """Ensure Type.is_restrict_qualified works."""
 
-        tu = get_tu('struct s { void * restrict i; void * j; };')
+        tu = get_tu("struct s { void * restrict i; void * j; };")
 
-        i = get_cursor(tu, 'i')
-        j = get_cursor(tu, 'j')
+        i = get_cursor(tu, "i")
+        j = get_cursor(tu, "j")
 
         self.assertIsNotNone(i)
         self.assertIsNotNone(j)
@@ -356,7 +361,7 @@ class TestType(unittest.TestCase):
         """Ensure Cursor.type.get_size, Cursor.type.get_align and
         Cursor.type.get_offset works."""
 
-        source ="""
+        source = """
     struct a {
         long a1;
         long a2:3;
@@ -364,15 +369,17 @@ class TestType(unittest.TestCase):
         long long a4;
     };
     """
-        tries=[(['-target','i386-linux-gnu'],(4,16,0,32,35,64)),
-               (['-target','nvptx64-unknown-unknown'],(8,24,0,64,67,128)),
-               (['-target','i386-pc-win32'],(8,16,0,32,35,64)),
-               (['-target','msp430-none-none'],(2,14,0,32,35,48))]
+        tries = [
+            (["-target", "i386-linux-gnu"], (4, 16, 0, 32, 35, 64)),
+            (["-target", "nvptx64-unknown-unknown"], (8, 24, 0, 64, 67, 128)),
+            (["-target", "i386-pc-win32"], (8, 16, 0, 32, 35, 64)),
+            (["-target", "msp430-none-none"], (2, 14, 0, 32, 35, 48)),
+        ]
         for flags, values in tries:
-            align,total,a1,a2,a3,a4 = values
+            align, total, a1, a2, a3, a4 = values
 
             tu = get_tu(source, flags=flags)
-            teststruct = get_cursor(tu, 'a')
+            teststruct = get_cursor(tu, "a")
             fields = list(teststruct.get_children())
 
             self.assertEqual(teststruct.type.get_align(), align)
@@ -390,7 +397,7 @@ class TestType(unittest.TestCase):
 
     def test_offset(self):
         """Ensure Cursor.get_record_field_offset works in anonymous records"""
-        source="""
+        source = """
     struct Test {
       struct {int a;} typeanon;
       struct {
@@ -401,14 +408,16 @@ class TestType(unittest.TestCase):
       };
       int bar;
     };"""
-        tries=[(['-target','i386-linux-gnu'],(4,16,0,32,64,96)),
-               (['-target','nvptx64-unknown-unknown'],(8,24,0,32,64,96)),
-               (['-target','i386-pc-win32'],(8,16,0,32,64,96)),
-               (['-target','msp430-none-none'],(2,14,0,32,64,96))]
+        tries = [
+            (["-target", "i386-linux-gnu"], (4, 16, 0, 32, 64, 96)),
+            (["-target", "nvptx64-unknown-unknown"], (8, 24, 0, 32, 64, 96)),
+            (["-target", "i386-pc-win32"], (8, 16, 0, 32, 64, 96)),
+            (["-target", "msp430-none-none"], (2, 14, 0, 32, 64, 96)),
+        ]
         for flags, values in tries:
-            align,total,f1,bariton,foo,bar = values
+            align, total, f1, bariton, foo, bar = values
             tu = get_tu(source)
-            teststruct = get_cursor(tu, 'Test')
+            teststruct = get_cursor(tu, "Test")
             children = list(teststruct.get_children())
             fields = list(teststruct.type.get_fields())
             self.assertEqual(children[0].kind, CursorKind.STRUCT_DECL)
@@ -426,7 +435,7 @@ class TestType(unittest.TestCase):
         """Ensure decayed types are handled as the original type"""
 
         tu = get_tu("void foo(int a[]);")
-        foo = get_cursor(tu, 'foo')
+        foo = get_cursor(tu, "foo")
         a = foo.type.argument_types()[0]
 
         self.assertEqual(a.kind, TypeKind.INCOMPLETEARRAY)
@@ -435,9 +444,9 @@ class TestType(unittest.TestCase):
 
     def test_addrspace(self):
         """Ensure the address space can be queried"""
-        tu = get_tu('__attribute__((address_space(2))) int testInteger = 3;', 'c')
+        tu = get_tu("__attribute__((address_space(2))) int testInteger = 3;", "c")
 
-        testInteger = get_cursor(tu, 'testInteger')
+        testInteger = get_cursor(tu, "testInteger")
 
         self.assertIsNotNone(testInteger, "Could not find testInteger.")
         self.assertEqual(testInteger.type.get_address_space(), 2)
@@ -452,17 +461,17 @@ class TestType(unittest.TestCase):
         Template<Foo> instance;
         int bar;
         """
-        tu = get_tu(source, lang='cpp')
+        tu = get_tu(source, lang="cpp")
 
         # Varible with a template argument.
-        cursor = get_cursor(tu, 'instance')
+        cursor = get_cursor(tu, "instance")
         cursor_type = cursor.type
         self.assertEqual(cursor.kind, CursorKind.VAR_DECL)
-        self.assertEqual(cursor_type.spelling, 'Template<Foo>')
+        self.assertEqual(cursor_type.spelling, "Template<Foo>")
         self.assertEqual(cursor_type.get_num_template_arguments(), 1)
         template_type = cursor_type.get_template_argument_type(0)
-        self.assertEqual(template_type.spelling, 'Foo')
+        self.assertEqual(template_type.spelling, "Foo")
 
         # Variable without a template argument.
-        cursor = get_cursor(tu, 'bar')
+        cursor = get_cursor(tu, "bar")
         self.assertEqual(cursor.get_num_template_arguments(), -1)

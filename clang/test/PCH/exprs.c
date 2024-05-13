@@ -30,7 +30,7 @@ floating_literal *double_ptr = &floating;
 imaginary_literal *cdouble_ptr = &floating_complex;
 
 // StringLiteral
-const char* printHello() {
+const char* printHello(void) {
   return hello;
 }
 

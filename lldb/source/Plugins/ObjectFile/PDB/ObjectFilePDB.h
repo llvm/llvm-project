@@ -22,7 +22,7 @@ public:
   static void Initialize();
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "pdb"; }
   static const char *GetPluginDescriptionStatic() {
     return "PDB object file reader.";
   }
@@ -31,12 +31,12 @@ public:
   loadPDBFile(std::string PdbPath, llvm::BumpPtrAllocator &Allocator);
 
   static ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
                  lldb::offset_t data_offset, const FileSpec *file,
                  lldb::offset_t file_offset, lldb::offset_t length);
 
   static ObjectFile *CreateMemoryInstance(const lldb::ModuleSP &module_sp,
-                                          lldb::DataBufferSP &data_sp,
+                                          lldb::WritableDataBufferSP data_sp,
                                           const lldb::ProcessSP &process_sp,
                                           lldb::addr_t header_addr);
 
@@ -48,9 +48,7 @@ public:
                                         ModuleSpecList &specs);
 
   // PluginInterface protocol
-  ConstString GetPluginName() override { return GetPluginNameStatic(); }
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // LLVM RTTI support
   static char ID;
@@ -70,7 +68,7 @@ public:
 
   bool IsExecutable() const override { return false; }
 
-  Symtab *GetSymtab() override { return nullptr; }
+  void ParseSymtab(lldb_private::Symtab &symtab) override {}
 
   bool IsStripped() override { return false; }
 
@@ -104,4 +102,4 @@ private:
 };
 
 } // namespace lldb_private
-#endif // LLDB_PLUGINS_OBJECTFILE_PDB_OBJECTFILEPDB_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_PDB_OBJECTFILEPDB_H

@@ -11,11 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_AFFINE_EXPR_H
-#define MLIR_IR_AFFINE_EXPR_H
+#ifndef MLIR_IR_AFFINEEXPR_H
+#define MLIR_IR_AFFINEEXPR_H
 
+#include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <functional>
 #include <type_traits>
@@ -31,7 +34,6 @@ namespace detail {
 struct AffineExprStorage;
 struct AffineBinaryOpExprStorage;
 struct AffineDimExprStorage;
-struct AffineSymbolExprStorage;
 struct AffineConstantExprStorage;
 
 } // namespace detail
@@ -68,7 +70,7 @@ class AffineExpr {
 public:
   using ImplType = detail::AffineExprStorage;
 
-  constexpr AffineExpr() : expr(nullptr) {}
+  constexpr AffineExpr() {}
   /* implicit */ AffineExpr(const ImplType *expr)
       : expr(const_cast<ImplType *>(expr)) {}
 
@@ -81,13 +83,17 @@ public:
   bool operator!() const { return expr == nullptr; }
 
   template <typename U>
-  bool isa() const;
+  [[deprecated("Use llvm::isa<U>() instead")]] constexpr bool isa() const;
+
   template <typename U>
-  U dyn_cast() const;
+  [[deprecated("Use llvm::dyn_cast<U>() instead")]] U dyn_cast() const;
+
   template <typename U>
-  U dyn_cast_or_null() const;
+  [[deprecated("Use llvm::dyn_cast_or_null<U>() instead")]] U
+  dyn_cast_or_null() const;
+
   template <typename U>
-  U cast() const;
+  [[deprecated("Use llvm::cast<U>() instead")]] U cast() const;
 
   MLIRContext *getContext() const;
 
@@ -118,8 +124,13 @@ public:
   /// Return true if the affine expression involves AffineSymbolExpr `position`.
   bool isFunctionOfSymbol(unsigned position) const;
 
-  /// Walk all of the AffineExpr's in this expression in postorder.
-  void walk(std::function<void(AffineExpr)> callback) const;
+  /// Walk all of the AffineExpr's in this expression in postorder. This allows
+  /// a lambda walk function that can either return `void` or a WalkResult. With
+  /// a WalkResult, interrupting is supported.
+  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  RetT walk(FnT &&callback) const {
+    return walk<RetT>(*this, callback);
+  }
 
   /// This method substitutes any uses of dimensions and symbols (e.g.
   /// dim#0 with dimReplacements[0]) and returns the modified expression tree.
@@ -143,12 +154,15 @@ public:
   /// `*this` and apply replace with `map` on its subexpressions.
   AffineExpr replace(const DenseMap<AffineExpr, AffineExpr> &map) const;
 
-  /// Replace dims[0 .. numDims - 1] by dims[shift .. shift + numDims - 1].
-  AffineExpr shiftDims(unsigned numDims, unsigned shift) const;
+  /// Replace dims[offset ... numDims)
+  /// by dims[offset + shift ... shift + numDims).
+  AffineExpr shiftDims(unsigned numDims, unsigned shift,
+                       unsigned offset = 0) const;
 
-  /// Replace symbols[0 .. numSymbols - 1] by
-  ///         symbols[shift .. shift + numSymbols - 1].
-  AffineExpr shiftSymbols(unsigned numSymbols, unsigned shift) const;
+  /// Replace symbols[offset ... numSymbols)
+  /// by symbols[offset + shift ... shift + numSymbols).
+  AffineExpr shiftSymbols(unsigned numSymbols, unsigned shift,
+                          unsigned offset = 0) const;
 
   AffineExpr operator+(int64_t v) const;
   AffineExpr operator+(AffineExpr other) const;
@@ -190,8 +204,19 @@ public:
         reinterpret_cast<ImplType *>(const_cast<void *>(pointer)));
   }
 
+  ImplType *getImpl() const { return expr; }
+
 protected:
-  ImplType *expr;
+  ImplType *expr{nullptr};
+
+private:
+  /// A trampoline for the templated non-static AffineExpr::walk method to
+  /// dispatch lambda `callback`'s of either a void result type or a
+  /// WalkResult type. Walk all of the AffineExprs in `e` in postorder. Users
+  /// should use the regular (non-static) `walk` method.
+  template <typename WalkRetTy>
+  static WalkRetTy walk(AffineExpr e,
+                        function_ref<WalkRetTy(AffineExpr)> callback);
 };
 
 /// Affine binary operation expression. An affine binary operation could be an
@@ -247,6 +272,8 @@ inline AffineExpr operator-(int64_t val, AffineExpr expr) {
 AffineExpr getAffineDimExpr(unsigned position, MLIRContext *context);
 AffineExpr getAffineSymbolExpr(unsigned position, MLIRContext *context);
 AffineExpr getAffineConstantExpr(int64_t constant, MLIRContext *context);
+SmallVector<AffineExpr> getAffineConstantExprs(ArrayRef<int64_t> constants,
+                                               MLIRContext *context);
 AffineExpr getAffineBinaryOpExpr(AffineExprKind kind, AffineExpr lhs,
                                  AffineExpr rhs);
 
@@ -263,36 +290,35 @@ AffineExpr getAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
 raw_ostream &operator<<(raw_ostream &os, AffineExpr expr);
 
 template <typename U>
-bool AffineExpr::isa() const {
-  if (std::is_same<U, AffineBinaryOpExpr>::value)
+constexpr bool AffineExpr::isa() const {
+  if constexpr (std::is_same_v<U, AffineBinaryOpExpr>)
     return getKind() <= AffineExprKind::LAST_AFFINE_BINARY_OP;
-  if (std::is_same<U, AffineDimExpr>::value)
+  if constexpr (std::is_same_v<U, AffineDimExpr>)
     return getKind() == AffineExprKind::DimId;
-  if (std::is_same<U, AffineSymbolExpr>::value)
+  if constexpr (std::is_same_v<U, AffineSymbolExpr>)
     return getKind() == AffineExprKind::SymbolId;
-  if (std::is_same<U, AffineConstantExpr>::value)
+  if constexpr (std::is_same_v<U, AffineConstantExpr>)
     return getKind() == AffineExprKind::Constant;
 }
 template <typename U>
 U AffineExpr::dyn_cast() const {
-  if (isa<U>())
-    return U(expr);
-  return U(nullptr);
+  return llvm::dyn_cast<U>(*this);
 }
 template <typename U>
 U AffineExpr::dyn_cast_or_null() const {
-  return (!*this || !isa<U>()) ? U(nullptr) : U(expr);
+  return llvm::dyn_cast_or_null<U>(*this);
 }
 template <typename U>
 U AffineExpr::cast() const {
-  assert(isa<U>());
-  return U(expr);
+  return llvm::cast<U>(*this);
 }
 
-/// Simplify an affine expression by flattening and some amount of
-/// simple analysis. This has complexity linear in the number of nodes in
-/// 'expr'. Returns the simplified expression, which is the same as the input
-///  expression if it can't be simplified.
+/// Simplify an affine expression by flattening and some amount of simple
+/// analysis. This has complexity linear in the number of nodes in 'expr'.
+/// Returns the simplified expression, which is the same as the input expression
+/// if it can't be simplified. When `expr` is semi-affine, a simplified
+/// semi-affine expression is constructed in the sorted order of dimension and
+/// symbol positions.
 AffineExpr simplifyAffineExpr(AffineExpr expr, unsigned numDims,
                               unsigned numSymbols);
 
@@ -314,6 +340,7 @@ void bindSymbols(MLIRContext *ctx, AffineExprTy &e, AffineExprTy2 &...exprs) {
   e = getAffineSymbolExpr(N, ctx);
   bindSymbols<N + 1, AffineExprTy2 &...>(ctx, exprs...);
 }
+
 } // namespace detail
 
 /// Bind a list of AffineExpr references to DimExpr at positions:
@@ -323,12 +350,40 @@ void bindDims(MLIRContext *ctx, AffineExprTy &...exprs) {
   detail::bindDims<0>(ctx, exprs...);
 }
 
+template <typename AffineExprTy>
+void bindDimsList(MLIRContext *ctx, MutableArrayRef<AffineExprTy> exprs) {
+  int idx = 0;
+  for (AffineExprTy &e : exprs)
+    e = getAffineDimExpr(idx++, ctx);
+}
+
 /// Bind a list of AffineExpr references to SymbolExpr at positions:
 ///   [0 .. sizeof...(exprs)]
 template <typename... AffineExprTy>
 void bindSymbols(MLIRContext *ctx, AffineExprTy &...exprs) {
   detail::bindSymbols<0>(ctx, exprs...);
 }
+
+template <typename AffineExprTy>
+void bindSymbolsList(MLIRContext *ctx, MutableArrayRef<AffineExprTy> exprs) {
+  int idx = 0;
+  for (AffineExprTy &e : exprs)
+    e = getAffineSymbolExpr(idx++, ctx);
+}
+
+/// Get a lower or upper (depending on `isUpper`) bound for `expr` while using
+/// the constant lower and upper bounds for its inputs provided in
+/// `constLowerBounds` and `constUpperBounds`. Return std::nullopt if such a
+/// bound can't be computed. This method only handles simple sum of product
+/// expressions (w.r.t constant coefficients) so as to not depend on anything
+/// heavyweight in `Analysis`. Expressions of the form: c0*d0 + c1*d1 + c2*s0 +
+/// ... + c_n are handled. Expressions involving floordiv, ceildiv, mod or
+/// semi-affine ones will lead a none being returned.
+std::optional<int64_t>
+getBoundForAffineExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
+                      ArrayRef<std::optional<int64_t>> constLowerBounds,
+                      ArrayRef<std::optional<int64_t>> constUpperBounds,
+                      bool isUpper);
 
 } // namespace mlir
 
@@ -338,11 +393,11 @@ namespace llvm {
 template <>
 struct DenseMapInfo<mlir::AffineExpr> {
   static mlir::AffineExpr getEmptyKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::AffineExpr(static_cast<mlir::AffineExpr::ImplType *>(pointer));
   }
   static mlir::AffineExpr getTombstoneKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlir::AffineExpr(static_cast<mlir::AffineExpr::ImplType *>(pointer));
   }
   static unsigned getHashValue(mlir::AffineExpr val) {
@@ -353,6 +408,35 @@ struct DenseMapInfo<mlir::AffineExpr> {
   }
 };
 
+/// Add support for llvm style casts. We provide a cast between To and From if
+/// From is mlir::AffineExpr or derives from it.
+template <typename To, typename From>
+struct CastInfo<To, From,
+                std::enable_if_t<std::is_same_v<mlir::AffineExpr,
+                                                std::remove_const_t<From>> ||
+                                 std::is_base_of_v<mlir::AffineExpr, From>>>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+
+  static inline bool isPossible(mlir::AffineExpr expr) {
+    /// Return a constant true instead of a dynamic true when casting to self or
+    /// up the hierarchy.
+    if constexpr (std::is_base_of_v<To, From>) {
+      return true;
+    } else {
+      if constexpr (std::is_same_v<To, ::mlir::AffineBinaryOpExpr>)
+        return expr.getKind() <= ::mlir::AffineExprKind::LAST_AFFINE_BINARY_OP;
+      if constexpr (std::is_same_v<To, ::mlir::AffineDimExpr>)
+        return expr.getKind() == ::mlir::AffineExprKind::DimId;
+      if constexpr (std::is_same_v<To, ::mlir::AffineSymbolExpr>)
+        return expr.getKind() == ::mlir::AffineExprKind::SymbolId;
+      if constexpr (std::is_same_v<To, ::mlir::AffineConstantExpr>)
+        return expr.getKind() == ::mlir::AffineExprKind::Constant;
+    }
+  }
+  static inline To doCast(mlir::AffineExpr expr) { return To(expr.getImpl()); }
+};
+
 } // namespace llvm
 
-#endif // MLIR_IR_AFFINE_EXPR_H
+#endif // MLIR_IR_AFFINEEXPR_H

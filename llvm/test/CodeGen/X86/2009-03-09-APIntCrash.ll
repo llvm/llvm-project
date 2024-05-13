@@ -7,7 +7,7 @@ entry:
 	br i1 false, label %if.then, label %return
 
 if.then:		; preds = %entry
-	%srcval18 = load i128, i128* null, align 8		; <i128> [#uses=1]
+	%srcval18 = load i128, ptr null, align 8		; <i128> [#uses=1]
 	%tmp15 = lshr i128 %srcval18, 64		; <i128> [#uses=1]
 	%tmp9 = mul i128 %tmp15, 18446744073709551616000		; <i128> [#uses=1]
 	br label %return

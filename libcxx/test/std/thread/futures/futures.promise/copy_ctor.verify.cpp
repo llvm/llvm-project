@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 // <future>
 
@@ -16,10 +16,7 @@
 
 #include <future>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     {
         std::promise<int> p0;
         std::promise<int> p(p0); // expected-error {{call to deleted constructor of 'std::promise<int>'}}
@@ -32,6 +29,4 @@ int main(int, char**)
         std::promise<void> p0;
         std::promise<void> p(p0); // expected-error {{call to deleted constructor of 'std::promise<void>'}}
     }
-
-    return 0;
 }

@@ -1,10 +1,10 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pragma-based-opts=1 -analyze < %s | FileCheck %s --match-full-lines
-; RUN: opt %loadPolly -polly-opt-isl -polly-pragma-based-opts=0 -analyze < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadPolly -polly-pragma-based-opts=1 -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadPolly -polly-pragma-based-opts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
 ;
 ; Unrolling with heuristic factor.
 ; Currently not supported and expected to be handled by LLVM's unroll pass.
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -14,7 +14,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:

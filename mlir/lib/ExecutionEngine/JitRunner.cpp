@@ -21,21 +21,28 @@
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Tools/ParseUtilities.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
 #include <numeric>
+#include <optional>
+#include <utility>
+
+#define DEBUG_TYPE "jit-runner"
 
 using namespace mlir;
 using llvm::Error;
@@ -57,10 +64,6 @@ struct Options {
 
   llvm::cl::OptionCategory optFlags{"opt-like flags"};
 
-  // CLI list of pass information
-  llvm::cl::list<const llvm::PassInfo *, bool, llvm::PassNameParser> llvmPasses{
-      llvm::cl::desc("LLVM optimizing passes to run"), llvm::cl::cat(optFlags)};
-
   // CLI variables for -On options.
   llvm::cl::opt<bool> optO0{"O0",
                             llvm::cl::desc("Run opt passes and codegen at O0"),
@@ -75,11 +78,19 @@ struct Options {
                             llvm::cl::desc("Run opt passes and codegen at O3"),
                             llvm::cl::cat(optFlags)};
 
+  llvm::cl::list<std::string> mAttrs{
+      "mattr", llvm::cl::MiscFlags::CommaSeparated,
+      llvm::cl::desc("Target specific attributes (-mattr=help for details)"),
+      llvm::cl::value_desc("a1,+a2,-a3,..."), llvm::cl::cat(optFlags)};
+
+  llvm::cl::opt<std::string> mArch{
+      "march",
+      llvm::cl::desc("Architecture to generate code for (see --version)")};
+
   llvm::cl::OptionCategory clOptionsCategory{"linking options"};
   llvm::cl::list<std::string> clSharedLibs{
       "shared-libs", llvm::cl::desc("Libraries to link dynamically"),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated,
-      llvm::cl::cat(clOptionsCategory)};
+      llvm::cl::MiscFlags::CommaSeparated, llvm::cl::cat(clOptionsCategory)};
 
   /// CLI variables for debugging.
   llvm::cl::opt<bool> dumpObjectFile{
@@ -90,15 +101,25 @@ struct Options {
   llvm::cl::opt<std::string> objectFilename{
       "object-filename",
       llvm::cl::desc("Dump JITted-compiled object to file <input file>.o")};
+
+  llvm::cl::opt<bool> hostSupportsJit{"host-supports-jit",
+                                      llvm::cl::desc("Report host JIT support"),
+                                      llvm::cl::Hidden};
+
+  llvm::cl::opt<bool> noImplicitModule{
+      "no-implicit-module",
+      llvm::cl::desc(
+          "Disable implicit addition of a top-level module op during parsing"),
+      llvm::cl::init(false)};
 };
 
 struct CompileAndExecuteConfig {
   /// LLVM module transformer that is passed to ExecutionEngine.
-  llvm::function_ref<llvm::Error(llvm::Module *)> transformer;
+  std::function<llvm::Error(llvm::Module *)> transformer;
 
   /// A custom function that is passed to ExecutionEngine. It processes MLIR
   /// module and creates LLVM IR module.
-  llvm::function_ref<std::unique_ptr<llvm::Module>(ModuleOp,
+  llvm::function_ref<std::unique_ptr<llvm::Module>(Operation *,
                                                    llvm::LLVMContext &)>
       llvmModuleBuilder;
 
@@ -108,10 +129,11 @@ struct CompileAndExecuteConfig {
       runtimeSymbolMap;
 };
 
-} // end anonymous namespace
+} // namespace
 
-static OwningModuleRef parseMLIRInput(StringRef inputFilename,
-                                      MLIRContext *context) {
+static OwningOpRef<Operation *> parseMLIRInput(StringRef inputFilename,
+                                               bool insertImplicitModule,
+                                               MLIRContext *context) {
   // Set up the input file.
   std::string errorMessage;
   auto file = openInputFile(inputFilename, &errorMessage);
@@ -120,18 +142,26 @@ static OwningModuleRef parseMLIRInput(StringRef inputFilename,
     return nullptr;
   }
 
-  llvm::SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(file), llvm::SMLoc());
-  return OwningModuleRef(parseSourceFile(sourceMgr, context));
+  auto sourceMgr = std::make_shared<llvm::SourceMgr>();
+  sourceMgr->AddNewSourceBuffer(std::move(file), SMLoc());
+  OwningOpRef<Operation *> module =
+      parseSourceFileForTool(sourceMgr, context, insertImplicitModule);
+  if (!module)
+    return nullptr;
+  if (!module.get()->hasTrait<OpTrait::SymbolTable>()) {
+    llvm::errs() << "Error: top-level op must be a symbol table.\n";
+    return nullptr;
+  }
+  return module;
 }
 
-static inline Error make_string_error(const Twine &message) {
+static inline Error makeStringError(const Twine &message) {
   return llvm::make_error<llvm::StringError>(message.str(),
                                              llvm::inconvertibleErrorCode());
 }
 
-static Optional<unsigned> getCommandLineOptLevel(Options &options) {
-  Optional<unsigned> optLevel;
+static std::optional<unsigned> getCommandLineOptLevel(Options &options) {
+  std::optional<unsigned> optLevel;
   SmallVector<std::reference_wrapper<llvm::cl::opt<bool>>, 4> optFlags{
       options.optO0, options.optO1, options.optO2, options.optO3};
 
@@ -147,76 +177,32 @@ static Optional<unsigned> getCommandLineOptLevel(Options &options) {
 }
 
 // JIT-compile the given module and run "entryPoint" with "args" as arguments.
-static Error compileAndExecute(Options &options, ModuleOp module,
-                               StringRef entryPoint,
-                               CompileAndExecuteConfig config, void **args) {
-  Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel;
+static Error
+compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
+                  CompileAndExecuteConfig config, void **args,
+                  std::unique_ptr<llvm::TargetMachine> tm = nullptr) {
+  std::optional<llvm::CodeGenOptLevel> jitCodeGenOptLevel;
   if (auto clOptLevel = getCommandLineOptLevel(options))
-    jitCodeGenOptLevel =
-        static_cast<llvm::CodeGenOpt::Level>(clOptLevel.getValue());
+    jitCodeGenOptLevel = static_cast<llvm::CodeGenOptLevel>(*clOptLevel);
 
-  // If shared library implements custom mlir-runner library init and destroy
-  // functions, we'll use them to register the library with the execution
-  // engine. Otherwise we'll pass library directly to the execution engine.
-  SmallVector<SmallString<256>, 4> libPaths;
+  SmallVector<StringRef, 4> sharedLibs(options.clSharedLibs.begin(),
+                                       options.clSharedLibs.end());
 
-  // Use absolute library path so that gdb can find the symbol table.
-  transform(
-      options.clSharedLibs, std::back_inserter(libPaths),
-      [](std::string libPath) {
-        SmallString<256> absPath(libPath.begin(), libPath.end());
-        cantFail(llvm::errorCodeToError(llvm::sys::fs::make_absolute(absPath)));
-        return absPath;
-      });
-
-  // Libraries that we'll pass to the ExecutionEngine for loading.
-  SmallVector<StringRef, 4> executionEngineLibs;
-
-  using MlirRunnerInitFn = void (*)(llvm::StringMap<void *> &);
-  using MlirRunnerDestroyFn = void (*)();
-
-  llvm::StringMap<void *> exportSymbols;
-  SmallVector<MlirRunnerDestroyFn> destroyFns;
-
-  // Handle libraries that do support mlir-runner init/destroy callbacks.
-  for (auto &libPath : libPaths) {
-    auto lib = llvm::sys::DynamicLibrary::getPermanentLibrary(libPath.c_str());
-    void *initSym = lib.getAddressOfSymbol("__mlir_runner_init");
-    void *destroySim = lib.getAddressOfSymbol("__mlir_runner_destroy");
-
-    // Library does not support mlir runner, load it with ExecutionEngine.
-    if (!initSym || !destroySim) {
-      executionEngineLibs.push_back(libPath);
-      continue;
-    }
-
-    auto initFn = reinterpret_cast<MlirRunnerInitFn>(initSym);
-    initFn(exportSymbols);
-
-    auto destroyFn = reinterpret_cast<MlirRunnerDestroyFn>(destroySim);
-    destroyFns.push_back(destroyFn);
-  }
-
-  // Build a runtime symbol map from the config and exported symbols.
-  auto runtimeSymbolMap = [&](llvm::orc::MangleAndInterner interner) {
-    auto symbolMap = config.runtimeSymbolMap ? config.runtimeSymbolMap(interner)
-                                             : llvm::orc::SymbolMap();
-    for (auto &exportSymbol : exportSymbols)
-      symbolMap[interner(exportSymbol.getKey())] =
-          llvm::JITEvaluatedSymbol::fromPointer(exportSymbol.getValue());
-    return symbolMap;
-  };
-
-  auto expectedEngine = mlir::ExecutionEngine::create(
-      module, config.llvmModuleBuilder, config.transformer, jitCodeGenOptLevel,
-      executionEngineLibs);
+  mlir::ExecutionEngineOptions engineOptions;
+  engineOptions.llvmModuleBuilder = config.llvmModuleBuilder;
+  if (config.transformer)
+    engineOptions.transformer = config.transformer;
+  engineOptions.jitCodeGenOptLevel = jitCodeGenOptLevel;
+  engineOptions.sharedLibPaths = sharedLibs;
+  engineOptions.enableObjectDump = true;
+  auto expectedEngine =
+      mlir::ExecutionEngine::create(module, engineOptions, std::move(tm));
   if (!expectedEngine)
     return expectedEngine.takeError();
 
   auto engine = std::move(*expectedEngine);
-  engine->registerSymbols(runtimeSymbolMap);
 
-  auto expectedFPtr = engine->lookup(entryPoint);
+  auto expectedFPtr = engine->lookupPacked(entryPoint);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
 
@@ -228,63 +214,67 @@ static Error compileAndExecute(Options &options, ModuleOp module,
   void (*fptr)(void **) = *expectedFPtr;
   (*fptr)(args);
 
-  // Run all dynamic library destroy callbacks to prepare for the shutdown.
-  llvm::for_each(destroyFns, [](MlirRunnerDestroyFn destroy) { destroy(); });
-
   return Error::success();
 }
 
-static Error compileAndExecuteVoidFunction(Options &options, ModuleOp module,
-                                           StringRef entryPoint,
-                                           CompileAndExecuteConfig config) {
-  auto mainFunction = module.lookupSymbol<LLVM::LLVMFuncOp>(entryPoint);
+static Error compileAndExecuteVoidFunction(
+    Options &options, Operation *module, StringRef entryPoint,
+    CompileAndExecuteConfig config, std::unique_ptr<llvm::TargetMachine> tm) {
+  auto mainFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(
+      SymbolTable::lookupSymbolIn(module, entryPoint));
   if (!mainFunction || mainFunction.empty())
-    return make_string_error("entry point not found");
+    return makeStringError("entry point not found");
+
+  auto resultType = dyn_cast<LLVM::LLVMVoidType>(
+      mainFunction.getFunctionType().getReturnType());
+  if (!resultType)
+    return makeStringError("expected void function");
+
   void *empty = nullptr;
-  return compileAndExecute(options, module, entryPoint, config, &empty);
+  return compileAndExecute(options, module, entryPoint, std::move(config),
+                           &empty, std::move(tm));
 }
 
 template <typename Type>
 Error checkCompatibleReturnType(LLVM::LLVMFuncOp mainFunction);
 template <>
 Error checkCompatibleReturnType<int32_t>(LLVM::LLVMFuncOp mainFunction) {
-  auto resultType = mainFunction.getType()
-                        .cast<LLVM::LLVMFunctionType>()
-                        .getReturnType()
-                        .dyn_cast<IntegerType>();
+  auto resultType = dyn_cast<IntegerType>(
+      cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
+          .getReturnType());
   if (!resultType || resultType.getWidth() != 32)
-    return make_string_error("only single i32 function result supported");
+    return makeStringError("only single i32 function result supported");
   return Error::success();
 }
 template <>
 Error checkCompatibleReturnType<int64_t>(LLVM::LLVMFuncOp mainFunction) {
-  auto resultType = mainFunction.getType()
-                        .cast<LLVM::LLVMFunctionType>()
-                        .getReturnType()
-                        .dyn_cast<IntegerType>();
+  auto resultType = dyn_cast<IntegerType>(
+      cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
+          .getReturnType());
   if (!resultType || resultType.getWidth() != 64)
-    return make_string_error("only single i64 function result supported");
+    return makeStringError("only single i64 function result supported");
   return Error::success();
 }
 template <>
 Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
-  if (!mainFunction.getType()
-           .cast<LLVM::LLVMFunctionType>()
-           .getReturnType()
-           .isa<Float32Type>())
-    return make_string_error("only single f32 function result supported");
+  if (!isa<Float32Type>(
+          cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
+              .getReturnType()))
+    return makeStringError("only single f32 function result supported");
   return Error::success();
 }
 template <typename Type>
-Error compileAndExecuteSingleReturnFunction(Options &options, ModuleOp module,
-                                            StringRef entryPoint,
-                                            CompileAndExecuteConfig config) {
-  auto mainFunction = module.lookupSymbol<LLVM::LLVMFuncOp>(entryPoint);
+Error compileAndExecuteSingleReturnFunction(
+    Options &options, Operation *module, StringRef entryPoint,
+    CompileAndExecuteConfig config, std::unique_ptr<llvm::TargetMachine> tm) {
+  auto mainFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(
+      SymbolTable::lookupSymbolIn(module, entryPoint));
   if (!mainFunction || mainFunction.isExternal())
-    return make_string_error("entry point not found");
+    return makeStringError("entry point not found");
 
-  if (mainFunction.getType().cast<LLVM::LLVMFunctionType>().getNumParams() != 0)
-    return make_string_error("function inputs not supported");
+  if (cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
+          .getNumParams() != 0)
+    return makeStringError("function inputs not supported");
 
   if (Error error = checkCompatibleReturnType<Type>(mainFunction))
     return error;
@@ -294,8 +284,9 @@ Error compileAndExecuteSingleReturnFunction(Options &options, ModuleOp module,
     void *data;
   } data;
   data.data = &res;
-  if (auto error = compileAndExecute(options, module, entryPoint, config,
-                                     (void **)&data))
+  if (auto error =
+          compileAndExecute(options, module, entryPoint, std::move(config),
+                            (void **)&data, std::move(tm)))
     return error;
 
   // Intentional printing of the output so we can test.
@@ -308,46 +299,40 @@ Error compileAndExecuteSingleReturnFunction(Options &options, ModuleOp module,
 /// standard C++ main functions.
 int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
                         JitRunnerConfig config) {
+  llvm::ExitOnError exitOnErr;
+
   // Create the options struct containing the command line options for the
   // runner. This must come before the command line options are parsed.
   Options options;
   llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR CPU execution driver\n");
 
-  Optional<unsigned> optLevel = getCommandLineOptLevel(options);
+  if (options.hostSupportsJit) {
+    auto j = llvm::orc::LLJITBuilder().create();
+    if (j)
+      llvm::outs() << "true\n";
+    else {
+      llvm::outs() << "false\n";
+      exitOnErr(j.takeError());
+    }
+    return 0;
+  }
+
+  std::optional<unsigned> optLevel = getCommandLineOptLevel(options);
   SmallVector<std::reference_wrapper<llvm::cl::opt<bool>>, 4> optFlags{
       options.optO0, options.optO1, options.optO2, options.optO3};
-  unsigned optCLIPosition = 0;
-  // Determine if there is an optimization flag present, and its CLI position
-  // (optCLIPosition).
-  for (unsigned j = 0; j < 4; ++j) {
-    auto &flag = optFlags[j].get();
-    if (flag) {
-      optCLIPosition = flag.getPosition();
-      break;
-    }
-  }
-  // Generate vector of pass information, plus the index at which we should
-  // insert any optimization passes in that vector (optPosition).
-  SmallVector<const llvm::PassInfo *, 4> passes;
-  unsigned optPosition = 0;
-  for (unsigned i = 0, e = options.llvmPasses.size(); i < e; ++i) {
-    passes.push_back(options.llvmPasses[i]);
-    if (optCLIPosition < options.llvmPasses.getPosition(i)) {
-      optPosition = i;
-      optCLIPosition = UINT_MAX; // To ensure we never insert again
-    }
-  }
 
   MLIRContext context(registry);
 
-  auto m = parseMLIRInput(options.inputFilename, &context);
+  auto m = parseMLIRInput(options.inputFilename, !options.noImplicitModule,
+                          &context);
   if (!m) {
     llvm::errs() << "could not parse the input IR\n";
     return 1;
   }
 
+  JitRunnerOptions runnerOptions{options.mainFuncName, options.mainFuncType};
   if (config.mlirTransformer)
-    if (failed(config.mlirTransformer(m.get())))
+    if (failed(config.mlirTransformer(m.get(), runnerOptions)))
       return EXIT_FAILURE;
 
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
@@ -355,23 +340,45 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
     llvm::errs() << "Failed to create a JITTargetMachineBuilder for the host\n";
     return EXIT_FAILURE;
   }
-  auto tmOrError = tmBuilderOrError->createTargetMachine();
-  if (!tmOrError) {
-    llvm::errs() << "Failed to create a TargetMachine for the host\n";
-    return EXIT_FAILURE;
+
+  // Configure TargetMachine builder based on the command line options
+  llvm::SubtargetFeatures features;
+  if (!options.mAttrs.empty()) {
+    for (StringRef attr : options.mAttrs)
+      features.AddFeature(attr);
+    tmBuilderOrError->addFeatures(features.getFeatures());
   }
 
-  auto transformer = mlir::makeLLVMPassesTransformer(
-      passes, optLevel, /*targetMachine=*/tmOrError->get(), optPosition);
+  if (!options.mArch.empty()) {
+    tmBuilderOrError->getTargetTriple().setArchName(options.mArch);
+  }
+
+  // Build TargetMachine
+  auto tmOrError = tmBuilderOrError->createTargetMachine();
+
+  if (!tmOrError) {
+    llvm::errs() << "Failed to create a TargetMachine for the host\n";
+    exitOnErr(tmOrError.takeError());
+  }
+
+  LLVM_DEBUG({
+    llvm::dbgs() << "  JITTargetMachineBuilder is "
+                 << llvm::orc::JITTargetMachineBuilderPrinter(*tmBuilderOrError,
+                                                              "\n");
+  });
 
   CompileAndExecuteConfig compileAndExecuteConfig;
-  compileAndExecuteConfig.transformer = transformer;
+  if (optLevel) {
+    compileAndExecuteConfig.transformer = mlir::makeOptimizingTransformer(
+        *optLevel, /*sizeLevel=*/0, /*targetMachine=*/tmOrError->get());
+  }
   compileAndExecuteConfig.llvmModuleBuilder = config.llvmModuleBuilder;
   compileAndExecuteConfig.runtimeSymbolMap = config.runtimesymbolMap;
 
   // Get the function used to compile and execute the module.
   using CompileAndExecuteFnT =
-      Error (*)(Options &, ModuleOp, StringRef, CompileAndExecuteConfig);
+      Error (*)(Options &, Operation *, StringRef, CompileAndExecuteConfig,
+                std::unique_ptr<llvm::TargetMachine> tm);
   auto compileAndExecuteFn =
       StringSwitch<CompileAndExecuteFnT>(options.mainFuncType.getValue())
           .Case("i32", compileAndExecuteSingleReturnFunction<int32_t>)
@@ -381,10 +388,10 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
           .Default(nullptr);
 
   Error error = compileAndExecuteFn
-                    ? compileAndExecuteFn(options, m.get(),
-                                          options.mainFuncName.getValue(),
-                                          compileAndExecuteConfig)
-                    : make_string_error("unsupported function type");
+                    ? compileAndExecuteFn(
+                          options, m.get(), options.mainFuncName.getValue(),
+                          compileAndExecuteConfig, std::move(tmOrError.get()))
+                    : makeStringError("unsupported function type");
 
   int exitCode = EXIT_SUCCESS;
   llvm::handleAllErrors(std::move(error),

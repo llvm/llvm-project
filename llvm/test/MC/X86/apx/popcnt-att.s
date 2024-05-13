@@ -1,0 +1,38 @@
+# RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
+
+# CHECK: {evex}	popcntw	%dx, %ax
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x88,0xc2]
+         {evex}	popcntw	%dx, %ax
+# CHECK: {nf}	popcntw	%dx, %ax
+# CHECK: encoding: [0x62,0xf4,0x7d,0x0c,0x88,0xc2]
+         {nf}	popcntw	%dx, %ax
+# CHECK: {evex}	popcntl	%ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x88,0xd1]
+         {evex}	popcntl	%ecx, %edx
+# CHECK: {nf}	popcntl	%ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x0c,0x88,0xd1]
+         {nf}	popcntl	%ecx, %edx
+# CHECK: {evex}	popcntq	%r9, %r15
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x88,0xf9]
+         {evex}	popcntq	%r9, %r15
+# CHECK: {nf}	popcntq	%r9, %r15
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x88,0xf9]
+         {nf}	popcntq	%r9, %r15
+# CHECK: {evex}	popcntw	123(%r8,%rax,4), %dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x88,0x54,0x80,0x7b]
+         {evex}	popcntw	123(%r8,%rax,4), %dx
+# CHECK: {nf}	popcntw	123(%r8,%rax,4), %dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x88,0x54,0x80,0x7b]
+         {nf}	popcntw	123(%r8,%rax,4), %dx
+# CHECK: {evex}	popcntl	123(%r8,%rax,4), %ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x88,0x4c,0x80,0x7b]
+         {evex}	popcntl	123(%r8,%rax,4), %ecx
+# CHECK: {nf}	popcntl	123(%r8,%rax,4), %ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x88,0x4c,0x80,0x7b]
+         {nf}	popcntl	123(%r8,%rax,4), %ecx
+# CHECK: {evex}	popcntq	123(%r8,%rax,4), %r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x88,0x4c,0x80,0x7b]
+         {evex}	popcntq	123(%r8,%rax,4), %r9
+# CHECK: {nf}	popcntq	123(%r8,%rax,4), %r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x88,0x4c,0x80,0x7b]
+         {nf}	popcntq	123(%r8,%rax,4), %r9

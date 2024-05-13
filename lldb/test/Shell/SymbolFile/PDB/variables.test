@@ -51,7 +51,7 @@ FUNC-MAIN-SAME:                     scope = local
 FUNC-MAIN-NEXT:     Variable{{.*}}, name = "a"
 FUNC-MAIN-SAME:                     scope = local
 
-FUNC-CONSTRUCTOR:      Function{{.*}}, mangled = ??0Class@@QEAA@H@Z
+FUNC-CONSTRUCTOR:      Function{{.*}}, {{(de)?}}mangled = {{.*}}{{(Class::)?}}Class{{.*}}
 FUNC-CONSTRUCTOR-NEXT:   Block
 FUNC-CONSTRUCTOR-NEXT:     Variable{{.*}}, name = "this"
 FUNC-CONSTRUCTOR-SAME:                     scope = parameter
@@ -59,7 +59,7 @@ FUNC-CONSTRUCTOR-SAME:                     artificial
 FUNC-CONSTRUCTOR-NEXT:     Variable{{.*}}, name = "a"
 FUNC-CONSTRUCTOR-SAME:                     scope = parameter
 
-FUNC-MEMBER:      Function{{.*}}, mangled = ?Func@Class@@QEAAXXZ
+FUNC-MEMBER:      Function{{.*}}, {{(de)?}}mangled = {{.*}}{{(Class::)?}}Func{{.*}}
 FUNC-MEMBER-NEXT:   Block
 FUNC-MEMBER-NEXT:     Variable{{.*}}, name = "this"
 FUNC-MEMBER-SAME:                     scope = parameter

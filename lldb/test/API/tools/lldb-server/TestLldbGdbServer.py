@@ -10,7 +10,10 @@ gdb remote packet functional areas.  For now it contains
 the initial set of tests implemented.
 """
 
-import unittest2
+import binascii
+import itertools
+import struct
+
 import gdbremote_testcase
 import lldbgdbserverutils
 from lldbsuite.support import seven
@@ -20,22 +23,23 @@ from lldbsuite.test.lldbdwarf import *
 from lldbsuite.test import lldbutil, lldbplatformutil
 
 
-class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser):
-
-    mydir = TestBase.compute_mydir(__file__)
-
+class LldbGdbServerTestCase(
+    gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser
+):
     def test_thread_suffix_supported(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
 
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["lldb-server <  26> read packet: $QThreadSuffixSupported#e4",
-             "lldb-server <   6> send packet: $OK#9a"],
-            True)
+            [
+                "lldb-server <  26> read packet: $QThreadSuffixSupported#e4",
+                "lldb-server <   6> send packet: $OK#9a",
+            ],
+            True,
+        )
 
         self.expect_gdbremote_sequence()
-
 
     def test_list_threads_in_stop_reply_supported(self):
         server = self.connect_to_debug_monitor()
@@ -43,31 +47,38 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         self.do_handshake()
         self.test_sequence.add_log_lines(
-            ["lldb-server <  27> read packet: $QListThreadsInStopReply#21",
-             "lldb-server <   6> send packet: $OK#9a"],
-            True)
+            [
+                "lldb-server <  27> read packet: $QListThreadsInStopReply#21",
+                "lldb-server <   6> send packet: $OK#9a",
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
     def test_c_packet_works(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
-            ["read packet: $c#63",
-             "send packet: $W00#00"],
-            True)
+            ["read packet: $c#63", "send packet: $W00#00"], True
+        )
 
         self.expect_gdbremote_sequence()
 
-    @skipIfWindows # No pty support to test any inferior output
+    @skipIfWindows  # No pty support to test any inferior output
     def test_inferior_print_exit(self):
         self.build()
-        procs = self.prep_debug_monitor_and_inferior(
-                inferior_args=["hello, world"])
+        procs = self.prep_debug_monitor_and_inferior(inferior_args=["hello, world"])
         self.test_sequence.add_log_lines(
-            ["read packet: $vCont;c#a8",
-             {"type": "output_match", "regex": self.maybe_strict_output_regex(r"hello, world\r\n")},
-             "send packet: $W00#00"],
-            True)
+            [
+                "read packet: $vCont;c#a8",
+                {
+                    "type": "output_match",
+                    "regex": self.maybe_strict_output_regex(r"hello, world\r\n"),
+                },
+                "send packet: $W00#00",
+            ],
+            True,
+        )
 
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
@@ -75,15 +86,23 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     def test_first_launch_stop_reply_thread_matches_first_qC(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
-        self.test_sequence.add_log_lines(["read packet: $qC#00",
-                                          {"direction": "send",
-                                           "regex": r"^\$QC([0-9a-fA-F]+)#",
-                                           "capture": {1: "thread_id_QC"}},
-                                          "read packet: $?#00",
-                                          {"direction": "send",
-                                              "regex": r"^\$T[0-9a-fA-F]{2}thread:([0-9a-fA-F]+)",
-                                              "capture": {1: "thread_id_?"}}],
-                                         True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $qC#00",
+                {
+                    "direction": "send",
+                    "regex": r"^\$QC([0-9a-fA-F]+)#",
+                    "capture": {1: "thread_id_QC"},
+                },
+                "read packet: $?#00",
+                {
+                    "direction": "send",
+                    "regex": r"^\$T[0-9a-fA-F]{2}thread:([0-9a-fA-F]+)",
+                    "capture": {1: "thread_id_?"},
+                },
+            ],
+            True,
+        )
         context = self.expect_gdbremote_sequence()
         self.assertEqual(context.get("thread_id_QC"), context.get("thread_id_?"))
 
@@ -92,9 +111,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_attach()
         procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
-            ["read packet: $vCont;c#a8",
-             "send packet: $W00#00"],
-            True)
+            ["read packet: $vCont;c#a8", "send packet: $W00#00"], True
+        )
         self.expect_gdbremote_sequence()
 
         # Wait a moment for completed and now-detached inferior process to
@@ -109,16 +127,23 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Where possible, verify at the system level that the process is not
         # running.
         self.assertFalse(
-            lldbgdbserverutils.process_is_running(
-                procs["inferior"].pid, False))
+            lldbgdbserverutils.process_is_running(procs["inferior"].pid, False)
+        )
 
     def test_qRegisterInfo_returns_one_valid_result(self):
         self.build()
         self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
-            ["read packet: $qRegisterInfo0#00",
-             {"direction": "send", "regex": r"^\$(.+);#[0-9A-Fa-f]{2}", "capture": {1: "reginfo_0"}}],
-            True)
+            [
+                "read packet: $qRegisterInfo0#00",
+                {
+                    "direction": "send",
+                    "regex": r"^\$(.+);#[0-9A-Fa-f]{2}",
+                    "capture": {1: "reginfo_0"},
+                },
+            ],
+            True,
+        )
 
         # Run the stream
         context = self.expect_gdbremote_sequence()
@@ -127,7 +152,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         reg_info_packet = context.get("reginfo_0")
         self.assertIsNotNone(reg_info_packet)
         self.assert_valid_reg_info(
-            lldbgdbserverutils.parse_reg_info_response(reg_info_packet))
+            lldbgdbserverutils.parse_reg_info_response(reg_info_packet)
+        )
 
     def test_qRegisterInfo_returns_all_valid_results(self):
         self.build()
@@ -156,20 +182,21 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         # Collect all generic registers found.
         generic_regs = {
-            reg_info['generic']: 1 for reg_info in reg_infos if 'generic' in reg_info}
+            reg_info["generic"]: 1 for reg_info in reg_infos if "generic" in reg_info
+        }
 
         # Ensure we have a program counter register.
-        self.assertIn('pc', generic_regs)
+        self.assertIn("pc", generic_regs)
 
         # Ensure we have a frame pointer register. PPC64le's FP is the same as SP
-        if self.getArchitecture() != 'powerpc64le':
-            self.assertIn('fp', generic_regs)
+        if self.getArchitecture() != "powerpc64le":
+            self.assertIn("fp", generic_regs)
 
         # Ensure we have a stack pointer register.
-        self.assertIn('sp', generic_regs)
+        self.assertIn("sp", generic_regs)
 
         # Ensure we have a flags register.
-        self.assertIn('flags', generic_regs)
+        self.assertIn("flags", generic_regs)
 
     def test_qRegisterInfo_contains_at_least_one_register_set(self):
         self.build()
@@ -185,8 +212,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         # Collect all register sets found.
         register_sets = {
-            reg_info['set']: 1 for reg_info in reg_infos if 'set' in reg_info}
-        self.assertTrue(len(register_sets) >= 1)
+            reg_info["set"]: 1 for reg_info in reg_infos if "set" in reg_info
+        }
+        self.assertGreaterEqual(len(register_sets), 1)
 
     def targetHasAVX(self):
         triple = self.dbg.GetSelectedPlatform().GetTriple()
@@ -203,13 +231,13 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         else:
             cpuinfo_path = "/proc/cpuinfo"
 
-        f = open(cpuinfo_path, 'r')
+        f = open(cpuinfo_path, "r")
         cpuinfo = f.read()
         f.close()
         return " avx " in cpuinfo
 
-    @expectedFailureAll(oslist=["windows"]) # no avx for now.
-    @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
+    @expectedFailureAll(oslist=["windows"])  # no avx for now.
+    @skipIf(archs=no_match(["amd64", "i386", "x86_64"]))
     @add_test_categories(["llgs"])
     def test_qRegisterInfo_contains_avx_registers(self):
         self.build()
@@ -225,10 +253,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         # Collect all generics found.
         register_sets = {
-            reg_info['set']: 1 for reg_info in reg_infos if 'set' in reg_info}
+            reg_info["set"]: 1 for reg_info in reg_infos if "set" in reg_info
+        }
         self.assertEqual(
-            self.targetHasAVX(),
-            "Advanced Vector Extensions" in register_sets)
+            self.targetHasAVX(), "Advanced Vector Extensions" in register_sets
+        )
 
     def qThreadInfo_contains_thread(self):
         procs = self.prep_debug_monitor_and_inferior()
@@ -250,7 +279,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.qThreadInfo_contains_thread()
 
-    @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
+    @expectedFailureAll(oslist=["windows"])  # expect one more thread stopped
     def test_qThreadInfo_contains_thread_attach(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -261,9 +290,16 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         self.add_threadinfo_collection_packets()
         self.test_sequence.add_log_lines(
-            ["read packet: $qC#00",
-             {"direction": "send", "regex": r"^\$QC([0-9a-fA-F]+)#", "capture": {1: "thread_id"}}
-             ], True)
+            [
+                "read packet: $qC#00",
+                {
+                    "direction": "send",
+                    "regex": r"^\$QC([0-9a-fA-F]+)#",
+                    "capture": {1: "thread_id"},
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -289,7 +325,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.qThreadInfo_matches_qC()
 
-    @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
+    @expectedFailureAll(oslist=["windows"])  # expect one more thread stopped
     def test_qThreadInfo_matches_qC_attach(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -308,7 +344,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Gather register info entries.
         reg_infos = self.parse_register_info_packets(context)
         self.assertIsNotNone(reg_infos)
-        self.assertTrue(len(reg_infos) > 0)
+        self.assertGreater(len(reg_infos), 0)
 
         byte_order = self.get_target_byte_order()
 
@@ -327,9 +363,16 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
             # Run the register query
             self.test_sequence.add_log_lines(
-                ["read packet: $p{0:x}#00".format(reg_index),
-                 {"direction": "send", "regex": r"^\$([0-9a-fA-F]+)#", "capture": {1: "p_response"}}],
-                True)
+                [
+                    "read packet: $p{0:x}#00".format(reg_index),
+                    {
+                        "direction": "send",
+                        "regex": r"^\$([0-9a-fA-F]+)#",
+                        "capture": {1: "p_response"},
+                    },
+                ],
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
 
@@ -344,25 +387,15 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
             if "dynamic_size_dwarf_expr_bytes" in reg_info:
                 self.updateRegInfoBitsize(reg_info, byte_order)
-            self.assertEqual(len(p_response), 2 * int(reg_info["bitsize"]) / 8,
-                             reg_info)
+            self.assertEqual(
+                len(p_response), 2 * int(reg_info["bitsize"]) / 8, reg_info
+            )
 
             # Increment loop
             reg_index += 1
 
     def Hg_switches_to_3_threads(self, pass_pid=False):
-        # Startup the inferior with three threads (main + 2 new ones).
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["thread:new", "thread:new"])
-
-        # Let the inferior process have a few moments to start up the thread
-        # when launched.  (The launch scenario has no time to run, so threads
-        # won't be there yet.)
-        self.run_process_then_stop(run_seconds=1)
-
-        # Wait at most x seconds for 3 threads to be present.
-        threads = self.wait_for_thread_count(3)
-        self.assertEqual(len(threads), 3)
+        _, threads = self.launch_with_threads(3)
 
         pid_str = ""
         if pass_pid:
@@ -373,11 +406,20 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             # Change to each thread, verify current thread id.
             self.reset_test_sequence()
             self.test_sequence.add_log_lines(
-                ["read packet: $Hg{0}{1:x}#00".format(pid_str, thread),  # Set current thread.
-                 "send packet: $OK#00",
-                 "read packet: $qC#00",
-                 {"direction": "send", "regex": r"^\$QC([0-9a-fA-F]+)#", "capture": {1: "thread_id"}}],
-                True)
+                [
+                    "read packet: $Hg{0}{1:x}#00".format(
+                        pid_str, thread
+                    ),  # Set current thread.
+                    "send packet: $OK#00",
+                    "read packet: $qC#00",
+                    {
+                        "direction": "send",
+                        "regex": r"^\$QC([0-9a-fA-F]+)#",
+                        "capture": {1: "thread_id"},
+                    },
+                ],
+                True,
+            )
 
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
@@ -386,34 +428,14 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.assertIsNotNone(context.get("thread_id"))
             self.assertEqual(int(context.get("thread_id"), 16), thread)
 
-    @expectedFailureAll(oslist=["windows"]) # expect 4 threads
+    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     def test_Hg_switches_to_3_threads_launch(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_switches_to_3_threads()
 
-    @expectedFailureAll(oslist=["windows"]) # expecting one more thread
-    def test_Hg_switches_to_3_threads_attach(self):
-        self.build()
-        self.set_inferior_startup_attach()
-        self.Hg_switches_to_3_threads()
-
-    @expectedFailureAll(oslist=["windows"]) # expect 4 threads
-    @add_test_categories(["llgs"])
-    def test_Hg_switches_to_3_threads_attach_pass_correct_pid(self):
-        self.build()
-        self.set_inferior_startup_attach()
-        self.Hg_switches_to_3_threads(pass_pid=True)
-
     def Hg_fails_on_pid(self, pass_pid):
-        # Start the inferior.
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["thread:new"])
-
-        self.run_process_then_stop(run_seconds=1)
-
-        threads = self.wait_for_thread_count(2)
-        self.assertEqual(len(threads), 2)
+        _, threads = self.launch_with_threads(2)
 
         if pass_pid == -1:
             pid_str = "p-1."
@@ -422,27 +444,29 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         thread = threads[1]
 
         self.test_sequence.add_log_lines(
-            ["read packet: $Hg{0}{1:x}#00".format(pid_str, thread),  # Set current thread.
-             "send packet: $Eff#00"],
-            True)
+            [
+                "read packet: $Hg{0}{1:x}#00".format(
+                    pid_str, thread
+                ),  # Set current thread.
+                "send packet: $Eff#00",
+            ],
+            True,
+        )
 
         self.expect_gdbremote_sequence()
 
-    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_Hg_fails_on_another_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(1)
 
-    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_Hg_fails_on_zero_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(0)
 
-    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
@@ -460,24 +484,16 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         inferior_args = ["thread:segfault"]
         for i in range(NUM_THREADS - 1):
             # if i > 0:
-                # Give time between thread creation/segfaulting for the handler to work.
-                # inferior_args.append("sleep:1")
+            # Give time between thread creation/segfaulting for the handler to work.
+            # inferior_args.append("sleep:1")
             inferior_args.append("thread:new")
         inferior_args.append("sleep:10")
 
         # Launch/attach.  (In our case, this should only ever be launched since
         # we need inferior stdout/stderr).
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=inferior_args)
+        procs = self.prep_debug_monitor_and_inferior(inferior_args=inferior_args)
         self.test_sequence.add_log_lines(["read packet: $c#63"], True)
         context = self.expect_gdbremote_sequence()
-
-        # Let the inferior process have a few moments to start up the thread when launched.
-        # context = self.run_process_then_stop(run_seconds=1)
-
-        # Wait at most x seconds for all threads to be present.
-        # threads = self.wait_for_thread_count(NUM_THREADS)
-        # self.assertEquals(len(threads), NUM_THREADS)
 
         signaled_tids = {}
         print_thread_ids = {}
@@ -486,11 +502,16 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         for i in range(NUM_THREADS - 1):
             # Run until SIGSEGV comes in.
             self.reset_test_sequence()
-            self.test_sequence.add_log_lines([{"direction": "send",
-                                               "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
-                                               "capture": {1: "signo",
-                                                            2: "thread_id"}}],
-                                             True)
+            self.test_sequence.add_log_lines(
+                [
+                    {
+                        "direction": "send",
+                        "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                        "capture": {1: "signo", 2: "thread_id"},
+                    }
+                ],
+                True,
+            )
 
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
@@ -510,22 +531,27 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                     # Set current thread.
                     "read packet: $Hc{0:x}#00".format(thread_id),
                     "send packet: $OK#00",
-
                     # Continue sending the signal number to the continue thread.
                     # The commented out packet is a way to do this same operation without using
                     # a $Hc (but this test is testing $Hc, so we'll stick with the former).
-                    "read packet: $C{0:x}#00".format(lldbutil.get_signal_number('SIGUSR1')),
+                    "read packet: $C{0:x}#00".format(
+                        lldbutil.get_signal_number("SIGUSR1")
+                    ),
                     # "read packet: $vCont;C{0:x}:{1:x};c#00".format(lldbutil.get_signal_number('SIGUSR1'), thread_id),
-
                     # FIXME: Linux does not report the thread stop on the delivered signal (SIGUSR1 here).  MacOSX debugserver does.
                     # But MacOSX debugserver isn't guaranteeing the thread the signal handler runs on, so currently its an XFAIL.
                     # Need to rectify behavior here.  The linux behavior is more intuitive to me since we're essentially swapping out
                     # an about-to-be-delivered signal (for which we already sent a stop packet) to a different signal.
                     # {"direction":"send", "regex":r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);", "capture":{1:"stop_signo", 2:"stop_thread_id"} },
                     #  "read packet: $c#63",
-                    {"type": "output_match", "regex": r"^received SIGUSR1 on thread id: ([0-9a-fA-F]+)\r\nthread ([0-9a-fA-F]+): past SIGSEGV\r\n", "capture": {1: "print_thread_id", 2: "post_handle_thread_id"}},
+                    {
+                        "type": "output_match",
+                        "regex": r"^received SIGUSR1 on thread id: ([0-9a-fA-F]+)\r\nthread ([0-9a-fA-F]+): past SIGSEGV\r\n",
+                        "capture": {1: "print_thread_id", 2: "post_handle_thread_id"},
+                    },
                 ],
-                True)
+                True,
+            )
 
             # Run the sequence.
             context = self.expect_gdbremote_sequence()
@@ -534,12 +560,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             # Ensure the stop signal is the signal we delivered.
             # stop_signo = context.get("stop_signo")
             # self.assertIsNotNone(stop_signo)
-            # self.assertEquals(int(stop_signo,16), lldbutil.get_signal_number('SIGUSR1'))
+            # self.assertEqual(int(stop_signo,16), lldbutil.get_signal_number('SIGUSR1'))
 
             # Ensure the stop thread is the thread to which we delivered the signal.
             # stop_thread_id = context.get("stop_thread_id")
             # self.assertIsNotNone(stop_thread_id)
-            # self.assertEquals(int(stop_thread_id,16), thread_id)
+            # self.assertEqual(int(stop_thread_id,16), thread_id)
 
             # Ensure we haven't seen this thread id yet.  The inferior's
             # self-obtained thread ids are not guaranteed to match the stub
@@ -561,8 +587,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.assertEqual(post_handle_thread_id, print_thread_id)
 
     @expectedFailureDarwin
-    @skipIfWindows # no SIGSEGV support
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48419")
+    @skipIfWindows  # no SIGSEGV support
     @expectedFailureNetBSD
     def test_Hc_then_Csignal_signals_correct_thread_launch(self):
         self.build()
@@ -574,9 +599,10 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
         else:
             self.Hc_then_Csignal_signals_correct_thread(
-                lldbutil.get_signal_number('SIGSEGV'))
+                lldbutil.get_signal_number("SIGSEGV")
+            )
 
-    @skipIfWindows # No pty support to test any inferior output
+    @skipIfWindows  # No pty support to test any inferior output
     def test_m_packet_reads_memory(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -587,10 +613,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=[
-                "set-message:%s" %
-                MEMORY_CONTENTS,
+                "set-message:%s" % MEMORY_CONTENTS,
                 "get-data-address-hex:g_message",
-                "sleep:5"])
+                "sleep:5",
+            ]
+        )
 
         # Run the process
         self.test_sequence.add_log_lines(
@@ -599,13 +626,24 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 "read packet: $c#63",
                 # Match output line that prints the memory address of the message buffer within the inferior.
                 # Note we require launch-only testing so we can get inferior otuput.
-                {"type": "output_match", "regex": self.maybe_strict_output_regex(r"data address: 0x([0-9a-fA-F]+)\r\n"),
-                 "capture": {1: "message_address"}},
+                {
+                    "type": "output_match",
+                    "regex": self.maybe_strict_output_regex(
+                        r"data address: 0x([0-9a-fA-F]+)\r\n"
+                    ),
+                    "capture": {1: "message_address"},
+                },
                 # Now stop the inferior.
                 "read packet: {}".format(chr(3)),
                 # And wait for the stop notification.
-                {"direction": "send", "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);", "capture": {1: "stop_signo", 2: "stop_thread_id"}}],
-            True)
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -618,9 +656,18 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Grab contents from the inferior.
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
-            ["read packet: $m{0:x},{1:x}#00".format(message_address, len(MEMORY_CONTENTS)),
-             {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$", "capture": {1: "read_contents"}}],
-            True)
+            [
+                "read packet: $m{0:x},{1:x}#00".format(
+                    message_address, len(MEMORY_CONTENTS)
+                ),
+                {
+                    "direction": "send",
+                    "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "read_contents"},
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -639,19 +686,19 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         # Ask if it supports $qMemoryRegionInfo.
         self.test_sequence.add_log_lines(
-            ["read packet: $qMemoryRegionInfo#00",
-             "send packet: $OK#00"
-             ], True)
+            ["read packet: $qMemoryRegionInfo#00", "send packet: $OK#00"], True
+        )
         self.expect_gdbremote_sequence()
 
-    @skipIfWindows # No pty support to test any inferior output
+    @skipIfWindows  # No pty support to test any inferior output
     def test_qMemoryRegionInfo_reports_code_address_as_executable(self):
         self.build()
         self.set_inferior_startup_launch()
 
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["get-code-address-hex:hello", "sleep:5"])
+            inferior_args=["get-code-address-hex:hello", "sleep:5"]
+        )
 
         # Run the process
         self.test_sequence.add_log_lines(
@@ -660,13 +707,24 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 "read packet: $c#63",
                 # Match output line that prints the memory address of the message buffer within the inferior.
                 # Note we require launch-only testing so we can get inferior otuput.
-                {"type": "output_match", "regex": self.maybe_strict_output_regex(r"code address: 0x([0-9a-fA-F]+)\r\n"),
-                 "capture": {1: "code_address"}},
+                {
+                    "type": "output_match",
+                    "regex": self.maybe_strict_output_regex(
+                        r"code address: 0x([0-9a-fA-F]+)\r\n"
+                    ),
+                    "capture": {1: "code_address"},
+                },
                 # Now stop the inferior.
                 "read packet: {}".format(chr(3)),
                 # And wait for the stop notification.
-                {"direction": "send", "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);", "capture": {1: "stop_signo", 2: "stop_thread_id"}}],
-            True)
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -696,14 +754,15 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Ensure the start address and size encompass the address we queried.
         self.assert_address_within_memory_region(code_address, mem_region_dict)
 
-    @skipIfWindows # No pty support to test any inferior output
+    @skipIfWindows  # No pty support to test any inferior output
     def test_qMemoryRegionInfo_reports_stack_address_as_rw(self):
         self.build()
         self.set_inferior_startup_launch()
 
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["get-stack-address-hex:", "sleep:5"])
+            inferior_args=["get-stack-address-hex:", "sleep:5"]
+        )
 
         # Run the process
         self.test_sequence.add_log_lines(
@@ -712,13 +771,24 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 "read packet: $c#63",
                 # Match output line that prints the memory address of the message buffer within the inferior.
                 # Note we require launch-only testing so we can get inferior otuput.
-                {"type": "output_match", "regex": self.maybe_strict_output_regex(r"stack address: 0x([0-9a-fA-F]+)\r\n"),
-                 "capture": {1: "stack_address"}},
+                {
+                    "type": "output_match",
+                    "regex": self.maybe_strict_output_regex(
+                        r"stack address: 0x([0-9a-fA-F]+)\r\n"
+                    ),
+                    "capture": {1: "stack_address"},
+                },
                 # Now stop the inferior.
                 "read packet: {}".format(chr(3)),
                 # And wait for the stop notification.
-                {"direction": "send", "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);", "capture": {1: "stop_signo", 2: "stop_thread_id"}}],
-            True)
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -746,17 +816,17 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIn("w", mem_region_dict["permissions"])
 
         # Ensure the start address and size encompass the address we queried.
-        self.assert_address_within_memory_region(
-            stack_address, mem_region_dict)
+        self.assert_address_within_memory_region(stack_address, mem_region_dict)
 
-    @skipIfWindows # No pty support to test any inferior output
+    @skipIfWindows  # No pty support to test any inferior output
     def test_qMemoryRegionInfo_reports_heap_address_as_rw(self):
         self.build()
         self.set_inferior_startup_launch()
 
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["get-heap-address-hex:", "sleep:5"])
+            inferior_args=["get-heap-address-hex:", "sleep:5"]
+        )
 
         # Run the process
         self.test_sequence.add_log_lines(
@@ -765,13 +835,24 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 "read packet: $c#63",
                 # Match output line that prints the memory address of the message buffer within the inferior.
                 # Note we require launch-only testing so we can get inferior otuput.
-                {"type": "output_match", "regex": self.maybe_strict_output_regex(r"heap address: 0x([0-9a-fA-F]+)\r\n"),
-                 "capture": {1: "heap_address"}},
+                {
+                    "type": "output_match",
+                    "regex": self.maybe_strict_output_regex(
+                        r"heap address: 0x([0-9a-fA-F]+)\r\n"
+                    ),
+                    "capture": {1: "heap_address"},
+                },
                 # Now stop the inferior.
                 "read packet: {}".format(chr(3)),
                 # And wait for the stop notification.
-                {"direction": "send", "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);", "capture": {1: "stop_signo", 2: "stop_thread_id"}}],
-            True)
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -807,7 +888,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             inferior_args=[
                 "get-code-address-hex:hello",
                 "sleep:1",
-                "call-function:hello"])
+                "call-function:hello",
+            ]
+        )
 
         # Run the process
         self.add_register_info_collection_packets()
@@ -817,13 +900,24 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 "read packet: $c#63",
                 # Match output line that prints the memory address of the function call entry point.
                 # Note we require launch-only testing so we can get inferior otuput.
-                {"type": "output_match", "regex": self.maybe_strict_output_regex(r"code address: 0x([0-9a-fA-F]+)\r\n"),
-                 "capture": {1: "function_address"}},
+                {
+                    "type": "output_match",
+                    "regex": self.maybe_strict_output_regex(
+                        r"code address: 0x([0-9a-fA-F]+)\r\n"
+                    ),
+                    "capture": {1: "function_address"},
+                },
                 # Now stop the inferior.
                 "read packet: {}".format(chr(3)),
                 # And wait for the stop notification.
-                {"direction": "send", "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);", "capture": {1: "stop_signo", 2: "stop_thread_id"}}],
-            True)
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -849,7 +943,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         target_arch = self.getArchitecture()
 
         # Set the breakpoint.
-        if (target_arch == "arm") or (target_arch == "aarch64"):
+        if target_arch in ["arm", "arm64", "aarch64"]:
             # TODO: Handle case when setting breakpoint in thumb code
             BREAKPOINT_KIND = 4
         else:
@@ -867,7 +961,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             function_address,
             z_packet_type,
             do_continue=True,
-            breakpoint_kind=BREAKPOINT_KIND)
+            breakpoint_kind=BREAKPOINT_KIND,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -876,8 +971,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Verify the stop signal reported was the breakpoint signal number.
         stop_signo = context.get("stop_signo")
         self.assertIsNotNone(stop_signo)
-        self.assertEqual(int(stop_signo, 16),
-                         lldbutil.get_signal_number('SIGTRAP'))
+        self.assertEqual(int(stop_signo, 16), lldbutil.get_signal_number("SIGTRAP"))
 
         # Ensure we did not receive any output.  If the breakpoint was not set, we would
         # see output (from a launched process with captured stdio) printing a hello, world message.
@@ -892,10 +986,14 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 # Print the PC.  This should match the breakpoint address.
                 "read packet: $p{0:x}#00".format(pc_lldb_reg_index),
                 # Capture $p results.
-                {"direction": "send",
-                 "regex": r"^\$([0-9a-fA-F]+)#",
-                 "capture": {1: "p_response"}},
-            ], True)
+                {
+                    "direction": "send",
+                    "regex": r"^\$([0-9a-fA-F]+)#",
+                    "capture": {1: "p_response"},
+                },
+            ],
+            True,
+        )
 
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
@@ -907,7 +1005,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         # Convert from target endian to int.
         returned_pc = lldbgdbserverutils.unpack_register_hex_unsigned(
-            endian, p_response)
+            endian, p_response
+        )
         self.assertEqual(returned_pc, function_address)
 
         # Verify that a breakpoint remove and continue gets us the expected
@@ -916,9 +1015,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         # Add breakpoint remove packets
         self.add_remove_breakpoint_packets(
-            function_address,
-            z_packet_type,
-            breakpoint_kind=BREAKPOINT_KIND)
+            function_address, z_packet_type, breakpoint_kind=BREAKPOINT_KIND
+        )
 
         self.test_sequence.add_log_lines(
             [
@@ -928,27 +1026,29 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 {"type": "output_match", "regex": r"^hello, world\r\n$"},
                 # And wait for program completion.
                 {"direction": "send", "regex": r"^\$W00(.*)#[0-9a-fA-F]{2}$"},
-            ], True)
+            ],
+            True,
+        )
 
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
-    @skipIfWindows # No pty support to test any inferior output
+    @skipIfWindows  # No pty support to test any inferior output
     def test_software_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
+            self.build(dictionary={"CFLAGS_EXTRAS": "-marm"})
         else:
             self.build()
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=False)
 
-    @skipUnlessPlatform(oslist=['linux'])
-    @skipIf(archs=no_match(['arm', 'aarch64']))
+    @skipUnlessPlatform(oslist=["linux"])
+    @skipIf(archs=no_match(["arm", "aarch64"]))
     def test_hardware_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
+            self.build(dictionary={"CFLAGS_EXTRAS": "-marm"})
         else:
             self.build()
         self.set_inferior_startup_launch()
@@ -972,60 +1072,81 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     def test_qSupported_returns_known_stub_features(self):
         supported_dict = self.get_qSupported_dict()
         self.assertIsNotNone(supported_dict)
-        self.assertTrue(len(supported_dict) > 0)
+        self.assertGreater(len(supported_dict), 0)
 
     def test_qSupported_auvx(self):
-        expected = ('+' if lldbplatformutil.getPlatform()
-                    in ["freebsd", "linux", "netbsd"] else '-')
+        expected = (
+            "+"
+            if lldbplatformutil.getPlatform() in ["freebsd", "linux", "netbsd"]
+            else "-"
+        )
         supported_dict = self.get_qSupported_dict()
-        self.assertEqual(supported_dict.get('qXfer:auxv:read', '-'), expected)
+        self.assertEqual(supported_dict.get("qXfer:auxv:read", "-"), expected)
 
     def test_qSupported_libraries_svr4(self):
-        expected = ('+' if lldbplatformutil.getPlatform()
-                    in ["freebsd", "linux", "netbsd"] else '-')
+        expected = (
+            "+"
+            if lldbplatformutil.getPlatform() in ["freebsd", "linux", "netbsd"]
+            else "-"
+        )
         supported_dict = self.get_qSupported_dict()
-        self.assertEqual(supported_dict.get('qXfer:libraries-svr4:read', '-'),
-                         expected)
+        self.assertEqual(supported_dict.get("qXfer:libraries-svr4:read", "-"), expected)
+
+    def test_qSupported_siginfo_read(self):
+        expected = (
+            "+" if lldbplatformutil.getPlatform() in ["freebsd", "linux"] else "-"
+        )
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get("qXfer:siginfo:read", "-"), expected)
 
     def test_qSupported_QPassSignals(self):
-        expected = ('+' if lldbplatformutil.getPlatform()
-                    in ["freebsd", "linux", "netbsd"] else '-')
+        expected = (
+            "+"
+            if lldbplatformutil.getPlatform() in ["freebsd", "linux", "netbsd"]
+            else "-"
+        )
         supported_dict = self.get_qSupported_dict()
-        self.assertEqual(supported_dict.get('QPassSignals', '-'), expected)
+        self.assertEqual(supported_dict.get("QPassSignals", "-"), expected)
 
     @add_test_categories(["fork"])
     def test_qSupported_fork_events(self):
-        supported_dict = (
-            self.get_qSupported_dict(['multiprocess+', 'fork-events+']))
-        self.assertEqual(supported_dict.get('multiprocess', '-'), '+')
-        self.assertEqual(supported_dict.get('fork-events', '-'), '+')
-        self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
+        supported_dict = self.get_qSupported_dict(["multiprocess+", "fork-events+"])
+        self.assertEqual(supported_dict.get("multiprocess", "-"), "+")
+        self.assertEqual(supported_dict.get("fork-events", "-"), "+")
+        self.assertEqual(supported_dict.get("vfork-events", "-"), "-")
 
     @add_test_categories(["fork"])
     def test_qSupported_fork_events_without_multiprocess(self):
-        supported_dict = (
-            self.get_qSupported_dict(['fork-events+']))
-        self.assertEqual(supported_dict.get('multiprocess', '-'), '-')
-        self.assertEqual(supported_dict.get('fork-events', '-'), '-')
-        self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
+        supported_dict = self.get_qSupported_dict(["fork-events+"])
+        self.assertEqual(supported_dict.get("multiprocess", "-"), "-")
+        self.assertEqual(supported_dict.get("fork-events", "-"), "-")
+        self.assertEqual(supported_dict.get("vfork-events", "-"), "-")
 
     @add_test_categories(["fork"])
     def test_qSupported_vfork_events(self):
-        supported_dict = (
-            self.get_qSupported_dict(['multiprocess+', 'vfork-events+']))
-        self.assertEqual(supported_dict.get('multiprocess', '-'), '+')
-        self.assertEqual(supported_dict.get('fork-events', '-'), '-')
-        self.assertEqual(supported_dict.get('vfork-events', '-'), '+')
+        supported_dict = self.get_qSupported_dict(["multiprocess+", "vfork-events+"])
+        self.assertEqual(supported_dict.get("multiprocess", "-"), "+")
+        self.assertEqual(supported_dict.get("fork-events", "-"), "-")
+        self.assertEqual(supported_dict.get("vfork-events", "-"), "+")
 
     @add_test_categories(["fork"])
     def test_qSupported_vfork_events_without_multiprocess(self):
-        supported_dict = (
-            self.get_qSupported_dict(['vfork-events+']))
-        self.assertEqual(supported_dict.get('multiprocess', '-'), '-')
-        self.assertEqual(supported_dict.get('fork-events', '-'), '-')
-        self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
+        supported_dict = self.get_qSupported_dict(["vfork-events+"])
+        self.assertEqual(supported_dict.get("multiprocess", "-"), "-")
+        self.assertEqual(supported_dict.get("fork-events", "-"), "-")
+        self.assertEqual(supported_dict.get("vfork-events", "-"), "-")
 
-    @skipIfWindows # No pty support to test any inferior output
+    # We need to be able to self.runCmd to get cpuinfo,
+    # which is not possible when using a remote platform.
+    @skipIfRemote
+    def test_qSupported_memory_tagging(self):
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(
+            supported_dict.get("memory-tagging", "-"),
+            "+" if self.isAArch64MTE() else "-",
+        )
+
+    @skipIfWindows  # No pty support to test any inferior output
     def test_written_M_content_reads_back_correctly(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -1038,20 +1159,33 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 "set-message:xxxxxxxxxxxxxX",
                 "get-data-address-hex:g_message",
                 "sleep:1",
-                "print-message:"])
+                "print-message:",
+            ]
+        )
         self.test_sequence.add_log_lines(
             [
                 # Start running after initial stop.
                 "read packet: $c#63",
                 # Match output line that prints the memory address of the message buffer within the inferior.
                 # Note we require launch-only testing so we can get inferior otuput.
-                {"type": "output_match", "regex": self.maybe_strict_output_regex(r"data address: 0x([0-9a-fA-F]+)\r\n"),
-                 "capture": {1: "message_address"}},
+                {
+                    "type": "output_match",
+                    "regex": self.maybe_strict_output_regex(
+                        r"data address: 0x([0-9a-fA-F]+)\r\n"
+                    ),
+                    "capture": {1: "message_address"},
+                },
                 # Now stop the inferior.
                 "read packet: {}".format(chr(3)),
                 # And wait for the stop notification.
-                {"direction": "send", "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);", "capture": {1: "stop_signo", 2: "stop_thread_id"}}],
-            True)
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
+                },
+            ],
+            True,
+        )
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
@@ -1066,20 +1200,33 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # and binary (x) memory read packets.
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
-            ["read packet: $M{0:x},{1:x}:{2}#00".format(message_address, len(TEST_MESSAGE), hex_encoded_message),
-             "send packet: $OK#00",
-             "read packet: $m{0:x},{1:x}#00".format(message_address, len(TEST_MESSAGE)),
-             "send packet: ${0}#00".format(hex_encoded_message),
-             "read packet: $x{0:x},{1:x}#00".format(message_address, len(TEST_MESSAGE)),
-             "send packet: ${0}#00".format(TEST_MESSAGE),
-             "read packet: $m{0:x},4#00".format(message_address),
-             "send packet: ${0}#00".format(hex_encoded_message[0:8]),
-             "read packet: $x{0:x},4#00".format(message_address),
-             "send packet: ${0}#00".format(TEST_MESSAGE[0:4]),
-             "read packet: $c#63",
-             {"type": "output_match", "regex": r"^message: (.+)\r\n$", "capture": {1: "printed_message"}},
-             "send packet: $W00#00",
-             ], True)
+            [
+                "read packet: $M{0:x},{1:x}:{2}#00".format(
+                    message_address, len(TEST_MESSAGE), hex_encoded_message
+                ),
+                "send packet: $OK#00",
+                "read packet: $m{0:x},{1:x}#00".format(
+                    message_address, len(TEST_MESSAGE)
+                ),
+                "send packet: ${0}#00".format(hex_encoded_message),
+                "read packet: $x{0:x},{1:x}#00".format(
+                    message_address, len(TEST_MESSAGE)
+                ),
+                "send packet: ${0}#00".format(TEST_MESSAGE),
+                "read packet: $m{0:x},4#00".format(message_address),
+                "send packet: ${0}#00".format(hex_encoded_message[0:8]),
+                "read packet: $x{0:x},4#00".format(message_address),
+                "send packet: ${0}#00".format(TEST_MESSAGE[0:4]),
+                "read packet: $c#63",
+                {
+                    "type": "output_match",
+                    "regex": r"^message: (.+)\r\n$",
+                    "capture": {1: "printed_message"},
+                },
+                "send packet: $W00#00",
+            ],
+            True,
+        )
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
@@ -1116,14 +1263,22 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Pull out the register infos that we think we can bit flip
         # successfully,.
         gpr_reg_infos = [
-            reg_info for reg_info in reg_infos if self.is_bit_flippable_register(reg_info)]
-        self.assertTrue(len(gpr_reg_infos) > 0)
+            reg_info
+            for reg_info in reg_infos
+            if self.is_bit_flippable_register(reg_info)
+        ]
+        self.assertGreater(len(gpr_reg_infos), 0)
 
         # Write flipped bit pattern of existing value to each register.
         (successful_writes, failed_writes) = self.flip_all_bits_in_each_register_value(
-            gpr_reg_infos, endian)
-        self.trace("successful writes: {}, failed writes: {}".format(successful_writes, failed_writes))
-        self.assertTrue(successful_writes > 0)
+            gpr_reg_infos, endian
+        )
+        self.trace(
+            "successful writes: {}, failed writes: {}".format(
+                successful_writes, failed_writes
+            )
+        )
+        self.assertGreater(successful_writes, 0)
 
     # Note: as of this moment, a hefty number of the GPR writes are failing
     # with E32 (everything except rax-rdx, rdi, rsi, rbp).
@@ -1133,8 +1288,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
 
         # Startup the inferior with three threads.
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["thread:new", "thread:new"])
+        _, threads = self.launch_with_threads(3)
+
+        self.reset_test_sequence()
         self.add_thread_suffix_request_packets()
         self.add_register_info_collection_packets()
         self.add_process_info_collection_packets()
@@ -1154,16 +1310,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         reg_index = self.select_modifiable_register(reg_infos)
         self.assertIsNotNone(reg_index)
         reg_byte_size = int(reg_infos[reg_index]["bitsize"]) // 8
-        self.assertTrue(reg_byte_size > 0)
-
-        # Run the process a bit so threads can start up, and collect register
-        # info.
-        context = self.run_process_then_stop(run_seconds=1)
-        self.assertIsNotNone(context)
-
-        # Wait for 3 threads to be present.
-        threads = self.wait_for_thread_count(3)
-        self.assertEqual(len(threads), 3)
+        self.assertGreater(reg_byte_size, 0)
 
         expected_reg_values = []
         register_increment = 1
@@ -1178,9 +1325,18 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 # Read pre-existing register value.
                 self.reset_test_sequence()
                 self.test_sequence.add_log_lines(
-                    ["read packet: $p{0:x};thread:{1:x}#00".format(reg_index, thread),
-                     {"direction": "send", "regex": r"^\$([0-9a-fA-F]+)#", "capture": {1: "p_response"}},
-                     ], True)
+                    [
+                        "read packet: $p{0:x};thread:{1:x}#00".format(
+                            reg_index, thread
+                        ),
+                        {
+                            "direction": "send",
+                            "regex": r"^\$([0-9a-fA-F]+)#",
+                            "capture": {1: "p_response"},
+                        },
+                    ],
+                    True,
+                )
                 context = self.expect_gdbremote_sequence()
                 self.assertIsNotNone(context)
 
@@ -1189,7 +1345,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 p_response = context.get("p_response")
                 self.assertIsNotNone(p_response)
                 next_value = lldbgdbserverutils.unpack_register_hex_unsigned(
-                    endian, p_response)
+                    endian, p_response
+                )
 
             # Set new value using P and thread suffix.
             self.reset_test_sequence()
@@ -1198,13 +1355,14 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                     "read packet: $P{0:x}={1};thread:{2:x}#00".format(
                         reg_index,
                         lldbgdbserverutils.pack_register_hex(
-                            endian,
-                            next_value,
-                            byte_size=reg_byte_size),
-                        thread),
+                            endian, next_value, byte_size=reg_byte_size
+                        ),
+                        thread,
+                    ),
                     "send packet: $OK#00",
                 ],
-                True)
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
 
@@ -1223,9 +1381,16 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             # Read pre-existing register value.
             self.reset_test_sequence()
             self.test_sequence.add_log_lines(
-                ["read packet: $p{0:x};thread:{1:x}#00".format(reg_index, thread),
-                 {"direction": "send", "regex": r"^\$([0-9a-fA-F]+)#", "capture": {1: "p_response"}},
-                 ], True)
+                [
+                    "read packet: $p{0:x};thread:{1:x}#00".format(reg_index, thread),
+                    {
+                        "direction": "send",
+                        "regex": r"^\$([0-9a-fA-F]+)#",
+                        "capture": {1: "p_response"},
+                    },
+                ],
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
 
@@ -1233,8 +1398,101 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             p_response = context.get("p_response")
             self.assertIsNotNone(p_response)
             read_value = lldbgdbserverutils.unpack_register_hex_unsigned(
-                endian, p_response)
+                endian, p_response
+            )
 
             # Make sure we read back what we wrote.
             self.assertEqual(read_value, expected_reg_values[thread_index])
             thread_index += 1
+
+    @skipUnlessPlatform(oslist=["freebsd", "linux"])
+    @add_test_categories(["llgs"])
+    def test_qXfer_siginfo_read(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        procs = self.prep_debug_monitor_and_inferior(
+            inferior_args=["thread:segfault", "thread:new", "sleep:10"]
+        )
+        self.test_sequence.add_log_lines(["read packet: $c#63"], True)
+        self.expect_gdbremote_sequence()
+
+        # Run until SIGSEGV comes in.
+        self.reset_test_sequence()
+        self.test_sequence.add_log_lines(
+            [
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                    "capture": {1: "signo", 2: "thread_id"},
+                }
+            ],
+            True,
+        )
+
+        # Figure out which thread crashed.
+        context = self.expect_gdbremote_sequence()
+        self.assertIsNotNone(context)
+        self.assertEqual(
+            int(context["signo"], 16), lldbutil.get_signal_number("SIGSEGV")
+        )
+        crashing_thread = int(context["thread_id"], 16)
+
+        # Grab siginfo for the crashing thread.
+        self.reset_test_sequence()
+        self.add_process_info_collection_packets()
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $Hg{:x}#00".format(crashing_thread),
+                "send packet: $OK#00",
+                "read packet: $qXfer:siginfo:read::0,80:#00",
+                {
+                    "direction": "send",
+                    "regex": re.compile(
+                        r"^\$([^E])(.*)#[0-9a-fA-F]{2}$", re.MULTILINE | re.DOTALL
+                    ),
+                    "capture": {1: "response_type", 2: "content_raw"},
+                },
+            ],
+            True,
+        )
+        context = self.expect_gdbremote_sequence()
+        self.assertIsNotNone(context)
+
+        # Ensure we end up with all data in one packet.
+        self.assertEqual(context.get("response_type"), "l")
+
+        # Decode binary data.
+        content_raw = context.get("content_raw")
+        self.assertIsNotNone(content_raw)
+        content = self.decode_gdbremote_binary(content_raw).encode("latin1")
+
+        # Decode siginfo_t.
+        process_info = self.parse_process_info_response(context)
+        pad = ""
+        if process_info["ptrsize"] == "8":
+            pad = "i"
+        signo_idx = 0
+        errno_idx = 1
+        code_idx = 2
+        addr_idx = -1
+        SEGV_MAPERR = 1
+        if process_info["ostype"] == "linux":
+            # si_signo, si_errno, si_code, [pad], _sifields._sigfault.si_addr
+            format_str = "iii{}P".format(pad)
+        elif process_info["ostype"].startswith("freebsd"):
+            # si_signo, si_errno, si_code, si_pid, si_uid, si_status, si_addr
+            format_str = "iiiiiiP"
+        elif process_info["ostype"].startswith("netbsd"):
+            # _signo, _code, _errno, [pad], _reason._fault._addr
+            format_str = "iii{}P".format(pad)
+            errno_idx = 2
+            code_idx = 1
+        else:
+            assert False, "unknown ostype"
+
+        decoder = struct.Struct(format_str)
+        decoded = decoder.unpack(content[: decoder.size])
+        self.assertEqual(decoded[signo_idx], lldbutil.get_signal_number("SIGSEGV"))
+        self.assertEqual(decoded[errno_idx], 0)  # si_errno
+        self.assertEqual(decoded[code_idx], SEGV_MAPERR)  # si_code
+        self.assertEqual(decoded[addr_idx], 0)  # si_addr

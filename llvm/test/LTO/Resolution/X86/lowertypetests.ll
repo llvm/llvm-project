@@ -14,19 +14,19 @@ target triple = "x86_64-unknown-linux-gnu"
 @foo = global i32 0, !type !0
 @bar = global i32 0, !type !1
 
-define i1 @f(i8* %ptr) {
-  %p = call i1 @llvm.type.test(i8* %ptr, metadata !"foo")
+define i1 @f(ptr %ptr) {
+  %p = call i1 @llvm.type.test(ptr %ptr, metadata !"foo")
   ret i1 %p
 }
 
-@g_alias = alias i1 (i8*), i1 (i8*)* @g
+@g_alias = alias i1 (ptr), ptr @g
 
-define internal i1 @g(i8* %ptr) {
-  %p = call i1 @llvm.type.test(i8* %ptr, metadata !"bar")
+define internal i1 @g(ptr %ptr) {
+  %p = call i1 @llvm.type.test(ptr %ptr, metadata !"bar")
   ret i1 %p
 }
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %typeid) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %typeid) nounwind readnone
 
 !0 = !{i32 0, !"foo"}
 !1 = !{i32 0, !"bar"}

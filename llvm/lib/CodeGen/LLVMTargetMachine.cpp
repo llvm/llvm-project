@@ -23,20 +23,24 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
-static cl::opt<bool> EnableTrapUnreachable("trap-unreachable",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Enable generating trap for unreachable"));
+static cl::opt<bool>
+    EnableTrapUnreachable("trap-unreachable", cl::Hidden,
+                          cl::desc("Enable generating trap for unreachable"));
+
+static cl::opt<bool> EnableNoTrapAfterNoreturn(
+    "no-trap-after-noreturn", cl::Hidden,
+    cl::desc("Do not emit a trap instruction for 'unreachable' IR instructions "
+             "after noreturn calls, even if --trap-unreachable is set."));
 
 void LLVMTargetMachine::initAsmInfo() {
   MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
@@ -64,14 +68,16 @@ void LLVMTargetMachine::initAsmInfo() {
   if (Options.BinutilsVersion.first > 0)
     TmpAsmInfo->setBinutilsVersion(Options.BinutilsVersion);
 
-  if (Options.DisableIntegratedAS)
+  if (Options.DisableIntegratedAS) {
     TmpAsmInfo->setUseIntegratedAssembler(false);
+    // If there is explict option disable integratedAS, we can't use it for
+    // inlineasm either.
+    TmpAsmInfo->setParseInlineAsmUsingAsmParser(false);
+  }
 
   TmpAsmInfo->setPreserveAsmComments(Options.MCOptions.PreserveAsmComments);
 
-  TmpAsmInfo->setCompressDebugSections(Options.CompressDebugSections);
-
-  TmpAsmInfo->setRelaxELFRelocations(Options.RelaxELFRelocations);
+  TmpAsmInfo->setFullRegisterNames(Options.MCOptions.PPCUseFullRegisterNames);
 
   if (Options.ExceptionModel != ExceptionHandling::None)
     TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
@@ -84,7 +90,7 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
                                      const Triple &TT, StringRef CPU,
                                      StringRef FS, const TargetOptions &Options,
                                      Reloc::Model RM, CodeModel::Model CM,
-                                     CodeGenOpt::Level OL)
+                                     CodeGenOptLevel OL)
     : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {
   this->RM = RM;
   this->CMModel = CM;
@@ -92,10 +98,12 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
 
   if (EnableTrapUnreachable)
     this->Options.TrapUnreachable = true;
+  if (EnableNoTrapAfterNoreturn)
+    this->Options.NoTrapAfterNoreturn = true;
 }
 
 TargetTransformInfo
-LLVMTargetMachine::getTargetTransformInfo(const Function &F) {
+LLVMTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(BasicTTIImpl(this, F));
 }
 
@@ -153,29 +161,42 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
   std::unique_ptr<MCStreamer> AsmStreamer;
 
   switch (FileType) {
-  case CGFT_AssemblyFile: {
+  case CodeGenFileType::AssemblyFile: {
     MCInstPrinter *InstPrinter = getTarget().createMCInstPrinter(
         getTargetTriple(), MAI.getAssemblerDialect(), MAI, MII, MRI);
 
     // Create a code emitter if asked to show the encoding.
     std::unique_ptr<MCCodeEmitter> MCE;
     if (Options.MCOptions.ShowMCEncoding)
-      MCE.reset(getTarget().createMCCodeEmitter(MII, MRI, Context));
+      MCE.reset(getTarget().createMCCodeEmitter(MII, Context));
+
+    bool UseDwarfDirectory = false;
+    switch (Options.MCOptions.MCUseDwarfDirectory) {
+    case MCTargetOptions::DisableDwarfDirectory:
+      UseDwarfDirectory = false;
+      break;
+    case MCTargetOptions::EnableDwarfDirectory:
+      UseDwarfDirectory = true;
+      break;
+    case MCTargetOptions::DefaultDwarfDirectory:
+      UseDwarfDirectory = MAI.enableDwarfFileDirectoryDefault();
+      break;
+    }
 
     std::unique_ptr<MCAsmBackend> MAB(
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
         Context, std::move(FOut), Options.MCOptions.AsmVerbose,
-        Options.MCOptions.MCUseDwarfDirectory, InstPrinter, std::move(MCE),
-        std::move(MAB), Options.MCOptions.ShowMCInst);
+        UseDwarfDirectory, InstPrinter, std::move(MCE), std::move(MAB),
+        Options.MCOptions.ShowMCInst);
     AsmStreamer.reset(S);
     break;
   }
-  case CGFT_ObjectFile: {
+  case CodeGenFileType::ObjectFile: {
     // Create the code emitter for the target if it exists.  If not, .o file
     // emission fails.
-    MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, MRI, Context);
+    MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, Context);
     if (!MCE)
       return make_error<StringError>("createMCCodeEmitter failed",
                                      inconvertibleErrorCode());
@@ -195,7 +216,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
         /*DWARFMustBeAtTheEnd*/ true));
     break;
   }
-  case CGFT_Null:
+  case CodeGenFileType::Null:
     // The Null output is intended for use for performance analysis and testing,
     // not real users.
     AsmStreamer.reset(getTarget().createNullStreamer(Context));
@@ -222,7 +243,7 @@ bool LLVMTargetMachine::addPassesToEmitFile(
       return true;
   } else {
     // MIR printing is redundant with -filetype=null.
-    if (FileType != CGFT_Null)
+    if (FileType != CodeGenFileType::Null)
       PM.add(createPrintMIRPass(Out));
   }
 
@@ -248,6 +269,9 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
          "Cannot emit MC with limited codegen pipeline");
 
   Ctx = &MMIWP->getMMI().getContext();
+  // libunwind is unable to load compact unwind dynamically, so we must generate
+  // DWARF unwind info for the JIT.
+  Options.MCOptions.EmitDwarfUnwind = EmitDwarfUnwindType::Always;
   if (Options.MCOptions.MCSaveTempLabels)
     Ctx->setAllowTemporaryLabels(false);
 
@@ -255,17 +279,17 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   // emission fails.
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
-  MCCodeEmitter *MCE =
-      getTarget().createMCCodeEmitter(*getMCInstrInfo(), MRI, *Ctx);
-  MCAsmBackend *MAB =
-      getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
+  std::unique_ptr<MCCodeEmitter> MCE(
+      getTarget().createMCCodeEmitter(*getMCInstrInfo(), *Ctx));
+  std::unique_ptr<MCAsmBackend> MAB(
+      getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
   if (!MCE || !MAB)
     return true;
 
   const Triple &T = getTargetTriple();
   std::unique_ptr<MCStreamer> AsmStreamer(getTarget().createMCObjectStreamer(
-      T, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), MAB->createObjectWriter(Out),
-      std::unique_ptr<MCCodeEmitter>(MCE), STI, Options.MCOptions.MCRelaxAll,
+      T, *Ctx, std::move(MAB), MAB->createObjectWriter(Out), std::move(MCE),
+      STI, Options.MCOptions.MCRelaxAll,
       Options.MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ true));
 

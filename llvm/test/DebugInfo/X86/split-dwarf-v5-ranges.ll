@@ -29,10 +29,10 @@
 define dso_local void @_Z2f3v() !dbg !7 {
 entry:
   %x = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %x, metadata !10, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.declare(metadata ptr %x, metadata !10, metadata !DIExpression()), !dbg !13
   %call = call i32 @_Z2f2v(), !dbg !14
-  store i32 %call, i32* %x, align 4, !dbg !13
-  %0 = load i32, i32* %x, align 4, !dbg !13
+  store i32 %call, ptr %x, align 4, !dbg !13
+  %0 = load i32, ptr %x, align 4, !dbg !13
   %tobool = icmp ne i32 %0, 0, !dbg !13
   br i1 %tobool, label %if.then, label %if.end, !dbg !15
 

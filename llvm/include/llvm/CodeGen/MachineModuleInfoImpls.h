@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include <cassert>
 
@@ -99,6 +100,17 @@ public:
   /// Accessor methods to return the set of stubs in sorted order.
 
   SymbolListTy GetGVStubList() { return getSortedStubs(GVStubs); }
+};
+
+/// MachineModuleInfoWasm - This is a MachineModuleInfoImpl implementation
+/// for Wasm targets.
+class MachineModuleInfoWasm : public MachineModuleInfoImpl {
+  virtual void anchor(); // Out of line virtual method.
+
+public:
+  MachineModuleInfoWasm(const MachineModuleInfo &) {}
+
+  SetVector<StringRef> MachineSymbolsUsed;
 };
 
 } // end namespace llvm

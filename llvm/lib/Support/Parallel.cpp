@@ -12,17 +12,25 @@
 #include "llvm/Support/Threading.h"
 
 #include <atomic>
+#include <deque>
 #include <future>
-#include <stack>
 #include <thread>
 #include <vector>
 
 llvm::ThreadPoolStrategy llvm::parallel::strategy;
 
-#if LLVM_ENABLE_THREADS
-
 namespace llvm {
 namespace parallel {
+#if LLVM_ENABLE_THREADS
+
+#ifdef _WIN32
+static thread_local unsigned threadIndex = UINT_MAX;
+
+unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
+#else
+thread_local unsigned threadIndex = UINT_MAX;
+#endif
+
 namespace detail {
 
 namespace {
@@ -31,7 +39,8 @@ namespace {
 class Executor {
 public:
   virtual ~Executor() = default;
-  virtual void add(std::function<void()> func) = 0;
+  virtual void add(std::function<void()> func, bool Sequential = false) = 0;
+  virtual size_t getThreadCount() const = 0;
 
   static Executor *getDefaultExecutor();
 };
@@ -41,13 +50,16 @@ public:
 class ThreadPoolExecutor : public Executor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S = hardware_concurrency()) {
-    unsigned ThreadCount = S.compute_thread_count();
+    ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
     Threads.reserve(ThreadCount);
     Threads.resize(1);
     std::lock_guard<std::mutex> Lock(Mutex);
-    Threads[0] = std::thread([this, ThreadCount, S] {
+    // Use operator[] before creating the thread to avoid data race in .size()
+    // in 'safe libc++' mode.
+    auto &Thread0 = Threads[0];
+    Thread0 = std::thread([this, S] {
       for (unsigned I = 1; I < ThreadCount; ++I) {
         Threads.emplace_back([=] { work(S, I); });
         if (Stop)
@@ -86,35 +98,61 @@ public:
     static void call(void *Ptr) { ((ThreadPoolExecutor *)Ptr)->stop(); }
   };
 
-  void add(std::function<void()> F) override {
+  void add(std::function<void()> F, bool Sequential = false) override {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      WorkStack.push(F);
+      if (Sequential)
+        WorkQueueSequential.emplace_front(std::move(F));
+      else
+        WorkQueue.emplace_back(std::move(F));
     }
     Cond.notify_one();
   }
 
+  size_t getThreadCount() const override { return ThreadCount; }
+
 private:
+  bool hasSequentialTasks() const {
+    return !WorkQueueSequential.empty() && !SequentialQueueIsLocked;
+  }
+
+  bool hasGeneralTasks() const { return !WorkQueue.empty(); }
+
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
+    threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
     while (true) {
       std::unique_lock<std::mutex> Lock(Mutex);
-      Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+      Cond.wait(Lock, [&] {
+        return Stop || hasGeneralTasks() || hasSequentialTasks();
+      });
       if (Stop)
         break;
-      auto Task = WorkStack.top();
-      WorkStack.pop();
+      bool Sequential = hasSequentialTasks();
+      if (Sequential)
+        SequentialQueueIsLocked = true;
+      else
+        assert(hasGeneralTasks());
+
+      auto &Queue = Sequential ? WorkQueueSequential : WorkQueue;
+      auto Task = std::move(Queue.back());
+      Queue.pop_back();
       Lock.unlock();
       Task();
+      if (Sequential)
+        SequentialQueueIsLocked = false;
     }
   }
 
   std::atomic<bool> Stop{false};
-  std::stack<std::function<void()>> WorkStack;
+  std::atomic<bool> SequentialQueueIsLocked{false};
+  std::deque<std::function<void()>> WorkQueue;
+  std::deque<std::function<void()>> WorkQueueSequential;
   std::mutex Mutex;
   std::condition_variable Cond;
   std::promise<void> ThreadsCreated;
   std::vector<std::thread> Threads;
+  unsigned ThreadCount;
 };
 
 Executor *Executor::getDefaultExecutor() {
@@ -143,29 +181,77 @@ Executor *Executor::getDefaultExecutor() {
   return Exec.get();
 }
 } // namespace
+} // namespace detail
 
-static std::atomic<int> TaskGroupInstances;
+size_t getThreadCount() {
+  return detail::Executor::getDefaultExecutor()->getThreadCount();
+}
+#endif
 
 // Latch::sync() called by the dtor may cause one thread to block. If is a dead
 // lock if all threads in the default executor are blocked. To prevent the dead
-// lock, only allow the first TaskGroup to run tasks parallelly. In the scenario
+// lock, only allow the root TaskGroup to run tasks parallelly. In the scenario
 // of nested parallel_for_each(), only the outermost one runs parallelly.
-TaskGroup::TaskGroup() : Parallel(TaskGroupInstances++ == 0) {}
-TaskGroup::~TaskGroup() { --TaskGroupInstances; }
-
-void TaskGroup::spawn(std::function<void()> F) {
-  if (Parallel) {
-    L.inc();
-    Executor::getDefaultExecutor()->add([&, F] {
-      F();
-      L.dec();
-    });
-  } else {
-    F();
-  }
+TaskGroup::TaskGroup()
+#if LLVM_ENABLE_THREADS
+    : Parallel((parallel::strategy.ThreadsRequested != 1) &&
+               (threadIndex == UINT_MAX)) {}
+#else
+    : Parallel(false) {}
+#endif
+TaskGroup::~TaskGroup() {
+  // We must ensure that all the workloads have finished before decrementing the
+  // instances count.
+  L.sync();
 }
 
-} // namespace detail
+void TaskGroup::spawn(std::function<void()> F, bool Sequential) {
+#if LLVM_ENABLE_THREADS
+  if (Parallel) {
+    L.inc();
+    detail::Executor::getDefaultExecutor()->add(
+        [&, F = std::move(F)] {
+          F();
+          L.dec();
+        },
+        Sequential);
+    return;
+  }
+#endif
+  F();
+}
+
 } // namespace parallel
 } // namespace llvm
-#endif // LLVM_ENABLE_THREADS
+
+void llvm::parallelFor(size_t Begin, size_t End,
+                       llvm::function_ref<void(size_t)> Fn) {
+#if LLVM_ENABLE_THREADS
+  if (parallel::strategy.ThreadsRequested != 1) {
+    auto NumItems = End - Begin;
+    // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
+    // overhead on large inputs.
+    auto TaskSize = NumItems / parallel::detail::MaxTasksPerGroup;
+    if (TaskSize == 0)
+      TaskSize = 1;
+
+    parallel::TaskGroup TG;
+    for (; Begin + TaskSize < End; Begin += TaskSize) {
+      TG.spawn([=, &Fn] {
+        for (size_t I = Begin, E = Begin + TaskSize; I != E; ++I)
+          Fn(I);
+      });
+    }
+    if (Begin != End) {
+      TG.spawn([=, &Fn] {
+        for (size_t I = Begin; I != End; ++I)
+          Fn(I);
+      });
+    }
+    return;
+  }
+#endif
+
+  for (; Begin != End; ++Begin)
+    Fn(Begin);
+}

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 source_filename = "test/DebugInfo/COFF/purge-typedef-udts.ll"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc19.11.25506"
@@ -14,9 +15,9 @@ target triple = "i686-pc-windows-msvc19.11.25506"
 ; typedef Foo FooTypedef;
 ; typedef Bar BarTypedef;
 ;
-; int func(void *F) { return 7; }
-; int func(const FooTypedef *F) { return func((void*)F); }
-; int func(const BarTypedef *B) { return func((void*)B->X); }
+; int func(ptr F) { return 7; }
+; int func(const FooTypedef *F) { return func((ptr)F); }
+; int func(const BarTypedef *B) { return func((ptr)B->X); }
 
 ; CHECK-NOT: UDTName: FooTypedef
 ; CHECK: UDTName: BarTypedef
@@ -25,11 +26,11 @@ target triple = "i686-pc-windows-msvc19.11.25506"
 %struct.Bar = type { i32 }
 
 ; Function Attrs: noinline nounwind optnone
-define i32 @"\01?func@@YAHPAX@Z"(i8* %F) #0 !dbg !10 {
+define i32 @"\01?func@@YAHPAX@Z"(ptr %F) #0 !dbg !10 {
 entry:
-  %F.addr = alloca i8*, align 4
-  store i8* %F, i8** %F.addr, align 4
-  call void @llvm.dbg.declare(metadata i8** %F.addr, metadata !14, metadata !DIExpression()), !dbg !15
+  %F.addr = alloca ptr, align 4
+  store ptr %F, ptr %F.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %F.addr, metadata !14, metadata !DIExpression()), !dbg !15
   ret i32 7, !dbg !16
 }
 
@@ -37,28 +38,26 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone
-define i32 @"\01?func@@YAHPBUFoo@@@Z"(%struct.Foo* %F) #0 !dbg !17 {
+define i32 @"\01?func@@YAHPBUFoo@@@Z"(ptr %F) #0 !dbg !17 {
 entry:
-  %F.addr = alloca %struct.Foo*, align 4
-  store %struct.Foo* %F, %struct.Foo** %F.addr, align 4
-  call void @llvm.dbg.declare(metadata %struct.Foo** %F.addr, metadata !24, metadata !DIExpression()), !dbg !25
-  %0 = load %struct.Foo*, %struct.Foo** %F.addr, align 4, !dbg !26
-  %1 = bitcast %struct.Foo* %0 to i8*, !dbg !26
-  %call = call i32 @"\01?func@@YAHPAX@Z"(i8* %1), !dbg !27
+  %F.addr = alloca ptr, align 4
+  store ptr %F, ptr %F.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %F.addr, metadata !24, metadata !DIExpression()), !dbg !25
+  %0 = load ptr, ptr %F.addr, align 4, !dbg !26
+  %call = call i32 @"\01?func@@YAHPAX@Z"(ptr %0), !dbg !27
   ret i32 %call, !dbg !28
 }
 
 ; Function Attrs: noinline nounwind optnone
-define i32 @"\01?func@@YAHPBUBar@@@Z"(%struct.Bar* %B) #0 !dbg !29 {
+define i32 @"\01?func@@YAHPBUBar@@@Z"(ptr %B) #0 !dbg !29 {
 entry:
-  %B.addr = alloca %struct.Bar*, align 4
-  store %struct.Bar* %B, %struct.Bar** %B.addr, align 4
-  call void @llvm.dbg.declare(metadata %struct.Bar** %B.addr, metadata !42, metadata !DIExpression()), !dbg !43
-  %0 = load %struct.Bar*, %struct.Bar** %B.addr, align 4, !dbg !44
-  %X = getelementptr inbounds %struct.Bar, %struct.Bar* %0, i32 0, i32 0, !dbg !45
-  %1 = load i32, i32* %X, align 4, !dbg !45
-  %2 = inttoptr i32 %1 to i8*, !dbg !46
-  %call = call i32 @"\01?func@@YAHPAX@Z"(i8* %2), !dbg !47
+  %B.addr = alloca ptr, align 4
+  store ptr %B, ptr %B.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %B.addr, metadata !42, metadata !DIExpression()), !dbg !43
+  %0 = load ptr, ptr %B.addr, align 4, !dbg !44
+  %1 = load i32, ptr %0, align 4, !dbg !45
+  %2 = inttoptr i32 %1 to ptr, !dbg !46
+  %call = call i32 @"\01?func@@YAHPAX@Z"(ptr %2), !dbg !47
   ret i32 %call, !dbg !48
 }
 

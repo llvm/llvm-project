@@ -27,37 +27,32 @@ define i32 @test1(i32 %a, i1 %x) nounwind {
 
 declare %umul.ty @llvm.umul.with.overflow.i32(i32, i32) nounwind readnone
 
-define i32 @test2(i32* %m_degree) ssp {
+define i32 @test2(ptr %m_degree) ssp {
 ; CHECK-LABEL: test2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    movs r1, #7
-; CHECK-NEXT:    lsls r1, r1, #29
-; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    bics r2, r1
-; CHECK-NEXT:    subs r1, r0, r2
+; CHECK-NEXT:    ldr r1, [r0]
+; CHECK-NEXT:    lsls r0, r1, #3
+; CHECK-NEXT:    lsrs r2, r0, #3
+; CHECK-NEXT:    subs r1, r1, r2
 ; CHECK-NEXT:    subs r2, r1, #1
 ; CHECK-NEXT:    sbcs r1, r2
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    bne .LBB1_2
+; CHECK-NEXT:    beq .LBB1_2
 ; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:    lsls r0, r0, #3
-; CHECK-NEXT:    b .LBB1_3
-; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    mvns r0, r4
-; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    bl _Znam
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    pop {r4, pc}
-%val = load i32, i32* %m_degree, align 4
+%val = load i32, ptr %m_degree, align 4
 %res = call %umul.ty @llvm.umul.with.overflow.i32(i32 %val, i32 8)
 %ov = extractvalue %umul.ty %res, 1
 %mul = extractvalue %umul.ty %res, 0
 %sel = select i1 %ov, i32 -1, i32 %mul
-%ret = call noalias i8* @_Znam(i32 %sel)
+%ret = call noalias ptr @_Znam(i32 %sel)
 ret i32 0
 }
 
-declare noalias i8* @_Znam(i32)
+declare noalias ptr @_Znam(i32)

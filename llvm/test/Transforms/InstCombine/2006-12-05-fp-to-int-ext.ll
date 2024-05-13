@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep zext
+; RUN: opt < %s -passes=instcombine -S | grep zext
 
 ; Never merge these two conversions, even though it's possible: this is
 ; significantly more expensive than the two conversions on some targets

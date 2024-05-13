@@ -21,19 +21,19 @@
 #  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
-TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
-TARGET_HEADER_BUILTIN(__mulh,  "LLiLLiLLi",    "nch", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__umulh, "ULLiULLiULLi", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(_mul128, "LLiLLiLLiLLi*",      "nch",   "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(_umul128, "ULLiULLiULLiULLi*", "nch",   "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__mulh,  "LLiLLiLLi",    "nch", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__umulh, "ULLiULLiULLi", "nch", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_mul128, "LLiLLiLLiLLi*",      "nch",   INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_umul128, "ULLiULLiULLiULLi*", "nch",   INTRIN_H, ALL_MS_LANGUAGES, "")
 
-TARGET_HEADER_BUILTIN(__faststorefence, "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__shiftleft128, "ULLiULLiULLiUc", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__shiftright128, "ULLiULLiULLiUc", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__faststorefence, "v", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__shiftleft128, "ULLiULLiULLiUc", "nch", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__shiftright128, "ULLiULLiULLiUc", "nch", INTRIN_H, ALL_MS_LANGUAGES, "")
 
-TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128, "UcLLiD*LLiLLiLLi*", "nh", "intrin.h", ALL_MS_LANGUAGES, "cx16")
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128, "UcLLiD*LLiLLiLLi*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "cx16")
 
 TARGET_BUILTIN(__builtin_ia32_readeflags_u64, "UOi", "n", "")
 TARGET_BUILTIN(__builtin_ia32_writeeflags_u64, "vUOi", "n", "")
@@ -42,9 +42,8 @@ TARGET_BUILTIN(__builtin_ia32_cvttss2si64, "OiV4f", "ncV:128:", "sse")
 TARGET_BUILTIN(__builtin_ia32_cvtsd2si64, "OiV2d", "ncV:128:", "sse2")
 TARGET_BUILTIN(__builtin_ia32_cvttsd2si64, "OiV2d", "ncV:128:", "sse2")
 TARGET_BUILTIN(__builtin_ia32_movnti64, "vOi*Oi", "n", "sse2")
-TARGET_BUILTIN(__builtin_ia32_vec_ext_v2di, "OiV2OiIi", "ncV:128:", "sse2")
 TARGET_BUILTIN(__builtin_ia32_vec_set_v2di, "V2OiV2OiOiIi", "ncV:128:", "sse4.1")
-TARGET_BUILTIN(__builtin_ia32_crc32di, "UOiUOiUOi", "nc", "sse4.2")
+TARGET_BUILTIN(__builtin_ia32_crc32di, "UOiUOiUOi", "nc", "crc32")
 TARGET_BUILTIN(__builtin_ia32_vec_ext_v4di, "OiV4OiIi", "ncV:256:", "avx")
 TARGET_BUILTIN(__builtin_ia32_vec_set_v4di, "V4OiV4OiOiIi", "ncV:256:", "avx")
 TARGET_BUILTIN(__builtin_ia32_rdfsbase32, "Ui", "n", "fsgsbase")
@@ -92,6 +91,12 @@ TARGET_BUILTIN(__builtin_ia32_cvtsi2sd64, "V2dV2dOiIi", "ncV:128:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtsi2ss64, "V4fV4fOiIi", "ncV:128:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtusi2sd64, "V2dV2dUOiIi", "ncV:128:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtusi2ss64, "V4fV4fUOiIi", "ncV:128:", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_vcvtsh2si64, "OiV8xIi", "ncV:128:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vcvtsh2usi64, "UOiV8xIi", "ncV:128:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vcvtusi642sh, "V8xV8xUOiIi", "ncV:128:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vcvtsi642sh, "V8xV8xOiIi", "ncV:128:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vcvttsh2si64, "OiV8xIi", "ncV:128:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vcvttsh2usi64, "UOiV8xIi", "ncV:128:", "avx512fp16")
 TARGET_BUILTIN(__builtin_ia32_directstore_u64, "vULi*ULi", "n", "movdiri")
 
 // UINTR
@@ -99,10 +104,14 @@ TARGET_BUILTIN(__builtin_ia32_clui, "v", "n", "uintr")
 TARGET_BUILTIN(__builtin_ia32_stui, "v", "n", "uintr")
 TARGET_BUILTIN(__builtin_ia32_testui, "Uc", "n", "uintr")
 TARGET_BUILTIN(__builtin_ia32_senduipi, "vUWi", "n", "uintr")
+// USERMSR
+TARGET_BUILTIN(__builtin_ia32_urdmsr, "ULLiULLi", "n", "usermsr")
+TARGET_BUILTIN(__builtin_ia32_uwrmsr, "vULLiULLi", "n", "usermsr")
 
 // AMX internal builtin
 TARGET_BUILTIN(__builtin_ia32_tile_loadconfig_internal, "vvC*", "n", "amx-tile")
 TARGET_BUILTIN(__builtin_ia32_tileloadd64_internal, "V256iUsUsvC*z", "n", "amx-tile")
+TARGET_BUILTIN(__builtin_ia32_tileloaddt164_internal, "V256iUsUsvC*z", "n", "amx-tile")
 TARGET_BUILTIN(__builtin_ia32_tdpbssd_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-int8")
 TARGET_BUILTIN(__builtin_ia32_tdpbsud_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-int8")
 TARGET_BUILTIN(__builtin_ia32_tdpbusd_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-int8")
@@ -110,6 +119,9 @@ TARGET_BUILTIN(__builtin_ia32_tdpbuud_internal, "V256iUsUsUsV256iV256iV256i", "n
 TARGET_BUILTIN(__builtin_ia32_tilestored64_internal, "vUsUsv*zV256i", "n", "amx-tile")
 TARGET_BUILTIN(__builtin_ia32_tilezero_internal, "V256iUsUs", "n", "amx-tile")
 TARGET_BUILTIN(__builtin_ia32_tdpbf16ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-bf16")
+TARGET_BUILTIN(__builtin_ia32_tdpfp16ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-fp16")
+TARGET_BUILTIN(__builtin_ia32_tcmmimfp16ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-complex")
+TARGET_BUILTIN(__builtin_ia32_tcmmrlfp16ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-complex")
 // AMX
 TARGET_BUILTIN(__builtin_ia32_tile_loadconfig, "vvC*", "n", "amx-tile")
 TARGET_BUILTIN(__builtin_ia32_tile_storeconfig, "vvC*", "n", "amx-tile")
@@ -126,6 +138,22 @@ TARGET_BUILTIN(__builtin_ia32_tdpbusd, "vIUcIUcIUc", "n", "amx-int8")
 TARGET_BUILTIN(__builtin_ia32_tdpbuud, "vIUcIUcIUc", "n", "amx-int8")
 TARGET_BUILTIN(__builtin_ia32_tdpbf16ps, "vIUcIUcIUc", "n", "amx-bf16")
 TARGET_BUILTIN(__builtin_ia32_ptwrite64, "vUOi", "n", "ptwrite")
+
+TARGET_BUILTIN(__builtin_ia32_tcmmimfp16ps, "vIUcIUcIUc", "n", "amx-complex")
+TARGET_BUILTIN(__builtin_ia32_tcmmrlfp16ps, "vIUcIUcIUc", "n", "amx-complex")
+
+TARGET_BUILTIN(__builtin_ia32_prefetchi, "vvC*Ui", "nc", "prefetchi")
+TARGET_BUILTIN(__builtin_ia32_cmpccxadd32, "Siv*SiSiIi", "n", "cmpccxadd")
+TARGET_BUILTIN(__builtin_ia32_cmpccxadd64, "SLLiv*SLLiSLLiIi", "n", "cmpccxadd")
+
+// AMX_FP16 FP16
+TARGET_BUILTIN(__builtin_ia32_tdpfp16ps, "vIUcIUcIUc", "n", "amx-fp16")
+
+// RAO-INT
+TARGET_BUILTIN(__builtin_ia32_aadd64, "vv*SOi", "n", "raoint")
+TARGET_BUILTIN(__builtin_ia32_aand64, "vv*SOi", "n", "raoint")
+TARGET_BUILTIN(__builtin_ia32_aor64, "vv*SOi", "n", "raoint")
+TARGET_BUILTIN(__builtin_ia32_axor64, "vv*SOi", "n", "raoint")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

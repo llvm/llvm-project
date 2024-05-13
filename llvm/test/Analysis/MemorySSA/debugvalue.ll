@@ -1,4 +1,4 @@
-; RUN: opt -disable-basic-aa -loop-rotate -enable-mssa-loop-dependency -verify-memoryssa -S %s | FileCheck %s
+; RUN: opt -disable-basic-aa -passes=loop-rotate -verify-memoryssa -S %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @f_w4_i2
@@ -15,7 +15,7 @@ for.cond.cleanup:                                 ; preds = %for.cond
   ret void
 
 for.body:                                         ; preds = %for.cond
-  store i32 undef, i32* undef, align 1
+  store i32 undef, ptr undef, align 1
   %inc = add i16 %i.0, 1
   call void @llvm.dbg.value(metadata i16 %inc, metadata !32, metadata !DIExpression()), !dbg !31
   br label %for.cond

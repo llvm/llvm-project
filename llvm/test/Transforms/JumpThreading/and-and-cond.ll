@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -mem2reg -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1  -S | FileCheck %s
+; RUN: opt < %s -passes=jump-threading,mem2reg,instcombine,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 declare i32 @f1()
 declare i32 @f2()

@@ -15,15 +15,18 @@
 #define LLVM_ANALYSIS_LOOPCACHEANALYSIS_H
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace llvm {
 
 class AAResults;
 class DependenceInfo;
+class Instruction;
 class LPMUpdater;
+class raw_ostream;
+class LoopInfo;
+class Loop;
 class ScalarEvolution;
 class SCEV;
 class TargetTransformInfo;
@@ -69,17 +72,17 @@ public:
   /// Return true/false if the current object and the indexed reference \p Other
   /// are/aren't in the same cache line of size \p CLS. Two references are in
   /// the same chace line iff the distance between them in the innermost
-  /// dimension is less than the cache line size. Return None if unsure.
-  Optional<bool> hasSpacialReuse(const IndexedReference &Other, unsigned CLS,
-                                 AAResults &AA) const;
+  /// dimension is less than the cache line size. Return std::nullopt if unsure.
+  std::optional<bool> hasSpacialReuse(const IndexedReference &Other,
+                                      unsigned CLS, AAResults &AA) const;
 
   /// Return true if the current object and the indexed reference \p Other
   /// have distance smaller than \p MaxDistance in the dimension associated with
   /// the given loop \p L. Return false if the distance is not smaller than \p
-  /// MaxDistance and None if unsure.
-  Optional<bool> hasTemporalReuse(const IndexedReference &Other,
-                                  unsigned MaxDistance, const Loop &L,
-                                  DependenceInfo &DI, AAResults &AA) const;
+  /// MaxDistance and std::nullopt if unsure.
+  std::optional<bool> hasTemporalReuse(const IndexedReference &Other,
+                                       unsigned MaxDistance, const Loop &L,
+                                       DependenceInfo &DI, AAResults &AA) const;
 
   /// Compute the cost of the reference w.r.t. the given loop \p L when it is
   /// considered in the innermost position in the loop nest.
@@ -96,14 +99,26 @@ private:
   /// Attempt to delinearize the indexed reference.
   bool delinearize(const LoopInfo &LI);
 
+  /// Attempt to delinearize \p AccessFn for fixed-size arrays.
+  bool tryDelinearizeFixedSize(const SCEV *AccessFn,
+                               SmallVectorImpl<const SCEV *> &Subscripts);
+
   /// Return true if the index reference is invariant with respect to loop \p L.
   bool isLoopInvariant(const Loop &L) const;
 
   /// Return true if the indexed reference is 'consecutive' in loop \p L.
   /// An indexed reference is 'consecutive' if the only coefficient that uses
   /// the loop induction variable is the rightmost one, and the access stride is
-  /// smaller than the cache line size \p CLS.
-  bool isConsecutive(const Loop &L, unsigned CLS) const;
+  /// smaller than the cache line size \p CLS. Provide a valid \p Stride value
+  /// if the indexed reference is 'consecutive'.
+  bool isConsecutive(const Loop &L, const SCEV *&Stride, unsigned CLS) const;
+
+  /// Retrieve the index of the subscript corresponding to the given loop \p
+  /// L. Return a zero-based positive index if the subscript index is
+  /// succesfully located and a negative value otherwise. For example given the
+  /// indexed reference 'A[i][2j+1][3k+2]', the call
+  /// 'getSubscriptIndex(loop-k)' would return value 2.
+  int getSubscriptIndex(const Loop &L) const;
 
   /// Return the coefficient used in the rightmost dimension.
   const SCEV *getLastCoefficient() const;
@@ -185,7 +200,7 @@ public:
   /// classified to have temporal reuse.
   CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI, ScalarEvolution &SE,
             TargetTransformInfo &TTI, AAResults &AA, DependenceInfo &DI,
-            Optional<unsigned> TRT = None);
+            std::optional<unsigned> TRT = std::nullopt);
 
   /// Create a CacheCost for the loop nest rooted by \p Root.
   /// The optional parameter \p TRT can be used to specify the max. distance
@@ -193,7 +208,7 @@ public:
   /// classified to have temporal reuse.
   static std::unique_ptr<CacheCost>
   getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR, DependenceInfo &DI,
-               Optional<unsigned> TRT = None);
+               std::optional<unsigned> TRT = std::nullopt);
 
   /// Return the estimated cost of loop \p L if the given loop is part of the
   /// loop nest associated with this object. Return -1 otherwise.
@@ -237,9 +252,10 @@ private:
 
   /// Sort the LoopCosts vector by decreasing cache cost.
   void sortLoopCosts() {
-    sort(LoopCosts, [](const LoopCacheCostTy &A, const LoopCacheCostTy &B) {
-      return A.second > B.second;
-    });
+    stable_sort(LoopCosts,
+                [](const LoopCacheCostTy &A, const LoopCacheCostTy &B) {
+                  return A.second > B.second;
+                });
   }
 
 private:
@@ -254,7 +270,7 @@ private:
 
   /// The max. distance between array elements accessed in a loop so that the
   /// elements are classified to have temporal reuse.
-  Optional<unsigned> TRT;
+  std::optional<unsigned> TRT;
 
   const LoopInfo &LI;
   ScalarEvolution &SE;
@@ -275,6 +291,8 @@ public:
 
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
+
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

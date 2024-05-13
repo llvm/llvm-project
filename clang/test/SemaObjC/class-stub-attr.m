@@ -24,4 +24,4 @@ __attribute__((objc_class_stub(123))) // expected-error {{'objc_class_stub' attr
 @end
 
 __attribute__((objc_class_stub)) // expected-error {{'objc_class_stub' attribute only applies to Objective-C interfaces}}
-int cannotHaveObjCClassStubAttribute() {}
+int cannotHaveObjCClassStubAttribute(void) {}

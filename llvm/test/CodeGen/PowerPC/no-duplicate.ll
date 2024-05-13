@@ -6,6 +6,7 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 define void @no_duplicate1(i64 %a) {
 ; CHECK-LABEL: no_duplicate1
 ; CHECK:        mr 30, 3
+; CHECK-NEXT:   std 0, 64(1)
 ; CHECK-NEXT:   b .LBB0_2
 
 ; CHECK:      .LBB0_2:
@@ -39,6 +40,7 @@ end:
 define void @no_duplicate2(i64 %a) {
 ; CHECK-LABEL: no_duplicate2
 ; CHECK:        mr 30, 3
+; CHECK-NEXT:   std 0, 64(1)
 ; CHECK-NEXT:   b .LBB1_2
 
 ; CHECK:      .LBB1_2:

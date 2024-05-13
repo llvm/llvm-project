@@ -2,6 +2,8 @@
 #   void puts(const char*);
 #   void hello() { puts("hello\n"); }
 
+  .functype puts (i32) -> ()
+
   .globl  hello
 hello:
   .functype hello () -> ()
@@ -14,5 +16,3 @@ hello:
 hello_str:
   .asciz  "hello\n"
   .size hello_str, 7
-
-  .functype puts (i32) -> ()

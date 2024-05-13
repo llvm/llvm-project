@@ -1,9 +1,15 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
+; RUN: opt < %s -passes=pseudo-probe,sample-profile  -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.opt.yaml
 
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/pseudo-probe-inline.prof -o %t2
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t2.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefix=YAML < %t2.opt.yaml
+; RUN: opt < %s -passes=pseudo-probe,sample-profile  -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t2.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t2.opt.yaml
+
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -annotate-sample-profile-inline-phase=true -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t3.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t3.opt.yaml
+
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -annotate-sample-profile-inline-phase=true -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t4.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t4.opt.yaml
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -44,7 +50,7 @@ while.cond:
 
 while.body:
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 3, i32 0, i64 -1)
-  %0 = load volatile i32, i32* @factor, align 4, !dbg !32
+  %0 = load volatile i32, ptr @factor, align 4, !dbg !32
   %sub = sub nsw i32 %x.addr.0, %0, !dbg !39
   br label %while.cond, !dbg !31
 
@@ -56,7 +62,7 @@ while.cond2:
 
 while.body4:
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 5, i32 0, i64 -1)
-  %1 = load volatile i32, i32* @factor, align 4, !dbg !45
+  %1 = load volatile i32, ptr @factor, align 4, !dbg !45
   %add = add nsw i32 %x.addr.1, %1, !dbg !48
   br label %while.cond2, !dbg !44
 
@@ -69,21 +75,24 @@ if.end:
 ; CHECK: !llvm.pseudo_probe_desc = !{![[#DESC0:]], ![[#DESC1:]]}
 ; CHECK: ![[#DESC0]] = !{i64 [[#GUID1]], i64 [[#HASH1:]], !"foo"}
 ; CHECK: ![[#DESC1]] = !{i64 [[#GUID2]], i64 [[#HASH2:]], !"zen"}
-; CHECK: ![[PD1]] = !{!"branch_weights", i32 25, i32 1}
-; CHECK: ![[PD2]] = !{!"branch_weights", i32 382916, i32 25}
+; CHECK: ![[PD1]] = !{!"branch_weights", i32 5, i32 0}
+; CHECK: ![[PD2]] = !{!"branch_weights", i32 382915, i32 5}
 
 ; Checking to see if YAML file is generated and contains remarks
 ;YAML: --- !Passed
-;YAML-NEXT:  Pass:            sample-profile-inline
+;YAML-NO-ANNOTATE-NEXT:  Pass:            sample-profile-inline
+;YAML-ANNOTATE-NEXT: Pass:    main-sample-profile-inline
 ;YAML-NEXT:  Name:            Inlined
 ;YAML-NEXT:  DebugLoc:        { File: test.cpp, Line: 10, Column: 11 }
 ;YAML-NEXT:  Function:        foo
 ;YAML-NEXT:  Args:
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - Callee:          zen
 ;YAML-NEXT:      DebugLoc:        { File: test.cpp, Line: 38, Column: 0 }
-;YAML-NEXT:    - String:          ' inlined into '
+;YAML-NEXT:    - String:          ''' inlined into '''
 ;YAML-NEXT:    - Caller:          foo
 ;YAML-NEXT:      DebugLoc:        { File: test.cpp, Line: 9, Column: 0 }
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - String:          ' to match profiling context'
 ;YAML-NEXT:    - String:          ' with '
 ;YAML-NEXT:    - String:          '(cost='
@@ -97,6 +106,8 @@ if.end:
 ;YAML-NEXT:    - Line:            '1'
 ;YAML-NEXT:    - String:          ':'
 ;YAML-NEXT:    - Column:          '11'
+;YAML-NEXT:    - String:          .
+;YAML-NEXT:    - Disc:            '2'
 ;YAML-NEXT:    - String:          ';'
 ;YAML-NEXT:  ...
 ;YAML:  --- !Analysis

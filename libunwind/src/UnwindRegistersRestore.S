@@ -1,4 +1,4 @@
-//===-------------------- UnwindRegistersRestore.S ------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,17 @@
 
 #include "assembly.h"
 
+#define FROM_0_TO_15 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+#define FROM_16_TO_31 16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+
+#define FROM_0_TO_31 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+#define FROM_32_TO_63 32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63
+
+#if defined(_AIX)
+  .toc
+#else
   .text
+#endif
 
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 
@@ -25,6 +35,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
 #  + return address        +
 #  +-----------------------+   <-- SP
 #  +                       +
+
+  _LIBUNWIND_CET_ENDBR
   movl   4(%esp), %eax
   # set up eax and ret on new stack location
   movl  28(%eax), %edx # edx holds new stack pointer
@@ -46,7 +58,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip ss
   # skip eflags
   pop    %eax  # eax was already pushed on new stack
-  ret        # eip was already pushed on new stack
+  pop    %ecx
+  jmp    *%ecx
   # skip cs
   # skip ds
   # skip es
@@ -70,6 +83,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 # On entry, thread_state pointer is in rdi
 #endif
 
+  _LIBUNWIND_CET_ENDBR
   movq  56(%rdi), %rax # rax holds new stack pointer
   subq  $16, %rax
   movq  %rax, 56(%rdi)
@@ -119,7 +133,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 #endif
   movq  56(%rdi), %rsp  # cut back rsp to new location
   pop    %rdi      # rdi was saved here earlier
-  ret            # rip was saved here
+  pop    %rcx
+  jmpq   *%rcx
 
 
 #elif defined(__powerpc64__)
@@ -179,9 +194,20 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
   addi  4, 3, PPC64_OFFS_FP
 
 // load VS register
+#ifdef __LITTLE_ENDIAN__
+// For little-endian targets, we need a swap since lxvd2x will load the register
+// in the incorrect doubleword order.
+// FIXME: when supporting targets older than Power9 on LE is no longer required,
+//        this can be changed to simply `lxv n, (16 * n)(4)`.
+#define PPC64_LVS(n)         \
+  lxvd2x  n, 0, 4           ;\
+  xxswapd n, n              ;\
+  addi    4, 4, 16
+#else
 #define PPC64_LVS(n)         \
   lxvd2x  n, 0, 4           ;\
   addi    4, 4, 16
+#endif
 
   // restore the first 32 VS regs (and also all floating point regs)
   PPC64_LVS(0)
@@ -217,27 +243,43 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
   PPC64_LVS(30)
   PPC64_LVS(31)
 
-  // use VRSAVE to conditionally restore the remaining VS regs,
-  // that are where the V regs are mapped
+#ifdef __LITTLE_ENDIAN__
+#define PPC64_CLVS_RESTORE(n)                    \
+  addi   4, 3, PPC64_OFFS_FP + n * 16           ;\
+  lxvd2x n, 0, 4                                ;\
+  xxswapd n, n
+#else
+#define PPC64_CLVS_RESTORE(n)                    \
+  addi   4, 3, PPC64_OFFS_FP + n * 16           ;\
+  lxvd2x n, 0, 4
+#endif
 
+#if !defined(_AIX)
+  // use VRSAVE to conditionally restore the remaining VS regs, that are
+  // where the V regs are mapped. In the AIX ABI, VRSAVE is not used.
   ld    5, PPC64_OFFS_VRSAVE(3)   // test VRsave
   cmpwi 5, 0
   beq   Lnovec
 
 // conditionally load VS
-#define PPC64_CLVS_BOTTOM(n)               \
-  beq    Ldone##n                         ;\
-  addi   4, 3, PPC64_OFFS_FP + n * 16     ;\
-  lxvd2x n, 0, 4                          ;\
+#define PPC64_CLVSl(n)                           \
+  andis. 0, 5, (1 PPC_LEFT_SHIFT(47-n))         ;\
+  beq    Ldone##n                               ;\
+  PPC64_CLVS_RESTORE(n)                         ;\
 Ldone##n:
 
-#define PPC64_CLVSl(n)                    \
-  andis. 0, 5, (1 PPC_LEFT_SHIFT(47-n))  ;\
-PPC64_CLVS_BOTTOM(n)
+#define PPC64_CLVSh(n)                           \
+  andi.  0, 5, (1 PPC_LEFT_SHIFT(63-n))         ;\
+  beq    Ldone##n                               ;\
+  PPC64_CLVS_RESTORE(n)                         ;\
+Ldone##n:
 
-#define PPC64_CLVSh(n)                    \
-  andi.  0, 5, (1 PPC_LEFT_SHIFT(63-n))  ;\
-PPC64_CLVS_BOTTOM(n)
+#else
+
+#define PPC64_CLVSl(n) PPC64_CLVS_RESTORE(n)
+#define PPC64_CLVSh(n) PPC64_CLVS_RESTORE(n)
+
+#endif // !defined(_AIX)
 
   PPC64_CLVSl(32)
   PPC64_CLVSl(33)
@@ -313,32 +355,44 @@ PPC64_CLVS_BOTTOM(n)
   PPC64_LF(31)
 
 #if defined(__ALTIVEC__)
-  // restore vector registers if any are in use
+
+#define PPC64_CLV_UNALIGNED_RESTORE(n)       \
+  ld     0, (PPC64_OFFS_V + n * 16)(3)      ;\
+  std    0, 0(4)                            ;\
+  ld     0, (PPC64_OFFS_V + n * 16 + 8)(3)  ;\
+  std    0, 8(4)                            ;\
+  lvx    n, 0, 4
+
+#if !defined(_AIX)
+  // restore vector registers if any are in use. In the AIX ABI, VRSAVE is
+  // not used.
   ld    5, PPC64_OFFS_VRSAVE(3)   // test VRsave
   cmpwi 5, 0
   beq   Lnovec
+
+#define PPC64_CLV_UNALIGNEDl(n)              \
+  andis. 0, 5, (1 PPC_LEFT_SHIFT(15-n))     ;\
+  beq    Ldone##n                           ;\
+  PPC64_CLV_UNALIGNED_RESTORE(n)            ;\
+Ldone  ## n:
+
+#define PPC64_CLV_UNALIGNEDh(n)              \
+  andi.  0, 5, (1 PPC_LEFT_SHIFT(31-n))     ;\
+  beq    Ldone##n                           ;\
+  PPC64_CLV_UNALIGNED_RESTORE(n)            ;\
+Ldone  ## n:
+
+#else
+
+#define PPC64_CLV_UNALIGNEDl(n) PPC64_CLV_UNALIGNED_RESTORE(n)
+#define PPC64_CLV_UNALIGNEDh(n) PPC64_CLV_UNALIGNED_RESTORE(n)
+
+#endif // !defined(_AIX)
 
   subi  4, 1, 16
   // r4 is now a 16-byte aligned pointer into the red zone
   // the _vectorScalarRegisters may not be 16-byte aligned
   // so copy via red zone temp buffer
-
-#define PPC64_CLV_UNALIGNED_BOTTOM(n)            \
-  beq    Ldone##n                               ;\
-  ld     0, (PPC64_OFFS_V + n * 16)(3)          ;\
-  std    0, 0(4)                                ;\
-  ld     0, (PPC64_OFFS_V + n * 16 + 8)(3)      ;\
-  std    0, 8(4)                                ;\
-  lvx    n, 0, 4                                ;\
-Ldone  ## n:
-
-#define PPC64_CLV_UNALIGNEDl(n)                 \
-  andis. 0, 5, (1 PPC_LEFT_SHIFT(15-n))        ;\
-PPC64_CLV_UNALIGNED_BOTTOM(n)
-
-#define PPC64_CLV_UNALIGNEDh(n)                \
-  andi.  0, 5, (1 PPC_LEFT_SHIFT(31-n))       ;\
-PPC64_CLV_UNALIGNED_BOTTOM(n)
 
   PPC64_CLV_UNALIGNEDl(0)
   PPC64_CLV_UNALIGNEDl(1)
@@ -382,14 +436,26 @@ Lnovec:
   ld    0, PPC64_OFFS_SRR0(3)
   mtctr 0
 
+#if defined(_AIX)
+  // After setting GPR1 to a higher address, AIX wipes out the original
+  // stack space below that address invalidated by the new GPR1 value. Use
+  // GPR0 to save the value of GPR3 in the context before it is wiped out.
+  // This compromises the content of GPR0 which is a volatile register.
+  ld 0, (8 * (3 + 2))(3)
+#else
   PPC64_LR(0)
+#endif
   PPC64_LR(5)
   PPC64_LR(4)
   PPC64_LR(1)
+#if defined(_AIX)
+  mr 3, 0
+#else
   PPC64_LR(3)
+#endif
   bctr
 
-#elif defined(__ppc__)
+#elif defined(__powerpc__)
 
 DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
 //
@@ -399,7 +465,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
 //  thread_state pointer is in r3
 //
 
-  // restore integral registerrs
+  // restore integral registers
   // skip r0 for now
   // skip r1 for now
   lwz     2,  16(3)
@@ -470,45 +536,48 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
 #endif
 
 #if defined(__ALTIVEC__)
-  // restore vector registers if any are in use
+
+#define LOAD_VECTOR_RESTORE(_index)                 \
+  lwz     0, 424+_index*16(3)             SEPARATOR \
+  stw     0, 0(4)                         SEPARATOR \
+  lwz     0, 424+_index*16+4(3)           SEPARATOR \
+  stw     0, 4(4)                         SEPARATOR \
+  lwz     0, 424+_index*16+8(3)           SEPARATOR \
+  stw     0, 8(4)                         SEPARATOR \
+  lwz     0, 424+_index*16+12(3)          SEPARATOR \
+  stw     0, 12(4)                        SEPARATOR \
+  lvx     _index, 0, 4
+
+#if !defined(_AIX)
+  // restore vector registers if any are in use. In the AIX ABI, VRSAVE
+  // is not used.
   lwz     5, 156(3)       // test VRsave
   cmpwi   5, 0
   beq     Lnovec
+
+#define LOAD_VECTOR_UNALIGNEDl(_index)                   \
+  andis.  0, 5, (1 PPC_LEFT_SHIFT(15-_index))  SEPARATOR \
+  beq     Ldone ## _index                      SEPARATOR \
+  LOAD_VECTOR_RESTORE(_index)                  SEPARATOR \
+  Ldone ## _index:
+
+#define LOAD_VECTOR_UNALIGNEDh(_index)                   \
+  andi.   0, 5, (1 PPC_LEFT_SHIFT(31-_index))  SEPARATOR \
+  beq     Ldone ## _index                      SEPARATOR \
+  LOAD_VECTOR_RESTORE(_index)                  SEPARATOR \
+  Ldone ## _index:
+
+#else
+
+#define LOAD_VECTOR_UNALIGNEDl(_index) LOAD_VECTOR_RESTORE(_index)
+#define LOAD_VECTOR_UNALIGNEDh(_index) LOAD_VECTOR_RESTORE(_index)
+
+#endif // !defined(_AIX)
 
   subi    4, 1, 16
   rlwinm  4, 4, 0, 0, 27  // mask low 4-bits
   // r4 is now a 16-byte aligned pointer into the red zone
   // the _vectorRegisters may not be 16-byte aligned so copy via red zone temp buffer
-
-
-#define LOAD_VECTOR_UNALIGNEDl(_index)          \
-  andis.  0, 5, (1 PPC_LEFT_SHIFT(15-_index)) SEPARATOR \
-  beq     Ldone ## _index             SEPARATOR \
-  lwz     0, 424+_index*16(3)         SEPARATOR \
-  stw     0, 0(%r4)                   SEPARATOR \
-  lwz     0, 424+_index*16+4(%r3)     SEPARATOR \
-  stw     0, 4(%r4)                   SEPARATOR \
-  lwz     0, 424+_index*16+8(%r3)     SEPARATOR \
-  stw     0, 8(%r4)                   SEPARATOR \
-  lwz     0, 424+_index*16+12(%r3)    SEPARATOR \
-  stw     0, 12(%r4)                  SEPARATOR \
-  lvx     _index, 0, 4                SEPARATOR \
-  Ldone ## _index:
-
-#define LOAD_VECTOR_UNALIGNEDh(_index)          \
-  andi.   0, 5, (1 PPC_LEFT_SHIFT(31-_index)) SEPARATOR \
-  beq     Ldone ## _index             SEPARATOR \
-  lwz     0, 424+_index*16(3)         SEPARATOR \
-  stw     0, 0(4)                     SEPARATOR \
-  lwz     0, 424+_index*16+4(3)       SEPARATOR \
-  stw     0, 4(4)                     SEPARATOR \
-  lwz     0, 424+_index*16+8(3)       SEPARATOR \
-  stw     0, 8(%r4)                   SEPARATOR \
-  lwz     0, 424+_index*16+12(3)      SEPARATOR \
-  stw     0, 12(4)                    SEPARATOR \
-  lvx     _index, 0, 4                SEPARATOR \
-  Ldone ## _index:
-
 
   LOAD_VECTOR_UNALIGNEDl(0)
   LOAD_VECTOR_UNALIGNEDl(1)
@@ -604,7 +673,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldr    d30,     [x0, #0x200]
   ldr    d31,     [x0, #0x208]
 
-  // Finally, restore sp. This must be done after the the last read from the
+  // Finally, restore sp. This must be done after the last read from the
   // context struct, because it is allocated on the stack, and an exception
   // could clobber the de-allocated portion of the stack after sp has been
   // restored.
@@ -655,7 +724,13 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_arm20restoreCoreAndJumpToEv)
   ldr sp, [lr, #52]
   ldr lr, [lr, #60]  @ restore pc into lr
 #endif
+#if defined(__ARM_FEATURE_BTI_DEFAULT) && !defined(__ARM_ARCH_ISA_ARM)
+  // 'bx' is not BTI setting when used with lr, therefore r12 is used instead
+  mov r12, lr
+  JMP(r12)
+#else
   JMP(lr)
+#endif
 
 @
 @ static void libunwind::Registers_arm::restoreVFPWithFLDMD(unw_fpreg_t* values)
@@ -800,11 +875,12 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   l.lwz    r30,120(r3)
   l.lwz    r31,124(r3)
 
+  # load new pc into ra
+  l.lwz    r9, 128(r3)
+
   # at last, restore r3
   l.lwz    r3,  12(r3)
 
-  # load new pc into ra
-  l.lwz    r9, 128(r3)
   # jump to pc
   l.jr     r9
    l.nop
@@ -917,11 +993,13 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   ldc1  $f31, (4 * 36 + 8 * 31)($4)
 #endif
 #endif
+#if __mips_isa_rev < 6
   // restore hi and lo
   lw    $8, (4 * 33)($4)
   mthi  $8
   lw    $8, (4 * 34)($4)
   mtlo  $8
+#endif
   // r0 is zero
   lw    $1, (4 * 1)($4)
   lw    $2, (4 * 2)($4)
@@ -974,81 +1052,78 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
   .set noreorder
   .set nomacro
 #ifdef __mips_hard_float
-  ldc1  $f0, (8 * 35)($4)
-  ldc1  $f1, (8 * 36)($4)
-  ldc1  $f2, (8 * 37)($4)
-  ldc1  $f3, (8 * 38)($4)
-  ldc1  $f4, (8 * 39)($4)
-  ldc1  $f5, (8 * 40)($4)
-  ldc1  $f6, (8 * 41)($4)
-  ldc1  $f7, (8 * 42)($4)
-  ldc1  $f8, (8 * 43)($4)
-  ldc1  $f9, (8 * 44)($4)
-  ldc1  $f10, (8 * 45)($4)
-  ldc1  $f11, (8 * 46)($4)
-  ldc1  $f12, (8 * 47)($4)
-  ldc1  $f13, (8 * 48)($4)
-  ldc1  $f14, (8 * 49)($4)
-  ldc1  $f15, (8 * 50)($4)
-  ldc1  $f16, (8 * 51)($4)
-  ldc1  $f17, (8 * 52)($4)
-  ldc1  $f18, (8 * 53)($4)
-  ldc1  $f19, (8 * 54)($4)
-  ldc1  $f20, (8 * 55)($4)
-  ldc1  $f21, (8 * 56)($4)
-  ldc1  $f22, (8 * 57)($4)
-  ldc1  $f23, (8 * 58)($4)
-  ldc1  $f24, (8 * 59)($4)
-  ldc1  $f25, (8 * 60)($4)
-  ldc1  $f26, (8 * 61)($4)
-  ldc1  $f27, (8 * 62)($4)
-  ldc1  $f28, (8 * 63)($4)
-  ldc1  $f29, (8 * 64)($4)
-  ldc1  $f30, (8 * 65)($4)
-  ldc1  $f31, (8 * 66)($4)
+  .irp i,FROM_0_TO_31
+    ldc1 $f\i, (280+8*\i)($4)
+  .endr
 #endif
+#if __mips_isa_rev < 6
   // restore hi and lo
   ld    $8, (8 * 33)($4)
   mthi  $8
   ld    $8, (8 * 34)($4)
   mtlo  $8
+#endif
   // r0 is zero
   ld    $1, (8 * 1)($4)
   ld    $2, (8 * 2)($4)
   ld    $3, (8 * 3)($4)
   // skip a0 for now
-  ld    $5, (8 * 5)($4)
-  ld    $6, (8 * 6)($4)
-  ld    $7, (8 * 7)($4)
-  ld    $8, (8 * 8)($4)
-  ld    $9, (8 * 9)($4)
-  ld    $10, (8 * 10)($4)
-  ld    $11, (8 * 11)($4)
-  ld    $12, (8 * 12)($4)
-  ld    $13, (8 * 13)($4)
-  ld    $14, (8 * 14)($4)
-  ld    $15, (8 * 15)($4)
-  ld    $16, (8 * 16)($4)
-  ld    $17, (8 * 17)($4)
-  ld    $18, (8 * 18)($4)
-  ld    $19, (8 * 19)($4)
-  ld    $20, (8 * 20)($4)
-  ld    $21, (8 * 21)($4)
-  ld    $22, (8 * 22)($4)
-  ld    $23, (8 * 23)($4)
-  ld    $24, (8 * 24)($4)
-  ld    $25, (8 * 25)($4)
-  ld    $26, (8 * 26)($4)
-  ld    $27, (8 * 27)($4)
-  ld    $28, (8 * 28)($4)
-  ld    $29, (8 * 29)($4)
-  ld    $30, (8 * 30)($4)
+  .irp i,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30
+    ld $\i, (8 * \i)($4)
+  .endr
   // load new pc into ra
   ld    $31, (8 * 32)($4)
   // jump to ra, load a0 in the delay slot
   jr    $31
   ld    $4, (8 * 4)($4)
   .set pop
+
+#elif defined(__sparc__) && defined(__arch64__)
+
+DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind17Registers_sparc646jumptoEv)
+//
+// void libunwind::Registers_sparc64::jumpto()
+//
+// On entry:
+//  thread_state pointer is in %o0
+//
+  .register %g2, #scratch
+  .register %g3, #scratch
+  .register %g6, #scratch
+  .register %g7, #scratch
+  flushw
+  ldx  [%o0 + 0x08], %g1
+  ldx  [%o0 + 0x10], %g2
+  ldx  [%o0 + 0x18], %g3
+  ldx  [%o0 + 0x20], %g4
+  ldx  [%o0 + 0x28], %g5
+  ldx  [%o0 + 0x30], %g6
+  ldx  [%o0 + 0x38], %g7
+  ldx  [%o0 + 0x48], %o1
+  ldx  [%o0 + 0x50], %o2
+  ldx  [%o0 + 0x58], %o3
+  ldx  [%o0 + 0x60], %o4
+  ldx  [%o0 + 0x68], %o5
+  ldx  [%o0 + 0x70], %o6
+  ldx  [%o0 + 0x78], %o7
+  ldx  [%o0 + 0x80], %l0
+  ldx  [%o0 + 0x88], %l1
+  ldx  [%o0 + 0x90], %l2
+  ldx  [%o0 + 0x98], %l3
+  ldx  [%o0 + 0xa0], %l4
+  ldx  [%o0 + 0xa8], %l5
+  ldx  [%o0 + 0xb0], %l6
+  ldx  [%o0 + 0xb8], %l7
+  ldx  [%o0 + 0xc0], %i0
+  ldx  [%o0 + 0xc8], %i1
+  ldx  [%o0 + 0xd0], %i2
+  ldx  [%o0 + 0xd8], %i3
+  ldx  [%o0 + 0xe0], %i4
+  ldx  [%o0 + 0xe8], %i5
+  ldx  [%o0 + 0xf0], %i6
+  ldx  [%o0 + 0xf8], %i7
+  jmp  %o7
+   ldx [%o0 + 0x40], %o0
 
 #elif defined(__sparc__)
 
@@ -1083,75 +1158,77 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_sparc6jumptoEv)
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_riscv6jumptoEv)
 # if defined(__riscv_flen)
-  FLOAD    f0, (RISCV_FOFFSET + RISCV_FSIZE * 0)(a0)
-  FLOAD    f1, (RISCV_FOFFSET + RISCV_FSIZE * 1)(a0)
-  FLOAD    f2, (RISCV_FOFFSET + RISCV_FSIZE * 2)(a0)
-  FLOAD    f3, (RISCV_FOFFSET + RISCV_FSIZE * 3)(a0)
-  FLOAD    f4, (RISCV_FOFFSET + RISCV_FSIZE * 4)(a0)
-  FLOAD    f5, (RISCV_FOFFSET + RISCV_FSIZE * 5)(a0)
-  FLOAD    f6, (RISCV_FOFFSET + RISCV_FSIZE * 6)(a0)
-  FLOAD    f7, (RISCV_FOFFSET + RISCV_FSIZE * 7)(a0)
-  FLOAD    f8, (RISCV_FOFFSET + RISCV_FSIZE * 8)(a0)
-  FLOAD    f9, (RISCV_FOFFSET + RISCV_FSIZE * 9)(a0)
-  FLOAD    f10, (RISCV_FOFFSET + RISCV_FSIZE * 10)(a0)
-  FLOAD    f11, (RISCV_FOFFSET + RISCV_FSIZE * 11)(a0)
-  FLOAD    f12, (RISCV_FOFFSET + RISCV_FSIZE * 12)(a0)
-  FLOAD    f13, (RISCV_FOFFSET + RISCV_FSIZE * 13)(a0)
-  FLOAD    f14, (RISCV_FOFFSET + RISCV_FSIZE * 14)(a0)
-  FLOAD    f15, (RISCV_FOFFSET + RISCV_FSIZE * 15)(a0)
-  FLOAD    f16, (RISCV_FOFFSET + RISCV_FSIZE * 16)(a0)
-  FLOAD    f17, (RISCV_FOFFSET + RISCV_FSIZE * 17)(a0)
-  FLOAD    f18, (RISCV_FOFFSET + RISCV_FSIZE * 18)(a0)
-  FLOAD    f19, (RISCV_FOFFSET + RISCV_FSIZE * 19)(a0)
-  FLOAD    f20, (RISCV_FOFFSET + RISCV_FSIZE * 20)(a0)
-  FLOAD    f21, (RISCV_FOFFSET + RISCV_FSIZE * 21)(a0)
-  FLOAD    f22, (RISCV_FOFFSET + RISCV_FSIZE * 22)(a0)
-  FLOAD    f23, (RISCV_FOFFSET + RISCV_FSIZE * 23)(a0)
-  FLOAD    f24, (RISCV_FOFFSET + RISCV_FSIZE * 24)(a0)
-  FLOAD    f25, (RISCV_FOFFSET + RISCV_FSIZE * 25)(a0)
-  FLOAD    f26, (RISCV_FOFFSET + RISCV_FSIZE * 26)(a0)
-  FLOAD    f27, (RISCV_FOFFSET + RISCV_FSIZE * 27)(a0)
-  FLOAD    f28, (RISCV_FOFFSET + RISCV_FSIZE * 28)(a0)
-  FLOAD    f29, (RISCV_FOFFSET + RISCV_FSIZE * 29)(a0)
-  FLOAD    f30, (RISCV_FOFFSET + RISCV_FSIZE * 30)(a0)
-  FLOAD    f31, (RISCV_FOFFSET + RISCV_FSIZE * 31)(a0)
+  .irp i,FROM_0_TO_31
+    FLOAD f\i, (RISCV_FOFFSET + RISCV_FSIZE * \i)(a0)
+  .endr
 # endif
 
   // x0 is zero
   ILOAD    x1, (RISCV_ISIZE * 0)(a0) // restore pc into ra
-  ILOAD    x2, (RISCV_ISIZE * 2)(a0)
-  ILOAD    x3, (RISCV_ISIZE * 3)(a0)
-  ILOAD    x4, (RISCV_ISIZE * 4)(a0)
-  ILOAD    x5, (RISCV_ISIZE * 5)(a0)
-  ILOAD    x6, (RISCV_ISIZE * 6)(a0)
-  ILOAD    x7, (RISCV_ISIZE * 7)(a0)
-  ILOAD    x8, (RISCV_ISIZE * 8)(a0)
-  ILOAD    x9, (RISCV_ISIZE * 9)(a0)
+  .irp i,2,3,4,5,6,7,8,9
+    ILOAD x\i, (RISCV_ISIZE * \i)(a0)
+  .endr
   // skip a0 for now
-  ILOAD    x11, (RISCV_ISIZE * 11)(a0)
-  ILOAD    x12, (RISCV_ISIZE * 12)(a0)
-  ILOAD    x13, (RISCV_ISIZE * 13)(a0)
-  ILOAD    x14, (RISCV_ISIZE * 14)(a0)
-  ILOAD    x15, (RISCV_ISIZE * 15)(a0)
-  ILOAD    x16, (RISCV_ISIZE * 16)(a0)
-  ILOAD    x17, (RISCV_ISIZE * 17)(a0)
-  ILOAD    x18, (RISCV_ISIZE * 18)(a0)
-  ILOAD    x19, (RISCV_ISIZE * 19)(a0)
-  ILOAD    x20, (RISCV_ISIZE * 20)(a0)
-  ILOAD    x21, (RISCV_ISIZE * 21)(a0)
-  ILOAD    x22, (RISCV_ISIZE * 22)(a0)
-  ILOAD    x23, (RISCV_ISIZE * 23)(a0)
-  ILOAD    x24, (RISCV_ISIZE * 24)(a0)
-  ILOAD    x25, (RISCV_ISIZE * 25)(a0)
-  ILOAD    x26, (RISCV_ISIZE * 26)(a0)
-  ILOAD    x27, (RISCV_ISIZE * 27)(a0)
-  ILOAD    x28, (RISCV_ISIZE * 28)(a0)
-  ILOAD    x29, (RISCV_ISIZE * 29)(a0)
-  ILOAD    x30, (RISCV_ISIZE * 30)(a0)
-  ILOAD    x31, (RISCV_ISIZE * 31)(a0)
+  .irp i,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+    ILOAD x\i, (RISCV_ISIZE * \i)(a0)
+  .endr
   ILOAD    x10, (RISCV_ISIZE * 10)(a0)   // restore a0
 
   ret                       // jump to ra
+
+#elif defined(__s390x__)
+
+DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_s390x6jumptoEv)
+//
+// void libunwind::Registers_s390x::jumpto()
+//
+// On entry:
+//  thread_state pointer is in r2
+//
+
+  // Skip PSWM, but load PSWA into r1
+  lg %r1, 8(%r2)
+
+  // Restore FPRs
+  .irp i,FROM_0_TO_15
+    ld %f\i, (144+8*\i)(%r2)
+  .endr
+
+  // Restore GPRs - skipping %r0 and %r1
+  lmg  %r2, %r15, 32(%r2)
+
+  // Return to PSWA (was loaded into %r1 above)
+  br %r1
+
+#elif defined(__loongarch__) && __loongarch_grlen == 64
+
+//
+// void libunwind::Registers_loongarch::jumpto()
+//
+// On entry:
+//  thread_state pointer is in $a0($r4)
+//
+  .p2align 2
+DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
+# if __loongarch_frlen == 64
+  .irp i,FROM_0_TO_31
+    fld.d $f\i, $a0, (8 * 33 + 8 * \i)
+  .endr
+# endif
+
+  // $r0 is zero
+  .irp i,1,2,3
+    ld.d $r\i, $a0, (8 * \i)
+  .endr
+  // skip $a0 for now
+  .irp i,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+    ld.d $r\i, $a0, (8 * \i)
+  .endr
+
+  ld.d    $ra,  $a0, (8 * 32)  // load new pc into $ra
+  ld.d    $a0,  $a0, (8 * 4)   // restore $a0 last
+
+  jr      $ra
 
 #endif
 

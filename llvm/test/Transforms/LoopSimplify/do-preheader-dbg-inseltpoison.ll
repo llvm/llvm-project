@@ -1,7 +1,7 @@
 ; Confirm that the line number for the do.body.preheader block
 ; branch is the the start of the loop.
 
-; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -loop-simplify -keep-loops="false" -S <%s | FileCheck %s
+; RUN: opt -passes=simplifycfg,loop-simplify -keep-loops="false" -simplifycfg-require-and-preserve-domtree=1 -S <%s | FileCheck %s
 
 ; CHECK: do.body.preheader:
 ; CHECK-NEXT: phi
@@ -22,7 +22,7 @@
 ;     return Total;
 ; }
 
-define dso_local i32 @"foo"(i8* nocapture readonly %Bytes, i32 %Count) local_unnamed_addr !dbg !8 {
+define dso_local i32 @"foo"(ptr nocapture readonly %Bytes, i32 %Count) local_unnamed_addr !dbg !8 {
 entry:
   %0 = sext i32 %Count to i64, !dbg !10
   %min.iters.check = icmp ult i32 %Count, 8, !dbg !10
@@ -39,15 +39,15 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %vec.phi5 = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %12, %vector.body ]
   %1 = xor i64 %index, -1, !dbg !11
   %2 = add i64 %1, %0, !dbg !11
-  %3 = getelementptr inbounds i8, i8* %Bytes, i64 %2, !dbg !11
-  %4 = getelementptr inbounds i8, i8* %3, i64 -3, !dbg !11
-  %5 = bitcast i8* %4 to <4 x i8>*, !dbg !11
-  %wide.load = load <4 x i8>, <4 x i8>* %5, align 1, !dbg !11, !tbaa !12
+  %3 = getelementptr inbounds i8, ptr %Bytes, i64 %2, !dbg !11
+  %4 = getelementptr inbounds i8, ptr %3, i64 -3, !dbg !11
+  %5 = bitcast ptr %4 to ptr, !dbg !11
+  %wide.load = load <4 x i8>, ptr %5, align 1, !dbg !11, !tbaa !12
   %reverse = shufflevector <4 x i8> %wide.load, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>, !dbg !11
-  %6 = getelementptr inbounds i8, i8* %3, i64 -4, !dbg !11
-  %7 = getelementptr inbounds i8, i8* %6, i64 -3, !dbg !11
-  %8 = bitcast i8* %7 to <4 x i8>*, !dbg !11
-  %wide.load6 = load <4 x i8>, <4 x i8>* %8, align 1, !dbg !11, !tbaa !12
+  %6 = getelementptr inbounds i8, ptr %3, i64 -4, !dbg !11
+  %7 = getelementptr inbounds i8, ptr %6, i64 -3, !dbg !11
+  %8 = bitcast ptr %7 to ptr, !dbg !11
+  %wide.load6 = load <4 x i8>, ptr %8, align 1, !dbg !11, !tbaa !12
   %reverse7 = shufflevector <4 x i8> %wide.load6, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>, !dbg !11
   %9 = sext <4 x i8> %reverse to <4 x i32>, !dbg !11
   %10 = sext <4 x i8> %reverse7 to <4 x i32>, !dbg !11
@@ -78,8 +78,8 @@ do.body:                                          ; preds = %do.body.preheader, 
   %indvars.iv = phi i64 [ %indvars.iv.next, %do.body ], [ %indvars.iv.ph, %do.body.preheader ]
   %Total.0 = phi i32 [ %add, %do.body ], [ %Total.0.ph, %do.body.preheader ], !dbg !18
   %indvars.iv.next = add nsw i64 %indvars.iv, -1, !dbg !11
-  %arrayidx = getelementptr inbounds i8, i8* %Bytes, i64 %indvars.iv.next, !dbg !11
-  %15 = load i8, i8* %arrayidx, align 1, !dbg !11, !tbaa !12
+  %arrayidx = getelementptr inbounds i8, ptr %Bytes, i64 %indvars.iv.next, !dbg !11
+  %15 = load i8, ptr %arrayidx, align 1, !dbg !11, !tbaa !12
   %conv = sext i8 %15 to i32, !dbg !11
   %add = add nsw i32 %Total.0, %conv, !dbg !11
   %16 = icmp eq i64 %indvars.iv.next, 0

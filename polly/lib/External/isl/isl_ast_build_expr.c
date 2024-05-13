@@ -40,6 +40,8 @@ static __isl_give isl_aff *oppose_div_arg(__isl_take isl_aff *aff,
 /* Internal data structure used inside isl_ast_expr_add_term.
  * The domain of "build" is used to simplify the expressions.
  * "build" needs to be set by the caller of isl_ast_expr_add_term.
+ * "ls" is the domain local space of the affine expression
+ * of which a term is being added.
  * "cst" is the constant term of the expression in which the added term
  * appears.  It may be modified by isl_ast_expr_add_term.
  *
@@ -48,6 +50,7 @@ static __isl_give isl_aff *oppose_div_arg(__isl_take isl_aff *aff,
  */
 struct isl_ast_add_term_data {
 	isl_ast_build *build;
+	isl_local_space *ls;
 	isl_val *cst;
 	isl_val *v;
 };
@@ -72,23 +75,23 @@ struct isl_ast_add_term_data {
  * Similarly, if floor(cst/v) is zero, then there is no point in
  * checking again.
  */
-static int is_non_neg_after_stealing(__isl_keep isl_aff *aff,
+static isl_bool is_non_neg_after_stealing(__isl_keep isl_aff *aff,
 	__isl_keep isl_val *d, struct isl_ast_add_term_data *data)
 {
 	isl_aff *shifted;
 	isl_val *shift;
-	int is_zero;
-	int non_neg;
+	isl_bool is_zero;
+	isl_bool non_neg;
 
 	if (isl_val_sgn(data->cst) != isl_val_sgn(data->v))
-		return 0;
+		return isl_bool_false;
 
 	shift = isl_val_div(isl_val_copy(data->cst), isl_val_copy(data->v));
 	shift = isl_val_floor(shift);
 	is_zero = isl_val_is_zero(shift);
 	if (is_zero < 0 || is_zero) {
 		isl_val_free(shift);
-		return is_zero < 0 ? -1 : 0;
+		return isl_bool_not(is_zero);
 	}
 	shift = isl_val_mul(shift, isl_val_copy(d));
 	shifted = isl_aff_copy(aff);
@@ -99,7 +102,7 @@ static int is_non_neg_after_stealing(__isl_keep isl_aff *aff,
 	return non_neg;
 }
 
-/* Given the numerator "aff' of the argument of an integer division
+/* Given the numerator "aff" of the argument of an integer division
  * with denominator "d", steal part of the constant term of
  * the expression in which the integer division appears to make it
  * non-negative over data->build->domain.
@@ -115,7 +118,7 @@ static int is_non_neg_after_stealing(__isl_keep isl_aff *aff,
  * That is, compute the minimal value "m" of "aff" over
  * data->build->domain and take
  *
- *	s = ceil(m/d)
+ *	s = ceil(-m/d)
  *
  * such that
  *
@@ -147,11 +150,26 @@ static __isl_give isl_aff *steal_from_cst(__isl_take isl_aff *aff,
 	return isl_aff_add_constant_val(aff, shift);
 }
 
-/* Create an isl_ast_expr evaluating the div at position "pos" in "ls".
+/* Construct an expression representing the binary operation "type"
+ * (some division or modulo) applied to the expressions
+ * constructed from "aff" and "v".
+ */
+static __isl_give isl_ast_expr *div_mod(enum isl_ast_expr_op_type type,
+	__isl_take isl_aff *aff, __isl_take isl_val *v,
+	__isl_keep isl_ast_build *build)
+{
+	isl_ast_expr *expr1, *expr2;
+
+	expr1 = isl_ast_expr_from_aff(aff, build);
+	expr2 = isl_ast_expr_from_val(v);
+	return isl_ast_expr_alloc_binary(type, expr1, expr2);
+}
+
+/* Create an isl_ast_expr evaluating the div at position "pos" in data->ls.
  * The result is simplified in terms of data->build->domain.
  * This function may change (the sign of) data->v.
  *
- * "ls" is known to be non-NULL.
+ * data->ls is known to be non-NULL.
  *
  * Let the div be of the form floor(e/d).
  * If the ast_build_prefer_pdiv option is set then we check if "e"
@@ -182,22 +200,21 @@ static __isl_give isl_aff *steal_from_cst(__isl_take isl_aff *aff,
  * with s the minimal shift that makes the argument non-negative.
  */
 static __isl_give isl_ast_expr *var_div(struct isl_ast_add_term_data *data,
-	__isl_keep isl_local_space *ls, int pos)
+	int pos)
 {
-	isl_ctx *ctx = isl_local_space_get_ctx(ls);
+	isl_ctx *ctx = isl_local_space_get_ctx(data->ls);
 	isl_aff *aff;
-	isl_ast_expr *num, *den;
 	isl_val *d;
 	enum isl_ast_expr_op_type type;
 
-	aff = isl_local_space_get_div(ls, pos);
+	aff = isl_local_space_get_div(data->ls, pos);
 	d = isl_aff_get_denominator_val(aff);
 	aff = isl_aff_scale_val(aff, isl_val_copy(d));
-	den = isl_ast_expr_from_val(isl_val_copy(d));
 
 	type = isl_ast_expr_op_fdiv_q;
 	if (isl_options_get_ast_build_prefer_pdiv(ctx)) {
-		int non_neg = isl_ast_build_aff_is_nonneg(data->build, aff);
+		isl_bool non_neg;
+		non_neg = isl_ast_build_aff_is_nonneg(data->build, aff);
 		if (non_neg >= 0 && !non_neg) {
 			isl_aff *opp = oppose_div_arg(isl_aff_copy(aff),
 							isl_val_copy(d));
@@ -220,49 +237,47 @@ static __isl_give isl_ast_expr *var_div(struct isl_ast_add_term_data *data,
 			type = isl_ast_expr_op_pdiv_q;
 	}
 
-	isl_val_free(d);
-	num = isl_ast_expr_from_aff(aff, data->build);
-	return isl_ast_expr_alloc_binary(type, num, den);
+	return div_mod(type, aff, d, data->build);
 }
 
-/* Create an isl_ast_expr evaluating the specified dimension of "ls".
+/* Create an isl_ast_expr evaluating the specified dimension of data->ls.
  * The result is simplified in terms of data->build->domain.
  * This function may change (the sign of) data->v.
  *
  * The isl_ast_expr is constructed based on the type of the dimension.
  * - divs are constructed by var_div
  * - set variables are constructed from the iterator isl_ids in data->build
- * - parameters are constructed from the isl_ids in "ls"
+ * - parameters are constructed from the isl_ids in data->ls
  */
 static __isl_give isl_ast_expr *var(struct isl_ast_add_term_data *data,
-	__isl_keep isl_local_space *ls, enum isl_dim_type type, int pos)
+	enum isl_dim_type type, int pos)
 {
-	isl_ctx *ctx = isl_local_space_get_ctx(ls);
+	isl_ctx *ctx = isl_local_space_get_ctx(data->ls);
 	isl_id *id;
 
 	if (type == isl_dim_div)
-		return var_div(data, ls, pos);
+		return var_div(data, pos);
 
 	if (type == isl_dim_set) {
 		id = isl_ast_build_get_iterator_id(data->build, pos);
 		return isl_ast_expr_from_id(id);
 	}
 
-	if (!isl_local_space_has_dim_id(ls, type, pos))
+	if (!isl_local_space_has_dim_id(data->ls, type, pos))
 		isl_die(ctx, isl_error_internal, "unnamed dimension",
 			return NULL);
-	id = isl_local_space_get_dim_id(ls, type, pos);
+	id = isl_local_space_get_dim_id(data->ls, type, pos);
 	return isl_ast_expr_from_id(id);
 }
 
 /* Does "expr" represent the zero integer?
  */
-static int ast_expr_is_zero(__isl_keep isl_ast_expr *expr)
+static isl_bool ast_expr_is_zero(__isl_keep isl_ast_expr *expr)
 {
 	if (!expr)
-		return -1;
+		return isl_bool_error;
 	if (expr->type != isl_ast_expr_int)
-		return 0;
+		return isl_bool_false;
 	return isl_val_is_zero(expr->u.v);
 }
 
@@ -343,10 +358,8 @@ static __isl_give isl_ast_expr *isl_ast_expr_mod(__isl_keep isl_val *v,
 	if (!aff)
 		return NULL;
 
-	expr = isl_ast_expr_from_aff(isl_aff_copy(aff), build);
-
-	c = isl_ast_expr_from_val(isl_val_copy(d));
-	expr = isl_ast_expr_alloc_binary(isl_ast_expr_op_pdiv_r, expr, c);
+	expr = div_mod(isl_ast_expr_op_pdiv_r,
+			isl_aff_copy(aff), isl_val_copy(d), build);
 
 	if (!isl_val_is_one(v)) {
 		c = isl_ast_expr_from_val(isl_val_copy(v));
@@ -394,7 +407,7 @@ error:
 	return NULL;
 }
 
-/* Add an expression for "*v" times the specified dimension of "ls"
+/* Add an expression for "*v" times the specified dimension of data->ls
  * to expr.
  * If the dimension is an integer division, then this function
  * may modify data->cst in order to make the numerator non-negative.
@@ -418,8 +431,7 @@ error:
  *
  */
 static __isl_give isl_ast_expr *isl_ast_expr_add_term(
-	__isl_take isl_ast_expr *expr,
-	__isl_keep isl_local_space *ls, enum isl_dim_type type, int pos,
+	__isl_take isl_ast_expr *expr, enum isl_dim_type type, int pos,
 	__isl_take isl_val *v, struct isl_ast_add_term_data *data)
 {
 	isl_ast_expr *term;
@@ -428,7 +440,7 @@ static __isl_give isl_ast_expr *isl_ast_expr_add_term(
 		return NULL;
 
 	data->v = v;
-	term = var(data, ls, type, pos);
+	term = var(data, type, pos);
 	v = data->v;
 
 	if (isl_val_is_neg(v) && !ast_expr_is_zero(expr)) {
@@ -569,7 +581,7 @@ static isl_bool is_even_test(struct isl_extract_mod_data *data,
  *
  * Also, if "lin - 1" is non-negative, then "lin" is non-negative too.
  */
-static int extract_term_and_mod(struct isl_extract_mod_data *data,
+static isl_stat extract_term_and_mod(struct isl_extract_mod_data *data,
 	__isl_take isl_aff *term, __isl_take isl_aff *arg)
 {
 	isl_bool even;
@@ -605,9 +617,9 @@ static int extract_term_and_mod(struct isl_extract_mod_data *data,
 	else
 		data->add = isl_aff_add(data->add, term);
 	if (!data->add)
-		return -1;
+		return isl_stat_error;
 
-	return 0;
+	return isl_stat_ok;
 }
 
 /* Given that data->v * div_i in data->aff is of the form
@@ -628,7 +640,7 @@ static int extract_term_and_mod(struct isl_extract_mod_data *data,
  *
  * to data->neg or data->pos depending on the sign of -f.
  */
-static int extract_mod(struct isl_extract_mod_data *data)
+static isl_stat extract_mod(struct isl_extract_mod_data *data)
 {
 	return extract_term_and_mod(data, isl_aff_copy(data->div),
 			isl_aff_copy(data->div));
@@ -652,9 +664,9 @@ static int extract_mod(struct isl_extract_mod_data *data)
  *
  * This function may modify data->div.
  */
-static int extract_nonneg_mod(struct isl_extract_mod_data *data)
+static isl_stat extract_nonneg_mod(struct isl_extract_mod_data *data)
 {
-	int mod;
+	isl_bool mod;
 
 	mod = isl_ast_build_aff_is_nonneg(data->build, data->div);
 	if (mod < 0)
@@ -671,10 +683,10 @@ static int extract_nonneg_mod(struct isl_extract_mod_data *data)
 		return extract_mod(data);
 	}
 
-	return 0;
+	return isl_stat_ok;
 error:
 	data->aff = isl_aff_free(data->aff);
-	return -1;
+	return isl_stat_error;
 }
 
 /* Is the affine expression of constraint "c" "simpler" than data->nonneg
@@ -735,19 +747,21 @@ static isl_stat check_parallel_or_opposite(__isl_take isl_constraint *c,
 	enum isl_dim_type a_type[2] = { isl_dim_param, isl_dim_in };
 	int i, t;
 	isl_size n[2];
-	int parallel = 1, opposite = 1;
+	isl_bool parallel = isl_bool_true, opposite = isl_bool_true;
 
 	for (t = 0; t < 2; ++t) {
 		n[t] = isl_constraint_dim(c, c_type[t]);
 		if (n[t] < 0)
-			return isl_stat_error;
+			goto error;
 		for (i = 0; i < n[t]; ++i) {
-			int a, b;
+			isl_bool a, b;
 
 			a = isl_constraint_involves_dims(c, c_type[t], i, 1);
 			b = isl_aff_involves_dims(data->div, a_type[t], i, 1);
+			if (a < 0 || b < 0)
+				goto error;
 			if (a != b)
-				parallel = opposite = 0;
+				parallel = opposite = isl_bool_false;
 		}
 	}
 
@@ -756,7 +770,7 @@ static isl_stat check_parallel_or_opposite(__isl_take isl_constraint *c,
 
 		v = isl_val_abs(isl_constraint_get_constant_val(c));
 		if (isl_val_cmp_si(v, 1 << 15) > 0)
-			parallel = opposite = 0;
+			parallel = opposite = isl_bool_false;
 		isl_val_free(v);
 	}
 
@@ -781,6 +795,8 @@ static isl_stat check_parallel_or_opposite(__isl_take isl_constraint *c,
 			}
 			isl_val_free(v1);
 			isl_val_free(v2);
+			if (parallel < 0 || opposite < 0)
+				goto error;
 		}
 	}
 
@@ -796,6 +812,9 @@ static isl_stat check_parallel_or_opposite(__isl_take isl_constraint *c,
 		return isl_stat_error;
 
 	return isl_stat_ok;
+error:
+	isl_constraint_free(c);
+	return isl_stat_error;
 }
 
 /* Given that data->v * div_i in data->aff is of the form
@@ -854,7 +873,7 @@ static isl_stat check_parallel_or_opposite(__isl_take isl_constraint *c,
  * multiple of d to make it positive.
  *
  *
- * Note that the above is a only a very simple heuristic for finding an
+ * Note that the above is only a very simple heuristic for finding an
  * appropriate expression.  We could try a bit harder by also considering
  * sums of constraints that involve disjoint sets of variables or
  * we could consider arbitrary linear combinations of constraints,
@@ -877,7 +896,7 @@ static isl_stat check_parallel_or_opposite(__isl_take isl_constraint *c,
  * Alternatively, we could first compute the dual of the domain
  * and plug in the constraints on the coefficients.
  */
-static int try_extract_mod(struct isl_extract_mod_data *data)
+static isl_stat try_extract_mod(struct isl_extract_mod_data *data)
 {
 	isl_basic_set *hull;
 	isl_val *v1, *v2;
@@ -937,7 +956,7 @@ static int try_extract_mod(struct isl_extract_mod_data *data)
 				    isl_aff_copy(data->div), data->nonneg);
 error:
 	data->aff = isl_aff_free(data->aff);
-	return -1;
+	return isl_stat_error;
 }
 
 /* Check if "data->aff" involves any (implicit) modulo computations based
@@ -1051,6 +1070,81 @@ static __isl_give isl_aff *extract_modulos(__isl_take isl_aff *aff,
 	return data.aff;
 }
 
+/* Call "fn" on every non-zero coefficient of "aff",
+ * passing it in the type of dimension (in terms of the domain),
+ * the position and the value, as long as "fn" returns isl_bool_true.
+ * If "reverse" is set, then the coefficients are considered in reverse order
+ * within each type.
+ */
+static isl_bool every_non_zero_coefficient(__isl_keep isl_aff *aff,
+	int reverse,
+	isl_bool (*fn)(enum isl_dim_type type, int pos, __isl_take isl_val *v,
+		void *user),
+	void *user)
+{
+	int i, j;
+	enum isl_dim_type t[] = { isl_dim_param, isl_dim_in, isl_dim_div };
+	enum isl_dim_type l[] = { isl_dim_param, isl_dim_set, isl_dim_div };
+	isl_val *v;
+
+	for (i = 0; i < 3; ++i) {
+		isl_size n;
+
+		n = isl_aff_dim(aff, t[i]);
+		if (n < 0)
+			return isl_bool_error;
+		for (j = 0; j < n; ++j) {
+			isl_bool ok;
+			int pos;
+
+			pos = reverse ? n - 1 - j : j;
+			v = isl_aff_get_coefficient_val(aff, t[i], pos);
+			ok = isl_val_is_zero(v);
+			if (ok >= 0 && !ok)
+				ok = fn(l[i], pos, v, user);
+			else
+				isl_val_free(v);
+			if (ok < 0 || !ok)
+				return ok;
+		}
+	}
+
+	return isl_bool_true;
+}
+
+/* Internal data structure for extract_rational.
+ *
+ * "d" is the denominator of the original affine expression.
+ * "ls" is its domain local space.
+ * "rat" collects the rational part.
+ */
+struct isl_ast_extract_rational_data {
+	isl_val *d;
+	isl_local_space *ls;
+
+	isl_aff *rat;
+};
+
+/* Given a non-zero term in an affine expression equal to "v" times
+ * the variable of type "type" at position "pos",
+ * add it to data->rat if "v" is not a multiple of data->d.
+ */
+static isl_bool add_rational(enum isl_dim_type type, int pos,
+	__isl_take isl_val *v, void *user)
+{
+	struct isl_ast_extract_rational_data *data = user;
+	isl_aff *rat;
+
+	if (isl_val_is_divisible_by(v, data->d)) {
+		isl_val_free(v);
+		return isl_bool_true;
+	}
+	rat = isl_aff_var_on_domain(isl_local_space_copy(data->ls), type, pos);
+	rat = isl_aff_scale_val(rat, v);
+	data->rat = isl_aff_add(data->rat, rat);
+	return isl_bool_true;
+}
+
 /* Check if aff involves any non-integer coefficients.
  * If so, split aff into
  *
@@ -1062,80 +1156,95 @@ static __isl_give isl_aff *extract_modulos(__isl_take isl_aff *aff,
 static __isl_give isl_aff *extract_rational(__isl_take isl_aff *aff,
 	__isl_keep isl_ast_expr **expr, __isl_keep isl_ast_build *build)
 {
-	int i, j;
-	isl_size n;
-	isl_aff *rat = NULL;
-	isl_local_space *ls = NULL;
+	struct isl_ast_extract_rational_data data = { NULL };
 	isl_ast_expr *rat_expr;
-	isl_val *v, *d;
-	enum isl_dim_type t[] = { isl_dim_param, isl_dim_in, isl_dim_div };
-	enum isl_dim_type l[] = { isl_dim_param, isl_dim_set, isl_dim_div };
+	isl_val *v;
 
 	if (!aff)
 		return NULL;
-	d = isl_aff_get_denominator_val(aff);
-	if (!d)
+	data.d = isl_aff_get_denominator_val(aff);
+	if (!data.d)
 		goto error;
-	if (isl_val_is_one(d)) {
-		isl_val_free(d);
+	if (isl_val_is_one(data.d)) {
+		isl_val_free(data.d);
 		return aff;
 	}
 
-	aff = isl_aff_scale_val(aff, isl_val_copy(d));
+	aff = isl_aff_scale_val(aff, isl_val_copy(data.d));
 
-	ls = isl_aff_get_domain_local_space(aff);
-	rat = isl_aff_zero_on_domain(isl_local_space_copy(ls));
+	data.ls = isl_aff_get_domain_local_space(aff);
+	data.rat = isl_aff_zero_on_domain(isl_local_space_copy(data.ls));
 
-	for (i = 0; i < 3; ++i) {
-		n = isl_aff_dim(aff, t[i]);
-		if (n < 0)
-			goto error;
-		for (j = 0; j < n; ++j) {
-			isl_aff *rat_j;
-
-			v = isl_aff_get_coefficient_val(aff, t[i], j);
-			if (!v)
-				goto error;
-			if (isl_val_is_divisible_by(v, d)) {
-				isl_val_free(v);
-				continue;
-			}
-			rat_j = isl_aff_var_on_domain(isl_local_space_copy(ls),
-							l[i], j);
-			rat_j = isl_aff_scale_val(rat_j, v);
-			rat = isl_aff_add(rat, rat_j);
-		}
-	}
+	if (every_non_zero_coefficient(aff, 0, &add_rational, &data) < 0)
+		goto error;
 
 	v = isl_aff_get_constant_val(aff);
-	if (isl_val_is_divisible_by(v, d)) {
+	if (isl_val_is_divisible_by(v, data.d)) {
 		isl_val_free(v);
 	} else {
 		isl_aff *rat_0;
 
-		rat_0 = isl_aff_val_on_domain(isl_local_space_copy(ls), v);
-		rat = isl_aff_add(rat, rat_0);
+		rat_0 = isl_aff_val_on_domain(isl_local_space_copy(data.ls), v);
+		data.rat = isl_aff_add(data.rat, rat_0);
 	}
 
-	isl_local_space_free(ls);
+	isl_local_space_free(data.ls);
 
-	aff = isl_aff_sub(aff, isl_aff_copy(rat));
-	aff = isl_aff_scale_down_val(aff, isl_val_copy(d));
+	aff = isl_aff_sub(aff, isl_aff_copy(data.rat));
+	aff = isl_aff_scale_down_val(aff, isl_val_copy(data.d));
 
-	rat_expr = isl_ast_expr_from_aff(rat, build);
-	rat_expr = isl_ast_expr_div(rat_expr, isl_ast_expr_from_val(d));
+	rat_expr = div_mod(isl_ast_expr_op_div, data.rat, data.d, build);
 	*expr = ast_expr_add(*expr, rat_expr);
 
 	return aff;
 error:
-	isl_aff_free(rat);
-	isl_local_space_free(ls);
+	isl_aff_free(data.rat);
+	isl_local_space_free(data.ls);
 	isl_aff_free(aff);
-	isl_val_free(d);
+	isl_val_free(data.d);
 	return NULL;
 }
 
-/* Construct an isl_ast_expr that evaluates the affine expression "aff",
+/* Internal data structure for isl_ast_expr_from_aff.
+ *
+ * "term" contains the information for adding a term.
+ * "expr" collects the results.
+ */
+struct isl_ast_add_terms_data {
+	struct isl_ast_add_term_data *term;
+	isl_ast_expr *expr;
+};
+
+/* Given a non-zero term in an affine expression equal to "v" times
+ * the variable of type "type" at position "pos",
+ * add the corresponding AST expression to data->expr.
+ */
+static isl_bool add_term(enum isl_dim_type type, int pos,
+	__isl_take isl_val *v, void *user)
+{
+	struct isl_ast_add_terms_data *data = user;
+
+	data->expr =
+		isl_ast_expr_add_term(data->expr, type, pos, v, data->term);
+
+	return isl_bool_true;
+}
+
+/* Add terms to "expr" for each variable in "aff".
+ * The result is simplified in terms of data->build->domain.
+ */
+static __isl_give isl_ast_expr *add_terms(__isl_take isl_ast_expr *expr,
+	__isl_keep isl_aff *aff, struct isl_ast_add_term_data *data)
+{
+	struct isl_ast_add_terms_data terms_data = { data, expr };
+
+	if (every_non_zero_coefficient(aff, 0, &add_term, &terms_data) < 0)
+		return isl_ast_expr_free(terms_data.expr);
+
+	return terms_data.expr;
+}
+
+/* Construct an isl_ast_expr that evaluates the affine expression "aff".
  * The result is simplified in terms of build->domain.
  *
  * We first extract hidden modulo computations from the affine expression
@@ -1146,15 +1255,9 @@ error:
 __isl_give isl_ast_expr *isl_ast_expr_from_aff(__isl_take isl_aff *aff,
 	__isl_keep isl_ast_build *build)
 {
-	int i, j;
-	isl_size n;
-	isl_val *v;
 	isl_ctx *ctx = isl_aff_get_ctx(aff);
 	isl_ast_expr *expr, *expr_neg;
-	enum isl_dim_type t[] = { isl_dim_param, isl_dim_in, isl_dim_div };
-	enum isl_dim_type l[] = { isl_dim_param, isl_dim_set, isl_dim_div };
-	isl_local_space *ls;
-	struct isl_ast_add_term_data data;
+	struct isl_ast_add_term_data term_data;
 
 	if (!aff)
 		return NULL;
@@ -1167,68 +1270,70 @@ __isl_give isl_ast_expr *isl_ast_expr_from_aff(__isl_take isl_aff *aff,
 	aff = extract_modulos(aff, &expr, &expr_neg, build);
 	expr = ast_expr_sub(expr, expr_neg);
 
-	ls = isl_aff_get_domain_local_space(aff);
+	term_data.build = build;
+	term_data.ls = isl_aff_get_domain_local_space(aff);
+	term_data.cst = isl_aff_get_constant_val(aff);
+	expr = add_terms(expr, aff, &term_data);
 
-	data.build = build;
-	data.cst = isl_aff_get_constant_val(aff);
-	for (i = 0; i < 3; ++i) {
-		n = isl_aff_dim(aff, t[i]);
-		if (n < 0)
-			expr = isl_ast_expr_free(expr);
-		for (j = 0; j < n; ++j) {
-			v = isl_aff_get_coefficient_val(aff, t[i], j);
-			if (!v)
-				expr = isl_ast_expr_free(expr);
-			if (isl_val_is_zero(v)) {
-				isl_val_free(v);
-				continue;
-			}
-			expr = isl_ast_expr_add_term(expr,
-							ls, l[i], j, v, &data);
-		}
-	}
+	expr = isl_ast_expr_add_int(expr, term_data.cst);
+	isl_local_space_free(term_data.ls);
 
-	expr = isl_ast_expr_add_int(expr, data.cst);
-
-	isl_local_space_free(ls);
 	isl_aff_free(aff);
 	return expr;
 }
 
-/* Add terms to "expr" for each variable in "aff" with a coefficient
- * with sign equal to "sign".
- * The result is simplified in terms of data->build->domain.
+/* Internal data structure for coefficients_of_sign.
+ *
+ * "sign" is the sign of the coefficients that should be retained.
+ * "aff" is the affine expression of which some coefficients are zeroed out.
  */
-static __isl_give isl_ast_expr *add_signed_terms(__isl_take isl_ast_expr *expr,
-	__isl_keep isl_aff *aff, int sign, struct isl_ast_add_term_data *data)
+struct isl_ast_coefficients_of_sign_data {
+	int sign;
+	isl_aff *aff;
+};
+
+/* Clear the specified coefficient of data->aff if the value "v"
+ * does not have the required sign.
+ */
+static isl_bool clear_opposite_sign(enum isl_dim_type type, int pos,
+	__isl_take isl_val *v, void *user)
 {
-	int i, j;
-	isl_val *v;
-	enum isl_dim_type t[] = { isl_dim_param, isl_dim_in, isl_dim_div };
-	enum isl_dim_type l[] = { isl_dim_param, isl_dim_set, isl_dim_div };
-	isl_local_space *ls;
+	struct isl_ast_coefficients_of_sign_data *data = user;
 
-	ls = isl_aff_get_domain_local_space(aff);
+	if (type == isl_dim_set)
+		type = isl_dim_in;
+	if (data->sign * isl_val_sgn(v) < 0)
+		data->aff = isl_aff_set_coefficient_si(data->aff, type, pos, 0);
+	isl_val_free(v);
 
-	for (i = 0; i < 3; ++i) {
-		isl_size n = isl_aff_dim(aff, t[i]);
-		if (n < 0)
-			expr = isl_ast_expr_free(expr);
-		for (j = 0; j < n; ++j) {
-			v = isl_aff_get_coefficient_val(aff, t[i], j);
-			if (sign * isl_val_sgn(v) <= 0) {
-				isl_val_free(v);
-				continue;
-			}
-			v = isl_val_abs(v);
-			expr = isl_ast_expr_add_term(expr,
-						ls, l[i], j, v, data);
-		}
-	}
+	return isl_bool_true;
+}
 
-	isl_local_space_free(ls);
+/* Extract the coefficients of "aff" (excluding the constant term)
+ * that have the given sign.
+ *
+ * Take a copy of "aff" and clear the coefficients that do not have
+ * the required sign.
+ * Consider the coefficients in reverse order since clearing
+ * the coefficient of an integer division in data.aff
+ * could result in the removal of that integer division from data.aff,
+ * changing the positions of all subsequent integer divisions of data.aff,
+ * while those of "aff" remain the same.
+ */
+static __isl_give isl_aff *coefficients_of_sign(__isl_take isl_aff *aff,
+	int sign)
+{
+	struct isl_ast_coefficients_of_sign_data data;
 
-	return expr;
+	data.sign = sign;
+	data.aff = isl_aff_copy(aff);
+	if (every_non_zero_coefficient(aff, 1, &clear_opposite_sign, &data) < 0)
+		data.aff = isl_aff_free(data.aff);
+	isl_aff_free(aff);
+
+	data.aff = isl_aff_set_constant_si(data.aff, 0);
+
+	return data.aff;
 }
 
 /* Should the constant term "v" be considered positive?
@@ -1240,13 +1345,17 @@ static __isl_give isl_ast_expr *add_signed_terms(__isl_take isl_ast_expr *expr,
  * This results in slightly shorter expressions and may reduce the risk
  * of overflows.
  */
-static int constant_is_considered_positive(__isl_keep isl_val *v,
+static isl_bool constant_is_considered_positive(__isl_keep isl_val *v,
 	__isl_keep isl_ast_expr *pos, __isl_keep isl_ast_expr *neg)
 {
-	if (ast_expr_is_zero(pos))
-		return 1;
-	if (ast_expr_is_zero(neg))
-		return 0;
+	isl_bool zero;
+
+	zero = ast_expr_is_zero(pos);
+	if (zero < 0 || zero)
+		return zero;
+	zero = ast_expr_is_zero(neg);
+	if (zero < 0 || zero)
+		return isl_bool_not(zero);
 	return isl_val_is_pos(v);
 }
 
@@ -1276,11 +1385,11 @@ static int constant_is_considered_positive(__isl_keep isl_val *v,
  *
  * where e and e' differ by a constant.
  */
-static int is_stride_constraint(__isl_keep isl_aff *aff, int pos)
+static isl_bool is_stride_constraint(__isl_keep isl_aff *aff, int pos)
 {
 	isl_aff *div;
 	isl_val *c, *d;
-	int eq;
+	isl_bool eq;
 
 	div = isl_aff_get_div(aff, pos);
 	c = isl_aff_get_coefficient_val(aff, isl_dim_div, pos);
@@ -1379,7 +1488,102 @@ static __isl_give isl_ast_expr *extract_stride_constraint(
 	return expr;
 }
 
-/* Construct an isl_ast_expr that evaluates the condition "constraint",
+/* Construct an isl_ast_expr evaluating
+ *
+ *	"expr_pos" == "expr_neg", if "eq" is set, or
+ *	"expr_pos" >= "expr_neg", if "eq" is not set
+ *
+ * However, if "expr_pos" is an integer constant (and "expr_neg" is not),
+ * then the two expressions are interchanged.  This ensures that,
+ * e.g., "i <= 5" is constructed rather than "5 >= i".
+ */
+static __isl_give isl_ast_expr *construct_constraint_expr(int eq,
+	__isl_take isl_ast_expr *expr_pos, __isl_take isl_ast_expr *expr_neg)
+{
+	isl_ast_expr *expr;
+	enum isl_ast_expr_op_type type;
+	int pos_is_cst, neg_is_cst;
+
+	pos_is_cst = isl_ast_expr_get_type(expr_pos) == isl_ast_expr_int;
+	neg_is_cst = isl_ast_expr_get_type(expr_neg) == isl_ast_expr_int;
+	if (pos_is_cst && !neg_is_cst) {
+		type = eq ? isl_ast_expr_op_eq : isl_ast_expr_op_le;
+		expr = isl_ast_expr_alloc_binary(type, expr_neg, expr_pos);
+	} else {
+		type = eq ? isl_ast_expr_op_eq : isl_ast_expr_op_ge;
+		expr = isl_ast_expr_alloc_binary(type, expr_pos, expr_neg);
+	}
+
+	return expr;
+}
+
+/* Construct an isl_ast_expr that evaluates the condition "aff" == 0
+ * (if "eq" is set) or "aff" >= 0 (otherwise).
+ * The result is simplified in terms of build->domain.
+ *
+ * We first extract hidden modulo computations from "aff"
+ * and then collect all the terms with a positive coefficient in cons_pos
+ * and the terms with a negative coefficient in cons_neg.
+ *
+ * The result is then essentially of the form
+ *
+ *	(isl_ast_expr_op_ge, expr(pos), expr(-neg)))
+ *
+ * or
+ *
+ *	(isl_ast_expr_op_eq, expr(pos), expr(-neg)))
+ *
+ * However, if there are no terms with positive coefficients (or no terms
+ * with negative coefficients), then the constant term is added to "pos"
+ * (or "neg"), ignoring the sign of the constant term.
+ */
+static __isl_give isl_ast_expr *isl_ast_expr_from_constraint_no_stride(
+	int eq, __isl_take isl_aff *aff, __isl_keep isl_ast_build *build)
+{
+	isl_bool cst_is_pos;
+	isl_ctx *ctx;
+	isl_ast_expr *expr_pos;
+	isl_ast_expr *expr_neg;
+	isl_aff *aff_pos, *aff_neg;
+	struct isl_ast_add_term_data data;
+
+	ctx = isl_aff_get_ctx(aff);
+	expr_pos = isl_ast_expr_alloc_int_si(ctx, 0);
+	expr_neg = isl_ast_expr_alloc_int_si(ctx, 0);
+
+	aff = extract_modulos(aff, &expr_pos, &expr_neg, build);
+
+	data.build = build;
+	data.ls = isl_aff_get_domain_local_space(aff);
+	data.cst = isl_aff_get_constant_val(aff);
+
+	aff_pos = coefficients_of_sign(isl_aff_copy(aff), 1);
+	aff_neg = isl_aff_neg(coefficients_of_sign(aff, -1));
+
+	expr_pos = add_terms(expr_pos, aff_pos, &data);
+	data.cst = isl_val_neg(data.cst);
+	expr_neg = add_terms(expr_neg, aff_neg, &data);
+	data.cst = isl_val_neg(data.cst);
+	isl_local_space_free(data.ls);
+
+	cst_is_pos =
+	    constant_is_considered_positive(data.cst, expr_pos, expr_neg);
+	if (cst_is_pos < 0)
+		expr_pos = isl_ast_expr_free(expr_pos);
+
+	if (cst_is_pos) {
+		expr_pos = isl_ast_expr_add_int(expr_pos, data.cst);
+	} else {
+		data.cst = isl_val_neg(data.cst);
+		expr_neg = isl_ast_expr_add_int(expr_neg, data.cst);
+	}
+
+	isl_aff_free(aff_pos);
+	isl_aff_free(aff_neg);
+	return construct_constraint_expr(eq, expr_pos, expr_neg);
+}
+
+/* Construct an isl_ast_expr that evaluates the condition "constraint".
  * The result is simplified in terms of build->domain.
  *
  * We first check if the constraint is an equality of the form
@@ -1394,55 +1598,27 @@ static __isl_give isl_ast_expr *extract_stride_constraint(
  *
  *	(isl_ast_expr_op_eq,
  *		(isl_ast_expr_op_zdiv_r, expr(e), expr(d)), expr(0))
- *
- * Otherwise, let the constraint by either "a >= 0" or "a == 0".
- * We first extract hidden modulo computations from "a"
- * and then collect all the terms with a positive coefficient in cons_pos
- * and the terms with a negative coefficient in cons_neg.
- *
- * The result is then of the form
- *
- *	(isl_ast_expr_op_ge, expr(pos), expr(-neg)))
- *
- * or
- *
- *	(isl_ast_expr_op_eq, expr(pos), expr(-neg)))
- *
- * However, if the first expression is an integer constant (and the second
- * is not), then we swap the two expressions.  This ensures that we construct,
- * e.g., "i <= 5" rather than "5 >= i".
- *
- * Furthermore, is there are no terms with positive coefficients (or no terms
- * with negative coefficients), then the constant term is added to "pos"
- * (or "neg"), ignoring the sign of the constant term.
  */
 static __isl_give isl_ast_expr *isl_ast_expr_from_constraint(
 	__isl_take isl_constraint *constraint, __isl_keep isl_ast_build *build)
 {
 	int i;
 	isl_size n;
-	isl_ctx *ctx;
-	isl_ast_expr *expr_pos;
-	isl_ast_expr *expr_neg;
-	isl_ast_expr *expr;
 	isl_aff *aff;
-	int eq;
-	enum isl_ast_expr_op_type type;
-	struct isl_ast_add_term_data data;
-
-	if (!constraint)
-		return NULL;
+	isl_bool eq;
 
 	aff = isl_constraint_get_aff(constraint);
 	eq = isl_constraint_is_equality(constraint);
 	isl_constraint_free(constraint);
+	if (eq < 0)
+		goto error;
 
 	n = isl_aff_dim(aff, isl_dim_div);
 	if (n < 0)
 		aff = isl_aff_free(aff);
 	if (eq && n > 0)
 		for (i = 0; i < n; ++i) {
-			int is_stride;
+			isl_bool is_stride;
 			is_stride = is_stride_constraint(aff, i);
 			if (is_stride < 0)
 				goto error;
@@ -1450,37 +1626,7 @@ static __isl_give isl_ast_expr *isl_ast_expr_from_constraint(
 				return extract_stride_constraint(aff, i, build);
 		}
 
-	ctx = isl_aff_get_ctx(aff);
-	expr_pos = isl_ast_expr_alloc_int_si(ctx, 0);
-	expr_neg = isl_ast_expr_alloc_int_si(ctx, 0);
-
-	aff = extract_modulos(aff, &expr_pos, &expr_neg, build);
-
-	data.build = build;
-	data.cst = isl_aff_get_constant_val(aff);
-	expr_pos = add_signed_terms(expr_pos, aff, 1, &data);
-	data.cst = isl_val_neg(data.cst);
-	expr_neg = add_signed_terms(expr_neg, aff, -1, &data);
-	data.cst = isl_val_neg(data.cst);
-
-	if (constant_is_considered_positive(data.cst, expr_pos, expr_neg)) {
-		expr_pos = isl_ast_expr_add_int(expr_pos, data.cst);
-	} else {
-		data.cst = isl_val_neg(data.cst);
-		expr_neg = isl_ast_expr_add_int(expr_neg, data.cst);
-	}
-
-	if (isl_ast_expr_get_type(expr_pos) == isl_ast_expr_int &&
-	    isl_ast_expr_get_type(expr_neg) != isl_ast_expr_int) {
-		type = eq ? isl_ast_expr_op_eq : isl_ast_expr_op_le;
-		expr = isl_ast_expr_alloc_binary(type, expr_neg, expr_pos);
-	} else {
-		type = eq ? isl_ast_expr_op_eq : isl_ast_expr_op_ge;
-		expr = isl_ast_expr_alloc_binary(type, expr_pos, expr_neg);
-	}
-
-	isl_aff_free(aff);
-	return expr;
+	return isl_ast_expr_from_constraint_no_stride(eq, aff, build);
 error:
 	isl_aff_free(aff);
 	return NULL;
@@ -1878,17 +2024,13 @@ static __isl_give isl_ast_expr *ast_expr_from_aff_list(
 	op_type = state == isl_state_min ? isl_ast_expr_op_min
 					 : isl_ast_expr_op_max;
 	expr = isl_ast_expr_alloc_op(isl_ast_build_get_ctx(build), op_type, n);
-	if (!expr)
-		goto error;
 
 	for (i = 0; i < n; ++i) {
 		isl_ast_expr *expr_i;
 
 		aff = isl_aff_list_get_aff(list, i);
 		expr_i = isl_ast_expr_from_aff(aff, build);
-		if (!expr_i)
-			goto error;
-		expr->u.op.args[i] = expr_i;
+		expr = isl_ast_expr_op_add_arg(expr, expr_i);
 	}
 
 	isl_aff_list_free(list);
@@ -1899,21 +2041,22 @@ error:
 	return NULL;
 }
 
-/* Extend the expression in "next" to take into account
+/* Extend the list of expressions in "next" to take into account
  * the piece at position "pos" in "data", allowing for a further extension
  * for the next piece(s).
- * In particular, "next" is set to a select operation that selects
+ * In particular, "next" is extended with a select operation that selects
  * an isl_ast_expr corresponding to data->aff_list on data->set and
  * to an expression that will be filled in by later calls.
- * Return a pointer to this location.
+ * Return a pointer to the arguments of this select operation.
  * Afterwards, the state of "data" is set to isl_state_none.
  *
  * The constraints of data->set are added to the generated
  * constraints of the build such that they can be exploited to simplify
  * the AST expression constructed from data->aff_list.
  */
-static isl_ast_expr **add_intermediate_piece(struct isl_from_pw_aff_data *data,
-	int pos, isl_ast_expr **next)
+static isl_ast_expr_list **add_intermediate_piece(
+	struct isl_from_pw_aff_data *data,
+	int pos, isl_ast_expr_list **next)
 {
 	isl_ctx *ctx;
 	isl_ast_build *build;
@@ -1926,26 +2069,26 @@ static isl_ast_expr **add_intermediate_piece(struct isl_from_pw_aff_data *data,
 	ternary = isl_ast_expr_alloc_op(ctx, isl_ast_expr_op_select, 3);
 	gist = isl_set_gist(isl_set_copy(set), isl_set_copy(data->dom));
 	arg = isl_ast_build_expr_from_set_internal(data->build, gist);
-	ternary = isl_ast_expr_set_op_arg(ternary, 0, arg);
+	ternary = isl_ast_expr_op_add_arg(ternary, arg);
 	build = isl_ast_build_copy(data->build);
 	build = isl_ast_build_restrict_generated(build, set);
 	arg = ast_expr_from_aff_list(data->p[pos].aff_list,
 					data->p[pos].state, build);
 	data->p[pos].aff_list = NULL;
 	isl_ast_build_free(build);
-	ternary = isl_ast_expr_set_op_arg(ternary, 1, arg);
+	ternary = isl_ast_expr_op_add_arg(ternary, arg);
 	data->p[pos].state = isl_state_none;
 	if (!ternary)
 		return NULL;
 
-	*next = ternary;
-	return &ternary->u.op.args[2];
+	*next = isl_ast_expr_list_add(*next, ternary);
+	return &ternary->u.op.args;
 }
 
-/* Extend the expression in "next" to take into account
+/* Extend the list of expressions in "next" to take into account
  * the final piece, located at position "pos" in "data".
- * In particular, "next" is set to evaluate data->aff_list
- * and the domain is ignored.
+ * In particular, "next" is extended with an expression
+ * to evaluate data->aff_list and the domain is ignored.
  * Return isl_stat_ok on success and isl_stat_error on failure.
  *
  * The constraints of data->set are however added to the generated
@@ -1953,9 +2096,10 @@ static isl_ast_expr **add_intermediate_piece(struct isl_from_pw_aff_data *data,
  * the AST expression constructed from data->aff_list.
  */
 static isl_stat add_last_piece(struct isl_from_pw_aff_data *data,
-	int pos, isl_ast_expr **next)
+	int pos, isl_ast_expr_list **next)
 {
 	isl_ast_build *build;
+	isl_ast_expr *last;
 
 	if (data->p[pos].state == isl_state_none)
 		isl_die(isl_ast_build_get_ctx(data->build), isl_error_invalid,
@@ -1964,8 +2108,9 @@ static isl_stat add_last_piece(struct isl_from_pw_aff_data *data,
 	build = isl_ast_build_copy(data->build);
 	build = isl_ast_build_restrict_generated(build, data->p[pos].set);
 	data->p[pos].set = NULL;
-	*next = ast_expr_from_aff_list(data->p[pos].aff_list,
+	last = ast_expr_from_aff_list(data->p[pos].aff_list,
 						data->p[pos].state, build);
+	*next = isl_ast_expr_list_add(*next, last);
 	data->p[pos].aff_list = NULL;
 	isl_ast_build_free(build);
 	data->p[pos].state = isl_state_none;
@@ -2006,17 +2151,25 @@ static int sort_pieces_cmp(const void *p1, const void *p2, void *arg)
  *
  * Construct intermediate AST expressions for the initial pieces and
  * finish off with the final pieces.
+ *
+ * Any piece that is not the very first is added to the list of arguments
+ * of the previously constructed piece.
+ * In order not to have to special case the first piece,
+ * an extra list is created to hold the final result.
  */
 static isl_ast_expr *build_pieces(struct isl_from_pw_aff_data *data)
 {
 	int i;
-	isl_ast_expr *res = NULL;
-	isl_ast_expr **next = &res;
+	isl_ctx *ctx;
+	isl_ast_expr_list *res_list;
+	isl_ast_expr_list **next = &res_list;
+	isl_ast_expr *res;
 
 	if (data->p[data->n].state != isl_state_none)
 		data->n++;
+	ctx = isl_ast_build_get_ctx(data->build);
 	if (data->n == 0)
-		isl_die(isl_ast_build_get_ctx(data->build), isl_error_invalid,
+		isl_die(ctx, isl_error_invalid,
 			"cannot handle void expression", return NULL);
 
 	for (i = 0; i < data->n; ++i) {
@@ -2028,18 +2181,26 @@ static isl_ast_expr *build_pieces(struct isl_from_pw_aff_data *data)
 
 	if (isl_sort(data->p, data->n, sizeof(data->p[0]),
 			&sort_pieces_cmp, NULL) < 0)
-		return isl_ast_expr_free(res);
+		return NULL;
 
+	res_list = isl_ast_expr_list_alloc(ctx, 1);
+	if (!res_list)
+		return NULL;
 	for (i = 0; i + 1 < data->n; ++i) {
 		next = add_intermediate_piece(data, i, next);
 		if (!next)
-			return isl_ast_expr_free(res);
+			goto error;
 	}
 
 	if (add_last_piece(data, data->n - 1, next) < 0)
-		return isl_ast_expr_free(res);
+		goto error;
 
+	res = isl_ast_expr_list_get_at(res_list, 0);
+	isl_ast_expr_list_free(res_list);
 	return res;
+error:
+	isl_ast_expr_list_free(res_list);
+	return NULL;
 }
 
 /* Is the domain of the current entry of "data", which is assumed
@@ -2364,14 +2525,14 @@ static __isl_give isl_ast_expr *isl_ast_build_with_arguments(
 
 	n = isl_multi_pw_aff_dim(mpa, isl_dim_out);
 	expr = n >= 0 ? isl_ast_expr_alloc_op(ctx, type, 1 + n) : NULL;
-	expr = isl_ast_expr_set_op_arg(expr, 0, arg0);
+	expr = isl_ast_expr_op_add_arg(expr, arg0);
 	for (i = 0; i < n; ++i) {
 		isl_pw_aff *pa;
 		isl_ast_expr *arg;
 
 		pa = isl_multi_pw_aff_get_pw_aff(mpa, i);
 		arg = isl_ast_build_expr_from_pw_aff_internal(build, pa);
-		expr = isl_ast_expr_set_op_arg(expr, 1 + i, arg);
+		expr = isl_ast_expr_op_add_arg(expr, arg);
 	}
 
 	isl_multi_pw_aff_free(mpa);

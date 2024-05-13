@@ -28,8 +28,7 @@
 #include "llvm/MC/MCInst.h"
 using namespace llvm;
 
-ARMInstrInfo::ARMInstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI), RI() {}
+ARMInstrInfo::ARMInstrInfo(const ARMSubtarget &STI) : ARMBaseInstrInfo(STI) {}
 
 /// Return the noop instruction to use for a noop.
 MCInst ARMInstrInfo::getNop() const {
@@ -95,9 +94,21 @@ void ARMInstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getParent()->getParent();
   const ARMSubtarget &Subtarget = MF.getSubtarget<ARMSubtarget>();
   const TargetMachine &TM = MF.getTarget();
+  Module &M = *MF.getFunction().getParent();
 
-  if (!Subtarget.useMovt()) {
-    if (TM.isPositionIndependent())
+  if (M.getStackProtectorGuard() == "tls") {
+    expandLoadStackGuardBase(MI, ARM::MRC, ARM::LDRi12);
+    return;
+  }
+
+  const GlobalValue *GV =
+      cast<GlobalValue>((*MI->memoperands_begin())->getValue());
+
+  bool ForceELFGOTPIC = Subtarget.isTargetELF() && !GV->isDSOLocal();
+  if (!Subtarget.useMovt() || ForceELFGOTPIC) {
+    // For ELF non-PIC, use GOT PIC code sequence as well because R_ARM_GOT_ABS
+    // does not have assembler support.
+    if (TM.isPositionIndependent() || ForceELFGOTPIC)
       expandLoadStackGuardBase(MI, ARM::LDRLIT_ga_pcrel, ARM::LDRi12);
     else
       expandLoadStackGuardBase(MI, ARM::LDRLIT_ga_abs, ARM::LDRi12);
@@ -108,9 +119,6 @@ void ARMInstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI) const {
     expandLoadStackGuardBase(MI, ARM::MOVi32imm, ARM::LDRi12);
     return;
   }
-
-  const GlobalValue *GV =
-      cast<GlobalValue>((*MI->memoperands_begin())->getValue());
 
   if (!Subtarget.isGVIndirectSymbol(GV)) {
     expandLoadStackGuardBase(MI, ARM::MOV_ga_pcrel, ARM::LDRi12);

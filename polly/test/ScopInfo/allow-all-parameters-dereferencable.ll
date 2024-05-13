@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -analyze -polly-invariant-load-hoisting \
+; RUN: opt %loadPolly -disable-output -polly-invariant-load-hoisting \
 ; RUN: -polly-allow-dereference-of-all-function-parameters \
-; RUN: -polly-scops < %s | FileCheck %s --check-prefix=SCOP
+; RUN: -polly-print-scops < %s | FileCheck %s --check-prefix=SCOP
 
 ; RUN: opt %loadPolly -S -polly-invariant-load-hoisting \
 ; RUN: -polly-codegen < %s | FileCheck %s --check-prefix=CODE-RTC
@@ -25,7 +25,7 @@
 ; Check that without the option `-polly-allow-dereference-of-all-function-parameters`
 ; we do generate the runtime check.
 ; CODE-RTC: polly.preload.cond:                               ; preds = %polly.preload.begin
-; CODE-RTC-NEXT: br i1 %{{[a-zA-Z0-9]*}}, label %polly.preload.exec, label %polly.preload.merge
+; CODE-RTC-NEXT: br i1 %{{[a-zA-Z0-9\.]*}}, label %polly.preload.exec, label %polly.preload.merge
 
 ; Check that we don't generate a runtime check because we treat all
 ; parameters as dereferencable.
@@ -38,9 +38,9 @@ target triple = "x86_64-unknown-linux-gnu"
 @global = external global i32
 
 ; Function Attrs: nounwind uwtable
-define void @hoge(i32* noalias %arg, i32* noalias %arg1, [0 x double]* noalias %arg2, float* %A) #0 {
+define void @hoge(ptr noalias %arg, ptr noalias %arg1, ptr noalias %arg2, ptr %A) #0 {
 bb:
-  %tmp = load i32, i32* @global, align 4
+  %tmp = load i32, ptr @global, align 4
   %tmp3 = icmp sgt i32 %tmp, 1
   br label %bb14
 
@@ -51,16 +51,15 @@ bb15:                                             ; preds = %bb14
   br i1 %tmp3, label %bb16, label %bb27
 
 bb16:                                             ; preds = %bb15
-  %tmp17 = load i32, i32* %arg1, align 4
+  %tmp17 = load i32, ptr %arg1, align 4
   br label %bb18
 
 bb18:                                             ; preds = %bb18, %bb16
   %tmp19 = phi i32 [ %tmp25, %bb18 ], [ 1, %bb16 ]
   %tmp20 = sext i32 %tmp19 to i64
   %tmp21 = add nsw i64 %tmp20, -1
-  %tmp22 = getelementptr [0 x double], [0 x double]* %arg2, i64 0, i64 %tmp21
-  %tmp23 = bitcast double* %tmp22 to i64*
-  store i64 undef, i64* %tmp23, align 8
+  %tmp22 = getelementptr [0 x double], ptr %arg2, i64 0, i64 %tmp21
+  store i64 undef, ptr %tmp22, align 8
   %tmp24 = icmp eq i32 %tmp19, %tmp17
   %tmp25 = add i32 %tmp19, 1
   br i1 %tmp24, label %bb26, label %bb18
@@ -69,18 +68,18 @@ bb26:                                             ; preds = %bb18
   br label %bb27
 
 bb27:                                             ; preds = %bb26, %bb15
-  %tmp28 = load i32, i32* %arg, align 4
-  store float 42.0, float* %A
+  %tmp28 = load i32, ptr %arg, align 4
+  store float 42.0, ptr %A
   br label %bb29
 
 bb29:                                             ; preds = %bb35, %bb27
-  %tmp30 = load i32, i32* %arg1, align 4
-  store float 42.0, float* %A
+  %tmp30 = load i32, ptr %arg1, align 4
+  store float 42.0, ptr %A
   br label %bb31
 
 bb31:                                             ; preds = %bb31, %bb29
   %tmp32 = phi i32 [ 1, %bb31 ], [ 1, %bb29 ]
-  store float 42.0, float* %A
+  store float 42.0, ptr %A
   %tmp33 = icmp eq i32 %tmp32, %tmp30
   br i1 %tmp33, label %bb34, label %bb31
 

@@ -10,6 +10,11 @@ Writing an LLVM Pass
 Introduction --- What is a pass?
 ================================
 
+.. warning::
+  This document deals with the new pass manager. LLVM uses the legacy pass
+  manager for the codegen pipeline. For more details, see
+  :doc:`WritingAnLLVMPass` and :doc:`NewPassManager`.
+
 The LLVM pass framework is an important part of the LLVM system, because LLVM
 passes are where most of the interesting parts of the compiler exist. Passes
 perform the transformations and optimizations that make up the compiler, they
@@ -28,11 +33,6 @@ along with an analysis manager. For example, a function pass would have a
 We start by showing you how to construct a pass, from setting up the build,
 creating the pass, to executing and testing it. Looking at existing passes is
 always a great way to learn details.
-
-.. warning::
-  This document deals with the new pass manager. LLVM uses the legacy pass
-  manager for the codegen pipeline. For more details, see
-  :doc:`WritingAnLLVMPass` and :doc:`NewPassManager`.
 
 Quick Start --- Writing hello world
 ===================================
@@ -232,3 +232,58 @@ function. Required passes will still be run on ``optnone`` functions.
 
 For more implementation details, see
 ``PassInstrumentation::runBeforePass()``.
+
+Registering passes as plugins
+-----------------------------
+
+LLVM provides a mechanism to register pass plugins within various tools like
+``clang`` or ``opt``. A pass plugin can add passes to default optimization
+pipelines or to be manually run via tools like ``opt``.  For more information,
+see :doc:`NewPassManager`.
+
+Create a CMake project at the root of the repo alongside
+other projects.  This project must contain the following minimal
+``CMakeLists.txt``:
+
+.. code-block:: cmake
+
+    add_llvm_pass_plugin(MyPassName source.cpp)
+
+See the definition of ``add_llvm_pass_plugin`` for more CMake details.
+
+The pass must provide at least one of two entry points for the new pass manager,
+one for static registration and one for dynamically loaded plugins:
+
+- ``llvm::PassPluginLibraryInfo get##Name##PluginInfo();``
+- ``extern "C" ::llvm::PassPluginLibraryInfo llvmGetPassPluginInfo() LLVM_ATTRIBUTE_WEAK;``
+
+Pass plugins are compiled and linked dynamically by default. Setting
+``LLVM_${NAME}_LINK_INTO_TOOLS`` to ``ON`` turns the project into a statically
+linked extension.
+
+For an in-tree example, see ``llvm/examples/Bye/``.
+
+To make ``PassBuilder`` aware of statically linked pass plugins:
+
+.. code-block:: c++
+
+    // Declare plugin extension function declarations.
+    #define HANDLE_EXTENSION(Ext) llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+    #include "llvm/Support/Extension.def"
+
+    ...
+
+    // Register plugin extensions in PassBuilder.
+    #define HANDLE_EXTENSION(Ext) get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
+    #include "llvm/Support/Extension.def"
+
+To make ``PassBuilder`` aware of dynamically linked pass plugins:
+
+.. code-block:: c++
+
+    // Load plugin dynamically.
+    auto Plugin = PassPlugin::Load(PathToPlugin);
+    if (!Plugin)
+      report_error();
+    // Register plugin extensions in PassBuilder.
+    Plugin.registerPassBuilderCallbacks(PB);

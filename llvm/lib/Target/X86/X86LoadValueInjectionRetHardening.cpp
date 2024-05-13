@@ -27,7 +27,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
-#include <bitset>
 
 using namespace llvm;
 
@@ -76,7 +75,7 @@ bool X86LoadValueInjectionRetHardeningPass::runOnMachineFunction(
   bool Modified = false;
   for (auto &MBB : MF) {
     for (auto MBBI = MBB.begin(); MBBI != MBB.end(); ++MBBI) {
-      if (MBBI->getOpcode() != X86::RETQ)
+      if (MBBI->getOpcode() != X86::RET64)
         continue;
 
       unsigned ClobberReg = TRI->findDeadCallerSavedReg(MBB, MBBI);

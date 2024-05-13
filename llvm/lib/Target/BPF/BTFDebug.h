@@ -16,11 +16,11 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
+#include "llvm/DebugInfo/BTF/BTF.h"
 #include <cstdint>
 #include <map>
 #include <set>
 #include <unordered_map>
-#include "BTF.h"
 
 namespace llvm {
 
@@ -64,9 +64,11 @@ public:
 class BTFTypeDerived : public BTFTypeBase {
   const DIDerivedType *DTy;
   bool NeedsFixup;
+  StringRef Name;
 
 public:
   BTFTypeDerived(const DIDerivedType *Ty, unsigned Tag, bool NeedsFixup);
+  BTFTypeDerived(unsigned NextTypeId, unsigned Tag, StringRef Name);
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
   void setPointeeType(uint32_t PointeeType);
@@ -101,7 +103,7 @@ class BTFTypeEnum : public BTFTypeBase {
   std::vector<struct BTF::BTFEnum> EnumValues;
 
 public:
-  BTFTypeEnum(const DICompositeType *ETy, uint32_t NumValues);
+  BTFTypeEnum(const DICompositeType *ETy, uint32_t NumValues, bool IsSigned);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + EnumValues.size() * BTF::BTFEnumSize;
   }
@@ -204,6 +206,42 @@ public:
   void completeType(BTFDebug &BDebug) override;
 };
 
+/// Handle decl tags.
+class BTFTypeDeclTag : public BTFTypeBase {
+  uint32_t Info;
+  StringRef Tag;
+
+public:
+  BTFTypeDeclTag(uint32_t BaseTypeId, int ComponentId, StringRef Tag);
+  uint32_t getSize() override { return BTFTypeBase::getSize() + 4; }
+  void completeType(BTFDebug &BDebug) override;
+  void emitType(MCStreamer &OS) override;
+};
+
+/// Handle 64-bit enumerate type.
+class BTFTypeEnum64 : public BTFTypeBase {
+  const DICompositeType *ETy;
+  std::vector<struct BTF::BTFEnum64> EnumValues;
+
+public:
+  BTFTypeEnum64(const DICompositeType *ETy, uint32_t NumValues, bool IsSigned);
+  uint32_t getSize() override {
+    return BTFTypeBase::getSize() + EnumValues.size() * BTF::BTFEnum64Size;
+  }
+  void completeType(BTFDebug &BDebug) override;
+  void emitType(MCStreamer &OS) override;
+};
+
+class BTFTypeTypeTag : public BTFTypeBase {
+  const DIDerivedType *DTy;
+  StringRef Tag;
+
+public:
+  BTFTypeTypeTag(uint32_t NextTypeId, StringRef Tag);
+  BTFTypeTypeTag(const DIDerivedType *DTy, StringRef Tag);
+  void completeType(BTFDebug &BDebug) override;
+};
+
 /// String table.
 class BTFStringTable {
   /// String table size in bytes.
@@ -265,7 +303,8 @@ class BTFDebug : public DebugHandlerBase {
   std::map<std::string, std::unique_ptr<BTFKindDataSec>> DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
   std::map<const GlobalVariable *, std::pair<int64_t, uint32_t>> PatchImms;
-  std::map<StringRef, std::pair<bool, std::vector<BTFTypeDerived *>>>
+  std::map<const DICompositeType *,
+           std::vector<std::pair<const DIDerivedType *, BTFTypeDerived *>>>
       FixupDerivedTypes;
   std::set<const Function *>ProtoFunctions;
 
@@ -299,12 +338,15 @@ class BTFDebug : public DebugHandlerBase {
   void visitMapDefType(const DIType *Ty, uint32_t &TypeId);
   /// @}
 
+  /// Check whether the type is a forward declaration candidate or not.
+  bool IsForwardDeclCandidate(const DIType *Base);
+
   /// Get the file content for the subprogram. Certain lines of the file
   /// later may be put into string table and referenced by line info.
-  std::string populateFileContent(const DISubprogram *SP);
+  std::string populateFileContent(const DIFile *File);
 
   /// Construct a line info.
-  void constructLineInfo(const DISubprogram *SP, MCSymbol *Label, uint32_t Line,
+  void constructLineInfo(MCSymbol *Label, const DIFile *File, uint32_t Line,
                          uint32_t Column);
 
   /// Generate types and variables for globals.
@@ -312,6 +354,21 @@ class BTFDebug : public DebugHandlerBase {
 
   /// Generate types for function prototypes.
   void processFuncPrototypes(const Function *);
+
+  /// Generate types for decl annotations.
+  void processDeclAnnotations(DINodeArray Annotations, uint32_t BaseTypeId,
+                              int ComponentId);
+
+  /// Generate types for DISubprogram and it's arguments.
+  uint32_t processDISubprogram(const DISubprogram *SP, uint32_t ProtoTypeId,
+                               uint8_t Scope);
+
+  /// Generate BTF type_tag's. If BaseTypeId is nonnegative, the last
+  /// BTF type_tag in the chain points to BaseTypeId. Otherwise, it points to
+  /// the base type of DTy. Return the type id of the first BTF type_tag
+  /// in the chain. If no type_tag's are generated, a negative value
+  /// is returned.
+  int genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId);
 
   /// Generate one field relocation record.
   void generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,

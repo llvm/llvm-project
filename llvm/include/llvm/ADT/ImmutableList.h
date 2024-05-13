@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the ImmutableList class.
-//
+///
+/// \file
+/// This file defines the ImmutableList class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_IMMUTABLELIST_H
@@ -93,7 +94,7 @@ public:
     bool operator==(const iterator& I) const { return L == I.L; }
     bool operator!=(const iterator& I) const { return L != I.L; }
     const value_type& operator*() const { return L->getHead(); }
-    const typename std::remove_reference<value_type>::type* operator->() const {
+    const std::remove_reference_t<value_type> *operator->() const {
       return &L->getHead();
     }
 
@@ -173,7 +174,7 @@ public:
   }
 
   template <typename ElemT>
-  LLVM_NODISCARD ImmutableList<T> concat(ElemT &&Head, ImmutableList<T> Tail) {
+  [[nodiscard]] ImmutableList<T> concat(ElemT &&Head, ImmutableList<T> Tail) {
     // Profile the new list to see if it already exists in our cache.
     FoldingSetNodeID ID;
     void* InsertPos;
@@ -196,13 +197,13 @@ public:
   }
 
   template <typename ElemT>
-  LLVM_NODISCARD ImmutableList<T> add(ElemT &&Data, ImmutableList<T> L) {
+  [[nodiscard]] ImmutableList<T> add(ElemT &&Data, ImmutableList<T> L) {
     return concat(std::forward<ElemT>(Data), L);
   }
 
-  template <typename ...CtorArgs>
-  LLVM_NODISCARD ImmutableList<T> emplace(ImmutableList<T> Tail,
-                                          CtorArgs &&...Args) {
+  template <typename... CtorArgs>
+  [[nodiscard]] ImmutableList<T> emplace(ImmutableList<T> Tail,
+                                         CtorArgs &&...Args) {
     return concat(T(std::forward<CtorArgs>(Args)...), Tail);
   }
 
@@ -220,8 +221,7 @@ public:
 // Partially-specialized Traits.
 //===----------------------------------------------------------------------===//
 
-template<typename T> struct DenseMapInfo;
-template<typename T> struct DenseMapInfo<ImmutableList<T>> {
+template <typename T> struct DenseMapInfo<ImmutableList<T>, void> {
   static inline ImmutableList<T> getEmptyKey() {
     return reinterpret_cast<ImmutableListImpl<T>*>(-1);
   }

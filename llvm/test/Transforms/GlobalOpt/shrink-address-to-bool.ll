@@ -1,17 +1,17 @@
-;RUN: opt -S -globalopt -f %s | FileCheck %s
+;RUN: opt -S -passes=globalopt -f %s | FileCheck %s
 
 ;CHECK: @foo = {{.*}}, !dbg !0
-@foo = global i64 ptrtoint ([1 x i64]* @baa to i64), align 8, !dbg !0
+@foo = global i64 ptrtoint (ptr @baa to i64), align 8, !dbg !0
 @baa = common global [1 x i64] zeroinitializer, align 8, !dbg !6
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define void @fun() #0 !dbg !16 {
 entry:
-  %0 = load i64, i64* @foo, align 8, !dbg !19
-  %1 = inttoptr i64 %0 to i64*, !dbg !19
-  %cmp = icmp ugt i64* getelementptr inbounds ([1 x i64], [1 x i64]* @baa, i32 0, i32 0), %1, !dbg !20
+  %0 = load i64, ptr @foo, align 8, !dbg !19
+  %1 = inttoptr i64 %0 to ptr, !dbg !19
+  %cmp = icmp ugt ptr @baa, %1, !dbg !20
   %conv = zext i1 %cmp to i32, !dbg !20
-  store i64 0, i64* @foo, align 8, !dbg !21
+  store i64 0, ptr @foo, align 8, !dbg !21
   ret void, !dbg !22
 }
 

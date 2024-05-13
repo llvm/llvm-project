@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_AST_ASTDIAGNOSTIC_H
 #define LLVM_CLANG_AST_ASTDIAGNOSTIC_H
 
+#include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticAST.h"
 
@@ -31,6 +32,12 @@ namespace clang {
       SmallVectorImpl<char> &Output,
       void *Cookie,
       ArrayRef<intptr_t> QualTypeVals);
+
+  /// Returns a desugared version of the QualType, and marks ShouldAKA as true
+  /// whenever we remove significant sugar from the type. Make sure ShouldAKA
+  /// is initialized before passing it in.
+  QualType desugarForDiagnostic(ASTContext &Context, QualType QT,
+                                bool &ShouldAKA);
 }  // end namespace clang
 
 #endif

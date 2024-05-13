@@ -4,13 +4,13 @@
 ; CHECK: cmpri
 ; CHECK: cmp %i1, 1
 ; CHECK: be %xcc,
-define void @cmpri(i64* %p, i64 %x) {
+define void @cmpri(ptr %p, i64 %x) {
 entry:
   %tobool = icmp eq i64 %x, 1
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:
-  store i64 %x, i64* %p, align 8
+  store i64 %x, ptr %p, align 8
   br label %if.end
 
 if.end:
@@ -20,13 +20,13 @@ if.end:
 ; CHECK: cmprr
 ; CHECK: cmp %i1, %i2
 ; CHECK: bgu %xcc,
-define void @cmprr(i64* %p, i64 %x, i64 %y) {
+define void @cmprr(ptr %p, i64 %x, i64 %y) {
 entry:
   %tobool = icmp ugt i64 %x, %y
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:
-  store i64 %x, i64* %p, align 8
+  store i64 %x, ptr %p, align 8
   br label %if.end
 
 if.end:
@@ -68,7 +68,7 @@ entry:
 
 ; CHECK: selecti64_fcc
 ; CHECK: mov %i3, %i0
-; CHECK: fcmps %f1, %f3
+; CHECK: fcmps %fcc0, %f1, %f3
 ; CHECK: movul %fcc0, %i2, %i0
 ; CHECK: restore
 define i64 @selecti64_fcc(float %x, float %y, i64 %a, i64 %b) {
@@ -112,13 +112,12 @@ entry:
 }
 
 ; CHECK-LABEL: setcc_resultty
-; CHECK-DAG:       srax %i0, 63, %o0
+; CHECK-DAG:       mov %g0, %o0
 ; CHECK-DAG:       mov %i0, %o1
-; CHECK-DAG:       mov 0, %o2
+; CHECK-DAG:       mov %g0, %o2
 ; CHECK-DAG:       mov 32, %o3
 ; CHECK-DAG:       call __multi3
-; CHECK:       cmp
-; CHECK:       movne %xcc, 1, [[R:%[gilo][0-7]]]
+; CHECK:       movrnz %o0, 1, [[R:%[gilo][0-7]]]
 ; CHECK:       or [[R]], %i1, %i0
 
 define i1 @setcc_resultty(i64 %a, i1 %b) {

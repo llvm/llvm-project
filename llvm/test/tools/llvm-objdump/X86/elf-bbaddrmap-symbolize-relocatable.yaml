@@ -1,0 +1,118 @@
+## Test that in the presence of SHT_LLVM_BB_ADDR_MAP sections,
+## --symbolize-operands can display <BB*> labels properly in a relocatable
+## object file.
+
+## Relocatable Object file.
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-objdump %t1 -d --symbolize-operands -M att --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s -DSYM=symbol --match-full-lines
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: FFFF
+  - Name:    .llvm_bb_addr_map
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Link:    .text
+    Entries:
+      - Version: 2
+        BBRanges:
+          - BBEntries:
+             - ID:              0
+               AddressOffset:   0x0
+               Size:            0x1
+               Metadata:        0xa
+      - Version: 2
+        BBRanges:
+          - BBEntries:
+            - ID:              0
+              AddressOffset:   0x0
+              Size:            0x1
+              Metadata:        0xb
+      - Version: 2
+        Feature: 0x8
+        BBRanges:
+          - BBEntries:
+            - ID:              0
+              AddressOffset:   0x0
+              Size:            0x1
+              Metadata:        0xc
+          - BBEntries:
+            - ID:              1
+              AddressOffset:   0x0
+              Size:            0x1
+              Metadata:        0xd
+  - Name:  .rela.llvm_bb_addr_map
+    Type:  SHT_RELA
+    Flags: [ SHF_INFO_LINK ]
+    Link:  .symtab
+    Info:  .llvm_bb_addr_map
+    Relocations:
+      - Offset: 0x2
+        Symbol: .text
+        Type:   R_X86_64_64
+      - Offset: 0x11
+        Symbol: .text
+        Type:   R_X86_64_64
+        Addend: 1
+      - Offset: 0x21
+        Symbol: .text
+        Type:   R_X86_64_64
+        Addend: 0x2
+      - Offset: 0x2e
+        Symbol: .text
+        Type:   R_X86_64_64
+        Addend: 0x3
+
+Symbols:
+  - Name:    a
+    Section: .text
+    Value:   0x0
+  - Name:    c
+    Section: .text
+    Value:   0x1
+  - Name:    h
+    Section: .text
+    Value:   0x2
+  - Name:    h1
+    Section: .text
+    Value:   0x3
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text
+
+# CHECK:      <a>:
+# CHECK-NEXT: <BB0>:
+# CHECK:      <c>:
+# CHECK-NEXT: <BB0>:
+
+## Check that if we're missing a relocation section we get the appropriate
+## warning.
+
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-readobj %t2 --bb-addr-map 2>&1 | FileCheck %s --check-prefix=NO-RELA-SECTION -DFILE=%t2
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: FF
+  - Name:    .llvm_bb_addr_map
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Link:    .text
+
+# NO-RELA-SECTION: warning: '[[FILE]]': unable to get relocation section for SHT_LLVM_BB_ADDR_MAP section with index 2

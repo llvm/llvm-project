@@ -85,6 +85,15 @@ particular function.  MemorySanitizer may still instrument such functions to
 avoid false positives.  This attribute may not be supported by other compilers,
 so we suggest to use it together with ``__has_feature(memory_sanitizer)``.
 
+``__attribute__((disable_sanitizer_instrumentation))``
+--------------------------------------------------------
+
+The ``disable_sanitizer_instrumentation`` attribute can be applied to functions
+to prevent all kinds of instrumentation. As a result, it may introduce false
+positives and therefore should be used with care, and only if absolutely
+required; for example for certain code that cannot tolerate any instrumentation
+and resulting side-effects. This attribute overrides ``no_sanitize("memory")``.
+
 Ignorelist
 ----------
 
@@ -153,16 +162,16 @@ not intermediate stores.
 Use-after-destruction detection
 ===============================
 
-You can enable experimental use-after-destruction detection in MemorySanitizer.
-After invocation of the destructor, the object will be considered no longer
-readable, and using underlying memory will lead to error reports in runtime.
+MemorySanitizer includes use-after-destruction detection. After invocation of
+the destructor, the object will be considered no longer readable, and using
+underlying memory will lead to error reports in runtime. Refer to the standard
+for `lifetime <https://eel.is/c++draft/basic.life#1>`_ definition.
 
-This feature is still experimental, in order to enable it at runtime you need
-to:
+This feature can be disabled with either:
 
-#. Pass addition Clang option ``-fsanitize-memory-use-after-dtor`` during
+#. Pass addition Clang option ``-fno-sanitize-memory-use-after-dtor`` during
    compilation.
-#. Set environment variable `MSAN_OPTIONS=poison_in_dtor=1` before running
+#. Set environment variable `MSAN_OPTIONS=poison_in_dtor=0` before running
    the program.
 
 Handling external code

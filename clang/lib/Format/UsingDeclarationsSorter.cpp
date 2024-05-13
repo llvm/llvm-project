@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UsingDeclarationsSorter.h"
+#include "clang/Format/Format.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 
@@ -32,7 +33,7 @@ namespace {
 // individual names is that all non-namespace names come before all namespace
 // names, and within those groups, names are in case-insensitive lexicographic
 // order.
-int compareLabels(StringRef A, StringRef B) {
+int compareLabelsLexicographicNumeric(StringRef A, StringRef B) {
   SmallVector<StringRef, 2> NamesA;
   A.split(NamesA, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   SmallVector<StringRef, 2> NamesB;
@@ -48,7 +49,7 @@ int compareLabels(StringRef A, StringRef B) {
         return -1;
 
       // Two names within a group compare case-insensitively.
-      return NamesA[I].compare_lower(NamesB[I]);
+      return NamesA[I].compare_insensitive(NamesB[I]);
     }
 
     // I is the last index of NamesB and NamesB[I] is a non-namespace name.
@@ -57,11 +58,37 @@ int compareLabels(StringRef A, StringRef B) {
       return 1;
 
     // Two namespaces names within a group compare case-insensitively.
-    int C = NamesA[I].compare_lower(NamesB[I]);
+    int C = NamesA[I].compare_insensitive(NamesB[I]);
     if (C != 0)
       return C;
   }
   return 0;
+}
+
+int compareLabelsLexicographic(StringRef A, StringRef B) {
+  SmallVector<StringRef, 2> NamesA;
+  A.split(NamesA, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  SmallVector<StringRef, 2> NamesB;
+  B.split(NamesB, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  size_t SizeA = NamesA.size();
+  size_t SizeB = NamesB.size();
+  for (size_t I = 0, E = std::min(SizeA, SizeB); I < E; ++I) {
+    // Two namespaces names within a group compare case-insensitively.
+    int C = NamesA[I].compare_insensitive(NamesB[I]);
+    if (C != 0)
+      return C;
+  }
+  if (SizeA < SizeB)
+    return -1;
+  return SizeA == SizeB ? 0 : 1;
+}
+
+int compareLabels(
+    StringRef A, StringRef B,
+    FormatStyle::SortUsingDeclarationsOptions SortUsingDeclarations) {
+  if (SortUsingDeclarations == FormatStyle::SUD_LexicographicNumeric)
+    return compareLabelsLexicographicNumeric(A, B);
+  return compareLabelsLexicographic(A, B);
 }
 
 struct UsingDeclaration {
@@ -70,10 +97,6 @@ struct UsingDeclaration {
 
   UsingDeclaration(const AnnotatedLine *Line, const std::string &Label)
       : Line(Line), Label(Label) {}
-
-  bool operator<(const UsingDeclaration &Other) const {
-    return compareLabels(Label, Other.Label) < 0;
-  }
 };
 
 /// Computes the label of a using declaration starting at tthe using token
@@ -113,7 +136,8 @@ std::string computeUsingDeclarationLabel(const FormatToken *UsingTok) {
 
 void endUsingDeclarationBlock(
     SmallVectorImpl<UsingDeclaration> *UsingDeclarations,
-    const SourceManager &SourceMgr, tooling::Replacements *Fixes) {
+    const SourceManager &SourceMgr, tooling::Replacements *Fixes,
+    FormatStyle::SortUsingDeclarationsOptions SortUsingDeclarations) {
   bool BlockAffected = false;
   for (const UsingDeclaration &Declaration : *UsingDeclarations) {
     if (Declaration.Line->Affected) {
@@ -127,7 +151,11 @@ void endUsingDeclarationBlock(
   }
   SmallVector<UsingDeclaration, 4> SortedUsingDeclarations(
       UsingDeclarations->begin(), UsingDeclarations->end());
-  llvm::stable_sort(SortedUsingDeclarations);
+  auto Comp = [SortUsingDeclarations](const UsingDeclaration &Lhs,
+                                      const UsingDeclaration &Rhs) -> bool {
+    return compareLabels(Lhs.Label, Rhs.Label, SortUsingDeclarations) < 0;
+  };
+  llvm::stable_sort(SortedUsingDeclarations, Comp);
   SortedUsingDeclarations.erase(
       std::unique(SortedUsingDeclarations.begin(),
                   SortedUsingDeclarations.end(),
@@ -188,25 +216,30 @@ std::pair<tooling::Replacements, unsigned> UsingDeclarationsSorter::analyze(
   AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
   tooling::Replacements Fixes;
   SmallVector<UsingDeclaration, 4> UsingDeclarations;
-  for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
-    const auto *FirstTok = AnnotatedLines[I]->First;
-    if (AnnotatedLines[I]->InPPDirective ||
-        !AnnotatedLines[I]->startsWith(tok::kw_using) || FirstTok->Finalized) {
-      endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
+  for (const AnnotatedLine *Line : AnnotatedLines) {
+    const auto *FirstTok = Line->First;
+    if (Line->InPPDirective || !Line->startsWith(tok::kw_using) ||
+        FirstTok->Finalized) {
+      endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes,
+                               Style.SortUsingDeclarations);
       continue;
     }
-    if (FirstTok->NewlinesBefore > 1)
-      endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
+    if (FirstTok->NewlinesBefore > 1) {
+      endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes,
+                               Style.SortUsingDeclarations);
+    }
     const auto *UsingTok =
         FirstTok->is(tok::comment) ? FirstTok->getNextNonComment() : FirstTok;
     std::string Label = computeUsingDeclarationLabel(UsingTok);
     if (Label.empty()) {
-      endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
+      endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes,
+                               Style.SortUsingDeclarations);
       continue;
     }
-    UsingDeclarations.push_back(UsingDeclaration(AnnotatedLines[I], Label));
+    UsingDeclarations.push_back(UsingDeclaration(Line, Label));
   }
-  endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
+  endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes,
+                           Style.SortUsingDeclarations);
   return {Fixes, 0};
 }
 

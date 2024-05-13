@@ -28,8 +28,9 @@
 #include "InputFiles.h"
 #include "Symbols.h"
 #include "Target.h"
+#include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
-#include "llvm/Object/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -42,16 +43,17 @@ using namespace lld::elf;
 namespace {
 class AVR final : public TargetInfo {
 public:
-  AVR();
+  AVR() { needsThunks = true; }
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
+  bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                  uint64_t branchAddr, const Symbol &s,
+                  int64_t a) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
 };
 } // namespace
-
-AVR::AVR() { noneRel = R_AVR_NONE; }
 
 RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
@@ -59,6 +61,9 @@ RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
   case R_AVR_6:
   case R_AVR_6_ADIW:
   case R_AVR_8:
+  case R_AVR_8_LO8:
+  case R_AVR_8_HI8:
+  case R_AVR_8_HLO8:
   case R_AVR_16:
   case R_AVR_16_PM:
   case R_AVR_32:
@@ -71,12 +76,15 @@ RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
   case R_AVR_HH8_LDI:
   case R_AVR_MS8_LDI_NEG:
   case R_AVR_MS8_LDI:
+  case R_AVR_LO8_LDI_GS:
   case R_AVR_LO8_LDI_PM:
   case R_AVR_LO8_LDI_PM_NEG:
+  case R_AVR_HI8_LDI_GS:
   case R_AVR_HI8_LDI_PM:
   case R_AVR_HI8_LDI_PM_NEG:
   case R_AVR_HH8_LDI_PM:
   case R_AVR_HH8_LDI_PM_NEG:
+  case R_AVR_LDS_STS_16:
   case R_AVR_PORT5:
   case R_AVR_PORT6:
   case R_AVR_CALL:
@@ -95,11 +103,36 @@ static void writeLDI(uint8_t *loc, uint64_t val) {
   write16le(loc, (read16le(loc) & 0xf0f0) | (val & 0xf0) << 4 | (val & 0x0f));
 }
 
+bool AVR::needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                     uint64_t branchAddr, const Symbol &s, int64_t a) const {
+  switch (type) {
+  case R_AVR_LO8_LDI_GS:
+  case R_AVR_HI8_LDI_GS:
+    // A thunk is needed if the symbol's virtual address is out of range
+    // [0, 0x1ffff].
+    return s.getVA() >= 0x20000;
+  default:
+    return false;
+  }
+}
+
 void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   switch (rel.type) {
   case R_AVR_8:
     checkUInt(loc, val, 8, rel);
     *loc = val;
+    break;
+  case R_AVR_8_LO8:
+    checkUInt(loc, val, 32, rel);
+    *loc = val & 0xff;
+    break;
+  case R_AVR_8_HI8:
+    checkUInt(loc, val, 32, rel);
+    *loc = (val >> 8) & 0xff;
+    break;
+  case R_AVR_8_HLO8:
+    checkUInt(loc, val, 32, rel);
+    *loc = (val >> 16) & 0xff;
     break;
   case R_AVR_16:
     // Note: this relocation is often used between code and data space, which
@@ -147,10 +180,16 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     writeLDI(loc, (val >> 24) & 0xff);
     break;
 
+  case R_AVR_LO8_LDI_GS:
+    checkUInt(loc, val, 17, rel);
+    [[fallthrough]];
   case R_AVR_LO8_LDI_PM:
     checkAlignment(loc, val, 2, rel);
     writeLDI(loc, (val >> 1) & 0xff);
     break;
+  case R_AVR_HI8_LDI_GS:
+    checkUInt(loc, val, 17, rel);
+    [[fallthrough]];
   case R_AVR_HI8_LDI_PM:
     checkAlignment(loc, val, 2, rel);
     writeLDI(loc, (val >> 9) & 0xff);
@@ -173,6 +212,14 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     writeLDI(loc, (-val >> 17) & 0xff);
     break;
 
+  case R_AVR_LDS_STS_16: {
+    checkUInt(loc, val, 7, rel);
+    const uint16_t hi = val >> 4;
+    const uint16_t lo = val & 0xf;
+    write16le(loc, (read16le(loc) & 0xf8f0) | ((hi << 8) | lo));
+    break;
+  }
+
   case R_AVR_PORT5:
     checkUInt(loc, val, 5, rel);
     write16le(loc, (read16le(loc) & 0xff07) | (val << 3));
@@ -184,13 +231,14 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   // Since every jump destination is word aligned we gain an extra bit
   case R_AVR_7_PCREL: {
-    checkInt(loc, val, 7, rel);
+    checkInt(loc, val - 2, 7, rel);
     checkAlignment(loc, val, 2, rel);
     const uint16_t target = (val - 2) >> 1;
     write16le(loc, (read16le(loc) & 0xfc07) | ((target & 0x7f) << 3));
     break;
   }
   case R_AVR_13_PCREL: {
+    checkInt(loc, val - 2, 13, rel);
     checkAlignment(loc, val, 2, rel);
     const uint16_t target = (val - 2) >> 1;
     write16le(loc, (read16le(loc) & 0xf000) | (target & 0xfff));
@@ -208,6 +256,7 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
 
   case R_AVR_CALL: {
+    checkAlignment(loc, val, 2, rel);
     uint16_t hi = val >> 17;
     uint16_t lo = val >> 1;
     write16le(loc, read16le(loc) | ((hi >> 1) << 4) | (hi & 1));
@@ -229,12 +278,12 @@ static uint32_t getEFlags(InputFile *file) {
 }
 
 uint32_t AVR::calcEFlags() const {
-  assert(!objectFiles.empty());
+  assert(!ctx.objectFiles.empty());
 
-  uint32_t flags = getEFlags(objectFiles[0]);
+  uint32_t flags = getEFlags(ctx.objectFiles[0]);
   bool hasLinkRelaxFlag = flags & EF_AVR_LINKRELAX_PREPARED;
 
-  for (InputFile *f : makeArrayRef(objectFiles).slice(1)) {
+  for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     uint32_t objFlags = getEFlags(f);
     if ((objFlags & EF_AVR_ARCH_MASK) != (flags & EF_AVR_ARCH_MASK))
       error(toString(f) +

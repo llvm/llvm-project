@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-import-jscop-postfix=transformed -polly-print-import-jscop -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Remove a redundant store, if its partial domain is a subset of the
 ; read's domain.
 ;
-define void @redundant_partialwrite(i32 %n, double* noalias nonnull %A) {
+define void @redundant_partialwrite(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -13,8 +13,8 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      %val = load double, double* %A
-      store double %val, double* %A
+      %val = load double, ptr %A
+      store double %val, ptr %A
       br label %inc
 
 inc:

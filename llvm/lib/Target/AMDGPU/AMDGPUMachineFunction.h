@@ -12,10 +12,14 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 
 namespace llvm {
 
-class GCNSubtarget;
+class AMDGPUSubtarget;
 
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
@@ -27,11 +31,13 @@ protected:
   Align MaxKernArgAlign;        // Cache for this.
 
   /// Number of bytes in the LDS that are being used.
-  unsigned LDSSize = 0;
+  uint32_t LDSSize = 0;
+  uint32_t GDSSize = 0;
 
   /// Number of bytes in the LDS allocated statically. This field is only used
   /// in the instruction selector and not part of the machine function info.
-  unsigned StaticLDSSize = 0;
+  uint32_t StaticLDSSize = 0;
+  uint32_t StaticGDSSize = 0;
 
   /// Align for dynamic shared memory if any. Dynamic shared memory is
   /// allocated directly after the static one, i.e., LDSSize. Need to pad
@@ -40,8 +46,8 @@ protected:
   /// stages.
   Align DynLDSAlign;
 
-  // State of MODE register, assumed FP mode.
-  AMDGPU::SIModeRegisterDefaults Mode;
+  // Flag to check dynamic LDS usage by kernel.
+  bool UsesDynamicLDS = false;
 
   // Kernels + shaders. i.e. functions called by the hardware and not called
   // by other functions.
@@ -49,6 +55,9 @@ protected:
 
   // Entry points called by other functions instead of directly by the hardware.
   bool IsModuleEntryFunction = false;
+
+  // Functions with the amdgpu_cs_chain or amdgpu_cs_chain_preserve CC.
+  bool IsChainFunction = false;
 
   bool NoSignedZerosFPMath = false;
 
@@ -59,20 +68,20 @@ protected:
   bool WaveLimiter = false;
 
 public:
-  AMDGPUMachineFunction(const MachineFunction &MF);
+  AMDGPUMachineFunction(const Function &F, const AMDGPUSubtarget &ST);
 
   uint64_t getExplicitKernArgSize() const {
     return ExplicitKernArgSize;
   }
 
-  unsigned getMaxKernArgAlign() const { return MaxKernArgAlign.value(); }
+  Align getMaxKernArgAlign() const { return MaxKernArgAlign; }
 
-  unsigned getLDSSize() const {
+  uint32_t getLDSSize() const {
     return LDSSize;
   }
 
-  AMDGPU::SIModeRegisterDefaults getMode() const {
-    return Mode;
+  uint32_t getGDSSize() const {
+    return GDSSize;
   }
 
   bool isEntryFunction() const {
@@ -80,6 +89,13 @@ public:
   }
 
   bool isModuleEntryFunction() const { return IsModuleEntryFunction; }
+
+  bool isChainFunction() const { return IsChainFunction; }
+
+  // The stack is empty upon entry to this function.
+  bool isBottomOfStack() const {
+    return isEntryFunction() || isChainFunction();
+  }
 
   bool hasNoSignedZerosFPMath() const {
     return NoSignedZerosFPMath;
@@ -93,12 +109,23 @@ public:
     return WaveLimiter;
   }
 
-  unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV);
-  void allocateModuleLDSGlobal(const Module *M);
+  unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV) {
+    return allocateLDSGlobal(DL, GV, DynLDSAlign);
+  }
+
+  unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV,
+                             Align Trailing);
+
+  static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
+  static std::optional<uint32_t> getLDSAbsoluteAddress(const GlobalValue &GV);
 
   Align getDynLDSAlign() const { return DynLDSAlign; }
 
-  void setDynLDSAlign(const DataLayout &DL, const GlobalVariable &GV);
+  void setDynLDSAlign(const Function &F, const GlobalVariable &GV);
+
+  void setUsesDynamicLDS(bool DynLDS);
+
+  bool isDynamicLDSUsed() const;
 };
 
 }

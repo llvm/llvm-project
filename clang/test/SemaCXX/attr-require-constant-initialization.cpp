@@ -7,7 +7,7 @@
 
 #define ATTR __attribute__((require_constant_initialization)) // expected-note 0+ {{expanded from macro}}
 
-int ReturnInt(); // expected-note 0+ {{declared here}}
+int ReturnInt(void); // expected-note 0+ {{declared here}}
 
 struct PODType { // expected-note 0+ {{declared here}}
   int value; // expected-note 0-2 {{declared here}}
@@ -78,7 +78,7 @@ ATTR const int &glvalue_ref ATTR = glvalue_int;
 ATTR const int &glvalue_ref2 ATTR = glvalue_int2;
 ATTR __thread const int &glvalue_ref_tl = glvalue_int;
 
-void test_basic_start_static_2_1() {
+void test_basic_start_static_2_1(void) {
   const int non_global = 42;
   ATTR static const int &local_init = non_global; // expected-error {{variable does not have a constant initializer}}
   // expected-note@-1 {{required by 'require_constant_initialization' attribute here}}
@@ -146,7 +146,7 @@ thread_local const int &TT1::tl_temp_init = 42; // expected-error {{variable doe
 // constructor call, and if the initialization full-expression is a constant
 // initializer for the object;
 
-void test_basic_start_static_2_2() {
+void test_basic_start_static_2_2(void) {
 #if __cplusplus < 201103L
   ATTR static PODType pod;
 #else
@@ -249,7 +249,7 @@ ATTR int lit_in_init = LitType{42}.value;
 // if an object with static or thread storage duration is not initialized by a
 // constructor call and if either the object is value-initialized or every
 // full-expression that appears in its initializer is a constant expression.
-void test_basic_start_static_2_3() {
+void test_basic_start_static_2_3(void) {
   ATTR static int static_local = 42;
   ATTR static int static_local2; // zero-initialization takes place
 #if __cplusplus >= 201103L

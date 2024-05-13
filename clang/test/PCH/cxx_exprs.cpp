@@ -1,9 +1,9 @@
 // Test this without pch.
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -include %S/cxx_exprs.h -std=c++11 -fsyntax-only -verify %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -include %S/cxx_exprs.h -std=c++11 -verify %s -ast-dump | FileCheck %s
 
 // Test with pch. Use '-ast-dump' to force deserialization of function bodies.
 // RUN: %clang_cc1 -fcxx-exceptions -fexceptions -x c++-header -std=c++11 -emit-pch -o %t %S/cxx_exprs.h
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-dump-all | FileCheck %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -include-pch %t -verify %s -ast-dump-all | FileCheck %s
 
 // expected-no-diagnostics
 
@@ -27,7 +27,7 @@ dynamic_cast_result derived_ptr = d;
 // CHECK: TypedefDecl {{.*}} <{{.*}}, col:{{.*}}> col:{{.*}} referenced dynamic_cast_result 'typeof (dynamic_cast<Derived *>(base_ptr))':'Derived *'{{$}}
 // CHECK-NEXT: TypeOfExprType {{.*}} 'typeof (dynamic_cast<Derived *>(base_ptr))' sugar{{( imported)?}}{{$}}
 // CHECK-NEXT: ParenExpr {{.*}} <col:{{.*}}, col:{{.*}}> 'Derived *'{{$}}
-// CHECK-NEXT: CXXDynamicCastExpr {{.*}} <col:{{.*}}, col:{{.*}}> 'Derived *' dynamic_cast<struct Derived *> <Dynamic>{{$}}
+// CHECK-NEXT: CXXDynamicCastExpr {{.*}} <col:{{.*}}, col:{{.*}}> 'Derived *' dynamic_cast<Derived *> <Dynamic>{{$}}
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'Base *' <LValueToRValue> part_of_explicit_cast{{$}}
 // CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'Base *' lvalue Var {{.*}} 'base_ptr' 'Base *' non_odr_use_unevaluated{{$}}
 

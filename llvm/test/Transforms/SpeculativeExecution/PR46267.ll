@@ -1,60 +1,56 @@
-; RUN: opt < %s -S -speculative-execution | FileCheck %s
 ; RUN: opt < %s -S -passes='speculative-execution' | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -S -passes='speculative-execution' | FileCheck %s
 
-%class.B = type { i32 (...)** }
+%class.B = type { ptr }
 
 ; Testing that two bitcasts are not hoisted to the first BB
-define i8* @foo(%class.B* readonly %b) {
+define ptr @foo(ptr readonly %b) {
 ; CHECK-LABEL: foo
 ; CHECK-LABEL: entry
-; CHECK-NEXT: %i = icmp eq %class.B* %b, null
+; CHECK-NEXT: %i = icmp eq ptr %b, null
 ; CHECK-NEXT: br i1 %i, label %end, label %notnull
 entry:
-  %i = icmp eq %class.B* %b, null
+  %i = icmp eq ptr %b, null
   br i1 %i, label %end, label %notnull
 
 ; CHECK-LABEL: notnull:
-; CHECK-NEXT: %i1 = bitcast %class.B* %b to i32**
-; CHECK: %i3 = bitcast %class.B* %b to i8*
 notnull:                             ; preds = %entry
-  %i1 = bitcast %class.B* %b to i32**
-  %vtable = load i32*, i32** %i1, align 8
-  %i2 = getelementptr inbounds i32, i32* %vtable, i64 -2
-  %offset.to.top = load i32, i32* %i2, align 4
-  %i3 = bitcast %class.B* %b to i8*
+  %vtable = load ptr, ptr %b, align 8
+  %i2 = getelementptr inbounds i32, ptr %vtable, i64 -2
+  %offset.to.top = load i32, ptr %i2, align 4
   %i4 = sext i32 %offset.to.top to i64
-  %i5 = getelementptr inbounds i8, i8* %i3, i64 %i4
+  %i5 = getelementptr inbounds i8, ptr %b, i64 %i4
   br label %end
 
 end:                                 ; preds = %notnull, %entry
-  %i6 = phi i8* [ %i5, %notnull ], [ null, %entry ]
-  ret i8* %i6
+  %i6 = phi ptr [ %i5, %notnull ], [ null, %entry ]
+  ret ptr %i6
 }
 
 define void @f(i32 %i) {
 entry:
 ; CHECK-LABEL: @f(
 ; CHECK:  %a2 = add i32 %i, 0
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 %a2
   br i1 undef, label %land.rhs, label %land.end
 
 land.rhs:                                         ; preds = %entry
 ; CHECK: land.rhs:
 ; CHECK-NEXT: call void @llvm.dbg.label
-; CHECK-NEXT: %x = alloca i32, align 4
-; CHECK-NEXT: call void @llvm.dbg.addr(metadata i32* %x
 ; CHECK-NEXT: %y = alloca i32, align 4
-; CHECK-NEXT: call void @llvm.dbg.declare(metadata i32* %y
-; CHECK-NEXT: %a0 = load i32, i32* undef, align 1
+; CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %y
+; CHECK-NEXT: %a0 = load i32, ptr undef, align 1
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a0
+; CHECK-NEXT: call void @llvm.dbg.label
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a2
   call void @llvm.dbg.label(metadata !11), !dbg !10
-  %x = alloca i32, align 4
-  call void @llvm.dbg.addr(metadata i32* %x, metadata !12, metadata !DIExpression()), !dbg !10
   %y = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %y, metadata !14, metadata !DIExpression()), !dbg !10
+  call void @llvm.dbg.declare(metadata ptr %y, metadata !14, metadata !DIExpression()), !dbg !10
 
-  %a0 = load i32, i32* undef, align 1
+  %a0 = load i32, ptr undef, align 1
   call void @llvm.dbg.value(metadata i32 %a0, metadata !9, metadata !DIExpression()), !dbg !10
+  ;; RemoveDIs: Check a label that is attached to a hoisted instruction
+  ;; gets left behind (match intrinsic-style debug info behaviour).
+  call void @llvm.dbg.label(metadata !15), !dbg !10
 
   %a2 = add i32 %i, 0
   call void @llvm.dbg.value(metadata i32 %a2, metadata !13, metadata !DIExpression()), !dbg !10
@@ -69,7 +65,6 @@ land.end:                                         ; preds = %land.rhs, %entry
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 declare void @llvm.dbg.label(metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare void @llvm.dbg.addr(metadata, metadata, metadata)
 
 attributes #1 = { nounwind readnone speculatable willreturn }
 
@@ -91,3 +86,4 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 !12 = !DILocalVariable(name: "x", scope: !6, file: !1, line: 3, type: !4)
 !13 = !DILocalVariable(name: "a2", scope: !6, file: !1, line: 3, type: !4)
 !14 = !DILocalVariable(name: "y", scope: !6, file: !1, line: 3, type: !4)
+!15 = !DILabel(scope: !6, name: "label2", file: !1, line: 2)

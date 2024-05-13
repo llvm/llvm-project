@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,osx.cocoa.Dealloc,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,osx.cocoa.Dealloc,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class -fobjc-arc -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,osx.cocoa.Dealloc,debug.ExprInspection -verify -Wno-objc-root-class -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,osx.cocoa.Dealloc,debug.ExprInspection -verify -Wno-objc-root-class -fobjc-arc -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(int);
 
@@ -37,8 +37,6 @@ typedef struct _NSZone NSZone;
 -(id)initWithInteger:(int)i;
 @end
 
-// rdar://6946338
-
 @interface Test1 : NSObject {
   NSString *text;
 }
@@ -64,8 +62,6 @@ typedef struct _NSZone NSZone;
 
 @end
 
-
-// rdar://8824416
 
 @interface MyNumber : NSObject
 {
@@ -130,8 +126,6 @@ NSNumber* numberFromMyNumberProperty(MyNumber* aMyNumber)
 #endif
 
 
-// rdar://6611873
-
 @interface Person : NSObject {
   NSString *_name;
 }
@@ -152,7 +146,7 @@ NSNumber* numberFromMyNumberProperty(MyNumber* aMyNumber)
 @end
 
 #if !__has_feature(objc_arc)
-void rdar6611873() {
+void rdar6611873(void) {
   Person *p = [[[Person alloc] init] autorelease];
   
   p.name = [[NSString string] retain]; // expected-warning {{leak}}
@@ -174,7 +168,7 @@ void rdar6611873() {
 
 
 #if !__has_feature(objc_arc)
-// <rdar://problem/9241180> Static analyzer doesn't detect uninitialized variable issues for property accesses
+// Static analyzer doesn't detect uninitialized variable issues for property accesses
 @interface RDar9241180
 @property (readwrite,assign) id x;
 -(id)testAnalyzer1:(int) y;
@@ -252,7 +246,6 @@ void testConsistencyAssign(Person *p) {
 // Tests for the analyzer fix that works around a Sema bug
 // where multiple methods are created for properties in class extensions that
 // are redeclared in a category method.
-// The Sema bug is tracked as <rdar://problem/25481164>.
 @interface ClassWithRedeclaredPropertyInExtensionFollowedByCategory
 @end
 
@@ -537,7 +530,6 @@ void testOverrelease(Person *p, int coin) {
   }
 }
 
-// <rdar://problem/16333368>
 @implementation Person (Rdar16333368)
 
 - (void)testDeliberateRelease:(Person *)other {
@@ -965,9 +957,8 @@ void testOpaqueConsistency(OpaqueIntWrapper *w) {
   [_implicitSynthProp release]; // FIXME: no-warning{{not owned}}
 }
 
-// rdar://problem/19862648
 - (void)establishIvarIsNilDuringLoops {
-  extern id getRandomObject();
+  extern id getRandomObject(void);
 
   int i = 4; // Must be at least 4 to trigger the bug.
   while (--i) {
@@ -980,7 +971,6 @@ void testOpaqueConsistency(OpaqueIntWrapper *w) {
   }
 }
 
-// rdar://problem/20335433
 - (void)retainIvarAndInvalidateSelf {
   extern void invalidate(id);
   [_unownedProp retain];
@@ -998,7 +988,7 @@ void testOpaqueConsistency(OpaqueIntWrapper *w) {
 @synthesize value;
 @end
 
-void testNoCrashWhenAccessPropertyAndThereAreNoDirectBindingsAtAll() {
+void testNoCrashWhenAccessPropertyAndThereAreNoDirectBindingsAtAll(void) {
    union {
     Wrapper *wrapper;
    } u = { 0 };

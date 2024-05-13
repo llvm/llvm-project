@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -verify=expected,le50 -fopenmp -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le51 -fopenmp -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=40 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le50 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le51 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le51 -fopenmp-simd -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
 void foo() {
 }
@@ -12,7 +12,7 @@ bool foobool(int argc) {
   return argc;
 }
 
-struct S1; // expected-note 2 {{declared here}}
+struct S1; // expected-note 2 {{declared here}}  // expected-note 2 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
@@ -107,12 +107,12 @@ T tmain(T argc) {
 #pragma omp target update from(x)
 #pragma omp target update from(t[:I])
 #pragma omp target update from(T) // expected-error {{'T' does not refer to a value}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from(I) // le50-error 2 {{expected addressable lvalue in 'from' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target update from(I) // le51-error 2 {{expected addressable lvalue in 'from' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target update from(S2::S2s)
 #pragma omp target update from(S2::S2sc)
 #pragma omp target update from(from)
 #pragma omp target update from(y x) // expected-error {{expected ',' or ')' in 'from' clause}}
-#pragma omp target update from(argc > 0 ? x : y) // le50-error 2 {{expected addressable lvalue in 'from' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target update from(argc > 0 ? x : y) // le51-error 2 {{expected addressable lvalue in 'from' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
 
 #pragma omp target update from(S1) // expected-error {{'S1' does not refer to a value}}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
 #pragma omp target update from(S2::S2sc)
 #pragma omp target update from(from)
 #pragma omp target update from(y x) // expected-error {{expected ',' or ')' in 'from' clause}}
-#pragma omp target update from(argc > 0 ? x : y) // le50-error {{expected addressable lvalue in 'from' clause}} le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update from(argc > 0 ? x : y) // le51-error {{expected addressable lvalue in 'from' clause}} le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(S1) // expected-error {{'S1' does not refer to a value}}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
 #pragma omp target update from(ba)

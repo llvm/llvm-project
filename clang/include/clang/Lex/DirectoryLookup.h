@@ -50,17 +50,21 @@ private:
 
   /// DirCharacteristic - The type of directory this is: this is an instance of
   /// SrcMgr::CharacteristicKind.
-  unsigned DirCharacteristic : 2;
+  LLVM_PREFERRED_TYPE(SrcMgr::CharacteristicKind)
+  unsigned DirCharacteristic : 3;
 
   /// LookupType - This indicates whether this DirectoryLookup object is a
   /// normal directory, a framework, or a headermap.
+  LLVM_PREFERRED_TYPE(LookupType_t)
   unsigned LookupType : 2;
 
   /// Whether this is a header map used when building a framework.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsIndexHeaderMap : 1;
 
   /// Whether we've performed an exhaustive search for module maps
   /// within the subdirectories of this directory.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SearchedAllModuleMaps : 1;
 
 public:
@@ -91,14 +95,18 @@ public:
     return isNormalDir() ? &u.Dir.getDirEntry() : nullptr;
   }
 
+  OptionalDirectoryEntryRef getDirRef() const {
+    return isNormalDir() ? OptionalDirectoryEntryRef(u.Dir) : std::nullopt;
+  }
+
   /// getFrameworkDir - Return the directory that this framework refers to.
   ///
   const DirectoryEntry *getFrameworkDir() const {
     return isFramework() ? &u.Dir.getDirEntry() : nullptr;
   }
 
-  Optional<DirectoryEntryRef> getFrameworkDirRef() const {
-    return isFramework() ? Optional<DirectoryEntryRef>(u.Dir) : None;
+  OptionalDirectoryEntryRef getFrameworkDirRef() const {
+    return isFramework() ? OptionalDirectoryEntryRef(u.Dir) : std::nullopt;
   }
 
   /// getHeaderMap - Return the directory that this entry refers to.
@@ -176,16 +184,17 @@ public:
   /// \param [out] MappedName if this is a headermap which maps the filename to
   /// a framework include ("Foo.h" -> "Foo/Foo.h"), set the new name to this
   /// vector and point Filename to it.
-  Optional<FileEntryRef>
+  OptionalFileEntryRef
   LookupFile(StringRef &Filename, HeaderSearch &HS, SourceLocation IncludeLoc,
              SmallVectorImpl<char> *SearchPath,
              SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
              ModuleMap::KnownHeader *SuggestedModule,
              bool &InUserSpecifiedSystemFramework, bool &IsFrameworkFound,
-             bool &IsInHeaderMap, SmallVectorImpl<char> &MappedName) const;
+             bool &IsInHeaderMap, SmallVectorImpl<char> &MappedName,
+             bool OpenFile = true) const;
 
 private:
-  Optional<FileEntryRef> DoFrameworkLookup(
+  OptionalFileEntryRef DoFrameworkLookup(
       StringRef Filename, HeaderSearch &HS, SmallVectorImpl<char> *SearchPath,
       SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule,

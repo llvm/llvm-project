@@ -53,9 +53,8 @@ void test_simple_ref_deduction(int *ip, float *fp, double *dp) {
 }
 
 
-// FIXME: Use the template parameter names in this diagnostic.
 template<typename ...Args1, typename ...Args2>
-typename get_nth_type<0, Args1...>::type first_arg_pair(pair<Args1, Args2>...); // expected-note{{candidate template ignored: could not match 'pair<type-parameter-0-0, type-parameter-0-1>' against 'int'}}
+typename get_nth_type<0, Args1...>::type first_arg_pair(pair<Args1, Args2>...); // expected-note{{candidate template ignored: could not match 'pair<Args1, Args2>' against 'int'}}
 
 template<typename ...Args1, typename ...Args2>
 typename get_nth_type<1, Args1...>::type second_arg_pair(pair<Args1, Args2>...);
@@ -82,7 +81,7 @@ void test_pair_deduction(int *ip, float *fp, double *dp) {
 template<typename ...Types> struct tuple { };
 
 template<typename ...Types>
-void pack_not_at_end(tuple<Types...>, Types... values, int); // expected-note {{<int *, double *> vs. <>}}
+void pack_not_at_end(tuple<Types...>, Types... values, int); // expected-note {{<int *, double *> vs. <int, int>}}
 
 void test_pack_not_at_end(tuple<int*, double*> t2) {
   pack_not_at_end(t2, 0, 0, 0); // expected-error {{no match}}

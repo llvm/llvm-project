@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_PDL_IR_PDLTYPES
 #define MLIR_DIALECT_PDL_IR_PDLTYPES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/PDL/IR/PDLDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -66,6 +67,7 @@ def PDL_Range : PDL_Type<"Range", "range"> {
     }]>,
   ];
   let genVerifyDecl = 1;
+  let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
 }
 
@@ -98,13 +100,13 @@ def PDL_Value : PDL_Type<"Value", "value"> {
 //===----------------------------------------------------------------------===//
 
 def PDL_AnyType : Type<
-  CPred<"$_self.isa<::mlir::pdl::PDLType>()">, "pdl type",
+  CPred<"::llvm::isa<::mlir::pdl::PDLType>($_self)">, "pdl type",
         "::mlir::pdl::PDLType">;
 
 // A range of positional values of one of the provided types.
 class PDL_RangeOf<Type positionalType> :
   ContainerType<AnyTypeOf<[positionalType]>, PDL_Range.predicate,
-                "$_self.cast<::mlir::pdl::RangeType>().getElementType()",
+                "::llvm::cast<::mlir::pdl::RangeType>($_self).getElementType()",
                 "range", "::mlir::pdl::RangeType">,
     BuildableType<"::mlir::pdl::RangeType::get(" # positionalType.builderCall #
                   ")">;

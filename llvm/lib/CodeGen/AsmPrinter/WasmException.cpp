@@ -12,32 +12,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "WasmException.h"
+#include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 using namespace llvm;
 
 void WasmException::endModule() {
-  // This is the symbol used in 'throw' and 'catch' instruction to denote this
-  // is a C++ exception. This symbol has to be emitted somewhere once in the
-  // module.  Check if the symbol has already been created, i.e., we have at
-  // least one 'throw' or 'catch' instruction in the module, and emit the symbol
-  // only if so.
-  SmallString<60> NameStr;
-  Mangler::getNameWithPrefix(NameStr, "__cpp_exception", Asm->getDataLayout());
-  if (Asm->OutContext.lookupSymbol(NameStr)) {
-    MCSymbol *ExceptionSym = Asm->GetExternalSymbolSymbol("__cpp_exception");
-    Asm->OutStreamer->emitLabel(ExceptionSym);
-  }
-}
-
-void WasmException::markFunctionEnd() {
-  // Get rid of any dead landing pads.
-  if (!Asm->MF->getLandingPads().empty()) {
-    auto *NonConstMF = const_cast<MachineFunction *>(Asm->MF);
-    // Wasm does not set BeginLabel and EndLabel information for landing pads,
-    // so we should set the second argument false.
-    NonConstMF->tidyLandingPads(nullptr, /* TidyIfNoBeginLabels */ false);
+  // These are symbols used to throw/catch C++ exceptions and C longjmps. These
+  // symbols have to be emitted somewhere once in the module. Check if each of
+  // the symbols has already been created, i.e., we have at least one 'throw' or
+  // 'catch' instruction with the symbol in the module, and emit the symbol only
+  // if so.
+  //
+  // But in dynamic linking, it is in general not possible to come up with a
+  // module instantiating order in which tag-defining modules are loaded before
+  // the importing modules. So we make them undefined symbols here, define tags
+  // in the JS side, and feed them to each importing module.
+  if (!Asm->isPositionIndependent()) {
+    for (const char *SymName : {"__cpp_exception", "__c_longjmp"}) {
+      SmallString<60> NameStr;
+      Mangler::getNameWithPrefix(NameStr, SymName, Asm->getDataLayout());
+      if (Asm->OutContext.lookupSymbol(NameStr)) {
+        MCSymbol *ExceptionSym = Asm->GetExternalSymbolSymbol(SymName);
+        Asm->OutStreamer->emitLabel(ExceptionSym);
+      }
+    }
   }
 }
 

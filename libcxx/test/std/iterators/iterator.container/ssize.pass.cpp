@@ -13,23 +13,24 @@
 //     -> common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>>;                    // C++20
 // template <class T, ptrdiff_t> constexpr ptrdiff_t ssize(const T (&array)[N]) noexcept; // C++20
 
-#include <iterator>
-#include <cassert>
-#include <vector>
 #include <array>
-#include <list>
+#include <cassert>
+#include <cstdint>
 #include <initializer_list>
+#include <iterator>
+#include <limits>
+#include <list>
 #include <string_view>
+#include <type_traits>
+#include <vector>
 
 #include "test_macros.h"
 
 // Ignore warning about std::numeric_limits comparisons being tautological.
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wtype-limits"
-#endif
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wtype-limits")
 
 struct short_container {
-    uint16_t size() const { return 60000; } // not noexcept
+    std::uint16_t size() const { return 60000; } // not noexcept
 };
 
 template<typename C>
@@ -64,7 +65,7 @@ void test_container(std::initializer_list<T>& c)
     assert ( std::ssize(c)   == static_cast<decltype(std::ssize(c))>(c.size()));
 }
 
-template<typename T, size_t Sz>
+template<typename T, std::size_t Sz>
 void test_const_array(const T (&array)[Sz])
 {
     ASSERT_NOEXCEPT(std::ssize(array));
@@ -78,14 +79,15 @@ int main(int, char**)
     std::list<int>   l; l.push_back(2);
     std::array<int, 1> a; a[0] = 3;
     std::initializer_list<int> il = { 4 };
+    using SSize = std::common_type_t<std::ptrdiff_t, std::make_signed_t<std::size_t>>;
     test_container ( v );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(v)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(v)));
     test_container ( l );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(l)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(l)));
     test_container ( a );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(a)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(a)));
     test_container ( il );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(il)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(il)));
 
     test_const_container ( v );
     test_const_container ( l );
@@ -94,11 +96,11 @@ int main(int, char**)
 
     std::string_view sv{"ABC"};
     test_container ( sv );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(sv)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(sv)));
     test_const_container ( sv );
 
     static constexpr int arrA [] { 1, 2, 3 };
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(arrA)));
+    ASSERT_SAME_TYPE(std::ptrdiff_t, decltype(std::ssize(arrA)));
     static_assert( std::is_signed_v<decltype(std::ssize(arrA))>, "");
     test_const_array ( arrA );
 

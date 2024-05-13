@@ -17,16 +17,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 
 using namespace llvm;
 
@@ -209,8 +208,8 @@ computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF) {
     MCPhysReg Reg = CSRegs[i];
     if (SavedRegs.test(Reg)) {
       // Save subregisters
-      for (MCSubRegIterator SR(Reg, &TRI); SR.isValid(); ++SR)
-        SavedRegs.set(*SR);
+      for (MCPhysReg SR : TRI.subregs(Reg))
+        SavedRegs.set(SR);
     }
   }
 }

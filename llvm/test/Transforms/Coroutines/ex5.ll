@@ -1,13 +1,12 @@
 ; Fifth example from Doc/Coroutines.rst (final suspend)
-; RUN: opt < %s -O2 -enable-coroutines -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
-; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -enable-coroutines -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
 
-define i8* @f(i32 %n) {
+define ptr @f(i32 %n) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %size = call i32 @llvm.coro.size.i32()
-  %alloc = call i8* @malloc(i32 %size)
-  %hdl = call noalias i8* @llvm.coro.begin(token %id, i8* %alloc)
+  %alloc = call ptr @malloc(i32 %size)
+  %hdl = call noalias ptr @llvm.coro.begin(token %id, ptr %alloc)
   br label %while.cond
 while.cond:
   %n.val = phi i32 [ %n, %entry ], [ %dec, %while.body ]
@@ -28,38 +27,38 @@ trap:
   call void @llvm.trap()
   unreachable
 cleanup:
-  %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
-  call void @free(i8* %mem)
+  %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
+  call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(i8* %hdl, i1 false)
-  ret i8* %hdl
+  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  ret ptr %hdl
 }
 
-declare noalias i8* @malloc(i32)
+declare noalias ptr @malloc(i32)
 declare void @print(i32)
 declare void @llvm.trap()
-declare void @free(i8* nocapture)
+declare void @free(ptr nocapture)
 
-declare token @llvm.coro.id( i32, i8*, i8*, i8*)
+declare token @llvm.coro.id( i32, ptr, ptr, ptr)
 declare i32 @llvm.coro.size.i32()
-declare i8* @llvm.coro.begin(token, i8*)
-declare token @llvm.coro.save(i8*)
+declare ptr @llvm.coro.begin(token, ptr)
+declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i8* @llvm.coro.free(token, i8*)
-declare i1 @llvm.coro.end(i8*, i1)
+declare ptr @llvm.coro.free(token, ptr)
+declare i1 @llvm.coro.end(ptr, i1, token)
 
 ; CHECK-LABEL: @main
 define i32 @main() {
 entry:
-  %hdl = call i8* @f(i32 4)
+  %hdl = call ptr @f(i32 4)
   br label %while
 while:
-  call void @llvm.coro.resume(i8* %hdl)
-  %done = call i1 @llvm.coro.done(i8* %hdl)
+  call void @llvm.coro.resume(ptr %hdl)
+  %done = call i1 @llvm.coro.done(ptr %hdl)
   br i1 %done, label %end, label %while
 end:
-  call void @llvm.coro.destroy(i8* %hdl)
+  call void @llvm.coro.destroy(ptr %hdl)
   ret i32 0
 
 ; CHECK:      call void @print(i32 4)
@@ -69,6 +68,6 @@ end:
 ; CHECK:      ret i32 0
 }
 
-declare i1 @llvm.coro.done(i8*)
-declare void @llvm.coro.resume(i8*)
-declare void @llvm.coro.destroy(i8*)
+declare i1 @llvm.coro.done(ptr)
+declare void @llvm.coro.resume(ptr)
+declare void @llvm.coro.destroy(ptr)

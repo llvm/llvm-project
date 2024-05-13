@@ -87,7 +87,7 @@ performance overhead, and clarity seems nice.
 
 At this point, I am a bit wondering about two questions.
 
-* When should something belong to a checker and when should something belong to the engine? 
+* When should something belong to a checker and when should something belong to the engine?
   Sometimes we model library aspects in the engine and model language constructs in checkers.
 
 * What is the checker programming model that we are aiming for? Maximum freedom or more easy checker development?
@@ -218,11 +218,11 @@ essentially immutable. For the future, i feel as if it is a dead end.
 I'd like to consider another funny example. Suppose we're trying to model
 
 .. code-block:: cpp
- 
+
  std::unique_ptr. Consider::
- 
+
    void bar(const std::unique_ptr<int> &x);
- 
+
    void foo(std::unique_ptr<int> &x) {
      int *a = x.get();   // (a, 0, direct): &AbstractStorageRegion
      *a = 1;             // (AbstractStorageRegion, 0, direct): 1 S32b
@@ -233,7 +233,7 @@ I'd like to consider another funny example. Suppose we're trying to model
      clang_analyzer_eval(*a == 1); // Making this true is up to the checker.
      clang_analyzer_eval(*b == 2); // Making this unknown is up to the checker.
    }
- 
+
 The checker doesn't totally need to ensure that ``*a == 1`` passes - even though the
 pointer was unique, it could theoretically have ``.get()``-ed above and the code
 could of course break the uniqueness invariant (though we'd probably want it).

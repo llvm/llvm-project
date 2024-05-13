@@ -5,19 +5,19 @@ declare i32 @__gxx_personality_v0(...)
 
 declare void @bar()
 
-define i64 @foo(i64 %lhs, i64 %rhs) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i64 @foo(i64 %lhs, i64 %rhs) personality ptr @__gxx_personality_v0 {
   invoke void @bar() to label %end unwind label %clean
 end:
  ret i64 0
 
 clean:
-  %tst = landingpad { i8*, i32 } cleanup
+  %tst = landingpad { ptr, i32 } cleanup
   ret i64 42
 }
 
 ; CHECK: Contents of section .eh_frame:
 ; CHECK: 0000 1c000000 00000000 017a504c 5200017c  .........zPLR..|
-; CHECK: 0010 1e0b0000 00000000 00000000 1b0c1f00  ................
+; CHECK: 0010 1e0b9c00 00000000 0000001c 1b0c1f00 ................
 
 ; Don't really care about the rest:
 

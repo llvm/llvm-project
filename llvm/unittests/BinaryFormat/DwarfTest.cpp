@@ -140,55 +140,55 @@ TEST(DwarfTest, getVirtuality) {
 }
 
 TEST(DwarfTest, FixedFormSizes) {
-  Optional<uint8_t> RefSize;
-  Optional<uint8_t> AddrSize;
+  std::optional<uint8_t> RefSize;
+  std::optional<uint8_t> AddrSize;
 
   // Test 32 bit DWARF version 2 with 4 byte addresses.
   FormParams Params_2_4_32 = {2, 4, DWARF32};
   RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_2_4_32);
   AddrSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_2_4_32);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_TRUE(AddrSize.hasValue());
+  EXPECT_TRUE(RefSize.has_value());
+  EXPECT_TRUE(AddrSize.has_value());
   EXPECT_EQ(*RefSize, *AddrSize);
 
   // Test 32 bit DWARF version 2 with 8 byte addresses.
   FormParams Params_2_8_32 = {2, 8, DWARF32};
   RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_2_8_32);
   AddrSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_2_8_32);
-  EXPECT_TRUE(RefSize.hasValue());
-  EXPECT_TRUE(AddrSize.hasValue());
+  EXPECT_TRUE(RefSize.has_value());
+  EXPECT_TRUE(AddrSize.has_value());
   EXPECT_EQ(*RefSize, *AddrSize);
 
   // DW_FORM_ref_addr is 4 bytes in DWARF 32 in DWARF version 3 and beyond.
   FormParams Params_3_4_32 = {3, 4, DWARF32};
   RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_3_4_32);
-  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_TRUE(RefSize.has_value());
   EXPECT_EQ(*RefSize, 4);
 
   FormParams Params_4_4_32 = {4, 4, DWARF32};
   RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_4_4_32);
-  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_TRUE(RefSize.has_value());
   EXPECT_EQ(*RefSize, 4);
 
   FormParams Params_5_4_32 = {5, 4, DWARF32};
   RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_5_4_32);
-  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_TRUE(RefSize.has_value());
   EXPECT_EQ(*RefSize, 4);
 
   // DW_FORM_ref_addr is 8 bytes in DWARF 64 in DWARF version 3 and beyond.
   FormParams Params_3_8_64 = {3, 8, DWARF64};
   RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_3_8_64);
-  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_TRUE(RefSize.has_value());
   EXPECT_EQ(*RefSize, 8);
 
   FormParams Params_4_8_64 = {4, 8, DWARF64};
   RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_4_8_64);
-  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_TRUE(RefSize.has_value());
   EXPECT_EQ(*RefSize, 8);
 
   FormParams Params_5_8_64 = {5, 8, DWARF64};
   RefSize = getFixedFormByteSize(DW_FORM_ref_addr, Params_5_8_64);
-  EXPECT_TRUE(RefSize.hasValue());
+  EXPECT_TRUE(RefSize.has_value());
   EXPECT_EQ(*RefSize, 8);
 }
 
@@ -203,5 +203,20 @@ TEST(DwarfTest, format_provider) {
   EXPECT_EQ("DW_TAG_unknown_ffff", formatv("{0}", DW_TAG_hi_user).str());
   EXPECT_EQ("DW_OP_lit0", formatv("{0}", DW_OP_lit0).str());
   EXPECT_EQ("DW_OP_unknown_ff", formatv("{0}", DW_OP_hi_user).str());
+}
+
+TEST(DwarfTest, lname) {
+  auto roundtrip = [](llvm::dwarf::SourceLanguage sl) {
+    auto name_version = toDW_LNAME(sl);
+    // Ignore ones without a defined mapping.
+    if (sl == DW_LANG_Mips_Assembler || sl == DW_LANG_GOOGLE_RenderScript ||
+        !name_version.has_value())
+      return sl;
+    return dwarf::toDW_LANG(name_version->first, name_version->second)
+        .value_or(sl);
+  };
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
+  EXPECT_EQ(roundtrip(DW_LANG_##NAME), DW_LANG_##NAME);
+#include "llvm/BinaryFormat/Dwarf.def"
 }
 } // end namespace

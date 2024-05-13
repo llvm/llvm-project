@@ -20,14 +20,14 @@ union { struct S s; } u;
 
 
 // CHECK: define dso_local void @t3() [[NAKED:#[0-9]+]] {
-__declspec(naked) void t3() {}
+__declspec(naked) void t3(void) {}
 
 // CHECK: define dso_local void @t22() [[NUW:#[0-9]+]]
-void __declspec(nothrow) t22();
-void t22() {}
+void __declspec(nothrow) t22(void);
+void t22(void) {}
 
 // CHECK: define dso_local void @t2() [[NI:#[0-9]+]] {
-__declspec(noinline) void t2() {}
+__declspec(noinline) void t2(void) {}
 
 // CHECK: call void @f20_t() [[NR:#[0-9]+]]
 __declspec(noreturn) void f20_t(void);
@@ -41,4 +41,4 @@ void noalias_caller(int *x) { noalias_callee(x); }
 // CHECK: attributes [[NUW]] = { nounwind{{.*}} }
 // CHECK: attributes [[NI]] = { noinline nounwind{{.*}} }
 // CHECK: attributes [[NR]] = { noreturn }
-// CHECK: attributes [[NA]] = { argmemonly nounwind{{.*}} }
+// CHECK: attributes [[NA]] = { nounwind memory(argmem: readwrite, inaccessiblemem: readwrite){{.*}} }

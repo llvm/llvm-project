@@ -2,7 +2,7 @@
 
 extern char ch;
 extern char ch;
-int test() {
+int test(void) {
   return ch;
 }
 

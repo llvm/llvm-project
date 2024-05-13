@@ -83,16 +83,16 @@ define void @test(double, float, i16, <4 x half>, <8 x half>) {
 ; SOFT:       @ %bb.0: @ %entry
 ; SOFT-NEXT:    push {r11, lr}
 ; SOFT-NEXT:    sub sp, sp, #32
-; SOFT-NEXT:    vldr d16, [sp, #40]
-; SOFT-NEXT:    mov r12, #16
-; SOFT-NEXT:    vabs.f16 d16, d16
-; SOFT-NEXT:    mov lr, sp
-; SOFT-NEXT:    vst1.16 {d16}, [lr:64], r12
 ; SOFT-NEXT:    add r12, sp, #48
 ; SOFT-NEXT:    vld1.64 {d16, d17}, [r12]
+; SOFT-NEXT:    add r12, sp, #16
 ; SOFT-NEXT:    vabs.f16 q8, q8
-; SOFT-NEXT:    str r3, [sp, #8]
-; SOFT-NEXT:    vst1.64 {d16, d17}, [lr]
+; SOFT-NEXT:    vst1.64 {d16, d17}, [r12]
+; SOFT-NEXT:    mov r12, sp
+; SOFT-NEXT:    vldr d16, [sp, #40]
+; SOFT-NEXT:    vabs.f16 d16, d16
+; SOFT-NEXT:    vst1.16 {d16}, [r12:64]!
+; SOFT-NEXT:    str r3, [r12]
 ; SOFT-NEXT:    bl use
 ; SOFT-NEXT:    add sp, sp, #32
 ; SOFT-NEXT:    pop {r11, pc}
@@ -105,26 +105,26 @@ define void @test(double, float, i16, <4 x half>, <8 x half>) {
 ;
 ; SOFTEB-LABEL: test:
 ; SOFTEB:       @ %bb.0: @ %entry
-; SOFTEB-NEXT:    .save {r11, lr}
-; SOFTEB-NEXT:    push {r11, lr}
+; SOFTEB-NEXT:    .save {r4, lr}
+; SOFTEB-NEXT:    push {r4, lr}
 ; SOFTEB-NEXT:    .pad #32
 ; SOFTEB-NEXT:    sub sp, sp, #32
 ; SOFTEB-NEXT:    vldr d16, [sp, #40]
-; SOFTEB-NEXT:    mov r12, #16
 ; SOFTEB-NEXT:    mov lr, sp
-; SOFTEB-NEXT:    str r3, [sp, #8]
+; SOFTEB-NEXT:    add r4, sp, #48
+; SOFTEB-NEXT:    add r12, sp, #16
 ; SOFTEB-NEXT:    vrev64.16 d16, d16
 ; SOFTEB-NEXT:    vabs.f16 d16, d16
-; SOFTEB-NEXT:    vst1.16 {d16}, [lr:64], r12
-; SOFTEB-NEXT:    add r12, sp, #48
-; SOFTEB-NEXT:    vld1.64 {d16, d17}, [r12]
+; SOFTEB-NEXT:    vst1.16 {d16}, [lr:64]!
+; SOFTEB-NEXT:    vld1.64 {d16, d17}, [r4]
 ; SOFTEB-NEXT:    vrev64.16 q8, q8
+; SOFTEB-NEXT:    str r3, [lr]
 ; SOFTEB-NEXT:    vabs.f16 q8, q8
 ; SOFTEB-NEXT:    vrev64.16 q8, q8
-; SOFTEB-NEXT:    vst1.64 {d16, d17}, [lr]
+; SOFTEB-NEXT:    vst1.64 {d16, d17}, [r12]
 ; SOFTEB-NEXT:    bl use
 ; SOFTEB-NEXT:    add sp, sp, #32
-; SOFTEB-NEXT:    pop {r11, pc}
+; SOFTEB-NEXT:    pop {r4, pc}
 ;
 ; HARDEB-LABEL: test:
 ; HARDEB:       @ %bb.0: @ %entry
@@ -148,20 +148,20 @@ define void @many_args_test(double, float, i16, <4 x half>, <8 x half>, <8 x hal
 ; SOFT-NEXT:    push {r11, lr}
 ; SOFT-NEXT:    sub sp, sp, #32
 ; SOFT-NEXT:    add r12, sp, #80
-; SOFT-NEXT:    mov lr, sp
 ; SOFT-NEXT:    vld1.64 {d16, d17}, [r12]
 ; SOFT-NEXT:    add r12, sp, #48
 ; SOFT-NEXT:    vabs.f16 q8, q8
 ; SOFT-NEXT:    vld1.64 {d18, d19}, [r12]
 ; SOFT-NEXT:    add r12, sp, #64
-; SOFT-NEXT:    str r3, [sp, #8]
 ; SOFT-NEXT:    vadd.f16 q8, q8, q9
 ; SOFT-NEXT:    vld1.64 {d18, d19}, [r12]
-; SOFT-NEXT:    mov r12, #16
+; SOFT-NEXT:    add r12, sp, #16
 ; SOFT-NEXT:    vmul.f16 q8, q9, q8
-; SOFT-NEXT:    vldr d18, [sp, #40]
-; SOFT-NEXT:    vst1.16 {d18}, [lr:64], r12
-; SOFT-NEXT:    vst1.64 {d16, d17}, [lr]
+; SOFT-NEXT:    vst1.64 {d16, d17}, [r12]
+; SOFT-NEXT:    mov r12, sp
+; SOFT-NEXT:    vldr d16, [sp, #40]
+; SOFT-NEXT:    vst1.16 {d16}, [r12:64]!
+; SOFT-NEXT:    str r3, [r12]
 ; SOFT-NEXT:    bl use
 ; SOFT-NEXT:    add sp, sp, #32
 ; SOFT-NEXT:    pop {r11, pc}
@@ -181,13 +181,8 @@ define void @many_args_test(double, float, i16, <4 x half>, <8 x half>, <8 x hal
 ; SOFTEB-NEXT:    push {r11, lr}
 ; SOFTEB-NEXT:    .pad #32
 ; SOFTEB-NEXT:    sub sp, sp, #32
-; SOFTEB-NEXT:    vldr d16, [sp, #40]
-; SOFTEB-NEXT:    mov r12, #16
-; SOFTEB-NEXT:    mov lr, sp
-; SOFTEB-NEXT:    str r3, [sp, #8]
-; SOFTEB-NEXT:    vrev64.16 d16, d16
-; SOFTEB-NEXT:    vst1.16 {d16}, [lr:64], r12
 ; SOFTEB-NEXT:    add r12, sp, #80
+; SOFTEB-NEXT:    mov lr, sp
 ; SOFTEB-NEXT:    vld1.64 {d16, d17}, [r12]
 ; SOFTEB-NEXT:    add r12, sp, #48
 ; SOFTEB-NEXT:    vrev64.16 q8, q8
@@ -197,10 +192,15 @@ define void @many_args_test(double, float, i16, <4 x half>, <8 x half>, <8 x hal
 ; SOFTEB-NEXT:    vrev64.16 q9, q9
 ; SOFTEB-NEXT:    vadd.f16 q8, q8, q9
 ; SOFTEB-NEXT:    vld1.64 {d18, d19}, [r12]
+; SOFTEB-NEXT:    add r12, sp, #16
 ; SOFTEB-NEXT:    vrev64.16 q9, q9
 ; SOFTEB-NEXT:    vmul.f16 q8, q9, q8
+; SOFTEB-NEXT:    vldr d18, [sp, #40]
+; SOFTEB-NEXT:    vrev64.16 d18, d18
+; SOFTEB-NEXT:    vst1.16 {d18}, [lr:64]!
+; SOFTEB-NEXT:    str r3, [lr]
 ; SOFTEB-NEXT:    vrev64.16 q8, q8
-; SOFTEB-NEXT:    vst1.64 {d16, d17}, [lr]
+; SOFTEB-NEXT:    vst1.64 {d16, d17}, [r12]
 ; SOFTEB-NEXT:    bl use
 ; SOFTEB-NEXT:    add sp, sp, #32
 ; SOFTEB-NEXT:    pop {r11, pc}

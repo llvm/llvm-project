@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-PICOLIBC-FIXME
+
 // <iostream>
 
-// istream cerr;
+// ostream cerr;
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
-// FILE_DEPENDENCIES: ../check-stderr.sh
 // RUN: %{build}
-// RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
+// RUN: %{exec} %t.exe 2> %t.actual
+// RUN: echo -n 1234 > %t.expected
+// RUN: diff %t.expected %t.actual
 
 #include <iostream>
 #include <cassert>
@@ -24,11 +25,6 @@
 int main(int, char**) {
     std::cerr << "1234";
     assert(std::cerr.flags() & std::ios_base::unitbuf);
-
-#ifdef _LIBCPP_HAS_NO_STDOUT
-    assert(std::cerr.tie() == NULL);
-#else
     assert(std::cerr.tie() == &std::cout);
-#endif
     return 0;
 }

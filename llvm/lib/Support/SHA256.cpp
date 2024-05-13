@@ -23,14 +23,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Host.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include <string.h>
 
 namespace llvm {
-
-#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
-#define SHA_BIG_ENDIAN
-#endif
 
 #define SHR(x, c) ((x) >> (c))
 #define ROTR(x, n) (((x) >> n) | ((x) << (32 - (n))))
@@ -171,11 +167,10 @@ void SHA256::hashBlock() {
 }
 
 void SHA256::addUncounted(uint8_t Data) {
-#ifdef SHA_BIG_ENDIAN
-  InternalState.Buffer.C[InternalState.BufferOffset] = Data;
-#else
-  InternalState.Buffer.C[InternalState.BufferOffset ^ 3] = Data;
-#endif
+  if constexpr (sys::IsBigEndianHost)
+    InternalState.Buffer.C[InternalState.BufferOffset] = Data;
+  else
+    InternalState.Buffer.C[InternalState.BufferOffset ^ 3] = Data;
 
   InternalState.BufferOffset++;
   if (InternalState.BufferOffset == BLOCK_LENGTH) {
@@ -204,7 +199,7 @@ void SHA256::update(ArrayRef<uint8_t> Data) {
   // Fast buffer filling for large inputs.
   while (Data.size() >= BLOCK_LENGTH) {
     assert(InternalState.BufferOffset == 0);
-    static_assert(BLOCK_LENGTH % 4 == 0, "");
+    static_assert(BLOCK_LENGTH % 4 == 0);
     constexpr size_t BLOCK_LENGTH_32 = BLOCK_LENGTH / 4;
     for (size_t I = 0; I < BLOCK_LENGTH_32; ++I)
       InternalState.Buffer.L[I] = support::endian::read32be(&Data[I * 4]);
@@ -243,30 +238,34 @@ void SHA256::pad() {
   addUncounted(len);
 }
 
-StringRef SHA256::final() {
+void SHA256::final(std::array<uint32_t, HASH_LENGTH / 4> &HashResult) {
   // Pad to complete the last block
   pad();
 
-#ifdef SHA_BIG_ENDIAN
-  // Just copy the current state
-  for (int i = 0; i < 8; i++) {
-    HashResult[i] = InternalState.State[i];
+  if constexpr (sys::IsBigEndianHost) {
+    // Just copy the current state
+    for (int i = 0; i < 8; i++) {
+      HashResult[i] = InternalState.State[i];
+    }
+  } else {
+    // Swap byte order back
+    for (int i = 0; i < 8; i++) {
+      HashResult[i] = llvm::byteswap(InternalState.State[i]);
+    }
   }
-#else
-  // Swap byte order back
-  for (int i = 0; i < 8; i++) {
-    HashResult[i] = (((InternalState.State[i]) << 24) & 0xff000000) |
-                    (((InternalState.State[i]) << 8) & 0x00ff0000) |
-                    (((InternalState.State[i]) >> 8) & 0x0000ff00) |
-                    (((InternalState.State[i]) >> 24) & 0x000000ff);
-  }
-#endif
-
-  // Return pointer to hash (32 characters)
-  return StringRef((char *)HashResult, HASH_LENGTH);
 }
 
-StringRef SHA256::result() {
+std::array<uint8_t, 32> SHA256::final() {
+  union {
+    std::array<uint32_t, HASH_LENGTH / 4> HashResult;
+    std::array<uint8_t, HASH_LENGTH> ReturnResult;
+  };
+  static_assert(sizeof(HashResult) == sizeof(ReturnResult));
+  final(HashResult);
+  return ReturnResult;
+}
+
+std::array<uint8_t, 32> SHA256::result() {
   auto StateToRestore = InternalState;
 
   auto Hash = final();
@@ -281,11 +280,7 @@ StringRef SHA256::result() {
 std::array<uint8_t, 32> SHA256::hash(ArrayRef<uint8_t> Data) {
   SHA256 Hash;
   Hash.update(Data);
-  StringRef S = Hash.final();
-
-  std::array<uint8_t, 32> Arr;
-  memcpy(Arr.data(), S.data(), S.size());
-  return Arr;
+  return Hash.final();
 }
 
 } // namespace llvm

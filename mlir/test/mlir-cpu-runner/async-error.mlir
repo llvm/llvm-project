@@ -1,21 +1,18 @@
-// RUN:   mlir-opt %s -async-to-async-runtime                                  \
-// RUN:               -async-runtime-ref-counting                              \
-// RUN:               -async-runtime-ref-counting-opt                          \
-// RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-linalg-to-loops                                 \
-// RUN:               -convert-scf-to-std                                      \
-// RUN:               -convert-linalg-to-llvm                                  \
-// RUN:               -convert-vector-to-llvm                                  \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:   mlir-opt %s -pass-pipeline="builtin.module(async-to-async-runtime,func.func(async-runtime-ref-counting,async-runtime-ref-counting-opt),convert-async-to-llvm,func.func(convert-linalg-to-loops,convert-scf-to-cf),convert-vector-to-llvm,func.func(convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
-// RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext  \
-// RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext    \
-// RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
+// RUN:     -shared-libs=%mlir_c_runner_utils  \
+// RUN:     -shared-libs=%mlir_runner_utils    \
+// RUN:     -shared-libs=%mlir_async_runtime   \
 // RUN: | FileCheck %s --dump-input=always
 
-func @main() {
-  %false = constant 0 : i1
+// FIXME: https://github.com/llvm/llvm-project/issues/57231
+// UNSUPPORTED: hwasan
+// FIXME: Windows does not have aligned_alloc
+// UNSUPPORTED: system-windows
+
+func.func @main() {
+  %false = arith.constant 0 : i1
 
   // ------------------------------------------------------------------------ //
   // Check that simple async region completes without errors.
@@ -33,7 +30,7 @@ func @main() {
   // Check that assertion in the async region converted to async error.
   // ------------------------------------------------------------------------ //
   %token1 = async.execute {
-    assert %false, "error"
+    cf.assert %false, "error"
     async.yield
   }
   async.runtime.await %token1 : !async.token
@@ -47,7 +44,7 @@ func @main() {
   // ------------------------------------------------------------------------ //
   %token2 = async.execute {
     %token = async.execute {
-      assert %false, "error"
+      cf.assert %false, "error"
       async.yield
     }
     async.await %token : !async.token
@@ -64,8 +61,8 @@ func @main() {
   // ------------------------------------------------------------------------ //
   %token3, %value3 = async.execute -> !async.value<f32> {
     %token, %value = async.execute -> !async.value<f32> {
-      assert %false, "error"
-      %0 = constant 123.45 : f32
+      cf.assert %false, "error"
+      %0 = arith.constant 123.45 : f32
       async.yield %0 : f32
     }
     %ret = async.await %value : !async.value<f32>
@@ -85,14 +82,15 @@ func @main() {
   // Check error propagation from a token to the group.
   // ------------------------------------------------------------------------ //
 
-  %group0 = async.create_group
+  %c2 = arith.constant 2 : index
+  %group0 = async.create_group %c2 : !async.group
 
   %token4 = async.execute {
     async.yield
   }
 
   %token5 = async.execute {
-    assert %false, "error"
+    cf.assert %false, "error"
     async.yield
   }
 

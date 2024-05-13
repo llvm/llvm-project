@@ -129,11 +129,16 @@ namespace clang {
     // the function-like macro's new replacement list.
     int NumOfTokensPriorToVAOpt = -1;
 
+    LLVM_PREFERRED_TYPE(bool)
     unsigned LeadingSpaceForStringifiedToken : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
     unsigned StringifyBefore : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned CharifyBefore : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BeginsWithPlaceholder : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned EndsWithPlaceholder : 1;
 
     bool hasStringifyBefore() const {

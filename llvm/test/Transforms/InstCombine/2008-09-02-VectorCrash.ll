@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine
+; RUN: opt < %s -passes=instcombine
 
 define void @entry(i32 %m_task_id, i32 %start_x, i32 %end_x, i32 %start_y, i32 %end_y) {
 	br label %1
@@ -22,6 +22,6 @@ define void @entry(i32 %m_task_id, i32 %start_x, i32 %end_x, i32 %start_y, i32 %
 	%11 = extractelement <2 x i32> %10, i32 1		; <i32> [#uses=1]
 	%12 = insertelement <4 x i32> zeroinitializer, i32 %11, i32 3		; <<4 x i32>> [#uses=1]
 	%13 = sitofp <4 x i32> %12 to <4 x float>		; <<4 x float>> [#uses=1]
-	store <4 x float> %13, <4 x float>* null
+	store <4 x float> %13, ptr null
 	br label %4
 }

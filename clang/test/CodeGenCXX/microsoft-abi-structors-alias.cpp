@@ -22,7 +22,7 @@ B::~B() {}
 void foo() {
   B b;
 }
-// CHECK-DAG: @"??1B@test2@@UAE@XZ" = dso_local unnamed_addr alias void (%"struct.test2::B"*), bitcast (void (%"struct.test2::A"*)* @"??1A@test2@@UAE@XZ" to void (%"struct.test2::B"*)*)
+// CHECK-DAG: @"??1B@test2@@UAE@XZ" = dso_local unnamed_addr alias void (ptr), ptr @"??1A@test2@@UAE@XZ"
 }
 
 namespace test3 {

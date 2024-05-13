@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 declare float @llvm.amdgcn.fdiv.fast(float, float) #0
 
@@ -8,9 +8,9 @@ declare float @llvm.amdgcn.fdiv.fast(float, float) #0
 ; CHECK: v_rcp_f32_e32
 ; CHECK: v_mul_f32_e32
 ; CHECK: v_mul_f32_e32
-define amdgpu_kernel void @test_fdiv_fast(float addrspace(1)* %out, float %a, float %b) #1 {
+define amdgpu_kernel void @test_fdiv_fast(ptr addrspace(1) %out, float %a, float %b) #1 {
   %fdiv = call float @llvm.amdgcn.fdiv.fast(float %a, float %b)
-  store float %fdiv, float addrspace(1)* %out
+  store float %fdiv, ptr addrspace(1) %out
   ret void
 }
 

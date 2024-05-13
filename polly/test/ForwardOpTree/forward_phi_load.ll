@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree-normalize-phi=true -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-optree-normalize-phi=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Rematerialize a load.
 ;
@@ -13,7 +13,7 @@
 ;   A[j] = phi;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -23,8 +23,8 @@ for:
   br i1 %j.cmp, label %bodyA, label %exit
 
     bodyA:
-      %B_idx = getelementptr inbounds double, double* %B, i32 %j
-      %val = load double, double* %B_idx
+      %B_idx = getelementptr inbounds double, ptr %B, i32 %j
+      %val = load double, ptr %B_idx
       br label %bodyB
 
     bodyB:
@@ -32,8 +32,8 @@ for:
       br label %bodyC
 
     bodyC:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %phi, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %phi, ptr %A_idx
       br label %inc
 
 inc:
@@ -59,7 +59,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyA[i0] -> MemRef_phi__phi[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
+; CHECK-NEXT:                   %val = load double, ptr %B_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_bodyB
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
@@ -77,6 +77,6 @@ return:
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyC[i0] -> MemRef_phi[] };
 ; CHECK-NEXT:            new: [n] -> { Stmt_bodyC[i0] -> MemRef_B[i0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   store double %phi, double* %A_idx, align 8
+; CHECK-NEXT:                   store double %phi, ptr %A_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

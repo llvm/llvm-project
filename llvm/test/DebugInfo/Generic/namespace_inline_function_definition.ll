@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Generate from clang with the following source. Note that the definition of
 ; the inline function follows its use to workaround another bug that should be
@@ -11,11 +11,11 @@
 ; int __attribute__((always_inline)) ns::func(int i) { return i * 2; }
 
 ; CHECK: DW_TAG_namespace
-; CHECK-NEXT: DW_AT_name {{.*}} "ns"
+; CHECK-NEXT: DW_AT_name ("ns")
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_linkage_name {{.*}} "_ZN2ns4funcEi"
+; CHECK:   DW_AT_linkage_name ("_ZN2ns4funcEi")
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_TAG_formal_parameter
 ; CHECK:   NULL
@@ -37,11 +37,11 @@ define i32 @main() #0 !dbg !4 {
 entry:
   %i.addr.i = alloca i32, align 4
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = load i32, i32* @x, align 4, !dbg !16
-  store i32 %0, i32* %i.addr.i, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.addr.i, metadata !117, metadata !DIExpression()), !dbg !18
-  %1 = load i32, i32* %i.addr.i, align 4, !dbg !18
+  store i32 0, ptr %retval
+  %0 = load i32, ptr @x, align 4, !dbg !16
+  store i32 %0, ptr %i.addr.i, align 4
+  call void @llvm.dbg.declare(metadata ptr %i.addr.i, metadata !117, metadata !DIExpression()), !dbg !18
+  %1 = load i32, ptr %i.addr.i, align 4, !dbg !18
   %mul.i = mul nsw i32 %1, 2, !dbg !18
   ret i32 %mul.i, !dbg !16
 }
@@ -50,9 +50,9 @@ entry:
 define i32 @_ZN2ns4funcEi(i32 %i) #1 !dbg !9 {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !17, metadata !DIExpression()), !dbg !19
-  %0 = load i32, i32* %i.addr, align 4, !dbg !19
+  store i32 %i, ptr %i.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !17, metadata !DIExpression()), !dbg !19
+  %0 = load i32, ptr %i.addr, align 4, !dbg !19
   %mul = mul nsw i32 %0, 2, !dbg !19
   ret i32 %mul, !dbg !19
 }

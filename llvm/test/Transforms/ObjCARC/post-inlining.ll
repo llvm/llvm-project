@@ -1,10 +1,10 @@
-; RUN: opt -S -objc-arc < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc < %s | FileCheck %s
 
-declare void @use_pointer(i8*)
-declare i8* @returner()
-declare i8* @llvm.objc.retain(i8*)
-declare i8* @llvm.objc.autoreleaseReturnValue(i8*)
-declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
+declare void @use_pointer(ptr)
+declare ptr @returner()
+declare ptr @llvm.objc.retain(ptr)
+declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
+declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 
 ; Clean up residue left behind after inlining.
 
@@ -12,10 +12,10 @@ declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
 ; CHECK: entry:
 ; CHECK-NEXT: ret void
 ; CHECK-NEXT: }
-define void @test0(i8* %call.i) {
+define void @test0(ptr %call.i) {
 entry:
-  %0 = tail call i8* @llvm.objc.retain(i8* %call.i) nounwind
-  %1 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %0) nounwind
+  %0 = tail call ptr @llvm.objc.retain(ptr %call.i) nounwind
+  %1 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %0) nounwind
   ret void
 }
 
@@ -25,10 +25,10 @@ entry:
 ; CHECK: entry:
 ; CHECK-NEXT: ret void
 ; CHECK-NEXT: }
-define void @test1(i8* %call.i) {
+define void @test1(ptr %call.i) {
 entry:
-  %0 = tail call i8* @llvm.objc.retain(i8* %call.i) nounwind
-  %1 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %call.i) nounwind
+  %0 = tail call ptr @llvm.objc.retain(ptr %call.i) nounwind
+  %1 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call.i) nounwind
   ret void
 }
 
@@ -36,14 +36,14 @@ entry:
 
 ; CHECK-LABEL: define void @test24(
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   call void @use_pointer(i8* %p)
+; CHECK-NEXT:   call void @use_pointer(ptr %p)
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
-define void @test24(i8* %p) {
+define void @test24(ptr %p) {
 entry:
-  call i8* @llvm.objc.autoreleaseReturnValue(i8* %p) nounwind
-  call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %p) nounwind
-  call void @use_pointer(i8* %p)
+  call ptr @llvm.objc.autoreleaseReturnValue(ptr %p) nounwind
+  call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %p) nounwind
+  call void @use_pointer(ptr %p)
   ret void
 }
 
@@ -52,61 +52,57 @@ entry:
 
 ; 1) Noop instructions: bitcasts and zero-indices GEPs.
 
-; CHECK-LABEL: define i8* @testNoop(
+; CHECK-LABEL: define ptr @testNoop(
 ; CHECK: entry:
-; CHECK-NEXT: %noop0 = bitcast i8* %call.i to i64*
-; CHECK-NEXT: %noop1 = getelementptr i8, i8* %call.i, i32 0
-; CHECK-NEXT: ret i8* %call.i
+; CHECK-NEXT: ret ptr %call.i
 ; CHECK-NEXT: }
-define i8* @testNoop(i8* %call.i) {
+define ptr @testNoop(ptr %call.i) {
 entry:
-  %0 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %call.i) nounwind
-  %noop0 = bitcast i8* %call.i to i64*
-  %noop1 = getelementptr i8, i8* %call.i, i32 0
-  %1 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call.i) nounwind
-  ret i8* %call.i
+  %0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call.i) nounwind
+  %1 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %call.i) nounwind
+  ret ptr %call.i
 }
 
 ; 2) Lifetime markers.
 
-declare void @llvm.lifetime.start.p0i8(i64, i8*)
-declare void @llvm.lifetime.end.p0i8(i64, i8*)
+declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.end.p0(i64, ptr)
 
-; CHECK-LABEL: define i8* @testLifetime(
+; CHECK-LABEL: define ptr @testLifetime(
 ; CHECK: entry:
 ; CHECK-NEXT: %obj = alloca i8
-; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* %obj)
-; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* %obj)
-; CHECK-NEXT: ret i8* %call.i
+; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr %obj)
+; CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr %obj)
+; CHECK-NEXT: ret ptr %call.i
 ; CHECK-NEXT: }
-define i8* @testLifetime(i8* %call.i) {
+define ptr @testLifetime(ptr %call.i) {
 entry:
   %obj = alloca i8
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %obj)
-  %0 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %call.i) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %obj)
-  %1 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call.i) nounwind
-  ret i8* %call.i
+  call void @llvm.lifetime.start.p0(i64 8, ptr %obj)
+  %0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call.i) nounwind
+  call void @llvm.lifetime.end.p0(i64 8, ptr %obj)
+  %1 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %call.i) nounwind
+  ret ptr %call.i
 }
 
 ; 3) Dynamic alloca markers.
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
 
-; CHECK-LABEL: define i8* @testStack(
+; CHECK-LABEL: define ptr @testStack(
 ; CHECK: entry:
-; CHECK-NEXT: %save = tail call i8* @llvm.stacksave()
+; CHECK-NEXT: %save = tail call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT: %obj = alloca i8, i8 %arg
-; CHECK-NEXT: call void @llvm.stackrestore(i8* %save)
-; CHECK-NEXT: ret i8* %call.i
+; CHECK-NEXT: call void @llvm.stackrestore.p0(ptr %save)
+; CHECK-NEXT: ret ptr %call.i
 ; CHECK-NEXT: }
-define i8* @testStack(i8* %call.i, i8 %arg) {
+define ptr @testStack(ptr %call.i, i8 %arg) {
 entry:
-  %save = tail call i8* @llvm.stacksave()
+  %save = tail call ptr @llvm.stacksave()
   %obj = alloca i8, i8 %arg
-  %0 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %call.i) nounwind
-  call void @llvm.stackrestore(i8* %save)
-  %1 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call.i) nounwind
-  ret i8* %call.i
+  %0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call.i) nounwind
+  call void @llvm.stackrestore(ptr %save)
+  %1 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %call.i) nounwind
+  ret ptr %call.i
 }

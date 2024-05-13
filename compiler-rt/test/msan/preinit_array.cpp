@@ -1,5 +1,8 @@
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t
 
+// FIXME: Something changed in glibc 2.34, maybe earier.
+// UNSUPPORTED: glibc-2.34
+
 #include <sanitizer/msan_interface.h>
 
 volatile int global;

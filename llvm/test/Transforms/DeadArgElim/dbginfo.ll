@@ -1,7 +1,7 @@
-; RUN: opt -deadargelim -S < %s | FileCheck %s
+; RUN: opt -passes=deadargelim -S < %s | FileCheck %s
 ; PR14016
 
-; Built with clang (then manually running -mem2reg with opt) from the following source:
+; Built with clang (then manually running -passes=mem2reg with opt) from the following source:
 ; static void f1(int, ...) {
 ; }
 ;

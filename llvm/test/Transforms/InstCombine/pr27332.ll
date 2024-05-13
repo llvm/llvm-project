@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S -o - < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - < %s | FileCheck %s
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
 
 define <4 x i1> @test1(<4 x float> %V) {

@@ -9,12 +9,12 @@ void empty_function(void);
 // CHECK-LABEL: @main(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 0, i32* [[RETVAL]], align 4
+// CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    call void @empty_function()
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(i32 1)
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(i32 noundef 1)
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
-int main() {
+int main(void) {
   empty_function();
   return foo(1);
 }
@@ -22,8 +22,8 @@ int main() {
 // CHECK-LABEL: @foo(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[ARG:%.*]], i32* [[ARG_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[ARG:%.*]], ptr [[ARG_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int foo(int arg) {

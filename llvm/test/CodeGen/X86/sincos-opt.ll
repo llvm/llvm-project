@@ -6,6 +6,7 @@
 ; RUN: llc < %s -mtriple=x86_64-fuchsia -mcpu=core2 | FileCheck %s --check-prefix=GNU_SINCOS
 ; RUN: llc < %s -mtriple=x86_64-fuchsia -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
 ; RUN: llc < %s -mtriple=x86_64-scei-ps4 -mcpu=btver2 | FileCheck %s --check-prefix=PS4_SINCOS
+; RUN: llc < %s -mtriple=x86_64-sie-ps5  -mcpu=znver2 | FileCheck %s --check-prefix=PS4_SINCOS
 
 ; Combine sin / cos into a single call unless they may write errno (as
 ; captured by readnone attrbiute, controlled by clang -fmath-errno

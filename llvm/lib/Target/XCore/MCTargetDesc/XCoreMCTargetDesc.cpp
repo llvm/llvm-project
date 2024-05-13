@@ -20,15 +20,16 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "XCoreGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -121,6 +122,10 @@ static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
   return new XCoreTargetAsmStreamer(S, OS);
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new XCoreTargetStreamer(S);
+}
+
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTargetMC() {
   // Register the MC asm info.
@@ -144,4 +149,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTargetMC() {
 
   TargetRegistry::RegisterAsmTargetStreamer(getTheXCoreTarget(),
                                             createTargetAsmStreamer);
+
+  TargetRegistry::RegisterNullTargetStreamer(getTheXCoreTarget(),
+                                             createNullTargetStreamer);
 }

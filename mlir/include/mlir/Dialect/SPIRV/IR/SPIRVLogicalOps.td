@@ -17,71 +17,61 @@
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class SPV_LogicalBinaryOp<string mnemonic, Type operandsType,
-                    list<OpTrait> traits = []> :
-      // Result type is SPV_Bool.
-      SPV_BinaryOp<mnemonic, SPV_Bool, operandsType,
-                   !listconcat(traits,
-                               [NoSideEffect, SameTypeOperands,
-                                SameOperandsAndResultShape])> {
-  let parser = [{ return ::parseLogicalBinaryOp(parser, result); }];
-  let printer = [{ return ::printLogicalOp(getOperation(), p); }];
-
-  let builders = [
-    OpBuilder<(ins "Value":$lhs, "Value":$rhs),
-    [{::buildLogicalBinaryOp($_builder, $_state, lhs, rhs);}]>
-  ];
+class SPIRV_LogicalBinaryOp<string mnemonic, Type operandsType,
+                            list<Trait> traits = []> :
+      // Result type is SPIRV_Bool.
+      SPIRV_BinaryOp<mnemonic, SPIRV_Bool, operandsType,
+                   !listconcat(traits, [
+                     Pure, SameTypeOperands,
+                     SameOperandsAndResultShape,
+                     TypesMatchWith<"type of result to correspond to the `i1` "
+                                    "equivalent of the operand",
+                                    "operand1", "result",
+                                    "getUnaryOpResultType($_self)"
+                     >])> {
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
 }
 
-class SPV_LogicalUnaryOp<string mnemonic, Type operandType,
-                         list<OpTrait> traits = []> :
-      // Result type is SPV_Bool.
-      SPV_UnaryOp<mnemonic, SPV_Bool, operandType,
-                  !listconcat(traits, [NoSideEffect, SameTypeOperands,
-                                       SameOperandsAndResultShape])> {
-  let parser = [{ return ::parseLogicalUnaryOp(parser, result); }];
-  let printer = [{ return ::printLogicalOp(getOperation(), p); }];
-
-  let builders = [
-    OpBuilder<(ins "Value":$value),
-    [{::buildLogicalUnaryOp($_builder, $_state, value);}]>
-  ];
+class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
+                         list<Trait> traits = []> :
+      // Result type is SPIRV_Bool.
+      SPIRV_UnaryOp<mnemonic, SPIRV_Bool, operandType,
+                  !listconcat(traits, [
+                     Pure, SameTypeOperands, SameOperandsAndResultShape,
+                     TypesMatchWith<"type of result to correspond to the `i1` "
+                                    "equivalent of the operand",
+                                    "operand", "result",
+                                    "getUnaryOpResultType($_self)"
+                     >])> {
+  let assemblyFormat = "$operand `:` type($operand) attr-dict";
 }
 
 // -----
 
-def SPV_FOrdEqualOp : SPV_LogicalBinaryOp<"FOrdEqual", SPV_Float, [Commutative]> {
+def SPIRV_FOrdEqualOp : SPIRV_LogicalBinaryOp<"FOrdEqual", SPIRV_Float, [Commutative]> {
   let summary = "Floating-point comparison for being ordered and equal.";
 
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fordequal-op ::= ssa-id `=` `spv.FOrdEqual` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FOrdEqual %0, %1 : f32
-    %5 = spv.FOrdEqual %2, %3 : vector<4xf32>
+    %4 = spirv.FOrdEqual %0, %1 : f32
+    %5 = spirv.FOrdEqual %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FOrdGreaterThanOp : SPV_LogicalBinaryOp<"FOrdGreaterThan", SPV_Float, []> {
+def SPIRV_FOrdGreaterThanOp : SPIRV_LogicalBinaryOp<"FOrdGreaterThan", SPIRV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are ordered and Operand 1 is
     greater than  Operand 2.
@@ -90,32 +80,24 @@ def SPV_FOrdGreaterThanOp : SPV_LogicalBinaryOp<"FOrdGreaterThan", SPV_Float, []
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fordgt-op ::= ssa-id `=` `spv.FOrdGreaterThan` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FOrdGreaterThan %0, %1 : f32
-    %5 = spv.FOrdGreaterThan %2, %3 : vector<4xf32>
+    %4 = spirv.FOrdGreaterThan %0, %1 : f32
+    %5 = spirv.FOrdGreaterThan %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FOrdGreaterThanEqualOp : SPV_LogicalBinaryOp<"FOrdGreaterThanEqual", SPV_Float, []> {
+def SPIRV_FOrdGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"FOrdGreaterThanEqual", SPIRV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are ordered and Operand 1 is
     greater than or equal to Operand 2.
@@ -124,32 +106,24 @@ def SPV_FOrdGreaterThanEqualOp : SPV_LogicalBinaryOp<"FOrdGreaterThanEqual", SPV
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fordgte-op ::= ssa-id `=` `spv.FOrdGreaterThanEqual` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FOrdGreaterThanEqual %0, %1 : f32
-    %5 = spv.FOrdGreaterThanEqual %2, %3 : vector<4xf32>
+    %4 = spirv.FOrdGreaterThanEqual %0, %1 : f32
+    %5 = spirv.FOrdGreaterThanEqual %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FOrdLessThanOp : SPV_LogicalBinaryOp<"FOrdLessThan", SPV_Float, []> {
+def SPIRV_FOrdLessThanOp : SPIRV_LogicalBinaryOp<"FOrdLessThan", SPIRV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are ordered and Operand 1 is less
     than Operand 2.
@@ -158,32 +132,24 @@ def SPV_FOrdLessThanOp : SPV_LogicalBinaryOp<"FOrdLessThan", SPV_Float, []> {
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fordlt-op ::= ssa-id `=` `spv.FOrdLessThan` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FOrdLessThan %0, %1 : f32
-    %5 = spv.FOrdLessThan %2, %3 : vector<4xf32>
+    %4 = spirv.FOrdLessThan %0, %1 : f32
+    %5 = spirv.FOrdLessThan %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FOrdLessThanEqualOp : SPV_LogicalBinaryOp<"FOrdLessThanEqual", SPV_Float, []> {
+def SPIRV_FOrdLessThanEqualOp : SPIRV_LogicalBinaryOp<"FOrdLessThanEqual", SPIRV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are ordered and Operand 1 is less
     than or equal to Operand 2.
@@ -192,94 +158,70 @@ def SPV_FOrdLessThanEqualOp : SPV_LogicalBinaryOp<"FOrdLessThanEqual", SPV_Float
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fordlte-op ::= ssa-id `=` `spv.FOrdLessThanEqual` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FOrdLessThanEqual %0, %1 : f32
-    %5 = spv.FOrdLessThanEqual %2, %3 : vector<4xf32>
+    %4 = spirv.FOrdLessThanEqual %0, %1 : f32
+    %5 = spirv.FOrdLessThanEqual %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FOrdNotEqualOp : SPV_LogicalBinaryOp<"FOrdNotEqual", SPV_Float, [Commutative]> {
+def SPIRV_FOrdNotEqualOp : SPIRV_LogicalBinaryOp<"FOrdNotEqual", SPIRV_Float, [Commutative]> {
   let summary = "Floating-point comparison for being ordered and not equal.";
 
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fordneq-op ::= ssa-id `=` `spv.FOrdNotEqual` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FOrdNotEqual %0, %1 : f32
-    %5 = spv.FOrdNotEqual %2, %3 : vector<4xf32>
+    %4 = spirv.FOrdNotEqual %0, %1 : f32
+    %5 = spirv.FOrdNotEqual %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FUnordEqualOp : SPV_LogicalBinaryOp<"FUnordEqual", SPV_Float, [Commutative]> {
+def SPIRV_FUnordEqualOp : SPIRV_LogicalBinaryOp<"FUnordEqual", SPIRV_Float, [Commutative]> {
   let summary = "Floating-point comparison for being unordered or equal.";
 
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    funordequal-op ::= ssa-id `=` `spv.FUnordEqual` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FUnordEqual %0, %1 : f32
-    %5 = spv.FUnordEqual %2, %3 : vector<4xf32>
+    %4 = spirv.FUnordEqual %0, %1 : f32
+    %5 = spirv.FUnordEqual %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FUnordGreaterThanOp : SPV_LogicalBinaryOp<"FUnordGreaterThan", SPV_Float, []> {
+def SPIRV_FUnordGreaterThanOp : SPIRV_LogicalBinaryOp<"FUnordGreaterThan", SPIRV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are unordered or Operand 1 is
     greater than  Operand 2.
@@ -288,32 +230,24 @@ def SPV_FUnordGreaterThanOp : SPV_LogicalBinaryOp<"FUnordGreaterThan", SPV_Float
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    funordgt-op ::= ssa-id `=` `spv.FUnordGreaterThan` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FUnordGreaterThan %0, %1 : f32
-    %5 = spv.FUnordGreaterThan %2, %3 : vector<4xf32>
+    %4 = spirv.FUnordGreaterThan %0, %1 : f32
+    %5 = spirv.FUnordGreaterThan %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FUnordGreaterThanEqualOp : SPV_LogicalBinaryOp<"FUnordGreaterThanEqual", SPV_Float, []> {
+def SPIRV_FUnordGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"FUnordGreaterThanEqual", SPIRV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are unordered or Operand 1 is
     greater than or equal to Operand 2.
@@ -322,32 +256,24 @@ def SPV_FUnordGreaterThanEqualOp : SPV_LogicalBinaryOp<"FUnordGreaterThanEqual",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    funordgte-op ::= ssa-id `=` `spv.FUnordGreaterThanEqual` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FUnordGreaterThanEqual %0, %1 : f32
-    %5 = spv.FUnordGreaterThanEqual %2, %3 : vector<4xf32>
+    %4 = spirv.FUnordGreaterThanEqual %0, %1 : f32
+    %5 = spirv.FUnordGreaterThanEqual %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FUnordLessThanOp : SPV_LogicalBinaryOp<"FUnordLessThan", SPV_Float, []> {
+def SPIRV_FUnordLessThanOp : SPIRV_LogicalBinaryOp<"FUnordLessThan", SPIRV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are unordered or Operand 1 is less
     than Operand 2.
@@ -356,32 +282,24 @@ def SPV_FUnordLessThanOp : SPV_LogicalBinaryOp<"FUnordLessThan", SPV_Float, []> 
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    funordlt-op ::= ssa-id `=` `spv.FUnordLessThan` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FUnordLessThan %0, %1 : f32
-    %5 = spv.FUnordLessThan %2, %3 : vector<4xf32>
+    %4 = spirv.FUnordLessThan %0, %1 : f32
+    %5 = spirv.FUnordLessThan %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FUnordLessThanEqualOp : SPV_LogicalBinaryOp<"FUnordLessThanEqual", SPV_Float, []> {
+def SPIRV_FUnordLessThanEqualOp : SPIRV_LogicalBinaryOp<"FUnordLessThanEqual", SPIRV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are unordered or Operand 1 is less
     than or equal to Operand 2.
@@ -390,129 +308,102 @@ def SPV_FUnordLessThanEqualOp : SPV_LogicalBinaryOp<"FUnordLessThanEqual", SPV_F
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    funordlte-op ::= ssa-id `=` `spv.FUnordLessThanEqual` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FUnordLessThanEqual %0, %1 : f32
-    %5 = spv.FUnordLessThanEqual %2, %3 : vector<4xf32>
+    %4 = spirv.FUnordLessThanEqual %0, %1 : f32
+    %5 = spirv.FUnordLessThanEqual %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FUnordNotEqualOp : SPV_LogicalBinaryOp<"FUnordNotEqual", SPV_Float, [Commutative]> {
+def SPIRV_FUnordNotEqualOp : SPIRV_LogicalBinaryOp<"FUnordNotEqual", SPIRV_Float, [Commutative]> {
   let summary = "Floating-point comparison for being unordered or not equal.";
 
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     floating-point type.  They must have the same type, and they must have
     the same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    funordneq-op ::= ssa-id `=` `spv.FUnordNotEqual` ssa-use, ssa-use
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %4 = spv.FUnordNotEqual %0, %1 : f32
-    %5 = spv.FUnordNotEqual %2, %3 : vector<4xf32>
+    %4 = spirv.FUnordNotEqual %0, %1 : f32
+    %5 = spirv.FUnordNotEqual %2, %3 : vector<4xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_IEqualOp : SPV_LogicalBinaryOp<"IEqual",
-                                       SPV_Integer,
+def SPIRV_IEqualOp : SPIRV_LogicalBinaryOp<"IEqual",
+                                       SPIRV_Integer,
                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer comparison for equality.";
 
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    iequal-op ::= ssa-id `=` `spv.IEqual` ssa-use, ssa-use
-                             `:` integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
-    %4 = spv.IEqual %0, %1 : i32
-    %5 = spv.IEqual %2, %3 : vector<4xi32>
-
+    %4 = spirv.IEqual %0, %1 : i32
+    %5 = spirv.IEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_INotEqualOp : SPV_LogicalBinaryOp<"INotEqual",
-                                          SPV_Integer,
+def SPIRV_INotEqualOp : SPIRV_LogicalBinaryOp<"INotEqual",
+                                          SPIRV_Integer,
                                           [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer comparison for inequality.";
 
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    inot-equal-op ::= ssa-id `=` `spv.INotEqual` ssa-use, ssa-use
-                                 `:` integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
-    %4 = spv.INotEqual %0, %1 : i32
-    %5 = spv.INotEqual %2, %3 : vector<4xi32>
+    %4 = spirv.INotEqual %0, %1 : i32
+    %5 = spirv.INotEqual %2, %3 : vector<4xi32>
 
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_IsInfOp : SPV_LogicalUnaryOp<"IsInf", SPV_Float, []> {
+def SPIRV_IsInfOp : SPIRV_LogicalUnaryOp<"IsInf", SPIRV_Float, []> {
   let summary = "Result is true if x is an IEEE Inf, otherwise result is false";
 
   let description = [{
@@ -521,29 +412,20 @@ def SPV_IsInfOp : SPV_LogicalUnaryOp<"IsInf", SPV_Float, []> {
     x must be a scalar or vector of floating-point type.  It must have the
     same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    isinf-op ::= ssa-id `=` `spv.IsInf` ssa-use
-                            `:` float-scalar-vector-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.IsInf %0: f32
-    %3 = spv.IsInf %1: vector<4xi32>
+    %2 = spirv.IsInf %0: f32
+    %3 = spirv.IsInf %1: vector<4xi32>
     ```
   }];
 }
 
 // -----
 
-def SPV_IsNanOp : SPV_LogicalUnaryOp<"IsNan", SPV_Float, []> {
+def SPIRV_IsNanOp : SPIRV_LogicalUnaryOp<"IsNan", SPIRV_Float, []> {
   let summary = [{
     Result is true if x is an IEEE NaN, otherwise result is false.
   }];
@@ -554,30 +436,21 @@ def SPV_IsNanOp : SPV_LogicalUnaryOp<"IsNan", SPV_Float, []> {
     x must be a scalar or vector of floating-point type.  It must have the
     same number of components as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    isnan-op ::= ssa-id `=` `spv.IsNan` ssa-use
-                            `:` float-scalar-vector-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.IsNan %0: f32
-    %3 = spv.IsNan %1: vector<4xi32>
+    %2 = spirv.IsNan %0: f32
+    %3 = spirv.IsNan %1: vector<4xi32>
     ```
   }];
 }
 
 // -----
 
-def SPV_LogicalAndOp : SPV_LogicalBinaryOp<"LogicalAnd",
-                                           SPV_Bool,
+def SPIRV_LogicalAndOp : SPIRV_LogicalBinaryOp<"LogicalAnd",
+                                           SPIRV_Bool,
                                            [Commutative,
                                             UsableInSpecConstantOp]> {
   let summary = [{
@@ -588,24 +461,17 @@ def SPV_LogicalAndOp : SPV_LogicalBinaryOp<"LogicalAnd",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 must be the same as Result Type.
+    The type of Operand 1 must be the same as Result Type.
 
-     The type of Operand 2 must be the same as Result Type.
+    The type of Operand 2 must be the same as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    logical-and ::= `spv.LogicalAnd` ssa-use `,` ssa-use
-                    `:` operand-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.LogicalAnd %0, %1 : i1
-    %2 = spv.LogicalAnd %0, %1 : vector<4xi1>
+    %2 = spirv.LogicalAnd %0, %1 : i1
+    %2 = spirv.LogicalAnd %0, %1 : vector<4xi1>
     ```
   }];
 
@@ -614,8 +480,8 @@ def SPV_LogicalAndOp : SPV_LogicalBinaryOp<"LogicalAnd",
 
 // -----
 
-def SPV_LogicalEqualOp : SPV_LogicalBinaryOp<"LogicalEqual",
-                                             SPV_Bool,
+def SPIRV_LogicalEqualOp : SPIRV_LogicalBinaryOp<"LogicalEqual",
+                                             SPIRV_Bool,
                                              [Commutative,
                                               UsableInSpecConstantOp]> {
   let summary = [{
@@ -626,32 +492,27 @@ def SPV_LogicalEqualOp : SPV_LogicalBinaryOp<"LogicalEqual",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 must be the same as Result Type.
+    The type of Operand 1 must be the same as Result Type.
 
-     The type of Operand 2 must be the same as Result Type.
+    The type of Operand 2 must be the same as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    logical-equal ::= `spv.LogicalEqual` ssa-use `,` ssa-use
-                      `:` operand-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.LogicalEqual %0, %1 : i1
-    %2 = spv.LogicalEqual %0, %1 : vector<4xi1>
+    %2 = spirv.LogicalEqual %0, %1 : i1
+    %2 = spirv.LogicalEqual %0, %1 : vector<4xi1>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_LogicalNotOp : SPV_LogicalUnaryOp<"LogicalNot",
-                                          SPV_Bool,
+def SPIRV_LogicalNotOp : SPIRV_LogicalUnaryOp<"LogicalNot",
+                                          SPIRV_Bool,
                                           [UsableInSpecConstantOp]> {
   let summary = [{
     Result is true if Operand is false.  Result is false if Operand is true.
@@ -660,31 +521,26 @@ def SPV_LogicalNotOp : SPV_LogicalUnaryOp<"LogicalNot",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand must be the same as Result Type.
+    The type of Operand must be the same as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    logical-not ::= `spv.LogicalNot` ssa-use `:` operand-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.LogicalNot %0 : i1
-    %2 = spv.LogicalNot %0 : vector<4xi1>
+    %2 = spirv.LogicalNot %0 : i1
+    %2 = spirv.LogicalNot %0 : vector<4xi1>
     ```
   }];
 
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_LogicalNotEqualOp : SPV_LogicalBinaryOp<"LogicalNotEqual",
-                                                SPV_Bool,
+def SPIRV_LogicalNotEqualOp : SPIRV_LogicalBinaryOp<"LogicalNotEqual",
+                                                SPIRV_Bool,
                                                 [Commutative,
                                                  UsableInSpecConstantOp]> {
   let summary = [{
@@ -695,32 +551,27 @@ def SPV_LogicalNotEqualOp : SPV_LogicalBinaryOp<"LogicalNotEqual",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 must be the same as Result Type.
+    The type of Operand 1 must be the same as Result Type.
 
-     The type of Operand 2 must be the same as Result Type.
+    The type of Operand 2 must be the same as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    logical-not-equal ::= `spv.LogicalNotEqual` ssa-use `,` ssa-use
-                          `:` operand-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.LogicalNotEqual %0, %1 : i1
-    %2 = spv.LogicalNotEqual %0, %1 : vector<4xi1>
+    %2 = spirv.LogicalNotEqual %0, %1 : i1
+    %2 = spirv.LogicalNotEqual %0, %1 : vector<4xi1>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_LogicalOrOp : SPV_LogicalBinaryOp<"LogicalOr",
-                                          SPV_Bool,
+def SPIRV_LogicalOrOp : SPIRV_LogicalBinaryOp<"LogicalOr",
+                                          SPIRV_Bool,
                                           [Commutative,
                                            UsableInSpecConstantOp]> {
   let summary = [{
@@ -731,24 +582,17 @@ def SPV_LogicalOrOp : SPV_LogicalBinaryOp<"LogicalOr",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 must be the same as Result Type.
+    The type of Operand 1 must be the same as Result Type.
 
-     The type of Operand 2 must be the same as Result Type.
+    The type of Operand 2 must be the same as Result Type.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    logical-or ::= `spv.LogicalOr` ssa-use `,` ssa-use
-                    `:` operand-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.LogicalOr %0, %1 : i1
-    %2 = spv.LogicalOr %0, %1 : vector<4xi1>
+    %2 = spirv.LogicalOr %0, %1 : i1
+    %2 = spirv.LogicalOr %0, %1 : vector<4xi1>
     ```
   }];
 
@@ -757,7 +601,7 @@ def SPV_LogicalOrOp : SPV_LogicalBinaryOp<"LogicalOr",
 
 // -----
 
-def SPV_OrderedOp : SPV_LogicalBinaryOp<"Ordered", SPV_Float, [Commutative]> {
+def SPIRV_OrderedOp : SPIRV_LogicalBinaryOp<"Ordered", SPIRV_Float, [Commutative]> {
   let summary = [{
     Result is true if both x == x and y == y are true, where IEEE comparison
     is used, otherwise result is false.
@@ -771,36 +615,28 @@ def SPV_OrderedOp : SPV_LogicalBinaryOp<"Ordered", SPV_Float, [Commutative]> {
 
     y must have the same type as x.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    ordered-op ::= ssa-id `=` `spv.Ordered` ssa-use, ssa-use
-    ```mlir
+    Results are computed per component.
 
     #### Example:
 
-    ```
-    %4 = spv.Ordered %0, %1 : f32
-    %5 = spv.Ordered %2, %3 : vector<4xf32>
+    ```mlir
+    %4 = spirv.Ordered %0, %1 : f32
+    %5 = spirv.Ordered %2, %3 : vector<4xf32>
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Kernel]>
+    Capability<[SPIRV_C_Kernel]>
   ];
 }
 
 // -----
 
-def SPV_SGreaterThanOp : SPV_LogicalBinaryOp<"SGreaterThan",
-                                             SPV_Integer,
+def SPIRV_SGreaterThanOp : SPIRV_LogicalBinaryOp<"SGreaterThan",
+                                             SPIRV_Integer,
                                              [UsableInSpecConstantOp, SignedOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is greater than  Operand 2.
@@ -809,33 +645,28 @@ def SPV_SGreaterThanOp : SPV_LogicalBinaryOp<"SGreaterThan",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    sgreater-than-op ::= ssa-id `=` `spv.SGreaterThan` ssa-use, ssa-use
-                                    `:` integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
-    %4 = spv.SGreaterThan %0, %1 : i32
-    %5 = spv.SGreaterThan %2, %3 : vector<4xi32>
+    %4 = spirv.SGreaterThan %0, %1 : i32
+    %5 = spirv.SGreaterThan %2, %3 : vector<4xi32>
 
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_SGreaterThanEqualOp : SPV_LogicalBinaryOp<"SGreaterThanEqual",
-                                                  SPV_Integer,
+def SPIRV_SGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"SGreaterThanEqual",
+                                                  SPIRV_Integer,
                                                   [UsableInSpecConstantOp,
                                                    SignedOp]> {
   let summary = [{
@@ -846,33 +677,27 @@ def SPV_SGreaterThanEqualOp : SPV_LogicalBinaryOp<"SGreaterThanEqual",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    sgreater-than-equal-op ::= ssa-id `=` `spv.SGreaterThanEqual` ssa-use, ssa-use
-                                          `:` integer-scalar-vector-type
-    ```
     #### Example:
 
-    ```
-    %4 = spv.SGreaterThanEqual %0, %1 : i32
-    %5 = spv.SGreaterThanEqual %2, %3 : vector<4xi32>
-
+    ```mlir
+    %4 = spirv.SGreaterThanEqual %0, %1 : i32
+    %5 = spirv.SGreaterThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_SLessThanOp : SPV_LogicalBinaryOp<"SLessThan",
-                                          SPV_Integer,
+def SPIRV_SLessThanOp : SPIRV_LogicalBinaryOp<"SLessThan",
+                                          SPIRV_Integer,
                                           [UsableInSpecConstantOp, SignedOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is less than Operand 2.
@@ -881,33 +706,28 @@ def SPV_SLessThanOp : SPV_LogicalBinaryOp<"SLessThan",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    sless-than-op ::= ssa-id `=` `spv.SLessThan` ssa-use, ssa-use
-                                 `:` integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
-    %4 = spv.SLessThan %0, %1 : i32
-    %5 = spv.SLessThan %2, %3 : vector<4xi32>
+    %4 = spirv.SLessThan %0, %1 : i32
+    %5 = spirv.SLessThan %2, %3 : vector<4xi32>
 
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual",
-                                               SPV_Integer,
+def SPIRV_SLessThanEqualOp : SPIRV_LogicalBinaryOp<"SLessThanEqual",
+                                               SPIRV_Integer,
                                                [UsableInSpecConstantOp,
                                                 SignedOp]> {
   let summary = [{
@@ -918,33 +738,27 @@ def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    sless-than-equal-op ::= ssa-id `=` `spv.SLessThanEqual` ssa-use, ssa-use
-                                       `:` integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
-    %4 = spv.SLessThanEqual %0, %1 : i32
-    %5 = spv.SLessThanEqual %2, %3 : vector<4xi32>
-
+    %4 = spirv.SLessThanEqual %0, %1 : i32
+    %5 = spirv.SLessThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_SelectOp : SPV_Op<"Select",
-    [NoSideEffect,
+def SPIRV_SelectOp : SPIRV_Op<"Select",
+    [Pure,
      AllTypesMatch<["true_value", "false_value", "result"]>,
      UsableInSpecConstantOp]> {
   let summary = [{
@@ -955,7 +769,7 @@ def SPV_SelectOp : SPV_Op<"Select",
   let description = [{
     Before version 1.4, Result Type must be a pointer, scalar, or vector.
 
-     The types of Object 1 and Object 2 must be the same as Result Type.
+    The types of Object 1 and Object 2 must be the same as Result Type.
 
     Condition must be a scalar or vector of Boolean type.
 
@@ -968,50 +782,40 @@ def SPV_SelectOp : SPV_Op<"Select",
     component in the result is taken from Object 1, otherwise it is taken
     from Object 2.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    scalar-type ::= integer-type | float-type | boolean-type
-    select-object-type ::= scalar-type
-                           | `vector<` integer-literal `x` scalar-type `>`
-                           | pointer-type
-    select-condition-type ::= boolean-type
-                              | `vector<` integer-literal `x` boolean-type `>`
-    select-op ::= ssa-id `=` `spv.Select` ssa-use, ssa-use, ssa-use
-                  `:` select-condition-type `,` select-object-type
-    ```
-
     #### Example:
 
     ```mlir
-    %3 = spv.Select %0, %1, %2 : i1, f32
-    %3 = spv.Select %0, %1, %2 : i1, vector<3xi32>
-    %3 = spv.Select %0, %1, %2 : vector<3xi1>, vector<3xf32>
+    %3 = spirv.Select %0, %1, %2 : i1, f32
+    %3 = spirv.Select %0, %1, %2 : i1, vector<3xi32>
+    %3 = spirv.Select %0, %1, %2 : vector<3xi1>, vector<3xf32>
     ```
   }];
 
   let arguments = (ins
-    SPV_ScalarOrVectorOf<SPV_Bool>:$condition,
-    SPV_SelectType:$true_value,
-    SPV_SelectType:$false_value
+    SPIRV_ScalarOrVectorOf<SPIRV_Bool>:$condition,
+    SPIRV_SelectType:$true_value,
+    SPIRV_SelectType:$false_value
   );
 
   let results = (outs
-    SPV_SelectType:$result
+    SPIRV_SelectType:$result
   );
-
-  let builders = [
-    OpBuilder<(ins "Value":$cond, "Value":$trueValue, "Value":$falseValue)>];
 
   let assemblyFormat = [{
     operands attr-dict `:` type($condition) `,` type($result)
   }];
+
+  // These ops require dynamic availability specification based on operand and
+  // result types.
+  bit autogenAvailability = 0;
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_UGreaterThanOp : SPV_LogicalBinaryOp<"UGreaterThan",
-                                             SPV_Integer,
+def SPIRV_UGreaterThanOp : SPIRV_LogicalBinaryOp<"UGreaterThan",
+                                             SPIRV_Integer,
                                              [UnsignedOp,
                                               UsableInSpecConstantOp]> {
   let summary = [{
@@ -1021,33 +825,27 @@ def SPV_UGreaterThanOp : SPV_LogicalBinaryOp<"UGreaterThan",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    ugreater-than-op ::= ssa-id `=` `spv.UGreaterThan` ssa-use, ssa-use
-                                    `:` integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
-    %4 = spv.UGreaterThan %0, %1 : i32
-    %5 = spv.UGreaterThan %2, %3 : vector<4xi32>
-
+    %4 = spirv.UGreaterThan %0, %1 : i32
+    %5 = spirv.UGreaterThan %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_UGreaterThanEqualOp : SPV_LogicalBinaryOp<"UGreaterThanEqual",
-                                                  SPV_Integer,
+def SPIRV_UGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"UGreaterThanEqual",
+                                                  SPIRV_Integer,
                                                   [UnsignedOp,
                                                    UsableInSpecConstantOp]> {
   let summary = [{
@@ -1058,33 +856,27 @@ def SPV_UGreaterThanEqualOp : SPV_LogicalBinaryOp<"UGreaterThanEqual",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    ugreater-than-equal-op ::= ssa-id `=` `spv.UGreaterThanEqual` ssa-use, ssa-use
-                                          `:` integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
-    %4 = spv.UGreaterThanEqual %0, %1 : i32
-    %5 = spv.UGreaterThanEqual %2, %3 : vector<4xi32>
-
+    %4 = spirv.UGreaterThanEqual %0, %1 : i32
+    %5 = spirv.UGreaterThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_ULessThanOp : SPV_LogicalBinaryOp<"ULessThan",
-                                          SPV_Integer,
+def SPIRV_ULessThanOp : SPIRV_LogicalBinaryOp<"ULessThan",
+                                          SPIRV_Integer,
                                           [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = [{
     Unsigned-integer comparison if Operand 1 is less than Operand 2.
@@ -1093,32 +885,26 @@ def SPV_ULessThanOp : SPV_LogicalBinaryOp<"ULessThan",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    uless-than-op ::= ssa-id `=` `spv.ULessThan` ssa-use, ssa-use
-                                 `:` integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
-    %4 = spv.ULessThan %0, %1 : i32
-    %5 = spv.ULessThan %2, %3 : vector<4xi32>
-
+    %4 = spirv.ULessThan %0, %1 : i32
+    %5 = spirv.ULessThan %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_UnorderedOp : SPV_LogicalBinaryOp<"Unordered", SPV_Float, [Commutative]> {
+def SPIRV_UnorderedOp : SPIRV_LogicalBinaryOp<"Unordered", SPIRV_Float, [Commutative]> {
   let summary = [{
     Result is true if either x or y is an IEEE NaN, otherwise result is
     false.
@@ -1132,36 +918,28 @@ def SPV_UnorderedOp : SPV_LogicalBinaryOp<"Unordered", SPV_Float, [Commutative]>
 
     y must have the same type as x.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    unordered-op ::= ssa-id `=` `spv.Unordered` ssa-use, ssa-use
-    ```mlir
+    Results are computed per component.
 
     #### Example:
 
-    ```
-    %4 = spv.Unordered %0, %1 : f32
-    %5 = spv.Unordered %2, %3 : vector<4xf32>
+    ```mlir
+    %4 = spirv.Unordered %0, %1 : f32
+    %5 = spirv.Unordered %2, %3 : vector<4xf32>
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Kernel]>
+    Capability<[SPIRV_C_Kernel]>
   ];
 }
 
 // -----
 
-def SPV_ULessThanEqualOp : SPV_LogicalBinaryOp<"ULessThanEqual",
-                                               SPV_Integer,
+def SPIRV_ULessThanEqualOp : SPIRV_LogicalBinaryOp<"ULessThanEqual",
+                                               SPIRV_Integer,
                                                [UnsignedOp,
                                                 UsableInSpecConstantOp]> {
   let summary = [{
@@ -1172,27 +950,21 @@ def SPV_ULessThanEqualOp : SPV_LogicalBinaryOp<"ULessThanEqual",
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-     The type of Operand 1 and Operand 2  must be a scalar or vector of
+    The type of Operand 1 and Operand 2  must be a scalar or vector of
     integer type.  They must have the same component width, and they must
     have the same number of components as Result Type.
 
-     Results are computed per component.
+    Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    uless-than-equal-op ::= ssa-id `=` `spv.ULessThanEqual` ssa-use, ssa-use
-                                       `:` integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
-    %4 = spv.ULessThanEqual %0, %1 : i32
-    %5 = spv.ULessThanEqual %2, %3 : vector<4xi32>
-
+    %4 = spirv.ULessThanEqual %0, %1 : i32
+    %5 = spirv.ULessThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_LOGICAL_OPS

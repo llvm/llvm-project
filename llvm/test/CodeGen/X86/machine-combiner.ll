@@ -44,7 +44,7 @@ define float @reassociate_adds2(float %x0, float %x1, float %x2, float %x3) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fadd reassoc nsz float %x0, %x1
   %t1 = fadd reassoc nsz float %x2, %t0
@@ -63,8 +63,8 @@ define float @reassociate_adds3(float %x0, float %x1, float %x2, float %x3) {
 ; AVX-LABEL: reassociate_adds3:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vaddss %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fadd reassoc nsz float %x0, %x1
   %t1 = fadd reassoc nsz float %t0, %x2
@@ -83,8 +83,8 @@ define float @reassociate_adds4(float %x0, float %x1, float %x2, float %x3) {
 ; AVX-LABEL: reassociate_adds4:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vaddss %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fadd reassoc nsz float %x0, %x1
   %t1 = fadd reassoc nsz float %x2, %t0
@@ -143,8 +143,8 @@ define float @reassociate_adds6(float %x0, float %x1, float %x2, float %x3) {
 ; AVX-LABEL: reassociate_adds6:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vaddss %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fdiv reassoc nsz float %x0, %x1
   %t1 = fadd reassoc nsz float %x2, %t0
@@ -165,8 +165,8 @@ define float @reassociate_muls1(float %x0, float %x1, float %x2, float %x3) {
 ; AVX-LABEL: reassociate_muls1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmulss %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmulss %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fdiv reassoc nsz float %x0, %x1
   %t1 = fmul reassoc nsz float %x2, %t0
@@ -187,8 +187,8 @@ define double @reassociate_adds_double(double %x0, double %x1, double %x2, doubl
 ; AVX-LABEL: reassociate_adds_double:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vaddsd %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vaddsd %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fdiv reassoc nsz double %x0, %x1
   %t1 = fadd reassoc nsz double %x2, %t0
@@ -209,8 +209,8 @@ define double @reassociate_muls_double(double %x0, double %x1, double %x2, doubl
 ; AVX-LABEL: reassociate_muls_double:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmulsd %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmulsd %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vmulsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fdiv reassoc nsz double %x0, %x1
   %t1 = fmul reassoc nsz double %x2, %t0
@@ -231,8 +231,8 @@ define <4 x float> @reassociate_adds_v4f32(<4 x float> %x0, <4 x float> %x1, <4 
 ; AVX1-LABEL: reassociate_adds_v4f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vaddps %xmm3, %xmm2, %xmm1
-; AVX1-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vaddps %xmm2, %xmm3, %xmm1
+; AVX1-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_adds_v4f32:
@@ -240,8 +240,8 @@ define <4 x float> @reassociate_adds_v4f32(<4 x float> %x0, <4 x float> %x1, <4 
 ; AVX512-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; AVX512-NEXT:    vaddps %xmm0, %xmm3, %xmm0
 ; AVX512-NEXT:    retq
-  %t0 = fmul reassoc nsz <4 x float> %x0, %x1
-  %t1 = fadd reassoc nsz <4 x float> %x2, %t0
+  %t0 = fmul contract reassoc nsz <4 x float> %x0, %x1
+  %t1 = fadd contract reassoc nsz <4 x float> %x2, %t0
   %t2 = fadd reassoc nsz <4 x float> %x3, %t1
   ret <4 x float> %t2
 }
@@ -259,8 +259,8 @@ define <2 x double> @reassociate_adds_v2f64(<2 x double> %x0, <2 x double> %x1, 
 ; AVX1-LABEL: reassociate_adds_v2f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vaddpd %xmm3, %xmm2, %xmm1
-; AVX1-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vaddpd %xmm2, %xmm3, %xmm1
+; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_adds_v2f64:
@@ -268,8 +268,8 @@ define <2 x double> @reassociate_adds_v2f64(<2 x double> %x0, <2 x double> %x1, 
 ; AVX512-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; AVX512-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
 ; AVX512-NEXT:    retq
-  %t0 = fmul reassoc nsz <2 x double> %x0, %x1
-  %t1 = fadd reassoc nsz <2 x double> %x2, %t0
+  %t0 = fmul contract reassoc nsz <2 x double> %x0, %x1
+  %t1 = fadd contract reassoc nsz <2 x double> %x2, %t0
   %t2 = fadd reassoc nsz <2 x double> %x3, %t1
   ret <2 x double> %t2
 }
@@ -287,8 +287,8 @@ define <4 x float> @reassociate_muls_v4f32(<4 x float> %x0, <4 x float> %x1, <4 
 ; AVX-LABEL: reassociate_muls_v4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmulps %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmulps %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fadd reassoc nsz <4 x float> %x0, %x1
   %t1 = fmul reassoc nsz <4 x float> %x2, %t0
@@ -309,8 +309,8 @@ define <2 x double> @reassociate_muls_v2f64(<2 x double> %x0, <2 x double> %x1, 
 ; AVX-LABEL: reassociate_muls_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmulpd %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vmulpd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fadd reassoc nsz <2 x double> %x0, %x1
   %t1 = fmul reassoc nsz <2 x double> %x2, %t0
@@ -334,8 +334,8 @@ define <8 x float> @reassociate_adds_v8f32(<8 x float> %x0, <8 x float> %x1, <8 
 ; AVX1-LABEL: reassociate_adds_v8f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmulps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vaddps %ymm3, %ymm2, %ymm1
-; AVX1-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vaddps %ymm2, %ymm3, %ymm1
+; AVX1-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_adds_v8f32:
@@ -343,8 +343,8 @@ define <8 x float> @reassociate_adds_v8f32(<8 x float> %x0, <8 x float> %x1, <8 
 ; AVX512-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; AVX512-NEXT:    vaddps %ymm0, %ymm3, %ymm0
 ; AVX512-NEXT:    retq
-  %t0 = fmul reassoc nsz <8 x float> %x0, %x1
-  %t1 = fadd reassoc nsz <8 x float> %x2, %t0
+  %t0 = fmul contract reassoc nsz <8 x float> %x0, %x1
+  %t1 = fadd contract reassoc nsz <8 x float> %x2, %t0
   %t2 = fadd reassoc nsz <8 x float> %x3, %t1
   ret <8 x float> %t2
 }
@@ -365,8 +365,8 @@ define <4 x double> @reassociate_adds_v4f64(<4 x double> %x0, <4 x double> %x1, 
 ; AVX1-LABEL: reassociate_adds_v4f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vaddpd %ymm3, %ymm2, %ymm1
-; AVX1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vaddpd %ymm2, %ymm3, %ymm1
+; AVX1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_adds_v4f64:
@@ -374,8 +374,8 @@ define <4 x double> @reassociate_adds_v4f64(<4 x double> %x0, <4 x double> %x1, 
 ; AVX512-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; AVX512-NEXT:    vaddpd %ymm0, %ymm3, %ymm0
 ; AVX512-NEXT:    retq
-  %t0 = fmul reassoc nsz <4 x double> %x0, %x1
-  %t1 = fadd reassoc nsz <4 x double> %x2, %t0
+  %t0 = fmul contract reassoc nsz <4 x double> %x0, %x1
+  %t1 = fadd contract reassoc nsz <4 x double> %x2, %t0
   %t2 = fadd reassoc nsz <4 x double> %x3, %t1
   ret <4 x double> %t2
 }
@@ -396,8 +396,8 @@ define <8 x float> @reassociate_muls_v8f32(<8 x float> %x0, <8 x float> %x1, <8 
 ; AVX-LABEL: reassociate_muls_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vmulps %ymm3, %ymm2, %ymm1
-; AVX-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vmulps %ymm2, %ymm3, %ymm1
+; AVX-NEXT:    vmulps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %t0 = fadd reassoc nsz <8 x float> %x0, %x1
   %t1 = fmul reassoc nsz <8 x float> %x2, %t0
@@ -421,8 +421,8 @@ define <4 x double> @reassociate_muls_v4f64(<4 x double> %x0, <4 x double> %x1, 
 ; AVX-LABEL: reassociate_muls_v4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vmulpd %ymm3, %ymm2, %ymm1
-; AVX-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vmulpd %ymm2, %ymm3, %ymm1
+; AVX-NEXT:    vmulpd %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %t0 = fadd reassoc nsz <4 x double> %x0, %x1
   %t1 = fmul reassoc nsz <4 x double> %x2, %t0
@@ -453,10 +453,10 @@ define <16 x float> @reassociate_adds_v16f32(<16 x float> %x0, <16 x float> %x1,
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vmulps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vaddps %ymm6, %ymm4, %ymm2
-; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vaddps %ymm7, %ymm5, %ymm2
-; AVX1-NEXT:    vaddps %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    vaddps %ymm4, %ymm6, %ymm2
+; AVX1-NEXT:    vaddps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vaddps %ymm5, %ymm7, %ymm2
+; AVX1-NEXT:    vaddps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_adds_v16f32:
@@ -464,8 +464,8 @@ define <16 x float> @reassociate_adds_v16f32(<16 x float> %x0, <16 x float> %x1,
 ; AVX512-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; AVX512-NEXT:    vaddps %zmm0, %zmm3, %zmm0
 ; AVX512-NEXT:    retq
-  %t0 = fmul reassoc nsz <16 x float> %x0, %x1
-  %t1 = fadd reassoc nsz <16 x float> %x2, %t0
+  %t0 = fmul contract reassoc nsz <16 x float> %x0, %x1
+  %t1 = fadd contract reassoc nsz <16 x float> %x2, %t0
   %t2 = fadd reassoc nsz <16 x float> %x3, %t1
   ret <16 x float> %t2
 }
@@ -493,10 +493,10 @@ define <8 x double> @reassociate_adds_v8f64(<8 x double> %x0, <8 x double> %x1, 
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vaddpd %ymm6, %ymm4, %ymm2
-; AVX1-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vaddpd %ymm7, %ymm5, %ymm2
-; AVX1-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    vaddpd %ymm4, %ymm6, %ymm2
+; AVX1-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vaddpd %ymm5, %ymm7, %ymm2
+; AVX1-NEXT:    vaddpd %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_adds_v8f64:
@@ -504,8 +504,8 @@ define <8 x double> @reassociate_adds_v8f64(<8 x double> %x0, <8 x double> %x1, 
 ; AVX512-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; AVX512-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
 ; AVX512-NEXT:    retq
-  %t0 = fmul reassoc nsz <8 x double> %x0, %x1
-  %t1 = fadd reassoc nsz <8 x double> %x2, %t0
+  %t0 = fmul contract reassoc nsz <8 x double> %x0, %x1
+  %t1 = fadd contract reassoc nsz <8 x double> %x2, %t0
   %t2 = fadd reassoc nsz <8 x double> %x3, %t1
   ret <8 x double> %t2
 }
@@ -533,17 +533,17 @@ define <16 x float> @reassociate_muls_v16f32(<16 x float> %x0, <16 x float> %x1,
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vmulps %ymm6, %ymm4, %ymm2
-; AVX1-NEXT:    vmulps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vmulps %ymm7, %ymm5, %ymm2
-; AVX1-NEXT:    vmulps %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    vmulps %ymm4, %ymm6, %ymm2
+; AVX1-NEXT:    vmulps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vmulps %ymm5, %ymm7, %ymm2
+; AVX1-NEXT:    vmulps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_muls_v16f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vmulps %zmm3, %zmm2, %zmm1
-; AVX512-NEXT:    vmulps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmulps %zmm2, %zmm3, %zmm1
+; AVX512-NEXT:    vmulps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %t0 = fadd reassoc nsz <16 x float> %x0, %x1
   %t1 = fmul reassoc nsz <16 x float> %x2, %t0
@@ -574,17 +574,17 @@ define <8 x double> @reassociate_muls_v8f64(<8 x double> %x0, <8 x double> %x1, 
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vmulpd %ymm6, %ymm4, %ymm2
-; AVX1-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vmulpd %ymm7, %ymm5, %ymm2
-; AVX1-NEXT:    vmulpd %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    vmulpd %ymm4, %ymm6, %ymm2
+; AVX1-NEXT:    vmulpd %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vmulpd %ymm5, %ymm7, %ymm2
+; AVX1-NEXT:    vmulpd %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_muls_v8f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vmulpd %zmm3, %zmm2, %zmm1
-; AVX512-NEXT:    vmulpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmulpd %zmm2, %zmm3, %zmm1
+; AVX512-NEXT:    vmulpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %t0 = fadd reassoc nsz <8 x double> %x0, %x1
   %t1 = fmul reassoc nsz <8 x double> %x2, %t0
@@ -605,8 +605,8 @@ define float @reassociate_mins_single(float %x0, float %x1, float %x2, float %x3
 ; AVX-LABEL: reassociate_mins_single:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vminss %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vminss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vminss %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vminss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fdiv float %x0, %x1
   %cmp1 = fcmp olt float %x2, %t0
@@ -629,8 +629,8 @@ define float @reassociate_maxs_single(float %x0, float %x1, float %x2, float %x3
 ; AVX-LABEL: reassociate_maxs_single:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmaxss %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmaxss %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fdiv float %x0, %x1
   %cmp1 = fcmp ogt float %x2, %t0
@@ -653,8 +653,8 @@ define double @reassociate_mins_double(double %x0, double %x1, double %x2, doubl
 ; AVX-LABEL: reassociate_mins_double:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vminsd %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vminsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vminsd %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vminsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fdiv double %x0, %x1
   %cmp1 = fcmp olt double %x2, %t0
@@ -677,8 +677,8 @@ define double @reassociate_maxs_double(double %x0, double %x1, double %x2, doubl
 ; AVX-LABEL: reassociate_maxs_double:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmaxsd %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmaxsd %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fdiv double %x0, %x1
   %cmp1 = fcmp ogt double %x2, %t0
@@ -701,8 +701,8 @@ define <4 x float> @reassociate_mins_v4f32(<4 x float> %x0, <4 x float> %x1, <4 
 ; AVX-LABEL: reassociate_mins_v4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vminps %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vminps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vminps %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vminps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fadd <4 x float> %x0, %x1
   %cmp1 = fcmp olt <4 x float> %x2, %t0
@@ -725,8 +725,8 @@ define <4 x float> @reassociate_maxs_v4f32(<4 x float> %x0, <4 x float> %x1, <4 
 ; AVX-LABEL: reassociate_maxs_v4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmaxps %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmaxps %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fadd <4 x float> %x0, %x1
   %cmp1 = fcmp ogt <4 x float> %x2, %t0
@@ -749,8 +749,8 @@ define <2 x double> @reassociate_mins_v2f64(<2 x double> %x0, <2 x double> %x1, 
 ; AVX-LABEL: reassociate_mins_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vminpd %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vminpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vminpd %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vminpd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fadd <2 x double> %x0, %x1
   %cmp1 = fcmp olt <2 x double> %x2, %t0
@@ -773,8 +773,8 @@ define <2 x double> @reassociate_maxs_v2f64(<2 x double> %x0, <2 x double> %x1, 
 ; AVX-LABEL: reassociate_maxs_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmaxpd %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmaxpd %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vmaxpd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %t0 = fadd <2 x double> %x0, %x1
   %cmp1 = fcmp ogt <2 x double> %x2, %t0
@@ -800,8 +800,8 @@ define <8 x float> @reassociate_mins_v8f32(<8 x float> %x0, <8 x float> %x1, <8 
 ; AVX-LABEL: reassociate_mins_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vminps %ymm3, %ymm2, %ymm1
-; AVX-NEXT:    vminps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vminps %ymm2, %ymm3, %ymm1
+; AVX-NEXT:    vminps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %t0 = fadd <8 x float> %x0, %x1
   %cmp1 = fcmp olt <8 x float> %x2, %t0
@@ -827,8 +827,8 @@ define <8 x float> @reassociate_maxs_v8f32(<8 x float> %x0, <8 x float> %x1, <8 
 ; AVX-LABEL: reassociate_maxs_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vmaxps %ymm3, %ymm2, %ymm1
-; AVX-NEXT:    vmaxps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vmaxps %ymm2, %ymm3, %ymm1
+; AVX-NEXT:    vmaxps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %t0 = fadd <8 x float> %x0, %x1
   %cmp1 = fcmp ogt <8 x float> %x2, %t0
@@ -854,8 +854,8 @@ define <4 x double> @reassociate_mins_v4f64(<4 x double> %x0, <4 x double> %x1, 
 ; AVX-LABEL: reassociate_mins_v4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vminpd %ymm3, %ymm2, %ymm1
-; AVX-NEXT:    vminpd %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vminpd %ymm2, %ymm3, %ymm1
+; AVX-NEXT:    vminpd %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %t0 = fadd <4 x double> %x0, %x1
   %cmp1 = fcmp olt <4 x double> %x2, %t0
@@ -881,8 +881,8 @@ define <4 x double> @reassociate_maxs_v4f64(<4 x double> %x0, <4 x double> %x1, 
 ; AVX-LABEL: reassociate_maxs_v4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vmaxpd %ymm3, %ymm2, %ymm1
-; AVX-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vmaxpd %ymm2, %ymm3, %ymm1
+; AVX-NEXT:    vmaxpd %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %t0 = fadd <4 x double> %x0, %x1
   %cmp1 = fcmp ogt <4 x double> %x2, %t0
@@ -915,17 +915,17 @@ define <16 x float> @reassociate_mins_v16f32(<16 x float> %x0, <16 x float> %x1,
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vminps %ymm6, %ymm4, %ymm2
-; AVX1-NEXT:    vminps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vminps %ymm7, %ymm5, %ymm2
-; AVX1-NEXT:    vminps %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    vminps %ymm4, %ymm6, %ymm2
+; AVX1-NEXT:    vminps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vminps %ymm5, %ymm7, %ymm2
+; AVX1-NEXT:    vminps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_mins_v16f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vminps %zmm3, %zmm2, %zmm1
-; AVX512-NEXT:    vminps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vminps %zmm2, %zmm3, %zmm1
+; AVX512-NEXT:    vminps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %t0 = fadd <16 x float> %x0, %x1
   %cmp1 = fcmp olt <16 x float> %x2, %t0
@@ -958,17 +958,17 @@ define <16 x float> @reassociate_maxs_v16f32(<16 x float> %x0, <16 x float> %x1,
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vmaxps %ymm6, %ymm4, %ymm2
-; AVX1-NEXT:    vmaxps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vmaxps %ymm7, %ymm5, %ymm2
-; AVX1-NEXT:    vmaxps %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    vmaxps %ymm4, %ymm6, %ymm2
+; AVX1-NEXT:    vmaxps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vmaxps %ymm5, %ymm7, %ymm2
+; AVX1-NEXT:    vmaxps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_maxs_v16f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vmaxps %zmm3, %zmm2, %zmm1
-; AVX512-NEXT:    vmaxps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmaxps %zmm2, %zmm3, %zmm1
+; AVX512-NEXT:    vmaxps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %t0 = fadd <16 x float> %x0, %x1
   %cmp1 = fcmp ogt <16 x float> %x2, %t0
@@ -1001,17 +1001,17 @@ define <8 x double> @reassociate_mins_v8f64(<8 x double> %x0, <8 x double> %x1, 
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vminpd %ymm6, %ymm4, %ymm2
-; AVX1-NEXT:    vminpd %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vminpd %ymm7, %ymm5, %ymm2
-; AVX1-NEXT:    vminpd %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    vminpd %ymm4, %ymm6, %ymm2
+; AVX1-NEXT:    vminpd %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vminpd %ymm5, %ymm7, %ymm2
+; AVX1-NEXT:    vminpd %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_mins_v8f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vminpd %zmm3, %zmm2, %zmm1
-; AVX512-NEXT:    vminpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vminpd %zmm2, %zmm3, %zmm1
+; AVX512-NEXT:    vminpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %t0 = fadd <8 x double> %x0, %x1
   %cmp1 = fcmp olt <8 x double> %x2, %t0
@@ -1044,17 +1044,17 @@ define <8 x double> @reassociate_maxs_v8f64(<8 x double> %x0, <8 x double> %x1, 
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vmaxpd %ymm6, %ymm4, %ymm2
-; AVX1-NEXT:    vmaxpd %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vmaxpd %ymm7, %ymm5, %ymm2
-; AVX1-NEXT:    vmaxpd %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    vmaxpd %ymm4, %ymm6, %ymm2
+; AVX1-NEXT:    vmaxpd %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vmaxpd %ymm5, %ymm7, %ymm2
+; AVX1-NEXT:    vmaxpd %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: reassociate_maxs_v8f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vmaxpd %zmm3, %zmm2, %zmm1
-; AVX512-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmaxpd %zmm2, %zmm3, %zmm1
+; AVX512-NEXT:    vmaxpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %t0 = fadd <8 x double> %x0, %x1
   %cmp1 = fcmp ogt <8 x double> %x2, %t0
@@ -1074,13 +1074,13 @@ define double @reassociate_adds_from_calls() {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $24, %rsp
 ; SSE-NEXT:    .cfi_def_cfa_offset 32
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; SSE-NEXT:    # xmm1 = mem[0],zero
 ; SSE-NEXT:    addsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Folded Reload
@@ -1094,13 +1094,13 @@ define double @reassociate_adds_from_calls() {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $24, %rsp
 ; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; AVX-NEXT:    # xmm1 = mem[0],zero
 ; AVX-NEXT:    vaddsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 8-byte Folded Reload
@@ -1125,13 +1125,13 @@ define double @already_reassociated() {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $24, %rsp
 ; SSE-NEXT:    .cfi_def_cfa_offset 32
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; SSE-NEXT:    # xmm1 = mem[0],zero
 ; SSE-NEXT:    addsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Folded Reload
@@ -1145,13 +1145,13 @@ define double @already_reassociated() {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $24, %rsp
 ; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; AVX-NEXT:    # xmm1 = mem[0],zero
 ; AVX-NEXT:    vaddsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 8-byte Folded Reload

@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -44,7 +42,8 @@ MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
                                      StringRef MakeSmartPtrFunctionName)
     : ClangTidyCheck(Name, Context),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM)),
+                                        utils::IncludeSorter::IS_LLVM),
+               areDiagsSelfContained()),
       MakeSmartPtrFunctionHeader(
           Options.get("MakeSmartPtrFunctionHeader", "<memory>")),
       MakeSmartPtrFunctionName(
@@ -97,14 +96,18 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               cxxMemberCallExpr(
-                   thisPointerType(getSmartPointerTypeMatcher()),
-                   callee(cxxMethodDecl(hasName("reset"))),
-                   hasArgument(0, cxxNewExpr(CanCallCtor, unless(IsPlacement))
-                                      .bind(NewExpression)),
-                   unless(isInTemplateInstantiation()))
-                   .bind(ResetCall)),
+      traverse(
+          TK_AsIs,
+          cxxMemberCallExpr(
+              unless(isInTemplateInstantiation()),
+              hasArgument(0, cxxNewExpr(CanCallCtor, unless(IsPlacement))
+                                 .bind(NewExpression)),
+              callee(cxxMethodDecl(hasName("reset"))),
+              anyOf(thisPointerType(getSmartPointerTypeMatcher()),
+                    on(ignoringImplicit(anyOf(
+                        hasType(getSmartPointerTypeMatcher()),
+                        hasType(pointsTo(getSmartPointerTypeMatcher())))))))
+              .bind(ResetCall)),
       this);
 }
 
@@ -282,7 +285,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     return false;
 
   std::string ArraySizeExpr;
-  if (const auto* ArraySize = New->getArraySize().getValueOr(nullptr)) {
+  if (const auto *ArraySize = New->getArraySize().value_or(nullptr)) {
     ArraySizeExpr = Lexer::getSourceText(CharSourceRange::getTokenRange(
                                              ArraySize->getSourceRange()),
                                          SM, getLangOpts())
@@ -320,7 +323,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     return false;
   };
   switch (New->getInitializationStyle()) {
-  case CXXNewExpr::NoInit: {
+  case CXXNewInitializationStyle::None: {
     if (ArraySizeExpr.empty()) {
       Diag << FixItHint::CreateRemoval(SourceRange(NewStart, NewEnd));
     } else {
@@ -331,7 +334,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     }
     break;
   }
-  case CXXNewExpr::CallInit: {
+  case CXXNewInitializationStyle::Parens: {
     // FIXME: Add fixes for constructors with parameters that can be created
     // with a C++11 braced-init-list (e.g. std::vector, std::map).
     // Unlike ordinal cases, braced list can not be deduced in
@@ -368,7 +371,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     }
     break;
   }
-  case CXXNewExpr::ListInit: {
+  case CXXNewInitializationStyle::Braces: {
     // Range of the substring that we do not want to remove.
     SourceRange InitRange;
     if (const auto *NewConstruct = New->getConstructExpr()) {
@@ -410,10 +413,10 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
       // stop generating fixes -- as the C++ rule is complicated and we are less
       // certain about the correct fixes.
       if (const CXXRecordDecl *RD = New->getType()->getPointeeCXXRecordDecl()) {
-        if (llvm::find_if(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
+        if (llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
               return Ctor->isCopyOrMoveConstructor() &&
                      (Ctor->isDeleted() || Ctor->getAccess() == AS_private);
-            }) != RD->ctor_end()) {
+            })) {
           return false;
         }
       }
@@ -438,6 +441,4 @@ void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
   Diag << Inserter.createIncludeInsertion(FD, MakeSmartPtrFunctionHeader);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

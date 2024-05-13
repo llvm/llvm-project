@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace lldb_private {
 class ExecutionContextScope;
@@ -40,13 +41,13 @@ public:
                                     const Address &address,
                                     const CompilerType &ast_type);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 
   ConstString GetDisplayTypeName() override;
 
-  size_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   lldb::ValueType GetValueType() const override;
 

@@ -2,7 +2,7 @@
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; CHECK: [[FILEID:[0-9]+]]]{{.*}}list0.h
-; CHECK: [[FILEID]]      0      1   0  0 is_stmt{{$}}
+; CHECK: [[FILEID]]      0      1   0  0 0 is_stmt{{$}}
 
 ; IR generated from clang -g -emit-llvm with the following source:
 ; list0.h:
@@ -17,11 +17,11 @@
 define i32 @foo(i32 %x) #0 !dbg !4 {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !14, metadata !DIExpression()), !dbg !15
-  %0 = load i32, i32* %x.addr, align 4, !dbg !16
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !14, metadata !DIExpression()), !dbg !15
+  %0 = load i32, ptr %x.addr, align 4, !dbg !16
   %inc = add nsw i32 %0, 1, !dbg !16
-  store i32 %inc, i32* %x.addr, align 4, !dbg !16
+  store i32 %inc, ptr %x.addr, align 4, !dbg !16
   ret i32 %inc, !dbg !16
 }
 

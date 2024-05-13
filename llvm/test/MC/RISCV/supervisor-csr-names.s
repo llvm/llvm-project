@@ -28,34 +28,6 @@ csrrs t1, sstatus, zero
 # uimm12
 csrrs t2, 0x100, zero
 
-# sedeleg
-# name
-# CHECK-INST: csrrs t1, sedeleg, zero
-# CHECK-ENC: encoding: [0x73,0x23,0x20,0x10]
-# CHECK-INST-ALIAS: csrr t1, sedeleg
-# uimm12
-# CHECK-INST: csrrs t2, sedeleg, zero
-# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x10]
-# CHECK-INST-ALIAS: csrr t2, sedeleg
-# name
-csrrs t1, sedeleg, zero
-# uimm12
-csrrs t2, 0x102, zero
-
-# sideleg
-# name
-# CHECK-INST: csrrs t1, sideleg, zero
-# CHECK-ENC: encoding: [0x73,0x23,0x30,0x10]
-# CHECK-INST-ALIAS: csrr t1, sideleg
-# uimm12
-# CHECK-INST: csrrs t2, sideleg, zero
-# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x10]
-# CHECK-INST-ALIAS: csrr t2, sideleg
-# name
-csrrs t1, sideleg, zero
-# uimm12
-csrrs t2, 0x103, zero
-
 # sie
 # name
 # CHECK-INST: csrrs t1, sie, zero
@@ -97,6 +69,38 @@ csrrs t2, 0x105, zero
 csrrs t1, scounteren, zero
 # uimm12
 csrrs t2, 0x106, zero
+
+# stimecmp
+# name
+# CHECK-INST: csrrs t1, stimecmp, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x14]
+# CHECK-INST-ALIAS: csrr t1, stimecmp
+# uimm12
+# CHECK-INST: csrrs t2, stimecmp, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x14]
+# CHECK-INST-ALIAS: csrr t2, stimecmp
+# name
+csrrs t1, stimecmp, zero
+# uimm12
+csrrs t2, 0x14D, zero
+
+##################################
+# Supervisor Configuration
+##################################
+
+# senvcfg
+# name
+# CHECK-INST: csrrs t1, senvcfg, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x10]
+# CHECK-INST-ALIAS: csrr t1, senvcfg
+# uimm12
+# CHECK-INST: csrrs t2, senvcfg, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x10]
+# CHECK-INST-ALIAS: csrr t2, senvcfg
+# name
+csrrs t1, senvcfg, zero
+# uimm12
+csrrs t2, 0x10A, zero
 
 ##################################
 # Supervisor Trap Handling
@@ -191,3 +195,177 @@ csrrs t2, 0x144, zero
 csrrs t1, satp, zero
 # uimm12
 csrrs t2, 0x180, zero
+
+#########################################
+# Quality-of-Service(QoS) Identifiers
+#########################################
+
+# srmcfg
+# name
+# CHECK-INST: csrrs t1, srmcfg, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x18]
+# CHECK-INST-ALIAS: csrr t1, srmcfg
+# uimm12
+# CHECK-INST: csrrs t2, srmcfg, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x10,0x18]
+# CHECK-INST-ALIAS: csrr t2, srmcfg
+# name
+csrrs t1, srmcfg, zero
+# uimm12
+csrrs t2, 0x181, zero
+
+#########################################
+# Debug/Trace Registers
+#########################################
+
+# scontext
+# name
+# CHECK-INST: csrrs t1, scontext, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x5a]
+# CHECK-INST-ALIAS: csrr t1, scontext
+# uimm12
+# CHECK-INST: csrrs t2, scontext, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x5a]
+# CHECK-INST-ALIAS: csrr t2, scontext
+# name
+csrrs t1, scontext, zero
+# uimm12
+csrrs t2, 0x5A8, zero
+
+#########################################
+# Supervisor Count Overflow (Sscofpmf)
+#########################################
+
+# scountovf
+# name
+# CHECK-INST: csrrs t1, scountovf, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0xda]
+# CHECK-INST-ALIAS: csrr t1, scountovf
+# uimm12
+# CHECK-INST: csrrs t2, scountovf, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0xda]
+# CHECK-INST-ALIAS: csrr t2, scountovf
+# name
+csrrs t1, scountovf, zero
+# uimm12
+csrrs t2, 0xDA0, zero
+
+#########################################
+# State Enable Extension (Smstateen)
+#########################################
+
+# sstateen0
+# name
+# CHECK-INST: csrrs t1, sstateen0, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xc0,0x10]
+# CHECK-INST-ALIAS: csrr t1, sstateen0
+# uimm12
+# CHECK-INST: csrrs t2, sstateen0, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xc0,0x10]
+# CHECK-INST-ALIAS: csrr t2, sstateen0
+# name
+csrrs t1, sstateen0, zero
+# uimm12
+csrrs t2, 0x10C, zero
+
+# sstateen1
+# name
+# CHECK-INST: csrrs t1, sstateen1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x10]
+# CHECK-INST-ALIAS: csrr t1, sstateen1
+# uimm12
+# CHECK-INST: csrrs t2, sstateen1, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x10]
+# CHECK-INST-ALIAS: csrr t2, sstateen1
+# name
+csrrs t1, sstateen1, zero
+# uimm12
+csrrs t2, 0x10D, zero
+
+# sstateen2
+# name
+# CHECK-INST: csrrs t1, sstateen2, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x10]
+# CHECK-INST-ALIAS: csrr t1, sstateen2
+# uimm12
+# CHECK-INST: csrrs t2, sstateen2, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x10]
+# CHECK-INST-ALIAS: csrr t2, sstateen2
+# name
+csrrs t1, sstateen2, zero
+# uimm12
+csrrs t2, 0x10E, zero
+
+# sstateen3
+# name
+# CHECK-INST: csrrs t1, sstateen3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x10]
+# CHECK-INST-ALIAS: csrr t1, sstateen3
+# uimm12
+# CHECK-INST: csrrs t2, sstateen3, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x10]
+# CHECK-INST-ALIAS: csrr t2, sstateen3
+# name
+csrrs t1, sstateen3, zero
+# uimm12
+csrrs t2, 0x10F, zero
+
+#########################################
+# Advanced Interrupt Architecture (Smaia and Ssaia)
+#########################################
+
+# siselect
+# name
+# CHECK-INST: csrrs t1, siselect, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x15]
+# CHECK-INST-ALIAS: csrr t1, siselect
+# uimm12
+# CHECK-INST: csrrs t2, siselect, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x15]
+# CHECK-INST-ALIAS: csrr t2, siselect
+# name
+csrrs t1, siselect, zero
+# uimm12
+csrrs t2, 0x150, zero
+
+# sireg
+# name
+# CHECK-INST: csrrs t1, sireg, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x15]
+# CHECK-INST-ALIAS: csrr t1, sireg
+# uimm12
+# CHECK-INST: csrrs t2, sireg, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x10,0x15]
+# CHECK-INST-ALIAS: csrr t2, sireg
+# name
+csrrs t1, sireg, zero
+# uimm12
+csrrs t2, 0x151, zero
+
+# stopei
+# name
+# CHECK-INST: csrrs t1, stopei, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xc0,0x15]
+# CHECK-INST-ALIAS: csrr t1, stopei
+# uimm12
+# CHECK-INST: csrrs t2, stopei, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xc0,0x15]
+# CHECK-INST-ALIAS: csrr t2, stopei
+# name
+csrrs t1, stopei, zero
+# uimm12
+csrrs t2, 0x15C, zero
+
+# stopi
+# name
+# CHECK-INST: csrrs t1, stopi, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0xdb]
+# CHECK-INST-ALIAS: csrr t1, stopi
+# uimm12
+# CHECK-INST: csrrs t2, stopi, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0xdb]
+# CHECK-INST-ALIAS: csrr t2, stopi
+# name
+csrrs t1, stopi, zero
+# uimm12
+csrrs t2, 0xDB0, zero

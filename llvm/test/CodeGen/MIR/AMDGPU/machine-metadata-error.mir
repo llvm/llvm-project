@@ -1,0 +1,25 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that the MIR parser detects errors when parsing machine
+# metadata.
+--- |
+  target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
+  target triple = "amdgcn-amd-amdhsa"
+
+  define i32 @test_memcpy(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) #0 {
+    ret i32 0
+  }
+...
+---
+name:            test_memcpy
+machineMetadataNodes:
+  - '!9 = distinct !{!9, !7, !"Dst"}'
+  - '!6 = distinct !{!6, !7, !"Src"}'
+  - '!5 = !{!6}'
+  - '!10 = !{!9}'
+  - '!7 = distinct !{!7, !"MemcpyLoweringDomain"}'
+body:             |
+  bb.0 (%ir-block.0):
+  ; CHECK: [[@LINE+1]]:113: use of undefined metadata '!11'
+    %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %9, 16, 0, implicit $exec :: (load 16, align 4, !alias.scope !5, !noalias !11, addrspace 1)
+
+...

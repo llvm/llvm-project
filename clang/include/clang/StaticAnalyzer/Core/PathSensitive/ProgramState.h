@@ -23,6 +23,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/Support/Allocator.h"
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -46,8 +47,6 @@ typedef std::unique_ptr<StoreManager>(*StoreManagerCreator)(
 //===----------------------------------------------------------------------===//
 // ProgramStateTrait - Traits used by the Generic Data Map of a ProgramState.
 //===----------------------------------------------------------------------===//
-
-template <typename T> struct ProgramStatePartialTrait;
 
 template <typename T> struct ProgramStateTrait {
   typedef typename T::data_type data_type;
@@ -80,11 +79,49 @@ private:
   friend class ProgramStateManager;
   friend class ExplodedGraph;
   friend class ExplodedNode;
+  friend class NodeBuilder;
 
   ProgramStateManager *stateMgr;
   Environment Env;           // Maps a Stmt to its current SVal.
   Store store;               // Maps a location to its current value.
   GenericDataMap   GDM;      // Custom data stored by a client of this class.
+
+  // A state is infeasible if there is a contradiction among the constraints.
+  // An infeasible state is represented by a `nullptr`.
+  // In the sense of `assumeDual`, a state can have two children by adding a
+  // new constraint and the negation of that new constraint. A parent state is
+  // over-constrained if both of its children are infeasible. In the
+  // mathematical sense, it means that the parent is infeasible and we should
+  // have realized that at the moment when we have created it. However, we
+  // could not recognize that because of the imperfection of the underlying
+  // constraint solver. We say it is posteriorly over-constrained because we
+  // recognize that a parent is infeasible only *after* a new and more specific
+  // constraint and its negation are evaluated.
+  //
+  // Example:
+  //
+  // x * x = 4 and x is in the range [0, 1]
+  // This is an already infeasible state, but the constraint solver is not
+  // capable of handling sqrt, thus we don't know it yet.
+  //
+  // Then a new constraint `x = 0` is added. At this moment the constraint
+  // solver re-evaluates the existing constraints and realizes the
+  // contradiction `0 * 0 = 4`.
+  // We also evaluate the negated constraint `x != 0`;  the constraint solver
+  // deduces `x = 1` and then realizes the contradiction `1 * 1 = 4`.
+  // Both children are infeasible, thus the parent state is marked as
+  // posteriorly over-constrained. These parents are handled with special care:
+  // we do not allow transitions to exploded nodes with such states.
+  bool PosteriorlyOverconstrained = false;
+  // Make internal constraint solver entities friends so they can access the
+  // overconstrained-related functions. We want to keep this API inaccessible
+  // for Checkers.
+  friend class ConstraintManager;
+  bool isPosteriorlyOverconstrained() const {
+    return PosteriorlyOverconstrained;
+  }
+  ProgramStateRef cloneAsPosteriorlyOverconstrained() const;
+
   unsigned refCount;
 
   /// makeWithStore - Return a ProgramState with the same values as the current
@@ -137,6 +174,7 @@ public:
     V->Env.Profile(ID);
     ID.AddPointer(V->store);
     V->GDM.Profile(ID);
+    ID.AddBoolean(V->PosteriorlyOverconstrained);
   }
 
   /// Profile - Used to profile the contents of this object for inclusion
@@ -179,18 +217,22 @@ public:
   ///
   /// This returns a new state with the added constraint on \p cond.
   /// If no new state is feasible, NULL is returned.
-  LLVM_NODISCARD ProgramStateRef assume(DefinedOrUnknownSVal cond,
-                                        bool assumption) const;
+  [[nodiscard]] ProgramStateRef assume(DefinedOrUnknownSVal cond,
+                                       bool assumption) const;
 
   /// Assumes both "true" and "false" for \p cond, and returns both
   /// corresponding states (respectively).
   ///
   /// This is more efficient than calling assume() twice. Note that one (but not
   /// both) of the returned states may be NULL.
-  LLVM_NODISCARD std::pair<ProgramStateRef, ProgramStateRef>
+  [[nodiscard]] std::pair<ProgramStateRef, ProgramStateRef>
   assume(DefinedOrUnknownSVal cond) const;
 
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] std::pair<ProgramStateRef, ProgramStateRef>
+  assumeInBoundDual(DefinedOrUnknownSVal idx, DefinedOrUnknownSVal upperBound,
+                    QualType IndexType = QualType()) const;
+
+  [[nodiscard]] ProgramStateRef
   assumeInBound(DefinedOrUnknownSVal idx, DefinedOrUnknownSVal upperBound,
                 bool assumption, QualType IndexType = QualType()) const;
 
@@ -200,17 +242,17 @@ public:
   ///
   /// This returns a new state with the added constraint on \p cond.
   /// If no new state is feasible, NULL is returned.
-  LLVM_NODISCARD ProgramStateRef assumeInclusiveRange(DefinedOrUnknownSVal Val,
-                                                      const llvm::APSInt &From,
-                                                      const llvm::APSInt &To,
-                                                      bool assumption) const;
+  [[nodiscard]] ProgramStateRef assumeInclusiveRange(DefinedOrUnknownSVal Val,
+                                                     const llvm::APSInt &From,
+                                                     const llvm::APSInt &To,
+                                                     bool assumption) const;
 
   /// Assumes given range both "true" and "false" for \p Val, and returns both
   /// corresponding states (respectively).
   ///
   /// This is more efficient than calling assume() twice. Note that one (but not
   /// both) of the returned states may be NULL.
-  LLVM_NODISCARD std::pair<ProgramStateRef, ProgramStateRef>
+  [[nodiscard]] std::pair<ProgramStateRef, ProgramStateRef>
   assumeInclusiveRange(DefinedOrUnknownSVal Val, const llvm::APSInt &From,
                        const llvm::APSInt &To) const;
 
@@ -226,6 +268,7 @@ public:
   ConditionTruthVal areEqual(SVal Lhs, SVal Rhs) const;
 
   /// Utility method for getting regions.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const VarRegion* getRegion(const VarDecl *D, const LocationContext *LC) const;
 
   //==---------------------------------------------------------------------==//
@@ -234,16 +277,16 @@ public:
 
   /// Create a new state by binding the value 'V' to the statement 'S' in the
   /// state's environment.
-  LLVM_NODISCARD ProgramStateRef BindExpr(const Stmt *S,
-                                          const LocationContext *LCtx, SVal V,
-                                          bool Invalidate = true) const;
+  [[nodiscard]] ProgramStateRef BindExpr(const Stmt *S,
+                                         const LocationContext *LCtx, SVal V,
+                                         bool Invalidate = true) const;
 
-  LLVM_NODISCARD ProgramStateRef bindLoc(Loc location, SVal V,
-                                         const LocationContext *LCtx,
-                                         bool notifyChanges = true) const;
+  [[nodiscard]] ProgramStateRef bindLoc(Loc location, SVal V,
+                                        const LocationContext *LCtx,
+                                        bool notifyChanges = true) const;
 
-  LLVM_NODISCARD ProgramStateRef bindLoc(SVal location, SVal V,
-                                         const LocationContext *LCtx) const;
+  [[nodiscard]] ProgramStateRef bindLoc(SVal location, SVal V,
+                                        const LocationContext *LCtx) const;
 
   /// Initializes the region of memory represented by \p loc with an initial
   /// value. Once initialized, all values loaded from any sub-regions of that
@@ -251,15 +294,15 @@ public:
   /// This method should not be used on regions that are already initialized.
   /// If you need to indicate that memory contents have suddenly become unknown
   /// within a certain region of memory, consider invalidateRegions().
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   bindDefaultInitial(SVal loc, SVal V, const LocationContext *LCtx) const;
 
   /// Performs C++ zero-initialization procedure on the region of memory
   /// represented by \p loc.
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   bindDefaultZero(SVal loc, const LocationContext *LCtx) const;
 
-  LLVM_NODISCARD ProgramStateRef killBinding(Loc LV) const;
+  [[nodiscard]] ProgramStateRef killBinding(Loc LV) const;
 
   /// Returns the state with bindings for the given regions
   ///  cleared from the store.
@@ -279,24 +322,25 @@ public:
   ///        the call and should be considered directly invalidated.
   /// \param ITraits information about special handling for a particular
   ///        region/symbol.
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   invalidateRegions(ArrayRef<const MemRegion *> Regions, const Expr *E,
                     unsigned BlockCount, const LocationContext *LCtx,
                     bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
-  LLVM_NODISCARD ProgramStateRef
-  invalidateRegions(ArrayRef<SVal> Regions, const Expr *E,
-                    unsigned BlockCount, const LocationContext *LCtx,
-                    bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
+  [[nodiscard]] ProgramStateRef
+  invalidateRegions(ArrayRef<SVal> Regions, const Expr *E, unsigned BlockCount,
+                    const LocationContext *LCtx, bool CausesPointerEscape,
+                    InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   /// enterStackFrame - Returns the state for entry to the given stack frame,
   ///  preserving the current state.
-  LLVM_NODISCARD ProgramStateRef enterStackFrame(
-      const CallEvent &Call, const StackFrameContext *CalleeCtx) const;
+  [[nodiscard]] ProgramStateRef
+  enterStackFrame(const CallEvent &Call,
+                  const StackFrameContext *CalleeCtx) const;
 
   /// Return the value of 'self' if available in the given context.
   SVal getSelfSVal(const LocationContext *LC) const;
@@ -307,10 +351,6 @@ public:
   /// Get the lvalue for a base class object reference.
   Loc getLValue(const CXXRecordDecl *BaseClass, const SubRegion *Super,
                 bool IsVirtual) const;
-
-  /// Get the lvalue for a parameter.
-  Loc getLValue(const Expr *Call, unsigned Index,
-                const LocationContext *LC) const;
 
   /// Get the lvalue for a variable reference.
   Loc getLValue(const VarDecl *D, const LocationContext *LC) const;
@@ -379,7 +419,7 @@ public:
   void *const* FindGDM(void *K) const;
 
   template <typename T>
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   add(typename ProgramStateTrait<T>::key_type K) const;
 
   template <typename T>
@@ -399,27 +439,27 @@ public:
   typename ProgramStateTrait<T>::context_type get_context() const;
 
   template <typename T>
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   remove(typename ProgramStateTrait<T>::key_type K) const;
 
   template <typename T>
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   remove(typename ProgramStateTrait<T>::key_type K,
          typename ProgramStateTrait<T>::context_type C) const;
 
-  template <typename T> LLVM_NODISCARD ProgramStateRef remove() const;
+  template <typename T> [[nodiscard]] ProgramStateRef remove() const;
 
   template <typename T>
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   set(typename ProgramStateTrait<T>::data_type D) const;
 
   template <typename T>
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   set(typename ProgramStateTrait<T>::key_type K,
       typename ProgramStateTrait<T>::value_type E) const;
 
   template <typename T>
-  LLVM_NODISCARD ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   set(typename ProgramStateTrait<T>::key_type K,
       typename ProgramStateTrait<T>::value_type E,
       typename ProgramStateTrait<T>::context_type C) const;
@@ -454,6 +494,8 @@ private:
                         InvalidatedSymbols *IS,
                         RegionAndSymbolInvalidationTraits *HTraits,
                         const CallEvent *Call) const;
+
+  SVal wrapSymbolicRegion(SVal Base) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -687,7 +729,7 @@ inline ProgramStateRef ProgramState::assumeInclusiveRange(
   if (Val.isUnknown())
     return this;
 
-  assert(Val.getAs<NonLoc>() && "Only NonLocs are supported!");
+  assert(isa<NonLoc>(Val) && "Only NonLocs are supported!");
 
   return getStateManager().ConstraintMgr->assumeInclusiveRange(
       this, Val.castAs<NonLoc>(), From, To, Assumption);
@@ -700,14 +742,14 @@ ProgramState::assumeInclusiveRange(DefinedOrUnknownSVal Val,
   if (Val.isUnknown())
     return std::make_pair(this, this);
 
-  assert(Val.getAs<NonLoc>() && "Only NonLocs are supported!");
+  assert(isa<NonLoc>(Val) && "Only NonLocs are supported!");
 
   return getStateManager().ConstraintMgr->assumeInclusiveRangeDual(
       this, Val.castAs<NonLoc>(), From, To);
 }
 
 inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V, const LocationContext *LCtx) const {
-  if (Optional<Loc> L = LV.getAs<Loc>())
+  if (std::optional<Loc> L = LV.getAs<Loc>())
     return bindLoc(*L, V, LCtx);
   return this;
 }
@@ -742,22 +784,8 @@ inline SVal ProgramState::getLValue(const ObjCIvarDecl *D, SVal Base) const {
   return getStateManager().StoreMgr->getLValueIvar(D, Base);
 }
 
-inline SVal ProgramState::getLValue(const FieldDecl *D, SVal Base) const {
-  return getStateManager().StoreMgr->getLValueField(D, Base);
-}
-
-inline SVal ProgramState::getLValue(const IndirectFieldDecl *D,
-                                    SVal Base) const {
-  StoreManager &SM = *getStateManager().StoreMgr;
-  for (const auto *I : D->chain()) {
-    Base = SM.getLValueField(cast<FieldDecl>(I), Base);
-  }
-
-  return Base;
-}
-
 inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) const{
-  if (Optional<NonLoc> N = Idx.getAs<NonLoc>())
+  if (std::optional<NonLoc> N = Idx.getAs<NonLoc>())
     return getStateManager().StoreMgr->getLValueElement(ElementType, *N, Base);
   return UnknownVal();
 }

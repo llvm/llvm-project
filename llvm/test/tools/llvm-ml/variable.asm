@@ -1,4 +1,4 @@
-# RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s
+; RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s
 
 .data
 t1_value equ 1 or 2

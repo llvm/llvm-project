@@ -113,6 +113,13 @@ TEST_F(FormatTestProto, EnumAsFieldName) {
                "}");
 }
 
+TEST_F(FormatTestProto, CaseAsFieldName) {
+  verifyFormat("message SomeMessage {\n"
+               "  required string case = 1;\n"
+               "  repeated int32 fizz = 2;\n"
+               "}");
+}
+
 TEST_F(FormatTestProto, UnderstandsReturns) {
   verifyFormat("rpc Search(SearchRequest) returns (SearchResponse);");
 }
@@ -194,7 +201,7 @@ TEST_F(FormatTestProto, DoesntWrapFileOptions) {
 }
 
 TEST_F(FormatTestProto, TrailingCommentAfterFileOption) {
-  verifyFormat("option java_package = \"foo.pkg\";  // comment\n");
+  verifyFormat("option java_package = \"foo.pkg\";  // comment");
 }
 
 TEST_F(FormatTestProto, FormatsOptions) {
@@ -404,7 +411,7 @@ TEST_F(FormatTestProto, DoesntWrapPackageStatements) {
 }
 
 TEST_F(FormatTestProto, TrailingCommentAfterPackage) {
-  verifyFormat("package foo.pkg;  // comment\n");
+  verifyFormat("package foo.pkg;  // comment");
 }
 
 TEST_F(FormatTestProto, FormatsService) {

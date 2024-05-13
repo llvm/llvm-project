@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
                                const SourceManager &SM,
@@ -37,6 +35,7 @@ static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
 
 void MoveConstArgCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckTriviallyCopyableMove", CheckTriviallyCopyableMove);
+  Options.store(Opts, "CheckMoveToConstRef", CheckMoveToConstRef);
 }
 
 void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
@@ -47,18 +46,62 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(MoveCallMatcher, this);
 
+  auto ConstTypeParmMatcher =
+      qualType(references(isConstQualified())).bind("invocation-parm-type");
+  auto RValueTypeParmMatcher =
+      qualType(rValueReferenceType()).bind("invocation-parm-type");
+  // Matches respective ParmVarDecl for a CallExpr or CXXConstructExpr.
+  auto ArgumentWithParamMatcher = forEachArgumentWithParam(
+      MoveCallMatcher, parmVarDecl(anyOf(hasType(ConstTypeParmMatcher),
+                                         hasType(RValueTypeParmMatcher)))
+                           .bind("invocation-parm"));
+  // Matches respective types of arguments for a CallExpr or CXXConstructExpr
+  // and it works on calls through function pointers as well.
+  auto ArgumentWithParamTypeMatcher = forEachArgumentWithParamType(
+      MoveCallMatcher, anyOf(ConstTypeParmMatcher, RValueTypeParmMatcher));
+
   Finder->addMatcher(
-      invocation(forEachArgumentWithParam(
-                     MoveCallMatcher,
-                     parmVarDecl(hasType(references(isConstQualified())))))
+      invocation(anyOf(ArgumentWithParamMatcher, ArgumentWithParamTypeMatcher))
           .bind("receiving-expr"),
       this);
+}
+
+bool IsRValueReferenceParam(const Expr *Invocation,
+                            const QualType *InvocationParmType,
+                            const Expr *Arg) {
+  if (Invocation && (*InvocationParmType)->isRValueReferenceType() &&
+      Arg->isLValue()) {
+    if (!Invocation->getType()->isRecordType())
+      return true;
+    if (const auto *ConstructCallExpr =
+            dyn_cast<CXXConstructExpr>(Invocation)) {
+      if (const auto *ConstructorDecl = ConstructCallExpr->getConstructor()) {
+        if (!ConstructorDecl->isCopyOrMoveConstructor() &&
+            !ConstructorDecl->isDefaultConstructor())
+          return true;
+      }
+    }
+  }
+  return false;
 }
 
 void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CallMove = Result.Nodes.getNodeAs<CallExpr>("call-move");
   const auto *ReceivingExpr = Result.Nodes.getNodeAs<Expr>("receiving-expr");
+  const auto *InvocationParm =
+      Result.Nodes.getNodeAs<ParmVarDecl>("invocation-parm");
+  const auto *InvocationParmType =
+      Result.Nodes.getNodeAs<QualType>("invocation-parm-type");
+
+  // Skipping matchers which have been matched.
+  if (!ReceivingExpr && AlreadyCheckedMoves.contains(CallMove))
+    return;
+
+  if (ReceivingExpr)
+    AlreadyCheckedMoves.insert(CallMove);
+
   const Expr *Arg = CallMove->getArg(0);
+  const QualType ArgType = Arg->getType().getCanonicalType();
   SourceManager &SM = Result.Context->getSourceManager();
 
   CharSourceRange MoveRange =
@@ -68,12 +111,11 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
   if (!FileMoveRange.isValid())
     return;
 
-  bool IsConstArg = Arg->getType().isConstQualified();
-  bool IsTriviallyCopyable =
-      Arg->getType().isTriviallyCopyableType(*Result.Context);
+  bool IsConstArg = ArgType.isConstQualified();
+  bool IsTriviallyCopyable = ArgType.isTriviallyCopyableType(*Result.Context);
 
   if (IsConstArg || IsTriviallyCopyable) {
-    if (const CXXRecordDecl *R = Arg->getType()->getAsCXXRecordDecl()) {
+    if (const CXXRecordDecl *R = ArgType->getAsCXXRecordDecl()) {
       // According to [expr.prim.lambda]p3, "whether the closure type is
       // trivially copyable" property can be changed by the implementation of
       // the language, so we shouldn't rely on it when issuing diagnostics.
@@ -90,28 +132,91 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     bool IsVariable = isa<DeclRefExpr>(Arg);
+    // std::move shouldn't be removed when an lvalue wrapped by std::move is
+    // passed to the function with an rvalue reference parameter.
+    bool IsRVRefParam =
+        IsRValueReferenceParam(ReceivingExpr, InvocationParmType, Arg);
     const auto *Var =
         IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;
-    auto Diag = diag(FileMoveRange.getBegin(),
-                     "std::move of the %select{|const }0"
-                     "%select{expression|variable %4}1 "
-                     "%select{|of the trivially-copyable type %5 }2"
-                     "has no effect; remove std::move()"
-                     "%select{| or make the variable non-const}3")
-                << IsConstArg << IsVariable << IsTriviallyCopyable
-                << (IsConstArg && IsVariable && !IsTriviallyCopyable) << Var
-                << Arg->getType();
 
-    replaceCallWithArg(CallMove, Diag, SM, getLangOpts());
-  } else if (ReceivingExpr) {
-    auto Diag = diag(FileMoveRange.getBegin(),
-                     "passing result of std::move() as a const reference "
-                     "argument; no move will actually happen");
+    {
+      auto Diag = diag(FileMoveRange.getBegin(),
+                       "std::move of the %select{|const }0"
+                       "%select{expression|variable %5}1 "
+                       "%select{|of the trivially-copyable type %6 }2"
+                       "has no effect%select{; remove std::move()|}3"
+                       "%select{| or make the variable non-const}4")
+                  << IsConstArg << IsVariable << IsTriviallyCopyable
+                  << IsRVRefParam
+                  << (IsConstArg && IsVariable && !IsTriviallyCopyable) << Var
+                  << Arg->getType();
+      if (!IsRVRefParam)
+        replaceCallWithArg(CallMove, Diag, SM, getLangOpts());
+    }
+    if (IsRVRefParam) {
+      // Generate notes for an invocation with an rvalue reference parameter.
+      const auto *ReceivingCallExpr = dyn_cast<CallExpr>(ReceivingExpr);
+      const auto *ReceivingConstructExpr =
+          dyn_cast<CXXConstructExpr>(ReceivingExpr);
+      // Skipping the invocation which is a template instantiation.
+      if ((!ReceivingCallExpr || !ReceivingCallExpr->getDirectCallee() ||
+           ReceivingCallExpr->getDirectCallee()->isTemplateInstantiation()) &&
+          (!ReceivingConstructExpr ||
+           !ReceivingConstructExpr->getConstructor() ||
+           ReceivingConstructExpr->getConstructor()->isTemplateInstantiation()))
+        return;
 
-    replaceCallWithArg(CallMove, Diag, SM, getLangOpts());
+      const NamedDecl *FunctionName = nullptr;
+      FunctionName =
+          ReceivingCallExpr
+              ? ReceivingCallExpr->getDirectCallee()->getUnderlyingDecl()
+              : ReceivingConstructExpr->getConstructor()->getUnderlyingDecl();
+
+      QualType NoRefType = (*InvocationParmType)->getPointeeType();
+      PrintingPolicy PolicyWithSuppressedTag(getLangOpts());
+      PolicyWithSuppressedTag.SuppressTagKeyword = true;
+      PolicyWithSuppressedTag.SuppressUnwrittenScope = true;
+      std::string ExpectParmTypeName =
+          NoRefType.getAsString(PolicyWithSuppressedTag);
+      if (!NoRefType->isPointerType()) {
+        NoRefType.addConst();
+        ExpectParmTypeName =
+            NoRefType.getAsString(PolicyWithSuppressedTag) + " &";
+      }
+
+      diag(InvocationParm->getLocation(),
+           "consider changing the %ordinal0 parameter of %1 from %2 to '%3'",
+           DiagnosticIDs::Note)
+          << (InvocationParm->getFunctionScopeIndex() + 1) << FunctionName
+          << *InvocationParmType << ExpectParmTypeName;
+    }
+  } else if (ReceivingExpr && CheckMoveToConstRef) {
+    if ((*InvocationParmType)->isRValueReferenceType())
+      return;
+
+    {
+      auto Diag = diag(FileMoveRange.getBegin(),
+                       "passing result of std::move() as a const reference "
+                       "argument; no move will actually happen");
+
+      replaceCallWithArg(CallMove, Diag, SM, getLangOpts());
+    }
+
+    if (const CXXRecordDecl *RecordDecl = ArgType->getAsCXXRecordDecl();
+        RecordDecl && !(RecordDecl->hasMoveConstructor() &&
+                        RecordDecl->hasMoveAssignment())) {
+      const bool MissingMoveAssignment = !RecordDecl->hasMoveAssignment();
+      const bool MissingMoveConstructor = !RecordDecl->hasMoveConstructor();
+      const bool MissingBoth = MissingMoveAssignment && MissingMoveConstructor;
+
+      diag(RecordDecl->getLocation(),
+           "%0 is not move "
+           "%select{|assignable}1%select{|/}2%select{|constructible}3",
+           DiagnosticIDs::Note)
+          << RecordDecl << MissingMoveAssignment << MissingBoth
+          << MissingMoveConstructor;
+    }
   }
 }
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance

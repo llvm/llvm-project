@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "gtest/gtest.h"
 
@@ -20,30 +21,61 @@ static const LLT S64 = LLT::scalar(64);
 static const LLT P0 = LLT::pointer(0, 64);
 static const LLT P1 = LLT::pointer(1, 32);
 
-static const LLT V2S8 = LLT::vector(2, 8);
-static const LLT V4S8 = LLT::vector(4, 8);
-static const LLT V8S8 = LLT::vector(8, 8);
+static const LLT V2S8 = LLT::fixed_vector(2, 8);
+static const LLT V4S8 = LLT::fixed_vector(4, 8);
+static const LLT V8S8 = LLT::fixed_vector(8, 8);
 
-static const LLT V2S16 = LLT::vector(2, 16);
-static const LLT V3S16 = LLT::vector(3, 16);
-static const LLT V4S16 = LLT::vector(4, 16);
+static const LLT V2S16 = LLT::fixed_vector(2, 16);
+static const LLT V3S16 = LLT::fixed_vector(3, 16);
+static const LLT V4S16 = LLT::fixed_vector(4, 16);
 
-static const LLT V2S32 = LLT::vector(2, 32);
-static const LLT V3S32 = LLT::vector(3, 32);
-static const LLT V4S32 = LLT::vector(4, 32);
-static const LLT V6S32 = LLT::vector(6, 32);
+static const LLT V2S32 = LLT::fixed_vector(2, 32);
+static const LLT V3S32 = LLT::fixed_vector(3, 32);
+static const LLT V4S32 = LLT::fixed_vector(4, 32);
+static const LLT V6S32 = LLT::fixed_vector(6, 32);
 
-static const LLT V2S64 = LLT::vector(2, 64);
-static const LLT V3S64 = LLT::vector(3, 64);
-static const LLT V4S64 = LLT::vector(4, 64);
+static const LLT V2S64 = LLT::fixed_vector(2, 64);
+static const LLT V3S64 = LLT::fixed_vector(3, 64);
+static const LLT V4S64 = LLT::fixed_vector(4, 64);
 
-static const LLT V2P0 = LLT::vector(2, P0);
-static const LLT V3P0 = LLT::vector(3, P0);
-static const LLT V4P0 = LLT::vector(4, P0);
-static const LLT V6P0 = LLT::vector(6, P0);
+static const LLT V2P0 = LLT::fixed_vector(2, P0);
+static const LLT V3P0 = LLT::fixed_vector(3, P0);
+static const LLT V4P0 = LLT::fixed_vector(4, P0);
+static const LLT V6P0 = LLT::fixed_vector(6, P0);
 
-static const LLT V2P1 = LLT::vector(2, P1);
-static const LLT V4P1 = LLT::vector(4, P1);
+static const LLT V2P1 = LLT::fixed_vector(2, P1);
+static const LLT V4P1 = LLT::fixed_vector(4, P1);
+
+static const LLT NXV1S1 = LLT::scalable_vector(1, S1);
+static const LLT NXV2S1 = LLT::scalable_vector(2, S1);
+static const LLT NXV3S1 = LLT::scalable_vector(3, S1);
+static const LLT NXV4S1 = LLT::scalable_vector(4, S1);
+static const LLT NXV12S1 = LLT::scalable_vector(12, S1);
+static const LLT NXV32S1 = LLT::scalable_vector(32, S1);
+static const LLT NXV64S1 = LLT::scalable_vector(64, S1);
+static const LLT NXV128S1 = LLT::scalable_vector(128, S1);
+static const LLT NXV384S1 = LLT::scalable_vector(384, S1);
+
+static const LLT NXV1S32 = LLT::scalable_vector(1, S32);
+static const LLT NXV2S32 = LLT::scalable_vector(2, S32);
+static const LLT NXV3S32 = LLT::scalable_vector(3, S32);
+static const LLT NXV4S32 = LLT::scalable_vector(4, S32);
+static const LLT NXV8S32 = LLT::scalable_vector(8, S32);
+static const LLT NXV12S32 = LLT::scalable_vector(12, S32);
+static const LLT NXV24S32 = LLT::scalable_vector(24, S32);
+
+static const LLT NXV1S64 = LLT::scalable_vector(1, S64);
+static const LLT NXV2S64 = LLT::scalable_vector(2, S64);
+static const LLT NXV3S64 = LLT::scalable_vector(3, S64);
+static const LLT NXV4S64 = LLT::scalable_vector(4, S64);
+static const LLT NXV6S64 = LLT::scalable_vector(6, S64);
+static const LLT NXV12S64 = LLT::scalable_vector(12, S64);
+
+static const LLT NXV1P0 = LLT::scalable_vector(1, P0);
+static const LLT NXV2P0 = LLT::scalable_vector(2, P0);
+static const LLT NXV3P0 = LLT::scalable_vector(3, P0);
+static const LLT NXV4P0 = LLT::scalable_vector(4, P0);
+static const LLT NXV12P0 = LLT::scalable_vector(12, P0);
 
 TEST(GISelUtilsTest, getGCDType) {
   EXPECT_EQ(S1, getGCDType(S1, S1));
@@ -118,14 +150,17 @@ TEST(GISelUtilsTest, getGCDType) {
   EXPECT_EQ(S32, getGCDType(V2S32, V4S8));
 
   // Test cases where neither element type nicely divides.
-  EXPECT_EQ(LLT::scalar(3), getGCDType(LLT::vector(3, 5), LLT::vector(2, 6)));
-  EXPECT_EQ(LLT::scalar(3), getGCDType(LLT::vector(2, 6), LLT::vector(3, 5)));
+  EXPECT_EQ(LLT::scalar(3),
+            getGCDType(LLT::fixed_vector(3, 5), LLT::fixed_vector(2, 6)));
+  EXPECT_EQ(LLT::scalar(3),
+            getGCDType(LLT::fixed_vector(2, 6), LLT::fixed_vector(3, 5)));
 
   // Have to go smaller than a pointer element.
-  EXPECT_EQ(LLT::scalar(3), getGCDType(LLT::vector(2, LLT::pointer(3, 6)),
-                                       LLT::vector(3, 5)));
-  EXPECT_EQ(LLT::scalar(3), getGCDType(LLT::vector(3, 5),
-                                       LLT::vector(2, LLT::pointer(3, 6))));
+  EXPECT_EQ(LLT::scalar(3), getGCDType(LLT::fixed_vector(2, LLT::pointer(3, 6)),
+                                       LLT::fixed_vector(3, 5)));
+  EXPECT_EQ(LLT::scalar(3),
+            getGCDType(LLT::fixed_vector(3, 5),
+                       LLT::fixed_vector(2, LLT::pointer(3, 6))));
 
   EXPECT_EQ(V4S8, getGCDType(V4S8, S32));
   EXPECT_EQ(S32, getGCDType(S32, V4S8));
@@ -135,18 +170,75 @@ TEST(GISelUtilsTest, getGCDType) {
   EXPECT_EQ(V2S8, getGCDType(V2S8, V4S16));
   EXPECT_EQ(S16, getGCDType(V4S16, V2S8));
 
-  EXPECT_EQ(S8, getGCDType(V2S8, LLT::vector(4, 2)));
-  EXPECT_EQ(LLT::vector(4, 2), getGCDType(LLT::vector(4, 2), S8));
+  EXPECT_EQ(S8, getGCDType(V2S8, LLT::fixed_vector(4, 2)));
+  EXPECT_EQ(LLT::fixed_vector(4, 2), getGCDType(LLT::fixed_vector(4, 2), S8));
 
+  EXPECT_EQ(LLT::pointer(4, 8),
+            getGCDType(LLT::fixed_vector(2, LLT::pointer(4, 8)),
+                       LLT::fixed_vector(4, 2)));
 
-  EXPECT_EQ(LLT::pointer(4, 8), getGCDType(LLT::vector(2, LLT::pointer(4, 8)),
-                                           LLT::vector(4, 2)));
+  EXPECT_EQ(LLT::fixed_vector(4, 2),
+            getGCDType(LLT::fixed_vector(4, 2),
+                       LLT::fixed_vector(2, LLT::pointer(4, 8))));
 
-  EXPECT_EQ(LLT::vector(4, 2), getGCDType(LLT::vector(4, 2),
-                                          LLT::vector(2, LLT::pointer(4, 8))));
+  EXPECT_EQ(LLT::scalar(4), getGCDType(LLT::fixed_vector(3, 4), S8));
+  EXPECT_EQ(LLT::scalar(4), getGCDType(S8, LLT::fixed_vector(3, 4)));
 
-  EXPECT_EQ(LLT::scalar(4), getGCDType(LLT::vector(3, 4), S8));
-  EXPECT_EQ(LLT::scalar(4), getGCDType(S8, LLT::vector(3, 4)));
+  // Scalable -> Scalable
+  EXPECT_EQ(NXV1S1, getGCDType(NXV1S1, NXV1S32));
+  EXPECT_EQ(NXV1S32, getGCDType(NXV1S64, NXV1S32));
+  EXPECT_EQ(NXV1S32, getGCDType(NXV1S32, NXV1S64));
+  EXPECT_EQ(NXV1P0, getGCDType(NXV1P0, NXV1S64));
+  EXPECT_EQ(NXV1S64, getGCDType(NXV1S64, NXV1P0));
+
+  EXPECT_EQ(NXV4S1, getGCDType(NXV4S1, NXV4S32));
+  EXPECT_EQ(NXV2S64, getGCDType(NXV4S64, NXV4S32));
+  EXPECT_EQ(NXV4S32, getGCDType(NXV4S32, NXV4S64));
+  EXPECT_EQ(NXV4P0, getGCDType(NXV4P0, NXV4S64));
+  EXPECT_EQ(NXV4S64, getGCDType(NXV4S64, NXV4P0));
+
+  EXPECT_EQ(NXV4S1, getGCDType(NXV4S1, NXV2S32));
+  EXPECT_EQ(NXV1S64, getGCDType(NXV4S64, NXV2S32));
+  EXPECT_EQ(NXV4S32, getGCDType(NXV4S32, NXV2S64));
+  EXPECT_EQ(NXV2P0, getGCDType(NXV4P0, NXV2S64));
+  EXPECT_EQ(NXV2S64, getGCDType(NXV4S64, NXV2P0));
+
+  EXPECT_EQ(NXV2S1, getGCDType(NXV2S1, NXV4S32));
+  EXPECT_EQ(NXV2S64, getGCDType(NXV2S64, NXV4S32));
+  EXPECT_EQ(NXV2S32, getGCDType(NXV2S32, NXV4S64));
+  EXPECT_EQ(NXV2P0, getGCDType(NXV2P0, NXV4S64));
+  EXPECT_EQ(NXV2S64, getGCDType(NXV2S64, NXV4P0));
+
+  EXPECT_EQ(NXV1S1, getGCDType(NXV3S1, NXV4S32));
+  EXPECT_EQ(NXV1S64, getGCDType(NXV3S64, NXV4S32));
+  EXPECT_EQ(NXV1S32, getGCDType(NXV3S32, NXV4S64));
+  EXPECT_EQ(NXV1P0, getGCDType(NXV3P0, NXV4S64));
+  EXPECT_EQ(NXV1S64, getGCDType(NXV3S64, NXV4P0));
+
+  EXPECT_EQ(NXV1S1, getGCDType(NXV3S1, NXV4S1));
+  EXPECT_EQ(NXV1S32, getGCDType(NXV3S32, NXV4S32));
+  EXPECT_EQ(NXV1S64, getGCDType(NXV3S64, NXV4S64));
+  EXPECT_EQ(NXV1P0, getGCDType(NXV3P0, NXV4P0));
+
+  // Scalable, Scalar
+
+  EXPECT_EQ(S1, getGCDType(NXV1S1, S1));
+  EXPECT_EQ(S1, getGCDType(NXV1S1, S32));
+  EXPECT_EQ(S1, getGCDType(NXV1S32, S1));
+  EXPECT_EQ(S32, getGCDType(NXV1S32, S32));
+  EXPECT_EQ(S32, getGCDType(NXV1S32, S64));
+  EXPECT_EQ(S1, getGCDType(NXV2S32, S1));
+  EXPECT_EQ(S32, getGCDType(NXV2S32, S32));
+  EXPECT_EQ(S32, getGCDType(NXV2S32, S64));
+
+  EXPECT_EQ(S1, getGCDType(S1, NXV1S1));
+  EXPECT_EQ(S1, getGCDType(S32, NXV1S1));
+  EXPECT_EQ(S1, getGCDType(S1, NXV1S32));
+  EXPECT_EQ(S32, getGCDType(S32, NXV1S32));
+  EXPECT_EQ(S32, getGCDType(S64, NXV1S32));
+  EXPECT_EQ(S1, getGCDType(S1, NXV2S32));
+  EXPECT_EQ(S32, getGCDType(S32, NXV2S32));
+  EXPECT_EQ(S32, getGCDType(S64, NXV2S32));
 }
 
 TEST(GISelUtilsTest, getLCMType) {
@@ -178,8 +270,8 @@ TEST(GISelUtilsTest, getLCMType) {
   EXPECT_EQ(V2S32, getLCMType(V2S32, V2S32));
   EXPECT_EQ(V6S32, getLCMType(V2S32, V3S32));
   EXPECT_EQ(V6S32, getLCMType(V3S32, V2S32));
-  EXPECT_EQ(LLT::vector(12, S32), getLCMType(V4S32, V3S32));
-  EXPECT_EQ(LLT::vector(12, S32), getLCMType(V3S32, V4S32));
+  EXPECT_EQ(LLT::fixed_vector(12, S32), getLCMType(V4S32, V3S32));
+  EXPECT_EQ(LLT::fixed_vector(12, S32), getLCMType(V3S32, V4S32));
 
   EXPECT_EQ(V2P0, getLCMType(V2P0, V2P0));
   EXPECT_EQ(V2P0, getLCMType(V2P0, P0));
@@ -187,14 +279,14 @@ TEST(GISelUtilsTest, getLCMType) {
   EXPECT_EQ(V2P0, getLCMType(V2P0, V2P0));
   EXPECT_EQ(V6P0, getLCMType(V2P0, V3P0));
   EXPECT_EQ(V6P0, getLCMType(V3P0, V2P0));
-  EXPECT_EQ(LLT::vector(12, P0), getLCMType(V4P0, V3P0));
-  EXPECT_EQ(LLT::vector(12, P0), getLCMType(V3P0, V4P0));
+  EXPECT_EQ(LLT::fixed_vector(12, P0), getLCMType(V4P0, V3P0));
+  EXPECT_EQ(LLT::fixed_vector(12, P0), getLCMType(V3P0, V4P0));
 
-  EXPECT_EQ(LLT::vector(12, S64), getLCMType(V4S64, V3P0));
-  EXPECT_EQ(LLT::vector(12, P0), getLCMType(V3P0, V4S64));
+  EXPECT_EQ(LLT::fixed_vector(12, S64), getLCMType(V4S64, V3P0));
+  EXPECT_EQ(LLT::fixed_vector(12, P0), getLCMType(V3P0, V4S64));
 
-  EXPECT_EQ(LLT::vector(12, P0), getLCMType(V4P0, V3S64));
-  EXPECT_EQ(LLT::vector(12, S64), getLCMType(V3S64, V4P0));
+  EXPECT_EQ(LLT::fixed_vector(12, P0), getLCMType(V4P0, V3S64));
+  EXPECT_EQ(LLT::fixed_vector(12, S64), getLCMType(V3S64, V4P0));
 
   EXPECT_EQ(V2P0, getLCMType(V2P0, S32));
   EXPECT_EQ(V4S32, getLCMType(S32, V2P0));
@@ -221,24 +313,99 @@ TEST(GISelUtilsTest, getLCMType) {
   EXPECT_EQ(V2S16, getLCMType(V2S16, V4S8));
   EXPECT_EQ(V4S8, getLCMType(V4S8, V2S16));
 
-  EXPECT_EQ(LLT::vector(6, S16), getLCMType(V3S16, V4S8));
-  EXPECT_EQ(LLT::vector(12, S8), getLCMType(V4S8, V3S16));
+  EXPECT_EQ(LLT::fixed_vector(6, S16), getLCMType(V3S16, V4S8));
+  EXPECT_EQ(LLT::fixed_vector(12, S8), getLCMType(V4S8, V3S16));
   EXPECT_EQ(V4S16, getLCMType(V4S16, V4S8));
   EXPECT_EQ(V8S8, getLCMType(V4S8, V4S16));
 
-  EXPECT_EQ(LLT::vector(6, 4), getLCMType(LLT::vector(3, 4), S8));
-  EXPECT_EQ(LLT::vector(3, 8), getLCMType(S8, LLT::vector(3, 4)));
+  EXPECT_EQ(LLT::fixed_vector(6, 4), getLCMType(LLT::fixed_vector(3, 4), S8));
+  EXPECT_EQ(LLT::fixed_vector(3, 8), getLCMType(S8, LLT::fixed_vector(3, 4)));
 
-  EXPECT_EQ(LLT::vector(6, 4),
-            getLCMType(LLT::vector(3, 4), LLT::pointer(4, 8)));
-  EXPECT_EQ(LLT::vector(3, LLT::pointer(4, 8)),
-            getLCMType(LLT::pointer(4, 8), LLT::vector(3, 4)));
+  EXPECT_EQ(LLT::fixed_vector(6, 4),
+            getLCMType(LLT::fixed_vector(3, 4), LLT::pointer(4, 8)));
+  EXPECT_EQ(LLT::fixed_vector(3, LLT::pointer(4, 8)),
+            getLCMType(LLT::pointer(4, 8), LLT::fixed_vector(3, 4)));
 
   EXPECT_EQ(V2S64, getLCMType(V2S64, P0));
   EXPECT_EQ(V2P0, getLCMType(P0, V2S64));
 
   EXPECT_EQ(V2S64, getLCMType(V2S64, P1));
   EXPECT_EQ(V4P1, getLCMType(P1, V2S64));
+
+  // Scalable, Scalable
+  EXPECT_EQ(NXV32S1, getLCMType(NXV1S1, NXV1S32));
+  EXPECT_EQ(NXV1S64, getLCMType(NXV1S64, NXV1S32));
+  EXPECT_EQ(NXV2S32, getLCMType(NXV1S32, NXV1S64));
+  EXPECT_EQ(NXV1P0, getLCMType(NXV1P0, NXV1S64));
+  EXPECT_EQ(NXV1S64, getLCMType(NXV1S64, NXV1P0));
+
+  EXPECT_EQ(NXV128S1, getLCMType(NXV4S1, NXV4S32));
+  EXPECT_EQ(NXV4S64, getLCMType(NXV4S64, NXV4S32));
+  EXPECT_EQ(NXV8S32, getLCMType(NXV4S32, NXV4S64));
+  EXPECT_EQ(NXV4P0, getLCMType(NXV4P0, NXV4S64));
+  EXPECT_EQ(NXV4S64, getLCMType(NXV4S64, NXV4P0));
+
+  EXPECT_EQ(NXV64S1, getLCMType(NXV4S1, NXV2S32));
+  EXPECT_EQ(NXV4S64, getLCMType(NXV4S64, NXV2S32));
+  EXPECT_EQ(NXV4S32, getLCMType(NXV4S32, NXV2S64));
+  EXPECT_EQ(NXV4P0, getLCMType(NXV4P0, NXV2S64));
+  EXPECT_EQ(NXV4S64, getLCMType(NXV4S64, NXV2P0));
+
+  EXPECT_EQ(NXV128S1, getLCMType(NXV2S1, NXV4S32));
+  EXPECT_EQ(NXV2S64, getLCMType(NXV2S64, NXV4S32));
+  EXPECT_EQ(NXV8S32, getLCMType(NXV2S32, NXV4S64));
+  EXPECT_EQ(NXV4P0, getLCMType(NXV2P0, NXV4S64));
+  EXPECT_EQ(NXV4S64, getLCMType(NXV2S64, NXV4P0));
+
+  EXPECT_EQ(NXV384S1, getLCMType(NXV3S1, NXV4S32));
+  EXPECT_EQ(NXV6S64, getLCMType(NXV3S64, NXV4S32));
+  EXPECT_EQ(NXV24S32, getLCMType(NXV3S32, NXV4S64));
+  EXPECT_EQ(NXV12P0, getLCMType(NXV3P0, NXV4S64));
+  EXPECT_EQ(NXV12S64, getLCMType(NXV3S64, NXV4P0));
+
+  EXPECT_EQ(NXV12S1, getLCMType(NXV3S1, NXV4S1));
+  EXPECT_EQ(NXV12S32, getLCMType(NXV3S32, NXV4S32));
+  EXPECT_EQ(NXV12S64, getLCMType(NXV3S64, NXV4S64));
+  EXPECT_EQ(NXV12P0, getLCMType(NXV3P0, NXV4P0));
+
+  // Scalable, Scalar
+
+  EXPECT_EQ(NXV1S1, getLCMType(NXV1S1, S1));
+  EXPECT_EQ(NXV32S1, getLCMType(NXV1S1, S32));
+  EXPECT_EQ(NXV1S32, getLCMType(NXV1S32, S1));
+  EXPECT_EQ(NXV1S32, getLCMType(NXV1S32, S32));
+  EXPECT_EQ(NXV2S32, getLCMType(NXV1S32, S64));
+  EXPECT_EQ(NXV2S32, getLCMType(NXV2S32, S1));
+  EXPECT_EQ(NXV2S32, getLCMType(NXV2S32, S32));
+  EXPECT_EQ(NXV2S32, getLCMType(NXV2S32, S64));
+
+  EXPECT_EQ(NXV1S1, getLCMType(S1, NXV1S1));
+  EXPECT_EQ(NXV1S32, getLCMType(S32, NXV1S1));
+  EXPECT_EQ(NXV32S1, getLCMType(S1, NXV1S32));
+  EXPECT_EQ(NXV1S32, getLCMType(S32, NXV1S32));
+  EXPECT_EQ(NXV1S64, getLCMType(S64, NXV1S32));
+  EXPECT_EQ(NXV64S1, getLCMType(S1, NXV2S32));
+  EXPECT_EQ(NXV2S32, getLCMType(S32, NXV2S32));
+  EXPECT_EQ(NXV1S64, getLCMType(S64, NXV2S32));
 }
 
+TEST_F(AArch64GISelMITest, ConstFalseTest) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+  const auto &TLI = *B.getMF().getSubtarget().getTargetLowering();
+  bool BooleanChoices[2] = {true, false};
+
+  // AArch64 uses ZeroOrOneBooleanContent for scalars, and
+  // ZeroOrNegativeOneBooleanContent for vectors.
+  for (auto IsVec : BooleanChoices) {
+    for (auto IsFP : BooleanChoices) {
+      EXPECT_TRUE(isConstFalseVal(TLI, 0, IsVec, IsFP));
+      EXPECT_FALSE(isConstFalseVal(TLI, 1, IsVec, IsFP));
+
+      // This would be true with UndefinedBooleanContent.
+      EXPECT_FALSE(isConstFalseVal(TLI, 2, IsVec, IsFP));
+    }
+  }
+}
 }

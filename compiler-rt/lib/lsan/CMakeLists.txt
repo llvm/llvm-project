@@ -3,6 +3,9 @@ include_directories(..)
 set(LSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF LSAN_CFLAGS)
 
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format LSAN_CFLAGS)
+
 set(LSAN_COMMON_SOURCES
   lsan_common.cpp
   lsan_common_fuchsia.cpp
@@ -50,7 +53,7 @@ if(COMPILER_RT_HAS_LSAN)
 
     add_compiler_rt_runtime(clang_rt.lsan
       SHARED
-      OS ${SANITIZER_COMMON_SUPPORTED_OS}
+      OS ${LSAN_SUPPORTED_OS}
       ARCHS ${LSAN_SUPPORTED_ARCH}
       SOURCES ${LSAN_SOURCES}
       ADDITIONAL_HEADERS ${LSAN_HEADERS}
@@ -75,6 +78,7 @@ if(COMPILER_RT_HAS_LSAN)
                 $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
                 $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
                 $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+                $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
                 $<TARGET_OBJECTS:RTLSanCommon.${arch}>
         ADDITIONAL_HEADERS ${LSAN_HEADERS}
         CFLAGS ${LSAN_CFLAGS}

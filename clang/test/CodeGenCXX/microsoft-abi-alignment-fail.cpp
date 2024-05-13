@@ -6,5 +6,5 @@ struct A : virtual B {} a;
 
 // The <> indicate that the pointer is packed, which is required to support
 // microsoft layout in 32 bit mode, but not 64 bit mode.
-// CHECK: %struct.A = type <{ i32*, %struct.B }>
-// CHECK-X64: %struct.A = type { i32*, %struct.B }
+// CHECK: %struct.A = type <{ ptr, %struct.B }>
+// CHECK-X64: %struct.A = type { ptr, %struct.B }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -reassociate -S | FileCheck %s
+; RUN: opt < %s -passes=inline,reassociate -S | FileCheck %s
 
 ; This test case exposed a bug in reassociate where EraseInst's
 ; removal of a dead call wasn't recognized as changing the IR.

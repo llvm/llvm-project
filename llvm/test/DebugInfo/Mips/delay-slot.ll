@@ -1,7 +1,8 @@
 ; RUN: llc -filetype=obj -O0 -relocation-model=pic < %s -mtriple mips-unknown-linux-gnu | llvm-dwarfdump -a - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj -O0 -relocation-model=pic < %s -mtriple mips-unknown-linux-gnu | llvm-dwarfdump -a - | FileCheck %s
 ; PR19815
 
-; Generated using clang -target mips-linux-gnu -g test.c -S -o - -flto|opt -sroa -S
+; Generated using clang -target mips-linux-gnu -g test.c -S -o - -flto|opt -passes=sroa -S
 ; test.c:
 ;
 ; int foo(int x) {
@@ -10,15 +11,15 @@
 ;  return 1;
 ; }
 
-; CHECK: Address            Line   Column File   ISA Discriminator Flags
-; CHECK: ------------------ ------ ------ ------ --- ------------- -------------
-; CHECK: 0x0000000000000000      1      0      1   0             0  is_stmt
-; CHECK: 0x0000000000000004      2      0      1   0             0  is_stmt prologue_end
-; CHECK: 0x0000000000000020      3      0      1   0             0  is_stmt
-; CHECK: 0x0000000000000030      4      0      1   0             0  is_stmt
+; CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+; CHECK: ------------------ ------ ------ ------ --- ------------- ------- -------------
+; CHECK: 0x0000000000000000      1      0      1   0             0       0  is_stmt
+; CHECK: 0x0000000000000004      2      0      1   0             0       0  is_stmt prologue_end
+; CHECK: 0x0000000000000020      3      0      1   0             0       0  is_stmt
+; CHECK: 0x0000000000000030      4      0      1   0             0       0  is_stmt
 ; CHECK: 0x0000000000000040      0      0      1   0             0
-; CHECK: 0x0000000000000048      5      0      1   0             0  is_stmt
-; CHECK: 0x0000000000000050      5      0      1   0             0  is_stmt end_sequence
+; CHECK: 0x0000000000000048      5      0      1   0             0       0  is_stmt
+; CHECK: 0x0000000000000050      5      0      1   0             0       0  is_stmt end_sequence
 
 
 target datalayout = "E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"

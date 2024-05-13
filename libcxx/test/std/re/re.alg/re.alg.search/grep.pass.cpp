@@ -24,7 +24,7 @@
 extern "C" void LLVMFuzzerTestOneInput(const char *data)
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    size_t size = strlen(data);
+    std::size_t size = strlen(data);
     if (size > 0)
     {
         try

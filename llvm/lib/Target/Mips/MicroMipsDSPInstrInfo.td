@@ -281,57 +281,46 @@ class SHRLV_PH_MMR2_DESC : SHLLV_R3_MM_DESC_BASE<
 class SHRLV_QB_MM_DESC : SHLLV_R3_MM_DESC_BASE<
   "shrlv.qb", int_mips_shrl_qb, NoItinerary, DSPROpnd>;
 
-class EXT_MM_2R_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                          InstrItinClass itin> {
+class EXT_MM_2R_DESC_BASE<string instr_asm> {
   dag OutOperandList = (outs GPR32Opnd:$rt);
   dag InOperandList = (ins ACC64DSPOpnd:$ac, GPR32Opnd:$rs);
   string AsmString = !strconcat(instr_asm, "\t$rt, $ac, $rs");
-  InstrItinClass Itinerary = itin;
+  InstrItinClass Itinerary = NoItinerary;
 }
-class EXT_MM_1R_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                          InstrItinClass itin> {
+class EXT_MM_1R_DESC_BASE<string instr_asm> {
   dag OutOperandList = (outs GPR32Opnd:$rt);
   dag InOperandList = (ins ACC64DSPOpnd:$ac, uimm5:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rt, $ac, $imm");
-  InstrItinClass Itinerary = itin;
+  InstrItinClass Itinerary = NoItinerary;
 }
 
-class EXTP_MM_DESC
-    : EXT_MM_1R_DESC_BASE<"extp", MipsEXTP, NoItinerary>,
-      Uses<[DSPPos]>, Defs<[DSPEFI]>;
-class EXTPDP_MM_DESC
-    : EXT_MM_1R_DESC_BASE<"extpdp", MipsEXTPDP, NoItinerary>,
-      Uses<[DSPPos]>, Defs<[DSPPos, DSPEFI]>;
-class EXTPDPV_MM_DESC
-    : EXT_MM_2R_DESC_BASE<"extpdpv", MipsEXTPDP, NoItinerary>,
-      Uses<[DSPPos]>, Defs<[DSPPos, DSPEFI]>;
-class EXTPV_MM_DESC
-    : EXT_MM_2R_DESC_BASE<"extpv", MipsEXTP, NoItinerary>,
-      Uses<[DSPPos]>, Defs<[DSPEFI]>;
-class EXTR_W_MM_DESC
-    : EXT_MM_1R_DESC_BASE<"extr.w", MipsEXTR_W, NoItinerary>,
-      Defs<[DSPOutFlag23]>;
-class EXTR_R_W_MM_DESC
-    : EXT_MM_1R_DESC_BASE<"extr_r.w", MipsEXTR_R_W, NoItinerary>,
-      Defs<[DSPOutFlag23]>;
-class EXTR_RS_W_MM_DESC
-    : EXT_MM_1R_DESC_BASE<"extr_rs.w", MipsEXTR_RS_W, NoItinerary>,
-      Defs<[DSPOutFlag23]>;
-class EXTR_S_H_MM_DESC
-    : EXT_MM_1R_DESC_BASE<"extr_s.h", MipsEXTR_S_H, NoItinerary>,
-      Defs<[DSPOutFlag23]>;
-class EXTRV_W_MM_DESC
-    : EXT_MM_2R_DESC_BASE<"extrv.w", MipsEXTR_W, NoItinerary>,
-      Defs<[DSPOutFlag23]>;
-class EXTRV_R_W_MM_DESC
-    : EXT_MM_2R_DESC_BASE<"extrv_r.w", MipsEXTR_R_W, NoItinerary>,
-      Defs<[DSPOutFlag23]>;
-class EXTRV_RS_W_MM_DESC
-    : EXT_MM_2R_DESC_BASE<"extrv_rs.w", MipsEXTR_RS_W, NoItinerary>,
-      Defs<[DSPOutFlag23]>;
-class EXTRV_S_H_MM_DESC
-    : EXT_MM_2R_DESC_BASE<"extrv_s.h", MipsEXTR_S_H, NoItinerary>,
-      Defs<[DSPOutFlag23]>;
+class EXTP_MM_DESC : EXT_MM_1R_DESC_BASE<"extp">,
+                     Uses<[DSPPos]>,
+                     Defs<[DSPEFI]>;
+class EXTPDP_MM_DESC : EXT_MM_1R_DESC_BASE<"extpdp">,
+                       Uses<[DSPPos]>,
+                       Defs<[DSPPos, DSPEFI]>;
+class EXTPDPV_MM_DESC : EXT_MM_2R_DESC_BASE<"extpdpv">,
+                        Uses<[DSPPos]>,
+                        Defs<[DSPPos, DSPEFI]>;
+class EXTPV_MM_DESC : EXT_MM_2R_DESC_BASE<"extpv">,
+                      Uses<[DSPPos]>,
+                      Defs<[DSPEFI]>;
+class EXTR_W_MM_DESC : EXT_MM_1R_DESC_BASE<"extr.w">,
+                       Defs<[DSPOutFlag23]>;
+class EXTR_R_W_MM_DESC : EXT_MM_1R_DESC_BASE<"extr_r.w">,
+                         Defs<[DSPOutFlag23]>;
+class EXTR_RS_W_MM_DESC : EXT_MM_1R_DESC_BASE<"extr_rs.w">,
+                          Defs<[DSPOutFlag23]>;
+class EXTR_S_H_MM_DESC : EXT_MM_1R_DESC_BASE<"extr_s.h">,
+                         Defs<[DSPOutFlag23]>;
+class EXTRV_W_MM_DESC : EXT_MM_2R_DESC_BASE<"extrv.w">, Defs<[DSPOutFlag23]>;
+class EXTRV_R_W_MM_DESC : EXT_MM_2R_DESC_BASE<"extrv_r.w">,
+                          Defs<[DSPOutFlag23]>;
+class EXTRV_RS_W_MM_DESC : EXT_MM_2R_DESC_BASE<"extrv_rs.w">,
+                           Defs<[DSPOutFlag23]>;
+class EXTRV_S_H_MM_DESC : EXT_MM_2R_DESC_BASE<"extrv_s.h">,
+                          Defs<[DSPOutFlag23]>;
 
 class MFHI_MM_DESC_BASE<string instr_asm, RegisterOperand RO, SDNode OpNode,
                         InstrItinClass itin> {
@@ -385,7 +374,6 @@ class WRDSP_MM_DESC {
   string AsmString = !strconcat("wrdsp", "\t$rt, $mask");
   list<dag> Pattern = [(int_mips_wrdsp GPR32Opnd:$rt, timmZExt7:$mask)];
   InstrItinClass Itinerary = NoItinerary;
-  bit isMoveReg = 1;
 }
 
 class BPOSGE32C_MMR3_DESC {

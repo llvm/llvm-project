@@ -1,6 +1,6 @@
 ; Test the behavior of GlobalDCE in conjunction with comdats.
 ;
-; RUN: opt < %s -globaldce -S | FileCheck %s
+; RUN: opt < %s -passes=globaldce -S | FileCheck %s
 
 ; First test checks that if one function in a comdat group is used, both other
 ; functions and other globals even if unused will be preserved.
@@ -70,22 +70,22 @@ $test10_c = comdat any
 @test9_gv = linkonce_odr unnamed_addr global i32 42, comdat($test9_c)
 ; CHECK-NOT: @test9_gv
 
-@test10_gv = linkonce_odr unnamed_addr global void ()* @test10_f, comdat($test10_c)
+@test10_gv = linkonce_odr unnamed_addr global ptr @test10_f, comdat($test10_c)
 ; CHECK-NOT: @test10_gv
 
-@test3_a = linkonce_odr unnamed_addr alias void (), void ()* @test3_f
+@test3_a = linkonce_odr unnamed_addr alias void (), ptr @test3_f
 ; CHECK: @test3_a = linkonce_odr unnamed_addr alias
 
-@test4_a = linkonce_odr unnamed_addr alias void (), void ()* @test4_f
+@test4_a = linkonce_odr unnamed_addr alias void (), ptr @test4_f
 ; CHECK: @test4_a = linkonce_odr unnamed_addr alias
 
-@test10_a = linkonce_odr unnamed_addr alias void (), void ()* @test10_g
+@test10_a = linkonce_odr unnamed_addr alias void (), ptr @test10_g
 ; CHECK-NOT: @test10_a
 
-@test5_if = linkonce_odr ifunc void (), void ()* ()* @test5_f
+@test5_if = linkonce_odr ifunc void (), ptr @test5_f
 ; CHECK-NOT: @test5_if
 
-@test6_if = linkonce_odr ifunc void (), void ()* ()* @test6_f
+@test6_if = linkonce_odr ifunc void (), ptr @test6_f
 ; CHECK: @test6_if = linkonce_odr ifunc
 
 ; This function is directly used and so cannot be eliminated.
@@ -123,16 +123,16 @@ entry:
 
 declare void @test_external()
 
-define linkonce_odr void ()* @test5_f() comdat($test5_c) {
-; CHECK: define linkonce_odr void ()* @test5_f()
+define linkonce_odr ptr @test5_f() comdat($test5_c) {
+; CHECK: define linkonce_odr ptr @test5_f()
 entry:
-  ret void ()* @test_external
+  ret ptr @test_external
 }
 
-define linkonce_odr void ()* @test6_f() comdat($test6_c) {
-; CHECK: define linkonce_odr void ()* @test6_f()
+define linkonce_odr ptr @test6_f() comdat($test6_c) {
+; CHECK: define linkonce_odr ptr @test6_f()
 entry:
-  ret void ()* @test_external
+  ret ptr @test_external
 }
 
 define linkonce_odr void @test7_f() comdat($test7_c) {
@@ -150,7 +150,7 @@ entry:
 define linkonce_odr void @test10_f() comdat($test10_c) {
 ; CHECK-NOT: @test10_f
 entry:
-  %gv = load void ()*, void ()** @test10_gv
+  %gv = load ptr, ptr @test10_gv
   call void @test10_a()
   ret void
 }
@@ -167,12 +167,12 @@ entry:
 ; eliminated.
 define void @external_user() {
   call void @test1_used()
-  %gv = load i32, i32* @test2_used
+  %gv = load i32, ptr @test2_used
 
   call void @test3_f()
   call void @test4_a()
 
-  %fptr = call void() *@test5_f()
+  %fptr = call ptr @test5_f()
   call void @test6_if()
   ret void
 }

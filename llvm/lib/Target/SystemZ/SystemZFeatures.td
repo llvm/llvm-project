@@ -32,6 +32,16 @@ def FeatureSoftFloat : SystemZFeature<
   "Use software emulation for floating point"
 >;
 
+def FeatureBackChain : SystemZFeature<
+  "backchain", "BackChain", (all_of FeatureBackChain),
+  "Store the address of the caller's frame into the callee's stack frame"
+>;
+
+def FeatureUnalignedSymbols : SystemZFeature<
+  "unaligned-symbols", "UnalignedSymbols", (all_of FeatureUnalignedSymbols),
+  "Don't apply the ABI minimum alignment to external symbols."
+>;
+
 //===----------------------------------------------------------------------===//
 //
 // New features added in the Ninth Edition of the z/Architecture
@@ -236,6 +246,11 @@ def FeatureInsertReferenceBitsMultiple : SystemZFeature<
   "Assume that the insert-reference-bits-multiple facility is installed"
 >;
 
+def FeatureTestPendingExternalInterruption : SystemZFeature<
+  "test-pending-external-interruption", "TestPendingExternalInterruption", (all_of FeatureTestPendingExternalInterruption),
+  "Assume that the test-pending-external-interruption facility is installed"
+>;
+
 def Arch12NewFeatures : SystemZFeatureList<[
     FeatureMiscellaneousExtensions2,
     FeatureGuardedStorage,
@@ -243,7 +258,8 @@ def Arch12NewFeatures : SystemZFeatureList<[
     FeatureMessageSecurityAssist8,
     FeatureVectorEnhancements1,
     FeatureVectorPackedDecimal,
-    FeatureInsertReferenceBitsMultiple
+    FeatureInsertReferenceBitsMultiple,
+    FeatureTestPendingExternalInterruption
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -293,6 +309,45 @@ def Arch13NewFeatures : SystemZFeatureList<[
 
 //===----------------------------------------------------------------------===//
 //
+// New features added in the Fourteenth Edition of the z/Architecture
+//
+//===----------------------------------------------------------------------===//
+
+def FeatureVectorPackedDecimalEnhancement2 : SystemZFeature<
+  "vector-packed-decimal-enhancement-2", "VectorPackedDecimalEnhancement2", (all_of FeatureVectorPackedDecimalEnhancement2),
+  "Assume that the vector packed decimal enhancement facility 2 is installed"
+>;
+
+def FeatureNNPAssist : SystemZFeature<
+  "nnp-assist", "NNPAssist", (all_of FeatureNNPAssist),
+  "Assume that the NNP-assist facility is installed"
+>;
+
+def FeatureBEAREnhancement : SystemZFeature<
+  "bear-enhancement", "BEAREnhancement", (all_of FeatureBEAREnhancement),
+  "Assume that the BEAR-enhancement facility is installed"
+>;
+
+def FeatureResetDATProtection : SystemZFeature<
+  "reset-dat-protection", "ResetDATProtection", (all_of FeatureResetDATProtection),
+  "Assume that the reset-DAT-protection facility is installed"
+>;
+
+def FeatureProcessorActivityInstrumentation : SystemZFeature<
+  "processor-activity-instrumentation", "ProcessorActivityInstrumentation", (all_of FeatureProcessorActivityInstrumentation),
+  "Assume that the processor-activity-instrumentation facility is installed"
+>;
+
+def Arch14NewFeatures : SystemZFeatureList<[
+    FeatureVectorPackedDecimalEnhancement2,
+    FeatureNNPAssist,
+    FeatureBEAREnhancement,
+    FeatureResetDATProtection,
+    FeatureProcessorActivityInstrumentation
+]>;
+
+//===----------------------------------------------------------------------===//
+//
 // Cumulative supported and unsupported feature sets
 //
 //===----------------------------------------------------------------------===//
@@ -309,9 +364,13 @@ def Arch12SupportedFeatures
   : SystemZFeatureAdd<Arch11SupportedFeatures.List, Arch12NewFeatures.List>;
 def Arch13SupportedFeatures
   : SystemZFeatureAdd<Arch12SupportedFeatures.List, Arch13NewFeatures.List>;
+def Arch14SupportedFeatures
+  : SystemZFeatureAdd<Arch13SupportedFeatures.List, Arch14NewFeatures.List>;
 
-def Arch13UnsupportedFeatures
+def Arch14UnsupportedFeatures
   : SystemZFeatureList<[]>;
+def Arch13UnsupportedFeatures
+  : SystemZFeatureAdd<Arch14UnsupportedFeatures.List, Arch14NewFeatures.List>;
 def Arch12UnsupportedFeatures
   : SystemZFeatureAdd<Arch13UnsupportedFeatures.List, Arch13NewFeatures.List>;
 def Arch11UnsupportedFeatures

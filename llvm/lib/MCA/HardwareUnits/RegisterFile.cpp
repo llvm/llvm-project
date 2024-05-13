@@ -109,7 +109,12 @@ void RegisterFile::onInstructionExecuted(Instruction *IS) {
       return;
 
     MCPhysReg RegID = WS.getRegisterID();
-    assert(RegID != 0 && "A write of an invalid register?");
+
+    // This allows InstrPostProcess to remove register Defs
+    // by setting their RegisterID to 0.
+    if (!RegID)
+      continue;
+
     assert(WS.getCyclesLeft() != UNKNOWN_CYCLES &&
            "The number of cycles should be known at this point!");
     assert(WS.getCyclesLeft() <= 0 && "Invalid cycles left for this write!");
@@ -122,8 +127,8 @@ void RegisterFile::onInstructionExecuted(Instruction *IS) {
     if (WR.getWriteState() == &WS)
       WR.notifyExecuted(CurrentCycle);
 
-    for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-      WriteRef &OtherWR = RegisterMappings[*I].first;
+    for (MCPhysReg I : MRI.subregs(RegID)) {
+      WriteRef &OtherWR = RegisterMappings[I].first;
       if (OtherWR.getWriteState() == &WS)
         OtherWR.notifyExecuted(CurrentCycle);
     }
@@ -131,8 +136,8 @@ void RegisterFile::onInstructionExecuted(Instruction *IS) {
     if (!WS.clearsSuperRegisters())
       continue;
 
-    for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-      WriteRef &OtherWR = RegisterMappings[*I].first;
+    for (MCPhysReg I : MRI.superregs(RegID)) {
+      WriteRef &OtherWR = RegisterMappings[I].first;
       if (OtherWR.getWriteState() == &WS)
         OtherWR.notifyExecuted(CurrentCycle);
     }
@@ -177,11 +182,11 @@ void RegisterFile::addRegisterFile(const MCRegisterFileDesc &RF,
       Entry.AllowMoveElimination = RCE.AllowMoveElimination;
 
       // Assume the same cost for each sub-register.
-      for (MCSubRegIterator I(Reg, &MRI); I.isValid(); ++I) {
-        RegisterRenamingInfo &OtherEntry = RegisterMappings[*I].second;
+      for (MCPhysReg I : MRI.subregs(Reg)) {
+        RegisterRenamingInfo &OtherEntry = RegisterMappings[I].second;
         if (!OtherEntry.IndexPlusCost.first &&
             (!OtherEntry.RenameAs ||
-             MRI.isSuperRegister(*I, OtherEntry.RenameAs))) {
+             MRI.isSuperRegister(I, OtherEntry.RenameAs))) {
           OtherEntry.IndexPlusCost = IPC;
           OtherEntry.RenameAs = Reg;
         }
@@ -224,7 +229,11 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
                                     MutableArrayRef<unsigned> UsedPhysRegs) {
   WriteState &WS = *Write.getWriteState();
   MCPhysReg RegID = WS.getRegisterID();
-  assert(RegID && "Adding an invalid register definition?");
+
+  // This allows InstrPostProcess to remove register Defs
+  // by setting their RegisterID to 0.
+  if (!RegID)
+    return;
 
   LLVM_DEBUG({
     dbgs() << "[PRF] addRegisterWrite [ " << Write.getSourceIndex() << ", "
@@ -273,18 +282,31 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   MCPhysReg ZeroRegisterID =
       WS.clearsSuperRegisters() ? RegID : WS.getRegisterID();
   ZeroRegisters.setBitVal(ZeroRegisterID, IsWriteZero);
-  for (MCSubRegIterator I(ZeroRegisterID, &MRI); I.isValid(); ++I)
-    ZeroRegisters.setBitVal(*I, IsWriteZero);
+  for (MCPhysReg I : MRI.subregs(ZeroRegisterID))
+    ZeroRegisters.setBitVal(I, IsWriteZero);
 
   // If this move has been eliminated, then method tryEliminateMoveOrSwap should
   // have already updated all the register mappings.
   if (!IsEliminated) {
+    // Check if this is one of multiple writes performed by this
+    // instruction to register RegID.
+    const WriteRef &OtherWrite = RegisterMappings[RegID].first;
+    const WriteState *OtherWS = OtherWrite.getWriteState();
+    if (OtherWS && OtherWrite.getSourceIndex() == Write.getSourceIndex()) {
+      if (OtherWS->getLatency() > WS.getLatency()) {
+        // Conservatively keep the slowest write on RegID.
+        if (ShouldAllocatePhysRegs)
+          allocatePhysRegs(RegisterMappings[RegID].second, UsedPhysRegs);
+        return;
+      }
+    }
+
     // Update the mapping for register RegID including its sub-registers.
     RegisterMappings[RegID].first = Write;
     RegisterMappings[RegID].second.AliasRegID = 0U;
-    for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-      RegisterMappings[*I].first = Write;
-      RegisterMappings[*I].second.AliasRegID = 0U;
+    for (MCPhysReg I : MRI.subregs(RegID)) {
+      RegisterMappings[I].first = Write;
+      RegisterMappings[I].second.AliasRegID = 0U;
     }
 
     // No physical registers are allocated for instructions that are optimized
@@ -297,13 +319,13 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   if (!WS.clearsSuperRegisters())
     return;
 
-  for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I) {
+  for (MCPhysReg I : MRI.superregs(RegID)) {
     if (!IsEliminated) {
-      RegisterMappings[*I].first = Write;
-      RegisterMappings[*I].second.AliasRegID = 0U;
+      RegisterMappings[I].first = Write;
+      RegisterMappings[I].second.AliasRegID = 0U;
     }
 
-    ZeroRegisters.setBitVal(*I, IsWriteZero);
+    ZeroRegisters.setBitVal(I, IsWriteZero);
   }
 }
 
@@ -316,7 +338,11 @@ void RegisterFile::removeRegisterWrite(
 
   MCPhysReg RegID = WS.getRegisterID();
 
-  assert(RegID != 0 && "Invalidating an already invalid register?");
+  // This allows InstrPostProcess to remove register Defs
+  // by setting their RegisterID to 0.
+  if (!RegID)
+    return;
+
   assert(WS.getCyclesLeft() != UNKNOWN_CYCLES &&
          "Invalidating a write of unknown cycles!");
   assert(WS.getCyclesLeft() <= 0 && "Invalid cycles left for this write!");
@@ -339,8 +365,8 @@ void RegisterFile::removeRegisterWrite(
   if (WR.getWriteState() == &WS)
     WR.commit();
 
-  for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-    WriteRef &OtherWR = RegisterMappings[*I].first;
+  for (MCPhysReg I : MRI.subregs(RegID)) {
+    WriteRef &OtherWR = RegisterMappings[I].first;
     if (OtherWR.getWriteState() == &WS)
       OtherWR.commit();
   }
@@ -348,8 +374,8 @@ void RegisterFile::removeRegisterWrite(
   if (!WS.clearsSuperRegisters())
     return;
 
-  for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-    WriteRef &OtherWR = RegisterMappings[*I].first;
+  for (MCPhysReg I : MRI.superregs(RegID)) {
+    WriteRef &OtherWR = RegisterMappings[I].first;
     if (OtherWR.getWriteState() == &WS)
       OtherWR.commit();
   }
@@ -446,8 +472,8 @@ bool RegisterFile::tryEliminateMoveOrSwap(MutableArrayRef<WriteState> Writes,
       AliasedReg = RMAlias.AliasRegID;
 
     RegisterMappings[AliasReg].second.AliasRegID = AliasedReg;
-    for (MCSubRegIterator I(AliasReg, &MRI); I.isValid(); ++I)
-      RegisterMappings[*I].second.AliasRegID = AliasedReg;
+    for (MCPhysReg I : MRI.subregs(AliasReg))
+      RegisterMappings[I].second.AliasRegID = AliasedReg;
 
     if (ZeroRegisters[RS.getRegisterID()]) {
       WS.setWriteZero();
@@ -504,8 +530,8 @@ void RegisterFile::collectWrites(
   }
 
   // Handle potential partial register updates.
-  for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-    const WriteRef &WR = RegisterMappings[*I].first;
+  for (MCPhysReg I : MRI.subregs(RegID)) {
+    const WriteRef &WR = RegisterMappings[I].first;
     if (WR.getWriteState()) {
       Writes.push_back(WR);
     } else if (WR.hasKnownWriteBackCycle()) {

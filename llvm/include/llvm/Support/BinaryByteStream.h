@@ -17,7 +17,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -31,14 +30,14 @@ namespace llvm {
 class BinaryByteStream : public BinaryStream {
 public:
   BinaryByteStream() = default;
-  BinaryByteStream(ArrayRef<uint8_t> Data, llvm::support::endianness Endian)
+  BinaryByteStream(ArrayRef<uint8_t> Data, llvm::endianness Endian)
       : Endian(Endian), Data(Data) {}
-  BinaryByteStream(StringRef Data, llvm::support::endianness Endian)
+  BinaryByteStream(StringRef Data, llvm::endianness Endian)
       : Endian(Endian), Data(Data.bytes_begin(), Data.bytes_end()) {}
 
-  llvm::support::endianness getEndian() const override { return Endian; }
+  llvm::endianness getEndian() const override { return Endian; }
 
-  Error readBytes(uint32_t Offset, uint32_t Size,
+  Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
     if (auto EC = checkOffsetForRead(Offset, Size))
       return EC;
@@ -46,7 +45,7 @@ public:
     return Error::success();
   }
 
-  Error readLongestContiguousChunk(uint32_t Offset,
+  Error readLongestContiguousChunk(uint64_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
     if (auto EC = checkOffsetForRead(Offset, 1))
       return EC;
@@ -54,7 +53,7 @@ public:
     return Error::success();
   }
 
-  uint32_t getLength() override { return Data.size(); }
+  uint64_t getLength() override { return Data.size(); }
 
   ArrayRef<uint8_t> data() const { return Data; }
 
@@ -64,7 +63,7 @@ public:
   }
 
 protected:
-  llvm::support::endianness Endian;
+  llvm::endianness Endian;
   ArrayRef<uint8_t> Data;
 };
 
@@ -75,7 +74,7 @@ protected:
 class MemoryBufferByteStream : public BinaryByteStream {
 public:
   MemoryBufferByteStream(std::unique_ptr<MemoryBuffer> Buffer,
-                         llvm::support::endianness Endian)
+                         llvm::endianness Endian)
       : BinaryByteStream(Buffer->getBuffer(), Endian),
         MemBuffer(std::move(Buffer)) {}
 
@@ -90,26 +89,26 @@ class MutableBinaryByteStream : public WritableBinaryStream {
 public:
   MutableBinaryByteStream() = default;
   MutableBinaryByteStream(MutableArrayRef<uint8_t> Data,
-                          llvm::support::endianness Endian)
+                          llvm::endianness Endian)
       : Data(Data), ImmutableStream(Data, Endian) {}
 
-  llvm::support::endianness getEndian() const override {
+  llvm::endianness getEndian() const override {
     return ImmutableStream.getEndian();
   }
 
-  Error readBytes(uint32_t Offset, uint32_t Size,
+  Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
     return ImmutableStream.readBytes(Offset, Size, Buffer);
   }
 
-  Error readLongestContiguousChunk(uint32_t Offset,
+  Error readLongestContiguousChunk(uint64_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
     return ImmutableStream.readLongestContiguousChunk(Offset, Buffer);
   }
 
-  uint32_t getLength() override { return ImmutableStream.getLength(); }
+  uint64_t getLength() override { return ImmutableStream.getLength(); }
 
-  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) override {
+  Error writeBytes(uint64_t Offset, ArrayRef<uint8_t> Buffer) override {
     if (Buffer.empty())
       return Error::success();
 
@@ -134,42 +133,41 @@ private:
 /// causing the underlying data to grow.  This class owns the underlying data.
 class AppendingBinaryByteStream : public WritableBinaryStream {
   std::vector<uint8_t> Data;
-  llvm::support::endianness Endian = llvm::support::little;
+  llvm::endianness Endian = llvm::endianness::little;
 
 public:
   AppendingBinaryByteStream() = default;
-  AppendingBinaryByteStream(llvm::support::endianness Endian)
-      : Endian(Endian) {}
+  AppendingBinaryByteStream(llvm::endianness Endian) : Endian(Endian) {}
 
   void clear() { Data.clear(); }
 
-  llvm::support::endianness getEndian() const override { return Endian; }
+  llvm::endianness getEndian() const override { return Endian; }
 
-  Error readBytes(uint32_t Offset, uint32_t Size,
+  Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
     if (auto EC = checkOffsetForWrite(Offset, Buffer.size()))
       return EC;
 
-    Buffer = makeArrayRef(Data).slice(Offset, Size);
+    Buffer = ArrayRef(Data).slice(Offset, Size);
     return Error::success();
   }
 
-  void insert(uint32_t Offset, ArrayRef<uint8_t> Bytes) {
+  void insert(uint64_t Offset, ArrayRef<uint8_t> Bytes) {
     Data.insert(Data.begin() + Offset, Bytes.begin(), Bytes.end());
   }
 
-  Error readLongestContiguousChunk(uint32_t Offset,
+  Error readLongestContiguousChunk(uint64_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
     if (auto EC = checkOffsetForWrite(Offset, 1))
       return EC;
 
-    Buffer = makeArrayRef(Data).slice(Offset);
+    Buffer = ArrayRef(Data).slice(Offset);
     return Error::success();
   }
 
-  uint32_t getLength() override { return Data.size(); }
+  uint64_t getLength() override { return Data.size(); }
 
-  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) override {
+  Error writeBytes(uint64_t Offset, ArrayRef<uint8_t> Buffer) override {
     if (Buffer.empty())
       return Error::success();
 
@@ -182,7 +180,7 @@ public:
     if (Offset > getLength())
       return make_error<BinaryStreamError>(stream_error_code::invalid_offset);
 
-    uint32_t RequiredSize = Offset + Buffer.size();
+    uint64_t RequiredSize = Offset + Buffer.size();
     if (RequiredSize > Data.size())
       Data.resize(RequiredSize);
 
@@ -193,9 +191,7 @@ public:
   Error commit() override { return Error::success(); }
 
   /// Return the properties of this stream.
-  virtual BinaryStreamFlags getFlags() const override {
-    return BSF_Write | BSF_Append;
-  }
+  BinaryStreamFlags getFlags() const override { return BSF_Write | BSF_Append; }
 
   MutableArrayRef<uint8_t> data() { return Data; }
 };
@@ -207,7 +203,7 @@ private:
   class StreamImpl : public MutableBinaryByteStream {
   public:
     StreamImpl(std::unique_ptr<FileOutputBuffer> Buffer,
-               llvm::support::endianness Endian)
+               llvm::endianness Endian)
         : MutableBinaryByteStream(
               MutableArrayRef<uint8_t>(Buffer->getBufferStart(),
                                        Buffer->getBufferEnd()),
@@ -233,26 +229,24 @@ private:
 
 public:
   FileBufferByteStream(std::unique_ptr<FileOutputBuffer> Buffer,
-                       llvm::support::endianness Endian)
+                       llvm::endianness Endian)
       : Impl(std::move(Buffer), Endian) {}
 
-  llvm::support::endianness getEndian() const override {
-    return Impl.getEndian();
-  }
+  llvm::endianness getEndian() const override { return Impl.getEndian(); }
 
-  Error readBytes(uint32_t Offset, uint32_t Size,
+  Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
     return Impl.readBytes(Offset, Size, Buffer);
   }
 
-  Error readLongestContiguousChunk(uint32_t Offset,
+  Error readLongestContiguousChunk(uint64_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
     return Impl.readLongestContiguousChunk(Offset, Buffer);
   }
 
-  uint32_t getLength() override { return Impl.getLength(); }
+  uint64_t getLength() override { return Impl.getLength(); }
 
-  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) override {
+  Error writeBytes(uint64_t Offset, ArrayRef<uint8_t> Data) override {
     return Impl.writeBytes(Offset, Data);
   }
 

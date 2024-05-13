@@ -1,7 +1,7 @@
 (* RUN: rm -rf %t && mkdir -p %t && cp %s %t/executionengine.ml
- * RUN: %ocamlc -g -w +A -thread -package llvm.executionengine -linkpkg %t/executionengine.ml -o %t/executable
+ * RUN: %ocamlc -g -w +A -thread -package ctypes.foreign,llvm.executionengine -linkpkg %t/executionengine.ml -o %t/executable
  * RUN: %t/executable
- * RUN: %ocamlopt -g -w +A -thread -package llvm.executionengine -linkpkg %t/executionengine.ml -o %t/executable
+ * RUN: %ocamlopt -g -w +A -thread -package ctypes.foreign,llvm.executionengine -linkpkg %t/executionengine.ml -o %t/executable
  * RUN: %t/executable
  * REQUIRES: native
  * XFAIL: vg_leak
@@ -28,9 +28,10 @@ let bomb msg =
   exit 2
 
 let define_getglobal m pg =
-  let fn = define_function "getglobal" (function_type i32_type [||]) m in
+  let fty = function_type i32_type [||] in
+  let fn = define_function "getglobal" fty m in
   let b = builder_at_end (global_context ()) (entry_block fn) in
-  let g = build_call pg [||] "" b in
+  let g = build_call fty pg [||] "" b in
   ignore (build_ret g b);
   fn
 

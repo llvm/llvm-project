@@ -70,8 +70,8 @@ define float @test5(float %p) #0 {
 ; ALL-NEXT:    retq
 ; ALL-NEXT:  LBB3_1: ## %if.end
 ; ALL-NEXT:    vcmpltss %xmm0, %xmm1, %k1
-; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ALL-NEXT:    vmovss {{.*}}(%rip), %xmm0 {%k1}
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 {%k1} = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; ALL-NEXT:    retq
 entry:
   %cmp = fcmp oeq float %p, 0.000000e+00
@@ -116,7 +116,7 @@ define i32 @test8(i32 %a1, i32 %a2, i32 %a3) {
 ; ALL-LABEL: test8:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    notl %edi
-; ALL-NEXT:    xorl $-2147483648, %esi ## imm = 0x80000000
+; ALL-NEXT:    addl $-2147483648, %esi ## imm = 0x80000000
 ; ALL-NEXT:    testl %edx, %edx
 ; ALL-NEXT:    movl $1, %eax
 ; ALL-NEXT:    cmovel %eax, %edx
@@ -191,8 +191,8 @@ define <8 x i32> @legalize_loop(<8 x double> %arg) {
 ; KNL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vcmpnltpd %zmm0, %zmm1, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vpsrld $31, %ymm0, %ymm1
-; KNL-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[3,2,1,0,7,6,5,4]
+; KNL-NEXT:    vpshufd {{.*#+}} ymm1 = ymm0[3,2,1,0,7,6,5,4]
+; KNL-NEXT:    vpsrld $31, %ymm1, %ymm1
 ; KNL-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
 ; KNL-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    retq
@@ -202,8 +202,8 @@ define <8 x i32> @legalize_loop(<8 x double> %arg) {
 ; SKX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vcmpnltpd %zmm0, %zmm1, %k0
 ; SKX-NEXT:    vpmovm2d %k0, %ymm0
-; SKX-NEXT:    vpsrld $31, %ymm0, %ymm1
-; SKX-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[3,2,1,0,7,6,5,4]
+; SKX-NEXT:    vpshufd {{.*#+}} ymm1 = ymm0[3,2,1,0,7,6,5,4]
+; SKX-NEXT:    vpsrld $31, %ymm1, %ymm1
 ; SKX-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
 ; SKX-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; SKX-NEXT:    retq

@@ -8,9 +8,9 @@
 int k(int);
 __declspec(dllimport) int kimport(int);
 int (*kptr)(int);
-int (*gptr())(int);
+int (*gptr(void))(int);
 
-int foo() {
+int foo(void) {
   // CHECK-LABEL: _foo:
   int (*r)(int) = gptr();
 
@@ -24,19 +24,30 @@ int foo() {
   __asm call kimport;
   // CHECK:     calll   *({{.*}})
 
-  // Broken case: Call through a global function pointer.
+  // Call through a global function pointer.
   __asm call kptr;
-  // CHECK:     calll   _kptr
-  // CHECK-FIXME: calll   *_kptr
+  // CHECK:     calll   *_kptr
 }
 
-int bar() {
+int bar(void) {
   // CHECK-LABEL: _bar:
-  __asm jmp k;
-  // CHECK:     jmp     _k
+  __asm {
+    jmp k
+    ja k
+    JAE k
+    LOOP k
+    loope k
+    loopne k
+  };
+  // CHECK:      jmp     _k
+  // CHECK-NEXT: ja      _k
+  // CHECK-NEXT: jae     _k
+  // CHECK-NEXT: loop    _k
+  // CHECK-NEXT: loope   _k
+  // CHECK-NEXT: loopne  _k
 }
 
-int baz() {
+int baz(void) {
   // CHECK-LABEL: _baz:
   __asm mov eax, k;
   // CHECK: movl    _k, %eax
@@ -47,7 +58,7 @@ int baz() {
 // Test that this asm blob doesn't require more registers than available.  This
 // has to be an LLVM code generation test.
 
-void __declspec(naked) naked() {
+void __declspec(naked) naked(void) {
   __asm pusha
   __asm call k
   __asm popa

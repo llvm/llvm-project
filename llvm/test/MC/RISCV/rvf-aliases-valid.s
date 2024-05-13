@@ -7,24 +7,28 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+f \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d --mattr=+f -M no-aliases - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d --mattr=+f -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d --mattr=+f - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d --mattr=+f - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d --mattr=+f -M no-aliases - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d --mattr=+f -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d --mattr=+f - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d --mattr=+f - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 
 ##===----------------------------------------------------------------------===##
 ## Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
 ##===----------------------------------------------------------------------===##
 
-# TODO flw
-# TODO fsw
+# CHECK-INST: flw ft0, 0(a0)
+# CHECK-ALIAS:  flw ft0, 0(a0)
+flw f0, (a0)
+# CHECK-INST: fsw ft0, 0(a0)
+# CHECK-ALIAS: fsw ft0, 0(a0)
+fsw f0, (a0)
 
 # CHECK-INST: fsgnj.s ft0, ft1, ft1
 # CHECK-ALIAS: fmv.s ft0, ft1

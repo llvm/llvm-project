@@ -109,17 +109,17 @@ protected:
 
 private:
   struct Cursor {
-    lldb::addr_t start_pc; // The start address of the function/symbol for this
-                           // frame - current pc if unknown
-    lldb::addr_t cfa;      // The canonical frame address for this stack frame
+    lldb::addr_t start_pc =
+        LLDB_INVALID_ADDRESS; // The start address of the function/symbol for
+                              // this frame - current pc if unknown
+    lldb::addr_t cfa = LLDB_INVALID_ADDRESS; // The canonical frame address for
+                                             // this stack frame
     lldb_private::SymbolContext sctx; // A symbol context we'll contribute to &
                                       // provide to the StackFrame creation
     RegisterContextLLDBSP
         reg_ctx_lldb_sp; // These are all RegisterContextUnwind's
 
-    Cursor()
-        : start_pc(LLDB_INVALID_ADDRESS), cfa(LLDB_INVALID_ADDRESS), sctx(),
-          reg_ctx_lldb_sp() {}
+    Cursor() = default;
 
   private:
     Cursor(const Cursor &) = delete;

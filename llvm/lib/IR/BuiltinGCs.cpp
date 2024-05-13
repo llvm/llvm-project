@@ -20,7 +20,7 @@ using namespace llvm;
 
 namespace {
 
-/// An example GC which attempts to be compatibile with Erlang/OTP garbage
+/// An example GC which attempts to be compatible with Erlang/OTP garbage
 /// collector.
 ///
 /// The frametable emitter is in ErlangGCPrinter.cpp.
@@ -53,7 +53,7 @@ public:
 /// while introducing only minor runtime overhead.
 class ShadowStackGC : public GCStrategy {
 public:
-  ShadowStackGC() {}
+  ShadowStackGC() = default;
 };
 
 /// A GCStrategy which serves as an example for the usage of a statepoint based
@@ -66,13 +66,14 @@ class StatepointGC : public GCStrategy {
 public:
   StatepointGC() {
     UseStatepoints = true;
+    UseRS4GC = true;
     // These options are all gc.root specific, we specify them so that the
     // gc.root lowering code doesn't run.
     NeededSafePoints = false;
     UsesMetadata = false;
   }
 
-  Optional<bool> isGCManagedPointer(const Type *Ty) const override {
+  std::optional<bool> isGCManagedPointer(const Type *Ty) const override {
     // Method is only valid on pointer typed values.
     const PointerType *PT = cast<PointerType>(Ty);
     // For the sake of this example GC, we arbitrarily pick addrspace(1) as our
@@ -98,13 +99,14 @@ class CoreCLRGC : public GCStrategy {
 public:
   CoreCLRGC() {
     UseStatepoints = true;
+    UseRS4GC = true;
     // These options are all gc.root specific, we specify them so that the
     // gc.root lowering code doesn't run.
     NeededSafePoints = false;
     UsesMetadata = false;
   }
 
-  Optional<bool> isGCManagedPointer(const Type *Ty) const override {
+  std::optional<bool> isGCManagedPointer(const Type *Ty) const override {
     // Method is only valid on pointer typed values.
     const PointerType *PT = cast<PointerType>(Ty);
     // We pick addrspace(1) as our GC managed heap.

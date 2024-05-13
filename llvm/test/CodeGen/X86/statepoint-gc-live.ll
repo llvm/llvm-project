@@ -11,50 +11,50 @@ define void @test_empty() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live" ()]
+  %token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live" ()]
   ret void
 }
 
-define void @test_dead(i8 addrspace(1)* %p) gc "statepoint-example" {
+define void @test_dead(ptr addrspace(1) %p) gc "statepoint-example" {
 ; CHECK-LABEL: test_dead:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %p)]
+  %token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %p)]
   ret void
 }
 
-define i8 addrspace(1)* @test_one(i8 addrspace(1)* %p) gc "statepoint-example" {
+define ptr addrspace(1) @test_one(ptr addrspace(1) %p) gc "statepoint-example" {
 ; CHECK-LABEL: test_one:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    movq (%rsp), %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %p)]
-  %p2 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 0, i32 0)
-  ret i8 addrspace(1)* %p2
+  %token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %p)]
+  %p2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 0, i32 0)
+  ret ptr addrspace(1) %p2
 }
 
-define i8 addrspace(1)* @test_one_derived(i8 addrspace(1)* %p) gc "statepoint-example" {
+define ptr addrspace(1) @test_one_derived(ptr addrspace(1) %p) gc "statepoint-example" {
 ; CHECK-LABEL: test_one_derived:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -62,21 +62,21 @@ define i8 addrspace(1)* @test_one_derived(i8 addrspace(1)* %p) gc "statepoint-ex
 ; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    addq $8, %rdi
 ; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %gep = getelementptr i8, i8 addrspace(1)* %p, i32 8
-  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %p, i8 addrspace(1)* %gep)]
-  %gep2 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 0, i32 1)
-  ret i8 addrspace(1)* %gep2
+  %gep = getelementptr i8, ptr addrspace(1) %p, i32 8
+  %token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %p, ptr addrspace(1) %gep)]
+  %gep2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 0, i32 1)
+  ret ptr addrspace(1) %gep2
 }
 
 
 
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)
 

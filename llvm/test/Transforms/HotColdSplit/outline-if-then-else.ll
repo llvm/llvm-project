@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
+; RUN: opt -S -passes=hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 ; Source:
 ;
@@ -27,13 +27,13 @@ target triple = "x86_64-apple-macosx10.14.0"
 define void @foo(i32 %cond) {
 entry:
   %cond.addr = alloca i32
-  store i32 %cond, i32* %cond.addr
-  %0 = load i32, i32* %cond.addr
+  store i32 %cond, ptr %cond.addr
+  %0 = load i32, ptr %cond.addr
   %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %if.then, label %if.end2
 
 if.then:                                          ; preds = %entry
-  %1 = load i32, i32* %cond.addr
+  %1 = load i32, ptr %cond.addr
   %cmp = icmp sgt i32 %1, 10
   br i1 %cmp, label %if.then1, label %if.else
 

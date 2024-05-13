@@ -43,6 +43,9 @@ public:
   void setIsSignature() const;
   bool isSignature() const;
 
+  void setMemtag(bool Tagged);
+  bool isMemtag() const;
+
   static bool classof(const MCSymbol *S) { return S->isELF(); }
 
 private:

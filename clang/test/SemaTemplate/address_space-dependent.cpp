@@ -9,7 +9,7 @@ void car() {
   __attribute__((address_space(J))) int array[5];     // expected-error {{automatic variable qualified with an address space}}
   __attribute__((address_space(I))) int arrarr[5][5]; // expected-error {{automatic variable qualified with an address space}}
 
-  __attribute__((address_space(J))) * x; // expected-error {{C++ requires a type specifier for all declarations}}
+  __attribute__((address_space(J))) * x; // expected-error {{a type specifier is required for all declarations}}
 
   __attribute__((address_space(I))) float *B;
 
@@ -43,7 +43,7 @@ void neg() {
 
 template <long int I>
 void tooBig() {
-  __attribute__((address_space(I))) int *bounds; // expected-error {{address space is larger than the maximum supported (8388588)}}
+  __attribute__((address_space(I))) int *bounds; // expected-error {{address space is larger than the maximum supported (8388586)}}
 }
 
 template <long int I>
@@ -89,19 +89,19 @@ template <unsigned B> int __attribute__((address_space(B+1))) *different_templat
 void test_different_template() { (void) different_template<0>(); } // expected-error {{call to 'different_template' is ambiguous}}
 
 template <typename T> struct partial_spec_deduce_as;
-template <typename T, unsigned AS> 
+template <typename T, unsigned AS>
 struct partial_spec_deduce_as <__attribute__((address_space(AS))) T *> {
-   static const unsigned value = AS;  
-}; 
+   static const unsigned value = AS;
+};
 
-int main() {  
+int main() {
   int __attribute__((address_space(1))) * p1;
   int p = GetAddressSpaceValue(p1);
 
   car<1, 2, 3>(); // expected-note {{in instantiation of function template specialization 'car<1, 2, 3>' requested here}}
   HasASTemplateFields<1> HASTF;
   neg<-1>(); // expected-note {{in instantiation of function template specialization 'neg<-1>' requested here}}
-  correct<0x7FFFEB>();
+  correct<0x7FFFE9>();
   tooBig<8388650>(); // expected-note {{in instantiation of function template specialization 'tooBig<8388650L>' requested here}}
 
   __attribute__((address_space(1))) char *x;
@@ -112,8 +112,8 @@ int main() {
   ff.get_0(); // expected-note {{in instantiation of member function 'fooFunction<1>::get_0' requested here}}
   ff.qf();
   ff.test3(); // expected-note {{in instantiation of member function 'fooFunction<1>::test3' requested here}}
-  
-  static_assert(partial_spec_deduce_as<int __attribute__((address_space(3))) *>::value == 3, "address space value has been incorrectly deduced"); 
+
+  static_assert(partial_spec_deduce_as<int __attribute__((address_space(3))) *>::value == 3, "address space value has been incorrectly deduced");
 
   return 0;
 }

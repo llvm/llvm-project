@@ -12,6 +12,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "lsan_common.h"
+#include "lsan_thread.h"
 #include "sanitizer_common/sanitizer_platform.h"
 
 #if CAN_SANITIZE_LEAKS && SANITIZER_FUCHSIA
@@ -52,14 +53,22 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {}
 // behavior and causes rare race conditions.
 void HandleLeaks() {}
 
+// This is defined differently in asan_fuchsia.cpp and lsan_fuchsia.cpp.
+bool UseExitcodeOnLeak();
+
 int ExitHook(int status) {
+  if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit) {
+    if (UseExitcodeOnLeak())
+      DoLeakCheck();
+    else
+      DoRecoverableLeakCheckVoid();
+  }
   return status == 0 && HasReportedLeaks() ? common_flags()->exitcode : status;
 }
 
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
                               CheckForLeaksParam *argument) {
-  LockThreadRegistry();
-  LockAllocator();
+  ScopedStopTheWorldLock lock;
 
   struct Params {
     InternalMmapVector<uptr> allocator_caches;
@@ -110,7 +119,8 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
     auto i = __sanitizer::InternalLowerBound(params->allocator_caches, begin);
     if (i < params->allocator_caches.size() &&
         params->allocator_caches[i] >= begin &&
-        end - params->allocator_caches[i] <= sizeof(AllocatorCache)) {
+        params->allocator_caches[i] <= end &&
+        end - params->allocator_caches[i] >= sizeof(AllocatorCache)) {
       // Split the range in two and omit the allocator cache within.
       ScanRangeForPointers(begin, params->allocator_caches[i],
                            &params->argument->frontier, "TLS", kReachable);
@@ -135,23 +145,16 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
 
         // We don't use the thread registry at all for enumerating the threads
         // and their stacks, registers, and TLS regions.  So use it separately
-        // just for the allocator cache, and to call ForEachExtraStackRange,
+        // just for the allocator cache, and to call ScanExtraStackRanges,
         // which ASan needs.
         if (flags()->use_stacks) {
-          GetThreadRegistryLocked()->RunCallbackForEachThreadLocked(
-              [](ThreadContextBase *tctx, void *arg) {
-                ForEachExtraStackRange(tctx->os_id, ForEachExtraStackRangeCb,
-                                       arg);
-              },
-              &params->argument->frontier);
+          InternalMmapVector<Range> ranges;
+          GetThreadExtraStackRangesLocked(&ranges);
+          ScanExtraStackRanges(ranges, &params->argument->frontier);
         }
-
         params->callback(SuspendedThreadsListFuchsia(), params->argument);
       },
       &params);
-
-  UnlockAllocator();
-  UnlockThreadRegistry();
 }
 
 }  // namespace __lsan

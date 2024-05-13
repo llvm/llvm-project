@@ -14,25 +14,22 @@
 
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
 #include "llvm/CodeGen/GlobalISel/LegalizationArtifactCombiner.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Target/TargetMachine.h"
-
-#include <iterator>
 
 #define DEBUG_TYPE "legalizer"
 
@@ -42,6 +39,13 @@ static cl::opt<bool>
     EnableCSEInLegalizer("enable-cse-in-legalizer",
                          cl::desc("Should enable CSE in Legalizer"),
                          cl::Optional, cl::init(false));
+
+// This is a temporary hack, should be removed soon.
+static cl::opt<bool> AllowGInsertAsArtifact(
+    "allow-ginsert-as-artifact",
+    cl::desc("Allow G_INSERT to be considered an artifact. Hack around AMDGPU "
+             "test infinite loops."),
+    cl::Optional, cl::init(true));
 
 enum class DebugLocVerifyLevel {
   None,
@@ -72,6 +76,7 @@ INITIALIZE_PASS_BEGIN(Legalizer, DEBUG_TYPE,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
 INITIALIZE_PASS_END(Legalizer, DEBUG_TYPE,
                     "Legalize the Machine IR a function's Machine IR", false,
                     false)
@@ -82,6 +87,8 @@ void Legalizer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
+  AU.addRequired<GISelKnownBitsAnalysis>();
+  AU.addPreserved<GISelKnownBitsAnalysis>();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -103,6 +110,8 @@ static bool isArtifact(const MachineInstr &MI) {
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_EXTRACT:
     return true;
+  case TargetOpcode::G_INSERT:
+    return AllowGInsertAsArtifact;
   }
 }
 using InstListTy = GISelWorkList<256>;
@@ -168,7 +177,8 @@ Legalizer::MFResult
 Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
                                    ArrayRef<GISelChangeObserver *> AuxObservers,
                                    LostDebugLocObserver &LocObserver,
-                                   MachineIRBuilder &MIRBuilder) {
+                                   MachineIRBuilder &MIRBuilder,
+                                   GISelKnownBits *KB) {
   MIRBuilder.setMF(MF);
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -207,11 +217,8 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
   // Now install the observer as the delegate to MF.
   // This will keep all the observers notified about new insertions/deletions.
   RAIIMFObsDelInstaller Installer(MF, WrapperObserver);
-  LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder);
-  LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI);
-  auto RemoveDeadInstFromLists = [&WrapperObserver](MachineInstr *DeadMI) {
-    WrapperObserver.erasingInstr(*DeadMI);
-  };
+  LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder, KB);
+  LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI, KB);
   bool Changed = false;
   SmallVector<MachineInstr *, 128> RetryList;
   do {
@@ -223,9 +230,8 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
-        LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
-        MI.eraseFromParentAndMarkDBGValuesForRemoval();
-        LocObserver.checkpoint(false);
+        salvageDebugInfo(MRI, MI);
+        eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
 
@@ -272,10 +278,8 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
-        LLVM_DEBUG(dbgs() << MI << "Is dead\n");
-        RemoveDeadInstFromLists(&MI);
-        MI.eraseFromParentAndMarkDBGValuesForRemoval();
-        LocObserver.checkpoint(false);
+        salvageDebugInfo(MRI, MI);
+        eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
       SmallVector<MachineInstr *, 4> DeadInstructions;
@@ -283,11 +287,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions,
                                             WrapperObserver)) {
         WorkListObserver.printNewInstrs();
-        for (auto *DeadMI : DeadInstructions) {
-          LLVM_DEBUG(dbgs() << "Is dead: " << *DeadMI);
-          RemoveDeadInstFromLists(DeadMI);
-          DeadMI->eraseFromParentAndMarkDBGValuesForRemoval();
-        }
+        eraseInstrs(DeadInstructions, MRI, &LocObserver);
         LocObserver.checkpoint(
             VerifyDebugLocs ==
             DebugLocVerifyLevel::LegalizationsAndArtifactCombiners);
@@ -319,8 +319,6 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
 
-  const size_t NumBlocks = MF.size();
-
   std::unique_ptr<MachineIRBuilder> MIRBuilder;
   GISelCSEInfo *CSEInfo = nullptr;
   bool EnableCSE = EnableCSEInLegalizer.getNumOccurrences()
@@ -343,23 +341,16 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   if (VerifyDebugLocs > DebugLocVerifyLevel::None)
     AuxObservers.push_back(&LocObserver);
 
+  // This allows Known Bits Analysis in the legalizer.
+  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+
   const LegalizerInfo &LI = *MF.getSubtarget().getLegalizerInfo();
-  MFResult Result =
-      legalizeMachineFunction(MF, LI, AuxObservers, LocObserver, *MIRBuilder);
+  MFResult Result = legalizeMachineFunction(MF, LI, AuxObservers, LocObserver,
+                                            *MIRBuilder, KB);
 
   if (Result.FailedOn) {
     reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
                        "unable to legalize instruction", *Result.FailedOn);
-    return false;
-  }
-  // For now don't support if new blocks are inserted - we would need to fix the
-  // outer loop for that.
-  if (MF.size() != NumBlocks) {
-    MachineOptimizationRemarkMissed R("gisel-legalize", "GISelFailure",
-                                      MF.getFunction().getSubprogram(),
-                                      /*MBB=*/nullptr);
-    R << "inserting blocks is not supported yet";
-    reportGISelFailure(MF, TPC, MORE, R);
     return false;
   }
 

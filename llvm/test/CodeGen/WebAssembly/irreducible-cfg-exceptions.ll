@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-block-placement -wasm-disable-explicit-locals -wasm-keep-registers -enable-emscripten-cxx-exceptions | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare i32 @__gxx_personality_v0(...)
@@ -11,7 +10,7 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-LABEL: crashy:
 ; CHECK-NOT: br_table
 
-define void @crashy() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @crashy() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void undef()
           to label %invoke.cont unwind label %lpad
@@ -21,7 +20,7 @@ invoke.cont:                                      ; preds = %entry
           to label %invoke.cont4 unwind label %lpad3
 
 invoke.cont4:                                     ; preds = %invoke.cont
-  %call.i82 = invoke i8* undef()
+  %call.i82 = invoke ptr undef()
           to label %invoke.cont6 unwind label %lpad3
 
 invoke.cont6:                                     ; preds = %invoke.cont4
@@ -58,27 +57,27 @@ invoke.cont25:                                    ; preds = %invoke.cont23
           to label %invoke.cont29 unwind label %lpad16.loopexit
 
 lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad3:                                            ; preds = %invoke.cont4, %invoke.cont
-  %1 = landingpad { i8*, i32 }
+  %1 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad12:                                           ; preds = %invoke.cont6
-  %2 = landingpad { i8*, i32 }
+  %2 = landingpad { ptr, i32 }
           cleanup
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 
 lpad16.loopexit:                                  ; preds = %if.then, %invoke.cont29, %invoke.cont25, %exit2, %land.lhs
-  %lpad.loopexit = landingpad { i8*, i32 }
+  %lpad.loopexit = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad22:                                           ; preds = %invoke.cont23, %exit3
-  %3 = landingpad { i8*, i32 }
+  %3 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
@@ -90,7 +89,7 @@ invoke.cont33:                                    ; preds = %invoke.cont29
   br label %for.inc
 
 for.inc:                                          ; preds = %invoke.cont33
-  %cmp.i.i141 = icmp eq i8* undef, undef
+  %cmp.i.i141 = icmp eq ptr undef, undef
   br i1 %cmp.i.i141, label %if.then, label %if.end.i.i146
 
 if.then:                                          ; preds = %for.inc

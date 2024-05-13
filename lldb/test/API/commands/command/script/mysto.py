@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import lldb
 
 
@@ -11,8 +9,9 @@ def StepOver(debugger, args, result, dict):
     print(type(arg_split))
     count = int(arg_split[0])
     for i in range(0, count):
-        debugger.GetSelectedTarget().GetProcess(
-        ).GetSelectedThread().StepOver(lldb.eOnlyThisThread)
+        debugger.GetSelectedTarget().GetProcess().GetSelectedThread().StepOver(
+            lldb.eOnlyThisThread
+        )
         print("step<%d>" % i)
 
 

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -x c++ -Werror %s
 
-int pr8880_1() {
+int pr8880_1(void) {
   int first = 1;
   for ( ; ({ if (first) { first = 0; continue; } 0; }); )
     return 0;

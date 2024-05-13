@@ -15,16 +15,16 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @foo() local_unnamed_addr !dbg !6 {
 entry:
-  %0 = load i64, i64* getelementptr inbounds ([10 x i64], [10 x i64]* @global_arr, i64 0, i64 4), align 16
-  call void @llvm.dbg.value(metadata i64* getelementptr inbounds ([10 x i64], [10 x i64]* @global_arr, i64 0, i64 5), metadata !10, metadata !DIExpression()), !dbg !13
-  %1 = load i64, i64* getelementptr inbounds ([10 x i64], [10 x i64]* @global_arr, i64 0, i64 6), align 16
-  call void @llvm.dbg.value(metadata i64* getelementptr inbounds ([10 x i64], [10 x i64]* @global_arr, i64 0, i64 6), metadata !10, metadata !DIExpression()), !dbg !14
+  %0 = load i64, ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 4), align 16
+  call void @llvm.dbg.value(metadata ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 5), metadata !10, metadata !DIExpression()), !dbg !13
+  %1 = load i64, ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 6), align 16
+  call void @llvm.dbg.value(metadata ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 6), metadata !10, metadata !DIExpression()), !dbg !14
   ret void
 }
 
 define void @bar() local_unnamed_addr !dbg !15 {
 entry:
-  call void @llvm.dbg.value(metadata i64* getelementptr inbounds ([10 x i64], [10 x i64]* @global_arr, i64 0, i64 7), metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 7), metadata !17, metadata !DIExpression()), !dbg !18
   ret void
 }
 

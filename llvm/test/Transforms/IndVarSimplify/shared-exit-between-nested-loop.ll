@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 @__const.e.f = private unnamed_addr constant <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }>, [10 x [2 x i32]] }> <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }> <{ [2 x i32] [i32 4, i32 8], [2 x i32] [i32 3, i32 10], [8 x [2 x i32]] zeroinitializer }>, [10 x [2 x i32]] [[2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] [i32 1, i32 5], [2 x i32] [i32 2080555007, i32 0], [2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] zeroinitializer] }>, align 4
 
@@ -20,8 +20,8 @@ if.then:                                          ; preds = %for.cond4
 ; CHECK-NEXT:     br i1 false, label %cleanup, label %for.inc
   %add = add nuw nsw i32 %storemerge2531, 2
   %idxprom8 = zext i32 %add to i64
-  %arrayidx10 = getelementptr inbounds <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }>, [10 x [2 x i32]] }>, <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }>, [10 x [2 x i32]] }>* @__const.e.f, i64 0, i32 1, i64 %idxprom8, i64 0
-  %0 = load i32, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }>, [10 x [2 x i32]] }>, ptr @__const.e.f, i64 0, i32 1, i64 %idxprom8, i64 0
+  %0 = load i32, ptr %arrayidx10, align 4
   %tobool11 = icmp eq i32 %0, 0
   br i1 %tobool11, label %cleanup, label %for.inc
 

@@ -16,9 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void ForwardDeclarationNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   // Match all class declarations/definitions *EXCEPT*
@@ -123,7 +121,7 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       if (CurDecl->hasDefinition() || CurDecl->isReferenced()) {
         continue; // Skip forward declarations that are used/referenced.
       }
-      if (FriendTypes.count(CurDecl->getTypeForDecl()) != 0) {
+      if (FriendTypes.contains(CurDecl->getTypeForDecl())) {
         continue; // Skip forward declarations referenced as friend.
       }
       if (CurDecl->getLocation().isMacroID() ||
@@ -149,7 +147,7 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       }
       // Check if a definition in another namespace exists.
       const auto DeclName = CurDecl->getName();
-      if (DeclNameToDefinitions.find(DeclName) == DeclNameToDefinitions.end()) {
+      if (!DeclNameToDefinitions.contains(DeclName)) {
         continue; // No definition in this translation unit, we can skip it.
       }
       // Make a warning for each definition with the same name (in other
@@ -168,6 +166,4 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

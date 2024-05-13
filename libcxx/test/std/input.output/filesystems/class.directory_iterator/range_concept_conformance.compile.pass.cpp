@@ -7,43 +7,38 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
-// XFAIL: *
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
-// directory_iterator, recursive_directory_iterator
+// directory_iterator
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <concepts>
 #include <ranges>
+namespace fs = std::filesystem;
 
-namespace stdr = std::ranges;
+static_assert(std::same_as<std::ranges::iterator_t<fs::directory_iterator>, fs::directory_iterator>);
+static_assert(std::ranges::common_range<fs::directory_iterator>);
+static_assert(std::ranges::input_range<fs::directory_iterator>);
+static_assert(std::ranges::view<fs::directory_iterator>);
+static_assert(!std::ranges::sized_range<fs::directory_iterator>);
+static_assert(std::ranges::borrowed_range<fs::directory_iterator>);
+static_assert(std::ranges::viewable_range<fs::directory_iterator>);
 
-static_assert(std::same_as<stdr::iterator_t<fs::directory_iterator>, fs::directory_iterator>);
-static_assert(stdr::common_range<fs::directory_iterator>);
-static_assert(stdr::input_range<fs::directory_iterator>);
-static_assert(!stdr::view<fs::directory_iterator>);
-static_assert(!stdr::sized_range<fs::directory_iterator>);
-static_assert(!stdr::borrowed_range<fs::directory_iterator>);
+static_assert(std::same_as<std::ranges::iterator_t<fs::directory_iterator&>, fs::directory_iterator>);
+static_assert(std::ranges::common_range<fs::directory_iterator&>);
+static_assert(std::ranges::input_range<fs::directory_iterator&>);
+static_assert(!std::ranges::view<fs::directory_iterator&>);
+static_assert(!std::ranges::sized_range<fs::directory_iterator&>);
+static_assert(std::ranges::borrowed_range<fs::directory_iterator&>);
+static_assert(std::ranges::viewable_range<fs::directory_iterator&>);
 
-static_assert(std::same_as<stdr::iterator_t<fs::directory_iterator const>, fs::directory_iterator>);
-static_assert(stdr::common_range<fs::directory_iterator const>);
-static_assert(stdr::input_range<fs::directory_iterator const>);
-static_assert(!stdr::view<fs::directory_iterator const>);
-static_assert(!stdr::sized_range<fs::directory_iterator const>);
-static_assert(!stdr::borrowed_range<fs::directory_iterator const>);
+static_assert(std::same_as<std::ranges::iterator_t<const fs::directory_iterator&>, fs::directory_iterator>);
+static_assert(std::ranges::common_range<const fs::directory_iterator&>);
+static_assert(std::ranges::input_range<const fs::directory_iterator&>);
+static_assert(!std::ranges::view<const fs::directory_iterator&>);
+static_assert(!std::ranges::sized_range<const fs::directory_iterator&>);
+static_assert(std::ranges::borrowed_range<const fs::directory_iterator&>);
+static_assert(std::ranges::viewable_range<const fs::directory_iterator&>);
 
-static_assert(std::same_as<stdr::iterator_t<fs::recursive_directory_iterator>, fs::recursive_directory_iterator>);
-static_assert(stdr::common_range<fs::recursive_directory_iterator>);
-static_assert(stdr::input_range<fs::recursive_directory_iterator>);
-static_assert(!stdr::view<fs::recursive_directory_iterator>);
-static_assert(!stdr::sized_range<fs::recursive_directory_iterator>);
-static_assert(!stdr::borrowed_range<fs::recursive_directory_iterator>);
-
-static_assert(std::same_as<stdr::iterator_t<fs::recursive_directory_iterator const>, fs::recursive_directory_iterator>);
-static_assert(stdr::common_range<fs::recursive_directory_iterator const>);
-static_assert(stdr::input_range<fs::recursive_directory_iterator const>);
-static_assert(!stdr::view<fs::recursive_directory_iterator const>);
-static_assert(!stdr::sized_range<fs::recursive_directory_iterator const>);
-static_assert(!stdr::borrowed_range<fs::recursive_directory_iterator const>);

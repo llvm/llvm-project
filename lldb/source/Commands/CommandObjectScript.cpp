@@ -12,6 +12,7 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -19,28 +20,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
-    {
-        eScriptLanguagePython,
-        "python",
-        "Python",
-    },
-    {
-        eScriptLanguageLua,
-        "lua",
-        "Lua",
-    },
-    {
-        eScriptLanguageNone,
-        "default",
-        "The default scripting language.",
-    },
-};
-
-static constexpr OptionEnumValues ScriptOptionEnum() {
-  return OptionEnumValues(g_script_option_enumeration);
-}
 
 #define LLDB_OPTIONS_script
 #include "CommandOptions.inc"
@@ -74,7 +53,7 @@ void CommandObjectScript::CommandOptions::OptionParsingStarting(
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectScript::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_script_options);
+  return llvm::ArrayRef(g_script_options);
 }
 
 CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter)
@@ -84,16 +63,16 @@ CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter)
           "results.  Start the interactive interpreter if no code is supplied.",
           "script [--language <scripting-language> --] [<script-code>]") {}
 
-CommandObjectScript::~CommandObjectScript() {}
+CommandObjectScript::~CommandObjectScript() = default;
 
-bool CommandObjectScript::DoExecute(llvm::StringRef command,
+void CommandObjectScript::DoExecute(llvm::StringRef command,
                                     CommandReturnObject &result) {
   // Try parsing the language option but when the command contains a raw part
   // separated by the -- delimiter.
   OptionsWithRaw raw_args(command);
   if (raw_args.HasArgs()) {
     if (!ParseOptions(raw_args.GetArgs(), result))
-      return false;
+      return;
     command = raw_args.GetRawPart();
   }
 
@@ -105,8 +84,7 @@ bool CommandObjectScript::DoExecute(llvm::StringRef command,
   if (language == lldb::eScriptLanguageNone) {
     result.AppendError(
         "the script-lang setting is set to none - scripting not available");
-    result.SetStatus(eReturnStatusFailed);
-    return false;
+    return;
   }
 
   ScriptInterpreter *script_interpreter =
@@ -114,8 +92,7 @@ bool CommandObjectScript::DoExecute(llvm::StringRef command,
 
   if (script_interpreter == nullptr) {
     result.AppendError("no script interpreter");
-    result.SetStatus(eReturnStatusFailed);
-    return false;
+    return;
   }
 
   // Script might change Python code we use for formatting. Make sure we keep
@@ -125,7 +102,7 @@ bool CommandObjectScript::DoExecute(llvm::StringRef command,
   if (command.empty()) {
     script_interpreter->ExecuteInterpreterLoop();
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    return result.Succeeded();
+    return;
   }
 
   // We can do better when reporting the status of one-liner script execution.
@@ -133,6 +110,4 @@ bool CommandObjectScript::DoExecute(llvm::StringRef command,
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   else
     result.SetStatus(eReturnStatusFailed);
-
-  return result.Succeeded();
 }

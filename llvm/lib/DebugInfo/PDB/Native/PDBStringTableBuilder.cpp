@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/TimeProfiler.h"
 
 #include <map>
 
@@ -71,7 +72,7 @@ static uint32_t computeBucketCount(uint32_t NumStrings) {
   // This list contains all StringCount, BucketCount pairs where BucketCount was
   // just incremented.  It ends before the first BucketCount entry where
   // BucketCount * 3 would overflow a 32-bit unsigned int.
-  static std::map<uint32_t, uint32_t> StringsToBuckets = {
+  static const std::pair<uint32_t, uint32_t> StringsToBuckets[] = {
       {0, 1},
       {1, 2},
       {2, 4},
@@ -124,8 +125,9 @@ static uint32_t computeBucketCount(uint32_t NumStrings) {
       {517197275, 1034394550},
       {775795913, 1551591826},
       {1163693870, 2327387740}};
-  auto Entry = StringsToBuckets.lower_bound(NumStrings);
-  assert(Entry != StringsToBuckets.end());
+  const auto *Entry = llvm::lower_bound(
+      StringsToBuckets, std::make_pair(NumStrings, 0U), llvm::less_first());
+  assert(Entry != std::end(StringsToBuckets));
   return Entry->second;
 }
 
@@ -177,7 +179,7 @@ Error PDBStringTableBuilder::writeHashTable(BinaryStreamWriter &Writer) const {
     return EC;
   std::vector<ulittle32_t> Buckets(BucketCount);
 
-  for (auto &Pair : Strings) {
+  for (const auto &Pair : Strings) {
     StringRef S = Pair.getKey();
     uint32_t Offset = Pair.getValue();
     uint32_t Hash = hashStringV1(S);
@@ -206,6 +208,7 @@ Error PDBStringTableBuilder::writeEpilogue(BinaryStreamWriter &Writer) const {
 }
 
 Error PDBStringTableBuilder::commit(BinaryStreamWriter &Writer) const {
+  llvm::TimeTraceScope timeScope("Commit strings table");
   BinaryStreamWriter SectionWriter;
 
   std::tie(SectionWriter, Writer) = Writer.split(sizeof(PDBStringTableHeader));

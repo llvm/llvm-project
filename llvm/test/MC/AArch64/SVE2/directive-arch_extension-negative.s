@@ -3,7 +3,7 @@
 .arch_extension sve2
 .arch_extension nosve2
 tbx z0.b, z1.b, z2.b
-// CHECK: error: instruction requires: sve2
+// CHECK: error: instruction requires: sve2 or sme
 // CHECK-NEXT: tbx z0.b, z1.b, z2.b
 
 .arch_extension sve2-aes

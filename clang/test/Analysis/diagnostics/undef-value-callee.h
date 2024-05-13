@@ -1,4 +1,4 @@
 
-void callee() {
+void callee(void) {
   ;
 }

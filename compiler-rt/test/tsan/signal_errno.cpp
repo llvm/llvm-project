@@ -1,7 +1,7 @@
 // RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
 // This test fails on powerpc64 BE (VMA=44), it does not appear to be
 // a functional problem, but the Tsan report is missing some info.
-// XFAIL: powerpc64-unknown-linux-gnu
+// XFAIL: target=powerpc64-unknown-linux-gnu{{.*}}
 
 #include "test.h"
 #include <signal.h>
@@ -46,7 +46,7 @@ int main() {
 }
 
 // CHECK: WARNING: ThreadSanitizer: signal handler spoils errno
+// CHECK:   Signal 27 handler invoked at:
 // CHECK:     #0 MyHandler(int, {{(__)?}}siginfo{{(_t)?}}*, void*) {{.*}}signal_errno.cpp
 // CHECK:     main
 // CHECK: SUMMARY: ThreadSanitizer: signal handler spoils errno{{.*}}MyHandler
-

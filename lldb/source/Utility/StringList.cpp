@@ -33,7 +33,7 @@ StringList::StringList(const char **strv, int strc) : m_strings() {
   }
 }
 
-StringList::~StringList() {}
+StringList::~StringList() = default;
 
 void StringList::AppendString(const char *str) {
   if (str)
@@ -42,7 +42,9 @@ void StringList::AppendString(const char *str) {
 
 void StringList::AppendString(const std::string &s) { m_strings.push_back(s); }
 
-void StringList::AppendString(std::string &&s) { m_strings.push_back(s); }
+void StringList::AppendString(std::string &&s) {
+  m_strings.push_back(std::move(s));
+}
 
 void StringList::AppendString(const char *str, size_t str_len) {
   if (str)
@@ -50,6 +52,10 @@ void StringList::AppendString(const char *str, size_t str_len) {
 }
 
 void StringList::AppendString(llvm::StringRef str) {
+  m_strings.push_back(str.str());
+}
+
+void StringList::AppendString(const llvm::Twine &str) {
   m_strings.push_back(str.str());
 }
 
@@ -102,7 +108,7 @@ std::string StringList::LongestCommonPrefix() {
   if (m_strings.empty())
     return {};
 
-  auto args = llvm::makeArrayRef(m_strings);
+  auto args = llvm::ArrayRef(m_strings);
   llvm::StringRef prefix = args.front();
   for (auto arg : args.drop_front()) {
     size_t count = 0;
@@ -133,9 +139,9 @@ void StringList::InsertStringAtIndex(size_t idx, const std::string &str) {
 
 void StringList::InsertStringAtIndex(size_t idx, std::string &&str) {
   if (idx < m_strings.size())
-    m_strings.insert(m_strings.begin() + idx, str);
+    m_strings.insert(m_strings.begin() + idx, std::move(str));
   else
-    m_strings.push_back(str);
+    m_strings.push_back(std::move(str));
 }
 
 void StringList::DeleteStringAtIndex(size_t idx) {

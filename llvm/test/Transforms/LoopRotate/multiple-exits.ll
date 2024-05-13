@@ -1,11 +1,10 @@
-; RUN: opt -S -loop-rotate < %s -verify-loop-info -verify-dom-info | FileCheck %s
-; RUN: opt -S -loop-rotate < %s -verify-loop-info -verify-dom-info -enable-mssa-loop-dependency=true -verify-memoryssa | FileCheck %s
+; RUN: opt -S -passes=loop-rotate < %s -verify-loop-info -verify-dom-info -verify-memoryssa | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
 
 ; PR7447
-define i32 @test1([100 x i32]* nocapture %a) nounwind readonly {
+define i32 @test1(ptr nocapture %a) nounwind readonly {
 entry:
   br label %for.cond
 
@@ -22,8 +21,8 @@ for.cond1:                                        ; preds = %for.cond, %land.rhs
 
 land.rhs:                                         ; preds = %for.cond1
   %conv = zext i32 %i.1 to i64
-  %arrayidx = getelementptr inbounds [100 x i32], [100 x i32]* %a, i64 0, i64 %conv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [100 x i32], ptr %a, i64 0, i64 %conv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add i32 %0, %sum.1
   %cmp4 = icmp ugt i32 %add, 1000
   %inc = add i32 %i.1, 1
@@ -85,10 +84,10 @@ declare i32 @foo(i32)
 
 declare i32 @bar(i32)
 
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 
 ; Verify dominators.
-define void @test3(i32 %x) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test3(i32 %x) personality ptr @__gxx_personality_v0 {
 entry:
   %cmp2 = icmp eq i32 0, %x
   br i1 %cmp2, label %try.cont.loopexit, label %for.body.lr.ph
@@ -107,16 +106,16 @@ for.inc:                                          ; preds = %for.body
   br i1 %cmp, label %for.cond.try.cont.loopexit_crit_edge, label %for.body
 
 lpad:                                             ; preds = %for.body
-  %0 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIi to i8*)
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = extractvalue { i8*, i32 } %0, 1
-  %3 = tail call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) nounwind
+  %0 = landingpad { ptr, i32 }
+          catch ptr @_ZTIi
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = extractvalue { ptr, i32 } %0, 1
+  %3 = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi) nounwind
   %matches = icmp eq i32 %2, %3
   br i1 %matches, label %catch, label %eh.resume
 
 catch:                                            ; preds = %lpad
-  %4 = tail call i8* @__cxa_begin_catch(i8* %1) nounwind
+  %4 = tail call ptr @__cxa_begin_catch(ptr %1) nounwind
   br i1 true, label %invoke.cont2.loopexit, label %for.body.i.lr.ph
 
 for.body.i.lr.ph:                                 ; preds = %catch
@@ -133,15 +132,15 @@ for.inc.i:                                        ; preds = %for.body.i
   br i1 %cmp.i, label %for.cond.i.invoke.cont2.loopexit_crit_edge, label %for.body.i
 
 lpad.i:                                           ; preds = %for.body.i
-  %5 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIi to i8*)
-  %6 = extractvalue { i8*, i32 } %5, 0
-  %7 = extractvalue { i8*, i32 } %5, 1
+  %5 = landingpad { ptr, i32 }
+          catch ptr @_ZTIi
+  %6 = extractvalue { ptr, i32 } %5, 0
+  %7 = extractvalue { ptr, i32 } %5, 1
   %matches.i = icmp eq i32 %7, %3
   br i1 %matches.i, label %catch.i, label %lpad1.body
 
 catch.i:                                          ; preds = %lpad.i
-  %8 = tail call i8* @__cxa_begin_catch(i8* %6) nounwind
+  %8 = tail call ptr @__cxa_begin_catch(ptr %6) nounwind
   invoke void @test3(i32 0)
           to label %invoke.cont2.i unwind label %lpad1.i
 
@@ -150,10 +149,10 @@ invoke.cont2.i:                                   ; preds = %catch.i
   br label %invoke.cont2
 
 lpad1.i:                                          ; preds = %catch.i
-  %9 = landingpad { i8*, i32 }
+  %9 = landingpad { ptr, i32 }
           cleanup
-  %10 = extractvalue { i8*, i32 } %9, 0
-  %11 = extractvalue { i8*, i32 } %9, 1
+  %10 = extractvalue { ptr, i32 } %9, 0
+  %11 = extractvalue { ptr, i32 } %9, 1
   tail call void @__cxa_end_catch() nounwind
   br label %lpad1.body
 
@@ -177,26 +176,26 @@ try.cont:                                         ; preds = %try.cont.loopexit, 
   ret void
 
 lpad1.body:                                       ; preds = %lpad1.i, %lpad.i
-  %exn.slot.0.i = phi i8* [ %10, %lpad1.i ], [ %6, %lpad.i ]
+  %exn.slot.0.i = phi ptr [ %10, %lpad1.i ], [ %6, %lpad.i ]
   %ehselector.slot.0.i = phi i32 [ %11, %lpad1.i ], [ %7, %lpad.i ]
   tail call void @__cxa_end_catch() nounwind
   br label %eh.resume
 
 eh.resume:                                        ; preds = %lpad1.body, %lpad
-  %exn.slot.0 = phi i8* [ %exn.slot.0.i, %lpad1.body ], [ %1, %lpad ]
+  %exn.slot.0 = phi ptr [ %exn.slot.0.i, %lpad1.body ], [ %1, %lpad ]
   %ehselector.slot.0 = phi i32 [ %ehselector.slot.0.i, %lpad1.body ], [ %2, %lpad ]
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn.slot.0, 0
-  %lpad.val5 = insertvalue { i8*, i32 } %lpad.val, i32 %ehselector.slot.0, 1
-  resume { i8*, i32 } %lpad.val5
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn.slot.0, 0
+  %lpad.val5 = insertvalue { ptr, i32 } %lpad.val, i32 %ehselector.slot.0, 1
+  resume { ptr, i32 } %lpad.val5
 }
 
 declare void @_Z3fooi(i32)
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i32 @llvm.eh.typeid.for(i8*) nounwind readnone
+declare i32 @llvm.eh.typeid.for(ptr) nounwind readnone
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 

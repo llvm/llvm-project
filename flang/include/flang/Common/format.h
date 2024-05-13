@@ -125,7 +125,8 @@ private:
   void check_r(bool allowed = true);
   bool check_w();
   void check_m();
-  bool check_d();
+  bool check_d(bool checkScaleFactor = false);
+  void check_k();
   void check_e();
 
   const CHAR *const format_; // format text
@@ -135,12 +136,14 @@ private:
 
   const CHAR *cursor_{}; // current location in format_
   const CHAR *laCursor_{}; // lookahead cursor
+  TokenKind previousTokenKind_{TokenKind::None};
   Token token_{}; // current token
-  int64_t integerValue_{-1}; // value of UnsignedInteger token
   Token knrToken_{}; // k, n, or r UnsignedInteger token
+  Token scaleFactorToken_{}; // most recent scale factor token P
+  int64_t integerValue_{-1}; // value of UnsignedInteger token
   int64_t knrValue_{-1}; // -1 ==> not present
+  int64_t scaleFactorValue_{}; // signed k in kP
   int64_t wValue_{-1};
-  bool previousTokenWasInt_{false};
   char argString_[3]{}; // 1-2 character msg arg; usually edit descriptor name
   bool formatHasErrors_{false};
   bool unterminatedFormatError_{false};
@@ -149,9 +152,20 @@ private:
   int maxNesting_{0}; // max level of nested parentheses
 };
 
+template <typename CHAR> static inline bool IsWhite(CHAR c) {
+  // White space.  ' ' is standard.  Other characters are extensions.
+  // Extension candidates:
+  //   '\t' (horizontal tab)
+  //   '\n' (new line)
+  //   '\v' (vertical tab)
+  //   '\f' (form feed)
+  //   '\r' (carriage ret)
+  return c == ' ' || c == '\t' || c == '\v';
+}
+
 template <typename CHAR> CHAR FormatValidator<CHAR>::NextChar() {
   for (++cursor_; cursor_ < end_; ++cursor_) {
-    if (*cursor_ != ' ') {
+    if (!IsWhite(*cursor_)) {
       return toupper(*cursor_);
     }
   }
@@ -161,7 +175,7 @@ template <typename CHAR> CHAR FormatValidator<CHAR>::NextChar() {
 
 template <typename CHAR> CHAR FormatValidator<CHAR>::LookAheadChar() {
   for (laCursor_ = cursor_ + 1; laCursor_ < end_; ++laCursor_) {
-    if (*laCursor_ != ' ') {
+    if (!IsWhite(*laCursor_)) {
       return toupper(*laCursor_);
     }
   }
@@ -179,7 +193,7 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
   // At entry, cursor_ points before the start of the next token.
   // At exit, cursor_ points to last CHAR of token_.
 
-  previousTokenWasInt_ = token_.kind() == TokenKind::UnsignedInteger;
+  previousTokenKind_ = token_.kind();
   CHAR c{NextChar()};
   token_.set_kind(TokenKind::None);
   token_.set_offset(cursor_ - format_);
@@ -416,7 +430,8 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
       }
     }
     SetLength();
-    if (stmt_ == IoStmtKind::Read) { // 13.3.2p6
+    if (stmt_ == IoStmtKind::Read &&
+        previousTokenKind_ != TokenKind::DT) { // 13.3.2p6
       ReportError("String edit descriptor in READ format expression");
     } else if (token_.kind() != TokenKind::String) {
       ReportError("Unterminated string");
@@ -456,7 +471,7 @@ template <typename CHAR> bool FormatValidator<CHAR>::check_w() {
     NextToken();
     return true;
   }
-  if (*argString_ != 'A') {
+  if (*argString_ != 'A' && *argString_ != 'L') {
     ReportWarning("Expected '%s' edit descriptor 'w' value"); // C1306
   }
   return false;
@@ -479,7 +494,8 @@ template <typename CHAR> void FormatValidator<CHAR>::check_m() {
 }
 
 // Return the predicate "d value is present" to control further processing.
-template <typename CHAR> bool FormatValidator<CHAR>::check_d() {
+template <typename CHAR>
+bool FormatValidator<CHAR>::check_d(bool checkScaleFactor) {
   if (token_.kind() != TokenKind::Point) {
     ReportError("Expected '%s' edit descriptor '.d' value");
     return false;
@@ -489,8 +505,39 @@ template <typename CHAR> bool FormatValidator<CHAR>::check_d() {
     ReportError("Expected '%s' edit descriptor 'd' value after '.'");
     return false;
   }
+  if (checkScaleFactor) {
+    check_k();
+  }
   NextToken();
   return true;
+}
+
+// Check the value of scale factor k against a field width d.
+template <typename CHAR> void FormatValidator<CHAR>::check_k() {
+  // Limit the check to D and E edit descriptors in output statements that
+  // explicitly set the scale factor.
+  if (stmt_ != IoStmtKind::Print && stmt_ != IoStmtKind::Write) {
+    return;
+  }
+  if (!scaleFactorToken_.IsSet()) {
+    return;
+  }
+  // 13.7.2.3.3p5 - The values of d and k must satisfy:
+  //   −d < k <= 0; or
+  //    0 < k < d+2
+  const int64_t d{integerValue_};
+  const int64_t k{scaleFactorValue_};
+  // Exception:  d = k = 0 is nonstandard, but has a reasonable interpretation.
+  if (d == 0 && k == 0) {
+    return;
+  }
+  if (k <= 0 && !(-d < k)) {
+    ReportError("Negative scale factor k (from kP) and width d in a '%s' "
+                "edit descriptor must satisfy '-d < k'");
+  } else if (k > 0 && !(k < d + 2)) {
+    ReportError("Positive scale factor k (from kP) and width d in a '%s' "
+                "edit descriptor must satisfy 'k < d+2'");
+  }
 }
 
 template <typename CHAR> void FormatValidator<CHAR>::check_e() {
@@ -572,28 +619,32 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       }
       break;
     case TokenKind::D:
-    case TokenKind::F:
+    case TokenKind::F: {
       // R1307 data-edit-desc -> D w . d | F w . d
+      bool isD{token_.kind() == TokenKind::D};
       hasDataEditDesc = true;
       check_r();
       NextToken();
       if (check_w()) {
-        check_d();
+        check_d(/*checkScaleFactor=*/isD);
       }
       break;
+    }
     case TokenKind::E:
     case TokenKind::EN:
     case TokenKind::ES:
-    case TokenKind::EX:
+    case TokenKind::EX: {
       // R1307 data-edit-desc ->
       //   E w . d [E e] | EN w . d [E e] | ES w . d [E e] | EX w . d [E e]
+      bool isE{token_.kind() == TokenKind::E};
       hasDataEditDesc = true;
       check_r();
       NextToken();
-      if (check_w() && check_d()) {
+      if (check_w() && check_d(/*checkScaleFactor=*/isE)) {
         check_e();
       }
       break;
+    }
     case TokenKind::G:
       // R1307 data-edit-desc -> G w [. d [E e]]
       hasDataEditDesc = true;
@@ -605,8 +656,8 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
             check_e();
           }
         } else if (token_.kind() == TokenKind::Point && check_d() &&
-            token_.kind() == TokenKind::E) {
-          ReportError("Unexpected 'e' in 'G0' edit descriptor"); // C1308
+            token_.kind() == TokenKind::E) { // C1308
+          ReportError("A 'G0' edit descriptor must not have an 'e' value");
           NextToken();
           if (token_.kind() == TokenKind::UnsignedInteger) {
             NextToken();
@@ -683,6 +734,13 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       // R1313 control-edit-desc -> k P
       if (knrValue_ < 0) {
         ReportError("'P' edit descriptor must have a scale factor");
+      } else {
+        scaleFactorToken_ = knrToken_;
+        if (signToken.IsSet() && format_[signToken.offset()] == '-') {
+          scaleFactorValue_ = -knrValue_;
+        } else {
+          scaleFactorValue_ = knrValue_;
+        }
       }
       // Diagnosing C1302 may require multiple token lookahead.
       // Save current cursor position to enable backup.
@@ -829,7 +887,8 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       // Possible first token of the next format item; token not yet processed.
       if (commaRequired) {
         const char *s{"Expected ',' or ')' in format expression"}; // C1302
-        if (previousTokenWasInt_ && itemsWithLeadingInts_.test(token_.kind())) {
+        if (previousTokenKind_ == TokenKind::UnsignedInteger &&
+            itemsWithLeadingInts_.test(token_.kind())) {
           ReportError(s);
         } else {
           ReportWarning(s);

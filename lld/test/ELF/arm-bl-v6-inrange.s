@@ -29,17 +29,17 @@ thumbfunc:
 // CHECK: Disassembly of section .callee1:
 // CHECK-EMPTY:
 // CHECK-NEXT: <thumbfunc>:
-// CHECK-NEXT:   100004:       70 47   bx      lr
+// CHECK-NEXT:   100004:       4770    bx      lr
 // CHECK-EMPTY:
 // CHECK-NEXT: Disassembly of section .caller:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:   500000:       00 f4 00 f8     bl      #-4194304
-// CHECK-NEXT:   500004:       ff f3 fe ef     blx     #4194300
-// CHECK-NEXT:   500008:       70 47   bx      lr
+// CHECK-NEXT:   500000:       f400 f800       bl     0x100004 <thumbfunc>
+// CHECK-NEXT:   500004:       f3ff effe       blx    0x900004 <armfunc>
+// CHECK-NEXT:   500008:       4770    bx      lr
 
-  .arm
   .section .callee_high, "ax", %progbits
+  .arm
   .globl armfunc
   .type armfunc, %function
 armfunc:
@@ -47,4 +47,4 @@ armfunc:
 // CHECK: Disassembly of section .callee2:
 // CHECK-EMPTY:
 // CHECK-NEXT: <armfunc>:
-// CHECK-NEXT:   900004:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:   900004:       e12fff1e        bx      lr

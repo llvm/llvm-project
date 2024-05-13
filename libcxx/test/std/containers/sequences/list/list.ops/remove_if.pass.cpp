@@ -30,12 +30,12 @@ bool g(int i)
 }
 
 struct PredLWG526 {
-    PredLWG526 (int i) : i_(i) {};
-    ~PredLWG526() { i_ = -32767; }
-    bool operator() (const PredLWG526 &p) const { return p.i_ == i_; }
+  PredLWG526(int i) : i_(i) {}
+  ~PredLWG526() { i_ = -32767; }
+  bool operator()(const PredLWG526& p) const { return p.i_ == i_; }
 
-    bool operator==(int i) const { return i == i_;}
-    int i_;
+  bool operator==(int i) const { return i == i_; }
+  int i_;
 };
 
 typedef unary_counting_predicate<bool(*)(int), int> Predicate;
@@ -49,10 +49,10 @@ int main(int, char**)
     L c(a1, a1+4);
     Predicate cp(g);
 #if TEST_STD_VER > 17
-	ASSERT_SAME_TYPE(L::size_type, decltype(c.remove_if(std::ref(cp))));
+    ASSERT_SAME_TYPE(L::size_type, decltype(c.remove_if(std::ref(cp))));
     assert(c.remove_if(std::ref(cp)) == 2);
 #else
-	ASSERT_SAME_TYPE(void, decltype(c.remove_if(std::ref(cp))));
+    ASSERT_SAME_TYPE(void, decltype(c.remove_if(std::ref(cp))));
     c.remove_if(std::ref(cp));
 #endif
     assert(c == std::list<int>(a2, a2+2));
@@ -77,7 +77,7 @@ int main(int, char**)
     std::list<PredLWG526> c(a1, a1 + 7);
     c.remove_if(std::ref(c.front()));
     assert(c.size() == 5);
-    for (size_t i = 0; i < c.size(); ++i)
+    for (std::size_t i = 0; i < c.size(); ++i)
     {
         assert(c.front() == a2[i]);
         c.pop_front();

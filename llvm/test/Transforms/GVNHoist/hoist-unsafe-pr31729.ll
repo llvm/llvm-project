@@ -1,4 +1,4 @@
-; RUN: opt -gvn-hoist -S < %s | FileCheck %s
+; RUN: opt -passes=gvn-hoist -S < %s | FileCheck %s
 
 ; Check that urem is not hoisted.
 ; CHECK-LABEL: @main
@@ -22,11 +22,11 @@ entry:
 ; Function Attrs:
 define i32 @main() {
 entry:
-  %0 = load volatile i32, i32* @g_x_s, align 4
-  %1 = load volatile i32, i32* @g_z_s, align 4
-  %2 = load volatile i32, i32* @g_x_u, align 4
-  %3 = load volatile i32, i32* @g_z_u, align 4
-  %4 = load volatile i32, i32* @g_m, align 4
+  %0 = load volatile i32, ptr @g_x_s, align 4
+  %1 = load volatile i32, ptr @g_z_s, align 4
+  %2 = load volatile i32, ptr @g_x_u, align 4
+  %3 = load volatile i32, ptr @g_z_u, align 4
+  %4 = load volatile i32, ptr @g_m, align 4
   %call = call i64 @func() #4
   %conv = sext i32 %1 to i64
   %cmp = icmp ne i64 %call, %conv

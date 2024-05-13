@@ -12,13 +12,13 @@
 TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   B.buildConstant(LLT::scalar(32), 42);
   B.buildFConstant(LLT::scalar(32), 1.0);
 
-  B.buildConstant(LLT::vector(2, 32), 99);
-  B.buildFConstant(LLT::vector(2, 32), 2.0);
+  B.buildConstant(LLT::fixed_vector(2, 32), 99);
+  B.buildFConstant(LLT::fixed_vector(2, 32), 2.0);
 
   // Test APFloat overload.
   APFloat KVal(APFloat::IEEEdouble(), "4.0");
@@ -43,7 +43,7 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
 TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLVMContext &Ctx = MF->getFunction().getContext();
   APInt APV32(32, 12345);
@@ -51,21 +51,21 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
   // Test APInt version breaks
   EXPECT_DEATH(B.buildConstant(LLT::scalar(16), APV32),
                "creating constant with the wrong size");
-  EXPECT_DEATH(B.buildConstant(LLT::vector(2, 16), APV32),
+  EXPECT_DEATH(B.buildConstant(LLT::fixed_vector(2, 16), APV32),
                "creating constant with the wrong size");
 
   // Test ConstantInt version breaks
   ConstantInt *CI = ConstantInt::get(Ctx, APV32);
   EXPECT_DEATH(B.buildConstant(LLT::scalar(16), *CI),
                "creating constant with the wrong size");
-  EXPECT_DEATH(B.buildConstant(LLT::vector(2, 16), *CI),
+  EXPECT_DEATH(B.buildConstant(LLT::fixed_vector(2, 16), *CI),
                "creating constant with the wrong size");
 
   APFloat DoubleVal(APFloat::IEEEdouble());
   ConstantFP *CF = ConstantFP::get(Ctx, DoubleVal);
   EXPECT_DEATH(B.buildFConstant(LLT::scalar(16), *CF),
                "creating fconstant with the wrong size");
-  EXPECT_DEATH(B.buildFConstant(LLT::vector(2, 16), *CF),
+  EXPECT_DEATH(B.buildFConstant(LLT::fixed_vector(2, 16), *CF),
                "creating fconstant with the wrong size");
 }
 
@@ -75,7 +75,7 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
 TEST_F(AArch64GISelMITest, DstOpSrcOp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
@@ -101,7 +101,7 @@ TEST_F(AArch64GISelMITest, DstOpSrcOp) {
 TEST_F(AArch64GISelMITest, BuildUnmerge) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
@@ -122,7 +122,7 @@ TEST_F(AArch64GISelMITest, BuildUnmerge) {
 TEST_F(AArch64GISelMITest, TestBuildFPInsts) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
@@ -158,21 +158,19 @@ TEST_F(AArch64GISelMITest, TestBuildFPInsts) {
 TEST_F(AArch64GISelMITest, BuildIntrinsic) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S64 = LLT::scalar(64);
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
   // Make sure DstOp version works. sqrt is just a placeholder intrinsic.
-  B.buildIntrinsic(Intrinsic::sqrt, {S64}, false)
-    .addUse(Copies[0]);
+  B.buildIntrinsic(Intrinsic::sqrt, {S64}).addUse(Copies[0]);
 
   // Make sure register version works
   SmallVector<Register, 1> Results;
   Results.push_back(MRI->createGenericVirtualRegister(S64));
-  B.buildIntrinsic(Intrinsic::sqrt, Results, false)
-    .addUse(Copies[1]);
+  B.buildIntrinsic(Intrinsic::sqrt, Results).addUse(Copies[1]);
 
   auto CheckStr = R"(
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
@@ -187,7 +185,7 @@ TEST_F(AArch64GISelMITest, BuildIntrinsic) {
 TEST_F(AArch64GISelMITest, BuildXor) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S64 = LLT::scalar(64);
   LLT S128 = LLT::scalar(128);
@@ -197,7 +195,7 @@ TEST_F(AArch64GISelMITest, BuildXor) {
   B.buildNot(S64, Copies[0]);
 
   // Make sure this works with > 64-bit types
-  auto Merge = B.buildMerge(S128, {Copies[0], Copies[1]});
+  auto Merge = B.buildMergeLikeInstr(S128, {Copies[0], Copies[1]});
   B.buildNot(S128, Merge);
   auto CheckStr = R"(
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
@@ -216,7 +214,7 @@ TEST_F(AArch64GISelMITest, BuildXor) {
 TEST_F(AArch64GISelMITest, BuildBitCounts) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S32 = LLT::scalar(32);
   SmallVector<Register, 4> Copies;
@@ -244,7 +242,7 @@ TEST_F(AArch64GISelMITest, BuildBitCounts) {
 TEST_F(AArch64GISelMITest, BuildCasts) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S32 = LLT::scalar(32);
   SmallVector<Register, 4> Copies;
@@ -269,7 +267,7 @@ TEST_F(AArch64GISelMITest, BuildCasts) {
 TEST_F(AArch64GISelMITest, BuildMinMaxAbs) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S64 = LLT::scalar(64);
   SmallVector<Register, 4> Copies;
@@ -297,7 +295,7 @@ TEST_F(AArch64GISelMITest, BuildMinMaxAbs) {
 TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S64 = LLT::scalar(64);
   LLT P0 = LLT::pointer(0, 64);
@@ -317,17 +315,17 @@ TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
   ; CHECK: [[PTR:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_ATOMICRMW_FADD [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered 8)
-  ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_ATOMICRMW_FSUB [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered 8)
+  ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_ATOMICRMW_FADD [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered (s64))
+  ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_ATOMICRMW_FSUB [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered (s64))
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(AArch64GISelMITest, BuildMerge) {
+TEST_F(AArch64GISelMITest, BuildMergeLikeInstr) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S32 = LLT::scalar(32);
   Register RegC0 = B.buildConstant(S32, 0).getReg(0);
@@ -337,15 +335,13 @@ TEST_F(AArch64GISelMITest, BuildMerge) {
 
   // Merging plain constants as one big blob of bit should produce a
   // G_MERGE_VALUES.
-  B.buildMerge(LLT::scalar(128), {RegC0, RegC1, RegC2, RegC3});
+  B.buildMergeLikeInstr(LLT::scalar(128), {RegC0, RegC1, RegC2, RegC3});
   // Merging plain constants to a vector should produce a G_BUILD_VECTOR.
-  LLT V2x32 = LLT::vector(2, 32);
-  Register RegC0C1 =
-      B.buildMerge(V2x32, {RegC0, RegC1}).getReg(0);
-  Register RegC2C3 =
-      B.buildMerge(V2x32, {RegC2, RegC3}).getReg(0);
+  LLT V2x32 = LLT::fixed_vector(2, 32);
+  Register RegC0C1 = B.buildMergeLikeInstr(V2x32, {RegC0, RegC1}).getReg(0);
+  Register RegC2C3 = B.buildMergeLikeInstr(V2x32, {RegC2, RegC3}).getReg(0);
   // Merging vector constants to a vector should produce a G_CONCAT_VECTORS.
-  B.buildMerge(LLT::vector(4, 32), {RegC0C1, RegC2C3});
+  B.buildMergeLikeInstr(LLT::fixed_vector(4, 32), {RegC0C1, RegC2C3});
   // Merging vector constants to a plain type is not allowed.
   // Nothing else to test.
 
@@ -363,10 +359,43 @@ TEST_F(AArch64GISelMITest, BuildMerge) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+using MachineIRBuilderDeathTest = AArch64GISelMITest;
+
+TEST_F(MachineIRBuilderDeathTest, BuildMergeValues) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S32 = LLT::scalar(32);
+  Register RegC0 = B.buildConstant(S32, 0).getReg(0);
+  Register RegC1 = B.buildConstant(S32, 1).getReg(0);
+  Register RegC2 = B.buildConstant(S32, 2).getReg(0);
+  Register RegC3 = B.buildConstant(S32, 3).getReg(0);
+
+  // Merging scalar constants should produce a G_MERGE_VALUES.
+  B.buildMergeValues(LLT::scalar(128), {RegC0, RegC1, RegC2, RegC3});
+
+  // Using a vector destination type should assert.
+  LLT V2x32 = LLT::fixed_vector(2, 32);
+  EXPECT_DEBUG_DEATH(
+      B.buildMergeValues(V2x32, {RegC0, RegC1}),
+      "vectors should be built with G_CONCAT_VECTOR or G_BUILD_VECTOR");
+
+  auto CheckStr = R"(
+  ; CHECK: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
+  ; CHECK: {{%[0-9]+}}:_(s128) = G_MERGE_VALUES [[C0]]:_(s32), [[C1]]:_(s32), [[C2]]:_(s32), [[C3]]:_(s32)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 TEST_F(AArch64GISelMITest, BuildAddoSubo) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S64 = LLT::scalar(64);
@@ -402,7 +431,7 @@ TEST_F(AArch64GISelMITest, BuildAddoSubo) {
 TEST_F(AArch64GISelMITest, BuildBitfieldExtract) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   LLT S64 = LLT::scalar(64);
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);

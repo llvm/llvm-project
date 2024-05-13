@@ -9,7 +9,7 @@
 // <list>
 
 // void merge(list& x);
-// If (&addressof(x) == this) does nothing; otherwise ...
+// If (addressof(x) == this) does nothing; otherwise ...
 
 #include <list>
 #include <cassert>

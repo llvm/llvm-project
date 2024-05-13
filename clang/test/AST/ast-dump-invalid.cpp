@@ -33,7 +33,7 @@ int g(int i) {
 // CHECK-NEXT:   |-ParmVarDecl
 // CHECK-NEXT:   `-CompoundStmt
 // CHECK-NEXT:     `-IfStmt {{.*}} <line:25:3, line:28:12>
-// CHECK-NEXT:       |-OpaqueValueExpr {{.*}} <<invalid sloc>> 'bool'
+// CHECK-NEXT:       |-RecoveryExpr {{.*}} <line:25:7> 'bool'
 // CHECK-NEXT:       |-ReturnStmt {{.*}} <line:26:5, col:12>
 // CHECK-NEXT:       | `-IntegerLiteral {{.*}} <col:12> 'int' 4
 // CHECK-NEXT:       `-ReturnStmt {{.*}} <line:28:5, col:12>
@@ -60,3 +60,12 @@ double Str::foo1(double, invalid_type)
 // CHECK-NEXT:     `-ReturnStmt {{.*}} <col:3, col:10>
 // CHECK-NEXT:       `-ImplicitCastExpr {{.*}} <col:10> 'double' <IntegralToFloating>
 // CHECK-NEXT:         `-IntegerLiteral {{.*}} <col:10> 'int' 45
+
+namespace TestAliasTemplateDecl {
+template<typename T> class A;
+
+template<typename T>
+template<typename U> using InvalidAlias = A<U>;
+// CHECK:      TypeAliasTemplateDecl {{.*}} invalid InvalidAlias
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
+}

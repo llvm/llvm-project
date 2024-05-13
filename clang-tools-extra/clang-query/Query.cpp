@@ -14,6 +14,7 @@
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Tooling/NodeIntrospection.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::dynamic;
@@ -121,7 +122,7 @@ void dumpLocations(llvm::raw_ostream &OS, DynTypedNode Node, ASTContext &Ctx,
       continue;
 
     TD.emitDiagnostic(FullSourceLoc(Iter->first, SM), DiagnosticsEngine::Note,
-                      "source locations here", None, None);
+                      "source locations here", std::nullopt, std::nullopt);
 
     Iter = PrintLocations(OS, Iter, Locs.LocationAccessors.end());
     OS << '\n';
@@ -137,10 +138,10 @@ void dumpLocations(llvm::raw_ostream &OS, DynTypedNode Node, ASTContext &Ctx,
         SM.getPresumedLineNumber(Iter->first.getEnd()))
       continue;
 
-    TD.emitDiagnostic(FullSourceLoc(Iter->first.getBegin(), SM),
-                      DiagnosticsEngine::Note,
-                      "source ranges here " + Iter->first.printToString(SM),
-                      CharSourceRange::getTokenRange(Iter->first), None);
+    TD.emitDiagnostic(
+        FullSourceLoc(Iter->first.getBegin(), SM), DiagnosticsEngine::Note,
+        "source ranges here " + Iter->first.printToString(SM),
+        CharSourceRange::getTokenRange(Iter->first), std::nullopt);
 
     Iter = PrintLocations(OS, Iter, Locs.RangeAccessors.end());
   }
@@ -157,7 +158,7 @@ void dumpLocations(llvm::raw_ostream &OS, DynTypedNode Node, ASTContext &Ctx,
     TD.emitDiagnostic(
         FullSourceLoc(Iter->first.getBegin(), SM), DiagnosticsEngine::Note,
         "source range " + Iter->first.printToString(SM) + " starting here...",
-        CharSourceRange::getTokenRange(Iter->first), None);
+        CharSourceRange::getTokenRange(Iter->first), std::nullopt);
 
     auto ColNum = SM.getPresumedColumnNumber(Iter->first.getEnd());
     auto LastLineLoc = Iter->first.getEnd().getLocWithOffset(-(ColNum - 1));
@@ -166,7 +167,7 @@ void dumpLocations(llvm::raw_ostream &OS, DynTypedNode Node, ASTContext &Ctx,
                       DiagnosticsEngine::Note, "... ending here",
                       CharSourceRange::getTokenRange(
                           SourceRange(LastLineLoc, Iter->first.getEnd())),
-                      None);
+                      std::nullopt);
 
     Iter = PrintLocations(OS, Iter, Locs.RangeAccessors.end());
   }
@@ -183,7 +184,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     std::vector<BoundNodes> Matches;
     DynTypedMatcher MaybeBoundMatcher = Matcher;
     if (QS.BindRoot) {
-      llvm::Optional<DynTypedMatcher> M = Matcher.tryBind("root");
+      std::optional<DynTypedMatcher> M = Matcher.tryBind("root");
       if (M)
         MaybeBoundMatcher = *M;
     }
@@ -232,7 +233,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
             TD.emitDiagnostic(
                 FullSourceLoc(R.getBegin(), AST->getSourceManager()),
                 DiagnosticsEngine::Note, "\"" + BI->first + "\" binds here",
-                CharSourceRange::getTokenRange(R), None);
+                CharSourceRange::getTokenRange(R), std::nullopt);
           }
         }
         if (QS.PrintOutput) {

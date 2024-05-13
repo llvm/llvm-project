@@ -17,12 +17,10 @@ namespace lldb_private {
 
 template <class T> class ThreadSafeValue {
 public:
-  // Constructors and Destructors
-  ThreadSafeValue() : m_value(), m_mutex() {}
+  ThreadSafeValue() = default;
+  ThreadSafeValue(const T &value) : m_value(value) {}
 
-  ThreadSafeValue(const T &value) : m_value(value), m_mutex() {}
-
-  ~ThreadSafeValue() {}
+  ~ThreadSafeValue() = default;
 
   T GetValue() const {
     T value;
@@ -44,6 +42,7 @@ public:
 
   // Call this if you have already manually locked the mutex using the
   // GetMutex() accessor
+  // coverity[missing_lock]
   void SetValueNoLock(const T &value) { m_value = value; }
 
   std::recursive_mutex &GetMutex() { return m_mutex; }

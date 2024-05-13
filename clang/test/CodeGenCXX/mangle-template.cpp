@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++11 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
-// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++20 -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK,CXX20
+// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++11 -fclang-abi-compat=latest -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++20 -fclang-abi-compat=latest -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK,CXX20
 // expected-no-diagnostics
 
 namespace test1 {
@@ -158,18 +158,17 @@ namespace test12 {
   const int n = 10;
   template<typename T, T v> void test() {}
   void use() {
-    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIFivEXadL_ZNS_L1fEvEEEEvv(
+    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIFivETnT_XadL_ZNS_L1fEvEEEEvv(
     test<int(), &f>();
-    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIRFivEL_ZNS_L1fEvEEEvv(
+    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIRFivETnT_L_ZNS_L1fEvEEEvv(
     test<int(&)(), f>();
-    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIPKiXadL_ZNS_L1nEEEEEvv(
+    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIPKiTnT_XadL_ZNS_L1nEEEEEvv(
     test<const int*, &n>();
-    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIRKiL_ZNS_L1nEEEEvv(
+    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIRKiTnT_L_ZNS_L1nEEEEvv(
     test<const int&, n>();
   }
 }
 
-// rdar://problem/12072531
 // Test the boundary condition of minimal signed integers.
 namespace test13 {
   template <char c> char returnChar() { return c; }
@@ -226,6 +225,16 @@ namespace test16 {
 namespace cxx20 {
   template<auto> struct A {};
   template<typename T, T V> struct B {};
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AILf3f800000EEE(
+  void f(A<1.0f>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AILd3ff0000000000000EEE(
+  void f(A<1.0>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AILe3fff8000000000000000EEE(
+  void f(A<1.0l>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXtlCiLi0ELi1EEEEE(
+  void f(A<1i>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXtlCdLd0000000000000000ELd3ff0000000000000EEEEE(
+  void f(A<1.0i>) {}
 
   int x;
   // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXadL_ZNS_1xEEEEE(
@@ -245,7 +254,24 @@ namespace cxx20 {
   // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIPKvXadL_ZNS_1xEEEEE(
   void f(B<const void*, (const void*)&x>) {}
 
-  struct Q { int x; };
+  struct Q { int x; } q;
+
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXadsoiL_ZNS_1qEEEEEE(
+  void f(A<&q.x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIPiXadsoiL_ZNS_1qEEEEEE(
+  void f(B<int*, &q.x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXadsoKiL_ZNS_1qEEEEEE(
+  void f(A<(const int*)&q.x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIPKiXadsoS1_L_ZNS_1qEEEEEE
+  void f(B<const int*, (const int*)&q.x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXcvPvadsoiL_ZNS_1qEEEEEE(
+  void f(A<(void*)&q.x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIPvXadsoiL_ZNS_1qEEEEEE(
+  void f(B<void*, (void*)&q.x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXcvPKvadsoiL_ZNS_1qEEEEEE(
+  void f(A<(const void*)&q.x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIPKvXadsoiL_ZNS_1qEEEEEE(
+  void f(B<const void*, (const void*)&q.x>) {}
 
   // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXadL_ZNS_1Q1xEEEEE(
   void f(A<&Q::x>) {}
@@ -255,6 +281,17 @@ namespace cxx20 {
   void f(A<(const int Q::*)&Q::x>) {}
   // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIMNS_1QEKiXadL_ZNS1_1xEEEEE(
   void f(B<const int Q::*, (const int Q::*)&Q::x>) {}
+
+  struct R : Q {};
+
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXmcMNS_1REiadL_ZNS_1Q1xEEEEEE(
+  void f(A<(int R::*)&Q::x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIMNS_1REiXmcS2_adL_ZNS_1Q1xEEEEEE(
+  void f(B<int R::*, (int R::*)&Q::x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXmcMNS_1REKiadL_ZNS_1Q1xEEEEEE(
+  void f(A<(const int R::*)&Q::x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIMNS_1REKiXmcS3_adL_ZNS_1Q1xEEEEEE(
+  void f(B<const int R::*, (const int R::*)&Q::x>) {}
 }
 #endif
 

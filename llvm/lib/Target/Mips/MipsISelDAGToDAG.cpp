@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/CFG.h"
@@ -31,11 +32,13 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
+#define PASS_NAME "MIPS DAG->DAG Pattern Instruction Selection"
 
 //===----------------------------------------------------------------------===//
 // Instruction Selector Implementation
@@ -54,7 +57,7 @@ void MipsDAGToDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool MipsDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &static_cast<const MipsSubtarget &>(MF.getSubtarget());
+  Subtarget = &MF.getSubtarget<MipsSubtarget>();
   bool Ret = SelectionDAGISel::runOnMachineFunction(MF);
 
   processFunctionAfterISel(MF);
@@ -296,8 +299,8 @@ void MipsDAGToDAGISel::Select(SDNode *Node) {
   case ISD::LOAD:
   case ISD::STORE:
     assert((Subtarget->systemSupportsUnalignedAccess() ||
-            cast<MemSDNode>(Node)->getMemoryVT().getSizeInBits() / 8 <=
-            cast<MemSDNode>(Node)->getAlignment()) &&
+            cast<MemSDNode>(Node)->getAlign() >=
+                cast<MemSDNode>(Node)->getMemoryVT().getStoreSize()) &&
            "Unexpected unaligned loads/stores.");
     break;
 #endif
@@ -307,18 +310,40 @@ void MipsDAGToDAGISel::Select(SDNode *Node) {
   SelectCode(Node);
 }
 
-bool MipsDAGToDAGISel::
-SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
-                             std::vector<SDValue> &OutOps) {
+bool MipsDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   // All memory constraints can at least accept raw pointers.
   switch(ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
-  case InlineAsm::Constraint_m:
-  case InlineAsm::Constraint_R:
-  case InlineAsm::Constraint_ZC:
+  case InlineAsm::ConstraintCode::m:
+  case InlineAsm::ConstraintCode::R:
+  case InlineAsm::ConstraintCode::ZC:
     OutOps.push_back(Op);
     return false;
   }
   return true;
 }
+
+bool MipsDAGToDAGISel::isUnneededShiftMask(SDNode *N,
+                                           unsigned ShAmtBits) const {
+  assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
+
+  const APInt &RHS = N->getConstantOperandAPInt(1);
+  if (RHS.countr_one() >= ShAmtBits) {
+    LLVM_DEBUG(
+        dbgs()
+        << DEBUG_TYPE
+        << " Need optimize 'and & shl/srl/sra' and operand value bits is "
+        << RHS.countr_one() << "\n");
+    return true;
+  }
+
+  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0));
+  return (Known.Zero | RHS).countr_one() >= ShAmtBits;
+}
+
+char MipsDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(MipsDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)

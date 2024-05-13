@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m1
   integer :: x
   integer :: y
@@ -12,7 +12,7 @@ module m2
   integer, parameter :: k2 = selected_int_kind(9)
 end
 
-program p1
+subroutine p1
   use m1
   use m2
   ! check that selected_int_kind is not use-associated
@@ -27,6 +27,12 @@ program p2
   contiguous w
   !ERROR: 'z' is use-associated from module 'm2' and cannot be re-declared
   integer z
+  real, target :: a(10)
+  real, contiguous, pointer :: p(:) => a
   !ERROR: Reference to 'y' is ambiguous
   y = 1
+ contains
+  subroutine inner
+    p(1) = 0. ! ok - check for regression on contiguous host assoc.
+  end subroutine
 end

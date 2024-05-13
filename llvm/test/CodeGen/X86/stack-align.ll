@@ -10,16 +10,16 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 target triple = "i686-apple-darwin8"
 @G = external global double
 
-define void @test({ double, double }* byval({ double, double })  %z, double* %P) nounwind {
+define void @test(ptr byval({ double, double })  %z, ptr %P) nounwind {
 entry:
-	%tmp3 = load double, double* @G, align 16		; <double> [#uses=1]
+	%tmp3 = load double, ptr @G, align 16		; <double> [#uses=1]
 	%tmp4 = tail call double @fabs( double %tmp3 ) readnone	; <double> [#uses=1]
-        store volatile double %tmp4, double* %P
-	%tmp = getelementptr { double, double }, { double, double }* %z, i32 0, i32 0		; <double*> [#uses=1]
-	%tmp1 = load volatile double, double* %tmp, align 8		; <double> [#uses=1]
+        store volatile double %tmp4, ptr %P
+	%tmp = getelementptr { double, double }, ptr %z, i32 0, i32 0		; <ptr> [#uses=1]
+	%tmp1 = load volatile double, ptr %tmp, align 8		; <double> [#uses=1]
 	%tmp2 = tail call double @fabs( double %tmp1 ) readnone	; <double> [#uses=1]
 	%tmp6 = fadd double %tmp4, %tmp2		; <double> [#uses=1]
-	store volatile double %tmp6, double* %P, align 8
+	store volatile double %tmp6, ptr %P, align 8
 	ret void
 
 ; CHECK-LABEL: test:
@@ -54,7 +54,7 @@ declare double @fabs(double)
 define i32 @test4() nounwind {
 entry:
   %buffer = alloca [2048 x i8], align 16
-  %0 = ptrtoint [2048 x i8]* %buffer to i32
+  %0 = ptrtoint ptr %buffer to i32
   %and = and i32 %0, -16
   ret i32 %and
 ; CHECK-LABEL: test4:
@@ -66,13 +66,11 @@ entry:
 
 ; Accessing stack parameters shouldn't assume stack alignment. Here we should
 ; emit two 8-byte loads, followed by two 8-byte stores.
-define x86_stdcallcc void @test5(%struct.sixteen* byval(%struct.sixteen) nocapture readonly align 4 %s) #0 {
+define x86_stdcallcc void @test5(ptr byval(%struct.sixteen) nocapture readonly align 4 %s) #0 {
   %d.sroa.0 = alloca [16 x i8], align 1
-  %1 = getelementptr inbounds [16 x i8], [16 x i8]* %d.sroa.0, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %1)
-  %2 = getelementptr inbounds %struct.sixteen, %struct.sixteen* %s, i32 0, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %2, i32 16, i1 true)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %1)
+  call void @llvm.lifetime.start.p0(i64 16, ptr %d.sroa.0)
+  call void @llvm.memcpy.p0.p0.i32(ptr %d.sroa.0, ptr %s, i32 16, i1 true)
+  call void @llvm.lifetime.end.p0(i64 16, ptr %d.sroa.0)
   ret void
 ; CHECK-LABEL: test5:
 ; CHECK: and
@@ -82,10 +80,10 @@ define x86_stdcallcc void @test5(%struct.sixteen* byval(%struct.sixteen) nocaptu
 ; CHECK-NEXT: movsd
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) argmemonly nounwind
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) argmemonly nounwind
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) argmemonly nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture readonly, i32, i1) argmemonly nounwind
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) argmemonly nounwind
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) argmemonly nounwind
 
 attributes #0 = { nounwind alignstack=16 "frame-pointer"="all" }

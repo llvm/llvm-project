@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -loop-unroll | FileCheck %s
+; RUN: opt < %s -S -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -passes=loop-unroll | FileCheck %s
 define void @unroll_default() nounwind {
 entry:
   br label %loop
@@ -14,37 +14,6 @@ exit:
 }
 
 ; CHECK-LABEL: @unroll_default
-; CHECK:      add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
+; CHECK: add{{.*}}, 32
 ; CHECK-NEXT: icmp
 

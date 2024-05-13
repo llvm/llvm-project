@@ -1,9 +1,8 @@
 // Test for on-demand leak checking.
-// RUN: LSAN_BASE="use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE %run %t foo 2>&1 | FileCheck %s
-// RUN: %env_lsan_opts=$LSAN_BASE %run %t 2>&1 | FileCheck %s
-//
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0:symbolize=0 %run %t foo 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0:symbolize=0 %run %t 2>&1 | FileCheck %s
+
 // UNSUPPORTED: darwin
 
 #include <assert.h>
@@ -23,12 +22,12 @@ int main(int argc, char *argv[]) {
 // CHECK: Test alloc:
 
   assert(__lsan_do_recoverable_leak_check() == 1);
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte
+// CHECK: SUMMARY: {{.*}}Sanitizer: 1337 byte
 
   // Test that we correctly reset chunk tags.
   p = 0;
   assert(__lsan_do_recoverable_leak_check() == 1);
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1360 byte
+// CHECK: SUMMARY: {{.*}}Sanitizer: 1360 byte
 
   _exit(0);
 }

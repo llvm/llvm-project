@@ -1,5 +1,8 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s -strict-dwarf=true | llvm-dwarfdump -debug-info - \
+; RUN:   | FileCheck %s --check-prefix=STRICT --implicit-check-not DW_AT_calling_convention
 ;
+
 ; // S is not trivially copyable.
 ; struct S {
 ;    ~S() {}
@@ -20,6 +23,12 @@
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NEXT: DW_AT_calling_convention	(DW_CC_pass_by_value)
 ; CHECK-NEXT: DW_AT_name	("T")
+;
+; STRICT: DW_TAG_structure_type
+; STRICT-NEXT: DW_AT_name	("S")
+;
+; STRICT: DW_TAG_structure_type
+; STRICT-NEXT: DW_AT_name	("T")
 
 %struct.S = type { i8 }
 %struct.T = type { i8 }

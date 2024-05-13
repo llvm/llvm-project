@@ -66,6 +66,8 @@ def ssub_10 : ComposedSubRegIndex<dsub_5, ssub_0>;
 def ssub_11 : ComposedSubRegIndex<dsub_5, ssub_1>;
 def ssub_12 : ComposedSubRegIndex<dsub_6, ssub_0>;
 def ssub_13 : ComposedSubRegIndex<dsub_6, ssub_1>;
+def ssub_14 : ComposedSubRegIndex<dsub_7, ssub_0>;
+def ssub_15 : ComposedSubRegIndex<dsub_7, ssub_1>;
 
 def gsub_0 : SubRegIndex<32>;
 def gsub_1 : SubRegIndex<32, 32>;
@@ -209,6 +211,8 @@ def FPCXTS  : ARMReg<15, "fpcxts">;
 
 def ZR  : ARMReg<15, "zr">,  DwarfRegNum<[15]>;
 
+def RA_AUTH_CODE : ARMReg<12, "ra_auth_code">, DwarfRegNum<[143]>;
+
 // Register classes.
 //
 // pc  == Program Counter
@@ -273,6 +277,16 @@ def GPRwithAPSR : RegisterClass<"ARM", [i32], 32, (add (sub GPR, PC), APSR_NZCV)
       return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
   }];
   let DiagnosticString = "operand must be a register in range [r0, r14] or apsr_nzcv";
+}
+
+// GPRs without the SP register. Used for BXAUT and AUTG
+def GPRnosp : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12), LR, PC)> {
+  let AltOrders = [(add LR, GPRnosp), (trunc GPRnosp, 8),
+                   (add (trunc GPRnosp, 8), R12, LR, (shl GPRnosp, 8))];
+  let AltOrderSelect = [{
+      return MF.getSubtarget<ARMSubtarget>().getGPRAllocationOrder(MF);
+  }];
+  let DiagnosticString = "operand must be a register in range [r0, r12] or LR or PC";
 }
 
 // GPRs without the PC and SP registers but with APSR. Used by CLRM instruction.
@@ -359,6 +373,16 @@ def tcGPR : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3, R12)> {
   }];
 }
 
+// Some pointer authentication instructions require the use of R12. When return
+// address signing is enabled, authentication of the caller's return address
+// must be performed before a tail call is made. Therefore, indirect tail call
+// jump cannot be from R12.
+// FIXME: All PACBTI instruction currently implemented in the compiler
+// implicitly use R12. When instructions that allow PAC to be placed in a
+// specific register are implemented the restriction needs to be updated to
+// make sure that PACBTI signature and indirect tail call both use a different register.
+def tcGPRnotr12 : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3)>;
+
 def tGPROdd : RegisterClass<"ARM", [i32], 32, (add R1, R3, R5, R7, R9, R11)> {
   let AltOrders = [(and tGPROdd, tGPR)];
   let AltOrderSelect = [{
@@ -383,7 +407,7 @@ def CCR : RegisterClass<"ARM", [i32], 32, (add CPSR)> {
 }
 
 // MVE Condition code register.
-def VCCR : RegisterClass<"ARM", [i32, v16i1, v8i1, v4i1], 32, (add VPR)> {
+def VCCR : RegisterClass<"ARM", [i32, v16i1, v8i1, v4i1, v2i1], 32, (add VPR)> {
 //  let CopyCost = -1;  // Don't allow copying of status registers.
 }
 
@@ -555,6 +579,9 @@ def QQPR : RegisterClass<"ARM", [v4i64], 256, (add Tuples2Q)> {
   let AltOrderSelect = [{ return 1; }];
 }
 
+// Same as QQPR but for MVE, containing the 7 register pairs made up from Q0-Q7.
+def MQQPR : RegisterClass<"ARM", [v4i64], 256, (trunc QQPR, 7)>;
+
 // Tuples of 4 D regs that isn't also a pair of Q regs.
 def TuplesOE4D : RegisterTuples<[dsub_0, dsub_1, dsub_2, dsub_3],
                                 [(decimate (shl DPR, 1), 2),
@@ -577,6 +604,9 @@ def QQQQPR : RegisterClass<"ARM", [v8i64], 256, (add Tuples2QQ)> {
   let AltOrders = [(rotl QQQQPR, 8)];
   let AltOrderSelect = [{ return 1; }];
 }
+
+// Same as QQPR but for MVE, containing the 5 register quads made up from Q0-Q7.
+def MQQQQPR : RegisterClass<"ARM", [v8i64], 256, (trunc QQQQPR, 5)>;
 
 
 // Pseudo-registers representing 2-spaced consecutive D registers.

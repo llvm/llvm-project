@@ -10,7 +10,7 @@
 #ifndef __CPUID_H
 #define __CPUID_H
 
-#if !(__x86_64__ || __i386__)
+#if !defined(__x86_64__) && !defined(__i386__)
 #error this header is for x86 only
 #endif
 
@@ -195,13 +195,31 @@
 #define bit_PCONFIG       0x00040000
 #define bit_IBT           0x00100000
 #define bit_AMXBF16       0x00400000
+#define bit_AVX512FP16    0x00800000
 #define bit_AMXTILE       0x01000000
 #define bit_AMXINT8       0x02000000
 
 /* Features in %eax for leaf 7 sub-leaf 1 */
-#define bit_AVXVNNI       0x00000008
+#define bit_SHA512        0x00000001
+#define bit_SM3           0x00000002
+#define bit_SM4           0x00000004
+#define bit_RAOINT        0x00000008
+#define bit_AVXVNNI       0x00000010
 #define bit_AVX512BF16    0x00000020
+#define bit_CMPCCXADD     0x00000080
+#define bit_AMXFP16       0x00200000
 #define bit_HRESET        0x00400000
+#define bit_AVXIFMA       0x00800000
+
+/* Features in %edx for leaf 7 sub-leaf 1 */
+#define bit_AVXVNNIINT8   0x00000010
+#define bit_AVXNECONVERT  0x00000020
+#define bit_AMXCOMPLEX    0x00000100
+#define bit_AVXVNNIINT16  0x00000400
+#define bit_PREFETCHI     0x00004000
+#define bit_USERMSR       0x00008000
+#define bit_AVX10         0x00080000
+#define bit_APXF          0x00200000
 
 /* Features in %eax for leaf 13 sub-leaf 1 */
 #define bit_XSAVEOPT    0x00000001
@@ -231,10 +249,14 @@
 
 /* Features in %ebx for leaf 0x80000008 */
 #define bit_CLZERO      0x00000001
+#define bit_RDPRU       0x00000010
 #define bit_WBNOINVD    0x00000200
 
+/* Features in %ebx for leaf 0x24 */
+#define bit_AVX10_256   0x00020000
+#define bit_AVX10_512   0x00040000
 
-#if __i386__
+#ifdef __i386__
 #define __cpuid(__leaf, __eax, __ebx, __ecx, __edx) \
     __asm("cpuid" : "=a"(__eax), "=b" (__ebx), "=c"(__ecx), "=d"(__edx) \
                   : "0"(__leaf))
@@ -259,10 +281,11 @@
         : "0"(__leaf), "2"(__count))
 #endif
 
-static __inline int __get_cpuid_max (unsigned int __leaf, unsigned int *__sig)
+static __inline unsigned int __get_cpuid_max (unsigned int __leaf,
+                                              unsigned int *__sig)
 {
     unsigned int __eax, __ebx, __ecx, __edx;
-#if __i386__
+#ifdef __i386__
     int __cpuid_supported;
 
     __asm("  pushfl\n"

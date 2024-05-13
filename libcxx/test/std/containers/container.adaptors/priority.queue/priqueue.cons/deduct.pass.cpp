@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <queue>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// <queue>
 
 // template<class Compare, class Container>
 // priority_queue(Compare, Container)
@@ -23,15 +24,28 @@
 // template<class Compare, class Container, class Allocator>
 // priority_queue(Compare, Container, Allocator)
 //     -> priority_queue<typename Container::value_type, Container, Compare>;
+//
+// template<ranges::input_range R, class Compare = less<ranges::range_value_t<R>>>
+//   priority_queue(from_range_t, R&&, Compare = Compare())
+//     -> priority_queue<ranges::range_value_t<R>, vector<ranges::range_value_t<R>>, Compare>; // C++23
+//
+// template<ranges::input_range R, class Compare, class Allocator>
+//   priority_queue(from_range_t, R&&, Compare, Allocator)
+//     -> priority_queue<ranges::range_value_t<R>, vector<ranges::range_value_t<R>, Allocator>,
+//                         Compare>; // C++23
+//
+// template<ranges::input_range R, class Allocator>
+//   priority_queue(from_range_t, R&&, Allocator)
+//     -> priority_queue<ranges::range_value_t<R>, vector<ranges::range_value_t<R>, Allocator>>; // C++23
 
-
+#include <cassert>
+#include <climits> // INT_MAX
+#include <cstddef>
+#include <iterator>
 #include <queue>
 #include <vector>
-#include <iterator>
-#include <cassert>
-#include <cstddef>
-#include <climits> // INT_MAX
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "test_allocator.h"
@@ -104,21 +118,312 @@ int main(int, char**)
     }
 
     {
-//  This one is odd - you can pass an allocator in to use, but the allocator
-//  has to match the type of the one used by the underlying container
-    typedef long double T;
-    typedef std::greater<T> Comp;
-    typedef test_allocator<T> Alloc;
-    typedef std::deque<T, Alloc> Cont;
+        typedef short T;
+        typedef std::greater<T> Comp;
+        typedef test_allocator<T> Alloc;
+        typedef std::deque<T, Alloc> Cont;
+        typedef test_allocator<int> ConvertibleToAlloc;
+        static_assert(std::uses_allocator_v<Cont, ConvertibleToAlloc> &&
+                      !std::is_same_v<typename Cont::allocator_type, ConvertibleToAlloc>);
 
-    Cont c{2,3,0,1};
-    std::priority_queue<T, Cont, Comp> source(Comp(), c);
-    std::priority_queue pri(source, Alloc(2)); // queue(queue &, allocator)
-    static_assert(std::is_same_v<decltype(pri)::value_type, T>, "");
-    static_assert(std::is_same_v<decltype(pri)::container_type, Cont>, "");
-    assert(pri.size() == 4);
-    assert(pri.top() == 0);
+        {
+        Comp comp;
+        Cont cont;
+        std::priority_queue pri(comp, cont, Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Comp comp;
+        Cont cont;
+        std::priority_queue pri(comp, cont, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Comp comp;
+        Cont cont;
+        std::priority_queue pri(comp, std::move(cont), Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Comp comp;
+        Cont cont;
+        std::priority_queue pri(comp, std::move(cont), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
     }
 
-  return 0;
+    {
+        typedef short T;
+        typedef signed char ConvertibleToT;
+        typedef std::greater<T> Comp;
+        typedef test_allocator<T> Alloc;
+        typedef std::deque<T, Alloc> Cont;
+        typedef test_allocator<int> ConvertibleToAlloc;
+        static_assert(std::uses_allocator_v<Cont, ConvertibleToAlloc> &&
+                      !std::is_same_v<typename Cont::allocator_type, ConvertibleToAlloc>);
+
+        {
+        std::priority_queue<T, Cont, Comp> source;
+        std::priority_queue pri(source, Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        std::priority_queue<T, Cont, Comp> source;
+        std::priority_queue pri(source, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        std::priority_queue<T, Cont, Comp> source;
+        std::priority_queue pri(std::move(source), Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        std::priority_queue<T, Cont, Comp> source;
+        std::priority_queue pri(std::move(source), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Cont cont;
+        std::priority_queue pri(Comp(), cont, Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Cont cont;
+        std::priority_queue pri(Comp(), cont, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Cont cont;
+        std::priority_queue pri(Comp(), std::move(cont), Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Cont cont;
+        std::priority_queue pri(Comp(), std::move(cont), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        T a[2] = {};
+        std::priority_queue pri(a, a+2, Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, std::vector<T, Alloc>>>);
+        }
+
+        {
+        T a[2] = {};
+        std::priority_queue pri(a, a+2, Comp(), Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, std::vector<T, Alloc>, Comp>>);
+        }
+
+        {
+        Cont cont;
+        ConvertibleToT a[2] = {};
+        std::priority_queue pri(a, a+2, Comp(), cont, Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Cont cont;
+        ConvertibleToT a[2] = {};
+        std::priority_queue pri(a, a+2, Comp(), cont, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Cont cont;
+        ConvertibleToT a[2] = {};
+        std::priority_queue pri(a, a+2, Comp(), std::move(cont), Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Cont cont;
+        ConvertibleToT a[2] = {};
+        std::priority_queue pri(a, a+2, Comp(), std::move(cont), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+#if TEST_STD_VER >= 23
+        { // (from_range, range)
+          std::priority_queue c(std::from_range, Cont());
+          static_assert(std::is_same_v<decltype(c), std::priority_queue<T>>);
+        }
+
+        { // (from_range, range, compare)
+          std::priority_queue c(std::from_range, Cont(), Comp());
+          static_assert(std::is_same_v<decltype(c), std::priority_queue<T, std::vector<T>, Comp>>);
+        }
+
+        { // (from_range, range, compare, alloc)
+          std::priority_queue c(std::from_range, Cont(), Comp(), Alloc(2));
+          static_assert(std::is_same_v<decltype(c), std::priority_queue<T, std::vector<T, Alloc>, Comp>>);
+        }
+
+        { // (from_range, range, alloc)
+          std::priority_queue c(std::from_range, Cont(), Alloc(2));
+          static_assert(std::is_same_v<decltype(c), std::priority_queue<T, std::vector<T, Alloc>>>);
+        }
+#endif // TEST_STD_VER >= 23
+    }
+
+    // Deduction guides should be SFINAE'd away when given:
+    // - "bad" input iterators (that is, a type not qualifying as an input
+    //   iterator);
+    // - a bad allocator;
+    // - an allocator instead of a comparator;
+    // - an allocator instead of a container;
+    // - an allocator and a container that uses a different allocator.
+    {
+        using Comp = std::less<int>;
+        using Cont = std::vector<int>;
+        using Alloc = std::allocator<int>;
+        using Iter = int*;
+
+        // The only requirement in the Standard is that integral types cannot be
+        // considered input iterators, beyond that it is unspecified.
+        using BadIter = int;
+#ifdef _LIBCPP_VERSION
+        struct OutputIter {
+          using iterator_category = std::output_iterator_tag;
+          using value_type = void;
+          using difference_type = void;
+          using pointer = void;
+          using reference = void;
+
+          const OutputIter& operator*() const { return *this; }
+          const OutputIter& operator++() { return *this; }
+          OutputIter operator++(int) const { return *this; }
+        };
+#endif // _LIBCPP_VERSION
+
+        struct BadAlloc {};
+        using AllocAsComp = Alloc;
+        using AllocAsCont = Alloc;
+        using DiffAlloc = test_allocator<int>;
+
+        // (iter, iter)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter>);
+        // Note: (OutputIter, OutputIter) is interpreted as (comp, cont) and fails on accessing
+        // non-existent typedefs in `OutputIter` (as if it were a container). There is no
+        // requirement to SFINAE away bad containers.
+
+        // (iter, iter, comp)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter, comp)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter, Comp>);
+        LIBCPP_STATIC_ASSERT(SFINAEs_away<std::priority_queue, OutputIter, OutputIter, Comp>);
+        // Note: (iter, iter, ALLOC_as_comp) is allowed -- it just calls (iter, iter, alloc).
+
+        // (iter, iter, comp, cont)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter, comp, cont)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter, Comp, Cont>);
+        LIBCPP_STATIC_ASSERT(SFINAEs_away<std::priority_queue, OutputIter, OutputIter, Comp, Cont>);
+        // Cannot deduce from (iter, iter, ALLOC_as_comp, cont)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, AllocAsComp, Cont>);
+        // Note: (iter, iter, comp, ALLOC_as_cont) is allowed -- it just calls (iter, iter, comp,
+        // alloc).
+
+        // (iter, iter, alloc)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter, Alloc>);
+        LIBCPP_STATIC_ASSERT(SFINAEs_away<std::priority_queue, OutputIter, OutputIter, Alloc>);
+        // Note: (iter, iter, BAD_alloc) is interpreted as (iter, iter, comp) instead and fails upon
+        // instantiation. There is no requirement to SFINAE away bad comparators.
+
+        // (iter, iter, comp, alloc)
+        //
+        // Cannot deduce from (iter, iter, ALLOC_as_comp, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, AllocAsComp, Alloc>);
+        // Note: (iter, iter, comp, BAD_alloc) is interpreted as (iter, iter, comp, cont) instead
+        // and fails upon instantiation. There is no requirement to SFINAE away bad containers.
+
+        // (iter, iter, comp, cont, alloc)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter, comp, cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter, Comp, Cont, Alloc>);
+        LIBCPP_STATIC_ASSERT(
+            SFINAEs_away<std::priority_queue, OutputIter, OutputIter, Comp, Cont, Alloc>);
+        // Cannot deduce from (iter, iter, ALLOC_as_comp, cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, AllocAsComp, Cont, Alloc>);
+        // Cannot deduce from (iter, iter, comp, ALLOC_as_cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, Comp, AllocAsCont, Alloc>);
+        // Cannot deduce from (iter, iter, comp, cont, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, Comp, Cont, BadAlloc>);
+        // Cannot deduce from (iter, iter, comp, cont, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, Comp, Cont, DiffAlloc>);
+
+        // (comp, alloc)
+        //
+        // Cannot deduce from (ALLOC_as_comp, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, AllocAsComp, Alloc>);
+        // Cannot deduce from (comp, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, BadAlloc>);
+
+        // (comp, cont, alloc)
+        //
+        // Cannot deduce from (ALLOC_as_comp, cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, AllocAsComp, Cont, Alloc>);
+        // Cannot deduce from (comp, ALLOC_as_cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, AllocAsCont, Alloc>);
+        // Cannot deduce from (comp, cont, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, Cont, BadAlloc>);
+        // Cannot deduce from (comp, cont, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, Cont, DiffAlloc>);
+
+        // (comp, cont)
+        //
+        // Cannot deduce from (ALLOC_as_comp, cont)
+        static_assert(SFINAEs_away<std::priority_queue, AllocAsComp, Cont>);
+        // Cannot deduce from (comp, ALLOC_as_cont)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, AllocAsCont>);
+
+#if TEST_STD_VER >= 23
+        using Range = RangeT<int>;
+        using BadRange = BadRangeT<int>;
+
+        // (from_range, range)
+        //
+        // Cannot deduce from (from_range, BAD_range)
+        static_assert(SFINAEs_away<std::priority_queue, BadRange>);
+
+        // (from_range, range, compare)
+        //
+        // Cannot deduce from (from_range, BAD_range, compare)
+        static_assert(SFINAEs_away<std::priority_queue, BadRange, Comp>);
+
+        // (from_range, range, compare, alloc)
+        //
+        // Cannot deduce from (from_range, BAD_range, compare, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, BadRange, Comp, Alloc>);
+        // Cannot deduce from (from_range, range, compare, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Range, Comp, BadAlloc>);
+        // Cannot deduce from (from_range, range, compare, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Range, Comp, DiffAlloc>);
+
+        // (from_range, range, alloc)
+        //
+        // Cannot deduce from (from_range, BAD_range, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, BadRange, Alloc>);
+        // Cannot deduce from (from_range, range, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Range, BadAlloc>);
+        // Cannot deduce from (from_range, range, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Range, DiffAlloc>);
+#endif // TEST_STD_VER >= 23
+    }
+
+    return 0;
 }

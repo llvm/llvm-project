@@ -1,4 +1,4 @@
-; RUN: opt -mergefunc -S < %s | FileCheck %s
+; RUN: opt -passes=mergefunc -S < %s | FileCheck %s
 
 define i8 @call_with_range() {
   bitcast i8 0 to i8 ; dummy to make the function large enough
@@ -26,18 +26,18 @@ define i8 @call_different_range() {
   ret i8 %out
 }
 
-define i8 @invoke_with_range() personality i8* undef {
+define i8 @invoke_with_range() personality ptr undef {
   %out = invoke i8 @dummy() to label %next unwind label %lpad, !range !0
 
 next:
   ret i8 %out
 
 lpad:
-  %pad = landingpad { i8*, i32 } cleanup
-  resume { i8*, i32 } zeroinitializer
+  %pad = landingpad { ptr, i32 } cleanup
+  resume { ptr, i32 } zeroinitializer
 }
 
-define i8 @invoke_no_range() personality i8* undef {
+define i8 @invoke_no_range() personality ptr undef {
 ; CHECK-LABEL: @invoke_no_range()
 ; CHECK-NEXT: invoke i8 @dummy
   %out = invoke i8 @dummy() to label %next unwind label %lpad
@@ -46,11 +46,11 @@ next:
   ret i8 %out
 
 lpad:
-  %pad = landingpad { i8*, i32 } cleanup
-  resume { i8*, i32 } zeroinitializer
+  %pad = landingpad { ptr, i32 } cleanup
+  resume { ptr, i32 } zeroinitializer
 }
 
-define i8 @invoke_different_range() personality i8* undef {
+define i8 @invoke_different_range() personality ptr undef {
 ; CHECK-LABEL: @invoke_different_range()
 ; CHECK-NEXT: invoke i8 @dummy
   %out = invoke i8 @dummy() to label %next unwind label %lpad, !range !1
@@ -59,11 +59,11 @@ next:
   ret i8 %out
 
 lpad:
-  %pad = landingpad { i8*, i32 } cleanup
-  resume { i8*, i32 } zeroinitializer
+  %pad = landingpad { ptr, i32 } cleanup
+  resume { ptr, i32 } zeroinitializer
 }
 
-define i8 @invoke_with_same_range() personality i8* undef {
+define i8 @invoke_with_same_range() personality ptr undef {
 ; CHECK-LABEL: @invoke_with_same_range()
 ; CHECK: tail call i8 @invoke_with_range()
   %out = invoke i8 @dummy() to label %next unwind label %lpad, !range !0
@@ -72,8 +72,8 @@ next:
   ret i8 %out
 
 lpad:
-  %pad = landingpad { i8*, i32 } cleanup
-  resume { i8*, i32 } zeroinitializer
+  %pad = landingpad { ptr, i32 } cleanup
+  resume { ptr, i32 } zeroinitializer
 }
 
 define i8 @call_with_same_range() {

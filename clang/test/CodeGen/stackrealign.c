@@ -4,5 +4,5 @@
 // REALIGN: attributes #{{[0-9]+}} = {{{.*}} "stackrealign"
 // NO-REALIGN-NOT: attributes #{{[0-9]+}} = {{{.*}} "stackrealign"
 
-void test1() {
+void test1(void) {
 }

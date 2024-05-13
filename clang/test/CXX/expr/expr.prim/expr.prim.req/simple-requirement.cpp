@@ -72,7 +72,7 @@ struct E {
 };
 
 template<typename T> requires requires(T t) { typename E<T>::non_default_constructible{}; }
-// expected-note@-1 {{because 'typename E<T>::non_default_constructible({})' would be invalid: no matching constructor for initialization of 'typename E<int>::non_default_constructible'}}
+// expected-note@-1 {{because 'typename E<T>::non_default_constructible{}' would be invalid: no matching constructor for initialization of 'typename E<int>::non_default_constructible'}}
 struct r6 {};
 
 using r6i1 = r6<int>;
@@ -88,7 +88,7 @@ using r7i1 = r7<int>;
 // C++ [expr.prim.req.simple] Example
 namespace std_example {
   template<typename T> concept C =
-    requires (T a, T b) { // expected-note{{because substituted constraint expression is ill-formed: argument may not have 'void' type}}
+    requires (T a, T b) { // expected-note{{because 'a' would be invalid: argument may not have 'void' type}}
       a + b; // expected-note{{because 'a + b' would be invalid: invalid operands to binary expression ('int *' and 'int *')}}
     };
 
@@ -104,3 +104,138 @@ class X { virtual ~X(); };
 constexpr bool b = requires (X &x) { static_cast<int(*)[(typeid(x), 0)]>(nullptr); };
 // expected-error@-1{{constraint variable 'x' cannot be used in an evaluated context}}
 // expected-note@-2{{'x' declared here}}
+
+namespace access_checks {
+namespace in_requires_expression {
+template<auto>
+struct A {
+    static constexpr bool foo();
+    static constexpr bool bar();
+    static constexpr bool baz();
+    static constexpr bool faz();
+};
+
+class C{};
+
+class B {
+    void p() {}
+    bool data_member = true;
+    static const bool static_member = true;
+    friend struct A<0>;
+};
+
+template<auto x>
+constexpr bool A<x>::foo() {
+    return requires(B b) { b.p(); };
+}
+static_assert(!A<1>::foo());
+static_assert(A<0>::foo());
+
+template<auto x>
+constexpr bool A<x>::bar() {
+    return requires() { B::static_member; };
+}
+static_assert(!A<1>::bar());
+static_assert(A<0>::bar());
+
+template<auto x>
+constexpr bool A<x>::baz() {
+    return requires(B b) { b.data_member; };
+}
+static_assert(!A<1>::baz());
+static_assert(A<0>::baz());
+
+template<auto x>
+constexpr bool A<x>::faz() {
+    return requires(B a, B b) { 
+      a.p();
+      b.data_member;
+      B::static_member;
+    };
+}
+static_assert(!A<1>::faz());
+static_assert(A<0>::faz());
+} // namespace in_requires_expression
+
+namespace in_concepts {
+// Dependent access does not cause hard errors.
+template<int N> class A;
+
+template <> class A<0> {
+  static void f() {}
+};
+template<int N>
+concept C1 = requires() { A<N>::f(); };
+static_assert(!C1<0>);
+
+template <> class A<1> {
+public: 
+  static void f() {}
+};
+static_assert(C1<1>);
+
+// Non-dependent access to private member is a hard error.
+class B{
+   static void f() {} // expected-note 2{{implicitly declared private here}}
+};
+template<class T>
+concept C2 = requires() { B::f(); }; // expected-error {{'f' is a private member}}
+
+constexpr bool non_template_func() {
+  return requires() {
+      B::f(); // expected-error {{'f' is a private member}}
+  };
+}
+template<int x>
+constexpr bool template_func() {
+  return requires() {
+      A<x>::f();
+  };
+}
+static_assert(!template_func<0>());
+static_assert(template_func<1>());
+} // namespace in_concepts
+
+namespace in_trailing_requires {
+template <class> struct B;
+class A {
+   static void f();
+   friend struct B<short>;
+};
+ 
+template <class T> struct B {
+  static constexpr int index() requires requires{ A::f(); } {
+    return 1;
+  }
+  static constexpr int index() {
+    return 2;
+  }
+};
+
+static_assert(B<short>::index() == 1);
+static_assert(B<int>::index() == 2);
+
+namespace missing_member_function {
+template <class T> struct Use;
+class X { 
+  int a;
+  static int B;
+  friend struct Use<short>;
+};
+template <class T> struct Use {
+  constexpr static int foo() requires requires(X x) { x.a; } {
+    return 1;
+  }
+  constexpr static int bar() requires requires { X::B; } {
+    return 1;
+  }
+};
+
+void test() {
+  // FIXME: Propagate diagnostic.
+  Use<int>::foo(); //expected-error {{invalid reference to function 'foo': constraints not satisfied}}
+  static_assert(Use<short>::foo() == 1);
+}
+} // namespace missing_member_function
+} // namespace in_trailing_requires
+} // namespace access_check

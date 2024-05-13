@@ -1,4 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %flang_fc1
+! RUN: %python %S/test_folding.py %s %flang_fc1
 ! Ensure that lower bounds are accounted for in intrinsic folding;
 ! this is a regression test for a bug in which they were not
 module m
@@ -7,7 +7,7 @@ module m
   integer, parameter :: c(-1:1) = [33, 22, 11]
   integer, parameter :: d(1:3) = [33, 22, 11]
   integer, parameter :: e(-2:0) = ([33, 22, 11])
-  logical, parameter :: test_1 = lbound((a),1)==-1 .and. lbound(b,1)==-1 .and. &
+  logical, parameter :: test_1 = lbound((a),1)==1 .and. lbound(b,1)==-1 .and. &
                                lbound(log(a),1)==1 .and. all(b==0)
   logical, parameter :: test_2 = all(c .eq. d)
   logical, parameter :: test_3 = all(c .eq. e)

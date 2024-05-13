@@ -23,6 +23,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -64,34 +65,44 @@ void AnalyzerOptions::printFormattedEntry(
 ExplorationStrategyKind
 AnalyzerOptions::getExplorationStrategy() const {
   auto K =
-    llvm::StringSwitch<llvm::Optional<ExplorationStrategyKind>>(
-                                                            ExplorationStrategy)
+      llvm::StringSwitch<std::optional<ExplorationStrategyKind>>(
+          ExplorationStrategy)
           .Case("dfs", ExplorationStrategyKind::DFS)
           .Case("bfs", ExplorationStrategyKind::BFS)
-          .Case("unexplored_first",
-                ExplorationStrategyKind::UnexploredFirst)
+          .Case("unexplored_first", ExplorationStrategyKind::UnexploredFirst)
           .Case("unexplored_first_queue",
                 ExplorationStrategyKind::UnexploredFirstQueue)
           .Case("unexplored_first_location_queue",
                 ExplorationStrategyKind::UnexploredFirstLocationQueue)
           .Case("bfs_block_dfs_contents",
                 ExplorationStrategyKind::BFSBlockDFSContents)
-          .Default(None);
-  assert(K.hasValue() && "User mode is invalid.");
-  return K.getValue();
+          .Default(std::nullopt);
+  assert(K && "User mode is invalid.");
+  return *K;
+}
+
+CTUPhase1InliningKind AnalyzerOptions::getCTUPhase1Inlining() const {
+  auto K = llvm::StringSwitch<std::optional<CTUPhase1InliningKind>>(
+               CTUPhase1InliningMode)
+               .Case("none", CTUPhase1InliningKind::None)
+               .Case("small", CTUPhase1InliningKind::Small)
+               .Case("all", CTUPhase1InliningKind::All)
+               .Default(std::nullopt);
+  assert(K && "CTU inlining mode is invalid.");
+  return *K;
 }
 
 IPAKind AnalyzerOptions::getIPAMode() const {
-  auto K = llvm::StringSwitch<llvm::Optional<IPAKind>>(IPAMode)
-          .Case("none", IPAK_None)
-          .Case("basic-inlining", IPAK_BasicInlining)
-          .Case("inlining", IPAK_Inlining)
-          .Case("dynamic", IPAK_DynamicDispatch)
-          .Case("dynamic-bifurcate", IPAK_DynamicDispatchBifurcate)
-          .Default(None);
-  assert(K.hasValue() && "IPA Mode is invalid.");
+  auto K = llvm::StringSwitch<std::optional<IPAKind>>(IPAMode)
+               .Case("none", IPAK_None)
+               .Case("basic-inlining", IPAK_BasicInlining)
+               .Case("inlining", IPAK_Inlining)
+               .Case("dynamic", IPAK_DynamicDispatch)
+               .Case("dynamic-bifurcate", IPAK_DynamicDispatchBifurcate)
+               .Default(std::nullopt);
+  assert(K && "IPA Mode is invalid.");
 
-  return K.getValue();
+  return *K;
 }
 
 bool
@@ -100,16 +111,15 @@ AnalyzerOptions::mayInlineCXXMemberFunction(
   if (getIPAMode() < IPAK_Inlining)
     return false;
 
-  auto K =
-    llvm::StringSwitch<llvm::Optional<CXXInlineableMemberKind>>(
-                                                          CXXMemberInliningMode)
-    .Case("constructors", CIMK_Constructors)
-    .Case("destructors", CIMK_Destructors)
-    .Case("methods", CIMK_MemberFunctions)
-    .Case("none", CIMK_None)
-    .Default(None);
+  auto K = llvm::StringSwitch<std::optional<CXXInlineableMemberKind>>(
+               CXXMemberInliningMode)
+               .Case("constructors", CIMK_Constructors)
+               .Case("destructors", CIMK_Destructors)
+               .Case("methods", CIMK_MemberFunctions)
+               .Case("none", CIMK_None)
+               .Default(std::nullopt);
 
-  assert(K.hasValue() && "Invalid c++ member function inlining mode.");
+  assert(K && "Invalid c++ member function inlining mode.");
 
   return *K >= Param;
 }
@@ -151,12 +161,12 @@ StringRef AnalyzerOptions::getCheckerStringOption(const ento::CheckerBase *C,
 bool AnalyzerOptions::getCheckerBooleanOption(StringRef CheckerName,
                                               StringRef OptionName,
                                               bool SearchInParents) const {
-  auto Ret = llvm::StringSwitch<llvm::Optional<bool>>(
-      getCheckerStringOption(CheckerName, OptionName,
-                             SearchInParents))
-      .Case("true", true)
-      .Case("false", false)
-      .Default(None);
+  auto Ret =
+      llvm::StringSwitch<std::optional<bool>>(
+          getCheckerStringOption(CheckerName, OptionName, SearchInParents))
+          .Case("true", true)
+          .Case("false", false)
+          .Default(std::nullopt);
 
   assert(Ret &&
          "This option should be either 'true' or 'false', and should've been "

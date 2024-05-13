@@ -12,9 +12,8 @@ define i32 @Atomic() {
 ; CHECK-LABEL: Atomic:
 entry:
   %s = alloca %struct.anon, align 4
-  %0 = bitcast %struct.anon* %s to i8*
-  %count = getelementptr inbounds %struct.anon, %struct.anon* %s, i64 0, i32 1
-  store i32 0, i32* %count, align 4
+  %count = getelementptr inbounds %struct.anon, ptr %s, i64 0, i32 1
+  store i32 0, ptr %count, align 4
 ; R6: addiu $[[R0:[0-9a-z]+]], $sp, {{[0-9]+}}
 
 ; ALL: #APP
@@ -27,8 +26,8 @@ entry:
 
 ; ALL: #NO_APP
 
-  %1 = call { i32, i32 } asm sideeffect ".set push\0A.set noreorder\0A1:\0All $0, $2\0Aaddu $1, $0, $3\0Asc $1, $2\0Abeqz $1, 1b\0Aaddu $1, $0, $3\0A.set pop\0A", "=&r,=&r,=*^ZC,Ir,*^ZC,~{memory},~{$1}"(i32* %count, i32 10, i32* %count)
-  %asmresult1.i = extractvalue { i32, i32 } %1, 1
+  %0 = call { i32, i32 } asm sideeffect ".set push\0A.set noreorder\0A1:\0All $0, $2\0Aaddu $1, $0, $3\0Asc $1, $2\0Abeqz $1, 1b\0Aaddu $1, $0, $3\0A.set pop\0A", "=&r,=&r,=*^ZC,Ir,*^ZC,~{memory},~{$1}"(ptr elementtype(i32) %count, i32 10, ptr elementtype(i32) %count)
+  %asmresult1.i = extractvalue { i32, i32 } %0, 1
   %cmp = icmp ne i32 %asmresult1.i, 10
   %conv = zext i1 %cmp to i32
   %call2 = call i32 @f(i32 signext %conv)

@@ -61,10 +61,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-  void initializeSystemZTDCPassPass(PassRegistry&);
-}
-
 namespace {
 
 class SystemZTDCPass : public FunctionPass {

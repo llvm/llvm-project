@@ -97,4 +97,3 @@ sgt	(0,%a0)
 ; CHECK:      sle  (0,%a0)
 ; CHECK-SAME: encoding: [0x5f,0xe8,0x00,0x00]
 sle	(0,%a0)
-

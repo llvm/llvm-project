@@ -16,7 +16,7 @@ define void @foo(i8 %a0) {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movsbl {{.*}}(%rip), %eax
+; X64-NEXT:    movsbl var_580(%rip), %eax
 ; X64-NEXT:    testl $-536870913, %eax # imm = 0xDFFFFFFF
 ; X64-NEXT:    jne .LBB0_1
 ; X64-NEXT:  # %bb.2: # %if.end13
@@ -28,7 +28,7 @@ entry:
   br label %if.end
 
 if.end:
-  %tmp1 = load i8, i8* @var_580, align 1
+  %tmp1 = load i8, ptr @var_580, align 1
   %conv7 = sext i8 %tmp1 to i32
   %conv8 = zext i16 %phitmp to i32
   %mul = shl nuw nsw i32 %conv8, 1

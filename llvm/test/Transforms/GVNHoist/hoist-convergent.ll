@@ -1,4 +1,4 @@
-; RUN: opt -gvn-hoist -S < %s | FileCheck %s
+; RUN: opt -passes=gvn-hoist -S < %s | FileCheck %s
 
 ; Check that convergent calls are not hoisted.
 ;

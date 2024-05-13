@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=arm64-apple-darwin19 -code-model=large -O2 -o - %s | FileCheck %s
 
 ; CHECK: adrp    [[REG1:x[0-9]+]], _bar@GOTPAGE
-; CHECK: ldr     [[REG1]], {{\[}}[[REG1]], _bar@GOTPAGEOFF]
+; CHECK: ldr     [[REG1]], [[[REG1]], _bar@GOTPAGEOFF]
 ; CHECK: blr     [[REG1]]
 
 declare void @bar()

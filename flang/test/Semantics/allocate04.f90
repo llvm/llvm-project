@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for semantic errors in ALLOCATE statements
 
 
@@ -61,7 +61,7 @@ subroutine C933_b(n)
   allocate(u1, u2(2), MOLD = cos(5.+n))
   allocate(u1, u2(2), MOLD = molda)
   allocate(u1, u2(2), MOLD = n1)
-  allocate(u1, u2(2), MOLD = new_line("a"))
+  allocate(u1, u2(2), MOLD = new_line(a="a"))
   allocate(n1%whatever, MOLD = n2(1))
   allocate(p1, p2(2), MOLD = p3)
   allocate(p3%y, p4(2)%y, MOLD = B(5))

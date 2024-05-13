@@ -15,7 +15,9 @@
 //   1. move structured DoConstruct and OmpEndLoopDirective into
 //      OpenMPLoopConstruct. Compilation will not proceed in case of errors
 //      after this pass.
-//   2. TBD
+//   2. Associate declarative OMP allocation directives with their
+//      respective executable allocation directive
+//   3. TBD
 namespace Fortran::semantics {
 
 using namespace parser::literals;
@@ -46,11 +48,22 @@ public:
     } // Block list
   }
 
+  void Post(parser::ExecutionPart &body) { RewriteOmpAllocations(body); }
+
 private:
   template <typename T> T *GetConstructIf(parser::ExecutionPartConstruct &x) {
     if (auto *y{std::get_if<parser::ExecutableConstruct>(&x.u)}) {
       if (auto *z{std::get_if<common::Indirection<T>>(&y->u)}) {
         return &z->value();
+      }
+    }
+    return nullptr;
+  }
+
+  template <typename T> T *GetOmpIf(parser::ExecutionPartConstruct &x) {
+    if (auto *construct{GetConstructIf<parser::OpenMPConstruct>(x)}) {
+      if (auto *omp{std::get_if<T>(&construct->u)}) {
+        return omp;
       }
     }
     return nullptr;
@@ -77,7 +90,11 @@ private:
     auto &dir{std::get<parser::OmpLoopDirective>(beginDir.t)};
 
     nextIt = it;
-    if (++nextIt != block.end()) {
+    while (++nextIt != block.end()) {
+      // Ignore compiler directives.
+      if (GetConstructIf<parser::CompilerDirective>(*nextIt))
+        continue;
+
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
@@ -98,12 +115,44 @@ private:
               "DO loop after the %s directive must have loop control"_err_en_US,
               parser::ToUpperCaseLetters(dir.source.ToString()));
         }
-        return; // found do-loop
+      } else {
+        messages_.Say(dir.source,
+            "A DO loop must follow the %s directive"_err_en_US,
+            parser::ToUpperCaseLetters(dir.source.ToString()));
+      }
+      // If we get here, we either found a loop, or issued an error message.
+      return;
+    }
+  }
+
+  void RewriteOmpAllocations(parser::ExecutionPart &body) {
+    // Rewrite leading declarative allocations so they are nested
+    // within their respective executable allocate directive
+    //
+    // Original:
+    //   ExecutionPartConstruct -> OpenMPDeclarativeAllocate
+    //   ExecutionPartConstruct -> OpenMPDeclarativeAllocate
+    //   ExecutionPartConstruct -> OpenMPExecutableAllocate
+    //
+    // After rewriting:
+    //   ExecutionPartConstruct -> OpenMPExecutableAllocate
+    //     ExecutionPartConstruct -> OpenMPDeclarativeAllocate
+    //     ExecutionPartConstruct -> OpenMPDeclarativeAllocate
+    for (auto it = body.v.rbegin(); it != body.v.rend();) {
+      if (auto *exec = GetOmpIf<parser::OpenMPExecutableAllocate>(*(it++))) {
+        parser::OpenMPDeclarativeAllocate *decl;
+        std::list<parser::OpenMPDeclarativeAllocate> subAllocates;
+        while (it != body.v.rend() &&
+            (decl = GetOmpIf<parser::OpenMPDeclarativeAllocate>(*it))) {
+          subAllocates.push_front(std::move(*decl));
+          it = decltype(it)(body.v.erase(std::next(it).base()));
+        }
+        if (!subAllocates.empty()) {
+          std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
+              exec->t) = {std::move(subAllocates)};
+        }
       }
     }
-    messages_.Say(dir.source,
-        "A DO loop must follow the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(dir.source.ToString()));
   }
 
   parser::Messages &messages_;

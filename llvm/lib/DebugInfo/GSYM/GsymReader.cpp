@@ -23,11 +23,10 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer) :
-    MemBuffer(std::move(Buffer)),
-    Endian(support::endian::system_endianness()) {}
+GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
+    : MemBuffer(std::move(Buffer)), Endian(llvm::endianness::native) {}
 
-  GsymReader::GsymReader(GsymReader &&RHS) = default;
+GsymReader::GsymReader(GsymReader &&RHS) = default;
 
 GsymReader::~GsymReader() = default;
 
@@ -48,7 +47,7 @@ llvm::Expected<GsymReader> GsymReader::copyBuffer(StringRef Bytes) {
 
 llvm::Expected<llvm::gsym::GsymReader>
 GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
-  if (!MemBuffer.get())
+  if (!MemBuffer)
     return createStringError(std::errc::invalid_argument,
                              "invalid memory buffer");
   GsymReader GR(std::move(MemBuffer));
@@ -60,8 +59,7 @@ GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
 
 llvm::Error
 GsymReader::parse() {
-  BinaryStreamReader FileData(MemBuffer->getBuffer(),
-                              support::endian::system_endianness());
+  BinaryStreamReader FileData(MemBuffer->getBuffer(), llvm::endianness::native);
   // Check for the magic bytes. This file format is designed to be mmap'ed
   // into a process and accessed as read only. This is done for performance
   // and efficiency for symbolicating and parsing GSYM data.
@@ -69,14 +67,15 @@ GsymReader::parse() {
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GSYM header");
 
-  const auto HostByteOrder = support::endian::system_endianness();
+  const auto HostByteOrder = llvm::endianness::native;
   switch (Hdr->Magic) {
     case GSYM_MAGIC:
       Endian = HostByteOrder;
       break;
     case GSYM_CIGAM:
       // This is a GSYM file, but not native endianness.
-      Endian = sys::IsBigEndianHost ? support::little : support::big;
+      Endian = sys::IsBigEndianHost ? llvm::endianness::little
+                                    : llvm::endianness::big;
       Swap.reset(new SwappedData);
       break;
     default:
@@ -84,7 +83,7 @@ GsymReader::parse() {
                                "not a GSYM file");
   }
 
-  bool DataIsLittleEndian = HostByteOrder != support::little;
+  bool DataIsLittleEndian = HostByteOrder != llvm::endianness::little;
   // Read a correctly byte swapped header if we need to.
   if (Swap) {
     DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
@@ -206,28 +205,28 @@ const Header &GsymReader::getHeader() const {
   return *Hdr;
 }
 
-Optional<uint64_t> GsymReader::getAddress(size_t Index) const {
+std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   switch (Hdr->AddrOffSize) {
   case 1: return addressForIndex<uint8_t>(Index);
   case 2: return addressForIndex<uint16_t>(Index);
   case 4: return addressForIndex<uint32_t>(Index);
   case 8: return addressForIndex<uint64_t>(Index);
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
-Optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
+std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
   const auto NumAddrInfoOffsets = AddrInfoOffsets.size();
   if (Index < NumAddrInfoOffsets)
     return AddrInfoOffsets[Index];
-  return llvm::None;
+  return std::nullopt;
 }
 
 Expected<uint64_t>
 GsymReader::getAddressIndex(const uint64_t Addr) const {
   if (Addr >= Hdr->BaseAddress) {
     const uint64_t AddrOffset = Addr - Hdr->BaseAddress;
-    Optional<uint64_t> AddrOffsetIndex;
+    std::optional<uint64_t> AddrOffsetIndex;
     switch (Hdr->AddrOffSize) {
     case 1:
       AddrOffsetIndex = getAddressOffsetIndex<uint8_t>(AddrOffset);
@@ -254,41 +253,94 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
 
 }
 
-llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
-  Expected<uint64_t> AddressIndex = getAddressIndex(Addr);
-  if (!AddressIndex)
-    return AddressIndex.takeError();
-  // Address info offsets size should have been checked in parse().
-  assert(*AddressIndex < AddrInfoOffsets.size());
-  auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset), Endian, 4);
-  if (Optional<uint64_t> OptAddr = getAddress(*AddressIndex)) {
-    auto ExpectedFI = FunctionInfo::decode(Data, *OptAddr);
-    if (ExpectedFI) {
-      if (ExpectedFI->Range.contains(Addr) || ExpectedFI->Range.size() == 0)
-        return ExpectedFI;
-      return createStringError(std::errc::invalid_argument,
-                                "address 0x%" PRIx64 " is not in GSYM", Addr);
+llvm::Expected<DataExtractor>
+GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
+                                          uint64_t &FuncStartAddr) const {
+  Expected<uint64_t> ExpectedAddrIdx = getAddressIndex(Addr);
+  if (!ExpectedAddrIdx)
+    return ExpectedAddrIdx.takeError();
+  const uint64_t FirstAddrIdx = *ExpectedAddrIdx;
+  // The AddrIdx is the first index of the function info entries that match
+  // \a Addr. We need to iterate over all function info objects that start with
+  // the same address until we find a range that contains \a Addr.
+  std::optional<uint64_t> FirstFuncStartAddr;
+  const size_t NumAddresses = getNumAddresses();
+  for (uint64_t AddrIdx = FirstAddrIdx; AddrIdx < NumAddresses; ++AddrIdx) {
+    auto ExpextedData = getFunctionInfoDataAtIndex(AddrIdx, FuncStartAddr);
+    // If there was an error, return the error.
+    if (!ExpextedData)
+      return ExpextedData;
+
+    // Remember the first function start address if it hasn't already been set.
+    // If it is already valid, check to see if it matches the first function
+    // start address and only continue if it matches.
+    if (FirstFuncStartAddr.has_value()) {
+      if (*FirstFuncStartAddr != FuncStartAddr)
+        break; // Done with consecutive function entries with same address.
+    } else {
+      FirstFuncStartAddr = FuncStartAddr;
     }
+    // Make sure the current function address ranges contains \a Addr.
+    // Some symbols on Darwin don't have valid sizes, so if we run into a
+    // symbol with zero size, then we have found a match for our address.
+
+    // The first thing the encoding of a FunctionInfo object is the function
+    // size.
+    uint64_t Offset = 0;
+    uint32_t FuncSize = ExpextedData->getU32(&Offset);
+    if (FuncSize == 0 ||
+        AddressRange(FuncStartAddr, FuncStartAddr + FuncSize).contains(Addr))
+      return ExpextedData;
   }
   return createStringError(std::errc::invalid_argument,
-                           "failed to extract address[%" PRIu64 "]",
-                           *AddressIndex);
+                           "address 0x%" PRIx64 " is not in GSYM", Addr);
+}
+
+llvm::Expected<DataExtractor>
+GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
+                                       uint64_t &FuncStartAddr) const {
+  if (AddrIdx >= getNumAddresses())
+    return createStringError(std::errc::invalid_argument,
+                             "invalid address index %" PRIu64, AddrIdx);
+  const uint32_t AddrInfoOffset = AddrInfoOffsets[AddrIdx];
+  assert((Endian == endianness::big || Endian == endianness::little) &&
+         "Endian must be either big or little");
+  StringRef Bytes = MemBuffer->getBuffer().substr(AddrInfoOffset);
+  if (Bytes.empty())
+    return createStringError(std::errc::invalid_argument,
+                             "invalid address info offset 0x%" PRIx32,
+                             AddrInfoOffset);
+  std::optional<uint64_t> OptFuncStartAddr = getAddress(AddrIdx);
+  if (!OptFuncStartAddr)
+    return createStringError(std::errc::invalid_argument,
+                             "failed to extract address[%" PRIu64 "]", AddrIdx);
+  FuncStartAddr = *OptFuncStartAddr;
+  return DataExtractor(Bytes, Endian == llvm::endianness::little, 4);
+}
+
+llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
+  uint64_t FuncStartAddr = 0;
+  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
+    return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
+  else
+    return ExpectedData.takeError();
+}
+
+llvm::Expected<FunctionInfo>
+GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
+  uint64_t FuncStartAddr = 0;
+  if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr))
+    return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
+  else
+    return ExpectedData.takeError();
 }
 
 llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
-  Expected<uint64_t> AddressIndex = getAddressIndex(Addr);
-  if (!AddressIndex)
-    return AddressIndex.takeError();
-  // Address info offsets size should have been checked in parse().
-  assert(*AddressIndex < AddrInfoOffsets.size());
-  auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset), Endian, 4);
-  if (Optional<uint64_t> OptAddr = getAddress(*AddressIndex))
-    return FunctionInfo::lookup(Data, *this, *OptAddr, Addr);
-  return createStringError(std::errc::invalid_argument,
-                           "failed to extract address[%" PRIu64 "]",
-                           *AddressIndex);
+  uint64_t FuncStartAddr = 0;
+  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
+    return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr);
+  else
+    return ExpectedData.takeError();
 }
 
 void GsymReader::dump(raw_ostream &OS) {
@@ -339,7 +391,7 @@ void GsymReader::dump(raw_ostream &OS) {
 
   for (uint32_t I = 0; I < Header.NumAddresses; ++I) {
     OS << "FunctionInfo @ " << HEX32(AddrInfoOffsets[I]) << ": ";
-    if (auto FI = getFunctionInfo(*getAddress(I)))
+    if (auto FI = getFunctionInfoAtIndex(I))
       dump(OS, *FI);
     else
       logAllUnhandledErrors(FI.takeError(), OS, "FunctionInfo:");
@@ -382,7 +434,7 @@ void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
     dump(OS, ChildII, Indent + 2);
 }
 
-void GsymReader::dump(raw_ostream &OS, Optional<FileEntry> FE) {
+void GsymReader::dump(raw_ostream &OS, std::optional<FileEntry> FE) {
   if (FE) {
     // IF we have the file from index 0, then don't print anything
     if (FE->Dir == 0 && FE->Base == 0)

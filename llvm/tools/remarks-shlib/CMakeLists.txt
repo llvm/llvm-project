@@ -9,7 +9,9 @@ if(LLVM_ENABLE_PIC)
     libremarks.cpp
     )
 
-  set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Remarks.exports)
+  if (NOT (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB))
+    set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Remarks.exports)
+  endif()
 
   add_llvm_library(Remarks SHARED INSTALL_WITH_TOOLCHAIN ${SOURCES})
 
@@ -19,7 +21,7 @@ if(LLVM_ENABLE_PIC)
   endif()
   
   install(FILES ${LLVM_MAIN_INCLUDE_DIR}/llvm-c/Remarks.h
-    DESTINATION include/llvm-c
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-c"
     COMPONENT Remarks)
 
   if (APPLE)

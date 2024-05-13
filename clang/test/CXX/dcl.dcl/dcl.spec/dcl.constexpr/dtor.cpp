@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx2a %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected %s
 
 // p3: if the function is a constructor or destructor, its class shall not have
 // any virtual base classes;
@@ -9,40 +10,43 @@ namespace vbase {
   };
 }
 
-// p3: its function-body shall not enclose
-//  -- a goto statement
-//  -- an identifier label
-//  -- a variable of non-literal type or of static or thread storage duration
 namespace contents {
   struct A {
     constexpr ~A() {
-      goto x; // expected-error {{statement not allowed in constexpr function}}
+      return;
+      goto x; // cxx2a-warning {{use of this statement in a constexpr function is a C++23 extension}}
       x: ;
     }
   };
   struct B {
     constexpr ~B() {
-      x: ; // expected-error {{statement not allowed in constexpr function}}
+    x:; // cxx2a-warning {{use of this statement in a constexpr function is a C++23 extension}}
     }
   };
-  struct Nonlit { Nonlit(); }; // expected-note {{not literal}}
+  struct Nonlit { // cxx2a-note {{'Nonlit' is not literal because}}
+    Nonlit();
+  };
   struct C {
     constexpr ~C() {
-      Nonlit nl; // expected-error {{non-literal}}
+      return;
+      Nonlit nl; // cxx2a-error {{variable of non-literal type 'Nonlit' cannot be defined in a constexpr function before C++23}}
     }
   };
   struct D {
     constexpr ~D() {
-      static int a; // expected-error {{static variable}}
+      return;
+      static int a; // cxx2a-warning {{definition of a static variable in a constexpr function is a C++23 extension}}
     }
   };
   struct E {
     constexpr ~E() {
-      thread_local int e; // expected-error {{thread_local variable}}
+      return;
+      thread_local int e; // cxx2a-warning {{definition of a thread_local variable in a constexpr function is a C++23 extension}}
     }
   };
   struct F {
     constexpr ~F() {
+      return;
       extern int f;
     }
   };
@@ -54,12 +58,12 @@ namespace subobject {
   struct A {
     ~A();
   };
-  struct B : A { // expected-note {{here}}
-    constexpr ~B() {} // expected-error {{destructor cannot be declared constexpr because base class 'subobject::A' does not have a constexpr destructor}}
+  struct B : A { // cxx2a-note {{here}}
+    constexpr ~B() {} // cxx2a-error {{destructor cannot be declared constexpr because base class 'A' does not have a constexpr destructor}}
   };
   struct C {
-    A a; // expected-note {{here}}
-    constexpr ~C() {} // expected-error {{destructor cannot be declared constexpr because data member 'a' does not have a constexpr destructor}}
+    A a; // cxx2a-note {{here}}
+    constexpr ~C() {} // cxx2a-error {{destructor cannot be declared constexpr because data member 'a' does not have a constexpr destructor}}
   };
   struct D : A {
     A a;

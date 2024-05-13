@@ -16,9 +16,13 @@
 // RUN: %env_asan_opts=log_path=%t.log not %run %t 2> %t.out
 // RUN: FileCheck %s --check-prefix=CHECK-ERROR < %t.log.*
 
-// Invalid log_path.
-// RUN: %env_asan_opts=log_path=/dev/null/INVALID not %run %t 2> %t.out
+// Invalid log_path in existing directory.
+// RUN: %env_asan_opts=log_path=/INVALID not %run %t 2> %t.out
 // RUN: FileCheck %s --check-prefix=CHECK-INVALID < %t.out
+
+// Directory of log_path can't be created.
+// RUN: %env_asan_opts=log_path=/dev/null/INVALID not %run %t 2> %t.out
+// RUN: FileCheck %s --check-prefix=CHECK-BAD-DIR < %t.out
 
 // Too long log_path.
 // RUN: %env_asan_opts=log_path=`for((i=0;i<10000;i++)); do echo -n $i; done` \
@@ -31,7 +35,7 @@
 // RUN: not cat %t.log.*
 
 // FIXME: log_path is not supported on Windows yet.
-// XFAIL: windows-msvc
+// XFAIL: target={{.*windows-msvc.*}}
 
 #include <stdlib.h>
 #include <string.h>
@@ -44,5 +48,6 @@ int main(int argc, char **argv) {
   return res;
 }
 // CHECK-ERROR: ERROR: AddressSanitizer
-// CHECK-INVALID: ERROR: Can't open file: /dev/null/INVALID
+// CHECK-INVALID: ERROR: Can't open file: /INVALID
+// CHECK-BAD-DIR: ERROR: Can't create directory: /dev/null
 // CHECK-LONG: ERROR: Path is too long: 01234

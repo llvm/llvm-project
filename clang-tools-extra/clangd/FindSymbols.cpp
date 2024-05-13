@@ -15,17 +15,13 @@
 #include "index/Index.h"
 #include "support/Logger.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
-#include "clang/Index/IndexingAction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include <limits>
+#include <optional>
 #include <tuple>
 
 #define DEBUG_TYPE "FindSymbols"
@@ -45,8 +41,8 @@ struct ScoredSymbolGreater {
 
 // Returns true if \p Query can be found as a sub-sequence inside \p Scope.
 bool approximateScopeMatch(llvm::StringRef Scope, llvm::StringRef Query) {
-  assert(Scope.empty() || Scope.endswith("::"));
-  assert(Query.empty() || Query.endswith("::"));
+  assert(Scope.empty() || Scope.ends_with("::"));
+  assert(Query.empty() || Query.ends_with("::"));
   while (!Scope.empty() && !Query.empty()) {
     auto Colons = Scope.find("::");
     assert(Colons != llvm::StringRef::npos);
@@ -224,15 +220,15 @@ std::string getSymbolDetail(ASTContext &Ctx, const NamedDecl &ND) {
   return std::move(OS.str());
 }
 
-llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
+std::optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
-  SourceLocation BeginLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
-  SourceLocation EndLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getEndLoc()));
+  SourceLocation BeginLoc = ND.getBeginLoc();
+  SourceLocation EndLoc = ND.getEndLoc();
   const auto SymbolRange =
       toHalfOpenFileRange(SM, Ctx.getLangOpts(), {BeginLoc, EndLoc});
   if (!SymbolRange)
-    return llvm::None;
+    return std::nullopt;
 
   index::SymbolInfo SymInfo = index::getSymbolInfo(&ND);
   // FIXME: This is not classifying constructors, destructors and operators
@@ -330,7 +326,7 @@ class DocumentOutline {
     //  - a macro symbol child of this (either new or previously created)
     //  - this scope itself, if it *is* the macro symbol or is nested within it
     SymBuilder &inMacro(const syntax::Token &Tok, const SourceManager &SM,
-                        llvm::Optional<syntax::TokenBuffer::Expansion> Exp) {
+                        std::optional<syntax::TokenBuffer::Expansion> Exp) {
       if (llvm::is_contained(EnclosingMacroLoc, Tok.location()))
         return *this;
       // If there's an existing child for this macro, we expect it to be last.
@@ -483,7 +479,7 @@ private:
     if (!llvm::isa<NamedDecl>(D))
       return VisitKind::No;
 
-    if (auto Func = llvm::dyn_cast<FunctionDecl>(D)) {
+    if (auto *Func = llvm::dyn_cast<FunctionDecl>(D)) {
       // Some functions are implicit template instantiations, those should be
       // ignored.
       if (auto *Info = Func->getTemplateSpecializationInfo()) {
@@ -523,9 +519,135 @@ private:
   ParsedAST &AST;
 };
 
-std::vector<DocumentSymbol> collectDocSymbols(ParsedAST &AST) {
-  return DocumentOutline(AST).build();
+struct PragmaMarkSymbol {
+  DocumentSymbol DocSym;
+  bool IsGroup;
+};
+
+/// Merge in `PragmaMarkSymbols`, sorted ascending by range, into the given
+/// `DocumentSymbol` tree.
+void mergePragmas(DocumentSymbol &Root, ArrayRef<PragmaMarkSymbol> Pragmas) {
+  while (!Pragmas.empty()) {
+    // We'll figure out where the Pragmas.front() should go.
+    PragmaMarkSymbol P = std::move(Pragmas.front());
+    Pragmas = Pragmas.drop_front();
+    DocumentSymbol *Cur = &Root;
+    while (Cur->range.contains(P.DocSym.range)) {
+      bool Swapped = false;
+      for (auto &C : Cur->children) {
+        // We assume at most 1 child can contain the pragma (as pragmas are on
+        // a single line, and children have disjoint ranges).
+        if (C.range.contains(P.DocSym.range)) {
+          Cur = &C;
+          Swapped = true;
+          break;
+        }
+      }
+      // Cur is the parent of P since none of the children contain P.
+      if (!Swapped)
+        break;
+    }
+    // Pragma isn't a group so we can just insert it and we are done.
+    if (!P.IsGroup) {
+      Cur->children.emplace_back(std::move(P.DocSym));
+      continue;
+    }
+    // Pragma is a group, so we need to figure out where it terminates:
+    // - If the next Pragma is not contained in Cur, P owns all of its
+    //   parent's children which occur after P.
+    // - If the next pragma is contained in Cur but actually belongs to one
+    //   of the parent's children, we temporarily skip over it and look at
+    //   the next pragma to decide where we end.
+    // - Otherwise nest all of its parent's children which occur after P but
+    //   before the next pragma.
+    bool TerminatedByNextPragma = false;
+    for (auto &NextPragma : Pragmas) {
+      // If we hit a pragma outside of Cur, the rest will be outside as well.
+      if (!Cur->range.contains(NextPragma.DocSym.range))
+        break;
+
+      // NextPragma cannot terminate P if it is nested inside a child, look for
+      // the next one.
+      if (llvm::any_of(Cur->children, [&NextPragma](const auto &Child) {
+            return Child.range.contains(NextPragma.DocSym.range);
+          }))
+        continue;
+
+      // Pragma owns all the children between P and NextPragma
+      auto It = llvm::partition(Cur->children,
+                                [&P, &NextPragma](const auto &S) -> bool {
+                                  return !(P.DocSym.range < S.range &&
+                                           S.range < NextPragma.DocSym.range);
+                                });
+      P.DocSym.children.assign(make_move_iterator(It),
+                               make_move_iterator(Cur->children.end()));
+      Cur->children.erase(It, Cur->children.end());
+      TerminatedByNextPragma = true;
+      break;
+    }
+    if (!TerminatedByNextPragma) {
+      // P is terminated by the end of current symbol, hence it owns all the
+      // children after P.
+      auto It = llvm::partition(Cur->children, [&P](const auto &S) -> bool {
+        return !(P.DocSym.range < S.range);
+      });
+      P.DocSym.children.assign(make_move_iterator(It),
+                               make_move_iterator(Cur->children.end()));
+      Cur->children.erase(It, Cur->children.end());
+    }
+    // Update the range for P to cover children and append to Cur.
+    for (DocumentSymbol &Sym : P.DocSym.children)
+      unionRanges(P.DocSym.range, Sym.range);
+    Cur->children.emplace_back(std::move(P.DocSym));
+  }
 }
+
+PragmaMarkSymbol markToSymbol(const PragmaMark &P) {
+  StringRef Name = StringRef(P.Trivia).trim();
+  bool IsGroup = false;
+  // "-\s+<group name>" or "<name>" after an initial trim. The former is
+  // considered a group, the latter just a mark. Like Xcode, we don't consider
+  // `-Foo` to be a group (space(s) after the `-` is required).
+  //
+  // We need to include a name here, otherwise editors won't properly render the
+  // symbol.
+  StringRef MaybeGroupName = Name;
+  if (MaybeGroupName.consume_front("-") &&
+      (MaybeGroupName.ltrim() != MaybeGroupName || MaybeGroupName.empty())) {
+    Name = MaybeGroupName.empty() ? "(unnamed group)" : MaybeGroupName.ltrim();
+    IsGroup = true;
+  } else if (Name.empty()) {
+    Name = "(unnamed mark)";
+  }
+  DocumentSymbol Sym;
+  Sym.name = Name.str();
+  Sym.kind = SymbolKind::File;
+  Sym.range = P.Rng;
+  Sym.selectionRange = P.Rng;
+  return {Sym, IsGroup};
+}
+
+std::vector<DocumentSymbol> collectDocSymbols(ParsedAST &AST) {
+  std::vector<DocumentSymbol> Syms = DocumentOutline(AST).build();
+
+  const auto &PragmaMarks = AST.getMarks();
+  if (PragmaMarks.empty())
+    return Syms;
+
+  std::vector<PragmaMarkSymbol> Pragmas;
+  Pragmas.reserve(PragmaMarks.size());
+  for (const auto &P : PragmaMarks)
+    Pragmas.push_back(markToSymbol(P));
+  Range EntireFile = {
+      {0, 0},
+      {std::numeric_limits<int>::max(), std::numeric_limits<int>::max()}};
+  DocumentSymbol Root;
+  Root.children = std::move(Syms);
+  Root.range = EntireFile;
+  mergePragmas(Root, llvm::ArrayRef(Pragmas));
+  return Root.children;
+}
+
 } // namespace
 
 llvm::Expected<std::vector<DocumentSymbol>> getDocumentSymbols(ParsedAST &AST) {

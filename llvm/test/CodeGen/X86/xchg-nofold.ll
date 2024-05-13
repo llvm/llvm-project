@@ -6,14 +6,13 @@
 %"struct.std::__atomic_base" = type { i8 }
 
 ; CHECK-LABEL: _Z3fooRSt6atomicIbEb
-define zeroext i1 @_Z3fooRSt6atomicIbEb(%"struct.std::atomic"* nocapture dereferenceable(1) %a, i1 returned zeroext %b) nounwind {
+define zeroext i1 @_Z3fooRSt6atomicIbEb(ptr nocapture dereferenceable(1) %a, i1 returned zeroext %b) nounwind {
 ; CHECK-LABEL: _Z3fooRSt6atomicIbEb:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    movq %rdi, %rcx
 ; CHECK-NEXT:    shrq $3, %rcx
-; CHECK-NEXT:    movb 2147450880(%rcx), %cl
+; CHECK-NEXT:    movzbl 2147450880(%rcx), %ecx
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.1:
@@ -25,20 +24,19 @@ define zeroext i1 @_Z3fooRSt6atomicIbEb(%"struct.std::atomic"* nocapture derefer
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    xchgb %cl, (%rdi)
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    callq __asan_report_store1
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq __asan_report_store1@PLT
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 entry:
   %frombool.i.i = zext i1 %b to i8
-  %_M_i.i.i = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* %a, i64 0, i32 0, i32 0, i32 0
-  %0 = ptrtoint i8* %_M_i.i.i to i64
+  %0 = ptrtoint ptr %a to i64
   %1 = lshr i64 %0, 3
   %2 = add i64 %1, 2147450880
-  %3 = inttoptr i64 %2 to i8*
-  %4 = load i8, i8* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i8, ptr %3
   %5 = icmp ne i8 %4, 0
   br i1 %5, label %6, label %11
 
@@ -54,7 +52,7 @@ entry:
   unreachable
 
 ; <label>:11:                                     ; preds = %6, %entry
-  store atomic i8 %frombool.i.i, i8* %_M_i.i.i seq_cst, align 1
+  store atomic i8 %frombool.i.i, ptr %a seq_cst, align 1
   ret i1 %b
 }
 

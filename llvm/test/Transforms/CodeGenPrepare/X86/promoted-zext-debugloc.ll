@@ -1,17 +1,17 @@
 ; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --match-full-lines
   
 ; Make sure the promoted zext doesn't get a debug location associated.
-; CHECK: %promoted = zext i8 %t to i64
+; CHECK: %promoted1 = zext i8 %t to i64
 
-define void @patatino(i8* %p, i64* %q, i32 %b, i32* %addr) !dbg !6 {
+define void @patatino(ptr %p, ptr %q, i32 %b, ptr %addr) !dbg !6 {
 entry:
-  %t = load i8, i8* %p, align 1, !dbg !8
+  %t = load i8, ptr %p, align 1, !dbg !8
   %zextt = zext i8 %t to i32, !dbg !9
   %add = add nuw i32 %zextt, %b, !dbg !10
   %add2 = add nuw i32 %zextt, 12, !dbg !11
-  store i32 %add, i32* %addr, align 4, !dbg !12
+  store i32 %add, ptr %addr, align 4, !dbg !12
   %s = zext i32 %add2 to i64, !dbg !13
-  store i64 %s, i64* %q, align 4, !dbg !14
+  store i64 %s, ptr %q, align 4, !dbg !14
   ret void, !dbg !15
 }
 

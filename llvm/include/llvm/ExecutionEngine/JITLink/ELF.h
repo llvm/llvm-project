@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_ELF_H
 #define LLVM_EXECUTIONENGINE_JITLINK_ELF_H
 
-#include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
 namespace llvm {

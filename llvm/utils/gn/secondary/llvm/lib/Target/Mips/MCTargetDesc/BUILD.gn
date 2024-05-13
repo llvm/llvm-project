@@ -51,9 +51,11 @@ static_library("MCTargetDesc") {
   deps = [
     ":MipsGenAsmWriter",
     ":MipsGenMCCodeEmitter",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target/Mips/TargetInfo",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [

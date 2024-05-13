@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=100 -unroll-threshold=10 -unroll-max-percent-threshold-boost=200 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-max-iteration-count-to-analyze=100 -unroll-threshold=10 -unroll-max-percent-threshold-boost=200 | FileCheck %s
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=100 -unroll-threshold=10 -unroll-max-percent-threshold-boost=200 | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -13,22 +13,22 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-LABEL: @branch_folded
 ; CHECK-NOT: br i1 %
 ; CHECK: ret i32
-define i32 @branch_folded(i32* noalias nocapture readonly %b) {
+define i32 @branch_folded(ptr noalias nocapture readonly %b) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.inc, %entry
   %iv.0 = phi i64 [ 0, %entry ], [ %iv.1, %for.inc ]
   %r.0 = phi i32 [ 0, %entry ], [ %r.1, %for.inc ]
-  %arrayidx1 = getelementptr inbounds [10 x i32], [10 x i32]* @known_constant, i64 0, i64 %iv.0
-  %x1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [10 x i32], ptr @known_constant, i64 0, i64 %iv.0
+  %x1 = load i32, ptr %arrayidx1, align 4
   %cmp = icmp eq i32 %x1, 0
   %iv.1 = add nuw nsw i64 %iv.0, 1
   br i1 %cmp, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv.0
-  %x2 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv.0
+  %x2 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %x2, %r.0
   br label %for.inc
 
@@ -50,9 +50,9 @@ entry:
   br label %while.body
 
 while.body:
-  %iv.0 = phi i32* [ getelementptr inbounds ([10 x i32], [10 x i32]* @known_constant, i64 0, i64 0), %entry ], [ %iv.1, %while.body ]
-  %iv.1 = getelementptr inbounds i32, i32* %iv.0, i64 1
-  %exitcond = icmp eq i32* %iv.1, getelementptr inbounds ([10 x i32], [10 x i32]* @known_constant, i64 0, i64 9)
+  %iv.0 = phi ptr [ @known_constant, %entry ], [ %iv.1, %while.body ]
+  %iv.1 = getelementptr inbounds i32, ptr %iv.0, i64 1
+  %exitcond = icmp eq ptr %iv.1, getelementptr inbounds ([10 x i32], ptr @known_constant, i64 0, i64 9)
   br i1 %exitcond, label %loop.exit, label %while.body
 
 loop.exit:
@@ -62,16 +62,16 @@ loop.exit:
 ; Check that we don't crash when we analyze ptrtoint cast.
 ; CHECK-LABEL: @ptrtoint_cast_crash
 ; CHECK:   ret void
-define void @ptrtoint_cast_crash(i8 * %a) {
+define void @ptrtoint_cast_crash(ptr %a) {
 entry:
-  %limit = getelementptr i8, i8* %a, i64 512
+  %limit = getelementptr i8, ptr %a, i64 512
   br label %loop.body
 
 loop.body:
-  %iv.0 = phi i8* [ %a, %entry ], [ %iv.1, %loop.body ]
-  %cast = ptrtoint i8* %iv.0 to i64
-  %iv.1 = getelementptr inbounds i8, i8* %iv.0, i64 1
-  %exitcond = icmp ne i8* %iv.1, %limit
+  %iv.0 = phi ptr [ %a, %entry ], [ %iv.1, %loop.body ]
+  %cast = ptrtoint ptr %iv.0 to i64
+  %iv.1 = getelementptr inbounds i8, ptr %iv.0, i64 1
+  %exitcond = icmp ne ptr %iv.1, %limit
   br i1 %exitcond, label %loop.body, label %loop.exit
 
 loop.exit:

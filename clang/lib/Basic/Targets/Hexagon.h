@@ -15,8 +15,8 @@
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace targets {
@@ -24,7 +24,6 @@ namespace targets {
 // Hexagon abstract base class
 class LLVM_LIBRARY_VISIBILITY HexagonTargetInfo : public TargetInfo {
 
-  static const Builtin::Info BuiltinInfo[];
   static const char *const GCCRegNames[];
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   std::string CPU;
@@ -113,7 +112,7 @@ public:
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   static const char *getHexagonCPUSuffix(StringRef Name);
 
@@ -139,7 +138,7 @@ public:
     return CPU.find('t') != std::string::npos;
   }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

@@ -11,47 +11,47 @@ declare zeroext i1 @return_i1()
 
 ; Can we handle an explicit relocation slot (in the form of an alloca) given
 ; to the statepoint?
-define i32 addrspace(1)* @test(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define ptr addrspace(1) @test(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq return_i1
+; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    movq (%rsp), %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %alloca = alloca i32 addrspace(1)*, align 8
-  store i32 addrspace(1)* %ptr, i32 addrspace(1)** %alloca
-  call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)** %alloca)]
-  %rel = load i32 addrspace(1)*, i32 addrspace(1)** %alloca
-  ret i32 addrspace(1)* %rel
+  %alloca = alloca ptr addrspace(1), align 8
+  store ptr addrspace(1) %ptr, ptr %alloca
+  call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr %alloca)]
+  %rel = load ptr addrspace(1), ptr %alloca
+  ret ptr addrspace(1) %rel
 }
 
 ; Can we handle an alloca as a deopt value?
-define i32 addrspace(1)* @test2(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define ptr addrspace(1) @test2(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq return_i1
+; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %alloca = alloca i32 addrspace(1)*, align 8
-  store i32 addrspace(1)* %ptr, i32 addrspace(1)** %alloca
-  call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 addrspace(1)** %alloca)]
-  ret i32 addrspace(1)* null
+  %alloca = alloca ptr addrspace(1), align 8
+  store ptr addrspace(1) %ptr, ptr %alloca
+  call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["deopt" (ptr %alloca)]
+  ret ptr addrspace(1) null
 }
 
-declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 
 
 ; CHECK-LABEL: .section .llvm_stackmaps

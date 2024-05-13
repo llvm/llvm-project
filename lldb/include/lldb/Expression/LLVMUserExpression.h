@@ -40,7 +40,7 @@ public:
   static bool classof(const Expression *obj) { return obj->isA(&ID); }
 
   // The IRPasses struct is filled in by a runtime after an expression is
-  // compiled and can be used to to run fixups/analysis passes as required.
+  // compiled and can be used to run fixups/analysis passes as required.
   // EarlyPasses are run on the generated module before lldb runs its own IR
   // fixups and inserts instrumentation code/pointer checks. LatePasses are run
   // after the module has been processed by llvm, before the module is
@@ -52,7 +52,7 @@ public:
   };
 
   LLVMUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                     llvm::StringRef prefix, lldb::LanguageType language,
+                     llvm::StringRef prefix, SourceLanguage language,
                      ResultType desired_type,
                      const EvaluateExpressionOptions &options);
   ~LLVMUserExpression() override;

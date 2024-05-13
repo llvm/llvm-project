@@ -1,4 +1,4 @@
-//===- IROutliner.h - Extract similar IR regions into functions ------------==//
+//===- IROutliner.h - Extract similar IR regions into functions --*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,14 +43,13 @@
 
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
-#include <set>
 
 struct OutlinableGroup;
 
 namespace llvm {
+using namespace CallingConv;
 using namespace IRSimilarity;
 
 class Module;
@@ -63,7 +62,7 @@ class OptimizationRemarkEmitter;
 /// mapping from the extracted function arguments to overall function arguments.
 struct OutlinableRegion {
   /// Describes the region of code.
-  IRSimilarityCandidate *Candidate;
+  IRSimilarityCandidate *Candidate = nullptr;
 
   /// If this region is outlined, the front and back IRInstructionData could
   /// potentially become invalidated if the only new instruction is a call.
@@ -72,11 +71,11 @@ struct OutlinableRegion {
   IRInstructionData *NewBack = nullptr;
 
   /// The number of extracted inputs from the CodeExtractor.
-  unsigned NumExtractedInputs;
+  unsigned NumExtractedInputs = 0;
 
   /// The corresponding BasicBlock with the appropriate stores for this
   /// OutlinableRegion in the overall function.
-  unsigned OutputBlockNum;
+  unsigned OutputBlockNum = -1;
 
   /// Mapping the extracted argument number to the argument number in the
   /// overall function.  Since there will be inputs, such as elevated constants
@@ -85,6 +84,26 @@ struct OutlinableRegion {
   /// track of which extracted argument maps to which overall argument.
   DenseMap<unsigned, unsigned> ExtractedArgToAgg;
   DenseMap<unsigned, unsigned> AggArgToExtracted;
+
+  /// Values in the outlined functions will often be replaced by arguments. When
+  /// finding corresponding values from one region to another, the found value
+  /// will be the value the argument previously replaced.  This structure maps
+  /// any replaced values for the region to the aggregate aggregate argument
+  /// in the overall function.
+  DenseMap<Value *, Value *> RemappedArguments;
+
+  /// Marks whether we need to change the order of the arguments when mapping
+  /// the old extracted function call to the new aggregate outlined function
+  /// call.
+  bool ChangedArgOrder = false;
+
+  /// Marks whether this region ends in a branch, there is special handling
+  /// required for the following basic blocks in this case.
+  bool EndsInBranch = false;
+
+  /// The PHIBlocks with their corresponding return block based on the return
+  /// value as the key.
+  DenseMap<Value *, BasicBlock *> PHIBlocks;
 
   /// Mapping of the argument number in the deduplicated function
   /// to a given constant, which is used when creating the arguments to the call
@@ -147,6 +166,23 @@ struct OutlinableRegion {
   /// containing the called function.
   void reattachCandidate();
 
+  /// Find a corresponding value for \p V in similar OutlinableRegion \p Other.
+  ///
+  /// \param Other [in] - The OutlinableRegion to find the corresponding Value
+  /// in.
+  /// \param V [in] - The Value to look for in the other region.
+  /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
+  Value *findCorrespondingValueIn(const OutlinableRegion &Other, Value *V);
+
+  /// Find a corresponding BasicBlock for \p BB in similar OutlinableRegion \p Other.
+  ///
+  /// \param Other [in] - The OutlinableRegion to find the corresponding
+  /// BasicBlock in.
+  /// \param BB [in] - The BasicBlock to look for in the other region.
+  /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
+  BasicBlock *findCorrespondingBlockIn(const OutlinableRegion &Other,
+                                       BasicBlock *BB);
+
   /// Get the size of the code removed from the region.
   ///
   /// \param [in] TTI - The TargetTransformInfo for the parent function.
@@ -165,7 +201,14 @@ public:
   IROutliner(function_ref<TargetTransformInfo &(Function &)> GTTI,
              function_ref<IRSimilarityIdentifier &(Module &)> GIRSI,
              function_ref<OptimizationRemarkEmitter &(Function &)> GORE)
-      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {}
+      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {
+    
+    // Check that the DenseMap implementation has not changed.
+    assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
+           "DenseMapInfo<unsigned>'s empty key isn't -1!");
+    assert(DenseMapInfo<unsigned>::getTombstoneKey() == (unsigned)-2 &&
+           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+  }
   bool run(Module &M);
 
 private:
@@ -175,6 +218,16 @@ private:
   /// \param [in] M - The module to outline from.
   /// \returns The number of Functions created.
   unsigned doOutline(Module &M);
+
+  /// Check whether an OutlinableRegion is incompatible with code already
+  /// outlined. OutlinableRegions are incomptaible when there are overlapping
+  /// instructions, or code that has not been recorded has been added to the
+  /// instructions.
+  ///
+  /// \param [in] Region - The OutlinableRegion to check for conflicts with
+  /// already outlined code.
+  /// \returns whether the region can safely be outlined.
+  bool isCompatibleWithAlreadyOutlinedCode(const OutlinableRegion &Region);
 
   /// Remove all the IRSimilarityCandidates from \p CandidateVec that have
   /// instructions contained in a previously outlined region and put the
@@ -299,12 +352,10 @@ private:
   /// be analyzed for similarity.  This is needed as there may be instruction we
   /// can identify as having similarity, but are more complicated to outline.
   struct InstructionAllowed : public InstVisitor<InstructionAllowed, bool> {
-    InstructionAllowed() {}
+    InstructionAllowed() = default;
 
-    // TODO: Determine a scheme to resolve when the label is similar enough.
-    bool visitBranchInst(BranchInst &BI) { return false; }
-    // TODO: Determine a scheme to resolve when the labels are similar enough.
-    bool visitPHINode(PHINode &PN) { return false; }
+    bool visitBranchInst(BranchInst &BI) { return EnableBranches; }
+    bool visitPHINode(PHINode &PN) { return EnableBranches; }
     // TODO: Handle allocas.
     bool visitAllocaInst(AllocaInst &AI) { return false; }
     // VAArg instructions are not allowed since this could cause difficulty when
@@ -321,12 +372,39 @@ private:
     bool visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return true; }
     // TODO: Handle specific intrinsics individually from those that can be
     // handled.
-    bool IntrinsicInst(IntrinsicInst &II) { return false; }
+    bool IntrinsicInst(IntrinsicInst &II) { return EnableIntrinsics; }
     // We only handle CallInsts that are not indirect, since we cannot guarantee
     // that they have a name in these cases.
     bool visitCallInst(CallInst &CI) {
       Function *F = CI.getCalledFunction();
-      if (!F || CI.isIndirectCall() || !F->hasName())
+      bool IsIndirectCall = CI.isIndirectCall();
+      if (IsIndirectCall && !EnableIndirectCalls)
+        return false;
+      if (!F && !IsIndirectCall)
+        return false;
+      // Returning twice can cause issues with the state of the function call
+      // that were not expected when the function was used, so we do not include
+      // the call in outlined functions.
+      if (CI.canReturnTwice())
+        return false;
+      // TODO: Update the outliner to capture whether the outlined function
+      // needs these extra attributes.
+
+      // Functions marked with the swifttailcc and tailcc calling conventions
+      // require special handling when outlining musttail functions.  The
+      // calling convention must be passed down to the outlined function as
+      // well. Further, there is special handling for musttail calls as well,
+      // requiring a return call directly after.  For now, the outliner does not
+      // support this.
+      bool IsTailCC = CI.getCallingConv() == CallingConv::SwiftTail ||
+                      CI.getCallingConv() == CallingConv::Tail;
+      if (IsTailCC && !EnableMustTailCalls)
+        return false;
+      if (CI.isMustTailCall() && !EnableMustTailCalls)
+        return false;
+      // The outliner can only handle musttail items if it is also accompanied
+      // by the tailcc or swifttailcc calling convention.
+      if (CI.isMustTailCall() && !IsTailCC)
         return false;
       return true;
     }
@@ -341,6 +419,21 @@ private:
     // TODO: Handle interblock similarity.
     bool visitTerminator(Instruction &I) { return false; }
     bool visitInstruction(Instruction &I) { return true; }
+
+    // The flag variable that marks whether we should allow branch instructions
+    // to be outlined.
+    bool EnableBranches = false;
+
+    // The flag variable that marks whether we should allow indirect calls
+    // to be outlined.
+    bool EnableIndirectCalls = true;
+
+    // The flag variable that marks whether we should allow intrinsics
+    // instructions to be outlined.
+    bool EnableIntrinsics = false;
+
+    // The flag variable that marks whether we should allow musttail calls.
+    bool EnableMustTailCalls = false;
   };
 
   /// A InstVisitor used to exclude certain instructions from being outlined.

@@ -1,6 +1,5 @@
-"Collection of tools for displaying bit representation of numbers."""
+"Collection of tools for displaying bit representation of numbers." ""
 
-from __future__ import print_function
 
 def binary(n, width=None):
     """
@@ -28,7 +27,7 @@ def twos_complement(n, width):
     Return a list of (0|1)'s for the binary representation of a width-bit two's
     complement numeral system of an integer n which may be negative.
     """
-    val = 2**(width - 1)
+    val = 2 ** (width - 1)
     if n >= 0:
         if n > (val - 1):
             return None
@@ -40,6 +39,7 @@ def twos_complement(n, width):
             return None
         # It is safe to represent n (a negative int) with width-bits.
         return binary(val * 2 - abs(n))
+
 
 # print binary(0xABCD)
 # [1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1]
@@ -59,7 +59,7 @@ def positions(width):
     """Helper function returning a list describing the bit positions.
     Bit positions greater than 99 are truncated to 2 digits, for example,
     100 -> 00 and 127 -> 27."""
-    return ['{0:2}'.format(i)[-2:] for i in reversed(range(width))]
+    return ["{0:2}".format(i)[-2:] for i in reversed(range(width))]
 
 
 def utob(debugger, command_line, result, dict):
@@ -90,8 +90,8 @@ def utob(debugger, command_line, result, dict):
         return
     if verbose and width > 0:
         pos = positions(width)
-        print(' ' + ' '.join(pos))
-    print(' %s' % str(bits))
+        print(" " + " ".join(pos))
+    print(" %s" % str(bits))
 
 
 def itob(debugger, command_line, result, dict):
@@ -120,5 +120,5 @@ def itob(debugger, command_line, result, dict):
         return
     if verbose and width > 0:
         pos = positions(width)
-        print(' ' + ' '.join(pos))
-    print(' %s' % str(bits))
+        print(" " + " ".join(pos))
+    print(" %s" % str(bits))

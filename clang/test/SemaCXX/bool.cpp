@@ -1,6 +1,11 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-constant-conversion %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-constant-conversion \
-// RUN:     -Wno-deprecated -Wdeprecated-increment-bool %s
+// RUN: %clang_cc1 %std_cxx98-14 -fsyntax-only -verify=expected,precxx17 -Wno-constant-conversion %s
+// RUN: %clang_cc1 %std_cxx98-14 -fsyntax-only -verify=expected,precxx17 -Wno-constant-conversion -Wno-deprecated -Wdeprecated-increment-bool %s
+// RUN: %clang_cc1 %std_cxx17- -fsyntax-only -verify=expected,cxx17 -Wno-constant-conversion -Wno-deprecated -Wdeprecated-increment-bool %s
+
+// RUN: %clang_cc1 %std_cxx98-14 -fsyntax-only -verify=expected,precxx17 -Wno-constant-conversion %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %std_cxx98-14 -fsyntax-only -verify=expected,precxx17 -Wno-constant-conversion -Wno-deprecated -Wdeprecated-increment-bool %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %std_cxx17- -fsyntax-only -verify=expected,cxx17 -Wno-constant-conversion -Wno-deprecated -Wdeprecated-increment-bool %s -fexperimental-new-constant-interpreter
+
 
 // Bool literals can be enum values.
 enum {
@@ -11,8 +16,10 @@ enum {
 // bool cannot be decremented, and gives a warning on increment
 void test(bool b)
 {
-  ++b; // expected-warning {{incrementing expression of type bool is deprecated}}
-  b++; // expected-warning {{incrementing expression of type bool is deprecated}}
+  ++b; // precxx17-warning {{incrementing expression of type bool is deprecated}} \
+          cxx17-error {{ISO C++17 does not allow incrementing expression of type bool}}
+  b++; // precxx17-warning {{incrementing expression of type bool is deprecated}} \
+          cxx17-error {{ISO C++17 does not allow incrementing expression of type bool}}
   --b; // expected-error {{cannot decrement expression of type bool}}
   b--; // expected-error {{cannot decrement expression of type bool}}
 

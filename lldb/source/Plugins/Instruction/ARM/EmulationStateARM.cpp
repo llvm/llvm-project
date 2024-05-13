@@ -20,48 +20,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-EmulationStateARM::EmulationStateARM() : m_gpr(), m_vfp_regs(), m_memory() {
+EmulationStateARM::EmulationStateARM() : m_vfp_regs(), m_memory() {
   ClearPseudoRegisters();
 }
 
-EmulationStateARM::~EmulationStateARM() {}
-
-bool EmulationStateARM::LoadPseudoRegistersFromFrame(StackFrame &frame) {
-  RegisterContext *reg_ctx = frame.GetRegisterContext().get();
-  bool success = true;
-  uint32_t reg_num;
-
-  for (int i = dwarf_r0; i < dwarf_r0 + 17; ++i) {
-    reg_num =
-        reg_ctx->ConvertRegisterKindToRegisterNumber(eRegisterKindDWARF, i);
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_num);
-    RegisterValue reg_value;
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-      m_gpr[i - dwarf_r0] = reg_value.GetAsUInt32();
-    } else
-      success = false;
-  }
-
-  for (int i = dwarf_d0; i < dwarf_d0 + 32; ++i) {
-    reg_num =
-        reg_ctx->ConvertRegisterKindToRegisterNumber(eRegisterKindDWARF, i);
-    RegisterValue reg_value;
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_num);
-
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-      uint64_t value = reg_value.GetAsUInt64();
-      uint32_t idx = i - dwarf_d0;
-      if (i < 16) {
-        m_vfp_regs.s_regs[idx * 2] = (uint32_t)value;
-        m_vfp_regs.s_regs[idx * 2 + 1] = (uint32_t)(value >> 32);
-      } else
-        m_vfp_regs.d_regs[idx - 16] = value;
-    } else
-      success = false;
-  }
-
-  return success;
-}
+EmulationStateARM::~EmulationStateARM() = default;
 
 bool EmulationStateARM::StorePseudoRegisterValue(uint32_t reg_num,
                                                  uint64_t value) {
@@ -92,12 +55,12 @@ uint64_t EmulationStateARM::ReadPseudoRegisterValue(uint32_t reg_num,
     value = m_gpr[reg_num - dwarf_r0];
   else if ((dwarf_s0 <= reg_num) && (reg_num <= dwarf_s31)) {
     uint32_t idx = reg_num - dwarf_s0;
-    value = m_vfp_regs.d_regs[idx];
+    value = m_vfp_regs.s_regs[idx];
   } else if ((dwarf_d0 <= reg_num) && (reg_num <= dwarf_d31)) {
     uint32_t idx = reg_num - dwarf_d0;
     if (idx < 16)
       value = (uint64_t)m_vfp_regs.s_regs[idx * 2] |
-              ((uint64_t)m_vfp_regs.s_regs[idx * 2 + 1] >> 32);
+              ((uint64_t)m_vfp_regs.s_regs[idx * 2 + 1] << 32);
     else
       value = m_vfp_regs.d_regs[idx - 16];
   } else
@@ -155,7 +118,7 @@ size_t EmulationStateARM::ReadPseudoMemory(
       return 0;
 
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
-      value = llvm::ByteSwap_32(value);
+      value = llvm::byteswap<uint32_t>(value);
     *((uint32_t *)dst) = value;
   } else if (length == 8) {
     uint32_t value1 = pseudo_state->ReadFromPseudoAddress(addr, success);
@@ -167,8 +130,8 @@ size_t EmulationStateARM::ReadPseudoMemory(
       return 0;
 
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig) {
-      value1 = llvm::ByteSwap_32(value1);
-      value2 = llvm::ByteSwap_32(value2);
+      value1 = llvm::byteswap<uint32_t>(value1);
+      value2 = llvm::byteswap<uint32_t>(value2);
     }
     ((uint32_t *)dst)[0] = value1;
     ((uint32_t *)dst)[1] = value2;
@@ -194,7 +157,7 @@ size_t EmulationStateARM::WritePseudoMemory(
     uint32_t value;
     memcpy (&value, dst, sizeof (uint32_t));
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
-      value = llvm::ByteSwap_32(value);
+      value = llvm::byteswap<uint32_t>(value);
 
     pseudo_state->StoreToPseudoAddress(addr, value);
     return length;
@@ -205,8 +168,8 @@ size_t EmulationStateARM::WritePseudoMemory(
     memcpy(&value2, static_cast<const uint8_t *>(dst) + sizeof(uint32_t),
            sizeof(uint32_t));
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig) {
-      value1 = llvm::ByteSwap_32(value1);
-      value2 = llvm::ByteSwap_32(value2);
+      value1 = llvm::byteswap<uint32_t>(value1);
+      value2 = llvm::byteswap<uint32_t>(value2);
     }
 
     pseudo_state->StoreToPseudoAddress(addr, value1);
@@ -251,31 +214,69 @@ bool EmulationStateARM::WritePseudoRegister(
                                                 reg_value.GetAsUInt64());
 }
 
-bool EmulationStateARM::CompareState(EmulationStateARM &other_state) {
+bool EmulationStateARM::CompareState(EmulationStateARM &other_state,
+                                     Stream &out_stream) {
   bool match = true;
 
   for (int i = 0; match && i < 17; ++i) {
-    if (m_gpr[i] != other_state.m_gpr[i])
+    if (m_gpr[i] != other_state.m_gpr[i]) {
       match = false;
+      out_stream.Printf("r%d: 0x%x != 0x%x\n", i, m_gpr[i],
+                        other_state.m_gpr[i]);
+    }
   }
 
   for (int i = 0; match && i < 32; ++i) {
-    if (m_vfp_regs.s_regs[i] != other_state.m_vfp_regs.s_regs[i])
+    if (m_vfp_regs.s_regs[i] != other_state.m_vfp_regs.s_regs[i]) {
       match = false;
+      out_stream.Printf("s%d: 0x%x != 0x%x\n", i, m_vfp_regs.s_regs[i],
+                        other_state.m_vfp_regs.s_regs[i]);
+    }
   }
 
   for (int i = 0; match && i < 16; ++i) {
-    if (m_vfp_regs.d_regs[i] != other_state.m_vfp_regs.d_regs[i])
+    if (m_vfp_regs.d_regs[i] != other_state.m_vfp_regs.d_regs[i]) {
       match = false;
+      out_stream.Printf("d%d: 0x%" PRIx64 " != 0x%" PRIx64 "\n", i + 16,
+                        m_vfp_regs.d_regs[i], other_state.m_vfp_regs.d_regs[i]);
+    }
+  }
+
+  // other_state is the expected state. If it has memory, check it.
+  if (!other_state.m_memory.empty() && m_memory != other_state.m_memory) {
+    match = false;
+    out_stream.Printf("memory does not match\n");
+    out_stream.Printf("got memory:\n");
+    for (auto p : m_memory)
+      out_stream.Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
+    out_stream.Printf("expected memory:\n");
+    for (auto p : other_state.m_memory)
+      out_stream.Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
   }
 
   return match;
 }
 
+bool EmulationStateARM::LoadRegistersStateFromDictionary(
+    OptionValueDictionary *reg_dict, char kind, int first_reg, int num) {
+  StreamString sstr;
+  for (int i = 0; i < num; ++i) {
+    sstr.Clear();
+    sstr.Printf("%c%d", kind, i);
+    OptionValueSP value_sp = reg_dict->GetValueForKey(sstr.GetString());
+    if (value_sp.get() == nullptr)
+      return false;
+    uint64_t reg_value = value_sp->GetValueAs<uint64_t>().value_or(0);
+    StorePseudoRegisterValue(first_reg + i, reg_value);
+  }
+
+  return true;
+}
+
 bool EmulationStateARM::LoadStateFromDictionary(
     OptionValueDictionary *test_data) {
-  static ConstString memory_key("memory");
-  static ConstString registers_key("registers");
+  static constexpr llvm::StringLiteral memory_key("memory");
+  static constexpr llvm::StringLiteral registers_key("registers");
 
   if (!test_data)
     return false;
@@ -285,8 +286,8 @@ bool EmulationStateARM::LoadStateFromDictionary(
   // Load memory, if present.
 
   if (value_sp.get() != nullptr) {
-    static ConstString address_key("address");
-    static ConstString data_key("data");
+    static constexpr llvm::StringLiteral address_key("address");
+    static constexpr llvm::StringLiteral data_key("data");
     uint64_t start_address = 0;
 
     OptionValueDictionary *mem_dict = value_sp->GetAsDictionary();
@@ -294,7 +295,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
     if (value_sp.get() == nullptr)
       return false;
     else
-      start_address = value_sp->GetUInt64Value();
+      start_address = value_sp->GetValueAs<uint64_t>().value_or(0);
 
     value_sp = mem_dict->GetValueForKey(data_key);
     OptionValueArray *mem_array = value_sp->GetAsArray();
@@ -308,7 +309,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
       value_sp = mem_array->GetValueAtIndex(i);
       if (value_sp.get() == nullptr)
         return false;
-      uint64_t value = value_sp->GetUInt64Value();
+      uint64_t value = value_sp->GetValueAs<uint64_t>().value_or(0);
       StoreToPseudoAddress(address, value);
       address = address + 4;
     }
@@ -321,36 +322,24 @@ bool EmulationStateARM::LoadStateFromDictionary(
   // Load General Registers
 
   OptionValueDictionary *reg_dict = value_sp->GetAsDictionary();
+  if (!LoadRegistersStateFromDictionary(reg_dict, 'r', dwarf_r0, 16))
+    return false;
 
-  StreamString sstr;
-  for (int i = 0; i < 16; ++i) {
-    sstr.Clear();
-    sstr.Printf("r%d", i);
-    ConstString reg_name(sstr.GetString());
-    value_sp = reg_dict->GetValueForKey(reg_name);
-    if (value_sp.get() == nullptr)
-      return false;
-    uint64_t reg_value = value_sp->GetUInt64Value();
-    StorePseudoRegisterValue(dwarf_r0 + i, reg_value);
-  }
-
-  static ConstString cpsr_name("cpsr");
+  static constexpr llvm::StringLiteral cpsr_name("cpsr");
   value_sp = reg_dict->GetValueForKey(cpsr_name);
   if (value_sp.get() == nullptr)
     return false;
-  StorePseudoRegisterValue(dwarf_cpsr, value_sp->GetUInt64Value());
+  StorePseudoRegisterValue(dwarf_cpsr,
+                           value_sp->GetValueAs<uint64_t>().value_or(0));
 
   // Load s/d Registers
-  for (int i = 0; i < 32; ++i) {
-    sstr.Clear();
-    sstr.Printf("s%d", i);
-    ConstString reg_name(sstr.GetString());
-    value_sp = reg_dict->GetValueForKey(reg_name);
-    if (value_sp.get() == nullptr)
-      return false;
-    uint64_t reg_value = value_sp->GetUInt64Value();
-    StorePseudoRegisterValue(dwarf_s0 + i, reg_value);
-  }
+  // To prevent you giving both types in a state and overwriting
+  // one or the other, we'll expect to get either all S registers,
+  // or all D registers. Not a mix of the two.
+  bool found_s_registers =
+      LoadRegistersStateFromDictionary(reg_dict, 's', dwarf_s0, 32);
+  bool found_d_registers =
+      LoadRegistersStateFromDictionary(reg_dict, 'd', dwarf_d0, 32);
 
-  return true;
+  return found_s_registers != found_d_registers;
 }

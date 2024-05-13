@@ -6,7 +6,6 @@
 
 #include "pseudo_barrier.h"
 #include <vector>
-using namespace std;
 
 #include <pthread.h>
 

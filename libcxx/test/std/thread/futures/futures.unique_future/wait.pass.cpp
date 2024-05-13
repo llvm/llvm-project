@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03
 
 // <future>
@@ -15,8 +15,10 @@
 
 // void wait() const;
 
-#include <future>
 #include <cassert>
+#include <chrono>
+#include <future>
+#include <ratio>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

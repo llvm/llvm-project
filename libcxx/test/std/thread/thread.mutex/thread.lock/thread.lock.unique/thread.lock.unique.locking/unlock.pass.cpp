@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 // <mutex>
 
@@ -14,8 +14,9 @@
 
 // void unlock();
 
-#include <mutex>
 #include <cassert>
+#include <mutex>
+#include <system_error>
 
 #include "test_macros.h"
 

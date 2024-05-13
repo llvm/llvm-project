@@ -13,26 +13,23 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
+#include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace llvm {
 
-class Timer;
 class TimerGroup;
 class raw_ostream;
 
 class TimeRecord {
-  double WallTime;               ///< Wall clock time elapsed in seconds.
-  double UserTime;               ///< User time elapsed.
-  double SystemTime;             ///< System time elapsed.
-  ssize_t MemUsed;               ///< Memory allocated (in bytes).
-  uint64_t InstructionsExecuted; ///< Number of instructions executed
+  double WallTime = 0.0;             ///< Wall clock time elapsed in seconds.
+  double UserTime = 0.0;             ///< User time elapsed.
+  double SystemTime = 0.0;           ///< System time elapsed.
+  ssize_t MemUsed = 0;               ///< Memory allocated (in bytes).
+  uint64_t InstructionsExecuted = 0; ///< Number of instructions executed
 public:
-  TimeRecord()
-      : WallTime(0), UserTime(0), SystemTime(0), MemUsed(0),
-        InstructionsExecuted(0) {}
+  TimeRecord() = default;
 
   /// Get the current time and memory usage.  If Start is true we get the memory
   /// usage before the time, otherwise we get time before memory usage.  This
@@ -107,7 +104,7 @@ public:
   ~Timer();
 
   /// Create an uninitialized timer, client must use 'init'.
-  explicit Timer() {}
+  explicit Timer() = default;
   void init(StringRef TimerName, StringRef TimerDescription);
   void init(StringRef TimerName, StringRef TimerDescription, TimerGroup &tg);
 
@@ -232,10 +229,10 @@ public:
   /// Prints all timers as JSON key/value pairs.
   static const char *printAllJSONValues(raw_ostream &OS, const char *delim);
 
-  /// Ensure global timer group lists are initialized. This function is mostly
-  /// used by the Statistic code to influence the construction and destruction
-  /// order of the global timer lists.
-  static void ConstructTimerLists();
+  /// Ensure global objects required for statistics printing are initialized.
+  /// This function is used by the Statistic code to ensure correct order of
+  /// global constructors and destructors.
+  static void constructForStatistics();
 
   /// This makes the default group unmanaged, and lets the user manage the
   /// group's lifetime.

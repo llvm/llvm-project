@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InputFiles.h"
+#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -38,28 +38,22 @@ public:
                 uint64_t val) const override;
 
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
 };
 } // namespace
 
 X86::X86() {
   copyRel = R_386_COPY;
   gotRel = R_386_GLOB_DAT;
-  noneRel = R_386_NONE;
   pltRel = R_386_JUMP_SLOT;
   iRelativeRel = R_386_IRELATIVE;
   relativeRel = R_386_RELATIVE;
   symbolicRel = R_386_32;
+  tlsDescRel = R_386_TLS_DESC;
   tlsGotRel = R_386_TLS_TPOFF;
   tlsModuleIndexRel = R_386_TLS_DTPMOD32;
   tlsOffsetRel = R_386_TLS_DTPOFF32;
+  gotBaseSymInGotPlt = true;
   pltHeaderSize = 16;
   pltEntrySize = 16;
   ipltEntrySize = 16;
@@ -71,19 +65,12 @@ X86::X86() {
 }
 
 int X86::getTlsGdRelaxSkip(RelType type) const {
-  return 2;
+  // TLSDESC relocations are processed separately. See relaxTlsGdToLe below.
+  return type == R_386_TLS_GOTDESC || type == R_386_TLS_DESC_CALL ? 1 : 2;
 }
 
 RelExpr X86::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
-  // There are 4 different TLS variable models with varying degrees of
-  // flexibility and performance. LocalExec and InitialExec models are fast but
-  // less-flexible models. If they are in use, we set DF_STATIC_TLS flag in the
-  // dynamic section to let runtime know about that.
-  if (type == R_386_TLS_LE || type == R_386_TLS_LE_32 || type == R_386_TLS_IE ||
-      type == R_386_TLS_GOTIE)
-    config->hasStaticTlsModel = true;
-
   switch (type) {
   case R_386_8:
   case R_386_16:
@@ -143,6 +130,10 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
     // the byte, we can determine whether the instruction uses the operand as an
     // absolute address (R_GOT) or a register-relative address (R_GOTPLT).
     return (loc[-1] & 0xc7) == 0x5 ? R_GOT : R_GOTPLT;
+  case R_386_TLS_GOTDESC:
+    return R_TLSDESC_GOTPLT;
+  case R_386_TLS_DESC_CALL:
+    return R_TLSDESC_CALL;
   case R_386_TLS_GOTIE:
     return R_GOTPLT;
   case R_386_GOTOFF:
@@ -167,7 +158,8 @@ RelExpr X86::adjustTlsExpr(RelType type, RelExpr expr) const {
   case R_RELAX_TLS_GD_TO_IE:
     return R_RELAX_TLS_GD_TO_IE_GOTPLT;
   case R_RELAX_TLS_GD_TO_LE:
-    return R_RELAX_TLS_GD_TO_LE_NEG;
+    return type == R_386_TLS_GD ? R_RELAX_TLS_GD_TO_LE_NEG
+                                : R_RELAX_TLS_GD_TO_LE;
   }
 }
 
@@ -218,7 +210,7 @@ void X86::writePltHeader(uint8_t *buf) const {
 
 void X86::writePlt(uint8_t *buf, const Symbol &sym,
                    uint64_t pltEntryAddr) const {
-  unsigned relOff = in.relaPlt->entsize * sym.pltIndex;
+  unsigned relOff = in.relaPlt->entsize * sym.getPltIdx();
   if (config->isPic) {
     const uint8_t inst[] = {
         0xff, 0xa3, 0, 0, 0, 0, // jmp *foo@GOT(%ebx)
@@ -250,16 +242,40 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_386_PC16:
     return SignExtend64<16>(read16le(buf));
   case R_386_32:
+  case R_386_GLOB_DAT:
   case R_386_GOT32:
   case R_386_GOT32X:
   case R_386_GOTOFF:
   case R_386_GOTPC:
+  case R_386_IRELATIVE:
   case R_386_PC32:
   case R_386_PLT32:
+  case R_386_RELATIVE:
+  case R_386_TLS_GOTDESC:
+  case R_386_TLS_DESC_CALL:
+  case R_386_TLS_DTPMOD32:
+  case R_386_TLS_DTPOFF32:
   case R_386_TLS_LDO_32:
+  case R_386_TLS_LDM:
+  case R_386_TLS_IE:
+  case R_386_TLS_IE_32:
   case R_386_TLS_LE:
+  case R_386_TLS_LE_32:
+  case R_386_TLS_GD:
+  case R_386_TLS_GD_32:
+  case R_386_TLS_GOTIE:
+  case R_386_TLS_TPOFF:
+  case R_386_TLS_TPOFF32:
     return SignExtend64<32>(read32le(buf));
+  case R_386_TLS_DESC:
+    return SignExtend64<32>(read32le(buf + 4));
+  case R_386_NONE:
+  case R_386_JUMP_SLOT:
+    // These relocations are defined as not having an implicit addend.
+    return 0;
   default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
     return 0;
   }
 }
@@ -303,6 +319,8 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_386_PC32:
   case R_386_PLT32:
   case R_386_RELATIVE:
+  case R_386_TLS_GOTDESC:
+  case R_386_TLS_DESC_CALL:
   case R_386_TLS_DTPMOD32:
   case R_386_TLS_DTPOFF32:
   case R_386_TLS_GD:
@@ -317,45 +335,85 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkInt(loc, val, 32, rel);
     write32le(loc, val);
     break;
+  case R_386_TLS_DESC:
+    // The addend is stored in the second 32-bit word.
+    write32le(loc + 4, val);
+    break;
   default:
     llvm_unreachable("unknown relocation");
   }
 }
 
-void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &, uint64_t val) const {
-  // Convert
-  //   leal x@tlsgd(, %ebx, 1),
-  //   call __tls_get_addr@plt
-  // to
-  //   movl %gs:0,%eax
-  //   subl $x@ntpoff,%eax
-  const uint8_t inst[] = {
-      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
-      0x81, 0xe8, 0, 0, 0, 0,             // subl Val(%ebx), %eax
-  };
-  memcpy(loc - 3, inst, sizeof(inst));
-  write32le(loc + 5, val);
+static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+  if (rel.type == R_386_TLS_GD) {
+    // Convert (loc[-2] == 0x04)
+    //   leal x@tlsgd(, %ebx, 1), %eax
+    //   call ___tls_get_addr@plt
+    // or
+    //   leal x@tlsgd(%reg), %eax
+    //   call *___tls_get_addr@got(%reg)
+    // to
+    const uint8_t inst[] = {
+        0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
+        0x81, 0xe8, 0,    0,    0,    0,    // subl x@ntpoff(%ebx), %eax
+    };
+    uint8_t *w = loc[-2] == 0x04 ? loc - 3 : loc - 2;
+    memcpy(w, inst, sizeof(inst));
+    write32le(w + 8, val);
+  } else if (rel.type == R_386_TLS_GOTDESC) {
+    // Convert leal x@tlsdesc(%ebx), %eax to leal x@ntpoff, %eax.
+    //
+    // Note: call *x@tlsdesc(%eax) may not immediately follow this instruction.
+    if (memcmp(loc - 2, "\x8d\x83", 2)) {
+      error(getErrorLocation(loc - 2) +
+            "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
+      return;
+    }
+    loc[-1] = 0x05;
+    write32le(loc, val);
+  } else {
+    // Convert call *x@tlsdesc(%eax) to xchg ax, ax.
+    assert(rel.type == R_386_TLS_DESC_CALL);
+    loc[0] = 0x66;
+    loc[1] = 0x90;
+  }
 }
 
-void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &, uint64_t val) const {
-  // Convert
-  //   leal x@tlsgd(, %ebx, 1),
-  //   call __tls_get_addr@plt
-  // to
-  //   movl %gs:0, %eax
-  //   addl x@gotntpoff(%ebx), %eax
-  const uint8_t inst[] = {
-      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
-      0x03, 0x83, 0, 0, 0, 0,             // addl Val(%ebx), %eax
-  };
-  memcpy(loc - 3, inst, sizeof(inst));
-  write32le(loc + 5, val);
+static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+  if (rel.type == R_386_TLS_GD) {
+    // Convert (loc[-2] == 0x04)
+    //   leal x@tlsgd(, %ebx, 1), %eax
+    //   call ___tls_get_addr@plt
+    // or
+    //   leal x@tlsgd(%reg), %eax
+    //   call *___tls_get_addr@got(%reg)
+    const uint8_t inst[] = {
+        0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
+        0x03, 0x83, 0,    0,    0,    0,    // addl x@gottpoff(%ebx), %eax
+    };
+    uint8_t *w = loc[-2] == 0x04 ? loc - 3 : loc - 2;
+    memcpy(w, inst, sizeof(inst));
+    write32le(w + 8, val);
+  } else if (rel.type == R_386_TLS_GOTDESC) {
+    // Convert leal x@tlsdesc(%ebx), %eax to movl x@gotntpoff(%ebx), %eax.
+    if (memcmp(loc - 2, "\x8d\x83", 2)) {
+      error(getErrorLocation(loc - 2) +
+            "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
+      return;
+    }
+    loc[-2] = 0x8b;
+    write32le(loc, val);
+  } else {
+    // Convert call *x@tlsdesc(%eax) to xchg ax, ax.
+    assert(rel.type == R_386_TLS_DESC_CALL);
+    loc[0] = 0x66;
+    loc[1] = 0x90;
+  }
 }
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
@@ -392,26 +450,66 @@ void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   write32le(loc, val);
 }
 
-void X86::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (rel.type == R_386_TLS_LDO_32) {
     write32le(loc, val);
     return;
   }
 
+  if (loc[4] == 0xe8) {
+    // Convert
+    //   leal x(%reg),%eax
+    //   call ___tls_get_addr@plt
+    // to
+    const uint8_t inst[] = {
+        0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0,%eax
+        0x90,                               // nop
+        0x8d, 0x74, 0x26, 0x00,             // leal 0(%esi,1),%esi
+    };
+    memcpy(loc - 2, inst, sizeof(inst));
+    return;
+  }
+
   // Convert
-  //   leal foo(%reg),%eax
-  //   call ___tls_get_addr
+  //   leal x(%reg),%eax
+  //   call *___tls_get_addr@got(%reg)
   // to
-  //   movl %gs:0,%eax
-  //   nop
-  //   leal 0(%esi,1),%esi
   const uint8_t inst[] = {
       0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0,%eax
-      0x90,                               // nop
-      0x8d, 0x74, 0x26, 0x00,             // leal 0(%esi,1),%esi
+      0x8d, 0xb6, 0x00, 0x00, 0x00, 0x00, // leal (%esi),%esi
   };
   memcpy(loc - 2, inst, sizeof(inst));
+}
+
+void X86::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  for (const Relocation &rel : sec.relocs()) {
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
+                             secAddr + rel.offset, *rel.sym, rel.expr),
+        32);
+    switch (rel.expr) {
+    case R_RELAX_TLS_GD_TO_IE_GOTPLT:
+      relaxTlsGdToIe(loc, rel, val);
+      continue;
+    case R_RELAX_TLS_GD_TO_LE:
+    case R_RELAX_TLS_GD_TO_LE_NEG:
+      relaxTlsGdToLe(loc, rel, val);
+      continue;
+    case R_RELAX_TLS_LD_TO_LE:
+      relaxTlsLdToLe(loc, rel, val);
+      break;
+    case R_RELAX_TLS_IE_TO_LE:
+      relaxTlsIeToLe(loc, rel, val);
+      continue;
+    default:
+      relocate(loc, rel, val);
+      break;
+    }
+  }
 }
 
 // If Intel Indirect Branch Tracking is enabled, we have to emit special PLT
@@ -434,7 +532,7 @@ IntelIBT::IntelIBT() { pltHeaderSize = 0; }
 
 void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   uint64_t va =
-      in.ibtPlt->getVA() + IBTPltHeaderSize + s.pltIndex * pltEntrySize;
+      in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
   write32le(buf, va);
 }
 
@@ -532,7 +630,7 @@ void RetpolinePic::writePltHeader(uint8_t *buf) const {
 
 void RetpolinePic::writePlt(uint8_t *buf, const Symbol &sym,
                             uint64_t pltEntryAddr) const {
-  unsigned relOff = in.relaPlt->entsize * sym.pltIndex;
+  unsigned relOff = in.relaPlt->entsize * sym.getPltIdx();
   const uint8_t insn[] = {
       0x50,                            // pushl %eax
       0x8b, 0x83, 0,    0,    0,    0, // mov foo@GOT(%ebx), %eax
@@ -591,7 +689,7 @@ void RetpolineNoPic::writePltHeader(uint8_t *buf) const {
 
 void RetpolineNoPic::writePlt(uint8_t *buf, const Symbol &sym,
                               uint64_t pltEntryAddr) const {
-  unsigned relOff = in.relaPlt->entsize * sym.pltIndex;
+  unsigned relOff = in.relaPlt->entsize * sym.getPltIdx();
   const uint8_t insn[] = {
       0x50,                         // 0:  pushl %eax
       0xa1, 0,    0,    0,    0,    // 1:  mov foo_in_GOT, %eax

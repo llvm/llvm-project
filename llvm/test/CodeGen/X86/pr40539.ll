@@ -24,7 +24,7 @@ define zeroext i1 @_Z9test_log2v() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load float, float* @f1, align 4
+  %0 = load float, ptr @f1, align 4
   %1 = fpext float %0 to x86_fp80
   %2 = tail call x86_fp80 asm "fld1; fxch; fyl2x", "={st},0,~{st(1)},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %1)
   %conv = fptrunc x86_fp80 %2 to float
@@ -40,25 +40,27 @@ define zeroext i1 @_Z8test_cosv() {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    divss {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = [8.70000004E-1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    divss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [8.60000014E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    fcos
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    fstps (%esp)
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    ucomiss %xmm0, %xmm1
-; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    ucomiss {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
-; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    cmpleps %xmm1, %xmm0
+; CHECK-NEXT:    cmpleps %xmm2, %xmm1
+; CHECK-NEXT:    andps %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load float, float* @fpi, align 4
+  %0 = load float, ptr @fpi, align 4
   %div = fdiv float %0, 6.000000e+00
   %1 = fpext float %div to x86_fp80
   %2 = tail call x86_fp80 asm "fcos", "={st},0,~{dirflag},~{fpsr},~{flags}"(x86_fp80 %1)

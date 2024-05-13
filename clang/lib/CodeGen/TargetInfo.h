@@ -38,20 +38,37 @@ class ABIInfo;
 class CallArgList;
 class CodeGenFunction;
 class CGBlockInfo;
-class CGFunctionInfo;
+class SwiftABIInfo;
 
 /// TargetCodeGenInfo - This class organizes various target-specific
 /// codegeneration issues, like target-specific attributes, builtins and so
 /// on.
 class TargetCodeGenInfo {
-  std::unique_ptr<ABIInfo> Info = nullptr;
+  std::unique_ptr<ABIInfo> Info;
+
+protected:
+  // Target hooks supporting Swift calling conventions. The target must
+  // initialize this field if it claims to support these calling conventions
+  // by returning true from TargetInfo::checkCallingConvention for them.
+  std::unique_ptr<SwiftABIInfo> SwiftInfo;
+
+  // Returns ABI info helper for the target. This is for use by derived classes.
+  template <typename T> const T &getABIInfo() const {
+    return static_cast<const T &>(*Info);
+  }
 
 public:
-  TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info) : Info(std::move(Info)) {}
+  TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info);
   virtual ~TargetCodeGenInfo();
 
   /// getABIInfo() - Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *Info; }
+
+  /// Returns Swift ABI info helper for the target.
+  const SwiftABIInfo &getSwiftABIInfo() const {
+    assert(SwiftInfo && "Swift ABI info has not been initialized");
+    return *SwiftInfo;
+  }
 
   /// setTargetAttributes - Provides a convenient hook to handle extra
   /// target-specific attributes for the given global.
@@ -64,12 +81,21 @@ public:
       CodeGen::CodeGenModule &CGM,
       const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {}
 
+  /// Provides a convenient hook to handle extra target-specific globals.
+  virtual void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const {}
+
+  /// Any further codegen related checks that need to be done on a function
+  /// signature in a target specific manner.
+  virtual void checkFunctionABI(CodeGenModule &CGM,
+                                const FunctionDecl *Decl) const {}
+
   /// Any further codegen related checks that need to be done on a function call
   /// in a target specific manner.
   virtual void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                                     const FunctionDecl *Caller,
                                     const FunctionDecl *Callee,
-                                    const CallArgList &Args) const {}
+                                    const CallArgList &Args,
+                                    QualType ReturnType) const {}
 
   /// Determines the size of struct _Unwind_Exception on this platform,
   /// in 8-bit units.  The Itanium ABI defines this as:
@@ -148,6 +174,13 @@ public:
     return Ty;
   }
 
+  /// Target hook to decide whether an inline asm operand can be passed
+  /// by value.
+  virtual bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
+                                        llvm::Type *Ty) const {
+    return false;
+  }
+
   /// Adds constraints and types for result registers.
   virtual void addReturnRegisterOutputs(
       CodeGen::CodeGenFunction &CGF, CodeGen::LValue ReturnValue,
@@ -180,9 +213,10 @@ public:
 
   /// Return a constant used by UBSan as a signature to identify functions
   /// possessing type information, or 0 if the platform is unsupported.
+  /// This magic number is invalid instruction encoding in many targets.
   virtual llvm::Constant *
   getUBSanFunctionSignature(CodeGen::CodeGenModule &CGM) const {
-    return nullptr;
+    return llvm::ConstantInt::get(CGM.Int32Ty, 0xc105cafe);
   }
 
   /// Determine whether a call to an unprototyped functions under
@@ -262,6 +296,11 @@ public:
   /// Get the AST address space for alloca.
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
+  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
+                               LangAS SrcAddr, LangAS DestAddr,
+                               llvm::Type *DestTy,
+                               bool IsNonNull = false) const;
+
   /// Perform address space cast of an expression of pointer type.
   /// \param V is the LLVM value to be casted to another address space.
   /// \param SrcAddr is the language address space of \p V.
@@ -320,15 +359,20 @@ public:
   /// convention and ABI as an OpenCL kernel. The wrapper function accepts
   /// block context and block arguments in target-specific way and calls
   /// the original block invoke function.
-  virtual llvm::Function *
+  virtual llvm::Value *
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
-                            llvm::Value *BlockLiteral) const;
+                            llvm::Type *BlockTy) const;
 
   /// \return true if the target supports alias from the unmangled name to the
   /// mangled name of functions declared within an extern "C" region and marked
   /// as 'used', and having internal linkage.
   virtual bool shouldEmitStaticExternCAliases() const { return true; }
+
+  /// \return true if annonymous zero-sized bitfields should be emitted to
+  /// correctly distinguish between struct types whose memory layout is the
+  /// same, but whose layout may differ when used as argument passed by value
+  virtual bool shouldEmitDWARFBitFieldSeparators() const { return false; }
 
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
 
@@ -342,6 +386,12 @@ public:
     // By default, no change from the original one.
     return nullptr;
   }
+
+  /// Return the WebAssembly externref reference type.
+  virtual llvm::Type *getWasmExternrefReferenceType() const { return nullptr; }
+
+  /// Return the WebAssembly funcref reference type.
+  virtual llvm::Type *getWasmFuncrefReferenceType() const { return nullptr; }
 
   /// Emit the device-side copy of the builtin surface type.
   virtual bool emitCUDADeviceBuiltinSurfaceDeviceCopy(CodeGenFunction &CGF,
@@ -357,7 +407,164 @@ public:
     // DO NOTHING by default.
     return false;
   }
+
+  /// Return an LLVM type that corresponds to an OpenCL type.
+  virtual llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const {
+    return nullptr;
+  }
+
+protected:
+  static std::string qualifyWindowsLibrary(StringRef Lib);
+
+  void addStackProbeTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                                     CodeGen::CodeGenModule &CGM) const;
 };
+
+std::unique_ptr<TargetCodeGenInfo>
+createDefaultTargetCodeGenInfo(CodeGenModule &CGM);
+
+enum class AArch64ABIKind {
+  AAPCS = 0,
+  DarwinPCS,
+  Win64,
+  AAPCSSoft,
+};
+
+std::unique_ptr<TargetCodeGenInfo>
+createAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind Kind);
+
+std::unique_ptr<TargetCodeGenInfo>
+createWindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind K);
+
+std::unique_ptr<TargetCodeGenInfo>
+createAMDGPUTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createARCTargetCodeGenInfo(CodeGenModule &CGM);
+
+enum class ARMABIKind {
+  APCS = 0,
+  AAPCS = 1,
+  AAPCS_VFP = 2,
+  AAPCS16_VFP = 3,
+};
+
+std::unique_ptr<TargetCodeGenInfo>
+createARMTargetCodeGenInfo(CodeGenModule &CGM, ARMABIKind Kind);
+
+std::unique_ptr<TargetCodeGenInfo>
+createWindowsARMTargetCodeGenInfo(CodeGenModule &CGM, ARMABIKind K);
+
+std::unique_ptr<TargetCodeGenInfo>
+createAVRTargetCodeGenInfo(CodeGenModule &CGM, unsigned NPR, unsigned NRR);
+
+std::unique_ptr<TargetCodeGenInfo>
+createBPFTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createCSKYTargetCodeGenInfo(CodeGenModule &CGM, unsigned FLen);
+
+std::unique_ptr<TargetCodeGenInfo>
+createHexagonTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createLanaiTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createLoongArchTargetCodeGenInfo(CodeGenModule &CGM, unsigned GRLen,
+                                 unsigned FLen);
+
+std::unique_ptr<TargetCodeGenInfo>
+createM68kTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32);
+
+std::unique_ptr<TargetCodeGenInfo>
+createMSP430TargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createNVPTXTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createPNaClTargetCodeGenInfo(CodeGenModule &CGM);
+
+enum class PPC64_SVR4_ABIKind {
+  ELFv1 = 0,
+  ELFv2,
+};
+
+std::unique_ptr<TargetCodeGenInfo>
+createAIXTargetCodeGenInfo(CodeGenModule &CGM, bool Is64Bit);
+
+std::unique_ptr<TargetCodeGenInfo>
+createPPC32TargetCodeGenInfo(CodeGenModule &CGM, bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createPPC64TargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createPPC64_SVR4_TargetCodeGenInfo(CodeGenModule &CGM, PPC64_SVR4_ABIKind Kind,
+                                   bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen, unsigned FLen,
+                             bool EABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createCommonSPIRTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSPIRVTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSparcV8TargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSparcV9TargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSystemZTargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
+                               bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createTCETargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createVETargetCodeGenInfo(CodeGenModule &CGM);
+
+enum class WebAssemblyABIKind {
+  MVP = 0,
+  ExperimentalMV = 1,
+};
+
+std::unique_ptr<TargetCodeGenInfo>
+createWebAssemblyTargetCodeGenInfo(CodeGenModule &CGM, WebAssemblyABIKind K);
+
+/// The AVX ABI level for X86 targets.
+enum class X86AVXABILevel {
+  None,
+  AVX,
+  AVX512,
+};
+
+std::unique_ptr<TargetCodeGenInfo> createX86_32TargetCodeGenInfo(
+    CodeGenModule &CGM, bool DarwinVectorABI, bool Win32StructABI,
+    unsigned NumRegisterParameters, bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createWinX86_32TargetCodeGenInfo(CodeGenModule &CGM, bool DarwinVectorABI,
+                                 bool Win32StructABI,
+                                 unsigned NumRegisterParameters);
+
+std::unique_ptr<TargetCodeGenInfo>
+createX86_64TargetCodeGenInfo(CodeGenModule &CGM, X86AVXABILevel AVXLevel);
+
+std::unique_ptr<TargetCodeGenInfo>
+createWinX86_64TargetCodeGenInfo(CodeGenModule &CGM, X86AVXABILevel AVXLevel);
+
+std::unique_ptr<TargetCodeGenInfo>
+createXCoreTargetCodeGenInfo(CodeGenModule &CGM);
 
 } // namespace CodeGen
 } // namespace clang

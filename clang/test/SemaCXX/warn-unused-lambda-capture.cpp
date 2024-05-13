@@ -167,7 +167,7 @@ void test_templated() {
   auto explicit_initialized_value_generic_used = [i = 1](auto c) mutable { i++; };
   auto explicit_initialized_value_generic_unused = [i = 1](auto c) mutable {}; // expected-warning{{lambda capture 'i' is not used}}
 
-  auto nested = [&i] {
+  auto nested = [&i] { // expected-note {{substituting into a lambda}}
     auto explicit_by_value_used = [i] { return i + 1; };
     auto explicit_by_value_unused = [i] {}; // expected-warning{{lambda capture 'i' is not used}}
   };
@@ -189,13 +189,14 @@ void test_templated() {
 }
 
 void test_use_template() {
-  test_templated<int>(); // expected-note{{in instantiation of function template specialization 'test_templated<int>' requested here}}
+  test_templated<int>(); // expected-note 3 {{requested here}}
 }
 
 namespace pr35555 {
-int a;
+int a; // expected-note {{declared here}}
 void b() {
-  int c[a];
+  int c[a]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+               expected-note {{read of non-const variable 'a' is not allowed in a constant expression}}
   auto vla_used = [&c] { return c[0]; };
   auto vla_unused = [&c] {}; // expected-warning{{lambda capture 'c' is not used}}
 }

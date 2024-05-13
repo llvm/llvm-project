@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
@@ -17,10 +17,16 @@ namespace {
 /// provided by the symbol table along with erasing from the symbol table.
 struct SymbolUsesPass
     : public PassWrapper<SymbolUsesPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SymbolUsesPass)
+
+  StringRef getArgument() const final { return "test-symbol-uses"; }
+  StringRef getDescription() const final {
+    return "Test detection of symbol uses";
+  }
   WalkResult operateOnSymbol(Operation *symbol, ModuleOp module,
-                             SmallVectorImpl<FuncOp> &deadFunctions) {
+                             SmallVectorImpl<func::FuncOp> &deadFunctions) {
     // Test computing uses on a non symboltable op.
-    Optional<SymbolTable::UseRange> symbolUses =
+    std::optional<SymbolTable::UseRange> symbolUses =
         SymbolTable::getSymbolUses(symbol);
 
     // Test the conservative failure case.
@@ -36,7 +42,7 @@ struct SymbolUsesPass
 
     // Test the functionality of symbolKnownUseEmpty.
     if (SymbolTable::symbolKnownUseEmpty(symbol, &module.getBodyRegion())) {
-      FuncOp funcSymbol = dyn_cast<FuncOp>(symbol);
+      func::FuncOp funcSymbol = dyn_cast<func::FuncOp>(symbol);
       if (funcSymbol && funcSymbol.isExternal())
         deadFunctions.push_back(funcSymbol);
 
@@ -46,14 +52,14 @@ struct SymbolUsesPass
 
     // Test the functionality of getSymbolUses.
     symbolUses = SymbolTable::getSymbolUses(symbol, &module.getBodyRegion());
-    assert(symbolUses.hasValue() && "expected no unknown operations");
+    assert(symbolUses && "expected no unknown operations");
     for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
       // Check that we can resolve back to our symbol.
       if (SymbolTable::lookupNearestSymbolFrom(
               symbolUse.getUser()->getParentOp(), symbolUse.getSymbolRef())) {
         symbolUse.getUser()->emitRemark()
             << "found use of symbol : " << symbolUse.getSymbolRef() << " : "
-            << symbol->getAttr(SymbolTable::getSymbolAttrName());
+            << *symbol->getInherentAttr(SymbolTable::getSymbolAttrName());
       }
     }
     symbol->emitRemark() << "symbol has " << llvm::size(*symbolUses) << " uses";
@@ -64,7 +70,7 @@ struct SymbolUsesPass
     auto module = getOperation();
 
     // Walk nested symbols.
-    SmallVector<FuncOp, 4> deadFunctions;
+    SmallVector<func::FuncOp, 4> deadFunctions;
     module.getBodyRegion().walk([&](Operation *nestedOp) {
       if (isa<SymbolOpInterface>(nestedOp))
         return operateOnSymbol(nestedOp, module, deadFunctions);
@@ -80,7 +86,7 @@ struct SymbolUsesPass
       table.erase(op);
       assert(!table.lookup(name) &&
              "expected erased operation to be unknown now");
-      module.emitRemark() << name << " function successfully erased";
+      module.emitRemark() << name.getValue() << " function successfully erased";
     }
   }
 };
@@ -89,6 +95,12 @@ struct SymbolUsesPass
 /// functionality provided by the symbol table.
 struct SymbolReplacementPass
     : public PassWrapper<SymbolReplacementPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SymbolReplacementPass)
+
+  StringRef getArgument() const final { return "test-symbol-rauw"; }
+  StringRef getDescription() const final {
+    return "Test replacement of symbol uses";
+  }
   void runOnOperation() override {
     ModuleOp module = getOperation();
 
@@ -102,19 +114,17 @@ struct SymbolReplacementPass
       StringAttr newName = nestedOp->getAttrOfType<StringAttr>("sym.new_name");
       if (!newName)
         return;
-      symbolUsers.replaceAllUsesWith(nestedOp, newName.getValue());
-      SymbolTable::setSymbolName(nestedOp, newName.getValue());
+      symbolUsers.replaceAllUsesWith(nestedOp, newName);
+      SymbolTable::setSymbolName(nestedOp, newName);
     });
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerSymbolTestPasses() {
-  PassRegistration<SymbolUsesPass>("test-symbol-uses",
-                                   "Test detection of symbol uses");
+  PassRegistration<SymbolUsesPass>();
 
-  PassRegistration<SymbolReplacementPass>("test-symbol-rauw",
-                                          "Test replacement of symbol uses");
+  PassRegistration<SymbolReplacementPass>();
 }
 } // namespace mlir

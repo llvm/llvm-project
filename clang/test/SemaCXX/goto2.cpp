@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fcxx-exceptions -std=c++17 %s
 // expected-no-diagnostics
 
 //PR9463
@@ -45,4 +45,21 @@ int main() {
 	fun(ptr);
 
 	return 0;
+}
+
+void asm_goto_try_catch() {
+  try {
+    __label__ label;
+    asm goto("" : : : : label);
+    label:;
+  } catch(...) {
+    __label__ label;
+    asm goto("" : : : : label);
+    label:;
+  };
+  if constexpr(false) {
+    __label__ label;
+    asm goto("" : : : : label);
+    label:;
+  }
 }

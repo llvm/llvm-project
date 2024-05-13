@@ -12,7 +12,7 @@ int a __attribute__((used));
 static void __attribute__((used)) f0(void) {
 }
 
-void f1() {
+void f1(void) {
   static int a __attribute__((used));
   int b __attribute__((used)); // expected-warning {{'used' attribute only applies to variables with non-local storage, functions, and Objective-C methods}}
 }

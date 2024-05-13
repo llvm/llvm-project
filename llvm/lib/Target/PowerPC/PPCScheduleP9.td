@@ -9,8 +9,6 @@
 // This file defines the itinerary class data for the POWER9 processor.
 //
 //===----------------------------------------------------------------------===//
-include "PPCInstrInfo.td"
-
 def P9Model : SchedMachineModel {
   // The maximum number of instructions to be issued at the same time.
   // While a value of 8 is technically correct since 8 instructions can be
@@ -40,11 +38,12 @@ def P9Model : SchedMachineModel {
 
   let CompleteModel = 1;
 
-  // Do not support SPE (Signal Processing Engine), prefixed instructions on
-  // Power 9, paired vector mem ops, MMA, PC relative mem ops, or instructions
-  // introduced in ISA 3.1.
-  let UnsupportedFeatures = [HasSPE, PrefixInstrs, PairedVectorMemops, MMA,
-                             PCRelativeMemops, IsISA3_1];
+  // Do not support SPE (Signal Processing Engine) or prefixed instructions on
+  // Power 9, or MMA, or paired vector mem ops,  or PC relative mem ops, or
+  // instructions introduced after ISA 3.0.
+  let UnsupportedFeatures = [HasSPE, PrefixInstrs, MMA,
+                             PairedVectorMemops, IsBookE,
+                             PCRelativeMemops, IsISA3_1, IsISAFuture];
 }
 
 let SchedModel = P9Model in {
@@ -228,17 +227,17 @@ let SchedModel = P9Model in {
   }
 
   def P9_DIV_16C_8 : SchedWriteRes<[DIV]> {
-    let ResourceCycles = [8];
+    let ReleaseAtCycles = [8];
     let Latency = 16;
   }
 
   def P9_DIV_24C_8 : SchedWriteRes<[DIV]> {
-    let ResourceCycles = [8];
+    let ReleaseAtCycles = [8];
     let Latency = 24;
   }
 
   def P9_DIV_40C_8 : SchedWriteRes<[DIV]> {
-    let ResourceCycles = [8];
+    let ReleaseAtCycles = [8];
     let Latency = 40;
   }
 
@@ -262,62 +261,62 @@ let SchedModel = P9Model in {
   }
 
   def P9_DP_22C_5 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [5];
+    let ReleaseAtCycles = [5];
     let Latency = 22;
   }
 
   def P9_DPO_24C_8 : SchedWriteRes<[DPO]> {
-    let ResourceCycles = [8];
+    let ReleaseAtCycles = [8];
     let Latency = 24;
   }
 
   def P9_DPE_24C_8 : SchedWriteRes<[DPE]> {
-    let ResourceCycles = [8];
+    let ReleaseAtCycles = [8];
     let Latency = 24;
   }
 
   def P9_DP_26C_5 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [5];
+    let ReleaseAtCycles = [5];
     let Latency = 22;
   }
 
   def P9_DPE_27C_10 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [10];
+    let ReleaseAtCycles = [10];
     let Latency = 27;
   }
 
   def P9_DPO_27C_10 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [10];
+    let ReleaseAtCycles = [10];
     let Latency = 27;
   }
 
   def P9_DP_33C_8 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [8];
+    let ReleaseAtCycles = [8];
     let Latency = 33;
   }
 
   def P9_DPE_33C_8 : SchedWriteRes<[DPE]> {
-    let ResourceCycles = [8];
+    let ReleaseAtCycles = [8];
     let Latency = 33;
   }
 
   def P9_DPO_33C_8 : SchedWriteRes<[DPO]> {
-    let ResourceCycles = [8];
+    let ReleaseAtCycles = [8];
     let Latency = 33;
   }
 
   def P9_DP_36C_10 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [10];
+    let ReleaseAtCycles = [10];
     let Latency = 36;
   }
 
   def P9_DPE_36C_10 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [10];
+    let ReleaseAtCycles = [10];
     let Latency = 36;
   }
 
   def P9_DPO_36C_10 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [10];
+    let ReleaseAtCycles = [10];
     let Latency = 36;
   }
 
@@ -359,27 +358,27 @@ let SchedModel = P9Model in {
 
   def P9_DFU_23C : SchedWriteRes<[DFU]> {
     let Latency = 23;
-    let ResourceCycles = [11];
+    let ReleaseAtCycles = [11];
   }
 
   def P9_DFU_24C : SchedWriteRes<[DFU]> {
     let Latency = 24;
-    let ResourceCycles = [12];
+    let ReleaseAtCycles = [12];
   }
 
   def P9_DFU_37C : SchedWriteRes<[DFU]> {
     let Latency = 37;
-    let ResourceCycles = [25];
+    let ReleaseAtCycles = [25];
   }
 
   def P9_DFU_58C : SchedWriteRes<[DFU]> {
     let Latency = 58;
-    let ResourceCycles = [44];
+    let ReleaseAtCycles = [44];
   }
 
   def P9_DFU_76C : SchedWriteRes<[DFU]> {
     let Latency = 76;
-    let ResourceCycles = [62];
+    let ReleaseAtCycles = [62];
   }
 
   // 2 or 5 cycle latencies for the branch unit.
@@ -406,7 +405,6 @@ let SchedModel = P9Model in {
   def P9_LoadAndALU2Op_7C : WriteSequence<[P9_LS_4C, P9_ALU_3C]>;
   def P9_LoadAndALU2Op_8C : WriteSequence<[P9_LS_5C, P9_ALU_3C]>;
   def P9_LoadAndPMOp_8C : WriteSequence<[P9_LS_5C, P9_PM_3C]>;
-  def P9_LoadAndLoadOp_8C : WriteSequence<[P9_LS_4C, P9_LS_4C]>;
   def P9_IntDivAndALUOp_18C_8 : WriteSequence<[P9_DIV_16C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_26C_8 : WriteSequence<[P9_DIV_24C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_42C_8 : WriteSequence<[P9_DIV_40C_8, P9_ALU_2C]>;

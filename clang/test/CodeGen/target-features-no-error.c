@@ -4,6 +4,6 @@
 int __attribute__((target("sse"), always_inline)) foo(int a) {
   return a + 4;
 }
-int bar() {
+int bar(void) {
   return foo(4); // expected-no-diagnostics
 }

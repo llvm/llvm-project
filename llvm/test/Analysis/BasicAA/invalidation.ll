@@ -13,33 +13,20 @@
 ; CHECK-DT-INVALIDATE: Running pass: AAEvaluator
 ; CHECK-DT-INVALIDATE: Running analysis: BasicAA
 ;
-; Check PhiValues specifically.
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
-; RUN:     -passes='require<phi-values>,require<aa>,invalidate<phi-values>,aa-eval' -aa-pipeline='basic-aa' \
-; RUN:     | FileCheck %s --check-prefix=CHECK-PV-INVALIDATE
-; CHECK-PV-INVALIDATE: Running pass: RequireAnalysisPass
-; CHECK-PV-INVALIDATE: Running analysis: BasicAA
-; CHECK-PV-INVALIDATE: Running pass: InvalidateAnalysisPass
-; CHECK-PV-INVALIDATE: Invalidating analysis: PhiValuesAnalysis
-; CHECK-PV-INVALIDATE: Invalidating analysis: BasicAA
-; CHECK-PV-INVALIDATE: Running pass: AAEvaluator
-; CHECK-PV-INVALIDATE: Running analysis: BasicAA
-
 ; Some code that will result in actual AA queries, including inside of a loop.
 ; FIXME: Sadly, none of these queries managed to use either the domtree or
 ; loopinfo that basic-aa cache. But nor does any other test in LLVM. It would
 ; be good to enhance this to actually use these other analyses to make this
 ; a more thorough test.
-define void @foo(i1 %x, i8* %p1, i8* %p2) {
+define void @foo(i1 %x, ptr %p1, ptr %p2) {
 entry:
   %p3 = alloca i8
-  store i8 42, i8* %p1
-  %gep2 = getelementptr i8, i8* %p2, i32 0
+  store i8 42, ptr %p1
   br i1 %x, label %loop, label %exit
 
 loop:
-  store i8 13, i8* %p3
-  %tmp1 = load i8, i8* %gep2
+  store i8 13, ptr %p3
+  %tmp1 = load i8, ptr %p2
   br label %loop
 
 exit:

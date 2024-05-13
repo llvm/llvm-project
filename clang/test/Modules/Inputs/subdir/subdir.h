@@ -1,1 +1,1 @@
-const char *getSubdir();
+const char *getSubdir(void);

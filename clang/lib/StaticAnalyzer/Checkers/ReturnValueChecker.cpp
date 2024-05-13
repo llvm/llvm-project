@@ -1,4 +1,4 @@
-//===- ReturnValueChecker - Applies guaranteed return values ----*- C++ -*-===//
+//===- ReturnValueChecker - Check methods always returning true -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,59 +6,62 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This defines ReturnValueChecker, which checks for calls with guaranteed
-// boolean return value. It ensures the return value of each function call.
+// This defines ReturnValueChecker, which models a very specific coding
+// convention within the LLVM/Clang codebase: there several classes that have
+// Error() methods which always return true.
+// This checker was introduced to eliminate false positives caused by this
+// peculiar "always returns true" invariant. (Normally, the analyzer assumes
+// that a function returning `bool` can return both `true` and `false`, because
+// otherwise it could've been a `void` function.)
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
+using llvm::formatv;
 
 namespace {
-class ReturnValueChecker : public Checker<check::PostCall, check::EndFunction> {
+class ReturnValueChecker : public Checker<check::PostCall> {
 public:
-  // It sets the predefined invariant ('CDM') if the current call not break it.
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 
-  // It reports whether a predefined invariant ('CDM') is broken.
-  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
-
 private:
-  // The pairs are in the following form: {{{class, call}}, return value}
-  const CallDescriptionMap<bool> CDM = {
+  const CallDescriptionSet Methods = {
       // These are known in the LLVM project: 'Error()'
-      {{{"ARMAsmParser", "Error"}}, true},
-      {{{"HexagonAsmParser", "Error"}}, true},
-      {{{"LLLexer", "Error"}}, true},
-      {{{"LLParser", "Error"}}, true},
-      {{{"MCAsmParser", "Error"}}, true},
-      {{{"MCAsmParserExtension", "Error"}}, true},
-      {{{"TGParser", "Error"}}, true},
-      {{{"X86AsmParser", "Error"}}, true},
+      {CDM::CXXMethod, {"ARMAsmParser", "Error"}},
+      {CDM::CXXMethod, {"HexagonAsmParser", "Error"}},
+      {CDM::CXXMethod, {"LLLexer", "Error"}},
+      {CDM::CXXMethod, {"LLParser", "Error"}},
+      {CDM::CXXMethod, {"MCAsmParser", "Error"}},
+      {CDM::CXXMethod, {"MCAsmParserExtension", "Error"}},
+      {CDM::CXXMethod, {"TGParser", "Error"}},
+      {CDM::CXXMethod, {"X86AsmParser", "Error"}},
       // 'TokError()'
-      {{{"LLParser", "TokError"}}, true},
-      {{{"MCAsmParser", "TokError"}}, true},
-      {{{"MCAsmParserExtension", "TokError"}}, true},
-      {{{"TGParser", "TokError"}}, true},
+      {CDM::CXXMethod, {"LLParser", "TokError"}},
+      {CDM::CXXMethod, {"MCAsmParser", "TokError"}},
+      {CDM::CXXMethod, {"MCAsmParserExtension", "TokError"}},
+      {CDM::CXXMethod, {"TGParser", "TokError"}},
       // 'error()'
-      {{{"MIParser", "error"}}, true},
-      {{{"WasmAsmParser", "error"}}, true},
-      {{{"WebAssemblyAsmParser", "error"}}, true},
+      {CDM::CXXMethod, {"MIParser", "error"}},
+      {CDM::CXXMethod, {"WasmAsmParser", "error"}},
+      {CDM::CXXMethod, {"WebAssemblyAsmParser", "error"}},
       // Other
-      {{{"AsmParser", "printError"}}, true}};
+      {CDM::CXXMethod, {"AsmParser", "printError"}}};
 };
 } // namespace
 
 static std::string getName(const CallEvent &Call) {
-  std::string Name = "";
+  std::string Name;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Call.getDecl()))
     if (const CXXRecordDecl *RD = MD->getParent())
       Name += RD->getNameAsString() + "::";
@@ -67,98 +70,32 @@ static std::string getName(const CallEvent &Call) {
   return Name;
 }
 
-// The predefinitions ('CDM') could break due to the ever growing code base.
-// Check for the expected invariants and see whether they apply.
-static Optional<bool> isInvariantBreak(bool ExpectedValue, SVal ReturnV,
-                                       CheckerContext &C) {
-  auto ReturnDV = ReturnV.getAs<DefinedOrUnknownSVal>();
-  if (!ReturnDV)
-    return None;
-
-  if (ExpectedValue)
-    return C.getState()->isNull(*ReturnDV).isConstrainedTrue();
-
-  return C.getState()->isNull(*ReturnDV).isConstrainedFalse();
-}
-
 void ReturnValueChecker::checkPostCall(const CallEvent &Call,
                                        CheckerContext &C) const {
-  const bool *RawExpectedValue = CDM.lookup(Call);
-  if (!RawExpectedValue)
+  if (!Methods.contains(Call))
     return;
 
-  SVal ReturnV = Call.getReturnValue();
-  bool ExpectedValue = *RawExpectedValue;
-  Optional<bool> IsInvariantBreak = isInvariantBreak(ExpectedValue, ReturnV, C);
-  if (!IsInvariantBreak)
-    return;
+  auto ReturnV = Call.getReturnValue().getAs<DefinedOrUnknownSVal>();
 
-  // If the invariant is broken it is reported by 'checkEndFunction()'.
-  if (*IsInvariantBreak)
-    return;
-
-  std::string Name = getName(Call);
-  const NoteTag *CallTag = C.getNoteTag(
-      [Name, ExpectedValue](PathSensitiveBugReport &) -> std::string {
-        SmallString<128> Msg;
-        llvm::raw_svector_ostream Out(Msg);
-
-        Out << '\'' << Name << "' returns "
-            << (ExpectedValue ? "true" : "false");
-        return std::string(Out.str());
-      },
-      /*IsPrunable=*/true);
-
-  ProgramStateRef State = C.getState();
-  State = State->assume(ReturnV.castAs<DefinedOrUnknownSVal>(), ExpectedValue);
-  C.addTransition(State, CallTag);
-}
-
-void ReturnValueChecker::checkEndFunction(const ReturnStmt *RS,
-                                          CheckerContext &C) const {
-  if (!RS || !RS->getRetValue())
-    return;
-
-  // We cannot get the caller in the top-frame.
-  const StackFrameContext *SFC = C.getStackFrame();
-  if (C.getStackFrame()->inTopFrame())
+  if (!ReturnV)
     return;
 
   ProgramStateRef State = C.getState();
-  CallEventManager &CMgr = C.getStateManager().getCallEventManager();
-  CallEventRef<> Call = CMgr.getCaller(SFC, State);
-  if (!Call)
+  if (ProgramStateRef StTrue = State->assume(*ReturnV, true)) {
+    // The return value can be true, so transition to a state where it's true.
+    std::string Msg =
+        formatv("'{0}' returns true (by convention)", getName(Call));
+    C.addTransition(StTrue, C.getNoteTag(Msg, /*IsPrunable=*/true));
     return;
-
-  const bool *RawExpectedValue = CDM.lookup(*Call);
-  if (!RawExpectedValue)
-    return;
-
-  SVal ReturnV = State->getSVal(RS->getRetValue(), C.getLocationContext());
-  bool ExpectedValue = *RawExpectedValue;
-  Optional<bool> IsInvariantBreak = isInvariantBreak(ExpectedValue, ReturnV, C);
-  if (!IsInvariantBreak)
-    return;
-
-  // If the invariant is appropriate it is reported by 'checkPostCall()'.
-  if (!*IsInvariantBreak)
-    return;
-
-  std::string Name = getName(*Call);
-  const NoteTag *CallTag = C.getNoteTag(
-      [Name, ExpectedValue](BugReport &BR) -> std::string {
-        SmallString<128> Msg;
-        llvm::raw_svector_ostream Out(Msg);
-
-        // The following is swapped because the invariant is broken.
-        Out << '\'' << Name << "' returns "
-            << (ExpectedValue ? "false" : "true");
-
-        return std::string(Out.str());
-      },
-      /*IsPrunable=*/false);
-
-  C.addTransition(State, CallTag);
+  }
+  // Paranoia: if the return value is known to be false (which is highly
+  // unlikely, it's easy to ensure that the method always returns true), then
+  // produce a note that highlights that this unusual situation.
+  // Note that this checker is 'hidden' so it cannot produce a bug report.
+  std::string Msg = formatv("'{0}' returned false, breaking the convention "
+                            "that it always returns true",
+                            getName(Call));
+  C.addTransition(State, C.getNoteTag(Msg, /*IsPrunable=*/true));
 }
 
 void ento::registerReturnValueChecker(CheckerManager &Mgr) {

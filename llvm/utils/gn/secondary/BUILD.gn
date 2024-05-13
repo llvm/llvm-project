@@ -5,6 +5,7 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 group("default") {
   deps = [
     "//clang-tools-extra/clangd/test",
+    "//clang-tools-extra/pseudo/test",
     "//clang-tools-extra/test",
     "//clang/test",
     "//clang/tools/scan-build",
@@ -12,6 +13,7 @@ group("default") {
     "//compiler-rt/include",
     "//compiler-rt/lib/scudo",
     "//lld/test",
+    "//lldb/test",
     "//llvm/test",
   ]
   if (current_os == "linux") {
@@ -20,11 +22,24 @@ group("default") {
       "//libcxxabi",
     ]
   }
+  if (current_os == "linux" || current_os == "win" || current_os=="mac") {
+    deps += [ "//compiler-rt/test/asan" ]
+  }
+
+  if (current_os == "linux" || current_os == "mac") {
+    deps += [ "//compiler-rt/test/lsan"]
+  }
+
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/test/hwasan" ]
   }
   if (current_os == "linux" || current_os == "mac") {
     deps += [ "//libunwind" ]
+  }
+
+  # FIXME: Add this on win after testing that it builds.
+  if (current_os != "win") {
+    deps += [ "//bolt/test" ]
   }
 
   testonly = true
@@ -61,6 +76,11 @@ group("lld") {
 group("llvm-ar") {
   deps = [ "//llvm/tools/llvm-ar:symlinks" ]
 }
+if (current_os == "mac") {
+  group("llvm-bolt") {
+    deps = [ "//bolt/tools/driver:symlinks" ]
+  }
+}
 group("llvm-dwp") {
   deps = [ "//llvm/tools/llvm-dwp:symlinks" ]
 }
@@ -69,6 +89,18 @@ group("llvm-nm") {
 }
 group("llvm-cxxfilt") {
   deps = [ "//llvm/tools/llvm-cxxfilt:symlinks" ]
+}
+group("llvm-debuginfod") {
+  deps = [ "//llvm/tools/llvm-debuginfod:symlinks" ]
+}
+group("llvm-debuginfod-find") {
+  deps = [ "//llvm/tools/llvm-debuginfod-find:symlinks" ]
+}
+group("llvm-libtool-darwin") {
+  deps = [ "//llvm/tools/llvm-libtool-darwin:symlinks" ]
+}
+group("llvm-lipo") {
+  deps = [ "//llvm/tools/llvm-lipo:symlinks" ]
 }
 group("llvm-objcopy") {
   deps = [ "//llvm/tools/llvm-objcopy:symlinks" ]

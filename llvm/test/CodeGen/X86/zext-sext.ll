@@ -5,9 +5,9 @@
 ; This randomly started passing after an unrelated change, if it fails again it
 ; might be worth looking at PR12324: misched bringup.
 
-@llvm.used = appending global [1 x i8*] [i8* bitcast (void ([40 x i16]*, i32*, i16**, i64*)* @func to i8*)], section "llvm.metadata"
+@llvm.used = appending global [1 x ptr] [ptr @func], section "llvm.metadata"
 
-define void @func([40 x i16]* %a, i32* %b, i16** %c, i64* %d) nounwind {
+define void @func(ptr %a, ptr %b, ptr %c, ptr %d) nounwind {
 ; CHECK-LABEL: func:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq (%rsi), %rax
@@ -16,38 +16,38 @@ define void @func([40 x i16]* %a, i32* %b, i16** %c, i64* %d) nounwind {
 ; CHECK-NEXT:    movq (%rdx), %rax
 ; CHECK-NEXT:    movswl 8(%rdi), %edx
 ; CHECK-NEXT:    movswl (%rax,%rsi,2), %eax
-; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    imull %edx, %eax
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    addl $2138875574, %eax # imm = 0x7F7CA6B6
-; CHECK-NEXT:    cmpl $-8608074, %eax # imm = 0xFF7CA6B6
-; CHECK-NEXT:    movslq %eax, %rdi
+; CHECK-NEXT:    cmpl $2138875574, %eax # imm = 0x7F7CA6B6
 ; CHECK-NEXT:    setl %dl
-; CHECK-NEXT:    cmpl $2138875573, %eax # imm = 0x7F7CA6B5
-; CHECK-NEXT:    movq %rdi, %r8
-; CHECK-NEXT:    leal -1(%rdx,%rdx), %edx
-; CHECK-NEXT:    cmovlel %edx, %esi
-; CHECK-NEXT:    subq %rax, %r8
+; CHECK-NEXT:    cmpl $-8608074, %eax # imm = 0xFF7CA6B6
+; CHECK-NEXT:    setge %sil
+; CHECK-NEXT:    andb %dl, %sil
+; CHECK-NEXT:    movzbl %sil, %edx
+; CHECK-NEXT:    movslq %eax, %rsi
+; CHECK-NEXT:    movq %rsi, %rdi
+; CHECK-NEXT:    negl %edx
+; CHECK-NEXT:    subq %rax, %rdi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $1, %esi
-; CHECK-NEXT:    cmovneq %rax, %r8
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    cmovnsq %rax, %r8
+; CHECK-NEXT:    testl $-2, %edx
+; CHECK-NEXT:    cmovneq %rax, %rdi
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    cmovnsq %rax, %rdi
 ; CHECK-NEXT:    movq (%rcx), %rax
-; CHECK-NEXT:    subq %r8, %rdi
-; CHECK-NEXT:    leaq -2138875574(%rax,%rdi), %rax
+; CHECK-NEXT:    subq %rdi, %rsi
+; CHECK-NEXT:    leaq -2138875574(%rax,%rsi), %rax
 ; CHECK-NEXT:    movq %rax, (%rcx)
 ; CHECK-NEXT:    retq
 entry:
-  %tmp103 = getelementptr inbounds [40 x i16], [40 x i16]* %a, i64 0, i64 4
-  %tmp104 = load i16, i16* %tmp103, align 2
+  %tmp103 = getelementptr inbounds [40 x i16], ptr %a, i64 0, i64 4
+  %tmp104 = load i16, ptr %tmp103, align 2
   %tmp105 = sext i16 %tmp104 to i32
-  %tmp106 = load i32, i32* %b, align 4
+  %tmp106 = load i32, ptr %b, align 4
   %tmp107 = sub nsw i32 4, %tmp106
-  %tmp108 = load i16*, i16** %c, align 8
+  %tmp108 = load ptr, ptr %c, align 8
   %tmp109 = sext i32 %tmp107 to i64
-  %tmp110 = getelementptr inbounds i16, i16* %tmp108, i64 %tmp109
-  %tmp111 = load i16, i16* %tmp110, align 1
+  %tmp110 = getelementptr inbounds i16, ptr %tmp108, i64 %tmp109
+  %tmp111 = load i16, ptr %tmp110, align 1
   %tmp112 = sext i16 %tmp111 to i32
   %tmp = mul i32 355244649, %tmp112
   %tmp1 = mul i32 %tmp, %tmp105
@@ -72,10 +72,10 @@ entry:
   %tmp19 = sub i64 %tmp18, 5386586244038704851
   %tmp20 = add i64 %tmp19, -1368057358110947217
   %tmp21 = mul i64 %tmp20, -422037402840850817
-  %tmp115 = load i64, i64* %d, align 8
+  %tmp115 = load i64, ptr %d, align 8
   %alphaX = mul i64 468858157810230901, %tmp21
   %alphaXbetaY = add i64 %alphaX, %tmp115
   %transformed = add i64 %alphaXbetaY, 9040145182981852475
-  store i64 %transformed, i64* %d, align 8
+  store i64 %transformed, ptr %d, align 8
   ret void
 }

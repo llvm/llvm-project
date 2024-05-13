@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-comment -triple arm64-linux-gnu -target-feature +sve -std=c90 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -triple arm64-linux-gnu -target-feature +sve -std=c11 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -triple arm64-linux-gnu -target-feature +sve -std=gnu11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-comment -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c90 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=gnu11 %s
 
 typedef __SVInt8_t svint8_t;
 typedef __SVInt16_t svint16_t;
@@ -26,7 +26,7 @@ int alignof_int8_var_ptr = _Alignof(extern_int8_ptr); // expected-warning {{GNU 
 
 void pass_int8(svint8_t); // expected-note {{passing argument to parameter here}}
 
-svint8_t return_int8();
+svint8_t return_int8(void);
 
 typedef svint8_t vec_int8_a __attribute__((vector_size(64)));    // expected-error {{invalid vector element type}}
 typedef svint8_t vec_int8_b __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type}}
@@ -45,7 +45,7 @@ void __attribute__((overloadable)) overf16(int);       // expected-note + {{not 
 void noproto();
 void varargs(int, ...);
 
-void unused() {
+void unused(void) {
   svint8_t unused_int8; // expected-warning {{unused}}
 }
 
@@ -57,38 +57,39 @@ void func(int sel) {
   static svint8_t static_int8; // expected-error {{non-local variable with sizeless type 'svint8_t'}}
 
   svint8_t local_int8;
+  int8_typedef typedef_int8;
   svint16_t local_int16;
 
   svint8_t __attribute__((aligned)) aligned_int8_1;    // expected-error {{'aligned' attribute cannot be applied to sizeless type 'svint8_t'}}
   svint8_t __attribute__((aligned(4))) aligned_int8_2; // expected-error {{'aligned' attribute cannot be applied to sizeless type 'svint8_t'}}
   svint8_t _Alignas(int) aligned_int8_3;               // expected-error {{'_Alignas' attribute cannot be applied to sizeless type 'svint8_t'}}
 
-  int _Alignas(svint8_t) aligned_int; // expected-error {{invalid application of 'alignof' to sizeless type 'svint8_t'}}
+  int _Alignas(svint8_t) aligned_int; // expected-error {{invalid application of '_Alignas' to sizeless type 'svint8_t'}}
 
   // Using pointers to sizeless data isn't wrong here, but because the
   // type is incomplete, it doesn't provide any alignment guarantees.
   _Static_assert(__atomic_is_lock_free(1, &local_int8) == __atomic_is_lock_free(1, incomplete_ptr), "");
-  _Static_assert(__atomic_is_lock_free(2, &local_int8) == __atomic_is_lock_free(2, incomplete_ptr), ""); // expected-error {{static_assert expression is not an integral constant expression}}
+  _Static_assert(__atomic_is_lock_free(2, &local_int8) == __atomic_is_lock_free(2, incomplete_ptr), ""); // expected-error {{static assertion expression is not an integral constant expression}}
   _Static_assert(__atomic_always_lock_free(1, &local_int8) == __atomic_always_lock_free(1, incomplete_ptr), "");
 
   local_int8; // expected-warning {{expression result unused}}
 
   (void)local_int8;
 
-  local_int8, 0; // expected-warning + {{expression result unused}}
+  local_int8, 0; // expected-warning {{left operand of comma operator has no effect}}
 
-  0, local_int8; // expected-warning + {{expression result unused}}
+  0, local_int8; // expected-warning {{left operand of comma operator has no effect}} expected-warning {{expression result unused}}
 
   svint8_t init_int8 = local_int8;
   svint8_t bad_init_int8 = for; // expected-error {{expected expression}}
 
-  int empty_brace_init_int = {}; // expected-error {{scalar initializer cannot be empty}}
-  svint8_t empty_brace_init_int8 = {}; // expected-error {{initializer for sizeless type 'svint8_t' (aka '__SVInt8_t') cannot be empty}}
+  int empty_brace_init_int = {};
+  svint8_t empty_brace_init_int8 = {};
   svint8_t brace_init_int8 = {local_int8};
   svint8_t bad_brace_init_int8_1 = {local_int8, 0};    // expected-warning {{excess elements in initializer for indivisible sizeless type 'svint8_t'}}
   svint8_t bad_brace_init_int8_2 = {0};                // expected-error {{incompatible type 'int'}}
   svint8_t bad_brace_init_int8_3 = {local_int16};      // expected-error {{incompatible type 'svint16_t'}}
-  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error {{designator in initializer for indivisible sizeless type 'svint8_t'}}
+  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error {{initialization of non-aggregate type 'svint8_t' (aka '__SVInt8_t') with a designated initializer list}}
   svint8_t bad_brace_init_int8_5 = {{local_int8}};     // expected-warning {{too many braces around initializer}}
   svint8_t bad_brace_init_int8_6 = {{local_int8, 0}};  // expected-warning {{too many braces around initializer}}
 
@@ -137,6 +138,7 @@ void func(int sel) {
   const_volatile_int8 = local_int8; // expected-error {{cannot assign to variable 'const_volatile_int8' with const-qualified type 'const volatile svint8_t'}}
 
   init_int8 = sel ? init_int8 : local_int8;
+  init_int8 = sel ? init_int8 : typedef_int8;
   init_int8 = sel ? init_int8 : const_int8;
   init_int8 = sel ? volatile_int8 : const_int8;
   init_int8 = sel ? volatile_int8 : const_volatile_int8;
@@ -185,66 +187,17 @@ void func(int sel) {
   global_int8_ptr -= 1;              // expected-error {{arithmetic on a pointer to sizeless type}}
   global_int8_ptr - global_int8_ptr; // expected-error {{arithmetic on a pointer to sizeless type}}
 
-  +init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   ++init_int8;      // expected-error {{cannot increment value of type 'svint8_t'}}
   init_int8++;      // expected-error {{cannot increment value of type 'svint8_t'}}
-  -init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   --init_int8;      // expected-error {{cannot decrement value of type 'svint8_t'}}
   init_int8--;      // expected-error {{cannot decrement value of type 'svint8_t'}}
-  ~init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   !init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   *init_int8;       // expected-error {{indirection requires pointer operand}}
   __real init_int8; // expected-error {{invalid type 'svint8_t'}}
   __imag init_int8; // expected-error {{invalid type 'svint8_t'}}
 
-  local_int8 + init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 - init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 *init_int8;   // expected-error {{invalid operands to binary expression}}
-  local_int8 / init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 % init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 &init_int8;   // expected-error {{invalid operands to binary expression}}
-  local_int8 | init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^ init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 << init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 >> init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 < init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 <= init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 == init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 != init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 >= init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 > init_int8;  // expected-error {{invalid operands to binary expression}}
   local_int8 &&init_int8;  // expected-error {{invalid operands to binary expression}}
   local_int8 || init_int8; // expected-error {{invalid operands to binary expression}}
-
-  local_int8 += init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 -= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 *= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 /= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 %= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 &= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 |= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 <<= init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 >>= init_int8; // expected-error {{invalid operands to binary expression}}
-
-  local_int8 + 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 - 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 * 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 / 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 % 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 & 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 | 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^ 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 << 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 >> 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 < 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 <= 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 == 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 != 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 >= 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 > 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 && 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 || 0; // expected-error {{invalid operands to binary expression}}
 
   if (local_int8) { // expected-error {{statement requires expression of scalar type}}
   }

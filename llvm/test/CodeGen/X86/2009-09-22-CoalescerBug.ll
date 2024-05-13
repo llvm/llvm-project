@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10
 
-define i32 @main(i32 %argc, i8** nocapture %argv) nounwind ssp {
+define i32 @main(i32 %argc, ptr nocapture %argv) nounwind ssp {
 entry:
   br i1 undef, label %bb, label %bb1
 
@@ -54,9 +54,9 @@ bb9:                                              ; preds = %quantum_new_qureg.e
   unreachable
 
 bb.i37:                                           ; preds = %bb.i37, %bb11.thread
-  %0 = load i64, i64* undef, align 8                   ; <i64> [#uses=1]
+  %0 = load i64, ptr undef, align 8                   ; <i64> [#uses=1]
   %1 = shl i64 %0, %.cast.i                       ; <i64> [#uses=1]
-  store i64 %1, i64* undef, align 8
+  store i64 %1, ptr undef, align 8
   br i1 undef, label %bb.i37, label %quantum_addscratch.exit
 
 quantum_addscratch.exit:                          ; preds = %bb.i37

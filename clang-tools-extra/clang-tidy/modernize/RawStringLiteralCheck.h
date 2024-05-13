@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include <bitset>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 using CharsBitSet = std::bitset<1 << CHAR_BIT>;
 
@@ -22,7 +20,7 @@ using CharsBitSet = std::bitset<1 << CHAR_BIT>;
 /// raw string literals.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-raw-string-literal.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/raw-string-literal.html
 class RawStringLiteralCheck : public ClangTidyCheck {
 public:
   RawStringLiteralCheck(StringRef Name, ClangTidyContext *Context);
@@ -30,7 +28,7 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
-  void storeOptions(ClangTidyOptions::OptionMap &Options) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
@@ -44,8 +42,6 @@ private:
   const bool ReplaceShorterLiterals;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_RAW_STRING_LITERAL_H

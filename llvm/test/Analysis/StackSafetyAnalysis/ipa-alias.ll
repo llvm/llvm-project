@@ -6,10 +6,8 @@
 ; RUN: llvm-as %S/Inputs/ipa-alias.ll -o %t1.bc
 ; RUN: llvm-link %t0.bc %t1.bc -o %t.combined.bc
 
-; RUN: opt -S -analyze -stack-safety-local %t.combined.bc -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LOCAL
 ; RUN: opt -S -passes="print<stack-safety-local>" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,LOCAL
 
-; RUN: opt -S -analyze -stack-safety %t.combined.bc -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
 ; RUN: opt -S -passes="print-stack-safety" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
 
 ; Do an end-to-test using the new LTO API
@@ -39,25 +37,21 @@
 ; RUN:  $(cat %t.res.txt) \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
-; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -stack-safety-print -stack-safety-run -save-temps -use-new-pm -thinlto-threads 1 -O0 \
-; RUN:  $(cat %t.res.txt) \
-; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
-
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"
 
 attributes #0 = { noinline sanitize_memtag "target-features"="+mte,+neon" }
 
-declare void @PreemptableAliasWrite1(i8* %p)
-declare void @AliasToPreemptableAliasWrite1(i8* %p)
+declare void @PreemptableAliasWrite1(ptr %p)
+declare void @AliasToPreemptableAliasWrite1(ptr %p)
 
-declare void @InterposableAliasWrite1(i8* %p)
+declare void @InterposableAliasWrite1(ptr %p)
 ; Aliases to interposable aliases are not allowed
 
-declare void @AliasWrite1(i8* %p)
+declare void @AliasWrite1(ptr %p)
 
-declare void @BitcastAliasWrite1(i32* %p)
-declare void @AliasToBitcastAliasWrite1(i8* %p)
+declare void @BitcastAliasWrite1(ptr %p)
+declare void @AliasToBitcastAliasWrite1(ptr %p)
 
 ; Call to dso_preemptable alias to a dso_local aliasee
 define void @PreemptableAliasCall() #0 {
@@ -68,14 +62,15 @@ define void @PreemptableAliasCall() #0 {
 ; GLOBAL-NEXT: x1[1]: full-set, @PreemptableAliasWrite1(arg0, [0,1)){{$}}
 ; LOCAL-NEXT: x2[1]: empty-set, @AliasToPreemptableAliasWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x2[1]: [0,1), @AliasToPreemptableAliasWrite1(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x1 = alloca i8
-  call void @PreemptableAliasWrite1(i8* %x1)
+  call void @PreemptableAliasWrite1(ptr %x1)
 
   %x2 = alloca i8
 ; Alias to a preemptable alias is not preemptable
-  call void @AliasToPreemptableAliasWrite1(i8* %x2)
+  call void @AliasToPreemptableAliasWrite1(ptr %x2)
   ret void
 }
 
@@ -87,11 +82,12 @@ define void @InterposableAliasCall() #0 {
 ; LOCAL-NEXT: x[1]: empty-set, @InterposableAliasWrite1(arg0, [0,1)){{$}}
 ; NOLTO-NEXT: x[1]: full-set, @InterposableAliasWrite1(arg0, [0,1)){{$}}
 ; LTO-NEXT: x[1]: [0,1), @InterposableAliasWrite1(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i8
 ; ThinLTO can resolve the prevailing implementation for interposable definitions.
-  call void @InterposableAliasWrite1(i8* %x)
+  call void @InterposableAliasWrite1(ptr %x)
   ret void
 }
 
@@ -102,10 +98,11 @@ define void @AliasCall() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[1]: empty-set, @AliasWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[1]: [0,1), @AliasWrite1(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i8
-  call void @AliasWrite1(i8* %x)
+  call void @AliasWrite1(ptr %x)
   ret void
 }
 
@@ -118,12 +115,13 @@ define void @BitcastAliasCall() #0 {
 ; GLOBAL-NEXT: x1[4]: [0,1), @BitcastAliasWrite1(arg0, [0,1)){{$}}
 ; LOCAL-NEXT: x2[1]: empty-set, @AliasToBitcastAliasWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x2[1]: [0,1), @AliasToBitcastAliasWrite1(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x1 = alloca i32
-  call void @BitcastAliasWrite1(i32* %x1)
+  call void @BitcastAliasWrite1(ptr %x1)
   %x2 = alloca i8
-  call void @AliasToBitcastAliasWrite1(i8* %x2)
+  call void @AliasToBitcastAliasWrite1(ptr %x2)
   ret void
 }
 
@@ -133,4 +131,6 @@ entry:
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, ptr %p, align 1
 ; CHECK-EMPTY:

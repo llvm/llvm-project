@@ -4,7 +4,7 @@
 
 #include "Common.h"
 
-id IhaveSideEffect();
+id IhaveSideEffect(void);
 
 @interface Foo : NSObject {
   id bar;
@@ -58,9 +58,9 @@ id foo (Foo *p) {
 }
 
 void block_tests(Foo *p) {
-  id (^B)() = ^() {
+  id (^B)(void) = ^(void) {
     if (p) {
-      id (^IB)() = ^() {
+      id (^IB)(void) = ^(void) {
         id bar = [p retain];
         return bar;
       };

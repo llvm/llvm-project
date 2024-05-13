@@ -24,8 +24,8 @@ void f0(OpaqueTypePtr) { }
 void f1(char __attribute__((address_space(1))) const *p) {}
 
 // Ensure we can do return values, which change in MS mode.
-// CHECK-LABEL: define {{.*}}float addrspace(1)* @_Z2f1PU3AS2Kc
-// WIN-LABEL: define {{.*}}float addrspace(1)* @"?f1@@YAPEAU?$_AS@$00$$CAM@__clang@@PEAU?$_AS@$01$$CBD@2@@Z"
+// CHECK-LABEL: define {{.*}}ptr addrspace(1) @_Z2f1PU3AS2Kc
+// WIN-LABEL: define {{.*}}ptr addrspace(1) @"?f1@@YAPEAU?$_AS@$00$$CAM@__clang@@PEAU?$_AS@$01$$CBD@2@@Z"
 __attribute__((address_space(1))) float *f1(char __attribute__((address_space(2))) const *p) { return 0;}
 
 #if !defined(__OPENCL_CPP_VERSION__)
@@ -57,13 +57,13 @@ void ocl_f0(ocl_OpaqueTypePtr) { }
 void ocl_f1(char __constant const *p) {}
 
 // Ensure we can do return values, which change in MS mode.
-// CHECKOCL-LABEL: define {{.*}}float* @_Z6ocl_f1PU9CLgenericKc
-// WINOCL-LABEL: define {{.*}}float* @"?ocl_f1@@YAPEAU?$_ASCLconstant@$$CAM@__clang@@PEAU?$_ASCLgeneric@$$CBD@2@@Z"
+// CHECKOCL-LABEL: define {{.*}}ptr @_Z6ocl_f1PU9CLgenericKc
+// WINOCL-LABEL: define {{.*}}ptr @"?ocl_f1@@YAPEAU?$_ASCLconstant@$$CAM@__clang@@PEAU?$_ASCLgeneric@$$CBD@2@@Z"
 __constant float *ocl_f1(char __generic const *p) { return 0;}
 
 // Ensure we skip return values, since non-pointers aren't supposed to have an AS.
-// CHECKOCL-LABEL: define {{.*}}float* @_Z6ocl_f2PU9CLgenericKc
-// WINOCL-LABEL: define {{.*}}float* @"?ocl_f2@@YAPEAU?$_ASCLgeneric@$$CAM@__clang@@QEAU?$_ASCLgeneric@$$CBD@2@@Z"
+// CHECKOCL-LABEL: define {{.*}}ptr @_Z6ocl_f2PU9CLgenericKc
+// WINOCL-LABEL: define {{.*}}ptr @"?ocl_f2@@YAPEAU?$_ASCLgeneric@$$CAM@__clang@@QEAU?$_ASCLgeneric@$$CBD@2@@Z"
 __generic float *ocl_f2(__generic char const * const p) { return 0;}
 
 // CHECKOCL-LABEL: define {{.*}}void @_Z6ocl_f3PU6CLhost14ocl_OpaqueType

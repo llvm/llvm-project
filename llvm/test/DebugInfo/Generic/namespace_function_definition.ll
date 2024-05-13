@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Generated from clang with the following source:
 ; namespace ns {
@@ -7,12 +7,12 @@
 ; }
 
 ; CHECK: DW_TAG_namespace
-; CHECK-NEXT: DW_AT_name {{.*}} "ns"
+; CHECK-NEXT: DW_AT_name ("ns")
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_AT_low_pc
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_linkage_name {{.*}} "_ZN2ns4funcEv"
+; CHECK:   DW_AT_linkage_name ("_ZN2ns4funcEv")
 ; CHECK: NULL
 ; CHECK: NULL
 

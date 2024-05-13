@@ -37,18 +37,23 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
     FnParent       = parent->FnParent;
     BlockParent    = parent->BlockParent;
     TemplateParamParent = parent->TemplateParamParent;
+    DeclParent = parent->DeclParent;
     MSLastManglingParent = parent->MSLastManglingParent;
     MSCurManglingNumber = getMSLastManglingNumber();
     if ((Flags & (FnScope | ClassScope | BlockScope | TemplateParamScope |
                   FunctionPrototypeScope | AtCatchScope | ObjCMethodScope)) ==
         0)
       Flags |= parent->getFlags() & OpenMPSimdDirectiveScope;
+    // transmit the parent's 'order' flag, if exists
+    if (parent->getFlags() & OpenMPOrderClauseScope)
+      Flags |= OpenMPOrderClauseScope;
   } else {
     Depth = 0;
     PrototypeDepth = 0;
     PrototypeIndex = 0;
     MSLastManglingParent = FnParent = BlockParent = nullptr;
     TemplateParamParent = nullptr;
+    DeclParent = nullptr;
     MSLastManglingNumber = 1;
     MSCurManglingNumber = 1;
   }
@@ -67,10 +72,13 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
   if (flags & BlockScope)         BlockParent = this;
   if (flags & TemplateParamScope) TemplateParamParent = this;
 
-  // If this is a prototype scope, record that.
-  if (flags & FunctionPrototypeScope) PrototypeDepth++;
+  // If this is a prototype scope, record that. Lambdas have an extra prototype
+  // scope that doesn't add any depth.
+  if (flags & FunctionPrototypeScope && !(flags & LambdaScope))
+    PrototypeDepth++;
 
   if (flags & DeclScope) {
+    DeclParent = this;
     if (flags & FunctionPrototypeScope)
       ; // Prototype scopes are uninteresting.
     else if ((flags & ClassScope) && getParent()->isClassScope())
@@ -91,7 +99,7 @@ void Scope::Init(Scope *parent, unsigned flags) {
   UsingDirectives.clear();
   Entity = nullptr;
   ErrorTrap.reset();
-  NRVO.setPointerAndInt(nullptr, 0);
+  NRVO = std::nullopt;
 }
 
 bool Scope::containedInPrototypeScope() const {
@@ -118,19 +126,71 @@ void Scope::AddFlags(unsigned FlagsToSet) {
   Flags |= FlagsToSet;
 }
 
-void Scope::mergeNRVOIntoParent() {
-  if (VarDecl *Candidate = NRVO.getPointer()) {
-    if (isDeclScope(Candidate))
-      Candidate->setNRVOVariable(true);
+// The algorithm for updating NRVO candidate is as follows:
+//   1. All previous candidates become invalid because a new NRVO candidate is
+//      obtained. Therefore, we need to clear return slots for other
+//      variables defined before the current return statement in the current
+//      scope and in outer scopes.
+//   2. Store the new candidate if its return slot is available. Otherwise,
+//      there is no NRVO candidate so far.
+void Scope::updateNRVOCandidate(VarDecl *VD) {
+  auto UpdateReturnSlotsInScopeForVD = [VD](Scope *S) -> bool {
+    bool IsReturnSlotFound = S->ReturnSlots.contains(VD);
+
+    // We found a candidate variable that can be put into a return slot.
+    // Clear the set, because other variables cannot occupy a return
+    // slot in the same scope.
+    S->ReturnSlots.clear();
+
+    if (IsReturnSlotFound)
+      S->ReturnSlots.insert(VD);
+
+    return IsReturnSlotFound;
+  };
+
+  bool CanBePutInReturnSlot = false;
+
+  for (auto *S = this; S; S = S->getParent()) {
+    CanBePutInReturnSlot |= UpdateReturnSlotsInScopeForVD(S);
+
+    if (S->getEntity())
+      break;
   }
 
-  if (getEntity())
+  // Consider the variable as NRVO candidate if the return slot is available
+  // for it in the current scope, or if it can be available in outer scopes.
+  NRVO = CanBePutInReturnSlot ? VD : nullptr;
+}
+
+void Scope::applyNRVO() {
+  // There is no NRVO candidate in the current scope.
+  if (!NRVO.has_value())
     return;
 
-  if (NRVO.getInt())
-    getParent()->setNoNRVO();
-  else if (NRVO.getPointer())
-    getParent()->addNRVOCandidate(NRVO.getPointer());
+  if (*NRVO && isDeclScope(*NRVO))
+    (*NRVO)->setNRVOVariable(true);
+
+  // It's necessary to propagate NRVO candidate to the parent scope for cases
+  // when the parent scope doesn't contain a return statement.
+  // For example:
+  //    X foo(bool b) {
+  //      X x;
+  //      if (b)
+  //        return x;
+  //      exit(0);
+  //    }
+  // Also, we need to propagate nullptr value that means NRVO is not
+  // allowed in this scope.
+  // For example:
+  //    X foo(bool b) {
+  //      X x;
+  //      if (b)
+  //        return x;
+  //      else
+  //        return X(); // NRVO is not allowed
+  //    }
+  if (!getEntity())
+    getParent()->NRVO = *NRVO;
 }
 
 LLVM_DUMP_METHOD void Scope::dump() const { dumpImpl(llvm::errs()); }
@@ -168,6 +228,8 @@ void Scope::dumpImpl(raw_ostream &OS) const {
       {CompoundStmtScope, "CompoundStmtScope"},
       {ClassInheritanceScope, "ClassInheritanceScope"},
       {CatchScope, "CatchScope"},
+      {OpenACCComputeConstructScope, "OpenACCComputeConstructScope"},
+      {FriendScope, "FriendScope"},
   };
 
   for (auto Info : FlagInfo) {
@@ -193,8 +255,10 @@ void Scope::dumpImpl(raw_ostream &OS) const {
   if (const DeclContext *DC = getEntity())
     OS << "Entity : (clang::DeclContext*)" << DC << '\n';
 
-  if (NRVO.getInt())
-    OS << "NRVO not allowed\n";
-  else if (NRVO.getPointer())
-    OS << "NRVO candidate : (clang::VarDecl*)" << NRVO.getPointer() << '\n';
+  if (!NRVO)
+    OS << "there is no NRVO candidate\n";
+  else if (*NRVO)
+    OS << "NRVO candidate : (clang::VarDecl*)" << *NRVO << '\n';
+  else
+    OS << "NRVO is not allowed\n";
 }

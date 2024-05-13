@@ -15,20 +15,20 @@ void f() {
   b.f();
 }
 
-// CHECK: define{{.*}} %struct.B* @_Z1fP1A(%struct.A* %a) [[NUW:#[0-9]+]]
+// CHECK: define{{.*}} ptr @_Z1fP1A(ptr noundef %a) [[NUW:#[0-9]+]]
 B *f(A *a) {
   // CHECK-NOT: br label
-  // CHECK: ret %struct.B*
+  // CHECK: ret ptr
   return static_cast<B*>(a);
 }
 
 // PR5965
 namespace PR5965 {
 
-// CHECK: define{{.*}} %struct.A* @_ZN6PR59651fEP1B(%struct.B* %b) [[NUW]]
+// CHECK: define{{.*}} ptr @_ZN6PR59651fEP1B(ptr noundef %b) [[NUW]]
 A *f(B* b) {
   // CHECK-NOT: br label
-  // CHECK: ret %struct.A*
+  // CHECK: ret ptr
   return b;
 }
 
@@ -46,4 +46,4 @@ namespace test3 {
   }
 }
 
-// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { mustprogress noinline nounwind{{.*}} }

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=IR
 ;
 ; The SCoP contains a loop with multiple exit blocks (BBs after leaving
@@ -39,7 +39,7 @@
 
 declare void @g();
 
-define void @func(i64 %count1, i64 %count2, i32 %dobreak, float* %A) {
+define void @func(i64 %count1, i64 %count2, i32 %dobreak, ptr %A) {
 entry:
   %fadd = fadd float undef, undef
   br label %loopguard
@@ -50,7 +50,7 @@ loopguard:
 
 
 loop_enter:
-  store float 1.0, float* %A
+  store float 1.0, ptr %A
   br label %loop_header
 
 loop_header:
@@ -66,7 +66,7 @@ loop_continue:
 
 
 loop_break:
-  store float 2.0, float* %A
+  store float 2.0, ptr %A
   br label %loop_break_error
 
 loop_break_error:
@@ -79,7 +79,7 @@ loop_break_g:
 
 
 loop_finish:
-    store float 3.0, float* %A
+    store float 3.0, ptr %A
   br label %loop_finish_error
 
 loop_finish_error:
@@ -88,7 +88,7 @@ loop_finish_error:
 
 
 loop_skip:
-  store float 4.0, float* %A
+  store float 4.0, ptr %A
   br label %loop_skip_error
 
 loop_skip_error:
@@ -98,6 +98,6 @@ loop_skip_error:
 
 return:
   %phi = phi float [ 0.0, %loop_finish_error ], [ 0.0, %loop_break_error ], [ 2.0, %loop_break_g ], [ 3.0, %loop_skip_error ]
-  store float 1.0, float* %A
+  store float 1.0, ptr %A
   ret void
 }

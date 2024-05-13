@@ -53,7 +53,7 @@ void setCurrentDebugType(const char *Type);
 void setCurrentDebugTypes(const char **Types, unsigned Count);
 
 /// DEBUG_WITH_TYPE macro - This macro should be used by passes to emit debug
-/// information.  In the '-debug' option is specified on the commandline, and if
+/// information.  If the '-debug' option is specified on the commandline, and if
 /// this is a debug build, then the code specified as the option to the macro
 /// will be executed.  Otherwise it will not be.  Example:
 ///
@@ -67,8 +67,8 @@ void setCurrentDebugTypes(const char **Types, unsigned Count);
 
 #else
 #define isCurrentDebugType(X) (false)
-#define setCurrentDebugType(X)
-#define setCurrentDebugTypes(X, N)
+#define setCurrentDebugType(X) do { (void)(X); } while (false)
+#define setCurrentDebugTypes(X, N) do { (void)(X); (void)(N); } while (false)
 #define DEBUG_WITH_TYPE(TYPE, X) do { } while (false)
 #endif
 
@@ -77,27 +77,6 @@ void setCurrentDebugTypes(const char **Types, unsigned Count);
 /// the DEBUG macro below.
 ///
 extern bool DebugFlag;
-
-/// \name Verification flags.
-///
-/// These flags turns on/off that are expensive and are turned off by default,
-/// unless macro EXPENSIVE_CHECKS is defined. The flags allow selectively
-/// turning the checks on without need to recompile.
-/// \{
-
-/// Enables verification of dominator trees.
-///
-extern bool VerifyDomInfo;
-
-/// Enables verification of loop info.
-///
-extern bool VerifyLoopInfo;
-
-/// Enables verification of MemorySSA.
-///
-extern bool VerifyMemorySSA;
-
-///\}
 
 /// EnableDebugBuffering - This defaults to false.  If true, the debug
 /// stream will install signal handlers to dump any buffered debug
@@ -113,7 +92,7 @@ extern bool EnableDebugBuffering;
 raw_ostream &dbgs();
 
 // DEBUG macro - This macro should be used by passes to emit debug information.
-// In the '-debug' option is specified on the commandline, and if this is a
+// If the '-debug' option is specified on the commandline, and if this is a
 // debug build, then the code specified as the option to the macro will be
 // executed.  Otherwise it will not be.  Example:
 //

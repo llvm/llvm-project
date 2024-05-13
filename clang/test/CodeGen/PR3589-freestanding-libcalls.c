@@ -4,6 +4,6 @@
 
 int printf(const char *, ...);
 
-void f0() {
+void f0(void) {
   printf("hello\n");
 }

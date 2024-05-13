@@ -8,11 +8,11 @@
 ; CHECK-NEXT: stw [[REG]], r0[0]
 ; CHECK-NEXT: bu .LBB0_1
 
-define void @f(i32* nocapture %p) noreturn nounwind {
+define void @f(ptr nocapture %p) noreturn nounwind {
 entry:
   br label %bb
 
 bb:                                               ; preds = %bb, %entry
-  store volatile i32 525509670, i32* %p, align 4
+  store volatile i32 525509670, ptr %p, align 4
   br label %bb
 }

@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/SwapByteOrder.h"
 
@@ -202,7 +202,7 @@ static T getLEB128(StringRef Data, uint64_t *OffsetPtr, Error *Err,
   if (isError(Err))
     return T();
 
-  const char *error;
+  const char *error = nullptr;
   unsigned bytes_read;
   T result =
       Decoder(Bytes.data() + *OffsetPtr, &bytes_read, Bytes.end(), &error);

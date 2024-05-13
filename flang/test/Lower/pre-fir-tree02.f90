@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only -fdebug-pre-fir-tree %s | FileCheck %s
+! RUN: bbc -pft-test -o %t %s | FileCheck %s
 
 ! Test Pre-FIR Tree captures all the intended nodes from the parse-tree
 ! Coarray and OpenMP related nodes are tested in other files.
@@ -144,7 +144,7 @@ program test_prog
   deallocate(x)
 end
 
-! CHECK: ModuleLike
+! CHECK: Module test
 module test
   !! When derived type processing is implemented, remove all instances of:
   !!  - !![disable]
@@ -155,6 +155,13 @@ module test
   !![disable]type, extends(a_type) :: b_type
   !![disable]  integer :: y
   !![disable]end type
+  interface
+     subroutine ss(aa)
+       ! CHECK: CompilerDirective
+       !DIR$ IGNORE_TKR aa
+       integer :: aa
+     end subroutine ss
+  end interface
 contains
   ! CHECK: Function foo
   function foo(x)
@@ -212,8 +219,7 @@ contains
   ! CHECK: Subroutine sub
   subroutine sub(a)
     real(4):: a
-    ! CompilerDirective
-    ! CHECK: <<CompilerDirective>>
+    ! CHECK: CompilerDirective
     !DIR$ IGNORE_TKR a
   end subroutine
 
@@ -254,7 +260,7 @@ subroutine iostmts(filename, a, b, c)
   read(10, *) length
   ! CHECK: RewindStmt
   rewind 10
-  ! CHECK: NamelistStmt
+  ! CHECK-NOT: NamelistStmt
   namelist /nlist/ a, b, c
   ! CHECK: WriteStmt
   write(10, NML=nlist)

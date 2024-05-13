@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value %s 2>&1 | FileCheck -strict-whitespace %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
 
-void foo() {
+void foo(void) {
 
   "§Ã"; // ø
 // CHECK: {{^  "<A7><C3>"; // <F8>}}
@@ -13,7 +13,7 @@ void foo() {
 // CHECK: {{^                                  \^~~~}}
 
   "xxé¿¿¿d";
-// CHECK: {{^  "xx<U\+9FFF><BF>d";}}
+// CHECK: {{^  "xxé¿¿<BF>d";}}
 // CHECK: {{^             \^~~~}}
 
   "xxé¿bcd";

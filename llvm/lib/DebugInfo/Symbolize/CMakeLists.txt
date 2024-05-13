@@ -1,5 +1,7 @@
 add_llvm_component_library(LLVMSymbolize
   DIPrinter.cpp
+  Markup.cpp
+  MarkupFilter.cpp
   SymbolizableObjectFile.cpp
   Symbolize.cpp
 
@@ -9,7 +11,9 @@ add_llvm_component_library(LLVMSymbolize
   LINK_COMPONENTS
   DebugInfoDWARF
   DebugInfoPDB
+  DebugInfoBTF
   Object
   Support
   Demangle
+  TargetParser
   )

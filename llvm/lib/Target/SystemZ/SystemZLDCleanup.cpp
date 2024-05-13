@@ -29,11 +29,8 @@ namespace {
 class SystemZLDCleanup : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZLDCleanup(const SystemZTargetMachine &tm)
-    : MachineFunctionPass(ID), TII(nullptr), MF(nullptr) {}
-
-  StringRef getPassName() const override {
-    return "SystemZ Local Dynamic TLS Access Clean-up";
+  SystemZLDCleanup() : MachineFunctionPass(ID), TII(nullptr), MF(nullptr) {
+    initializeSystemZLDCleanupPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -52,8 +49,11 @@ char SystemZLDCleanup::ID = 0;
 
 } // end anonymous namespace
 
+INITIALIZE_PASS(SystemZLDCleanup, "systemz-ld-cleanup",
+                "SystemZ Local Dynamic TLS Access Clean-up", false, false)
+
 FunctionPass *llvm::createSystemZLDCleanupPass(SystemZTargetMachine &TM) {
-  return new SystemZLDCleanup(TM);
+  return new SystemZLDCleanup();
 }
 
 void SystemZLDCleanup::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -66,7 +66,7 @@ bool SystemZLDCleanup::runOnMachineFunction(MachineFunction &F) {
   if (skipFunction(F.getFunction()))
     return false;
 
-  TII = static_cast<const SystemZInstrInfo *>(F.getSubtarget().getInstrInfo());
+  TII = F.getSubtarget<SystemZSubtarget>().getInstrInfo();
   MF = &F;
 
   SystemZMachineFunctionInfo* MFI = F.getInfo<SystemZMachineFunctionInfo>();
@@ -105,8 +105,8 @@ bool SystemZLDCleanup::VisitNode(MachineDomTreeNode *Node,
   }
 
   // Visit the children of this block in the dominator tree.
-  for (auto I = Node->begin(), E = Node->end(); I != E; ++I)
-    Changed |= VisitNode(*I, TLSBaseAddrReg);
+  for (auto &N : *Node)
+    Changed |= VisitNode(N, TLSBaseAddrReg);
 
   return Changed;
 }

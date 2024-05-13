@@ -6,10 +6,10 @@
 
 ; CHECK-NOT: alias
 ; CHECK: @c = global i32 1
-; CHECK-NEXT: @d = global i32* @a
+; CHECK-NEXT: @d = global ptr @a
 ; CHECK-EMPTY:
-; CHECK-NEXT: @a = weak alias i32, i32* @b
-; CHECK-NEXT: @b = internal alias i32, i32* @c
+; CHECK-NEXT: @a = weak alias i32, ptr @b
+; CHECK-NEXT: @b = internal alias i32, ptr @c
 
 ; RES: 1.o{{$}}
 ; RES-NEXT: {{^}}-r={{.*}}1.o,c,p{{$}}

@@ -41,7 +41,7 @@ typedef _Bool BOOL;
 // and then used un-checked.
 const char *getStr(void);
 
-void test_sig() {
+void test_sig(void) {
   (void)@__objc_yes; // expected-error{{literal construction method 'numberWithBool:' has incompatible signature}}
   (void)@__objc_yes; // expected-error{{literal construction method 'numberWithBool:' has incompatible signature}}
   id array = @[ @17 ]; // expected-error{{literal construction method 'arrayWithObjects:count:' has incompatible signature}}

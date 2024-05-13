@@ -1,3 +1,5 @@
+.. _using-libcxx:
+
 ============
 Using libc++
 ============
@@ -5,174 +7,165 @@ Using libc++
 .. contents::
   :local:
 
-Getting Started
-===============
+Usually, libc++ is packaged and shipped by a vendor through some delivery vehicle
+(operating system distribution, SDK, toolchain, etc) and users don't need to do
+anything special in order to use the library.
 
-If you already have libc++ installed you can use it with clang.
+This page contains information about configuration knobs that can be used by
+users when they know libc++ is used by their toolchain, and how to use libc++
+when it is not the default library used by their toolchain.
 
-.. code-block:: bash
 
-    $ clang++ -stdlib=libc++ test.cpp
-    $ clang++ -std=c++11 -stdlib=libc++ test.cpp
+Using a different version of the C++ Standard
+=============================================
 
-On macOS and FreeBSD libc++ is the default standard library
-and the ``-stdlib=libc++`` is not required.
-
-.. _alternate libcxx:
-
-If you want to select an alternate installation of libc++ you
-can use the following options.
-
-.. code-block:: bash
-
-  $ clang++ -std=c++11 -stdlib=libc++ -nostdinc++ \
-            -I<libcxx-install-prefix>/include/c++/v1 \
-            -L<libcxx-install-prefix>/lib \
-            -Wl,-rpath,<libcxx-install-prefix>/lib \
-            test.cpp
-
-The option ``-Wl,-rpath,<libcxx-install-prefix>/lib`` adds a runtime library
-search path. Meaning that the systems dynamic linker will look for libc++ in
-``<libcxx-install-prefix>/lib`` whenever the program is run. Alternatively the
-environment variable ``LD_LIBRARY_PATH`` (``DYLD_LIBRARY_PATH`` on macOS) can
-be used to change the dynamic linkers search paths after a program is compiled.
-
-An example of using ``LD_LIBRARY_PATH``:
+Libc++ implements the various versions of the C++ Standard. Changing the version of
+the standard can be done by passing ``-std=c++XY`` to the compiler. Libc++ will
+automatically detect what Standard is being used and will provide functionality that
+matches that Standard in the library.
 
 .. code-block:: bash
 
-  $ clang++ -stdlib=libc++ -nostdinc++ \
-            -I<libcxx-install-prefix>/include/c++/v1
-            -L<libcxx-install-prefix>/lib \
-            test.cpp -o
-  $ ./a.out # Searches for libc++ in the systems library paths.
-  $ export LD_LIBRARY_PATH=<libcxx-install-prefix>/lib
-  $ ./a.out # Searches for libc++ along LD_LIBRARY_PATH
-
-Using ``<filesystem>``
-======================
-
-Prior to LLVM 9.0, libc++ provides the implementation of the filesystem library
-in a separate static library. Users of ``<filesystem>`` and ``<experimental/filesystem>``
-are required to link ``-lc++fs``. Prior to libc++ 7.0, users of
-``<experimental/filesystem>`` were required to link libc++experimental.
-
-Starting with LLVM 9.0, support for ``<filesystem>`` is provided in the main
-library and nothing special is required to use ``<filesystem>``.
-
-Using libc++experimental and ``<experimental/...>``
-=====================================================
-
-Libc++ provides implementations of experimental technical specifications
-in a separate library, ``libc++experimental.a``. Users of ``<experimental/...>``
-headers may be required to link ``-lc++experimental``.
-
-.. code-block:: bash
-
-  $ clang++ -std=c++14 -stdlib=libc++ test.cpp -lc++experimental
-
-Libc++experimental.a may not always be available, even when libc++ is already
-installed. For information on building libc++experimental from source see
-:ref:`Building Libc++ <build instructions>` and
-:ref:`libc++experimental CMake Options <libc++experimental options>`.
-
-Also see the `Experimental Library Implementation Status <http://libcxx.llvm.org/ts1z_status.html>`__
-page.
+  $ clang++ -std=c++17 test.cpp
 
 .. warning::
-  Experimental libraries are Experimental.
-    * The contents of the ``<experimental/...>`` headers and ``libc++experimental.a``
+  Using ``-std=c++XY`` with a version of the Standard that has not been ratified yet
+  is considered unstable. Libc++ reserves the right to make breaking changes to the
+  library until the standard has been ratified.
+
+
+Enabling experimental C++ Library features
+==========================================
+
+Libc++ provides implementations of some experimental features. Experimental features
+are either Technical Specifications (TSes) or official features that were voted to
+the Standard but whose implementation is not complete or stable yet in libc++. Those
+are disabled by default because they are neither API nor ABI stable. However, the
+``-fexperimental-library`` compiler flag can be defined to turn those features on.
+
+The following features are currently considered experimental and are only provided
+when ``-fexperimental-library`` is passed:
+
+* The parallel algorithms library (``<execution>`` and the associated algorithms)
+* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
+* ``std::jthread``
+* ``std::chrono::tzdb`` and related time zone functionality
+
+.. warning::
+  Experimental libraries are experimental.
+    * The contents of the ``<experimental/...>`` headers and the associated static
       library will not remain compatible between versions.
     * No guarantees of API or ABI stability are provided.
-    * When we implement the standardized version of an experimental feature,
+    * When the standardized version of an experimental feature is implemented,
       the experimental feature is removed two releases after the non-experimental
       version has shipped. The full policy is explained :ref:`here <experimental features>`.
 
-Using libc++ on Linux
-=====================
-
-On Linux libc++ can typically be used with only '-stdlib=libc++'. However
-some libc++ installations require the user manually link libc++abi themselves.
-If you are running into linker errors when using libc++ try adding '-lc++abi'
-to the link line.  For example:
-
-.. code-block:: bash
-
-  $ clang++ -stdlib=libc++ test.cpp -lc++ -lc++abi -lm -lc -lgcc_s -lgcc
-
-Alternately, you could just add libc++abi to your libraries list, which in
-most situations will give the same result:
-
-.. code-block:: bash
-
-  $ clang++ -stdlib=libc++ test.cpp -lc++abi
+.. note::
+  On compilers that do not support the ``-fexperimental-library`` flag, users can
+  define the ``_LIBCPP_ENABLE_EXPERIMENTAL`` macro and manually link against the
+  appropriate static library (usually shipped as ``libc++experimental.a``) to get
+  access to experimental library features.
 
 
-Using libc++ with GCC
----------------------
+Using libc++ when it is not the system default
+==============================================
 
-GCC does not provide a way to switch from libstdc++ to libc++. You must manually
-configure the compile and link commands.
-
-In particular, you must tell GCC to remove the libstdc++ include directories
-using ``-nostdinc++`` and to not link libstdc++.so using ``-nodefaultlibs``.
-
-Note that ``-nodefaultlibs`` removes all the standard system libraries and
-not just libstdc++ so they must be manually linked. For example:
+On systems where libc++ is provided but is not the default, Clang provides a flag
+called ``-stdlib=`` that can be used to decide which standard library is used.
+Using ``-stdlib=libc++`` will select libc++:
 
 .. code-block:: bash
 
-  $ g++ -nostdinc++ -I<libcxx-install-prefix>/include/c++/v1 \
-         test.cpp -nodefaultlibs -lc++ -lc++abi -lm -lc -lgcc_s -lgcc
+  $ clang++ -stdlib=libc++ test.cpp
+
+On systems where libc++ is the library in use by default such as macOS and FreeBSD,
+this flag is not required.
+
+
+.. _alternate libcxx:
+
+Using a custom built libc++
+===========================
+
+Most compilers provide a way to disable the default behavior for finding the
+standard library and to override it with custom paths. With Clang, this can
+be done with:
+
+.. code-block:: bash
+
+  $ clang++ -nostdinc++ -nostdlib++           \
+            -isystem <install>/include/c++/v1 \
+            -L <install>/lib                  \
+            -Wl,-rpath,<install>/lib          \
+            -lc++                             \
+            test.cpp
+
+The option ``-Wl,-rpath,<install>/lib`` adds a runtime library search path,
+which causes the system's dynamic linker to look for libc++ in ``<install>/lib``
+whenever the program is loaded.
+
+GCC does not support the ``-nostdlib++`` flag, so one must use ``-nodefaultlibs``
+instead. Since that removes all the standard system libraries and not just libc++,
+the system libraries must be re-added manually. For example:
+
+.. code-block:: bash
+
+  $ g++ -nostdinc++ -nodefaultlibs           \
+        -isystem <install>/include/c++/v1    \
+        -L <install>/lib                     \
+        -Wl,-rpath,<install>/lib             \
+        -lc++ -lc++abi -lm -lc -lgcc_s -lgcc \
+        test.cpp
 
 
 GDB Pretty printers for libc++
-------------------------------
+==============================
 
-GDB does not support pretty-printing of libc++ symbols by default. Unfortunately
-libc++ does not provide pretty-printers itself. However there are 3rd
-party implementations available and although they are not officially
-supported by libc++ they may be useful to users.
+GDB does not support pretty-printing of libc++ symbols by default. However, libc++ does
+provide pretty-printers itself. Those can be used as:
 
-Known 3rd Party Implementations Include:
+.. code-block:: bash
 
-* `Koutheir's libc++ pretty-printers <https://github.com/koutheir/libcxx-pretty-printers>`_.
+  $ gdb -ex "source <libcxx>/utils/gdb/libcxx/printers.py" \
+        -ex "python register_libcxx_printer_loader()" \
+        <args>
 
+.. _include-what-you-use:
+
+include-what-you-use (IWYU)
+===========================
+
+libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`_,
+which drastically improves the accuracy of the tool when using libc++. To use the mapping file with
+IWYU, you should run the tool like so:
+
+.. code-block:: bash
+
+  $ include-what-you-use -Xiwyu --mapping_file=/path/to/libcxx/include/libcxx.imp file.cpp
+
+If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
+file with the libc++-provided ``libcxx.imp`` file.
 
 Libc++ Configuration Macros
 ===========================
 
 Libc++ provides a number of configuration macros which can be used to enable
-or disable extended libc++ behavior, including enabling "debug mode" or
-thread safety annotations.
-
-**_LIBCPP_DEBUG**:
-  See :ref:`using-debug-mode` for more information.
+or disable extended libc++ behavior, including enabling hardening or thread
+safety annotations.
 
 **_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
   This macro is used to enable -Wthread-safety annotations on libc++'s
   ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
   disabled and must be manually enabled by the user.
 
+**_LIBCPP_HARDENING_MODE**:
+  This macro is used to choose the :ref:`hardening mode <using-hardening-modes>`.
+
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.
   Defining this macro and then building libc++ with hidden visibility gives a
   build of libc++ which does not export any symbols, which can be useful when
   building statically for inclusion into another library.
-
-**_LIBCPP_DISABLE_EXTERN_TEMPLATE**:
-  This macro is used to disable extern template declarations in the libc++
-  headers. The intended use case is for clients who wish to use the libc++
-  headers without taking a dependency on the libc++ library itself.
-
-**_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS**:
-  This macro disables the additional diagnostics generated by libc++ using the
-  `diagnose_if` attribute. These additional diagnostics include checks for:
-
-    * Giving `set`, `map`, `multiset`, `multimap` and their `unordered_`
-      counterparts a comparator which is not const callable.
-    * Giving an unordered associative container a hasher that is not const
-      callable.
 
 **_LIBCPP_NO_VCRUNTIME**:
   Microsoft's C and C++ headers are fairly entangled, and some of their C++
@@ -194,20 +187,6 @@ thread safety annotations.
   replacement scenarios from working, e.g. replacing `operator new` and
   expecting a non-replaced `operator new[]` to call the replaced `operator new`.
 
-**_LIBCPP_ENABLE_NODISCARD**:
-  Allow the library to add ``[[nodiscard]]`` attributes to entities not specified
-  as ``[[nodiscard]]`` by the current language dialect. This includes
-  backporting applications of ``[[nodiscard]]`` from newer dialects and
-  additional extended applications at the discretion of the library. All
-  additional applications of ``[[nodiscard]]`` are disabled by default.
-  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>` for
-  more information.
-
-**_LIBCPP_DISABLE_NODISCARD_EXT**:
-  This macro prevents the library from applying ``[[nodiscard]]`` to entities
-  purely as an extension. See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
-  for more information.
-
 **_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
   This macro disables warnings when using deprecated components. For example,
   using `std::auto_ptr` when compiling in C++11 mode will normally trigger a
@@ -216,10 +195,6 @@ thread safety annotations.
 
 C++17 Specific Configuration Macros
 -----------------------------------
-**_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES**:
-  This macro is used to re-enable all the features removed in C++17. The effect
-  is equivalent to manually defining each macro listed below.
-
 **_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR**:
   This macro is used to re-enable `auto_ptr`.
 
@@ -238,23 +213,16 @@ C++17 Specific Configuration Macros
   This macro is used to re-enable `set_unexpected`, `get_unexpected`, and
   `unexpected`.
 
-C++20 Specific Configuration Macros:
-------------------------------------
-**_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17**:
-  This macro can be used to disable diagnostics emitted from functions marked
-  ``[[nodiscard]]`` in dialects after C++17.  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
-  for more information.
+C++20 Specific Configuration Macros
+-----------------------------------
+**_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**:
+  This macro is used to re-enable the function
+  ``std::shared_ptr<...>::unique()``.
 
-**_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES**:
-  This macro is used to re-enable all the features removed in C++20. The effect
-  is equivalent to manually defining each macro listed below.
-
-**_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS**:
-  This macro is used to re-enable redundant members of `allocator<T>`,
-  including `pointer`, `reference`, `rebind`, `address`, `max_size`,
-  `construct`, `destroy`, and the two-argument overload of `allocate`.
-  It also re-enables the library-provided explicit specializations
-  of `allocator<void>` and `allocator<const void>`.
+**_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS**:
+  This macro is used to re-enable the `argument_type`, `result_type`,
+  `first_argument_type`, and `second_argument_type` members of class
+  templates such as `plus`, `logical_not`, `hash`, and `owner_less`.
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS**:
   This macro is used to re-enable `not1`, `not2`, `unary_negate`,
@@ -263,6 +231,34 @@ C++20 Specific Configuration Macros:
 **_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR**:
   This macro is used to re-enable `raw_storage_iterator`.
 
+**_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS**:
+  This macro is used to re-enable `is_literal_type`, `is_literal_type_v`,
+  `result_of` and `result_of_t`.
+
+
+C++26 Specific Configuration Macros
+-----------------------------------
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT**:
+  This macro is used to re-enable all named declarations in ``<codecvt>``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**:
+  This macro is used to re-enable the function
+  ``std::basic_string<...>::reserve()``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS**:
+  This macro is used to re-enable redundant member of ``allocator<T>::is_always_equal``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM**:
+  This macro is used to re-enable all named declarations in ``<strstream>``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS**:
+  This macro is used to re-enable all ``shared_ptr`` atomic access APIs in ``<memory>``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT**:
+  This macro is used to re-enable the ``wstring_convert`` and ``wbuffer_convert``
+  in ``<locale>``.
+
 
 Libc++ Extensions
 =================
@@ -270,88 +266,127 @@ Libc++ Extensions
 This section documents various extensions provided by libc++, how they're
 provided, and any information regarding how to use them.
 
-.. _nodiscard extension:
+Extended integral type support
+------------------------------
 
-Extended applications of ``[[nodiscard]]``
-------------------------------------------
+Several platforms support types that are not specified in the Standard, such as
+the 128-bit integral types ``__int128_t`` and ``__uint128_t``. As an extension,
+libc++ does a best-effort attempt to support these types like other integral
+types, by supporting them notably in:
 
-The ``[[nodiscard]]`` attribute is intended to help users find bugs where
-function return values are ignored when they shouldn't be. After C++17 the
-C++ standard has started to declared such library functions as ``[[nodiscard]]``.
-However, this application is limited and applies only to dialects after C++17.
-Users who want help diagnosing misuses of STL functions may desire a more
-liberal application of ``[[nodiscard]]``.
+* ``<bits>``
+* ``<charconv>``
+* ``<functional>``
+* ``<type_traits>``
+* ``<format>``
+* ``<random>``
 
-For this reason libc++ provides an extension that does just that! The
-extension must be enabled by defining ``_LIBCPP_ENABLE_NODISCARD``. The extended
-applications of ``[[nodiscard]]`` takes two forms:
+Additional types supported in random distributions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Backporting ``[[nodiscard]]`` to entities declared as such by the
-   standard in newer dialects, but not in the present one.
+The `C++ Standard <http://eel.is/c++draft/rand#req.genl-1.5>`_ mentions that instantiating several random number
+distributions with types other than ``short``, ``int``, ``long``, ``long long``, and their unsigned versions is
+undefined. As an extension, libc++ supports instantiating ``binomial_distribution``, ``discrete_distribution``,
+``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``, and ``uniform_int_distribution``
+with ``int8_t``, ``__int128_t`` and their unsigned versions.
 
-2. Extended applications of ``[[nodiscard]]``, at the library's discretion,
-   applied to entities never declared as such by the standard.
+Extensions to ``<format>``
+--------------------------
 
-Users may also opt-out of additional applications ``[[nodiscard]]`` using
-additional macros.
+The exposition only type ``basic-format-string`` and its typedefs
+``format-string`` and ``wformat-string`` became ``basic_format_string``,
+``format_string``, and ``wformat_string`` in C++23. Libc++ makes these types
+available in C++20 as an extension.
 
-Applications of the first form, which backport ``[[nodiscard]]`` from a newer
-dialect, may be disabled using macros specific to the dialect in which it was
-added. For example, ``_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17``.
+For padding Unicode strings the ``format`` library relies on the Unicode
+Standard. Libc++ retroactively updates the Unicode Standard in older C++
+versions. This allows the library to have better estimates for newly introduced
+Unicode code points, without requiring the user to use the latest C++ version
+in their code base.
 
-Applications of the second form, which are pure extensions, may be disabled
-by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
+In C++26 formatting pointers gained a type ``P`` and allows to use
+zero-padding. These options have been retroactively applied to C++20.
 
+Extensions to the C++23 modules ``std`` and ``std.compat``
+----------------------------------------------------------
 
-Entities declared with ``_LIBCPP_NODISCARD_EXT``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Like other major implementations, libc++ provides C++23 modules ``std`` and
+``std.compat`` in C++20 as an extension"
 
-This section lists all extended applications of ``[[nodiscard]]`` to entities
-which no dialect declares as such (See the second form described above).
+Constant-initialized std::string
+--------------------------------
 
-* ``adjacent_find``
-* ``all_of``
-* ``any_of``
-* ``binary_search``
-* ``clamp``
-* ``count_if``
-* ``count``
-* ``equal_range``
-* ``equal``
-* ``find_end``
-* ``find_first_of``
-* ``find_if_not``
-* ``find_if``
-* ``find``
-* ``get_temporary_buffer``
-* ``includes``
-* ``is_heap_until``
-* ``is_heap``
-* ``is_partitioned``
-* ``is_permutation``
-* ``is_sorted_until``
-* ``is_sorted``
-* ``lexicographical_compare``
-* ``lower_bound``
-* ``max_element``
-* ``max``
-* ``min_element``
-* ``min``
-* ``minmax_element``
-* ``minmax``
-* ``mismatch``
-* ``none_of``
-* ``remove_if``
-* ``remove``
-* ``search_n``
-* ``search``
-* ``unique``
-* ``upper_bound``
-* ``lock_guard``'s constructors
-* ``as_const``
-* ``forward``
-* ``move``
-* ``move_if_noexcept``
-* ``identity::operator()``
-* ``to_integer``
-* ``to_underlying``
+As an implementation-specific optimization, ``std::basic_string`` (``std::string``,
+``std::wstring``, etc.) may either store the string data directly in the object, or else store a
+pointer to heap-allocated memory, depending on the length of the string.
+
+As of C++20, the constructors are now declared ``constexpr``, which permits strings to be used
+during constant-evaluation time. In libc++, as in other common implementations, it is also possible
+to constant-initialize a string object (e.g. via declaring a variable with ``constinit`` or
+``constexpr``), but, only if the string is short enough to not require a heap allocation. Reliance
+upon this should be discouraged in portable code, as the allowed length differs based on the
+standard-library implementation and also based on whether the platform uses 32-bit or 64-bit
+pointers.
+
+.. code-block:: cpp
+
+  // Non-portable: 11-char string works on 64-bit libc++, but not on 32-bit.
+  constinit std::string x = "hello world";
+
+  // Prefer to use string_view, or remove constinit/constexpr from the variable definition:
+  constinit std::string_view x = "hello world";
+  std::string_view y = "hello world";
+
+.. _turning-off-asan:
+
+Turning off ASan annotation in containers
+-----------------------------------------
+
+``__asan_annotate_container_with_allocator`` is a customization point to allow users to disable
+`Address Sanitizer annotations for containers <https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow>`_ for specific allocators. This may be necessary for allocators that access allocated memory.
+This customization point exists only when ``_LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS`` Feature Test Macro is defined.
+
+For allocators not running destructors, it is also possible to `bulk-unpoison memory <https://github.com/google/sanitizers/wiki/AddressSanitizerManualPoisoning>`_ instead of disabling annotations altogether.
+
+The struct may be specialized for user-defined allocators. It is a `Cpp17UnaryTypeTrait <http://eel.is/c++draft/type.traits#meta.rqmts>`_ with a base characteristic of ``true_type`` if the container is allowed to use annotations and ``false_type`` otherwise.
+
+The annotations for a ``user_allocator`` can be disabled like this:
+
+.. code-block:: cpp
+
+  #ifdef _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS
+  template <class T>
+  struct std::__asan_annotate_container_with_allocator<user_allocator<T>> : std::false_type {};
+  #endif
+
+Why may I want to turn it off?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are a few reasons why you may want to turn off annotations for an allocator.
+Unpoisoning may not be an option, if (for example) you are not maintaining the allocator.
+
+* You are using allocator, which does not call destructor during deallocation.
+* You are aware that memory allocated with an allocator may be accessed, even when unused by container.
+
+Platform specific behavior
+==========================
+
+Windows
+-------
+
+The ``stdout``, ``stderr``, and ``stdin`` file streams can be placed in
+Unicode mode by a suitable call to ``_setmode()``. When in this mode,
+the sequence of bytes read from, or written to, these streams is interpreted
+as a sequence of little-endian ``wchar_t`` elements. Thus, use of
+``std::cout``, ``std::cerr``, or ``std::cin`` with streams in Unicode mode
+will not behave as they usually do since bytes read or written won't be
+interpreted as individual ``char`` elements. However, ``std::wcout``,
+``std::wcerr``, and ``std::wcin`` will behave as expected.
+
+Wide character stream such as ``std::wcin`` or ``std::wcout`` imbued with a
+locale behave differently than they otherwise do. By default, wide character
+streams don't convert wide characters but input/output them as is. If a
+specific locale is imbued, the IO with the underlying stream happens with
+regular ``char`` elements, which are converted to/from wide characters
+according to the locale. Note that this doesn't behave as expected if the
+stream has been set in Unicode mode.

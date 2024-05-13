@@ -21,11 +21,13 @@
 
 using namespace llvm;
 
+namespace llvm {
 cl::opt<unsigned> AsmMacroMaxNestingDepth(
     "asm-macro-max-nesting-depth", cl::init(20), cl::Hidden,
     cl::desc("The maximum nesting depth allowed for assembly macros."));
+}
 
-MCAsmParser::MCAsmParser() {}
+MCAsmParser::MCAsmParser() = default;
 
 MCAsmParser::~MCAsmParser() = default;
 
@@ -138,6 +140,25 @@ bool MCAsmParser::parseMany(function_ref<bool()> parseOne, bool hasComma) {
 bool MCAsmParser::parseExpression(const MCExpr *&Res) {
   SMLoc L;
   return parseExpression(Res, L);
+}
+
+bool MCAsmParser::parseGNUAttribute(SMLoc L, int64_t &Tag,
+                                    int64_t &IntegerValue) {
+  // Parse a .gnu_attribute with numerical tag and value.
+  StringRef S(L.getPointer());
+  SMLoc TagLoc;
+  TagLoc = getTok().getLoc();
+  const AsmToken &Tok = getTok();
+  if (Tok.isNot(AsmToken::Integer))
+    return false;
+  Tag = Tok.getIntVal();
+  Lex(); // Eat the Tag
+  Lex(); // Eat the comma
+  if (Tok.isNot(AsmToken::Integer))
+    return false;
+  IntegerValue = Tok.getIntVal();
+  Lex(); // Eat the IntegerValue
+  return true;
 }
 
 void MCParsedAsmOperand::dump() const {

@@ -1,10 +1,7 @@
-; RUN: opt %loadPolly -basic-aa -polly-detect -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false -analyze < %s | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
-; RUN: opt %loadPolly -basic-aa -polly-detect -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -analyze < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
-; RUN: opt %loadPolly -basic-aa -polly-detect -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -analyze < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
-; RUN: opt %loadPolly -basic-aa -polly-detect -polly-process-unprofitable=false \
-; RUN:    -polly-allow-nonaffine -polly-allow-nonaffine-branches \
-; RUN:    -polly-allow-nonaffine-loops=true -analyze < %s \
-; RUN:    | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                                                          -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                                           -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine                                   -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=PROFIT
 ;
 ; Here we have a non-affine loop but also a non-affine access which should
 ; be rejected as long as -polly-allow-nonaffine isn't given.
@@ -24,7 +21,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* noalias %A, i32* noalias %C) {
+define void @f(ptr noalias %A, ptr noalias %C) {
 bb:
   br label %bb1
 
@@ -38,17 +35,17 @@ bb2:                                              ; preds = %bb1
 
 bb3:                                              ; preds = %bb6, %bb2
   %indvars.j = phi i32 [ %tmp4, %bb6 ], [ 0, %bb2 ]
-  %tmp = getelementptr inbounds i32, i32* %C, i32 %indvars.j
-  %tmp4 = load i32, i32* %tmp, align 4
+  %tmp = getelementptr inbounds i32, ptr %C, i32 %indvars.j
+  %tmp4 = load i32, ptr %tmp, align 4
   %tmp5 = icmp eq i32 %tmp4, 0
   br i1 %tmp5, label %bb11, label %bb6
 
 bb6:                                              ; preds = %bb3
   %tmp7 = sext i32 %tmp4 to i64
-  %tmp8 = getelementptr inbounds i32, i32* %A, i64 %tmp7
-  %tmp9 = load i32, i32* %tmp8, align 4
+  %tmp8 = getelementptr inbounds i32, ptr %A, i64 %tmp7
+  %tmp9 = load i32, ptr %tmp8, align 4
   %tmp10 = add nsw i32 %tmp9, 1
-  store i32 %tmp10, i32* %tmp8, align 4
+  store i32 %tmp10, ptr %tmp8, align 4
   br label %bb3
 
 bb11:                                             ; preds = %bb3

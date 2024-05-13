@@ -17,28 +17,31 @@ enum Fixups {
   /// fixup_ve_reflong - 32-bit fixup corresponding to foo
   fixup_ve_reflong = FirstTargetFixupKind,
 
-  /// fixup_ve_hi32 - 32-bit fixup corresponding to foo@hi
+  /// fixup_ve_srel32 - 32-bit fixup corresponding to foo for relative branch
+  fixup_ve_srel32,
+
+  /// fixup_ve_hi32 - 32-bit fixup corresponding to foo\@hi
   fixup_ve_hi32,
 
-  /// fixup_ve_lo32 - 32-bit fixup corresponding to foo@lo
+  /// fixup_ve_lo32 - 32-bit fixup corresponding to foo\@lo
   fixup_ve_lo32,
 
-  /// fixup_ve_pc_hi32 - 32-bit fixup corresponding to foo@pc_hi
+  /// fixup_ve_pc_hi32 - 32-bit fixup corresponding to foo\@pc_hi
   fixup_ve_pc_hi32,
 
-  /// fixup_ve_pc_lo32 - 32-bit fixup corresponding to foo@pc_lo
+  /// fixup_ve_pc_lo32 - 32-bit fixup corresponding to foo\@pc_lo
   fixup_ve_pc_lo32,
 
-  /// fixup_ve_got_hi32 - 32-bit fixup corresponding to foo@got_hi
+  /// fixup_ve_got_hi32 - 32-bit fixup corresponding to foo\@got_hi
   fixup_ve_got_hi32,
 
-  /// fixup_ve_got_lo32 - 32-bit fixup corresponding to foo@got_lo
+  /// fixup_ve_got_lo32 - 32-bit fixup corresponding to foo\@got_lo
   fixup_ve_got_lo32,
 
-  /// fixup_ve_gotoff_hi32 - 32-bit fixup corresponding to foo@gotoff_hi
+  /// fixup_ve_gotoff_hi32 - 32-bit fixup corresponding to foo\@gotoff_hi
   fixup_ve_gotoff_hi32,
 
-  /// fixup_ve_gotoff_lo32 - 32-bit fixup corresponding to foo@gotoff_lo
+  /// fixup_ve_gotoff_lo32 - 32-bit fixup corresponding to foo\@gotoff_lo
   fixup_ve_gotoff_lo32,
 
   /// fixup_ve_plt_hi32/lo32

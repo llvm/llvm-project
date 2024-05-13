@@ -1,16 +1,16 @@
 // RUN: %clang -target x86_64-linux-gnu -fsplit-stack -S %s -emit-llvm -o - | FileCheck -check-prefix=CHECK-SEGSTK %s
 // RUN: %clang -target x86_64-linux-gnu -S %s -emit-llvm -o - | FileCheck -check-prefix=CHECK-NOSEGSTK %s
 
-int foo() {
+int foo(void) {
   return 0;
 }
 
 __attribute__((no_split_stack))
-int nosplit() {
+int nosplit(void) {
   return 0;
 }
 
-int main() {
+int main(void) {
   return foo();
 }
 

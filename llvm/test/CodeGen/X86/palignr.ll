@@ -11,7 +11,7 @@ define <4 x i32> @test1(<4 x i32> %A, <4 x i32> %B) nounwind {
 ;
 ; CHECK-AVX-LABEL: test1:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,2,3,0]
+; CHECK-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,2,3,0]
 ; CHECK-AVX-NEXT:    retl
   %C = shufflevector <4 x i32> %A, <4 x i32> undef, <4 x i32> < i32 1, i32 2, i32 3, i32 0 >
   ret <4 x i32> %C
@@ -167,8 +167,8 @@ define <8 x i16> @test9(<8 x i16> %A, <8 x i16> %B) nounwind {
 ; CHECK-SSE2-LABEL: test9:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
-; CHECK-SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1]
+; CHECK-SSE2-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
+; CHECK-SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
 ; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    retl
 ;

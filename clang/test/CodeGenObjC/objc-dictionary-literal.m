@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x objective-c -triple x86_64-apple-darwin10 -fblocks -emit-llvm %s -o /dev/null
 // RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -fblocks -emit-llvm %s -o /dev/null
-// rdar://10614657
 
 @interface NSNumber
 + (NSNumber *)numberWithChar:(char)value;
@@ -17,7 +16,7 @@ typedef unsigned long NSUInteger;
 @interface NSString<NSCopying>
 @end
 
-int main() {
+int main(void) {
 	NSDictionary *dict = @{ @"name":@666 };
 	NSDictionary *dict1 = @{ @"name":@666 };
 	NSDictionary *dict2 = @{ @"name":@666 };

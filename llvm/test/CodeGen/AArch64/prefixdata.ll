@@ -8,9 +8,8 @@
 ; MACHO-NEXT: .alt_entry _f
 ; MACHO-NEXT: _f:
 ; ELF: .type f,@function
-; ELF-NEXT: .word	1
-; ELF-NEXT: // 0x1
-; ELF-NEXT: f:
+; ELF-NEXT: .word	1  // 0x1
+; ELF-NEXT: f:  // @f
 define void @f() prefix i32 1 {
   ret void
 }
@@ -22,7 +21,7 @@ define void @f() prefix i32 1 {
 ; ELF: .type g,@function
 ; ELF-NEXT: .xword	i
 ; ELF-NEXT: g:
-define void @g() prefix i32* @i {
+define void @g() prefix ptr @i {
   ret void
 }
 

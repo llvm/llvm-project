@@ -4,9 +4,8 @@ Test the PExpectTest test functions.
 
 from lldbsuite.test.lldbpexpect import *
 
-class TestPExpectTestCase(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
+class TestPExpectTestCase(PExpectTest):
     NO_DEBUG_INFO_TESTCASE = True
 
     def assert_expect_fails_with(self, cmd, expect_args, expected_msg):
@@ -19,6 +18,8 @@ class TestPExpectTestCase(PExpectTest):
 
     def test_expect(self):
         # Test that passing a string to the 'substrs' argument is rejected.
-        self.assert_expect_fails_with("settings list prompt",
+        self.assert_expect_fails_with(
+            "settings list prompt",
             dict(substrs="some substring"),
-            "substrs must be a collection of strings")
+            "substrs must be a collection of strings",
+        )

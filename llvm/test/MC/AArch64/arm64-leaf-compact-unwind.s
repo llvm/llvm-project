@@ -1,69 +1,26 @@
-// RUN: llvm-mc -triple=arm64-apple-ios -filetype=obj < %s | \
-// RUN: llvm-readobj --expand-relocs -S --section-relocations --section-data - | \
+// RUN: llvm-mc -triple=arm64-apple-ios -filetype=obj -emit-compact-unwind-non-canonical=true < %s | \
+// RUN: llvm-objdump --macho --unwind-info - | \
 // RUN: FileCheck %s
 //
 // rdar://13070556
 
-// FIXME: we should add compact unwind support to llvm-objdump --unwind-info
-
-// CHECK:      Section {
-// CHECK:        Index: 1
-// CHECK-NEXT:   Name: __compact_unwind
-// CHECK-NEXT:   Segment: __LD
-// CHECK-NEXT:   Address:
-// CHECK-NEXT:   Size:
-// CHECK-NEXT:   Offset:
-// CHECK-NEXT:   Alignment:
-// CHECK-NEXT:   RelocationOffset:
-// CHECK-NEXT:   RelocationCount:
-// CHECK-NEXT:   Type:
-// CHECK-NEXT:   Attributes [
-// CHECK-NEXT:     Debug
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Reserved1:
-// CHECK-NEXT:   Reserved2:
-// CHECK-NEXT:   Reserved3:
-// CHECK-NEXT:   Relocations [
-// CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x60
-// CHECK-NEXT:       PCRel: 0
-// CHECK-NEXT:       Length: 3
-// CHECK-NEXT:       Type: ARM64_RELOC_UNSIGNED (0)
-// CHECK-NEXT:       Section: __text (1)
-// CHECK-NEXT:     }
-// CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x40
-// CHECK-NEXT:       PCRel: 0
-// CHECK-NEXT:       Length: 3
-// CHECK-NEXT:       Type: ARM64_RELOC_UNSIGNED (0)
-// CHECK-NEXT:       Section: __text (1)
-// CHECK-NEXT:     }
-// CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x20
-// CHECK-NEXT:       PCRel: 0
-// CHECK-NEXT:       Length: 3
-// CHECK-NEXT:       Type: ARM64_RELOC_UNSIGNED (0)
-// CHECK-NEXT:       Section: __text (1)
-// CHECK-NEXT:     }
-// CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x0
-// CHECK-NEXT:       PCRel: 0
-// CHECK-NEXT:       Length: 3
-// CHECK-NEXT:       Type: ARM64_RELOC_UNSIGNED (0)
-// CHECK-NEXT:       Section: __text (1)
-// CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   SectionData (
-// CHECK-NEXT:     0000: 00000000 00000000 08000000 00000002
-// CHECK-NEXT:     0010: 00000000 00000000 00000000 00000000
-// CHECK-NEXT:     0020: 08000000 00000000 40000000 00900002
-// CHECK-NEXT:     0030: 00000000 00000000 00000000 00000000
-// CHECK-NEXT:     0040: 48000000 00000000 D4000000 0F400002
-// CHECK-NEXT:     0050: 00000000 00000000 00000000 00000000
-// CHECK-NEXT:     0060: 1C010000 00000000 54000000 10100202
-// CHECK-NEXT:     0070: 00000000 00000000 00000000 00000000
-// CHECK-NEXT:   )
-// CHECK-NEXT: }
+// CHECK:      Contents of __compact_unwind section:
+// CHECK-NEXT:   Entry at offset 0x0:
+// CHECK-NEXT:     start:                0x0 ltmp0
+// CHECK-NEXT:     length:               0x8
+// CHECK-NEXT:     compact encoding:     0x02000000
+// CHECK-NEXT:   Entry at offset 0x20:
+// CHECK-NEXT:     start:                0x8 _foo2
+// CHECK-NEXT:     length:               0x40
+// CHECK-NEXT:     compact encoding:     0x02009000
+// CHECK-NEXT:   Entry at offset 0x40:
+// CHECK-NEXT:     start:                0x48 _foo3
+// CHECK-NEXT:     length:               0xd4
+// CHECK-NEXT:     compact encoding:     0x0200400f
+// CHECK-NEXT:   Entry at offset 0x60:
+// CHECK-NEXT:     start:                0x11c _foo4
+// CHECK-NEXT:     length:               0x54
+// CHECK-NEXT:     compact encoding:     0x02021010
 
 	.section	__TEXT,__text,regular,pure_instructions
 	.globl	_foo1

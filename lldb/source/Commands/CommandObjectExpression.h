@@ -35,6 +35,15 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override;
 
+    /// Return the appropriate expression options used for evaluating the
+    /// expression in the given target.
+    EvaluateExpressionOptions GetEvaluateExpressionOptions(
+        const Target &target,
+        const OptionGroupValueObjectDisplay &display_opts);
+
+    bool ShouldSuppressResult(
+        const OptionGroupValueObjectDisplay &display_opts) const;
+
     bool top_level;
     bool unwind_on_error;
     bool ignore_breakpoints;
@@ -47,6 +56,7 @@ public:
     lldb::LanguageType language;
     LanguageRuntimeDescriptionDisplayVerbosity m_verbosity;
     LazyBool auto_apply_fixits;
+    LazyBool suppress_persistent_result;
   };
 
   CommandObjectExpression(CommandInterpreter &interpreter);
@@ -65,11 +75,7 @@ protected:
   bool IOHandlerIsInputComplete(IOHandler &io_handler,
                                 StringList &lines) override;
 
-  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
-
-  /// Return the appropriate expression options used for evaluating the
-  /// expression in the given target.
-  EvaluateExpressionOptions GetEvalOptions(const Target &target);
+  void DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
   /// Evaluates the given expression.
   /// \param output_stream The stream to which the evaluation result will be

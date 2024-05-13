@@ -35,17 +35,13 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -58,8 +54,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -67,7 +61,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/GVNExpression.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -158,7 +151,7 @@ public:
 
   void restrictToBlocks(SmallSetVector<BasicBlock *, 4> &Blocks) {
     for (auto II = Insts.begin(); II != Insts.end();) {
-      if (!llvm::is_contained(Blocks, (*II)->getParent())) {
+      if (!Blocks.contains((*II)->getParent())) {
         ActiveBlocks.remove((*II)->getParent());
         II = Insts.erase(II);
       } else {
@@ -233,12 +226,22 @@ class ModelledPHI {
 public:
   ModelledPHI() = default;
 
-  ModelledPHI(const PHINode *PN) {
-    // BasicBlock comes first so we sort by basic block pointer order, then by value pointer order.
-    SmallVector<std::pair<BasicBlock *, Value *>, 4> Ops;
+  ModelledPHI(const PHINode *PN,
+              const DenseMap<const BasicBlock *, unsigned> &BlockOrder) {
+    // BasicBlock comes first so we sort by basic block pointer order,
+    // then by value pointer order. No need to call `verifyModelledPHI`
+    // As the Values and Blocks are populated in a deterministic order.
+    using OpsType = std::pair<BasicBlock *, Value *>;
+    SmallVector<OpsType, 4> Ops;
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I)
       Ops.push_back({PN->getIncomingBlock(I), PN->getIncomingValue(I)});
-    llvm::sort(Ops);
+
+    auto ComesBefore = [BlockOrder](OpsType O1, OpsType O2) {
+      return BlockOrder.lookup(O1.first) < BlockOrder.lookup(O2.first);
+    };
+    // Sort in a deterministic order.
+    llvm::sort(Ops, ComesBefore);
+
     for (auto &P : Ops) {
       Blocks.push_back(P.first);
       Values.push_back(P.second);
@@ -254,16 +257,38 @@ public:
     return M;
   }
 
+  void
+  verifyModelledPHI(const DenseMap<const BasicBlock *, unsigned> &BlockOrder) {
+    assert(Values.size() > 1 && Blocks.size() > 1 &&
+           "Modelling PHI with less than 2 values");
+    auto ComesBefore = [BlockOrder](const BasicBlock *BB1,
+                                    const BasicBlock *BB2) {
+      return BlockOrder.lookup(BB1) < BlockOrder.lookup(BB2);
+    };
+    assert(llvm::is_sorted(Blocks, ComesBefore));
+    int C = 0;
+    for (const Value *V : Values) {
+      if (!isa<UndefValue>(V)) {
+        assert(cast<Instruction>(V)->getParent() == Blocks[C]);
+        (void)C;
+      }
+      C++;
+    }
+  }
   /// Create a PHI from an array of incoming values and incoming blocks.
-  template <typename VArray, typename BArray>
-  ModelledPHI(const VArray &V, const BArray &B) {
+  ModelledPHI(SmallVectorImpl<Instruction *> &V,
+              SmallSetVector<BasicBlock *, 4> &B,
+              const DenseMap<const BasicBlock *, unsigned> &BlockOrder) {
+    // The order of Values and Blocks are already ordered by the caller.
     llvm::copy(V, std::back_inserter(Values));
     llvm::copy(B, std::back_inserter(Blocks));
+    verifyModelledPHI(BlockOrder);
   }
 
   /// Create a PHI from [I[OpNum] for I in Insts].
-  template <typename BArray>
-  ModelledPHI(ArrayRef<Instruction *> Insts, unsigned OpNum, const BArray &B) {
+  /// TODO: Figure out a way to verifyModelledPHI in this constructor.
+  ModelledPHI(ArrayRef<Instruction *> Insts, unsigned OpNum,
+              SmallSetVector<BasicBlock *, 4> &B) {
     llvm::copy(B, std::back_inserter(Blocks));
     for (auto *I : Insts)
       Values.push_back(I->getOperand(OpNum));
@@ -276,7 +301,7 @@ public:
     auto VI = Values.begin();
     while (BI != Blocks.end()) {
       assert(VI != Values.end());
-      if (!llvm::is_contained(NewBlocks, *BI)) {
+      if (!NewBlocks.contains(*BI)) {
         BI = Blocks.erase(BI);
         VI = Values.erase(VI);
       } else {
@@ -290,7 +315,7 @@ public:
   ArrayRef<Value *> getValues() const { return Values; }
 
   bool areAllIncomingValuesSame() const {
-    return llvm::all_of(Values, [&](Value *V) { return V == Values[0]; });
+    return llvm::all_equal(Values);
   }
 
   bool areAllIncomingValuesSameType() const {
@@ -304,7 +329,8 @@ public:
 
   // Hash functor
   unsigned hash() const {
-      return (unsigned)hash_combine_range(Values.begin(), Values.end());
+    // Is deterministic because Values are saved in a specific order.
+    return (unsigned)hash_combine_range(Values.begin(), Values.end());
   }
 
   bool operator==(const ModelledPHI &Other) const {
@@ -383,6 +409,8 @@ public:
   }
 };
 
+using BasicBlocksSet = SmallPtrSet<const BasicBlock *, 32>;
+
 class ValueTable {
   DenseMap<Value *, uint32_t> ValueNumbering;
   DenseMap<GVNExpression::Expression *, uint32_t> ExpressionNumbering;
@@ -390,6 +418,7 @@ class ValueTable {
   BumpPtrAllocator Allocator;
   ArrayRecycler<Value *> Recycler;
   uint32_t nextValueNumber = 1;
+  BasicBlocksSet ReachableBBs;
 
   /// Create an expression for I based on its opcode and its uses. If I
   /// touches or reads memory, the expression is also based upon its memory
@@ -421,6 +450,11 @@ class ValueTable {
 public:
   ValueTable() = default;
 
+  /// Set basic blocks reachable from entry block.
+  void setReachableBBs(const BasicBlocksSet &ReachableBBs) {
+    this->ReachableBBs = ReachableBBs;
+  }
+
   /// Returns the value number for the specified value, assigning
   /// it a new number if it did not have one before.
   uint32_t lookupOrAdd(Value *V) {
@@ -434,6 +468,9 @@ public:
     }
 
     Instruction *I = cast<Instruction>(V);
+    if (!ReachableBBs.contains(I->getParent()))
+      return ~0U;
+
     InstructionUseExpr *exp = nullptr;
     switch (I->getOpcode()) {
     case Instruction::Load:
@@ -562,7 +599,7 @@ public:
 
 class GVNSink {
 public:
-  GVNSink() = default;
+  GVNSink() {}
 
   bool run(Function &F) {
     LLVM_DEBUG(dbgs() << "GVNSink: running on function @" << F.getName()
@@ -570,6 +607,17 @@ public:
 
     unsigned NumSunk = 0;
     ReversePostOrderTraversal<Function*> RPOT(&F);
+    VN.setReachableBBs(BasicBlocksSet(RPOT.begin(), RPOT.end()));
+    // Populate reverse post-order to order basic blocks in deterministic
+    // order. Any arbitrary ordering will work in this case as long as they are
+    // deterministic. The node ordering of newly created basic blocks
+    // are irrelevant because RPOT(for computing sinkable candidates) is also
+    // obtained ahead of time and only their order are relevant for this pass.
+    unsigned NodeOrdering = 0;
+    RPOTOrder[*RPOT.begin()] = ++NodeOrdering;
+    for (auto *BB : RPOT)
+      if (!pred_empty(BB))
+        RPOTOrder[BB] = ++NodeOrdering;
     for (auto *N : RPOT)
       NumSunk += sinkBB(N);
 
@@ -578,6 +626,7 @@ public:
 
 private:
   ValueTable VN;
+  DenseMap<const BasicBlock *, unsigned> RPOTOrder;
 
   bool shouldAvoidSinkingInstruction(Instruction *I) {
     // These instructions may change or break semantics if moved.
@@ -589,8 +638,8 @@ private:
 
   /// The main heuristic function. Analyze the set of instructions pointed to by
   /// LRI and return a candidate solution if these instructions can be sunk, or
-  /// None otherwise.
-  Optional<SinkingInstructionCandidate> analyzeInstructionForSinking(
+  /// std::nullopt otherwise.
+  std::optional<SinkingInstructionCandidate> analyzeInstructionForSinking(
       LockstepReverseIterator &LRI, unsigned &InstNum, unsigned &MemoryInstNum,
       ModelledPHISet &NeededPHIs, SmallPtrSetImpl<Value *> &PHIContents);
 
@@ -598,7 +647,7 @@ private:
   void analyzeInitialPHIs(BasicBlock *BB, ModelledPHISet &PHIs,
                           SmallPtrSetImpl<Value *> &PHIContents) {
     for (PHINode &PN : BB->phis()) {
-      auto MPHI = ModelledPHI(&PN);
+      auto MPHI = ModelledPHI(&PN, RPOTOrder);
       PHIs.insert(MPHI);
       for (auto *V : MPHI.getValues())
         PHIContents.insert(V);
@@ -624,15 +673,18 @@ private:
       if (PN->getIncomingValue(0) != PN)
         PN->replaceAllUsesWith(PN->getIncomingValue(0));
       else
-        PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
       PN->eraseFromParent();
     }
   }
 };
 
-Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
-  LockstepReverseIterator &LRI, unsigned &InstNum, unsigned &MemoryInstNum,
-  ModelledPHISet &NeededPHIs, SmallPtrSetImpl<Value *> &PHIContents) {
+std::optional<SinkingInstructionCandidate>
+GVNSink::analyzeInstructionForSinking(LockstepReverseIterator &LRI,
+                                      unsigned &InstNum,
+                                      unsigned &MemoryInstNum,
+                                      ModelledPHISet &NeededPHIs,
+                                      SmallPtrSetImpl<Value *> &PHIContents) {
   auto Insts = *LRI;
   LLVM_DEBUG(dbgs() << " -- Analyzing instruction set: [\n"; for (auto *I
                                                                   : Insts) {
@@ -644,20 +696,14 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
     uint32_t N = VN.lookupOrAdd(I);
     LLVM_DEBUG(dbgs() << " VN=" << Twine::utohexstr(N) << " for" << *I << "\n");
     if (N == ~0U)
-      return None;
+      return std::nullopt;
     VNums[N]++;
   }
-  unsigned VNumToSink =
-      std::max_element(VNums.begin(), VNums.end(),
-                       [](const std::pair<uint32_t, unsigned> &I,
-                          const std::pair<uint32_t, unsigned> &J) {
-                         return I.second < J.second;
-                       })
-          ->first;
+  unsigned VNumToSink = llvm::max_element(VNums, llvm::less_second())->first;
 
   if (VNums[VNumToSink] == 1)
     // Can't sink anything!
-    return None;
+    return std::nullopt;
 
   // Now restrict the number of incoming blocks down to only those with
   // VNumToSink.
@@ -672,7 +718,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
   }
   for (auto *I : NewInsts)
     if (shouldAvoidSinkingInstruction(I))
-      return None;
+      return std::nullopt;
 
   // If we've restricted the incoming blocks, restrict all needed PHIs also
   // to that set.
@@ -689,7 +735,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
   }
 
   // The sunk instruction's results.
-  ModelledPHI NewPHI(NewInsts, ActivePreds);
+  ModelledPHI NewPHI(NewInsts, ActivePreds, RPOTOrder);
 
   // Does sinking this instruction render previous PHIs redundant?
   if (NeededPHIs.erase(NewPHI))
@@ -710,7 +756,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
       // V exists in this PHI, but the whole PHI is different to NewPHI
       // (else it would have been removed earlier). We cannot continue
       // because this isn't representable.
-      return None;
+      return std::nullopt;
 
   // Which operands need PHIs?
   // FIXME: If any of these fail, we should partition up the candidates to
@@ -723,7 +769,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
     return I->getNumOperands() != I0->getNumOperands();
   };
   if (any_of(NewInsts, hasDifferentNumOperands))
-    return None;
+    return std::nullopt;
 
   for (unsigned OpNum = 0, E = I0->getNumOperands(); OpNum != E; ++OpNum) {
     ModelledPHI PHI(NewInsts, OpNum, ActivePreds);
@@ -731,15 +777,15 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
       continue;
     if (!canReplaceOperandWithVariable(I0, OpNum))
       // We can 't create a PHI from this instruction!
-      return None;
+      return std::nullopt;
     if (NeededPHIs.count(PHI))
       continue;
     if (!PHI.areAllIncomingValuesSameType())
-      return None;
+      return std::nullopt;
     // Don't create indirect calls! The called value is the final operand.
     if ((isa<CallInst>(I0) || isa<InvokeInst>(I0)) && OpNum == E - 1 &&
         PHI.areAnyIncomingValuesConstant())
-      return None;
+      return std::nullopt;
 
     NeededPHIs.reserve(NeededPHIs.size());
     NeededPHIs.insert(PHI);
@@ -764,6 +810,9 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
              BBEnd->printAsOperand(dbgs()); dbgs() << "\n");
   SmallVector<BasicBlock *, 4> Preds;
   for (auto *B : predecessors(BBEnd)) {
+    // Bailout on basic blocks without predecessor(PR42346).
+    if (!RPOTOrder.count(B))
+      return 0;
     auto *T = B->getTerminator();
     if (isa<BranchInst>(T) || isa<SwitchInst>(T))
       Preds.push_back(B);
@@ -772,16 +821,17 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
   }
   if (Preds.size() < 2)
     return 0;
-  llvm::sort(Preds);
+  auto ComesBefore = [this](const BasicBlock *BB1, const BasicBlock *BB2) {
+    return RPOTOrder.lookup(BB1) < RPOTOrder.lookup(BB2);
+  };
+  // Sort in a deterministic order.
+  llvm::sort(Preds, ComesBefore);
 
   unsigned NumOrigPreds = Preds.size();
   // We can only sink instructions through unconditional branches.
-  for (auto I = Preds.begin(); I != Preds.end();) {
-    if ((*I)->getTerminator()->getNumSuccessors() != 1)
-      I = Preds.erase(I);
-    else
-      ++I;
-  }
+  llvm::erase_if(Preds, [](BasicBlock *BB) {
+    return BB->getTerminator()->getNumSuccessors() != 1;
+  });
 
   LockstepReverseIterator LRI(Preds);
   SmallVector<SinkingInstructionCandidate, 4> Candidates;
@@ -850,8 +900,9 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
     // Create a new PHI in the successor block and populate it.
     auto *Op = I0->getOperand(O);
     assert(!Op->getType()->isTokenTy() && "Can't PHI tokens!");
-    auto *PN = PHINode::Create(Op->getType(), Insts.size(),
-                               Op->getName() + ".sink", &BBEnd->front());
+    auto *PN =
+        PHINode::Create(Op->getType(), Insts.size(), Op->getName() + ".sink");
+    PN->insertBefore(BBEnd->begin());
     for (auto *I : Insts)
       PN->addIncoming(I->getOperand(O), I->getParent());
     NewOperands.push_back(PN);
@@ -883,45 +934,12 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
   NumRemoved += Insts.size() - 1;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Pass machinery / boilerplate
-
-class GVNSinkLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  GVNSinkLegacyPass() : FunctionPass(ID) {
-    initializeGVNSinkLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    GVNSink G;
-    return G.run(F);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-
 } // end anonymous namespace
 
 PreservedAnalyses GVNSinkPass::run(Function &F, FunctionAnalysisManager &AM) {
   GVNSink G;
   if (!G.run(F))
     return PreservedAnalyses::all();
+
   return PreservedAnalyses::none();
 }
-
-char GVNSinkLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(GVNSinkLegacyPass, "gvn-sink",
-                      "Early GVN sinking of Expressions", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(GVNSinkLegacyPass, "gvn-sink",
-                    "Early GVN sinking of Expressions", false, false)
-
-FunctionPass *llvm::createGVNSinkPass() { return new GVNSinkLegacyPass(); }

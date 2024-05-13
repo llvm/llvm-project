@@ -36,7 +36,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/InitializePasses.h"
@@ -54,9 +53,10 @@ static cl::opt<bool> EnableScopedNoAlias("enable-scoped-noalias",
 
 AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
                                          const MemoryLocation &LocB,
-                                         AAQueryInfo &AAQI) {
+                                         AAQueryInfo &AAQI,
+                                         const Instruction *) {
   if (!EnableScopedNoAlias)
-    return AAResultBase::alias(LocA, LocB, AAQI);
+    return AliasResult::MayAlias;
 
   // Get the attached MDNodes.
   const MDNode *AScopes = LocA.AATags.Scope, *BScopes = LocB.AATags.Scope;
@@ -69,15 +69,14 @@ AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
   if (!mayAliasInScopes(BScopes, ANoAlias))
     return AliasResult::NoAlias;
 
-  // If they may alias, chain to the next AliasAnalysis.
-  return AAResultBase::alias(LocA, LocB, AAQI);
+  return AliasResult::MayAlias;
 }
 
 ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,
                                                 const MemoryLocation &Loc,
                                                 AAQueryInfo &AAQI) {
   if (!EnableScopedNoAlias)
-    return AAResultBase::getModRefInfo(Call, Loc, AAQI);
+    return ModRefInfo::ModRef;
 
   if (!mayAliasInScopes(Loc.AATags.Scope,
                         Call->getMetadata(LLVMContext::MD_noalias)))
@@ -87,14 +86,14 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,
                         Loc.AATags.NoAlias))
     return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(Call, Loc, AAQI);
+  return ModRefInfo::ModRef;
 }
 
 ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call1,
                                                 const CallBase *Call2,
                                                 AAQueryInfo &AAQI) {
   if (!EnableScopedNoAlias)
-    return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
+    return ModRefInfo::ModRef;
 
   if (!mayAliasInScopes(Call1->getMetadata(LLVMContext::MD_alias_scope),
                         Call2->getMetadata(LLVMContext::MD_noalias)))
@@ -104,7 +103,7 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call1,
                         Call1->getMetadata(LLVMContext::MD_noalias)))
     return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
+  return ModRefInfo::ModRef;
 }
 
 static void collectMDInDomain(const MDNode *List, const MDNode *Domain,

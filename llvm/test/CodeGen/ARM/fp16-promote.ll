@@ -14,11 +14,11 @@ target triple = "armv7---eabihf"
 ; CHECK-NOVFP: bl __aeabi_fadd
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_fadd(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_fadd(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = fadd half %a, %b
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -31,11 +31,11 @@ define void @test_fadd(half* %p, half* %q) #0 {
 ; CHECK-NOVFP: bl __aeabi_fsub
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_fsub(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_fsub(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = fsub half %a, %b
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -48,11 +48,11 @@ define void @test_fsub(half* %p, half* %q) #0 {
 ; CHECK-NOVFP: bl __aeabi_fmul
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_fmul(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_fmul(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = fmul half %a, %b
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -65,11 +65,11 @@ define void @test_fmul(half* %p, half* %q) #0 {
 ; CHECK-NOVFP: bl __aeabi_fdiv
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_fdiv(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_fdiv(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = fdiv half %a, %b
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -81,11 +81,11 @@ define void @test_fdiv(half* %p, half* %q) #0 {
 ; CHECK-LIBCALL: bl fmodf
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_frem(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_frem(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = frem half %a, %b
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -93,9 +93,9 @@ define void @test_frem(half* %p, half* %q) #0 {
 ; CHECK-ALL-NEXT: .fnstart
 ; CHECK-ALL: ldrh {{r[0-9]+}}, [{{r[0-9]+}}]
 ; CHECK-ALL: strh {{r[0-9]+}}, [{{r[0-9]+}}]
-define void @test_load_store(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  store half %a, half* %q
+define void @test_load_store(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  store half %a, ptr %q
   ret void
 }
 
@@ -153,11 +153,11 @@ define half @test_tailcall_flipped(half %a, half %b) #0 {
 ; CHECK-ALL: movne {{r[0-9]+}}, {{r[0-9]+}}
 ; CHECK-ALL: ldrh {{r[0-9]+}}, [{{r[0-9]+}}]
 ; CHECK-ALL: strh {{r[0-9]+}}, [{{r[0-9]+}}]
-define void @test_select(half* %p, half* %q, i1 zeroext %c) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_select(ptr %p, ptr %q, i1 zeroext %c) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = select i1 %c, half %a, half %b
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -174,9 +174,9 @@ define void @test_select(half* %p, half* %q, i1 zeroext %c) #0 {
 ; CHECK-VFP-NEXT: movwne
 ; CHECK-NOVFP-NEXT: clz r0, r0
 ; CHECK-NOVFP-NEXT: lsr r0, r0, #5
-define i1 @test_fcmp_une(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define i1 @test_fcmp_une(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = fcmp une half %a, %b
   ret i1 %r
 }
@@ -190,9 +190,9 @@ define i1 @test_fcmp_une(half* %p, half* %q) #0 {
 ; CHECK-NOVFP: bl __aeabi_fcmpeq
 ; CHECK-FP16: vmrs APSR_nzcv, fpscr
 ; CHECK-LIBCALL: movw{{ne|eq}}
-define i1 @test_fcmp_ueq(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define i1 @test_fcmp_ueq(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = fcmp ueq half %a, %b
   ret i1 %r
 }
@@ -205,48 +205,41 @@ define i1 @test_fcmp_ueq(half* %p, half* %q) #0 {
 ; CHECK-VFP: vcmp.f32
 ; CHECK-NOVFP: bl __aeabi_fcmplt
 ; CHECK-FP16: vmrs APSR_nzcv, fpscr
-; CHECK-VFP: strmi
-; CHECK-VFP: strpl
-; CHECK-NOVFP: strne
-; CHECK-NOVFP: streq
-define void @test_br_cc(half* %p, half* %q, i32* %p1, i32* %p2) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+; CHECK-VFP: movmi
+; CHECK-VFP: str
+; CHECK-NOVFP: str
+define void @test_br_cc(ptr %p, ptr %q, ptr %p1, ptr %p2) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %c = fcmp uge half %a, %b
   br i1 %c, label %then, label %else
 then:
-  store i32 0, i32* %p1
+  store i32 0, ptr %p1
   ret void
 else:
-  store i32 0, i32* %p2
+  store i32 0, ptr %p2
   ret void
 }
 
-declare i1 @test_dummy(half* %p) #0
+declare i1 @test_dummy(ptr %p) #0
 ; CHECK-ALL-LABEL: test_phi:
-; CHECK-FP16: vcvtb.f32.f16
-; CHECK-FP16: [[LOOP:.LBB[1-9_]+]]:
-; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: [[LOOP:.LBB[0-9_]+]]:
 ; CHECK-FP16: bl      test_dummy
 ; CHECK-FP16: bne     [[LOOP]]
-; CHECK-FP16: vcvtb.f16.f32
-; CHECK-LIBCALL-VFP: bl __aeabi_h2f
-; CHECK-LIBCALL: [[LOOP:.LBB[1-9_]+]]:
-; CHECK-LIBCALL-VFP: bl __aeabi_h2f
+; CHECK-LIBCALL: [[LOOP:.LBB[0-9_]+]]:
 ; CHECK-LIBCALL: bl test_dummy
 ; CHECK-LIBCALL: bne     [[LOOP]]
-; CHECK-LIBCALL-VFP: bl __aeabi_f2h
-define void @test_phi(half* %p) #0 {
+define void @test_phi(ptr %p) #0 {
 entry:
-  %a = load half, half* %p
+  %a = load half, ptr %p
   br label %loop
 loop:
   %r = phi half [%a, %entry], [%b, %loop]
-  %b = load half, half* %p
-  %c = call i1 @test_dummy(half* %p)
+  %b = load half, ptr %p
+  %c = call i1 @test_dummy(ptr %p)
   br i1 %c, label %loop, label %return
 return:
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -255,8 +248,8 @@ return:
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-VFP: vcvt.s32.f32
 ; CHECK-NOVFP: bl __aeabi_f2iz
-define i32 @test_fptosi_i32(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define i32 @test_fptosi_i32(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = fptosi half %a to i32
   ret i32 %r
 }
@@ -265,8 +258,8 @@ define i32 @test_fptosi_i32(half* %p) #0 {
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-ALL: bl __aeabi_f2lz
-define i64 @test_fptosi_i64(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define i64 @test_fptosi_i64(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = fptosi half %a to i64
   ret i64 %r
 }
@@ -276,8 +269,8 @@ define i64 @test_fptosi_i64(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-VFP: vcvt.u32.f32
 ; CHECK-NOVFP: bl __aeabi_f2uiz
-define i32 @test_fptoui_i32(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define i32 @test_fptoui_i32(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = fptoui half %a to i32
   ret i32 %r
 }
@@ -286,8 +279,8 @@ define i32 @test_fptoui_i32(half* %p) #0 {
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-ALL: bl __aeabi_f2ulz
-define i64 @test_fptoui_i64(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define i64 @test_fptoui_i64(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = fptoui half %a to i64
   ret i64 %r
 }
@@ -297,9 +290,9 @@ define i64 @test_fptoui_i64(half* %p) #0 {
 ; CHECK-NOVFP: bl __aeabi_i2f
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_sitofp_i32(i32 %a, half* %p) #0 {
+define void @test_sitofp_i32(i32 %a, ptr %p) #0 {
   %r = sitofp i32 %a to half
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -308,9 +301,9 @@ define void @test_sitofp_i32(i32 %a, half* %p) #0 {
 ; CHECK-NOVFP: bl __aeabi_ui2f
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_uitofp_i32(i32 %a, half* %p) #0 {
+define void @test_uitofp_i32(i32 %a, ptr %p) #0 {
   %r = uitofp i32 %a to half
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -318,9 +311,9 @@ define void @test_uitofp_i32(i32 %a, half* %p) #0 {
 ; CHECK-ALL: bl __aeabi_l2f
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_sitofp_i64(i64 %a, half* %p) #0 {
+define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
   %r = sitofp i64 %a to half
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -328,9 +321,9 @@ define void @test_sitofp_i64(i64 %a, half* %p) #0 {
 ; CHECK-ALL: bl __aeabi_ul2f
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_uitofp_i64(i64 %a, half* %p) #0 {
+define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
   %r = uitofp i64 %a to half
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -338,9 +331,9 @@ define void @test_uitofp_i64(i64 %a, half* %p) #0 {
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL-LABEL: test_fptrunc_float:
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_fptrunc_float(float %f, half* %p) #0 {
+define void @test_fptrunc_float(float %f, ptr %p) #0 {
   %a = fptrunc float %f to half
-  store half %a, half* %p
+  store half %a, ptr %p
   ret void
 }
 
@@ -348,9 +341,9 @@ define void @test_fptrunc_float(float %f, half* %p) #0 {
 ; CHECK-FP16: bl __aeabi_d2h
 ; CHECK-LIBCALL-LABEL: test_fptrunc_double:
 ; CHECK-LIBCALL: bl __aeabi_d2h
-define void @test_fptrunc_double(double %d, half* %p) #0 {
+define void @test_fptrunc_double(double %d, ptr %p) #0 {
   %a = fptrunc double %d to half
-  store half %a, half* %p
+  store half %a, ptr %p
   ret void
 }
 
@@ -358,8 +351,8 @@ define void @test_fptrunc_double(double %d, half* %p) #0 {
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-LIBCALL-LABEL: test_fpextend_float:
 ; CHECK-LIBCALL: bl __aeabi_h2f
-define float @test_fpextend_float(half* %p) {
-  %a = load half, half* %p, align 2
+define float @test_fpextend_float(ptr %p) {
+  %a = load half, ptr %p, align 2
   %r = fpext half %a to float
   ret float %r
 }
@@ -370,8 +363,8 @@ define float @test_fpextend_float(half* %p) {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-VFP: vcvt.f64.f32
 ; CHECK-NOVFP: bl __aeabi_f2d
-define double @test_fpextend_double(half* %p) {
-  %a = load half, half* %p, align 2
+define double @test_fpextend_double(ptr %p) {
+  %a = load half, ptr %p, align 2
   %r = fpext half %a to double
   ret double %r
 }
@@ -380,8 +373,8 @@ define double @test_fpextend_double(half* %p) {
 ; CHECK-ALL-NEXT: .fnstart
 ; CHECK-ALL-NEXT: ldrh r0, [r0]
 ; CHECK-ALL-NEXT: bx lr
-define i16 @test_bitcast_halftoi16(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define i16 @test_bitcast_halftoi16(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = bitcast half %a to i16
   ret i16 %r
 }
@@ -390,14 +383,14 @@ define i16 @test_bitcast_halftoi16(half* %p) #0 {
 ; CHECK-ALL-NEXT: .fnstart
 ; CHECK-ALL-NEXT: strh r0, [r1]
 ; CHECK-ALL-NEXT: bx lr
-define void @test_bitcast_i16tohalf(i16 %a, half* %p) #0 {
+define void @test_bitcast_i16tohalf(i16 %a, ptr %p) #0 {
   %r = bitcast i16 %a to half
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
 declare half @llvm.sqrt.f16(half %a) #0
-declare half @llvm.powi.f16(half %a, i32 %b) #0
+declare half @llvm.powi.f16.i32(half %a, i32 %b) #0
 declare half @llvm.sin.f16(half %a) #0
 declare half @llvm.cos.f16(half %a) #0
 declare half @llvm.pow.f16(half %a, half %b) #0
@@ -427,10 +420,10 @@ declare half @llvm.fmuladd.f16(half %a, half %b, half %c) #0
 ; CHECK-LIBCALL-VFP: vsqrt.f32
 ; CHECK-NOVFP: bl sqrtf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_sqrt(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_sqrt(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.sqrt.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -442,10 +435,10 @@ define void @test_sqrt(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __powisf2
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_fpowi(half* %p, i32 %b) #0 {
-  %a = load half, half* %p, align 2
-  %r = call half @llvm.powi.f16(half %a, i32 %b)
-  store half %r, half* %p
+define void @test_fpowi(ptr %p, i32 %b) #0 {
+  %a = load half, ptr %p, align 2
+  %r = call half @llvm.powi.f16.i32(half %a, i32 %b)
+  store half %r, ptr %p
   ret void
 }
 
@@ -457,10 +450,10 @@ define void @test_fpowi(half* %p, i32 %b) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl sinf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_sin(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_sin(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.sin.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -472,10 +465,10 @@ define void @test_sin(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl cosf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_cos(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_cos(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.cos.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -489,11 +482,11 @@ define void @test_cos(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl powf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_pow(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_pow(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = call half @llvm.pow.f16(half %a, half %b)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -505,10 +498,10 @@ define void @test_pow(half* %p, half* %q) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl powf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_cbrt(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_cbrt(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.pow.f16(half %a, half 0x3FD5540000000000)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -520,10 +513,10 @@ define void @test_cbrt(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl expf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_exp(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_exp(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.exp.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -535,10 +528,10 @@ define void @test_exp(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl exp2f
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_exp2(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_exp2(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.exp2.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -550,10 +543,10 @@ define void @test_exp2(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl logf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_log(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_log(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.log.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -565,10 +558,10 @@ define void @test_log(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl log10f
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_log10(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_log10(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.log10.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -580,10 +573,10 @@ define void @test_log10(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl log2f
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_log2(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_log2(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.log2.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -599,12 +592,12 @@ define void @test_log2(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl fmaf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_fma(half* %p, half* %q, half* %r) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
-  %c = load half, half* %r, align 2
+define void @test_fma(ptr %p, ptr %q, ptr %r) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
+  %c = load half, ptr %r, align 2
   %v = call half @llvm.fma.f16(half %a, half %b, half %c)
-  store half %v, half* %p
+  store half %v, ptr %p
   ret void
 }
 
@@ -616,10 +609,10 @@ define void @test_fma(half* %p, half* %q, half* %r) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bic
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_fabs(half* %p) {
-  %a = load half, half* %p, align 2
+define void @test_fabs(ptr %p) {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.fabs.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -633,11 +626,11 @@ define void @test_fabs(half* %p) {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl fminf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_minnum(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_minnum(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = call half @llvm.minnum.f16(half %a, half %b)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -651,11 +644,11 @@ define void @test_minnum(half* %p, half* %q) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl fmaxf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_maxnum(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_maxnum(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = call half @llvm.maxnum.f16(half %a, half %b)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -667,15 +660,13 @@ define void @test_maxnum(half* %p, half* %q) #0 {
 ; CHECK-NOVFP: mov r{{[0-9]+}}, #1065353216
 ; CHECK-VFP: vcmp.f32
 ; CHECK-VFP: vmrs
-; CHECK-VFP: vmovlt.f32
+; CHECK-VFP: movge
 ; CHECK-NOVFP: bl __aeabi_fcmpge
-; CHECK-FP16: vcvtb.f16.f32
-; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_minimum(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_minimum(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %c = fcmp ult half %a, 1.0
   %r = select i1 %c, half %a, half 1.0
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -687,62 +678,30 @@ define void @test_minimum(half* %p) #0 {
 ; CHECK-NOVFP: mov r{{[0-9]+}}, #1065353216
 ; CHECK-VFP: vcmp.f32
 ; CHECK-VFP: vmrs
-; CHECK-VFP: vmovhi.f32
+; CHECK-VFP: movls
 ; CHECK-NOVFP: bl __aeabi_fcmple
-; CHECK-FP16: vcvtb.f16.f32
-; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_maximum(half* %p) #0 {
-  %a = load half, half* %p, align 2
+define void @test_maximum(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
   %c = fcmp ugt half %a, 1.0
   %r = select i1 %c, half %a, half 1.0
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
-; CHECK-FP16-LABEL: test_copysign:
-; CHECK-FP16:         ldrh r2, [r0]
-; CHECK-FP16-NEXT:    vmov.i32 d16, #0x80000000
-; CHECK-FP16-NEXT:    ldrh r1, [r1]
-; CHECK-FP16-NEXT:    vmov s0, r2
-; CHECK-FP16-NEXT:    vmov s2, r1
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-FP16-NEXT:    vbit d0, d1, d16
-; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FP16-NEXT:    vmov r1, s0
-; CHECK-FP16-NEXT:    strh r1, [r0]
-; CHECK-FP16-NEXT:    bx lr
+; CHECK-ALL-LABEL: test_copysign:
+; CHECK-ALL:         ldrh r2, [r0]
+; CHECK-ALL-NEXT:    ldrh r1, [r1]
+; CHECK-ALL-NEXT:    and r1, r1, #32768
+; CHECK-ALL-NEXT:    bfc r2, #15, #17
+; CHECK-ALL-NEXT:    orr r1, r2, r1
+; CHECK-ALL-NEXT:    strh r1, [r0]
+; CHECK-ALL-NEXT:    bx lr
 
-; CHECK-LIBCALL-LABEL: test_copysign:
-; CHECK-LIBCALL-VFP:         .fnstart
-; CHECK-LIBCALL-VFP-NEXT:    .save {r4, r5, r11, lr}
-; CHECK-LIBCALL-VFP-NEXT:    push {r4, r5, r11, lr}
-; CHECK-LIBCALL-VFP-NEXT:    .vsave {d8, d9}
-; CHECK-LIBCALL-VFP-NEXT:    vpush {d8, d9}
-; CHECK-LIBCALL-VFP-NEXT:    mov r5, r0
-; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r0]
-; CHECK-LIBCALL-VFP-NEXT:    mov r4, r1
-; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-LIBCALL-VFP:         ldrh r1, [r4]
-; CHECK-LIBCALL-VFP-NEXT:    vmov s18, r0
-; CHECK-LIBCALL-VFP-NEXT:    vmov.i32 d8, #0x80000000
-; CHECK-LIBCALL-VFP-NEXT:    mov r0, r1
-; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-LIBCALL-VFP:         vmov s0, r0
-; CHECK-LIBCALL-VFP-NEXT:    vbif d0, d9, d8
-; CHECK-LIBCALL-VFP-NEXT:    vmov r0, s0
-; CHECK-LIBCALL: bl __aeabi_f2h
-; CHECK-LIBCALL-VFP:         strh r0, [r5]
-; CHECK-LIBCALL-VFP-NEXT:    vpop {d8, d9}
-; CHECK-LIBCALL-VFP-NEXT:    pop {r4, r5, r11, pc}
-; CHECK-NOVFP: and
-; CHECK-NOVFP: bic
-; CHECK-NOVFP: orr
-define void @test_copysign(half* %p, half* %q) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
+define void @test_copysign(ptr %p, ptr %q) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
   %r = call half @llvm.copysign.f16(half %a, half %b)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -754,10 +713,10 @@ define void @test_copysign(half* %p, half* %q) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl floorf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_floor(half* %p) {
-  %a = load half, half* %p, align 2
+define void @test_floor(ptr %p) {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.floor.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -769,10 +728,10 @@ define void @test_floor(half* %p) {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl ceilf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_ceil(half* %p) {
-  %a = load half, half* %p, align 2
+define void @test_ceil(ptr %p) {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.ceil.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -784,10 +743,10 @@ define void @test_ceil(half* %p) {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl truncf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_trunc(half* %p) {
-  %a = load half, half* %p, align 2
+define void @test_trunc(ptr %p) {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.trunc.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -799,10 +758,10 @@ define void @test_trunc(half* %p) {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl rintf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_rint(half* %p) {
-  %a = load half, half* %p, align 2
+define void @test_rint(ptr %p) {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.rint.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -814,10 +773,10 @@ define void @test_rint(half* %p) {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl nearbyintf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_nearbyint(half* %p) {
-  %a = load half, half* %p, align 2
+define void @test_nearbyint(ptr %p) {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.nearbyint.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
@@ -829,32 +788,39 @@ define void @test_nearbyint(half* %p) {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl roundf
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_round(half* %p) {
-  %a = load half, half* %p, align 2
+define void @test_round(ptr %p) {
+  %a = load half, ptr %p, align 2
   %r = call half @llvm.round.f16(half %a)
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
 ; CHECK-FP16-LABEL: test_fmuladd:
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: vmul.f32
+; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-FP16: vcvtb.f32.f16
-; CHECK-FP16: vmla.f32
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: vadd.f32
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL-LABEL: test_fmuladd:
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-LIBCALL-VFP: vmla.f32
+; CHECK-LIBCALL-VFP: vmul.f32
 ; CHECK-NOVFP: bl __aeabi_fmul
 ; CHECK-LIBCALL: bl __aeabi_f2h
-define void @test_fmuladd(half* %p, half* %q, half* %r) #0 {
-  %a = load half, half* %p, align 2
-  %b = load half, half* %q, align 2
-  %c = load half, half* %r, align 2
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL-VFP: vadd.f32
+; CHECK-NOVFP: bl __aeabi_fadd
+; CHECK-LIBCALL: bl __aeabi_f2h
+define void @test_fmuladd(ptr %p, ptr %q, ptr %r) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load half, ptr %q, align 2
+  %c = load half, ptr %r, align 2
   %v = call half @llvm.fmuladd.f16(half %a, half %b, half %c)
-  store half %v, half* %p
+  store half %v, ptr %p
   ret void
 }
 
@@ -865,68 +831,45 @@ define void @test_fmuladd(half* %p, half* %q, half* %r) #0 {
 ; CHECK-ALL-LABEL: test_insertelement:
 ; CHECK-ALL: sub sp, sp, #8
 
-; CHECK-VFP:	and	
-; CHECK-VFP:	mov	
-; CHECK-VFP:	ldrd	
-; CHECK-VFP:	orr	
-; CHECK-VFP:	ldrh	
-; CHECK-VFP:	stm	
-; CHECK-VFP:	strh	
-; CHECK-VFP:	ldm	
-; CHECK-VFP:	stm	
-
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: mov
-; CHECK-NOVFP-DAG: ldrh
-; CHECK-NOVFP-DAG: orr
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: ldrh
-; CHECK-NOVFP-DAG: ldrh
-; CHECK-NOVFP-DAG: ldrh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
-; CHECK-NOVFP-DAG: strh
+; CHECK-ALL-DAG: and
+; CHECK-ALL-DAG: mov
+; CHECK-ALL-DAG: ldrd
+; CHECK-ALL-DAG: orr
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: stm
+; CHECK-ALL: ldrh
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL: strh
 
 ; CHECK-ALL: add sp, sp, #8
-define void @test_insertelement(half* %p, <4 x half>* %q, i32 %i) #0 {
-  %a = load half, half* %p, align 2
-  %b = load <4 x half>, <4 x half>* %q, align 8
+define void @test_insertelement(ptr %p, ptr %q, i32 %i) #0 {
+  %a = load half, ptr %p, align 2
+  %b = load <4 x half>, ptr %q, align 8
   %c = insertelement <4 x half> %b, half %a, i32 %i
-  store <4 x half> %c, <4 x half>* %q
+  store volatile <4 x half> %c, ptr %q
   ret void
 }
 
 ; CHECK-ALL-LABEL: test_extractelement:
-; CHECK-VFP: push {{{.*}}, lr}
-; CHECK-VFP: sub sp, sp, #8
-; CHECK-VFP: ldrd
-; CHECK-VFP: mov
-; CHECK-VFP: orr
-; CHECK-VFP: ldrh
-; CHECK-VFP: strh
-; CHECK-VFP: add sp, sp, #8
-; CHECK-VFP: pop {{{.*}}, pc}
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: strh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: strh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: strh
-; CHECK-NOVFP: ldrh
-; CHECK-NOVFP: strh
-; CHECK-NOVFP: ldrh
-define void @test_extractelement(half* %p, <4 x half>* %q, i32 %i) #0 {
-  %a = load <4 x half>, <4 x half>* %q, align 8
+; CHECK-ALL: push {{{.*}}, lr}
+; CHECK-ALL: sub sp, sp, #8
+; CHECK-ALL: ldrd
+; CHECK-ALL: mov
+; CHECK-ALL: orr
+; CHECK-ALL: ldrh
+; CHECK-ALL: strh
+; CHECK-ALL: add sp, sp, #8
+; CHECK-ALL: pop {{{.*}}, pc}
+define void @test_extractelement(ptr %p, ptr %q, i32 %i) #0 {
+  %a = load <4 x half>, ptr %q, align 8
   %b = extractelement <4 x half> %a, i32 %i
-  store half %b, half* %p
+  store half %b, ptr %p
   ret void
 }
 
@@ -939,11 +882,11 @@ define void @test_extractelement(half* %p, <4 x half>* %q, i32 %i) #0 {
 ; CHECK-ALL-DAG: ldrh
 ; CHECK-ALL-DAG: strh
 ; CHECK-ALL-DAG: str
-define void @test_insertvalue(%struct.dummy* %p, half* %q) {
-  %a = load %struct.dummy, %struct.dummy* %p
-  %b = load half, half* %q
+define void @test_insertvalue(ptr %p, ptr %q) {
+  %a = load %struct.dummy, ptr %p
+  %b = load half, ptr %q
   %c = insertvalue %struct.dummy %a, half %b, 1
-  store %struct.dummy %c, %struct.dummy* %p
+  store %struct.dummy %c, ptr %p
   ret void
 }
 
@@ -951,10 +894,10 @@ define void @test_insertvalue(%struct.dummy* %p, half* %q) {
 ; CHECK-ALL: .fnstart
 ; CHECK-ALL: ldrh
 ; CHECK-ALL: strh
-define void @test_extractvalue(%struct.dummy* %p, half* %q) {
-  %a = load %struct.dummy, %struct.dummy* %p
+define void @test_extractvalue(ptr %p, ptr %q) {
+  %a = load %struct.dummy, ptr %p
   %b = extractvalue %struct.dummy %a, 1
-  store half %b, half* %q
+  store half %b, ptr %q
   ret void
 }
 
@@ -962,8 +905,8 @@ define void @test_extractvalue(%struct.dummy* %p, half* %q) {
 ; CHECK-VFP-LIBCALL: bl __aeabi_h2f
 ; CHECK-NOVFP-DAG: ldr
 ; CHECK-NOVFP-DAG: ldrh
-define %struct.dummy @test_struct_return(%struct.dummy* %p) {
-  %a = load %struct.dummy, %struct.dummy* %p
+define %struct.dummy @test_struct_return(ptr %p) {
+  %a = load %struct.dummy, ptr %p
   ret %struct.dummy %a
 }
 

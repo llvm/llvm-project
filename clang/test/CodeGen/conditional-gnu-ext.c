@@ -5,14 +5,12 @@ int foo(int x, short y) {
   return x ?: y;
 }
 
-// rdar://6586493
 float test(float x, int Y) {
   return Y != 0 ? : x;
 }
 
-// rdar://8446940
-extern void abort();
-void  test1 () {
+extern void abort(void);
+void  test1 (void) {
   char x[1];
   char *y = x ? : 0;
 
@@ -20,7 +18,6 @@ void  test1 () {
     abort();
 }
 
-// rdar://8453812
 _Complex int getComplex(_Complex int val) {
   static int count;
   if (count++)
@@ -28,7 +25,7 @@ _Complex int getComplex(_Complex int val) {
   return val;
 }
 
-_Complex int complx() {
+_Complex int complx(void) {
     _Complex int cond;
     _Complex int rhs;
 

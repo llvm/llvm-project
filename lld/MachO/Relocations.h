@@ -17,8 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class Symbol;
@@ -56,11 +55,20 @@ struct Reloc {
   uint8_t length = 0;
   // The offset from the start of the subsection that this relocation belongs
   // to.
-  uint64_t offset = 0;
+  uint32_t offset = 0;
   // Adding this offset to the address of the referent symbol or subsection
   // gives the destination that this relocation refers to.
   int64_t addend = 0;
   llvm::PointerUnion<Symbol *, InputSection *> referent = nullptr;
+
+  Reloc() = default;
+
+  Reloc(uint8_t type, bool pcrel, uint8_t length, uint32_t offset,
+        int64_t addend, llvm::PointerUnion<Symbol *, InputSection *> referent)
+      : type(type), pcrel(pcrel), length(length), offset(offset),
+        addend(addend), referent(referent) {}
+
+  InputSection *getReferentInputSection() const;
 };
 
 bool validateSymbolRelocation(const Symbol *, const InputSection *,
@@ -70,28 +78,28 @@ bool validateSymbolRelocation(const Symbol *, const InputSection *,
  * v: The value the relocation is attempting to encode
  * bits: The number of bits actually available to encode this relocation
  */
-void reportRangeError(const Reloc &, const llvm::Twine &v, uint8_t bits,
-                      int64_t min, uint64_t max);
+void reportRangeError(void *loc, const Reloc &, const llvm::Twine &v,
+                      uint8_t bits, int64_t min, uint64_t max);
 
 struct SymbolDiagnostic {
   const Symbol *symbol;
   llvm::StringRef reason;
 };
 
-void reportRangeError(SymbolDiagnostic, const llvm::Twine &v, uint8_t bits,
-                      int64_t min, uint64_t max);
+void reportRangeError(void *loc, SymbolDiagnostic, const llvm::Twine &v,
+                      uint8_t bits, int64_t min, uint64_t max);
 
 template <typename Diagnostic>
-inline void checkInt(Diagnostic d, int64_t v, int bits) {
+inline void checkInt(void *loc, Diagnostic d, int64_t v, int bits) {
   if (v != llvm::SignExtend64(v, bits))
-    reportRangeError(d, llvm::Twine(v), bits, llvm::minIntN(bits),
+    reportRangeError(loc, d, llvm::Twine(v), bits, llvm::minIntN(bits),
                      llvm::maxIntN(bits));
 }
 
 template <typename Diagnostic>
-inline void checkUInt(Diagnostic d, uint64_t v, int bits) {
+inline void checkUInt(void *loc, Diagnostic d, uint64_t v, int bits) {
   if ((v >> bits) != 0)
-    reportRangeError(d, llvm::Twine(v), bits, 0, llvm::maxUIntN(bits));
+    reportRangeError(loc, d, llvm::Twine(v), bits, 0, llvm::maxUIntN(bits));
 }
 
 inline void writeAddress(uint8_t *loc, uint64_t addr, uint8_t length) {
@@ -107,9 +115,10 @@ inline void writeAddress(uint8_t *loc, uint64_t addr, uint8_t length) {
   }
 }
 
+InputSection *offsetToInputSection(uint64_t *);
+
 extern const RelocAttrs invalidRelocAttrs;
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::Macho
 
 #endif

@@ -4,10 +4,10 @@
 // -----
 
 // Emit the first available call stack in the fused location.
-func @constant_out_of_range() {
-  // CHECK: mysource1:0:0: error: 'std.constant' op requires attribute's type ('i64') to match op's return type ('i1')
+func.func @constant_out_of_range() {
+  // CHECK: mysource1:0:0: error: 'arith.constant' op failed to verify that all of {value, result} have same type
   // CHECK-NEXT: mysource2:1:0: note: called from
   // CHECK-NEXT: mysource3:2:0: note: called from
-  %x = "std.constant"() {value = 100} : () -> i1 loc(fused["bar", callsite("foo"("mysource1":0:0) at callsite("mysource2":1:0 at "mysource3":2:0))])
+  %x = "arith.constant"() {value = 100} : () -> i1 loc(fused["bar", callsite("foo"("mysource1":0:0) at callsite("mysource2":1:0 at "mysource3":2:0))])
   return
 }

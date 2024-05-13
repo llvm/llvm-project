@@ -47,6 +47,11 @@ bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
   return SSCL->inSection(Mask, "src", FileName, Category);
 }
 
+bool NoSanitizeList::containsMainFile(SanitizerMask Mask, StringRef FileName,
+                                      StringRef Category) const {
+  return SSCL->inSection(Mask, "mainfile", FileName, Category);
+}
+
 bool NoSanitizeList::containsLocation(SanitizerMask Mask, SourceLocation Loc,
                                       StringRef Category) const {
   return Loc.isValid() &&

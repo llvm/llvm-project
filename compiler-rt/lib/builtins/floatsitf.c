@@ -15,8 +15,8 @@
 #define QUAD_PRECISION
 #include "fp_lib.h"
 
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
-COMPILER_RT_ABI fp_t __floatsitf(int a) {
+#if defined(CRT_HAS_TF_MODE)
+COMPILER_RT_ABI fp_t __floatsitf(si_int a) {
 
   const int aWidth = sizeof a * CHAR_BIT;
 
@@ -26,14 +26,14 @@ COMPILER_RT_ABI fp_t __floatsitf(int a) {
 
   // All other cases begin by extracting the sign and absolute value of a
   rep_t sign = 0;
-  unsigned aAbs = (unsigned)a;
+  su_int aAbs = (su_int)a;
   if (a < 0) {
     sign = signBit;
-    aAbs = ~(unsigned)a + 1U;
+    aAbs = -aAbs;
   }
 
   // Exponent of (fp_t)a is the width of abs(a).
-  const int exponent = (aWidth - 1) - __builtin_clz(aAbs);
+  const int exponent = (aWidth - 1) - clzsi(aAbs);
   rep_t result;
 
   // Shift a into the significand field and clear the implicit bit.

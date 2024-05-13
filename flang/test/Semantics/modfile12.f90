@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 module m
   integer(8), parameter :: a = 1, b = 2_8
   parameter(n=3,l=-3,e=1.0/3.0)
@@ -41,7 +41,7 @@ end
 !  real(4)::y(1_8:8_8)
 !  type::t(c,d)
 !    integer(4),kind::c=1_4
-!    integer(4),len::d=3_4
+!    integer(4),len::d=3_8
 !  end type
 !  type(t(c=4_4,d=:)),allocatable::z
 !  class(t(c=5_4,d=:)),allocatable::z2

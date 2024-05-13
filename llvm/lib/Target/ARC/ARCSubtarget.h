@@ -35,6 +35,9 @@ class ARCSubtarget : public ARCGenSubtargetInfo {
   ARCTargetLowering TLInfo;
   SelectionDAGTargetInfo TSInfo;
 
+  // ARC processor extensions
+  bool Xnorm = false;
+
 public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
@@ -58,6 +61,8 @@ public:
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
+
+  bool hasNorm() const { return Xnorm; }
 };
 
 } // end namespace llvm

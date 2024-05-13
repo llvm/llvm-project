@@ -7,7 +7,7 @@
 ;
 ; void escape1(int bees);
 ; void escape2(int bees);
-; 
+;
 ; int foo(int bar) {
 ;   int baz = bar;
 ;   if (baz == 12) {
@@ -16,7 +16,7 @@
 ;     baz += 1;
 ;     escape2(bar);
 ;   }
-; 
+;
 ;   return bar;
 ; }
 ;
@@ -30,10 +30,12 @@
 ; CHECK-LABEL: bb.2.if.else:
 ; CHECK:       DBG_VALUE {{[0-9a-zA-Z$%_]*}}, $noreg, ![[BAZVAR]],
 ; CHECK-SAME:     !DIExpression()
-; CHECK:       DBG_VALUE {{[0-9a-zA-Z$%_]*}}, $noreg, ![[BAZVAR]],
-; CHECK-SAME:     !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)
+; CHECK:       DBG_VALUE_LIST ![[BAZVAR]],
+; CHECK-SAME:     !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 1, DW_OP_stack_value)
+; CHECK-SAME:     {{[0-9a-zA-Z$%_]*}}
 ; CHECK-LABEL: bb.3.if.end:
 ; CHECK-NOT:   DBG_VALUE
+; CHECK-NOT:   DBG_VALUE_LIST
 
 declare void @escape1(i32)
 declare void @escape2(i32)

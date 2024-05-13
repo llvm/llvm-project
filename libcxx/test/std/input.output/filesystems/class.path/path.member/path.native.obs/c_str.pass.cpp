@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -15,16 +16,16 @@
 
 // const value_type* c_str() const noexcept;
 
-#include "filesystem_include.h"
-#include <type_traits>
+#include <filesystem>
 #include <cassert>
+#include <string>
+#include <type_traits>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "filesystem_test_helper.h"
+namespace fs = std::filesystem;
 
-
-int main(int, char**)
-{
+int main(int, char**) {
   using namespace fs;
   const char* const value = "hello world";
   const std::string str_value = value;

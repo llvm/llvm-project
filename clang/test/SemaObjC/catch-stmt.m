@@ -2,7 +2,7 @@
 @interface A @end
 @protocol P;
 
-void f() {
+void f(void) {
   @try {
   } @catch (void a) { // expected-error{{@catch parameter is not a pointer to an interface type}}
   } @catch (int) { // expected-error{{@catch parameter is not a pointer to an interface type}}

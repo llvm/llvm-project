@@ -143,7 +143,7 @@ static uintptr_t readEncodedPointer(const uint8_t **data, uint8_t encoding) {
 }
 
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) &&                 \
-    !defined(__ARM_DWARF_EH__)
+    !defined(__ARM_DWARF_EH__) && !defined(__SEH__)
 #define USING_ARM_EHABI 1
 _Unwind_Reason_Code __gnu_unwind_frame(struct _Unwind_Exception *,
                                        struct _Unwind_Context *);
@@ -219,7 +219,7 @@ COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
   }
   // Walk call-site table looking for range that includes current PC.
   uint8_t callSiteEncoding = *lsda++;
-  uint32_t callSiteTableLength = readULEB128(&lsda);
+  size_t callSiteTableLength = readULEB128(&lsda);
   const uint8_t *callSiteTableStart = lsda;
   const uint8_t *callSiteTableEnd = callSiteTableStart + callSiteTableLength;
   const uint8_t *p = callSiteTableStart;

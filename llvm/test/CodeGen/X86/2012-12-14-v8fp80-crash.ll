@@ -14,7 +14,7 @@ while.body.lr.ph:                                 ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %while.body.lr.ph
   %0 = fptrunc <8 x x86_fp80> undef to <8 x float>
-  store <8 x float> %0, <8 x float>* undef, align 4
+  store <8 x float> %0, ptr undef, align 4
   br label %vector.body
 
 while.end:                                        ; preds = %entry

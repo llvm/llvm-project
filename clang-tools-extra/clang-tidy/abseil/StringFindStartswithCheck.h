@@ -17,13 +17,10 @@
 #include <string>
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 // Find string.find(...) == 0 comparisons and suggest replacing with StartsWith.
 // FIXME(niko): Add similar check for EndsWith
-// FIXME(niko): Add equivalent modernize checks for C++20's std::starts_With
 class StringFindStartswithCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;
@@ -33,15 +30,17 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    // Prefer modernize-use-starts-ends-with when C++20 is available.
+    return LangOpts.CPlusPlus && !LangOpts.CPlusPlus20;
+  }
 
 private:
-  const std::vector<std::string> StringLikeClasses;
+  const std::vector<StringRef> StringLikeClasses;
   utils::IncludeInserter IncludeInserter;
-  const std::string AbseilStringsMatchHeader;
+  const StringRef AbseilStringsMatchHeader;
 };
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_STRINGFINDSTARTSWITHCHECK_H

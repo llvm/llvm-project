@@ -14,9 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
-namespace clang {
-namespace tidy {
-namespace android {
+namespace clang::tidy::android {
 
 /// Attempts to catch calls to TEMP_FAILURE_RETRY with a top-level comparison
 /// operation, like `TEMP_FAILURE_RETRY(read(...) != N)`. In these cases, the
@@ -31,12 +29,10 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const std::string RawRetryList;
+  const StringRef RawRetryList;
   SmallVector<StringRef, 5> RetryMacros;
 };
 
-} // namespace android
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::android
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_COMPARISONINTEMPFAILURERETRYCHECK_H

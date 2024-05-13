@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Function: f_no_fast_math
 ; CHECK: Reduction Type: NONE
@@ -11,7 +11,7 @@
 ; }
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @f_no_fast_math(float* %sum) {
+define void @f_no_fast_math(ptr %sum) {
 entry:
   br label %for.cond
 
@@ -24,9 +24,9 @@ for.body:                                         ; preds = %for.cond
   %conv = sitofp i32 %i.0 to float
   %pi = fptrunc double 3.41 to float
   %mul = fmul float %conv, %pi
-  %tmp = load float, float* %sum, align 4
+  %tmp = load float, ptr %sum, align 4
   %add = fadd float %tmp, %mul
-  store float %add, float* %sum, align 4
+  store float %add, ptr %sum, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -37,7 +37,7 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
-define void @f_fast_math(float* %sum) {
+define void @f_fast_math(ptr %sum) {
 entry:
   br label %for.cond
 
@@ -50,9 +50,9 @@ for.body:                                         ; preds = %for.cond
   %conv = sitofp i32 %i.0 to float
   %pi = fptrunc double 3.41 to float
   %mul = fmul fast float %conv, %pi
-  %tmp = load float, float* %sum, align 4
+  %tmp = load float, ptr %sum, align 4
   %add = fadd fast float %tmp, %mul
-  store float %add, float* %sum, align 4
+  store float %add, ptr %sum, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

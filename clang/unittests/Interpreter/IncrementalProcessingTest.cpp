@@ -16,11 +16,11 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -44,7 +44,7 @@ const char TestProgram2[] = "extern \"C\" int funcForProg2() { return 42; }\n"
 
 const Function *getGlobalInit(llvm::Module *M) {
   for (const auto &Func : *M)
-    if (Func.hasName() && Func.getName().startswith("_GLOBAL__sub_I_"))
+    if (Func.hasName() && Func.getName().starts_with("_GLOBAL__sub_I_"))
       return &Func;
 
   return nullptr;
@@ -52,26 +52,28 @@ const Function *getGlobalInit(llvm::Module *M) {
 
 TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
   std::vector<const char *> ClangArgv = {"-Xclang", "-emit-llvm-only"};
-  auto CI = llvm::cantFail(IncrementalCompilerBuilder::create(ClangArgv));
+  auto CB = clang::IncrementalCompilerBuilder();
+  CB.SetCompilerArgs(ClangArgv);
+  auto CI = cantFail(CB.CreateCpp());
   auto Interp = llvm::cantFail(Interpreter::create(std::move(CI)));
 
-  std::array<clang::Transaction *, 2> Transactions;
+  std::array<clang::PartialTranslationUnit *, 2> PTUs;
 
-  Transactions[0] = &llvm::cantFail(Interp->Parse(TestProgram1));
-  ASSERT_TRUE(Transactions[0]->TheModule);
-  ASSERT_TRUE(Transactions[0]->TheModule->getFunction("funcForProg1"));
+  PTUs[0] = &llvm::cantFail(Interp->Parse(TestProgram1));
+  ASSERT_TRUE(PTUs[0]->TheModule);
+  ASSERT_TRUE(PTUs[0]->TheModule->getFunction("funcForProg1"));
 
-  Transactions[1] = &llvm::cantFail(Interp->Parse(TestProgram2));
-  ASSERT_TRUE(Transactions[1]->TheModule);
-  ASSERT_TRUE(Transactions[1]->TheModule->getFunction("funcForProg2"));
+  PTUs[1] = &llvm::cantFail(Interp->Parse(TestProgram2));
+  ASSERT_TRUE(PTUs[1]->TheModule);
+  ASSERT_TRUE(PTUs[1]->TheModule->getFunction("funcForProg2"));
   // First code should not end up in second module:
-  ASSERT_FALSE(Transactions[1]->TheModule->getFunction("funcForProg1"));
+  ASSERT_FALSE(PTUs[1]->TheModule->getFunction("funcForProg1"));
 
   // Make sure global inits exist and are unique:
-  const Function *GlobalInit1 = getGlobalInit(Transactions[0]->TheModule.get());
+  const Function *GlobalInit1 = getGlobalInit(PTUs[0]->TheModule.get());
   ASSERT_TRUE(GlobalInit1);
 
-  const Function *GlobalInit2 = getGlobalInit(Transactions[1]->TheModule.get());
+  const Function *GlobalInit2 = getGlobalInit(PTUs[1]->TheModule.get());
   ASSERT_TRUE(GlobalInit2);
 
   ASSERT_FALSE(GlobalInit1->getName() == GlobalInit2->getName());

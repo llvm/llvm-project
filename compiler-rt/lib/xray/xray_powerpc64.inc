@@ -12,7 +12,22 @@
 
 #include <cstdint>
 #include <mutex>
+#ifdef __linux__
 #include <sys/platform/ppc.h>
+#elif defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+
+#define __ppc_get_timebase __builtin_ppc_get_timebase
+
+uint64_t __ppc_get_timebase_freq (void)
+{
+  uint64_t tb_freq = 0;
+  size_t length = sizeof(tb_freq);
+  sysctlbyname("kern.timecounter.tc.timebase.frequency", &tb_freq, &length, nullptr, 0);
+  return tb_freq;
+}
+#endif
 
 #include "xray_defs.h"
 

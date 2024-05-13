@@ -21,14 +21,14 @@ struct B {
 // PR4853
 template <typename T> class List {
 public:
-  List(){ }     // List<BinomialNode<int>*>::List() remains undefined.
+  List(){ }     // List<BinomialNodeptr>::List() remains undefined.
   ~List() {}
 };
 
 template <typename T> class Node {
  int i;
 public:
- Node(){ }      // Node<BinomialNode<int>*>::Node() remains undefined.
+ Node(){ }      // Node<BinomialNodeptr>::Node() remains undefined.
  ~Node() {}
 };
 

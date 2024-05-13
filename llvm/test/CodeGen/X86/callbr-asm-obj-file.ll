@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -filetype=obj -o - \
-; RUN:  | llvm-objdump --triple=x86_64-linux-gnu -d - \
+; RUN:  | llvm-objdump --no-print-imm-hex --triple=x86_64-linux-gnu -d - \
 ; RUN:  | FileCheck %s
 
 ; CHECK: 0000000000000000 <test1>:
@@ -8,7 +8,7 @@
 
 define void @test1() {
 entry:
-  callbr void asm sideeffect "je ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, %a.b.normal.jump))
+  callbr void asm sideeffect "je ${0:l}", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %asm.fallthrough [label %a.b.normal.jump]
 
 asm.fallthrough:

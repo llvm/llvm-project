@@ -1,7 +1,7 @@
 ; Test to ensure that the filename provided by clang in the module flags
 ; metadata results in the expected __memprof_profile_filename insertion.
 
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -memprof -memprof-module -S | FileCheck --check-prefixes=CHECK %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes='function(memprof),memprof-module' -S | FileCheck --check-prefixes=CHECK %s
 
 define i32 @main() {
 entry:

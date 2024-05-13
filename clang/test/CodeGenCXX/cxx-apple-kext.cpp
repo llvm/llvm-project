@@ -15,7 +15,7 @@
 // CHECK-KEXT-NOT: declare i32 @__cxa_atexit
 // CHECK-KEXT: @is_freestanding ={{.*}} global
 // CHECK-KEXT: _GLOBAL__D_a
-// CHECK-KEXT: call void @_ZN3fooD1Ev(%class.foo* @a)
+// CHECK-KEXT: call void @_ZN3fooD1Ev(ptr @a)
 
 class foo {
 public:

@@ -7,9 +7,9 @@
 void ffcomplex (int a) {
   double _Complex dc = (double)a;
 
-  // CHECK: call { double, double } @__muldc3(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
+  // CHECK: call noundef { double, double } @__muldc3(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
   dc *= dc;
-  // CHECK: call {{.+}} @__kmpc_fork_call({{.+}} [[REGNAME1:@.*]] to void (i32*, i32*, ...)*), { double, double }* %{{.+}})
+  // CHECK: call {{.+}} @__kmpc_fork_call({{.+}} [[REGNAME1:@.*]], ptr %{{.+}})
   #pragma omp parallel
   {
     dc *= dc;
@@ -19,7 +19,7 @@ void ffcomplex (int a) {
 
 // CHECK: define internal {{.+}}[[REGNAME1]](
 // CHECK-NOT: invoke
-// CHECK: call { double, double } @__muldc3(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
+// CHECK: call noundef { double, double } @__muldc3(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
 // CHECK-NOT: invoke
 // CHECK: ret void
 
@@ -32,7 +32,7 @@ void foo(int a, int b) {
 
   void (*fptr)(void) noexcept = fnoexcp;
 
-  // CHECK: call {{.+}} @__kmpc_fork_call({{.+}} [[REGNAME2:@.*]] to void (i32*, i32*, ...)*), void ()** %{{.+}})
+  // CHECK: call {{.+}} @__kmpc_fork_call({{.+}} [[REGNAME2:@.*]], ptr %{{.+}})
   #pragma omp parallel
   {
     fptr();

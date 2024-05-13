@@ -23,6 +23,7 @@ name: test
 # CHECK-LABEL: {{^}}test:
 tracksRegLiveness: true
 frameInfo:
+  adjustsStack:    true
   hasCalls: true
 body: |
   bb.0.entry:
@@ -69,6 +70,6 @@ body: |
     %7:gr64 = ADD64rr killed %4, killed %5, implicit-def $eflags
     %8:gr64 = ADD64rr killed %6, killed %7, implicit-def $eflags
     $rax = COPY %8
-    RETQ implicit $rax
+    RET64 implicit $rax
 
 ...

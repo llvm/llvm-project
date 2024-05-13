@@ -1,4 +1,5 @@
-; RUN: opt < %s -mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=mem2reg -S --try-experimental-debuginfo-iterators | FileCheck %s
 source_filename = "bugpoint-output.bc"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
@@ -6,20 +7,20 @@ target triple = "x86_64-apple-macosx10.12.0"
 define void @scan() #0 !dbg !12 {
 entry:
   %entry1 = alloca i8, align 8
-  call void @llvm.dbg.declare(metadata i8* %entry1, metadata !18, metadata !19), !dbg !20
-  store i8 0, i8* %entry1, align 8, !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %entry1, metadata !18, metadata !19), !dbg !20
+  store i8 0, ptr %entry1, align 8, !dbg !20
   br label %for.cond, !dbg !20
 
 for.cond:
 ; CHECK: %[[PHI:.*]] = phi i8 [ 0, %entry ], [ %0, %for.cond ]
-  %entryN = load i8, i8* %entry1, align 8, !dbg !20
+  %entryN = load i8, ptr %entry1, align 8, !dbg !20
 ; CHECK: call void @llvm.dbg.value(metadata i8 %[[PHI]],
 ; CHECK-SAME:                      metadata !DIExpression())
   %0 = add i8 %entryN, 1
 ; CHECK: %0 = add i8 %[[PHI]], 1
 ; CHECK: call void @llvm.dbg.value(metadata i8 %0,
 ; CHECK-SAME:                      metadata !DIExpression())
-  store i8 %0, i8* %entry1, align 8, !dbg !20
+  store i8 %0, ptr %entry1, align 8, !dbg !20
   br label %for.cond, !dbg !20
 }
 

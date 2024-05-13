@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll-and-jam -allow-unroll-and-jam -verify-loop-info < %s -S | FileCheck %s
+; RUN: opt -passes=loop-unroll-and-jam -allow-unroll-and-jam -verify-loop-info < %s -S | FileCheck %s
 ; RUN: opt -passes='loop(loop-unroll-and-jam),verify<loops>' -allow-unroll-and-jam < %s -S | FileCheck %s
 
 ; Check that the newly created loops to not fail to be added to LI
@@ -57,22 +57,22 @@ for.body25:                                       ; preds = %for.cond23.preheade
   %k.01 = phi i32 [ 0, %for.cond23.preheader ], [ %inc43, %for.body25 ]
   %idxprom26 = zext i32 %i.13 to i64
   %idxprom28 = zext i32 %j.12 to i64
-  %arrayidx29 = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* %C, i64 0, i64 %idxprom26, i64 %idxprom28
-  %0 = load i32, i32* %arrayidx29, align 4
+  %arrayidx29 = getelementptr inbounds [8 x [8 x i32]], ptr %C, i64 0, i64 %idxprom26, i64 %idxprom28
+  %0 = load i32, ptr %arrayidx29, align 4
   %idxprom30 = zext i32 %i.13 to i64
   %idxprom32 = zext i32 %k.01 to i64
-  %arrayidx33 = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* %A, i64 0, i64 %idxprom30, i64 %idxprom32
-  %1 = load i32, i32* %arrayidx33, align 4
+  %arrayidx33 = getelementptr inbounds [8 x [8 x i32]], ptr %A, i64 0, i64 %idxprom30, i64 %idxprom32
+  %1 = load i32, ptr %arrayidx33, align 4
   %idxprom34 = zext i32 %k.01 to i64
   %idxprom36 = zext i32 %j.12 to i64
-  %arrayidx37 = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* %B, i64 0, i64 %idxprom34, i64 %idxprom36
-  %2 = load i32, i32* %arrayidx37, align 4
+  %arrayidx37 = getelementptr inbounds [8 x [8 x i32]], ptr %B, i64 0, i64 %idxprom34, i64 %idxprom36
+  %2 = load i32, ptr %arrayidx37, align 4
   %mul = mul nsw i32 %1, %2
   %add = add nsw i32 %0, %mul
   %idxprom38 = zext i32 %i.13 to i64
   %idxprom40 = zext i32 %j.12 to i64
-  %arrayidx41 = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* %C, i64 0, i64 %idxprom38, i64 %idxprom40
-  store i32 %add, i32* %arrayidx41, align 4
+  %arrayidx41 = getelementptr inbounds [8 x [8 x i32]], ptr %C, i64 0, i64 %idxprom38, i64 %idxprom40
+  store i32 %add, ptr %arrayidx41, align 4
   %inc43 = add nuw nsw i32 %k.01, 1
   %cmp24 = icmp ult i32 %k.01, 7
   br i1 %cmp24, label %for.body25, label %for.inc45

@@ -8,9 +8,10 @@
 
 # Parser Combinators
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 This document is a primer on Parser Combinators and their use in Flang.
@@ -97,8 +98,9 @@ They are `constexpr`, so they should be viewed as type-safe macros.
 * `nonemptySeparated(p, q)` repeatedly matches "p q p q p q ... p",
   returning a `std::list<>` of only the values of the p's.  It fails if
   p immediately fails.
-* `extension(p)` parses p if strict standard compliance is disabled,
-   or with a warning if nonstandard usage warnings are enabled.
+* `extension<feature>([msg,]p)` parses p if strict standard compliance is
+  disabled, or with an optional warning when nonstandard usage warnings
+  are enabled.
 * `deprecated(p)` parses p if strict standard compliance is disabled,
   with a warning if deprecated usage warnings are enabled.
 * `inContext(msg, p)` runs p within an error message context; any
@@ -155,16 +157,19 @@ is built.  All of the following parsers consume characters acquired from
 * `"..."_tok` match the content of the string, skipping spaces before and
   after.  Internal spaces are optional matches.  The `_tok` suffix is
   optional when the parser appears before the combinator `>>` or after
-  the combinator `/`.
+  the combinator `/`.  If the quoted string ends in a character that
+  could appear in an identifier, a missing space will be diagnosed in
+  free form source in pedantic mode if the next character could also
+  be part of an identifier -- add a trailing blank to avoid this.
 * `"..."_sptok` is a string match in which the spaces are required in
    free form source.
 * `"..."_id` is a string match for a complete identifier (not a prefix of
    a longer identifier or keyword).
 * `parenthesized(p)` is shorthand for `"(" >> p / ")"`.
 * `bracketed(p)` is shorthand for `"[" >> p / "]"`.
-* `nonEmptyList(p)` matches a comma-separated list of one or more
+* `nonemptyList(p)` matches a comma-separated list of one or more
   instances of p.
-* `nonEmptyList(errorMessage, p)` is equivalent to
+* `nonemptyList(errorMessage, p)` is equivalent to
   `withMessage(errorMessage, nonemptyList(p))`, which allows one to supply
   a meaningful error message in the event of an empty list.
 * `optionalList(p)` is the same thing, but can be empty, and always succeeds.

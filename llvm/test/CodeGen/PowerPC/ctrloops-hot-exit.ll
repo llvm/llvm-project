@@ -11,15 +11,14 @@ define signext i64 @func() {
 
 entry:
   %a = alloca [1000 x i32], align 4
-  %0 = bitcast [1000 x i32]* %a to i8*
   br label %for.body
 
 for.body:
   %i.013 = phi i64 [ 0, %entry ], [ %inc, %if.end ]
   %b.012 = phi i64 [ 0, %entry ], [ %xor, %if.end ]
-  %arrayidx = getelementptr inbounds [1000 x i32], [1000 x i32]* %a, i64 0, i64 %i.013
-  %1 = load i32, i32* %arrayidx, align 4
-  %tobool = icmp eq i32 %1, 0
+  %arrayidx = getelementptr inbounds [1000 x i32], ptr %a, i64 0, i64 %i.013
+  %0 = load i32, ptr %arrayidx, align 4
+  %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %cleanup, !prof !1
 
 if.end:
@@ -41,15 +40,14 @@ define signext i64 @func2() {
 
 entry:
   %a = alloca [1000 x i32], align 4
-  %0 = bitcast [1000 x i32]* %a to i8*
   br label %for.body
 
 for.body:
   %i.013 = phi i64 [ 0, %entry ], [ %inc, %if.end ]
   %b.012 = phi i64 [ 0, %entry ], [ %xor, %if.end ]
-  %arrayidx = getelementptr inbounds [1000 x i32], [1000 x i32]* %a, i64 0, i64 %i.013
-  %1 = load i32, i32* %arrayidx, align 4
-  %tobool = icmp eq i32 %1, 0
+  %arrayidx = getelementptr inbounds [1000 x i32], ptr %a, i64 0, i64 %i.013
+  %0 = load i32, ptr %arrayidx, align 4
+  %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %cleanup, !prof !2
 
 if.end:
@@ -71,15 +69,14 @@ define signext i64 @func3() {
 
 entry:
   %a = alloca [1000 x i32], align 4
-  %0 = bitcast [1000 x i32]* %a to i8*
   br label %for.body
 
 for.body:
   %i.013 = phi i64 [ 0, %entry ], [ %inc, %if.end ]
   %b.012 = phi i64 [ 0, %entry ], [ %xor, %if.end ]
-  %arrayidx = getelementptr inbounds [1000 x i32], [1000 x i32]* %a, i64 0, i64 %i.013
-  %1 = load i32, i32* %arrayidx, align 4
-  %tobool = icmp eq i32 %1, 0
+  %arrayidx = getelementptr inbounds [1000 x i32], ptr %a, i64 0, i64 %i.013
+  %0 = load i32, ptr %arrayidx, align 4
+  %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %cleanup
 
 if.end:
@@ -101,15 +98,14 @@ define signext i64 @func4() {
 
 entry:
   %a = alloca [1000 x i32], align 4
-  %0 = bitcast [1000 x i32]* %a to i8*
   br label %for.body
 
 for.body:
   %i.013 = phi i64 [ 0, %entry ], [ %inc, %if.end ]
   %b.012 = phi i64 [ 0, %entry ], [ %xor, %if.end ]
-  %arrayidx = getelementptr inbounds [1000 x i32], [1000 x i32]* %a, i64 0, i64 %i.013
-  %1 = load i32, i32* %arrayidx, align 4
-  %tobool = icmp ne i32 %1, 0
+  %arrayidx = getelementptr inbounds [1000 x i32], ptr %a, i64 0, i64 %i.013
+  %0 = load i32, ptr %arrayidx, align 4
+  %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %cleanup, label %if.end, !prof !2
 
 if.end:
@@ -131,15 +127,14 @@ define signext i64 @func5() {
 
 entry:
   %a = alloca [1000 x i32], align 4
-  %0 = bitcast [1000 x i32]* %a to i8*
   br label %for.body
 
 for.body:
   %i.013 = phi i64 [ 0, %entry ], [ %inc, %if.end ]
   %b.012 = phi i64 [ 0, %entry ], [ %xor, %if.end ]
-  %arrayidx = getelementptr inbounds [1000 x i32], [1000 x i32]* %a, i64 0, i64 %i.013
-  %1 = load i32, i32* %arrayidx, align 4
-  %tobool = icmp ne i32 %1, 0
+  %arrayidx = getelementptr inbounds [1000 x i32], ptr %a, i64 0, i64 %i.013
+  %0 = load i32, ptr %arrayidx, align 4
+  %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %cleanup, label %if.end, !prof !1
 
 if.end:
@@ -161,15 +156,14 @@ define signext i64 @func6() {
 
 entry:
   %a = alloca [1000 x i32], align 4
-  %0 = bitcast [1000 x i32]* %a to i8*
   br label %for.body
 
 for.body:
   %i.013 = phi i64 [ 0, %entry ], [ %inc, %if.end ]
   %b.012 = phi i64 [ 0, %entry ], [ %xor, %if.end ]
-  %arrayidx = getelementptr inbounds [1000 x i32], [1000 x i32]* %a, i64 0, i64 %i.013
-  %1 = load i32, i32* %arrayidx, align 4
-  %tobool = icmp ne i32 %1, 0
+  %arrayidx = getelementptr inbounds [1000 x i32], ptr %a, i64 0, i64 %i.013
+  %0 = load i32, ptr %arrayidx, align 4
+  %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %cleanup, label %if.end
 
 if.end:

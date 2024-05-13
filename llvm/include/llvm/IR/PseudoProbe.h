@@ -13,23 +13,25 @@
 #ifndef LLVM_IR_PSEUDOPROBE_H
 #define LLVM_IR_PSEUDOPROBE_H
 
-#include "llvm/ADT/Optional.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <optional>
 
 namespace llvm {
 
 class Instruction;
-class BasicBlock;
 
 constexpr const char *PseudoProbeDescMetadataName = "llvm.pseudo_probe_desc";
+
+enum class PseudoProbeReservedId { Invalid = 0, Last = Invalid };
 
 enum class PseudoProbeType { Block = 0, IndirectCall, DirectCall };
 
 enum class PseudoProbeAttributes {
-  Reserved = 0x1, // Reserved for future use.
-  Dangling = 0x2, // The probe is dangling.
+  Reserved = 0x1,
+  Sentinel = 0x2,         // A place holder for split function entry address.
+  HasDiscriminator = 0x4, // for probes with a discriminator
 };
 
 // The saturated distrution factor representing 100% for block probes.
@@ -76,27 +78,39 @@ public:
   constexpr static uint8_t FullDistributionFactor = 100;
 };
 
+class PseudoProbeDescriptor {
+  uint64_t FunctionGUID;
+  uint64_t FunctionHash;
+
+public:
+  PseudoProbeDescriptor(uint64_t GUID, uint64_t Hash)
+      : FunctionGUID(GUID), FunctionHash(Hash) {}
+  uint64_t getFunctionGUID() const { return FunctionGUID; }
+  uint64_t getFunctionHash() const { return FunctionHash; }
+};
+
 struct PseudoProbe {
   uint32_t Id;
   uint32_t Type;
   uint32_t Attr;
+  uint32_t Discriminator;
   // Distribution factor that estimates the portion of the real execution count.
   // A saturated distribution factor stands for 1.0 or 100%. A pesudo probe has
   // a factor with the value ranged from 0.0 to 1.0.
   float Factor;
-
-  bool isDangling() const {
-    return Attr & (uint32_t)PseudoProbeAttributes::Dangling;
-  }
 };
 
-Optional<PseudoProbe> extractProbe(const Instruction &Inst);
+static inline bool isSentinelProbe(uint32_t Flags) {
+  return Flags & (uint32_t)PseudoProbeAttributes::Sentinel;
+}
+
+static inline bool hasDiscriminator(uint32_t Flags) {
+  return Flags & (uint32_t)PseudoProbeAttributes::HasDiscriminator;
+}
+
+std::optional<PseudoProbe> extractProbe(const Instruction &Inst);
 
 void setProbeDistributionFactor(Instruction &Inst, float Factor);
-
-bool moveAndDanglePseudoProbes(BasicBlock *From, Instruction *To);
-
-bool removeRedundantPseudoProbes(BasicBlock *Block);
 } // end namespace llvm
 
 #endif // LLVM_IR_PSEUDOPROBE_H

@@ -1,4 +1,10 @@
-cmake_minimum_required(VERSION 3.13.4)
+cmake_minimum_required(VERSION 3.20.0)
+
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
 
 # Add path for custom modules.
 set(CMAKE_MODULE_PATH
@@ -11,11 +17,21 @@ set(CMAKE_MODULE_PATH
 # using LLVM as an external library.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lldb)
-  include(LLDBStandalone)
+  set(LLDB_BUILT_STANDALONE TRUE)
+  set(LLVM_INCLUDE_TESTS ON CACHE INTERNAL "")
+endif()
 
-  set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
+# Must go below project(..)
+include(GNUInstallDirs)
+
+option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
+
+if(LLDB_BUILT_STANDALONE)
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
   set(CMAKE_CXX_STANDARD_REQUIRED YES)
   set(CMAKE_CXX_EXTENSIONS NO)
+
+  include(LLDBStandalone)
 endif()
 
 include(LLDBConfig)
@@ -28,27 +44,52 @@ endif()
 
 if (WIN32)
   add_definitions(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
+  if (NOT MSVC)
+    # _BSD_SOURCE is required for MinGW's getopt.h to define optreset
+    add_definitions(-D_BSD_SOURCE)
+  endif()
 endif()
 
 if (LLDB_ENABLE_PYTHON)
-  if (NOT CMAKE_CROSSCOMPILING)
-    execute_process(
-      COMMAND ${Python3_EXECUTABLE}
-          -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(True, False, ''))"
-      OUTPUT_VARIABLE LLDB_PYTHON_DEFAULT_RELATIVE_PATH
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(cachestring_LLDB_PYTHON_RELATIVE_PATH
+    "Path where Python modules are installed, relative to LLDB's install prefix")
+  set(cachestring_LLDB_PYTHON_EXE_RELATIVE_PATH
+    "Path to python interpreter exectuable, relative to python's install prefix")
+  set(cachestring_LLDB_PYTHON_EXT_SUFFIX
+    "Filename extension for native code python modules")
 
-    file(TO_CMAKE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH} LLDB_PYTHON_DEFAULT_RELATIVE_PATH)
-  else ()
-    if ("${LLDB_PYTHON_RELATIVE_PATH}" STREQUAL "")
-      message(FATAL_ERROR
-        "Crosscompiling LLDB with Python requires manually setting
-        LLDB_PYTHON_RELATIVE_PATH.")
-    endif ()
-  endif ()
+  foreach(var LLDB_PYTHON_RELATIVE_PATH LLDB_PYTHON_EXE_RELATIVE_PATH LLDB_PYTHON_EXT_SUFFIX)
+    if(NOT DEFINED ${var} AND NOT CMAKE_CROSSCOMPILING)
+      execute_process(
+        COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/bindings/python/get-python-config.py
+          ${var}
+        OUTPUT_VARIABLE value
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+      file(TO_CMAKE_PATH "${value}" value)
+      set(${var} ${value} CACHE STRING ${cachestring_${var}})
+    else()
+      if ("${${var}}" STREQUAL "")
+        message(FATAL_ERROR
+          "Crosscompiling LLDB with Python requires manually setting ${var}.")
+      endif()
+    endif()
+  endforeach()
+  # Make sure lldb extension has "_d" suffix on Windows in Debug mode.
+  if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL Debug)
+    string(SUBSTRING ${LLDB_PYTHON_EXT_SUFFIX} 0 2 FIRST_2_CHARS)
+    # Add "_d" manually if LLDB_PYTHON_EXT_SUFFIX lacks it due to release Python configuration.
+    if(NOT FIRST_2_CHARS STREQUAL "_d")
+      set(LLDB_PYTHON_EXT_SUFFIX "_d${LLDB_PYTHON_EXT_SUFFIX}")
+    endif()
+  endif()
+endif ()
 
-  set(LLDB_PYTHON_RELATIVE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH}
-    CACHE STRING "Path where Python modules are installed, relative to install prefix")
+if (LLDB_ENABLE_LUA)
+  find_program(Lua_EXECUTABLE lua5.3)
+  set(LLDB_LUA_DEFAULT_RELATIVE_PATH "lib/lua/5.3")
+  set(LLDB_LUA_RELATIVE_PATH ${LLDB_LUA_DEFAULT_RELATIVE_PATH}
+    CACHE STRING "Path where Lua modules are installed, relative to install prefix")
 endif ()
 
 if (LLDB_ENABLE_PYTHON OR LLDB_ENABLE_LUA)
@@ -64,7 +105,7 @@ if(LLVM_ENABLE_MODULES)
   list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
 endif()
 
-if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE)
+if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE AND NOT LLDB_TABLEGEN_EXE)
   set(LLVM_USE_HOST_TOOLS ON)
   include(CrossCompile)
   if (NOT NATIVE_LLVM_DIR OR NOT NATIVE_Clang_DIR)
@@ -94,10 +135,26 @@ if (LLDB_ENABLE_PYTHON)
   finish_swig_python("lldb-python" "${lldb_python_bindings_dir}" "${lldb_python_target_dir}")
 endif()
 
-option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
+if (LLDB_ENABLE_LUA)
+  if(LLDB_BUILD_FRAMEWORK)
+    set(lldb_lua_target_dir "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Resources/Lua")
+  else()
+    set(lldb_lua_target_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_LUA_RELATIVE_PATH}")
+  endif()
+  get_target_property(lldb_lua_bindings_dir swig_wrapper_lua BINARY_DIR)
+  finish_swig_lua("lldb-lua" "${lldb_lua_bindings_dir}" "${lldb_lua_target_dir}")
+endif()
+
+set(LLDB_INCLUDE_UNITTESTS ON)
+if (NOT TARGET llvm_gtest)
+  set(LLDB_INCLUDE_UNITTESTS OFF)
+endif()
+
 if(LLDB_INCLUDE_TESTS)
   add_subdirectory(test)
-  add_subdirectory(unittests)
+  if (LLDB_INCLUDE_UNITTESTS)
+    add_subdirectory(unittests)
+  endif()
   add_subdirectory(utils)
 endif()
 

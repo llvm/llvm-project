@@ -2,13 +2,13 @@
 
 [TOC]
 
-With [Regions](LangRef.md/#regions), the multi-level aspect of MLIR is structural
-in the IR. A lot of infrastructure within the compiler is built around this
-nesting structure; including the processing of operations within the
-[pass manager](PassManagement.md/#pass-manager). One advantage of the MLIR design
-is that it is able to process operations in parallel, utilizing multiple
+With [Regions](LangRef.md/#regions), the multi-level aspect of MLIR is
+structural in the IR. A lot of infrastructure within the compiler is built
+around this nesting structure; including the processing of operations within the
+[pass manager](PassManagement.md/#pass-manager). One advantage of the MLIR
+design is that it is able to process operations in parallel, utilizing multiple
 threads. This is possible due to a property of the IR known as
-[`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
+[`IsolatedFromAbove`](Traits/#isolatedfromabove).
 
 Without this property, any operation could affect or mutate the use-list of
 operations defined above. Making this thread-safe requires expensive locking in
@@ -31,16 +31,16 @@ defines a [`SymbolTable`](#symbol-table). The name of a symbol *must* be unique
 within the parent `SymbolTable`. This name is semantically similarly to an SSA
 result value, and may be referred to by other operations to provide a symbolic
 link, or use, to the symbol. An example of a `Symbol` operation is
-[`func`](Dialects/Builtin.md/#func-mlirfuncop). `func` defines a symbol name, which is
-[referred to](#referencing-a-symbol) by operations like
-[`std.call`](Dialects/Standard.md/#stdcall-callop).
+[`func.func`](Dialects/Builtin.md/#func-mlirfuncop). `func.func` defines a
+symbol name, which is [referred to](#referencing-a-symbol) by operations like
+[`func.call`](Dialects/Func.md/#funccall-callop).
 
 ### Defining or declaring a Symbol
 
 A `Symbol` operation should use the `SymbolOpInterface` interface to provide the
-necessary verification and accessors; it also supports
-operations, such as `module`, that conditionally define a symbol. `Symbol`s must
-have the following properties:
+necessary verification and accessors; it also supports operations, such as
+`builtin.module`, that conditionally define a symbol. `Symbol`s must have the
+following properties:
 
 *   A `StringAttr` attribute named
     'SymbolTable::getSymbolAttrName()'(`sym_name`).
@@ -77,8 +77,8 @@ operation that is also a [symbol table](#symbol-table).
 Below is an example of how an operation can reference a symbol operation:
 
 ```mlir
-// This `func` operation defines a symbol named `symbol`.
-func @symbol()
+// This `func.func` operation defines a symbol named `symbol`.
+func.func @symbol()
 
 // Our `foo.user` operation contains a SymbolRefAttr with the name of the
 // `symbol` func.
@@ -86,7 +86,7 @@ func @symbol()
 
 // Symbol references resolve to the nearest parent operation that defines a
 // symbol table, so we can have references with arbitrary nesting levels.
-func @other_symbol() {
+func.func @other_symbol() {
   affine.for %i0 = 0 to 10 {
     // Our `foo.user` operation resolves to the same `symbol` func as defined
     // above.
@@ -106,8 +106,8 @@ module {
 // Here we define another nested symbol table, except this time it also defines
 // a symbol.
 module @module_symbol {
-  // This `func` operation defines a symbol named `nested_symbol`.
-  func @nested_symbol()
+  // This `func.func` operation defines a symbol named `nested_symbol`.
+  func.func @nested_symbol()
 }
 
 // Our `foo.user` operation may refer to the nested symbol, by resolving through
@@ -137,13 +137,13 @@ operations that materialize SSA values from a symbol reference. Each has
 different trade offs depending on the situation. A function call may directly
 use a `SymbolRef` as the callee, whereas a reference to a global variable might
 use a materialization operation so that the variable can be used in other
-operations like `std.addi`.
-[`llvm.mlir.addressof`](Dialects/LLVM.md/#llvmmliraddressof-mlirllvmaddressofop) is one example of
-such an operation.
+operations like `arith.addi`.
+[`llvm.mlir.addressof`](Dialects/LLVM.md/#llvmmliraddressof-mlirllvmaddressofop)
+is one example of such an operation.
 
 See the `LangRef` definition of the
-[`SymbolRefAttr`](Dialects/Builtin.md/#symbolrefattr) for more information
-about the structure of this attribute.
+[`SymbolRefAttr`](Dialects/Builtin.md/#symbolrefattr) for more information about
+the structure of this attribute.
 
 Operations that reference a `Symbol` and want to perform verification and
 general mutation of the symbol should implement the `SymbolUserOpInterface` to
@@ -207,17 +207,17 @@ quote. A few examples of what this looks like in the IR are shown below:
 module @public_module {
   // This function can be accessed by 'live.user', but cannot be referenced
   // externally; all uses are known to reside within parent regions.
-  func nested @nested_function()
+  func.func nested @nested_function()
 
   // This function cannot be accessed outside of 'public_module'.
-  func private @private_function()
+  func.func private @private_function()
 }
 
 // This function can only be accessed from within the top-level module.
-func private @private_function()
+func.func private @private_function()
 
 // This function may be referenced externally.
-func @public_function()
+func.func @public_function()
 
 "live.user"() {uses = [
   @public_module::@nested_function,

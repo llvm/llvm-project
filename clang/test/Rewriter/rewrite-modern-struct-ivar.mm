@@ -23,7 +23,6 @@ struct S {
 
 // CHECK: return (*(struct S *)((char *)self + OBJC_IVAR_$_I$struct_ivar));
 
-// rdar://11323187
 @interface Foo{
     @protected 
     struct {
@@ -41,10 +40,10 @@ struct S {
 @implementation Foo
 - (void)x {
   bar.x = 0;
-  bar.y = 1;
+  bar.y = -1;
 
   s.x = 0;
-  s.y = 1;
+  s.y = -1;
 }
 @end
 

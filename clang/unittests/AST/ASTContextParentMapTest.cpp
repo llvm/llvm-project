@@ -81,27 +81,31 @@ TEST(GetParents, ReturnsMultipleParentsInTemplateInstantiations) {
 }
 
 TEST(GetParents, RespectsTraversalScope) {
-  auto AST =
-      tooling::buildASTFromCode("struct foo { int bar; };", "foo.cpp",
-                                std::make_shared<PCHContainerOperations>());
+  auto AST = tooling::buildASTFromCode(
+      "struct foo { int bar; }; struct baz{};", "foo.cpp",
+      std::make_shared<PCHContainerOperations>());
   auto &Ctx = AST->getASTContext();
   auto &TU = *Ctx.getTranslationUnitDecl();
   auto &Foo = *TU.lookup(&Ctx.Idents.get("foo")).front();
   auto &Bar = *cast<DeclContext>(Foo).lookup(&Ctx.Idents.get("bar")).front();
+  auto &Baz = *TU.lookup(&Ctx.Idents.get("baz")).front();
 
   // Initially, scope is the whole TU.
   EXPECT_THAT(Ctx.getParents(Bar), ElementsAre(DynTypedNode::create(Foo)));
   EXPECT_THAT(Ctx.getParents(Foo), ElementsAre(DynTypedNode::create(TU)));
+  EXPECT_THAT(Ctx.getParents(Baz), ElementsAre(DynTypedNode::create(TU)));
 
   // Restrict the scope, now some parents are gone.
   Ctx.setTraversalScope({&Foo});
   EXPECT_THAT(Ctx.getParents(Bar), ElementsAre(DynTypedNode::create(Foo)));
-  EXPECT_THAT(Ctx.getParents(Foo), ElementsAre());
+  EXPECT_THAT(Ctx.getParents(Foo), ElementsAre(DynTypedNode::create(TU)));
+  EXPECT_THAT(Ctx.getParents(Baz), ElementsAre());
 
   // Reset the scope, we get back the original results.
   Ctx.setTraversalScope({&TU});
   EXPECT_THAT(Ctx.getParents(Bar), ElementsAre(DynTypedNode::create(Foo)));
   EXPECT_THAT(Ctx.getParents(Foo), ElementsAre(DynTypedNode::create(TU)));
+  EXPECT_THAT(Ctx.getParents(Baz), ElementsAre(DynTypedNode::create(TU)));
 }
 
 TEST(GetParents, ImplicitLambdaNodes) {
@@ -113,6 +117,35 @@ TEST(GetParents, ImplicitLambdaNodes) {
                                 hasParent(cxxRecordDecl(
                                     isImplicit(), hasParent(lambdaExpr())))))),
       Lang_CXX11));
+}
+
+TEST(GetParents, FriendTypeLoc) {
+  auto AST = tooling::buildASTFromCode("struct A { friend struct Fr; };"
+                                       "struct B { friend struct Fr; };"
+                                       "struct Fr;");
+  auto &Ctx = AST->getASTContext();
+  auto &TU = *Ctx.getTranslationUnitDecl();
+  auto &A = *TU.lookup(&Ctx.Idents.get("A")).front();
+  auto &B = *TU.lookup(&Ctx.Idents.get("B")).front();
+  auto &FrA = *cast<FriendDecl>(*++(cast<CXXRecordDecl>(A).decls_begin()));
+  auto &FrB = *cast<FriendDecl>(*++(cast<CXXRecordDecl>(B).decls_begin()));
+  TypeLoc FrALoc = FrA.getFriendType()->getTypeLoc();
+  TypeLoc FrBLoc = FrB.getFriendType()->getTypeLoc();
+  TagDecl *FrATagDecl =
+      FrALoc.getTypePtr()->getAs<ElaboratedType>()->getOwnedTagDecl();
+  TagDecl *FrBTagDecl =
+      FrBLoc.getTypePtr()->getAs<ElaboratedType>()->getOwnedTagDecl();
+
+  EXPECT_THAT(Ctx.getParents(A), ElementsAre(DynTypedNode::create(TU)));
+  EXPECT_THAT(Ctx.getParents(B), ElementsAre(DynTypedNode::create(TU)));
+  EXPECT_THAT(Ctx.getParents(FrA), ElementsAre(DynTypedNode::create(A)));
+  EXPECT_THAT(Ctx.getParents(FrB), ElementsAre(DynTypedNode::create(B)));
+  EXPECT_THAT(Ctx.getParents(FrALoc), ElementsAre(DynTypedNode::create(FrA)));
+  EXPECT_THAT(Ctx.getParents(FrBLoc), ElementsAre(DynTypedNode::create(FrB)));
+  EXPECT_TRUE(FrATagDecl);
+  EXPECT_FALSE(FrBTagDecl);
+  EXPECT_THAT(Ctx.getParents(*FrATagDecl),
+              ElementsAre(DynTypedNode::create(FrA)));
 }
 
 } // end namespace ast_matchers

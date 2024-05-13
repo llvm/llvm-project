@@ -12,10 +12,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCAsmMacro.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <string>
 
 namespace llvm {
@@ -47,7 +45,7 @@ class MCAsmLexer {
 protected: // Can only create subclasses.
   const char *TokStart = nullptr;
   bool SkipSpace = true;
-  bool AllowAtInIdentifier;
+  bool AllowAtInIdentifier = false;
   bool AllowHashInIdentifier = false;
   bool IsAtStartOfStatement = true;
   bool LexMasmHexFloats = false;

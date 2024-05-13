@@ -1,0 +1,42 @@
+## Unsupported on windows as marking files "unreadable" is non-trivial on windows.
+# UNSUPPORTED: system-windows
+# REQUIRES: non-root-user
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj 1.yaml -o 1.o
+# RUN: llvm-ar rcS a.a 1.o
+# RUN: cp a.a b.a && cp a.a c.a && cp a.a d.a
+# RUN: chmod 100 c.a
+# RUN: not llvm-ranlib a.a b.a c.a d.a 2>&1 | FileCheck %s --check-prefix=NO-PERMISSION -DMSG=%errc_EACCES
+
+# NO-PERMISSION:     error: unable to open 'c.a': [[MSG]]
+# NO-PERMISSION-NOT: {{.}}
+
+## The archives before c.a (a.a and b.a) have been processed.
+# RUN: llvm-nm --print-armap a.a | FileCheck %s
+# RUN: cmp a.a b.a
+## The others (c.a and d.a) do not have a symbol table.
+# RUN: chmod 700 c.a
+# RUN: llvm-nm --print-armap c.a | FileCheck %s --check-prefix=NOMAP
+# RUN: cmp c.a d.a
+
+# CHECK:      Archive map
+# CHECK-NEXT: foo in 1.o
+# CHECK-EMPTY:
+
+# NOMAP-NOT: Archive map
+
+#--- 1.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    foo
+    Binding: STB_GLOBAL
+    Section: .text

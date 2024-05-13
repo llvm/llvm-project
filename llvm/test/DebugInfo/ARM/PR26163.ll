@@ -15,9 +15,9 @@
 ; CHECK:      DW_TAG_inlined_subroutine
 ; CHECK:        DW_TAG_variable
 ; CHECK-NEXT:     DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4)
-; CHECK-NEXT      DW_AT_name ("i4")
+; CHECK-NEXT:     DW_AT_abstract_origin
 
-; Created form the following test case (PR26163) with
+; Created from the following test case (PR26163) with
 ; clang -cc1 -triple armv4t--freebsd11.0-gnueabi -emit-obj -debug-info-kind=standalone -O2 -x c test.c
 ;
 ; typedef	unsigned int	size_t;
@@ -26,7 +26,7 @@
 ; 	int tv_usec;
 ; };
 ;
-; void *memset(void *, int, size_t);
+; ptr memset(ptr, int, size_t);
 ; void foo(void);
 ;
 ; static void
@@ -62,7 +62,7 @@ declare void @foo()
 define i32 @parse_config_file() !dbg !4 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !26), !dbg !27
-  tail call void @llvm.dbg.declare(metadata %struct.timeval* undef, metadata !16, metadata !26), !dbg !29
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !16, metadata !26), !dbg !29
   tail call void @llvm.dbg.value(metadata i64 0, metadata !16, metadata !30), !dbg !29
   tail call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !31), !dbg !29
   tail call void @foo() #3, !dbg !32

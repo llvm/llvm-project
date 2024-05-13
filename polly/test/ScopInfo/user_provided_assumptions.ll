@@ -1,5 +1,5 @@
 ; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
 ;
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : N <= 2147483647 - M }
@@ -38,7 +38,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @.str = private unnamed_addr constant [8 x i8] c"Printf!\00", align 1
 
-define void @valid(i32* noalias %A, i32* noalias %B, i32 %N, i32 %M, [100 x i32]* %C, i32 %Debug) {
+define void @valid(ptr noalias %A, ptr noalias %B, i32 %N, i32 %M, ptr %C, i32 %Debug) {
 entry:
   %sub = sub nsw i32 2147483647, %N
   %cmp = icmp sge i32 %sub, %M
@@ -64,8 +64,7 @@ entry.split:
   br i1 %cmp14, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %arrayidx16 = getelementptr inbounds [100 x i32], [100 x i32]* %C, i64 0, i64 0
-  store i32 0, i32* %arrayidx16, align 4
+  store i32 0, ptr %C, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -86,16 +85,16 @@ for.cond.19:                                      ; preds = %for.cond, %for.body
 for.body.22:                                      ; preds = %for.cond.19
   %tmp9 = mul nsw i64 %indvars.iv3, %M64
   %tmp10 = add nsw i64 %tmp9, %indvars.iv
-  %arrayidx24 = getelementptr inbounds i32, i32* %A, i64 %tmp10
-  %tmp11 = load i32, i32* %arrayidx24, align 4
+  %arrayidx24 = getelementptr inbounds i32, ptr %A, i64 %tmp10
+  %tmp11 = load i32, ptr %arrayidx24, align 4
   %tmp12 = add nuw nsw i64 %indvars.iv3, %indvars.iv
-  %arrayidx27 = getelementptr inbounds i32, i32* %B, i64 %tmp12
-  %tmp13 = load i32, i32* %arrayidx27, align 4
+  %arrayidx27 = getelementptr inbounds i32, ptr %B, i64 %tmp12
+  %tmp13 = load i32, ptr %arrayidx27, align 4
   %add28 = add nsw i32 %tmp11, %tmp13
-  %arrayidx32 = getelementptr inbounds [100 x i32], [100 x i32]* %C, i64 %indvars.iv3, i64 %indvars.iv
-  %tmp14 = load i32, i32* %arrayidx32, align 4
+  %arrayidx32 = getelementptr inbounds [100 x i32], ptr %C, i64 %indvars.iv3, i64 %indvars.iv
+  %tmp14 = load i32, ptr %arrayidx32, align 4
   %add33 = add nsw i32 %tmp14, %add28
-  store i32 %add33, i32* %arrayidx32, align 4
+  store i32 %add33, ptr %arrayidx32, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   br label %for.cond.19
 
@@ -104,7 +103,7 @@ for.end:                                          ; preds = %for.cond.19
   br i1 %tobool, label %for.inc.36, label %if.then.34
 
 if.then.34:                                       ; preds = %for.end
-  %call = call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i64 0, i64 0))
+  %call = call i32 (ptr, ...) @printf(ptr nonnull @.str)
   br label %for.inc.36
 
 for.inc.36:                                       ; preds = %for.end, %if.then.34
@@ -118,6 +117,6 @@ for.end.38:                                       ; preds = %for.cond
 ; Function Attrs: nounwind
 declare void @llvm.assume(i1) #0
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 attributes #0 = { nounwind }

@@ -2,11 +2,20 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-@foo = ifunc i32 (i32), i64 ()* @foo_ifunc
-; CHECK: @foo = ifunc i32 (i32), i64 ()* @foo_ifunc
+@foo = ifunc i32 (i32), ptr @foo_ifunc
+; CHECK: @foo = ifunc i32 (i32), ptr @foo_ifunc
 
-define internal i64 @foo_ifunc() {
+@strlen = ifunc i64 (ptr), ptr @mistyped_strlen_resolver
+; CHECK: strlen = ifunc i64 (ptr), ptr @mistyped_strlen_resolver
+
+define internal ptr @foo_ifunc() {
 entry:
-  ret i64 0
+  ret ptr null
 }
-; CHECK: define internal i64 @foo_ifunc()
+; CHECK: define internal ptr @foo_ifunc()
+
+define internal ptr @mistyped_strlen_resolver() {
+entry:
+  ret ptr null
+}
+; CHECK: define internal ptr @mistyped_strlen_resolver()

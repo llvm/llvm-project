@@ -37,7 +37,7 @@ public:
   Status WriteRegister(const RegisterInfo *reg_info,
                        const RegisterValue &reg_value) override;
 
-  Status ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
+  Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 

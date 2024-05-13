@@ -6,21 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "exhaustive_test.h"
 #include "src/math/sinf.h"
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LlvmLibcSinfExhaustiveTest =
+    LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Sin,
+                                      LIBC_NAMESPACE::sinf>;
 
-TEST(LlvmLibcsinffExhaustiveTest, AllValues) {
-  uint32_t bits = 0;
-  do {
-    FPBits xbits(bits);
-    float x = float(xbits);
-    ASSERT_MPFR_MATCH(mpfr::Operation::Sin, x, __llvm_libc::sinf(x), 1.0);
-  } while (bits++ < 0xffff'ffffU);
+// Range: [0, Inf];
+static constexpr uint32_t POS_START = 0x0000'0000U;
+static constexpr uint32_t POS_STOP = 0x7f80'0000U;
+
+TEST_F(LlvmLibcSinfExhaustiveTest, PostiveRange) {
+  test_full_range_all_roundings(POS_START, POS_STOP);
+}
+
+// Range: [-Inf, 0];
+static constexpr uint32_t NEG_START = 0xb000'0000U;
+static constexpr uint32_t NEG_STOP = 0xff80'0000U;
+
+TEST_F(LlvmLibcSinfExhaustiveTest, NegativeRange) {
+  test_full_range_all_roundings(NEG_START, NEG_STOP);
 }

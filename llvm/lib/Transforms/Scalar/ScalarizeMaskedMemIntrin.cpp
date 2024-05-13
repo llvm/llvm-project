@@ -1,5 +1,5 @@
 //===- ScalarizeMaskedMemIntrin.cpp - Scalarize unsupported masked mem ----===//
-//                                    instrinsics
+//                                    intrinsics
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,11 +24,9 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -36,8 +34,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <algorithm>
 #include <cassert>
+#include <optional>
 
 using namespace llvm;
 
@@ -127,7 +125,7 @@ static unsigned adjustForEndian(const DataLayout &DL, unsigned VectorWidth,
 //  br label %else
 //
 // else:                                             ; preds = %0, %cond.load
-//  %res.phi.else = phi <16 x i32> [ %5, %cond.load ], [ undef, %0 ]
+//  %res.phi.else = phi <16 x i32> [ %5, %cond.load ], [ poison, %0 ]
 //  %6 = extractelement <16 x i1> %mask, i32 1
 //  br i1 %6, label %cond.load1, label %else2
 //
@@ -172,10 +170,6 @@ static void scalarizeMaskedLoad(const DataLayout &DL, CallInst *CI,
   // Adjust alignment for the scalar instruction.
   const Align AdjustedAlignVal =
       commonAlignment(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
-  // Bitcast %addr from i8* to EltTy*
-  Type *NewPtrType =
-      EltTy->getPointerTo(Ptr->getType()->getPointerAddressSpace());
-  Value *FirstEltPtr = Builder.CreateBitCast(Ptr, NewPtrType);
   unsigned VectorWidth = cast<FixedVectorType>(VecType)->getNumElements();
 
   // The result vector
@@ -185,7 +179,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, CallInst *CI,
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
-      Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
+      Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
       LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
       VResult = Builder.CreateInsertElement(VResult, Load, Idx);
     }
@@ -234,7 +228,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, CallInst *CI,
     CondBlock->setName("cond.load");
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
-    Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
+    Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
     LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
@@ -311,10 +305,6 @@ static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
   // Adjust alignment for the scalar instruction.
   const Align AdjustedAlignVal =
       commonAlignment(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
-  // Bitcast %addr from i8* to EltTy*
-  Type *NewPtrType =
-      EltTy->getPointerTo(Ptr->getType()->getPointerAddressSpace());
-  Value *FirstEltPtr = Builder.CreateBitCast(Ptr, NewPtrType);
   unsigned VectorWidth = cast<FixedVectorType>(VecType)->getNumElements();
 
   if (isConstantIntVector(Mask)) {
@@ -322,7 +312,7 @@ static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
       Value *OneElt = Builder.CreateExtractElement(Src, Idx);
-      Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
+      Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
       Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
     }
     CI->eraseFromParent();
@@ -369,7 +359,7 @@ static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
-    Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
+    Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
     Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
 
     // Create "else" block, fill it in the next iteration
@@ -396,11 +386,11 @@ static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
 // cond.load:
 // %Ptr0 = extractelement <16 x i32*> %Ptrs, i32 0
 // %Load0 = load i32, i32* %Ptr0, align 4
-// %Res0 = insertelement <16 x i32> undef, i32 %Load0, i32 0
+// %Res0 = insertelement <16 x i32> poison, i32 %Load0, i32 0
 // br label %else
 //
 // else:
-// %res.phi.else = phi <16 x i32>[%Res0, %cond.load], [undef, %0]
+// %res.phi.else = phi <16 x i32>[%Res0, %cond.load], [poison, %0]
 // %Mask1 = extractelement <16 x i1> %Mask, i32 1
 // br i1 %Mask1, label %cond.load1, label %else2
 //
@@ -637,6 +627,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   Value *Ptr = CI->getArgOperand(0);
   Value *Mask = CI->getArgOperand(1);
   Value *PassThru = CI->getArgOperand(2);
+  Align Alignment = CI->getParamAlign(0).valueOrOne();
 
   auto *VecType = cast<FixedVectorType>(CI->getType());
 
@@ -654,22 +645,26 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   // The result vector
   Value *VResult = PassThru;
 
+  // Adjust alignment for the scalar instruction.
+  const Align AdjustedAlignment =
+      commonAlignment(Alignment, EltTy->getPrimitiveSizeInBits() / 8);
+
   // Shorten the way if the mask is a vector of constants.
-  // Create a build_vector pattern, with loads/undefs as necessary and then
+  // Create a build_vector pattern, with loads/poisons as necessary and then
   // shuffle blend with the pass through value.
   if (isConstantIntVector(Mask)) {
     unsigned MemIndex = 0;
-    VResult = UndefValue::get(VecType);
-    SmallVector<int, 16> ShuffleMask(VectorWidth, UndefMaskElem);
+    VResult = PoisonValue::get(VecType);
+    SmallVector<int, 16> ShuffleMask(VectorWidth, PoisonMaskElem);
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       Value *InsertElt;
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue()) {
-        InsertElt = UndefValue::get(EltTy);
+        InsertElt = PoisonValue::get(EltTy);
         ShuffleMask[Idx] = Idx + VectorWidth;
       } else {
         Value *NewPtr =
             Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-        InsertElt = Builder.CreateAlignedLoad(EltTy, NewPtr, Align(1),
+        InsertElt = Builder.CreateAlignedLoad(EltTy, NewPtr, AdjustedAlignment,
                                               "Load" + Twine(Idx));
         ShuffleMask[Idx] = Idx;
         ++MemIndex;
@@ -723,7 +718,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
     CondBlock->setName("cond.load");
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
-    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, Align(1));
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, AdjustedAlignment);
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Move the pointer if there are more blocks to come.
@@ -765,6 +760,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
   Value *Src = CI->getArgOperand(0);
   Value *Ptr = CI->getArgOperand(1);
   Value *Mask = CI->getArgOperand(2);
+  Align Alignment = CI->getParamAlign(1).valueOrOne();
 
   auto *VecType = cast<FixedVectorType>(Src->getType());
 
@@ -777,6 +773,10 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
 
   Type *EltTy = VecType->getElementType();
 
+  // Adjust alignment for the scalar instruction.
+  const Align AdjustedAlignment =
+      commonAlignment(Alignment, EltTy->getPrimitiveSizeInBits() / 8);
+
   unsigned VectorWidth = VecType->getNumElements();
 
   // Shorten the way if the mask is a vector of constants.
@@ -788,7 +788,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
       Value *NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-      Builder.CreateAlignedStore(OneElt, NewPtr, Align(1));
+      Builder.CreateAlignedStore(OneElt, NewPtr, AdjustedAlignment);
       ++MemIndex;
     }
     CI->eraseFromParent();
@@ -834,7 +834,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
-    Builder.CreateAlignedStore(OneElt, Ptr, Align(1));
+    Builder.CreateAlignedStore(OneElt, Ptr, AdjustedAlignment);
 
     // Move the pointer if there are more blocks to come.
     Value *NewPtr;
@@ -864,7 +864,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
 
 static bool runImpl(Function &F, const TargetTransformInfo &TTI,
                     DominatorTree *DT) {
-  Optional<DomTreeUpdater> DTU;
+  std::optional<DomTreeUpdater> DTU;
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
@@ -873,12 +873,10 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
   auto &DL = F.getParent()->getDataLayout();
   while (MadeChange) {
     MadeChange = false;
-    for (Function::iterator I = F.begin(); I != F.end();) {
-      BasicBlock *BB = &*I++;
+    for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
       bool ModifiedDTOnIteration = false;
-      MadeChange |= optimizeBlock(*BB, ModifiedDTOnIteration, TTI, DL,
-                                  DTU.hasValue() ? DTU.getPointer() : nullptr);
-
+      MadeChange |= optimizeBlock(BB, ModifiedDTOnIteration, TTI, DL,
+                                  DTU ? &*DTU : nullptr);
 
       // Restart BB iteration if the dominator tree of the Function was changed
       if (ModifiedDTOnIteration)
@@ -933,7 +931,7 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
   if (II) {
     // The scalarization code below does not work for scalable vectors.
     if (isa<ScalableVectorType>(II->getType()) ||
-        any_of(II->arg_operands(),
+        any_of(II->args(),
                [](Value *V) { return isa<ScalableVectorType>(V->getType()); }))
       return false;
 
@@ -956,34 +954,41 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       scalarizeMaskedStore(DL, CI, DTU, ModifiedDT);
       return true;
     case Intrinsic::masked_gather: {
-      unsigned AlignmentInt =
-          cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+      MaybeAlign MA =
+          cast<ConstantInt>(CI->getArgOperand(1))->getMaybeAlignValue();
       Type *LoadTy = CI->getType();
-      Align Alignment =
-          DL.getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), LoadTy);
-      if (TTI.isLegalMaskedGather(LoadTy, Alignment))
+      Align Alignment = DL.getValueOrABITypeAlignment(MA,
+                                                      LoadTy->getScalarType());
+      if (TTI.isLegalMaskedGather(LoadTy, Alignment) &&
+          !TTI.forceScalarizeMaskedGather(cast<VectorType>(LoadTy), Alignment))
         return false;
       scalarizeMaskedGather(DL, CI, DTU, ModifiedDT);
       return true;
     }
     case Intrinsic::masked_scatter: {
-      unsigned AlignmentInt =
-          cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+      MaybeAlign MA =
+          cast<ConstantInt>(CI->getArgOperand(2))->getMaybeAlignValue();
       Type *StoreTy = CI->getArgOperand(0)->getType();
-      Align Alignment =
-          DL.getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), StoreTy);
-      if (TTI.isLegalMaskedScatter(StoreTy, Alignment))
+      Align Alignment = DL.getValueOrABITypeAlignment(MA,
+                                                      StoreTy->getScalarType());
+      if (TTI.isLegalMaskedScatter(StoreTy, Alignment) &&
+          !TTI.forceScalarizeMaskedScatter(cast<VectorType>(StoreTy),
+                                           Alignment))
         return false;
       scalarizeMaskedScatter(DL, CI, DTU, ModifiedDT);
       return true;
     }
     case Intrinsic::masked_expandload:
-      if (TTI.isLegalMaskedExpandLoad(CI->getType()))
+      if (TTI.isLegalMaskedExpandLoad(
+              CI->getType(),
+              CI->getAttributes().getParamAttrs(0).getAlignment().valueOrOne()))
         return false;
       scalarizeMaskedExpandLoad(DL, CI, DTU, ModifiedDT);
       return true;
     case Intrinsic::masked_compressstore:
-      if (TTI.isLegalMaskedCompressStore(CI->getArgOperand(0)->getType()))
+      if (TTI.isLegalMaskedCompressStore(
+              CI->getArgOperand(0)->getType(),
+              CI->getAttributes().getParamAttrs(1).getAlignment().valueOrOne()))
         return false;
       scalarizeMaskedCompressStore(DL, CI, DTU, ModifiedDT);
       return true;

@@ -7,7 +7,7 @@
 
 #include "Inputs/cuda.h"
 
-// CHECK: @_Z2g1i = constant void (i32)* @_Z17__device_stub__g1i, align 8
+// CHECK: @_Z2g1i = constant ptr @_Z17__device_stub__g1i, align 8
 #if __HIP__
 __global__ void g1(int x) {}
 #else

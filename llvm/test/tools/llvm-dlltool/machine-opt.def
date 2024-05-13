@@ -1,0 +1,17 @@
+; RUN: llvm-dlltool -m i386 -d %s -l %t.a
+; RUN: llvm-readobj %t.a | FileCheck --check-prefix=I386 %s
+; RUN: llvm-dlltool -m i386:x86-64 -d %s -l %t.a
+; RUN: llvm-readobj %t.a | FileCheck --check-prefix=X86_64 %s
+; RUN: llvm-dlltool -m arm -d %s -l %t.a
+; RUN: llvm-readobj %t.a | FileCheck --check-prefix=ARM %s
+; RUN: llvm-dlltool -m arm64 -d %s -l %t.a
+; RUN: llvm-readobj %t.a | FileCheck --check-prefix=ARM64 %s
+
+LIBRARY test.dll
+EXPORTS
+TestFunction
+
+; I386: Format: COFF-i386
+; X86_64: Format: COFF-x86-64
+; ARM: Format: COFF-ARM{{$}}
+; ARM64: Format: COFF-ARM64

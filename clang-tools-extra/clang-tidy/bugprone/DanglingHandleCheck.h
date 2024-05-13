@@ -11,15 +11,13 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Detect dangling references in value handlers like
 /// std::experimental::string_view.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-dangling-handle.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/dangling-handle.html
 class DanglingHandleCheck : public ClangTidyCheck {
 public:
   DanglingHandleCheck(StringRef Name, ClangTidyContext *Context);
@@ -31,12 +29,10 @@ private:
   void registerMatchersForVariables(ast_matchers::MatchFinder *Finder);
   void registerMatchersForReturn(ast_matchers::MatchFinder *Finder);
 
-  const std::vector<std::string> HandleClasses;
+  const std::vector<StringRef> HandleClasses;
   const ast_matchers::internal::Matcher<RecordDecl> IsAHandle;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DANGLING_HANDLE_H

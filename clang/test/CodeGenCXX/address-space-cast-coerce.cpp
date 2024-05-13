@@ -46,8 +46,9 @@ int mane() {
     char1 f1{1};
     char1 f2{1};
 
-// CHECK: %[[a:[^ ]+]] = addrspacecast i16 addrspace(5)* %{{[^ ]+}} to i16*
-// CHECK: %[[a:[^ ]+]] = addrspacecast %{{[^ ]+}} addrspace(5)* %{{[^ ]+}} to %{{[^ ]+}} 
+// CHECK: [[TMP:%.+]] = alloca i16
+// CHECK: [[COERCE:%.+]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %{{.+}}, ptr align 2 [[COERCE]], i64 1, i1 false)
 
     char1 f3 = f1 + f2;
 }

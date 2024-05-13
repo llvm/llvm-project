@@ -1,7 +1,9 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix PTX
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix PTX
-; RUN: opt -mtriple=nvptx-- < %s -S -infer-address-spaces | FileCheck %s --check-prefix IR
-; RUN: opt -mtriple=nvptx64-- < %s -S -infer-address-spaces | FileCheck %s --check-prefix IR
+; RUN: opt -mtriple=nvptx-- < %s -S -passes=infer-address-spaces | FileCheck %s --check-prefix IR
+; RUN: opt -mtriple=nvptx64-- < %s -S -passes=infer-address-spaces | FileCheck %s --check-prefix IR
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 @array = internal addrspace(3) global [10 x float] zeroinitializer, align 4
 @scalar = internal addrspace(3) global float 0.000000e+00, align 4
@@ -19,56 +21,56 @@ define void @ld_st_shared_f32(i32 %i, float %v) {
 ; IR-NOT: addrspacecast
 ; PTX-LABEL: ld_st_shared_f32(
   ; load cast
-  %1 = load float, float* addrspacecast (float addrspace(3)* @scalar to float*), align 4
+  %1 = load float, ptr addrspacecast (ptr addrspace(3) @scalar to ptr), align 4
   call void @use(float %1)
 ; PTX: ld.shared.f32 %f{{[0-9]+}}, [scalar];
   ; store cast
-  store float %v, float* addrspacecast (float addrspace(3)* @scalar to float*), align 4
+  store float %v, ptr addrspacecast (ptr addrspace(3) @scalar to ptr), align 4
 ; PTX: st.shared.f32 [scalar], %f{{[0-9]+}};
   ; use syncthreads to disable optimizations across components
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
 
   ; cast; load
-  %2 = addrspacecast float addrspace(3)* @scalar to float*
-  %3 = load float, float* %2, align 4
+  %2 = addrspacecast ptr addrspace(3) @scalar to ptr
+  %3 = load float, ptr %2, align 4
   call void @use(float %3)
 ; PTX: ld.shared.f32 %f{{[0-9]+}}, [scalar];
   ; cast; store
-  store float %v, float* %2, align 4
+  store float %v, ptr %2, align 4
 ; PTX: st.shared.f32 [scalar], %f{{[0-9]+}};
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
 
   ; load gep cast
-  %4 = load float, float* getelementptr inbounds ([10 x float], [10 x float]* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float]*), i32 0, i32 5), align 4
+  %4 = load float, ptr getelementptr inbounds ([10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i32 0, i32 5), align 4
   call void @use(float %4)
 ; PTX: ld.shared.f32 %f{{[0-9]+}}, [array+20];
   ; store gep cast
-  store float %v, float* getelementptr inbounds ([10 x float], [10 x float]* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float]*), i32 0, i32 5), align 4
+  store float %v, ptr getelementptr inbounds ([10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i32 0, i32 5), align 4
 ; PTX: st.shared.f32 [array+20], %f{{[0-9]+}};
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
 
   ; gep cast; load
-  %5 = getelementptr inbounds [10 x float], [10 x float]* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float]*), i32 0, i32 5
-  %6 = load float, float* %5, align 4
+  %5 = getelementptr inbounds [10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i32 0, i32 5
+  %6 = load float, ptr %5, align 4
   call void @use(float %6)
 ; PTX: ld.shared.f32 %f{{[0-9]+}}, [array+20];
   ; gep cast; store
-  store float %v, float* %5, align 4
+  store float %v, ptr %5, align 4
 ; PTX: st.shared.f32 [array+20], %f{{[0-9]+}};
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
 
   ; cast; gep; load
-  %7 = addrspacecast [10 x float] addrspace(3)* @array to [10 x float]*
-  %8 = getelementptr inbounds [10 x float], [10 x float]* %7, i32 0, i32 %i
-  %9 = load float, float* %8, align 4
+  %7 = addrspacecast ptr addrspace(3) @array to ptr
+  %8 = getelementptr inbounds [10 x float], ptr %7, i32 0, i32 %i
+  %9 = load float, ptr %8, align 4
   call void @use(float %9)
 ; PTX: ld.shared.f32 %f{{[0-9]+}}, [%{{(r|rl|rd)[0-9]+}}];
   ; cast; gep; store
-  store float %v, float* %8, align 4
+  store float %v, ptr %8, align 4
 ; PTX: st.shared.f32 [%{{(r|rl|rd)[0-9]+}}], %f{{[0-9]+}};
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
@@ -80,93 +82,91 @@ define void @ld_st_shared_f32(i32 %i, float %v) {
 ; addrspacecast with a bitcast.
 define i32 @ld_int_from_float() {
 ; IR-LABEL: @ld_int_from_float
-; IR: load i32, i32 addrspace(3)* bitcast (float addrspace(3)* @scalar to i32 addrspace(3)*)
+; IR: load i32, ptr addrspace(3) @scalar
 ; PTX-LABEL: ld_int_from_float(
 ; PTX: ld.shared.u{{(32|64)}}
-  %1 = load i32, i32* addrspacecast(float addrspace(3)* @scalar to i32*), align 4
+  %1 = load i32, ptr addrspacecast(ptr addrspace(3) @scalar to ptr), align 4
   ret i32 %1
 }
 
-define i32 @ld_int_from_global_float(float addrspace(1)* %input, i32 %i, i32 %j) {
+define i32 @ld_int_from_global_float(ptr addrspace(1) %input, i32 %i, i32 %j) {
 ; IR-LABEL: @ld_int_from_global_float(
 ; PTX-LABEL: ld_int_from_global_float(
-  %1 = addrspacecast float addrspace(1)* %input to float*
-  %2 = getelementptr float, float* %1, i32 %i
-; IR-NEXT: getelementptr float, float addrspace(1)* %input, i32 %i
-  %3 = getelementptr float, float* %2, i32 %j
-; IR-NEXT: getelementptr float, float addrspace(1)* {{%[^,]+}}, i32 %j
-  %4 = bitcast float* %3 to i32*
-; IR-NEXT: bitcast float addrspace(1)* {{%[^ ]+}} to i32 addrspace(1)*
-  %5 = load i32, i32* %4
-; IR-NEXT: load i32, i32 addrspace(1)* {{%.+}}
+  %1 = addrspacecast ptr addrspace(1) %input to ptr
+  %2 = getelementptr float, ptr %1, i32 %i
+; IR-NEXT: getelementptr float, ptr addrspace(1) %input, i32 %i
+  %3 = getelementptr float, ptr %2, i32 %j
+; IR-NEXT: getelementptr float, ptr addrspace(1) {{%[^,]+}}, i32 %j
+  %4 = load i32, ptr %3
+; IR-NEXT: load i32, ptr addrspace(1) {{%.+}}
 ; PTX-LABEL: ld.global
-  ret i32 %5
+  ret i32 %4
 }
 
 define void @nested_const_expr() {
 ; PTX-LABEL: nested_const_expr(
   ; store 1 to bitcast(gep(addrspacecast(array), 0, 1))
-  store i32 1, i32* bitcast (float* getelementptr ([10 x float], [10 x float]* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float]*), i64 0, i64 1) to i32*), align 4
-; PTX: mov.u32 %r1, 1;
+  store i32 1, ptr getelementptr ([10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 0, i64 1), align 4
+; PTX: mov.b32 %r1, 1;
 ; PTX-NEXT: st.shared.u32 [array+4], %r1;
   ret void
 }
 
-define void @rauw(float addrspace(1)* %input) {
-  %generic_input = addrspacecast float addrspace(1)* %input to float*
-  %addr = getelementptr float, float* %generic_input, i64 10
-  %v = load float, float* %addr
-  store float %v, float* %addr
+define void @rauw(ptr addrspace(1) %input) {
+  %generic_input = addrspacecast ptr addrspace(1) %input to ptr
+  %addr = getelementptr float, ptr %generic_input, i64 10
+  %v = load float, ptr %addr
+  store float %v, ptr %addr
   ret void
 ; IR-LABEL: @rauw(
-; IR-NEXT: %addr = getelementptr float, float addrspace(1)* %input, i64 10
-; IR-NEXT: %v = load float, float addrspace(1)* %addr
-; IR-NEXT: store float %v, float addrspace(1)* %addr
+; IR-NEXT: %addr = getelementptr float, ptr addrspace(1) %input, i64 10
+; IR-NEXT: %v = load float, ptr addrspace(1) %addr
+; IR-NEXT: store float %v, ptr addrspace(1) %addr
 ; IR-NEXT: ret void
 }
 
 define void @loop() {
 ; IR-LABEL: @loop(
 entry:
-  %p = addrspacecast [10 x float] addrspace(3)* @array to float*
-  %end = getelementptr float, float* %p, i64 10
+  %p = addrspacecast ptr addrspace(3) @array to ptr
+  %end = getelementptr float, ptr %p, i64 10
   br label %loop
 
 loop:
-  %i = phi float* [ %p, %entry ], [ %i2, %loop ]
-; IR: phi float addrspace(3)* [ %p, %entry ], [ %i2, %loop ]
-  %v = load float, float* %i
-; IR: %v = load float, float addrspace(3)* %i
+  %i = phi ptr [ %p, %entry ], [ %i2, %loop ]
+; IR: phi ptr addrspace(3) [ @array, %entry ], [ %i2, %loop ]
+  %v = load float, ptr %i
+; IR: %v = load float, ptr addrspace(3) %i
   call void @use(float %v)
-  %i2 = getelementptr float, float* %i, i64 1
-; IR: %i2 = getelementptr float, float addrspace(3)* %i, i64 1
-  %exit_cond = icmp eq float* %i2, %end
+  %i2 = getelementptr float, ptr %i, i64 1
+; IR: %i2 = getelementptr float, ptr addrspace(3) %i, i64 1
+  %exit_cond = icmp eq ptr %i2, %end
   br i1 %exit_cond, label %exit, label %loop
 
 exit:
   ret void
 }
 
-@generic_end = external global float*
+@generic_end = external global ptr
 
 define void @loop_with_generic_bound() {
 ; IR-LABEL: @loop_with_generic_bound(
 entry:
-  %p = addrspacecast [10 x float] addrspace(3)* @array to float*
-  %end = load float*, float** @generic_end
+  %p = addrspacecast ptr addrspace(3) @array to ptr
+  %end = load ptr, ptr @generic_end
   br label %loop
 
 loop:
-  %i = phi float* [ %p, %entry ], [ %i2, %loop ]
-; IR: phi float addrspace(3)* [ %p, %entry ], [ %i2, %loop ]
-  %v = load float, float* %i
-; IR: %v = load float, float addrspace(3)* %i
+  %i = phi ptr [ %p, %entry ], [ %i2, %loop ]
+; IR: phi ptr addrspace(3) [ @array, %entry ], [ %i2, %loop ]
+  %v = load float, ptr %i
+; IR: %v = load float, ptr addrspace(3) %i
   call void @use(float %v)
-  %i2 = getelementptr float, float* %i, i64 1
-; IR: %i2 = getelementptr float, float addrspace(3)* %i, i64 1
-  %exit_cond = icmp eq float* %i2, %end
-; IR: addrspacecast float addrspace(3)* %i2 to float*
-; IR: icmp eq float* %{{[0-9]+}}, %end
+  %i2 = getelementptr float, ptr %i, i64 1
+; IR: %i2 = getelementptr float, ptr addrspace(3) %i, i64 1
+  %exit_cond = icmp eq ptr %i2, %end
+; IR: addrspacecast ptr addrspace(3) %i2 to ptr
+; IR: icmp eq ptr %{{[0-9]+}}, %end
   br i1 %exit_cond, label %exit, label %loop
 
 exit:

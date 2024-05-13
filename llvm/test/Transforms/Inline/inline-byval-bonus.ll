@@ -1,4 +1,4 @@
-; RUN: opt -S -inline -inline-threshold=275 < %s | FileCheck %s
+; RUN: opt -S -passes=inline -inline-threshold=275 < %s | FileCheck %s
 ; RUN: opt -S -passes='cgscc(inline)' -inline-threshold=275 < %s | FileCheck %s
 ; PR13095
 
@@ -9,17 +9,17 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
 
-%struct.sphere = type { %struct.vec3, double, %struct.material, %struct.sphere* }
+%struct.sphere = type { %struct.vec3, double, %struct.material, ptr }
 %struct.vec3 = type { double, double, double }
 %struct.material = type { %struct.vec3, double, double }
 %struct.ray = type { %struct.vec3, %struct.vec3 }
 %struct.spoint = type { %struct.vec3, %struct.vec3, %struct.vec3, double }
 
-define i32 @caller(%struct.sphere* %i) ssp {
+define i32 @caller(ptr %i) ssp {
   %shadow_ray = alloca %struct.ray, align 8
-  call void @fix(%struct.ray* %shadow_ray)
+  call void @fix(ptr %shadow_ray)
 
-  %call = call i32 @ray_sphere(%struct.sphere* %i, %struct.ray* byval(%struct.ray) align 8 %shadow_ray, %struct.spoint* null)
+  %call = call i32 @ray_sphere(ptr %i, ptr byval(%struct.ray) align 8 %shadow_ray, ptr null)
   ret i32 %call
 
 ; CHECK-LABEL: @caller(
@@ -27,40 +27,40 @@ define i32 @caller(%struct.sphere* %i) ssp {
 ; CHECK: ret i32
 }
 
-declare void @fix(%struct.ray*)
+declare void @fix(ptr)
 
-define i32 @ray_sphere(%struct.sphere* nocapture %sph, %struct.ray* nocapture byval(%struct.ray) align 8 %ray, %struct.spoint* %sp) nounwind uwtable ssp {
-  %1 = getelementptr inbounds %struct.ray, %struct.ray* %ray, i64 0, i32 1, i32 0
-  %2 = load double, double* %1, align 8
+define i32 @ray_sphere(ptr nocapture %sph, ptr nocapture byval(%struct.ray) align 8 %ray, ptr %sp) nounwind uwtable ssp {
+  %1 = getelementptr inbounds %struct.ray, ptr %ray, i64 0, i32 1, i32 0
+  %2 = load double, ptr %1, align 8
   %3 = fmul double %2, %2
-  %4 = getelementptr inbounds %struct.ray, %struct.ray* %ray, i64 0, i32 1, i32 1
-  %5 = load double, double* %4, align 8
+  %4 = getelementptr inbounds %struct.ray, ptr %ray, i64 0, i32 1, i32 1
+  %5 = load double, ptr %4, align 8
   %6 = fmul double %5, %5
   %7 = fadd double %3, %6
-  %8 = getelementptr inbounds %struct.ray, %struct.ray* %ray, i64 0, i32 1, i32 2
-  %9 = load double, double* %8, align 8
+  %8 = getelementptr inbounds %struct.ray, ptr %ray, i64 0, i32 1, i32 2
+  %9 = load double, ptr %8, align 8
   %10 = fmul double %9, %9
   %11 = fadd double %7, %10
   %12 = fmul double %2, 2.000000e+00
-  %13 = getelementptr inbounds %struct.ray, %struct.ray* %ray, i64 0, i32 0, i32 0
-  %14 = load double, double* %13, align 8
-  %15 = getelementptr inbounds %struct.sphere, %struct.sphere* %sph, i64 0, i32 0, i32 0
-  %16 = load double, double* %15, align 8
+  %13 = getelementptr inbounds %struct.ray, ptr %ray, i64 0, i32 0, i32 0
+  %14 = load double, ptr %13, align 8
+  %15 = getelementptr inbounds %struct.sphere, ptr %sph, i64 0, i32 0, i32 0
+  %16 = load double, ptr %15, align 8
   %17 = fsub double %14, %16
   %18 = fmul double %12, %17
   %19 = fmul double %5, 2.000000e+00
-  %20 = getelementptr inbounds %struct.ray, %struct.ray* %ray, i64 0, i32 0, i32 1
-  %21 = load double, double* %20, align 8
-  %22 = getelementptr inbounds %struct.sphere, %struct.sphere* %sph, i64 0, i32 0, i32 1
-  %23 = load double, double* %22, align 8
+  %20 = getelementptr inbounds %struct.ray, ptr %ray, i64 0, i32 0, i32 1
+  %21 = load double, ptr %20, align 8
+  %22 = getelementptr inbounds %struct.sphere, ptr %sph, i64 0, i32 0, i32 1
+  %23 = load double, ptr %22, align 8
   %24 = fsub double %21, %23
   %25 = fmul double %19, %24
   %26 = fadd double %18, %25
   %27 = fmul double %9, 2.000000e+00
-  %28 = getelementptr inbounds %struct.ray, %struct.ray* %ray, i64 0, i32 0, i32 2
-  %29 = load double, double* %28, align 8
-  %30 = getelementptr inbounds %struct.sphere, %struct.sphere* %sph, i64 0, i32 0, i32 2
-  %31 = load double, double* %30, align 8
+  %28 = getelementptr inbounds %struct.ray, ptr %ray, i64 0, i32 0, i32 2
+  %29 = load double, ptr %28, align 8
+  %30 = getelementptr inbounds %struct.sphere, ptr %sph, i64 0, i32 0, i32 2
+  %31 = load double, ptr %30, align 8
   %32 = fsub double %29, %31
   %33 = fmul double %27, %32
   %34 = fadd double %26, %33
@@ -83,8 +83,8 @@ define i32 @ray_sphere(%struct.sphere* nocapture %sph, %struct.ray* nocapture by
   %51 = fsub double %49, %50
   %52 = fmul double %51, 2.000000e+00
   %53 = fadd double %52, %45
-  %54 = getelementptr inbounds %struct.sphere, %struct.sphere* %sph, i64 0, i32 1
-  %55 = load double, double* %54, align 8
+  %54 = getelementptr inbounds %struct.sphere, ptr %sph, i64 0, i32 1
+  %55 = load double, ptr %54, align 8
   %56 = fmul double %55, %55
   %57 = fsub double %53, %56
   %58 = fmul double %34, %34
@@ -114,7 +114,7 @@ define i32 @ray_sphere(%struct.sphere* nocapture %sph, %struct.ray* nocapture by
   br i1 %or.cond1, label %130, label %76
 
 ; <label>:76                                      ; preds = %73
-  %77 = icmp eq %struct.spoint* %sp, null
+  %77 = icmp eq ptr %sp, null
   br i1 %77, label %130, label %78
 
 ; <label>:78                                      ; preds = %76
@@ -122,38 +122,38 @@ define i32 @ray_sphere(%struct.sphere* nocapture %sph, %struct.ray* nocapture by
   %t2.0 = select i1 %72, double %t1.0, double %70
   %79 = fcmp olt double %t1.0, %t2.0
   %80 = select i1 %79, double %t1.0, double %t2.0
-  %81 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 3
-  store double %80, double* %81, align 8
+  %81 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 3
+  store double %80, ptr %81, align 8
   %82 = fmul double %80, %2
   %83 = fadd double %14, %82
-  %84 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 0, i32 0
-  store double %83, double* %84, align 8
+  %84 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 0, i32 0
+  store double %83, ptr %84, align 8
   %85 = fmul double %5, %80
   %86 = fadd double %21, %85
-  %87 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 0, i32 1
-  store double %86, double* %87, align 8
+  %87 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 0, i32 1
+  store double %86, ptr %87, align 8
   %88 = fmul double %9, %80
   %89 = fadd double %29, %88
-  %90 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 0, i32 2
-  store double %89, double* %90, align 8
-  %91 = load double, double* %15, align 8
+  %90 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 0, i32 2
+  store double %89, ptr %90, align 8
+  %91 = load double, ptr %15, align 8
   %92 = fsub double %83, %91
-  %93 = load double, double* %54, align 8
+  %93 = load double, ptr %54, align 8
   %94 = fdiv double %92, %93
-  %95 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 1, i32 0
-  store double %94, double* %95, align 8
-  %96 = load double, double* %22, align 8
+  %95 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 1, i32 0
+  store double %94, ptr %95, align 8
+  %96 = load double, ptr %22, align 8
   %97 = fsub double %86, %96
-  %98 = load double, double* %54, align 8
+  %98 = load double, ptr %54, align 8
   %99 = fdiv double %97, %98
-  %100 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 1, i32 1
-  store double %99, double* %100, align 8
-  %101 = load double, double* %30, align 8
+  %100 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 1, i32 1
+  store double %99, ptr %100, align 8
+  %101 = load double, ptr %30, align 8
   %102 = fsub double %89, %101
-  %103 = load double, double* %54, align 8
+  %103 = load double, ptr %54, align 8
   %104 = fdiv double %102, %103
-  %105 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 1, i32 2
-  store double %104, double* %105, align 8
+  %105 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 1, i32 2
+  store double %104, ptr %105, align 8
   %106 = fmul double %2, %94
   %107 = fmul double %5, %99
   %108 = fadd double %106, %107
@@ -169,9 +169,9 @@ define i32 @ray_sphere(%struct.sphere* nocapture %sph, %struct.ray* nocapture by
   %118 = fmul double %104, %111
   %119 = fsub double %118, %9
   %120 = fsub double -0.000000e+00, %119
-  %.06 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 2, i32 0
-  %.18 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 2, i32 1
-  %.210 = getelementptr inbounds %struct.spoint, %struct.spoint* %sp, i64 0, i32 2, i32 2
+  %.06 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 2, i32 0
+  %.18 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 2, i32 1
+  %.210 = getelementptr inbounds %struct.spoint, ptr %sp, i64 0, i32 2, i32 2
   %121 = fmul double %113, %113
   %122 = fmul double %116, %116
   %123 = fadd double %121, %122
@@ -179,11 +179,11 @@ define i32 @ray_sphere(%struct.sphere* nocapture %sph, %struct.ray* nocapture by
   %125 = fadd double %123, %124
   %126 = tail call double @sqrt(double %125) nounwind readnone
   %127 = fdiv double %114, %126
-  store double %127, double* %.06, align 8
+  store double %127, ptr %.06, align 8
   %128 = fdiv double %117, %126
-  store double %128, double* %.18, align 8
+  store double %128, ptr %.18, align 8
   %129 = fdiv double %120, %126
-  store double %129, double* %.210, align 8
+  store double %129, ptr %.210, align 8
   br label %130
 
 ; <label>:130                                     ; preds = %78, %76, %73, %63, %0

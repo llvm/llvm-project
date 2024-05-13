@@ -10,12 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ValueProfileCollector.h"
 #include "ValueProfilePlugins.inc"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/InitializePasses.h"
-#include <cassert>
+#include "llvm/ProfileData/InstrProf.h"
 
 using namespace llvm;
 

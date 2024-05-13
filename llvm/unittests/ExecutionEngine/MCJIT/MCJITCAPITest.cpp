@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This test suite verifies basic MCJIT functionality when invoked form the C
+// This test suite verifies basic MCJIT functionality when invoked from the C
 // API.
 //
 //===----------------------------------------------------------------------===//
@@ -16,11 +16,10 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm-c/Target.h"
-#include "llvm-c/Transforms/PassManagerBuilder.h"
-#include "llvm-c/Transforms/Scalar.h"
+#include "llvm-c/Transforms/PassBuilder.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -87,10 +86,10 @@ public:
 
   bool needsToReserveAllocationSpace() override { return true; }
 
-  void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
-                              uintptr_t DataSizeRO, uint32_t RODataAlign,
+  void reserveAllocationSpace(uintptr_t CodeSize, Align CodeAlign,
+                              uintptr_t DataSizeRO, Align RODataAlign,
                               uintptr_t DataSizeRW,
-                              uint32_t RWDataAlign) override {
+                              Align RWDataAlign) override {
     ReservedCodeSize = CodeSize;
     ReservedDataSizeRO = DataSizeRO;
     ReservedDataSizeRW = DataSizeRW;
@@ -188,9 +187,10 @@ protected:
     LLVMSetTarget(Module, HostTriple.c_str());
     
     LLVMTypeRef stackmapParamTypes[] = { LLVMInt64Type(), LLVMInt32Type() };
+    LLVMTypeRef stackmapTy =
+        LLVMFunctionType(LLVMVoidType(), stackmapParamTypes, 2, 1);
     LLVMValueRef stackmap = LLVMAddFunction(
-      Module, "llvm.experimental.stackmap",
-      LLVMFunctionType(LLVMVoidType(), stackmapParamTypes, 2, 1));
+      Module, "llvm.experimental.stackmap", stackmapTy);
     LLVMSetLinkage(stackmap, LLVMExternalLinkage);
     
     Function = LLVMAddFunction(Module, "simple_function",
@@ -203,7 +203,7 @@ protected:
       LLVMConstInt(LLVMInt64Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 5, 0),
       LLVMConstInt(LLVMInt32Type(), 42, 0)
     };
-    LLVMBuildCall(builder, stackmap, stackmapArgs, 3, "");
+    LLVMBuildCall2(builder, stackmapTy, stackmap, stackmapArgs, 3, "");
     LLVMBuildRet(builder, LLVMConstInt(LLVMInt32Type(), 42, 0));
     
     LLVMVerifyModule(Module, LLVMAbortProcessAction, &Error);
@@ -230,7 +230,8 @@ protected:
         LLVMBuilderRef Builder = LLVMCreateBuilder();
         LLVMPositionBuilderAtEnd(Builder, Entry);
         
-        LLVMValueRef IntVal = LLVMBuildLoad(Builder, GlobalVar, "intVal");
+        LLVMValueRef IntVal =
+            LLVMBuildLoad2(Builder, LLVMInt32Type(), GlobalVar, "intVal");
         LLVMBuildRet(Builder, IntVal);
         
         LLVMVerifyModule(Module, LLVMAbortProcessAction, &Error);
@@ -284,40 +285,29 @@ protected:
   }
   
   void buildAndRunPasses() {
-    LLVMPassManagerRef pass = LLVMCreatePassManager();
-    LLVMAddInstructionCombiningPass(pass);
-    LLVMRunPassManager(pass, Module);
-    LLVMDisposePassManager(pass);
+    LLVMPassBuilderOptionsRef Options = LLVMCreatePassBuilderOptions();
+    if (LLVMErrorRef E =
+            LLVMRunPasses(Module, "instcombine", nullptr, Options)) {
+        char *Msg = LLVMGetErrorMessage(E);
+        LLVMConsumeError(E);
+        LLVMDisposePassBuilderOptions(Options);
+        FAIL() << "Failed to run passes: " << Msg;
+    }
+
+    LLVMDisposePassBuilderOptions(Options);
   }
   
   void buildAndRunOptPasses() {
-    LLVMPassManagerBuilderRef passBuilder;
-    
-    passBuilder = LLVMPassManagerBuilderCreate();
-    LLVMPassManagerBuilderSetOptLevel(passBuilder, 2);
-    LLVMPassManagerBuilderSetSizeLevel(passBuilder, 0);
-    
-    LLVMPassManagerRef functionPasses =
-      LLVMCreateFunctionPassManagerForModule(Module);
-    LLVMPassManagerRef modulePasses =
-      LLVMCreatePassManager();
-    
-    LLVMPassManagerBuilderPopulateFunctionPassManager(passBuilder,
-                                                      functionPasses);
-    LLVMPassManagerBuilderPopulateModulePassManager(passBuilder, modulePasses);
-    
-    LLVMPassManagerBuilderDispose(passBuilder);
-    
-    LLVMInitializeFunctionPassManager(functionPasses);
-    for (LLVMValueRef value = LLVMGetFirstFunction(Module);
-         value; value = LLVMGetNextFunction(value))
-      LLVMRunFunctionPassManager(functionPasses, value);
-    LLVMFinalizeFunctionPassManager(functionPasses);
-    
-    LLVMRunPassManager(modulePasses, Module);
-    
-    LLVMDisposePassManager(functionPasses);
-    LLVMDisposePassManager(modulePasses);
+    LLVMPassBuilderOptionsRef Options = LLVMCreatePassBuilderOptions();
+    if (LLVMErrorRef E =
+            LLVMRunPasses(Module, "default<O2>", nullptr, Options)) {
+        char *Msg = LLVMGetErrorMessage(E);
+        LLVMConsumeError(E);
+        LLVMDisposePassBuilderOptions(Options);
+        FAIL() << "Failed to run passes: " << Msg;
+    }
+
+    LLVMDisposePassBuilderOptions(Options);
   }
   
   LLVMModuleRef Module;
@@ -396,7 +386,7 @@ TEST_F(MCJITCAPITest, stackmap_creates_compact_unwind_on_darwin) {
   
   // This test is also not supported on non-x86 platforms.
   if (Triple(HostTriple).getArch() != Triple::x86_64)
-    return;
+    GTEST_SKIP();
   
   buildFunctionThatUsesStackmap();
   buildMCJITOptions();
@@ -489,7 +479,8 @@ TEST_F(MCJITCAPITest, addGlobalMapping) {
   LLVMBasicBlockRef Entry = LLVMAppendBasicBlock(Function, "");
   LLVMBuilderRef Builder = LLVMCreateBuilder();
   LLVMPositionBuilderAtEnd(Builder, Entry);
-  LLVMValueRef RetVal = LLVMBuildCall(Builder, MappedFn, nullptr, 0, "");
+  LLVMValueRef RetVal =
+      LLVMBuildCall2(Builder, FunctionType, MappedFn, nullptr, 0, "");
   LLVMBuildRet(Builder, RetVal);
   LLVMDisposeBuilder(Builder);
 

@@ -29,6 +29,10 @@ void OptionValueLanguage::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
+llvm::json::Value OptionValueLanguage::ToJSON(const ExecutionContext *exe_ctx) {
+  return Language::GetNameForLanguageType(m_current_value);
+}
+
 Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
                                                VarSetOperationType op) {
   Status error;
@@ -39,10 +43,8 @@ Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
 
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
-    ConstString lang_name(value.trim());
     LanguageSet languages_for_types = Language::GetLanguagesSupportingTypeSystems();
-    LanguageType new_type =
-        Language::GetLanguageTypeFromString(lang_name.GetStringRef());
+    LanguageType new_type = Language::GetLanguageTypeFromString(value.trim());
     if (new_type && languages_for_types[new_type]) {
       m_value_was_set = true;
       m_current_value = new_type;

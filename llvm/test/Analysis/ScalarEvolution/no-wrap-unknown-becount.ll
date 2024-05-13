@@ -1,10 +1,9 @@
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
 declare void @llvm.experimental.guard(i1, ...)
 declare void @llvm.assume(i1)
 
-define void @s_0(i32 %n, i1* %cond) {
+define void @s_0(i32 %n, ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @s_0
 entry:
   br label %loop
@@ -17,14 +16,14 @@ loop:
 ; CHECK-NEXT:  -->  {0,+,1}<nuw><nsw><%loop>
   %cmp = icmp slt i32 %iv, %n
   call void(i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @s_1(i1* %cond) {
+define void @s_1(ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @s_1
 entry:
   br label %loop
@@ -37,14 +36,14 @@ loop:
 ; CHECK-NEXT:  -->  {0,+,3}<nuw><nsw><%loop>
   %cmp = icmp slt i32 %iv, 10000
   call void(i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @s_2(i1* %cond) {
+define void @s_2(ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @s_2
 entry:
   br label %loop
@@ -57,14 +56,14 @@ loop:
 ; CHECK:  %iv.sext = sext i32 %iv to i64
 ; CHECK-NEXT:  -->  {0,+,3}<nuw><nsw><%loop>
   call void @llvm.assume(i1 %cmp)
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @s_3(i32 %start, i1* %cond) {
+define void @s_3(i32 %start, ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @s_3
 entry:
   br label %loop
@@ -79,14 +78,14 @@ be:
   %iv.inc.sext = sext i32 %iv.inc to i64
 ; CHECK:  %iv.inc.sext = sext i32 %iv.inc to i64
 ; CHECK-NEXT:  -->  {(sext i32 (3 + %start) to i64),+,3}<nsw><%loop>
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @s_4(i32 %start, i1* %cond) {
+define void @s_4(i32 %start, ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @s_4
 entry:
   br label %loop
@@ -101,14 +100,14 @@ be:
   %iv.inc.sext = sext i32 %iv.inc to i64
 ; CHECK:  %iv.inc.sext = sext i32 %iv.inc to i64
 ; CHECK-NEXT:  -->  {(sext i32 (-3 + %start) to i64),+,-3}<nsw><%loop>
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @u_0(i32 %n, i1* %cond) {
+define void @u_0(i32 %n, ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @u_0
 entry:
   br label %loop
@@ -121,14 +120,14 @@ loop:
 ; CHECK-NEXT:  -->  {0,+,1}<nuw><%loop>
   %cmp = icmp ult i32 %iv, %n
   call void(i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @u_1(i1* %cond) {
+define void @u_1(ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @u_1
 entry:
   br label %loop
@@ -141,14 +140,14 @@ loop:
 ; CHECK-NEXT:  -->  {0,+,3}<nuw><%loop>
   %cmp = icmp ult i32 %iv, 10000
   call void(i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @u_2(i1* %cond) {
+define void @u_2(ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @u_2
 entry:
   br label %loop
@@ -161,14 +160,14 @@ loop:
 ; CHECK:  %iv.zext = zext i32 %iv to i64
 ; CHECK-NEXT:  -->  {30000,+,-2}<nw><%loop>
   call void @llvm.assume(i1 %cmp)
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @u_3(i32 %start, i1* %cond) {
+define void @u_3(i32 %start, ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @u_3
 entry:
   br label %loop
@@ -183,7 +182,7 @@ be:
   %iv.inc.zext = zext i32 %iv.inc to i64
 ; CHECK:  %iv.inc.zext = zext i32 %iv.inc to i64
 ; CHECK-NEXT:  -->  {(zext i32 (3 + %start) to i64),+,3}<nuw><%loop>
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %leave
 
 leave:

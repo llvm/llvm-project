@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Check that the access function of the store is simple and concise
 ;
@@ -11,7 +11,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @BPredPartitionCost(i32* %A) #0 {
+define void @BPredPartitionCost(ptr %A) #0 {
 entry:
   %curr_blk = alloca [16 x [16 x i32]], align 16
   br label %for.cond261.preheader.lr.ph
@@ -33,10 +33,10 @@ for.cond273.preheader:                            ; preds = %for.cond261.prehead
 for.body276:                                      ; preds = %for.body276, %for.cond273.preheader
   %indvars.iv = phi i64 [ 0, %for.cond273.preheader ], [ %indvars.iv.next, %for.body276 ]
   %3 = add nsw i64 0, %indvars.iv189
-  %arrayidx282 = getelementptr inbounds [16 x [16 x i32]], [16 x [16 x i32]]* %curr_blk, i64 0, i64 %3, i64 0
-  %4 = load i32, i32* %arrayidx282, align 4
-  %arridx = getelementptr i32, i32* %A, i64 %3
-  store i32 0, i32* %arridx, align 4
+  %arrayidx282 = getelementptr inbounds [16 x [16 x i32]], ptr %curr_blk, i64 0, i64 %3, i64 0
+  %4 = load i32, ptr %arrayidx282, align 4
+  %arridx = getelementptr i32, ptr %A, i64 %3
+  store i32 0, ptr %arridx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   br i1 false, label %for.body276, label %for.end291
 

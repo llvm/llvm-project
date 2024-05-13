@@ -34,9 +34,11 @@ public:
   uint32_t block_size() const { return 1; }
   uint32_t block_count() const { return Blocks.size(); }
 
-  endianness getEndian() const override { return little; }
+  llvm::endianness getEndian() const override {
+    return llvm::endianness::little;
+  }
 
-  Error readBytes(uint32_t Offset, uint32_t Size,
+  Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
     if (auto EC = checkOffsetForRead(Offset, Size))
       return EC;
@@ -44,7 +46,7 @@ public:
     return Error::success();
   }
 
-  Error readLongestContiguousChunk(uint32_t Offset,
+  Error readLongestContiguousChunk(uint64_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
     if (auto EC = checkOffsetForRead(Offset, 1))
       return EC;
@@ -52,9 +54,9 @@ public:
     return Error::success();
   }
 
-  uint32_t getLength() override { return Data.size(); }
+  uint64_t getLength() override { return Data.size(); }
 
-  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> SrcData) override {
+  Error writeBytes(uint64_t Offset, ArrayRef<uint8_t> SrcData) override {
     if (auto EC = checkOffsetForWrite(Offset, SrcData.size()))
       return EC;
     ::memcpy(&Data[Offset], SrcData.data(), SrcData.size());
@@ -412,7 +414,7 @@ TEST(MappedBlockStreamTest, TestWriteContiguousStreamRef) {
       F.block_size(), F.layout(), F, F.Allocator);
 
   // First write "Test Str" into the source stream.
-  MutableBinaryByteStream SourceStream(SrcData, little);
+  MutableBinaryByteStream SourceStream(SrcData, llvm::endianness::little);
   BinaryStreamWriter SourceWriter(SourceStream);
   EXPECT_THAT_ERROR(SourceWriter.writeCString("Test Str"), Succeeded());
   EXPECT_EQ(SrcDataBytes, std::vector<uint8_t>(
@@ -493,7 +495,7 @@ TEST(MappedBlockStreamTest, DataLivesAfterStreamDestruction) {
 
 MATCHER_P3(BlockIsFilledWith, Layout, BlockIndex, Byte, "succeeded") {
   uint64_t Offset = msf::blockToOffset(BlockIndex, Layout.SB->BlockSize);
-  ArrayRef<uint8_t> BufferRef = makeArrayRef(arg);
+  ArrayRef<uint8_t> BufferRef = ArrayRef(arg);
   BufferRef = BufferRef.slice(Offset, Layout.SB->BlockSize);
   return llvm::all_of(BufferRef, [this](uint8_t B) { return B == Byte; });
 }
@@ -511,7 +513,7 @@ TEST(MappedBlockStreamTest, CreateFpmStream) {
   constexpr uint32_t NumFileBlocks = 4096 * 4;
 
   std::vector<uint8_t> MsfBuffer(NumFileBlocks * SB.BlockSize);
-  MutableBinaryByteStream MsfStream(MsfBuffer, llvm::support::little);
+  MutableBinaryByteStream MsfStream(MsfBuffer, llvm::endianness::little);
 
   SB.NumBlocks = NumFileBlocks;
   auto FpmStream =

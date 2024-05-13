@@ -1,4 +1,4 @@
-; RUN: opt -S %s -ipsccp | FileCheck %s
+; RUN: opt -S %s -passes=ipsccp | FileCheck %s
 
 @a = internal global i32 2
 
@@ -9,7 +9,7 @@ define i32 @patatino() {
 ; CHECK-NEXT: ret i32 0
 entry:
   call void @f(i32 undef, i32 1)
-  %0 = load i32, i32* @a
+  %0 = load i32, ptr @a
   call void @f(i32 %0, i32 0)
   ret i32 0
 }

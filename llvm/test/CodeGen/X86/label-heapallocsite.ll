@@ -1,15 +1,18 @@
 ; RUN: llc < %s | FileCheck --check-prefixes=CHECK %s
 ; RUN: llc -O0 < %s | FileCheck --check-prefixes=CHECK %s
 
+; RUN: llc --try-experimental-debuginfo-iterators < %s | FileCheck --check-prefixes=CHECK %s
+; RUN: llc --try-experimental-debuginfo-iterators -O0 < %s | FileCheck --check-prefixes=CHECK %s
+
 ; Source to regenerate:
 ; $ clang -cc1 -triple x86_64-windows-msvc t.cpp -debug-info-kind=limited \
 ;      -gcodeview -O2 -fms-extensions -emit-llvm -o t.ll
 ;
 ; extern "C" struct Foo {
-;   __declspec(allocator) virtual void *alloc();
+;   __declspec(allocator) virtual ptr alloc();
 ; };
 ; extern "C" __declspec(allocator) Foo *alloc_foo();
-; extern "C" void use_result(void *);
+; extern "C" void use_result(ptr);
 ; extern "C" Foo *call_tail() {
 ;   return alloc_foo();
 ; }
@@ -28,40 +31,37 @@ source_filename = "t.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-windows-msvc"
 
-%struct.Foo = type { i32 (...)** }
+%struct.Foo = type { ptr }
 
 ; Function Attrs: nounwind
-define dso_local %struct.Foo* @call_tail() local_unnamed_addr #0 !dbg !7 {
+define dso_local ptr @call_tail() local_unnamed_addr #0 !dbg !7 {
 entry:
-  %call = tail call %struct.Foo* @alloc_foo() #3, !dbg !13, !heapallocsite !12
-  ret %struct.Foo* %call, !dbg !13
+  %call = tail call ptr @alloc_foo() #3, !dbg !13, !heapallocsite !12
+  ret ptr %call, !dbg !13
 }
 
-declare dso_local %struct.Foo* @alloc_foo() local_unnamed_addr #1
+declare dso_local ptr @alloc_foo() local_unnamed_addr #1
 
 ; Function Attrs: nounwind
-define dso_local i32 @call_virtual(%struct.Foo* %p) local_unnamed_addr #0 !dbg !14 {
+define dso_local i32 @call_virtual(ptr %p) local_unnamed_addr #0 !dbg !14 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.Foo* %p, metadata !19, metadata !DIExpression()), !dbg !20
-  %0 = bitcast %struct.Foo* %p to i8* (%struct.Foo*)***, !dbg !21
-  %vtable = load i8* (%struct.Foo*)**, i8* (%struct.Foo*)*** %0, align 8, !dbg !21, !tbaa !22
-  %1 = load i8* (%struct.Foo*)*, i8* (%struct.Foo*)** %vtable, align 8, !dbg !21
-  %call = tail call i8* %1(%struct.Foo* %p) #3, !dbg !21, !heapallocsite !2
-  tail call void @use_result(i8* %call) #3, !dbg !21
+  call void @llvm.dbg.value(metadata ptr %p, metadata !19, metadata !DIExpression()), !dbg !20
+  %vtable = load ptr, ptr %p, align 8, !dbg !21, !tbaa !22
+  %0 = load ptr, ptr %vtable, align 8, !dbg !21
+  %call = tail call ptr %0(ptr %p) #3, !dbg !21, !heapallocsite !2
+  tail call void @use_result(ptr %call) #3, !dbg !21
   ret i32 0, !dbg !25
 }
 
-declare dso_local void @use_result(i8*) local_unnamed_addr #1
+declare dso_local void @use_result(ptr) local_unnamed_addr #1
 
 ; Function Attrs: nounwind
 define dso_local i32 @call_multiple() local_unnamed_addr #0 !dbg !26 {
 entry:
-  %call = tail call %struct.Foo* @alloc_foo() #3, !dbg !29, !heapallocsite !12
-  %0 = bitcast %struct.Foo* %call to i8*, !dbg !29
-  tail call void @use_result(i8* %0) #3, !dbg !29
-  %call1 = tail call %struct.Foo* @alloc_foo() #3, !dbg !30, !heapallocsite !12
-  %1 = bitcast %struct.Foo* %call1 to i8*, !dbg !30
-  tail call void @use_result(i8* %1) #3, !dbg !30
+  %call = tail call ptr @alloc_foo() #3, !dbg !29, !heapallocsite !12
+  tail call void @use_result(ptr %call) #3, !dbg !29
+  %call1 = tail call ptr @alloc_foo() #3, !dbg !30, !heapallocsite !12
+  tail call void @use_result(ptr %call1) #3, !dbg !30
   ret i32 0, !dbg !31
 }
 

@@ -44,10 +44,8 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
 
   /// EmitCopyFromReg - Generate machine code for an CopyFromReg node or an
   /// implicit physical register output.
-  void EmitCopyFromReg(SDNode *Node, unsigned ResNo,
-                       bool IsClone, bool IsCloned,
-                       Register SrcReg,
-                       DenseMap<SDValue, Register> &VRBaseMap);
+  void EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
+                       Register SrcReg, DenseMap<SDValue, Register> &VRBaseMap);
 
   void CreateVirtualRegisters(SDNode *Node,
                               MachineInstrBuilder &MIB,
@@ -119,10 +117,22 @@ public:
   MachineInstr *EmitDbgValue(SDDbgValue *SD,
                              DenseMap<SDValue, Register> &VRBaseMap);
 
-  /// Attempt to emit a dbg_value as a DBG_INSTR_REF. May fail and return
-  /// nullptr, in which case we fall back to plain EmitDbgValue.
+  /// Emit a dbg_value as a DBG_INSTR_REF. May produce DBG_VALUE $noreg instead
+  /// if there is no variable location; alternately a half-formed DBG_INSTR_REF
+  /// that refers to a virtual register and is corrected later in isel.
   MachineInstr *EmitDbgInstrRef(SDDbgValue *SD,
                                 DenseMap<SDValue, Register> &VRBaseMap);
+
+  /// Emit a DBG_VALUE $noreg, indicating a variable has no location.
+  MachineInstr *EmitDbgNoLocation(SDDbgValue *SD);
+
+  /// Emit a DBG_VALUE_LIST from the operands to SDDbgValue.
+  MachineInstr *EmitDbgValueList(SDDbgValue *SD,
+                                 DenseMap<SDValue, Register> &VRBaseMap);
+
+  /// Emit a DBG_VALUE from the operands to SDDbgValue.
+  MachineInstr *EmitDbgValueFromSingleOp(SDDbgValue *SD,
+                                    DenseMap<SDValue, Register> &VRBaseMap);
 
   /// Generate machine instruction for a dbg_label node.
   MachineInstr *EmitDbgLabel(SDDbgLabel *SD);

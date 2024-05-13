@@ -91,13 +91,12 @@ public:
                    FileID PrevFID = FileID()) override;
   void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override;
-  bool FileNotFound(llvm::StringRef FileName,
-                    llvm::SmallVectorImpl<char> &RecoveryPath) override;
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          llvm::StringRef SearchPath,
-                          llvm::StringRef RelativePath, const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, llvm::StringRef SearchPath,
+                          llvm::StringRef RelativePath,
+                          const Module *SuggestedModule, bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override;
@@ -121,7 +120,7 @@ public:
                         diag::Severity mapping, llvm::StringRef Str) override;
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *Name,
                              SourceLocation StateLoc, unsigned State) override;
-  void PragmaWarning(SourceLocation Loc, llvm::StringRef WarningSpec,
+  void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier WarningSpec,
                      llvm::ArrayRef<int> Ids) override;
   void PragmaWarningPush(SourceLocation Loc, int Level) override;
   void PragmaWarningPop(SourceLocation Loc) override;
@@ -179,8 +178,9 @@ public:
   /// Append a FileID argument to the top trace item.
   void appendArgument(const char *Name, FileID Value);
 
-  /// Append a FileEntry argument to the top trace item.
-  void appendArgument(const char *Name, const FileEntry *Value);
+  /// Append a FileEntryRef argument to the top trace item.
+  void appendArgument(const char *Name, OptionalFileEntryRef Value);
+  void appendArgument(const char *Name, FileEntryRef Value);
 
   /// Append a SourceLocation argument to the top trace item.
   void appendArgument(const char *Name, SourceLocation Value);

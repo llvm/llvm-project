@@ -13,40 +13,40 @@
 ;     }
 ;   }
 
-%rtti.TypeDescriptor2 = type { i8**, i8*, [3 x i8] }
-%eh.CatchableType = type { i32, i8*, i32, i32, i32, i32, i8* }
-%eh.CatchableTypeArray.1 = type { i32, [1 x %eh.CatchableType*] }
-%eh.ThrowInfo = type { i32, i8*, i8*, i8* }
+%rtti.TypeDescriptor2 = type { ptr, ptr, [3 x i8] }
+%eh.CatchableType = type { i32, ptr, i32, i32, i32, i32, ptr }
+%eh.CatchableTypeArray.1 = type { i32, [1 x ptr] }
+%eh.ThrowInfo = type { i32, ptr, ptr, ptr }
 
 $"\01??_R0H@8" = comdat any
 
-@"\01??_7type_info@@6B@" = external constant i8*
-@"\01??_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { i8** @"\01??_7type_info@@6B@", i8* null, [3 x i8] c".H\00" }, comdat
+@"\01??_7type_info@@6B@" = external constant ptr
+@"\01??_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { ptr @"\01??_7type_info@@6B@", ptr null, [3 x i8] c".H\00" }, comdat
 
 
-declare void @f(i32 %p, i32* %l)
+declare void @f(i32 %p, ptr %l)
 declare i1 @getbool()
 declare i32 @__CxxFrameHandler3(...)
 
-define i32 @try_catch_catch() personality i32 (...)* @__CxxFrameHandler3 {
+define i32 @try_catch_catch() personality ptr @__CxxFrameHandler3 {
 entry:
   %e.addr = alloca i32
   %local = alloca i32
-  invoke void @f(i32 1, i32* %local)
+  invoke void @f(i32 1, ptr %local)
           to label %try.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
   %cs = catchswitch within none [label %handler1, label %handler2] unwind to caller
 
 handler1:
-  %h1 = catchpad within %cs [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i32* %e.addr]
-  %e = load i32, i32* %e.addr
-  call void @f(i32 %e, i32* %local) [ "funclet"(token %h1) ]
+  %h1 = catchpad within %cs [ptr @"\01??_R0H@8", i32 0, ptr %e.addr]
+  %e = load i32, ptr %e.addr
+  call void @f(i32 %e, ptr %local) [ "funclet"(token %h1) ]
   catchret from %h1 to label %try.cont
 
 handler2:
-  %h2 = catchpad within %cs [i8* null, i32 64, i8* null]
-  call void @f(i32 3, i32* %local) [ "funclet"(token %h2) ]
+  %h2 = catchpad within %cs [ptr null, i32 64, ptr null]
+  call void @f(i32 3, ptr %local) [ "funclet"(token %h2) ]
   catchret from %h2 to label %try.cont
 
 try.cont:
@@ -64,13 +64,13 @@ try.cont:
 ; X86: retl
 
 ; FIXME: These should be de-duplicated.
-; X86: [[restorebb2:LBB0_[0-9]+]]: # Block address taken
-; X86-NEXT:                        # %handler2
+; X86: [[restorebb1:LBB0_[0-9]+]]: # Block address taken
+; X86-NEXT:                        # %handler1
 ; X86-NEXT: addl $12, %ebp
 ; X86: jmp [[contbb]]
 
-; X86: [[restorebb1:LBB0_[0-9]+]]: # Block address taken
-; X86-NEXT:                        # %handler1
+; X86: [[restorebb2:LBB0_[0-9]+]]: # Block address taken
+; X86-NEXT:                        # %handler2
 ; X86-NEXT: addl $12, %ebp
 ; X86: jmp [[contbb]]
 
@@ -218,16 +218,16 @@ try.cont:
 ; X64-NEXT: .long   1
 
 
-define i32 @branch_to_normal_dest() personality i32 (...)* @__CxxFrameHandler3 {
+define i32 @branch_to_normal_dest() personality ptr @__CxxFrameHandler3 {
 entry:
-  invoke void @f(i32 1, i32* null)
+  invoke void @f(i32 1, ptr null)
           to label %try.cont unwind label %catch.dispatch
 
 catch.dispatch:
   %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:
-  %cp1 = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %cp1 = catchpad within %cs1 [ptr null, i32 64, ptr null]
   br label %loop
 
 loop:

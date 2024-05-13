@@ -1,10 +1,10 @@
 @ RUN: llvm-mc -triple armv7-apple-ios -filetype=obj -o %t %s
-@ RUN: llvm-objdump -d -r %t | FileCheck %s
+@ RUN: llvm-objdump --no-print-imm-hex -d -r %t | FileCheck %s
 
 @ CHECK: <_func>:
-@ CHECK:    bl #0 <_func+0x8>
+@ CHECK:    bl 0x8 <_func+0x8> @ imm = #0
 @ CHECK:  ARM_RELOC_BR24 __text
-@ CHECK:    bl #-12 <_func>
+@ CHECK:    bl 0x0 <_func> @ imm = #-12
 @ CHECK:  ARM_RELOC_BR24 _elsewhere
     .global _func
 _func:

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; To forward %val, B[j] cannot be reused in bodyC because it is overwritten
 ; between. Verify that instead the alternative C[j] is used.
@@ -15,7 +15,7 @@
 ;   A[j] = val;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B, double* noalias nonnull %C) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B, ptr noalias nonnull %C) {
 entry:
   br label %for
 
@@ -25,19 +25,19 @@ for:
   br i1 %j.cmp, label %bodyA, label %exit
 
     bodyA:
-      %B_idx = getelementptr inbounds double, double* %B, i32 %j
-      %val = load double, double* %B_idx
+      %B_idx = getelementptr inbounds double, ptr %B, i32 %j
+      %val = load double, ptr %B_idx
       br label %bodyB
 
     bodyB:
-      store double 0.0, double* %B_idx
-      %C_idx = getelementptr inbounds double, double* %C, i32 %j
-      store double %val, double* %C_idx
+      store double 0.0, ptr %B_idx
+      %C_idx = getelementptr inbounds double, ptr %C, i32 %j
+      store double %val, ptr %C_idx
       br label %bodyC
 
     bodyC:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %val, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %val, ptr %A_idx
       br label %inc
 
 inc:
@@ -65,7 +65,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyA[i0] -> MemRef_val[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
+; CHECK-NEXT:                   %val = load double, ptr %B_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_bodyB
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
@@ -76,9 +76,9 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_C[i0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
-; CHECK-NEXT:                   store double 0.000000e+00, double* %B_idx, align 8
-; CHECK-NEXT:                   store double %val, double* %C_idx, align 8
+; CHECK-NEXT:                   %val = load double, ptr %B_idx, align 8
+; CHECK-NEXT:                   store double 0.000000e+00, ptr %B_idx, align 8
+; CHECK-NEXT:                   store double %val, ptr %C_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_bodyC
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
@@ -87,7 +87,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyC[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
-; CHECK-NEXT:                   store double %val, double* %A_idx, align 8
+; CHECK-NEXT:                   %val = load double, ptr %B_idx, align 8
+; CHECK-NEXT:                   store double %val, ptr %A_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

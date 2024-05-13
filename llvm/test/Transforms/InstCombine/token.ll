@@ -1,10 +1,10 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
 declare i32 @__CxxFrameHandler3(...)
 
-define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1() personality ptr @__CxxFrameHandler3 {
 bb:
   unreachable
 
@@ -18,7 +18,7 @@ unreachable:
 ; CHECK:   %cl = cleanuppad within none []
 ; CHECK:   cleanupret from %cl unwind to caller
 
-define void @test2(i8 %A, i8 %B) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test2(i8 %A, i8 %B) personality ptr @__CxxFrameHandler3 {
 bb:
   %X = zext i8 %A to i32
   invoke void @g(i32 0)
@@ -49,7 +49,7 @@ unreachable:
 ; CHECK:  %Y = zext i8 %B to i32
 ; CHECK:  %phi = phi i32 [ %X, %bb ], [ %Y, %cont ]
 
-define void @test3(i8 %A, i8 %B) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test3(i8 %A, i8 %B) personality ptr @__CxxFrameHandler3 {
 bb:
   %X = zext i8 %A to i32
   invoke void @g(i32 0)
@@ -86,20 +86,20 @@ unreachable:
 ; CHECK:  %phi = phi i32 [ %X, %bb ], [ %Y, %cont ], [ %Y, %cont2 ]
 
 declare void @foo()
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 
-define void @test4(i8 addrspace(1)* %obj) gc "statepoint-example" {
+define void @test4(ptr addrspace(1) %obj) gc "statepoint-example" {
 bb:
   unreachable
 
 unreachable:
-  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
+  call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
   ret void
 }
 
 ; CHECK-LABEL: define void @test4(
 ; CHECK: unreachable:
-; CHECK:   call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
+; CHECK:   call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
 ; CHECK:   ret void
 
 

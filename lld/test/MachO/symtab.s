@@ -6,8 +6,39 @@
 # RUN: %lld -dylib %t/libfoo.o -o %t/libfoo.dylib
 # RUN: %lld -lSystem %t/test.o %t/test2.o %t/libfoo.dylib -o %t/test
 
-# RUN: llvm-readobj --syms --macho-dysymtab %t/test | FileCheck %s
+# RUN: llvm-readobj --syms --sort-symbols=type,name --macho-dysymtab %t/test | FileCheck %s
 # CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _dynamic
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Undef (0x0)
+# CHECK-NEXT:     Section:  (0x0)
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x200)
+# CHECK-NEXT:       AltEntry (0x200)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: dyld_stub_binder
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Undef (0x0)
+# CHECK-NEXT:     Section:  (0x0)
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x100)
+# CHECK-NEXT:       SymbolResolver (0x100)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: __dyld_private
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __data
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
+# CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: _local
 # CHECK-NEXT:     Type: Section (0xE)
@@ -18,9 +49,42 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __dyld_private
+# CHECK-NEXT:     Name: __mh_execute_header
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __text (0x1)
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x10)
+# CHECK-NEXT:       ReferencedDynamically (0x10)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x100000000
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _external
+# CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __data
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _external_weak
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __text (0x1)
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x80)
+# CHECK-NEXT:       WeakDef (0x80)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _main
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __text (0x1)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
@@ -45,70 +109,6 @@
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _main
-# CHECK-NEXT:     Extern
-# CHECK-NEXT:     Type: Section (0xE)
-# CHECK-NEXT:     Section: __text (0x1)
-# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:     Flags [ (0x0)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _external_weak
-# CHECK-NEXT:     Extern
-# CHECK-NEXT:     Type: Section (0xE)
-# CHECK-NEXT:     Section: __text (0x1)
-# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:     Flags [ (0x80)
-# CHECK-NEXT:       WeakDef (0x80)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _external
-# CHECK-NEXT:     Extern
-# CHECK-NEXT:     Type: Section (0xE)
-# CHECK-NEXT:     Section: __data
-# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:     Flags [ (0x0)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __mh_execute_header
-# CHECK-NEXT:     Extern
-# CHECK-NEXT:     Type: Section (0xE)
-# CHECK-NEXT:     Section: __text (0x1)
-# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:     Flags [ (0x10)
-# CHECK-NEXT:       ReferencedDynamically (0x10)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Value: 0x100000000
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: dyld_stub_binder
-# CHECK-NEXT:     Extern
-# CHECK-NEXT:     Type: Undef (0x0)
-# CHECK-NEXT:     Section:  (0x0)
-# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:     Flags [ (0x100)
-# CHECK-NEXT:       SymbolResolver (0x100)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _dynamic
-# CHECK-NEXT:     Extern
-# CHECK-NEXT:     Type: Undef (0x0)
-# CHECK-NEXT:     Section:  (0x0)
-# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:     Flags [ (0x200)
-# CHECK-NEXT:       AltEntry (0x200)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Value: 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 # CHECK-NEXT: Dysymtab {

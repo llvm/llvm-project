@@ -1,4 +1,3 @@
-; RUN: opt -loops -analyze -enable-new-pm=0 < %s | FileCheck %s
 ; RUN: opt -passes='print<loops>' -disable-output %s 2>&1 | FileCheck %s
 ;
 ; void func(long n, double A[static const restrict n]) {
@@ -10,7 +9,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @func(i64 %n, double* noalias nonnull %A) {
+define void @func(i64 %n, ptr noalias nonnull %A) {
 entry:
   br label %for.cond
 
@@ -20,8 +19,8 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %i.0
-  store double 2.100000e+01, double* %arrayidx, align 8, !llvm.access.group !6
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %i.0
+  store double 2.100000e+01, ptr %arrayidx, align 8, !llvm.access.group !6
   %add = add nuw nsw i64 %i.0, 1
   br label %for.cond, !llvm.loop !7
 
@@ -34,5 +33,5 @@ for.end:
 !7 = distinct !{!7, !9} ; LoopID
 !9 = !{!"llvm.loop.parallel_accesses", !6}
 
-
-; CHECK: Parallel Loop
+; CHECK: Loop info for function 'func':
+; CHECK: Parallel Loop at depth 1 containing:

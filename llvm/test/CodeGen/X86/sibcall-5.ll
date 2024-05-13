@@ -35,26 +35,25 @@ declare double @sin(double) nounwind readonly
 ; rdar://10930395
 %0 = type opaque
 
-@"\01L_OBJC_SELECTOR_REFERENCES_2" = external hidden global i8*, section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
+@"\01L_OBJC_SELECTOR_REFERENCES_2" = external hidden global ptr, section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
 
-define hidden { double, double } @foo2(%0* %self, i8* nocapture %_cmd) uwtable optsize ssp {
+define hidden { double, double } @foo2(ptr %self, ptr nocapture %_cmd) uwtable optsize ssp {
 ; X64_BAD: foo
 ; X64_BAD: call
 ; X64_BAD: call
 ; X64_BAD: call
-  %1 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_2", align 8, !invariant.load !0
-  %2 = bitcast %0* %self to i8*
-  %3 = tail call { double, double } bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to { double, double } (i8*, i8*)*)(i8* %2, i8* %1) optsize
-  %4 = extractvalue { double, double } %3, 0
-  %5 = extractvalue { double, double } %3, 1
+  %1 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_2", align 8, !invariant.load !0
+  %2 = tail call { double, double } @objc_msgSend(ptr %self, ptr %1) optsize
+  %3 = extractvalue { double, double } %2, 0
+  %4 = extractvalue { double, double } %2, 1
+  %5 = tail call double @floor(double %3) optsize
   %6 = tail call double @floor(double %4) optsize
-  %7 = tail call double @floor(double %5) optsize
-  %insert.i.i = insertvalue { double, double } undef, double %6, 0
-  %insert5.i.i = insertvalue { double, double } %insert.i.i, double %7, 1
+  %insert.i.i = insertvalue { double, double } undef, double %5, 0
+  %insert5.i.i = insertvalue { double, double } %insert.i.i, double %6, 1
   ret { double, double } %insert5.i.i
 }
 
-declare i8* @objc_msgSend(i8*, i8*, ...)
+declare ptr @objc_msgSend(ptr, ptr, ...)
 
 declare double @floor(double) optsize
 

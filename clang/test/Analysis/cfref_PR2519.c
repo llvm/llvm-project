@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -verify %s
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core -verify %s
 // expected-no-diagnostics
 
 typedef unsigned char Boolean;

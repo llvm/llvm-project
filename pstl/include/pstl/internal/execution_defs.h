@@ -26,88 +26,20 @@ inline namespace v1
 // 2.4, Sequential execution policy
 class sequenced_policy
 {
-  public:
-    // For internal use only
-    static constexpr std::false_type
-    __allow_unsequenced()
-    {
-        return std::false_type{};
-    }
-    static constexpr std::false_type
-    __allow_vector()
-    {
-        return std::false_type{};
-    }
-    static constexpr std::false_type
-    __allow_parallel()
-    {
-        return std::false_type{};
-    }
 };
 
 // 2.5, Parallel execution policy
 class parallel_policy
 {
-  public:
-    // For internal use only
-    static constexpr std::false_type
-    __allow_unsequenced()
-    {
-        return std::false_type{};
-    }
-    static constexpr std::false_type
-    __allow_vector()
-    {
-        return std::false_type{};
-    }
-    static constexpr std::true_type
-    __allow_parallel()
-    {
-        return std::true_type{};
-    }
 };
 
 // 2.6, Parallel+Vector execution policy
 class parallel_unsequenced_policy
 {
-  public:
-    // For internal use only
-    static constexpr std::true_type
-    __allow_unsequenced()
-    {
-        return std::true_type{};
-    }
-    static constexpr std::true_type
-    __allow_vector()
-    {
-        return std::true_type{};
-    }
-    static constexpr std::true_type
-    __allow_parallel()
-    {
-        return std::true_type{};
-    }
 };
 
 class unsequenced_policy
 {
-  public:
-    // For internal use only
-    static constexpr std::true_type
-    __allow_unsequenced()
-    {
-        return std::true_type{};
-    }
-    static constexpr std::true_type
-    __allow_vector()
-    {
-        return std::true_type{};
-    }
-    static constexpr std::false_type
-    __allow_parallel()
-    {
-        return std::false_type{};
-    }
 };
 
 // 2.8, Execution policy objects
@@ -153,6 +85,12 @@ template <class ExecPolicy, class T>
 using __enable_if_execution_policy =
     typename std::enable_if<__pstl::execution::is_execution_policy<typename std::decay<ExecPolicy>::type>::value,
                             T>::type;
+
+template <class _IsVector>
+struct __serial_tag;
+template <class _IsVector>
+struct __parallel_tag;
+
 } // namespace __internal
 
 } // namespace __pstl

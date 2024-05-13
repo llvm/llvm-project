@@ -3,9 +3,16 @@ include "OptionsBase.td"
 let Command = "target modules dump symtab" in {
   def tm_sort : Option<"sort", "s">, Group<1>,
     Desc<"Supply a sort order when dumping the symbol table.">,
-    EnumArg<"SortOrder", "OptionEnumValues(g_sort_option_enumeration)">;
+    EnumArg<"SortOrder">;
   def tm_smn : Option<"show-mangled-names", "m">, Group<1>,
     Desc<"Do not demangle symbol names before showing them.">;
+}
+
+let Command = "target modules dump separate debug info" in {
+  def tm_json : Option<"json", "j">, Group<1>,
+    Desc<"Output the details in JSON format.">;
+  def tm_errors_only : Option<"errors-only", "e">, Group<1>,
+    Desc<"Filter to show only debug info files with errors.">;
 }
 
 let Command = "help" in {
@@ -18,11 +25,13 @@ let Command = "help" in {
 }
 
 let Command = "settings set" in {
-  def setset_global : Option<"global", "g">, Arg<"Filename">,
-    Completion<"DiskFile">,
+  def setset_global : Option<"global", "g">,
     Desc<"Apply the new value to the global default value.">;
   def setset_force : Option<"force", "f">,
     Desc<"Force an empty value to be accepted as the default.">;
+  def setset_exists : Option<"exists", "e">,
+    Desc<"Set the setting if it exists, but do not cause the command to raise "
+    "an error if it does not exist.">;
 }
 
 let Command = "settings write" in {
@@ -73,7 +82,7 @@ let Command = "breakpoint modify" in {
     "index matches this argument.">;
   def breakpoint_modify_thread_id : Option<"thread-id", "t">, Group<1>,
     Arg<"ThreadID">, Desc<"The breakpoint stops only for the thread whose TID "
-    "matches this argument.">;
+    "matches this argument.  The token 'current' resolves to the current thread's ID.">;
   def breakpoint_modify_thread_name : Option<"thread-name", "T">, Group<1>,
     Arg<"ThreadName">, Desc<"The breakpoint stops only for the thread whose "
     "thread name matches this argument.">;
@@ -93,7 +102,7 @@ let Command = "breakpoint modify" in {
   def breakpoint_modify_command : Option<"command", "C">, Group<4>,
     Arg<"Command">,
     Desc<"A command to run when the breakpoint is hit, can be provided more "
-    "than once, the commands will get run in order left to right.">;
+    "than once, the commands will be run in left-to-right order.">;
 }
 
 let Command = "breakpoint dummy" in {
@@ -130,39 +139,39 @@ let Command = "breakpoint set" in {
     "no matter where the binary eventually loads.  Alternately, if you also "
     "specify the module - with the -s option - then the address will be "
     "treated as a file address in that module, and resolved accordingly.  "
-    "Again, this will allow lldb to track that offset on subsequent reloads. "
-    " The module need not have been loaded at the time you specify this "
+    "Again, this will allow lldb to track that offset on subsequent reloads.  "
+    "The module need not have been loaded at the time you specify this "
     "breakpoint, and will get resolved when the module is loaded.">;
   def breakpoint_set_name : Option<"name", "n">, Group<3>, Arg<"FunctionName">,
     Completion<"Symbol">, Required,
     Desc<"Set the breakpoint by function name.  Can be repeated multiple times "
-    "to makeone breakpoint for multiple names">;
+    "to make one breakpoint for multiple names.">;
   def breakpoint_set_source_regexp_function :
     Option<"source-regexp-function", "X">, Group<9>, Arg<"FunctionName">,
     Completion<"Symbol">,
     Desc<"When used with '-p' limits the source regex to source contained in "
-    "the namedfunctions.  Can be repeated multiple times.">;
+    "the named functions.  Can be repeated multiple times.">;
   def breakpoint_set_fullname : Option<"fullname", "F">, Group<4>,
     Arg<"FullName">, Required, Completion<"Symbol">,
     Desc<"Set the breakpoint by fully qualified function names. For C++ this "
     "means namespaces and all arguments, and for Objective-C this means a full "
-    "functionprototype with class and selector.  Can be repeated multiple times"
+    "function prototype with class and selector.  Can be repeated multiple times"
     " to make one breakpoint for multiple names.">;
   def breakpoint_set_selector : Option<"selector", "S">, Group<5>,
     Arg<"Selector">, Required,
-    Desc<"Set the breakpoint by ObjC selector name. Can be repeated multiple "
-    "times tomake one breakpoint for multiple Selectors.">;
+    Desc<"Set the breakpoint by Objective-C selector name.  Can be repeated "
+    "multiple times to make one breakpoint for multiple Selectors.">;
   def breakpoint_set_method : Option<"method", "M">, Group<6>, Arg<"Method">,
     Required, Desc<"Set the breakpoint by C++ method names.  Can be repeated "
-    "multiple times tomake one breakpoint for multiple methods.">;
+    "multiple times to make one breakpoint for multiple methods.">;
   def breakpoint_set_func_regex : Option<"func-regex", "r">, Group<7>,
     Arg<"RegularExpression">, Required, Desc<"Set the breakpoint by function "
     "name, evaluating a regular-expression to find the function name(s).">;
   def breakpoint_set_basename : Option<"basename", "b">, Group<8>,
     Arg<"FunctionName">, Required, Completion<"Symbol">,
     Desc<"Set the breakpoint by function basename (C++ namespaces and arguments"
-    " will beignored).  Can be repeated multiple times to make one breakpoint "
-    "for multiplesymbols.">;
+    " will be ignored).  Can be repeated multiple times to make one breakpoint "
+    "for multiple symbols.">;
   def breakpoint_set_source_pattern_regexp :
     Option<"source-pattern-regexp", "p">, Group<9>, Arg<"RegularExpression">,
     Required, Desc<"Set the breakpoint by specifying a regular expression which"
@@ -280,7 +289,7 @@ let Command = "breakpoint command add" in {
     Arg<"Boolean">, Desc<"Specify whether breakpoint command execution should "
     "terminate on error.">;
   def breakpoint_add_script_type : Option<"script-type", "s">,
-    EnumArg<"None", "ScriptOptionEnum()">,
+    EnumArg<"ScriptLang">,
     Desc<"Specify the language for the commands - if none is specified, the "
     "lldb command interpreter will be used.">;
   def breakpoint_add_dummy_breakpoints : Option<"dummy-breakpoints", "D">,
@@ -298,6 +307,11 @@ let Command = "breakpoint command delete" in {
 let Command = "disassemble" in {
   def disassemble_options_bytes : Option<"bytes", "b">,
     Desc<"Show opcode bytes when disassembling.">;
+  def disassemble_options_kind : Option<"kind", "k">,
+    Desc<"Show instruction control flow kind. Refer to the enum "
+    "`InstructionControlFlowKind` for a list of control flow kind. "
+    "As an important note, far jumps, far calls and far returns often indicate "
+    "calls to and from kernel.">;
   def disassemble_options_context : Option<"context", "C">, Arg<"NumLines">,
     Desc<"Number of context lines of source to show.">;
   def disassemble_options_mixed : Option<"mixed", "m">,
@@ -333,7 +347,12 @@ let Command = "disassemble" in {
     Arg<"AddressOrExpression">,
     Desc<"Disassemble function containing this address.">;
   def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
-    Desc<"Force dissasembly of large functions.">;
+    Desc<"Force disassembly of large functions.">;
+}
+
+let Command = "diagnostics dump" in {
+  def diagnostics_dump_directory : Option<"directory", "d">, Group<1>,
+    Arg<"Path">, Desc<"Dump the diagnostics to the given directory.">;
 }
 
 let Command = "expression" in {
@@ -355,15 +374,15 @@ let Command = "expression" in {
     Desc<"When specified, debug the JIT code by setting a breakpoint on the "
     "first instruction and forcing breakpoints to not be ignored (-i0) and no "
     "unwinding to happen on error (-u0).">;
-  def expression_options_language : Option<"language", "l">, Groups<[1,2]>,
+  def expression_options_language : Option<"language", "l">, Groups<[1,2,3]>,
     Arg<"Language">, Desc<"Specifies the Language to use when parsing the "
     "expression.  If not set the target.language setting is used.">;
   def expression_options_apply_fixits : Option<"apply-fixits", "X">,
-    Groups<[1,2]>, Arg<"Language">, Desc<"If true, simple fix-it hints will be "
+    Groups<[1,2]>, Arg<"Boolean">, Desc<"If true, simple fix-it hints will be "
     "automatically applied to the expression.">;
   def expression_options_description_verbosity :
     Option<"description-verbosity", "v">, Group<1>,
-    OptionalEnumArg<"DescriptionVerbosity", "DescriptionVerbosityTypes()">,
+    OptionalEnumArg<"DescriptionVerbosity">,
     Desc<"How verbose should the output of this expression be, if the object "
     "description is asked for.">;
   def expression_options_top_level : Option<"top-level", "p">, Groups<[1,2]>,
@@ -374,6 +393,11 @@ let Command = "expression" in {
     Arg<"Boolean">,
     Desc<"Controls whether the expression can fall back to being JITted if it's "
     "not supported by the interpreter (defaults to true).">;
+  def persistent_result : Option<"persistent-result", "\\x01">, Groups<[1,2]>,
+    Arg<"Boolean">,
+    Desc<"Persist expression result in a variable for subsequent use. "
+    "Expression results will be labeled with $-prefixed variables, e.g. $0, "
+    "$1, etc.">;
 }
 
 let Command = "frame diag" in {
@@ -404,6 +428,13 @@ let Command = "frame recognizer add" in {
     Desc<"Give the name of a Python class to use for this frame recognizer.">;
   def frame_recognizer_regex : Option<"regex", "x">,
     Desc<"Function name and module name are actually regular expressions.">;
+  def frame_recognizer_first_instruction_only : Option<"first-instruction-only", "f">, Arg<"Boolean">,
+    Desc<"If true, only apply this recognizer to frames whose PC currently points to the "
+    "first instruction of the specified function. If false, the recognizer "
+    "will always be applied, regardless of the current position within the specified function. The "
+    "implementer should keep in mind that some features, e.g. accessing function argument "
+    "values via $arg<N>, are not guaranteed to work reliably in this case, so extra care must "
+    "be taken to make the recognizer operate correctly. Defaults to true.">;
 }
 
 let Command = "history" in {
@@ -419,11 +450,13 @@ let Command = "history" in {
     Desc<"Clears the current command history.">;
 }
 
-let Command = "log" in {
+let Command = "log enable" in {
   def log_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
     Desc<"Set the destination file to log to.">;
-  def log_threadsafe : Option<"threadsafe", "t">, Group<1>,
-    Desc<"Enable thread safe logging to avoid interweaved log lines.">;
+  def log_handler : Option<"log-handler", "h">, Group<1>,
+    EnumArg<"LogHandler">, Desc<"Specify a log handler which determines where log messages are written.">;
+  def log_buffer_size : Option<"buffer", "b">, Group<1>, Arg<"UnsignedInteger">,
+    Desc<"Set the log to be buffered, using the specified buffer size, if supported by the log handler.">;
   def log_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Enable verbose logging.">;
   def log_sequence : Option<"sequence", "s">, Group<1>,
@@ -445,25 +478,9 @@ let Command = "log" in {
     Desc<"Prepend the names of files and function that generate the logs.">;
 }
 
-let Command = "reproducer dump" in {
-  def reproducer_provider : Option<"provider", "p">, Group<1>,
-    EnumArg<"None", "ReproducerProviderType()">,
-    Required, Desc<"The reproducer provider to dump.">;
-  def reproducer_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
-    Desc<"The reproducer path. If a reproducer is replayed and no path is "
-    "provided, that reproducer is dumped.">;
-}
-
-let Command = "reproducer verify" in {
-  def reproducer_verify_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
-    Desc<"The reproducer path. If a reproducer is replayed and no path is "
-    "provided, that reproducer is dumped.">;
-}
-
-let Command = "reproducer xcrash" in {
-  def reproducer_signal : Option<"signal", "s">, Group<1>,
-    EnumArg<"None", "ReproducerSignalType()">,
-    Required, Desc<"The signal to crash the debugger.">;
+let Command = "log dump" in {
+  def log_dump_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Desc<"Set the destination file to dump to.">;
 }
 
 let Command = "memory read" in {
@@ -504,6 +521,20 @@ let Command = "memory write" in {
     Desc<"Start writing bytes from an offset within the input file.">;
 }
 
+let Command = "memory region" in {
+  def memory_region_all : Option<"all", "a">, Group<2>, Required,
+    Desc<"Show all memory regions. This is equivalent to starting from address "
+         "0 and repeating the command. Unmapped areas are included.">;
+}
+
+let Command = "memory tag write" in {
+  def memory_write_end_addr : Option<"end-addr", "e">, Group<1>,
+  Arg<"AddressOrExpression">, Desc<
+    "Set tags for start address to end-addr, repeating tags as needed"
+    " to cover the range. (instead of calculating the range from the"
+    " number of tags given)">;
+}
+
 let Command = "register read" in {
   def register_read_alternate : Option<"alternate", "A">,
     Desc<"Display register names using the alternate register name if there "
@@ -521,6 +552,10 @@ let Command = "source" in {
     Desc<"If true, stop executing commands on continue.">;
   def source_silent_run : Option<"silent-run", "s">, Arg<"Boolean">,
     Desc<"If true don't echo commands while executing.">;
+  def cmd_relative_to_command_file : Option<"relative-to-command-file", "C">,
+    Desc<"Resolve non-absolute paths relative to the location of the "
+    "current command file. This argument can only be used when the command is "
+    "being sourced from a file.">;
 }
 
 let Command = "alias" in {
@@ -647,6 +682,10 @@ let Command = "platform shell" in {
 let Command = "process launch" in {
   def process_launch_stop_at_entry : Option<"stop-at-entry", "s">,
     Desc<"Stop at the entry point of the program when launching a process.">;
+  def process_launch_stop_at_user_entry : Option<"stop-at-user-entry", "m">,
+    Desc<"Stop at the user entry point when launching a process. For C based "
+    "languages this will be the 'main' function, but this might differ for "
+    "other languages.">;
   def process_launch_disable_aslr : Option<"disable-aslr", "A">, Arg<"Boolean">,
     Desc<"Set whether to disable address space layout randomization when launching a process.">;
   def process_launch_plugin : Option<"plugin", "P">, Arg<"Plugin">,
@@ -691,9 +730,13 @@ let Command = "process attach" in {
 }
 
 let Command = "process continue" in {
-  def process_continue_ignore_count : Option<"ignore-count", "i">,
+  def process_continue_ignore_count : Option<"ignore-count", "i">, Group<1>,
     Arg<"UnsignedInteger">, Desc<"Ignore <N> crossings of the breakpoint (if it"
     " exists) for the currently selected thread.">;
+  def process_continue_run_to_bkpt : Option<"continue-to-bkpt", "b">, Group<2>,
+    Arg<"BreakpointIDRange">, Desc<"Specify a breakpoint to continue to, temporarily "
+    "ignoring other breakpoints.  Can be specified more than once.  "
+    "The continue action will be done synchronously if this option is specified.">;
 }
 
 let Command = "process detach" in {
@@ -715,6 +758,8 @@ let Command = "process load" in {
 }
 
 let Command = "process handle" in {
+  def process_handle_clear : Option<"clear", "c">, Group<2>,
+    Desc<"Removes the signals listed from the Target signal handlers">;
   def process_handle_stop : Option<"stop", "s">, Group<1>, Arg<"Boolean">,
     Desc<"Whether or not the process should be stopped if the signal is "
     "received.">;
@@ -723,11 +768,24 @@ let Command = "process handle" in {
     "received.">;
   def process_handle_pass : Option<"pass", "p">, Group<1>, Arg<"Boolean">,
     Desc<"Whether or not the signal should be passed to the process.">;
+  def process_handle_only_target : Option<"target", "t">, Group<1>,
+    Desc<"Show only the signals with behaviors modified in this target">;
+  def process_handle_dummy : Option<"dummy", "d">, Group<2>,
+    Desc<"Also clear the values in the dummy target so they won't be inherited by new targets.">;
 }
 
 let Command = "process status" in {
   def process_status_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose process status including extended crash information.">;
+}
+
+let Command = "process save_core" in {
+  def process_save_core_style : Option<"style", "s">, Group<1>,
+    EnumArg<"SaveCoreStyle">, Desc<"Request a specific style "
+    "of corefile to be saved.">;
+  def process_save_core_plugin_name : Option<"plugin-name", "p">,
+    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file."
+    "This allows core files to be saved in different formats.">;
 }
 
 let Command = "script import" in {
@@ -739,25 +797,47 @@ let Command = "script import" in {
     Group<1>, Desc<"Resolve non-absolute paths relative to the location of the "
     "current command file. This argument can only be used when the command is "
     "being sourced from a file.">;
+  def silent : Option<"silent", "s">, Group<1>,
+    Desc<"If true don't print any script output while importing.">;
 }
 
 let Command = "script add" in {
   def script_add_function : Option<"function", "f">, Group<1>,
     Arg<"PythonFunction">,
     Desc<"Name of the Python function to bind to this command name.">;
-  def script_add_class : Option<"class", "c">, Group<2>, Arg<"PythonClass">,
-  Desc<"Name of the Python class to bind to this command name.">;
+  def script_add_class : Option<"class", "c">, Groups<[2,3]>,
+    Arg<"PythonClass">,
+    Desc<"Name of the Python class to bind to this command name.">;
   def script_add_help : Option<"help", "h">, Group<1>, Arg<"HelpText">,
-  Desc<"The help text to display for this command.">;
+    Desc<"The help text to display for this command.">;
+    def script_add_overwrite : Option<"overwrite", "o">,
+    Desc<"Overwrite an existing command at this node.">;
   def script_add_synchronicity : Option<"synchronicity", "s">,
-    EnumArg<"ScriptedCommandSynchronicity", "ScriptSynchroType()">,
+    EnumArg<"ScriptedCommandSynchronicity">,
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
+  def script_add_completion_type : Option<"completion-type", "C">,
+    Groups<[1,2]>, EnumArg<"CompletionType">,
+    Desc<"Specify which completion type the command should use - if none is "
+    "specified, the command won't use auto-completion.">;
+  def script_add_parsed_command : Option<"parsed", "p">, Group<3>,
+    Desc<"Make a parsed command. The command class will provide the command "
+    "definition by implementing get_options and get_arguments.">;
+
+}
+
+let Command = "container add" in {
+  def container_add_help : Option<"help", "h">, Arg<"HelpText">,
+    Desc<"Help text for this command">;
+  def container_add_long_help : Option<"long-help", "H">, Arg<"HelpText">,
+    Desc<"Long help text for this command">;
+  def container_add_overwrite : Option<"overwrite", "o">, Group<1>,
+  Desc<"Overwrite an existing command at this node.">;
 }
 
 let Command = "script" in {
   def script_language : Option<"language", "l">,
-    EnumArg<"ScriptLang", "ScriptOptionEnum()">, Desc<"Specify the scripting "
+    EnumArg<"ScriptLang">, Desc<"Specify the scripting "
     " language. If none is specific the default scripting language is used.">;
 }
 
@@ -810,7 +890,7 @@ let Command = "source list" in {
 
 let Command = "target dependents" in {
   def dependents_no_dependents : Option<"no-dependents", "d">, Group<1>,
-    OptionalEnumArg<"Value", "OptionEnumValues(g_dependents_enumaration)">,
+    OptionalEnumArg<"Value">,
     Desc<"Whether or not to load dependents when creating a target. If the "
          "option is not specified, the value is implicitly 'default'. If the "
          "option is specified but without a value, the value is implicitly "
@@ -856,8 +936,8 @@ let Command = "target modules list" in {
     OptionalArg<"Width">, Desc<"Display the modification time with optional "
     "width of the module.">;
   def target_modules_list_ref_count : Option<"ref-count", "r">, Group<1>,
-    OptionalArg<"Width">, Desc<"Display the reference count if the module is "
-    "still in the shared module cache.">;
+    OptionalArg<"Width">, Desc<"Display whether the module is still in the "
+    "the shared module cache (Y/N), and its shared pointer use_count.">;
   def target_modules_list_pointer : Option<"pointer", "p">, Group<1>,
     OptionalArg<"None">, Desc<"Display the module pointer.">;
   def target_modules_list_global : Option<"global", "g">, Group<1>,
@@ -907,6 +987,9 @@ let Command = "target modules lookup" in {
   def target_modules_lookup_type : Option<"type", "t">, Group<6>, Arg<"Name">,
     Required, Desc<"Lookup a type by name in the debug symbols in one or more "
     "target modules.">;
+  def target_modules_lookup_variables_ranges : Option<"show-variable-ranges",
+    "\\x01">, GroupRange<1, 6>, Desc<"Dump valid ranges of variables (must be "
+    "used in conjunction with --verbose">;
   def target_modules_lookup_verbose : Option<"verbose", "v">,
     Desc<"Enable verbose lookup information.">;
   def target_modules_lookup_all : Option<"all", "A">, Desc<"Print all matches, "
@@ -954,7 +1037,7 @@ let Command = "target stop hook add" in {
 
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">, Group<1>, Arg<"Count">,
-  Desc<"How many frames to display (-1 for all)">;
+  Desc<"How many frames to display (0 for all)">;
   def thread_backtrace_start : Option<"start", "s">, Group<1>,
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
@@ -980,7 +1063,7 @@ let Command = "thread step scope" in {
       " block.  This is particularly use  in conjunction with --step-target to"
       " step through a complex calling sequence.">;
   def thread_step_scope_run_mode : Option<"run-mode", "m">, Group<1>,
-    EnumArg<"RunMode", "TriRunningModes()">, Desc<"Determine how to run other "
+    EnumArg<"RunMode">, Desc<"Determine how to run other "
     "threads while stepping the current thread.">;
   def thread_step_scope_step_over_regexp : Option<"step-over-regexp", "r">,
     Group<1>, Arg<"RegularExpression">, Desc<"A regular expression that defines "
@@ -996,7 +1079,7 @@ let Command = "thread until" in {
   def thread_until_thread : Option<"thread", "t">, Group<1>, Arg<"ThreadIndex">,
     Desc<"Thread index for the thread for until operation">;
   def thread_until_run_mode : Option<"run-mode", "m">, Group<1>,
-    EnumArg<"RunMode", "DuoRunningModes()">, Desc<"Determine how to run other "
+    EnumArg<"RunMode">, Desc<"Determine how to run other "
     "threads while stepping this one">;
   def thread_until_address : Option<"address", "a">, Group<1>,
     Arg<"AddressOrExpression">, Desc<"Run until we reach the specified address, "
@@ -1040,17 +1123,88 @@ let Command = "thread plan list" in {
     Desc<"Display thread plans for unreported threads">;
 }
 
+let Command = "thread select" in {
+  def thread_select_thread_id : Option<"thread-id", "t">, Group<2>,
+    Arg<"ThreadID">, Completion<"ThreadID">,
+    Desc<"Provide a thread ID instead of a thread index.">;
+}
+
+let Command = "thread trace dump function calls" in {
+  def thread_trace_dump_function_calls_file : Option<"file", "F">, Group<1>,
+    Arg<"Filename">,
+    Desc<"Dump the function calls to a file instead of the standard output.">;
+  def thread_trace_dump_function_calls_json: Option<"json", "j">,
+    Group<1>,
+    Desc<"Dump in simple JSON format.">;
+  def thread_trace_dump_function_calls_pretty_json: Option<"pretty-json", "J">,
+    Group<1>,
+    Desc<"Dump in JSON format but pretty printing the output for easier "
+    "readability.">;
+}
+
 let Command = "thread trace dump instructions" in {
+  def thread_trace_dump_instructions_forwards: Option<"forwards", "f">,
+    Group<1>,
+    Desc<"If specified, the trace is traversed forwards chronologically "
+    "starting at the oldest instruction. Otherwise, it starts at the most "
+    "recent one and the traversal is backwards.">;
   def thread_trace_dump_instructions_count : Option<"count", "c">, Group<1>,
     Arg<"Count">,
-    Desc<"The number of instructions to display ending at the current position.">;
-  def thread_trace_dump_instructions_position : Option<"position", "p">,
-    Group<1>,
+    Desc<"The number of instructions to display starting at the most recent "
+    "instruction, or the oldest if --forwards is provided.">;
+  def thread_trace_dump_instructions_all : Option<"all", "a">, Group<1>,
+    Desc<"From the starting point of the trace, dump all instructions "
+    "available.">;
+  def thread_trace_dump_instructions_id: Option<"id", "i">, Group<1>,
     Arg<"Index">,
-    Desc<"The position to use instead of the current position of the trace.">;
-  def thread_trace_dump_instructions_raw : Option<"raw", "r">,
+    Desc<"Custom starting instruction id from where to start traversing. This "
+    "id can be provided in decimal or hexadecimal representation.">;
+  def thread_trace_dump_instructions_skip: Option<"skip", "s">, Group<1>,
+    Arg<"Index">,
+    Desc<"How many trace items (instructions, errors and events) to skip from "
+    "the starting position of the trace before starting the traversal.">;
+  def thread_trace_dump_instructions_raw : Option<"raw", "r">, Group<1>,
+    Desc<"Dump only instruction address without disassembly nor symbol "
+    "information.">;
+  def thread_trace_dump_instructions_file : Option<"file", "F">, Group<1>,
+    Arg<"Filename">,
+    Desc<"Dump the instruction to a file instead of the standard output.">;
+  def thread_trace_dump_instructions_json: Option<"json", "j">,
     Group<1>,
-    Desc<"Dump only instruction address without disassembly nor symbol information.">;
+    Desc<"Dump in simple JSON format.">;
+  def thread_trace_dump_instructions_pretty_print: Option<"pretty-json", "J">,
+    Group<1>,
+    Desc<"Dump in JSON format but pretty printing the output for easier "
+    "readability.">;
+  def thread_trace_dump_instructions_show_kind : Option<"kind", "k">, Group<1>,
+    Desc<"Show instruction control flow kind. Refer to the enum "
+    "`InstructionControlFlowKind` for a list of control flow kind. "
+    "As an important note, far jumps, far calls and far returns often indicate "
+    "calls to and from kernel.">;
+  def thread_trace_dump_instructions_show_timestamps: Option<"time", "t">,
+    Group<1>,
+    Desc<"For each trace item, print the corresponding wall clock timestamp "
+    "if available.">;
+  def thread_trace_dump_instructions_show_events : Option<"events", "e">,
+    Group<1>,
+    Desc<"Dump the events that happened during the execution of the target.">;
+  def thread_trace_dump_instruction_only_events : Option<"only-events", "E">,
+    Group<1>,
+    Desc<"Dump only the events that happened during the execution of the "
+    "target. No instrutions are dumped.">;
+  def thread_trace_dump_instructions_continue: Option<"continue", "C">,
+    Group<1>,
+    Desc<"Continue dumping instructions right where the previous invocation of "
+    "this command was left, or from the beginning if this is the first "
+    "invocation. The --skip argument is discarded and the other arguments are "
+    "preserved from the previous invocation when possible.">;
+}
+
+let Command = "thread trace dump info" in {
+  def thread_trace_dump_info_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"show verbose thread trace dump info">;
+  def thread_trace_dump_info_json: Option<"json", "j">, Group<1>,
+    Desc<"Dump in JSON format.">;
 }
 
 let Command = "type summary add" in {
@@ -1066,6 +1220,11 @@ let Command = "type summary add" in {
     Desc<"Don't use this format for references-to-type objects.">;
   def type_summary_add_regex : Option<"regex", "x">,
     Desc<"Type names are actually regular expressions.">;
+  def type_summary_add_recognizer_function :
+    Option<"recognizer-function", "\\x01">,
+    Desc<"The names in the argument list are actually the names of python "
+    "functions that decide whether to use this summary for any given type. "
+    "Cannot be specified at the same time as --regex (-x).">;
   def type_summary_add_inline_children : Option<"inline-children", "c">,
     Group<1>, Required,
     Desc<"If true, inline all child values into summary string.">;
@@ -1107,6 +1266,11 @@ let Command = "type synth add" in {
     "children.">;
   def type_synth_add_regex : Option<"regex", "x">,
     Desc<"Type names are actually regular expressions.">;
+  def type_synth_add_recognizer_function :
+    Option<"recognizer-function", "\\x01">,
+    Desc<"The names in the argument list are actually the names of python "
+    "functions that decide whether to use this summary for any given type. "
+    "Cannot be specified at the same time as --regex (-x).">;
 }
 
 let Command = "type format add" in {
@@ -1213,7 +1377,7 @@ let Command = "watchpoint command add" in {
     Arg<"Boolean">, Desc<"Specify whether watchpoint command execution should "
     "terminate on error.">;
   def watchpoint_command_add_script_type : Option<"script-type", "s">,
-    EnumArg<"None", "ScriptOptionEnum()">, Desc<"Specify the language for the"
+    EnumArg<"ScriptLang">, Desc<"Specify the language for the"
     " commands - if none is specified, the lldb command interpreter will be "
     "used.">;
   def watchpoint_command_add_python_function : Option<"python-function", "F">,
@@ -1233,6 +1397,14 @@ let Command = "trace load" in {
     "implementation.">;
 }
 
+let Command = "trace save" in {
+  def trace_save_compact: Option<"compact", "c">,
+    Group<1>,
+    Desc<"Try not to save to disk information irrelevant to the traced "
+        "processes. Each trace plug-in implements this in a different "
+        "fashion.">;
+}
+
 let Command = "trace dump" in {
   def trace_dump_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose trace information.">;
@@ -1241,4 +1413,16 @@ let Command = "trace dump" in {
 let Command = "trace schema" in {
   def trace_schema_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose trace schema logging for debugging the plug-in.">;
+}
+
+let Command = "statistics dump" in {
+  def statistics_dump_all: Option<"all-targets", "a">, Group<1>,
+    Desc<"Include statistics for all targets.">;
+  def statistics_dump_summary: Option<"summary", "s">, Group<1>,
+    Desc<"Dump only high-level summary statistics. "
+         "Exclude targets, modules, breakpoints etc... details.">;
+  def statistics_dump_force: Option<"load-all-debug-info", "f">, Group<1>,
+    Desc<"Dump the total possible debug info statistics. "
+    "Force loading all the debug information if not yet loaded, and collect "
+    "statistics with those.">;
 }

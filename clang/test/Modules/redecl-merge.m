@@ -41,7 +41,7 @@ void f(A *a) {
 
 @class A;
 
-B *f1() {
+B *f1(void) {
   return [B create_a_B];
 }
 
@@ -60,7 +60,7 @@ struct S3 {
   int s3_field;
 };
 
-void testTagMerge() {
+void testTagMerge(void) {
   consume_S1(produce_S1());
   struct S2 s2;
   s2.field = 0;
@@ -105,7 +105,7 @@ void testVarMerge(int i) {
 // Test redeclarations of entities in explicit submodules, to make
 // sure we're maintaining the declaration chains even when normal name
 // lookup can't see what we're looking for.
-void testExplicit() {
+void testExplicit(void) {
   Explicit *e;
   int *(*fp)(void) = &explicit_func;
   int *ip = explicit_func();
@@ -148,7 +148,7 @@ void test_ClassWithDef(ClassWithDef *cwd) {
 
 @import redecl_merge_bottom;
 
-void test_C4b() {
+void test_C4b(void) {
   if (&refers_to_C4) {
   }
 }

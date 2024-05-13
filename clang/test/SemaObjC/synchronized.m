@@ -14,7 +14,7 @@
 
 struct x { int a; } b;
 
-void test1() {
+void test1(void) {
   @synchronized (b) {  // expected-error {{@synchronized requires an Objective-C object type ('struct x' invalid)}}
   }
 

@@ -14,15 +14,14 @@ define void @foo() {
 ; CHECK-NEXT:    vpmovsxdq %xmm1, %xmm2
 ; CHECK-NEXT:    # implicit-def: $ymm0
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; CHECK-NEXT:    vpmovsxdq %xmm1, %xmm1
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,2,3,3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:  # %bb.2: # %BB1
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 BB:
   %A1 = alloca i1, align 1
-  %L1 = load i1, i1* %A1, align 1
+  %L1 = load i1, ptr %A1, align 1
   %Cmp = icmp ugt <4 x i64> zeroinitializer, zeroinitializer
   br label %BB0
 

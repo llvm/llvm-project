@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s
+; RUN: opt %loadPolly -polly-scops -disable-output < %s
 
 ; Bug description: Alias Analysis thinks IntToPtrInst aliases with alloca instructions created by IndependentBlocks Pass.
 ;                  This will trigger the assertion when we are verifying the SCoP after IndependentBlocks.
@@ -12,7 +12,7 @@ entry:
  br label %bb1.i198.i
 
 bb1.i198.i:                                       ; preds = %bb.i197.i, %psetq.exit196.i
-  %tmp51.i = inttoptr i64 0 to %struct.precisionType*
+  %tmp51.i = inttoptr i64 0 to ptr
   br i1 undef, label %bb1.i210.i, label %bb.i209.i
 
 bb.i209.i:                                        ; preds = %bb1.i198.i
@@ -23,8 +23,7 @@ bb1.i210.i:                                       ; preds = %bb.i209.i, %bb1.i19
   br i1 %0, label %bb1.i216.i, label %bb.i215.i
 
 bb.i215.i:                                        ; preds = %bb1.i210.i
-  %1 = getelementptr inbounds %struct.precisionType, %struct.precisionType* %tmp51.i, i64 0, i32 0
-  store i16 undef, i16* %1, align 2
+  store i16 undef, ptr %tmp51.i, align 2
   br label %bb1.i216.i
 
 bb1.i216.i:                                       ; preds = %bb.i215.i, %bb1.i210.i

@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func @entry() {
+func.func @entry() {
   %0 = vector.constant_mask [4] : vector<8xi1>
   vector.print %0 : vector<8xi1>
   // CHECK: ( 1, 1, 1, 1, 0, 0, 0, 0 )

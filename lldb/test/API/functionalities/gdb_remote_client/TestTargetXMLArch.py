@@ -1,13 +1,15 @@
-from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
+
 
 class MyResponder(MockGDBServerResponder):
     def qXferRead(self, obj, annex, offset, length):
         if annex == "target.xml":
-            return """<?xml version="1.0"?>
+            return (
+                """<?xml version="1.0"?>
                 <target version="1.0">
                   <architecture>i386:x86-64</architecture>
                   <feature name="org.gnu.gdb.i386.core">
@@ -76,7 +78,9 @@ class MyResponder(MockGDBServerResponder):
                     <reg name="fooff" bitsize="32" regnum="38" type="int" group="float"/>
                     <reg name="fop"   bitsize="32" regnum="39" type="int" group="float"/>
                   </feature>
-                </target>""", False
+                </target>""",
+                False,
+            )
         else:
             return None, False
 
@@ -87,20 +91,22 @@ class MyResponder(MockGDBServerResponder):
         return "T05thread:00000001;06:9038d60f00700000;07:98b4062680ffffff;10:c0d7bf1b80ffffff;"
 
     def readRegister(self, register):
-        regs = {0x0: "00b0060000610000",
-                0xa: "68fe471c80ffffff",
-                0xc: "60574a1c80ffffff",
-                0xd: "18f3042680ffffff",
-                0xe: "be8a4d7142000000",
-                0xf: "50df471c80ffffff",
-                0x10: "c0d7bf1b80ffffff" }
+        regs = {
+            0x0: "00b0060000610000",
+            0xA: "68fe471c80ffffff",
+            0xC: "60574a1c80ffffff",
+            0xD: "18f3042680ffffff",
+            0xE: "be8a4d7142000000",
+            0xF: "50df471c80ffffff",
+            0x10: "c0d7bf1b80ffffff",
+        }
         if register in regs:
             return regs[register]
         else:
             return "0000000000000000"
 
-class TestTargetXMLArch(GDBRemoteTestBase):
 
+class TestTargetXMLArch(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     @expectedFailureAll(archs=["i386"])
     @skipIfRemote
@@ -114,19 +120,19 @@ class TestTargetXMLArch(GDBRemoteTestBase):
         result = lldb.SBCommandReturnObject()
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                    lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
-        target = self.dbg.CreateTarget('')
-        self.assertEqual('', target.GetTriple())
+        target = self.dbg.CreateTarget("")
+        self.assertEqual("", target.GetTriple())
         process = self.connect(target)
         if self.TraceOn():
             interp.HandleCommand("target list", result)
             print(result.GetOutput())
-        self.assertTrue(target.GetTriple().startswith('x86_64-unknown-unknown'))
+        self.assertTrue(target.GetTriple().startswith("x86_64-unknown-unknown"))
 
     @skipIfXmlSupportMissing
     @skipIfRemote
+    @skipIfLLVMTargetMissing("X86")
     def test_register_augmentation(self):
         """
         Test that we correctly associate the register info with the eh_frame
@@ -137,9 +143,11 @@ class TestTargetXMLArch(GDBRemoteTestBase):
         self.server.responder = MyResponder()
 
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                [lldb.eStateStopped])
-        self.filecheck("image show-unwind -n foo", __file__,
-            "--check-prefix=UNWIND")
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+        self.filecheck("image show-unwind -n foo", __file__, "--check-prefix=UNWIND")
+
+
 # UNWIND: eh_frame UnwindPlan:
 # UNWIND: row[0]:    0: CFA=rsp+128 => rip=[CFA-8]

@@ -1,4 +1,4 @@
-# RUN: llc -march=aarch64 -o - %s -run-pass=machine-cp | FileCheck %s
+# RUN: llc -mtriple=aarch64 -o - %s -run-pass=machine-cp | FileCheck %s
 
 ---
 name: dont_propagate_past_lower_subreg_kill
@@ -32,8 +32,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: dont_propagate_past_upper_subreg_kill
     ; CHECK: HINT 0, implicit-def $z0
-    ; CHECK: HINT 0, implicit-def $z1_hi
-    ; CHECK: HINT 0, implicit killed $z1_hi
+    ; CHECK: HINT 0, implicit-def $q1
+    ; CHECK: HINT 0, implicit killed $q1
     ; CHECK: $z1 = COPY killed $z0
     ; CHECK: $z2 = COPY $z1
     ; CHECK: HINT 0, implicit $z2
@@ -41,8 +41,8 @@ body: |
     $z1 = COPY killed $z0
     $z0 = COPY killed $z1
 
-    HINT 0, implicit-def $z1_hi
-    HINT 0, implicit killed $z1_hi
+    HINT 0, implicit-def $q1
+    HINT 0, implicit killed $q1
 
     $z1 = COPY killed $z0
     $z2 = COPY $z1

@@ -12,9 +12,11 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
-#include "llvm/ADT/None.h"
+#include "support/Path.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -29,14 +31,14 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   FS.Files[FooCpp];
   FS.Files[FooH];
   FS.Files[Invalid];
-  Optional<Path> PathResult =
-      getCorrespondingHeaderOrSource(FooCpp, FS.view(llvm::None));
-  EXPECT_TRUE(PathResult.hasValue());
-  ASSERT_EQ(PathResult.getValue(), FooH);
+  std::optional<Path> PathResult =
+      getCorrespondingHeaderOrSource(FooCpp, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, FooH);
 
-  PathResult = getCorrespondingHeaderOrSource(FooH, FS.view(llvm::None));
-  EXPECT_TRUE(PathResult.hasValue());
-  ASSERT_EQ(PathResult.getValue(), FooCpp);
+  PathResult = getCorrespondingHeaderOrSource(FooH, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, FooCpp);
 
   // Test with header file in capital letters and different extension, source
   // file with different extension
@@ -45,18 +47,18 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
 
   FS.Files[FooC];
   FS.Files[FooHH];
-  PathResult = getCorrespondingHeaderOrSource(FooC, FS.view(llvm::None));
-  EXPECT_TRUE(PathResult.hasValue());
-  ASSERT_EQ(PathResult.getValue(), FooHH);
+  PathResult = getCorrespondingHeaderOrSource(FooC, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, FooHH);
 
   // Test with both capital letters
   auto Foo2C = testPath("foo2.C");
   auto Foo2HH = testPath("foo2.HH");
   FS.Files[Foo2C];
   FS.Files[Foo2HH];
-  PathResult = getCorrespondingHeaderOrSource(Foo2C, FS.view(llvm::None));
-  EXPECT_TRUE(PathResult.hasValue());
-  ASSERT_EQ(PathResult.getValue(), Foo2HH);
+  PathResult = getCorrespondingHeaderOrSource(Foo2C, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, Foo2HH);
 
   // Test with source file as capital letter and .hxx header file
   auto Foo3C = testPath("foo3.C");
@@ -64,17 +66,17 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
 
   FS.Files[Foo3C];
   FS.Files[Foo3HXX];
-  PathResult = getCorrespondingHeaderOrSource(Foo3C, FS.view(llvm::None));
-  EXPECT_TRUE(PathResult.hasValue());
-  ASSERT_EQ(PathResult.getValue(), Foo3HXX);
+  PathResult = getCorrespondingHeaderOrSource(Foo3C, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, Foo3HXX);
 
   // Test if asking for a corresponding file that doesn't exist returns an empty
   // string.
-  PathResult = getCorrespondingHeaderOrSource(Invalid, FS.view(llvm::None));
-  EXPECT_FALSE(PathResult.hasValue());
+  PathResult = getCorrespondingHeaderOrSource(Invalid, FS.view(std::nullopt));
+  EXPECT_FALSE(PathResult.has_value());
 }
 
-MATCHER_P(DeclNamed, Name, "") {
+MATCHER_P(declNamed, Name, "") {
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(arg))
     if (ND->getQualifiedNameAsString() == Name)
       return true;
@@ -106,8 +108,8 @@ TEST(HeaderSourceSwitchTest, GetLocalDecls) {
   auto AST = TU.build();
   EXPECT_THAT(getIndexableLocalDecls(AST),
               testing::UnorderedElementsAre(
-                  DeclNamed("MainF1"), DeclNamed("Foo"), DeclNamed("ns::Foo"),
-                  DeclNamed("ns::Foo::method"), DeclNamed("ns::Foo::field")));
+                  declNamed("MainF1"), declNamed("Foo"), declNamed("ns::Foo"),
+                  declNamed("ns::Foo::method"), declNamed("ns::Foo::field")));
 }
 
 TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
@@ -140,14 +142,14 @@ TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
   // Test for switch from .h header to .cc source
   struct {
     llvm::StringRef HeaderCode;
-    llvm::Optional<std::string> ExpectedSource;
+    std::optional<std::string> ExpectedSource;
   } TestCases[] = {
-      {"// empty, no header found", llvm::None},
+      {"// empty, no header found", std::nullopt},
       {R"cpp(
          // no definition found in the index.
          void NonDefinition();
        )cpp",
-       llvm::None},
+       std::nullopt},
       {R"cpp(
          void A_Sym1();
        )cpp",
@@ -166,11 +168,11 @@ TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
        )cpp",
        testPath("a.cpp")},
 
-       {R"cpp(
+      {R"cpp(
           // We don't have definition in the index, so stay in the header.
           void B_Sym3_NoDef();
        )cpp",
-       None},
+       std::nullopt},
   };
   for (const auto &Case : TestCases) {
     TestTU TU = TestTU::withCode(Case.HeaderCode);
@@ -209,14 +211,14 @@ TEST(HeaderSourceSwitchTest, FromSourceToHeader) {
   // Test for switching from .cc source file to .h header.
   struct {
     llvm::StringRef SourceCode;
-    llvm::Optional<std::string> ExpectedResult;
+    std::optional<std::string> ExpectedResult;
   } TestCases[] = {
-      {"// empty, no header found", llvm::None},
+      {"// empty, no header found", std::nullopt},
       {R"cpp(
          // symbol not in index, no header found
          void Local() {}
        )cpp",
-       llvm::None},
+       std::nullopt},
 
       {R"cpp(
          // a.h wins.
@@ -269,6 +271,43 @@ TEST(HeaderSourceSwitchTest, ClangdServerIntegration) {
   runAddDocument(Server, CppPath, FileContent);
   EXPECT_EQ(HeaderPath,
             *llvm::cantFail(runSwitchHeaderSource(Server, CppPath)));
+}
+
+TEST(HeaderSourceSwitchTest, CaseSensitivity) {
+  TestTU TU = TestTU::withCode("void foo() {}");
+  // Define more symbols in the header than the source file to trick heuristics
+  // into picking the header as source file, if the matching for header file
+  // path fails.
+  TU.HeaderCode = R"cpp(
+  inline void bar1() {}
+  inline void bar2() {}
+  void foo();)cpp";
+  // Give main file and header different base names to make sure file system
+  // heuristics don't work.
+  TU.Filename = "Source.cpp";
+  TU.HeaderFilename = "Header.h";
+
+  auto Index = TU.index();
+  TU.Code = std::move(TU.HeaderCode);
+  TU.HeaderCode.clear();
+  auto AST = TU.build();
+
+  // Provide a different-cased filename in the query than what we have in the
+  // index, check if we can still find the source file, which defines less
+  // symbols than the header.
+  auto HeaderAbsPath = testPath("HEADER.H");
+  // We expect the heuristics to pick:
+  // - header on case sensitive file systems, because the HeaderAbsPath doesn't
+  //   match what we've seen through index.
+  // - source on case insensitive file systems, as the HeaderAbsPath would match
+  //   the filename in index.
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+  EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
+              llvm::ValueIs(testing::StrCaseEq(testPath(TU.Filename))));
+#else
+  EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
+              llvm::ValueIs(testing::StrCaseEq(testPath(TU.HeaderFilename))));
+#endif
 }
 
 } // namespace

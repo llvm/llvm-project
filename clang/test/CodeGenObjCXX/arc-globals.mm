@@ -6,21 +6,21 @@
 id getObject();
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: call i8* @_Z9getObjectv
-// CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
-// CHECK-NEXT: {{store i8*.*@global_obj}}
+// CHECK: call noundef ptr @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use
+// CHECK-NEXT: {{store ptr.*@global_obj}}
 // CHECK-NEXT: ret void
 id global_obj = getObject();
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: call i8* @_Z9getObjectv
-// CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
-// CHECK-NEXT: {{store i8*.*@global_obj2}}
+// CHECK: call noundef ptr @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use
+// CHECK-NEXT: {{store ptr.*@global_obj2}}
 // CHECK-NEXT: ret void
 id global_obj2 = getObject();
 
 // CHECK-LABEL: define internal void @_GLOBAL__sub_I_arc_globals.mm
-// CHECK: call i8* @llvm.objc.autoreleasePoolPush()
+// CHECK: call ptr @llvm.objc.autoreleasePoolPush()
 // CHECK-NEXT: call void @__cxx_global_var_init
 // CHECK-NEXT: call void @__cxx_global_var_init.1
 // CHECK-NEXT: call void @llvm.objc.autoreleasePoolPop(

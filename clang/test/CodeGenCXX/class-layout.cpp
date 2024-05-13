@@ -3,19 +3,19 @@
 // An extra byte should be allocated for an empty class.
 namespace Test1 {
   // CHECK: %"struct.Test1::A" = type { i8 }
-  struct A { } *a;
+  struct A { } a;
 }
 
 namespace Test2 {
   // No need to add tail padding here.
-  // CHECK: %"struct.Test2::A" = type { i8*, i32 }
-  struct A { void *a; int b; } *a;
+  // CHECK: %"struct.Test2::A" = type { ptr, i32 }
+  struct A { void *a; int b; } a;
 }
 
 namespace Test3 {
   // C should have a vtable pointer.
-  // CHECK: %"struct.Test3::A" = type <{ i32 (...)**, i32, [4 x i8] }>
-  struct A { virtual void f(); int a; } *a;
+  // CHECK: %"struct.Test3::A" = type <{ ptr, i32, [4 x i8] }>
+  struct A { virtual void f(); int a; } a;
 }
 
 namespace Test4 {
@@ -30,7 +30,7 @@ namespace Test4 {
   struct B : public A {
     short d;
     double e;
-  } *b;
+  } b;
 }
 
 namespace Test5 {
@@ -43,7 +43,7 @@ namespace Test5 {
   struct B : A {
     char b : 1;
     char c;
-  } *b;
+  } b;
 }
 
 // PR10912: don't crash
@@ -78,17 +78,17 @@ namespace Test6 {
   E *e;
 }
 
-// <rdar://problem/11324125>: Make sure this doesn't crash.  (It's okay
-// if we start rejecting it at some point.)
+// Make sure this doesn't crash. (It's okay if we start rejecting it at some
+// point.)
 namespace Test7 {
   #pragma pack (1)
   class A {};
-  // CHECK: %"class.Test7::B" = type <{ i32 (...)**, %"class.Test7::A" }>
+  // CHECK: %"class.Test7::B" = type <{ ptr, %"class.Test7::A" }>
   class B {
      virtual ~B();
      A a;
   };
-  B* b;
+  B test(B b) { return b; }
   #pragma pack ()
 }
 

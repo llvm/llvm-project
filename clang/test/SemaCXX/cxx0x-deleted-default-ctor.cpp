@@ -48,8 +48,12 @@ struct good : non_trivial {
 };
 good g;
 
+struct bad_const_inner {
+  int x;
+};
+
 struct bad_const {
-  const good g; // expected-note {{field 'g' of const-qualified type 'const good' would not be initialized}}
+  const bad_const_inner g; // expected-note {{field 'g' of const-qualified type 'const bad_const_inner' would not be initialized}}
 };
 bad_const bc; // expected-error {{call to implicitly-deleted default constructor}}
 
@@ -109,7 +113,7 @@ has_friend hf;
 
 struct defaulted_delete {
   no_default nd; // expected-note 2{{because field 'nd' has a deleted default constructor}}
-  defaulted_delete() = default; // expected-note{{implicitly deleted here}} expected-warning {{implicitly deleted}}
+  defaulted_delete() = default; // expected-note{{implicitly deleted here}} expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
 };
 defaulted_delete dd; // expected-error {{call to implicitly-deleted default constructor}}
 
@@ -119,7 +123,6 @@ struct late_delete {
 };
 late_delete::late_delete() = default; // expected-error {{would delete it}}
 
-// See also rdar://problem/8125400.
 namespace empty {
   static union {}; // expected-warning {{does not declare anything}}
   static union { union {}; }; // expected-warning {{does not declare anything}}

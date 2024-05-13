@@ -271,9 +271,8 @@ public:
     const Table &Config = mgr.options.Config;
 
     SmallVector<const Table::MapEntryTy *, 32> Keys;
-    for (Table::const_iterator I = Config.begin(), E = Config.end(); I != E;
-         ++I)
-      Keys.push_back(&*I);
+    for (const auto &Entry : Config)
+      Keys.push_back(&Entry);
     llvm::array_pod_sort(Keys.begin(), Keys.end(), compareEntry);
 
     llvm::errs() << "[config]\n";
@@ -302,7 +301,7 @@ class ExplodedGraphViewer : public Checker< check::EndAnalysis > {
 public:
   ExplodedGraphViewer() {}
   void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,ExprEngine &Eng) const {
-    Eng.ViewGraph(0);
+    Eng.ViewGraph(false);
   }
 };
 
@@ -323,7 +322,7 @@ bool ento::shouldRegisterExplodedGraphViewer(const CheckerManager &mgr) {
 namespace {
 
 class ReportStmts : public Checker<check::PreStmt<Stmt>> {
-  BuiltinBug BT_stmtLoc{this, "Statement"};
+  BugType BT_stmtLoc{this, "Statement"};
 
 public:
   void checkPreStmt(const Stmt *S, CheckerContext &C) const {

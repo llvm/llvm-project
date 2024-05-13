@@ -9,6 +9,9 @@
 #ifndef liblldb_ScriptInterpreterLua_h_
 #define liblldb_ScriptInterpreterLua_h_
 
+#include <vector>
+
+#include "lldb/Breakpoint/WatchpointOptions.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Status.h"
@@ -40,10 +43,13 @@ public:
 
   void ExecuteInterpreterLoop() override;
 
-  bool LoadScriptingModule(const char *filename, bool init_session,
+  bool LoadScriptingModule(const char *filename,
+                           const LoadScriptOptions &options,
                            lldb_private::Status &error,
                            StructuredData::ObjectSP *module_sp = nullptr,
                            FileSpec extra_search_dir = {}) override;
+
+  StructuredData::DictionarySP GetInterpreterInfo() override;
 
   // Static Functions
   static void Initialize();
@@ -52,19 +58,21 @@ public:
 
   static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "script-lua"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static bool BreakpointCallbackFunction(void *baton,
                                          StoppointCallbackContext *context,
                                          lldb::user_id_t break_id,
                                          lldb::user_id_t break_loc_id);
 
-  // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  static bool WatchpointCallbackFunction(void *baton,
+                                         StoppointCallbackContext *context,
+                                         lldb::user_id_t watch_id);
 
-  uint32_t GetPluginVersion() override;
+  // PluginInterface protocol
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   Lua &GetLua();
 
@@ -72,21 +80,34 @@ public:
   llvm::Error LeaveSession();
 
   void CollectDataForBreakpointCommandCallback(
-      std::vector<BreakpointOptions *> &bp_options_vec,
+      std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
       CommandReturnObject &result) override;
 
-  Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
-                                      const char *command_body_text) override;
+  void
+  CollectDataForWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                          CommandReturnObject &result) override;
+
+  Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
+                                      const char *command_body_text,
+                                      bool is_callback) override;
+
+  void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                    const char *command_body_text,
+                                    bool is_callback) override;
 
   Status SetBreakpointCommandCallbackFunction(
-      BreakpointOptions *bp_options, const char *function_name,
+      BreakpointOptions &bp_options, const char *function_name,
       StructuredData::ObjectSP extra_args_sp) override;
 
 private:
   std::unique_ptr<Lua> m_lua;
   bool m_session_is_active = false;
 
-  Status RegisterBreakpointCallback(BreakpointOptions *bp_options,
+  Status RegisterBreakpointCallback(BreakpointOptions &bp_options,
+                                    const char *command_body_text,
+                                    StructuredData::ObjectSP extra_args_sp);
+
+  Status RegisterWatchpointCallback(WatchpointOptions *wp_options,
                                     const char *command_body_text,
                                     StructuredData::ObjectSP extra_args_sp);
 };

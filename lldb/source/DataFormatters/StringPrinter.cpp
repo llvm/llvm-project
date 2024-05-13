@@ -154,11 +154,11 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::ASCII>(
   switch (escape_style) {
   case StringPrinter::EscapeStyle::CXX:
     // Prints 4 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\x%02x", *buffer);
+    escaped_len = snprintf((char *)data, max_buffer_size, "\\x%02x", *buffer);
     break;
   case StringPrinter::EscapeStyle::Swift:
     // Prints up to 6 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\u{%x}", *buffer);
+    escaped_len = snprintf((char *)data, max_buffer_size, "\\u{%x}", *buffer);
     break;
   }
   lldbassert(escaped_len > 0 && "unknown string escape style");
@@ -183,7 +183,7 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::UTF8>(
       &buffer_for_conversion, buffer_end, &codepoint, llvm::strictConversion);
   assert(result == llvm::conversionOK &&
          "Failed to convert legal utf8 sequence");
-  (void)result;
+  UNUSED_IF_ASSERT_DISABLED(result);
 
   // The UTF8 helper always advances by the utf8 encoded length.
   const unsigned utf8_encoded_len = buffer_for_conversion - buffer;
@@ -201,11 +201,11 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::UTF8>(
   switch (escape_style) {
   case StringPrinter::EscapeStyle::CXX:
     // Prints 10 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\U%08x", codepoint);
+    escaped_len = snprintf((char *)data, max_buffer_size, "\\U%08x", codepoint);
     break;
   case StringPrinter::EscapeStyle::Swift:
     // Prints up to 12 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\u{%x}", codepoint);
+    escaped_len = snprintf((char *)data, max_buffer_size, "\\u{%x}", codepoint);
     break;
   }
   lldbassert(escaped_len > 0 && "unknown string escape style");
@@ -293,7 +293,7 @@ static bool DumpEncodedBufferToStream(
       data_ptr = (const SourceDataType *)data.GetDataStart();
     }
 
-    lldb::DataBufferSP utf8_data_buffer_sp;
+    lldb::WritableDataBufferSP utf8_data_buffer_sp;
     llvm::UTF8 *utf8_data_ptr = nullptr;
     llvm::UTF8 *utf8_data_end_ptr = nullptr;
 
@@ -408,8 +408,8 @@ static bool ReadEncodedBufferAndDumpToStream(
       options.GetLocation() == LLDB_INVALID_ADDRESS)
     return false;
 
-  lldb::ProcessSP process_sp(options.GetProcessSP());
-  if (!process_sp)
+  lldb::TargetSP target_sp = options.GetTargetSP();
+  if (!target_sp)
     return false;
 
   constexpr int type_width = sizeof(SourceDataType);
@@ -423,7 +423,7 @@ static bool ReadEncodedBufferAndDumpToStream(
   bool needs_zero_terminator = options.GetNeedsZeroTermination();
 
   bool is_truncated = false;
-  const auto max_size = process_sp->GetTarget().GetMaximumSizeOfStringSummary();
+  const auto max_size = target_sp->GetMaximumSizeOfStringSummary();
 
   uint32_t sourceSize;
   if (elem_type == StringElementType::ASCII && !options.GetSourceSize()) {
@@ -450,7 +450,7 @@ static bool ReadEncodedBufferAndDumpToStream(
   }
 
   const int bufferSPSize = sourceSize * type_width;
-  lldb::DataBufferSP buffer_sp(new DataBufferHeap(bufferSPSize, 0));
+  lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(bufferSPSize, 0));
 
   // Check if we got bytes. We never get any bytes if we have an empty
   // string, but we still continue so that we end up actually printing
@@ -462,24 +462,22 @@ static bool ReadEncodedBufferAndDumpToStream(
   char *buffer = reinterpret_cast<char *>(buffer_sp->GetBytes());
 
   if (elem_type == StringElementType::ASCII)
-    process_sp->ReadCStringFromMemory(options.GetLocation(), buffer,
+    target_sp->ReadCStringFromMemory(options.GetLocation(), buffer,
                                       bufferSPSize, error);
   else if (needs_zero_terminator)
-    process_sp->ReadStringFromMemory(options.GetLocation(), buffer,
+    target_sp->ReadStringFromMemory(options.GetLocation(), buffer,
                                      bufferSPSize, error, type_width);
   else
-    process_sp->ReadMemoryFromInferior(options.GetLocation(), buffer,
-                                       bufferSPSize, error);
+    target_sp->ReadMemory(options.GetLocation(), buffer, bufferSPSize, error);
   if (error.Fail()) {
     options.GetStream()->Printf("unable to read data");
     return true;
   }
 
-  DataExtractor data(buffer_sp, process_sp->GetByteOrder(),
-                     process_sp->GetAddressByteSize());
-
   StringPrinter::ReadBufferAndDumpToStreamOptions dump_options(options);
-  dump_options.SetData(data);
+  dump_options.SetData(
+      DataExtractor(buffer_sp, target_sp->GetArchitecture().GetByteOrder(),
+                    target_sp->GetArchitecture().GetAddressByteSize()));
   dump_options.SetSourceSize(sourceSize);
   dump_options.SetIsTruncated(is_truncated);
   dump_options.SetNeedsZeroTermination(needs_zero_terminator);

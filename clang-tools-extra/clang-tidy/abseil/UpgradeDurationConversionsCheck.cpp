@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
   // For the arithmetic calls, we match only the uses of the templated operators
@@ -160,6 +158,4 @@ void UpgradeDurationConversionsCheck::check(
        << FixItHint::CreateInsertion(SourceRange.getEnd(), ")");
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil

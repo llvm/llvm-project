@@ -9,7 +9,7 @@ static void foo(int Z) {
   Y = Z;
 }
 
-void *test() {
+void *test(void) {
   foo(12);
   return &Y;
 }

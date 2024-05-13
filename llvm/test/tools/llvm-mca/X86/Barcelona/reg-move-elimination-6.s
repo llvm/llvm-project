@@ -35,8 +35,8 @@ mov %esi, %ecx
 # CHECK-NEXT:  1      1     0.33                        movl	%esi, %ecx
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    1100
-# CHECK-NEXT: Max number of mappings used:         141
+# CHECK-NEXT: Total number of mappings created:    900
+# CHECK-NEXT: Max number of mappings used:         115
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider

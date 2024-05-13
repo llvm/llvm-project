@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE,SSE42
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+prefer-movmsk-over-vtest | FileCheck %s --check-prefixes=ADL
 
 declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>)
 declare i32 @llvm.x86.sse2.movmsk.pd(<2 x double>)
@@ -24,10 +25,18 @@ define i1 @movmskps_noneof_bitcast_v2f64(<2 x double> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpeqpd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovmskpd %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vtestpd %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: movmskps_noneof_bitcast_v2f64:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; ADL-NEXT:    vcmpeqpd %xmm0, %xmm1, %xmm0
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    testl %eax, %eax
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    retq
   %1 = fcmp oeq <2 x double> zeroinitializer, %a0
   %2 = sext <2 x i1> %1 to <2 x i64>
   %3 = bitcast <2 x i64> %2 to <4 x float>
@@ -50,10 +59,19 @@ define i1 @movmskps_allof_bitcast_v2f64(<2 x double> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpeqpd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovmskpd %xmm0, %eax
-; AVX-NEXT:    cmpl $3, %eax
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vtestpd %xmm1, %xmm0
+; AVX-NEXT:    setb %al
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: movmskps_allof_bitcast_v2f64:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; ADL-NEXT:    vcmpeqpd %xmm0, %xmm1, %xmm0
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    cmpl $3, %eax
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    retq
   %1 = fcmp oeq <2 x double> zeroinitializer, %a0
   %2 = sext <2 x i1> %1 to <2 x i64>
   %3 = bitcast <2 x i64> %2 to <4 x float>
@@ -80,10 +98,16 @@ define i1 @pmovmskb_noneof_bitcast_v2i64(<2 x i64> %a0) {
 ;
 ; AVX-LABEL: pmovmskb_noneof_bitcast_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovmskpd %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vtestpd %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: pmovmskb_noneof_bitcast_v2i64:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    testl %eax, %eax
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    retq
   %1 = icmp sgt <2 x i64> zeroinitializer, %a0
   %2 = sext <2 x i1> %1 to <2 x i64>
   %3 = bitcast <2 x i64> %2 to <16 x i8>
@@ -110,10 +134,17 @@ define i1 @pmovmskb_allof_bitcast_v2i64(<2 x i64> %a0) {
 ;
 ; AVX-LABEL: pmovmskb_allof_bitcast_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovmskpd %xmm0, %eax
-; AVX-NEXT:    cmpl $3, %eax
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vtestpd %xmm1, %xmm0
+; AVX-NEXT:    setb %al
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: pmovmskb_allof_bitcast_v2i64:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    cmpl $3, %eax
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    retq
   %1 = icmp sgt <2 x i64> zeroinitializer, %a0
   %2 = sext <2 x i1> %1 to <2 x i64>
   %3 = bitcast <2 x i64> %2 to <16 x i8>
@@ -136,10 +167,18 @@ define i1 @pmovmskb_noneof_bitcast_v4f32(<4 x float> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovmskps %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vtestps %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: pmovmskb_noneof_bitcast_v4f32:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ADL-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vmovmskps %xmm0, %eax
+; ADL-NEXT:    testl %eax, %eax
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    retq
   %1 = fcmp oeq <4 x float> %a0, zeroinitializer
   %2 = sext <4 x i1> %1 to <4 x i32>
   %3 = bitcast <4 x i32> %2 to <16 x i8>
@@ -162,10 +201,19 @@ define i1 @pmovmskb_allof_bitcast_v4f32(<4 x float> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovmskps %xmm0, %eax
-; AVX-NEXT:    cmpl $15, %eax
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vtestps %xmm1, %xmm0
+; AVX-NEXT:    setb %al
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: pmovmskb_allof_bitcast_v4f32:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ADL-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vmovmskps %xmm0, %eax
+; ADL-NEXT:    cmpl $15, %eax
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    retq
   %1 = fcmp oeq <4 x float> %a0, zeroinitializer
   %2 = sext <4 x i1> %1 to <4 x i32>
   %3 = bitcast <4 x i32> %2 to <16 x i8>
@@ -191,6 +239,14 @@ define i1 @movmskps_allof_v4i32_positive(<4 x i32> %a0) {
 ; AVX-NEXT:    cmpl $15, %eax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: movmskps_allof_v4i32_positive:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vmovmskps %xmm0, %eax
+; ADL-NEXT:    xorl $15, %eax
+; ADL-NEXT:    cmpl $15, %eax
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    retq
   %1 = icmp sgt <4 x i32> %a0, <i32 -1, i32 -1, i32 -1, i32 -1>
   %2 = sext <4 x i1> %1 to <4 x i32>
   %3 = bitcast <4 x i32> %2 to <4 x float>
@@ -213,11 +269,112 @@ define i1 @pmovmskb_noneof_v16i8_positive(<16 x i8> %a0) {
 ; AVX-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: pmovmskb_noneof_v16i8_positive:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vpmovmskb %xmm0, %eax
+; ADL-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    retq
   %1 = icmp sgt <16 x i8> %a0, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %2 = sext <16 x i1> %1 to <16 x i8>
   %3 = tail call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %2)
   %4 = icmp eq i32 %3, 0
   ret i1 %4
+}
+
+; MOVMSK(CMPEQ(AND(X,C1),0)) -> MOVMSK(NOT(SHL(X,C2)))
+define i32 @movmskpd_pow2_mask(<2 x i64> %a0) {
+; SSE2-LABEL: movmskpd_pow2_mask:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movmskpd %xmm0, %eax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: movmskpd_pow2_mask:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movmskpd %xmm0, %eax
+; SSE42-NEXT:    xorl $3, %eax
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: movmskpd_pow2_mask:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovmskpd %xmm0, %eax
+; AVX-NEXT:    xorl $3, %eax
+; AVX-NEXT:    retq
+;
+; ADL-LABEL: movmskpd_pow2_mask:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    xorl $3, %eax
+; ADL-NEXT:    retq
+  %1 = and <2 x i64> %a0, <i64 -9223372036854775808, i64 -9223372036854775808>
+  %2 = icmp eq <2 x i64> %1, zeroinitializer
+  %3 = sext <2 x i1> %2 to <2 x i64>
+  %4 = bitcast <2 x i64> %3 to <2 x double>
+  %5 = tail call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %4)
+  ret i32 %5
+}
+
+define i32 @movmskps_pow2_mask(<4 x i32> %a0) {
+; SSE-LABEL: movmskps_pow2_mask:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pslld $29, %xmm0
+; SSE-NEXT:    movmskps %xmm0, %eax
+; SSE-NEXT:    xorl $15, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: movmskps_pow2_mask:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpslld $29, %xmm0, %xmm0
+; AVX-NEXT:    vmovmskps %xmm0, %eax
+; AVX-NEXT:    xorl $15, %eax
+; AVX-NEXT:    retq
+;
+; ADL-LABEL: movmskps_pow2_mask:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vpslld $29, %xmm0, %xmm0
+; ADL-NEXT:    vmovmskps %xmm0, %eax
+; ADL-NEXT:    xorl $15, %eax
+; ADL-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 4, i32 4, i32 4, i32 4>
+  %2 = icmp eq <4 x i32> %1, zeroinitializer
+  %3 = sext <4 x i1> %2 to <4 x i32>
+  %4 = bitcast <4 x i32> %3 to <4 x float>
+  %5 = tail call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %4)
+  ret i32 %5
+}
+
+define i32 @pmovmskb_pow2_mask(<16 x i8> %a0) {
+; SSE-LABEL: pmovmskb_pow2_mask:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psllw $7, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: pmovmskb_pow2_mask:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllw $7, %xmm0, %xmm0
+; AVX-NEXT:    vpmovmskb %xmm0, %eax
+; AVX-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; AVX-NEXT:    retq
+;
+; ADL-LABEL: pmovmskb_pow2_mask:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vpsllw $7, %xmm0, %xmm0
+; ADL-NEXT:    vpmovmskb %xmm0, %eax
+; ADL-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; ADL-NEXT:    retq
+  %1 = and <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %2 = icmp eq <16 x i8> %1, zeroinitializer
+  %3 = sext <16 x i1> %2 to <16 x i8>
+  %4 = tail call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %3)
+  ret i32 %4
 }
 
 ; AND(MOVMSK(X),MOVMSK(Y)) -> MOVMSK(AND(X,Y))
@@ -241,6 +398,14 @@ define i32 @and_movmskpd_movmskpd(<2 x double> %a0, <2 x i64> %a1) {
 ; AVX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovmskpd %xmm0, %eax
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: and_movmskpd_movmskpd:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; ADL-NEXT:    vcmpeqpd %xmm0, %xmm2, %xmm0
+; ADL-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    retq
   %1 = fcmp oeq <2 x double> zeroinitializer, %a0
   %2 = sext <2 x i1> %1 to <2 x i64>
   %3 = bitcast <2 x i64> %2 to <2 x double>
@@ -268,6 +433,14 @@ define i32 @xor_movmskps_movmskps(<4 x float> %a0, <4 x i32> %a1) {
 ; AVX-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovmskps %xmm0, %eax
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: xor_movmskps_movmskps:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; ADL-NEXT:    vcmpeqps %xmm0, %xmm2, %xmm0
+; ADL-NEXT:    vxorps %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vmovmskps %xmm0, %eax
+; ADL-NEXT:    retq
   %1 = fcmp oeq <4 x float> zeroinitializer, %a0
   %2 = sext <4 x i1> %1 to <4 x i32>
   %3 = bitcast <4 x i32> %2 to <4 x float>
@@ -297,6 +470,15 @@ define i32 @or_pmovmskb_pmovmskb(<16 x i8> %a0, <8 x i16> %a1) {
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX-NEXT:    retq
+;
+; ADL-LABEL: or_pmovmskb_pmovmskb:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; ADL-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; ADL-NEXT:    vpsraw $15, %xmm1, %xmm1
+; ADL-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vpmovmskb %xmm0, %eax
+; ADL-NEXT:    retq
   %1 = icmp eq <16 x i8> zeroinitializer, %a0
   %2 = sext <16 x i1> %1 to <16 x i8>
   %3 = tail call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %2)
@@ -305,4 +487,46 @@ define i32 @or_pmovmskb_pmovmskb(<16 x i8> %a0, <8 x i16> %a1) {
   %6 = tail call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %5)
   %7 = or i32 %3, %6
   ret i32 %7
+}
+
+; We can't fold to ptest if we're not checking every pcmpeq result
+define i32 @movmskps_ptest_numelts_mismatch(<16 x i8> %a0) {
+; SSE-LABEL: movmskps_ptest_numelts_mismatch:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE-NEXT:    movmskps %xmm1, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    cmpl $15, %ecx
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    negl %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: movmskps_ptest_numelts_mismatch:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    vtestps %xmm1, %xmm0
+; AVX-NEXT:    sbbl %eax, %eax
+; AVX-NEXT:    retq
+;
+; ADL-LABEL: movmskps_ptest_numelts_mismatch:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; ADL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vmovmskps %xmm0, %ecx
+; ADL-NEXT:    xorl %eax, %eax
+; ADL-NEXT:    cmpl $15, %ecx
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    negl %eax
+; ADL-NEXT:    retq
+  %1 = icmp eq <16 x i8> %a0, zeroinitializer
+  %2 = sext <16 x i1> %1 to <16 x i8>
+  %3 = bitcast <16 x i8> %2 to <4 x float>
+  %4 = tail call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %3)
+  %5 = icmp eq i32 %4, 15
+  %6 = sext i1 %5 to i32
+  ret i32 %6
 }

@@ -10,11 +10,11 @@ div_arm:
   udiv r0, r1, r2
 
 @CHECK-LABEL: div_arm
-@CHECK: 11 f2 30 e7 <unknown>
+@CHECK: e730f211    <unknown>
 
 .thumb
 div_thumb:
   udiv r0, r1, r2
 
 @CHECK-LABEL: div_thumb
-@CHECK: b1 fb f2 f0 udiv r0, r1, r2
+@CHECK: fbb1 f0f2   udiv r0, r1, r2

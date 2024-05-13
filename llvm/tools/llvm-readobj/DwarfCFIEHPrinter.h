@@ -113,8 +113,7 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
   if (!Content)
     reportError(Content.takeError(), ObjF.getFileName());
 
-  DataExtractor DE(*Content,
-                   ELFT::TargetEndianness == support::endianness::little,
+  DataExtractor DE(*Content, ELFT::Endianness == llvm::endianness::little,
                    ELFT::Is64Bits ? 8 : 4);
 
   DictScope D(W, "Header");
@@ -185,17 +184,18 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
     reportError(DataOrErr.takeError(), ObjF.getFileName());
 
   // Construct DWARFDataExtractor to handle relocations ("PC Begin" fields).
-  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(ObjF, nullptr);
-  DWARFDataExtractor DE(DICtx->getDWARFObj(),
-                        DICtx->getDWARFObj().getEHFrameSection(),
-                        ELFT::TargetEndianness == support::endianness::little,
-                        ELFT::Is64Bits ? 8 : 4);
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
+      ObjF, DWARFContext::ProcessDebugRelocations::Process, nullptr);
+  DWARFDataExtractor DE(
+      DICtx->getDWARFObj(), DICtx->getDWARFObj().getEHFrameSection(),
+      ELFT::Endianness == llvm::endianness::little, ELFT::Is64Bits ? 8 : 4);
   DWARFDebugFrame EHFrame(Triple::ArchType(ObjF.getArch()), /*IsEH=*/true,
                           /*EHFrameAddress=*/Address);
   if (Error E = EHFrame.parse(DE))
     reportError(std::move(E), ObjF.getFileName());
 
   for (const dwarf::FrameEntry &Entry : EHFrame) {
+    std::optional<uint64_t> InitialLocation;
     if (const dwarf::CIE *CIE = dyn_cast<dwarf::CIE>(&Entry)) {
       W.startLine() << format("[0x%" PRIx64 "] CIE length=%" PRIu64 "\n",
                               Address + CIE->getOffset(), CIE->getLength());
@@ -214,8 +214,9 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
                               Address + FDE->getLinkedCIE()->getOffset());
       W.indent();
 
+      InitialLocation = FDE->getInitialLocation();
       W.startLine() << format("initial_location: 0x%" PRIx64 "\n",
-                              FDE->getInitialLocation());
+                              *InitialLocation);
       W.startLine() << format(
           "address_range: 0x%" PRIx64 " (end : 0x%" PRIx64 ")\n",
           FDE->getAddressRange(),
@@ -225,8 +226,10 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
     W.getOStream() << "\n";
     W.startLine() << "Program:\n";
     W.indent();
-    Entry.cfis().dump(W.getOStream(), DIDumpOptions(), nullptr,
-                      W.getIndentLevel());
+    auto DumpOpts = DIDumpOptions();
+    DumpOpts.IsEH = true;
+    Entry.cfis().dump(W.getOStream(), DumpOpts, W.getIndentLevel(),
+                      InitialLocation);
     W.unindent();
     W.unindent();
     W.getOStream() << "\n";

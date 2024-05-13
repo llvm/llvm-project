@@ -49,28 +49,30 @@ public:
 void implicit_maps_struct (int a){
   SSS s = {a, (double)a};
 
-  // CK17-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** null)
-  // CK17-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK17-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK17-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK17-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK17-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to [[ST]]**
-  // CK17-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to [[ST]]**
-  // CK17-DAG: store [[ST]]* [[DECL:%.+]], [[ST]]** [[CBP1]]
-  // CK17-DAG: store [[ST]]* [[DECL]], [[ST]]** [[CP1]]
+// CK17-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
+// CK17-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK17-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
+// CK17-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK17-DAG: store ptr [[PGEP:%.+]], ptr [[PARG]]
+// CK17-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK17-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK17-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK17-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK17-DAG: store ptr [[DECL:%.+]], ptr [[BP1]]
+// CK17-DAG: store ptr [[DECL]], ptr [[P1]]
 
-  // CK17: call void [[KERNEL:@.+]]([[ST]]* [[DECL]])
-  #pragma omp target
+// CK17: call void [[KERNEL:@.+]](ptr [[DECL]])
+#pragma omp target
   {
     s.a += 1;
     s.b += 1.0;
   }
 }
 
-// CK17: define internal void [[KERNEL]]([[ST]]* {{.+}}[[ARG:%.+]])
-// CK17: [[ADDR:%.+]] = alloca [[ST]]*,
-// CK17: store [[ST]]* [[ARG]], [[ST]]** [[ADDR]],
-// CK17: [[REF:%.+]] = load [[ST]]*, [[ST]]** [[ADDR]],
-// CK17: {{.+}} = getelementptr inbounds [[ST]], [[ST]]* [[REF]], i32 0, i32 0
+// CK17: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK17: [[ADDR:%.+]] = alloca ptr,
+// CK17: store ptr [[ARG]], ptr [[ADDR]],
+// CK17: [[REF:%.+]] = load ptr, ptr [[ADDR]],
+// CK17: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
 #endif // CK17
 #endif

@@ -1,5 +1,7 @@
-; RUN: opt < %s -mtriple=aarch64--linux-gnu -cost-model -analyze | FileCheck %s --check-prefix=COST
+; RUN: opt < %s -mtriple=aarch64--linux-gnu -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s --check-prefix=COST
 ; RUN: llc < %s -mtriple=aarch64--linux-gnu | FileCheck %s --check-prefix=CODE
+
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; COST-LABEL: uaddl_8h
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
@@ -614,7 +616,7 @@ define <4 x i64> @neg_llegal_vector_type_2(<4 x i16> %a, <4 x i64> %b) {
 }
 
 ; COST-LABEL: neg_llegal_vector_type_3
-; COST-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %tmp0 = zext <3 x i34> %a to <3 x i68>
+; COST-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %tmp0 = zext <3 x i34> %a to <3 x i68>
 define <3 x i68> @neg_llegal_vector_type_3(<3 x i34> %a, <3 x i68> %b) {
   %tmp0 = zext <3 x i34> %a to <3 x i68>
   %tmp1 = add <3 x i68> %b, %tmp0

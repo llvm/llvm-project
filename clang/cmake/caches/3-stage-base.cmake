@@ -1,6 +1,8 @@
 set(CMAKE_BUILD_TYPE RELEASE CACHE STRING "")
 set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
-set(LLVM_BUILD_EXTERNAL_COMPILER_RT ON CACHE BOOL "")
+
+set(LLVM_ENABLE_PROJECTS "clang;lld" CACHE STRING "")
+set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi" CACHE STRING "")
 
 if(APPLE)
   # Use LLD to have fewer requirements on system linker, unless we're on an apple

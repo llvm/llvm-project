@@ -25,7 +25,7 @@
 ; `a::b()` is actually associated with the function's symbol instead of the
 ; .debug_types.dwo section.
 ;
-; CHECK-ASM: xray_fn_idx,"awo",@progbits,_ZN1a1bEv{{$}}
+; CHECK-ASM: xray_fn_idx,"ao",@progbits,_ZN1a1bEv{{$}}
 ;
 ; CHECK-ELF-DAG: [[FSECT:[0-9]+]]] .text._ZN1a1bEv PROGBITS
 ; CHECK-ELF-DAG: [{{.*}}] .debug_types.dwo PROGBITS
@@ -35,8 +35,8 @@ target triple = "x86_64-pc-linux"
 %class.a = type { i8 }
 
 ; Function Attrs: nounwind readnone uwtable
-define i32 @_ZN1a1bEv(%class.a* nocapture readnone) local_unnamed_addr #0 align 2 !dbg !8 {
-  tail call void @llvm.dbg.value(metadata %class.a* %0, metadata !17, metadata !DIExpression()), !dbg !19
+define i32 @_ZN1a1bEv(ptr nocapture readnone) local_unnamed_addr #0 align 2 !dbg !8 {
+  tail call void @llvm.dbg.value(metadata ptr %0, metadata !17, metadata !DIExpression()), !dbg !19
   br label %2, !dbg !20
 
 ; <label>:2:                                      ; preds = %2, %1

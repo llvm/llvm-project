@@ -1,9 +1,8 @@
 //===-------- PPCELFStreamer.cpp - ELF Object Output ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,11 +17,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "PPCELFStreamer.h"
 #include "PPCFixupKinds.h"
-#include "PPCInstrInfo.h"
 #include "PPCMCCodeEmitter.h"
+#include "PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -41,9 +39,8 @@ PPCELFStreamer::PPCELFStreamer(MCContext &Context,
                                std::unique_ptr<MCAsmBackend> MAB,
                                std::unique_ptr<MCObjectWriter> OW,
                                std::unique_ptr<MCCodeEmitter> Emitter)
-    : MCELFStreamer(Context, std::move(MAB), std::move(OW),
-                    std::move(Emitter)), LastLabel(NULL) {
-}
+    : MCELFStreamer(Context, std::move(MAB), std::move(OW), std::move(Emitter)),
+      LastLabel(nullptr) {}
 
 void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
                                              const MCSubtargetInfo &STI) {
@@ -57,7 +54,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
   // all of the nops required as part of the alignment operation. In the cases
   // when no nops are added then The fragment is still created but it remains
   // empty.
-  emitCodeAlignment(64, 4);
+  emitCodeAlignment(Align(64), &STI, 4);
 
   // Emit the instruction.
   // Since the previous emit created a new fragment then adding this instruction
@@ -79,7 +76,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
     // label to the top of the fragment containing the aligned instruction that
     // was just added.
     if (InstLine == LabelLine) {
-      AssignFragment(LastLabel, InstructionFragment);
+      assignFragment(LastLabel, InstructionFragment);
       LastLabel->setOffset(0);
     }
   }
@@ -91,16 +88,17 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
       static_cast<PPCMCCodeEmitter*>(getAssembler().getEmitterPtr());
 
   // If the instruction is a part of the GOT to PC-Rel link time optimization
-  // instruction pair, return a value, otherwise return None. A true returned
-  // value means the instruction is the PLDpc and a false value means it is
-  // the user instruction.
-  Optional<bool> IsPartOfGOTToPCRelPair = isPartOfGOTToPCRelPair(Inst, STI);
+  // instruction pair, return a value, otherwise return std::nullopt. A true
+  // returned value means the instruction is the PLDpc and a false value means
+  // it is the user instruction.
+  std::optional<bool> IsPartOfGOTToPCRelPair =
+      isPartOfGOTToPCRelPair(Inst, STI);
 
   // User of the GOT-indirect address.
   // For example, the load that will get the relocation as follows:
   // .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
   //  lwa 3, 4(3)
-  if (IsPartOfGOTToPCRelPair.hasValue() && !IsPartOfGOTToPCRelPair.getValue())
+  if (IsPartOfGOTToPCRelPair && !*IsPartOfGOTToPCRelPair)
     emitGOTToPCRelReloc(Inst);
 
   // Special handling is only for prefixed instructions.
@@ -115,7 +113,7 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
   // follows:
   //  pld 3, vec@got@pcrel(0), 1
   // .Lpcrel1:
-  if (IsPartOfGOTToPCRelPair.hasValue() && IsPartOfGOTToPCRelPair.getValue())
+  if (IsPartOfGOTToPCRelPair && *IsPartOfGOTToPCRelPair)
     emitGOTToPCRelLabel(Inst);
 }
 
@@ -185,38 +183,39 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
   emitLabel(LabelSym, Inst.getLoc());
 }
 
-// This funciton checks if the parameter Inst is part of the setup for a link
+// This function checks if the parameter Inst is part of the setup for a link
 // time GOT PC Relative optimization. For example in this situation:
 // <MCInst PLDpc <MCOperand Reg:282> <MCOperand Expr:(glob_double@got@pcrel)>
 //   <MCOperand Imm:0> <MCOperand Expr:(.Lpcrel@<<invalid>>)>>
 // <MCInst SOME_LOAD <MCOperand Reg:22> <MCOperand Imm:0> <MCOperand Reg:282>
 //   <MCOperand Expr:(.Lpcrel@<<invalid>>)>>
 // The above is a pair of such instructions and this function will not return
-// None for either one of them. In both cases we are looking for the last
-// operand <MCOperand Expr:(.Lpcrel@<<invalid>>)> which needs to be an MCExpr
-// and has the flag MCSymbolRefExpr::VK_PPC_PCREL_OPT. After that we just look
-// at the opcode and in the case of PLDpc we will return true. For the load
+// std::nullopt for either one of them. In both cases we are looking for the
+// last operand <MCOperand Expr:(.Lpcrel@<<invalid>>)> which needs to be an
+// MCExpr and has the flag MCSymbolRefExpr::VK_PPC_PCREL_OPT. After that we just
+// look at the opcode and in the case of PLDpc we will return true. For the load
 // (or store) this function will return false indicating it has found the second
 // instruciton in the pair.
-Optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
-                                            const MCSubtargetInfo &STI) {
+std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
+                                                 const MCSubtargetInfo &STI) {
   // Need at least two operands.
   if (Inst.getNumOperands() < 2)
-    return None;
+    return std::nullopt;
 
   unsigned LastOp = Inst.getNumOperands() - 1;
   // The last operand needs to be an MCExpr and it needs to have a variant kind
   // of VK_PPC_PCREL_OPT. If it does not satisfy these conditions it is not a
-  // link time GOT PC Rel opt instruction and we can ignore it and return None.
+  // link time GOT PC Rel opt instruction and we can ignore it and return
+  // std::nullopt.
   const MCOperand &Operand = Inst.getOperand(LastOp);
   if (!Operand.isExpr())
-    return None;
+    return std::nullopt;
 
   // Check for the variant kind VK_PPC_PCREL_OPT in this expression.
   const MCExpr *Expr = Operand.getExpr();
   const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
   if (!SymExpr || SymExpr->getKind() != MCSymbolRefExpr::VK_PPC_PCREL_OPT)
-    return None;
+    return std::nullopt;
 
   return (Inst.getOpcode() == PPC::PLDpc);
 }

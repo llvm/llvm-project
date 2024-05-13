@@ -9,7 +9,7 @@
 #include "llvm/DebugInfo/CodeView/TypeHashing.h"
 
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
-#include "llvm/Support/SHA1.h"
+#include "llvm/Support/BLAKE3.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -35,7 +35,7 @@ GloballyHashedType::hashType(ArrayRef<uint8_t> RecordData,
                              ArrayRef<GloballyHashedType> PreviousIds) {
   SmallVector<TiReference, 4> Refs;
   discoverTypeIndices(RecordData, Refs);
-  SHA1 S;
+  TruncatedBLAKE3<8> S;
   S.init();
   uint32_t Off = 0;
   S.update(RecordData.take_front(sizeof(RecordPrefix)));
@@ -56,7 +56,7 @@ GloballyHashedType::hashType(ArrayRef<uint8_t> RecordData,
       ArrayRef<uint8_t> BytesToHash;
       if (TI.isSimple() || TI.isNoneType()) {
         const uint8_t *IndexBytes = reinterpret_cast<const uint8_t *>(&TI);
-        BytesToHash = makeArrayRef(IndexBytes, sizeof(TypeIndex));
+        BytesToHash = ArrayRef(IndexBytes, sizeof(TypeIndex));
       } else {
         if (TI.toArrayIndex() >= Prev.size() ||
             Prev[TI.toArrayIndex()].empty()) {
@@ -76,5 +76,5 @@ GloballyHashedType::hashType(ArrayRef<uint8_t> RecordData,
   auto TrailingBytes = RecordData.drop_front(Off);
   S.update(TrailingBytes);
 
-  return {S.final().take_back(8)};
+  return {S.final()};
 }

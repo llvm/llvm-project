@@ -1,7 +1,7 @@
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
 ; RUN:     -pass-remarks-analysis=loop-distribute \
 ; RUN:     -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
 ; RUN:     -pass-remarks-analysis=loop-distribute \
 ; RUN:                                < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
 
@@ -29,7 +29,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; NO_HOTNESS: remark: /tmp/t.c:3:3: loop not distributed: use -Rpass-analysis=loop-distribute for more info{{$}}
 ; NO_HOTNESS: remark: /tmp/t.c:3:3: loop not distributed: memory operations are safe for vectorization{{$}}
 
-define void @forced(i8* %A, i8* %B, i8* %C, i32 %N) !dbg !7 !prof !22 {
+define void @forced(ptr %A, ptr %B, ptr %C, i32 %N) !dbg !7 !prof !22 {
 entry:
   %cmp12 = icmp sgt i32 %N, 0, !dbg !9
   br i1 %cmp12, label %ph, label %for.cond.cleanup, !dbg !10, !prof !23
@@ -39,13 +39,13 @@ ph:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
-  %arrayidx = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !12
-  %0 = load i8, i8* %arrayidx, align 1, !dbg !12, !tbaa !13
-  %arrayidx2 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !16
-  %1 = load i8, i8* %arrayidx2, align 1, !dbg !16, !tbaa !13
+  %arrayidx = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !12
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !12, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !16
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !16, !tbaa !13
   %mul = mul i8 %1, %0, !dbg !17
-  %arrayidx6 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !18
-  store i8 %mul, i8* %arrayidx6, align 1, !dbg !19, !tbaa !13
+  %arrayidx6 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !18
+  store i8 %mul, ptr %arrayidx6, align 1, !dbg !19, !tbaa !13
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !10
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !10
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !10
@@ -79,5 +79,5 @@ for.cond.cleanup:
 !20 = distinct !{!20, !21}
 !21 = !{!"llvm.loop.distribute.enable", i1 true}
 !22 = !{!"function_entry_count", i64 3}
-!23 = !{!"branch_weights", i32 99, i32 1}
+!23 = !{!"branch_weights", i32 2000, i32 1}
 !24 = !{!"branch_weights", i32 1, i32 99}

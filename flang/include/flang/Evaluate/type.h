@@ -22,6 +22,7 @@
 #include "integer.h"
 #include "logical.h"
 #include "real.h"
+#include "flang/Common/Fortran-features.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/real.h"
@@ -37,12 +38,18 @@ class DeclTypeSpec;
 class DerivedTypeSpec;
 class ParamValue;
 class Symbol;
+// IsDescriptor() is true when an object requires the use of a descriptor
+// in memory when "at rest".  IsPassedViaDescriptor() is sometimes false
+// when IsDescriptor() is true, including the cases of CHARACTER dummy
+// arguments and explicit & assumed-size dummy arrays.
 bool IsDescriptor(const Symbol &);
+bool IsPassedViaDescriptor(const Symbol &);
 } // namespace Fortran::semantics
 
 namespace Fortran::evaluate {
 
 using common::TypeCategory;
+class TargetCharacteristics;
 
 // Specific intrinsic types are represented by specializations of
 // this class template Type<CATEGORY, KIND>.
@@ -50,13 +57,14 @@ template <TypeCategory CATEGORY, int KIND = 0> class Type;
 
 using SubscriptInteger = Type<TypeCategory::Integer, 8>;
 using CInteger = Type<TypeCategory::Integer, 4>;
+using LargestInt = Type<TypeCategory::Integer, 16>;
 using LogicalResult = Type<TypeCategory::Logical, 4>;
 using LargestReal = Type<TypeCategory::Real, 16>;
+using Ascii = Type<TypeCategory::Character, 1>;
 
 // A predicate that is true when a kind value is a kind that could possibly
 // be supported for an intrinsic type category on some target instruction
 // set architecture.
-// TODO: specialize for the actual target architecture
 static constexpr bool IsValidKindOfIntrinsicType(
     TypeCategory category, std::int64_t kind) {
   switch (category) {
@@ -89,8 +97,11 @@ public:
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
   DynamicType(int charKind, const semantics::ParamValue &len);
+  // When a known length is presented, resolve it to its effective
+  // length of zero if it is negative.
   constexpr DynamicType(int k, std::int64_t len)
-      : category_{TypeCategory::Character}, kind_{k}, knownLength_{len} {
+      : category_{TypeCategory::Character}, kind_{k}, knownLength_{
+                                                          len >= 0 ? len : 0} {
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
   explicit constexpr DynamicType(
@@ -142,13 +153,19 @@ public:
     return charLengthParamValue_;
   }
   constexpr std::optional<std::int64_t> knownLength() const {
+#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE == 7
+    if (knownLength_ < 0) {
+      return std::nullopt;
+    }
+#endif
     return knownLength_;
   }
   std::optional<Expr<SubscriptInteger>> GetCharLength() const;
 
-  std::size_t GetAlignment(const FoldingContext &) const;
-  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
-      FoldingContext &, bool aligned) const;
+  std::size_t GetAlignment(const TargetCharacteristics &) const;
+  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(FoldingContext &,
+      bool aligned,
+      std::optional<std::int64_t> charLength = std::nullopt) const;
 
   std::string AsFortran() const;
   std::string AsFortran(std::string &&charLenExpr) const;
@@ -166,6 +183,7 @@ public:
   constexpr bool IsUnlimitedPolymorphic() const { // TYPE(*) or CLASS(*)
     return IsPolymorphic() && !derived_;
   }
+  bool IsLengthlessIntrinsicType() const;
   constexpr const semantics::DerivedTypeSpec &GetDerivedTypeSpec() const {
     return DEREF(derived_);
   }
@@ -176,8 +194,23 @@ public:
   // 7.3.2.3 & 15.5.2.4 type compatibility.
   // x.IsTkCompatibleWith(y) is true if "x => y" or passing actual y to
   // dummy argument x would be valid.  Be advised, this is not a reflexive
-  // relation.  Kind type parameters must match.
+  // relation.  Kind type parameters must match, but CHARACTER lengths
+  // need not do so.
   bool IsTkCompatibleWith(const DynamicType &) const;
+  bool IsTkCompatibleWith(const DynamicType &, common::IgnoreTKRSet) const;
+
+  // A stronger compatibility check that does not allow distinct known
+  // values for CHARACTER lengths for e.g. MOVE_ALLOC().
+  bool IsTkLenCompatibleWith(const DynamicType &) const;
+
+  // EXTENDS_TYPE_OF (16.9.76); ignores type parameter values
+  std::optional<bool> ExtendsTypeOf(const DynamicType &) const;
+  // SAME_TYPE_AS (16.9.165); ignores type parameter values
+  std::optional<bool> SameTypeAs(const DynamicType &) const;
+
+  // 7.5.2.4 type equivalence; like operator==(), but SEQUENCE/BIND(C)
+  // derived types can be structurally equivalent.
+  bool IsEquivalentTo(const DynamicType &) const;
 
   // Result will be missing when a symbol is absent or
   // has an erroneous type, e.g., REAL(KIND=666).
@@ -203,6 +236,12 @@ public:
     }
   }
 
+  // Get a copy of this dynamic type where charLengthParamValue_ is reset if it
+  // is not a constant expression. This avoids propagating symbol references in
+  // scopes where they do not belong. Returns the type unmodified if it is not
+  // a character or if the length is not explicit.
+  DynamicType DropNonConstantCharacterLength() const;
+
 private:
   // Special kind codes are used to distinguish the following Fortran types.
   enum SpecialKind {
@@ -217,7 +256,12 @@ private:
   TypeCategory category_{TypeCategory::Derived}; // overridable default
   int kind_{0};
   const semantics::ParamValue *charLengthParamValue_{nullptr};
+#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE == 7
+  // GCC 7's optional<> lacks a constexpr operator=
+  std::int64_t knownLength_{-1};
+#else
   std::optional<std::int64_t> knownLength_;
+#endif
   const semantics::DerivedTypeSpec *derived_{nullptr}; // TYPE(T), CLASS(T)
 };
 
@@ -228,7 +272,8 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
 const semantics::DerivedTypeSpec *GetParentTypeSpec(
     const semantics::DerivedTypeSpec &);
 
-std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &);
+std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &,
+    const parser::CharBlock *derivedTypeRename = nullptr);
 
 template <TypeCategory CATEGORY, int KIND = 0> struct TypeBase {
   static constexpr TypeCategory category{CATEGORY};
@@ -251,7 +296,10 @@ class Type<TypeCategory::Real, KIND>
 public:
   static constexpr int precision{common::PrecisionOfRealKind(KIND)};
   static constexpr int bits{common::BitsForBinaryPrecision(precision)};
-  using Scalar = value::Real<value::Integer<bits>, precision>;
+  using Scalar =
+      value::Real<std::conditional_t<precision == 64,
+                      value::X87IntegerContainer, value::Integer<bits>>,
+          precision>;
 };
 
 // The KIND type parameter on COMPLEX is the kind of each of its components.
@@ -325,8 +373,10 @@ using LogicalTypes = CategoryTypes<TypeCategory::Logical>;
 
 using FloatingTypes = common::CombineTuples<RealTypes, ComplexTypes>;
 using NumericTypes = common::CombineTuples<IntegerTypes, FloatingTypes>;
-using RelationalTypes = common::CombineTuples<NumericTypes, CharacterTypes>;
-using AllIntrinsicTypes = common::CombineTuples<RelationalTypes, LogicalTypes>;
+using RelationalTypes =
+    common::CombineTuples<IntegerTypes, RealTypes, CharacterTypes>;
+using AllIntrinsicTypes =
+    common::CombineTuples<NumericTypes, CharacterTypes, LogicalTypes>;
 using LengthlessIntrinsicTypes =
     common::CombineTuples<NumericTypes, LogicalTypes>;
 
@@ -346,7 +396,7 @@ template <TypeCategory CATEGORY> struct SomeKind {
   static constexpr TypeCategory category{CATEGORY};
   constexpr bool operator==(const SomeKind &) const { return true; }
   static std::string AsFortran() {
-    return "Some"s + common::EnumToString(category);
+    return "Some"s + std::string{common::EnumToString(category)};
   }
 };
 
@@ -429,9 +479,24 @@ template <typename CONST> struct TypeOfHelper {
 template <typename CONST> using TypeOf = typename TypeOfHelper<CONST>::type;
 
 int SelectedCharKind(const std::string &, int defaultKind);
-int SelectedIntKind(std::int64_t precision = 0);
-int SelectedRealKind(
-    std::int64_t precision = 0, std::int64_t range = 0, std::int64_t radix = 2);
+// SelectedIntKind and SelectedRealKind are now member functions of
+// TargetCharactertics.
+
+// Given the dynamic types and kinds of two operands, determine the common
+// type to which they must be converted in order to be compared with
+// intrinsic OPERATOR(==) or .EQV.
+std::optional<DynamicType> ComparisonType(
+    const DynamicType &, const DynamicType &);
+
+bool IsInteroperableIntrinsicType(const DynamicType &,
+    const common::LanguageFeatureControl * = nullptr,
+    bool checkCharLength = true);
+bool IsCUDAIntrinsicType(const DynamicType &);
+
+// Determine whether two derived type specs are sufficiently identical
+// to be considered the "same" type even if declared separately.
+bool AreSameDerivedType(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \
@@ -442,7 +507,6 @@ int SelectedRealKind(
 #define EXPAND_FOR_EACH_CHARACTER_KIND(M, P, S) M(P, S, 1) M(P, S, 2) M(P, S, 4)
 #define EXPAND_FOR_EACH_LOGICAL_KIND(M, P, S) \
   M(P, S, 1) M(P, S, 2) M(P, S, 4) M(P, S, 8)
-#define TEMPLATE_INSTANTIATION(P, S, ARG) P<ARG> S;
 
 #define FOR_EACH_INTEGER_KIND_HELP(PREFIX, SUFFIX, K) \
   PREFIX<Type<TypeCategory::Integer, K>> SUFFIX;

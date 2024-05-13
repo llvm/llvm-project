@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-scops -pass-remarks-analysis="polly-scops" \
-; RUN: -polly-allow-differing-element-types \
-; RUN:                -analyze < %s  2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -pass-remarks-analysis="polly-scops" \
+; RUN:     -polly-allow-differing-element-types \
+; RUN:     -disable-output < %s  2>&1 | FileCheck %s
 ;
 ;    void foo(long n, long m, char A[][m]) {
 ;      for (long i = 0; i < n; i++)
@@ -15,7 +15,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64 %n, i64 %m, i8* %A) {
+define void @foo(i64 %n, i64 %m, ptr %A) {
 bb:
   br label %bb1
 
@@ -36,15 +36,14 @@ bb3:                                              ; preds = %bb17, %bb2
 bb6:                                              ; preds = %bb3
   %tmp7 = shl nsw i64 %j.0, 2
   %tmp8 = mul nsw i64 %i.0, %m
-  %tmp9 = getelementptr inbounds i8, i8* %A, i64 %tmp8
-  %tmp10 = getelementptr inbounds i8, i8* %tmp9, i64 %tmp7
-  %tmp11 = bitcast i8* %tmp10 to float*
-  %tmp12 = load float, float* %tmp11, align 4
+  %tmp9 = getelementptr inbounds i8, ptr %A, i64 %tmp8
+  %tmp10 = getelementptr inbounds i8, ptr %tmp9, i64 %tmp7
+  %tmp12 = load float, ptr %tmp10, align 4
   %tmp13 = fptosi float %tmp12 to i8
   %tmp14 = mul nsw i64 %i.0, %m
-  %tmp15 = getelementptr inbounds i8, i8* %A, i64 %tmp14
-  %tmp16 = getelementptr inbounds i8, i8* %tmp15, i64 %j.0
-  store i8 %tmp13, i8* %tmp16, align 1
+  %tmp15 = getelementptr inbounds i8, ptr %A, i64 %tmp14
+  %tmp16 = getelementptr inbounds i8, ptr %tmp15, i64 %j.0
+  store i8 %tmp13, ptr %tmp16, align 1
   br label %bb17
 
 bb17:                                             ; preds = %bb6

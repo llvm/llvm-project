@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify %s
 
 // Ensure we substitute into instantiation-dependent but non-dependent
 // constructs. The poster-child for this is...
@@ -37,8 +37,8 @@ namespace PR33655 {
   template<class ...Args> using indirect_void_t = typename indirect_void_t_imp<Args...>::type;
 
   template<class T> void foo() {
-    static_assert(!__is_void(indirect_void_t<T>)); // "ok", dependent
-    static_assert(!__is_void(void_t<T>)); // expected-error {{failed}}
+    int check1[__is_void(indirect_void_t<T>) == 0 ? 1 : -1]; // "ok", dependent
+    int check2[__is_void(void_t<T>) == 0 ? 1 : -1]; // expected-error {{array with a negative size}}
   }
 }
 
@@ -68,8 +68,10 @@ namespace PR46791 { // also PR45782
   struct D : B, C {};
 
   static_assert(trait<A>::specialization == 0);
-  static_assert(trait<B>::specialization == 1); // FIXME expected-error {{failed}}
-  static_assert(trait<C>::specialization == 2); // FIXME expected-error {{failed}}
+  static_assert(trait<B>::specialization == 1); // FIXME expected-error {{failed}} \
+                                                // expected-note {{evaluates to '0 == 1'}}
+  static_assert(trait<C>::specialization == 2); // FIXME expected-error {{failed}} \
+                                                // expected-note {{evaluates to '0 == 2'}}
   static_assert(trait<D>::specialization == 0); // FIXME-error {{ambiguous partial specialization}}
 }
 

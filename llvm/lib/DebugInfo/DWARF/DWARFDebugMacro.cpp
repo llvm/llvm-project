@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -102,8 +105,8 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
 }
 
 Error DWARFDebugMacro::parseImpl(
-    Optional<DWARFUnitVector::compile_unit_range> Units,
-    Optional<DataExtractor> StringExtractor, DWARFDataExtractor Data,
+    std::optional<DWARFUnitVector::compile_unit_range> Units,
+    std::optional<DataExtractor> StringExtractor, DWARFDataExtractor Data,
     bool IsMacro) {
   uint64_t Offset = 0;
   MacroList *M = nullptr;
@@ -112,7 +115,7 @@ Error DWARFDebugMacro::parseImpl(
   if (IsMacro && Data.isValidOffset(Offset)) {
     // Keep a mapping from Macro contribution to CUs, this will
     // be needed while retrieving macro from DW_MACRO_define_strx form.
-    for (const auto &U : Units.getValue())
+    for (const auto &U : *Units)
       if (auto CUDIE = U->getUnitDIE())
         // Skip units which does not contibutes to macro section.
         if (auto MacroOffset = toSectionOffset(CUDIE.find(DW_AT_macros)))
@@ -194,13 +197,11 @@ Error DWARFDebugMacro::parseImpl(
       if (MacroContributionOffset == MacroToUnits.end())
         return createStringError(errc::invalid_argument,
                                  "Macro contribution of the unit not found");
-      Optional<uint64_t> StrOffset =
+      Expected<uint64_t> StrOffset =
           MacroContributionOffset->second->getStringOffsetSectionItem(
               Data.getULEB128(&Offset));
       if (!StrOffset)
-        return createStringError(
-            errc::invalid_argument,
-            "String offsets contribution of the unit not found");
+        return StrOffset.takeError();
       E.MacroStr =
           MacroContributionOffset->second->getStringExtractor().getCStr(
               &*StrOffset);

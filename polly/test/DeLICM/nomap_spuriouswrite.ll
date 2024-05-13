@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
@@ -16,7 +16,7 @@
 ; MUST_WRITE. Also nothing can be map to the MAY_WRITE itself because it is a
 ; MAY_WRITE.
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   %fsomeval = fadd double 21.0, 21.0
   br label %outer.preheader
@@ -52,16 +52,16 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
       %phi.cmp = fcmp ogt double %phi, 0.0
       br i1 %phi.cmp, label %reduction.exit.true, label %reduction.exit.unconditional
 
     reduction.exit.true:
-       store double undef, double* %A_idx
+       store double undef, ptr %A_idx
        br label %reduction.exit.unconditional
 
     reduction.exit.unconditional:
-      store double %phi, double* %A_idx
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

@@ -1,5 +1,7 @@
-; RUN: opt %loadPolly -polly-mse -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-mse -pass-remarks-analysis="polly-mse" -analyze < %s 2>&1 | FileCheck %s --check-prefix=MSE
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly "-passes=scop(print<polly-mse>)" -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
+; RUN: opt %loadNPMPolly "-passes=scop(print<polly-mse>)" -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
 ;
 ; Verify that the accesses are correctly expanded for MemoryKind::PHI
 ; tmp_04 is not expanded because it need copy-in.
@@ -44,7 +46,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @tmp(double* %A, double* %B) {
+define void @tmp(ptr %A, ptr %B) {
 entry:
   br label %entry.split
 
@@ -66,8 +68,8 @@ for.inc:                                          ; preds = %for.body, %for.inc
 
 for.end:                                          ; preds = %for.inc
   %add.lcssa = phi double [ %add, %for.inc ]
-  %arrayidx = getelementptr inbounds double, double* %B, i64 %indvars.iv
-  store double %add.lcssa, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %B, i64 %indvars.iv
+  store double %add.lcssa, ptr %arrayidx, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond5 = icmp ne i64 %indvars.iv.next, 10000
   br i1 %exitcond5, label %for.body, label %for.end7

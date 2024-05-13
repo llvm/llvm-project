@@ -15,30 +15,14 @@
 #include "llvm/Transforms/Scalar/LowerGuardIntrinsic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GuardUtils.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/GuardUtils.h"
 
 using namespace llvm;
-
-namespace {
-struct LowerGuardIntrinsicLegacyPass : public FunctionPass {
-  static char ID;
-  LowerGuardIntrinsicLegacyPass() : FunctionPass(ID) {
-    initializeLowerGuardIntrinsicLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-};
-}
 
 static bool lowerGuardIntrinsic(Function &F) {
   // Check if we can cheaply rule out the possibility of not having any work to
@@ -49,9 +33,13 @@ static bool lowerGuardIntrinsic(Function &F) {
     return false;
 
   SmallVector<CallInst *, 8> ToLower;
-  for (auto &I : instructions(F))
-    if (isGuard(&I))
-      ToLower.push_back(cast<CallInst>(&I));
+  // Traverse through the users of GuardDecl.
+  // This is presumably cheaper than traversing all instructions in the
+  // function.
+  for (auto *U : GuardDecl->users())
+    if (auto *CI = dyn_cast<CallInst>(U))
+      if (CI->getFunction() == &F)
+        ToLower.push_back(CI);
 
   if (ToLower.empty())
     return false;
@@ -66,19 +54,6 @@ static bool lowerGuardIntrinsic(Function &F) {
   }
 
   return true;
-}
-
-bool LowerGuardIntrinsicLegacyPass::runOnFunction(Function &F) {
-  return lowerGuardIntrinsic(F);
-}
-
-char LowerGuardIntrinsicLegacyPass::ID = 0;
-INITIALIZE_PASS(LowerGuardIntrinsicLegacyPass, "lower-guard-intrinsic",
-                "Lower the guard intrinsic to normal control flow", false,
-                false)
-
-Pass *llvm::createLowerGuardIntrinsicPass() {
-  return new LowerGuardIntrinsicLegacyPass();
 }
 
 PreservedAnalyses LowerGuardIntrinsicPass::run(Function &F,

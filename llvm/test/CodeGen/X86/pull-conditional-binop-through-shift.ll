@@ -4,7 +4,7 @@
 
 ; shift left
 
-define i32 @and_signbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
+define i32 @and_signbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: and_signbit_select_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -30,10 +30,10 @@ define i32 @and_signbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = shl i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @and_nosignbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
+define i32 @and_nosignbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: and_nosignbit_select_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -59,11 +59,11 @@ define i32 @and_nosignbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = shl i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @or_signbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
+define i32 @or_signbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: or_signbit_select_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -89,10 +89,10 @@ define i32 @or_signbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = shl i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @or_nosignbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
+define i32 @or_nosignbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: or_nosignbit_select_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -118,11 +118,11 @@ define i32 @or_nosignbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
   %t0 = or i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = shl i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @xor_signbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
+define i32 @xor_signbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: xor_signbit_select_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -148,10 +148,10 @@ define i32 @xor_signbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = shl i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @xor_nosignbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
+define i32 @xor_nosignbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: xor_nosignbit_select_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -177,11 +177,11 @@ define i32 @xor_nosignbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
   %t0 = xor i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = shl i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @add_signbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
+define i32 @add_signbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: add_signbit_select_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -207,10 +207,10 @@ define i32 @add_signbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
   %t0 = add i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = shl i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @add_nosignbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
+define i32 @add_nosignbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: add_nosignbit_select_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -236,13 +236,13 @@ define i32 @add_nosignbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
   %t0 = add i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = shl i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
 ; logical shift right
 
-define i32 @and_signbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @and_signbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: and_signbit_select_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -268,10 +268,10 @@ define i32 @and_signbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = lshr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @and_nosignbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @and_nosignbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: and_nosignbit_select_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -297,11 +297,11 @@ define i32 @and_nosignbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = lshr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @or_signbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @or_signbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: or_signbit_select_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -327,10 +327,10 @@ define i32 @or_signbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = lshr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @or_nosignbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @or_nosignbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: or_nosignbit_select_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -356,11 +356,11 @@ define i32 @or_nosignbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = or i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = lshr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @xor_signbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @xor_signbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: xor_signbit_select_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -386,10 +386,10 @@ define i32 @xor_signbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = lshr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @xor_nosignbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @xor_nosignbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: xor_nosignbit_select_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -415,11 +415,11 @@ define i32 @xor_nosignbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = xor i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = lshr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @add_signbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @add_signbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: add_signbit_select_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -445,10 +445,10 @@ define i32 @add_signbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = add i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = lshr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @add_nosignbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @add_nosignbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: add_nosignbit_select_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -474,13 +474,13 @@ define i32 @add_nosignbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = add i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = lshr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
 ; arithmetic shift right
 
-define i32 @and_signbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @and_signbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: and_signbit_select_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -506,10 +506,10 @@ define i32 @and_signbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = ashr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @and_nosignbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @and_nosignbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: and_nosignbit_select_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -535,11 +535,11 @@ define i32 @and_nosignbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = ashr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @or_signbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @or_signbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: or_signbit_select_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -565,10 +565,10 @@ define i32 @or_signbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = ashr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @or_nosignbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @or_nosignbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: or_nosignbit_select_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -594,11 +594,11 @@ define i32 @or_nosignbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = or i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = ashr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @xor_signbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @xor_signbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: xor_signbit_select_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -624,10 +624,10 @@ define i32 @xor_signbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = ashr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @xor_nosignbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @xor_nosignbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: xor_nosignbit_select_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -653,11 +653,11 @@ define i32 @xor_nosignbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = xor i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = ashr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @add_signbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @add_signbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: add_signbit_select_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -683,10 +683,10 @@ define i32 @add_signbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = add i32 %x, 4294901760 ; 0xFFFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = ashr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @add_nosignbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
+define i32 @add_nosignbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X64-LABEL: add_nosignbit_select_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -712,6 +712,6 @@ define i32 @add_nosignbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
   %t0 = add i32 %x, 2147418112 ; 0x7FFF0000
   %t1 = select i1 %cond, i32 %t0, i32 %x
   %r = ashr i32 %t1, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }

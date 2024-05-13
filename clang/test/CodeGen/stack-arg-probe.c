@@ -11,5 +11,5 @@
 // NO-STACKPROBE: attributes #{{[0-9]+}} = {{{.*}} "no-stack-arg-probe"
 // STACKPROBE-NOT: "no-stack-arg-probe"
 
-void test1() {
+void test1(void) {
 }

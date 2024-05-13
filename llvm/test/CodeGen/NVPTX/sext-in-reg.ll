@@ -1,9 +1,10 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 
 
-define void @one(i64 %a, i64 %b, i64* %p1, i64* %p2) {
+define void @one(i64 %a, i64 %b, ptr %p1, ptr %p2) {
 ; CHECK: cvt.s64.s8
 ; CHECK: cvt.s64.s8
 entry:
@@ -14,14 +15,14 @@ entry:
   %shr = ashr i64 %a, 16
   %shr9 = ashr i64 %b, 16
   %add = add nsw i64 %conv4, %conv1
-  store i64 %add, i64* %p1, align 8
+  store i64 %add, ptr %p1, align 8
   %add17 = add nsw i64 %shr9, %shr
-  store i64 %add17, i64* %p2, align 8
+  store i64 %add17, ptr %p2, align 8
   ret void
 }
 
 
-define void @two(i64 %a, i64 %b, i64* %p1, i64* %p2) {
+define void @two(i64 %a, i64 %b, ptr %p1, ptr %p2) {
 entry:
 ; CHECK: cvt.s64.s32
 ; CHECK: cvt.s64.s32
@@ -32,14 +33,14 @@ entry:
   %shr = ashr i64 %a, 16
   %shr9 = ashr i64 %b, 16
   %add = add nsw i64 %conv4, %conv1
-  store i64 %add, i64* %p1, align 8
+  store i64 %add, ptr %p1, align 8
   %add17 = add nsw i64 %shr9, %shr
-  store i64 %add17, i64* %p2, align 8
+  store i64 %add17, ptr %p2, align 8
   ret void
 }
 
 
-define void @three(i64 %a, i64 %b, i64* %p1, i64* %p2) {
+define void @three(i64 %a, i64 %b, ptr %p1, ptr %p2) {
 entry:
 ; CHECK: cvt.s64.s16
 ; CHECK: cvt.s64.s16
@@ -50,14 +51,14 @@ entry:
   %shr = ashr i64 %a, 16
   %shr9 = ashr i64 %b, 16
   %add = add nsw i64 %conv4, %conv1
-  store i64 %add, i64* %p1, align 8
+  store i64 %add, ptr %p1, align 8
   %add17 = add nsw i64 %shr9, %shr
-  store i64 %add17, i64* %p2, align 8
+  store i64 %add17, ptr %p2, align 8
   ret void
 }
 
 
-define void @four(i32 %a, i32 %b, i32* %p1, i32* %p2) {
+define void @four(i32 %a, i32 %b, ptr %p1, ptr %p2) {
 entry:
 ; CHECK: cvt.s32.s8
 ; CHECK: cvt.s32.s8
@@ -68,14 +69,14 @@ entry:
   %shr = ashr i32 %a, 16
   %shr9 = ashr i32 %b, 16
   %add = add nsw i32 %conv4, %conv1
-  store i32 %add, i32* %p1, align 4
+  store i32 %add, ptr %p1, align 4
   %add17 = add nsw i32 %shr9, %shr
-  store i32 %add17, i32* %p2, align 4
+  store i32 %add17, ptr %p2, align 4
   ret void
 }
 
 
-define void @five(i32 %a, i32 %b, i32* %p1, i32* %p2) {
+define void @five(i32 %a, i32 %b, ptr %p1, ptr %p2) {
 entry:
 ; CHECK: cvt.s32.s16
 ; CHECK: cvt.s32.s16
@@ -86,14 +87,14 @@ entry:
   %shr = ashr i32 %a, 16
   %shr9 = ashr i32 %b, 16
   %add = add nsw i32 %conv4, %conv1
-  store i32 %add, i32* %p1, align 4
+  store i32 %add, ptr %p1, align 4
   %add17 = add nsw i32 %shr9, %shr
-  store i32 %add17, i32* %p2, align 4
+  store i32 %add17, ptr %p2, align 4
   ret void
 }
 
 
-define void @six(i16 %a, i16 %b, i16* %p1, i16* %p2) {
+define void @six(i16 %a, i16 %b, ptr %p1, ptr %p2) {
 entry:
 ; CHECK: cvt.s16.s8
 ; CHECK: cvt.s16.s8
@@ -104,8 +105,8 @@ entry:
   %shr = ashr i16 %a, 8
   %shr9 = ashr i16 %b, 8
   %add = add nsw i16 %conv4, %conv1
-  store i16 %add, i16* %p1, align 4
+  store i16 %add, ptr %p1, align 4
   %add17 = add nsw i16 %shr9, %shr
-  store i16 %add17, i16* %p2, align 4
+  store i16 %add17, ptr %p2, align 4
   ret void
 }

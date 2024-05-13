@@ -43,7 +43,7 @@ public:
   void backoff() {
     volatile T LocalData[Size] = {};
     for (scudo::u32 I = 0; I < Size; I++) {
-      LocalData[I]++;
+      LocalData[I] = LocalData[I] + 1;
       EXPECT_EQ(LocalData[I], 1U);
     }
   }
@@ -98,4 +98,11 @@ TEST(ScudoMutexTest, MutexTry) {
     pthread_create(&Threads[I], 0, tryThread, &Data);
   for (scudo::u32 I = 0; I < NumberOfThreads; I++)
     pthread_join(Threads[I], 0);
+}
+
+TEST(ScudoMutexTest, MutexAssertHeld) {
+  scudo::HybridMutex M;
+  M.lock();
+  M.assertHeld();
+  M.unlock();
 }

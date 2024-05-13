@@ -35,12 +35,16 @@ namespace Sparc {
 #include "SparcGenAsmWriter.inc"
 
 bool SparcInstPrinter::isV9(const MCSubtargetInfo &STI) const {
-  return (STI.getFeatureBits()[Sparc::FeatureV9]) != 0;
+  return (STI.hasFeature(Sparc::FeatureV9)) != 0;
 }
 
-void SparcInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const
-{
-  OS << '%' << StringRef(getRegisterName(RegNo)).lower();
+void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << '%' << getRegisterName(Reg);
+}
+
+void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg,
+                                    unsigned AltIdx) const {
+  OS << '%' << getRegisterName(Reg, AltIdx);
 }
 
 void SparcInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -112,7 +116,11 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   const MCOperand &MO = MI->getOperand (opNum);
 
   if (MO.isReg()) {
-    printRegName(O, MO.getReg());
+    unsigned Reg = MO.getReg();
+    if (isV9(STI))
+      printRegName(O, Reg, SP::RegNamesStateReg);
+    else
+      printRegName(O, Reg);
     return ;
   }
 
@@ -140,15 +148,7 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
 
 void SparcInstPrinter::printMemOperand(const MCInst *MI, int opNum,
                                        const MCSubtargetInfo &STI,
-                                       raw_ostream &O, const char *Modifier) {
-  // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
-    printOperand(MI, opNum, STI, O);
-    O << ", ";
-    printOperand(MI, opNum + 1, STI, O);
-    return;
-  }
-
+                                       raw_ostream &O) {
   const MCOperand &Op1 = MI->getOperand(opNum);
   const MCOperand &Op2 = MI->getOperand(opNum + 1);
 
@@ -179,6 +179,8 @@ void SparcInstPrinter::printCCOperand(const MCInst *MI, int opNum,
   default: break;
   case SP::FBCOND:
   case SP::FBCONDA:
+  case SP::FBCOND_V9:
+  case SP::FBCONDA_V9:
   case SP::BPFCC:
   case SP::BPFCCA:
   case SP::BPFCCNT:
@@ -189,12 +191,24 @@ void SparcInstPrinter::printCCOperand(const MCInst *MI, int opNum,
   case SP::FMOVD_FCC: case SP::V9FMOVD_FCC:
   case SP::FMOVQ_FCC: case SP::V9FMOVQ_FCC:
     // Make sure CC is a fp conditional flag.
-    CC = (CC < 16) ? (CC + 16) : CC;
+    CC = (CC < SPCC::FCC_BEGIN) ? (CC + SPCC::FCC_BEGIN) : CC;
     break;
   case SP::CBCOND:
   case SP::CBCONDA:
     // Make sure CC is a cp conditional flag.
-    CC = (CC < 32) ? (CC + 32) : CC;
+    CC = (CC < SPCC::CPCC_BEGIN) ? (CC + SPCC::CPCC_BEGIN) : CC;
+    break;
+  case SP::BPR:
+  case SP::BPRA:
+  case SP::BPRNT:
+  case SP::BPRANT:
+  case SP::MOVRri:
+  case SP::MOVRrr:
+  case SP::FMOVRS:
+  case SP::FMOVRD:
+  case SP::FMOVRQ:
+    // Make sure CC is a register conditional flag.
+    CC = (CC < SPCC::REG_BEGIN) ? (CC + SPCC::REG_BEGIN) : CC;
     break;
   }
   O << SPARCCondCodeToString((SPCC::CondCodes)CC);
@@ -222,10 +236,20 @@ void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
   }
 
   bool First = true;
-  for (unsigned i = 0; i < sizeof(TagNames) / sizeof(char *); i++) {
+  for (unsigned i = 0; i < std::size(TagNames); i++) {
     if (Imm & (1 << i)) {
       O << (First ? "" : " | ") << TagNames[i];
       First = false;
     }
   }
+}
+
+void SparcInstPrinter::printASITag(const MCInst *MI, int opNum,
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
+  unsigned Imm = MI->getOperand(opNum).getImm();
+  auto ASITag = SparcASITag::lookupASITagByEncoding(Imm);
+  if (isV9(STI) && ASITag)
+    O << '#' << ASITag->Name;
+  else
+    O << Imm;
 }

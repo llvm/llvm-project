@@ -174,7 +174,6 @@ def V6_ldcpnt0Alias : InstAlias<"if ($Pv4) $Vd32.cur = vmem($Rt32):nt", (V6_vL32
 def V6_ldnp0Alias : InstAlias<"if (!$Pv4) $Vd32 = vmem($Rt32)", (V6_vL32b_npred_pi HvxVR:$Vd32, IntRegs:$Rt32, PredRegs:$Pv4, 0)>, Requires<[UseHVX]>;
 def V6_ldnpnt0Alias : InstAlias<"if (!$Pv4) $Vd32 = vmem($Rt32):nt", (V6_vL32b_nt_npred_pi HvxVR:$Vd32, IntRegs:$Rt32, PredRegs:$Pv4, 0)>, Requires<[UseHVX]>;
 def V6_ldnt0Alias : InstAlias<"$Vd32 = vmem($Rt32):nt", (V6_vL32b_nt_ai HvxVR:$Vd32, IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
-def V6_ldntnt0Alias : InstAlias<"$Vd32 = vmem($Rt32):nt", (V6_vL32b_nt_ai HvxVR:$Vd32, IntRegs:$Rt32, 0)>;
 def V6_ldp0Alias : InstAlias<"if ($Pv4) $Vd32 = vmem($Rt32)", (V6_vL32b_pred_ai HvxVR:$Vd32, PredRegs:$Pv4, IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
 def V6_ldpnt0Alias : InstAlias<"if ($Pv4) $Vd32 = vmem($Rt32):nt", (V6_vL32b_nt_pred_ai HvxVR:$Vd32, PredRegs:$Pv4, IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
 def V6_ldtnp0Alias : InstAlias<"if (!$Pv4) $Vd32.tmp = vmem($Rt32)", (V6_vL32b_npred_ai HvxVR:$Vd32, PredRegs:$Pv4, IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
@@ -472,4 +471,5 @@ def V6_vzb_altAlias : InstAlias<"$Vdd32 = vzxtb($Vu32)", (V6_vzb HvxWR:$Vdd32, H
 def V6_vzh_altAlias : InstAlias<"$Vdd32 = vzxth($Vu32)", (V6_vzh HvxWR:$Vdd32, HvxVR:$Vu32)>, Requires<[UseHVX]>;
 def V6_zld0Alias : InstAlias<"z = vmem($Rt32)", (V6_zLd_ai IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
 def V6_zldp0Alias : InstAlias<"if ($Pv4) z = vmem($Rt32)", (V6_zLd_pred_ai PredRegs:$Pv4, IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
+def Y2_crswap_oldAlias : InstAlias<"crswap($Rx32,sgp)", (Y2_crswap0 IntRegs:$Rx32)>;
 def Y2_dcfetchAlias : InstAlias<"dcfetch($Rs32)", (Y2_dcfetchbo IntRegs:$Rs32, 0)>;

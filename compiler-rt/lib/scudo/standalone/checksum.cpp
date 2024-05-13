@@ -8,6 +8,7 @@
 
 #include "checksum.h"
 #include "atomic_helpers.h"
+#include "chunk.h"
 
 #if defined(__x86_64__) || defined(__i386__)
 #include <cpuid.h>
@@ -18,6 +19,8 @@
 #else
 #include <sys/auxv.h>
 #endif
+#elif defined(__loongarch__)
+#include <sys/auxv.h>
 #endif
 
 namespace scudo {
@@ -73,6 +76,20 @@ bool hasHardwareCRC32() {
 #else
   return !!(getauxval(AT_HWCAP) & HWCAP_CRC32);
 #endif // SCUDO_FUCHSIA
+}
+#elif defined(__loongarch__)
+// The definition is only pulled in by <sys/auxv.h> since glibc 2.38, so
+// supply it if missing.
+#ifndef HWCAP_LOONGARCH_CRC32
+#define HWCAP_LOONGARCH_CRC32 (1 << 6)
+#endif
+// Query HWCAP for platform capability, according to *Software Development and
+// Build Convention for LoongArch Architectures* v0.1, Section 9.1.
+//
+// Link:
+// https://github.com/loongson/la-softdev-convention/blob/v0.1/la-softdev-convention.adoc#kernel-development
+bool hasHardwareCRC32() {
+  return !!(getauxval(AT_HWCAP) & HWCAP_LOONGARCH_CRC32);
 }
 #else
 // No hardware CRC32 implemented in Scudo for other architectures.

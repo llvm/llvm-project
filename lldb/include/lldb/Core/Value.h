@@ -107,7 +107,7 @@ public:
 
   Type *GetType();
 
-  Scalar &ResolveValue(ExecutionContext *exe_ctx);
+  Scalar &ResolveValue(ExecutionContext *exe_ctx, Module *module = nullptr);
 
   const Scalar &GetScalar() const { return m_value; }
 
@@ -145,24 +145,24 @@ public:
 
   void Clear();
 
+  static ValueType GetValueTypeFromAddressType(AddressType address_type);
+
 protected:
   Scalar m_value;
   CompilerType m_compiler_type;
-  void *m_context;
-  ValueType m_value_type;
-  ContextType m_context_type;
+  void *m_context = nullptr;
+  ValueType m_value_type = ValueType::Scalar;
+  ContextType m_context_type = ContextType::Invalid;
   DataBufferHeap m_data_buffer;
 };
 
 class ValueList {
 public:
-  ValueList() : m_values() {}
-
-  ValueList(const ValueList &rhs);
-
+  ValueList() = default;
   ~ValueList() = default;
 
-  const ValueList &operator=(const ValueList &rhs);
+  ValueList(const ValueList &rhs) = default;
+  ValueList &operator=(const ValueList &rhs) = default;
 
   // void InsertValue (Value *value, size_t idx);
   void PushValue(const Value &value);

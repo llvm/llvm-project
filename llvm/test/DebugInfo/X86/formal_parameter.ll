@@ -15,6 +15,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 ; RUN: opt %s -O2 -S -o %t
 ; RUN: cat %t | FileCheck --check-prefix=LOWERING %s
 ; RUN: llc -filetype=obj %t -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj %t -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Test that we only emit only one DW_AT_formal_parameter "map" for this function.
 ; rdar://problem/14874886
 ;
@@ -27,17 +28,17 @@ target triple = "x86_64-apple-macosx10.9.0"
 define void @foo(i32 %map) #0 !dbg !4 {
 entry:
   %map.addr = alloca i32, align 4
-  store i32 %map, i32* %map.addr, align 4, !tbaa !15
-  call void @llvm.dbg.declare(metadata i32* %map.addr, metadata !10, metadata !DIExpression()), !dbg !14
-  %call = call i32 (i32*, ...) bitcast (i32 (...)* @lookup to i32 (i32*, ...)*)(i32* %map.addr) #3, !dbg !19
+  store i32 %map, ptr %map.addr, align 4, !tbaa !15
+  call void @llvm.dbg.declare(metadata ptr %map.addr, metadata !10, metadata !DIExpression()), !dbg !14
+  %call = call i32 (ptr, ...) @lookup(ptr %map.addr) #3, !dbg !19
   ; Ensure that all dbg intrinsics have the same scope after
   ; LowerDbgDeclare is finished with them.
   ;
   ; LOWERING: call void @llvm.dbg.value{{.*}}, !dbg ![[LOC:.*]]
   ; LOWERING: call void @llvm.dbg.value{{.*}}, !dbg ![[LOC]]
   ; LOWERING: call void @llvm.dbg.value{{.*}}, !dbg ![[LOC]]
-%0 = load i32, i32* %map.addr, align 4, !dbg !20, !tbaa !15
-  %call1 = call i32 (i32, ...) bitcast (i32 (...)* @verify to i32 (i32, ...)*)(i32 %0) #3, !dbg !20
+%0 = load i32, ptr %map.addr, align 4, !dbg !20, !tbaa !15
+  %call1 = call i32 (i32, ...) @verify(i32 %0) #3, !dbg !20
   ret void, !dbg !22
 }
 

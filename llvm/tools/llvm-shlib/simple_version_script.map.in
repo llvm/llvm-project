@@ -1,1 +1,1 @@
-LLVM_@LLVM_VERSION_MAJOR@ { global: *; };
+@LLVM_SHLIB_SYMBOL_VERSION@ { global: *; };

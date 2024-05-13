@@ -18,7 +18,7 @@ define void @f3() comdat($f3) {
   ret void
 }
 
-$f4 = comdat noduplicates
+$f4 = comdat nodeduplicate
 @v4 = global i32 0, comdat($f4)
 define void @f4() comdat($f4) {
   ret void
@@ -52,8 +52,8 @@ define x86_fastcallcc void @f8() comdat($f8) {
 
 $vftable = comdat largest
 
-@some_name = private unnamed_addr constant [2 x i8*] zeroinitializer, comdat($vftable)
-@vftable = alias i8*, getelementptr([2 x i8*], [2 x i8*]* @some_name, i32 0, i32 1)
+@some_name = private unnamed_addr constant [2 x ptr] zeroinitializer, comdat($vftable)
+@vftable = alias ptr, getelementptr([2 x ptr], ptr @some_name, i32 0, i32 1)
 
 ; CHECK: .section        .text,"xr",discard,_f1
 ; CHECK: .globl  _f1

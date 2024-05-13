@@ -8,7 +8,6 @@
 
 // <unordered_map>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 // template<class InputIterator,
 //          class Hash = hash<iter-key-type<InputIterator>>,
@@ -55,13 +54,39 @@
 // unordered_multimap(initializer_list<pair<Key, T>>, typename see below::size_type, Hash,
 //                    Allocator)
 //   -> unordered_multimap<Key, T, Hash, equal_to<Key>, Allocator>;
+//
+// template<ranges::input_range R, class Hash = hash<range-key-type<R>>,
+//           class Pred = equal_to<range-key-type<R>>,
+//           class Allocator = allocator<range-to-alloc-type<R>>>
+//   unordered_multimap(from_range_t, R&&, typename see below::size_type = see below,
+//                 Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+//     -> unordered_multimap<range-key-type<R>, range-mapped-type<R>, Hash, Pred, Allocator>; // C++23
+//
+// template<ranges::input_range R, class Allocator>
+//   unordered_multimap(from_range_t, R&&, typename see below::size_type, Allocator)
+//     -> unordered_multimap<range-key-type<R>, range-mapped-type<R>, hash<range-key-type<R>>,
+//                       equal_to<range-key-type<R>>, Allocator>;   // C++23
+//
+// template<ranges::input_range R, class Allocator>
+//   unordered_multimap(from_range_t, R&&, Allocator)
+//     -> unordered_multimap<range-key-type<R>, range-mapped-type<R>, hash<range-key-type<R>>,
+//                       equal_to<range-key-type<R>>, Allocator>;   // C++23
+//
+// template<ranges::input_range R, class Hash, class Allocator>
+//   unordered_multimap(from_range_t, R&&, typename see below::size_type, Hash, Allocator)
+//     -> unordered_multimap<range-key-type<R>, range-mapped-type<R>, Hash,
+//                       equal_to<range-key-type<R>>, Allocator>;   // C++23
 
 #include <algorithm> // is_permutation
+#include <array>
 #include <cassert>
 #include <climits> // INT_MAX
 #include <type_traits>
 #include <unordered_map>
 
+#include "../../../test_compare.h"
+#include "../../../test_hash.h"
+#include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
 using P = std::pair<int, long>;
@@ -199,6 +224,79 @@ int main(int, char**)
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 48);
     }
+
+    {
+    // Examples from LWG3025
+    std::unordered_multimap m{std::pair{1, 1}, {2, 2}, {3, 3}};
+    ASSERT_SAME_TYPE(decltype(m), std::unordered_multimap<int, int>);
+
+    std::unordered_multimap m2{m.begin(), m.end()};
+    ASSERT_SAME_TYPE(decltype(m2), std::unordered_multimap<int, int>);
+    }
+
+    {
+    // Examples from LWG3531
+    std::unordered_multimap m1{{std::pair{1, 2}, {3, 4}}, 0};
+    ASSERT_SAME_TYPE(decltype(m1), std::unordered_multimap<int, int>);
+
+    using value_type = std::pair<const int, int>;
+    std::unordered_multimap m2{{value_type{1, 2}, {3, 4}}, 0};
+    ASSERT_SAME_TYPE(decltype(m2), std::unordered_multimap<int, int>);
+    }
+
+#if TEST_STD_VER >= 23
+    {
+      using Range = std::array<P, 0>;
+      using Pred = test_equal_to<int>;
+      using DefaultPred = std::equal_to<int>;
+      using Hash = test_hash<int>;
+      using DefaultHash = std::hash<int>;
+      using Alloc = test_allocator<PC>;
+
+      { // (from_range, range)
+        std::unordered_multimap c(std::from_range, Range());
+        static_assert(std::is_same_v<decltype(c), std::unordered_multimap<int, long>>);
+      }
+
+      { // (from_range, range, n)
+        std::unordered_multimap c(std::from_range, Range(), std::size_t());
+        static_assert(std::is_same_v<decltype(c), std::unordered_multimap<int, long>>);
+      }
+
+      { // (from_range, range, n, hash)
+        std::unordered_multimap c(std::from_range, Range(), std::size_t(), Hash());
+        static_assert(std::is_same_v<decltype(c), std::unordered_multimap<int, long, Hash>>);
+      }
+
+      { // (from_range, range, n, hash, pred)
+        std::unordered_multimap c(std::from_range, Range(), std::size_t(), Hash(), Pred());
+        static_assert(std::is_same_v<decltype(c), std::unordered_multimap<int, long, Hash, Pred>>);
+      }
+
+      { // (from_range, range, n, hash, pred, alloc)
+        std::unordered_multimap c(std::from_range, Range(), std::size_t(), Hash(), Pred(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::unordered_multimap<int, long, Hash, Pred, Alloc>>);
+      }
+
+      { // (from_range, range, n, alloc)
+        std::unordered_multimap c(std::from_range, Range(), std::size_t(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::unordered_multimap<int, long, DefaultHash, DefaultPred, Alloc>>);
+      }
+
+      // TODO(LWG 2713): uncomment this test once the constructor is added.
+      { // (from_range, range, alloc)
+        //std::unordered_multimap c(std::from_range, Range(), Alloc());
+        //static_assert(std::is_same_v<decltype(c), std::unordered_multimap<int, long, DefaultHash, DefaultPred, Alloc>>);
+      }
+
+      { // (from_range, range, n, hash, alloc)
+        std::unordered_multimap c(std::from_range, Range(), std::size_t(), Hash(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::unordered_multimap<int, long, Hash, DefaultPred, Alloc>>);
+      }
+    }
+#endif
+
+    UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_multimap, std::unordered_multimap<int, long>>();
 
     return 0;
 }

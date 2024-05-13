@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 %s -fblocks -pedantic -verify -triple=x86_64-unknown-linux
 // RUN: %clang_cc1 %s -fblocks -pedantic -verify -triple=x86_64-unknown-linux-gnux32
 // RUN: %clang_cc1 %s -fblocks -pedantic -pedantic -verify -triple=arm64_32-apple-ios7.0
+// RUN: %clang_cc1 %s -fblocks -pedantic -verify -triple=powerpc64-ibm-aix-xcoff
 
-// rdar://6097662
 typedef int (*T)[2];
 restrict T x;
 
@@ -14,17 +14,17 @@ restrict S y; // expected-error {{restrict requires a pointer or reference ('S' 
 
 
 // int128_t is available.
-int a() {
+int a(void) {
   __int128_t s;
   __uint128_t t;
 }
 // but not a keyword
-int b() {
+int b(void) {
   int __int128_t;
   int __uint128_t;
 }
 // __int128 is a keyword
-int c() {
+int c(void) {
   __int128 i;
   unsigned __int128 j;
   long unsigned __int128 k; // expected-error {{'long __int128' is invalid}}
@@ -41,19 +41,15 @@ typedef int check_uint_128; // expected-error {{different types ('int' vs '__uin
 
 // Array type merging should convert array size to whatever matches the target
 // pointer size.
-// rdar://6880874
 extern int i[1LL];
 int i[(short)1];
 
 enum e { e_1 };
 extern int j[sizeof(enum e)];  // expected-note {{previous declaration}}
-int j[42];   // expected-error {{redefinition of 'j' with a different type: 'int [42]' vs 'int [4]'}}
+int j[42];   // expected-error {{redefinition of 'j' with a different type: 'int[42]' vs 'int[4]'}}
 
-// rdar://6880104
 _Decimal32 x;  // expected-error {{GNU decimal type extension not supported}}
 
-
-// rdar://6880951
 int __attribute__ ((vector_size (8), vector_size (8))) v;  // expected-error {{invalid vector element type}}
 
 void test(int i) {
@@ -84,10 +80,9 @@ enum { e_2 } x3 __attribute__((vector_size(64))); // expected-error {{invalid ve
 
 int x4 __attribute__((ext_vector_type(64)));  // expected-error {{'ext_vector_type' attribute only applies to typedefs}}
 
-// rdar://16492792
 typedef __attribute__ ((ext_vector_type(32),__aligned__(32))) unsigned char uchar32;
 
-void convert() {
+void convert(void) {
     uchar32 r = 0;
     r.s[ 1234 ] = 1; // expected-error {{illegal vector component name 's'}}
 }

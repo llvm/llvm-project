@@ -204,11 +204,11 @@ public:
   }
 
   llvm::iterator_range<reverse_iterator> reverse() {
-    return llvm::make_range(rbegin(), rend());
+    return llvm::reverse(*this);
   }
 
   llvm::iterator_range<const_reverse_iterator> reverse() const {
-    return llvm::make_range(rbegin(), rend());
+    return llvm::reverse(*this);
   }
 
 private:
@@ -240,6 +240,10 @@ class CopyOnWriteVector {
 
     VectorData() = default;
     VectorData(const VectorData &VD) : Vect(VD.Vect) {}
+
+    // The copy assignment operator is defined as deleted pending further
+    // motivation.
+    VectorData &operator=(const VectorData &) = delete;
   };
 
 public:
@@ -354,4 +358,4 @@ inline std::ostream& operator<<(std::ostream& ss, const StringRef str) {
 } // namespace threadSafety
 } // namespace clang
 
-#endif // LLVM_CLANG_THREAD_SAFETY_UTIL_H
+#endif // LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYUTIL_H

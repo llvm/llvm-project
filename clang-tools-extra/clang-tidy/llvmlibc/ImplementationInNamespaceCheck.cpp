@@ -7,20 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "ImplementationInNamespaceCheck.h"
+#include "NamespaceConstants.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace llvm_libc {
+namespace clang::tidy::llvm_libc {
 
-const static StringRef RequiredNamespace = "__llvm_libc";
 void ImplementationInNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      decl(hasParent(translationUnitDecl()), unless(linkageSpecDecl()))
-          .bind("child_of_translation_unit"),
+      translationUnitDecl(
+          forEach(decl(isExpansionInMainFile(), unless(linkageSpecDecl()),
+                       // anonymous namespaces generate usingDirective
+                       unless(usingDirectiveDecl(isImplicit())))
+                      .bind("child_of_translation_unit"))),
       this);
 }
 
@@ -28,22 +29,23 @@ void ImplementationInNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<Decl>("child_of_translation_unit");
-  if (!Result.SourceManager->isInMainFile(MatchedDecl->getLocation()))
-    return;
-
-  if (const auto *NS = dyn_cast<NamespaceDecl>(MatchedDecl)) {
-    if (NS->getName() != RequiredNamespace) {
-      diag(NS->getLocation(), "'%0' needs to be the outermost namespace")
-          << RequiredNamespace;
-    }
+  const auto *NS = dyn_cast<NamespaceDecl>(MatchedDecl);
+  if (NS == nullptr || NS->isAnonymousNamespace()) {
+    diag(MatchedDecl->getLocation(),
+         "declaration must be enclosed within the '%0' namespace")
+        << RequiredNamespaceMacroName;
     return;
   }
-  diag(MatchedDecl->getLocation(),
-       "declaration must be declared within the '%0' namespace")
-      << RequiredNamespace;
-  return;
+  if (Result.SourceManager->isMacroBodyExpansion(NS->getLocation()) == false) {
+    diag(NS->getLocation(), "the outermost namespace should be the '%0' macro")
+        << RequiredNamespaceMacroName;
+    return;
+  }
+  if (NS->getName().starts_with(RequiredNamespaceStart) == false) {
+    diag(NS->getLocation(), "the '%0' macro should start with '%1'")
+        << RequiredNamespaceMacroName << RequiredNamespaceStart;
+    return;
+  }
 }
 
-} // namespace llvm_libc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_libc

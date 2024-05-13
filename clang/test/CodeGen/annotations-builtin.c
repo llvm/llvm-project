@@ -16,9 +16,9 @@ static int foo(int a) {
 int main(int argc, char **argv) {
     char barray[16];
     char *b = (char *) __builtin_annotation((int)barray, "annotation_a");
-// CHECK: ptrtoint i8* {{.*}} to i32
+// CHECK: ptrtoint ptr {{.*}} to i32
 // CHECK-NEXT: call i32 @llvm.annotation.i32
-// CHECK: inttoptr {{.*}} to i8*
+// CHECK: inttoptr {{.*}} to ptr
 
     int call = __builtin_annotation(foo(argc), "annotation_a");
 // CHECK: call {{.*}} @foo
@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 // CHECK: call i64 @llvm.annotation.i64
 
     int inta = __builtin_annotation(intfoo, "annotation_a");
-// CHECK: load i32, i32* @intfoo
+// CHECK: load i32, ptr @intfoo
 // CHECK-NEXT: call i32 @llvm.annotation.i32
 // CHECK-NEXT: store
 
@@ -39,9 +39,9 @@ int main(int argc, char **argv) {
 // CHECK: call i8 @llvm.annotation.i8
 
     char **arg = (char**) __builtin_annotation((int) argv, "annotation_a");
-// CHECK: ptrtoint i8** {{.*}} to
+// CHECK: ptrtoint ptr {{.*}} to
 // CHECK: call i32 @llvm.annotation.i32
-// CHECK: inttoptr {{.*}} to i8**
+// CHECK: inttoptr {{.*}} to ptr
     return 0;
 
     int after_return = __builtin_annotation(argc, "annotation_a");

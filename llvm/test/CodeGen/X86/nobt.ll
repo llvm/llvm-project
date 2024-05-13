@@ -11,7 +11,7 @@ define void @test2(i32 %x, i32 %n) nounwind {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    calll foo
+; CHECK-NEXT:    calll foo@PLT
 ; CHECK-NEXT:  .LBB0_2: # %UnifiedReturnBlock
 ; CHECK-NEXT:    retl
 entry:
@@ -36,7 +36,7 @@ define void @test3(i32 %x, i32 %n) nounwind {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    calll foo
+; CHECK-NEXT:    calll foo@PLT
 ; CHECK-NEXT:  .LBB1_2: # %UnifiedReturnBlock
 ; CHECK-NEXT:    retl
 entry:
@@ -61,7 +61,7 @@ define void @test4(i32 %x, i32 %n) nounwind {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    calll foo
+; CHECK-NEXT:    calll foo@PLT
 ; CHECK-NEXT:  .LBB2_2: # %UnifiedReturnBlock
 ; CHECK-NEXT:    retl
 entry:
@@ -86,7 +86,7 @@ define void @test5(i32 %x, i32 %n) nounwind {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    calll foo
+; CHECK-NEXT:    calll foo@PLT
 ; CHECK-NEXT:  .LBB3_2: # %UnifiedReturnBlock
 ; CHECK-NEXT:    retl
 entry:

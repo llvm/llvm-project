@@ -16,12 +16,13 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Host.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 // Used to skip tests on unsupported architectures and operating systems.
 // To skip a test, add this macro at the top of a test-case in a suite that
@@ -29,7 +30,7 @@
 #define SKIP_UNSUPPORTED_PLATFORM \
   do \
     if (!ArchSupportsMCJIT() || !OSSupportsMCJIT() || !HostCanBeTargeted()) \
-      return; \
+      GTEST_SKIP(); \
   while(0)
 
 namespace llvm {
@@ -72,7 +73,7 @@ protected:
     // If ARCH has sub-arch support, find it
     SmallVectorImpl<std::string>::const_iterator I = SupportedSubArchs.begin();
     for(; I != SupportedSubArchs.end(); ++I)
-      if (Host.getArchName().startswith(*I))
+      if (Host.getArchName().starts_with(*I))
         return true;
 
     return false;

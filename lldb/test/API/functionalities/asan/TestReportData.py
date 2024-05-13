@@ -3,44 +3,55 @@ Test the AddressSanitizer runtime support for report breakpoint and data extract
 """
 
 
-
 import json
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+from lldbsuite.test_event.build_exception import BuildError
 
 class AsanTestReportDataCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer
-    @skipIf(archs=['i386'], bugnumber="llvm.org/PR36710")
+    @skipIf(archs=["i386"], bugnumber="llvm.org/PR36710")
     def test(self):
-        self.build()
+        self.build(make_targets=["asan"])
         self.asan_tests()
+
+    @skipIf(oslist=no_match(["macosx"]))
+    def test_libsanitizers_asan(self):
+        try:
+            self.build(make_targets=["libsanitizers"])
+        except BuildError as e:
+            self.skipTest("failed to build with libsanitizers")
+        self.asan_tests(libsanitizers=True)
 
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        self.line_malloc = line_number('main.c', '// malloc line')
-        self.line_malloc2 = line_number('main.c', '// malloc2 line')
-        self.line_free = line_number('main.c', '// free line')
-        self.line_breakpoint = line_number('main.c', '// break line')
-        self.line_crash = line_number('main.c', '// BOOM line')
+        self.line_malloc = line_number("main.c", "// malloc line")
+        self.line_malloc2 = line_number("main.c", "// malloc2 line")
+        self.line_free = line_number("main.c", "// free line")
+        self.line_breakpoint = line_number("main.c", "// break line")
+        self.line_crash = line_number("main.c", "// BOOM line")
         self.col_crash = 16
 
-    def asan_tests(self):
+    def asan_tests(self, libsanitizers=False):
         target = self.createTestTarget()
 
-        self.registerSanitizerLibrariesWithTarget(target)
+        if libsanitizers:
+            self.runCmd(
+                "env SanitizersAddress=1 MallocSanitizerZone=1 MallocSecureAllocator=0"
+            )
+        else:
+            self.registerSanitizerLibrariesWithTarget(target)
 
         self.runCmd("run")
 
-        stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        stop_reason = (
+            self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        )
         if stop_reason == lldb.eStopReasonExec:
             # On OS X 10.10 and older, we need to re-exec to enable
             # interceptors.
@@ -49,16 +60,19 @@ class AsanTestReportDataCase(TestBase):
         self.expect(
             "thread list",
             "Process should be stopped due to ASan report",
-            substrs=[
-                'stopped',
-                'stop reason = Use of deallocated memory'])
+            substrs=["stopped", "stop reason = Use of deallocated memory"],
+        )
 
         self.assertEqual(
             self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
-            lldb.eStopReasonInstrumentation)
+            lldb.eStopReasonInstrumentation,
+        )
 
-        self.expect("bt", "The backtrace should show the crashing line",
-                    substrs=['main.c:%d:%d' % (self.line_crash, self.col_crash)])
+        self.expect(
+            "bt",
+            "The backtrace should show the crashing line",
+            substrs=["main.c:%d:%d" % (self.line_crash, self.col_crash)],
+        )
 
         self.expect(
             "thread info -s",
@@ -70,10 +84,11 @@ class AsanTestReportDataCase(TestBase):
                 "description",
                 "heap-use-after-free",
                 "pc",
-            ])
+            ],
+        )
 
-        output_lines = self.res.GetOutput().split('\n')
-        json_line = '\n'.join(output_lines[2:])
+        output_lines = self.res.GetOutput().split("\n")
+        json_line = "\n".join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["description"], "heap-use-after-free")
         self.assertEqual(data["instrumentation_class"], "AddressSanitizer")

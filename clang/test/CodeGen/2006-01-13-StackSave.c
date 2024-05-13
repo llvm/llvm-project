@@ -1,6 +1,8 @@
 // PR691
 // RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
-// CHECK: call i8* @llvm.stacksave()
+// CHECK: call ptr @llvm.stacksave.p0()
+
+extern void external(int[*]);
 
 void test(int N) {
   int i;

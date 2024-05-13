@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -30,19 +31,16 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 #include <utility>
@@ -57,6 +55,11 @@ static cl::opt<unsigned> UserBonusInstThreshold(
 static cl::opt<bool> UserKeepLoops(
     "keep-loops", cl::Hidden, cl::init(true),
     cl::desc("Preserve canonical loop structure (default = true)"));
+
+static cl::opt<bool> UserSwitchRangeToICmp(
+    "switch-range-to-icmp", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Convert switches into an integer range comparison (default = false)"));
 
 static cl::opt<bool> UserSwitchToLookup(
     "switch-to-lookup", cl::Hidden, cl::init(false),
@@ -77,117 +80,139 @@ static cl::opt<bool> UserSinkCommonInsts(
 
 STATISTIC(NumSimpl, "Number of blocks simplified");
 
-/// If we have more than one empty (other than phi node) return blocks,
-/// merge them together to promote recursive block merging.
-static bool mergeEmptyReturnBlocks(Function &F, DomTreeUpdater *DTU) {
-  bool Changed = false;
+static bool
+performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
+                        std::vector<DominatorTree::UpdateType> *Updates) {
+  SmallVector<PHINode *, 1> NewOps;
 
-  std::vector<DominatorTree::UpdateType> Updates;
-  SmallVector<BasicBlock *, 8> DeadBlocks;
+  // We don't want to change IR just because we can.
+  // Only do that if there are at least two blocks we'll tail-merge.
+  if (BBs.size() < 2)
+    return false;
 
-  BasicBlock *RetBlock = nullptr;
+  if (Updates)
+    Updates->reserve(Updates->size() + BBs.size());
 
-  // Scan all the blocks in the function, looking for empty return blocks.
-  for (BasicBlock &BB : make_early_inc_range(F)) {
+  BasicBlock *CanonicalBB;
+  Instruction *CanonicalTerm;
+  {
+    auto *Term = BBs[0]->getTerminator();
+
+    // Create a canonical block for this function terminator type now,
+    // placing it *before* the first block that will branch to it.
+    CanonicalBB = BasicBlock::Create(
+        F.getContext(), Twine("common.") + Term->getOpcodeName(), &F, BBs[0]);
+    // We'll also need a PHI node per each operand of the terminator.
+    NewOps.resize(Term->getNumOperands());
+    for (auto I : zip(Term->operands(), NewOps)) {
+      std::get<1>(I) = PHINode::Create(std::get<0>(I)->getType(),
+                                       /*NumReservedValues=*/BBs.size(),
+                                       CanonicalBB->getName() + ".op");
+      std::get<1>(I)->insertInto(CanonicalBB, CanonicalBB->end());
+    }
+    // Make it so that this canonical block actually has the right
+    // terminator.
+    CanonicalTerm = Term->clone();
+    CanonicalTerm->insertInto(CanonicalBB, CanonicalBB->end());
+    // If the canonical terminator has operands, rewrite it to take PHI's.
+    for (auto I : zip(NewOps, CanonicalTerm->operands()))
+      std::get<1>(I) = std::get<0>(I);
+  }
+
+  // Now, go through each block (with the current terminator type)
+  // we've recorded, and rewrite it to branch to the new common block.
+  DILocation *CommonDebugLoc = nullptr;
+  for (BasicBlock *BB : BBs) {
+    auto *Term = BB->getTerminator();
+    assert(Term->getOpcode() == CanonicalTerm->getOpcode() &&
+           "All blocks to be tail-merged must be the same "
+           "(function-terminating) terminator type.");
+
+    // Aha, found a new non-canonical function terminator. If it has operands,
+    // forward them to the PHI nodes in the canonical block.
+    for (auto I : zip(Term->operands(), NewOps))
+      std::get<1>(I)->addIncoming(std::get<0>(I), BB);
+
+    // Compute the debug location common to all the original terminators.
+    if (!CommonDebugLoc)
+      CommonDebugLoc = Term->getDebugLoc();
+    else
+      CommonDebugLoc =
+          DILocation::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
+
+    // And turn BB into a block that just unconditionally branches
+    // to the canonical block.
+    Term->eraseFromParent();
+    BranchInst::Create(CanonicalBB, BB);
+    if (Updates)
+      Updates->push_back({DominatorTree::Insert, BB, CanonicalBB});
+  }
+
+  CanonicalTerm->setDebugLoc(CommonDebugLoc);
+
+  return true;
+}
+
+static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
+                                                          DomTreeUpdater *DTU) {
+  SmallMapVector<unsigned /*TerminatorOpcode*/, SmallVector<BasicBlock *, 2>, 4>
+      Structure;
+
+  // Scan all the blocks in the function, record the interesting-ones.
+  for (BasicBlock &BB : F) {
     if (DTU && DTU->isBBPendingDeletion(&BB))
       continue;
 
-    // Only look at return blocks.
-    ReturnInst *Ret = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!Ret) continue;
+    // We are only interested in function-terminating blocks.
+    if (!succ_empty(&BB))
+      continue;
 
-    // Only look at the block if it is empty or the only other thing in it is a
-    // single PHI node that is the operand to the return.
-    if (Ret != &BB.front()) {
-      // Check for something else in the block.
-      BasicBlock::iterator I(Ret);
-      --I;
-      // Skip over debug info.
-      while (isa<DbgInfoIntrinsic>(I) && I != BB.begin())
-        --I;
-      if (!isa<DbgInfoIntrinsic>(I) &&
-          (!isa<PHINode>(I) || I != BB.begin() || Ret->getNumOperands() == 0 ||
-           Ret->getOperand(0) != &*I))
-        continue;
-    }
+    auto *Term = BB.getTerminator();
 
-    // If this is the first returning block, remember it and keep going.
-    if (!RetBlock) {
-      RetBlock = &BB;
+    // Fow now only support `ret`/`resume` function terminators.
+    // FIXME: lift this restriction.
+    switch (Term->getOpcode()) {
+    case Instruction::Ret:
+    case Instruction::Resume:
+      break;
+    default:
       continue;
     }
 
-    // Skip merging if this would result in a CallBr instruction with a
-    // duplicate destination. FIXME: See note in CodeGenPrepare.cpp.
-    bool SkipCallBr = false;
-    for (pred_iterator PI = pred_begin(&BB), E = pred_end(&BB);
-         PI != E && !SkipCallBr; ++PI) {
-      if (auto *CBI = dyn_cast<CallBrInst>((*PI)->getTerminator()))
-        for (unsigned i = 0, e = CBI->getNumSuccessors(); i != e; ++i)
-          if (RetBlock == CBI->getSuccessor(i)) {
-            SkipCallBr = true;
-            break;
-          }
-    }
-    if (SkipCallBr)
+    // We can't tail-merge block that contains a musttail call.
+    if (BB.getTerminatingMustTailCall())
       continue;
 
-    // Otherwise, we found a duplicate return block.  Merge the two.
-    Changed = true;
+    // Calls to experimental_deoptimize must be followed by a return
+    // of the value computed by experimental_deoptimize.
+    // I.e., we can not change `ret` to `br` for this block.
+    if (auto *CI =
+            dyn_cast_or_null<CallInst>(Term->getPrevNonDebugInstruction())) {
+      if (Function *F = CI->getCalledFunction())
+        if (Intrinsic::ID ID = F->getIntrinsicID())
+          if (ID == Intrinsic::experimental_deoptimize)
+            continue;
+    }
 
-    // Case when there is no input to the return or when the returned values
-    // agree is trivial.  Note that they can't agree if there are phis in the
-    // blocks.
-    if (Ret->getNumOperands() == 0 ||
-        Ret->getOperand(0) ==
-          cast<ReturnInst>(RetBlock->getTerminator())->getOperand(0)) {
-      // All predecessors of BB should now branch to RetBlock instead.
-      if (DTU) {
-        SmallPtrSet<BasicBlock *, 2> PredsOfBB(pred_begin(&BB), pred_end(&BB));
-        SmallPtrSet<BasicBlock *, 2> PredsOfRetBlock(pred_begin(RetBlock),
-                                                     pred_end(RetBlock));
-        Updates.reserve(Updates.size() + 2 * PredsOfBB.size());
-        for (auto *Predecessor : PredsOfBB)
-          // But, iff Predecessor already branches to RetBlock,
-          // don't (re-)add DomTree edge, because it already exists.
-          if (!PredsOfRetBlock.contains(Predecessor))
-            Updates.push_back({DominatorTree::Insert, Predecessor, RetBlock});
-        for (auto *Predecessor : PredsOfBB)
-          Updates.push_back({DominatorTree::Delete, Predecessor, &BB});
-      }
-      BB.replaceAllUsesWith(RetBlock);
-      DeadBlocks.emplace_back(&BB);
+    // PHI nodes cannot have token type, so if the terminator has an operand
+    // with token type, we can not tail-merge this kind of function terminators.
+    if (any_of(Term->operands(),
+               [](Value *Op) { return Op->getType()->isTokenTy(); }))
       continue;
-    }
 
-    // If the canonical return block has no PHI node, create one now.
-    PHINode *RetBlockPHI = dyn_cast<PHINode>(RetBlock->begin());
-    if (!RetBlockPHI) {
-      Value *InVal = cast<ReturnInst>(RetBlock->getTerminator())->getOperand(0);
-      pred_iterator PB = pred_begin(RetBlock), PE = pred_end(RetBlock);
-      RetBlockPHI = PHINode::Create(Ret->getOperand(0)->getType(),
-                                    std::distance(PB, PE), "merge",
-                                    &RetBlock->front());
-
-      for (pred_iterator PI = PB; PI != PE; ++PI)
-        RetBlockPHI->addIncoming(InVal, *PI);
-      RetBlock->getTerminator()->setOperand(0, RetBlockPHI);
-    }
-
-    // Turn BB into a block that just unconditionally branches to the return
-    // block.  This handles the case when the two return blocks have a common
-    // predecessor but that return different things.
-    RetBlockPHI->addIncoming(Ret->getOperand(0), &BB);
-    BB.getTerminator()->eraseFromParent();
-    BranchInst::Create(RetBlock, &BB);
-    if (DTU)
-      Updates.push_back({DominatorTree::Insert, &BB, RetBlock});
+    // Canonical blocks are uniqued based on the terminator type (opcode).
+    Structure[Term->getOpcode()].emplace_back(&BB);
   }
+
+  bool Changed = false;
+
+  std::vector<DominatorTree::UpdateType> Updates;
+
+  for (ArrayRef<BasicBlock *> BBs : make_second_range(Structure))
+    Changed |= performBlockTailMerging(F, BBs, DTU ? &Updates : nullptr);
 
   if (DTU)
     DTU->applyUpdates(Updates);
-
-  DeleteDeadBlocks(DeadBlocks, DTU);
 
   return Changed;
 }
@@ -203,13 +228,16 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 32> Edges;
   FindFunctionBackedges(F, Edges);
   SmallPtrSet<BasicBlock *, 16> UniqueLoopHeaders;
-  for (unsigned i = 0, e = Edges.size(); i != e; ++i)
-    UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edges[i].second));
+  for (const auto &Edge : Edges)
+    UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edge.second));
 
   SmallVector<WeakVH, 16> LoopHeaders(UniqueLoopHeaders.begin(),
                                       UniqueLoopHeaders.end());
 
+  unsigned IterCnt = 0;
+  (void)IterCnt;
   while (LocalChange) {
+    assert(IterCnt++ < 1000 && "Iterative simplification didn't converge!");
     LocalChange = false;
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
@@ -240,7 +268,8 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
 
   bool EverChanged = removeUnreachableBlocks(F, DT ? &DTU : nullptr);
-  EverChanged |= mergeEmptyReturnBlocks(F, DT ? &DTU : nullptr);
+  EverChanged |=
+      tailMergeBlocksWithSimilarFunctionTerminators(F, DT ? &DTU : nullptr);
   EverChanged |= iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
 
   // If neither pass changed anything, we're done.
@@ -284,6 +313,8 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.BonusInstThreshold = UserBonusInstThreshold;
   if (UserForwardSwitchCond.getNumOccurrences())
     Options.ForwardSwitchCondToPhi = UserForwardSwitchCond;
+  if (UserSwitchRangeToICmp.getNumOccurrences())
+    Options.ConvertSwitchRangeToICmp = UserSwitchRangeToICmp;
   if (UserSwitchToLookup.getNumOccurrences())
     Options.ConvertSwitchToLookupTable = UserSwitchToLookup;
   if (UserKeepLoops.getNumOccurrences())
@@ -294,13 +325,32 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.SinkCommonInsts = UserSinkCommonInsts;
 }
 
-SimplifyCFGPass::SimplifyCFGPass() : Options() {
+SimplifyCFGPass::SimplifyCFGPass() {
   applyCommandLineOverridesToOptions(Options);
 }
 
 SimplifyCFGPass::SimplifyCFGPass(const SimplifyCFGOptions &Opts)
     : Options(Opts) {
   applyCommandLineOverridesToOptions(Options);
+}
+
+void SimplifyCFGPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<SimplifyCFGPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  OS << "bonus-inst-threshold=" << Options.BonusInstThreshold << ';';
+  OS << (Options.ForwardSwitchCondToPhi ? "" : "no-") << "forward-switch-cond;";
+  OS << (Options.ConvertSwitchRangeToICmp ? "" : "no-")
+     << "switch-range-to-icmp;";
+  OS << (Options.ConvertSwitchToLookupTable ? "" : "no-")
+     << "switch-to-lookup;";
+  OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
+  OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
+  OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts;";
+  OS << (Options.SpeculateBlocks ? "" : "no-") << "speculate-blocks;";
+  OS << (Options.SimplifyCondBranch ? "" : "no-") << "simplify-cond-branch";
+  OS << '>';
 }
 
 PreservedAnalyses SimplifyCFGPass::run(Function &F,
@@ -310,11 +360,6 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
   DominatorTree *DT = nullptr;
   if (RequireAndPreserveDomTree)
     DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  if (F.hasFnAttribute(Attribute::OptForFuzzing)) {
-    Options.setSimplifyCondBranch(false).setFoldTwoEntryPHINode(false);
-  } else {
-    Options.setSimplifyCondBranch(true).setFoldTwoEntryPHINode(true);
-  }
   if (!simplifyFunctionCFG(F, TTI, DT, Options))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -347,13 +392,6 @@ struct CFGSimplifyPass : public FunctionPass {
     DominatorTree *DT = nullptr;
     if (RequireAndPreserveDomTree)
       DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    if (F.hasFnAttribute(Attribute::OptForFuzzing)) {
-      Options.setSimplifyCondBranch(false)
-             .setFoldTwoEntryPHINode(false);
-    } else {
-      Options.setSimplifyCondBranch(true)
-             .setFoldTwoEntryPHINode(true);
-    }
 
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     return simplifyFunctionCFG(F, TTI, DT, Options);

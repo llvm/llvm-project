@@ -11,21 +11,21 @@ target triple = "hexagon"
 @g0 = external unnamed_addr global i1, align 4
 
 ; Function Attrs: nounwind
-declare i8* @llvm.stacksave() #0
+declare ptr @llvm.stacksave() #0
 
 ; Function Attrs: nounwind
-declare void @llvm.stackrestore(i8*) #0
+declare void @llvm.stackrestore(ptr) #0
 
 ; Function Attrs: norecurse nounwind
-declare fastcc void @f0(i16 signext, i16 signext, i16 signext, i16* nocapture readonly, i16 signext, i16* nocapture) unnamed_addr #1
+declare fastcc void @f0(i16 signext, i16 signext, i16 signext, ptr nocapture readonly, i16 signext, ptr nocapture) unnamed_addr #1
 
 ; Function Attrs: norecurse nounwind
 declare fastcc signext i16 @f1(i16 signext, i16 signext) unnamed_addr #1
 
 ; Function Attrs: norecurse nounwind
-define fastcc i32 @f2(i16* nocapture readonly %a0, i16 signext %a1, i16 signext %a2, i16* nocapture readonly %a3, i16 signext %a4, i16* nocapture readonly %a51, i16* nocapture %a6) unnamed_addr #1 {
+define fastcc i32 @f2(ptr nocapture readonly %a0, i16 signext %a1, i16 signext %a2, ptr nocapture readonly %a3, i16 signext %a4, ptr nocapture readonly %a51, ptr nocapture %a6) unnamed_addr #1 {
 b0:
-  %v0 = tail call i8* @llvm.stacksave()
+  %v0 = tail call ptr @llvm.stacksave()
   %v1 = tail call fastcc signext i16 @f1(i16 signext %a2, i16 signext %a1)
   br i1 undef, label %b7, label %b1
 
@@ -62,17 +62,17 @@ b8:                                               ; preds = %b7, %b3, %b2
 b9:                                               ; preds = %b8, %b7
   %v8 = phi i16 [ 0, %b8 ], [ %v6, %b7 ]
   %v9 = phi i32 [ %v7, %b8 ], [ 0, %b7 ]
-  %v10 = load i16, i16* undef, align 2, !tbaa !4
+  %v10 = load i16, ptr undef, align 2, !tbaa !4
   %v11 = sext i16 %v10 to i32
   %v12 = zext i16 %v10 to i32
   br i1 undef, label %b10, label %b11
 
 b10:                                              ; preds = %b9
-  store i1 true, i1* @g0, align 4
+  store i1 true, ptr @g0, align 4
   br label %b11
 
 b11:                                              ; preds = %b10, %b9
-  %v13 = load i16, i16* undef, align 2, !tbaa !4
+  %v13 = load i16, ptr undef, align 2, !tbaa !4
   %v14 = sext i16 %v13 to i32
   %v15 = shl nuw i32 %v12, 16
   %v16 = and i32 %v9, 65535
@@ -91,7 +91,7 @@ b11:                                              ; preds = %b10, %b9
   br i1 %v28, label %b12, label %b13
 
 b12:                                              ; preds = %b11
-  store i1 true, i1* @g0, align 4
+  store i1 true, ptr @g0, align 4
   br label %b13
 
 b13:                                              ; preds = %b12, %b11
@@ -113,7 +113,7 @@ b17:                                              ; preds = %b15
   br i1 %v31, label %b18, label %b19
 
 b18:                                              ; preds = %b17
-  store i1 true, i1* @g0, align 4
+  store i1 true, ptr @g0, align 4
   br label %b20
 
 b19:                                              ; preds = %b17, %b16
@@ -125,7 +125,7 @@ b20:                                              ; preds = %b19, %b18
   br i1 %v33, label %b21, label %b22
 
 b21:                                              ; preds = %b20
-  store i1 true, i1* @g0, align 4
+  store i1 true, ptr @g0, align 4
   br label %b23
 
 b22:                                              ; preds = %b20
@@ -135,12 +135,12 @@ b23:                                              ; preds = %b22, %b21
   %v34 = add nsw i32 %v32, 32768
   %v35 = lshr i32 %v34, 16
   %v36 = trunc i32 %v35 to i16
-  store i16 %v36, i16* undef, align 2, !tbaa !4
+  store i16 %v36, ptr undef, align 2, !tbaa !4
   br i1 undef, label %b24, label %b15
 
 b24:                                              ; preds = %b23, %b13
-  call fastcc void @f0(i16 signext undef, i16 signext %a1, i16 signext %a2, i16* %a3, i16 signext %a4, i16* %a6)
-  call void @llvm.stackrestore(i8* %v0)
+  call fastcc void @f0(i16 signext undef, i16 signext %a1, i16 signext %a2, ptr %a3, i16 signext %a4, ptr %a6)
+  call void @llvm.stackrestore(ptr %v0)
   ret i32 undef
 }
 

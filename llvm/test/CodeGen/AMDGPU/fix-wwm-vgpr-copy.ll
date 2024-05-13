@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn--amdpal -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; NOTE: llvm.amdgcn.wwm is deprecated, use llvm.amdgcn.strict.wwm instead.
 
 ; GCN-LABEL: wwm:
-define amdgpu_hs void @wwm(i32 inreg %arg, <4 x i32> inreg %buffer) {
+define amdgpu_hs void @wwm(i32 inreg %arg, ptr addrspace(8) inreg %buffer) {
 entry:
   br label %work
 
@@ -16,7 +16,7 @@ bb602:
   br i1 %tmp607, label %bb49, label %bb54
 
 bb49:
-  call void @llvm.amdgcn.raw.tbuffer.store.f32(float 1.0, <4 x i32> %buffer, i32 4, i32 1, i32 116, i32 1)
+  call void @llvm.amdgcn.raw.ptr.tbuffer.store.f32(float 1.0, ptr addrspace(8) %buffer, i32 4, i32 1, i32 116, i32 1)
   ret void
 
 bb54:
@@ -28,11 +28,11 @@ work:
 ; GCN: s_not_b64 exec, exec
   %tmp1189 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 4, i32 1)
 
-; GCN: s_or_saveexec_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, -1
+; GCN: s_or_saveexec_b64 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], -1
 ; GCN: v_lshlrev_b32_e32 v[[tmp1191:[0-9]+]], 2, v[[tmp1189]]
   %tmp1191 = mul i32 %tmp1189, 4
 
-; GCN: s_mov_b64 exec, s{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_mov_b64 exec, s[[[LO]]:[[HI]]]
   %tmp1196 = tail call i32 @llvm.amdgcn.wwm.i32(i32 %tmp1191)
 
   %tmp34 = icmp eq i32 %arg, 0
@@ -40,7 +40,7 @@ work:
 }
 
 ; GCN-LABEL: strict_wwm:
-define amdgpu_hs void @strict_wwm(i32 inreg %arg, <4 x i32> inreg %buffer) {
+define amdgpu_hs void @strict_wwm(i32 inreg %arg, ptr addrspace(8) inreg %buffer) {
 entry:
   br label %work
 
@@ -53,7 +53,7 @@ bb602:
   br i1 %tmp607, label %bb49, label %bb54
 
 bb49:
-  call void @llvm.amdgcn.raw.tbuffer.store.f32(float 1.0, <4 x i32> %buffer, i32 4, i32 1, i32 116, i32 1)
+  call void @llvm.amdgcn.raw.ptr.tbuffer.store.f32(float 1.0, ptr addrspace(8) %buffer, i32 4, i32 1, i32 116, i32 1)
   ret void
 
 bb54:
@@ -65,11 +65,11 @@ work:
 ; GCN: s_not_b64 exec, exec
   %tmp1189 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 4, i32 1)
 
-; GCN: s_or_saveexec_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, -1
+; GCN: s_or_saveexec_b64 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], -1
 ; GCN: v_lshlrev_b32_e32 v[[tmp1191:[0-9]+]], 2, v[[tmp1189]]
   %tmp1191 = mul i32 %tmp1189, 4
 
-; GCN: s_mov_b64 exec, s{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_mov_b64 exec, s[[[LO]]:[[HI]]]
   %tmp1196 = tail call i32 @llvm.amdgcn.strict.wwm.i32(i32 %tmp1191)
 
   %tmp34 = icmp eq i32 %arg, 0
@@ -79,8 +79,8 @@ work:
 declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #0
 declare i32 @llvm.amdgcn.wwm.i32(i32) #1
 declare i32 @llvm.amdgcn.strict.wwm.i32(i32) #1
-declare void @llvm.amdgcn.raw.tbuffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg, i32 immarg) #2
+declare void @llvm.amdgcn.raw.ptr.tbuffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg) #2
 
 attributes #0 = { convergent nounwind readnone willreturn }
 attributes #1 = { convergent nounwind readnone speculatable willreturn }
-attributes #2 = { nounwind willreturn writeonly }
+attributes #2 = { nounwind willreturn memory(argmem: write) }

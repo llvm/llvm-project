@@ -14,8 +14,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTTU_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTTU_H
 
 #include "../TidyProvider.h"
 #include "Compiler.h"
@@ -23,7 +23,6 @@
 #include "ParsedAST.h"
 #include "TestFS.h"
 #include "index/Index.h"
-#include "support/Path.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 #include <string>
@@ -60,12 +59,18 @@ struct TestTU {
   // Extra arguments for the compiler invocation.
   std::vector<std::string> ExtraArgs;
 
+  // Predefine macros such as __UINTPTR_TYPE__.
+  bool PredefineMacros = false;
+
   TidyProvider ClangTidyProvider = {};
   // Index to use when building AST.
   const SymbolIndex *ExternalIndex = nullptr;
 
   // Simulate a header guard of the header (using an #import directive).
   bool ImplicitHeaderGuard = true;
+
+  // Parse options pass on to the ParseInputs
+  ParseOptions ParseOpts = {};
 
   // Whether to use overlay the TestFS over the real filesystem. This is
   // required for use of implicit modules.where the module file is written to
@@ -104,4 +109,4 @@ const NamedDecl &findUnqualifiedDecl(ParsedAST &AST, llvm::StringRef Name);
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTTU_H

@@ -20,10 +20,12 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -45,6 +47,7 @@ protected:
     IntAttrEntry,
     StringAttrEntry,
     TypeAttrEntry,
+    ConstantRangeAttrEntry,
   };
 
   AttributeImpl(AttrEntryKind KindID) : KindID(KindID) {}
@@ -58,6 +61,9 @@ public:
   bool isIntAttribute() const { return KindID == IntAttrEntry; }
   bool isStringAttribute() const { return KindID == StringAttrEntry; }
   bool isTypeAttribute() const { return KindID == TypeAttrEntry; }
+  bool isConstantRangeAttribute() const {
+    return KindID == ConstantRangeAttrEntry;
+  }
 
   bool hasAttribute(Attribute::AttrKind A) const;
   bool hasAttribute(StringRef Kind) const;
@@ -71,24 +77,34 @@ public:
 
   Type *getValueAsType() const;
 
+  const ConstantRange &getValueAsConstantRange() const;
+
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
 
   void Profile(FoldingSetNodeID &ID) const {
     if (isEnumAttribute())
-      Profile(ID, getKindAsEnum(), static_cast<uint64_t>(0));
+      Profile(ID, getKindAsEnum());
     else if (isIntAttribute())
       Profile(ID, getKindAsEnum(), getValueAsInt());
     else if (isStringAttribute())
       Profile(ID, getKindAsString(), getValueAsString());
-    else
+    else if (isTypeAttribute())
       Profile(ID, getKindAsEnum(), getValueAsType());
+    else
+      Profile(ID, getKindAsEnum(), getValueAsConstantRange());
+  }
+
+  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind) {
+    assert(Attribute::isEnumAttrKind(Kind) && "Expected enum attribute");
+    ID.AddInteger(Kind);
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
                       uint64_t Val) {
+    assert(Attribute::isIntAttrKind(Kind) && "Expected int attribute");
     ID.AddInteger(Kind);
-    if (Val) ID.AddInteger(Val);
+    ID.AddInteger(Val);
   }
 
   static void Profile(FoldingSetNodeID &ID, StringRef Kind, StringRef Values) {
@@ -100,6 +116,13 @@ public:
                       Type *Ty) {
     ID.AddInteger(Kind);
     ID.AddPointer(Ty);
+  }
+
+  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
+                      const ConstantRange &CR) {
+    ID.AddInteger(Kind);
+    CR.getLower().Profile(ID);
+    CR.getUpper().Profile(ID);
   }
 };
 
@@ -136,7 +159,7 @@ class IntAttributeImpl : public EnumAttributeImpl {
 public:
   IntAttributeImpl(Attribute::AttrKind Kind, uint64_t Val)
       : EnumAttributeImpl(IntAttrEntry, Kind), Val(Val) {
-    assert(Attribute::doesAttrKindHaveArgument(Kind) &&
+    assert(Attribute::isIntAttrKind(Kind) &&
            "Wrong kind for int attribute!");
   }
 
@@ -189,6 +212,16 @@ public:
   Type *getTypeValue() const { return Ty; }
 };
 
+class ConstantRangeAttributeImpl : public EnumAttributeImpl {
+  ConstantRange CR;
+
+public:
+  ConstantRangeAttributeImpl(Attribute::AttrKind Kind, const ConstantRange &CR)
+      : EnumAttributeImpl(ConstantRangeAttrEntry, Kind), CR(CR) {}
+
+  const ConstantRange &getConstantRangeValue() const { return CR; }
+};
+
 class AttributeBitSet {
   /// Bitset with a bit for each available attribute Attribute::AttrKind.
   uint8_t AvailableAttrs[12] = {};
@@ -223,7 +256,7 @@ class AttributeSetNode final
 
   static AttributeSetNode *getSorted(LLVMContext &C,
                                      ArrayRef<Attribute> SortedAttrs);
-  Optional<Attribute> findEnumAttribute(Attribute::AttrKind Kind) const;
+  std::optional<Attribute> findEnumAttribute(Attribute::AttrKind Kind) const;
 
 public:
   // AttributesSetNode is uniqued, these should not be available.
@@ -252,14 +285,16 @@ public:
   MaybeAlign getStackAlignment() const;
   uint64_t getDereferenceableBytes() const;
   uint64_t getDereferenceableOrNullBytes() const;
-  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  std::optional<std::pair<unsigned, std::optional<unsigned>>> getAllocSizeArgs()
+      const;
+  unsigned getVScaleRangeMin() const;
+  std::optional<unsigned> getVScaleRangeMax() const;
+  UWTableKind getUWTableKind() const;
+  AllocFnKind getAllocKind() const;
+  MemoryEffects getMemoryEffects() const;
+  FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp) const;
-  Type *getByValType() const;
-  Type *getStructRetType() const;
-  Type *getByRefType() const;
-  Type *getPreallocatedType() const;
-  Type *getInAllocaType() const;
+  Type *getAttributeType(Attribute::AttrKind Kind) const;
 
   using iterator = const Attribute *;
 
@@ -267,7 +302,7 @@ public:
   iterator end() const { return begin() + NumAttrs; }
 
   void Profile(FoldingSetNodeID &ID) const {
-    Profile(ID, makeArrayRef(begin(), end()));
+    Profile(ID, ArrayRef(begin(), end()));
   }
 
   static void Profile(FoldingSetNodeID &ID, ArrayRef<Attribute> AttrList) {

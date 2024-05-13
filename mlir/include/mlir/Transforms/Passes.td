@@ -16,350 +16,15 @@
 include "mlir/Pass/PassBase.td"
 include "mlir/Rewrite/PassUtil.td"
 
-def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
-  let summary = "Fuse affine loop nests";
-  let description = [{
-    This pass performs fusion of loop nests using a slicing-based approach. It
-    combines two fusion strategies: producer-consumer fusion and sibling fusion.
-    Producer-consumer fusion is aimed at fusing pairs of loops where the first
-    one writes to a memref that the second reads. Sibling fusion targets pairs
-    of loops that share no dependences between them but that load from the same
-    memref. The fused loop nests, when possible, are rewritten to access
-    significantly smaller local buffers instead of the original memref's, and
-    the latter are often either completely optimized away or contracted. This
-    transformation leads to enhanced locality and lower memory footprint through
-    the elimination or contraction of temporaries/intermediate memref's. These
-    benefits are sometimes achieved at the expense of redundant computation
-    through a cost model that evaluates available choices such as the depth at
-    which a source slice should be materialized in the designation slice.
-
-    Example 1: Producer-consumer fusion.
-    Input:
-    ```mlir
-    func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
-      %0 = alloc() : memref<10xf32>
-      %1 = alloc() : memref<10xf32>
-      %cst = constant 0.000000e+00 : f32
-      affine.for %arg2 = 0 to 10 {
-        affine.store %cst, %0[%arg2] : memref<10xf32>
-        affine.store %cst, %1[%arg2] : memref<10xf32>
-      }
-      affine.for %arg2 = 0 to 10 {
-        %2 = affine.load %0[%arg2] : memref<10xf32>
-        %3 = addf %2, %2 : f32
-        affine.store %3, %arg0[%arg2] : memref<10xf32>
-      }
-      affine.for %arg2 = 0 to 10 {
-        %2 = affine.load %1[%arg2] : memref<10xf32>
-        %3 = mulf %2, %2 : f32
-        affine.store %3, %arg1[%arg2] : memref<10xf32>
-      }
-      return
-    }
-    ```
-    Output:
-    ```mlir
-    func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
-      %0 = alloc() : memref<1xf32>
-      %1 = alloc() : memref<1xf32>
-      %cst = constant 0.000000e+00 : f32
-      affine.for %arg2 = 0 to 10 {
-        affine.store %cst, %0[0] : memref<1xf32>
-        affine.store %cst, %1[0] : memref<1xf32>
-        %2 = affine.load %1[0] : memref<1xf32>
-        %3 = mulf %2, %2 : f32
-        affine.store %3, %arg1[%arg2] : memref<10xf32>
-        %4 = affine.load %0[0] : memref<1xf32>
-        %5 = addf %4, %4 : f32
-        affine.store %5, %arg0[%arg2] : memref<10xf32>
-      }
-      return
-    }
-    ```
-
-    Example 2: Sibling fusion.
-    Input:
-    ```mlir
-    func @sibling_fusion(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>,
-                         %arg2: memref<10x10xf32>, %arg3: memref<10x10xf32>,
-                         %arg4: memref<10x10xf32>) {
-      affine.for %arg5 = 0 to 3 {
-        affine.for %arg6 = 0 to 3 {
-          %0 = affine.load %arg0[%arg5, %arg6] : memref<10x10xf32>
-          %1 = affine.load %arg1[%arg5, %arg6] : memref<10x10xf32>
-          %2 = mulf %0, %1 : f32
-          affine.store %2, %arg3[%arg5, %arg6] : memref<10x10xf32>
-        }
-      }
-      affine.for %arg5 = 0 to 3 {
-        affine.for %arg6 = 0 to 3 {
-          %0 = affine.load %arg0[%arg5, %arg6] : memref<10x10xf32>
-          %1 = affine.load %arg2[%arg5, %arg6] : memref<10x10xf32>
-          %2 = addf %0, %1 : f32
-          affine.store %2, %arg4[%arg5, %arg6] : memref<10x10xf32>
-        }
-      }
-      return
-    }
-    ```
-    Output:
-    ```mlir
-    func @sibling_fusion(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>,
-                         %arg2: memref<10x10xf32>, %arg3: memref<10x10xf32>,
-                         %arg4: memref<10x10xf32>) {
-      affine.for %arg5 = 0 to 3 {
-        affine.for %arg6 = 0 to 3 {
-          %0 = affine.load %arg0[%arg5, %arg6] : memref<10x10xf32>
-          %1 = affine.load %arg1[%arg5, %arg6] : memref<10x10xf32>
-          %2 = mulf %0, %1 : f32
-          affine.store %2, %arg3[%arg5, %arg6] : memref<10x10xf32>
-          %3 = affine.load %arg0[%arg5, %arg6] : memref<10x10xf32>
-          %4 = affine.load %arg2[%arg5, %arg6] : memref<10x10xf32>
-          %5 = addf %3, %4 : f32
-          affine.store %5, %arg4[%arg5, %arg6] : memref<10x10xf32>
-        }
-      }
-      return
-    }
-    ```
-  }];
-  let constructor = "mlir::createLoopFusionPass()";
-  let options = [
-    Option<"computeToleranceThreshold", "fusion-compute-tolerance", "double",
-           /*default=*/"0.30f", "Fractional increase in additional computation "
-                                "tolerated while fusing">,
-    Option<"fastMemorySpace", "fusion-fast-mem-space", "unsigned",
-           /*default=*/"0",
-           "Faster memory space number to promote fusion buffers to">,
-    Option<"localBufSizeThreshold", "fusion-local-buf-threshold", "uint64_t",
-           /*default=*/"0", "Threshold size (KiB) for promoting local buffers "
-                            "to fast memory space">,
-    Option<"maximalFusion", "fusion-maximal", "bool", /*default=*/"false",
-           "Enables maximal loop fusion">,
-  ];
-  let dependentDialects = ["memref::MemRefDialect"];
-}
-
-def AffinePipelineDataTransfer
-    : FunctionPass<"affine-pipeline-data-transfer"> {
-  let summary = "Pipeline non-blocking data transfers between explicitly "
-                "managed levels of the memory hierarchy";
-  let description = [{
-    This pass performs a transformation to overlap non-blocking DMA operations
-    in a loop with computations through double buffering. This is achieved by
-    advancing dma_start operations with respect to other operations.
-
-    Input
-
-    ```mlir
-    func @pipelinedatatransfer() {
-      %0 = alloc() : memref<256xf32>
-      %1 = alloc() : memref<32xf32, 1>
-      %2 = alloc() : memref<1xf32>
-      %c0 = constant 0 : index
-      %c128 = constant 128 : index
-      affine.for %i0 = 0 to 8 {
-        affine.dma_start %0[%i0], %1[%i0], %2[%c0], %c128 : memref<256xf32>, memref<32xf32, 1>, memref<1xf32>
-        affine.dma_wait %2[%c0], %c128 : memref<1xf32>
-        %3 = affine.load %1[%i0] : memref<32xf32, 1>
-        %4 = "compute"(%3) : (f32) -> f32
-        affine.store %4, %1[%i0] : memref<32xf32, 1>
-      }
-      return
-    }
-    ```
-
-    Output
-
-    ```mlir
-    module {
-      func @pipelinedatatransfer() {
-        %c8 = constant 8 : index
-        %c0 = constant 0 : index
-        %0 = alloc() : memref<256xf32>
-        %c0_0 = constant 0 : index
-        %c128 = constant 128 : index
-        %1 = alloc() : memref<2x32xf32, 1>
-        %2 = alloc() : memref<2x1xf32>
-        affine.dma_start %0[%c0], %1[%c0 mod 2, %c0], %2[%c0 mod 2, symbol(%c0_0)], %c128 : memref<256xf32>, memref<2x32xf32, 1>, memref<2x1xf32>
-        affine.for %arg0 = 1 to 8 {
-          affine.dma_start %0[%arg0], %1[%arg0 mod 2, %arg0], %2[%arg0 mod 2, symbol(%c0_0)], %c128 : memref<256xf32>, memref<2x32xf32, 1>, memref<2x1xf32>
-          %8 = affine.apply #map3(%arg0)
-          %9 = affine.apply #map4(%8)
-          %10 = affine.apply #map4(%8)
-          affine.dma_wait %2[%8 mod 2, symbol(%c0_0)], %c128 : memref<2x1xf32>
-          %11 = affine.load %1[%8 mod 2, %8] : memref<2x32xf32, 1>
-          %12 = "compute"(%11) : (f32) -> f32
-          affine.store %12, %1[%8 mod 2, %8] : memref<2x32xf32, 1>
-        }
-        %3 = affine.apply #map3(%c8)
-        %4 = affine.apply #map4(%3)
-        %5 = affine.apply #map4(%3)
-        affine.dma_wait %2[%3 mod 2, symbol(%c0_0)], %c128 : memref<2x1xf32>
-        %6 = affine.load %1[%3 mod 2, %3] : memref<2x32xf32, 1>
-        %7 = "compute"(%6) : (f32) -> f32
-        affine.store %7, %1[%3 mod 2, %3] : memref<2x32xf32, 1>
-        dealloc %2 : memref<2x1xf32>
-        dealloc %1 : memref<2x32xf32, 1>
-        return
-      }
-    }
-    ```
-  }];
-  let constructor = "mlir::createPipelineDataTransferPass()";
-}
-
-def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
-  let summary = "Adds all required dealloc operations for all allocations in the "
-                "input program";
-  let description = [{
-    This pass implements an algorithm to automatically introduce all required
-    deallocation operations for all buffers in the input program. This ensures that
-    the resulting program does not have any memory leaks.
-
-
-    Input
-
-    ```mlir
-    #map0 = affine_map<(d0) -> (d0)>
-    module {
-      func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-        cond_br %arg0, ^bb1, ^bb2
-      ^bb1:
-        br ^bb3(%arg1 : memref<2xf32>)
-      ^bb2:
-        %0 = alloc() : memref<2xf32>
-        linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
-          indexing_maps = [#map0, #map0],
-          iterator_types = ["parallel"]} %arg1, %0 {
-        ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-          %tmp1 = exp %gen1_arg0 : f32
-          linalg.yield %tmp1 : f32
-        }: memref<2xf32>, memref<2xf32>
-        br ^bb3(%0 : memref<2xf32>)
-      ^bb3(%1: memref<2xf32>):
-        "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
-        return
-      }
-    }
-
-    ```
-
-    Output
-
-    ```mlir
-    #map0 = affine_map<(d0) -> (d0)>
-    module {
-      func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-        cond_br %arg0, ^bb1, ^bb2
-      ^bb1:  // pred: ^bb0
-        %0 = alloc() : memref<2xf32>
-        linalg.copy(%arg1, %0) : memref<2xf32>, memref<2xf32>
-        br ^bb3(%0 : memref<2xf32>)
-      ^bb2:  // pred: ^bb0
-        %1 = alloc() : memref<2xf32>
-        linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
-          indexing_maps = [#map0, #map0],
-          iterator_types = ["parallel"]} %arg1, %1 {
-        ^bb0(%arg3: f32, %arg4: f32):  // no predecessors
-          %4 = exp %arg3 : f32
-          linalg.yield %4 : f32
-        }: memref<2xf32>, memref<2xf32>
-        %2 = alloc() : memref<2xf32>
-        linalg.copy(%1, %2) : memref<2xf32>, memref<2xf32>
-        dealloc %1 : memref<2xf32>
-        br ^bb3(%2 : memref<2xf32>)
-      ^bb3(%3: memref<2xf32>):  // 2 preds: ^bb1, ^bb2
-        linalg.copy(%3, %arg2) : memref<2xf32>, memref<2xf32>
-        dealloc %3 : memref<2xf32>
-        return
-      }
-
-    }
-    ```
-
-  }];
-  let constructor = "mlir::createBufferDeallocationPass()";
-}
-
-def BufferHoisting : FunctionPass<"buffer-hoisting"> {
-  let summary = "Optimizes placement of allocation operations by moving them "
-                "into common dominators and out of nested regions";
-  let description = [{
-    This pass implements an approach to aggressively move allocations upwards
-    into common dominators and out of nested regions.
-  }];
-  let constructor = "mlir::createBufferHoistingPass()";
-}
-
-def BufferLoopHoisting : FunctionPass<"buffer-loop-hoisting"> {
-  let summary = "Optimizes placement of allocation operations by moving them "
-                "out of loop nests";
-  let description = [{
-    This pass implements an approach to aggressively move allocations upwards
-    out of loop nests. It does not move allocations into common dominators.
-  }];
-  let constructor = "mlir::createBufferLoopHoistingPass()";
-}
-
-def PromoteBuffersToStack : FunctionPass<"promote-buffers-to-stack"> {
-  let summary = "Promotes heap-based allocations to automatically managed "
-                "stack-based allocations";
-  let description = [{
-    This pass implements a simple algorithm to convert heap-based memory
-    allocations to stack-based ones. It uses a built-in heuristic to decide
-    whether it makes sense to convert an allocation. Furthermore, dynamic
-    shaped buffers that are limited by the rank of the tensor can be
-    converted. They are only transformed if they are considered to be small.
-  }];
-  let constructor = "mlir::createPromoteBuffersToStackPass()";
-  let options = [
-    Option<"maxAllocSizeInBytes", "max-alloc-size-in-bytes", "unsigned",
-           /*default=*/"1024",
-           "Maximal size in bytes to promote allocations to stack.">,
-    Option<"bitwidthOfIndexType", "bitwidth-of-index-type", "unsigned",
-           /*default=*/"64",
-           "Bitwidth of the index type. Used for size estimation.">,
-    Option<"maxRankOfAllocatedMemRef", "max-rank-of-allocated-memref", "unsigned",
-           /*default=*/"1",
-           "Maximal memref rank to promote dynamic buffers.">,
-  ];
-}
-
-def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp">  {
-  let summary = "Converts memref-typed function results to out-params";
-  let description = [{
-    Some calling conventions prefer to pass output memrefs as "out params". The
-    conversion to this calling convention must be done as an atomic
-    transformation of the entire program (hence this is a module pass).
-
-    For example, if a call is rewritten, the callee needs to be rewritten
-    otherwise the IR will end up invalid. Thus, this transformation
-    require an atomic change to the entire program (e.g. the whole module).
-
-    This pass is expected to run immediately after bufferization is finished.
-    At that point, tensor-typed results will have been converted to memref-typed
-    results, and can be consistently converted to out params.
-
-    All memref-typed results are appended to the function argument list.
-
-    The main issue with this pass (and the out-param calling convention) is that
-    buffers for results need to be allocated in the caller. This currently only
-    works for static shaped memrefs.
-  }];
-  let constructor = "mlir::createBufferResultsToOutParamsPass()";
-  let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect"];
-}
-
 def Canonicalizer : Pass<"canonicalize"> {
   let summary = "Canonicalize operations";
   let description = [{
     This pass performs various types of canonicalizations over a set of
-    operations. See [Operation Canonicalization](Canonicalization.md) for more
+    operations by iteratively applying the canonicalization patterns of all
+    loaded dialects until either a fixpoint is reached or the maximum number of
+    iterations/rewrites is exhausted. Canonicalization is best-effort and does
+    not guarantee that the entire IR is in a canonical form after running this
+    pass. See [Operation Canonicalization](Canonicalization.md) for more
     details.
   }];
   let constructor = "mlir::createCanonicalizerPass()";
@@ -369,11 +34,39 @@ def Canonicalizer : Pass<"canonicalize"> {
            "Seed the worklist in general top-down order">,
     Option<"enableRegionSimplification", "region-simplify", "bool",
            /*default=*/"true",
-           "Seed the worklist in general top-down order">,
-    Option<"maxIterations", "max-iterations", "unsigned",
+           "Perform control flow optimizations to the region tree">,
+    Option<"maxIterations", "max-iterations", "int64_t",
            /*default=*/"10",
-           "Seed the worklist in general top-down order">
+           "Max. iterations between applying patterns / simplifying regions">,
+    Option<"maxNumRewrites", "max-num-rewrites", "int64_t", /*default=*/"-1",
+           "Max. number of pattern rewrites within an iteration">,
+    Option<"testConvergence", "test-convergence", "bool", /*default=*/"false",
+           "Test only: Fail pass on non-convergence to detect cyclic pattern">
   ] # RewritePassUtils.options;
+}
+
+def ControlFlowSink : Pass<"control-flow-sink"> {
+  let summary = "Sink operations into conditional blocks";
+  let description = [{
+    This pass implements control-flow sink on operations that implement
+    `RegionBranchOpInterface` by moving dominating operations whose only uses
+    are in a conditionally-executed regions into those regions so that
+    executions paths where their results are not needed do not perform
+    unnecessary computations.
+
+    This is similar (but opposite) to loop-invariant code motion, which hoists
+    operations out of regions executed more than once. The implementation of
+    control-flow sink uses a simple and conversative cost model: operations are
+    never duplicated and are only moved into singly-executed regions.
+
+    It is recommended to run canonicalization first to remove unreachable
+    blocks: ops in unreachable blocks may prevent other operations from being
+    sunk as they may contain uses of their results
+  }];
+  let constructor = "::mlir::createControlFlowSinkPass()";
+  let statistics = [
+    Statistic<"numSunk", "num-sunk", "Number of operations sunk">,
+  ];
 }
 
 def CSE : Pass<"cse"> {
@@ -392,36 +85,207 @@ def CSE : Pass<"cse"> {
   ];
 }
 
+def RemoveDeadValues : Pass<"remove-dead-values"> {
+  let summary = "Remove dead values";
+  let description = [{
+    The goal of this pass is optimization (reducing runtime) by removing
+    unnecessary instructions. Unlike other passes that rely on local information
+    gathered from patterns to accomplish optimization, this pass uses a full
+    analysis of the IR, specifically, liveness analysis, and is thus more
+    powerful.
+
+    Currently, this pass performs the following optimizations:
+    (A) Removes function arguments that are not live,
+    (B) Removes function return values that are not live across all callers of
+    the function,
+    (C) Removes unneccesary operands, results, region arguments, and region
+    terminator operands of region branch ops, and,
+    (D) Removes simple and region branch ops that have all non-live results and
+    don't affect memory in any way,
+
+    iff
+
+    the IR doesn't have any non-function symbol ops, non-call symbol user ops
+    and branch ops.
+
+    Here, a "simple op" refers to an op that isn't a symbol op, symbol-user op,
+    region branch op, branch op, region branch terminator op, or return-like.
+
+    It is noteworthy that we do not refer to non-live values as "dead" in this
+    file to avoid confusing it with dead code analysis's "dead", which refers to
+    unreachable code (code that never executes on hardware) while "non-live"
+    refers to code that executes on hardware but is unnecessary. Thus, while the
+    removal of dead code helps little in reducing runtime, removing non-live
+    values should theoretically have significant impact (depending on the amount
+    removed).
+
+    It is also important to note that unlike other passes (like `canonicalize`)
+    that apply op-specific optimizations through patterns, this pass uses
+    different interfaces to handle various types of ops and tries to cover all
+    existing ops through these interfaces.
+
+    It is because of its reliance on (a) liveness analysis and (b) interfaces
+    that makes it so powerful that it can optimize ops that don't have a
+    canonicalizer and even when an op does have a canonicalizer, it can perform
+    more aggressive optimizations, as observed in the test files associated with
+    this pass.
+
+    Example of optimization (A):-
+
+    ```
+    int add_2_to_y(int x, int y) {
+      return 2 + y
+    }
+
+    print(add_2_to_y(3, 4))
+    print(add_2_to_y(5, 6))
+    ```
+
+    becomes
+
+    ```
+    int add_2_to_y(int y) {
+      return 2 + y
+    }
+
+    print(add_2_to_y(4))
+    print(add_2_to_y(6))
+    ```
+
+    Example of optimization (B):-
+
+    ```
+    int, int get_incremented_values(int y) {
+      store y somewhere in memory
+      return y + 1, y + 2
+    }
+
+    y1, y2 = get_incremented_values(4)
+    y3, y4 = get_incremented_values(6)
+    print(y2)
+    ```
+
+    becomes
+
+    ```
+    int get_incremented_values(int y) {
+      store y somewhere in memory
+      return y + 2
+    }
+
+    y2 = get_incremented_values(4)
+    y4 = get_incremented_values(6)
+    print(y2)
+    ```
+
+    Example of optimization (C):-
+
+    Assume only `%result1` is live here. Then,
+
+    ```
+    %result1, %result2, %result3 = scf.while (%arg1 = %operand1, %arg2 = %operand2) {
+      %terminator_operand2 = add %arg2, %arg2
+      %terminator_operand3 = mul %arg2, %arg2
+      %terminator_operand4 = add %arg1, %arg1
+      scf.condition(%terminator_operand1) %terminator_operand2, %terminator_operand3, %terminator_operand4
+    } do {
+    ^bb0(%arg3, %arg4, %arg5):
+      %terminator_operand6 = add %arg4, %arg4
+      %terminator_operand5 = add %arg5, %arg5
+      scf.yield %terminator_operand5, %terminator_operand6
+    }
+    ```
+
+    becomes
+
+    ```
+    %result1, %result2 = scf.while (%arg2 = %operand2) {
+      %terminator_operand2 = add %arg2, %arg2
+      %terminator_operand3 = mul %arg2, %arg2
+      scf.condition(%terminator_operand1) %terminator_operand2, %terminator_operand3
+    } do {
+    ^bb0(%arg3, %arg4):
+      %terminator_operand6 = add %arg4, %arg4
+      scf.yield %terminator_operand6
+    }
+    ```
+
+    It is interesting to see that `%result2` won't be removed even though it is
+    not live because `%terminator_operand3` forwards to it and cannot be
+    removed. And, that is because it also forwards to `%arg4`, which is live.
+
+    Example of optimization (D):-
+
+    ```
+    int square_and_double_of_y(int y) {
+      square = y ^ 2
+      double = y * 2
+      return square, double
+    }
+
+    sq, do = square_and_double_of_y(5)
+    print(do)
+    ```
+
+    becomes
+
+    ```
+    int square_and_double_of_y(int y) {
+      double = y * 2
+      return double
+    }
+
+    do = square_and_double_of_y(5)
+    print(do)
+    ```
+  }];
+  let constructor = "mlir::createRemoveDeadValuesPass()";
+}
+
+def PrintIRPass : Pass<"print-ir"> {
+  let summary = "Print IR on the debug stream";
+  let description = [{
+    Print the entire IR on the debug stream. This is meant for debugging
+    purposes to inspect the IR at a specific point in the pipeline.
+  }];
+  let constructor = "mlir::createPrintIRPass()";
+  let options = [
+    Option<"label", "label", "std::string", /*default=*/"", "Label">,
+  ];
+}
+
+def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {
+  let summary = "Generate additional runtime op verification checks";
+  let description = [{
+    This pass generates op-specific runtime checks using the
+    `RuntimeVerifiableOpInterface`. It can be run for debugging purposes after
+    passes that are suspected to introduce faulty IR.
+  }];
+  let constructor = "mlir::createGenerateRuntimeVerificationPass()";
+}
+
 def Inliner : Pass<"inline"> {
   let summary = "Inline function calls";
   let constructor = "mlir::createInlinerPass()";
   let options = [
     Option<"defaultPipelineStr", "default-pipeline", "std::string",
-           /*default=*/"", "The default optimizer pipeline used for callables">,
-    ListOption<"opPipelineStrs", "op-pipelines", "std::string",
+           /*default=*/"\"canonicalize\"",
+           "The optimizer pipeline used for callables that do not have "
+           "a dedicated optimizer pipeline in opPipelineList">,
+    ListOption<"opPipelineList", "op-pipelines", "OpPassManager",
                "Callable operation specific optimizer pipelines (in the form "
-               "of `dialect.op(pipeline)`)",
-               "llvm::cl::MiscFlags::CommaSeparated">,
+               "of `dialect.op(pipeline)`)">,
     Option<"maxInliningIterations", "max-iterations", "unsigned",
            /*default=*/"4",
            "Maximum number of iterations when inlining within an SCC">,
+    Option<"inliningThreshold", "inlining-threshold", "unsigned",
+           /*default=*/"-1U",
+           "If the ratio between the number of the operations "
+           "in the callee and the number of the operations "
+           "in the caller exceeds this value (in percentage), "
+           "then the callee is not inlined even if it is legal "
+           "to inline it">,
   ];
-}
-
-def FinalizingBufferize : FunctionPass<"finalizing-bufferize"> {
-  let summary = "Finalize a partial bufferization";
-  let description = [{
-    A bufferize pass that finalizes a partial bufferization by removing
-    remaining `memref.tensor_load` and `memref.buffer_cast` operations.
-
-    The removal of those operations is only possible if the operations only
-    exist in pairs, i.e., all uses of `memref.tensor_load` operations are
-    `memref.buffer_cast` operations.
-
-    This pass will fail if not all operations can be removed or if any operation
-    with tensor typed operands remains.
-  }];
-  let constructor = "mlir::createFinalizingBufferizePass()";
 }
 
 def LocationSnapshot : Pass<"snapshot-op-locations"> {
@@ -447,7 +311,7 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
     ```
 
     * If set, the new location is fused with the original location in the form
-    of a [`Name Location`](Diagnostics.md#name-location) with the specified tag.
+    of a [`Name Location`](Dialects/Builtin.md/#nameloc) with the specified tag.
 
     Example:
 
@@ -469,207 +333,57 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
   ];
 }
 
-def LoopCoalescing : FunctionPass<"loop-coalescing"> {
-  let summary = "Coalesce nested loops with independent bounds into a single "
-                "loop";
-  let constructor = "mlir::createLoopCoalescingPass()";
-}
-
 def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
   let summary = "Hoist loop invariant instructions outside of the loop";
   let constructor = "mlir::createLoopInvariantCodeMotionPass()";
 }
 
-def MemRefDataFlowOpt : FunctionPass<"memref-dataflow-opt"> {
-  let summary = "Perform store/load forwarding for memrefs";
+def LoopInvariantSubsetHoisting : Pass<"loop-invariant-subset-hoisting"> {
+  let summary = "Hoist loop invariant subset ops outside of the loop";
+  let constructor = "mlir::createLoopInvariantSubsetHoistingPass()";
+}
+
+def Mem2Reg : Pass<"mem2reg"> {
+  let summary = "Promotes memory slots into values.";
   let description = [{
-    This pass performs store to load forwarding for memref's to eliminate memory
-    accesses and potentially the entire memref if all its accesses are
-    forwarded.
+    This pass removes loads out of and stores into a memory slot, and turns
+    them into direct uses of SSA values. This is done generically using the
+    `PromoteAllocationOpInterface`, `PromoteOpInterface` and
+    `PromoteMemOpInterface` interfaces.
 
-    Input
+    This pass will attempt to compute which definitions of the content of
+    the memory slot reach operations that use the memory slot pointer. It
+    will rewire or remove operations that use the slot pointer so they no
+    longer use it. If any of this is not possible, the IR will be left
+    without mutation.
 
-    ```mlir
-    func @store_load_affine_apply() -> memref<10x10xf32> {
-      %cf7 = constant 7.0 : f32
-      %m = alloc() : memref<10x10xf32>
-      affine.for %i0 = 0 to 10 {
-        affine.for %i1 = 0 to 10 {
-          affine.store %cf7, %m[%i0, %i1] : memref<10x10xf32>
-          %v0 = affine.load %m[%i0, %i1] : memref<10x10xf32>
-          %v1 = addf %v0, %v0 : f32
-        }
-      }
-      return %m : memref<10x10xf32>
-    }
-    ```
-
-    Output
-
-    ```mlir
-    module {
-      func @store_load_affine_apply() -> memref<10x10xf32> {
-        %cst = constant 7.000000e+00 : f32
-        %0 = alloc() : memref<10x10xf32>
-        affine.for %arg0 = 0 to 10 {
-          affine.for %arg1 = 0 to 10 {
-            affine.store %cst, %0[%arg0, %arg1] : memref<10x10xf32>
-            %1 = addf %cst, %cst : f32
-          }
-        }
-        return %0 : memref<10x10xf32>
-      }
-    }
-    ```
+    This pass only supports unstructured control-flow. Promotion of operations
+    within subregions will not happen.
   }];
-  let constructor = "mlir::createMemRefDataFlowOptPass()";
-}
 
-def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
-  let summary = "Normalize memrefs";
-   let description = [{
-    This pass transforms memref types with a non-trivial
-    [layout map](https://mlir.llvm.org/docs/LangRef/#layout-map) into
-    memref types with an identity layout map, e.g. (i, j) -> (i, j). This
-    pass is inter-procedural, in the sense that it can modify function
-    interfaces and call sites that pass memref types. In order to modify
-    memref types while preserving the original behavior, users of those
-    memref types are also modified to incorporate the resulting layout map.
-    For instance, an [AffineLoadOp]
-    (https://mlir.llvm.org/docs/Dialects/Affine/#affineload-affineloadop)
-    will be updated to compose the layout map with with the affine expression
-    contained in the op. Operations marked with the [MemRefsNormalizable]
-    (https://mlir.llvm.org/docs/Traits/#memrefsnormalizable) trait are
-    expected to be normalizable. Supported operations include affine
-    operations, memref.alloc, memref.dealloc, and std.return.
-
-    Given an appropriate layout map specified in the code, this transformation
-    can express tiled or linearized access to multi-dimensional data
-    structures, but will not modify memref types without an explicit layout
-    map.
-
-    Currently this pass is limited to only modify
-    functions where all memref types can be normalized. If a function
-    contains any operations that are not MemRefNormalizable, then the function
-    and any functions that call or call it will not be modified.
-
-    Input
-
-    ```mlir
-    #tile = affine_map<(i) -> (i floordiv 4, i mod 4)>
-    func @matmul(%A: memref<16xf64, #tile>,
-                 %B: index, %C: memref<16xf64>) -> (memref<16xf64, #tile>) {
-      affine.for %arg3 = 0 to 16 {
-            %a = affine.load %A[%arg3] : memref<16xf64, #tile>
-            %p = mulf %a, %a : f64
-            affine.store %p, %A[%arg3] : memref<16xf64, #tile>
-      }
-      %c = alloc() : memref<16xf64, #tile>
-      %d = affine.load %c[0] : memref<16xf64, #tile>
-      return %A: memref<16xf64, #tile>
-    }
-    ```
-
-    Output
-
-    ```mlir
-    func @matmul(%arg0: memref<4x4xf64>, %arg1: index, %arg2: memref<16xf64>)
-      -> memref<4x4xf64> {
-      affine.for %arg3 = 0 to 16 {
-        %3 = affine.load %arg0[%arg3 floordiv 4, %arg3 mod 4]: memref<4x4xf64>
-        %4 = mulf %3, %3 : f64
-        affine.store %4, %arg0[%arg3 floordiv 4, %arg3 mod 4]: memref<4x4xf64>
-      }
-      %0 = alloc() : memref<4x4xf64>
-      %1 = affine.apply #map1()
-      %2 = affine.load %0[0, 0] : memref<4x4xf64>
-      return %arg0 : memref<4x4xf64>
-    }
-    ```
-
-    Input
-
-    ```
-    #linear8 = affine_map<(i, j) -> (i * 8 + j)>
-    func @linearize(%arg0: memref<8x8xi32, #linear8>,
-                    %arg1: memref<8x8xi32, #linear8>,
-                    %arg2: memref<8x8xi32, #linear8>) {
-      %c8 = constant 8 : index
-      %c0 = constant 0 : index
-      %c1 = constant 1 : index
-      affine.for %arg3 = %c0 to %c8  {
-      affine.for %arg4 = %c0 to %c8  {
-        affine.for %arg5 = %c0 to %c8 {
-          %0 = affine.load %arg0[%arg3, %arg5] : memref<8x8xi32, #linear8>
-          %1 = affine.load %arg1[%arg5, %arg4] : memref<8x8xi32, #linear8>
-          %2 = affine.load %arg2[%arg3, %arg4] : memref<8x8xi32, #linear8>
-          %3 = muli %0, %1 : i32
-          %4 = addi %2, %3 : i32
-          affine.store %4, %arg2[%arg3, %arg4] : memref<8x8xi32, #linear8>
-        }
-      }
-      }
-      return
-    }
-    ```
-
-    Output
-
-    ```mlir
-    func @linearize(%arg0: memref<64xi32>,
-                    %arg1: memref<64xi32>,
-                    %arg2: memref<64xi32>) {
-    %c8 = constant 8 : index
-    %c0 = constant 0 : index
-    affine.for %arg3 = %c0 to %c8 {
-      affine.for %arg4 = %c0 to %c8 {
-        affine.for %arg5 = %c0 to %c8 {
-          %0 = affine.load %arg0[%arg3 * 8 + %arg5] : memref<64xi32>
-          %1 = affine.load %arg1[%arg5 * 8 + %arg4] : memref<64xi32>
-          %2 = affine.load %arg2[%arg3 * 8 + %arg4] : memref<64xi32>
-          %3 = muli %0, %1 : i32
-          %4 = addi %2, %3 : i32
-          affine.store %4, %arg2[%arg3 * 8 + %arg4] : memref<64xi32>
-        }
-      }
-    }
-    return
-  }
-  ```
-  }];
-  let constructor = "mlir::createNormalizeMemRefsPass()";
-  let dependentDialects = ["AffineDialect"];
-}
-
-def ParallelLoopCollapsing : Pass<"parallel-loop-collapsing"> {
-  let summary = "Collapse parallel loops to use less induction variables";
-  let constructor = "mlir::createParallelLoopCollapsingPass()";
   let options = [
-    ListOption<"clCollapsedIndices0", "collapsed-indices-0", "unsigned",
-               "Which loop indices to combine 0th loop index",
-               "llvm::cl::MiscFlags::CommaSeparated">,
-    ListOption<"clCollapsedIndices1", "collapsed-indices-1", "unsigned",
-               "Which loop indices to combine into the position 1 loop index",
-               "llvm::cl::MiscFlags::CommaSeparated">,
-    ListOption<"clCollapsedIndices2", "collapsed-indices-2", "unsigned",
-               "Which loop indices to combine into the position 2 loop index",
-               "llvm::cl::MiscFlags::CommaSeparated">,
+    Option<"enableRegionSimplification", "region-simplify", "bool",
+       /*default=*/"true",
+       "Perform control flow optimizations to the region tree">,
   ];
-}
 
-def PrintCFG : FunctionPass<"print-cfg-graph"> {
-  let summary = "Print CFG graph per-Region";
-  let constructor = "mlir::createPrintCFGGraphPass()";
+  let statistics = [
+    Statistic<"promotedAmount",
+              "promoted slots",
+              "Total amount of memory slot promoted">,
+    Statistic<"newBlockArgumentAmount",
+              "new block args",
+              "Total amount of new block argument inserted in blocks">,
+  ];
 }
 
 def PrintOpStats : Pass<"print-op-stats"> {
   let summary = "Print statistics of operations";
   let constructor = "mlir::createPrintOpStatsPass()";
-}
-
-def PrintOp : Pass<"print-op-graph", "ModuleOp"> {
-  let summary = "Print op graph per-Region";
-  let constructor = "mlir::createPrintOpGraphPass()";
+  let options = [
+    Option<"printAsJSON", "json", "bool", /*default=*/"false",
+           "print the stats as JSON">
+  ];
 }
 
 def SCCP : Pass<"sccp"> {
@@ -686,11 +400,47 @@ def SCCP : Pass<"sccp"> {
   let constructor = "mlir::createSCCPPass()";
 }
 
+def SROA : Pass<"sroa"> {
+  let summary = "Scalar Replacement of Aggregates";
+  let description = [{
+    Scalar Replacement of Aggregates. Replaces allocations of aggregates into
+    independant allocations of its elements.
+
+    Allocators must implement `DestructurableAllocationOpInterface` to provide
+    the list of memory slots for which destructuring should be attempted.
+
+    This pass will only be applied if all accessors of the aggregate implement
+    the `DestructurableAccessorOpInterface`. If the accessors provide a view
+    into the struct, users of the view must ensure it is used in a type-safe
+    manner and within bounds by implementing `TypeSafeOpInterface`.
+  }];
+
+  let statistics = [
+    Statistic<
+      "destructuredAmount",
+      "destructured slots",
+      "Total amount of memory slots destructured"
+    >,
+    Statistic<
+      "slotsWithMemoryBenefit",
+      "slots with memory benefit",
+      "Total amount of memory slots in which the destructured size was smaller "
+      "than the total size after eliminating unused fields"
+    >,
+    Statistic<
+      "maxSubelementAmount",
+      "max subelement number",
+      "Maximal number of sub-elements a successfully destructured slot "
+      "initially had"
+    >,
+  ];
+}
+
 def StripDebugInfo : Pass<"strip-debuginfo"> {
   let summary = "Strip debug info from all operations";
   let description = [{
     This pass strips the IR of any location information, by replacing all
-    operation locations with [`unknown`](Diagnostics.md#unknown-location).
+    operation locations with [`unknown`](Dialects/Builtin.md/#unknownloc).
   }];
   let constructor = "mlir::createStripDebugInfoPass()";
 }
@@ -702,18 +452,18 @@ def SymbolDCE : Pass<"symbol-dce"> {
     by computing the set of operations that are known to be live, propagating
     that liveness to other symbols, and then deleting all symbols that are not
     within this live set. Live symbols are those that have a
-    [visibility](SymbolsAndSymbolTables.md#symbol-visibility) that extends
+    [visibility](SymbolsAndSymbolTables.md/#symbol-visibility) that extends
     beyond the IR, e.g. `public`, or those that are referenced by live symbols
     or other non-Symbol operations.
 
     For example, consider the following input:
 
     ```mlir
-    func private @dead_private_function()
-    func private @live_private_function()
+    func.func private @dead_private_function()
+    func.func private @live_private_function()
 
     // Note: The `public` isn't necessary here, as this is the default.
-    func public @public_function() {
+    func.func public @public_function() {
       "foo.return"() {uses = [@live_private_function]} : () -> ()
     }
     ```
@@ -725,9 +475,9 @@ def SymbolDCE : Pass<"symbol-dce"> {
     are no links to known-live operations. After running, we get the expected:
 
     ```mlir
-    func private @live_private_function()
+    func.func private @live_private_function()
 
-    func public @public_function() {
+    func.func public @public_function() {
       "foo.return"() {uses = [@live_private_function]} : () -> ()
     }
     ```
@@ -736,22 +486,86 @@ def SymbolDCE : Pass<"symbol-dce"> {
     information on `Symbols`.
   }];
   let constructor = "mlir::createSymbolDCEPass()";
+
+  let statistics = [
+    Statistic<"numDCE", "num-dce'd", "Number of symbols DCE'd">,
+  ];
 }
 
-def ViewOpGraphPass : Pass<"view-op-graph", "ModuleOp"> {
-  let summary = "Print graphviz view of module";
+def SymbolPrivatize : Pass<"symbol-privatize"> {
+  let summary = "Mark symbols private";
   let description = [{
-    This pass prints a graphviz per block of a module.
-
-    - Op are represented as nodes;
-    - Uses as edges;
+    This pass marks all top-level symbols of the operation run as `private`
+    except if listed in `exclude` pass option.
   }];
-  let constructor = "mlir::createPrintOpGraphPass()";
   let options = [
-    Option<"title", "title", "std::string",
-           /*default=*/"", "The prefix of the title of the graph">,
-    Option<"shortNames", "short-names", "bool", /*default=*/"false",
-           "Use short names">
+    ListOption<"exclude", "exclude", "std::string",
+       "Comma separated list of symbols that should not be marked private">
+  ];
+  let constructor = "mlir::createSymbolPrivatizePass()";
+}
+
+def ViewOpGraph : Pass<"view-op-graph"> {
+  let summary = "Print Graphviz visualization of an operation";
+  let description = [{
+    This pass prints a Graphviz graph of a module.
+
+    - Operations are represented as nodes;
+    - Uses (data flow) as edges;
+    - Control flow as dashed edges;
+    - Regions/blocks as subgraphs.
+
+    By default, only data flow edges are printed.
+
+    Note: See https://www.graphviz.org/doc/info/lang.html for more information
+    about the Graphviz DOT language.
+  }];
+  let options = [
+    Option<"maxLabelLen", "max-label-len", "unsigned",
+            /*default=*/"20", "Limit attribute/type length to number of chars">,
+    Option<"printAttrs", "print-attrs", "bool",
+           /*default=*/"true", "Print attributes of operations">,
+    Option<"printControlFlowEdges", "print-control-flow-edges", "bool",
+           /*default=*/"false", "Print control flow edges">,
+    Option<"printDataFlowEdges", "print-data-flow-edges", "bool",
+           /*default=*/"true", "Print data flow edges">,
+    Option<"printResultTypes", "print-result-types", "bool",
+            /*default=*/"true", "Print result types of operations">
+  ];
+  let constructor = "mlir::createPrintOpGraphPass()";
+}
+
+def TopologicalSort : Pass<"topological-sort"> {
+  let summary = "Sort regions without SSA dominance in topological order";
+  let description = [{
+    Recursively sorts all nested regions without SSA dominance in topological
+    order. The main purpose is readability, as well as potentially processing of
+    certain transformations and analyses. The function sorts the operations in
+    all nested regions such that, as much as possible, all users appear after
+    their producers.
+
+    This sort is stable. If the block is already topologically sorted, the IR
+    is not changed. Operations that form a cycle are moved to the end of the
+    regions in a stable order.
+  }];
+
+  let constructor = "mlir::createTopologicalSortPass()";
+}
+
+def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
+  let summary = "Composite fixed point pass";
+  let description = [{
+    Composite pass runs provided set of passes until fixed point or maximum
+    number of iterations reached.
+  }];
+
+  let options = [
+    Option<"name", "name", "std::string", /*default=*/"\"CompositeFixedPointPass\"",
+      "Composite pass display name">,
+    Option<"pipelineStr", "pipeline", "std::string", /*default=*/"",
+      "Composite pass inner pipeline">,
+    Option<"maxIter", "max-iterations", "int", /*default=*/"10",
+      "Maximum number of iterations if inner pipeline">,
   ];
 }
 

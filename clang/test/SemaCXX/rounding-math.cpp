@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux -verify=norounding -Wno-unknown-pragmas %s
 // RUN: %clang_cc1 -triple x86_64-linux -verify=rounding %s -frounding-math -Wno-unknown-pragmas
+// RUN: %clang_cc1 -triple x86_64-linux -verify=rounding %s -frounding-math -fexperimental-new-constant-interpreter -Wno-unknown-pragmas
 // rounding-no-diagnostics
 
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
@@ -76,3 +77,24 @@ struct S1d {
   int f;
 };
 static_assert(sizeof(S1d) == sizeof(int), "");
+
+constexpr float incr_down(float k) {
+  float x = k;
+  ++x;
+  return x;
+}
+
+// 0x1.0p23 = 8388608.0, inc(8388608.0) = 8388609.0
+static_assert(incr_down(0x1.0p23F) == 0x1.000002p23F, "");
+// 0x1.0p24 = 16777216.0, inc(16777216.0) = 16777217.0 -> round down -> 16777216.0
+static_assert(incr_down(0x1.0p24F) == 0x1.0p24F, "");
+
+#pragma STDC FENV_ROUND FE_UPWARD
+constexpr float incr_up(float k) {
+  float x = k;
+  ++x;
+  return x;
+}
+static_assert(incr_up(0x1.0p23F) == 0x1.000002p23F, "");
+// 0x1.0p24 = 16777216.0, inc(16777216.0) = 16777217.0 -> round up -> 16777218.0
+static_assert(incr_up(0x1.0p24F) == 0x1.000002p24F, "");

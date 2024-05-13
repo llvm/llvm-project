@@ -10,6 +10,8 @@
 #define LLVM_LTO_SUMMARYBASEDOPTIMIZATIONS_H
 namespace llvm {
 class ModuleSummaryIndex;
+
+/// Compute synthetic function entry counts.
 void computeSyntheticCounts(ModuleSummaryIndex &Index);
 
 } // namespace llvm

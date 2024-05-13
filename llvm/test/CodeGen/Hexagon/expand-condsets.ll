@@ -9,7 +9,7 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0, i32* nocapture %a1, i32* nocapture %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6) #0 {
+define void @f0(i32 %a0, ptr nocapture %a1, ptr nocapture %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6) #0 {
 b0:
   %v0 = icmp ugt i32 %a0, 32
   %v1 = lshr i32 %a0, 6
@@ -19,32 +19,32 @@ b0:
 
 b1:                                               ; preds = %b0
   %v4 = lshr i32 %a0, 2
-  %v5 = getelementptr inbounds i32, i32* %a1, i32 %v4
+  %v5 = getelementptr inbounds i32, ptr %a1, i32 %v4
   br label %b2
 
 b2:                                               ; preds = %b7, %b1
-  %v6 = phi i32* [ %v5, %b1 ], [ %v9, %b7 ]
-  %v7 = phi i32* [ %a1, %b1 ], [ %v49, %b7 ]
+  %v6 = phi ptr [ %v5, %b1 ], [ %v9, %b7 ]
+  %v7 = phi ptr [ %a1, %b1 ], [ %v49, %b7 ]
   %v8 = phi i32 [ 0, %b1 ], [ %v55, %b7 ]
-  %v9 = getelementptr i32, i32* %v6, i32 64
+  %v9 = getelementptr i32, ptr %v6, i32 64
   br label %b3
 
 b3:                                               ; preds = %b3, %b2
   %v10 = phi i32 [ 2, %b2 ], [ %v46, %b3 ]
   %v11 = phi i32 [ 1, %b2 ], [ %v45, %b3 ]
-  %v12 = phi i32* [ %v6, %b2 ], [ %v23, %b3 ]
-  %v13 = phi i32* [ %v7, %b2 ], [ %v19, %b3 ]
+  %v12 = phi ptr [ %v6, %b2 ], [ %v23, %b3 ]
+  %v13 = phi ptr [ %v7, %b2 ], [ %v19, %b3 ]
   %v14 = phi i32 [ 0, %b2 ], [ %v47, %b3 ]
   %v15 = phi i32 [ 0, %b2 ], [ %v41, %b3 ]
   %v16 = phi i32 [ 0, %b2 ], [ %v44, %b3 ]
-  %v17 = getelementptr inbounds i32, i32* %v13, i32 1
-  %v18 = load i32, i32* %v13, align 4, !tbaa !0
-  %v19 = getelementptr inbounds i32, i32* %v13, i32 2
-  %v20 = load i32, i32* %v17, align 4, !tbaa !0
-  %v21 = getelementptr inbounds i32, i32* %v12, i32 1
-  %v22 = load i32, i32* %v12, align 4, !tbaa !0
-  %v23 = getelementptr inbounds i32, i32* %v12, i32 2
-  %v24 = load i32, i32* %v21, align 4, !tbaa !0
+  %v17 = getelementptr inbounds i32, ptr %v13, i32 1
+  %v18 = load i32, ptr %v13, align 4, !tbaa !0
+  %v19 = getelementptr inbounds i32, ptr %v13, i32 2
+  %v20 = load i32, ptr %v17, align 4, !tbaa !0
+  %v21 = getelementptr inbounds i32, ptr %v12, i32 1
+  %v22 = load i32, ptr %v12, align 4, !tbaa !0
+  %v23 = getelementptr inbounds i32, ptr %v12, i32 2
+  %v24 = load i32, ptr %v21, align 4, !tbaa !0
   %v25 = tail call i32 @llvm.hexagon.A2.add(i32 %v22, i32 %a4)
   %v26 = tail call i32 @llvm.hexagon.A2.sub(i32 %v25, i32 %a3)
   %v27 = tail call i32 @llvm.hexagon.A2.add(i32 %v24, i32 %a4)
@@ -72,21 +72,21 @@ b3:                                               ; preds = %b3, %b2
   br i1 %v48, label %b4, label %b3
 
 b4:                                               ; preds = %b3
-  %v49 = getelementptr i32, i32* %v7, i32 64
+  %v49 = getelementptr i32, ptr %v7, i32 64
   br i1 %v0, label %b5, label %b6
 
 b5:                                               ; preds = %b4
-  %v50 = getelementptr inbounds i32, i32* %a2, i32 %v8
-  store i32 %v41, i32* %v50, align 4, !tbaa !0
+  %v50 = getelementptr inbounds i32, ptr %a2, i32 %v8
+  store i32 %v41, ptr %v50, align 4, !tbaa !0
   %v51 = add i32 %v8, %v2
-  %v52 = getelementptr inbounds i32, i32* %a2, i32 %v51
-  store i32 %v44, i32* %v52, align 4, !tbaa !0
+  %v52 = getelementptr inbounds i32, ptr %a2, i32 %v51
+  store i32 %v44, ptr %v52, align 4, !tbaa !0
   br label %b7
 
 b6:                                               ; preds = %b4
   %v53 = or i32 %v41, %v44
-  %v54 = getelementptr inbounds i32, i32* %a2, i32 %v8
-  store i32 %v53, i32* %v54, align 4, !tbaa !0
+  %v54 = getelementptr inbounds i32, ptr %a2, i32 %v8
+  store i32 %v53, ptr %v54, align 4, !tbaa !0
   br label %b7
 
 b7:                                               ; preds = %b6, %b5

@@ -1,29 +1,56 @@
-; RUN: opt -debugify -S -o - < %s | FileCheck %s
+; RUN: opt -passes=debugify -S -o - < %s | FileCheck %s
 ; RUN: opt -passes=debugify -S -o - < %s | FileCheck %s
 
-; RUN: opt -debugify -debugify -S -o - < %s 2>&1 | \
+; RUN: opt -passes=debugify,debugify -S -o - < %s 2>&1 | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-REPEAT
 ; RUN: opt -passes=debugify,debugify -S -o - < %s 2>&1 | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-REPEAT
 
-; RUN: opt -debugify -check-debugify -S -o - < %s | \
+; RUN: opt -passes=debugify,check-debugify -S -o - < %s | \
 ; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
 ; RUN: opt -passes=debugify,check-debugify -S -o - < %s | \
 ; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
 ; RUN: opt -enable-debugify -passes=verify -S -o - < %s | \
 ; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
 
-; RUN: opt -debugify -strip -check-debugify -S -o - < %s 2>&1 | \
+; RUN: opt -passes=debugify,strip,check-debugify -S -o - < %s 2>&1 | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-WARN
 
-; RUN: opt -enable-debugify -strip -S -o - < %s 2>&1 | \
+; RUN: opt -enable-debugify -passes=strip -S -o - < %s 2>&1 | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-WARN
 
 ; RUN: opt -enable-debugify -S -o - < %s 2>&1 | FileCheck %s -check-prefix=PASS
 
 ; Verify that debugify can be safely used with piping
 ; RUN: opt -enable-debugify -O1 < %s | opt -O2 -o /dev/null
-; RUN: opt -debugify -mem2reg -check-debugify < %s | opt -O2 -o /dev/null
+; RUN: opt -passes=debugify,mem2reg,check-debugify < %s | opt -O2 -o /dev/null
+
+;; Perform the same checks again for intrinsic debug info
+; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify -S -o - < %s | FileCheck %s
+; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify -S -o - < %s | FileCheck %s
+
+; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,debugify -S -o - < %s 2>&1 | \
+; RUN:   FileCheck %s -check-prefix=CHECK-REPEAT
+; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,debugify -S -o - < %s 2>&1 | \
+; RUN:   FileCheck %s -check-prefix=CHECK-REPEAT
+
+; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,check-debugify -S -o - < %s | \
+; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
+; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,check-debugify -S -o - < %s | \
+; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
+; RUN: opt --experimental-debuginfo-iterators=false -enable-debugify -passes=verify -S -o - < %s | \
+; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
+
+; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,strip,check-debugify -S -o - < %s 2>&1 | \
+; RUN:   FileCheck %s -check-prefix=CHECK-WARN
+
+; RUN: opt --experimental-debuginfo-iterators=false -enable-debugify -passes=strip -S -o - < %s 2>&1 | \
+; RUN:   FileCheck %s -check-prefix=CHECK-WARN
+
+; RUN: opt --experimental-debuginfo-iterators=false -enable-debugify -S -o - < %s 2>&1 | FileCheck %s -check-prefix=PASS
+
+; RUN: opt --experimental-debuginfo-iterators=false -enable-debugify -O1 < %s | opt -O2 -o /dev/null
+; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,mem2reg,check-debugify < %s | opt -O2 -o /dev/null
 
 ; CHECK-LABEL: define void @foo
 define void @foo() {
@@ -61,7 +88,7 @@ define i32 @boom() {
 ; CHECK-DAG: !llvm.debugify = !{![[NUM_INSTS:.*]], ![[NUM_VARS:.*]]}
 ; CHECK-DAG: "Debug Info Version"
 
-; CHECK-DAG: ![[CU]] = distinct !DICompileUnit(language: DW_LANG_C, file: {{.*}}, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: {{.*}})
+; CHECK-DAG: ![[CU]] = distinct !DICompileUnit(language: DW_LANG_C, file: {{.*}}, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 ; CHECK-DAG: !DIFile(filename: "<stdin>", directory: "/")
 ; CHECK-DAG: distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: {{.*}}, line: 1, type: {{.*}}, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: {{.*}}, retainedNodes: {{.*}})
 ; CHECK-DAG: distinct !DISubprogram(name: "bar", linkageName: "bar", scope: null, file: {{.*}}, line: 2, type: {{.*}}, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: {{.*}}, retainedNodes: {{.*}})

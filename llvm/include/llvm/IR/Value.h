@@ -37,7 +37,6 @@ class DataLayout;
 class Function;
 class GlobalAlias;
 class GlobalIFunc;
-class GlobalIndirectSymbol;
 class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
@@ -73,12 +72,6 @@ using ValueName = StringMapEntry<Value *>;
 /// objects that watch it and listen to RAUW and Destroy events.  See
 /// llvm/IR/ValueHandle.h for details.
 class Value {
-  Type *VTy;
-  Use *UseList;
-
-  friend class ValueAsMetadata; // Allow access to IsUsedByMD.
-  friend class ValueHandleBase;
-
   const unsigned char SubclassID;   // Subclass identifier (for isa/dyn_cast)
   unsigned char HasValueHandle : 1; // Has a ValueHandle pointing to this?
 
@@ -122,6 +115,12 @@ protected:
   unsigned HasDescriptor : 1;
 
 private:
+  Type *VTy;
+  Use *UseList;
+
+  friend class ValueAsMetadata; // Allow access to IsUsedByMD.
+  friend class ValueHandleBase; // Allow access to HasValueHandle.
+
   template <typename UseT> // UseT == 'Use' or 'const Use'
   class use_iterator_impl {
     friend class Value;
@@ -243,7 +242,7 @@ public:
   ///
   /// This is useful when you just want to print 'int %reg126', not the
   /// instruction that generated it. If you specify a Module for context, then
-  /// even constanst get pretty-printed; for example, the type of a null
+  /// even constants get pretty-printed; for example, the type of a null
   /// pointer is printed symbolically.
   /// @{
   void printAsOperand(raw_ostream &O, bool PrintType = true,
@@ -454,12 +453,16 @@ public:
 
   /// Return true if there is exactly one use of this value that cannot be
   /// dropped.
-  ///
-  /// This is specialized because it is a common request and does not require
-  /// traversing the whole use list.
   Use *getSingleUndroppableUse();
   const Use *getSingleUndroppableUse() const {
     return const_cast<Value *>(this)->getSingleUndroppableUse();
+  }
+
+  /// Return true if there is exactly one unique user of this value that cannot be
+  /// dropped (that user can have multiple uses of this value).
+  User *getUniqueUndroppableUser();
+  const User *getUniqueUndroppableUser() const {
+    return const_cast<Value *>(this)->getUniqueUndroppableUser();
   }
 
   /// Return true if there this value.
@@ -553,16 +556,17 @@ public:
   /// Return true if there is metadata referencing this value.
   bool isUsedByMetadata() const { return IsUsedByMD; }
 
-  // Return true if this value is only transitively referenced by metadata.
-  bool isTransitiveUsedByMetadataOnly() const;
-
 protected:
   /// Get the current metadata attachments for the given kind, if any.
   ///
   /// These functions require that the value have at most a single attachment
   /// of the given kind, and return \c nullptr if such an attachment is missing.
   /// @{
-  MDNode *getMetadata(unsigned KindID) const;
+  MDNode *getMetadata(unsigned KindID) const {
+    if (!HasMetadata)
+      return nullptr;
+    return getMetadataImpl(KindID);
+  }
   MDNode *getMetadata(StringRef Kind) const;
   /// @}
 
@@ -614,8 +618,16 @@ protected:
   /// \returns true if any metadata was removed.
   bool eraseMetadata(unsigned KindID);
 
+  /// Erase all metadata attachments matching the given predicate.
+  void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
+
   /// Erase all metadata attached to this Value.
   void clearMetadata();
+
+  /// Get metadata for the given kind, if any.
+  /// This is an internal function that must only be called after
+  /// checking that `hasMetadata()` returns true.
+  MDNode *getMetadataImpl(unsigned KindID) const;
 
 public:
   /// Return true if this value is a swifterror value.
@@ -690,6 +702,9 @@ public:
   /// If \p AllowNonInbounds is true, offsets in GEPs are stripped and
   /// accumulated even if the GEP is not "inbounds".
   ///
+  /// If \p AllowInvariantGroup is true then this method also looks through
+  /// strip.invariant.group and launder.invariant.group intrinsics.
+  ///
   /// If \p ExternalAnalysis is provided it will be used to calculate a offset
   /// when a operand of GEP is not constant.
   /// For example, for a value \p ExternalAnalysis might try to calculate a
@@ -705,13 +720,15 @@ public:
   /// is unchanged.
   const Value *stripAndAccumulateConstantOffsets(
       const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
       function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
           nullptr) const;
   Value *stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
-                                           bool AllowNonInbounds) {
+                                           bool AllowNonInbounds,
+                                           bool AllowInvariantGroup = false) {
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripAndAccumulateConstantOffsets(
-            DL, Offset, AllowNonInbounds));
+            DL, Offset, AllowNonInbounds, AllowInvariantGroup));
   }
 
   /// This is a wrapper around stripAndAccumulateConstantOffsets with the
@@ -738,6 +755,11 @@ public:
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripInBoundsOffsets(Func));
   }
+
+  /// If this ptr is provably equal to \p Other plus a constant offset, return
+  /// that offset in bytes. Essentially `ptr this` subtract `ptr Other`.
+  std::optional<int64_t> getPointerOffsetFrom(const Value *Other,
+                                              const DataLayout &DL) const;
 
   /// Return true if the memory object referred to by V can by freed in the
   /// scope for which the SSA value defining the allocation is statically
@@ -781,8 +803,8 @@ public:
   ///
   /// This is the greatest alignment value supported by load, store, and alloca
   /// instructions, and global values.
-  static const unsigned MaxAlignmentExponent = 29;
-  static const unsigned MaximumAlignment = 1u << MaxAlignmentExponent;
+  static constexpr unsigned MaxAlignmentExponent = 32;
+  static constexpr uint64_t MaximumAlignment = 1ULL << MaxAlignmentExponent;
 
   /// Mutate the type of this Value to be of the specified type.
   ///
@@ -1012,21 +1034,16 @@ template <> struct isa_impl<GlobalIFunc, Value> {
   }
 };
 
-template <> struct isa_impl<GlobalIndirectSymbol, Value> {
-  static inline bool doit(const Value &Val) {
-    return isa<GlobalAlias>(Val) || isa<GlobalIFunc>(Val);
-  }
-};
-
 template <> struct isa_impl<GlobalValue, Value> {
   static inline bool doit(const Value &Val) {
-    return isa<GlobalObject>(Val) || isa<GlobalIndirectSymbol>(Val);
+    return isa<GlobalObject>(Val) || isa<GlobalAlias>(Val);
   }
 };
 
 template <> struct isa_impl<GlobalObject, Value> {
   static inline bool doit(const Value &Val) {
-    return isa<GlobalVariable>(Val) || isa<Function>(Val);
+    return isa<GlobalVariable>(Val) || isa<Function>(Val) ||
+           isa<GlobalIFunc>(Val);
   }
 };
 

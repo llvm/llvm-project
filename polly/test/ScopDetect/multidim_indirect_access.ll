@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; Check that we will recognize this SCoP.
 ;
@@ -18,25 +18,25 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i64 %N) {
+define void @f(ptr %A, i64 %N) {
 bb:
   br label %bb0
 
 bb0:
   %j = phi i64 [ %j.next, %bb1 ], [ 1, %bb ]
-  %tmp = load i32, i32* %A, align 4
+  %tmp = load i32, ptr %A, align 4
   %exitcond0 = icmp sgt i64 %N, %j
   %j.next = add nuw nsw i64 %j, 1
   br i1 %exitcond0, label %bb1, label %bb13
 
 bb1:                                              ; preds = %bb7, %bb0
   %i = phi i64 [ %i.next, %bb1 ], [ 1, %bb0 ]
-  %.0 = phi i32* [ %A, %bb0 ], [ %tmp12, %bb1 ]
+  %.0 = phi ptr [ %A, %bb0 ], [ %tmp12, %bb1 ]
   %tmp8 = sext i32 %tmp to i64
-  %tmp9 = getelementptr inbounds i32, i32* %.0, i64 %tmp8
-  store i32 42, i32* %tmp9, align 4
+  %tmp9 = getelementptr inbounds i32, ptr %.0, i64 %tmp8
+  store i32 42, ptr %tmp9, align 4
   %tmp11 = sext i32 %tmp to i64
-  %tmp12 = getelementptr inbounds i32, i32* %.0, i64 %tmp11
+  %tmp12 = getelementptr inbounds i32, ptr %.0, i64 %tmp11
   %i.next = add nuw nsw i64 %i, 1
   %exitcond = icmp ne i64 %i, %N
   br i1 %exitcond, label %bb1, label %bb0

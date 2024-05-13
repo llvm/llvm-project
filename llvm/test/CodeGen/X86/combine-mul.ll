@@ -81,13 +81,12 @@ define <4 x i64> @combine_vec_mul_pow2c(<4 x i64> %x) {
 ; SSE-LABEL: combine_vec_mul_pow2c:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    psllq $1, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1,2,3],xmm2[4,5,6,7]
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    psllq $4, %xmm0
+; SSE-NEXT:    paddq %xmm0, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    psllq $4, %xmm2
 ; SSE-NEXT:    psllq $2, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_pow2c:
@@ -135,12 +134,12 @@ define <4 x i32> @combine_vec_mul_negpow2b(<4 x i32> %x) {
 define <4 x i64> @combine_vec_mul_negpow2c(<4 x i64> %x) {
 ; SSE-LABEL: combine_vec_mul_negpow2c:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,4294967295]
+; SSE-NEXT:    pmovsxbd {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pmuludq %xmm2, %xmm3
 ; SSE-NEXT:    movdqa %xmm0, %xmm4
 ; SSE-NEXT:    psrlq $32, %xmm4
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [18446744073709551615,18446744073709551614]
+; SSE-NEXT:    pmovsxbq {{.*#+}} xmm5 = [18446744073709551615,18446744073709551614]
 ; SSE-NEXT:    pmuludq %xmm5, %xmm4
 ; SSE-NEXT:    paddq %xmm3, %xmm4
 ; SSE-NEXT:    psllq $32, %xmm4
@@ -149,7 +148,7 @@ define <4 x i64> @combine_vec_mul_negpow2c(<4 x i64> %x) {
 ; SSE-NEXT:    pmuludq %xmm1, %xmm2
 ; SSE-NEXT:    movdqa %xmm1, %xmm3
 ; SSE-NEXT:    psrlq $32, %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [18446744073709551612,18446744073709551600]
+; SSE-NEXT:    pmovsxbq {{.*#+}} xmm4 = [18446744073709551612,18446744073709551600]
 ; SSE-NEXT:    pmuludq %xmm4, %xmm3
 ; SSE-NEXT:    paddq %xmm2, %xmm3
 ; SSE-NEXT:    psllq $32, %xmm3
@@ -162,7 +161,7 @@ define <4 x i64> @combine_vec_mul_negpow2c(<4 x i64> %x) {
 ; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,4294967295]
 ; AVX-NEXT:    vpmuludq %ymm1, %ymm0, %ymm1
 ; AVX-NEXT:    vpsrlq $32, %ymm0, %ymm2
-; AVX-NEXT:    vmovdqa {{.*#+}} ymm3 = [18446744073709551615,18446744073709551614,18446744073709551612,18446744073709551600]
+; AVX-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [18446744073709551615,18446744073709551614,18446744073709551612,18446744073709551600]
 ; AVX-NEXT:    vpmuludq %ymm3, %ymm2, %ymm2
 ; AVX-NEXT:    vpaddq %ymm2, %ymm1, %ymm1
 ; AVX-NEXT:    vpsllq $32, %ymm1, %ymm1
@@ -296,7 +295,7 @@ define <16 x i8> @combine_mul_to_abs_v16i8(<16 x i8> %x) {
 ; SSE-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE-NEXT:    pmullw %xmm0, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm0, %xmm2
 ; SSE-NEXT:    pmullw %xmm3, %xmm1
 ; SSE-NEXT:    pand %xmm0, %xmm1
@@ -326,9 +325,8 @@ define <16 x i8> @combine_mul_to_abs_v16i8(<16 x i8> %x) {
 define <2 x i64> @combine_mul_to_abs_v2i64(<2 x i64> %x) {
 ; SSE-LABEL: combine_mul_to_abs_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    psrlq $32, %xmm2
@@ -362,6 +360,181 @@ define <2 x i64> @combine_mul_to_abs_v2i64(<2 x i64> %x) {
   ret <2 x i64> %m
 }
 
+; 'Quadratic Reciprocity' - and(mul(x,x),2) -> 0
+
+define i64 @combine_mul_self_knownbits(i64 %x) {
+; SSE-LABEL: combine_mul_self_knownbits:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_knownbits:
+; AVX:       # %bb.0:
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    retq
+  %1 = mul i64 %x, %x
+  %2 = and i64 %1, 2
+  ret i64 %2
+}
+
+define <4 x i32> @combine_mul_self_knownbits_vector(<4 x i32> %x) {
+; SSE-LABEL: combine_mul_self_knownbits_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_knownbits_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = mul <4 x i32> %x, %x
+  %2 = and <4 x i32> %1, <i32 2, i32 2, i32 2, i32 2>
+  ret <4 x i32> %2
+}
+
+; mul(x,x) - bit[1] is 0, but if demanding the other bits the source must not be undef
+
+define i64 @combine_mul_self_demandedbits(i64 %x) {
+; SSE-LABEL: combine_mul_self_demandedbits:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    imulq %rdi, %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_demandedbits:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    imulq %rdi, %rax
+; AVX-NEXT:    retq
+  %1 = mul i64 %x, %x
+  %2 = and i64 %1, -3
+  ret i64 %2
+}
+
+define <4 x i32> @combine_mul_self_demandedbits_vector(<4 x i32> %x) {
+; SSE-LABEL: combine_mul_self_demandedbits_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmulld %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_demandedbits_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulld %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = freeze <4 x i32> %x
+  %2 = mul <4 x i32> %1, %1
+  %3 = and <4 x i32> %2, <i32 -3, i32 -3, i32 -3, i32 -3>
+  ret <4 x i32> %3
+}
+
+; PR59217 - Reuse umul_lohi/smul_lohi node
+
+define i64 @combine_mul_umul_lohi_i64(i64 %a, i64 %b) {
+; SSE-LABEL: combine_mul_umul_lohi_i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    mulq %rsi
+; SSE-NEXT:    xorq %rdx, %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_umul_lohi_i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    mulq %rsi
+; AVX-NEXT:    xorq %rdx, %rax
+; AVX-NEXT:    retq
+  %a128 = zext i64 %a to i128
+  %b128 = zext i64 %b to i128
+  %m128 = mul nuw i128 %a128, %b128
+  %hi128 = lshr i128 %m128, 64
+  %hi = trunc i128 %hi128 to i64
+  %lo = mul i64 %a, %b
+  %r = xor i64 %lo, %hi
+  ret i64 %r
+}
+
+define i64 @combine_mul_smul_lohi_commute_i64(i64 %a, i64 %b) {
+; SSE-LABEL: combine_mul_smul_lohi_commute_i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    imulq %rsi
+; SSE-NEXT:    xorq %rdx, %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_smul_lohi_commute_i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    imulq %rsi
+; AVX-NEXT:    xorq %rdx, %rax
+; AVX-NEXT:    retq
+  %a128 = sext i64 %a to i128
+  %b128 = sext i64 %b to i128
+  %m128 = mul nsw i128 %a128, %b128
+  %hi128 = lshr i128 %m128, 64
+  %hi = trunc i128 %hi128 to i64
+  %lo = mul i64 %b, %a
+  %r = xor i64 %lo, %hi
+  ret i64 %r
+}
+
+define i64 @combine_mul_umul_lohi_const_i64(i64 %h) {
+; SSE-LABEL: combine_mul_umul_lohi_const_i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movabsq $-4265267296055464877, %rcx # imm = 0xC4CEB9FE1A85EC53
+; SSE-NEXT:    mulq %rcx
+; SSE-NEXT:    xorq %rdx, %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_umul_lohi_const_i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    movabsq $-4265267296055464877, %rcx # imm = 0xC4CEB9FE1A85EC53
+; AVX-NEXT:    mulq %rcx
+; AVX-NEXT:    xorq %rdx, %rax
+; AVX-NEXT:    retq
+  %h128 = zext i64 %h to i128
+  %m128 = mul nuw i128 %h128, 14181476777654086739
+  %hi128 = lshr i128 %m128, 64
+  %hi = trunc i128 %hi128 to i64
+  %lo = mul i64 %h, 14181476777654086739
+  %r = xor i64 %lo, %hi
+  ret i64 %r
+}
+
+define i64 @combine_mul_smul_lohi_const_i64(i64 %h) {
+; SSE-LABEL: combine_mul_smul_lohi_const_i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movq %rdi, %rcx
+; SSE-NEXT:    sarq $63, %rcx
+; SSE-NEXT:    movabsq $-4265267296055464877, %rsi # imm = 0xC4CEB9FE1A85EC53
+; SSE-NEXT:    mulq %rsi
+; SSE-NEXT:    imulq %rsi, %rcx
+; SSE-NEXT:    addq %rdx, %rcx
+; SSE-NEXT:    xorq %rcx, %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_smul_lohi_const_i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    movq %rdi, %rcx
+; AVX-NEXT:    sarq $63, %rcx
+; AVX-NEXT:    movabsq $-4265267296055464877, %rsi # imm = 0xC4CEB9FE1A85EC53
+; AVX-NEXT:    mulq %rsi
+; AVX-NEXT:    imulq %rsi, %rcx
+; AVX-NEXT:    addq %rdx, %rcx
+; AVX-NEXT:    xorq %rcx, %rax
+; AVX-NEXT:    retq
+  %h128 = sext i64 %h to i128
+  %m128 = mul nsw i128 %h128, 14181476777654086739
+  %hi128 = lshr i128 %m128, 64
+  %hi = trunc i128 %hi128 to i64
+  %lo = mul i64 %h, 14181476777654086739
+  %r = xor i64 %lo, %hi
+  ret i64 %r
+}
+
 ; This would infinite loop because DAGCombiner wants to turn this into a shift,
 ; but x86 lowering wants to avoid non-uniform vector shift amounts.
 
@@ -371,7 +544,7 @@ define <16 x i8> @PR35579(<16 x i8> %x) {
 ; SSE-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    pand %xmm2, %xmm1
@@ -409,8 +582,8 @@ define <4 x i64> @fuzz15429(<4 x i64> %InVec) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
-; AVX-NEXT:    vpinsrq $0, %rax, %xmm0, %xmm1
-; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX-NEXT:    vmovq %rax, %xmm1
+; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5,6,7]
 ; AVX-NEXT:    retq
   %mul = mul <4 x i64> %InVec, <i64 1, i64 2, i64 4, i64 8>
   %I = insertelement <4 x i64> %mul, i64 9223372036854775807, i64 0

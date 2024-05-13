@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "StaticAssertCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -15,13 +16,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 #include <string>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 StaticAssertCheck::StaticAssertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
@@ -46,13 +46,20 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
       IsAlwaysFalse);
   auto NonConstexprFunctionCall =
       callExpr(hasDeclaration(functionDecl(unless(isConstexpr()))));
+  auto NonConstexprVariableReference =
+      declRefExpr(to(varDecl(unless(isConstexpr()))),
+                  unless(hasAncestor(expr(matchers::hasUnevaluatedContext()))),
+                  unless(hasAncestor(typeLoc())));
+
+  auto NonConstexprCode =
+      expr(anyOf(NonConstexprFunctionCall, NonConstexprVariableReference));
   auto AssertCondition =
       expr(
           anyOf(expr(ignoringParenCasts(anyOf(
                     AssertExprRoot, unaryOperator(hasUnaryOperand(
                                         ignoringParenCasts(AssertExprRoot)))))),
                 anything()),
-          unless(findAll(NonConstexprFunctionCall)))
+          unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
           .bind("condition");
   auto Condition =
       anyOf(ignoringParenImpCasts(callExpr(
@@ -104,8 +111,8 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
 
     StringRef FalseMacroName =
         Lexer::getImmediateMacroName(FalseLiteralLoc, SM, Opts);
-    if (FalseMacroName.compare_lower("false") == 0 ||
-        FalseMacroName.compare_lower("null") == 0)
+    if (FalseMacroName.compare_insensitive("false") == 0 ||
+        FalseMacroName.compare_insensitive("null") == 0)
       return;
   }
 
@@ -139,10 +146,10 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
   const LangOptions &Opts = ASTCtx->getLangOpts();
   const SourceManager &SM = ASTCtx->getSourceManager();
 
-  llvm::Optional<llvm::MemoryBufferRef> Buffer =
+  std::optional<llvm::MemoryBufferRef> Buffer =
       SM.getBufferOrNone(SM.getFileID(AssertLoc));
   if (!Buffer)
-    return SourceLocation();
+    return {};
 
   const char *BufferPos = SM.getCharacterData(AssertLoc);
 
@@ -153,7 +160,7 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
   //        assert                          first left parenthesis
   if (Lexer.LexFromRawLexer(Token) || Lexer.LexFromRawLexer(Token) ||
       !Token.is(tok::l_paren))
-    return SourceLocation();
+    return {};
 
   unsigned int ParenCount = 1;
   while (ParenCount && !Lexer.LexFromRawLexer(Token)) {
@@ -166,6 +173,4 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
   return Token.getLocation();
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

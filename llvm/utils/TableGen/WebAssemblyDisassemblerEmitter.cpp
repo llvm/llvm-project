@@ -14,6 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyDisassemblerEmitter.h"
+#include "Common/CodeGenInstruction.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 
 namespace llvm {
@@ -34,8 +37,9 @@ void emitWebAssemblyDisassemblerTables(
     if (!Def.getValue("Inst"))
       continue;
     auto &Inst = *Def.getValueAsBitsInit("Inst");
-    auto Opc = static_cast<unsigned>(
-        reinterpret_cast<IntInit *>(Inst.convertInitializerTo(IntRecTy::get()))
+    RecordKeeper &RK = Inst.getRecordKeeper();
+    unsigned Opc = static_cast<unsigned>(
+        cast<IntInit>(Inst.convertInitializerTo(IntRecTy::get(RK)))
             ->getValue());
     if (Opc == 0xFFFFFFFF)
       continue; // No opcode defined.
@@ -51,11 +55,7 @@ void emitWebAssemblyDisassemblerTables(
     auto &CGIP = OpcodeTable[Prefix][Opc];
     // All wasm instructions have a StackBased field of type string, we only
     // want the instructions for which this is "true".
-    auto StackString =
-        Def.getValue("StackBased")->getValue()->getCastTo(StringRecTy::get());
-    auto IsStackBased =
-        StackString &&
-        reinterpret_cast<const StringInit *>(StackString)->getValue() == "true";
+    bool IsStackBased = Def.getValueAsBit("StackBased");
     if (!IsStackBased)
       continue;
     if (CGIP.second) {
@@ -63,14 +63,12 @@ void emitWebAssemblyDisassemblerTables(
       // should be the canonical one. This determines which variant gets
       // printed in a disassembly. We want e.g. "call" not "i32.call", and
       // "end" when we don't know if its "end_loop" or "end_block" etc.
-      auto IsCanonicalExisting = CGIP.second->TheDef->getValue("IsCanonical")
-                                     ->getValue()
-                                     ->getAsString() == "1";
+      bool IsCanonicalExisting =
+          CGIP.second->TheDef->getValueAsBit("IsCanonical");
       // We already have one marked explicitly as canonical, so keep it.
       if (IsCanonicalExisting)
         continue;
-      auto IsCanonicalNew =
-          Def.getValue("IsCanonical")->getValue()->getAsString() == "1";
+      bool IsCanonicalNew = Def.getValueAsBit("IsCanonical");
       // If the new one is explicitly marked as canonical, take it.
       if (!IsCanonicalNew) {
         // Neither the existing or new instruction is canonical.
@@ -82,7 +80,7 @@ void emitWebAssemblyDisassemblerTables(
       }
     }
     // Set this instruction as the one to use.
-    CGIP = std::make_pair(I, &CGI);
+    CGIP = std::pair(I, &CGI);
   }
   OS << "#include \"MCTargetDesc/WebAssemblyMCTargetDesc.h\"\n";
   OS << "\n";
@@ -129,7 +127,8 @@ void emitWebAssemblyDisassemblerTables(
                ++J) {
             size_t K = 0;
             for (; K < CurOperandList.size(); ++K) {
-              if (OperandTable[J + K] != CurOperandList[K]) break;
+              if (OperandTable[J + K] != CurOperandList[K])
+                break;
             }
             if (K == CurOperandList.size()) {
               OperandStart = J;

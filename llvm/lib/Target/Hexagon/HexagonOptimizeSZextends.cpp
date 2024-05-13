@@ -67,26 +67,23 @@ bool HexagonOptimizeSZextends::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  unsigned Idx = 1;
+  unsigned Idx = 0;
   // Try to optimize sign extends in formal parameters. It's relying on
   // callee already sign extending the values. I'm not sure if our ABI
   // requires callee to sign extend though.
   for (auto &Arg : F.args()) {
-    if (F.getAttributes().hasAttribute(Idx, Attribute::SExt)) {
+    if (F.getAttributes().hasParamAttr(Idx, Attribute::SExt)) {
       if (!isa<PointerType>(Arg.getType())) {
-        for (auto UI = Arg.use_begin(); UI != Arg.use_end();) {
-          if (isa<SExtInst>(*UI)) {
-            Instruction* Use = cast<Instruction>(*UI);
+        for (Use &U : llvm::make_early_inc_range(Arg.uses())) {
+          if (isa<SExtInst>(U)) {
+            Instruction* Use = cast<Instruction>(U);
             SExtInst* SI = new SExtInst(&Arg, Use->getType());
             assert (EVT::getEVT(SI->getType()) ==
                     (EVT::getEVT(Use->getType())));
-            ++UI;
             Use->replaceAllUsesWith(SI);
             Instruction* First = &F.getEntryBlock().front();
             SI->insertBefore(First);
             Use->eraseFromParent();
-          } else {
-            ++UI;
           }
         }
       }

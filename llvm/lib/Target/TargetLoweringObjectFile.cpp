@@ -24,10 +24,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
@@ -73,7 +71,7 @@ static bool isNullOrUndef(const Constant *C) {
     return true;
   if (!isa<ConstantAggregate>(C))
     return false;
-  for (auto Operand : C->operand_values()) {
+  for (const auto *Operand : C->operand_values()) {
     if (!isNullOrUndef(cast<Constant>(Operand)))
       return false;
   }
@@ -242,6 +240,13 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
     return SectionKind::getBSS();
   }
 
+  // Global variables with '!exclude' should get the exclude section kind if
+  // they have an explicit section and no other metadata.
+  if (GVar->hasSection())
+    if (MDNode *MD = GVar->getMetadata(LLVMContext::MD_exclude))
+      if (!MD->getNumOperands())
+        return SectionKind::getExclude();
+
   // If the global is marked constant, we can put it into a mergable section,
   // a mergable string section, or general .data if it contains relocations.
   if (GVar->isConstant()) {
@@ -327,11 +332,6 @@ MCSection *TargetLoweringObjectFile::SectionForGlobal(
         (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()))  {
        return getExplicitSectionGlobal(GO, Kind, TM);
     }
-  }
-
-  if (auto *F = dyn_cast<Function>(GO)) {
-    if (F->hasFnAttribute("implicit-section-name"))
-      return getExplicitSectionGlobal(GO, Kind, TM);
   }
 
   // Use default section depending on the 'type' of global

@@ -11,15 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Target/TargetIntrinsicInfo.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringMapEntry.h"
 #include "llvm/IR/Function.h"
 using namespace llvm;
 
-TargetIntrinsicInfo::TargetIntrinsicInfo() {
-}
+TargetIntrinsicInfo::TargetIntrinsicInfo() = default;
 
-TargetIntrinsicInfo::~TargetIntrinsicInfo() {
-}
+TargetIntrinsicInfo::~TargetIntrinsicInfo() = default;
 
 unsigned TargetIntrinsicInfo::getIntrinsicID(const Function *F) const {
   const ValueName *ValName = F->getValueName();

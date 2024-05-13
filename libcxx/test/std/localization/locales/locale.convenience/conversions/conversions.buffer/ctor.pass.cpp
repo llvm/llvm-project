@@ -8,6 +8,8 @@
 
 // <locale>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT -D_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT
+
 // wbuffer_convert<Codecvt, Elem, Tr>
 
 // wbuffer_convert(streambuf* bytebuf = 0, Codecvt* pcvt = new Codecvt,
@@ -17,6 +19,8 @@
 // wbuffer_convert() : wbuffer_convert(nullptr) {} // C++20
 // explicit wbuffer_convert(streambuf* bytebuf, Codecvt* pcvt = new Codecvt,
 //                          state_type state = state_type()); // C++20
+
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <codecvt>

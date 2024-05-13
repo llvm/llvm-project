@@ -1,7 +1,6 @@
 // RUN: %clangxx -fsanitize=implicit-unsigned-integer-truncation %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NOTYPE
 // RUN: %env_ubsan_opts=report_error_type=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-TYPE
-// REQUIRES: !ubsan-standalone && !ubsan-standalone-static
 
 #include <stdint.h>
 

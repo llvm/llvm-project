@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-arm-none-eabi -frame-pointer=non-leaf < %s | FileCheck %s --check-prefix=NOOMIT
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-arm-none-eabi -frame-pointer=none < %s | FileCheck %s --check-prefix=OMITFP
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64 -frame-pointer=non-leaf < %s | FileCheck %s --check-prefix=NOOMIT
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64 -frame-pointer=none < %s | FileCheck %s --check-prefix=OMITFP
 
 define void @_Z1giii(i32 %x, i32 %y, i32 %z) minsize {
 ; NOOMIT-LABEL: _Z1giii:

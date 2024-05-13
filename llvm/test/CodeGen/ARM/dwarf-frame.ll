@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple armv7-unknown -frame-pointer=all -filetype=asm -o - %s | FileCheck %s --check-prefix=CHECK-NO-CFI
 ; RUN: llc -mtriple armv7-unknown -frame-pointer=all -filetype=asm -force-dwarf-frame-section -o - %s | FileCheck %s --check-prefix=CHECK-ALWAYS-CFI
 
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define void @test_basic() #0 {
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
   ret void
 }
 

@@ -82,6 +82,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }
@@ -93,6 +94,7 @@ liveins:
   - { reg: '$esi', virtual-reg: '%2' }
 frameInfo:
   maxAlignment:    1
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |
@@ -103,9 +105,7 @@ body:             |
     DBG_VALUE $edi, $noreg, !11, !DIExpression(), debug-location !12
     DBG_VALUE $esi, $noreg, !13, !DIExpression(), debug-location !12
     %2:gr32 = COPY killed $esi
-    DBG_VALUE %2, $noreg, !13, !DIExpression(), debug-location !12
     %1:gr32 = COPY killed $edi
-    DBG_VALUE %1, $noreg, !11, !DIExpression(), debug-location !12
     DBG_VALUE 0, $noreg, !14, !DIExpression(), debug-location !12
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     %3:gr32 = MOV32r0 implicit-def dead $eflags
@@ -118,14 +118,13 @@ body:             |
     JMP_1 %bb.1, debug-location !17
 
   bb.1.if.else:
-    DBG_VALUE %2, $noreg, !14, !DIExpression(), debug-location !12
 
     ; CHECK-LABEL: bb.2.if.end:
   bb.2.if.end:
     %0:gr32 = PHI %1, %bb.0, %2, %bb.1, debug-instr-number 1, debug-location !18
-    DBG_INSTR_REF 1, 0, !14, !DIExpression(), debug-location !12
+    DBG_INSTR_REF !14, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
     ; CHECK:      DBG_PHI $ebp, 1
-    ; CHECK:      DBG_INSTR_REF 1, 0
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
     $eax = COPY killed %0, debug-location !19
     ; Confirm that %0 is allocated in $ebp,
     ; CHECK:      $eax = COPY killed renamable $ebp

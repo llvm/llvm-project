@@ -19,16 +19,15 @@ namespace llvm {
 namespace {
 
 const struct ModifierEntry {
-  const char * const Spelling;
+  const char *const Spelling;
   AVRMCExpr::VariantKind VariantKind;
 } ModifierNames[] = {
     {"lo8", AVRMCExpr::VK_AVR_LO8},       {"hi8", AVRMCExpr::VK_AVR_HI8},
     {"hh8", AVRMCExpr::VK_AVR_HH8}, // synonym with hlo8
     {"hlo8", AVRMCExpr::VK_AVR_HH8},      {"hhi8", AVRMCExpr::VK_AVR_HHI8},
 
-    {"pm", AVRMCExpr::VK_AVR_PM},
-    {"pm_lo8", AVRMCExpr::VK_AVR_PM_LO8}, {"pm_hi8", AVRMCExpr::VK_AVR_PM_HI8},
-    {"pm_hh8", AVRMCExpr::VK_AVR_PM_HH8},
+    {"pm", AVRMCExpr::VK_AVR_PM},         {"pm_lo8", AVRMCExpr::VK_AVR_PM_LO8},
+    {"pm_hi8", AVRMCExpr::VK_AVR_PM_HI8}, {"pm_hh8", AVRMCExpr::VK_AVR_PM_HH8},
 
     {"lo8_gs", AVRMCExpr::VK_AVR_LO8_GS}, {"hi8_gs", AVRMCExpr::VK_AVR_HI8_GS},
     {"gs", AVRMCExpr::VK_AVR_GS},
@@ -43,12 +42,12 @@ const AVRMCExpr *AVRMCExpr::create(VariantKind Kind, const MCExpr *Expr,
 
 void AVRMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   assert(Kind != VK_AVR_None);
-
-  if (isNegated())
-    OS << '-';
-
   OS << getName() << '(';
+  if (isNegated())
+    OS << '-' << '(';
   getSubExpr()->print(OS, MAI);
+  if (isNegated())
+    OS << ')';
   OS << ')';
 }
 
@@ -81,7 +80,8 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
   if (Value.isAbsolute()) {
     Result = MCValue::get(evaluateAsInt64(Value.getConstant()));
   } else {
-    if (!Layout) return false;
+    if (!Layout)
+      return false;
 
     MCContext &Context = Layout->getAssembler().getContext();
     const MCSymbolRefExpr *Sym = Value.getSymA();
@@ -219,4 +219,3 @@ AVRMCExpr::VariantKind AVRMCExpr::getKindByName(StringRef Name) {
 }
 
 } // end of namespace llvm
-

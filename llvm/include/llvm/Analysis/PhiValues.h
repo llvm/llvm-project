@@ -22,7 +22,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
@@ -133,6 +132,7 @@ class PhiValuesPrinterPass : public PassInfoMixin<PhiValuesPrinterPass> {
 public:
   explicit PhiValuesPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Wrapper pass for the legacy pass manager

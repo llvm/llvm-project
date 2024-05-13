@@ -1,0 +1,57 @@
+; RUN: llvm-objcopy --strip-debug %S/Inputs/inline-noprobe.perfbin %t1
+; RUN: llvm-objcopy --only-keep-debug %S/Inputs/inline-noprobe.perfbin %t2
+; RUN: echo -e "0\n0" > %t
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%t1 --debug-binary=%t2 --output=%t3 --fill-zero-for-all-funcs
+; RUN: FileCheck %s --input-file %t3 --check-prefix=CHECK
+
+; RUN: llvm-objcopy --strip-debug %S/Inputs/inline-cs-pseudoprobe.perfbin %t4
+; RUN: llvm-objcopy --only-keep-debug %S/Inputs/inline-cs-pseudoprobe.perfbin %t5
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%t4 --debug-binary=%t5 --output=%t6 --profile-summary-hot-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t6 --check-prefix=CHECK-CS-PROBE
+
+; CHECK: bar:0:0
+; CHECK:  1: 0
+; CHECK:  5: 0
+; CHECK: foo:0:0
+; CHECK:  0: 0
+; CHECK:  2.1: 0
+; CHECK:  3: 0
+; CHECK:  3.2: 0
+; CHECK:  4: 0
+; CHECK:  3.1: bar:0
+; CHECK:   1: 0
+; CHECK:   65533: 0
+; CHECK:  3.2: bar:0
+; CHECK:   1: 0
+; CHECK:   7: 0
+; CHECK: main:0:0
+; CHECK:  0: 0
+; CHECK:  2: 0
+; CHECK:  1: foo:0
+; CHECK:   2.1: 0
+; CHECK:   3: 0
+; CHECK:   3.2: 0
+; CHECK:   4: 0
+; CHECK:   65526: 0
+; CHECK:   3.1: bar:0
+; CHECK:    1: 0
+; CHECK:    65533: 0
+; CHECK:   3.2: bar:0
+; CHECK:    1: 0
+
+
+; CHECK-CS-PROBE: [main:2 @ foo]:74:0
+; CHECK-CS-PROBE:   1: 0
+; CHECK-CS-PROBE:   2: 15
+; CHECK-CS-PROBE:   3: 15
+; CHECK-CS-PROBE:   4: 14
+; CHECK-CS-PROBE:   5: 1
+; CHECK-CS-PROBE:   6: 15
+; CHECK-CS-PROBE:   7: 0
+; CHECK-CS-PROBE:   8: 14 bar:14
+; CHECK-CS-PROBE:   9: 0
+; CHECK-CS-PROBE: !CFGChecksum: 563088904013236
+; CHECK-CS-PROBE: [main:2 @ foo:8 @ bar]:28:14
+; CHECK-CS-PROBE:   1: 14
+; CHECK-CS-PROBE:   4: 14
+; CHECK-CS-PROBE: !CFGChecksum: 72617220756

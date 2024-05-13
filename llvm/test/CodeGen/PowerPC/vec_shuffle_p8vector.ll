@@ -2,9 +2,9 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu -mattr=+power8-vector < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64-ibm-aix-xcoff -vec-extabi -mattr=+power8-vector < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck -check-prefix=CHECK-PWR7 %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64-ibm-aix-xcoff -vec-extabi < %s | FileCheck -check-prefix=CHECK-PWR7 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64-ibm-aix-xcoff -vec-extabi < %s | FileCheck -check-prefix=CHECK-PWR7-AIX %s
 
-define void @VPKUDUM_unary(<2 x i64>* %A) {
+define void @VPKUDUM_unary(ptr %A) {
 ; CHECK-LABEL: VPKUDUM_unary:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvw4x 34, 0, 3
@@ -14,14 +14,24 @@ define void @VPKUDUM_unary(<2 x i64>* %A) {
 ;
 ; CHECK-PWR7-LABEL: VPKUDUM_unary:
 ; CHECK-PWR7:       # %bb.0: # %entry
+; CHECK-PWR7-NEXT:    addis 4, 2, .LCPI0_0@toc@ha
 ; CHECK-PWR7-NEXT:    lxvw4x 34, 0, 3
-; CHECK-PWR7-NEXT:    vmrglw 3, 2, 2
-; CHECK-PWR7-NEXT:    vmrghw 2, 2, 2
-; CHECK-PWR7-NEXT:    vmrglw 2, 2, 3
+; CHECK-PWR7-NEXT:    addi 4, 4, .LCPI0_0@toc@l
+; CHECK-PWR7-NEXT:    lxvw4x 35, 0, 4
+; CHECK-PWR7-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-PWR7-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-PWR7-NEXT:    blr
+;
+; CHECK-PWR7-AIX-LABEL: VPKUDUM_unary:
+; CHECK-PWR7-AIX:       # %bb.0: # %entry
+; CHECK-PWR7-AIX-NEXT:    ld 4, L..C0(2) # %const.0
+; CHECK-PWR7-AIX-NEXT:    lxvw4x 34, 0, 3
+; CHECK-PWR7-AIX-NEXT:    lxvw4x 35, 0, 4
+; CHECK-PWR7-AIX-NEXT:    vperm 2, 2, 2, 3
+; CHECK-PWR7-AIX-NEXT:    stxvw4x 34, 0, 3
+; CHECK-PWR7-AIX-NEXT:    blr
 entry:
-        %tmp = load <2 x i64>, <2 x i64>* %A
+        %tmp = load <2 x i64>, ptr %A
         %tmp2 = bitcast <2 x i64> %tmp to <4 x i32>
         %tmp3 = extractelement <4 x i32> %tmp2, i32 1
         %tmp4 = extractelement <4 x i32> %tmp2, i32 3
@@ -30,11 +40,11 @@ entry:
         %tmp7 = insertelement <4 x i32> %tmp6, i32 %tmp3, i32 2
         %tmp8 = insertelement <4 x i32> %tmp7, i32 %tmp4, i32 3
         %tmp9 = bitcast <4 x i32> %tmp8 to <2 x i64>
-        store <2 x i64> %tmp9, <2 x i64>* %A
+        store <2 x i64> %tmp9, ptr %A
         ret void
 }
 
-define void @VPKUDUM(<2 x i64>* %A, <2 x i64>* %B) {
+define void @VPKUDUM(ptr %A, ptr %B) {
 ; CHECK-LABEL: VPKUDUM:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvw4x 34, 0, 3
@@ -45,17 +55,28 @@ define void @VPKUDUM(<2 x i64>* %A, <2 x i64>* %B) {
 ;
 ; CHECK-PWR7-LABEL: VPKUDUM:
 ; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-PWR7-NEXT:    lxvw4x 35, 0, 4
-; CHECK-PWR7-NEXT:    vmrglw 4, 2, 3
-; CHECK-PWR7-NEXT:    vmrghw 2, 2, 3
-; CHECK-PWR7-NEXT:    vmrglw 2, 2, 4
+; CHECK-PWR7-NEXT:    addis 4, 2, .LCPI1_0@toc@ha
+; CHECK-PWR7-NEXT:    lxvw4x 34, 0, 3
+; CHECK-PWR7-NEXT:    addi 4, 4, .LCPI1_0@toc@l
+; CHECK-PWR7-NEXT:    lxvw4x 36, 0, 4
+; CHECK-PWR7-NEXT:    vperm 2, 2, 3, 4
 ; CHECK-PWR7-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-PWR7-NEXT:    blr
+;
+; CHECK-PWR7-AIX-LABEL: VPKUDUM:
+; CHECK-PWR7-AIX:       # %bb.0: # %entry
+; CHECK-PWR7-AIX-NEXT:    lxvw4x 35, 0, 4
+; CHECK-PWR7-AIX-NEXT:    ld 4, L..C1(2) # %const.0
+; CHECK-PWR7-AIX-NEXT:    lxvw4x 34, 0, 3
+; CHECK-PWR7-AIX-NEXT:    lxvw4x 36, 0, 4
+; CHECK-PWR7-AIX-NEXT:    vperm 2, 2, 3, 4
+; CHECK-PWR7-AIX-NEXT:    stxvw4x 34, 0, 3
+; CHECK-PWR7-AIX-NEXT:    blr
 entry:
-        %tmp = load <2 x i64>, <2 x i64>* %A
+        %tmp = load <2 x i64>, ptr %A
         %tmp2 = bitcast <2 x i64> %tmp to <4 x i32>
-        %tmp3 = load <2 x i64>, <2 x i64>* %B
+        %tmp3 = load <2 x i64>, ptr %B
         %tmp4 = bitcast <2 x i64> %tmp3 to <4 x i32>
         %tmp5 = extractelement <4 x i32> %tmp2, i32 1
         %tmp6 = extractelement <4 x i32> %tmp2, i32 3
@@ -66,7 +87,7 @@ entry:
         %tmp11 = insertelement <4 x i32> %tmp10, i32 %tmp7, i32 2
         %tmp12 = insertelement <4 x i32> %tmp11, i32 %tmp8, i32 3
         %tmp13 = bitcast <4 x i32> %tmp12 to <2 x i64>
-        store <2 x i64> %tmp13, <2 x i64>* %A
+        store <2 x i64> %tmp13, ptr %A
         ret void
 }
 

@@ -14,6 +14,7 @@
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -110,7 +111,7 @@ static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst,
   if (OrigInst->getType()->isVoidTy() || OrigInst->use_empty())
     return;
 
-  Builder.SetInsertPoint(&MergeBlock->front());
+  Builder.SetInsertPoint(MergeBlock, MergeBlock->begin());
   PHINode *Phi = Builder.CreatePHI(OrigInst->getType(), 0);
   SmallVector<User *, 16> UsersToUpdate(OrigInst->users());
   for (User *U : UsersToUpdate)
@@ -167,12 +168,12 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 
   // Determine an appropriate location to create the bitcast for the return
   // value. The location depends on if we have a call or invoke instruction.
-  Instruction *InsertBefore = nullptr;
+  BasicBlock::iterator InsertBefore;
   if (auto *Invoke = dyn_cast<InvokeInst>(&CB))
     InsertBefore =
-        &SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->front();
+        SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->begin();
   else
-    InsertBefore = &*std::next(CB.getIterator());
+    InsertBefore = std::next(CB.getIterator());
 
   // Bitcast the return value to the correct type.
   auto *Cast = CastInst::CreateBitOrPointerCast(&CB, RetTy, "", InsertBefore);
@@ -279,8 +280,8 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 ///     ; The original call instruction stays in its original block.
 ///     %t0 = musttail call i32 %ptr()
 ///     ret %t0
-static CallBase &versionCallSite(CallBase &CB, Value *Callee,
-                                 MDNode *BranchWeights) {
+CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
+                                MDNode *BranchWeights) {
 
   IRBuilder<> Builder(&CB);
   CallBase *OrigInst = &CB;
@@ -415,6 +416,21 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
   // site.
   unsigned I = 0;
   for (; I < NumParams; ++I) {
+    // Make sure that the callee and call agree on byval/inalloca. The types do
+    // not have to match.
+    if (Callee->hasParamAttribute(I, Attribute::ByVal) !=
+        CB.getAttributes().hasParamAttr(I, Attribute::ByVal)) {
+      if (FailureReason)
+        *FailureReason = "byval mismatch";
+      return false;
+    }
+    if (Callee->hasParamAttribute(I, Attribute::InAlloca) !=
+        CB.getAttributes().hasParamAttr(I, Attribute::InAlloca)) {
+      if (FailureReason)
+        *FailureReason = "inalloca mismatch";
+      return false;
+    }
+
     Type *FormalTy = Callee->getFunctionType()->getFunctionParamType(I);
     Type *ActualTy = CB.getArgOperand(I)->getType();
     if (FormalTy == ActualTy)
@@ -423,6 +439,18 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
       if (FailureReason)
         *FailureReason = "Argument type mismatch";
       return false;
+    }
+
+    // MustTail call needs stricter type match. See
+    // Verifier::verifyMustTailCall().
+    if (CB.isMustTailCall()) {
+      PointerType *PF = dyn_cast<PointerType>(FormalTy);
+      PointerType *PA = dyn_cast<PointerType>(ActualTy);
+      if (!PF || !PA || PF->getAddressSpace() != PA->getAddressSpace()) {
+        if (FailureReason)
+          *FailureReason = "Musttail call Argument type mismatch";
+        return false;
+      }
     }
   }
   for (; I < NumArgs; I++) {
@@ -481,31 +509,29 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
     Type *FormalTy = CalleeType->getParamType(ArgNo);
     Type *ActualTy = Arg->getType();
     if (FormalTy != ActualTy) {
-      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", &CB);
+      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", CB.getIterator());
       CB.setArgOperand(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
-      AttrBuilder ArgAttrs(CallerPAL.getParamAttributes(ArgNo));
+      AttrBuilder ArgAttrs(Ctx, CallerPAL.getParamAttrs(ArgNo));
       ArgAttrs.remove(AttributeFuncs::typeIncompatible(FormalTy));
 
-      // If byval is used, this must be a pointer type, and the byval type must
-      // match the element type. Update it if present.
-      if (ArgAttrs.getByValType()) {
-        Type *NewTy = Callee->getParamByValType(ArgNo);
-        ArgAttrs.addByValAttr(
-            NewTy ? NewTy : cast<PointerType>(FormalTy)->getElementType());
-      }
+      // We may have a different byval/inalloca type.
+      if (ArgAttrs.getByValType())
+        ArgAttrs.addByValAttr(Callee->getParamByValType(ArgNo));
+      if (ArgAttrs.getInAllocaType())
+        ArgAttrs.addInAllocaAttr(Callee->getParamInAllocaType(ArgNo));
 
       NewArgAttrs.push_back(AttributeSet::get(Ctx, ArgAttrs));
       AttributeChanged = true;
     } else
-      NewArgAttrs.push_back(CallerPAL.getParamAttributes(ArgNo));
+      NewArgAttrs.push_back(CallerPAL.getParamAttrs(ArgNo));
   }
 
   // If the return type of the call site doesn't match that of the callee, cast
   // the returned value to the appropriate type.
   // Remove any incompatible return value attribute.
-  AttrBuilder RAttrs(CallerPAL, AttributeList::ReturnIndex);
+  AttrBuilder RAttrs(Ctx, CallerPAL.getRetAttrs());
   if (!CallSiteRetTy->isVoidTy() && CallSiteRetTy != CalleeRetTy) {
     createRetBitCast(CB, CallSiteRetTy, RetBitCast);
     RAttrs.remove(AttributeFuncs::typeIncompatible(CalleeRetTy));
@@ -514,7 +540,7 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
 
   // Set the new callsite attribute.
   if (AttributeChanged)
-    CB.setAttributes(AttributeList::get(Ctx, CallerPAL.getFnAttributes(),
+    CB.setAttributes(AttributeList::get(Ctx, CallerPAL.getFnAttrs(),
                                         AttributeSet::get(Ctx, RAttrs),
                                         NewArgAttrs));
 
@@ -571,16 +597,13 @@ bool llvm::tryPromoteCall(CallBase &CB) {
     // Not in the form of a global constant variable with an initializer.
     return false;
 
-  Constant *VTableGVInitializer = GV->getInitializer();
   APInt VTableGVOffset = VTableOffsetGVBase + VTableOffset;
   if (!(VTableGVOffset.getActiveBits() <= 64))
     return false; // Out of range.
-  Constant *Ptr = getPointerAtOffset(VTableGVInitializer,
-                                     VTableGVOffset.getZExtValue(),
-                                     *M);
-  if (!Ptr)
-    return false; // No constant (function) pointer found.
-  Function *DirectCallee = dyn_cast<Function>(Ptr->stripPointerCasts());
+
+  Function *DirectCallee = nullptr;
+  std::tie(DirectCallee, std::ignore) =
+      getFunctionAtVTableOffset(GV, VTableGVOffset.getZExtValue(), *M);
   if (!DirectCallee)
     return false; // No function pointer found.
 

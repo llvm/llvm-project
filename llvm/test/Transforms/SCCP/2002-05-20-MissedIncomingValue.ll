@@ -1,7 +1,7 @@
 ; This test shows a case where SCCP is incorrectly eliminating the PHI node
 ; because it thinks it has a constant 0 value, when it really doesn't.
 
-; RUN: opt < %s -sccp -S | grep phi
+; RUN: opt < %s -passes=sccp -S | grep phi
 
 define i32 @test(i32 %A, i1 %c) {
 bb1:

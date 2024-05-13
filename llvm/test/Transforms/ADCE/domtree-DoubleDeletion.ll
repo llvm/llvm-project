@@ -1,5 +1,5 @@
-; RUN: opt < %s -gvn -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -adce | llvm-dis
-; RUN: opt < %s -gvn -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -adce -verify-dom-info | llvm-dis
+; RUN: opt < %s -passes=gvn,simplifycfg,adce -simplifycfg-require-and-preserve-domtree=1 | llvm-dis
+; RUN: opt < %s -passes=gvn,simplifycfg,adce -simplifycfg-require-and-preserve-domtree=1 -verify-dom-info | llvm-dis
 
 ; This test makes sure that the DominatorTree properly handles
 ; deletion of edges that go to forward-unreachable regions.
@@ -11,13 +11,13 @@
 define i32 @main() {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %0 = load i32, i32* @a, align 4
+  store i32 0, ptr %retval, align 4
+  %0 = load i32, ptr @a, align 4
   %cmp = icmp ne i32 %0, 1
   br i1 %cmp, label %land.rhs, label %land.end4
 
 land.rhs:                                         ; preds = %entry
-  %1 = load i32, i32* @a, align 4
+  %1 = load i32, ptr @a, align 4
   %tobool = icmp ne i32 %1, 0
   br i1 %tobool, label %land.rhs1, label %land.end
 

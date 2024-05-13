@@ -15,14 +15,14 @@
 ;
 ; RUN: llc -mtriple x86_64-linux %s -o - | FileCheck %s --check-prefix=CHECK
 
-define dso_local void @f(i32 %n, i32* nocapture %x) {
+define dso_local void @f(i32 %n, ptr nocapture %x) {
 entry:
   %cmp = icmp slt i32 %n, 0
   br i1 %cmp, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
   %0 = zext i32 %n to i64
-  %1 = tail call i8* @llvm.stacksave()
+  %1 = tail call ptr @llvm.stacksave()
   %vla = alloca i32, i64 %0, align 16
   %cmp132 = icmp eq i32 %n, 0
   br i1 %cmp132, label %for.cond.cleanup8, label %for.body.lr.ph
@@ -40,25 +40,25 @@ for.body:                                         ; preds = %for.body, %for.body
   %2 = trunc i64 %indvars.iv34 to i32
   %sub2 = sub i32 %sub, %2
   %idxprom = sext i32 %sub2 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %x, i64 %idxprom
-  %3 = load i32, i32* %arrayidx, align 4
-  %arrayidx4 = getelementptr inbounds i32, i32* %vla, i64 %indvars.iv34
-  store i32 %3, i32* %arrayidx4, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %x, i64 %idxprom
+  %3 = load i32, ptr %arrayidx, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %vla, i64 %indvars.iv34
+  store i32 %3, ptr %arrayidx4, align 4
   %indvars.iv.next35 = add nuw nsw i64 %indvars.iv34, 1
   %exitcond37 = icmp eq i64 %indvars.iv.next35, %0
   br i1 %exitcond37, label %for.cond6.preheader, label %for.body
 
 for.cond.cleanup8:                                ; preds = %for.body9, %if.end, %for.cond6.preheader
-  tail call void @llvm.stackrestore(i8* %1)
+  tail call void @llvm.stackrestore(ptr %1)
   br label %return
 
 for.body9:                                        ; preds = %for.cond6.preheader, %for.body9
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body9 ], [ 0, %for.cond6.preheader ]
-  %arrayidx11 = getelementptr inbounds i32, i32* %vla, i64 %indvars.iv
-  %4 = load i32, i32* %arrayidx11, align 4
+  %arrayidx11 = getelementptr inbounds i32, ptr %vla, i64 %indvars.iv
+  %4 = load i32, ptr %arrayidx11, align 4
   %add = add nsw i32 %4, 1
-  %arrayidx13 = getelementptr inbounds i32, i32* %x, i64 %indvars.iv
-  store i32 %add, i32* %arrayidx13, align 4
+  %arrayidx13 = getelementptr inbounds i32, ptr %x, i64 %indvars.iv
+  store i32 %add, ptr %arrayidx13, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %0
   br i1 %exitcond, label %for.cond.cleanup8, label %for.body9
@@ -68,10 +68,10 @@ return:                                           ; preds = %entry, %for.cond.cl
 }
 
 ; Function Attrs: nounwind
-declare i8* @llvm.stacksave()
+declare ptr @llvm.stacksave()
 
 ; Function Attrs: nounwind
-declare void @llvm.stackrestore(i8*)
+declare void @llvm.stackrestore(ptr)
 
 ; Check that llvm.stackrestore() happens before CSRs are popped off the stack
 

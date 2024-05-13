@@ -17,6 +17,8 @@
 #include <limits>
 #include <numeric>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include "test_macros.h"
 
 template <typename T>
@@ -113,10 +115,10 @@ int main(int, char**)
     signed_test<long>();
     signed_test<long long>();
 
-    signed_test<int8_t>();
-    signed_test<int16_t>();
-    signed_test<int32_t>();
-    signed_test<int64_t>();
+    signed_test<std::int8_t>();
+    signed_test<std::int16_t>();
+    signed_test<std::int32_t>();
+    signed_test<std::int64_t>();
 
     unsigned_test<unsigned char>();
     unsigned_test<unsigned short>();
@@ -124,19 +126,19 @@ int main(int, char**)
     unsigned_test<unsigned long>();
     unsigned_test<unsigned long long>();
 
-    unsigned_test<uint8_t>();
-    unsigned_test<uint16_t>();
-    unsigned_test<uint32_t>();
-    unsigned_test<uint64_t>();
+    unsigned_test<std::uint8_t>();
+    unsigned_test<std::uint16_t>();
+    unsigned_test<std::uint32_t>();
+    unsigned_test<std::uint64_t>();
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     unsigned_test<__uint128_t>();
     signed_test<__int128_t>();
 #endif
 
 //     int_test<char>();
-    signed_test<ptrdiff_t>();
-    unsigned_test<size_t>();
+    signed_test<std::ptrdiff_t>();
+    unsigned_test<std::size_t>();
 
     return 0;
 }

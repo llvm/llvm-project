@@ -58,7 +58,7 @@
 # RUN: rm -f %t/libgoodbye.dylib
 # RUN: not %lld -o %t/sub-library -L%t -lsuper %t/sub-library.o 2>&1 \
 # RUN:  | FileCheck %s --check-prefix=MISSING-REEXPORT -DDIR=%t
-# MISSING-REEXPORT: error: unable to locate re-export with install name [[DIR]]/libgoodbye.dylib
+# MISSING-REEXPORT: error: {{.*}}libsuper.dylib: unable to locate re-export with install name [[DIR]]/libgoodbye.dylib
 
 
 ## We can match dylibs without extensions too.
@@ -85,6 +85,36 @@
 # RUN: not %lld -dylib -L%t -sub_umbrella libhello -lhello %t/libgoodbye.o \
 # RUN:   -o %t/libgoodbye.dylib 2>&1 | FileCheck %s --check-prefix=MISSING-FRAMEWORK
 # MISSING-FRAMEWORK: error: -sub_umbrella libhello does not match a supplied dylib
+
+
+## Check that -F (but not -L) can override the search path in install_name for
+## frameworks.
+# RUN: mkdir -p %t/Hello2.framework
+# RUN: %lld -dylib %t/libhello.o \
+# RUN:   -install_name /path/to/Hello2.framework/Hello2 \
+# RUN:   -o %t/Hello2.framework/Hello2
+# RUN: %lld -dylib -o %t/libgoodbye4.dylib %t/libgoodbye.o \
+# RUN:   -reexport_library %t/Hello2.framework/Hello2
+# RUN: not %lld -lSystem -o %t/hello %t/libgoodbye4.dylib %t/sub-library.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOTFOUND
+# RUN: not %lld -lSystem -o %t/hello -L%t %t/libgoodbye4.dylib %t/sub-library.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOTFOUND
+# NOTFOUND: unable to locate re-export with install name /path/to/Hello2.framework/Hello2
+# RUN: %lld -lSystem -o %t/hello -F%t %t/libgoodbye4.dylib %t/sub-library.o
+
+## Check that -L (but not -F) can override the search path in install_name for
+## libraries.
+# RUN: %lld -dylib %t/libhello.o \
+# RUN:   -install_name /path/to/libhello2.dylib \
+# RUN:   -o %t/libhello2.dylib
+# RUN: %lld -dylib -o %t/libgoodbye5.dylib %t/libgoodbye.o \
+# RUN:   -reexport_library %t/libhello2.dylib
+# RUN: not %lld -lSystem -o %t/hello %t/libgoodbye5.dylib %t/sub-library.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOTFOUND2
+# RUN: not %lld -lSystem -o %t/hello -F%t %t/libgoodbye5.dylib %t/sub-library.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOTFOUND2
+# NOTFOUND2: unable to locate re-export with install name /path/to/libhello2.dylib
+# RUN: %lld -lSystem -o %t/hello -L%t %t/libgoodbye5.dylib %t/sub-library.o
 
 .text
 .globl _main

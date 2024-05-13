@@ -138,6 +138,7 @@ template <> struct MappingTraits<TypeIdSummary> {
 struct FunctionSummaryYaml {
   unsigned Linkage, Visibility;
   bool NotEligibleToImport, Live, IsLocal, CanAutoHide;
+  unsigned ImportType;
   std::vector<uint64_t> Refs;
   std::vector<uint64_t> TypeTests;
   std::vector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
@@ -183,6 +184,7 @@ template <> struct MappingTraits<FunctionSummaryYaml> {
     io.mapOptional("Live", summary.Live);
     io.mapOptional("Local", summary.IsLocal);
     io.mapOptional("CanAutoHide", summary.CanAutoHide);
+    io.mapOptional("ImportType", summary.ImportType);
     io.mapOptional("Refs", summary.Refs);
     io.mapOptional("TypeTests", summary.TypeTests);
     io.mapOptional("TypeTestAssumeVCalls", summary.TypeTestAssumeVCalls);
@@ -227,14 +229,16 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
               static_cast<GlobalValue::VisibilityTypes>(FSum.Visibility),
               FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal,
-              FSum.CanAutoHide),
+              FSum.CanAutoHide,
+              static_cast<GlobalValueSummary::ImportKind>(FSum.ImportType)),
           /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0, Refs,
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),
           std::move(FSum.TypeCheckedLoadVCalls),
           std::move(FSum.TypeTestAssumeConstVCalls),
           std::move(FSum.TypeCheckedLoadConstVCalls),
-          ArrayRef<FunctionSummary::ParamAccess>{}));
+          ArrayRef<FunctionSummary::ParamAccess>{}, ArrayRef<CallsiteInfo>{},
+          ArrayRef<AllocInfo>{}));
     }
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {
@@ -250,9 +254,9 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(FSum->flags().NotEligibleToImport),
               static_cast<bool>(FSum->flags().Live),
               static_cast<bool>(FSum->flags().DSOLocal),
-              static_cast<bool>(FSum->flags().CanAutoHide), Refs,
-              FSum->type_tests(), FSum->type_test_assume_vcalls(),
-              FSum->type_checked_load_vcalls(),
+              static_cast<bool>(FSum->flags().CanAutoHide),
+              FSum->flags().ImportType, Refs, FSum->type_tests(),
+              FSum->type_test_assume_vcalls(), FSum->type_checked_load_vcalls(),
               FSum->type_test_assume_const_vcalls(),
               FSum->type_checked_load_const_vcalls()});
           }
@@ -270,8 +274,8 @@ template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
     V.insert({GlobalValue::getGUID(Key), {std::string(Key), TId}});
   }
   static void output(IO &io, TypeIdSummaryMapTy &V) {
-    for (auto TidIter = V.begin(); TidIter != V.end(); TidIter++)
-      io.mapRequired(TidIter->second.first.c_str(), TidIter->second.second);
+    for (auto &TidIter : V)
+      io.mapRequired(TidIter.second.first.c_str(), TidIter.second.second);
   }
 };
 

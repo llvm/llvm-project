@@ -17,7 +17,7 @@ If you need to run the job on your own machines, please follow the
 `Buildkite guide <https://buildkite.com/docs/agent/v3>`_ to setup your
 own agents. Make sure you tag your agents in a way that you'll be able
 to recognize them when defining your job below. Finally, in order for the
-agent to register itself to Buildkite, it will need a ``BUILDKITE_AGENT_TOKEN``.
+agent to register itself to Buildkite, it will need a BuildKite Agent token.
 Please contact a maintainer to get your token.
 
 Then, simply add a job to the Buildkite pipeline by editing ``libcxx/utils/ci/buildkite-pipeline.yml``.
@@ -32,20 +32,22 @@ An example of a job definition is:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      [...]
 
-If you've created your own agents, you should provide the tag that you used
-when creating them in the ``queue`` entry -- this will instruct Buildkite to
-run that job only on agents that have that tag.
+If you create your own agents, put them in the ``libcxx-builders`` queue and
+use agent tags to allow targeting your agents from the Buildkite pipeline
+config appropriately.
 
 We try to keep the pipeline definition file as simple as possible, and to
 keep any script used for CI inside ``libcxx/utils/ci``. This ensures that
 it's possible to reproduce CI issues locally with ease, understanding of
 course that some setups may require access to special hardware that is not
 available.
+
+Finally, add your contact info to ``libcxx/utils/ci/BOT_OWNERS.txt``. This will
+be used to contact you when there are issues with the bot.
 
 Testing Your New Job
 ====================

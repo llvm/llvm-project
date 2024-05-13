@@ -76,7 +76,7 @@ double g0call() {
   D0 d = {0.0, };
   return g0(d);
 // CHECK-SOFT: call double @g0([2 x i64]
-// CHECK-HARD: call arm_aapcs_vfpcc double @g0(%struct.D0 %1
+// CHECK-HARD: call arm_aapcs_vfpcc double @g0(%struct.D0 %0
 }
 
 typedef struct {

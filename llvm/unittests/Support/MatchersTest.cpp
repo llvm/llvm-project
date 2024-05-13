@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock-matchers.h"
 
@@ -18,8 +17,8 @@ using ::testing::Not;
 
 namespace {
 TEST(MatchersTest, Optional) {
-  EXPECT_THAT(llvm::Optional<int>(llvm::None), Not(llvm::ValueIs(_)));
-  EXPECT_THAT(llvm::Optional<int>(10), llvm::ValueIs(10));
-  EXPECT_THAT(llvm::Optional<int>(10), llvm::ValueIs(AllOf(Lt(11), Gt(9))));
+  EXPECT_THAT(std::optional<int>(std::nullopt), Not(llvm::ValueIs(_)));
+  EXPECT_THAT(std::optional<int>(10), llvm::ValueIs(10));
+  EXPECT_THAT(std::optional<int>(10), llvm::ValueIs(AllOf(Lt(11), Gt(9))));
 }
 } // namespace

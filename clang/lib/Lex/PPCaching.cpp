@@ -88,7 +88,7 @@ void Preprocessor::EnterCachingLexMode() {
          "entered caching lex mode while lexing something else");
 
   if (InCachingLexMode()) {
-    assert(CurLexerKind == CLK_CachingLexer && "Unexpected lexer kind");
+    assert(CurLexerCallback == CLK_CachingLexer && "Unexpected lexer kind");
     return;
   }
 
@@ -96,9 +96,9 @@ void Preprocessor::EnterCachingLexMode() {
 }
 
 void Preprocessor::EnterCachingLexModeUnchecked() {
-  assert(CurLexerKind != CLK_CachingLexer && "already in caching lex mode");
+  assert(CurLexerCallback != CLK_CachingLexer && "already in caching lex mode");
   PushIncludeMacroStack();
-  CurLexerKind = CLK_CachingLexer;
+  CurLexerCallback = CLK_CachingLexer;
 }
 
 
@@ -145,7 +145,7 @@ bool Preprocessor::IsPreviousCachedToken(const Token &Tok) const {
   if (LastCachedTok.getKind() != Tok.getKind())
     return false;
 
-  int RelOffset = 0;
+  SourceLocation::IntTy RelOffset = 0;
   if ((!getSourceManager().isInSameSLocAddrSpace(
           Tok.getLocation(), getLastCachedTokenLocation(), &RelOffset)) ||
       RelOffset)

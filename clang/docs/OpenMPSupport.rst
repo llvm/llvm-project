@@ -13,20 +13,19 @@
 .. contents::
    :local:
 
+==============
 OpenMP Support
 ==============
 
-Clang fully supports OpenMP 4.5. Clang supports offloading to X86_64, AArch64,
-PPC64[LE] and has `basic support for Cuda devices`_.
-
-* #pragma omp declare simd: :part:`Partial`.  We support parsing/semantic
-  analysis + generation of special attributes for X86 target, but still
-  missing the LLVM pass for vectorization.
+Clang fully supports OpenMP 4.5, almost all of 5.0 and most of 5.1/2.
+Clang supports offloading to X86_64, AArch64, PPC64[LE], NVIDIA GPUs (all models) and AMD GPUs (all models).
 
 In addition, the LLVM OpenMP runtime `libomp` supports the OpenMP Tools
 Interface (OMPT) on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and macOS.
+OMPT is also supported for NVIDIA and AMD GPUs.
 
-For the list of supported features from OpenMP 5.0 see `OpenMP implementation details`_.
+For the list of supported features from OpenMP 5.0 and 5.1
+see `OpenMP implementation details`_ and `OpenMP 51 implementation details`_.
 
 General improvements
 ====================
@@ -35,17 +34,6 @@ General improvements
   collapse clause by replacing the expensive remainder operation with
   multiplications and additions.
 
-- The default schedules for the `distribute` and `for` constructs in a
-  parallel region and in SPMD mode have changed to ensure coalesced
-  accesses. For the `distribute` construct, a static schedule is used
-  with a chunk size equal to the number of threads per team (default
-  value of threads or as specified by the `thread_limit` clause if
-  present). For the `for` construct, the schedule is static with chunk
-  size of one.
-
-- Simplified SPMD code generation for `distribute parallel for` when
-  the new default schedules are applicable.
-
 - When using the collapse clause on a loop nest the default behavior
   is to automatically extend the representation of the loop counter to
   64 bits for the cases where the sizes of the collapsed loops are not
@@ -53,24 +41,9 @@ General improvements
   at most 32 bits, compile your program with the
   `-fopenmp-optimistic-collapse`.
 
-.. _basic support for Cuda devices:
 
-Cuda devices support
-====================
-
-Directives execution modes
---------------------------
-
-Clang code generation for target regions supports two modes: the SPMD and
-non-SPMD modes. Clang chooses one of these two modes automatically based on the
-way directives and clauses on those directives are used. The SPMD mode uses a
-simplified set of runtime functions thus increasing performance at the cost of
-supporting some OpenMP features. The non-SPMD mode is the most generic mode and
-supports all currently available OpenMP features. The compiler will always
-attempt to use the SPMD mode wherever possible. SPMD mode will not be used if:
-
-   - The target region contains user code (other than OpenMP-specific
-     directives) in between the `target` and the `parallel` directives.
+GPU devices support
+===================
 
 Data-sharing modes
 ------------------
@@ -81,8 +54,9 @@ performance and can be activated using the `-fopenmp-cuda-mode` flag. In
 `Generic` mode all local variables that can be shared in the parallel regions
 are stored in the global memory. In `Cuda` mode local variables are not shared
 between the threads and it is user responsibility to share the required data
-between the threads in the parallel regions.
-
+between the threads in the parallel regions. Often, the optimizer is able to
+reduce the cost of `Generic` mode to the level of `Cuda` mode, but the flag,
+as well as other assumption flags, can be used for tuning.
 
 Features not supported or with limited support for Cuda devices
 ---------------------------------------------------------------
@@ -94,11 +68,6 @@ Features not supported or with limited support for Cuda devices
 - User-defined reductions are supported only for trivial types.
 
 - Nested parallelism: inner parallel regions are executed sequentially.
-
-- Static linking of libraries containing device code is not supported yet.
-
-- Automatic translation of math functions in target regions to device-specific
-  math functions is not implemented yet.
 
 - Debug information for OpenMP target regions is supported, but sometimes it may
   be required to manually specify the address class of the inspected variables.
@@ -112,118 +81,119 @@ OpenMP 5.0 Implementation Details
 =================================
 
 The following table provides a quick overview over various OpenMP 5.0 features
-and their implementation status. Please contact *openmp-dev* at
-*lists.llvm.org* for more information or if you want to help with the
+and their implementation status. Please post on the
+`Discourse forums (Runtimes - OpenMP category)`_ for more
+information or if you want to help with the
 implementation.
 
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 |Category                      | Feature                                                      | Status                   | Reviews                                                               |
 +==============================+==============================================================+==========================+=======================================================================+
-| loop extension               | support != in the canonical loop form                        | :good:`done`             | D54441                                                                |
+| loop                         | support != in the canonical loop form                        | :good:`done`             | D54441                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| loop extension               | #pragma omp loop (directive)                                 | :part:`worked on`        |                                                                       |
+| loop                         | #pragma omp loop (directive)                                 | :part:`partial`          | D145823 (combined forms)                                              |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| loop extension               | collapse imperfectly nested loop                             | :good:`done`             |                                                                       |
+| loop                         | #pragma omp loop bind                                        | :part:`worked on`        | D144634 (needs review)                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| loop extension               | collapse non-rectangular nested loop                         | :good:`done`             |                                                                       |
+| loop                         | collapse imperfectly nested loop                             | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| loop extension               | C++ range-base for loop                                      | :good:`done`             |                                                                       |
+| loop                         | collapse non-rectangular nested loop                         | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| loop extension               | clause: if for SIMD directives                               | :good:`done`             |                                                                       |
+| loop                         | C++ range-base for loop                                      | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| loop extension               | inclusive scan extension (matching C++17 PSTL)               | :good:`done`             |                                                                       |
+| loop                         | clause: if for SIMD directives                               | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| memory mangagement           | memory allocators                                            | :good:`done`             | r341687,r357929                                                       |
+| loop                         | inclusive scan (matching C++17 PSTL)                         | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| memory mangagement           | allocate directive and allocate clause                       | :good:`done`             | r355614,r335952                                                       |
+| memory management            | memory allocators                                            | :good:`done`             | r341687,r357929                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| OMPD                         | OMPD interfaces                                              | :part:`not upstream`     | https://github.com/OpenMPToolsInterface/LLVM-openmp/tree/ompd-tests   |
+| memory management            | allocate directive and allocate clause                       | :good:`done`             | r355614,r335952                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| OMPT                         | OMPT interfaces                                              | :part:`mostly done`      |                                                                       |
+| OMPD                         | OMPD interfaces                                              | :good:`done`             | https://reviews.llvm.org/D99914   (Supports only HOST(CPU) and Linux  |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| thread affinity extension    | thread affinity extension                                    | :good:`done`             |                                                                       |
+| OMPT                         | OMPT interfaces (callback support)                           | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | taskloop reduction                                           | :good:`done`             |                                                                       |
+| thread affinity              | thread affinity                                              | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | task affinity                                                | :part:`not upstream`     |                                                                       |
+| task                         | taskloop reduction                                           | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | clause: depend on the taskwait construct                     | :part:`worked on`        |                                                                       |
+| task                         | task affinity                                                | :part:`not upstream`     | https://github.com/jklinkenberg/openmp/tree/task-affinity             |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | depend objects and detachable tasks                          | :good:`done`             |                                                                       |
+| task                         | clause: depend on the taskwait construct                     | :good:`done`             | D113540 (regular codegen only)                                        |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | mutexinoutset dependence-type for tasks                      | :good:`done`             | D53380,D57576                                                         |
+| task                         | depend objects and detachable tasks                          | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | combined taskloop constructs                                 | :good:`done`             |                                                                       |
+| task                         | mutexinoutset dependence-type for tasks                      | :good:`done`             | D53380,D57576                                                         |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | master taskloop                                              | :good:`done`             |                                                                       |
+| task                         | combined taskloop constructs                                 | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | parallel master taskloop                                     | :good:`done`             |                                                                       |
+| task                         | master taskloop                                              | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | master taskloop simd                                         | :good:`done`             |                                                                       |
+| task                         | parallel master taskloop                                     | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | parallel master taskloop simd                                | :good:`done`             |                                                                       |
+| task                         | master taskloop simd                                         | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| SIMD extension               | atomic and simd constructs inside SIMD code                  | :good:`done`             |                                                                       |
+| task                         | parallel master taskloop simd                                | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| SIMD extension               | SIMD nontemporal                                             | :good:`done`             |                                                                       |
+| SIMD                         | atomic and simd constructs inside SIMD code                  | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | infer target functions from initializers                     | :part:`worked on`        |                                                                       |
+| SIMD                         | SIMD nontemporal                                             | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | infer target variables from initializers                     | :part:`worked on`        |                                                                       |
+| device                       | infer target functions from initializers                     | :part:`worked on`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | OMP_TARGET_OFFLOAD environment variable                      | :good:`done`             | D50522                                                                |
+| device                       | infer target variables from initializers                     | :good:`done`             | D146418                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | support full 'defaultmap' functionality                      | :good:`done`             | D69204                                                                |
+| device                       | OMP_TARGET_OFFLOAD environment variable                      | :good:`done`             | D50522                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | device specific functions                                    | :good:`done`             |                                                                       |
+| device                       | support full 'defaultmap' functionality                      | :good:`done`             | D69204                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: device_type                                          | :good:`done`             |                                                                       |
+| device                       | device specific functions                                    | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: extended device                                      | :good:`done`             |                                                                       |
+| device                       | clause: device_type                                          | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: uses_allocators clause                               | :good:`done`             |                                                                       |
+| device                       | clause: extended device                                      | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: in_reduction                                         | :part:`worked on`        | r308768                                                               |
+| device                       | clause: uses_allocators clause                               | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | omp_get_device_num()                                         | :part:`worked on`        | D54342                                                                |
+| device                       | clause: in_reduction                                         | :part:`worked on`        | r308768                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | structure mapping of references                              | :none:`unclaimed`        |                                                                       |
+| device                       | omp_get_device_num()                                         | :good:`done`             | D54342,D128347                                                        |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | nested target declare                                        | :good:`done`             | D51378                                                                |
+| device                       | structure mapping of references                              | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | implicitly map 'this' (this[:1])                             | :good:`done`             | D55982                                                                |
+| device                       | nested target declare                                        | :good:`done`             | D51378                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | allow access to the reference count (omp_target_is_present)  | :good:`done`             |                                                                       |
+| device                       | implicitly map 'this' (this[:1])                             | :good:`done`             | D55982                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | requires directive                                           | :part:`partial`          |                                                                       |
+| device                       | allow access to the reference count (omp_target_is_present)  | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: unified_shared_memory                                | :good:`done`             | D52625,D52359                                                         |
+| device                       | requires directive                                           | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: unified_address                                      | :part:`partial`          |                                                                       |
+| device                       | clause: unified_shared_memory                                | :good:`done`             | D52625,D52359                                                         |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: reverse_offload                                      | :none:`unclaimed parts`  | D52780                                                                |
+| device                       | clause: unified_address                                      | :part:`partial`          |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: atomic_default_mem_order                             | :good:`done`             | D53513                                                                |
+| device                       | clause: reverse_offload                                      | :part:`partial`          | D52780,D155003                                                        |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: dynamic_allocators                                   | :part:`unclaimed parts`  | D53079                                                                |
+| device                       | clause: atomic_default_mem_order                             | :good:`done`             | D53513                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | user-defined mappers                                         | :part:`worked on`        | D56326,D58638,D58523,D58074,D60972,D59474                             |
+| device                       | clause: dynamic_allocators                                   | :part:`unclaimed parts`  | D53079                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | mapping lambda expression                                    | :good:`done`             | D51107                                                                |
+| device                       | user-defined mappers                                         | :good:`done`             | D56326,D58638,D58523,D58074,D60972,D59474                             |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: use_device_addr for target data                      | :good:`done`             |                                                                       |
+| device                       | mapping lambda expression                                    | :good:`done`             | D51107                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | support close modifier on map clause                         | :good:`done`             | D55719,D55892                                                         |
+| device                       | clause: use_device_addr for target data                      | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | teams construct on the host device                           | :part:`done`             | r371553                                                               |
+| device                       | support close modifier on map clause                         | :good:`done`             | D55719,D55892                                                         |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | support non-contiguous array sections for target update      | :good:`done`             |                                                                       |
+| device                       | teams construct on the host device                           | :good:`done`             | r371553                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | pointer attachment                                           | :none:`unclaimed`        |                                                                       |
+| device                       | support non-contiguous array sections for target update      | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | map clause reordering based on map types                     | :none:`unclaimed`        |                                                                       |
+| device                       | pointer attachment                                           | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| atomic extension             | hints for the atomic construct                               | :good:`done`             | D51233                                                                |
+| atomic                       | hints for the atomic construct                               | :good:`done`             | D51233                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | base language                | C11 support                                                  | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -231,118 +201,124 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | base language                | lambda support                                               | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | array shaping                                                | :good:`done`             | D74144                                                                |
+| misc                         | array shaping                                                | :good:`done`             | D74144                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | library shutdown (omp_pause_resource[_all])                  | :none:`unclaimed parts`  | D55078                                                                |
+| misc                         | library shutdown (omp_pause_resource[_all])                  | :good:`done`             | D55078                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | metadirectives                                               | :part:`worked on`        |                                                                       |
+| misc                         | metadirectives                                               | :part:`mostly done`      | D91944                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | conditional modifier for lastprivate clause                  | :good:`done`             |                                                                       |
+| misc                         | conditional modifier for lastprivate clause                  | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | iterator and multidependences                                | :good:`done`             |                                                                       |
+| misc                         | iterator and multidependences                                | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | depobj directive and depobj dependency kind                  | :good:`done`             |                                                                       |
+| misc                         | depobj directive and depobj dependency kind                  | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | user-defined function variants                               | :part:`worked on`        | D67294, D64095, D71847, D71830                                        |
+| misc                         | user-defined function variants                               | :good:`done`.            | D67294, D64095, D71847, D71830, D109635                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | pointer/reference to pointer based array reductions          | :none:`unclaimed`        |                                                                       |
+| misc                         | pointer/reference to pointer based array reductions          | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | prevent new type definitions in clauses                      | :good:`done`             |                                                                       |
+| misc                         | prevent new type definitions in clauses                      | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| memory model extension       | memory model update (seq_cst, acq_rel, release, acquire,...) | :good:`done`             |                                                                       |
+| memory model                 | memory model update (seq_cst, acq_rel, release, acquire,...) | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 
+
+.. _OpenMP 51 implementation details:
 
 OpenMP 5.1 Implementation Details
 =================================
 
 The following table provides a quick overview over various OpenMP 5.1 features
-and their implementation status, as defined in the technical report 8 (TR8).
-Please contact *openmp-dev* at *lists.llvm.org* for more information or if you
-want to help with the implementation.
+and their implementation status.
+Please post on the
+`Discourse forums (Runtimes - OpenMP category)`_ for more
+information or if you want to help with the
+implementation.
 
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 |Category                      | Feature                                                      | Status                   | Reviews                                                               |
 +==============================+==============================================================+==========================+=======================================================================+
-| atomic extension             | 'compare' clause on atomic construct                         | :good:`worked on`        |                                                                       |
+| atomic                       | 'compare' clause on atomic construct                         | :good:`done`             | D120290, D120007, D118632, D120200, D116261, D118547, D116637         |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| atomic extension             | 'fail' clause on atomic construct                            | :none:`unclaimed`        |                                                                       |
+| atomic                       | 'fail' clause on atomic construct                            | :part:`worked on`        | D123235 (in progress)                                                 |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| base language                | C++ attribute specifier syntax                               | :part:`worked on`        |                                                                       |
+| base language                | C++ attribute specifier syntax                               | :good:`done`             | D105648                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | 'present' map type modifier                                  | :good:`done`             | D83061, D83062, D84422                                                |
+| device                       | 'present' map type modifier                                  | :good:`done`             | D83061, D83062, D84422                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | 'present' motion modifier                                    | :good:`done`             | D84711, D84712                                                        |
+| device                       | 'present' motion modifier                                    | :good:`done`             | D84711, D84712                                                        |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | 'present' in defaultmap clause                               | :good:`done`             | D92427                                                                |
+| device                       | 'present' in defaultmap clause                               | :good:`done`             | D92427                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | map clause reordering reordering based on 'present' modifier | :none:`unclaimed`        |                                                                       |
+| device                       | map clause reordering based on 'present' modifier            | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | device-specific environment variables                        | :none:`unclaimed`        |                                                                       |
+| device                       | device-specific environment variables                        | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | omp_target_is_accessible routine                             | :none:`unclaimed`        |                                                                       |
+| device                       | omp_target_is_accessible routine                             | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | omp_get_mapped_ptr routine                                   | :none:`unclaimed`        |                                                                       |
+| device                       | omp_get_mapped_ptr routine                                   | :good:`done`             | D141545                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | new async target memory copy routines                        | :none:`unclaimed`        |                                                                       |
+| device                       | new async target memory copy routines                        | :good:`done`             | D136103                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | thread_limit clause on target construct                      | :none:`unclaimed`        |                                                                       |
+| device                       | thread_limit clause on target construct                      | :part:`partial`          | D141540 (offload), D152054 (host, in progress)                        |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | has_device_addr clause on target construct                   | :none:`unclaimed`        |                                                                       |
+| device                       | has_device_addr clause on target construct                   | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | iterators in map clause or motion clauses                    | :none:`unclaimed`        |                                                                       |
+| device                       | iterators in map clause or motion clauses                    | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | indirect clause on declare target directive                  | :none:`unclaimed`        |                                                                       |
+| device                       | indirect clause on declare target directive                  | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | allow virtual functions calls for mapped object on device    | :none:`unclaimed`        |                                                                       |
+| device                       | allow virtual functions calls for mapped object on device    | :part:`partial`          |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | interop construct                                            | :part:`partial`          | parsing/sema done: D98558, D98834, D98815                             |
+| device                       | interop construct                                            | :part:`partial`          | parsing/sema done: D98558, D98834, D98815                             |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | assorted routines for querying interoperable properties      | :none:`unclaimed`        |                                                                       |
+| device                       | assorted routines for querying interoperable properties      | :part:`partial`          | D106674                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| loop extension               | Loop tiling transformation                                   | :good:`done`             | D76342                                                                |
+| loop                         | Loop tiling transformation                                   | :good:`done`             | D76342                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| loop extension               | Loop unrolling transformation                                | :none:`worked on`        |                                                                       |
+| loop                         | Loop unrolling transformation                                | :good:`done`             | D99459                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| loop extension               | 'reproducible'/'unconstrained' modifiers in 'order' clause   | :none:`unclaimed`        |                                                                       |
+| loop                         | 'reproducible'/'unconstrained' modifiers in 'order' clause   | :part:`partial`          | D127855                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| memory management            | alignment extensions for allocate directive and clause       | :part:`worked on`        |                                                                       |
+| memory management            | alignment for allocate directive and clause                  | :good:`done`             | D115683                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | memory management            | new memory management routines                               | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | memory management            | changes to omp_alloctrait_key enum                           | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| memory model extension       | seq_cst clause on flush construct                            | :none:`unclaimed`        |                                                                       |
+| memory model                 | seq_cst clause on flush construct                            | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | 'omp_all_memory' keyword and use in 'depend' clause          | :none:`unclaimed`        |                                                                       |
+| misc                         | 'omp_all_memory' keyword and use in 'depend' clause          | :good:`done`             | D125828, D126321                                                      |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | error directive                                              | :none:`unclaimed`        |                                                                       |
+| misc                         | error directive                                              | :good:`done`             | D139166                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | scope construct                                              | :none:`unclaimed`        |                                                                       |
+| misc                         | scope construct                                              | :none:`worked on`        | D157933                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | routines for controlling and querying team regions           | :none:`unclaimed`        |                                                                       |
+| misc                         | routines for controlling and querying team regions           | :part:`partial`          | D95003 (libomp only)                                                  |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | changes to ompt_scope_endpoint_t enum                        | :none:`unclaimed`        |                                                                       |
+| misc                         | changes to ompt_scope_endpoint_t enum                        | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | omp_display_env routine                                      | :none:`unclaimed`        |                                                                       |
+| misc                         | omp_display_env routine                                      | :good:`done`             | D74956                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | extended OMP_PLACES syntax                                   | :none:`unclaimed`        |                                                                       |
+| misc                         | extended OMP_PLACES syntax                                   | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | OMP_NUM_TEAMS and OMP_TEAMS_THREAD_LIMIT env vars            | :none:`unclaimed`        |                                                                       |
+| misc                         | OMP_NUM_TEAMS and OMP_TEAMS_THREAD_LIMIT env vars            | :good:`done`             | D138769                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | 'target_device' selector in context specifier                | :none:`unclaimed`        |                                                                       |
+| misc                         | 'target_device' selector in context specifier                | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | begin/end declare variant                                    | :good:`done`             | D71179                                                                |
+| misc                         | begin/end declare variant                                    | :good:`done`             | D71179                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | dispatch construct and function variant argument adjustment  | :part:`worked on`        | D99537, D99679                                                        |
+| misc                         | dispatch construct and function variant argument adjustment  | :part:`worked on`        | D99537, D99679                                                        |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | assume and assumes directives                                | :part:`worked on`        |                                                                       |
+| misc                         | assumes directives                                           | :part:`worked on`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | nothing directive                                            | :none:`unclaimed`        |                                                                       |
+| misc                         | assume directive                                             | :part:`worked on`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | masked construct and related combined constructs             | :part:`worked on`        | D99995, D100514                                                       |
+| misc                         | nothing directive                                            | :good:`done`             | D123286                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | default(firstprivate) & default(private)                     | :part:`partial`          | firstprivate done: D75591                                             |
+| misc                         | masked construct and related combined constructs             | :part:`worked on`        | D99995, D100514                                                       |
++------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
+| misc                         | default(firstprivate) & default(private)                     | :good:`done`             | D75591 (firstprivate), D125912 (private)                              |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | other                        | deprecating master construct                                 | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -352,11 +328,35 @@ want to help with the implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | OMPT                         | new barrier state values added to ompt_state_t enum          | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| OMPT                         | new 'emi' callbacks for external monitoring interfaces       | :none:`unclaimed`        |                                                                       |
+| OMPT                         | new 'emi' callbacks for external monitoring interfaces       | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | 'strict' modifier for taskloop construct                     | :none:`unclaimed`        |                                                                       |
+| OMPT                         | device tracing interface                                     | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | inoutset in depend clause                                    | :none:`unclaimed`        |                                                                       |
+| task                         | 'strict' modifier for taskloop construct                     | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | nowait clause on taskwait                                    | :none:`unclaimed`        |                                                                       |
+| task                         | inoutset in depend clause                                    | :good:`done`             | D97085, D118383                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
+| task                         | nowait clause on taskwait                                    | :part:`partial`          | parsing/sema done: D131830, D141531                                   |
++------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
+
+OpenMP Extensions
+=================
+
+The following table provides a quick overview over various OpenMP
+extensions and their implementation status.  These extensions are not
+currently defined by any standard, so links to associated LLVM
+documentation are provided.  As these extensions mature, they will be
+considered for standardization. Please post on the
+`Discourse forums (Runtimes - OpenMP category)`_ to provide feedback.
+
++------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
+|Category                      | Feature                                                                           | Status                   | Reviews                                                |
++==============================+===================================================================================+==========================+========================================================+
+| atomic extension             | `'atomic' strictly nested within 'teams'                                          | :good:`prototyped`       | D126323                                                |
+|                              | <https://openmp.llvm.org/docs/openacc/OpenMPExtensions.html#atomicWithinTeams>`_  |                          |                                                        |
++------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
+| device extension             | `'ompx_hold' map type modifier                                                    | :good:`prototyped`       | D106509, D106510                                       |
+|                              | <https://openmp.llvm.org/docs/openacc/OpenMPExtensions.html#ompx-hold>`_          |                          |                                                        |
++------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
+
+.. _Discourse forums (Runtimes - OpenMP category): https://discourse.llvm.org/c/runtimes/openmp/35

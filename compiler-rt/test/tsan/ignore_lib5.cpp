@@ -1,7 +1,7 @@
 // RUN: rm -rf %t-dir
 // RUN: mkdir %t-dir
 
-// RUN: %clangxx_tsan -O1 %s -DLIB -fPIC -fno-sanitize=thread -shared -o %t-dir/libignore_lib1.so
+// RUN: %clangxx_tsan -O1 -fno-builtin %s -DLIB -fPIC -fno-sanitize=thread -shared -o %t-dir/libignore_lib1.so
 // RUN: %clangxx_tsan -O1 %s %link_libcxx_tsan -o %t-dir/executable
 // RUN: echo running w/o suppressions:
 // RUN: %deflake %run %t-dir/executable | FileCheck %s --check-prefix=CHECK-NOSUPP
@@ -9,7 +9,7 @@
 // RUN: %env_tsan_opts=suppressions='%s.supp' %run %t-dir/executable 2>&1 | FileCheck %s --check-prefix=CHECK-WITHSUPP
 
 // REQUIRES: stable-runtime
-// UNSUPPORTED: powerpc64le
+// UNSUPPORTED: target=powerpc64le{{.*}}
 // FIXME: This test occasionally fails on powerpc64 LE possibly starting with
 // r279664.  Re-enable the test once the problem(s) have been fixed.
 
@@ -19,7 +19,7 @@
 // This was caused by non-atomicity of reading of /proc/self/maps.
 
 // ReadProcMaps() on NetBSD does not handle >=1MB of memory layout information
-// UNSUPPORTED: netbsd
+// UNSUPPORTED: target={{.*netbsd.*}}
 
 #ifndef LIB
 

@@ -1,6 +1,6 @@
 ;; This test checks whether DW_AT_rank attribute accepts DIExpression.
 
-; RUN: llc %s -filetype=obj -o %t.o
+; RUN: llc %s -mtriple=x86_64 -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump  %t.o | FileCheck %s
 
 ;; Test whether DW_AT_data_location is generated.
@@ -19,11 +19,11 @@
 ; ModuleID = 'dwarfdump-rank.ll'
 source_filename = "dwarfdump-rank.ll"
 
-define void @sub_(i64* noalias %arank, i64* noalias %"arank$sd") !dbg !5 {
+define void @sub_(ptr noalias %arank, ptr noalias %"arank$sd") !dbg !5 {
 L.entry:
-  call void @llvm.dbg.value(metadata i64* %arank, metadata !17, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.declare(metadata i64* %"arank$sd", metadata !19, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.declare(metadata i64* %"arank$sd", metadata !29, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %arank, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %"arank$sd", metadata !19, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %"arank$sd", metadata !29, metadata !DIExpression()), !dbg !18
   ret void, !dbg !18
 }
 

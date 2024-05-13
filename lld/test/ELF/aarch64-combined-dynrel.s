@@ -1,4 +1,4 @@
-// REQUIRES: AArch64
+// REQUIRES: aarch64
 // RUN: llvm-mc --triple=aarch64-linux-gnu -filetype=obj -o %t.o %s
 // RUN: echo "SECTIONS { \
 // RUN:         .text : { *(.text) } \
@@ -32,6 +32,7 @@ _start:
 // CHECK-NEXT:         Type: SHT_RELA
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:       SHF_ALLOC
+// CHECK-NEXT:       SHF_INFO_LINK
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address:
 // CHECK-NEXT:     Offset:

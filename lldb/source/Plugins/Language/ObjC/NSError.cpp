@@ -14,7 +14,6 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
@@ -83,13 +82,15 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   }
 
   InferiorSizedWord isw(domain_str_value, *process_sp);
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
 
+  if (!scratch_ts_sp)
+    return false;
   ValueObjectSP domain_str_sp = ValueObject::CreateValueObjectFromData(
       "domain_str", isw.GetAsData(process_sp->GetByteOrder()),
       valobj.GetExecutionContextRef(),
-      ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget())
-          ->GetBasicType(lldb::eBasicTypeVoid)
-          .GetPointerType());
+      scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType());
 
   if (!domain_str_sp)
     return false;
@@ -115,7 +116,7 @@ public:
   // no need to delete m_child_ptr - it's kept alive by the cluster manager on
   // our behalf
 
-  size_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     if (m_child_ptr)
       return 1;
     if (m_child_sp)
@@ -123,7 +124,7 @@ public:
     return 0;
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     if (idx != 0)
       return lldb::ValueObjectSP();
 
@@ -132,17 +133,17 @@ public:
     return m_child_sp;
   }
 
-  bool Update() override {
+  lldb::ChildCacheState Update() override {
     m_child_ptr = nullptr;
     m_child_sp.reset();
 
     ProcessSP process_sp(m_backend.GetProcessSP());
     if (!process_sp)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     lldb::addr_t userinfo_location = DerefToNSErrorPointer(m_backend);
     if (userinfo_location == LLDB_INVALID_ADDRESS)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     size_t ptr_size = process_sp->GetAddressByteSize();
 
@@ -151,21 +152,24 @@ public:
     lldb::addr_t userinfo =
         process_sp->ReadPointerFromMemory(userinfo_location, error);
     if (userinfo == LLDB_INVALID_ADDRESS || error.Fail())
-      return false;
+      return lldb::ChildCacheState::eRefetch;
     InferiorSizedWord isw(userinfo, *process_sp);
+    TypeSystemClangSP scratch_ts_sp =
+        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
+    if (!scratch_ts_sp)
+      return lldb::ChildCacheState::eRefetch;
     m_child_sp = CreateValueObjectFromData(
         "_userInfo", isw.GetAsData(process_sp->GetByteOrder()),
         m_backend.GetExecutionContextRef(),
-        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget())
-            ->GetBasicType(lldb::eBasicTypeObjCID));
-    return false;
+        scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID));
+    return lldb::ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return true; }
 
   size_t GetIndexOfChildWithName(ConstString name) override {
-    static ConstString g___userInfo("_userInfo");
-    if (name == g___userInfo)
+    static ConstString g_userInfo("_userInfo");
+    if (name == g_userInfo)
       return 0;
     return UINT32_MAX;
   }
@@ -177,7 +181,7 @@ private:
   // values to leak if the latter, then I need to store a SharedPointer to it -
   // so that it only goes away when everyone else in the cluster goes away oh
   // joy!
-  ValueObject *m_child_ptr;
+  ValueObject *m_child_ptr = nullptr;
   ValueObjectSP m_child_sp;
 };
 

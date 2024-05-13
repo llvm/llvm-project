@@ -1,0 +1,9 @@
+# REQUIRES: aarch64-registered-target
+## This tests that archives are correctly created when the llvm
+## has native assembly info
+
+# RUN: llvm-as %p/Inputs/arm64-asm.ll -o %t-arm64-asm.bc
+# RUN: llvm-libtool-darwin -static -o %t-arm64.lib %t-arm64-asm.bc
+# RUN: llvm-nm %t-arm64.lib | FileCheck %s
+
+# CHECK: T somesymbol

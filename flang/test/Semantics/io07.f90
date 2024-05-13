@@ -1,12 +1,12 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 1001 format(A)
 
      !ERROR: Format statement must be labeled
      format(A)
 
 2001 format(3I8, 3Z8)
-2002 format(3I8, Z8)
-2003 format(  3  I  8  ,  3  Z  8  )
+2002 format(DC, F8.2, 3I8, Z8)
+2003 format(  D C , F 8 . 2 , 3  I  8  ,  3  Z  8  )
 2004 format(20PF10.2)
 2005 format(20P,F10.2)
 2006 format(20P7F10.2)
@@ -74,9 +74,9 @@
 
 8001 format(9G0.5)
 
-     !ERROR: Unexpected 'e' in 'G0' edit descriptor
+     !ERROR: A 'G0' edit descriptor must not have an 'e' value
 8101 format(9(G0.5e1))
 
-     !ERROR: Unexpected 'e' in 'G0' edit descriptor
+     !ERROR: A 'G0' edit descriptor must not have an 'e' value
 8102 format(9(G0.5  E 1))
 end

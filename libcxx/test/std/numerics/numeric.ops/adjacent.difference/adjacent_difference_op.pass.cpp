@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // <numeric>
-// UNSUPPORTED: clang-8
-// UNSUPPORTED: gcc-9
 
 // Became constexpr in C++20
 // template <InputIterator InIter,
@@ -68,17 +66,7 @@ test_use_move()
 }
 #endif // TEST_STD_VER > 17
 
-// C++20 can use string in constexpr evaluation, but both libc++ and MSVC
-// don't have the support yet. In these cases omit the constexpr test.
-// FIXME Remove constexpr string workaround introduced in D90569
-#if TEST_STD_VER > 17 && \
-	(!defined(__cpp_lib_constexpr_string) || __cpp_lib_constexpr_string < 201907L)
-void
-#else
-TEST_CONSTEXPR_CXX20 void
-#endif
-test_string()
-{
+TEST_CONSTEXPR_CXX20 void test_string() {
     std::string sa[] = {"a", "b", "c"};
     std::string sr[] = {"a", "ba", "cb"};
     std::string output[3];
@@ -142,31 +130,31 @@ public:
 TEST_CONSTEXPR_CXX20 bool
 test()
 {
-    test<cpp17_input_iterator<const int*>, output_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, cpp17_output_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, random_access_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, int*>();
 
-    test<forward_iterator<const int*>, output_iterator<int*> >();
+    test<forward_iterator<const int*>, cpp17_output_iterator<int*> >();
     test<forward_iterator<const int*>, forward_iterator<int*> >();
     test<forward_iterator<const int*>, bidirectional_iterator<int*> >();
     test<forward_iterator<const int*>, random_access_iterator<int*> >();
     test<forward_iterator<const int*>, int*>();
 
-    test<bidirectional_iterator<const int*>, output_iterator<int*> >();
+    test<bidirectional_iterator<const int*>, cpp17_output_iterator<int*> >();
     test<bidirectional_iterator<const int*>, forward_iterator<int*> >();
     test<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
     test<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
     test<bidirectional_iterator<const int*>, int*>();
 
-    test<random_access_iterator<const int*>, output_iterator<int*> >();
+    test<random_access_iterator<const int*>, cpp17_output_iterator<int*> >();
     test<random_access_iterator<const int*>, forward_iterator<int*> >();
     test<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
     test<random_access_iterator<const int*>, random_access_iterator<int*> >();
     test<random_access_iterator<const int*>, int*>();
 
-    test<const int*, output_iterator<int*> >();
+    test<const int*, cpp17_output_iterator<int*> >();
     test<const int*, forward_iterator<int*> >();
     test<const int*, bidirectional_iterator<int*> >();
     test<const int*, random_access_iterator<int*> >();
@@ -181,13 +169,7 @@ test()
 #if TEST_STD_VER > 17
     test_use_move();
 #endif // TEST_STD_VER > 17
-    // C++20 can use string in constexpr evaluation, but both libc++ and MSVC
-    // don't have the support yet. In these cases omit the constexpr test.
-    // FIXME Remove constexpr string workaround introduced in D90569
-#if TEST_STD_VER > 17 && \
-	(!defined(__cpp_lib_constexpr_string) || __cpp_lib_constexpr_string < 201907L)
-	if (!std::is_constant_evaluated())
-#endif
+
     test_string();
 
     return true;

@@ -15,11 +15,11 @@ void func(struct struct1* p, float *a, float *b, float c) {
   *b = p->position[0];
   p->position[2] = c;
   // CHECK: @func
-  // CHECK: load <4 x float>, <4 x float>* {{%.*}}, align 4
-  // CHECK: store <4 x float> {{%.*}}, <4 x float>* {{%.*}}, align 4
-  // CHECK: load <4 x float>, <4 x float>* {{%.*}}, align 4
-  // CHECK: load <4 x float>, <4 x float>* {{%.*}}, align 4
-  // CHECK: load <4 x float>, <4 x float>* {{%.*}}, align 4
-  // CHECK: store <4 x float> {{%.*}}, <4 x float>* {{%.*}}, align 4
+  // CHECK: load <4 x float>, ptr {{%.*}}, align 4
+  // CHECK: store <4 x float> {{%.*}}, ptr {{%.*}}, align 4
+  // CHECK: load <4 x float>, ptr {{%.*}}, align 4
+  // CHECK: load <4 x float>, ptr {{%.*}}, align 4
+  // CHECK: load <4 x float>, ptr {{%.*}}, align 4
+  // CHECK: store <4 x float> {{%.*}}, ptr {{%.*}}, align 4
   // CHECK: ret void
 }

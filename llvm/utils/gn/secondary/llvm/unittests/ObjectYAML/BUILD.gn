@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("ObjectYAMLTests") {
   deps = [
@@ -8,6 +8,7 @@ unittest("ObjectYAMLTests") {
   ]
   sources = [
     "DWARFYAMLTest.cpp",
+    "DXContainerYAMLTest.cpp",
     "ELFYAMLTest.cpp",
     "MinidumpYAMLTest.cpp",
     "YAML2ObjTest.cpp",

@@ -12,11 +12,14 @@
 
 #include <limits>
 #include <climits>
-#include <cwchar>
 #include <cfloat>
 #include <cassert>
 
 #include "test_macros.h"
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#   include <cwchar>
+#endif
 
 template <class T>
 void
@@ -38,14 +41,14 @@ int main(int, char**)
     test<char>(CHAR_MAX);
     test<signed char>(SCHAR_MAX);
     test<unsigned char>(UCHAR_MAX);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>(WCHAR_MAX);
+#endif
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     test<char8_t>(UCHAR_MAX); // ??
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t>(USHRT_MAX);
     test<char32_t>(UINT_MAX);
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
     test<short>(SHRT_MAX);
     test<unsigned short>(USHRT_MAX);
     test<int>(INT_MAX);
@@ -54,7 +57,7 @@ int main(int, char**)
     test<unsigned long>(ULONG_MAX);
     test<long long>(LLONG_MAX);
     test<unsigned long long>(ULLONG_MAX);
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__int128_t>(__int128_t(__uint128_t(-1)/2));
     test<__uint128_t>(__uint128_t(-1));
 #endif

@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -18,29 +19,56 @@
 //      path(InputIterator first, InputIterator last);
 
 
-#include "filesystem_include.h"
+#include <filesystem>
+#include <cassert>
 #include <iterator>
 #include <type_traits>
-#include <cassert>
 
 #include "test_macros.h"
-#include "filesystem_test_helper.h"
+namespace fs = std::filesystem;
 
+template <class Iter1, class Iter2>
+bool checkCollectionsEqual(
+    Iter1 start1, Iter1 const end1
+  , Iter2 start2, Iter2 const end2
+  )
+{
+    while (start1 != end1 && start2 != end2) {
+        if (*start1 != *start2) {
+            return false;
+        }
+        ++start1; ++start2;
+    }
+    return (start1 == end1 && start2 == end2);
+}
 
-
-template <class It>
-std::reverse_iterator<It> mkRev(It it) {
-  return std::reverse_iterator<It>(it);
+template <class Iter1, class Iter2>
+bool checkCollectionsEqualBackwards(
+    Iter1 const start1, Iter1 end1
+  , Iter2 const start2, Iter2 end2
+  )
+{
+    while (start1 != end1 && start2 != end2) {
+        --end1; --end2;
+        if (*end1 != *end2) {
+            return false;
+        }
+    }
+    return (start1 == end1 && start2 == end2);
 }
 
 void checkIteratorConcepts() {
   using namespace fs;
   using It = path::iterator;
   using Traits = std::iterator_traits<It>;
-  ASSERT_SAME_TYPE(Traits::iterator_category, std::bidirectional_iterator_tag);
+  ASSERT_SAME_TYPE(path::const_iterator, It);
+#if TEST_STD_VER > 17
+  static_assert(std::bidirectional_iterator<It>);
+#endif
   ASSERT_SAME_TYPE(Traits::value_type, path);
-  ASSERT_SAME_TYPE(Traits::pointer,   path const*);
-  ASSERT_SAME_TYPE(Traits::reference, path const&);
+  LIBCPP_STATIC_ASSERT(std::is_same<Traits::iterator_category, std::input_iterator_tag>::value, "");
+  LIBCPP_STATIC_ASSERT(std::is_same<Traits::pointer, path const*>::value, "");
+  LIBCPP_STATIC_ASSERT(std::is_same<Traits::reference, path>::value, "");
   {
     It it;
     ASSERT_SAME_TYPE(It&, decltype(++it));
@@ -93,16 +121,13 @@ void checkBeginEndBasic() {
 #endif
     assert(checkCollectionsEqual(p.begin(), p.end(), std::begin(expect), std::end(expect)));
     assert(checkCollectionsEqualBackwards(p.begin(), p.end(), std::begin(expect), std::end(expect)));
-
   }
   {
     path p("////foo/bar/baz///");
     const path expect[] = {"/", "foo", "bar", "baz", ""};
     assert(checkCollectionsEqual(p.begin(), p.end(), std::begin(expect), std::end(expect)));
     assert(checkCollectionsEqualBackwards(p.begin(), p.end(), std::begin(expect), std::end(expect)));
-
   }
-
 }
 
 int main(int, char**) {

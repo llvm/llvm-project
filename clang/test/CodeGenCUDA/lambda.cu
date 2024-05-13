@@ -28,8 +28,8 @@
 // HOST:  call void @_Z16__device_stub__gIZ12test_resolvevEUlvE_EvT_
 // HOST:  call void @_ZZ12test_resolvevENKUlvE_clEv
 // HOST-LABEL: define internal void @_ZZ12test_resolvevENKUlvE_clEv
-// HOST:  call i32 @_Z10overloadedIiET_v
-// HOST-LABEL: define linkonce_odr i32 @_Z10overloadedIiET_v
+// HOST:  call noundef i32 @_Z10overloadedIiET_v
+// HOST-LABEL: define linkonce_odr noundef i32 @_Z10overloadedIiET_v
 // HOST:  ret i32 2
 
 // Check kernel is registered with correct device side kernel name.
@@ -43,7 +43,7 @@
 // DEV-LABEL: define{{.*}} amdgpu_kernel void @_Z1gIZ12test_capturevEUlvE_EvT_
 // DEV:  call void @_ZZ12test_capturevENKUlvE_clEv
 // DEV-LABEL: define internal void @_ZZ12test_capturevENKUlvE_clEv
-// DEV:  store i32 1, i32* addrspacecast (i32 addrspace(1)* @a to i32*)
+// DEV:  store i32 1, ptr addrspacecast (ptr addrspace(1) @a to ptr)
 
 // Check functions emitted for test_resolve in device compilation.
 // Check device version of template function 'overloaded' is emitted and called
@@ -51,8 +51,8 @@
 // DEV-LABEL: define{{.*}} amdgpu_kernel void @_Z1gIZ12test_resolvevEUlvE_EvT_
 // DEV:  call void @_ZZ12test_resolvevENKUlvE_clEv
 // DEV-LABEL: define internal void @_ZZ12test_resolvevENKUlvE_clEv
-// DEV:  call i32 @_Z10overloadedIiET_v
-// DEV-LABEL: define linkonce_odr i32 @_Z10overloadedIiET_v
+// DEV:  call noundef i32 @_Z10overloadedIiET_v
+// DEV-LABEL: define linkonce_odr noundef i32 @_Z10overloadedIiET_v
 // DEV:  ret i32 1
 
 __device__ int a;

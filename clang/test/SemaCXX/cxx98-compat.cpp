@@ -24,7 +24,7 @@ template<int ...I>  // expected-warning {{variadic templates are incompatible wi
 class Variadic3 {};
 
 alignas(8) int with_alignas; // expected-warning {{'alignas' is incompatible with C++98}}
-int with_attribute [[ ]]; // expected-warning {{C++11 attribute syntax is incompatible with C++98}}
+int with_attribute [[ ]]; // expected-warning {{[[]] attributes are incompatible with C++ standards before C++11}}
 
 void Literals() {
   (void)u8"str"; // expected-warning {{unicode literals are incompatible with C++98}}
@@ -104,7 +104,7 @@ struct RefQualifier {
 
 auto f() -> int; // expected-warning {{trailing return types are incompatible with C++98}}
 #ifdef CXX14COMPAT
-auto ff() { return 5; } // expected-warning {{'auto' type specifier is incompatible with C++98}} 
+auto ff() { return 5; } // expected-warning {{'auto' type specifier is incompatible with C++98}}
 // expected-warning@-1 {{return type deduction is incompatible with C++ standards before C++14}}
 #endif
 
@@ -152,7 +152,7 @@ __decltype(const_expr) decl_type2 = 0; // ok
 void no_except() noexcept; // expected-warning {{noexcept specifications are incompatible with C++98}}
 bool no_except_expr = noexcept(1 + 1); // expected-warning {{noexcept expressions are incompatible with C++98}}
 void *null = nullptr; // expected-warning {{'nullptr' is incompatible with C++98}}
-static_assert(true, "!"); // expected-warning {{static_assert declarations are incompatible with C++98}}
+static_assert(true, "!"); // expected-warning {{'static_assert' declarations are incompatible with C++98}}
 
 struct InhCtorBase {
   InhCtorBase(int);
@@ -220,7 +220,8 @@ struct HasExplicitConversion {
 struct Struct {};
 enum Enum { enum_val = 0 };
 struct BadFriends {
-  friend enum ::Enum; // expected-warning {{befriending enumeration type 'enum ::Enum' is incompatible with C++98}}
+  friend enum ::Enum; // expected-warning {{elaborated enum specifier cannot be declared as a friend}}
+                      // expected-note@-1 {{remove 'enum' to befriend an enum}}
   friend int; // expected-warning {{non-class friend type 'int' is incompatible with C++98}}
   friend Struct; // expected-warning {{befriending 'Struct' without 'struct' keyword is incompatible with C++98}}
 };

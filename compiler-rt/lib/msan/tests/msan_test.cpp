@@ -413,7 +413,7 @@ TEST(MemorySanitizer, AndOr) {
   EXPECT_POISONED(*p | 0x0000ffff);
   EXPECT_POISONED(*p | 0xffff0000);
 
-  EXPECT_POISONED(*GetPoisoned<bool>() & *GetPoisoned<bool>());
+  EXPECT_POISONED((int)*GetPoisoned<bool>() & (int)*GetPoisoned<bool>());
 }
 
 template<class T>
@@ -1560,6 +1560,7 @@ TEST(MemorySanitizer, memccpy_nomatch_positive) {
   char* y = new char[5];
   strcpy(x, "abc");
   EXPECT_UMR(memccpy(y, x, 'd', 5));
+  break_optimization(y);
   delete[] x;
   delete[] y;
 }
@@ -1570,6 +1571,7 @@ TEST(MemorySanitizer, memccpy_match_positive) {
   x[0] = 'a';
   x[2] = 'b';
   EXPECT_UMR(memccpy(y, x, 'b', 5));
+  break_optimization(y);
   delete[] x;
   delete[] y;
 }
@@ -1683,6 +1685,21 @@ TEST(MemorySanitizer, stpcpy) {
   EXPECT_NOT_POISONED(y[0]);
   EXPECT_POISONED(y[1]);
   EXPECT_NOT_POISONED(y[2]);
+}
+
+TEST(MemorySanitizer, stpncpy) {
+  char *x = new char[3];
+  char *y = new char[5];
+  x[0] = 'a';
+  x[1] = *GetPoisoned<char>(1, 1);
+  x[2] = '\0';
+  char *res = stpncpy(y, x, 4);
+  ASSERT_EQ(res, y + 2);
+  EXPECT_NOT_POISONED(y[0]);
+  EXPECT_POISONED(y[1]);
+  EXPECT_NOT_POISONED(y[2]);
+  EXPECT_NOT_POISONED(y[3]);
+  EXPECT_POISONED(y[4]);
 }
 
 TEST(MemorySanitizer, strcat) {
@@ -3153,19 +3170,21 @@ static void GetPathToLoadable(char *buf, size_t sz) {
   const char *last_slash = strrchr(program_path, '/');
   ASSERT_NE(nullptr, last_slash);
   size_t dir_len = (size_t)(last_slash - program_path);
-#if defined(__x86_64__)
+#  if defined(__x86_64__)
   static const char basename[] = "libmsan_loadable.x86_64.so";
-#elif defined(__MIPSEB__) || defined(MIPSEB)
+#  elif defined(__MIPSEB__) || defined(MIPSEB)
   static const char basename[] = "libmsan_loadable.mips64.so";
-#elif defined(__mips64)
+#  elif defined(__mips64)
   static const char basename[] = "libmsan_loadable.mips64el.so";
-#elif defined(__aarch64__)
+#  elif defined(__aarch64__)
   static const char basename[] = "libmsan_loadable.aarch64.so";
-#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#  elif defined(__loongarch_lp64)
+  static const char basename[] = "libmsan_loadable.loongarch64.so";
+#  elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   static const char basename[] = "libmsan_loadable.powerpc64.so";
-#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#  elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   static const char basename[] = "libmsan_loadable.powerpc64le.so";
-#endif
+#  endif
   int res = snprintf(buf, sz, "%.*s/%s",
                      (int)dir_len, program_path, basename);
   ASSERT_GE(res, 0);
@@ -3222,7 +3241,7 @@ TEST(MemorySanitizer, dlopenFailed) {
 
 #endif // MSAN_TEST_DISABLE_DLOPEN
 
-#if !defined(__FreeBSD__) && !defined(__NetBSD__)
+#if !defined(__NetBSD__)
 TEST(MemorySanitizer, sched_getaffinity) {
   cpu_set_t mask;
   if (sched_getaffinity(getpid(), sizeof(mask), &mask) == 0)
@@ -3280,11 +3299,13 @@ static void *SmallStackThread_threadfn(void* data) {
   return 0;
 }
 
+static int GetThreadStackMin() {
 #ifdef PTHREAD_STACK_MIN
-constexpr int kThreadStackMin = PTHREAD_STACK_MIN;
+  return PTHREAD_STACK_MIN;
 #else
-constexpr int kThreadStackMin = 0;
+  return 0;
 #endif
+}
 
 TEST(MemorySanitizer, SmallStackThread) {
   pthread_attr_t attr;
@@ -3293,7 +3314,8 @@ TEST(MemorySanitizer, SmallStackThread) {
   int res;
   res = pthread_attr_init(&attr);
   ASSERT_EQ(0, res);
-  res = pthread_attr_setstacksize(&attr, std::max(kThreadStackMin, 64 * 1024));
+  res = pthread_attr_setstacksize(&attr,
+                                  std::max(GetThreadStackMin(), 64 * 1024));
   ASSERT_EQ(0, res);
   res = pthread_create(&t, &attr, SmallStackThread_threadfn, NULL);
   ASSERT_EQ(0, res);
@@ -3310,7 +3332,7 @@ TEST(MemorySanitizer, SmallPreAllocatedStackThread) {
   res = pthread_attr_init(&attr);
   ASSERT_EQ(0, res);
   void *stack;
-  const size_t kStackSize = std::max(kThreadStackMin, 32 * 1024);
+  const size_t kStackSize = std::max(GetThreadStackMin(), 32 * 1024);
   res = posix_memalign(&stack, 4096, kStackSize);
   ASSERT_EQ(0, res);
   res = pthread_attr_setstack(&attr, stack, kStackSize);
@@ -3750,6 +3772,14 @@ TEST(MemorySanitizer, getgroups_negative) {
   ASSERT_EQ(-1, n);
 }
 
+TEST(MemorySanitizer, wordexp_empty) {
+  wordexp_t w;
+  int res = wordexp("", &w, 0);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(0U, w.we_wordc);
+  ASSERT_STREQ(nullptr, w.we_wordv[0]);
+}
+
 TEST(MemorySanitizer, wordexp) {
   wordexp_t w;
   int res = wordexp("a b c", &w, 0);
@@ -3758,6 +3788,18 @@ TEST(MemorySanitizer, wordexp) {
   ASSERT_STREQ("a", w.we_wordv[0]);
   ASSERT_STREQ("b", w.we_wordv[1]);
   ASSERT_STREQ("c", w.we_wordv[2]);
+}
+
+TEST(MemorySanitizer, wordexp_initial_offset) {
+  wordexp_t w;
+  w.we_offs = 1;
+  int res = wordexp("a b c", &w, WRDE_DOOFFS);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(3U, w.we_wordc);
+  ASSERT_EQ(nullptr, w.we_wordv[0]);
+  ASSERT_STREQ("a", w.we_wordv[1]);
+  ASSERT_STREQ("b", w.we_wordv[2]);
+  ASSERT_STREQ("c", w.we_wordv[3]);
 }
 
 template<class T>
@@ -4318,8 +4360,8 @@ TEST(MemorySanitizerOrigins, InitializedStoreDoesNotChangeOrigin) {
 template<class T, class BinaryOp>
 ALWAYS_INLINE
 void BinaryOpOriginTest(BinaryOp op) {
-  U4 ox = rand();  //NOLINT
-  U4 oy = rand();  //NOLINT
+  U4 ox = rand();
+  U4 oy = rand();
   T *x = GetPoisonedO<T>(0, ox, 0);
   T *y = GetPoisonedO<T>(1, oy, 0);
   T *z = GetPoisonedO<T>(2, 0, 0);
@@ -4400,7 +4442,8 @@ TEST(MemorySanitizerOrigins, EQ) {
   if (!TrackingOrigins()) return;
   EXPECT_POISONED_O(*GetPoisonedO<S4>(0, __LINE__) <= 11, __LINE__);
   EXPECT_POISONED_O(*GetPoisonedO<S4>(0, __LINE__) == 11, __LINE__);
-  EXPECT_POISONED_O(*GetPoisonedO<float>(0, __LINE__) == 1.1, __LINE__);
+  EXPECT_POISONED_O(*GetPoisonedO<float>(0, __LINE__) == 1.1f, __LINE__);
+  EXPECT_POISONED_O(*GetPoisonedO<double>(0, __LINE__) == 1.1, __LINE__);
 }
 
 TEST(MemorySanitizerOrigins, DIV) {

@@ -27,7 +27,7 @@ bb5:                                              ; preds = %bb3
   %tmp11 = ashr exact i64 %tmp10, 48
   %tmp12 = and i64 %tmp11, %tmp4
   %tmp13 = trunc i64 %tmp12 to i32
-  store i32 %tmp13, i32* undef, align 4
+  store i32 %tmp13, ptr undef, align 4
   br label %bb15
 
 bb14:                                             ; preds = %bb3

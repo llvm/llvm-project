@@ -1,4 +1,4 @@
-; RUN: opt -S -deadargelim %s | FileCheck %s
+; RUN: opt -S -passes=deadargelim %s | FileCheck %s
 
 ; DeadArgumentElimination should respect the function address space
 ; in the data layout.

@@ -5,7 +5,7 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux -filetype=obj %s -o -| \
 # RUN:   not llvm-dwarfdump -debug-macro - /dev/null 2>&1 | FileCheck %s
 
-# CHECK: error: String offsets contribution of the unit not found
+# CHECK: error: DW_FORM_strx used without a valid string offsets table
 
        .section        .debug_abbrev,"",@progbits
        .byte   1                       # Abbreviation Code

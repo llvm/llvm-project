@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/FPUtil/TestHelpers.h"
+#include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class CopySignTest : public __llvm_libc::testing::Test {
+template <typename T>
+class CopySignTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -25,18 +27,18 @@ public:
     EXPECT_FP_EQ(aNaN, func(aNaN, -1.0));
     EXPECT_FP_EQ(aNaN, func(aNaN, 1.0));
 
-    EXPECT_FP_EQ(negInf, func(inf, -1.0));
-    EXPECT_FP_EQ(inf, func(negInf, 1.0));
+    EXPECT_FP_EQ(neg_inf, func(inf, -1.0));
+    EXPECT_FP_EQ(inf, func(neg_inf, 1.0));
 
-    EXPECT_FP_EQ(negZero, func(zero, -1.0));
-    EXPECT_FP_EQ(zero, func(negZero, 1.0));
+    EXPECT_FP_EQ(neg_zero, func(zero, -1.0));
+    EXPECT_FP_EQ(zero, func(neg_zero, 1.0));
   }
 
   void testRange(CopySignFunc func) {
-    constexpr UIntType count = 10000000;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
-      T x = T(FPBits(v));
+    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      T x = FPBits(v).get_val();
       if (isnan(x) || isinf(x))
         continue;
 

@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // <functional>
-// REQUIRES: c++03 || c++11 || c++14
 
 // mem_fun1_ref_t
 
-#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// REQUIRES: c++03 || c++11 || c++14
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <functional>
 #include <type_traits>

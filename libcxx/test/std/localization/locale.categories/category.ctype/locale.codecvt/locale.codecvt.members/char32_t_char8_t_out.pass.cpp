@@ -8,16 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test relies on P0482 being fixed, which isn't in
-// older Apple dylibs
-//
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.14
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
+// XFAIL: availability-char8_t_support-missing
 
 // <locale>
 
@@ -33,7 +24,7 @@
 int main(int, char**) {
   using F = std::codecvt<char32_t, char8_t, std::mbstate_t>;
   const F& f = std::use_facet<F>(std::locale::classic());
-  F::intern_type from[9] = {'s', 'o', 'm', 'e', ' ', 't', 'e', 'x', 't'};
+  F::intern_type from[9] = {u's', u'o', u'm', u'e', u' ', u't', u'e', u'x', u't'};
   F::extern_type to[9] = {0};
   std::mbstate_t mbs = {};
   const F::intern_type* from_next = nullptr;

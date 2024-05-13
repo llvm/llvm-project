@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 // <functional>
 
 // class function<R(ArgTypes...)>
@@ -13,7 +15,20 @@
 // R operator()(ArgTypes... args) const
 
 // This test runs in C++03, but we have deprecated using std::function in C++03.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX03_FUNCTION
+
+// Address Sanitizer doesn't instrument weak symbols on Linux. When a key
+// function is defined for bad_function_call's vtable, its typeinfo and vtable
+// will be defined as strong symbols in the library and weak symbols in other
+// translation units. Only the strong symbol will be instrumented, increasing
+// its size (due to the redzone) and leading to a serious ODR violation
+// resulting in a crash.
+// Some relevant bugs:
+// https://github.com/google/sanitizers/issues/1017
+// https://github.com/google/sanitizers/issues/619
+// https://github.com/google/sanitizers/issues/398
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68016
+// UNSUPPORTED: asan
 
 #include <functional>
 #include <cassert>

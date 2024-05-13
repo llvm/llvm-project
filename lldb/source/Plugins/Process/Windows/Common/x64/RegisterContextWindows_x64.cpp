@@ -24,13 +24,44 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#define DEFINE_GPR(reg, alt) #reg, alt, 8, 0, eEncodingUint, eFormatHexUppercase
+#define DEFINE_GPR(reg, alt, generic)                                          \
+{                                                                              \
+  #reg, alt, 8, 0, eEncodingUint, eFormatHexUppercase,                         \
+      {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, generic,                    \
+        LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                            \
+        nullptr, nullptr, nullptr,                                             \
+}
+
 #define DEFINE_GPR_BIN(reg, alt) #reg, alt, 8, 0, eEncodingUint, eFormatBinary
 #define DEFINE_FPU_XMM(reg)                                                    \
   #reg, NULL, 16, 0, eEncodingUint, eFormatVectorOfUInt64,                     \
   {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,            \
    LLDB_INVALID_REGNUM, lldb_##reg##_x86_64},                                  \
-  nullptr, nullptr, nullptr, 0
+  nullptr, nullptr, nullptr,
+
+#define DEFINE_GPR_PSEUDO_32(reg)                                              \
+{                                                                              \
+  #reg, nullptr, 4, 0, eEncodingUint, eFormatHexUppercase,                     \
+      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
+        LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                            \
+        nullptr, nullptr, nullptr,                                             \
+}
+
+#define DEFINE_GPR_PSEUDO_16(reg)                                              \
+{                                                                              \
+  #reg, nullptr, 2, 0, eEncodingUint, eFormatHexUppercase,                     \
+      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
+        LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                            \
+        nullptr, nullptr, nullptr,                                             \
+}
+
+#define DEFINE_GPR_PSEUDO_8(reg)                                               \
+{                                                                              \
+  #reg, nullptr, 1, 0, eEncodingUint, eFormatHexUppercase,                     \
+      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
+        LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                            \
+        nullptr, nullptr, nullptr,                                             \
+}
 
 namespace {
 
@@ -59,6 +90,58 @@ enum RegisterIndex {
   eRegisterIndexR15,
   eRegisterIndexRip,
   eRegisterIndexRflags,
+  eRegisterIndexEax,
+  eRegisterIndexEbx,
+  eRegisterIndexEcx,
+  eRegisterIndexEdx,
+  eRegisterIndexEdi,
+  eRegisterIndexEsi,
+  eRegisterIndexEbp,
+  eRegisterIndexEsp,
+  eRegisterIndexR8d,
+  eRegisterIndexR9d,
+  eRegisterIndexR10d,
+  eRegisterIndexR11d,
+  eRegisterIndexR12d,
+  eRegisterIndexR13d,
+  eRegisterIndexR14d,
+  eRegisterIndexR15d,
+  eRegisterIndexAx,
+  eRegisterIndexBx,
+  eRegisterIndexCx,
+  eRegisterIndexDx,
+  eRegisterIndexDi,
+  eRegisterIndexSi,
+  eRegisterIndexBp,
+  eRegisterIndexSp,
+  eRegisterIndexR8w,
+  eRegisterIndexR9w,
+  eRegisterIndexR10w,
+  eRegisterIndexR11w,
+  eRegisterIndexR12w,
+  eRegisterIndexR13w,
+  eRegisterIndexR14w,
+  eRegisterIndexR15w,
+  eRegisterIndexAh,
+  eRegisterIndexBh,
+  eRegisterIndexCh,
+  eRegisterIndexDh,
+  eRegisterIndexAl,
+  eRegisterIndexBl,
+  eRegisterIndexCl,
+  eRegisterIndexDl,
+  eRegisterIndexDil,
+  eRegisterIndexSil,
+  eRegisterIndexBpl,
+  eRegisterIndexSpl,
+  eRegisterIndexR8l,
+  eRegisterIndexR9l,
+  eRegisterIndexR10l,
+  eRegisterIndexR11l,
+  eRegisterIndexR12l,
+  eRegisterIndexR13l,
+  eRegisterIndexR14l,
+  eRegisterIndexR15l,
 
   eRegisterIndexXmm0,
   eRegisterIndexXmm1,
@@ -86,132 +169,83 @@ RegisterInfo g_register_infos[] = {
     //  ================================  =========================
     //  ======================  =========================
     //  ===================  =================     ==========    ===============
-    {DEFINE_GPR(rax, nullptr),
-     {dwarf_rax_x86_64, dwarf_rax_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_rax_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(rbx, nullptr),
-     {dwarf_rbx_x86_64, dwarf_rbx_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_rbx_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(rcx, nullptr),
-     {dwarf_rcx_x86_64, dwarf_rcx_x86_64, LLDB_REGNUM_GENERIC_ARG1,
-      LLDB_INVALID_REGNUM, lldb_rcx_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(rdx, nullptr),
-     {dwarf_rdx_x86_64, dwarf_rdx_x86_64, LLDB_REGNUM_GENERIC_ARG2,
-      LLDB_INVALID_REGNUM, lldb_rdx_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(rdi, nullptr),
-     {dwarf_rdi_x86_64, dwarf_rdi_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_rdi_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(rsi, nullptr),
-     {dwarf_rsi_x86_64, dwarf_rsi_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_rsi_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(rbp, "fp"),
-     {dwarf_rbp_x86_64, dwarf_rbp_x86_64, LLDB_REGNUM_GENERIC_FP,
-      LLDB_INVALID_REGNUM, lldb_rbp_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(rsp, "sp"),
-     {dwarf_rsp_x86_64, dwarf_rsp_x86_64, LLDB_REGNUM_GENERIC_SP,
-      LLDB_INVALID_REGNUM, lldb_rsp_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(r8, nullptr),
-     {dwarf_r8_x86_64, dwarf_r8_x86_64, LLDB_REGNUM_GENERIC_ARG3,
-      LLDB_INVALID_REGNUM, lldb_r8_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(r9, nullptr),
-     {dwarf_r9_x86_64, dwarf_r9_x86_64, LLDB_REGNUM_GENERIC_ARG4,
-      LLDB_INVALID_REGNUM, lldb_r9_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(r10, nullptr),
-     {dwarf_r10_x86_64, dwarf_r10_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_r10_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(r11, nullptr),
-     {dwarf_r11_x86_64, dwarf_r11_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_r11_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(r12, nullptr),
-     {dwarf_r12_x86_64, dwarf_r12_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_r12_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(r13, nullptr),
-     {dwarf_r13_x86_64, dwarf_r13_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_r13_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(r14, nullptr),
-     {dwarf_r14_x86_64, dwarf_r14_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_r14_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(r15, nullptr),
-     {dwarf_r15_x86_64, dwarf_r15_x86_64, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_r15_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR(rip, "pc"),
-     {dwarf_rip_x86_64, dwarf_rip_x86_64, LLDB_REGNUM_GENERIC_PC,
-      LLDB_INVALID_REGNUM, lldb_rip_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
-    {DEFINE_GPR_BIN(eflags, "flags"),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_FLAGS,
-      LLDB_INVALID_REGNUM, lldb_rflags_x86_64},
-     nullptr,
-     nullptr,
-     nullptr,
-     0},
+    DEFINE_GPR(rax, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rbx, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rcx, nullptr, LLDB_REGNUM_GENERIC_ARG1),
+    DEFINE_GPR(rdx, nullptr, LLDB_REGNUM_GENERIC_ARG2),
+    DEFINE_GPR(rdi, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rsi, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rbp, "fp", LLDB_REGNUM_GENERIC_FP),
+    DEFINE_GPR(rsp, "sp", LLDB_REGNUM_GENERIC_SP),
+    DEFINE_GPR(r8, nullptr, LLDB_REGNUM_GENERIC_ARG3),
+    DEFINE_GPR(r9, nullptr, LLDB_REGNUM_GENERIC_ARG4),
+    DEFINE_GPR(r10, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r11, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r12, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r13, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r14, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r15, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rip, "pc", LLDB_REGNUM_GENERIC_PC),
+    {
+        DEFINE_GPR_BIN(eflags, "flags"),
+        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_FLAGS,
+         LLDB_INVALID_REGNUM, lldb_rflags_x86_64},
+        nullptr,
+        nullptr,
+        nullptr,
+    },
+    DEFINE_GPR_PSEUDO_32(eax),
+    DEFINE_GPR_PSEUDO_32(ebx),
+    DEFINE_GPR_PSEUDO_32(ecx),
+    DEFINE_GPR_PSEUDO_32(edx),
+    DEFINE_GPR_PSEUDO_32(edi),
+    DEFINE_GPR_PSEUDO_32(esi),
+    DEFINE_GPR_PSEUDO_32(ebp),
+    DEFINE_GPR_PSEUDO_32(esp),
+    DEFINE_GPR_PSEUDO_32(r8d),
+    DEFINE_GPR_PSEUDO_32(r9d),
+    DEFINE_GPR_PSEUDO_32(r10d),
+    DEFINE_GPR_PSEUDO_32(r11d),
+    DEFINE_GPR_PSEUDO_32(r12d),
+    DEFINE_GPR_PSEUDO_32(r13d),
+    DEFINE_GPR_PSEUDO_32(r14d),
+    DEFINE_GPR_PSEUDO_32(r15d),
+    DEFINE_GPR_PSEUDO_16(ax),
+    DEFINE_GPR_PSEUDO_16(bx),
+    DEFINE_GPR_PSEUDO_16(cx),
+    DEFINE_GPR_PSEUDO_16(dx),
+    DEFINE_GPR_PSEUDO_16(di),
+    DEFINE_GPR_PSEUDO_16(si),
+    DEFINE_GPR_PSEUDO_16(bp),
+    DEFINE_GPR_PSEUDO_16(sp),
+    DEFINE_GPR_PSEUDO_16(r8w),
+    DEFINE_GPR_PSEUDO_16(r9w),
+    DEFINE_GPR_PSEUDO_16(r10w),
+    DEFINE_GPR_PSEUDO_16(r11w),
+    DEFINE_GPR_PSEUDO_16(r12w),
+    DEFINE_GPR_PSEUDO_16(r13w),
+    DEFINE_GPR_PSEUDO_16(r14w),
+    DEFINE_GPR_PSEUDO_16(r15w),
+    DEFINE_GPR_PSEUDO_8(ah),
+    DEFINE_GPR_PSEUDO_8(bh),
+    DEFINE_GPR_PSEUDO_8(ch),
+    DEFINE_GPR_PSEUDO_8(dh),
+    DEFINE_GPR_PSEUDO_8(al),
+    DEFINE_GPR_PSEUDO_8(bl),
+    DEFINE_GPR_PSEUDO_8(cl),
+    DEFINE_GPR_PSEUDO_8(dl),
+    DEFINE_GPR_PSEUDO_8(dil),
+    DEFINE_GPR_PSEUDO_8(sil),
+    DEFINE_GPR_PSEUDO_8(bpl),
+    DEFINE_GPR_PSEUDO_8(spl),
+    DEFINE_GPR_PSEUDO_8(r8l),
+    DEFINE_GPR_PSEUDO_8(r9l),
+    DEFINE_GPR_PSEUDO_8(r10l),
+    DEFINE_GPR_PSEUDO_8(r11l),
+    DEFINE_GPR_PSEUDO_8(r12l),
+    DEFINE_GPR_PSEUDO_8(r13l),
+    DEFINE_GPR_PSEUDO_8(r14l),
+    DEFINE_GPR_PSEUDO_8(r15l),
     {DEFINE_FPU_XMM(xmm0)},
     {DEFINE_FPU_XMM(xmm1)},
     {DEFINE_FPU_XMM(xmm2)},
@@ -227,20 +261,38 @@ RegisterInfo g_register_infos[] = {
     {DEFINE_FPU_XMM(xmm12)},
     {DEFINE_FPU_XMM(xmm13)},
     {DEFINE_FPU_XMM(xmm14)},
-    {DEFINE_FPU_XMM(xmm15)}
-};
+    {DEFINE_FPU_XMM(xmm15)}};
 
-static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
+static size_t k_num_register_infos = std::size(g_register_infos);
 
 // Array of lldb register numbers used to define the set of all General Purpose
 // Registers
 uint32_t g_gpr_reg_indices[] = {
-    eRegisterIndexRax, eRegisterIndexRbx, eRegisterIndexRcx,
-    eRegisterIndexRdx, eRegisterIndexRdi, eRegisterIndexRsi,
-    eRegisterIndexRbp, eRegisterIndexRsp, eRegisterIndexR8,
-    eRegisterIndexR9,  eRegisterIndexR10, eRegisterIndexR11,
-    eRegisterIndexR12, eRegisterIndexR13, eRegisterIndexR14,
-    eRegisterIndexR15, eRegisterIndexRip, eRegisterIndexRflags};
+    eRegisterIndexRax,  eRegisterIndexRbx,  eRegisterIndexRcx,
+    eRegisterIndexRdx,  eRegisterIndexRdi,  eRegisterIndexRsi,
+    eRegisterIndexRbp,  eRegisterIndexRsp,  eRegisterIndexR8,
+    eRegisterIndexR9,   eRegisterIndexR10,  eRegisterIndexR11,
+    eRegisterIndexR12,  eRegisterIndexR13,  eRegisterIndexR14,
+    eRegisterIndexR15,  eRegisterIndexRip,  eRegisterIndexRflags,
+    eRegisterIndexEax,  eRegisterIndexEbx,  eRegisterIndexEcx,
+    eRegisterIndexEdx,  eRegisterIndexEdi,  eRegisterIndexEsi,
+    eRegisterIndexEbp,  eRegisterIndexEsp,  eRegisterIndexR8d,
+    eRegisterIndexR9d,  eRegisterIndexR10d, eRegisterIndexR11d,
+    eRegisterIndexR12d, eRegisterIndexR13d, eRegisterIndexR14d,
+    eRegisterIndexR15d, eRegisterIndexAx,   eRegisterIndexBx,
+    eRegisterIndexCx,   eRegisterIndexDx,   eRegisterIndexDi,
+    eRegisterIndexSi,   eRegisterIndexBp,   eRegisterIndexSp,
+    eRegisterIndexR8w,  eRegisterIndexR9w,  eRegisterIndexR10w,
+    eRegisterIndexR11w, eRegisterIndexR12w, eRegisterIndexR13w,
+    eRegisterIndexR14w, eRegisterIndexR15w, eRegisterIndexAh,
+    eRegisterIndexBh,   eRegisterIndexCh,   eRegisterIndexDh,
+    eRegisterIndexAl,   eRegisterIndexBl,   eRegisterIndexCl,
+    eRegisterIndexDl,   eRegisterIndexDil,  eRegisterIndexSil,
+    eRegisterIndexBpl,  eRegisterIndexSpl,  eRegisterIndexR8l,
+    eRegisterIndexR9l,  eRegisterIndexR10l, eRegisterIndexR11l,
+    eRegisterIndexR12l, eRegisterIndexR13l, eRegisterIndexR14l,
+    eRegisterIndexR15l
+};
 
 uint32_t g_fpu_reg_indices[] = {
     eRegisterIndexXmm0,  eRegisterIndexXmm1,  eRegisterIndexXmm2,
@@ -252,10 +304,10 @@ uint32_t g_fpu_reg_indices[] = {
 };
 
 RegisterSet g_register_sets[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_reg_indices), g_gpr_reg_indices},
-    {"Floating Point Registers", "fpu",
-     llvm::array_lengthof(g_fpu_reg_indices), g_fpu_reg_indices}};
+    {"General Purpose Registers", "gpr", std::size(g_gpr_reg_indices),
+     g_gpr_reg_indices},
+    {"Floating Point Registers", "fpu", std::size(g_fpu_reg_indices),
+     g_fpu_reg_indices}};
 }
 
 // Constructors and Destructors
@@ -266,7 +318,7 @@ RegisterContextWindows_x64::RegisterContextWindows_x64(
 RegisterContextWindows_x64::~RegisterContextWindows_x64() {}
 
 size_t RegisterContextWindows_x64::GetRegisterCount() {
-  return llvm::array_lengthof(g_register_infos);
+  return std::size(g_register_infos);
 }
 
 const RegisterInfo *
@@ -277,7 +329,7 @@ RegisterContextWindows_x64::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextWindows_x64::GetRegisterSetCount() {
-  return llvm::array_lengthof(g_register_sets);
+  return std::size(g_register_sets);
 }
 
 const RegisterSet *RegisterContextWindows_x64::GetRegisterSet(size_t reg_set) {
@@ -295,60 +347,82 @@ bool RegisterContextWindows_x64::ReadRegister(const RegisterInfo *reg_info,
   const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
 
   switch (reg) {
-  case lldb_rax_x86_64:
-    reg_value.SetUInt64(m_context.Rax);
+#define GPR_CASE(size, reg_case, reg_val)                                      \
+  case reg_case:                                                               \
+    reg_value.SetUInt##size(reg_val);                                        \
     break;
-  case lldb_rbx_x86_64:
-    reg_value.SetUInt64(m_context.Rbx);
-    break;
-  case lldb_rcx_x86_64:
-    reg_value.SetUInt64(m_context.Rcx);
-    break;
-  case lldb_rdx_x86_64:
-    reg_value.SetUInt64(m_context.Rdx);
-    break;
-  case lldb_rdi_x86_64:
-    reg_value.SetUInt64(m_context.Rdi);
-    break;
-  case lldb_rsi_x86_64:
-    reg_value.SetUInt64(m_context.Rsi);
-    break;
-  case lldb_r8_x86_64:
-    reg_value.SetUInt64(m_context.R8);
-    break;
-  case lldb_r9_x86_64:
-    reg_value.SetUInt64(m_context.R9);
-    break;
-  case lldb_r10_x86_64:
-    reg_value.SetUInt64(m_context.R10);
-    break;
-  case lldb_r11_x86_64:
-    reg_value.SetUInt64(m_context.R11);
-    break;
-  case lldb_r12_x86_64:
-    reg_value.SetUInt64(m_context.R12);
-    break;
-  case lldb_r13_x86_64:
-    reg_value.SetUInt64(m_context.R13);
-    break;
-  case lldb_r14_x86_64:
-    reg_value.SetUInt64(m_context.R14);
-    break;
-  case lldb_r15_x86_64:
-    reg_value.SetUInt64(m_context.R15);
-    break;
-  case lldb_rbp_x86_64:
-    reg_value.SetUInt64(m_context.Rbp);
-    break;
-  case lldb_rsp_x86_64:
-    reg_value.SetUInt64(m_context.Rsp);
-    break;
-  case lldb_rip_x86_64:
-    reg_value.SetUInt64(m_context.Rip);
-    break;
-  case lldb_rflags_x86_64:
-    reg_value.SetUInt64(m_context.EFlags);
-    break;
+
+  GPR_CASE(64, lldb_rax_x86_64, m_context.Rax);
+  GPR_CASE(64, lldb_rbx_x86_64, m_context.Rbx);
+  GPR_CASE(64, lldb_rcx_x86_64, m_context.Rcx);
+  GPR_CASE(64, lldb_rdx_x86_64, m_context.Rdx);
+  GPR_CASE(64, lldb_rdi_x86_64, m_context.Rdi);
+  GPR_CASE(64, lldb_rsi_x86_64, m_context.Rsi);
+  GPR_CASE(64, lldb_r8_x86_64, m_context.R8);
+  GPR_CASE(64, lldb_r9_x86_64, m_context.R9);
+  GPR_CASE(64, lldb_r10_x86_64, m_context.R10);
+  GPR_CASE(64, lldb_r11_x86_64, m_context.R11);
+  GPR_CASE(64, lldb_r12_x86_64, m_context.R12);
+  GPR_CASE(64, lldb_r13_x86_64, m_context.R13);
+  GPR_CASE(64, lldb_r14_x86_64, m_context.R14);
+  GPR_CASE(64, lldb_r15_x86_64, m_context.R15);
+  GPR_CASE(64, lldb_rbp_x86_64, m_context.Rbp);
+  GPR_CASE(64, lldb_rsp_x86_64, m_context.Rsp);
+  GPR_CASE(64, lldb_rip_x86_64, m_context.Rip);
+  GPR_CASE(64, lldb_rflags_x86_64, m_context.EFlags);
+  GPR_CASE(32, lldb_eax_x86_64, static_cast<uint32_t>(m_context.Rax));
+  GPR_CASE(32, lldb_ebx_x86_64, static_cast<uint32_t>(m_context.Rbx));
+  GPR_CASE(32, lldb_ecx_x86_64, static_cast<uint32_t>(m_context.Rcx));
+  GPR_CASE(32, lldb_edx_x86_64, static_cast<uint32_t>(m_context.Rdx));
+  GPR_CASE(32, lldb_edi_x86_64, static_cast<uint32_t>(m_context.Rdi));
+  GPR_CASE(32, lldb_esi_x86_64, static_cast<uint32_t>(m_context.Rsi));
+  GPR_CASE(32, lldb_ebp_x86_64, static_cast<uint32_t>(m_context.Rbp));
+  GPR_CASE(32, lldb_esp_x86_64, static_cast<uint32_t>(m_context.Rsp));
+  GPR_CASE(32, lldb_r8d_x86_64, static_cast<uint32_t>(m_context.R8));
+  GPR_CASE(32, lldb_r9d_x86_64, static_cast<uint32_t>(m_context.R9));
+  GPR_CASE(32, lldb_r10d_x86_64, static_cast<uint32_t>(m_context.R10));
+  GPR_CASE(32, lldb_r11d_x86_64, static_cast<uint32_t>(m_context.R11));
+  GPR_CASE(32, lldb_r12d_x86_64, static_cast<uint32_t>(m_context.R12));
+  GPR_CASE(32, lldb_r13d_x86_64, static_cast<uint32_t>(m_context.R13));
+  GPR_CASE(32, lldb_r14d_x86_64, static_cast<uint32_t>(m_context.R14));
+  GPR_CASE(32, lldb_r15d_x86_64, static_cast<uint32_t>(m_context.R15));
+  GPR_CASE(16, lldb_ax_x86_64, static_cast<uint16_t>(m_context.Rax));
+  GPR_CASE(16, lldb_bx_x86_64, static_cast<uint16_t>(m_context.Rbx));
+  GPR_CASE(16, lldb_cx_x86_64, static_cast<uint16_t>(m_context.Rcx));
+  GPR_CASE(16, lldb_dx_x86_64, static_cast<uint16_t>(m_context.Rdx));
+  GPR_CASE(16, lldb_di_x86_64, static_cast<uint16_t>(m_context.Rdi));
+  GPR_CASE(16, lldb_si_x86_64, static_cast<uint16_t>(m_context.Rsi));
+  GPR_CASE(16, lldb_bp_x86_64, static_cast<uint16_t>(m_context.Rbp));
+  GPR_CASE(16, lldb_sp_x86_64, static_cast<uint16_t>(m_context.Rsp));
+  GPR_CASE(16, lldb_r8w_x86_64, static_cast<uint16_t>(m_context.R8));
+  GPR_CASE(16, lldb_r9w_x86_64, static_cast<uint16_t>(m_context.R9));
+  GPR_CASE(16, lldb_r10w_x86_64, static_cast<uint16_t>(m_context.R10));
+  GPR_CASE(16, lldb_r11w_x86_64, static_cast<uint16_t>(m_context.R11));
+  GPR_CASE(16, lldb_r12w_x86_64, static_cast<uint16_t>(m_context.R12));
+  GPR_CASE(16, lldb_r13w_x86_64, static_cast<uint16_t>(m_context.R13));
+  GPR_CASE(16, lldb_r14w_x86_64, static_cast<uint16_t>(m_context.R14));
+  GPR_CASE(16, lldb_r15w_x86_64, static_cast<uint16_t>(m_context.R15));
+  GPR_CASE(8, lldb_ah_x86_64, static_cast<uint16_t>(m_context.Rax) >> 8);
+  GPR_CASE(8, lldb_bh_x86_64, static_cast<uint16_t>(m_context.Rbx) >> 8);
+  GPR_CASE(8, lldb_ch_x86_64, static_cast<uint16_t>(m_context.Rcx) >> 8);
+  GPR_CASE(8, lldb_dh_x86_64, static_cast<uint16_t>(m_context.Rdx) >> 8);
+  GPR_CASE(8, lldb_al_x86_64, static_cast<uint8_t>(m_context.Rax));
+  GPR_CASE(8, lldb_bl_x86_64, static_cast<uint8_t>(m_context.Rbx));
+  GPR_CASE(8, lldb_cl_x86_64, static_cast<uint8_t>(m_context.Rcx));
+  GPR_CASE(8, lldb_dl_x86_64, static_cast<uint8_t>(m_context.Rdx));
+  GPR_CASE(8, lldb_dil_x86_64, static_cast<uint8_t>(m_context.Rdi));
+  GPR_CASE(8, lldb_sil_x86_64, static_cast<uint8_t>(m_context.Rsi));
+  GPR_CASE(8, lldb_bpl_x86_64, static_cast<uint8_t>(m_context.Rbp));
+  GPR_CASE(8, lldb_spl_x86_64, static_cast<uint8_t>(m_context.Rsp));
+  GPR_CASE(8, lldb_r8l_x86_64, static_cast<uint8_t>(m_context.R8));
+  GPR_CASE(8, lldb_r9l_x86_64, static_cast<uint8_t>(m_context.R9));
+  GPR_CASE(8, lldb_r10l_x86_64, static_cast<uint8_t>(m_context.R10));
+  GPR_CASE(8, lldb_r11l_x86_64, static_cast<uint8_t>(m_context.R11));
+  GPR_CASE(8, lldb_r12l_x86_64, static_cast<uint8_t>(m_context.R12));
+  GPR_CASE(8, lldb_r13l_x86_64, static_cast<uint8_t>(m_context.R13));
+  GPR_CASE(8, lldb_r14l_x86_64, static_cast<uint8_t>(m_context.R14));
+  GPR_CASE(8, lldb_r15l_x86_64, static_cast<uint8_t>(m_context.R15));
+
   case lldb_xmm0_x86_64:
     reg_value.SetBytes(&m_context.Xmm0,
                        reg_info->byte_size, endian::InlHostByteOrder());

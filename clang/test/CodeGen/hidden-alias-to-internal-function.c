@@ -4,5 +4,5 @@ static void foo(void) {}
 void bar(void) __attribute__((alias("foo")))
 __attribute__((visibility("hidden")));
 
-// CHECK: @bar = hidden alias void (), void ()* @foo
+// CHECK: @bar = hidden alias void (), ptr @foo
 // CHECK: define internal void @foo()

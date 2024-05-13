@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-readobj -r --symbols --sections %t | FileCheck %s
  .syntax unified
  .text
@@ -30,13 +30,12 @@ _start:
 // CHECK-NEXT:     Type: SHT_REL
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:       SHF_ALLOC
-// CHECK-NEXT:       SHF_INFO_LINK
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x100F4
 // CHECK-NEXT:     Offset: 0xF4
 // CHECK-NEXT:     Size: 16
 // CHECK-NEXT:     Link:
-// CHECK-NEXT:     Info: 4
+// CHECK-NEXT:     Info: 0
 // CHECK:          Name: .iplt
 // CHECK-NEXT:     Type: SHT_PROGBITS
 // CHECK-NEXT:     Flags [
@@ -118,8 +117,8 @@ _start:
 // DISASM: <bar>:
 // DISASM-NEXT:    20108:      bx      lr
 // DISASM: <_start>:
-// DISASM-NEXT:    2010c:      bl      #28
-// DISASM-NEXT:    20110:      bl      #40
+// DISASM-NEXT:    2010c:      bl      0x20140
+// DISASM-NEXT:    20110:      bl      0x20130
 // 1 * 65536 + 244 = 0x100f4 __rel_iplt_start
 // DISASM-NEXT:    20114:      movw    r0, #244
 // DISASM-NEXT:    20118:      movt    r0, #1
@@ -129,16 +128,12 @@ _start:
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: <$a>:
+// DISASM-NEXT: <.iplt>:
 // DISASM-NEXT:    20130:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20134:       add     r12, r12, #16
 // DISASM-NEXT:    20138:       ldr     pc, [r12, #24]!
-// DISASM: <$d>:
 // DISASM-NEXT:    2013c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: <$a>:
 // DISASM-NEXT:    20140:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20144:       add     r12, r12, #16
 // DISASM-NEXT:    20148:       ldr     pc, [r12, #12]!
-// DISASM: <$d>:
 // DISASM-NEXT:    2014c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-

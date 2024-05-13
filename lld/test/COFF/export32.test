@@ -8,16 +8,16 @@
 # RUN: llvm-readobj --file-headers --sections %t.dll | FileCheck -check-prefix=HEADER-MERGE %s
 
 # CHECK1:      Export Table:
-# CHECK1:      DLL name: export32.test.tmp.dll
-# CHECK1:      Ordinal      RVA  Name
-# CHECK1-NEXT:       0        0
+# CHECK1-NEXT: DLL name: export32.test.tmp.dll
+# CHECK1-NEXT: Ordinal base: 1
+# CHECK1-NEXT: Ordinal      RVA  Name
 # CHECK1-NEXT:       1   0x1008  exportfn1
 # CHECK1-NEXT:       2   0x1010  exportfn2
 
 # HEADER-MERGE: ExportTableRVA: 0x2000
-# HEADER-MERGE-NEXT: ExportTableSize: 0x7E
+# HEADER-MERGE-NEXT: ExportTableSize: 0x7A
 # HEADER-MERGE: Name: .rdata
-# HEADER-MERGE-NEXT: VirtualSize: 0x7E
+# HEADER-MERGE-NEXT: VirtualSize: 0x7A
 # HEADER-MERGE-NEXT: VirtualAddress: 0x2000
 
 # RUN: lld-link -safeseh:no /out:%t.dll /dll %t.obj /export:exportfn1,@5 \
@@ -25,13 +25,9 @@
 # RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK2 %s
 
 # CHECK2:      Export Table:
-# CHECK2:      DLL name: export32.test.tmp.dll
-# CHECK2:      Ordinal      RVA  Name
-# CHECK2-NEXT:       0        0
-# CHECK2-NEXT:       1        0
-# CHECK2-NEXT:       2        0
-# CHECK2-NEXT:       3        0
-# CHECK2-NEXT:       4        0
+# CHECK2-NEXT: DLL name: export32.test.tmp.dll
+# CHECK2-NEXT: Ordinal base: 5
+# CHECK2-NEXT: Ordinal      RVA  Name
 # CHECK2-NEXT:       5   0x1008  exportfn1
 # CHECK2-NEXT:       6   0x1010  exportfn2
 # CHECK2-NEXT:       7   0x1010  exportfn3
@@ -41,13 +37,9 @@
 # RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK3 %s
 
 # CHECK3:      Export Table:
-# CHECK3:      DLL name: export32.test.tmp.dll
-# CHECK3:      Ordinal      RVA  Name
-# CHECK3-NEXT:       0        0
-# CHECK3-NEXT:       1        0
-# CHECK3-NEXT:       2        0
-# CHECK3-NEXT:       3        0
-# CHECK3-NEXT:       4        0
+# CHECK3-NEXT: DLL name: export32.test.tmp.dll
+# CHECK3-NEXT: Ordinal base: 5
+# CHECK3-NEXT: Ordinal      RVA  Name
 # CHECK3-NEXT:       5   0x1008
 # CHECK3-NEXT:       6   0x1010  exportfn2
 
@@ -55,9 +47,9 @@
 # RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK4 %s
 
 # CHECK4:      Export Table:
-# CHECK4:      DLL name: export32.test.tmp.dll
-# CHECK4:      Ordinal      RVA  Name
-# CHECK4-NEXT:       0        0
+# CHECK4-NEXT: DLL name: export32.test.tmp.dll
+# CHECK4-NEXT: Ordinal base: 1
+# CHECK4-NEXT: Ordinal      RVA  Name
 # CHECK4-NEXT:       1   0x1010  exportfn3
 # CHECK4-NEXT:       2   0x1008  f1
 # CHECK4-NEXT:       3   0x1010  f2
@@ -73,10 +65,9 @@
 # RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK5 %s
 
 # CHECK5:      Export Table:
-# CHECK5:      DLL name: export32.test.tmp.dll
-# CHECK5:      Ordinal      RVA  Name
-# CHECK5-NEXT:       0        0
-# CHECK5-NEXT:       1        0
+# CHECK5-NEXT: DLL name: export32.test.tmp.dll
+# CHECK5-NEXT: Ordinal base: 2
+# CHECK5-NEXT: Ordinal      RVA  Name
 # CHECK5-NEXT:       2   0x1010  fn2
 # CHECK5-NEXT:       3   0x1008  exportfn1
 # CHECK5-NEXT:       4   0x1010  exportfn3
@@ -92,10 +83,10 @@
 # RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK7 %s
 
 # CHECK7:      Export Table:
-# CHECK7:      DLL name: export32.test.tmp.dll
-# CHECK7:      Ordinal      RVA  Name
-# CHECK7-NEXT:       0        0
-# CHECK7-NEXT:       1        0
+# CHECK7-NEXT: DLL name: export32.test.tmp.dll
+# CHECK7-NEXT: Ordinal base: 1
+# CHECK7-NEXT: Ordinal      RVA  Name
+# CHECK7-NEXT:       1   0x1010  exportfn3
 # CHECK7-NEXT:       2   0x1010  foo
 
 --- !COFF

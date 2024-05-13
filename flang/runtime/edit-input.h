@@ -15,27 +15,39 @@
 
 namespace Fortran::runtime::io {
 
-bool EditIntegerInput(IoStatementState &, const DataEdit &, void *, int kind);
+RT_API_ATTRS bool EditIntegerInput(
+    IoStatementState &, const DataEdit &, void *, int kind);
 
 template <int KIND>
-bool EditRealInput(IoStatementState &, const DataEdit &, void *);
+RT_API_ATTRS bool EditRealInput(IoStatementState &, const DataEdit &, void *);
 
-bool EditLogicalInput(IoStatementState &, const DataEdit &, bool &);
-bool EditDefaultCharacterInput(
-    IoStatementState &, const DataEdit &, char *, std::size_t);
+RT_API_ATTRS bool EditLogicalInput(
+    IoStatementState &, const DataEdit &, bool &);
 
-extern template bool EditRealInput<2>(
+template <typename CHAR>
+RT_API_ATTRS bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, CHAR *, std::size_t);
+
+extern template RT_API_ATTRS bool EditRealInput<2>(
     IoStatementState &, const DataEdit &, void *);
-extern template bool EditRealInput<3>(
+extern template RT_API_ATTRS bool EditRealInput<3>(
     IoStatementState &, const DataEdit &, void *);
-extern template bool EditRealInput<4>(
+extern template RT_API_ATTRS bool EditRealInput<4>(
     IoStatementState &, const DataEdit &, void *);
-extern template bool EditRealInput<8>(
+extern template RT_API_ATTRS bool EditRealInput<8>(
     IoStatementState &, const DataEdit &, void *);
-extern template bool EditRealInput<10>(
+extern template RT_API_ATTRS bool EditRealInput<10>(
     IoStatementState &, const DataEdit &, void *);
 // TODO: double/double
-extern template bool EditRealInput<16>(
+extern template RT_API_ATTRS bool EditRealInput<16>(
     IoStatementState &, const DataEdit &, void *);
+
+extern template RT_API_ATTRS bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, char *, std::size_t);
+extern template RT_API_ATTRS bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, char16_t *, std::size_t);
+extern template RT_API_ATTRS bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, char32_t *, std::size_t);
+
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_EDIT_INPUT_H_

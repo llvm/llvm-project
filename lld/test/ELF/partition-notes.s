@@ -37,7 +37,7 @@
 // CHECK-NEXT:       Owner: GNU
 // CHECK-NEXT:       Data size:
 // CHECK-NEXT:       Type: NT_GNU_BUILD_ID (unique build ID bitstring)
-// CHECK-NEXT:       Build ID: bb5542bd74252653e286044980d602874d237ae0
+// CHECK-NEXT:       Build ID: d5101cb9d03b7e836ba9b64f5768a0b31980920f{{$}}
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

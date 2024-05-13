@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s --strict-whitespace
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s -check-prefix CHECK-X64 --strict-whitespace
 
 extern "C" int printf(const char *fmt, ...);
@@ -716,11 +716,11 @@ struct ArrayFieldOfRecords {
 };
 
 // CHECK-LABEL:   0 | struct ArrayFieldOfRecords{{$}}
-// CHECK-NEXT:    0 |   struct A4 [2] InlineElts
+// CHECK-NEXT:    0 |   A4[2] InlineElts
 // CHECK-NEXT:      | [sizeof=8, align=4
 // CHECK-NEXT:      |  nvsize=8, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct ArrayFieldOfRecords{{$}}
-// CHECK-X64-NEXT:    0 |   struct A4 [2] InlineElts
+// CHECK-X64-NEXT:    0 |   A4[2] InlineElts
 // CHECK-X64-NEXT:      | [sizeof=8, align=4
 // CHECK-X64-NEXT:      |  nvsize=8, nvalign=4]
 
@@ -729,11 +729,11 @@ struct ArrayOfArrayFieldOfRecords {
 };
 
 // CHECK-LABEL:   0 | struct ArrayOfArrayFieldOfRecords{{$}}
-// CHECK-NEXT:    0 |   struct A4 [2][2] InlineElts
+// CHECK-NEXT:    0 |   A4[2][2] InlineElts
 // CHECK-NEXT:      | [sizeof=16, align=4
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct ArrayOfArrayFieldOfRecords{{$}}
-// CHECK-X64-NEXT:    0 |   struct A4 [2][2] InlineElts
+// CHECK-X64-NEXT:    0 |   A4[2][2] InlineElts
 // CHECK-X64-NEXT:      | [sizeof=16, align=4
 // CHECK-X64-NEXT:      |  nvsize=16, nvalign=4]
 
@@ -743,11 +743,11 @@ struct RecordArrayTypedef {
 };
 
 // CHECK-LABEL:   0 | struct RecordArrayTypedef{{$}}
-// CHECK-NEXT:    0 |   RecordArrayTypedef::ArrayTy [2] InlineElts
+// CHECK-NEXT:    0 |   ArrayTy[2] InlineElts
 // CHECK-NEXT:      | [sizeof=16, align=4
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct RecordArrayTypedef{{$}}
-// CHECK-X64-NEXT:    0 |   RecordArrayTypedef::ArrayTy [2] InlineElts
+// CHECK-X64-NEXT:    0 |   ArrayTy[2] InlineElts
 // CHECK-X64-NEXT:      | [sizeof=16, align=4
 // CHECK-X64-NEXT:      |  nvsize=16, nvalign=4]
 
@@ -756,11 +756,11 @@ struct EmptyIntMemb {
 };
 
 // CHECK-LABEL:   0 | struct EmptyIntMemb{{$}}
-// CHECK-NEXT:    0 |   int [0] FlexArrayMemb
+// CHECK-NEXT:    0 |   int[0] FlexArrayMemb
 // CHECK-NEXT:      | [sizeof=1, align=4
 // CHECK-NEXT:      |  nvsize=0, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct EmptyIntMemb{{$}}
-// CHECK-X64-NEXT:    0 |   int [0] FlexArrayMemb
+// CHECK-X64-NEXT:    0 |   int[0] FlexArrayMemb
 // CHECK-X64-NEXT:      | [sizeof=4, align=4
 // CHECK-X64-NEXT:      |  nvsize=0, nvalign=4]
 
@@ -769,11 +769,11 @@ struct EmptyLongLongMemb {
 };
 
 // CHECK-LABEL:   0 | struct EmptyLongLongMemb{{$}}
-// CHECK-NEXT:    0 |   long long [0] FlexArrayMemb
+// CHECK-NEXT:    0 |   long long[0] FlexArrayMemb
 // CHECK-NEXT:      | [sizeof=1, align=8
 // CHECK-NEXT:      |  nvsize=0, nvalign=8]
 // CHECK-X64-LABEL:   0 | struct EmptyLongLongMemb{{$}}
-// CHECK-X64-NEXT:    0 |   long long [0] FlexArrayMemb
+// CHECK-X64-NEXT:    0 |   long long[0] FlexArrayMemb
 // CHECK-X64-NEXT:      | [sizeof=8, align=8
 // CHECK-X64-NEXT:      |  nvsize=0, nvalign=8]
 

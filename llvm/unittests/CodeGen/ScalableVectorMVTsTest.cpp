@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/TypeSize.h"
 #include "gtest/gtest.h"
 
@@ -18,7 +18,7 @@ using namespace llvm;
 namespace {
 
 TEST(ScalableVectorMVTsTest, IntegerMVTs) {
-  for (auto VecTy : MVT::integer_scalable_vector_valuetypes()) {
+  for (MVT VecTy : MVT::integer_scalable_vector_valuetypes()) {
     ASSERT_TRUE(VecTy.isValid());
     ASSERT_TRUE(VecTy.isInteger());
     ASSERT_TRUE(VecTy.isVector());
@@ -30,7 +30,7 @@ TEST(ScalableVectorMVTsTest, IntegerMVTs) {
 }
 
 TEST(ScalableVectorMVTsTest, FloatMVTs) {
-  for (auto VecTy : MVT::fp_scalable_vector_valuetypes()) {
+  for (MVT VecTy : MVT::fp_scalable_vector_valuetypes()) {
     ASSERT_TRUE(VecTy.isValid());
     ASSERT_TRUE(VecTy.isFloatingPoint());
     ASSERT_TRUE(VecTy.isVector());
@@ -135,18 +135,28 @@ TEST(ScalableVectorMVTsTest, SizeQueries) {
   EVT v2i64 = EVT::getVectorVT(Ctx, MVT::i64, 2);
   EVT v2f64 = EVT::getVectorVT(Ctx, MVT::f64, 2);
 
+  EVT nxv5i32 = EVT::getVectorVT(Ctx, MVT::i32, 5, /*Scalable=*/true);
+  ASSERT_FALSE(nxv5i32.is16BitVector());
+  ASSERT_FALSE(nxv5i32.is32BitVector());
+  ASSERT_FALSE(nxv5i32.is64BitVector());
+  ASSERT_FALSE(nxv5i32.is128BitVector());
+  ASSERT_FALSE(nxv5i32.is256BitVector());
+  ASSERT_FALSE(nxv5i32.is512BitVector());
+  ASSERT_FALSE(nxv5i32.is1024BitVector());
+  ASSERT_FALSE(nxv5i32.is2048BitVector());
+
   // Check equivalence and ordering on scalable types.
   EXPECT_EQ(nxv4i32.getSizeInBits(), nxv2i64.getSizeInBits());
   EXPECT_EQ(nxv2f64.getSizeInBits(), nxv2i64.getSizeInBits());
   EXPECT_NE(nxv2i32.getSizeInBits(), nxv4i32.getSizeInBits());
-  EXPECT_LT(nxv2i32.getSizeInBits().getKnownMinSize(),
-            nxv2i64.getSizeInBits().getKnownMinSize());
-  EXPECT_LE(nxv4i32.getSizeInBits().getKnownMinSize(),
-            nxv2i64.getSizeInBits().getKnownMinSize());
-  EXPECT_GT(nxv4i32.getSizeInBits().getKnownMinSize(),
-            nxv2i32.getSizeInBits().getKnownMinSize());
-  EXPECT_GE(nxv2i64.getSizeInBits().getKnownMinSize(),
-            nxv4i32.getSizeInBits().getKnownMinSize());
+  EXPECT_LT(nxv2i32.getSizeInBits().getKnownMinValue(),
+            nxv2i64.getSizeInBits().getKnownMinValue());
+  EXPECT_LE(nxv4i32.getSizeInBits().getKnownMinValue(),
+            nxv2i64.getSizeInBits().getKnownMinValue());
+  EXPECT_GT(nxv4i32.getSizeInBits().getKnownMinValue(),
+            nxv2i32.getSizeInBits().getKnownMinValue());
+  EXPECT_GE(nxv2i64.getSizeInBits().getKnownMinValue(),
+            nxv4i32.getSizeInBits().getKnownMinValue());
 
   // Check equivalence and ordering on fixed types.
   EXPECT_EQ(v4i32.getSizeInBits(), v2i64.getSizeInBits());
@@ -168,10 +178,10 @@ TEST(ScalableVectorMVTsTest, SizeQueries) {
 
   // Check that we can query the known minimum size for both scalable and
   // fixed length types.
-  EXPECT_EQ(nxv2i32.getSizeInBits().getKnownMinSize(), 64U);
-  EXPECT_EQ(nxv2f64.getSizeInBits().getKnownMinSize(), 128U);
-  EXPECT_EQ(v2i32.getSizeInBits().getKnownMinSize(),
-            nxv2i32.getSizeInBits().getKnownMinSize());
+  EXPECT_EQ(nxv2i32.getSizeInBits().getKnownMinValue(), 64U);
+  EXPECT_EQ(nxv2f64.getSizeInBits().getKnownMinValue(), 128U);
+  EXPECT_EQ(v2i32.getSizeInBits().getKnownMinValue(),
+            nxv2i32.getSizeInBits().getKnownMinValue());
 
   // Check scalable property.
   ASSERT_FALSE(v4i32.getSizeInBits().isScalable());

@@ -70,14 +70,14 @@ extern "C" {
     __attribute__((used)) static int duplicate_internal_fn() { return 0; }
   }
 
-  // CHECK: @llvm.compiler.used = appending global {{.*}} @internal_var {{.*}} @internal_fn
+  // CHECK: @llvm.compiler.used = appending global {{.*}} @internal_var, {{.*}} @internal_fn
 
   // CHECK-NOT: @unused
   // CHECK-NOT: @duplicate_internal
-  // CHECK: @internal_var = internal alias i32, i32* @_ZL12internal_var
+  // CHECK: @internal_var = internal alias i32, ptr @_ZL12internal_var
   // CHECK-NOT: @unused
   // CHECK-NOT: @duplicate_internal
-  // CHECK: @internal_fn = internal alias i32 (), i32 ()* @_ZL11internal_fnv
+  // CHECK: @internal_fn = internal alias i32 (), ptr @_ZL11internal_fnv
   // CHECK-NOT: @unused
   // CHECK-NOT: @duplicate_internal
 }

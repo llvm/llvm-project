@@ -7,7 +7,7 @@ import lldb
 
 def fuzz_obj(obj):
     obj.GetSize()
-    obj.GetInstructionAtIndex(0xffffffff)
+    obj.GetInstructionAtIndex(0xFFFFFFFF)
     obj.AppendInstruction(lldb.SBInstruction())
     try:
         obj.Print(None)

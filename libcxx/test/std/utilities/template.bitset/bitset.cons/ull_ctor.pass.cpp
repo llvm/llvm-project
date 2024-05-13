@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test bitset(unsigned long long val);
+// bitset(unsigned long long val); // constexpr since C++23
 
 #include <bitset>
 #include <cassert>
@@ -15,12 +15,10 @@
 
 #include "test_macros.h"
 
-#if defined(TEST_COMPILER_C1XX)
-#pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
-#endif
+TEST_MSVC_DIAGNOSTIC_IGNORED(6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
 
 template <std::size_t N>
-void test_val_ctor()
+TEST_CONSTEXPR_CXX23 void test_val_ctor()
 {
     {
         TEST_CONSTEXPR std::bitset<N> v(0xAAAAAAAAAAAAAAAAULL);
@@ -39,17 +37,26 @@ void test_val_ctor()
 #endif
 }
 
+TEST_CONSTEXPR_CXX23 bool test() {
+  test_val_ctor<0>();
+  test_val_ctor<1>();
+  test_val_ctor<31>();
+  test_val_ctor<32>();
+  test_val_ctor<33>();
+  test_val_ctor<63>();
+  test_val_ctor<64>();
+  test_val_ctor<65>();
+  test_val_ctor<1000>();
+
+  return true;
+}
+
 int main(int, char**)
 {
-    test_val_ctor<0>();
-    test_val_ctor<1>();
-    test_val_ctor<31>();
-    test_val_ctor<32>();
-    test_val_ctor<33>();
-    test_val_ctor<63>();
-    test_val_ctor<64>();
-    test_val_ctor<65>();
-    test_val_ctor<1000>();
+  test();
+#if TEST_STD_VER > 20
+  static_assert(test());
+#endif
 
   return 0;
 }

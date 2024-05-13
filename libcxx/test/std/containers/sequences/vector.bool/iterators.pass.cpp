@@ -22,8 +22,17 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
+    using IterRefT = std::iterator_traits<std::vector<bool>::iterator>::reference;
+    ASSERT_SAME_TYPE(IterRefT, std::vector<bool>::reference);
+
+    using ConstIterRefT = std::iterator_traits<std::vector<bool>::const_iterator>::reference;
+#if !defined(_LIBCPP_VERSION) || defined(_LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL)
+    ASSERT_SAME_TYPE(ConstIterRefT, bool);
+#else
+    ASSERT_SAME_TYPE(ConstIterRefT, std::__bit_const_reference<std::vector<bool> >);
+#endif
     {
         typedef bool T;
         typedef std::vector<T> C;
@@ -57,6 +66,8 @@ int main(int, char**)
         typedef std::vector<T> C;
         C::iterator i;
         C::const_iterator j;
+        (void) i;
+        (void) j;
     }
 #if TEST_STD_VER >= 11
     {
@@ -92,6 +103,8 @@ int main(int, char**)
         typedef std::vector<T, min_allocator<T>> C;
         C::iterator i;
         C::const_iterator j;
+        (void) i;
+        (void) j;
     }
 #endif
 #if TEST_STD_VER > 11
@@ -121,5 +134,14 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

@@ -13,7 +13,7 @@
 // RUN: %clang -target armv7--none-eabi -mimplicit-it=always -### %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-ALWAYS
 
-// RUN: %clang -target armv7--none-eabi -mimplicit-it=thisisnotavalidoption -### %s 2>&1 \
+// RUN: not %clang --target=armv7--none-eabi -mimplicit-it=thisisnotavalidoption -### %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-INVALID
 
 // CHECK-DEFAULT-NOT: "-arm-implicit-it
@@ -21,4 +21,4 @@
 // CHECK-THUMB: "-arm-implicit-it=thumb"
 // CHECK-NEVER: "-arm-implicit-it=never"
 // CHECK-ALWAYS: "-arm-implicit-it=always"
-// CHECK-INVALID: error: unsupported argument 'thisisnotavalidoption' to option 'mimplicit-it='
+// CHECK-INVALID: error: unsupported argument 'thisisnotavalidoption' to option '-mimplicit-it='

@@ -7,7 +7,7 @@
 
 target triple = "i386-pc-linux-gnu"
 
-define void @_ZN4llvm17AsmMatcherEmitter3runERNS_11raw_ostreamE() align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @_ZN4llvm17AsmMatcherEmitter3runERNS_11raw_ostreamE() align 2 personality ptr @__gxx_personality_v0 {
   invoke void @_ZNK4llvm13CodeGenTarget12getAsmParserEv()
           to label %1 unwind label %5
 
@@ -16,7 +16,7 @@ define void @_ZN4llvm17AsmMatcherEmitter3runERNS_11raw_ostreamE() align 2 person
           to label %4 unwind label %2
 
 ; <label>:2                                       ; preds = %1
-  %3 = landingpad { i8*, i32 }
+  %3 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
@@ -25,18 +25,18 @@ define void @_ZN4llvm17AsmMatcherEmitter3runERNS_11raw_ostreamE() align 2 person
           to label %12 unwind label %7
 
 ; <label>:5                                       ; preds = %0
-  %6 = landingpad { i8*, i32 }
+  %6 = landingpad { ptr, i32 }
           cleanup
   br label %33
 
 ; <label>:7                                       ; preds = %4
-  %8 = landingpad { i8*, i32 }
+  %8 = landingpad { ptr, i32 }
           cleanup
   br label %9
 
 ; <label>:9                                       ; preds = %28, %7
-  %10 = phi { i8*, i32 } [ %29, %28 ], [ %8, %7 ]
-  %11 = extractvalue { i8*, i32 } %10, 1
+  %10 = phi { ptr, i32 } [ %29, %28 ], [ %8, %7 ]
+  %11 = extractvalue { ptr, i32 } %10, 1
   invoke fastcc void @_ZN12_GLOBAL__N_114AsmMatcherInfoD2Ev()
           to label %32 unwind label %35
 
@@ -52,7 +52,7 @@ define void @_ZN4llvm17AsmMatcherEmitter3runERNS_11raw_ostreamE() align 2 person
   br i1 %15, label %20, label %18
 
 ; <label>:16                                      ; preds = %12
-  %17 = landingpad { i8*, i32 }
+  %17 = landingpad { ptr, i32 }
           cleanup
   br label %26
 
@@ -67,9 +67,9 @@ define void @_ZN4llvm17AsmMatcherEmitter3runERNS_11raw_ostreamE() align 2 person
   br label %14
 
 ; <label>:21                                      ; preds = %18
-  %22 = landingpad { i8*, i32 }
+  %22 = landingpad { ptr, i32 }
           cleanup
-  %23 = extractvalue { i8*, i32 } %22, 1
+  %23 = extractvalue { ptr, i32 } %22, 1
   br i1 undef, label %26, label %24
 
 ; <label>:24                                      ; preds = %21
@@ -84,12 +84,12 @@ define void @_ZN4llvm17AsmMatcherEmitter3runERNS_11raw_ostreamE() align 2 person
           to label %28 unwind label %30
 
 ; <label>:28                                      ; preds = %26
-  %29 = insertvalue { i8*, i32 } undef, i32 %27, 1
+  %29 = insertvalue { ptr, i32 } undef, i32 %27, 1
   br label %9
 
 ; <label>:30                                      ; preds = %26
-  %31 = landingpad { i8*, i32 }
-          catch i8* null
+  %31 = landingpad { ptr, i32 }
+          catch ptr null
   unreachable
 
 ; <label>:32                                      ; preds = %9
@@ -100,8 +100,8 @@ define void @_ZN4llvm17AsmMatcherEmitter3runERNS_11raw_ostreamE() align 2 person
   unreachable
 
 ; <label>:35                                      ; preds = %9
-  %36 = landingpad { i8*, i32 }
-          catch i8* null
+  %36 = landingpad { ptr, i32 }
+          catch ptr null
   unreachable
 }
 

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // <utility>
 
@@ -89,7 +88,7 @@ constexpr void test2(const std::tuple<Ts...>&, const UTuple& utuple) {
 
 constexpr bool test() {
   std::tuple<
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
       __int128_t, __uint128_t,
 #endif
       unsigned long long, long long, unsigned long, long, unsigned int, int,
@@ -99,7 +98,7 @@ constexpr bool test() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   ASSERT_NOEXCEPT(std::cmp_equal(0, 0));
   test();
   static_assert(test());

@@ -41,7 +41,11 @@ public:
 
   /// Default constructor.
   Timer(Category &category, const char *format, ...)
-      __attribute__((format(printf, 3, 4)));
+#if !defined(_MSC_VER)
+  // MSVC appears to have trouble recognizing the this argument in the constructor.
+      __attribute__((format(printf, 3, 4)))
+#endif
+    ;
 
   /// Destructor
   ~Timer();
@@ -52,7 +56,7 @@ public:
 
   static void SetQuiet(bool value);
 
-  static void DumpCategoryTimes(Stream *s);
+  static void DumpCategoryTimes(Stream &s);
 
   static void ResetCategoryTimes();
 

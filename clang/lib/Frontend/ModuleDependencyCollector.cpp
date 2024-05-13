@@ -26,13 +26,19 @@ namespace {
 /// Private implementations for ModuleDependencyCollector
 class ModuleDependencyListener : public ASTReaderListener {
   ModuleDependencyCollector &Collector;
+  FileManager &FileMgr;
 public:
-  ModuleDependencyListener(ModuleDependencyCollector &Collector)
-      : Collector(Collector) {}
+  ModuleDependencyListener(ModuleDependencyCollector &Collector,
+                           FileManager &FileMgr)
+      : Collector(Collector), FileMgr(FileMgr) {}
   bool needsInputFileVisitation() override { return true; }
   bool needsSystemInputFileVisitation() override { return true; }
   bool visitInputFile(StringRef Filename, bool IsSystem, bool IsOverridden,
                       bool IsExplicitModule) override {
+    // Run this through the FileManager in order to respect 'use-external-name'
+    // in case we have a VFS overlay.
+    if (auto FE = FileMgr.getOptionalFileRef(Filename))
+      Filename = FE->getName();
     Collector.addFile(Filename);
     return true;
   }
@@ -47,9 +53,10 @@ struct ModuleDependencyPPCallbacks : public PPCallbacks {
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     if (!File)
       return;
@@ -66,40 +73,16 @@ struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
     if (llvm::sys::path::is_absolute(HeaderPath))
       Collector.addFile(HeaderPath);
   }
-  void moduleMapAddUmbrellaHeader(FileManager *FileMgr,
-                                  const FileEntry *Header) override {
-    StringRef HeaderFilename = Header->getName();
-    moduleMapAddHeader(HeaderFilename);
-    // The FileManager can find and cache the symbolic link for a framework
-    // header before its real path, this means a module can have some of its
-    // headers to use other paths. Although this is usually not a problem, it's
-    // inconsistent, and not collecting the original path header leads to
-    // umbrella clashes while rebuilding modules in the crash reproducer. For
-    // example:
-    //    ApplicationServices.framework/Frameworks/ImageIO.framework/ImageIO.h
-    // instead of:
-    //    ImageIO.framework/ImageIO.h
-    //
-    // FIXME: this shouldn't be necessary once we have FileName instances
-    // around instead of FileEntry ones. For now, make sure we collect all
-    // that we need for the reproducer to work correctly.
-    StringRef UmbreallDirFromHeader =
-        llvm::sys::path::parent_path(HeaderFilename);
-    StringRef UmbrellaDir = Header->getDir()->getName();
-    if (!UmbrellaDir.equals(UmbreallDirFromHeader)) {
-      SmallString<128> AltHeaderFilename;
-      llvm::sys::path::append(AltHeaderFilename, UmbrellaDir,
-                              llvm::sys::path::filename(HeaderFilename));
-      if (FileMgr->getFile(AltHeaderFilename))
-        moduleMapAddHeader(AltHeaderFilename);
-    }
+  void moduleMapAddUmbrellaHeader(FileEntryRef Header) override {
+    moduleMapAddHeader(Header.getNameAsRequested());
   }
 };
 
-}
+} // namespace
 
 void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
-  R.addListener(std::make_unique<ModuleDependencyListener>(*this));
+  R.addListener(
+      std::make_unique<ModuleDependencyListener>(*this, R.getFileManager()));
 }
 
 void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
@@ -122,7 +105,7 @@ static bool isCaseSensitivePath(StringRef Path) {
   // already expects when sensitivity isn't setup.
   for (auto &C : Path)
     UpperDest.push_back(toUppercase(C));
-  if (!llvm::sys::fs::real_path(UpperDest, RealDest) && Path.equals(RealDest))
+  if (!llvm::sys::fs::real_path(UpperDest, RealDest) && Path == RealDest)
     return false;
   return true;
 }

@@ -10,42 +10,40 @@
 ; DARWIN-SELDAG: bb.[[SUCCESS]]{{[0-9a-zA-Z_.]+}}:
 
 ; DARWIN-IR: # Machine code for function test_branch_weights:
-; DARWIN-IR: successors: %bb.[[SUCCESS:[0-9]+]](0x7fffffff), %bb.[[FAILURE:[0-9]+]]
+; DARWIN-IR: successors: %bb.[[SUCCESS:[0-9]+]](0x7ffff800), %bb.[[FAILURE:[0-9]+]]
 ; DARWIN-IR: bb.[[SUCCESS]]{{[0-9a-zA-Z_.]+}}:
 ; DARWIN-IR: bb.[[FAILURE]]{{[0-9a-zA-Z_.]+}}:
 ; DARWIN-IR: CALL64pcrel32 @__stack_chk_fail
 
 ; MSVC-SELDAG: # Machine code for function test_branch_weights:
-; MSVC-SELDAG: :: (volatile load 4 from @__security_cookie)
-; MSVC-SELDAG: (store 4 into stack)
-; MSVC-SELDAG: (volatile load 4 from %stack.0.StackGuardSlot)
+; MSVC-SELDAG: :: (volatile load (s32) from @__security_cookie)
+; MSVC-SELDAG: (store (s32) into stack)
+; MSVC-SELDAG: (volatile load (s32) from %stack.0.StackGuardSlot)
 ; MSVC-SELDAG: CALLpcrel32 @__security_check_cookie
 
 ; MSVC always uses selection DAG now.
 ; MSVC-IR: # Machine code for function test_branch_weights:
-; MSVC-IR: :: (volatile load 4 from @__security_cookie)
-; MSVC-IR: (store 4 into stack)
-; MSVC-IR: (volatile load 4 from %stack.0.StackGuardSlot)
+; MSVC-IR: :: (volatile load (s32) from @__security_cookie)
+; MSVC-IR: (store (s32) into stack)
+; MSVC-IR: (volatile load (s32) from %stack.0.StackGuardSlot)
 ; MSVC-IR: CALLpcrel32 @__security_check_cookie
 
 define i32 @test_branch_weights(i32 %n) #0 {
 entry:
   %a = alloca [128 x i32], align 16
-  %0 = bitcast [128 x i32]* %a to i8*
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %0)
-  %arraydecay = getelementptr inbounds [128 x i32], [128 x i32]* %a, i64 0, i64 0
-  call void @foo2(i32* %arraydecay)
+  call void @llvm.lifetime.start.p0(i64 512, ptr %a)
+  call void @foo2(ptr %a)
   %idxprom = sext i32 %n to i64
-  %arrayidx = getelementptr inbounds [128 x i32], [128 x i32]* %a, i64 0, i64 %idxprom
-  %1 = load i32, i32* %arrayidx, align 4
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %0)
-  ret i32 %1
+  %arrayidx = getelementptr inbounds [128 x i32], ptr %a, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  call void @llvm.lifetime.end.p0(i64 512, ptr %a)
+  ret i32 %0
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
-declare void @foo2(i32*)
+declare void @foo2(ptr)
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 attributes #0 = { sspstrong "stack-protector-buffer-size"="8" }

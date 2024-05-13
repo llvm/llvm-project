@@ -31,6 +31,12 @@ foreach I = {0-3} in {
   def CheckExtBy#I                      : CheckImmOperand<3, I>;
 }
 
+// Check for shifting in arithmetic and logic instructions.
+foreach I = {0-4, 8} in {
+  let FunctionMapper = "AArch64_AM::getShiftValue" in
+  def CheckShiftBy#I                    : CheckImmOperand<3, I>;
+}
+
 // Check the extension type in the register offset addressing mode.
 let FunctionMapper = "AArch64_AM::getMemExtendType" in {
   def CheckMemExtUXTW                   : CheckImmOperand_s<3, "AArch64_AM::UXTW">;
@@ -52,153 +58,37 @@ let FunctionMapper = "AArch64_AM::getShiftType" in {
   def CheckShiftMSL                : CheckImmOperand_s<3, "AArch64_AM::MSL">;
 }
 
-// Check for shifting in arithmetic and logic instructions.
-foreach I = {0-3, 8} in {
-  let FunctionMapper = "AArch64_AM::getShiftValue" in
-  def CheckShiftBy#I        : CheckImmOperand<3, I>;
-}
-
 // Generic predicates.
 
+// Check for ZR in a register operand.
+foreach I = {1-3} in {
+  def CheckIsReg#I#Zero : CheckAll<
+                            [CheckIsRegOperand<I>,
+                             CheckAny<
+                               [CheckRegOperand<I, WZR>,
+                                CheckRegOperand<I, XZR>]>]>;
+}
+def IsReg1ZeroPred  : MCSchedPredicate<CheckIsReg1Zero>;
+def IsReg2ZeroPred  : MCSchedPredicate<CheckIsReg2Zero>;
+def IsReg3ZeroPred  : MCSchedPredicate<CheckIsReg3Zero>;
+
+// Identify whether an instruction is NEON or floating point
+def CheckFpOrNEON : CheckFunctionPredicateWithTII<
+  "AArch64_MC::isFpOrNEON",
+  "AArch64InstrInfo::isFpOrNEON"
+>;
+
 // Identify whether an instruction is the 16-bit NEON form based on its result.
-def CheckHForm             : CheckAll<[CheckIsRegOperand<0>,
-                                       CheckAny<[CheckRegOperand<0, H0>,
-                                                 CheckRegOperand<0, H1>,
-                                                 CheckRegOperand<0, H2>,
-                                                 CheckRegOperand<0, H3>,
-                                                 CheckRegOperand<0, H4>,
-                                                 CheckRegOperand<0, H5>,
-                                                 CheckRegOperand<0, H6>,
-                                                 CheckRegOperand<0, H7>,
-                                                 CheckRegOperand<0, H8>,
-                                                 CheckRegOperand<0, H9>,
-                                                 CheckRegOperand<0, H10>,
-                                                 CheckRegOperand<0, H11>,
-                                                 CheckRegOperand<0, H12>,
-                                                 CheckRegOperand<0, H13>,
-                                                 CheckRegOperand<0, H14>,
-                                                 CheckRegOperand<0, H15>,
-                                                 CheckRegOperand<0, H16>,
-                                                 CheckRegOperand<0, H17>,
-                                                 CheckRegOperand<0, H18>,
-                                                 CheckRegOperand<0, H19>,
-                                                 CheckRegOperand<0, H20>,
-                                                 CheckRegOperand<0, H21>,
-                                                 CheckRegOperand<0, H22>,
-                                                 CheckRegOperand<0, H23>,
-                                                 CheckRegOperand<0, H24>,
-                                                 CheckRegOperand<0, H25>,
-                                                 CheckRegOperand<0, H26>,
-                                                 CheckRegOperand<0, H27>,
-                                                 CheckRegOperand<0, H28>,
-                                                 CheckRegOperand<0, H29>,
-                                                 CheckRegOperand<0, H30>,
-                                                 CheckRegOperand<0, H31>]>]>;
-
-// Identify whether an instruction is the 32-bit NEON form based on its result.
-def CheckSForm             : CheckAll<[CheckIsRegOperand<0>,
-                                       CheckAny<[CheckRegOperand<0, S0>,
-                                                 CheckRegOperand<0, S1>,
-                                                 CheckRegOperand<0, S2>,
-                                                 CheckRegOperand<0, S3>,
-                                                 CheckRegOperand<0, S4>,
-                                                 CheckRegOperand<0, S5>,
-                                                 CheckRegOperand<0, S6>,
-                                                 CheckRegOperand<0, S7>,
-                                                 CheckRegOperand<0, S8>,
-                                                 CheckRegOperand<0, S9>,
-                                                 CheckRegOperand<0, S10>,
-                                                 CheckRegOperand<0, S11>,
-                                                 CheckRegOperand<0, S12>,
-                                                 CheckRegOperand<0, S13>,
-                                                 CheckRegOperand<0, S14>,
-                                                 CheckRegOperand<0, S15>,
-                                                 CheckRegOperand<0, S16>,
-                                                 CheckRegOperand<0, S17>,
-                                                 CheckRegOperand<0, S18>,
-                                                 CheckRegOperand<0, S19>,
-                                                 CheckRegOperand<0, S20>,
-                                                 CheckRegOperand<0, S21>,
-                                                 CheckRegOperand<0, S22>,
-                                                 CheckRegOperand<0, S23>,
-                                                 CheckRegOperand<0, S24>,
-                                                 CheckRegOperand<0, S25>,
-                                                 CheckRegOperand<0, S26>,
-                                                 CheckRegOperand<0, S27>,
-                                                 CheckRegOperand<0, S28>,
-                                                 CheckRegOperand<0, S29>,
-                                                 CheckRegOperand<0, S30>,
-                                                 CheckRegOperand<0, S31>]>]>;
-
-// Identify whether an instruction is the 64-bit NEON form based on its result.
-def CheckDForm             : CheckAll<[CheckIsRegOperand<0>,
-                                       CheckAny<[CheckRegOperand<0, D0>,
-                                                 CheckRegOperand<0, D1>,
-                                                 CheckRegOperand<0, D2>,
-                                                 CheckRegOperand<0, D3>,
-                                                 CheckRegOperand<0, D4>,
-                                                 CheckRegOperand<0, D5>,
-                                                 CheckRegOperand<0, D6>,
-                                                 CheckRegOperand<0, D7>,
-                                                 CheckRegOperand<0, D8>,
-                                                 CheckRegOperand<0, D9>,
-                                                 CheckRegOperand<0, D10>,
-                                                 CheckRegOperand<0, D11>,
-                                                 CheckRegOperand<0, D12>,
-                                                 CheckRegOperand<0, D13>,
-                                                 CheckRegOperand<0, D14>,
-                                                 CheckRegOperand<0, D15>,
-                                                 CheckRegOperand<0, D16>,
-                                                 CheckRegOperand<0, D17>,
-                                                 CheckRegOperand<0, D18>,
-                                                 CheckRegOperand<0, D19>,
-                                                 CheckRegOperand<0, D20>,
-                                                 CheckRegOperand<0, D21>,
-                                                 CheckRegOperand<0, D22>,
-                                                 CheckRegOperand<0, D23>,
-                                                 CheckRegOperand<0, D24>,
-                                                 CheckRegOperand<0, D25>,
-                                                 CheckRegOperand<0, D26>,
-                                                 CheckRegOperand<0, D27>,
-                                                 CheckRegOperand<0, D28>,
-                                                 CheckRegOperand<0, D29>,
-                                                 CheckRegOperand<0, D30>,
-                                                 CheckRegOperand<0, D31>]>]>;
+def CheckHForm : CheckFunctionPredicateWithTII<
+  "AArch64_MC::isHForm",
+  "AArch64InstrInfo::isHForm"
+>;
 
 // Identify whether an instruction is the 128-bit NEON form based on its result.
-def CheckQForm             : CheckAll<[CheckIsRegOperand<0>,
-                                       CheckAny<[CheckRegOperand<0, Q0>,
-                                                 CheckRegOperand<0, Q1>,
-                                                 CheckRegOperand<0, Q2>,
-                                                 CheckRegOperand<0, Q3>,
-                                                 CheckRegOperand<0, Q4>,
-                                                 CheckRegOperand<0, Q5>,
-                                                 CheckRegOperand<0, Q6>,
-                                                 CheckRegOperand<0, Q7>,
-                                                 CheckRegOperand<0, Q8>,
-                                                 CheckRegOperand<0, Q9>,
-                                                 CheckRegOperand<0, Q10>,
-                                                 CheckRegOperand<0, Q11>,
-                                                 CheckRegOperand<0, Q12>,
-                                                 CheckRegOperand<0, Q13>,
-                                                 CheckRegOperand<0, Q14>,
-                                                 CheckRegOperand<0, Q15>,
-                                                 CheckRegOperand<0, Q16>,
-                                                 CheckRegOperand<0, Q17>,
-                                                 CheckRegOperand<0, Q18>,
-                                                 CheckRegOperand<0, Q19>,
-                                                 CheckRegOperand<0, Q20>,
-                                                 CheckRegOperand<0, Q21>,
-                                                 CheckRegOperand<0, Q22>,
-                                                 CheckRegOperand<0, Q23>,
-                                                 CheckRegOperand<0, Q24>,
-                                                 CheckRegOperand<0, Q25>,
-                                                 CheckRegOperand<0, Q26>,
-                                                 CheckRegOperand<0, Q27>,
-                                                 CheckRegOperand<0, Q28>,
-                                                 CheckRegOperand<0, Q29>,
-                                                 CheckRegOperand<0, Q30>,
-                                                 CheckRegOperand<0, Q31>]>]>;
+def CheckQForm : CheckFunctionPredicateWithTII<
+  "AArch64_MC::isQForm",
+  "AArch64InstrInfo::isQForm"
+>;
 
 // Identify arithmetic instructions with extend.
 def IsArithExtOp           : CheckOpcode<[ADDWrx, ADDXrx, ADDSWrx, ADDSXrx,
@@ -341,38 +231,6 @@ def IsLoadStoreRegOffsetOp : CheckOpcode<!listconcat(IsLoadRegOffsetOp.ValidOpco
 
 // Target predicates.
 
-// Identify an instruction that effectively transfers a register to another.
-def IsCopyIdiomFn     : TIIPredicate<"isCopyIdiom",
-                                     MCOpcodeSwitchStatement<
-                                       [// MOV {Rd, SP}, {SP, Rn} =>
-                                        // ADD {Rd, SP}, {SP, Rn}, #0
-                                        MCOpcodeSwitchCase<
-                                          [ADDWri, ADDXri],
-                                          MCReturnStatement<
-                                            CheckAll<
-                                              [CheckIsRegOperand<0>,
-                                               CheckIsRegOperand<1>,
-                                               CheckAny<
-                                                 [CheckRegOperand<0, WSP>,
-                                                  CheckRegOperand<0, SP>,
-                                                  CheckRegOperand<1, WSP>,
-                                                  CheckRegOperand<1, SP>]>,
-                                               CheckZeroOperand<2>]>>>,
-                                        // MOV Rd, Rm =>
-                                        // ORR Rd, ZR, Rm, LSL #0
-                                        MCOpcodeSwitchCase<
-                                          [ORRWrs, ORRXrs],
-                                          MCReturnStatement<
-                                            CheckAll<
-                                              [CheckIsRegOperand<1>,
-                                               CheckIsRegOperand<2>,
-                                               CheckAny<
-                                                 [CheckRegOperand<1, WZR>,
-                                                  CheckRegOperand<1, XZR>]>,
-                                               CheckShiftBy0]>>>],
-                                       MCReturnStatement<FalsePred>>>;
-def IsCopyIdiomPred   : MCSchedPredicate<IsCopyIdiomFn>;
-
 // Identify arithmetic instructions with an extended register.
 def RegExtendedFn     : TIIPredicate<"hasExtendedReg",
                                      MCOpcodeSwitchStatement<
@@ -405,6 +263,63 @@ def ScaledIdxFn       : TIIPredicate<"isScaledAddr",
                                        MCReturnStatement<FalsePred>>>;
 def ScaledIdxPred     : MCSchedPredicate<ScaledIdxFn>;
 
+// Special cases.
+
+// Check for LSL shift <= 4
+def IsCheapLSL        : MCSchedPredicate<
+                          CheckAll<
+                            [CheckShiftLSL,
+                             CheckAny<
+                               [CheckShiftBy0,
+                                CheckShiftBy1,
+                                CheckShiftBy2,
+                                CheckShiftBy3,
+                                CheckShiftBy4]>]>>;
+
+// Idioms.
+
+// Identify an instruction that effectively transfers a register to another.
+def IsCopyIdiomFn     : TIIPredicate<"isCopyIdiom",
+                                     MCOpcodeSwitchStatement<
+                                       [// MOV {Rd, SP}, {SP, Rn} =>
+                                        // ADD {Rd, SP}, {SP, Rn}, #0
+                                        MCOpcodeSwitchCase<
+                                          [ADDWri, ADDXri],
+                                          MCReturnStatement<
+                                            CheckAll<
+                                              [CheckIsRegOperand<0>,
+                                               CheckIsRegOperand<1>,
+                                               CheckAny<
+                                                 [CheckRegOperand<0, WSP>,
+                                                  CheckRegOperand<0, SP>,
+                                                  CheckRegOperand<1, WSP>,
+                                                  CheckRegOperand<1, SP>]>,
+                                               CheckZeroOperand<2>]>>>,
+                                        // MOV Rd, Rm =>
+                                        // ORR Rd, ZR, Rm, LSL #0
+                                        MCOpcodeSwitchCase<
+                                          [ORRWrs, ORRXrs],
+                                          MCReturnStatement<
+                                            CheckAll<
+                                              [CheckIsReg1Zero,
+                                               CheckIsRegOperand<2>,
+                                               CheckShiftBy0]>>>],
+                                       MCReturnStatement<FalsePred>>>;
+def IsCopyIdiomPred   : MCSchedPredicate<IsCopyIdiomFn>;
+
+// Identify an instruction that effectively resets a GP register to zero.
+def IsZeroIdiomFn     : TIIPredicate<"isZeroIdiom",
+                                    MCOpcodeSwitchStatement<
+                                      [// ORR Rd, ZR, #0
+                                       MCOpcodeSwitchCase<
+                                         [ORRWri, ORRXri],
+                                         MCReturnStatement<
+                                           CheckAll<
+                                             [CheckIsReg1Zero,
+                                              CheckZeroOperand<2>]>>>],
+                                      MCReturnStatement<FalsePred>>>;
+def IsZeroIdiomPred   : MCSchedPredicate<IsZeroIdiomFn>;
+
 // Identify an instruction that effectively resets a FP register to zero.
 def IsZeroFPIdiomFn   : TIIPredicate<"isZeroFPIdiom",
                                      MCOpcodeSwitchStatement<
@@ -424,18 +339,7 @@ def IsZeroFPIdiomFn   : TIIPredicate<"isZeroFPIdiom",
                                        MCReturnStatement<FalsePred>>>;
 def IsZeroFPIdiomPred : MCSchedPredicate<IsZeroFPIdiomFn>;
 
-// Identify an instruction that effectively resets a GP register to zero.
-def IsZeroIdiomFn     : TIIPredicate<"isZeroIdiom",
-                                    MCOpcodeSwitchStatement<
-                                      [// ORR Rd, ZR, #0
-                                       MCOpcodeSwitchCase<
-                                         [ORRWri, ORRXri],
-                                         MCReturnStatement<
-                                           CheckAll<
-                                             [CheckIsRegOperand<1>,
-                                              CheckAny<
-                                                [CheckRegOperand<1, WZR>,
-                                                 CheckRegOperand<1, XZR>]>,
-                                              CheckZeroOperand<2>]>>>],
-                                      MCReturnStatement<FalsePred>>>;
-def IsZeroIdiomPred   : MCSchedPredicate<IsZeroIdiomFn>;
+// Identify EXTR as the alias for ROR (immediate).
+def IsRORImmIdiomPred : MCSchedPredicate< // EXTR Rd, Rs, Rs, #Imm
+                          CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
+                                    CheckSameRegOperand<1, 2>]>>;

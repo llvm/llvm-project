@@ -143,12 +143,8 @@ struct isl_detect_stride_data {
 static isl_stat set_stride(struct isl_detect_stride_data *data,
 	__isl_take isl_val *stride, __isl_take isl_aff *offset)
 {
-	int pos;
-
 	if (!stride || !offset)
 		goto error;
-
-	pos = data->pos;
 
 	if (data->found) {
 		isl_val *stride2, *a, *b, *g;

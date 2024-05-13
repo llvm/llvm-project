@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify
+// RUN: %clang_cc1 -Wno-strict-prototypes %s -verify
 
 void *fail1(int a) __attribute__((alloc_size)); //expected-error{{'alloc_size' attribute takes at least 1 argument}}
 void *fail2(int a) __attribute__((alloc_size())); //expected-error{{'alloc_size' attribute takes at least 1 argument}}

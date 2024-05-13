@@ -30,7 +30,7 @@ namespace Fortran::parser {
 
 // Each character in the contiguous source stream built by the
 // prescanner corresponds to a particular character in a source file,
-// include file, macro expansion, or compiler-inserted padding.
+// include file, macro expansion, or compiler-inserted text.
 // The location of this original character to which a parsable character
 // corresponds is its provenance.
 //
@@ -149,7 +149,9 @@ public:
     return *this;
   }
 
+  void ClearSearchPath();
   void AppendSearchPathDirectory(std::string); // new last directory
+  const SourceFile *OpenPath(std::string path, llvm::raw_ostream &error);
   const SourceFile *Open(std::string path, llvm::raw_ostream &error,
       std::optional<std::string> &&prependPath = std::nullopt);
   const SourceFile *ReadStandardInput(llvm::raw_ostream &error);
@@ -160,12 +162,19 @@ public:
       ProvenanceRange def, ProvenanceRange use, const std::string &expansion);
   ProvenanceRange AddCompilerInsertion(std::string);
 
+  // If provenance is in an expanded macro, return the starting provenance of
+  // the replaced macro. Otherwise, return the input provenance.
+  Provenance GetReplacedProvenance(Provenance) const;
+
   bool IsValid(Provenance at) const { return range_.Contains(at); }
   bool IsValid(ProvenanceRange range) const {
     return range.size() > 0 && range_.Contains(range);
   }
+  void setShowColors(bool showColors) { showColors_ = showColors; }
+  bool getShowColors() const { return showColors_; }
   void EmitMessage(llvm::raw_ostream &, const std::optional<ProvenanceRange> &,
-      const std::string &message, bool echoSourceLine = false) const;
+      const std::string &message, const std::string &prefix,
+      llvm::raw_ostream::Colors color, bool echoSourceLine = false) const;
   const SourceFile *GetSourceFile(
       Provenance, std::size_t *offset = nullptr) const;
   const char *GetSource(ProvenanceRange) const;
@@ -213,6 +222,7 @@ private:
   std::vector<std::unique_ptr<SourceFile>> ownedSourceFiles_;
   std::list<std::string> searchPath_;
   Encoding encoding_{Encoding::UTF_8};
+  bool showColors_{false};
 };
 
 // Represents the result of preprocessing and prescanning a single source
@@ -220,6 +230,8 @@ private:
 // single instances of CookedSource.
 class CookedSource {
 public:
+  explicit CookedSource(AllSources &allSources) : allSources_{allSources} {};
+
   int number() const { return number_; }
   void set_number(int n) { number_ = n; }
 
@@ -251,6 +263,7 @@ public:
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
+  AllSources &allSources_;
   int number_{0}; // for sorting purposes
   CharBuffer buffer_; // before Marshal()
   std::string data_; // all of it, prescanned and preprocessed
@@ -291,18 +304,6 @@ private:
   AllSources &allSources_;
   std::list<CookedSource> cooked_; // owns all CookedSource instances
   std::map<CharBlock, const CookedSource &, CharBlockPointerComparator> index_;
-};
-
-// For use as a Comparator for maps, sets, sorting, &c.
-class CharBlockComparator {
-public:
-  explicit CharBlockComparator(const AllCookedSources &all) : all_{all} {}
-  bool operator()(CharBlock x, CharBlock y) const {
-    return all_.Precedes(x, y);
-  }
-
-private:
-  const AllCookedSources &all_;
 };
 
 } // namespace Fortran::parser

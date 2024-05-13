@@ -8,44 +8,17 @@
 //
 // This file is a part of the ORC runtime support library.
 //
-// The behavior of the utilities in this header must be synchronized with the
-// behavior of the utilities in
-// llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h.
-//
-// The Simple Packed Serialization (SPS) utilities are used to generate
-// argument and return buffers for wrapper functions using the following
-// serialization scheme:
-//
-// Primitives:
-//   bool, char, int8_t, uint8_t -- Two's complement 8-bit (0=false, 1=true)
-//   int16_t, uint16_t           -- Two's complement 16-bit little endian
-//   int32_t, uint32_t           -- Two's complement 32-bit little endian
-//   int64_t, int64_t            -- Two's complement 64-bit little endian
-//
-// Sequence<T>:
-//   Serialized as the sequence length (as a uint64_t) followed by the
-//   serialization of each of the elements without padding.
-//
-// Tuple<T1, ..., TN>:
-//   Serialized as each of the element types from T1 to TN without padding.
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef ORC_RT_WRAPPER_FUNCTION_UTILS_H
 #define ORC_RT_WRAPPER_FUNCTION_UTILS_H
 
-#include "adt.h"
-#include "c_api.h"
+#include "orc_rt/c_api.h"
 #include "common.h"
-#include "endian.h"
 #include "error.h"
-#include "stl_extras.h"
-
-#include <string>
-#include <tuple>
+#include "executor_address.h"
+#include "simple_packed_serialization.h"
 #include <type_traits>
-#include <utility>
-#include <vector>
 
 namespace __orc_rt {
 
@@ -54,66 +27,66 @@ namespace __orc_rt {
 class WrapperFunctionResult {
 public:
   /// Create a default WrapperFunctionResult.
-  WrapperFunctionResult() { __orc_rt_CWrapperFunctionResultInit(&R); }
+  WrapperFunctionResult() { orc_rt_CWrapperFunctionResultInit(&R); }
 
   /// Create a WrapperFunctionResult from a CWrapperFunctionResult. This
   /// instance takes ownership of the result object and will automatically
   /// call dispose on the result upon destruction.
-  WrapperFunctionResult(__orc_rt_CWrapperFunctionResult R) : R(R) {}
+  WrapperFunctionResult(orc_rt_CWrapperFunctionResult R) : R(R) {}
 
   WrapperFunctionResult(const WrapperFunctionResult &) = delete;
   WrapperFunctionResult &operator=(const WrapperFunctionResult &) = delete;
 
   WrapperFunctionResult(WrapperFunctionResult &&Other) {
-    __orc_rt_CWrapperFunctionResultInit(&R);
+    orc_rt_CWrapperFunctionResultInit(&R);
     std::swap(R, Other.R);
   }
 
   WrapperFunctionResult &operator=(WrapperFunctionResult &&Other) {
-    __orc_rt_CWrapperFunctionResult Tmp;
-    __orc_rt_CWrapperFunctionResultInit(&Tmp);
+    orc_rt_CWrapperFunctionResult Tmp;
+    orc_rt_CWrapperFunctionResultInit(&Tmp);
     std::swap(Tmp, Other.R);
     std::swap(R, Tmp);
     return *this;
   }
 
-  ~WrapperFunctionResult() { __orc_rt_DisposeCWrapperFunctionResult(&R); }
+  ~WrapperFunctionResult() { orc_rt_DisposeCWrapperFunctionResult(&R); }
 
   /// Relinquish ownership of and return the
-  /// __orc_rt_CWrapperFunctionResult.
-  __orc_rt_CWrapperFunctionResult release() {
-    __orc_rt_CWrapperFunctionResult Tmp;
-    __orc_rt_CWrapperFunctionResultInit(&Tmp);
+  /// orc_rt_CWrapperFunctionResult.
+  orc_rt_CWrapperFunctionResult release() {
+    orc_rt_CWrapperFunctionResult Tmp;
+    orc_rt_CWrapperFunctionResultInit(&Tmp);
     std::swap(R, Tmp);
     return Tmp;
   }
 
-  /// Get an ArrayRef covering the data in the result.
-  const char *data() const { return __orc_rt_CWrapperFunctionResultData(&R); }
+  /// Get a pointer to the data contained in this instance.
+  char *data() { return orc_rt_CWrapperFunctionResultData(&R); }
 
   /// Returns the size of the data contained in this instance.
-  size_t size() const { return __orc_rt_CWrapperFunctionResultSize(&R); }
+  size_t size() const { return orc_rt_CWrapperFunctionResultSize(&R); }
 
   /// Returns true if this value is equivalent to a default-constructed
   /// WrapperFunctionResult.
-  bool empty() const { return __orc_rt_CWrapperFunctionResultEmpty(&R); }
+  bool empty() const { return orc_rt_CWrapperFunctionResultEmpty(&R); }
 
   /// Create a WrapperFunctionResult with the given size and return a pointer
   /// to the underlying memory.
-  static char *allocate(WrapperFunctionResult &R, size_t Size) {
-    __orc_rt_DisposeCWrapperFunctionResult(&R.R);
-    __orc_rt_CWrapperFunctionResultInit(&R.R);
-    return __orc_rt_CWrapperFunctionResultAllocate(&R.R, Size);
+  static WrapperFunctionResult allocate(size_t Size) {
+    WrapperFunctionResult R;
+    R.R = orc_rt_CWrapperFunctionResultAllocate(Size);
+    return R;
   }
 
   /// Copy from the given char range.
   static WrapperFunctionResult copyFrom(const char *Source, size_t Size) {
-    return __orc_rt_CreateCWrapperFunctionResultFromRange(Source, Size);
+    return orc_rt_CreateCWrapperFunctionResultFromRange(Source, Size);
   }
 
   /// Copy from the given null-terminated string (includes the null-terminator).
   static WrapperFunctionResult copyFrom(const char *Source) {
-    return __orc_rt_CreateCWrapperFunctionResultFromString(Source);
+    return orc_rt_CreateCWrapperFunctionResultFromString(Source);
   }
 
   /// Copy from the given std::string (includes the null terminator).
@@ -123,549 +96,54 @@ public:
 
   /// Create an out-of-band error by copying the given string.
   static WrapperFunctionResult createOutOfBandError(const char *Msg) {
-    return __orc_rt_CreateCWrapperFunctionResultFromOutOfBandError(Msg);
+    return orc_rt_CreateCWrapperFunctionResultFromOutOfBandError(Msg);
+  }
+
+  /// Create an out-of-band error by copying the given string.
+  static WrapperFunctionResult createOutOfBandError(const std::string &Msg) {
+    return createOutOfBandError(Msg.c_str());
+  }
+
+  template <typename SPSArgListT, typename... ArgTs>
+  static WrapperFunctionResult fromSPSArgs(const ArgTs &...Args) {
+    auto Result = allocate(SPSArgListT::size(Args...));
+    SPSOutputBuffer OB(Result.data(), Result.size());
+    if (!SPSArgListT::serialize(OB, Args...))
+      return createOutOfBandError(
+          "Error serializing arguments to blob in call");
+    return Result;
   }
 
   /// If this value is an out-of-band error then this returns the error message,
   /// otherwise returns nullptr.
   const char *getOutOfBandError() const {
-    return __orc_rt_CWrapperFunctionResultGetOutOfBandError(&R);
+    return orc_rt_CWrapperFunctionResultGetOutOfBandError(&R);
   }
 
 private:
-  __orc_rt_CWrapperFunctionResult R;
+  orc_rt_CWrapperFunctionResult R;
 };
-
-/// Output char buffer with overflow check.
-class SPSOutputBuffer {
-public:
-  SPSOutputBuffer(char *Buffer, size_t Remaining)
-      : Buffer(Buffer), Remaining(Remaining) {}
-  bool write(const char *Data, size_t Size) {
-    if (Size > Remaining)
-      return false;
-    memcpy(Buffer, Data, Size);
-    Buffer += Size;
-    Remaining -= Size;
-    return true;
-  }
-
-private:
-  char *Buffer = nullptr;
-  size_t Remaining = 0;
-};
-
-/// Input char buffer with underflow check.
-class SPSInputBuffer {
-public:
-  SPSInputBuffer() = default;
-  SPSInputBuffer(const char *Buffer, size_t Remaining)
-      : Buffer(Buffer), Remaining(Remaining) {}
-  bool read(char *Data, size_t Size) {
-    if (Size > Remaining)
-      return false;
-    memcpy(Data, Buffer, Size);
-    Buffer += Size;
-    Remaining -= Size;
-    return true;
-  }
-
-  const char *data() const { return Buffer; }
-  bool skip(size_t Size) {
-    if (Size > Remaining)
-      return false;
-    Remaining -= Size;
-    return true;
-  }
-
-private:
-  const char *Buffer = nullptr;
-  size_t Remaining = 0;
-};
-
-/// Specialize to describe how to serialize/deserialize to/from the given
-/// concrete type.
-template <typename SPSTagT, typename ConcreteT, typename _ = void>
-class SPSSerializationTraits;
-
-/// A utility class for serializing to a blob from a variadic list.
-template <typename... ArgTs> class SPSArgList;
-
-// Empty list specialization for SPSArgList.
-template <> class SPSArgList<> {
-public:
-  static size_t size() { return 0; }
-
-  static bool serialize(SPSOutputBuffer &OB) { return true; }
-  static bool deserialize(SPSInputBuffer &IB) { return true; }
-
-  static bool toWrapperFunctionResult(WrapperFunctionResult &R) {
-    R = WrapperFunctionResult();
-    return true;
-  }
-};
-
-// Non-empty list specialization for SPSArgList.
-template <typename SPSTagT, typename... SPSTagTs>
-class SPSArgList<SPSTagT, SPSTagTs...> {
-public:
-  template <typename ArgT, typename... ArgTs>
-  static size_t size(const ArgT &Arg, const ArgTs &...Args) {
-    return SPSSerializationTraits<SPSTagT, ArgT>::size(Arg) +
-           SPSArgList<SPSTagTs...>::size(Args...);
-  }
-
-  template <typename ArgT, typename... ArgTs>
-  static bool serialize(SPSOutputBuffer &OB, const ArgT &Arg,
-                        const ArgTs &...Args) {
-    return SPSSerializationTraits<SPSTagT, ArgT>::serialize(OB, Arg) &&
-           SPSArgList<SPSTagTs...>::serialize(OB, Args...);
-  }
-
-  template <typename ArgT, typename... ArgTs>
-  static bool deserialize(SPSInputBuffer &IB, ArgT &Arg, ArgTs &...Args) {
-    return SPSSerializationTraits<SPSTagT, ArgT>::deserialize(IB, Arg) &&
-           SPSArgList<SPSTagTs...>::deserialize(IB, Args...);
-  }
-
-  template <typename... ArgTs>
-  static bool toWrapperFunctionResult(WrapperFunctionResult &R,
-                                      const ArgTs &...Args) {
-    WrapperFunctionResult TR;
-    char *DataPtr = WrapperFunctionResult::allocate(TR, size(Args...));
-
-    SPSOutputBuffer OB(DataPtr, TR.size());
-    if (!serialize(OB, Args...))
-      return false;
-
-    R = std::move(TR);
-    return true;
-  }
-
-  template <typename... ArgTs>
-  static bool fromBuffer(const char *Data, size_t Size, ArgTs &...Args) {
-    SPSInputBuffer IB(Data, Size);
-    return deserialize(IB, Args...);
-  }
-};
-
-/// SPS serialization for integral types, bool, and char.
-template <typename SPSTagT>
-class SPSSerializationTraits<
-    SPSTagT, SPSTagT,
-    std::enable_if_t<std::is_same<SPSTagT, bool>::value ||
-                     std::is_same<SPSTagT, char>::value ||
-                     std::is_same<SPSTagT, int8_t>::value ||
-                     std::is_same<SPSTagT, int16_t>::value ||
-                     std::is_same<SPSTagT, int32_t>::value ||
-                     std::is_same<SPSTagT, int64_t>::value ||
-                     std::is_same<SPSTagT, uint8_t>::value ||
-                     std::is_same<SPSTagT, uint16_t>::value ||
-                     std::is_same<SPSTagT, uint32_t>::value ||
-                     std::is_same<SPSTagT, uint64_t>::value>> {
-public:
-  static size_t size(const SPSTagT &Value) { return sizeof(SPSTagT); }
-
-  static bool serialize(SPSOutputBuffer &OB, const SPSTagT &Value) {
-    SPSTagT Tmp = Value;
-    if (IsBigEndianHost)
-      swapByteOrder(Tmp);
-    return OB.write(reinterpret_cast<const char *>(&Tmp), sizeof(Tmp));
-  }
-
-  static bool deserialize(SPSInputBuffer &IB, SPSTagT &Value) {
-    SPSTagT Tmp;
-    if (!IB.read(reinterpret_cast<char *>(&Tmp), sizeof(Tmp)))
-      return false;
-    if (IsBigEndianHost)
-      swapByteOrder(Tmp);
-    Value = Tmp;
-    return true;
-  }
-};
-
-// Any empty placeholder suitable as a substitute for void when deserializing
-class SPSEmpty {};
-
-/// SPS tag type for target addresses.
-///
-/// SPSTagTargetAddresses should be serialized as a uint64_t value.
-class SPSTagTargetAddress;
-
-template <>
-class SPSSerializationTraits<SPSTagTargetAddress, uint64_t>
-    : public SPSSerializationTraits<uint64_t, uint64_t> {};
-
-/// SPS tag type for tuples.
-///
-/// A blob tuple should be serialized by serializing each of the elements in
-/// sequence.
-template <typename... SPSTagTs> class SPSTuple {
-public:
-  /// Convenience typedef of the corresponding arg list.
-  typedef SPSArgList<SPSTagTs...> AsArgList;
-};
-
-/// SPS tag type for sequences.
-///
-/// SPSSequences should be serialized as a uint64_t sequence length,
-/// followed by the serialization of each of the elements.
-template <typename SPSElementTagT> class SPSSequence;
-
-/// SPS tag type for strings, which are equivalent to sequences of chars.
-using SPSString = SPSSequence<char>;
-
-/// SPS tag type for maps.
-///
-/// SPS maps are just sequences of (Key, Value) tuples.
-template <typename SPSTagT1, typename SPSTagT2>
-using SPSMap = SPSSequence<SPSTuple<SPSTagT1, SPSTagT2>>;
-
-/// Serialization for SPSEmpty type.
-template <> class SPSSerializationTraits<SPSEmpty, SPSEmpty> {
-public:
-  static size_t size(const SPSEmpty &EP) { return 0; }
-  static bool serialize(SPSOutputBuffer &OB, const SPSEmpty &BE) {
-    return true;
-  }
-  static bool deserialize(SPSInputBuffer &IB, SPSEmpty &BE) { return true; }
-};
-
-/// Specialize this to implement 'trivial' sequence serialization for
-/// a concrete sequence type.
-///
-/// Trivial sequence serialization uses the sequence's 'size' member to get the
-/// length of the sequence, and uses a range-based for loop to iterate over the
-/// elements.
-///
-/// Specializing this template class means that you do not need to provide a
-/// specialization of SPSSerializationTraits for your type.
-template <typename SPSElementTagT, typename ConcreteSequenceT>
-class TrivialSPSSequenceSerialization {
-public:
-  static constexpr bool available = false;
-};
-
-/// Specialize this to implement 'trivial' sequence deserialization for
-/// a concrete sequence type.
-///
-/// Trivial deserialization calls a static 'reserve(SequenceT&)' method on your
-/// specialization (you must implement this) to reserve space, and then calls
-/// a static 'append(SequenceT&, ElementT&) method to append each of the
-/// deserialized elements.
-///
-/// Specializing this template class means that you do not need to provide a
-/// specialization of SPSSerializationTraits for your type.
-template <typename SPSElementTagT, typename ConcreteSequenceT>
-class TrivialSPSSequenceDeserialization {
-public:
-  static constexpr bool available = false;
-};
-
-/// Trivial std::string -> SPSSequence<char> serialization.
-template <> class TrivialSPSSequenceSerialization<char, std::string> {
-public:
-  static constexpr bool available = true;
-};
-
-/// Trivial SPSSequence<char> -> std::string deserialization.
-template <> class TrivialSPSSequenceDeserialization<char, std::string> {
-public:
-  static constexpr bool available = true;
-
-  using element_type = char;
-
-  static void reserve(std::string &S, uint64_t Size) { S.reserve(Size); }
-  static bool append(std::string &S, char C) {
-    S.push_back(C);
-    return true;
-  }
-};
-
-/// Trivial std::vector<T> -> SPSSequence<SPSElementTagT> serialization.
-template <typename SPSElementTagT, typename T>
-class TrivialSPSSequenceSerialization<SPSElementTagT, std::vector<T>> {
-public:
-  static constexpr bool available = true;
-};
-
-/// Trivial SPSSequence<SPSElementTagT> -> std::vector<T> deserialization.
-template <typename SPSElementTagT, typename T>
-class TrivialSPSSequenceDeserialization<SPSElementTagT, std::vector<T>> {
-public:
-  static constexpr bool available = true;
-
-  using element_type = typename std::vector<T>::value_type;
-
-  static void reserve(std::vector<T> &V, uint64_t Size) { V.reserve(Size); }
-  static bool append(std::vector<T> &V, T E) {
-    V.push_back(std::move(E));
-    return true;
-  }
-};
-
-/// 'Trivial' sequence serialization: Sequence is serialized as a uint64_t size
-/// followed by a for-earch loop over the elements of the sequence to serialize
-/// each of them.
-template <typename SPSElementTagT, typename SequenceT>
-class SPSSerializationTraits<SPSSequence<SPSElementTagT>, SequenceT,
-                             std::enable_if_t<TrivialSPSSequenceSerialization<
-                                 SPSElementTagT, SequenceT>::available>> {
-public:
-  static size_t size(const SequenceT &S) {
-    size_t Size = SPSArgList<uint64_t>::size(static_cast<uint64_t>(S.size()));
-    for (const auto &E : S)
-      Size += SPSArgList<SPSElementTagT>::size(E);
-    return Size;
-  }
-
-  static bool serialize(SPSOutputBuffer &OB, const SequenceT &S) {
-    if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(S.size())))
-      return false;
-    for (const auto &E : S)
-      if (!SPSArgList<SPSElementTagT>::serialize(OB, E))
-        return false;
-    return true;
-  }
-
-  static bool deserialize(SPSInputBuffer &IB, SequenceT &S) {
-    using TBSD = TrivialSPSSequenceDeserialization<SPSElementTagT, SequenceT>;
-    uint64_t Size;
-    if (!SPSArgList<uint64_t>::deserialize(IB, Size))
-      return false;
-    TBSD::reserve(S, Size);
-    for (size_t I = 0; I != Size; ++I) {
-      typename TBSD::element_type E;
-      if (!SPSArgList<SPSElementTagT>::deserialize(IB, E))
-        return false;
-      if (!TBSD::append(S, std::move(E)))
-        return false;
-    }
-    return true;
-  }
-};
-
-/// SPSTuple serialization for std::pair.
-template <typename SPSTagT1, typename SPSTagT2, typename T1, typename T2>
-class SPSSerializationTraits<SPSTuple<SPSTagT1, SPSTagT2>, std::pair<T1, T2>> {
-public:
-  static size_t size(const std::pair<T1, T2> &P) {
-    return SPSArgList<SPSTagT1>::size(P.first) +
-           SPSArgList<SPSTagT2>::size(P.second);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB, const std::pair<T1, T2> &P) {
-    return SPSArgList<SPSTagT1>::serialize(OB, P.first) &&
-           SPSArgList<SPSTagT2>::serialize(OB, P.second);
-  }
-
-  static bool deserialize(SPSInputBuffer &IB, std::pair<T1, T2> &P) {
-    return SPSArgList<SPSTagT1>::deserialize(IB, P.first) &&
-           SPSArgList<SPSTagT2>::deserialize(IB, P.second);
-  }
-};
-
-/// Serialization for string_views.
-///
-/// Serialization is as for regular strings. Deserialization points directly
-/// into the blob.
-template <> class SPSSerializationTraits<SPSString, __orc_rt::string_view> {
-public:
-  static size_t size(const __orc_rt::string_view &S) {
-    return SPSArgList<uint64_t>::size(static_cast<uint64_t>(S.size())) +
-           S.size();
-  }
-
-  static bool serialize(SPSOutputBuffer &OB, const __orc_rt::string_view &S) {
-    if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(S.size())))
-      return false;
-    return OB.write(S.data(), S.size());
-  }
-
-  static bool deserialize(SPSInputBuffer &IB, __orc_rt::string_view &S) {
-    const char *Data = nullptr;
-    uint64_t Size;
-    if (!SPSArgList<uint64_t>::deserialize(IB, Size))
-      return false;
-    Data = IB.data();
-    if (!IB.skip(Size))
-      return false;
-    S = {Data, Size};
-    return true;
-  }
-};
-
-/// SPS tag type for errors.
-class SPSError;
-
-/// SPS tag type for expecteds, which are either a T or a string representing
-/// an error.
-template <typename SPSTagT> class SPSExpected;
 
 namespace detail {
 
-/// Helper type for serializing Errors.
-///
-/// llvm::Errors are move-only, and not inspectable except by consuming them.
-/// This makes them unsuitable for direct serialization via
-/// SPSSerializationTraits, which needs to inspect values twice (once to
-/// determine the amount of space to reserve, and then again to serialize).
-///
-/// The WrapperFunctionSerializableError type is a helper that can be
-/// constructed from an llvm::Error, but inspected more than once.
-struct SPSSerializableError {
-  bool HasError = false;
-  std::string ErrMsg;
-};
-
-/// Helper type for serializing Expected<T>s.
-///
-/// See SPSSerializableError for more details.
-///
-// FIXME: Use std::variant for storage once we have c++17.
-template <typename T> struct SPSSerializableExpected {
-  bool HasValue = false;
-  T Value{};
-  std::string ErrMsg;
-};
-
-inline SPSSerializableError toSPSSerializable(Error Err) {
-  if (Err)
-    return {true, toString(std::move(Err))};
-  return {false, {}};
-}
-
-inline Error fromSPSSerializable(SPSSerializableError BSE) {
-  if (BSE.HasError)
-    return make_error<StringError>(BSE.ErrMsg);
-  return Error::success();
-}
-
-template <typename T>
-SPSSerializableExpected<T> toSPSSerializable(Expected<T> E) {
-  if (E)
-    return {true, std::move(*E), {}};
-  else
-    return {false, {}, toString(E.takeError())};
-}
-
-template <typename T>
-Expected<T> fromSPSSerializable(SPSSerializableExpected<T> BSE) {
-  if (BSE.HasValue)
-    return std::move(BSE.Value);
-  else
-    return make_error<StringError>(BSE.ErrMsg);
-}
-
-} // end namespace detail
-
-/// Serialize to a SPSError from a detail::SPSSerializableError.
-template <>
-class SPSSerializationTraits<SPSError, detail::SPSSerializableError> {
+template <typename RetT> class WrapperFunctionHandlerCaller {
 public:
-  static size_t size(const detail::SPSSerializableError &BSE) {
-    size_t Size = SPSArgList<bool>::size(BSE.HasError);
-    if (BSE.HasError)
-      Size += SPSArgList<SPSString>::size(BSE.ErrMsg);
-    return Size;
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const detail::SPSSerializableError &BSE) {
-    if (!SPSArgList<bool>::serialize(OB, BSE.HasError))
-      return false;
-    if (BSE.HasError)
-      if (!SPSArgList<SPSString>::serialize(OB, BSE.ErrMsg))
-        return false;
-    return true;
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          detail::SPSSerializableError &BSE) {
-    if (!SPSArgList<bool>::deserialize(IB, BSE.HasError))
-      return false;
-
-    if (!BSE.HasError)
-      return true;
-
-    return SPSArgList<SPSString>::deserialize(IB, BSE.ErrMsg);
+  template <typename HandlerT, typename ArgTupleT, std::size_t... I>
+  static decltype(auto) call(HandlerT &&H, ArgTupleT &Args,
+                             std::index_sequence<I...>) {
+    return std::forward<HandlerT>(H)(std::get<I>(Args)...);
   }
 };
 
-/// Serialize to a SPSExpected<SPSTagT> from a
-/// detail::SPSSerializableExpected<T>.
-template <typename SPSTagT, typename T>
-class SPSSerializationTraits<SPSExpected<SPSTagT>,
-                             detail::SPSSerializableExpected<T>> {
+template <> class WrapperFunctionHandlerCaller<void> {
 public:
-  static size_t size(const detail::SPSSerializableExpected<T> &BSE) {
-    size_t Size = SPSArgList<bool>::size(BSE.HasValue);
-    if (BSE.HasValue)
-      Size += SPSArgList<SPSTagT>::size(BSE.Value);
-    else
-      Size += SPSArgList<SPSString>::size(BSE.ErrMsg);
-    return Size;
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const detail::SPSSerializableExpected<T> &BSE) {
-    if (!SPSArgList<bool>::serialize(OB, BSE.HasValue))
-      return false;
-
-    if (BSE.HasValue)
-      return SPSArgList<SPSTagT>::serialize(OB, BSE.Value);
-
-    return SPSArgList<SPSString>::serialize(OB, BSE.ErrMsg);
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          detail::SPSSerializableExpected<T> &BSE) {
-    if (!SPSArgList<bool>::deserialize(IB, BSE.HasValue))
-      return false;
-
-    if (BSE.HasValue)
-      return SPSArgList<SPSTagT>::deserialize(IB, BSE.Value);
-
-    return SPSArgList<SPSString>::deserialize(IB, BSE.ErrMsg);
+  template <typename HandlerT, typename ArgTupleT, std::size_t... I>
+  static SPSEmpty call(HandlerT &&H, ArgTupleT &Args,
+                       std::index_sequence<I...>) {
+    std::forward<HandlerT>(H)(std::get<I>(Args)...);
+    return SPSEmpty();
   }
 };
-
-/// Serialize to a SPSExpected<SPSTagT> from a detail::SPSSerializableError.
-template <typename SPSTagT>
-class SPSSerializationTraits<SPSExpected<SPSTagT>,
-                             detail::SPSSerializableError> {
-public:
-  static size_t size(const detail::SPSSerializableError &BSE) {
-    assert(BSE.HasError && "Cannot serialize expected from a success value");
-    return SPSArgList<bool>::size(false) +
-           SPSArgList<SPSString>::size(BSE.ErrMsg);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const detail::SPSSerializableError &BSE) {
-    assert(BSE.HasError && "Cannot serialize expected from a success value");
-    if (!SPSArgList<bool>::serialize(OB, false))
-      return false;
-    return SPSArgList<SPSString>::serialize(OB, BSE.ErrMsg);
-  }
-};
-
-/// Serialize to a SPSExpected<SPSTagT> from a T.
-template <typename SPSTagT, typename T>
-class SPSSerializationTraits<SPSExpected<SPSTagT>, T> {
-public:
-  static size_t size(const T &Value) {
-    return SPSArgList<bool>::size(true) + SPSArgList<SPSTagT>::size(Value);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB, const T &Value) {
-    if (!SPSArgList<bool>::serialize(OB, true))
-      return false;
-    return SPSArgList<SPSTagT>::serialize(Value);
-  }
-};
-
-namespace detail {
 
 template <typename WrapperFunctionImplT,
           template <typename> class ResultSerializer, typename... SPSTagTs>
@@ -690,8 +168,11 @@ public:
       return WrapperFunctionResult::createOutOfBandError(
           "Could not deserialize arguments for wrapper function call");
 
-    return ResultSerializer<RetT>::serialize(
-        call(std::forward<HandlerT>(H), Args, ArgIndices{}));
+    auto HandlerResult = WrapperFunctionHandlerCaller<RetT>::call(
+        std::forward<HandlerT>(H), Args, ArgIndices{});
+
+    return ResultSerializer<decltype(HandlerResult)>::serialize(
+        std::move(HandlerResult));
   }
 
 private:
@@ -701,18 +182,12 @@ private:
     SPSInputBuffer IB(ArgData, ArgSize);
     return SPSArgList<SPSTagTs...>::deserialize(IB, std::get<I>(Args)...);
   }
-
-  template <typename HandlerT, std::size_t... I>
-  static decltype(auto) call(HandlerT &&H, ArgTuple &Args,
-                             std::index_sequence<I...>) {
-    return std::forward<HandlerT>(H)(std::get<I>(Args)...);
-  }
 };
 
-// Map function references to function types.
+// Map function pointers to function types.
 template <typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionHandlerHelper<RetT (&)(ArgTs...), ResultSerializer,
+class WrapperFunctionHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
                                    SPSTagTs...>
     : public WrapperFunctionHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                           SPSTagTs...> {};
@@ -736,23 +211,15 @@ class WrapperFunctionHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
 template <typename SPSRetTagT, typename RetT> class ResultSerializer {
 public:
   static WrapperFunctionResult serialize(RetT Result) {
-    WrapperFunctionResult R;
-    if (!SPSArgList<SPSRetTagT>::toWrapperFunctionResult(R, Result))
-      return WrapperFunctionResult::createOutOfBandError(
-          "Could not serialize return value from wrapper function");
-    return R;
+    return WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSRetTagT>>(Result);
   }
 };
 
 template <typename SPSRetTagT> class ResultSerializer<SPSRetTagT, Error> {
 public:
   static WrapperFunctionResult serialize(Error Err) {
-    WrapperFunctionResult R;
-    if (!SPSArgList<SPSRetTagT>::toWrapperFunctionResult(
-            R, toSPSSerializable(std::move(Err))))
-      return WrapperFunctionResult::createOutOfBandError(
-          "Could not serialize return value from wrapper function");
-    return R;
+    return WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSRetTagT>>(
+        toSPSSerializable(std::move(Err)));
   }
 };
 
@@ -760,12 +227,8 @@ template <typename SPSRetTagT, typename T>
 class ResultSerializer<SPSRetTagT, Expected<T>> {
 public:
   static WrapperFunctionResult serialize(Expected<T> E) {
-    WrapperFunctionResult R;
-    if (!SPSArgList<SPSRetTagT>::toWrapperFunctionResult(
-            R, toSPSSerializable(std::move(E))))
-      return WrapperFunctionResult::createOutOfBandError(
-          "Could not serialize return value from wrapper function");
-    return R;
+    return WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSRetTagT>>(
+        toSPSSerializable(std::move(E)));
   }
 };
 
@@ -833,15 +296,20 @@ public:
     // operation fails.
     detail::ResultDeserializer<SPSRetTagT, RetT>::makeSafe(Result);
 
+    // Since the functions cannot be zero/unresolved on Windows, the following
+    // reference taking would always be non-zero, thus generating a compiler
+    // warning otherwise.
+#if !defined(_WIN32)
     if (ORC_RT_UNLIKELY(!&__orc_rt_jit_dispatch_ctx))
-      return make_error<StringError>("__orc_jtjit_dispatch_ctx not set");
-    if (ORC_RT_UNLIKELY(!&__orc_rt_jit_dispatch_ctx))
-      return make_error<StringError>("__orc_jtjit_dispatch not set");
+      return make_error<StringError>("__orc_rt_jit_dispatch_ctx not set");
+    if (ORC_RT_UNLIKELY(!&__orc_rt_jit_dispatch))
+      return make_error<StringError>("__orc_rt_jit_dispatch not set");
+#endif
+    auto ArgBuffer =
+        WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSTagTs...>>(Args...);
+    if (const char *ErrMsg = ArgBuffer.getOutOfBandError())
+      return make_error<StringError>(ErrMsg);
 
-    WrapperFunctionResult ArgBuffer;
-    if (!SPSArgList<SPSTagTs...>::toWrapperFunctionResult(ArgBuffer, Args...))
-      return make_error<StringError>(
-          "Error serializing arguments to blob in call");
     WrapperFunctionResult ResultBuffer = __orc_rt_jit_dispatch(
         &__orc_rt_jit_dispatch_ctx, FnTag, ArgBuffer.data(), ArgBuffer.size());
     if (auto ErrMsg = ResultBuffer.getOutOfBandError())
@@ -855,8 +323,8 @@ public:
   static WrapperFunctionResult handle(const char *ArgData, size_t ArgSize,
                                       HandlerT &&Handler) {
     using WFHH =
-        detail::WrapperFunctionHandlerHelper<HandlerT, ResultSerializer,
-                                             SPSTagTs...>;
+        detail::WrapperFunctionHandlerHelper<std::remove_reference_t<HandlerT>,
+                                             ResultSerializer, SPSTagTs...>;
     return WFHH::apply(std::forward<HandlerT>(Handler), ArgData, ArgSize);
   }
 
@@ -886,6 +354,154 @@ public:
   }
 
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handle;
+};
+
+/// A function object that takes an ExecutorAddr as its first argument,
+/// casts that address to a ClassT*, then calls the given method on that
+/// pointer passing in the remaining function arguments. This utility
+/// removes some of the boilerplate from writing wrappers for method calls.
+///
+///   @code{.cpp}
+///   class MyClass {
+///   public:
+///     void myMethod(uint32_t, bool) { ... }
+///   };
+///
+///   // SPS Method signature -- note MyClass object address as first argument.
+///   using SPSMyMethodWrapperSignature =
+///     SPSTuple<SPSExecutorAddr, uint32_t, bool>;
+///
+///   WrapperFunctionResult
+///   myMethodCallWrapper(const char *ArgData, size_t ArgSize) {
+///     return WrapperFunction<SPSMyMethodWrapperSignature>::handle(
+///        ArgData, ArgSize, makeMethodWrapperHandler(&MyClass::myMethod));
+///   }
+///   @endcode
+///
+template <typename RetT, typename ClassT, typename... ArgTs>
+class MethodWrapperHandler {
+public:
+  using MethodT = RetT (ClassT::*)(ArgTs...);
+  MethodWrapperHandler(MethodT M) : M(M) {}
+  RetT operator()(ExecutorAddr ObjAddr, ArgTs &...Args) {
+    return (ObjAddr.toPtr<ClassT *>()->*M)(std::forward<ArgTs>(Args)...);
+  }
+
+private:
+  MethodT M;
+};
+
+/// Create a MethodWrapperHandler object from the given method pointer.
+template <typename RetT, typename ClassT, typename... ArgTs>
+MethodWrapperHandler<RetT, ClassT, ArgTs...>
+makeMethodWrapperHandler(RetT (ClassT::*Method)(ArgTs...)) {
+  return MethodWrapperHandler<RetT, ClassT, ArgTs...>(Method);
+}
+
+/// Represents a call to a wrapper function.
+class WrapperFunctionCall {
+public:
+  // FIXME: Switch to a SmallVector<char, 24> once ORC runtime has a
+  // smallvector.
+  using ArgDataBufferType = std::vector<char>;
+
+  /// Create a WrapperFunctionCall using the given SPS serializer to serialize
+  /// the arguments.
+  template <typename SPSSerializer, typename... ArgTs>
+  static Expected<WrapperFunctionCall> Create(ExecutorAddr FnAddr,
+                                              const ArgTs &...Args) {
+    ArgDataBufferType ArgData;
+    ArgData.resize(SPSSerializer::size(Args...));
+    SPSOutputBuffer OB(ArgData.empty() ? nullptr : ArgData.data(),
+                       ArgData.size());
+    if (SPSSerializer::serialize(OB, Args...))
+      return WrapperFunctionCall(FnAddr, std::move(ArgData));
+    return make_error<StringError>("Cannot serialize arguments for "
+                                   "AllocActionCall");
+  }
+
+  WrapperFunctionCall() = default;
+
+  /// Create a WrapperFunctionCall from a target function and arg buffer.
+  WrapperFunctionCall(ExecutorAddr FnAddr, ArgDataBufferType ArgData)
+      : FnAddr(FnAddr), ArgData(std::move(ArgData)) {}
+
+  /// Returns the address to be called.
+  const ExecutorAddr &getCallee() const { return FnAddr; }
+
+  /// Returns the argument data.
+  const ArgDataBufferType &getArgData() const { return ArgData; }
+
+  /// WrapperFunctionCalls convert to true if the callee is non-null.
+  explicit operator bool() const { return !!FnAddr; }
+
+  /// Run call returning raw WrapperFunctionResult.
+  WrapperFunctionResult run() const {
+    using FnTy =
+        orc_rt_CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
+    return WrapperFunctionResult(
+        FnAddr.toPtr<FnTy *>()(ArgData.data(), ArgData.size()));
+  }
+
+  /// Run call and deserialize result using SPS.
+  template <typename SPSRetT, typename RetT>
+  std::enable_if_t<!std::is_same<SPSRetT, void>::value, Error>
+  runWithSPSRet(RetT &RetVal) const {
+    auto WFR = run();
+    if (const char *ErrMsg = WFR.getOutOfBandError())
+      return make_error<StringError>(ErrMsg);
+    SPSInputBuffer IB(WFR.data(), WFR.size());
+    if (!SPSSerializationTraits<SPSRetT, RetT>::deserialize(IB, RetVal))
+      return make_error<StringError>("Could not deserialize result from "
+                                     "serialized wrapper function call");
+    return Error::success();
+  }
+
+  /// Overload for SPS functions returning void.
+  template <typename SPSRetT>
+  std::enable_if_t<std::is_same<SPSRetT, void>::value, Error>
+  runWithSPSRet() const {
+    SPSEmpty E;
+    return runWithSPSRet<SPSEmpty>(E);
+  }
+
+  /// Run call and deserialize an SPSError result. SPSError returns and
+  /// deserialization failures are merged into the returned error.
+  Error runWithSPSRetErrorMerged() const {
+    detail::SPSSerializableError RetErr;
+    if (auto Err = runWithSPSRet<SPSError>(RetErr))
+      return Err;
+    return detail::fromSPSSerializable(std::move(RetErr));
+  }
+
+private:
+  ExecutorAddr FnAddr;
+  std::vector<char> ArgData;
+};
+
+using SPSWrapperFunctionCall = SPSTuple<SPSExecutorAddr, SPSSequence<char>>;
+
+template <>
+class SPSSerializationTraits<SPSWrapperFunctionCall, WrapperFunctionCall> {
+public:
+  static size_t size(const WrapperFunctionCall &WFC) {
+    return SPSArgList<SPSExecutorAddr, SPSSequence<char>>::size(
+        WFC.getCallee(), WFC.getArgData());
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const WrapperFunctionCall &WFC) {
+    return SPSArgList<SPSExecutorAddr, SPSSequence<char>>::serialize(
+        OB, WFC.getCallee(), WFC.getArgData());
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, WrapperFunctionCall &WFC) {
+    ExecutorAddr FnAddr;
+    WrapperFunctionCall::ArgDataBufferType ArgData;
+    if (!SPSWrapperFunctionCall::AsArgList::deserialize(IB, FnAddr, ArgData))
+      return false;
+    WFC = WrapperFunctionCall(FnAddr, std::move(ArgData));
+    return true;
+  }
 };
 
 } // end namespace __orc_rt

@@ -1,14 +1,14 @@
-; RUN: opt < %s -gvn | llvm-dis
+; RUN: opt < %s -passes=gvn | llvm-dis
 
 	%"struct.Block::$_16" = type { i32 }
-	%struct.Exp = type { %struct.Exp_*, i32, i32, i32, %struct.Exp*, %struct.Exp*, %"struct.Exp::$_10", %"struct.Block::$_16", %"struct.Exp::$_12" }
-	%"struct.Exp::$_10" = type { %struct.Exp* }
-	%"struct.Exp::$_12" = type { %struct.Exp** }
-	%struct.Exp_ = type { i32, i32, i32, i32, %struct.Id* }
-	%struct.Id = type { i8*, i32, i32, i32, %"struct.Id::$_13" }
+	%struct.Exp = type { ptr, i32, i32, i32, ptr, ptr, %"struct.Exp::$_10", %"struct.Block::$_16", %"struct.Exp::$_12" }
+	%"struct.Exp::$_10" = type { ptr }
+	%"struct.Exp::$_12" = type { ptr }
+	%struct.Exp_ = type { i32, i32, i32, i32, ptr }
+	%struct.Id = type { ptr, i32, i32, i32, %"struct.Id::$_13" }
 	%"struct.Id::$_13" = type { double }
 
-define i8* @_ZN3Exp8toStringEj(%struct.Exp* %this, i32 %nextpc) {
+define ptr @_ZN3Exp8toStringEj(ptr %this, i32 %nextpc) {
 entry:
 	switch i32 0, label %bb970 [
 		 i32 1, label %bb
@@ -23,7 +23,7 @@ entry:
 	]
 
 bb:		; preds = %entry
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 bb39:		; preds = %entry
@@ -66,7 +66,7 @@ cond_true189:		; preds = %cond_next181
 	br label %cond_next191
 
 cond_next191:		; preds = %cond_true189, %cond_next181
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 bb195:		; preds = %entry
@@ -85,7 +85,7 @@ cond_true265:		; preds = %cond_next252
 	br label %cond_next267
 
 cond_next267:		; preds = %cond_true265, %cond_next252
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 bb270:		; preds = %entry
@@ -125,7 +125,7 @@ cond_true413:		; preds = %cond_next408
 	br label %cond_next415
 
 cond_next415:		; preds = %cond_true413, %cond_next408
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 bb418:		; preds = %entry
@@ -180,7 +180,7 @@ cond_true628:		; preds = %cond_next623
 	br label %cond_next630
 
 cond_next630:		; preds = %cond_true628, %cond_next623
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 bb633:		; preds = %entry
@@ -223,7 +223,7 @@ cond_true805:		; preds = %cond_next791
 	br label %cond_next807
 
 cond_next807:		; preds = %cond_true805, %cond_next791
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 bb810:		; preds = %entry
@@ -239,7 +239,7 @@ cond_true877:		; preds = %cond_next872
 	br label %cond_next879
 
 cond_next879:		; preds = %cond_true877, %cond_next872
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 bb882:		; preds = %entry
@@ -249,7 +249,7 @@ cond_true920:		; preds = %bb882
 	br label %cond_next922
 
 cond_next922:		; preds = %cond_true920, %bb882
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 bb925:		; preds = %entry
@@ -259,16 +259,16 @@ cond_true965:		; preds = %bb925
 	br label %cond_next967
 
 cond_next967:		; preds = %cond_true965, %bb925
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 bb970:		; preds = %entry
 	unreachable
 		; No predecessors!
-	store i8* null, i8** null
+	store ptr null, ptr null
 	br label %return
 
 return:		; preds = %0, %cond_next967, %cond_next922, %cond_next879, %cond_next807, %cond_next630, %cond_next415, %cond_next267, %cond_next191, %bb
-	%retval980 = load i8*, i8** null		; <i8*> [#uses=1]
-	ret i8* %retval980
+	%retval980 = load ptr, ptr null		; <ptr> [#uses=1]
+	ret ptr %retval980
 }

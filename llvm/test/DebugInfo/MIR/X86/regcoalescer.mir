@@ -1,4 +1,4 @@
-# RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 -o - %s  -start-before=simple-register-coalescing -stop-after=simple-register-coalescing | FileCheck %s
+# RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 -o - %s  -start-before=register-coalescer -stop-after=register-coalescer | FileCheck %s
 
 --- |
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -27,9 +27,10 @@
   !16 = !{!7}
   !17 = !{!18}
   !18 = !DILocalVariable(name: "bazinga", scope: !14, file: !1, line: 13, type: !7)
-  !19 = !DILocation(line: 14, column: 11, scope: !14)
-  !20 = !DILocation(line: 13, column: 7, scope: !14)
-  !21 = !DILocation(line: 16, column: 3, scope: !14)
+  !19 = !DILocalVariable(name: "bazinga2", scope: !14, file: !1, line: 13, type: !7)
+  !20 = !DILocation(line: 14, column: 11, scope: !14)
+  !21 = !DILocation(line: 13, column: 7, scope: !14)
+  !22 = !DILocation(line: 16, column: 3, scope: !14)
 
 ...
 ---
@@ -39,12 +40,14 @@ registers:
   - { id: 0, class: gr32, preferred-register: '' }
 body:             |
   bb.0.entry:
-    %0 = MOV32r0 implicit-def dead $eflags, debug-location !19
-    DBG_VALUE %0, _, !18, !DIExpression(), debug-location !20
-    $eax = COPY killed %0, debug-location !21
-    RET 0, killed $eax, debug-location !21
+    %0 = MOV32r0 implicit-def dead $eflags, debug-location !20
+    DBG_VALUE %0, _, !18, !DIExpression(), debug-location !21
+    DBG_VALUE %0, _, !19, !DIExpression(), debug-location !22
+    $eax = COPY killed %0, debug-location !22
+    RET 0, killed $eax, debug-location !22
 
 ...
 
 # CHECK: $eax = MOV32r0
+# CHECK-NEXT: DBG_VALUE $eax
 # CHECK-NEXT: DBG_VALUE $eax

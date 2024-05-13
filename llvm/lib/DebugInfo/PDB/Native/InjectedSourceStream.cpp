@@ -9,12 +9,11 @@
 #include "llvm/DebugInfo/PDB/Native/InjectedSourceStream.h"
 
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Native/Hash.h"
+#include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::msf;

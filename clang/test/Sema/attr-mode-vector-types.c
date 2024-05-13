@@ -22,8 +22,7 @@ typedef float __attribute__((mode(QC))) __attribute__((vector_size(256))) vec_t8
 // expected-error@-1{{unsupported machine mode 'QC'}}
 // expected-error@-2{{type of machine mode does not match type of base type}}
 typedef _Complex float __attribute__((mode(HC))) __attribute__((vector_size(256))) vec_t9;
-// expected-error@-1{{unsupported machine mode 'HC'}}
-// expected-error@-2{{invalid vector element type '_Complex float'}}
+// expected-error@-1{{invalid vector element type '_Complex float'}}
 typedef int __attribute__((mode(SC))) __attribute__((vector_size(256))) vec_t10;
 // expected-error@-1{{type of machine mode does not match type of base type}}
 // expected-error@-2{{type of machine mode does not support base vector types}}

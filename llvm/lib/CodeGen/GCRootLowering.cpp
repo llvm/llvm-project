@@ -14,7 +14,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -24,11 +23,18 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/MC/MCContext.h"
 
 using namespace llvm;
+
+/// Lower barriers out of existence (if the associated GCStrategy hasn't
+/// already done so...), and insert initializing stores to roots as a defensive
+/// measure.  Given we're going to report all roots live at all safepoints, we
+/// need to be able to ensure each root has been initialized by the point the
+/// first safepoint is reached.  This really should have been done by the
+/// frontend, but the old API made this non-obvious, so we do a potentially
+/// redundant store just in case.
+static bool DoLowering(Function &F, GCStrategy &S);
 
 namespace {
 
@@ -37,8 +43,6 @@ namespace {
 /// directed by the GCStrategy. It also performs automatic root initialization
 /// and custom intrinsic lowering.
 class LowerIntrinsics : public FunctionPass {
-  bool DoLowering(Function &F, GCStrategy &S);
-
 public:
   static char ID;
 
@@ -55,8 +59,8 @@ public:
 /// in the machine code. It inserts labels at safe points and populates a
 /// GCMetadata record for each function.
 class GCMachineCodeAnalysis : public MachineFunctionPass {
-  GCFunctionInfo *FI;
-  const TargetInstrInfo *TII;
+  GCFunctionInfo *FI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
 
   void FindSafePoints(MachineFunction &MF);
   void VisitCallPoint(MachineBasicBlock::iterator CI);
@@ -75,6 +79,22 @@ public:
 };
 }
 
+PreservedAnalyses GCLoweringPass::run(Function &F,
+                                      FunctionAnalysisManager &FAM) {
+  if (!F.hasGC())
+    return PreservedAnalyses::all();
+
+  auto &Info = FAM.getResult<GCFunctionAnalysis>(F);
+
+  bool Changed = DoLowering(F, Info.getStrategy());
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
+
 // -----------------------------------------------------------------------------
 
 INITIALIZE_PASS_BEGIN(LowerIntrinsics, "gc-lowering", "GC Lowering", false,
@@ -85,6 +105,7 @@ INITIALIZE_PASS_END(LowerIntrinsics, "gc-lowering", "GC Lowering", false, false)
 FunctionPass *llvm::createGCLoweringPass() { return new LowerIntrinsics(); }
 
 char LowerIntrinsics::ID = 0;
+char &llvm::GCLoweringID = LowerIntrinsics::ID;
 
 LowerIntrinsics::LowerIntrinsics() : FunctionPass(ID) {
   initializeLowerIntrinsicsPass(*PassRegistry::getPassRegistry());
@@ -160,7 +181,7 @@ static bool InsertRootInitializers(Function &F, ArrayRef<AllocaInst *> Roots) {
     if (!InitedRoots.count(Root)) {
       new StoreInst(
           ConstantPointerNull::get(cast<PointerType>(Root->getAllocatedType())),
-          Root, Root->getNextNode());
+          Root, std::next(Root->getIterator()));
       MadeChange = true;
     }
 
@@ -180,20 +201,13 @@ bool LowerIntrinsics::runOnFunction(Function &F) {
   return DoLowering(F, S);
 }
 
-/// Lower barriers out of existance (if the associated GCStrategy hasn't
-/// already done so...), and insert initializing stores to roots as a defensive
-/// measure.  Given we're going to report all roots live at all safepoints, we
-/// need to be able to ensure each root has been initialized by the point the
-/// first safepoint is reached.  This really should have been done by the
-/// frontend, but the old API made this non-obvious, so we do a potentially
-/// redundant store just in case.
-bool LowerIntrinsics::DoLowering(Function &F, GCStrategy &S) {
+bool DoLowering(Function &F, GCStrategy &S) {
   SmallVector<AllocaInst *, 32> Roots;
 
   bool MadeChange = false;
   for (BasicBlock &BB : F)
-    for (BasicBlock::iterator II = BB.begin(), E = BB.end(); II != E;) {
-      IntrinsicInst *CI = dyn_cast<IntrinsicInst>(II++);
+    for (Instruction &I : llvm::make_early_inc_range(BB)) {
+      IntrinsicInst *CI = dyn_cast<IntrinsicInst>(&I);
       if (!CI)
         continue;
 
@@ -202,8 +216,8 @@ bool LowerIntrinsics::DoLowering(Function &F, GCStrategy &S) {
       default: break;
       case Intrinsic::gcwrite: {
         // Replace a write barrier with a simple store.
-        Value *St = new StoreInst(CI->getArgOperand(0),
-                                  CI->getArgOperand(2), CI);
+        Value *St = new StoreInst(CI->getArgOperand(0), CI->getArgOperand(2),
+                                  CI->getIterator());
         CI->replaceAllUsesWith(St);
         CI->eraseFromParent();
         MadeChange = true;
@@ -211,7 +225,8 @@ bool LowerIntrinsics::DoLowering(Function &F, GCStrategy &S) {
       }
       case Intrinsic::gcread: {
         // Replace a read barrier with a simple load.
-        Value *Ld = new LoadInst(CI->getType(), CI->getArgOperand(1), "", CI);
+        Value *Ld = new LoadInst(CI->getType(), CI->getArgOperand(1), "",
+                                 CI->getIterator());
         Ld->takeName(CI);
         CI->replaceAllUsesWith(Ld);
         CI->eraseFromParent();
@@ -270,16 +285,15 @@ void GCMachineCodeAnalysis::VisitCallPoint(MachineBasicBlock::iterator CI) {
 
 void GCMachineCodeAnalysis::FindSafePoints(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
-    for (MachineBasicBlock::iterator MI = MBB.begin(), ME = MBB.end();
-         MI != ME; ++MI)
-      if (MI->isCall()) {
+    for (MachineInstr &MI : MBB)
+      if (MI.isCall()) {
         // Do not treat tail or sibling call sites as safe points.  This is
         // legal since any arguments passed to the callee which live in the
         // remnants of the callers frame will be owned and updated by the
         // callee if required.
-        if (MI->isTerminator())
+        if (MI.isTerminator())
           continue;
-        VisitCallPoint(MI);
+        VisitCallPoint(&MI);
       }
 }
 

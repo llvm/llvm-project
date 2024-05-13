@@ -17,7 +17,7 @@ bool b1, b2;
 
 void test_all_sizes(void)                 // CHECK-LABEL: test_all_sizes
 {
-  __builtin_nontemporal_store(true, &b1); // CHECK: store i8 1, i8* @b1, align 1, !nontemporal
+  __builtin_nontemporal_store(true, &b1); // CHECK: store i8 1, ptr @b1, align 1, !nontemporal
   __builtin_nontemporal_store(b1, &b2);   // CHECK: store i8{{.*}}, align 1, !nontemporal
   __builtin_nontemporal_store(1, &uc);    // CHECK: store i8{{.*}}align 1, !nontemporal
   __builtin_nontemporal_store(1, &sc);    // CHECK: store i8{{.*}}align 1, !nontemporal
@@ -45,4 +45,18 @@ void test_all_sizes(void)                 // CHECK-LABEL: test_all_sizes
   d1 = __builtin_nontemporal_load(&d2);   // CHECK: load double{{.*}}align 8, !nontemporal
   vf2 = __builtin_nontemporal_load(&vf1); // CHECK: load <4 x float>{{.*}}align 16, !nontemporal
   vc2 = __builtin_nontemporal_load(&vc1); // CHECK: load <8 x i8>{{.*}}align 8, !nontemporal
+}
+
+struct S { char c[16]; };
+S x;
+
+typedef int v4si __attribute__ ((vector_size(16)));
+
+// CHECK-LABEL: define void @_Z14test_alignmentv()
+// CHECK: load <4 x i32>, ptr @x, align 1, !nontemporal
+// CHECK: store <4 x i32> %1, ptr @x, align 1, !nontemporal
+
+void test_alignment() {
+ auto t =  __builtin_nontemporal_load((v4si*)x.c);
+ __builtin_nontemporal_store(t, (v4si*)x.c);
 }

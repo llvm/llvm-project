@@ -48,7 +48,7 @@ static void runDumpModule(llvm::Module &M, StringRef Filename, bool IsSuffix) {
   Out->keep();
 }
 
-class DumpModuleWrapperPass : public ModulePass {
+class DumpModuleWrapperPass final : public ModulePass {
 private:
   DumpModuleWrapperPass(const DumpModuleWrapperPass &) = delete;
   const DumpModuleWrapperPass &
@@ -71,11 +71,11 @@ public:
 
   /// @name ModulePass interface
   //@{
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
 
-  virtual bool runOnModule(llvm::Module &M) override {
+  bool runOnModule(llvm::Module &M) override {
     runDumpModule(M, Filename, IsSuffix);
     return false;
   }

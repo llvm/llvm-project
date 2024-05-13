@@ -5,6 +5,6 @@ target triple = "thumbv7-elf"
 define void @foo() {
 entry:
   %0 = insertelement <4 x i32> undef, i32 -1, i32 3
-  store <4 x i32> %0, <4 x i32>* undef, align 16
+  store <4 x i32> %0, ptr undef, align 16
   unreachable
 }

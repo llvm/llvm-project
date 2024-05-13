@@ -55,6 +55,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/Debug.h"
 using namespace llvm;
@@ -221,10 +222,8 @@ private:
       assert(!Enterers.count(MBB));
       if (Blocks.insert(MBB).second) {
         for (auto *Pred : MBB->predecessors()) {
-          if (!AddedToWorkList.count(Pred)) {
+          if (AddedToWorkList.insert(Pred).second)
             WorkList.push_back(Pred);
-            AddedToWorkList.insert(Pred);
-          }
         }
       }
     }
@@ -344,7 +343,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
   BlockVector SortedEntries = getSortedEntries(Entries);
 
 #ifndef NDEBUG
-  for (auto Block : SortedEntries)
+  for (auto *Block : SortedEntries)
     assert(Block->getNumber() != -1);
   if (SortedEntries.size() > 1) {
     for (auto I = SortedEntries.begin(), E = SortedEntries.end() - 1; I != E;
@@ -491,6 +490,46 @@ FunctionPass *llvm::createWebAssemblyFixIrreducibleControlFlow() {
   return new WebAssemblyFixIrreducibleControlFlow();
 }
 
+// Test whether the given register has an ARGUMENT def.
+static bool hasArgumentDef(unsigned Reg, const MachineRegisterInfo &MRI) {
+  for (const auto &Def : MRI.def_instructions(Reg))
+    if (WebAssembly::isArgument(Def.getOpcode()))
+      return true;
+  return false;
+}
+
+// Add a register definition with IMPLICIT_DEFs for every register to cover for
+// register uses that don't have defs in every possible path.
+// TODO: This is fairly heavy-handed; find a better approach.
+static void addImplicitDefs(MachineFunction &MF) {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  MachineBasicBlock &Entry = *MF.begin();
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+
+    // Skip unused registers.
+    if (MRI.use_nodbg_empty(Reg))
+      continue;
+
+    // Skip registers that have an ARGUMENT definition.
+    if (hasArgumentDef(Reg, MRI))
+      continue;
+
+    BuildMI(Entry, Entry.begin(), DebugLoc(),
+            TII.get(WebAssembly::IMPLICIT_DEF), Reg);
+  }
+
+  // Move ARGUMENT_* instructions to the top of the entry block, so that their
+  // liveness reflects the fact that these really are live-in values.
+  for (MachineInstr &MI : llvm::make_early_inc_range(Entry)) {
+    if (WebAssembly::isArgument(MI.getOpcode())) {
+      MI.removeFromParent();
+      Entry.insert(Entry.begin(), &MI);
+    }
+  }
+}
+
 bool WebAssemblyFixIrreducibleControlFlow::runOnMachineFunction(
     MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Fixing Irreducible Control Flow **********\n"
@@ -505,8 +544,15 @@ bool WebAssemblyFixIrreducibleControlFlow::runOnMachineFunction(
 
   if (LLVM_UNLIKELY(processRegion(&*MF.begin(), AllBlocks, MF))) {
     // We rewrote part of the function; recompute relevant things.
-    MF.getRegInfo().invalidateLiveness();
     MF.RenumberBlocks();
+    // Now we've inserted dispatch blocks, some register uses can have incoming
+    // paths without a def. For example, before this pass register %a was
+    // defined in BB1 and used in BB2, and there was only one path from BB1 and
+    // BB2. But if this pass inserts a dispatch block having multiple
+    // predecessors between the two BBs, now there are paths to BB2 without
+    // visiting BB1, and %a's use in BB2 is not dominated by its def. Adding
+    // IMPLICIT_DEFs to all regs is one simple way to fix it.
+    addImplicitDefs(MF);
     return true;
   }
 

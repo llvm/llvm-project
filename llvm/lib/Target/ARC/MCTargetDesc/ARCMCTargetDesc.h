@@ -28,6 +28,7 @@ class Target;
 
 // Defines symbolic names for the ARC instructions.
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "ARCGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

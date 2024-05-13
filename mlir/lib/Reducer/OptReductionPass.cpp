@@ -14,10 +14,14 @@
 
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
-#include "mlir/Reducer/PassDetail.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/Tester.h"
 #include "llvm/Support/Debug.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_OPTREDUCTION
+#include "mlir/Reducer/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "mlir-reduce"
 
@@ -25,13 +29,13 @@ using namespace mlir;
 
 namespace {
 
-class OptReductionPass : public OptReductionBase<OptReductionPass> {
+class OptReductionPass : public impl::OptReductionBase<OptReductionPass> {
 public:
   /// Runs the pass instance in the pass pipeline.
   void runOnOperation() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Runs the pass instance in the pass pipeline.
 void OptReductionPass::runOnOperation() {
@@ -42,21 +46,27 @@ void OptReductionPass::runOnOperation() {
   ModuleOp module = this->getOperation();
   ModuleOp moduleVariant = module.clone();
 
-  PassManager passManager(module.getContext());
+  OpPassManager passManager("builtin.module");
   if (failed(parsePassPipeline(optPass, passManager))) {
-    LLVM_DEBUG(llvm::dbgs() << "\nFailed to parse pass pipeline");
-    return;
+    module.emitError() << "\nfailed to parse pass pipeline";
+    return signalPassFailure();
   }
 
   std::pair<Tester::Interestingness, int> original = test.isInteresting(module);
   if (original.first != Tester::Interestingness::True) {
-    LLVM_DEBUG(llvm::dbgs() << "\nThe original input is not interested");
-    return;
+    module.emitError() << "\nthe original input is not interested";
+    return signalPassFailure();
   }
 
-  if (failed(passManager.run(moduleVariant))) {
-    LLVM_DEBUG(llvm::dbgs() << "\nFailed to run pass pipeline");
-    return;
+  // Temporarily push the variant under the main module and execute the pipeline
+  // on it.
+  module.getBody()->push_back(moduleVariant);
+  LogicalResult pipelineResult = runPipeline(passManager, moduleVariant);
+  moduleVariant->remove();
+
+  if (failed(pipelineResult)) {
+    module.emitError() << "\nfailed to run pass pipeline";
+    return signalPassFailure();
   }
 
   std::pair<Tester::Interestingness, int> reduced =

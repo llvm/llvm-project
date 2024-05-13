@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll -unroll-runtime -unroll-peel-multi-deopt-exit 2>&1 | FileCheck %s
-; RUN: opt < %s -S -debug-only=loop-unroll -unroll-peel-multi-deopt-exit -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll)' 2>&1 | FileCheck %s
-; RUN: opt < %s -S -debug-only=loop-unroll -unroll-peel-multi-deopt-exit -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll<no-profile-peeling>)' 2>&1 | FileCheck %s --check-prefixes=CHECK-NO-PEEL
+; RUN: opt < %s -S -debug-only=loop-unroll -passes=loop-unroll -unroll-runtime 2>&1 | FileCheck %s
+; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll)' 2>&1 | FileCheck %s
+; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll<no-profile-peeling>)' 2>&1 | FileCheck %s --check-prefixes=CHECK-NO-PEEL
 
 ; Make sure we use the profile information correctly to peel-off 3 iterations
 ; from the loop, and update the branch weights for the peeled loop properly.
@@ -21,9 +21,9 @@
 ; CHECK: br i1 %{{.*}}, label %[[NEXT2:.*]], label %for.cond.for.end_crit_edge, !prof !18
 ; CHECK: [[NEXT2]]:
 ; CHECK: br i1 %c, label %{{.*}}, label %side_exit.loopexit, !prof !15
-; CHECK: br i1 %{{.*}}, label %for.body, label %{{.*}}, !prof !19
+; CHECK: br i1 %{{.*}}, label %for.body, label %{{.*}}, !prof !18
 
-define i32 @basic(i32* %p, i32 %k, i1 %c) #0 !prof !15 {
+define i32 @basic(ptr %p, i32 %k, i1 %c) #0 !prof !15 {
 entry:
   %cmp3 = icmp slt i32 0, %k
   br i1 %cmp3, label %for.body.lr.ph, label %for.end
@@ -33,9 +33,9 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %i.05 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %continue ]
-  %p.addr.04 = phi i32* [ %p, %for.body.lr.ph ], [ %incdec.ptr, %continue ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.04, i32 1
-  store i32 %i.05, i32* %p.addr.04, align 4
+  %p.addr.04 = phi ptr [ %p, %for.body.lr.ph ], [ %incdec.ptr, %continue ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.04, i32 1
+  store i32 %i.05, ptr %p.addr.04, align 4
   %inc = add nsw i32 %i.05, 1
   %cmp = icmp slt i32 %inc, %k
   br i1 %c, label %continue, label %side_exit, !prof !17
@@ -85,6 +85,5 @@ attributes #1 = { nounwind optsize }
 ; This is a weights of latch and its copies.
 ;CHECK: !16 = !{!"branch_weights", i32 3001, i32 1001}
 ;CHECK: !17 = !{!"branch_weights", i32 2000, i32 1001}
-;CHECK: !18 = !{!"branch_weights", i32 999, i32 1001}
-;CHECK: !19 = !{!"branch_weights", i32 1, i32 1001}
+;CHECK: !18 = !{!"branch_weights", i32 1001, i32 1001}
 

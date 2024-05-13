@@ -11,14 +11,12 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 /// Diagnoses every integer to pointer cast.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-no-int-to-ptr.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/no-int-to-ptr.html
 class NoIntToPtrCheck : public ClangTidyCheck {
 public:
   NoIntToPtrCheck(StringRef Name, ClangTidyContext *Context)
@@ -27,8 +25,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOINTTOPTRCHECK_H

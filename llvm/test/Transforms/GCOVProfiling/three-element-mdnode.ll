@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t && mkdir -p %t
 ; RUN: echo '!10 = !{!"%/t/aaa.gcno", !"%/t/bbb.gcda", !0}' > %t/1
 ; RUN: cat %s %t/1 > %t/2
-; RUN: opt -insert-gcov-profiling -S -o %t/3 < %t/2
+; RUN: opt -passes=insert-gcov-profiling -S -o %t/3 < %t/2
 ; RUN: grep _Z3foov %t/aaa.gcno
 ; RUN: grep bbb.gcda %t/3
 ; RUN: rm %t/aaa.gcno

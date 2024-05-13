@@ -16,6 +16,7 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=bool -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=dataflow -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=thread -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=kcfi -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target %itanium_abi_triple -fsanitize=float-divide-by-zero -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu                     -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // CHECK-SANITIZE-COVERAGE-FUNC: fsanitize-coverage-type=1
@@ -36,25 +37,27 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_FUNC_BB_EDGE_DEPRECATED
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=bb %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_FUNC_BB_EDGE_DEPRECATED
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_FUNC_BB_EDGE_DEPRECATED
-// CHECK_FUNC_BB_EDGE_DEPRECATED: warning: argument '-fsanitize-coverage=[func|bb|edge]' is deprecated, use '-fsanitize-coverage=[func|bb|edge],[trace-pc-guard|trace-pc]' instead
+// CHECK_FUNC_BB_EDGE_DEPRECATED: warning: argument '-fsanitize-coverage=[func|bb|edge]' is deprecated, use '-fsanitize-coverage=[func|bb|edge],[trace-pc-guard|trace-pc],[control-flow]' instead
 
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge,indirect-calls,trace-pc,trace-cmp,trace-div,trace-gep %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FEATURES
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge,indirect-calls,trace-pc,trace-cmp,trace-loads,trace-stores,trace-div,trace-gep %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FEATURES
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-type=3
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-indirect-calls
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-cmp
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-div
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-gep
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-pc
+// CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-loads
+// CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-stores
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func,edge,indirect-calls,trace-cmp -fno-sanitize-coverage=edge,indirect-calls %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MASK
 // CHECK-MASK: -fsanitize-coverage-type=1
 // CHECK-MASK: -fsanitize-coverage-trace-cmp
 // CHECK-MASK-NOT: -fsanitize-coverage-
 
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=foobar %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-VALUE
-// CHECK-INVALID-VALUE: error: unsupported argument 'foobar' to option 'fsanitize-coverage='
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=foobar %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-VALUE
+// CHECK-INVALID-VALUE: error: unsupported argument 'foobar' to option '-fsanitize-coverage='
 
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func -fsanitize-coverage=edge %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INCOMPATIBLE
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func -fsanitize-coverage=edge %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INCOMPATIBLE
 // CHECK-INCOMPATIBLE: error: invalid argument '-fsanitize-coverage=func' not allowed with '-fsanitize-coverage=edge'
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=8bit-counters %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-8BIT
@@ -104,7 +107,7 @@
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-8bit-counters %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_INLINE8BIT
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=bb,inline-8bit-counters %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_INLINE8BIT
-// CHECK_INLINE8BIT-NOT: warning
+// CHECK_INLINE8BIT-NOT: warning:
 // CHECK_INLINE8BIT: -fsanitize-coverage-inline-8bit-counters
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-8bit-counters,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE_FOR_INLINE8BIT
@@ -113,7 +116,7 @@
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-bool-flag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_INLINE_BOOL_FLAG
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=bb,inline-bool-flag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_INLINE_BOOL_FLAG
-// CHECK_INLINE_BOOL_FLAG-NOT: warning
+// CHECK_INLINE_BOOL_FLAG-NOT: warning:
 // CHECK_INLINE_BOOL_FLAG: -fsanitize-coverage-inline-bool-flag
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-bool-flag,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE_FOR_INLINEBOOL

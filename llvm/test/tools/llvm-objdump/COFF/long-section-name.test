@@ -1,0 +1,30 @@
+# RUN: yaml2obj %S/Inputs/long-section-name.yaml -o %t.obj
+
+## Replace the section name field of the object file with /4\0abcde emulating
+## a section name field not fully null-padded at the end.
+# RUN: %python %s %t.obj
+
+## This should print the LongSectionName section.
+# RUN: llvm-objdump --headers %t.obj | FileCheck %s
+
+# CHECK: LongSectionName
+
+import sys
+
+if len(sys.argv) < 2:
+  print("Use: python3 long-section-name.test <OBJECT_FILE>")
+  exit(1)
+
+pattern = b'/4'
+replacement = b'/4\0abcde'
+
+data = None
+with open(sys.argv[1], "rb") as inp:
+  data = inp.read()
+with open(sys.argv[1], "wb") as outp:
+  pos = data.find(pattern)
+  if pos == -1:
+    sys.exit("Error: Pattern /4 not found in " + sys.argv[1])
+  outp.write(data[:pos])
+  outp.write(replacement)
+  outp.write(data[pos + len(replacement):])

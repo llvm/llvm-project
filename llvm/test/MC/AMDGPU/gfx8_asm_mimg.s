@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
 
 image_load v5, v1, s[8:15] dmask:0x1
 // CHECK: [0x00,0x01,0x00,0xf0,0x01,0x05,0x02,0x00]
@@ -1773,7 +1773,7 @@ image_sample_d v5, v[1:3], s[8:15], s[12:15] dmask:0x0
 image_sample_d v5, v[1:8], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0x88,0xf0,0x01,0x05,0x62,0x00]
 
-image_sample_d v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_d v5, v[1:9], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0x88,0xf0,0x01,0x05,0x62,0x00]
 
 image_sample_d v5, v[1:4], s[8:15], s[12:15] dmask:0x1
@@ -1875,7 +1875,7 @@ image_sample_d_cl v5, v[1:4], s[8:15], s[12:15] dmask:0x0
 image_sample_d_cl v5, v[1:8], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0x8c,0xf0,0x01,0x05,0x62,0x00]
 
-image_sample_d_cl v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_d_cl v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0x8c,0xf0,0x01,0x05,0x62,0x00]
 
 image_sample_d_cl v5, v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
@@ -2568,7 +2568,7 @@ image_sample_c_d v5, v[1:4], s[8:15], s[12:15] dmask:0x0
 image_sample_c_d v5, v[1:8], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xa8,0xf0,0x01,0x05,0x62,0x00]
 
-image_sample_c_d v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_c_d v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xa8,0xf0,0x01,0x05,0x62,0x00]
 
 image_sample_c_d v5, v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
@@ -2664,7 +2664,7 @@ image_sample_c_d_cl v[5:8], v[1:8], s[8:15], s[12:15] dmask:0xf
 image_sample_c_d_cl v5, v[1:8], s[8:15], s[12:15] dmask:0x0
 // CHECK: [0x00,0x00,0xac,0xf0,0x01,0x05,0x62,0x00]
 
-image_sample_c_d_cl v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_c_d_cl v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xac,0xf0,0x01,0x05,0x62,0x00]
 
 image_sample_c_d_cl v5, v[1:8], s[8:15], s[12:15] dmask:0x1 unorm
@@ -3354,7 +3354,7 @@ image_sample_d_o v5, v[1:4], s[8:15], s[12:15] dmask:0x0
 image_sample_d_o v5, v[1:8], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xc8,0xf0,0x01,0x05,0x62,0x00]
 
-image_sample_d_o v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_d_o v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xc8,0xf0,0x01,0x05,0x62,0x00]
 
 image_sample_d_o v5, v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
@@ -3450,7 +3450,7 @@ image_sample_d_cl_o v[5:8], v[1:8], s[8:15], s[12:15] dmask:0xf
 image_sample_d_cl_o v5, v[1:8], s[8:15], s[12:15] dmask:0x0
 // CHECK: [0x00,0x00,0xcc,0xf0,0x01,0x05,0x62,0x00]
 
-image_sample_d_cl_o v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_d_cl_o v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xcc,0xf0,0x01,0x05,0x62,0x00]
 
 image_sample_d_cl_o v5, v[1:8], s[8:15], s[12:15] dmask:0x1 unorm
@@ -4134,7 +4134,7 @@ image_sample_c_d_o v[5:8], v[1:8], s[8:15], s[12:15] dmask:0xf
 image_sample_c_d_o v5, v[1:8], s[8:15], s[12:15] dmask:0x0
 // CHECK: [0x00,0x00,0xe8,0xf0,0x01,0x05,0x62,0x00]
 
-image_sample_c_d_o v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_c_d_o v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xe8,0xf0,0x01,0x05,0x62,0x00]
 
 image_sample_c_d_o v5, v[1:8], s[8:15], s[12:15] dmask:0x1 unorm
@@ -4230,7 +4230,7 @@ image_sample_c_d_cl_o v[5:8], v[1:8], s[8:15], s[12:15] dmask:0xf
 image_sample_c_d_cl_o v5, v[1:8], s[8:15], s[12:15] dmask:0x0
 // CHECK: [0x00,0x00,0xec,0xf0,0x01,0x05,0x62,0x00]
 
-image_sample_c_d_cl_o v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_c_d_cl_o v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xec,0xf0,0x01,0x05,0x62,0x00]
 
 image_sample_c_d_cl_o v5, v[1:8], s[8:15], s[12:15] dmask:0x1 unorm
@@ -6156,7 +6156,7 @@ image_sample_cd v5, v[1:3], s[8:15], s[12:15] dmask:0x0
 image_sample_cd v5, v[1:8], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xa0,0xf1,0x01,0x05,0x62,0x00]
 
-image_sample_cd v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_cd v5, v[1:9], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xa0,0xf1,0x01,0x05,0x62,0x00]
 
 image_sample_cd v5, v[1:4], s[8:15], s[12:15] dmask:0x1
@@ -6258,7 +6258,7 @@ image_sample_cd_cl v5, v[1:4], s[8:15], s[12:15] dmask:0x0
 image_sample_cd_cl v5, v[1:8], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xa4,0xf1,0x01,0x05,0x62,0x00]
 
-image_sample_cd_cl v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_cd_cl v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xa4,0xf1,0x01,0x05,0x62,0x00]
 
 image_sample_cd_cl v5, v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
@@ -6357,7 +6357,7 @@ image_sample_c_cd v5, v[1:4], s[8:15], s[12:15] dmask:0x0
 image_sample_c_cd v5, v[1:8], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xa8,0xf1,0x01,0x05,0x62,0x00]
 
-image_sample_c_cd v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_c_cd v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xa8,0xf1,0x01,0x05,0x62,0x00]
 
 image_sample_c_cd v5, v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
@@ -6453,7 +6453,7 @@ image_sample_c_cd_cl v[5:8], v[1:8], s[8:15], s[12:15] dmask:0xf
 image_sample_c_cd_cl v5, v[1:8], s[8:15], s[12:15] dmask:0x0
 // CHECK: [0x00,0x00,0xac,0xf1,0x01,0x05,0x62,0x00]
 
-image_sample_c_cd_cl v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_c_cd_cl v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xac,0xf1,0x01,0x05,0x62,0x00]
 
 image_sample_c_cd_cl v5, v[1:8], s[8:15], s[12:15] dmask:0x1 unorm
@@ -6552,7 +6552,7 @@ image_sample_cd_o v5, v[1:4], s[8:15], s[12:15] dmask:0x0
 image_sample_cd_o v5, v[1:8], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xb0,0xf1,0x01,0x05,0x62,0x00]
 
-image_sample_cd_o v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_cd_o v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xb0,0xf1,0x01,0x05,0x62,0x00]
 
 image_sample_cd_o v5, v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
@@ -6648,7 +6648,7 @@ image_sample_cd_cl_o v[5:8], v[1:8], s[8:15], s[12:15] dmask:0xf
 image_sample_cd_cl_o v5, v[1:8], s[8:15], s[12:15] dmask:0x0
 // CHECK: [0x00,0x00,0xb4,0xf1,0x01,0x05,0x62,0x00]
 
-image_sample_cd_cl_o v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_cd_cl_o v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xb4,0xf1,0x01,0x05,0x62,0x00]
 
 image_sample_cd_cl_o v5, v[1:8], s[8:15], s[12:15] dmask:0x1 unorm
@@ -6744,7 +6744,7 @@ image_sample_c_cd_o v[5:8], v[1:8], s[8:15], s[12:15] dmask:0xf
 image_sample_c_cd_o v5, v[1:8], s[8:15], s[12:15] dmask:0x0
 // CHECK: [0x00,0x00,0xb8,0xf1,0x01,0x05,0x62,0x00]
 
-image_sample_c_cd_o v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_c_cd_o v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xb8,0xf1,0x01,0x05,0x62,0x00]
 
 image_sample_c_cd_o v5, v[1:8], s[8:15], s[12:15] dmask:0x1 unorm
@@ -6840,7 +6840,7 @@ image_sample_c_cd_cl_o v[5:8], v[1:8], s[8:15], s[12:15] dmask:0xf
 image_sample_c_cd_cl_o v5, v[1:8], s[8:15], s[12:15] dmask:0x0
 // CHECK: [0x00,0x00,0xbc,0xf1,0x01,0x05,0x62,0x00]
 
-image_sample_c_cd_cl_o v5, v[1:16], s[8:15], s[12:15] dmask:0x1
+image_sample_c_cd_cl_o v5, v[1:10], s[8:15], s[12:15] dmask:0x1
 // CHECK: [0x00,0x01,0xbc,0xf1,0x01,0x05,0x62,0x00]
 
 image_sample_c_cd_cl_o v5, v[1:8], s[8:15], s[12:15] dmask:0x1 unorm

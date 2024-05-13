@@ -11,9 +11,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 namespace {
 class MacroParenthesesPPCallbacks : public PPCallbacks {
@@ -268,6 +266,4 @@ void MacroParenthesesCheck::registerPPCallbacks(
   PP->addPPCallbacks(std::make_unique<MacroParenthesesPPCallbacks>(PP, this));
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

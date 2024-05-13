@@ -6,25 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-// source/Plugins/Process/Linux/Procfs.h defines the symbols we need from
-// sys/procfs.h on Android/Linux for all supported architectures.
+#include "lldb/lldb-types.h"
+#include "llvm/Support/Error.h"
+#include <vector>
 
-#include <sys/ptrace.h>
+namespace lldb_private {
+namespace process_linux {
 
-#ifdef __ANDROID__
-#if defined(__arm64__) || defined(__aarch64__)
-typedef unsigned long elf_greg_t;
-typedef elf_greg_t
-    elf_gregset_t[(sizeof(struct user_pt_regs) / sizeof(elf_greg_t))];
-typedef struct user_fpsimd_state elf_fpregset_t;
-#ifndef NT_FPREGSET
-#define NT_FPREGSET NT_PRFPREG
-#endif // NT_FPREGSET
-#elif defined(__mips__)
-#ifndef NT_FPREGSET
-#define NT_FPREGSET NT_PRFPREG
-#endif // NT_FPREGSET
-#endif
-#else // __ANDROID__
-#include <sys/procfs.h>
-#endif // __ANDROID__
+/// \return
+///     The content of /proc/cpuinfo and cache it if errors didn't happen.
+llvm::Expected<llvm::ArrayRef<uint8_t>> GetProcfsCpuInfo();
+
+/// \return
+///     A list of available logical core ids given the contents of
+///     /proc/cpuinfo.
+llvm::Expected<std::vector<lldb::cpu_id_t>>
+GetAvailableLogicalCoreIDs(llvm::StringRef cpuinfo);
+
+/// \return
+///     A list with all the logical cores available in the system and cache it
+///     if errors didn't happen.
+llvm::Expected<llvm::ArrayRef<lldb::cpu_id_t>> GetAvailableLogicalCoreIDs();
+
+/// \return
+///     The current value of /proc/sys/kernel/yama/ptrace_scope, parsed as an
+///     integer, or an error if the proc file cannot be read or has non-integer
+///     contents.
+llvm::Expected<int> GetPtraceScope();
+
+} // namespace process_linux
+} // namespace lldb_private

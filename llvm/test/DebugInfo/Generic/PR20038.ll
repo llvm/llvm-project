@@ -1,7 +1,8 @@
 ; For some reason, the output when targetting sparc is not quite as expected.
-; XFAIL: sparc
+; XFAIL: target=sparc{{.*}}
 
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not=DW_TAG
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not=DW_TAG
 
 ; IR generated from clang -O0 with:
 ; struct C {
@@ -11,42 +12,38 @@
 ; void fun4() { b && (C(), 1); }
 ; __attribute__((always_inline)) C::~C() { }
 
-; CHECK: DW_TAG_structure_type
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name {{.*}} "C"
-; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK: DW_TAG_compile_unit
+
+; CHECK:   DW_TAG_structure_type
+; CHECK:     DW_AT_name ("C")
+; CHECK:     DW_TAG_subprogram
+; CHECK:       DW_AT_name ("~C")
+; CHECK:       DW_TAG_formal_parameter
+; CHECK:   DW_TAG_pointer_type
+
 ; CHECK:   DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "~C"
-
-; CHECK:  DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_linkage_name {{.*}} "_ZN1CD1Ev"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:  DW_TAG_formal_parameter
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "this"
-
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name {{.*}} "fun4"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_TAG_inlined_subroutine
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_abstract_origin {{.*}} "_ZN1CD1Ev"
-; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:     DW_AT_linkage_name ("_ZN1CD1Ev")
 ; CHECK:     DW_TAG_formal_parameter
-; CHECK-NOT: DW_TAG
+; CHECK:       DW_AT_name ("this")
+; CHECK:   DW_TAG_pointer_type
+
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_AT_name ("fun4")
+; CHECK:     DW_TAG_inlined_subroutine
+; CHECK:       DW_AT_abstract_origin {{.*}} "_ZN1CD1Ev"
+; CHECK:       DW_TAG_formal_parameter
+; CHECK:         DW_AT_abstract_origin {{.*}} "this"
+
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_AT_abstract_origin {{.*}} "_ZN1CD1Ev"
+; CHECK:     DW_TAG_formal_parameter
 ; CHECK:       DW_AT_abstract_origin {{.*}} "this"
 
-; FIXME: D2 is actually inlined into D1 but doesn't show up here, possibly due
-; to there being no work in D2 (calling another member function from the dtor
-; causes D2 to show up, calling a free function doesn't).
-
-; CHECK-NOT: DW_TAG
-; CHECK:     NULL
-; CHECK-NOT: DW_TAG
-; CHECK:   NULL
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_AT_linkage_name  ("_ZN1CD2Ev")
+; CHECK:     DW_AT_specification {{.*}} "~C"
+; CHECK:     DW_TAG_formal_parameter
+; CHECK:       DW_AT_name  ("this")
 
 %struct.C = type { i8 }
 
@@ -55,31 +52,31 @@
 ; Function Attrs: nounwind
 define void @_Z4fun4v() #0 !dbg !12 {
 entry:
-  %this.addr.i.i = alloca %struct.C*, align 8, !dbg !21
-  %this.addr.i = alloca %struct.C*, align 8, !dbg !22
+  %this.addr.i.i = alloca ptr, align 8, !dbg !21
+  %this.addr.i = alloca ptr, align 8, !dbg !22
   %agg.tmp.ensured = alloca %struct.C, align 1
   %cleanup.cond = alloca i1
-  %0 = load i8, i8* @b, align 1, !dbg !24
+  %0 = load i8, ptr @b, align 1, !dbg !24
   %tobool = trunc i8 %0 to i1, !dbg !24
-  store i1 false, i1* %cleanup.cond
+  store i1 false, ptr %cleanup.cond
   br i1 %tobool, label %land.rhs, label %land.end, !dbg !24
 
 land.rhs:                                         ; preds = %entry
-  store i1 true, i1* %cleanup.cond, !dbg !25
+  store i1 true, ptr %cleanup.cond, !dbg !25
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %entry
   %1 = phi i1 [ false, %entry ], [ true, %land.rhs ]
-  %cleanup.is_active = load i1, i1* %cleanup.cond, !dbg !27
+  %cleanup.is_active = load i1, ptr %cleanup.cond, !dbg !27
   br i1 %cleanup.is_active, label %cleanup.action, label %cleanup.done, !dbg !27
 
 cleanup.action:                                   ; preds = %land.end
-  store %struct.C* %agg.tmp.ensured, %struct.C** %this.addr.i, align 8, !dbg !22
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr.i, metadata !129, metadata !DIExpression()), !dbg !31
-  %this1.i = load %struct.C*, %struct.C** %this.addr.i, !dbg !22
-  store %struct.C* %this1.i, %struct.C** %this.addr.i.i, align 8, !dbg !21
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr.i.i, metadata !132, metadata !DIExpression()), !dbg !33
-  %this1.i.i = load %struct.C*, %struct.C** %this.addr.i.i, !dbg !21
+  store ptr %agg.tmp.ensured, ptr %this.addr.i, align 8, !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %this.addr.i, metadata !129, metadata !DIExpression()), !dbg !31
+  %this1.i = load ptr, ptr %this.addr.i, !dbg !22
+  store ptr %this1.i, ptr %this.addr.i.i, align 8, !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %this.addr.i.i, metadata !132, metadata !DIExpression()), !dbg !33
+  %this1.i.i = load ptr, ptr %this.addr.i.i, !dbg !21
   br label %cleanup.done, !dbg !22
 
 cleanup.done:                                     ; preds = %cleanup.action, %land.end
@@ -87,26 +84,26 @@ cleanup.done:                                     ; preds = %cleanup.action, %la
 }
 
 ; Function Attrs: alwaysinline nounwind
-define void @_ZN1CD1Ev(%struct.C* %this) unnamed_addr #1 align 2 !dbg !17 {
+define void @_ZN1CD1Ev(ptr %this) unnamed_addr #1 align 2 !dbg !17 {
 entry:
-  %this.addr.i = alloca %struct.C*, align 8, !dbg !37
-  %this.addr = alloca %struct.C*, align 8
-  store %struct.C* %this, %struct.C** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr, metadata !29, metadata !DIExpression()), !dbg !38
-  %this1 = load %struct.C*, %struct.C** %this.addr
-  store %struct.C* %this1, %struct.C** %this.addr.i, align 8, !dbg !37
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr.i, metadata !232, metadata !DIExpression()), !dbg !39
-  %this1.i = load %struct.C*, %struct.C** %this.addr.i, !dbg !37
+  %this.addr.i = alloca ptr, align 8, !dbg !37
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !29, metadata !DIExpression()), !dbg !38
+  %this1 = load ptr, ptr %this.addr
+  store ptr %this1, ptr %this.addr.i, align 8, !dbg !37
+  call void @llvm.dbg.declare(metadata ptr %this.addr.i, metadata !232, metadata !DIExpression()), !dbg !39
+  %this1.i = load ptr, ptr %this.addr.i, !dbg !37
   ret void, !dbg !37
 }
 
 ; Function Attrs: alwaysinline nounwind
-define void @_ZN1CD2Ev(%struct.C* %this) unnamed_addr #1 align 2 !dbg !16 {
+define void @_ZN1CD2Ev(ptr %this) unnamed_addr #1 align 2 !dbg !16 {
 entry:
-  %this.addr = alloca %struct.C*, align 8
-  store %struct.C* %this, %struct.C** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr, metadata !32, metadata !DIExpression()), !dbg !40
-  %this1 = load %struct.C*, %struct.C** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !32, metadata !DIExpression()), !dbg !40
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !41
 }
 

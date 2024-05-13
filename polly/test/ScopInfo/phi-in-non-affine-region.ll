@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; Verify that 'tmp' is stored in bb1 and read by bb3, as it is needed as
 ; incoming value for the tmp11 PHI node.
@@ -34,7 +34,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp = load double, double* getelementptr inbounds (%struct.hoge, %struct.hoge* @global, i64 0, i32 0), align 8
+  %tmp = load double, ptr @global, align 8
   br i1 false, label %bb3, label %bb2
 
 bb2:                                              ; preds = %bb1

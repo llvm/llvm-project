@@ -1,5 +1,5 @@
 # RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 \
-# RUN:   -start-before=simple-register-coalescing -o - 2>&1 > /dev/null
+# RUN:   -start-before=register-coalescer -o - 2>&1 > /dev/null
 
 # Test that the SystemZ shouldCoalesce() implementation does not crash in
 # case of an undef use in another MBB. This was discovered in testing with
@@ -10,14 +10,14 @@
   @g_193 = external dso_local unnamed_addr global i32, align 4
   
   define dso_local void @main() local_unnamed_addr {
-    %1 = load i32, i32* @g_193
+    %1 = load i32, ptr @g_193
     %2 = or i32 %1, -1395153718
     %3 = sdiv i32 -1395153718, %2
     br i1 undef, label %5, label %4
   
   ; <label>:4:                                      ; preds = %0
-    store i32 %3, i32* @g_74
-    store i32 -9, i32* @g_74
+    store i32 %3, ptr @g_74
+    store i32 -9, ptr @g_74
     ret void
   
   ; <label>:5:                                      ; preds = %0
@@ -47,7 +47,7 @@ body:             |
     %1:addr64bit = LARL @g_193
     %2:gr32bit = IIFMux 2899813578
     %3:gr32bit = COPY killed %2
-    %3:gr32bit = O %3, killed %1, 0, $noreg, implicit-def dead $cc :: (dereferenceable load 4 from @g_193)
+    %3:gr32bit = O %3, killed %1, 0, $noreg, implicit-def dead $cc :: (dereferenceable load (s32) from @g_193)
     %4:gr64bit = LGFI -1395153718
     undef %5.subreg_l64:gr128bit = COPY killed %4
     %6:gr128bit = COPY killed %5
@@ -59,7 +59,7 @@ body:             |
   
   bb.1 (%ir-block.4):
     %8:gr32bit = LHIMux -9
-    STRL killed %8, @g_74 :: (store 4 into @g_74)
+    STRL killed %8, @g_74 :: (store (s32) into @g_74)
     Return
   
   bb.2 (%ir-block.5):

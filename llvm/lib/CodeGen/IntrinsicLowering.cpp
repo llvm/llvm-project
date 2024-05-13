@@ -243,6 +243,11 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     break;
   }
 
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    CI->replaceAllUsesWith(ConstantInt::getTrue(CI->getType()));
+    return;
+
   case Intrinsic::ctpop:
     CI->replaceAllUsesWith(LowerCTPOP(Context, CI->getArgOperand(0), CI));
     break;
@@ -309,6 +314,12 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
   case Intrinsic::readcyclecounter: {
     errs() << "WARNING: this target does not support the llvm.readcyclecoun"
            << "ter intrinsic.  It is being lowered to a constant 0\n";
+    CI->replaceAllUsesWith(ConstantInt::get(Type::getInt64Ty(Context), 0));
+    break;
+  }
+  case Intrinsic::readsteadycounter: {
+    errs() << "WARNING: this target does not support the llvm.readsteadycounter"
+           << " intrinsic.  It is being lowered to a constant 0\n";
     CI->replaceAllUsesWith(ConstantInt::get(Type::getInt64Ty(Context), 0));
     break;
   }
@@ -430,7 +441,7 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     ReplaceFPIntrinsicWithCall(CI, "copysignf", "copysign", "copysignl");
     break;
   }
-  case Intrinsic::flt_rounds:
+  case Intrinsic::get_rounding:
      // Lower to "round to the nearest"
      if (!CI->getType()->isVoidTy())
        CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 1));
@@ -453,8 +464,7 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
 
 bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
   // Verify this is a simple bswap.
-  if (CI->getNumArgOperands() != 1 ||
-      CI->getType() != CI->getArgOperand(0)->getType() ||
+  if (CI->arg_size() != 1 || CI->getType() != CI->getArgOperand(0)->getType() ||
       !CI->getType()->isIntegerTy())
     return false;
 
@@ -467,7 +477,7 @@ bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
   Function *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
 
   Value *Op = CI->getArgOperand(0);
-  Op = CallInst::Create(Int, Op, CI->getName(), CI);
+  Op = CallInst::Create(Int, Op, CI->getName(), CI->getIterator());
 
   CI->replaceAllUsesWith(Op);
   CI->eraseFromParent();

@@ -21,7 +21,7 @@ __device__ int foo1() {
 // CHECK: [[APPEND5:%.*]] = call i64 @__ockl_printf_append_args(i64 [[APPEND4]], i32 1, i64 4, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
 // CHECK: [[STRLEN2:%.*]] = phi i64 [ %{{[^,]*}}, %{{[^ ]*}} ], [ 0, %{{[^ ]*}} ]
 // CHECK: [[APPEND6:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[APPEND5]], {{.*}}, i64 [[STRLEN2]], i32 0)
-// CHECK: [[PTR2INT:%.*]] = ptrtoint i8* %{{.*}} to i64
+// CHECK: [[PTR2INT:%.*]] = ptrtoint ptr %{{.*}} to i64
 // CHECK: [[APPEND7:%.*]] = call i64 @__ockl_printf_append_args(i64 [[APPEND6]], i32 1, i64 [[PTR2INT]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
 // CHECK: [[RETURN:%.*]]  = trunc i64 [[APPEND7]] to i32
 // CHECK: ret i32 [[RETURN]]
@@ -38,7 +38,7 @@ __device__ int foo2() {
 // CHECK: [[APPEND1:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[BEGIN]], {{.*}}, i64 [[STRLEN1]], i32 0)
 // CHECK: [[STRLEN2:%.*]] = phi i64 [ %{{[^,]*}}, %{{[^ ]*}} ], [ 0, %{{[^ ]*}} ]
 // CHECK: [[APPEND2:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[APPEND1]], {{.*}}, i64 [[STRLEN2]], i32 0)
-// CHECK: [[PTR2INT:%.*]] = ptrtoint i8* %{{.*}} to i64
+// CHECK: [[PTR2INT:%.*]] = ptrtoint ptr %{{.*}} to i64
 // CHECK: [[APPEND3:%.*]] = call i64 @__ockl_printf_append_args(i64 [[APPEND2]], i32 1, i64 [[PTR2INT]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
 // CHECK: [[RETURN:%.*]]  = trunc i64 [[APPEND3]] to i32
 // CHECK: ret i32 [[RETURN]]

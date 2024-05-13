@@ -40,8 +40,8 @@ the nested regions and print them individually:
     if (!op->getAttrs().empty()) {
       printIndent() << op->getAttrs().size() << " attributes:\n";
       for (NamedAttribute attr : op->getAttrs())
-        printIndent() << " - '" << attr.first << "' : '" << attr.second
-                      << "'\n";
+        printIndent() << " - '" << attr.getName() << "' : '"
+                      << attr.getValue() << "'\n";
     }
 
     // Recurse into each of the regions attached to the operation.
@@ -96,7 +96,7 @@ with `mlir-opt -test-print-nesting -allow-unregistered-dialect
 llvm-project/mlir/test/IR/print-ir-nesting.mlir`:
 
 ```mlir
-"module"() ( {
+"builtin.module"() ( {
   %0:4 = "dialect.op1"() {"attribute name" = 42 : i32} : () -> (i1, i16, i32, i64)
   "dialect.op2"() ( {
     "dialect.innerop1"(%0#0, %0#1) : (i1, i16) -> ()
@@ -116,10 +116,10 @@ llvm-project/mlir/test/IR/print-ir-nesting.mlir`:
 And will yield the following output:
 
 ```
-visiting op: 'module' with 0 operands and 0 results
+visiting op: 'builtin.module' with 0 operands and 0 results
  1 nested regions:
   Region with 1 blocks:
-    Block with 0 arguments, 0 successors, and 3 operations
+    Block with 0 arguments, 0 successors, and 2 operations
       visiting op: 'dialect.op1' with 0 operands and 4 results
       1 attributes:
        - 'attribute name' : '42 : i32'
@@ -149,7 +149,7 @@ visiting op: 'module' with 0 operands and 0 results
        0 nested regions:
 ```
 
-## Other IR Traversal Methods.
+## Other IR Traversal Methods
 
 In many cases, unwrapping the recursive structure of the IR is cumbersome and
 you may be interested in using other helpers.
@@ -192,7 +192,7 @@ Operation, for example the following will apply the callback only on `LinalgOp`
 operations nested inside the function:
 
 ```c++
-  getFunction.walk([](LinalgOp linalgOp) {
+  getFunction().walk([](LinalgOp linalgOp) {
     // process LinalgOp `linalgOp`.
   });
 ```

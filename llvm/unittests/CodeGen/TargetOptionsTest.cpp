@@ -3,7 +3,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
@@ -38,8 +38,9 @@ std::unique_ptr<TargetMachine> createTargetMachine(bool EnableIPRA) {
 
   TargetOptions Options;
   Options.EnableIPRA = EnableIPRA;
-  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
-      "X86", "", "", Options, None, None, CodeGenOpt::Aggressive));
+  return std::unique_ptr<TargetMachine>(
+      T->createTargetMachine("X86", "", "", Options, std::nullopt, std::nullopt,
+                             CodeGenOptLevel::Aggressive));
 }
 
 typedef std::function<void(bool)> TargetOptionsTest;

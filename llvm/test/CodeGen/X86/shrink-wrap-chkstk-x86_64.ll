@@ -9,11 +9,7 @@
 define void @fn1() nounwind uwtable {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl $4136, %eax # imm = 0x1028
-; CHECK-NEXT:    callq ___chkstk_ms
-; CHECK-NEXT:    subq %rax, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4144
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl a(%rip), %eax
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %select.true.sink
@@ -24,7 +20,13 @@ define void @fn1() nounwind uwtable {
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:  .LBB0_2: # %select.end
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl $4128, %eax # imm = 0x1020
+; CHECK-NEXT:    callq ___chkstk_ms
+; CHECK-NEXT:    subq %rax, %rsp
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 4144
+; CHECK-NEXT:    movl %eax, b(%rip)
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    # kill: def $ecx killed $ecx killed $rcx
 ; CHECK-NEXT:    callq fn2
@@ -32,21 +34,20 @@ define void @fn1() nounwind uwtable {
 ; CHECK-NEXT:    retq
 entry:
   %ctx = alloca %struct.A, align 1
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %tobool = icmp eq i32 %0, 0
   %div = sdiv i32 %0, 6
   %cond = select i1 %tobool, i32 %div, i32 %0
-  store i32 %cond, i32* @b, align 4
-  %1 = getelementptr inbounds %struct.A, %struct.A* %ctx, i64 0, i32 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 4096, i8* nonnull %1)
-  %2 = ptrtoint %struct.A* %ctx to i64
-  %3 = trunc i64 %2 to i32
-  call void @fn2(i32 %3)
-  call void @llvm.lifetime.end.p0i8(i64 4096, i8* nonnull %1)
+  store i32 %cond, ptr @b, align 4
+  call void @llvm.lifetime.start.p0(i64 4096, ptr nonnull %ctx)
+  %1 = ptrtoint ptr %ctx to i64
+  %2 = trunc i64 %1 to i32
+  call void @fn2(i32 %2)
+  call void @llvm.lifetime.end.p0(i64 4096, ptr nonnull %ctx)
   ret void
 }
 
 declare void @fn2(i32)
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 

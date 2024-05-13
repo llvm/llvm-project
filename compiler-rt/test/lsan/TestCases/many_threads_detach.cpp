@@ -3,6 +3,8 @@
 // Use `-pthread` so that its driver will DTRT (ie., ignore it).
 // RUN: %clangxx_lsan %s -o %t -pthread && %run %t
 
+#include <assert.h>
+#include <dirent.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -12,15 +14,21 @@
 // reused.
 static const size_t kTestThreads = 10000;
 
+// Limit the number of simultaneous threads to avoid reaching the limit.
+static const size_t kTestThreadsBatch = 100;
+
 void *null_func(void *args) {
   return NULL;
 }
 
 int main(void) {
-  for (size_t i = 0; i < kTestThreads; i++) {
-    pthread_t thread;
-    if (pthread_create(&thread, NULL, null_func, NULL) == 0)
-      pthread_detach(thread);
+  for (size_t i = 0; i < kTestThreads; i += kTestThreadsBatch) {
+    pthread_t thread[kTestThreadsBatch];
+    for (size_t j = 0; j < kTestThreadsBatch; ++j)
+      assert(pthread_create(&thread[j], NULL, null_func, NULL) == 0);
+
+    for (size_t j = 0; j < kTestThreadsBatch; ++j)
+      assert(pthread_join(thread[j], NULL) == 0);
   }
   return 0;
 }

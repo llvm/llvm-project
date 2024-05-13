@@ -1,21 +1,11 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf,lower-affine,convert-scf-to-cf),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-// RUN: mlir-opt %s -convert-vector-to-scf='lower-permutation-maps=true' -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true},lower-affine,convert-scf-to-cf),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
-
-// RUN: mlir-opt %s -convert-vector-to-scf='full-unroll=true' -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
-
-// RUN: mlir-opt %s -convert-vector-to-scf='full-unroll=true lower-permutation-maps=true' -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
 memref.global "private" @gv : memref<3x4xf32> = dense<[[0. , 1. , 2. , 3. ],
@@ -23,8 +13,8 @@ memref.global "private" @gv : memref<3x4xf32> = dense<[[0. , 1. , 2. , 3. ],
                                                        [20., 21., 22., 23.]]>
 
 // Vector load.
-func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
+func.func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
       {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -33,9 +23,9 @@ func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
 }
 
 // Vector load with mask.
-func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[[1, 0, 1, 0, 1, 1, 1, 0, 1],
+func.func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[[1, 0, 1, 0, 1, 1, 1, 0, 1],
                           [0, 0, 1, 1, 1, 1, 1, 0, 1],
                           [1, 1, 1, 1, 1, 1, 1, 0, 1],
                           [0, 0, 1, 0, 1, 1, 1, 0, 1]]> : vector<4x9xi1>
@@ -47,14 +37,13 @@ func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) 
 }
 
 // Vector load with mask + transpose.
-func @transfer_read_2d_mask_transposed(
+func.func @transfer_read_2d_mask_transposed(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[[1, 0, 1, 0], [0, 0, 1, 0],
-                          [1, 1, 1, 1], [0, 1, 1, 0],
-                          [1, 1, 1, 1], [1, 1, 1, 1],
-                          [1, 1, 1, 1], [0, 0, 0, 0],
-                          [1, 1, 1, 1]]> : vector<9x4xi1>
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[[1, 0, 1, 0, 1, 1, 1, 0, 1],
+                          [0, 0, 1, 1, 1, 1, 1, 0, 1],
+                          [1, 1, 1, 1, 1, 1, 1, 0, 1],
+                          [0, 0, 1, 0, 1, 1, 1, 0, 1]]> : vector<4x9xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
       {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} :
     memref<?x?xf32>, vector<9x4xf32>
@@ -63,10 +52,10 @@ func @transfer_read_2d_mask_transposed(
 }
 
 // Vector load with mask + broadcast.
-func @transfer_read_2d_mask_broadcast(
+func.func @transfer_read_2d_mask_broadcast(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[1, 0, 1, 0, 1, 1, 1, 0, 1]> : vector<9xi1>
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[1, 0, 1, 0, 1, 1, 1, 0, 1]> : vector<9xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
       {permutation_map = affine_map<(d0, d1) -> (0, d1)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -75,10 +64,10 @@ func @transfer_read_2d_mask_broadcast(
 }
 
 // Transpose + vector load with mask + broadcast.
-func @transfer_read_2d_mask_transpose_broadcast_last_dim(
+func.func @transfer_read_2d_mask_transpose_broadcast_last_dim(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[1, 0, 1, 1]> : vector<4xi1>
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[1, 0, 1, 1]> : vector<4xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
       {permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -87,9 +76,9 @@ func @transfer_read_2d_mask_transpose_broadcast_last_dim(
 }
 
 // Load + transpose.
-func @transfer_read_2d_transposed(
+func.func @transfer_read_2d_transposed(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
       {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -98,9 +87,9 @@ func @transfer_read_2d_transposed(
 }
 
 // Load 1D + broadcast to 2D.
-func @transfer_read_2d_broadcast(
+func.func @transfer_read_2d_broadcast(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
       {permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -109,9 +98,9 @@ func @transfer_read_2d_broadcast(
 }
 
 // Vector store.
-func @transfer_write_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fn1 = constant -1.0 : f32
-  %vf0 = splat %fn1 : vector<1x4xf32>
+func.func @transfer_write_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fn1 = arith.constant -1.0 : f32
+  %vf0 = vector.splat %fn1 : vector<1x4xf32>
   vector.transfer_write %vf0, %A[%base1, %base2]
     {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
     vector<1x4xf32>, memref<?x?xf32>
@@ -119,27 +108,38 @@ func @transfer_write_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
 }
 
 // Vector store with mask.
-func @transfer_write_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fn1 = constant -2.0 : f32
-  %mask = constant dense<[[1, 0, 1, 0]]> : vector<1x4xi1>
-  %vf0 = splat %fn1 : vector<1x4xf32>
+func.func @transfer_write_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fn1 = arith.constant -2.0 : f32
+  %mask = arith.constant dense<[[1, 0, 1, 0]]> : vector<1x4xi1>
+  %vf0 = vector.splat %fn1 : vector<1x4xf32>
   vector.transfer_write %vf0, %A[%base1, %base2], %mask
     {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
     vector<1x4xf32>, memref<?x?xf32>
   return
 }
 
-func @entry() {
-  %c0 = constant 0: index
-  %c1 = constant 1: index
-  %c2 = constant 2: index
-  %c3 = constant 3: index
+func.func @entry() {
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c2 = arith.constant 2: index
+  %c3 = arith.constant 3: index
+  %c10 = arith.constant 10 : index
   %0 = memref.get_global @gv : memref<3x4xf32>
   %A = memref.cast %0 : memref<3x4xf32> to memref<?x?xf32>
 
-  // 1. Read 2D vector from 2D memref.
+  // 1.a. Read 2D vector from 2D memref.
   call @transfer_read_2d(%A, %c1, %c2) : (memref<?x?xf32>, index, index) -> ()
   // CHECK: ( ( 12, 13, -42, -42, -42, -42, -42, -42, -42 ), ( 22, 23, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+
+  // 1.b. Read 2D vector from 2D memref. Starting position of first dim is
+  //      out-of-bounds.
+  call @transfer_read_2d(%A, %c3, %c2) : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+
+  // 1.c. Read 2D vector from 2D memref. Starting position of second dim is
+  //      out-of-bounds.
+  call @transfer_read_2d(%A, %c1, %c10) : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
 
   // 2. Read 2D vector from 2D memref at specified location and transpose the
   //    result.

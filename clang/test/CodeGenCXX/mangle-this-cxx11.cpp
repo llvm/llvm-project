@@ -13,8 +13,8 @@ struct A {
 
 int main() {
   A a;
-  // CHECK: call i32 @_ZN1A1fIiEEDTcldtdtdefpT1b1fIT_EEEv
+  // CHECK: call noundef i32 @_ZN1A1fIiEEDTcldtdtdefpT1b1fIT_EEEv
   a.f<int>();
-  // CHECK: call i32 @_ZN1A1gIiEEDTcldtptfpT1b1fIT_EEEv
+  // CHECK: call noundef i32 @_ZN1A1gIiEEDTcldtptfpT1b1fIT_EEEv
   a.g<int>();
 }

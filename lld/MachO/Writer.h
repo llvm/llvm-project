@@ -11,8 +11,7 @@
 
 #include <cstdint>
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class OutputSection;
 class InputSection;
@@ -26,6 +25,7 @@ public:
 };
 
 template <class LP> void writeResult();
+void resetWriter();
 
 void createSyntheticSections();
 
@@ -35,7 +35,6 @@ void addNonLazyBindingEntries(const Symbol *, const InputSection *,
 
 extern OutputSection *firstTLVDataSection;
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

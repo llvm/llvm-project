@@ -12,8 +12,8 @@ define x86_fp80 @foo(x86_fp80 %a) {
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb $-128, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    flds {{.*}}(%rip)
-; CHECK-NEXT:    flds {{.*}}(%rip)
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
 ; CHECK-NEXT:    fcmovne %st(1), %st
 ; CHECK-NEXT:    fstp %st(1)
 ; CHECK-NEXT:    retq
@@ -29,7 +29,7 @@ declare x86_fp80 @copysignl(x86_fp80, x86_fp80) nounwind readnone
 define float @pr26070() {
 ; CHECK-LABEL: pr26070:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    retq
   %c = call float @copysignf(float 1.0, float undef) readnone
   ret float %c

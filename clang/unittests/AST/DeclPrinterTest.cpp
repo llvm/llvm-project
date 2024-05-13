@@ -18,6 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ASTPrint.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -32,10 +33,8 @@ using namespace tooling;
 
 namespace {
 
-using PrintingPolicyModifier = void (*)(PrintingPolicy &policy);
-
 void PrintDecl(raw_ostream &Out, const ASTContext *Context, const Decl *D,
-               PrintingPolicyModifier PolicyModifier) {
+               PrintingPolicyAdjuster PolicyModifier) {
   PrintingPolicy Policy = Context->getPrintingPolicy();
   Policy.TerseOutput = true;
   Policy.Indentation = 0;
@@ -44,74 +43,23 @@ void PrintDecl(raw_ostream &Out, const ASTContext *Context, const Decl *D,
   D->print(Out, Policy, /*Indentation*/ 0, /*PrintInstantiation*/ false);
 }
 
-class PrintMatch : public MatchFinder::MatchCallback {
-  SmallString<1024> Printed;
-  unsigned NumFoundDecls;
-  PrintingPolicyModifier PolicyModifier;
-
-public:
-  PrintMatch(PrintingPolicyModifier PolicyModifier)
-      : NumFoundDecls(0), PolicyModifier(PolicyModifier) {}
-
-  void run(const MatchFinder::MatchResult &Result) override {
-    const Decl *D = Result.Nodes.getNodeAs<Decl>("id");
-    if (!D || D->isImplicit())
-      return;
-    NumFoundDecls++;
-    if (NumFoundDecls > 1)
-      return;
-
-    llvm::raw_svector_ostream Out(Printed);
-    PrintDecl(Out, Result.Context, D, PolicyModifier);
-  }
-
-  StringRef getPrinted() const {
-    return Printed;
-  }
-
-  unsigned getNumFoundDecls() const {
-    return NumFoundDecls;
-  }
-};
-
 ::testing::AssertionResult
 PrintedDeclMatches(StringRef Code, const std::vector<std::string> &Args,
                    const DeclarationMatcher &NodeMatch,
                    StringRef ExpectedPrinted, StringRef FileName,
-                   PrintingPolicyModifier PolicyModifier = nullptr,
+                   PrintingPolicyAdjuster PolicyModifier = nullptr,
                    bool AllowError = false) {
-  PrintMatch Printer(PolicyModifier);
-  MatchFinder Finder;
-  Finder.addMatcher(NodeMatch, &Printer);
-  std::unique_ptr<FrontendActionFactory> Factory(
-      newFrontendActionFactory(&Finder));
-
-  if (!runToolOnCodeWithArgs(Factory->create(), Code, Args, FileName) &&
-      !AllowError)
-    return testing::AssertionFailure()
-      << "Parsing error in \"" << Code.str() << "\"";
-
-  if (Printer.getNumFoundDecls() == 0)
-    return testing::AssertionFailure()
-        << "Matcher didn't find any declarations";
-
-  if (Printer.getNumFoundDecls() > 1)
-    return testing::AssertionFailure()
-        << "Matcher should match only one declaration "
-           "(found " << Printer.getNumFoundDecls() << ")";
-
-  if (Printer.getPrinted() != ExpectedPrinted)
-    return ::testing::AssertionFailure()
-      << "Expected \"" << ExpectedPrinted.str() << "\", "
-         "got \"" << Printer.getPrinted().str() << "\"";
-
-  return ::testing::AssertionSuccess();
+  return PrintedNodeMatches<Decl>(
+      Code, Args, NodeMatch, ExpectedPrinted, FileName, PrintDecl,
+      PolicyModifier, AllowError,
+      // Filter out implicit decls
+      [](const Decl *D) { return !D->isImplicit(); });
 }
 
 ::testing::AssertionResult
 PrintedDeclCXX98Matches(StringRef Code, StringRef DeclName,
                         StringRef ExpectedPrinted,
-                        PrintingPolicyModifier PolicyModifier = nullptr) {
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++98");
   return PrintedDeclMatches(Code, Args, namedDecl(hasName(DeclName)).bind("id"),
                             ExpectedPrinted, "input.cc", PolicyModifier);
@@ -120,7 +68,7 @@ PrintedDeclCXX98Matches(StringRef Code, StringRef DeclName,
 ::testing::AssertionResult
 PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                         StringRef ExpectedPrinted,
-                        PrintingPolicyModifier PolicyModifier = nullptr) {
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++98");
   return PrintedDeclMatches(Code,
                             Args,
@@ -138,16 +86,13 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                             ExpectedPrinted, "input.cc");
 }
 
-::testing::AssertionResult PrintedDeclCXX11Matches(
-                                  StringRef Code,
-                                  const DeclarationMatcher &NodeMatch,
-                                  StringRef ExpectedPrinted) {
+::testing::AssertionResult
+PrintedDeclCXX11Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
+                        StringRef ExpectedPrinted,
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++11");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            NodeMatch,
-                            ExpectedPrinted,
-                            "input.cc");
+  return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.cc",
+                            PolicyModifier);
 }
 
 ::testing::AssertionResult PrintedDeclCXX11nonMSCMatches(
@@ -165,7 +110,7 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
 ::testing::AssertionResult
 PrintedDeclCXX17Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                         StringRef ExpectedPrinted,
-                        PrintingPolicyModifier PolicyModifier = nullptr) {
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args{"-std=c++17", "-fno-delayed-template-parsing"};
   return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.cc",
                             PolicyModifier);
@@ -174,7 +119,7 @@ PrintedDeclCXX17Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
 ::testing::AssertionResult
 PrintedDeclC11Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                       StringRef ExpectedPrinted,
-                      PrintingPolicyModifier PolicyModifier = nullptr) {
+                      PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c11");
   return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.c",
                             PolicyModifier);
@@ -408,6 +353,59 @@ TEST(DeclPrinter, TestCXXRecordDecl11) {
     "class A : virtual public Z, private Y { int c; };",
     "A",
     "class A : virtual public Z, private Y {}"));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl12) {
+  ASSERT_TRUE(
+      PrintedDeclCXX98Matches("struct S { int x; };"
+                              "namespace NS { class C {};}"
+                              "void foo() {using namespace NS; C c;}",
+                              "foo",
+                              "void foo() {\nusing namespace NS;\nclass "
+                              "NS::C c;\n}\n",
+                              [](PrintingPolicy &Policy) {
+                                Policy.SuppressTagKeyword = false;
+                                Policy.SuppressScope = true;
+                                Policy.TerseOutput = false;
+                              }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl13) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "struct S { int x; };"
+      "S s1;"
+      "S foo() {return s1;}",
+      "foo", "struct S foo() {\nreturn s1;\n}\n", [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword = false;
+        Policy.SuppressScope = true;
+        Policy.TerseOutput = false;
+      }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl14) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "struct S { int x; };"
+      "S foo(S s1) {return s1;}",
+      "foo", "struct S foo(struct S s1) {\nreturn s1;\n}\n",
+      [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword = false;
+        Policy.SuppressScope = true;
+        Policy.TerseOutput = false;
+      }));
+}
+TEST(DeclPrinter, TestCXXRecordDecl15) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "struct S { int x; };"
+      "namespace NS { class C {};}"
+      "S foo(S s1, NS::C c1) {using namespace NS; C c; return s1;}",
+      "foo",
+      "struct S foo(struct S s1, class NS::C c1) {\nusing namespace NS;\nclass "
+      "NS::C c;\nreturn s1;\n}\n",
+      [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword = false;
+        Policy.SuppressScope = true;
+        Policy.TerseOutput = false;
+      }));
 }
 
 TEST(DeclPrinter, TestFunctionDecl1) {
@@ -783,7 +781,7 @@ TEST(DeclPrinter, TestCXXMethodDecl_Operator1) {
     "()", "[]"
   };
 
-  for (unsigned i = 0, e = llvm::array_lengthof(OperatorNames); i != e; ++i) {
+  for (unsigned i = 0, e = std::size(OperatorNames); i != e; ++i) {
     SmallString<128> Code;
     Code.append("struct Z { void operator");
     Code.append(OperatorNames[i]);
@@ -806,7 +804,7 @@ TEST(DeclPrinter, TestCXXMethodDecl_Operator2) {
     "~", "!", "++", "--", "->"
   };
 
-  for (unsigned i = 0, e = llvm::array_lengthof(OperatorNames); i != e; ++i) {
+  for (unsigned i = 0, e = std::size(OperatorNames); i != e; ++i) {
     SmallString<128> Code;
     Code.append("struct Z { void operator");
     Code.append(OperatorNames[i]);
@@ -961,8 +959,7 @@ TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification5) {
     "  void A(int a) noexcept(true);"
     "};",
     "A",
-    "void A(int a) noexcept(trueA(int a) noexcept(true)"));
-    // WRONG; Should be: "void A(int a) noexcept(true);"
+    "void A(int a) noexcept(true)"));
 }
 
 TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification6) {
@@ -971,8 +968,7 @@ TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification6) {
     "  void A(int a) noexcept(1 < 2);"
     "};",
     "A",
-    "void A(int a) noexcept(1 < 2A(int a) noexcept(1 < 2)"));
-    // WRONG; Should be: "void A(int a) noexcept(1 < 2);"
+    "void A(int a) noexcept(1 < 2)"));
 }
 
 TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification7) {
@@ -982,8 +978,7 @@ TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification7) {
     "  void A(int a) noexcept(N < 2);"
     "};",
     "A",
-    "void A(int a) noexcept(N < 2A(int a) noexcept(N < 2)"));
-    // WRONG; Should be: "void A(int a) noexcept(N < 2);"
+    "void A(int a) noexcept(N < 2)"));
 }
 
 TEST(DeclPrinter, TestVarDecl1) {
@@ -1222,8 +1217,7 @@ TEST(DeclPrinter, TestTemplateTemplateParameterWrittenWithTypename) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "template <template <typename> typename Z> void A();",
       functionTemplateDecl(hasName("A")).bind("id"),
-      "template <template <typename> class Z> void A()"));
-  // WRONG: We should use typename if the parameter was written with it.
+      "template <template <typename> typename Z> void A()"));
 }
 
 TEST(DeclPrinter, TestTemplateArgumentList1) {
@@ -1388,6 +1382,114 @@ TEST(DeclPrinter, TestTemplateArgumentList16) {
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT2", "int NT2 = 5"));
 }
 
+TEST(DeclPrinter, TestCXXRecordDecl17) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;",
+      "A", "Z<X> A",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl18) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;"
+      "template <typename T1, int>"
+      "struct Y{};"
+      "Y<Z<X>, 2> B;",
+      "B", "Y<Z<X>, 2> B",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl19) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;"
+      "template <typename T1, int>"
+      "struct Y{};"
+      "Y<Z<X>, 2> B;",
+      "B", "Y<Z<X>, 2> B",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl20) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template <typename T, int N> class Inner;"
+      "template <typename T, int N>"
+      "class Inner{Inner(T val){}};"
+      "template <class InnerClass, int N> class Outer {"
+      "public:"
+      "struct NestedStruct {"
+      "int nestedValue;"
+      "NestedStruct(int val) : nestedValue(val) {}"
+      "};"
+      "InnerClass innerInstance;"
+      "Outer(const InnerClass &inner) : innerInstance(inner) {}"
+      "};"
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
+      "nestedInstance",
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl21) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template <typename T, int N> class Inner;"
+      "template <typename T, int N>"
+      "class Inner{Inner(T val){}};"
+      "template <class InnerClass, int N> class Outer {"
+      "public:"
+      "struct NestedStruct {"
+      "int nestedValue;"
+      "NestedStruct(int val) : nestedValue(val) {}"
+      "};"
+      "InnerClass innerInstance;"
+      "Outer(const InnerClass &inner) : innerInstance(inner) {}"
+      "};"
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
+      "nestedInstance",
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
+}
+
+TEST(DeclPrinter, TestFunctionParamUglified) {
+  llvm::StringLiteral Code = R"cpp(
+    class __c;
+    void _A(__c *__param);
+  )cpp";
+  auto Clean = [](PrintingPolicy &Policy) {
+    Policy.CleanUglifiedParameters = true;
+  };
+
+  ASSERT_TRUE(PrintedDeclCXX17Matches(Code, namedDecl(hasName("_A")).bind("id"),
+                                      "void _A(__c *__param)"));
+  ASSERT_TRUE(PrintedDeclCXX17Matches(Code, namedDecl(hasName("_A")).bind("id"),
+                                      "void _A(__c *param)", Clean));
+}
+
+TEST(DeclPrinter, TestTemplateParamUglified) {
+  llvm::StringLiteral Code = R"cpp(
+    template <typename _Tp, int __n, template <typename> class _Container>
+    struct _A{};
+  )cpp";
+  auto Clean = [](PrintingPolicy &Policy) {
+    Policy.CleanUglifiedParameters = true;
+  };
+
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      Code, classTemplateDecl(hasName("_A")).bind("id"),
+      "template <typename _Tp, int __n, template <typename> class _Container> "
+      "struct _A {}"));
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      Code, classTemplateDecl(hasName("_A")).bind("id"),
+      "template <typename Tp, int n, template <typename> class Container> "
+      "struct _A {}",
+      Clean));
+}
+
 TEST(DeclPrinter, TestStaticAssert1) {
   ASSERT_TRUE(PrintedDeclCXX17Matches("static_assert(true);",
                                       staticAssertDecl().bind("id"),
@@ -1446,4 +1548,29 @@ TEST(DeclPrinter, VarDeclWithInitializer) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "int a = 0x15;", namedDecl(hasName("a")).bind("id"), "int a = 0x15",
       [](PrintingPolicy &Policy) { Policy.ConstantsAsWritten = true; }));
+  ASSERT_TRUE(
+      PrintedDeclCXX17Matches("void foo() {int arr[42]; for(int a : arr);}",
+                              namedDecl(hasName("a")).bind("id"), "int a"));
+}
+
+TEST(DeclPrinter, TestTemplateFinal) {
+  // By default we should print 'final' keyword whether class is implicitly or
+  // explicitly marked final.
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class FinalTemplate final {};",
+      classTemplateDecl(hasName("FinalTemplate")).bind("id"),
+      "template <typename T> class FinalTemplate final {}"));
+}
+
+TEST(DeclPrinter, TestTemplateFinalWithPolishForDecl) {
+  // clangd relies on the 'final' keyword being printed when
+  // PolishForDeclaration is enabled, so make sure it is even if implicit attrs
+  // are disabled.
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class FinalTemplate final {};",
+      classTemplateDecl(hasName("FinalTemplate")).bind("id"),
+      "template <typename T> class FinalTemplate final {}",
+      [](PrintingPolicy &Policy) { Policy.PolishForDeclaration = true; }));
 }

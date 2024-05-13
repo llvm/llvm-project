@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static const char DifferentEnumErrorMessage[] =
     "enum values are from different enum types";
@@ -62,7 +60,7 @@ static bool hasDisjointValueRange(const EnumDecl *Enum1,
 }
 
 static bool isNonPowerOf2NorNullLiteral(const EnumConstantDecl *EnumConst) {
-  llvm::APSInt Val = EnumConst->getInitVal();
+  const llvm::APSInt &Val = EnumConst->getInitVal();
   if (Val.isPowerOf2() || !Val.getBoolValue())
     return false;
   const Expr *InitExpr = EnumConst->getInitExpr();
@@ -79,7 +77,7 @@ static bool isMaxValAllBitSetLiteral(const EnumDecl *EnumDec) {
       });
 
   if (const Expr *InitExpr = EnumConst->getInitExpr()) {
-    return EnumConst->getInitVal().countTrailingOnes() ==
+    return EnumConst->getInitVal().countr_one() ==
                EnumConst->getInitVal().getActiveBits() &&
            isa<IntegerLiteral>(InitExpr->IgnoreImpCasts());
   }
@@ -87,9 +85,7 @@ static bool isMaxValAllBitSetLiteral(const EnumDecl *EnumDec) {
 }
 
 static int countNonPowOfTwoLiteralNum(const EnumDecl *EnumDec) {
-  return std::count_if(
-      EnumDec->enumerator_begin(), EnumDec->enumerator_end(),
-      [](const EnumConstantDecl *E) { return isNonPowerOf2NorNullLiteral(E); });
+  return llvm::count_if(EnumDec->enumerators(), isNonPowerOf2NorNullLiteral);
 }
 
 /// Check if there is one or two enumerators that are not a power of 2 and are
@@ -210,6 +206,4 @@ void SuspiciousEnumUsageCheck::check(const MatchFinder::MatchResult &Result) {
   checkSuspiciousBitmaskUsage(RhsExpr, EnumDec);
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

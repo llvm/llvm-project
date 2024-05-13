@@ -40,12 +40,14 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/Passes.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -61,17 +63,12 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -79,6 +76,11 @@
 #include <string>
 
 using namespace llvm;
+
+static const char LintAbortOnErrorArgName[] = "lint-abort-on-error";
+static cl::opt<bool>
+    LintAbortOnError(LintAbortOnErrorArgName, cl::init(false),
+                     cl::desc("In the Lint pass, abort on errors."));
 
 namespace {
 namespace MemRef {
@@ -96,8 +98,6 @@ class Lint : public InstVisitor<Lint> {
   void visitCallBase(CallBase &CB);
   void visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
                             MaybeAlign Alignment, Type *Ty, unsigned Flags);
-  void visitEHBeginCatch(IntrinsicInst *II);
-  void visitEHEndCatch(IntrinsicInst *II);
 
   void visitReturnInst(ReturnInst &I);
   void visitLoadInst(LoadInst &I);
@@ -169,8 +169,8 @@ public:
 };
 } // end anonymous namespace
 
-// Assert - We know that cond should be true, if not print an error message.
-#define Assert(C, ...)                                                         \
+// Check - We know that cond should be true, if not print an error message.
+#define Check(C, ...)                                                          \
   do {                                                                         \
     if (!(C)) {                                                                \
       CheckFailed(__VA_ARGS__);                                                \
@@ -181,8 +181,8 @@ public:
 void Lint::visitFunction(Function &F) {
   // This isn't undefined behavior, it's just a little unusual, and it's a
   // fairly common mistake to neglect to name a function.
-  Assert(F.hasName() || F.hasLocalLinkage(),
-         "Unusual: Unnamed function with non-local linkage", &F);
+  Check(F.hasName() || F.hasLocalLinkage(),
+        "Unusual: Unnamed function with non-local linkage", &F);
 
   // TODO: Check for irreducible control flow.
 }
@@ -190,28 +190,28 @@ void Lint::visitFunction(Function &F) {
 void Lint::visitCallBase(CallBase &I) {
   Value *Callee = I.getCalledOperand();
 
-  visitMemoryReference(I, MemoryLocation::getAfter(Callee), None, nullptr,
-                       MemRef::Callee);
+  visitMemoryReference(I, MemoryLocation::getAfter(Callee), std::nullopt,
+                       nullptr, MemRef::Callee);
 
   if (Function *F = dyn_cast<Function>(findValue(Callee,
                                                  /*OffsetOk=*/false))) {
-    Assert(I.getCallingConv() == F->getCallingConv(),
-           "Undefined behavior: Caller and callee calling convention differ",
-           &I);
+    Check(I.getCallingConv() == F->getCallingConv(),
+          "Undefined behavior: Caller and callee calling convention differ",
+          &I);
 
     FunctionType *FT = F->getFunctionType();
     unsigned NumActualArgs = I.arg_size();
 
-    Assert(FT->isVarArg() ? FT->getNumParams() <= NumActualArgs
-                          : FT->getNumParams() == NumActualArgs,
-           "Undefined behavior: Call argument count mismatches callee "
-           "argument count",
-           &I);
+    Check(FT->isVarArg() ? FT->getNumParams() <= NumActualArgs
+                         : FT->getNumParams() == NumActualArgs,
+          "Undefined behavior: Call argument count mismatches callee "
+          "argument count",
+          &I);
 
-    Assert(FT->getReturnType() == I.getType(),
-           "Undefined behavior: Call return type mismatches "
-           "callee return type",
-           &I);
+    Check(FT->getReturnType() == I.getType(),
+          "Undefined behavior: Call return type mismatches "
+          "callee return type",
+          &I);
 
     // Check argument types (in case the callee was casted) and attributes.
     // TODO: Verify that caller and callee attributes are compatible.
@@ -221,10 +221,10 @@ void Lint::visitCallBase(CallBase &I) {
       Value *Actual = *AI;
       if (PI != PE) {
         Argument *Formal = &*PI++;
-        Assert(Formal->getType() == Actual->getType(),
-               "Undefined behavior: Call argument type mismatches "
-               "callee parameter type",
-               &I);
+        Check(Formal->getType() == Actual->getType(),
+              "Undefined behavior: Call argument type mismatches "
+              "callee parameter type",
+              &I);
 
         // Check that noalias arguments don't alias other arguments. This is
         // not fully precise because we don't know the sizes of the dereferenced
@@ -232,19 +232,23 @@ void Lint::visitCallBase(CallBase &I) {
         if (Formal->hasNoAliasAttr() && Actual->getType()->isPointerTy()) {
           AttributeList PAL = I.getAttributes();
           unsigned ArgNo = 0;
-          for (auto BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
+          for (auto *BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
             // Skip ByVal arguments since they will be memcpy'd to the callee's
             // stack so we're not really passing the pointer anyway.
-            if (PAL.hasParamAttribute(ArgNo, Attribute::ByVal))
+            if (PAL.hasParamAttr(ArgNo, Attribute::ByVal))
               continue;
             // If both arguments are readonly, they have no dependence.
             if (Formal->onlyReadsMemory() && I.onlyReadsMemory(ArgNo))
               continue;
+            // Skip readnone arguments since those are guaranteed not to be
+            // dereferenced anyway.
+            if (I.doesNotAccessMemory(ArgNo))
+              continue;
             if (AI != BI && (*BI)->getType()->isPointerTy()) {
               AliasResult Result = AA->alias(*AI, *BI);
-              Assert(Result != AliasResult::MustAlias &&
-                         Result != AliasResult::PartialAlias,
-                     "Unusual: noalias argument aliases another argument", &I);
+              Check(Result != AliasResult::MustAlias &&
+                        Result != AliasResult::PartialAlias,
+                    "Unusual: noalias argument aliases another argument", &I);
             }
           }
         }
@@ -268,13 +272,13 @@ void Lint::visitCallBase(CallBase &I) {
       for (Value *Arg : I.args()) {
         // Skip ByVal arguments since they will be memcpy'd to the callee's
         // stack anyway.
-        if (PAL.hasParamAttribute(ArgNo++, Attribute::ByVal))
+        if (PAL.hasParamAttr(ArgNo++, Attribute::ByVal))
           continue;
         Value *Obj = findValue(Arg, /*OffsetOk=*/true);
-        Assert(!isa<AllocaInst>(Obj),
-               "Undefined behavior: Call with \"tail\" keyword references "
-               "alloca",
-               &I);
+        Check(!isa<AllocaInst>(Obj),
+              "Undefined behavior: Call with \"tail\" keyword references "
+              "alloca",
+              &I);
       }
     }
   }
@@ -302,9 +306,9 @@ void Lint::visitCallBase(CallBase &I) {
                                               /*OffsetOk=*/false)))
         if (Len->getValue().isIntN(32))
           Size = LocationSize::precise(Len->getValue().getZExtValue());
-      Assert(AA->alias(MCI->getSource(), Size, MCI->getDest(), Size) !=
-                 AliasResult::MustAlias,
-             "Undefined behavior: memcpy source and destination overlap", &I);
+      Check(AA->alias(MCI->getSource(), Size, MCI->getDest(), Size) !=
+                AliasResult::MustAlias,
+            "Undefined behavior: memcpy source and destination overlap", &I);
       break;
     }
     case Intrinsic::memcpy_inline: {
@@ -319,9 +323,9 @@ void Lint::visitCallBase(CallBase &I) {
       // isn't expressive enough for what we really want to do. Known partial
       // overlap is not distinguished from the case where nothing is known.
       const LocationSize LS = LocationSize::precise(Size);
-      Assert(AA->alias(MCII->getSource(), LS, MCII->getDest(), LS) !=
-                 AliasResult::MustAlias,
-             "Undefined behavior: memcpy source and destination overlap", &I);
+      Check(AA->alias(MCII->getSource(), LS, MCII->getDest(), LS) !=
+                AliasResult::MustAlias,
+            "Undefined behavior: memcpy source and destination overlap", &I);
       break;
     }
     case Intrinsic::memmove: {
@@ -338,49 +342,54 @@ void Lint::visitCallBase(CallBase &I) {
                            MSI->getDestAlign(), nullptr, MemRef::Write);
       break;
     }
+    case Intrinsic::memset_inline: {
+      MemSetInlineInst *MSII = cast<MemSetInlineInst>(&I);
+      visitMemoryReference(I, MemoryLocation::getForDest(MSII),
+                           MSII->getDestAlign(), nullptr, MemRef::Write);
+      break;
+    }
 
     case Intrinsic::vastart:
-      Assert(I.getParent()->getParent()->isVarArg(),
-             "Undefined behavior: va_start called in a non-varargs function",
-             &I);
-
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
-                           nullptr, MemRef::Read | MemRef::Write);
+      // vastart in non-varargs function is rejected by the verifier
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
+                           std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
     case Intrinsic::vacopy:
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
-                           nullptr, MemRef::Write);
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 1, TLI), None,
-                           nullptr, MemRef::Read);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
+                           std::nullopt, nullptr, MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 1, TLI),
+                           std::nullopt, nullptr, MemRef::Read);
       break;
     case Intrinsic::vaend:
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
-                           nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
+                           std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
 
     case Intrinsic::stackrestore:
       // Stackrestore doesn't read or write memory, but it sets the
       // stack pointer, which the compiler may read from or write to
       // at any time, so check it for both readability and writeability.
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
-                           nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
+                           std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
     case Intrinsic::get_active_lane_mask:
       if (auto *TripCount = dyn_cast<ConstantInt>(I.getArgOperand(1)))
-        Assert(!TripCount->isZero(), "get_active_lane_mask: operand #2 "
-               "must be greater than 0", &I);
+        Check(!TripCount->isZero(),
+              "get_active_lane_mask: operand #2 "
+              "must be greater than 0",
+              &I);
       break;
     }
 }
 
 void Lint::visitReturnInst(ReturnInst &I) {
   Function *F = I.getParent()->getParent();
-  Assert(!F->doesNotReturn(),
-         "Unusual: Return statement in function with noreturn attribute", &I);
+  Check(!F->doesNotReturn(),
+        "Unusual: Return statement in function with noreturn attribute", &I);
 
   if (Value *V = I.getReturnValue()) {
     Value *Obj = findValue(V, /*OffsetOk=*/true);
-    Assert(!isa<AllocaInst>(Obj), "Unusual: Returning alloca value", &I);
+    Check(!isa<AllocaInst>(Obj), "Unusual: Returning alloca value", &I);
   }
 }
 
@@ -395,39 +404,39 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
   Value *Ptr = const_cast<Value *>(Loc.Ptr);
   Value *UnderlyingObject = findValue(Ptr, /*OffsetOk=*/true);
-  Assert(!isa<ConstantPointerNull>(UnderlyingObject),
-         "Undefined behavior: Null pointer dereference", &I);
-  Assert(!isa<UndefValue>(UnderlyingObject),
-         "Undefined behavior: Undef pointer dereference", &I);
-  Assert(!isa<ConstantInt>(UnderlyingObject) ||
-             !cast<ConstantInt>(UnderlyingObject)->isMinusOne(),
-         "Unusual: All-ones pointer dereference", &I);
-  Assert(!isa<ConstantInt>(UnderlyingObject) ||
-             !cast<ConstantInt>(UnderlyingObject)->isOne(),
-         "Unusual: Address one pointer dereference", &I);
+  Check(!isa<ConstantPointerNull>(UnderlyingObject),
+        "Undefined behavior: Null pointer dereference", &I);
+  Check(!isa<UndefValue>(UnderlyingObject),
+        "Undefined behavior: Undef pointer dereference", &I);
+  Check(!isa<ConstantInt>(UnderlyingObject) ||
+            !cast<ConstantInt>(UnderlyingObject)->isMinusOne(),
+        "Unusual: All-ones pointer dereference", &I);
+  Check(!isa<ConstantInt>(UnderlyingObject) ||
+            !cast<ConstantInt>(UnderlyingObject)->isOne(),
+        "Unusual: Address one pointer dereference", &I);
 
   if (Flags & MemRef::Write) {
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(UnderlyingObject))
-      Assert(!GV->isConstant(), "Undefined behavior: Write to read-only memory",
-             &I);
-    Assert(!isa<Function>(UnderlyingObject) &&
-               !isa<BlockAddress>(UnderlyingObject),
-           "Undefined behavior: Write to text section", &I);
+      Check(!GV->isConstant(), "Undefined behavior: Write to read-only memory",
+            &I);
+    Check(!isa<Function>(UnderlyingObject) &&
+              !isa<BlockAddress>(UnderlyingObject),
+          "Undefined behavior: Write to text section", &I);
   }
   if (Flags & MemRef::Read) {
-    Assert(!isa<Function>(UnderlyingObject), "Unusual: Load from function body",
-           &I);
-    Assert(!isa<BlockAddress>(UnderlyingObject),
-           "Undefined behavior: Load from block address", &I);
+    Check(!isa<Function>(UnderlyingObject), "Unusual: Load from function body",
+          &I);
+    Check(!isa<BlockAddress>(UnderlyingObject),
+          "Undefined behavior: Load from block address", &I);
   }
   if (Flags & MemRef::Callee) {
-    Assert(!isa<BlockAddress>(UnderlyingObject),
-           "Undefined behavior: Call to block address", &I);
+    Check(!isa<BlockAddress>(UnderlyingObject),
+          "Undefined behavior: Call to block address", &I);
   }
   if (Flags & MemRef::Branchee) {
-    Assert(!isa<Constant>(UnderlyingObject) ||
-               isa<BlockAddress>(UnderlyingObject),
-           "Undefined behavior: Branch to non-blockaddress", &I);
+    Check(!isa<Constant>(UnderlyingObject) ||
+              isa<BlockAddress>(UnderlyingObject),
+          "Undefined behavior: Branch to non-blockaddress", &I);
   }
 
   // Check for buffer overflows and misalignment.
@@ -461,17 +470,17 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
     // Accesses from before the start or after the end of the object are not
     // defined.
-    Assert(!Loc.Size.hasValue() || BaseSize == MemoryLocation::UnknownSize ||
-               (Offset >= 0 && Offset + Loc.Size.getValue() <= BaseSize),
-           "Undefined behavior: Buffer overflow", &I);
+    Check(!Loc.Size.hasValue() || BaseSize == MemoryLocation::UnknownSize ||
+              (Offset >= 0 && Offset + Loc.Size.getValue() <= BaseSize),
+          "Undefined behavior: Buffer overflow", &I);
 
     // Accesses that say that the memory is more aligned than it is are not
     // defined.
     if (!Align && Ty && Ty->isSized())
       Align = DL->getABITypeAlign(Ty);
     if (BaseAlign && Align)
-      Assert(*Align <= commonAlignment(*BaseAlign, Offset),
-             "Undefined behavior: Memory reference address is misaligned", &I);
+      Check(*Align <= commonAlignment(*BaseAlign, Offset),
+            "Undefined behavior: Memory reference address is misaligned", &I);
   }
 }
 
@@ -486,34 +495,34 @@ void Lint::visitStoreInst(StoreInst &I) {
 }
 
 void Lint::visitXor(BinaryOperator &I) {
-  Assert(!isa<UndefValue>(I.getOperand(0)) || !isa<UndefValue>(I.getOperand(1)),
-         "Undefined result: xor(undef, undef)", &I);
+  Check(!isa<UndefValue>(I.getOperand(0)) || !isa<UndefValue>(I.getOperand(1)),
+        "Undefined result: xor(undef, undef)", &I);
 }
 
 void Lint::visitSub(BinaryOperator &I) {
-  Assert(!isa<UndefValue>(I.getOperand(0)) || !isa<UndefValue>(I.getOperand(1)),
-         "Undefined result: sub(undef, undef)", &I);
+  Check(!isa<UndefValue>(I.getOperand(0)) || !isa<UndefValue>(I.getOperand(1)),
+        "Undefined result: sub(undef, undef)", &I);
 }
 
 void Lint::visitLShr(BinaryOperator &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getOperand(1),
                                                         /*OffsetOk=*/false)))
-    Assert(CI->getValue().ult(cast<IntegerType>(I.getType())->getBitWidth()),
-           "Undefined result: Shift count out of range", &I);
+    Check(CI->getValue().ult(cast<IntegerType>(I.getType())->getBitWidth()),
+          "Undefined result: Shift count out of range", &I);
 }
 
 void Lint::visitAShr(BinaryOperator &I) {
   if (ConstantInt *CI =
           dyn_cast<ConstantInt>(findValue(I.getOperand(1), /*OffsetOk=*/false)))
-    Assert(CI->getValue().ult(cast<IntegerType>(I.getType())->getBitWidth()),
-           "Undefined result: Shift count out of range", &I);
+    Check(CI->getValue().ult(cast<IntegerType>(I.getType())->getBitWidth()),
+          "Undefined result: Shift count out of range", &I);
 }
 
 void Lint::visitShl(BinaryOperator &I) {
   if (ConstantInt *CI =
           dyn_cast<ConstantInt>(findValue(I.getOperand(1), /*OffsetOk=*/false)))
-    Assert(CI->getValue().ult(cast<IntegerType>(I.getType())->getBitWidth()),
-           "Undefined result: Shift count out of range", &I);
+    Check(CI->getValue().ult(cast<IntegerType>(I.getType())->getBitWidth()),
+          "Undefined result: Shift count out of range", &I);
 }
 
 static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
@@ -554,51 +563,51 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 }
 
 void Lint::visitSDiv(BinaryOperator &I) {
-  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
-         "Undefined behavior: Division by zero", &I);
+  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+        "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitUDiv(BinaryOperator &I) {
-  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
-         "Undefined behavior: Division by zero", &I);
+  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+        "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitSRem(BinaryOperator &I) {
-  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
-         "Undefined behavior: Division by zero", &I);
+  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+        "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitURem(BinaryOperator &I) {
-  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
-         "Undefined behavior: Division by zero", &I);
+  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+        "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitAllocaInst(AllocaInst &I) {
   if (isa<ConstantInt>(I.getArraySize()))
     // This isn't undefined behavior, it's just an obvious pessimization.
-    Assert(&I.getParent()->getParent()->getEntryBlock() == I.getParent(),
-           "Pessimization: Static alloca outside of entry block", &I);
+    Check(&I.getParent()->getParent()->getEntryBlock() == I.getParent(),
+          "Pessimization: Static alloca outside of entry block", &I);
 
   // TODO: Check for an unusual size (MSB set?)
 }
 
 void Lint::visitVAArgInst(VAArgInst &I) {
-  visitMemoryReference(I, MemoryLocation::get(&I), None, nullptr,
+  visitMemoryReference(I, MemoryLocation::get(&I), std::nullopt, nullptr,
                        MemRef::Read | MemRef::Write);
 }
 
 void Lint::visitIndirectBrInst(IndirectBrInst &I) {
-  visitMemoryReference(I, MemoryLocation::getAfter(I.getAddress()), None,
-                       nullptr, MemRef::Branchee);
+  visitMemoryReference(I, MemoryLocation::getAfter(I.getAddress()),
+                       std::nullopt, nullptr, MemRef::Branchee);
 
-  Assert(I.getNumDestinations() != 0,
-         "Undefined behavior: indirectbr with no destinations", &I);
+  Check(I.getNumDestinations() != 0,
+        "Undefined behavior: indirectbr with no destinations", &I);
 }
 
 void Lint::visitExtractElementInst(ExtractElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getIndexOperand(),
                                                         /*OffsetOk=*/false)))
-    Assert(
+    Check(
         CI->getValue().ult(
             cast<FixedVectorType>(I.getVectorOperandType())->getNumElements()),
         "Undefined result: extractelement index out of range", &I);
@@ -607,18 +616,18 @@ void Lint::visitExtractElementInst(ExtractElementInst &I) {
 void Lint::visitInsertElementInst(InsertElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getOperand(2),
                                                         /*OffsetOk=*/false)))
-    Assert(CI->getValue().ult(
-               cast<FixedVectorType>(I.getType())->getNumElements()),
-           "Undefined result: insertelement index out of range", &I);
+    Check(CI->getValue().ult(
+              cast<FixedVectorType>(I.getType())->getNumElements()),
+          "Undefined result: insertelement index out of range", &I);
 }
 
 void Lint::visitUnreachableInst(UnreachableInst &I) {
   // This isn't undefined behavior, it's merely suspicious.
-  Assert(&I == &I.getParent()->front() ||
-             std::prev(I.getIterator())->mayHaveSideEffects(),
-         "Unusual: unreachable immediately preceded by instruction without "
-         "side effects",
-         &I);
+  Check(&I == &I.getParent()->front() ||
+            std::prev(I.getIterator())->mayHaveSideEffects(),
+        "Unusual: unreachable immediately preceded by instruction without "
+        "side effects",
+        &I);
 }
 
 /// findValue - Look through bitcasts and simple memory reference patterns
@@ -650,11 +659,12 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
     BasicBlock::iterator BBI = L->getIterator();
     BasicBlock *BB = L->getParent();
     SmallPtrSet<BasicBlock *, 4> VisitedBlocks;
+    BatchAAResults BatchAA(*AA);
     for (;;) {
       if (!VisitedBlocks.insert(BB).second)
         break;
       if (Value *U =
-              FindAvailableLoadedValue(L, BB, BBI, DefMaxInstsToScan, AA))
+              FindAvailableLoadedValue(L, BB, BBI, DefMaxInstsToScan, &BatchAA))
         return findValueImpl(U, OffsetOk, Visited);
       if (BBI != BB->begin())
         break;
@@ -681,17 +691,12 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
                                CE->getOperand(0)->getType(), CE->getType(),
                                *DL))
         return findValueImpl(CE->getOperand(0), OffsetOk, Visited);
-    } else if (CE->getOpcode() == Instruction::ExtractValue) {
-      ArrayRef<unsigned> Indices = CE->getIndices();
-      if (Value *W = FindInsertedValue(CE->getOperand(0), Indices))
-        if (W != V)
-          return findValueImpl(W, OffsetOk, Visited);
     }
   }
 
   // As a last resort, try SimplifyInstruction or constant folding.
   if (Instruction *Inst = dyn_cast<Instruction>(V)) {
-    if (Value *W = SimplifyInstruction(Inst, {*DL, TLI, DT, AC}))
+    if (Value *W = simplifyInstruction(Inst, {*DL, TLI, DT, AC}))
       return findValueImpl(W, OffsetOk, Visited);
   } else if (auto *C = dyn_cast<Constant>(V)) {
     Value *W = ConstantFoldConstant(C, *DL, TLI);
@@ -712,56 +717,16 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   Lint L(Mod, DL, AA, AC, DT, TLI);
   L.visit(F);
   dbgs() << L.MessagesStr.str();
+  if (LintAbortOnError && !L.MessagesStr.str().empty())
+    report_fatal_error(Twine("Linter found errors, aborting. (enabled by --") +
+                           LintAbortOnErrorArgName + ")",
+                       false);
   return PreservedAnalyses::all();
-}
-
-class LintLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  LintLegacyPass() : FunctionPass(ID) {
-    initializeLintLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-  }
-  void print(raw_ostream &O, const Module *M) const override {}
-};
-
-char LintLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(LintLegacyPass, "lint", "Statically lint-checks LLVM IR",
-                      false, true)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(LintLegacyPass, "lint", "Statically lint-checks LLVM IR",
-                    false, true)
-
-bool LintLegacyPass::runOnFunction(Function &F) {
-  auto *Mod = F.getParent();
-  auto *DL = &F.getParent()->getDataLayout();
-  auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  Lint L(Mod, DL, AA, AC, DT, TLI);
-  L.visit(F);
-  dbgs() << L.MessagesStr.str();
-  return false;
 }
 
 //===----------------------------------------------------------------------===//
 //  Implement the public interfaces to this file...
 //===----------------------------------------------------------------------===//
-
-FunctionPass *llvm::createLintLegacyPassPass() { return new LintLegacyPass(); }
 
 /// lintFunction - Check a function for errors, printing messages on stderr.
 ///
@@ -769,17 +734,25 @@ void llvm::lintFunction(const Function &f) {
   Function &F = const_cast<Function &>(f);
   assert(!F.isDeclaration() && "Cannot lint external functions");
 
-  legacy::FunctionPassManager FPM(F.getParent());
-  auto *V = new LintLegacyPass();
-  FPM.add(V);
-  FPM.run(F);
+  FunctionAnalysisManager FAM;
+  FAM.registerPass([&] { return TargetLibraryAnalysis(); });
+  FAM.registerPass([&] { return DominatorTreeAnalysis(); });
+  FAM.registerPass([&] { return AssumptionAnalysis(); });
+  FAM.registerPass([&] {
+    AAManager AA;
+    AA.registerFunctionAnalysis<BasicAA>();
+    AA.registerFunctionAnalysis<ScopedNoAliasAA>();
+    AA.registerFunctionAnalysis<TypeBasedAA>();
+    return AA;
+  });
+  LintPass().run(F, FAM);
 }
 
 /// lintModule - Check a module for errors, printing messages on stderr.
 ///
 void llvm::lintModule(const Module &M) {
-  legacy::PassManager PM;
-  auto *V = new LintLegacyPass();
-  PM.add(V);
-  PM.run(const_cast<Module &>(M));
+  for (const Function &F : M) {
+    if (!F.isDeclaration())
+      lintFunction(F);
+  }
 }

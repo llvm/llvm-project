@@ -8,7 +8,7 @@ int main() {
 // CHECK: [[X_ADDR:%.+]] = alloca i32,
   int x;
 // CHECK: getelementptr inbounds
-// CHECK: store i32* [[X_ADDR]], i32** %
+// CHECK: store ptr [[X_ADDR]], ptr %
 // CHECK: call
   parallel_loop([&](auto y) {
 #pragma clang __debug captured

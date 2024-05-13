@@ -11,11 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Memory.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <system_error>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
@@ -45,6 +44,8 @@ public:
   size_t getBufferSize() const override { return Buffer.size(); }
 
   Error commit() override {
+    llvm::TimeTraceScope timeScope("Commit buffer to disk");
+
     // Unmap buffer, letting OS flush dirty pages to file on disk.
     Buffer.unmap();
 

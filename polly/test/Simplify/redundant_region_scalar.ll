@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Remove redundant store (a store that writes the same value already
 ; at the destination) in a region.
 ;
-define void @redundant_region_scalar(i32 %n, double* noalias nonnull %A) {
+define void @redundant_region_scalar(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -14,11 +14,11 @@ for:
 
 
     bodyA:
-      %val1 = load double, double* %A
+      %val1 = load double, ptr %A
       br label %region_entry
 
     region_entry:
-      %val2 = load double, double* %A
+      %val2 = load double, ptr %A
       %cmp = fcmp oeq double %val1, 0.0
       br i1 %cmp, label %region_true, label %region_exit
 
@@ -29,7 +29,7 @@ for:
       br label %bodyB
 
     bodyB:
-      store double %val2, double* %A
+      store double %val2, ptr %A
       br label %inc
 
 

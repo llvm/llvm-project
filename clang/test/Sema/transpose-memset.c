@@ -8,11 +8,13 @@
 int array[10];
 int *ptr;
 
-int main() {
+int main(void) {
   memset(array, sizeof(array), 0); // expected-warning{{'size' argument to memset is '0'; did you mean to transpose the last two arguments?}} expected-note{{parenthesize the third argument to silence}}
   memset(array, sizeof(array), 0xff); // expected-warning{{setting buffer to a 'sizeof' expression; did you mean to transpose the last two arguments?}} expected-note{{cast the second argument to 'int' to silence}} expected-warning{{'memset' will always overflow; destination buffer has size 40, but size argument is 255}}
+  memset(array, sizeof(array), '\0'); // expected-warning{{'size' argument to memset is '0'; did you mean to transpose the last two arguments?}} expected-note{{parenthesize the third argument to silence}}
   memset(ptr, sizeof(ptr), 0); // expected-warning{{'size' argument to memset is '0'; did you mean to transpose the last two arguments?}} expected-note{{parenthesize the third argument to silence}}
   memset(ptr, sizeof(*ptr) * 10, 1); // expected-warning{{setting buffer to a 'sizeof' expression; did you mean to transpose the last two arguments?}} expected-note{{cast the second argument to 'int' to silence}}
+  memset(ptr, sizeof(ptr), '\0');    // expected-warning{{'size' argument to memset is '0'; did you mean to transpose the last two arguments?}} expected-note{{parenthesize the third argument to silence}}
   memset(ptr, 10 * sizeof(int *), 1); // expected-warning{{setting buffer to a 'sizeof' expression; did you mean to transpose the last two arguments?}} expected-note{{cast the second argument to 'int' to silence}}
   memset(ptr, 10 * sizeof(int *) + 10, 0xff); // expected-warning{{setting buffer to a 'sizeof' expression; did you mean to transpose the last two arguments?}} expected-note{{cast the second argument to 'int' to silence}}
   memset(ptr, sizeof(char) * sizeof(int *), 0xff); // expected-warning{{setting buffer to a 'sizeof' expression; did you mean to transpose the last two arguments?}} expected-note{{cast the second argument to 'int' to silence}}
@@ -28,7 +30,7 @@ int main() {
   real_bzero(ptr, 0); // expected-warning{{'size' argument to bzero is '0'}} expected-note{{parenthesize the second argument to silence}}
 }
 
-void macros() {
+void macros(void) {
 #define ZERO 0
   int array[10];
   memset(array, 0xff, ZERO); // no warning

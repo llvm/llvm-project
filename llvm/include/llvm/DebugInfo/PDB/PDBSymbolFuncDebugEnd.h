@@ -14,8 +14,6 @@
 
 namespace llvm {
 
-class raw_ostream;
-
 namespace pdb {
 
 class PDBSymbolFuncDebugEnd : public PDBSymbol {
@@ -40,7 +38,7 @@ public:
   FORWARD_SYMBOL_METHOD(getVirtualAddress)
 };
 
+} // namespace pdb
 } // namespace llvm
-}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNCDEBUGEND_H

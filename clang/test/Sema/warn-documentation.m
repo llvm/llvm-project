@@ -98,7 +98,6 @@ int b;
 /// \returns aaa.
 typedef int (^test_param1)(int aaa, int ccc);
 
-// rdar://13094352
 // expected-warning@+2 {{'@method' command should be used in a comment attached to an Objective-C method declaration}}
 @interface I
 /*!	@method Base64EncodeEx
@@ -107,7 +106,6 @@ typedef id ID;
 - (unsigned) Base64EncodeEx : (ID)Arg;
 @end
 
-// rdar://12379114
 // expected-warning@+5 {{'@interface' command should not be used in a comment attached to a non-interface declaration}} 
 // expected-warning@+5 {{'@classdesign' command should not be used in a comment attached to a non-container declaration}}
 // expected-warning@+5 {{'@coclass' command should not be used in a comment attached to a non-container declaration}} 
@@ -124,7 +122,6 @@ typedef id OBJ;
 }
 @end
 
-// rdar://12379114
 // expected-warning@+4 {{'@methodgroup' command should be used in a comment attached to an Objective-C method declaration}}
 // expected-warning@+6 {{'@method' command should be used in a comment attached to an Objective-C method declaratio}}
 @interface rdar12379114
@@ -176,9 +173,8 @@ struct S;
 
 // expected-warning@+1 {{unknown command tag name}}
 /// \t bbb IS_DOXYGEN_END
-int FooBar();
+int FooBar(void);
 
-// rdar://13836387
 /** \brief Module handling the incoming notifications from the system.
  *
  * This includes:
@@ -199,12 +195,11 @@ int FooBar();
 }
 @end
 
-// rdar://13927330
 /// @class Asset  <- '@class' may be used in a comment attached to a an interface declaration
 @interface Asset : NSObject
 @end
 
-// rdar://14024851 Check that this does not enter an infinite loop
+// Check that this does not enter an infinite loop
 @interface rdar14024851
 -(void)meth; // expected-note {{declared here}}
 @end
@@ -217,7 +212,6 @@ int FooBar();
 -(void)meth {}
 @end
 
-// rdar://14124644
 @interface test_vararg1
 /// @param[in] arg something
 /// @param[in] ... This is vararg
@@ -248,6 +242,7 @@ struct HasFields {
   int (^blockPointerFields)(int i);
 };
 
+// expected-warning@+5 {{parameter 'p' not found in the function declaration}}
 // expected-warning@+5 {{'\returns' command used in a comment that is attached to a function returning void}}
 /**
  * functionPointerVariable
@@ -255,7 +250,7 @@ struct HasFields {
  * \param p not here.
  * \returns integer.
  */
-void (^_Nullable blockPointerVariableThatLeadsNowhere)();
+void (^_Nullable blockPointerVariableThatLeadsNowhere)(void);
 
 @interface CheckFunctionBlockPointerVars {
   /**
@@ -297,7 +292,7 @@ void (^_Nullable blockPointerVariableThatLeadsNowhere)();
  * \returns Nothing, but can allow this as this pattern is used to document the
  * value that the property getter returns.
  */
-@property void (^blockReturnsNothing)();
+@property void (^blockReturnsNothing)(void);
 
 @end
 
@@ -313,8 +308,8 @@ void (^_Nullable blockPointerVariableThatLeadsNowhere)();
 typedef void (^VariadicBlockType)(int a, ...);
 
 // PR42844 - Assertion failures when using typedefed block pointers
-typedef void(^VoidBlockType)();
-typedef VoidBlockType VoidBlockTypeCall();
+typedef void(^VoidBlockType)(void);
+typedef VoidBlockType VoidBlockTypeCall(void);
 VoidBlockTypeCall *d; ///< \return none
 // expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
 VoidBlockTypeCall ^e; ///< \return none

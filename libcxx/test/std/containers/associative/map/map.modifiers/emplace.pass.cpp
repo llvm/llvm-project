@@ -41,18 +41,18 @@ int main(int, char**)
         r = m.emplace(std::piecewise_construct, std::forward_as_tuple(1),
                                                 std::forward_as_tuple());
         assert(r.second);
-        assert(r.first == next(m.begin()));
+        assert(r.first == std::next(m.begin()));
         assert(m.size() == 2);
-        assert(next(m.begin())->first == 1);
-        assert(next(m.begin())->second == DefaultOnly());
+        assert(std::next(m.begin())->first == 1);
+        assert(std::next(m.begin())->second == DefaultOnly());
         assert(DefaultOnly::count == 2);
         r = m.emplace(std::piecewise_construct, std::forward_as_tuple(1),
                                                 std::forward_as_tuple());
         assert(!r.second);
-        assert(r.first == next(m.begin()));
+        assert(r.first == std::next(m.begin()));
         assert(m.size() == 2);
-        assert(next(m.begin())->first == 1);
-        assert(next(m.begin())->second == DefaultOnly());
+        assert(std::next(m.begin())->first == 1);
+        assert(std::next(m.begin())->second == DefaultOnly());
         assert(DefaultOnly::count == 2);
     }
     assert(DefaultOnly::count == 0);
@@ -108,18 +108,18 @@ int main(int, char**)
         r = m.emplace(std::piecewise_construct, std::forward_as_tuple(1),
                                                 std::forward_as_tuple());
         assert(r.second);
-        assert(r.first == next(m.begin()));
+        assert(r.first == std::next(m.begin()));
         assert(m.size() == 2);
-        assert(next(m.begin())->first == 1);
-        assert(next(m.begin())->second == DefaultOnly());
+        assert(std::next(m.begin())->first == 1);
+        assert(std::next(m.begin())->second == DefaultOnly());
         assert(DefaultOnly::count == 2);
         r = m.emplace(std::piecewise_construct, std::forward_as_tuple(1),
                                                 std::forward_as_tuple());
         assert(!r.second);
-        assert(r.first == next(m.begin()));
+        assert(r.first == std::next(m.begin()));
         assert(m.size() == 2);
-        assert(next(m.begin())->first == 1);
-        assert(next(m.begin())->second == DefaultOnly());
+        assert(std::next(m.begin())->first == 1);
+        assert(std::next(m.begin())->second == DefaultOnly());
         assert(DefaultOnly::count == 2);
     }
     assert(DefaultOnly::count == 0);

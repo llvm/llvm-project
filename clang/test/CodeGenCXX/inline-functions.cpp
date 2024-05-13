@@ -26,7 +26,6 @@ void B<char>::f() { }
 // MSVCCOMPAT-LABEL: define dso_local void @"?f@@YAXXZ"
 void f() { }
 
-// <rdar://problem/8740363>
 inline void f1(int);
 
 // NORMAL-LABEL: define linkonce_odr void @_Z2f1i
@@ -101,7 +100,7 @@ extern void InlineThenExternThenDefFn();
 void InlineThenExternThenDefFn() {}
 
 // NORMAL-NOT: _Z17ExternAndConstexprFnv
-// MSVCCOMPAT-LABEL: define weak_odr dso_local i32 @"?ExternAndConstexprFn@@YAHXZ"
+// MSVCCOMPAT-LABEL: define weak_odr dso_local noundef i32 @"?ExternAndConstexprFn@@YAHXZ"
 extern constexpr int ExternAndConstexprFn() { return 0; }
 
 // NORMAL-NOT: _Z11ConstexprFnv

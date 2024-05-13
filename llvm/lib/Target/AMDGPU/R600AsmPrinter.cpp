@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600AsmPrinter.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
@@ -71,7 +71,7 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   if (STM.getGeneration() >= AMDGPUSubtarget::EVERGREEN) {
     // Evergreen / Northern Islands
     switch (MF.getFunction().getCallingConv()) {
-    default: LLVM_FALLTHROUGH;
+    default: [[fallthrough]];
     case CallingConv::AMDGPU_CS: RsrcReg = R_0288D4_SQ_PGM_RESOURCES_LS; break;
     case CallingConv::AMDGPU_GS: RsrcReg = R_028878_SQ_PGM_RESOURCES_GS; break;
     case CallingConv::AMDGPU_PS: RsrcReg = R_028844_SQ_PGM_RESOURCES_PS; break;
@@ -80,9 +80,9 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   } else {
     // R600 / R700
     switch (MF.getFunction().getCallingConv()) {
-    default: LLVM_FALLTHROUGH;
-    case CallingConv::AMDGPU_GS: LLVM_FALLTHROUGH;
-    case CallingConv::AMDGPU_CS: LLVM_FALLTHROUGH;
+    default: [[fallthrough]];
+    case CallingConv::AMDGPU_GS: [[fallthrough]];
+    case CallingConv::AMDGPU_CS: [[fallthrough]];
     case CallingConv::AMDGPU_VS: RsrcReg = R_028868_SQ_PGM_RESOURCES_VS; break;
     case CallingConv::AMDGPU_PS: RsrcReg = R_028850_SQ_PGM_RESOURCES_PS; break;
     }
@@ -111,7 +111,7 @@ bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   MCContext &Context = getObjFileLowering().getContext();
   MCSectionELF *ConfigSection =
       Context.getELFSection(".AMDGPU.config", ELF::SHT_PROGBITS, 0);
-  OutStreamer->SwitchSection(ConfigSection);
+  OutStreamer->switchSection(ConfigSection);
 
   EmitProgramInfoR600(MF);
 
@@ -120,7 +120,7 @@ bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (isVerbose()) {
     MCSectionELF *CommentSection =
         Context.getELFSection(".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
-    OutStreamer->SwitchSection(CommentSection);
+    OutStreamer->switchSection(CommentSection);
 
     R600MachineFunctionInfo *MFI = MF.getInfo<R600MachineFunctionInfo>();
     OutStreamer->emitRawComment(
@@ -129,4 +129,3 @@ bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   return false;
 }
-

@@ -58,16 +58,10 @@ class Class2 : public Class1<T> {
 #pragma omp declare reduction(fun1 : long : omp_out += omp_in) initializer                              // expected-error {{expected '(' after 'initializer'}}
 #pragma omp declare reduction(fun2 : long : omp_out += omp_in) initializer {                            // expected-error {{expected '(' after 'initializer'}} expected-error {{expected expression}} expected-warning {{extra tokens at the end of '#pragma omp declare reduction' are ignored}}
 #pragma omp declare reduction(fun3 : long : omp_out += omp_in) initializer[
-#if __cplusplus <= 199711L
-// expected-error@-2 {{expected '(' after 'initializer'}}
-// expected-error@-3 {{expected expression}}
-// expected-warning@-4 {{extra tokens at the end of '#pragma omp declare reduction' are ignored}}
-#else
-// expected-error@-6 {{expected '(' after 'initializer'}}
-// expected-error@-7 {{expected variable name or 'this' in lambda capture list}}
-// expected-error@-8 {{expected ')'}}
-// expected-note@-9 {{to match this '('}}
-#endif
+// expected-error@-1 {{expected '(' after 'initializer'}}
+// expected-error@-2 {{expected variable name or 'this' in lambda capture list}}
+// expected-error@-3 {{expected ')'}}
+// expected-note@-4 {{to match this '('}}
 #pragma omp declare reduction(fun4 : long : omp_out += omp_in) initializer()                            // expected-error {{expected expression}}
 #pragma omp declare reduction(fun5 : long : omp_out += omp_in) initializer(temp)                        // expected-error {{only 'omp_priv' or 'omp_orig' variables are allowed in initializer expression}}
 #pragma omp declare reduction(fun6 : long : omp_out += omp_in) initializer(omp_orig                     // expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -169,7 +163,6 @@ struct S
   #pragma omp declare reduction (xxx : U, S : bar(omp_in)) // expected-error {{non-const lvalue reference to type 'S<1>' cannot bind to a value of unrelated type 'U'}}
   static void bar(S &x); // expected-note {{passing argument to parameter 'x' here}}
 };
-// expected-warning@+2 {{extra tokens at the end of '#pragma omp declare reduction' are ignored}}
 // expected-note@+1 {{in instantiation of template class 'S<1>' requested here}}
 #pragma omp declare reduction (bar : S<1> : omp_out.foo(omp_in))
 

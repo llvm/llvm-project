@@ -41,7 +41,8 @@ inline uint32_t Clzll(uint64_t X) {
 #if !defined(_M_ARM) && !defined(_M_X64)
   // Scan the high 32 bits.
   if (_BitScanReverse(&LeadZeroIdx, static_cast<unsigned long>(X >> 32)))
-    return static_cast<int>(63 - (LeadZeroIdx + 32)); // Create a bit offset from the MSB.
+    return static_cast<int>(
+        63 - (LeadZeroIdx + 32)); // Create a bit offset from the MSB.
   // Scan the low 32 bits.
   if (_BitScanReverse(&LeadZeroIdx, static_cast<unsigned long>(X)))
     return static_cast<int>(63 - LeadZeroIdx);

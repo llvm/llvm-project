@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_REQUIREMENTS_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_REQUIREMENTS_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULEREQUIREMENTS_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULEREQUIREMENTS_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Refactoring/ASTSelection.h"
@@ -98,7 +98,7 @@ public:
   OptionRequirement() : Opt(createRefactoringOption<OptionType>()) {}
 
   ArrayRef<std::shared_ptr<RefactoringOption>>
-  getRefactoringOptions() const final override {
+  getRefactoringOptions() const final {
     return Opt;
   }
 
@@ -119,4 +119,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_REQUIREMENTS_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULEREQUIREMENTS_H

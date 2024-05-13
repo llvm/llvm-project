@@ -10,30 +10,29 @@
 
 int a[10];
 
-int f0() {
+int f0(void) {
   return OBJECT_SIZE_BUILTIN(&a); // expected-error {{too few arguments to function}}
 }
-int f1() {
+int f1(void) {
   return (OBJECT_SIZE_BUILTIN(&a, 0) + 
           OBJECT_SIZE_BUILTIN(&a, 1) + 
           OBJECT_SIZE_BUILTIN(&a, 2) + 
           OBJECT_SIZE_BUILTIN(&a, 3));
 }
-int f2() {
+int f2(void) {
   return OBJECT_SIZE_BUILTIN(&a, -1); // expected-error {{argument value -1 is outside the valid range [0, 3]}}
 }
-int f3() {
+int f3(void) {
   return OBJECT_SIZE_BUILTIN(&a, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
 
-// rdar://6252231 - cannot call vsnprintf with va_list on x86_64
+// cannot call vsnprintf with va_list on x86_64
 void f4(const char *fmt, ...) {
  __builtin_va_list args;
  __builtin___vsnprintf_chk (0, 42, 0, 11, fmt, args); // expected-warning {{'vsnprintf' will always overflow; destination buffer has size 11, but size argument is 42}}
 }
 
-// rdar://18334276
 typedef __typeof__(sizeof(int)) size_t;
 void * memcset(void *restrict dst, int src, size_t n);
 void * memcpy(void *restrict dst, const void *restrict src, size_t n);
@@ -51,7 +50,6 @@ void f5(void)
   memcpy1((char *)NULL + 0x10000, buf, 0x10); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
-// rdar://18431336
 void f6(void)
 {
   char b[5];
@@ -84,7 +82,7 @@ int pr28314(void) {
   return a;
 }
 
-int pr31843() {
+int pr31843(void) {
   int n = 0;
 
   struct { int f; } a;

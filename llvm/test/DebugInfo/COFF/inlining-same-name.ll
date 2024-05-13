@@ -18,6 +18,12 @@
 ; CHECK:     {{.*}}Proc{{.*}}Sym {
 ; CHECK:       DisplayName: main
 ; CHECK:     }
+; CHECK:     InlineesSym {
+; CHECK-NEXT:  Kind: S_INLINEES (0x1168)
+; CHECK-NEXT:  Inlinees [
+; CHECK-NEXT:    FuncID: same_name (0x1002)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:}
 ; CHECK:     InlineSiteSym {
 ; CHECK:       Inlinee: same_name (0x1002)
 ; CHECK:     }
@@ -34,9 +40,9 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
-define void @main(i32* %i.i) !dbg !16 {
-  store volatile i32 3, i32* %i.i, !dbg !6
-  store volatile i32 3, i32* %i.i, !dbg !19
+define void @main(ptr %i.i) !dbg !16 {
+  store volatile i32 3, ptr %i.i, !dbg !6
+  store volatile i32 3, ptr %i.i, !dbg !19
   ret void
 }
 

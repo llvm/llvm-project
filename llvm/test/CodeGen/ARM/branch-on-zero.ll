@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple thumbv8.1m.main-none-eabi -mattr=+mve,+lob -o - %s | FileCheck %s --check-prefix=CHECK-V81M
 ; RUN: llc -mtriple armv7a-none-eabi -o - %s | FileCheck %s --check-prefix=CHECK-V7A
 
-define i32 @test_lshr(i32* nocapture %x, i32* nocapture readonly %y, i32 %n) {
+define i32 @test_lshr(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-V6M-LABEL: test_lshr:
 ; CHECK-V6M:       @ %bb.0: @ %entry
 ; CHECK-V6M-NEXT:    lsrs r2, r2, #2
@@ -56,19 +56,16 @@ define i32 @test_lshr(i32* nocapture %x, i32* nocapture readonly %y, i32 %n) {
 ;
 ; CHECK-V7A-LABEL: test_lshr:
 ; CHECK-V7A:       @ %bb.0: @ %entry
-; CHECK-V7A-NEXT:    mov r3, #0
-; CHECK-V7A-NEXT:    cmp r3, r2, lsr #2
-; CHECK-V7A-NEXT:    beq .LBB0_3
-; CHECK-V7A-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-V7A-NEXT:    lsr r2, r2, #2
-; CHECK-V7A-NEXT:  .LBB0_2: @ %while.body
+; CHECK-V7A-NEXT:    lsrs r2, r2, #2
+; CHECK-V7A-NEXT:    beq .LBB0_2
+; CHECK-V7A-NEXT:  .LBB0_1: @ %while.body
 ; CHECK-V7A-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-V7A-NEXT:    ldr r3, [r1], #4
 ; CHECK-V7A-NEXT:    subs r2, r2, #1
 ; CHECK-V7A-NEXT:    lsl r3, r3, #1
 ; CHECK-V7A-NEXT:    str r3, [r0], #4
-; CHECK-V7A-NEXT:    bne .LBB0_2
-; CHECK-V7A-NEXT:  .LBB0_3: @ %while.end
+; CHECK-V7A-NEXT:    bne .LBB0_1
+; CHECK-V7A-NEXT:  .LBB0_2: @ %while.end
 ; CHECK-V7A-NEXT:    mov r0, #0
 ; CHECK-V7A-NEXT:    bx lr
 entry:
@@ -78,13 +75,13 @@ entry:
 
 while.body:                                       ; preds = %entry, %while.body
   %c.07 = phi i32 [ %dec, %while.body ], [ %shr, %entry ]
-  %x.addr.06 = phi i32* [ %incdec.ptr1, %while.body ], [ %x, %entry ]
-  %y.addr.05 = phi i32* [ %incdec.ptr, %while.body ], [ %y, %entry ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %y.addr.05, i32 1
-  %0 = load i32, i32* %y.addr.05, align 4
+  %x.addr.06 = phi ptr [ %incdec.ptr1, %while.body ], [ %x, %entry ]
+  %y.addr.05 = phi ptr [ %incdec.ptr, %while.body ], [ %y, %entry ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %y.addr.05, i32 1
+  %0 = load i32, ptr %y.addr.05, align 4
   %mul = shl nsw i32 %0, 1
-  %incdec.ptr1 = getelementptr inbounds i32, i32* %x.addr.06, i32 1
-  store i32 %mul, i32* %x.addr.06, align 4
+  %incdec.ptr1 = getelementptr inbounds i32, ptr %x.addr.06, i32 1
+  store i32 %mul, ptr %x.addr.06, align 4
   %dec = add nsw i32 %c.07, -1
   %tobool.not = icmp eq i32 %dec, 0
   br i1 %tobool.not, label %while.end, label %while.body
@@ -93,7 +90,7 @@ while.end:                                        ; preds = %while.body, %entry
   ret i32 0
 }
 
-define i32 @test_lshr2(i32* nocapture %x, i32* nocapture readonly %y, i32 %n) {
+define i32 @test_lshr2(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-V6M-LABEL: test_lshr2:
 ; CHECK-V6M:       @ %bb.0: @ %entry
 ; CHECK-V6M-NEXT:    lsrs r2, r2, #2
@@ -145,19 +142,16 @@ define i32 @test_lshr2(i32* nocapture %x, i32* nocapture readonly %y, i32 %n) {
 ;
 ; CHECK-V7A-LABEL: test_lshr2:
 ; CHECK-V7A:       @ %bb.0: @ %entry
-; CHECK-V7A-NEXT:    mov r3, #0
-; CHECK-V7A-NEXT:    cmp r3, r2, lsr #2
-; CHECK-V7A-NEXT:    beq .LBB1_3
-; CHECK-V7A-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-V7A-NEXT:    lsr r2, r2, #2
-; CHECK-V7A-NEXT:  .LBB1_2: @ %while.body
+; CHECK-V7A-NEXT:    lsrs r2, r2, #2
+; CHECK-V7A-NEXT:    beq .LBB1_2
+; CHECK-V7A-NEXT:  .LBB1_1: @ %while.body
 ; CHECK-V7A-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-V7A-NEXT:    ldr r3, [r1], #4
 ; CHECK-V7A-NEXT:    subs r2, r2, #1
 ; CHECK-V7A-NEXT:    lsl r3, r3, #1
 ; CHECK-V7A-NEXT:    str r3, [r0], #4
-; CHECK-V7A-NEXT:    bne .LBB1_2
-; CHECK-V7A-NEXT:  .LBB1_3: @ %while.end
+; CHECK-V7A-NEXT:    bne .LBB1_1
+; CHECK-V7A-NEXT:  .LBB1_2: @ %while.end
 ; CHECK-V7A-NEXT:    mov r0, #0
 ; CHECK-V7A-NEXT:    bx lr
 entry:
@@ -170,13 +164,13 @@ while.body.preheader:                             ; preds = %entry
 
 while.body:                                       ; preds = %while.body.preheader, %while.body
   %c.07 = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
-  %x.addr.06 = phi i32* [ %incdec.ptr1, %while.body ], [ %x, %while.body.preheader ]
-  %y.addr.05 = phi i32* [ %incdec.ptr, %while.body ], [ %y, %while.body.preheader ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %y.addr.05, i32 1
-  %0 = load i32, i32* %y.addr.05, align 4
+  %x.addr.06 = phi ptr [ %incdec.ptr1, %while.body ], [ %x, %while.body.preheader ]
+  %y.addr.05 = phi ptr [ %incdec.ptr, %while.body ], [ %y, %while.body.preheader ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %y.addr.05, i32 1
+  %0 = load i32, ptr %y.addr.05, align 4
   %mul = shl nsw i32 %0, 1
-  %incdec.ptr1 = getelementptr inbounds i32, i32* %x.addr.06, i32 1
-  store i32 %mul, i32* %x.addr.06, align 4
+  %incdec.ptr1 = getelementptr inbounds i32, ptr %x.addr.06, i32 1
+  store i32 %mul, ptr %x.addr.06, align 4
   %dec = add nsw i32 %c.07, -1
   %tobool.not = icmp eq i32 %dec, 0
   br i1 %tobool.not, label %while.end, label %while.body

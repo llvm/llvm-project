@@ -8,9 +8,10 @@
 
 # Flang C++ Style Guide
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 This document captures the style guide rules that are followed in the Flang codebase.
@@ -19,7 +20,7 @@ This document captures the style guide rules that are followed in the Flang code
 * Use *clang-format*
 from llvm 7
 on all C++ source and header files before
-every merge to master.  All code layout should be determined
+every merge to main.  All code layout should be determined
 by means of clang-format.
 * Where a clear precedent exists in the project, follow it.
 * Otherwise, where [LLVM's C++ style guide](https://llvm.org/docs/CodingStandards.html#style-issues)
@@ -115,7 +116,10 @@ Don't try to make columns of variable names or comments
 align vertically -- they are maintenance problems.
 
 Always wrap the bodies of `if()`, `else`, `while()`, `for()`, `do`, &c.
-with braces, even when the body is a single statement or empty.  The
+with braces, even when the body is a single statement or empty.  Note that this
+diverges from the LLVM coding style.  In parts of the codebase that make heavy
+use of LLVM or MLIR APIs (e.g. the Lower and Optimizer libraries), use the
+LLVM style instead.  The
 opening `{` goes on
 the end of the line, not on the next line.  Functions also put the opening
 `{` after the formal arguments or new-style result type, not on the next

@@ -1,9 +1,0 @@
-static_library("YAML") {
-  output_name = "lldYAML"
-  configs += [ "//llvm/utils/gn/build:lld_code" ]
-  deps = [
-    "//lld/lib/Core",
-    "//llvm/lib/Support",
-  ]
-  sources = [ "ReaderWriterYAML.cpp" ]
-}

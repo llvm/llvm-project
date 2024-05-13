@@ -22,7 +22,7 @@
 # CHECK-NEXT: AddressAlignment: 1
 # CHECK-NEXT: EntrySize: 0
 # CHECK-NEXT: SectionData (
-# CHECK-NEXT:   0000: 67452301 10325476 67452301 10325476
+# CHECK-NEXT:   0000: 10325476 67452301 67452301 10325476
 
 .section .rodata.cst4,"aM",@progbits,4
 rodata4:

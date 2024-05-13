@@ -38,14 +38,10 @@ define half @freeze_half() {
 ; X86ASM:       # %bb.0:
 ; X86ASM-NEXT:    pushq %rax
 ; X86ASM-NEXT:    .cfi_def_cfa_offset 16
-; X86ASM-NEXT:    xorl %edi, %edi
-; X86ASM-NEXT:    callq __gnu_h2f_ieee
-; X86ASM-NEXT:    callq __gnu_f2h_ieee
-; X86ASM-NEXT:    movzwl %ax, %edi
-; X86ASM-NEXT:    callq __gnu_h2f_ieee
+; X86ASM-NEXT:    callq __extendhfsf2@PLT
 ; X86ASM-NEXT:    addss %xmm0, %xmm0
-; X86ASM-NEXT:    callq __gnu_f2h_ieee
-; X86ASM-NEXT:    popq %rcx
+; X86ASM-NEXT:    callq __truncsfhf2@PLT
+; X86ASM-NEXT:    popq %rax
 ; X86ASM-NEXT:    .cfi_def_cfa_offset 8
 ; X86ASM-NEXT:    retq
   %y1 = freeze half undef
@@ -63,14 +59,14 @@ define <2 x i32> @freeze_ivec() {
   ret <2 x i32> %t1
 }
 
-define i8* @freeze_ptr() {
+define ptr @freeze_ptr() {
 ; X86ASM-LABEL: freeze_ptr:
 ; X86ASM:       # %bb.0:
 ; X86ASM-NEXT:    addq $4, %rax
 ; X86ASM-NEXT:    retq
-  %y1 = freeze i8* undef
-  %t1 = getelementptr i8, i8* %y1, i64 4
-  ret i8* %t1
+  %y1 = freeze ptr undef
+  %t1 = getelementptr i8, ptr %y1, i64 4
+  ret ptr %t1
 }
 
 define i32 @freeze_struct() {
@@ -121,4 +117,27 @@ define i64 @freeze_array() {
   %v2 = extractvalue [2 x i64] %y1, 1
   %t1 = add i64 %v1, %v2
   ret i64 %t1
+}
+
+; Make sure we emit a movl to zext the input before the imulq. This previously
+; failed because freeze was not listed in the instructions that don't zext their
+; result in the def32 pattern X86InstrCompiler.td.
+define i32 @freeze_zext(i64 %a) nounwind {
+; X86ASM-LABEL: freeze_zext:
+; X86ASM:       # %bb.0: # %entry
+; X86ASM-NEXT:    movq %rdi, %rax
+; X86ASM-NEXT:    movl %eax, %ecx
+; X86ASM-NEXT:    movl $3435973837, %edx # imm = 0xCCCCCCCD
+; X86ASM-NEXT:    imulq %rcx, %rdx
+; X86ASM-NEXT:    shrq $35, %rdx
+; X86ASM-NEXT:    addl %edx, %edx
+; X86ASM-NEXT:    leal (%rdx,%rdx,4), %ecx
+; X86ASM-NEXT:    subl %ecx, %eax
+; X86ASM-NEXT:    # kill: def $eax killed $eax killed $rax
+; X86ASM-NEXT:    retq
+entry:
+  %x = trunc i64 %a to i32
+  %y = freeze i32 %x
+  %z = urem i32 %y, 10
+  ret i32 %z
 }

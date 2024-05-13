@@ -68,10 +68,10 @@ static_assert(((sizeof g_fpr_regnums_arm / sizeof g_fpr_regnums_arm[0]) - 1) ==
               "g_fpu_regnums_arm has wrong number of register infos");
 
 static const RegisterSet g_reg_sets_arm[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_regnums_arm) - 1, g_gpr_regnums_arm},
-    {"Floating Point Registers", "fpr",
-     llvm::array_lengthof(g_fpr_regnums_arm) - 1, g_fpr_regnums_arm},
+    {"General Purpose Registers", "gpr", std::size(g_gpr_regnums_arm) - 1,
+     g_gpr_regnums_arm},
+    {"Floating Point Registers", "fpr", std::size(g_fpr_regnums_arm) - 1,
+     g_fpr_regnums_arm},
 };
 
 enum { k_num_register_sets = 2 };
@@ -80,15 +80,15 @@ enum { k_num_register_sets = 2 };
 
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
-  assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
-         "Register setting path assumes this is a 64-bit host");
+  assert((HostInfo::GetArchitecture().GetAddressByteSize() == 4) &&
+         "Register setting path assumes this is a 32-bit host");
   return new RegisterInfoPOSIX_arm(target_arch);
 }
 
 static Status GetThreadContextHelper(lldb::thread_t thread_handle,
                                      PCONTEXT context_ptr,
                                      const DWORD control_flag) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
 
   memset(context_ptr, 0, sizeof(::CONTEXT));
@@ -104,7 +104,7 @@ static Status GetThreadContextHelper(lldb::thread_t thread_handle,
 
 static Status SetThreadContextHelper(lldb::thread_t thread_handle,
                                      PCONTEXT context_ptr) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
   // It's assumed that the thread has stopped.
   if (!::SetThreadContext(thread_handle, context_ptr)) {
@@ -560,7 +560,7 @@ Status NativeRegisterContextWindows_arm::WriteRegister(
 }
 
 Status NativeRegisterContextWindows_arm::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   const size_t data_size = REG_CONTEXT_SIZE;
   data_sp = std::make_shared<DataBufferHeap>(data_size, 0);
   ::CONTEXT tls_context;

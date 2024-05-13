@@ -1,4 +1,4 @@
-//===---------------------------- cxa_guard.cpp ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -48,6 +48,6 @@ _LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *raw_guard_object) {
   SelectedImplementation imp(raw_guard_object);
   imp.cxa_guard_abort();
 }
-}  // extern "C"
+} // extern "C"
 
 }  // __cxxabiv1

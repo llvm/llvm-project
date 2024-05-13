@@ -11,5 +11,5 @@
 
 #import <A/A.h>
 
-int bar() { return foo(); }
+int bar(void) { return foo(); }
 

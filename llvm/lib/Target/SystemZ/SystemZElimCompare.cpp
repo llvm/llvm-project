@@ -18,7 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -65,11 +65,8 @@ class SystemZElimCompare : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZElimCompare(const SystemZTargetMachine &tm)
-    : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "SystemZ Comparison Elimination";
+  SystemZElimCompare() : MachineFunctionPass(ID) {
+    initializeSystemZElimComparePass(*PassRegistry::getPassRegistry());
   }
 
   bool processBlock(MachineBasicBlock &MBB);
@@ -106,6 +103,9 @@ char SystemZElimCompare::ID = 0;
 
 } // end anonymous namespace
 
+INITIALIZE_PASS(SystemZElimCompare, DEBUG_TYPE,
+                "SystemZ Comparison Elimination", false, false)
+
 // Returns true if MI is an instruction whose output equals the value in Reg.
 static bool preservesValueOf(MachineInstr &MI, unsigned Reg) {
   switch (MI.getOpcode()) {
@@ -115,12 +115,6 @@ static bool preservesValueOf(MachineInstr &MI, unsigned Reg) {
   case SystemZ::LTR:
   case SystemZ::LTGR:
   case SystemZ::LTGFR:
-  case SystemZ::LER:
-  case SystemZ::LDR:
-  case SystemZ::LXR:
-  case SystemZ::LTEBR:
-  case SystemZ::LTDBR:
-  case SystemZ::LTXBR:
     if (MI.getOperand(1).getReg() == Reg)
       return true;
   }
@@ -144,8 +138,7 @@ Reference SystemZElimCompare::getRegReferences(MachineInstr &MI, unsigned Reg) {
   if (MI.isDebugInstr())
     return Ref;
 
-  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = MI.getOperand(I);
+  for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
       if (Register MOReg = MO.getReg()) {
         if (TRI->regsOverlap(MOReg, Reg)) {
@@ -225,7 +218,7 @@ bool SystemZElimCompare::convertToBRCT(
   // The transformation is OK.  Rebuild Branch as a BRCT(G) or BRCTH.
   MachineOperand Target(Branch->getOperand(2));
   while (Branch->getNumOperands())
-    Branch->RemoveOperand(0);
+    Branch->removeOperand(0);
   Branch->setDesc(TII->get(BRCT));
   MachineInstrBuilder MIB(*Branch->getParent()->getParent(), Branch);
   MIB.add(MI.getOperand(0)).add(MI.getOperand(1)).add(Target);
@@ -268,7 +261,7 @@ bool SystemZElimCompare::convertToLoadAndTrap(
 
   // The transformation is OK.  Rebuild Branch as a load-and-trap.
   while (Branch->getNumOperands())
-    Branch->RemoveOperand(0);
+    Branch->removeOperand(0);
   Branch->setDesc(TII->get(LATOpcode));
   MachineInstrBuilder(*Branch->getParent()->getParent(), Branch)
       .add(MI.getOperand(0))
@@ -499,18 +492,10 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
 
 // Return true if Compare is a comparison against zero.
 static bool isCompareZero(MachineInstr &Compare) {
-  switch (Compare.getOpcode()) {
-  case SystemZ::LTEBRCompare:
-  case SystemZ::LTDBRCompare:
-  case SystemZ::LTXBRCompare:
+  if (isLoadAndTestAsCmp(Compare))
     return true;
-
-  default:
-    if (isLoadAndTestAsCmp(Compare))
-      return true;
-    return Compare.getNumExplicitOperands() == 2 &&
-           Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
-  }
+  return Compare.getNumExplicitOperands() == 2 &&
+    Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
 }
 
 // Try to optimize cases where comparison instruction Compare is testing
@@ -570,11 +555,10 @@ bool SystemZElimCompare::optimizeCompareZero(
 
   // Also do a forward search to handle cases where an instruction after the
   // compare can be converted, like
-  // LTEBRCompare %f0s, %f0s; %f2s = LER %f0s  =>  LTEBRCompare %f2s, %f0s
-  for (MachineBasicBlock::iterator MBBI =
-         std::next(MachineBasicBlock::iterator(&Compare)), MBBE = MBB.end();
-       MBBI != MBBE;) {
-    MachineInstr &MI = *MBBI++;
+  // CGHI %r0d, 0; %r1d = LGR %r0d  =>  LTGR %r1d, %r0d
+  auto MIRange = llvm::make_range(
+      std::next(MachineBasicBlock::iterator(&Compare)), MBB.end());
+  for (MachineInstr &MI : llvm::make_early_inc_range(MIRange)) {
     if (preservesValueOf(MI, SrcReg)) {
       // Try to eliminate Compare by reusing a CC result from MI.
       if (convertToLoadAndTest(MI, Compare, CCUsers)) {
@@ -649,18 +633,18 @@ bool SystemZElimCompare::fuseCompareOperations(
     RegMask = MBBI->getOperand(3).getRegMask();
 
   // Clear out all current operands.
-  int CCUse = MBBI->findRegisterUseOperandIdx(SystemZ::CC, false, TRI);
+  int CCUse = MBBI->findRegisterUseOperandIdx(SystemZ::CC, TRI, false);
   assert(CCUse >= 0 && "BRC/BCR must use CC");
-  Branch->RemoveOperand(CCUse);
+  Branch->removeOperand(CCUse);
   // Remove regmask (sibcall).
   if (Type == SystemZII::CompareAndSibcall)
-    Branch->RemoveOperand(3);
+    Branch->removeOperand(3);
   // Remove target (branch or sibcall).
   if (Type == SystemZII::CompareAndBranch ||
       Type == SystemZII::CompareAndSibcall)
-    Branch->RemoveOperand(2);
-  Branch->RemoveOperand(1);
-  Branch->RemoveOperand(0);
+    Branch->removeOperand(2);
+  Branch->removeOperand(1);
+  Branch->removeOperand(0);
 
   // Rebuild Branch as a fused compare and branch.
   // SrcNOps is the number of MI operands of the compare instruction
@@ -706,9 +690,9 @@ bool SystemZElimCompare::processBlock(MachineBasicBlock &MBB) {
   // Walk backwards through the block looking for comparisons, recording
   // all CC users as we go.  The subroutines can delete Compare and
   // instructions before it.
-  LivePhysRegs LiveRegs(*TRI);
+  LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(MBB);
-  bool CompleteCCUsers = !LiveRegs.contains(SystemZ::CC);
+  bool CompleteCCUsers = LiveRegs.available(SystemZ::CC);
   SmallVector<MachineInstr *, 4> CCUsers;
   MachineBasicBlock::iterator MBBI = MBB.end();
   while (MBBI != MBB.begin()) {
@@ -723,11 +707,11 @@ bool SystemZElimCompare::processBlock(MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (MI.definesRegister(SystemZ::CC)) {
+    if (MI.definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
       CCUsers.clear();
       CompleteCCUsers = true;
     }
-    if (MI.readsRegister(SystemZ::CC) && CompleteCCUsers)
+    if (MI.readsRegister(SystemZ::CC, /*TRI=*/nullptr) && CompleteCCUsers)
       CCUsers.push_back(&MI);
   }
   return Changed;
@@ -737,7 +721,7 @@ bool SystemZElimCompare::runOnMachineFunction(MachineFunction &F) {
   if (skipFunction(F.getFunction()))
     return false;
 
-  TII = static_cast<const SystemZInstrInfo *>(F.getSubtarget().getInstrInfo());
+  TII = F.getSubtarget<SystemZSubtarget>().getInstrInfo();
   TRI = &TII->getRegisterInfo();
 
   bool Changed = false;
@@ -748,5 +732,5 @@ bool SystemZElimCompare::runOnMachineFunction(MachineFunction &F) {
 }
 
 FunctionPass *llvm::createSystemZElimComparePass(SystemZTargetMachine &TM) {
-  return new SystemZElimCompare(TM);
+  return new SystemZElimCompare();
 }

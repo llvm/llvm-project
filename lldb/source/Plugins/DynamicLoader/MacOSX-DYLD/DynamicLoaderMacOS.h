@@ -39,9 +39,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "macos-dyld"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb_private::DynamicLoader *
   CreateInstance(lldb_private::Process *process, bool force);
@@ -60,9 +60,7 @@ public:
       lldb_private::LazyBool &private_shared_cache) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   void PutToLog(lldb_private::Log *log) const;
@@ -73,14 +71,22 @@ protected:
 
   bool DidSetNotificationBreakpoint() override;
 
+  bool SetDYLDHandoverBreakpoint(lldb::addr_t notification_address);
+
+  void ClearDYLDHandoverBreakpoint();
+
   void AddBinaries(const std::vector<lldb::addr_t> &load_addresses);
 
   void DoClear() override;
+
+  bool IsFullyInitialized() override;
 
   static bool
   NotifyBreakpointHit(void *baton,
                       lldb_private::StoppointCallbackContext *context,
                       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
+
+  lldb::addr_t GetNotificationFuncAddrFromImageInfos();
 
   bool SetNotificationBreakpoint() override;
 
@@ -96,6 +102,7 @@ protected:
   uint32_t m_image_infos_stop_id; // The Stop ID the last time we
                                   // loaded/unloaded images
   lldb::user_id_t m_break_id;
+  lldb::user_id_t m_dyld_handover_break_id;
   mutable std::recursive_mutex m_mutex;
   lldb::addr_t m_maybe_image_infos_address; // If dyld is still maintaining the
                                             // all_image_infos address, store it
@@ -103,6 +110,7 @@ protected:
                                             // exec's when talking to
                                             // debugservers that don't support
                                             // the "reason:exec" annotation.
+  bool m_libsystem_fully_initalized;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H

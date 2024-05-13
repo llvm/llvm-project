@@ -10,17 +10,17 @@
 
   declare i32 @llvm.arm.space(i32, i32) #0
 
-  define dso_local i32 @ARM(i64* %LL, i32 %A.coerce) local_unnamed_addr #1 {
+  define dso_local i32 @ARM(ptr %LL, i32 %A.coerce) local_unnamed_addr #1 {
   entry:
     %S = alloca half, align 2
     %tmp.0.extract.trunc = trunc i32 %A.coerce to i16
     %0 = bitcast i16 %tmp.0.extract.trunc to half
-    store volatile half 0xH3C00, half* %S, align 2
-    store volatile i64 4242424242424242, i64* %LL, align 8
+    store volatile half 0xH3C00, ptr %S, align 2
+    store volatile i64 4242424242424242, ptr %LL, align 8
     %1 = call i32 @llvm.arm.space(i32 8920, i32 undef)
-    %S.0.S.0.570 = load volatile half, half* %S, align 2
+    %S.0.S.0.570 = load volatile half, ptr %S, align 2
     %add298 = fadd half %S.0.S.0.570, 0xH2E66
-    store volatile half %add298, half* %S, align 2
+    store volatile half %add298, ptr %S, align 2
     %2 = call i32 @llvm.arm.space(i32 1350, i32 undef)
     %3 = bitcast half %add298 to i16
     %tmp343.0.insert.ext = zext i16 %3 to i32
@@ -73,16 +73,16 @@ body:             |
     $sp = frame-setup SUBri $sp, 4, 14, $noreg, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 4
     renamable $s0 = FCONSTH 112, 14, $noreg
-    renamable $r1 = LDRcp %const.0, 0, 14, $noreg :: (load 4 from constant-pool)
-    renamable $r2 = LDRcp %const.1, 0, 14, $noreg :: (load 4 from constant-pool)
-    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (volatile store 2 into %ir.S)
-    STRi12 killed renamable $r2, renamable $r0, 4, 14, $noreg :: (volatile store 4 into %ir.LL + 4)
-    renamable $s0 = VLDRH %const.2, 0, 14, $noreg :: (load 2 from constant-pool)
-    STRi12 killed renamable $r1, killed renamable $r0, 0, 14, $noreg :: (volatile store 4 into %ir.LL, align 8)
+    renamable $r1 = LDRcp %const.0, 0, 14, $noreg :: (load (s32) from constant-pool)
+    renamable $r2 = LDRcp %const.1, 0, 14, $noreg :: (load (s32) from constant-pool)
+    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
+    STRi12 killed renamable $r2, renamable $r0, 4, 14, $noreg :: (volatile store (s32) into %ir.LL + 4)
+    renamable $s0 = VLDRH %const.2, 0, 14, $noreg :: (load (s16) from constant-pool)
+    STRi12 killed renamable $r1, killed renamable $r0, 0, 14, $noreg :: (volatile store (s32) into %ir.LL, align 8)
     dead renamable $r0 = SPACE 8920, undef renamable $r0
-    renamable $s2 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load 2 from %ir.S)
+    renamable $s2 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load (s16) from %ir.S)
     renamable $s0 = VADDH killed renamable $s2, killed renamable $s0, 14, $noreg
-    VSTRH renamable $s0, $sp, 1, 14, $noreg :: (volatile store 2 into %ir.S)
+    VSTRH renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
     renamable $r0 = VMOVRH killed renamable $s0, 14, $noreg
     dead renamable $r1 = SPACE 1350, undef renamable $r0
     $sp = ADDri $sp, 4, 14, $noreg, $noreg

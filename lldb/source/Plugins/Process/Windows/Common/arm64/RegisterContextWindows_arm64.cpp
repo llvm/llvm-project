@@ -37,15 +37,14 @@ using namespace lldb_private;
                               {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                LLDB_INVALID_REGNUM },                          \
-                               NULL, NULL, NULL, 0
+                               NULL, NULL, NULL
 
 // Include RegisterInfos_arm64 to declare our g_register_infos_arm64 structure.
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT
 #include "Plugins/Process/Utility/RegisterInfos_arm64.h"
 #undef DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
-static size_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos_arm64_le);
+static size_t k_num_register_infos = std::size(g_register_infos_arm64_le);
 
 // Array of lldb register numbers used to define the set of all General Purpose
 // Registers
@@ -82,9 +81,9 @@ uint32_t g_fpu_reg_indices[] = {
 };
 
 RegisterSet g_register_sets[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_reg_indices), g_gpr_reg_indices},
-    {"Floating Point Registers", "fpu", llvm::array_lengthof(g_fpu_reg_indices),
+    {"General Purpose Registers", "gpr", std::size(g_gpr_reg_indices),
+     g_gpr_reg_indices},
+    {"Floating Point Registers", "fpu", std::size(g_fpu_reg_indices),
      g_fpu_reg_indices},
 };
 
@@ -96,7 +95,7 @@ RegisterContextWindows_arm64::RegisterContextWindows_arm64(
 RegisterContextWindows_arm64::~RegisterContextWindows_arm64() {}
 
 size_t RegisterContextWindows_arm64::GetRegisterCount() {
-  return llvm::array_lengthof(g_register_infos_arm64_le);
+  return std::size(g_register_infos_arm64_le);
 }
 
 const RegisterInfo *
@@ -107,7 +106,7 @@ RegisterContextWindows_arm64::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextWindows_arm64::GetRegisterSetCount() {
-  return llvm::array_lengthof(g_register_sets);
+  return std::size(g_register_sets);
 }
 
 const RegisterSet *
@@ -171,7 +170,7 @@ bool RegisterContextWindows_arm64::ReadRegister(const RegisterInfo *reg_info,
     reg_value.SetUInt64(m_context.Pc);
     break;
   case gpr_cpsr:
-    reg_value.SetUInt64(m_context.Cpsr);
+    reg_value.SetUInt32(m_context.Cpsr);
     break;
 
   case gpr_w0:
@@ -385,7 +384,7 @@ bool RegisterContextWindows_arm64::WriteRegister(
     m_context.Pc = reg_value.GetAsUInt64();
     break;
   case gpr_cpsr:
-    m_context.Cpsr = reg_value.GetAsUInt64();
+    m_context.Cpsr = reg_value.GetAsUInt32();
     break;
 
   case fpu_v0:

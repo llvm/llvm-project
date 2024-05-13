@@ -32,7 +32,7 @@ RegisterContextCorePOSIX_mips64::RegisterContextCorePOSIX_mips64(
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 }
 
-RegisterContextCorePOSIX_mips64::~RegisterContextCorePOSIX_mips64() {}
+RegisterContextCorePOSIX_mips64::~RegisterContextCorePOSIX_mips64() = default;
 
 bool RegisterContextCorePOSIX_mips64::ReadGPR() { return true; }
 
@@ -72,7 +72,7 @@ bool RegisterContextCorePOSIX_mips64::ReadRegister(const RegisterInfo *reg_info,
 }
 
 bool RegisterContextCorePOSIX_mips64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 

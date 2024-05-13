@@ -1,8 +1,8 @@
-// RUN: %clang -target x86_64-apple-darwin10 --relocatable-pch -o %t \
+// RUN: %clang -target x86_64-apple-darwin11 --relocatable-pch -o %t \
 // RUN:   -isysroot %S/Inputs/libroot %S/Inputs/libroot/usr/include/reloc.h
-// RUN: %clang -target x86_64-apple-darwin10 -fsyntax-only \
+// RUN: %clang -target x86_64-apple-darwin11 -fsyntax-only \
 // RUN:   -include-pch %t -isysroot %S/Inputs/libroot %s -Xclang -verify
-// RUN: not %clang -target x86_64-apple-darwin10 -include-pch %t %s
+// RUN: not %clang -target x86_64-apple-darwin11 -include-pch %t %s
 // REQUIRES: x86-registered-target
 
 #include <reloc.h>

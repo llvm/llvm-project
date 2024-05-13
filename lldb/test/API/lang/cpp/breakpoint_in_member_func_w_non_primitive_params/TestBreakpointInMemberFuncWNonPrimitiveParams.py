@@ -12,14 +12,13 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestBreakpointInMemberFuncWNonPrimitiveParams(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["gmodules"])
     def test_breakpint_in_member_func_w_non_primitie_params(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, '// break here',
-                lldb.SBFileSpec("main.cpp", False))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp", False)
+        )
 
-        self.runCmd("b a.cpp:11");
+        self.runCmd("b a.cpp:11")

@@ -5,7 +5,7 @@
 --- |
   define void @fun() { ret void }
 
-  declare noalias nonnull i8* @_Znwj()
+  declare noalias nonnull ptr @_Znwj()
   declare void @_ZNSt3__127__tree_balance_after_insertIPNS_16__tree_node_baseIPvEEEEvT_S5_()
   declare zeroext i1 @_ZN15COLLADASaxFWL1429ColladaParserAutoGen14Private14_end__commentsEv()
   declare zeroext i1 @_ZN15COLLADASaxFWL1429ColladaParserAutoGen14Private15_preEnd__authorEv()
@@ -103,6 +103,7 @@ registers:
   - { id: 82, class: gr32 }
 frameInfo:       
   maxAlignment:    4
+  adjustsStack:    true
   hasCalls:        true
 fixedStack:      
   - { id: 0, size: 4, alignment: 4, stack-id: default, isImmutable: true }

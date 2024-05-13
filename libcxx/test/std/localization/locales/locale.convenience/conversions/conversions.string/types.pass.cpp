@@ -8,6 +8,8 @@
 
 // <locale>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT -D_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT
+
 // template<class Codecvt, class Elem = wchar_t,
 //          class Wide_alloc = allocator<Elem>,
 //          class Byte_alloc = allocator<char>>
@@ -18,6 +20,8 @@
 //     typedef basic_string<Elem, char_traits<Elem>, Wide_alloc> wide_string;
 //     typedef typename Codecvt::state_type                      state_type;
 //     typedef typename wide_string::traits_type::int_type       int_type;
+
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <codecvt>

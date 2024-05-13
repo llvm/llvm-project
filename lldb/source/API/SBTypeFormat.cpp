@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTypeFormat.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBStream.h"
 
@@ -16,43 +16,39 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeFormat::SBTypeFormat() : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeFormat);
-}
+SBTypeFormat::SBTypeFormat() { LLDB_INSTRUMENT_VA(this); }
 
 SBTypeFormat::SBTypeFormat(lldb::Format format, uint32_t options)
     : m_opaque_sp(
           TypeFormatImplSP(new TypeFormatImpl_Format(format, options))) {
-  LLDB_RECORD_CONSTRUCTOR(SBTypeFormat, (lldb::Format, uint32_t), format,
-                          options);
+  LLDB_INSTRUMENT_VA(this, format, options);
 }
 
 SBTypeFormat::SBTypeFormat(const char *type, uint32_t options)
     : m_opaque_sp(TypeFormatImplSP(new TypeFormatImpl_EnumType(
           ConstString(type ? type : ""), options))) {
-  LLDB_RECORD_CONSTRUCTOR(SBTypeFormat, (const char *, uint32_t), type,
-                          options);
+  LLDB_INSTRUMENT_VA(this, type, options);
 }
 
 SBTypeFormat::SBTypeFormat(const lldb::SBTypeFormat &rhs)
     : m_opaque_sp(rhs.m_opaque_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBTypeFormat, (const lldb::SBTypeFormat &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBTypeFormat::~SBTypeFormat() = default;
 
 bool SBTypeFormat::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFormat, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBTypeFormat::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFormat, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp.get() != nullptr;
 }
 
 lldb::Format SBTypeFormat::GetFormat() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::Format, SBTypeFormat, GetFormat);
+  LLDB_INSTRUMENT_VA(this);
 
   if (IsValid() && m_opaque_sp->GetType() == TypeFormatImpl::Type::eTypeFormat)
     return ((TypeFormatImpl_Format *)m_opaque_sp.get())->GetFormat();
@@ -60,7 +56,7 @@ lldb::Format SBTypeFormat::GetFormat() {
 }
 
 const char *SBTypeFormat::GetTypeName() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeFormat, GetTypeName);
+  LLDB_INSTRUMENT_VA(this);
 
   if (IsValid() && m_opaque_sp->GetType() == TypeFormatImpl::Type::eTypeEnum)
     return ((TypeFormatImpl_EnumType *)m_opaque_sp.get())
@@ -70,7 +66,7 @@ const char *SBTypeFormat::GetTypeName() {
 }
 
 uint32_t SBTypeFormat::GetOptions() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeFormat, GetOptions);
+  LLDB_INSTRUMENT_VA(this);
 
   if (IsValid())
     return m_opaque_sp->GetOptions();
@@ -78,14 +74,14 @@ uint32_t SBTypeFormat::GetOptions() {
 }
 
 void SBTypeFormat::SetFormat(lldb::Format fmt) {
-  LLDB_RECORD_METHOD(void, SBTypeFormat, SetFormat, (lldb::Format), fmt);
+  LLDB_INSTRUMENT_VA(this, fmt);
 
   if (CopyOnWrite_Impl(Type::eTypeFormat))
     ((TypeFormatImpl_Format *)m_opaque_sp.get())->SetFormat(fmt);
 }
 
 void SBTypeFormat::SetTypeName(const char *type) {
-  LLDB_RECORD_METHOD(void, SBTypeFormat, SetTypeName, (const char *), type);
+  LLDB_INSTRUMENT_VA(this, type);
 
   if (CopyOnWrite_Impl(Type::eTypeEnum))
     ((TypeFormatImpl_EnumType *)m_opaque_sp.get())
@@ -93,7 +89,7 @@ void SBTypeFormat::SetTypeName(const char *type) {
 }
 
 void SBTypeFormat::SetOptions(uint32_t value) {
-  LLDB_RECORD_METHOD(void, SBTypeFormat, SetOptions, (uint32_t), value);
+  LLDB_INSTRUMENT_VA(this, value);
 
   if (CopyOnWrite_Impl(Type::eTypeKeepSame))
     m_opaque_sp->SetOptions(value);
@@ -101,9 +97,7 @@ void SBTypeFormat::SetOptions(uint32_t value) {
 
 bool SBTypeFormat::GetDescription(lldb::SBStream &description,
                                   lldb::DescriptionLevel description_level) {
-  LLDB_RECORD_METHOD(bool, SBTypeFormat, GetDescription,
-                     (lldb::SBStream &, lldb::DescriptionLevel), description,
-                     description_level);
+  LLDB_INSTRUMENT_VA(this, description, description_level);
 
   if (!IsValid())
     return false;
@@ -114,18 +108,16 @@ bool SBTypeFormat::GetDescription(lldb::SBStream &description,
 }
 
 lldb::SBTypeFormat &SBTypeFormat::operator=(const lldb::SBTypeFormat &rhs) {
-  LLDB_RECORD_METHOD(lldb::SBTypeFormat &,
-                     SBTypeFormat, operator=,(const lldb::SBTypeFormat &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBTypeFormat::operator==(lldb::SBTypeFormat &rhs) {
-  LLDB_RECORD_METHOD(bool, SBTypeFormat, operator==,(lldb::SBTypeFormat &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
     return !rhs.IsValid();
@@ -133,8 +125,7 @@ bool SBTypeFormat::operator==(lldb::SBTypeFormat &rhs) {
 }
 
 bool SBTypeFormat::IsEqualTo(lldb::SBTypeFormat &rhs) {
-  LLDB_RECORD_METHOD(bool, SBTypeFormat, IsEqualTo, (lldb::SBTypeFormat &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
     return !rhs.IsValid();
@@ -146,8 +137,7 @@ bool SBTypeFormat::IsEqualTo(lldb::SBTypeFormat &rhs) {
 }
 
 bool SBTypeFormat::operator!=(lldb::SBTypeFormat &rhs) {
-  LLDB_RECORD_METHOD(bool, SBTypeFormat, operator!=,(lldb::SBTypeFormat &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
     return !rhs.IsValid();
@@ -167,7 +157,7 @@ bool SBTypeFormat::CopyOnWrite_Impl(Type type) {
   if (!IsValid())
     return false;
 
-  if (m_opaque_sp.unique() &&
+  if (m_opaque_sp.use_count() == 1 &&
       ((type == Type::eTypeKeepSame) ||
        (type == Type::eTypeFormat &&
         m_opaque_sp->GetType() == TypeFormatImpl::Type::eTypeFormat) ||
@@ -190,33 +180,4 @@ bool SBTypeFormat::CopyOnWrite_Impl(Type type) {
         new TypeFormatImpl_EnumType(ConstString(GetTypeName()), GetOptions())));
 
   return true;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBTypeFormat>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeFormat, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeFormat, (lldb::Format, uint32_t));
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeFormat, (const char *, uint32_t));
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeFormat, (const lldb::SBTypeFormat &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBTypeFormat, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBTypeFormat, operator bool, ());
-  LLDB_REGISTER_METHOD(lldb::Format, SBTypeFormat, GetFormat, ());
-  LLDB_REGISTER_METHOD(const char *, SBTypeFormat, GetTypeName, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBTypeFormat, GetOptions, ());
-  LLDB_REGISTER_METHOD(void, SBTypeFormat, SetFormat, (lldb::Format));
-  LLDB_REGISTER_METHOD(void, SBTypeFormat, SetTypeName, (const char *));
-  LLDB_REGISTER_METHOD(void, SBTypeFormat, SetOptions, (uint32_t));
-  LLDB_REGISTER_METHOD(bool, SBTypeFormat, GetDescription,
-                       (lldb::SBStream &, lldb::DescriptionLevel));
-  LLDB_REGISTER_METHOD(lldb::SBTypeFormat &,
-                       SBTypeFormat, operator=,(const lldb::SBTypeFormat &));
-  LLDB_REGISTER_METHOD(bool, SBTypeFormat, operator==,(lldb::SBTypeFormat &));
-  LLDB_REGISTER_METHOD(bool, SBTypeFormat, IsEqualTo, (lldb::SBTypeFormat &));
-  LLDB_REGISTER_METHOD(bool, SBTypeFormat, operator!=,(lldb::SBTypeFormat &));
-}
-
-}
 }

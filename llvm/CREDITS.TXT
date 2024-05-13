@@ -26,6 +26,11 @@ E: aaron@aaronballman.com
 D: Clang frontend, frontend attributes, Windows support, general bug fixing
 I: AaronBallman
 
+N: Alexey Bataev
+E: a.bataev@outlook.com
+D: Clang frontend, OpenMP in clang, SLP vectorizer, Loop vectorizer, InstCombine
+I: ABataev
+
 N: Nate Begeman
 E: natebegeman@mac.com
 D: PowerPC backend developer
@@ -52,7 +57,7 @@ E: neil@daikokuya.co.uk
 D: APFloat implementation.
 
 N: Alex Bradbury
-E: asb@lowrisc.org
+E: asb@igalia.com
 D: RISC-V backend
 
 N: Misha Brukman
@@ -169,7 +174,6 @@ D: WebAssembly Backend
 
 N: Renato Golin
 E: rengolin@systemcall.eu
-E: renato.golin@linaro.org
 E: rengolin@gmail.com
 D: ARM/AArch64 back-end improvements
 D: Loop Vectorizer improvements
@@ -266,6 +270,10 @@ N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: Miscellaneous bug fixes
 
+N: Michael Kuperstein
+E: mkuper@google.com
+D: Loop Vectorizer
+
 N: Sundeep Kushwaha
 E: sundeepk@codeaurora.org
 D: Implemented DFA-based target independent VLIW packetizer
@@ -323,6 +331,10 @@ W: http://brunocardoso.cc
 D: Mips backend
 D: Random ARM integrated assembler and assembly parser improvements
 D: General X86 AVX1 support
+
+N: Weining Lu
+E: luweining@loongson.cn
+D: LoongArch backend
 
 N: Duraid Madina
 E: duraid@octopus.com.au
@@ -407,6 +419,10 @@ N: Francois Pichet
 E: pichet2000@gmail.com
 D: MSVC support
 
+N: Simon Pilgrim
+E: llvm-dev@redking.me.uk
+D: X86 backend, Selection DAG, Scheduler Models and Cost Tables.
+
 N: Adrian Prantl
 E: aprantl@apple.com
 D: Debug Information
@@ -460,6 +476,10 @@ N: Ruchira Sasanka
 E: sasanka@uiuc.edu
 D: Graph coloring register allocator for the Sparc64 backend
 
+N: Alina Sbirlea
+E: alina.sbirlea@gmail.com
+D: MemorySSA, BatchAA, misc loop and new pass manager work.
+
 N: Arnold Schwaighofer
 E: arnold.schwaighofer@gmail.com
 D: Tail call optimization for the x86 backend
@@ -511,6 +531,10 @@ N: Lauro Ramos Venancio
 E: lauro.venancio@indt.org.br
 D: ARM backend improvements
 D: Thread Local Storage implementation
+
+N: Phoebe Wang
+E: phoebe.wang@intel.com
+D: X86 bug fixes and new instruction support.
 
 N: Bill Wendling
 I: wendling

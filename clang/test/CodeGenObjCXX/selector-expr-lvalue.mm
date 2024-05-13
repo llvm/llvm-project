@@ -2,7 +2,7 @@
 // PR7390
 
 // CHECK: @[[setprioname:[^ ]*]] = {{.*}}"setPriority:
-// CHECK-NEXT: @[[setpriosel:[^ ]*]] = {{.*}}getelementptr{{.*}}[[setprioname]]
+// CHECK-NEXT: @[[setpriosel:[^ ]*]] = {{.*}}[[setprioname]]
 @interface NSObject
 - (void)respondsToSelector:(const SEL &)s ps:(SEL *)s1;
 - (void)setPriority:(int)p;
@@ -13,7 +13,7 @@
 
 // CHECK-LABEL: define internal void @"\01-[NSObject Meth]"(
 - (void)Meth {
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8**, i8**)*){{.*}}, i8** @[[setpriosel]])
+// CHECK: call void @objc_msgSend{{.*}}, ptr noundef @[[setpriosel]])
   [self respondsToSelector:@selector(setPriority:) ps:&@selector(setPriority:)];
 }
 - (void)setPriority:(int)p {

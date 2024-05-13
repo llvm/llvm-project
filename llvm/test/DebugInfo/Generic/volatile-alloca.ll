@@ -1,4 +1,5 @@
-; RUN: opt -mem2reg -instcombine %s -o - -S | FileCheck %s
+; RUN: opt -passes=mem2reg,instcombine %s -o - -S | FileCheck %s
+; RUN: opt -passes=mem2reg,instcombine %s -o - -S --try-experimental-debuginfo-iterators | FileCheck %s
 ;
 ; Test that a dbg.declare describing am alloca with volatile
 ; load/stores is not lowered into a dbg.value, since the alloca won't
@@ -25,28 +26,27 @@ source_filename = "volatile.c"
 ; Function Attrs: nounwind optsize ssp uwtable
 define void @f() local_unnamed_addr #0 !dbg !8 {
   %1 = alloca i64, align 8
-  %2 = bitcast i64* %1 to i8*, !dbg !15
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %2), !dbg !15
-  call void @llvm.dbg.declare(metadata i64* %1, metadata !12, metadata !DIExpression()), !dbg !15
-  %3 = call i64 (...) @g() #4, !dbg !15
-  store volatile i64 %3, i64* %1, align 8, !dbg !15
-  %4 = load volatile i64, i64* %1, align 8, !dbg !15
-  %5 = icmp eq i64 %4, 0, !dbg !15
-  br i1 %5, label %6, label %8, !dbg !15
+  call void @llvm.lifetime.start.p0(i64 8, ptr %1), !dbg !15
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !12, metadata !DIExpression()), !dbg !15
+  %2 = call i64 (...) @g() #4, !dbg !15
+  store volatile i64 %2, ptr %1, align 8, !dbg !15
+  %3 = load volatile i64, ptr %1, align 8, !dbg !15
+  %4 = icmp eq i64 %3, 0, !dbg !15
+  br i1 %4, label %5, label %7, !dbg !15
 
 ; <label>:6:                                      ; preds = %0
-  %7 = call i64 (...) @g() #4, !dbg !15
-  br label %8, !dbg !15
+  %6 = call i64 (...) @g() #4, !dbg !15
+  br label %7, !dbg !15
 
-; <label>:8:                                      ; preds = %6, %0
-  %9 = load volatile i64, i64* %1, align 8, !dbg !15
-  call void @h(i64 %9) #4, !dbg !15
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %2), !dbg !15
+; <label>:8:                                      ; preds = %5, %0
+  %8 = load volatile i64, ptr %1, align 8, !dbg !15
+  call void @h(i64 %8) #4, !dbg !15
+  call void @llvm.lifetime.end.p0(i64 8, ptr %1), !dbg !15
   ret void, !dbg !15
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
@@ -58,7 +58,7 @@ declare i64 @g(...) local_unnamed_addr #3
 declare void @h(i64) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 attributes #0 = { nounwind optsize ssp uwtable }
 attributes #1 = { argmemonly nounwind }

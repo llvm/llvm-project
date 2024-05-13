@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DialectGenUtilities.h"
 #include "DocGenUtilities.h"
 #include "OpGenHelpers.h"
 #include "mlir/Support/IndentedOstream.h"
@@ -18,23 +19,47 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 #include <set>
+#include <string>
+
+//===----------------------------------------------------------------------===//
+// Commandline Options
+//===----------------------------------------------------------------------===//
+static llvm::cl::OptionCategory
+    docCat("Options for -gen-(attrdef|typedef|op|dialect)-doc");
+llvm::cl::opt<std::string>
+    stripPrefix("strip-prefix",
+                llvm::cl::desc("Strip prefix of the fully qualified names"),
+                llvm::cl::init("::mlir::"), llvm::cl::cat(docCat));
+llvm::cl::opt<bool> allowHugoSpecificFeatures(
+    "allow-hugo-specific-features",
+    llvm::cl::desc("Allows using features specific to Hugo"),
+    llvm::cl::init(false), llvm::cl::cat(docCat));
 
 using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
-
 using mlir::tblgen::Operator;
 
-extern llvm::cl::opt<std::string> selectedDialect;
+void mlir::tblgen::emitSummary(StringRef summary, raw_ostream &os) {
+  if (!summary.empty()) {
+    llvm::StringRef trimmed = summary.trim();
+    char first = std::toupper(trimmed.front());
+    llvm::StringRef rest = trimmed.drop_front();
+    os << "\n_" << first << rest << "_\n\n";
+  }
+}
 
 // Emit the description by aligning the text to the left per line (e.g.,
 // removing the minimum indentation across the block).
@@ -44,7 +69,18 @@ extern llvm::cl::opt<std::string> selectedDialect;
 // nested in the op definition.
 void mlir::tblgen::emitDescription(StringRef description, raw_ostream &os) {
   raw_indented_ostream ros(os);
-  ros.reindent(description.rtrim(" \t"));
+  ros.printReindented(description.rtrim(" \t"));
+}
+
+void mlir::tblgen::emitDescriptionComment(StringRef description,
+                                          raw_ostream &os, StringRef prefix) {
+  if (description.empty())
+    return;
+  raw_indented_ostream ros(os);
+  StringRef trimmed = description.rtrim(" \t");
+  ros.printReindented(trimmed, (Twine(prefix) + "/// ").str());
+  if (!trimmed.ends_with("\n"))
+    ros << "\n";
 }
 
 // Emits `str` with trailing newline if not empty.
@@ -59,7 +95,7 @@ static void emitIfNotEmpty(StringRef str, raw_ostream &os) {
 template <typename T>
 static void emitNamedConstraint(const T &it, raw_ostream &os) {
   if (!it.name.empty())
-    os << "`" << it.name << "`";
+    os << "| `" << it.name << "`";
   else
     os << "&laquo;unnamed&raquo;";
   os << " | " << it.constraint.getSummary() << "\n";
@@ -87,31 +123,122 @@ static void emitAssemblyFormat(StringRef opName, StringRef format,
   os << "```\n\n";
 }
 
-static void emitOpDoc(Operator op, raw_ostream &os) {
-  os << llvm::formatv("### `{0}` ({1})\n", op.getOperationName(),
-                      op.getQualCppClassName());
+/// Place `text` between backticks so that the Markdown processor renders it as
+/// inline code.
+static std::string backticks(const std::string &text) {
+  return '`' + text + '`';
+}
+
+static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
+  // TODO: We should link to the trait/documentation of it. That also means we
+  // should add descriptions to traits that can be queried.
+  // Collect using set to sort effects, interfaces & traits.
+  std::set<std::string> effects, interfaces, traits;
+  for (auto &trait : op.getTraits()) {
+    if (isa<PredTrait>(&trait))
+      continue;
+
+    std::string name = trait.getDef().getName().str();
+    StringRef ref = name;
+    StringRef traitName = trait.getDef().getValueAsString("trait");
+    traitName.consume_back("::Trait");
+    traitName.consume_back("::Impl");
+    if (ref.starts_with("anonymous_"))
+      name = traitName.str();
+    if (isa<InterfaceTrait>(&trait)) {
+      if (trait.getDef().isSubClassOf("SideEffectsTraitBase")) {
+        auto effectName = trait.getDef().getValueAsString("baseEffectName");
+        effectName.consume_front("::");
+        effectName.consume_front("mlir::");
+        std::string effectStr;
+        llvm::raw_string_ostream os(effectStr);
+        os << effectName << "{";
+        auto list = trait.getDef().getValueAsListOfDefs("effects");
+        llvm::interleaveComma(list, os, [&](Record *rec) {
+          StringRef effect = rec->getValueAsString("effect");
+          effect.consume_front("::");
+          effect.consume_front("mlir::");
+          os << effect << " on " << rec->getValueAsString("resource");
+        });
+        os << "}";
+        effects.insert(backticks(os.str()));
+        name.append(llvm::formatv(" ({0})", traitName).str());
+      }
+      interfaces.insert(backticks(name));
+      continue;
+    }
+
+    traits.insert(backticks(name));
+  }
+  if (!traits.empty()) {
+    llvm::interleaveComma(traits, os << "\nTraits: ");
+    os << "\n";
+  }
+  if (!interfaces.empty()) {
+    llvm::interleaveComma(interfaces, os << "\nInterfaces: ");
+    os << "\n";
+  }
+  if (!effects.empty()) {
+    llvm::interleaveComma(effects, os << "\nEffects: ");
+    os << "\n";
+  }
+}
+
+static StringRef resolveAttrDescription(const Attribute &attr) {
+  StringRef description = attr.getDescription();
+  if (description.empty())
+    return attr.getBaseAttr().getDescription();
+  return description;
+}
+
+static void emitOpDoc(const Operator &op, raw_ostream &os) {
+  std::string classNameStr = op.getQualCppClassName();
+  StringRef className = classNameStr;
+  (void)className.consume_front(stripPrefix);
+  os << llvm::formatv("### `{0}` ({1})\n", op.getOperationName(), className);
 
   // Emit the summary, syntax, and description if present.
   if (op.hasSummary())
-    os << "\n" << op.getSummary() << "\n\n";
+    emitSummary(op.getSummary(), os);
   if (op.hasAssemblyFormat())
     emitAssemblyFormat(op.getOperationName(), op.getAssemblyFormat().trim(),
                        os);
   if (op.hasDescription())
     mlir::tblgen::emitDescription(op.getDescription(), os);
 
+  emitOpTraitsDoc(op, os);
+
   // Emit attributes.
   if (op.getNumAttributes() != 0) {
-    // TODO: Attributes are only documented by TableGen name, with no further
-    // info. This should be improved.
     os << "\n#### Attributes:\n\n";
-    os << "| Attribute | MLIR Type | Description |\n"
-       << "| :-------: | :-------: | ----------- |\n";
+    // Note: This table is HTML rather than markdown so the attribute's
+    // description can appear in an expandable region. The description may be
+    // multiple lines, which is not supported in a markdown table cell.
+    os << "<table>\n";
+    // Header.
+    os << "<tr><th>Attribute</th><th>MLIR Type</th><th>Description</th></tr>\n";
     for (const auto &it : op.getAttributes()) {
       StringRef storageType = it.attr.getStorageType();
-      os << "`" << it.name << "` | " << storageType << " | "
-         << it.attr.getSummary() << "\n";
+      // Name and storage type.
+      os << "<tr>";
+      os << "<td><code>" << it.name << "</code></td><td>" << storageType
+         << "</td><td>";
+      StringRef description = resolveAttrDescription(it.attr);
+      if (allowHugoSpecificFeatures && !description.empty()) {
+        // Expandable description.
+        // This appears as just the summary, but when clicked shows the full
+        // description.
+        os << "<details>"
+           << "<summary>" << it.attr.getSummary() << "</summary>"
+           << "{{% markdown %}}" << description << "{{% /markdown %}}"
+           << "</details>";
+      } else {
+        // Fallback: Single-line summary.
+        os << it.attr.getSummary();
+      }
+      os << "</td></tr>\n";
     }
+    os << "</table>\n";
   }
 
   // Emit each of the operands.
@@ -144,12 +271,34 @@ static void emitOpDoc(Operator op, raw_ostream &os) {
   os << "\n";
 }
 
+static void emitSourceLink(StringRef inputFilename, raw_ostream &os) {
+  size_t pathBegin = inputFilename.find("mlir/include/mlir/");
+  if (pathBegin == StringRef::npos)
+    return;
+
+  StringRef inputFromMlirInclude = inputFilename.substr(pathBegin);
+
+  os << "[source](https://github.com/llvm/llvm-project/blob/main/"
+     << inputFromMlirInclude << ")\n\n";
+}
+
 static void emitOpDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
   auto opDefs = getRequestedOpDefinitions(recordKeeper);
 
   os << "<!-- Autogenerated by mlir-tblgen; don't manually edit -->\n";
+  emitSourceLink(recordKeeper.getInputFilename(), os);
   for (const llvm::Record *opDef : opDefs)
     emitOpDoc(Operator(opDef), os);
+}
+
+//===----------------------------------------------------------------------===//
+// Attribute Documentation
+//===----------------------------------------------------------------------===//
+
+static void emitAttrDoc(const Attribute &attr, raw_ostream &os) {
+  os << "### " << attr.getSummary() << "\n\n";
+  emitDescription(attr.getDescription(), os);
+  os << "\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -157,9 +306,9 @@ static void emitOpDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
 //===----------------------------------------------------------------------===//
 
 static void emitTypeDoc(const Type &type, raw_ostream &os) {
-  os << "### " << type.getSummary() << "\n";
+  os << "### " << type.getSummary() << "\n\n";
   emitDescription(type.getDescription(), os);
-  os << "\n";
+  os << "\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -168,17 +317,18 @@ static void emitTypeDoc(const Type &type, raw_ostream &os) {
 
 static void emitAttrOrTypeDefAssemblyFormat(const AttrOrTypeDef &def,
                                             raw_ostream &os) {
-  SmallVector<AttrOrTypeParameter, 4> parameters;
-  def.getParameters(parameters);
+  ArrayRef<AttrOrTypeParameter> parameters = def.getParameters();
+  char prefix = isa<AttrDef>(def) ? '#' : '!';
   if (parameters.empty()) {
-    os << "\nSyntax: `!" << def.getDialect().getName() << "."
+    os << "\nSyntax: `" << prefix << def.getDialect().getName() << "."
        << def.getMnemonic() << "`\n";
     return;
   }
 
-  os << "\nSyntax:\n\n```\n!" << def.getDialect().getName() << "."
-     << def.getMnemonic() << "<\n";
-  for (auto it : llvm::enumerate(parameters)) {
+  os << "\nSyntax:\n\n```\n"
+     << prefix << def.getDialect().getName() << "." << def.getMnemonic()
+     << "<\n";
+  for (const auto &it : llvm::enumerate(parameters)) {
     const AttrOrTypeParameter &param = it.value();
     os << "  " << param.getSyntax();
     if (it.index() < (parameters.size() - 1))
@@ -196,8 +346,7 @@ static void emitAttrOrTypeDefDoc(const AttrOrTypeDef &def, raw_ostream &os) {
     os << "\n" << def.getSummary() << "\n";
 
   // Emit the syntax if present.
-  if (def.getMnemonic() && def.getPrinterCode() == StringRef() &&
-      def.getParserCode() == StringRef())
+  if (def.getMnemonic() && !def.hasCustomAssemblyFormat())
     emitAttrOrTypeDefAssemblyFormat(def, os);
 
   // Emit the description if present.
@@ -207,8 +356,7 @@ static void emitAttrOrTypeDefDoc(const AttrOrTypeDef &def, raw_ostream &os) {
   }
 
   // Emit parameter documentation.
-  SmallVector<AttrOrTypeParameter, 4> parameters;
-  def.getParameters(parameters);
+  ArrayRef<AttrOrTypeParameter> parameters = def.getParameters();
   if (!parameters.empty()) {
     os << "\n#### Parameters:\n\n";
     os << "| Parameter | C++ type | Description |\n"
@@ -237,87 +385,180 @@ static void emitAttrOrTypeDefDoc(const RecordKeeper &recordKeeper,
 // Dialect Documentation
 //===----------------------------------------------------------------------===//
 
-static void emitDialectDoc(const Dialect &dialect, ArrayRef<AttrDef> attrDefs,
-                           ArrayRef<Operator> ops, ArrayRef<Type> types,
-                           ArrayRef<TypeDef> typeDefs, raw_ostream &os) {
-  if (selectedDialect.getNumOccurrences() &&
-      dialect.getName() != selectedDialect)
-    return;
-  os << "# '" << dialect.getName() << "' Dialect\n\n";
-  emitIfNotEmpty(dialect.getSummary(), os);
-  emitIfNotEmpty(dialect.getDescription(), os);
+struct OpDocGroup {
+  const Dialect &getDialect() const { return ops.front().getDialect(); }
 
-  os << "[TOC]\n\n";
+  // Returns the summary description of the section.
+  std::string summary = "";
+
+  // Returns the description of the section.
+  StringRef description = "";
+
+  // Instances inside the section.
+  std::vector<Operator> ops;
+};
+
+static void maybeNest(bool nest, llvm::function_ref<void(raw_ostream &os)> fn,
+                      raw_ostream &os) {
+  std::string str;
+  llvm::raw_string_ostream ss(str);
+  fn(ss);
+  for (StringRef x : llvm::split(ss.str(), "\n")) {
+    if (nest && x.starts_with("#"))
+      os << "#";
+    os << x << "\n";
+  }
+}
+
+static void emitBlock(ArrayRef<Attribute> attributes, StringRef inputFilename,
+                      ArrayRef<AttrDef> attrDefs, ArrayRef<OpDocGroup> ops,
+                      ArrayRef<Type> types, ArrayRef<TypeDef> typeDefs,
+                      raw_ostream &os) {
+  if (!ops.empty()) {
+    os << "## Operations\n\n";
+    emitSourceLink(inputFilename, os);
+    for (const OpDocGroup &grouping : ops) {
+      bool nested = !grouping.summary.empty();
+      maybeNest(
+          nested,
+          [&](raw_ostream &os) {
+            if (nested) {
+              os << "## " << StringRef(grouping.summary).trim() << "\n\n";
+              emitDescription(grouping.description, os);
+              os << "\n\n";
+            }
+            for (const Operator &op : grouping.ops) {
+              emitOpDoc(op, os);
+            }
+          },
+          os);
+    }
+  }
+
+  if (!attributes.empty()) {
+    os << "## Attribute constraints\n\n";
+    for (const Attribute &attr : attributes)
+      emitAttrDoc(attr, os);
+  }
 
   if (!attrDefs.empty()) {
-    os << "## Attribute definition\n\n";
+    os << "## Attributes\n\n";
     for (const AttrDef &def : attrDefs)
       emitAttrOrTypeDefDoc(def, os);
   }
 
   // TODO: Add link between use and def for types
   if (!types.empty()) {
-    os << "## Type constraint definition\n\n";
+    os << "## Type constraints\n\n";
     for (const Type &type : types)
       emitTypeDoc(type, os);
   }
 
-  if (!ops.empty()) {
-    os << "## Operation definition\n\n";
-    for (const Operator &op : ops)
-      emitOpDoc(op, os);
-  }
-
   if (!typeDefs.empty()) {
-    os << "## Type definition\n\n";
+    os << "## Types\n\n";
     for (const TypeDef &def : typeDefs)
       emitAttrOrTypeDefDoc(def, os);
   }
 }
 
-static void emitDialectDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static void emitDialectDoc(const Dialect &dialect, StringRef inputFilename,
+                           ArrayRef<Attribute> attributes,
+                           ArrayRef<AttrDef> attrDefs, ArrayRef<OpDocGroup> ops,
+                           ArrayRef<Type> types, ArrayRef<TypeDef> typeDefs,
+                           raw_ostream &os) {
+  os << "# '" << dialect.getName() << "' Dialect\n\n";
+  emitIfNotEmpty(dialect.getSummary(), os);
+  emitIfNotEmpty(dialect.getDescription(), os);
+
+  // Generate a TOC marker except if description already contains one.
+  llvm::Regex r("^[[:space:]]*\\[TOC\\]$", llvm::Regex::RegexFlags::Newline);
+  if (!r.match(dialect.getDescription()))
+    os << "[TOC]\n\n";
+
+  emitBlock(attributes, inputFilename, attrDefs, ops, types, typeDefs, os);
+}
+
+static bool emitDialectDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
+  std::vector<Record *> dialectDefs =
+      recordKeeper.getAllDerivedDefinitionsIfDefined("Dialect");
+  SmallVector<Dialect> dialects(dialectDefs.begin(), dialectDefs.end());
+  std::optional<Dialect> dialect = findDialectToGenerate(dialects);
+  if (!dialect)
+    return true;
+
   std::vector<Record *> opDefs = getRequestedOpDefinitions(recordKeeper);
+  std::vector<Record *> attrDefs =
+      recordKeeper.getAllDerivedDefinitionsIfDefined("DialectAttr");
   std::vector<Record *> typeDefs =
-      recordKeeper.getAllDerivedDefinitions("DialectType");
+      recordKeeper.getAllDerivedDefinitionsIfDefined("DialectType");
   std::vector<Record *> typeDefDefs =
-      recordKeeper.getAllDerivedDefinitions("TypeDef");
+      recordKeeper.getAllDerivedDefinitionsIfDefined("TypeDef");
   std::vector<Record *> attrDefDefs =
-      recordKeeper.getAllDerivedDefinitions("AttrDef");
+      recordKeeper.getAllDerivedDefinitionsIfDefined("AttrDef");
 
-  std::set<Dialect> dialectsWithDocs;
+  std::vector<Attribute> dialectAttrs;
+  std::vector<AttrDef> dialectAttrDefs;
+  std::vector<OpDocGroup> dialectOps;
+  std::vector<Type> dialectTypes;
+  std::vector<TypeDef> dialectTypeDefs;
 
-  llvm::StringMap<std::vector<AttrDef>> dialectAttrDefs;
-  llvm::StringMap<std::vector<Operator>> dialectOps;
-  llvm::StringMap<std::vector<Type>> dialectTypes;
-  llvm::StringMap<std::vector<TypeDef>> dialectTypeDefs;
-  for (auto *attrDef : attrDefDefs) {
-    AttrDef attr(attrDef);
-    dialectAttrDefs[attr.getDialect().getName()].push_back(attr);
-    dialectsWithDocs.insert(attr.getDialect());
+  llvm::SmallDenseSet<Record *> seen;
+  auto addIfInDialect = [&](llvm::Record *record, const auto &def, auto &vec) {
+    if (seen.insert(record).second && def.getDialect() == *dialect) {
+      vec.push_back(def);
+      return true;
+    }
+    return false;
+  };
+
+  SmallDenseMap<Record *, OpDocGroup> opDocGroup;
+
+  for (Record *def : attrDefDefs)
+    addIfInDialect(def, AttrDef(def), dialectAttrDefs);
+  for (Record *def : attrDefs)
+    addIfInDialect(def, Attribute(def), dialectAttrs);
+  for (Record *def : opDefs) {
+    if (Record *group = def->getValueAsOptionalDef("opDocGroup")) {
+      OpDocGroup &op = opDocGroup[group];
+      addIfInDialect(def, Operator(def), op.ops);
+    } else {
+      OpDocGroup op;
+      op.ops.emplace_back(def);
+      addIfInDialect(def, op, dialectOps);
+    }
   }
-  for (auto *opDef : opDefs) {
-    Operator op(opDef);
-    dialectOps[op.getDialect().getName()].push_back(op);
-    dialectsWithDocs.insert(op.getDialect());
+  for (Record *rec :
+       recordKeeper.getAllDerivedDefinitionsIfDefined("OpDocGroup")) {
+    if (opDocGroup[rec].ops.empty())
+      continue;
+    opDocGroup[rec].summary = rec->getValueAsString("summary");
+    opDocGroup[rec].description = rec->getValueAsString("description");
+    dialectOps.push_back(opDocGroup[rec]);
   }
-  for (auto *typeDef : typeDefs) {
-    Type type(typeDef);
-    if (auto dialect = type.getDialect())
-      dialectTypes[dialect.getName()].push_back(type);
-  }
-  for (auto *typeDef : typeDefDefs) {
-    TypeDef type(typeDef);
-    dialectTypeDefs[type.getDialect().getName()].push_back(type);
-    dialectsWithDocs.insert(type.getDialect());
-  }
+  for (Record *def : typeDefDefs)
+    addIfInDialect(def, TypeDef(def), dialectTypeDefs);
+  for (Record *def : typeDefs)
+    addIfInDialect(def, Type(def), dialectTypes);
+
+  // Sort alphabetically ignorning dialect for ops and section name for
+  // sections.
+  // TODO: The sorting order could be revised, currently attempting to sort of
+  // keep in alphabetical order.
+  std::sort(dialectOps.begin(), dialectOps.end(),
+            [](const OpDocGroup &lhs, const OpDocGroup &rhs) {
+              auto getDesc = [](const OpDocGroup &arg) -> StringRef {
+                if (!arg.summary.empty())
+                  return arg.summary;
+                return arg.ops.front().getDef().getValueAsString("opName");
+              };
+              return getDesc(lhs).compare_insensitive(getDesc(rhs)) < 0;
+            });
 
   os << "<!-- Autogenerated by mlir-tblgen; don't manually edit -->\n";
-  for (const Dialect &dialect : dialectsWithDocs) {
-    StringRef dialectName = dialect.getName();
-    emitDialectDoc(dialect, dialectAttrDefs[dialectName],
-                   dialectOps[dialectName], dialectTypes[dialectName],
-                   dialectTypeDefs[dialectName], os);
-  }
+  emitDialectDoc(*dialect, recordKeeper.getInputFilename(), dialectAttrs,
+                 dialectAttrDefs, dialectOps, dialectTypes, dialectTypeDefs,
+                 os);
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -349,6 +590,5 @@ static mlir::GenRegistration
 static mlir::GenRegistration
     genRegister("gen-dialect-doc", "Generate dialect documentation",
                 [](const RecordKeeper &records, raw_ostream &os) {
-                  emitDialectDoc(records, os);
-                  return false;
+                  return emitDialectDoc(records, os);
                 });

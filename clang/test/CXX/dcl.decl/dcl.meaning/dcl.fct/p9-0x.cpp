@@ -4,4 +4,4 @@
 // will necessarily be ill-formed as a trailing return type for a function
 // definition), and recover with a "type cannot be defined in a trailing return
 // type" error.
-auto j() -> enum { e3 }; // expected-error{{unnamed enumeration must be a definition}} expected-error {{expected a type}}
+auto j() -> enum { e3 }; // expected-error{{unnamed enumeration must be a definition}}

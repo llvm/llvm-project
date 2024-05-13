@@ -11,8 +11,7 @@
 #include <set>
 using namespace llvm;
 
-DeltaAlgorithm::~DeltaAlgorithm() {
-}
+DeltaAlgorithm::~DeltaAlgorithm() = default;
 
 bool DeltaAlgorithm::GetTestResult(const changeset_ty &Changes) {
   if (FailedTestsCache.count(Changes))
@@ -57,9 +56,8 @@ DeltaAlgorithm::Delta(const changeset_ty &Changes,
 
   // Otherwise, partition the sets if possible; if not we are done.
   changesetlist_ty SplitSets;
-  for (changesetlist_ty::const_iterator it = Sets.begin(),
-         ie = Sets.end(); it != ie; ++it)
-    Split(*it, SplitSets);
+  for (const changeset_ty &Set : Sets)
+    Split(Set, SplitSets);
   if (SplitSets.size() == Sets.size())
     return Changes;
 
@@ -85,9 +83,9 @@ bool DeltaAlgorithm::Search(const changeset_ty &Changes,
     if (Sets.size() > 2) {
       // FIXME: This is really slow.
       changeset_ty Complement;
-      std::set_difference(
-        Changes.begin(), Changes.end(), it->begin(), it->end(),
-        std::insert_iterator<changeset_ty>(Complement, Complement.begin()));
+      std::set_difference(Changes.begin(), Changes.end(), it->begin(),
+                          it->end(),
+                          std::inserter(Complement, Complement.begin()));
       if (GetTestResult(Complement)) {
         changesetlist_ty ComplementSets;
         ComplementSets.insert(ComplementSets.end(), Sets.begin(), it);

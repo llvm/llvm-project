@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution 2>&1 | FileCheck %s
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes='print<scalar-evolution>' -S 2>&1 | FileCheck %s
 ; Regression test for assert ScalarEvolution::getTruncateExpr.
@@ -6,7 +5,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @snork(i8* %arg, i8 %arg1, i64 %arg2) {
+define void @snork(ptr %arg, i8 %arg1, i64 %arg2) {
 
 ; CHECK-LABEL: Classifying expressions for: @snork
 

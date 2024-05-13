@@ -17,10 +17,8 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/XML.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
@@ -55,11 +53,11 @@ static bool UUIDsMatch(Module *module, ObjectFile *ofile,
     if (feedback_strm) {
       feedback_strm->PutCString(
           "warning: UUID mismatch detected between modules:\n    ");
-      module->GetUUID().Dump(feedback_strm);
+      module->GetUUID().Dump(*feedback_strm);
       feedback_strm->PutChar(' ');
       module->GetFileSpec().Dump(feedback_strm->AsRawOstream());
       feedback_strm->PutCString("\n    ");
-      dsym_uuid.Dump(feedback_strm);
+      dsym_uuid.Dump(*feedback_strm);
       feedback_strm->PutChar(' ');
       ofile->GetFileSpec().Dump(feedback_strm->AsRawOstream());
       feedback_strm->EOL();
@@ -77,12 +75,7 @@ void SymbolVendorMacOSX::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString SymbolVendorMacOSX::GetPluginNameStatic() {
-  static ConstString g_name("macosx");
-  return g_name;
-}
-
-const char *SymbolVendorMacOSX::GetPluginDescriptionStatic() {
+llvm::StringRef SymbolVendorMacOSX::GetPluginDescriptionStatic() {
   return "Symbol vendor for MacOSX that looks for dSYM files that match "
          "executables.";
 }
@@ -125,7 +118,13 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
     FileSpec dsym_fspec(module_sp->GetSymbolFileFileSpec());
 
     ObjectFileSP dsym_objfile_sp;
-    if (!dsym_fspec) {
+    // On Darwin, we store the debug information either in object files,
+    // using the debug map to tie them to the executable, or in a dSYM.  We
+    // pass through this routine both for binaries and for .o files, but in the
+    // latter case there will never be an external debug file.  So we shouldn't
+    // do all the stats needed to find it.
+    if (!dsym_fspec && module_sp->GetObjectFile()->CalculateType() !=
+        ObjectFile::eTypeObjectFile) {
       // No symbol file was specified in the module, lets try and find one
       // ourselves.
       FileSpec file_spec = obj_file->GetFileSpec();
@@ -136,7 +135,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
       module_spec.GetUUID() = module_sp->GetUUID();
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
       dsym_fspec =
-          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
       if (module_spec.GetSourceMappingList().GetSize())
         module_sp->GetSourceMappingList().Append(
             module_spec.GetSourceMappingList(), true);
@@ -154,6 +153,12 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
           ObjectFile::FindPlugin(module_sp, &dsym_fspec, 0,
                                  FileSystem::Instance().GetByteSize(dsym_fspec),
                                  dsym_file_data_sp, dsym_file_data_offset);
+      // Important to save the dSYM FileSpec so we don't call
+      // PluginManager::LocateExecutableSymbolFile a second time while trying to
+      // add the symbol ObjectFile to this Module.
+      if (dsym_objfile_sp && !module_sp->GetSymbolFileFileSpec()) {
+        module_sp->SetSymbolFileFileSpec(dsym_fspec);
+      }
       if (UUIDsMatch(module_sp.get(), dsym_objfile_sp.get(), feedback_strm)) {
         // We need a XML parser if we hope to parse a plist...
         if (XMLDocument::XMLEnabled()) {
@@ -224,7 +229,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                           [&module_sp, new_style_source_remapping_dictionary,
                            original_DBGSourcePath_value,
                            do_truncate_remapping_names](
-                              ConstString key,
+                              llvm::StringRef key,
                               StructuredData::Object *object) -> bool {
                             if (object && object->GetAsString()) {
 
@@ -236,15 +241,8 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                   !original_DBGSourcePath_value.empty()) {
                                 DBGSourcePath = original_DBGSourcePath_value;
                               }
-                              if (DBGSourcePath[0] == '~') {
-                                FileSpec resolved_source_path(
-                                    DBGSourcePath.c_str());
-                                FileSystem::Instance().Resolve(
-                                    resolved_source_path);
-                                DBGSourcePath = resolved_source_path.GetPath();
-                              }
                               module_sp->GetSourceMappingList().Append(
-                                  key, ConstString(DBGSourcePath), true);
+                                  key, DBGSourcePath, true);
                               // With version 2 of DBGSourcePathRemapping, we
                               // can chop off the last two filename parts
                               // from the source remapping and get a more
@@ -252,15 +250,14 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                               // Add this as another option in addition to
                               // the full source path remap.
                               if (do_truncate_remapping_names) {
-                                FileSpec build_path(key.AsCString());
+                                FileSpec build_path(key);
                                 FileSpec source_path(DBGSourcePath.c_str());
                                 build_path.RemoveLastPathComponent();
                                 build_path.RemoveLastPathComponent();
                                 source_path.RemoveLastPathComponent();
                                 source_path.RemoveLastPathComponent();
                                 module_sp->GetSourceMappingList().Append(
-                                    ConstString(build_path.GetPath().c_str()),
-                                    ConstString(source_path.GetPath().c_str()),
+                                    build_path.GetPath(), source_path.GetPath(),
                                     true);
                               }
                             }
@@ -275,14 +272,8 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                            DBGBuildSourcePath);
                     plist.GetValueAsString("DBGSourcePath", DBGSourcePath);
                     if (!DBGBuildSourcePath.empty() && !DBGSourcePath.empty()) {
-                      if (DBGSourcePath[0] == '~') {
-                        FileSpec resolved_source_path(DBGSourcePath.c_str());
-                        FileSystem::Instance().Resolve(resolved_source_path);
-                        DBGSourcePath = resolved_source_path.GetPath();
-                      }
                       module_sp->GetSourceMappingList().Append(
-                          ConstString(DBGBuildSourcePath),
-                          ConstString(DBGSourcePath), true);
+                          DBGBuildSourcePath, DBGSourcePath, true);
                     }
                   }
                 }
@@ -292,13 +283,6 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
         }
 
         symbol_vendor->AddSymbolFileRepresentation(dsym_objfile_sp);
-        if (!dsym_root.empty()) {
-          if (repro::Generator *g =
-                  repro::Reproducer::Instance().GetGenerator()) {
-            repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-            fp.RecordInterestingDirectoryRecursive(dsym_root);
-          }
-        }
         return symbol_vendor;
       }
     }
@@ -310,10 +294,3 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
   }
   return symbol_vendor;
 }
-
-// PluginInterface protocol
-ConstString SymbolVendorMacOSX::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t SymbolVendorMacOSX::GetPluginVersion() { return 1; }

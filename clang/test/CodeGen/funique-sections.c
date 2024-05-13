@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux -S -ffunction-sections -fdata-sections -o - < %s | FileCheck %s --check-prefix=UNIQUE
 
 const int hello = 123;
-void world() {}
+void world(void) {}
 
 // CHECK: .section .text,"ax",@progbits,unique
 // CHECK: .section .rodata,"a",@progbits,unique

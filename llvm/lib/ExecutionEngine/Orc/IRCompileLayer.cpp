@@ -11,7 +11,7 @@
 namespace llvm {
 namespace orc {
 
-IRCompileLayer::IRCompiler::~IRCompiler() {}
+IRCompileLayer::IRCompiler::~IRCompiler() = default;
 
 IRCompileLayer::IRCompileLayer(ExecutionSession &ES, ObjectLayer &BaseLayer,
                                std::unique_ptr<IRCompiler> Compile)

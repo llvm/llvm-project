@@ -8,17 +8,14 @@
 ; CHECK: ret
 ;
 ; Check the original function, which is wrapped and becomes anonymous
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; CHECK: define internal i32 @0()
-; CHECK: %a = alloca i32
-; CHECK: store i32 1, i32* %a
-; CHECK: %b = load i32, i32* %a
-; CHECK: ret i32 %b
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: define internal noundef i32 @0()
+; CHECK: ret i32 1
 define linkonce i32 @inner1() {
 entry:
   %a = alloca i32
-  store i32 1, i32* %a
-  %b = load i32, i32* %a
+  store i32 1, ptr %a
+  %b = load i32, ptr %a
   ret i32 %b
 }
 
@@ -38,7 +35,7 @@ entry:
 ; CHECK: tail call i32 @1(i32 %a, i32 %b)
 ; CHECK: ret
 ;
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK: define internal i32 @1(i32 %a, i32 %b)
 ; CHECK: %c = add i32 %a, %b
 ; CHECK: ret i32 %c
@@ -69,20 +66,20 @@ entry:
 define linkonce i32 @inner3(i32) {
 entry:
   %1 = alloca i32
-  store i32 %0, i32* %1
+  store i32 %0, ptr %1
   br label %2
 2:
-  %3 = load i32, i32* %1
+  %3 = load i32, ptr %1
   %4 = icmp slt i32 %3, 4
   br i1 %4, label %5, label %9
 5:
-  %6 = load i32, i32* %1
+  %6 = load i32, ptr %1
   %7 = add nsw i32 %6, 1
   %8 = call i32 @inner3(i32 %7)
-  store i32 %8, i32* %1
+  store i32 %8, ptr %1
   br label %2
 9:
-  %10 = load i32, i32* %1
+  %10 = load i32, ptr %1
   ret i32 %10
 }
 

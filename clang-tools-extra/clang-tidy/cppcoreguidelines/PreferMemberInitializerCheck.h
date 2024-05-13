@@ -11,31 +11,23 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 /// Finds member initializations in the constructor body which can be placed
 /// into the initialization list instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-prefer-member-initializer.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/prefer-member-initializer.html
 class PreferMemberInitializerCheck : public ClangTidyCheck {
 public:
   PreferMemberInitializerCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-
-  const bool IsUseDefaultMemberInitEnabled;
-  const bool UseAssignment;
 };
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PREFERMEMBERINITIALIZERCHECK_H

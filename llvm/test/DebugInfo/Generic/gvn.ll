@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 ;
 ; Produced at -O2 from:
 ; int a, b;
@@ -26,27 +26,27 @@ entry:
   ; Verify that the call still has a debug location after GVN.
   ; CHECK: %call = tail call i32 @f2(i32 1) #{{[0-9]}}, !dbg
   %call = tail call i32 @f2(i32 1) #0, !dbg !15
-  store i32 %call, i32* @a, align 4, !dbg !15, !tbaa !24
-  tail call void @llvm.dbg.value(metadata i32* @a, metadata !22, metadata !28) #0, !dbg !29
-  %0 = load i32, i32* @b, align 4, !dbg !29, !tbaa !24
+  store i32 %call, ptr @a, align 4, !dbg !15, !tbaa !24
+  tail call void @llvm.dbg.value(metadata ptr @a, metadata !22, metadata !28) #0, !dbg !29
+  %0 = load i32, ptr @b, align 4, !dbg !29, !tbaa !24
   %tobool.i = icmp eq i32 %0, 0, !dbg !29
   br i1 %tobool.i, label %if.end.i, label %land.lhs.true.i.thread, !dbg !30
 
 land.lhs.true.i.thread:                           ; preds = %entry
-  store i32 1, i32* @a, align 4, !dbg !32, !tbaa !24
+  store i32 1, ptr @a, align 4, !dbg !32, !tbaa !24
   br label %if.then.3.i, !dbg !33
 
   ; This instruction has no debug location -- in this
   ; particular case it was removed by a bug in SimplifyCFG.
 if.end.i:                                         ; preds = %entry
-  %.pr = load i32, i32* @a, align 4
+  %.pr = load i32, ptr @a, align 4
   ; GVN is supposed to replace the load of %.pr with a direct reference to %call.
   ; CHECK: %tobool2.i = icmp eq i32 %call, 0, !dbg
   %tobool2.i = icmp eq i32 %.pr, 0, !dbg !34
   br i1 %tobool2.i, label %f1.exit, label %if.then.3.i, !dbg !34
 
 if.then.3.i:                                      ; preds = %if.end.i, %land.lhs.true.i.thread
-  %call.i = tail call i32 bitcast (i32 (...)* @f4 to i32 ()*)() #0, !dbg !35
+  %call.i = tail call i32 @f4() #0, !dbg !35
   br label %f1.exit, !dbg !35
 
 f1.exit:                                          ; preds = %if.then.3.i, %if.end.i

@@ -1,4 +1,4 @@
-; RUN: llc %s -march=mips -mcpu=mips32r3 -mattr=micromips -filetype=asm \
+; RUN: llc %s -mtriple=mips -mcpu=mips32r3 -mattr=micromips -filetype=asm \
 ; RUN: -relocation-model=pic -O3 -o - | FileCheck %s
 
 ; The purpose of this test is to check whether the CodeGen selects
@@ -8,16 +8,14 @@
 
 $_ZN1TaSERKS_ = comdat any
 
-define linkonce_odr void @_ZN1TaSERKS_(%struct.T* %this, %struct.T* dereferenceable(4) %t) #0 comdat align 2 {
+define linkonce_odr void @_ZN1TaSERKS_(ptr %this, ptr dereferenceable(4) %t) #0 comdat align 2 {
 entry:
-  %this.addr = alloca %struct.T*, align 4
-  %t.addr = alloca %struct.T*, align 4
-  %this1 = load %struct.T*, %struct.T** %this.addr, align 4
-  %0 = load %struct.T*, %struct.T** %t.addr, align 4
-  %V3 = getelementptr inbounds %struct.T, %struct.T* %0, i32 0, i32 0
-  %1 = load i32, i32* %V3, align 4
-  %V4 = getelementptr inbounds %struct.T, %struct.T* %this1, i32 0, i32 0
-  store i32 %1, i32* %V4, align 4
+  %this.addr = alloca ptr, align 4
+  %t.addr = alloca ptr, align 4
+  %this1 = load ptr, ptr %this.addr, align 4
+  %0 = load ptr, ptr %t.addr, align 4
+  %1 = load i32, ptr %0, align 4
+  store i32 %1, ptr %this1, align 4
   ret void
 }
 

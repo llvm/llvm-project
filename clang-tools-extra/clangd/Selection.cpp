@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Selection.h"
-#include "SourceCode.h"
+#include "AST.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -24,11 +25,14 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <optional>
+#include <set>
 #include <string>
 
 namespace clang {
@@ -55,6 +59,28 @@ void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {
   }
   if (Common)
     SelectionUsedRecovery.record(0, LanguageLabel); // unused.
+}
+
+// Return the range covering a node and all its children.
+SourceRange getSourceRange(const DynTypedNode &N) {
+  // MemberExprs to implicitly access anonymous fields should not claim any
+  // tokens for themselves. Given:
+  //   struct A { struct { int b; }; };
+  // The clang AST reports the following nodes for an access to b:
+  //   A().b;
+  //   [----] MemberExpr, base = A().<anonymous>, member = b
+  //   [----] MemberExpr: base = A(), member = <anonymous>
+  //   [-]    CXXConstructExpr
+  // For our purposes, we don't want the second MemberExpr to own any tokens,
+  // so we reduce its range to match the CXXConstructExpr.
+  // (It's not clear that changing the clang AST would be correct in general).
+  if (const auto *ME = N.get<MemberExpr>()) {
+    if (!ME->getMemberDecl()->getDeclName())
+      return ME->getBase()
+                 ? getSourceRange(DynTypedNode::create(*ME->getBase()))
+                 : SourceRange();
+  }
+  return N.getSourceRange();
 }
 
 // An IntervalSet maintains a set of disjoint subranges of an array.
@@ -166,7 +192,19 @@ void update(SelectionTree::Selection &Result, SelectionTree::Selection New) {
 // As well as comments, don't count semicolons as real tokens.
 // They're not properly claimed as expr-statement is missing from the AST.
 bool shouldIgnore(const syntax::Token &Tok) {
-  return Tok.kind() == tok::comment || Tok.kind() == tok::semi;
+  switch (Tok.kind()) {
+    // Even "attached" comments are not considered part of a node's range.
+    case tok::comment:
+    // The AST doesn't directly store locations for terminating semicolons.
+    case tok::semi:
+    // We don't have locations for cvr-qualifiers: see QualifiedTypeLoc.
+    case tok::kw_const:
+    case tok::kw_volatile:
+    case tok::kw_restrict:
+      return true;
+    default:
+      return false;
+  }
 }
 
 // Determine whether 'Target' is the first expansion of the macro
@@ -211,7 +249,9 @@ public:
   // The selection is offsets [SelBegin, SelEnd) in SelFile.
   SelectionTester(const syntax::TokenBuffer &Buf, FileID SelFile,
                   unsigned SelBegin, unsigned SelEnd, const SourceManager &SM)
-      : SelFile(SelFile), SM(SM) {
+      : SelFile(SelFile), SelFileBounds(SM.getLocForStartOfFile(SelFile),
+                                        SM.getLocForEndOfFile(SelFile)),
+        SM(SM) {
     // Find all tokens (partially) selected in the file.
     auto AllSpelledTokens = Buf.spelledTokens(SelFile);
     const syntax::Token *SelFirst =
@@ -222,9 +262,9 @@ public:
         SelFirst, AllSpelledTokens.end(), [&](const syntax::Token &Tok) {
           return SM.getFileOffset(Tok.location()) < SelEnd;
         });
-    auto Sel = llvm::makeArrayRef(SelFirst, SelLimit);
+    auto Sel = llvm::ArrayRef(SelFirst, SelLimit);
     // Find which of these are preprocessed to nothing and should be ignored.
-    std::vector<bool> PPIgnored(Sel.size(), false);
+    llvm::BitVector PPIgnored(Sel.size(), false);
     for (const syntax::TokenBuffer::Expansion &X :
          Buf.expansionsOverlapping(Sel)) {
       if (X.Expanded.empty()) {
@@ -238,28 +278,54 @@ public:
     for (unsigned I = 0; I < Sel.size(); ++I) {
       if (shouldIgnore(Sel[I]) || PPIgnored[I])
         continue;
-      SpelledTokens.emplace_back();
-      Tok &S = SpelledTokens.back();
+      SelectedSpelled.emplace_back();
+      Tok &S = SelectedSpelled.back();
       S.Offset = SM.getFileOffset(Sel[I].location());
       if (S.Offset >= SelBegin && S.Offset + Sel[I].length() <= SelEnd)
         S.Selected = SelectionTree::Complete;
       else
         S.Selected = SelectionTree::Partial;
     }
+    MaybeSelectedExpanded = computeMaybeSelectedExpandedTokens(Buf);
   }
 
   // Test whether a consecutive range of tokens is selected.
   // The tokens are taken from the expanded token stream.
   SelectionTree::Selection
   test(llvm::ArrayRef<syntax::Token> ExpandedTokens) const {
-    if (SpelledTokens.empty())
+    if (ExpandedTokens.empty())
       return NoTokens;
+    if (SelectedSpelled.empty())
+      return SelectionTree::Unselected;
+    // Cheap (pointer) check whether any of the tokens could touch selection.
+    // In most cases, the node's overall source range touches ExpandedTokens,
+    // or we would have failed mayHit(). However now we're only considering
+    // the *unclaimed* spans of expanded tokens.
+    // This is a significant performance improvement when a lot of nodes
+    // surround the selection, including when generated by macros.
+    if (MaybeSelectedExpanded.empty() ||
+        &ExpandedTokens.front() > &MaybeSelectedExpanded.back() ||
+        &ExpandedTokens.back() < &MaybeSelectedExpanded.front()) {
+      return SelectionTree::Unselected;
+    }
+
+    // The eof token is used as a sentinel.
+    // In general, source range from an AST node should not claim the eof token,
+    // but it could occur for unmatched-bracket cases.
+    // FIXME: fix it in TokenBuffer, expandedTokens(SourceRange) should not
+    // return the eof token.
+    if (ExpandedTokens.back().kind() == tok::eof)
+      ExpandedTokens = ExpandedTokens.drop_back();
+
     SelectionTree::Selection Result = NoTokens;
     while (!ExpandedTokens.empty()) {
       // Take consecutive tokens from the same context together for efficiency.
-      FileID FID = SM.getFileID(ExpandedTokens.front().location());
+      SourceLocation Start = ExpandedTokens.front().location();
+      FileID FID = SM.getFileID(Start);
+      // Comparing SourceLocations against bounds is cheaper than getFileID().
+      SourceLocation Limit = SM.getComposedLoc(FID, SM.getFileIDSize(FID));
       auto Batch = ExpandedTokens.take_while([&](const syntax::Token &T) {
-        return SM.getFileID(T.location()) == FID;
+        return T.location() >= Start && T.location() < Limit;
       });
       assert(!Batch.empty());
       ExpandedTokens = ExpandedTokens.drop_front(Batch.size());
@@ -273,18 +339,89 @@ public:
   // If it returns false, test() will return NoTokens or Unselected.
   // If it returns true, test() may return any value.
   bool mayHit(SourceRange R) const {
-    if (SpelledTokens.empty())
+    if (SelectedSpelled.empty() || MaybeSelectedExpanded.empty())
       return false;
-    auto B = SM.getDecomposedLoc(R.getBegin());
-    auto E = SM.getDecomposedLoc(R.getEnd());
-    if (B.first == SelFile && E.first == SelFile)
-      if (E.second < SpelledTokens.front().Offset ||
-          B.second > SpelledTokens.back().Offset)
+    // If the node starts after the selection ends, it is not selected.
+    // Tokens a macro location might claim are >= its expansion start.
+    // So if the expansion start > last selected token, we can prune it.
+    // (This is particularly helpful for GTest's TEST macro).
+    if (auto B = offsetInSelFile(getExpansionStart(R.getBegin())))
+      if (*B > SelectedSpelled.back().Offset)
+        return false;
+    // If the node ends before the selection begins, it is not selected.
+    SourceLocation EndLoc = R.getEnd();
+    while (EndLoc.isMacroID())
+      EndLoc = SM.getImmediateExpansionRange(EndLoc).getEnd();
+    // In the rare case that the expansion range is a char range, EndLoc is
+    // ~one token too far to the right. We may fail to prune, that's OK.
+    if (auto E = offsetInSelFile(EndLoc))
+      if (*E < SelectedSpelled.front().Offset)
         return false;
     return true;
   }
 
 private:
+  // Plausible expanded tokens that might be affected by the selection.
+  // This is an overestimate, it may contain tokens that are not selected.
+  // The point is to allow cheap pruning in test()
+  llvm::ArrayRef<syntax::Token>
+  computeMaybeSelectedExpandedTokens(const syntax::TokenBuffer &Toks) {
+    if (SelectedSpelled.empty())
+      return {};
+
+    auto LastAffectedToken = [&](SourceLocation Loc) {
+      auto Offset = offsetInSelFile(Loc);
+      while (Loc.isValid() && !Offset) {
+        Loc = Loc.isMacroID() ? SM.getImmediateExpansionRange(Loc).getEnd()
+                              : SM.getIncludeLoc(SM.getFileID(Loc));
+        Offset = offsetInSelFile(Loc);
+      }
+      return Offset;
+    };
+    auto FirstAffectedToken = [&](SourceLocation Loc) {
+      auto Offset = offsetInSelFile(Loc);
+      while (Loc.isValid() && !Offset) {
+        Loc = Loc.isMacroID() ? SM.getImmediateExpansionRange(Loc).getBegin()
+                              : SM.getIncludeLoc(SM.getFileID(Loc));
+        Offset = offsetInSelFile(Loc);
+      }
+      return Offset;
+    };
+
+    const syntax::Token *Start = llvm::partition_point(
+        Toks.expandedTokens(),
+        [&, First = SelectedSpelled.front().Offset](const syntax::Token &Tok) {
+          if (Tok.kind() == tok::eof)
+            return false;
+          // Implausible if upperbound(Tok) < First.
+          if (auto Offset = LastAffectedToken(Tok.location()))
+            return *Offset < First;
+          // A prefix of the expanded tokens may be from an implicit
+          // inclusion (e.g. preamble patch, or command-line -include).
+          return true;
+        });
+
+    bool EndInvalid = false;
+    const syntax::Token *End = std::partition_point(
+        Start, Toks.expandedTokens().end(),
+        [&, Last = SelectedSpelled.back().Offset](const syntax::Token &Tok) {
+          if (Tok.kind() == tok::eof)
+            return false;
+          // Plausible if lowerbound(Tok) <= Last.
+          if (auto Offset = FirstAffectedToken(Tok.location()))
+            return *Offset <= Last;
+          // Shouldn't happen: once we've seen tokens traceable to the main
+          // file, there shouldn't be any more implicit inclusions.
+          assert(false && "Expanded token could not be resolved to main file!");
+          EndInvalid = true;
+          return true; // conservatively assume this token can overlap
+        });
+    if (EndInvalid)
+      End = Toks.expandedTokens().end();
+
+    return llvm::ArrayRef(Start, End);
+  }
+
   // Hit-test a consecutive range of tokens from a single file ID.
   SelectionTree::Selection
   testChunk(FileID FID, llvm::ArrayRef<syntax::Token> Batch) const {
@@ -299,8 +436,8 @@ private:
 
     // Handle tokens written directly in the main file.
     if (FID == SelFile) {
-      return testTokenRange(SM.getFileOffset(Batch.front().location()),
-                            SM.getFileOffset(Batch.back().location()));
+      return testTokenRange(*offsetInSelFile(Batch.front().location()),
+                            *offsetInSelFile(Batch.back().location()));
     }
 
     // Handle tokens in another file #included into the main file.
@@ -308,9 +445,9 @@ private:
     if (StartLoc.isFileID()) {
       for (SourceLocation Loc = Batch.front().location(); Loc.isValid();
            Loc = SM.getIncludeLoc(SM.getFileID(Loc))) {
-        if (SM.getFileID(Loc) == SelFile)
+        if (auto Offset = offsetInSelFile(Loc))
           // FIXME: use whole #include directive, not just the filename string.
-          return testToken(SM.getFileOffset(Loc));
+          return testToken(*Offset);
       }
       return NoTokens;
     }
@@ -318,44 +455,42 @@ private:
     assert(StartLoc.isMacroID());
     // Handle tokens that were passed as a macro argument.
     SourceLocation ArgStart = SM.getTopMacroCallerLoc(StartLoc);
-    if (SM.getFileID(ArgStart) == SelFile) {
+    if (auto ArgOffset = offsetInSelFile(ArgStart)) {
       if (isFirstExpansion(FID, ArgStart, SM)) {
         SourceLocation ArgEnd =
             SM.getTopMacroCallerLoc(Batch.back().location());
-        return testTokenRange(SM.getFileOffset(ArgStart),
-                              SM.getFileOffset(ArgEnd));
-      } else {
+        return testTokenRange(*ArgOffset, *offsetInSelFile(ArgEnd));
+      } else { // NOLINT(llvm-else-after-return)
         /* fall through and treat as part of the macro body */
       }
     }
 
     // Handle tokens produced by non-argument macro expansion.
     // Check if the macro name is selected, don't claim it exclusively.
-    auto Expansion = SM.getDecomposedExpansionLoc(StartLoc);
-    if (Expansion.first == SelFile)
+    if (auto ExpansionOffset = offsetInSelFile(getExpansionStart(StartLoc)))
       // FIXME: also check ( and ) for function-like macros?
-      return testToken(Expansion.second);
-    else
-      return NoTokens;
+      return testToken(*ExpansionOffset);
+    return NoTokens;
   }
 
   // Is the closed token range [Begin, End] selected?
   SelectionTree::Selection testTokenRange(unsigned Begin, unsigned End) const {
     assert(Begin <= End);
     // Outside the selection entirely?
-    if (End < SpelledTokens.front().Offset ||
-        Begin > SpelledTokens.back().Offset)
+    if (End < SelectedSpelled.front().Offset ||
+        Begin > SelectedSpelled.back().Offset)
       return SelectionTree::Unselected;
 
     // Compute range of tokens.
     auto B = llvm::partition_point(
-        SpelledTokens, [&](const Tok &T) { return T.Offset < Begin; });
-    auto E = std::partition_point(
-        B, SpelledTokens.end(), [&](const Tok &T) { return T.Offset <= End; });
+        SelectedSpelled, [&](const Tok &T) { return T.Offset < Begin; });
+    auto E = std::partition_point(B, SelectedSpelled.end(), [&](const Tok &T) {
+      return T.Offset <= End;
+    });
 
     // Aggregate selectedness of tokens in range.
-    bool ExtendsOutsideSelection = Begin < SpelledTokens.front().Offset ||
-                                   End > SpelledTokens.back().Offset;
+    bool ExtendsOutsideSelection = Begin < SelectedSpelled.front().Offset ||
+                                   End > SelectedSpelled.back().Offset;
     SelectionTree::Selection Result =
         ExtendsOutsideSelection ? SelectionTree::Unselected : NoTokens;
     for (auto It = B; It != E; ++It)
@@ -366,23 +501,42 @@ private:
   // Is the token at `Offset` selected?
   SelectionTree::Selection testToken(unsigned Offset) const {
     // Outside the selection entirely?
-    if (Offset < SpelledTokens.front().Offset ||
-        Offset > SpelledTokens.back().Offset)
+    if (Offset < SelectedSpelled.front().Offset ||
+        Offset > SelectedSpelled.back().Offset)
       return SelectionTree::Unselected;
     // Find the token, if it exists.
     auto It = llvm::partition_point(
-        SpelledTokens, [&](const Tok &T) { return T.Offset < Offset; });
-    if (It != SpelledTokens.end() && It->Offset == Offset)
+        SelectedSpelled, [&](const Tok &T) { return T.Offset < Offset; });
+    if (It != SelectedSpelled.end() && It->Offset == Offset)
       return It->Selected;
     return NoTokens;
+  }
+
+  // Decomposes Loc and returns the offset if the file ID is SelFile.
+  std::optional<unsigned> offsetInSelFile(SourceLocation Loc) const {
+    // Decoding Loc with SM.getDecomposedLoc is relatively expensive.
+    // But SourceLocations for a file are numerically contiguous, so we
+    // can use cheap integer operations instead.
+    if (Loc < SelFileBounds.getBegin() || Loc >= SelFileBounds.getEnd())
+      return std::nullopt;
+    // FIXME: subtracting getRawEncoding() is dubious, move this logic into SM.
+    return Loc.getRawEncoding() - SelFileBounds.getBegin().getRawEncoding();
+  }
+
+  SourceLocation getExpansionStart(SourceLocation Loc) const {
+    while (Loc.isMacroID())
+      Loc = SM.getImmediateExpansionRange(Loc).getBegin();
+    return Loc;
   }
 
   struct Tok {
     unsigned Offset;
     SelectionTree::Selection Selected;
   };
-  std::vector<Tok> SpelledTokens;
+  std::vector<Tok> SelectedSpelled;
+  llvm::ArrayRef<syntax::Token> MaybeSelectedExpanded;
   FileID SelFile;
+  SourceRange SelFileBounds;
   const SourceManager &SM;
 };
 
@@ -405,7 +559,6 @@ std::string printNodeToString(const DynTypedNode &N, const PrintingPolicy &PP) {
   std::string S;
   llvm::raw_string_ostream OS(S);
   printNodeKind(OS, N);
-  OS << " ";
   return std::move(OS.str());
 }
 #endif
@@ -421,6 +574,15 @@ bool isImplicit(const Stmt *S) {
   if (auto *CTI = llvm::dyn_cast<CXXThisExpr>(S))
     if (CTI->isImplicit())
       return true;
+  // Make sure implicit access of anonymous structs don't end up owning tokens.
+  if (auto *ME = llvm::dyn_cast<MemberExpr>(S)) {
+    if (auto *FD = llvm::dyn_cast<FieldDecl>(ME->getMemberDecl()))
+      if (FD->isAnonymousStructOrUnion())
+        // If Base is an implicit CXXThis, then the whole MemberExpr has no
+        // tokens. If it's a normal e.g. DeclRef, we treat the MemberExpr like
+        // an implicit cast.
+        return isImplicit(ME->getBase());
+  }
   // Refs to operator() and [] are (almost?) always implicit as part of calls.
   if (auto *DRE = llvm::dyn_cast<DeclRefExpr>(S)) {
     if (auto *FD = llvm::dyn_cast<FunctionDecl>(DRE->getDecl())) {
@@ -469,13 +631,16 @@ public:
   // Two categories of nodes are not "well-behaved":
   //  - those without source range information, we don't record those
   //  - those that can't be stored in DynTypedNode.
-  // We're missing some interesting things like Attr due to the latter.
   bool TraverseDecl(Decl *X) {
-    if (X && isa<TranslationUnitDecl>(X))
+    if (llvm::isa_and_nonnull<TranslationUnitDecl>(X))
       return Base::TraverseDecl(X); // Already pushed by constructor.
     // Base::TraverseDecl will suppress children, but not this node itself.
-    if (X && X->isImplicit())
-      return true;
+    if (X && X->isImplicit()) {
+      // Most implicit nodes have only implicit children and can be skipped.
+      // However there are exceptions (`void foo(Concept auto x)`), and
+      // the base implementation knows how to find them.
+      return Base::TraverseDecl(X);
+    }
     return traverseNode(X, [&] { return Base::TraverseDecl(X); });
   }
   bool TraverseTypeLoc(TypeLoc X) {
@@ -495,6 +660,12 @@ public:
   }
   bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &X) {
     return traverseNode(&X, [&] { return Base::TraverseCXXBaseSpecifier(X); });
+  }
+  bool TraverseAttr(Attr *X) {
+    return traverseNode(X, [&] { return Base::TraverseAttr(X); });
+  }
+  bool TraverseConceptReference(ConceptReference *X) {
+    return traverseNode(X, [&] { return Base::TraverseConceptReference(X); });
   }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
@@ -523,6 +694,9 @@ public:
     return traverseNode<TypeLoc>(
         &QX, [&] { return TraverseTypeLoc(QX.getUnqualifiedLoc()); });
   }
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc PL) {
+    return traverseNode(&PL, [&] { return Base::TraverseObjCProtocolLoc(PL); });
+  }
   // Uninteresting parts of the AST that don't have locations within them.
   bool TraverseNestedNameSpecifier(NestedNameSpecifier *) { return true; }
   bool TraverseType(QualType) { return true; }
@@ -543,6 +717,23 @@ public:
   // We only want to traverse the *syntactic form* to understand the selection.
   bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
     return traverseNode(E, [&] { return TraverseStmt(E->getSyntacticForm()); });
+  }
+  bool TraverseTypeConstraint(const TypeConstraint *C) {
+    if (auto *E = C->getImmediatelyDeclaredConstraint()) {
+      // Technically this expression is 'implicit' and not traversed by the RAV.
+      // However, the range is correct, so we visit expression to avoid adding
+      // an extra kind to 'DynTypeNode' that hold 'TypeConstraint'.
+      return TraverseStmt(E);
+    }
+    return Base::TraverseTypeConstraint(C);
+  }
+
+  // Override child traversal for certain node types.
+  using RecursiveASTVisitor::getStmtChildren;
+  // PredefinedExpr like __func__ has a StringLiteral child for its value.
+  // It's not written, so don't traverse it.
+  Stmt::child_range getStmtChildren(PredefinedExpr *) {
+    return {StmtIterator{}, StmtIterator{}};
   }
 
 private:
@@ -591,11 +782,10 @@ private:
   // Nodes *usually* nest nicely: a child's getSourceRange() lies within the
   // parent's, and a node (transitively) owns all tokens in its range.
   //
-  // Exception 1: child range claims tokens that should be owned by the parent.
-  //              e.g. in `void foo(int);`, the FunctionTypeLoc should own
-  //              `void (int)` but the parent FunctionDecl should own `foo`.
-  // To handle this case, certain nodes claim small token ranges *before*
-  // their children are traversed. (see earlySourceRange).
+  // Exception 1: when declarators nest, *inner* declarator is the *outer* type.
+  //              e.g. void foo[5](int) is an array of functions.
+  // To handle this case, declarators are careful to only claim the tokens they
+  // own, rather than claim a range and rely on claim ordering.
   //
   // Exception 2: siblings both claim the same node.
   //              e.g. `int x, y;` produces two sibling VarDecls.
@@ -608,31 +798,25 @@ private:
   // An optimization for a common case: nodes outside macro expansions that
   // don't intersect the selection may be recursively skipped.
   bool canSafelySkipNode(const DynTypedNode &N) {
-    SourceRange S = N.getSourceRange();
+    SourceRange S = getSourceRange(N);
     if (auto *TL = N.get<TypeLoc>()) {
       // FIXME: TypeLoc::getBeginLoc()/getEndLoc() are pretty fragile
       // heuristics. We should consider only pruning critical TypeLoc nodes, to
       // be more robust.
 
-      // DeclTypeTypeLoc::getSourceRange() is incomplete, which would lead to
-      // failing
-      // to descend into the child expression.
-      // decltype(2+2);
-      // ~~~~~~~~~~~~~ <-- correct range
-      // ~~~~~~~~      <-- range reported by getSourceRange()
-      // ~~~~~~~~~~~~  <-- range with this hack(i.e, missing closing paren)
-      // FIXME: Alter DecltypeTypeLoc to contain parentheses locations and get
-      // rid of this patch.
-      if (auto DT = TL->getAs<DecltypeTypeLoc>())
-        S.setEnd(DT.getUnderlyingExpr()->getEndLoc());
       // AttributedTypeLoc may point to the attribute's range, NOT the modified
       // type's range.
       if (auto AT = TL->getAs<AttributedTypeLoc>())
         S = AT.getModifiedLoc().getSourceRange();
     }
+    // SourceRange often doesn't manage to accurately cover attributes.
+    // Fortunately, attributes are rare.
+    if (llvm::any_of(getAttributes(N),
+                     [](const Attr *A) { return !A->isImplicit(); }))
+      return false;
     if (!SelChecker.mayHit(S)) {
-      dlog("{1}skip: {0}", printNodeToString(N, PrintPolicy), indent());
-      dlog("{1}skipped range = {0}", S.printToString(SM), indent(1));
+      dlog("{2}skip: {0} {1}", printNodeToString(N, PrintPolicy),
+           S.printToString(SM), indent());
       return true;
     }
     return false;
@@ -651,7 +835,8 @@ private:
   // Performs early hit detection for some nodes (on the earlySourceRange).
   void push(DynTypedNode Node) {
     SourceRange Early = earlySourceRange(Node);
-    dlog("{1}push: {0}", printNodeToString(Node, PrintPolicy), indent());
+    dlog("{2}push: {0} {1}", printNodeToString(Node, PrintPolicy),
+         Node.getSourceRange().printToString(SM), indent());
     Nodes.emplace_back();
     Nodes.back().ASTNode = std::move(Node);
     Nodes.back().Parent = Stack.top();
@@ -665,7 +850,7 @@ private:
   void pop() {
     Node &N = *Stack.top();
     dlog("{1}pop: {0}", printNodeToString(N.ASTNode, PrintPolicy), indent(-1));
-    claimRange(N.ASTNode.getSourceRange(), N.Selected);
+    claimTokensFor(N.ASTNode, N.Selected);
     if (N.Selected == NoTokens)
       N.Selected = SelectionTree::Unselected;
     if (N.Selected || !N.Children.empty()) {
@@ -683,34 +868,101 @@ private:
   // is not available to the node's children.
   // Usually empty, but sometimes children cover tokens but shouldn't own them.
   SourceRange earlySourceRange(const DynTypedNode &N) {
-    if (const Decl *D = N.get<Decl>()) {
-      // We want constructor name to be claimed by TypeLoc not the constructor
-      // itself. Similar for deduction guides, we rather want to select the
-      // underlying TypeLoc.
-      // FIXME: Unfortunately this doesn't work, even though RecursiveASTVisitor
-      // traverses the underlying TypeLoc inside DeclarationName, it is null for
-      // constructors.
-      if (isa<CXXConstructorDecl>(D) || isa<CXXDeductionGuideDecl>(D))
-        return SourceRange();
-      // This will capture Field, Function, MSProperty, NonTypeTemplateParm and
-      // VarDecls. We want the name in the declarator to be claimed by the decl
-      // and not by any children. For example:
-      // void [[foo]]();
-      // int (*[[s]])();
-      // struct X { int [[hash]] [32]; [[operator]] int();}
-      if (const auto *DD = llvm::dyn_cast<DeclaratorDecl>(D))
-        return DD->getLocation();
-    } else if (const auto *CCI = N.get<CXXCtorInitializer>()) {
-      // : [[b_]](42)
-      return CCI->getMemberLocation();
+    if (const Decl *VD = N.get<VarDecl>()) {
+      // We want the name in the var-decl to be claimed by the decl itself and
+      // not by any children. Ususally, we don't need this, because source
+      // ranges of children are not overlapped with their parent's.
+      // An exception is lambda captured var decl, where AutoTypeLoc is
+      // overlapped with the name loc.
+      //    auto fun = [bar = foo]() { ... }
+      //                ~~~~~~~~~   VarDecl
+      //                ~~~         |- AutoTypeLoc
+      return VD->getLocation();
     }
+
+    // When referring to a destructor ~Foo(), attribute Foo to the destructor
+    // rather than the TypeLoc nested inside it.
+    // We still traverse the TypeLoc, because it may contain other targeted
+    // things like the T in ~Foo<T>().
+    if (const auto *CDD = N.get<CXXDestructorDecl>())
+      return CDD->getNameInfo().getNamedTypeInfo()->getTypeLoc().getBeginLoc();
+    if (const auto *ME = N.get<MemberExpr>()) {
+      auto NameInfo = ME->getMemberNameInfo();
+      if (NameInfo.getName().getNameKind() ==
+          DeclarationName::CXXDestructorName)
+        return NameInfo.getNamedTypeInfo()->getTypeLoc().getBeginLoc();
+    }
+
     return SourceRange();
+  }
+
+  // Claim tokens for N, after processing its children.
+  // By default this claims all unclaimed tokens in getSourceRange().
+  // We override this if we want to claim fewer tokens (e.g. there are gaps).
+  void claimTokensFor(const DynTypedNode &N, SelectionTree::Selection &Result) {
+    // CXXConstructExpr often shows implicit construction, like `string s;`.
+    // Don't associate any tokens with it unless there's some syntax like {}.
+    // This prevents it from claiming 's', its primary location.
+    if (const auto *CCE = N.get<CXXConstructExpr>()) {
+      claimRange(CCE->getParenOrBraceRange(), Result);
+      return;
+    }
+    // ExprWithCleanups is always implicit. It often wraps CXXConstructExpr.
+    // Prevent it claiming 's' in the case above.
+    if (N.get<ExprWithCleanups>())
+      return;
+
+    // Declarators nest "inside out", with parent types inside child ones.
+    // Instead of claiming the whole range (clobbering parent tokens), carefully
+    // claim the tokens owned by this node and non-declarator children.
+    // (We could manipulate traversal order instead, but this is easier).
+    //
+    // Non-declarator types nest normally, and are handled like other nodes.
+    //
+    // Example:
+    //   Vec<R<int>(*[2])(A<char>)> is a Vec of arrays of pointers to functions,
+    //                              which accept A<char> and return R<int>.
+    // The TypeLoc hierarchy:
+    //   Vec<R<int>(*[2])(A<char>)> m;
+    //   Vec<#####################>      TemplateSpecialization Vec
+    //       --------[2]----------       `-Array
+    //       -------*-------------         `-Pointer
+    //       ------(----)---------           `-Paren
+    //       ------------(#######)             `-Function
+    //       R<###>                              |-TemplateSpecialization R
+    //         int                               | `-Builtin int
+    //                    A<####>                `-TemplateSpecialization A
+    //                      char                   `-Builtin char
+    //
+    // In each row
+    //   --- represents unclaimed parts of the SourceRange.
+    //   ### represents parts that children already claimed.
+    if (const auto *TL = N.get<TypeLoc>()) {
+      if (auto PTL = TL->getAs<ParenTypeLoc>()) {
+        claimRange(PTL.getLParenLoc(), Result);
+        claimRange(PTL.getRParenLoc(), Result);
+        return;
+      }
+      if (auto ATL = TL->getAs<ArrayTypeLoc>()) {
+        claimRange(ATL.getBracketsRange(), Result);
+        return;
+      }
+      if (auto PTL = TL->getAs<PointerTypeLoc>()) {
+        claimRange(PTL.getStarLoc(), Result);
+        return;
+      }
+      if (auto FTL = TL->getAs<FunctionTypeLoc>()) {
+        claimRange(SourceRange(FTL.getLParenLoc(), FTL.getEndLoc()), Result);
+        return;
+      }
+    }
+    claimRange(getSourceRange(N), Result);
   }
 
   // Perform hit-testing of a complete Node against the selection.
   // This runs for every node in the AST, and must be fast in common cases.
   // This is usually called from pop(), so we can take children into account.
-  // The existing state of Result is relevant (early/late claims can interact).
+  // The existing state of Result is relevant.
   void claimRange(SourceRange S, SelectionTree::Selection &Result) {
     for (const auto &ClaimedRange :
          UnclaimedExpandedTokens.erase(TokenBuf.expandedTokens(S)))
@@ -750,8 +1002,7 @@ llvm::SmallString<256> abbreviatedString(DynTypedNode N,
   }
   auto Pos = Result.find('\n');
   if (Pos != llvm::StringRef::npos) {
-    bool MoreText =
-        !llvm::all_of(llvm::StringRef(Result).drop_front(Pos), llvm::isSpace);
+    bool MoreText = !llvm::all_of(Result.str().drop_front(Pos), llvm::isSpace);
     Result.resize(Pos);
     if (MoreText)
       Result.append(" …");
@@ -816,7 +1067,7 @@ bool SelectionTree::createEach(ASTContext &AST,
 SelectionTree SelectionTree::createRight(ASTContext &AST,
                                          const syntax::TokenBuffer &Tokens,
                                          unsigned int Begin, unsigned int End) {
-  llvm::Optional<SelectionTree> Result;
+  std::optional<SelectionTree> Result;
   createEach(AST, Tokens, Begin, End, [&](SelectionTree T) {
     Result = std::move(T);
     return true;
@@ -860,21 +1111,24 @@ const DeclContext &SelectionTree::Node::getDeclContext() const {
       if (CurrentNode != this)
         if (auto *DC = dyn_cast<DeclContext>(Current))
           return *DC;
-      return *Current->getDeclContext();
+      return *Current->getLexicalDeclContext();
     }
+    if (const auto *LE = CurrentNode->ASTNode.get<LambdaExpr>())
+      if (CurrentNode != this)
+        return *LE->getCallOperator();
   }
   llvm_unreachable("A tree must always be rooted at TranslationUnitDecl.");
 }
 
 const SelectionTree::Node &SelectionTree::Node::ignoreImplicit() const {
   if (Children.size() == 1 &&
-      Children.front()->ASTNode.getSourceRange() == ASTNode.getSourceRange())
+      getSourceRange(Children.front()->ASTNode) == getSourceRange(ASTNode))
     return Children.front()->ignoreImplicit();
   return *this;
 }
 
 const SelectionTree::Node &SelectionTree::Node::outerImplicit() const {
-  if (Parent && Parent->ASTNode.getSourceRange() == ASTNode.getSourceRange())
+  if (Parent && getSourceRange(Parent->ASTNode) == getSourceRange(ASTNode))
     return Parent->outerImplicit();
   return *this;
 }

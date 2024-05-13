@@ -1,10 +1,8 @@
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128 | FileCheck %s
 
 ; Test that a splat shuffle of an fp-to-int bitcasted vector correctly
-; optimizes and lowers to a single splat instruction. Without a custom
-; DAG combine, this ends up doing both a splat and a shuffle.
+; optimizes and lowers to a single splat instruction.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: f32x4_splat:
@@ -18,10 +16,19 @@ define <4 x i32> @f32x4_splat(float %x) {
   ret <4 x i32> %b
 }
 
+; CHECK-LABEL: i2x2_splat:
+; CHECK-NEXT: .functype i2x2_splat (i32) -> (v128){{$}}
+define <2 x i2> @i2x2_splat(i1 %x) {
+  %vecinit = insertelement <4 x i1> undef, i1 %x, i32 0
+  %a = bitcast <4 x i1> %vecinit to <2 x i2>
+  %b = shufflevector <2 x i2> %a, <2 x i2> undef, <2 x i32> zeroinitializer
+  ret <2 x i2> %b
+}
+
 ; CHECK-LABEL: not_a_vec:
 ; CHECK-NEXT: .functype not_a_vec (i64, i64) -> (v128){{$}}
-; CHECK-NEXT: i64x2.splat $push[[L1:[0-9]+]]=, $0{{$}}
-; CHECK-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $pop[[L1]], $2, 0, 1, 2, 3
+; CHECK-NEXT: i32.wrap_i64    $push[[L:[0-9]+]]=, $0
+; CHECK-NEXT: i32x4.splat     $push[[R:[0-9]+]]=, $pop[[L]]
 ; CHECK-NEXT: return $pop[[R]]
 define <4 x i32> @not_a_vec(i128 %x) {
   %a = bitcast i128 %x to <4 x i32>

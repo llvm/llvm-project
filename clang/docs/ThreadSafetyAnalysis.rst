@@ -408,7 +408,8 @@ and destructor refer to the capability via different names; see the
 Scoped capabilities are treated as capabilities that are implicitly acquired
 on construction and released on destruction. They are associated with
 the set of (regular) capabilities named in thread safety attributes on the
-constructor. Acquire-type attributes on other member functions are treated as
+constructor or function returning them by value (using C++17 guaranteed copy
+elision). Acquire-type attributes on other member functions are treated as
 applying to that set of associated capabilities, while ``RELEASE`` implies that
 a function releases all associated capabilities in whatever mode they're held.
 
@@ -466,9 +467,9 @@ Use of these attributes has been deprecated.
 Warning flags
 -------------
 
-* ``-Wthread-safety``:  Umbrella flag which turns on the following three:
+* ``-Wthread-safety``:  Umbrella flag which turns on the following:
 
-  + ``-Wthread-safety-attributes``: Sanity checks on attribute syntax.
+  + ``-Wthread-safety-attributes``: Semantic checks for thread safety attributes.
   + ``-Wthread-safety-analysis``: The core analysis.
   + ``-Wthread-safety-precise``: Requires that mutex expressions match precisely.
        This warning can be disabled for code which has a lot of aliases.
@@ -640,8 +641,8 @@ mutex.  For example:
     Mutex mu;
 
   public:
-    // For thread safety analysis only.  Does not actually return mu.
-    Mutex* getMu() RETURN_CAPABILITY(mu) { return 0; }
+    // For thread safety analysis only.  Does not need to be defined.
+    Mutex* getMu() RETURN_CAPABILITY(mu);
 
     void doSomething() REQUIRES(mu);
   };
@@ -892,7 +893,7 @@ implementation.
 
     // Assert that is mutex is currently held for read operations.
     void AssertReaderHeld() ASSERT_SHARED_CAPABILITY(this);
-    
+
     // For negative capabilities.
     const Mutex& operator!() const { return *this; }
   };
@@ -929,6 +930,13 @@ implementation.
 
     // Assume mu is not held, implicitly acquire *this and associate it with mu.
     MutexLocker(Mutex *mu, defer_lock_t) EXCLUDES(mu) : mut(mu), locked(false) {}
+
+    // Same as constructors, but without tag types. (Requires C++17 copy elision.)
+    static MutexLocker Lock(Mutex *mu) ACQUIRE(mu);
+    static MutexLocker Adopt(Mutex *mu) REQUIRES(mu);
+    static MutexLocker ReaderLock(Mutex *mu) ACQUIRE_SHARED(mu);
+    static MutexLocker AdoptReaderLock(Mutex *mu) REQUIRES_SHARED(mu);
+    static MutexLocker DeferLock(Mutex *mu) EXCLUDES(mu);
 
     // Release *this and all associated mutexes, if they are still held.
     // There is no warning if the scope was already unlocked before.
@@ -1041,4 +1049,3 @@ implementation.
   #endif  // USE_LOCK_STYLE_THREAD_SAFETY_ATTRIBUTES
 
   #endif  // THREAD_SAFETY_ANALYSIS_MUTEX_H
-

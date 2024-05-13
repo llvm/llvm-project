@@ -18,13 +18,12 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Unicode.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -76,13 +75,6 @@ Input::~Input() = default;
 
 std::error_code Input::error() { return EC; }
 
-// Pin the vtables to this file.
-void Input::HNode::anchor() {}
-void Input::EmptyHNode::anchor() {}
-void Input::ScalarHNode::anchor() {}
-void Input::MapHNode::anchor() {}
-void Input::SequenceHNode::anchor() {}
-
 bool Input::outputting() const {
   return false;
 }
@@ -100,8 +92,9 @@ bool Input::setCurrentDocument() {
       ++DocIterator;
       return setCurrentDocument();
     }
+    releaseHNodeBuffers();
     TopNode = createHNodes(N);
-    CurrentNode = TopNode.get();
+    CurrentNode = TopNode;
     return true;
   }
   return false;
@@ -127,7 +120,7 @@ bool Input::mapTag(StringRef Tag, bool Default) {
     return Default;
   }
   // Return true iff found tag matches supplied tag.
-  return Tag.equals(foundTag);
+  return Tag == foundTag;
 }
 
 void Input::beginMapping() {
@@ -163,6 +156,8 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
   if (!CurrentNode) {
     if (Required)
       EC = make_error_code(errc::invalid_argument);
+    else
+      UseDefault = true;
     return false;
   }
 
@@ -175,7 +170,7 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
     return false;
   }
   MN->ValidKeys.push_back(Key);
-  HNode *Value = MN->Mapping[Key].first.get();
+  HNode *Value = MN->Mapping[Key].first;
   if (!Value) {
     if (Required)
       setError(CurrentNode, Twine("missing required key '") + Key + "'");
@@ -238,7 +233,7 @@ bool Input::preflightElement(unsigned Index, void *&SaveInfo) {
     return false;
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
     SaveInfo = CurrentNode;
-    CurrentNode = SQ->Entries[Index].get();
+    CurrentNode = SQ->Entries[Index];
     return true;
   }
   return false;
@@ -255,7 +250,7 @@ bool Input::preflightFlowElement(unsigned index, void *&SaveInfo) {
     return false;
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
     SaveInfo = CurrentNode;
-    CurrentNode = SQ->Entries[index].get();
+    CurrentNode = SQ->Entries[index];
     return true;
   }
   return false;
@@ -276,7 +271,7 @@ bool Input::matchEnumScalar(const char *Str, bool) {
   if (ScalarMatchFound)
     return false;
   if (ScalarHNode *SN = dyn_cast<ScalarHNode>(CurrentNode)) {
-    if (SN->value().equals(Str)) {
+    if (SN->value() == Str) {
       ScalarMatchFound = true;
       return true;
     }
@@ -300,7 +295,7 @@ void Input::endEnumScalar() {
 bool Input::beginBitSetScalar(bool &DoClear) {
   BitValuesUsed.clear();
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
-    BitValuesUsed.insert(BitValuesUsed.begin(), SQ->Entries.size(), false);
+    BitValuesUsed.resize(SQ->Entries.size());
   } else {
     setError(CurrentNode, "expected sequence of bit values");
   }
@@ -314,8 +309,8 @@ bool Input::bitSetMatch(const char *Str, bool) {
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
     unsigned Index = 0;
     for (auto &N : SQ->Entries) {
-      if (ScalarHNode *SN = dyn_cast<ScalarHNode>(N.get())) {
-        if (SN->value().equals(Str)) {
+      if (ScalarHNode *SN = dyn_cast<ScalarHNode>(N)) {
+        if (SN->value() == Str) {
           BitValuesUsed[Index] = true;
           return true;
         }
@@ -337,7 +332,7 @@ void Input::endBitSetScalar() {
     assert(BitValuesUsed.size() == SQ->Entries.size());
     for (unsigned i = 0; i < SQ->Entries.size(); ++i) {
       if (!BitValuesUsed[i]) {
-        setError(SQ->Entries[i].get(), "unknown bit value");
+        setError(SQ->Entries[i], "unknown bit value");
         return;
       }
     }
@@ -396,29 +391,44 @@ void Input::reportWarning(const SMRange &range, const Twine &message) {
   Strm->printError(range, message, SourceMgr::DK_Warning);
 }
 
-std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
+void Input::releaseHNodeBuffers() {
+  EmptyHNodeAllocator.DestroyAll();
+  ScalarHNodeAllocator.DestroyAll();
+  SequenceHNodeAllocator.DestroyAll();
+  MapHNodeAllocator.DestroyAll();
+}
+
+Input::HNode *Input::createHNodes(Node *N) {
   SmallString<128> StringStorage;
-  if (ScalarNode *SN = dyn_cast<ScalarNode>(N)) {
+  switch (N->getType()) {
+  case Node::NK_Scalar: {
+    ScalarNode *SN = dyn_cast<ScalarNode>(N);
     StringRef KeyStr = SN->getValue(StringStorage);
     if (!StringStorage.empty()) {
       // Copy string to permanent storage
       KeyStr = StringStorage.str().copy(StringAllocator);
     }
-    return std::make_unique<ScalarHNode>(N, KeyStr);
-  } else if (BlockScalarNode *BSN = dyn_cast<BlockScalarNode>(N)) {
+    return new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, KeyStr);
+  }
+  case Node::NK_BlockScalar: {
+    BlockScalarNode *BSN = dyn_cast<BlockScalarNode>(N);
     StringRef ValueCopy = BSN->getValue().copy(StringAllocator);
-    return std::make_unique<ScalarHNode>(N, ValueCopy);
-  } else if (SequenceNode *SQ = dyn_cast<SequenceNode>(N)) {
-    auto SQHNode = std::make_unique<SequenceHNode>(N);
+    return new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, ValueCopy);
+  }
+  case Node::NK_Sequence: {
+    SequenceNode *SQ = dyn_cast<SequenceNode>(N);
+    auto SQHNode = new (SequenceHNodeAllocator.Allocate()) SequenceHNode(N);
     for (Node &SN : *SQ) {
       auto Entry = createHNodes(&SN);
       if (EC)
         break;
-      SQHNode->Entries.push_back(std::move(Entry));
+      SQHNode->Entries.push_back(Entry);
     }
-    return std::move(SQHNode);
-  } else if (MappingNode *Map = dyn_cast<MappingNode>(N)) {
-    auto mapHNode = std::make_unique<MapHNode>(N);
+    return SQHNode;
+  }
+  case Node::NK_Mapping: {
+    MappingNode *Map = dyn_cast<MappingNode>(N);
+    auto mapHNode = new (MapHNodeAllocator.Allocate()) MapHNode(N);
     for (KeyValueNode &KVN : *Map) {
       Node *KeyNode = KVN.getKey();
       ScalarNode *Key = dyn_cast_or_null<ScalarNode>(KeyNode);
@@ -436,6 +446,11 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
         // Copy string to permanent storage
         KeyStr = StringStorage.str().copy(StringAllocator);
       }
+      if (mapHNode->Mapping.count(KeyStr))
+        // From YAML spec: "The content of a mapping node is an unordered set of
+        // key/value node pairs, with the restriction that each of the keys is
+        // unique."
+        setError(KeyNode, Twine("duplicated mapping key '") + KeyStr + "'");
       auto ValueHNode = createHNodes(Value);
       if (EC)
         break;
@@ -443,9 +458,10 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
           std::make_pair(std::move(ValueHNode), KeyNode->getSourceRange());
     }
     return std::move(mapHNode);
-  } else if (isa<NullNode>(N)) {
-    return std::make_unique<EmptyHNode>(N);
-  } else {
+  }
+  case Node::NK_Null:
+    return new (EmptyHNodeAllocator.Allocate()) EmptyHNode(N);
+  default:
     setError(N, "unknown node kind");
     return nullptr;
   }
@@ -527,8 +543,9 @@ std::vector<StringRef> Output::keys() {
 }
 
 bool Output::preflightKey(const char *Key, bool Required, bool SameAsDefault,
-                          bool &UseDefault, void *&) {
+                          bool &UseDefault, void *&SaveInfo) {
   UseDefault = false;
+  SaveInfo = nullptr;
   if (Required || !SameAsDefault || WriteDefaultValues) {
     auto State = StateStack.back();
     if (State == inFlowMapFirstKey || State == inFlowMapOtherKey) {
@@ -599,7 +616,8 @@ void Output::endSequence() {
   StateStack.pop_back();
 }
 
-bool Output::preflightElement(unsigned, void *&) {
+bool Output::preflightElement(unsigned, void *&SaveInfo) {
+  SaveInfo = nullptr;
   return true;
 }
 
@@ -627,7 +645,7 @@ void Output::endFlowSequence() {
   outputUpToEndOfLine(" ]");
 }
 
-bool Output::preflightFlowElement(unsigned, void *&) {
+bool Output::preflightFlowElement(unsigned, void *&SaveInfo) {
   if (NeedFlowSequenceComma)
     output(", ");
   if (WrapColumn && Column > WrapColumn) {
@@ -637,6 +655,7 @@ bool Output::preflightFlowElement(unsigned, void *&) {
     Column = ColumnAtFlowStart;
     output("  ");
   }
+  SaveInfo = nullptr;
   return true;
 }
 
@@ -699,40 +718,8 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
     outputUpToEndOfLine("''");
     return;
   }
-  if (MustQuote == QuotingType::None) {
-    // Only quote if we must.
-    outputUpToEndOfLine(S);
-    return;
-  }
-
-  const char *const Quote = MustQuote == QuotingType::Single ? "'" : "\"";
-  output(Quote); // Starting quote.
-
-  // When using double-quoted strings (and only in that case), non-printable characters may be
-  // present, and will be escaped using a variety of unicode-scalar and special short-form
-  // escapes. This is handled in yaml::escape.
-  if (MustQuote == QuotingType::Double) {
-    output(yaml::escape(S, /* EscapePrintable= */ false));
-    outputUpToEndOfLine(Quote);
-    return;
-  }
-
-  unsigned i = 0;
-  unsigned j = 0;
-  unsigned End = S.size();
-  const char *Base = S.data();
-
-  // When using single-quoted strings, any single quote ' must be doubled to be escaped.
-  while (j < End) {
-    if (S[j] == '\'') {                    // Escape quotes.
-      output(StringRef(&Base[i], j - i));  // "flush".
-      output(StringLiteral("''"));         // Print it as ''
-      i = j + 1;
-    }
-    ++j;
-  }
-  output(StringRef(&Base[i], j - i));
-  outputUpToEndOfLine(Quote); // Ending quote.
+  output(S, MustQuote);
+  outputUpToEndOfLine("");
 }
 
 void Output::blockScalarString(StringRef &S) {
@@ -780,6 +767,46 @@ bool Output::canElideEmptySequence() {
 void Output::output(StringRef s) {
   Column += s.size();
   Out << s;
+}
+
+void Output::output(StringRef S, QuotingType MustQuote) {
+  if (MustQuote == QuotingType::None) {
+    // Only quote if we must.
+    output(S);
+    return;
+  }
+
+  StringLiteral Quote = MustQuote == QuotingType::Single ? StringLiteral("'")
+                                                         : StringLiteral("\"");
+  output(Quote); // Starting quote.
+
+  // When using double-quoted strings (and only in that case), non-printable
+  // characters may be present, and will be escaped using a variety of
+  // unicode-scalar and special short-form escapes. This is handled in
+  // yaml::escape.
+  if (MustQuote == QuotingType::Double) {
+    output(yaml::escape(S, /* EscapePrintable= */ false));
+    output(Quote);
+    return;
+  }
+
+  unsigned i = 0;
+  unsigned j = 0;
+  unsigned End = S.size();
+  const char *Base = S.data();
+
+  // When using single-quoted strings, any single quote ' must be doubled to be
+  // escaped.
+  while (j < End) {
+    if (S[j] == '\'') {                   // Escape quotes.
+      output(StringRef(&Base[i], j - i)); // "flush".
+      output(StringLiteral("''"));        // Print it as ''
+      i = j + 1;
+    }
+    ++j;
+  }
+  output(StringRef(&Base[i], j - i));
+  output(Quote); // Ending quote.
 }
 
 void Output::outputUpToEndOfLine(StringRef s) {
@@ -834,7 +861,7 @@ void Output::newLineCheck(bool EmptySequence) {
 }
 
 void Output::paddedKey(StringRef key) {
-  output(key);
+  output(key, needsQuotes(key, false));
   output(":");
   const char *spaces = "                ";
   if (key.size() < strlen(spaces))
@@ -853,7 +880,7 @@ void Output::flowKey(StringRef Key) {
     Column = ColumnAtMapFlowStart;
     output("  ");
   }
-  output(Key);
+  output(Key, needsQuotes(Key, false));
   output(": ");
 }
 
@@ -884,7 +911,7 @@ void ScalarTraits<bool>::output(const bool &Val, void *, raw_ostream &Out) {
 }
 
 StringRef ScalarTraits<bool>::input(StringRef Scalar, void *, bool &Val) {
-  if (llvm::Optional<bool> Parsed = parseBool(Scalar)) {
+  if (std::optional<bool> Parsed = parseBool(Scalar)) {
     Val = *Parsed;
     return StringRef();
   }

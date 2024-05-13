@@ -1,9 +1,5 @@
-# REQUIRES: lua
 # XFAIL: system-netbsd
-# RUN: echo "int main() { return 0; }" | %clang_host -x c - -o %t
-# RUN: %lldb -s %s --script-language lua %t 2>&1 | FileCheck %s
-b main
-r
-watchpoint set expr 0x0
-watchpoint command add -s lua
-# CHECK: error: This script interpreter does not support watchpoint callbacks
+# RUN: %clang_host -x c %S/Inputs/val.c -g -o %t
+# RUN: %lldb -b -s %S/Inputs/watchpoint1.in --script-language lua %t 2>&1 | FileCheck %S/Inputs/watchpoint1.in
+# RUN: %lldb -b -s %S/Inputs/watchpoint2.in --script-language lua %t 2>&1 | FileCheck %S/Inputs/watchpoint2.in
+# RUN: %lldb -b -s %S/Inputs/watchpoint3.in --script-language lua %t 2>&1 | FileCheck %S/Inputs/watchpoint3.in

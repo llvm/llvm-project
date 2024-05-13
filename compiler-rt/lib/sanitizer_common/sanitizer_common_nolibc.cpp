@@ -25,10 +25,10 @@ void LogMessageOnPrintf(const char *str) {}
 #endif
 void WriteToSyslog(const char *buffer) {}
 void Abort() { internal__exit(1); }
-void SleepForSeconds(int seconds) { internal_sleep(seconds); }
+bool CreateDir(const char *pathname) { return false; }
 #endif // !SANITIZER_WINDOWS
 
-#if !SANITIZER_WINDOWS && !SANITIZER_MAC
+#if !SANITIZER_WINDOWS && !SANITIZER_APPLE
 void ListOfModules::init() {}
 void InitializePlatformCommonFlags(CommonFlags *cf) {}
 #endif

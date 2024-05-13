@@ -6,7 +6,7 @@
 // simple return expressions.
 
 // CHECK: define {{.*}}foo
-// CHECK: call void @_ZN1CD1Ev(%class.C* {{.*}}){{( #[0-9])?}}, !dbg ![[RET:[0-9]+]]
+// CHECK: call void @_ZN1CD1Ev(ptr {{.*}}){{( #[0-9])?}}, !dbg ![[RET:[0-9]+]]
 // CHECK: ret i32 0, !dbg ![[RET]]
 
 // CHECK: define {{.*}}bar

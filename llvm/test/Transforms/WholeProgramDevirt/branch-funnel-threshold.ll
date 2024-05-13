@@ -1,94 +1,82 @@
-; RUN: opt -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -wholeprogramdevirt-branch-funnel-threshold=1 -S -o - %s | not grep @llvm.icall.branch.funnel | count 0
+; RUN: opt -passes=wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -wholeprogramdevirt-branch-funnel-threshold=1 -S -o - %s | not grep @llvm.icall.branch.funnel | count 0
 
-; RUN: opt -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -wholeprogramdevirt-branch-funnel-threshold=10 -S -o - %s | grep @llvm.icall.branch.funnel | count 4
+; RUN: opt -passes=wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -wholeprogramdevirt-branch-funnel-threshold=10 -S -o - %s | grep @llvm.icall.branch.funnel | count 4
 
-; RUN: opt -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -wholeprogramdevirt-branch-funnel-threshold=100 -S -o - %s | grep @llvm.icall.branch.funnel | count 5
+; RUN: opt -passes=wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -wholeprogramdevirt-branch-funnel-threshold=100 -S -o - %s | grep @llvm.icall.branch.funnel | count 5
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-@vt1_1 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf1_1 to i8*)], !type !0
-@vt1_2 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf1_2 to i8*)], !type !0
+@vt1_1 = constant [1 x ptr] [ptr @vf1_1], !type !0
+@vt1_2 = constant [1 x ptr] [ptr @vf1_2], !type !0
 
-declare i32 @vf1_1(i8* %this, i32 %arg)
-declare i32 @vf1_2(i8* %this, i32 %arg)
+declare i32 @vf1_1(ptr %this, i32 %arg)
+declare i32 @vf1_2(ptr %this, i32 %arg)
 
-@vt2_1 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_1 to i8*)], !type !1
-@vt2_2 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_2 to i8*)], !type !1
-@vt2_3 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_3 to i8*)], !type !1
-@vt2_4 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_4 to i8*)], !type !1
-@vt2_5 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_5 to i8*)], !type !1
-@vt2_6 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_6 to i8*)], !type !1
-@vt2_7 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_7 to i8*)], !type !1
-@vt2_8 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_8 to i8*)], !type !1
-@vt2_9 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_9 to i8*)], !type !1
-@vt2_10 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_10 to i8*)], !type !1
-@vt2_11 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2_11 to i8*)], !type !1
+@vt2_1 = constant [1 x ptr] [ptr @vf2_1], !type !1
+@vt2_2 = constant [1 x ptr] [ptr @vf2_2], !type !1
+@vt2_3 = constant [1 x ptr] [ptr @vf2_3], !type !1
+@vt2_4 = constant [1 x ptr] [ptr @vf2_4], !type !1
+@vt2_5 = constant [1 x ptr] [ptr @vf2_5], !type !1
+@vt2_6 = constant [1 x ptr] [ptr @vf2_6], !type !1
+@vt2_7 = constant [1 x ptr] [ptr @vf2_7], !type !1
+@vt2_8 = constant [1 x ptr] [ptr @vf2_8], !type !1
+@vt2_9 = constant [1 x ptr] [ptr @vf2_9], !type !1
+@vt2_10 = constant [1 x ptr] [ptr @vf2_10], !type !1
+@vt2_11 = constant [1 x ptr] [ptr @vf2_11], !type !1
 
-declare i32 @vf2_1(i8* %this, i32 %arg)
-declare i32 @vf2_2(i8* %this, i32 %arg)
-declare i32 @vf2_3(i8* %this, i32 %arg)
-declare i32 @vf2_4(i8* %this, i32 %arg)
-declare i32 @vf2_5(i8* %this, i32 %arg)
-declare i32 @vf2_6(i8* %this, i32 %arg)
-declare i32 @vf2_7(i8* %this, i32 %arg)
-declare i32 @vf2_8(i8* %this, i32 %arg)
-declare i32 @vf2_9(i8* %this, i32 %arg)
-declare i32 @vf2_10(i8* %this, i32 %arg)
-declare i32 @vf2_11(i8* %this, i32 %arg)
+declare i32 @vf2_1(ptr %this, i32 %arg)
+declare i32 @vf2_2(ptr %this, i32 %arg)
+declare i32 @vf2_3(ptr %this, i32 %arg)
+declare i32 @vf2_4(ptr %this, i32 %arg)
+declare i32 @vf2_5(ptr %this, i32 %arg)
+declare i32 @vf2_6(ptr %this, i32 %arg)
+declare i32 @vf2_7(ptr %this, i32 %arg)
+declare i32 @vf2_8(ptr %this, i32 %arg)
+declare i32 @vf2_9(ptr %this, i32 %arg)
+declare i32 @vf2_10(ptr %this, i32 %arg)
+declare i32 @vf2_11(ptr %this, i32 %arg)
 
-@vt3_1 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf3_1 to i8*)], !type !2
-@vt3_2 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf3_2 to i8*)], !type !2
+@vt3_1 = constant [1 x ptr] [ptr @vf3_1], !type !2
+@vt3_2 = constant [1 x ptr] [ptr @vf3_2], !type !2
 
-declare i32 @vf3_1(i8* %this, i32 %arg)
-declare i32 @vf3_2(i8* %this, i32 %arg)
+declare i32 @vf3_1(ptr %this, i32 %arg)
+declare i32 @vf3_2(ptr %this, i32 %arg)
 
-@vt4_1 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf4_1 to i8*)], !type !3
-@vt4_2 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf4_2 to i8*)], !type !3
+@vt4_1 = constant [1 x ptr] [ptr @vf4_1], !type !3
+@vt4_2 = constant [1 x ptr] [ptr @vf4_2], !type !3
 
-declare i32 @vf4_1(i8* %this, i32 %arg)
-declare i32 @vf4_2(i8* %this, i32 %arg)
+declare i32 @vf4_1(ptr %this, i32 %arg)
+declare i32 @vf4_2(ptr %this, i32 %arg)
 
-define i32 @fn1(i8* %obj) #0 {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid1")
+define i32 @fn1(ptr %obj) #0 {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid1")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr [1 x i8*], [1 x i8*]* %vtable, i32 0, i32 0
-  %fptr = load i8*, i8** %fptrptr
-  %fptr_casted = bitcast i8* %fptr to i32 (i8*, i32)*
-  %result = call i32 %fptr_casted(i8* %obj, i32 1)
+  %fptr = load ptr, ptr %vtable
+  %result = call i32 %fptr(ptr %obj, i32 1)
   ret i32 %result
 }
 
-define i32 @fn2(i8* %obj) #0 {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid2")
+define i32 @fn2(ptr %obj) #0 {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid2")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr [1 x i8*], [1 x i8*]* %vtable, i32 0, i32 0
-  %fptr = load i8*, i8** %fptrptr
-  %fptr_casted = bitcast i8* %fptr to i32 (i8*, i32)*
-  %result = call i32 %fptr_casted(i8* %obj, i32 1)
+  %fptr = load ptr, ptr %vtable
+  %result = call i32 %fptr(ptr %obj, i32 1)
   ret i32 %result
 }
 
-define i32 @fn3(i8* %obj) #0 {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !4)
+define i32 @fn3(ptr %obj) #0 {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !4)
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr [1 x i8*], [1 x i8*]* %vtable, i32 0, i32 0
-  %fptr = load i8*, i8** %fptrptr
-  %fptr_casted = bitcast i8* %fptr to i32 (i8*, i32)*
-  %result = call i32 %fptr_casted(i8* %obj, i32 1)
+  %fptr = load ptr, ptr %vtable
+  %result = call i32 %fptr(ptr %obj, i32 1)
   ret i32 %result
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)
 
 !0 = !{i32 0, !"typeid1"}

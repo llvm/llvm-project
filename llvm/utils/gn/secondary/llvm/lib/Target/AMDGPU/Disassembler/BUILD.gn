@@ -10,6 +10,7 @@ static_library("Disassembler") {
   output_name = "LLVMAMDGPUDisassembler"
   deps = [
     ":AMDGPUGenDisassemblerTables",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Support",

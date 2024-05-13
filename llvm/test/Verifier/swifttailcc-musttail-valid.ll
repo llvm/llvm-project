@@ -1,11 +1,11 @@
-; RUN: opt -verify %s
+; RUN: opt -passes=verify %s
 
-define swifttailcc void @valid_attrs(i64* sret(i64) %ret, i8* byval(i8) %byval, i8* swiftself %self, i8* swiftasync %ctx) {
-  musttail call swifttailcc void @valid_attrs(i64* sret(i64) %ret, i8* byval(i8) %byval, i8* swiftself %self, i8* swiftasync %ctx)
+define swifttailcc void @valid_attrs(ptr sret(i64) %ret, ptr byval(i8) %byval, ptr swiftself %self, ptr swiftasync %ctx) {
+  musttail call swifttailcc void @valid_attrs(ptr sret(i64) %ret, ptr byval(i8) %byval, ptr swiftself %self, ptr swiftasync %ctx)
   ret void
 }
 
 define swifttailcc void @mismatch_parms() {
-  musttail call swifttailcc void @valid_attrs(i64* sret(i64) undef, i8* byval(i8) undef, i8* swiftself undef, i8* swiftasync  undef)
+  musttail call swifttailcc void @valid_attrs(ptr sret(i64) undef, ptr byval(i8) undef, ptr swiftself undef, ptr swiftasync  undef)
   ret void
 }

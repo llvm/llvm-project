@@ -11,10 +11,8 @@ import json
 
 
 class UbsanBasicTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessUndefinedBehaviorSanitizer
+    @no_debug_info_test
     def test(self):
         self.build()
         self.ubsan_tests()
@@ -22,7 +20,7 @@ class UbsanBasicTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        self.line_align = line_number('main.c', '// align line')
+        self.line_align = line_number("main.c", "// align line")
 
     def ubsan_tests(self):
         # Load the test
@@ -38,17 +36,21 @@ class UbsanBasicTestCase(TestBase):
         frame = thread.GetSelectedFrame()
 
         # the stop reason of the thread should be breakpoint.
-        self.expect("thread list", "A ubsan issue should be detected",
-                    substrs=['stopped', 'stop reason ='])
+        self.expect(
+            "thread list",
+            "A ubsan issue should be detected",
+            substrs=["stopped", "stop reason ="],
+        )
 
         stop_reason = thread.GetStopReason()
-        self.assertEqual(stop_reason, lldb.eStopReasonInstrumentation)
+        self.assertStopReason(stop_reason, lldb.eStopReasonInstrumentation)
 
         # test that the UBSan dylib is present
         self.expect(
             "image lookup -n __ubsan_on_report",
             "__ubsan_on_report should be present",
-            substrs=['1 match found'])
+            substrs=["1 match found"],
+        )
 
         # We should be stopped in __ubsan_on_report
         self.assertIn("__ubsan_on_report", frame.GetFunctionName())
@@ -63,8 +65,9 @@ class UbsanBasicTestCase(TestBase):
         self.assertTrue(found)
 
         backtraces = thread.GetStopReasonExtendedBacktraces(
-            lldb.eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer)
-        self.assertEquals(backtraces.GetSize(), 1)
+            lldb.eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer
+        )
+        self.assertEqual(backtraces.GetSize(), 1)
 
         self.expect(
             "thread info -s",
@@ -76,10 +79,11 @@ class UbsanBasicTestCase(TestBase):
                 "instrumentation_class",
                 "line",
                 "memory_address",
-            ])
+            ],
+        )
 
-        output_lines = self.res.GetOutput().split('\n')
-        json_line = '\n'.join(output_lines[2:])
+        output_lines = self.res.GetOutput().split("\n")
+        json_line = "\n".join(output_lines[2:])
         data = json.loads(json_line)
 
         self.assertEqual(data["instrumentation_class"], "UndefinedBehaviorSanitizer")
@@ -87,4 +91,11 @@ class UbsanBasicTestCase(TestBase):
         self.assertEqual(os.path.basename(data["filename"]), "main.c")
         self.assertEqual(data["line"], self.line_align)
 
-        self.runCmd("continue")
+        for count in range(0, 8):
+            process.Continue()
+            stop_reason = thread.GetStopReason()
+            self.assertEqual(
+                stop_reason,
+                lldb.eStopReasonInstrumentation,
+                "Round {0} wasn't instrumentation".format(count),
+            )

@@ -111,7 +111,9 @@ public:
   }
 
 private:
+  LLVM_PREFERRED_TYPE(AccessSpecifier)
   unsigned Access : 2;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsMember : 1;
   NamedDecl *Target;
   CXXRecordDecl *NamingClass;
@@ -190,8 +192,8 @@ public:
 
   ArrayRef<SourceLocation> getAvailabilitySelectorLocs() const {
     assert(Kind == Availability && "Not an availability diagnostic.");
-    return llvm::makeArrayRef(AvailabilityData.SelectorLocs,
-                              AvailabilityData.NumSelectorLocs);
+    return llvm::ArrayRef(AvailabilityData.SelectorLocs,
+                          AvailabilityData.NumSelectorLocs);
   }
 
   AvailabilityResult getAvailabilityResult() const {

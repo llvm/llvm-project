@@ -5,8 +5,8 @@
 
 // RUN: rm -rf %t
 
-// Sanity check one of the compilations.
-// RUN: %clang_cc1 -triple aarch64-unknown-unknown -fmodules -fmodules-cache-path=%t -fimplicit-module-maps -I %S/Inputs -fsyntax-only %s -verify -DSANITY_CHECK
+// Basic check on one of the compilations.
+// RUN: %clang_cc1 -triple aarch64-unknown-unknown -fmodules -fmodules-cache-path=%t -fimplicit-module-maps -I %S/Inputs -fsyntax-only %s -verify -DBASIC_CHECK
 // expected-no-diagnostics
 
 // Check all the targets:
@@ -23,7 +23,7 @@
 // RUN: not %clang_cc1 -triple riscv64-unknown-unknown -fmodules -fmodules-cache-path=%t -fimplicit-module-maps -I %S/Inputs -fsyntax-only  %s 2> %t.riscv64
 // RUN: FileCheck %s -check-prefix=RISCV64 < %t.riscv64
 
-#ifndef SANITY_CHECK
+#ifndef BASIC_CHECK
 @import TargetFeatures;
 // AARCH32-NOT: module 'TargetFeatures' requires
 // AARCH64-NOT: module 'TargetFeatures' requires
@@ -55,7 +55,7 @@
 // RISCV32: module 'TargetFeatures.arm.aarch64' requires feature
 // RISCV64: module 'TargetFeatures.arm.aarch64' requires feature
 
-#ifndef SANITY_CHECK
+#ifndef BASIC_CHECK
 @import TargetFeatures.x86;
 // AARCH32:  module 'TargetFeatures.x86' requires feature 'x86'
 // AARCH64:  module 'TargetFeatures.x86' requires feature 'x86'

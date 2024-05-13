@@ -54,7 +54,7 @@ define dso_local i32 @select_noopt(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4) 
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    orb %cl, %dl
 ; CHECK-NEXT:    movzbl %dl, %ecx
-; CHECK-NEXT:    movl %ecx, {{.*}}(%rip)
+; CHECK-NEXT:    movl %ecx, var32(%rip)
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    cmovel %r8d, %eax
 ; CHECK-NEXT:    retq
@@ -62,7 +62,7 @@ define dso_local i32 @select_noopt(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4) 
   %cmp1 = icmp ult i32 %a1, %a2
   %or = or i1 %cmp0, %cmp1
   %zero_one = zext i1 %or to i32
-  store volatile i32 %zero_one, i32* @var32
+  store volatile i32 %zero_one, ptr @var32
   %res = select i1 %or, i32 %a3, i32 %a4
   ret i32 %res
 }

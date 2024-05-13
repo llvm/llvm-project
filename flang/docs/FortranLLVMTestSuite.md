@@ -1,8 +1,9 @@
 # Fortran Tests in the LLVM Test Suite
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 The [LLVM Test Suite](https://github.com/llvm/llvm-test-suite) is a
@@ -11,29 +12,34 @@ first-time users read through [LLVM Test Suite
 Guide](https://llvm.org/docs/TestSuiteGuide.html) which describes the
 organizational structure of the test suite and how to run it.
 
-Although the Flang driver is unable to generate code at this time, we
-are neverthelesss incrementally adding Fortran tests into the LLVM
-Test Suite. We are currently testing against GFortran while we make
-progress towards completing the new Flang driver with full
-code-generation capabilities.
-
 ## Running the LLVM test-suite with Fortran
 
 Fortran support can be enabled by setting the following CMake variables:
 ```
-% cmake -DCMAKE_Fortran_COMPILER=<path to Fortran compiler> \
-        -DTEST_SUITE_FORTRAN:STRING=ON \
-        -C../test-suite/cmake/caches/O3.cmake \
-        ../test-suite
+cmake -G "Ninja" -DCMAKE_C_COMPILER=<path to C compiler> \
+    -DCMAKE_CXX_COMPILER=<path to C++ compiler> \
+    -DCMAKE_Fortran_COMPILER=<path to Fortran compiler> \
+    -DTEST_SUITE_COLLECT_CODE_SIZE:STRING=OFF \
+    -DTEST_SUITE_SUBDIRS:STRING="Fortran" \
+    -DTEST_SUITE_FORTRAN:STRING=ON \
+    -DTEST_SUITE_LIT=<path to llvm-lit> \
+    <path to llvm-test-suite>
 ```
 
-At the moment, there is only a "hello world" Fortran test. A current
-shortcoming in the design of the test suite is that building the C/C++
-tests is conflated with building and running the Fortran tests,
-i.e. it is not possible to only build and run the Fortran tests with
-the exception of the [External
-tests](https://llvm.org/docs/TestSuiteGuide.html#external-suites).
+This will configure the test-suite to run only the Fortran tests which
+are found in the Fortran subdirectory. To run the C/C++ tests
+alongside the Fortran tests omit the `-DTEST_SUITE_SUBDIRS` CMake
+variable.
 
+If your Fortran compiler is Flang, there are a couple of other things you need
+to do, which are explained
+[here](https://github.com/llvm/llvm-test-suite/blob/main/Fortran/gfortran/README.md#usage).
+
+Then to build and run the tests:
+```
+ninja
+ninja check
+```
 
 ## Running the SPEC CPU 2017
 
@@ -58,3 +64,12 @@ cmake -G "Ninja" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ \
     -DTEST_SUITE_FORTRAN:STRING=ON \
     -DTEST_SUITE_SPEC2017_ROOT=<path to SPEC directory>  ..
 ```
+
+## Running the gfortran tests
+
+Tests from the gfortran test suite have been imported into the LLVM Test Suite.
+The tests will be run automatically if the test suite is built following the
+instructions described [above](#running-the-llvm-test-suite-with-fortran).
+There are additional configure-time options that can be used with the gfortran 
+tests. More details about those options and their purpose can be found in 
+[`Fortran/gfortran/README.md`](https://github.com/llvm/llvm-test-suite/tree/main/Fortran/gfortran/README.md)`.

@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone       -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
 // RUN: %clang_cc1 -emit-llvm                                   -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=NO_MACRO %s 
 
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -debug-info-macro %S/Inputs/debug-info-macro.h -emit-pch -o %t.pch -DC3
+// RUN: %clang_cc1 -debug-info-kind=limited -debug-info-macro %S/Inputs/debug-info-macro.h -emit-pch -o %t.pch -DC3
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -debug-info-macro %s -o - -include-pch %t.pch "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,PCH %s 
 
 // This test checks that macro Debug info is correctly generated.
@@ -25,7 +25,6 @@
 // NO_MACRO-NOT: DIMacroFile
 
 // CHECK:  !DICompileUnit({{.*}} macros: [[Macros:![0-9]+]]
-// CHECK:  [[EmptyMD:![0-9]+]] = !{}
 
 // NO_PCH: [[Macros]] = !{[[MainMacroFile:![0-9]+]], [[BuiltinMacro:![0-9]+]], {{.*}}, [[DefineC1:![0-9]+]], [[DefineA:![0-9]+]], [[UndefC1:![0-9]+]]}
 // PCH:    [[Macros]] = !{[[MainMacroFile:![0-9]+]], [[DefineC1:![0-9]+]], [[DefineA:![0-9]+]], [[UndefC1:![0-9]+]]}

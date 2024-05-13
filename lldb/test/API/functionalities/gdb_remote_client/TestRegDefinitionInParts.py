@@ -1,35 +1,39 @@
-from __future__ import print_function
 import lldb
 import time
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
+
 
 class TestRegDefinitionInParts(GDBRemoteTestBase):
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
         """
         Test that lldb correctly fetches the target definition file
-        in multiple chunks if the remote server only provides the 
+        in multiple chunks if the remote server only provides the
         content in small parts, and the small parts it provides is
         smaller than the maximum packet size that it declared at
         the start of the debug session.  qemu does this.
         """
-        class MyResponder(MockGDBServerResponder):
 
+        class MyResponder(MockGDBServerResponder):
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                               <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                               <target version="1.0">
                               <architecture>i386:x86-64</architecture>
                               <xi:include href="i386-64bit-core.xml"/>
-                              </target>""", False
+                              </target>""",
+                        False,
+                    )
 
                 if annex == "i386-64bit-core.xml" and offset == 0:
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
 <!-- Copyright (C) 2010-2015 Free Software Foundation, Inc.
 
      Copying and distribution of this file, with or without modification,
@@ -78,10 +82,13 @@ class TestRegDefinitionInParts(GDBRemoteTestBase):
   <reg name="rip" bitsize="64" type="code_ptr"/>
   <reg name="eflags" bitsize="32" type="i386_eflags"/>
   <reg name="cs" bitsize="32" type="int32"/>
-  <reg name="ss" bitsize="32" ty""", True
+  <reg name="ss" bitsize="32" ty""",
+                        True,
+                    )
 
                 if annex == "i386-64bit-core.xml" and offset == 2045:
-                    return """pe="int32"/>
+                    return (
+                        """pe="int32"/>
   <reg name="ds" bitsize="32" type="int32"/>
   <reg name="es" bitsize="32" type="int32"/>
   <reg name="fs" bitsize="32" type="int32"/>
@@ -104,7 +111,9 @@ class TestRegDefinitionInParts(GDBRemoteTestBase):
   <reg name="foseg" bitsize="32" type="int" group="float"/>
   <reg name="fooff" bitsize="32" type="int" group="float"/>
   <reg name="fop" bitsize="32" type="int" group="float"/>
-</feature>""", False
+</feature>""",
+                        False,
+                    )
 
                 return None, False
 
@@ -119,7 +128,7 @@ class TestRegDefinitionInParts(GDBRemoteTestBase):
 
             def qfThreadInfo(self):
                 return "mdead"
-            
+
             def qC(self):
                 return ""
 
@@ -136,8 +145,7 @@ class TestRegDefinitionInParts(GDBRemoteTestBase):
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
             time.sleep(10)
-            self.addTearDownHook(
-                    lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         target = self.dbg.CreateTargetWithFileAndArch(None, None)
 
@@ -150,7 +158,7 @@ class TestRegDefinitionInParts(GDBRemoteTestBase):
             print(result.GetOutput())
 
         rip_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("rip")
-        self.assertEqual(rip_valobj.GetValueAsUnsigned(), 0x00ffff800041120e)
+        self.assertEqual(rip_valobj.GetValueAsUnsigned(), 0x00FFFF800041120E)
 
         ss_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("ss")
         self.assertEqual(ss_valobj.GetValueAsUnsigned(), 0x22222222)

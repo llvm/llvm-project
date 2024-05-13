@@ -8,6 +8,7 @@
 
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/FileSystem.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
 #include <cassert>
@@ -22,6 +23,10 @@
 
 #include "lldb/Host/PosixApi.h"
 
+#if defined(__APPLE__)
+#include <Availability.h>
+#endif
+
 #if defined(__ANDROID__)
 int posix_openpt(int flags);
 #endif
@@ -29,8 +34,7 @@ int posix_openpt(int flags);
 using namespace lldb_private;
 
 // PseudoTerminal constructor
-PseudoTerminal::PseudoTerminal()
-    : m_primary_fd(invalid_fd), m_secondary_fd(invalid_fd) {}
+PseudoTerminal::PseudoTerminal() = default;
 
 // Destructor
 //
@@ -92,7 +96,7 @@ llvm::Error PseudoTerminal::OpenSecondary(int oflag) {
   CloseSecondaryFileDescriptor();
 
   std::string name = GetSecondaryName();
-  m_secondary_fd = llvm::sys::RetryAfterSignal(-1, ::open, name.c_str(), oflag);
+  m_secondary_fd = FileSystem::Instance().Open(name.c_str(), oflag);
   if (m_secondary_fd >= 0)
     return llvm::Error::success();
 
@@ -100,21 +104,35 @@ llvm::Error PseudoTerminal::OpenSecondary(int oflag) {
       std::error_code(errno, std::generic_category()));
 }
 
+#if !HAVE_PTSNAME_R || defined(__APPLE__)
+static std::string use_ptsname(int fd) {
+  static std::mutex mutex;
+  std::lock_guard<std::mutex> guard(mutex);
+  const char *r = ptsname(fd);
+  assert(r != nullptr);
+  return r;
+}
+#endif
+
 std::string PseudoTerminal::GetSecondaryName() const {
   assert(m_primary_fd >= 0);
 #if HAVE_PTSNAME_R
-  char buf[PATH_MAX];
-  buf[0] = '\0';
-  int r = ptsname_r(m_primary_fd, buf, sizeof(buf));
-  (void)r;
-  assert(r == 0);
-  return buf;
+#if defined(__APPLE__)
+  if (__builtin_available(macos 10.13.4, iOS 11.3, tvOS 11.3, watchOS 4.4, *)) {
+#endif
+    char buf[PATH_MAX];
+    buf[0] = '\0';
+    int r = ptsname_r(m_primary_fd, buf, sizeof(buf));
+    UNUSED_IF_ASSERT_DISABLED(r);
+    assert(r == 0);
+    return buf;
+#if defined(__APPLE__)
+  } else {
+    return use_ptsname(m_primary_fd);
+  }
+#endif
 #else
-  static std::mutex mutex;
-  std::lock_guard<std::mutex> guard(mutex);
-  const char *r = ptsname(m_primary_fd);
-  assert(r != nullptr);
-  return r;
+  return use_ptsname(m_primary_fd);
 #endif
 }
 

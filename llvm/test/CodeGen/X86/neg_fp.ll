@@ -10,7 +10,7 @@ define float @negfp(float %a, float %b) nounwind {
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    subss {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    xorps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    popl %eax
@@ -23,14 +23,14 @@ entry:
 
 ; This may infinite loop if isNegatibleForFree and getNegatedExpression are conflicted.
 
-define double @negation_propagation(double* %arg, double %arg1, double %arg2) nounwind {
+define double @negation_propagation(ptr %arg, double %arg1, double %arg2) nounwind {
 ; CHECK-LABEL: negation_propagation:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    divsd 12(%ebp), %xmm0
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1
@@ -80,4 +80,18 @@ define float @fdiv_extra_use_changes_cost(float %a0, float %a1, float %a2) nounw
   %sub4 = fadd fast float %add3, %a2
   %div5 = fdiv fast float %sub4, %mul2
   ret float %div5
+}
+
+; PR55758 - this is not -(-X)
+
+define <2 x i64> @fneg_mismatched_sizes(<4 x float> %x) {
+; CHECK-LABEL: fneg_mismatched_sizes:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; CHECK-NEXT:    retl
+  %n = fneg <4 x float> %x
+  %b = bitcast <4 x float> %n to <2 x i64>
+  %r = xor <2 x i64> %b, <i64 -9223372036854775808, i64 -9223372036854775808>
+  ret <2 x i64> %r
 }

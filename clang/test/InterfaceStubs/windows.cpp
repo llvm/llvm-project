@@ -6,9 +6,9 @@
 // CHECK-CC1: Symbols:
 // CHECK-CC1-NEXT: ?helloWindowsMsvc@@YAHXZ
 
-// CHECK-IFS: --- !experimental-ifs-v2
-// CHECK-IFS: IfsVersion: 2.0
-// CHECK-IFS: Triple:
+// CHECK-IFS: --- !ifs-v1
+// CHECK-IFS: IfsVersion: 3.0
+// CHECK-IFS: Target:
 // CHECK-IFS: Symbols:
 // CHECK-IFS:   - { Name: '?helloWindowsMsvc@@YAHXZ', Type: Func }
 // CHECK-IFS: ...

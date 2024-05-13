@@ -1,0 +1,15 @@
+# CRLF (Windows) line endings take two bytes instead of one, so any tests that
+# rely on or check fixed character -offset, Offset: or FileOffset: locations
+# will fail when run on input files checked out with different line endings.
+
+# These test input files rely on one-byte Unix (LF) line-endings, as they use
+# fixed -offset, FileOffset:, or Offset: numbers in their tests.
+clang-apply-replacements/ClangRenameClassReplacements.cpp -text
+clang-apply-replacements/Inputs/basic/basic.h -text
+clang-apply-replacements/Inputs/format/no.cpp -text
+clang-apply-replacements/Inputs/format/yes.cpp -text
+clang-tidy/infrastructure/export-diagnostics.cpp -text
+
+# These test input files rely on two-byte Windows (CRLF) line endings.
+clang-apply-replacements/Inputs/crlf/crlf.cpp -text
+clang-apply-replacements/Inputs/crlf/crlf.cpp.expected -text

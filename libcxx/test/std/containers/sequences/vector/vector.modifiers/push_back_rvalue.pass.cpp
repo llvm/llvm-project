@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
     {
         std::vector<MoveOnly> c;
@@ -83,7 +83,7 @@ int main(int, char**)
             assert(c[j] == MoveOnly(j));
     }
     {
-        std::vector<MoveOnly, min_allocator<MoveOnly>> c;
+        std::vector<MoveOnly, min_allocator<MoveOnly> > c;
         c.push_back(MoveOnly(0));
         assert(c.size() == 1);
         assert(is_contiguous_container_asan_correct(c));
@@ -111,5 +111,14 @@ int main(int, char**)
             assert(c[j] == MoveOnly(j));
     }
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

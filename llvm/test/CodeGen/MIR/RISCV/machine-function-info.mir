@@ -1,0 +1,138 @@
+# RUN: llc -mtriple=riscv64 -run-pass none %s -o - | FileCheck %s
+
+--- |
+  ; ModuleID = 'foo.ll'
+  source_filename = "foo.ll"
+  target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
+  target triple = "riscv64"
+
+  define void @foo(i32 %0, ...) {
+    ret void
+  }
+
+...
+---
+name:            foo
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+  - { id: 2, class: gpr, preferred-register: '' }
+  - { id: 3, class: gpr, preferred-register: '' }
+  - { id: 4, class: gpr, preferred-register: '' }
+  - { id: 5, class: gpr, preferred-register: '' }
+  - { id: 6, class: gpr, preferred-register: '' }
+  - { id: 7, class: gpr, preferred-register: '' }
+liveins:
+  - { reg: '$x11', virtual-reg: '%1' }
+  - { reg: '$x12', virtual-reg: '%2' }
+  - { reg: '$x13', virtual-reg: '%3' }
+  - { reg: '$x14', virtual-reg: '%4' }
+  - { reg: '$x15', virtual-reg: '%5' }
+  - { reg: '$x16', virtual-reg: '%6' }
+  - { reg: '$x17', virtual-reg: '%7' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: -8, size: 8, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: default, offset: -16, size: 8, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: default, offset: -24, size: 8, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, type: default, offset: -32, size: 8, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, type: default, offset: -40, size: 8, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, type: default, offset: -48, size: 8, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, type: default, offset: -56, size: 8, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, type: default, offset: -64, size: 8, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, type: default, offset: -56, size: 8, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  varArgsFrameIndex: -1
+  varArgsSaveSize: 64
+body:             |
+  bb.0 (%ir-block.1):
+    liveins: $x11, $x12, $x13, $x14, $x15, $x16, $x17
+    ; CHECK-LABEL: name: foo
+    ; CHECK: machineFunctionInfo:
+    ; CHECK-NEXT:  varArgsFrameIndex: -1
+    ; CHECK-NEXT:  varArgsSaveSize: 64
+    ; CHECK: liveins: $x11, $x12, $x13, $x14, $x15, $x16, $x17
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x17
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x16
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x15
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x14
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr = COPY $x13
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gpr = COPY $x12
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: SD [[COPY]], %fixed-stack.8, 0 :: (store (s64))
+    ; CHECK-NEXT: SD [[COPY1]], %fixed-stack.7, 0 :: (store (s64) into %fixed-stack.7, align 16)
+    ; CHECK-NEXT: SD [[COPY2]], %fixed-stack.6, 0 :: (store (s64))
+    ; CHECK-NEXT: SD [[COPY3]], %fixed-stack.5, 0 :: (store (s64) into %fixed-stack.5, align 16)
+    ; CHECK-NEXT: SD [[COPY4]], %fixed-stack.4, 0 :: (store (s64))
+    ; CHECK-NEXT: SD [[COPY5]], %fixed-stack.3, 0 :: (store (s64) into %fixed-stack.3, align 16)
+    ; CHECK-NEXT: SD [[COPY6]], %fixed-stack.2, 0 :: (store (s64))
+    ; CHECK-NEXT: PseudoRET
+    %7:gpr = COPY $x17
+    %6:gpr = COPY $x16
+    %5:gpr = COPY $x15
+    %4:gpr = COPY $x14
+    %3:gpr = COPY $x13
+    %2:gpr = COPY $x12
+    %1:gpr = COPY $x11
+    SD %7, %fixed-stack.0, 0 :: (store (s64))
+    SD %6, %fixed-stack.1, 0 :: (store (s64) into %fixed-stack.1, align 16)
+    SD %5, %fixed-stack.2, 0 :: (store (s64))
+    SD %4, %fixed-stack.3, 0 :: (store (s64) into %fixed-stack.3, align 16)
+    SD %3, %fixed-stack.4, 0 :: (store (s64))
+    SD %2, %fixed-stack.5, 0 :: (store (s64) into %fixed-stack.5, align 16)
+    SD %1, %fixed-stack.6, 0 :: (store (s64))
+    PseudoRET
+
+...

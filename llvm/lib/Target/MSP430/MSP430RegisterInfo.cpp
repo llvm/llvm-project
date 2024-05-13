@@ -99,7 +99,7 @@ MSP430RegisterInfo::getPointerRegClass(const MachineFunction &MF, unsigned Kind)
   return &MSP430::GR16RegClass;
 }
 
-void
+bool
 MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                         int SPAdj, unsigned FIOperandNum,
                                         RegScavenger *RS) const {
@@ -135,8 +135,11 @@ MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MI.setDesc(TII.get(MSP430::MOV16rr));
     MI.getOperand(FIOperandNum).ChangeToRegister(BasePtr, false);
 
+    // Remove the now unused Offset operand.
+    MI.removeOperand(FIOperandNum + 1);
+
     if (Offset == 0)
-      return;
+      return false;
 
     // We need to materialize the offset via add instruction.
     Register DstReg = MI.getOperand(0).getReg();
@@ -147,11 +150,12 @@ MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       BuildMI(MBB, std::next(II), dl, TII.get(MSP430::ADD16ri), DstReg)
         .addReg(DstReg).addImm(Offset);
 
-    return;
+    return false;
   }
 
   MI.getOperand(FIOperandNum).ChangeToRegister(BasePtr, false);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+  return false;
 }
 
 Register MSP430RegisterInfo::getFrameRegister(const MachineFunction &MF) const {

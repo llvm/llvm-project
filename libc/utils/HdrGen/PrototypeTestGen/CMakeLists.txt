@@ -1,4 +1,4 @@
-add_tablegen(libc-prototype-testgen llvm-libc
+add_tablegen(libc-prototype-testgen LLVM_LIBC
   PrototypeTestGen.cpp
 )
 target_link_libraries(libc-prototype-testgen PRIVATE LibcTableGenUtil)

@@ -8,27 +8,27 @@ union A {
 int *f1(A *a) {
   return a->ref;
 }
-// CHECK-LABEL: define {{.*}}i32* @"?f1@@YAPAHPATA@@@Z"(%union.A* %a)
-// CHECK:       [[REF:%[^[:space:]]+]] = bitcast %union.A* %{{.*}} to i32***
-// CHECK:       [[IPP:%[^[:space:]]+]] = load i32**, i32*** [[REF]]
-// CHECK:       [[IP:%[^[:space:]]+]]  = load i32*, i32** [[IPP]]
-// CHECK:       ret i32* [[IP]]
+// CHECK-LABEL: define {{.*}}ptr @"?f1@@YAPAHPATA@@@Z"(ptr noundef %a)
+// CHECK:       [[A_ADDR:%[^[:space:]]+]] = load ptr, ptr %{{.*}}
+// CHECK:       [[IPP:%[^[:space:]]+]] = load ptr, ptr [[A_ADDR]]
+// CHECK:       [[IP:%[^[:space:]]+]]  = load ptr, ptr [[IPP]]
+// CHECK:       ret ptr [[IP]]
 
 void f2(A *a) {
   *a->ref = 1;
 }
-// CHECK-LABEL: define {{.*}}void @"?f2@@YAXPATA@@@Z"(%union.A* %a)
-// CHECK:       [[REF:%[^[:space:]]+]] = bitcast %union.A* %{{.*}} to i32***
-// CHECK:       [[IPP:%[^[:space:]]+]] = load i32**, i32*** [[REF]]
-// CHECK:       [[IP:%[^[:space:]]+]]  = load i32*, i32** [[IPP]]
-// CHECK:       store i32 1, i32* [[IP]]
+// CHECK-LABEL: define {{.*}}void @"?f2@@YAXPATA@@@Z"(ptr noundef %a)
+// CHECK:       [[A_ADDR:%[^[:space:]]+]] = load ptr, ptr %{{.*}}
+// CHECK:       [[IPP:%[^[:space:]]+]] = load ptr, ptr [[A_ADDR]]
+// CHECK:       [[IP:%[^[:space:]]+]]  = load ptr, ptr [[IPP]]
+// CHECK:       store i32 1, ptr [[IP]]
 
 bool f3(A *a, int *b) {
   return a->ref != b;
 }
-// CHECK-LABEL: define {{.*}}i1 @"?f3@@YA_NPATA@@PAH@Z"(%union.A* %a, i32* %b)
-// CHECK:       [[REF:%[^[:space:]]+]] = bitcast %union.A* %{{.*}} to i32***
-// CHECK:       [[IPP:%[^[:space:]]+]] = load i32**, i32*** [[REF]]
-// CHECK:       [[IP:%[^[:space:]]+]]  = load i32*, i32** [[IPP]]
-// CHECK:       [[IP2:%[^[:space:]]+]]  = load i32*, i32** %b.addr
-// CHECK:       icmp ne i32* [[IP]], [[IP2]]
+// CHECK-LABEL: define {{.*}}i1 @"?f3@@YA_NPATA@@PAH@Z"(ptr noundef %a, ptr noundef %b)
+// CHECK:       [[A_ADDR:%[^[:space:]]+]] = load ptr, ptr %{{.*}}
+// CHECK:       [[IPP:%[^[:space:]]+]] = load ptr, ptr [[A_ADDR]]
+// CHECK:       [[IP:%[^[:space:]]+]]  = load ptr, ptr [[IPP]]
+// CHECK:       [[IP2:%[^[:space:]]+]]  = load ptr, ptr %b.addr
+// CHECK:       icmp ne ptr [[IP]], [[IP2]]

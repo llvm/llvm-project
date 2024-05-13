@@ -30,10 +30,10 @@ long double f5(void) {
   return 0;
 }
 
-// CHECK-LABEL: define{{.*}} void @f6(i8 signext %a0, i16 signext %a1, i32 %a2, i64 %a3, i8* %a4)
+// CHECK-LABEL: define{{.*}} void @f6(i8 noundef signext %a0, i16 noundef signext %a1, i32 noundef %a2, i64 noundef %a3, ptr noundef %a4)
 void f6(char a0, short a1, int a2, long long a3, void *a4) {}
 
-// CHECK-LABEL: define{{.*}} void @f7(i32 %a0)
+// CHECK-LABEL: define{{.*}} void @f7(i32 noundef %a0)
 typedef enum { A, B, C } e7;
 void f7(e7 a0) {}
 
@@ -52,7 +52,7 @@ void f8_2(struct s8 a0) {}
 
 // FIXME: llvm-gcc expands this, this may have some value for the
 // backend in terms of optimization but doesn't change the ABI.
-// CHECK-LABEL: define{{.*}} void @f9_2(%struct.s9* byval(%struct.s9) align 4 %a0)
+// CHECK-LABEL: define{{.*}} void @f9_2(ptr noundef byval(%struct.s9) align 4 %a0)
 struct s9 {
   int a : 17;
   int b;
@@ -71,7 +71,7 @@ struct s10 {
 // Small vectors and 1 x {i64,double} are returned in registers
 
 // CHECK: i32 @f11()
-// CHECK: void @f12(<2 x i32>* noalias sret(<2 x i32>) align 8 %agg.result)
+// CHECK: void @f12(ptr dead_on_unwind noalias writable sret(<2 x i32>) align 8 %agg.result)
 // CHECK: i64 @f13()
 // CHECK: i64 @f14()
 // CHECK: <2 x i64> @f15()
@@ -93,11 +93,11 @@ T16 f16(void) { while (1) {} }
 // 128-bits).
 
 // CHECK: i32 @f17()
-// CHECK: void @f18(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 8 %agg.result)
-// CHECK: void @f19(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 8 %agg.result)
-// CHECK: void @f20(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 8 %agg.result)
-// CHECK: void @f21(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 16 %agg.result)
-// CHECK: void @f22(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 16 %agg.result)
+// CHECK: void @f18(ptr dead_on_unwind noalias writable sret(%struct.anon.{{[0-9]+}}) align 8 %agg.result)
+// CHECK: void @f19(ptr dead_on_unwind noalias writable sret(%struct.anon.{{[0-9]+}}) align 8 %agg.result)
+// CHECK: void @f20(ptr dead_on_unwind noalias writable sret(%struct.anon.{{[0-9]+}}) align 8 %agg.result)
+// CHECK: void @f21(ptr dead_on_unwind noalias writable sret(%struct.anon.{{[0-9]+}}) align 16 %agg.result)
+// CHECK: void @f22(ptr dead_on_unwind noalias writable sret(%struct.anon.{{[0-9]+}}) align 16 %agg.result)
 struct { T11 a; } f17(void) { while (1) {} }
 struct { T12 a; } f18(void) { while (1) {} }
 struct { T13 a; } f19(void) { while (1) {} }
@@ -116,11 +116,11 @@ struct { struct {} a; struct { float a[1]; } b; } f25(void) { while (1) {} }
 
 // Small structures are handled recursively
 // CHECK: i32 @f26()
-// CHECK: void @f27(%struct.s27* noalias sret(%struct.s27) align 1 %agg.result)
+// CHECK: void @f27(ptr dead_on_unwind noalias writable sret(%struct.s27) align 1 %agg.result)
 struct s26 { struct { char a, b; } a; struct { char a, b; } b; } f26(void) { while (1) {} }
 struct s27 { struct { char a, b, c; } a; struct { char a; } b; } f27(void) { while (1) {} }
 
-// CHECK: void @f28(%struct.s28* noalias sret(%struct.s28) align 4 %agg.result)
+// CHECK: void @f28(ptr dead_on_unwind noalias writable sret(%struct.s28) align 4 %agg.result)
 struct s28 { int a; int b[]; } f28(void) { while (1) {} }
 
 // CHECK-LABEL: define{{.*}} i16 @f29()
@@ -150,20 +150,19 @@ struct s36 { struct { int : 0; } a[2][10]; char b; char c; } f36(void) { while (
 // CHECK-LABEL: define{{.*}} float @f37()
 struct s37 { float c[1][1]; } f37(void) { while (1) {} }
 
-// CHECK-LABEL: define{{.*}} void @f38(%struct.s38* noalias sret(%struct.s38) align 2 %agg.result)
+// CHECK-LABEL: define{{.*}} void @f38(ptr dead_on_unwind noalias writable sret(%struct.s38) align 2 %agg.result)
 struct s38 { char a[3]; short b; } f38(void) { while (1) {} }
 
-// CHECK-LABEL: define{{.*}} void @f39(%struct.s39* byval(%struct.s39) align 16 %x)
+// CHECK-LABEL: define{{.*}} void @f39(ptr noundef byval(%struct.s39) align 16 %x)
 typedef int v39 __attribute((vector_size(16)));
 struct s39 { v39 x; };
 void f39(struct s39 x) {}
 
-// <rdar://problem/7247671>
 // CHECK-LABEL: define{{.*}} i32 @f40()
 enum e40 { ec0 = 0 };
 enum e40 f40(void) { }
 
-// CHECK-LABEL: define{{.*}} void ()* @f41()
+// CHECK-LABEL: define{{.*}} ptr @f41()
 typedef void (^vvbp)(void);
 vvbp f41(void) { }
 
@@ -173,16 +172,16 @@ struct s42 { enum e40 f0; } f42(void) {  }
 // CHECK-LABEL: define{{.*}} i64 @f43()
 struct s43 { enum e40 f0; int f1; } f43(void) {  }
 
-// CHECK-LABEL: define{{.*}} void ()* @f44()
+// CHECK-LABEL: define{{.*}} ptr @f44()
 struct s44 { vvbp f0; } f44(void) {  }
 
 // CHECK-LABEL: define{{.*}} i64 @f45()
 struct s45 { vvbp f0; int f1; } f45(void) {  }
 
-// CHECK-LABEL: define{{.*}} void @f46(i32 %a0)
+// CHECK-LABEL: define{{.*}} void @f46(i32 noundef %a0)
 void f46(enum e40 a0) { }
 
-// CHECK-LABEL: define{{.*}} void @f47(void ()* %a1)
+// CHECK-LABEL: define{{.*}} void @f47(ptr noundef %a1)
 void f47(vvbp a1) { }
 
 // CHECK-LABEL: define{{.*}} void @f48(i32 %a0.0)
@@ -193,21 +192,21 @@ void f48(struct s48 a0) { }
 struct s49 { enum e40 f0; int f1; };
 void f49(struct s49 a0) { }
 
-// CHECK-LABEL: define{{.*}} void @f50(void ()* %a0.0)
+// CHECK-LABEL: define{{.*}} void @f50(ptr %a0.0)
 struct s50 { vvbp f0; };
 void f50(struct s50 a0) { }
 
-// CHECK-LABEL: define{{.*}} void @f51(void ()* %a0.0, i32 %a0.1)
+// CHECK-LABEL: define{{.*}} void @f51(ptr %a0.0, i32 %a0.1)
 struct s51 { vvbp f0; int f1; };
 void f51(struct s51 a0) { }
 
-// CHECK-LABEL: define{{.*}} void @f52(%struct.s52* byval(%struct.s52) align 4 %0)
+// CHECK-LABEL: define{{.*}} void @f52(ptr noundef byval(%struct.s52) align 4 %0)
 struct s52 {
   long double a;
 };
 void f52(struct s52 x) {}
 
-// CHECK-LABEL: define{{.*}} void @f53(%struct.s53* byval(%struct.s53) align 4 %0)
+// CHECK-LABEL: define{{.*}} void @f53(ptr noundef byval(%struct.s53) align 4 %0)
 struct __attribute__((aligned(32))) s53 {
   int x;
   int y;
@@ -216,39 +215,37 @@ void f53(struct s53 x) {}
 
 typedef unsigned short v2i16 __attribute__((__vector_size__(4)));
 
-// CHECK-LABEL: define{{.*}} i32 @f54(i32 %arg.coerce)
-// rdar://8359483
+// CHECK-LABEL: define{{.*}} i32 @f54(i32 noundef %arg.coerce)
 v2i16 f54(v2i16 arg) { return arg+arg; }
 
 
 typedef int v4i32 __attribute__((__vector_size__(16)));
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @f55(<4 x i32> %arg)
+// CHECK-LABEL: define{{.*}} <2 x i64> @f55(<4 x i32> noundef %arg)
 // PR8029
 v4i32 f55(v4i32 arg) { return arg+arg; }
 
 // CHECK-LABEL: define{{.*}} void @f56(
-// CHECK: i8 signext %a0, %struct.s56_0* byval(%struct.s56_0) align 4 %a1,
-// CHECK: i64 %a2.coerce, %struct.s56_1* byval(%struct.s56_1) align 4 %0,
-// CHECK: i64 %a4.coerce, %struct.s56_2* byval(%struct.s56_2) align 4 %1,
-// CHECK: <4 x i32> %a6, %struct.s56_3* byval(%struct.s56_3) align 16 %a7,
-// CHECK: <2 x double> %a8, %struct.s56_4* byval(%struct.s56_4) align 16 %a9,
-// CHECK: <8 x i32> %a10, %struct.s56_5* byval(%struct.s56_5) align 4 %2,
-// CHECK: <4 x double> %a12, %struct.s56_6* byval(%struct.s56_6) align 4 %3)
+// CHECK: i8 noundef signext %a0, ptr noundef byval(%struct.s56_0) align 4 %a1,
+// CHECK: i64 noundef %a2.coerce, ptr noundef byval(%struct.s56_1) align 4 %0,
+// CHECK: i64 noundef %a4.coerce, ptr noundef byval(%struct.s56_2) align 4 %1,
+// CHECK: <4 x i32> noundef %a6, ptr noundef byval(%struct.s56_3) align 16 %a7,
+// CHECK: <2 x double> noundef %a8, ptr noundef byval(%struct.s56_4) align 16 %a9,
+// CHECK: <8 x i32> noundef %a10, ptr noundef byval(%struct.s56_5) align 4 %2,
+// CHECK: <4 x double> noundef %a12, ptr noundef byval(%struct.s56_6) align 4 %3)
 
-// CHECK:   call void (i32, ...) @f56_0(i32 1,
-// CHECK: i32 %{{[^ ]*}}, %struct.s56_0* byval(%struct.s56_0) align 4 %{{[^ ]*}},
-// CHECK: i64 %{{[^ ]*}}, %struct.s56_1* byval(%struct.s56_1) align 4 %{{[^ ]*}},
-// CHECK: i64 %{{[^ ]*}}, %struct.s56_2* byval(%struct.s56_2) align 4 %{{[^ ]*}},
-// CHECK: <4 x i32> %{{[^ ]*}}, %struct.s56_3* byval(%struct.s56_3) align 16 %{{[^ ]*}},
-// CHECK: <2 x double> %{{[^ ]*}}, %struct.s56_4* byval(%struct.s56_4) align 16 %{{[^ ]*}},
-// CHECK: <8 x i32> {{[^ ]*}}, %struct.s56_5* byval(%struct.s56_5) align 4 %{{[^ ]*}},
-// CHECK: <4 x double> {{[^ ]*}}, %struct.s56_6* byval(%struct.s56_6) align 4 %{{[^ ]*}})
+// CHECK:   call void (i32, ...) @f56_0(i32 noundef 1,
+// CHECK: i32 noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_0) align 4 %{{[^ ]*}},
+// CHECK: i64 noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_1) align 4 %{{[^ ]*}},
+// CHECK: i64 noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_2) align 4 %{{[^ ]*}},
+// CHECK: <4 x i32> noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_3) align 16 %{{[^ ]*}},
+// CHECK: <2 x double> noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_4) align 16 %{{[^ ]*}},
+// CHECK: <8 x i32> noundef {{[^ ]*}}, ptr noundef byval(%struct.s56_5) align 4 %{{[^ ]*}},
+// CHECK: <4 x double> noundef {{[^ ]*}}, ptr noundef byval(%struct.s56_6) align 4 %{{[^ ]*}})
 // CHECK: }
 //
-// <rdar://problem/7964854> [i386] clang misaligns long double in structures
-// when passed byval
-// <rdar://problem/8431367> clang misaligns parameters on stack
+// [i386] clang misaligns long double in structures when passed byval
+// clang misaligns parameters on stack
 typedef int __attribute__((vector_size (8))) t56_v2i;
 typedef double __attribute__((vector_size (8))) t56_v1d;
 typedef int __attribute__((vector_size (16))) t56_v4i;
@@ -287,26 +284,25 @@ void f58(union u58 x) {}
 
 // CHECK-LABEL: define{{.*}} i64 @f59()
 struct s59 { float x __attribute((aligned(8))); };
-struct s59 f59() { while (1) {} }
+struct s59 f59(void) { while (1) {} }
 
-// CHECK-LABEL: define{{.*}} void @f60(%struct.s60* byval(%struct.s60) align 4 %0, i32 %y)
+// CHECK-LABEL: define{{.*}} void @f60(ptr noundef byval(%struct.s60) align 4 %0, i32 noundef %y)
 struct s60 { int x __attribute((aligned(8))); };
 void f60(struct s60 x, int y) {}
 
-// CHECK-LABEL: define{{.*}} void @f61(i32 %x, %struct.s61* byval(%struct.s61) align 16 %y)
+// CHECK-LABEL: define{{.*}} void @f61(i32 noundef %x, ptr noundef byval(%struct.s61) align 16 %y)
 typedef int T61 __attribute((vector_size(16)));
 struct s61 { T61 x; int y; };
 void f61(int x, struct s61 y) {}
 
-// CHECK-LABEL: define{{.*}} void @f62(i32 %x, %struct.s62* byval(%struct.s62) align 4 %0)
+// CHECK-LABEL: define{{.*}} void @f62(i32 noundef %x, ptr noundef byval(%struct.s62) align 4 %0)
 typedef int T62 __attribute((vector_size(16)));
 struct s62 { T62 x; int y; } __attribute((packed, aligned(8)));
 void f62(int x, struct s62 y) {}
 
 // CHECK-LABEL: define{{.*}} i32 @f63
-// CHECK: ptrtoint
-// CHECK: and {{.*}}, -16
-// CHECK: inttoptr
+// CHECK: getelementptr inbounds i8, ptr {{.*}}, i32 15
+// CHECK: call ptr @llvm.ptrmask.p0.i32(ptr {{.*}}, i32 -16)
 typedef int T63 __attribute((vector_size(16)));
 struct s63 { T63 x; int y; };
 int f63(int i, ...) {
@@ -317,18 +313,17 @@ int f63(int i, ...) {
   return s.y;
 }
 
-// CHECK-LABEL: define{{.*}} void @f64(%struct.s64* byval(%struct.s64) align 4 %x)
+// CHECK-LABEL: define{{.*}} void @f64(ptr noundef byval(%struct.s64) align 4 %x)
 struct s64 { signed char a[0]; signed char b[]; };
 void f64(struct s64 x) {}
 
 // CHECK-LABEL: define{{.*}} float @f65()
 struct s65 { signed char a[0]; float b; };
-struct s65 f65() { return (struct s65){{},2}; }
+struct s65 f65(void) { return (struct s65){{},2}; }
 
 // CHECK-LABEL: define{{.*}} <2 x i64> @f66
-// CHECK: ptrtoint
-// CHECK: and {{.*}}, -16
-// CHECK: inttoptr
+// CHECK: getelementptr inbounds i8, ptr {{.*}}, i32 15
+// CHECK: call ptr @llvm.ptrmask.p0.i32(ptr {{.*}}, i32 -16)
 typedef int T66 __attribute((vector_size(16)));
 T66 f66(int i, ...) {
   __builtin_va_list ap;
@@ -341,4 +336,4 @@ T66 f66(int i, ...) {
 // PR14453
 struct s67 { _Complex unsigned short int a; };
 void f67(struct s67 x) {}
-// CHECK-LABEL: define{{.*}} void @f67(%struct.s67* byval(%struct.s67) align 4 %x)
+// CHECK-LABEL: define{{.*}} void @f67(ptr noundef byval(%struct.s67) align 4 %x)

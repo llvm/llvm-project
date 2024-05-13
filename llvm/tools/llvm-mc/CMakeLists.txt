@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   MCParser
   Support
+  TargetParser
   )
 
 add_llvm_tool(llvm-mc

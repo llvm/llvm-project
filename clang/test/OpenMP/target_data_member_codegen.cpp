@@ -33,7 +33,10 @@ struct S {
 
 // CHECK-LABEL: @main
 int main() {
-  // CHECK: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @.{{.+}}, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZES]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPTYPES]], i32 0, i32 0), i8** null, i8** null)
+    // CHECK: store ptr @.offload_sizes
+    // CHECK: store ptr @.offload_maptypes
+    // CHECK: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr %{{.+}})
+
     S s;
 #pragma omp target map(s.p)
     { }

@@ -1,7 +1,7 @@
-; RUN: opt < %s -cost-model -cost-kind=code-size -analyze \
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output \
 ; RUN:   -mtriple=s390x-unknown-linux -mcpu=z13  | FileCheck %s
 ;
-; Check that getUserCost() does not return TCC_Free for extensions of
+; Check that getInstructionCost() does not return TCC_Free for extensions of
 ; i1 returned from icmp.
 
 define i64 @fun1(i64 %v) {

@@ -17,8 +17,6 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
 
-#include <vector>
-
 namespace llvm {
 
 namespace orc {
@@ -30,7 +28,7 @@ protected:
   bool isStraightLine(const Function &F);
 
 public:
-  using ResultTy = Optional<DenseMap<StringRef, DenseSet<StringRef>>>;
+  using ResultTy = std::optional<DenseMap<StringRef, DenseSet<StringRef>>>;
 };
 
 // Direct calls in high frequency basic blocks are extracted.

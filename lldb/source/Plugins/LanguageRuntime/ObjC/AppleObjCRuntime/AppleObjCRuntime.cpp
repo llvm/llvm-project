@@ -31,6 +31,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -48,7 +49,7 @@ LLDB_PLUGIN_DEFINE(AppleObjCRuntime)
 
 char AppleObjCRuntime::ID = 0;
 
-AppleObjCRuntime::~AppleObjCRuntime() {}
+AppleObjCRuntime::~AppleObjCRuntime() = default;
 
 AppleObjCRuntime::AppleObjCRuntime(Process *process)
     : ObjCLanguageRuntime(process), m_read_objc_library(false),
@@ -122,14 +123,14 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
     }
   } else {
     // If it is not a pointer, see if we can make it into a pointer.
-    TypeSystemClang *ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(*target);
-    if (!ast_context)
+    if (!scratch_ts_sp)
       return false;
 
-    CompilerType opaque_type = ast_context->GetBasicType(eBasicTypeObjCID);
+    CompilerType opaque_type = scratch_ts_sp->GetBasicType(eBasicTypeObjCID);
     if (!opaque_type)
-      opaque_type = ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+      opaque_type = scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
     // value.SetContext(Value::eContextTypeClangType, opaque_type_ptr);
     value.SetCompilerType(opaque_type);
   }
@@ -138,11 +139,12 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   arg_value_list.PushValue(value);
 
   // This is the return value:
-  TypeSystemClang *ast_context = ScratchTypeSystemClang::GetForTarget(*target);
-  if (!ast_context)
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(*target);
+  if (!scratch_ts_sp)
     return false;
 
-  CompilerType return_compiler_type = ast_context->GetCStringType(true);
+  CompilerType return_compiler_type = scratch_ts_sp->GetCStringType(true);
   Value ret;
   //    ret.SetContext(Value::eContextTypeClangType, return_compiler_type);
   ret.SetCompilerType(return_compiler_type);
@@ -154,7 +156,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
       thread = exe_ctx.GetThreadPtr();
     }
     if (thread) {
-      exe_ctx.SetFrameSP(thread->GetSelectedFrame());
+      exe_ctx.SetFrameSP(thread->GetSelectedFrame(DoNoSelectMostRelevantFrame));
     }
   }
 
@@ -318,7 +320,7 @@ bool AppleObjCRuntime::AppleIsModuleObjCLibrary(const ModuleSP &module_sp) {
 // we use the version of Foundation to make assumptions about the ObjC runtime
 // on a target
 uint32_t AppleObjCRuntime::GetFoundationVersion() {
-  if (!m_Foundation_major.hasValue()) {
+  if (!m_Foundation_major) {
     const ModuleList &modules = m_process->GetTarget().GetImages();
     for (uint32_t idx = 0; idx < modules.GetSize(); idx++) {
       lldb::ModuleSP module_sp = modules.GetModuleAtIndex(idx);
@@ -332,7 +334,7 @@ uint32_t AppleObjCRuntime::GetFoundationVersion() {
     }
     return LLDB_INVALID_MODULE_VERSION;
   } else
-    return m_Foundation_major.getValue();
+    return *m_Foundation_major;
 }
 
 void AppleObjCRuntime::GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
@@ -443,7 +445,7 @@ bool AppleObjCRuntime::ExceptionBreakpointsExplainStop(
     return false;
 
   uint64_t break_site_id = stop_reason->GetValue();
-  return m_process->GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
+  return m_process->GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
       break_site_id, m_objc_exception_bp_sp->GetID());
 }
 
@@ -502,9 +504,9 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
 /// \param msg The message to add to the log.
 /// \return An invalid ThreadSP to be returned from
 ///         GetBacktraceThreadFromException.
-LLVM_NODISCARD
+[[nodiscard]]
 static ThreadSP FailExceptionParsing(llvm::StringRef msg) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
   LLDB_LOG(log, "Failed getting backtrace from exception: {0}", msg);
   return ThreadSP();
 }
@@ -512,7 +514,7 @@ static ThreadSP FailExceptionParsing(llvm::StringRef msg) {
 ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     lldb::ValueObjectSP exception_sp) {
   ValueObjectSP reserved_dict =
-      exception_sp->GetChildMemberWithName(ConstString("reserved"), true);
+      exception_sp->GetChildMemberWithName("reserved");
   if (!reserved_dict)
     return FailExceptionParsing("Failed to get 'reserved' member.");
 
@@ -520,12 +522,11 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
   if (!reserved_dict)
     return FailExceptionParsing("Failed to get synthetic value.");
 
-  TypeSystemClang *clang_ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*exception_sp->GetTargetSP());
-  if (!clang_ast_context)
+  if (!scratch_ts_sp)
     return FailExceptionParsing("Failed to get scratch AST.");
-  CompilerType objc_id =
-      clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID);
+  CompilerType objc_id = scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID);
   ValueObjectSP return_addresses;
 
   auto objc_object_from_address = [&exception_sp, &objc_id](uint64_t addr,
@@ -538,8 +539,9 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     return object;
   };
 
-  for (size_t idx = 0; idx < reserved_dict->GetNumChildren(); idx++) {
-    ValueObjectSP dict_entry = reserved_dict->GetChildAtIndex(idx, true);
+  for (size_t idx = 0; idx < reserved_dict->GetNumChildrenIgnoringErrors();
+       idx++) {
+    ValueObjectSP dict_entry = reserved_dict->GetChildAtIndex(idx);
 
     DataExtractor data;
     data.SetAddressByteSize(dict_entry->GetProcessSP()->GetAddressByteSize());
@@ -566,18 +568,15 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
 
   if (!return_addresses)
     return FailExceptionParsing("Failed to get return addresses.");
-  auto frames_value =
-      return_addresses->GetChildMemberWithName(ConstString("_frames"), true);
+  auto frames_value = return_addresses->GetChildMemberWithName("_frames");
   if (!frames_value)
     return FailExceptionParsing("Failed to get frames_value.");
   addr_t frames_addr = frames_value->GetValueAsUnsigned(0);
-  auto count_value =
-      return_addresses->GetChildMemberWithName(ConstString("_cnt"), true);
+  auto count_value = return_addresses->GetChildMemberWithName("_cnt");
   if (!count_value)
     return FailExceptionParsing("Failed to get count_value.");
   size_t count = count_value->GetValueAsUnsigned(0);
-  auto ignore_value =
-      return_addresses->GetChildMemberWithName(ConstString("_ignore"), true);
+  auto ignore_value = return_addresses->GetChildMemberWithName("_ignore");
   if (!ignore_value)
     return FailExceptionParsing("Failed to get ignore_value.");
   size_t ignore = ignore_value->GetValueAsUnsigned(0);

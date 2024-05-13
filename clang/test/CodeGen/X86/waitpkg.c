@@ -8,7 +8,7 @@
 
 void test_umonitor(void *address) {
   //CHECK-LABEL: @test_umonitor
-  //CHECK: call void @llvm.x86.umonitor(i8* %{{.*}})
+  //CHECK: call void @llvm.x86.umonitor(ptr %{{.*}})
   return _umonitor(address);
 }
 

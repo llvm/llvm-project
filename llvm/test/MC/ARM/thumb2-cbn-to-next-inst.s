@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple thumbv7-apple-darwin -filetype=obj -o %t.o %s
-@ RUN: llvm-objdump --triple=thumbv7-apple-darwin -d %t.o | FileCheck %s
+@ RUN: llvm-objdump --no-print-imm-hex --triple=thumbv7-apple-darwin -d %t.o | FileCheck %s
 
 .thumb
 start:
@@ -20,14 +20,14 @@ L3:
 L4:
 	add	r3, r4, r5
 
-@ CHECK: 0:	02 eb 03 01	add.w	r1, r2, r3
-@ CHECK: 4:	00 bf		nop
-@ CHECK: 6:	05 eb 06 04	add.w	r4, r5, r6
-@ CHECK: a:	0a b9		cbnz	r2, #2
-@ CHECK: c:	a8 eb 09 07	sub.w	r7, r8, r9
-@ CHECK: 10:	08 eb 09 07	add.w	r7, r8, r9
-@ CHECK: 14:	00 bf		nop
-@ CHECK: 16:	0b eb 0c 0a	add.w	r10, r11, r12
-@ CHECK: 1a:	0a b1		cbz	r2, #2
-@ CHECK: 1c:	a8 eb 09 07	sub.w	r7, r8, r9
-@ CHECK: 20:	04 eb 05 03	add.w	r3, r4, r5
+@ CHECK: 0:	eb02 0103  	add.w	r1, r2, r3
+@ CHECK: 4:	bf00		nop
+@ CHECK: 6:	eb05 0406  	add.w	r4, r5, r6
+@ CHECK: a:	b90a 		cbnz	r2, 0x10 <start+0x10> @ imm = #2
+@ CHECK: c:	eba8 0709  	sub.w	r7, r8, r9
+@ CHECK: 10:	eb08 0709  	add.w	r7, r8, r9
+@ CHECK: 14:	bf00 		nop
+@ CHECK: 16:	eb0b 0a0c  	add.w	r10, r11, r12
+@ CHECK: 1a:	b10a 		cbz	r2, 0x20 <start+0x20> @ imm = #2
+@ CHECK: 1c:	eba8 0709  	sub.w	r7, r8, r9
+@ CHECK: 20:	eb04 0305  	add.w	r3, r4, r5

@@ -16,11 +16,11 @@
 ; M1: @g.581d7631532fa146ba4061179da39272 = hidden global i8 42, !type !0
 @g = internal global i8 42, !type !0
 
-; M0: define i8* @f()
+; M0: define ptr @f()
 ; M1-NOT: @f()
-define i8* @f() {
-  ; M0: ret i8* @g.581d7631532fa146ba4061179da39272
-  ret i8* @g
+define ptr @f() {
+  ; M0: ret ptr @g.581d7631532fa146ba4061179da39272
+  ret ptr @g
 }
 
 ; M1: !0 = !{i32 0, !"typeid"}

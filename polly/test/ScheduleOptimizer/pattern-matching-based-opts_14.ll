@@ -9,18 +9,14 @@
 ; RUN: -polly-import-jscop-postfix=transformed -polly-codegen -S < %s \
 ; RUN: | FileCheck %s
 ;
-; Check that we do not create different alias sets for locations represented by
-; different raw pointers.
+; Check that we disable the Loop Vectorizer.
 ;
-; Also check that we disable the Loop Vectorizer.
-;
-; CHECK-NOT: !76 = distinct !{!76, !5, !"second level alias metadata"}
 ; CHECK: !{!"llvm.loop.vectorize.enable", i1 false}
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
 
-define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, [1024 x double]* %A, [1024 x double]* %B, [1024 x double]* %C, double* %C1) {
+define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, ptr %A, ptr %B, ptr %C, ptr %C1) {
 entry:
   br label %entry.split
 
@@ -37,17 +33,17 @@ for.body3:                                        ; preds = %for.inc19, %for.bod
 
 for.body6:                                        ; preds = %for.body6, %for.body3
   %indvars.iv = phi i64 [ 0, %for.body3 ], [ %indvars.iv.next, %for.body6 ]
-  %tmp = load double, double* %C1, align 8
-  %arrayidx9 = getelementptr inbounds [1024 x double], [1024 x double]* %A, i64 %indvars.iv43, i64 %indvars.iv
-  %tmp1 = load double, double* %arrayidx9, align 8
-  %arrayidx13 = getelementptr inbounds [1024 x double], [1024 x double]* %B, i64 %indvars.iv, i64 %indvars.iv40
-  %tmp2 = load double, double* %arrayidx13, align 8
+  %tmp = load double, ptr %C1, align 8
+  %arrayidx9 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv43, i64 %indvars.iv
+  %tmp1 = load double, ptr %arrayidx9, align 8
+  %arrayidx13 = getelementptr inbounds [1024 x double], ptr %B, i64 %indvars.iv, i64 %indvars.iv40
+  %tmp2 = load double, ptr %arrayidx13, align 8
   %mul = fmul double %tmp1, %tmp2
   %add = fadd double %tmp, %mul
-  %arrayidx17 = getelementptr inbounds [1024 x double], [1024 x double]* %C, i64 %indvars.iv43, i64 %indvars.iv40
-  %tmp3 = load double, double* %arrayidx17, align 8
+  %arrayidx17 = getelementptr inbounds [1024 x double], ptr %C, i64 %indvars.iv43, i64 %indvars.iv40
+  %tmp3 = load double, ptr %arrayidx17, align 8
   %add18 = fadd double %tmp3, %add
-  store double %add18, double* %arrayidx17, align 8
+  store double %add18, ptr %arrayidx17, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.body6, label %for.inc19

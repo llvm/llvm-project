@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
-// rdar://8843851
 
 int* global;
 
@@ -12,7 +11,7 @@ int* global;
 
 @implementation I
 + (void) _defaultMinSize { };
-static void _initCommon() {
+static void _initCommon(void) {
   Class graphicClass;
   [graphicClass _defaultMinSize];
 }

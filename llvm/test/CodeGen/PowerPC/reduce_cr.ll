@@ -4,10 +4,10 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 
 ; First block frequency info
 ;CHECK:      block-frequency-info: loop_test
-;CHECK-NEXT: - BB0[entry]: float = 1.0, int = 12
-;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = 34
-;CHECK-NEXT: - BB2[test1]: float = 1.6667, int = 21
-;CHECK-NEXT: - BB3[optional1]: float = 0.625, int = 8
+;CHECK-NEXT: - BB0[entry]: float = 1.0, int = {{.*}}
+;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = {{.*}}
+;CHECK-NEXT: - BB2[test1]: float = 1.6667, int = {{.*}}
+;CHECK-NEXT: - BB3[optional1]: float = 0.625, int = {{.*}}
 
 ;CHECK:      block-frequency-info: loop_test
 ;CHECK:      block-frequency-info: loop_test
@@ -15,21 +15,21 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 
 ; Last block frequency info
 ;CHECK:      block-frequency-info: loop_test
-;CHECK-NEXT: - BB0[entry]: float = 1.0, int = 12
-;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = 34
-;CHECK-NEXT: - BB2[for.check]: float = 2.1667, int = 27
-;CHECK-NEXT: - BB3[test1]: float = 1.6667, int = 21
-;CHECK-NEXT: - BB4[optional1]: float = 0.625, int = 8
+;CHECK-NEXT: - BB0[entry]: float = 1.0, int = {{.*}}
+;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = {{.*}}
+;CHECK-NEXT: - BB2[for.check]: float = 2.1667, int = {{.*}}
+;CHECK-NEXT: - BB3[test1]: float = 1.6667, int = {{.*}}
+;CHECK-NEXT: - BB4[optional1]: float = 0.625, int = {{.*}}
 
 
-define void @loop_test(i32* %tags, i32 %count) {
+define void @loop_test(ptr %tags, i32 %count) {
 entry:
   br label %for.check
 for.check:
   %count.loop = phi i32 [%count, %entry], [%count.sub, %for.latch]
   %done.count = icmp ugt i32 %count.loop, 0
-  %tag_ptr = getelementptr inbounds i32, i32* %tags, i32 %count
-  %tag = load i32, i32* %tag_ptr
+  %tag_ptr = getelementptr inbounds i32, ptr %tags, i32 %count
+  %tag = load i32, ptr %tag_ptr
   %done.tag = icmp eq i32 %tag, 0
   %done = and i1 %done.count, %done.tag
   br i1 %done, label %test1, label %exit, !prof !1

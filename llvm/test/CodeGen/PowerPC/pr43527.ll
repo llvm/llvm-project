@@ -16,10 +16,10 @@ define dso_local void @test(i64 %arg, i64 %arg1) {
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    sub r30, r4, r3
 ; CHECK-NEXT:    li r29, -4
+; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_3: # %bb5
 ; CHECK-NEXT:    #
@@ -28,7 +28,7 @@ define dso_local void @test(i64 %arg, i64 %arg1) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r30, r30, -1
 ; CHECK-NEXT:    cmpldi r30, 0
-; CHECK-NEXT:    bne cr0, .LBB0_3
+; CHECK-NEXT:    bc 12, gt, .LBB0_3
 ; CHECK-NEXT:  # %bb.4: # %bb15
 ; CHECK-NEXT:    stb r3, 0(r3)
 ; CHECK-NEXT:    addi r1, r1, 64
@@ -54,12 +54,12 @@ bb4:                                              ; preds = %bb3
 
 bb5:                                              ; preds = %bb5, %bb4
   %tmp6 = phi i64 [ %tmp12, %bb5 ], [ 0, %bb4 ]
-  %tmp7 = getelementptr inbounds float, float* null, i64 %tmp6
-  %tmp8 = load float, float* %tmp7, align 4
+  %tmp7 = getelementptr inbounds float, ptr null, i64 %tmp6
+  %tmp8 = load float, ptr %tmp7, align 4
   %tmp9 = fpext float %tmp8 to double
   %tmp10 = tail call i64 @llvm.lrint.i64.f64(double %tmp9) #2
   %tmp11 = trunc i64 %tmp10 to i8
-  store i8 %tmp11, i8* undef, align 1
+  store i8 %tmp11, ptr undef, align 1
   %tmp12 = add nuw i64 %tmp6, 1
   %tmp13 = icmp eq i64 %tmp12, %tmp
   br i1 %tmp13, label %bb15, label %bb5

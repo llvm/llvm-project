@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 ; PR3144
 
 define fastcc i32 @func(i32 %length) nounwind {

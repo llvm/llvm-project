@@ -31,6 +31,7 @@ int main(int, char**)
         str = sm.str();
         assert(str == std::string("123"));
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef wchar_t CharT;
         typedef std::sub_match<const CharT*> SM;
@@ -44,6 +45,7 @@ int main(int, char**)
         str = sm.str();
         assert(str == std::wstring(L"123"));
     }
+#endif
 
   return 0;
 }

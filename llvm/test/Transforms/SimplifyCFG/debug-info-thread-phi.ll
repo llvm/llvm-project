@@ -1,4 +1,5 @@
-; RUN: opt %s -debugify -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt %s -passes=debugify,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt %s -passes=debugify,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S --try-experimental-debuginfo-iterators | FileCheck %s
 ; Tests Bug 37966
 
 define void @bar(i32 %aa) {
@@ -8,8 +9,8 @@ define void @bar(i32 %aa) {
 entry:
   %aa.addr = alloca i32, align 4
   %bb = alloca i32, align 4
-  store i32 %aa, i32* %aa.addr, align 4
-  store i32 0, i32* %bb, align 4
+  store i32 %aa, ptr %aa.addr, align 4
+  store i32 0, ptr %bb, align 4
   %tobool = icmp ne i32 %aa, 0
   br i1 %tobool, label %if.then, label %if.end
 
@@ -18,7 +19,7 @@ if.then:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  store i32 1, i32* %bb, align 4
+  store i32 1, ptr %bb, align 4
   br i1 %tobool, label %if.then.1, label %if.end.1 ; "line 10" to -debugify
 
 if.then.1:                                        ; preds = %if.end
@@ -26,7 +27,7 @@ if.then.1:                                        ; preds = %if.end
   br label %if.end.1
 
 if.end.1:                                         ; preds = %if.then.1, %if.end
-  store i32 2, i32* %bb, align 4
+  store i32 2, ptr %bb, align 4
   br label %for.end
 
 for.end:                                          ; preds = %if.end.1

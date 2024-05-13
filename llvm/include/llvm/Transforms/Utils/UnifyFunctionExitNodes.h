@@ -19,21 +19,6 @@
 
 namespace llvm {
 
-class BasicBlock;
-
-class UnifyFunctionExitNodesLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  UnifyFunctionExitNodesLegacyPass();
-
-  // We can preserve non-critical-edgeness when we unify function exit nodes
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  bool runOnFunction(Function &F) override;
-};
-
-Pass *createUnifyFunctionExitNodesPass();
-
 class UnifyFunctionExitNodesPass
     : public PassInfoMixin<UnifyFunctionExitNodesPass> {
 public:

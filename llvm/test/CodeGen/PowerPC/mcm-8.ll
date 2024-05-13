@@ -11,9 +11,8 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define signext i8 @test_avext() nounwind {
 entry:
-  %0 = getelementptr inbounds [13 x i8], [13 x i8]* @x, i32 0, i32 0
-  %1 = load i8, i8* %0, align 1
-  ret i8 %1
+  %0 = load i8, ptr @x, align 1
+  ret i8 %0
 }
 
 ; CHECK-LABEL: test_avext:

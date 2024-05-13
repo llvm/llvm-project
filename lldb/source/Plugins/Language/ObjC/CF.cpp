@@ -44,7 +44,7 @@ bool lldb_private::formatters::CFAbsoluteTimeSummaryProvider(
 
 bool lldb_private::formatters::CFBagSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g_TypeHint("CFBag");
+  static constexpr llvm::StringLiteral g_TypeHint("CFBag");
 
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)
@@ -74,10 +74,10 @@ bool lldb_private::formatters::CFBagSummaryProvider(
   if (descriptor->IsCFType()) {
     ConstString type_name(valobj.GetTypeName());
 
-    static ConstString g___CFBag("__CFBag");
+    static ConstString g_CFBag("__CFBag");
     static ConstString g_conststruct__CFBag("const struct __CFBag");
 
-    if (type_name == g___CFBag || type_name == g_conststruct__CFBag) {
+    if (type_name == g_CFBag || type_name == g_conststruct__CFBag) {
       if (valobj.IsPointerType())
         is_type_ok = true;
     }
@@ -92,17 +92,13 @@ bool lldb_private::formatters::CFBagSummaryProvider(
   } else
     return false;
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(options.GetLanguage())) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(options.GetLanguage()))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s\"%u value%s\"%s", prefix.c_str(), count,
-                (count == 1 ? "" : "s"), suffix.c_str());
+  stream << prefix;
+  stream.Printf("\"%u value%s\"", count, (count == 1 ? "" : "s"));
+  stream << suffix;
   return true;
 }
 
@@ -158,7 +154,7 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
   // make sure we do not try to read huge amounts of data
   if (num_bytes > 1024)
     num_bytes = 1024;
-  DataBufferSP buffer_sp(new DataBufferHeap(num_bytes, 0));
+  WritableDataBufferSP buffer_sp(new DataBufferHeap(num_bytes, 0));
   num_bytes =
       process_sp->ReadMemory(data_ptr, buffer_sp->GetBytes(), num_bytes, error);
   if (error.Fail() || num_bytes == 0)
@@ -226,7 +222,7 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
 
 bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g_TypeHint("CFBinaryHeap");
+  static constexpr llvm::StringLiteral g_TypeHint("CFBinaryHeap");
 
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)
@@ -257,12 +253,12 @@ bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
   if (descriptor->IsCFType()) {
     ConstString type_name(valobj.GetTypeName());
 
-    static ConstString g___CFBinaryHeap("__CFBinaryHeap");
+    static ConstString g_CFBinaryHeap("__CFBinaryHeap");
     static ConstString g_conststruct__CFBinaryHeap(
         "const struct __CFBinaryHeap");
     static ConstString g_CFBinaryHeapRef("CFBinaryHeapRef");
 
-    if (type_name == g___CFBinaryHeap ||
+    if (type_name == g_CFBinaryHeap ||
         type_name == g_conststruct__CFBinaryHeap ||
         type_name == g_CFBinaryHeapRef) {
       if (valobj.IsPointerType())
@@ -279,16 +275,12 @@ bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
   } else
     return false;
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(options.GetLanguage())) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(options.GetLanguage()))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s\"%u item%s\"%s", prefix.c_str(), count,
-                (count == 1 ? "" : "s"), suffix.c_str());
+  stream << prefix;
+  stream.Printf("\"%u item%s\"", count, (count == 1 ? "" : "s"));
+  stream << suffix;
   return true;
 }

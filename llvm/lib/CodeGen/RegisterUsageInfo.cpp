@@ -22,8 +22,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
-#include <cassert>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -65,7 +63,7 @@ ArrayRef<uint32_t>
 PhysicalRegisterUsageInfo::getRegUsageInfo(const Function &FP) {
   auto It = RegMasks.find(&FP);
   if (It != RegMasks.end())
-    return makeArrayRef<uint32_t>(It->second);
+    return ArrayRef<uint32_t>(It->second);
   return ArrayRef<uint32_t>();
 }
 

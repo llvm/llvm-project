@@ -1,5 +1,4 @@
-; RUN: opt -S -loop-rotate < %s | FileCheck %s
-; RUN: opt -S -loop-rotate -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -passes=loop-rotate -verify-memoryssa < %s | FileCheck %s
 
 ;CHECK-LABEL: func
 ;CHECK-LABEL: entry

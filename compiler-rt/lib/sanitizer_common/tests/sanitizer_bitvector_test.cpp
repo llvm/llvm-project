@@ -71,7 +71,7 @@ void Print(const set<uptr> &s) {
 #if defined(_WIN64)
     fprintf(stderr, "%llu ", *it);
 #else
-    fprintf(stderr, "%lu ", *it);
+    fprintf(stderr, "%lu ", (unsigned long)*it);
 #endif
   }
   fprintf(stderr, "\n");

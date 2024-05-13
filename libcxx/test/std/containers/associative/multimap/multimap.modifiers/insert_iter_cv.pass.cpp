@@ -41,14 +41,14 @@ void do_insert_hint_test()
 
     const VT v3(3, 3.5);
     r = m.insert(m.end(), v3);
-    assert(r == prev(m.end()));
+    assert(r == std::prev(m.end()));
     assert(m.size() == 3);
     assert(r->first == 3);
     assert(r->second == 3.5);
 
     const VT v4(3, 4.5);
-    r = m.insert(prev(m.end()), v4);
-    assert(r == prev(m.end(), 2));
+    r = m.insert(std::prev(m.end()), v4);
+    assert(r == std::prev(m.end(), 2));
     assert(m.size() == 4);
     assert(r->first == 3);
     assert(r->second == 4.5);

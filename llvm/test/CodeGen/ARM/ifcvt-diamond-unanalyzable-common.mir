@@ -6,9 +6,11 @@
 --- |
   target triple = "thumbv7-unknown-linux-gnueabi"
 
-  define dso_local void @fn1() {
+  define dso_local ptr @fn1() {
+  entry:
+    br label %l_yes
   l_yes:
-    ret void
+    ret ptr blockaddress(@fn1, %l_yes)
   }
 
   declare dso_local i32 @fn2(...)
@@ -20,22 +22,25 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fn1
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r4, $lr
-  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r4, killed $lr
-  ; CHECK:   t2CMPri killed renamable $r2, 34, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   $r0 = t2MOVi 2, 1 /* CC::ne */, $cpsr, $noreg
-  ; CHECK:   $r0 = t2MOVi 3, 0 /* CC::eq */, killed $cpsr, $noreg, implicit killed $r0
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @fn2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit-def $sp, implicit-def dead $r0
-  ; CHECK:   t2CMPri $sp, 34, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.2, 1 /* CC::ne */, $cpsr
-  ; CHECK:   t2Bcc %bb.2, 2 /* CC::hs */, killed $cpsr
-  ; CHECK:   t2B %bb.1, 14 /* CC::al */, $noreg
-  ; CHECK: bb.1:
-  ; CHECK:   INLINEASM &"", 1
-  ; CHECK:   $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $pc
-  ; CHECK: bb.2.l_yes (address-taken):
-  ; CHECK:   $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $pc
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r4, $lr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r4, killed $lr
+  ; CHECK-NEXT:   t2CMPri killed renamable $r2, 34, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   $r0 = t2MOVi 2, 1 /* CC::ne */, $cpsr, $noreg
+  ; CHECK-NEXT:   $r0 = t2MOVi 3, 0 /* CC::eq */, killed $cpsr, $noreg, implicit killed $r0
+  ; CHECK-NEXT:   tBL 14 /* CC::al */, $noreg, @fn2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit-def $sp, implicit-def dead $r0
+  ; CHECK-NEXT:   t2CMPri $sp, 34, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2Bcc %bb.2, 1 /* CC::ne */, $cpsr
+  ; CHECK-NEXT:   t2Bcc %bb.2, 2 /* CC::hs */, killed $cpsr
+  ; CHECK-NEXT:   t2B %bb.1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.l_yes (ir-block-address-taken %ir-block.l_yes):
+  ; CHECK-NEXT:   $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $pc
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0, $r1, $r2, $r4, $lr
@@ -70,7 +75,7 @@ body:             |
     INLINEASM &"", 1
     $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc
 
-  bb.4.l_yes (address-taken):
+  bb.4.l_yes (ir-block-address-taken %ir-block.l_yes):
     $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc
 
 ...

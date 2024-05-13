@@ -14,7 +14,7 @@ entry:
 define <4 x double> @addpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: addpd256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %add.i = fadd <4 x double> %y, <double 4.500000e+00, double 3.400000e+00, double 2.300000e+00, double 1.200000e+00>
@@ -34,7 +34,7 @@ entry:
 define <8 x float> @addps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: addps256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %add.i = fadd <8 x float> %y, <float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000, float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000>
@@ -51,13 +51,13 @@ entry:
   ret <4 x double> %sub.i
 }
 
-define <4 x double> @subpd256fold(<4 x double> %y, <4 x double>* nocapture %x) nounwind uwtable readonly ssp {
+define <4 x double> @subpd256fold(<4 x double> %y, ptr nocapture %x) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: subpd256fold:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vsubpd (%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
-  %tmp2 = load <4 x double>, <4 x double>* %x, align 32
+  %tmp2 = load <4 x double>, ptr %x, align 32
   %sub.i = fsub <4 x double> %y, %tmp2
   ret <4 x double> %sub.i
 }
@@ -72,13 +72,13 @@ entry:
   ret <8 x float> %sub.i
 }
 
-define <8 x float> @subps256fold(<8 x float> %y, <8 x float>* nocapture %x) nounwind uwtable readonly ssp {
+define <8 x float> @subps256fold(<8 x float> %y, ptr nocapture %x) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: subps256fold:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vsubps (%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
-  %tmp2 = load <8 x float>, <8 x float>* %x, align 32
+  %tmp2 = load <8 x float>, ptr %x, align 32
   %sub.i = fsub <8 x float> %y, %tmp2
   ret <8 x float> %sub.i
 }
@@ -96,7 +96,7 @@ entry:
 define <4 x double> @mulpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: mulpd256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vmulpd {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %mul.i = fmul <4 x double> %y, <double 4.500000e+00, double 3.400000e+00, double 2.300000e+00, double 1.200000e+00>
@@ -116,7 +116,7 @@ entry:
 define <8 x float> @mulps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: mulps256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %mul.i = fmul <8 x float> %y, <float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000, float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000>
@@ -136,7 +136,7 @@ entry:
 define <4 x double> @divpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: divpd256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vdivpd {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vdivpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %div.i = fdiv <4 x double> %y, <double 4.500000e+00, double 3.400000e+00, double 2.300000e+00, double 1.200000e+00>
@@ -156,7 +156,7 @@ entry:
 define <8 x float> @divps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: divps256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vdivps {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vdivps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %div.i = fdiv <8 x float> %y, <float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000, float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000>
@@ -353,19 +353,19 @@ define <4 x float> @int_sqrt_ss() {
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
- %x0 = load float, float addrspace(1)* undef, align 8
+ %x0 = load float, ptr addrspace(1) undef, align 8
  %x1 = insertelement <4 x float> undef, float %x0, i32 0
  %x2 = call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %x1) nounwind
  ret <4 x float> %x2
 }
 
-define <2 x double> @vector_sqrt_scalar_load(double* %a0) optsize {
+define <2 x double> @vector_sqrt_scalar_load(ptr %a0) optsize {
 ; CHECK-LABEL: vector_sqrt_scalar_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vsqrtpd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %a1 = load double, double* %a0
+  %a1 = load double, ptr %a0
   %a2 = insertelement <2 x double> undef, double %a1, i32 0
   %res = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %a2) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res

@@ -1,9 +1,13 @@
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
 import("//llvm/lib/Target/targets_with_disassemblers.gni")
+import("//llvm/lib/Target/targets_with_exegesis.gni")
+import("//llvm/lib/Target/targets_with_mcas.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
+import("//llvm/utils/gn/build/libs/curl/enable.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
@@ -43,8 +47,12 @@ declare_args() {
   # Enable additional checks that alter the LLVM C++ ABI.
   llvm_enable_abi_breaking_checks = llvm_enable_assertions
 
-  # Iterate unordered llvm containers in reverse.
-  llvm_enable_reverse_iteration = false
+  # Force enable statistics.
+  llvm_force_enable_stats = false
+
+  # glibc is at least 2.33 which has mallinfo2.
+  # TODO: remove this once nobody using the gn build is building against an old glibc.
+  llvm_have_mallinfo2 = current_os == "linux"
 }
 
 write_cmake_config("abi-breaking") {
@@ -71,10 +79,11 @@ write_cmake_config("config") {
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
   values = [
-    "BUG_REPORT_URL=https://bugs.llvm.org/",
+    "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
     "ENABLE_BACKTRACES=1",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
+    "HAVE_BUILTIN_THREAD_POINTER=",
     "HAVE_CRASHREPORTERCLIENT_H=",
     "HAVE_DECL_FE_ALL_EXCEPT=1",
     "HAVE_DECL_FE_INEXACT=1",
@@ -88,10 +97,7 @@ write_cmake_config("config") {
     "HAVE_LIBPFM=",
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
-    "HAVE_MALLINFO2=",
     "HAVE_SIGNAL_H=1",
-    "HAVE_STD_IS_TRIVIALLY_COPYABLE=1",
-    "HAVE_STRERROR=1",
     "HAVE_SYS_STAT_H=1",
     "HAVE_SYS_TYPES_H=1",
     "HAVE_VALGRIND_VALGRIND_H=",
@@ -116,41 +122,33 @@ write_cmake_config("config") {
     "HOST_LINK_VERSION=",
     "LIBPFM_HAS_FIELD_CYCLES=",
     "LLVM_TARGET_TRIPLE_ENV=",
-    "LLVM_VERSION_INFO=",
+    "LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG=1",
     "LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=1",
-    "PACKAGE_BUGREPORT=https://bugs.llvm.org/",
+    "LLVM_WINDOWS_PREFER_FORWARD_SLASH=",
+    "PACKAGE_BUGREPORT=https://github.com/llvm/llvm-project/issues/",
     "PACKAGE_NAME=LLVM",
     "PACKAGE_STRING=LLVM ${llvm_version}git",
     "PACKAGE_VERSION=${llvm_version}git",
     "PACKAGE_VENDOR=",
-    "RETSIGTYPE=void",
     "LLVM_GISEL_COV_ENABLED=",
     "LLVM_GISEL_COV_PREFIX=",
 
     # FIXME: Set to 1 on mac once the 10.14 SDK is in common use.
     "LLVM_SUPPORT_XCODE_SIGNPOSTS=",
-
-    # This is both in llvm-config.h and config.h; llvm-config.h doesn't
-    # define it if it's not set while config.h defines it to empty in that case.
-    "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
   ]
 
   if (current_os == "linux" || current_os == "android") {
     values += [
       "HAVE_FUTIMENS=1",
       "HAVE_LINK_H=1",
-      "HAVE_LSEEK64=1",
       "HAVE_MALLINFO=1",
-      "HAVE_POSIX_FALLOCATE=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
   } else {
     values += [
       "HAVE_FUTIMENS=",
       "HAVE_LINK_H=",
-      "HAVE_LSEEK64=",
       "HAVE_MALLINFO=",
-      "HAVE_POSIX_FALLOCATE=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
   }
@@ -159,23 +157,23 @@ write_cmake_config("config") {
     values += [
       "HAVE_CRASHREPORTER_INFO=1",
       "HAVE_DECL_ARC4RANDOM=1",
-      "HAVE_DLADDR=1",
       "HAVE_MACH_MACH_H=1",
       "HAVE_MALLOC_MALLOC_H=1",
       "HAVE_MALLOC_ZONE_STATISTICS=1",
       "HAVE_PROC_PID_RUSAGE=1",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=1",
+      "HAVE_UNW_ADD_DYNAMIC_FDE=1",
     ]
   } else {
     values += [
       "HAVE_CRASHREPORTER_INFO=",
       "HAVE_DECL_ARC4RANDOM=",
-      "HAVE_DLADDR=",
       "HAVE_MACH_MACH_H=",
       "HAVE_MALLOC_MALLOC_H=",
       "HAVE_MALLOC_ZONE_STATISTICS=",
       "HAVE_PROC_PID_RUSAGE=",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=",
+      "HAVE_UNW_ADD_DYNAMIC_FDE=",
     ]
   }
 
@@ -208,6 +206,7 @@ write_cmake_config("config") {
   if (current_os == "win") {
     values += [
       "HAVE_DECL_STRERROR_S=1",
+      "HAVE_DLADDR=",
       "HAVE_DLFCN_H=",
       "HAVE_DLOPEN=",
       "HAVE_FUTIMES=",
@@ -218,7 +217,6 @@ write_cmake_config("config") {
       "HAVE_LIBPTHREAD=",
       "HAVE_PTHREAD_SETNAME_NP=",
       "HAVE_PREAD=",
-      "HAVE_PTHREAD_GETSPECIFIC=",
       "HAVE_PTHREAD_H=",
       "HAVE_PTHREAD_MUTEX_LOCK=",
       "HAVE_PTHREAD_RWLOCK_INIT=",
@@ -244,6 +242,7 @@ write_cmake_config("config") {
     # POSIX-y system defaults.
     values += [
       "HAVE_DECL_STRERROR_S=",
+      "HAVE_DLADDR=1",
       "HAVE_DLFCN_H=1",
       "HAVE_DLOPEN=1",
       "HAVE_FUTIMES=1",
@@ -254,7 +253,6 @@ write_cmake_config("config") {
       "HAVE_LIBPTHREAD=1",
       "HAVE_PTHREAD_SETNAME_NP=1",
       "HAVE_PREAD=1",
-      "HAVE_PTHREAD_GETSPECIFIC=1",
       "HAVE_PTHREAD_H=1",
       "HAVE_PTHREAD_MUTEX_LOCK=1",
       "HAVE_PTHREAD_RWLOCK_INIT=1",
@@ -302,22 +300,16 @@ write_cmake_config("config") {
     values += [ "LLVM_ENABLE_TERMINFO=" ]
   }
 
-  if (llvm_enable_dia_sdk) {
-    values += [ "LLVM_ENABLE_DIA_SDK=1" ]
-  } else {
-    values += [ "LLVM_ENABLE_DIA_SDK=" ]
-  }
-
-  if (llvm_enable_zlib) {
-    values += [ "LLVM_ENABLE_ZLIB=1" ]
-  } else {
-    values += [ "LLVM_ENABLE_ZLIB=" ]
-  }
-
   if (llvm_enable_libxml2) {
     values += [ "LLVM_ENABLE_LIBXML2=1" ]
   } else {
     values += [ "LLVM_ENABLE_LIBXML2=" ]
+  }
+
+  if (llvm_have_mallinfo2) {
+    values += [ "HAVE_MALLINFO2=1" ]
+  } else {
+    values += [ "HAVE_MALLINFO2=" ]
   }
 }
 
@@ -325,21 +317,18 @@ write_cmake_config("llvm-config") {
   input = "llvm-config.h.cmake"
   output = "$target_gen_dir/llvm-config.h"
   values = [
+    "LLVM_BUILD_LLVM_DYLIB=",
+    "LLVM_BUILD_SHARED_LIBS=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_ENABLE_DUMP=",
-    "LLVM_ENABLE_NEW_PASS_MANAGER=1",
-    "LLVM_FORCE_ENABLE_STATS=",
+    "LLVM_ENABLE_HTTPLIB=",
+    "LLVM_ENABLE_ZSTD=",
+    "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
-    "LLVM_HAVE_TF_AOT=",
-    "LLVM_HAVE_TF_API=",
+    "LLVM_HAVE_TFLITE=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
-    "LLVM_NATIVE_ASMPARSER=1",
-    "LLVM_NATIVE_ASMPRINTER=1",
-    "LLVM_NATIVE_DISASSEMBLER=1",
-    "LLVM_NATIVE_TARGET=1",
-    "LLVM_NATIVE_TARGETINFO=1",
-    "LLVM_NATIVE_TARGETMC=1",
+    "LLVM_UNREACHABLE_OPTIMIZE=1",
     "LLVM_USE_INTEL_JITEVENTS=",
     "LLVM_USE_OPROFILE=",
     "LLVM_USE_PERF=",
@@ -350,22 +339,46 @@ write_cmake_config("llvm-config") {
     "PACKAGE_VERSION=${llvm_version}git",
   ]
 
+  if (llvm_build_native) {
+    values += [
+      "LLVM_NATIVE_ASMPARSER=1",
+      "LLVM_NATIVE_ASMPRINTER=1",
+      "LLVM_NATIVE_DISASSEMBLER=1",
+      "LLVM_NATIVE_TARGET=1",
+      "LLVM_NATIVE_TARGETINFO=1",
+      "LLVM_NATIVE_TARGETMC=1",
+      "LLVM_NATIVE_TARGETMCA=1",
+    ]
+  } else {
+    values += [
+      "LLVM_NATIVE_ASMPARSER=",
+      "LLVM_NATIVE_ASMPRINTER=",
+      "LLVM_NATIVE_DISASSEMBLER=",
+      "LLVM_NATIVE_TARGET=",
+      "LLVM_NATIVE_TARGETINFO=",
+      "LLVM_NATIVE_TARGETMC=",
+      "LLVM_NATIVE_TARGETMCA=",
+    ]
+  }
+
   if (current_os == "win") {
     values += [
       "HAVE_SYSEXITS_H=",
+      "LLVM_ENABLE_PLUGINS=",
       "LLVM_ON_UNIX=",
     ]
   } else {
     values += [
       "HAVE_SYSEXITS_H=1",
+      "LLVM_ENABLE_PLUGINS=1",
       "LLVM_ON_UNIX=1",
     ]
   }
 
-  if (llvm_enable_libxar) {
-    values += [ "LLVM_HAVE_LIBXAR=1" ]
+  if (llvm_enable_dia_sdk) {
+    values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
-    values += [ "LLVM_HAVE_LIBXAR=" ]
+    values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
   if (llvm_enable_threads) {
@@ -373,6 +386,112 @@ write_cmake_config("llvm-config") {
   } else {
     values += [ "LLVM_ENABLE_THREADS=" ]
   }
+
+  if (llvm_enable_zlib) {
+    values += [ "LLVM_ENABLE_ZLIB=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ZLIB=" ]
+  }
+
+  if (llvm_enable_libcurl) {
+    values += [ "LLVM_ENABLE_CURL=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_CURL=" ]
+  }
+
+  if (llvm_force_enable_stats) {
+    values += [ "LLVM_FORCE_ENABLE_STATS=1" ]
+  } else {
+    values += [ "LLVM_FORCE_ENABLE_STATS=" ]
+  }
+
+  if (llvm_build_AArch64) {
+    values += [ "LLVM_HAS_AARCH64_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_AARCH64_TARGET=" ]
+  }
+
+  if (llvm_build_AMDGPU) {
+    values += [ "LLVM_HAS_AMDGPU_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_AMDGPU_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_ARC_TARGET=" ]
+
+  if (llvm_build_ARM) {
+    values += [ "LLVM_HAS_ARM_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_ARM_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_AVR_TARGET=" ]
+
+  if (llvm_build_BPF) {
+    values += [ "LLVM_HAS_BPF_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_BPF_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_CSKY_TARGET=" ]
+  values += [ "LLVM_HAS_DIRECTX_TARGET=" ]
+  values += [ "LLVM_HAS_HEXAGON_TARGET=" ]
+  values += [ "LLVM_HAS_LANAI_TARGET=" ]
+
+  if (llvm_build_LoongArch) {
+    values += [ "LLVM_HAS_LOONGARCH_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_LOONGARCH_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_M68K_TARGET=" ]
+
+  if (llvm_build_Mips) {
+    values += [ "LLVM_HAS_MIPS_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_MIPS_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_MSP430_TARGET=" ]
+  values += [ "LLVM_HAS_NVPTX_TARGET=" ]
+
+  if (llvm_build_PowerPC) {
+    values += [ "LLVM_HAS_POWERPC_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_POWERPC_TARGET=" ]
+  }
+
+  if (llvm_build_RISCV) {
+    values += [ "LLVM_HAS_RISCV_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_RISCV_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_SPARC_TARGET=" ]
+  values += [ "LLVM_HAS_SPIRV_TARGET=" ]
+
+  if (llvm_build_SystemZ) {
+    values += [ "LLVM_HAS_SYSTEMZ_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_SYSTEMZ_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_VE_TARGET=" ]
+
+  if (llvm_build_WebAssembly) {
+    values += [ "LLVM_HAS_WEBASSEMBLY_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_WEBASSEMBLY_TARGET=" ]
+  }
+
+  if (llvm_build_X86) {
+    values += [ "LLVM_HAS_X86_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_X86_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_XCORE_TARGET=" ]
+  values += [ "LLVM_HAS_XTENSA_TARGET=" ]
 }
 
 ##############################################################################
@@ -430,6 +549,18 @@ write_target_def_file("Targets.def") {
   value = "LLVM_TARGET"
 }
 
+write_target_def_file("TargetMCAs.def") {
+  key = "LLVM_ENUM_TARGETMCAS"
+  value = "LLVM_TARGETMCA"
+  all_targets = targets_with_mcas
+}
+
+write_target_def_file("TargetExegesis.def") {
+  key = "LLVM_ENUM_EXEGESIS"
+  value = "LLVM_EXEGESIS"
+  all_targets = targets_with_exegesis
+}
+
 group("write_target_def_files") {
   visibility = [
     "//llvm/lib/Support",
@@ -439,6 +570,8 @@ group("write_target_def_files") {
     ":AsmParsers.def",
     ":AsmPrinters.def",
     ":Disassemblers.def",
+    ":TargetExegesis.def",
+    ":TargetMCAs.def",
     ":Targets.def",
   ]
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll 2>&1 | FileCheck %s
+; RUN: opt < %s -S -debug-only=loop-unroll -passes=loop-unroll 2>&1 | FileCheck %s
 ; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll)' 2>&1 | FileCheck %s
 ; Confirm that peeling is disabled if the number of counts required to reach
 ; the hot percentile is above the threshold.
@@ -24,9 +24,9 @@
 ; CHECK: [[NEXT1]]:
 ; CHECK: br i1 %{{.*}}, label %[[NEXT2:.*]], label %for.cond.for.end_crit_edge, !prof !17
 ; CHECK: [[NEXT2]]:
-; CHECK: br i1 %{{.*}}, label %for.body, label %{{.*}}, !prof !18
+; CHECK: br i1 %{{.*}}, label %for.body, label %{{.*}}, !prof !17
 
-define void @basic(i32* %p, i32 %k) #0 !prof !15 {
+define void @basic(ptr %p, i32 %k) #0 !prof !15 {
 entry:
   %cmp3 = icmp slt i32 0, %k
   br i1 %cmp3, label %for.body.lr.ph, label %for.end
@@ -36,9 +36,9 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %i.05 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %p.addr.04 = phi i32* [ %p, %for.body.lr.ph ], [ %incdec.ptr, %for.body ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.04, i32 1
-  store i32 %i.05, i32* %p.addr.04, align 4
+  %p.addr.04 = phi ptr [ %p, %for.body.lr.ph ], [ %incdec.ptr, %for.body ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.04, i32 1
+  store i32 %i.05, ptr %p.addr.04, align 4
   %inc = add nsw i32 %i.05, 1
   %cmp = icmp slt i32 %inc, %k
   br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge, !prof !16
@@ -57,7 +57,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ; CHECK: for.body:
 ; CHECK-NOT: br
 ; CHECK: br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge
-define void @optsize(i32* %p, i32 %k) #1 !prof !15 {
+define void @optsize(ptr %p, i32 %k) #1 !prof !15 {
 entry:
   %cmp3 = icmp slt i32 0, %k
   br i1 %cmp3, label %for.body.lr.ph, label %for.end
@@ -67,9 +67,9 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %i.05 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %p.addr.04 = phi i32* [ %p, %for.body.lr.ph ], [ %incdec.ptr, %for.body ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.04, i32 1
-  store i32 %i.05, i32* %p.addr.04, align 4
+  %p.addr.04 = phi ptr [ %p, %for.body.lr.ph ], [ %incdec.ptr, %for.body ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.04, i32 1
+  store i32 %i.05, ptr %p.addr.04, align 4
   %inc = add nsw i32 %i.05, 1
   %cmp = icmp slt i32 %inc, %k
   br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge, !prof !16
@@ -105,6 +105,5 @@ attributes #1 = { nounwind optsize }
 
 ;CHECK: !15 = !{!"branch_weights", i32 3001, i32 1001}
 ;CHECK: !16 = !{!"branch_weights", i32 2000, i32 1001}
-;CHECK: !17 = !{!"branch_weights", i32 999, i32 1001}
-;CHECK: !18 = !{!"branch_weights", i32 1, i32 1001}
+;CHECK: !17 = !{!"branch_weights", i32 1001, i32 1001}
 

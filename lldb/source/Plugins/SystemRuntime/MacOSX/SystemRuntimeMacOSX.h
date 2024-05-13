@@ -39,9 +39,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
-
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginNameStatic() {
+    return "systemruntime-macosx";
+  }
 
   static lldb_private::SystemRuntime *
   CreateInstance(lldb_private::Process *process);
@@ -98,9 +98,7 @@ public:
   bool SafeToCallFunctionsOnThisThread(lldb::ThreadSP thread_sp) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   lldb::user_id_t m_break_id;
@@ -108,14 +106,12 @@ protected:
 
 private:
   struct libBacktraceRecording_info {
-    uint16_t queue_info_version;
-    uint16_t queue_info_data_offset;
-    uint16_t item_info_version;
-    uint16_t item_info_data_offset;
+    uint16_t queue_info_version = 0;
+    uint16_t queue_info_data_offset = 0;
+    uint16_t item_info_version = 0;
+    uint16_t item_info_data_offset = 0;
 
-    libBacktraceRecording_info()
-        : queue_info_version(0), queue_info_data_offset(0),
-          item_info_version(0), item_info_data_offset(0) {}
+    libBacktraceRecording_info() = default;
   };
 
   // A structure which reflects the data recorded in the
@@ -178,6 +174,14 @@ private:
       dqo_target_queue = UINT16_MAX;
       dqo_target_queue = UINT16_MAX;
       dqo_priority = UINT16_MAX;
+      dqo_label_size = 0;
+      dqo_flags_size = 0;
+      dqo_serialnum_size = 0;
+      dqo_width_size = 0;
+      dqo_running_size = 0;
+      dqo_suspend_cnt_size = 0;
+      dqo_target_queue_size = 0;
+      dqo_priority_size = 0;
     }
 
     bool IsValid() { return dqo_version != UINT16_MAX; }
@@ -186,44 +190,35 @@ private:
   };
 
   struct LibdispatchVoucherOffsets {
-    uint16_t vo_version;
-    uint16_t vo_activity_ids_count;
-    uint16_t vo_activity_ids_count_size;
-    uint16_t vo_activity_ids_array;
-    uint16_t vo_activity_ids_array_entry_size;
+    uint16_t vo_version = UINT16_MAX;
+    uint16_t vo_activity_ids_count = UINT16_MAX;
+    uint16_t vo_activity_ids_count_size = UINT16_MAX;
+    uint16_t vo_activity_ids_array = UINT16_MAX;
+    uint16_t vo_activity_ids_array_entry_size = UINT16_MAX;
 
-    LibdispatchVoucherOffsets()
-        : vo_version(UINT16_MAX), vo_activity_ids_count(UINT16_MAX),
-          vo_activity_ids_count_size(UINT16_MAX),
-          vo_activity_ids_array(UINT16_MAX),
-          vo_activity_ids_array_entry_size(UINT16_MAX) {}
+    LibdispatchVoucherOffsets() = default;
 
     bool IsValid() { return vo_version != UINT16_MAX; }
   };
 
   struct LibdispatchTSDIndexes {
-    uint16_t dti_version;
-    uint64_t dti_queue_index;
-    uint64_t dti_voucher_index;
-    uint64_t dti_qos_class_index;
+    uint16_t dti_version = UINT16_MAX;
+    uint64_t dti_queue_index = UINT64_MAX;
+    uint64_t dti_voucher_index = UINT64_MAX;
+    uint64_t dti_qos_class_index = UINT64_MAX;
 
-    LibdispatchTSDIndexes()
-        : dti_version(UINT16_MAX), dti_queue_index(UINT64_MAX),
-          dti_voucher_index(UINT64_MAX), dti_qos_class_index(UINT64_MAX) {}
+    LibdispatchTSDIndexes() = default;
 
     bool IsValid() { return dti_version != UINT16_MAX; }
   };
 
   struct LibpthreadOffsets {
-    uint16_t plo_version;
-    uint16_t plo_pthread_tsd_base_offset;
-    uint16_t plo_pthread_tsd_base_address_offset;
-    uint16_t plo_pthread_tsd_entry_size;
+    uint16_t plo_version = UINT16_MAX;
+    uint16_t plo_pthread_tsd_base_offset = UINT16_MAX;
+    uint16_t plo_pthread_tsd_base_address_offset = UINT16_MAX;
+    uint16_t plo_pthread_tsd_entry_size = UINT16_MAX;
 
-    LibpthreadOffsets()
-        : plo_version(UINT16_MAX), plo_pthread_tsd_base_offset(UINT16_MAX),
-          plo_pthread_tsd_base_address_offset(UINT16_MAX),
-          plo_pthread_tsd_entry_size(UINT16_MAX) {}
+    LibpthreadOffsets() = default;
 
     bool IsValid() { return plo_version != UINT16_MAX; }
   };

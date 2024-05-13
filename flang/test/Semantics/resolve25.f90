@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
   interface foo
     real function s1(x)
@@ -6,7 +6,7 @@ module m
     end
     !ERROR: 's2' is not a module procedure
     module procedure s2
-    !ERROR: Procedure 's3' not found
+    !ERROR: 's3' is not a procedure
     procedure s3
     !ERROR: Procedure 's1' is already specified in generic 'foo'
     procedure s1

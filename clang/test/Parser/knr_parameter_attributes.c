@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -W -Wall -Werror -verify %s
+// RUN: %clang_cc1 -fsyntax-only -W -Wall -Wno-deprecated-non-prototype -Werror -verify %s -std=c99
 // expected-no-diagnostics
 
 int f(int i __attribute__((__unused__)))

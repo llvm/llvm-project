@@ -6,6 +6,8 @@ add_llvm_component_library(LLVMGlobalISel
   GlobalISel.cpp
   Combiner.cpp
   CombinerHelper.cpp
+  CombinerHelperVectorOps.cpp
+  GIMatchTableExecutor.cpp
   GISelChangeObserver.cpp
   IRTranslator.cpp
   InlineAsmLowering.cpp
@@ -17,12 +19,11 @@ add_llvm_component_library(LLVMGlobalISel
   LegalizerHelper.cpp
   LegalizerInfo.cpp
   LegacyLegalizerInfo.cpp
+  LoadStoreOpt.cpp
   Localizer.cpp
   LostDebugLocObserver.cpp
   MachineIRBuilder.cpp
   RegBankSelect.cpp
-  RegisterBank.cpp
-  RegisterBankInfo.cpp
   Utils.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -34,6 +35,7 @@ add_llvm_component_library(LLVMGlobalISel
   LINK_COMPONENTS
   Analysis
   CodeGen
+  CodeGenTypes
   Core
   MC
   SelectionDAG

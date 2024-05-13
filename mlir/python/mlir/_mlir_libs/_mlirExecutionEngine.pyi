@@ -1,0 +1,23 @@
+# Originally imported via:
+#   stubgen {...} -m mlir._mlir_libs._mlirExecutionEngine
+# Local modifications:
+#   * Relative imports for cross-module references.
+#   * Add __all__
+
+from typing import List, Sequence
+
+from ._mlir import ir as _ir
+
+__all__ = [
+    "ExecutionEngine",
+]
+
+class ExecutionEngine:
+    def __init__(self, module: _ir.Module, opt_level: int = 2, shared_libs: Sequence[str] = ...) -> None: ...
+    def _CAPICreate(self) -> object: ...
+    def _testing_release(self) -> None: ...
+    def dump_to_object_file(self, file_name: str) -> None: ...
+    def raw_lookup(self, func_name: str) -> int: ...
+    def raw_register_runtime(self, name: str, callback: object) -> None: ...
+    @property
+    def _CAPIPtr(self) -> object: ...

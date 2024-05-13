@@ -73,6 +73,13 @@ int main(int, char**)
         for (int j = 1; j <= 8; ++j)
             for (int n = 0; n < 3; ++n, ++i)
                 assert(*i == j);
+        assert(i == m.end());
+        for (int j = 8; j >= 1; --j)
+            for (int n = 0; n < 3; ++n) {
+                --i;
+                assert(*i == j);
+            }
+        assert(i == m.begin());
     }
     {
         typedef int V;
@@ -113,6 +120,13 @@ int main(int, char**)
         for (int j = 1; j <= 8; ++j)
             for (int k = 0; k < 3; ++k, ++i)
                 assert(*i == j);
+        assert(i == m.end());
+        for (int j = 8; j >= 1; --j)
+            for (int k = 0; k < 3; ++k) {
+                --i;
+                assert(*i == j);
+            }
+        assert(i == m.begin());
     }
 #if TEST_STD_VER >= 11
     {
@@ -154,6 +168,13 @@ int main(int, char**)
         for (int j = 1; j <= 8; ++j)
             for (int n = 0; n < 3; ++n, ++i)
                 assert(*i == j);
+        assert(i == m.end());
+        for (int j = 8; j >= 1; --j)
+            for (int n = 0; n < 3; ++n) {
+                --i;
+                assert(*i == j);
+            }
+        assert(i == m.begin());
     }
     {
         typedef int V;
@@ -194,6 +215,13 @@ int main(int, char**)
         for (int j = 1; j <= 8; ++j)
             for (int k = 0; k < 3; ++k, ++i)
                 assert(*i == j);
+        assert(i == m.end());
+        for (int j = 8; j >= 1; --j)
+            for (int k = 0; k < 3; ++k) {
+                --i;
+                assert(*i == j);
+            }
+        assert(i == m.begin());
     }
 #endif
 #if TEST_STD_VER > 11

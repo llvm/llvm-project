@@ -1,6 +1,6 @@
-; RUN: opt < %s -licm -S | FileCheck %s
-; RUN: opt < %s -strip-debug -licm -S | FileCheck %s
-; RUN: opt < %s -licm -enable-mssa-loop-dependency=true -verify-memoryssa -S | FileCheck %s
+; RUN: opt < %s -strip-debug -passes=licm -S | FileCheck %s
+; RUN: opt < %s -passes=licm -verify-memoryssa -S | FileCheck %s
+; RUN: opt < %s -passes=licm -verify-memoryssa -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -14,20 +14,20 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @fn1() !dbg !6 {
 ; CHECK-LABEL: @fn1(
-; CHECK-NEXT: [[_TMP2:%.*]] = load i32, i32* @a, align 4
-; CHECK-NEXT: [[_TMP3:%.*]] = load i32, i32* @b, align 4
+; CHECK-NEXT: [[_TMP2:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT: [[_TMP3:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT: [[_TMP4:%.*]] = sdiv i32 [[_TMP2]], [[_TMP3]]
 ; CHECK-NEXT: br label [[BB3:%.*]]
 
   br label %bb3
 
 bb3:                                              ; preds = %bb3, %0
-  call void @llvm.dbg.value(metadata i32* @c, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !12
-  %_tmp2 = load i32, i32* @a, align 4
-  %_tmp3 = load i32, i32* @b, align 4
+  call void @llvm.dbg.value(metadata ptr @c, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !12
+  %_tmp2 = load i32, ptr @a, align 4
+  %_tmp3 = load i32, ptr @b, align 4
   %_tmp4 = sdiv i32 %_tmp2, %_tmp3
-  store i32 %_tmp4, i32* @c, align 4
-  %_tmp6 = load volatile i32, i32* @c, align 4
+  store i32 %_tmp4, ptr @c, align 4
+  %_tmp6 = load volatile i32, ptr @c, align 4
   br label %bb3
 }
 

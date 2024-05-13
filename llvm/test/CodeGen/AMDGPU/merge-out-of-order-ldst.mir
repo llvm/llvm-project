@@ -2,22 +2,21 @@
 
 # GCN-LABEL: name: out_of_order_merge
 # GCN: DS_READ2_B64_gfx9
-# GCN: DS_WRITE_B64_gfx9
 # GCN: DS_READ2_B64_gfx9
-# GCN: DS_WRITE_B64_gfx9
+# GCN: DS_WRITE2_B64_gfx9
 # GCN: DS_WRITE_B64_gfx9
 ---
 name:            out_of_order_merge
 body:             |
   bb.0:
     %4:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %5:vreg_64 = DS_READ_B64_gfx9 %4, 776, 0, implicit $exec :: (load 8 from `double addrspace(3)* undef`, addrspace 3)
-    %6:vreg_64 = DS_READ_B64_gfx9 %4, 784, 0, implicit $exec :: (load 8 from `double addrspace(3)* undef` + 8, addrspace 3)
-    %17:vreg_64 = DS_READ_B64_gfx9 %4, 840, 0, implicit $exec :: (load 8 from `double addrspace(3)* undef`, addrspace 3)
-    DS_WRITE_B64_gfx9 %4, %17, 8, 0, implicit $exec :: (store 8 into `double addrspace(3)* undef` + 8, addrspace 3)
-    DS_WRITE_B64_gfx9 %4, %6, 0, 0, implicit $exec :: (store 8 into `double addrspace(3)* undef`, align 16, addrspace 3)
-    %24:vreg_64 = DS_READ_B64_gfx9 %4, 928, 0, implicit $exec :: (load 8 from `double addrspace(3)* undef` + 8, addrspace 3)
-    DS_WRITE_B64_gfx9 undef %29:vgpr_32, %5, 0, 0, implicit $exec :: (store 8 into `double addrspace(3)* undef`, addrspace 3)
+    %5:vreg_64 = DS_READ_B64_gfx9 %4, 776, 0, implicit $exec :: (load (s64) from `ptr addrspace(3) undef`, addrspace 3)
+    %6:vreg_64 = DS_READ_B64_gfx9 %4, 784, 0, implicit $exec :: (load (s64) from `ptr addrspace(3) undef` + 8, addrspace 3)
+    %17:vreg_64 = DS_READ_B64_gfx9 %4, 840, 0, implicit $exec :: (load (s64) from `ptr addrspace(3) undef`, addrspace 3)
+    DS_WRITE_B64_gfx9 %4, %17, 8, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) undef` + 8, addrspace 3)
+    DS_WRITE_B64_gfx9 %4, %6, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) undef`, align 16, addrspace 3)
+    %24:vreg_64 = DS_READ_B64_gfx9 %4, 928, 0, implicit $exec :: (load (s64) from `ptr addrspace(3) undef` + 8, addrspace 3)
+    DS_WRITE_B64_gfx9 undef %29:vgpr_32, %5, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) undef`, addrspace 3)
     S_ENDPGM 0
 
 ...

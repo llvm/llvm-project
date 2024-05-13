@@ -3,19 +3,19 @@
 ;
 ; Test folding of spilled immediate loads and compares.
 
-define i32 @fun0(i32 *%src, i32 %arg) nounwind {
+define i32 @fun0(ptr %src, i32 %arg) nounwind {
 ; CHECK-LABEL: fun0:
-; CHECK: 	mvhi	164(%r15), 0            # 4-byte Folded Spill
-; CHECK:	mvc	164(4,%r15), 0(%r2)     # 4-byte Folded Spill
+; CHECK: 	mvhi	160(%r15), 0            # 4-byte Folded Spill
+; CHECK:	mvc	160(4,%r15), 0(%r2)     # 4-byte Folded Spill
 ; CHECK-LABEL: .LBB0_2:
-; CHECK:	chsi	164(%r15), 2            # 4-byte Folded Reload
+; CHECK:	chsi	160(%r15), 2            # 4-byte Folded Reload
 
 entry:
   %cmp  = icmp eq i32 %arg, 0
   br i1 %cmp, label %cond, label %exit
 
 cond:
-  %val0 = load i32, i32 *%src
+  %val0 = load i32, ptr %src
   call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"() nounwind
   br label %exit
 
@@ -29,18 +29,18 @@ exit:
   ret i32 %and0
 }
 
-define i64 @fun1(i64 *%src, i64 %arg) nounwind {
+define i64 @fun1(ptr %src, i64 %arg) nounwind {
 ; CHECK-LABEL: fun1:
-; CHECK: 	mvghi	168(%r15), 0            # 8-byte Folded Spill
-; CHECK:	mvc	168(8,%r15), 0(%r2)     # 8-byte Folded Spill
+; CHECK: 	mvghi	160(%r15), 0            # 8-byte Folded Spill
+; CHECK:	mvc	160(8,%r15), 0(%r2)     # 8-byte Folded Spill
 ; CHECK-LABEL: .LBB1_2:
-; CHECK:	cghsi	168(%r15), 2            # 8-byte Folded Reload
+; CHECK:	cghsi	160(%r15), 2            # 8-byte Folded Reload
 entry:
   %cmp  = icmp eq i64 %arg, 0
   br i1 %cmp, label %cond, label %exit
 
 cond:
-  %val0 = load i64, i64 *%src
+  %val0 = load i64, ptr %src
   call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"() nounwind
   br label %exit
 

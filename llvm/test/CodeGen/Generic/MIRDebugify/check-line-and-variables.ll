@@ -1,4 +1,5 @@
 ; RUN: llc -debugify-check-and-strip-all-safe -o - %s 2>&1 | FileCheck %s
+; RUN: llc --experimental-debuginfo-iterators=false -debugify-check-and-strip-all-safe -o - %s 2>&1 | FileCheck %s
 
 ; ModuleID = 'main.c'
 source_filename = "main.c"
@@ -10,16 +11,16 @@ entry:
   %a.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
   %c = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  store i32 %b, i32* %b.addr, align 4
-  %0 = load i32, i32* %a.addr, align 4
-  %1 = load i32, i32* %b.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  store i32 %b, ptr %b.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4
+  %1 = load i32, ptr %b.addr, align 4
   %add = add nsw i32 %0, %1
-  store i32 %add, i32* %c, align 4
-  %2 = load i32, i32* %c, align 4
+  store i32 %add, ptr %c, align 4
+  %2 = load i32, ptr %c, align 4
   %mul = mul nsw i32 %2, 2
-  store i32 %mul, i32* @ga, align 4
-  %3 = load i32, i32* %c, align 4
+  store i32 %mul, ptr @ga, align 4
+  %3 = load i32, ptr %c, align 4
   ret i32 %3
 }
 

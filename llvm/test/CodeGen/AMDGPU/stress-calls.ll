@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-stress-function-calls -amdgpu-always-inline %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-stress-function-calls -passes=amdgpu-always-inline %s | FileCheck %s
 
 ; CHECK: define internal fastcc i32 @alwaysinline_func(i32 %a) #0 {
 define internal fastcc i32 @alwaysinline_func(i32 %a) alwaysinline {
@@ -21,14 +21,14 @@ entry:
   ret i32 %tmp0
 }
 
-define amdgpu_kernel void @kernel(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @kernel(ptr addrspace(1) %out) {
 entry:
   %tmp0 = call i32 @alwaysinline_func(i32 1)
-  store volatile i32 %tmp0, i32 addrspace(1)* %out
+  store volatile i32 %tmp0, ptr addrspace(1) %out
   %tmp1 = call i32 @noinline_func(i32 1)
-  store volatile i32 %tmp1, i32 addrspace(1)* %out
+  store volatile i32 %tmp1, ptr addrspace(1) %out
   %tmp2 = call i32 @unmarked_func(i32 1)
-  store volatile i32 %tmp2, i32 addrspace(1)* %out
+  store volatile i32 %tmp2, ptr addrspace(1) %out
   ret void
 }
 

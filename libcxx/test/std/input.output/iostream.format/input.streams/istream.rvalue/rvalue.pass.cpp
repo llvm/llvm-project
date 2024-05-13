@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // <istream>
 
 // template <class Stream, class T>
@@ -65,6 +63,7 @@ int main(int, char**)
         assert(&result == &is);
         assert(i.value == 123);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb(L"   123");
         Int i = {0};
@@ -73,11 +72,12 @@ int main(int, char**)
         assert(&result == &is);
         assert(i.value == 123);
     }
+#endif
     {
         // test perfect forwarding
         assert(called == false);
         std::istringstream ss;
-        std::istringstream&& result = (std::move(ss) >> A{});
+        std::istringstream&& result = (std::move(ss) >> A());
         assert(&result == &ss);
         assert(called);
     }

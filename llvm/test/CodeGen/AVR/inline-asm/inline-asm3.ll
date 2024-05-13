@@ -10,7 +10,7 @@ define void @add_r_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    mov r24, r22
 ; CHECK-NEXT:    add r24, r20
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    call foo8
+; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
   %3 = tail call i8 asm sideeffect "mov $0, $1\0Aadd $0, $2", "=r,r,r"(i8 %0, i8 %1)
   tail call void @foo8(i8 signext %3, i8 signext %0, i8 signext %1)
@@ -32,7 +32,7 @@ define void @add_r_i16(i16 signext %0, i16 signext %1) {
 ; CHECK-NEXT:    add r24, r20
 ; CHECK-NEXT:    adc r25, r21
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    call foo16
+; CHECK-NEXT:    rcall foo16
 ; CHECK-NEXT:    ret
   %3 = tail call i16 asm sideeffect "mov ${0:A}, ${1:A}\0Amov ${0:B}, ${1:B}\0Aadd ${0:A}, ${2:A}\0Aadc ${0:B}, ${2:B}", "=r,r,r"(i16 %0, i16 %1)
   tail call void @foo16(i16 signext %3, i16 signext %0, i16 signext %1)
@@ -51,7 +51,7 @@ define void @add_a_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    add r23, r20
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    mov r24, r23
-; CHECK-NEXT:    call foo8
+; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
   %3 = tail call i8 asm sideeffect "mov $0, $1\0Aadd $0, $2", "=a,a,a"(i8 %0, i8 %1)
   tail call void @foo8(i8 signext %3, i8 signext %0, i8 signext %1)
@@ -73,7 +73,7 @@ define void @add_a_i16(i16 signext %0, i16 signext %1) {
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    mov r24, r18
 ; CHECK-NEXT:    mov r25, r19
-; CHECK-NEXT:    call foo16
+; CHECK-NEXT:    rcall foo16
 ; CHECK-NEXT:    ret
   %3 = tail call i16 asm sideeffect "mov ${0:A}, ${1:A}\0Amov ${0:B}, ${1:B}\0Aadd ${0:A}, ${2:A}\0Aadc ${0:B}, ${2:B}", "=a,a,a"(i16 %0, i16 %1)
   tail call void @foo16(i16 signext %3, i16 signext %0, i16 signext %1)
@@ -89,7 +89,7 @@ define void @add_d_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    mov r24, r22
 ; CHECK-NEXT:    add r24, r20
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    call foo8
+; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
   %3 = tail call i8 asm sideeffect "mov $0, $1\0Aadd $0, $2", "=d,d,d"(i8 %0, i8 %1)
   tail call void @foo8(i8 signext %3, i8 signext %0, i8 signext %1)
@@ -109,7 +109,7 @@ define void @add_d_i16(i16 signext %0, i16 signext %1) {
 ; CHECK-NEXT:    add r24, r20
 ; CHECK-NEXT:    adc r25, r21
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    call foo16
+; CHECK-NEXT:    rcall foo16
 ; CHECK-NEXT:    ret
   %3 = tail call i16 asm sideeffect "mov ${0:A}, ${1:A}\0Amov ${0:B}, ${1:B}\0Aadd ${0:A}, ${2:A}\0Aadc ${0:B}, ${2:B}", "=d,d,d"(i16 %0, i16 %1)
   tail call void @foo16(i16 signext %3, i16 signext %0, i16 signext %1)
@@ -131,7 +131,7 @@ define void @add_l_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    mov r24, r13
 ; CHECK-NEXT:    mov r22, r14
 ; CHECK-NEXT:    mov r20, r15
-; CHECK-NEXT:    call foo8
+; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    pop r15
 ; CHECK-NEXT:    pop r14
 ; CHECK-NEXT:    pop r13
@@ -166,7 +166,7 @@ define void @add_l_i16(i16 signext %0, i16 signext %1) {
 ; CHECK-NEXT:    mov r23, r13
 ; CHECK-NEXT:    mov r20, r14
 ; CHECK-NEXT:    mov r21, r15
-; CHECK-NEXT:    call foo16
+; CHECK-NEXT:    rcall foo16
 ; CHECK-NEXT:    pop r15
 ; CHECK-NEXT:    pop r14
 ; CHECK-NEXT:    pop r13
@@ -190,7 +190,7 @@ define void @add_b_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    add r30, r20
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    mov r24, r30
-; CHECK-NEXT:    call foo8
+; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
   %3 = tail call i8 asm sideeffect "mov $0, $1\0Aadd $0, $2", "=b,b,r"(i8 %0, i8 %1)
   tail call void @foo8(i8 signext %3, i8 signext %0, i8 signext %1)
@@ -214,7 +214,7 @@ define void @add_b_i16(i16 signext %0, i16 signext %1) {
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    mov r24, r30
 ; CHECK-NEXT:    mov r25, r31
-; CHECK-NEXT:    call foo16
+; CHECK-NEXT:    rcall foo16
 ; CHECK-NEXT:    ret
   %3 = tail call i16 asm sideeffect "mov ${0:A}, ${1:A}\0Amov ${0:B}, ${1:B}\0Aadd ${0:A}, ${2:A}\0Aadc ${0:B}, ${2:B}", "=b,b,r"(i16 %0, i16 %1)
   tail call void @foo16(i16 signext %3, i16 signext %0, i16 signext %1)
@@ -227,15 +227,13 @@ define void @add_e_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    mov r30, r22
 ; CHECK-NEXT:    mov r22, r24
 ; CHECK-NEXT:    mov r26, r22
-; CHECK-NEXT:    mov r27, r23
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    mov r26, r26
 ; CHECK-NEXT:    add r26, r30
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    mov r24, r26
-; CHECK-NEXT:    ; kill: def $r22 killed $r22 killed $r23r22
 ; CHECK-NEXT:    mov r20, r30
-; CHECK-NEXT:    call foo8
+; CHECK-NEXT:    mov r24, r26
+; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
   %3 = tail call i8 asm sideeffect "mov $0, $1\0Aadd $0, $2", "=e,e,e"(i8 %0, i8 %1)
   tail call void @foo8(i8 signext %3, i8 signext %0, i8 signext %1)
@@ -261,7 +259,7 @@ define void @add_e_i16(i16 signext %0, i16 signext %1) {
 ; CHECK-NEXT:    mov r25, r27
 ; CHECK-NEXT:    mov r20, r30
 ; CHECK-NEXT:    mov r21, r31
-; CHECK-NEXT:    call foo16
+; CHECK-NEXT:    rcall foo16
 ; CHECK-NEXT:    ret
   %3 = tail call i16 asm sideeffect "mov ${0:A}, ${1:A}\0Amov ${0:B}, ${1:B}\0Aadd ${0:A}, ${2:A}\0Aadc ${0:B}, ${2:B}", "=e,e,e"(i16 %0, i16 %1)
   tail call void @foo16(i16 signext %3, i16 signext %0, i16 signext %1)
@@ -278,7 +276,7 @@ define void @add_t_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    add r0, r20
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    mov r24, r0
-; CHECK-NEXT:    call foo8
+; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
   %3 = tail call i8 asm sideeffect "mov $0, $1\0Aadd $0, $2", "=t,r,r"(i8 %0, i8 %1)
   tail call void @foo8(i8 signext %3, i8 signext %0, i8 signext %1)
@@ -294,10 +292,9 @@ define void @add_w_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    mov r24, r30
 ; CHECK-NEXT:    add r24, r26
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    ; kill: def $r24 killed $r24 killed $r25r24
 ; CHECK-NEXT:    mov r22, r30
 ; CHECK-NEXT:    mov r20, r26
-; CHECK-NEXT:    call foo8
+; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
   %3 = tail call i8 asm sideeffect "mov $0, $1\0Aadd $0, $2", "=w,w,w"(i8 %0, i8 %1)
   tail call void @foo8(i8 signext %3, i8 signext %0, i8 signext %1)
@@ -321,7 +318,7 @@ define void @add_w_i16(i16 signext %0, i16 signext %1) {
 ; CHECK-NEXT:    mov r23, r31
 ; CHECK-NEXT:    mov r20, r26
 ; CHECK-NEXT:    mov r21, r27
-; CHECK-NEXT:    call foo16
+; CHECK-NEXT:    rcall foo16
 ; CHECK-NEXT:    ret
   %3 = tail call i16 asm sideeffect "mov ${0:A}, ${1:A}\0Amov ${0:B}, ${1:B}\0Aadd ${0:A}, ${2:A}\0Aadc ${0:B}, ${2:B}", "=w,w,w"(i16 %0, i16 %1)
   tail call void @foo16(i16 signext %3, i16 signext %0, i16 signext %1)
@@ -345,10 +342,7 @@ define void @add_xyz_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    mov r24, r30
 ; CHECK-NEXT:    mov r25, r31
-; CHECK-NEXT:    ; kill: def $r24 killed $r24 killed $r25r24
-; CHECK-NEXT:    ; kill: def $r22 killed $r22 killed $r23r22
-; CHECK-NEXT:    ; kill: def $r20 killed $r20 killed $r21r20
-; CHECK-NEXT:    call foo8
+; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    pop r29
 ; CHECK-NEXT:    pop r28
 ; CHECK-NEXT:    ret
@@ -378,11 +372,37 @@ define void @add_xyz_i16(i16 signext %0, i16 signext %1) {
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    mov r24, r30
 ; CHECK-NEXT:    mov r25, r31
-; CHECK-NEXT:    call foo16
+; CHECK-NEXT:    rcall foo16
 ; CHECK-NEXT:    pop r29
 ; CHECK-NEXT:    pop r28
 ; CHECK-NEXT:    ret
   %3 = tail call i16 asm sideeffect "mov ${0:A}, ${1:A}\0Amov ${0:B}, ${1:B}\0Aadd ${0:A}, ${2:A}\0Aadc ${0:B}, ${2:B}", "=z,y,x"(i16 %0, i16 %1)
   tail call void @foo16(i16 signext %3, i16 signext %0, i16 signext %1)
   ret void
+}
+
+@gvar = global i16 0
+
+define ptr @ldi_dreg_symbol() {
+; CHECK-LABEL: ldi_dreg_symbol:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ;APP
+; CHECK-NEXT:    ldi r25, hi8(gvar)
+; CHECK-NEXT:    ldi r24, lo8(gvar)
+; CHECK-NEXT:    ;NO_APP
+; CHECK-NEXT:    ret
+  %1 = tail call ptr asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(ptr @gvar)
+  ret ptr %1
+}
+
+define ptr @ldi_dreg_imm() {
+; CHECK-LABEL: ldi_dreg_imm:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ;APP
+; CHECK-NEXT:    ldi r25, hi8(2345)
+; CHECK-NEXT:    ldi r24, lo8(2345)
+; CHECK-NEXT:    ;NO_APP
+; CHECK-NEXT:    ret
+  %1 = tail call ptr asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(i16 2345)
+  ret ptr %1
 }

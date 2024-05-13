@@ -22,7 +22,6 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86-NEXT:    je .LBB0_2
 ; X86-NEXT:  # %bb.3: # %if.end1401
 ; X86-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; X86-NEXT:    testb %dl, %dl
 ; X86-NEXT:    addl %eax, %esi
 ; X86-NEXT:    movw %si, s_2
 ; X86-NEXT:    movw %bx, s_0
@@ -45,11 +44,10 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X64-NEXT:    je .LBB0_2
 ; X64-NEXT:  # %bb.3: # %if.end1401
 ; X64-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; X64-NEXT:    testb %cl, %cl
 ; X64-NEXT:    addl %esi, %edx
-; X64-NEXT:    movw %dx, {{.*}}(%rip)
+; X64-NEXT:    movw %dx, s_2(%rip)
 ; X64-NEXT:    leal -23090(%rax), %edi
-; X64-NEXT:    movw %di, {{.*}}(%rip)
+; X64-NEXT:    movw %di, s_0(%rip)
 ; X64-NEXT:    incq %rax
 ; X64-NEXT:    leal -23091(%rax), %edi
 ; X64-NEXT:    cmpw $73, %di
@@ -94,12 +92,12 @@ cond.false1514:                                   ; preds = %if.end1510
 cond.end1528:                                     ; preds = %cond.false1514, %if.end1510
   %cond1529 = phi i64 [ %add1526, %cond.false1514 ], [ undef, %if.end1510 ]
   %conv1532 = add i16 %i1, %i
-  store i16 %conv1532, i16* @s_2, align 2
+  store i16 %conv1532, ptr @s_2, align 2
   br label %for.inc1677
 
 for.inc1677:                                      ; preds = %cond.end1528
   %add1679 = add i16 %i2, 1
-  store i16 %add1679, i16* @s_0, align 2
+  store i16 %add1679, ptr @s_0, align 2
   %cmp610 = icmp slt i16 %add1679, 73
   br i1 %cmp610, label %for.body612, label %for.body1703
 

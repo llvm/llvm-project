@@ -11,7 +11,7 @@
 // no-pointee-no-diagnostics
 
 void doStuff_pointerToConstInt(const int *u){};
-void pointee_uninit() {
+void pointee_uninit(void) {
   int i;
   int *p = &i;
   doStuff_pointerToConstInt(p); // expected-warning{{1st function call argument is a pointer to uninitialized value [core.CallAndMessage]}}

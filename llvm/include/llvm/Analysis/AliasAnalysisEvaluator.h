@@ -24,33 +24,27 @@
 #ifndef LLVM_ANALYSIS_ALIASANALYSISEVALUATOR_H
 #define LLVM_ANALYSIS_ALIASANALYSISEVALUATOR_H
 
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 class AAResults;
+class Function;
 
 class AAEvaluator : public PassInfoMixin<AAEvaluator> {
-  int64_t FunctionCount;
-  int64_t NoAliasCount, MayAliasCount, PartialAliasCount, MustAliasCount;
-  int64_t NoModRefCount, ModCount, RefCount, ModRefCount;
-  int64_t MustCount, MustRefCount, MustModCount, MustModRefCount;
+  int64_t FunctionCount = 0;
+  int64_t NoAliasCount = 0, MayAliasCount = 0, PartialAliasCount = 0;
+  int64_t MustAliasCount = 0;
+  int64_t NoModRefCount = 0, ModCount = 0, RefCount = 0, ModRefCount = 0;
 
 public:
-  AAEvaluator()
-      : FunctionCount(), NoAliasCount(), MayAliasCount(), PartialAliasCount(),
-        MustAliasCount(), NoModRefCount(), ModCount(), RefCount(),
-        ModRefCount(), MustCount(), MustRefCount(), MustModCount(),
-        MustModRefCount() {}
+  AAEvaluator() = default;
   AAEvaluator(AAEvaluator &&Arg)
       : FunctionCount(Arg.FunctionCount), NoAliasCount(Arg.NoAliasCount),
         MayAliasCount(Arg.MayAliasCount),
         PartialAliasCount(Arg.PartialAliasCount),
         MustAliasCount(Arg.MustAliasCount), NoModRefCount(Arg.NoModRefCount),
         ModCount(Arg.ModCount), RefCount(Arg.RefCount),
-        ModRefCount(Arg.ModRefCount), MustCount(Arg.MustCount),
-        MustRefCount(Arg.MustRefCount), MustModCount(Arg.MustModCount),
-        MustModRefCount(Arg.MustModRefCount) {
+        ModRefCount(Arg.ModRefCount) {
     Arg.FunctionCount = 0;
   }
   ~AAEvaluator();
@@ -59,15 +53,8 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
-  // Allow the legacy pass to run this using an internal API.
-  friend class AAEvalLegacyPass;
-
   void runInternal(Function &F, AAResults &AA);
 };
-
-/// Create a wrapper of the above for the legacy pass manager.
-FunctionPass *createAAEvalPass();
-
 }
 
 #endif

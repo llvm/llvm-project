@@ -10,18 +10,16 @@
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
-; CHECK: %0 = type { i8 }
-%0 = type opaque
-
-%a = type { %0 * }
+; CHECK: %a = type { i8 }
+%a = type opaque
 
 declare void @baz()
-define void @foo(%a *) {
+define void @foo(%a) {
 	call void @baz()
 	ret void
 }
 
 define i32 @main() {
-    call void @foo(%a *null)
+  call void @foo(%a undef)
 	ret i32 0
 }

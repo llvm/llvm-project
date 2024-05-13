@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 
@@ -105,7 +106,7 @@ define i16 @myctlz_ret16_2(i16 %a) {
 ; Here we store the result of ctlz.16 into an i16 pointer, so the trunc should
 ; remain.
 ; CHECK-LABEL: myctlz_store16(
-define void @myctlz_store16(i16 %a, i16* %b) {
+define void @myctlz_store16(i16 %a, ptr %b) {
 ; CHECK: ld.param.
 ; CHECK-NEXT: cvt.u32.u16
 ; CHECK-NEXT: clz.b32
@@ -114,11 +115,11 @@ define void @myctlz_store16(i16 %a, i16* %b) {
 ; CHECK: st.{{[a-z]}}16
 ; CHECK: ret;
   %val = call i16 @llvm.ctlz.i16(i16 %a, i1 false) readnone
-  store i16 %val, i16* %b
+  store i16 %val, ptr %b
   ret void
 }
 ; CHECK-LABEL: myctlz_store16_2(
-define void @myctlz_store16_2(i16 %a, i16* %b) {
+define void @myctlz_store16_2(i16 %a, ptr %b) {
 ; CHECK: ld.param.
 ; CHECK-NEXT: cvt.u32.u16
 ; CHECK-NEXT: clz.b32
@@ -127,6 +128,6 @@ define void @myctlz_store16_2(i16 %a, i16* %b) {
 ; CHECK: st.{{[a-z]}}16
 ; CHECK: ret;
   %val = call i16 @llvm.ctlz.i16(i16 %a, i1 false) readnone
-  store i16 %val, i16* %b
+  store i16 %val, ptr %b
   ret void
 }

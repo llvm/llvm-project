@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid10_attr:
+.. _amdgpu_synid_gfx10_attr:
 
 attr
-===========================
+====
 
 Interpolation attribute and channel:
 

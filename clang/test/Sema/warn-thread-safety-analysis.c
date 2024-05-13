@@ -72,7 +72,9 @@ int get_value(int *p) SHARED_LOCKS_REQUIRED(foo_.mu_){
   return *p;
 }
 
-int main() {
+void unlock_scope(struct Mutex *const *mu) __attribute__((release_capability(**mu)));
+
+int main(void) {
 
   Foo_fun1(1); // expected-warning{{calling function 'Foo_fun1' requires holding mutex 'mu2'}} \
                   expected-warning{{calling function 'Foo_fun1' requires holding mutex 'mu1' exclusively}}
@@ -127,9 +129,16 @@ int main() {
                                 // expected-note@-1{{mutex released here}}
   mutex_shared_unlock(&mu1);    // expected-warning {{releasing mutex 'mu1' that was not held}}
 
+  /// Cleanup functions
+  {
+    struct Mutex* const __attribute__((cleanup(unlock_scope))) scope = &mu1;
+    mutex_exclusive_lock(scope);  // Note that we have to lock through scope, because no alias analysis!
+    // Cleanup happens automatically -> no warning.
+  }
+
   return 0;
 }
 
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
-void run() __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}
+void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}

@@ -2,7 +2,10 @@
 ;; for double type.
 
 ; RUN: llc -O0 -debugger-tune=gdb -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -debugger-tune=gdb -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+
 ; RUN: llc -O0 -debugger-tune=lldb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -debugger-tune=lldb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
 
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
@@ -11,6 +14,7 @@
 ; CHECK-NEXT:  DW_AT_name    ("d")
 
 ; RUN: llc -O0 -debugger-tune=sce -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s -check-prefixes=SCE-CHECK,BOTH
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -debugger-tune=sce -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s -check-prefixes=SCE-CHECK,BOTH
 
 ; SCE-CHECK: .debug_info contents:
 ; SCE-CHECK: DW_TAG_variable
@@ -37,7 +41,7 @@ entry:
   call void @llvm.dbg.value(metadata double 3.140000e+00, metadata !12, metadata !DIExpression()), !dbg !14
   call void @llvm.dbg.value(metadata double 4.700000e+01, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !14
   call void @llvm.dbg.value(metadata double 7.400000e+01, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !14
-  %puts = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @str, i64 0, i64 0)), !dbg !15
+  %puts = call i32 @puts(ptr nonnull dereferenceable(1) @str), !dbg !15
   call void @llvm.dbg.value(metadata double undef, metadata !12, metadata !DIExpression()), !dbg !14
   ret i32 0, !dbg !16
 }
@@ -46,7 +50,7 @@ entry:
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 ; Function Attrs: nofree nounwind
-declare i32 @puts(i8* nocapture readonly) local_unnamed_addr #2
+declare i32 @puts(ptr nocapture readonly) local_unnamed_addr #2
 
 attributes #0 = { nofree nounwind uwtable }
 attributes #1 = { nounwind readnone speculatable willreturn }

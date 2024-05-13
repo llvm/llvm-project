@@ -18,6 +18,7 @@
 ## Warn unless the archive is excluded by --warn-backrefs-exclude
 # RUN: ld.lld --fatal-warnings %t2.a %t1.o -o /dev/null
 # RUN: ld.lld --warn-backrefs %t2.a %t1.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --warn-backrefs --no-warn-backrefs %t2.a %t1.o -o /dev/null 2>&1 | count 0
 # RUN: ld.lld --warn-backrefs %t2.a '-(' %t1.o '-)' -o /dev/null 2>&1 | FileCheck %s
 # RUN: ld.lld --warn-backrefs --warn-backrefs-exclude='*3.a' %t2.a %t1.o -o /dev/null 2>&1 | FileCheck %s
 # RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude='*2.a(*2.o)' %t2.a %t1.o -o /dev/null
@@ -30,6 +31,7 @@
 # RUN: echo 'GROUP("%t2.a" "%t1.o")' > %t2.lds
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t2.lds -o /dev/null
 # RUN: ld.lld --fatal-warnings --warn-backrefs '-(' %t2.a %t1.o '-)' -o /dev/null
+# RUN: ld.lld --fatal-warnings --warn-backrefs --start-group %t2.a %t1.o --end-group -o /dev/null
 
 ## A backward reference from %t1.o to %t2.a (added by %t3.lds).
 # RUN: echo 'GROUP("%t2.a")' > %t3.lds
@@ -61,6 +63,8 @@
 # RUN: echo '.globl bar; bar:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t3.o
 # RUN: echo '.globl foo; foo: call bar' | llvm-mc -filetype=obj -triple=x86_64 - -o %t4.o
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t1.o --start-lib %t3.o %t4.o --end-lib -o /dev/null
+# RUN: rm -f %t34.a && llvm-ar rcS %t34.a %t3.o %t4.o
+# RUN: ld.lld --fatal-warnings --warn-backrefs %t1.o %t34.a -o /dev/null
 
 ## We don't report backward references to weak symbols as they can be overridden later.
 # RUN: echo '.weak foo; foo:' | llvm-mc -filetype=obj -triple=x86_64 - -o %tweak.o
@@ -73,7 +77,7 @@
 # RUN: llvm-ar rcs %tcomm.a %tcomm.o
 # RUN: llvm-ar rcs %tstrong.a %tstrong.o
 # RUN: ld.lld --warn-backrefs %tcomm.a %t1.o %t5.o 2>&1 -o /dev/null | FileCheck --check-prefix=COMM %s
-# RUN: ld.lld --fatal-warnings --warn-backrefs %tcomm.a %t1.o %t5.o %tstrong.a 2>&1 -o /dev/null
+# RUN: ld.lld --fatal-warnings --fortran-common --warn-backrefs %tcomm.a %t1.o %t5.o %tstrong.a 2>&1 -o /dev/null
 # RUN: ld.lld --warn-backrefs --no-fortran-common %tcomm.a %t1.o %t5.o %tstrong.a 2>&1 -o /dev/null | FileCheck --check-prefix=COMM %s
 
 # COMM: ld.lld: warning: backward reference detected: obj in {{.*}}5.o refers to {{.*}}comm.a
@@ -96,8 +100,12 @@
 ## -u does not make a backward reference.
 # RUN: ld.lld --fatal-warnings --warn-backrefs -u foo %t2.a %t1.o -o /dev/null
 
+## --defsym does not make a backward reference, but it does not suppress the warning due to another file.
+# RUN: ld.lld --fatal-warnings --warn-backrefs --defsym=x=foo -e 0 %t2.a -o /dev/null
+# RUN: ld.lld --warn-backrefs --defsym=x=foo %t2.a %t1.o -o /dev/null 2>&1 | FileCheck %s
+
 # RUN: not ld.lld --warn-backrefs-exclude='[' 2>&1 | FileCheck --check-prefix=INVALID %s
-# INVALID: error: --warn-backrefs-exclude: invalid glob pattern: [
+# INVALID: error: --warn-backrefs-exclude: invalid glob pattern, unmatched '[': [
 
 .globl _start, foo
 _start:

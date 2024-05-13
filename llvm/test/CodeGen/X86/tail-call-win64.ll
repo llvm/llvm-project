@@ -3,7 +3,7 @@
 ; The Win64 ABI wants tail jmps to use a REX_W prefix so it can distinguish
 ; in-function jumps from function exiting jumps.
 
-define void @tail_jmp_reg(i32, i32, void ()* %fptr) {
+define void @tail_jmp_reg(i32, i32, ptr %fptr) {
   tail call void () %fptr()
   ret void
 }
@@ -24,10 +24,10 @@ define void @tail_jmp_imm() {
 ; CHECK-LABEL: tail_jmp_imm:
 ; CHECK: jmp tail_tgt
 
-@g_fptr = global void ()* @tail_tgt
+@g_fptr = global ptr @tail_tgt
 
 define void @tail_jmp_mem() {
-  %fptr = load void ()*, void ()** @g_fptr
+  %fptr = load ptr, ptr @g_fptr
   tail call void () %fptr()
   ret void
 }

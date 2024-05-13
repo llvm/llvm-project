@@ -29,7 +29,7 @@ using namespace lldb_private;
 
 // CommunicationKDP constructor
 CommunicationKDP::CommunicationKDP(const char *comm_name)
-    : Communication(comm_name), m_addr_byte_size(4),
+    : Communication(), m_addr_byte_size(4),
       m_byte_order(eByteOrderLittle), m_packet_timeout(5), m_sequence_mutex(),
       m_is_running(false), m_session_key(0u), m_request_sequence_id(0u),
       m_exception_sequence_id(0u), m_kdp_version_version(0u),
@@ -65,7 +65,7 @@ bool CommunicationKDP::SendRequestAndGetReply(
     const CommandType command, const PacketStreamType &request_packet,
     DataExtractor &reply_packet) {
   if (IsRunning()) {
-    Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
+    Log *log = GetLog(KDPLog::Packets);
     if (log) {
       PacketStreamType log_strm;
       DumpPacket(log_strm, request_packet.GetData(), request_packet.GetSize());
@@ -133,7 +133,7 @@ bool CommunicationKDP::SendRequestPacketNoLock(
     const char *packet_data = request_packet.GetData();
     const size_t packet_size = request_packet.GetSize();
 
-    Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
+    Log *log = GetLog(KDPLog::Packets);
     if (log) {
       PacketStreamType log_strm;
       DumpPacket(log_strm, packet_data, packet_size);
@@ -178,7 +178,7 @@ size_t CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock(
   uint8_t buffer[8192];
   Status error;
 
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
+  Log *log = GetLog(KDPLog::Packets);
 
   // Check for a packet from our cache first without trying any reading...
   if (CheckForPacket(NULL, 0, packet))
@@ -189,7 +189,7 @@ size_t CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock(
     lldb::ConnectionStatus status = eConnectionStatusNoConnection;
     size_t bytes_read = Read(buffer, sizeof(buffer),
                              timeout_usec == UINT32_MAX
-                                 ? Timeout<std::micro>(llvm::None)
+                                 ? Timeout<std::micro>(std::nullopt)
                                  : std::chrono::microseconds(timeout_usec),
                              status, &error);
 
@@ -231,7 +231,7 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
   // Put the packet data into the buffer in a thread safe fashion
   std::lock_guard<std::recursive_mutex> guard(m_bytes_mutex);
 
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
+  Log *log = GetLog(KDPLog::Packets);
 
   if (src && src_len > 0) {
     if (log && log->GetVerbose()) {
@@ -267,7 +267,7 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
         SendRequestPacketNoLock(request_ack_packet);
       }
       // Fall through to case below to get packet contents
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ePacketTypeReply | KDP_CONNECT:
     case ePacketTypeReply | KDP_DISCONNECT:
     case ePacketTypeReply | KDP_HOSTINFO:

@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=4 -S -o - < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S -o - < %s | FileCheck %s
 %arrayt = type [64 x i32]
 
 @v_146 = external global %arrayt, align 1
@@ -30,8 +30,8 @@ cond.false:                                       ; preds = %for.body, %land.rhs
 
 cond.end:                                         ; preds = %land.rhs, %cond.false
   %cond = phi i32 [ 0, %cond.false ], [ 1, %land.rhs ]
-  %arrayidx = getelementptr inbounds %arrayt, %arrayt* @v_146, i16 0, i16 %storemerge
-  store i32 %cond, i32* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %arrayt, ptr @v_146, i16 0, i16 %storemerge
+  store i32 %cond, ptr %arrayidx, align 1
   %inc = add nsw i16 %storemerge, 1
   br label %for.cond
 

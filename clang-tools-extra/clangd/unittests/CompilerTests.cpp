@@ -8,6 +8,8 @@
 
 #include "Compiler.h"
 #include "TestTU.h"
+#include "clang/Frontend/DependencyOutputOptions.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -56,6 +58,61 @@ TEST(BuildCompilerInvocation, PragmaDebugCrash) {
   TU.build(); // no-crash
 }
 
+TEST(BuildCompilerInvocation, DropsShowIncludes) {
+  MockFS FS;
+  IgnoreDiagnostics Diags;
+  TestTU TU;
+
+  TU.ExtraArgs = {"-Xclang", "--show-includes"};
+  EXPECT_THAT(buildCompilerInvocation(TU.inputs(FS), Diags)
+                  ->getDependencyOutputOpts()
+                  .ShowIncludesDest,
+              ShowIncludesDestination::None);
+
+  TU.ExtraArgs = {"/showIncludes", "--driver-mode=cl"};
+  EXPECT_THAT(buildCompilerInvocation(TU.inputs(FS), Diags)
+                  ->getDependencyOutputOpts()
+                  .ShowIncludesDest,
+              ShowIncludesDestination::None);
+
+  TU.ExtraArgs = {"/showIncludes:user", "--driver-mode=cl"};
+  EXPECT_THAT(buildCompilerInvocation(TU.inputs(FS), Diags)
+                  ->getDependencyOutputOpts()
+                  .ShowIncludesDest,
+              ShowIncludesDestination::None);
+}
+
+TEST(BuildCompilerInvocation, DropsPlugins) {
+  MockFS FS;
+  IgnoreDiagnostics Diags;
+  TestTU TU;
+
+  TU.ExtraArgs = {"-Xclang", "-load",
+                  "-Xclang", "plugins.so",
+                  "-Xclang", "-plugin",
+                  "-Xclang", "my_plugin",
+                  "-Xclang", "-plugin-arg-my_plugin",
+                  "-Xclang", "foo=bar",
+                  "-Xclang", "-add-plugin",
+                  "-Xclang", "my_plugin2"};
+  auto Opts = buildCompilerInvocation(TU.inputs(FS), Diags)->getFrontendOpts();
+  EXPECT_THAT(Opts.Plugins, IsEmpty());
+  EXPECT_THAT(Opts.PluginArgs, IsEmpty());
+  EXPECT_THAT(Opts.AddPluginActions, IsEmpty());
+  EXPECT_EQ(Opts.ProgramAction, frontend::ActionKind::ParseSyntaxOnly);
+  EXPECT_TRUE(Opts.ActionName.empty());
+}
+
+TEST(BuildCompilerInvocation, EmptyArgs) {
+  MockFS FS;
+  IgnoreDiagnostics Diags;
+  TestTU TU;
+  auto Inputs = TU.inputs(FS);
+  Inputs.CompileCommand.CommandLine.clear();
+
+  // No crash.
+  EXPECT_EQ(buildCompilerInvocation(Inputs, Diags), nullptr);
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

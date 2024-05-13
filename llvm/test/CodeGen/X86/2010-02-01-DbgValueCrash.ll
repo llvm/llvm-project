@@ -1,5 +1,4 @@
-; RUN: llc -O1 < %s
-; REQUIRES: default_triple
+; RUN: llc -mtriple=x86_64 -O1 < %s
 
 ; ModuleID = 'pr6157.bc'
 ; formerly crashed in SelectionDAGBuilder
@@ -10,13 +9,13 @@
 
 define i32 @"main(tart.core.String[])->int32"(i32 %args) {
 entry:
-  tail call void @llvm.dbg.value(metadata %tart.reflect.ComplexType* @.type.SwitchStmtTest, i64 0, metadata !8, metadata !DIExpression()), !dbg !DILocation(scope: !9)
-  tail call void @"tart.reflect.ComplexType.create->tart.core.Object"(%tart.reflect.ComplexType* @.type.SwitchStmtTest) ; <%tart.core.Object*> [#uses=2]
+  tail call void @llvm.dbg.value(metadata ptr @.type.SwitchStmtTest, i64 0, metadata !8, metadata !DIExpression()), !dbg !DILocation(scope: !9)
+  tail call void @"tart.reflect.ComplexType.create->tart.core.Object"(ptr @.type.SwitchStmtTest) ; <ptr> [#uses=2]
   ret i32 3
 }
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
-declare void @"tart.reflect.ComplexType.create->tart.core.Object"(%tart.reflect.ComplexType*) nounwind readnone
+declare void @"tart.reflect.ComplexType.create->tart.core.Object"(ptr) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !15, enums: !16, retainedTypes: !16)
@@ -33,6 +32,6 @@ declare void @"tart.reflect.ComplexType.create->tart.core.Object"(%tart.reflect.
 !11 = !DISubroutineType(types: !12)
 !12 = !{!13}
 !13 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!14 = !{%tart.reflect.ComplexType* @.type.SwitchStmtTest}
+!14 = !{ptr @.type.SwitchStmtTest}
 !15 = !DIFile(filename: "sm.c", directory: "")
 !16 = !{i32 0}

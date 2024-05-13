@@ -6,14 +6,14 @@
 ; Attempt the import now, ensure below that file containing inline assembly
 ; is not imported from. Otherwise we would need to promote its local variable
 ; used in the inline assembly, which would not see the rename.
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s
+; RUN: opt -passes=function-import -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s
 
 define i32 @main() #0 {
 entry:
   %f = alloca i64, align 8
-  call void @foo(i64* %f)
+  call void @foo(ptr %f)
   ret i32 0
 }
 
-; CHECK: declare void @foo(i64*)
-declare void @foo(i64*) #1
+; CHECK: declare void @foo(ptr)
+declare void @foo(ptr) #1

@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 /// Finds declarations of assignment operators with the wrong return and/or
 /// argument types and definitions with good return type but wrong return
@@ -25,7 +23,7 @@ namespace misc {
 ///   * The operator must always return ``*this``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-unconventional-assign-operator.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/unconventional-assign-operator.html
 class UnconventionalAssignOperatorCheck : public ClangTidyCheck {
 public:
   UnconventionalAssignOperatorCheck(StringRef Name, ClangTidyContext *Context)
@@ -37,8 +35,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ASSIGNOPERATORSIGNATURECHECK_H

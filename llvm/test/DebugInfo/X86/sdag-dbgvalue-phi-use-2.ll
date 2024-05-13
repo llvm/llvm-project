@@ -1,4 +1,13 @@
-; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:     -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:     -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
+
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:     -experimental-debug-variable-locations=false --try-experimental-debuginfo-iterators \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
 
 ; This test case is a modified version of dbg_value_phi_isel1.ll
 ; where the llvm.dbg.value nodes in for.body has been moved.
@@ -17,44 +26,57 @@ entry:
   call void @llvm.dbg.value(metadata i32 9, metadata !15, metadata !DIExpression()), !dbg !26
   call void @llvm.dbg.value(metadata i32 13, metadata !16, metadata !DIExpression()), !dbg !27
   call void @llvm.dbg.value(metadata i32 0, metadata !17, metadata !DIExpression()), !dbg !28
-  %0 = load i32, i32* @end, align 4, !dbg !29, !tbaa !31
+  %0 = load i32, ptr @end, align 4, !dbg !29, !tbaa !31
   %cmp20 = icmp sgt i32 %0, 0, !dbg !35
   br i1 %cmp20, label %for.body.lr.ph, label %for.cond.cleanup, !dbg !36
 
 for.body.lr.ph:                                   ; preds = %entry
-  %1 = load i32, i32* @end, align 4, !tbaa !31
+  %1 = load i32, ptr @end, align 4, !tbaa !31
   br label %for.body, !dbg !36
 
 for.cond.cleanup:                                 ; preds = %for.body, %entry
 ; CHECK-LABEL: bb.{{.*}}.for.cond.cleanup:
-; CHECK:      [[REG1:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE [[REG1]]
+; CHECK:         [[REG1:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:      debug-instr-number 7
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(7, 0)
+; DBGVALUE-NEXT: DBG_VALUE [[REG1]]
   %x.0.lcssa = phi i32 [ 9, %entry ], [ %add, %for.body ]
   call void @llvm.dbg.value(metadata i32 %x.0.lcssa, metadata !15, metadata !DIExpression()), !dbg !26
-  %2 = bitcast [80 x i32]* %arr to i8*, !dbg !37
-  call void @llvm.lifetime.start.p0i8(i64 320, i8* nonnull %2) #3, !dbg !37
-  call void @llvm.dbg.declare(metadata [80 x i32]* %arr, metadata !19, metadata !DIExpression()), !dbg !38
+  call void @llvm.lifetime.start.p0(i64 320, ptr nonnull %arr) #3, !dbg !37
+  call void @llvm.dbg.declare(metadata ptr %arr, metadata !19, metadata !DIExpression()), !dbg !38
   call void @llvm.dbg.value(metadata i32 0, metadata !24, metadata !DIExpression()), !dbg !39
   br label %for.body4, !dbg !40
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
 ; CHECK-LABEL: bb.{{.*}}.for.body:
-; CHECK:      [[REG2:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG3:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG4:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE [[REG3]], $noreg, !16
-; CHECK-NEXT: DBG_VALUE 555, $noreg, !17
-; CHECK-NEXT: [[ADDREG:%[0-9]+]]:gr32 = nuw nsw ADD32rr
-; CHECK-NEXT: DBG_VALUE [[REG2]], $noreg, !17
-; CHECK:      [[MULREG:%[0-9]+]]:gr32 = LEA64_32r
-; CHECK-NEXT: DBG_VALUE 777, $noreg, !17
-; XXX: The following DBG_VALUE should have stayed below the INC32r
-; CHECK-NEXT: DBG_VALUE [[MULREG]], $noreg, !16
-; CHECK-NEXT: [[INCREG:%[0-9]+]]:gr32 = nuw nsw INC32r
-; CHECK-NEXT: DBG_VALUE [[INCREG]], $noreg, !17
-; CHECK-NEXT: DBG_VALUE [[ADDREG]], $noreg, !15
-; CHECK-NEXT: implicit-def $eflags,
-; CHECK-NEXT: DBG_VALUE [[REG4]]
+; CHECK:         [[REG2:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 4
+; CHECK-NEXT:    [[REG3:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 3
+; CHECK-NEXT:    [[REG4:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 6
+; INSTRREF-NEXT: DBG_INSTR_REF !16, {{.+}}, dbg-instr-ref(3, 0)
+; DBGVALUE-NEXT: DBG_VALUE [[REG3]], $noreg, !16
+; CHECK-NEXT:    DBG_VALUE 555, $noreg, !17
+; CHECK-NEXT:    [[ADDREG:%[0-9]+]]:gr32 = nuw nsw ADD32rr
+; INSTRREF-SAME:    debug-instr-number 5
+; INSTRREF-NEXT: DBG_INSTR_REF !17, {{.+}}, dbg-instr-ref(4, 0)
+; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg, !17
+; CHECK:         [[MULREG:%[0-9]+]]:gr32 = LEA64_32r
+; INSTRREF-SAME:    debug-instr-number 1
+; CHECK-NEXT:    DBG_VALUE 777, $noreg, !17
+;;; XXX: The following DBG_INSTR_REF should have stayed below the INC32r
+; INSTRREF-NEXT: DBG_INSTR_REF !16, {{.+}}, dbg-instr-ref(1, 0)
+; DBGVALUE-NEXT: DBG_VALUE [[MULREG]], $noreg, !16
+; CHECK-NEXT:    [[INCREG:%[0-9]+]]:gr32 = nuw nsw INC32r
+; INSTRREF-SAME:    debug-instr-number 2
+; INSTRREF-NEXT: DBG_INSTR_REF !17, {{.+}}, dbg-instr-ref(2, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !15, {{.+}}, dbg-instr-ref(5, 0)
+; DBGVALUE-NEXT: DBG_VALUE [[INCREG]], $noreg, !17
+; DBGVALUE-NEXT: DBG_VALUE [[ADDREG]], $noreg, !15
+; CHECK-NEXT:    implicit-def $eflags,
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(6, 0)
+; DBGVALUE-NEXT: DBG_VALUE [[REG4]]
   %u.023 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %y.022 = phi i32 [ 13, %for.body.lr.ph ], [ %mul, %for.body ]
   %x.021 = phi i32 [ 9, %for.body.lr.ph ], [ %add, %for.body ]
@@ -77,16 +99,16 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !36, !llvm.loop !45
 
 for.cond.cleanup3:                                ; preds = %for.body4
-  call void @llvm.lifetime.end.p0i8(i64 320, i8* nonnull %2) #3, !dbg !47
+  call void @llvm.lifetime.end.p0(i64 320, ptr nonnull %arr) #3, !dbg !47
   ret i32 %x.0.lcssa, !dbg !48
 
 for.body4:                                        ; preds = %for.body4, %for.cond.cleanup
   %indvars.iv = phi i64 [ 0, %for.cond.cleanup ], [ %indvars.iv.next, %for.body4 ]
   call void @llvm.dbg.value(metadata i64 %indvars.iv, metadata !24, metadata !DIExpression()), !dbg !39
-  %arrayidx = getelementptr inbounds [80 x i32], [80 x i32]* %arr, i64 0, i64 %indvars.iv, !dbg !49
-  %3 = trunc i64 %indvars.iv to i32, !dbg !52
-  %4 = add i32 %3, 3, !dbg !52
-  store volatile i32 %4, i32* %arrayidx, align 4, !dbg !52, !tbaa !31
+  %arrayidx = getelementptr inbounds [80 x i32], ptr %arr, i64 0, i64 %indvars.iv, !dbg !49
+  %2 = trunc i64 %indvars.iv to i32, !dbg !52
+  %3 = add i32 %2, 3, !dbg !52
+  store volatile i32 %3, ptr %arrayidx, align 4, !dbg !52, !tbaa !31
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !53
   call void @llvm.dbg.value(metadata i32 undef, metadata !24, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !39
   %exitcond = icmp eq i64 %indvars.iv.next, 64, !dbg !54
@@ -94,13 +116,13 @@ for.body4:                                        ; preds = %for.body4, %for.con
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

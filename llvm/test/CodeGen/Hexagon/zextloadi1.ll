@@ -13,8 +13,8 @@
 ; CHECK-DAG: memd(##i129_s+8) = r[[REG1]]
 ; CHECK-DAG: memd(##i129_s) = r[[REG0]]
 define void @i129_ls() nounwind  {
-        %tmp = load i129, i129* @i129_l
-        store i129 %tmp, i129* @i129_s
+        %tmp = load i129, ptr @i129_l
+        store i129 %tmp, ptr @i129_s
         ret void
 }
 
@@ -24,7 +24,7 @@ define void @i129_ls() nounwind  {
 ; CHECK-DAG: memd(##i65_s) = r[[REG0]]
 ; CHECK-DAG: memb(##i65_s+8) = r[[REG1]]
 define void @i65_ls() nounwind  {
-        %tmp = load i65, i65* @i65_l
-        store i65 %tmp, i65* @i65_s
+        %tmp = load i65, ptr @i65_l
+        store i65 %tmp, ptr @i65_s
         ret void
 }

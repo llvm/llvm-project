@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=VI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mtriple=r600-- -mcpu=cayman -verify-machineinstrs < %s | FileCheck -check-prefix=CM -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=VI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600-- -mcpu=cayman -verify-machineinstrs < %s | FileCheck -check-prefix=CM -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}store_i1:
 ; EG: MEM_RAT MSKOR
@@ -13,9 +13,9 @@
 
 ; SIVI: buffer_store_byte
 ; GFX9: global_store_byte
-define amdgpu_kernel void @store_i1(i1 addrspace(1)* %out) {
+define amdgpu_kernel void @store_i1(ptr addrspace(1) %out) {
 entry:
-  store i1 true, i1 addrspace(1)* %out
+  store i1 true, ptr addrspace(1) %out
   ret void
 }
 
@@ -33,9 +33,9 @@ entry:
 
 ; SIVI: buffer_store_byte
 ; GFX9: global_store_byte
-define amdgpu_kernel void @store_i8(i8 addrspace(1)* %out, i8 %in) {
+define amdgpu_kernel void @store_i8(ptr addrspace(1) %out, i8 %in) {
 entry:
-  store i8 %in, i8 addrspace(1)* %out
+  store i8 %in, ptr addrspace(1) %out
   ret void
 }
 
@@ -54,9 +54,9 @@ entry:
 
 ; SIVI: buffer_store_short
 ; GFX9: global_store_short
-define amdgpu_kernel void @store_i16(i16 addrspace(1)* %out, i16 %in) {
+define amdgpu_kernel void @store_i16(ptr addrspace(1) %out, i16 %in) {
 entry:
-  store i16 %in, i16 addrspace(1)* %out
+  store i16 %in, ptr addrspace(1) %out
   ret void
 }
 
@@ -70,9 +70,9 @@ entry:
 
 ; EG: MEM_RAT MSKOR
 ; EG: MEM_RAT MSKOR
-define amdgpu_kernel void @store_i24(i24 addrspace(1)* %out, i24 %in) {
+define amdgpu_kernel void @store_i24(ptr addrspace(1) %out, i24 %in) {
 entry:
-  store i24 %in, i24 addrspace(1)* %out
+  store i24 %in, ptr addrspace(1) %out
   ret void
 }
 
@@ -87,9 +87,9 @@ entry:
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD
 ; CM-NOT: MEM_RAT
-define amdgpu_kernel void @store_i25(i25 addrspace(1)* %out, i25 %in) {
+define amdgpu_kernel void @store_i25(ptr addrspace(1) %out, i25 %in) {
 entry:
-  store i25 %in, i25 addrspace(1)* %out
+  store i25 %in, ptr addrspace(1) %out
   ret void
 }
 
@@ -103,10 +103,10 @@ entry:
 
 ; SIVI: buffer_store_short
 ; GFX9: global_store_short
-define amdgpu_kernel void @store_v2i8(<2 x i8> addrspace(1)* %out, <2 x i32> %in) {
+define amdgpu_kernel void @store_v2i8(ptr addrspace(1) %out, <2 x i32> %in) {
 entry:
   %0 = trunc <2 x i32> %in to <2 x i8>
-  store <2 x i8> %0, <2 x i8> addrspace(1)* %out
+  store <2 x i8> %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -120,10 +120,10 @@ entry:
 ; CM-NOT: MEM_RAT MSKOR
 
 ; SI: buffer_store_byte
-define amdgpu_kernel void @store_v2i8_unaligned(<2 x i8> addrspace(1)* %out, <2 x i32> %in) {
+define amdgpu_kernel void @store_v2i8_unaligned(ptr addrspace(1) %out, <2 x i32> %in) {
 entry:
   %0 = trunc <2 x i32> %in to <2 x i8>
-  store <2 x i8> %0, <2 x i8> addrspace(1)* %out, align 1
+  store <2 x i8> %0, ptr addrspace(1) %out, align 1
   ret void
 }
 
@@ -135,10 +135,10 @@ entry:
 
 ; SIVI: buffer_store_dword
 ; GFX9: global_store_dword
-define amdgpu_kernel void @store_v2i16(<2 x i16> addrspace(1)* %out, <2 x i32> %in) {
+define amdgpu_kernel void @store_v2i16(ptr addrspace(1) %out, <2 x i32> %in) {
 entry:
   %0 = trunc <2 x i32> %in to <2 x i16>
-  store <2 x i16> %0, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -158,10 +158,10 @@ entry:
 
 ; GFX9: global_store_short
 ; GFX9: global_store_short
-define amdgpu_kernel void @store_v2i16_unaligned(<2 x i16> addrspace(1)* %out, <2 x i32> %in) {
+define amdgpu_kernel void @store_v2i16_unaligned(ptr addrspace(1) %out, <2 x i32> %in) {
 entry:
   %0 = trunc <2 x i32> %in to <2 x i16>
-  store <2 x i16> %0, <2 x i16> addrspace(1)* %out, align 2
+  store <2 x i16> %0, ptr addrspace(1) %out, align 2
   ret void
 }
 
@@ -172,10 +172,10 @@ entry:
 
 ; SIVI: buffer_store_dword
 ; GFX9: global_store_dword
-define amdgpu_kernel void @store_v4i8(<4 x i8> addrspace(1)* %out, <4 x i32> %in) {
+define amdgpu_kernel void @store_v4i8(ptr addrspace(1) %out, <4 x i32> %in) {
 entry:
   %0 = trunc <4 x i32> %in to <4 x i8>
-  store <4 x i8> %0, <4 x i8> addrspace(1)* %out
+  store <4 x i8> %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -199,10 +199,10 @@ entry:
 ; SI: buffer_store_byte
 ; SI: buffer_store_byte
 ; SI-NOT: buffer_store_dword
-define amdgpu_kernel void @store_v4i8_unaligned(<4 x i8> addrspace(1)* %out, <4 x i32> %in) {
+define amdgpu_kernel void @store_v4i8_unaligned(ptr addrspace(1) %out, <4 x i32> %in) {
 entry:
   %0 = trunc <4 x i32> %in to <4 x i8>
-  store <4 x i8> %0, <4 x i8> addrspace(1)* %out, align 1
+  store <4 x i8> %0, ptr addrspace(1) %out, align 1
   ret void
 }
 
@@ -220,10 +220,10 @@ entry:
 ; SI: buffer_store_short
 ; SI: buffer_store_short
 ; SI-NOT: buffer_store_dword
-define amdgpu_kernel void @store_v4i8_halfaligned(<4 x i8> addrspace(1)* %out, <4 x i32> %in) {
+define amdgpu_kernel void @store_v4i8_halfaligned(ptr addrspace(1) %out, <4 x i32> %in) {
 entry:
   %0 = trunc <4 x i32> %in to <4 x i8>
-  store <4 x i8> %0, <4 x i8> addrspace(1)* %out, align 2
+  store <4 x i8> %0, ptr addrspace(1) %out, align 2
   ret void
 }
 
@@ -236,8 +236,8 @@ entry:
 ; SIVI: buffer_store_dword
 ; GFX9: global_store_dword
 
-define amdgpu_kernel void @store_f32(float addrspace(1)* %out, float %in) {
-  store float %in, float addrspace(1)* %out
+define amdgpu_kernel void @store_f32(ptr addrspace(1) %out, float %in) {
+  store float %in, ptr addrspace(1) %out
   ret void
 }
 
@@ -248,10 +248,10 @@ define amdgpu_kernel void @store_f32(float addrspace(1)* %out, float %in) {
 
 ; SIVI: buffer_store_dwordx2
 ; GFX9: global_store_dwordx2
-define amdgpu_kernel void @store_v4i16(<4 x i16> addrspace(1)* %out, <4 x i32> %in) {
+define amdgpu_kernel void @store_v4i16(ptr addrspace(1) %out, <4 x i32> %in) {
 entry:
   %0 = trunc <4 x i32> %in to <4 x i16>
-  store <4 x i16> %0, <4 x i16> addrspace(1)* %out
+  store <4 x i16> %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -264,11 +264,11 @@ entry:
 ; SIVI: buffer_store_dwordx2
 ; GFX9: global_store_dwordx2
 
-define amdgpu_kernel void @store_v2f32(<2 x float> addrspace(1)* %out, float %a, float %b) {
+define amdgpu_kernel void @store_v2f32(ptr addrspace(1) %out, float %a, float %b) {
 entry:
   %0 = insertelement <2 x float> <float 0.0, float 0.0>, float %a, i32 0
   %1 = insertelement <2 x float> %0, float %b, i32 1
-  store <2 x float> %1, <2 x float> addrspace(1)* %out
+  store <2 x float> %1, ptr addrspace(1) %out
   ret void
 }
 
@@ -282,8 +282,8 @@ entry:
 
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.[XYZW]}}, {{T[0-9]+\.[XYZW]}},
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.XY}}, {{T[0-9]+\.[XYZW]}},
-define amdgpu_kernel void @store_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a) nounwind {
-  store <3 x i32> %a, <3 x i32> addrspace(1)* %out, align 16
+define amdgpu_kernel void @store_v3i32(ptr addrspace(1) %out, <3 x i32> %a) nounwind {
+  store <3 x i32> %a, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -296,9 +296,9 @@ define amdgpu_kernel void @store_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %
 
 ; SIVI: buffer_store_dwordx4
 ; GFX9: global_store_dwordx4
-define amdgpu_kernel void @store_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %in) {
+define amdgpu_kernel void @store_v4i32(ptr addrspace(1) %out, <4 x i32> %in) {
 entry:
-  store <4 x i32> %in, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %in, ptr addrspace(1) %out
   ret void
 }
 
@@ -311,9 +311,9 @@ entry:
 
 ; SIVI: buffer_store_dwordx4
 ; GFX9: global_store_dwordx4
-define amdgpu_kernel void @store_v4i32_unaligned(<4 x i32> addrspace(1)* %out, <4 x i32> %in) {
+define amdgpu_kernel void @store_v4i32_unaligned(ptr addrspace(1) %out, <4 x i32> %in) {
 entry:
-  store <4 x i32> %in, <4 x i32> addrspace(1)* %out, align 4
+  store <4 x i32> %in, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -327,9 +327,9 @@ entry:
 
 ; SIVI: buffer_store_dwordx4
 ; GFX9: global_store_dwordx4
-define amdgpu_kernel void @store_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in) {
-  %1 = load <4 x float>, <4 x float> addrspace(1) * %in
-  store <4 x float> %1, <4 x float> addrspace(1)* %out
+define amdgpu_kernel void @store_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+  %1 = load <4 x float>, ptr addrspace(1) %in
+  store <4 x float> %1, ptr addrspace(1) %out
   ret void
 }
 
@@ -340,10 +340,10 @@ define amdgpu_kernel void @store_v4f32(<4 x float> addrspace(1)* %out, <4 x floa
 
 ; SIVI: buffer_store_byte
 ; GFX9: global_store_byte
-define amdgpu_kernel void @store_i64_i8(i8 addrspace(1)* %out, i64 %in) {
+define amdgpu_kernel void @store_i64_i8(ptr addrspace(1) %out, i64 %in) {
 entry:
   %0 = trunc i64 %in to i8
-  store i8 %0, i8 addrspace(1)* %out
+  store i8 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -351,10 +351,10 @@ entry:
 ; EG: MEM_RAT MSKOR
 ; SIVI: buffer_store_short
 ; GFX9: global_store_short
-define amdgpu_kernel void @store_i64_i16(i16 addrspace(1)* %out, i64 %in) {
+define amdgpu_kernel void @store_i64_i16(ptr addrspace(1) %out, i64 %in) {
 entry:
   %0 = trunc i64 %in to i16
-  store i16 %0, i16 addrspace(1)* %out
+  store i16 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -371,14 +371,14 @@ entry:
 
 ; SIVI: buffer_store_dwordx2
 ; GFX9: global_store_dwordx2
-define amdgpu_kernel void @vecload2(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* nocapture %mem) #0 {
+define amdgpu_kernel void @vecload2(ptr addrspace(1) nocapture %out, ptr addrspace(4) nocapture %mem) #0 {
 entry:
-  %0 = load i32, i32 addrspace(4)* %mem, align 4
-  %arrayidx1.i = getelementptr inbounds i32, i32 addrspace(4)* %mem, i64 1
-  %1 = load i32, i32 addrspace(4)* %arrayidx1.i, align 4
-  store i32 %0, i32 addrspace(1)* %out, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 1
-  store i32 %1, i32 addrspace(1)* %arrayidx1, align 4
+  %0 = load i32, ptr addrspace(4) %mem, align 4
+  %arrayidx1.i = getelementptr inbounds i32, ptr addrspace(4) %mem, i64 1
+  %1 = load i32, ptr addrspace(4) %arrayidx1.i, align 4
+  store i32 %0, ptr addrspace(1) %out, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 1
+  store i32 %1, ptr addrspace(1) %arrayidx1, align 4
   ret void
 }
 
@@ -391,15 +391,15 @@ entry:
 
 ; SIVI: buffer_store_dwordx4
 ; GFX9: global_store_dwordx4
-define amdgpu_kernel void @i128-const-store(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @i128-const-store(ptr addrspace(1) %out) {
 entry:
-  store i32 1, i32 addrspace(1)* %out, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 1
-  store i32 1, i32 addrspace(1)* %arrayidx2, align 4
-  %arrayidx4 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 2
-  store i32 2, i32 addrspace(1)* %arrayidx4, align 4
-  %arrayidx6 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 3
-  store i32 2, i32 addrspace(1)* %arrayidx6, align 4
+  store i32 1, ptr addrspace(1) %out, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 1
+  store i32 1, ptr addrspace(1) %arrayidx2, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 2
+  store i32 2, ptr addrspace(1) %arrayidx4, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 3
+  store i32 2, ptr addrspace(1) %arrayidx6, align 4
   ret void
 }
 

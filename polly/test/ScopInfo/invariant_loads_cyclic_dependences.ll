@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 ;
 ; Negative test. If we assume UB[*V] to be invariant we get a cyclic
 ; dependence in the invariant loads that needs to be resolved by
@@ -22,7 +22,7 @@
 ;
 target datalayout = "e-m:e-i32:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* noalias %V, i32* noalias %UB, i32* noalias %A) {
+define void @f(ptr noalias %V, ptr noalias %UB, ptr noalias %A) {
 entry:
   br label %for.cond
 
@@ -36,18 +36,18 @@ for.body:                                         ; preds = %for.cond
 
 do.body:                                          ; preds = %do.cond, %for.body
   %indvars.iv = phi i32 [ %indvars.iv.next, %do.cond ], [ 0, %for.body ]
-  %tmp = load i32, i32* %V, align 4
+  %tmp = load i32, ptr %V, align 4
   %tmp4 = add nuw nsw i32 %indvars.iv, %indvars.iv2
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %tmp4
-  %tmp5 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %tmp4
+  %tmp5 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %tmp5, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   br label %do.cond
 
 do.cond:                                          ; preds = %do.body
   %indvars.iv.next = add nuw nsw i32 %indvars.iv, 1
-  %arrayidx3 = getelementptr inbounds i32, i32* %UB, i32 %tmp
-  %tmp6 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %UB, i32 %tmp
+  %tmp6 = load i32, ptr %arrayidx3, align 4
   %cmp4 = icmp slt i32 %indvars.iv, %tmp6
   br i1 %cmp4, label %do.body, label %do.end
 

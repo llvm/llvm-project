@@ -6,15 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-stdin
+// This test hangs on Android devices that lack shell_v2, which was added in
+// Android N (API 24).
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME && android-device-api={{2[1-3]}}
 
 // <iostream>
 
-// istream wcin;
+// wistream wcin;
 
-// FILE_DEPENDENCIES: ../send-stdin.sh
+// UNSUPPORTED: no-wide-characters
+
 // RUN: %{build}
-// RUN: %{exec} bash send-stdin.sh "%t.exe" "1234"
+// RUN: echo -n 1234 > %t.input
+// RUN: %{exec} %t.exe < %t.input
 
 #include <iostream>
 #include <cassert>

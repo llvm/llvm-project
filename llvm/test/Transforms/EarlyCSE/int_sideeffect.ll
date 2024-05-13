@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -early-cse -earlycse-debug-hash | FileCheck %s
+; RUN: opt -S < %s -passes=early-cse -earlycse-debug-hash | FileCheck %s
 
 declare void @llvm.sideeffect()
 
@@ -6,10 +6,10 @@ declare void @llvm.sideeffect()
 
 ; CHECK-LABEL: s2l
 ; CHECK-NOT: load
-define float @s2l(float* %p) {
-    store float 0.0, float* %p
+define float @s2l(ptr %p) {
+    store float 0.0, ptr %p
     call void @llvm.sideeffect()
-    %t = load float, float* %p
+    %t = load float, ptr %p
     ret float %t
 }
 
@@ -18,10 +18,10 @@ define float @s2l(float* %p) {
 ; CHECK-LABEL: rle
 ; CHECK: load
 ; CHECK-NOT: load
-define float @rle(float* %p) {
-    %r = load float, float* %p
+define float @rle(ptr %p) {
+    %r = load float, ptr %p
     call void @llvm.sideeffect()
-    %s = load float, float* %p
+    %s = load float, ptr %p
     %t = fadd float %r, %s
     ret float %t
 }

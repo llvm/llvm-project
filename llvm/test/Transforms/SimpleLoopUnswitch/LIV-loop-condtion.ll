@@ -1,5 +1,4 @@
-; RUN: opt < %s -simple-loop-unswitch -S 2>&1 | FileCheck %s
-; RUN: opt < %s -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -S 2>&1 | FileCheck %s
 
 ; This is to test trivial loop unswitch only happens when trivial condition
 ; itself is an LIV loop condition (not partial LIV which could occur in and/or).
@@ -9,7 +8,8 @@ define i32 @test(i1 %cond1, i32 %var1) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond1, label %entry.split, label %loop_exit.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond1
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split, label %loop_exit.split
 ;
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label %loop_begin
@@ -34,4 +34,4 @@ loop_exit:
   ret i32 0
 }
 
-declare void @some_func() noreturn 
+declare void @some_func() noreturn

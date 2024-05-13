@@ -2,4 +2,4 @@
 
 int f(int restrict);
 
-void main() {} // expected-warning {{return type of 'main' is not 'int'}} expected-note {{change return type to 'int'}}
+void main(void) {} // expected-warning {{return type of 'main' is not 'int'}} expected-note {{change return type to 'int'}}

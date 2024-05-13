@@ -14,23 +14,20 @@
 #define LLVM_ANALYSIS_GLOBALSMODREF_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include <list>
 
 namespace llvm {
 class CallGraph;
+class Function;
 
 /// An alias analysis result set for globals.
 ///
 /// This focuses on handling aliasing properties of globals and interprocedural
 /// function call mod/ref information.
-class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
-  friend AAResultBase<GlobalsAAResult>;
-
+class GlobalsAAResult : public AAResultBase {
   class FunctionInfo;
 
   const DataLayout &DL;
@@ -79,6 +76,8 @@ class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
       const DataLayout &DL,
       std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
 
+  friend struct RecomputeGlobalsAAPass;
+
 public:
   GlobalsAAResult(GlobalsAAResult &&Arg);
   ~GlobalsAAResult();
@@ -95,21 +94,17 @@ public:
   // Implement the AliasAnalysis API
   //
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI);
+                    AAQueryInfo &AAQI, const Instruction *CtxI);
 
   using AAResultBase::getModRefInfo;
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);
 
-  /// getModRefBehavior - Return the behavior of the specified function if
+  using AAResultBase::getMemoryEffects;
+  /// getMemoryEffects - Return the behavior of the specified function if
   /// called from the specified call site.  The call site may be null in which
   /// case the most generic behavior of this function should be returned.
-  FunctionModRefBehavior getModRefBehavior(const Function *F);
-
-  /// getModRefBehavior - Return the behavior of the specified function if
-  /// called from the specified call site.  The call site may be null in which
-  /// case the most generic behavior of this function should be returned.
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call);
+  MemoryEffects getMemoryEffects(const Function *F);
 
 private:
   FunctionInfo *getFunctionInfo(const Function *F);
@@ -137,6 +132,10 @@ public:
   typedef GlobalsAAResult Result;
 
   GlobalsAAResult run(Module &M, ModuleAnalysisManager &AM);
+};
+
+struct RecomputeGlobalsAAPass : PassInfoMixin<RecomputeGlobalsAAPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the GlobalsAAResult object.

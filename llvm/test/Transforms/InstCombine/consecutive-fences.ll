@@ -1,10 +1,11 @@
-; RUN: opt -instcombine -S %s | FileCheck %s
+; RUN: opt -passes=instcombine -S %s | FileCheck %s
+; RUN: opt -passes=instcombine -S %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Make sure we collapse the fences in this case
 
 ; CHECK-LABEL: define void @tinkywinky
 ; CHECK-NEXT:   fence seq_cst
-; CHECK-NEXT:   fence syncscope("singlethread") acquire
+; CHECK-NEXT:   fence syncscope("singlethread") acquire 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 
@@ -15,6 +16,17 @@ define void @tinkywinky() {
   fence syncscope("singlethread") acquire
   fence syncscope("singlethread") acquire
   fence syncscope("singlethread") acquire
+  ret void
+}
+
+; Arbitrary target dependent scope
+; Is this transform really needed?
+; CHECK-LABEL: test_target_dependent_scope
+; CHECK-NEXT: fence syncscope("MSP430") acquire
+; CHECK-NEXT: ret void
+define void @test_target_dependent_scope() {
+  fence syncscope("MSP430") acquire
+  fence syncscope("MSP430") acquire
   ret void
 }
 
@@ -31,9 +43,6 @@ define void @dipsy() {
 }
 
 ; CHECK-LABEL: define void @patatino
-; CHECK-NEXT:   fence acquire
-; CHECK-NEXT:   fence seq_cst
-; CHECK-NEXT:   fence acquire
 ; CHECK-NEXT:   fence seq_cst
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
@@ -43,6 +52,47 @@ define void @patatino() {
   fence seq_cst
   fence acquire
   fence seq_cst
+  ret void
+}
+
+; CHECK-LABEL: define void @weaker_fence_1
+; CHECK-NEXT: fence seq_cst
+; CHECK-NEXT: ret void
+define void @weaker_fence_1() {
+  fence seq_cst
+  fence release
+  fence seq_cst
+  ret void
+}
+
+; CHECK-LABEL: define void @weaker_fence_2
+; CHECK-NEXT: fence seq_cst
+; CHECK-NEXT: ret void
+define void @weaker_fence_2() {
+  fence seq_cst
+  fence release
+  fence seq_cst
+  fence acquire 
+  ret void
+}
+
+; Although acquire is a weaker ordering than seq_cst, it has a system scope,
+; compare to singlethread scope in seq_cst.
+; CHECK-LABEL: acquire_global_neg_test
+; CHECK-NEXT: fence acquire
+; CHECK-NEXT: fence syncscope("singlethread") seq_cst
+define void @acquire_global_neg_test() {
+  fence acquire 
+  fence acquire 
+  fence syncscope("singlethread") seq_cst 
+  ret void
+}
+
+; CHECK-LABEL: acquire_single_thread_scope
+; CHECK-NEXT: fence syncscope("singlethread") seq_cst 
+define void @acquire_single_thread_scope() {
+  fence syncscope("singlethread") acquire 
+  fence syncscope("singlethread") seq_cst 
   ret void
 }
 

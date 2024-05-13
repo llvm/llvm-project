@@ -75,8 +75,8 @@ private:
   SBCommunication(const SBCommunication &) = delete;
   const SBCommunication &operator=(const SBCommunication &) = delete;
 
-  lldb_private::Communication *m_opaque;
-  bool m_opaque_owned;
+  lldb_private::ThreadedCommunication *m_opaque = nullptr;
+  bool m_opaque_owned = false;
 };
 
 } // namespace lldb

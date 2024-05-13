@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck %s
 ;
 ; This test checks that the lds input queue will is empty at the end of
 ; the ALU clause.
@@ -10,16 +10,16 @@
 
 @local_mem = internal unnamed_addr addrspace(3) global [2 x i32] undef, align 4
 
-define amdgpu_kernel void @lds_input_queue(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %index) {
+define amdgpu_kernel void @lds_input_queue(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %index) {
 entry:
-  %0 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(3)* @local_mem, i32 0, i32 %index
-  %1 = load i32, i32 addrspace(3)* %0
+  %0 = getelementptr inbounds [2 x i32], ptr addrspace(3) @local_mem, i32 0, i32 %index
+  %1 = load i32, ptr addrspace(3) %0
   call void @llvm.r600.group.barrier()
 
   ; This will start a new clause for the vertex fetch
-  %2 = load i32, i32 addrspace(1)* %in
+  %2 = load i32, ptr addrspace(1) %in
   %3 = add i32 %1, %2
-  store i32 %3, i32 addrspace(1)* %out
+  store i32 %3, ptr addrspace(1) %out
   ret void
 }
 
@@ -40,9 +40,9 @@ declare void @llvm.r600.group.barrier() nounwind convergent
 ; load from global memory which immediately follows a load from a global value that
 ; has been declared in the local memory space:
 ;
-;  %0 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(3)* @local_mem, i32 0, i32 %index
-;  %1 = load i32, i32 addrspace(3)* %0
-;  %2 = load i32, i32 addrspace(1)* %in
+;  %0 = getelementptr inbounds [2 x i32], ptr addrspace(3) @local_mem, i32 0, i32 %index
+;  %1 = load i32, ptr addrspace(3) %0
+;  %2 = load i32, ptr addrspace(1) %in
 ;
 ; The instruction selection phase will generate ISA that looks like this:
 ; %oqap = LDS_READ_RET
@@ -88,12 +88,11 @@ declare void @llvm.r600.group.barrier() nounwind convergent
 ; CHECK: LDS_READ_RET
 ; CHECK-NOT: ALU clause
 ; CHECK: MOV * T{{[0-9]\.[XYZW]}}, OQAP
-define amdgpu_kernel void @local_global_alias(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @local_global_alias(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 entry:
-  %0 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(3)* @local_mem, i32 0, i32 0
-  %1 = load i32, i32 addrspace(3)* %0
-  %2 = load i32, i32 addrspace(1)* %in
-  %3 = add i32 %2, %1
-  store i32 %3, i32 addrspace(1)* %out
+  %0 = load i32, ptr addrspace(3) @local_mem
+  %1 = load i32, ptr addrspace(1) %in
+  %2 = add i32 %1, %0
+  store i32 %2, ptr addrspace(1) %out
   ret void
 }

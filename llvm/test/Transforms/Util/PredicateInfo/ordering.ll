@@ -1,15 +1,16 @@
-; REQUIRES: assert
-; RUN: opt -print-predicateinfo -analyze -debug < %s 2>&1 | FileCheck %s
+; REQUIRES: asserts
+; RUN: opt -passes=print-predicateinfo -debug < %s 2>&1 | FileCheck %s
 
 declare void @use(i32)
+declare void @use.i1(i1)
 
 ; Make sure we are visiting the values to build predicate infos for in a
 ; deterministic order.
-define i32 @test12(i32 %x, i32 %y) {
-; CHECK: Visiting i32 %x
-; CHECK: Visiting i32 %y
+define i32 @test12(i32 %x, i32 %y, i1 %c1) {
 ; CHECK: Visiting   %lcmp = icmp eq i32 %x, 0
+; CHECK: Visiting i32 %x
 ; CHECK: Visiting   %lcmp2 = icmp slt i32 %y, 1000
+; CHECK: Visiting i32 %y
 ; CHECK: Visiting   %lcmp3 = icmp slt i32 %y.0, 900
 ; CHECK: Visiting   %lcmp4 = icmp slt i32 %y.0.1, 700
 ; CHECK: Visiting   %lcmp5 = icmp slt i32 %y.0.1.2, 700
@@ -17,7 +18,7 @@ define i32 @test12(i32 %x, i32 %y) {
 ; CHECK: Visiting   %lcmp7 = icmp slt i32 %y.0.1.2.3.4, 700
 ; CHECK: Visiting   %rcmp = icmp eq i32 %x, 0
 entry:
-  br i1 undef, label %left, label %right
+  br i1 %c1, label %left, label %right
 
 left:
   %lcmp = icmp eq i32 %x, 0
@@ -53,6 +54,13 @@ left_cond_true6:
   br i1 %lcmp7, label %left_cond_true7, label %left_ret
 
 left_cond_true7:
+  call void @use.i1(i1 %lcmp)
+  call void @use.i1(i1 %lcmp2)
+  call void @use.i1(i1 %lcmp3)
+  call void @use.i1(i1 %lcmp4)
+  call void @use.i1(i1 %lcmp5)
+  call void @use.i1(i1 %lcmp6)
+  call void @use.i1(i1 %lcmp7)
   ret i32 %y
 
 left_cond_false:
@@ -68,6 +76,7 @@ right:
   br i1 %rcmp, label %right_cond_true, label %right_cond_false
 
 right_cond_true:
+  call void @use.i1(i1 %rcmp)
   br label %right_ret
 
 right_cond_false:

@@ -7,7 +7,10 @@
 
 // This usage of llvm-nm assumes executables have symbol tables. They do not in
 // an MSVC environment, so we can't make this test portable.
-// UNSUPPORTED: msvc
+// UNSUPPORTED: target={{.*msvc.*}}
+
+// The MinGW CRT init files do reference malloc etc, so this test fails.
+// UNSUPPORTED: target={{.*windows-gnu.*}}
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -19,7 +22,7 @@
 int __llvm_profile_runtime = 0;
 uint64_t __llvm_profile_get_size_for_buffer(void);
 int __llvm_profile_write_buffer(char *);
-void __llvm_profile_merge_from_buffer(const char *, uint64_t Size);
+int __llvm_profile_merge_from_buffer(const char *, uint64_t Size);
 
 int write_buffer(uint64_t, const char *);
 int main(int argc, const char *argv[]) {

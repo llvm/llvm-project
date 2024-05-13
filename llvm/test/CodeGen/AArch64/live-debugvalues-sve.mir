@@ -1,5 +1,8 @@
 # RUN: llc -start-before=prologepilog -stop-after=livedebugvalues -mattr=+sve -o - %s | FileCheck %s
-# RUN: llc -start-before=prologepilog -stop-after=livedebugvalues -experimental-debug-variable-locations -mattr=+sve -o - %s | FileCheck %s
+#
+# FIXME: re-enable this run line when InstrRef LiveDebugValues is able to
+# rely on the target spill/restore inst recognisers.
+# run: llc -start-before=prologepilog -stop-after=livedebugvalues -experimental-debug-variable-locations -mattr=+sve -o - %s | FileCheck %s
 #
 # Test that the LiveDebugValues pass can correctly handle the address
 # of the SVE spill (at a scalable address location) which is expressed
@@ -66,10 +69,10 @@
   !3 = !{i32 7, !"Dwarf Version", i32 4}
   !4 = !{i32 2, !"Debug Info Version", i32 3}
   !5 = !{i32 1, !"wchar_size", i32 4}
-  !6 = !{i32 1, !"branch-target-enforcement", i32 0}
-  !7 = !{i32 1, !"sign-return-address", i32 0}
-  !8 = !{i32 1, !"sign-return-address-all", i32 0}
-  !9 = !{i32 1, !"sign-return-address-with-bkey", i32 0}
+  !6 = !{i32 8, !"branch-target-enforcement", i32 0}
+  !7 = !{i32 8, !"sign-return-address", i32 0}
+  !8 = !{i32 8, !"sign-return-address-all", i32 0}
+  !9 = !{i32 8, !"sign-return-address-with-bkey", i32 0}
   !10 = !{!"clang version 12.0.0 (https://github.com/llvm/llvm-project.git b19275ba870a06c5ef0428af6264ffd28c7cde9e)"}
   !11 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 6, type: !12, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !26)
   !12 = !DISubroutineType(types: !13)
@@ -142,7 +145,7 @@ body:             |
     liveins: $z1
 
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !34
-    renamable $p0 = PTRUE_S 31, debug-location !34
+    renamable $p0 = PTRUE_S 31, implicit $vg, debug-location !34
     $x0 = ADDXri %stack.0, 0, 0, debug-location !34
     ST1W_IMM renamable $z1, killed renamable $p0, %stack.0, 0, debug-location !34 :: (store unknown-size into %stack.0, align 16)
     $z0 = COPY renamable $z1, debug-location !34
@@ -154,7 +157,7 @@ body:             |
     $z7 = COPY renamable $z1, debug-location !34
     BL @bar, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $z0, implicit $z1, implicit $z2, implicit $z3, implicit $z4, implicit $z5, implicit $z6, implicit $z7, implicit $x0, implicit-def $sp, implicit-def $z0, implicit-def $z1, debug-location !34
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !34
-    renamable $p0 = PTRUE_S 31, debug-location !34
+    renamable $p0 = PTRUE_S 31, implicit $vg, debug-location !34
     $z3 = IMPLICIT_DEF
     renamable $z1 = LD1W_IMM renamable $p0, %stack.0, 0, debug-location !34 :: (load unknown-size from %stack.0, align 16)
     ST1W_IMM renamable $z3, killed renamable $p0, %stack.0, 0 :: (store unknown-size into %stack.0, align 16)

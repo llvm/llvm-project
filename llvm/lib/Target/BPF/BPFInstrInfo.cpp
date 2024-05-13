@@ -125,7 +125,8 @@ void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
                                        Register SrcReg, bool IsKill, int FI,
                                        const TargetRegisterClass *RC,
-                                       const TargetRegisterInfo *TRI) const {
+                                       const TargetRegisterInfo *TRI,
+                                       Register VReg) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -148,7 +149,8 @@ void BPFInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
                                         Register DestReg, int FI,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI) const {
+                                        const TargetRegisterInfo *TRI,
+                                        Register VReg) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -192,8 +194,7 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       }
 
       // If the block has any instructions after a J, delete them.
-      while (std::next(I) != MBB.end())
-        std::next(I)->eraseFromParent();
+      MBB.erase(std::next(I), MBB.end());
       Cond.clear();
       FBB = nullptr;
 

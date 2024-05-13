@@ -1,26 +1,25 @@
-; RUN: opt -S -analyze -stack-safety-local -enable-new-pm=0 < %s | FileCheck %s
 ; RUN: opt -S -passes="print<stack-safety-local>" -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -S -analyze -stack-safety < %s -enable-new-pm=0 | FileCheck %s
-; RUN: opt -S -passes="print-stack-safety" -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes="print-stack-safety" -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare void @llvm.memset.p0i8.i64(i8* %dest, i8 %val, i64 %len, i1 %isvolatile)
-declare void @llvm.memset.p0i8.i32(i8* %dest, i8 %val, i32 %len, i1 %isvolatile)
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 %isvolatile)
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 %isvolatile)
+declare void @llvm.memset.p0.i64(ptr %dest, i8 %val, i64 %len, i1 %isvolatile)
+declare void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
+declare void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 %isvolatile)
+declare void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 %isvolatile)
 
 define void @MemsetInBounds() {
 ; CHECK-LABEL: MemsetInBounds dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memset.p0.i32(ptr %x, i8 42, i32 4, i1 false)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
-  %x1 = bitcast i32* %x to i8*
-  call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 4, i1 false)
+  call void @llvm.memset.p0.i32(ptr %x, i8 42, i32 4, i1 false)
   ret void
 }
 
@@ -30,11 +29,12 @@ define void @VolatileMemsetInBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memset.p0.i32(ptr %x, i8 42, i32 4, i1 true)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
-  %x1 = bitcast i32* %x to i8*
-  call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 4, i1 true)
+  call void @llvm.memset.p0.i32(ptr %x, i8 42, i32 4, i1 true)
   ret void
 }
 
@@ -43,11 +43,11 @@ define void @MemsetOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,5){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
-  %x1 = bitcast i32* %x to i8*
-  call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 5, i1 false)
+  call void @llvm.memset.p0.i32(ptr %x, i8 42, i32 5, i1 false)
   ret void
 }
 
@@ -56,11 +56,11 @@ define void @MemsetNonConst(i32 %size) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
-  %x1 = bitcast i32* %x to i8*
-  call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 %size, i1 false)
+  call void @llvm.memset.p0.i32(ptr %x, i8 42, i32 %size, i1 false)
   ret void
 }
 
@@ -71,12 +71,12 @@ define void @MemsetNonConstInBounds(i1 zeroext %z) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,7){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
-  %x1 = bitcast i32* %x to i8*
   %size = select i1 %z, i32 3, i32 4
-  call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 %size, i1 false)
+  call void @llvm.memset.p0.i32(ptr %x, i8 42, i32 %size, i1 false)
   ret void
 }
 
@@ -86,15 +86,49 @@ define void @MemsetNonConstSize() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
 ; CHECK-NEXT: y[4]: empty-set{{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  %x1 = bitcast i32* %x to i8*
-  %xint = ptrtoint i32* %x to i32
-  %yint = ptrtoint i32* %y to i32
+  %xint = ptrtoint ptr %x to i32
+  %yint = ptrtoint ptr %y to i32
   %d = sub i32 %xint, %yint
-  call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 %d, i1 false)
+  call void @llvm.memset.p0.i32(ptr %x, i8 42, i32 %d, i1 false)
+  ret void
+}
+
+define void @MemsetHugeUpper_m1(i1 %bool) {
+; CHECK-LABEL: MemsetHugeUpper_m1 dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT:   x[4]: full-set
+entry:
+  %x = alloca i32, align 4
+  br i1 %bool, label %if.then, label %if.end
+
+if.then:
+  call void @llvm.memset.p0.i64(ptr %x, i8 0, i64 -1, i1 false)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @MemsetHugeUpper_m2(i1 %bool) {
+; CHECK-LABEL: MemsetHugeUpper_m2 dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT:   x[4]: full-set
+entry:
+  %x = alloca i32, align 4
+  br i1 %bool, label %if.then, label %if.end
+
+if.then:
+  call void @llvm.memset.p0.i64(ptr %x, i8 0, i64 -2, i1 false)
+  br label %if.end
+
+if.end:
   ret void
 }
 
@@ -104,13 +138,13 @@ define void @MemcpyInBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4){{$}}
 ; CHECK-NEXT: y[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 4, i1 false)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  %x1 = bitcast i32* %x to i8*
-  %y1 = bitcast i32* %y to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %y1, i32 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 4, i1 false)
   ret void
 }
 
@@ -120,13 +154,12 @@ define void @MemcpySrcOutOfBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,5){{$}}
 ; CHECK-NEXT: y[4]: [0,5){{$}}
+; GLOBAL-NEXT: safe accesses
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %y = alloca i32, align 4
-  %x1 = bitcast i64* %x to i8*
-  %y1 = bitcast i32* %y to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %y1, i32 5, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 5, i1 false)
   ret void
 }
 
@@ -136,13 +169,12 @@ define void @MemcpyDstOutOfBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,5){{$}}
 ; CHECK-NEXT: y[8]: [0,5){{$}}
+; GLOBAL-NEXT: safe accesses
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %y = alloca i64, align 4
-  %x1 = bitcast i32* %x to i8*
-  %y1 = bitcast i64* %y to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %y1, i32 5, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 5, i1 false)
   ret void
 }
 
@@ -152,13 +184,12 @@ define void @MemcpyBothOutOfBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,9){{$}}
 ; CHECK-NEXT: y[8]: [0,9){{$}}
+; GLOBAL-NEXT: safe accesses
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %y = alloca i64, align 4
-  %x1 = bitcast i32* %x to i8*
-  %y1 = bitcast i64* %y to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %y1, i32 9, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 9, i1 false)
   ret void
 }
 
@@ -167,12 +198,13 @@ define void @MemcpySelfInBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,8){{$}}
+; GLOBAL-NEXT: safe accesses
+; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %x2, i32 3, i1 false)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
-  %x1 = bitcast i64* %x to i8*
-  %x2 = getelementptr i8, i8* %x1, i64 5
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %x2, i32 3, i1 false)
+  %x2 = getelementptr i8, ptr %x, i64 5
+  call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %x2, i32 3, i1 false)
   ret void
 }
 
@@ -181,12 +213,12 @@ define void @MemcpySelfSrcOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,9){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
-  %x1 = bitcast i64* %x to i8*
-  %x2 = getelementptr i8, i8* %x1, i64 5
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %x2, i32 4, i1 false)
+  %x2 = getelementptr i8, ptr %x, i64 5
+  call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %x2, i32 4, i1 false)
   ret void
 }
 
@@ -195,12 +227,12 @@ define void @MemcpySelfDstOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,9){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
-  %x1 = bitcast i64* %x to i8*
-  %x2 = getelementptr i8, i8* %x1, i64 5
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x2, i8* %x1, i32 4, i1 false)
+  %x2 = getelementptr i8, ptr %x, i64 5
+  call void @llvm.memcpy.p0.p0.i32(ptr %x2, ptr %x, i32 4, i1 false)
   ret void
 }
 
@@ -209,11 +241,47 @@ define void @MemmoveSelfBothOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,14){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
-  %x1 = bitcast i64* %x to i8*
-  %x2 = getelementptr i8, i8* %x1, i64 5
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %x1, i8* %x2, i32 9, i1 false)
+  %x2 = getelementptr i8, ptr %x, i64 5
+  call void @llvm.memmove.p0.p0.i32(ptr %x, ptr %x2, i32 9, i1 false)
+  ret void
+}
+
+define void @MemsetInBoundsCast() {
+; CHECK-LABEL: MemsetInBoundsCast dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: [0,4){{$}}
+; CHECK-NEXT: y[1]: empty-set{{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memset.p0.i32(ptr %x, i8 %yint, i32 4, i1 false)
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  %y = alloca i8, align 1
+  %yint = ptrtoint ptr %y to i8
+  call void @llvm.memset.p0.i32(ptr %x, i8 %yint, i32 4, i1 false)
+  ret void
+}
+
+define void @MemcpyInBoundsCast2(i8 %zint8) {
+; CHECK-LABEL: MemcpyInBoundsCast2 dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[256]: [0,255){{$}}
+; CHECK-NEXT: y[256]: [0,255){{$}}
+; CHECK-NEXT: z[1]: empty-set{{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 %zint32, i1 false)
+; CHECK-EMPTY:
+entry:
+  %x = alloca [256 x i8], align 4
+  %y = alloca [256 x i8], align 4
+  %z = alloca i8, align 1
+  %zint32 = zext i8 %zint8 to i32
+  call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 %zint32, i1 false)
   ret void
 }

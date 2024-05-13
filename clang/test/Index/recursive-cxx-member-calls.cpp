@@ -216,9 +216,9 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: "}" [4:63 - 4:64] ClassTemplate=pair:4:44 (Definition)
 // CHECK-tokens: Punctuation: ";" [4:64 - 4:65] Namespace=std:3:11 (Definition)
 // CHECK-tokens: Punctuation: "}" [5:1 - 5:2] Namespace=std:3:11 (Definition)
-// CHECK-tokens: Keyword: "extern" [6:1 - 6:7]
-// CHECK-tokens: Literal: ""C"" [6:8 - 6:11] UnexposedDecl=:6:8 (Definition)
-// CHECK-tokens: Punctuation: "{" [6:12 - 6:13] UnexposedDecl=:6:8 (Definition)
+// CHECK-tokens: Keyword: "extern" [6:1 - 6:7] LinkageSpec=:6:8 (Definition)
+// CHECK-tokens: Literal: ""C"" [6:8 - 6:11] LinkageSpec=:6:8 (Definition)
+// CHECK-tokens: Punctuation: "{" [6:12 - 6:13] LinkageSpec=:6:8 (Definition)
 // CHECK-tokens: Keyword: "int" [7:3 - 7:6] FunctionDecl=memcmp:7:7
 // CHECK-tokens: Identifier: "memcmp" [7:7 - 7:13] FunctionDecl=memcmp:7:7
 // CHECK-tokens: Punctuation: "(" [7:13 - 7:14] FunctionDecl=memcmp:7:7
@@ -232,7 +232,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: "," [7:40 - 7:41] FunctionDecl=memcmp:7:7
 // CHECK-tokens: Identifier: "size_t" [7:42 - 7:48] TypeRef=size_t:2:25
 // CHECK-tokens: Punctuation: ")" [7:48 - 7:49] FunctionDecl=memcmp:7:7
-// CHECK-tokens: Punctuation: ";" [7:49 - 7:50] UnexposedDecl=:6:8 (Definition)
+// CHECK-tokens: Punctuation: ";" [7:49 - 7:50] LinkageSpec=:6:8 (Definition)
 // CHECK-tokens: Identifier: "size_t" [8:3 - 8:9] TypeRef=size_t:2:25
 // CHECK-tokens: Identifier: "strlen" [8:10 - 8:16] FunctionDecl=strlen:8:10
 // CHECK-tokens: Punctuation: "(" [8:16 - 8:17] FunctionDecl=strlen:8:10
@@ -824,7 +824,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Keyword: "public" [86:1 - 86:7] CXXAccessSpecifier=:86:1 (Definition)
 // CHECK-tokens: Punctuation: ":" [86:7 - 86:8] CXXAccessSpecifier=:86:1 (Definition)
 // CHECK-tokens: Keyword: "explicit" [87:3 - 87:11] CXXConstructor=StringSwitch<T, R>:87:12 (Definition)
-// CHECK-tokens: Identifier: "StringSwitch" [87:12 - 87:24] CXXConstructor=StringSwitch<T, R>:87:12 (Definition)
+// CHECK-tokens: Identifier: "StringSwitch" [87:12 - 87:24] CXXConstructor=StringSwitch<T, R>:87:12 (Definition) (explicit)
 // CHECK-tokens: Punctuation: "(" [87:24 - 87:25] CXXConstructor=StringSwitch<T, R>:87:12 (Definition)
 // CHECK-tokens: Identifier: "StringRef" [87:25 - 87:34] TypeRef=class llvm::StringRef:38:7
 // CHECK-tokens: Identifier: "Str" [87:35 - 87:38] ParmDecl=Str:87:35 (Definition)
@@ -1532,7 +1532,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 4:20: TemplateTypeParameter=_T1:4:20 (Definition) Extent=[4:14 - 4:23]
 // CHECK: 4:31: TemplateTypeParameter=_T2:4:31 (Definition) Extent=[4:25 - 4:34]
 // CHECK: 4:55: FieldDecl=second:4:55 (Definition) Extent=[4:51 - 4:61]
-// CHECK: 6:8: UnexposedDecl=:6:8 (Definition) Extent=[6:1 - 9:2]
+// CHECK: 6:8: LinkageSpec=:6:8 (Definition) Extent=[6:1 - 9:2]
 // CHECK: 7:7: FunctionDecl=memcmp:7:7 Extent=[7:3 - 7:49]
 // CHECK: 7:26: ParmDecl=:7:26 (Definition) Extent=[7:14 - 7:26]
 // CHECK: 7:40: ParmDecl=:7:40 (Definition) Extent=[7:28 - 7:40]
@@ -1839,7 +1839,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 84:3: TypeRef=class llvm::StringRef:38:7 Extent=[84:3 - 84:12]
 // CHECK: 85:12: FieldDecl=Result:85:12 (Definition) Extent=[85:3 - 85:18]
 // CHECK: 86:1: CXXAccessSpecifier=:86:1 (Definition) Extent=[86:1 - 86:8]
-// CHECK: 87:12: CXXConstructor=StringSwitch<T, R>:87:12 (Definition) Extent=[87:3 - 87:64]
+// CHECK: 87:12: CXXConstructor=StringSwitch<T, R>:87:12 (Definition) (explicit) Extent=[87:3 - 87:64]
 // CHECK: 87:35: ParmDecl=Str:87:35 (Definition) Extent=[87:25 - 87:38]
 // CHECK: 87:25: TypeRef=class llvm::StringRef:38:7 Extent=[87:25 - 87:34]
 // CHECK: 87:42: MemberRef=Str:84:13 Extent=[87:42 - 87:45]

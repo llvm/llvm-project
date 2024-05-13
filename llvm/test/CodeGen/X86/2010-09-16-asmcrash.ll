@@ -25,12 +25,12 @@ module asm ".equ sem_wait, _sem_wait"
 %struct._sem = type { i32, %struct._usem }
 %struct._usem = type { i32, i32, i32 }
 
-define void @_sem_timedwait(%struct._sem* noalias %sem) nounwind ssp {
+define void @_sem_timedwait(ptr noalias %sem) nounwind ssp {
 entry:
   br i1 undef, label %while.cond.preheader, label %sem_check_validity.exit
 
 while.cond.preheader:                             ; preds = %entry
-  %tmp4 = getelementptr inbounds %struct._sem, %struct._sem* %sem, i64 0, i32 1, i32 1
+  %tmp4 = getelementptr inbounds %struct._sem, ptr %sem, i64 0, i32 1, i32 1
   br label %while.cond
 
 sem_check_validity.exit:                          ; preds = %entry
@@ -40,7 +40,7 @@ while.cond:                                       ; preds = %while.body, %while.
   br i1 undef, label %while.body, label %while.end
 
 while.body:                                       ; preds = %while.cond
-  %0 = call i8 asm sideeffect "\09lock ; \09\09\09cmpxchgl $2,$1 ;\09       sete\09$0 ;\09\091:\09\09\09\09# atomic_cmpset_int", "={ax},=*m,r,{ax},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %tmp4, i32 undef, i32 undef, i32* %tmp4) nounwind, !srcloc !0
+  %0 = call i8 asm sideeffect "\09lock ; \09\09\09cmpxchgl $2,$1 ;\09       sete\09$0 ;\09\091:\09\09\09\09# atomic_cmpset_int", "={ax},=*m,r,{ax},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %tmp4, i32 undef, i32 undef, ptr elementtype(i32) %tmp4) nounwind, !srcloc !0
   br i1 undef, label %while.cond, label %return
 
 while.end:                                        ; preds = %while.cond

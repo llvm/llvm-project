@@ -18,7 +18,7 @@
 ; Function Attrs: nounwind
 define i32 @main(i32 %x) {
 entry:
-  %call = call fastcc i32 @foo(i32 %x, i32* nonnull @a)
+  %call = call fastcc i32 @foo(i32 %x, ptr nonnull @a)
   %call1 = call fastcc i32 @baz(i32 %x)
   %add = add nsw i32 %call, %call1
   ret i32 %add
@@ -34,23 +34,23 @@ entry:
 ; Function Attrs: nounwind
 define fastcc i32 @baz(i32 %x) {
 entry:
-  store i32 %x, i32* @global_storage, align 4
+  store i32 %x, ptr @global_storage, align 4
   %shl = shl i32 %x, %x
   ret i32 %shl
 }
 
 ; Function Attrs: noinline nounwind
-define fastcc i32 @foo(i32 %a, i32* nocapture %b) {
+define fastcc i32 @foo(i32 %a, ptr nocapture %b) {
 entry:
   call fastcc void @local_func()
   %call = call fastcc i32 @bar(i32 %a)
-  %0 = load i32, i32* @global_storage, align 4
+  %0 = load i32, ptr @global_storage, align 4
   %call1 = call fastcc i32 @baz(i32 %0)
   %add = add nsw i32 %call, %call1
-  store i32 %add, i32* %b, align 4
+  store i32 %add, ptr %b, align 4
   %call.i = call fastcc i32 @baz(i32 %add) #2
   %add.i = add nsw i32 %call.i, 2
-  %1 = load volatile i32, i32* @local_var, align 4
+  %1 = load volatile i32, ptr @local_var, align 4
   %add3 = add nsw i32 %add.i, %1
   ret i32 %add3
 }
@@ -58,8 +58,8 @@ entry:
 ; Function Attrs: noinline nounwind
 define internal fastcc void @local_func() section ".text" {
 entry:
-  %0 = load i32, i32* @global_storage, align 4
-  %call = call fastcc i32 @foo(i32 %0, i32* null)
-  store volatile i32 %call, i32* @local_var, align 4
+  %0 = load i32, ptr @global_storage, align 4
+  %call = call fastcc i32 @foo(i32 %0, ptr null)
+  store volatile i32 %call, ptr @local_var, align 4
   ret void
 }

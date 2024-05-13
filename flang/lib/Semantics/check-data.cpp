@@ -58,27 +58,56 @@ public:
     const Scope &scope{context_.FindScope(source_)};
     bool isFirstSymbol{isFirstSymbol_};
     isFirstSymbol_ = false;
-    if (const char *whyNot{IsAutomatic(symbol) ? "Automatic variable"
-                : IsDummy(symbol)              ? "Dummy argument"
-                : IsFunctionResult(symbol)     ? "Function result"
-                : IsAllocatable(symbol)        ? "Allocatable"
-                : IsInitialized(symbol, true)  ? "Default-initialized"
-                : IsInBlankCommon(symbol)      ? "Blank COMMON object"
-                : IsProcedure(symbol) && !IsPointer(symbol) ? "Procedure"
-                // remaining checks don't apply to components
-                : !isFirstSymbol                   ? nullptr
-                : IsHostAssociated(symbol, scope)  ? "Host-associated object"
-                : IsUseAssociated(symbol, scope)   ? "USE-associated object"
+    // Ordered so that most egregious errors are first
+    if (const char *whyNot{IsProcedure(symbol) && !IsPointer(symbol)
+                ? "Procedure"
+                : isFirstSymbol && IsHostAssociated(symbol, scope)
+                ? "Host-associated object"
+                : isFirstSymbol && IsUseAssociated(symbol, scope)
+                ? "USE-associated object"
+                : IsDummy(symbol)          ? "Dummy argument"
+                : IsFunctionResult(symbol) ? "Function result"
+                : IsAutomatic(symbol)      ? "Automatic variable"
+                : IsAllocatable(symbol)    ? "Allocatable"
+                : IsInitialized(symbol, true /*ignore DATA*/,
+                      true /*ignore allocatable components*/,
+                      true /*ignore uninitialized pointer components*/)
+                ? "Default-initialized"
                 : symbol.has<AssocEntityDetails>() ? "Construct association"
-                                                   : nullptr}) {
+                : isFirstSymbol && IsPointer(symbol) &&
+                    (hasComponent_ || hasSubscript_)
+                ? "Target of pointer"
+                : nullptr}) {
       context_.Say(source_,
           "%s '%s' must not be initialized in a DATA statement"_err_en_US,
           whyNot, symbol.name());
       return false;
-    } else if (IsProcedurePointer(symbol)) {
-      context_.Say(source_,
-          "Procedure pointer '%s' in a DATA statement is not standard"_en_US,
-          symbol.name());
+    }
+    if (IsProcedurePointer(symbol)) {
+      if (!context_.IsEnabled(common::LanguageFeature::DataStmtExtensions)) {
+        context_.Say(source_,
+            "Procedure pointer '%s' may not appear in a DATA statement"_err_en_US,
+            symbol.name());
+        return false;
+      } else if (context_.ShouldWarn(
+                     common::LanguageFeature::DataStmtExtensions)) {
+        context_.Say(source_,
+            "Procedure pointer '%s' in a DATA statement is not standard"_port_en_US,
+            symbol.name());
+      }
+    }
+    if (IsInBlankCommon(symbol)) {
+      if (!context_.IsEnabled(common::LanguageFeature::DataStmtExtensions)) {
+        context_.Say(source_,
+            "Blank COMMON object '%s' may not appear in a DATA statement"_err_en_US,
+            symbol.name());
+        return false;
+      } else if (context_.ShouldWarn(
+                     common::LanguageFeature::DataStmtExtensions)) {
+        context_.Say(source_,
+            "Blank COMMON object '%s' in a DATA statement is not standard"_port_en_US,
+            symbol.name());
+      }
     }
     return true;
   }
@@ -92,16 +121,16 @@ public:
             lastSymbol.name().ToString());
         return false;
       }
-      RestrictPointer();
+      auto restorer{common::ScopedSet(isPointerAllowed_, false)};
+      return (*this)(component.base()) && (*this)(lastSymbol);
+    } else if (IsPointer(lastSymbol)) { // C877
+      context_.Say(source_,
+          "Data object must not contain pointer '%s' as a non-rightmost part"_err_en_US,
+          lastSymbol.name().ToString());
+      return false;
     } else {
-      if (IsPointer(lastSymbol)) { // C877
-        context_.Say(source_,
-            "Data object must not contain pointer '%s' as a non-rightmost part"_err_en_US,
-            lastSymbol.name().ToString());
-        return false;
-      }
+      return (*this)(component.base()) && (*this)(lastSymbol);
     }
-    return (*this)(component.base()) && (*this)(lastSymbol);
   }
   bool operator()(const evaluate::ArrayRef &arrayRef) {
     hasSubscript_ = true;
@@ -118,29 +147,32 @@ public:
     return false;
   }
   bool operator()(const evaluate::Subscript &subs) {
-    DataVarChecker subscriptChecker{context_, source_};
-    subscriptChecker.RestrictPointer();
-    return std::visit(
-               common::visitors{
-                   [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
-                     return CheckSubscriptExpr(expr);
-                   },
-                   [&](const evaluate::Triplet &triplet) {
-                     return CheckSubscriptExpr(triplet.lower()) &&
-                         CheckSubscriptExpr(triplet.upper()) &&
-                         CheckSubscriptExpr(triplet.stride());
-                   },
-               },
-               subs.u) &&
-        subscriptChecker(subs.u);
+    auto restorer1{common::ScopedSet(isPointerAllowed_, false)};
+    auto restorer2{common::ScopedSet(isFunctionAllowed_, true)};
+    return common::visit(
+        common::visitors{
+            [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
+              return CheckSubscriptExpr(expr);
+            },
+            [&](const evaluate::Triplet &triplet) {
+              return CheckSubscriptExpr(triplet.lower()) &&
+                  CheckSubscriptExpr(triplet.upper()) &&
+                  CheckSubscriptExpr(triplet.stride());
+            },
+        },
+        subs.u);
   }
   template <typename T>
   bool operator()(const evaluate::FunctionRef<T> &) const { // C875
-    context_.Say(source_,
-        "Data object variable must not be a function reference"_err_en_US);
-    return false;
+    if (isFunctionAllowed_) {
+      // Must have been validated as a constant expression
+      return true;
+    } else {
+      context_.Say(source_,
+          "Data object variable must not be a function reference"_err_en_US);
+      return false;
+    }
   }
-  void RestrictPointer() { isPointerAllowed_ = false; }
 
 private:
   bool CheckSubscriptExpr(
@@ -168,7 +200,13 @@ private:
   bool hasSubscript_{false};
   bool isPointerAllowed_{true};
   bool isFirstSymbol_{true};
+  bool isFunctionAllowed_{false};
 };
+
+static bool IsValidDataObject(const SomeExpr &expr) { // C878, C879
+  return !evaluate::IsConstantExpr(expr) &&
+      (evaluate::IsVariable(expr) || evaluate::IsProcedurePointer(expr));
+}
 
 void DataChecker::Leave(const parser::DataIDoObject &object) {
   if (const auto *designator{
@@ -176,18 +214,16 @@ void DataChecker::Leave(const parser::DataIDoObject &object) {
               &object.u)}) {
     if (MaybeExpr expr{exprAnalyzer_.Analyze(*designator)}) {
       auto source{designator->thing.value().source};
-      if (evaluate::IsConstantExpr(*expr)) { // C878,C879
-        exprAnalyzer_.context().Say(
-            source, "Data implied do object must be a variable"_err_en_US);
-      } else {
-        DataVarChecker checker{exprAnalyzer_.context(), source};
-        if (checker(*expr)) {
-          if (checker.HasComponentWithoutSubscripts()) { // C880
-            exprAnalyzer_.context().Say(source,
-                "Data implied do structure component must be subscripted"_err_en_US);
-          } else {
-            return;
-          }
+      DataVarChecker checker{exprAnalyzer_.context(), source};
+      if (checker(*expr)) {
+        if (checker.HasComponentWithoutSubscripts()) { // C880
+          exprAnalyzer_.context().Say(source,
+              "Data implied do structure component must be subscripted"_err_en_US);
+        } else if (!IsValidDataObject(*expr)) {
+          exprAnalyzer_.context().Say(
+              source, "Data implied do object must be a variable"_err_en_US);
+        } else {
+          return;
         }
       }
     }
@@ -196,18 +232,23 @@ void DataChecker::Leave(const parser::DataIDoObject &object) {
 }
 
 void DataChecker::Leave(const parser::DataStmtObject &dataObject) {
-  std::visit(common::visitors{
-                 [](const parser::DataImpliedDo &) { // has own Enter()/Leave()
-                 },
-                 [&](const auto &var) {
-                   auto expr{exprAnalyzer_.Analyze(var)};
-                   if (!expr ||
-                       !DataVarChecker{exprAnalyzer_.context(),
-                           parser::FindSourceLocation(dataObject)}(*expr)) {
-                     currentSetHasFatalErrors_ = true;
-                   }
-                 },
-             },
+  common::visit(
+      common::visitors{
+          [](const parser::DataImpliedDo &) { // has own Enter()/Leave()
+          },
+          [&](const auto &var) {
+            auto expr{exprAnalyzer_.Analyze(var)};
+            auto source{parser::FindSourceLocation(dataObject)};
+            if (!expr ||
+                !DataVarChecker{exprAnalyzer_.context(), source}(*expr)) {
+              currentSetHasFatalErrors_ = true;
+            } else if (!IsValidDataObject(*expr)) {
+              exprAnalyzer_.context().Say(
+                  source, "Data statement object must be a variable"_err_en_US);
+              currentSetHasFatalErrors_ = true;
+            }
+          },
+      },
       dataObject.u);
 }
 
@@ -216,6 +257,29 @@ void DataChecker::Leave(const parser::DataStmtSet &set) {
     AccumulateDataInitializations(inits_, exprAnalyzer_, set);
   }
   currentSetHasFatalErrors_ = false;
+}
+
+// Handle legacy DATA-style initialization, e.g. REAL PI/3.14159/, for
+// variables and components (esp. for DEC STRUCTUREs)
+template <typename A> void DataChecker::LegacyDataInit(const A &decl) {
+  if (const auto &init{
+          std::get<std::optional<parser::Initialization>>(decl.t)}) {
+    const Symbol *name{std::get<parser::Name>(decl.t).symbol};
+    const auto *list{
+        std::get_if<std::list<common::Indirection<parser::DataStmtValue>>>(
+            &init->u)};
+    if (name && list) {
+      AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
+    }
+  }
+}
+
+void DataChecker::Leave(const parser::ComponentDecl &decl) {
+  LegacyDataInit(decl);
+}
+
+void DataChecker::Leave(const parser::EntityDecl &decl) {
+  LegacyDataInit(decl);
 }
 
 void DataChecker::CompileDataInitializationsIntoInitializers() {

@@ -83,6 +83,14 @@
 # CHECK-LE: stdcx. 2, 3, 4                  # encoding: [0xad,0x21,0x43,0x7c]
             stdcx. 2, 3, 4
 
+# CHECK-BE: stqcx. 2, 3, 4                  # encoding: [0x7c,0x43,0x21,0x6d]
+# CHECK-LE: stqcx. 2, 3, 4                  # encoding: [0x6d,0x21,0x43,0x7c]
+            stqcx. 2, 3, 4
+
+# CHECK-BE: stqcx. 28, 30, 31               # encoding: [0x7f,0x9e,0xf9,0x6d]
+# CHECK-LE: stqcx. 28, 30, 31               # encoding: [0x6d,0xf9,0x9e,0x7f]
+            stqcx. 28, 30, 31
+
 # CHECK-BE: stwat 2, 3, 28                  # encoding: [0x7c,0x43,0xe5,0x8c]
 # CHECK-LE: stwat 2, 3, 28                  # encoding: [0x8c,0xe5,0x43,0x7c]
             stwat 2, 3, 28
@@ -122,17 +130,41 @@
 # CHECK-LE: lbarx 2, 3, 4                   # encoding: [0x68,0x20,0x43,0x7c]
             lbarx 2, 3, 4
 
+# CHECK-BE: lbarx 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0x68]
+# CHECK-LE: lbarx 2, 3, 4                   # encoding: [0x68,0x20,0x43,0x7c]
+            lbarx 2, 3, 4, 0
+
 # CHECK-BE: lharx 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0xe8]
 # CHECK-LE: lharx 2, 3, 4                   # encoding: [0xe8,0x20,0x43,0x7c]
             lharx 2, 3, 4
+
+# CHECK-BE: lharx 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0xe8]
+# CHECK-LE: lharx 2, 3, 4                   # encoding: [0xe8,0x20,0x43,0x7c]
+            lharx 2, 3, 4, 0
 
 # CHECK-BE: lwarx 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0x28]
 # CHECK-LE: lwarx 2, 3, 4                   # encoding: [0x28,0x20,0x43,0x7c]
             lwarx 2, 3, 4
 
+# CHECK-BE: lwarx 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0x28]
+# CHECK-LE: lwarx 2, 3, 4                   # encoding: [0x28,0x20,0x43,0x7c]
+            lwarx 2, 3, 4, 0
+
 # CHECK-BE: ldarx 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0xa8]
 # CHECK-LE: ldarx 2, 3, 4                   # encoding: [0xa8,0x20,0x43,0x7c]
             ldarx 2, 3, 4
+
+# CHECK-BE: ldarx 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0xa8]
+# CHECK-LE: ldarx 2, 3, 4                   # encoding: [0xa8,0x20,0x43,0x7c]
+            ldarx 2, 3, 4, 0
+
+# CHECK-BE: lqarx 2, 3, 4                   # encoding: [0x7c,0x43,0x22,0x28]
+# CHECK-LE: lqarx 2, 3, 4                   # encoding: [0x28,0x22,0x43,0x7c]
+            lqarx 2, 3, 4
+
+# CHECK-BE: lqarx 28, 30, 31                # encoding: [0x7f,0x9e,0xfa,0x28]
+# CHECK-LE: lqarx 28, 30, 31                # encoding: [0x28,0xfa,0x9e,0x7f]
+            lqarx 28, 30, 31
 
 # CHECK-BE: lbarx 2, 3, 4, 1                # encoding: [0x7c,0x43,0x20,0x69]
 # CHECK-LE: lbarx 2, 3, 4, 1                # encoding: [0x69,0x20,0x43,0x7c]
@@ -149,6 +181,14 @@
 # CHECK-BE: ldarx 2, 3, 4, 1                # encoding: [0x7c,0x43,0x20,0xa9]
 # CHECK-LE: ldarx 2, 3, 4, 1                # encoding: [0xa9,0x20,0x43,0x7c]
             ldarx 2, 3, 4, 1
+
+# CHECK-BE: lqarx 2, 3, 4, 1                # encoding: [0x7c,0x43,0x22,0x29]
+# CHECK-LE: lqarx 2, 3, 4, 1                # encoding: [0x29,0x22,0x43,0x7c]
+            lqarx 2, 3, 4, 1
+
+# CHECK-BE: lqarx 28, 30, 31, 1             # encoding: [0x7f,0x9e,0xfa,0x29]
+# CHECK-LE: lqarx 28, 30, 31, 1             # encoding: [0x29,0xfa,0x9e,0x7f]
+            lqarx 28, 30, 31, 1
 
 # CHECK-BE: lwat 2, 3, 28                   # encoding: [0x7c,0x43,0xe4,0x8c]
 # CHECK-LE: lwat 2, 3, 28                   # encoding: [0x8c,0xe4,0x43,0x7c]
@@ -167,6 +207,9 @@
 # CHECK-BE: lwsync                          # encoding: [0x7c,0x20,0x04,0xac]
 # CHECK-LE: lwsync                          # encoding: [0xac,0x04,0x20,0x7c]
             lwsync
+# CHECK-BE: sync                            # encoding: [0x7c,0x00,0x04,0xac]
+# CHECK-LE: sync                            # encoding: [0xac,0x04,0x00,0x7c]
+            hwsync
 # CHECK-BE: ptesync                         # encoding: [0x7c,0x40,0x04,0xac]
 # CHECK-LE: ptesync                         # encoding: [0xac,0x04,0x40,0x7c]
             ptesync

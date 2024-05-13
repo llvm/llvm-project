@@ -8,7 +8,7 @@
 # CHECK: L2_loadri_io killed $r0, 12
 
 --- |
-  define void @foo(i32* %a, i32* %b) {
+  define void @foo(ptr %a, ptr %b) {
     ret void
   }
 ...
@@ -21,8 +21,8 @@ body: |
   bb.0:
     liveins: $r0, $r1
 
-    $r2 = L2_loadri_io $r0, 8 :: (load 4 from %ir.a)
-    $r3 = L2_loadri_io killed $r0, 12 :: (load 4 from %ir.a)
-    $r4 = L2_loadri_io killed $r1, 0 :: (load 4 from %ir.b)
+    $r2 = L2_loadri_io $r0, 8 :: (load (s32) from %ir.a)
+    $r3 = L2_loadri_io killed $r0, 12 :: (load (s32) from %ir.a)
+    $r4 = L2_loadri_io killed $r1, 0 :: (load (s32) from %ir.b)
 ...
 

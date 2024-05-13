@@ -61,7 +61,7 @@ protected:
 
     assert(ExclusionSet.empty());
     for (auto I = F->begin(), E = F->end(); I != E; ++I) {
-      if (I->hasName() && I->getName().startswith("excluded"))
+      if (I->hasName() && I->getName().starts_with("excluded"))
         ExclusionSet.insert(&*I);
     }
   }
@@ -79,7 +79,7 @@ protected:
        static int initialize() {
          PassInfo *PI = new PassInfo("isPotentiallyReachable testing pass", "",
                                      &ID, nullptr, true, true);
-         PassRegistry::getPassRegistry()->registerPass(*PI, false);
+         PassRegistry::getPassRegistry()->registerPass(*PI, true);
          initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
          initializeDominatorTreeWrapperPassPass(
              *PassRegistry::getPassRegistry());

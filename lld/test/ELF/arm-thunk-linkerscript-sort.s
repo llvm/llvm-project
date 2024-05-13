@@ -4,8 +4,8 @@
 // RUN:       .text 0x100000 : { *(SORT_BY_NAME(.text.*)) } \
 // RUN:       }" > %t.script
 // RUN: ld.lld --script %t.script %t -o %t2
-// RUN: llvm-objdump -d %t2 --start-address=1048576 --stop-address=1048584 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=16777220 --stop-address=16777230 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x100000 --stop-address=0x100008 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x1000004 --stop-address=0x100000e | FileCheck --check-prefix=CHECK2 %s
 
  .syntax unified
 
@@ -41,7 +41,7 @@ tfunc\suff\():
  FUNCTION 16
  FUNCTION 15
 // CHECK2: <__Thumbv7ABSLongThunk_tfunc31>:
-// CHECK2-NEXT:  1000004:       ff f3 fc 97     b.w     #16777208 <tfunc31>
+// CHECK2-NEXT:  1000004:       f3ff 97fc       b.w     0x2000000 <tfunc31>
  FUNCTION 14
  FUNCTION 13
  FUNCTION 12
@@ -65,5 +65,5 @@ _start:
  bl tfunc01
  bl tfunc31
 // CHECK1: <_start>:
-// CHECK1-NEXT:   100000:       ff f0 fe ff     bl      #1048572
-// CHECK1-NEXT:   100004:       ff f2 fe d7     bl      #15728636
+// CHECK1-NEXT:   100000:       f0ff fffe       bl      0x200000 <tfunc01>
+// CHECK1-NEXT:   100004:       f2ff d7fe       bl      0x1000004 <__Thumbv7ABSLongThunk_tfunc31>

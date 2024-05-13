@@ -17,8 +17,6 @@
 
 namespace llvm {
 
-class SystemZTargetMachine;
-
 class SystemZSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
   explicit SystemZSelectionDAGInfo() = default;
@@ -33,7 +31,7 @@ public:
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &DL,
                                   SDValue Chain, SDValue Dst, SDValue Byte,
                                   SDValue Size, Align Alignment,
-                                  bool IsVolatile,
+                                  bool IsVolatile, bool AlwaysInline,
                                   MachinePointerInfo DstPtrInfo) const override;
 
   std::pair<SDValue, SDValue>

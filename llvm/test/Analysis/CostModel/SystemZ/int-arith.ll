@@ -1,4 +1,4 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
 ;
 ; Note: The scalarized vector instructions costs are not including any
 ; extracts, due to the undef operands.
@@ -8,6 +8,7 @@ define void @add() {
   %res1 = add i16 undef, undef
   %res2 = add i32 undef, undef
   %res3 = add i64 undef, undef
+  %resQ = add i128 undef, undef
   %res4 = add <2 x i8> undef, undef
   %res5 = add <2 x i16> undef, undef
   %res6 = add <2 x i32> undef, undef
@@ -29,6 +30,7 @@ define void @add() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = add i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = add i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = add i64 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %resQ = add i128 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = add <2 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = add <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = add <2 x i32> undef, undef
@@ -54,6 +56,7 @@ define void @sub() {
   %res1 = sub i16 undef, undef
   %res2 = sub i32 undef, undef
   %res3 = sub i64 undef, undef
+  %resQ = sub i128 undef, undef
   %res4 = sub <2 x i8> undef, undef
   %res5 = sub <2 x i16> undef, undef
   %res6 = sub <2 x i32> undef, undef
@@ -75,6 +78,7 @@ define void @sub() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = sub i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = sub i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = sub i64 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %resQ = sub i128 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = sub <2 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = sub <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = sub <2 x i32> undef, undef
@@ -100,6 +104,7 @@ define void @mul() {
   %res1 = mul i16 undef, undef
   %res2 = mul i32 undef, undef
   %res3 = mul i64 undef, undef
+  %resQ = mul i128 undef, undef
   %res4 = mul <2 x i8> undef, undef
   %res5 = mul <2 x i16> undef, undef
   %res6 = mul <2 x i32> undef, undef
@@ -121,6 +126,7 @@ define void @mul() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = mul i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = mul i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = mul i64 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %resQ = mul i128 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = mul <2 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = mul <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = mul <2 x i32> undef, undef

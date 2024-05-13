@@ -1,28 +1,28 @@
-; RUN: llc -march=r600 -mcpu=redwood -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=redwood -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
 ; RUN: FileCheck --check-prefix=BUG64 %s < %t
 
-; RUN: llc -march=r600 -mcpu=sumo -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=sumo -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
 ; RUN: FileCheck --check-prefix=BUG64 %s < %t
 
-; RUN: llc -march=r600 -mcpu=barts -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=barts -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
 ; RUN: FileCheck --check-prefix=BUG64 %s < %t
 
-; RUN: llc -march=r600 -mcpu=turks -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=turks -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
 ; RUN: FileCheck --check-prefix=BUG64 %s < %t
 
-; RUN: llc -march=r600 -mcpu=caicos -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=caicos -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
 ; RUN: FileCheck --check-prefix=BUG64 %s < %t
 
-; RUN: llc -march=r600 -mcpu=cedar -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=cedar -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
 ; RUN: FileCheck --check-prefix=BUG32 %s < %t
 
-; RUN: llc -march=r600 -mcpu=juniper -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=juniper -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
 ; RUN: FileCheck --check-prefix=NOBUG %s < %t
 
-; RUN: llc -march=r600 -mcpu=cypress -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=cypress -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
 ; RUN: FileCheck --check-prefix=NOBUG %s < %t
 
-; RUN: llc -march=r600 -mcpu=cayman -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=cayman -debug-only=r600cf %s -o - 2>%t | FileCheck %s --check-prefix=FUNC
 ; RUN: FileCheck --check-prefix=NOBUG %s < %t
 
 ; REQUIRES: asserts
@@ -35,7 +35,7 @@
 ; BUG32-NOT: Applying bug work-around
 ; NOBUG-NOT: Applying bug work-around
 ; FUNC-LABEL: {{^}}nested3:
-define amdgpu_kernel void @nested3(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @nested3(ptr addrspace(1) %out, i32 %cond) {
 entry:
   %0 = icmp sgt i32 %cond, 0
   br i1 %0, label %if.1, label %end
@@ -45,7 +45,7 @@ if.1:
   br i1 %1, label %if.2, label %if.store.1
 
 if.store.1:
-  store i32 1, i32 addrspace(1)* %out
+  store i32 1, ptr addrspace(1) %out
   br label %end
 
 if.2:
@@ -53,11 +53,11 @@ if.2:
   br i1 %2, label %if.3, label %if.2.store
 
 if.2.store:
-  store i32 2, i32 addrspace(1)* %out
+  store i32 2, ptr addrspace(1) %out
   br label %end
 
 if.3:
-  store i32 3, i32 addrspace(1)* %out
+  store i32 3, ptr addrspace(1) %out
   br label %end
 
 end:
@@ -68,7 +68,7 @@ end:
 ; BUG32-NOT: Applying bug work-around
 ; NOBUG-NOT: Applying bug work-around
 ; FUNC-LABEL: {{^}}nested4:
-define amdgpu_kernel void @nested4(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @nested4(ptr addrspace(1) %out, i32 %cond) {
 entry:
   %0 = icmp sgt i32 %cond, 0
   br i1 %0, label %if.1, label %end
@@ -78,7 +78,7 @@ if.1:
   br i1 %1, label %if.2, label %if.1.store
 
 if.1.store:
-  store i32 1, i32 addrspace(1)* %out
+  store i32 1, ptr addrspace(1) %out
   br label %end
 
 if.2:
@@ -86,7 +86,7 @@ if.2:
   br i1 %2, label %if.3, label %if.2.store
 
 if.2.store:
-  store i32 2, i32 addrspace(1)* %out
+  store i32 2, ptr addrspace(1) %out
   br label %end
 
 if.3:
@@ -94,11 +94,11 @@ if.3:
   br i1 %3, label %if.4, label %if.3.store
 
 if.3.store:
-  store i32 3, i32 addrspace(1)* %out
+  store i32 3, ptr addrspace(1) %out
   br label %end
 
 if.4:
-  store i32 4, i32 addrspace(1)* %out
+  store i32 4, ptr addrspace(1) %out
   br label %end
 
 end:
@@ -109,7 +109,7 @@ end:
 ; BUG32-NOT: Applying bug work-around
 ; NOBUG-NOT: Applying bug work-around
 ; FUNC-LABEL: {{^}}nested7:
-define amdgpu_kernel void @nested7(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @nested7(ptr addrspace(1) %out, i32 %cond) {
 entry:
   %0 = icmp sgt i32 %cond, 0
   br i1 %0, label %if.1, label %end
@@ -119,7 +119,7 @@ if.1:
   br i1 %1, label %if.2, label %if.1.store
 
 if.1.store:
-  store i32 1, i32 addrspace(1)* %out
+  store i32 1, ptr addrspace(1) %out
   br label %end
 
 if.2:
@@ -127,7 +127,7 @@ if.2:
   br i1 %2, label %if.3, label %if.2.store
 
 if.2.store:
-  store i32 2, i32 addrspace(1)* %out
+  store i32 2, ptr addrspace(1) %out
   br label %end
 
 if.3:
@@ -135,7 +135,7 @@ if.3:
   br i1 %3, label %if.4, label %if.3.store
 
 if.3.store:
-  store i32 3, i32 addrspace(1)* %out
+  store i32 3, ptr addrspace(1) %out
   br label %end
 
 if.4:
@@ -143,7 +143,7 @@ if.4:
   br i1 %4, label %if.5, label %if.4.store
 
 if.4.store:
-  store i32 4, i32 addrspace(1)* %out
+  store i32 4, ptr addrspace(1) %out
   br label %end
 
 if.5:
@@ -151,7 +151,7 @@ if.5:
   br i1 %5, label %if.6, label %if.5.store
 
 if.5.store:
-  store i32 5, i32 addrspace(1)* %out
+  store i32 5, ptr addrspace(1) %out
   br label %end
 
 if.6:
@@ -159,11 +159,11 @@ if.6:
   br i1 %6, label %if.7, label %if.6.store
 
 if.6.store:
-  store i32 6, i32 addrspace(1)* %out
+  store i32 6, ptr addrspace(1) %out
   br label %end
 
 if.7:
-  store i32 7, i32 addrspace(1)* %out
+  store i32 7, ptr addrspace(1) %out
   br label %end
 
 end:
@@ -174,7 +174,7 @@ end:
 ; BUG32: Applying bug work-around
 ; NOBUG-NOT: Applying bug work-around
 ; FUNC-LABEL: {{^}}nested8:
-define amdgpu_kernel void @nested8(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @nested8(ptr addrspace(1) %out, i32 %cond) {
 entry:
   %0 = icmp sgt i32 %cond, 0
   br i1 %0, label %if.1, label %end
@@ -184,7 +184,7 @@ if.1:
   br i1 %1, label %if.2, label %if.1.store
 
 if.1.store:
-  store i32 1, i32 addrspace(1)* %out
+  store i32 1, ptr addrspace(1) %out
   br label %end
 
 if.2:
@@ -192,7 +192,7 @@ if.2:
   br i1 %2, label %if.3, label %if.2.store
 
 if.2.store:
-  store i32 2, i32 addrspace(1)* %out
+  store i32 2, ptr addrspace(1) %out
   br label %end
 
 if.3:
@@ -200,7 +200,7 @@ if.3:
   br i1 %3, label %if.4, label %if.3.store
 
 if.3.store:
-  store i32 3, i32 addrspace(1)* %out
+  store i32 3, ptr addrspace(1) %out
   br label %end
 
 if.4:
@@ -208,7 +208,7 @@ if.4:
   br i1 %4, label %if.5, label %if.4.store
 
 if.4.store:
-  store i32 4, i32 addrspace(1)* %out
+  store i32 4, ptr addrspace(1) %out
   br label %end
 
 if.5:
@@ -216,7 +216,7 @@ if.5:
   br i1 %5, label %if.6, label %if.5.store
 
 if.5.store:
-  store i32 5, i32 addrspace(1)* %out
+  store i32 5, ptr addrspace(1) %out
   br label %end
 
 if.6:
@@ -224,7 +224,7 @@ if.6:
   br i1 %6, label %if.7, label %if.6.store
 
 if.6.store:
-  store i32 6, i32 addrspace(1)* %out
+  store i32 6, ptr addrspace(1) %out
   br label %end
 
 if.7:
@@ -232,11 +232,11 @@ if.7:
   br i1 %7, label %if.8, label %if.7.store
 
 if.7.store:
-  store i32 7, i32 addrspace(1)* %out
+  store i32 7, ptr addrspace(1) %out
   br label %end
 
 if.8:
-  store i32 8, i32 addrspace(1)* %out
+  store i32 8, ptr addrspace(1) %out
   br label %end
 
 end:

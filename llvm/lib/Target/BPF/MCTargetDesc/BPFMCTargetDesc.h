@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_BPF_MCTARGETDESC_BPFMCTARGETDESC_H
 
 #include "llvm/Config/config.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/DataTypes.h"
 
 #include <memory>
@@ -29,11 +30,8 @@ class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
 
-MCCodeEmitter *createBPFMCCodeEmitter(const MCInstrInfo &MCII,
-                                      const MCRegisterInfo &MRI,
-                                      MCContext &Ctx);
+MCCodeEmitter *createBPFMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 MCCodeEmitter *createBPFbeMCCodeEmitter(const MCInstrInfo &MCII,
-                                        const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
 MCAsmBackend *createBPFAsmBackend(const Target &T, const MCSubtargetInfo &STI,
@@ -44,7 +42,7 @@ MCAsmBackend *createBPFbeAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCTargetOptions &Options);
 
 std::unique_ptr<MCObjectTargetWriter> createBPFELFObjectWriter(uint8_t OSABI);
-}
+} // namespace llvm
 
 // Defines symbolic names for BPF registers.  This defines a mapping from
 // register name to register number.
@@ -55,6 +53,7 @@ std::unique_ptr<MCObjectTargetWriter> createBPFELFObjectWriter(uint8_t OSABI);
 // Defines symbolic names for the BPF instructions.
 //
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "BPFGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

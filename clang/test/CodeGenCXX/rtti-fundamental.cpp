@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -fvisibility hidden -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
+// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -fvisibility=hidden -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
 
 #include <typeinfo>
 

@@ -1,5 +1,5 @@
-; RUN: opt -instcombine -instcombine-lower-dbg-declare=1 -S < %s | FileCheck %s
-; RUN: opt -instcombine -instcombine-lower-dbg-declare=0 -S < %s | FileCheck %s --check-prefix=DECLARE
+; RUN: opt -passes=instcombine -instcombine-lower-dbg-declare=1 -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -instcombine-lower-dbg-declare=0 -S < %s | FileCheck %s --check-prefix=DECLARE
 ; XFAIL: *
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
@@ -11,29 +11,29 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 ; Function Attrs: sspreq
-define void @julia_fastshortest_6256() #1 {
+define void @julia_fastshortest_6256(i1 %c1) #1 {
 top:
   %cp = alloca %foo, align 8
   %sink = alloca %foo, align 8
-  call void @llvm.dbg.declare(metadata %foo* %cp, metadata !1, metadata !16), !dbg !17
-  br i1 undef, label %idxend, label %fail
+  call void @llvm.dbg.declare(metadata ptr %cp, metadata !1, metadata !16), !dbg !17
+  br i1 %c1, label %idxend, label %fail
 
 fail:                                             ; preds = %top
   unreachable
 
 idxend:                                           ; preds = %top
-; CHECK-NOT: call void @llvm.dbg.value(metadata %foo* %cp,
-  %0 = load %foo, %foo* %cp, align 8
-  store volatile %foo %0, %foo *%sink, align 8
+; CHECK-NOT: call void @llvm.dbg.value(metadata ptr %cp,
+  %0 = load %foo, ptr %cp, align 8
+  store volatile %foo %0, ptr %sink, align 8
 ; CHECK: call void @llvm.dbg.value(metadata %foo %
-  store %foo %0, %foo* undef, align 8
+  store %foo %0, ptr undef, align 8
   ret void
 }
 
 ; Keep the declare if we keep the alloca.
 ; DECLARE-LABEL: define void @julia_fastshortest_6256()
 ; DECLARE: %cp = alloca %foo, align 8
-; DECLARE: call void @llvm.dbg.declare(metadata %foo* %cp,
+; DECLARE: call void @llvm.dbg.declare(metadata ptr %cp,
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { sspreq }

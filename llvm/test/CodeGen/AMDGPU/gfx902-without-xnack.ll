@@ -1,8 +1,10 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx902 --amdhsa-code-object-version=2 -mattr=-xnack < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx902 -mattr=-xnack < %s | FileCheck %s
 
-; CHECK: .hsa_code_object_isa 9,0,2,"AMD","AMDGPU"
-define amdgpu_kernel void @test_kernel(float addrspace(1)* %out0, double addrspace(1)* %out1) nounwind {
-  store float 0.0, float addrspace(1)* %out0
+; CHECK: .amdgcn_target "amdgcn-amd-amdhsa--gfx902:xnack-"
+define amdgpu_kernel void @test_kernel(ptr addrspace(1) %out0, ptr addrspace(1) %out1) nounwind {
+  store float 0.0, ptr addrspace(1) %out0
   ret void
 }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

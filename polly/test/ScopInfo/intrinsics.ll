@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-print-instructions < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-print-instructions -disable-output < %s | FileCheck %s
 ;
 ; Verify that we remove the ignored intrinsics from the instruction list.
 ;
 ; CHECK:       Instructions {
-; CHECK-NEXT:      store i32 %i.0, i32* %arrayidx, align 4
+; CHECK-NEXT:      store i32 %i.0, ptr %arrayidx, align 4
 ; CHECK-NEXT:    }
 ;
 ;    int A[1024];
@@ -26,9 +26,9 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds [1024 x i32], [1024 x i32]* %A, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds [1024 x i32], ptr %A, i64 0, i64 %idxprom
   call void @llvm.donothing()
-  store i32 %i.0, i32* %arrayidx, align 4
+  store i32 %i.0, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

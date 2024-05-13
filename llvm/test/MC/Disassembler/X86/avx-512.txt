@@ -1,6 +1,5 @@
 # RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 -mcpu=knl | FileCheck %s
 # RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 -mcpu=skx | FileCheck --check-prefix=CHECK-SKX %s
-# RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 -mattr=+avx512vpopcntdq | FileCheck %s --check-prefix=AVX512VPOPCNTDQ
 
 # CHECK: vpbroadcastd    %xmm18, %zmm28 {%k7} {z}
 0x62 0x22 0x7d 0xcf 0x58 0xe2
@@ -55,6 +54,9 @@
 
 # CHECK: vpord %zmm22, %zmm21, %zmm23
 0x62 0xa1 0x55 0x40 0xeb 0xfe
+
+# CHECK: vmovq   %xmm19, 1016(%rdx)
+0x62 0xe1 0xfd 0x08 0x7e 0x5a 0x7f
 
 #####################################################
 #                MASK INSTRUCTIONS                  #
@@ -174,6 +176,12 @@
 # CHECK: vcmpps	$127, %xmm27, %xmm11, %k4
 0x62 0x91 0x24 0x08 0xc2 0xe3 0x7f
 
+# CHECK: vcmpps	$37, %xmm1, %xmm0, %k1 {%k7}
+0x62 0xf1 0x7c 0x0f 0xc2 0xc9 0x25
+
+# CHECK: vcmpps	$37, %ymm1, %ymm0, %k1 {%k7}
+0x62 0xf1 0x7c 0x2f 0xc2 0xc9 0x25
+
 # CHECK: vpgatherdd 256(%r9,%xmm31), %xmm17 {%k1}
 0x62 0x82 0x7d 0x01 0x90 0x4c 0x39 0x40
 
@@ -269,28 +277,6 @@
 
 # CHECK: vscatterqpd %ymm19, 256(%r9,%ymm31) {%k1}
 0x62 0x82 0xfd 0x21 0xa3 0x5c 0x39 0x20
-
-#####################################################
-#             POPULATION COUNT                      #
-#####################################################
-
-# AVX512VPOPCNTDQ: vpopcntd   %zmm21, %zmm26 {%k4}
-0x62 0x22 0x7d 0x4c 0x55 0xd5
-
-# AVX512VPOPCNTDQ: vpopcntd   %zmm21, %zmm26 {%k4} {z} 
-0x62 0x22 0x7d 0xcc 0x55 0xd5
-
-# AVX512VPOPCNTDQ: vpopcntd   (%rcx), %zmm26  
-0x62 0x62 0x7d 0x48 0x55 0x11
-
-# AVX512VPOPCNTDQ: vpopcntq   %zmm21, %zmm17 {%k6} 
-0x62 0xa2 0xfd 0x4e 0x55 0xcd
-
-# AVX512VPOPCNTDQ: vpopcntq   %zmm21, %zmm17 {%k6} {z} 
-0x62 0xa2 0xfd 0xce 0x55 0xcd
-
-# AVX512VPOPCNTDQ: vpopcntq   (%rcx), %zmm17  
-0x62 0xe2 0xfd 0x48 0x55 0x09
 
 #####################################################
 #                  SAE ATTRIBUTE                    #

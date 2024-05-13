@@ -34,7 +34,7 @@ else ()
   set(LLVM_FILECHECK "${LLVM_TOOLS_BINARY_DIR}/FileCheck")
   set(LLVM_NOT "${LLVM_TOOLS_BINARY_DIR}/not")
   set(POLLY_TEST_EXTRA_PATHS "")
-  set(POLLY_TEST_DEPS llvm-config opt LLVMPolly FileCheck not)
+  set(POLLY_TEST_DEPS llvm-config opt LLVMPolly FileCheck not count)
 endif()
 
 if (POLLY_BUNDLED_ISL)
@@ -46,7 +46,7 @@ endif ()
 
 set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}")
 set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}")
-set(LLVM_LIBS_DIR "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
+set(LLVM_LIBS_DIR "${LLVM_LIBRARY_DIR}")
 if (CMAKE_LIBRARY_OUTPUT_DIRECTORY)
   set(POLLY_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 else()
@@ -77,6 +77,7 @@ if (POLLY_GTEST_AVAIL)
   add_lit_testsuite(check-polly-unittests "Running polly unit tests only"
     ${CMAKE_CURRENT_BINARY_DIR}/Unit
     PARAMS polly_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
+    EXCLUDE_FROM_CHECK_ALL
     DEPENDS PollyUnitTests
     )
   set_target_properties(check-polly-unittests PROPERTIES FOLDER "Polly")
@@ -90,6 +91,7 @@ if (POLLY_BUNDLED_ISL)
   add_lit_testsuite(check-polly-isl "Running isl unit tests only"
     ${CMAKE_CURRENT_BINARY_DIR}/UnitIsl
     PARAMS polly_site_config=${CMAKE_CURRENT_BINARY_DIR}/UnitIsl/lit.site.cfg
+    EXCLUDE_FROM_CHECK_ALL
     DEPENDS polly-isl-test
     )
   set_target_properties(check-polly-isl PROPERTIES FOLDER "Polly")

@@ -1,50 +1,43 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux -save-temp-labels %s -o %t
-// RUN: ld.lld -discard-locals %t -o %t2
-// RUN: llvm-readobj -S --section-data --symbols %t2 | FileCheck %s
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 -save-temp-labels %s -o %t.o
 
-.global _start
+# RUN: ld.lld --discard-locals %t.o -o %tlocal
+# RUN: llvm-readelf -s %tlocal | FileCheck --check-prefixes=DISCARD-LOCALS,DISCARD-LOCALS-NOGC %s
+
+## --gc-sections can discard symbols relative to GCed sections (including STT_SECTION).
+# RUN: ld.lld --discard-locals --gc-sections %t.o -o %tlocal.gc
+# RUN: llvm-readelf -s %tlocal.gc | FileCheck --check-prefix=DISCARD-LOCALS %s
+
+# RUN: ld.lld --discard-all %t.o -o %tall
+# RUN: llvm-readelf -s %tall | FileCheck --check-prefix=DISCARD-ALL %s
+
+# RUN: ld.lld --discard-all --gc-sections %t.o -o %tall.gc
+# RUN: llvm-readelf -s %tall.gc | FileCheck --check-prefix=DISCARD-ALL %s
+
+## --discard-locals removes local symbols which start with ".L"
+# DISCARD-LOCALS:    0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
+# DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} used
+# DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} unused
+# DISCARD-LOCALS-NOGC-NEXT:      NOTYPE  LOCAL  DEFAULT {{.*}} unused_gc
+# DISCARD-LOCALS-NEXT:           NOTYPE  GLOBAL DEFAULT {{.*}} _start
+
+## --discard-all removes all regular local symbols.
+# DISCARD-ALL:       0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
+# DISCARD-ALL-NEXT:              NOTYPE  GLOBAL DEFAULT {{.*}} _start
+
+.globl _start
 _start:
+  call text@plt
+  jmp .Lused@plt
+  call used@plt
 
-.text
-.Lmyvar:
-.Lmyothervar:
+.section text,"ax"
+.Lunused:
+.Lused:
+unused:
+used:
 
-// CHECK:   Section {
-// CHECK:     Name: .strtab
-// CHECK-NEXT:     Type: SHT_STRTAB
-// CHECK-NEXT:     Flags [
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Address:
-// CHECK-NEXT:     Offset:
-// CHECK-NEXT:     Size:
-// CHECK-NEXT:     Link:
-// CHECK-NEXT:     Info:
-// CHECK-NEXT:     AddressAlignment:
-// CHECK-NEXT:     EntrySize:
-// CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 005F7374 61727400                    |._start.|
-// CHECK-NEXT:     )
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]
-
-// CHECK: Symbols [
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name:
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: _start
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECk-NEXT: ]
+.section gc,"ax"
+.Lunused_gc:
+unused_gc:
+  ret

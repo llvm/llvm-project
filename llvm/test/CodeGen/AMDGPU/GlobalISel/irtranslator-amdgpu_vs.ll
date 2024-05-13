@@ -4,11 +4,12 @@
 define amdgpu_vs void @test_f32_inreg(float inreg %arg0) {
   ; CHECK-LABEL: name: test_f32_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $sgpr2
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
-  ; CHECK:   S_ENDPGM 0
+  ; CHECK-NEXT:   liveins: $sgpr2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
+  ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float undef, float undef, float undef, i1 false, i1 false) #0
   ret void
 }
@@ -16,41 +17,44 @@ define amdgpu_vs void @test_f32_inreg(float inreg %arg0) {
 define amdgpu_vs void @test_f32(float %arg0) {
   ; CHECK-LABEL: name: test_f32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
-  ; CHECK:   S_ENDPGM 0
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
+  ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float undef, float undef, float undef, i1 false, i1 false) #0
   ret void
 }
 
-define amdgpu_vs void @test_ptr2_inreg(i32 addrspace(4)* inreg %arg0) {
+define amdgpu_vs void @test_ptr2_inreg(ptr addrspace(4) inreg %arg0) {
   ; CHECK-LABEL: name: test_ptr2_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $sgpr2, $sgpr3
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; CHECK:   [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile load 4 from %ir.arg0, addrspace 4)
-  ; CHECK:   S_ENDPGM 0
-  %tmp0 = load volatile i32, i32 addrspace(4)* %arg0
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile invariant load (s32) from %ir.arg0, addrspace 4)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  %tmp0 = load volatile i32, ptr addrspace(4) %arg0
   ret void
 }
 
-define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, i32 addrspace(4)* inreg %arg1) {
+define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, ptr addrspace(4) inreg %arg1) {
   ; CHECK-LABEL: name: test_sgpr_alignment0
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; CHECK:   [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
-  ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile load 4 from %ir.arg1, addrspace 4)
-  ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
-  ; CHECK:   S_ENDPGM 0
-  %tmp0 = load volatile i32, i32 addrspace(4)* %arg1
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile invariant load (s32) from %ir.arg1, addrspace 4)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
+  ; CHECK-NEXT:   S_ENDPGM 0
+  %tmp0 = load volatile i32, ptr addrspace(4) %arg1
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float undef, float undef, float undef, i1 false, i1 false) #0
   ret void
 }
@@ -58,13 +62,14 @@ define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, i32 addrspace(4)*
 define amdgpu_vs void @test_order(float inreg %arg0, float inreg %arg1, float %arg2, float %arg3) {
   ; CHECK-LABEL: name: test_order
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $sgpr2, $sgpr3, $vgpr0, $vgpr1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY2]](s32), [[COPY]](s32), [[COPY3]](s32), [[COPY1]](s32), 0, 0
-  ; CHECK:   S_ENDPGM 0
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY2]](s32), [[COPY]](s32), [[COPY3]](s32), [[COPY1]](s32), 0, 0
+  ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg2, float %arg0, float %arg3, float %arg1, i1 false, i1 false) #0
   ret void
 }
@@ -72,15 +77,16 @@ define amdgpu_vs void @test_order(float inreg %arg0, float inreg %arg1, float %a
 define amdgpu_vs <{ i32, i32 }> @ret_struct(i32 inreg %arg0, i32 inreg %arg1) {
   ; CHECK-LABEL: name: ret_struct
   ; CHECK: bb.1.main_body:
-  ; CHECK:   liveins: $sgpr2, $sgpr3
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
-  ; CHECK:   $sgpr0 = COPY [[INT]](s32)
-  ; CHECK:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)
-  ; CHECK:   $sgpr1 = COPY [[INT1]](s32)
-  ; CHECK:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)
+  ; CHECK-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
 main_body:
   %tmp0 = insertvalue <{ i32, i32 }> undef, i32 %arg0, 0
   %tmp1 = insertvalue <{ i32, i32 }> %tmp0, i32 %arg1, 1
@@ -90,10 +96,10 @@ main_body:
 define amdgpu_vs i32 @non_void_ret() {
   ; CHECK-LABEL: name: non_void_ret
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[C]](s32)
-  ; CHECK:   $sgpr0 = COPY [[INT]](s32)
-  ; CHECK:   SI_RETURN_TO_EPILOG implicit $sgpr0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[C]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
   ret i32 0
 }
 

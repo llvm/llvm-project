@@ -6,6 +6,6 @@ enum e1 g1(enum e1 *x) {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @g1
-// CHECK: load i32, i32* %x, align 4
+// CHECK: load i32, ptr %x, align 4
 // CHECK-NOT: range
 // CHECK: ret

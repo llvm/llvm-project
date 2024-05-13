@@ -42,8 +42,8 @@ define void @func() nounwind ssp {
 ;
 ; COREI7-LABEL: func:
 ; COREI7:       ## %bb.0: ## %entry
-; COREI7-NEXT:    movups _.str3+{{.*}}(%rip), %xmm0
-; COREI7-NEXT:    movups {{.*}}(%rip), %xmm1
+; COREI7-NEXT:    movups _.str3+15(%rip), %xmm0
+; COREI7-NEXT:    movups _.str3(%rip), %xmm1
 ; COREI7-NEXT:    .p2align 4, 0x90
 ; COREI7-NEXT:  LBB0_1: ## %bb
 ; COREI7-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -55,8 +55,7 @@ entry:
   br label %bb
 
 bb:                                               ; preds = %bb, %entry
-  %String2Loc9 = getelementptr inbounds [31 x i8], [31 x i8]* %String2Loc, i64 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %String2Loc9, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str3, i64 0, i64 0), i64 31, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %String2Loc, ptr @.str3, i64 31, i1 false)
   br label %bb
 
 return:                                           ; No predecessors!
@@ -95,8 +94,8 @@ define void @func_aligned() nounwind ssp {
 ;
 ; COREI7-LABEL: func_aligned:
 ; COREI7:       ## %bb.0: ## %entry
-; COREI7-NEXT:    movups _.str3+{{.*}}(%rip), %xmm0
-; COREI7-NEXT:    movups {{.*}}(%rip), %xmm1
+; COREI7-NEXT:    movups _.str3+15(%rip), %xmm0
+; COREI7-NEXT:    movups _.str3(%rip), %xmm1
 ; COREI7-NEXT:    .p2align 4, 0x90
 ; COREI7-NEXT:  LBB1_1: ## %bb
 ; COREI7-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -108,12 +107,11 @@ entry:
   br label %bb
 
 bb:                                               ; preds = %bb, %entry
-  %String2Loc9 = getelementptr inbounds [31 x i8], [31 x i8]* %String2Loc, i64 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %String2Loc9, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str3, i64 0, i64 0), i64 31, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %String2Loc, ptr @.str3, i64 31, i1 false)
   br label %bb
 
 return:                                           ; No predecessors!
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/CXXInheritance.h"
@@ -14,6 +15,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -76,15 +78,56 @@ public:
               (AccSpec == AS_none && RD->isClass()))
             return false;
 
-          llvm::Optional<const CXXRecordDecl *> RefCntblBaseRD =
-              isRefCountable(Base);
-          if (!RefCntblBaseRD || !(*RefCntblBaseRD))
+          auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
+          auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
+
+          bool hasRef = hasRefInBase && *hasRefInBase != nullptr;
+          bool hasDeref = hasDerefInBase && *hasDerefInBase != nullptr;
+
+          QualType T = Base->getType();
+          if (T.isNull())
             return false;
 
-          const auto *Dtor = (*RefCntblBaseRD)->getDestructor();
+          const CXXRecordDecl *C = T->getAsCXXRecordDecl();
+          if (!C)
+            return false;
+          if (isRefCountedClass(C))
+            return false;
+
+          bool AnyInconclusiveBase = false;
+          const auto hasPublicRefInBase =
+              [&AnyInconclusiveBase](const CXXBaseSpecifier *Base,
+                                     CXXBasePath &) {
+                auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
+                if (!hasRefInBase) {
+                  AnyInconclusiveBase = true;
+                  return false;
+                }
+                return (*hasRefInBase) != nullptr;
+              };
+          const auto hasPublicDerefInBase = [&AnyInconclusiveBase](
+                                                const CXXBaseSpecifier *Base,
+                                                CXXBasePath &) {
+            auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
+            if (!hasDerefInBase) {
+              AnyInconclusiveBase = true;
+              return false;
+            }
+            return (*hasDerefInBase) != nullptr;
+          };
+          CXXBasePaths Paths;
+          Paths.setOrigin(C);
+          hasRef = hasRef || C->lookupInBases(hasPublicRefInBase, Paths,
+                                              /*LookupInDependent =*/true);
+          hasDeref = hasDeref || C->lookupInBases(hasPublicDerefInBase, Paths,
+                                                  /*LookupInDependent =*/true);
+          if (AnyInconclusiveBase || !hasRef || !hasDeref)
+            return false;
+
+          const auto *Dtor = C->getDestructor();
           if (!Dtor || !Dtor->isVirtual()) {
             ProblematicBaseSpecifier = Base;
-            ProblematicBaseClass = *RefCntblBaseRD;
+            ProblematicBaseClass = C;
             return true;
           }
 
@@ -114,7 +157,7 @@ public:
       return true;
 
     const auto Kind = RD->getTagKind();
-    if (Kind != TTK_Struct && Kind != TTK_Class)
+    if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class)
       return true;
 
     // Ignore CXXRecords that come from system headers.
@@ -123,6 +166,20 @@ public:
       return true;
 
     return false;
+  }
+
+  static bool isRefCountedClass(const CXXRecordDecl *D) {
+    if (!D->getTemplateInstantiationPattern())
+      return false;
+    auto *NsDecl = D->getParent();
+    if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
+      return false;
+    auto NamespaceName = safeGetName(NsDecl);
+    auto ClsNameStr = safeGetName(D);
+    StringRef ClsName = ClsNameStr; // FIXME: Make safeGetName return StringRef.
+    return NamespaceName == "WTF" &&
+           (ClsName.ends_with("RefCounted") ||
+            ClsName == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr");
   }
 
   void reportBug(const CXXRecordDecl *DerivedClass,

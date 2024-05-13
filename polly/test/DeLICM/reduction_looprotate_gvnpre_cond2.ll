@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Load (but not store) of A[j] hoisted, reduction not written in all iterations.
 ; FIXME: %join is not mapped because the MemoryKind::Value mapping does not
@@ -16,7 +16,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -30,8 +30,8 @@ outer.for:
 
 
     reduction.preheader:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      %init = load double, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      %init = load double, ptr %A_idx
       br label %reduction.for
 
     reduction.for:
@@ -47,7 +47,7 @@ outer.for:
 
         body_true:
           %add = fadd double %phi, 4.2
-          store double %add, double* %A_idx
+          store double %add, ptr %A_idx
           br label %body_join
 
         body_join:

@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/DJB.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ReverseIteration.h"
+#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 
 /// Returns the number of buckets to allocate to ensure that the DenseMap can
 /// accommodate \p NumEntries without need to grow().
-static unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
+static inline unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
   // Ensure that "NumEntries * 4 < NumBuckets * 3"
   if (NumEntries == 0)
     return 0;
@@ -27,6 +27,23 @@ static unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
   // For example if NumEntries is 48, we need to return 401.
   return NextPowerOf2(NumEntries * 4 / 3 + 1);
 }
+
+static inline StringMapEntryBase **createTable(unsigned NewNumBuckets) {
+  auto **Table = static_cast<StringMapEntryBase **>(safe_calloc(
+      NewNumBuckets + 1, sizeof(StringMapEntryBase **) + sizeof(unsigned)));
+
+  // Allocate one extra bucket, set it to look filled so the iterators stop at
+  // end.
+  Table[NewNumBuckets] = (StringMapEntryBase *)2;
+  return Table;
+}
+
+static inline unsigned *getHashTable(StringMapEntryBase **TheTable,
+                                     unsigned NumBuckets) {
+  return reinterpret_cast<unsigned *>(TheTable + NumBuckets + 1);
+}
+
+uint32_t StringMapImpl::hash(StringRef Key) { return xxh3_64bits(Key); }
 
 StringMapImpl::StringMapImpl(unsigned InitSize, unsigned itemSize) {
   ItemSize = itemSize;
@@ -55,15 +72,10 @@ void StringMapImpl::init(unsigned InitSize) {
   NumItems = 0;
   NumTombstones = 0;
 
-  TheTable = static_cast<StringMapEntryBase **>(safe_calloc(
-      NewNumBuckets + 1, sizeof(StringMapEntryBase **) + sizeof(unsigned)));
+  TheTable = createTable(NewNumBuckets);
 
   // Set the member only if TheTable was successfully allocated
   NumBuckets = NewNumBuckets;
-
-  // Allocate one extra bucket, set it to look filled so the iterators stop at
-  // end.
-  TheTable[NumBuckets] = (StringMapEntryBase *)2;
 }
 
 /// LookupBucketFor - Look up the bucket that the specified string should end
@@ -71,15 +83,18 @@ void StringMapImpl::init(unsigned InitSize) {
 /// specified bucket will be non-null.  Otherwise, it will be null.  In either
 /// case, the FullHashValue field of the bucket will be set to the hash value
 /// of the string.
-unsigned StringMapImpl::LookupBucketFor(StringRef Name) {
-  unsigned HTSize = NumBuckets;
-  if (HTSize == 0) { // Hash table unallocated so far?
+unsigned StringMapImpl::LookupBucketFor(StringRef Name,
+                                        uint32_t FullHashValue) {
+#ifdef EXPENSIVE_CHECKS
+  assert(FullHashValue == hash(Name));
+#endif
+  // Hash table unallocated so far?
+  if (NumBuckets == 0)
     init(16);
-    HTSize = NumBuckets;
-  }
-  unsigned FullHashValue = djbHash(Name, 0);
-  unsigned BucketNo = FullHashValue & (HTSize - 1);
-  unsigned *HashTable = (unsigned *)(TheTable + NumBuckets + 1);
+  if (shouldReverseIterate())
+    FullHashValue = ~FullHashValue;
+  unsigned BucketNo = FullHashValue & (NumBuckets - 1);
+  unsigned *HashTable = getHashTable(TheTable, NumBuckets);
 
   unsigned ProbeAmt = 1;
   int FirstTombstone = -1;
@@ -118,7 +133,7 @@ unsigned StringMapImpl::LookupBucketFor(StringRef Name) {
     }
 
     // Okay, we didn't find the item.  Probe to the next bucket.
-    BucketNo = (BucketNo + ProbeAmt) & (HTSize - 1);
+    BucketNo = (BucketNo + ProbeAmt) & (NumBuckets - 1);
 
     // Use quadratic probing, it has fewer clumping artifacts than linear
     // probing and has good cache behavior in the common case.
@@ -129,13 +144,16 @@ unsigned StringMapImpl::LookupBucketFor(StringRef Name) {
 /// FindKey - Look up the bucket that contains the specified key. If it exists
 /// in the map, return the bucket number of the key.  Otherwise return -1.
 /// This does not modify the map.
-int StringMapImpl::FindKey(StringRef Key) const {
-  unsigned HTSize = NumBuckets;
-  if (HTSize == 0)
+int StringMapImpl::FindKey(StringRef Key, uint32_t FullHashValue) const {
+  if (NumBuckets == 0)
     return -1; // Really empty table?
-  unsigned FullHashValue = djbHash(Key, 0);
-  unsigned BucketNo = FullHashValue & (HTSize - 1);
-  unsigned *HashTable = (unsigned *)(TheTable + NumBuckets + 1);
+#ifdef EXPENSIVE_CHECKS
+  assert(FullHashValue == hash(Key));
+#endif
+  if (shouldReverseIterate())
+    FullHashValue = ~FullHashValue;
+  unsigned BucketNo = FullHashValue & (NumBuckets - 1);
+  unsigned *HashTable = getHashTable(TheTable, NumBuckets);
 
   unsigned ProbeAmt = 1;
   while (true) {
@@ -162,7 +180,7 @@ int StringMapImpl::FindKey(StringRef Key) const {
     }
 
     // Okay, we didn't find the item.  Probe to the next bucket.
-    BucketNo = (BucketNo + ProbeAmt) & (HTSize - 1);
+    BucketNo = (BucketNo + ProbeAmt) & (NumBuckets - 1);
 
     // Use quadratic probing, it has fewer clumping artifacts than linear
     // probing and has good cache behavior in the common case.
@@ -199,8 +217,6 @@ StringMapEntryBase *StringMapImpl::RemoveKey(StringRef Key) {
 /// the appropriate mod-of-hashtable-size.
 unsigned StringMapImpl::RehashTable(unsigned BucketNo) {
   unsigned NewSize;
-  unsigned *HashTable = (unsigned *)(TheTable + NumBuckets + 1);
-
   // If the hash table is now more than 3/4 full, or if fewer than 1/8 of
   // the buckets are empty (meaning that many are filled with tombstones),
   // grow/rehash the table.
@@ -214,35 +230,24 @@ unsigned StringMapImpl::RehashTable(unsigned BucketNo) {
   }
 
   unsigned NewBucketNo = BucketNo;
-  // Allocate one extra bucket which will always be non-empty.  This allows the
-  // iterators to stop at end.
-  auto NewTableArray = static_cast<StringMapEntryBase **>(safe_calloc(
-      NewSize + 1, sizeof(StringMapEntryBase *) + sizeof(unsigned)));
-
-  unsigned *NewHashArray = (unsigned *)(NewTableArray + NewSize + 1);
-  NewTableArray[NewSize] = (StringMapEntryBase *)2;
+  auto **NewTableArray = createTable(NewSize);
+  unsigned *NewHashArray = getHashTable(NewTableArray, NewSize);
+  unsigned *HashTable = getHashTable(TheTable, NumBuckets);
 
   // Rehash all the items into their new buckets.  Luckily :) we already have
   // the hash values available, so we don't have to rehash any strings.
   for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
     StringMapEntryBase *Bucket = TheTable[I];
     if (Bucket && Bucket != getTombstoneVal()) {
-      // Fast case, bucket available.
+      // If the bucket is not available, probe for a spot.
       unsigned FullHash = HashTable[I];
       unsigned NewBucket = FullHash & (NewSize - 1);
-      if (!NewTableArray[NewBucket]) {
-        NewTableArray[FullHash & (NewSize - 1)] = Bucket;
-        NewHashArray[FullHash & (NewSize - 1)] = FullHash;
-        if (I == BucketNo)
-          NewBucketNo = NewBucket;
-        continue;
+      if (NewTableArray[NewBucket]) {
+        unsigned ProbeSize = 1;
+        do {
+          NewBucket = (NewBucket + ProbeSize++) & (NewSize - 1);
+        } while (NewTableArray[NewBucket]);
       }
-
-      // Otherwise probe for a spot.
-      unsigned ProbeSize = 1;
-      do {
-        NewBucket = (NewBucket + ProbeSize++) & (NewSize - 1);
-      } while (NewTableArray[NewBucket]);
 
       // Finally found a slot.  Fill it in.
       NewTableArray[NewBucket] = Bucket;

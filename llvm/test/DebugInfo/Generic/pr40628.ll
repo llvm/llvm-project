@@ -1,4 +1,4 @@
-; RUN: opt -early-cse -earlycse-debug-hash -S %s -o - | FileCheck %s
+; RUN: opt -passes=early-cse -earlycse-debug-hash -S %s -o - | FileCheck %s
 
 ; PR40628: The first load below is determined to be redundant by EarlyCSE.
 ; During salvaging, the corresponding dbg.value could have a DW_OP_deref used
@@ -11,7 +11,7 @@
 ; being assigned the 'undef' value.
 
 ; CHECK:      @foo
-; CHECK-NEXT: dbg.value(metadata i32 undef, metadata ![[DEADVAR:[0-9]+]],
+; CHECK-NEXT: dbg.value(metadata i32 poison, metadata ![[DEADVAR:[0-9]+]],
 ; CHECK-NEXT: load
 ; CHECK-NEXT: dbg.value(metadata i32 %{{[0-9]+}}, metadata ![[LIVEVAR:[0-9]+]],
 ; CHECK-NEXT: store
@@ -23,12 +23,12 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local i32 @foo(i32*) !dbg !7 {
-  %2 = load i32, i32* %0, align 4, !dbg !23
+define dso_local i32 @foo(ptr) !dbg !7 {
+  %2 = load i32, ptr %0, align 4, !dbg !23
   call void @llvm.dbg.value(metadata i32 %2, metadata !16, metadata !DIExpression()), !dbg !23
-  %3 = load i32, i32* %0, align 4, !dbg !23
+  %3 = load i32, ptr %0, align 4, !dbg !23
   call void @llvm.dbg.value(metadata i32 %3, metadata !17, metadata !DIExpression()), !dbg !23
-  store i32 0, i32* %0, align 4, !dbg !23
+  store i32 0, ptr %0, align 4, !dbg !23
   ret i32 %3, !dbg !23
 }
 

@@ -1,4 +1,5 @@
 ; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
 ; Test that multi-DW_OP_piece expressions are emitted for FI variables.
 ;
 ; CHECK: .debug_info contents:
@@ -25,11 +26,11 @@ define void @f() #0 !dbg !8 {
 entry:
   %a = alloca i16, align 4
   %b = alloca i16, align 4
-  call void @llvm.dbg.declare(metadata i16* %a, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 16)), !dbg !14
-  store i16 1, i16* %a, align 4, !dbg !14
-  call void @llvm.dbg.declare(metadata i16* %b, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 16, 16)), !dbg !16
-  call void @llvm.dbg.declare(metadata i16* %a, metadata !11, metadata !13), !dbg !17
-  store i16 2, i16* %b, align 4, !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 16)), !dbg !14
+  store i16 1, ptr %a, align 4, !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 16, 16)), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !11, metadata !13), !dbg !17
+  store i16 2, ptr %b, align 4, !dbg !17
   ret void
 }
 

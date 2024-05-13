@@ -152,6 +152,7 @@ symbols:
 # I386-CUSTOM-HEADER-NEXT:  MinorSubsystemVersion: 0
 # I386-CUSTOM-HEADER-NEXT:  SizeOfImage: 4096
 # I386-CUSTOM-HEADER-NEXT:  SizeOfHeaders: 512
+# I386-CUSTOM-HEADER-NEXT:  CheckSum: 0x0
 # I386-CUSTOM-HEADER-NEXT:  Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
 # I386-CUSTOM-HEADER-NEXT:  Characteristics [ (0x8140)
 # I386-CUSTOM-HEADER-NEXT:    IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE (0x40)
@@ -319,9 +320,10 @@ symbols:
 # RUN: llvm-readobj -h %p/Inputs/magic.coff-importlib \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix IMPORTLIB
 
-#      IMPORTLIB:Format: COFF-import-file
+#      IMPORTLIB:Format: COFF-import-file-i386
 # IMPORTLIB-NEXT:Type: code
 # IMPORTLIB-NEXT:Name type: noprefix
+# IMPORTLIB-NEXT:Export name: func
 # IMPORTLIB-NEXT:Symbol: __imp__func
 # IMPORTLIB-NEXT:Symbol: _func
 # IMPORTLIB-NOT:{{.}}

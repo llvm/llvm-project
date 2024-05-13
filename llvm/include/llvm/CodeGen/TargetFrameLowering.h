@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_TARGETFRAMELOWERING_H
 #define LLVM_CODEGEN_TARGETFRAMELOWERING_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/Support/TypeSize.h"
 #include <vector>
@@ -54,15 +55,18 @@ public:
   };
 
   struct DwarfFrameBase {
-    // The frame base may be either a register (the default), the CFA,
-    // or a WebAssembly-specific location description.
+    // The frame base may be either a register (the default), the CFA with an
+    // offset, or a WebAssembly-specific location description.
     enum FrameBaseKind { Register, CFA, WasmFrameBase } Kind;
     struct WasmFrameBase {
       unsigned Kind; // Wasm local, global, or value stack
       unsigned Index;
     };
     union {
+      // Used with FrameBaseKind::Register.
       unsigned Reg;
+      // Used with FrameBaseKind::CFA.
+      int Offset;
       struct WasmFrameBase WasmLoc;
     } Location;
   };
@@ -99,6 +103,10 @@ public:
   ///
   Align getStackAlign() const { return StackAlignment; }
 
+  /// getStackThreshold - Return the maximum stack size
+  ///
+  virtual uint64_t getStackThreshold() const { return UINT_MAX; }
+
   /// alignSPAdjust - This method aligns the stack adjustment to the correct
   /// alignment.
   ///
@@ -123,11 +131,6 @@ public:
     return StackRealignable;
   }
 
-  /// Return the skew that has to be applied to stack alignment under
-  /// certain conditions (e.g. stack was adjusted before function \p MF
-  /// was called).
-  virtual unsigned getStackAlignmentSkew(const MachineFunction &MF) const;
-
   /// This method returns whether or not it is safe for an object with the
   /// given stack id to be bundled into the local area.
   virtual bool isStackIdSafeForLocalArea(unsigned StackId) const {
@@ -139,10 +142,13 @@ public:
   ///
   int getOffsetOfLocalArea() const { return LocalAreaOffset; }
 
-  /// isFPCloseToIncomingSP - Return true if the frame pointer is close to
-  /// the incoming stack pointer, false if it is close to the post-prologue
-  /// stack pointer.
-  virtual bool isFPCloseToIncomingSP() const { return true; }
+  /// Control the placement of special register scavenging spill slots when
+  /// allocating a stack frame.
+  ///
+  /// If this returns true, the frame indexes used by the RegScavenger will be
+  /// allocated closest to the incoming stack pointer.
+  virtual bool allocateScavengingFrameIndexesNearIncomingSP(
+    const MachineFunction &MF) const;
 
   /// assignCalleeSavedSpillSlots - Allows target to override spill slot
   /// assignment logic.  If implemented, assignCalleeSavedSpillSlots() should
@@ -210,15 +216,30 @@ public:
   virtual void emitEpilogue(MachineFunction &MF,
                             MachineBasicBlock &MBB) const = 0;
 
+  /// emitZeroCallUsedRegs - Zeros out call used registers.
+  virtual void emitZeroCallUsedRegs(BitVector RegsToZero,
+                                    MachineBasicBlock &MBB) const {}
+
   /// With basic block sections, emit callee saved frame moves for basic blocks
   /// that are in a different section.
   virtual void
-  emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI) const {}
+  emitCalleeSavedFrameMovesFullCFA(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI) const {}
+
+  /// Returns true if we may need to fix the unwind information for the
+  /// function.
+  virtual bool enableCFIFixup(MachineFunction &MF) const;
+
+  /// Emit CFI instructions that recreate the state of the unwind information
+  /// upon fucntion entry.
+  virtual void resetCFIToInitialState(MachineBasicBlock &MBB) const {}
 
   /// Replace a StackProbe stub (if any) with the actual probe code inline
   virtual void inlineStackProbe(MachineFunction &MF,
                                 MachineBasicBlock &PrologueMBB) const {}
+
+  /// Does the stack probe function call return with a modified stack pointer?
+  virtual bool stackProbeFunctionModifiesSP() const { return false; }
 
   /// Adjust the prologue to have the function use segmented stacks. This works
   /// by adding a check even before the "normal" function prologue.

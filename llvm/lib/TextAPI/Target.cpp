@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/Target.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/Format.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -22,26 +19,20 @@ Expected<Target> Target::create(StringRef TargetValue) {
   auto ArchitectureStr = Result.first;
   auto Architecture = getArchitectureFromName(ArchitectureStr);
   auto PlatformStr = Result.second;
-  PlatformKind Platform;
-  Platform = StringSwitch<PlatformKind>(PlatformStr)
-                 .Case("macos", PlatformKind::macOS)
-                 .Case("ios", PlatformKind::iOS)
-                 .Case("tvos", PlatformKind::tvOS)
-                 .Case("watchos", PlatformKind::watchOS)
-                 .Case("bridgeos", PlatformKind::bridgeOS)
-                 .Case("maccatalyst", PlatformKind::macCatalyst)
-                 .Case("ios-simulator", PlatformKind::iOSSimulator)
-                 .Case("tvos-simulator", PlatformKind::tvOSSimulator)
-                 .Case("watchos-simulator", PlatformKind::watchOSSimulator)
-                 .Case("driverkit", PlatformKind::driverKit)
-                 .Default(PlatformKind::unknown);
+  PlatformType Platform;
+  Platform = StringSwitch<PlatformType>(PlatformStr)
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  .Case(#tapi_target, PLATFORM_##platform)
+#include "llvm/BinaryFormat/MachO.def"
+                 .Default(PLATFORM_UNKNOWN);
 
-  if (Platform == PlatformKind::unknown) {
-    if (PlatformStr.startswith("<") && PlatformStr.endswith(">")) {
+  if (Platform == PLATFORM_UNKNOWN) {
+    if (PlatformStr.starts_with("<") && PlatformStr.ends_with(">")) {
       PlatformStr = PlatformStr.drop_front().drop_back();
       unsigned long long RawValue;
       if (!PlatformStr.getAsInteger(10, RawValue))
-        Platform = (PlatformKind)RawValue;
+        Platform = (PlatformType)RawValue;
     }
   }
 
@@ -49,13 +40,23 @@ Expected<Target> Target::create(StringRef TargetValue) {
 }
 
 Target::operator std::string() const {
-  return (getArchitectureName(Arch) + " (" + getPlatformName(Platform) + ")")
+  auto Version = MinDeployment.empty() ? "" : MinDeployment.getAsString();
+
+  return (getArchitectureName(Arch) + " (" + getPlatformName(Platform) +
+          Version + ")")
       .str();
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Target &Target) {
   OS << std::string(Target);
   return OS;
+}
+
+PlatformVersionSet mapToPlatformVersionSet(ArrayRef<Target> Targets) {
+  PlatformVersionSet Result;
+  for (const auto &Target : Targets)
+    Result.insert({Target.Platform, Target.MinDeployment});
+  return Result;
 }
 
 PlatformSet mapToPlatformSet(ArrayRef<Target> Targets) {
@@ -70,6 +71,15 @@ ArchitectureSet mapToArchitectureSet(ArrayRef<Target> Targets) {
   for (const auto &Target : Targets)
     Result.set(Target.Arch);
   return Result;
+}
+
+std::string getTargetTripleName(const Target &Targ) {
+  auto Version =
+      Targ.MinDeployment.empty() ? "" : Targ.MinDeployment.getAsString();
+
+  return (getArchitectureName(Targ.Arch) + "-apple-" +
+          getOSAndEnvironmentName(Targ.Platform, Version))
+      .str();
 }
 
 } // end namespace MachO.

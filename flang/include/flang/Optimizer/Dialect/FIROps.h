@@ -9,12 +9,14 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
 
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-
-using namespace mlir;
 
 namespace fir {
 
@@ -22,25 +24,29 @@ class FirEndOp;
 class DoLoopOp;
 class RealAttr;
 
-void buildCmpFOp(mlir::OpBuilder &builder, mlir::OperationState &result,
-                 mlir::CmpFPredicate predicate, mlir::Value lhs,
-                 mlir::Value rhs);
 void buildCmpCOp(mlir::OpBuilder &builder, mlir::OperationState &result,
-                 mlir::CmpFPredicate predicate, mlir::Value lhs,
+                 mlir::arith::CmpFPredicate predicate, mlir::Value lhs,
                  mlir::Value rhs);
 unsigned getCaseArgumentOffset(llvm::ArrayRef<mlir::Attribute> cases,
                                unsigned dest);
 DoLoopOp getForInductionVarOwner(mlir::Value val);
-bool isReferenceLike(mlir::Type type);
 mlir::ParseResult isValidCaseAttr(mlir::Attribute attr);
-mlir::ParseResult parseCmpfOp(mlir::OpAsmParser &parser,
-                              mlir::OperationState &result);
 mlir::ParseResult parseCmpcOp(mlir::OpAsmParser &parser,
                               mlir::OperationState &result);
 mlir::ParseResult parseSelector(mlir::OpAsmParser &parser,
                                 mlir::OperationState &result,
-                                mlir::OpAsmParser::OperandType &selector,
+                                mlir::OpAsmParser::UnresolvedOperand &selector,
                                 mlir::Type &type);
+
+static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
+  return "normalized.lb";
+}
+
+/// Model operations which affect global debugging information
+struct DebuggingResource
+    : public mlir::SideEffects::Resource::Base<DebuggingResource> {
+  mlir::StringRef getName() final { return "DebuggingResource"; }
+};
 
 } // namespace fir
 

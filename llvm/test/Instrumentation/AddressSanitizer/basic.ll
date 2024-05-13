@@ -1,24 +1,23 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt < %s -asan -asan-module -S -enable-new-pm=0 | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
-; RUN: opt < %s -asan -asan-module -asan-mapping-scale=5 -S -enable-new-pm=0 | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
-; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
-; RUN: opt < %s -passes='asan-pipeline' -asan-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
+; RUN: opt < %s -passes=asan -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -passes=asan -asan-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
-; CHECK: @llvm.global_ctors = {{.*}}@asan.module_ctor
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @asan.module_ctor]
+; CHECK: @llvm.global_ctors = {{.*}}{ i32 1, ptr @asan.module_ctor, ptr @asan.module_ctor }
 
-define i32 @test_load(i32* %a) sanitize_address {
+define i32 @test_load(ptr %a) sanitize_address {
 ; CHECK-LABEL: @test_load
 ; CHECK-NOT: load
-; CHECK:   %[[LOAD_ADDR:[^ ]*]] = ptrtoint i32* %a to i64
+; CHECK:   %[[LOAD_ADDR:[^ ]*]] = ptrtoint ptr %a to i64
 ; CHECK-S3:   lshr i64 %[[LOAD_ADDR]], 3
 ; CHECK-S5:   lshr i64 %[[LOAD_ADDR]], 5
 ; CHECK:   {{or|add}}
 ; CHECK:   %[[LOAD_SHADOW_PTR:[^ ]*]] = inttoptr
-; CHECK:   %[[LOAD_SHADOW:[^ ]*]] = load i8, i8* %[[LOAD_SHADOW_PTR]]
+; CHECK:   %[[LOAD_SHADOW:[^ ]*]] = load i8, ptr %[[LOAD_SHADOW_PTR]]
 ; CHECK:   icmp ne i8
 ; CHECK:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}!prof ![[PROF:[0-9]+]]
 ;
@@ -35,25 +34,25 @@ define i32 @test_load(i32* %a) sanitize_address {
 ; CHECK:   unreachable
 ;
 ; The actual load.
-; CHECK:   %tmp1 = load i32, i32* %a
+; CHECK:   %tmp1 = load i32, ptr %a
 ; CHECK:   ret i32 %tmp1
 
 
 
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 
-define void @test_store(i32* %a) sanitize_address {
+define void @test_store(ptr %a) sanitize_address {
 ; CHECK-LABEL: @test_store
 ; CHECK-NOT: store
-; CHECK:   %[[STORE_ADDR:[^ ]*]] = ptrtoint i32* %a to i64
+; CHECK:   %[[STORE_ADDR:[^ ]*]] = ptrtoint ptr %a to i64
 ; CHECK-S3:   lshr i64 %[[STORE_ADDR]], 3
 ; CHECK-S5:   lshr i64 %[[STORE_ADDR]], 5
 ; CHECK:   {{or|add}}
 ; CHECK:   %[[STORE_SHADOW_PTR:[^ ]*]] = inttoptr
-; CHECK:   %[[STORE_SHADOW:[^ ]*]] = load i8, i8* %[[STORE_SHADOW_PTR]]
+; CHECK:   %[[STORE_SHADOW:[^ ]*]] = load i8, ptr %[[STORE_SHADOW_PTR]]
 ; CHECK:   icmp ne i8
 ; CHECK:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}
 ;
@@ -70,26 +69,26 @@ define void @test_store(i32* %a) sanitize_address {
 ; CHECK:   unreachable
 ;
 ; The actual load.
-; CHECK:   store i32 42, i32* %a
+; CHECK:   store i32 42, ptr %a
 ; CHECK:   ret void
 ;
 
 entry:
-  store i32 42, i32* %a, align 4
+  store i32 42, ptr %a, align 4
   ret void
 }
 
 ; Check that asan leaves just one alloca.
 
-declare void @alloca_test_use([10 x i8]*)
+declare void @alloca_test_use(ptr)
 define void @alloca_test() sanitize_address {
 entry:
   %x = alloca [10 x i8], align 1
   %y = alloca [10 x i8], align 1
   %z = alloca [10 x i8], align 1
-  call void @alloca_test_use([10 x i8]* %x)
-  call void @alloca_test_use([10 x i8]* %y)
-  call void @alloca_test_use([10 x i8]* %z)
+  call void @alloca_test_use(ptr %x)
+  call void @alloca_test_use(ptr %y)
+  call void @alloca_test_use(ptr %z)
   ret void
 }
 
@@ -99,9 +98,9 @@ entry:
 ; CHECK-NOT: = alloca
 ; CHECK: ret void
 
-define void @LongDoubleTest(x86_fp80* nocapture %a) nounwind uwtable sanitize_address {
+define void @LongDoubleTest(ptr nocapture %a) nounwind uwtable sanitize_address {
 entry:
-    store x86_fp80 0xK3FFF8000000000000000, x86_fp80* %a, align 16
+    store x86_fp80 0xK3FFF8000000000000000, ptr %a, align 16
     ret void
 }
 
@@ -111,10 +110,10 @@ entry:
 ; CHECK: ret void
 
 
-define void @i40test(i40* %a, i40* %b) nounwind uwtable sanitize_address {
+define void @i40test(ptr %a, ptr %b) nounwind uwtable sanitize_address {
   entry:
-  %t = load i40, i40* %a
-  store i40 %t, i40* %b, align 8
+  %t = load i40, ptr %a
+  store i40 %t, ptr %b, align 8
   ret void
 }
 
@@ -125,9 +124,9 @@ define void @i40test(i40* %a, i40* %b) nounwind uwtable sanitize_address {
 ; CHECK: __asan_report_store_n{{.*}}, i64 5)
 ; CHECK: ret void
 
-define void @i64test_align1(i64* %b) nounwind uwtable sanitize_address {
+define void @i64test_align1(ptr %b) nounwind uwtable sanitize_address {
   entry:
-  store i64 0, i64* %b, align 1
+  store i64 0, ptr %b, align 1
   ret void
 }
 
@@ -136,11 +135,32 @@ define void @i64test_align1(i64* %b) nounwind uwtable sanitize_address {
 ; CHECK: __asan_report_store_n{{.*}}, i64 8)
 ; CHECK: ret void
 
+define void @i128test_align8(ptr %a) nounwind uwtable sanitize_address {
+entry:
+  store i128 0, ptr %a, align 8
+  ret void
+}
+; CHECK-LABEL: define {{[^@]+}}@i128test_align8(
+; CHECK-S3:      load i16, ptr %[[#]], align 1
+; CHECK-S3-NEXT: icmp ne i16 %[[#]], 0
+; CHECK-S5:      load i8, ptr %[[#]], align 1
+; CHECK-S5:      load i8, ptr %[[#]], align 1
 
-define void @i80test(i80* %a, i80* %b) nounwind uwtable sanitize_address {
+define void @i128test_align16(ptr %a) nounwind uwtable sanitize_address {
+entry:
+  store i128 0, ptr %a, align 16
+  ret void
+}
+; CHECK-LABEL: define {{[^@]+}}@i128test_align16(
+; CHECK-S3:      load i16, ptr %[[#]], align 2
+; CHECK-S3-NEXT: icmp ne i16 %[[#]], 0
+; CHECK-S5:      load i8, ptr %[[#]], align 1
+; CHECK-S5-NEXT: icmp ne i8 %[[#]], 0
+
+define void @i80test(ptr %a, ptr %b) nounwind uwtable sanitize_address {
   entry:
-  %t = load i80, i80* %a
-  store i80 %t, i80* %b, align 8
+  %t = load i80, ptr %a
+  store i80 %t, ptr %b, align 8
   ret void
 }
 
@@ -152,66 +172,29 @@ define void @i80test(i80* %a, i80* %b) nounwind uwtable sanitize_address {
 ; CHECK: ret void
 
 ; asan should not instrument functions with available_externally linkage.
-define available_externally i32 @f_available_externally(i32* %a) sanitize_address  {
+define available_externally i32 @f_available_externally(ptr %a) sanitize_address  {
 entry:
-  %tmp1 = load i32, i32* %a
+  %tmp1 = load i32, ptr %a
   ret i32 %tmp1
 }
 ; CHECK-LABEL: @f_available_externally
 ; CHECK-NOT: __asan_report
 ; CHECK: ret i32
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) nounwind
-
-define void @memintr_test(i8* %a, i8* %b) nounwind uwtable sanitize_address {
-  entry:
-  tail call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 100, i1 false)
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* %a, i8* %b, i64 100, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* %b, i64 100, i1 false)
-  ret void
-}
-
-; CHECK-LABEL: memintr_test
-; CHECK: __asan_memset
-; CHECK: __asan_memmove
-; CHECK: __asan_memcpy
-; CHECK: ret void
-
-declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture writeonly, i8, i64, i32) nounwind
-declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
-declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
-
-define void @memintr_element_atomic_test(i8* %a, i8* %b) nounwind uwtable sanitize_address {
-  ; This is a canary test to make sure that these don't get lowered into calls that don't
-  ; have the element-atomic property. Eventually, asan will have to be enhanced to lower
-  ; these properly.
-  ; CHECK-LABEL: memintr_element_atomic_test
-  ; CHECK-NEXT: tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 100, i32 1)
-  ; CHECK-NEXT: tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %a, i8* align 1 %b, i64 100, i32 1)
-  ; CHECK-NEXT: tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %a, i8* align 1 %b, i64 100, i32 1)
-  ; CHECK-NEXT: ret void
-  tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 100, i32 1)
-  tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %a, i8* align 1 %b, i64 100, i32 1)
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %a, i8* align 1 %b, i64 100, i32 1)
-  ret void
-}
-
 
 ; CHECK-LABEL: @test_swifterror
 ; CHECK-NOT: __asan_report_load
 ; CHECK: ret void
-define void @test_swifterror(i8** swifterror) sanitize_address {
-  %swifterror_ptr_value = load i8*, i8** %0
+define void @test_swifterror(ptr swifterror) sanitize_address {
+  %swifterror_ptr_value = load ptr, ptr %0
   ret void
 }
 
 ; CHECK-LABEL: @test_swifterror_2
 ; CHECK-NOT: __asan_report_store
 ; CHECK: ret void
-define void @test_swifterror_2(i8** swifterror) sanitize_address {
-  store i8* null, i8** %0
+define void @test_swifterror_2(ptr swifterror) sanitize_address {
+  store ptr null, ptr %0
   ret void
 }
 
@@ -219,18 +202,20 @@ define void @test_swifterror_2(i8** swifterror) sanitize_address {
 ; CHECK-NOT: __asan_report_store
 ; CHECK: ret void
 define void @test_swifterror_3() sanitize_address {
-  %swifterror_addr = alloca swifterror i8*
-  store i8* null, i8** %swifterror_addr
-  call void @test_swifterror_2(i8** swifterror %swifterror_addr)
+  %swifterror_addr = alloca swifterror ptr
+  store ptr null, ptr %swifterror_addr
+  call void @test_swifterror_2(ptr swifterror %swifterror_addr)
   ret void
 }
 
 ;; ctor/dtor have the nounwind attribute. See uwtable.ll, they additionally have
 ;; the uwtable attribute with the module flag "uwtable".
-; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]] {{(comdat )?}}{
+; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]] comdat {
 ; CHECK: call void @__asan_init()
+;; __asan_register_elf_globals is called even if this module does not contain instrumented global variables.
+; CHECK: call void @__asan_register_elf_globals(i64 ptrtoint (ptr @___asan_globals_registered to i64), i64 ptrtoint (ptr @__start_asan_globals to i64), i64 ptrtoint (ptr @__stop_asan_globals to i64))
 
 ; CHECK: attributes #[[#ATTR]] = { nounwind }
 
 ; PROF
-; CHECK: ![[PROF]] = !{!"branch_weights", i32 1, i32 100000}
+; CHECK: ![[PROF]] = !{!"branch_weights", i32 1, i32 1048575}

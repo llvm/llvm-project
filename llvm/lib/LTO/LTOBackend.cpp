@@ -18,7 +18,6 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
@@ -26,7 +25,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -36,16 +35,17 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include <optional>
 
 using namespace llvm;
 using namespace lto;
@@ -74,23 +74,29 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
 
-LLVM_ATTRIBUTE_NORETURN static void reportOpenError(StringRef Path, Twine Msg) {
+namespace llvm {
+extern cl::opt<bool> NoPGOWarnMismatch;
+}
+
+[[noreturn]] static void reportOpenError(StringRef Path, Twine Msg) {
   errs() << "failed to open " << Path << ": " << Msg << '\n';
   errs().flush();
   exit(1);
 }
 
-Error Config::addSaveTemps(std::string OutputFileName,
-                           bool UseInputModulePath) {
+Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
+                           const DenseSet<StringRef> &SaveTempsArgs) {
   ShouldDiscardValueNames = false;
 
   std::error_code EC;
-  ResolutionFile =
-      std::make_unique<raw_fd_ostream>(OutputFileName + "resolution.txt", EC,
-                                       sys::fs::OpenFlags::OF_TextWithCRLF);
-  if (EC) {
-    ResolutionFile.reset();
-    return errorCodeToError(EC);
+  if (SaveTempsArgs.empty() || SaveTempsArgs.contains("resolution")) {
+    ResolutionFile =
+        std::make_unique<raw_fd_ostream>(OutputFileName + "resolution.txt", EC,
+                                         sys::fs::OpenFlags::OF_TextWithCRLF);
+    if (EC) {
+      ResolutionFile.reset();
+      return errorCodeToError(EC);
+    }
   }
 
   auto setHook = [&](std::string PathSuffix, ModuleHookFn &Hook) {
@@ -124,14 +130,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
     };
   };
 
-  setHook("0.preopt", PreOptModuleHook);
-  setHook("1.promote", PostPromoteModuleHook);
-  setHook("2.internalize", PostInternalizeModuleHook);
-  setHook("3.import", PostImportModuleHook);
-  setHook("4.opt", PostOptModuleHook);
-  setHook("5.precodegen", PreCodeGenModuleHook);
-
-  CombinedIndexHook =
+  auto SaveCombinedIndex =
       [=](const ModuleSummaryIndex &Index,
           const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
         std::string Path = OutputFileName + "index.bc";
@@ -141,7 +140,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
         // directly and exit.
         if (EC)
           reportOpenError(Path, EC.message());
-        WriteIndexToFile(Index, OS);
+        writeIndexToFile(Index, OS);
 
         Path = OutputFileName + "index.dot";
         raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_None);
@@ -150,6 +149,31 @@ Error Config::addSaveTemps(std::string OutputFileName,
         Index.exportToDot(OSDot, GUIDPreservedSymbols);
         return true;
       };
+
+  if (SaveTempsArgs.empty()) {
+    setHook("0.preopt", PreOptModuleHook);
+    setHook("1.promote", PostPromoteModuleHook);
+    setHook("2.internalize", PostInternalizeModuleHook);
+    setHook("3.import", PostImportModuleHook);
+    setHook("4.opt", PostOptModuleHook);
+    setHook("5.precodegen", PreCodeGenModuleHook);
+    CombinedIndexHook = SaveCombinedIndex;
+  } else {
+    if (SaveTempsArgs.contains("preopt"))
+      setHook("0.preopt", PreOptModuleHook);
+    if (SaveTempsArgs.contains("promote"))
+      setHook("1.promote", PostPromoteModuleHook);
+    if (SaveTempsArgs.contains("internalize"))
+      setHook("2.internalize", PostInternalizeModuleHook);
+    if (SaveTempsArgs.contains("import"))
+      setHook("3.import", PostImportModuleHook);
+    if (SaveTempsArgs.contains("opt"))
+      setHook("4.opt", PostOptModuleHook);
+    if (SaveTempsArgs.contains("precodegen"))
+      setHook("5.precodegen", PreCodeGenModuleHook);
+    if (SaveTempsArgs.contains("combinedindex"))
+      CombinedIndexHook = SaveCombinedIndex;
+  }
 
   return Error::success();
 }
@@ -185,14 +209,14 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
-  Optional<Reloc::Model> RelocModel = None;
+  std::optional<Reloc::Model> RelocModel;
   if (Conf.RelocModel)
     RelocModel = *Conf.RelocModel;
   else if (M.getModuleFlag("PIC Level"))
     RelocModel =
         M.getPICLevel() == PICLevel::NotPIC ? Reloc::Static : Reloc::PIC_;
 
-  Optional<CodeModel::Model> CodeModel;
+  std::optional<CodeModel::Model> CodeModel;
   if (Conf.CodeModel)
     CodeModel = *Conf.CodeModel;
   else
@@ -201,7 +225,12 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
       CodeModel, Conf.CGOptLevel));
+
   assert(TM && "Failed to create target machine");
+
+  if (std::optional<uint64_t> LargeDataThreshold = M.getLargeDataThreshold())
+    TM->setLargeDataThreshold(*LargeDataThreshold);
+
   return TM;
 }
 
@@ -209,22 +238,30 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
-  Optional<PGOOptions> PGOOpt;
+  auto FS = vfs::getRealFileSystem();
+  std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
-                        PGOOptions::SampleUse, PGOOptions::NoCSAction, true);
+                        /*MemoryProfile=*/"", FS, PGOOptions::SampleUse,
+                        PGOOptions::NoCSAction,
+                        PGOOptions::ColdFuncOpt::Default, true);
   else if (Conf.RunCSIRInstr) {
     PGOOpt = PGOOptions("", Conf.CSIRProfile, Conf.ProfileRemapping,
-                        PGOOptions::IRUse, PGOOptions::CSIRInstr,
+                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
+                        PGOOptions::CSIRInstr, PGOOptions::ColdFuncOpt::Default,
                         Conf.AddFSDiscriminator);
   } else if (!Conf.CSIRProfile.empty()) {
     PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
-                        PGOOptions::IRUse, PGOOptions::CSIRUse,
+                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
+                        PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default,
                         Conf.AddFSDiscriminator);
+    NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
   } else if (Conf.AddFSDiscriminator) {
-    PGOOpt = PGOOptions("", "", "", PGOOptions::NoAction,
-                        PGOOptions::NoCSAction, true);
+    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
+                        PGOOptions::NoAction, PGOOptions::NoCSAction,
+                        PGOOptions::ColdFuncOpt::Default, true);
   }
+  TM->setPGOOption(PGOOpt);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -232,8 +269,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   ModuleAnalysisManager MAM;
 
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(Conf.DebugPassManager);
-  SI.registerCallbacks(PIC, &FAM);
+  StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager,
+                              Conf.VerifyEach);
+  SI.registerCallbacks(PIC, &MAM);
   PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
 
   RegisterPassPlugins(Conf.PassPlugins, PB);
@@ -244,18 +282,16 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
-  AAManager AA;
   // Parse a custom AA pipeline if asked to.
   if (!Conf.AAPipeline.empty()) {
+    AAManager AA;
     if (auto Err = PB.parseAAPipeline(AA, Conf.AAPipeline)) {
-      report_fatal_error("unable to parse AA pipeline description '" +
+      report_fatal_error(Twine("unable to parse AA pipeline description '") +
                          Conf.AAPipeline + "': " + toString(std::move(Err)));
     }
-  } else {
-    AA = PB.buildDefaultAAPipeline();
+    // Register the AA manager first so that our version is the one used.
+    FAM.registerPass([&] { return std::move(AA); });
   }
-  // Register the AA manager first so that our version is the one used.
-  FAM.registerPass([&] { return std::move(AA); });
 
   // Register all the basic analyses with the managers.
   PB.registerModuleAnalyses(MAM);
@@ -269,29 +305,29 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
-  PassBuilder::OptimizationLevel OL;
+  OptimizationLevel OL;
 
   switch (OptLevel) {
   default:
     llvm_unreachable("Invalid optimization level");
   case 0:
-    OL = PassBuilder::OptimizationLevel::O0;
+    OL = OptimizationLevel::O0;
     break;
   case 1:
-    OL = PassBuilder::OptimizationLevel::O1;
+    OL = OptimizationLevel::O1;
     break;
   case 2:
-    OL = PassBuilder::OptimizationLevel::O2;
+    OL = OptimizationLevel::O2;
     break;
   case 3:
-    OL = PassBuilder::OptimizationLevel::O3;
+    OL = OptimizationLevel::O3;
     break;
   }
 
   // Parse a custom pipeline if asked to.
   if (!Conf.OptPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, Conf.OptPipeline)) {
-      report_fatal_error("unable to parse pass pipeline description '" +
+      report_fatal_error(Twine("unable to parse pass pipeline description '") +
                          Conf.OptPipeline + "': " + toString(std::move(Err)));
     }
   } else if (IsThinLTO) {
@@ -304,39 +340,6 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     MPM.addPass(VerifierPass());
 
   MPM.run(Mod, MAM);
-}
-
-static void runOldPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
-                           bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
-                           const ModuleSummaryIndex *ImportSummary) {
-  legacy::PassManager passes;
-  passes.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
-
-  PassManagerBuilder PMB;
-  PMB.LibraryInfo = new TargetLibraryInfoImpl(Triple(TM->getTargetTriple()));
-  if (Conf.Freestanding)
-    PMB.LibraryInfo->disableAllFunctions();
-  PMB.Inliner = createFunctionInliningPass();
-  PMB.ExportSummary = ExportSummary;
-  PMB.ImportSummary = ImportSummary;
-  // Unconditionally verify input since it is not verified before this
-  // point and has unknown origin.
-  PMB.VerifyInput = true;
-  PMB.VerifyOutput = !Conf.DisableVerify;
-  PMB.LoopVectorize = true;
-  PMB.SLPVectorize = true;
-  PMB.OptLevel = Conf.OptLevel;
-  PMB.PGOSampleUse = Conf.SampleProfile;
-  PMB.EnablePGOCSInstrGen = Conf.RunCSIRInstr;
-  if (!Conf.RunCSIRInstr && !Conf.CSIRProfile.empty()) {
-    PMB.EnablePGOCSInstrUse = true;
-    PMB.PGOInstrUse = Conf.CSIRProfile;
-  }
-  if (IsThinLTO)
-    PMB.populateThinLTOPassManager(passes);
-  else
-    PMB.populateLTOPassManager(passes);
-  passes.run(Mod);
 }
 
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
@@ -356,17 +359,13 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
       LLVM_DEBUG(
           dbgs() << "Post-(Thin)LTO merge bitcode embedding was requested, but "
                     "command line arguments are not available");
-    llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
+    llvm::embedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
                                /*EmbedBitcode*/ true, /*EmbedCmdline*/ true,
                                /*Cmdline*/ CmdArgs);
   }
   // FIXME: Plumb the combined index into the new pass manager.
-  if (Conf.UseNewPM || !Conf.OptPipeline.empty()) {
-    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                   ImportSummary);
-  } else {
-    runOldPMPasses(Conf, Mod, TM, IsThinLTO, ExportSummary, ImportSummary);
-  }
+  runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
+                 ImportSummary);
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
@@ -377,7 +376,7 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     return;
 
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedOptimized)
-    llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
+    llvm::embedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
                                /*EmbedBitcode*/ true,
                                /*EmbedCmdline*/ false,
                                /*CmdArgs*/ std::vector<uint8_t>());
@@ -387,8 +386,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   if (!Conf.DwoDir.empty()) {
     std::error_code EC;
     if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
-      report_fatal_error("Failed to create directory " + Conf.DwoDir + ": " +
-                         EC.message());
+      report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
+                         ": " + EC.message());
 
     DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
@@ -400,11 +399,20 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     std::error_code EC;
     DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
     if (EC)
-      report_fatal_error("Failed to open " + DwoFile + ": " + EC.message());
+      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
+                         EC.message());
   }
 
-  auto Stream = AddStream(Task);
+  Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
+      AddStream(Task, Mod.getModuleIdentifier());
+  if (Error Err = StreamOrErr.takeError())
+    report_fatal_error(std::move(Err));
+  std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
+  TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
+
   legacy::PassManager CodeGenPasses;
+  TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
+  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   CodeGenPasses.add(
       createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
   if (Conf.PreCodeGenPassesHook)
@@ -423,13 +431,12 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
                          AddStreamFn AddStream,
                          unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                          const ModuleSummaryIndex &CombinedIndex) {
-  ThreadPool CodegenThreadPool(
+  DefaultThreadPool CodegenThreadPool(
       heavyweight_hardware_concurrency(ParallelCodeGenParallelismLevel));
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();
 
-  SplitModule(
-      Mod, ParallelCodeGenParallelismLevel,
+  const auto HandleModulePartition =
       [&](std::unique_ptr<Module> MPart) {
         // We want to clone the module in a new context to multi-thread the
         // codegen. We do it by serializing partition modules to bitcode
@@ -461,8 +468,14 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
             // Pass BC using std::move to ensure that it get moved rather than
             // copied into the thread's context.
             std::move(BC), ThreadCount++);
-      },
-      false);
+      };
+
+  // Try target-specific module splitting first, then fallback to the default.
+  if (!TM->splitModule(Mod, ParallelCodeGenParallelismLevel,
+                       HandleModulePartition)) {
+    SplitModule(Mod, ParallelCodeGenParallelismLevel, HandleModulePartition,
+                false);
+  }
 
   // Because the inner lambda (which runs in a worker thread) captures our local
   // variables, we need to wait for the worker threads to terminate before we
@@ -504,6 +517,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
   std::unique_ptr<TargetMachine> TM = createTargetMachine(C, *TOrErr, Mod);
 
+  LLVM_DEBUG(dbgs() << "Running regular LTO\n");
   if (!C.CodeGenOnly) {
     if (!opt(C, TM.get(), 0, Mod, /*IsThinLTO=*/false,
              /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
@@ -566,6 +580,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // the module, if applicable.
   Mod.setPartialSampleProfileRatio(CombinedIndex);
 
+  LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   if (Conf.CodeGenOnly) {
     codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
@@ -599,7 +614,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   dropDeadSymbols(Mod, DefinedGlobals, CombinedIndex);
 
-  thinLTOResolvePrevailingInModule(Mod, DefinedGlobals);
+  thinLTOFinalizeInModule(Mod, DefinedGlobals, /*PropagateAttrs=*/true);
 
   if (Conf.PostPromoteModuleHook && !Conf.PostPromoteModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
@@ -649,6 +664,10 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                             ClearDSOLocalOnDeclarations);
   if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
     return Err;
+
+  // Do this after any importing so that imported code is updated.
+  updateMemProfAttributes(Mod, CombinedIndex);
+  updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));

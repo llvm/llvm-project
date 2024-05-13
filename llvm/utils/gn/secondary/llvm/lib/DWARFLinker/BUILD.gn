@@ -1,17 +1,14 @@
 static_library("DWARFLinker") {
-  output_name = "LLVMDWARFLinker"
+  output_name = "LLVMDWARFLinkerBase"
   deps = [
+    "//llvm/lib/BinaryFormat",
     "//llvm/lib/CodeGen",
-    "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/DebugInfo/DWARF",
-    "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
   ]
   sources = [
-    "DWARFLinker.cpp",
-    "DWARFLinkerCompileUnit.cpp",
-    "DWARFLinkerDeclContext.cpp",
-    "DWARFStreamer.cpp",
+    "DWARFLinkerBase.cpp",
+    "Utils.cpp",
   ]
 }

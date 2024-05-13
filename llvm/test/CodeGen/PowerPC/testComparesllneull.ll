@@ -118,24 +118,24 @@ define dso_local void @test_llneull_store(i64 %a, i64 %b) {
 ; CHECK-BE-LABEL: test_llneull_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    addic r4, r3, -1
 ; CHECK-BE-NEXT:    subfe r3, r4, r3
-; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_llneull_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    addic r4, r3, -1
 ; CHECK-LE-NEXT:    subfe r3, r4, r3
-; CHECK-LE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp ne i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -151,24 +151,24 @@ define dso_local void @test_llneull_sext_store(i64 %a, i64 %b) {
 ; CHECK-BE-LABEL: test_llneull_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    subfic r3, r3, 0
 ; CHECK-BE-NEXT:    subfe r3, r3, r3
-; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_llneull_sext_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    subfic r3, r3, 0
 ; CHECK-LE-NEXT:    subfe r3, r3, r3
-; CHECK-LE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp ne i64 %a, %b
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -182,23 +182,23 @@ define dso_local void @test_llneull_z_store(i64 %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_llneull_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addic r5, r3, -1
+; CHECK-BE-NEXT:    addic r4, r3, -1
+; CHECK-BE-NEXT:    subfe r3, r4, r3
 ; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-BE-NEXT:    subfe r3, r5, r3
 ; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_llneull_z_store:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    addic r5, r3, -1
+; CHECK-LE-NEXT:    addic r4, r3, -1
+; CHECK-LE-NEXT:    subfe r3, r4, r3
 ; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-LE-NEXT:    subfe r3, r5, r3
 ; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp ne i64 %a, 0
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -228,6 +228,6 @@ define dso_local void @test_llneull_sext_z_store(i64 %a) {
 entry:
   %cmp = icmp ne i64 %a, 0
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }

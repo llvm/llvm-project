@@ -16,7 +16,7 @@ void alignment() {
   __private char2 data_generic[100];
   __private char8 data_private[100];
 
-  // CHECK: %{{.*}} = load <4 x float>, <4 x float> addrspace(4)* %{{.*}}, align 2
-  // CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 8
+  // CHECK: %{{.*}} = load <4 x float>, ptr addrspace(4) %{{.*}}, align 2
+  // CHECK: store <4 x float> %{{.*}}, ptr %{{.*}}, align 8
   ((private float4 *)data_private)[1] = ((float4 *)data_generic)[2];
 }

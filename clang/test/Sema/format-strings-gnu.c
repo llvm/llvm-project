@@ -9,7 +9,7 @@
 int printf(const char *restrict, ...);
 int scanf(const char * restrict, ...) ;
 
-void test() {
+void test(void) {
   long notLongEnough = 1;
   long long quiteLong = 2;
 
@@ -29,7 +29,7 @@ void test() {
 #endif
 }
 
-void testAlwaysInvalid() {
+void testAlwaysInvalid(void) {
   // We should not suggest 'll' here!
   printf("%Lc", 'a'); // expected-warning {{length modifier 'L' results in undefined behavior or no effect with 'c' conversion specifier}}
   printf("%Ls", "a"); // expected-warning {{length modifier 'L' results in undefined behavior or no effect with 's' conversion specifier}}

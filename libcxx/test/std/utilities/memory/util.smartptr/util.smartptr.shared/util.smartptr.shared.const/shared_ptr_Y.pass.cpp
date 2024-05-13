@@ -74,6 +74,23 @@ public:
     }
 };
 
+// https://llvm.org/PR60258
+// Invalid constructor SFINAE for std::shared_ptr's array ctors
+static_assert(!std::is_constructible<std::shared_ptr<int>,     const std::shared_ptr<long>&>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<B>,       const std::shared_ptr<A>&>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<const A>, const std::shared_ptr<A>&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<A>,       const std::shared_ptr<const A>&>::value, "");
+
+#if TEST_STD_VER >= 17
+static_assert(!std::is_constructible<std::shared_ptr<int>,     const std::shared_ptr<int[]>&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int>,     const std::shared_ptr<int[5]>&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,   const std::shared_ptr<int>&>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[]>,   const std::shared_ptr<int[5]>&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  const std::shared_ptr<int>&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  const std::shared_ptr<int[]>&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[7]>,  const std::shared_ptr<int[5]>&>::value, "");
+#endif
+
 int main(int, char**)
 {
     static_assert(( std::is_convertible<std::shared_ptr<A>, std::shared_ptr<B> >::value), "");
@@ -133,4 +150,30 @@ int main(int, char**)
                                                              private_delete_arr_op*>::value, "");
     }
 #endif
+
+#if TEST_STD_VER > 14
+    {
+        std::shared_ptr<A[]> p1(new A[8]);
+        assert(p1.use_count() == 1);
+        assert(A::count == 8);
+        {
+            std::shared_ptr<const A[]> p2(p1);
+            assert(A::count == 8);
+            assert(p2.use_count() == 2);
+            assert(p1.use_count() == 2);
+            assert(p1.get() == p2.get());
+        }
+        assert(p1.use_count() == 1);
+        assert(A::count == 8);
+    }
+    assert(A::count == 0);
+#endif
+
+    {
+        std::shared_ptr<A const> pA(new A);
+        std::shared_ptr<B const> pB(pA);
+        assert(pB.get() == pA.get());
+    }
+
+    return 0;
 }

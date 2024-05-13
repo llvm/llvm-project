@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; Check that PHI nodes only create PHI access and nothing else (e.g. unnecessary
 ; SCALAR accesses). In this case, for a PHI in the exit node, hence there is no
@@ -25,7 +25,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define float @foo(float %sum, float* %A) {
+define float @foo(float %sum, ptr %A) {
 entry:
   br label %header
 

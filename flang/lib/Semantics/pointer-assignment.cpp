@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "pointer-assignment.h"
+#include "definable.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/restorer.h"
+#include "flang/Common/template.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
@@ -39,14 +41,15 @@ using parser::MessageFormattedText;
 
 class PointerAssignmentChecker {
 public:
-  PointerAssignmentChecker(evaluate::FoldingContext &context,
+  PointerAssignmentChecker(SemanticsContext &context, const Scope &scope,
       parser::CharBlock source, const std::string &description)
-      : context_{context}, source_{source}, description_{description} {}
-  PointerAssignmentChecker(evaluate::FoldingContext &context, const Symbol &lhs)
-      : context_{context}, source_{lhs.name()},
-        description_{"pointer '"s + lhs.name().ToString() + '\''}, lhs_{&lhs},
-        procedure_{Procedure::Characterize(lhs, context)} {
-    set_lhsType(TypeAndShape::Characterize(lhs, context));
+      : context_{context}, scope_{scope}, source_{source}, description_{
+                                                               description} {}
+  PointerAssignmentChecker(
+      SemanticsContext &context, const Scope &scope, const Symbol &lhs)
+      : context_{context}, scope_{scope}, source_{lhs.name()},
+        description_{"pointer '"s + lhs.name().ToString() + '\''}, lhs_{&lhs} {
+    set_lhsType(TypeAndShape::Characterize(lhs, foldingContext_));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
   }
@@ -54,9 +57,13 @@ public:
   PointerAssignmentChecker &set_isContiguous(bool);
   PointerAssignmentChecker &set_isVolatile(bool);
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
+  PointerAssignmentChecker &set_isAssumedRank(bool);
+  PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
+  bool CheckLeftHandSide(const SomeExpr &);
   bool Check(const SomeExpr &);
 
 private:
+  bool CharacterizeProcedure();
   template <typename T> bool Check(const T &);
   template <typename T> bool Check(const evaluate::Expr<T> &);
   template <typename T> bool Check(const evaluate::FunctionRef<T> &);
@@ -65,20 +72,26 @@ private:
   bool Check(const evaluate::ProcedureDesignator &);
   bool Check(const evaluate::ProcedureRef &);
   // Target is a procedure
-  bool Check(
-      parser::CharBlock rhsName, bool isCall, const Procedure * = nullptr);
+  bool Check(parser::CharBlock rhsName, bool isCall,
+      const Procedure * = nullptr,
+      const evaluate::SpecificIntrinsic *specific = nullptr);
   bool LhsOkForUnlimitedPoly() const;
   template <typename... A> parser::Message *Say(A &&...);
 
-  evaluate::FoldingContext &context_;
+  SemanticsContext &context_;
+  evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
+  const Scope &scope_;
   const parser::CharBlock source_;
   const std::string description_;
   const Symbol *lhs_{nullptr};
   std::optional<TypeAndShape> lhsType_;
   std::optional<Procedure> procedure_;
+  bool characterizedProcedure_{false};
   bool isContiguous_{false};
   bool isVolatile_{false};
   bool isBoundsRemapping_{false};
+  bool isAssumedRank_{false};
+  const Symbol *pointerComponentLHS_{nullptr};
 };
 
 PointerAssignmentChecker &PointerAssignmentChecker::set_lhsType(
@@ -105,6 +118,41 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isBoundsRemapping(
   return *this;
 }
 
+PointerAssignmentChecker &PointerAssignmentChecker::set_isAssumedRank(
+    bool isAssumedRank) {
+  isAssumedRank_ = isAssumedRank;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_pointerComponentLHS(
+    const Symbol *symbol) {
+  pointerComponentLHS_ = symbol;
+  return *this;
+}
+
+bool PointerAssignmentChecker::CharacterizeProcedure() {
+  if (!characterizedProcedure_) {
+    characterizedProcedure_ = true;
+    if (lhs_ && IsProcedure(*lhs_)) {
+      procedure_ = Procedure::Characterize(*lhs_, foldingContext_);
+    }
+  }
+  return procedure_.has_value();
+}
+
+bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
+  if (auto whyNot{WhyNotDefinable(foldingContext_.messages().at(), scope_,
+          DefinabilityFlags{DefinabilityFlag::PointerDefinition}, lhs)}) {
+    if (auto *msg{Say(
+            "The left-hand side of a pointer assignment is not definable"_err_en_US)}) {
+      msg->Attach(std::move(*whyNot));
+    }
+    return false;
+  } else {
+    return true;
+  }
+}
+
 template <typename T> bool PointerAssignmentChecker::Check(const T &) {
   // Catch-all case for really bad target expression
   Say("Target associated with %s must be a designator or a call to a"
@@ -115,19 +163,72 @@ template <typename T> bool PointerAssignmentChecker::Check(const T &) {
 
 template <typename T>
 bool PointerAssignmentChecker::Check(const evaluate::Expr<T> &x) {
-  return std::visit([&](const auto &x) { return Check(x); }, x.u);
+  return common::visit([&](const auto &x) { return Check(x); }, x.u);
 }
 
 bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
   if (HasVectorSubscript(rhs)) { // C1025
     Say("An array section with a vector subscript may not be a pointer target"_err_en_US);
     return false;
-  } else if (ExtractCoarrayRef(rhs)) { // C1026
+  }
+  if (ExtractCoarrayRef(rhs)) { // C1026
     Say("A coindexed object may not be a pointer target"_err_en_US);
     return false;
-  } else {
-    return std::visit([&](const auto &x) { return Check(x); }, rhs.u);
   }
+  if (!common::visit([&](const auto &x) { return Check(x); }, rhs.u)) {
+    return false;
+  }
+  if (IsNullPointer(rhs)) {
+    return true;
+  }
+  if (lhs_ && IsProcedure(*lhs_)) {
+    return true;
+  }
+  if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
+    if (pointerComponentLHS_) { // C1594(4) is a hard error
+      if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
+        if (auto *msg{Say(
+                "Externally visible object '%s' may not be associated with pointer component '%s' in a pure procedure"_err_en_US,
+                object->name(), pointerComponentLHS_->name())}) {
+          msg->Attach(object->name(), "Object declaration"_en_US)
+              .Attach(
+                  pointerComponentLHS_->name(), "Pointer declaration"_en_US);
+        }
+        return false;
+      }
+    } else if (const Symbol * base{GetFirstSymbol(rhs)}) {
+      if (const char *why{WhyBaseObjectIsSuspicious(
+              base->GetUltimate(), scope_)}) { // C1594(3)
+        evaluate::SayWithDeclaration(foldingContext_.messages(), *base,
+            "A pure subprogram may not use '%s' as the target of pointer assignment because it is %s"_err_en_US,
+            base->name(), why);
+        return false;
+      }
+    }
+  }
+  if (isContiguous_) {
+    if (auto contiguous{evaluate::IsContiguous(rhs, foldingContext_)}) {
+      if (!*contiguous) {
+        Say("CONTIGUOUS pointer may not be associated with a discontiguous target"_err_en_US);
+        return false;
+      }
+    } else if (context_.ShouldWarn(
+                   common::UsageWarning::PointerToPossibleNoncontiguous)) {
+      Say("Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
+    }
+  }
+  // Warn about undefinable data targets
+  if (context_.ShouldWarn(common::UsageWarning::PointerToUndefinable)) {
+    if (auto because{WhyNotDefinable(
+            foldingContext_.messages().at(), scope_, {}, rhs)}) {
+      if (auto *msg{
+              Say("Pointer target is not a definable variable"_warn_en_US)}) {
+        msg->Attach(std::move(*because));
+      }
+      return false;
+    }
+  }
+  return true;
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::NullPointer &) {
@@ -143,7 +244,8 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (const auto *intrinsic{f.proc().GetSpecificIntrinsic()}) {
     funcName = intrinsic->name;
   }
-  auto proc{Procedure::Characterize(f.proc(), context_)};
+  auto proc{
+      Procedure::Characterize(f.proc(), foldingContext_, /*emitError=*/true)};
   if (!proc) {
     return false;
   }
@@ -152,7 +254,7 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   if (!funcResult) {
     msg = "%s is associated with the non-existent result of reference to"
           " procedure"_err_en_US;
-  } else if (procedure_) {
+  } else if (CharacterizeProcedure()) {
     // Shouldn't be here in this function unless lhs is an object pointer.
     msg = "Procedure %s is associated with the result of a reference to"
           " function '%s' that does not return a procedure pointer"_err_en_US;
@@ -164,16 +266,19 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
           " that is a not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
-    msg = "CONTIGUOUS %s is associated with the result of reference to"
-          " function '%s' that is not contiguous"_err_en_US;
+    if (context_.ShouldWarn(
+            common::UsageWarning::PointerToPossibleNoncontiguous)) {
+      msg =
+          "CONTIGUOUS %s is associated with the result of reference to function '%s' that is not known to be contiguous"_warn_en_US;
+    }
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
-    if (!lhsType_->IsCompatibleWith(context_.messages(), *frTypeAndShape,
-            "pointer", "function result", false /*elemental*/,
-            true /*left: deferred shape*/, true /*right: deferred shape*/)) {
-      msg = "%s is associated with the result of a reference to function '%s'"
-            " whose pointer result has an incompatible type or shape"_err_en_US;
+    if (!lhsType_->IsCompatibleWith(foldingContext_.messages(), *frTypeAndShape,
+            "pointer", "function result",
+            /*omitShapeConformanceCheck=*/isBoundsRemapping_ || isAssumedRank_,
+            evaluate::CheckConformanceFlags::BothDeferredShape)) {
+      return false; // IsCompatibleWith() emitted message
     }
   }
   if (msg) {
@@ -190,18 +295,18 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
   const Symbol *base{d.GetBaseObject().symbol()};
   if (!last || !base) {
     // P => "character literal"(1:3)
-    context_.messages().Say("Pointer target is not a named entity"_err_en_US);
+    Say("Pointer target is not a named entity"_err_en_US);
     return false;
   }
   std::optional<std::variant<MessageFixedText, MessageFormattedText>> msg;
-  if (procedure_) {
+  if (CharacterizeProcedure()) {
     // Shouldn't be here in this function unless lhs is an object pointer.
     msg = "In assignment to procedure %s, the target is not a procedure or"
           " procedure pointer"_err_en_US;
   } else if (!evaluate::GetLastTarget(GetSymbolVector(d))) { // C1025
     msg = "In assignment to object %s, the target '%s' is not an object with"
           " POINTER or TARGET attributes"_err_en_US;
-  } else if (auto rhsType{TypeAndShape::Characterize(d, context_)}) {
+  } else if (auto rhsType{TypeAndShape::Characterize(d, foldingContext_)}) {
     if (!lhsType_) {
       msg = "%s associated with object '%s' with incompatible type or"
             " shape"_err_en_US;
@@ -221,12 +326,13 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
               " derived type when target is unlimited polymorphic"_err_en_US;
       }
     } else {
-      if (!lhsType_->type().IsTkCompatibleWith(rhsType->type())) {
+      if (!lhsType_->type().IsTkLenCompatibleWith(rhsType->type())) {
         msg = MessageFormattedText{
             "Target type %s is not compatible with pointer type %s"_err_en_US,
             rhsType->type().AsFortran(), lhsType_->type().AsFortran()};
 
-      } else if (!isBoundsRemapping_) {
+      } else if (!isBoundsRemapping_ &&
+          !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
         int lhsRank{evaluate::GetRank(lhsType_->shape())};
         int rhsRank{evaluate::GetRank(rhsType->shape())};
         if (lhsRank != rhsRank) {
@@ -253,36 +359,59 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
 }
 
 // Common handling for procedure pointer right-hand sides
-bool PointerAssignmentChecker::Check(
-    parser::CharBlock rhsName, bool isCall, const Procedure *rhsProcedure) {
-  if (std::optional<MessageFixedText> msg{
-          evaluate::CheckProcCompatibility(isCall, procedure_, rhsProcedure)}) {
-    Say(std::move(*msg), description_, rhsName);
+bool PointerAssignmentChecker::Check(parser::CharBlock rhsName, bool isCall,
+    const Procedure *rhsProcedure,
+    const evaluate::SpecificIntrinsic *specific) {
+  std::string whyNot;
+  std::optional<std::string> warning;
+  CharacterizeProcedure();
+  if (std::optional<MessageFixedText> msg{evaluate::CheckProcCompatibility(
+          isCall, procedure_, rhsProcedure, specific, whyNot, warning,
+          /*ignoreImplicitVsExplicit=*/isCall)}) {
+    Say(std::move(*msg), description_, rhsName, whyNot);
     return false;
+  }
+  if (context_.ShouldWarn(common::UsageWarning::ProcDummyArgShapes) &&
+      warning) {
+    Say("%s and %s may not be completely compatible procedures: %s"_warn_en_US,
+        description_, rhsName, std::move(*warning));
   }
   return true;
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
-  if (auto chars{Procedure::Characterize(d, context_)}) {
-    return Check(d.GetName(), false, &*chars);
+  const Symbol *symbol{d.GetSymbol()};
+  if (symbol) {
+    if (const auto *subp{
+            symbol->GetUltimate().detailsIf<SubprogramDetails>()}) {
+      if (subp->stmtFunction()) {
+        evaluate::SayWithDeclaration(foldingContext_.messages(), *symbol,
+            "Statement function '%s' may not be the target of a pointer assignment"_err_en_US,
+            symbol->name());
+        return false;
+      }
+    } else if (symbol->has<ProcBindingDetails>() &&
+        context_.ShouldWarn(common::LanguageFeature::BindingAsProcedure)) {
+      evaluate::SayWithDeclaration(foldingContext_.messages(), *symbol,
+          "Procedure binding '%s' used as target of a pointer assignment"_port_en_US,
+          symbol->name());
+    }
+  }
+  if (auto chars{
+          Procedure::Characterize(d, foldingContext_, /*emitError=*/true)}) {
+    // Disregard the elemental attribute of RHS intrinsics.
+    if (symbol && symbol->GetUltimate().attrs().test(Attr::INTRINSIC)) {
+      chars->attrs.reset(Procedure::Attr::Elemental);
+    }
+    return Check(d.GetName(), false, &*chars, d.GetSpecificIntrinsic());
   } else {
     return Check(d.GetName(), false);
   }
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureRef &ref) {
-  const Procedure *procedure{nullptr};
-  auto chars{Procedure::Characterize(ref, context_)};
-  if (chars) {
-    procedure = &*chars;
-    if (chars->functionResult) {
-      if (const auto *proc{chars->functionResult->IsProcedurePointer()}) {
-        procedure = proc;
-      }
-    }
-  }
-  return Check(ref.proc().GetName(), true, procedure);
+  auto chars{Procedure::Characterize(ref, foldingContext_)};
+  return Check(ref.proc().GetName(), true, common::GetPtrFromOptional(chars));
 }
 
 // The target can be unlimited polymorphic if the pointer is, or if it is
@@ -300,7 +429,7 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
 
 template <typename... A>
 parser::Message *PointerAssignmentChecker::Say(A &&...x) {
-  auto *msg{context_.messages().Say(std::forward<A>(x)...)};
+  auto *msg{foldingContext_.messages().Say(std::forward<A>(x)...)};
   if (msg) {
     if (lhs_) {
       return evaluate::AttachDeclaration(msg, *lhs_);
@@ -320,7 +449,7 @@ static bool CheckPointerBounds(
   const SomeExpr &lhs{assignment.lhs};
   const SomeExpr &rhs{assignment.rhs};
   bool isBoundsRemapping{false};
-  std::size_t numBounds{std::visit(
+  std::size_t numBounds{common::visit(
       common::visitors{
           [&](const evaluate::Assignment::BoundsSpec &bounds) {
             return bounds.size();
@@ -370,53 +499,53 @@ static bool CheckPointerBounds(
   return isBoundsRemapping;
 }
 
-bool CheckPointerAssignment(
-    evaluate::FoldingContext &context, const evaluate::Assignment &assignment) {
-  return CheckPointerAssignment(context, assignment.lhs, assignment.rhs,
-      CheckPointerBounds(context, assignment));
+bool CheckPointerAssignment(SemanticsContext &context,
+    const evaluate::Assignment &assignment, const Scope &scope) {
+  return CheckPointerAssignment(context, assignment.lhs, assignment.rhs, scope,
+      CheckPointerBounds(context.foldingContext(), assignment),
+      /*isAssumedRank=*/false);
 }
 
-bool CheckPointerAssignment(evaluate::FoldingContext &context,
-    const SomeExpr &lhs, const SomeExpr &rhs, bool isBoundsRemapping) {
+bool CheckPointerAssignment(SemanticsContext &context, const SomeExpr &lhs,
+    const SomeExpr &rhs, const Scope &scope, bool isBoundsRemapping,
+    bool isAssumedRank) {
   const Symbol *pointer{GetLastSymbol(lhs)};
   if (!pointer) {
     return false; // error was reported
   }
-  if (!IsPointer(*pointer)) {
-    evaluate::SayWithDeclaration(context.messages(), *pointer,
-        "'%s' is not a pointer"_err_en_US, pointer->name());
-    return false;
-  }
-  if (pointer->has<ProcEntityDetails>() && evaluate::ExtractCoarrayRef(lhs)) {
-    context.messages().Say( // C1027
-        "Procedure pointer may not be a coindexed object"_err_en_US);
-    return false;
-  }
-  return PointerAssignmentChecker{context, *pointer}
-      .set_isBoundsRemapping(isBoundsRemapping)
+  PointerAssignmentChecker checker{context, scope, *pointer};
+  checker.set_isBoundsRemapping(isBoundsRemapping);
+  checker.set_isAssumedRank(isAssumedRank);
+  bool lhsOk{checker.CheckLeftHandSide(lhs)};
+  bool rhsOk{checker.Check(rhs)};
+  return lhsOk && rhsOk; // don't short-circuit
+}
+
+bool CheckStructConstructorPointerComponent(SemanticsContext &context,
+    const Symbol &lhs, const SomeExpr &rhs, const Scope &scope) {
+  return PointerAssignmentChecker{context, scope, lhs}
+      .set_pointerComponentLHS(&lhs)
       .Check(rhs);
 }
 
-bool CheckPointerAssignment(
-    evaluate::FoldingContext &context, const Symbol &lhs, const SomeExpr &rhs) {
-  CHECK(IsPointer(lhs));
-  return PointerAssignmentChecker{context, lhs}.Check(rhs);
-}
-
-bool CheckPointerAssignment(evaluate::FoldingContext &context,
-    parser::CharBlock source, const std::string &description,
-    const DummyDataObject &lhs, const SomeExpr &rhs) {
-  return PointerAssignmentChecker{context, source, description}
+bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
+    const std::string &description, const DummyDataObject &lhs,
+    const SomeExpr &rhs, const Scope &scope, bool isAssumedRank) {
+  return PointerAssignmentChecker{context, scope, source, description}
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
+      .set_isAssumedRank(isAssumedRank)
       .Check(rhs);
 }
 
-bool CheckInitialTarget(evaluate::FoldingContext &context,
-    const SomeExpr &pointer, const SomeExpr &init) {
-  return evaluate::IsInitialDataTarget(init, &context.messages()) &&
-      CheckPointerAssignment(context, pointer, init);
+bool CheckInitialDataPointerTarget(SemanticsContext &context,
+    const SomeExpr &pointer, const SomeExpr &init, const Scope &scope) {
+  return evaluate::IsInitialDataTarget(
+             init, &context.foldingContext().messages()) &&
+      CheckPointerAssignment(context, pointer, init, scope,
+          /*isBoundsRemapping=*/false,
+          /*isAssumedRank=*/false);
 }
 
 } // namespace Fortran::semantics

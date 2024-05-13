@@ -1,7 +1,8 @@
 ; Checks that llvm.dbg.declare -> llvm.dbg.value conversion utility
 ; (here exposed through the SROA) pass refers to [s|z]exts of values (as
 ; opposed to the operand of a [s|z]ext).
-; RUN: opt -S -sroa %s | FileCheck %s
+; RUN: opt -S -passes='sroa' %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S -passes='sroa' %s | FileCheck %s
 
 ; Built from:
 ; struct foo { bool b; long i; };
@@ -32,18 +33,17 @@ entry:
   %g = alloca %struct.foo, align 8
   %b.addr = alloca i8, align 1
   %frag.addr = alloca i8, align 1
-  %0 = bitcast %struct.foo* %g to { i8, i64 }*
-  %1 = getelementptr inbounds { i8, i64 }, { i8, i64 }* %0, i32 0, i32 0
-  store i8 %g.coerce0, i8* %1, align 8
-  %2 = getelementptr inbounds { i8, i64 }, { i8, i64 }* %0, i32 0, i32 1
-  store i64 %g.coerce1, i64* %2, align 8
+  %0 = getelementptr inbounds { i8, i64 }, ptr %g, i32 0, i32 0
+  store i8 %g.coerce0, ptr %0, align 8
+  %1 = getelementptr inbounds { i8, i64 }, ptr %g, i32 0, i32 1
+  store i64 %g.coerce1, ptr %1, align 8
   %frombool = zext i1 %b to i8
-  store i8 %frombool, i8* %b.addr, align 1
-  call void @llvm.dbg.declare(metadata i8* %b.addr, metadata !15, metadata !16), !dbg !17
+  store i8 %frombool, ptr %b.addr, align 1
+  call void @llvm.dbg.declare(metadata ptr %b.addr, metadata !15, metadata !16), !dbg !17
   %frombool1 = sext i1 %frag to i8
-  store i8 %frombool1, i8* %frag.addr, align 1
-  call void @llvm.dbg.declare(metadata i8* %frag.addr, metadata !18, metadata !23), !dbg !19
-  call void @llvm.dbg.declare(metadata %struct.foo* %g, metadata !20, metadata !16), !dbg !21
+  store i8 %frombool1, ptr %frag.addr, align 1
+  call void @llvm.dbg.declare(metadata ptr %frag.addr, metadata !18, metadata !23), !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %g, metadata !20, metadata !16), !dbg !21
   ret void, !dbg !22
 }
 

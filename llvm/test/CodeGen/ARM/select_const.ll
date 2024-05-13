@@ -665,8 +665,8 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB-NEXT:    movs r7, #1
 ; THUMB-NEXT:    ands r0, r7
 ; THUMB-NEXT:    subs r1, r0, #1
-; THUMB-NEXT:    push {r0}
-; THUMB-NEXT:    pop {r4}
+; THUMB-NEXT:    mov r12, r0
+; THUMB-NEXT:    mov r4, r12
 ; THUMB-NEXT:    sbcs r4, r1
 ; THUMB-NEXT:    cmp r0, #0
 ; THUMB-NEXT:    bne .LBB24_2
@@ -681,8 +681,8 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB-NEXT:    ands r5, r0
 ; THUMB-NEXT:    movs r6, #0
 ; THUMB-NEXT:    subs r0, r5, #1
-; THUMB-NEXT:    push {r4}
-; THUMB-NEXT:    pop {r1}
+; THUMB-NEXT:    mov r12, r4
+; THUMB-NEXT:    mov r1, r12
 ; THUMB-NEXT:    sbcs r1, r6
 ; THUMB-NEXT:    eors r3, r7
 ; THUMB-NEXT:    ldr r6, .LCPI24_0
@@ -758,3 +758,52 @@ define i64 @opaque_constant2(i1 %cond, i64 %x) {
   ret i64 %bo
 }
 
+define i64 @func(i64 %arg) {
+; ARM-LABEL: func:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    adds r0, r0, #1
+; ARM-NEXT:    mov r2, #0
+; ARM-NEXT:    adcs r0, r1, #0
+; ARM-NEXT:    mov r1, #0
+; ARM-NEXT:    adcs r0, r2, #0
+; ARM-NEXT:    movne r0, #8
+; ARM-NEXT:    mov pc, lr
+;
+; THUMB2-LABEL: func:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    adds r0, #1
+; THUMB2-NEXT:    mov.w r2, #0
+; THUMB2-NEXT:    adcs r0, r1, #0
+; THUMB2-NEXT:    mov.w r1, #0
+; THUMB2-NEXT:    adcs r0, r2, #0
+; THUMB2-NEXT:    it ne
+; THUMB2-NEXT:    movne r0, #8
+; THUMB2-NEXT:    bx lr
+;
+; THUMB-LABEL: func:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    .save {r4, lr}
+; THUMB-NEXT:    push {r4, lr}
+; THUMB-NEXT:    movs r2, #0
+; THUMB-NEXT:    adds r3, r0, #1
+; THUMB-NEXT:    mov r12, r1
+; THUMB-NEXT:    mov r3, r12
+; THUMB-NEXT:    adcs r3, r2
+; THUMB-NEXT:    mov r12, r2
+; THUMB-NEXT:    mov r3, r12
+; THUMB-NEXT:    adcs r3, r2
+; THUMB-NEXT:    subs r4, r3, #1
+; THUMB-NEXT:    adds r0, r0, #1
+; THUMB-NEXT:    adcs r1, r2
+; THUMB-NEXT:    sbcs r3, r4
+; THUMB-NEXT:    lsls r0, r3, #3
+; THUMB-NEXT:    movs r1, r2
+; THUMB-NEXT:    pop {r4}
+; THUMB-NEXT:    pop {r2}
+; THUMB-NEXT:    bx r2
+entry:
+  %0 = add i64 %arg, 1
+  %1 = icmp ult i64 %0, 1
+  %2 = select i1 %1, i64 8, i64 0
+  ret i64 %2
+}

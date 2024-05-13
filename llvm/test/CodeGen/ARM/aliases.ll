@@ -33,29 +33,29 @@
 ; CHECK: .size elem1, 4
 
 @bar = global i32 42
-@foo1 = alias i32, i32* @bar
-@foo2 = alias i32, i32* @bar
+@foo1 = alias i32, ptr @bar
+@foo2 = alias i32, ptr @bar
 
 %FunTy = type i32()
 
 define i32 @foo_f() {
   ret i32 0
 }
-@bar_f = weak alias %FunTy, %FunTy* @foo_f
+@bar_f = weak alias %FunTy, ptr @foo_f
 
-@bar_i = internal alias i32, i32* @bar
+@bar_i = internal alias i32, ptr @bar
 
-@A = alias i64, bitcast (i32* @bar to i64*)
+@A = alias i64, ptr @bar
 
 @structvar = private global {i32, i32} {i32 1, i32 2}
-@elem0 = alias i32, getelementptr({i32, i32}, {i32, i32}*  @structvar, i32 0, i32 0)
-@elem1 = alias i32, getelementptr({i32, i32}, {i32, i32}*  @structvar, i32 0, i32 1)
+@elem0 = alias i32, ptr @structvar
+@elem1 = alias i32, getelementptr({i32, i32}, ptr  @structvar, i32 0, i32 1)
 
 define i32 @test() {
 entry:
-   %tmp = load i32, i32* @foo1
-   %tmp1 = load i32, i32* @foo2
-   %tmp0 = load i32, i32* @bar_i
+   %tmp = load i32, ptr @foo1
+   %tmp1 = load i32, ptr @foo2
+   %tmp0 = load i32, ptr @bar_i
    %tmp2 = call i32 @foo_f()
    %tmp3 = add i32 %tmp, %tmp2
    %tmp4 = call i32 @bar_f()

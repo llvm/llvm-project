@@ -21,7 +21,17 @@
 #ifndef MLIR_C_BINDINGS_PYTHON_INTEROP_H
 #define MLIR_C_BINDINGS_PYTHON_INTEROP_H
 
+// We *should*, in theory, include Python.h here in order to import the correct
+// definitions for what we need below, however, importing Python.h directly on
+// Windows results in the enforcement of either pythonX.lib or pythonX_d.lib
+// depending on the build flavor. Instead, we rely on the fact that this file
+// (Interop.h) is always included AFTER pybind11 and will therefore have access
+// to the definitions from Python.h in addition to having a workaround applied
+// through the pybind11 headers that allows us to control which python library
+// is used.
+#if !defined(_MSC_VER)
 #include <Python.h>
+#endif
 
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
@@ -30,19 +40,49 @@
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Pass.h"
 
-#define MLIR_PYTHON_CAPSULE_AFFINE_EXPR "mlir.ir.AffineExpr._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_AFFINE_MAP "mlir.ir.AffineMap._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_ATTRIBUTE "mlir.ir.Attribute._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_CONTEXT "mlir.ir.Context._CAPIPtr"
+// The 'mlir' Python package is relocatable and supports co-existing in multiple
+// projects. Each project must define its outer package prefix with this define
+// in order to provide proper isolation and local name resolution.
+// The default is for the upstream "import mlir" package layout.
+// Note that this prefix is internally stringified, allowing it to be passed
+// unquoted on the compiler command line without shell quote escaping issues.
+#ifndef MLIR_PYTHON_PACKAGE_PREFIX
+#define MLIR_PYTHON_PACKAGE_PREFIX mlir.
+#endif
+
+// Makes a fully-qualified name relative to the MLIR python package.
+#define MLIR_PYTHON_STRINGIZE(s) #s
+#define MLIR_PYTHON_STRINGIZE_ARG(arg) MLIR_PYTHON_STRINGIZE(arg)
+#define MAKE_MLIR_PYTHON_QUALNAME(local)                                       \
+  MLIR_PYTHON_STRINGIZE_ARG(MLIR_PYTHON_PACKAGE_PREFIX) local
+
+#define MLIR_PYTHON_CAPSULE_AFFINE_EXPR                                        \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.AffineExpr._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_AFFINE_MAP                                         \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.AffineMap._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_ATTRIBUTE                                          \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_BLOCK MAKE_MLIR_PYTHON_QUALNAME("ir.Block._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_CONTEXT                                            \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Context._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY                                   \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.DialectRegistry._CAPIPtr")
 #define MLIR_PYTHON_CAPSULE_EXECUTION_ENGINE                                   \
-  "mlir.execution_engine.ExecutionEngine._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_INTEGER_SET "mlir.ir.IntegerSet._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_LOCATION "mlir.ir.Location._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_MODULE "mlir.ir.Module._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_OPERATION "mlir.ir.Operation._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_TYPE "mlir.ir.Type._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_PASS_MANAGER "mlir.passmanager.PassManager._CAPIPtr"
-#define MLIR_PYTHON_CAPSULE_VALUE "mlir.ir.Value._CAPIPtr"
+  MAKE_MLIR_PYTHON_QUALNAME("execution_engine.ExecutionEngine._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_INTEGER_SET                                        \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.IntegerSet._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_LOCATION                                           \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Location._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_MODULE                                             \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Module._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_OPERATION                                          \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Operation._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_TYPE MAKE_MLIR_PYTHON_QUALNAME("ir.Type._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_PASS_MANAGER                                       \
+  MAKE_MLIR_PYTHON_QUALNAME("passmanager.PassManager._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_VALUE MAKE_MLIR_PYTHON_QUALNAME("ir.Value._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_TYPEID                                             \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID._CAPIPtr")
 
 /** Attribute on MLIR Python objects that expose their C-API pointer.
  * This will be a type-specific capsule created as per one of the helpers
@@ -68,10 +108,43 @@
  * delineated). */
 #define MLIR_PYTHON_CAPI_FACTORY_ATTR "_CAPICreate"
 
+/** Attribute on MLIR Python objects that expose a function for downcasting the
+ * corresponding Python object to a subclass if the object is in fact a subclass
+ * (Concrete or mlir_type_subclass) of ir.Type. The signature of the function
+ * is: def maybe_downcast(self) -> object where the resulting object will
+ * (possibly) be an instance of the subclass.
+ */
+#define MLIR_PYTHON_MAYBE_DOWNCAST_ATTR "maybe_downcast"
+
+/** Attribute on main C extension module (_mlir) that corresponds to the
+ * type caster registration binding. The signature of the function is:
+ *   def register_type_caster(MlirTypeID mlirTypeID, *, bool replace)
+ * which then takes a typeCaster (register_type_caster is meant to be used as a
+ * decorator from python), and where replace indicates the typeCaster should
+ * replace any existing registered type casters (such as those for upstream
+ * ConcreteTypes). The interface of the typeCaster is: def type_caster(ir.Type)
+ * -> SubClassTypeT where SubClassTypeT indicates the result should be a
+ * subclass (inherit from) ir.Type.
+ */
+#define MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR "register_type_caster"
+
+/** Attribute on main C extension module (_mlir) that corresponds to the
+ * value caster registration binding. The signature of the function is:
+ *   def register_value_caster(MlirTypeID mlirTypeID, *, bool replace)
+ * which then takes a valueCaster (register_value_caster is meant to be used as
+ * a decorator, from python), and where replace indicates the valueCaster should
+ * replace any existing registered value casters. The interface of the
+ * valueCaster is: def value_caster(ir.Value) -> SubClassValueT where
+ * SubClassValueT indicates the result should be a subclass (inherit from)
+ * ir.Value.
+ */
+#define MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR "register_value_caster"
+
 /// Gets a void* from a wrapped struct. Needed because const cast is different
 /// between C/C++.
 #ifdef __cplusplus
-#define MLIR_PYTHON_GET_WRAPPED_POINTER(object) const_cast<void *>(object.ptr)
+#define MLIR_PYTHON_GET_WRAPPED_POINTER(object)                                \
+  (const_cast<void *>((object).ptr))
 #else
 #define MLIR_PYTHON_GET_WRAPPED_POINTER(object) (void *)(object.ptr)
 #endif
@@ -118,6 +191,23 @@ static inline MlirAttribute mlirPythonCapsuleToAttribute(PyObject *capsule) {
   return attr;
 }
 
+/** Creates a capsule object encapsulating the raw C-API MlirBlock.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the module in any way. */
+static inline PyObject *mlirPythonBlockToCapsule(MlirBlock block) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(block),
+                       MLIR_PYTHON_CAPSULE_BLOCK, NULL);
+}
+
+/** Extracts an MlirBlock from a capsule as produced from
+ * mlirPythonBlockToCapsule. If the capsule is not of the right type, then
+ * a null pass manager is returned (as checked via mlirBlockIsNull). */
+static inline MlirBlock mlirPythonCapsuleToBlock(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_BLOCK);
+  MlirBlock block = {ptr};
+  return block;
+}
+
 /** Creates a capsule object encapsulating the raw C-API MlirContext.
  * The returned capsule does not extend or affect ownership of any Python
  * objects that reference the context in any way.
@@ -134,6 +224,28 @@ static inline MlirContext mlirPythonCapsuleToContext(PyObject *capsule) {
   void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_CONTEXT);
   MlirContext context = {ptr};
   return context;
+}
+
+/** Creates a capsule object encapsulating the raw C-API MlirDialectRegistry.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the context in any way.
+ */
+static inline PyObject *
+mlirPythonDialectRegistryToCapsule(MlirDialectRegistry registry) {
+  return PyCapsule_New(registry.ptr, MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY,
+                       NULL);
+}
+
+/** Extracts an MlirDialectRegistry from a capsule as produced from
+ * mlirPythonDialectRegistryToCapsule. If the capsule is not of the right type,
+ * then a null context is returned (as checked via mlirContextIsNull). In such a
+ * case, the Python APIs will have already set an error. */
+static inline MlirDialectRegistry
+mlirPythonCapsuleToDialectRegistry(PyObject *capsule) {
+  void *ptr =
+      PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY);
+  MlirDialectRegistry registry = {ptr};
+  return registry;
 }
 
 /** Creates a capsule object encapsulating the raw C-API MlirLocation.
@@ -206,6 +318,25 @@ static inline MlirOperation mlirPythonCapsuleToOperation(PyObject *capsule) {
   void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_OPERATION);
   MlirOperation op = {ptr};
   return op;
+}
+
+/** Creates a capsule object encapsulating the raw C-API MlirTypeID.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the type in any way.
+ */
+static inline PyObject *mlirPythonTypeIDToCapsule(MlirTypeID typeID) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(typeID),
+                       MLIR_PYTHON_CAPSULE_TYPEID, NULL);
+}
+
+/** Extracts an MlirTypeID from a capsule as produced from
+ * mlirPythonTypeIDToCapsule. If the capsule is not of the right type, then
+ * a null type is returned (as checked via mlirTypeIDIsNull). In such a
+ * case, the Python APIs will have already set an error. */
+static inline MlirTypeID mlirPythonCapsuleToTypeID(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_TYPEID);
+  MlirTypeID typeID = {ptr};
+  return typeID;
 }
 
 /** Creates a capsule object encapsulating the raw C-API MlirType.

@@ -2,9 +2,9 @@ include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)
 include_directories(${LLDB_SOURCE_DIR}/source)
-include_directories(MacOSX/DarwinLog)
-
 include_directories(MacOSX)
+include_directories(MacOSX/x86_64)
+include_directories(MacOSX/arm64)
 
 function(check_certificate identity result_valid)
   execute_process(
@@ -19,8 +19,8 @@ endfunction()
 
 function(get_debugserver_codesign_identity result)
   string(CONCAT not_found_help
-    "This will cause failures in the test suite."
-    "Pass '-DLLDB_USE_SYSTEM_DEBUGSERVER=ON' to use the system one instead."
+    "This will cause failures in the test suite. "
+    "Pass '-DLLDB_USE_SYSTEM_DEBUGSERVER=ON' to use the system one instead. "
     "See 'Code Signing on macOS' in the documentation."
   )
 
@@ -83,35 +83,31 @@ if (CXX_SUPPORTS_NO_EXTENDED_OFFSETOF)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-extended-offsetof")
 endif ()
 
-# When compiling for arm, build debugserver 2 way fat with an arm64 and arm64e
-# slice. You can only debug arm64e processes using an arm64e debugserver.
 include(CheckCSourceCompiles)
 check_c_source_compiles(
     "
     #include <TargetConditionals.h>
-    #if TARGET_CPU_ARM
+    #if TARGET_CPU_ARM64
     #if TARGET_OS_OSX
     #warning Building for macOS
     #else
     #error Not building for macOS
     #endif
     #else
-    #error Not building for ARM
+    #error Not building for ARM64
     #endif
-    int main() { return 0; }
+    int main(void) { return 0; }
     "
-    BUILDING_FOR_ARM_OSX
+    BUILDING_FOR_ARM64_OSX
 )
 
-if (BUILDING_FOR_ARM_OSX)
+# You can only debug arm64e processes using an arm64e debugserver.
+option(LLDB_ENABLE_ARM64E_DEBUGSERVER "Build debugserver for arm64 and arm64e" OFF)
+if (BUILDING_FOR_ARM64_OSX AND LLDB_ENABLE_ARM64E_DEBUGSERVER)
   set(CMAKE_OSX_ARCHITECTURES "arm64;arm64e")
 endif ()
 
-check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSION)
-
 find_library(SECURITY_LIBRARY Security)
-
-add_subdirectory(MacOSX)
 
 set(LLDB_CODESIGN_IDENTITY "" CACHE STRING
     "Identity override for debugserver; see 'Code Signing on macOS' in the documentation (Darwin only)")
@@ -121,11 +117,8 @@ get_debugserver_codesign_identity(debugserver_codesign_identity)
 # Override locally, so the identity is used for targets created in this scope.
 set(LLVM_CODESIGNING_IDENTITY ${debugserver_codesign_identity})
 
-# Use the same identity later in the test suite.
-set_property(GLOBAL PROPERTY
-  LLDB_DEBUGSERVER_CODESIGN_IDENTITY ${debugserver_codesign_identity})
-
 if(APPLE)
+  set(LIBCOMPRESSION compression)
   if(APPLE_EMBEDDED)
     find_library(BACKBOARD_LIBRARY BackBoardServices
       PATHS ${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks)
@@ -145,10 +138,6 @@ if(APPLE)
       set(SKIP_TEST_DEBUGSERVER ON CACHE BOOL "" FORCE)
     endif()
   endif()
-endif()
-
-if(HAVE_LIBCOMPRESSION)
-  set(LIBCOMPRESSION compression)
 endif()
 
 if(LLDB_USE_ENTITLEMENTS)
@@ -207,8 +196,8 @@ set(lldbDebugserverCommonSources
   DNBThreadResumeActions.cpp
   JSON.cpp
   StdStringExtractor.cpp
+  StringConvert.cpp
   # JSON reader depends on the following LLDB-common files
-  ${LLDB_SOURCE_DIR}/source/Host/common/StringConvert.cpp
   ${LLDB_SOURCE_DIR}/source/Host/common/SocketAddress.cpp
   # end JSON reader dependencies
   libdebugserver.cpp
@@ -233,6 +222,8 @@ set(lldbDebugserverCommonSources
   MacOSX/MachVMMemory.cpp
   MacOSX/MachVMRegion.cpp
   MacOSX/OsLogger.cpp
+  MacOSX/arm64/DNBArchImplARM64.cpp
+  MacOSX/x86_64/DNBArchImplX86_64.cpp
   ${generated_mach_interfaces}
   ${DEBUGSERVER_VERS_GENERATED_FILE})
 
@@ -254,16 +245,10 @@ target_link_libraries(lldbDebugserverCommon
                       ${MOBILESERVICES_LIBRARY}
                       ${LOCKDOWN_LIBRARY}
                       ${CAROUSELSERVICES_LIBRARY}
-                      lldbDebugserverArchSupport
-                      lldbDebugserverDarwin_DarwinLog
                       ${FOUNDATION_LIBRARY}
                       ${SECURITY_LIBRARY}
                       ${LIBCOMPRESSION}
                       ${ENERGY_LIBRARY})
-if(HAVE_LIBCOMPRESSION)
-  set_property(TARGET lldbDebugserverCommon APPEND PROPERTY
-                COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
-endif()
 add_lldb_tool(debugserver ADD_TO_FRAMEWORK
   debugserver.cpp
   LINK_LIBS lldbDebugserverCommon
@@ -324,14 +309,8 @@ if(APPLE_EMBEDDED)
                       INTERFACE ${COCOA_LIBRARY}
                       ${CORE_FOUNDATION_LIBRARY}
                       ${FOUNDATION_LIBRARY}
-                      lldbDebugserverArchSupport
-                      lldbDebugserverDarwin_DarwinLog
                       ${SECURITY_LIBRARY}
                       ${LIBCOMPRESSION})
-  if(HAVE_LIBCOMPRESSION)
-    set_property(TARGET lldbDebugserverCommon_NonUI APPEND PROPERTY
-                  COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
-  endif()
 
   add_lldb_tool(debugserver-nonui
     debugserver.cpp

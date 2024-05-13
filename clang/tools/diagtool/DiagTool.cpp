@@ -1,4 +1,4 @@
-//===- DiagTool.cpp - Classes for defining diagtool tools -------------------===//
+//===- DiagTool.cpp - Classes for defining diagtool tools -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 
 #include "DiagTool.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include <vector>
 
 using namespace diagtool;

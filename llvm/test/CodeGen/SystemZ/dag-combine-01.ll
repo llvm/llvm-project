@@ -7,7 +7,7 @@
 @A = common global [2048 x float] zeroinitializer, align 4
 
 ; Function Attrs: nounwind
-define signext i32 @main(i32 signext %argc, i8** nocapture readnone %argv) #0 {
+define signext i32 @main(i32 signext %argc, ptr nocapture readnone %argv) #0 {
 entry:
   br label %for.body
 
@@ -16,8 +16,8 @@ for.body:                                         ; preds = %for.body, %entry
   %sum.018 = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
   %0 = trunc i64 %indvars.iv24 to i32
   %conv = sitofp i32 %0 to float
-  %arrayidx = getelementptr inbounds [2048 x float], [2048 x float]* @A, i64 0, i64 %indvars.iv24
-  store float %conv, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [2048 x float], ptr @A, i64 0, i64 %indvars.iv24
+  store float %conv, ptr %arrayidx, align 4
   %add = fadd float %sum.018, %conv
   %indvars.iv.next25 = add nuw nsw i64 %indvars.iv24, 1
   %exitcond26 = icmp eq i64 %indvars.iv.next25, 2048
@@ -45,24 +45,20 @@ for.body.3.i:                                     ; preds = %for.body.3.i, %for.
   %indvars.iv.i = phi i64 [ 0, %for.body.3.lr.ph.i ], [ %indvars.iv.next.i, %for.body.3.i ]
   %3 = shl nsw i64 %indvars.iv.i, 6
   %4 = add nuw nsw i64 %3, %1
-  %arrayidx.i = getelementptr inbounds [2048 x float], [2048 x float]* @A, i64 0, i64 %4
-  %5 = bitcast float* %arrayidx.i to i32*
-  %6 = load i32, i32* %5, align 4
-  %arrayidx9.i = getelementptr inbounds float, float* getelementptr inbounds ([2048 x float], [2048 x float]* @A, i64 0, i64 1), i64 %4
-  %7 = bitcast float* %arrayidx9.i to i32*
-  %8 = load i32, i32* %7, align 4
-  %9 = shl nsw i64 %indvars.iv.i, 1
-  %10 = add nuw nsw i64 %9, %2
-  %arrayidx14.i = getelementptr inbounds [2048 x float], [2048 x float]* @A, i64 0, i64 %10
-  %11 = bitcast float* %arrayidx14.i to i32*
-  %12 = load i32, i32* %11, align 4
-  %arrayidx19.i = getelementptr inbounds float, float* getelementptr inbounds ([2048 x float], [2048 x float]* @A, i64 0, i64 1), i64 %10
-  %13 = bitcast float* %arrayidx19.i to i32*
-  %14 = load i32, i32* %13, align 4
-  store i32 %6, i32* %11, align 4
-  store i32 %8, i32* %13, align 4
-  store i32 %12, i32* %5, align 4
-  store i32 %14, i32* %7, align 4
+  %arrayidx.i = getelementptr inbounds [2048 x float], ptr @A, i64 0, i64 %4
+  %5 = load i32, ptr %arrayidx.i, align 4
+  %arrayidx9.i = getelementptr inbounds float, ptr getelementptr inbounds ([2048 x float], ptr @A, i64 0, i64 1), i64 %4
+  %6 = load i32, ptr %arrayidx9.i, align 4
+  %7 = shl nsw i64 %indvars.iv.i, 1
+  %8 = add nuw nsw i64 %7, %2
+  %arrayidx14.i = getelementptr inbounds [2048 x float], ptr @A, i64 0, i64 %8
+  %9 = load i32, ptr %arrayidx14.i, align 4
+  %arrayidx19.i = getelementptr inbounds float, ptr getelementptr inbounds ([2048 x float], ptr @A, i64 0, i64 1), i64 %8
+  %10 = load i32, ptr %arrayidx19.i, align 4
+  store i32 %5, ptr %arrayidx14.i, align 4
+  store i32 %6, ptr %arrayidx19.i, align 4
+  store i32 %9, ptr %arrayidx.i, align 4
+  store i32 %10, ptr %arrayidx9.i, align 4
   %indvars.iv.next.i = add nuw nsw i64 %indvars.iv.i, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next.i to i32
   %exitcond21 = icmp eq i32 %lftr.wideiv, %indvars.iv19
@@ -85,9 +81,9 @@ for.body.14.preheader:                            ; preds = %complex_transpose.e
 for.body.14:                                      ; preds = %for.body.14.preheader, %for.body.14
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body.14 ], [ 0, %for.body.14.preheader ]
   %sum.115 = phi float [ %add17, %for.body.14 ], [ 0.000000e+00, %for.body.14.preheader ]
-  %arrayidx16 = getelementptr inbounds [2048 x float], [2048 x float]* @A, i64 0, i64 %indvars.iv
-  %15 = load float, float* %arrayidx16, align 4
-  %add17 = fadd float %sum.115, %15
+  %arrayidx16 = getelementptr inbounds [2048 x float], ptr @A, i64 0, i64 %indvars.iv
+  %11 = load float, ptr %arrayidx16, align 4
+  %add17 = fadd float %sum.115, %11
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 2048
   br i1 %exitcond, label %for.end.20, label %for.body.14

@@ -2,7 +2,7 @@
 
 @A = global <4 x float> <float 0., float 1., float 2., float 3.>
 
-define void @test_sqrt(<4 x float>* %X) nounwind {
+define void @test_sqrt(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_sqrt:
 
@@ -16,16 +16,16 @@ define void @test_sqrt(<4 x float>* %X) nounwind {
 ; CHECK:      vst1.64  {{.*}}
 
 L.entry:
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
   ret void
 }
 
 declare <4 x float> @llvm.sqrt.v4f32(<4 x float>) nounwind readonly
 
 
-define void @test_cos(<4 x float>* %X) nounwind {
+define void @test_cos(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_cos:
 
@@ -48,15 +48,15 @@ define void @test_cos(<4 x float>* %X) nounwind {
 ; CHECK:      vst1.64
 
 L.entry:
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.cos.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
   ret void
 }
 
 declare <4 x float> @llvm.cos.v4f32(<4 x float>) nounwind readonly
 
-define void @test_exp(<4 x float>* %X) nounwind {
+define void @test_exp(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_exp:
 
@@ -79,15 +79,15 @@ define void @test_exp(<4 x float>* %X) nounwind {
 ; CHECK:      vst1.64
 
 L.entry:
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.exp.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
   ret void
 }
 
 declare <4 x float> @llvm.exp.v4f32(<4 x float>) nounwind readonly
 
-define void @test_exp2(<4 x float>* %X) nounwind {
+define void @test_exp2(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_exp2:
 
@@ -110,15 +110,15 @@ define void @test_exp2(<4 x float>* %X) nounwind {
 ; CHECK:      vst1.64
 
 L.entry:
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.exp2.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
   ret void
 }
 
 declare <4 x float> @llvm.exp2.v4f32(<4 x float>) nounwind readonly
 
-define void @test_log10(<4 x float>* %X) nounwind {
+define void @test_log10(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_log10:
 
@@ -141,15 +141,15 @@ define void @test_log10(<4 x float>* %X) nounwind {
 ; CHECK:      vst1.64
 
 L.entry:
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.log10.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
   ret void
 }
 
 declare <4 x float> @llvm.log10.v4f32(<4 x float>) nounwind readonly
 
-define void @test_log(<4 x float>* %X) nounwind {
+define void @test_log(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_log:
 
@@ -172,15 +172,15 @@ define void @test_log(<4 x float>* %X) nounwind {
 ; CHECK:      vst1.64
 
 L.entry:
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.log.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
   ret void
 }
 
 declare <4 x float> @llvm.log.v4f32(<4 x float>) nounwind readonly
 
-define void @test_log2(<4 x float>* %X) nounwind {
+define void @test_log2(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_log2:
 
@@ -203,16 +203,16 @@ define void @test_log2(<4 x float>* %X) nounwind {
 ; CHECK:      vst1.64
 
 L.entry:
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.log2.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
   ret void
 }
 
 declare <4 x float> @llvm.log2.v4f32(<4 x float>) nounwind readonly
 
 
-define void @test_pow(<4 x float>* %X) nounwind {
+define void @test_pow(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_pow:
 
@@ -236,17 +236,17 @@ define void @test_pow(<4 x float>* %X) nounwind {
 
 L.entry:
 
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.pow.v4f32(<4 x float> %0, <4 x float> <float 2., float 2., float 2., float 2.>)
 
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
 
   ret void
 }
 
 declare <4 x float> @llvm.pow.v4f32(<4 x float>, <4 x float>) nounwind readonly
 
-define void @test_powi(<4 x float>* %X) nounwind {
+define void @test_powi(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_powi:
 
@@ -259,17 +259,17 @@ define void @test_powi(<4 x float>* %X) nounwind {
 
 L.entry:
 
-  %0 = load <4 x float>, <4 x float>* @A, align 16
-  %1 = call <4 x float> @llvm.powi.v4f32(<4 x float> %0, i32 2)
+  %0 = load <4 x float>, ptr @A, align 16
+  %1 = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %0, i32 2)
 
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
 
   ret void
 }
 
-declare <4 x float> @llvm.powi.v4f32(<4 x float>, i32) nounwind readonly
+declare <4 x float> @llvm.powi.v4f32.i32(<4 x float>, i32) nounwind readonly
 
-define void @test_sin(<4 x float>* %X) nounwind {
+define void @test_sin(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_sin:
 
@@ -292,15 +292,15 @@ define void @test_sin(<4 x float>* %X) nounwind {
 ; CHECK:      vst1.64
 
 L.entry:
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.sin.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
   ret void
 }
 
 declare <4 x float> @llvm.sin.v4f32(<4 x float>) nounwind readonly
 
-define void @test_floor(<4 x float>* %X) nounwind {
+define void @test_floor(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_floor:
 
@@ -323,9 +323,9 @@ define void @test_floor(<4 x float>* %X) nounwind {
 ; CHECK:      vst1.64
 
 L.entry:
-  %0 = load <4 x float>, <4 x float>* @A, align 16
+  %0 = load <4 x float>, ptr @A, align 16
   %1 = call <4 x float> @llvm.floor.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %X, align 16
+  store <4 x float> %1, ptr %X, align 16
   ret void
 }
 

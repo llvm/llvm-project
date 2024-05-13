@@ -28,24 +28,21 @@ const char * f(S s)
 //
 // FIXME: We could defer starting the lifetime of the return object of concat
 // until the call.
-// CHECK: [[T1i8:%.*]] = bitcast %class.T* [[T1]] to i8*
-// CHECK: call void @llvm.lifetime.start.p0i8(i64 16, i8* [[T1i8]])
+// CHECK: call void @llvm.lifetime.start.p0(i64 16, ptr [[T1]])
 //
-// CHECK: [[T2i8:%.*]] = bitcast %class.T* [[T2]] to i8*
-// CHECK: call void @llvm.lifetime.start.p0i8(i64 16, i8* [[T2i8]])
-// CHECK: [[T4:%.*]] = call %class.T* @_ZN1TC1EPKc(%class.T* {{[^,]*}} [[T2]], i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
+// CHECK: call void @llvm.lifetime.start.p0(i64 16, ptr [[T2]])
+// CHECK: [[T4:%.*]] = call noundef ptr @_ZN1TC1EPKc(ptr {{[^,]*}} [[T2]], ptr noundef @.str)
 //
-// CHECK: [[T3i8:%.*]] = bitcast %class.T* [[T3]] to i8*
-// CHECK: call void @llvm.lifetime.start.p0i8(i64 16, i8* [[T3i8]])
-// CHECK: [[T5:%.*]] = call %class.T* @_ZN1TC1E1S(%class.T* {{[^,]*}} [[T3]], [2 x i32] %{{.*}})
+// CHECK: call void @llvm.lifetime.start.p0(i64 16, ptr [[T3]])
+// CHECK: [[T5:%.*]] = call noundef ptr @_ZN1TC1E1S(ptr {{[^,]*}} [[T3]], [2 x i32] %{{.*}})
 //
-// CHECK: call void @_ZNK1T6concatERKS_(%class.T* sret(%class.T) align 4 [[T1]], %class.T* {{[^,]*}} [[T2]], %class.T* nonnull align 4 dereferenceable(16) [[T3]])
-// CHECK: [[T6:%.*]] = call i8* @_ZNK1T3strEv(%class.T* {{[^,]*}} [[T1]])
+// CHECK: call void @_ZNK1T6concatERKS_(ptr dead_on_unwind writable sret(%class.T) align 4 [[T1]], ptr {{[^,]*}} [[T2]], ptr noundef nonnull align 4 dereferenceable(16) [[T3]])
+// CHECK: [[T6:%.*]] = call noundef ptr @_ZNK1T3strEv(ptr {{[^,]*}} [[T1]])
 //
-// CHECK: call void @llvm.lifetime.end.p0i8(
-// CHECK: call void @llvm.lifetime.end.p0i8(
-// CHECK: call void @llvm.lifetime.end.p0i8(
-// CHECK: ret i8* [[T6]]
+// CHECK: call void @llvm.lifetime.end.p0(
+// CHECK: call void @llvm.lifetime.end.p0(
+// CHECK: call void @llvm.lifetime.end.p0(
+// CHECK: ret ptr [[T6]]
 
   return T("[").concat(T(s)).str();
 }

@@ -19,8 +19,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
     {
         std::vector<int> v(100);
         v.resize(50);
@@ -79,6 +78,28 @@ int main(int, char**)
         assert(v.capacity() >= 200);
         assert(is_contiguous_container_asan_correct(v));
     }
+    {
+      std::vector<int, safe_allocator<int>> v(100);
+      v.resize(50);
+      assert(v.size() == 50);
+      assert(v.capacity() == 100);
+      assert(is_contiguous_container_asan_correct(v));
+      v.resize(200);
+      assert(v.size() == 200);
+      assert(v.capacity() >= 200);
+      assert(is_contiguous_container_asan_correct(v));
+    }
+#endif
+
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+
+#if TEST_STD_VER > 17
+    static_assert(tests());
 #endif
 
   return 0;

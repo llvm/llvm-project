@@ -35,7 +35,7 @@ struct_with_ids_t GlobalStructArray[10];
 #define ASSIGNTEST(expr, global) expr = rhs
 void *rhs = 0;
 
-int main() {
+int main(void) {
   static id staticGlobalId;
   static id staticGlobalArray[20];
   static NSObject *staticGlobalObject;

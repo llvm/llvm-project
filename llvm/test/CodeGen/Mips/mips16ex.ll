@@ -1,4 +1,4 @@
-; RUN: llc  -march=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=16
+; RUN: llc  -mtriple=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=16
 
 ;16: main:
 ;16-NEXT: [[TMP:.*]]:
@@ -6,46 +6,44 @@
 ;16-NEXT: .cfi_startproc
 ;16-NEXT: .cfi_personality
 @.str = private unnamed_addr constant [7 x i8] c"hello\0A\00", align 1
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 @.str1 = private unnamed_addr constant [15 x i8] c"exception %i \0A\00", align 1
 
-define i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @main() personality ptr @__gxx_personality_v0 {
 entry:
   %retval = alloca i32, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
   %e = alloca i32, align 4
-  store i32 0, i32* %retval
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i32 0, i32 0))
-  %exception = call i8* @__cxa_allocate_exception(i32 4) nounwind
-  %0 = bitcast i8* %exception to i32*
-  store i32 20, i32* %0
-  invoke void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) noreturn
+  store i32 0, ptr %retval
+  %call = call i32 (ptr, ...) @printf(ptr @.str)
+  %exception = call ptr @__cxa_allocate_exception(i32 4) nounwind
+  store i32 20, ptr %exception
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) noreturn
           to label %unreachable unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %1 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIi to i8*)
-  %2 = extractvalue { i8*, i32 } %1, 0
-  store i8* %2, i8** %exn.slot
-  %3 = extractvalue { i8*, i32 } %1, 1
-  store i32 %3, i32* %ehselector.slot
+  %0 = landingpad { ptr, i32 }
+          catch ptr @_ZTIi
+  %1 = extractvalue { ptr, i32 } %0, 0
+  store ptr %1, ptr %exn.slot
+  %2 = extractvalue { ptr, i32 } %0, 1
+  store i32 %2, ptr %ehselector.slot
   br label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %lpad
-  %sel = load i32, i32* %ehselector.slot
-  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) nounwind
-  %matches = icmp eq i32 %sel, %4
+  %sel = load i32, ptr %ehselector.slot
+  %3 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) nounwind
+  %matches = icmp eq i32 %sel, %3
   br i1 %matches, label %catch, label %eh.resume
 
 catch:                                            ; preds = %catch.dispatch
-  %exn = load i8*, i8** %exn.slot
-  %5 = call i8* @__cxa_begin_catch(i8* %exn) nounwind
-  %6 = bitcast i8* %5 to i32*
-  %exn.scalar = load i32, i32* %6
-  store i32 %exn.scalar, i32* %e, align 4
-  %7 = load i32, i32* %e, align 4
-  %call2 = invoke i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str1, i32 0, i32 0), i32 %7)
+  %exn = load ptr, ptr %exn.slot
+  %4 = call ptr @__cxa_begin_catch(ptr %exn) nounwind
+  %exn.scalar = load i32, ptr %4
+  store i32 %exn.scalar, ptr %e, align 4
+  %5 = load i32, ptr %e, align 4
+  %call2 = invoke i32 (ptr, ...) @printf(ptr @.str1, i32 %5)
           to label %invoke.cont unwind label %lpad1
 
 invoke.cont:                                      ; preds = %catch
@@ -56,36 +54,36 @@ try.cont:                                         ; preds = %invoke.cont
   ret i32 0
 
 lpad1:                                            ; preds = %catch
-  %8 = landingpad { i8*, i32 }
+  %6 = landingpad { ptr, i32 }
           cleanup
-  %9 = extractvalue { i8*, i32 } %8, 0
-  store i8* %9, i8** %exn.slot
-  %10 = extractvalue { i8*, i32 } %8, 1
-  store i32 %10, i32* %ehselector.slot
+  %7 = extractvalue { ptr, i32 } %6, 0
+  store ptr %7, ptr %exn.slot
+  %8 = extractvalue { ptr, i32 } %6, 1
+  store i32 %8, ptr %ehselector.slot
   call void @__cxa_end_catch() nounwind
   br label %eh.resume
 
 eh.resume:                                        ; preds = %lpad1, %catch.dispatch
-  %exn3 = load i8*, i8** %exn.slot
-  %sel4 = load i32, i32* %ehselector.slot
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn3, 0
-  %lpad.val5 = insertvalue { i8*, i32 } %lpad.val, i32 %sel4, 1
-  resume { i8*, i32 } %lpad.val5
+  %exn3 = load ptr, ptr %exn.slot
+  %sel4 = load i32, ptr %ehselector.slot
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn3, 0
+  %lpad.val5 = insertvalue { ptr, i32 } %lpad.val, i32 %sel4, 1
+  resume { ptr, i32 } %lpad.val5
 
 unreachable:                                      ; preds = %entry
   unreachable
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
-declare i8* @__cxa_allocate_exception(i32)
+declare ptr @__cxa_allocate_exception(i32)
 
 declare i32 @__gxx_personality_v0(...)
 
-declare void @__cxa_throw(i8*, i8*, i8*)
+declare void @__cxa_throw(ptr, ptr, ptr)
 
-declare i32 @llvm.eh.typeid.for(i8*) nounwind readnone
+declare i32 @llvm.eh.typeid.for(ptr) nounwind readnone
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()

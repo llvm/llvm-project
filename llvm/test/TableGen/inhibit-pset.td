@@ -8,7 +8,7 @@ include "reg-with-subregs-common.td"
 def X0 : Register <"x0">;
 
 // CHECK-LABEL: getRegPressureSetName(unsigned Idx) const {
-// CHECK-NEXT:    static const char *const PressureNameTable[] = {
+// CHECK-NEXT:    static const char *PressureNameTable[] = {
 // CHECK-NEXT:      "GPR32",
 // CHECK-NEXT:    };
 // CHECK-NEXT:    return PressureNameTable[Idx];

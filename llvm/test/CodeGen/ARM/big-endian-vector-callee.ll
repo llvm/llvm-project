@@ -1290,10 +1290,10 @@ define <2 x double> @test_v2f64_f128(fp128 %p) {
 ; SOFT-NEXT:    vmov.32 d17[1], r3
 ; SOFT-NEXT:    vmov.32 d16[1], r1
 ; SOFT-NEXT:    vrev64.32 q8, q8
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    add sp, sp, #16
 ; SOFT-NEXT:    pop {r11, pc}
 ;
@@ -1326,10 +1326,10 @@ define <2 x double> @test_v2f64_v2i64(<2 x i64> %p) {
 ; SOFT-NEXT:    vmov d17, r3, r2
 ; SOFT-NEXT:    vmov d16, r1, r0
 ; SOFT-NEXT:    vadd.i64 q8, q8, q8
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bx lr
 ;
 ; HARD-LABEL: test_v2f64_v2i64:
@@ -1352,10 +1352,10 @@ define <2 x double> @test_v2f64_v4f32(<4 x float> %p) {
 ; SOFT-NEXT:    vrev64.32 q8, q8
 ; SOFT-NEXT:    vadd.f32 q8, q8, q8
 ; SOFT-NEXT:    vrev64.32 q8, q8
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bx lr
 ;
 ; HARD-LABEL: test_v2f64_v4f32:
@@ -1380,10 +1380,10 @@ define <2 x double> @test_v2f64_v4i32(<4 x i32> %p) {
 ; SOFT-NEXT:    vrev64.32 q8, q8
 ; SOFT-NEXT:    vadd.i32 q8, q8, q8
 ; SOFT-NEXT:    vrev64.32 q8, q8
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bx lr
 ;
 ; HARD-LABEL: test_v2f64_v4i32:
@@ -1408,10 +1408,10 @@ define <2 x double> @test_v2f64_v8i16(<8 x i16> %p) {
 ; SOFT-NEXT:    vrev64.16 q8, q8
 ; SOFT-NEXT:    vadd.i16 q8, q8, q8
 ; SOFT-NEXT:    vrev64.16 q8, q8
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bx lr
 ;
 ; HARD-LABEL: test_v2f64_v8i16:
@@ -1436,10 +1436,10 @@ define <2 x double> @test_v2f64_v16i8(<16 x i8> %p) {
 ; SOFT-NEXT:    vrev64.8 q8, q8
 ; SOFT-NEXT:    vadd.i8 q8, q8, q8
 ; SOFT-NEXT:    vrev64.8 q8, q8
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bx lr
 ;
 ; HARD-LABEL: test_v2f64_v16i8:

@@ -3,18 +3,19 @@
 
 #include <isl/space.h>
 
-/* pos maps original dimensions to new dimensions.
+/* "pos" has "src_len" entries and maps original dimensions to new dimensions.
  * The final space is given by "space".
  * The number of dimensions (i.e., the range of values) in the result
  * may be larger than the number of dimensions in the input.
- * In particular, the possible values of the entries in pos ranges from 0 to
- * the total dimension of dim - 1, unless isl_reordering_extend
- * has been called.
+ * In particular, the possible values of the entries in "pos" ranges from 0 to
+ * to "dst_len" - 1, where "dst_len" is equal to the total dimension of "space",
+ * unless isl_reordering_extend has been called.
  */
 struct isl_reordering {
 	int ref;
 	isl_space *space;
-	unsigned len;
+	unsigned src_len;
+	unsigned dst_len;
 	int pos[1];
 };
 typedef struct isl_reordering isl_reordering;

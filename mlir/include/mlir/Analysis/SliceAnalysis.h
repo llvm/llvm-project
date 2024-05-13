@@ -17,15 +17,39 @@
 #include "llvm/ADT/SetVector.h"
 
 namespace mlir {
-
+class BlockArgument;
 class Operation;
 class Value;
 
-/// Type of the condition to limit the propagation of transitive use-defs.
-/// This can be used in particular to limit the propagation to a given Scope or
-/// to avoid passing through certain types of operation in a configurable
-/// manner.
-using TransitiveFilter = llvm::function_ref<bool(Operation *)>;
+struct SliceOptions {
+  /// Type of the condition to limit the propagation of transitive use-defs.
+  /// This can be used in particular to limit the propagation to a given Scope
+  /// or to avoid passing through certain types of operation in a configurable
+  /// manner.
+  using TransitiveFilter = std::function<bool(Operation *)>;
+  TransitiveFilter filter = nullptr;
+
+  /// Include the top level op in the slice.
+  bool inclusive = false;
+
+  // TODO: Remove this alias once downstream users are updated.
+  SliceOptions() {}
+  SliceOptions(TransitiveFilter filter) : filter(std::move(filter)) {}
+};
+
+// TODO: Remove this alias once downstream users are updated.
+using TransitiveFilter = SliceOptions::TransitiveFilter;
+
+struct BackwardSliceOptions : public SliceOptions {
+  using SliceOptions::SliceOptions;
+  /// When omitBlockArguments is true, the backward slice computation omits
+  /// traversing any block arguments. When omitBlockArguments is false, the
+  /// backward slice computation traverses block arguments and asserts that the
+  /// parent op has a single region with a single block.
+  bool omitBlockArguments = false;
+};
+
+using ForwardSliceOptions = SliceOptions;
 
 /// Fills `forwardSlice` with the computed forward slice (i.e. all
 /// the transitive uses of op), **without** including that operation.
@@ -42,7 +66,7 @@ using TransitiveFilter = llvm::function_ref<bool(Operation *)>;
 ///
 /// Upon return to the root call, `forwardSlice` is filled with a
 /// postorder list of uses (i.e. a reverse topological order). To get a proper
-/// topological order, we just just reverse the order in `forwardSlice` before
+/// topological order, we just reverse the order in `forwardSlice` before
 /// returning.
 ///
 /// Example starting from node 0
@@ -69,12 +93,12 @@ using TransitiveFilter = llvm::function_ref<bool(Operation *)>;
 ///      {4, 3, 6, 2, 1, 5, 8, 7, 9}
 ///
 void getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
-                     TransitiveFilter filter = nullptr /* pass-through*/);
+                     const ForwardSliceOptions &options = {});
 
 /// Value-rooted version of `getForwardSlice`. Return the union of all forward
 /// slices for the uses of the value `root`.
 void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
-                     TransitiveFilter filter = nullptr /* pass-through*/);
+                     const ForwardSliceOptions &options = {});
 
 /// Fills `backwardSlice` with the computed backward slice (i.e.
 /// all the transitive defs of op), **without** including that operation.
@@ -111,12 +135,12 @@ void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
 ///    {1, 2, 5, 3, 4, 6}
 ///
 void getBackwardSlice(Operation *op, SetVector<Operation *> *backwardSlice,
-                      TransitiveFilter filter = nullptr /* pass-through*/);
+                      const BackwardSliceOptions &options = {});
 
 /// Value-rooted version of `getBackwardSlice`. Return the union of all backward
 /// slices for the op defining or owning the value `root`.
 void getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
-                      TransitiveFilter filter = nullptr /* pass-through*/);
+                      const BackwardSliceOptions &options = {});
 
 /// Iteratively computes backward slices and forward slices until
 /// a fixed point is reached. Returns an `SetVector<Operation *>` which
@@ -196,15 +220,45 @@ void getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
 /// trouble for now: punt to a simple worklist-based solution.
 ///
 SetVector<Operation *>
-getSlice(Operation *op,
-         TransitiveFilter backwardFilter = nullptr /* pass-through*/,
-         TransitiveFilter forwardFilter = nullptr /* pass-through*/);
+getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions = {},
+         const ForwardSliceOptions &forwardSliceOptions = {});
 
 /// Multi-root DAG topological sort.
 /// Performs a topological sort of the Operation in the `toSort` SetVector.
 /// Returns a topologically sorted SetVector.
 SetVector<Operation *> topologicalSort(const SetVector<Operation *> &toSort);
 
-} // end namespace mlir
+/// Utility to match a generic reduction given a list of iteration-carried
+/// arguments, `iterCarriedArgs` and the position of the potential reduction
+/// argument within the list, `redPos`. If a reduction is matched, returns the
+/// reduced value and the topologically-sorted list of combiner operations
+/// involved in the reduction. Otherwise, returns a null value.
+///
+/// The matching algorithm relies on the following invariants, which are subject
+/// to change:
+///  1. The first combiner operation must be a binary operation with the
+///     iteration-carried value and the reduced value as operands.
+///  2. The iteration-carried value and combiner operations must be side
+///     effect-free, have single result and a single use.
+///  3. Combiner operations must be immediately nested in the region op
+///     performing the reduction.
+///  4. Reduction def-use chain must end in a terminator op that yields the
+///     next iteration/output values in the same order as the iteration-carried
+///     values in `iterCarriedArgs`.
+///  5. `iterCarriedArgs` must contain all the iteration-carried/output values
+///     of the region op performing the reduction.
+///
+/// This utility is generic enough to detect reductions involving multiple
+/// combiner operations (disabled for now) across multiple dialects, including
+/// Linalg, Affine and SCF. For the sake of genericity, it does not return
+/// specific enum values for the combiner operations since its goal is also
+/// matching reductions without pre-defined semantics in core MLIR. It's up to
+/// each client to make sense out of the list of combiner operations. It's also
+/// up to each client to check for additional invariants on the expected
+/// reductions not covered by this generic matching.
+Value matchReduction(ArrayRef<BlockArgument> iterCarriedArgs, unsigned redPos,
+                     SmallVectorImpl<Operation *> &combinerOps);
+
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_SLICEANALYSIS_H_

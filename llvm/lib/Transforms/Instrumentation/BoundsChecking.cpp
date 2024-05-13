@@ -19,20 +19,16 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
-#include <vector>
+#include <utility>
 
 using namespace llvm;
 
@@ -40,6 +36,9 @@ using namespace llvm;
 
 static cl::opt<bool> SingleTrapBB("bounds-checking-single-trap",
                                   cl::desc("Use one trap block per function"));
+
+static cl::opt<bool> DebugTrapBB("bounds-checking-unique-traps",
+                                 cl::desc("Always use one trap per check"));
 
 STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
@@ -58,23 +57,23 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
                                  const DataLayout &DL, TargetLibraryInfo &TLI,
                                  ObjectSizeOffsetEvaluator &ObjSizeEval,
                                  BuilderTy &IRB, ScalarEvolution &SE) {
-  uint64_t NeededSize = DL.getTypeStoreSize(InstVal->getType());
+  TypeSize NeededSize = DL.getTypeStoreSize(InstVal->getType());
   LLVM_DEBUG(dbgs() << "Instrument " << *Ptr << " for " << Twine(NeededSize)
                     << " bytes\n");
 
-  SizeOffsetEvalType SizeOffset = ObjSizeEval.compute(Ptr);
+  SizeOffsetValue SizeOffset = ObjSizeEval.compute(Ptr);
 
-  if (!ObjSizeEval.bothKnown(SizeOffset)) {
+  if (!SizeOffset.bothKnown()) {
     ++ChecksUnable;
     return nullptr;
   }
 
-  Value *Size   = SizeOffset.first;
-  Value *Offset = SizeOffset.second;
+  Value *Size = SizeOffset.Size;
+  Value *Offset = SizeOffset.Offset;
   ConstantInt *SizeCI = dyn_cast<ConstantInt>(Size);
 
-  Type *IntTy = DL.getIntPtrType(Ptr->getType());
-  Value *NeededSizeVal = ConstantInt::get(IntTy, NeededSize);
+  Type *IndexTy = DL.getIndexType(Ptr->getType());
+  Value *NeededSizeVal = IRB.CreateTypeSize(IndexTy, NeededSize);
 
   auto SizeRange = SE.getUnsignedRange(SE.getSCEV(Size));
   auto OffsetRange = SE.getUnsignedRange(SE.getSCEV(Offset));
@@ -99,7 +98,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   Value *Or = IRB.CreateOr(Cmp2, Cmp3);
   if ((!SizeCI || SizeCI->getValue().slt(0)) &&
       !SizeRange.getSignedMin().isNonNegative()) {
-    Value *Cmp1 = IRB.CreateICmpSLT(Offset, ConstantInt::get(IntTy, 0));
+    Value *Cmp1 = IRB.CreateICmpSLT(Offset, ConstantInt::get(IndexTy, 0));
     Or = IRB.CreateOr(Cmp1, Or);
   }
 
@@ -142,9 +141,13 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
 
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
                               ScalarEvolution &SE) {
+  if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
+    return false;
+
   const DataLayout &DL = F.getParent()->getDataLayout();
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
+  EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
   ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
@@ -180,19 +183,27 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   // will create a fresh block every time it is called.
   BasicBlock *TrapBB = nullptr;
   auto GetTrapBB = [&TrapBB](BuilderTy &IRB) {
-    if (TrapBB && SingleTrapBB)
-      return TrapBB;
-
     Function *Fn = IRB.GetInsertBlock()->getParent();
-    // FIXME: This debug location doesn't make a lot of sense in the
-    // `SingleTrapBB` case.
     auto DebugLoc = IRB.getCurrentDebugLocation();
     IRBuilder<>::InsertPointGuard Guard(IRB);
+
+    if (TrapBB && SingleTrapBB && !DebugTrapBB)
+      return TrapBB;
+
     TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
     IRB.SetInsertPoint(TrapBB);
 
-    auto *F = Intrinsic::getDeclaration(Fn->getParent(), Intrinsic::trap);
-    CallInst *TrapCall = IRB.CreateCall(F, {});
+    Intrinsic::ID IntrID = DebugTrapBB ? Intrinsic::ubsantrap : Intrinsic::trap;
+    auto *F = Intrinsic::getDeclaration(Fn->getParent(), IntrID);
+
+    CallInst *TrapCall;
+    if (DebugTrapBB) {
+      TrapCall =
+          IRB.CreateCall(F, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
+    } else {
+      TrapCall = IRB.CreateCall(F, {});
+    }
+
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     TrapCall->setDebugLoc(DebugLoc);
@@ -219,36 +230,4 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
-}
-
-namespace {
-struct BoundsCheckingLegacyPass : public FunctionPass {
-  static char ID;
-
-  BoundsCheckingLegacyPass() : FunctionPass(ID) {
-    initializeBoundsCheckingLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    return addBoundsChecking(F, TLI, SE);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-  }
-};
-} // namespace
-
-char BoundsCheckingLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(BoundsCheckingLegacyPass, "bounds-checking",
-                      "Run-time bounds checking", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(BoundsCheckingLegacyPass, "bounds-checking",
-                    "Run-time bounds checking", false, false)
-
-FunctionPass *llvm::createBoundsCheckingLegacyPass() {
-  return new BoundsCheckingLegacyPass();
 }

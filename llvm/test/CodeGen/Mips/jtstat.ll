@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=CHECK-STATIC16
+; RUN: llc -mtriple=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=CHECK-STATIC16
 
 @s = global i8 115, align 1
 @c = common global i8 0, align 1
@@ -7,8 +7,8 @@
 define void @test(i32 %i) nounwind {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4
   switch i32 %0, label %sw.epilog [
     i32 115, label %sw.bb
     i32 105, label %sw.bb1
@@ -21,35 +21,35 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry
-  store i8 115, i8* @c, align 1
+  store i8 115, ptr @c, align 1
   br label %sw.epilog
 
 sw.bb1:                                           ; preds = %entry
-  store i8 105, i8* @c, align 1
+  store i8 105, ptr @c, align 1
   br label %sw.epilog
 
 sw.bb2:                                           ; preds = %entry
-  store i8 100, i8* @c, align 1
+  store i8 100, ptr @c, align 1
   br label %sw.epilog
 
 sw.bb3:                                           ; preds = %entry
-  store i8 108, i8* @c, align 1
+  store i8 108, ptr @c, align 1
   br label %sw.epilog
 
 sw.bb4:                                           ; preds = %entry
-  store i8 99, i8* @c, align 1
+  store i8 99, ptr @c, align 1
   br label %sw.epilog
 
 sw.bb5:                                           ; preds = %entry
-  store i8 68, i8* @c, align 1
+  store i8 68, ptr @c, align 1
   br label %sw.epilog
 
 sw.bb6:                                           ; preds = %entry
-  store i8 81, i8* @c, align 1
+  store i8 81, ptr @c, align 1
   br label %sw.epilog
 
 sw.bb7:                                           ; preds = %entry
-  store i8 76, i8* @c, align 1
+  store i8 76, ptr @c, align 1
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %entry, %sw.bb7, %sw.bb6, %sw.bb5, %sw.bb4, %sw.bb3, %sw.bb2, %sw.bb1, %sw.bb

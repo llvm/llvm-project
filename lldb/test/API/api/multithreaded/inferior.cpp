@@ -1,11 +1,11 @@
 
 #include <iostream>
 
-using namespace std;
+
 
 int next() {
   static int i = 0;
-  cout << "incrementing " << i << endl;
+  std::cout << "incrementing " << i << std::endl;
   return ++i;
 }
 

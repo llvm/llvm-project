@@ -12,26 +12,33 @@
 
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRVPass.h"
 
-#include "../PassDetail.h"
+#include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
+#include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
+#include "mlir/Conversion/IndexToSPIRV/IndexToSPIRV.h"
+#include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
-#include "mlir/Conversion/StandardToSPIRV/StandardToSPIRV.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_SCFTOSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
-struct SCFToSPIRVPass : public SCFToSPIRVBase<SCFToSPIRVPass> {
+struct SCFToSPIRVPass : public impl::SCFToSPIRVBase<SCFToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
 
 void SCFToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
+  Operation *op = getOperation();
 
-  auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
+  auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
 
@@ -39,13 +46,15 @@ void SCFToSPIRVPass::runOnOperation() {
   ScfToSPIRVContext scfContext;
   RewritePatternSet patterns(context);
   populateSCFToSPIRVPatterns(typeConverter, scfContext, patterns);
-  populateStandardToSPIRVPatterns(typeConverter, patterns);
+
+  // TODO: Change SPIR-V conversion to be progressive and remove the following
+  // patterns.
+  mlir::arith::populateArithToSPIRVPatterns(typeConverter, patterns);
+  populateFuncToSPIRVPatterns(typeConverter, patterns);
+  populateMemRefToSPIRVPatterns(typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
+  index::populateIndexToSPIRVPatterns(typeConverter, patterns);
 
-  if (failed(applyPartialConversion(module, *target, std::move(patterns))))
+  if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertSCFToSPIRVPass() {
-  return std::make_unique<SCFToSPIRVPass>();
 }

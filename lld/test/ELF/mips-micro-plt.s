@@ -12,7 +12,7 @@
 # RUN:       }" > %t.script
 # RUN: ld.lld %t-exe.o %t.so --script %t.script -o %t.exe
 # RUN: llvm-readelf --symbols --dyn-syms -A %t.exe | FileCheck %s
-# RUN: llvm-objdump -d --mattr=micromips --no-show-raw-insn %t.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=micromips --no-show-raw-insn %t.exe \
 # RUN:   | FileCheck --check-prefix=ASM %s
 
 # CHECK: Symbol table '.dynsym'
@@ -42,7 +42,7 @@
 # ASM-NEXT:            addi    $8, $8, 801
 #
 # ASM:      <foo>:
-# ASM-NEXT:    20210:  jal     131872
+# ASM-NEXT:    20210:  jal     0x20320
 
   .text
   .set micromips

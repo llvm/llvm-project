@@ -1,19 +1,18 @@
 if (CLANGD_ENABLE_REMOTE)
-  generate_protos(RemoteIndexProto "Index.proto")
-  generate_protos(MonitoringServiceProto "MonitoringService.proto"
+  generate_clang_protos_library(clangdRemoteIndexProto "Index.proto")
+  generate_clang_protos_library(clangdMonitoringServiceProto "MonitoringService.proto"
     GRPC)
-  generate_protos(RemoteIndexServiceProto "Service.proto"
+  generate_clang_protos_library(clangdRemoteIndexServiceProto "Service.proto"
     DEPENDS "Index.proto"
     GRPC)
   # FIXME: Move this into generate_protos. Currently we only mention proto
   # filename as a dependency, but linking requires target name.
-  target_link_libraries(RemoteIndexServiceProto
+  target_link_libraries(clangdRemoteIndexServiceProto
     PRIVATE
-    RemoteIndexProto
-    MonitoringServiceProto
+    clangdRemoteIndexProto
+    clangdMonitoringServiceProto
     )
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../)
 
   # FIXME(kirillbobyrev): target_compile_definitions is not working with
   # add_clang_library for some reason. Is there any way to make this
@@ -24,16 +23,16 @@ if (CLANGD_ENABLE_REMOTE)
     Client.cpp
 
     LINK_LIBS
-    RemoteIndexProto
-    RemoteIndexServiceProto
+    clangdRemoteIndexProto
+    clangdRemoteIndexServiceProto
     clangdRemoteMarshalling
     clangBasic
     clangDaemon
     clangdSupport
 
     DEPENDS
-    RemoteIndexProto
-    RemoteIndexServiceProto
+    clangdRemoteIndexProto
+    clangdRemoteIndexServiceProto
     )
 
   add_subdirectory(marshalling)

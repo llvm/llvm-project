@@ -15,17 +15,18 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <vector>
 
 namespace llvm {
 
 class Triple;
-class FunctionPass;
-class ModulePass;
 class OptimizationRemarkEmitter;
 class Comdat;
 class CallBase;
@@ -47,6 +48,12 @@ GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
 // Otherwise creates a new comdat, sets F's comdat, and returns it.
 // Returns nullptr on failure.
 Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
+
+// Place global in a large section for x86-64 ELF binaries to mitigate
+// relocation overflow pressure. This can be be used for metadata globals that
+// aren't directly accessed by code, which has no performance impact.
+void setGlobalVariableLargeSection(const Triple &TargetTriple,
+                                   GlobalVariable &GV);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
@@ -74,23 +81,6 @@ struct GCOVOptions {
   // Regexes separated by a semi-colon to filter the files to not instrument.
   std::string Exclude;
 };
-
-ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
-                                   GCOVOptions::getDefault());
-
-// PGO Instrumention. Parameter IsCS indicates if this is the context senstive
-// instrumentation.
-ModulePass *createPGOInstrumentationGenLegacyPass(bool IsCS = false);
-ModulePass *
-createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""),
-                                      bool IsCS = false);
-ModulePass *createPGOInstrumentationGenCreateVarLegacyPass(
-    StringRef CSInstrName = StringRef(""));
-ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false,
-                                                     bool SamplePGO = false);
-FunctionPass *createPGOMemOPSizeOptLegacyPass();
-
-ModulePass *createCGProfileLegacyPass();
 
 // The pgo-specific indirect call promotion function declared below is used by
 // the pgo-driven indirect call promotion and sample profile passes. It's a
@@ -137,17 +127,6 @@ struct InstrProfOptions {
   InstrProfOptions() = default;
 };
 
-/// Insert frontend instrumentation based profiling. Parameter IsCS indicates if
-// this is the context senstive instrumentation.
-ModulePass *createInstrProfilingLegacyPass(
-    const InstrProfOptions &Options = InstrProfOptions(), bool IsCS = false);
-
-ModulePass *createInstrOrderFilePass();
-
-// Insert DataFlowSanitizer (dynamic data flow analysis) instrumentation
-ModulePass *createDataFlowSanitizerLegacyPassPass(
-    const std::vector<std::string> &ABIListFiles = std::vector<std::string>());
-
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {
   enum Type {
@@ -169,6 +148,9 @@ struct SanitizerCoverageOptions {
   bool PCTable = false;
   bool NoPrune = false;
   bool StackDepth = false;
+  bool TraceLoads = false;
+  bool TraceStores = false;
+  bool CollectControlFlow = false;
 
   SanitizerCoverageOptions() = default;
 };
@@ -192,6 +174,26 @@ static inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
   assert(Scaled <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
   return Scaled;
 }
+
+// Use to ensure the inserted instrumentation has a DebugLocation; if none is
+// attached to the source instruction, try to use a DILocation with offset 0
+// scoped to surrounding function (if it has a DebugLocation).
+//
+// Some non-call instructions may be missing debug info, but when inserting
+// instrumentation calls, some builds (e.g. LTO) want calls to have debug info
+// if the enclosing function does.
+struct InstrumentationIRBuilder : IRBuilder<> {
+  static void ensureDebugInfo(IRBuilder<> &IRB, const Function &F) {
+    if (IRB.getCurrentDebugLocation())
+      return;
+    if (DISubprogram *SP = F.getSubprogram())
+      IRB.SetCurrentDebugLocation(DILocation::get(SP->getContext(), 0, 0, SP));
+  }
+
+  explicit InstrumentationIRBuilder(Instruction *IP) : IRBuilder<>(IP) {
+    ensureDebugInfo(*this, *IP->getFunction());
+  }
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_INSTRUMENTATION_H

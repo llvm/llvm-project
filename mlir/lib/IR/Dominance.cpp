@@ -34,6 +34,21 @@ DominanceInfoBase<IsPostDom>::~DominanceInfoBase() {
     delete entry.second.getPointer();
 }
 
+template <bool IsPostDom> void DominanceInfoBase<IsPostDom>::invalidate() {
+  for (auto entry : dominanceInfos)
+    delete entry.second.getPointer();
+  dominanceInfos.clear();
+}
+
+template <bool IsPostDom>
+void DominanceInfoBase<IsPostDom>::invalidate(Region *region) {
+  auto it = dominanceInfos.find(region);
+  if (it != dominanceInfos.end()) {
+    delete it->second.getPointer();
+    dominanceInfos.erase(it);
+  }
+}
+
 /// Return the dom tree and "hasSSADominance" bit for the given region.  The
 /// DomTree will be null for single-block regions.  This lazily constructs the
 /// DomTree on demand when needsDomTree=true.
@@ -297,7 +312,7 @@ bool DominanceInfo::properlyDominatesImpl(Operation *a, Operation *b,
 bool DominanceInfo::properlyDominates(Value a, Operation *b) const {
   // block arguments properly dominate all operations in their own block, so
   // we use a dominates check here, not a properlyDominates check.
-  if (auto blockArg = a.dyn_cast<BlockArgument>())
+  if (auto blockArg = dyn_cast<BlockArgument>(a))
     return dominates(blockArg.getOwner(), b->getBlock());
 
   // `a` properlyDominates `b` if the operation defining `a` properlyDominates

@@ -13,32 +13,15 @@
 
 #include "llvm/Transforms/Scalar/LowerWidenableCondition.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/GuardUtils.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/GuardUtils.h"
 
 using namespace llvm;
-
-namespace {
-struct LowerWidenableConditionLegacyPass : public FunctionPass {
-  static char ID;
-  LowerWidenableConditionLegacyPass() : FunctionPass(ID) {
-    initializeLowerWidenableConditionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-};
-}
 
 static bool lowerWidenableCondition(Function &F) {
   // Check if we can cheaply rule out the possibility of not having any work to
@@ -50,9 +33,13 @@ static bool lowerWidenableCondition(Function &F) {
 
   using namespace llvm::PatternMatch;
   SmallVector<CallInst *, 8> ToLower;
-  for (auto &I : instructions(F))
-    if (match(&I, m_Intrinsic<Intrinsic::experimental_widenable_condition>()))
-      ToLower.push_back(cast<CallInst>(&I));
+  // Traverse through the users of WCDecl.
+  // This is presumably cheaper than traversing all instructions in the
+  // function.
+  for (auto *U : WCDecl->users())
+    if (auto *CI = dyn_cast<CallInst>(U))
+      if (CI->getFunction() == &F)
+        ToLower.push_back(CI);
 
   if (ToLower.empty())
     return false;
@@ -62,19 +49,6 @@ static bool lowerWidenableCondition(Function &F) {
     CI->eraseFromParent();
   }
   return true;
-}
-
-bool LowerWidenableConditionLegacyPass::runOnFunction(Function &F) {
-  return lowerWidenableCondition(F);
-}
-
-char LowerWidenableConditionLegacyPass::ID = 0;
-INITIALIZE_PASS(LowerWidenableConditionLegacyPass, "lower-widenable-condition",
-                "Lower the widenable condition to default true value", false,
-                false)
-
-Pass *llvm::createLowerWidenableConditionPass() {
-  return new LowerWidenableConditionLegacyPass();
 }
 
 PreservedAnalyses LowerWidenableConditionPass::run(Function &F,

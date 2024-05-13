@@ -12,18 +12,50 @@ define i32 @test1(i32 %a) {
 ; CHECK-NEXT:    addl $4, %eax
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    jmp .Ltmp0
+; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.1: # %normal
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  .LBB0_2: # %fail
+; CHECK-NEXT:  .LBB0_2: # Block address taken
+; CHECK-NEXT:    # %fail
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 entry:
   %0 = add i32 %a, 4
-  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test1, %fail)) to label %normal [label %fail]
+  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,!i,~{dirflag},~{fpsr},~{flags}"(i32 %0) to label %normal [label %fail]
+
+normal:
+  ret i32 0
+
+fail:
+  ret i32 1
+}
+
+; Test 1b - Like test 1 but using `asm inteldialect`.
+define i32 @test1b(i32 %a) {
+; CHECK-LABEL: test1b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    addl $4, %eax
+; CHECK-NEXT:    #APP
+; CHECK-EMPTY:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-EMPTY:
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:  # %bb.1: # %normal
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB1_2: # Block address taken
+; CHECK-NEXT:    # %fail
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    retl
+entry:
+  %0 = add i32 %a, 4
+  callbr void asm inteldialect "xor $0, $0; jmp ${1:l}", "r,!i,~{dirflag},~{fpsr},~{flags}"(i32 %0) to label %normal [label %fail]
 
 normal:
   ret i32 0
@@ -44,7 +76,7 @@ entry:
 
 unreachableasm:
   %0 = add i32 %a, 4
-  callbr void asm sideeffect "xorl $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test2, %fail)) to label %normal [label %fail]
+  callbr void asm sideeffect "xorl $0, $0; jmp ${1:l}", "r,!i,~{dirflag},~{fpsr},~{flags}"(i32 %0) to label %normal [label %fail]
 
 normal:
   ret i32 0
@@ -59,74 +91,78 @@ fail:
 define i32 @test3(i32 %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  .Ltmp1: # Block address taken
-; CHECK-NEXT:  .LBB2_1: # %label01
+; CHECK-NEXT:  .LBB3_1: # Block address taken
+; CHECK-NEXT:    # %label01
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB2_2 Depth 2
-; CHECK-NEXT:    # Child Loop BB2_3 Depth 3
-; CHECK-NEXT:    # Child Loop BB2_4 Depth 4
-; CHECK-NEXT:  .Ltmp2: # Block address taken
-; CHECK-NEXT:  .LBB2_2: # %label02
-; CHECK-NEXT:    # Parent Loop BB2_1 Depth=1
+; CHECK-NEXT:    # Child Loop BB3_2 Depth 2
+; CHECK-NEXT:    # Child Loop BB3_3 Depth 3
+; CHECK-NEXT:    # Child Loop BB3_4 Depth 4
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:  .LBB3_2: # Block address taken
+; CHECK-NEXT:    # %label02
+; CHECK-NEXT:    # Parent Loop BB3_1 Depth=1
 ; CHECK-NEXT:    # => This Loop Header: Depth=2
-; CHECK-NEXT:    # Child Loop BB2_3 Depth 3
-; CHECK-NEXT:    # Child Loop BB2_4 Depth 4
+; CHECK-NEXT:    # Child Loop BB3_3 Depth 3
+; CHECK-NEXT:    # Child Loop BB3_4 Depth 4
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    addl $4, {{[0-9]+}}(%esp)
-; CHECK-NEXT:  .Ltmp3: # Block address taken
-; CHECK-NEXT:  .LBB2_3: # %label03
-; CHECK-NEXT:    # Parent Loop BB2_1 Depth=1
-; CHECK-NEXT:    # Parent Loop BB2_2 Depth=2
+; CHECK-NEXT:  .LBB3_3: # Block address taken
+; CHECK-NEXT:    # %label03
+; CHECK-NEXT:    # Parent Loop BB3_1 Depth=1
+; CHECK-NEXT:    # Parent Loop BB3_2 Depth=2
 ; CHECK-NEXT:    # => This Loop Header: Depth=3
-; CHECK-NEXT:    # Child Loop BB2_4 Depth 4
-; CHECK-NEXT:  .Ltmp4: # Block address taken
-; CHECK-NEXT:  .LBB2_4: # %label04
-; CHECK-NEXT:    # Parent Loop BB2_1 Depth=1
-; CHECK-NEXT:    # Parent Loop BB2_2 Depth=2
-; CHECK-NEXT:    # Parent Loop BB2_3 Depth=3
+; CHECK-NEXT:    # Child Loop BB3_4 Depth 4
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:  .LBB3_4: # Block address taken
+; CHECK-NEXT:    # %label04
+; CHECK-NEXT:    # Parent Loop BB3_1 Depth=1
+; CHECK-NEXT:    # Parent Loop BB3_2 Depth=2
+; CHECK-NEXT:    # Parent Loop BB3_3 Depth=3
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=4
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    jmp .Ltmp1
-; CHECK-NEXT:    jmp .Ltmp2
-; CHECK-NEXT:    jmp .Ltmp3
+; CHECK-NEXT:    jmp .LBB3_1
+; CHECK-NEXT:    jmp .LBB3_2
+; CHECK-NEXT:    jmp .LBB3_3
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.5: # %normal0
-; CHECK-NEXT:    # in Loop: Header=BB2_4 Depth=4
+; CHECK-NEXT:    # in Loop: Header=BB3_4 Depth=4
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    jmp .Ltmp1
-; CHECK-NEXT:    jmp .Ltmp2
-; CHECK-NEXT:    jmp .Ltmp3
-; CHECK-NEXT:    jmp .Ltmp4
+; CHECK-NEXT:    jmp .LBB3_1
+; CHECK-NEXT:    jmp .LBB3_2
+; CHECK-NEXT:    jmp .LBB3_3
+; CHECK-NEXT:    jmp .LBB3_4
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.6: # %normal1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    retl
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
   br label %label01
 
 label01:                                          ; preds = %normal0, %label04, %entry
   br label %label02
 
 label02:                                          ; preds = %normal0, %label04, %label01
-  %0 = load i32, i32* %a.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4
   %add = add nsw i32 %0, 4
-  store i32 %add, i32* %a.addr, align 4
+  store i32 %add, ptr %a.addr, align 4
   br label %label03
 
 label03:                                          ; preds = %normal0, %label04, %label02
   br label %label04
 
 label04:                                          ; preds = %normal0, %label03
-  callbr void asm sideeffect "jmp ${0:l}; jmp ${1:l}; jmp ${2:l}", "X,X,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test3, %label01), i8* blockaddress(@test3, %label02), i8* blockaddress(@test3, %label03))
+  callbr void asm sideeffect "jmp ${0:l}; jmp ${1:l}; jmp ${2:l}", "!i,!i,!i,~{dirflag},~{fpsr},~{flags}"()
           to label %normal0 [label %label01, label %label02, label %label03]
 
 normal0:                                          ; preds = %label04
-  callbr void asm sideeffect "jmp ${0:l}; jmp ${1:l}; jmp ${2:l}; jmp ${3:l}", "X,X,X,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test3, %label01), i8* blockaddress(@test3, %label02), i8* blockaddress(@test3, %label03), i8* blockaddress(@test3, %label04))
+  callbr void asm sideeffect "jmp ${0:l}; jmp ${1:l}; jmp ${2:l}; jmp ${3:l}", "!i,!i,!i,!i,~{dirflag},~{fpsr},~{flags}"()
           to label %normal1 [label %label01, label %label02, label %label03, label %label04]
 
 normal1:                                          ; preds = %normal0
-  %1 = load i32, i32* %a.addr, align 4
+  %1 = load i32, ptr %a.addr, align 4
   ret i32 %1
 }
 
@@ -135,21 +171,22 @@ define void @test4() {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    ja .Ltmp5
+; CHECK-NEXT:    ja .LBB4_3
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.1: # %asm.fallthrough
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    ja .Ltmp5
+; CHECK-NEXT:    ja .LBB4_3
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .Ltmp5: # Block address taken
-; CHECK-NEXT:  .LBB3_3: # %quux
+; CHECK-NEXT:  .LBB4_3: # Block address taken
+; CHECK-NEXT:    # %quux
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    retl
 entry:
-  callbr void asm sideeffect "ja $0", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))
+  callbr void asm sideeffect "ja $0", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %asm.fallthrough [label %quux]
 
 asm.fallthrough:                                  ; preds = %entry
-  callbr void asm sideeffect "ja ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))
+  callbr void asm sideeffect "ja ${0:l}", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %cleanup [label %quux]
 
 quux:                                             ; preds = %asm.fallthrough, %entry

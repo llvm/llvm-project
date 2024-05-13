@@ -1,8 +1,13 @@
-cmake_minimum_required(VERSION 3.13.4)
+cmake_minimum_required(VERSION 3.20.0)
 
 project(Debugserver LANGUAGES C CXX ASM-ATT)
 
+# Must go below project(..)
+include(GNUInstallDirs)
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  set(LLDB_BUILT_STANDALONE TRUE)
+
   set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
     "${CMAKE_SOURCE_DIR}/../../cmake"

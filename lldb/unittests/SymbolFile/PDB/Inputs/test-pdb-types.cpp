@@ -2,8 +2,6 @@
 // Link with "link test-pdb-types.obj /debug /nodefaultlib /entry:main
 // /out:test-pdb-types.exe"
 
-using namespace std;
-
 // Sizes of builtin types
 static const int sizeof_char = sizeof(char);
 static const int sizeof_uchar = sizeof(unsigned char);

@@ -1,0 +1,163 @@
+## Test that llvm-readobj shows proper relocation type
+## names and values for ppc target.
+
+# RUN: yaml2obj %s -o %t-ppc.o
+# RUN: llvm-readobj -r --expand-relocs %t-ppc.o | FileCheck %s
+
+# CHECK: Type: R_PPC_NONE (0)
+# CHECK: Type: R_PPC_ADDR32 (1)
+# CHECK: Type: R_PPC_ADDR24 (2)
+# CHECK: Type: R_PPC_ADDR16 (3)
+# CHECK: Type: R_PPC_ADDR16_LO (4)
+# CHECK: Type: R_PPC_ADDR16_HI (5)
+# CHECK: Type: R_PPC_ADDR16_HA (6)
+# CHECK: Type: R_PPC_ADDR14 (7)
+# CHECK: Type: R_PPC_ADDR14_BRTAKEN (8)
+# CHECK: Type: R_PPC_ADDR14_BRNTAKEN (9)
+# CHECK: Type: R_PPC_REL24 (10)
+# CHECK: Type: R_PPC_REL14 (11)
+# CHECK: Type: R_PPC_REL14_BRTAKEN (12)
+# CHECK: Type: R_PPC_REL14_BRNTAKEN (13)
+# CHECK: Type: R_PPC_GOT16 (14)
+# CHECK: Type: R_PPC_GOT16_LO (15)
+# CHECK: Type: R_PPC_GOT16_HI (16)
+# CHECK: Type: R_PPC_GOT16_HA (17)
+# CHECK: Type: R_PPC_PLTREL24 (18)
+# CHECK: Type: R_PPC_COPY (19)
+# CHECK: Type: R_PPC_GLOB_DAT (20)
+# CHECK: Type: R_PPC_JMP_SLOT (21)
+# CHECK: Type: R_PPC_RELATIVE (22)
+# CHECK: Type: R_PPC_LOCAL24PC (23)
+# CHECK: Type: R_PPC_UADDR32 (24)
+# CHECK: Type: R_PPC_UADDR16 (25)
+# CHECK: Type: R_PPC_REL32 (26)
+# CHECK: Type: R_PPC_PLT32 (27)
+# CHECK: Type: R_PPC_PLTREL32 (28)
+# CHECK: Type: R_PPC_PLT16_LO (29)
+# CHECK: Type: R_PPC_PLT16_HI (30)
+# CHECK: Type: R_PPC_PLT16_HA (31)
+# CHECK: Type: R_PPC_SDAREL16 (32)
+# CHECK: Type: R_PPC_SECTOFF (33)
+# CHECK: Type: R_PPC_SECTOFF_LO (34)
+# CHECK: Type: R_PPC_SECTOFF_HI (35)
+# CHECK: Type: R_PPC_SECTOFF_HA (36)
+# CHECK: Type: R_PPC_ADDR30 (37)
+# CHECK: Type: R_PPC_TLS (67)
+# CHECK: Type: R_PPC_DTPMOD32 (68)
+# CHECK: Type: R_PPC_TPREL16 (69)
+# CHECK: Type: R_PPC_TPREL16_LO (70)
+# CHECK: Type: R_PPC_TPREL16_HI (71)
+# CHECK: Type: R_PPC_TPREL16_HA (72)
+# CHECK: Type: R_PPC_TPREL32 (73)
+# CHECK: Type: R_PPC_DTPREL16 (74)
+# CHECK: Type: R_PPC_DTPREL16_LO (75)
+# CHECK: Type: R_PPC_DTPREL16_HI (76)
+# CHECK: Type: R_PPC_DTPREL16_HA (77)
+# CHECK: Type: R_PPC_DTPREL32 (78)
+# CHECK: Type: R_PPC_GOT_TLSGD16 (79)
+# CHECK: Type: R_PPC_GOT_TLSGD16_LO (80)
+# CHECK: Type: R_PPC_GOT_TLSGD16_HI (81)
+# CHECK: Type: R_PPC_GOT_TLSGD16_HA (82)
+# CHECK: Type: R_PPC_GOT_TLSLD16 (83)
+# CHECK: Type: R_PPC_GOT_TLSLD16_LO (84)
+# CHECK: Type: R_PPC_GOT_TLSLD16_HI (85)
+# CHECK: Type: R_PPC_GOT_TLSLD16_HA (86)
+# CHECK: Type: R_PPC_GOT_TPREL16 (87)
+# CHECK: Type: R_PPC_GOT_TPREL16_LO (88)
+# CHECK: Type: R_PPC_GOT_TPREL16_HI (89)
+# CHECK: Type: R_PPC_GOT_TPREL16_HA (90)
+# CHECK: Type: R_PPC_GOT_DTPREL16 (91)
+# CHECK: Type: R_PPC_GOT_DTPREL16_LO (92)
+# CHECK: Type: R_PPC_GOT_DTPREL16_HI (93)
+# CHECK: Type: R_PPC_GOT_DTPREL16_HA (94)
+# CHECK: Type: R_PPC_TLSGD (95)
+# CHECK: Type: R_PPC_TLSLD (96)
+# CHECK: Type: R_PPC_IRELATIVE (248)
+# CHECK: Type: R_PPC_REL16 (249)
+# CHECK: Type: R_PPC_REL16_LO (250)
+# CHECK: Type: R_PPC_REL16_HI (251)
+# CHECK: Type: R_PPC_REL16_HA (252)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_PPC
+Sections:
+  - Name: .rela.text
+    Type: SHT_RELA
+    Relocations:
+      - Type: R_PPC_NONE
+      - Type: R_PPC_ADDR32
+      - Type: R_PPC_ADDR24
+      - Type: R_PPC_ADDR16
+      - Type: R_PPC_ADDR16_LO
+      - Type: R_PPC_ADDR16_HI
+      - Type: R_PPC_ADDR16_HA
+      - Type: R_PPC_ADDR14
+      - Type: R_PPC_ADDR14_BRTAKEN
+      - Type: R_PPC_ADDR14_BRNTAKEN
+      - Type: R_PPC_REL24
+      - Type: R_PPC_REL14
+      - Type: R_PPC_REL14_BRTAKEN
+      - Type: R_PPC_REL14_BRNTAKEN
+      - Type: R_PPC_GOT16
+      - Type: R_PPC_GOT16_LO
+      - Type: R_PPC_GOT16_HI
+      - Type: R_PPC_GOT16_HA
+      - Type: R_PPC_PLTREL24
+      - Type: R_PPC_COPY
+      - Type: R_PPC_GLOB_DAT
+      - Type: R_PPC_JMP_SLOT
+      - Type: R_PPC_RELATIVE
+      - Type: R_PPC_LOCAL24PC
+      - Type: R_PPC_UADDR32
+      - Type: R_PPC_UADDR16
+      - Type: R_PPC_REL32
+      - Type: R_PPC_PLT32
+      - Type: R_PPC_PLTREL32
+      - Type: R_PPC_PLT16_LO
+      - Type: R_PPC_PLT16_HI
+      - Type: R_PPC_PLT16_HA
+      - Type: R_PPC_SDAREL16
+      - Type: R_PPC_SECTOFF
+      - Type: R_PPC_SECTOFF_LO
+      - Type: R_PPC_SECTOFF_HI
+      - Type: R_PPC_SECTOFF_HA
+      - Type: R_PPC_ADDR30
+      - Type: R_PPC_TLS
+      - Type: R_PPC_DTPMOD32
+      - Type: R_PPC_TPREL16
+      - Type: R_PPC_TPREL16_LO
+      - Type: R_PPC_TPREL16_HI
+      - Type: R_PPC_TPREL16_HA
+      - Type: R_PPC_TPREL32
+      - Type: R_PPC_DTPREL16
+      - Type: R_PPC_DTPREL16_LO
+      - Type: R_PPC_DTPREL16_HI
+      - Type: R_PPC_DTPREL16_HA
+      - Type: R_PPC_DTPREL32
+      - Type: R_PPC_GOT_TLSGD16
+      - Type: R_PPC_GOT_TLSGD16_LO
+      - Type: R_PPC_GOT_TLSGD16_HI
+      - Type: R_PPC_GOT_TLSGD16_HA
+      - Type: R_PPC_GOT_TLSLD16
+      - Type: R_PPC_GOT_TLSLD16_LO
+      - Type: R_PPC_GOT_TLSLD16_HI
+      - Type: R_PPC_GOT_TLSLD16_HA
+      - Type: R_PPC_GOT_TPREL16
+      - Type: R_PPC_GOT_TPREL16_LO
+      - Type: R_PPC_GOT_TPREL16_HI
+      - Type: R_PPC_GOT_TPREL16_HA
+      - Type: R_PPC_GOT_DTPREL16
+      - Type: R_PPC_GOT_DTPREL16_LO
+      - Type: R_PPC_GOT_DTPREL16_HI
+      - Type: R_PPC_GOT_DTPREL16_HA
+      - Type: R_PPC_TLSGD
+      - Type: R_PPC_TLSLD
+      - Type: R_PPC_IRELATIVE
+      - Type: R_PPC_REL16
+      - Type: R_PPC_REL16_LO
+      - Type: R_PPC_REL16_HI
+      - Type: R_PPC_REL16_HA

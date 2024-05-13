@@ -28,7 +28,7 @@ static const vm_size_t kInvalidPageSize = ~0;
 
 MachVMMemory::MachVMMemory() : m_page_size(kInvalidPageSize), m_err(0) {}
 
-MachVMMemory::~MachVMMemory() {}
+MachVMMemory::~MachVMMemory() = default;
 
 nub_size_t MachVMMemory::PageSize(task_t task) {
   if (m_page_size == kInvalidPageSize) {
@@ -72,6 +72,49 @@ nub_size_t MachVMMemory::MaxBytesLeftInPage(task_t task, nub_addr_t addr,
   return count;
 }
 
+#define MAX_STACK_ALLOC_DISPOSITIONS                                           \
+  (16 * 1024 / sizeof(int)) // 16K of allocations
+
+std::vector<nub_addr_t> get_dirty_pages(task_t task, mach_vm_address_t addr,
+                                        mach_vm_size_t size) {
+  std::vector<nub_addr_t> dirty_pages;
+
+  int pages_to_query = size / vm_page_size;
+  // Don't try to fetch too many pages' dispositions in a single call or we
+  // could blow our stack out.
+  mach_vm_size_t dispositions_size =
+      std::min(pages_to_query, (int)MAX_STACK_ALLOC_DISPOSITIONS);
+  int dispositions[dispositions_size];
+
+  mach_vm_size_t chunk_count =
+      ((pages_to_query + MAX_STACK_ALLOC_DISPOSITIONS - 1) /
+       MAX_STACK_ALLOC_DISPOSITIONS);
+
+  for (mach_vm_size_t cur_disposition_chunk = 0;
+       cur_disposition_chunk < chunk_count; cur_disposition_chunk++) {
+    mach_vm_size_t dispositions_already_queried =
+        cur_disposition_chunk * MAX_STACK_ALLOC_DISPOSITIONS;
+
+    mach_vm_size_t chunk_pages_to_query = std::min(
+        pages_to_query - dispositions_already_queried, dispositions_size);
+    mach_vm_address_t chunk_page_aligned_start_addr =
+        addr + (dispositions_already_queried * vm_page_size);
+
+    kern_return_t kr = mach_vm_page_range_query(
+        task, chunk_page_aligned_start_addr,
+        chunk_pages_to_query * vm_page_size, (mach_vm_address_t)dispositions,
+        &chunk_pages_to_query);
+    if (kr != KERN_SUCCESS)
+      return dirty_pages;
+    for (mach_vm_size_t i = 0; i < chunk_pages_to_query; i++) {
+      uint64_t dirty_addr = chunk_page_aligned_start_addr + (i * vm_page_size);
+      if (dispositions[i] & VM_PAGE_QUERY_PAGE_DIRTY)
+        dirty_pages.push_back(dirty_addr);
+    }
+  }
+  return dirty_pages;
+}
+
 nub_bool_t MachVMMemory::GetMemoryRegionInfo(task_t task, nub_addr_t address,
                                              DNBRegionInfo *region_info) {
   MachVMRegion vmRegion(task);
@@ -80,6 +123,9 @@ nub_bool_t MachVMMemory::GetMemoryRegionInfo(task_t task, nub_addr_t address,
     region_info->addr = vmRegion.StartAddress();
     region_info->size = vmRegion.GetByteSize();
     region_info->permissions = vmRegion.GetDNBPermissions();
+    region_info->dirty_pages =
+        get_dirty_pages(task, vmRegion.StartAddress(), vmRegion.GetByteSize());
+    region_info->vm_types = vmRegion.GetMemoryTypes();
   } else {
     region_info->addr = address;
     region_info->size = 0;

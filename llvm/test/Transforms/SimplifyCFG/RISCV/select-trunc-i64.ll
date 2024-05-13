@@ -1,4 +1,4 @@
-;RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -mtriple=riscv32 < %s | FileCheck %s
+;RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -mtriple=riscv32 < %s | FileCheck %s
 
 ; Test case taken from test/Transforms/SimplifyCFG/ARM/select-trunc-i64.ll.
 ; A correct implementation of isTruncateFree allows this test case to be

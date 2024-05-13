@@ -52,8 +52,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -67,6 +65,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -122,7 +121,7 @@ template <typename T> struct TypeListContainsSuperOf<EmptyTypeList, T> {
 template <typename ResultT, typename ArgT,
           ResultT (*Func)(ArrayRef<const ArgT *>)>
 struct VariadicFunction {
-  ResultT operator()() const { return Func(None); }
+  ResultT operator()() const { return Func(std::nullopt); }
 
   template <typename... ArgsT>
   ResultT operator()(const ArgT &Arg1, const ArgsT &... Args) const {
@@ -132,10 +131,7 @@ struct VariadicFunction {
   // We also allow calls with an already created array, in case the caller
   // already had it.
   ResultT operator()(ArrayRef<ArgT> Args) const {
-    SmallVector<const ArgT*, 8> InnerArgs;
-    for (const ArgT &Arg : Args)
-      InnerArgs.push_back(&Arg);
-    return Func(InnerArgs);
+    return Func(llvm::to_vector<8>(llvm::make_pointer_range(Args)));
   }
 
 private:
@@ -312,8 +308,7 @@ public:
 
   template <typename ExcludePredicate>
   bool removeBindings(const ExcludePredicate &Predicate) {
-    Bindings.erase(std::remove_if(Bindings.begin(), Bindings.end(), Predicate),
-                   Bindings.end());
+    llvm::erase_if(Bindings, Predicate);
     return !Bindings.empty();
   }
 
@@ -355,8 +350,8 @@ public:
   virtual bool dynMatches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
                           BoundNodesTreeBuilder *Builder) const = 0;
 
-  virtual llvm::Optional<clang::TraversalKind> TraversalKind() const {
-    return llvm::None;
+  virtual std::optional<clang::TraversalKind> TraversalKind() const {
+    return std::nullopt;
   }
 };
 
@@ -468,7 +463,7 @@ public:
   ///   restricts the node types for \p Kind.
   DynTypedMatcher dynCastTo(const ASTNodeKind Kind) const;
 
-  /// Return a matcher that that points to the same implementation, but sets the
+  /// Return a matcher that points to the same implementation, but sets the
   ///   traversal kind.
   ///
   /// If the traversal kind is already set, then \c TK overrides it.
@@ -487,8 +482,8 @@ public:
 
   /// Bind the specified \p ID to the matcher.
   /// \return A new matcher with the \p ID bound to it if this matcher supports
-  ///   binding. Otherwise, returns an empty \c Optional<>.
-  llvm::Optional<DynTypedMatcher> tryBind(StringRef ID) const;
+  ///   binding. Otherwise, returns an empty \c std::optional<>.
+  std::optional<DynTypedMatcher> tryBind(StringRef ID) const;
 
   /// Returns a unique \p ID for the matcher.
   ///
@@ -540,8 +535,8 @@ public:
   /// Returns the \c TraversalKind respected by calls to `match()`, if any.
   ///
   /// Most matchers will not have a traversal kind set, instead relying on the
-  /// surrounding context. For those, \c llvm::None is returned.
-  llvm::Optional<clang::TraversalKind> getTraversalKind() const {
+  /// surrounding context. For those, \c std::nullopt is returned.
+  std::optional<clang::TraversalKind> getTraversalKind() const {
     return Implementation->TraversalKind();
   }
 
@@ -601,17 +596,15 @@ public:
   /// Convert \c this into a \c Matcher<T> by applying dyn_cast<> to the
   /// argument.
   /// \c To must be a base class of \c T.
-  template <typename To> Matcher<To> dynCastTo() const LLVM_LVALUE_FUNCTION {
+  template <typename To> Matcher<To> dynCastTo() const & {
     static_assert(std::is_base_of<To, T>::value, "Invalid dynCast call.");
     return Matcher<To>(Implementation);
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename To> Matcher<To> dynCastTo() && {
     static_assert(std::is_base_of<To, T>::value, "Invalid dynCast call.");
     return Matcher<To>(std::move(Implementation));
   }
-#endif
 
   /// Forwards the call to the underlying MatcherInterface<T> pointer.
   bool matches(const T &Node,
@@ -629,13 +622,9 @@ public:
   ///
   /// The returned matcher keeps the same restrictions as \c this and remembers
   /// that it is meant to support nodes of type \c T.
-  operator DynTypedMatcher() const LLVM_LVALUE_FUNCTION {
-    return Implementation;
-  }
+  operator DynTypedMatcher() const & { return Implementation; }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   operator DynTypedMatcher() && { return std::move(Implementation); }
-#endif
 
   /// Allows the conversion of a \c Matcher<Type> to a \c
   /// Matcher<QualType>.
@@ -659,7 +648,7 @@ public:
                                         Builder);
     }
 
-    llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+    std::optional<clang::TraversalKind> TraversalKind() const override {
       return this->InnerMatcher.getTraversalKind();
     }
   };
@@ -757,7 +746,8 @@ public:
                       std::is_base_of<NestedNameSpecifier, T>::value ||
                       std::is_base_of<NestedNameSpecifierLoc, T>::value ||
                       std::is_base_of<TypeLoc, T>::value ||
-                      std::is_base_of<QualType, T>::value,
+                      std::is_base_of<QualType, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "unsupported type for recursive matching");
     return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
                           Builder, Bind);
@@ -771,7 +761,8 @@ public:
                       std::is_base_of<NestedNameSpecifier, T>::value ||
                       std::is_base_of<NestedNameSpecifierLoc, T>::value ||
                       std::is_base_of<TypeLoc, T>::value ||
-                      std::is_base_of<QualType, T>::value,
+                      std::is_base_of<QualType, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "unsupported type for recursive matching");
     return matchesDescendantOf(DynTypedNode::create(Node), getASTContext(),
                                Matcher, Builder, Bind);
@@ -785,7 +776,8 @@ public:
     static_assert(std::is_base_of<Decl, T>::value ||
                       std::is_base_of<NestedNameSpecifierLoc, T>::value ||
                       std::is_base_of<Stmt, T>::value ||
-                      std::is_base_of<TypeLoc, T>::value,
+                      std::is_base_of<TypeLoc, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "type not allowed for recursive matching");
     return matchesAncestorOf(DynTypedNode::create(Node), getASTContext(),
                              Matcher, Builder, MatchMode);
@@ -954,7 +946,7 @@ class HasNameMatcher : public SingleNodeMatcherInterface<NamedDecl> {
 
   bool matchesNode(const NamedDecl &Node) const override;
 
- private:
+private:
   /// Unqualified match routine.
   ///
   /// It is much faster than the full match, but it only works for unqualified
@@ -1025,31 +1017,29 @@ private:
                           BoundNodesTreeBuilder *Builder) const {
     // DeducedType does not have declarations of its own, so
     // match the deduced type instead.
-    const Type *EffectiveType = &Node;
     if (const auto *S = dyn_cast<DeducedType>(&Node)) {
-      EffectiveType = S->getDeducedType().getTypePtrOrNull();
-      if (!EffectiveType)
-        return false;
+      QualType DT = S->getDeducedType();
+      return !DT.isNull() ? matchesSpecialized(*DT, Finder, Builder) : false;
     }
 
     // First, for any types that have a declaration, extract the declaration and
     // match on it.
-    if (const auto *S = dyn_cast<TagType>(EffectiveType)) {
+    if (const auto *S = dyn_cast<TagType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<InjectedClassNameType>(EffectiveType)) {
+    if (const auto *S = dyn_cast<InjectedClassNameType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<TemplateTypeParmType>(EffectiveType)) {
+    if (const auto *S = dyn_cast<TemplateTypeParmType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<TypedefType>(EffectiveType)) {
+    if (const auto *S = dyn_cast<TypedefType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<UnresolvedUsingType>(EffectiveType)) {
+    if (const auto *S = dyn_cast<UnresolvedUsingType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<ObjCObjectType>(EffectiveType)) {
+    if (const auto *S = dyn_cast<ObjCObjectType>(&Node)) {
       return matchesDecl(S->getInterface(), Finder, Builder);
     }
 
@@ -1061,14 +1051,14 @@ private:
     //   template<typename T> struct X { T t; } class A {}; X<A> a;
     // The following matcher will match, which otherwise would not:
     //   fieldDecl(hasType(pointerType())).
-    if (const auto *S = dyn_cast<SubstTemplateTypeParmType>(EffectiveType)) {
+    if (const auto *S = dyn_cast<SubstTemplateTypeParmType>(&Node)) {
       return matchesSpecialized(S->getReplacementType(), Finder, Builder);
     }
 
     // For template specialization types, we want to match the template
     // declaration, as long as the type is still dependent, and otherwise the
     // declaration of the instantiated tag type.
-    if (const auto *S = dyn_cast<TemplateSpecializationType>(EffectiveType)) {
+    if (const auto *S = dyn_cast<TemplateSpecializationType>(&Node)) {
       if (!S->isTypeAlias() && S->isSugared()) {
         // If the template is non-dependent, we want to match the instantiated
         // tag type.
@@ -1087,7 +1077,13 @@ private:
     // FIXME: We desugar elaborated types. This makes the assumption that users
     // do never want to match on whether a type is elaborated - there are
     // arguments for both sides; for now, continue desugaring.
-    if (const auto *S = dyn_cast<ElaboratedType>(EffectiveType)) {
+    if (const auto *S = dyn_cast<ElaboratedType>(&Node)) {
+      return matchesSpecialized(S->desugar(), Finder, Builder);
+    }
+    // Similarly types found via using declarations.
+    // These are *usually* meaningless sugar, and this matches the historical
+    // behavior prior to the introduction of UsingType.
+    if (const auto *S = dyn_cast<UsingType>(&Node)) {
       return matchesSpecialized(S->desugar(), Finder, Builder);
     }
     return false;
@@ -1175,7 +1171,8 @@ struct IsBaseType {
       std::is_same<T, NestedNameSpecifier>::value ||
       std::is_same<T, NestedNameSpecifierLoc>::value ||
       std::is_same<T, CXXCtorInitializer>::value ||
-      std::is_same<T, TemplateArgumentLoc>::value;
+      std::is_same<T, TemplateArgumentLoc>::value ||
+      std::is_same<T, Attr>::value;
 };
 template <typename T>
 const bool IsBaseType<T>::value;
@@ -1185,7 +1182,7 @@ const bool IsBaseType<T>::value;
 /// Useful for matchers like \c anything and \c unless.
 using AllNodeBaseTypes =
     TypeList<Decl, Stmt, NestedNameSpecifier, NestedNameSpecifierLoc, QualType,
-             Type, TypeLoc, CXXCtorInitializer>;
+             Type, TypeLoc, CXXCtorInitializer, Attr>;
 
 /// Helper meta-function to extract the argument out of a function of
 ///   type void(Arg).
@@ -1212,7 +1209,7 @@ template <class T, class Tuple> constexpr T *new_from_tuple(Tuple &&t) {
 using AdaptativeDefaultFromTypes = AllNodeBaseTypes;
 using AdaptativeDefaultToTypes =
     TypeList<Decl, Stmt, NestedNameSpecifier, NestedNameSpecifierLoc, TypeLoc,
-             QualType>;
+             QualType, Attr>;
 
 /// All types that are supported by HasDeclarationMatcher above.
 using HasDeclarationSupportedTypes =
@@ -1354,35 +1351,31 @@ public:
   VariadicOperatorMatcher(DynTypedMatcher::VariadicOperator Op, Ps &&... Params)
       : Op(Op), Params(std::forward<Ps>(Params)...) {}
 
-  template <typename T> operator Matcher<T>() const LLVM_LVALUE_FUNCTION {
+  template <typename T> operator Matcher<T>() const & {
     return DynTypedMatcher::constructVariadic(
                Op, ASTNodeKind::getFromNodeKind<T>(),
                getMatchers<T>(std::index_sequence_for<Ps...>()))
         .template unconditionalConvertTo<T>();
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename T> operator Matcher<T>() && {
     return DynTypedMatcher::constructVariadic(
                Op, ASTNodeKind::getFromNodeKind<T>(),
                getMatchers<T>(std::index_sequence_for<Ps...>()))
         .template unconditionalConvertTo<T>();
   }
-#endif
+
 private:
   // Helper method to unpack the tuple into a vector.
   template <typename T, std::size_t... Is>
-  std::vector<DynTypedMatcher>
-  getMatchers(std::index_sequence<Is...>) const LLVM_LVALUE_FUNCTION {
+  std::vector<DynTypedMatcher> getMatchers(std::index_sequence<Is...>) const & {
     return {Matcher<T>(std::get<Is>(Params))...};
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename T, std::size_t... Is>
   std::vector<DynTypedMatcher> getMatchers(std::index_sequence<Is...>) && {
     return {Matcher<T>(std::get<Is>(std::move(Params)))...};
   }
-#endif
 
   const DynTypedMatcher::VariadicOperator Op;
   std::tuple<Ps...> Params;
@@ -1402,20 +1395,6 @@ struct VariadicOperatorMatcherFunc {
   }
 };
 
-template <typename F, typename Tuple, std::size_t... I>
-constexpr auto applyMatcherImpl(F &&f, Tuple &&args,
-                                std::index_sequence<I...>) {
-  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(args))...);
-}
-
-template <typename F, typename Tuple>
-constexpr auto applyMatcher(F &&f, Tuple &&args) {
-  return applyMatcherImpl(
-      std::forward<F>(f), std::forward<Tuple>(args),
-      std::make_index_sequence<
-          std::tuple_size<typename std::decay<Tuple>::type>::value>());
-}
-
 template <typename T, bool IsBaseOf, typename Head, typename Tail>
 struct GetCladeImpl {
   using Type = Head;
@@ -1434,12 +1413,11 @@ struct MapAnyOfMatcherImpl {
   template <typename... InnerMatchers>
   BindableMatcher<CladeType>
   operator()(InnerMatchers &&... InnerMatcher) const {
-    // TODO: Use std::apply from c++17
-    return VariadicAllOfMatcher<CladeType>()(applyMatcher(
+    return VariadicAllOfMatcher<CladeType>()(std::apply(
         internal::VariadicOperatorMatcherFunc<
             0, std::numeric_limits<unsigned>::max()>{
             internal::DynTypedMatcher::VO_AnyOf},
-        applyMatcher(
+        std::apply(
             [&](auto... Matcher) {
               return std::make_tuple(Matcher(InnerMatcher...)...);
             },
@@ -1472,15 +1450,13 @@ public:
 
   using ReturnTypes = ToTypes;
 
-  template <typename To> operator Matcher<To>() const LLVM_LVALUE_FUNCTION {
+  template <typename To> operator Matcher<To>() const & {
     return Matcher<To>(new ArgumentAdapterT<To, T>(InnerMatcher));
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename To> operator Matcher<To>() && {
     return Matcher<To>(new ArgumentAdapterT<To, T>(std::move(InnerMatcher)));
   }
-#endif
 
 private:
   Matcher<T> InnerMatcher;
@@ -1539,7 +1515,7 @@ public:
                                       Builder);
   }
 
-  llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+  std::optional<clang::TraversalKind> TraversalKind() const override {
     if (auto NestedKind = this->InnerMatcher.getTraversalKind())
       return NestedKind;
     return Traversal;
@@ -1551,21 +1527,19 @@ public:
   TraversalWrapper(TraversalKind TK, const MatcherType &InnerMatcher)
       : TK(TK), InnerMatcher(InnerMatcher) {}
 
-  template <typename T> operator Matcher<T>() const LLVM_LVALUE_FUNCTION {
+  template <typename T> operator Matcher<T>() const & {
     return internal::DynTypedMatcher::constructRestrictedWrapper(
                new internal::TraversalMatcher<T>(TK, InnerMatcher),
                ASTNodeKind::getFromNodeKind<T>())
         .template unconditionalConvertTo<T>();
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename T> operator Matcher<T>() && {
     return internal::DynTypedMatcher::constructRestrictedWrapper(
                new internal::TraversalMatcher<T>(TK, std::move(InnerMatcher)),
                ASTNodeKind::getFromNodeKind<T>())
         .template unconditionalConvertTo<T>();
   }
-#endif
 
 private:
   TraversalKind TK;
@@ -1592,20 +1566,18 @@ public:
 
   using ReturnTypes = typename ExtractFunctionArgMeta<ReturnTypesF>::type;
 
-  template <typename T> operator Matcher<T>() const LLVM_LVALUE_FUNCTION {
+  template <typename T> operator Matcher<T>() const & {
     static_assert(TypeListContainsSuperOf<ReturnTypes, T>::value,
                   "right polymorphic conversion");
     return Matcher<T>(new_from_tuple<MatcherT<T, ParamTypes...>>(Params));
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename T> operator Matcher<T>() && {
     static_assert(TypeListContainsSuperOf<ReturnTypes, T>::value,
                   "right polymorphic conversion");
     return Matcher<T>(
         new_from_tuple<MatcherT<T, ParamTypes...>>(std::move(Params)));
   }
-#endif
 
 private:
   std::tuple<ParamTypes...> Params;
@@ -1969,7 +1941,7 @@ getTemplateSpecializationArgs(const ClassTemplateSpecializationDecl &D) {
 
 inline ArrayRef<TemplateArgument>
 getTemplateSpecializationArgs(const TemplateSpecializationType &T) {
-  return llvm::makeArrayRef(T.getArgs(), T.getNumArgs());
+  return T.template_arguments();
 }
 
 inline ArrayRef<TemplateArgument>
@@ -1993,27 +1965,27 @@ template <typename Ty, typename Enable = void> struct GetBodyMatcher {
 };
 
 template <typename Ty>
-struct GetBodyMatcher<Ty, typename std::enable_if<
-                              std::is_base_of<FunctionDecl, Ty>::value>::type> {
+struct GetBodyMatcher<
+    Ty, std::enable_if_t<std::is_base_of<FunctionDecl, Ty>::value>> {
   static const Stmt *get(const Ty &Node) {
     return Node.doesThisDeclarationHaveABody() ? Node.getBody() : nullptr;
   }
 };
 
 template <typename NodeType>
-inline Optional<BinaryOperatorKind>
+inline std::optional<BinaryOperatorKind>
 equivalentBinaryOperator(const NodeType &Node) {
   return Node.getOpcode();
 }
 
 template <>
-inline Optional<BinaryOperatorKind>
+inline std::optional<BinaryOperatorKind>
 equivalentBinaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
   if (Node.getNumArgs() != 2)
-    return None;
+    return std::nullopt;
   switch (Node.getOperator()) {
   default:
-    return None;
+    return std::nullopt;
   case OO_ArrowStar:
     return BO_PtrMemI;
   case OO_Star:
@@ -2082,26 +2054,28 @@ equivalentBinaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
 }
 
 template <typename NodeType>
-inline Optional<UnaryOperatorKind>
+inline std::optional<UnaryOperatorKind>
 equivalentUnaryOperator(const NodeType &Node) {
   return Node.getOpcode();
 }
 
 template <>
-inline Optional<UnaryOperatorKind>
+inline std::optional<UnaryOperatorKind>
 equivalentUnaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
   if (Node.getNumArgs() != 1 && Node.getOperator() != OO_PlusPlus &&
       Node.getOperator() != OO_MinusMinus)
-    return None;
+    return std::nullopt;
   switch (Node.getOperator()) {
   default:
-    return None;
+    return std::nullopt;
   case OO_Plus:
     return UO_Plus;
   case OO_Minus:
     return UO_Minus;
   case OO_Amp:
     return UO_AddrOf;
+  case OO_Star:
+    return UO_Deref;
   case OO_Tilde:
     return UO_Not;
   case OO_Exclaim:
@@ -2109,13 +2083,13 @@ equivalentUnaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
   case OO_PlusPlus: {
     const auto *FD = Node.getDirectCallee();
     if (!FD)
-      return None;
+      return std::nullopt;
     return FD->getNumParams() > 0 ? UO_PostInc : UO_PreInc;
   }
   case OO_MinusMinus: {
     const auto *FD = Node.getDirectCallee();
     if (!FD)
-      return None;
+      return std::nullopt;
     return FD->getNumParams() > 0 ? UO_PostDec : UO_PreDec;
   }
   case OO_Coawait:
@@ -2198,28 +2172,31 @@ CompoundStmtMatcher<StmtExpr>::get(const StmtExpr &Node) {
 /// location (in the chain of expansions) at which \p MacroName was
 /// expanded. Since the macro may have been expanded inside a series of
 /// expansions, that location may itself be a MacroID.
-llvm::Optional<SourceLocation>
-getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
-                       const ASTContext &Context);
+std::optional<SourceLocation> getExpansionLocOfMacro(StringRef MacroName,
+                                                     SourceLocation Loc,
+                                                     const ASTContext &Context);
 
-inline Optional<StringRef> getOpName(const UnaryOperator &Node) {
+inline std::optional<StringRef> getOpName(const UnaryOperator &Node) {
   return Node.getOpcodeStr(Node.getOpcode());
 }
-inline Optional<StringRef> getOpName(const BinaryOperator &Node) {
+inline std::optional<StringRef> getOpName(const BinaryOperator &Node) {
   return Node.getOpcodeStr();
 }
 inline StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
   return Node.getOpcodeStr();
 }
-inline Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
+inline std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
   auto optBinaryOpcode = equivalentBinaryOperator(Node);
   if (!optBinaryOpcode) {
     auto optUnaryOpcode = equivalentUnaryOperator(Node);
     if (!optUnaryOpcode)
-      return None;
+      return std::nullopt;
     return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
   }
   return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+}
+inline StringRef getOpName(const CXXFoldExpr &Node) {
+  return BinaryOperator::getOpcodeStr(Node.getOperator());
 }
 
 /// Matches overloaded operators with a specific name.
@@ -2242,30 +2219,26 @@ public:
       : SingleNodeMatcherInterface<T>(), Names(std::move(Names)) {}
 
   bool matchesNode(const T &Node) const override {
-    Optional<StringRef> OptOpName = getOpName(Node);
-    if (!OptOpName)
-      return false;
-    return llvm::any_of(Names, [OpName = *OptOpName](const std::string &Name) {
-      return Name == OpName;
-    });
+    std::optional<StringRef> OptOpName = getOpName(Node);
+    return OptOpName && llvm::is_contained(Names, *OptOpName);
   }
 
 private:
-  static Optional<StringRef> getOpName(const UnaryOperator &Node) {
+  static std::optional<StringRef> getOpName(const UnaryOperator &Node) {
     return Node.getOpcodeStr(Node.getOpcode());
   }
-  static Optional<StringRef> getOpName(const BinaryOperator &Node) {
+  static std::optional<StringRef> getOpName(const BinaryOperator &Node) {
     return Node.getOpcodeStr();
   }
   static StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
     return Node.getOpcodeStr();
   }
-  static Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
+  static std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
     auto optBinaryOpcode = equivalentBinaryOperator(Node);
     if (!optBinaryOpcode) {
       auto optUnaryOpcode = equivalentUnaryOperator(Node);
       if (!optUnaryOpcode)
-        return None;
+        return std::nullopt;
       return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
     }
     return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
@@ -2301,6 +2274,26 @@ bool matchesAnyBase(const CXXRecordDecl &Node,
 std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
                                                   llvm::Regex::RegexFlags Flags,
                                                   StringRef MatcherID);
+
+inline bool
+MatchTemplateArgLocAt(const DeclRefExpr &Node, unsigned int Index,
+                      internal::Matcher<TemplateArgumentLoc> InnerMatcher,
+                      internal::ASTMatchFinder *Finder,
+                      internal::BoundNodesTreeBuilder *Builder) {
+  llvm::ArrayRef<TemplateArgumentLoc> ArgLocs = Node.template_arguments();
+  return Index < ArgLocs.size() &&
+         InnerMatcher.matches(ArgLocs[Index], Finder, Builder);
+}
+
+inline bool
+MatchTemplateArgLocAt(const TemplateSpecializationTypeLoc &Node,
+                      unsigned int Index,
+                      internal::Matcher<TemplateArgumentLoc> InnerMatcher,
+                      internal::ASTMatchFinder *Finder,
+                      internal::BoundNodesTreeBuilder *Builder) {
+  return !Node.isNull() && Index < Node.getNumArgs() &&
+         InnerMatcher.matches(Node.getArgLoc(Index), Finder, Builder);
+}
 
 } // namespace internal
 

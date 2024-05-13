@@ -10,27 +10,36 @@
 #define LLVM_CLANG_DRIVER_DRIVER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/HeaderInclude.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/StringSaver.h"
 
-#include <list>
 #include <map>
+#include <set>
 #include <string>
+#include <vector>
 
 namespace llvm {
 class Triple;
 namespace vfs {
 class FileSystem;
+}
+namespace cl {
+class ExpansionContext;
 }
 } // namespace llvm
 
@@ -38,13 +47,12 @@ namespace clang {
 
 namespace driver {
 
-  class Command;
-  class Compilation;
-  class InputInfo;
-  class JobList;
-  class JobAction;
-  class SanitizerArgs;
-  class ToolChain;
+typedef SmallVector<InputInfo, 4> InputInfoList;
+
+class Command;
+class Compilation;
+class JobAction;
+class ToolChain;
 
 /// Describes the kind of LTO mode selected via -f(no-)?lto(=.*)? options.
 enum LTOKind {
@@ -52,6 +60,16 @@ enum LTOKind {
   LTOK_Full,
   LTOK_Thin,
   LTOK_Unknown
+};
+
+/// Whether headers used to construct C++20 module units should be looked
+/// up by the path supplied on the command line, or in the user or system
+/// search paths.
+enum ModuleHeaderMode {
+  HeaderMode_None,
+  HeaderMode_Default,
+  HeaderMode_User,
+  HeaderMode_System
 };
 
 /// Driver - Encapsulate logic for constructing compilation processes
@@ -66,7 +84,8 @@ class Driver {
     GXXMode,
     CPPMode,
     CLMode,
-    FlangMode
+    FlangMode,
+    DXCMode
   } Mode;
 
   enum SaveTempsMode {
@@ -80,6 +99,19 @@ class Driver {
     EmbedMarker,
     EmbedBitcode
   } BitcodeEmbed;
+
+  enum OffloadMode {
+    OffloadHostDevice,
+    OffloadHost,
+    OffloadDevice,
+  } Offload;
+
+  /// Header unit mode set by -fmodule-header={user,system}.
+  ModuleHeaderMode CXX20HeaderType;
+
+  /// Set if we should process inputs and jobs with C++20 module
+  /// interpretation.
+  bool ModulesModeCXX20;
 
   /// LTO mode selected via -f(no-)?lto(=.*)? options.
   LTOKind LTOMode;
@@ -128,9 +160,6 @@ public:
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
 
-  /// The path to the installed clang directory, if any.
-  std::string InstalledDir;
-
   /// The path to the compiler resource directory.
   std::string ResourceDir;
 
@@ -162,6 +191,9 @@ public:
   /// The file to log CC_PRINT_PROC_STAT_FILE output to, if enabled.
   std::string CCPrintStatReportFilename;
 
+  /// The file to log CC_PRINT_INTERNAL_STAT_FILE output to, if enabled.
+  std::string CCPrintInternalStatReportFilename;
+
   /// The file to log CC_PRINT_OPTIONS output to, if enabled.
   std::string CCPrintOptionsFilename;
 
@@ -171,9 +203,11 @@ public:
   /// The file to log CC_LOG_DIAGNOSTICS output to, if enabled.
   std::string CCLogDiagnosticsFilename;
 
+  /// An input type and its arguments.
+  using InputTy = std::pair<types::ID, const llvm::opt::Arg *>;
+
   /// A list of inputs and their types for the given arguments.
-  typedef SmallVector<std::pair<types::ID, const llvm::opt::Arg *>, 16>
-      InputList;
+  using InputList = SmallVector<InputTy, 16>;
 
   /// Whether the driver should follow g++ like behavior.
   bool CCCIsCXX() const { return Mode == GXXMode; }
@@ -191,34 +225,60 @@ public:
   /// Other modes fall back to calling gcc which in turn calls gfortran.
   bool IsFlangMode() const { return Mode == FlangMode; }
 
+  /// Whether the driver should follow dxc.exe like behavior.
+  bool IsDXCMode() const { return Mode == DXCMode; }
+
   /// Only print tool bindings, don't build any jobs.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCCPrintBindings : 1;
 
   /// Set CC_PRINT_OPTIONS mode, which is like -v but logs the commands to
   /// CCPrintOptionsFilename or to stderr.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCPrintOptions : 1;
 
-  /// Set CC_PRINT_HEADERS mode, which causes the frontend to log header include
-  /// information to CCPrintHeadersFilename or to stderr.
-  unsigned CCPrintHeaders : 1;
+  /// The format of the header information that is emitted. If CC_PRINT_HEADERS
+  /// is set, the format is textual. Otherwise, the format is determined by the
+  /// enviroment variable CC_PRINT_HEADERS_FORMAT.
+  HeaderIncludeFormatKind CCPrintHeadersFormat = HIFMT_None;
+
+  /// This flag determines whether clang should filter the header information
+  /// that is emitted. If enviroment variable CC_PRINT_HEADERS_FILTERING is set
+  /// to "only-direct-system", only system headers that are directly included
+  /// from non-system headers are emitted.
+  HeaderIncludeFilteringKind CCPrintHeadersFiltering = HIFIL_None;
+
+  /// Name of the library that provides implementations of
+  /// IEEE-754 128-bit float math functions used by Fortran F128
+  /// runtime library. It should be linked as needed by the linker job.
+  std::string FlangF128MathLibrary;
 
   /// Set CC_LOG_DIAGNOSTICS mode, which causes the frontend to log diagnostics
   /// to CCLogDiagnosticsFilename or to stderr, in a stable machine readable
   /// format.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCLogDiagnostics : 1;
 
   /// Whether the driver is generating diagnostics for debugging purposes.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCGenDiagnostics : 1;
 
   /// Set CC_PRINT_PROC_STAT mode, which causes the driver to dump
   /// performance report to CC_PRINT_PROC_STAT_FILE or to stdout.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CCPrintProcessStats : 1;
+
+  /// Set CC_PRINT_INTERNAL_STAT mode, which causes the driver to dump internal
+  /// performance report to CC_PRINT_INTERNAL_STAT_FILE or to stdout.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned CCPrintInternalStats : 1;
 
   /// Pointer to the ExecuteCC1Tool function, if available.
   /// When the clangDriver lib is used through clang.exe, this provides a
   /// shortcut for executing the -cc1 command-line directly, in the same
   /// process.
-  typedef int (*CC1ToolFunc)(SmallVectorImpl<const char *> &ArgV);
+  using CC1ToolFunc =
+      llvm::function_ref<int(SmallVectorImpl<const char *> &ArgV)>;
   CC1ToolFunc CC1Main = nullptr;
 
 private:
@@ -228,8 +288,8 @@ private:
   /// Name to use when invoking gcc/g++.
   std::string CCCGenericGCCName;
 
-  /// Name of configuration file if used.
-  std::string ConfigFile;
+  /// Paths to configuration files used.
+  std::vector<std::string> ConfigFiles;
 
   /// Allocator for string saver.
   llvm::BumpPtrAllocator Alloc;
@@ -243,18 +303,33 @@ private:
   /// Arguments originated from command line.
   std::unique_ptr<llvm::opt::InputArgList> CLOptions;
 
+  /// If this is non-null, the driver will prepend this argument before
+  /// reinvoking clang. This is useful for the llvm-driver where clang's
+  /// realpath will be to the llvm binary and not clang, so it must pass
+  /// "clang" as it's first argument.
+  const char *PrependArg;
+
   /// Whether to check that input files exist when constructing compilation
   /// jobs.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CheckInputsExist : 1;
+  /// Whether to probe for PCH files on disk, in order to upgrade
+  /// -include foo.h to -include-pch foo.h.pch.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ProbePrecompiled : 1;
 
 public:
-  /// Force clang to emit reproducer for driver invocation. This is enabled
-  /// indirectly by setting FORCE_CLANG_DIAGNOSTICS_CRASH environment variable
-  /// or when using the -gen-reproducer driver flag.
-  unsigned GenReproducer : 1;
+  // getFinalPhase - Determine which compilation mode we are in and record
+  // which option we used to determine the final phase.
+  // TODO: Much of what getFinalPhase returns are not actually true compiler
+  //       modes. Fold this functionality into Types::getCompilationPhases and
+  //       handleArguments.
+  phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
+                           llvm::opt::Arg **FinalPhaseArg = nullptr) const;
 
 private:
   /// Certain options suppress the 'no input files' warning.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressMissingInputWarning : 1;
 
   /// Cache of all the ToolChains in use by the driver.
@@ -264,19 +339,16 @@ private:
   /// stored in it, and will clean them up when torn down.
   mutable llvm::StringMap<std::unique_ptr<ToolChain>> ToolChains;
 
+  /// Cache of known offloading architectures for the ToolChain already derived.
+  /// This should only be modified when we first initialize the offloading
+  /// toolchains.
+  llvm::DenseMap<const ToolChain *, llvm::DenseSet<llvm::StringRef>> KnownArchs;
+
 private:
   /// TranslateInputArgs - Create a new derived argument list from the input
   /// arguments, after applying the standard argument translations.
   llvm::opt::DerivedArgList *
   TranslateInputArgs(const llvm::opt::InputArgList &Args) const;
-
-  // getFinalPhase - Determine which compilation mode we are in and record
-  // which option we used to determine the final phase.
-  // TODO: Much of what getFinalPhase returns are not actually true compiler
-  //       modes. Fold this functionality into Types::getCompilationPhases and
-  //       handleArguments.
-  phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
-                           llvm::opt::Arg **FinalPhaseArg = nullptr) const;
 
   // handleArguments - All code related to claiming and printing diagnostics
   // related to arguments to the driver are done here.
@@ -320,7 +392,9 @@ public:
   /// Name to use when invoking gcc/g++.
   const std::string &getCCCGenericGCCName() const { return CCCGenericGCCName; }
 
-  const std::string &getConfigFile() const { return ConfigFile; }
+  llvm::ArrayRef<std::string> getConfigFiles() const {
+    return ConfigFiles;
+  }
 
   const llvm::opt::OptTable &getOpts() const { return getDriverOptTable(); }
 
@@ -331,6 +405,12 @@ public:
   bool getCheckInputsExist() const { return CheckInputsExist; }
 
   void setCheckInputsExist(bool Value) { CheckInputsExist = Value; }
+
+  bool getProbePrecompiled() const { return ProbePrecompiled; }
+  void setProbePrecompiled(bool Value) { ProbePrecompiled = Value; }
+
+  const char *getPrependArg() const { return PrependArg; }
+  void setPrependArg(const char *Value) { PrependArg = Value; }
 
   void setTargetAndMode(const ParsedClangName &TM) { ClangNameParts = TM; }
 
@@ -344,20 +424,20 @@ public:
     return ClangExecutable.c_str();
   }
 
-  /// Get the path to where the clang executable was installed.
-  const char *getInstalledDir() const {
-    if (!InstalledDir.empty())
-      return InstalledDir.c_str();
-    return Dir.c_str();
-  }
-  void setInstalledDir(StringRef Value) { InstalledDir = std::string(Value); }
-
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }
 
   bool embedBitcodeEnabled() const { return BitcodeEmbed != EmbedNone; }
   bool embedBitcodeInObject() const { return (BitcodeEmbed == EmbedBitcode); }
   bool embedBitcodeMarkerOnly() const { return (BitcodeEmbed == EmbedMarker); }
+
+  bool offloadHostOnly() const { return Offload == OffloadHost; }
+  bool offloadDeviceOnly() const { return Offload == OffloadDevice; }
+
+  void setFlangF128MathLibrary(std::string name) {
+    FlangF128MathLibrary = std::move(name);
+  }
+  StringRef getFlangF128MathLibrary() const { return FlangF128MathLibrary; }
 
   /// Compute the desired OpenMP runtime from the flags provided.
   OpenMPRuntimeKind getOpenMPRuntime(const llvm::opt::ArgList &Args) const;
@@ -380,16 +460,10 @@ public:
   /// to determine if an error occurred.
   Compilation *BuildCompilation(ArrayRef<const char *> Args);
 
-  /// @name Driver Steps
-  /// @{
-
-  /// ParseDriverMode - Look for and handle the driver mode option in Args.
-  void ParseDriverMode(StringRef ProgramName, ArrayRef<const char *> Args);
-
   /// ParseArgStrings - Parse the given list of strings into an
   /// ArgList.
   llvm::opt::InputArgList ParseArgStrings(ArrayRef<const char *> Args,
-                                          bool IsClCompatMode,
+                                          bool UseDriverMode,
                                           bool &ContainsError);
 
   /// BuildInputs - Construct the list of inputs and their types from
@@ -418,6 +492,26 @@ public:
   /// \param TC - The default host tool chain.
   void BuildUniversalActions(Compilation &C, const ToolChain &TC,
                              const InputList &BAInputs) const;
+
+  /// BuildOffloadingActions - Construct the list of actions to perform for the
+  /// offloading toolchain that will be embedded in the host.
+  ///
+  /// \param C - The compilation that is being built.
+  /// \param Args - The input arguments.
+  /// \param Input - The input type and arguments
+  /// \param HostAction - The host action used in the offloading toolchain.
+  Action *BuildOffloadingActions(Compilation &C,
+                                 llvm::opt::DerivedArgList &Args,
+                                 const InputTy &Input,
+                                 Action *HostAction) const;
+
+  /// Returns the set of bound architectures active for this offload kind.
+  /// If there are no bound architctures we return a set containing only the
+  /// empty string. The \p SuppressError option is used to suppress errors.
+  llvm::DenseSet<StringRef>
+  getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
+                  Action::OffloadKind Kind, const ToolChain *TC,
+                  bool SuppressError = false) const;
 
   /// Check that the file referenced by Value exists. If it doesn't,
   /// issue a diagnostic and return false.
@@ -456,6 +550,35 @@ public:
       StringRef AdditionalInformation = "",
       CompilationDiagnosticReport *GeneratedReport = nullptr);
 
+  enum class CommandStatus {
+    Crash = 1,
+    Error,
+    Ok,
+  };
+
+  enum class ReproLevel {
+    Off = 0,
+    OnCrash = static_cast<int>(CommandStatus::Crash),
+    OnError = static_cast<int>(CommandStatus::Error),
+    Always = static_cast<int>(CommandStatus::Ok),
+  };
+
+  bool maybeGenerateCompilationDiagnostics(
+      CommandStatus CS, ReproLevel Level, Compilation &C,
+      const Command &FailingCommand, StringRef AdditionalInformation = "",
+      CompilationDiagnosticReport *GeneratedReport = nullptr) {
+    if (static_cast<int>(CS) > static_cast<int>(Level))
+      return false;
+    if (CS != CommandStatus::Crash)
+      Diags.Report(diag::err_drv_force_crash)
+          << !::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH");
+    // Hack to ensure that diagnostic notes get emitted.
+    Diags.setLastDiagnosticIgnored(false);
+    generateCompilationDiagnostics(C, FailingCommand, AdditionalInformation,
+                                   GeneratedReport);
+    return true;
+  }
+
   /// @}
   /// @name Helper Methods
   /// @{
@@ -487,6 +610,16 @@ public:
   // FIXME: This should be in CompilationInfo.
   std::string GetProgramPath(StringRef Name, const ToolChain &TC) const;
 
+  /// Lookup the path to the Standard library module manifest.
+  ///
+  /// \param C - The compilation.
+  /// \param TC - The tool chain for additional information on
+  /// directories to search.
+  //
+  // FIXME: This should be in CompilationInfo.
+  std::string GetStdModuleManifestPath(const Compilation &C,
+                                       const ToolChain &TC) const;
+
   /// HandleAutocompletions - Handle --autocomplete by searching and printing
   /// possible flags, descriptions, and its arguments.
   void HandleAutocompletions(StringRef PassedFlags) const;
@@ -509,16 +642,29 @@ public:
   /// BuildJobsForAction - Construct the jobs to perform for the action \p A and
   /// return an InputInfo for the result of running \p A.  Will only construct
   /// jobs for a given (Action, ToolChain, BoundArch, DeviceKind) tuple once.
-  InputInfo
-  BuildJobsForAction(Compilation &C, const Action *A, const ToolChain *TC,
-                     StringRef BoundArch, bool AtTopLevel, bool MultipleArchs,
-                     const char *LinkingOutput,
-                     std::map<std::pair<const Action *, std::string>, InputInfo>
-                         &CachedResults,
-                     Action::OffloadKind TargetDeviceOffloadKind) const;
+  InputInfoList BuildJobsForAction(
+      Compilation &C, const Action *A, const ToolChain *TC, StringRef BoundArch,
+      bool AtTopLevel, bool MultipleArchs, const char *LinkingOutput,
+      std::map<std::pair<const Action *, std::string>, InputInfoList>
+          &CachedResults,
+      Action::OffloadKind TargetDeviceOffloadKind) const;
 
   /// Returns the default name for linked images (e.g., "a.out").
   const char *getDefaultImageName() const;
+
+  /// Creates a temp file.
+  /// 1. If \p MultipleArch is false or \p BoundArch is empty, the temp file is
+  ///    in the temporary directory with name $Prefix-%%%%%%.$Suffix.
+  /// 2. If \p MultipleArch is true and \p BoundArch is not empty,
+  ///    2a. If \p NeedUniqueDirectory is false, the temp file is in the
+  ///        temporary directory with name $Prefix-$BoundArch-%%%%%.$Suffix.
+  ///    2b. If \p NeedUniqueDirectory is true, the temp file is in a unique
+  ///        subdiretory with random name under the temporary directory, and
+  ///        the temp file itself has name $Prefix-$BoundArch.$Suffix.
+  const char *CreateTempFile(Compilation &C, StringRef Prefix, StringRef Suffix,
+                             bool MultipleArchs = false,
+                             StringRef BoundArch = {},
+                             bool NeedUniqueDirectory = false) const;
 
   /// GetNamedOutputPath - Return the name to use for the output of
   /// the action \p JA. The result is appended to the compilation's
@@ -561,6 +707,12 @@ public:
   /// ShouldEmitStaticLibrary - Should the linker emit a static library.
   bool ShouldEmitStaticLibrary(const llvm::opt::ArgList &Args) const;
 
+  /// Returns true if the user has indicated a C++20 header unit mode.
+  bool hasHeaderMode() const { return CXX20HeaderType != HeaderMode_None; }
+
+  /// Get the mode for handling headers as set by fmodule-header{=}.
+  ModuleHeaderMode getModuleHeaderMode() const { return CXX20HeaderType; }
+
   /// Returns true if we are performing any kind of LTO.
   bool isUsingLTO(bool IsOffload = false) const {
     return getLTOMode(IsOffload) != LTOK_None;
@@ -573,20 +725,27 @@ public:
 
 private:
 
-  /// Tries to load options from configuration file.
+  /// Tries to load options from configuration files.
   ///
   /// \returns true if error occurred.
-  bool loadConfigFile();
+  bool loadConfigFiles();
+
+  /// Tries to load options from default configuration files (deduced from
+  /// executable filename).
+  ///
+  /// \returns true if error occurred.
+  bool loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx);
 
   /// Read options from the specified file.
   ///
   /// \param [in] FileName File to read.
+  /// \param [in] Search and expansion options.
   /// \returns true, if error occurred while reading.
-  bool readConfigFile(StringRef FileName);
+  bool readConfigFile(StringRef FileName, llvm::cl::ExpansionContext &ExpCtx);
 
-  /// Set the driver mode (cl, gcc, etc) from an option string of the form
-  /// --driver-mode=<mode>.
-  void setDriverModeFromOption(StringRef Opt);
+  /// Set the driver mode (cl, gcc, etc) from the value of the `--driver-mode`
+  /// option.
+  void setDriverMode(StringRef DriverModeValue);
 
   /// Parse the \p Args list for LTO options and record the type of LTO
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
@@ -601,19 +760,38 @@ private:
 
   /// @}
 
+  /// Retrieves a ToolChain for a particular device \p Target triple
+  ///
+  /// \param[in] HostTC is the host ToolChain paired with the device
+  ///
+  /// \param[in] TargetDeviceOffloadKind (e.g. OFK_Cuda/OFK_OpenMP/OFK_SYCL) is
+  /// an Offloading action that is optionally passed to a ToolChain (used by
+  /// CUDA, to specify if it's used in conjunction with OpenMP)
+  ///
+  /// Will cache ToolChains for the life of the driver object, and create them
+  /// on-demand.
+  const ToolChain &getOffloadingDeviceToolChain(
+      const llvm::opt::ArgList &Args, const llvm::Triple &Target,
+      const ToolChain &HostTC,
+      const Action::OffloadKind &TargetDeviceOffloadKind) const;
+
   /// Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.
-  std::pair<unsigned, unsigned> getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const;
+  llvm::opt::Visibility
+  getOptionVisibilityMask(bool UseDriverMode = true) const;
 
   /// Helper used in BuildJobsForAction.  Doesn't use the cache when building
   /// jobs specifically for the given action, but will use the cache when
   /// building jobs for the Action's inputs.
-  InputInfo BuildJobsForActionNoCache(
+  InputInfoList BuildJobsForActionNoCache(
       Compilation &C, const Action *A, const ToolChain *TC, StringRef BoundArch,
       bool AtTopLevel, bool MultipleArchs, const char *LinkingOutput,
-      std::map<std::pair<const Action *, std::string>, InputInfo>
+      std::map<std::pair<const Action *, std::string>, InputInfoList>
           &CachedResults,
       Action::OffloadKind TargetDeviceOffloadKind) const;
+
+  /// Return the typical executable name for the specified driver \p Mode.
+  static const char *getExecutableForDriverMode(DriverMode Mode);
 
 public:
   /// GetReleaseVersion - Parse (([0-9]+)(.([0-9]+)(.([0-9]+)?))?)? and
@@ -645,6 +823,33 @@ bool isOptimizationLevelFast(const llvm::opt::ArgList &Args);
 
 /// \return True if the argument combination will end up generating remarks.
 bool willEmitRemarks(const llvm::opt::ArgList &Args);
+
+/// Returns the driver mode option's value, i.e. `X` in `--driver-mode=X`. If \p
+/// Args doesn't mention one explicitly, tries to deduce from `ProgName`.
+/// Returns empty on failure.
+/// Common values are "gcc", "g++", "cpp", "cl" and "flang". Returned value need
+/// not be one of these.
+llvm::StringRef getDriverMode(StringRef ProgName, ArrayRef<const char *> Args);
+
+/// Checks whether the value produced by getDriverMode is for CL mode.
+bool IsClangCL(StringRef DriverMode);
+
+/// Expand response files from a clang driver or cc1 invocation.
+///
+/// \param Args The arguments that will be expanded.
+/// \param ClangCLMode Whether clang is in CL mode.
+/// \param Alloc Allocator for new arguments.
+/// \param FS Filesystem to use when expanding files.
+llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
+                                bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
+                                llvm::vfs::FileSystem *FS = nullptr);
+
+/// Apply a space separated list of edits to the input argument lists.
+/// See applyOneOverrideOption.
+void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
+                          const char *OverrideOpts,
+                          llvm::StringSet<> &SavedStrings,
+                          raw_ostream *OS = nullptr);
 
 } // end namespace driver
 } // end namespace clang

@@ -10,16 +10,17 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGPUBTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include <cstdint>
 #include <vector>
 
 namespace llvm {
 
 class raw_ostream;
+class DWARFDataExtractor;
+class Error;
 
 /// Represents structure for holding and parsing .debug_pub* tables.
 class DWARFDebugPubTable {

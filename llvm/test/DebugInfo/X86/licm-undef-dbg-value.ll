@@ -1,13 +1,14 @@
-; RUN: opt -licm %s -S | FileCheck %s
+; RUN: opt -passes=licm %s -S | FileCheck %s
+; RUN: opt -passes=licm %s -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; CHECK: for.body:
-; CHECK-NEXT: llvm.dbg.value(metadata i8 undef
+; CHECK-NEXT: llvm.dbg.value(metadata i8 poison
 
 ; The load is loop invariant. Check that we leave an undef dbg.value behind
 ; when licm sinks the instruction.
 
 ; clang reduce.cpp -g -O2 -Xclang -disable-llvm-passes -emit-llvm -o reduce.ll
-; opt -simplifycfg -sroa -loop-rotate -o - -S reduce.ll
+; opt -passes=simplifycfg -sroa -passes=loop-rotate -o - -S reduce.ll
 ; cat reduce.cpp
 ; extern char a;
 ; extern char b;
@@ -25,7 +26,7 @@
 define dso_local void @_Z3funv() !dbg !12 {
 entry:
   call void @llvm.dbg.value(metadata i8 0, metadata !16, metadata !DIExpression()), !dbg !17
-  %0 = load i8, i8* @b, align 1, !dbg !18
+  %0 = load i8, ptr @b, align 1, !dbg !18
   %tobool1 = icmp ne i8 %0, 0, !dbg !18
   br i1 %tobool1, label %for.body.lr.ph, label %for.end, !dbg !24
 
@@ -33,9 +34,9 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body, !dbg !24
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %1 = load i8, i8* @a, align 1, !dbg !25
+  %1 = load i8, ptr @a, align 1, !dbg !25
   call void @llvm.dbg.value(metadata i8 %1, metadata !16, metadata !DIExpression()), !dbg !17
-  %2 = load i8, i8* @b, align 1, !dbg !18
+  %2 = load i8, ptr @b, align 1, !dbg !18
   %tobool = icmp ne i8 %2, 0, !dbg !18
   br i1 %tobool, label %for.body, label %for.cond.for.end_crit_edge, !dbg !24, !llvm.loop !26
 

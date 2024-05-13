@@ -8,7 +8,7 @@ extern void abort (void);
 
 // CHECK: @.compoundliteral = internal global %struct.A { i32 1, i32 2 }
 // CHECK: @.compoundliteral.1 = internal global %struct.A { i32 3, i32 4 }
-// CHECK: @.compoundliteral.2 = internal global %struct.B { %struct.A* @.compoundliteral, %struct.A* @.compoundliteral.1 }
+// CHECK: @.compoundliteral.2 = internal global %struct.B { ptr @.compoundliteral, ptr @.compoundliteral.1 }
 // CHECK: @.compoundliteral.3 = internal global %struct.A { i32 5, i32 6 }
 
 struct A { int i; int j; };

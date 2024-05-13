@@ -10,12 +10,7 @@
 ; Generated from:
 ; typedef struct t *t_t;
 ; extern unsigned int enable;
-; struct t {
-;   struct q {
-;     struct q *next;
-;     unsigned long long resource;
-;   } * s;
-; } * tt;
+; struct t ptr tt;
 ; static unsigned long find(t_t t, unsigned long long resource) {
 ;   struct q *q;
 ;   q = t->s;
@@ -37,40 +32,38 @@ source_filename = "inlined-arg.c"
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios5.0.0"
 
-%struct.t = type { %struct.q* }
-%struct.q = type { %struct.q*, i64 }
+%struct.t = type { ptr }
+%struct.q = type { ptr, i64 }
 
-@tt = common local_unnamed_addr global %struct.t* null, align 8, !dbg !0
+@tt = common local_unnamed_addr global ptr null, align 8, !dbg !0
 
 ; Function Attrs: norecurse nounwind readonly ssp uwtable
-define i32 @g(%struct.t* nocapture readonly %t, i64 %r) local_unnamed_addr !dbg !21 {
+define i32 @g(ptr nocapture readonly %t, i64 %r) local_unnamed_addr !dbg !21 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.t* %t, metadata !27, metadata !DIExpression()), !dbg !30
+  call void @llvm.dbg.value(metadata ptr %t, metadata !27, metadata !DIExpression()), !dbg !30
   call void @llvm.dbg.value(metadata i64 %r, metadata !28, metadata !DIExpression()), !dbg !31
-  call void @llvm.dbg.value(metadata %struct.t* %t, metadata !32, metadata !DIExpression()), !dbg !39
+  call void @llvm.dbg.value(metadata ptr %t, metadata !32, metadata !DIExpression()), !dbg !39
   call void @llvm.dbg.value(metadata i64 %r, metadata !37, metadata !DIExpression()), !dbg !41
-  %s.i = getelementptr inbounds %struct.t, %struct.t* %t, i64 0, i32 0, !dbg !42
-  %q.05.i = load %struct.q*, %struct.q** %s.i, align 8, !dbg !43, !tbaa !44
-  call void @llvm.dbg.value(metadata %struct.q* %q.05.i, metadata !38, metadata !DIExpression()), !dbg !48
-  %tobool6.i = icmp eq %struct.q* %q.05.i, null, !dbg !49
+  %q.05.i = load ptr, ptr %t, align 8, !dbg !43, !tbaa !44
+  call void @llvm.dbg.value(metadata ptr %q.05.i, metadata !38, metadata !DIExpression()), !dbg !48
+  %tobool6.i = icmp eq ptr %q.05.i, null, !dbg !49
   br i1 %tobool6.i, label %find.exit, label %while.body.i, !dbg !49
 
 while.body.i:                                     ; preds = %entry, %if.end.i
-  %q.07.i = phi %struct.q* [ %q.0.i, %if.end.i ], [ %q.05.i, %entry ]
-  %resource1.i = getelementptr inbounds %struct.q, %struct.q* %q.07.i, i64 0, i32 1, !dbg !50
-  %0 = load i64, i64* %resource1.i, align 8, !dbg !50, !tbaa !53
+  %q.07.i = phi ptr [ %q.0.i, %if.end.i ], [ %q.05.i, %entry ]
+  %resource1.i = getelementptr inbounds %struct.q, ptr %q.07.i, i64 0, i32 1, !dbg !50
+  %0 = load i64, ptr %resource1.i, align 8, !dbg !50, !tbaa !53
   %cmp.i = icmp eq i64 %0, %r, !dbg !56
   br i1 %cmp.i, label %find.exit, label %if.end.i, !dbg !57
 
 if.end.i:                                         ; preds = %while.body.i
-  %next.i = getelementptr inbounds %struct.q, %struct.q* %q.07.i, i64 0, i32 0, !dbg !58
-  %q.0.i = load %struct.q*, %struct.q** %next.i, align 8, !dbg !43, !tbaa !44
-  call void @llvm.dbg.value(metadata %struct.q* %q.0.i, metadata !38, metadata !DIExpression()), !dbg !48
-  %tobool.i = icmp eq %struct.q* %q.0.i, null, !dbg !49
+  %q.0.i = load ptr, ptr %q.07.i, align 8, !dbg !43, !tbaa !44
+  call void @llvm.dbg.value(metadata ptr %q.0.i, metadata !38, metadata !DIExpression()), !dbg !48
+  %tobool.i = icmp eq ptr %q.0.i, null, !dbg !49
   br i1 %tobool.i, label %find.exit, label %while.body.i, !dbg !49, !llvm.loop !59
 
 find.exit:                                        ; preds = %while.body.i, %if.end.i, %entry
-  call void @llvm.dbg.value(metadata %struct.q* undef, metadata !29, metadata !DIExpression()), !dbg !61
+  call void @llvm.dbg.value(metadata ptr undef, metadata !29, metadata !DIExpression()), !dbg !61
   ret i32 undef, !dbg !62
 }
 

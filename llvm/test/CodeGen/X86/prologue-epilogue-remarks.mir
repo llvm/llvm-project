@@ -17,13 +17,15 @@ stack:
 # CHECK-NEXT: Function:        fun0
 # CHECK-NEXT: Args:
 # CHECK-NEXT:   - NumStackBytes:   '8'
-# CHECK-NEXT:   - String:          ' stack bytes in function'
+# CHECK-NEXT:   - String:          ' stack bytes in function '''
+# CHECK-NEXT:   - Function: fun0
+# CHECK-NEXT:   - String: ''''
 # CHECK-NEXT: ...
 
 constants:
 body:             |
   bb.0:
-    RETQ
+    RET64
 
 ...
 ---
@@ -36,12 +38,14 @@ stack:
 # CHECK-NEXT: Function:        fun1
 # CHECK-NEXT: Args:
 # CHECK-NEXT:   - NumStackBytes:   '20'
-# CHECK-NEXT:   - String:          ' stack bytes in function'
+# CHECK-NEXT:   - String:          ' stack bytes in function '''
+# CHECK-NEXT:   - Function: fun1
+# CHECK-NEXT:   - String: ''''
 # CHECK-NEXT: ...
 constants:
 body:             |
   bb.0:
-    RETQ
+    RET64
 
 ...
 ---
@@ -54,11 +58,13 @@ stack:
 # CHECK-NEXT: Function:        fun2
 # CHECK-NEXT: Args:
 # CHECK-NEXT:   - NumStackBytes:   '1024'
-# CHECK-NEXT:   - String:          ' stack bytes in function'
+# CHECK-NEXT:   - String:          ' stack bytes in function '''
+# CHECK-NEXT:   - Function: fun2
+# CHECK-NEXT:   - String: ''''
 # CHECK-NEXT: ...
 constants:
 body:             |
   bb.0:
-    RETQ
+    RET64
 
 ...

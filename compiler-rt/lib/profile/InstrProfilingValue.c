@@ -39,7 +39,7 @@ COMPILER_RT_VISIBILITY ValueProfNode
 COMPILER_RT_VISIBILITY uint32_t VPMaxNumValsPerSite =
     INSTR_PROF_DEFAULT_NUM_VAL_PER_SITE;
 
-COMPILER_RT_VISIBILITY void lprofSetupValueProfiler() {
+COMPILER_RT_VISIBILITY void lprofSetupValueProfiler(void) {
   const char *Str = 0;
   Str = getenv("LLVM_VP_MAX_NUM_VALS_PER_SITE");
   if (Str && Str[0]) {
@@ -59,7 +59,19 @@ COMPILER_RT_VISIBILITY void lprofSetMaxValsPerSite(uint32_t MaxVals) {
 COMPILER_RT_VISIBILITY void
 __llvm_profile_set_num_value_sites(__llvm_profile_data *Data,
                                    uint32_t ValueKind, uint16_t NumValueSites) {
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   *((uint16_t *)&Data->NumValueSites[ValueKind]) = NumValueSites;
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 }
 
 /* This method is only used in value profiler mock testing.  */
@@ -253,7 +265,7 @@ __llvm_profile_instrument_memop(uint64_t TargetValue, void *Data,
 /*
  * A wrapper struct that represents value profile runtime data.
  * Like InstrProfRecord class which is used by profiling host tools,
- * ValueProfRuntimeRecord also implements the abstract intefaces defined in
+ * ValueProfRuntimeRecord also implements the abstract interfaces defined in
  * ValueProfRecordClosure so that the runtime data can be serialized using
  * shared C implementation.
  */
@@ -353,6 +365,6 @@ static VPDataReaderType TheVPDataReader = {
     getFirstValueProfRecord,          getNumValueDataForSiteWrapper,
     getValueProfDataSizeWrapper,      getNextNValueData};
 
-COMPILER_RT_VISIBILITY VPDataReaderType *lprofGetVPDataReader() {
+COMPILER_RT_VISIBILITY VPDataReaderType *lprofGetVPDataReader(void) {
   return &TheVPDataReader;
 }

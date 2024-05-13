@@ -8,16 +8,16 @@ define i32 @foo1() nounwind uwtable {
 ; CHECK-LABEL: foo1:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:    move.l #5, (%sp)
-; CHECK-NEXT:    move.l #1, %d0
-; CHECK-NEXT:    move.l #2, %d1
+; CHECK-NEXT:    moveq #1, %d0
+; CHECK-NEXT:    moveq #2, %d1
 ; CHECK-NEXT:    move.l #3, %a0
 ; CHECK-NEXT:    move.l #4, %a1
 ; CHECK-NEXT:    jsr (bar1@PLT,%pc)
-; CHECK-NEXT:    move.l #0, %d0
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
   call fastcc void @bar1(i32 1, i32 2, i32 3, i32 4, i32 5) nounwind
@@ -31,21 +31,21 @@ define i32 @foo2() nounwind uwtable {
 ; CHECK-LABEL: foo2:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #12, %sp
+; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -16
 ; CHECK-NEXT:    lea (8,%sp), %a0
-; CHECK-NEXT:    move.l #2, %d0
+; CHECK-NEXT:    moveq #2, %d0
 ; CHECK-NEXT:    lea (4,%sp), %a1
-; CHECK-NEXT:    move.l #4, %d1
+; CHECK-NEXT:    moveq #4, %d1
 ; CHECK-NEXT:    jsr (bar2@PLT,%pc)
-; CHECK-NEXT:    move.l #0, %d0
-; CHECK-NEXT:    add.l #12, %sp
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
-  call fastcc void @bar2(i32* %a, i32 2, i32* %b, i32 4) nounwind
+  call fastcc void @bar2(ptr %a, i32 2, ptr %b, i32 4) nounwind
   ret i32 0
 }
 
-declare fastcc void @bar2(i32* %a, i32 %b, i32* %c, i32 %d);
+declare fastcc void @bar2(ptr %a, i32 %b, ptr %c, i32 %d);

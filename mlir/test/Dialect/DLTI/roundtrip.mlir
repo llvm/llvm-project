@@ -2,10 +2,12 @@
 
 // Round-tripping the syntax.
 
+// CHECK: #[[MAP:.*]] = affine_map<(d0) -> (d0)>
+
 "test.unknown_op"() {
   // CHECK: #dlti.dl_entry<"test.identifier", 42 : i64>
   test.unknown_attr_1 = #dlti.dl_entry<"test.identifier", 42 : i64>,
-  // CHECK: #dlti.dl_entry<"test.identifier", affine_map<(d0) -> (d0)>>
+  // CHECK: #dlti.dl_entry<"test.identifier", #[[MAP]]>
   test.unknown_attr_2 = #dlti.dl_entry<"test.identifier", affine_map<(d0) -> (d0)>>,
   // CHECK: #dlti.dl_entry<i32, 32 : index>
   test.unknown_attr_3 = #dlti.dl_entry<i32, 32 : index>,

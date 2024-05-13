@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -analyze< %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -disable-output -stats < %s 2>&1 | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 ;
@@ -14,7 +14,7 @@
 ;    }
 ;
 
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -28,9 +28,9 @@ outer.for:
 
 
     reduction.preheader:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double 21.0, double* %A_idx
-      store double 42.0, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double 21.0, ptr %A_idx
+      store double 42.0, ptr %A_idx
       br label %reduction.for
 
     reduction.for:
@@ -52,7 +52,7 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      store double %phi, double* %A_idx
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

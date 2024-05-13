@@ -11,7 +11,7 @@ namespace N2 {
   namespace I1 { }
   
   namespace New =
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:13:18 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):18 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
   // CHECK-CC1: I1
   // CHECK-CC1: I4
   // CHECK-CC1: I5

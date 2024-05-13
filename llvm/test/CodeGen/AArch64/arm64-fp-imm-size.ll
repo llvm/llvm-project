@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-apple-darwin | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-darwin -global-isel | FileCheck %s
 
 ; CHECK: literal8
 ; CHECK: .quad  0x400921fb54442d18

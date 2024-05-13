@@ -35,12 +35,8 @@ CHECK: -x
 CHECK: OPTIONS
 CHECK: --arch
 CHECK: -a
-CHECK: --capture-path
-CHECK: --capture
 CHECK: --core
 CHECK: -c
-CHECK: --debug
-CHECK: -d
 CHECK: --editor
 CHECK: -e
 CHECK: --file
@@ -48,7 +44,6 @@ CHECK: -f
 CHECK: --help
 CHECK: -h
 CHECK: --no-use-colors
-CHECK: --replay
 CHECK: --version
 CHECK: -v
 CHECK: -X
@@ -62,6 +57,7 @@ CHECK: -r
 
 CHECK: SCRIPTING
 CHECK: -l
+CHECK: --print-script-interpreter-info
 CHECK: --python-path
 CHECK: -P
 CHECK: --script-language

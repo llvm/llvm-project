@@ -11,7 +11,7 @@ define void @test1(i32 %x) #0 {
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    movzbl %al, %edi
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    callq callee1
+; CHECK-NEXT:    callq callee1@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 entry:
@@ -29,7 +29,7 @@ define void @test2(i32 %x) #0 {
 ; CHECK-NEXT:    movzbl %al, %edi
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    negl %edi
-; CHECK-NEXT:    callq callee2
+; CHECK-NEXT:    callq callee2@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 entry:

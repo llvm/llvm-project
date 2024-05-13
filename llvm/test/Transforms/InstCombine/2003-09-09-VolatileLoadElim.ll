@@ -1,7 +1,7 @@
-; RUN: opt < %s -instcombine -S | grep load
+; RUN: opt < %s -passes=instcombine -S | grep load
 
-define void @test(i32* %P) {
+define void @test(ptr %P) {
         ; Dead but not deletable!
-        %X = load volatile i32, i32* %P              ; <i32> [#uses=0]
+        %X = load volatile i32, ptr %P              ; <i32> [#uses=0]
         ret void
 }

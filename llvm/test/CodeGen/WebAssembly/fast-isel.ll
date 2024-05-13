@@ -3,7 +3,6 @@
 ; RUN:   -wasm-disable-explicit-locals -wasm-keep-registers \
 ; RUN:   | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; This tests very minimal fast-isel functionality.
@@ -51,29 +50,29 @@ define double @bitcast_f64_i64(i64 %x) {
 ; Do fold offsets into geps.
 ; CHECK-LABEL: do_fold_offset_into_gep:
 ; CHECK: i64.load $push{{[0-9]+}}=, 8($0)
-define i64 @do_fold_offset_into_gep(i64* %p) {
+define i64 @do_fold_offset_into_gep(ptr %p) {
 bb:
-  %tmp = getelementptr inbounds i64, i64* %p, i32 1
-  %tmp2 = load i64, i64* %tmp, align 8
+  %tmp = getelementptr inbounds i64, ptr %p, i32 1
+  %tmp2 = load i64, ptr %tmp, align 8
   ret i64 %tmp2
 }
 
 ; Don't fold negative offsets into geps.
 ; CHECK-LABEL: dont_fold_negative_offset:
 ; CHECK: i64.load $push{{[0-9]+}}=, 0($pop{{[0-9]+}})
-define i64 @dont_fold_negative_offset(i64* %p) {
+define i64 @dont_fold_negative_offset(ptr %p) {
 bb:
-  %tmp = getelementptr inbounds i64, i64* %p, i32 -1
-  %tmp2 = load i64, i64* %tmp, align 8
+  %tmp = getelementptr inbounds i64, ptr %p, i32 -1
+  %tmp2 = load i64, ptr %tmp, align 8
   ret i64 %tmp2
 }
 
 ; Don't fold non-inbounds geps.
 ; CHECK-LABEL: dont_fold_non_inbounds_gep:
 ; CHECK: i64.load $push{{[0-9]+}}=, 0($pop{{[0-9]+}})
-define i64 @dont_fold_non_inbounds_gep(i64* %p) {
+define i64 @dont_fold_non_inbounds_gep(ptr %p) {
 bb:
-  %tmp = getelementptr i64, i64* %p, i32 1
-  %tmp2 = load i64, i64* %tmp, align 8
+  %tmp = getelementptr i64, ptr %p, i32 1
+  %tmp2 = load i64, ptr %tmp, align 8
   ret i64 %tmp2
 }

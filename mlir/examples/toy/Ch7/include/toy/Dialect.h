@@ -14,10 +14,13 @@
 #ifndef MLIR_TUTORIAL_TOY_DIALECT_H_
 #define MLIR_TUTORIAL_TOY_DIALECT_H_
 
-#include "mlir/IR/BuiltinOps.h"
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/CastInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "toy/ShapeInferenceInterface.h"
 
@@ -25,9 +28,9 @@ namespace mlir {
 namespace toy {
 namespace detail {
 struct StructTypeStorage;
-} // end namespace detail
-} // end namespace toy
-} // end namespace mlir
+} // namespace detail
+} // namespace toy
+} // namespace mlir
 
 /// Include the auto-generated header file containing the declaration of the toy
 /// dialect.
@@ -69,8 +72,11 @@ public:
 
   /// Returns the number of element type held by this struct.
   size_t getNumElementTypes() { return getElementTypes().size(); }
+
+  /// The name of this struct type.
+  static constexpr StringLiteral name = "toy.struct";
 };
-} // end namespace toy
-} // end namespace mlir
+} // namespace toy
+} // namespace mlir
 
 #endif // MLIR_TUTORIAL_TOY_DIALECT_H_

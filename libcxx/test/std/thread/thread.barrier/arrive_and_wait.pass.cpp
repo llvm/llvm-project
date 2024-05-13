@@ -6,19 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
 
-// This test requires the dylib support introduced in D68480,
-// which hasn't shipped yet.
-// XFAIL: use_system_cxx_lib && x86_64-apple
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.14
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
+// Until we drop support for the synchronization library in C++11/14/17
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
+// XFAIL: availability-synchronization_library-missing
 
 // <barrier>
 

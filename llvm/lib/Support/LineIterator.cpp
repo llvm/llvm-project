@@ -37,8 +37,9 @@ line_iterator::line_iterator(const MemoryBuffer &Buffer, bool SkipBlanks,
 
 line_iterator::line_iterator(const MemoryBufferRef &Buffer, bool SkipBlanks,
                              char CommentMarker)
-    : Buffer(Buffer.getBufferSize() ? Optional<MemoryBufferRef>(Buffer) : None),
-      CommentMarker(CommentMarker), SkipBlanks(SkipBlanks), LineNumber(1),
+    : Buffer(Buffer.getBufferSize() ? std::optional<MemoryBufferRef>(Buffer)
+                                    : std::nullopt),
+      CommentMarker(CommentMarker), SkipBlanks(SkipBlanks),
       CurrentLine(Buffer.getBufferSize() ? Buffer.getBufferStart() : nullptr,
                   0) {
   // Ensure that if we are constructed on a non-empty memory buffer that it is
@@ -82,7 +83,7 @@ void line_iterator::advance() {
 
   if (*Pos == '\0') {
     // We've hit the end of the buffer, reset ourselves to the end state.
-    Buffer = None;
+    Buffer = std::nullopt;
     CurrentLine = StringRef();
     return;
   }

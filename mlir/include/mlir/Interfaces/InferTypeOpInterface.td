@@ -34,16 +34,70 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       The method takes an optional location which, if set, will be used to
       report errors on. The operands and attributes correspond to those with
       which an Operation would be created (e.g., as used in Operation::create)
-      and the regions of the op.
+      and the regions of the op. Be aware that this method is supposed to be
+      called with valid arguments, e.g., operands are verified, or it may result
+      in an undefined behavior.
       }],
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"inferReturnTypes",
       /*args=*/(ins "::mlir::MLIRContext *":$context,
-                    "::llvm::Optional<::mlir::Location>":$location,
+                    "::std::optional<::mlir::Location>":$location,
                     "::mlir::ValueRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::OpaqueProperties":$properties,
                     "::mlir::RegionRange":$regions,
                     "::llvm::SmallVectorImpl<::mlir::Type>&":$inferredReturnTypes)
+    >,
+    StaticInterfaceMethod<
+      /*desc=*/[{Refine the return types that an op would generate.
+
+      This method computes the return types as `inferReturnTypes` does but
+      additionally takes the existing result types as input. The existing
+      result types can be checked as part of inference to provide more
+      op-specific error messages as well as part of inference to merge
+      additional information, attributes, during inference. It is called during
+      verification for ops implementing this trait with default behavior
+      reporting mismatch with current and inferred types printed.
+
+      The operands and attributes correspond to those with which an Operation
+      would be created (e.g., as used in Operation::create) and the regions of
+      the op. The method takes an optional location which, if set, will be used
+      to report errors on.
+
+      The return types may be elided or specific elements be null for elements
+      that should just be returned but not verified.
+
+      Because this method can be called from within different stages of IR
+      verification, implementations should not assume the arguments to
+      represent fully valid IR and are responsible for checking inputs for
+      validity to the degree necessary to perform the return type inference.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"refineReturnTypes",
+      /*args=*/(ins "::mlir::MLIRContext *":$context,
+                    "::std::optional<::mlir::Location>":$location,
+                    "::mlir::ValueRange":$operands,
+                    "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::OpaqueProperties":$properties,
+                    "::mlir::RegionRange":$regions,
+                    "::llvm::SmallVectorImpl<::mlir::Type>&":$returnTypes),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+          llvm::SmallVector<Type, 4> inferredReturnTypes;
+          if (failed(ConcreteOp::inferReturnTypes(context, location, operands,
+                                                  attributes, properties, regions,
+                                                  inferredReturnTypes)))
+            return failure();
+          if (!ConcreteOp::isCompatibleReturnTypes(inferredReturnTypes,
+                                                   returnTypes)) {
+            return emitOptionalError(
+                location, "'", ConcreteOp::getOperationName(),
+                "' op inferred type(s) ", inferredReturnTypes,
+                " are incompatible with return type(s) of operation ",
+                returnTypes);
+          }
+          return success();
+      }]
     >,
     StaticInterfaceMethod<
       /*desc=*/"Returns whether two array of types are compatible result types"
@@ -62,6 +116,8 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
     >,
   ];
 
+  // Inferring result types may need to access the region operations.
+  let verifyWithRegions = 1;
   let verify = [{
     return detail::verifyInferredResultTypes($_op);
   }];
@@ -88,15 +144,21 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       Unknown (e.g., unranked) shape and nullptrs for element type and attribute
       may be returned by this function while returning success. E.g., partial
       population of components is not error condition.
+
+      Because this method can be called from within different stages of IR
+      verification, implementations should not assume the arguments to
+      represent fully valid IR and are responsible for checking inputs for
+      validity to the degree necessary to perform the return type inference.
       }],
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"inferReturnTypeComponents",
       /*args=*/(ins "::mlir::MLIRContext*":$context,
-                    "::mlir::Optional<::mlir::Location>":$location,
-                    "::mlir::ValueRange":$operands,
+                    "::std::optional<::mlir::Location>":$location,
+                    "::mlir::ValueShapeRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::OpaqueProperties":$properties,
                     "::mlir::RegionRange":$regions,
-                    "::mlir::SmallVectorImpl<::mlir::ShapedTypeComponents>&":
+                    "::llvm::SmallVectorImpl<::mlir::ShapedTypeComponents>&":
                       $inferredReturnShapes),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{ return ::mlir::failure(); }]
@@ -105,9 +167,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       /*desc=*/[{Reify the shape computation for the operation.
 
       Insert operations using the given OpBuilder that computes the
-      result shape. Only one of this method or
-      `reifyReturnTypeShapesPerResultDim` needs to be overriden by the
-      operation. This interface is supposed to be workable during dialect
+      result shape. This interface is supposed to be workable during dialect
       conversion (e.g. convert from tensor world to buffer world),
       where `getOperand` may be invalid. For example, some ops (e.g.
       dynamic_reshape(input, target_shape)) may depend on their operands
@@ -124,56 +184,199 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       /*methodName=*/"reifyReturnTypeShapes",
       /*args=*/(ins "::mlir::OpBuilder&":$builder,
           "::mlir::ValueRange":$operands,
-          "::mlir::SmallVectorImpl<Value> &":$reifiedReturnShapes),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{ return ::mlir::failure(); }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{Reify the shape computation for the operation.
-
-      Insert operations using the given OpBuilder that computes the
-      result shape. The `reifiedReturnShapes` is expected to be
-      populated with as many vectors as the number of results of the
-      op (empty if the shape of a result value cannot be computed). If
-      the returned shape for a result is not empty, its size must
-      match the rank of the shaped type returned. Consequently, this
-      interface can only be overridden if the return types are ranked.
-
-      If both this method and `reifyReturnTypeShapes` are overridden
-      by the operation, `reifyReturnTypeShapes` takes precedence. This
-      method is intended to be used when the shape of each result, dim
-      pair can be computed independently. Using this method avoids
-      adding additional instructions to aggregate individual dimension
-      of a result shape into an single `Value` (and consequently
-      avoids the need to extract the value from the shape on the
-      client side).
-      }],
-      /*retTy=*/"::mlir::LogicalResult",
-      /*methodName=*/"reifyReturnTypeShapesPerResultDim",
-      /*args=*/(ins "::mlir::OpBuilder&":$builder,
-          "::mlir::SmallVectorImpl<SmallVector<::mlir::Value>>&"
-          :$reifiedReturnShapes),
+          "::llvm::SmallVectorImpl<::mlir::Value> &":$reifiedReturnShapes),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{ return ::mlir::failure(); }]
     >
   ];
 }
 
+// Convenient trait to define a wrapper to inferReturnTypes that passes in the
+// Op Adaptor directly
+class InferTypeOpAdaptorBase<code additionalDecls = [{}]> : TraitList<
+  [
+    // Op implements infer type op interface.
+    DeclareOpInterfaceMethods<InferTypeOpInterface>,
+    NativeOpTrait<
+      /*name=*/"InferTypeOpAdaptor",
+      /*traits=*/[],
+      /*extraOpDeclaration=*/[{
+        static ::mlir::LogicalResult
+        inferReturnTypes(::mlir::MLIRContext *context,
+                                std::optional<::mlir::Location> location,
+                                Adaptor adaptor,
+                                ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes);
+      }] # additionalDecls,
+      /*extraOpDefinition=*/[{
+        ::mlir::LogicalResult
+        $cppClass::inferReturnTypes(::mlir::MLIRContext *context,
+                          std::optional<::mlir::Location> location,
+                          ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
+          $cppClass::Adaptor adaptor(operands, attributes, properties, regions);
+          return $cppClass::inferReturnTypes(context,
+            location, adaptor, inferredReturnTypes);
+        }
+      }]
+    >
+  ]>;
+
+def InferTypeOpAdaptor : InferTypeOpAdaptorBase;
+def InferTypeOpAdaptorWithIsCompatible : InferTypeOpAdaptorBase<
+  [{
+    static bool isCompatibleReturnTypes(::mlir::TypeRange l, ::mlir::TypeRange r);
+  }]
+>;
+
+// Convenient trait to define a wrapper to inferReturnTypeComponents that passes
+// in the Op Adaptor directly. Only uses the current types of the operands.
+class InferShapedTypeOpAdaptorBase<list<string> overridenMethods = []> : TraitList<
+  [
+    // Op implements infer type op interface.
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface, overridenMethods>,
+    NativeOpTrait<
+      /*name=*/"InferShapedTypeOpAdaptor",
+      /*traits=*/[],
+      /*extraOpDeclaration=*/[{
+        static ::mlir::LogicalResult
+        inferReturnTypeComponents(::mlir::MLIRContext *context,
+                                std::optional<::mlir::Location> location,
+                                Adaptor adaptor,
+                                ::llvm::SmallVectorImpl<::mlir::ShapedTypeComponents> &inferredReturnShapes);
+      }],
+      /*extraOpDefinition=*/[{
+        ::mlir::LogicalResult
+        $cppClass::inferReturnTypeComponents(::mlir::MLIRContext *context,
+                          std::optional<::mlir::Location> location,
+                          ::mlir::ValueShapeRange operands, ::mlir::DictionaryAttr attributes,
+                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::llvm::SmallVectorImpl<::mlir::ShapedTypeComponents> &inferredReturnShapes) {
+          $cppClass::Adaptor adaptor(operands, attributes, properties, regions);
+          return $cppClass::inferReturnTypeComponents(context,
+            location, adaptor, inferredReturnShapes);
+        }
+      }]
+    >
+  ]>;
+
+def InferShapedTypeOpAdaptor : InferShapedTypeOpAdaptorBase<[
+  "inferReturnTypeComponents"]>;
+def InferShapedTypeOpAdaptorWithReify : InferShapedTypeOpAdaptorBase<[
+  "inferReturnTypeComponents", "reifyReturnTypeShapes"]>;
+
 // Convenience class grouping together type and shaped type op interfaces for
 // ops that have tensor return types.
-class InferTensorType<list<string> overridenMethods = []> {
-  list<OpTrait> traits = [
+class InferTensorTypeBase<list<string> overridenMethods = []> : TraitList<
+  [
     // Op implements infer type op interface.
-    InferTypeOpInterface,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>,
     // The op will have methods implementing the ShapedType type inference
     // interface.
     DeclareOpInterfaceMethods<InferShapedTypeOpInterface, overridenMethods>,
     // The op produces tensors and will use the ShapedType type infer interface
     // along with knowledge that it is producing Tensors to infer the type.
-    NativeOpTrait<"InferTensorType">
+    NativeOpTrait<
+      /*name=*/"InferTensorType",
+      /*traits=*/[],
+      /*extraOpDeclaration=*/[{}],
+      /*extraOpDefinition=*/[{
+        ::mlir::LogicalResult
+        $cppClass::inferReturnTypes(::mlir::MLIRContext *context,
+                          std::optional<::mlir::Location> location,
+                          ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
+          ::llvm::SmallVector<::mlir::ShapedTypeComponents, 2> retComponents;
+          if (failed($cppClass::inferReturnTypeComponents(context, location,
+                                    operands, attributes, properties, regions,
+                                    retComponents)))
+            return failure();
+          return ::mlir::detail::inferReturnTensorTypes(retComponents,
+                                    inferredReturnTypes);
+        }
+      }]
+    >
+  ]>;
+
+def InferTensorType : InferTensorTypeBase<["inferReturnTypeComponents"]>;
+def InferTensorTypeWithReify: InferTensorTypeBase<[
+    "inferReturnTypeComponents", "reifyReturnTypeShapes"]>;
+
+// Convenience class grouping together type and shaped type op interfaces for
+// ops that have tensor return types.
+class InferTensorTypeAdaptorBase<list<string> overridenMethods = []> : TraitList<
+  [
+    // Op implements infer type op interface.
+    DeclareOpInterfaceMethods<InferTypeOpInterface>,
+    // The op will have methods implementing the ShapedType type inference
+    // interface.
+    InferShapedTypeOpAdaptorBase<overridenMethods>,
+    // The op produces tensors and will use the ShapedType type infer interface
+    // along with knowledge that it is producing Tensors to infer the type.
+    NativeOpTrait<
+      /*name=*/"InferTensorType",
+      /*traits=*/[],
+      /*extraOpDeclaration=*/[{}],
+      /*extraOpDefinition=*/[{
+        LogicalResult
+        $cppClass::inferReturnTypes(::mlir::MLIRContext *context,
+                          std::optional<::mlir::Location> location,
+                          ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
+          SmallVector<ShapedTypeComponents, 2> retComponents;
+          if (failed($cppClass::inferReturnTypeComponents(context, location,
+                                    operands, attributes, properties, regions,
+                                    retComponents)))
+            return failure();
+          return ::mlir::detail::inferReturnTensorTypes(retComponents,
+                                    inferredReturnTypes);
+        }
+      }]
+    >
+  ]>;
+
+def InferTensorTypeAdaptor : InferTensorTypeAdaptorBase<["inferReturnTypeComponents"]>;
+def InferTensorTypeAdaptorWithReify: InferTensorTypeAdaptorBase<[
+    "inferReturnTypeComponents", "reifyReturnTypeShapes"]>;
+
+def ReifyRankedShapedTypeOpInterface :
+    OpInterface<"ReifyRankedShapedTypeOpInterface"> {
+  let description = [{
+    Interface to compute the shape of the result of an operation when
+    the result is a ranked shape type, i.e. `RankedTensorType` or
+    `MemRefType`.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Reify the shape of the result of an operation (typically in terms of the
+        shape of its operands).
+
+        `reifiedReturnShapes` is populated with one vector per op result. Each
+        of those vectors contains an OpFoldResult for each dimension of the
+        shaped type. In case a dimension in the type is static, the
+        corresponding entry is an IntegerAttr. Otherwise, it is a Value. The
+        given builder may be used to insert ops that compute result shapes.
+
+        If the shape of a particular result cannot be computed it must be empty.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"reifyResultShapes",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+        "::mlir::ReifiedRankedShapedTypeDims &":$reifiedReturnShapes)
+    >
   ];
 }
-defvar InferTensorTypeWithReify = InferTensorType<[
-    "inferReturnTypeComponents", "reifyReturnTypeShapes"]>;
+
+// Op has the same operand and result type.
+// TODO: Change from hard coded to utilizing type inference trait.
+def SameOperandsAndResultType : NativeOpTrait<"SameOperandsAndResultType">;
+
+// Op has the same ranks for all operands and results types, if known.
+def SameOperandsAndResultRank : NativeOpTrait<"SameOperandsAndResultRank">;
 
 #endif // MLIR_INFERTYPEOPINTERFACE

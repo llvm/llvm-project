@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Region.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 using namespace mlir;
 
@@ -33,22 +33,19 @@ Location Region::getLoc() {
   return container->getLoc();
 }
 
-/// Return a range containing the types of the arguments for this region.
 auto Region::getArgumentTypes() -> ValueTypeRange<BlockArgListType> {
   return ValueTypeRange<BlockArgListType>(getArguments());
 }
 
-/// Add one argument to the argument list for each type specified in the list.
-iterator_range<Region::args_iterator> Region::addArguments(TypeRange types) {
-  return front().addArguments(types);
+iterator_range<Region::args_iterator>
+Region::addArguments(TypeRange types, ArrayRef<Location> locs) {
+  return front().addArguments(types, locs);
 }
 
 Region *Region::getParentRegion() {
   assert(container && "region is not attached to a container");
   return container->getParentRegion();
 }
-
-Operation *Region::getParentOp() { return container; }
 
 bool Region::isProperAncestor(Region *other) {
   if (this == other)
@@ -70,14 +67,14 @@ unsigned Region::getRegionNumber() {
 
 /// Clone the internal blocks from this region into `dest`. Any
 /// cloned blocks are appended to the back of dest.
-void Region::cloneInto(Region *dest, BlockAndValueMapping &mapper) {
+void Region::cloneInto(Region *dest, IRMapping &mapper) {
   assert(dest && "expected valid region to clone into");
   cloneInto(dest, dest->end(), mapper);
 }
 
 /// Clone this region into 'dest' before the given position in 'dest'.
 void Region::cloneInto(Region *dest, Region::iterator destPos,
-                       BlockAndValueMapping &mapper) {
+                       IRMapping &mapper) {
   assert(dest && "expected valid region to clone into");
   assert(this != dest && "cannot clone region into itself");
 
@@ -85,6 +82,18 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
   if (empty())
     return;
 
+  // The below clone implementation takes special care to be read only for the
+  // sake of multi threading. That essentially means not adding any uses to any
+  // of the blocks or operation results contained within this region as that
+  // would lead to a write in their use-def list. This is unavoidable for
+  // 'Value's from outside the region however, in which case it is not read
+  // only. Using the BlockAndValueMapper it is possible to remap such 'Value's
+  // to ones owned by the calling thread however, making it read only once
+  // again.
+
+  // First clone all the blocks and block arguments and map them, but don't yet
+  // clone the operations, as they may otherwise add a use to a block that has
+  // not yet been mapped
   for (Block &block : *this) {
     Block *newBlock = new Block();
     mapper.map(&block, newBlock);
@@ -94,28 +103,49 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
     // argument to the cloned block.
     for (auto arg : block.getArguments())
       if (!mapper.contains(arg))
-        mapper.map(arg, newBlock->addArgument(arg.getType()));
-
-    // Clone and remap the operations within this block.
-    for (auto &op : block)
-      newBlock->push_back(op.clone(mapper));
+        mapper.map(arg, newBlock->addArgument(arg.getType(), arg.getLoc()));
 
     dest->getBlocks().insert(destPos, newBlock);
   }
 
-  // Now that each of the blocks have been cloned, go through and remap the
-  // operands of each of the operations.
-  auto remapOperands = [&](Operation *op) {
-    for (auto &operand : op->getOpOperands())
-      if (auto mappedOp = mapper.lookupOrNull(operand.get()))
-        operand.set(mappedOp);
-    for (auto &succOp : op->getBlockOperands())
-      if (auto *mappedOp = mapper.lookupOrNull(succOp.get()))
-        succOp.set(mappedOp);
-  };
+  auto newBlocksRange =
+      llvm::make_range(Region::iterator(mapper.lookup(&front())), destPos);
 
-  for (iterator it(mapper.lookup(&front())); it != destPos; ++it)
-    it->walk(remapOperands);
+  // Now follow up with creating the operations, but don't yet clone their
+  // regions, nor set their operands. Setting the successors is safe as all have
+  // already been mapped. We are essentially just creating the operation results
+  // to be able to map them.
+  // Cloning the operands and region as well would lead to uses of operations
+  // not yet mapped.
+  auto cloneOptions =
+      Operation::CloneOptions::all().cloneRegions(false).cloneOperands(false);
+  for (auto zippedBlocks : llvm::zip(*this, newBlocksRange)) {
+    Block &sourceBlock = std::get<0>(zippedBlocks);
+    Block &clonedBlock = std::get<1>(zippedBlocks);
+    // Clone and remap the operations within this block.
+    for (Operation &op : sourceBlock)
+      clonedBlock.push_back(op.clone(mapper, cloneOptions));
+  }
+
+  // Finally now that all operation results have been mapped, set the operands
+  // and clone the regions.
+  SmallVector<Value> operands;
+  for (auto zippedBlocks : llvm::zip(*this, newBlocksRange)) {
+    for (auto ops :
+         llvm::zip(std::get<0>(zippedBlocks), std::get<1>(zippedBlocks))) {
+      Operation &source = std::get<0>(ops);
+      Operation &clone = std::get<1>(ops);
+
+      operands.resize(source.getNumOperands());
+      llvm::transform(
+          source.getOperands(), operands.begin(),
+          [&](Value operand) { return mapper.lookupOrDefault(operand); });
+      clone.setOperands(operands);
+
+      for (auto regions : llvm::zip(source.getRegions(), clone.getRegions()))
+        std::get<0>(regions).cloneInto(&std::get<1>(regions), mapper);
+    }
+  }
 }
 
 /// Returns 'block' if 'block' lies in this region, or otherwise finds the
@@ -154,10 +184,10 @@ void Region::dropAllReferences() {
 }
 
 Region *llvm::ilist_traits<::mlir::Block>::getParentRegion() {
-  size_t Offset(
+  size_t offset(
       size_t(&((Region *)nullptr->*Region::getSublistAccess(nullptr))));
-  iplist<Block> *Anchor(static_cast<iplist<Block> *>(this));
-  return reinterpret_cast<Region *>(reinterpret_cast<char *>(Anchor) - Offset);
+  iplist<Block> *anchor(static_cast<iplist<Block> *>(this));
+  return reinterpret_cast<Region *>(reinterpret_cast<char *>(anchor) - offset);
 }
 
 /// This is a trait method invoked when a basic block is added to a region.
@@ -231,18 +261,24 @@ RegionRange::RegionRange(MutableArrayRef<Region> regions)
     : RegionRange(regions.data(), regions.size()) {}
 RegionRange::RegionRange(ArrayRef<std::unique_ptr<Region>> regions)
     : RegionRange(regions.data(), regions.size()) {}
+RegionRange::RegionRange(ArrayRef<Region *> regions)
+    : RegionRange(const_cast<Region **>(regions.data()), regions.size()) {}
 
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 RegionRange::OwnerT RegionRange::offset_base(const OwnerT &owner,
                                              ptrdiff_t index) {
-  if (auto *operand = owner.dyn_cast<const std::unique_ptr<Region> *>())
-    return operand + index;
+  if (auto *region = llvm::dyn_cast_if_present<const std::unique_ptr<Region> *>(owner))
+    return region + index;
+  if (auto **region = llvm::dyn_cast_if_present<Region **>(owner))
+    return region + index;
   return &owner.get<Region *>()[index];
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Region *RegionRange::dereference_iterator(const OwnerT &owner,
                                           ptrdiff_t index) {
-  if (auto *operand = owner.dyn_cast<const std::unique_ptr<Region> *>())
-    return operand[index].get();
+  if (auto *region = llvm::dyn_cast_if_present<const std::unique_ptr<Region> *>(owner))
+    return region[index].get();
+  if (auto **region = llvm::dyn_cast_if_present<Region **>(owner))
+    return region[index];
   return &owner.get<Region *>()[index];
 }

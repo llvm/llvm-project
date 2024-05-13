@@ -1,37 +1,39 @@
-; RUN: opt -S -loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s
 ; RUN: opt -S -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s
 
 ;   1	void cold(char *A, char *B, char *C, char *D, char *E, int N) {
 ;   2	  for(int i = 0; i < N; i++) {
 ;   3	    A[i + 1] = A[i] + B[i];
-;   4	    C[i] = D[i] * E[i];
+;   4	    C[i] = Dptr E[i];
 ;   5	  }
 ;   6	}
 ;   7
 ;   8	void hot(char *A, char *B, char *C, char *D, char *E, int N) {
 ;   9	  for(int i = 0; i < N; i++) {
 ;  10	    A[i + 1] = A[i] + B[i];
-;  11	    C[i] = D[i] * E[i];
+;  11	    C[i] = Dptr E[i];
 ;  12	  }
 ;  13	}
 ;  14
 ;  15	void unknown(char *A, char *B, char *C, char *D, char *E, int N) {
 ;  16	  for(int i = 0; i < N; i++) {
 ;  17	    A[i + 1] = A[i] + B[i];
-;  18	    C[i] = D[i] * E[i];
+;  18	    C[i] = Dptr E[i];
 ;  19	  }
 ;  20	}
 
-; CHECK: remark: /tmp/s.c:2:3: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop (hotness: 300)
-; CHECK: remark: /tmp/s.c:9:3: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop (hotness: 5000)
-; CHECK: remark: /tmp/s.c:16:3: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop{{$}}
+; CHECK: remark: /tmp/s.c:3:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at /tmp/s.c:3:16 (hotness: 300)
+; CHECK: remark: /tmp/s.c:10:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at /tmp/s.c:10:16 (hotness: 5000)
+; CHECK: remark: /tmp/s.c:17:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at /tmp/s.c:17:16{{$}}
 
 ; ModuleID = '/tmp/s.c'
 source_filename = "/tmp/s.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: norecurse nounwind ssp uwtable
-define void @cold(i8* nocapture %A, i8* nocapture readonly %B, i8* nocapture %C, i8* nocapture readonly %D, i8* nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !7 !prof !56 {
+define void @cold(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !7 !prof !56 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !9
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !10, !prof !58
@@ -41,21 +43,21 @@ ph:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
-  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !12
-  %0 = load i8, i8* %arrayidx, align 1, !dbg !12, !tbaa !13
-  %arrayidx2 = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !16
-  %1 = load i8, i8* %arrayidx2, align 1, !dbg !16, !tbaa !13
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !12
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !12, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !16
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !16, !tbaa !13
   %add = add i8 %1, %0, !dbg !17
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !10
-  %arrayidx7 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv.next, !dbg !18
-  store i8 %add, i8* %arrayidx7, align 1, !dbg !19, !tbaa !13
-  %arrayidx9 = getelementptr inbounds i8, i8* %D, i64 %indvars.iv, !dbg !20
-  %2 = load i8, i8* %arrayidx9, align 1, !dbg !20, !tbaa !13
-  %arrayidx12 = getelementptr inbounds i8, i8* %E, i64 %indvars.iv, !dbg !21
-  %3 = load i8, i8* %arrayidx12, align 1, !dbg !21, !tbaa !13
+  %arrayidx7 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv.next, !dbg !18
+  store i8 %add, ptr %arrayidx7, align 1, !dbg !19, !tbaa !13
+  %arrayidx9 = getelementptr inbounds i8, ptr %D, i64 %indvars.iv, !dbg !20
+  %2 = load i8, ptr %arrayidx9, align 1, !dbg !20, !tbaa !13
+  %arrayidx12 = getelementptr inbounds i8, ptr %E, i64 %indvars.iv, !dbg !21
+  %3 = load i8, ptr %arrayidx12, align 1, !dbg !21, !tbaa !13
   %mul = mul i8 %3, %2, !dbg !22
-  %arrayidx16 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !23
-  store i8 %mul, i8* %arrayidx16, align 1, !dbg !24, !tbaa !13
+  %arrayidx16 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !23
+  store i8 %mul, ptr %arrayidx16, align 1, !dbg !24, !tbaa !13
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !10
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !10
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !10, !llvm.loop !25, !prof !59
@@ -65,7 +67,7 @@ for.cond.cleanup:
 }
 
 ; Function Attrs: norecurse nounwind ssp uwtable
-define void @hot(i8* nocapture %A, i8* nocapture readonly %B, i8* nocapture %C, i8* nocapture readonly %D, i8* nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !26 !prof !57 {
+define void @hot(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !26 !prof !57 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !27
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !28, !prof !58
@@ -75,21 +77,21 @@ ph:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
-  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !30
-  %0 = load i8, i8* %arrayidx, align 1, !dbg !30, !tbaa !13
-  %arrayidx2 = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !31
-  %1 = load i8, i8* %arrayidx2, align 1, !dbg !31, !tbaa !13
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !30
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !30, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !31
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !31, !tbaa !13
   %add = add i8 %1, %0, !dbg !32
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !28
-  %arrayidx7 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv.next, !dbg !33
-  store i8 %add, i8* %arrayidx7, align 1, !dbg !34, !tbaa !13
-  %arrayidx9 = getelementptr inbounds i8, i8* %D, i64 %indvars.iv, !dbg !35
-  %2 = load i8, i8* %arrayidx9, align 1, !dbg !35, !tbaa !13
-  %arrayidx12 = getelementptr inbounds i8, i8* %E, i64 %indvars.iv, !dbg !36
-  %3 = load i8, i8* %arrayidx12, align 1, !dbg !36, !tbaa !13
+  %arrayidx7 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv.next, !dbg !33
+  store i8 %add, ptr %arrayidx7, align 1, !dbg !34, !tbaa !13
+  %arrayidx9 = getelementptr inbounds i8, ptr %D, i64 %indvars.iv, !dbg !35
+  %2 = load i8, ptr %arrayidx9, align 1, !dbg !35, !tbaa !13
+  %arrayidx12 = getelementptr inbounds i8, ptr %E, i64 %indvars.iv, !dbg !36
+  %3 = load i8, ptr %arrayidx12, align 1, !dbg !36, !tbaa !13
   %mul = mul i8 %3, %2, !dbg !37
-  %arrayidx16 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !38
-  store i8 %mul, i8* %arrayidx16, align 1, !dbg !39, !tbaa !13
+  %arrayidx16 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !38
+  store i8 %mul, ptr %arrayidx16, align 1, !dbg !39, !tbaa !13
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !28
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !28
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !28, !llvm.loop !40, !prof !59
@@ -99,7 +101,7 @@ for.cond.cleanup:
 }
 
 ; Function Attrs: norecurse nounwind ssp uwtable
-define void @unknown(i8* nocapture %A, i8* nocapture readonly %B, i8* nocapture %C, i8* nocapture readonly %D, i8* nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !41 {
+define void @unknown(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !41 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !42
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !43
@@ -109,21 +111,21 @@ ph:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
-  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !45
-  %0 = load i8, i8* %arrayidx, align 1, !dbg !45, !tbaa !13
-  %arrayidx2 = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !46
-  %1 = load i8, i8* %arrayidx2, align 1, !dbg !46, !tbaa !13
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !45
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !45, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !46
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !46, !tbaa !13
   %add = add i8 %1, %0, !dbg !47
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !43
-  %arrayidx7 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv.next, !dbg !48
-  store i8 %add, i8* %arrayidx7, align 1, !dbg !49, !tbaa !13
-  %arrayidx9 = getelementptr inbounds i8, i8* %D, i64 %indvars.iv, !dbg !50
-  %2 = load i8, i8* %arrayidx9, align 1, !dbg !50, !tbaa !13
-  %arrayidx12 = getelementptr inbounds i8, i8* %E, i64 %indvars.iv, !dbg !51
-  %3 = load i8, i8* %arrayidx12, align 1, !dbg !51, !tbaa !13
+  %arrayidx7 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv.next, !dbg !48
+  store i8 %add, ptr %arrayidx7, align 1, !dbg !49, !tbaa !13
+  %arrayidx9 = getelementptr inbounds i8, ptr %D, i64 %indvars.iv, !dbg !50
+  %2 = load i8, ptr %arrayidx9, align 1, !dbg !50, !tbaa !13
+  %arrayidx12 = getelementptr inbounds i8, ptr %E, i64 %indvars.iv, !dbg !51
+  %3 = load i8, ptr %arrayidx12, align 1, !dbg !51, !tbaa !13
   %mul = mul i8 %3, %2, !dbg !52
-  %arrayidx16 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !53
-  store i8 %mul, i8* %arrayidx16, align 1, !dbg !54, !tbaa !13
+  %arrayidx16 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !53
+  store i8 %mul, ptr %arrayidx16, align 1, !dbg !54, !tbaa !13
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !43
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !43
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !43, !llvm.loop !55
@@ -196,5 +198,5 @@ attributes #0 = { norecurse nounwind ssp uwtable "disable-tail-calls"="false" "l
 !55 = distinct !{!55, !43}
 !56 = !{!"function_entry_count", i64 3}
 !57 = !{!"function_entry_count", i64 50}
-!58 = !{!"branch_weights", i32 99, i32 1}
+!58 = !{!"branch_weights", i32 10000, i32 1}
 !59 = !{!"branch_weights", i32 1, i32 99}

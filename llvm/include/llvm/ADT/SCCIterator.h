@@ -23,11 +23,16 @@
 #define LLVM_ADT_SCCITERATOR_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <queue>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -234,6 +239,144 @@ template <class T> scc_iterator<T> scc_end(const T &G) {
   return scc_iterator<T>::end(G);
 }
 
+/// Sort the nodes of a directed SCC in the decreasing order of the edge
+/// weights. The instantiating GraphT type should have weighted edge type
+/// declared in its graph traits in order to use this iterator.
+///
+/// This is implemented using Kruskal's minimal spanning tree algorithm followed
+/// by Kahn's algorithm to compute a topological order on the MST. First a
+/// maximum spanning tree (forest) is built based on all edges within the SCC
+/// collection. Then a topological walk is initiated on tree nodes that do not
+/// have a predecessor and then applied to all nodes of the SCC. Such order
+/// ensures that high-weighted edges are visited first during the traversal.
+template <class GraphT, class GT = GraphTraits<GraphT>>
+class scc_member_iterator {
+  using NodeType = typename GT::NodeType;
+  using EdgeType = typename GT::EdgeType;
+  using NodesType = std::vector<NodeType *>;
+
+  // Auxilary node information used during the MST calculation.
+  struct NodeInfo {
+    NodeInfo *Group = this;
+    uint32_t Rank = 0;
+    bool Visited = false;
+    DenseSet<const EdgeType *> IncomingMSTEdges;
+  };
+
+  // Find the root group of the node and compress the path from node to the
+  // root.
+  NodeInfo *find(NodeInfo *Node) {
+    if (Node->Group != Node)
+      Node->Group = find(Node->Group);
+    return Node->Group;
+  }
+
+  // Union the source and target node into the same group and return true.
+  // Returns false if they are already in the same group.
+  bool unionGroups(const EdgeType *Edge) {
+    NodeInfo *G1 = find(&NodeInfoMap[Edge->Source]);
+    NodeInfo *G2 = find(&NodeInfoMap[Edge->Target]);
+
+    // If the edge forms a cycle, do not add it to MST
+    if (G1 == G2)
+      return false;
+
+    // Make the smaller rank tree a direct child of high rank tree.
+    if (G1->Rank < G2->Rank)
+      G1->Group = G2;
+    else {
+      G2->Group = G1;
+      // If the ranks are the same, increment root of one tree by one.
+      if (G1->Rank == G2->Rank)
+        G1->Rank++;
+    }
+    return true;
+  }
+
+  std::unordered_map<NodeType *, NodeInfo> NodeInfoMap;
+  NodesType Nodes;
+
+public:
+  scc_member_iterator(const NodesType &InputNodes);
+
+  NodesType &operator*() { return Nodes; }
+};
+
+template <class GraphT, class GT>
+scc_member_iterator<GraphT, GT>::scc_member_iterator(
+    const NodesType &InputNodes) {
+  if (InputNodes.size() <= 1) {
+    Nodes = InputNodes;
+    return;
+  }
+
+  // Initialize auxilary node information.
+  NodeInfoMap.clear();
+  for (auto *Node : InputNodes) {
+    // This is specifically used to construct a `NodeInfo` object in place. An
+    // insert operation will involve a copy construction which invalidate the
+    // initial value of the `Group` field which should be `this`.
+    (void)NodeInfoMap[Node].Group;
+  }
+
+  // Sort edges by weights.
+  struct EdgeComparer {
+    bool operator()(const EdgeType *L, const EdgeType *R) const {
+      return L->Weight > R->Weight;
+    }
+  };
+
+  std::multiset<const EdgeType *, EdgeComparer> SortedEdges;
+  for (auto *Node : InputNodes) {
+    for (auto &Edge : Node->Edges) {
+      if (NodeInfoMap.count(Edge.Target))
+        SortedEdges.insert(&Edge);
+    }
+  }
+
+  // Traverse all the edges and compute the Maximum Weight Spanning Tree
+  // using Kruskal's algorithm.
+  std::unordered_set<const EdgeType *> MSTEdges;
+  for (auto *Edge : SortedEdges) {
+    if (unionGroups(Edge))
+      MSTEdges.insert(Edge);
+  }
+
+  // Run Kahn's algorithm on MST to compute a topological traversal order.
+  // The algorithm starts from nodes that have no incoming edge. These nodes are
+  // "roots" of the MST forest. This ensures that nodes are visited before their
+  // descendants are, thus ensures hot edges are processed before cold edges,
+  // based on how MST is computed.
+  std::queue<NodeType *> Queue;
+  for (const auto *Edge : MSTEdges)
+    NodeInfoMap[Edge->Target].IncomingMSTEdges.insert(Edge);
+
+  // Walk through SortedEdges to initialize the queue, instead of using NodeInfoMap
+  // to ensure an ordered deterministic push.
+  for (auto *Edge : SortedEdges) {
+    if (!NodeInfoMap[Edge->Source].Visited &&
+        NodeInfoMap[Edge->Source].IncomingMSTEdges.empty()) {
+      Queue.push(Edge->Source);
+      NodeInfoMap[Edge->Source].Visited = true;
+    }
+  }
+
+  while (!Queue.empty()) {
+    auto *Node = Queue.front();
+    Queue.pop();
+    Nodes.push_back(Node);
+    for (auto &Edge : Node->Edges) {
+      NodeInfoMap[Edge.Target].IncomingMSTEdges.erase(&Edge);
+      if (MSTEdges.count(&Edge) &&
+          NodeInfoMap[Edge.Target].IncomingMSTEdges.empty()) {
+        Queue.push(Edge.Target);
+      }
+    }
+  }
+
+  assert(InputNodes.size() == Nodes.size() && "missing nodes in MST");
+  std::reverse(Nodes.begin(), Nodes.end());
+}
 } // end namespace llvm
 
 #endif // LLVM_ADT_SCCITERATOR_H

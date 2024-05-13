@@ -16,8 +16,8 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
@@ -29,6 +29,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -51,10 +52,20 @@ static inline bool isFnEntryBlock(Block *block) {
 spirv::Deserializer::Deserializer(ArrayRef<uint32_t> binary,
                                   MLIRContext *context)
     : binary(binary), context(context), unknownLoc(UnknownLoc::get(context)),
-      module(createModuleOp()), opBuilder(module->body()) {}
+      module(createModuleOp()), opBuilder(module->getRegion())
+#ifndef NDEBUG
+      ,
+      logger(llvm::dbgs())
+#endif
+{
+}
 
 LogicalResult spirv::Deserializer::deserialize() {
-  LLVM_DEBUG(llvm::dbgs() << "+++ starting deserialization +++\n");
+  LLVM_DEBUG({
+    logger.resetIndent();
+    logger.startLine()
+        << "//+++---------- start deserialization ----------+++//\n";
+  });
 
   if (failed(processHeader()))
     return failure();
@@ -83,7 +94,8 @@ LogicalResult spirv::Deserializer::deserialize() {
 
   attachVCETriple();
 
-  LLVM_DEBUG(llvm::dbgs() << "+++ completed deserialization +++\n");
+  LLVM_DEBUG(logger.startLine()
+             << "//+++-------- completed deserialization --------+++//\n");
   return success();
 }
 
@@ -204,11 +216,13 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpMemoryModel must have two operands");
 
   (*module)->setAttr(
-      "addressing_model",
-      opBuilder.getI32IntegerAttr(llvm::bit_cast<int32_t>(operands.front())));
-  (*module)->setAttr(
-      "memory_model",
-      opBuilder.getI32IntegerAttr(llvm::bit_cast<int32_t>(operands.back())));
+      module->getAddressingModelAttrName(),
+      opBuilder.getAttr<spirv::AddressingModelAttr>(
+          static_cast<spirv::AddressingModel>(operands.front())));
+
+  (*module)->setAttr(module->getMemoryModelAttrName(),
+                     opBuilder.getAttr<spirv::MemoryModelAttr>(
+                         static_cast<spirv::MemoryModel>(operands.back())));
 
   return success();
 }
@@ -226,9 +240,17 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   if (decorationName.empty()) {
     return emitError(unknownLoc, "invalid Decoration code : ") << words[1];
   }
-  auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
-  auto symbol = opBuilder.getIdentifier(attrName);
+  auto symbol = getSymbolDecoration(decorationName);
   switch (static_cast<spirv::Decoration>(words[1])) {
+  case spirv::Decoration::FPFastMathMode:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName << " needs a single integer literal";
+    }
+    decorations[words[0]].set(
+        symbol, FPFastMathModeAttr::get(opBuilder.getContext(),
+                                        static_cast<FPFastMathMode>(words[2])));
+    break;
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
     if (words.size() != 3) {
@@ -254,20 +276,47 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     }
     typeDecorations[words[0]] = words[2];
     break;
+  case spirv::Decoration::LinkageAttributes: {
+    if (words.size() < 4) {
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName
+             << " needs at least 1 string and 1 integer literal";
+    }
+    // LinkageAttributes has two parameters ["linkageName", linkageType]
+    // e.g., OpDecorate %imported_func LinkageAttributes "outside.func" Import
+    // "linkageName" is a stringliteral encoded as uint32_t,
+    // hence the size of name is variable length which results in words.size()
+    // being variable length, words.size() = 3 + strlen(name)/4 + 1 or
+    // 3 + ceildiv(strlen(name), 4).
+    unsigned wordIndex = 2;
+    auto linkageName = spirv::decodeStringLiteral(words, wordIndex).str();
+    auto linkageTypeAttr = opBuilder.getAttr<::mlir::spirv::LinkageTypeAttr>(
+        static_cast<::mlir::spirv::LinkageType>(words[wordIndex++]));
+    auto linkageAttr = opBuilder.getAttr<::mlir::spirv::LinkageAttributesAttr>(
+        StringAttr::get(context, linkageName), linkageTypeAttr);
+    decorations[words[0]].set(symbol, llvm::dyn_cast<Attribute>(linkageAttr));
+    break;
+  }
   case spirv::Decoration::Aliased:
+  case spirv::Decoration::AliasedPointer:
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
   case spirv::Decoration::Flat:
   case spirv::Decoration::NonReadable:
   case spirv::Decoration::NonWritable:
   case spirv::Decoration::NoPerspective:
+  case spirv::Decoration::NoSignedWrap:
+  case spirv::Decoration::NoUnsignedWrap:
+  case spirv::Decoration::RelaxedPrecision:
   case spirv::Decoration::Restrict:
+  case spirv::Decoration::RestrictPointer:
+  case spirv::Decoration::NoContraction:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
     }
-    // Block decoration does not affect spv.struct type, but is still stored for
-    // verification.
+    // Block decoration does not affect spirv.struct type, but is still stored
+    // for verification.
     // TODO: Update StructType to contain this information since
     // it is needed for many validation rules.
     decorations[words[0]].set(symbol, opBuilder.getUnitAttr());
@@ -323,6 +372,46 @@ LogicalResult spirv::Deserializer::processMemberName(ArrayRef<uint32_t> words) {
   return success();
 }
 
+LogicalResult spirv::Deserializer::setFunctionArgAttrs(
+    uint32_t argID, SmallVectorImpl<Attribute> &argAttrs, size_t argIndex) {
+  if (!decorations.contains(argID)) {
+    argAttrs[argIndex] = DictionaryAttr::get(context, {});
+    return success();
+  }
+
+  spirv::DecorationAttr foundDecorationAttr;
+  for (NamedAttribute decAttr : decorations[argID]) {
+    for (auto decoration :
+         {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
+          spirv::Decoration::AliasedPointer,
+          spirv::Decoration::RestrictPointer}) {
+
+      if (decAttr.getName() !=
+          getSymbolDecoration(stringifyDecoration(decoration)))
+        continue;
+
+      if (foundDecorationAttr)
+        return emitError(unknownLoc,
+                         "more than one Aliased/Restrict decorations for "
+                         "function argument with result <id> ")
+               << argID;
+
+      foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
+      break;
+    }
+  }
+
+  if (!foundDecorationAttr)
+    return emitError(unknownLoc, "unimplemented decoration support for "
+                                 "function argument with result <id> ")
+           << argID;
+
+  NamedAttribute attr(StringAttr::get(context, spirv::DecorationAttr::name),
+                      foundDecorationAttr);
+  argAttrs[argIndex] = DictionaryAttr::get(context, attr);
+  return success();
+}
+
 LogicalResult
 spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   if (curFunction) {
@@ -339,7 +428,8 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
            << operands[0];
   }
 
-  if (funcMap.count(operands[1])) {
+  uint32_t fnID = operands[1];
+  if (funcMap.count(fnID)) {
     return emitError(unknownLoc, "duplicate function definition/declaration");
   }
 
@@ -349,11 +439,11 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   }
 
   Type fnType = getType(operands[3]);
-  if (!fnType || !fnType.isa<FunctionType>()) {
+  if (!fnType || !isa<FunctionType>(fnType)) {
     return emitError(unknownLoc, "unknown function type from <id> ")
            << operands[3];
   }
-  auto functionType = fnType.cast<FunctionType>();
+  auto functionType = cast<FunctionType>(fnType);
 
   if ((isVoidType(resultType) && functionType.getNumResults() != 0) ||
       (functionType.getNumResults() == 1 &&
@@ -362,15 +452,29 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
            << functionType << " and return type " << resultType << " specified";
   }
 
-  std::string fnName = getFunctionSymbol(operands[1]);
+  std::string fnName = getFunctionSymbol(fnID);
   auto funcOp = opBuilder.create<spirv::FuncOp>(
-      unknownLoc, fnName, functionType, fnControl.getValue());
-  curFunction = funcMap[operands[1]] = funcOp;
-  LLVM_DEBUG(llvm::dbgs() << "-- start function " << fnName << " (type = "
-                          << fnType << ", id = " << operands[1] << ") --\n");
+      unknownLoc, fnName, functionType, fnControl.value());
+  // Processing other function attributes.
+  if (decorations.count(fnID)) {
+    for (auto attr : decorations[fnID].getAttrs()) {
+      funcOp->setAttr(attr.getName(), attr.getValue());
+    }
+  }
+  curFunction = funcMap[fnID] = funcOp;
   auto *entryBlock = funcOp.addEntryBlock();
-  LLVM_DEBUG(llvm::dbgs() << "[block] created entry block " << entryBlock
-                          << "\n");
+  LLVM_DEBUG({
+    logger.startLine()
+        << "//===-------------------------------------------===//\n";
+    logger.startLine() << "[fn] name: " << fnName << "\n";
+    logger.startLine() << "[fn] type: " << fnType << "\n";
+    logger.startLine() << "[fn] ID: " << fnID << "\n";
+    logger.startLine() << "[fn] entry block: " << entryBlock << "\n";
+    logger.indent();
+  });
+
+  SmallVector<Attribute> argAttrs;
+  argAttrs.resize(functionType.getNumInputs());
 
   // Parse the op argument instructions
   if (functionType.getNumInputs()) {
@@ -402,13 +506,33 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
                << argDefinedType << " at argument " << i;
       }
       if (getValue(operands[1])) {
-        return emitError(unknownLoc, "duplicate definition of result <id> '")
+        return emitError(unknownLoc, "duplicate definition of result <id> ")
                << operands[1];
       }
+      if (failed(setFunctionArgAttrs(operands[1], argAttrs, i))) {
+        return failure();
+      }
+
       auto argValue = funcOp.getArgument(i);
       valueMap[operands[1]] = argValue;
     }
   }
+
+  if (llvm::any_of(argAttrs, [](Attribute attr) {
+        auto argAttr = cast<DictionaryAttr>(attr);
+        return !argAttr.empty();
+      }))
+    funcOp.setArgAttrsAttr(ArrayAttr::get(context, argAttrs));
+
+  // entryBlock is needed to access the arguments, Once that is done, we can
+  // erase the block for functions with 'Import' LinkageAttributes, since these
+  // are essentially function declarations, so they have no body.
+  auto linkageAttr = funcOp.getLinkageAttributes();
+  auto hasImportLinkage =
+      linkageAttr && (linkageAttr.value().getLinkageType().getValue() ==
+                      spirv::LinkageType::Import);
+  if (hasImportLinkage)
+    funcOp.eraseBody();
 
   // RAII guard to reset the insertion point to the module's region after
   // deserializing the body of this function.
@@ -427,9 +551,6 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
     return failure();
   }
   if (opcode == spirv::Opcode::OpFunctionEnd) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "-- completed function '" << fnName << "' (type = " << fnType
-               << ", id = " << operands[1] << ") --\n");
     return processFunctionEnd(instOperands);
   }
   if (opcode != spirv::Opcode::OpLabel) {
@@ -456,8 +577,6 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
     return failure();
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "-- completed function '" << fnName << "' (type = "
-                          << fnType << ", id = " << operands[1] << ") --\n");
   return processFunctionEnd(instOperands);
 }
 
@@ -469,30 +588,36 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
   }
 
   // Wire up block arguments from OpPhi instructions.
-  // Put all structured control flow in spv.mlir.selection/spv.mlir.loop ops.
+  // Put all structured control flow in spirv.mlir.selection/spirv.mlir.loop
+  // ops.
   if (failed(wireUpBlockArgument()) || failed(structurizeControlFlow())) {
     return failure();
   }
 
   curBlock = nullptr;
-  curFunction = llvm::None;
+  curFunction = std::nullopt;
 
+  LLVM_DEBUG({
+    logger.unindent();
+    logger.startLine()
+        << "//===-------------------------------------------===//\n";
+  });
   return success();
 }
 
-Optional<std::pair<Attribute, Type>>
+std::optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
   if (constIt == constantMap.end())
-    return llvm::None;
+    return std::nullopt;
   return constIt->getSecond();
 }
 
-Optional<spirv::SpecConstOperationMaterializationInfo>
+std::optional<spirv::SpecConstOperationMaterializationInfo>
 spirv::Deserializer::getSpecConstantOperation(uint32_t id) {
   auto constIt = specConstOperationMap.find(id);
   if (constIt == specConstOperationMap.end())
-    return llvm::None;
+    return std::nullopt;
   return constIt->getSecond();
 }
 
@@ -514,13 +639,13 @@ std::string spirv::Deserializer::getSpecConstantSymbol(uint32_t id) {
 
 spirv::SpecConstantOp
 spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
-                                        Attribute defaultValue) {
+                                        TypedAttr defaultValue) {
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
   auto op = opBuilder.create<spirv::SpecConstantOp>(unknownLoc, symName,
                                                     defaultValue);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
-      op->setAttr(attr.first, attr.second);
+      op->setAttr(attr.getName(), attr.getValue());
   }
   specConstMap[resultID] = op;
   return op;
@@ -541,10 +666,10 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unknown result type <id> : ")
            << operands[wordIndex];
   }
-  auto ptrType = type.dyn_cast<spirv::PointerType>();
+  auto ptrType = dyn_cast<spirv::PointerType>(type);
   if (!ptrType) {
     return emitError(unknownLoc,
-                     "expected a result type <id> to be a spv.ptr, found : ")
+                     "expected a result type <id> to be a spirv.ptr, found : ")
            << type;
   }
   wordIndex++;
@@ -568,14 +693,22 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
 
   // Initializer.
   FlatSymbolRefAttr initializer = nullptr;
+
   if (wordIndex < operands.size()) {
-    auto initializerOp = getGlobalVariable(operands[wordIndex]);
-    if (!initializerOp) {
+    Operation *op = nullptr;
+
+    if (auto initOp = getGlobalVariable(operands[wordIndex]))
+      op = initOp;
+    else if (auto initOp = getSpecConstant(operands[wordIndex]))
+      op = initOp;
+    else if (auto initOp = getSpecConstantComposite(operands[wordIndex]))
+      op = initOp;
+    else
       return emitError(unknownLoc, "unknown <id> ")
              << operands[wordIndex] << "used as initializer";
-    }
+
+    initializer = SymbolRefAttr::get(op);
     wordIndex++;
-    initializer = opBuilder.getSymbolRefAttr(initializerOp.getOperation());
   }
   if (wordIndex != operands.size()) {
     return emitError(unknownLoc,
@@ -590,9 +723,8 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
 
   // Decorations.
   if (decorations.count(variableID)) {
-    for (auto attr : decorations[variableID].getAttrs()) {
-      varOp->setAttr(attr.first, attr.second);
-    }
+    for (auto attr : decorations[variableID].getAttrs())
+      varOp->setAttr(attr.getName(), attr.getValue());
   }
   globalVariableMap[variableID] = varOp;
   return success();
@@ -603,7 +735,7 @@ IntegerAttr spirv::Deserializer::getConstantInt(uint32_t id) {
   if (!constInfo) {
     return nullptr;
   }
-  return constInfo->first.dyn_cast<IntegerAttr>();
+  return dyn_cast<IntegerAttr>(constInfo->first);
 }
 
 LogicalResult spirv::Deserializer::processName(ArrayRef<uint32_t> operands) {
@@ -708,10 +840,12 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
   } break;
   case spirv::Opcode::OpTypeArray:
     return processArrayType(operands);
-  case spirv::Opcode::OpTypeCooperativeMatrixNV:
-    return processCooperativeMatrixType(operands);
+  case spirv::Opcode::OpTypeCooperativeMatrixKHR:
+    return processCooperativeMatrixTypeKHR(operands);
   case spirv::Opcode::OpTypeFunction:
     return processFunctionType(operands);
+  case spirv::Opcode::OpTypeJointMatrixINTEL:
+    return processJointMatrixType(operands);
   case spirv::Opcode::OpTypeImage:
     return processImageType(operands);
   case spirv::Opcode::OpTypeSampledImage:
@@ -803,7 +937,7 @@ spirv::Deserializer::processArrayType(ArrayRef<uint32_t> operands) {
            << operands[2] << "can only come from normal constant right now";
   }
 
-  if (auto intVal = countInfo->first.dyn_cast<IntegerAttr>()) {
+  if (auto intVal = dyn_cast<IntegerAttr>(countInfo->first)) {
     count = intVal.getValue().getZExtValue();
   } else {
     return emitError(unknownLoc, "OpTypeArray count must come from a "
@@ -835,38 +969,85 @@ spirv::Deserializer::processFunctionType(ArrayRef<uint32_t> operands) {
   }
   ArrayRef<Type> returnTypes;
   if (!isVoidType(returnType)) {
-    returnTypes = llvm::makeArrayRef(returnType);
+    returnTypes = llvm::ArrayRef(returnType);
   }
   typeMap[operands[0]] = FunctionType::get(context, argTypes, returnTypes);
   return success();
 }
 
-LogicalResult
-spirv::Deserializer::processCooperativeMatrixType(ArrayRef<uint32_t> operands) {
-  if (operands.size() != 5) {
-    return emitError(unknownLoc, "OpTypeCooperativeMatrix must have element "
-                                 "type and row x column parameters");
+LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() != 6) {
+    return emitError(unknownLoc,
+                     "OpTypeCooperativeMatrixKHR must have element type, "
+                     "scope, row and column parameters, and use");
   }
 
   Type elementTy = getType(operands[1]);
   if (!elementTy) {
     return emitError(unknownLoc,
-                     "OpTypeCooperativeMatrix references undefined <id> ")
+                     "OpTypeCooperativeMatrixKHR references undefined <id> ")
            << operands[1];
   }
 
-  auto scope = spirv::symbolizeScope(getConstantInt(operands[2]).getInt());
+  std::optional<spirv::Scope> scope =
+      spirv::symbolizeScope(getConstantInt(operands[2]).getInt());
   if (!scope) {
-    return emitError(unknownLoc,
-                     "OpTypeCooperativeMatrix references undefined scope <id> ")
+    return emitError(
+               unknownLoc,
+               "OpTypeCooperativeMatrixKHR references undefined scope <id> ")
            << operands[2];
   }
 
   unsigned rows = getConstantInt(operands[3]).getInt();
   unsigned columns = getConstantInt(operands[4]).getInt();
 
-  typeMap[operands[0]] = spirv::CooperativeMatrixNVType::get(
-      elementTy, scope.getValue(), rows, columns);
+  std::optional<spirv::CooperativeMatrixUseKHR> use =
+      spirv::symbolizeCooperativeMatrixUseKHR(
+          getConstantInt(operands[5]).getInt());
+  if (!use) {
+    return emitError(
+               unknownLoc,
+               "OpTypeCooperativeMatrixKHR references undefined use <id> ")
+           << operands[5];
+  }
+
+  typeMap[operands[0]] =
+      spirv::CooperativeMatrixType::get(elementTy, rows, columns, *scope, *use);
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processJointMatrixType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 6) {
+    return emitError(unknownLoc, "OpTypeJointMatrix must have element "
+                                 "type and row x column parameters");
+  }
+
+  Type elementTy = getType(operands[1]);
+  if (!elementTy) {
+    return emitError(unknownLoc, "OpTypeJointMatrix references undefined <id> ")
+           << operands[1];
+  }
+
+  auto scope = spirv::symbolizeScope(getConstantInt(operands[5]).getInt());
+  if (!scope) {
+    return emitError(unknownLoc,
+                     "OpTypeJointMatrix references undefined scope <id> ")
+           << operands[5];
+  }
+  auto matrixLayout =
+      spirv::symbolizeMatrixLayout(getConstantInt(operands[4]).getInt());
+  if (!matrixLayout) {
+    return emitError(unknownLoc,
+                     "OpTypeJointMatrix references undefined scope <id> ")
+           << operands[4];
+  }
+  unsigned rows = getConstantInt(operands[2]).getInt();
+  unsigned columns = getConstantInt(operands[3]).getInt();
+
+  typeMap[operands[0]] = spirv::JointMatrixINTELType::get(
+      elementTy, scope.value(), rows, columns, matrixLayout.value());
   return success();
 }
 
@@ -1050,8 +1231,8 @@ spirv::Deserializer::processImageType(ArrayRef<uint32_t> operands) {
            << operands[7];
 
   typeMap[operands[0]] = spirv::ImageType::get(
-      elementTy, dim.getValue(), depthInfo.getValue(), arrayedInfo.getValue(),
-      samplingInfo.getValue(), samplerUseInfo.getValue(), format.getValue());
+      elementTy, dim.value(), depthInfo.value(), arrayedInfo.value(),
+      samplingInfo.value(), samplerUseInfo.value(), format.value());
   return success();
 }
 
@@ -1116,7 +1297,7 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
 
   auto resultID = operands[1];
 
-  if (auto intType = resultType.dyn_cast<IntegerType>()) {
+  if (auto intType = dyn_cast<IntegerType>(resultType)) {
     auto bitwidth = intType.getWidth();
     if (failed(checkOperandSizeForBitwidth(bitwidth))) {
       return failure();
@@ -1149,7 +1330,7 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
     return success();
   }
 
-  if (auto floatType = resultType.dyn_cast<FloatType>()) {
+  if (auto floatType = dyn_cast<FloatType>(resultType)) {
     auto bitwidth = floatType.getWidth();
     if (failed(checkOperandSizeForBitwidth(bitwidth))) {
       return failure();
@@ -1239,12 +1420,12 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (auto vectorType = resultType.dyn_cast<VectorType>()) {
+  if (auto vectorType = dyn_cast<VectorType>(resultType)) {
     auto attr = DenseElementsAttr::get(vectorType, elements);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, resultType);
-  } else if (auto arrayType = resultType.dyn_cast<spirv::ArrayType>()) {
+  } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
   } else {
@@ -1279,7 +1460,7 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
   elements.reserve(operands.size() - 2);
   for (unsigned i = 2, e = operands.size(); i < e; ++i) {
     auto elementInfo = getSpecConstant(operands[i]);
-    elements.push_back(opBuilder.getSymbolRefAttr(elementInfo));
+    elements.push_back(SymbolRefAttr::get(elementInfo));
   }
 
   auto op = opBuilder.create<spirv::SpecConstantCompositeOp>(
@@ -1334,8 +1515,7 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
   // SpecConstantOperation in the module, we simply re-use the fake ID since the
   // previous Value assigned to it isn't visible in the current scope anyway.
   DenseMap<uint32_t, Value> newValueMap;
-  llvm::SaveAndRestore<DenseMap<uint32_t, Value>> valueMapGuard(valueMap,
-                                                                newValueMap);
+  llvm::SaveAndRestore valueMapGuard(valueMap, newValueMap);
   constexpr uint32_t fakeID = static_cast<uint32_t>(-3);
 
   SmallVector<uint32_t, 4> enclosedOpResultTypeAndOperands;
@@ -1360,7 +1540,7 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
   auto specConstOperationOp =
       opBuilder.create<spirv::SpecConstantOperationOp>(loc, resultType);
 
-  Region &body = specConstOperationOp.body();
+  Region &body = specConstOperationOp.getBody();
   // Move the new block into SpecConstantOperation's body.
   body.getBlocks().splice(body.end(), curBlock->getParent()->getBlocks(),
                           Region::iterator(enclosedBlock));
@@ -1389,7 +1569,7 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (resultType.isIntOrFloat() || resultType.isa<VectorType>()) {
+  if (resultType.isIntOrFloat() || isa<VectorType>(resultType)) {
     auto attr = opBuilder.getZeroAttr(resultType);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
@@ -1407,17 +1587,17 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
 
 Block *spirv::Deserializer::getOrCreateBlock(uint32_t id) {
   if (auto *block = getBlock(id)) {
-    LLVM_DEBUG(llvm::dbgs() << "[block] got exiting block for id = " << id
-                            << " @ " << block << "\n");
+    LLVM_DEBUG(logger.startLine() << "[block] got exiting block for id = " << id
+                                  << " @ " << block << "\n");
     return block;
   }
 
   // We don't know where this block will be placed finally (in a
-  // spv.mlir.selection or spv.mlir.loop or function). Create it into the
+  // spirv.mlir.selection or spirv.mlir.loop or function). Create it into the
   // function for now and sort out the proper place later.
   auto *block = curFunction->addBlock();
-  LLVM_DEBUG(llvm::dbgs() << "[block] created block for id = " << id << " @ "
-                          << block << "\n");
+  LLVM_DEBUG(logger.startLine() << "[block] created block for id = " << id
+                                << " @ " << block << "\n");
   return blockMap[id] = block;
 }
 
@@ -1437,7 +1617,7 @@ LogicalResult spirv::Deserializer::processBranch(ArrayRef<uint32_t> operands) {
   // the same OpLine information.
   opBuilder.create<spirv::BranchOp>(loc, target);
 
-  (void)clearDebugLine();
+  clearDebugLine();
   return success();
 }
 
@@ -1458,7 +1638,7 @@ spirv::Deserializer::processBranchConditional(ArrayRef<uint32_t> operands) {
   auto *trueBlock = getOrCreateBlock(operands[1]);
   auto *falseBlock = getOrCreateBlock(operands[2]);
 
-  Optional<std::pair<uint32_t, uint32_t>> weights;
+  std::optional<std::pair<uint32_t, uint32_t>> weights;
   if (operands.size() == 5) {
     weights = std::make_pair(operands[3], operands[4]);
   }
@@ -1471,7 +1651,7 @@ spirv::Deserializer::processBranchConditional(ArrayRef<uint32_t> operands) {
       /*trueArguments=*/ArrayRef<Value>(), falseBlock,
       /*falseArguments=*/ArrayRef<Value>(), weights);
 
-  (void)clearDebugLine();
+  clearDebugLine();
   return success();
 }
 
@@ -1487,7 +1667,8 @@ LogicalResult spirv::Deserializer::processLabel(ArrayRef<uint32_t> operands) {
   auto labelID = operands[0];
   // We may have forward declared this block.
   auto *block = getOrCreateBlock(labelID);
-  LLVM_DEBUG(llvm::dbgs() << "[block] populating block " << block << "\n");
+  LLVM_DEBUG(logger.startLine()
+             << "[block] populating block " << block << "\n");
   // If we have seen this block, make sure it was just a forward declaration.
   assert(block->empty() && "re-deserialize the same block!");
 
@@ -1562,11 +1743,11 @@ LogicalResult spirv::Deserializer::processPhi(ArrayRef<uint32_t> operands) {
 
   // Create a block argument for this OpPhi instruction.
   Type blockArgType = getType(operands[0]);
-  BlockArgument blockArg = curBlock->addArgument(blockArgType);
+  BlockArgument blockArg = curBlock->addArgument(blockArgType, unknownLoc);
   valueMap[operands[1]] = blockArg;
-  LLVM_DEBUG(llvm::dbgs() << "[phi] created block argument " << blockArg
-                          << " id = " << operands[1] << " of type "
-                          << blockArgType << '\n');
+  LLVM_DEBUG(logger.startLine()
+             << "[phi] created block argument " << blockArg
+             << " id = " << operands[1] << " of type " << blockArgType << "\n");
 
   // For each (value, predecessor) pair, insert the value to the predecessor's
   // blockPhiInfo entry so later we can fix the block argument there.
@@ -1575,8 +1756,8 @@ LogicalResult spirv::Deserializer::processPhi(ArrayRef<uint32_t> operands) {
     Block *predecessor = getOrCreateBlock(operands[i + 1]);
     std::pair<Block *, Block *> predecessorTargetPair{predecessor, curBlock};
     blockPhiInfo[predecessorTargetPair].push_back(value);
-    LLVM_DEBUG(llvm::dbgs() << "[phi] predecessor @ " << predecessor
-                            << " with arg id = " << value << '\n');
+    LLVM_DEBUG(logger.startLine() << "[phi] predecessor @ " << predecessor
+                                  << " with arg id = " << value << "\n");
   }
 
   return success();
@@ -1584,42 +1765,44 @@ LogicalResult spirv::Deserializer::processPhi(ArrayRef<uint32_t> operands) {
 
 namespace {
 /// A class for putting all blocks in a structured selection/loop in a
-/// spv.mlir.selection/spv.mlir.loop op.
+/// spirv.mlir.selection/spirv.mlir.loop op.
 class ControlFlowStructurizer {
 public:
-  /// Structurizes the loop at the given `headerBlock`.
-  ///
-  /// This method will create an spv.mlir.loop op in the `mergeBlock` and move
-  /// all blocks in the structured loop into the spv.mlir.loop's region. All
-  /// branches to the `headerBlock` will be redirected to the `mergeBlock`. This
-  /// method will also update `mergeInfo` by remapping all blocks inside to the
-  /// newly cloned ones inside structured control flow op's regions.
-  static LogicalResult structurize(Location loc, uint32_t control,
-                                   spirv::BlockMergeInfoMap &mergeInfo,
-                                   Block *headerBlock, Block *mergeBlock,
-                                   Block *continueBlock) {
-    return ControlFlowStructurizer(loc, control, mergeInfo, headerBlock,
-                                   mergeBlock, continueBlock)
-        .structurizeImpl();
-  }
-
-private:
+#ifndef NDEBUG
+  ControlFlowStructurizer(Location loc, uint32_t control,
+                          spirv::BlockMergeInfoMap &mergeInfo, Block *header,
+                          Block *merge, Block *cont,
+                          llvm::ScopedPrinter &logger)
+      : location(loc), control(control), blockMergeInfo(mergeInfo),
+        headerBlock(header), mergeBlock(merge), continueBlock(cont),
+        logger(logger) {}
+#else
   ControlFlowStructurizer(Location loc, uint32_t control,
                           spirv::BlockMergeInfoMap &mergeInfo, Block *header,
                           Block *merge, Block *cont)
       : location(loc), control(control), blockMergeInfo(mergeInfo),
         headerBlock(header), mergeBlock(merge), continueBlock(cont) {}
+#endif
 
-  /// Creates a new spv.mlir.selection op at the beginning of the `mergeBlock`.
+  /// Structurizes the loop at the given `headerBlock`.
+  ///
+  /// This method will create an spirv.mlir.loop op in the `mergeBlock` and move
+  /// all blocks in the structured loop into the spirv.mlir.loop's region. All
+  /// branches to the `headerBlock` will be redirected to the `mergeBlock`. This
+  /// method will also update `mergeInfo` by remapping all blocks inside to the
+  /// newly cloned ones inside structured control flow op's regions.
+  LogicalResult structurize();
+
+private:
+  /// Creates a new spirv.mlir.selection op at the beginning of the
+  /// `mergeBlock`.
   spirv::SelectionOp createSelectionOp(uint32_t selectionControl);
 
-  /// Creates a new spv.mlir.loop op at the beginning of the `mergeBlock`.
+  /// Creates a new spirv.mlir.loop op at the beginning of the `mergeBlock`.
   spirv::LoopOp createLoopOp(uint32_t loopControl);
 
   /// Collects all blocks reachable from `headerBlock` except `mergeBlock`.
   void collectBlocksInConstruct();
-
-  LogicalResult structurizeImpl();
 
   Location location;
   uint32_t control;
@@ -1628,9 +1811,14 @@ private:
 
   Block *headerBlock;
   Block *mergeBlock;
-  Block *continueBlock; // nullptr for spv.mlir.selection
+  Block *continueBlock; // nullptr for spirv.mlir.selection
 
   SetVector<Block *> constructBlocks;
+
+#ifndef NDEBUG
+  /// A logger used to emit information during the deserialzation process.
+  llvm::ScopedPrinter &logger;
+#endif
 };
 } // namespace
 
@@ -1642,7 +1830,7 @@ ControlFlowStructurizer::createSelectionOp(uint32_t selectionControl) {
 
   auto control = static_cast<spirv::SelectionControl>(selectionControl);
   auto selectionOp = builder.create<spirv::SelectionOp>(location, control);
-  selectionOp.addMergeBlock();
+  selectionOp.addMergeBlock(builder);
 
   return selectionOp;
 }
@@ -1654,7 +1842,7 @@ spirv::LoopOp ControlFlowStructurizer::createLoopOp(uint32_t loopControl) {
 
   auto control = static_cast<spirv::LoopControl>(loopControl);
   auto loopOp = builder.create<spirv::LoopOp>(location, control);
-  loopOp.addEntryAndMergeBlock();
+  loopOp.addEntryAndMergeBlock(builder);
 
   return loopOp;
 }
@@ -1674,7 +1862,7 @@ void ControlFlowStructurizer::collectBlocksInConstruct() {
   }
 }
 
-LogicalResult ControlFlowStructurizer::structurizeImpl() {
+LogicalResult ControlFlowStructurizer::structurize() {
   Operation *op = nullptr;
   bool isLoop = continueBlock != nullptr;
   if (isLoop) {
@@ -1688,7 +1876,7 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
     return failure();
   Region &body = op->getRegion(0);
 
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   // All references to the old merge block should be directed to the
   // selection/loop merge block in the SelectionOp/LoopOp's region.
   mapper.map(mergeBlock, &body.back());
@@ -1720,19 +1908,21 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
     // SelectionOp/LoopOp's region.
     auto *newBlock = builder.createBlock(&body.back());
     mapper.map(block, newBlock);
-    LLVM_DEBUG(llvm::dbgs() << "[cf] cloned block " << newBlock
-                            << " from block " << block << "\n");
+    LLVM_DEBUG(logger.startLine() << "[cf] cloned block " << newBlock
+                                  << " from block " << block << "\n");
     if (!isFnEntryBlock(block)) {
       for (BlockArgument blockArg : block->getArguments()) {
-        auto newArg = newBlock->addArgument(blockArg.getType());
+        auto newArg =
+            newBlock->addArgument(blockArg.getType(), blockArg.getLoc());
         mapper.map(blockArg, newArg);
-        LLVM_DEBUG(llvm::dbgs() << "[cf] remapped block argument " << blockArg
-                                << " to " << newArg << '\n');
+        LLVM_DEBUG(logger.startLine() << "[cf] remapped block argument "
+                                      << blockArg << " to " << newArg << "\n");
       }
     } else {
-      LLVM_DEBUG(llvm::dbgs()
+      LLVM_DEBUG(logger.startLine()
                  << "[cf] block " << block << " is a function entry block\n");
     }
+
     for (auto &op : *block)
       newBlock->push_back(op.clone(mapper));
   }
@@ -1746,9 +1936,8 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
       if (Block *mappedOp = mapper.lookupOrNull(succOp.get()))
         succOp.set(mappedOp);
   };
-  for (auto &block : body) {
+  for (auto &block : body)
     block.walk(remapOperands);
-  }
 
   // We have created the SelectionOp/LoopOp and "moved" all blocks belonging to
   // the selection/loop construct into its region. Next we need to fix the
@@ -1758,17 +1947,26 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
   // SelectionOp/LoopOp resides right now.
   headerBlock->replaceAllUsesWith(mergeBlock);
 
+  LLVM_DEBUG({
+    logger.startLine() << "[cf] after cloning and fixing references:\n";
+    headerBlock->getParentOp()->print(logger.getOStream());
+    logger.startLine() << "\n";
+  });
+
   if (isLoop) {
-    // The loop selection/loop header block may have block arguments. Since now
-    // we place the selection/loop op inside the old merge block, we need to
-    // make sure the old merge block has the same block argument list.
-    assert(mergeBlock->args_empty() && "OpPhi in loop merge block unsupported");
-    for (BlockArgument blockArg : headerBlock->getArguments()) {
-      mergeBlock->addArgument(blockArg.getType());
+    if (!mergeBlock->args_empty()) {
+      return mergeBlock->getParentOp()->emitError(
+          "OpPhi in loop merge block unsupported");
     }
 
-    // If the loop header block has block arguments, make sure the spv.branch op
-    // matches.
+    // The loop header block may have block arguments. Since now we place the
+    // loop op inside the old merge block, we need to make sure the old merge
+    // block has the same block argument list.
+    for (BlockArgument blockArg : headerBlock->getArguments())
+      mergeBlock->addArgument(blockArg.getType(), blockArg.getLoc());
+
+    // If the loop header block has block arguments, make sure the spirv.Branch
+    // op matches.
     SmallVector<Value, 4> blockArgs;
     if (!headerBlock->args_empty())
       blockArgs = {mergeBlock->args_begin(), mergeBlock->args_end()};
@@ -1782,11 +1980,24 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
 
   // All the blocks cloned into the SelectionOp/LoopOp's region can now be
   // cleaned up.
-  LLVM_DEBUG(llvm::dbgs() << "[cf] cleaning up blocks after clone\n");
+  LLVM_DEBUG(logger.startLine() << "[cf] cleaning up blocks after clone\n");
   // First we need to drop all operands' references inside all blocks. This is
   // needed because we can have blocks referencing SSA values from one another.
   for (auto *block : constructBlocks)
     block->dropAllReferences();
+
+  // Check that whether some op in the to-be-erased blocks still has uses. Those
+  // uses come from blocks that won't be sinked into the SelectionOp/LoopOp's
+  // region. We cannot handle such cases given that once a value is sinked into
+  // the SelectionOp/LoopOp's region, there is no escape for it:
+  // SelectionOp/LooOp does not support yield values right now.
+  for (auto *block : constructBlocks) {
+    for (Operation &op : *block)
+      if (!op.use_empty())
+        return op.emitOpError(
+            "failed control flow structurization: it has uses outside of the "
+            "enclosing selection/loop construct");
+  }
 
   // Then erase all old blocks.
   for (auto *block : constructBlocks) {
@@ -1795,26 +2006,31 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
     // selection/loop. If so, they will be recorded within blockMergeInfo.
     // We need to update the pointers there to the newly remapped ones so we can
     // continue structurizing them later.
-    // TODO: The asserts in the following assumes input SPIR-V blob
-    // forms correctly nested selection/loop constructs. We should relax this
-    // and support error cases better.
+    // TODO: The asserts in the following assumes input SPIR-V blob forms
+    // correctly nested selection/loop constructs. We should relax this and
+    // support error cases better.
     auto it = blockMergeInfo.find(block);
     if (it != blockMergeInfo.end()) {
+      // Use the original location for nested selection/loop ops.
+      Location loc = it->second.loc;
+
       Block *newHeader = mapper.lookupOrNull(block);
-      assert(newHeader && "nested loop header block should be remapped!");
+      if (!newHeader)
+        return emitError(loc, "failed control flow structurization: nested "
+                              "loop header block should be remapped!");
 
       Block *newContinue = it->second.continueBlock;
       if (newContinue) {
         newContinue = mapper.lookupOrNull(newContinue);
-        assert(newContinue && "nested loop continue block should be remapped!");
+        if (!newContinue)
+          return emitError(loc, "failed control flow structurization: nested "
+                                "loop continue block should be remapped!");
       }
 
       Block *newMerge = it->second.mergeBlock;
       if (Block *mappedTo = mapper.lookupOrNull(newMerge))
         newMerge = mappedTo;
 
-      // Keep original location for nested selection/loop ops.
-      Location loc = it->second.loc;
       // The iterator should be erased before adding a new entry into
       // blockMergeInfo to avoid iterator invalidation.
       blockMergeInfo.erase(it);
@@ -1827,29 +2043,33 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
     // flow, we cannot just simply erase it because it may contain arguments
     // matching the function signature and used by the cloned blocks.
     if (isFnEntryBlock(block)) {
-      LLVM_DEBUG(llvm::dbgs() << "[cf] changing entry block " << block
-                              << " to only contain a spv.Branch op\n");
+      LLVM_DEBUG(logger.startLine() << "[cf] changing entry block " << block
+                                    << " to only contain a spirv.Branch op\n");
       // Still keep the function entry block for the potential block arguments,
       // but replace all ops inside with a branch to the merge block.
       block->clear();
       builder.setInsertionPointToEnd(block);
       builder.create<spirv::BranchOp>(location, mergeBlock);
     } else {
-      LLVM_DEBUG(llvm::dbgs() << "[cf] erasing block " << block << "\n");
+      LLVM_DEBUG(logger.startLine() << "[cf] erasing block " << block << "\n");
       block->erase();
     }
   }
 
-  LLVM_DEBUG(
-      llvm::dbgs() << "[cf] after structurizing construct with header block "
-                   << headerBlock << ":\n"
-                   << *op << '\n');
+  LLVM_DEBUG(logger.startLine()
+             << "[cf] after structurizing construct with header block "
+             << headerBlock << ":\n"
+             << *op << "\n");
 
   return success();
 }
 
 LogicalResult spirv::Deserializer::wireUpBlockArgument() {
-  LLVM_DEBUG(llvm::dbgs() << "[phi] start wiring up block arguments\n");
+  LLVM_DEBUG({
+    logger.startLine()
+        << "//----- [phi] start wiring up block arguments -----//\n";
+    logger.indent();
+  });
 
   OpBuilder::InsertionGuard guard(opBuilder);
 
@@ -1857,10 +2077,12 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
     Block *block = info.first.first;
     Block *target = info.first.second;
     const BlockPhiInfo &phiInfo = info.second;
-    LLVM_DEBUG(llvm::dbgs() << "[phi] block " << block << "\n");
-    LLVM_DEBUG(llvm::dbgs() << "[phi] before creating block argument:\n");
-    LLVM_DEBUG(block->getParentOp()->print(llvm::dbgs()));
-    LLVM_DEBUG(llvm::dbgs() << '\n');
+    LLVM_DEBUG({
+      logger.startLine() << "[phi] block " << block << "\n";
+      logger.startLine() << "[phi] before creating block argument:\n";
+      block->getParentOp()->print(logger.getOStream());
+      logger.startLine() << "\n";
+    });
 
     // Set insertion point to before this block's terminator early because we
     // may materialize ops via getValue() call.
@@ -1872,8 +2094,8 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
     for (uint32_t valueId : phiInfo) {
       if (Value value = getValue(valueId)) {
         blockArgs.push_back(value);
-        LLVM_DEBUG(llvm::dbgs() << "[phi] block argument " << value
-                                << " id = " << valueId << '\n');
+        LLVM_DEBUG(logger.startLine() << "[phi] block argument " << value
+                                      << " id = " << valueId << "\n");
       } else {
         return emitError(unknownLoc, "OpPhi references undefined value!");
       }
@@ -1888,17 +2110,17 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
       assert((branchCondOp.getTrueBlock() == target ||
               branchCondOp.getFalseBlock() == target) &&
              "expected target to be either the true or false target");
-      if (target == branchCondOp.trueTarget())
+      if (target == branchCondOp.getTrueTarget())
         opBuilder.create<spirv::BranchConditionalOp>(
-            branchCondOp.getLoc(), branchCondOp.condition(), blockArgs,
+            branchCondOp.getLoc(), branchCondOp.getCondition(), blockArgs,
             branchCondOp.getFalseBlockArguments(),
-            branchCondOp.branch_weightsAttr(), branchCondOp.trueTarget(),
-            branchCondOp.falseTarget());
+            branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueTarget(),
+            branchCondOp.getFalseTarget());
       else
         opBuilder.create<spirv::BranchConditionalOp>(
-            branchCondOp.getLoc(), branchCondOp.condition(),
+            branchCondOp.getLoc(), branchCondOp.getCondition(),
             branchCondOp.getTrueBlockArguments(), blockArgs,
-            branchCondOp.branch_weightsAttr(), branchCondOp.getTrueBlock(),
+            branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueBlock(),
             branchCondOp.getFalseBlock());
 
       branchCondOp.erase();
@@ -1906,49 +2128,75 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
       return emitError(unknownLoc, "unimplemented terminator for Phi creation");
     }
 
-    LLVM_DEBUG(llvm::dbgs() << "[phi] after creating block argument:\n");
-    LLVM_DEBUG(block->getParentOp()->print(llvm::dbgs()));
-    LLVM_DEBUG(llvm::dbgs() << '\n');
+    LLVM_DEBUG({
+      logger.startLine() << "[phi] after creating block argument:\n";
+      block->getParentOp()->print(logger.getOStream());
+      logger.startLine() << "\n";
+    });
   }
   blockPhiInfo.clear();
 
-  LLVM_DEBUG(llvm::dbgs() << "[phi] completed wiring up block arguments\n");
+  LLVM_DEBUG({
+    logger.unindent();
+    logger.startLine()
+        << "//--- [phi] completed wiring up block arguments ---//\n";
+  });
   return success();
 }
 
 LogicalResult spirv::Deserializer::structurizeControlFlow() {
-  LLVM_DEBUG(llvm::dbgs() << "[cf] start structurizing control flow\n");
+  LLVM_DEBUG({
+    logger.startLine()
+        << "//----- [cf] start structurizing control flow -----//\n";
+    logger.indent();
+  });
 
   while (!blockMergeInfo.empty()) {
     Block *headerBlock = blockMergeInfo.begin()->first;
     BlockMergeInfo mergeInfo = blockMergeInfo.begin()->second;
 
-    LLVM_DEBUG(llvm::dbgs() << "[cf] header block " << headerBlock << ":\n");
-    LLVM_DEBUG(headerBlock->print(llvm::dbgs()));
+    LLVM_DEBUG({
+      logger.startLine() << "[cf] header block " << headerBlock << ":\n";
+      headerBlock->print(logger.getOStream());
+      logger.startLine() << "\n";
+    });
 
     auto *mergeBlock = mergeInfo.mergeBlock;
     assert(mergeBlock && "merge block cannot be nullptr");
     if (!mergeBlock->args_empty())
       return emitError(unknownLoc, "OpPhi in loop merge block unimplemented");
-    LLVM_DEBUG(llvm::dbgs() << "[cf] merge block " << mergeBlock << ":\n");
-    LLVM_DEBUG(mergeBlock->print(llvm::dbgs()));
+    LLVM_DEBUG({
+      logger.startLine() << "[cf] merge block " << mergeBlock << ":\n";
+      mergeBlock->print(logger.getOStream());
+      logger.startLine() << "\n";
+    });
 
     auto *continueBlock = mergeInfo.continueBlock;
-    if (continueBlock) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "[cf] continue block " << continueBlock << ":\n");
-      LLVM_DEBUG(continueBlock->print(llvm::dbgs()));
-    }
+    LLVM_DEBUG(if (continueBlock) {
+      logger.startLine() << "[cf] continue block " << continueBlock << ":\n";
+      continueBlock->print(logger.getOStream());
+      logger.startLine() << "\n";
+    });
     // Erase this case before calling into structurizer, who will update
     // blockMergeInfo.
     blockMergeInfo.erase(blockMergeInfo.begin());
-    if (failed(ControlFlowStructurizer::structurize(
-            mergeInfo.loc, mergeInfo.control, blockMergeInfo, headerBlock,
-            mergeBlock, continueBlock)))
+    ControlFlowStructurizer structurizer(mergeInfo.loc, mergeInfo.control,
+                                         blockMergeInfo, headerBlock,
+                                         mergeBlock, continueBlock
+#ifndef NDEBUG
+                                         ,
+                                         logger
+#endif
+    );
+    if (failed(structurizer.structurize()))
       return failure();
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "[cf] completed structurizing control flow\n");
+  LLVM_DEBUG({
+    logger.unindent();
+    logger.startLine()
+        << "//--- [cf] completed structurizing control flow ---//\n";
+  });
   return success();
 }
 
@@ -1963,8 +2211,8 @@ Location spirv::Deserializer::createFileLineColLoc(OpBuilder opBuilder) {
   auto fileName = debugInfoMap.lookup(debugLine->fileID).str();
   if (fileName.empty())
     fileName = "<unknown>";
-  return FileLineColLoc::get(opBuilder.getIdentifier(fileName), debugLine->line,
-                             debugLine->col);
+  return FileLineColLoc::get(opBuilder.getStringAttr(fileName), debugLine->line,
+                             debugLine->column);
 }
 
 LogicalResult
@@ -1976,14 +2224,11 @@ spirv::Deserializer::processDebugLine(ArrayRef<uint32_t> operands) {
   // OpNoLine instruction."
   if (operands.size() != 3)
     return emitError(unknownLoc, "OpLine must have 3 operands");
-  debugLine = DebugLine(operands[0], operands[1], operands[2]);
+  debugLine = DebugLine{operands[0], operands[1], operands[2]};
   return success();
 }
 
-LogicalResult spirv::Deserializer::clearDebugLine() {
-  debugLine = llvm::None;
-  return success();
-}
+void spirv::Deserializer::clearDebugLine() { debugLine = std::nullopt; }
 
 LogicalResult
 spirv::Deserializer::processDebugString(ArrayRef<uint32_t> operands) {

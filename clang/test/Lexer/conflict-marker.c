@@ -32,7 +32,7 @@ int z = 2;
 y b;
 
 
-int foo() {
+int foo(void) {
   y a = x;
   return x + a - z;
 }

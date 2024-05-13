@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine
+; RUN: opt < %s -passes=instcombine
 
 define i65 @foo(i65 %x) nounwind  {
 entry:

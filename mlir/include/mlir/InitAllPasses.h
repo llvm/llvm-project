@@ -14,21 +14,38 @@
 #ifndef MLIR_INITALLPASSES_H_
 #define MLIR_INITALLPASSES_H_
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Conversion/Passes.h"
+#include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/ArmSME/Transforms/Passes.h"
+#include "mlir/Dialect/ArmSVE/Transforms/Passes.h"
 #include "mlir/Dialect/Async/Passes.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/Bufferization/Pipelines/Passes.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/EmitC/Transforms/Passes.h"
+#include "mlir/Dialect/Func/Transforms/Passes.h"
+#include "mlir/Dialect/GPU/Pipelines/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/MLProgram/Transforms/Passes.h"
+#include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
-#include "mlir/Dialect/Quant/Passes.h"
-#include "mlir/Dialect/SCF/Passes.h"
+#include "mlir/Dialect/Mesh/Transforms/Passes.h"
+#include "mlir/Dialect/NVGPU/Transforms/Passes.h"
+#include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
+#include "mlir/Dialect/SparseTensor/Pipelines/Passes.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Transform/Transforms/Passes.h"
+#include "mlir/Dialect/Vector/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Transforms/Passes.h"
 
 #include <cstdlib>
@@ -50,22 +67,41 @@ inline void registerAllPasses() {
   registerConversionPasses();
 
   // Dialect passes
-  registerAffinePasses();
+  acc::registerOpenACCPasses();
+  affine::registerAffinePasses();
+  amdgpu::registerAMDGPUPasses();
   registerAsyncPasses();
+  arith::registerArithPasses();
+  bufferization::registerBufferizationPasses();
+  func::registerFuncPasses();
   registerGPUPasses();
-  registerGpuSerializeToCubinPass();
-  registerGpuSerializeToHsacoPass();
   registerLinalgPasses();
+  registerNVGPUPasses();
   registerSparseTensorPasses();
   LLVM::registerLLVMPasses();
+  math::registerMathPasses();
   memref::registerMemRefPasses();
-  quant::registerQuantPasses();
+  mesh::registerMeshPasses();
+  ml_program::registerMLProgramPasses();
   registerSCFPasses();
   registerShapePasses();
   spirv::registerSPIRVPasses();
-  registerStandardPasses();
   tensor::registerTensorPasses();
   tosa::registerTosaOptPasses();
+  transform::registerTransformPasses();
+  vector::registerVectorPasses();
+  arm_sme::registerArmSMEPasses();
+  arm_sve::registerArmSVEPasses();
+  emitc::registerEmitCPasses();
+  xegpu::registerXeGPUPasses();
+
+  // Dialect pipelines
+  bufferization::registerBufferizationPipelines();
+  sparse_tensor::registerSparseTensorPipelines();
+  tosa::registerTosaToLinalgPipelines();
+#if MLIR_ENABLE_CUDA_CONVERSIONS
+  gpu::registerGPUToNVVMPipeline();
+#endif
 }
 
 } // namespace mlir

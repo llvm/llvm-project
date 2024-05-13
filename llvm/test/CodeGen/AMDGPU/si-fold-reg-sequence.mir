@@ -1,0 +1,18 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=si-fold-operands -verify-machineinstrs -o - %s
+
+---
+name:            fold_reg_sequence
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    %0:sreg_32 = S_MOV_B32 0
+    %1:sreg_32 = S_MOV_B32 429
+    %2:sreg_64 = REG_SEQUENCE killed %1, %subreg.sub0, %0, %subreg.sub1
+    %3:vgpr_32 = V_MUL_HI_U32_e64 $vgpr2, %2.sub0, implicit $exec
+    %4:vgpr_32 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    %5:vgpr_32 = V_MUL_HI_U32_e64 %4, %2.sub0, implicit $exec
+    S_ENDPGM 0
+
+...
+

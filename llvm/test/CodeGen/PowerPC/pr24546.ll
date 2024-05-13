@@ -19,7 +19,7 @@ if.then.i:                                        ; preds = %if.then
   br label %php_intpow10.exit, !dbg !41
 
 if.end.i:                                         ; preds = %if.then
-  %0 = load double, double* undef, align 8, !dbg !42, !tbaa !43
+  %0 = load double, ptr undef, align 8, !dbg !42, !tbaa !43
   br label %php_intpow10.exit, !dbg !47
 
 php_intpow10.exit:                                ; preds = %if.end.i, %if.then.i

@@ -1,18 +1,22 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN: -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | FileCheck --check-prefixes=COMMON,BIT32 %s
+; RUN:   -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | \
+; RUN:   FileCheck --check-prefixes=COMMON,BIT32 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN: -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | FileCheck --check-prefixes=COMMON,BIT64 %s
+; RUN:   -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | \
+; RUN:   FileCheck --check-prefixes=COMMON,BIT64 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN: -mattr=-altivec -data-sections=false -xcoff-traceback-table=false -filetype=obj -o %t.o < %s
-; RUN: llvm-readobj --symbols %t.o | FileCheck --check-prefix=CHECKSYM %s
+; RUN:   -mattr=-altivec -data-sections=false -xcoff-traceback-table=false \
+; RUN:   -filetype=obj -o %t.o < %s
+; RUN: llvm-readobj --symbols %t.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM32 %s
 
-; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN: -mattr=-altivec -data-sections=false -xcoff-traceback-table=false -filetype=obj -o %t.o 2>&1 < %s | FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN:   -mattr=-altivec -data-sections=false -xcoff-traceback-table=false \
+; RUN:   -filetype=obj -o %t64.o < %s
+; RUN: llvm-readobj --symbols %t64.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM64 %s
 
-@bar_p = global i32 (...)* @bar_ref, align 4
+@bar_p = global ptr @bar_ref, align 4
 @b_e = external global i32, align 4
 
 ; Function Attrs: noinline nounwind optnone
@@ -26,16 +30,15 @@ declare i32 @bar_ref(...)
 ; Function Attrs: noinline nounwind optnone
 define i32 @main() {
 entry:
-  %call = call i32 @bar_extern(i32* @b_e)
+  %call = call i32 @bar_extern(ptr @b_e)
   call void @foo()
-  %0 = load i32 (...)*, i32 (...)** @bar_p, align 4
-  %callee.knr.cast = bitcast i32 (...)* %0 to i32 ()*
-  %call1 = call i32 %callee.knr.cast()
-  %call2 = call i32 bitcast (i32 (...)* @bar_ref to i32 ()*)()
+  %0 = load ptr, ptr @bar_p, align 4
+  %call1 = call i32 %0()
+  %call2 = call i32 @bar_ref()
   ret i32 0
 }
 
-declare i32 @bar_extern(i32*)
+declare i32 @bar_extern(ptr)
 
 
 ; COMMON:           .globl	foo[DS]                 # -- Begin function foo
@@ -48,7 +51,7 @@ declare i32 @bar_extern(i32*)
 ; BIT64-NEXT:       .vbyte	8, .foo                    # @foo
 ; BIT64-NEXT:       .vbyte	8, TOC[TC0]
 ; BIT64-NEXT:       .vbyte	8, 0
-; COMMON-NEXT:      .csect .text[PR]
+; COMMON-NEXT:      .csect ..text..[PR]
 ; COMMON-NEXT: .foo:
 
 ; COMMON:           .globl	main[DS]                # -- Begin function main
@@ -61,7 +64,7 @@ declare i32 @bar_extern(i32*)
 ; BIT64-NEXT:       .vbyte	8, .main                   # @main
 ; BIT64-NEXT:       .vbyte	8, TOC[TC0]
 ; BIT64-NEXT:       .vbyte	8, 0
-; COMMON-NEXT:      .csect .text[PR]
+; COMMON-NEXT:      .csect ..text..[PR]
 ; COMMON-NEXT: .main:
 
 ; COMMON:           .csect .data[RW]
@@ -88,12 +91,12 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:     Name: .file
 ; CHECKSYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECKSYM-NEXT:     Section: N_DEBUG
-; CHECKSYM-NEXT:     Source Language ID: TB_C (0x0)
-; CHECKSYM-NEXT:     CPU Version ID: 0x0
+; CHECKSYM-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
+; CHECKSYM32-NEXT:   CPU Version ID: TCPU_COM (0x3)
+; CHECKSYM64-NEXT:   CPU Version ID: TCPU_PPC64 (0x2)
 ; CHECKSYM-NEXT:     StorageClass: C_FILE (0x67)
-; CHECKSYM-NEXT:     NumberOfAuxEntries: 0
-; CHECKSYM-NEXT:   }
-; CHECKSYM-NEXT:   Symbol {
+; CHECKSYM-NEXT:     NumberOfAuxEntries: 2
+; CHECKSYM:        Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index:]]
 ; CHECKSYM-NEXT:     Name: .bar_extern
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0
@@ -109,8 +112,9 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
 ; CHECKSYM-NEXT:       SymbolType: XTY_ER (0x0)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
@@ -129,8 +133,9 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
 ; CHECKSYM-NEXT:       SymbolType: XTY_ER (0x0)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
@@ -149,8 +154,9 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
 ; CHECKSYM-NEXT:       SymbolType: XTY_ER (0x0)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_DS (0xA)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
@@ -169,8 +175,9 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
 ; CHECKSYM-NEXT:       SymbolType: XTY_ER (0x0)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_UA (0x4)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
@@ -189,13 +196,14 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
 ; CHECKSYM-NEXT:       SymbolType: XTY_ER (0x0)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_DS (0xA)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index+10]]
-; CHECKSYM-NEXT:     Name: .text
+; CHECKSYM-NEXT:     Name:
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0
 ; CHECKSYM-NEXT:     Section: .text
 ; CHECKSYM-NEXT:     Type: 0x0
@@ -206,11 +214,12 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SectionLen: 112
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:       SymbolAlignmentLog2: 4
+; CHECKSYM-NEXT:       SymbolAlignmentLog2: 5
 ; CHECKSYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
@@ -229,8 +238,9 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
 ; CHECKSYM-NEXT:       SymbolType: XTY_LD (0x2)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
@@ -249,8 +259,9 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
 ; CHECKSYM-NEXT:       SymbolType: XTY_LD (0x2)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
@@ -263,14 +274,17 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
 ; CHECKSYM-NEXT:       Index: [[#Index+17]]
-; CHECKSYM-NEXT:       SectionLen: 4
+; CHECKSYM32-NEXT:     SectionLen: 4
+; CHECKSYM64-NEXT:     SectionLen: 8
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:       SymbolAlignmentLog2: 2
+; CHECKSYM32-NEXT:     SymbolAlignmentLog2: 2
+; CHECKSYM64-NEXT:     SymbolAlignmentLog2: 3
 ; CHECKSYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_RW (0x5)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
@@ -289,54 +303,64 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
 ; CHECKSYM-NEXT:       SymbolType: XTY_LD (0x2)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_RW (0x5)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index+20]]
 ; CHECKSYM-NEXT:     Name: foo
-; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x74
+; CHECKSYM32-NEXT:   Value (RelocatableAddress): 0x74
+; CHECKSYM64-NEXT:   Value (RelocatableAddress): 0x78
 ; CHECKSYM-NEXT:     Section: .data
 ; CHECKSYM-NEXT:     Type: 0x0
 ; CHECKSYM-NEXT:     StorageClass: C_EXT (0x2)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
 ; CHECKSYM-NEXT:       Index: [[#Index+21]]
-; CHECKSYM-NEXT:       SectionLen: 12
+; CHECKSYM32-NEXT:     SectionLen: 12
+; CHECKSYM64-NEXT:     SectionLen: 24
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:       SymbolAlignmentLog2: 2
+; CHECKSYM32-NEXT:     SymbolAlignmentLog2: 2
+; CHECKSYM64-NEXT:     SymbolAlignmentLog2: 3
 ; CHECKSYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_DS (0xA)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index+22]]
 ; CHECKSYM-NEXT:     Name: main
-; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x80
+; CHECKSYM32-NEXT:   Value (RelocatableAddress): 0x80
+; CHECKSYM64-NEXT:   Value (RelocatableAddress): 0x90
 ; CHECKSYM-NEXT:     Section: .data
 ; CHECKSYM-NEXT:     Type: 0x0
 ; CHECKSYM-NEXT:     StorageClass: C_EXT (0x2)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
 ; CHECKSYM-NEXT:       Index: [[#Index+23]]
-; CHECKSYM-NEXT:       SectionLen: 12
+; CHECKSYM32-NEXT:     SectionLen: 12
+; CHECKSYM64-NEXT:     SectionLen: 24
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:       SymbolAlignmentLog2: 2
+; CHECKSYM32-NEXT:     SymbolAlignmentLog2: 2
+; CHECKSYM64-NEXT:     SymbolAlignmentLog2: 3
 ; CHECKSYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_DS (0xA)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index+24]]
 ; CHECKSYM-NEXT:     Name: TOC
-; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x8C
+; CHECKSYM32-NEXT:   Value (RelocatableAddress): 0x8C
+; CHECKSYM64-NEXT:   Value (RelocatableAddress): 0xA8
 ; CHECKSYM-NEXT:     Section: .data
 ; CHECKSYM-NEXT:     Type: 0x0
 ; CHECKSYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -349,48 +373,57 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 2
 ; CHECKSYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_TC0 (0xF)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index+26]]
 ; CHECKSYM-NEXT:     Name: b_e
-; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x8C
+; CHECKSYM32-NEXT:   Value (RelocatableAddress): 0x8C
+; CHECKSYM64-NEXT:   Value (RelocatableAddress): 0xA8
 ; CHECKSYM-NEXT:     Section: .data
 ; CHECKSYM-NEXT:     Type: 0x0
 ; CHECKSYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
 ; CHECKSYM-NEXT:       Index: [[#Index+27]]
-; CHECKSYM-NEXT:       SectionLen: 4
+; CHECKSYM32-NEXT:     SectionLen: 4
+; CHECKSYM64-NEXT:     SectionLen: 8
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:       SymbolAlignmentLog2: 2
+; CHECKSYM32-NEXT:     SymbolAlignmentLog2: 2
+; CHECKSYM64-NEXT:     SymbolAlignmentLog2: 3
 ; CHECKSYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_TC (0x3)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index+28]]
 ; CHECKSYM-NEXT:     Name: bar_p
-; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x90
+; CHECKSYM32-NEXT:   Value (RelocatableAddress): 0x90
+; CHECKSYM64-NEXT:   Value (RelocatableAddress): 0xB0
 ; CHECKSYM-NEXT:     Section: .data
 ; CHECKSYM-NEXT:     Type: 0x0
 ; CHECKSYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
 ; CHECKSYM-NEXT:       Index: [[#Index+29]]
-; CHECKSYM-NEXT:       SectionLen: 4
+; CHECKSYM32-NEXT:     SectionLen: 4
+; CHECKSYM64-NEXT:     SectionLen: 8
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:       SymbolAlignmentLog2: 2
+; CHECKSYM32-NEXT:     SymbolAlignmentLog2: 2
+; CHECKSYM64-NEXT:     SymbolAlignmentLog2: 3
 ; CHECKSYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_TC (0x3)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT: ]

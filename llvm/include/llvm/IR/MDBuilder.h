@@ -15,8 +15,8 @@
 #define LLVM_IR_MDBUILDER_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/DataTypes.h"
 #include <utility>
@@ -28,6 +28,7 @@ template <typename T> class ArrayRef;
 class LLVMContext;
 class Constant;
 class ConstantAsMetadata;
+class Function;
 class MDNode;
 class MDString;
 class Metadata;
@@ -60,6 +61,14 @@ public:
   /// Return metadata containing two branch weights.
   MDNode *createBranchWeights(uint32_t TrueWeight, uint32_t FalseWeight);
 
+  /// Return metadata containing two branch weights, with significant bias
+  /// towards `true` destination.
+  MDNode *createLikelyBranchWeights();
+
+  /// Return metadata containing two branch weights, with significant bias
+  /// towards `false` destination.
+  MDNode *createUnlikelyBranchWeights();
+
   /// Return metadata containing a number of branch weights.
   MDNode *createBranchWeights(ArrayRef<uint32_t> Weights);
 
@@ -77,7 +86,11 @@ public:
   MDNode *createFunctionSectionPrefix(StringRef Prefix);
 
   /// Return metadata containing the pseudo probe descriptor for a function.
-  MDNode *createPseudoProbeDesc(uint64_t GUID, uint64_t Hash, Function *F);
+  MDNode *createPseudoProbeDesc(uint64_t GUID, uint64_t Hash, StringRef FName);
+
+  /// Return metadata containing llvm statistics.
+  MDNode *
+  createLLVMStats(ArrayRef<std::pair<StringRef, uint64_t>> LLVMStatsVec);
 
   //===------------------------------------------------------------------===//
   // Range metadata.
@@ -107,6 +120,20 @@ public:
 
   /// Merge the new callback encoding \p NewCB into \p ExistingCallbacks.
   MDNode *mergeCallbackEncodings(MDNode *ExistingCallbacks, MDNode *NewCB);
+
+  /// Return metadata feeding to the CodeGen about how to generate a function
+  /// prologue for the "function" santizier.
+  MDNode *createRTTIPointerPrologue(Constant *PrologueSig, Constant *RTTI);
+
+  //===------------------------------------------------------------------===//
+  // PC sections metadata.
+  //===------------------------------------------------------------------===//
+
+  /// A pair of PC section name with auxilliary constant data.
+  using PCSection = std::pair<StringRef, SmallVector<Constant *>>;
+
+  /// Return metadata for PC sections.
+  MDNode *createPCSections(ArrayRef<PCSection> Sections);
 
   //===------------------------------------------------------------------===//
   // AA metadata.

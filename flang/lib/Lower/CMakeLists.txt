@@ -1,36 +1,64 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
 add_flang_library(FortranLower
-  CharacterExpr.cpp
-  CharacterRuntime.cpp
+  Allocatable.cpp
+  Bridge.cpp
+  CallInterface.cpp
   Coarray.cpp
-  ComplexExpr.cpp
-  ConvertType.cpp
+  ComponentPath.cpp
+  ConvertArrayConstructor.cpp
+  ConvertCall.cpp
+  ConvertConstant.cpp
   ConvertExpr.cpp
-  DoLoopHelper.cpp
-  FIRBuilder.cpp
-  IntrinsicCall.cpp
+  ConvertExprToHLFIR.cpp
+  ConvertProcedureDesignator.cpp
+  ConvertType.cpp
+  ConvertVariable.cpp
+  CustomIntrinsicCall.cpp
+  DumpEvaluateExpr.cpp
+  HlfirIntrinsics.cpp
+  HostAssociations.cpp
   IO.cpp
+  IterationSpace.cpp
+  LoweringOptions.cpp
   Mangler.cpp
   OpenACC.cpp
-  OpenMP.cpp
+  OpenMP/ClauseProcessor.cpp
+  OpenMP/Clauses.cpp
+  OpenMP/DataSharingProcessor.cpp
+  OpenMP/OpenMP.cpp
+  OpenMP/ReductionProcessor.cpp
+  OpenMP/Utils.cpp
   PFTBuilder.cpp
-
+  Runtime.cpp
+  SymbolMap.cpp
+  VectorSubscripts.cpp
+  
   DEPENDS
-  FIROptimizer
+  FIRDialect
+  FIRTransforms
+  HLFIRDialect
   ${dialect_libs}
+  ${extension_libs}
 
   LINK_LIBS
-  FIROptimizer
+  FIRDialect
+  FIRDialectSupport
+  FIRBuilder
+  FIRSupport
+  FIRTransforms
+  HLFIRDialect
   ${dialect_libs}
+  ${extension_libs}
   FortranCommon
   FortranParser
   FortranEvaluate
   FortranSemantics
   MLIRAffineToStandard
-  MLIRLLVMIR
-  MLIRSCFToStandard
-  MLIRStandard
+  MLIRFuncDialect
+  MLIRLLVMDialect
+  MLIRSCFToControlFlow
 
   LINK_COMPONENTS
   Support

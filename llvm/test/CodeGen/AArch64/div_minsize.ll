@@ -35,7 +35,7 @@ entry:
 define <8 x i16> @sdiv_vec8x16_minsize(<8 x i16> %var) minsize {
 entry:
 ; CHECK: sdiv_vec8x16_minsize
-; CHECK: sshr 	v1.8h, v0.8h, #15 
+; CHECK: cmlt	v1.8h, v0.8h, #0
 ; CHECK: usra	v0.8h, v1.8h, #11
 ; CHECK: sshr	v0.8h, v0.8h, #5
 ; CHECK: ret

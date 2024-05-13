@@ -34,16 +34,41 @@ namespace exegesis {
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
-  explicit BenchmarkRunner(const LLVMState &State,
-                           InstructionBenchmark::ModeE Mode);
+  enum ExecutionModeE { InProcess, SubProcess };
+
+  explicit BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
+                           BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
+                           ExecutionModeE ExecutionMode,
+                           ArrayRef<ValidationEvent> ValCounters);
 
   virtual ~BenchmarkRunner();
 
-  Expected<InstructionBenchmark>
-  runConfiguration(const BenchmarkCode &Configuration, unsigned NumRepetitions,
-                   unsigned LoopUnrollFactor,
-                   ArrayRef<std::unique_ptr<const SnippetRepetitor>> Repetitors,
-                   bool DumpObjectToDisk) const;
+  class RunnableConfiguration {
+    friend class BenchmarkRunner;
+
+  public:
+    ~RunnableConfiguration() = default;
+    RunnableConfiguration(RunnableConfiguration &&) = default;
+
+    RunnableConfiguration(const RunnableConfiguration &) = delete;
+    RunnableConfiguration &operator=(RunnableConfiguration &&) = delete;
+    RunnableConfiguration &operator=(const RunnableConfiguration &) = delete;
+
+  private:
+    RunnableConfiguration() = default;
+
+    Benchmark BenchmarkResult;
+    object::OwningBinary<object::ObjectFile> ObjectFile;
+  };
+
+  Expected<RunnableConfiguration>
+  getRunnableConfiguration(const BenchmarkCode &Configuration,
+                           unsigned MinInstructions, unsigned LoopUnrollFactor,
+                           const SnippetRepetitor &Repetitor) const;
+
+  std::pair<Error, Benchmark>
+  runConfiguration(RunnableConfiguration &&RC,
+                   const std::optional<StringRef> &DumpFile) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
@@ -67,25 +92,50 @@ public:
   class FunctionExecutor {
   public:
     virtual ~FunctionExecutor();
-    // FIXME deprecate this.
-    virtual Expected<int64_t> runAndMeasure(const char *Counters) const = 0;
 
-    virtual Expected<llvm::SmallVector<int64_t, 4>>
-    runAndSample(const char *Counters) const = 0;
+    Expected<SmallVector<int64_t, 4>>
+    runAndSample(const char *Counters,
+                 ArrayRef<const char *> ValidationCounters,
+                 SmallVectorImpl<int64_t> &ValidationCounterValues) const;
+
+  protected:
+    static void
+    accumulateCounterValues(const SmallVectorImpl<int64_t> &NewValues,
+                            SmallVectorImpl<int64_t> *Result);
+    virtual Expected<SmallVector<int64_t, 4>>
+    runWithCounter(StringRef CounterName,
+                   ArrayRef<const char *> ValidationCounters,
+                   SmallVectorImpl<int64_t> &ValidationCounterValues) const = 0;
   };
 
 protected:
   const LLVMState &State;
-  const InstructionBenchmark::ModeE Mode;
+  const Benchmark::ModeE Mode;
+  const BenchmarkPhaseSelectorE BenchmarkPhaseSelector;
+  const ExecutionModeE ExecutionMode;
+
+  SmallVector<ValidationEvent> ValidationCounters;
+
+  Error
+  getValidationCountersToRun(SmallVector<const char *> &ValCountersToRun) const;
 
 private:
   virtual Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const = 0;
 
-  Expected<std::string> writeObjectFile(const BenchmarkCode &Configuration,
-                                        const FillFunction &Fill) const;
+  Expected<SmallString<0>>
+  assembleSnippet(const BenchmarkCode &BC, const SnippetRepetitor &Repetitor,
+                  unsigned MinInstructions, unsigned LoopBodySize,
+                  bool GenerateMemoryInstructions) const;
+
+  Expected<std::string> writeObjectFile(StringRef Buffer,
+                                        StringRef FileName) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
+
+  Expected<std::unique_ptr<FunctionExecutor>>
+  createFunctionExecutor(object::OwningBinary<object::ObjectFile> Obj,
+                         const BenchmarkKey &Key) const;
 };
 
 } // namespace exegesis

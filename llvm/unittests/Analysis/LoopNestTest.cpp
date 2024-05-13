@@ -40,6 +40,14 @@ static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
   return parseAssemblyString(ModuleStr, Err, Context);
 }
 
+static Instruction *getInstructionByName(Function &F, StringRef Name) {
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (I.getName() == Name)
+        return &I;
+  llvm_unreachable("Expected to find instruction!");
+}
+
 TEST(LoopNestTest, PerfectLoopNest) {
   const char *ModuleStr =
     "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
@@ -98,6 +106,19 @@ TEST(LoopNestTest, PerfectLoopNest) {
     const ArrayRef<Loop*> Loops = LN.getLoops();
     EXPECT_EQ(Loops.size(), 2ull);
 
+    // Ensure that we can obtain loops by depth.
+    LoopVectorTy LoopsAtDepth1 = LN.getLoopsAtDepth(1);
+    EXPECT_EQ(LoopsAtDepth1.size(), 1u);
+    EXPECT_EQ(LoopsAtDepth1[0], &OL);
+    LoopVectorTy LoopsAtDepth2 = LN.getLoopsAtDepth(2);
+    EXPECT_EQ(LoopsAtDepth2.size(), 1u);
+    EXPECT_EQ(LoopsAtDepth2[0], IL);
+
+    // Ensure that we can obtain the loop index of a given loop, and get back
+    // the loop with that index.
+    EXPECT_EQ(LN.getLoop(LN.getLoopIndex(OL)), &OL);
+    EXPECT_EQ(LN.getLoop(LN.getLoopIndex(*IL)), IL);
+
     // Ensure the loop nest is recognized as perfect in its entirety.
     const SmallVector<LoopVectorTy, 4> &PLV = LN.getPerfectLoops(SE);
     EXPECT_EQ(PLV.size(), 1ull);
@@ -106,6 +127,8 @@ TEST(LoopNestTest, PerfectLoopNest) {
     // Ensure the nest depth and perfect nest depth are computed correctly.
     EXPECT_EQ(LN.getNestDepth(), 2u);
     EXPECT_EQ(LN.getMaxPerfectDepth(), 2u);
+
+    EXPECT_TRUE(LN.getInterveningInstructions(OL, *IL, SE).empty());
   });
 }
 
@@ -190,6 +213,107 @@ TEST(LoopNestTest, ImperfectLoopNest) {
     // Ensure the nest depth and perfect nest depth are computed correctly.
     EXPECT_EQ(LN.getNestDepth(), 3u);
     EXPECT_EQ(LN.getMaxPerfectDepth(), 2u);
+
+    EXPECT_TRUE(LN.getInterveningInstructions(OL, *IL, SE).empty());
   });
 }
 
+TEST(LoopNestTest, InterveningInstrLoopNest) {
+  const char *ModuleStr =
+      "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
+      "define void @foo(i64 signext %nx, i64 signext %ny, i32* noalias %A, i32 "
+      "%op0, i32 %op1){\n"
+      "entry:\n"
+      "  br label %for.outer\n"
+      "for.outer:\n"
+      "  %i = phi i64 [ 0, %entry ], [ %inc13, %for.outer.latch ]\n"
+      "  %cmp21 = icmp slt i64 0, %ny\n"
+      "  call void @outerheader()\n"
+      "  br i1 %cmp21, label %for.inner.preheader, label %for.outer.latch\n"
+      "for.inner.preheader:\n"
+      "  %varr = getelementptr inbounds i32, i32* %A, i64 5\n"
+      "  store i32 5, i32* %varr, align 4\n"
+      "  call void @innerpreheader()\n"
+      "  br label %for.inner\n"
+      "for.inner:\n"
+      "  %j = phi i64 [ 0, %for.inner.preheader ], [ %inc, %for.inner.latch ]\n"
+      "  br label %for.inner.latch\n"
+      "for.inner.latch:\n"
+      "  %inc = add nsw i64 %j, 1\n"
+      "  %cmp2 = icmp slt i64 %inc, %ny\n"
+      "  br i1 %cmp2, label %for.inner, label %for.inner.exit\n"
+      "for.inner.exit:\n"
+      "  %varr1 = getelementptr inbounds i32, i32* %A, i64 5\n"
+      "  call void @innerexit()\n"
+      "  br label %for.outer.latch\n"
+      "for.outer.latch:\n"
+      "  %inc13 = add nsw i64 %i, 1\n"
+      "  call void @outerlatch()\n"
+      "  %cmp = icmp slt i64 %inc13, %nx\n"
+      "  br i1 %cmp, label %for.outer, label %for.outer.exit\n"
+      "for.outer.exit:\n"
+      "  br label %for.end\n"
+      "for.end:\n"
+      "  ret void\n"
+      "}\n"
+      "declare void @innerpreheader()\n"
+      "declare void @outerheader()\n"
+      "declare void @outerlatch()\n"
+      "declare void @innerexit()\n";
+
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runTest(*M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    Function::iterator FI = F.begin();
+    // Skip the first basic block (entry), get to the outer loop header.
+    BasicBlock *Header = &*(++FI);
+    assert(Header->getName() == "for.outer");
+    Loop *L = LI.getLoopFor(Header);
+    EXPECT_NE(L, nullptr);
+
+    LoopNest LN(*L, SE);
+    EXPECT_TRUE(LN.areAllLoopsSimplifyForm());
+
+    // Ensure that we can identify the outermost loop in the nest.
+    const Loop &OL = LN.getOutermostLoop();
+    EXPECT_EQ(OL.getName(), "for.outer");
+
+    // Ensure that we can identify the innermost loop in the nest.
+    const Loop *IL = LN.getInnermostLoop();
+    EXPECT_NE(IL, nullptr);
+    EXPECT_EQ(IL->getName(), "for.inner");
+
+    // Ensure the loop nest is recognized as having 2 loops.
+    const ArrayRef<Loop *> Loops = LN.getLoops();
+    EXPECT_EQ(Loops.size(), 2ull);
+
+    // Ensure the loop nest is not recognized as perfect in its entirety.
+    const SmallVector<LoopVectorTy, 4> &PLV = LN.getPerfectLoops(SE);
+    EXPECT_EQ(PLV.size(), 2ull);
+    EXPECT_EQ(PLV.front().size(), 1ull);
+    EXPECT_EQ(PLV.back().size(), 1ull);
+
+    // Ensure the nest depth and perfect nest depth are computed correctly.
+    EXPECT_EQ(LN.getNestDepth(), 2u);
+    EXPECT_EQ(LN.getMaxPerfectDepth(), 1u);
+
+    // Ensure enclosed instructions are recognized
+    const LoopNest::InstrVectorTy InstrV =
+        LN.getInterveningInstructions(OL, *IL, SE);
+    EXPECT_EQ(InstrV.size(), 5u);
+
+    Instruction *SI = getInstructionByName(F, "varr")->getNextNode();
+    Instruction *CI = SI->getNextNode();
+    Instruction *OLH =
+        getInstructionByName(F, "i")->getNextNode()->getNextNode();
+    Instruction *OLL = getInstructionByName(F, "inc13")->getNextNode();
+    Instruction *IE = getInstructionByName(F, "varr1")->getNextNode();
+
+    EXPECT_EQ(InstrV.front(), OLH);
+    EXPECT_EQ(InstrV[1], OLL);
+    EXPECT_EQ(InstrV[2], IE);
+    EXPECT_EQ(InstrV[3], SI);
+    EXPECT_EQ(InstrV.back(), CI);
+  });
+}

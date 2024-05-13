@@ -1,4 +1,7 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
+  character(20), parameter :: kp_ok = "(4P,E20.5,E15.5)"
+  character(20), parameter :: kp_xx = "(4P,E20.5,E15.2)"
+
   write(*,*)
   write(*,'()')
   write(*,'(A)')
@@ -37,6 +40,12 @@
   write(*,'($)')
   write(*,'(\)')
   write(*,'(RZ,RU,RP,RN,RD,RC,SS,SP,S,3G15.3e2)')
+  write(*, '(' // achar( 9) // ')') ! horizontal tab
+  write(*, '(' // achar(11) // ')') ! vertical tab
+  write(*, '(' // achar(32) // ')') ! space
+  write(*, kp_ok)
+  write(*, '(-4P,E20.5,E15.5)')
+  write(*, '(D20.0)')
 
   ! C1302 warnings; no errors
   write(*,'(3P7I2)')
@@ -189,10 +198,10 @@
   !ERROR: Expected 'G' edit descriptor '.d' value
   write(*,'(G4)')
 
-  !ERROR: Unexpected 'e' in 'G0' edit descriptor
+  !ERROR: A 'G0' edit descriptor must not have an 'e' value
   write(*,'(G0.8e)')
 
-  !ERROR: Unexpected 'e' in 'G0' edit descriptor
+  !ERROR: A 'G0' edit descriptor must not have an 'e' value
   write(*,'(G0.8e2)')
 
   !ERROR: Kind parameter '_' character in format expression
@@ -306,4 +315,10 @@
 
   !ERROR: Repeat specifier before '$' edit descriptor
   write(*,'(7$)')
+
+  !ERROR: Positive scale factor k (from kP) and width d in a 'E' edit descriptor must satisfy 'k < d+2'
+  write(*, kp_xx)
+
+  !ERROR: Negative scale factor k (from kP) and width d in a 'E' edit descriptor must satisfy '-d < k'
+  write(*, '(-4P,E20.5,E15.2)')
 end

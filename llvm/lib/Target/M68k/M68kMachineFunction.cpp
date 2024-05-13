@@ -1,4 +1,4 @@
-//===-- M68kMachineFunctionInfo.cpp - M68k private data ----*- C++ -*--===//
+//===-- M68kMachineFunctionInfo.cpp - M68k private data ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,3 +18,10 @@
 using namespace llvm;
 
 void M68kMachineFunctionInfo::anchor() {}
+
+MachineFunctionInfo *M68kMachineFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  return DestMF.cloneInfo<M68kMachineFunctionInfo>(*this);
+}

@@ -112,15 +112,14 @@ template<typename T, template<typename> class X = T::template apply>
 int array4[is_same<X4<add_pointer>, 
                    X4<add_pointer, add_pointer::apply> >::value? 1 : -1];
 
-template<int> struct X5 {}; // expected-note{{has a different type 'int'}}
+template<int> struct X5 {};
 template<long> struct X5b {};
 template<typename T, 
-         template<T> class B = X5> // expected-error{{template template argument has different}} \
-                                   // expected-note{{previous non-type template parameter}}
+         template<T> class B = X5>
   struct X6 {};
 
 X6<int> x6a;
-X6<long> x6b; // expected-note{{while checking a default template argument}}
+X6<long> x6b;
 X6<long, X5b> x6c;
 
 
@@ -169,7 +168,8 @@ namespace DR1635 {
 
 namespace NondefDecls {
   template<typename T> void f1() {
-    int g1(int defarg = T::error);  // expected-error{{type 'int' cannot be used prior to '::' because it has no members}}
+    int g1(int defarg = T::error);  // expected-error{{type 'int' cannot be used prior to '::' because it has no members}} \
+                                    // expected-note {{in instantiation of default function argument expression for 'g1<int>' required here}}
   }
   template void f1<int>();  // expected-note{{in instantiation of function template specialization 'NondefDecls::f1<int>' requested here}}
 }

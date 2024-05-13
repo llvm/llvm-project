@@ -23,25 +23,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ve-asmprinter"
 
-// The generated AsmMatcher VEGenAsmWriter uses "VE" as the target
-// namespace.
-namespace llvm {
-namespace VE {
-using namespace VE;
-}
-} // namespace llvm
-
 #define GET_INSTRUCTION_NAME
 #define PRINT_ALIAS_INSTR
 #include "VEGenAsmWriter.inc"
 
-void VEInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
+void VEInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   // Generic registers have identical register name among register classes.
   unsigned AltIdx = VE::AsmName;
   // Misc registers have each own name, so no use alt-names.
-  if (MRI.getRegClass(VE::MISCRegClassID).contains(RegNo))
+  if (MRI.getRegClass(VE::MISCRegClassID).contains(Reg))
     AltIdx = VE::NoRegAltName;
-  OS << '%' << getRegisterName(RegNo, AltIdx);
+  OS << '%' << getRegisterName(Reg, AltIdx);
 }
 
 void VEInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -62,13 +54,10 @@ void VEInstPrinter::printOperand(const MCInst *MI, int OpNum,
   }
 
   if (MO.isImm()) {
-    switch (MI->getOpcode()) {
-    default:
-      // Expects signed 32bit literals
-      int32_t TruncatedImm = static_cast<int32_t>(MO.getImm());
-      O << TruncatedImm;
-      return;
-    }
+    // Expects signed 32bit literals.
+    int32_t TruncatedImm = static_cast<int32_t>(MO.getImm());
+    O << TruncatedImm;
+    return;
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");

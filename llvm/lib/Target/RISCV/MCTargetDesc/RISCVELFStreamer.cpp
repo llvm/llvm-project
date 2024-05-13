@@ -1,4 +1,4 @@
-//===-- RISCVELFStreamer.cpp - RISCV ELF Target Streamer Methods ----------===//
+//===-- RISCVELFStreamer.cpp - RISC-V ELF Target Streamer Methods ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides RISCV specific target streamer methods.
+// This file provides RISC-V specific target streamer methods.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,9 +15,14 @@
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributes.h"
 
@@ -30,13 +35,67 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   MCAssembler &MCA = getStreamer().getAssembler();
   const FeatureBitset &Features = STI.getFeatureBits();
   auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  RISCVABI::ABI ABI = MAB.getTargetABI();
-  assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialised target ABI");
+  setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
+                                          MAB.getTargetOptions().getABIName()));
+  setFlagsFromFeatures(STI);
+  // `j label` in `.option norelax; j label; .option relax; ...; label:` needs a
+  // relocation to ensure the jump target is correct after linking. This is due
+  // to a limitation that shouldForceRelocation has to make the decision upfront
+  // without knowing a possibly future .option relax. When RISCVAsmParser is used,
+  // its ParseInstruction may call setForceRelocs as well.
+  if (STI.hasFeature(RISCV::FeatureRelax))
+    static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
+}
+
+RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
+  return static_cast<RISCVELFStreamer &>(Streamer);
+}
+
+void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionPIC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionNoPIC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionNoRVC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionRelax() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionNoRelax() {}
+
+void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
+  getStreamer().setAttributeItem(Attribute, Value, /*OverwriteExisting=*/true);
+}
+
+void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
+                                               StringRef String) {
+  getStreamer().setAttributeItem(Attribute, String, /*OverwriteExisting=*/true);
+}
+
+void RISCVTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,
+                                                  unsigned IntValue,
+                                                  StringRef StringValue) {
+  getStreamer().setAttributeItems(Attribute, IntValue, StringValue,
+                                  /*OverwriteExisting=*/true);
+}
+
+void RISCVTargetELFStreamer::finishAttributeSection() {
+  RISCVELFStreamer &S = getStreamer();
+  if (S.Contents.empty())
+    return;
+
+  S.emitAttributesSection(CurrentVendor, ".riscv.attributes",
+                          ELF::SHT_RISCV_ATTRIBUTES, AttributeSection);
+}
+
+void RISCVTargetELFStreamer::finish() {
+  RISCVTargetStreamer::finish();
+  MCAssembler &MCA = getStreamer().getAssembler();
+  RISCVABI::ABI ABI = getTargetABI();
 
   unsigned EFlags = MCA.getELFHeaderEFlags();
 
-  if (Features[RISCV::FeatureStdExtC])
+  if (hasRVC())
     EFlags |= ELF::EF_RISCV_RVC;
+  if (hasTSO())
+    EFlags |= ELF::EF_RISCV_TSO;
 
   switch (ABI) {
   case RISCVABI::ABI_ILP32:
@@ -51,6 +110,7 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
     EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
     break;
   case RISCVABI::ABI_ILP32E:
+  case RISCVABI::ABI_LP64E:
     EFlags |= ELF::EF_RISCV_RVE;
     break;
   case RISCVABI::ABI_Unknown:
@@ -60,110 +120,86 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   MCA.setELFHeaderEFlags(EFlags);
 }
 
-MCELFStreamer &RISCVTargetELFStreamer::getStreamer() {
-  return static_cast<MCELFStreamer &>(Streamer);
+void RISCVTargetELFStreamer::reset() {
+  AttributeSection = nullptr;
 }
 
-void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionPIC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionNoPIC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionNoRVC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionRelax() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionNoRelax() {}
-
-void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
-  setAttributeItem(Attribute, Value, /*OverwriteExisting=*/true);
+void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
+  getStreamer().getAssembler().registerSymbol(Symbol);
+  cast<MCSymbolELF>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
 }
 
-void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
-                                               StringRef String) {
-  setAttributeItem(Attribute, String, /*OverwriteExisting=*/true);
+void RISCVELFStreamer::reset() {
+  static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
+  MCELFStreamer::reset();
+  MappingSymbolCounter = 0;
+  LastMappingSymbols.clear();
+  LastEMS = EMS_None;
 }
 
-void RISCVTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,
-                                                  unsigned IntValue,
-                                                  StringRef StringValue) {
-  setAttributeItems(Attribute, IntValue, StringValue,
-                    /*OverwriteExisting=*/true);
-}
-
-void RISCVTargetELFStreamer::finishAttributeSection() {
-  if (Contents.empty())
+void RISCVELFStreamer::emitDataMappingSymbol() {
+  if (LastEMS == EMS_Data)
     return;
-
-  if (AttributeSection) {
-    Streamer.SwitchSection(AttributeSection);
-  } else {
-    MCAssembler &MCA = getStreamer().getAssembler();
-    AttributeSection = MCA.getContext().getELFSection(
-        ".riscv.attributes", ELF::SHT_RISCV_ATTRIBUTES, 0);
-    Streamer.SwitchSection(AttributeSection);
-
-    Streamer.emitInt8(ELFAttrs::Format_Version);
-  }
-
-  // Vendor size + Vendor name + '\0'
-  const size_t VendorHeaderSize = 4 + CurrentVendor.size() + 1;
-
-  // Tag + Tag Size
-  const size_t TagHeaderSize = 1 + 4;
-
-  const size_t ContentsSize = calculateContentSize();
-
-  Streamer.emitInt32(VendorHeaderSize + TagHeaderSize + ContentsSize);
-  Streamer.emitBytes(CurrentVendor);
-  Streamer.emitInt8(0); // '\0'
-
-  Streamer.emitInt8(ELFAttrs::File);
-  Streamer.emitInt32(TagHeaderSize + ContentsSize);
-
-  // Size should have been accounted for already, now
-  // emit each field as its type (ULEB or String).
-  for (AttributeItem item : Contents) {
-    Streamer.emitULEB128IntValue(item.Tag);
-    switch (item.Type) {
-    default:
-      llvm_unreachable("Invalid attribute type");
-    case AttributeType::Numeric:
-      Streamer.emitULEB128IntValue(item.IntValue);
-      break;
-    case AttributeType::Text:
-      Streamer.emitBytes(item.StringValue);
-      Streamer.emitInt8(0); // '\0'
-      break;
-    case AttributeType::NumericAndText:
-      Streamer.emitULEB128IntValue(item.IntValue);
-      Streamer.emitBytes(item.StringValue);
-      Streamer.emitInt8(0); // '\0'
-      break;
-    }
-  }
-
-  Contents.clear();
+  emitMappingSymbol("$d");
+  LastEMS = EMS_Data;
 }
 
-size_t RISCVTargetELFStreamer::calculateContentSize() const {
-  size_t Result = 0;
-  for (AttributeItem item : Contents) {
-    switch (item.Type) {
-    case AttributeType::Hidden:
-      break;
-    case AttributeType::Numeric:
-      Result += getULEB128Size(item.Tag);
-      Result += getULEB128Size(item.IntValue);
-      break;
-    case AttributeType::Text:
-      Result += getULEB128Size(item.Tag);
-      Result += item.StringValue.size() + 1; // string + '\0'
-      break;
-    case AttributeType::NumericAndText:
-      Result += getULEB128Size(item.Tag);
-      Result += getULEB128Size(item.IntValue);
-      Result += item.StringValue.size() + 1; // string + '\0';
-      break;
-    }
-  }
-  return Result;
+void RISCVELFStreamer::emitInstructionsMappingSymbol() {
+  if (LastEMS == EMS_Instructions)
+    return;
+  emitMappingSymbol("$x");
+  LastEMS = EMS_Instructions;
 }
+
+void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
+  auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
+      Name + "." + Twine(MappingSymbolCounter++)));
+  emitLabel(Symbol);
+  Symbol->setType(ELF::STT_NOTYPE);
+  Symbol->setBinding(ELF::STB_LOCAL);
+}
+
+void RISCVELFStreamer::changeSection(MCSection *Section,
+                                     const MCExpr *Subsection) {
+  // We have to keep track of the mapping symbol state of any sections we
+  // use. Each one should start off as EMS_None, which is provided as the
+  // default constructor by DenseMap::lookup.
+  LastMappingSymbols[getPreviousSection().first] = LastEMS;
+  LastEMS = LastMappingSymbols.lookup(Section);
+
+  MCELFStreamer::changeSection(Section, Subsection);
+}
+
+void RISCVELFStreamer::emitInstruction(const MCInst &Inst,
+                                       const MCSubtargetInfo &STI) {
+  emitInstructionsMappingSymbol();
+  MCELFStreamer::emitInstruction(Inst, STI);
+}
+
+void RISCVELFStreamer::emitBytes(StringRef Data) {
+  emitDataMappingSymbol();
+  MCELFStreamer::emitBytes(Data);
+}
+
+void RISCVELFStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                                SMLoc Loc) {
+  emitDataMappingSymbol();
+  MCELFStreamer::emitFill(NumBytes, FillValue, Loc);
+}
+
+void RISCVELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
+                                     SMLoc Loc) {
+  emitDataMappingSymbol();
+  MCELFStreamer::emitValueImpl(Value, Size, Loc);
+}
+
+namespace llvm {
+MCELFStreamer *createRISCVELFStreamer(MCContext &C,
+                                      std::unique_ptr<MCAsmBackend> MAB,
+                                      std::unique_ptr<MCObjectWriter> MOW,
+                                      std::unique_ptr<MCCodeEmitter> MCE) {
+  RISCVELFStreamer *S =
+      new RISCVELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE));
+  return S;
+}
+} // namespace llvm

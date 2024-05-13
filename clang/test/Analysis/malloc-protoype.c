@@ -6,12 +6,12 @@
 void malloc(int i);
 void valloc(int i);
 
-void test1()
+void test1(void)
 {
   malloc(1);
 }
 
-void test2()
+void test2(void)
 {
   valloc(1);
 }

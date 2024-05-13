@@ -74,7 +74,8 @@ bool operator>=(AtomicOrdering, AtomicOrdering) = delete;
 // is a valid AtomicOrdering.
 template <typename Int> inline bool isValidAtomicOrdering(Int I) {
   return static_cast<Int>(AtomicOrdering::NotAtomic) <= I &&
-         I <= static_cast<Int>(AtomicOrdering::SequentiallyConsistent);
+         I <= static_cast<Int>(AtomicOrdering::SequentiallyConsistent) &&
+         I != 3;
 }
 
 /// String used by LLVM IR to represent atomic ordering.
@@ -131,6 +132,16 @@ inline bool isAcquireOrStronger(AtomicOrdering AO) {
 
 inline bool isReleaseOrStronger(AtomicOrdering AO) {
   return isAtLeastOrStrongerThan(AO, AtomicOrdering::Release);
+}
+
+/// Return a single atomic ordering that is at least as strong as both the \p AO
+/// and \p Other orderings for an atomic operation.
+inline AtomicOrdering getMergedAtomicOrdering(AtomicOrdering AO,
+                                              AtomicOrdering Other) {
+  if ((AO == AtomicOrdering::Acquire && Other == AtomicOrdering::Release) ||
+      (AO == AtomicOrdering::Release && Other == AtomicOrdering::Acquire))
+    return AtomicOrdering::AcquireRelease;
+  return isStrongerThan(AO, Other) ? AO : Other;
 }
 
 inline AtomicOrderingCABI toCABI(AtomicOrdering AO) {

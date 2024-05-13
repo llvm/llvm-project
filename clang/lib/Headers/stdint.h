@@ -14,6 +14,10 @@
 #define __CLANG_STDINT_H
 #endif
 
+#if defined(__MVS__) && __has_include_next(<stdint.h>)
+#include_next <stdint.h>
+#else
+
 /* If we're hosted, fall back to the system's stdint.h, which might have
  * additional definitions.
  */
@@ -96,13 +100,21 @@
 typedef __INT64_TYPE__ int64_t;
 # endif /* __int8_t_defined */
 typedef __UINT64_TYPE__ uint64_t;
+# undef __int_least64_t
 # define __int_least64_t int64_t
+# undef __uint_least64_t
 # define __uint_least64_t uint64_t
+# undef __int_least32_t
 # define __int_least32_t int64_t
+# undef __uint_least32_t
 # define __uint_least32_t uint64_t
+# undef __int_least16_t
 # define __int_least16_t int64_t
+# undef __uint_least16_t
 # define __uint_least16_t uint64_t
+# undef __int_least8_t
 # define __int_least8_t int64_t
+# undef __uint_least8_t
 # define __uint_least8_t uint64_t
 #endif /* __INT64_TYPE__ */
 
@@ -120,11 +132,17 @@ typedef int56_t int_least56_t;
 typedef uint56_t uint_least56_t;
 typedef int56_t int_fast56_t;
 typedef uint56_t uint_fast56_t;
+# undef __int_least32_t
 # define __int_least32_t int56_t
+# undef __uint_least32_t
 # define __uint_least32_t uint56_t
+# undef __int_least16_t
 # define __int_least16_t int56_t
+# undef __uint_least16_t
 # define __uint_least16_t uint56_t
+# undef __int_least8_t
 # define __int_least8_t int56_t
+# undef __uint_least8_t
 # define __uint_least8_t uint56_t
 #endif /* __INT56_TYPE__ */
 
@@ -136,11 +154,17 @@ typedef int48_t int_least48_t;
 typedef uint48_t uint_least48_t;
 typedef int48_t int_fast48_t;
 typedef uint48_t uint_fast48_t;
+# undef __int_least32_t
 # define __int_least32_t int48_t
+# undef __uint_least32_t
 # define __uint_least32_t uint48_t
+# undef __int_least16_t
 # define __int_least16_t int48_t
+# undef __uint_least16_t
 # define __uint_least16_t uint48_t
+# undef __int_least8_t
 # define __int_least8_t int48_t
+# undef __uint_least8_t
 # define __uint_least8_t uint48_t
 #endif /* __INT48_TYPE__ */
 
@@ -152,11 +176,17 @@ typedef int40_t int_least40_t;
 typedef uint40_t uint_least40_t;
 typedef int40_t int_fast40_t;
 typedef uint40_t uint_fast40_t;
+# undef __int_least32_t
 # define __int_least32_t int40_t
+# undef __uint_least32_t
 # define __uint_least32_t uint40_t
+# undef __int_least16_t
 # define __int_least16_t int40_t
+# undef __uint_least16_t
 # define __uint_least16_t uint40_t
+# undef __int_least8_t
 # define __int_least8_t int40_t
+# undef __uint_least8_t
 # define __uint_least8_t uint40_t
 #endif /* __INT40_TYPE__ */
 
@@ -172,11 +202,17 @@ typedef __INT32_TYPE__ int32_t;
 typedef __UINT32_TYPE__ uint32_t;
 # endif /* __uint32_t_defined */
 
+# undef __int_least32_t
 # define __int_least32_t int32_t
+# undef __uint_least32_t
 # define __uint_least32_t uint32_t
+# undef __int_least16_t
 # define __int_least16_t int32_t
+# undef __uint_least16_t
 # define __uint_least16_t uint32_t
+# undef __int_least8_t
 # define __int_least8_t int32_t
+# undef __uint_least8_t
 # define __uint_least8_t uint32_t
 #endif /* __INT32_TYPE__ */
 
@@ -194,9 +230,13 @@ typedef int24_t int_least24_t;
 typedef uint24_t uint_least24_t;
 typedef int24_t int_fast24_t;
 typedef uint24_t uint_fast24_t;
+# undef __int_least16_t
 # define __int_least16_t int24_t
+# undef __uint_least16_t
 # define __uint_least16_t uint24_t
+# undef __int_least8_t
 # define __int_least8_t int24_t
+# undef __uint_least8_t
 # define __uint_least8_t uint24_t
 #endif /* __INT24_TYPE__ */
 
@@ -205,9 +245,13 @@ typedef uint24_t uint_fast24_t;
 typedef __INT16_TYPE__ int16_t;
 #endif /* __int8_t_defined */
 typedef __UINT16_TYPE__ uint16_t;
+# undef __int_least16_t
 # define __int_least16_t int16_t
+# undef __uint_least16_t
 # define __uint_least16_t uint16_t
+# undef __int_least8_t
 # define __int_least8_t int16_t
+# undef __uint_least8_t
 # define __uint_least8_t uint16_t
 #endif /* __INT16_TYPE__ */
 
@@ -224,7 +268,9 @@ typedef __uint_least16_t uint_fast16_t;
 typedef __INT8_TYPE__ int8_t;
 #endif /* __int8_t_defined */
 typedef __UINT8_TYPE__ uint8_t;
+# undef __int_least8_t
 # define __int_least8_t int8_t
+# undef __uint_least8_t
 # define __uint_least8_t uint8_t
 #endif /* __INT8_TYPE__ */
 
@@ -285,16 +331,15 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 
 
 #ifdef __INT64_TYPE__
+# undef __int64_c_suffix
+# undef __int32_c_suffix
+# undef __int16_c_suffix
+# undef  __int8_c_suffix
 # ifdef __INT64_C_SUFFIX__
 #  define __int64_c_suffix __INT64_C_SUFFIX__
 #  define __int32_c_suffix __INT64_C_SUFFIX__
 #  define __int16_c_suffix __INT64_C_SUFFIX__
 #  define  __int8_c_suffix __INT64_C_SUFFIX__
-# else
-#  undef __int64_c_suffix
-#  undef __int32_c_suffix
-#  undef __int16_c_suffix
-#  undef  __int8_c_suffix
 # endif /* __INT64_C_SUFFIX__ */
 #endif /* __INT64_TYPE__ */
 
@@ -310,6 +355,9 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 
 
 #ifdef __INT56_TYPE__
+# undef __int32_c_suffix
+# undef __int16_c_suffix
+# undef  __int8_c_suffix
 # ifdef __INT56_C_SUFFIX__
 #  define INT56_C(v) __int_c(v, __INT56_C_SUFFIX__)
 #  define UINT56_C(v) __uint_c(v, __INT56_C_SUFFIX__)
@@ -319,14 +367,14 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # else
 #  define INT56_C(v) v
 #  define UINT56_C(v) v ## U
-#  undef __int32_c_suffix
-#  undef __int16_c_suffix
-#  undef  __int8_c_suffix
 # endif /* __INT56_C_SUFFIX__ */
 #endif /* __INT56_TYPE__ */
 
 
 #ifdef __INT48_TYPE__
+# undef __int32_c_suffix
+# undef __int16_c_suffix
+# undef  __int8_c_suffix
 # ifdef __INT48_C_SUFFIX__
 #  define INT48_C(v) __int_c(v, __INT48_C_SUFFIX__)
 #  define UINT48_C(v) __uint_c(v, __INT48_C_SUFFIX__)
@@ -336,14 +384,14 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # else
 #  define INT48_C(v) v
 #  define UINT48_C(v) v ## U
-#  undef __int32_c_suffix
-#  undef __int16_c_suffix
-#  undef  __int8_c_suffix
 # endif /* __INT48_C_SUFFIX__ */
 #endif /* __INT48_TYPE__ */
 
 
 #ifdef __INT40_TYPE__
+# undef __int32_c_suffix
+# undef __int16_c_suffix
+# undef  __int8_c_suffix
 # ifdef __INT40_C_SUFFIX__
 #  define INT40_C(v) __int_c(v, __INT40_C_SUFFIX__)
 #  define UINT40_C(v) __uint_c(v, __INT40_C_SUFFIX__)
@@ -353,22 +401,18 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # else
 #  define INT40_C(v) v
 #  define UINT40_C(v) v ## U
-#  undef __int32_c_suffix
-#  undef __int16_c_suffix
-#  undef  __int8_c_suffix
 # endif /* __INT40_C_SUFFIX__ */
 #endif /* __INT40_TYPE__ */
 
 
 #ifdef __INT32_TYPE__
+# undef __int32_c_suffix
+# undef __int16_c_suffix
+# undef  __int8_c_suffix
 # ifdef __INT32_C_SUFFIX__
 #  define __int32_c_suffix __INT32_C_SUFFIX__
 #  define __int16_c_suffix __INT32_C_SUFFIX__
 #  define __int8_c_suffix  __INT32_C_SUFFIX__
-#else
-#  undef __int32_c_suffix
-#  undef __int16_c_suffix
-#  undef  __int8_c_suffix
 # endif /* __INT32_C_SUFFIX__ */
 #endif /* __INT32_TYPE__ */
 
@@ -384,6 +428,8 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 
 
 #ifdef __INT24_TYPE__
+# undef __int16_c_suffix
+# undef  __int8_c_suffix
 # ifdef __INT24_C_SUFFIX__
 #  define INT24_C(v) __int_c(v, __INT24_C_SUFFIX__)
 #  define UINT24_C(v) __uint_c(v, __INT24_C_SUFFIX__)
@@ -392,19 +438,16 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # else
 #  define INT24_C(v) v
 #  define UINT24_C(v) v ## U
-#  undef __int16_c_suffix
-#  undef  __int8_c_suffix
 # endif /* __INT24_C_SUFFIX__ */
 #endif /* __INT24_TYPE__ */
 
 
 #ifdef __INT16_TYPE__
+# undef __int16_c_suffix
+# undef  __int8_c_suffix
 # ifdef __INT16_C_SUFFIX__
 #  define __int16_c_suffix __INT16_C_SUFFIX__
 #  define __int8_c_suffix  __INT16_C_SUFFIX__
-#else
-#  undef __int16_c_suffix
-#  undef  __int8_c_suffix
 # endif /* __INT16_C_SUFFIX__ */
 #endif /* __INT16_TYPE__ */
 
@@ -420,10 +463,9 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 
 
 #ifdef __INT8_TYPE__
+# undef  __int8_c_suffix
 # ifdef __INT8_C_SUFFIX__
 #  define __int8_c_suffix __INT8_C_SUFFIX__
-#else
-#  undef  __int8_c_suffix
 # endif /* __INT8_C_SUFFIX__ */
 #endif /* __INT8_TYPE__ */
 
@@ -461,17 +503,40 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT64_MAX           INT64_C( 9223372036854775807)
 # define INT64_MIN         (-INT64_C( 9223372036854775807)-1)
 # define UINT64_MAX         UINT64_C(18446744073709551615)
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT64_WIDTH         64
+# define INT64_WIDTH          UINT64_WIDTH
+
+# define __UINT_LEAST64_WIDTH UINT64_WIDTH
+# undef __UINT_LEAST32_WIDTH
+# define __UINT_LEAST32_WIDTH UINT64_WIDTH
+# undef __UINT_LEAST16_WIDTH
+# define __UINT_LEAST16_WIDTH UINT64_WIDTH
+# undef __UINT_LEAST8_MAX
+# define __UINT_LEAST8_MAX UINT64_MAX
+#endif /* __STDC_VERSION__ */
+
 # define __INT_LEAST64_MIN   INT64_MIN
 # define __INT_LEAST64_MAX   INT64_MAX
 # define __UINT_LEAST64_MAX UINT64_MAX
+# undef __INT_LEAST32_MIN
 # define __INT_LEAST32_MIN   INT64_MIN
+# undef __INT_LEAST32_MAX
 # define __INT_LEAST32_MAX   INT64_MAX
+# undef __UINT_LEAST32_MAX
 # define __UINT_LEAST32_MAX UINT64_MAX
+# undef __INT_LEAST16_MIN
 # define __INT_LEAST16_MIN   INT64_MIN
+# undef __INT_LEAST16_MAX
 # define __INT_LEAST16_MAX   INT64_MAX
+# undef __UINT_LEAST16_MAX
 # define __UINT_LEAST16_MAX UINT64_MAX
+# undef __INT_LEAST8_MIN
 # define __INT_LEAST8_MIN    INT64_MIN
+# undef __INT_LEAST8_MAX
 # define __INT_LEAST8_MAX    INT64_MAX
+# undef __UINT_LEAST8_MAX
 # define __UINT_LEAST8_MAX  UINT64_MAX
 #endif /* __INT64_TYPE__ */
 
@@ -482,6 +547,13 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT_FAST64_MIN    __INT_LEAST64_MIN
 # define INT_FAST64_MAX    __INT_LEAST64_MAX
 # define UINT_FAST64_MAX  __UINT_LEAST64_MAX
+
+#if defined(__STDC_VERSION__) &&  __STDC_VERSION__ >= 202311L
+# define UINT_LEAST64_WIDTH __UINT_LEAST64_WIDTH
+# define INT_LEAST64_WIDTH  UINT_LEAST64_WIDTH
+# define UINT_FAST64_WIDTH  __UINT_LEAST64_WIDTH
+# define INT_FAST64_WIDTH   UINT_FAST64_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT_LEAST64_MIN */
 
 
@@ -495,15 +567,40 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT_FAST56_MIN      INT56_MIN
 # define INT_FAST56_MAX      INT56_MAX
 # define UINT_FAST56_MAX    UINT56_MAX
+
+# undef __INT_LEAST32_MIN
 # define __INT_LEAST32_MIN   INT56_MIN
+# undef __INT_LEAST32_MAX
 # define __INT_LEAST32_MAX   INT56_MAX
+# undef __UINT_LEAST32_MAX
 # define __UINT_LEAST32_MAX UINT56_MAX
+# undef __INT_LEAST16_MIN
 # define __INT_LEAST16_MIN   INT56_MIN
+# undef __INT_LEAST16_MAX
 # define __INT_LEAST16_MAX   INT56_MAX
+# undef __UINT_LEAST16_MAX
 # define __UINT_LEAST16_MAX UINT56_MAX
+# undef __INT_LEAST8_MIN
 # define __INT_LEAST8_MIN    INT56_MIN
+# undef __INT_LEAST8_MAX
 # define __INT_LEAST8_MAX    INT56_MAX
+# undef __UINT_LEAST8_MAX
 # define __UINT_LEAST8_MAX  UINT56_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT56_WIDTH         56
+# define INT56_WIDTH          UINT56_WIDTH
+# define UINT_LEAST56_WIDTH   UINT56_WIDTH
+# define INT_LEAST56_WIDTH    UINT_LEAST56_WIDTH
+# define UINT_FAST56_WIDTH    UINT56_WIDTH
+# define INT_FAST56_WIDTH     UINT_FAST56_WIDTH
+# undef __UINT_LEAST32_WIDTH
+# define __UINT_LEAST32_WIDTH UINT56_WIDTH
+# undef __UINT_LEAST16_WIDTH
+# define __UINT_LEAST16_WIDTH UINT56_WIDTH
+# undef __UINT_LEAST8_WIDTH
+# define __UINT_LEAST8_WIDTH  UINT56_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT56_TYPE__ */
 
 
@@ -517,15 +614,40 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT_FAST48_MIN      INT48_MIN
 # define INT_FAST48_MAX      INT48_MAX
 # define UINT_FAST48_MAX    UINT48_MAX
+
+# undef __INT_LEAST32_MIN
 # define __INT_LEAST32_MIN   INT48_MIN
+# undef __INT_LEAST32_MAX
 # define __INT_LEAST32_MAX   INT48_MAX
+# undef __UINT_LEAST32_MAX
 # define __UINT_LEAST32_MAX UINT48_MAX
+# undef __INT_LEAST16_MIN
 # define __INT_LEAST16_MIN   INT48_MIN
+# undef __INT_LEAST16_MAX
 # define __INT_LEAST16_MAX   INT48_MAX
+# undef __UINT_LEAST16_MAX
 # define __UINT_LEAST16_MAX UINT48_MAX
+# undef __INT_LEAST8_MIN
 # define __INT_LEAST8_MIN    INT48_MIN
+# undef __INT_LEAST8_MAX
 # define __INT_LEAST8_MAX    INT48_MAX
+# undef __UINT_LEAST8_MAX
 # define __UINT_LEAST8_MAX  UINT48_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#define UINT48_WIDTH         48
+#define INT48_WIDTH          UINT48_WIDTH
+#define UINT_LEAST48_WIDTH   UINT48_WIDTH
+#define INT_LEAST48_WIDTH    UINT_LEAST48_WIDTH
+#define UINT_FAST48_WIDTH    UINT48_WIDTH
+#define INT_FAST48_WIDTH     UINT_FAST48_WIDTH
+#undef __UINT_LEAST32_WIDTH
+#define __UINT_LEAST32_WIDTH UINT48_WIDTH
+# undef __UINT_LEAST16_WIDTH
+#define __UINT_LEAST16_WIDTH UINT48_WIDTH
+# undef __UINT_LEAST8_WIDTH
+#define __UINT_LEAST8_WIDTH  UINT48_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT48_TYPE__ */
 
 
@@ -539,15 +661,40 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT_FAST40_MIN      INT40_MIN
 # define INT_FAST40_MAX      INT40_MAX
 # define UINT_FAST40_MAX    UINT40_MAX
+
+# undef __INT_LEAST32_MIN
 # define __INT_LEAST32_MIN   INT40_MIN
+# undef __INT_LEAST32_MAX
 # define __INT_LEAST32_MAX   INT40_MAX
+# undef __UINT_LEAST32_MAX
 # define __UINT_LEAST32_MAX UINT40_MAX
+# undef __INT_LEAST16_MIN
 # define __INT_LEAST16_MIN   INT40_MIN
+# undef __INT_LEAST16_MAX
 # define __INT_LEAST16_MAX   INT40_MAX
+# undef __UINT_LEAST16_MAX
 # define __UINT_LEAST16_MAX UINT40_MAX
+# undef __INT_LEAST8_MIN
 # define __INT_LEAST8_MIN    INT40_MIN
+# undef __INT_LEAST8_MAX
 # define __INT_LEAST8_MAX    INT40_MAX
+# undef __UINT_LEAST8_MAX
 # define __UINT_LEAST8_MAX  UINT40_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT40_WIDTH         40
+# define INT40_WIDTH          UINT40_WIDTH
+# define UINT_LEAST40_WIDTH   UINT40_WIDTH
+# define INT_LEAST40_WIDTH    UINT_LEAST40_WIDTH
+# define UINT_FAST40_WIDTH    UINT40_WIDTH
+# define INT_FAST40_WIDTH     UINT_FAST40_WIDTH
+# undef __UINT_LEAST32_WIDTH
+# define __UINT_LEAST32_WIDTH UINT40_WIDTH
+# undef __UINT_LEAST16_WIDTH
+# define __UINT_LEAST16_WIDTH UINT40_WIDTH
+# undef __UINT_LEAST8_WIDTH
+# define __UINT_LEAST8_WIDTH  UINT40_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT40_TYPE__ */
 
 
@@ -555,15 +702,36 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT32_MAX           INT32_C(2147483647)
 # define INT32_MIN         (-INT32_C(2147483647)-1)
 # define UINT32_MAX         UINT32_C(4294967295)
+
+# undef __INT_LEAST32_MIN
 # define __INT_LEAST32_MIN   INT32_MIN
+# undef __INT_LEAST32_MAX
 # define __INT_LEAST32_MAX   INT32_MAX
+# undef __UINT_LEAST32_MAX
 # define __UINT_LEAST32_MAX UINT32_MAX
+# undef __INT_LEAST16_MIN
 # define __INT_LEAST16_MIN   INT32_MIN
+# undef __INT_LEAST16_MAX
 # define __INT_LEAST16_MAX   INT32_MAX
+# undef __UINT_LEAST16_MAX
 # define __UINT_LEAST16_MAX UINT32_MAX
+# undef __INT_LEAST8_MIN
 # define __INT_LEAST8_MIN    INT32_MIN
+# undef __INT_LEAST8_MAX
 # define __INT_LEAST8_MAX    INT32_MAX
+# undef __UINT_LEAST8_MAX
 # define __UINT_LEAST8_MAX  UINT32_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT32_WIDTH         32
+# define INT32_WIDTH          UINT32_WIDTH
+# undef __UINT_LEAST32_WIDTH
+# define __UINT_LEAST32_WIDTH UINT32_WIDTH
+# undef __UINT_LEAST16_WIDTH
+# define __UINT_LEAST16_WIDTH UINT32_WIDTH
+# undef __UINT_LEAST8_WIDTH
+# define __UINT_LEAST8_WIDTH  UINT32_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT32_TYPE__ */
 
 #ifdef __INT_LEAST32_MIN
@@ -573,6 +741,13 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT_FAST32_MIN    __INT_LEAST32_MIN
 # define INT_FAST32_MAX    __INT_LEAST32_MAX
 # define UINT_FAST32_MAX  __UINT_LEAST32_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT_LEAST32_WIDTH __UINT_LEAST32_WIDTH
+# define INT_LEAST32_WIDTH  UINT_LEAST32_WIDTH
+# define UINT_FAST32_WIDTH  __UINT_LEAST32_WIDTH
+# define INT_FAST32_WIDTH   UINT_FAST32_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT_LEAST32_MIN */
 
 
@@ -586,12 +761,32 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT_FAST24_MIN      INT24_MIN
 # define INT_FAST24_MAX      INT24_MAX
 # define UINT_FAST24_MAX    UINT24_MAX
+
+# undef __INT_LEAST16_MIN
 # define __INT_LEAST16_MIN   INT24_MIN
+# undef __INT_LEAST16_MAX
 # define __INT_LEAST16_MAX   INT24_MAX
+# undef __UINT_LEAST16_MAX
 # define __UINT_LEAST16_MAX UINT24_MAX
+# undef __INT_LEAST8_MIN
 # define __INT_LEAST8_MIN    INT24_MIN
+# undef __INT_LEAST8_MAX
 # define __INT_LEAST8_MAX    INT24_MAX
+# undef __UINT_LEAST8_MAX
 # define __UINT_LEAST8_MAX  UINT24_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT24_WIDTH         24
+# define INT24_WIDTH          UINT24_WIDTH
+# define UINT_LEAST24_WIDTH   UINT24_WIDTH
+# define INT_LEAST24_WIDTH    UINT_LEAST24_WIDTH
+# define UINT_FAST24_WIDTH    UINT24_WIDTH
+# define INT_FAST24_WIDTH     UINT_FAST24_WIDTH
+# undef __UINT_LEAST16_WIDTH
+# define __UINT_LEAST16_WIDTH UINT24_WIDTH
+# undef __UINT_LEAST8_WIDTH
+# define __UINT_LEAST8_WIDTH  UINT24_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT24_TYPE__ */
 
 
@@ -599,12 +794,28 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 #define INT16_MAX            INT16_C(32767)
 #define INT16_MIN          (-INT16_C(32767)-1)
 #define UINT16_MAX          UINT16_C(65535)
+
+# undef __INT_LEAST16_MIN
 # define __INT_LEAST16_MIN   INT16_MIN
+# undef __INT_LEAST16_MAX
 # define __INT_LEAST16_MAX   INT16_MAX
+# undef __UINT_LEAST16_MAX
 # define __UINT_LEAST16_MAX UINT16_MAX
+# undef __INT_LEAST8_MIN
 # define __INT_LEAST8_MIN    INT16_MIN
+# undef __INT_LEAST8_MAX
 # define __INT_LEAST8_MAX    INT16_MAX
+# undef __UINT_LEAST8_MAX
 # define __UINT_LEAST8_MAX  UINT16_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT16_WIDTH         16
+# define INT16_WIDTH          UINT16_WIDTH
+# undef __UINT_LEAST16_WIDTH
+# define __UINT_LEAST16_WIDTH UINT16_WIDTH
+# undef __UINT_LEAST8_WIDTH
+# define __UINT_LEAST8_WIDTH  UINT16_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT16_TYPE__ */
 
 #ifdef __INT_LEAST16_MIN
@@ -614,6 +825,13 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT_FAST16_MIN    __INT_LEAST16_MIN
 # define INT_FAST16_MAX    __INT_LEAST16_MAX
 # define UINT_FAST16_MAX  __UINT_LEAST16_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT_LEAST16_WIDTH __UINT_LEAST16_WIDTH
+# define INT_LEAST16_WIDTH  UINT_LEAST16_WIDTH
+# define UINT_FAST16_WIDTH  __UINT_LEAST16_WIDTH
+# define INT_FAST16_WIDTH   UINT_FAST16_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT_LEAST16_MIN */
 
 
@@ -621,9 +839,20 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT8_MAX            INT8_C(127)
 # define INT8_MIN          (-INT8_C(127)-1)
 # define UINT8_MAX          UINT8_C(255)
+
+# undef __INT_LEAST8_MIN
 # define __INT_LEAST8_MIN    INT8_MIN
+# undef __INT_LEAST8_MAX
 # define __INT_LEAST8_MAX    INT8_MAX
+# undef __UINT_LEAST8_MAX
 # define __UINT_LEAST8_MAX  UINT8_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT8_WIDTH         8
+# define INT8_WIDTH          UINT8_WIDTH
+# undef __UINT_LEAST8_WIDTH
+# define __UINT_LEAST8_WIDTH UINT8_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT8_TYPE__ */
 
 #ifdef __INT_LEAST8_MIN
@@ -633,6 +862,13 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 # define INT_FAST8_MIN    __INT_LEAST8_MIN
 # define INT_FAST8_MAX    __INT_LEAST8_MAX
 # define UINT_FAST8_MAX  __UINT_LEAST8_MAX
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define UINT_LEAST8_WIDTH __UINT_LEAST8_WIDTH
+# define INT_LEAST8_WIDTH  UINT_LEAST8_WIDTH
+# define UINT_FAST8_WIDTH  __UINT_LEAST8_WIDTH
+# define INT_FAST8_WIDTH   UINT_FAST8_WIDTH
+#endif /* __STDC_VERSION__ */
 #endif /* __INT_LEAST8_MIN */
 
 /* Some utility macros */
@@ -652,6 +888,14 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 #define PTRDIFF_MAX   __PTRDIFF_MAX__
 #define    SIZE_MAX      __SIZE_MAX__
 
+/* C23 7.22.2.4 Width of integer types capable of holding object pointers. */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+/* NB: The C standard requires that these be the same value, but the compiler
+   exposes separate internal width macros. */
+#define INTPTR_WIDTH  __INTPTR_WIDTH__
+#define UINTPTR_WIDTH __UINTPTR_WIDTH__
+#endif
+
 /* ISO9899:2011 7.20 (C11 Annex K): Define RSIZE_MAX if __STDC_WANT_LIB_EXT1__
  * is enabled. */
 #if defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ >= 1
@@ -662,6 +906,14 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 #define  INTMAX_MIN (-__INTMAX_MAX__-1)
 #define  INTMAX_MAX   __INTMAX_MAX__
 #define UINTMAX_MAX  __UINTMAX_MAX__
+
+/* C23 7.22.2.5 Width of greatest-width integer types. */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+/* NB: The C standard requires that these be the same value, but the compiler
+   exposes separate internal width macros. */
+#define INTMAX_WIDTH __INTMAX_WIDTH__
+#define UINTMAX_WIDTH __UINTMAX_WIDTH__
+#endif
 
 /* C99 7.18.3 Limits of other integer types. */
 #define SIG_ATOMIC_MIN __INTN_MIN(__SIG_ATOMIC_WIDTH__)
@@ -689,5 +941,15 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 #define  INTMAX_C(v) __int_c(v,  __INTMAX_C_SUFFIX__)
 #define UINTMAX_C(v) __int_c(v, __UINTMAX_C_SUFFIX__)
 
+/* C23 7.22.3.x Width of other integer types. */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#define PTRDIFF_WIDTH    __PTRDIFF_WIDTH__
+#define SIG_ATOMIC_WIDTH __SIG_ATOMIC_WIDTH__
+#define SIZE_WIDTH       __SIZE_WIDTH__
+#define WCHAR_WIDTH      __WCHAR_WIDTH__
+#define WINT_WIDTH       __WINT_WIDTH__
+#endif
+
 #endif /* __STDC_HOSTED__ */
+#endif /* __MVS__ */
 #endif /* __CLANG_STDINT_H */

@@ -6,8 +6,6 @@
 ; scenario independent of any particular backend options that may exist now or
 ; in the future.
 
-; XFAIL: aix
-
 ; RUN: %clang -flto=thin -c -o %t.o %s
 ; RUN: llvm-lto -thinlto -o %t %t.o
 ; RUN: not %clang_cc1 -x ir %t.o -fthinlto-index=%t.thinlto.bc -mllvm -nonexistent -emit-obj -o /dev/null 2>&1 | FileCheck %s -check-prefix=UNKNOWN

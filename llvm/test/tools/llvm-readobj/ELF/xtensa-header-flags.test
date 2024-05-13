@@ -1,0 +1,20 @@
+## Check that we are able to dump EF_XTENSA_XT_* flags correctly
+
+# RUN: yaml2obj %s -o %t.insn -DFLAG=INSN
+# RUN: llvm-readobj -S --file-headers %t.insn | FileCheck --check-prefixes=ALL,INSN %s
+
+# RUN: yaml2obj %s -o %t.lit -DFLAG=LIT
+# RUN: llvm-readobj -S --file-headers %t.lit | FileCheck --check-prefixes=ALL,LIT %s
+
+# ALL:  Flags [
+# INSN:   EF_XTENSA_XT_INSN (0x100)
+# LIT:    EF_XTENSA_XT_LIT  (0x200)
+# ALL:  ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_XTENSA
+  Flags:   [ EF_XTENSA_XT_[[FLAG]] ]

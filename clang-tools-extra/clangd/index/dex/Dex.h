@@ -20,25 +20,18 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
 
-#include "Iterator.h"
-#include "PostingList.h"
-#include "Token.h"
-#include "Trigram.h"
+#include "index/dex/Iterator.h"
 #include "index/Index.h"
-#include "index/MemIndex.h"
 #include "index/Relation.h"
-#include "index/SymbolCollector.h"
+#include "index/dex/PostingList.h"
+#include "index/dex/Token.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace clang {
 namespace clangd {
 namespace dex {
 
 /// In-memory Dex trigram-based index implementation.
-// FIXME(kbobyrev): Introduce serialization and deserialization of the symbol
-// index so that it can be loaded from the disk. Since static index is not
-// changed frequently, it's safe to assume that it has to be built only once
-// (when the clangd process starts). Therefore, it can be easier to store built
-// index on disk and then load it if available.
 class Dex : public SymbolIndex {
 public:
   // All data must outlive this index.
@@ -139,7 +132,7 @@ private:
 /// Should be used within the index build process.
 ///
 /// This function is exposed for testing only.
-std::vector<std::string> generateProximityURIs(llvm::StringRef URIPath);
+llvm::SmallVector<llvm::StringRef, 5> generateProximityURIs(llvm::StringRef);
 
 } // namespace dex
 } // namespace clangd

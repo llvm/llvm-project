@@ -11,11 +11,11 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str = private unnamed_addr constant [6 x i8] c"blah\0A\00", align 1
 
 define i32 @_start() {
-  %str = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0))
+  %str = call i32 (ptr, ...) @printf(ptr @.str)
   ret i32 0
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 ; Check that puts symbol is present in the dynamic symbol table and
 ; there's a relocation for it.

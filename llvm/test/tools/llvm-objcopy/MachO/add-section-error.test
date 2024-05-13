@@ -6,7 +6,7 @@
 ## Error case 1: Nonexistent input file is specified by --add-section.
 # RUN: not llvm-objcopy --add-section __TEXT,__text=%t.missing %t %t.nonexistent-file 2>&1 \
 # RUN:   | FileCheck %s -DINPUT=%t -DSECTION_DATA_FILE=%t.missing -DMSG=%errc_ENOENT --check-prefix=NONEXSITENT-FILE
-# NONEXSITENT-FILE: error: '[[INPUT]]': '[[SECTION_DATA_FILE]]': [[MSG]]
+# NONEXSITENT-FILE: error: '[[SECTION_DATA_FILE]]': [[MSG]]
 
 ## Error case 2: Too long segment name.
 # RUN: not llvm-objcopy --add-section __TOOOOOOOOO_LONG,__text=%t.data %t %t.too-long-seg-name 2>&1 \

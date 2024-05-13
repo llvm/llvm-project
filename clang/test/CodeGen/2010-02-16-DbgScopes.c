@@ -5,8 +5,8 @@
 // CHECK: !DILexicalBlock(
 // CHECK: !DILexicalBlock(
 
-extern int bar();
-extern void foobar();
+extern int bar(void);
+extern void foobar(void);
 void foo(int s) {
   unsigned loc = 0;
   if (s) {

@@ -101,24 +101,22 @@ TEST(IntrusiveRefCntPtr, UsesTraitsToRetainAndRelease) {
 struct X : RefCountedBase<X> {};
 struct Y : X {};
 struct Z : RefCountedBase<Z> {};
-static_assert(!std::is_convertible<IntrusiveRefCntPtr<X> &&,
-                                   IntrusiveRefCntPtr<Y>>::value,
-              "X&& -> Y should be rejected with SFINAE");
-static_assert(!std::is_convertible<const IntrusiveRefCntPtr<X> &,
-                                   IntrusiveRefCntPtr<Y>>::value,
+static_assert(
+    !std::is_convertible_v<IntrusiveRefCntPtr<X> &&, IntrusiveRefCntPtr<Y>>,
+    "X&& -> Y should be rejected with SFINAE");
+static_assert(!std::is_convertible_v<const IntrusiveRefCntPtr<X> &,
+                                     IntrusiveRefCntPtr<Y>>,
               "const X& -> Y should be rejected with SFINAE");
+static_assert(!std::is_convertible_v<std::unique_ptr<X>, IntrusiveRefCntPtr<Y>>,
+              "X -> Y should be rejected with SFINAE");
 static_assert(
-    !std::is_convertible<std::unique_ptr<X>, IntrusiveRefCntPtr<Y>>::value,
-    "X -> Y should be rejected with SFINAE");
-static_assert(!std::is_convertible<IntrusiveRefCntPtr<X> &&,
-                                   IntrusiveRefCntPtr<Z>>::value,
-              "X&& -> Z should be rejected with SFINAE");
-static_assert(!std::is_convertible<const IntrusiveRefCntPtr<X> &,
-                                   IntrusiveRefCntPtr<Z>>::value,
+    !std::is_convertible_v<IntrusiveRefCntPtr<X> &&, IntrusiveRefCntPtr<Z>>,
+    "X&& -> Z should be rejected with SFINAE");
+static_assert(!std::is_convertible_v<const IntrusiveRefCntPtr<X> &,
+                                     IntrusiveRefCntPtr<Z>>,
               "const X& -> Z should be rejected with SFINAE");
-static_assert(
-    !std::is_convertible<std::unique_ptr<X>, IntrusiveRefCntPtr<Z>>::value,
-    "X -> Z should be rejected with SFINAE");
+static_assert(!std::is_convertible_v<std::unique_ptr<X>, IntrusiveRefCntPtr<Z>>,
+              "X -> Z should be rejected with SFINAE");
 
 TEST(IntrusiveRefCntPtr, InteropsWithConvertible) {
   // Check converting constructors and operator=.
@@ -140,6 +138,19 @@ TEST(IntrusiveRefCntPtr, InteropsWithConvertible) {
   EXPECT_EQ(P2, X2.get());
   EXPECT_EQ(P3, X3.get());
   EXPECT_EQ(P4, X4.get());
+}
+
+TEST(IntrusiveRefCntPtrTest, Unique) {
+  IntrusiveRefCntPtr<X> X1;
+  EXPECT_EQ(X1.useCount(), 0u);
+  X1 = new X();
+  EXPECT_EQ(X1.useCount(), 1u);
+  {
+    IntrusiveRefCntPtr<X> X2 = X1;
+    EXPECT_EQ(X1.useCount(), 2u);
+    EXPECT_EQ(X2.useCount(), 2u);
+  }
+  EXPECT_EQ(X1.useCount(), 1u);
 }
 
 } // end namespace llvm

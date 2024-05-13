@@ -10,7 +10,7 @@
 #ifndef MLIR_C_DIALECT_SCF_H
 #define MLIR_C_DIALECT_SCF_H
 
-#include "mlir-c/Registration.h"
+#include "mlir-c/IR.h"
 
 #ifdef __cplusplus
 extern "C" {

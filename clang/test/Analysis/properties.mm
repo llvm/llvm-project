@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class -fobjc-arc %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,debug.ExprInspection -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,debug.ExprInspection -verify -Wno-objc-root-class -fobjc-arc %s
 
 void clang_analyzer_eval(bool);
 void clang_analyzer_checkInlined(bool);
@@ -87,7 +87,6 @@ void testConsistencyCustomCopy(CustomCopyWrapper *w) {
 @synthesize inner;
 @end
 
-// rdar://67416721
 void testNoDirectPropertyDecl(NoDirectPropertyDecl *w) {
   clang_analyzer_eval(w.inner.value == w.inner.value); // expected-warning{{TRUE}}
 

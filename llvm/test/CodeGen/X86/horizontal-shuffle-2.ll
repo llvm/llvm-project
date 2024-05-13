@@ -14,7 +14,7 @@ define <4 x float> @test_unpacklo_hadd_v4f32(<4 x float> %0, <4 x float> %1, <4 
 ; AVX-LABEL: test_unpacklo_hadd_v4f32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %0, <4 x float> %1) #4
   %6 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %2, <4 x float> %3) #4
@@ -33,7 +33,7 @@ define <4 x float> @test_unpackhi_hadd_v4f32(<4 x float> %0, <4 x float> %1, <4 
 ; AVX-LABEL: test_unpackhi_hadd_v4f32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhaddps %xmm3, %xmm1, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %0, <4 x float> %1) #4
   %6 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %2, <4 x float> %3) #4
@@ -51,7 +51,7 @@ define <4 x float> @test_unpacklo_hsub_v4f32(<4 x float> %0, <4 x float> %1, <4 
 ; AVX-LABEL: test_unpacklo_hsub_v4f32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhsubps %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %0, <4 x float> %1) #4
   %6 = tail call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %2, <4 x float> %3) #4
@@ -70,7 +70,7 @@ define <4 x float> @test_unpackhi_hsub_v4f32(<4 x float> %0, <4 x float> %1, <4 
 ; AVX-LABEL: test_unpackhi_hsub_v4f32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhsubps %xmm3, %xmm1, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %0, <4 x float> %1) #4
   %6 = tail call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %2, <4 x float> %3) #4
@@ -164,11 +164,52 @@ define <4 x float> @test_unpacklo_hadd_v4f32_unary(<4 x float> %0) {
 ; AVX-LABEL: test_unpacklo_hadd_v4f32_unary:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; AVX-NEXT:    ret{{[l|q]}}
   %2 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %0, <4 x float> %0) #4
   %3 = shufflevector <4 x float> %2, <4 x float> %2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   ret <4 x float> %3
+}
+
+define <8 x i16> @PR51974(<8 x i16> %a0) {
+; SSE-LABEL: PR51974:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    phaddw %xmm0, %xmm1
+; SSE-NEXT:    phaddw %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: PR51974:
+; AVX:       ## %bb.0:
+; AVX-NEXT:    vphaddw %xmm0, %xmm0, %xmm1
+; AVX-NEXT:    vphaddw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %r0 = call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %a0, <8 x i16> %a0)
+  %r1 = call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %r0, <8 x i16> %a0)
+  ret <8 x i16> %r1
+}
+
+define <8 x i16> @PR52040(<8 x i16> %a0) {
+; SSE-LABEL: PR52040:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    phaddw %xmm0, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    phaddw %xmm0, %xmm1
+; SSE-NEXT:    phaddw %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: PR52040:
+; AVX:       ## %bb.0:
+; AVX-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vphaddw %xmm0, %xmm0, %xmm1
+; AVX-NEXT:    vphaddw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %r1 = tail call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %a0, <8 x i16> %a0)
+  %r2 = tail call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %r1, <8 x i16> %r1)
+  %r3 = tail call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %r2, <8 x i16> %r1)
+  ret <8 x i16> %r3
 }
 
 declare <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float>, <4 x float>)

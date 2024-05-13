@@ -9,10 +9,14 @@
 #ifndef LLDB_TARGET_PATHMAPPINGLIST_H
 #define LLDB_TARGET_PATHMAPPINGLIST_H
 
-#include <map>
-#include <vector>
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
+#include <map>
+#include <mutex>
+#include <optional>
+#include <vector>
 
 namespace lldb_private {
 
@@ -32,34 +36,45 @@ public:
 
   const PathMappingList &operator=(const PathMappingList &rhs);
 
-  void Append(ConstString path, ConstString replacement,
-              bool notify);
+  void Append(llvm::StringRef path, llvm::StringRef replacement, bool notify);
 
   void Append(const PathMappingList &rhs, bool notify);
+
+  /// Append <path, replacement> pair without duplication.
+  /// \return whether appending suceeds without duplication or not.
+  bool AppendUnique(llvm::StringRef path, llvm::StringRef replacement,
+                    bool notify);
 
   void Clear(bool notify);
 
   // By default, dump all pairs.
   void Dump(Stream *s, int pair_index = -1);
 
-  bool IsEmpty() const { return m_pairs.empty(); }
+  llvm::json::Value ToJSON();
 
-  size_t GetSize() const { return m_pairs.size(); }
+  bool IsEmpty() const {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    return m_pairs.empty();
+  }
+
+  size_t GetSize() const {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    return m_pairs.size();
+  }
 
   bool GetPathsAtIndex(uint32_t idx, ConstString &path,
                        ConstString &new_path) const;
 
-  void Insert(ConstString path, ConstString replacement,
+  void Insert(llvm::StringRef path, llvm::StringRef replacement,
               uint32_t insert_idx, bool notify);
 
   bool Remove(size_t index, bool notify);
 
   bool Remove(ConstString path, bool notify);
 
-  bool Replace(ConstString path, ConstString replacement,
-               bool notify);
+  bool Replace(llvm::StringRef path, llvm::StringRef replacement, bool notify);
 
-  bool Replace(ConstString path, ConstString replacement,
+  bool Replace(llvm::StringRef path, llvm::StringRef replacement,
                uint32_t index, bool notify);
   bool RemapPath(ConstString path, ConstString &new_path) const;
 
@@ -72,16 +87,37 @@ public:
   /// \param[in] path
   ///     The original source file path to try and remap.
   ///
-  /// \param[out] new_path
-  ///     The newly remapped filespec that is may or may not exist.
+  /// \param[in] only_if_exists
+  ///     If \b true, besides matching \p path with the remapping rules, this
+  ///     tries to check with the filesystem that the remapped file exists. If
+  ///     no valid file is found, \b std::nullopt is returned. This might be
+  ///     expensive, specially on a network.
+  ///
+  ///     If \b false, then the existence of the returned remapping is not
+  ///     checked.
   ///
   /// \return
-  ///     /b true if \a path was successfully located and \a new_path
-  ///     is filled in with a new source path, \b false otherwise.
-  bool RemapPath(llvm::StringRef path, std::string &new_path) const;
+  ///     The remapped filespec that may or may not exist on disk.
+  std::optional<FileSpec> RemapPath(llvm::StringRef path,
+                                    bool only_if_exists = false) const;
   bool RemapPath(const char *, std::string &) const = delete;
 
-  bool ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const;
+  /// Perform reverse source path remap for input \a file.
+  /// Source maps contains a list of <from_original_path, to_new_path> mappings.
+  /// Reverse remap means locating a matching entry prefix using "to_new_path"
+  /// part and replacing it with "from_original_path" part if found.
+  ///
+  /// \param[in] file
+  ///     The source path to reverse remap.
+  /// \param[in] fixed
+  ///     The reversed mapped new path.
+  ///
+  /// \return
+  ///     std::nullopt if no remapping happens, otherwise, the matching source
+  ///     map entry's ""to_new_pathto"" part (which is the prefix of \a file) is
+  ///     returned.
+  std::optional<llvm::StringRef> ReverseRemapPath(const FileSpec &file,
+                                                  FileSpec &fixed) const;
 
   /// Finds a source file given a file spec using the path remappings.
   ///
@@ -94,20 +130,19 @@ public:
   /// \param[in] orig_spec
   ///     The original source file path to try and remap.
   ///
-  /// \param[out] new_spec
-  ///     The newly remapped filespec that is guaranteed to exist.
-  ///
   /// \return
-  ///     /b true if \a orig_spec was successfully located and
-  ///     \a new_spec is filled in with an existing file spec,
-  ///     \b false otherwise.
-  bool FindFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
+  ///     The newly remapped filespec that is guaranteed to exist.
+  std::optional<FileSpec> FindFile(const FileSpec &orig_spec) const;
 
-  uint32_t FindIndexForPath(ConstString path) const;
+  uint32_t FindIndexForPath(llvm::StringRef path) const;
 
-  uint32_t GetModificationID() const { return m_mod_id; }
+  uint32_t GetModificationID() const {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    return m_mod_id;
+  }
 
 protected:
+  mutable std::recursive_mutex m_mutex;
   typedef std::pair<ConstString, ConstString> pair;
   typedef std::vector<pair> collection;
   typedef collection::iterator iterator;
@@ -118,9 +153,9 @@ protected:
   const_iterator FindIteratorForPath(ConstString path) const;
 
   collection m_pairs;
-  ChangedCallback m_callback;
-  void *m_callback_baton;
-  uint32_t m_mod_id; // Incremented anytime anything is added or removed.
+  ChangedCallback m_callback = nullptr;
+  void *m_callback_baton = nullptr;
+  uint32_t m_mod_id = 0; // Incremented anytime anything is added or removed.
 };
 
 } // namespace lldb_private

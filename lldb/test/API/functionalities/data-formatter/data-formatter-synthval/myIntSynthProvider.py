@@ -1,5 +1,4 @@
 class myIntSynthProvider(object):
-
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.val = self.valobj.GetChildMemberWithName("theValue")
@@ -24,7 +23,6 @@ class myIntSynthProvider(object):
 
 
 class myArraySynthProvider(object):
-
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.array = self.valobj.GetChildMemberWithName("array")

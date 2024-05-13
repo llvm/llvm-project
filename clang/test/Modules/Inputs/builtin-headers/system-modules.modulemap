@@ -1,0 +1,71 @@
+module cstd [system] [no_undeclared_includes] {
+  module complex {
+    header "complex.h"
+    export *
+  }
+
+  module float {
+    header "float.h"
+    export *
+  }
+
+  module inttypes {
+    header "inttypes.h"
+    export *
+  }
+
+  module iso646 {
+    header "iso646.h"
+    export *
+  }
+
+  module limits {
+    header "limits.h"
+    export *
+  }
+
+  module math {
+    header "math.h"
+    export *
+  }
+
+  module stdalign {
+    header "stdalign.h"
+    export *
+  }
+
+  module stdarg {
+    header "stdarg.h"
+    export *
+  }
+
+  module stdatomic {
+    header "stdatomic.h"
+    export *
+  }
+
+  module stdbool {
+    header "stdbool.h"
+    export *
+  }
+
+  module stddef {
+    header "stddef.h"
+    export *
+  }
+
+  module stdint {
+    header "stdint.h"
+    export *
+  }
+
+  module tgmath {
+    header "tgmath.h"
+    export *
+  }
+
+  module unwind {
+    header "unwind.h"
+    export *
+  }
+}

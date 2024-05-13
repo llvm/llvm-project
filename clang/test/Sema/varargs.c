@@ -34,7 +34,7 @@ void f4(const char *msg, ...) {
  __builtin_va_end (ap);
 }
 
-void f5() {
+void f5(void) {
   __builtin_va_list ap;
   __builtin_va_start(ap,ap); // expected-error {{'va_start' used in function with fixed args}}
 }
@@ -114,7 +114,7 @@ void f13(enum E1 e, ...) {
 }
 
 void f14(int e, ...) {
-  // expected-warning@+3 {{implicitly declaring library function 'va_start'}}
+  // expected-error@+3 {{call to undeclared library function 'va_start'}}
   // expected-note@+2 {{include the header <stdarg.h>}}
   // expected-error@+1 {{too few arguments to function call}}
   va_start();

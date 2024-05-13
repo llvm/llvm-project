@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      Domain :=
 ; CHECK-NEXT:   { Stmt_while_cond_i__TO__while_end_i[] };
 ;
-define i32 @func(i32 %param0, i32 %param1, i64* %param2) #3 {
+define i32 @func(i32 %param0, i32 %param1, ptr %param2) #3 {
 
 entry:
   %var0 = alloca i32
@@ -24,22 +24,22 @@ if.end.i1.i:                                    ; preds = %while.cond.i
 exit1.i:                          ; preds = %if.end.i1.i
   %var7 = srem i32 %var3, 64
   %var8 = sext i32 %var5 to i64
-  %var9 = getelementptr inbounds i64, i64* %param2, i64 %var8
-  %var10 = load i64, i64* %var9, align 8
+  %var9 = getelementptr inbounds i64, ptr %param2, i64 %var8
+  %var10 = load i64, ptr %var9, align 8
   %var11 = zext i32 %var7 to i64
   %var12 = shl i64 1, %var11
   %var13 = and i64 %var10, %var12
   %var14 = icmp eq i64 %var13, 0
-  store i32 %var2, i32* %var1
-  store i32 %var3, i32* %var0
+  store i32 %var2, ptr %var1
+  store i32 %var3, ptr %var0
   br i1 %var14, label %while.cond.i.backedge, label %while.end.i
 
 while.cond.i.backedge:                            ; preds = %exit1.i, %while.cond.i, %if.end.i1.i
   br label %while.cond.i
 
 while.end.i:
-  %var15 = load i32, i32* %var0
-  %var16 = load i32, i32* %var1
+  %var15 = load i32, ptr %var0
+  %var16 = load i32, ptr %var1
   %var17 = add i32 %var15, %var16
   ret i32 %var17
 }

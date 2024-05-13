@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test constant folding of type parameter values both a base value and a
 ! parameter name are supplied.
 ! 
@@ -33,7 +33,7 @@ module m2
     integer, kind :: dtypeParam = 4
     type(baseType(dtypeParam)) :: baseField
     !ERROR: KIND parameter value (343) of intrinsic type REAL did not resolve to a supported value
-    real(baseField%baseParam) :: realField
+    real(dtypeParam) :: realField
   end type dtype
 
   type(dtype) :: v1

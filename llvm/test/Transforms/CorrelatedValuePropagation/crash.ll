@@ -1,4 +1,4 @@
-; RUN: opt < %s -correlated-propagation
+; RUN: opt < %s -passes=correlated-propagation
 
 ; PR8161
 define void @test1() nounwind ssp {

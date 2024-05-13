@@ -15,7 +15,7 @@ namespace test1 {
 // weak_odr constructors and destructors.
 
 // CHECK1: @_ZN5test16foobarIvEC1Ev = weak_odr unnamed_addr alias void {{.*}} @_ZN5test16foobarIvEC2Ev
-// CHECK1: @_ZN5test16foobarIvED1Ev = weak_odr unnamed_addr alias void (%"struct.test1::foobar"*), void (%"struct.test1::foobar"*)* @_ZN5test16foobarIvED2Ev
+// CHECK1: @_ZN5test16foobarIvED1Ev = weak_odr unnamed_addr alias void (ptr), ptr @_ZN5test16foobarIvED2Ev
 // CHECK1: define weak_odr void @_ZN5test16foobarIvEC2Ev({{.*}} comdat($_ZN5test16foobarIvEC5Ev)
 // CHECK1: define weak_odr void @_ZN5test16foobarIvED2Ev({{.*}} comdat($_ZN5test16foobarIvED5Ev)
 // CHECK1: define weak_odr void @_ZN5test16foobarIvED0Ev({{.*}} comdat($_ZN5test16foobarIvED5Ev)
@@ -172,7 +172,7 @@ void zed() {
 }
 }
 
-// CHECK5: @_ZTV1C = linkonce_odr unnamed_addr constant { [4 x i8*] } {{[^@]*}}@_ZTI1C {{[^@]*}}@_ZN1CD2Ev {{[^@]*}}@_ZN1CD0Ev {{[^@]*}}]
+// CHECK5: @_ZTV1C = linkonce_odr unnamed_addr constant { [4 x ptr] } {{[^@]*}}@_ZTI1C, {{[^@]*}}@_ZN1CD2Ev, {{[^@]*}}@_ZN1CD0Ev]
 // r194296 replaced C::~C with B::~B without emitting the later.
 
 class A {

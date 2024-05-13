@@ -24,7 +24,7 @@ Error InstructionTables::execute(InstRef &IR) {
   UsedResources.clear();
 
   // Identify the resources consumed by this instruction.
-  for (const std::pair<const uint64_t, ResourceUsage> Resource :
+  for (const std::pair<uint64_t, ResourceUsage> &Resource :
        Desc.Resources) {
     // Skip zero-cycle resources (i.e., unused resources).
     if (!Resource.second.size())
@@ -38,7 +38,7 @@ Error InstructionTables::execute(InstRef &IR) {
       for (unsigned I = 0, E = NumUnits; I < E; ++I) {
         ResourceRef ResourceUnit = std::make_pair(Index, 1U << I);
         UsedResources.emplace_back(
-            std::make_pair(ResourceUnit, ResourceCycles(Cycles, NumUnits)));
+            std::make_pair(ResourceUnit, ReleaseAtCycles(Cycles, NumUnits)));
       }
       continue;
     }
@@ -53,7 +53,8 @@ Error InstructionTables::execute(InstRef &IR) {
       for (unsigned I2 = 0, E2 = SubUnit.NumUnits; I2 < E2; ++I2) {
         ResourceRef ResourceUnit = std::make_pair(SubUnitIdx, 1U << I2);
         UsedResources.emplace_back(std::make_pair(
-            ResourceUnit, ResourceCycles(Cycles, NumUnits * SubUnit.NumUnits)));
+            ResourceUnit,
+            ReleaseAtCycles(Cycles, NumUnits * SubUnit.NumUnits)));
       }
     }
   }

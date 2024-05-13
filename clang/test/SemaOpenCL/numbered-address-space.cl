@@ -9,12 +9,12 @@ void test_numeric_as_to_generic_explicit_cast(__attribute__((address_space(3))) 
   generic int* generic_ptr = (generic int*) as3_ptr; // Should maybe be valid?
 }
 
-void test_generic_to_numeric_as_implicit_cast() {
+void test_generic_to_numeric_as_implicit_cast(void) {
   generic int* generic_ptr = 0;
   __attribute__((address_space(3))) int *as3_ptr = generic_ptr; // expected-error{{initializing '__attribute__((address_space(3))) int *__private' with an expression of type '__generic int *__private' changes address space of pointer}}
 }
 
-void test_generic_to_numeric_as_explicit_cast() {
+void test_generic_to_numeric_as_explicit_cast(void) {
   generic int* generic_ptr = 0;
   __attribute__((address_space(3))) int *as3_ptr = (__attribute__((address_space(3))) int *)generic_ptr;
 }

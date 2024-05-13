@@ -1,10 +1,10 @@
-include_directories(
+add_llvm_exegesis_unittest_includes(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/PowerPC
   ${LLVM_BINARY_DIR}/lib/Target/PowerPC
   ${LLVM_MAIN_SRC_DIR}/tools/llvm-exegesis/lib
   )
 
-set(LLVM_LINK_COMPONENTS
+add_llvm_exegesis_unittest_link_components(
   MC
   MCParser
   Object
@@ -13,11 +13,10 @@ set(LLVM_LINK_COMPONENTS
   PowerPC
   )
 
-add_llvm_target_unittest(LLVMExegesisPowerPCTests
+add_llvm_exegesis_unittest_sources(
   AnalysisTest.cpp
   SnippetGeneratorTest.cpp
   TargetTest.cpp
   )
-target_link_libraries(LLVMExegesisPowerPCTests PRIVATE
-  LLVMExegesis
+add_llvm_exegesis_unittest_link_libraries(
   LLVMExegesisPowerPC)

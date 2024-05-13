@@ -1,4 +1,4 @@
-//===------------------- stdexcept_vcruntime.ipp --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
-#error This file may only be used when defering to vcruntime
+#  error This file may only be used when deferring to vcruntime
 #endif
 
 namespace std {

@@ -26,7 +26,7 @@ public:
   // Subclasses must override these functions
   void InvalidateAllRegisters() override;
 
-  bool ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
+  bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
@@ -38,7 +38,6 @@ public:
   static constexpr uint32_t GetNumHardwareBreakpointSlots() {
     return NUM_HARDWARE_BREAKPOINT_SLOTS;
   }
-  static constexpr bool DoHardwareBreakpointsTriggerAfter() { return true; }
 
   bool AddHardwareBreakpoint(uint32_t slot, lldb::addr_t address, uint32_t size,
                              bool read, bool write);

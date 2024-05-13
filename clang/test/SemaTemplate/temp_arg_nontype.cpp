@@ -174,7 +174,7 @@ namespace pr6249 {
 
 namespace PR6723 {
   template<unsigned char C> void f(int (&a)[C]); // expected-note 3{{candidate template ignored: substitution failure [with C = '\x00']}}
-  // expected-note@-1 {{not viable: no known conversion from 'int [512]' to 'int (&)[0]'}}
+  // expected-note@-1 {{not viable: no known conversion from 'int[512]' to 'int (&)[0]'}}
   void g() {
     int arr512[512];
     f(arr512); // expected-error{{no matching function for call}}
@@ -204,8 +204,8 @@ namespace EntityReferenced {
 }
 
 namespace PR6964 {
-  template <typename ,int, int = 9223372036854775807L > // expected-warning 2{{non-type template argument value '9223372036854775807' truncated to '-1' for template parameter of type 'int'}} \
-  // expected-note 2{{template parameter is declared here}}
+  template <typename ,int, int = 9223372036854775807L > // expected-warning {{non-type template argument value '9223372036854775807' truncated to '-1' for template parameter of type 'int'}} \
+  // expected-note {{template parameter is declared here}}
   struct as_nview { };
 
   template <typename Sequence, int I0> 
@@ -213,7 +213,6 @@ namespace PR6964 {
   { };
 }
 
-// rdar://problem/8302138
 namespace test8 {
   template <int* ip> struct A {
     int* p;
@@ -398,7 +397,7 @@ namespace partial_order_different_types {
 
 namespace partial_order_references {
   // FIXME: The standard does not appear to consider the second specialization
-  // to be more more specialized than the first! The problem is that deducing
+  // to be more specialized than the first! The problem is that deducing
   // an 'int&' parameter from an argument 'R' results in a type mismatch,
   // because the parameter has a reference type and the argument is an
   // expression and thus does not have reference type. We resolve this by
@@ -437,7 +436,7 @@ namespace dependent_nested_partial_specialization {
 
   template<template<typename> class X> struct A {
     template<typename T, X<T> N> struct B; // expected-note 2{{here}}
-    template<typename T> struct B<T, 0> {}; // expected-error {{specializes a template parameter with dependent type 'Y<T>'}}
+    template<typename T> struct B<T, 0> {}; // expected-error {{non-type template argument specializes a template parameter with dependent type 'Y<T>' (aka 'type-parameter-0-0 *')}}
   };
   A<X>::B<int, 0> ax;
   A<Y>::B<int, &n> ay; // expected-error {{undefined}} expected-note {{instantiation of}}

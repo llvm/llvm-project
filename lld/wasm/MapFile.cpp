@@ -28,7 +28,6 @@
 #include "SyntheticSections.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -52,7 +51,7 @@ static void writeHeader(raw_ostream &os, int64_t vma, uint64_t lma,
 // Returns a list of all symbols that we want to print out.
 static std::vector<Symbol *> getSymbols() {
   std::vector<Symbol *> v;
-  for (InputFile *file : symtab->objectFiles)
+  for (InputFile *file : ctx.objectFiles)
     for (Symbol *b : file->getSymbols())
       if (auto *dr = dyn_cast<Symbol>(b))
         if ((!isa<SectionSymbol>(dr)) && dr->isLive() &&
@@ -75,12 +74,14 @@ static SymbolMapTy getSectionSyms(ArrayRef<Symbol *> syms) {
 static DenseMap<Symbol *, std::string>
 getSymbolStrings(ArrayRef<Symbol *> syms) {
   std::vector<std::string> str(syms.size());
-  parallelForEachN(0, syms.size(), [&](size_t i) {
+  parallelFor(0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
     auto *chunk = syms[i]->getChunk();
     if (chunk == nullptr)
       return;
-    uint64_t fileOffset = chunk->outputSec->getOffset() + chunk->outSecOff;
+    uint64_t fileOffset = chunk->outputSec != nullptr
+                              ? chunk->outputSec->getOffset() + chunk->outSecOff
+                              : 0;
     uint64_t vma = -1;
     uint64_t size = 0;
     if (auto *DD = dyn_cast<DefinedData>(syms[i])) {
@@ -138,9 +139,11 @@ void lld::wasm::writeMapFile(ArrayRef<OutputSection *> outputSections) {
                     oseg->size);
         os << oseg->name << '\n';
         for (auto *chunk : oseg->inputSegments) {
-          writeHeader(os, chunk->getVA(),
-                      chunk->outputSec->getOffset() + chunk->outSecOff,
-                      chunk->getSize());
+          uint64_t offset =
+              chunk->outputSec != nullptr
+                  ? chunk->outputSec->getOffset() + chunk->outSecOff
+                  : 0;
+          writeHeader(os, chunk->getVA(), offset, chunk->getSize());
           os.indent(8) << toString(chunk) << '\n';
           for (Symbol *sym : sectionSyms[chunk])
             os << symStr[sym] << '\n';

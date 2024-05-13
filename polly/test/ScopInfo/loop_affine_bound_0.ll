@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-function-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-function-scops -disable-output < %s | FileCheck %s
 
 ; void f(long a[][128], long N, long M) {
 ;   long i, j;
@@ -10,7 +10,7 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 
-define void @f([128 x i64]* nocapture %a, i64 %N, i64 %M) nounwind {
+define void @f(ptr nocapture %a, i64 %N, i64 %M) nounwind {
 entry:
   %0 = shl i64 %N, 2                              ; <i64> [#uses=2]
   %1 = mul i64 %M, 7                              ; <i64> [#uses=2]
@@ -21,8 +21,8 @@ entry:
 
 bb1:                                              ; preds = %bb2.preheader, %bb1
   %i.06 = phi i64 [ 0, %bb2.preheader ], [ %5, %bb1 ] ; <i64> [#uses=2]
-  %scevgep = getelementptr [128 x i64], [128 x i64]* %a, i64 %i.06, i64 %10 ; <i64*> [#uses=1]
-  store i64 0, i64* %scevgep, align 8
+  %scevgep = getelementptr [128 x i64], ptr %a, i64 %i.06, i64 %10 ; <ptr> [#uses=1]
+  store i64 0, ptr %scevgep, align 8
   %5 = add nsw i64 %i.06, 1                       ; <i64> [#uses=2]
   %exitcond = icmp eq i64 %5, %8                  ; <i1> [#uses=1]
   br i1 %exitcond, label %bb3, label %bb1

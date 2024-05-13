@@ -13,9 +13,10 @@
 ; }
 ;
 ; RUN: opt %s -O2 -S -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -O2 -S -o - | FileCheck %s
 ; Test that we correctly lower dbg.declares for arrays.
 ;
-; CHECK: define i32 @main
+; CHECK: define noundef i32 @main
 ; CHECK: call void @llvm.dbg.value(metadata i32 42, metadata ![[ARRAY:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
 ; CHECK: ![[ARRAY]] = !DILocalVariable(name: "array",{{.*}} line: 6
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -24,14 +25,13 @@ target triple = "x86_64-apple-macosx10.9.0"
 @main.array = private unnamed_addr constant [4 x i32] [i32 0, i32 1, i32 2, i32 3], align 16
 
 ; Function Attrs: nounwind ssp uwtable
-define void @f(i32* %p) #0 !dbg !4 {
+define void @f(ptr %p) #0 !dbg !4 {
 entry:
-  %p.addr = alloca i32*, align 8
-  store i32* %p, i32** %p.addr, align 8
-  call void @llvm.dbg.declare(metadata i32** %p.addr, metadata !19, metadata !DIExpression()), !dbg !20
-  %0 = load i32*, i32** %p.addr, align 8, !dbg !21
-  %arrayidx = getelementptr inbounds i32, i32* %0, i64 0, !dbg !21
-  store i32 42, i32* %arrayidx, align 4, !dbg !21
+  %p.addr = alloca ptr, align 8
+  store ptr %p, ptr %p.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !19, metadata !DIExpression()), !dbg !20
+  %0 = load ptr, ptr %p.addr, align 8, !dbg !21
+  store i32 42, ptr %0, align 4, !dbg !21
   ret void, !dbg !22
 }
 
@@ -39,29 +39,26 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @main(i32 %argc, i8** %argv) #0 !dbg !10 {
+define i32 @main(i32 %argc, ptr %argv) #0 !dbg !10 {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
+  %argv.addr = alloca ptr, align 8
   %array = alloca [4 x i32], align 16
-  store i32 0, i32* %retval
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !23, metadata !DIExpression()), !dbg !24
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !25, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.declare(metadata [4 x i32]* %array, metadata !26, metadata !DIExpression()), !dbg !30
-  %0 = bitcast [4 x i32]* %array to i8*, !dbg !30
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %0, i8* align 16 bitcast ([4 x i32]* @main.array to i8*), i64 16, i1 false), !dbg !30
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %array, i32 0, i32 0, !dbg !31
-  call void @f(i32* %arraydecay), !dbg !31
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %array, i32 0, i64 0, !dbg !32
-  %1 = load i32, i32* %arrayidx, align 4, !dbg !32
-  ret i32 %1, !dbg !32
+  store i32 0, ptr %retval
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !23, metadata !DIExpression()), !dbg !24
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !25, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %array, metadata !26, metadata !DIExpression()), !dbg !30
+  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %array, ptr align 16 @main.array, i64 16, i1 false), !dbg !30
+  call void @f(ptr %array), !dbg !31
+  %0 = load i32, ptr %array, align 4, !dbg !32
+  ret i32 %0, !dbg !32
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone }

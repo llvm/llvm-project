@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace android {
+namespace clang::tidy::android {
 
 namespace {
 // Helper function to form the correct string mode for Type3.
@@ -87,7 +85,7 @@ void CloexecCheck::insertStringFlag(
 
   // Check if the <Mode> may be in the mode string.
   const auto *ModeStr = dyn_cast<StringLiteral>(ModeArg->IgnoreParenCasts());
-  if (!ModeStr || (ModeStr->getString().find(Mode) != StringRef::npos))
+  if (!ModeStr || ModeStr->getString().contains(Mode))
     return;
 
   std::string ReplacementText = buildFixMsgForStringFlag(
@@ -108,6 +106,4 @@ StringRef CloexecCheck::getSpellingArg(const MatchFinder::MatchResult &Result,
       SM, Result.Context->getLangOpts());
 }
 
-} // namespace android
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::android

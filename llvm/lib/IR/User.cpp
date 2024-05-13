@@ -18,8 +18,9 @@ class BasicBlock;
 //                                 User Class
 //===----------------------------------------------------------------------===//
 
-void User::replaceUsesOfWith(Value *From, Value *To) {
-  if (From == To) return;   // Duh what?
+bool User::replaceUsesOfWith(Value *From, Value *To) {
+  bool Changed = false;
+  if (From == To) return Changed;   // Duh what?
 
   assert((!isa<Constant>(this) || isa<GlobalValue>(this)) &&
          "Cannot call User::replaceUsesOfWith on a constant!");
@@ -30,11 +31,16 @@ void User::replaceUsesOfWith(Value *From, Value *To) {
       // "To", adding "this" to the uses list of To, and
       // most importantly, removing "this" from the use list of "From".
       setOperand(i, To);
+      Changed = true;
     }
   if (auto DVI = dyn_cast_or_null<DbgVariableIntrinsic>(this)) {
-    if (is_contained(DVI->location_ops(), From))
+    if (is_contained(DVI->location_ops(), From)) {
       DVI->replaceVariableLocationOp(From, To);
+      Changed = true;
+    }
   }
+
+  return Changed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -107,7 +113,7 @@ MutableArrayRef<uint8_t> User::getDescriptor() {
 }
 
 bool User::isDroppable() const {
-  return isa<AssumeInst>(this);
+  return isa<AssumeInst>(this) || isa<PseudoProbeInst>(this);
 }
 
 //===----------------------------------------------------------------------===//

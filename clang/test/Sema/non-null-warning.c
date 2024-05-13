@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -Wnonnull -Wnullability %s -verify
-// rdar://19160762
 
 #if __has_feature(nullability)
 #else
@@ -9,7 +8,7 @@
 
 int * _Nullable foo(int * _Nonnull x);
 
-int *_Nonnull ret_nonnull();
+int *_Nonnull ret_nonnull(void);
 
 int *foo(int *x) {
   return 0;
@@ -33,13 +32,20 @@ int *foo3(int * _Nonnull x) { // expected-warning {{nullability specifier '_Nonn
   return 0;
 }
 
-int * ret_nonnull() {
+int * ret_nonnull(void) {
   return 0; // expected-warning {{null returned from function that requires a non-null return value}}
 }
 
+int foo4(int * _Nonnull x, int * y) {
+  return 0;
+}
+
 #define SAFE_CALL(X) if (X) foo(X)
-int main () {
+int main (void) {
   foo(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
   (void)sizeof(foo(0)); // expect no diagnostic in unevaluated context.
   SAFE_CALL(0); // expect no diagnostic for unreachable code.
+  foo4(
+       0, // expected-warning {{null passed to a callee that requires a non-null argument}}
+       0);
 }

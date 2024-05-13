@@ -27,7 +27,6 @@ void test0(Test0 *x) {
   [weakx setBlock: ^{ [x actNow]; }];
   weakx.block = ^{ [x actNow]; };
 
-  // rdar://11702054
   x.block = ^{ (void)x.actNow; };  // expected-warning {{capturing 'x' strongly in this block is likely to lead to a retain cycle}} \
                                    // expected-note {{block will be retained by the captured object}}
 }
@@ -111,7 +110,7 @@ void test2_helper(id);
 void doSomething(unsigned v);
 @implementation Test3
 - (void) test {
-  // 'addOperationWithBlock:' is specifically whitelisted.
+  // 'addOperationWithBlock:' is specifically allowlisted.
   [myOperationQueue addOperationWithBlock:^() { // no-warning
     if (count > 20) {
       doSomething(count);
@@ -119,7 +118,7 @@ void doSomething(unsigned v);
   }];
 }
 - (void) test_positive {
-  // Sanity check that we are really whitelisting 'addOperationWithBlock:' and not doing
+  // Check that we are really allowlisting 'addOperationWithBlock:' and not doing
   // something funny.
   [myOperationQueue addSomethingElse:^() { // expected-note {{block will be retained by an object strongly retained by the captured object}}
     if (count > 20) {
@@ -130,7 +129,7 @@ void doSomething(unsigned v);
 @end
 
 
-void testBlockVariable() {
+void testBlockVariable(void) {
   typedef void (^block_t)(void);
   
   // This case will be caught by -Wuninitialized, and does not create a
@@ -184,7 +183,6 @@ void testCopying(Test0 *obj) {
   })];
 }
 
-// rdar://16944538
 void func(int someCondition) {
 
 __block void(^myBlock)(void) = ^{

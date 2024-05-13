@@ -21,7 +21,7 @@ OPTIONS
 .. option:: --accelerator=<accelerator type>
 
  Specify the desired type of accelerator table. Valid options are 'Apple',
- 'Dwarf' and 'Default'.
+ 'Dwarf', 'Default' and 'None'.
 
 .. option:: --arch <arch>
 
@@ -32,10 +32,29 @@ OPTIONS
  architectures will be linked by default and any architectures that can't be
  properly linked will cause :program:`dsymutil` to return an error.
 
+.. option:: --build-variant-suffix <suffix=buildvariant>
+
+ Specify the build variant suffix used to build the executable file.
+ There can be multiple variants for the binary of a product, each built
+ slightly differently. The most common build variants are 'debug' and
+ 'profile'. Setting the DYLD_IMAGE_SUFFIX environment variable will
+ cause dyld to load the specified variant at runtime.
+
 .. option:: --dump-debug-map
 
  Dump the *executable*'s debug-map (the list of the object files containing the
- debug information) in YAML format and exit. Not DWARF link will take place.
+ debug information) in YAML format and exit. No DWARF link will take place.
+
+ .. option:: -D <path>
+
+ Specify a directory that contain dSYM files to search for.
+ This is used for mergeable libraries, so dsymutil knows where to look
+ for dSYM files with  debug information about symbols present in those
+ libraries.
+
+.. option:: --fat64
+
+ Use a 64-bit header when emitting universal binaries.
 
 .. option:: --flat, -f
 
@@ -44,7 +63,8 @@ OPTIONS
 
 .. option:: --gen-reproducer
 
- Generate a reproducer consisting of the input object files.
+ Generate a reproducer consisting of the input object files. Alias for
+ --reproducer=GenerateOnExit.
 
 .. option:: --help, -h
 
@@ -95,12 +115,13 @@ OPTIONS
  Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
  bundle path is created by appending ``.dSYM`` to the executable name.
 
-.. option:: --papertrail
+.. option:: -q, --quiet
 
- When running dsymutil as part of your build system, it can be desirable for
- warnings to be part of the end product, rather than just being emitted to the
- output stream. When enabled warnings are embedded in the linked DWARF debug
- information.
+ Enable quiet mode and limit output.
+
+.. option:: --remarks-drop-without-debug
+
+ Drop remarks without valid debug locations. Without this flags, all remarks are kept.
 
 .. option:: --remarks-output-format <format>
 
@@ -110,6 +131,11 @@ OPTIONS
 
  Specify a directory to prepend the paths of the external remark files.
 
+.. option:: --reproducer <mode>
+
+ Specify the reproducer generation mode. Valid options are 'GenerateOnExit',
+ 'GenerateOnCrash', 'Use', 'Off'.
+
 .. option:: --statistics
 
  Print statistics about the contribution of each object file to the linked
@@ -117,10 +143,6 @@ OPTIONS
  size of the debug info in the object file (in bytes) and the size contributed
  (in bytes) to the linked dSYM. The table is sorted by the output size listing
  the object files with the largest contribution first.
-
-.. option:: --symbol-map <bcsymbolmap>
-
- Update the existing dSYMs inplace using symbol map specified.
 
 .. option:: -s, --symtab
 
@@ -142,7 +164,8 @@ OPTIONS
 
 .. option:: --use-reproducer <path>
 
- Use the object files from the given reproducer path.
+ Use the object files from the given reproducer path. Alias for
+ --reproducer=Use.
 
 .. option:: --verbose
 

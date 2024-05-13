@@ -11,18 +11,18 @@
 define void @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movsbl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movsbl var_29(%rip), %eax
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    cmpl %eax, var_21(%rip)
 ; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    movl %ecx, {{.*}}(%rip)
-; CHECK-NEXT:    movb {{.*}}(%rip), %al
-; CHECK-NEXT:    movb %al, {{.*}}(%rip)
+; CHECK-NEXT:    movl %ecx, var_390(%rip)
+; CHECK-NEXT:    movzbl var_11(%rip), %eax
+; CHECK-NEXT:    movb %al, var_370(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i32, i32* @var_21, align 4
-  %1 = load i8, i8* @var_29, align 1
+  %0 = load i32, ptr @var_21, align 4
+  %1 = load i8, ptr @var_29, align 1
   %conv = sext i8 %1 to i32
   %sub = sub nsw i32 0, %conv
   %cmp = icmp ult i32 %0, %sub
@@ -32,10 +32,10 @@ entry:
   %tobool = icmp ne i8 %conv2, 0
   %lnot = xor i1 %tobool, true
   %conv3 = zext i1 %lnot to i32
-  store i32 %conv3, i32* @var_390, align 4
-  %2 = load i8, i8* @var_11, align 1
+  store i32 %conv3, ptr @var_390, align 4
+  %2 = load i8, ptr @var_11, align 1
   %conv4 = sext i8 %2 to i16
   %conv5 = trunc i16 %conv4 to i8
-  store i8 %conv5, i8* @var_370, align 1
+  store i8 %conv5, ptr @var_370, align 1
   ret void
 }

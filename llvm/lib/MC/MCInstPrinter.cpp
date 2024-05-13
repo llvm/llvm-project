@@ -12,6 +12,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -42,7 +43,7 @@ StringRef MCInstPrinter::getOpcodeName(unsigned Opcode) const {
   return MII.getName(Opcode);
 }
 
-void MCInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
+void MCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   llvm_unreachable("Target should implement this");
 }
 
@@ -169,14 +170,6 @@ const char *MCInstPrinter::matchAliasPatterns(const MCInst *MI,
   return M.AsmStrings.data() + AsmStrOffset;
 }
 
-/// Utility functions to make adding mark ups simpler.
-StringRef MCInstPrinter::markup(StringRef s) const {
-  if (getUseMarkup())
-    return s;
-  else
-    return "";
-}
-
 // For asm-style hex (e.g. 0ffh) the first digit always has to be a number.
 static bool needsLeadingZero(uint64_t Value)
 {
@@ -229,4 +222,54 @@ format_object<uint64_t> MCInstPrinter::formatHex(uint64_t Value) const {
       return format("%" PRIx64 "h", Value);
   }
   llvm_unreachable("unsupported print style");
+}
+
+MCInstPrinter::WithMarkup MCInstPrinter::markup(raw_ostream &OS,
+                                                Markup S) const {
+  return WithMarkup(OS, S, getUseMarkup(), getUseColor());
+}
+
+MCInstPrinter::WithMarkup::WithMarkup(raw_ostream &OS, Markup M,
+                                      bool EnableMarkup, bool EnableColor)
+    : OS(OS), EnableMarkup(EnableMarkup), EnableColor(EnableColor) {
+  if (EnableColor) {
+    switch (M) {
+    case Markup::Immediate:
+      OS.changeColor(raw_ostream::RED);
+      break;
+    case Markup::Register:
+      OS.changeColor(raw_ostream::CYAN);
+      break;
+    case Markup::Target:
+      OS.changeColor(raw_ostream::YELLOW);
+      break;
+    case Markup::Memory:
+      OS.changeColor(raw_ostream::GREEN);
+      break;
+    }
+  }
+
+  if (EnableMarkup) {
+    switch (M) {
+    case Markup::Immediate:
+      OS << "<imm:";
+      break;
+    case Markup::Register:
+      OS << "<reg:";
+      break;
+    case Markup::Target:
+      OS << "<target:";
+      break;
+    case Markup::Memory:
+      OS << "<mem:";
+      break;
+    }
+  }
+}
+
+MCInstPrinter::WithMarkup::~WithMarkup() {
+  if (EnableMarkup)
+    OS << '>';
+  if (EnableColor)
+    OS.resetColor();
 }

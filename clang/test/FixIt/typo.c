@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // RUN: cp %s %t
-// RUN: not %clang_cc1 -fsyntax-only -fixit -x c %t
+// RUN: not %clang_cc1 -fixit -x c %t
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Werror -x c %t
 
 struct Point {
@@ -29,7 +29,7 @@ struct Window window = {
   2.71818, 5.0, 6.0, Red
 };
 
-void test() {
+void test(void) {
   Rectangle r1; // expected-error{{must use 'struct' tag to refer to type 'Rectangle'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:3}:"struct "
   r1.top_left.x = 0;

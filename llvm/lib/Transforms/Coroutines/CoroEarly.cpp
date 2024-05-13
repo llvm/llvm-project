@@ -8,10 +8,11 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
+#include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Pass.h"
 
 using namespace llvm;
 
@@ -35,7 +36,7 @@ public:
         AnyResumeFnPtrTy(FunctionType::get(Type::getVoidTy(Context), Int8Ptr,
                                            /*isVarArg=*/false)
                              ->getPointerTo()) {}
-  bool lowerEarlyIntrinsics(Function &F);
+  void lowerEarlyIntrinsics(Function &F);
 };
 }
 
@@ -100,6 +101,25 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
   II->eraseFromParent();
 }
 
+static void buildDebugInfoForNoopResumeDestroyFunc(Function *NoopFn) {
+  Module &M = *NoopFn->getParent();
+  if (M.debug_compile_units().empty())
+     return;
+
+  DICompileUnit *CU = *M.debug_compile_units_begin();
+  DIBuilder DB(M, /*AllowUnresolved*/ false, CU);
+  std::array<Metadata *, 2> Params{nullptr, nullptr};
+  auto *SubroutineType =
+      DB.createSubroutineType(DB.getOrCreateTypeArray(Params));
+  StringRef Name = NoopFn->getName();
+  auto *SP = DB.createFunction(
+      CU, /*Name=*/Name, /*LinkageName=*/Name, /*File=*/ CU->getFile(),
+      /*LineNo=*/0, SubroutineType, /*ScopeLine=*/0, DINode::FlagArtificial,
+      DISubprogram::SPFlagDefinition);
+  NoopFn->setSubprogram(SP);
+  DB.finalize();
+}
+
 void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
   if (!NoopCoro) {
     LLVMContext &C = Builder.getContext();
@@ -116,8 +136,9 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     // Create a Noop function that does nothing.
     Function *NoopFn =
         Function::Create(FnTy, GlobalValue::LinkageTypes::PrivateLinkage,
-                         "NoopCoro.ResumeDestroy", &M);
+                         "__NoopCoro_ResumeDestroy", &M);
     NoopFn->setCallingConv(CallingConv::Fast);
+    buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
     auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
     ReturnInst::Create(C, Entry);
 
@@ -145,14 +166,16 @@ static void setCannotDuplicate(CoroIdInst *CoroId) {
       CB->setCannotDuplicate();
 }
 
-bool Lowerer::lowerEarlyIntrinsics(Function &F) {
-  bool Changed = false;
+void Lowerer::lowerEarlyIntrinsics(Function &F) {
   CoroIdInst *CoroId = nullptr;
   SmallVector<CoroFreeInst *, 4> CoroFrees;
-  for (auto IB = inst_begin(F), IE = inst_end(F); IB != IE;) {
-    Instruction &I = *IB++;
-    if (auto *CB = dyn_cast<CallBase>(&I)) {
-      switch (CB->getIntrinsicID()) {
+  bool HasCoroSuspend = false;
+  for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
+    auto *CB = dyn_cast<CallBase>(&I);
+    if (!CB)
+      continue;
+
+    switch (CB->getIntrinsicID()) {
       default:
         continue;
       case Intrinsic::coro_free:
@@ -163,6 +186,7 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
         // pass expects that there is at most one final suspend point.
         if (cast<CoroSuspendInst>(&I)->isFinal())
           CB->setCannotDuplicate();
+        HasCoroSuspend = true;
         break;
       case Intrinsic::coro_end_async:
       case Intrinsic::coro_end:
@@ -175,11 +199,11 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
         lowerCoroNoop(cast<IntrinsicInst>(&I));
         break;
       case Intrinsic::coro_id:
-        // Mark a function that comes out of the frontend that has a coro.id
-        // with a coroutine attribute.
         if (auto *CII = cast<CoroIdInst>(&I)) {
           if (CII->getInfo().isPreSplit()) {
-            F.addFnAttr(CORO_PRESPLIT_ATTR, UNPREPARED_FOR_SPLIT);
+            assert(F.isPresplitCoroutine() &&
+                   "The frontend uses Swtich-Resumed ABI should emit "
+                   "\"presplitcoroutine\" attribute for the coroutine.");
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();
             CoroId = cast<CoroIdInst>(&I);
@@ -189,7 +213,7 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_id_retcon:
       case Intrinsic::coro_id_retcon_once:
       case Intrinsic::coro_id_async:
-        F.addFnAttr(CORO_PRESPLIT_ATTR, PREPARED_FOR_SPLIT);
+        F.setPresplitCoroutine();
         break;
       case Intrinsic::coro_resume:
         lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
@@ -203,17 +227,23 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_done:
         lowerCoroDone(cast<IntrinsicInst>(&I));
         break;
-      }
-      Changed = true;
     }
   }
+
   // Make sure that all CoroFree reference the coro.id intrinsic.
   // Token type is not exposed through coroutine C/C++ builtins to plain C, so
   // we allow specifying none and fixing it up here.
   if (CoroId)
     for (CoroFreeInst *CF : CoroFrees)
       CF->setArgOperand(0, CoroId);
-  return Changed;
+
+  // Coroutine suspention could potentially lead to any argument modified
+  // outside of the function, hence arguments should not have noalias
+  // attributes.
+  if (HasCoroSuspend)
+    for (Argument &A : F.args())
+      if (A.hasNoAliasAttr())
+        A.removeAttr(Attribute::NoAlias);
 }
 
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
@@ -225,52 +255,15 @@ static bool declaresCoroEarlyIntrinsics(const Module &M) {
           "llvm.coro.suspend"});
 }
 
-PreservedAnalyses CoroEarlyPass::run(Function &F, FunctionAnalysisManager &) {
-  Module &M = *F.getParent();
-  if (!declaresCoroEarlyIntrinsics(M) || !Lowerer(M).lowerEarlyIntrinsics(F))
+PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
+  if (!declaresCoroEarlyIntrinsics(M))
     return PreservedAnalyses::all();
+
+  Lowerer L(M);
+  for (auto &F : M)
+    L.lowerEarlyIntrinsics(F);
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
-
-namespace {
-
-struct CoroEarlyLegacy : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid.
-  CoroEarlyLegacy() : FunctionPass(ID) {
-    initializeCoroEarlyLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  std::unique_ptr<Lowerer> L;
-
-  // This pass has work to do only if we find intrinsics we are going to lower
-  // in the module.
-  bool doInitialization(Module &M) override {
-    if (declaresCoroEarlyIntrinsics(M))
-      L = std::make_unique<Lowerer>(M);
-    return false;
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!L)
-      return false;
-
-    return L->lowerEarlyIntrinsics(F);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-  }
-  StringRef getPassName() const override {
-    return "Lower early coroutine intrinsics";
-  }
-};
-}
-
-char CoroEarlyLegacy::ID = 0;
-INITIALIZE_PASS(CoroEarlyLegacy, "coro-early",
-                "Lower early coroutine intrinsics", false, false)
-
-Pass *llvm::createCoroEarlyLegacyPass() { return new CoroEarlyLegacy(); }

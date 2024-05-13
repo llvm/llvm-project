@@ -53,7 +53,6 @@ class Int3 { int x, y, z; };
 }
 @end
 
-// rdar: // 8519948
 typedef float HGVec4f __attribute__ ((vector_size(16)));
 
 @interface RedBalloonHGXFormWrapper {
@@ -64,7 +63,6 @@ typedef float HGVec4f __attribute__ ((vector_size(16)));
 @implementation RedBalloonHGXFormWrapper
 @end
 
-// rdar://9357400
 namespace rdar9357400 {
   template<int Dim1 = -1, int Dim2 = -1> struct fixed {
       template<int D> struct rebind { typedef fixed<D> other; };
@@ -90,12 +88,14 @@ namespace rdar9357400 {
   typedef vector< float,  fixed<4> > vector4f;
 
   // FIXME: This difference is due to D76801. It was probably an unintentional change. Maybe we want to undo it?
-  // CHECKCXX98: @_ZN11rdar93574002ggE ={{.*}} constant [49 x i8] c"{vector<float, rdar9357400::fixed<4, -1> >=[4f]}\00"
-  // CHECKCXX20: @_ZN11rdar93574002ggE ={{.*}} constant [48 x i8] c"{vector<float, rdar9357400::fixed<4, -1>>=[4f]}\00"
+  // @encoding for C++ is dependent on the TypePrinter implementation, which is a known issue. But since there
+  // are currently no system frameworks that vend Objective-C++ types, a potential ABI break caused by changes
+  // to the TypePrinter should not be a concern.
+  // CHECKCXX98: @_ZN11rdar93574002ggE ={{.*}} constant [45 x i8] c"{vector<float, rdar9357400::fixed<4> >=[4f]}\00"
+  // CHECKCXX20: @_ZN11rdar93574002ggE ={{.*}} constant [44 x i8] c"{vector<float, rdar9357400::fixed<4>>=[4f]}\00"
   extern const char gg[] = @encode(vector4f);
 }
 
-// rdar://9624314
 namespace rdar9624314 {
   struct B2 { int x; };
   struct B3 {};
@@ -192,7 +192,6 @@ struct CefBrowserImpl2 : public CefBrowser2 {};
 // CHECK: @g7 ={{.*}} constant [26 x i8] c"{CefBrowserImpl2=^^?^^?i}\00"
 extern const char g7[] = @encode(CefBrowserImpl2);
 
-// <rdar://problem/11324167>
 struct Empty {};
 
 struct X : Empty { 
@@ -299,30 +298,30 @@ struct Outer0 {
 };
 
 // CHECK: @[[STR22:.*]] = {{.*}} [12 x i8] c"{B0<int>=i}\00"
-// CHECK: @_ZN32test_cxx_template_specialization2b0E = {{.*}} ([12 x i8], [12 x i8]* @[[STR22]], i32 0, i32 0)
+// CHECK: @_ZN32test_cxx_template_specialization2b0E = global ptr @[[STR22]]
 // CHECK-NO-TEMP-SPEC: @[[STR23:.*]] = {{.*}} [3 x i8] c"^v\00"
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = global ptr @[[STR23]]
 // CHECK-TEMP-SPEC: @[[STR23:.*]] = {{.*}} [13 x i8] c"^{B0<int>=i}\00"
-// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = {{.*}} ([13 x i8], [13 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b02E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d1E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d2E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b02E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d0E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d1E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d2E = global ptr @[[STR23]]
 // CHECK: @[[STR24:.*]] = {{.*}} [7 x i8] c"^^{D2}\00"
-// CHECK: @_ZN32test_cxx_template_specialization3d21E = {{.*}} ([7 x i8], [7 x i8]* @[[STR24]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s1E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK: @_ZN32test_cxx_template_specialization3d21E = global ptr @[[STR24]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s0E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s1E = global ptr @[[STR23]]
 // CHECK: @[[STR25:.*]] = {{.*}} [12 x i8] c"^{S2=^{S1}}\00"
-// CHECK: @_ZN32test_cxx_template_specialization2s2E = {{.*}} ([12 x i8], [12 x i8]* @[[STR25]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2u0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3td0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK: @_ZN32test_cxx_template_specialization2s2E = global ptr @[[STR25]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2u0E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3td0E = global ptr @[[STR23]]
 // CHECK-NO-TEMP-SPEC: @[[STR26:.*]] = {{.*}} [6 x i8] c"[4^v]\00"
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2a0E = {{.*}} ([6 x i8], [6 x i8]* @[[STR26]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2a0E = global ptr @[[STR26]]
 // CHECK: @[[STR27:.*]] = {{.*}} [11 x i8] c"^{Inner0=}\00"
-// CHECK: @_ZN32test_cxx_template_specialization6inner0E = {{.*}} ([11 x i8], [11 x i8]* @[[STR27]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = {{.*}} ([3 x i8], [3 x i8]* @.str.23, i32 0, i32 0)
+// CHECK: @_ZN32test_cxx_template_specialization6inner0E = global ptr @[[STR27]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = global ptr @.str.23
 // CHECK-TEMP-SPEC: @[[STR34:.*]] = {{.*}} [18 x i8] c"^{Inner1<float>=}\00"
-// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = {{.*}} ([18 x i8], [18 x i8]* @[[STR34]], i32 0, i32 0)
+// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = global ptr @[[STR34]]
 
 const char *b0 = @encode(B0<int>);
 const char *b01 = @encode(B0<int> *);
@@ -340,3 +339,17 @@ const char *a0 = @encode(Array0);
 const char *inner0 = @encode(Outer0<int>::Inner0 *);
 const char *inner1 = @encode(Outer0<int>::Inner1<float> *);
 }
+
+#if __cplusplus >= 202002L
+namespace GH71250 {
+  struct Empty {};
+  struct S {
+    [[no_unique_address]] Empty a;
+    long b;
+    long c;
+  };
+
+  // CHECKCXX20: @_ZN7GH712501sE =  constant [7 x i8] c"{S=qq}\00", align 1
+  extern const char s[] = @encode(S);
+}
+#endif

@@ -26,7 +26,6 @@
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -163,6 +162,9 @@ class Sema;
     /// Arm SVE Vector conversions
     ICK_SVE_Vector_Conversion,
 
+    /// RISC-V RVV Vector conversions
+    ICK_RVV_Vector_Conversion,
+
     /// A vector splat from an arithmetic type
     ICK_Vector_Splat,
 
@@ -189,6 +191,15 @@ class Sema;
 
     /// C-only conversion between pointers with incompatible types
     ICK_Incompatible_Pointer_Conversion,
+
+    /// Fixed point type conversions according to N1169.
+    ICK_Fixed_Point_Conversion,
+
+    /// HLSL vector truncation.
+    ICK_HLSL_Vector_Truncation,
+
+    /// HLSL non-decaying array rvalue cast.
+    ICK_HLSL_Array_RValue,
 
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
@@ -252,10 +263,7 @@ class Sema;
   /// sequence (C++ 13.3.3.1.1). A standard conversion sequence
   /// contains between zero and three conversions. If a particular
   /// conversion is not needed, it will be set to the identity conversion
-  /// (ICK_Identity). Note that the three conversions are
-  /// specified as separate members (rather than in an array) so that
-  /// we can keep the size of a standard conversion sequence to a
-  /// single word.
+  /// (ICK_Identity).
   class StandardConversionSequence {
   public:
     /// First -- The first conversion can be an lvalue-to-rvalue
@@ -269,6 +277,12 @@ class Sema;
     /// pointer-to-member conversion, or boolean conversion.
     ImplicitConversionKind Second : 8;
 
+    /// Element - Between the second and third conversion a vector or matrix
+    /// element conversion may occur. If this is not ICK_Identity this
+    /// conversion is applied element-wise to each element in the vector or
+    /// matrix.
+    ImplicitConversionKind Element : 8;
+
     /// Third - The third conversion can be a qualification conversion
     /// or a function conversion.
     ImplicitConversionKind Third : 8;
@@ -276,40 +290,50 @@ class Sema;
     /// Whether this is the deprecated conversion of a
     /// string literal to a pointer to non-const character data
     /// (C++ 4.2p2).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned DeprecatedStringLiteralToCharPtr : 1;
 
     /// Whether the qualification conversion involves a change in the
     /// Objective-C lifetime (for automatic reference counting).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned QualificationIncludesObjCLifetime : 1;
 
     /// IncompatibleObjC - Whether this is an Objective-C conversion
     /// that we should warn about (if we actually use it).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IncompatibleObjC : 1;
 
     /// ReferenceBinding - True when this is a reference binding
     /// (C++ [over.ics.ref]).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ReferenceBinding : 1;
 
     /// DirectBinding - True when this is a reference binding that is a
     /// direct binding (C++ [dcl.init.ref]).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned DirectBinding : 1;
 
     /// Whether this is an lvalue reference binding (otherwise, it's
     /// an rvalue reference binding).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsLvalueReference : 1;
 
     /// Whether we're binding to a function lvalue.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BindsToFunctionLvalue : 1;
 
     /// Whether we're binding to an rvalue.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BindsToRvalue : 1;
 
     /// Whether this binds an implicit object argument to a
     /// non-static member function without a ref-qualifier.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BindsImplicitObjectArgumentWithoutRefQualifier : 1;
 
     /// Whether this binds a reference to an object with a different
     /// Objective-C lifetime qualifier.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ObjCLifetimeConversionBinding : 1;
 
     /// FromType - The type that this conversion is converting
@@ -355,7 +379,8 @@ class Sema;
     void setAsIdentityConversion();
 
     bool isIdentityConversion() const {
-      return Second == ICK_Identity && Third == ICK_Identity;
+      return Second == ICK_Identity && Element == ICK_Identity &&
+             Third == ICK_Identity;
     }
 
     ImplicitConversionRank getRank() const;
@@ -469,7 +494,9 @@ class Sema;
       unrelated_class,
       bad_qualifiers,
       lvalue_ref_to_rvalue,
-      rvalue_ref_to_lvalue
+      rvalue_ref_to_lvalue,
+      too_few_initializers,
+      too_many_initializers,
     };
 
     // This can be null, e.g. for implicit object arguments.
@@ -519,8 +546,12 @@ class Sema;
     /// specifies that there is no conversion from the source type to
     /// the target type.  AmbiguousConversion represents the unique
     /// ambiguous conversion (C++0x [over.best.ics]p10).
+    /// StaticObjectArgumentConversion represents the conversion rules for
+    /// the synthesized first argument of calls to static member functions
+    /// ([over.best.ics.general]p8).
     enum Kind {
       StandardConversion = 0,
+      StaticObjectArgumentConversion,
       UserDefinedConversion,
       AmbiguousConversion,
       EllipsisConversion,
@@ -533,11 +564,19 @@ class Sema;
     };
 
     /// ConversionKind - The kind of implicit conversion sequence.
-    unsigned ConversionKind : 30;
+    LLVM_PREFERRED_TYPE(Kind)
+    unsigned ConversionKind : 31;
 
-    /// Whether the target is really a std::initializer_list, and the
-    /// sequence only represents the worst element conversion.
-    unsigned StdInitializerListElement : 1;
+    // Whether the initializer list was of an incomplete array.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned InitializerListOfIncompleteArray : 1;
+
+    /// When initializing an array or std::initializer_list from an
+    /// initializer-list, this is the array or std::initializer_list type being
+    /// initialized. The remainder of the conversion sequence, including ToType,
+    /// describe the worst conversion of an initializer to an element of the
+    /// array or std::initializer_list. (Note, 'worst' is not well defined.)
+    QualType InitializerListContainerType;
 
     void setKind(Kind K) {
       destruct();
@@ -568,16 +607,21 @@ class Sema;
     };
 
     ImplicitConversionSequence()
-        : ConversionKind(Uninitialized), StdInitializerListElement(false) {
+        : ConversionKind(Uninitialized),
+          InitializerListOfIncompleteArray(false) {
       Standard.setAsIdentityConversion();
     }
 
     ImplicitConversionSequence(const ImplicitConversionSequence &Other)
         : ConversionKind(Other.ConversionKind),
-          StdInitializerListElement(Other.StdInitializerListElement) {
+          InitializerListOfIncompleteArray(
+              Other.InitializerListOfIncompleteArray),
+          InitializerListContainerType(Other.InitializerListContainerType) {
       switch (ConversionKind) {
       case Uninitialized: break;
       case StandardConversion: Standard = Other.Standard; break;
+      case StaticObjectArgumentConversion:
+        break;
       case UserDefinedConversion: UserDefined = Other.UserDefined; break;
       case AmbiguousConversion: Ambiguous.copyFrom(Other.Ambiguous); break;
       case EllipsisConversion: break;
@@ -611,6 +655,7 @@ class Sema;
     unsigned getKindRank() const {
       switch (getKind()) {
       case StandardConversion:
+      case StaticObjectArgumentConversion:
         return 0;
 
       case UserDefinedConversion:
@@ -629,6 +674,9 @@ class Sema;
 
     bool isBad() const { return getKind() == BadConversion; }
     bool isStandard() const { return getKind() == StandardConversion; }
+    bool isStaticObjectArgument() const {
+      return getKind() == StaticObjectArgumentConversion;
+    }
     bool isEllipsis() const { return getKind() == EllipsisConversion; }
     bool isAmbiguous() const { return getKind() == AmbiguousConversion; }
     bool isUserDefined() const { return getKind() == UserDefinedConversion; }
@@ -654,6 +702,7 @@ class Sema;
     }
 
     void setStandard() { setKind(StandardConversion); }
+    void setStaticObjectArgument() { setKind(StaticObjectArgumentConversion); }
     void setEllipsis() { setKind(EllipsisConversion); }
     void setUserDefined() { setKind(UserDefinedConversion); }
 
@@ -670,14 +719,22 @@ class Sema;
       Standard.setAllToTypes(T);
     }
 
-    /// Whether the target is really a std::initializer_list, and the
-    /// sequence only represents the worst element conversion.
-    bool isStdInitializerListElement() const {
-      return StdInitializerListElement;
+    // True iff this is a conversion sequence from an initializer list to an
+    // array or std::initializer.
+    bool hasInitializerListContainerType() const {
+      return !InitializerListContainerType.isNull();
     }
-
-    void setStdInitializerListElement(bool V = true) {
-      StdInitializerListElement = V;
+    void setInitializerListContainerType(QualType T, bool IA) {
+      InitializerListContainerType = T;
+      InitializerListOfIncompleteArray = IA;
+    }
+    bool isInitializerListOfIncompleteArray() const {
+      return InitializerListOfIncompleteArray;
+    }
+    QualType getInitializerListContainerType() const {
+      assert(hasInitializerListContainerType() &&
+             "not initializer list container");
+      return InitializerListContainerType;
     }
 
     /// Form an "implicit" conversion sequence from nullptr_t to bool, for a
@@ -776,6 +833,10 @@ class Sema;
     /// This candidate was not viable because its associated constraints were
     /// not satisfied.
     ovl_fail_constraints_not_satisfied,
+
+    /// This candidate was not viable because it has internal linkage and is
+    /// from a different module unit than the use.
+    ovl_fail_module_mismatched,
   };
 
   /// A list of implicit conversion sequences for the arguments of an
@@ -842,6 +903,7 @@ class Sema;
     CallExpr::ADLCallKind IsADLCandidate : 1;
 
     /// Whether this is a rewritten candidate, and if so, of what kind?
+    LLVM_PREFERRED_TYPE(OverloadCandidateRewriteKind)
     unsigned RewriteKind : 2;
 
     /// FailureKind - The reason why this candidate is not viable.
@@ -905,6 +967,8 @@ class Sema;
       return ExplicitCallArguments;
     }
 
+    bool NotValidBecauseConstraintExprHasError() const;
+
   private:
     friend class OverloadCandidateSet;
     OverloadCandidate()
@@ -941,12 +1005,16 @@ class Sema;
     /// functions to a candidate set.
     struct OperatorRewriteInfo {
       OperatorRewriteInfo()
-          : OriginalOperator(OO_None), AllowRewrittenCandidates(false) {}
-      OperatorRewriteInfo(OverloadedOperatorKind Op, bool AllowRewritten)
-          : OriginalOperator(Op), AllowRewrittenCandidates(AllowRewritten) {}
+          : OriginalOperator(OO_None), OpLoc(), AllowRewrittenCandidates(false) {}
+      OperatorRewriteInfo(OverloadedOperatorKind Op, SourceLocation OpLoc,
+                          bool AllowRewritten)
+          : OriginalOperator(Op), OpLoc(OpLoc),
+            AllowRewrittenCandidates(AllowRewritten) {}
 
       /// The original operator as written in the source.
       OverloadedOperatorKind OriginalOperator;
+      /// The source location of the operator.
+      SourceLocation OpLoc;
       /// Whether we should include rewritten candidates in the overload set.
       bool AllowRewrittenCandidates;
 
@@ -982,22 +1050,23 @@ class Sema;
           CRK = OverloadCandidateRewriteKind(CRK | CRK_Reversed);
         return CRK;
       }
-
       /// Determines whether this operator could be implemented by a function
       /// with reversed parameter order.
       bool isReversible() {
         return AllowRewrittenCandidates && OriginalOperator &&
                (getRewrittenOverloadedOperator(OriginalOperator) != OO_None ||
-                shouldAddReversed(OriginalOperator));
+                allowsReversed(OriginalOperator));
       }
 
-      /// Determine whether we should consider looking for and adding reversed
-      /// candidates for operator Op.
-      bool shouldAddReversed(OverloadedOperatorKind Op);
+      /// Determine whether reversing parameter order is allowed for operator
+      /// Op.
+      bool allowsReversed(OverloadedOperatorKind Op);
 
       /// Determine whether we should add a rewritten candidate for \p FD with
       /// reversed parameter order.
-      bool shouldAddReversed(ASTContext &Ctx, const FunctionDecl *FD);
+      /// \param OriginalArgs are the original non reversed arguments.
+      bool shouldAddReversed(Sema &S, ArrayRef<Expr *> OriginalArgs,
+                             FunctionDecl *FD);
     };
 
   private:
@@ -1048,9 +1117,6 @@ class Sema;
 
     void destroyCandidates();
 
-    /// Whether diagnostics should be deferred.
-    bool shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args, SourceLocation OpLoc);
-
   public:
     OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK,
                          OperatorRewriteInfo RewriteInfo = {})
@@ -1062,6 +1128,9 @@ class Sema;
     SourceLocation getLocation() const { return Loc; }
     CandidateSetKind getKind() const { return Kind; }
     OperatorRewriteInfo getRewriteInfo() const { return RewriteInfo; }
+
+    /// Whether diagnostics should be deferred.
+    bool shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args, SourceLocation OpLoc);
 
     /// Determine when this overload candidate will be new to the
     /// overload set.
@@ -1105,8 +1174,9 @@ class Sema;
 
     /// Add a new candidate with NumConversions conversion sequence slots
     /// to the overload set.
-    OverloadCandidate &addCandidate(unsigned NumConversions = 0,
-                                    ConversionSequenceList Conversions = None) {
+    OverloadCandidate &
+    addCandidate(unsigned NumConversions = 0,
+                 ConversionSequenceList Conversions = std::nullopt) {
       assert((Conversions.empty() || Conversions.size() == NumConversions) &&
              "preallocated conversion sequence has wrong length");
 
@@ -1183,6 +1253,20 @@ class Sema;
     Info.Constructor = dyn_cast<CXXConstructorDecl>(D);
     return Info;
   }
+
+  // Returns false if signature help is relevant despite number of arguments
+  // exceeding parameters. Specifically, it returns false when
+  // PartialOverloading is true and one of the following:
+  // * Function is variadic
+  // * Function is template variadic
+  // * Function is an instantiation of template variadic function
+  // The last case may seem strange. The idea is that if we added one more
+  // argument, we'd end up with a function similar to Function. Since, in the
+  // context of signature help and/or code completion, we do not know what the
+  // type of the next argument (that the user is typing) will be, this is as
+  // good candidate as we can get, despite the fact that it takes one less
+  // parameter.
+  bool shouldEnforceArgLimit(bool PartialOverloading, FunctionDecl *Function);
 
 } // namespace clang
 

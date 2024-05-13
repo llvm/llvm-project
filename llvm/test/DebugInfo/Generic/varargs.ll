@@ -1,5 +1,5 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj -o %t.o %s
-; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s
 ;
 ; Test debug info for variadic function arguments.
 ; Created from tools/clang/tests/CodeGenCXX/debug-info-varargs.cpp
@@ -12,7 +12,7 @@
 ;
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}} "a"
+; CHECK: DW_AT_name ("a")
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
@@ -22,7 +22,7 @@
 ;
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}} "b"
+; CHECK: DW_AT_name ("b")
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
@@ -52,12 +52,12 @@
 define void @_Z1biz(i32 %c, ...) #0 !dbg !14 {
   %1 = alloca i32, align 4
   %a = alloca %struct.A, align 1
-  %fptr = alloca void (i32, ...)*, align 8
-  store i32 %c, i32* %1, align 4
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !21, metadata !DIExpression()), !dbg !22
-  call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !23, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.declare(metadata void (i32, ...)** %fptr, metadata !25, metadata !DIExpression(DW_OP_deref)), !dbg !27
-  store void (i32, ...)* @_Z1biz, void (i32, ...)** %fptr, align 8, !dbg !27
+  %fptr = alloca ptr, align 8
+  store i32 %c, ptr %1, align 4
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !21, metadata !DIExpression()), !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !23, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %fptr, metadata !25, metadata !DIExpression(DW_OP_deref)), !dbg !27
+  store ptr @_Z1biz, ptr %fptr, align 8, !dbg !27
   ret void, !dbg !28
 }
 
@@ -86,7 +86,7 @@ attributes #1 = { nounwind readnone }
 !15 = !DIFile(filename: "llvm/tools/clang/test/CodeGenCXX/debug-info-varargs.cpp", directory: "radar/13690847")
 !16 = !DISubroutineType(types: !17)
 !17 = !{null, !10, null}
-!18 = !{i32 2, !"Dwarf Version", i32 2}
+!18 = !{i32 2, !"Dwarf Version", i32 3}
 !19 = !{i32 1, !"Debug Info Version", i32 3}
 !20 = !{!"clang version 3.5 "}
 !21 = !DILocalVariable(name: "c", line: 13, arg: 1, scope: !14, file: !15, type: !10)

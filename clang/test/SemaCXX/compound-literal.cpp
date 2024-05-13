@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++03 -verify -ast-dump %s > %t-03
+// RUN: %clang_cc1 -std=c++03 -verify -ast-dump %s > %t-03
 // RUN: FileCheck --input-file=%t-03 %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -ast-dump %s > %t-11
+// RUN: %clang_cc1 -std=c++11 -verify -ast-dump %s > %t-11
 // RUN: FileCheck --input-file=%t-11 %s
 // RUN: FileCheck --input-file=%t-11 %s --check-prefix=CHECK-CXX11
+// RUN: %clang_cc1 -verify -std=c++17 %s
 
 // http://llvm.org/PR7905
 namespace PR7905 {
@@ -36,8 +37,8 @@ namespace brace_initializers {
 
   POD p = (POD){1, 2};
   // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::POD'
-  // CHECK: CompoundLiteralExpr {{.*}} 'brace_initializers::POD'
-  // CHECK-NEXT: InitListExpr {{.*}} 'brace_initializers::POD'
+  // CHECK: CompoundLiteralExpr {{.*}} 'POD':'brace_initializers::POD'
+  // CHECK-NEXT: InitListExpr {{.*}} 'POD':'brace_initializers::POD'
   // CHECK-NEXT: ConstantExpr {{.*}}
   // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
   // CHECK-NEXT: ConstantExpr {{.*}}
@@ -45,34 +46,34 @@ namespace brace_initializers {
 
   void test() {
     (void)(POD){1, 2};
-    // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::POD'
-    // CHECK-NOT: ConstantExpr {{.*}} 'brace_initializers::POD'
-    // CHECK: CompoundLiteralExpr {{.*}} 'brace_initializers::POD'
-    // CHECK-NEXT: InitListExpr {{.*}} 'brace_initializers::POD'
+    // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'POD':'brace_initializers::POD'
+    // CHECK-NOT: ConstantExpr {{.*}} 'POD':'brace_initializers::POD'
+    // CHECK: CompoundLiteralExpr {{.*}} 'POD':'brace_initializers::POD'
+    // CHECK-NEXT: InitListExpr {{.*}} 'POD':'brace_initializers::POD'
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
     (void)(HasDtor){1, 2};
-    // CHECK: CXXBindTemporaryExpr {{.*}} 'brace_initializers::HasDtor'
-    // CHECK-NEXT: CompoundLiteralExpr {{.*}} 'brace_initializers::HasDtor'
-    // CHECK-NEXT: InitListExpr {{.*}} 'brace_initializers::HasDtor'
+    // CHECK: CXXBindTemporaryExpr {{.*}} 'HasDtor':'brace_initializers::HasDtor'
+    // CHECK-NEXT: CompoundLiteralExpr {{.*}} 'HasDtor':'brace_initializers::HasDtor'
+    // CHECK-NEXT: InitListExpr {{.*}} 'HasDtor':'brace_initializers::HasDtor'
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
 #if __cplusplus >= 201103L
     (void)(HasCtor){1, 2};
-    // CHECK-CXX11-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::HasCtor'
-    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'brace_initializers::HasCtor'
-    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'brace_initializers::HasCtor'
-    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'brace_initializers::HasCtor'
+    // CHECK-CXX11-NOT: CXXBindTemporaryExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
+    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
+    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
+    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
     (void)(HasCtorDtor){1, 2};
-    // CHECK-CXX11: CXXBindTemporaryExpr {{.*}} 'brace_initializers::HasCtorDtor'
-    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'brace_initializers::HasCtorDtor'
-    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'brace_initializers::HasCtorDtor'
-    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11: CXXBindTemporaryExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 2{{$}}
 #endif
@@ -85,7 +86,7 @@ namespace brace_initializers {
   };
 
   void testPrivateDtor() {
-    (void)(PrivateDtor){1, 2}; // expected-error {{temporary of type 'brace_initializers::PrivateDtor' has private destructor}}
+    (void)(PrivateDtor){1, 2}; // expected-error {{temporary of type 'PrivateDtor' has private destructor}}
   }
 }
 
@@ -108,3 +109,23 @@ int computed_with_lambda = [] {
   return result;
 }();
 #endif
+
+namespace DynamicFileScopeLiteral {
+// This covers the case where we have a file-scope compound literal with a
+// non-constant initializer in C++. Previously, we had a bug where Clang forgot
+// to consider initializer list elements for bases.
+struct Empty {};
+struct Foo : Empty { // expected-note 0+ {{candidate constructor}}
+  int x;
+  int y;
+};
+int f();
+#if __cplusplus < 201103L
+// expected-error@+6 {{non-aggregate type 'Foo' cannot be initialized with an initializer list}}
+#elif __cplusplus < 201703L
+// expected-error@+4 {{no matching constructor}}
+#else
+// expected-error@+2 {{initializer element is not a compile-time constant}}
+#endif
+Foo o = (Foo){ {}, 1, f() };
+}

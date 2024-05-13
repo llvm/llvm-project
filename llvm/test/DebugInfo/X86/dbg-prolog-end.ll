@@ -8,30 +8,30 @@ define i32 @foo(i32 %i) nounwind ssp !dbg !1 {
 entry:
   %i.addr = alloca i32, align 4
   %j = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !7, metadata !DIExpression()), !dbg !8
-  call void @llvm.dbg.declare(metadata i32* %j, metadata !9, metadata !DIExpression()), !dbg !11
-  store i32 2, i32* %j, align 4, !dbg !12
-  %tmp = load i32, i32* %j, align 4, !dbg !13
+  store i32 %i, ptr %i.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !7, metadata !DIExpression()), !dbg !8
+  call void @llvm.dbg.declare(metadata ptr %j, metadata !9, metadata !DIExpression()), !dbg !11
+  store i32 2, ptr %j, align 4, !dbg !12
+  %tmp = load i32, ptr %j, align 4, !dbg !13
   %inc = add nsw i32 %tmp, 1, !dbg !13
-  store i32 %inc, i32* %j, align 4, !dbg !13
-  %tmp1 = load i32, i32* %j, align 4, !dbg !14
-  %tmp2 = load i32, i32* %i.addr, align 4, !dbg !14
+  store i32 %inc, ptr %j, align 4, !dbg !13
+  %tmp1 = load i32, ptr %j, align 4, !dbg !14
+  %tmp2 = load i32, ptr %i.addr, align 4, !dbg !14
   %add = add nsw i32 %tmp1, %tmp2, !dbg !14
-  store i32 %add, i32* %j, align 4, !dbg !14
-  %tmp3 = load i32, i32* %j, align 4, !dbg !15
+  store i32 %add, ptr %j, align 4, !dbg !14
+  %tmp3 = load i32, ptr %j, align 4, !dbg !15
   ret i32 %tmp3, !dbg !15
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 ;CHECK-LABEL: main:
-;CHECK: .loc 1 0 0 prologue_end
+;CHECK: .loc 1 8 2 prologue_end
 
 define i32 @main() nounwind ssp !dbg !6 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, !dbg !22
+  store i32 0, ptr %retval, !dbg !22
   %call = call i32 @foo(i32 21), !dbg !16
   ret i32 %call, !dbg !16
 }

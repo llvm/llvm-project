@@ -16,9 +16,9 @@ foo:
 ## gcc does generate a DW_TAG_compile_unit in this case, with or without
 ## -g on the command line, but we do not.
 # CHECK-EMPTY:
-# CHECK_NEXT: .debug_line
+# CHECK-NEXT: .debug_line
 # CHECK: file_names[ 1]:
 # CHECK-NEXT: name: "a.c"
 # CHECK-NEXT: dir_index: 0
-# CHECK: 0x{{0+}}0 1 1 1 0 0 is_stmt
-# CHECK: 0x{{0+}}1 1 1 1 0 0 is_stmt end_sequence
+# CHECK: 0x{{0+}}0 1 1 1 0 0 0 is_stmt
+# CHECK: 0x{{0+}}1 1 1 1 0 0 0 is_stmt end_sequence

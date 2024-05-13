@@ -13,6 +13,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
@@ -61,54 +62,33 @@ inline bool operator!=(WaitStatus a, WaitStatus b) { return !(a == b); }
 /// Host is a class that answers information about the host operating system.
 class Host {
 public:
-  typedef std::function<bool(
-      lldb::pid_t pid, bool exited,
-      int signal,  // Zero for no signal
-      int status)> // Exit value of process if signal is zero
+  typedef std::function<void(lldb::pid_t pid,
+                             int signal,  // Zero for no signal
+                             int status)> // Exit value of process if signal is
+                                          // zero
       MonitorChildProcessCallback;
 
   /// Start monitoring a child process.
   ///
   /// Allows easy monitoring of child processes. \a callback will be called
-  /// when the child process exits or if it gets a signal. The callback will
-  /// only be called with signals if \a monitor_signals is \b true. \a
-  /// callback will usually be called from another thread so the callback
-  /// function must be thread safe.
-  ///
-  /// When the callback gets called, the return value indicates if monitoring
-  /// should stop. If \b true is returned from \a callback the information
-  /// will be removed. If \b false is returned then monitoring will continue.
-  /// If the child process exits, the monitoring will automatically stop after
-  /// the callback returned regardless of the callback return value.
+  /// when the child process exits or if it dies from a signal.
   ///
   /// \param[in] callback
   ///     A function callback to call when a child receives a signal
-  ///     (if \a monitor_signals is true) or a child exits.
+  ///     or exits.
   ///
   /// \param[in] pid
-  ///     The process ID of a child process to monitor, -1 for all
-  ///     processes.
-  ///
-  /// \param[in] monitor_signals
-  ///     If \b true the callback will get called when the child
-  ///     process gets a signal. If \b false, the callback will only
-  ///     get called if the child process exits.
+  ///     The process ID of a child process to monitor.
   ///
   /// \return
   ///     A thread handle that can be used to cancel the thread that
   ///     was spawned to monitor \a pid.
-  ///
-  /// \see static void Host::StopMonitoringChildProcess (uint32_t)
   static llvm::Expected<HostThread>
   StartMonitoringChildProcess(const MonitorChildProcessCallback &callback,
-                              lldb::pid_t pid, bool monitor_signals);
+                              lldb::pid_t pid);
 
-  enum SystemLogType { eSystemLogWarning, eSystemLogError };
-
-  static void SystemLog(SystemLogType type, const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
-
-  static void SystemLog(SystemLogType type, const char *format, va_list args);
+  /// Emit the given message to the operating system log.
+  static void SystemLog(lldb::Severity severity, llvm::StringRef message);
 
   /// Get the process ID for the calling process.
   ///
@@ -256,8 +236,16 @@ public:
                                 bool run_in_shell = true,
                                 bool hide_stderr = false);
 
-  static bool OpenFileInExternalEditor(const FileSpec &file_spec,
-                                       uint32_t line_no);
+  static llvm::Error OpenFileInExternalEditor(llvm::StringRef editor,
+                                              const FileSpec &file_spec,
+                                              uint32_t line_no);
+
+  /// Check if we're running in an interactive graphical session.
+  ///
+  /// \return
+  ///     True if we're running in an interactive graphical session. False if
+  ///     we're not or don't know.
+  static bool IsInteractiveGraphicSession();
 
   static Environment GetEnvironment();
 
@@ -267,6 +255,19 @@ public:
 protected:
   static uint32_t FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                     ProcessInstanceInfoList &proc_infos);
+};
+
+/// Log handler that emits log messages to the operating system log.
+class SystemLogHandler : public LogHandler {
+public:
+  SystemLogHandler();
+  void Emit(llvm::StringRef message) override;
+
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
+
+private:
+  static char ID;
 };
 
 } // namespace lldb_private

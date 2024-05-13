@@ -1,4 +1,5 @@
 import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 symlinks = [
@@ -23,18 +24,19 @@ foreach(target, symlinks) {
 
 # //:llvm-ar depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
-  deps = []
+  deps = [ ":llvm-ar" ]
   foreach(target, symlinks) {
     deps += [ ":$target" ]
   }
 }
 
-executable("llvm-ar") {
+driver_executable("llvm-ar") {
   deps = [
     "//llvm/lib/IR",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/ToolDrivers/llvm-dlltool:DlltoolDriver",
     "//llvm/lib/ToolDrivers/llvm-lib:LibDriver",
   ]

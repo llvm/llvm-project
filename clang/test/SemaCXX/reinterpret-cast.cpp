@@ -25,6 +25,9 @@ void self_conversion()
   const int structure::*psi = 0;
   (void)reinterpret_cast<const int structure::*>(psi);
 
+  const int ci = 0;
+  (void)reinterpret_cast<const int>(i);
+
   structure s;
   (void)reinterpret_cast<structure>(s); // expected-error {{reinterpret_cast from 'structure' to 'structure' is not allowed}}
 
@@ -68,6 +71,16 @@ void constness()
   (void)reinterpret_cast<int const*>(ip);
   // Valid: T*** -> T2 const* const* const*
   (void)reinterpret_cast<int const* const* const*>(ipppc);
+
+  // C++ [expr.type]/8.2.2:
+  //   If a pr-value initially has the type cv-T, where T is a
+  //   cv-unqualified non-class, non-array type, the type of the
+  //   expression is adjusted to T prior to any further analysis.
+  int i = 0;
+  // Valid: T -> T (top level const is ignored)
+  (void)reinterpret_cast<const int>(i);
+  // Valid: T* -> T* (top level const is ignored)
+  (void)reinterpret_cast<int *const>(ip);
 }
 
 void fnptrs()
@@ -113,13 +126,12 @@ void (A::*a)();
 void (B::*b)() = reinterpret_cast<void (B::*)()>(a);
 }
 
-// <rdar://problem/8018292>
 void const_arrays() {
   typedef char STRING[10];
   const STRING *s;
   const char *c;
 
-  (void)reinterpret_cast<char *>(s); // expected-error {{reinterpret_cast from 'const STRING *' (aka 'char const (*)[10]') to 'char *' casts away qualifiers}}
+  (void)reinterpret_cast<char *>(s); // expected-error {{reinterpret_cast from 'const STRING *' (aka 'const char (*)[10]') to 'char *' casts away qualifiers}}
   (void)reinterpret_cast<const STRING *>(c);
 }
 
@@ -201,14 +213,14 @@ void dereference_reinterpret_cast() {
   (void)*reinterpret_cast<float*>(v_ptr);
 
   // Casting to void pointer
-  (void)*reinterpret_cast<void*>(&a); // expected-warning {{ISO C++ does not allow}}
-  (void)*reinterpret_cast<void*>(&b); // expected-warning {{ISO C++ does not allow}}
-  (void)*reinterpret_cast<void*>(&l); // expected-warning {{ISO C++ does not allow}}
-  (void)*reinterpret_cast<void*>(&d); // expected-warning {{ISO C++ does not allow}}
-  (void)*reinterpret_cast<void*>(&f); // expected-warning {{ISO C++ does not allow}}
+  (void)*reinterpret_cast<void*>(&a); // expected-error {{indirection not permitted on operand of type 'void *'}}
+  (void)*reinterpret_cast<void*>(&b); // expected-error {{indirection not permitted on operand of type 'void *'}}
+  (void)*reinterpret_cast<void*>(&l); // expected-error {{indirection not permitted on operand of type 'void *'}}
+  (void)*reinterpret_cast<void*>(&d); // expected-error {{indirection not permitted on operand of type 'void *'}}
+  (void)*reinterpret_cast<void*>(&f); // expected-error {{indirection not permitted on operand of type 'void *'}}
 }
 
-void reinterpret_cast_whitelist () {
+void reinterpret_cast_allowlist () {
   // the dynamic type of the object
   int a;
   float b;

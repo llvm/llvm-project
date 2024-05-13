@@ -17,26 +17,26 @@
 
 using namespace llvm;
 
-Optional<RegOrConstant>
+std::optional<RegOrConstant>
 AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI) {
   if (auto Splat = getVectorSplat(MI, MRI))
     return Splat;
   if (MI.getOpcode() != AArch64::G_DUP)
-    return None;
+    return std::nullopt;
   Register Src = MI.getOperand(1).getReg();
   if (auto ValAndVReg =
-          getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI))
+          getAnyConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI))
     return RegOrConstant(ValAndVReg->Value.getSExtValue());
   return RegOrConstant(Src);
 }
 
-Optional<int64_t>
+std::optional<int64_t>
 AArch64GISelUtils::getAArch64VectorSplatScalar(const MachineInstr &MI,
                                                const MachineRegisterInfo &MRI) {
   auto Splat = getAArch64VectorSplat(MI, MRI);
   if (!Splat || Splat->isReg())
-    return None;
+    return std::nullopt;
   return Splat->getCst();
 }
 
@@ -56,7 +56,7 @@ bool AArch64GISelUtils::isCMN(const MachineInstr *MaybeSub,
       !CmpInst::isEquality(Pred))
     return false;
   auto MaybeZero =
-      getConstantVRegValWithLookThrough(MaybeSub->getOperand(1).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(MaybeSub->getOperand(1).getReg(), MRI);
   return MaybeZero && MaybeZero->Value.getZExtValue() == 0;
 }
 
@@ -68,7 +68,8 @@ bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   if (!TLI.getLibcallName(RTLIB::BZERO))
     return false;
-  auto Zero = getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
+  auto Zero =
+      getIConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
   if (!Zero || Zero->Value.getSExtValue() != 0)
     return false;
 
@@ -78,8 +79,8 @@ bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
   if (!MinSize) {
     // If the size is known, check it. If it is not known, assume using bzero is
     // better.
-    if (auto Size =
-            getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
+    if (auto Size = getIConstantVRegValWithLookThrough(
+            MI.getOperand(2).getReg(), MRI)) {
       if (Size->Value.getSExtValue() <= 256)
         return false;
     }
@@ -146,6 +147,12 @@ void AArch64GISelUtils::changeFCMPPredToAArch64CC(
   case CmpInst::FCMP_UNE:
     CondCode = AArch64CC::NE;
     break;
+  case CmpInst::FCMP_TRUE:
+    CondCode = AArch64CC::AL;
+    break;
+  case CmpInst::FCMP_FALSE:
+    CondCode = AArch64CC::NV;
+    break;
   }
 }
 
@@ -160,7 +167,7 @@ void AArch64GISelUtils::changeVectorFCMPPredToAArch64CC(
     break;
   case CmpInst::FCMP_UNO:
     Invert = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CmpInst::FCMP_ORD:
     CondCode = AArch64CC::MI;
     CondCode2 = AArch64CC::GE;

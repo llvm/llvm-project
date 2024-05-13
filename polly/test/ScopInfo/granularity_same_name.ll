@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb           -polly-use-llvm-names=0 -polly-scops -analyze < %s | FileCheck %s -match-full-lines -check-prefix=IDX
-; RUN: opt %loadPolly -polly-stmt-granularity=bb           -polly-use-llvm-names=1 -polly-scops -analyze < %s | FileCheck %s -match-full-lines -check-prefix=BB
-; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-use-llvm-names=0 -polly-scops -analyze < %s | FileCheck %s -match-full-lines -check-prefix=IDX
-; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-use-llvm-names=1 -polly-scops -analyze < %s | FileCheck %s -match-full-lines -check-prefix=BB
+; RUN: opt %loadPolly -polly-stmt-granularity=bb           -polly-use-llvm-names=0 -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines -check-prefix=IDX
+; RUN: opt %loadPolly -polly-stmt-granularity=bb           -polly-use-llvm-names=1 -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines -check-prefix=BB
+; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-use-llvm-names=0 -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines -check-prefix=IDX
+; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-use-llvm-names=1 -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines -check-prefix=BB
 ;
 ; Check that the statement has the same name, regardless of how the
 ; basic block is split into multiple statements.
@@ -15,7 +15,7 @@
 ;   double unrelatedB = 21.0 + 21.0;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -26,7 +26,7 @@ for:
 
     body:
       %unrelatedA = fadd double 21.0, 21.0
-      store double 0.0, double* %A
+      store double 0.0, ptr %A
       %unrelatedB = fadd double 21.0, 21.0
       br label %inc
 

@@ -3,17 +3,18 @@
 ; Also make sure that the DISubprograms reference the generated unit.
 ; make sure that if there are two outlined functions in the program, 
 ; RUN: llc %s -verify-machineinstrs -enable-machine-outliner -mtriple=x86_64-apple-darwin -o /dev/null -print-after=machine-outliner
+; RUN: llc --try-experimental-debuginfo-iterators %s -verify-machineinstrs -enable-machine-outliner -mtriple=x86_64-apple-darwin -o /dev/null -print-after=machine-outliner
 define void @f6() #0 !dbg !8 {
 entry:
   %dog = alloca i32, align 4
   %cat = alloca i32, align 4
   %pangolin = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %dog, metadata !11, metadata !DIExpression()), !dbg !13
-  store i32 16, i32* %dog, align 4, !dbg !13
-  call void @llvm.dbg.declare(metadata i32* %cat, metadata !14, metadata !DIExpression()), !dbg !15
-  store i32 32, i32* %cat, align 4, !dbg !15
-  call void @llvm.dbg.declare(metadata i32* %pangolin, metadata !16, metadata !DIExpression()), !dbg !17
-  store i32 48, i32* %pangolin, align 4, !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %dog, metadata !11, metadata !DIExpression()), !dbg !13
+  store i32 16, ptr %dog, align 4, !dbg !13
+  call void @llvm.dbg.declare(metadata ptr %cat, metadata !14, metadata !DIExpression()), !dbg !15
+  store i32 32, ptr %cat, align 4, !dbg !15
+  call void @llvm.dbg.declare(metadata ptr %pangolin, metadata !16, metadata !DIExpression()), !dbg !17
+  store i32 48, ptr %pangolin, align 4, !dbg !17
   ret void, !dbg !18
 }
 
@@ -24,12 +25,12 @@ entry:
   %dog = alloca i32, align 4
   %cat = alloca i32, align 4
   %pangolin = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %dog, metadata !20, metadata !DIExpression()), !dbg !21
-  store i32 16, i32* %dog, align 4, !dbg !21
-  call void @llvm.dbg.declare(metadata i32* %cat, metadata !22, metadata !DIExpression()), !dbg !23
-  store i32 32, i32* %cat, align 4, !dbg !23
-  call void @llvm.dbg.declare(metadata i32* %pangolin, metadata !24, metadata !DIExpression()), !dbg !25
-  store i32 48, i32* %pangolin, align 4, !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %dog, metadata !20, metadata !DIExpression()), !dbg !21
+  store i32 16, ptr %dog, align 4, !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %cat, metadata !22, metadata !DIExpression()), !dbg !23
+  store i32 32, ptr %cat, align 4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %pangolin, metadata !24, metadata !DIExpression()), !dbg !25
+  store i32 48, ptr %pangolin, align 4, !dbg !25
   ret void, !dbg !26
 }
 
@@ -38,12 +39,12 @@ entry:
   %dog = alloca i32, align 4
   %cat = alloca i32, align 4
   %pangolin = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %dog, metadata !28, metadata !DIExpression()), !dbg !29
-  store i32 16, i32* %dog, align 4, !dbg !29
-  call void @llvm.dbg.declare(metadata i32* %cat, metadata !30, metadata !DIExpression()), !dbg !31
-  store i32 32, i32* %cat, align 4, !dbg !31
-  call void @llvm.dbg.declare(metadata i32* %pangolin, metadata !32, metadata !DIExpression()), !dbg !33
-  store i32 48, i32* %pangolin, align 4, !dbg !33
+  call void @llvm.dbg.declare(metadata ptr %dog, metadata !28, metadata !DIExpression()), !dbg !29
+  store i32 16, ptr %dog, align 4, !dbg !29
+  call void @llvm.dbg.declare(metadata ptr %cat, metadata !30, metadata !DIExpression()), !dbg !31
+  store i32 32, ptr %cat, align 4, !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %pangolin, metadata !32, metadata !DIExpression()), !dbg !33
+  store i32 48, ptr %pangolin, align 4, !dbg !33
   ret void, !dbg !34
 }
 
@@ -52,14 +53,14 @@ entry:
   %dog = alloca i32, align 4
   %cat = alloca i32, align 4
   %pangolin = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %dog, metadata !38, metadata !DIExpression()), !dbg !39
-  store i32 1, i32* %dog, align 4, !dbg !39
-  call void @llvm.dbg.declare(metadata i32* %cat, metadata !40, metadata !DIExpression()), !dbg !41
-  store i32 2, i32* %cat, align 4, !dbg !41
-  call void @llvm.dbg.declare(metadata i32* %pangolin, metadata !42, metadata !DIExpression()), !dbg !43
-  store i32 3, i32* %pangolin, align 4, !dbg !43
-  store i32 16, i32* %dog, align 4, !dbg !44
-  %0 = load i32, i32* %dog, align 4, !dbg !45
+  call void @llvm.dbg.declare(metadata ptr %dog, metadata !38, metadata !DIExpression()), !dbg !39
+  store i32 1, ptr %dog, align 4, !dbg !39
+  call void @llvm.dbg.declare(metadata ptr %cat, metadata !40, metadata !DIExpression()), !dbg !41
+  store i32 2, ptr %cat, align 4, !dbg !41
+  call void @llvm.dbg.declare(metadata ptr %pangolin, metadata !42, metadata !DIExpression()), !dbg !43
+  store i32 3, ptr %pangolin, align 4, !dbg !43
+  store i32 16, ptr %dog, align 4, !dbg !44
+  %0 = load i32, ptr %dog, align 4, !dbg !45
   ret i32 %0, !dbg !46
 }
 
@@ -68,14 +69,14 @@ entry:
   %dog = alloca i32, align 4
   %cat = alloca i32, align 4
   %pangolin = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %dog, metadata !48, metadata !DIExpression()), !dbg !49
-  store i32 1, i32* %dog, align 4, !dbg !49
-  call void @llvm.dbg.declare(metadata i32* %cat, metadata !50, metadata !DIExpression()), !dbg !51
-  store i32 2, i32* %cat, align 4, !dbg !51
-  call void @llvm.dbg.declare(metadata i32* %pangolin, metadata !52, metadata !DIExpression()), !dbg !53
-  store i32 3, i32* %pangolin, align 4, !dbg !53
-  store i32 16, i32* %dog, align 4, !dbg !54
-  %0 = load i32, i32* %dog, align 4, !dbg !55
+  call void @llvm.dbg.declare(metadata ptr %dog, metadata !48, metadata !DIExpression()), !dbg !49
+  store i32 1, ptr %dog, align 4, !dbg !49
+  call void @llvm.dbg.declare(metadata ptr %cat, metadata !50, metadata !DIExpression()), !dbg !51
+  store i32 2, ptr %cat, align 4, !dbg !51
+  call void @llvm.dbg.declare(metadata ptr %pangolin, metadata !52, metadata !DIExpression()), !dbg !53
+  store i32 3, ptr %pangolin, align 4, !dbg !53
+  store i32 16, ptr %dog, align 4, !dbg !54
+  %0 = load i32, ptr %dog, align 4, !dbg !55
   ret i32 %0, !dbg !56
 }
 
@@ -84,14 +85,14 @@ entry:
   %dog = alloca i32, align 4
   %cat = alloca i32, align 4
   %pangolin = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %dog, metadata !58, metadata !DIExpression()), !dbg !59
-  store i32 1, i32* %dog, align 4, !dbg !59
-  call void @llvm.dbg.declare(metadata i32* %cat, metadata !60, metadata !DIExpression()), !dbg !61
-  store i32 2, i32* %cat, align 4, !dbg !61
-  call void @llvm.dbg.declare(metadata i32* %pangolin, metadata !62, metadata !DIExpression()), !dbg !63
-  store i32 3, i32* %pangolin, align 4, !dbg !63
-  store i32 16, i32* %dog, align 4, !dbg !64
-  %0 = load i32, i32* %dog, align 4, !dbg !65
+  call void @llvm.dbg.declare(metadata ptr %dog, metadata !58, metadata !DIExpression()), !dbg !59
+  store i32 1, ptr %dog, align 4, !dbg !59
+  call void @llvm.dbg.declare(metadata ptr %cat, metadata !60, metadata !DIExpression()), !dbg !61
+  store i32 2, ptr %cat, align 4, !dbg !61
+  call void @llvm.dbg.declare(metadata ptr %pangolin, metadata !62, metadata !DIExpression()), !dbg !63
+  store i32 3, ptr %pangolin, align 4, !dbg !63
+  store i32 16, ptr %dog, align 4, !dbg !64
+  %0 = load i32, ptr %dog, align 4, !dbg !65
   ret i32 %0, !dbg !66
 }
 
@@ -99,9 +100,9 @@ define i32 @main() #0 !dbg !67 {
 entry:
   %retval = alloca i32, align 4
   %a = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !68, metadata !DIExpression()), !dbg !69
-  store i32 4, i32* %a, align 4, !dbg !69
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !68, metadata !DIExpression()), !dbg !69
+  store i32 4, ptr %a, align 4, !dbg !69
   %call = call i32 @f1() #2, !dbg !70
   %call1 = call i32 @f2() #2, !dbg !71
   %call2 = call i32 @f3() #2, !dbg !72

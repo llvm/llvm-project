@@ -11,13 +11,14 @@ body:             |
 
     ; CHECK-LABEL: name: redundant_zext_8
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load 1)
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRBBui]]
-    ; CHECK: $w0 = COPY [[COPY1]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRBBui]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:gpr(p0) = COPY $x0
-    %2:gpr(s8) = G_LOAD %1(p0) :: (load 1)
+    %2:gpr(s8) = G_LOAD %1(p0) :: (load (s8))
     %3:gpr(s32) = G_ZEXT %2(s8)
     $w0 = COPY %3(s32)
     RET_ReallyLR implicit $w0
@@ -34,13 +35,14 @@ body:             |
 
     ; CHECK-LABEL: name: redundant_zext_16
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load 2)
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHui]]
-    ; CHECK: $w0 = COPY [[COPY1]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHui]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:gpr(p0) = COPY $x0
-    %2:gpr(s16) = G_LOAD %1(p0) :: (load 2)
+    %2:gpr(s16) = G_LOAD %1(p0) :: (load (s16))
     %3:gpr(s32) = G_ZEXT %2(s16)
     $w0 = COPY %3(s32)
     RET_ReallyLR implicit $w0

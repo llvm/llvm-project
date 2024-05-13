@@ -9,11 +9,10 @@
 // Make sure that std::random_device is not available in namespace std:: when
 // libc++ is built without support for random device.
 
-// REQUIRES: libcpp-has-no-random-device
+// REQUIRES: no-random-device
 
 #include <random>
 
-int main(int, char**) {
+void f() {
   std::random_device d; // expected-error {{no type named 'random_device' in namespace 'std'}}
-  return 0;
 }

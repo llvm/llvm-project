@@ -1,0 +1,60 @@
+# RUN: llvm-mc -filetype=obj -triple=wasm32 %p/Inputs/start.s -o %t
+
+# RUN: wasm-ld --build-id %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
+# RUN: wasm-ld  --build-id=fast %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
+# RUN: wasm-ld  --build-id %t -o %t2 --threads=1
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
+
+# RUN: wasm-ld  --build-id=sha1 %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
+# RUN: wasm-ld  --build-id=sha1 %t -o %t2 --threads=1
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
+
+# RUN: wasm-ld  --build-id=tree %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
+# RUN: wasm-ld  --build-id=tree %t -o %t2 --threads=1
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
+
+# RUN: wasm-ld  --build-id=uuid %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=UUID %s
+
+# RUN: wasm-ld  --build-id=0x12345678 %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=HEX %s
+
+# RUN: wasm-ld  %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=NONE %s
+
+# RUN: wasm-ld  --build-id=sha1 --build-id=none %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=NONE %s
+# RUN: wasm-ld  --build-id --build-id=none %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=NONE %s
+# RUN: wasm-ld  --build-id=none --build-id %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
+
+.section .data.foo,"",@
+        .globl  foo
+        .hidden  foo
+        .p2align        2
+foo:
+        .int32  1
+        .size   foo, 4
+
+
+# DEFAULT:      Contents of section build_id:
+# DEFAULT-NEXT: 0079 10299168 1e3c845a 3c8f80ae 2f16cc22  .).h.<.Z<.../.."
+# DEFAULT-NEXT: 0089 2d
+
+# SHA1:      Contents of section build_id:
+# SHA1-NEXT: 0079 145abdda 387a9bc4 e3aed3c3 3319cd37  .Z..8z......3..7
+# SHA1-NEXT: 0089 0212237c e4                          ..#|.
+
+# UUID:      Contents of section build_id:
+# UUID-NEXT: 0079 10
+
+# HEX:      Contents of section build_id:
+# HEX-NEXT:  0079 04123456 78                          ..4Vx
+
+
+# NONE-NOT: Contents of section build_id:

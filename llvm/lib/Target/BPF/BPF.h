@@ -10,34 +10,36 @@
 #define LLVM_LIB_TARGET_BPF_BPF_H
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class BPFRegisterBankInfo;
+class BPFSubtarget;
 class BPFTargetMachine;
+class InstructionSelector;
+class PassRegistry;
 
-ModulePass *createBPFAdjustOpt();
 ModulePass *createBPFCheckAndAdjustIR();
 
-FunctionPass *createBPFAbstractMemberAccess(BPFTargetMachine *TM);
-FunctionPass *createBPFPreserveDIType();
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
 FunctionPass *createBPFMISimplifyPatchablePass();
 FunctionPass *createBPFMIPeepholePass();
-FunctionPass *createBPFMIPeepholeTruncElimPass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
-void initializeBPFAdjustOptPass(PassRegistry&);
-void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
+InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
+                                                  const BPFSubtarget &,
+                                                  const BPFRegisterBankInfo &);
 
-void initializeBPFAbstractMemberAccessLegacyPassPass(PassRegistry &);
-void initializeBPFPreserveDITypePass(PassRegistry&);
-void initializeBPFMISimplifyPatchablePass(PassRegistry&);
-void initializeBPFMIPeepholePass(PassRegistry&);
-void initializeBPFMIPeepholeTruncElimPass(PassRegistry&);
-void initializeBPFMIPreEmitPeepholePass(PassRegistry&);
+void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
+void initializeBPFDAGToDAGISelPass(PassRegistry &);
+void initializeBPFMIPeepholePass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
+void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
+void initializeBPFMISimplifyPatchablePass(PassRegistry &);
 
 class BPFAbstractMemberAccessPass
     : public PassInfoMixin<BPFAbstractMemberAccessPass> {
@@ -57,10 +59,43 @@ public:
   static bool isRequired() { return true; }
 };
 
+class BPFIRPeepholePass : public PassInfoMixin<BPFIRPeepholePass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+};
+
+class BPFASpaceCastSimplifyPass
+    : public PassInfoMixin<BPFASpaceCastSimplifyPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+};
+
 class BPFAdjustOptPass : public PassInfoMixin<BPFAdjustOptPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
+
+class BPFPreserveStaticOffsetPass
+    : public PassInfoMixin<BPFPreserveStaticOffsetPass> {
+  bool AllowPartial;
+
+public:
+  BPFPreserveStaticOffsetPass(bool AllowPartial) : AllowPartial(AllowPartial) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+
+  static std::pair<GetElementPtrInst *, LoadInst *>
+  reconstructLoad(CallInst *Call);
+
+  static std::pair<GetElementPtrInst *, StoreInst *>
+  reconstructStore(CallInst *Call);
+};
+
 } // namespace llvm
 
 #endif

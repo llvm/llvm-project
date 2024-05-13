@@ -1,4 +1,4 @@
-# RUN: not --crash llc -march=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 # Undef uses are illegal for generic vregs.
@@ -12,7 +12,7 @@ body:             |
 
     ; Test generic instruction
     ; CHECK: *** Bad machine code: Generic virtual register use cannot be undef ***
-    G_STORE %0, undef %1:_(p0) :: (store 4)
+    G_STORE %0, undef %1:_(p0) :: (store (s32))
 
     ; Make sure this fails on a post-isel generic instruction.
     ; CHECK: *** Bad machine code: Generic virtual register use cannot be undef ***

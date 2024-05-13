@@ -1,5 +1,7 @@
-; RUN: llc < %s | FileCheck %s
-; RUN: llc -filetype=obj < %s | llvm-dwarfdump -debug-loc - | FileCheck %s --check-prefix=DWARF
+; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck %s
+; RUN: llc -filetype=obj < %s -experimental-debug-variable-locations=true | llvm-dwarfdump -debug-loc - | FileCheck %s --check-prefix=DWARF
+; RUN: llc --try-experimental-debuginfo-iterators < %s -experimental-debug-variable-locations=true | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj < %s -experimental-debug-variable-locations=true | llvm-dwarfdump -debug-loc - | FileCheck %s --check-prefix=DWARF
 
 ; Compile the following with -O1:
 
@@ -16,8 +18,8 @@
 ; CHECK-LABEL: bitpiece_spill:                         # @bitpiece_spill
 ; CHECK:               callq   g
 ; CHECK:               movl    %eax, [[offs:[0-9]+]](%rsp)          # 4-byte Spill
+; CHECK:               #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_plus_uconst [[offs]], DW_OP_deref, DW_OP_LLVM_fragment 0 32] $rsp
 ; CHECK:               #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_LLVM_fragment 32 32] 0
-; CHECK:               #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_plus_uconst [[offs]], DW_OP_LLVM_fragment 0 32] [$rsp+0]
 ; CHECK:               #APP
 ; CHECK:               #NO_APP
 ; CHECK:               movl    [[offs]](%rsp), %eax          # 4-byte Reload
@@ -37,7 +39,7 @@ target triple = "x86_64-pc-windows-msvc19.0.24210"
 ; Function Attrs: nounwind uwtable
 define i32 @bitpiece_spill() local_unnamed_addr #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.declare(metadata %struct.IntPair* undef, metadata !12, metadata !17), !dbg !18
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !12, metadata !17), !dbg !18
   %call = tail call i32 @g() #3, !dbg !19
   tail call void @llvm.dbg.value(metadata i32 %call, metadata !12, metadata !20), !dbg !18
   tail call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !21), !dbg !18

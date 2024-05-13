@@ -1,5 +1,5 @@
 ; Test that we correctly import an unsat resolution for type identifier "typeid1".
-; RUN: opt -S -lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%S/Inputs/import-unsat.yaml -lowertypetests-write-summary=%t < %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%S/Inputs/import-unsat.yaml -lowertypetests-write-summary=%t %s | FileCheck %s
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
 ; SUMMARY:      GlobalValueMap:
@@ -10,6 +10,7 @@
 ; SUMMARY-NEXT:      Live:                true
 ; SUMMARY-NEXT:      Local:               false
 ; SUMMARY-NEXT:      CanAutoHide:         false
+; SUMMARY-NEXT:      ImportType:          0
 ; SUMMARY-NEXT:      TypeTests: [ 123 ]
 ; SUMMARY-NEXT: TypeIdMap:
 ; SUMMARY-NEXT:   typeid1:
@@ -19,10 +20,10 @@
 
 target datalayout = "e-p:32:32"
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
-define i1 @foo(i8* %p) {
-  %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
+define i1 @foo(ptr %p) {
+  %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid1")
   ; CHECK: ret i1 false
   ret i1 %x
 }

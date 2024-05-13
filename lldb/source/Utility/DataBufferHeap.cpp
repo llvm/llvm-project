@@ -26,18 +26,16 @@ DataBufferHeap::DataBufferHeap(const void *src, lldb::offset_t src_len)
   CopyData(src, src_len);
 }
 
+DataBufferHeap::DataBufferHeap(const DataBuffer &data_buffer) : m_data() {
+  CopyData(data_buffer.GetBytes(), data_buffer.GetByteSize());
+}
+
 // Virtual destructor since this class inherits from a pure virtual base class.
 DataBufferHeap::~DataBufferHeap() = default;
 
-// Return a pointer to the bytes owned by this object, or nullptr if the object
-// contains no bytes.
-uint8_t *DataBufferHeap::GetBytes() {
-  return (m_data.empty() ? nullptr : m_data.data());
-}
-
 // Return a const pointer to the bytes owned by this object, or nullptr if the
 // object contains no bytes.
-const uint8_t *DataBufferHeap::GetBytes() const {
+const uint8_t *DataBufferHeap::GetBytesImpl() const {
   return (m_data.empty() ? nullptr : m_data.data());
 }
 
@@ -47,7 +45,8 @@ uint64_t DataBufferHeap::GetByteSize() const { return m_data.size(); }
 // Sets the number of bytes that this object should be able to contain. This
 // can be used prior to copying data into the buffer.
 uint64_t DataBufferHeap::SetByteSize(uint64_t new_size) {
-  m_data.resize(new_size);
+  if (new_size < m_data.max_size())
+    m_data.resize(new_size);
   return m_data.size();
 }
 
@@ -68,3 +67,8 @@ void DataBufferHeap::Clear() {
   buffer_t empty;
   m_data.swap(empty);
 }
+
+char DataBuffer::ID;
+char WritableDataBuffer::ID;
+char DataBufferUnowned::ID;
+char DataBufferHeap::ID;

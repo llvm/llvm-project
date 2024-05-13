@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestBreakpointIt(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(archs=no_match(["arm"]))
@@ -22,12 +20,14 @@ class TestBreakpointIt(TestBase):
         exe = self.getBuildArtifact("a.out")
 
         self.runCmd("target create %s" % exe)
-        lldbutil.run_break_set_by_symbol(self, "bkpt_false",
-                extra_options="--skip-prologue 0")
+        lldbutil.run_break_set_by_symbol(
+            self, "bkpt_false", extra_options="--skip-prologue 0"
+        )
 
         self.runCmd("run")
-        self.assertEqual(self.process().GetState(), lldb.eStateExited,
-                "Breakpoint does not get hit")
+        self.assertState(
+            self.process().GetState(), lldb.eStateExited, "Breakpoint does not get hit"
+        )
 
     @skipIf(archs=no_match(["arm"]))
     @skipIf(archs=["arm64", "arm64e", "arm64_32"])
@@ -36,9 +36,11 @@ class TestBreakpointIt(TestBase):
         exe = self.getBuildArtifact("a.out")
 
         self.runCmd("target create %s" % exe)
-        bpid = lldbutil.run_break_set_by_symbol(self, "bkpt_true",
-                extra_options="--skip-prologue 0")
+        bpid = lldbutil.run_break_set_by_symbol(
+            self, "bkpt_true", extra_options="--skip-prologue 0"
+        )
 
         self.runCmd("run")
-        self.assertIsNotNone(lldbutil.get_one_thread_stopped_at_breakpoint_id(
-            self.process(), bpid))
+        self.assertIsNotNone(
+            lldbutil.get_one_thread_stopped_at_breakpoint_id(self.process(), bpid)
+        )

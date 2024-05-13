@@ -38,18 +38,38 @@ namespace odr_use_in_selected_arm {
 }
 #else
 namespace ccce {
+
+  struct S {
+  };
   void f() {
     if (5) {}
-    if constexpr (5) {} // expected-error {{cannot be narrowed}}
+    if constexpr (5) {
+    }
   }
   template<int N> void g() {
-    if constexpr (N) {} // expected-error {{cannot be narrowed}}
+    if constexpr (N) {
+    }
   }
-  template void g<5>(); // expected-note {{instantiation of}}
+  template void g<5>();
   void h() {
-    if constexpr (4.3) {} // expected-error{{conversion from 'double' to 'bool' is not allowed in a converted constant expression}}
+    if constexpr (4.3) { //expected-warning {{implicit conversion from 'double' to 'bool' changes value}}
+    }
     constexpr void *p = nullptr;
-    if constexpr (p) {} // expected-error{{conversion from 'void *const' to 'bool' is not allowed in a converted constant expression}}
+    if constexpr (p) {
+    }
+  }
+
+  void not_constant(int b, S s) { //  expected-note 2{{declared here}}
+    if constexpr (bool(b)) {      // expected-error {{constexpr if condition is not a constant expression}} expected-note {{cannot be used in a constant expression}}
+    }
+    if constexpr (b) { // expected-error {{constexpr if condition is not a constant expression}} expected-note {{cannot be used in a constant expression}}
+    }
+    if constexpr (s) { // expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
+    }
+
+    constexpr S constexprS;
+    if constexpr (constexprS) { // expected-error {{value of type 'const S' is not contextually convertible to 'bool'}}
+    }
   }
 }
 
@@ -60,6 +80,7 @@ namespace generic_lambda {
     [](auto x) {
       if constexpr (sizeof(T) == 1 && sizeof(x) == 1)
         T::error(); // expected-error 2{{'::'}}
+                    // expected-note@-3 2{{while substituting into a lambda expression here}}
     } (0);
   }
 
@@ -68,6 +89,7 @@ namespace generic_lambda {
       if constexpr (sizeof(T) == 1)
         if constexpr (sizeof(x) == 1)
           T::error(); // expected-error {{'::'}}
+                      // expected-note@-4 {{while substituting into a lambda expression here}}
     } (0);
   }
 
@@ -131,7 +153,8 @@ a:  if constexpr(sizeof(n) == 4) // expected-error {{redefinition}} expected-not
 
   void evil_things() {
     goto evil_label; // expected-error {{cannot jump}}
-    if constexpr (true || ({evil_label: false;})) {} // expected-note {{constexpr if}}
+    if constexpr (true || ({evil_label: false;})) {} // expected-note {{constexpr if}} \
+                                                     // expected-note {{jump enters a statement expression}}
 
     if constexpr (true) // expected-note {{constexpr if}}
       goto surprise; // expected-error {{cannot jump}}
@@ -139,4 +162,19 @@ a:  if constexpr(sizeof(n) == 4) // expected-error {{redefinition}} expected-not
       surprise: {}
   }
 }
+
+namespace deduced_return_type_in_discareded_statement {
+
+template <typename T>
+auto a(const T &t) {
+  return t;
+}
+
+void f() {
+  if constexpr (false) {
+    a(a(0));
+  }
+}
+} // namespace deduced_return_type_in_discareded_statement
+
 #endif

@@ -64,16 +64,36 @@ SSA is the canonical form expected by much of the optimizer; if allocas can
 not be eliminated by Mem2Reg or SROA, the optimizer is likely to be less
 effective than it could be.
 
-Avoid loads and stores of large aggregate type
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Avoid creating values of aggregate type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-LLVM currently does not optimize well loads and stores of large :ref:`aggregate
-types <t_aggregate>` (i.e. structs and arrays).  As an alternative, consider
-loading individual fields from memory.
+Avoid creating values of :ref:`aggregate types <t_aggregate>` (i.e. structs and
+arrays). In particular, avoid loading and storing them, or manipulating them
+with insertvalue and extractvalue instructions. Instead, only load and store
+individual fields of the aggregate.
 
-Aggregates that are smaller than the largest (performant) load or store
-instruction supported by the targeted hardware are well supported.  These can
-be an effective way to represent collections of small packed fields.
+There are some exceptions to this rule:
+
+* It is fine to use values of aggregate type in global variable initializers.
+* It is fine to return structs, if this is done to represent the return of
+  multiple values in registers.
+* It is fine to work with structs returned by LLVM intrinsics, such as the
+  ``with.overflow`` family of intrinsics.
+* It is fine to use aggregate *types* without creating values. For example,
+  they are commonly used in ``getelementptr`` instructions or attributes like
+  ``sret``.
+
+Avoid loads and stores of non-byte-sized types
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Avoid loading or storing non-byte-sized types like ``i1``. Instead,
+appropriately extend them to the next byte-sized type.
+
+For example, when working with boolean values, store them by zero-extending
+``i1`` to ``i8`` and load them by loading ``i8`` and truncating to ``i1``.
+
+If you do use loads/stores on non-byte-sized types, make sure that you *always*
+use those types. For example, do not first store ``i8`` and then load ``i1``.
 
 Prefer zext over sext when legal
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -170,8 +190,7 @@ Other Things to Consider
    comparison type.  The GVN pass *will* optimize redundant equalities even if
    the type of comparison is inverted, but GVN only runs late in the pipeline.
    As a result, you may miss the opportunity to run other important
-   optimizations.  Improvements to EarlyCSE to remove this issue are tracked in
-   Bug 23333.
+   optimizations.
 
 #. Avoid using arithmetic intrinsics unless you are *required* by your source
    language specification to emit a particular code sequence.  The optimizer
@@ -227,6 +246,12 @@ Describing Aliasing Properties
 
 #. Use inbounds on geps.  This can help to disambiguate some aliasing queries.
 
+Undefined Values
+^^^^^^^^^^^^^^^^
+
+#. Use poison values instead of undef values whenever possible.
+
+#. Tag function parameters with the noundef attribute whenever possible.
 
 Modeling Memory Effects
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -276,8 +301,8 @@ relatively common and are generally well received by the community.  You will
 need to ensure that your proposal is sufficiently general so that it benefits
 others if you wish to contribute it upstream.
 
-You should also consider describing the problem you're facing on `llvm-dev
-<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ and asking for advice.
+You should also consider describing the problem you're facing on `Discourse
+<https://discourse.llvm.org>`_ and asking for advice.
 It's entirely possible someone has encountered your problem before and can
 give good advice.  If there are multiple interested parties, that also
 increases the chances that a metadata extension would be well received by the
@@ -290,8 +315,7 @@ If you run across a case that you feel deserves to be covered here, please send
 a patch to `llvm-commits
 <http://lists.llvm.org/mailman/listinfo/llvm-commits>`_ for review.
 
-If you have questions on these items, please direct them to `llvm-dev
-<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_.  The more relevant
+If you have questions on these items, please ask them on `Discourse
+<https://discourse.llvm.org>`_.  The more relevant
 context you are able to give to your question, the more likely it is to be
 answered.
-

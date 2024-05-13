@@ -1,7 +1,7 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
-@G1 = internal global i32 123            ; <i32*> [#uses=1]
-@A1 = internal alias i32, i32* @G1
+@G1 = internal global i32 123            ; <ptr> [#uses=1]
+@A1 = internal alias i32, ptr @G1
 
 ; CHECK-NOT: @G1
 ; CHECK: @G2
@@ -12,7 +12,7 @@
 define void @foo1() {
 ; CHECK: define void @foo
 ; CHECK-NEXT: ret
-        store i32 1, i32* @G1
+        store i32 1, ptr @G1
         ret void
 }
 
@@ -21,7 +21,7 @@ define void @foo1() {
 define void @foo2() {
 ; CHECK-LABEL: define void @foo2(
 ; CHECK-NEXT: store
-        store i32 1, i32* @G2
+        store i32 1, ptr @G2
         ret void
 }
 

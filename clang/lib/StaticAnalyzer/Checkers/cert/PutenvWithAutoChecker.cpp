@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -29,7 +30,7 @@ class PutenvWithAutoChecker : public Checker<check::PostCall> {
 private:
   BugType BT{this, "'putenv' function should not be called with auto variables",
              categories::SecurityError};
-  const CallDescription Putenv{"putenv", 1};
+  const CallDescription Putenv{CDM::CLibrary, {"putenv"}, 1};
 
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
@@ -38,7 +39,7 @@ public:
 
 void PutenvWithAutoChecker::checkPostCall(const CallEvent &Call,
                                           CheckerContext &C) const {
-  if (!Call.isCalled(Putenv))
+  if (!Putenv.matches(Call))
     return;
 
   SVal ArgV = Call.getArgSVal(0);

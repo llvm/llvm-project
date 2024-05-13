@@ -1,15 +1,14 @@
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=+relax %s -o - \
-; RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX %s
+; RUN:     | llvm-readobj -r - | FileCheck %s
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=-relax %s -o - \
-; RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX %s
+; RUN:     | llvm-readobj -r - | FileCheck %s
 
-; Check that a difference between two symbols in the same fragment
-; causes relocations to be emitted if and only if relaxation is enabled.
-;
-; This specific test is checking that the size of the function in
-; the debug information is represented by a relocation. This isn't
-; an assembly test as the assembler takes a different path through
-; LLVM, which is already covered by the fixups-expr.s test.
+;; b-a in the inline asm is unaffected by linker relaxation, so we don't emit
+;; relocations.
+
+;; b-a in the inline asm and DW_AT_high_pc are unaffected by linker relaxation,
+;; so we don't emit ADD/SUB relocations.
+;; See also MC/RISCV/fixups-expr.s.
 
 source_filename = "tmp.c"
 target datalayout = "e-m:e-p:32:32-i64:64-n32-S128"
@@ -18,15 +17,18 @@ target triple = "riscv32"
 define i32 @main() !dbg !7 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
+  call void asm sideeffect "a:\0Ab:\0A.dword b-a", ""()
   ret i32 0
 }
 
-; RELAX: 0x22 R_RISCV_ADD32 - 0x0
-; RELAX: 0x22 R_RISCV_SUB32 - 0x0
-; RELAX: 0x2B R_RISCV_ADD32 - 0x0
-; RELAX: 0x2B R_RISCV_SUB32 - 0x0
-; NORELAX-NOT: R_RISCV_ADD32
+; CHECK:      Section {{.*}} .rela.debug_info {
+; CHECK-NOT:         R_RISCV_ADD32
+; CHECK:      }
+
+; CHECK:      Section {{.*}} .rela.eh_frame {
+; CHECK-NEXT:   0x1C R_RISCV_32_PCREL .L0  0x0
+; CHECK-NEXT: }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

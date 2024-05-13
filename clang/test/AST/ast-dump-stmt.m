@@ -27,7 +27,7 @@ void TestExprWithCleanup(int x) {
 @interface A
 @end
 
-void TestObjCAtCatchStmt() {
+void TestObjCAtCatchStmt(void) {
   @try {
   } @catch(A *a) {
   } @catch(...) {
@@ -55,4 +55,4 @@ id TestCompoundLiteral(id a) {
 // CHECK:     FunctionDecl{{.*}}TestCompoundLiteral
 // CHECK:       ExprWithCleanups
 // CHECK-NEXT:    cleanup CompoundLiteralExpr
-// CHECK:           CompoundLiteralExpr{{.*}}'S':'S' lvalue
+// CHECK:           CompoundLiteralExpr{{.*}}'S' lvalue

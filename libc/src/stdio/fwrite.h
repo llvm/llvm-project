@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STDIO_FWRITE_H
 #define LLVM_LIBC_SRC_STDIO_FWRITE_H
 
-#include "src/stdio/FILE.h"
-#include <stddef.h>
+#include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-size_t fwrite(const void *__restrict ptr, size_t size, size_t nmeb,
-              __llvm_libc::FILE *__restrict stream);
+size_t fwrite(const void *__restrict ptr, size_t size, size_t nmemb,
+              ::FILE *__restrict stream);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FWRITE_H

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; In this test case we pass a pointer %A into a PHI node and also use this
 ; pointer as base pointer of an array store. As a result, we get both scalar
@@ -6,13 +6,13 @@
 
 ; CHECK:      Arrays {
 ; CHECK-NEXT:     float MemRef_A[*]; // Element size 4
-; CHECK-NEXT:     float* MemRef_x__phi; // Element size 8
-; CHECK-NEXT:     float* MemRef_C[*]; // Element size 8
+; CHECK-NEXT:     ptr MemRef_x__phi; // Element size 8
+; CHECK-NEXT:     ptr MemRef_C[*]; // Element size 8
 ; CHECK-NEXT: }
 ; CHECK:      Arrays (Bounds as pw_affs) {
 ; CHECK-NEXT:     float MemRef_A[*]; // Element size 4
-; CHECK-NEXT:     float* MemRef_x__phi; // Element size 8
-; CHECK-NEXT:     float* MemRef_C[*]; // Element size 8
+; CHECK-NEXT:     ptr MemRef_x__phi; // Element size 8
+; CHECK-NEXT:     ptr MemRef_C[*]; // Element size 8
 ; CHECK-NEXT: }
 ; CHECK:      Alias Groups (0):
 ; CHECK-NEXT:     n/a
@@ -48,7 +48,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(float* noalias %A, float* noalias %B, float ** noalias %C, i32 %p) {
+define void @foo(ptr noalias %A, ptr noalias %B, ptr noalias %C, i32 %p) {
 bb:
   br label %bb1
 
@@ -62,16 +62,16 @@ bb2:
   br i1 %cmp, label %then, label %else
 
 then:
-  store float 3.0, float* %A
+  store float 3.0, ptr %A
   br label %bb8
 
 else:
-  store float 4.0, float* %A
+  store float 4.0, ptr %A
   br label %bb8
 
 bb8:
-  %x = phi float* [%A, %then], [%B, %else]
-  store float* %x, float** %C
+  %x = phi ptr [%A, %then], [%B, %else]
+  store ptr %x, ptr %C
   %tmp9 = add nuw nsw i64 %i.0, 1
   br label %bb1
 

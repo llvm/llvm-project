@@ -1,15 +1,16 @@
 ; Verify that the .toc section is aligned on an 8-byte boundary.
 
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -filetype=obj -o - | llvm-readobj --sections - | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu \
+; RUN: -mcpu=pwr8 -filetype=obj -ppc-min-jump-table-entries=4 -o - | llvm-readobj --sections - | FileCheck %s
 
-define void @test(i32* %a) {
+define void @test(ptr %a) {
 entry:
-  %a.addr = alloca i32*, align 8
-  store i32* %a, i32** %a.addr, align 8
-  %0 = load i32*,  i32** %a.addr, align 8
-  %incdec.ptr = getelementptr inbounds i32, i32* %0, i32 1
-  store i32* %incdec.ptr, i32** %a.addr, align 8
-  %1 = load i32,  i32* %0, align 4
+  %a.addr = alloca ptr, align 8
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr,  ptr %a.addr, align 8
+  %incdec.ptr = getelementptr inbounds i32, ptr %0, i32 1
+  store ptr %incdec.ptr, ptr %a.addr, align 8
+  %1 = load i32,  ptr %0, align 4
   switch i32 %1, label %sw.epilog [
     i32 17, label %sw.bb
     i32 13, label %sw.bb1
@@ -21,38 +22,38 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry
-  %2 = load i32*,  i32** %a.addr, align 8
-  store i32 2, i32* %2, align 4
+  %2 = load ptr,  ptr %a.addr, align 8
+  store i32 2, ptr %2, align 4
   br label %sw.epilog
 
 sw.bb1:                                           ; preds = %entry
-  %3 = load i32*,  i32** %a.addr, align 8
-  store i32 3, i32* %3, align 4
+  %3 = load ptr,  ptr %a.addr, align 8
+  store i32 3, ptr %3, align 4
   br label %sw.epilog
 
 sw.bb2:                                           ; preds = %entry
-  %4 = load i32*,  i32** %a.addr, align 8
-  store i32 5, i32* %4, align 4
+  %4 = load ptr,  ptr %a.addr, align 8
+  store i32 5, ptr %4, align 4
   br label %sw.epilog
 
 sw.bb3:                                           ; preds = %entry
-  %5 = load i32*,  i32** %a.addr, align 8
-  store i32 7, i32* %5, align 4
+  %5 = load ptr,  ptr %a.addr, align 8
+  store i32 7, ptr %5, align 4
   br label %sw.epilog
 
 sw.bb4:                                           ; preds = %entry
-  %6 = load i32*,  i32** %a.addr, align 8
-  store i32 11, i32* %6, align 4
+  %6 = load ptr,  ptr %a.addr, align 8
+  store i32 11, ptr %6, align 4
   br label %sw.epilog
 
 sw.bb5:                                           ; preds = %entry
-  %7 = load i32*,  i32** %a.addr, align 8
-  store i32 13, i32* %7, align 4
+  %7 = load ptr,  ptr %a.addr, align 8
+  store i32 13, ptr %7, align 4
   br label %sw.epilog
 
 sw.bb6:                                           ; preds = %entry
-  %8 = load i32*,  i32** %a.addr, align 8
-  store i32 17, i32* %8, align 4
+  %8 = load ptr,  ptr %a.addr, align 8
+  store i32 17, ptr %8, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %entry, %sw.bb6, %sw.bb5, %sw.bb4, %sw.bb3, %sw.bb2, %sw.bb1, %sw.bb

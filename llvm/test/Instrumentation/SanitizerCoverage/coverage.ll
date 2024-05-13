@@ -1,36 +1,34 @@
-; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc  -S -enable-new-pm=0 | FileCheck %s --check-prefix=CHECK_TRACE_PC
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-prune-blocks=1 -S -enable-new-pm=0 | FileCheck %s --check-prefix=CHECKPRUNE
 
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc  -S | FileCheck %s --check-prefix=CHECK_TRACE_PC
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-prune-blocks=1 -S | FileCheck %s --check-prefix=CHECKPRUNE
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
-define void @foo(i32* %a) sanitize_address {
+define void @foo(ptr %a) sanitize_address {
 entry:
-  %tobool = icmp eq i32* %a, null
+  %tobool = icmp eq ptr %a, null
   br i1 %tobool, label %if.end, label %if.then
 
   if.then:                                          ; preds = %entry
-  store i32 0, i32* %a, align 4
+  store i32 0, ptr %a, align 4
   br label %if.end
 
   if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
-; CHECK0-NOT: @llvm.global_ctors = {{.*}}{ i32 2, void ()* @sancov.module_ctor }
-; CHECK1: @llvm.global_ctors = {{.*}}{ i32 2, void ()* @sancov.module_ctor, i8* null }
-; CHECK2: @llvm.global_ctors = {{.*}}{ i32 2, void ()* @sancov.module_ctor, i8* null }
+; CHECK0-NOT: @llvm.global_ctors = {{.*}}{ i32 2, ptr @sancov.module_ctor }
+; CHECK1: @llvm.global_ctors = {{.*}}{ i32 2, ptr @sancov.module_ctor, ptr null }
+; CHECK2: @llvm.global_ctors = {{.*}}{ i32 2, ptr @sancov.module_ctor, ptr null }
 
 ; CHECK0-NOT: call void @__sanitizer_cov(
 ; CHECK0-NOT: call void @__sanitizer_cov_module_init(
 
 ; CHECK1-LABEL: define void @foo
-; CHECK1: %0 = load atomic i32, i32* {{.*}} monotonic, align 4, !nosanitize
+; CHECK1: %0 = load atomic i32, ptr {{.*}} monotonic, align 4, !nosanitize
 ; CHECK1: %1 = icmp sge i32 0, %0
 ; CHECK1: br i1 %1, label %2, label %3
-; CHECK1: call void @__sanitizer_cov(i32*{{.*}})
+; CHECK1: call void @__sanitizer_cov(ptr{{.*}})
 ; CHECK1: call void asm sideeffect "", ""()
 ; CHECK1-NOT: call void @__sanitizer_cov
 ; CHECK1: ret void
@@ -70,15 +68,14 @@ entry:
 ; CHECK3-NOT: call void @__sanitizer_cov
 ; CHECK3: ret void
 
-%struct.StructWithVptr = type { i32 (...)** }
+%struct.StructWithVptr = type { ptr }
 
-define void @CallViaVptr(%struct.StructWithVptr* %foo) uwtable sanitize_address {
+define void @CallViaVptr(ptr %foo) uwtable sanitize_address {
 entry:
-  %0 = bitcast %struct.StructWithVptr* %foo to void (%struct.StructWithVptr*)***
-  %vtable = load void (%struct.StructWithVptr*)**, void (%struct.StructWithVptr*)*** %0, align 8
-  %1 = load void (%struct.StructWithVptr*)*, void (%struct.StructWithVptr*)** %vtable, align 8
-  tail call void %1(%struct.StructWithVptr* %foo)
-  tail call void %1(%struct.StructWithVptr* %foo)
+  %vtable = load ptr, ptr %foo, align 8
+  %0 = load ptr, ptr %vtable, align 8
+  tail call void %0(ptr %foo)
+  tail call void %0(ptr %foo)
   tail call void asm sideeffect "", ""()
   ret void
 }

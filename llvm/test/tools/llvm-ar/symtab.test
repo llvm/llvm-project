@@ -58,8 +58,22 @@
 # RUN: llvm-nm --print-armap %t-thin.a \
 # RUN:   | FileCheck %s --check-prefix=SYMTAB
 
+## llvm-ranlib does not change a thin archive to a regular one.
+# RUN: rm -f %t-thin.a && llvm-ar rcTS %t-thin.a %t.o
+# RUN: llvm-nm --print-armap %t-thin.a | FileCheck %s --check-prefix=NO-SYMTAB
+# RUN: llvm-ranlib %t-thin.a
+# RUN: llvm-nm --print-armap %t-thin.a | FileCheck %s --check-prefix=SYMTAB
+# RUN: FileCheck --input-file=%t-thin.a %s --check-prefixes=THIN
+
+## llvm-ar -s is identical to ranlib and a duplicated operation does not change the output.
+# RUN: rm -f %t-thin2.a && llvm-ar rcTS %t-thin2.a %t.o
+# RUN: llvm-ar s %t-thin2.a && cmp %t-thin.a %t-thin2.a
+# RUN: llvm-ar s %t-thin2.a && cmp %t-thin.a %t-thin2.a
+
 # SYMTAB:        symbol in
 # NO-SYMTAB-NOT: symbol in
+
+# THIN: !<thin>
 
 --- !ELF
 FileHeader:

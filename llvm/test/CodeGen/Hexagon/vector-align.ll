@@ -15,8 +15,8 @@ entry:
   %v0 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 1)
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -2147483648)
   %v2 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v1, i32 -1)
-  store <16 x i32> %v2, <16 x i32>* @Q6VecPredResult, align 64, !tbaa !1
-  tail call void @print_vecpred(i32 64, i8* bitcast (<16 x i32>* @Q6VecPredResult to i8*)) #3
+  store <16 x i32> %v2, ptr @Q6VecPredResult, align 64, !tbaa !1
+  tail call void @print_vecpred(i32 64, ptr @Q6VecPredResult) #3
   ret i32 0
 }
 
@@ -24,7 +24,7 @@ declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #1
 
-declare void @print_vecpred(i32, i8*) #2
+declare void @print_vecpred(i32, ptr) #2
 
 attributes #0 = { nounwind "target-cpu"="hexagonv66" "target-features"="+hvxv66,+hvx-length64b" }
 attributes #1 = { nounwind readnone }

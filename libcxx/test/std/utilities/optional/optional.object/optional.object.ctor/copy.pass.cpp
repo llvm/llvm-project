@@ -170,5 +170,14 @@ int main(int, char**)
         static_assert( *o2 == 4, "" );
     }
 
+    // LWG3836 https://wg21.link/LWG3836
+    // std::optional<bool> conversion constructor optional(const optional<U>&)
+    // should take precedence over optional(U&&) with operator bool
+    {
+        std::optional<bool> o1(false);
+        std::optional<bool> o2(o1);
+        assert(!o2.value());
+    }
+
   return 0;
 }

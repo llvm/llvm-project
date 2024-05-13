@@ -1,15 +1,14 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -disable-cgp-delete-phis < %s | FileCheck %s
 
-; Test that we generate an unaligned vector store for a spill when a function
-; has an alloca. Also, make sure the addressing mode for unaligned store does
-; is not a base+offset with a non-zero offset that is not a multiple of 128.
+; Test that we no longer generate an unaligned vector store for a spill when
+; a function has an alloca.
 
-; CHECK: vmemu({{.*}}) =
+; CHECK: vmem({{.*}}) =
 
 %s.0 = type { [5 x [4 x i8]], i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind
-define i32 @f0(i8* nocapture readonly %a0, i8* nocapture %a1, i8* nocapture readonly %a2, i8* nocapture readonly %a3, i32 %a4, i32 %a5, i32 %a6, %s.0* nocapture readonly %a7) #0 {
+define i32 @f0(ptr nocapture readonly %a0, ptr nocapture %a1, ptr nocapture readonly %a2, ptr nocapture readonly %a3, i32 %a4, i32 %a5, i32 %a6, ptr nocapture readonly %a7) #0 {
 b0:
   %v0 = alloca i8, i32 %a4, align 128
   br i1 undef, label %b1, label %b5
@@ -22,7 +21,7 @@ b2:                                               ; preds = %b3, %b2, %b1
   br i1 undef, label %b3, label %b2
 
 b3:                                               ; preds = %b2
-  call void @f1(i8* undef, i8* undef, i8* nonnull %v0, i32 %a4, i32 %a5, %s.0* %a7)
+  call void @f1(ptr undef, ptr undef, ptr nonnull %v0, i32 %a4, i32 %a5, ptr %a7)
   %v2 = tail call <32 x i32> @llvm.hexagon.V6.vd0.128B() #2
   br i1 %v1, label %b4, label %b2
 
@@ -37,7 +36,7 @@ b5:                                               ; preds = %b0
 }
 
 ; Function Attrs: nounwind
-declare void @f1(i8* nocapture readonly, i8* nocapture readonly, i8* nocapture, i32, i32, %s.0* nocapture readonly) #0
+declare void @f1(ptr nocapture readonly, ptr nocapture readonly, ptr nocapture, i32, i32, ptr nocapture readonly) #0
 
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.vd0.128B() #1

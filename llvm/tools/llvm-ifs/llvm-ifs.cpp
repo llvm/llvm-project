@@ -6,25 +6,34 @@
 //
 //===-----------------------------------------------------------------------===/
 
+#include "ErrorCollector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/InterfaceStub/ELFObjHandler.h"
+#include "llvm/InterfaceStub/IFSHandler.h"
+#include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 #include "llvm/TextAPI/TextAPIWriter.h"
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -32,40 +41,74 @@
 using namespace llvm;
 using namespace llvm::yaml;
 using namespace llvm::MachO;
+using namespace llvm::ifs;
 
 #define DEBUG_TYPE "llvm-ifs"
 
 namespace {
-const VersionTuple IFSVersionCurrent(2, 0);
+const VersionTuple IfsVersionCurrent(3, 0);
+
+enum class FileFormat { IFS, ELF, TBD };
 } // end anonymous namespace
 
-static cl::opt<std::string> Action("action", cl::desc("<llvm-ifs action>"),
-                                   cl::value_desc("write-ifs | write-bin"),
-                                   cl::init("write-ifs"));
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::opt<std::string> ForceFormat("force-format",
-                                        cl::desc("<force object format>"),
-                                        cl::value_desc("ELF | TBD"),
-                                        cl::init(""));
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
+#include "Opts.inc"
+#undef PREFIX
 
-static cl::list<std::string> InputFilenames(cl::Positional,
-                                            cl::desc("<input ifs files>"),
-                                            cl::ZeroOrMore);
+static constexpr opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::opt<std::string> OutputFilename("o", cl::desc("<output file>"),
-                                           cl::value_desc("path"));
+class IFSOptTable : public opt::GenericOptTable {
+public:
+  IFSOptTable() : opt::GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
+};
 
-static cl::opt<bool> UseInterfaceStub(
-    "use-interfacestub",
-    cl::desc("Write output ELF file using latest InterfaceStub backend"),
-    cl::init(false));
+struct DriverConfig {
+  std::vector<std::string> InputFilePaths;
 
-enum class IFSSymbolType {
-  NoType = 0,
-  Object,
-  Func,
-  // Type information is 4 bits, so 16 is safely out of range.
-  Unknown = 16,
+  std::optional<FileFormat> InputFormat;
+  std::optional<FileFormat> OutputFormat;
+
+  std::optional<std::string> HintIfsTarget;
+  std::optional<std::string> OptTargetTriple;
+  std::optional<IFSArch> OverrideArch;
+  std::optional<IFSBitWidthType> OverrideBitWidth;
+  std::optional<IFSEndiannessType> OverrideEndianness;
+
+  bool StripIfsArch = false;
+  bool StripIfsBitwidth = false;
+  bool StripIfsEndianness = false;
+  bool StripIfsTarget = false;
+  bool StripNeeded = false;
+  bool StripSize = false;
+  bool StripUndefined = false;
+
+  std::vector<std::string> Exclude;
+
+  std::optional<std::string> SoName;
+
+  std::optional<std::string> Output;
+  std::optional<std::string> OutputElf;
+  std::optional<std::string> OutputIfs;
+  std::optional<std::string> OutputTbd;
+
+  bool WriteIfChanged = false;
 };
 
 static std::string getTypeName(IFSSymbolType Type) {
@@ -76,110 +119,16 @@ static std::string getTypeName(IFSSymbolType Type) {
     return "Func";
   case IFSSymbolType::Object:
     return "Object";
+  case IFSSymbolType::TLS:
+    return "TLS";
   case IFSSymbolType::Unknown:
     return "Unknown";
   }
   llvm_unreachable("Unexpected ifs symbol type.");
 }
 
-struct IFSSymbol {
-  IFSSymbol() = default;
-  IFSSymbol(std::string SymbolName) : Name(SymbolName) {}
-  std::string Name;
-  uint64_t Size;
-  IFSSymbolType Type;
-  bool Weak;
-  Optional<std::string> Warning;
-  bool operator<(const IFSSymbol &RHS) const { return Name < RHS.Name; }
-};
-
-LLVM_YAML_IS_SEQUENCE_VECTOR(IFSSymbol)
-
-namespace llvm {
-namespace yaml {
-/// YAML traits for IFSSymbolType.
-template <> struct ScalarEnumerationTraits<IFSSymbolType> {
-  static void enumeration(IO &IO, IFSSymbolType &SymbolType) {
-    IO.enumCase(SymbolType, "NoType", IFSSymbolType::NoType);
-    IO.enumCase(SymbolType, "Func", IFSSymbolType::Func);
-    IO.enumCase(SymbolType, "Object", IFSSymbolType::Object);
-    IO.enumCase(SymbolType, "Unknown", IFSSymbolType::Unknown);
-    // Treat other symbol types as noise, and map to Unknown.
-    if (!IO.outputting() && IO.matchEnumFallback())
-      SymbolType = IFSSymbolType::Unknown;
-  }
-};
-
-/// YAML traits for IFSSymbol.
-template <> struct MappingTraits<IFSSymbol> {
-  static void mapping(IO &IO, IFSSymbol &Symbol) {
-    IO.mapRequired("Name", Symbol.Name);
-    IO.mapRequired("Type", Symbol.Type);
-    // The need for symbol size depends on the symbol type.
-    if (Symbol.Type == IFSSymbolType::NoType)
-      IO.mapOptional("Size", Symbol.Size, (uint64_t)0);
-    else if (Symbol.Type == IFSSymbolType::Func)
-      Symbol.Size = 0;
-    else
-      IO.mapRequired("Size", Symbol.Size);
-    IO.mapOptional("Weak", Symbol.Weak, false);
-    IO.mapOptional("Warning", Symbol.Warning);
-  }
-
-  // Compacts symbol information into a single line.
-  static const bool flow = true;
-};
-
-} // namespace yaml
-} // namespace llvm
-
-// A cumulative representation of ELF stubs.
-// Both textual and binary stubs will read into and write from this object.
-class IFSStub {
-  // TODO: Add support for symbol versioning.
-public:
-  VersionTuple IfsVersion;
-  std::string Triple;
-  std::string ObjectFileFormat;
-  Optional<std::string> SOName;
-  std::vector<std::string> NeededLibs;
-  std::vector<IFSSymbol> Symbols;
-
-  IFSStub() = default;
-  IFSStub(const IFSStub &Stub)
-      : IfsVersion(Stub.IfsVersion), Triple(Stub.Triple),
-        ObjectFileFormat(Stub.ObjectFileFormat), SOName(Stub.SOName),
-        NeededLibs(Stub.NeededLibs), Symbols(Stub.Symbols) {}
-  IFSStub(IFSStub &&Stub)
-      : IfsVersion(std::move(Stub.IfsVersion)), Triple(std::move(Stub.Triple)),
-        ObjectFileFormat(std::move(Stub.ObjectFileFormat)),
-        SOName(std::move(Stub.SOName)), NeededLibs(std::move(Stub.NeededLibs)),
-        Symbols(std::move(Stub.Symbols)) {}
-};
-
-namespace llvm {
-namespace yaml {
-/// YAML traits for IFSStub objects.
-template <> struct MappingTraits<IFSStub> {
-  static void mapping(IO &IO, IFSStub &Stub) {
-    if (!IO.mapTag("!experimental-ifs-v2", true))
-      IO.setError("Not a .ifs YAML file.");
-
-    auto OldContext = IO.getContext();
-    IO.setContext(&Stub);
-    IO.mapRequired("IfsVersion", Stub.IfsVersion);
-    IO.mapOptional("Triple", Stub.Triple);
-    IO.mapOptional("ObjectFileFormat", Stub.ObjectFileFormat);
-    IO.mapOptional("SOName", Stub.SOName);
-    IO.mapOptional("NeededLibs", Stub.NeededLibs);
-    IO.mapRequired("Symbols", Stub.Symbols);
-    IO.setContext(&OldContext);
-  }
-};
-} // namespace yaml
-} // namespace llvm
-
-static Expected<std::unique_ptr<IFSStub>> readInputFile(StringRef FilePath) {
+static Expected<std::unique_ptr<IFSStub>>
+readInputFile(std::optional<FileFormat> &InputFormat, StringRef FilePath) {
   // Read in file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =
       MemoryBuffer::getFileOrSTDIN(FilePath, /*IsText=*/true);
@@ -188,48 +137,73 @@ static Expected<std::unique_ptr<IFSStub>> readInputFile(StringRef FilePath) {
                              FilePath.data());
 
   std::unique_ptr<MemoryBuffer> FileReadBuffer = std::move(*BufOrError);
-  yaml::Input YamlIn(FileReadBuffer->getBuffer());
-  std::unique_ptr<IFSStub> Stub(new IFSStub());
-  YamlIn >> *Stub;
+  ErrorCollector EC(/*UseFatalErrors=*/false);
 
-  if (std::error_code Err = YamlIn.error())
-    return createStringError(Err, "Failed reading Interface Stub File.");
+  // First try to read as a binary (fails fast if not binary).
+  if (!InputFormat || *InputFormat == FileFormat::ELF) {
+    Expected<std::unique_ptr<IFSStub>> StubFromELF =
+        readELFFile(FileReadBuffer->getMemBufferRef());
+    if (StubFromELF) {
+      InputFormat = FileFormat::ELF;
+      (*StubFromELF)->IfsVersion = IfsVersionCurrent;
+      return std::move(*StubFromELF);
+    }
+    EC.addError(StubFromELF.takeError(), "BinaryRead");
+  }
 
-  if (Stub->IfsVersion > IFSVersionCurrent)
-    return make_error<StringError>(
-        "IFS version " + Stub->IfsVersion.getAsString() + " is unsupported.",
-        std::make_error_code(std::errc::invalid_argument));
+  // Fall back to reading as a ifs.
+  if (!InputFormat || *InputFormat == FileFormat::IFS) {
+    Expected<std::unique_ptr<IFSStub>> StubFromIFS =
+        readIFSFromBuffer(FileReadBuffer->getBuffer());
+    if (StubFromIFS) {
+      InputFormat = FileFormat::IFS;
+      if ((*StubFromIFS)->IfsVersion > IfsVersionCurrent)
+        EC.addError(
+            createStringError(errc::not_supported,
+                              "IFS version " +
+                                  (*StubFromIFS)->IfsVersion.getAsString() +
+                                  " is unsupported."),
+            "ReadInputFile");
+      else
+        return std::move(*StubFromIFS);
+    } else {
+      EC.addError(StubFromIFS.takeError(), "YamlParse");
+    }
+  }
 
-  return std::move(Stub);
+  // If both readers fail, build a new error that includes all information.
+  EC.addError(createStringError(errc::not_supported,
+                                "No file readers succeeded reading `%s` "
+                                "(unsupported/malformed file?)",
+                                FilePath.data()),
+              "ReadInputFile");
+  EC.escalateToFatal();
+  return EC.makeError();
 }
 
 static int writeTbdStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
                         const StringRef Format, raw_ostream &Out) {
 
-  auto PlatformKindOrError =
-      [](const llvm::Triple &T) -> llvm::Expected<llvm::MachO::PlatformKind> {
+  auto PlatformTypeOrError =
+      [](const llvm::Triple &T) -> llvm::Expected<llvm::MachO::PlatformType> {
     if (T.isMacOSX())
-      return llvm::MachO::PlatformKind::macOS;
+      return llvm::MachO::PLATFORM_MACOS;
     if (T.isTvOS())
-      return llvm::MachO::PlatformKind::tvOS;
+      return llvm::MachO::PLATFORM_TVOS;
     if (T.isWatchOS())
-      return llvm::MachO::PlatformKind::watchOS;
+      return llvm::MachO::PLATFORM_WATCHOS;
     // Note: put isiOS last because tvOS and watchOS are also iOS according
     // to the Triple.
     if (T.isiOS())
-      return llvm::MachO::PlatformKind::iOS;
-
-    // TODO: Add an option for ForceTriple, but keep ForceFormat for now.
-    if (ForceFormat == "TBD")
-      return llvm::MachO::PlatformKind::macOS;
+      return llvm::MachO::PLATFORM_IOS;
 
     return createStringError(errc::not_supported, "Invalid Platform.\n");
   }(T);
 
-  if (!PlatformKindOrError)
+  if (!PlatformTypeOrError)
     return -1;
 
-  PlatformKind Plat = PlatformKindOrError.get();
+  PlatformType Plat = PlatformTypeOrError.get();
   TargetList Targets({Target(llvm::MachO::mapToArchitecture(T), Plat)});
 
   InterfaceFile File;
@@ -238,17 +212,17 @@ static int writeTbdStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
 
   for (const auto &Symbol : Symbols) {
     auto Name = Symbol.Name;
-    auto Kind = SymbolKind::GlobalSymbol;
+    auto Kind = EncodeKind::GlobalSymbol;
     switch (Symbol.Type) {
     default:
     case IFSSymbolType::NoType:
-      Kind = SymbolKind::GlobalSymbol;
+      Kind = EncodeKind::GlobalSymbol;
       break;
     case IFSSymbolType::Object:
-      Kind = SymbolKind::GlobalSymbol;
+      Kind = EncodeKind::GlobalSymbol;
       break;
     case IFSSymbolType::Func:
-      Kind = SymbolKind::GlobalSymbol;
+      Kind = EncodeKind::GlobalSymbol;
       break;
     }
     if (Symbol.Weak)
@@ -265,220 +239,175 @@ static int writeTbdStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
   return 0;
 }
 
-static int writeElfStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
-                        const StringRef Format, raw_ostream &Out) {
-  SmallString<0> Storage;
-  Storage.clear();
-  raw_svector_ostream OS(Storage);
-
-  OS << "--- !ELF\n";
-  OS << "FileHeader:\n";
-  OS << "  Class:           ELFCLASS";
-  OS << (T.isArch64Bit() ? "64" : "32");
-  OS << "\n";
-  OS << "  Data:            ELFDATA2";
-  OS << (T.isLittleEndian() ? "LSB" : "MSB");
-  OS << "\n";
-  OS << "  Type:            ET_DYN\n";
-  OS << "  Machine:         "
-     << llvm::StringSwitch<llvm::StringRef>(T.getArchName())
-            .Case("x86_64", "EM_X86_64")
-            .Case("i386", "EM_386")
-            .Case("i686", "EM_386")
-            .Case("aarch64", "EM_AARCH64")
-            .Case("amdgcn", "EM_AMDGPU")
-            .Case("r600", "EM_AMDGPU")
-            .Case("arm", "EM_ARM")
-            .Case("thumb", "EM_ARM")
-            .Case("avr", "EM_AVR")
-            .Case("mips", "EM_MIPS")
-            .Case("mipsel", "EM_MIPS")
-            .Case("mips64", "EM_MIPS")
-            .Case("mips64el", "EM_MIPS")
-            .Case("msp430", "EM_MSP430")
-            .Case("ppc", "EM_PPC")
-            .Case("ppc64", "EM_PPC64")
-            .Case("ppc64le", "EM_PPC64")
-            .Case("x86", T.isOSIAMCU() ? "EM_IAMCU" : "EM_386")
-            .Case("x86_64", "EM_X86_64")
-            .Default("EM_NONE")
-     << "\nSections:"
-     << "\n  - Name:            .text"
-     << "\n    Type:            SHT_PROGBITS"
-     << "\n  - Name:            .data"
-     << "\n    Type:            SHT_PROGBITS"
-     << "\n  - Name:            .rodata"
-     << "\n    Type:            SHT_PROGBITS"
-     << "\nSymbols:\n";
-  for (const auto &Symbol : Symbols) {
-    OS << "  - Name:            " << Symbol.Name << "\n"
-       << "    Type:            STT_";
-    switch (Symbol.Type) {
-    default:
-    case IFSSymbolType::NoType:
-      OS << "NOTYPE";
-      break;
-    case IFSSymbolType::Object:
-      OS << "OBJECT";
-      break;
-    case IFSSymbolType::Func:
-      OS << "FUNC";
-      break;
-    }
-    OS << "\n    Section:         .text"
-       << "\n    Binding:         STB_" << (Symbol.Weak ? "WEAK" : "GLOBAL")
-       << "\n";
-  }
-  OS << "...\n";
-
-  std::string YamlStr = std::string(OS.str());
-
-  // Only or debugging. Not an offical format.
-  LLVM_DEBUG({
-    if (ForceFormat == "ELFOBJYAML") {
-      Out << YamlStr;
-      return 0;
-    }
-  });
-
-  yaml::Input YIn(YamlStr);
-  auto ErrHandler = [](const Twine &Msg) {
-    WithColor::error(errs(), "llvm-ifs") << Msg << "\n";
-  };
-  return convertYAML(YIn, Out, ErrHandler) ? 0 : 1;
+static void fatalError(Error Err) {
+  WithColor::defaultErrorHandler(std::move(Err));
+  exit(1);
 }
 
-static elfabi::ELFTarget convertIFSStub(const IFSStub &IfsStub,
-                                        elfabi::ELFStub &ElfStub) {
-  ElfStub.TbeVersion = IfsStub.IfsVersion;
-  ElfStub.SoName = IfsStub.SOName;
-  // TODO: Support more archs and targets.
-  Triple IFSTriple(IfsStub.Triple);
-  elfabi::ELFTarget Target = elfabi::ELFTarget::ELF64LE;
-  switch (IFSTriple.getArch()) {
-  case Triple::ArchType::aarch64:
-    ElfStub.Arch = (elfabi::ELFArch)ELF::EM_AARCH64;
-    break;
-  case Triple::ArchType::x86_64:
-    ElfStub.Arch = (elfabi::ELFArch)ELF::EM_X86_64;
-    break;
-  default:
-    ElfStub.Arch = (elfabi::ELFArch)ELF::EM_NONE;
-  }
-  ElfStub.NeededLibs = IfsStub.NeededLibs;
-  for (const IFSSymbol &IfsSymbol : IfsStub.Symbols) {
-    elfabi::ELFSymbol ElfSymbol(IfsSymbol.Name);
-    switch (IfsSymbol.Type) {
-    case IFSSymbolType::Func:
-      ElfSymbol.Type = elfabi::ELFSymbolType::Func;
-      break;
-    case IFSSymbolType::NoType:
-      ElfSymbol.Type = elfabi::ELFSymbolType::NoType;
-      break;
-    case IFSSymbolType::Object:
-      ElfSymbol.Type = elfabi::ELFSymbolType::Object;
-      break;
-    default:
-      ElfSymbol.Type = elfabi::ELFSymbolType::Unknown;
-      break;
-      // TODO: Add support for TLS?
-    }
-    ElfSymbol.Size = IfsSymbol.Size;
-    ElfSymbol.Undefined = false;
-    ElfSymbol.Weak = IfsSymbol.Weak;
-    ElfSymbol.Warning = IfsSymbol.Warning;
-    ElfStub.Symbols.insert(ElfSymbol);
-  }
-  return Target;
+static void fatalError(Twine T) {
+  WithColor::error() << T.str() << '\n';
+  exit(1);
 }
 
-static int writeIfso(const IFSStub &Stub, bool IsWriteIfs) {
-  std::string ObjectFileFormat =
-      ForceFormat.empty() ? Stub.ObjectFileFormat : ForceFormat;
+/// writeIFS() writes a Text-Based ELF stub to a file using the latest version
+/// of the YAML parser.
+static Error writeIFS(StringRef FilePath, IFSStub &Stub, bool WriteIfChanged) {
+  // Write IFS to memory first.
+  std::string IFSStr;
+  raw_string_ostream OutStr(IFSStr);
+  Error YAMLErr = writeIFSToOutputStream(OutStr, Stub);
+  if (YAMLErr)
+    return YAMLErr;
+  OutStr.flush();
 
-  // Use InterfaceStub library if the option is enabled and output
-  // format is ELF.
-  if (UseInterfaceStub && (!IsWriteIfs) && ObjectFileFormat != "TBD") {
-    elfabi::ELFStub ElfStub;
-    elfabi::ELFTarget Target = convertIFSStub(Stub, ElfStub);
-    Error BinaryWriteError =
-        elfabi::writeBinaryStub(OutputFilename, ElfStub, Target);
-    if (BinaryWriteError) {
-      return -1;
+  if (WriteIfChanged) {
+    if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =
+            MemoryBuffer::getFile(FilePath)) {
+      // Compare IFS output with the existing IFS file. If unchanged, avoid
+      // changing the file.
+      if ((*BufOrError)->getBuffer() == IFSStr)
+        return Error::success();
     }
-    return 0;
   }
-
-  // Open file for writing.
+  // Open IFS file for writing.
   std::error_code SysErr;
-  raw_fd_ostream Out(OutputFilename, SysErr);
-  if (SysErr) {
-    WithColor::error() << "Couldn't open " << OutputFilename
-                       << " for writing.\n";
-    return -1;
-  }
-
-  if (IsWriteIfs) {
-    yaml::Output YamlOut(Out, NULL, /*WrapColumn =*/0);
-    YamlOut << const_cast<IFSStub &>(Stub);
-    return 0;
-  }
-
-  if (ObjectFileFormat == "ELF" || ForceFormat == "ELFOBJYAML")
-    return writeElfStub(llvm::Triple(Stub.Triple), Stub.Symbols,
-                        Stub.ObjectFileFormat, Out);
-  if (ObjectFileFormat == "TBD")
-    return writeTbdStub(llvm::Triple(Stub.Triple), Stub.Symbols,
-                        Stub.ObjectFileFormat, Out);
-
-  WithColor::error()
-      << "Invalid ObjectFileFormat: Only ELF and TBD are supported.\n";
-  return -1;
+  raw_fd_ostream Out(FilePath, SysErr);
+  if (SysErr)
+    return createStringError(SysErr, "Couldn't open `%s` for writing",
+                             FilePath.data());
+  Out << IFSStr;
+  return Error::success();
 }
 
-// TODO: Drop ObjectFileFormat, it can be subsumed from the triple.
-// New Interface Stubs Yaml Format:
-// --- !experimental-ifs-v2
-// IfsVersion: 2.0
-// Triple:          <llvm triple>
-// ObjectFileFormat: <ELF | others not yet supported>
-// Symbols:
-//   _ZSymbolName: { Type: <type> }
-// ...
+static DriverConfig parseArgs(int argc, char *const *argv) {
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  IFSOptTable Tbl;
+  StringRef ToolName = argv[0];
+  llvm::opt::InputArgList Args = Tbl.parseArgs(
+      argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) { fatalError(Msg); });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(),
+                  (Twine(ToolName) + " <input_file> <output_file> [options]")
+                      .str()
+                      .c_str(),
+                  "shared object stubbing tool");
+    std::exit(0);
+  }
+  if (Args.hasArg(OPT_version)) {
+    llvm::outs() << ToolName << '\n';
+    cl::PrintVersionMessage();
+    std::exit(0);
+  }
 
-int main(int argc, char *argv[]) {
-  // Parse arguments.
-  cl::ParseCommandLineOptions(argc, argv);
+  DriverConfig Config;
+  for (const opt::Arg *A : Args.filtered(OPT_INPUT))
+    Config.InputFilePaths.push_back(A->getValue());
+  if (const opt::Arg *A = Args.getLastArg(OPT_input_format_EQ)) {
+    Config.InputFormat = StringSwitch<std::optional<FileFormat>>(A->getValue())
+                             .Case("IFS", FileFormat::IFS)
+                             .Case("ELF", FileFormat::ELF)
+                             .Default(std::nullopt);
+    if (!Config.InputFormat)
+      fatalError(Twine("invalid argument '") + A->getValue());
+  }
 
-  if (InputFilenames.empty())
-    InputFilenames.push_back("-");
+  auto OptionNotFound = [ToolName](StringRef FlagName, StringRef OptionName) {
+    fatalError(Twine(ToolName) + ": for the " + FlagName +
+               " option: Cannot find option named '" + OptionName + "'!");
+  };
+  if (const opt::Arg *A = Args.getLastArg(OPT_output_format_EQ)) {
+    Config.OutputFormat = StringSwitch<std::optional<FileFormat>>(A->getValue())
+                              .Case("IFS", FileFormat::IFS)
+                              .Case("ELF", FileFormat::ELF)
+                              .Case("TBD", FileFormat::TBD)
+                              .Default(std::nullopt);
+    if (!Config.OutputFormat)
+      OptionNotFound("--output-format", A->getValue());
+  }
+  if (const opt::Arg *A = Args.getLastArg(OPT_arch_EQ)) {
+    uint16_t eMachine = ELF::convertArchNameToEMachine(A->getValue());
+    if (eMachine == ELF::EM_NONE) {
+      fatalError(Twine("unknown arch '") + A->getValue() + "'");
+    }
+    Config.OverrideArch = eMachine;
+  }
+  if (const opt::Arg *A = Args.getLastArg(OPT_bitwidth_EQ)) {
+    size_t Width;
+    llvm::StringRef S(A->getValue());
+    if (!S.getAsInteger<size_t>(10, Width) || Width == 64 || Width == 32)
+      Config.OverrideBitWidth =
+          Width == 64 ? IFSBitWidthType::IFS64 : IFSBitWidthType::IFS32;
+    else
+      OptionNotFound("--bitwidth", A->getValue());
+  }
+  if (const opt::Arg *A = Args.getLastArg(OPT_endianness_EQ)) {
+    Config.OverrideEndianness =
+        StringSwitch<std::optional<IFSEndiannessType>>(A->getValue())
+            .Case("little", IFSEndiannessType::Little)
+            .Case("big", IFSEndiannessType::Big)
+            .Default(std::nullopt);
+    if (!Config.OverrideEndianness)
+      OptionNotFound("--endianness", A->getValue());
+  }
+  if (const opt::Arg *A = Args.getLastArg(OPT_target_EQ))
+    Config.OptTargetTriple = A->getValue();
+  if (const opt::Arg *A = Args.getLastArg(OPT_hint_ifs_target_EQ))
+    Config.HintIfsTarget = A->getValue();
 
+  Config.StripIfsArch = Args.hasArg(OPT_strip_ifs_arch);
+  Config.StripIfsBitwidth = Args.hasArg(OPT_strip_ifs_bitwidth);
+  Config.StripIfsEndianness = Args.hasArg(OPT_strip_ifs_endianness);
+  Config.StripIfsTarget = Args.hasArg(OPT_strip_ifs_target);
+  Config.StripUndefined = Args.hasArg(OPT_strip_undefined);
+  Config.StripNeeded = Args.hasArg(OPT_strip_needed);
+  Config.StripSize = Args.hasArg(OPT_strip_size);
+
+  for (const opt::Arg *A : Args.filtered(OPT_exclude_EQ))
+    Config.Exclude.push_back(A->getValue());
+  if (const opt::Arg *A = Args.getLastArg(OPT_soname_EQ))
+    Config.SoName = A->getValue();
+  if (const opt::Arg *A = Args.getLastArg(OPT_output_EQ))
+    Config.Output = A->getValue();
+  if (const opt::Arg *A = Args.getLastArg(OPT_output_elf_EQ))
+    Config.OutputElf = A->getValue();
+  if (const opt::Arg *A = Args.getLastArg(OPT_output_ifs_EQ))
+    Config.OutputIfs = A->getValue();
+  if (const opt::Arg *A = Args.getLastArg(OPT_output_tbd_EQ))
+    Config.OutputTbd = A->getValue();
+  Config.WriteIfChanged = Args.hasArg(OPT_write_if_changed);
+  return Config;
+}
+
+int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
+  DriverConfig Config = parseArgs(argc, argv);
+
+  if (Config.InputFilePaths.empty())
+    Config.InputFilePaths.push_back("-");
+
+  // If input files are more than one, they can only be IFS files.
+  if (Config.InputFilePaths.size() > 1)
+    Config.InputFormat = FileFormat::IFS;
+
+  // Attempt to merge input.
   IFSStub Stub;
   std::map<std::string, IFSSymbol> SymbolMap;
-
   std::string PreviousInputFilePath;
-  for (const std::string &InputFilePath : InputFilenames) {
-    Expected<std::unique_ptr<IFSStub>> StubOrErr = readInputFile(InputFilePath);
-    if (!StubOrErr) {
-      WithColor::error() << StubOrErr.takeError() << "\n";
-      return -1;
-    }
-    std::unique_ptr<IFSStub> TargetStub = std::move(StubOrErr.get());
+  for (const std::string &InputFilePath : Config.InputFilePaths) {
+    Expected<std::unique_ptr<IFSStub>> StubOrErr =
+        readInputFile(Config.InputFormat, InputFilePath);
+    if (!StubOrErr)
+      fatalError(StubOrErr.takeError());
 
-    if (Stub.Triple.empty()) {
-      PreviousInputFilePath = InputFilePath;
+    std::unique_ptr<IFSStub> TargetStub = std::move(StubOrErr.get());
+    if (PreviousInputFilePath.empty()) {
       Stub.IfsVersion = TargetStub->IfsVersion;
-      Stub.Triple = TargetStub->Triple;
-      Stub.ObjectFileFormat = TargetStub->ObjectFileFormat;
-      Stub.SOName = TargetStub->SOName;
+      Stub.Target = TargetStub->Target;
+      Stub.SoName = TargetStub->SoName;
       Stub.NeededLibs = TargetStub->NeededLibs;
     } else {
-      Stub.ObjectFileFormat = !Stub.ObjectFileFormat.empty()
-                                  ? Stub.ObjectFileFormat
-                                  : TargetStub->ObjectFileFormat;
-
       if (Stub.IfsVersion != TargetStub->IfsVersion) {
-        if (Stub.IfsVersion.getMajor() != IFSVersionCurrent.getMajor()) {
+        if (Stub.IfsVersion.getMajor() != IfsVersionCurrent.getMajor()) {
           WithColor::error()
               << "Interface Stub: IfsVersion Mismatch."
               << "\nFilenames: " << PreviousInputFilePath << " "
@@ -489,29 +418,18 @@ int main(int argc, char *argv[]) {
         if (TargetStub->IfsVersion > Stub.IfsVersion)
           Stub.IfsVersion = TargetStub->IfsVersion;
       }
-      if (Stub.ObjectFileFormat != TargetStub->ObjectFileFormat &&
-          !TargetStub->ObjectFileFormat.empty()) {
-        WithColor::error() << "Interface Stub: ObjectFileFormat Mismatch."
+      if (Stub.Target != TargetStub->Target && !TargetStub->Target.empty()) {
+        WithColor::error() << "Interface Stub: Target Mismatch."
                            << "\nFilenames: " << PreviousInputFilePath << " "
-                           << InputFilePath << "\nObjectFileFormat Values: "
-                           << Stub.ObjectFileFormat << " "
-                           << TargetStub->ObjectFileFormat << "\n";
+                           << InputFilePath;
         return -1;
       }
-      if (Stub.Triple != TargetStub->Triple && !TargetStub->Triple.empty()) {
-        WithColor::error() << "Interface Stub: Triple Mismatch."
+      if (Stub.SoName != TargetStub->SoName) {
+        WithColor::error() << "Interface Stub: SoName Mismatch."
                            << "\nFilenames: " << PreviousInputFilePath << " "
                            << InputFilePath
-                           << "\nTriple Values: " << Stub.Triple << " "
-                           << TargetStub->Triple << "\n";
-        return -1;
-      }
-      if (Stub.SOName != TargetStub->SOName) {
-        WithColor::error() << "Interface Stub: SOName Mismatch."
-                           << "\nFilenames: " << PreviousInputFilePath << " "
-                           << InputFilePath
-                           << "\nSOName Values: " << Stub.SOName << " "
-                           << TargetStub->SOName << "\n";
+                           << "\nSoName Values: " << Stub.SoName << " "
+                           << TargetStub->SoName << "\n";
         return -1;
       }
       if (Stub.NeededLibs != TargetStub->NeededLibs) {
@@ -559,16 +477,159 @@ int main(int argc, char *argv[]) {
     PreviousInputFilePath = InputFilePath;
   }
 
-  if (Stub.IfsVersion != IFSVersionCurrent)
-    if (Stub.IfsVersion.getMajor() != IFSVersionCurrent.getMajor()) {
+  if (Stub.IfsVersion != IfsVersionCurrent)
+    if (Stub.IfsVersion.getMajor() != IfsVersionCurrent.getMajor()) {
       WithColor::error() << "Interface Stub: Bad IfsVersion: "
                          << Stub.IfsVersion << ", llvm-ifs supported version: "
-                         << IFSVersionCurrent << ".\n";
+                         << IfsVersionCurrent << ".\n";
       return -1;
     }
 
   for (auto &Entry : SymbolMap)
     Stub.Symbols.push_back(Entry.second);
 
-  return writeIfso(Stub, (Action == "write-ifs"));
+  // Change SoName before emitting stubs.
+  if (Config.SoName)
+    Stub.SoName = *Config.SoName;
+
+  Error OverrideError =
+      overrideIFSTarget(Stub, Config.OverrideArch, Config.OverrideEndianness,
+                        Config.OverrideBitWidth, Config.OptTargetTriple);
+  if (OverrideError)
+    fatalError(std::move(OverrideError));
+
+  if (Config.StripNeeded)
+    Stub.NeededLibs.clear();
+
+  if (Error E = filterIFSSyms(Stub, Config.StripUndefined, Config.Exclude))
+    fatalError(std::move(E));
+
+  if (Config.StripSize)
+    for (IFSSymbol &Sym : Stub.Symbols)
+      Sym.Size.reset();
+
+  if (!Config.OutputElf && !Config.OutputIfs && !Config.OutputTbd) {
+    if (!Config.OutputFormat) {
+      WithColor::error() << "at least one output should be specified.";
+      return -1;
+    }
+  } else if (Config.OutputFormat) {
+    WithColor::error() << "'--output-format' cannot be used with "
+                          "'--output-{FILE_FORMAT}' options at the same time";
+    return -1;
+  }
+  if (Config.OutputFormat) {
+    // TODO: Remove OutputFormat flag in the next revision.
+    WithColor::warning() << "--output-format option is deprecated, please use "
+                            "--output-{FILE_FORMAT} options instead\n";
+    switch (*Config.OutputFormat) {
+    case FileFormat::TBD: {
+      std::error_code SysErr;
+      raw_fd_ostream Out(*Config.Output, SysErr);
+      if (SysErr) {
+        WithColor::error() << "Couldn't open " << *Config.Output
+                           << " for writing.\n";
+        return -1;
+      }
+      if (!Stub.Target.Triple) {
+        WithColor::error()
+            << "Triple should be defined when output format is TBD";
+        return -1;
+      }
+      return writeTbdStub(llvm::Triple(*Stub.Target.Triple), Stub.Symbols,
+                          "TBD", Out);
+    }
+    case FileFormat::IFS: {
+      Stub.IfsVersion = IfsVersionCurrent;
+      if (*Config.InputFormat == FileFormat::ELF && Config.HintIfsTarget) {
+        std::error_code HintEC(1, std::generic_category());
+        IFSTarget HintTarget = parseTriple(*Config.HintIfsTarget);
+        if (*Stub.Target.Arch != *HintTarget.Arch)
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual architecture", HintEC));
+        if (*Stub.Target.Endianness != *HintTarget.Endianness)
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual endianness", HintEC));
+        if (*Stub.Target.BitWidth != *HintTarget.BitWidth)
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual bit width", HintEC));
+
+        stripIFSTarget(Stub, true, false, false, false);
+        Stub.Target.Triple = *Config.HintIfsTarget;
+      } else {
+        stripIFSTarget(Stub, Config.StripIfsTarget, Config.StripIfsArch,
+                       Config.StripIfsEndianness, Config.StripIfsBitwidth);
+      }
+      Error IFSWriteError =
+          writeIFS(*Config.Output, Stub, Config.WriteIfChanged);
+      if (IFSWriteError)
+        fatalError(std::move(IFSWriteError));
+      break;
+    }
+    case FileFormat::ELF: {
+      Error TargetError = validateIFSTarget(Stub, true);
+      if (TargetError)
+        fatalError(std::move(TargetError));
+      Error BinaryWriteError =
+          writeBinaryStub(*Config.Output, Stub, Config.WriteIfChanged);
+      if (BinaryWriteError)
+        fatalError(std::move(BinaryWriteError));
+      break;
+    }
+    }
+  } else {
+    // Check if output path for individual format.
+    if (Config.OutputElf) {
+      Error TargetError = validateIFSTarget(Stub, true);
+      if (TargetError)
+        fatalError(std::move(TargetError));
+      Error BinaryWriteError =
+          writeBinaryStub(*Config.OutputElf, Stub, Config.WriteIfChanged);
+      if (BinaryWriteError)
+        fatalError(std::move(BinaryWriteError));
+    }
+    if (Config.OutputIfs) {
+      Stub.IfsVersion = IfsVersionCurrent;
+      if (*Config.InputFormat == FileFormat::ELF && Config.HintIfsTarget) {
+        std::error_code HintEC(1, std::generic_category());
+        IFSTarget HintTarget = parseTriple(*Config.HintIfsTarget);
+        if (*Stub.Target.Arch != *HintTarget.Arch)
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual architecture", HintEC));
+        if (*Stub.Target.Endianness != *HintTarget.Endianness)
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual endianness", HintEC));
+        if (*Stub.Target.BitWidth != *HintTarget.BitWidth)
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual bit width", HintEC));
+
+        stripIFSTarget(Stub, true, false, false, false);
+        Stub.Target.Triple = *Config.HintIfsTarget;
+      } else {
+        stripIFSTarget(Stub, Config.StripIfsTarget, Config.StripIfsArch,
+                       Config.StripIfsEndianness, Config.StripIfsBitwidth);
+      }
+      Error IFSWriteError =
+          writeIFS(*Config.OutputIfs, Stub, Config.WriteIfChanged);
+      if (IFSWriteError)
+        fatalError(std::move(IFSWriteError));
+    }
+    if (Config.OutputTbd) {
+      std::error_code SysErr;
+      raw_fd_ostream Out(*Config.OutputTbd, SysErr);
+      if (SysErr) {
+        WithColor::error() << "Couldn't open " << *Config.OutputTbd
+                           << " for writing.\n";
+        return -1;
+      }
+      if (!Stub.Target.Triple) {
+        WithColor::error()
+            << "Triple should be defined when output format is TBD";
+        return -1;
+      }
+      return writeTbdStub(llvm::Triple(*Stub.Target.Triple), Stub.Symbols,
+                          "TBD", Out);
+    }
+  }
+  return 0;
 }

@@ -12,7 +12,9 @@
 
 #include <functional>
 #include <memory>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -233,11 +235,11 @@ void test_bullet_three_four() {
   static_assert(std::is_same_v<std::common_type_t<const bad_reference_wrapper<double>, double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<volatile bad_reference_wrapper<double>, double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<const volatile bad_reference_wrapper<double>, double>, double>, "");
-  
+
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>, const double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>, volatile double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>, const volatile double>, double>, "");
-  
+
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>&, double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>, double&>, double>, "");
 #endif
@@ -261,38 +263,15 @@ void test_bullet_four() {
   }
 }
 
-
-// The example code specified in Note B for common_type
-namespace note_b_example {
-
-typedef bool (&PF1)();
-typedef short (*PF2)(long);
-
-struct S {
-  operator PF2() const;
-  double operator()(char, int&);
-  void fn(long) const;
-  char data;
+#if TEST_STD_VER > 20
+struct A {};
+struct B {};
+struct C : B {};
+template<>
+struct std::common_type<A, std::tuple<B>> {
+  using type = tuple<B>;
 };
-
-typedef void (S::*PMF)(long) const;
-typedef char S::*PMD;
-
-using std::is_same;
-using std::result_of;
-using std::unique_ptr;
-
-static_assert((is_same<result_of<S(int)>::type, short>::value), "Error!");
-static_assert((is_same<result_of<S&(unsigned char, int&)>::type, double>::value), "Error!");
-static_assert((is_same<result_of<PF1()>::type, bool>::value), "Error!");
-static_assert((is_same<result_of<PMF(unique_ptr<S>, int)>::type, void>::value), "Error!");
-#if TEST_STD_VER >= 11
-static_assert((is_same<result_of<PMD(S)>::type, char&&>::value), "Error!");
 #endif
-static_assert((is_same<result_of<PMD(const S*)>::type, const char&>::value), "Error!");
-
-} // namespace note_b_example
-
 
 int main(int, char**)
 {
@@ -354,7 +333,7 @@ int main(int, char**)
   test_bullet_three_four();
   test_bullet_four();
 
-//  P0548
+    // P0548
     static_assert((std::is_same<std::common_type<S<int> >::type,         S<int> >::value), "");
     static_assert((std::is_same<std::common_type<S<int>, S<int> >::type, S<int> >::value), "");
 
@@ -371,6 +350,30 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     // Test that we're really variadic in C++11
     static_assert(std::is_same<std::common_type<int, int, int, int, int, int, int, int>::type, int>::value, "");
+#endif
+
+#if TEST_STD_VER > 20
+    // P2321
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<int>>, std::tuple<int>>);
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<int>, std::tuple<long>>, std::tuple<long>>);
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<const int>, std::tuple<const int>>, std::tuple<int>>);
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<const int&>>, std::tuple<int>>);
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<const volatile int&>, std::tuple<const volatile long&>>, std::tuple<long>>);
+
+    static_assert(std::is_same_v<std::common_type_t<A, std::tuple<B>, std::tuple<C>>, std::tuple<B>>);
+
+    static_assert(std::is_same_v<std::common_type_t<std::pair<int, int>>, std::pair<int, int>>);
+    static_assert(std::is_same_v<std::common_type_t<std::pair<int, long>, std::pair<long, int>>, std::pair<long, long>>);
+    static_assert(std::is_same_v<std::common_type_t<std::pair<const int, const long>,
+                                                    std::pair<const int, const long>>,
+                                                    std::pair<int, long>>);
+
+    static_assert(std::is_same_v<std::common_type_t<std::pair<const int&, const long&>>, std::pair<int, long>>);
+    static_assert(std::is_same_v<std::common_type_t<std::pair<const volatile int&, const volatile long&>,
+                                                    std::pair<const volatile long&, const volatile int&>>,
+                                                    std::pair<long, long>>);
+
+    static_assert(std::is_same_v<std::common_type_t<A, std::tuple<B>, std::tuple<C>>, std::tuple<B>>);
 #endif
 
   return 0;

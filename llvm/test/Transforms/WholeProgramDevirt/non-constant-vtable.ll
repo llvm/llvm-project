@@ -1,32 +1,28 @@
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT: devirtualized call
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-@vt = global [1 x i8*] [i8* bitcast (void (i8*)* @vf to i8*)], !type !0
+@vt = global [1 x ptr] [ptr @vf], !type !0
 
-define void @vf(i8* %this) {
+define void @vf(ptr %this) {
   ret void
 }
 
 ; CHECK: define void @call
-define void @call(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid")
+define void @call(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr [1 x i8*], [1 x i8*]* %vtable, i32 0, i32 0
-  %fptr = load i8*, i8** %fptrptr
-  %fptr_casted = bitcast i8* %fptr to void (i8*)*
+  %fptr = load ptr, ptr %vtable
   ; CHECK: call void %
-  call void %fptr_casted(i8* %obj)
+  call void %fptr(ptr %obj)
   ret void
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)
 
 !0 = !{i32 0, !"typeid"}

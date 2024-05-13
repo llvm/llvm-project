@@ -4,15 +4,6 @@
 ; RUN: cat %s %t/1 > %t/2
 
 ; By default, the exit block is the second.
-; RUN: opt -insert-gcov-profiling -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-SECOND %s
-
-; But we can optionally emit it last, to match GCC<4.8 (r189778).
-; RUN: opt -insert-gcov-profiling -default-gcov-version='407*' -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-LAST %s
-; RUN: rm  %t/exit-block.gcno
-
-; By default, the exit block is the second.
 ; RUN: opt -passes=insert-gcov-profiling -disable-output %t/2
 ; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-SECOND %s
 
@@ -29,7 +20,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() #0 !dbg !4 {
 entry:
   tail call void (...) @f() #2, !dbg !14
-  %0 = load i32, i32* @A, align 4, !dbg !15
+  %0 = load i32, ptr @A, align 4, !dbg !15
   %tobool = icmp eq i32 %0, 0, !dbg !15
   br i1 %tobool, label %if.end, label %if.then, !dbg !15
 

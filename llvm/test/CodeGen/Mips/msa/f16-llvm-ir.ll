@@ -24,7 +24,7 @@
 
 @k = external global float
 
-declare float @k2(half *)
+declare float @k2(ptr)
 
 define void @f3(i16 %b) {
 ; MIPS32-LABEL: f3:
@@ -96,9 +96,9 @@ define void @f3(i16 %b) {
 entry:
   %0 = alloca half
   %1 = bitcast i16 %b to half
-  store half %1, half * %0
-  %2 = call float @k2(half * %0)
-  store float %2, float * @k
+  store half %1, ptr %0
+  %2 = call float @k2(ptr %0)
+  store float %2, ptr @k
   ret void
 }
 
@@ -158,7 +158,7 @@ define void  @f(i16 %b) {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 16
   %1 = bitcast i16 %b to half
   %2 = fpext half %1 to float
-  store float %2, float * @k
+  store float %2, ptr @k
   ret void
 }
 
@@ -241,13 +241,13 @@ define void @fadd_f64() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load half, half * @h, align 2
+  %0 = load half, ptr @h, align 2
   %1 = fpext half %0 to double
-  %2 = load half, half * @h, align 2
+  %2 = load half, ptr @h, align 2
   %3 = fpext half %2 to double
   %add = fadd double %1, %3
   %4 = fptrunc double %add to half
-   store half %4, half * @h, align 2
+   store half %4, ptr @h, align 2
   ret void
 }
 
@@ -303,7 +303,7 @@ define i32 @ffptoui() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    mfc1 $2, $f0
 entry:
-  %0 = load half, half * @h, align 2
+  %0 = load half, ptr @h, align 2
   %1 = fptoui half %0 to i32
   ret i32 %1
 }
@@ -359,7 +359,7 @@ define i32 @ffptosi() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    mfc1 $2, $f0
 entry:
-  %0 = load half, half * @h, align 2
+  %0 = load half, ptr @h, align 2
   %1 = fptosi half %0 to i32
   ret i32 %1
 
@@ -405,8 +405,9 @@ define void @uitofp(i32 %a) {
 ; MIPS64-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
 ; MIPS64-N32-NEXT:    lui $2, 17200
 ; MIPS64-N32-NEXT:    sw $2, 12($sp)
-; MIPS64-N32-NEXT:    sll $2, $4, 0
-; MIPS64-N32-NEXT:    sw $2, 8($sp)
+; MIPS64R5-N32-NEXT:    sll $2, $4, 0
+; MIPS64R5-N32-NEXT:    sw $2, 8($sp)
+; MIPSR6-N32-NEXT:    sw $4, 8($sp)
 ; MIPS64-N32-NEXT:    lw $2, %got_page(.LCPI5_0)($1)
 ; MIPS64-N32-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
 ; MIPS64-N32-NEXT:    ldc1 $f1, 8($sp)
@@ -430,8 +431,9 @@ define void @uitofp(i32 %a) {
 ; MIPS64-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
 ; MIPS64-N64-NEXT:    lui $2, 17200
 ; MIPS64-N64-NEXT:    sw $2, 12($sp)
-; MIPS64-N64-NEXT:    sll $2, $4, 0
-; MIPS64-N64-NEXT:    sw $2, 8($sp)
+; MIPS64R5-N64-NEXT:    sll $2, $4, 0
+; MIPS64R5-N64-NEXT:    sw $2, 8($sp)
+; MIPSR6-N64-NEXT:    sw $4, 8($sp)
 ; MIPS64-N64-NEXT:    ld $2, %got_page(.LCPI5_0)($1)
 ; MIPS64-N64-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
 ; MIPS64-N64-NEXT:    ldc1 $f1, 8($sp)
@@ -456,7 +458,7 @@ entry:
 
 
   %0 = uitofp i32 %a to half
-  store half %0, half * @h, align 2
+  store half %0, ptr @h, align 2
   ret void
 }
 
@@ -522,18 +524,18 @@ define void @fadd() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %add = fadd float %1, %3
 
 
  %4 = call i16 @llvm.convert.to.fp16.f32(float %add)
 
-   store i16 %4, i16* @g, align 2
+   store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -602,11 +604,11 @@ define void @fsub() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %sub = fsub float %1, %3
 
@@ -614,7 +616,7 @@ entry:
   %4 = call i16 @llvm.convert.to.fp16.f32(float %sub)
 
 
-  store i16 %4, i16* @g, align 2
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -676,11 +678,11 @@ define void @fmult() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %mul = fmul float %1, %3
 
@@ -688,7 +690,7 @@ entry:
   %4 = call i16 @llvm.convert.to.fp16.f32(float %mul)
 
 
-  store i16 %4, i16* @g, align 2
+  store i16 %4, ptr @g, align 2
 
   ret void
 }
@@ -752,18 +754,18 @@ define void @fdiv() {
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
 
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %div = fdiv float %1, %3
 
 
   %4 = call i16 @llvm.convert.to.fp16.f32(float %div)
 
-  store i16 %4, i16* @g, align 2
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -864,11 +866,11 @@ define void @frem() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %rem = frem float %1, %3
 
@@ -876,7 +878,7 @@ entry:
   %4 = call i16 @llvm.convert.to.fp16.f32(float %rem)
 
 
-  store i16 %4, i16* @g, align 2
+  store i16 %4, ptr @g, align 2
 
   ret void
 }
@@ -995,21 +997,21 @@ define void @fcmp() {
 ; MIPSR6-N64-NEXT:    jr $ra
 ; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %fcmp = fcmp oeq float %1, %3
 
 
   %4 = zext i1 %fcmp to i16
-  store i16 %4, i16* @i1, align 2
+  store i16 %4, ptr @i1, align 2
 
   ret void
 }
 
-declare float @llvm.powi.f32(float, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 
 define void @fpowi() {
 ; MIPS32-LABEL: fpowi:
@@ -1069,17 +1071,17 @@ define void @fpowi() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %powi = call float @llvm.powi.f32(float %1, i32 2)
+  %powi = call float @llvm.powi.f32.i32(float %1, i32 2)
 
 
   %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
   ret void
 }
 
@@ -1180,17 +1182,17 @@ define void @fpowi_var(i32 %var) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %powi = call float @llvm.powi.f32(float %1, i32 %var)
+  %powi = call float @llvm.powi.f32.i32(float %1, i32 %var)
 
 
   %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
   ret void
 }
 
@@ -1293,7 +1295,7 @@ define void @fpow(float %var) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1303,7 +1305,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
   ret void
 }
 
@@ -1403,7 +1405,7 @@ define void @flog2() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1411,7 +1413,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %log2)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1512,7 +1514,7 @@ define void @flog10() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1520,7 +1522,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %log10)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1585,7 +1587,7 @@ define void @fsqrt() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1593,7 +1595,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %sqrt)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1694,7 +1696,7 @@ define void @fsin() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1702,7 +1704,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %sin)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1803,7 +1805,7 @@ define void @fcos() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1811,7 +1813,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %cos)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1912,14 +1914,14 @@ define void @fexp() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
   %exp = call float @llvm.exp.f32(float %1)
   %2 = call i16 @llvm.convert.to.fp16.f32(float %exp)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2020,7 +2022,7 @@ define void @fexp2() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2028,7 +2030,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %exp2)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2136,7 +2138,7 @@ define void @ffma(float %b, float %c) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2144,7 +2146,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %fma)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2272,7 +2274,7 @@ define void @ffmuladd(float %b, float %c) {
 ; MIPSR6-N64-NEXT:    jr $ra
 ; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 ; MIPS32-N32:     madd.s $f[[F1:[0-9]]], $f13, $f[[F0]], $f12
@@ -2282,7 +2284,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %fmuladd)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2347,7 +2349,7 @@ define void @ffabs() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2355,7 +2357,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %fabs)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2363,103 +2365,161 @@ entry:
 declare float @llvm.minnum.f32(float %Val, float %b)
 
 define void @fminnum(float %b) {
-; MIPS32-LABEL: fminnum:
-; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
-; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    .cfi_offset 16, -8
-; MIPS32-NEXT:    addu $gp, $2, $25
-; MIPS32-NEXT:    mov.s $f14, $f12
-; MIPS32-NEXT:    lw $16, %got(g)($gp)
-; MIPS32-NEXT:    lh $1, 0($16)
-; MIPS32-NEXT:    fill.h $w0, $1
-; MIPS32-NEXT:    fexupr.w $w0, $w0
-; MIPS32-NEXT:    copy_s.w $1, $w0[0]
-; MIPS32-NEXT:    lw $25, %call16(fminf)($gp)
-; MIPS32-NEXT:    jalr $25
-; MIPS32-NEXT:    mtc1 $1, $f12
-; MIPS32-NEXT:    mfc1 $1, $f0
-; MIPS32-NEXT:    fill.w $w0, $1
-; MIPS32-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS32-NEXT:    copy_u.h $1, $w0[0]
-; MIPS32-NEXT:    sh $1, 0($16)
-; MIPS32-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-O32-LABEL: fminnum:
+; MIPS32-O32:       # %bb.0: # %entry
+; MIPS32-O32-NEXT:    lui $2, %hi(_gp_disp)
+; MIPS32-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; MIPS32-O32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-O32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-O32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-O32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
+; MIPS32-O32-NEXT:    .cfi_offset 31, -4
+; MIPS32-O32-NEXT:    .cfi_offset 16, -8
+; MIPS32-O32-NEXT:    addu $gp, $2, $25
+; MIPS32-O32-NEXT:    mov.s $f14, $f12
+; MIPS32-O32-NEXT:    lw $16, %got(g)($gp)
+; MIPS32-O32-NEXT:    lh $1, 0($16)
+; MIPS32-O32-NEXT:    fill.h $w0, $1
+; MIPS32-O32-NEXT:    fexupr.w $w0, $w0
+; MIPS32-O32-NEXT:    copy_s.w $1, $w0[0]
+; MIPS32-O32-NEXT:    lw $25, %call16(fminf)($gp)
+; MIPS32-O32-NEXT:    jalr $25
+; MIPS32-O32-NEXT:    mtc1 $1, $f12
+; MIPS32-O32-NEXT:    mfc1 $1, $f0
+; MIPS32-O32-NEXT:    fill.w $w0, $1
+; MIPS32-O32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS32-O32-NEXT:    copy_u.h $1, $w0[0]
+; MIPS32-O32-NEXT:    sh $1, 0($16)
+; MIPS32-O32-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
+; MIPS32-O32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-O32-NEXT:    jr $ra
+; MIPS32-O32-NEXT:    addiu $sp, $sp, 24
 ;
-; MIPS64-N32-LABEL: fminnum:
-; MIPS64-N32:       # %bb.0: # %entry
-; MIPS64-N32-NEXT:    addiu $sp, $sp, -32
-; MIPS64-N32-NEXT:    .cfi_def_cfa_offset 32
-; MIPS64-N32-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    .cfi_offset 31, -8
-; MIPS64-N32-NEXT:    .cfi_offset 28, -16
-; MIPS64-N32-NEXT:    .cfi_offset 16, -24
-; MIPS64-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
-; MIPS64-N32-NEXT:    addu $1, $1, $25
-; MIPS64-N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(fminnum)))
-; MIPS64-N32-NEXT:    mov.s $f13, $f12
-; MIPS64-N32-NEXT:    lw $16, %got_disp(g)($gp)
-; MIPS64-N32-NEXT:    lh $1, 0($16)
-; MIPS64-N32-NEXT:    fill.h $w0, $1
-; MIPS64-N32-NEXT:    fexupr.w $w0, $w0
-; MIPS64-N32-NEXT:    copy_s.w $1, $w0[0]
-; MIPS64-N32-NEXT:    lw $25, %call16(fminf)($gp)
-; MIPS64-N32-NEXT:    jalr $25
-; MIPS64-N32-NEXT:    mtc1 $1, $f12
-; MIPS64-N32-NEXT:    mfc1 $1, $f0
-; MIPS64-N32-NEXT:    fill.w $w0, $1
-; MIPS64-N32-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS64-N32-NEXT:    copy_u.h $1, $w0[0]
-; MIPS64-N32-NEXT:    sh $1, 0($16)
-; MIPS64-N32-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    jr $ra
-; MIPS64-N32-NEXT:    addiu $sp, $sp, 32
+; MIPS64R5-N32-LABEL: fminnum:
+; MIPS64R5-N32:       # %bb.0: # %entry
+; MIPS64R5-N32-NEXT:    addiu $sp, $sp, -32
+; MIPS64R5-N32-NEXT:    .cfi_def_cfa_offset 32
+; MIPS64R5-N32-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
+; MIPS64R5-N32-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
+; MIPS64R5-N32-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
+; MIPS64R5-N32-NEXT:    .cfi_offset 31, -8
+; MIPS64R5-N32-NEXT:    .cfi_offset 28, -16
+; MIPS64R5-N32-NEXT:    .cfi_offset 16, -24
+; MIPS64R5-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
+; MIPS64R5-N32-NEXT:    addu $1, $1, $25
+; MIPS64R5-N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(fminnum)))
+; MIPS64R5-N32-NEXT:    mov.s $f13, $f12
+; MIPS64R5-N32-NEXT:    lw $16, %got_disp(g)($gp)
+; MIPS64R5-N32-NEXT:    lh $1, 0($16)
+; MIPS64R5-N32-NEXT:    fill.h $w0, $1
+; MIPS64R5-N32-NEXT:    fexupr.w $w0, $w0
+; MIPS64R5-N32-NEXT:    copy_s.w $1, $w0[0]
+; MIPS64R5-N32-NEXT:    lw $25, %call16(fminf)($gp)
+; MIPS64R5-N32-NEXT:    jalr $25
+; MIPS64R5-N32-NEXT:    mtc1 $1, $f12
+; MIPS64R5-N32-NEXT:    mfc1 $1, $f0
+; MIPS64R5-N32-NEXT:    fill.w $w0, $1
+; MIPS64R5-N32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS64R5-N32-NEXT:    copy_u.h $1, $w0[0]
+; MIPS64R5-N32-NEXT:    sh $1, 0($16)
+; MIPS64R5-N32-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
+; MIPS64R5-N32-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
+; MIPS64R5-N32-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
+; MIPS64R5-N32-NEXT:    jr $ra
+; MIPS64R5-N32-NEXT:    addiu $sp, $sp, 32
 ;
-; MIPS64-N64-LABEL: fminnum:
-; MIPS64-N64:       # %bb.0: # %entry
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, -32
-; MIPS64-N64-NEXT:    .cfi_def_cfa_offset 32
-; MIPS64-N64-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    .cfi_offset 31, -8
-; MIPS64-N64-NEXT:    .cfi_offset 28, -16
-; MIPS64-N64-NEXT:    .cfi_offset 16, -24
-; MIPS64-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
-; MIPS64-N64-NEXT:    daddu $1, $1, $25
-; MIPS64-N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(fminnum)))
-; MIPS64-N64-NEXT:    mov.s $f13, $f12
-; MIPS64-N64-NEXT:    ld $16, %got_disp(g)($gp)
-; MIPS64-N64-NEXT:    lh $1, 0($16)
-; MIPS64-N64-NEXT:    fill.h $w0, $1
-; MIPS64-N64-NEXT:    fexupr.w $w0, $w0
-; MIPS64-N64-NEXT:    copy_s.w $1, $w0[0]
-; MIPS64-N64-NEXT:    ld $25, %call16(fminf)($gp)
-; MIPS64-N64-NEXT:    jalr $25
-; MIPS64-N64-NEXT:    mtc1 $1, $f12
-; MIPS64-N64-NEXT:    mfc1 $1, $f0
-; MIPS64-N64-NEXT:    fill.w $w0, $1
-; MIPS64-N64-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS64-N64-NEXT:    copy_u.h $1, $w0[0]
-; MIPS64-N64-NEXT:    sh $1, 0($16)
-; MIPS64-N64-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    jr $ra
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
+; MIPS64R5-N64-LABEL: fminnum:
+; MIPS64R5-N64:       # %bb.0: # %entry
+; MIPS64R5-N64-NEXT:    daddiu $sp, $sp, -32
+; MIPS64R5-N64-NEXT:    .cfi_def_cfa_offset 32
+; MIPS64R5-N64-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
+; MIPS64R5-N64-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
+; MIPS64R5-N64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
+; MIPS64R5-N64-NEXT:    .cfi_offset 31, -8
+; MIPS64R5-N64-NEXT:    .cfi_offset 28, -16
+; MIPS64R5-N64-NEXT:    .cfi_offset 16, -24
+; MIPS64R5-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
+; MIPS64R5-N64-NEXT:    daddu $1, $1, $25
+; MIPS64R5-N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(fminnum)))
+; MIPS64R5-N64-NEXT:    mov.s $f13, $f12
+; MIPS64R5-N64-NEXT:    ld $16, %got_disp(g)($gp)
+; MIPS64R5-N64-NEXT:    lh $1, 0($16)
+; MIPS64R5-N64-NEXT:    fill.h $w0, $1
+; MIPS64R5-N64-NEXT:    fexupr.w $w0, $w0
+; MIPS64R5-N64-NEXT:    copy_s.w $1, $w0[0]
+; MIPS64R5-N64-NEXT:    ld $25, %call16(fminf)($gp)
+; MIPS64R5-N64-NEXT:    jalr $25
+; MIPS64R5-N64-NEXT:    mtc1 $1, $f12
+; MIPS64R5-N64-NEXT:    mfc1 $1, $f0
+; MIPS64R5-N64-NEXT:    fill.w $w0, $1
+; MIPS64R5-N64-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS64R5-N64-NEXT:    copy_u.h $1, $w0[0]
+; MIPS64R5-N64-NEXT:    sh $1, 0($16)
+; MIPS64R5-N64-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
+; MIPS64R5-N64-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
+; MIPS64R5-N64-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
+; MIPS64R5-N64-NEXT:    jr $ra
+; MIPS64R5-N64-NEXT:    daddiu $sp, $sp, 32
+;
+; MIPSR6-O32-LABEL: fminnum:
+; MIPSR6-O32:       # %bb.0: # %entry
+; MIPSR6-O32-NEXT:    lui $2, %hi(_gp_disp)
+; MIPSR6-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; MIPSR6-O32-NEXT:    addu $1, $2, $25
+; MIPSR6-O32-NEXT:    lw $1, %got(g)($1)
+; MIPSR6-O32-NEXT:    lh $2, 0($1)
+; MIPSR6-O32-NEXT:    fill.h $w0, $2
+; MIPSR6-O32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-O32-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-O32-NEXT:    mtc1 $2, $f0
+; MIPSR6-O32-NEXT:    min.s $f0, $f0, $f12
+; MIPSR6-O32-NEXT:    mfc1 $2, $f0
+; MIPSR6-O32-NEXT:    fill.w $w0, $2
+; MIPSR6-O32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-O32-NEXT:    copy_u.h $2, $w0[0]
+; MIPSR6-O32-NEXT:    jr $ra
+; MIPSR6-O32-NEXT:    sh $2, 0($1)
+;
+; MIPSR6-N32-LABEL: fminnum:
+; MIPSR6-N32:       # %bb.0: # %entry
+; MIPSR6-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
+; MIPSR6-N32-NEXT:    addu $1, $1, $25
+; MIPSR6-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(fminnum)))
+; MIPSR6-N32-NEXT:    lw $1, %got_disp(g)($1)
+; MIPSR6-N32-NEXT:    lh $2, 0($1)
+; MIPSR6-N32-NEXT:    fill.h $w0, $2
+; MIPSR6-N32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N32-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-N32-NEXT:    mtc1 $2, $f0
+; MIPSR6-N32-NEXT:    min.s $f0, $f0, $f12
+; MIPSR6-N32-NEXT:    mfc1 $2, $f0
+; MIPSR6-N32-NEXT:    fill.w $w0, $2
+; MIPSR6-N32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-N32-NEXT:    copy_u.h $2, $w0[0]
+; MIPSR6-N32-NEXT:    jr $ra
+; MIPSR6-N32-NEXT:    sh $2, 0($1)
+;
+; MIPSR6-N64-LABEL: fminnum:
+; MIPSR6-N64:       # %bb.0: # %entry
+; MIPSR6-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
+; MIPSR6-N64-NEXT:    daddu $1, $1, $25
+; MIPSR6-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(fminnum)))
+; MIPSR6-N64-NEXT:    ld $1, %got_disp(g)($1)
+; MIPSR6-N64-NEXT:    lh $2, 0($1)
+; MIPSR6-N64-NEXT:    fill.h $w0, $2
+; MIPSR6-N64-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N64-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-N64-NEXT:    mtc1 $2, $f0
+; MIPSR6-N64-NEXT:    min.s $f0, $f0, $f12
+; MIPSR6-N64-NEXT:    mfc1 $2, $f0
+; MIPSR6-N64-NEXT:    fill.w $w0, $2
+; MIPSR6-N64-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-N64-NEXT:    copy_u.h $2, $w0[0]
+; MIPSR6-N64-NEXT:    jr $ra
+; MIPSR6-N64-NEXT:    sh $2, 0($1)
+;
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2467,7 +2527,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %minnum)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2475,103 +2535,160 @@ entry:
 declare float @llvm.maxnum.f32(float %Val, float %b)
 
 define void @fmaxnum(float %b) {
-; MIPS32-LABEL: fmaxnum:
-; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
-; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    .cfi_offset 16, -8
-; MIPS32-NEXT:    addu $gp, $2, $25
-; MIPS32-NEXT:    mov.s $f14, $f12
-; MIPS32-NEXT:    lw $16, %got(g)($gp)
-; MIPS32-NEXT:    lh $1, 0($16)
-; MIPS32-NEXT:    fill.h $w0, $1
-; MIPS32-NEXT:    fexupr.w $w0, $w0
-; MIPS32-NEXT:    copy_s.w $1, $w0[0]
-; MIPS32-NEXT:    lw $25, %call16(fmaxf)($gp)
-; MIPS32-NEXT:    jalr $25
-; MIPS32-NEXT:    mtc1 $1, $f12
-; MIPS32-NEXT:    mfc1 $1, $f0
-; MIPS32-NEXT:    fill.w $w0, $1
-; MIPS32-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS32-NEXT:    copy_u.h $1, $w0[0]
-; MIPS32-NEXT:    sh $1, 0($16)
-; MIPS32-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-O32-LABEL: fmaxnum:
+; MIPS32-O32:       # %bb.0: # %entry
+; MIPS32-O32-NEXT:    lui $2, %hi(_gp_disp)
+; MIPS32-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; MIPS32-O32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-O32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-O32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-O32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
+; MIPS32-O32-NEXT:    .cfi_offset 31, -4
+; MIPS32-O32-NEXT:    .cfi_offset 16, -8
+; MIPS32-O32-NEXT:    addu $gp, $2, $25
+; MIPS32-O32-NEXT:    mov.s $f14, $f12
+; MIPS32-O32-NEXT:    lw $16, %got(g)($gp)
+; MIPS32-O32-NEXT:    lh $1, 0($16)
+; MIPS32-O32-NEXT:    fill.h $w0, $1
+; MIPS32-O32-NEXT:    fexupr.w $w0, $w0
+; MIPS32-O32-NEXT:    copy_s.w $1, $w0[0]
+; MIPS32-O32-NEXT:    lw $25, %call16(fmaxf)($gp)
+; MIPS32-O32-NEXT:    jalr $25
+; MIPS32-O32-NEXT:    mtc1 $1, $f12
+; MIPS32-O32-NEXT:    mfc1 $1, $f0
+; MIPS32-O32-NEXT:    fill.w $w0, $1
+; MIPS32-O32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS32-O32-NEXT:    copy_u.h $1, $w0[0]
+; MIPS32-O32-NEXT:    sh $1, 0($16)
+; MIPS32-O32-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
+; MIPS32-O32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-O32-NEXT:    jr $ra
+; MIPS32-O32-NEXT:    addiu $sp, $sp, 24
 ;
-; MIPS64-N32-LABEL: fmaxnum:
-; MIPS64-N32:       # %bb.0: # %entry
-; MIPS64-N32-NEXT:    addiu $sp, $sp, -32
-; MIPS64-N32-NEXT:    .cfi_def_cfa_offset 32
-; MIPS64-N32-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    .cfi_offset 31, -8
-; MIPS64-N32-NEXT:    .cfi_offset 28, -16
-; MIPS64-N32-NEXT:    .cfi_offset 16, -24
-; MIPS64-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
-; MIPS64-N32-NEXT:    addu $1, $1, $25
-; MIPS64-N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(fmaxnum)))
-; MIPS64-N32-NEXT:    mov.s $f13, $f12
-; MIPS64-N32-NEXT:    lw $16, %got_disp(g)($gp)
-; MIPS64-N32-NEXT:    lh $1, 0($16)
-; MIPS64-N32-NEXT:    fill.h $w0, $1
-; MIPS64-N32-NEXT:    fexupr.w $w0, $w0
-; MIPS64-N32-NEXT:    copy_s.w $1, $w0[0]
-; MIPS64-N32-NEXT:    lw $25, %call16(fmaxf)($gp)
-; MIPS64-N32-NEXT:    jalr $25
-; MIPS64-N32-NEXT:    mtc1 $1, $f12
-; MIPS64-N32-NEXT:    mfc1 $1, $f0
-; MIPS64-N32-NEXT:    fill.w $w0, $1
-; MIPS64-N32-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS64-N32-NEXT:    copy_u.h $1, $w0[0]
-; MIPS64-N32-NEXT:    sh $1, 0($16)
-; MIPS64-N32-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    jr $ra
-; MIPS64-N32-NEXT:    addiu $sp, $sp, 32
+; MIPS64R5-N32-LABEL: fmaxnum:
+; MIPS64R5-N32:       # %bb.0: # %entry
+; MIPS64R5-N32-NEXT:    addiu $sp, $sp, -32
+; MIPS64R5-N32-NEXT:    .cfi_def_cfa_offset 32
+; MIPS64R5-N32-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
+; MIPS64R5-N32-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
+; MIPS64R5-N32-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
+; MIPS64R5-N32-NEXT:    .cfi_offset 31, -8
+; MIPS64R5-N32-NEXT:    .cfi_offset 28, -16
+; MIPS64R5-N32-NEXT:    .cfi_offset 16, -24
+; MIPS64R5-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
+; MIPS64R5-N32-NEXT:    addu $1, $1, $25
+; MIPS64R5-N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(fmaxnum)))
+; MIPS64R5-N32-NEXT:    mov.s $f13, $f12
+; MIPS64R5-N32-NEXT:    lw $16, %got_disp(g)($gp)
+; MIPS64R5-N32-NEXT:    lh $1, 0($16)
+; MIPS64R5-N32-NEXT:    fill.h $w0, $1
+; MIPS64R5-N32-NEXT:    fexupr.w $w0, $w0
+; MIPS64R5-N32-NEXT:    copy_s.w $1, $w0[0]
+; MIPS64R5-N32-NEXT:    lw $25, %call16(fmaxf)($gp)
+; MIPS64R5-N32-NEXT:    jalr $25
+; MIPS64R5-N32-NEXT:    mtc1 $1, $f12
+; MIPS64R5-N32-NEXT:    mfc1 $1, $f0
+; MIPS64R5-N32-NEXT:    fill.w $w0, $1
+; MIPS64R5-N32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS64R5-N32-NEXT:    copy_u.h $1, $w0[0]
+; MIPS64R5-N32-NEXT:    sh $1, 0($16)
+; MIPS64R5-N32-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
+; MIPS64R5-N32-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
+; MIPS64R5-N32-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
+; MIPS64R5-N32-NEXT:    jr $ra
+; MIPS64R5-N32-NEXT:    addiu $sp, $sp, 32
 ;
-; MIPS64-N64-LABEL: fmaxnum:
-; MIPS64-N64:       # %bb.0: # %entry
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, -32
-; MIPS64-N64-NEXT:    .cfi_def_cfa_offset 32
-; MIPS64-N64-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    .cfi_offset 31, -8
-; MIPS64-N64-NEXT:    .cfi_offset 28, -16
-; MIPS64-N64-NEXT:    .cfi_offset 16, -24
-; MIPS64-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
-; MIPS64-N64-NEXT:    daddu $1, $1, $25
-; MIPS64-N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(fmaxnum)))
-; MIPS64-N64-NEXT:    mov.s $f13, $f12
-; MIPS64-N64-NEXT:    ld $16, %got_disp(g)($gp)
-; MIPS64-N64-NEXT:    lh $1, 0($16)
-; MIPS64-N64-NEXT:    fill.h $w0, $1
-; MIPS64-N64-NEXT:    fexupr.w $w0, $w0
-; MIPS64-N64-NEXT:    copy_s.w $1, $w0[0]
-; MIPS64-N64-NEXT:    ld $25, %call16(fmaxf)($gp)
-; MIPS64-N64-NEXT:    jalr $25
-; MIPS64-N64-NEXT:    mtc1 $1, $f12
-; MIPS64-N64-NEXT:    mfc1 $1, $f0
-; MIPS64-N64-NEXT:    fill.w $w0, $1
-; MIPS64-N64-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS64-N64-NEXT:    copy_u.h $1, $w0[0]
-; MIPS64-N64-NEXT:    sh $1, 0($16)
-; MIPS64-N64-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    jr $ra
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
+; MIPS64R5-N64-LABEL: fmaxnum:
+; MIPS64R5-N64:       # %bb.0: # %entry
+; MIPS64R5-N64-NEXT:    daddiu $sp, $sp, -32
+; MIPS64R5-N64-NEXT:    .cfi_def_cfa_offset 32
+; MIPS64R5-N64-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
+; MIPS64R5-N64-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
+; MIPS64R5-N64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
+; MIPS64R5-N64-NEXT:    .cfi_offset 31, -8
+; MIPS64R5-N64-NEXT:    .cfi_offset 28, -16
+; MIPS64R5-N64-NEXT:    .cfi_offset 16, -24
+; MIPS64R5-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
+; MIPS64R5-N64-NEXT:    daddu $1, $1, $25
+; MIPS64R5-N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(fmaxnum)))
+; MIPS64R5-N64-NEXT:    mov.s $f13, $f12
+; MIPS64R5-N64-NEXT:    ld $16, %got_disp(g)($gp)
+; MIPS64R5-N64-NEXT:    lh $1, 0($16)
+; MIPS64R5-N64-NEXT:    fill.h $w0, $1
+; MIPS64R5-N64-NEXT:    fexupr.w $w0, $w0
+; MIPS64R5-N64-NEXT:    copy_s.w $1, $w0[0]
+; MIPS64R5-N64-NEXT:    ld $25, %call16(fmaxf)($gp)
+; MIPS64R5-N64-NEXT:    jalr $25
+; MIPS64R5-N64-NEXT:    mtc1 $1, $f12
+; MIPS64R5-N64-NEXT:    mfc1 $1, $f0
+; MIPS64R5-N64-NEXT:    fill.w $w0, $1
+; MIPS64R5-N64-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS64R5-N64-NEXT:    copy_u.h $1, $w0[0]
+; MIPS64R5-N64-NEXT:    sh $1, 0($16)
+; MIPS64R5-N64-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
+; MIPS64R5-N64-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
+; MIPS64R5-N64-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
+; MIPS64R5-N64-NEXT:    jr $ra
+; MIPS64R5-N64-NEXT:    daddiu $sp, $sp, 32
+;
+; MIPSR6-O32-LABEL: fmaxnum:
+; MIPSR6-O32:       # %bb.0:
+; MIPSR6-O32-NEXT:    lui $2, %hi(_gp_disp)
+; MIPSR6-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; MIPSR6-O32-NEXT:    addu $1, $2, $25
+; MIPSR6-O32-NEXT:    lw $1, %got(g)($1)
+; MIPSR6-O32-NEXT:    lh $2, 0($1)
+; MIPSR6-O32-NEXT:    fill.h $w0, $2
+; MIPSR6-O32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-O32-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-O32-NEXT:    mtc1 $2, $f0
+; MIPSR6-O32-NEXT:    max.s $f0, $f0, $f12
+; MIPSR6-O32-NEXT:    mfc1 $2, $f0
+; MIPSR6-O32-NEXT:    fill.w $w0, $2
+; MIPSR6-O32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-O32-NEXT:    copy_u.h $2, $w0[0]
+; MIPSR6-O32-NEXT:    jr $ra
+; MIPSR6-O32-NEXT:    sh $2, 0($1)
+;
+; MIPSR6-N32-LABEL: fmaxnum:
+; MIPSR6-N32:       # %bb.0:
+; MIPSR6-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
+; MIPSR6-N32-NEXT:    addu $1, $1, $25
+; MIPSR6-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(fmaxnum)))
+; MIPSR6-N32-NEXT:    lw $1, %got_disp(g)($1)
+; MIPSR6-N32-NEXT:    lh $2, 0($1)
+; MIPSR6-N32-NEXT:    fill.h $w0, $2
+; MIPSR6-N32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N32-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-N32-NEXT:    mtc1 $2, $f0
+; MIPSR6-N32-NEXT:    max.s $f0, $f0, $f12
+; MIPSR6-N32-NEXT:    mfc1 $2, $f0
+; MIPSR6-N32-NEXT:    fill.w $w0, $2
+; MIPSR6-N32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-N32-NEXT:    copy_u.h $2, $w0[0]
+; MIPSR6-N32-NEXT:    jr $ra
+; MIPSR6-N32-NEXT:    sh $2, 0($1)
+;
+; MIPSR6-N64-LABEL: fmaxnum:
+; MIPSR6-N64:       # %bb.0:
+; MIPSR6-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
+; MIPSR6-N64-NEXT:    daddu $1, $1, $25
+; MIPSR6-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(fmaxnum)))
+; MIPSR6-N64-NEXT:    ld $1, %got_disp(g)($1)
+; MIPSR6-N64-NEXT:    lh $2, 0($1)
+; MIPSR6-N64-NEXT:    fill.h $w0, $2
+; MIPSR6-N64-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N64-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-N64-NEXT:    mtc1 $2, $f0
+; MIPSR6-N64-NEXT:    max.s $f0, $f0, $f12
+; MIPSR6-N64-NEXT:    mfc1 $2, $f0
+; MIPSR6-N64-NEXT:    fill.w $w0, $2
+; MIPSR6-N64-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-N64-NEXT:    copy_u.h $2, $w0[0]
+; MIPSR6-N64-NEXT:    jr $ra
+; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2579,7 +2696,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %maxnum)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2646,7 +2763,7 @@ define void @fcopysign(float %b) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2654,7 +2771,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %copysign)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2755,7 +2872,7 @@ define void @ffloor() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2763,7 +2880,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %floor)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2864,7 +2981,7 @@ define void @fceil() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2872,7 +2989,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %ceil)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2973,7 +3090,7 @@ define void @ftrunc() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2981,7 +3098,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %trunc)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -3082,13 +3199,13 @@ define void @frint() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
   %rint = call float @llvm.rint.f32(float %1)
   %2 = call i16 @llvm.convert.to.fp16.f32(float %rint)
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -3189,7 +3306,7 @@ define void @fnearbyint() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -3197,7 +3314,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %nearbyint)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -3298,7 +3415,7 @@ define void @fround() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -3306,7 +3423,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %round)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }

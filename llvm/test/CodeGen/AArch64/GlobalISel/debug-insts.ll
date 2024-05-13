@@ -2,6 +2,10 @@
 ; RUN: llc -global-isel -mtriple=aarch64 %s -stop-after=irtranslator -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null
 ; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null -debug
+;
+; RUN: llc -global-isel -mtriple=aarch64 %s -stop-after=irtranslator -o - --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null --try-experimental-debuginfo-iterators
+; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null -debug --try-experimental-debuginfo-iterators
 
 ; CHECK-LABEL: name: debug_declare
 ; CHECK: stack:
@@ -11,8 +15,8 @@
 define void @debug_declare(i32 %in) #0 !dbg !7 {
 entry:
   %in.addr = alloca i32, align 4
-  store i32 %in, i32* %in.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %in.addr, metadata !11, metadata !DIExpression()), !dbg !12
+  store i32 %in, ptr %in.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %in.addr, metadata !11, metadata !DIExpression()), !dbg !12
   ret void, !dbg !12
 }
 
@@ -21,25 +25,34 @@ entry:
 define void @debug_declare_vla(i32 %in) #0 !dbg !13 {
 entry:
   %vla.addr = alloca i32, i32 %in
-  call void @llvm.dbg.declare(metadata i32* %vla.addr, metadata !14, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.declare(metadata ptr %vla.addr, metadata !14, metadata !DIExpression()), !dbg !15
   ret void, !dbg !15
 }
 
+@gv = global i32 zeroinitializer
+
 ; CHECK-LABEL: name: debug_value
+; CHECK: stack:
+; CHECK:    - { id: {{.*}}, name: addr
 ; CHECK: [[IN:%[0-9]+]]:_(s32) = COPY $w0
 define void @debug_value(i32 %in) #0 !dbg !16 {
+; CHECK: G_FRAME_INDEX %[[stack_slot:.*]]
   %addr = alloca i32
 ; CHECK: DBG_VALUE [[IN]](s32), $noreg, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata i32 %in, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
-  store i32 %in, i32* %addr
-; CHECK: DBG_VALUE %1(p0), $noreg, !17, !DIExpression(DW_OP_deref), debug-location !18
-  call void @llvm.dbg.value(metadata i32* %addr, i64 0, metadata !17, metadata !DIExpression(DW_OP_deref)), !dbg !18
+  store i32 %in, ptr %addr
+; CHECK: DBG_VALUE %[[stack_slot]], 0, !17, !DIExpression(), debug-location !18
+  call void @llvm.dbg.value(metadata ptr %addr, i64 0, metadata !17, metadata !DIExpression(DW_OP_deref)), !dbg !18
 ; CHECK: DBG_VALUE 123, 0, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata i32 123, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
 ; CHECK: DBG_VALUE float 1.000000e+00, 0, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata float 1.000000e+00, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
+; CHECK: DBG_VALUE 0, 0, !17, !DIExpression(), debug-location !18
+  call void @llvm.dbg.value(metadata ptr null, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
 ; CHECK: DBG_VALUE $noreg, 0, !17, !DIExpression(), debug-location !18
-  call void @llvm.dbg.value(metadata i32* null, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr @gv, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
+; CHECK: DBG_VALUE 42, 0, !17, !DIExpression(), debug-location !18
+  call void @llvm.dbg.value(metadata ptr inttoptr (i64 42 to ptr), i64 0, metadata !17, metadata !DIExpression()), !dbg !18
   ret void
 }
 

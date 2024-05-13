@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -loop-simplify -S  < %s | FileCheck %s
+; RUN: opt -passes=loop-unroll,loop-simplify -S  < %s | FileCheck %s
 
 ; This test is one of the tests of PR33494. Its compilation takes
 ; excessive time if we don't mark visited nodes while looking for
@@ -7,13 +7,13 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test_01(i32* nocapture %a) local_unnamed_addr {
+define void @test_01(ptr nocapture %a) local_unnamed_addr {
 
 ; CHECK-LABEL: @test_01(
 
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 96
-  %arrayidx.promoted51 = load i32, i32* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 96
+  %arrayidx.promoted51 = load i32, ptr %arrayidx, align 1
   br label %while.body
 
 while.body:                                       ; preds = %entry, %while.end29
@@ -66,7 +66,7 @@ while.end28:                                      ; preds = %while.end.split
 while.cond1.while.end29_crit_edge:                ; preds = %while.end28
   %.lcssa = phi i32 [ %mul17.lcssa, %while.end28 ]
   %add.lcssa50.lcssa = phi i32 [ %add.lcssa, %while.end28 ]
-  store i32 %add.lcssa50.lcssa, i32* %a, align 4
+  store i32 %add.lcssa50.lcssa, ptr %a, align 4
   br label %while.end29
 
 while.end29:                                      ; preds = %while.cond1.while.end29_crit_edge, %while.body

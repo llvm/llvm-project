@@ -67,7 +67,7 @@ void bad(sampler_t *); // expected-error{{pointer to type 'sampler_t' is invalid
 void bad(sampler_t*); // expected-error{{pointer to type 'sampler_t' is invalid in OpenCL}}
 #endif
 
-void bar() {
+void bar(void) {
   sampler_t smp1 = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
   sampler_t smp2 = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_NEAREST;
   smp1=smp2; //expected-error{{invalid operands to binary expression ('sampler_t' and 'sampler_t')}}

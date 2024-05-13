@@ -16,14 +16,14 @@
     %S = alloca half, align 2
     %tmp.0.extract.trunc = trunc i32 %A.coerce to i16
     %0 = bitcast i16 %tmp.0.extract.trunc to half
-    store volatile float 4.200000e+01, float* %F, align 4
-    store volatile half 0xH3C00, half* %S, align 2
-    %S.0.S.0.142 = load volatile half, half* %S, align 2
+    store volatile float 4.200000e+01, ptr %F, align 4
+    store volatile half 0xH3C00, ptr %S, align 2
+    %S.0.S.0.142 = load volatile half, ptr %S, align 2
     %1 = call i32 @llvm.arm.space(i32 1230, i32 undef)
     %add42 = fadd half %S.0.S.0.142, 0xH2E66
-    store volatile half %add42, half* %S, align 2
+    store volatile half %add42, ptr %S, align 2
     %2 = call i32 @llvm.arm.space(i32 1330, i32 undef)
-    %S.0.S.0.119 = load volatile half, half* %S, align 2
+    %S.0.S.0.119 = load volatile half, ptr %S, align 2
     %3 = bitcast half %add42 to i16
     %tmp87.0.insert.ext = zext i16 %3 to i32
     ret i32 %tmp87.0.insert.ext
@@ -65,18 +65,18 @@ body:             |
   bb.0.entry:
     $sp = frame-setup tSUBspi $sp, 2, 14, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
-    renamable $r0 = tLDRpci %const.0, 14, $noreg :: (load 4 from constant-pool)
+    renamable $r0 = tLDRpci %const.0, 14, $noreg :: (load (s32) from constant-pool)
     renamable $s0 = FCONSTH 112, 14, $noreg
-    tSTRspi killed renamable $r0, $sp, 1, 14, $noreg :: (volatile store 4 into %ir.F)
-    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (volatile store 2 into %ir.S)
-    renamable $s2 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load 2 from %ir.S)
-    renamable $s0 = VLDRH %const.1, 0, 14, $noreg :: (load 2 from constant-pool)
+    tSTRspi killed renamable $r0, $sp, 1, 14, $noreg :: (volatile store (s32) into %ir.F)
+    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
+    renamable $s2 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load (s16) from %ir.S)
+    renamable $s0 = VLDRH %const.1, 0, 14, $noreg :: (load (s16) from constant-pool)
     dead renamable $r0 = SPACE 1230, undef renamable $r0
     renamable $s0 = VADDH killed renamable $s2, killed renamable $s0, 14, $noreg
-    VSTRH renamable $s0, $sp, 1, 14, $noreg :: (volatile store 2 into %ir.S)
+    VSTRH renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
     renamable $r0 = VMOVRH killed renamable $s0, 14, $noreg
     dead renamable $r1 = SPACE 1330, undef renamable $r0
-    dead renamable $s0 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load 2 from %ir.S)
+    dead renamable $s0 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load (s16) from %ir.S)
     $sp = tADDspi $sp, 2, 14, $noreg
     tBX_RET 14, $noreg, implicit killed $r0
 

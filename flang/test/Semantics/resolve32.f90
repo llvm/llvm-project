@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m2
   public s2, s4
   private s3
@@ -18,6 +18,10 @@ module m
     subroutine foo
     end subroutine
   end interface
+  abstract interface
+    subroutine absfoo
+    end subroutine
+  end interface
   integer :: i
   type t1
     integer :: c
@@ -34,6 +38,8 @@ module m
     !ERROR: 's3' must be either an accessible module procedure or an external procedure with an explicit interface
     procedure, nopass :: s3
     procedure, nopass :: foo
+    !ERROR: 'absfoo' must be either an accessible module procedure or an external procedure with an explicit interface
+    procedure, nopass :: absfoo
     !ERROR: 'bar' must be either an accessible module procedure or an external procedure with an explicit interface
     procedure, nopass :: bar
     !ERROR: 'i' must be either an accessible module procedure or an external procedure with an explicit interface

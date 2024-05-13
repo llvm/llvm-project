@@ -8,17 +8,17 @@
 
 // expected-no-diagnostics
 
-char alloca();
-char malloc();
-char realloc();
-char kmalloc();
-char valloc();
-char calloc();
+char alloca(void);
+char malloc(void);
+char realloc(void);
+char kmalloc(void);
+char valloc(void);
+char calloc(void);
 
-char free();
-char kfree();
+char free(void);
+char kfree(void);
 
-void testCustomArgumentlessAllocation() {
+void testCustomArgumentlessAllocation(void) {
   alloca(); // no-crash
   malloc(); // no-crash
   realloc(); // no-crash

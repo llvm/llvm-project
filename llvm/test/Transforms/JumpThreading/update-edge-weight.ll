@@ -1,9 +1,8 @@
-; RUN: opt -S -jump-threading %s | FileCheck %s
 ; RUN: opt -S -passes=jump-threading %s | FileCheck %s
 
 ; Test if edge weights are properly updated after jump threading.
 
-; CHECK: !2 = !{!"branch_weights", i32 1629125526, i32 518358122}
+; CHECK: !2 = !{!"branch_weights", i32 1561806291, i32 585677357}
 
 define void @foo(i32 %n) !prof !0 {
 entry:

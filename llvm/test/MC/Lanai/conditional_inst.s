@@ -1,4 +1,4 @@
-! RUN: llvm-mc -arch=lanai -show-encoding -show-inst < %s | FileCheck %s
+! RUN: llvm-mc -triple=lanai -show-encoding -show-inst < %s | FileCheck %s
 
 .text
    .align 4

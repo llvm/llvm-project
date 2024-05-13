@@ -81,22 +81,24 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
     SmallVectorImpl<std::pair<MCPhysReg, const MachineOperand*>> &Clobbers) {
   // Remove killed registers from the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (O->isReg() && !O->isDebug()) {
+    if (O->isReg()) {
+      if (O->isDebug())
+        continue;
       Register Reg = O->getReg();
-      if (!Register::isPhysicalRegister(Reg))
+      if (!Reg.isPhysical())
         continue;
       if (O->isDef()) {
         // Note, dead defs are still recorded.  The caller should decide how to
         // handle them.
         Clobbers.push_back(std::make_pair(Reg, &*O));
       } else {
-        if (!O->isKill())
-          continue;
         assert(O->isUse());
-        removeReg(Reg);
+        if (O->isKill())
+          removeReg(Reg);
       }
-    } else if (O->isRegMask())
+    } else if (O->isRegMask()) {
       removeRegsInMask(*O, &Clobbers);
+    }
   }
 
   // Add defs to the set.
@@ -239,6 +241,10 @@ void LivePhysRegs::addLiveIns(const MachineBasicBlock &MBB) {
   addBlockLiveIns(MBB);
 }
 
+void LivePhysRegs::addLiveInsNoPristines(const MachineBasicBlock &MBB) {
+  addBlockLiveIns(MBB);
+}
+
 void llvm::computeLiveIns(LivePhysRegs &LiveRegs,
                           const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
@@ -246,7 +252,7 @@ void llvm::computeLiveIns(LivePhysRegs &LiveRegs,
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   LiveRegs.init(TRI);
   LiveRegs.addLiveOutsNoPristines(MBB);
-  for (const MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend()))
+  for (const MachineInstr &MI : llvm::reverse(MBB))
     LiveRegs.stepBackward(MI);
 }
 
@@ -259,14 +265,9 @@ void llvm::addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs) {
     if (MRI.isReserved(Reg))
       continue;
     // Skip the register if we are about to add one of its super registers.
-    bool ContainsSuperReg = false;
-    for (MCSuperRegIterator SReg(Reg, &TRI); SReg.isValid(); ++SReg) {
-      if (LiveRegs.contains(*SReg) && !MRI.isReserved(*SReg)) {
-        ContainsSuperReg = true;
-        break;
-      }
-    }
-    if (ContainsSuperReg)
+    if (any_of(TRI.superregs(Reg), [&](MCPhysReg SReg) {
+          return LiveRegs.contains(SReg) && !MRI.isReserved(SReg);
+        }))
       continue;
     MBB.addLiveIn(Reg);
   }
@@ -283,7 +284,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
   LiveRegs.init(TRI);
   LiveRegs.addLiveOutsNoPristines(MBB);
 
-  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
     // Recompute dead flags.
     for (MIBundleOperands MO(MI); MO.isValid(); ++MO) {
       if (!MO->isReg() || !MO->isDef() || MO->isDebug())
@@ -292,7 +293,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       Register Reg = MO->getReg();
       if (Reg == 0)
         continue;
-      assert(Register::isPhysicalRegister(Reg));
+      assert(Reg.isPhysical());
 
       bool IsNotLive = LiveRegs.available(MRI, Reg);
 
@@ -321,7 +322,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       Register Reg = MO->getReg();
       if (Reg == 0)
         continue;
-      assert(Register::isPhysicalRegister(Reg));
+      assert(Reg.isPhysical());
 
       bool IsNotLive = LiveRegs.available(MRI, Reg);
       MO->setIsKill(IsNotLive);

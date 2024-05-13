@@ -18,9 +18,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
-test()
-{
+TEST_CONSTEXPR_CXX20 bool test() {
   // Tests that a long string holding a SSO size string results in
   // an SSO copy constructed value.
   S s1("1234567890123456789012345678901234567890123456789012345678901234567890");
@@ -29,21 +27,18 @@ test()
   LIBCPP_ASSERT(s2.__invariants());
   assert(s2 == s1);
   assert(s2.capacity() < sizeof(S));
+
+  return true;
 }
 
-int main(int, char**)
-{
-    {
-    typedef test_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test<S>();
-    }
+int main(int, char**) {
+  test<std::basic_string<char, std::char_traits<char>, test_allocator<char> > >();
 #if TEST_STD_VER >= 11
-    {
-    typedef min_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test<S>();
-    }
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+#endif
+#if TEST_STD_VER > 17
+  static_assert(test<std::basic_string<char, std::char_traits<char>, test_allocator<char>>>());
+  static_assert(test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>());
 #endif
 
   return 0;

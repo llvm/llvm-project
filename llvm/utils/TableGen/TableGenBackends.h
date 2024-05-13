@@ -15,6 +15,8 @@
 #ifndef LLVM_UTILS_TABLEGEN_TABLEGENBACKENDS_H
 #define LLVM_UTILS_TABLEGEN_TABLEGENBACKENDS_H
 
+#include <string>
+
 // A TableGen backend is a function that looks like
 //
 //    EmitFoo(RecordKeeper &RK, raw_ostream &OS /*, anything else you need */ )
@@ -44,7 +46,6 @@
 // backends, this means that the EmitFoo function is the only thing not in
 // the anonymous namespace.
 
-
 // FIXME: Reorganize TableGen so that build dependencies can be more
 // accurately expressed. Currently, touching any of the emitters (or
 // anything that they transitively depend on) causes everything dependent
@@ -55,45 +56,17 @@
 // TableGen binary with as few dependencies as possible on the rest of
 // LLVM.
 
-
 namespace llvm {
 
 class raw_ostream;
 class RecordKeeper;
 
-void EmitIntrinsicEnums(RecordKeeper &RK, raw_ostream &OS);
-void EmitIntrinsicImpl(RecordKeeper &RK, raw_ostream &OS);
-void EmitAsmMatcher(RecordKeeper &RK, raw_ostream &OS);
-void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS);
-void EmitCallingConv(RecordKeeper &RK, raw_ostream &OS);
-void EmitCodeEmitter(RecordKeeper &RK, raw_ostream &OS);
-void EmitCodeBeads(RecordKeeper &RK, raw_ostream &OS);
-void EmitDAGISel(RecordKeeper &RK, raw_ostream &OS);
-void EmitDFAPacketizer(RecordKeeper &RK, raw_ostream &OS);
-void EmitDisassembler(RecordKeeper &RK, raw_ostream &OS);
-void EmitFastISel(RecordKeeper &RK, raw_ostream &OS);
-void EmitInstrInfo(RecordKeeper &RK, raw_ostream &OS);
-void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS);
-void EmitPseudoLowering(RecordKeeper &RK, raw_ostream &OS);
-void EmitCompressInst(RecordKeeper &RK, raw_ostream &OS);
-void EmitRegisterInfo(RecordKeeper &RK, raw_ostream &OS);
-void EmitSubtarget(RecordKeeper &RK, raw_ostream &OS);
 void EmitMapTable(RecordKeeper &RK, raw_ostream &OS);
-void EmitOptParser(RecordKeeper &RK, raw_ostream &OS);
-void EmitOptRST(RecordKeeper &RK, raw_ostream &OS);
-void EmitCTags(RecordKeeper &RK, raw_ostream &OS);
-void EmitAttributes(RecordKeeper &RK, raw_ostream &OS);
-void EmitSearchableTables(RecordKeeper &RK, raw_ostream &OS);
-void EmitGlobalISel(RecordKeeper &RK, raw_ostream &OS);
-void EmitGICombiner(RecordKeeper &RK, raw_ostream &OS);
-void EmitX86EVEX2VEXTables(RecordKeeper &RK, raw_ostream &OS);
-void EmitX86FoldTables(RecordKeeper &RK, raw_ostream &OS);
-void EmitRegisterBank(RecordKeeper &RK, raw_ostream &OS);
-void EmitExegesis(RecordKeeper &RK, raw_ostream &OS);
-void EmitAutomata(RecordKeeper &RK, raw_ostream &OS);
-void EmitDirectivesDecl(RecordKeeper &RK, raw_ostream &OS);
-void EmitDirectivesImpl(RecordKeeper &RK, raw_ostream &OS);
 
-} // End llvm namespace
+// Defined in DecoderEmitter.cpp
+void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
+                 const std::string &PredicateNamespace);
+
+} // namespace llvm
 
 #endif

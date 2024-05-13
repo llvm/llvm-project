@@ -5,8 +5,10 @@
 ; CHECK-NEXT:        .long	241
 ; CHECK-NEXT:        .long	[[SUBSEC_END:.*]]-[[SUBSEC_START:.*]] # Subsection size
 ; CHECK-NEXT:        [[SUBSEC_START]]:
-; CHECK-NEXT:        .short	[[C1_END:.*]]-[[C1_START:.*]] # Record length
-; CHECK:             [[C1_END]]:
+; CHECK-NEXT:        .short	[[OBJNAME_END:.*]]-[[OBJNAME_START:.*]] # Record length
+; CHECK:             [[OBJNAME_END]]:
+; CHECK-NEXT:        .short	[[COMPILE3_END:.*]]-[[COMPILE3_START:.*]] # Record length
+; CHECK:             [[COMPILE3_END]]:
 ; CHECK-NEXT:        [[SUBSEC_END]]:
 ; CHECK-NEXT:        .p2align 2
 ; CHECK-NEXT:        .cv_filechecksums
@@ -18,8 +20,8 @@ target triple = "i686-pc-windows-msvc18.0.0"
 define void @baz() {
 entry:
   %x.i.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.i.i, metadata !6, metadata !12), !dbg !13
-  store i32 5, i32* %x.i.i, align 4, !dbg !13
+  call void @llvm.dbg.declare(metadata ptr %x.i.i, metadata !6, metadata !12), !dbg !13
+  store i32 5, ptr %x.i.i, align 4, !dbg !13
   ret void
 }
 

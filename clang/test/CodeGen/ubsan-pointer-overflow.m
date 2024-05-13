@@ -5,13 +5,13 @@ void variable_len_array_arith(int n, int k) {
   int vla[n];
   int (*p)[n] = &vla;
 
-  // CHECK: getelementptr inbounds i32, i32* {{.*}}, i64 [[INC:%.*]]
+  // CHECK: getelementptr inbounds i32, ptr {{.*}}, i64 [[INC:%.*]]
   // CHECK: @llvm.smul.with.overflow.i64(i64 4, i64 [[INC]]), !nosanitize
   // CHECK-NOT: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
   ++p;
 
-  // CHECK: getelementptr inbounds i32, i32* {{.*}}, i64 [[IDXPROM:%.*]]
+  // CHECK: getelementptr inbounds i32, ptr {{.*}}, i64 [[IDXPROM:%.*]]
   // CHECK: @llvm.smul.with.overflow.i64(i64 4, i64 [[IDXPROM]]), !nosanitize
   // CHECK: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}

@@ -23,7 +23,7 @@
 ; IMPORT-NEXT: @gFoo.llvm.0 = internal unnamed_addr global i32 1, align 4, !dbg !5
 ; IMPORT: !DICompileUnit({{.*}})
 
-; OPTIMIZE:        define i32 @main
+; OPTIMIZE:        define noundef i32 @main
 ; OPTIMIZE-NEXT:     ret i32 3
 
 ; IMPORT2: @gBar = available_externally local_unnamed_addr global i32 2, align 4, !dbg !0
@@ -38,8 +38,8 @@ target triple = "x86_64-pc-linux-gnu"
 @gDead = internal unnamed_addr global i32 1, align 4
 
 define i32 @main() local_unnamed_addr {
-  %call = tail call i32 bitcast (i32 (...)* @foo to i32 ()*)()
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)()
+  %call = tail call i32 @foo()
+  %call1 = tail call i32 @bar()
   %add = add nsw i32 %call1, %call
   ret i32 %add
 }

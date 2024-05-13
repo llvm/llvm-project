@@ -4,7 +4,7 @@
 
 target triple = "wasm32-unknown-unknown"
 
-@foo = internal global i8* blockaddress(@bar, %addr), align 4
+@foo = internal global ptr blockaddress(@bar, %addr), align 4
 
 define hidden i32 @bar() #0 {
 entry:

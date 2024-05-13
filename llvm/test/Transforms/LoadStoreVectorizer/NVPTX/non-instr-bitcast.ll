@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=nvptx64-nvidia-cuda -load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=nvptx64-nvidia-cuda -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 
 ; Load from a constant.  This can be vectorized, but shouldn't crash us.
 
@@ -6,9 +6,9 @@
 
 define void @foo() {
   ; CHECK: load <4 x float>
-  %a = load float, float addrspace(1)* getelementptr inbounds ([4 x float], [4 x float] addrspace(1)* @global, i64 0, i64 0), align 16
-  %b = load float, float addrspace(1)* getelementptr inbounds ([4 x float], [4 x float] addrspace(1)* @global, i64 0, i64 1), align 4
-  %c = load float, float addrspace(1)* getelementptr inbounds ([4 x float], [4 x float] addrspace(1)* @global, i64 0, i64 2), align 4
-  %d = load float, float addrspace(1)* getelementptr inbounds ([4 x float], [4 x float] addrspace(1)* @global, i64 0, i64 3), align 4
+  %a = load float, ptr addrspace(1) @global, align 16
+  %b = load float, ptr addrspace(1) getelementptr inbounds ([4 x float], ptr addrspace(1) @global, i64 0, i64 1), align 4
+  %c = load float, ptr addrspace(1) getelementptr inbounds ([4 x float], ptr addrspace(1) @global, i64 0, i64 2), align 4
+  %d = load float, ptr addrspace(1) getelementptr inbounds ([4 x float], ptr addrspace(1) @global, i64 0, i64 3), align 4
   ret void
 }

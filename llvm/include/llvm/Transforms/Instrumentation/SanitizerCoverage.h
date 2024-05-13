@@ -8,30 +8,28 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the SanitizerCoverage class which is a port of the legacy
-// SanitizerCoverage pass to use the new PassManager infrastructure.
+// SanitizerCoverage is a simple code coverage implementation.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERCOVERAGE_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERCOVERAGE_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Instrumentation.h"
 
 namespace llvm {
+class Module;
 
 /// This is the ModuleSanitizerCoverage pass used in the new pass manager. The
 /// pass instruments functions for coverage, adds initialization calls to the
 /// module for trace PC guards and 8bit counters if they are requested, and
 /// appends globals to llvm.compiler.used.
-class ModuleSanitizerCoveragePass
-    : public PassInfoMixin<ModuleSanitizerCoveragePass> {
+class SanitizerCoveragePass : public PassInfoMixin<SanitizerCoveragePass> {
 public:
-  explicit ModuleSanitizerCoveragePass(
+  explicit SanitizerCoveragePass(
       SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
       const std::vector<std::string> &AllowlistFiles =
           std::vector<std::string>(),
@@ -54,13 +52,6 @@ private:
   std::unique_ptr<SpecialCaseList> Allowlist;
   std::unique_ptr<SpecialCaseList> Blocklist;
 };
-
-// Insert SanitizerCoverage instrumentation.
-ModulePass *createModuleSanitizerCoverageLegacyPassPass(
-    const SanitizerCoverageOptions &Options = SanitizerCoverageOptions(),
-    const std::vector<std::string> &AllowlistFiles = std::vector<std::string>(),
-    const std::vector<std::string> &BlocklistFiles =
-        std::vector<std::string>());
 
 } // namespace llvm
 

@@ -6,23 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-objcopy.h"
-#include "COFF/COFFConfig.h"
-#include "COFF/COFFObjcopy.h"
-#include "CommonConfig.h"
-#include "ConfigManager.h"
-#include "ELF/ELFConfig.h"
-#include "ELF/ELFObjcopy.h"
-#include "MachO/MachOConfig.h"
-#include "MachO/MachOObjcopy.h"
-#include "wasm/WasmConfig.h"
-#include "wasm/WasmObjcopy.h"
-
+#include "ObjcopyOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/ObjCopy/COFF/COFFConfig.h"
+#include "llvm/ObjCopy/COFF/COFFObjcopy.h"
+#include "llvm/ObjCopy/CommonConfig.h"
+#include "llvm/ObjCopy/ELF/ELFConfig.h"
+#include "llvm/ObjCopy/ELF/ELFObjcopy.h"
+#include "llvm/ObjCopy/MachO/MachOConfig.h"
+#include "llvm/ObjCopy/MachO/MachOObjcopy.h"
+#include "llvm/ObjCopy/ObjCopy.h"
+#include "llvm/ObjCopy/wasm/WasmConfig.h"
+#include "llvm/ObjCopy/wasm/WasmObjcopy.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
@@ -42,8 +41,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -51,21 +50,22 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <memory>
-#include <string>
 #include <system_error>
 #include <utility>
 
-namespace llvm {
-namespace objcopy {
+using namespace llvm;
+using namespace llvm::objcopy;
+using namespace llvm::object;
 
 // The name this program was invoked as.
-StringRef ToolName;
+static StringRef ToolName;
 
-ErrorSuccess reportWarning(Error E) {
+static ErrorSuccess reportWarning(Error E) {
   assert(E);
   WithColor::warning(errs(), ToolName) << toString(std::move(E)) << '\n';
   return Error::success();
@@ -80,60 +80,19 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
     // strip-10.exe -> strip
     // powerpc64-unknown-freebsd13-objcopy -> objcopy
     // llvm-install-name-tool -> install-name-tool
-    auto I = Stem.rfind_lower(Tool);
+    auto I = Stem.rfind_insensitive(Tool);
     return I != StringRef::npos &&
            (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
   };
 
   if (Is("bitcode-strip") || Is("bitcode_strip"))
-    return parseBitcodeStripOptions(Args);
+    return parseBitcodeStripOptions(Args, reportWarning);
   else if (Is("strip"))
     return parseStripOptions(Args, reportWarning);
   else if (Is("install-name-tool") || Is("install_name_tool"))
     return parseInstallNameToolOptions(Args);
   else
     return parseObjcopyOptions(Args, reportWarning);
-}
-
-} // end namespace objcopy
-} // end namespace llvm
-
-using namespace llvm;
-using namespace llvm::object;
-using namespace llvm::objcopy;
-
-// For regular archives this function simply calls llvm::writeArchive,
-// For thin archives it writes the archive file itself as well as its members.
-static Error deepWriteArchive(StringRef ArcName,
-                              ArrayRef<NewArchiveMember> NewMembers,
-                              bool WriteSymtab, object::Archive::Kind Kind,
-                              bool Deterministic, bool Thin) {
-  if (Error E = writeArchive(ArcName, NewMembers, WriteSymtab, Kind,
-                             Deterministic, Thin))
-    return createFileError(ArcName, std::move(E));
-
-  if (!Thin)
-    return Error::success();
-
-  for (const NewArchiveMember &Member : NewMembers) {
-    // For regular files (as is the case for deepWriteArchive),
-    // FileOutputBuffer::create will return OnDiskBuffer.
-    // OnDiskBuffer uses a temporary file and then renames it. So in reality
-    // there is no inefficiency / duplicated in-memory buffers in this case. For
-    // now in-memory buffers can not be completely avoided since
-    // NewArchiveMember still requires them even though writeArchive does not
-    // write them on disk.
-    Expected<std::unique_ptr<FileOutputBuffer>> FB =
-        FileOutputBuffer::create(Member.MemberName, Member.Buf->getBufferSize(),
-                                 FileOutputBuffer::F_executable);
-    if (!FB)
-      return FB.takeError();
-    std::copy(Member.Buf->getBufferStart(), Member.Buf->getBufferEnd(),
-              (*FB)->getBufferStart());
-    if (Error E = (*FB)->commit())
-      return E;
-  }
-  return Error::success();
 }
 
 /// The function executeObjcopyOnIHex does the dispatch based on the format
@@ -162,6 +121,7 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   case FileFormat::Binary:
   case FileFormat::IHex:
   case FileFormat::Unspecified:
+  case FileFormat::SREC:
     Expected<const ELFConfig &> ELFConfig = ConfigMgr.getELFConfig();
     if (!ELFConfig)
       return ELFConfig.takeError();
@@ -172,161 +132,16 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   llvm_unreachable("unsupported output format");
 }
 
-/// The function executeObjcopyOnBinary does the dispatch based on the format
-/// of the input binary (ELF, MachO or COFF).
-static Error executeObjcopyOnBinary(const MultiFormatConfig &Config,
-                                    object::Binary &In, raw_ostream &Out) {
-  if (auto *ELFBinary = dyn_cast<object::ELFObjectFileBase>(&In)) {
-    Expected<const ELFConfig &> ELFConfig = Config.getELFConfig();
-    if (!ELFConfig)
-      return ELFConfig.takeError();
-
-    return elf::executeObjcopyOnBinary(Config.getCommonConfig(), *ELFConfig,
-                                       *ELFBinary, Out);
-  } else if (auto *COFFBinary = dyn_cast<object::COFFObjectFile>(&In)) {
-    Expected<const COFFConfig &> COFFConfig = Config.getCOFFConfig();
-    if (!COFFConfig)
-      return COFFConfig.takeError();
-
-    return coff::executeObjcopyOnBinary(Config.getCommonConfig(), *COFFConfig,
-                                        *COFFBinary, Out);
-  } else if (auto *MachOBinary = dyn_cast<object::MachOObjectFile>(&In)) {
-    Expected<const MachOConfig &> MachOConfig = Config.getMachOConfig();
-    if (!MachOConfig)
-      return MachOConfig.takeError();
-
-    return macho::executeObjcopyOnBinary(Config.getCommonConfig(), *MachOConfig,
-                                         *MachOBinary, Out);
-  } else if (auto *MachOUniversalBinary =
-                 dyn_cast<object::MachOUniversalBinary>(&In)) {
-    return macho::executeObjcopyOnMachOUniversalBinary(
-        Config, *MachOUniversalBinary, Out);
-  } else if (auto *WasmBinary = dyn_cast<object::WasmObjectFile>(&In)) {
-    Expected<const WasmConfig &> WasmConfig = Config.getWasmConfig();
-    if (!WasmConfig)
-      return WasmConfig.takeError();
-
-    return objcopy::wasm::executeObjcopyOnBinary(Config.getCommonConfig(),
-                                                 *WasmConfig, *WasmBinary, Out);
-  } else
-    return createStringError(object_error::invalid_file_type,
-                             "unsupported object file format");
-}
-
-namespace llvm {
-namespace objcopy {
-
-Expected<std::vector<NewArchiveMember>>
-createNewArchiveMembers(const MultiFormatConfig &Config, const Archive &Ar) {
-  std::vector<NewArchiveMember> NewArchiveMembers;
-  Error Err = Error::success();
-  for (const Archive::Child &Child : Ar.children(Err)) {
-    Expected<StringRef> ChildNameOrErr = Child.getName();
-    if (!ChildNameOrErr)
-      return createFileError(Ar.getFileName(), ChildNameOrErr.takeError());
-
-    Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
-    if (!ChildOrErr)
-      return createFileError(Ar.getFileName() + "(" + *ChildNameOrErr + ")",
-                             ChildOrErr.takeError());
-
-    SmallVector<char, 0> Buffer;
-    raw_svector_ostream MemStream(Buffer);
-
-    if (Error E = executeObjcopyOnBinary(Config, *ChildOrErr->get(), MemStream))
-      return std::move(E);
-
-    Expected<NewArchiveMember> Member = NewArchiveMember::getOldMember(
-        Child, Config.getCommonConfig().DeterministicArchives);
-    if (!Member)
-      return createFileError(Ar.getFileName(), Member.takeError());
-
-    Member->Buf = std::make_unique<SmallVectorMemoryBuffer>(
-        std::move(Buffer), ChildNameOrErr.get());
-    Member->MemberName = Member->Buf->getBufferIdentifier();
-    NewArchiveMembers.push_back(std::move(*Member));
-  }
-  if (Err)
-    return createFileError(Config.getCommonConfig().InputFilename,
-                           std::move(Err));
-  return std::move(NewArchiveMembers);
-}
-
-} // end namespace objcopy
-} // end namespace llvm
-
-static Error executeObjcopyOnArchive(const ConfigManager &ConfigMgr,
-                                     const object::Archive &Ar) {
-  Expected<std::vector<NewArchiveMember>> NewArchiveMembersOrErr =
-      createNewArchiveMembers(ConfigMgr, Ar);
-  if (!NewArchiveMembersOrErr)
-    return NewArchiveMembersOrErr.takeError();
-  const CommonConfig &Config = ConfigMgr.getCommonConfig();
-  return deepWriteArchive(Config.OutputFilename, *NewArchiveMembersOrErr,
-                          Ar.hasSymbolTable(), Ar.kind(),
-                          Config.DeterministicArchives, Ar.isThin());
-}
-
-static Error restoreStatOnFile(StringRef Filename,
-                               const sys::fs::file_status &Stat,
-                               const ConfigManager &ConfigMgr) {
-  int FD;
-  const CommonConfig &Config = ConfigMgr.getCommonConfig();
-
-  // Writing to stdout should not be treated as an error here, just
-  // do not set access/modification times or permissions.
-  if (Filename == "-")
-    return Error::success();
-
-  if (auto EC =
-          sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting))
-    return createFileError(Filename, EC);
-
-  if (Config.PreserveDates)
-    if (auto EC = sys::fs::setLastAccessAndModificationTime(
-            FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
-      return createFileError(Filename, EC);
-
-  sys::fs::file_status OStat;
-  if (std::error_code EC = sys::fs::status(FD, OStat))
-    return createFileError(Filename, EC);
-  if (OStat.type() == sys::fs::file_type::regular_file) {
-#ifndef _WIN32
-    // Keep ownership if llvm-objcopy is called under root.
-    if (Config.InputFilename == Config.OutputFilename && OStat.getUser() == 0)
-      sys::fs::changeFileOwnership(FD, Stat.getUser(), Stat.getGroup());
-#endif
-
-    sys::fs::perms Perm = Stat.permissions();
-    if (Config.InputFilename != Config.OutputFilename)
-      Perm = static_cast<sys::fs::perms>(Perm & ~sys::fs::getUmask() & ~06000);
-#ifdef _WIN32
-    if (auto EC = sys::fs::setPermissions(Filename, Perm))
-#else
-    if (auto EC = sys::fs::setPermissions(FD, Perm))
-#endif
-      return createFileError(Filename, EC);
-  }
-
-  if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
-    return createFileError(Filename, EC);
-
-  return Error::success();
-}
-
 /// The function executeObjcopy does the higher level dispatch based on the type
 /// of input (raw binary, archive or single object file) and takes care of the
 /// format-agnostic modifications, i.e. preserving dates.
 static Error executeObjcopy(ConfigManager &ConfigMgr) {
   CommonConfig &Config = ConfigMgr.Common;
 
-  sys::fs::file_status Stat;
-  if (Config.InputFilename != "-") {
-    if (auto EC = sys::fs::status(Config.InputFilename, Stat))
-      return createFileError(Config.InputFilename, EC);
-  } else {
-    Stat.permissions(static_cast<sys::fs::perms>(0777));
-  }
+  Expected<FilePermissionsApplier> PermsApplierOrErr =
+      FilePermissionsApplier::create(Config.InputFilename);
+  if (!PermsApplierOrErr)
+    return PermsApplierOrErr.takeError();
 
   std::function<Error(raw_ostream & OutFile)> ObjcopyFunc;
 
@@ -395,24 +210,20 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     }
   }
 
-  if (Error E = restoreStatOnFile(Config.OutputFilename, Stat, ConfigMgr))
+  if (Error E =
+          PermsApplierOrErr->apply(Config.OutputFilename, Config.PreserveDates))
     return E;
 
-  if (!Config.SplitDWO.empty()) {
-    Stat.permissions(static_cast<sys::fs::perms>(0666));
-    if (Error E = restoreStatOnFile(Config.SplitDWO, Stat, ConfigMgr))
+  if (!Config.SplitDWO.empty())
+    if (Error E =
+            PermsApplierOrErr->apply(Config.SplitDWO, Config.PreserveDates,
+                                     static_cast<sys::fs::perms>(0666)))
       return E;
-  }
 
   return Error::success();
 }
 
-namespace {
-
-} // anonymous namespace
-
-int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
+int llvm_objcopy_main(int argc, char **argv, const llvm::ToolContext &) {
   ToolName = argv[0];
 
   // Expand response files.
@@ -428,7 +239,7 @@ int main(int argc, char **argv) {
                               : cl::TokenizeGNUCommandLine,
                           NewArgv);
 
-  auto Args = makeArrayRef(NewArgv).drop_front();
+  auto Args = ArrayRef(NewArgv).drop_front();
   Expected<DriverConfig> DriverConfig = getDriverConfig(Args);
 
   if (!DriverConfig) {

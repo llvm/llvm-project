@@ -1,6 +1,9 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
+
 ; Command to generate enum-co.ll
 ; $ clang++ enum-co.cpp -S -emit-llvm -g -gcodeview -o enum-co.ll
 ;
@@ -90,13 +93,13 @@ target triple = "x86_64-pc-windows-msvc19.15.26729"
 %"union.Func()::Struct::Union" = type { i8 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @"?Func_Enum@@YA?AW4Enum@@AEAW41@@Z"(i32* dereferenceable(4) %arg) #0 !dbg !30 {
+define dso_local i32 @"?Func_Enum@@YA?AW4Enum@@AEAW41@@Z"(ptr dereferenceable(4) %arg) #0 !dbg !30 {
 entry:
-  %arg.addr = alloca i32*, align 8
-  store i32* %arg, i32** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata i32** %arg.addr, metadata !34, metadata !DIExpression()), !dbg !35
-  %0 = load i32*, i32** %arg.addr, align 8, !dbg !35
-  %1 = load i32, i32* %0, align 4, !dbg !35
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !34, metadata !DIExpression()), !dbg !35
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !35
+  %1 = load i32, ptr %0, align 4, !dbg !35
   ret i32 %1, !dbg !35
 }
 
@@ -104,13 +107,13 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @"?Func_EnumClass@@YA?AW4EnumClass@@AEAW41@@Z"(i32* dereferenceable(4) %arg) #0 !dbg !36 {
+define dso_local i32 @"?Func_EnumClass@@YA?AW4EnumClass@@AEAW41@@Z"(ptr dereferenceable(4) %arg) #0 !dbg !36 {
 entry:
-  %arg.addr = alloca i32*, align 8
-  store i32* %arg, i32** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata i32** %arg.addr, metadata !40, metadata !DIExpression()), !dbg !41
-  %0 = load i32*, i32** %arg.addr, align 8, !dbg !41
-  %1 = load i32, i32* %0, align 4, !dbg !41
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !40, metadata !DIExpression()), !dbg !41
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !41
+  %1 = load i32, ptr %0, align 4, !dbg !41
   ret i32 %1, !dbg !41
 }
 
@@ -119,8 +122,8 @@ define dso_local void @"?Func@@YAXXZ"() #0 !dbg !14 {
 entry:
   %SE = alloca i32, align 4
   %S = alloca %struct.Struct, align 1
-  call void @llvm.dbg.declare(metadata i32* %SE, metadata !42, metadata !DIExpression()), !dbg !43
-  call void @llvm.dbg.declare(metadata %struct.Struct* %S, metadata !44, metadata !DIExpression()), !dbg !45
+  call void @llvm.dbg.declare(metadata ptr %SE, metadata !42, metadata !DIExpression()), !dbg !43
+  call void @llvm.dbg.declare(metadata ptr %S, metadata !44, metadata !DIExpression()), !dbg !45
   ret void, !dbg !46
 }
 

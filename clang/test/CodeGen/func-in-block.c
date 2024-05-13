@@ -1,10 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fblocks -emit-llvm -o - %s | FileCheck %s
-// rdar: // 7860965
 
 extern void PRINTF(const char *);
 extern void B(void (^)(void));
 
-int main()
+int main(void)
 {
     PRINTF(__func__);
     B(

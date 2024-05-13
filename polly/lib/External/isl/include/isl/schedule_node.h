@@ -8,6 +8,7 @@
 #include <isl/val_type.h>
 #include <isl/space_type.h>
 #include <isl/id_type.h>
+#include <isl/set_type.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -91,12 +92,16 @@ __isl_give isl_schedule_node *isl_schedule_node_root(
 __isl_export
 __isl_give isl_schedule_node *isl_schedule_node_parent(
 	__isl_take isl_schedule_node *node);
+__isl_give isl_schedule_node *isl_schedule_node_grandparent(
+	__isl_take isl_schedule_node *node);
 __isl_export
 __isl_give isl_schedule_node *isl_schedule_node_ancestor(
 	__isl_take isl_schedule_node *node, int generation);
 __isl_export
 __isl_give isl_schedule_node *isl_schedule_node_child(
 	__isl_take isl_schedule_node *node, int pos);
+__isl_give isl_schedule_node *isl_schedule_node_grandchild(
+	__isl_take isl_schedule_node *node, int pos1, int pos2);
 __isl_export
 __isl_give isl_schedule_node *isl_schedule_node_first_child(
 	__isl_take isl_schedule_node *node);
@@ -116,6 +121,8 @@ __isl_give isl_schedule_node *isl_schedule_node_group(
 
 __isl_give isl_schedule_node *isl_schedule_node_sequence_splice_child(
 	__isl_take isl_schedule_node *node, int pos);
+__isl_give isl_schedule_node *isl_schedule_node_sequence_splice_children(
+	__isl_take isl_schedule_node *node);
 
 __isl_give isl_space *isl_schedule_node_band_get_space(
 	__isl_keep isl_schedule_node *node);

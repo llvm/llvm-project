@@ -1,4 +1,4 @@
-; RUN: opt -S -jump-threading < %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading < %s | FileCheck %s
 
 ; Check that based solely on static profile estimation we don't update the
 ; branch-weight metadata.  Even if the function has an entry frequency, a
@@ -73,14 +73,14 @@
 
 declare void @bar()
 
-define void @foo(i32 *%p, i32 %n) !prof !0 {
+define void @foo(ptr %p, i32 %n) !prof !0 {
 entry:
   %enter_loop = icmp eq i32 %n, 0
   br i1 %enter_loop, label %exit, label %check_1, !prof !1
 ; CHECK: br i1 %enter_loop, label %exit, label %check_1, !prof !1
 
 check_1:
-  %v = load i32, i32* %p
+  %v = load i32, ptr %p
   %cond1 = icmp eq i32 %v, 1
   br i1 %cond1, label %eq_1, label %check_2
 ; No metadata:

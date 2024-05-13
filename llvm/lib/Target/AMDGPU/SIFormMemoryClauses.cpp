@@ -119,9 +119,7 @@ static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
   // If this is a load instruction where the result has been coalesced with an operand, then we cannot clause it.
   for (const MachineOperand &ResMO : MI.defs()) {
     Register ResReg = ResMO.getReg();
-    for (const MachineOperand &MO : MI.uses()) {
-      if (!MO.isReg() || MO.isDef())
-        continue;
+    for (const MachineOperand &MO : MI.all_uses()) {
       if (MO.getReg() == ResReg)
         return false;
     }
@@ -232,7 +230,7 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
     auto Loc = Map.find(Reg);
     unsigned State = getMopState(MO);
     if (Loc == Map.end()) {
-      Map[Reg] = std::make_pair(State, Mask);
+      Map[Reg] = std::pair(State, Mask);
     } else {
       Loc->second.first |= State;
       Loc->second.second |= Mask;
@@ -241,7 +239,7 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
 }
 
 // Check register def/use conflicts, occupancy limits and collect def/use maps.
-// Return true if instruction can be bundled with previous. It it cannot
+// Return true if instruction can be bundled with previous. If it cannot
 // def/use maps are not updated.
 bool SIFormMemoryClauses::processRegUses(const MachineInstr &MI,
                                          RegUse &Defs, RegUse &Uses,
@@ -274,8 +272,8 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
   MaxVGPRs = TRI->getAllocatableSet(MF, &AMDGPU::VGPR_32RegClass).count();
   MaxSGPRs = TRI->getAllocatableSet(MF, &AMDGPU::SGPR_32RegClass).count();
-  unsigned FuncMaxClause = AMDGPU::getIntegerAttribute(
-      MF.getFunction(), "amdgpu-max-memory-clause", MaxClause);
+  unsigned FuncMaxClause = MF.getFunction().getFnAttributeAsParsedInteger(
+      "amdgpu-max-memory-clause", MaxClause);
 
   for (MachineBasicBlock &MBB : MF) {
     GCNDownwardRPTracker RPT(*LIS);
@@ -393,13 +391,11 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
         Ind->insertMachineInstrInMaps(*Kill);
       }
 
-      if (!Kill) {
-        RPT.reset(MI, &LiveRegsCopy);
-        continue;
-      }
-
       // Restore the state after processing the end of the bundle.
-      RPT.reset(*Kill, &LiveRegsCopy);
+      RPT.reset(MI, &LiveRegsCopy);
+
+      if (!Kill)
+        continue;
 
       for (auto &&R : Defs) {
         Register Reg = R.first;

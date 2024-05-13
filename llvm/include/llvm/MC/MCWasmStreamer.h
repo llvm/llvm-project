@@ -41,24 +41,27 @@ public:
   /// @{
 
   void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
+                      uint64_t Offset) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
   void emitThumbFunc(MCSymbol *Func) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        unsigned ByteAlignment) override;
+                        Align ByteAlignment) override;
 
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
 
   void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                             unsigned ByteAlignment) override;
+                             Align ByteAlignment) override;
 
   void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, unsigned ByteAlignment = 0,
+                    uint64_t Size = 0, Align ByteAlignment = Align(1),
                     SMLoc Loc = SMLoc()) override;
   void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
-                      unsigned ByteAlignment = 0) override;
+                      Align ByteAlignment = Align(1)) override;
 
   void emitIdent(StringRef IdentString) override;
 
@@ -67,6 +70,8 @@ public:
 private:
   void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &) override;
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
+
+  void fixSymbolsInTLSFixups(const MCExpr *expr);
 
   /// Merge the content of the fragment \p EF into the fragment \p DF.
   void mergeFragment(MCDataFragment *, MCDataFragment *);

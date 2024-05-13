@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -fblocks -analyzer-opt-analyze-nested-blocks -verify -x objective-c++ %s
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-opt-analyze-nested-blocks -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -fblocks -verify -x objective-c++ %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-opt-analyze-nested-blocks -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
 
 // This file tests how we construct two different flavors of the Clang CFG -
@@ -52,8 +52,8 @@ void testBlockWithCopyExpression(StructWithCopyConstructor s) {
 
 // CHECK: [B1]
 // CHECK-NEXT:   1: s
-// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, NoOp, const struct StructWithCopyConstructor)
-// CHECK-NEXT:   3: [B1.2] (CXXConstructExpr, const struct StructWithCopyConstructor)
+// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, NoOp, const StructWithCopyConstructor)
+// CHECK-NEXT:   3: [B1.2] (CXXConstructExpr, const StructWithCopyConstructor)
 // CHECK-NEXT:   4: ^{ }
 // CHECK-NEXT:   5: (void)([B1.4]) (CStyleCastExpr, ToVoid, void)
 // CHECK-NEXT:   Preds (1): B2
@@ -76,9 +76,9 @@ void testBlockWithCaptureByReference() {
 
 // CHECK: [B1]
 // CHECK-NEXT:   1: 5
-// WARNINGS-NEXT:   2: [B1.1] (CXXConstructExpr, struct StructWithCopyConstructor)
-// ANALYZER-NEXT:   2: [B1.1] (CXXConstructExpr, [B1.3], struct StructWithCopyConstructor)
-// CHECK-NEXT:   3: StructWithCopyConstructor s(5) __attribute__((blocks("byref")));
+// WARNINGS-NEXT:   2: [B1.1] (CXXConstructExpr, StructWithCopyConstructor)
+// ANALYZER-NEXT:   2: [B1.1] (CXXConstructExpr, [B1.3], StructWithCopyConstructor)
+// CHECK-NEXT:   3: __attribute__((blocks("byref"))) StructWithCopyConstructor s(5);
 // CHECK-NEXT:   4: ^{ }
 // CHECK-NEXT:   5: (void)([B1.4]) (CStyleCastExpr, ToVoid, void)
 // CHECK-NEXT:   Preds (1): B2

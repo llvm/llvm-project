@@ -1,6 +1,6 @@
 ;; This test checks whether DW_AT_rank attribute accepts DIExpression.
 
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64 -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 
 ;; Test whether DW_AT_data_location is generated.
 ; CHECK-LABEL:  DW_TAG_array_type
@@ -22,11 +22,11 @@
 ; ModuleID = 'dwarfdump-generic_subrange.ll'
 source_filename = "dwarfdump-generic_subrange.ll"
 
-define void @sub_(i64* noalias %arank, i64* noalias %"arank$sd") !dbg !5 {
+define void @sub_(ptr noalias %arank, ptr noalias %"arank$sd") !dbg !5 {
 L.entry:
-  call void @llvm.dbg.value(metadata i64* %arank, metadata !17, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.declare(metadata i64* %"arank$sd", metadata !19, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.declare(metadata i64* %"arank$sd", metadata !29, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %arank, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %"arank$sd", metadata !19, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %"arank$sd", metadata !29, metadata !DIExpression()), !dbg !18
   ret void, !dbg !18
 }
 

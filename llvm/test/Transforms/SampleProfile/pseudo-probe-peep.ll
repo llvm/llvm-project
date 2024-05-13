@@ -1,19 +1,19 @@
 ; REQUIRES: x86_64-linux
 ; RUN: llc -mtriple=x86_64-- -stop-after=peephole-opt -o - %s | FileCheck %s
 
-define internal i32 @arc_compare() {
+define internal i32 @arc_compare(i1 %c) {
 entry:
-  %0 = load i64, i64* undef, align 8
-  br i1 undef, label %return, label %if.end
+  %0 = load i64, ptr undef, align 8
+  br i1 %c, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
 ; Chek a register copy has been sinked into the compare instruction.
 ; CHECK: %[[#REG:]]:gr64 = IMPLICIT_DEF 
 ; CHECK-NOT: %[[#]]:gr64 = MOV64rm %[[#REG]]
 ; CHECK: PSEUDO_PROBE 5116412291814990879, 3, 0, 0
-; CHECK: CMP64mr %[[#REG]], 1
+; CHECK: CMP64mi32 %[[#REG]], 1
   call void @llvm.pseudoprobe(i64 5116412291814990879, i64 3, i32 0, i64 -1)
-  %cmp4 = icmp slt i64 %0, undef
+  %cmp4 = icmp slt i64 %0, 0
   br i1 %cmp4, label %return, label %if.end6
 
 if.end6:                                          ; preds = %if.end

@@ -15,12 +15,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -48,7 +43,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
   }
 
   if (Inst->isTerminator() || isa<PHINode>(Inst) || Inst->isEHPad() ||
-      Inst->mayThrow())
+      Inst->mayThrow() || !Inst->willReturn())
     return false;
 
   if (auto *Call = dyn_cast<CallBase>(Inst)) {
@@ -72,9 +67,8 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
   assert(Inst && "Instruction to be sunk is null");
   assert(SuccToSinkTo && "Candidate sink target is null");
 
-  // It's never legal to sink an instruction into a block which terminates in an
-  // EH-pad.
-  if (SuccToSinkTo->getTerminator()->isExceptionalTerminator())
+  // It's never legal to sink an instruction into an EH-pad block.
+  if (SuccToSinkTo->isEHPad())
     return false;
 
   // If the block has multiple predecessors, this would introduce computation
@@ -84,7 +78,8 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
     // We cannot sink a load across a critical edge - there may be stores in
     // other code paths.
-    if (Inst->mayReadFromMemory())
+    if (Inst->mayReadFromMemory() &&
+        !Inst->hasMetadata(LLVMContext::MD_invariant_load))
       return false;
 
     // We don't want to sink across a critical edge if we don't dominate the
@@ -135,15 +130,16 @@ static bool SinkInstruction(Instruction *Inst,
   for (Use &U : Inst->uses()) {
     Instruction *UseInst = cast<Instruction>(U.getUser());
     BasicBlock *UseBlock = UseInst->getParent();
-    // Don't worry about dead users.
-    if (!DT.isReachableFromEntry(UseBlock))
-      continue;
     if (PHINode *PN = dyn_cast<PHINode>(UseInst)) {
       // PHI nodes use the operand in the predecessor block, not the block with
       // the PHI.
       unsigned Num = PHINode::getIncomingValueNumForOperand(U.getOperandNo());
       UseBlock = PN->getIncomingBlock(Num);
     }
+    // Don't worry about dead users.
+    if (!DT.isReachableFromEntry(UseBlock))
+      continue;
+
     if (SuccToSinkTo)
       SuccToSinkTo = DT.findNearestCommonDominator(SuccToSinkTo, UseBlock);
     else
@@ -178,9 +174,6 @@ static bool SinkInstruction(Instruction *Inst,
 
 static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
                          AAResults &AA) {
-  // Can't sink anything out of a block that has less than two successors.
-  if (BB.getTerminator()->getNumSuccessors() <= 1) return false;
-
   // Don't bother sinking code out of unreachable blocks. In addition to being
   // unprofitable, it can also lead to infinite looping, because in an
   // unreachable loop there may be nowhere to stop.

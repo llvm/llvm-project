@@ -1,18 +1,18 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -lower-matrix-intrinsics -matrix-allow-contract -matrix-default-layout=column-major \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -O0 -enable-matrix -matrix-allow-contract -matrix-default-layout=column-major \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func @entry() {
-  %f0 = constant 0.0: f64
-  %f1 = constant 1.0: f64
-  %f2 = constant 2.0: f64
-  %f3 = constant 3.0: f64
-  %f4 = constant 4.0: f64
-  %f5 = constant 5.0: f64
-  %f6 = constant 6.0: f64
-  %f7 = constant 7.0: f64
+func.func @entry() {
+  %f0 = arith.constant 0.0: f64
+  %f1 = arith.constant 1.0: f64
+  %f2 = arith.constant 2.0: f64
+  %f3 = arith.constant 3.0: f64
+  %f4 = arith.constant 4.0: f64
+  %f5 = arith.constant 5.0: f64
+  %f6 = arith.constant 6.0: f64
+  %f7 = arith.constant 7.0: f64
 
   // Construct test vectors.
   %0 = vector.broadcast %f0 : f64 to vector<4xf64>

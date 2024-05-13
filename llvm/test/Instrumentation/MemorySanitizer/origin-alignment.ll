@@ -1,11 +1,9 @@
 ; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S          \
 ; RUN: -passes=msan 2>&1 | FileCheck -check-prefix=CHECK                       \
 ; RUN: -check-prefix=CHECK-ORIGINS1 %s
-; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=1 -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-ORIGINS1 %s
 ; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=2 -S          \
 ; RUN: -passes=msan 2>&1 | FileCheck -check-prefix=CHECK                       \
 ; RUN: -check-prefix=CHECK-ORIGINS2 %s
-; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=2 -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-ORIGINS2 %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -22,7 +20,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; 8-aligned store => 8-aligned origin store, origin address is not realigned
 define void @Store8(i8 %x) sanitize_memory {
 entry:
-  store i8 %x, i8* @a8, align 8
+  store i8 %x, ptr @a8, align 8
   ret void
 }
 
@@ -37,7 +35,7 @@ entry:
 ; 4-aligned store => 4-aligned origin store, origin address is not realigned
 define void @Store4(i8 %x) sanitize_memory {
 entry:
-  store i8 %x, i8* @a4, align 4
+  store i8 %x, ptr @a4, align 4
   ret void
 }
 
@@ -52,7 +50,7 @@ entry:
 ; 2-aligned store => 4-aligned origin store, origin address is realigned
 define void @Store2(i8 %x) sanitize_memory {
 entry:
-  store i8 %x, i8* @a2, align 2
+  store i8 %x, ptr @a2, align 2
   ret void
 }
 
@@ -67,7 +65,7 @@ entry:
 ; 1-aligned store => 4-aligned origin store, origin address is realigned
 define void @Store1(i8 %x) sanitize_memory {
 entry:
-  store i8 %x, i8* @a1, align 1
+  store i8 %x, ptr @a1, align 1
   ret void
 }
 

@@ -12,9 +12,9 @@ define i32 @t() {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %i = alloca i32, align 4
-  store i32 1, i32* %i, align 4
+  store i32 1, ptr %i, align 4
   fence seq_cst
-  %t0 = atomicrmw sub i32* %i, i32 1 monotonic
+  %t0 = atomicrmw sub ptr %i, i32 1 monotonic
   fence seq_cst
   ret i32 0
 }

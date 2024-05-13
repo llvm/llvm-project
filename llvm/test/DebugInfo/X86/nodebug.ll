@@ -31,7 +31,7 @@
 ; Function Attrs: uwtable
 define void @_Z2f2v() #0 {
 entry:
-  store i32 3, i32* @i, align 4, !dbg !11
+  store i32 3, ptr @i, align 4, !dbg !11
   ret void
 }
 

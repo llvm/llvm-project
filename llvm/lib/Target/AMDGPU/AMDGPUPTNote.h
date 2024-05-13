@@ -29,4 +29,4 @@ const char NoteNameV3[] = "AMDGPU";
 } // End namespace ElfNote
 } // End namespace AMDGPU
 } // End namespace llvm
-#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUNOTETYPE_H
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUPTNOTE_H

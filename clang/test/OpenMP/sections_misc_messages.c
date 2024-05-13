@@ -10,7 +10,7 @@ void xxx(int argc) {
 }
 }
 
-void foo();
+void foo(void);
 
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp sections'}}
 #pragma omp sections
@@ -18,7 +18,7 @@ void foo();
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp sections'}}
 #pragma omp sections foo
 
-void test_no_clause() {
+void test_no_clause(void) {
   int i;
 #pragma omp sections
   {
@@ -50,7 +50,7 @@ void test_no_clause() {
 
 }
 
-void test_branch_protected_scope() {
+void test_branch_protected_scope(void) {
   int i = 0;
 L1:
   ++i;
@@ -100,7 +100,7 @@ L1:
   goto L3; // expected-error {{use of undeclared label 'L3'}}
 }
 
-void test_invalid_clause() {
+void test_invalid_clause(void) {
   int i;
 #pragma omp parallel
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp sections' are ignored}}
@@ -113,7 +113,7 @@ void test_invalid_clause() {
   }
 }
 
-void test_non_identifiers() {
+void test_non_identifiers(void) {
   int i, x;
 
 #pragma omp parallel
@@ -145,7 +145,7 @@ void test_non_identifiers() {
   }
 }
 
-void test_private() {
+void test_private(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected expression}}
@@ -204,7 +204,7 @@ void test_private() {
   }
 }
 
-void test_lastprivate() {
+void test_lastprivate(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
@@ -264,7 +264,7 @@ void test_lastprivate() {
   }
 }
 
-void test_firstprivate() {
+void test_firstprivate(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
@@ -324,7 +324,7 @@ void test_firstprivate() {
   }
 }
 
-void test_nowait() {
+void test_nowait(void) {
 #pragma omp parallel
 #pragma omp sections nowait nowait // expected-error {{directive '#pragma omp sections' cannot contain more than one 'nowait' clause}}
   {

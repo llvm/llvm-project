@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20_2b %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14    %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23          %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23,cxx20 %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14          %s -fcxx-exceptions -triple=x86_64-linux-gnu
 
 struct S {
   // dummy ctor to make this a literal type
@@ -44,12 +44,14 @@ constexpr int g(int k) {
   return 3 * k3 + 5 * k2 + n * k - 20;
 }
 static_assert(g(2) == 42, "");
-constexpr int h(int n) {
-  static const int m = n; // expected-error {{static variable not permitted in a constexpr function}}
+constexpr int h(int n) {  // cxx14_20-error {{constexpr function never produces a constant expression}}
+  static const int m = n; // cxx14_20-note {{control flows through the definition of a static variable}} \
+                          // cxx14_20-warning {{definition of a static variable in a constexpr function is a C++23 extension}}
   return m;
 }
-constexpr int i(int n) {
-  thread_local const int m = n; // expected-error {{thread_local variable not permitted in a constexpr function}}
+constexpr int i(int n) {        // cxx14_20-error {{constexpr function never produces a constant expression}}
+  thread_local const int m = n; // cxx14_20-note {{control flows through the definition of a thread_local variable}} \
+                                // cxx14_20-warning {{definition of a thread_local variable in a constexpr function is a C++23 extension}}
   return m;
 }
 
@@ -66,6 +68,7 @@ constexpr int j(int k) {
     }
   }
 } // expected-note 2{{control reached end of constexpr function}}
+  // cxx23-warning@-1 {{does not return a value in all control paths}}
 static_assert(j(0) == -3, "");
 static_assert(j(1) == 5, "");
 static_assert(j(2), ""); // expected-error {{constant expression}} expected-note {{in call to 'j(2)'}}
@@ -102,10 +105,10 @@ static_assert(l(false) == 5, "");
 static_assert(l(true), ""); // expected-error {{constant expression}} expected-note {{in call to 'l(true)'}}
 
 // Potential constant expression checking is still applied where possible.
-constexpr int htonl(int x) { // expected-error {{never produces a constant expression}}
+constexpr int htonl(int x) { // cxx14_20-error {{never produces a constant expression}}
   typedef unsigned char uchar;
   uchar arr[4] = { uchar(x >> 24), uchar(x >> 16), uchar(x >> 8), uchar(x) };
-  return *reinterpret_cast<int*>(arr); // expected-note {{reinterpret_cast is not allowed in a constant expression}}
+  return *reinterpret_cast<int*>(arr); // cxx14_20-note {{reinterpret_cast is not allowed in a constant expression}}
 }
 
 constexpr int maybe_htonl(bool isBigEndian, int x) {
@@ -181,7 +184,7 @@ namespace string_assign {
   static_assert(!test1(100), "");
   static_assert(!test1(101), ""); // expected-error {{constant expression}} expected-note {{in call to 'test1(101)'}}
 
-  constexpr void f() { // expected-error{{constexpr function never produces a constant expression}} expected-note@+2{{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+  constexpr void f() { // cxx14_20-error{{constexpr function never produces a constant expression}} cxx14_20-note@+2{{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}}
     char foo[10] = { "z" }; // expected-note {{here}}
     foo[10] = 'x'; // expected-warning {{past the end}}
   }
@@ -205,14 +208,14 @@ namespace array_resize {
 namespace potential_const_expr {
   constexpr void set(int &n) { n = 1; }
   constexpr int div_zero_1() { int z = 0; set(z); return 100 / z; } // no error
-  constexpr int div_zero_2() { // expected-error {{never produces a constant expression}}
+  constexpr int div_zero_2() { // cxx14_20-error {{never produces a constant expression}}
     int z = 0;
-    return 100 / (set(z), 0); // expected-note {{division by zero}}
+    return 100 / (set(z), 0); // cxx14_20-note {{division by zero}}
   }
-  int n; // expected-note {{declared here}}
-  constexpr int ref() { // expected-error {{never produces a constant expression}}
+  int n; // cxx14_20-note {{declared here}}
+  constexpr int ref() { // cxx14_20-error {{never produces a constant expression}}
     int &r = n;
-    return r; // expected-note {{read of non-const variable 'n'}}
+    return r; // cxx14_20-note {{read of non-const variable 'n'}}
   }
 }
 
@@ -227,7 +230,7 @@ namespace subobject {
     // expected-note@-2 {{assignment to member 'c' of union with active member 'n'}}
   }
   constexpr bool check(D &d) { return d.c.a.y == 3; }
-  // cxx20_2b-note@-1 {{read of member 'y' of union with active member 'x'}}
+  // cxx20_23-note@-1 {{read of member 'y' of union with active member 'x'}}
 
   constexpr bool g() { D d; f(d); return d.c.a.y == 3; }
   static_assert(g(), "");
@@ -240,7 +243,7 @@ namespace subobject {
   static_assert(i(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 
   constexpr bool j() { D d; d.c.a.x = 3; return check(d); } // cxx14-note {{assignment to member 'x' of union with active member 'y'}}
-  // cxx20_2b-note@-1 {{in call to 'check(d)'}}
+  // cxx20_23-note@-1 {{in call to 'check(d)'}}
   static_assert(j(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
 
@@ -269,16 +272,23 @@ namespace null {
 
 namespace incdec {
   template<typename T> constexpr T &ref(T &&r) { return r; }
+  // cxx23-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
   template<typename T> constexpr T postinc(T &&r) { return (r++, r); }
   template<typename T> constexpr T postdec(T &&r) { return (r--, r); }
 
+  template int &ref<int>(int &&);
+  // cxx23-note@-1  {{in instantiation of function template specialization}}
+
+  static_assert(postinc(0) == 1, "");
+  static_assert(postdec(0) == -1, "");
+#if __cplusplus <= 202002L
   static_assert(++ref(0) == 1, "");
   static_assert(ref(0)++ == 0, "");
-  static_assert(postinc(0) == 1, "");
   static_assert(--ref(0) == -1, "");
   static_assert(ref(0)-- == 0, "");
-  static_assert(postdec(0) == -1, "");
+#endif
 
+#if __cplusplus <= 202002L
   constexpr int overflow_int_inc_1 = ref(0x7fffffff)++; // expected-error {{constant}} expected-note {{2147483648}}
   constexpr int overflow_int_inc_1_ok = ref(0x7ffffffe)++;
   constexpr int overflow_int_inc_2 = ++ref(0x7fffffff); // expected-error {{constant}} expected-note {{2147483648}}
@@ -291,37 +301,42 @@ namespace incdec {
   // inc on bool sets to true
   static_assert(++ref(false), "");
   // cxx14-warning@-1  {{incrementing expression of type bool}}
-  // cxx20_2b-error@-2 {{incrementing expression of type bool}}
+  // cxx20-error@-2 {{incrementing expression of type bool}}
   static_assert(++ref(true), "");
   // cxx14-warning@-1  {{incrementing expression of type bool}}
-  // cxx20_2b-error@-2 {{incrementing expression of type bool}}
+  // cxx20-error@-2 {{incrementing expression of type bool}}
+#endif
 
   int arr[10];
+  static_assert(postinc(&arr[0]) == &arr[1], "");
+  static_assert(postdec(&arr[1]) == &arr[0], "");
+#if __cplusplus <= 202002L
   static_assert(++ref(&arr[0]) == &arr[1], "");
   static_assert(++ref(&arr[9]) == &arr[10], "");
   static_assert(++ref(&arr[10]) == &arr[11], ""); // expected-error {{constant}} expected-note {{cannot refer to element 11}}
   static_assert(ref(&arr[0])++ == &arr[0], "");
   static_assert(ref(&arr[10])++ == &arr[10], ""); // expected-error {{constant}} expected-note {{cannot refer to element 11}}
-  static_assert(postinc(&arr[0]) == &arr[1], "");
   static_assert(--ref(&arr[10]) == &arr[9], "");
   static_assert(--ref(&arr[1]) == &arr[0], "");
   static_assert(--ref(&arr[0]) != &arr[0], ""); // expected-error {{constant}} expected-note {{cannot refer to element -1}}
   static_assert(ref(&arr[1])-- == &arr[1], "");
   static_assert(ref(&arr[0])-- == &arr[0], ""); // expected-error {{constant}} expected-note {{cannot refer to element -1}}
-  static_assert(postdec(&arr[1]) == &arr[0], "");
+#endif
 
+  static_assert(postinc(0.0) == 1.0, "");
+  static_assert(postdec(0.0) == -1.0, "");
+#if __cplusplus <= 202002L
   int x;
   static_assert(++ref(&x) == &x + 1, "");
 
   static_assert(++ref(0.0) == 1.0, "");
   static_assert(ref(0.0)++ == 0.0, "");
-  static_assert(postinc(0.0) == 1.0, "");
   static_assert(--ref(0.0) == -1.0, "");
   static_assert(ref(0.0)-- == 0.0, "");
-  static_assert(postdec(0.0) == -1.0, "");
 
   static_assert(++ref(1e100) == 1e100, "");
   static_assert(--ref(1e100) == 1e100, "");
+#endif
 
   union U {
     int a, b;
@@ -331,7 +346,7 @@ namespace incdec {
   }
   constexpr int wrong_member = f({0}); // expected-error {{constant}} expected-note {{in call to 'f({.a = 0})'}}
   constexpr int vol = --ref<volatile int>(0); // expected-error {{constant}} expected-note {{decrement of volatile-qualified}}
-  // cxx20_2b-warning@-1 {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
+  // cxx20_23-warning@-1 {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
 
   constexpr int incr(int k) {
     int x = k;
@@ -817,8 +832,9 @@ namespace StmtExpr {
     case 0:
       return 0;
 
-      ({
-        case 1: // expected-note {{not supported}}
+      ({  // expected-note {{jump enters a statement expression}}
+        case 1:// expected-error {{cannot jump from switch statement to this case label}} \
+               // expected-note  {{not supported}}
           return 1;
       });
     }
@@ -831,8 +847,8 @@ namespace StmtExpr {
   static_assert(g() == 0, ""); // expected-error {{constant expression}} expected-note {{in call}}
 
   // FIXME: We should handle the void statement expression case.
-  constexpr int h() { // expected-error {{never produces a constant}}
-    ({ if (true) {} }); // expected-note {{not supported}}
+  constexpr int h() { // cxx14_20-error {{never produces a constant}}
+    ({ if (true) {} }); // cxx14_20-note {{not supported}}
     return 0;
   }
 }
@@ -863,11 +879,13 @@ namespace VirtualFromBase {
 
 namespace Lifetime {
   constexpr int &get(int &&r) { return r; }
+  // cxx23-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
   constexpr int f() {
     int &r = get(123);
-    return r; // expected-note {{read of object outside its lifetime}}
+    return r;
+    // cxx14_20-note@-1 {{read of object outside its lifetime}}
   }
-  static_assert(f() == 123, ""); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(f() == 123, ""); // expected-error {{constant expression}} cxx14_20-note {{in call}}
 
   constexpr int g() {
     int *p = 0;
@@ -1022,13 +1040,14 @@ const char Cs[] = {'a', 'b'}; // expected-note 2{{declared here}}
 void foo() __attribute__((enable_if(sum(Cs) == 'a' + 'b', "")));
 void run() { foo(); }
 
-static_assert(sum(Cs) == 'a' + 'b', ""); // expected-error{{not an integral constant expression}} expected-note{{in call to 'sum(Cs)'}}
+static_assert(sum(Cs) == 'a' + 'b', ""); // expected-error{{not an integral constant expression}} expected-note{{in call to 'sum<2>(Cs)'}}
 constexpr int S = sum(Cs); // expected-error{{must be initialized by a constant expression}} expected-note{{in call}}
 }
 
-constexpr void PR28739(int n) { // expected-error {{never produces a constant}}
-  int *p = &n;
-  p += (__int128)(unsigned long)-1; // expected-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
+constexpr void PR28739(int n) { // cxx14_20-error {{never produces a constant}}
+  int *p = &n;                  // expected-note {{array 'p' declared here}}
+  p += (__int128)(unsigned long)-1; // cxx14_20-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
+  // expected-warning@-1 {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4611686018427387904 elements)}}
 }
 
 constexpr void Void(int n) {
@@ -1256,4 +1275,34 @@ namespace TemporaryWithBadPointer {
     get_bad_pointer(),
     (dbt2.wp = nullptr, 0)
   };
+}
+
+namespace UninitCompoundAssign {
+constexpr int scalar(int a) {
+  int sum; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}}
+  sum += a; // expected-note {{read of uninitialized object}};
+  return 0;
+}
+static_assert(scalar(3), ""); // expected-error {{constant expression}} \
+                              // expected-note {{in call to 'scalar(3)'}}
+
+constexpr int array(int a) {
+  int arr[3]; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}}
+  arr[1] += a; // expected-note {{read of uninitialized object}};
+  return 0;
+}
+static_assert(array(3), ""); // expected-error {{constant expression}} \
+                             // expected-note {{in call to 'array(3)'}}
+
+struct Foo {
+  int val; // cxx14-note{{member not initialized by constructor}}
+  constexpr Foo() {} // cxx14-warning {{constexpr constructor that does not initialize all members is a C++20 extension}}
+};
+constexpr int field(int a) {
+  Foo f;
+  f.val += a; // expected-note {{read of uninitialized object}};
+  return 0;
+}
+static_assert(field(3), ""); // expected-error {{constant expression}} \
+                             // expected-note {{in call to 'field(3)'}}
 }

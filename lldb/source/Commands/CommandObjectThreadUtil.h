@@ -54,7 +54,7 @@ public:
 
   ~CommandObjectIterateOverThreads() override = default;
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override;
+  void DoExecute(Args &command, CommandReturnObject &result) override;
 
 protected:
   // Override this to do whatever you need to do for one thread.
@@ -80,9 +80,11 @@ protected:
 /// an action on multiple threads at once instead of iterating over each thread.
 class CommandObjectMultipleThreads : public CommandObjectParsed {
 public:
-  using CommandObjectParsed::CommandObjectParsed;
+  CommandObjectMultipleThreads(CommandInterpreter &interpreter,
+                               const char *name, const char *help,
+                               const char *syntax, uint32_t flags);
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override;
+  void DoExecute(Args &command, CommandReturnObject &result) override;
 
 protected:
   /// Method that handles the command after the main arguments have been parsed.
@@ -93,7 +95,7 @@ protected:
   /// \return
   ///     A boolean result similar to the one expected from \a DoExecute.
   virtual bool DoExecuteOnThreads(Args &command, CommandReturnObject &result,
-                                  const std::vector<lldb::tid_t> &tids) = 0;
+                                  llvm::ArrayRef<lldb::tid_t> tids) = 0;
 };
 
 } // namespace lldb_private

@@ -55,6 +55,10 @@ using namespace __dfsan;
 #define DECLARE_WEAK_INTERCEPTOR_HOOK(f, ...) \
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void f(__VA_ARGS__);
 
+#define WRAPPER_ALIAS(fun, real)                                          \
+  SANITIZER_INTERFACE_ATTRIBUTE void __dfsw_##fun() ALIAS(__dfsw_##real); \
+  SANITIZER_INTERFACE_ATTRIBUTE void __dfso_##fun() ALIAS(__dfso_##real);
+
 // Async-safe, non-reentrant spin lock.
 class SignalSpinLocker {
  public:
@@ -202,6 +206,57 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strpbrk(
     }
   }
   return const_cast<char *>(ret);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strsep(char **s, const char *delim,
+                                                  dfsan_label s_label,
+                                                  dfsan_label delim_label,
+                                                  dfsan_label *ret_label) {
+  dfsan_label base_label = dfsan_read_label(s, sizeof(*s));
+  char *base = *s;
+  char *res = strsep(s, delim);
+  if (res != *s) {
+    char *token_start = res;
+    int token_length = strlen(res);
+    // the delimiter byte has been set to NULL
+    dfsan_set_label(0, token_start + token_length, 1);
+  }
+
+  if (flags().strict_data_dependencies) {
+    *ret_label = res ? base_label : 0;
+  } else {
+    size_t s_bytes_read = (res ? strlen(res) : strlen(base)) + 1;
+    *ret_label = dfsan_union(
+        dfsan_union(base_label, dfsan_read_label(base, sizeof(s_bytes_read))),
+        dfsan_union(dfsan_read_label(delim, strlen(delim) + 1),
+                    dfsan_union(s_label, delim_label)));
+  }
+
+  return res;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strsep(
+    char **s, const char *delim, dfsan_label s_label, dfsan_label delim_label,
+    dfsan_label *ret_label, dfsan_origin s_origin, dfsan_origin delim_origin,
+    dfsan_origin *ret_origin) {
+  dfsan_origin base_origin = dfsan_read_origin_of_first_taint(s, sizeof(*s));
+  char *res = __dfsw_strsep(s, delim, s_label, delim_label, ret_label);
+  if (flags().strict_data_dependencies) {
+    if (res)
+      *ret_origin = base_origin;
+  } else {
+    if (*ret_label) {
+      if (base_origin) {
+        *ret_origin = base_origin;
+      } else {
+        dfsan_origin o =
+            dfsan_read_origin_of_first_taint(delim, strlen(delim) + 1);
+        *ret_origin = o ? o : (s_label ? s_origin : delim_origin);
+      }
+    }
+  }
+
+  return res;
 }
 
 static int dfsan_memcmp_bcmp(const void *s1, const void *s2, size_t n,
@@ -461,24 +516,6 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfso_strncasecmp(
   return r;
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void *__dfsw_calloc(size_t nmemb, size_t size,
-                                                  dfsan_label nmemb_label,
-                                                  dfsan_label size_label,
-                                                  dfsan_label *ret_label) {
-  void *p = calloc(nmemb, size);
-  dfsan_set_label(0, p, nmemb * size);
-  *ret_label = 0;
-  return p;
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE void *__dfso_calloc(
-    size_t nmemb, size_t size, dfsan_label nmemb_label, dfsan_label size_label,
-    dfsan_label *ret_label, dfsan_origin nmemb_origin, dfsan_origin size_origin,
-    dfsan_origin *ret_origin) {
-  void *p = __dfsw_calloc(nmemb, size, nmemb_label, size_label, ret_label);
-  *ret_origin = 0;
-  return p;
-}
 
 SANITIZER_INTERFACE_ATTRIBUTE size_t
 __dfsw_strlen(const char *s, dfsan_label s_label, dfsan_label *ret_label) {
@@ -502,6 +539,36 @@ SANITIZER_INTERFACE_ATTRIBUTE size_t __dfso_strlen(const char *s,
   return ret;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE size_t __dfsw_strnlen(const char *s,
+                                                    size_t maxlen,
+                                                    dfsan_label s_label,
+                                                    dfsan_label maxlen_label,
+                                                    dfsan_label *ret_label) {
+  size_t ret = strnlen(s, maxlen);
+  if (flags().strict_data_dependencies) {
+    *ret_label = 0;
+  } else {
+    size_t full_len = strlen(s);
+    size_t covered_len = maxlen > (full_len + 1) ? (full_len + 1) : maxlen;
+    *ret_label = dfsan_union(maxlen_label, dfsan_read_label(s, covered_len));
+  }
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE size_t __dfso_strnlen(
+    const char *s, size_t maxlen, dfsan_label s_label, dfsan_label maxlen_label,
+    dfsan_label *ret_label, dfsan_origin s_origin, dfsan_origin maxlen_origin,
+    dfsan_origin *ret_origin) {
+  size_t ret = __dfsw_strnlen(s, maxlen, s_label, maxlen_label, ret_label);
+  if (!flags().strict_data_dependencies) {
+    size_t full_len = strlen(s);
+    size_t covered_len = maxlen > (full_len + 1) ? (full_len + 1) : maxlen;
+    dfsan_origin o = dfsan_read_origin_of_first_taint(s, covered_len);
+    *ret_origin = o ? o : maxlen_origin;
+  }
+  return ret;
+}
+
 static void *dfsan_memmove(void *dest, const void *src, size_t n) {
   dfsan_label *sdest = shadow_for(dest);
   const dfsan_label *ssrc = shadow_for(src);
@@ -515,9 +582,7 @@ static void *dfsan_memmove_with_origin(void *dest, const void *src, size_t n) {
 }
 
 static void *dfsan_memcpy(void *dest, const void *src, size_t n) {
-  dfsan_label *sdest = shadow_for(dest);
-  const dfsan_label *ssrc = shadow_for(src);
-  internal_memcpy((void *)sdest, (const void *)ssrc, n * sizeof(dfsan_label));
+  dfsan_mem_shadow_transfer(dest, src, n);
   return internal_memcpy(dest, src, n);
 }
 
@@ -601,11 +666,8 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strcat(char *dest, const char *src,
                                                   dfsan_label src_label,
                                                   dfsan_label *ret_label) {
   size_t dest_len = strlen(dest);
-  char *ret = strcat(dest, src);  // NOLINT
-  dfsan_label *sdest = shadow_for(dest + dest_len);
-  const dfsan_label *ssrc = shadow_for(src);
-  internal_memcpy((void *)sdest, (const void *)ssrc,
-                  strlen(src) * sizeof(dfsan_label));
+  char *ret = strcat(dest, src);
+  dfsan_mem_shadow_transfer(dest + dest_len, src, strlen(src));
   *ret_label = dest_label;
   return ret;
 }
@@ -615,13 +677,41 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strcat(
     dfsan_label *ret_label, dfsan_origin dest_origin, dfsan_origin src_origin,
     dfsan_origin *ret_origin) {
   size_t dest_len = strlen(dest);
-  char *ret = strcat(dest, src);  // NOLINT
-  dfsan_label *sdest = shadow_for(dest + dest_len);
-  const dfsan_label *ssrc = shadow_for(src);
+  char *ret = strcat(dest, src);
   size_t src_len = strlen(src);
   dfsan_mem_origin_transfer(dest + dest_len, src, src_len);
-  internal_memcpy((void *)sdest, (const void *)ssrc,
-                  src_len * sizeof(dfsan_label));
+  dfsan_mem_shadow_transfer(dest + dest_len, src, src_len);
+  *ret_label = dest_label;
+  *ret_origin = dest_origin;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strncat(
+    char *dest, const char *src, size_t num, dfsan_label dest_label,
+    dfsan_label src_label, dfsan_label num_label, dfsan_label *ret_label) {
+  size_t src_len = strlen(src);
+  src_len = src_len < num ? src_len : num;
+  size_t dest_len = strlen(dest);
+
+  char *ret = strncat(dest, src, num);
+  dfsan_mem_shadow_transfer(dest + dest_len, src, src_len);
+  *ret_label = dest_label;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strncat(
+    char *dest, const char *src, size_t num, dfsan_label dest_label,
+    dfsan_label src_label, dfsan_label num_label, dfsan_label *ret_label,
+    dfsan_origin dest_origin, dfsan_origin src_origin, dfsan_origin num_origin,
+    dfsan_origin *ret_origin) {
+  size_t src_len = strlen(src);
+  src_len = src_len < num ? src_len : num;
+  size_t dest_len = strlen(dest);
+
+  char *ret = strncat(dest, src, num);
+
+  dfsan_mem_origin_transfer(dest + dest_len, src, src_len);
+  dfsan_mem_shadow_transfer(dest + dest_len, src, src_len);
   *ret_label = dest_label;
   *ret_origin = dest_origin;
   return ret;
@@ -756,7 +846,7 @@ __dfsw_dlopen(const char *filename, int flag, dfsan_label filename_label,
               dfsan_label flag_label, dfsan_label *ret_label) {
   void *handle = dlopen(filename, flag);
   link_map *map = GET_LINK_MAP_BY_DLOPEN_HANDLE(handle);
-  if (map)
+  if (filename && map)
     ForEachMappedRegion(map, dfsan_set_zero_label);
   *ret_label = 0;
   return handle;
@@ -773,11 +863,12 @@ SANITIZER_INTERFACE_ATTRIBUTE void *__dfso_dlopen(
 static void *DFsanThreadStartFunc(void *arg) {
   DFsanThread *t = (DFsanThread *)arg;
   SetCurrentThread(t);
+  t->Init();
+  SetSigProcMask(&t->starting_sigset_, nullptr);
   return t->ThreadStart();
 }
 
 static int dfsan_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-                                void *start_routine_trampoline,
                                 void *start_routine, void *arg,
                                 dfsan_label *ret_label,
                                 bool track_origins = false) {
@@ -791,8 +882,8 @@ static int dfsan_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   AdjustStackSize((void *)(const_cast<pthread_attr_t *>(attr)));
 
   DFsanThread *t =
-      DFsanThread::Create(start_routine_trampoline,
-                          (thread_callback_t)start_routine, arg, track_origins);
+      DFsanThread::Create((thread_callback_t)start_routine, arg, track_origins);
+  ScopedBlockSignals block(&t->starting_sigset_);
   int res = pthread_create(thread, attr, DFsanThreadStartFunc, t);
 
   if (attr == &myattr)
@@ -802,28 +893,22 @@ static int dfsan_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_create(
-    pthread_t *thread, const pthread_attr_t *attr,
-    void *(*start_routine_trampoline)(void *, void *, dfsan_label,
-                                      dfsan_label *),
-    void *start_routine, void *arg, dfsan_label thread_label,
-    dfsan_label attr_label, dfsan_label start_routine_label,
-    dfsan_label arg_label, dfsan_label *ret_label) {
-  return dfsan_pthread_create(thread, attr, (void *)start_routine_trampoline,
-                              start_routine, arg, ret_label);
+    pthread_t *thread, const pthread_attr_t *attr, void *start_routine,
+    void *arg, dfsan_label thread_label, dfsan_label attr_label,
+    dfsan_label start_routine_label, dfsan_label arg_label,
+    dfsan_label *ret_label) {
+  return dfsan_pthread_create(thread, attr, start_routine, arg, ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE int __dfso_pthread_create(
-    pthread_t *thread, const pthread_attr_t *attr,
-    void *(*start_routine_trampoline)(void *, void *, dfsan_label,
-                                      dfsan_label *, dfsan_origin,
-                                      dfsan_origin *),
-    void *start_routine, void *arg, dfsan_label thread_label,
-    dfsan_label attr_label, dfsan_label start_routine_label,
-    dfsan_label arg_label, dfsan_label *ret_label, dfsan_origin thread_origin,
+    pthread_t *thread, const pthread_attr_t *attr, void *start_routine,
+    void *arg, dfsan_label thread_label, dfsan_label attr_label,
+    dfsan_label start_routine_label, dfsan_label arg_label,
+    dfsan_label *ret_label, dfsan_origin thread_origin,
     dfsan_origin attr_origin, dfsan_origin start_routine_origin,
     dfsan_origin arg_origin, dfsan_origin *ret_origin) {
-  return dfsan_pthread_create(thread, attr, (void *)start_routine_trampoline,
-                              start_routine, arg, ret_label, true);
+  return dfsan_pthread_create(thread, attr, start_routine, arg, ret_label,
+                              true);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_join(pthread_t thread,
@@ -848,22 +933,7 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfso_pthread_join(
 }
 
 struct dl_iterate_phdr_info {
-  int (*callback_trampoline)(void *callback, struct dl_phdr_info *info,
-                             size_t size, void *data, dfsan_label info_label,
-                             dfsan_label size_label, dfsan_label data_label,
-                             dfsan_label *ret_label);
-  void *callback;
-  void *data;
-};
-
-struct dl_iterate_phdr_origin_info {
-  int (*callback_trampoline)(void *callback, struct dl_phdr_info *info,
-                             size_t size, void *data, dfsan_label info_label,
-                             dfsan_label size_label, dfsan_label data_label,
-                             dfsan_label *ret_label, dfsan_origin info_origin,
-                             dfsan_origin size_origin, dfsan_origin data_origin,
-                             dfsan_origin *ret_origin);
-  void *callback;
+  int (*callback)(struct dl_phdr_info *info, size_t size, void *data);
   void *data;
 };
 
@@ -875,53 +945,28 @@ int dl_iterate_phdr_cb(struct dl_phdr_info *info, size_t size, void *data) {
   dfsan_set_label(
       0, const_cast<char *>(reinterpret_cast<const char *>(info->dlpi_phdr)),
       sizeof(*info->dlpi_phdr) * info->dlpi_phnum);
-  dfsan_label ret_label;
-  return dipi->callback_trampoline(dipi->callback, info, size, dipi->data, 0, 0,
-                                   0, &ret_label);
-}
 
-int dl_iterate_phdr_origin_cb(struct dl_phdr_info *info, size_t size,
-                              void *data) {
-  dl_iterate_phdr_origin_info *dipi = (dl_iterate_phdr_origin_info *)data;
-  dfsan_set_label(0, *info);
-  dfsan_set_label(0, const_cast<char *>(info->dlpi_name),
-                  strlen(info->dlpi_name) + 1);
-  dfsan_set_label(
-      0, const_cast<char *>(reinterpret_cast<const char *>(info->dlpi_phdr)),
-      sizeof(*info->dlpi_phdr) * info->dlpi_phnum);
-  dfsan_label ret_label;
-  dfsan_origin ret_origin;
-  return dipi->callback_trampoline(dipi->callback, info, size, dipi->data, 0, 0,
-                                   0, &ret_label, 0, 0, 0, &ret_origin);
+  dfsan_clear_thread_local_state();
+  return dipi->callback(info, size, dipi->data);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_dl_iterate_phdr(
-    int (*callback_trampoline)(void *callback, struct dl_phdr_info *info,
-                               size_t size, void *data, dfsan_label info_label,
-                               dfsan_label size_label, dfsan_label data_label,
-                               dfsan_label *ret_label),
-    void *callback, void *data, dfsan_label callback_label,
-    dfsan_label data_label, dfsan_label *ret_label) {
-  dl_iterate_phdr_info dipi = { callback_trampoline, callback, data };
+    int (*callback)(struct dl_phdr_info *info, size_t size, void *data),
+    void *data, dfsan_label callback_label, dfsan_label data_label,
+    dfsan_label *ret_label) {
+  dl_iterate_phdr_info dipi = {callback, data};
   *ret_label = 0;
   return dl_iterate_phdr(dl_iterate_phdr_cb, &dipi);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE int __dfso_dl_iterate_phdr(
-    int (*callback_trampoline)(void *callback, struct dl_phdr_info *info,
-                               size_t size, void *data, dfsan_label info_label,
-                               dfsan_label size_label, dfsan_label data_label,
-                               dfsan_label *ret_label, dfsan_origin info_origin,
-                               dfsan_origin size_origin,
-                               dfsan_origin data_origin,
-                               dfsan_origin *ret_origin),
-    void *callback, void *data, dfsan_label callback_label,
-    dfsan_label data_label, dfsan_label *ret_label,
-    dfsan_origin callback_origin, dfsan_origin data_origin,
-    dfsan_origin *ret_origin) {
-  dl_iterate_phdr_origin_info dipi = {callback_trampoline, callback, data};
+    int (*callback)(struct dl_phdr_info *info, size_t size, void *data),
+    void *data, dfsan_label callback_label, dfsan_label data_label,
+    dfsan_label *ret_label, dfsan_origin callback_origin,
+    dfsan_origin data_origin, dfsan_origin *ret_origin) {
+  dl_iterate_phdr_info dipi = {callback, data};
   *ret_label = 0;
-  return dl_iterate_phdr(dl_iterate_phdr_origin_cb, &dipi);
+  return dl_iterate_phdr(dl_iterate_phdr_cb, &dipi);
 }
 
 // This function is only available for glibc 2.27 or newer.  Mark it weak so
@@ -1044,6 +1089,33 @@ char *__dfso_get_current_dir_name(dfsan_label *ret_label,
   return __dfsw_get_current_dir_name(ret_label);
 }
 
+// This function is only available for glibc 2.25 or newer.  Mark it weak so
+// linking succeeds with older glibcs.
+SANITIZER_WEAK_ATTRIBUTE int getentropy(void *buffer, size_t length);
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_getentropy(void *buffer, size_t length,
+                                                    dfsan_label buffer_label,
+                                                    dfsan_label length_label,
+                                                    dfsan_label *ret_label) {
+  int ret = getentropy(buffer, length);
+  if (ret == 0) {
+    dfsan_set_label(0, buffer, length);
+  }
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfso_getentropy(void *buffer, size_t length,
+                                                    dfsan_label buffer_label,
+                                                    dfsan_label length_label,
+                                                    dfsan_label *ret_label,
+                                                    dfsan_origin buffer_origin,
+                                                    dfsan_origin length_origin,
+                                                    dfsan_origin *ret_origin) {
+  return __dfsw_getentropy(buffer, length, buffer_label, length_label,
+                           ret_label);
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_gethostname(char *name, size_t len, dfsan_label name_label,
                        dfsan_label len_label, dfsan_label *ret_label) {
@@ -1106,10 +1178,9 @@ int __dfso_getrusage(int who, struct rusage *usage, dfsan_label who_label,
 SANITIZER_INTERFACE_ATTRIBUTE
 char *__dfsw_strcpy(char *dest, const char *src, dfsan_label dst_label,
                     dfsan_label src_label, dfsan_label *ret_label) {
-  char *ret = strcpy(dest, src);  // NOLINT
+  char *ret = strcpy(dest, src);
   if (ret) {
-    internal_memcpy(shadow_for(dest), shadow_for(src),
-                    sizeof(dfsan_label) * (strlen(src) + 1));
+    dfsan_mem_shadow_transfer(dest, src, strlen(src) + 1);
   }
   *ret_label = dst_label;
   return ret;
@@ -1120,27 +1191,30 @@ char *__dfso_strcpy(char *dest, const char *src, dfsan_label dst_label,
                     dfsan_label src_label, dfsan_label *ret_label,
                     dfsan_origin dst_origin, dfsan_origin src_origin,
                     dfsan_origin *ret_origin) {
-  char *ret = strcpy(dest, src);  // NOLINT
+  char *ret = strcpy(dest, src);
   if (ret) {
     size_t str_len = strlen(src) + 1;
     dfsan_mem_origin_transfer(dest, src, str_len);
-    internal_memcpy(shadow_for(dest), shadow_for(src),
-                    sizeof(dfsan_label) * str_len);
+    dfsan_mem_shadow_transfer(dest, src, str_len);
   }
   *ret_label = dst_label;
   *ret_origin = dst_origin;
   return ret;
 }
+}
 
-static long int dfsan_strtol(const char *nptr, char **endptr, int base,
-                             char **tmp_endptr) {
+template <typename Fn>
+static ALWAYS_INLINE auto dfsan_strtol_impl(
+    Fn real, const char *nptr, char **endptr, int base,
+    char **tmp_endptr) -> decltype(real(nullptr, nullptr, 0)) {
   assert(tmp_endptr);
-  long int ret = strtol(nptr, tmp_endptr, base);
+  auto ret = real(nptr, tmp_endptr, base);
   if (endptr)
     *endptr = *tmp_endptr;
   return ret;
 }
 
+extern "C" {
 static void dfsan_strtolong_label(const char *nptr, const char *tmp_endptr,
                                   dfsan_label base_label,
                                   dfsan_label *ret_label) {
@@ -1168,30 +1242,6 @@ static void dfsan_strtolong_origin(const char *nptr, const char *tmp_endptr,
                       : dfsan_read_origin_of_first_taint(
                             nptr, tmp_endptr - nptr + (*tmp_endptr ? 0 : 1));
   }
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-long int __dfsw_strtol(const char *nptr, char **endptr, int base,
-                       dfsan_label nptr_label, dfsan_label endptr_label,
-                       dfsan_label base_label, dfsan_label *ret_label) {
-  char *tmp_endptr;
-  long int ret = dfsan_strtol(nptr, endptr, base, &tmp_endptr);
-  dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);
-  return ret;
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-long int __dfso_strtol(const char *nptr, char **endptr, int base,
-                       dfsan_label nptr_label, dfsan_label endptr_label,
-                       dfsan_label base_label, dfsan_label *ret_label,
-                       dfsan_origin nptr_origin, dfsan_origin endptr_origin,
-                       dfsan_origin base_origin, dfsan_origin *ret_origin) {
-  char *tmp_endptr;
-  long int ret = dfsan_strtol(nptr, endptr, base, &tmp_endptr);
-  dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);
-  dfsan_strtolong_origin(nptr, tmp_endptr, base_label, ret_label, base_origin,
-                         ret_origin);
-  return ret;
 }
 
 static double dfsan_strtod(const char *nptr, char **endptr, char **tmp_endptr) {
@@ -1241,108 +1291,40 @@ double __dfso_strtod(const char *nptr, char **endptr, dfsan_label nptr_label,
   return ret;
 }
 
-static long long int dfsan_strtoll(const char *nptr, char **endptr, int base,
-                                   char **tmp_endptr) {
-  assert(tmp_endptr);
-  long long int ret = strtoll(nptr, tmp_endptr, base);
-  if (endptr)
-    *endptr = *tmp_endptr;
-  return ret;
-}
+WRAPPER_ALIAS(__isoc23_strtod, strtod)
 
-SANITIZER_INTERFACE_ATTRIBUTE
-long long int __dfsw_strtoll(const char *nptr, char **endptr, int base,
-                             dfsan_label nptr_label, dfsan_label endptr_label,
-                             dfsan_label base_label, dfsan_label *ret_label) {
-  char *tmp_endptr;
-  long long int ret = dfsan_strtoll(nptr, endptr, base, &tmp_endptr);
-  dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);
-  return ret;
-}
+#define WRAPPER_STRTO(ret_type, fun)                                     \
+  SANITIZER_INTERFACE_ATTRIBUTE ret_type __dfsw_##fun(                   \
+      const char *nptr, char **endptr, int base, dfsan_label nptr_label, \
+      dfsan_label endptr_label, dfsan_label base_label,                  \
+      dfsan_label *ret_label) {                                          \
+    char *tmp_endptr;                                                    \
+    auto ret = dfsan_strtol_impl(fun, nptr, endptr, base, &tmp_endptr);  \
+    dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);      \
+    return ret;                                                          \
+  }                                                                      \
+  SANITIZER_INTERFACE_ATTRIBUTE ret_type __dfso_##fun(                   \
+      const char *nptr, char **endptr, int base, dfsan_label nptr_label, \
+      dfsan_label endptr_label, dfsan_label base_label,                  \
+      dfsan_label *ret_label, dfsan_origin nptr_origin,                  \
+      dfsan_origin endptr_origin, dfsan_origin base_origin,              \
+      dfsan_origin *ret_origin) {                                        \
+    char *tmp_endptr;                                                    \
+    auto ret = dfsan_strtol_impl(fun, nptr, endptr, base, &tmp_endptr);  \
+    dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);      \
+    dfsan_strtolong_origin(nptr, tmp_endptr, base_label, ret_label,      \
+                           base_origin, ret_origin);                     \
+    return ret;                                                          \
+  }
 
-SANITIZER_INTERFACE_ATTRIBUTE
-long long int __dfso_strtoll(const char *nptr, char **endptr, int base,
-                             dfsan_label nptr_label, dfsan_label endptr_label,
-                             dfsan_label base_label, dfsan_label *ret_label,
-                             dfsan_origin nptr_origin,
-                             dfsan_origin endptr_origin,
-                             dfsan_origin base_origin,
-                             dfsan_origin *ret_origin) {
-  char *tmp_endptr;
-  long long int ret = dfsan_strtoll(nptr, endptr, base, &tmp_endptr);
-  dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);
-  dfsan_strtolong_origin(nptr, tmp_endptr, base_label, ret_label, base_origin,
-                         ret_origin);
-  return ret;
-}
-
-static unsigned long int dfsan_strtoul(const char *nptr, char **endptr,
-                                       int base, char **tmp_endptr) {
-  assert(tmp_endptr);
-  unsigned long int ret = strtoul(nptr, tmp_endptr, base);
-  if (endptr)
-    *endptr = *tmp_endptr;
-  return ret;
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-unsigned long int __dfsw_strtoul(const char *nptr, char **endptr, int base,
-                       dfsan_label nptr_label, dfsan_label endptr_label,
-                       dfsan_label base_label, dfsan_label *ret_label) {
-  char *tmp_endptr;
-  unsigned long int ret = dfsan_strtoul(nptr, endptr, base, &tmp_endptr);
-  dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);
-  return ret;
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-unsigned long int __dfso_strtoul(
-    const char *nptr, char **endptr, int base, dfsan_label nptr_label,
-    dfsan_label endptr_label, dfsan_label base_label, dfsan_label *ret_label,
-    dfsan_origin nptr_origin, dfsan_origin endptr_origin,
-    dfsan_origin base_origin, dfsan_origin *ret_origin) {
-  char *tmp_endptr;
-  unsigned long int ret = dfsan_strtoul(nptr, endptr, base, &tmp_endptr);
-  dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);
-  dfsan_strtolong_origin(nptr, tmp_endptr, base_label, ret_label, base_origin,
-                         ret_origin);
-  return ret;
-}
-
-static long long unsigned int dfsan_strtoull(const char *nptr, char **endptr,
-                                             int base, char **tmp_endptr) {
-  assert(tmp_endptr);
-  long long unsigned int ret = strtoull(nptr, tmp_endptr, base);
-  if (endptr)
-    *endptr = *tmp_endptr;
-  return ret;
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-long long unsigned int __dfsw_strtoull(const char *nptr, char **endptr,
-                                       int base, dfsan_label nptr_label,
-                                       dfsan_label endptr_label,
-                                       dfsan_label base_label,
-                                       dfsan_label *ret_label) {
-  char *tmp_endptr;
-  long long unsigned int ret = dfsan_strtoull(nptr, endptr, base, &tmp_endptr);
-  dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);
-  return ret;
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-long long unsigned int __dfso_strtoull(
-    const char *nptr, char **endptr, int base, dfsan_label nptr_label,
-    dfsan_label endptr_label, dfsan_label base_label, dfsan_label *ret_label,
-    dfsan_origin nptr_origin, dfsan_origin endptr_origin,
-    dfsan_origin base_origin, dfsan_origin *ret_origin) {
-  char *tmp_endptr;
-  long long unsigned int ret = dfsan_strtoull(nptr, endptr, base, &tmp_endptr);
-  dfsan_strtolong_label(nptr, tmp_endptr, base_label, ret_label);
-  dfsan_strtolong_origin(nptr, tmp_endptr, base_label, ret_label, base_origin,
-                         ret_origin);
-  return ret;
-}
+WRAPPER_STRTO(long, strtol)
+WRAPPER_STRTO(long long, strtoll)
+WRAPPER_STRTO(unsigned long, strtoul)
+WRAPPER_STRTO(unsigned long long, strtoull)
+WRAPPER_ALIAS(__isoc23_strtol, strtol)
+WRAPPER_ALIAS(__isoc23_strtoll, strtoll)
+WRAPPER_ALIAS(__isoc23_strtoul, strtoul)
+WRAPPER_ALIAS(__isoc23_strtoull, strtoull)
 
 SANITIZER_INTERFACE_ATTRIBUTE
 time_t __dfsw_time(time_t *t, dfsan_label t_label, dfsan_label *ret_label) {
@@ -1627,10 +1609,7 @@ static void SignalHandler(int signo) {
   SignalHandlerScope signal_handler_scope;
   ScopedClearThreadLocalState scoped_clear_tls;
 
-  // Clear shadows for all inputs provided by system. This is why DFSan
-  // instrumentation generates a trampoline function to each function pointer,
-  // and uses the trampoline to clear shadows. However sigaction does not use
-  // a function pointer directly, so we have to do this manually.
+  // Clear shadows for all inputs provided by system.
   dfsan_clear_arg_tls(0, sizeof(dfsan_label));
 
   typedef void (*signal_cb)(int x);
@@ -1731,22 +1710,18 @@ static sighandler_t dfsan_signal(int signum, sighandler_t handler,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-sighandler_t __dfsw_signal(int signum,
-                           void *(*handler_trampoline)(void *, int, dfsan_label,
-                                                       dfsan_label *),
-                           sighandler_t handler, dfsan_label signum_label,
-                           dfsan_label handler_label, dfsan_label *ret_label) {
+sighandler_t __dfsw_signal(int signum, sighandler_t handler,
+                           dfsan_label signum_label, dfsan_label handler_label,
+                           dfsan_label *ret_label) {
   return dfsan_signal(signum, handler, ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-sighandler_t __dfso_signal(
-    int signum,
-    void *(*handler_trampoline)(void *, int, dfsan_label, dfsan_label *,
-                                dfsan_origin, dfsan_origin *),
-    sighandler_t handler, dfsan_label signum_label, dfsan_label handler_label,
-    dfsan_label *ret_label, dfsan_origin signum_origin,
-    dfsan_origin handler_origin, dfsan_origin *ret_origin) {
+sighandler_t __dfso_signal(int signum, sighandler_t handler,
+                           dfsan_label signum_label, dfsan_label handler_label,
+                           dfsan_label *ret_label, dfsan_origin signum_origin,
+                           dfsan_origin handler_origin,
+                           dfsan_origin *ret_origin) {
   return dfsan_signal(signum, handler, ret_label);
 }
 
@@ -2086,47 +2061,62 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfso_getpeername(
                             addrlen_label, ret_label);
 }
 
-// Type of the trampoline function passed to the custom version of
-// dfsan_set_write_callback.
-typedef void (*write_trampoline_t)(
-    void *callback,
-    int fd, const void *buf, ssize_t count,
-    dfsan_label fd_label, dfsan_label buf_label, dfsan_label count_label);
-
-typedef void (*write_origin_trampoline_t)(
-    void *callback, int fd, const void *buf, ssize_t count,
-    dfsan_label fd_label, dfsan_label buf_label, dfsan_label count_label,
-    dfsan_origin fd_origin, dfsan_origin buf_origin, dfsan_origin count_origin);
+// Type of the function passed to dfsan_set_write_callback.
+typedef void (*write_dfsan_callback_t)(int fd, const void *buf, ssize_t count);
 
 // Calls to dfsan_set_write_callback() set the values in this struct.
 // Calls to the custom version of write() read (and invoke) them.
 static struct {
-  write_trampoline_t write_callback_trampoline = nullptr;
-  void *write_callback = nullptr;
+  write_dfsan_callback_t write_callback = nullptr;
 } write_callback_info;
 
-static struct {
-  write_origin_trampoline_t write_callback_trampoline = nullptr;
-  void *write_callback = nullptr;
-} write_origin_callback_info;
-
-SANITIZER_INTERFACE_ATTRIBUTE void
-__dfsw_dfsan_set_write_callback(
-    write_trampoline_t write_callback_trampoline,
-    void *write_callback,
-    dfsan_label write_callback_label,
+SANITIZER_INTERFACE_ATTRIBUTE void __dfsw_dfsan_set_write_callback(
+    write_dfsan_callback_t write_callback, dfsan_label write_callback_label,
     dfsan_label *ret_label) {
-  write_callback_info.write_callback_trampoline = write_callback_trampoline;
   write_callback_info.write_callback = write_callback;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __dfso_dfsan_set_write_callback(
-    write_origin_trampoline_t write_callback_trampoline, void *write_callback,
-    dfsan_label write_callback_label, dfsan_label *ret_label,
-    dfsan_origin write_callback_origin, dfsan_origin *ret_origin) {
-  write_origin_callback_info.write_callback_trampoline =
-      write_callback_trampoline;
-  write_origin_callback_info.write_callback = write_callback;
+    write_dfsan_callback_t write_callback, dfsan_label write_callback_label,
+    dfsan_label *ret_label, dfsan_origin write_callback_origin,
+    dfsan_origin *ret_origin) {
+  write_callback_info.write_callback = write_callback;
+}
+
+static inline void setup_tls_args_for_write_callback(
+    dfsan_label fd_label, dfsan_label buf_label, dfsan_label count_label,
+    bool origins, dfsan_origin fd_origin, dfsan_origin buf_origin,
+    dfsan_origin count_origin) {
+  // The callback code will expect argument shadow labels in the args TLS,
+  // and origin labels in the origin args TLS.
+  // Previously this was done by a trampoline, but we want to remove this:
+  // https://github.com/llvm/llvm-project/issues/54172
+  //
+  // Instead, this code is manually setting up the args TLS data.
+  //
+  // The offsets used need to correspond with the instrumentation code,
+  // see llvm/lib/Transforms/Instrumentation/DataFlowSanitizer.cpp
+  // DFSanFunction::getShadowForTLSArgument.
+  // https://github.com/llvm/llvm-project/blob/0acc9e4b5edd8b39ff3d4c6d0e17f02007671c4e/llvm/lib/Transforms/Instrumentation/DataFlowSanitizer.cpp#L1684
+  // https://github.com/llvm/llvm-project/blob/0acc9e4b5edd8b39ff3d4c6d0e17f02007671c4e/llvm/lib/Transforms/Instrumentation/DataFlowSanitizer.cpp#L125
+  //
+  // Here the arguments are all primitives, but it can be more complex
+  // to compute offsets for array/aggregate type arguments.
+  //
+  // TODO(browneee): Consider a builtin to improve maintainabliity.
+  // With a builtin, we would provide the argument labels via builtin,
+  // and the builtin would reuse parts of the instrumentation code to ensure
+  // that this code and the instrumentation can never be out of sync.
+  // Note: Currently DFSan instrumentation does not run on this code, so
+  // the builtin may need to be handled outside DFSan instrumentation.
+  dfsan_set_arg_tls(0, fd_label);
+  dfsan_set_arg_tls(1, buf_label);
+  dfsan_set_arg_tls(2, count_label);
+  if (origins) {
+    dfsan_set_arg_origin_tls(0, fd_origin);
+    dfsan_set_arg_origin_tls(1, buf_origin);
+    dfsan_set_arg_origin_tls(2, count_origin);
+  }
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE int
@@ -2134,10 +2124,9 @@ __dfsw_write(int fd, const void *buf, size_t count,
              dfsan_label fd_label, dfsan_label buf_label,
              dfsan_label count_label, dfsan_label *ret_label) {
   if (write_callback_info.write_callback) {
-    write_callback_info.write_callback_trampoline(
-        write_callback_info.write_callback,
-        fd, buf, count,
-        fd_label, buf_label, count_label);
+    setup_tls_args_for_write_callback(fd_label, buf_label, count_label, false,
+                                      0, 0, 0);
+    write_callback_info.write_callback(fd, buf, count);
   }
 
   *ret_label = 0;
@@ -2149,16 +2138,16 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfso_write(
     dfsan_label buf_label, dfsan_label count_label, dfsan_label *ret_label,
     dfsan_origin fd_origin, dfsan_origin buf_origin, dfsan_origin count_origin,
     dfsan_origin *ret_origin) {
-  if (write_origin_callback_info.write_callback) {
-    write_origin_callback_info.write_callback_trampoline(
-        write_origin_callback_info.write_callback, fd, buf, count, fd_label,
-        buf_label, count_label, fd_origin, buf_origin, count_origin);
+  if (write_callback_info.write_callback) {
+    setup_tls_args_for_write_callback(fd_label, buf_label, count_label, true,
+                                      fd_origin, buf_origin, count_origin);
+    write_callback_info.write_callback(fd, buf, count);
   }
 
   *ret_label = 0;
   return write(fd, buf, count);
 }
-} // namespace __dfsan
+}  // namespace __dfsan
 
 // Type used to extract a dfsan_label with va_arg()
 typedef int dfsan_label_va;
@@ -2167,8 +2156,14 @@ typedef int dfsan_label_va;
 // '%.3f').
 struct Formatter {
   Formatter(char *str_, const char *fmt_, size_t size_)
-      : str(str_), str_off(0), size(size_), fmt_start(fmt_), fmt_cur(fmt_),
-        width(-1) {}
+      : str(str_),
+        str_off(0),
+        size(size_),
+        fmt_start(fmt_),
+        fmt_cur(fmt_),
+        width(-1),
+        num_scanned(-1),
+        skip(false) {}
 
   int format() {
     char *tmp_fmt = build_format_string();
@@ -2193,12 +2188,50 @@ struct Formatter {
     return retval;
   }
 
-  char *build_format_string() {
+  int scan() {
+    char *tmp_fmt = build_format_string(true);
+    int read_count = 0;
+    int retval = sscanf(str + str_off, tmp_fmt, &read_count);
+    if (retval > 0) {
+      if (-1 == num_scanned)
+        num_scanned = 0;
+      num_scanned += retval;
+    }
+    free(tmp_fmt);
+    return read_count;
+  }
+
+  template <typename T>
+  int scan(T arg) {
+    char *tmp_fmt = build_format_string(true);
+    int read_count = 0;
+    int retval = sscanf(str + str_off, tmp_fmt, arg, &read_count);
+    if (retval > 0) {
+      if (-1 == num_scanned)
+        num_scanned = 0;
+      num_scanned += retval;
+    }
+    free(tmp_fmt);
+    return read_count;
+  }
+
+  // with_n -> toggles adding %n on/off; off by default
+  char *build_format_string(bool with_n = false) {
     size_t fmt_size = fmt_cur - fmt_start + 1;
-    char *new_fmt = (char *)malloc(fmt_size + 1);
+    size_t add_size = 0;
+    if (with_n)
+      add_size = 2;
+    char *new_fmt = (char *)malloc(fmt_size + 1 + add_size);
     assert(new_fmt);
     internal_memcpy(new_fmt, fmt_start, fmt_size);
-    new_fmt[fmt_size] = '\0';
+    if (!with_n) {
+      new_fmt[fmt_size] = '\0';
+    } else {
+      new_fmt[fmt_size] = '%';
+      new_fmt[fmt_size + 1] = 'n';
+      new_fmt[fmt_size + 2] = '\0';
+    }
+
     return new_fmt;
   }
 
@@ -2230,6 +2263,8 @@ struct Formatter {
   const char *fmt_start;
   const char *fmt_cur;
   int width;
+  int num_scanned;
+  bool skip;
 };
 
 // Formats the input and propagates the input labels to the output. The output
@@ -2357,9 +2392,8 @@ static int format_buffer(char *str, size_t size, const char *fmt,
                                       formatter.num_written_bytes(retval));
           }
           va_labels++;
-          internal_memcpy(shadow_for(formatter.str_cur()), shadow_for(arg),
-                          sizeof(dfsan_label) *
-                              formatter.num_written_bytes(retval));
+          dfsan_mem_shadow_transfer(formatter.str_cur(), arg,
+                                    formatter.num_written_bytes(retval));
           end_fmt = true;
           break;
         }
@@ -2423,6 +2457,249 @@ static int format_buffer(char *str, size_t size, const char *fmt,
   return formatter.str_off;
 }
 
+// This function is an inverse of format_buffer: we take the input buffer,
+// scan it in search for format strings and store the results in the varargs.
+// The labels are propagated from the input buffer to the varargs.
+static int scan_buffer(char *str, size_t size, const char *fmt,
+                       dfsan_label *va_labels, dfsan_label *ret_label,
+                       dfsan_origin *str_origin, dfsan_origin *ret_origin,
+                       va_list ap) {
+  Formatter formatter(str, fmt, size);
+  while (*formatter.fmt_cur) {
+    formatter.fmt_start = formatter.fmt_cur;
+    formatter.width = -1;
+    formatter.skip = false;
+    int read_count = 0;
+    void *dst_ptr = 0;
+    size_t write_size = 0;
+    if (*formatter.fmt_cur != '%') {
+      // Ordinary character. Consume all the characters until a '%' or the end
+      // of the string.
+      for (; *(formatter.fmt_cur + 1) && *(formatter.fmt_cur + 1) != '%';
+           ++formatter.fmt_cur) {
+      }
+      read_count = formatter.scan();
+      dfsan_set_label(0, formatter.str_cur(),
+                      formatter.num_written_bytes(read_count));
+    } else {
+      // Conversion directive. Consume all the characters until a conversion
+      // specifier or the end of the string.
+      bool end_fmt = false;
+      for (; *formatter.fmt_cur && !end_fmt;) {
+        switch (*++formatter.fmt_cur) {
+        case 'd':
+        case 'i':
+        case 'o':
+        case 'u':
+        case 'x':
+        case 'X':
+          if (formatter.skip) {
+            read_count = formatter.scan();
+          } else {
+            switch (*(formatter.fmt_cur - 1)) {
+            case 'h':
+              // Also covers the 'hh' case (since the size of the arg is still
+              // an int).
+              dst_ptr = va_arg(ap, int *);
+              read_count = formatter.scan((int *)dst_ptr);
+              write_size = sizeof(int);
+              break;
+            case 'l':
+              if (formatter.fmt_cur - formatter.fmt_start >= 2 &&
+                  *(formatter.fmt_cur - 2) == 'l') {
+                dst_ptr = va_arg(ap, long long int *);
+                read_count = formatter.scan((long long int *)dst_ptr);
+                write_size = sizeof(long long int);
+              } else {
+                dst_ptr = va_arg(ap, long int *);
+                read_count = formatter.scan((long int *)dst_ptr);
+                write_size = sizeof(long int);
+              }
+              break;
+            case 'q':
+              dst_ptr = va_arg(ap, long long int *);
+              read_count = formatter.scan((long long int *)dst_ptr);
+              write_size = sizeof(long long int);
+              break;
+            case 'j':
+              dst_ptr = va_arg(ap, intmax_t *);
+              read_count = formatter.scan((intmax_t *)dst_ptr);
+              write_size = sizeof(intmax_t);
+              break;
+            case 'z':
+            case 't':
+              dst_ptr = va_arg(ap, size_t *);
+              read_count = formatter.scan((size_t *)dst_ptr);
+              write_size = sizeof(size_t);
+              break;
+            default:
+              dst_ptr = va_arg(ap, int *);
+              read_count = formatter.scan((int *)dst_ptr);
+              write_size = sizeof(int);
+            }
+            // get the label associated with the string at the corresponding
+            // place
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
+            dfsan_set_label(l, dst_ptr, write_size);
+            if (str_origin != nullptr) {
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(read_count);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            }
+          }
+          end_fmt = true;
+
+          break;
+
+        case 'a':
+        case 'A':
+        case 'e':
+        case 'E':
+        case 'f':
+        case 'F':
+        case 'g':
+        case 'G':
+          if (formatter.skip) {
+            read_count = formatter.scan();
+          } else {
+            if (*(formatter.fmt_cur - 1) == 'L') {
+            dst_ptr = va_arg(ap, long double *);
+            read_count = formatter.scan((long double *)dst_ptr);
+            write_size = sizeof(long double);
+            } else if (*(formatter.fmt_cur - 1) == 'l') {
+            dst_ptr = va_arg(ap, double *);
+            read_count = formatter.scan((double *)dst_ptr);
+            write_size = sizeof(double);
+            } else {
+            dst_ptr = va_arg(ap, float *);
+            read_count = formatter.scan((float *)dst_ptr);
+            write_size = sizeof(float);
+            }
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
+            dfsan_set_label(l, dst_ptr, write_size);
+            if (str_origin != nullptr) {
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(read_count);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            }
+          }
+          end_fmt = true;
+          break;
+
+        case 'c':
+          if (formatter.skip) {
+            read_count = formatter.scan();
+          } else {
+            dst_ptr = va_arg(ap, char *);
+            read_count = formatter.scan((char *)dst_ptr);
+            write_size = sizeof(char);
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
+            dfsan_set_label(l, dst_ptr, write_size);
+            if (str_origin != nullptr) {
+            size_t scan_count = formatter.num_written_bytes(read_count);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            }
+          }
+          end_fmt = true;
+          break;
+
+        case 's': {
+          if (formatter.skip) {
+            read_count = formatter.scan();
+          } else {
+            dst_ptr = va_arg(ap, char *);
+            read_count = formatter.scan((char *)dst_ptr);
+            if (1 == read_count) {
+            // special case: we have parsed a single string and we need to
+            // update read_count with the string size
+            read_count = strlen((char *)dst_ptr);
+            }
+            if (str_origin)
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(),
+                                      formatter.num_written_bytes(read_count));
+            va_labels++;
+            dfsan_mem_shadow_transfer(dst_ptr, formatter.str_cur(),
+                                      formatter.num_written_bytes(read_count));
+          }
+          end_fmt = true;
+          break;
+        }
+
+        case 'p':
+          if (formatter.skip) {
+            read_count = formatter.scan();
+          } else {
+            dst_ptr = va_arg(ap, void *);
+            read_count =
+                formatter.scan((int *)dst_ptr);  // note: changing void* to int*
+                                                 // since we need to call sizeof
+            write_size = sizeof(int);
+
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
+            dfsan_set_label(l, dst_ptr, write_size);
+            if (str_origin != nullptr) {
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(read_count);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            }
+          }
+          end_fmt = true;
+          break;
+
+        case 'n': {
+          if (!formatter.skip) {
+            int *ptr = va_arg(ap, int *);
+            *ptr = (int)formatter.str_off;
+            *va_labels++ = 0;
+            dfsan_set_label(0, ptr, sizeof(*ptr));
+            if (str_origin != nullptr)
+            *str_origin++ = 0;
+          }
+          end_fmt = true;
+          break;
+        }
+
+        case '%':
+          read_count = formatter.scan();
+          end_fmt = true;
+          break;
+
+        case '*':
+          formatter.skip = true;
+          break;
+
+        default:
+          break;
+        }
+      }
+    }
+
+    if (read_count < 0) {
+      // There was an error.
+      return read_count;
+    }
+
+    formatter.fmt_cur++;
+    formatter.str_off += read_count;
+  }
+
+  (void)va_labels; // Silence unused-but-set-parameter warning
+  *ret_label = 0;
+  if (ret_origin)
+    *ret_origin = 0;
+
+  // Number of items scanned in total.
+  return formatter.num_scanned;
+}
+
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_sprintf(char *str, const char *format, dfsan_label str_label,
@@ -2430,7 +2707,8 @@ int __dfsw_sprintf(char *str, const char *format, dfsan_label str_label,
                    dfsan_label *ret_label, ...) {
   va_list ap;
   va_start(ap, ret_label);
-  int ret = format_buffer(str, ~0ul, format, va_labels, ret_label, nullptr,
+
+  int ret = format_buffer(str, INT32_MAX, format, va_labels, ret_label, nullptr,
                           nullptr, ap);
   va_end(ap);
   return ret;
@@ -2444,8 +2722,8 @@ int __dfso_sprintf(char *str, const char *format, dfsan_label str_label,
                    dfsan_origin *ret_origin, ...) {
   va_list ap;
   va_start(ap, ret_origin);
-  int ret = format_buffer(str, ~0ul, format, va_labels, ret_label, va_origins,
-                          ret_origin, ap);
+  int ret = format_buffer(str, INT32_MAX, format, va_labels, ret_label,
+                          va_origins, ret_origin, ap);
   va_end(ap);
   return ret;
 }
@@ -2478,14 +2756,43 @@ int __dfso_snprintf(char *str, size_t size, const char *format,
   return ret;
 }
 
-static void BeforeFork() {
-  StackDepotLockAll();
-  GetChainedOriginDepot()->LockAll();
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfsw_sscanf(char *str, const char *format, dfsan_label str_label,
+                  dfsan_label format_label, dfsan_label *va_labels,
+                  dfsan_label *ret_label, ...) {
+  va_list ap;
+  va_start(ap, ret_label);
+  int ret = scan_buffer(str, ~0ul, format, va_labels, ret_label, nullptr,
+                        nullptr, ap);
+  va_end(ap);
+  return ret;
 }
 
-static void AfterFork() {
-  GetChainedOriginDepot()->UnlockAll();
-  StackDepotUnlockAll();
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_sscanf(char *str, const char *format, dfsan_label str_label,
+                  dfsan_label format_label, dfsan_label *va_labels,
+                  dfsan_label *ret_label, dfsan_origin str_origin,
+                  dfsan_origin format_origin, dfsan_origin *va_origins,
+                  dfsan_origin *ret_origin, ...) {
+  va_list ap;
+  va_start(ap, ret_origin);
+  int ret = scan_buffer(str, ~0ul, format, va_labels, ret_label, &str_origin,
+                        ret_origin, ap);
+  va_end(ap);
+  return ret;
+}
+
+WRAPPER_ALIAS(__isoc99_sscanf, sscanf)
+WRAPPER_ALIAS(__isoc23_sscanf, sscanf)
+
+static void BeforeFork() {
+  StackDepotLockBeforeFork();
+  ChainedOriginDepotLockBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  ChainedOriginDepotUnlockAfterFork(fork_child);
+  StackDepotUnlockAfterFork(fork_child);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -2499,7 +2806,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 pid_t __dfso_fork(dfsan_label *ret_label, dfsan_origin *ret_origin) {
   BeforeFork();
   pid_t pid = __dfsw_fork(ret_label);
-  AfterFork();
+  AfterFork(/* fork_child= */ pid == 0);
   return pid;
 }
 
@@ -2507,7 +2814,8 @@ pid_t __dfso_fork(dfsan_label *ret_label, dfsan_origin *ret_origin) {
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard, u32 *) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard_init, u32 *,
                              u32 *) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, const uptr *beg,
+                             const uptr *end) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_indir, void) {}
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __dfsw___sanitizer_cov_trace_cmp, void) {}

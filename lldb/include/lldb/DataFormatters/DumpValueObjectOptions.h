@@ -25,7 +25,7 @@ public:
     enum class Mode { Always, Default, Never } m_mode;
     uint32_t m_count;
 
-    PointerDepth operator--() const {
+    PointerDepth Decremented() const {
       if (m_count > 0)
         return PointerDepth{m_mode, m_count - 1};
       return PointerDepth{m_mode, m_count};
@@ -35,12 +35,11 @@ public:
   };
 
   struct PointerAsArraySettings {
-    size_t m_element_count;
-    size_t m_base_element;
-    size_t m_stride;
+    size_t m_element_count = 0;
+    size_t m_base_element = 0;
+    size_t m_stride = 0;
 
-    PointerAsArraySettings()
-        : m_element_count(0), m_base_element(0), m_stride() {}
+    PointerAsArraySettings() = default;
 
     PointerAsArraySettings(size_t elem_count, size_t base_elem = 0,
                            size_t stride = 1)
@@ -53,6 +52,8 @@ public:
   typedef std::function<bool(ConstString, ConstString,
                              const DumpValueObjectOptions &, Stream &)>
       DeclPrintingHelper;
+
+  typedef std::function<bool(ConstString)> ChildPrintingDecider;
 
   static const DumpValueObjectOptions DefaultOptions() {
     static DumpValueObjectOptions g_default_options;
@@ -67,9 +68,11 @@ public:
   DumpValueObjectOptions &
   SetMaximumPointerDepth(PointerDepth depth = {PointerDepth::Mode::Never, 0});
 
-  DumpValueObjectOptions &SetMaximumDepth(uint32_t depth = 0);
+  DumpValueObjectOptions &SetMaximumDepth(uint32_t depth, bool is_default);
 
   DumpValueObjectOptions &SetDeclPrintingHelper(DeclPrintingHelper helper);
+
+  DumpValueObjectOptions &SetChildPrintingDecider(ChildPrintingDecider decider);
 
   DumpValueObjectOptions &SetShowTypes(bool show = false);
 
@@ -103,6 +106,8 @@ public:
 
   DumpValueObjectOptions &SetHideRootType(bool hide_root_type = false);
 
+  DumpValueObjectOptions &SetHideRootName(bool hide_root_name);
+
   DumpValueObjectOptions &SetHideName(bool hide_name = false);
 
   DumpValueObjectOptions &SetHideValue(bool hide_value = false);
@@ -126,6 +131,7 @@ public:
   SetPointerAsArray(const PointerAsArraySettings &ptr_array);
 
   uint32_t m_max_depth = UINT32_MAX;
+  bool m_max_depth_is_default = true;
   lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
   uint32_t m_omit_summary_depth = 0;
   lldb::Format m_format = lldb::eFormatDefault;
@@ -134,6 +140,7 @@ public:
   lldb::LanguageType m_varformat_language = lldb::eLanguageTypeUnknown;
   PointerDepth m_max_ptr_depth;
   DeclPrintingHelper m_decl_printing_helper;
+  ChildPrintingDecider m_child_printing_decider;
   PointerAsArraySettings m_pointer_as_array;
   bool m_use_synthetic : 1;
   bool m_scope_already_checked : 1;
@@ -143,6 +150,7 @@ public:
   bool m_show_location : 1;
   bool m_use_objc : 1;
   bool m_hide_root_type : 1;
+  bool m_hide_root_name : 1;
   bool m_hide_name : 1;
   bool m_hide_value : 1;
   bool m_run_validator : 1;

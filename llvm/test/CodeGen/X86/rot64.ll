@@ -91,7 +91,7 @@ entry:
 	ret i64 %2
 }
 
-define i64 @xfoop(i64* %p) nounwind readnone {
+define i64 @xfoop(ptr %p) nounwind readnone {
 ; X64-LABEL: xfoop:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %rax
@@ -109,7 +109,7 @@ define i64 @xfoop(i64* %p) nounwind readnone {
 ; BMI2-NEXT:    rorxq $57, (%rdi), %rax
 ; BMI2-NEXT:    retq
 entry:
-	%x = load i64, i64* %p
+	%x = load i64, ptr %p
 	%a = lshr i64 %x, 57
 	%b = shl i64 %x, 7
 	%c = or i64 %a, %b
@@ -153,7 +153,7 @@ entry:
 	ret i64 %2
 }
 
-define i64 @xunp(i64* %p) nounwind readnone {
+define i64 @xunp(ptr %p) nounwind readnone {
 ; X64-LABEL: xunp:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %rax
@@ -171,7 +171,7 @@ define i64 @xunp(i64* %p) nounwind readnone {
 ; BMI2-NEXT:    rorxq $7, (%rdi), %rax
 ; BMI2-NEXT:    retq
 entry:
-	%x = load i64, i64* %p
+	%x = load i64, ptr %p
 	%a = lshr i64 %x, 7
 	%b = shl i64 %x, 57
 	%c = or i64 %a, %b
@@ -255,7 +255,7 @@ define i64 @fshl63(i64 %x) nounwind {
   ret i64 %f
 }
 
-define i64 @fshl_load(i64* %p) nounwind {
+define i64 @fshl_load(ptr %p) nounwind {
 ; X64-LABEL: fshl_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
@@ -272,7 +272,7 @@ define i64 @fshl_load(i64* %p) nounwind {
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    rorxq $57, (%rdi), %rax
 ; BMI2-NEXT:    retq
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 7)
   ret i64 %f
 }
@@ -341,7 +341,7 @@ define i64 @fshr63(i64 %x) nounwind {
   ret i64 %f
 }
 
-define i64 @fshr_load(i64* %p) nounwind {
+define i64 @fshr_load(ptr %p) nounwind {
 ; X64-LABEL: fshr_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
@@ -358,7 +358,7 @@ define i64 @fshr_load(i64* %p) nounwind {
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    rorxq $7, (%rdi), %rax
 ; BMI2-NEXT:    retq
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 7)
   ret i64 %f
 }

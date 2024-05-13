@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_STRING_H
 #define LLVM_LIBC_STRING_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
+
+#include "llvm-libc-macros/null-macro.h"
 
 %%public_api()
 

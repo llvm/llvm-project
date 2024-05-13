@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
 #include "ClangUtilityFunction.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
@@ -15,13 +13,10 @@
 #include "ClangPersistentVariables.h"
 
 #include <cstdio>
-#if HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
 
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -49,7 +44,7 @@ ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
     llvm::SmallString<128> result_path;
     llvm::sys::fs::createTemporaryFile("lldb", "expr", temp_fd, result_path);
     if (temp_fd != -1) {
-      lldb_private::NativeFile file(temp_fd, File::eOpenOptionWrite, true);
+      lldb_private::NativeFile file(temp_fd, File::eOpenOptionWriteOnly, true);
       text = "#line 1 \"" + std::string(result_path) + "\"\n" + text;
       size_t bytes_written = text.size();
       file.Write(text.c_str(), bytes_written);
@@ -65,7 +60,7 @@ ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
   }
 }
 
-ClangUtilityFunction::~ClangUtilityFunction() {}
+ClangUtilityFunction::~ClangUtilityFunction() = default;
 
 /// Install the utility function into a process
 ///
@@ -80,8 +75,7 @@ ClangUtilityFunction::~ClangUtilityFunction() {}
 bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx) {
   if (m_jit_start_addr != LLDB_INVALID_ADDRESS) {
-    diagnostic_manager.PutString(eDiagnosticSeverityWarning,
-                                 "already installed");
+    diagnostic_manager.PutString(lldb::eSeverityWarning, "already installed");
     return false;
   }
 
@@ -92,17 +86,23 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
   Target *target = exe_ctx.GetTargetPtr();
 
   if (!target) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError, "invalid target");
+    diagnostic_manager.PutString(lldb::eSeverityError, "invalid target");
     return false;
   }
 
   Process *process = exe_ctx.GetProcessPtr();
 
   if (!process) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError, "invalid process");
+    diagnostic_manager.PutString(lldb::eSeverityError, "invalid process");
     return false;
   }
 
+  // Since we might need to call allocate memory and maybe call code to make
+  // the caller, we need to be stopped.
+  if (process->GetState() != lldb::eStateStopped) {
+    diagnostic_manager.PutString(lldb::eSeverityError, "process running");
+    return false;
+  }
   //////////////////////////
   // Parse the expression
   //
@@ -113,7 +113,7 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
 
   if (!DeclMap()->WillParse(exe_ctx, nullptr)) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "current process state is unsuitable for expression parsing");
     return false;
   }
@@ -148,7 +148,7 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
       if (jit_module_sp) {
         ConstString const_func_name(FunctionName());
         FileSpec jit_file;
-        jit_file.GetFilename() = const_func_name;
+        jit_file.SetFilename(const_func_name);
         jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
         m_jit_module_wp = jit_module_sp;
         target->GetImages().Append(jit_module_sp);
@@ -165,14 +165,16 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
   } else {
     const char *error_cstr = jit_error.AsCString();
     if (error_cstr && error_cstr[0]) {
-      diagnostic_manager.Printf(eDiagnosticSeverityError, "%s", error_cstr);
+      diagnostic_manager.Printf(lldb::eSeverityError, "%s", error_cstr);
     } else {
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
+      diagnostic_manager.PutString(lldb::eSeverityError,
                                    "expression can't be interpreted or run");
     }
     return false;
   }
 }
+
+char ClangUtilityFunction::ClangUtilityFunctionHelper::ID;
 
 void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx, bool keep_result_in_memory) {

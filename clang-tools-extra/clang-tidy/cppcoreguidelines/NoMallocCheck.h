@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 /// This checker is concerned with C-style memory management and suggest modern
 /// alternatives to it.
@@ -21,7 +19,7 @@ namespace cppcoreguidelines {
 /// Static Analyzer - unix.Malloc.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-no-malloc.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/no-malloc.html
 class NoMallocCheck : public ClangTidyCheck {
 public:
   /// Construct Checker and read in configuration for function names.
@@ -47,17 +45,15 @@ public:
 private:
   /// Semicolon-separated list of fully qualified names of memory allocation
   /// functions the check warns about. Defaults to `::malloc;::calloc`.
-  const std::string AllocList;
+  const StringRef AllocList;
   /// Semicolon-separated list of fully qualified names of memory reallocation
   /// functions the check warns about. Defaults to `::realloc`.
-  const std::string ReallocList;
+  const StringRef ReallocList;
   /// Semicolon-separated list of fully qualified names of memory deallocation
   /// functions the check warns about. Defaults to `::free`.
-  const std::string DeallocList;
+  const StringRef DeallocList;
 };
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_NO_MALLOC_H

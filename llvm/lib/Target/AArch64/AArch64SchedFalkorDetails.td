@@ -210,13 +210,13 @@ def FalkorWr_1Z_1XY_0cyc : SchedWriteRes<[FalkorUnitZ, FalkorUnitXY]> {
 def FalkorWr_1X_1Z_8cyc  : SchedWriteRes<[FalkorUnitX, FalkorUnitZ]> {
   let Latency = 8;
   let NumMicroOps = 2;
-  let ResourceCycles = [2, 8];
+  let ReleaseAtCycles = [2, 8];
 }
 
 def FalkorWr_1X_1Z_11cyc : SchedWriteRes<[FalkorUnitX, FalkorUnitZ]> {
   let Latency = 11;
   let NumMicroOps = 2;
-  let ResourceCycles = [2, 11];
+  let ReleaseAtCycles = [2, 11];
 }
 
 def FalkorWr_1LD_1Z_3cyc : SchedWriteRes<[FalkorUnitLD, FalkorUnitZ]> {
@@ -908,7 +908,7 @@ def : InstRW<[FalkorWr_ADDSUBsx],     (instregex "^SUB(S)?(W|X)r(s|x|x64)$")>;
 // -----------------------------------------------------------------------------
 def : InstRW<[FalkorWr_1GTOV_1cyc],   (instregex "^DUP(v8i8|v4i16|v2i32)(gpr|lane)$")>;
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^DUP(v16i8|v8i16)(gpr|lane)$")>;
-def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^CPY(i8|i16|i32|i64)$")>;
+def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[FalkorWr_1GTOV_1cyc],   (instregex "^INSv(i8|i16)(gpr|lane)$")>;
 def : InstRW<[FalkorWr_1VTOG_1cyc],   (instregex "^(S|U)MOVv.*$")>;
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^(BIF|BIT|BSL|BSP)v8i8$")>;
@@ -1259,7 +1259,8 @@ def : InstRW<[FalkorWr_1SD_1ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
                                       (instrs STNPWi, STNPXi)>;
 def : InstRW<[FalkorWr_2LD_1Z_3cyc],  (instrs ERET)>;
 
-def : InstRW<[FalkorWr_1ST_1SD_1LD_3cyc], (instregex "^LDC.*$")>;
+
+def : InstRW<[FalkorWr_1ST_1SD_1LD_3cyc], (instregex "^LDCLR(A|AL|L)?(B|H)?$")>;
 def : InstRW<[FalkorWr_1ST_1SD_1LD_0cyc, ReadDefault, FalkorReadIncSt],
                                       (instregex "^STLR(B|H|W|X)$")>;
 def : InstRW<[FalkorWr_1ST_1SD_1LD_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],

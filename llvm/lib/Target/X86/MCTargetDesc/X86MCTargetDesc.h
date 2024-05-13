@@ -63,6 +63,28 @@ void initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI);
 /// Returns true if this instruction has a LOCK prefix.
 bool hasLockPrefix(const MCInst &MI);
 
+/// \param Op operand # of the memory operand.
+///
+/// \returns true if the specified instruction has a 16-bit memory operand.
+bool is16BitMemOperand(const MCInst &MI, unsigned Op,
+                       const MCSubtargetInfo &STI);
+
+/// \param Op operand # of the memory operand.
+///
+/// \returns true if the specified instruction has a 32-bit memory operand.
+bool is32BitMemOperand(const MCInst &MI, unsigned Op);
+
+/// \param Op operand # of the memory operand.
+///
+/// \returns true if the specified instruction has a 64-bit memory operand.
+#ifndef NDEBUG
+bool is64BitMemOperand(const MCInst &MI, unsigned Op);
+#endif
+
+/// Returns true if this instruction needs an Address-Size override prefix.
+bool needsAddressSizeOverride(const MCInst &MI, const MCSubtargetInfo &STI,
+                              int MemoryOperand, uint64_t TSFlags);
+
 /// Create a X86 MCSubtargetInfo instance. This is exposed so Asm parser, etc.
 /// do not need to go through TargetRegistry.
 MCSubtargetInfo *createX86MCSubtargetInfo(const Triple &TT, StringRef CPU,
@@ -70,7 +92,6 @@ MCSubtargetInfo *createX86MCSubtargetInfo(const Triple &TT, StringRef CPU,
 }
 
 MCCodeEmitter *createX86MCCodeEmitter(const MCInstrInfo &MCII,
-                                      const MCRegisterInfo &MRI,
                                       MCContext &Ctx);
 
 MCAsmBackend *createX86_32AsmBackend(const Target &T,
@@ -100,7 +121,6 @@ MCStreamer *createX86WinCOFFStreamer(MCContext &C,
                                      std::unique_ptr<MCAsmBackend> &&AB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&CE,
-                                     bool RelaxAll,
                                      bool IncrementalLinkerCompatible);
 
 /// Construct an X86 Mach-O object writer.
@@ -114,16 +134,13 @@ createX86ELFObjectWriter(bool IsELF64, uint8_t OSABI, uint16_t EMachine);
 std::unique_ptr<MCObjectTargetWriter>
 createX86WinCOFFObjectWriter(bool Is64Bit);
 
-/// Returns the sub or super register of a specific X86 register.
-/// e.g. getX86SubSuperRegister(X86::EAX, 16) returns X86::AX.
-/// Aborts on error.
-MCRegister getX86SubSuperRegister(MCRegister, unsigned, bool High=false);
-
-/// Returns the sub or super register of a specific X86 register.
-/// Like getX86SubSuperRegister() but returns 0 on error.
-MCRegister getX86SubSuperRegisterOrZero(MCRegister, unsigned,
-                                        bool High = false);
-
+/// \param Reg speicifed register.
+/// \param Size the bit size of returned register.
+/// \param High requires the high register.
+///
+/// \returns the sub or super register of a specific X86 register.
+MCRegister getX86SubSuperRegister(MCRegister Reg, unsigned Size,
+                                  bool High = false);
 } // End llvm namespace
 
 
@@ -141,5 +158,8 @@ MCRegister getX86SubSuperRegisterOrZero(MCRegister, unsigned,
 
 #define GET_SUBTARGETINFO_ENUM
 #include "X86GenSubtargetInfo.inc"
+
+#define GET_X86_MNEMONIC_TABLES_H
+#include "X86GenMnemonicTables.inc"
 
 #endif

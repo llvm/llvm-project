@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj -o - %s | llvm-dwarfdump -name i4 - \
+; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj -o - %s -experimental-debug-variable-locations=false | llvm-dwarfdump -name i4 - \
 ; RUN:     | FileCheck %s
 
 ; The test inlines the function F four times, with each inlined variable for
@@ -27,7 +27,7 @@
 ; CHECK: DW_TAG_formal_parameter
 ; Check concrete entry has a single location.
 ; CHECK:      DW_TAG_formal_parameter
-; CHECK-NEXT:   DW_AT_location (DW_OP_reg3 RBX)
+; CHECK-NEXT:   DW_AT_location (DW_OP_reg6 RBP)
 ; CHECK-NEXT:   DW_AT_abstract_origin
 ; CHECK-NOT:  DW_TAG_formal_parameter
 

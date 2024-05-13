@@ -10,11 +10,11 @@
 #ifndef LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H
 #define LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H
 
+#include <optional>
 #include <string>
 
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
-#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationReplayServer.h"
 #include "lldb/Target/Platform.h"
 
 namespace lldb_private {
@@ -28,28 +28,22 @@ public:
 
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "remote-gdb-server"; }
 
-  static const char *GetDescriptionStatic();
+  static llvm::StringRef GetDescriptionStatic();
 
   PlatformRemoteGDBServer();
 
   ~PlatformRemoteGDBServer() override;
 
   // lldb_private::PluginInterface functions
-  ConstString GetPluginName() override { return GetPluginNameStatic(); }
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // lldb_private::Platform functions
-  Status
-  ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                    const FileSpecList *module_search_paths_ptr) override;
-
   bool GetModuleSpec(const FileSpec &module_file_spec, const ArchSpec &arch,
                      ModuleSpec &module_spec) override;
 
-  const char *GetDescription() override;
+  llvm::StringRef GetDescription() override;
 
   Status GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid_ptr,
                          FileSpec &local_file) override;
@@ -64,10 +58,7 @@ public:
   Status KillProcess(const lldb::pid_t pid) override;
 
   lldb::ProcessSP DebugProcess(ProcessLaunchInfo &launch_info,
-                               Debugger &debugger,
-                               Target *target, // Can be NULL, if NULL create a
-                                               // new target, else use existing
-                                               // one
+                               Debugger &debugger, Target &target,
                                Status &error) override;
 
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
@@ -75,16 +66,19 @@ public:
                                          // target, else use existing one
                          Status &error) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override {
+    return m_supported_architectures;
+  }
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
 
   bool GetRemoteOSVersion() override;
 
-  bool GetRemoteOSBuildString(std::string &s) override;
+  std::optional<std::string> GetRemoteOSBuildString() override;
 
-  bool GetRemoteOSKernelDescription(std::string &s) override;
+  std::optional<std::string> GetRemoteOSKernelDescription() override;
 
   // Remote Platform subclasses need to override this function
   ArchSpec GetRemoteSystemArchitecture() override;
@@ -152,6 +146,9 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
+  llvm::ErrorOr<llvm::MD5::MD5Result>
+  CalculateMD5(const FileSpec &file_spec) override;
+
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
 
   size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
@@ -161,8 +158,8 @@ public:
   GetPendingGdbServerList(std::vector<std::string> &connection_urls);
 
 protected:
-  process_gdb_remote::GDBRemoteCommunicationClient m_gdb_client;
-  process_gdb_remote::GDBRemoteCommunicationReplayServer m_gdb_replay_server;
+  std::unique_ptr<process_gdb_remote::GDBRemoteCommunicationClient>
+      m_gdb_client_up;
   std::string m_platform_description; // After we connect we can get a more
                                       // complete description of what we are
                                       // connected to
@@ -188,8 +185,10 @@ private:
                                const std::string &platform_hostname,
                                uint16_t port, const char *socket_name);
 
-  llvm::Optional<std::string> DoGetUserName(UserIDResolver::id_t uid) override;
-  llvm::Optional<std::string> DoGetGroupName(UserIDResolver::id_t uid) override;
+  std::optional<std::string> DoGetUserName(UserIDResolver::id_t uid) override;
+  std::optional<std::string> DoGetGroupName(UserIDResolver::id_t uid) override;
+
+  std::vector<ArchSpec> m_supported_architectures;
 
   PlatformRemoteGDBServer(const PlatformRemoteGDBServer &) = delete;
   const PlatformRemoteGDBServer &

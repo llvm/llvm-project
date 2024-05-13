@@ -1,10 +1,9 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}else_no_execfix:
 ; CHECK: ; %Flow
-; CHECK-NEXT: s_or_saveexec_b64 [[DST:s\[[0-9]+:[0-9]+\]]],
-; CHECK-NEXT: s_xor_b64 exec, exec, [[DST]]
+; CHECK-NEXT: s_andn2_saveexec_b64 [[DST:s\[[0-9]+:[0-9]+\]]], [[DST]]
 define amdgpu_ps float @else_no_execfix(i32 %z, float %v) #0 {
 main_body:
   %cc = icmp sgt i32 %z, 5
@@ -49,11 +48,11 @@ else:
 
 end:
   %r = phi float [ %v.if, %if ], [ %v.else, %else ]
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %r, <4 x i32> undef, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %r, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
   ret void
 }
 
-declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg) #1
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg) #1
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 immarg, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #2
 
 attributes #0 = { nounwind }

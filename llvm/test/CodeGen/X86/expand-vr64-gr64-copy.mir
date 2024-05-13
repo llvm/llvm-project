@@ -32,5 +32,5 @@ body: |
     MMX_MOVQ64mr $rsp, 1, $noreg, -16, $noreg, killed $mm0
     $xmm0 = MOVQI2PQIrm $rsp, 1, $noreg, -16, $noreg
     $xmm0 = PSHUFDri killed $xmm0, -44
-    RETQ $xmm0
+    RET64 $xmm0
 ...

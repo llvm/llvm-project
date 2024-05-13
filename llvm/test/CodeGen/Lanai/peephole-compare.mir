@@ -130,14 +130,14 @@
 
   define void @testBB() {
   entry:
-    %0 = load i32, i32* @a, align 4, !tbaa !0
-    %1 = load i32, i32* @b, align 4, !tbaa !0
+    %0 = load i32, ptr @a, align 4, !tbaa !0
+    %1 = load i32, ptr @b, align 4, !tbaa !0
     %sub.i = sub i32 %1, %0
     %tobool = icmp sgt i32 %sub.i, -1
     br i1 %tobool, label %if.end, label %if.then
 
   if.then:                                          ; preds = %entry
-    %call1 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
+    %call1 = tail call i32 @g()
     br label %while.body
 
   while.body:                                       ; preds = %while.body, %if.then
@@ -148,7 +148,7 @@
     br i1 %cmp.i, label %if.then4, label %if.end7
 
   if.then4:                                         ; preds = %if.end
-    %call5 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
+    %call5 = tail call i32 @g()
     br label %while.body6
 
   while.body6:                                      ; preds = %while.body6, %if.then4
@@ -161,7 +161,7 @@
   declare i32 @g(...)
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
 
   attributes #0 = { nounwind }
 
@@ -632,10 +632,10 @@ body:             |
 
     %1 = MOVHI target-flags(lanai-hi) @a
     %2 = OR_I_LO killed %1, target-flags(lanai-lo) @a
-    %3 = LDW_RI killed %2, 0, 0 :: (load 4 from @a, !tbaa !0)
+    %3 = LDW_RI killed %2, 0, 0 :: (load (s32) from @a, !tbaa !0)
     %4 = MOVHI target-flags(lanai-hi) @b
     %5 = OR_I_LO killed %4, target-flags(lanai-lo) @b
-    %6 = LDW_RI killed %5, 0, 0 :: (load 4 from @b, !tbaa !0)
+    %6 = LDW_RI killed %5, 0, 0 :: (load (s32) from @b, !tbaa !0)
     %0 = SUB_R killed %6, killed %3, 0
     SFSUB_F_RI_LO %0, 0, implicit-def $sr
     BRCC %bb.3.if.end, 10, implicit $sr

@@ -15,7 +15,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake)
     set(CROSS_TOOLCHAIN_FLAGS_INIT
       -DCMAKE_TOOLCHAIN_FILE=\"${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake\")
-  else()
+  elseif (NOT CMAKE_CROSSCOMPILING)
     set(CROSS_TOOLCHAIN_FLAGS_INIT
       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -26,7 +26,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
   # project specific version of the flags up above
   set(CROSS_TOOLCHAIN_FLAGS_${project_name}_${target_name} ""
-    CACHE STRING "Toolchain configuration for ${Pproject_name}_${target_name}")
+    CACHE STRING "Toolchain configuration for ${project_name}_${target_name}")
 
   if (buildtype)
     set(build_type_flags "-DCMAKE_BUILD_TYPE=${buildtype}")
@@ -57,6 +57,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
          "${LLVM_ENABLE_PROJECTS}")
   string(REPLACE ";" "$<SEMICOLON>" llvm_external_projects_arg
          "${LLVM_EXTERNAL_PROJECTS}")
+  string(REPLACE ";" "$<SEMICOLON>" llvm_enable_runtimes_arg
+         "${LLVM_ENABLE_RUNTIMES}")
 
   set(external_project_source_dirs)
   foreach(project ${LLVM_EXTERNAL_PROJECTS})
@@ -65,21 +67,30 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
          "-DLLVM_EXTERNAL_${name}_SOURCE_DIR=${LLVM_EXTERNAL_${name}_SOURCE_DIR}")
   endforeach()
 
+  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND NOT LIBC_HDRGEN_EXE)
+    set(libc_flags -DLLVM_LIBC_FULL_BUILD=ON -DLIBC_HDRGEN_ONLY=ON)
+  endif()
+
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
         -DCMAKE_MAKE_PROGRAM="${CMAKE_MAKE_PROGRAM}"
+        -DCMAKE_C_COMPILER_LAUNCHER="${CMAKE_C_COMPILER_LAUNCHER}"
+        -DCMAKE_CXX_COMPILER_LAUNCHER="${CMAKE_CXX_COMPILER_LAUNCHER}"
         ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_CURRENT_SOURCE_DIR}
         ${CROSS_TOOLCHAIN_FLAGS_${project_name}_${target_name}}
         -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE
         -DLLVM_TARGETS_TO_BUILD="${targets_to_build_arg}"
         -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="${experimental_targets_to_build_arg}"
-        -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}"
+        -DLLVM_DEFAULT_TARGET_TRIPLE="${LLVM_TARGET_TRIPLE}"
         -DLLVM_TARGET_ARCH="${LLVM_TARGET_ARCH}"
         -DLLVM_ENABLE_PROJECTS="${llvm_enable_projects_arg}"
         -DLLVM_EXTERNAL_PROJECTS="${llvm_external_projects_arg}"
+        -DLLVM_ENABLE_RUNTIMES="${llvm_enable_runtimes_arg}"
         ${external_project_source_dirs}
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
-        ${build_type_flags} ${linker_flag} ${external_clang_dir}
+        -DLLVM_INCLUDE_BENCHMARKS=OFF
+        -DLLVM_INCLUDE_TESTS=OFF
+        ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
         ${ARGN}
     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}
     DEPENDS CREATE_${project_name}_${target_name}
@@ -90,6 +101,15 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
 endfunction()
 
+function(get_native_tool_path target output_path_var)
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(output_path "${${PROJECT_NAME}_NATIVE_BUILD}/Release/bin/${target}")
+  else()
+    set(output_path "${${PROJECT_NAME}_NATIVE_BUILD}/bin/${target}")
+  endif()
+  set(${output_path_var} ${output_path}${LLVM_HOST_EXECUTABLE_SUFFIX} PARENT_SCOPE)
+endfunction()
+
 # Sets up a native build for a tool, used e.g. for cross-compilation and
 # LLVM_OPTIMIZED_TABLEGEN. Always builds in Release.
 # - target: The target to build natively
@@ -98,17 +118,19 @@ endfunction()
 function(build_native_tool target output_path_var)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
-  if(CMAKE_CONFIGURATION_TYPES)
-    set(output_path "${${PROJECT_NAME}_NATIVE_BUILD}/Release/bin/${target}")
-  else()
-    set(output_path "${${PROJECT_NAME}_NATIVE_BUILD}/bin/${target}")
+  get_native_tool_path(${target} output_path)
+
+  # Make chain of preceding actions
+  if(CMAKE_GENERATOR MATCHES "Visual Studio")
+    get_property(host_targets GLOBAL PROPERTY ${PROJECT_NAME}_HOST_TARGETS)
+    set_property(GLOBAL APPEND PROPERTY ${PROJECT_NAME}_HOST_TARGETS ${output_path})
   endif()
 
   llvm_ExternalProject_BuildCmd(build_cmd ${target} ${${PROJECT_NAME}_NATIVE_BUILD}
                                 CONFIGURATION Release)
   add_custom_command(OUTPUT "${output_path}"
                      COMMAND ${build_cmd}
-                     DEPENDS CONFIGURE_${PROJECT_NAME}_NATIVE ${ARG_DEPENDS}
+                     DEPENDS CONFIGURE_${PROJECT_NAME}_NATIVE ${ARG_DEPENDS} ${host_targets}
                      WORKING_DIRECTORY "${${PROJECT_NAME}_NATIVE_BUILD}"
                      COMMENT "Building native ${target}..."
                      USES_TERMINAL)

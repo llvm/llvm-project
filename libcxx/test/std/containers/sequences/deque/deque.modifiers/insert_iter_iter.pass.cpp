@@ -5,14 +5,21 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // REQUIRES: long_tests
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// This test is super slow, in particular with msan or tsan. In order to avoid timeouts and to
+// spend less time waiting for this particular test to complete we compile with optimizations.
+// ADDITIONAL_COMPILE_FLAGS(msan): -O1
+// ADDITIONAL_COMPILE_FLAGS(tsan): -O1
 
 // <deque>
 
 // template <class InputIterator>
 //   iterator insert (const_iterator p, InputIterator f, InputIterator l);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -57,7 +64,9 @@ test(int P, const C& c0, const C& c2)
     CI i = c1.insert(c1.begin() + P, BCI(c2.begin()), BCI(c2.end()));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + c2.size());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
@@ -74,7 +83,7 @@ test(int P, const C& c0, const C& c2)
     CI i = c1.insert(c1.begin() + P, BCI(c2.begin()), BCI(c2.end()));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + c2.size());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
@@ -91,7 +100,7 @@ test(int P, const C& c0, const C& c2)
     CI i = c1.insert(c1.begin() + P, BCI(c2.begin()), BCI(c2.end()));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + c2.size());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
@@ -172,7 +181,9 @@ testI(int P, C& c1, const C& c2)
     CI i = c1.insert(c1.begin() + P, ICI(c2.begin()), ICI(c2.end()));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + c2.size());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
@@ -246,7 +257,7 @@ test_move()
         c.insert(c.end(), std::move_iterator<I>(&mo), std::move_iterator<I>(&mo+1));
     }
     int j = 0;
-    for (CI i = c.begin(); i != c.end(); ++i, ++j)
+    for (CI i = c.begin(); i != c.end(); ++i, (void) ++j)
         assert(*i == MoveOnly(j));
     {
         MoveOnly mo(1);
@@ -254,7 +265,7 @@ test_move()
         c.insert(c.end(), std::move_iterator<I>(I(&mo)), std::move_iterator<I>(I(&mo+1)));
     }
     j = 0;
-    for (CI i = c.begin(); i != c.end(); ++i, ++j)
+    for (CI i = c.begin(); i != c.end(); ++i, (void) ++j)
         assert(*i == MoveOnly(j));
 #endif
 }
@@ -283,6 +294,16 @@ int main(int, char**)
                 testN<std::deque<int, min_allocator<int>> >(rng[i], rng[j], rng[k]);
     testNI<std::deque<int> >(1500, 2000, 1000);
     test_move<std::deque<MoveOnly, min_allocator<MoveOnly> > >();
+    }
+    {
+    int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+    const int N = sizeof(rng)/sizeof(rng[0]);
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+            for (int k = 0; k < N; ++k)
+                testN<std::deque<int, safe_allocator<int>> >(rng[i], rng[j], rng[k]);
+    testNI<std::deque<int> >(1500, 2000, 1000);
+    test_move<std::deque<MoveOnly, safe_allocator<MoveOnly> > >();
     }
 #endif
 

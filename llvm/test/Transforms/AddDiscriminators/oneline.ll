@@ -1,4 +1,3 @@
-; RUN: opt < %s -add-discriminators -S | FileCheck %s
 ; RUN: opt < %s -passes=add-discriminators -S | FileCheck %s
 
 ; Discriminator support for code that is written in one line:
@@ -14,15 +13,15 @@
 define i32 @_Z3fooi(i32 %i) #0 !dbg !4 {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
-  store i32 %i, i32* %2, align 4, !tbaa !13
-  call void @llvm.dbg.declare(metadata i32* %2, metadata !9, metadata !17), !dbg !18
-  %3 = load i32, i32* %2, align 4, !dbg !19, !tbaa !13
+  store i32 %i, ptr %2, align 4, !tbaa !13
+  call void @llvm.dbg.declare(metadata ptr %2, metadata !9, metadata !17), !dbg !18
+  %3 = load i32, ptr %2, align 4, !dbg !19, !tbaa !13
   %4 = icmp eq i32 %3, 3, !dbg !21
   br i1 %4, label %8, label %5, !dbg !22
 
 ; <label>:5                                       ; preds = %0
-  %6 = load i32, i32* %2, align 4, !dbg !23, !tbaa !13
-; CHECK:  %6 = load i32, i32* %2, align 4, !dbg ![[THEN1:[0-9]+]],{{.*}}
+  %6 = load i32, ptr %2, align 4, !dbg !23, !tbaa !13
+; CHECK:  %6 = load i32, ptr %2, align 4, !dbg ![[THEN1:[0-9]+]],{{.*}}
 
   %7 = icmp eq i32 %6, 5, !dbg !24
 ; CHECK:  %7 = icmp eq i32 %6, 5, !dbg ![[THEN2:[0-9]+]]
@@ -31,21 +30,21 @@ define i32 @_Z3fooi(i32 %i) #0 !dbg !4 {
 ; CHECK:  br i1 %7, label %8, label %9, !dbg ![[THEN3:[0-9]+]]
 
 ; <label>:8                                       ; preds = %5, %0
-  store i32 100, i32* %1, align 4, !dbg !26
-; CHECK: store i32 100, i32* %1, align 4, !dbg ![[ELSE:[0-9]+]]
+  store i32 100, ptr %1, align 4, !dbg !26
+; CHECK: store i32 100, ptr %1, align 4, !dbg ![[ELSE:[0-9]+]]
 
   br label %10, !dbg !26
 ; CHECK: br label %10, !dbg ![[ELSE]]
 
 ; <label>:9                                       ; preds = %5
-  store i32 99, i32* %1, align 4, !dbg !27
-; CHECK: store i32 99, i32* %1, align 4, !dbg ![[COMBINE:[0-9]+]]
+  store i32 99, ptr %1, align 4, !dbg !27
+; CHECK: store i32 99, ptr %1, align 4, !dbg ![[COMBINE:[0-9]+]]
 
   br label %10, !dbg !27
 ; CHECK: br label %10, !dbg ![[COMBINE]]
 
 ; <label>:10                                      ; preds = %9, %8
-  %11 = load i32, i32* %1, align 4, !dbg !28
+  %11 = load i32, ptr %1, align 4, !dbg !28
   ret i32 %11, !dbg !28
 }
 

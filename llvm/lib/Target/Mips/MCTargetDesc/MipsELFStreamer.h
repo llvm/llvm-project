@@ -50,7 +50,7 @@ public:
 
   /// Overriding this function allows us to dismiss all labels that are
   /// candidates for marking as microMIPS when .section directive is processed.
-  void SwitchSection(MCSection *Section,
+  void switchSection(MCSection *Section,
                      const MCExpr *Subsection = nullptr) override;
 
   /// Overriding these functions allows us to dismiss all labels that are
@@ -75,8 +75,7 @@ public:
 MCELFStreamer *createMipsELFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> MAB,
                                      std::unique_ptr<MCObjectWriter> OW,
-                                     std::unique_ptr<MCCodeEmitter> Emitter,
-                                     bool RelaxAll);
+                                     std::unique_ptr<MCCodeEmitter> Emitter);
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSELFSTREAMER_H

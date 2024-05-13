@@ -133,6 +133,27 @@ statement in main!)</td>
 
 <tbody>
 <tr>
+<td class="org-left">all&#95;memory</td>
+<td class="org-right">0</td>
+<td class="org-left">Turn on tracking and analysis of omp_all_memory
+dependencies. Archer will activate the support automatically when
+such dependency is seen during execution. At this time the analysis
+already missed synchronization semantics, which will lead to false
+reports in most cases.</td>
+</tr>
+</tbody>
+
+<tbody>
+<tr>
+<td class="org-left">report&#95;data&#95;leak</td>
+<td class="org-right">0</td>
+<td class="org-left">Report leaking OMPT data for execution under
+Archer. Used for testing and debugging Archer if errors occur.</td>
+</tr>
+</tbody>
+
+<tbody>
+<tr>
 <td class="org-left">verbose</td>
 <td class="org-right">0</td>
 <td class="org-left">Print startup information.</td>

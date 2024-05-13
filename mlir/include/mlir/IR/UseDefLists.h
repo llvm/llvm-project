@@ -20,9 +20,10 @@
 namespace mlir {
 
 class Operation;
-template <typename OperandType> class ValueUseIterator;
-template <typename OperandType> class FilteredValueUseIterator;
-template <typename UseIteratorT, typename OperandType> class ValueUserIterator;
+template <typename OperandType>
+class ValueUseIterator;
+template <typename UseIteratorT, typename OperandType>
+class ValueUserIterator;
 
 //===----------------------------------------------------------------------===//
 // IROperand
@@ -40,6 +41,21 @@ public:
   /// This should generally only be used by the internal implementation details
   /// of the SSA machinery.
   IROperandBase *getNextOperandUsingThisValue() { return nextUse; }
+
+  /// Initialize the use-def chain by setting the back address to self and
+  /// nextUse to nullptr.
+  void initChainWithUse(IROperandBase **self) {
+    assert(this == *self);
+    back = self;
+    nextUse = nullptr;
+  }
+
+  /// Link the current node to next.
+  void linkTo(IROperandBase *next) {
+    nextUse = next;
+    if (nextUse)
+      nextUse->back = &nextUse;
+  }
 
 protected:
   IROperandBase(Operation *owner) : owner(owner) {}
@@ -77,7 +93,8 @@ protected:
   }
 
   /// Insert this operand into the given use list.
-  template <typename UseListT> void insertInto(UseListT *useList) {
+  template <typename UseListT>
+  void insertInto(UseListT *useList) {
     back = &useList->firstUse;
     nextUse = useList->firstUse;
     if (nextUse)
@@ -129,6 +146,16 @@ public:
     return *this;
   }
 
+  /// Two operands are equal if they have the same owner and the same operand
+  /// number. They are stored inside of ops, so it is valid to compare their
+  /// pointers to determine equality.
+  bool operator==(const IROperand<DerivedT, IRValueT> &other) const {
+    return this == &other;
+  }
+  bool operator!=(const IROperand<DerivedT, IRValueT> &other) const {
+    return !(*this == other);
+  }
+
   /// Return the current value being used by this operand.
   IRValueT get() const { return value; }
 
@@ -164,7 +191,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a single IR object that contains a use list.
-template <typename OperandType> class IRObjectWithUseList {
+template <typename OperandType>
+class IRObjectWithUseList {
 public:
   ~IRObjectWithUseList() {
     assert(use_empty() && "Cannot destroy a value that still has uses!");
@@ -185,6 +213,30 @@ public:
            "cannot RAUW a value with itself");
     while (!use_empty())
       use_begin()->set(newValue);
+  }
+
+  /// Shuffle the use-list chain according to the provided indices vector, which
+  /// need to represent a valid shuffle. That is, a vector of unique integers in
+  /// range [0, numUses - 1]. Users of this function need to guarantee the
+  /// validity of the indices vector.
+  void shuffleUseList(ArrayRef<unsigned> indices) {
+    assert((size_t)std::distance(getUses().begin(), getUses().end()) ==
+               indices.size() &&
+           "indices vector expected to have a number of elements equal to the "
+           "number of uses");
+    SmallVector<detail::IROperandBase *> shuffled(indices.size());
+    detail::IROperandBase *ptr = firstUse;
+    for (size_t idx = 0; idx < indices.size();
+         idx++, ptr = ptr->getNextOperandUsingThisValue())
+      shuffled[indices[idx]] = ptr;
+
+    initFirstUse(shuffled.front());
+    auto *current = firstUse;
+    for (auto &next : llvm::drop_begin(shuffled)) {
+      current->linkTo(next);
+      current = next;
+    }
+    current->linkTo(nullptr);
   }
 
   //===--------------------------------------------------------------------===//
@@ -229,6 +281,12 @@ protected:
   OperandType *getFirstUse() const { return (OperandType *)firstUse; }
 
 private:
+  /// Set use as the first use of the chain.
+  void initFirstUse(detail::IROperandBase *use) {
+    firstUse = use;
+    firstUse->initChainWithUse(&firstUse);
+  }
+
   detail::IROperandBase *firstUse = nullptr;
 
   /// Allow access to `firstUse`.
@@ -281,18 +339,18 @@ protected:
 /// a specific use iterator.
 template <typename UseIteratorT, typename OperandType>
 class ValueUserIterator final
-    : public llvm::mapped_iterator<UseIteratorT,
-                                   Operation *(*)(OperandType &)> {
-  static Operation *unwrap(OperandType &value) { return value.getOwner(); }
-
+    : public llvm::mapped_iterator_base<
+          ValueUserIterator<UseIteratorT, OperandType>, UseIteratorT,
+          Operation *> {
 public:
-  using pointer = Operation *;
-  using reference = Operation *;
+  using llvm::mapped_iterator_base<ValueUserIterator<UseIteratorT, OperandType>,
+                                   UseIteratorT,
+                                   Operation *>::mapped_iterator_base;
 
-  /// Initializes the user iterator to the specified use iterator.
-  ValueUserIterator(UseIteratorT it)
-      : llvm::mapped_iterator<UseIteratorT, Operation *(*)(OperandType &)>(
-            it, &unwrap) {}
+  /// Map the element to the iterator result type.
+  Operation *mapElement(OperandType &value) const { return value.getOwner(); }
+
+  /// Provide access to the underlying operation.
   Operation *operator->() { return **this; }
 };
 

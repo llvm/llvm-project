@@ -1,4 +1,4 @@
-# UNSUPPORTED: darwin, freebsd, aarch64
+# UNSUPPORTED: darwin, target={{.*freebsd.*}}, target=aarch64{{.*}}
 BINGO: BINGO
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
 RUN: not %run %t-SimpleTest -fork=1 2>&1 | FileCheck %s --check-prefix=BINGO
@@ -14,8 +14,12 @@ RUN: not %run %t-OutOfMemoryTest -fork=1 -ignore_ooms=0  -rss_limit_mb=128 2>&1 
 # access-violation is the error thrown on Windows. Address will be smaller on i386.
 CRASH: {{SEGV|access-violation}} on unknown address 0x00000000
 RUN: %cpp_compiler %S/ShallowOOMDeepCrash.cpp -o %t-ShallowOOMDeepCrash
-RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 2>&1 | FileCheck %s --check-prefix=CRASH
+# Run multiple times to deflake. Sometimes rss_limit_mb kill process before SEGV.
+RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 >%t-ShallowOOMDeepCrash.log 2>&1
+RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 >>%t-ShallowOOMDeepCrash.log 2>&1
+RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 >>%t-ShallowOOMDeepCrash.log 2>&1
+RUN: FileCheck %s --check-prefix=CRASH --input-file=%t-ShallowOOMDeepCrash.log
 
 MAX_TOTAL_TIME: INFO: fuzzed for {{.*}} seconds, wrapping up soon
 MAX_TOTAL_TIME: INFO: exiting: {{.*}} time:
-RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 -ignore_crashes=1 -max_total_time=10 2>&1 | FileCheck %s  --check-prefix=MAX_TOTAL_TIME
+RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 -ignore_crashes=1 -max_total_time=30 2>&1 | FileCheck %s  --check-prefix=MAX_TOTAL_TIME

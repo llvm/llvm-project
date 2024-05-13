@@ -1,0 +1,36 @@
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+package(default_visibility = ["//visibility:public"])
+
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        data = [
+            "//llvm:include/llvm/CodeGen/SDNodeProperties.td",
+            "//llvm:include/llvm/CodeGen/ValueTypes.td",
+            "//llvm:include/llvm/Frontend/Directive/DirectiveBase.td",
+            "//llvm:include/llvm/IR/Intrinsics.td",
+            "//mlir:BuiltinDialectBytecodeTdFiles",
+            "//mlir:SideEffectInterfacesTdFiles",
+            "//mlir:include/mlir/Dialect/LLVMIR/LLVMAttrDefs.td",
+            "//mlir:include/mlir/Dialect/LLVMIR/LLVMDialect.td",
+            "//mlir:include/mlir/Dialect/LLVMIR/LLVMInterfaces.td",
+            "//mlir:include/mlir/Dialect/LLVMIR/LLVMOpBase.td",
+            "//mlir:include/mlir/IR/BuiltinDialectBytecode.td",
+            "//mlir:include/mlir/IR/BytecodeBase.td",
+            "//mlir:include/mlir/IR/OpBase.td",
+            "//mlir:include/mlir/Interfaces/InferTypeOpInterface.td",
+            "//mlir:include/mlir/Interfaces/SideEffectInterfaces.td",
+            "//mlir:mlir-opt",
+            "//mlir:mlir-tblgen",
+            "//mlir/test:lit_data",
+        ],
+    )
+    for src in glob([
+        "**/*.mlir",
+        "**/*.td",
+    ])
+]

@@ -10,7 +10,7 @@ target triple = "i386-apple-macosx10.5"
 ; We used to have 8 + 1 because we were not reading the right immediate form
 ; the LEA instruction.
 ; CHECK-NEXT: leal 24(%esp), %esp
-define noalias i8* @useLEA(i8* nocapture %p, i32 %nbytes) #0 {
+define noalias ptr @useLEA(ptr nocapture %p, i32 %nbytes) #0 {
 entry:
   %cmp = icmp slt i32 %nbytes, 0
   br i1 %cmp, label %cond.end.3, label %cond.false
@@ -18,15 +18,15 @@ entry:
 cond.false:                                       ; preds = %entry
   %tobool = icmp ne i32 %nbytes, 0
   %cond = select i1 %tobool, i32 %nbytes, i32 1
-  %call = tail call i8* @realloc(i8* %p, i32 %cond)
+  %call = tail call ptr @realloc(ptr %p, i32 %cond)
   br label %cond.end.3
 
 cond.end.3:                                       ; preds = %entry, %cond.false
-  %cond4 = phi i8* [ %call, %cond.false ], [ null, %entry ]
-  ret i8* %cond4
+  %cond4 = phi ptr [ %call, %cond.false ], [ null, %entry ]
+  ret ptr %cond4
 }
 
 ; Function Attrs: nounwind optsize
-declare noalias i8* @realloc(i8* nocapture, i32)
+declare noalias ptr @realloc(ptr nocapture, i32)
 
 attributes #0 = { nounwind optsize ssp "disable-tail-calls"="false" "frame-pointer"="all" "target-features"="+lea-sp" }

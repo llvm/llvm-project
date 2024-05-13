@@ -34,6 +34,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "lanai-isel"
+#define PASS_NAME "Lanai DAG->DAG Pattern Instruction Selection"
 
 //===----------------------------------------------------------------------===//
 // Instruction Selector Implementation
@@ -47,19 +48,19 @@ namespace {
 
 class LanaiDAGToDAGISel : public SelectionDAGISel {
 public:
+  static char ID;
+
+  LanaiDAGToDAGISel() = delete;
+
   explicit LanaiDAGToDAGISel(LanaiTargetMachine &TargetMachine)
-      : SelectionDAGISel(TargetMachine) {}
+      : SelectionDAGISel(ID, TargetMachine) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  // Pass Name
-  StringRef getPassName() const override {
-    return "Lanai DAG->DAG Pattern Instruction Selection";
-  }
-
-  bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintCode,
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintCode,
                                     std::vector<SDValue> &OutOps) override;
 
 private:
@@ -97,6 +98,10 @@ bool canBeRepresentedAsSls(const ConstantSDNode &CN) {
 }
 
 } // namespace
+
+char LanaiDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(LanaiDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 // Helper functions for ComplexPattern used on LanaiInstrInfo
 // Used on Lanai Load/Store instructions.
@@ -208,6 +213,37 @@ bool LanaiDAGToDAGISel::selectAddrSpls(SDValue Addr, SDValue &Base,
   return selectAddrRiSpls(Addr, Base, Offset, AluOp, /*RiMode=*/false);
 }
 
+namespace llvm {
+namespace LPAC {
+static AluCode isdToLanaiAluCode(ISD::NodeType Node_type) {
+  switch (Node_type) {
+  case ISD::ADD:
+    return AluCode::ADD;
+  case ISD::ADDE:
+    return AluCode::ADDC;
+  case ISD::SUB:
+    return AluCode::SUB;
+  case ISD::SUBE:
+    return AluCode::SUBB;
+  case ISD::AND:
+    return AluCode::AND;
+  case ISD::OR:
+    return AluCode::OR;
+  case ISD::XOR:
+    return AluCode::XOR;
+  case ISD::SHL:
+    return AluCode::SHL;
+  case ISD::SRL:
+    return AluCode::SRL;
+  case ISD::SRA:
+    return AluCode::SRA;
+  default:
+    return AluCode::UNKNOWN;
+  }
+}
+} // namespace LPAC
+} // namespace llvm
+
 bool LanaiDAGToDAGISel::selectAddrRr(SDValue Addr, SDValue &R1, SDValue &R2,
                                      SDValue &AluOp) {
   // if Address is FI, get the TargetFrameIndex.
@@ -249,12 +285,13 @@ bool LanaiDAGToDAGISel::selectAddrRr(SDValue Addr, SDValue &R1, SDValue &R2,
 }
 
 bool LanaiDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, unsigned ConstraintCode, std::vector<SDValue> &OutOps) {
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintCode,
+    std::vector<SDValue> &OutOps) {
   SDValue Op0, Op1, AluOp;
   switch (ConstraintCode) {
   default:
     return true;
-  case InlineAsm::Constraint_m: // memory
+  case InlineAsm::ConstraintCode::m: // memory
     if (!selectAddrRr(Op, Op0, Op1, AluOp) &&
         !selectAddrRi(Op, Op0, Op1, AluOp))
       return true;
@@ -287,14 +324,14 @@ void LanaiDAGToDAGISel::Select(SDNode *Node) {
       ConstantSDNode *ConstNode = cast<ConstantSDNode>(Node);
       // Materialize zero constants as copies from R0. This allows the coalescer
       // to propagate these into other instructions.
-      if (ConstNode->isNullValue()) {
+      if (ConstNode->isZero()) {
         SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(),
                                              SDLoc(Node), Lanai::R0, MVT::i32);
         return ReplaceNode(Node, New.getNode());
       }
       // Materialize all ones constants as copies from R1. This allows the
       // coalescer to propagate these into other instructions.
-      if (ConstNode->isAllOnesValue()) {
+      if (ConstNode->isAllOnes()) {
         SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(),
                                              SDLoc(Node), Lanai::R1, MVT::i32);
         return ReplaceNode(Node, New.getNode());

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://9224670
 
 @interface RandomObject {
 @private
@@ -25,15 +24,13 @@
 + (id)alloc { return 0; }
 @end
 
-int main ()
+int main (void)
 {
     Class<TestProtocol> c = [c alloc]; //  expected-warning {{class method '+alloc' not found (return type defaults to 'id')}}
     Class<Test2Protocol> c1 = [c1 alloc2]; //  expected-warning {{instance method 'alloc2' found instead of class method 'alloc2'}}
     Class<Test2Protocol> c2 = [c2 alloc]; //  ok
     return 0;
 }
-
-// rdar://22812517
 
 @protocol NSObject
 

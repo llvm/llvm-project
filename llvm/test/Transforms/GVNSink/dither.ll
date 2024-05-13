@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -gvn-sink | FileCheck %s
+; RUN: opt < %s -S -passes=gvn-sink | FileCheck %s
 
 ; Because %tmp17 has flipped operands to its equivalents %tmp14 and %tmp7, we
 ; can't sink the zext as we'd need a shuffling PHI in between.

@@ -32,7 +32,7 @@
 using namespace llvm;
 
 AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
-  AllowAtInIdentifier = !StringRef(MAI.getCommentString()).startswith("@");
+  AllowAtInIdentifier = !StringRef(MAI.getCommentString()).starts_with("@");
   LexMotorolaIntegers = MAI.shouldUseMotorolaIntegers();
 }
 
@@ -228,6 +228,7 @@ AsmToken AsmLexer::LexLineComment() {
   int CurChar = getNextChar();
   while (CurChar != '\n' && CurChar != '\r' && CurChar != EOF)
     CurChar = getNextChar();
+  const char *NewlinePtr = CurPtr;
   if (CurChar == '\r' && CurPtr != CurBuf.end() && *CurPtr == '\n')
     ++CurPtr;
 
@@ -235,7 +236,7 @@ AsmToken AsmLexer::LexLineComment() {
   if (CommentConsumer) {
     CommentConsumer->HandleComment(
         SMLoc::getFromPointer(CommentTextStart),
-        StringRef(CommentTextStart, CurPtr - 1 - CommentTextStart));
+        StringRef(CommentTextStart, NewlinePtr - 1 - CommentTextStart));
   }
 
   IsAtStartOfLine = true;
@@ -250,12 +251,12 @@ AsmToken AsmLexer::LexLineComment() {
 }
 
 static void SkipIgnoredIntegerSuffix(const char *&CurPtr) {
-  // Skip ULL, UL, U, L and LL suffices.
-  if (CurPtr[0] == 'U')
+  // Skip case-insensitive ULL, UL, U, L and LL suffixes.
+  if (CurPtr[0] == 'U' || CurPtr[0] == 'u')
     ++CurPtr;
-  if (CurPtr[0] == 'L')
+  if (CurPtr[0] == 'L' || CurPtr[0] == 'l')
     ++CurPtr;
-  if (CurPtr[0] == 'L')
+  if (CurPtr[0] == 'L' || CurPtr[0] == 'l')
     ++CurPtr;
 }
 
@@ -338,7 +339,7 @@ AsmToken AsmLexer::LexDigit() {
         if (!FirstNonDecimal) {
           FirstNonDecimal = CurPtr;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case '9':
       case '8':
       case '7':
@@ -577,7 +578,7 @@ AsmToken AsmLexer::LexSingleQuote() {
       } else if (peekNextChar() == '\'') {
         // In MASM single-quote strings, doubled single-quotes mean an escaped
         // single quote, so should be lexed in.
-        getNextChar();
+        (void)getNextChar();
         CurChar = getNextChar();
       } else {
         break;
@@ -604,7 +605,7 @@ AsmToken AsmLexer::LexSingleQuote() {
   StringRef Res = StringRef(TokStart,CurPtr - TokStart);
   long long Value;
 
-  if (Res.startswith("\'\\")) {
+  if (Res.starts_with("\'\\")) {
     char theChar = Res[2];
     switch (theChar) {
       default: Value = theChar; break;
@@ -634,7 +635,7 @@ AsmToken AsmLexer::LexQuote() {
       } else if (peekNextChar() == '"') {
         // In MASM double-quoted strings, doubled double-quotes mean an escaped
         // double quote, so should be lexed in.
-        getNextChar();
+        (void)getNextChar();
         CurChar = getNextChar();
       } else {
         break;
@@ -683,12 +684,12 @@ StringRef AsmLexer::LexUntilEndOfLine() {
 
 size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
                             bool ShouldSkipSpace) {
-  SaveAndRestore<const char *> SavedTokenStart(TokStart);
-  SaveAndRestore<const char *> SavedCurPtr(CurPtr);
-  SaveAndRestore<bool> SavedAtStartOfLine(IsAtStartOfLine);
-  SaveAndRestore<bool> SavedAtStartOfStatement(IsAtStartOfStatement);
-  SaveAndRestore<bool> SavedSkipSpace(SkipSpace, ShouldSkipSpace);
-  SaveAndRestore<bool> SavedIsPeeking(IsPeeking, true);
+  SaveAndRestore SavedTokenStart(TokStart);
+  SaveAndRestore SavedCurPtr(CurPtr);
+  SaveAndRestore SavedAtStartOfLine(IsAtStartOfLine);
+  SaveAndRestore SavedAtStartOfStatement(IsAtStartOfStatement);
+  SaveAndRestore SavedSkipSpace(SkipSpace, ShouldSkipSpace);
+  SaveAndRestore SavedIsPeeking(IsPeeking, true);
   std::string SavedErr = getErr();
   SMLoc SavedErrLoc = getErrLoc();
 
@@ -715,7 +716,7 @@ bool AsmLexer::isAtStartOfComment(const char *Ptr) {
   if (CommentString.size() == 1)
     return CommentString[0] == Ptr[0];
 
-  // Allow # preprocessor commments also be counted as comments for "##" cases
+  // Allow # preprocessor comments also be counted as comments for "##" cases
   if (CommentString[1] == '#')
     return CommentString[0] == Ptr[0];
 
@@ -775,9 +776,11 @@ AsmToken AsmLexer::LexToken() {
   IsAtStartOfStatement = false;
   switch (CurChar) {
   default:
-    // Handle identifier: [a-zA-Z_.?][a-zA-Z0-9_$.@#?]*
-    if (isalpha(CurChar) || CurChar == '_' || CurChar == '.' ||
-        (MAI.doesAllowQuestionAtStartOfIdentifier() && CurChar == '?'))
+    // Handle identifier: [a-zA-Z_.$@#?][a-zA-Z0-9_.$@#?]*
+    // Whether or not the lexer accepts '$', '@', '#' and '?' at the start of
+    // an identifier is target-dependent. These characters are handled in the
+    // respective switch cases.
+    if (isalpha(CurChar) || CurChar == '_' || CurChar == '.')
       return LexIdentifier();
 
     // Unknown character, emit an error.
@@ -829,11 +832,18 @@ AsmToken AsmLexer::LexToken() {
       return LexIdentifier();
     return AsmToken(AsmToken::Dollar, StringRef(TokStart, 1));
   }
-  case '@': {
+  case '@':
     if (MAI.doesAllowAtAtStartOfIdentifier())
       return LexIdentifier();
     return AsmToken(AsmToken::At, StringRef(TokStart, 1));
-  }
+  case '#':
+    if (MAI.doesAllowHashAtStartOfIdentifier())
+      return LexIdentifier();
+    return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
+  case '?':
+    if (MAI.doesAllowQuestionAtStartOfIdentifier())
+      return LexIdentifier();
+    return AsmToken(AsmToken::Question, StringRef(TokStart, 1));
   case '\\': return AsmToken(AsmToken::BackSlash, StringRef(TokStart, 1));
   case '=':
     if (*CurPtr == '=') {
@@ -913,11 +923,6 @@ AsmToken AsmLexer::LexToken() {
   case '/':
     IsAtStartOfStatement = OldIsAtStartOfStatement;
     return LexSlash();
-  case '#': {
-    if (MAI.doesAllowHashAtStartOfIdentifier())
-      return LexIdentifier();
-    return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
-  }
   case '\'': return LexSingleQuote();
   case '"': return LexQuote();
   case '0': case '1': case '2': case '3': case '4':

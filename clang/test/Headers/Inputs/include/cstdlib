@@ -5,11 +5,9 @@
 #if __cplusplus >= 201703L
 extern int abs (int __x) throw()  __attribute__ ((__const__)) ;
 extern long int labs (long int __x) throw() __attribute__ ((__const__)) ;
-extern float fabs (float __x) throw() __attribute__ ((__const__)) ;
 #else
 extern int abs (int __x) __attribute__ ((__const__)) ;
 extern long int labs (long int __x) __attribute__ ((__const__)) ;
-extern float fabs (float __x) __attribute__ ((__const__)) ;
 #endif
 
 namespace std
@@ -28,4 +26,7 @@ float fabs(float __x) { return __builtin_fabs(__x); }
 float abs(float __x) { return fabs(__x); }
 double abs(double __x) { return fabs(__x); }
 
+using ::malloc;
+using ::free;
 }
+

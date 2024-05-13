@@ -1,9 +1,15 @@
 // RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DCONSTANT -cl-std=CL2.0
 // RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGLOBAL -cl-std=CL2.0
 // RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGENERIC -cl-std=CL2.0
-// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DCONSTANT -cl-std=clc++
-// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGLOBAL -cl-std=clc++
-// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGENERIC -cl-std=clc++
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DCONSTANT -cl-std=clc++1.0
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGLOBAL -cl-std=clc++1.0
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGENERIC -cl-std=clc++1.0
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DCONSTANT -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGLOBAL -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGENERIC -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DCONSTANT -cl-std=clc++2021 -cl-ext=+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGLOBAL -cl-std=clc++2021 -cl-ext=+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGENERIC -cl-std=clc++2021 -cl-ext=+__opencl_c_generic_address_space
 
 /* OpenCLC v2.0 adds a set of restrictions for conversions between pointers to
 *  different address spaces, mainly described in Sections 6.5.5 and 6.5.6.
@@ -17,6 +23,8 @@
 *  case), and __constant, that should cover all program paths for CL address
 *  space conversions used in initialisations, assignments, casts, comparisons
 *  and arithmetic operations.
+*
+*  OpenCLC v3.0 supports generic address if __opencl_c_generic_address_space feature is supported
 */
 
 #ifdef GENERIC
@@ -377,7 +385,7 @@ void test_conversion(__global int *arg_glob, __local int *arg_loc,
 #endif
 }
 
-void test_ternary() {
+void test_ternary(void) {
   AS int *var_cond;
   __generic int *var_gen;
   __global int *var_glob;
@@ -492,7 +500,7 @@ void test_ternary() {
 #endif
 }
 
-void test_pointer_chains() {
+void test_pointer_chains(void) {
   AS int *AS *var_as_as_int;
   AS int *AS_COMP *var_asc_as_int;
   AS_INCOMP int *AS_COMP *var_asc_asn_int;

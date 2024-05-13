@@ -16,4 +16,4 @@ struct B {
 B b = B();
 
 // CHECK: define {{.*}}cxx_global_var_init
-// CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN1BD1Ev {{.*}} @b
+// CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN1BD1Ev, {{.*}} @b

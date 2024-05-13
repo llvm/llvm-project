@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple i386-pc-linux -emit-llvm < %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-pc-linux -emit-llvm -mrtd < %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-pc-linux -emit-llvm -fms-compatibility < %s
+// RUN: %clang_cc1 -triple i386-pc-linux -Wno-strict-prototypes -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-linux -Wno-strict-prototypes -emit-llvm -mrtd < %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-linux -Wno-strict-prototypes -emit-llvm -fms-compatibility < %s | FileCheck %s
 
 void __fastcall f1(void);
 void __stdcall f2(void);
@@ -56,13 +56,13 @@ int main(void) {
 void __stdcall f7(foo) int foo; {}
 void f8(void) {
   f7(0);
-  // CHECK: call x86_stdcallcc void @f7(i32 0)
+  // CHECK: call x86_stdcallcc void @f7(i32 noundef 0)
 }
 
 // PR12535
 void __fastcall f9(int x, int y) {};
-// WIN: define{{.*}} x86_fastcallcc void @f9({{.*}})
+// CHECK: define{{.*}} x86_fastcallcc void @f9({{.*}})
 void __fastcall f10(int x, ...) {};
-// WIN: define{{.*}} void @f10({{.*}})
+// CHECK: define{{.*}} void @f10({{.*}})
 void __stdcall f11(int x, ...) {};
-// WIN: define{{.*}} void @f11({{.*}})
+// CHECK: define{{.*}} void @f11({{.*}})

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -64,6 +63,7 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, HResult, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Char16, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Char32, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Char8, OS)
   }
   return OS;
 }
@@ -96,6 +96,7 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, ClrCall    , "clrcall", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, Inline     , "inlinecall", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearVector , "vectorcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, Swift, "swiftcall", OS)
   }
   return OS;
 }
@@ -231,6 +232,12 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_Lang &Lang) {
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, HLSL, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, D, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, Swift, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, Rust, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, ObjC, OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_Lang, ObjCpp, "ObjC++", OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, AliasObj, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, Go, OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_Lang, OldSwift, "Swift", OS)
   }
   return OS;
 }

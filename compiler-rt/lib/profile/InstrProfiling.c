@@ -20,12 +20,20 @@
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "profile/InstrProfData.inc"
 
+static uint32_t __llvm_profile_global_timestamp = 1;
+
+COMPILER_RT_VISIBILITY
+void INSTR_PROF_PROFILE_SET_TIMESTAMP(uint64_t *Probe) {
+  if (*Probe == 0 || *Probe == (uint64_t)-1)
+    *Probe = __llvm_profile_global_timestamp++;
+}
+
 COMPILER_RT_VISIBILITY uint64_t __llvm_profile_get_magic(void) {
   return sizeof(void *) == sizeof(uint64_t) ? (INSTR_PROF_RAW_MAGIC_64)
                                             : (INSTR_PROF_RAW_MAGIC_32);
 }
 
-COMPILER_RT_VISIBILITY void __llvm_profile_set_dumped() {
+COMPILER_RT_VISIBILITY void __llvm_profile_set_dumped(void) {
   lprofSetProfileDumped(1);
 }
 
@@ -38,14 +46,23 @@ __llvm_profile_get_num_padding_bytes(uint64_t SizeInBytes) {
 }
 
 COMPILER_RT_VISIBILITY uint64_t __llvm_profile_get_version(void) {
-  return __llvm_profile_raw_version;
+  return INSTR_PROF_RAW_VERSION_VAR;
 }
 
 COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
-  uint64_t *I = __llvm_profile_begin_counters();
-  uint64_t *E = __llvm_profile_end_counters();
+  if (__llvm_profile_get_version() & VARIANT_MASK_TEMPORAL_PROF)
+    __llvm_profile_global_timestamp = 1;
 
-  memset(I, 0, sizeof(uint64_t) * (E - I));
+  char *I = __llvm_profile_begin_counters();
+  char *E = __llvm_profile_end_counters();
+
+  char ResetValue =
+      (__llvm_profile_get_version() & VARIANT_MASK_BYTE_COVERAGE) ? 0xFF : 0;
+  memset(I, ResetValue, E - I);
+
+  I = __llvm_profile_begin_bitmap();
+  E = __llvm_profile_end_bitmap();
+  memset(I, 0x0, E - I);
 
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
@@ -62,11 +79,11 @@ COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
       CurrentVSiteCount += DI->NumValueSites[VKI];
 
     for (i = 0; i < CurrentVSiteCount; ++i) {
-      ValueProfNode *CurrentVNode = ValueCounters[i];
+      ValueProfNode *CurrVNode = ValueCounters[i];
 
-      while (CurrentVNode) {
-        CurrentVNode->Count = 0;
-        CurrentVNode = CurrentVNode->Next;
+      while (CurrVNode) {
+        CurrVNode->Count = 0;
+        CurrVNode = CurrVNode->Next;
       }
     }
   }

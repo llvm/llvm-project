@@ -16,7 +16,7 @@ entry:
 ; CHECK-NEXT: ret i32 4
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, ptr %argv) {
 entry:
   %a = call i32 @foo(i32 2)
   ret i32 %a

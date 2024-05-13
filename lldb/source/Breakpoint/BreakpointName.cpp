@@ -28,13 +28,6 @@ const Flags::ValueType BreakpointName::Permissions::permissions_mask
       (0x5u)
 };
 
-BreakpointName::BreakpointName(ConstString name, const Breakpoint &bkpt,
-                 const char *help) :
-      m_name(name), m_options(bkpt.GetOptions())
-{
-  SetHelp(help);
-}
-
 bool BreakpointName::Permissions::GetDescription(Stream *s,
                                                  lldb::DescriptionLevel level) {
     if (!AnySet())
@@ -81,6 +74,6 @@ bool BreakpointName::GetDescription(Stream *s, lldb::DescriptionLevel level) {
 
 void BreakpointName::ConfigureBreakpoint(lldb::BreakpointSP bp_sp)
 {
-   bp_sp->GetOptions()->CopyOverSetOptions(GetOptions());
-   bp_sp->GetPermissions().MergeInto(GetPermissions());
+  bp_sp->GetOptions().CopyOverSetOptions(GetOptions());
+  bp_sp->GetPermissions().MergeInto(GetPermissions());
 }

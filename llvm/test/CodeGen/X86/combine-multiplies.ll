@@ -31,7 +31,7 @@
 ;	movl	$33, 10080(%edx,%eax)
 
 ; Function Attrs: nounwind
-define void @testCombineMultiplies([100 x i32]* nocapture %a, i32 %lll) nounwind {
+define void @testCombineMultiplies(ptr nocapture %a, i32 %lll) nounwind {
 ; CHECK-LABEL: testCombineMultiplies:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
@@ -46,13 +46,13 @@ define void @testCombineMultiplies([100 x i32]* nocapture %a, i32 %lll) nounwind
 ; CHECK-NEXT:    retl
 entry:
   %add = add nsw i32 %lll, 5
-  %arrayidx1 = getelementptr inbounds [100 x i32], [100 x i32]* %a, i32 %add, i32 %add
-  store i32 11, i32* %arrayidx1, align 4
-  %arrayidx3 = getelementptr inbounds [100 x i32], [100 x i32]* %a, i32 %add, i32 20
-  store i32 22, i32* %arrayidx3, align 4
+  %arrayidx1 = getelementptr inbounds [100 x i32], ptr %a, i32 %add, i32 %add
+  store i32 11, ptr %arrayidx1, align 4
+  %arrayidx3 = getelementptr inbounds [100 x i32], ptr %a, i32 %add, i32 20
+  store i32 22, ptr %arrayidx3, align 4
   %add4 = add nsw i32 %lll, 25
-  %arrayidx6 = getelementptr inbounds [100 x i32], [100 x i32]* %a, i32 %add4, i32 20
-  store i32 33, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds [100 x i32], ptr %a, i32 %add4, i32 20
+  store i32 33, ptr %arrayidx6, align 4
   ret void
 }
 
@@ -116,7 +116,7 @@ define void @testCombineMultiplies_splat(<4 x i32> %v1) nounwind {
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [242,242,242,242]
 ; CHECK-NEXT:    paddd %xmm0, %xmm2
-; CHECK-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movdqa %xmm2, v2
 ; CHECK-NEXT:    movdqa %xmm0, v3
 ; CHECK-NEXT:    movdqa %xmm1, x
@@ -126,9 +126,9 @@ entry:
   %mul1 = mul <4 x i32> %add1, <i32 22, i32 22, i32 22, i32 22>
   %add2 = add <4 x i32> %v1, <i32 33, i32 33, i32 33, i32 33>
   %mul2 = mul <4 x i32> %add2, <i32 22, i32 22, i32 22, i32 22>
-  store <4 x i32> %mul1, <4 x i32>* @v2, align 16
-  store <4 x i32> %mul2, <4 x i32>* @v3, align 16
-  store <4 x i32> %add1, <4 x i32>* @x, align 16
+  store <4 x i32> %mul1, ptr @v2, align 16
+  store <4 x i32> %mul2, ptr @v3, align 16
+  store <4 x i32> %add1, ptr @x, align 16
   ret void
 }
 
@@ -141,17 +141,15 @@ define void @testCombineMultiplies_non_splat(<4 x i32> %v1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [11,22,33,44]
 ; CHECK-NEXT:    paddd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [22,33,44,55]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm2, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm3, %xmm2
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [242,726,1452,2420]
 ; CHECK-NEXT:    paddd %xmm0, %xmm2
-; CHECK-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movdqa %xmm2, v2
 ; CHECK-NEXT:    movdqa %xmm0, v3
 ; CHECK-NEXT:    movdqa %xmm1, x
@@ -161,8 +159,8 @@ entry:
   %mul1 = mul <4 x i32> %add1, <i32 22, i32 33, i32 44, i32 55>
   %add2 = add <4 x i32> %v1, <i32 33, i32 44, i32 55, i32 66>
   %mul2 = mul <4 x i32> %add2, <i32 22, i32 33, i32 44, i32 55>
-  store <4 x i32> %mul1, <4 x i32>* @v2, align 16
-  store <4 x i32> %mul2, <4 x i32>* @v3, align 16
-  store <4 x i32> %add1, <4 x i32>* @x, align 16
+  store <4 x i32> %mul1, ptr @v2, align 16
+  store <4 x i32> %mul2, ptr @v3, align 16
+  store <4 x i32> %add1, ptr @x, align 16
   ret void
 }

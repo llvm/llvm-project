@@ -12,6 +12,9 @@
 #if !SCUDO_ANDROID || !_BIONIC
 
 #include "allocator_config.h"
+#include "internal_defs.h"
+#include "platform.h"
+#include "scudo/interface.h"
 #include "wrappers_c.h"
 #include "wrappers_c_checks.h"
 
@@ -20,8 +23,6 @@
 
 #define SCUDO_PREFIX(name) name
 #define SCUDO_ALLOCATOR Allocator
-
-extern "C" void SCUDO_PREFIX(malloc_postinit)();
 
 // Export the static allocator so that the C++ wrappers can access it.
 // Technically we could have a completely separated heap for C & C++ but in

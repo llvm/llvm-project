@@ -141,7 +141,7 @@ void tautologiesOutside(unsigned char a) {
 
 // Wraparound with mixed types. Note that the analyzer assumes
 // -fwrapv semantics.
-void mixedWraparoundSanityCheck(int a) {
+void mixedWraparoundBasicCheck(int a) {
   int max = INT_MAX;
   int min = INT_MIN;
 
@@ -197,7 +197,7 @@ void mixedSignedness3(unsigned a) {
 }
 
 
-void multiplicativeSanityTest(int x) {
+void multiplicativeBasicTest(int x) {
   // At one point we were ignoring the *4 completely -- the constraint manager
   // would see x < 8 and then declare the assertion to be known false.
   if (x*4 < 8)

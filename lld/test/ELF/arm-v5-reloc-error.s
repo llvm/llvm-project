@@ -7,6 +7,10 @@
 // RUN:       } " > %t.script
 // RUN: not ld.lld --script %t.script %t -o /dev/null 2>&1 | FileCheck %s
 
+// RUN: llvm-mc -filetype=obj -triple=armv7aeb-linux-gnueabi -mcpu=cortex-a8 %s -o %t
+// RUN: not ld.lld --script %t.script %t -o /dev/null 2>&1 | FileCheck %s
+// RUN: not ld.lld -be8 --script %t.script %t -o /dev/null 2>&1 | FileCheck %s
+
 // CHECK: error: relocation R_ARM_THM_JUMP24 to far not supported for Armv5 or Armv6 targets
 
 // Lie about our build attributes. Our triple is armv7a-linux-gnueabi but

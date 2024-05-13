@@ -8,8 +8,8 @@ target triple = "powerpc-buildroot-linux-gnu"
 
 define void @foo() #0 {
 entry:
-  %0 = load ppc_fp128, ppc_fp128* @x, align 16
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), ppc_fp128 %0, ppc_fp128 %0)
+  %0 = load ppc_fp128, ptr @x, align 16
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, ppc_fp128 %0, ppc_fp128 %0)
   ret void
 }
 ; Do not put second argument of function in r8 register, because there is no enough registers
@@ -21,6 +21,6 @@ entry:
 ; CHECK: stw 5, 12(1)
 ; CHECK: stw 4, 8(1)
 
-declare i32 @printf(i8* nocapture readonly, ...)
+declare i32 @printf(ptr nocapture readonly, ...)
 
 attributes #0 = { "use-soft-float"="true" }

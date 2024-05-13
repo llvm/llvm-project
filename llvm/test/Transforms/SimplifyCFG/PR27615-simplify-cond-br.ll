@@ -1,5 +1,8 @@
-; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -strip-debug < %s | FileCheck %s
-; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -strip-debug < %s | FileCheck %s
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -strip-debug < %s --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Test case for BUG-27615
 ; Test that simplify cond branch produce same result for debug and non-debug builds
@@ -11,23 +14,23 @@ source_filename = "./csmith107.i.debug.ll"
 
 @a = global i16 0, !dbg !0
 @b = global i32 0, !dbg !4
-@c = global i16* null, !dbg !9
+@c = global ptr null, !dbg !9
 
 define i16 @fn1() !dbg !17 {
 bb2:
-  store i32 -1, i32* @b, align 1
-  %_tmp1.pre = load i16, i16* @a, align 1, !dbg !20
-  %_tmp2.pre = load i16*, i16** @c, align 1
+  store i32 -1, ptr @b, align 1
+  %_tmp1.pre = load i16, ptr @a, align 1, !dbg !20
+  %_tmp2.pre = load ptr, ptr @c, align 1
   tail call void @llvm.dbg.value(metadata i16 6, metadata !22, metadata !23), !dbg !24
   tail call void @llvm.dbg.value(metadata i16 %_tmp1.pre, metadata !25, metadata !23), !dbg !20
-  %_tmp3 = load i16, i16* %_tmp2.pre, align 1
+  %_tmp3 = load i16, ptr %_tmp2.pre, align 1
   %_tmp4 = icmp ne i16 %_tmp3, 0
   %_tmp6 = icmp ne i16 %_tmp1.pre, 0
   %or.cond = and i1 %_tmp6, %_tmp4
   br i1 %or.cond, label %bb5, label %bb1
 
 bb1:                                              ; preds = %bb2
-  store i32 5, i32* @b, align 1
+  store i32 5, ptr @b, align 1
   br label %bb5
 
 bb5:                                              ; preds = %bb1, %bb2

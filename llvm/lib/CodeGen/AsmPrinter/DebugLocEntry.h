@@ -76,6 +76,9 @@ public:
       : EntryKind(E_TargetIndexLocation), TIL(Loc) {}
 
   bool isLocation() const { return EntryKind == E_Location; }
+  bool isIndirectLocation() const {
+    return EntryKind == E_Location && Loc.isIndirect();
+  }
   bool isTargetIndexLocation() const {
     return EntryKind == E_TargetIndexLocation;
   }
@@ -116,27 +119,17 @@ class DbgValueLoc {
 public:
   DbgValueLoc(const DIExpression *Expr, ArrayRef<DbgValueLocEntry> Locs)
       : Expression(Expr), ValueLocEntries(Locs.begin(), Locs.end()),
-        IsVariadic(true) {
-#ifndef NDEBUG
-    // Currently, DBG_VALUE_VAR expressions must use stack_value.
-    assert(Expr && Expr->isValid() &&
-           is_contained(Locs, dwarf::DW_OP_stack_value));
-#endif
-  }
+        IsVariadic(true) {}
 
   DbgValueLoc(const DIExpression *Expr, ArrayRef<DbgValueLocEntry> Locs,
               bool IsVariadic)
       : Expression(Expr), ValueLocEntries(Locs.begin(), Locs.end()),
         IsVariadic(IsVariadic) {
 #ifndef NDEBUG
-    assert(cast<DIExpression>(Expr)->isValid() ||
+    assert(Expr->isValid() ||
            !any_of(Locs, [](auto LE) { return LE.isLocation(); }));
     if (!IsVariadic) {
       assert(ValueLocEntries.size() == 1);
-    } else {
-      // Currently, DBG_VALUE_VAR expressions must use stack_value.
-      assert(Expr && Expr->isValid() &&
-             is_contained(Expr->getElements(), dwarf::DW_OP_stack_value));
     }
 #endif
   }
@@ -150,15 +143,36 @@ public:
   bool isFragment() const { return getExpression()->isFragment(); }
   bool isEntryVal() const { return getExpression()->isEntryValue(); }
   bool isVariadic() const { return IsVariadic; }
-  const DIExpression *getExpression() const { return Expression; }
-  const ArrayRef<DbgValueLocEntry> getLocEntries() const {
-    return ValueLocEntries;
+  bool isEquivalent(const DbgValueLoc &Other) const {
+    // Cannot be equivalent with different numbers of entries.
+    if (ValueLocEntries.size() != Other.ValueLocEntries.size())
+      return false;
+    bool ThisIsIndirect =
+        !IsVariadic && ValueLocEntries[0].isIndirectLocation();
+    bool OtherIsIndirect =
+        !Other.IsVariadic && Other.ValueLocEntries[0].isIndirectLocation();
+    // Check equivalence of DIExpressions + Directness together.
+    if (!DIExpression::isEqualExpression(Expression, ThisIsIndirect,
+                                         Other.Expression, OtherIsIndirect))
+      return false;
+    // Indirectness should have been accounted for in the above check, so just
+    // compare register values directly here.
+    if (ThisIsIndirect || OtherIsIndirect) {
+      DbgValueLocEntry ThisOp = ValueLocEntries[0];
+      DbgValueLocEntry OtherOp = Other.ValueLocEntries[0];
+      return ThisOp.isLocation() && OtherOp.isLocation() &&
+             ThisOp.getLoc().getReg() == OtherOp.getLoc().getReg();
+    }
+    // If neither are indirect, then just compare the loc entries directly.
+    return ValueLocEntries == Other.ValueLocEntries;
   }
+  const DIExpression *getExpression() const { return Expression; }
+  ArrayRef<DbgValueLocEntry> getLocEntries() const { return ValueLocEntries; }
   friend bool operator==(const DbgValueLoc &, const DbgValueLoc &);
   friend bool operator<(const DbgValueLoc &, const DbgValueLoc &);
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
-    for (DbgValueLocEntry DV : ValueLocEntries)
+    for (const DbgValueLocEntry &DV : ValueLocEntries)
       DV.dump();
     if (Expression)
       Expression->dump();
@@ -193,11 +207,15 @@ public:
   /// Entry.
   bool MergeRanges(const DebugLocEntry &Next) {
     // If this and Next are describing the same variable, merge them.
-    if ((End == Next.Begin && Values == Next.Values)) {
-      End = Next.End;
-      return true;
-    }
-    return false;
+    if (End != Next.Begin)
+      return false;
+    if (Values.size() != Next.Values.size())
+      return false;
+    for (unsigned EntryIdx = 0; EntryIdx < Values.size(); ++EntryIdx)
+      if (!Values[EntryIdx].isEquivalent(Next.Values[EntryIdx]))
+        return false;
+    End = Next.End;
+    return true;
   }
 
   const MCSymbol *getBeginSym() const { return Begin; }
@@ -214,6 +232,11 @@ public:
   // Sort the pieces by offset.
   // Remove any duplicate entries by dropping all but the first.
   void sortUniqueValues() {
+    // Values is either 1 item that does not have a fragment, or many items
+    // that all do. No need to sort if the former and also prevents operator<
+    // being called on a non fragment item when _GLIBCXX_DEBUG is defined.
+    if (Values.size() == 1)
+      return;
     llvm::sort(Values);
     Values.erase(std::unique(Values.begin(), Values.end(),
                              [](const DbgValueLoc &A, const DbgValueLoc &B) {

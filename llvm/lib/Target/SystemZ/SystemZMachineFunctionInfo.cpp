@@ -14,3 +14,9 @@ using namespace llvm;
 // pin vtable to this file
 void SystemZMachineFunctionInfo::anchor() {}
 
+MachineFunctionInfo *SystemZMachineFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  return DestMF.cloneInfo<SystemZMachineFunctionInfo>(*this);
+}

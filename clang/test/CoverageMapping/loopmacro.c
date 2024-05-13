@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name loopmacro.c %s | FileCheck %s
 
 // CHECK: main
-// CHECK-NEXT: File 0, {{[0-9]+}}:12 -> {{[0-9]+}}:2 = #0
+// CHECK-NEXT: File 0, {{[0-9]+}}:16 -> {{[0-9]+}}:2 = #0
 // CHECK-NEXT: File 0, {{[0-9]+}}:6 -> {{[0-9]+}}:4 = (#0 + #1)
 // CHECK-NEXT: Expansion,File 0, {{[0-9]+}}:7 -> {{[0-9]+}}:20 = (#0 + #1)
 // CHECK-NEXT: File 0, {{[0-9]+}}:12 -> {{[0-9]+}}:30 = (#0 + #1)
@@ -33,7 +33,7 @@
 // CHECK-NEXT: File 8, [[@LINE+1]]:20 -> [[@LINE+1]]:21 = (#0 + #1)
 #define MIN_MATCH  3
 
-int main() {
+int main(void) {
   int strstart = 0;
   int hash_head = 2;
   int prev_length = 5;

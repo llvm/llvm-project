@@ -18,10 +18,10 @@ polly.loop_header:                                ; preds = %polly.loop_body, %e
   br i1 %0, label %polly.loop_body, label %polly.loop_after
 
 polly.loop_body:                                  ; preds = %polly.loop_header
-  %_p_vec_full = load <4 x i8>, <4 x i8>* undef, align 8
+  %_p_vec_full = load <4 x i8>, ptr undef, align 8
   %1 = sext <4 x i8> %_p_vec_full to <4 x i32>
   %p_vec = mul <4 x i32> %1, <i32 3, i32 3, i32 3, i32 3>
   %mulp_vec = add <4 x i32> %p_vec, <i32 21, i32 21, i32 21, i32 21>
-  store <4 x i32> %mulp_vec, <4 x i32>* undef, align 8
+  store <4 x i32> %mulp_vec, ptr undef, align 8
   br label %polly.loop_header
 }

@@ -11,17 +11,20 @@
 // This file contains error reporting code.
 //===----------------------------------------------------------------------===//
 
+#include "asan_report.h"
+
+#include "asan_descriptions.h"
 #include "asan_errors.h"
 #include "asan_flags.h"
-#include "asan_descriptions.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
-#include "asan_report.h"
 #include "asan_scariness_score.h"
 #include "asan_stack.h"
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
+#include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
@@ -30,27 +33,27 @@ namespace __asan {
 
 // -------------------- User-specified callbacks ----------------- {{{1
 static void (*error_report_callback)(const char*);
-static char *error_message_buffer = nullptr;
-static uptr error_message_buffer_pos = 0;
-static BlockingMutex error_message_buf_mutex(LINKER_INITIALIZED);
+using ErrorMessageBuffer = InternalMmapVectorNoCtor<char, true>;
+static ALIGNED(
+    alignof(ErrorMessageBuffer)) char error_message_buffer_placeholder
+    [sizeof(ErrorMessageBuffer)];
+static ErrorMessageBuffer *error_message_buffer = nullptr;
+static Mutex error_message_buf_mutex;
 static const unsigned kAsanBuggyPcPoolSize = 25;
 static __sanitizer::atomic_uintptr_t AsanBuggyPcPool[kAsanBuggyPcPoolSize];
 
 void AppendToErrorMessageBuffer(const char *buffer) {
-  BlockingMutexLock l(&error_message_buf_mutex);
+  Lock l(&error_message_buf_mutex);
   if (!error_message_buffer) {
     error_message_buffer =
-      (char*)MmapOrDieQuietly(kErrorMessageBufferSize, __func__);
-    error_message_buffer_pos = 0;
+        new (error_message_buffer_placeholder) ErrorMessageBuffer();
+    error_message_buffer->Initialize(kErrorMessageBufferSize);
   }
-  uptr length = internal_strlen(buffer);
-  RAW_CHECK(kErrorMessageBufferSize >= error_message_buffer_pos);
-  uptr remaining = kErrorMessageBufferSize - error_message_buffer_pos;
-  internal_strncpy(error_message_buffer + error_message_buffer_pos,
-                   buffer, remaining);
-  error_message_buffer[kErrorMessageBufferSize - 1] = '\0';
-  // FIXME: reallocate the buffer instead of truncating the message.
-  error_message_buffer_pos += Min(remaining, length);
+  uptr error_message_buffer_len = error_message_buffer->size();
+  uptr buffer_len = internal_strlen(buffer);
+  error_message_buffer->resize(error_message_buffer_len + buffer_len);
+  internal_memcpy(error_message_buffer->data() + error_message_buffer_len,
+                  buffer, buffer_len);
 }
 
 // ---------------------- Helper functions ----------------------- {{{1
@@ -58,23 +61,23 @@ void AppendToErrorMessageBuffer(const char *buffer) {
 void PrintMemoryByte(InternalScopedString *str, const char *before, u8 byte,
                      bool in_shadow, const char *after) {
   Decorator d;
-  str->append("%s%s%x%x%s%s", before,
-              in_shadow ? d.ShadowByte(byte) : d.MemoryByte(), byte >> 4,
-              byte & 15, d.Default(), after);
+  str->AppendF("%s%s%x%x%s%s", before,
+               in_shadow ? d.ShadowByte(byte) : d.MemoryByte(), byte >> 4,
+               byte & 15, d.Default(), after);
 }
 
 static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
                                 const char *zone_name) {
   if (zone_ptr) {
     if (zone_name) {
-      Printf("malloc_zone_from_ptr(%p) = %p, which is %s\n",
-                 ptr, zone_ptr, zone_name);
+      Printf("malloc_zone_from_ptr(%p) = %p, which is %s\n", (void *)ptr,
+             (void *)zone_ptr, zone_name);
     } else {
       Printf("malloc_zone_from_ptr(%p) = %p, which doesn't have a name\n",
-                 ptr, zone_ptr);
+             (void *)ptr, (void *)zone_ptr);
     }
   } else {
-    Printf("malloc_zone_from_ptr(%p) = 0\n", ptr);
+    Printf("malloc_zone_from_ptr(%p) = 0\n", (void *)ptr);
   }
 }
 
@@ -155,15 +158,15 @@ class ScopedInErrorReport {
       DumpProcessMap();
 
     // Copy the message buffer so that we could start logging without holding a
-    // lock that gets aquired during printing.
-    InternalMmapVector<char> buffer_copy(kErrorMessageBufferSize);
+    // lock that gets acquired during printing.
+    InternalScopedString buffer_copy;
     {
-      BlockingMutexLock l(&error_message_buf_mutex);
-      internal_memcpy(buffer_copy.data(),
-                      error_message_buffer, kErrorMessageBufferSize);
+      Lock l(&error_message_buf_mutex);
+      error_message_buffer->push_back('\0');
+      buffer_copy.Append(error_message_buffer->data());
       // Clear error_message_buffer so that if we find other errors
       // we don't re-log this error.
-      error_message_buffer_pos = 0;
+      error_message_buffer->clear();
     }
 
     LogFullErrorReport(buffer_copy.data());
@@ -352,6 +355,18 @@ void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,
   in_report.ReportError(error);
 }
 
+void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
+    uptr storage_beg, uptr storage_end, uptr old_container_beg,
+    uptr old_container_end, uptr new_container_beg, uptr new_container_end,
+    BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report;
+  ErrorBadParamsToAnnotateDoubleEndedContiguousContainer error(
+      GetCurrentTidOrInvalid(), stack, storage_beg, storage_end,
+      old_container_beg, old_container_end, new_container_beg,
+      new_container_end);
+  in_report.ReportError(error);
+}
+
 void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
                         const __asan_global *g2, u32 stack_id2) {
   ScopedInErrorReport in_report;
@@ -435,9 +450,10 @@ static inline void CheckForInvalidPointerPair(void *p1, void *p2) {
 void ReportMacMzReallocUnknown(uptr addr, uptr zone_ptr, const char *zone_name,
                                BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Printf("mz_realloc(%p) -- attempting to realloc unallocated memory.\n"
-             "This is an unrecoverable problem, exiting now.\n",
-             addr);
+  Printf(
+      "mz_realloc(%p) -- attempting to realloc unallocated memory.\n"
+      "This is an unrecoverable problem, exiting now.\n",
+      (void *)addr);
   PrintZoneForPointer(addr, zone_ptr, zone_name);
   stack->Print();
   DescribeAddressIfHeap(addr);
@@ -459,6 +475,10 @@ static bool SuppressErrorReport(uptr pc) {
 
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal) {
+  if (__asan_test_only_reported_buggy_pointer) {
+    *__asan_test_only_reported_buggy_pointer = addr;
+    return;
+  }
   if (!fatal && SuppressErrorReport(pc)) return;
   ENABLE_FRAME_POINTER;
 
@@ -490,7 +510,7 @@ void __asan_report_error(uptr pc, uptr bp, uptr sp, uptr addr, int is_write,
 }
 
 void NOINLINE __asan_set_error_report_callback(void (*callback)(const char*)) {
-  BlockingMutexLock l(&error_message_buf_mutex);
+  Lock l(&error_message_buf_mutex);
   error_report_callback = callback;
 }
 

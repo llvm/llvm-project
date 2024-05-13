@@ -3,4 +3,4 @@
 // CHECK: !llvm.linker.options = !{![[msvcrt:[0-9]+]]}
 // CHECK: ![[msvcrt]] = !{!"/include:foo"}
 
-int f();
+int f(void);

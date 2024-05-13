@@ -12,10 +12,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include <cstdint>
 
 namespace llvm {
+template <typename T> struct EnumEntry;
 namespace codeview {
 
 ArrayRef<EnumEntry<SymbolKind>> getSymbolTypeNames();
@@ -48,6 +48,7 @@ ArrayRef<EnumEntry<uint16_t>> getTypeModifierNames();
 ArrayRef<EnumEntry<uint8_t>> getCallingConventions();
 ArrayRef<EnumEntry<uint8_t>> getFunctionOptionEnum();
 ArrayRef<EnumEntry<uint16_t>> getLabelTypeEnum();
+ArrayRef<EnumEntry<uint16_t>> getJumpTableEntrySizeNames();
 
 } // end namespace codeview
 } // end namespace llvm

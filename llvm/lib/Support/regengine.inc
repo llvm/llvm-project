@@ -53,6 +53,7 @@
 #define	at	sat
 #define	match	smat
 #define	nope	snope
+#define step_back	sstep_back
 #endif
 #ifdef LNAMES
 #define	matcher	lmatcher
@@ -65,6 +66,7 @@
 #define	at	lat
 #define	match	lmat
 #define	nope	lnope
+#define step_back	lstep_back
 #endif
 
 /* another structure passed up and down to avoid zillions of parameters */
@@ -104,10 +106,11 @@ static states step(struct re_guts *, sopno, sopno, states, int, states);
 #define	NONCHAR(c)	((c) > CHAR_MAX)
 #define	NNONCHAR	(CODEMAX-CHAR_MAX)
 #ifdef REDEBUG
-static void print(struct match *, char *, states, int, FILE *);
+static void print(struct match *, const char *, states, int, FILE *);
 #endif
 #ifdef REDEBUG
-static void at(struct match *, char *, char *, char *, sopno, sopno);
+static void at(
+	struct match *, const char *, const char *, const char *, sopno, sopno);
 #endif
 #ifdef REDEBUG
 static char *pchar(int);
@@ -288,6 +291,44 @@ matcher(struct re_guts *g, const char *string, size_t nmatch,
 	return(0);
 }
 
+/* Step back from "stop" to a position where the strip startst..stopst might
+ * match. This can always conservatively return "stop - 1", but may return an
+ * earlier position if matches at later positions are impossible. */
+static const char *
+step_back(struct re_guts *g, const char *start, const char *stop, sopno startst,
+          sopno stopst)
+{
+	/* Always step back at least one character. */
+	assert(stop > start);
+	const char *res = stop - 1;
+
+	/* Check whether the strip startst..stropst starts with a fixed character,
+	 * ignoring any closing parentheses. If not, return a conservative result. */
+	for (;;) {
+		if (startst >= stopst)
+			return res;
+		if (OP(g->strip[startst]) != ORPAREN)
+			break;
+		startst++;
+	}
+	if (OP(g->strip[startst]) != OCHAR)
+		return res;
+
+	/* Find the character that starts the following match. */
+	char ch = OPND(g->strip[startst]);
+	for (; res != start; --res) {
+		if (*res == ch) {
+			/* Try to check the next fixed character as well. */
+			sopno nextst = startst + 1;
+			const char *next = res + 1;
+			if (nextst >= stopst || OP(g->strip[nextst]) != OCHAR || next >= stop ||
+					*next == (char)OPND(g->strip[nextst]))
+				break;
+    }
+	}
+	return res;
+}
+
 /*
  - dissect - figure out what matched what, no back references
  */
@@ -358,7 +399,7 @@ dissect(struct match *m, const char *start, const char *stop, sopno startst,
 				if (tail == stop)
 					break;		/* yes! */
 				/* no -- try a shorter match for this one */
-				stp = rest - 1;
+				stp = step_back(m->g, sp, rest, es, stopst);
 				assert(stp >= sp);	/* it did work */
 			}
 			ssub = ss + 1;
@@ -383,7 +424,7 @@ dissect(struct match *m, const char *start, const char *stop, sopno startst,
 				if (tail == stop)
 					break;		/* yes! */
 				/* no -- try a shorter match for this one */
-				stp = rest - 1;
+				stp = step_back(m->g, sp, rest, es, stopst);
 				assert(stp >= sp);	/* it did work */
 			}
 			ssub = ss + 1;
@@ -555,6 +596,7 @@ backref(struct match *m, const char *start, const char *stop, sopno startst,
 				return(NULL);
 			break;
 		case O_QUEST:
+		case O_CH:
 			break;
 		case OOR1:	/* matches null but needs to skip */
 			ss++;
@@ -627,7 +669,7 @@ backref(struct match *m, const char *start, const char *stop, sopno startst,
 		esub = ss + OPND(s) - 1;
 		assert(OP(m->g->strip[esub]) == OOR1);
 		for (;;) {	/* find first matching branch */
-			dp = backref(m, sp, stop, ssub, esub, lev, rec);
+			dp = backref(m, sp, stop, ssub, stopst, lev, rec);
 			if (dp != NULL)
 				return(dp);
 			/* that one missed, try next one */
@@ -768,11 +810,33 @@ static const char *			/* where it ended */
 slow(struct match *m, const char *start, const char *stop, sopno startst,
      sopno stopst)
 {
+	/* Quickly skip over fixed character matches at the start. */
+	const char *p = start;
+	for (; startst < stopst; ++startst) {
+		int hard = 0;
+		sop s = m->g->strip[startst];
+		switch (OP(s)) {
+		case OLPAREN:
+		case ORPAREN:
+			/* Not relevant here. */
+			break;
+		case OCHAR:
+			if (p == stop || *p != (char)OPND(s))
+				return NULL;
+			++p;
+			break;
+		default:
+			hard = 1;
+			break;
+		}
+		if (hard)
+			break;
+	}
+
 	states st = m->st;
 	states empty = m->empty;
 	states tmp = m->tmp;
-	const char *p = start;
-	int c = (start == m->beginp) ? OUT : *(start-1);
+	int c = (p == m->beginp) ? OUT : *(p-1);
 	int lastc;	/* previous c */
 	int flagch;
 	int i;
@@ -963,7 +1027,7 @@ step(struct re_guts *g,
  - print - print a set of states
  */
 static void
-print(struct match *m, char *caption, states st, int ch, FILE *d)
+print(struct match *m, const char *caption, states st, int ch, FILE *d)
 {
 	struct re_guts *g = m->g;
 	int i;
@@ -987,8 +1051,8 @@ print(struct match *m, char *caption, states st, int ch, FILE *d)
  - at - print current situation
  */
 static void
-at(struct match *m, char *title, char *start, char *stop, sopno startst,
-    sopno stopst)
+at(struct match *m, const char *title, const char *start, const char *stop,
+	sopno startst, sopno stopst)
 {
 	if (!(m->eflags&REG_TRACE))
 		return;
@@ -1013,7 +1077,7 @@ pchar(int ch)
 {
 	static char pbuf[10];
 
-	if (isPrint(ch) || ch == ' ')
+	if (isprint(ch) || ch == ' ')
 		(void)snprintf(pbuf, sizeof pbuf, "%c", ch);
 	else
 		(void)snprintf(pbuf, sizeof pbuf, "\\%o", ch);
@@ -1032,3 +1096,4 @@ pchar(int ch)
 #undef	at
 #undef	match
 #undef	nope
+#undef	step_back

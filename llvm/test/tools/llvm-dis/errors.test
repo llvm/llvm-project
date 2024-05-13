@@ -1,0 +1,3 @@
+# RUN: not llvm-dis missing-file-path 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=MISSING --ignore-case
+
+# MISSING: error: missing-file-path: [[MSG]]

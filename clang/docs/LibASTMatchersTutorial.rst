@@ -22,7 +22,7 @@ started guide <https://llvm.org/docs/GettingStarted.html>`_.
 
 .. code-block:: console
 
-      cd ~/clang-llvm
+      mkdir ~/clang-llvm && cd ~/clang-llvm
       git clone https://github.com/llvm/llvm-project.git
 
 Next you need to obtain the CMake build system and Ninja build tool.
@@ -33,11 +33,11 @@ Next you need to obtain the CMake build system and Ninja build tool.
       git clone https://github.com/martine/ninja.git
       cd ninja
       git checkout release
-      ./bootstrap.py
+      ./configure.py --bootstrap
       sudo cp ninja /usr/bin/
 
       cd ~/clang-llvm
-      git clone git://cmake.org/stage/cmake.git
+      git clone https://gitlab.kitware.com/cmake/cmake.git
       cd cmake
       git checkout next
       ./bootstrap
@@ -50,7 +50,7 @@ Okay. Now we'll build Clang!
 
       cd ~/clang-llvm
       mkdir build && cd build
-      cmake -G Ninja ../llvm -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DLLVM_BUILD_TESTS=ON  # Enable tests; default is off.
+      cmake -G Ninja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_TESTS=ON
       ninja
       ninja check       # Test LLVM only.
       ninja clang-test  # Test Clang only.
@@ -65,7 +65,7 @@ Finally, we want to set Clang as its own compiler.
 .. code-block:: console
 
       cd ~/clang-llvm/build
-      ccmake ../llvm
+      ccmake ../llvm-project/llvm
 
 The second command will bring up a GUI for configuring Clang. You need
 to set the entry for ``CMAKE_CXX_COMPILER``. Press ``'t'`` to turn on
@@ -89,7 +89,7 @@ live in the ``clang-tools-extra`` repository.
 
 .. code-block:: console
 
-      cd ~/clang-llvm
+      cd ~/clang-llvm/llvm-project
       mkdir clang-tools-extra/loop-convert
       echo 'add_subdirectory(loop-convert)' >> clang-tools-extra/CMakeLists.txt
       vim clang-tools-extra/loop-convert/CMakeLists.txt
@@ -105,9 +105,12 @@ CMakeLists.txt should have the following contents:
         )
       target_link_libraries(loop-convert
         PRIVATE
-        clangTooling
-        clangBasic
+        clangAST
         clangASTMatchers
+        clangBasic
+        clangFrontend
+        clangSerialization
+        clangTooling
         )
 
 With that done, Ninja will be able to compile our tool. Let's give it
@@ -311,7 +314,7 @@ handiwork:
 
 .. code-block:: console
 
-      cd ~/clang-llvm/llvm/llvm_build/
+      cd ~/clang-llvm/build/
       ninja loop-convert
       vim ~/test-files/simple-loops.cc
       bin/loop-convert ~/test-files/simple-loops.cc
@@ -396,7 +399,7 @@ in the callback. So we start with:
 
 .. code-block:: c++
 
-      hasCondition(binaryOperator(hasOperatorName("<"))
+      hasCondition(binaryOperator(hasOperatorName("<")))
 
 It makes sense to ensure that the left-hand side is a reference to a
 variable, and that the right-hand side has integer type.
@@ -526,7 +529,7 @@ address, all we need to do is make sure neither ``ValueDecl`` (base class of
       }
 
 If execution reaches the end of ``LoopPrinter::run()``, we know that the
-loop shell that looks like
+loop shell looks like
 
 .. code-block:: c++
 

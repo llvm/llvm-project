@@ -12,7 +12,7 @@ A::A(int i, ...) {}
 // CHECK-NOT: ret void
 // CHECK: call void @llvm.dbg.declare
 // CHECK-NOT: ret void
-// CHECK: call void @llvm.dbg.declare(metadata %{{.*}}** %{{[^,]+}},
+// CHECK: call void @llvm.dbg.declare(metadata ptr %{{[^,]+}},
 // CHECK-SAME: metadata ![[THIS:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC:[0-9]+]]
 // CHECK: ret void, !dbg ![[NOINL:[0-9]+]]
 // CHECK: ![[FOO:.*]] = distinct !DISubprogram(name: "foo"

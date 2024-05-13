@@ -10,9 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SymbolizableObjectFile.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/COFF.h"
@@ -21,6 +20,7 @@
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -168,6 +168,11 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
     return SymbolTypeOrErr.takeError();
   SymbolRef::Type SymbolType = *SymbolTypeOrErr;
   if (Obj.isELF()) {
+    // Ignore any symbols coming from sections that don't have runtime
+    // allocated memory.
+    if ((elf_section_iterator(*Sec)->getFlags() & ELF::SHF_ALLOC) == 0)
+      return Error::success();
+
     // Allow function and data symbols. Additionally allow STT_NONE, which are
     // common for functions defined in assembly.
     uint8_t Type = ELFSymbolRef(Symbol).getELFType();
@@ -205,8 +210,8 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
       SymbolAddress = OpdExtractor->getAddress(&OpdOffset);
   }
   // Mach-O symbol table names have leading underscore, skip it.
-  if (Module->isMachO() && !SymbolName.empty() && SymbolName[0] == '_')
-    SymbolName = SymbolName.drop_front();
+  if (Module->isMachO())
+    SymbolName.consume_front("_");
 
   if (Obj.isELF() && ELFSymbolRef(Symbol).getBinding() != ELF::STB_LOCAL)
     ELFSymIdx = 0;
@@ -327,6 +332,14 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
   std::string FileName;
   getNameFromSymbolTable(ModuleOffset.Address, Res.Name, Res.Start, Res.Size,
                          FileName);
+  Res.DeclFile = FileName;
+
+  // Try and get a better filename:lineno pair from the debuginfo, if present.
+  DILineInfo DL = DebugInfoContext->getLineInfoForDataAddress(ModuleOffset);
+  if (DL.Line != 0) {
+    Res.DeclFile = DL.FileName;
+    Res.DeclLine = DL.Line;
+  }
   return Res;
 }
 
@@ -336,6 +349,21 @@ std::vector<DILocal> SymbolizableObjectFile::symbolizeFrame(
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
   return DebugInfoContext->getLocalsForAddress(ModuleOffset);
+}
+
+std::vector<object::SectionedAddress>
+SymbolizableObjectFile::findSymbol(StringRef Symbol, uint64_t Offset) const {
+  std::vector<object::SectionedAddress> Result;
+  for (const SymbolDesc &Sym : Symbols) {
+    if (Sym.Name == Symbol) {
+      uint64_t Addr = Sym.Addr;
+      if (Offset < Sym.Size)
+        Addr += Offset;
+      object::SectionedAddress A{Addr, getModuleSectionIndexForAddress(Addr)};
+      Result.push_back(A);
+    }
+  }
+  return Result;
 }
 
 /// Search for the first occurence of specified Address in ObjectFile.

@@ -201,8 +201,8 @@ about it. In that sense, code will never be removed outright without a series
 of steps are taken.
 
 A minimum set of steps should be:
- #. A proposal for removal / deactivation should be made to the developers'
-    mailing lists (``llvm-dev``, ``cfe-dev``, ``lldb-dev``, etc), with a clear
+ #. A proposal for removal / deactivation should be made to the Discourse forums 
+    (under the appropriate category), with a clear
     statement of the maintenance costs imposed and the alternatives, if
     applicable.
  #. There must be enough consensus on the list that removal is warranted, and no

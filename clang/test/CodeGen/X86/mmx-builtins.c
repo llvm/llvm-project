@@ -229,7 +229,6 @@ __m64 test_m_from_int(int a) {
 
 __m64 test_m_from_int64(long long a) {
   // CHECK-LABEL: test_m_from_int64
-  // CHECK: bitcast
   return _m_from_int64(a);
 }
 
@@ -602,6 +601,12 @@ void test_mm_stream_pi(__m64 *p, __m64 a) {
   _mm_stream_pi(p, a);
 }
 
+void test_mm_stream_pi_void(void *p, __m64 a) {
+  // CHECK-LABEL: test_mm_stream_pi_void
+  // CHECK: call void @llvm.x86.mmx.movnt.dq
+  _mm_stream_pi(p, a);
+}
+
 __m64 test_mm_sub_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sub_pi8
   // CHECK: call x86_mmx @llvm.x86.mmx.psub.b
@@ -658,7 +663,6 @@ int test_m_to_int(__m64 a) {
 
 long long test_m_to_int64(__m64 a) {
   // CHECK-LABEL: test_m_to_int64
-  // CHECK: bitcast
   return _m_to_int64(a);
 }
 

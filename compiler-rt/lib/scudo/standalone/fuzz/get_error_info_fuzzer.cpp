@@ -9,6 +9,7 @@
 #define SCUDO_FUZZ
 #include "allocator_config.h"
 #include "combined.h"
+#include "common.h"
 
 #include <fuzzer/FuzzedDataProvider.h>
 
@@ -31,11 +32,6 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *Data, size_t Size) {
 
   std::string StackDepotBytes =
       FDP.ConsumeRandomLengthString(FDP.remaining_bytes());
-  std::vector<char> StackDepot(sizeof(scudo::StackDepot), 0);
-  for (size_t i = 0; i < StackDepotBytes.length() && i < StackDepot.size();
-       ++i) {
-    StackDepot[i] = StackDepotBytes[i];
-  }
 
   std::string RegionInfoBytes =
       FDP.ConsumeRandomLengthString(FDP.remaining_bytes());
@@ -46,15 +42,11 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *Data, size_t Size) {
   }
 
   std::string RingBufferBytes = FDP.ConsumeRemainingBytesAsString();
-  std::vector<char> RingBuffer(AllocatorT::getRingBufferSize(), 0);
-  for (size_t i = 0; i < RingBufferBytes.length() && i < RingBuffer.size();
-       ++i) {
-    RingBuffer[i] = RingBufferBytes[i];
-  }
 
   scudo_error_info ErrorInfo;
-  AllocatorT::getErrorInfo(&ErrorInfo, FaultAddr, StackDepot.data(),
-                           RegionInfo.data(), RingBuffer.data(), Memory,
-                           MemoryTags, MemoryAddr, MemorySize);
+  AllocatorT::getErrorInfo(&ErrorInfo, FaultAddr, StackDepotBytes.data(),
+                           StackDepotBytes.size(), RegionInfo.data(),
+                           RingBufferBytes.data(), RingBufferBytes.size(),
+                           Memory, MemoryTags, MemoryAddr, MemorySize);
   return 0;
 }

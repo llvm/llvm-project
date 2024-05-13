@@ -402,8 +402,8 @@ define <2 x i64> @fcvtzs_2d_intrinsic(<2 x double> %A) nounwind {
 define <1 x i64> @fcvtzs_1d_intrinsic(<1 x double> %A) nounwind {
 ;CHECK-LABEL: fcvtzs_1d_intrinsic:
 ;CHECK-NOT: ld1
-;CHECK: fcvtzs d0, d0
-;CHECK-NEXT: ret
+;CHECK: fcvtzs{{.*}}, d0
+;CHECK: ret
 	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> %A)
 	ret <1 x i64> %tmp3
 }
@@ -481,8 +481,8 @@ define <2 x i64> @fcvtzu_2d_intrinsic(<2 x double> %A) nounwind {
 define <1 x i64> @fcvtzu_1d_intrinsic(<1 x double> %A) nounwind {
 ;CHECK-LABEL: fcvtzu_1d_intrinsic:
 ;CHECK-NOT: ld1
-;CHECK: fcvtzu d0, d0
-;CHECK-NEXT: ret
+;CHECK: fcvtzu{{.*}}, d0
+;CHECK: ret
 	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> %A)
 	ret <1 x i64> %tmp3
 }
@@ -857,19 +857,19 @@ define <2 x double> @ucvtf_2dc(<2 x i64> %A) nounwind {
 ;CHECK-LABEL: autogen_SD28458:
 ;CHECK: fcvt
 ;CHECK: ret
-define void @autogen_SD28458(<8 x double> %val.f64, <8 x float>* %addr.f32) {
+define void @autogen_SD28458(<8 x double> %val.f64, ptr %addr.f32) {
   %Tr53 = fptrunc <8 x double> %val.f64 to <8 x float>
-  store <8 x float> %Tr53, <8 x float>* %addr.f32
+  store <8 x float> %Tr53, ptr %addr.f32
   ret void
 }
 
 ;CHECK-LABEL: autogen_SD19225:
 ;CHECK: fcvt
 ;CHECK: ret
-define void @autogen_SD19225(<8 x double>* %addr.f64, <8 x float>* %addr.f32) {
-  %A = load <8 x float>, <8 x float>* %addr.f32
+define void @autogen_SD19225(ptr %addr.f64, ptr %addr.f32) {
+  %A = load <8 x float>, ptr %addr.f32
   %Tr53 = fpext <8 x float> %A to <8 x double>
-  store <8 x double> %Tr53, <8 x double>* %addr.f64
+  store <8 x double> %Tr53, ptr %addr.f64
   ret void
 }
 

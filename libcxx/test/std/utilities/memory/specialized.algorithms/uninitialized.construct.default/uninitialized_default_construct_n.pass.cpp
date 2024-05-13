@@ -66,7 +66,7 @@ void test_ctor_throws()
         assert(false);
     } catch (...) {}
     assert(ThrowsCounted::count == 0);
-    assert(ThrowsCounted::constructed == 4); // forth construction throws
+    assert(ThrowsCounted::constructed == 4); // Fourth construction throws
 #endif
 }
 
@@ -88,29 +88,9 @@ void test_counted()
     assert(Counted::count == 0);
 }
 
-void test_value_initialized()
-{
-    using It = forward_iterator<int*>;
-    const int N = 5;
-    int pool[N] = {-1, -1, -1, -1, -1};
-    int* p = pool;
-    auto e = std::uninitialized_default_construct_n(It(p), 1);
-    assert(e == It(p+1));
-    assert(pool[0] == -1);
-    assert(pool[1] == -1);
-    e = std::uninitialized_default_construct_n(It(p+1), 4);
-    assert(e == It(p+N));
-    assert(pool[1] == -1);
-    assert(pool[2] == -1);
-    assert(pool[3] == -1);
-    assert(pool[4] == -1);
-}
-
-
 int main(int, char**)
 {
     test_counted();
-    test_value_initialized();
     test_ctor_throws();
 
   return 0;

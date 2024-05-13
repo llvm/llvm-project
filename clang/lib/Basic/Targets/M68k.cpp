@@ -17,19 +17,20 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <optional>
 
 namespace clang {
 namespace targets {
 
 M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
-                               const TargetOptions &)
-    : TargetInfo(Triple) {
+                               const TargetOptions &Opts)
+    : TargetInfo(Triple), TargetOpts(Opts) {
 
-  std::string Layout = "";
+  std::string Layout;
 
   // M68k is Big Endian
   Layout += "E";
@@ -37,8 +38,8 @@ M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
   // FIXME how to wire it with the used object format?
   Layout += "-m:e";
 
-  // M68k pointers are always 32 bit wide even for 16 bit cpus
-  Layout += "-p:32:32";
+  // M68k pointers are always 32 bit wide even for 16-bit CPUs
+  Layout += "-p:32:16:32";
 
   // M68k integer data types
   Layout += "-i8:8:8-i16:16:16-i32:16:32";
@@ -79,45 +80,44 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__m68k__");
 
-  Builder.defineMacro("mc68000");
-  Builder.defineMacro("__mc68000");
-  Builder.defineMacro("__mc68000__");
+  DefineStd(Builder, "mc68000", Opts);
 
   // For sub-architecture
   switch (CPU) {
   case CK_68010:
-    Builder.defineMacro("mc68010");
-    Builder.defineMacro("__mc68010");
-    Builder.defineMacro("__mc68010__");
+    DefineStd(Builder, "mc68010", Opts);
     break;
   case CK_68020:
-    Builder.defineMacro("mc68020");
-    Builder.defineMacro("__mc68020");
-    Builder.defineMacro("__mc68020__");
+    DefineStd(Builder, "mc68020", Opts);
     break;
   case CK_68030:
-    Builder.defineMacro("mc68030");
-    Builder.defineMacro("__mc68030");
-    Builder.defineMacro("__mc68030__");
+    DefineStd(Builder, "mc68030", Opts);
     break;
   case CK_68040:
-    Builder.defineMacro("mc68040");
-    Builder.defineMacro("__mc68040");
-    Builder.defineMacro("__mc68040__");
+    DefineStd(Builder, "mc68040", Opts);
     break;
   case CK_68060:
-    Builder.defineMacro("mc68060");
-    Builder.defineMacro("__mc68060");
-    Builder.defineMacro("__mc68060__");
+    DefineStd(Builder, "mc68060", Opts);
     break;
   default:
     break;
   }
+
+  if (CPU >= CK_68020) {
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  }
+
+  // Floating point
+  if (TargetOpts.FeatureMap.lookup("isa-68881") ||
+      TargetOpts.FeatureMap.lookup("isa-68882"))
+    Builder.defineMacro("__HAVE_68881__");
 }
 
 ArrayRef<Builtin::Info> M68kTargetInfo::getTargetBuiltins() const {
   // FIXME: Implement.
-  return None;
+  return std::nullopt;
 }
 
 bool M68kTargetInfo::hasFeature(StringRef Feature) const {
@@ -127,16 +127,21 @@ bool M68kTargetInfo::hasFeature(StringRef Feature) const {
 
 const char *const M68kTargetInfo::GCCRegNames[] = {
     "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7",
-    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
+    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "sp",
     "pc"};
 
 ArrayRef<const char *> M68kTargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
+const TargetInfo::GCCRegAlias M68kTargetInfo::GCCRegAliases[] = {
+    {{"bp"}, "a5"},
+    {{"fp"}, "a6"},
+    {{"usp", "ssp", "isp", "a7"}, "sp"},
+};
+
 ArrayRef<TargetInfo::GCCRegAlias> M68kTargetInfo::getGCCRegAliases() const {
-  // No aliases.
-  return None;
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool M68kTargetInfo::validateAsmConstraint(
@@ -185,13 +190,19 @@ bool M68kTargetInfo::validateAsmConstraint(
       break;
     }
     break;
+  case 'Q': // address register indirect addressing
+  case 'U': // address register indirect w/ constant offset addressing
+    // TODO: Handle 'S' (basically 'm' when pc-rel is enforced) when
+    // '-mpcrel' flag is properly handled by the driver.
+    info.setAllowsMemory();
+    return true;
   default:
     break;
   }
   return false;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 M68kTargetInfo::handleAsmEscapedChar(char EscChar) const {
   char C;
   switch (EscChar) {
@@ -209,7 +220,7 @@ M68kTargetInfo::handleAsmEscapedChar(char EscChar) const {
     C = 'd';
     break;
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 
   return std::string(1, C);
@@ -223,7 +234,7 @@ std::string M68kTargetInfo::convertConstraint(const char *&Constraint) const {
   return std::string(1, *Constraint);
 }
 
-const char *M68kTargetInfo::getClobbers() const {
+std::string_view M68kTargetInfo::getClobbers() const {
   // FIXME: Is this really right?
   return "";
 }
@@ -232,5 +243,15 @@ TargetInfo::BuiltinVaListKind M68kTargetInfo::getBuiltinVaListKind() const {
   return TargetInfo::VoidPtrBuiltinVaList;
 }
 
+TargetInfo::CallingConvCheckResult
+M68kTargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_C:
+  case CC_M68kRTD:
+    return CCCR_OK;
+  default:
+    return TargetInfo::checkCallingConvention(CC);
+  }
+}
 } // namespace targets
 } // namespace clang

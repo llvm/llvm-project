@@ -1,4 +1,4 @@
-//===-- M68kISelLowering.h - M68k DAG Lowering Interface ----*- C++ -*-===//
+//===-- M68kISelLowering.h - M68k DAG Lowering Interface --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,7 +43,7 @@ enum NodeType {
   CMP,
 
   /// M68k bit-test instructions.
-  BT,
+  BTST,
 
   /// M68k Select
   SELECT,
@@ -163,7 +163,7 @@ public:
                                StringRef Constraint, MVT VT) const override;
 
   // Lower operand with C_Immediate and C_Other constraint type
-  void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
@@ -171,9 +171,37 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
 
+  CCAssignFn *getCCAssignFn(CallingConv::ID CC, bool Return,
+                            bool IsVarArg) const;
+
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
+
+  /// If a physical register, this returns the register that receives the
+  /// exception address on entry to an EH pad.
+  Register
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+
+  /// If a physical register, this returns the register that receives the
+  /// exception typeid on entry to a landing pad.
+  Register
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
+
 private:
   unsigned GetAlignedArgumentStackSize(unsigned StackSize,
                                        SelectionDAG &DAG) const;
+
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override {
+    // In many cases, `GA` doesn't give the correct offset to fold. It's
+    // hard to know if the real offset actually fits into the displacement
+    // of the perspective addressing mode.
+    // Thus, we disable offset folding altogether and leave that to ISel
+    // patterns.
+    return false;
+  }
 
   SDValue getReturnAddressFrameIndex(SelectionDAG &DAG) const;
 
@@ -201,8 +229,8 @@ private:
                            const CCValAssign &VA, ISD::ArgFlagsTy Flags) const;
 
   SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerToBT(SDValue And, ISD::CondCode CC, const SDLoc &DL,
-                    SelectionDAG &DAG) const;
+  SDValue LowerToBTST(SDValue And, ISD::CondCode CC, const SDLoc &DL,
+                      SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
@@ -217,12 +245,17 @@ private:
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
 
-  SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+  SDValue LowerATOMICFENCE(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool IsVarArg,
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &DL, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
+  SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
 
   /// LowerFormalArguments - transform physical registers into virtual
   /// registers and generate load operations for arguments places on the stack.
@@ -235,12 +268,31 @@ private:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool isVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      LLVMContext &Context) const override;
+
   /// Lower the result values of a call into the
   /// appropriate copies out of appropriate physical registers.
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CCID, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
+
+  SDValue LowerExternalSymbolCall(SelectionDAG &DAG, SDLoc loc,
+                                  llvm::StringRef SymbolName,
+                                  ArgListTy &&ArgList) const;
+  SDValue getTLSGetAddr(GlobalAddressSDNode *GA, SelectionDAG &DAG,
+                        unsigned TargetFlags) const;
+  SDValue getM68kReadTp(SDLoc Loc, SelectionDAG &DAG) const;
+
+  SDValue LowerTLSGeneralDynamic(GlobalAddressSDNode *GA,
+                                 SelectionDAG &DAG) const;
+  SDValue LowerTLSLocalDynamic(GlobalAddressSDNode *GA,
+                               SelectionDAG &DAG) const;
+  SDValue LowerTLSInitialExec(GlobalAddressSDNode *GA, SelectionDAG &DAG) const;
+  SDValue LowerTLSLocalExec(GlobalAddressSDNode *GA, SelectionDAG &DAG) const;
 
   bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                               SDValue C) const override;
@@ -273,4 +325,4 @@ private:
 };
 } // namespace llvm
 
-#endif // M68kISELLOWERING_H
+#endif // LLVM_LIB_TARGET_M68K_M68KISELLOWERING_H

@@ -52,6 +52,16 @@ public:
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
                                 TTI::TargetCostKind CostKind) {
     assert(Ty->isIntegerTy());
+    unsigned BitSize = Ty->getPrimitiveSizeInBits();
+    // There is no cost model for constants with a bit size of 0. Return
+    // TCC_Free here, so that constant hoisting will ignore this constant.
+    if (BitSize == 0)
+      return TTI::TCC_Free;
+    // No cost model for operations on integers larger than 64 bit implemented
+    // yet.
+    if (BitSize > 64)
+      return TTI::TCC_Free;
+
     if (Imm == 0)
       return TTI::TCC_Free;
     if (isInt<16>(Imm.getSExtValue()))
@@ -81,21 +91,17 @@ public:
   }
 
   InstructionCost getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
-      TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
-      TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
-      TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      ArrayRef<const Value *> Args = std::nullopt,
       const Instruction *CxtI = nullptr) {
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
     switch (ISD) {
     default:
-      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                           Opd2Info,
-                                           Opd1PropInfo, Opd2PropInfo);
+      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                           Op2Info);
     case ISD::MUL:
     case ISD::SDIV:
     case ISD::UDIV:
@@ -105,9 +111,8 @@ public:
       // instruction cost was arbitrarily chosen to reduce the desirability
       // of emitting arithmetic instructions that are emulated in software.
       // TODO: Investigate the performance impact given specialized lowerings.
-      return 64 * BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                                Opd2Info,
-                                                Opd1PropInfo, Opd2PropInfo);
+      return 64 * BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                                Op2Info);
     }
   }
 };

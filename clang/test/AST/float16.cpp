@@ -33,9 +33,9 @@ namespace {
 //CHECK-NEXT: | |-VarDecl {{.*}} f1n '_Float16'
 //CHECK-NEXT: | |-VarDecl {{.*}} f2n '_Float16' cinit
 //CHECK-NEXT: | | `-FloatingLiteral {{.*}} '_Float16' 3.300000e+01
-//CHECK-NEXT: | |-VarDecl {{.*}} arr1n '_Float16 [10]'
-//CHECK-NEXT: | |-VarDecl {{.*}} arr2n '_Float16 [3]' cinit
-//CHECK-NEXT: | | `-InitListExpr {{.*}} '_Float16 [3]'
+//CHECK-NEXT: | |-VarDecl {{.*}} arr1n '_Float16[10]'
+//CHECK-NEXT: | |-VarDecl {{.*}} arr2n '_Float16[3]' cinit
+//CHECK-NEXT: | | `-InitListExpr {{.*}} '_Float16[3]'
 //CHECK-NEXT: | |   |-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
 //CHECK-NEXT: | |   | `-FloatingLiteral {{.*}} 'double' 1.200000e+00
 //CHECK-NEXT: | |   |-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
@@ -55,9 +55,9 @@ _Float16 func1f(_Float16 arg);
 //CHECK-NEXT: |-VarDecl {{.*}} f2f '_Float16' cinit
 //CHECK-NEXT: | `-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
 //CHECK-NEXT: |   `-FloatingLiteral {{.*}} 'double' 3.240000e+01
-//CHECK-NEXT: |-VarDecl {{.*}} arr1f '_Float16 [10]'
-//CHECK-NEXT: |-VarDecl {{.*}} arr2f '_Float16 [3]' cinit
-//CHECK-NEXT: | `-InitListExpr {{.*}} '_Float16 [3]'
+//CHECK-NEXT: |-VarDecl {{.*}} arr1f '_Float16[10]'
+//CHECK-NEXT: |-VarDecl {{.*}} arr2f '_Float16[3]' cinit
+//CHECK-NEXT: | `-InitListExpr {{.*}} '_Float16[3]'
 //CHECK-NEXT: |   |-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
 //CHECK-NEXT: |   | `-UnaryOperator {{.*}} 'double' prefix '-'
 //CHECK-NEXT: |   |   `-FloatingLiteral {{.*}} 'double' 1.200000e+00
@@ -85,7 +85,7 @@ auto C = -1.0f16 + B;
 //CHECK-NEXT: | `-ImplicitCastExpr {{.*}} '__fp16' <FloatingCast>
 //CHECK-NEXT: |   `-UnaryOperator {{.*}} 'double' prefix '-'
 //CHECK-NEXT: |     `-FloatingLiteral {{.*}} 'double' 1.000000e-01
-//CHECK-NEXT: |-VarDecl {{.*}} C 'float':'float' cinit
+//CHECK-NEXT: |-VarDecl {{.*}} C 'float' cinit
 //CHECK-NEXT: | `-BinaryOperator {{.*}} 'float' '+'
 //CHECK-NEXT: |   |-ImplicitCastExpr {{.*}} 'float' <FloatingCast>
 //CHECK-NEXT: |   | `-UnaryOperator {{.*}} '_Float16' prefix '-'
@@ -100,7 +100,7 @@ auto C = -1.0f16 + B;
 //CHECK-NATIVE: | `-ImplicitCastExpr {{.*}} '__fp16' <FloatingCast>
 //CHECK-NATIVE: |   `-UnaryOperator {{.*}} 'double' prefix '-'
 //CHECK-NATIVE: |     `-FloatingLiteral {{.*}} 'double' 1.000000e-01
-//CHECK-NATIVE: |-VarDecl {{.*}} C '__fp16':'__fp16' cinit
+//CHECK-NATIVE: |-VarDecl {{.*}} C '__fp16' cinit
 //CHECK-NATIVE: | `-BinaryOperator {{.*}} '__fp16' '+'
 //CHECK-NATIVE: |   |-ImplicitCastExpr {{.*}} '__fp16' <FloatingCast>
 //CHECK-NATIVE: |   | `-UnaryOperator {{.*}} '_Float16' prefix '-'
@@ -178,12 +178,12 @@ template <class C> C func1t(C arg) {
 //CHECK-NEXT: | |       `-FloatingLiteral {{.*}} '_Float16' 2.000000e+00
 //CHECK-NEXT: | `-FunctionDecl {{.*}} used func1t '_Float16 (_Float16)'
 //CHECK-NEXT: |   |-TemplateArgument type '_Float16'
-//CHECK:      |   |-ParmVarDecl {{.*}} used arg '_Float16':'_Float16'
+//CHECK:      |   |-ParmVarDecl {{.*}} used arg '_Float16'
 //CHECK-NEXT: |   `-CompoundStmt
 //CHECK-NEXT: |     `-ReturnStmt
 //CHECK-NEXT: |       `-BinaryOperator {{.*}} '_Float16' '*'
-//CHECK-NEXT: |         |-ImplicitCastExpr {{.*}} '_Float16':'_Float16' <LValueToRValue>
-//CHECK-NEXT: |         | `-DeclRefExpr {{.*}} '_Float16':'_Float16' lvalue ParmVar {{.*}} 'arg' '_Float16':'_Float16'
+//CHECK-NEXT: |         |-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
+//CHECK-NEXT: |         | `-DeclRefExpr {{.*}} '_Float16' lvalue ParmVar {{.*}} 'arg' '_Float16'
 //CHECK-NEXT: |         `-FloatingLiteral {{.*}} '_Float16' 2.000000e+00
 
 
@@ -229,8 +229,8 @@ int main(void) {
 //CHECK-NEXT:  |       `-DeclRefExpr {{.*}} '_Float16' lvalue Var 0x{{.*}} 'f1l' '_Float16'
 
   S1<_Float16> s1 = { 132.f16 };
-//CHECK:       | `-VarDecl {{.*}} used s1 'S1<_Float16>':'S1<_Float16>' cinit
-//CHECK-NEXT:  |   `-InitListExpr {{.*}} 'S1<_Float16>':'S1<_Float16>'
+//CHECK:       | `-VarDecl {{.*}} used s1 'S1<_Float16>' cinit
+//CHECK-NEXT:  |   `-InitListExpr {{.*}} 'S1<_Float16>'
 //CHECK-NEXT:  |     `-FloatingLiteral {{.*}} '_Float16' 1.320000e+02
 
   _Float16 f4l = func1n(f1l)  + func1f(f2l) + c1.func1c(f3l) + c1.func2c(f1l) +
@@ -264,28 +264,28 @@ int main(void) {
 //CHECK-NEXT:  |     | | | |   |   `-DeclRefExpr {{.*}} 'C1' lvalue Var {{.*}} 'c1' 'C1'
 //CHECK-NEXT:  |     | | | |   `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |     | | | |     `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f1l' '_Float16'
-//CHECK-NEXT:  |     | | | `-CallExpr {{.*}} '_Float16':'_Float16'
+//CHECK-NEXT:  |     | | | `-CallExpr {{.*}} '_Float16'
 //CHECK-NEXT:  |     | | |   |-ImplicitCastExpr {{.*}} '_Float16 (*)(_Float16)' <FunctionToPointerDecay>
 //CHECK-NEXT:  |     | | |   | `-DeclRefExpr {{.*}} '_Float16 (_Float16)' lvalue Function {{.*}} 'func1t' '_Float16 (_Float16)' (FunctionTemplate {{.*}} 'func1t')
 //CHECK-NEXT:  |     | | |   `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |     | | |     `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f1l' '_Float16'
 //CHECK-NEXT:  |     | | `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |     | |   `-MemberExpr {{.*}} '_Float16' lvalue .mem2 {{.*}}
-//CHECK-NEXT:  |     | |     `-DeclRefExpr {{.*}} 'S1<_Float16>':'S1<_Float16>' lvalue Var {{.*}} 's1' 'S1<_Float16>':'S1<_Float16>'
+//CHECK-NEXT:  |     | |     `-DeclRefExpr {{.*}} 'S1<_Float16>' lvalue Var {{.*}} 's1' 'S1<_Float16>'
 //CHECK-NEXT:  |     | `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |     |   `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f1n' '_Float16'
 //CHECK-NEXT:  |     `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |       `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f2n' '_Float16'
 
   auto f5l = -1.f16, *f6l = &f2l, f7l = func1t(f3l);
-//CHECK:       | |-VarDecl {{.*}} f5l '_Float16':'_Float16' cinit
+//CHECK:       | |-VarDecl {{.*}} f5l '_Float16' cinit
 //CHECK-NEXT:  | | `-UnaryOperator {{.*}} '_Float16' prefix '-'
 //CHECK-NEXT:  | |   `-FloatingLiteral {{.*}} '_Float16' 1.000000e+00
 //CHECK-NEXT:  | |-VarDecl {{.*}} f6l '_Float16 *' cinit
 //CHECK-NEXT:  | | `-UnaryOperator {{.*}} '_Float16 *' prefix '&'
 //CHECK-NEXT:  | |   `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f2l' '_Float16'
-//CHECK-NEXT:  | `-VarDecl {{.*}} f7l '_Float16':'_Float16' cinit
-//CHECK-NEXT:  |   `-CallExpr {{.*}} '_Float16':'_Float16'
+//CHECK-NEXT:  | `-VarDecl {{.*}} f7l '_Float16' cinit
+//CHECK-NEXT:  |   `-CallExpr {{.*}} '_Float16'
 //CHECK-NEXT:  |     |-ImplicitCastExpr {{.*}} '_Float16 (*)(_Float16)' <FunctionToPointerDecay>
 //CHECK-NEXT:  |     | `-DeclRefExpr {{.*}} '_Float16 (_Float16)' lvalue Function {{.*}} 'func1t' '_Float16 (_Float16)' (FunctionTemplate {{.*}} 'func1t')
 //CHECK-NEXT:  |     `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
@@ -297,8 +297,8 @@ int main(void) {
 //CHECK-NEXT:  |     `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f4l' '_Float16'
 
   _Float16 arr1l[] = { -1.f16, -0.f16, -11.f16 };
-//CHECK:       `-VarDecl {{.*}} arr1l '_Float16 [3]' cinit
-//CHECK-NEXT:    `-InitListExpr {{.*}} '_Float16 [3]'
+//CHECK:       `-VarDecl {{.*}} arr1l '_Float16[3]' cinit
+//CHECK-NEXT:    `-InitListExpr {{.*}} '_Float16[3]'
 //CHECK-NEXT:      |-UnaryOperator {{.*}} '_Float16' prefix '-'
 //CHECK-NEXT:      | `-FloatingLiteral {{.*}} '_Float16' 1.000000e+00
 //CHECK-NEXT:      |-UnaryOperator {{.*}} '_Float16' prefix '-'

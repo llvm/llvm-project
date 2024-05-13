@@ -3,7 +3,7 @@
 @interface Foo // expected-note {{receiver is instance of class declared here}}
 @end
 
-void test() {
+void test(void) {
   Foo *fooObj;
   id obj;
 

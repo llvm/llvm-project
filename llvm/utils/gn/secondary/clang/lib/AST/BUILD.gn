@@ -6,10 +6,17 @@ clang_tablegen("Opcodes") {
   td_file = "Interp/Opcodes.td"
 }
 
+clang_tablegen("AttrDocTable") {
+  visibility = [ ":AST" ]
+  args = [ "-gen-clang-attr-doc-table" ]
+  td_file = "//clang/include/clang/Basic/Attr.td"
+}
+
 static_library("AST") {
   output_name = "clangAST"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":AttrDocTable",
     ":Opcodes",
     "//clang/include/clang/AST:AttrImpl",
     "//clang/include/clang/AST:AttrNodeTraverse",
@@ -24,6 +31,7 @@ static_library("AST") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Frontend/OpenMP",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Generated files used in public headers should be in public_deps, the rest
@@ -51,7 +59,9 @@ static_library("AST") {
     "ASTImporterLookupTable.cpp",
     "ASTStructuralEquivalence.cpp",
     "ASTTypeTraits.cpp",
+    "AttrDocTable.cpp",
     "AttrImpl.cpp",
+    "Availability.cpp",
     "CXXInheritance.cpp",
     "Comment.cpp",
     "CommentBriefParser.cpp",
@@ -84,17 +94,20 @@ static_library("AST") {
     "InheritViz.cpp",
     "Interp/ByteCodeEmitter.cpp",
     "Interp/ByteCodeExprGen.cpp",
-    "Interp/ByteCodeGenError.cpp",
     "Interp/ByteCodeStmtGen.cpp",
     "Interp/Context.cpp",
     "Interp/Descriptor.cpp",
     "Interp/Disasm.cpp",
     "Interp/EvalEmitter.cpp",
+    "Interp/EvaluationResult.cpp",
+    "Interp/Floating.cpp",
     "Interp/Frame.cpp",
     "Interp/Function.cpp",
     "Interp/Interp.cpp",
     "Interp/InterpBlock.cpp",
+    "Interp/InterpBuiltin.cpp",
     "Interp/InterpFrame.cpp",
+    "Interp/InterpShared.cpp",
     "Interp/InterpStack.cpp",
     "Interp/InterpState.cpp",
     "Interp/Pointer.cpp",
@@ -111,13 +124,16 @@ static_library("AST") {
     "MicrosoftMangle.cpp",
     "NSAPI.cpp",
     "NestedNameSpecifier.cpp",
+    "ODRDiagsEmitter.cpp",
     "ODRHash.cpp",
     "OSLog.cpp",
+    "OpenACCClause.cpp",
     "OpenMPClause.cpp",
     "ParentMap.cpp",
     "ParentMapContext.cpp",
     "PrintfFormatString.cpp",
     "QualTypeNames.cpp",
+    "Randstruct.cpp",
     "RawCommentList.cpp",
     "RecordLayout.cpp",
     "RecordLayoutBuilder.cpp",
@@ -127,6 +143,7 @@ static_library("AST") {
     "StmtCXX.cpp",
     "StmtIterator.cpp",
     "StmtObjC.cpp",
+    "StmtOpenACC.cpp",
     "StmtOpenMP.cpp",
     "StmtPrinter.cpp",
     "StmtProfile.cpp",

@@ -18,6 +18,6 @@ void v(char *ptr, char *ptr2) {
   asm("vst %0, 8, %1"
       :
       : "v"(a), "r"(ptr2));
-  // CHECK: %1 = call <256 x double> asm "vld $0, 8, $1", "=v,r"(i8* %0)
-  // CHECK: call void asm sideeffect "vst $0, 8, $1", "v,r"(<256 x double> %2, i8* %3)
+  // CHECK: %1 = call <256 x double> asm "vld $0, 8, $1", "=v,r"(ptr %0)
+  // CHECK: call void asm sideeffect "vst $0, 8, $1", "v,r"(<256 x double> %2, ptr %3)
 }

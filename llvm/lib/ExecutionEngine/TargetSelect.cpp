@@ -13,13 +13,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -89,7 +89,6 @@ TargetMachine *EngineBuilder::selectTarget(const Triple &TargetTriple,
                                      Options, RelocModel, CMModel, OptLevel,
 				     /*JIT*/ true);
   Target->Options.EmulatedTLS = EmulatedTLS;
-  Target->Options.ExplicitEmulatedTLS = true;
 
   assert(Target && "Could not allocate target machine!");
   return Target;

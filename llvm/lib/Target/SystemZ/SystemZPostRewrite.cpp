@@ -17,19 +17,14 @@
 #include "SystemZInstrInfo.h"
 #include "SystemZSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 using namespace llvm;
 
-#define SYSTEMZ_POSTREWRITE_NAME "SystemZ Post Rewrite pass"
-
 #define DEBUG_TYPE "systemz-postrewrite"
 STATISTIC(MemFoldCopies, "Number of copies inserted before folded mem ops.");
 STATISTIC(LOCRMuxJumps, "Number of LOCRMux jump-sequences (lower is better)");
-
-namespace llvm {
-  void initializeSystemZPostRewritePass(PassRegistry&);
-}
 
 namespace {
 
@@ -43,8 +38,6 @@ public:
   const SystemZInstrInfo *TII;
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
-
-  StringRef getPassName() const override { return SYSTEMZ_POSTREWRITE_NAME; }
 
 private:
   void selectLOCRMux(MachineBasicBlock &MBB,
@@ -70,7 +63,7 @@ char SystemZPostRewrite::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(SystemZPostRewrite, "systemz-post-rewrite",
-                SYSTEMZ_POSTREWRITE_NAME, false, false)
+                "SystemZ Post Rewrite pass", false, false)
 
 /// Returns an instance of the Post Rewrite pass.
 FunctionPass *llvm::createSystemZPostRewritePass(SystemZTargetMachine &TM) {
@@ -178,15 +171,15 @@ bool SystemZPostRewrite::expandCondMove(MachineBasicBlock &MBB,
   MF.insert(std::next(MachineFunction::iterator(MBB)), RestMBB);
   RestMBB->splice(RestMBB->begin(), &MBB, MI, MBB.end());
   RestMBB->transferSuccessors(&MBB);
-  for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
-    RestMBB->addLiveIn(*I);
+  for (MCPhysReg R : LiveRegs)
+    RestMBB->addLiveIn(R);
 
   // Create a new block MoveMBB to hold the move instruction.
   MachineBasicBlock *MoveMBB = MF.CreateMachineBasicBlock(BB);
   MF.insert(std::next(MachineFunction::iterator(MBB)), MoveMBB);
   MoveMBB->addLiveIn(SrcReg);
-  for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
-    MoveMBB->addLiveIn(*I);
+  for (MCPhysReg R : LiveRegs)
+    MoveMBB->addLiveIn(R);
 
   // At the end of MBB, create a conditional branch to RestMBB if the
   // condition is false, otherwise fall through to MoveMBB.
@@ -261,7 +254,7 @@ bool SystemZPostRewrite::selectMBB(MachineBasicBlock &MBB) {
 }
 
 bool SystemZPostRewrite::runOnMachineFunction(MachineFunction &MF) {
-  TII = static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  TII = MF.getSubtarget<SystemZSubtarget>().getInstrInfo();
 
   bool Modified = false;
   for (auto &MBB : MF)

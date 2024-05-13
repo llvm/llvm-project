@@ -64,6 +64,11 @@ To compile code with coverage enabled, pass ``-fprofile-instr-generate
 Note that linking together code with and without coverage instrumentation is
 supported. Uninstrumented code simply won't be accounted for in reports.
 
+To compile code with Modified Condition/Decision Coverage (MC/DC) enabled,
+pass ``-fcoverage-mcdc`` in addition to the clang options specified above.
+MC/DC is an advanced form of code coverage most applicable in the embedded
+space.
+
 Running the instrumented program
 ================================
 
@@ -86,9 +91,8 @@ directory structure will be created.  Additionally, the following special
   is specified, the runtime creates a pool of N raw profiles which are used for
   on-line profile merging. The runtime takes care of selecting a raw profile
   from the pool, locking it, and updating it before the program exits.  If N is
-  not specified (i.e the pattern is "%m"), it's assumed that ``N = 1``. N must
-  be between 1 and 9. The merge pool specifier can only occur once per filename
-  pattern.
+  not specified (i.e the pattern is "%m"), it's assumed that ``N = 1``. The
+  merge pool specifier can only occur once per filename pattern.
 
 * "%c" expands out to nothing, but enables a mode in which profile counter
   updates are continuously synced to a file. This means that if the
@@ -127,6 +131,12 @@ copy that's mapped into memory). This implementation can be also enabled for
 other platforms by passing the ``-runtime-counter-relocation`` option to the
 backend during compilation.
 
+For a program such as the `Lit <https://llvm.org/docs/CommandGuide/lit.html>`_
+testing tool which invokes other programs, it may be necessary to set
+``LLVM_PROFILE_FILE`` for each invocation. The pattern strings "%p" or "%Nm"
+may help to avoid corruption due to concurrency. Note that "%p" is also a Lit
+token and needs to be escaped as "%%p".
+
 .. code-block:: console
 
     % clang++ -fprofile-instr-generate -fcoverage-mapping -mllvm -runtime-counter-relocation foo.cc -o foo
@@ -142,6 +152,9 @@ coverage reports. This is done using the "merge" tool in ``llvm-profdata``
 
     # Step 3(a): Index the raw profile.
     % llvm-profdata merge -sparse foo.profraw -o foo.profdata
+
+For an example of merging multiple profiles created by testing,
+see the LLVM `coverage build script <https://github.com/llvm/llvm-zorg/blob/main/zorg/jenkins/jobs/jobs/llvm-coverage>`_.
 
 There are multiple different ways to render coverage reports. The simplest
 option is to generate a line-oriented report:
@@ -203,6 +216,10 @@ region counts:
     |      4|    1|}
     ------------------
 
+If the application was instrumented for Modified Condition/Decision Coverage
+(MC/DC) using the clang option ``-fcoverage-mcdc``, an MC/DC subview can be
+enabled using ``--show-mcdc`` that will show detailed MC/DC information for
+each complex condition boolean expression containing at most six conditions.
 
 To generate a file-level summary of coverage statistics instead of a
 line-oriented report, try:
@@ -251,7 +268,7 @@ the exported data at a high level in the llvm-cov source code.
 Interpreting reports
 ====================
 
-There are five statistics tracked in a coverage summary:
+There are six statistics tracked in a coverage summary:
 
 * Function coverage is the percentage of functions which have been executed at
   least once. A function is considered to be executed if any of its
@@ -280,10 +297,28 @@ There are five statistics tracked in a coverage summary:
   that is comprised of two individual conditions, each of which evaluates to
   either true or false, producing four total branch outcomes.
 
-Of these five statistics, function coverage is usually the least granular while
-branch coverage is the most granular. 100% branch coverage for a function
-implies 100% region coverage for a function. The project-wide totals for each
-statistic are listed in the summary.
+* Modified Condition/Decision Coverage (MC/DC) is the percentage of individual
+  branch conditions that have been shown to independently affect the decision
+  outcome of the boolean expression they comprise. This is accomplished using
+  the analysis of executed control flow through the expression (i.e. test
+  vectors) to show that as a condition's outcome is varied between "true" and
+  false", the decision's outcome also varies between "true" and false", while
+  the outcome of all other conditions is held fixed (or they are masked out as
+  unevaluatable, as happens in languages whose logical operators have
+  short-circuit semantics).  MC/DC builds on top of branch coverage and
+  requires that all code blocks and all execution paths have been tested.  This
+  statistic is hidden by default in reports, but it can be enabled via the
+  ``-show-mcdc-summary`` option as long as code was also compiled using the
+  clang option ``-fcoverage-mcdc``.
+
+  * Boolean expressions that are only comprised of one condition (and therefore
+    have no logical operators) are not included in MC/DC analysis and are
+    trivially deducible using branch coverage.
+
+Of these six statistics, function coverage is usually the least granular while
+branch coverage (with MC/DC) is the most granular. 100% branch coverage for a
+function implies 100% region coverage for a function. The project-wide totals
+for each statistic are listed in the summary.
 
 Format compatibility guarantees
 ===============================
@@ -445,6 +480,21 @@ Branch coverage is tied directly to branch-generating conditions in the source
 code.  Users should not see hidden branches that aren't actually tied to the
 source code.
 
+MC/DC Instrumentation
+---------------------
+
+When instrumenting for Modified Condition/Decision Coverage (MC/DC) using the
+clang option ``-fcoverage-mcdc``, users are limited to at most **six** leaf-level
+conditions in a boolean expression.  A warning will be generated for boolean
+expressions that contain more than six, and they will not be instrumented for
+MC/DC.
+
+Also, if a boolean expression is embedded in the nest of another boolean
+expression but separated by a non-logical operator, this is also not supported.
+For example, in ``x = (a && b && c && func(d && f))``, the ``d && f`` case
+starts a new boolean expression that is separated from the other conditions by
+the operator ``func()``.  When this is encountered, a warning will be generated
+and the boolean expression will not be instrumented.
 
 Switch statements
 -----------------

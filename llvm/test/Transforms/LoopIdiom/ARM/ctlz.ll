@@ -1,5 +1,5 @@
-; RUN: opt -loop-idiom -mtriple=armv7a < %s -S | FileCheck -check-prefix=LZCNT --check-prefix=ALL %s
-; RUN: opt -loop-idiom -mtriple=armv4t < %s -S | FileCheck -check-prefix=NOLZCNT --check-prefix=ALL %s
+; RUN: opt -passes=loop-idiom -mtriple=armv7a < %s -S | FileCheck -check-prefix=LZCNT --check-prefix=ALL %s
+; RUN: opt -passes=loop-idiom -mtriple=armv4t < %s -S | FileCheck -check-prefix=NOLZCNT --check-prefix=ALL %s
 
 ; Recognize CTLZ builtin pattern.
 ; Here we'll just convert loop to countable,
@@ -29,11 +29,9 @@
 ; NOLZCNT-NOT:  @llvm.ctlz
 
 ; Function Attrs: norecurse nounwind uwtable
-define i32 @ctlz_and_other(i32 %n, i8* nocapture %a) {
+define i32 @ctlz_and_other(i32 %n, ptr nocapture %a) {
 entry:
-  %c = icmp sgt i32 %n, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs_n = call i32 @llvm.abs.i32(i32 %n, i1 true)
   %shr8 = lshr i32 %abs_n, 1
   %tobool9 = icmp eq i32 %shr8, 0
   br i1 %tobool9, label %while.end, label %while.body.preheader
@@ -49,8 +47,8 @@ while.body:                                       ; preds = %while.body.preheade
   %and = and i32 %shl, %abs_n
   %tobool1 = icmp ne i32 %and, 0
   %conv = zext i1 %tobool1 to i8
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %indvars.iv
-  store i8 %conv, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %indvars.iv
+  store i8 %conv, ptr %arrayidx, align 1
   %indvars.iv.next = add nuw i64 %indvars.iv, 1
   %shr = ashr i32 %shr11, 1
   %tobool = icmp eq i32 %shr, 0
@@ -90,9 +88,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @ctlz_zero_check(i32 %n) {
 entry:
-  %c = icmp sgt i32 %n, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs_n = call i32 @llvm.abs.i32(i32 %n, i1 true)
   %tobool4 = icmp eq i32 %abs_n, 0
   br i1 %tobool4, label %while.end, label %while.body.preheader
 
@@ -140,9 +136,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @ctlz(i32 %n) {
 entry:
-  %c = icmp sgt i32 %n, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs_n = call i32 @llvm.abs.i32(i32 %n, i1 true)
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %entry
@@ -183,9 +177,7 @@ while.end:                                        ; preds = %while.cond
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @ctlz_add(i32 %n, i32 %i0) {
 entry:
-  %c = icmp sgt i32 %n, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs_n = call i32 @llvm.abs.i32(i32 %n, i1 true)
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %entry
@@ -227,10 +219,8 @@ while.end:                                        ; preds = %while.cond
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @ctlz_sext(i16 %in) {
 entry:
-  %n = sext i16 %in to i32
-  %c = icmp sgt i16 %in, 0
-  %negn = sub nsw i32 0, %n
-  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %abs = call i16 @llvm.abs.i16(i16 %in, i1 false)
+  %abs_n = zext i16 %abs to i32
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %entry
@@ -244,3 +234,6 @@ while.cond:                                       ; preds = %while.cond, %entry
 while.end:                                        ; preds = %while.cond
   ret i32 %i.0
 }
+
+declare i32 @llvm.abs.i32(i32, i1)
+declare i16 @llvm.abs.i16(i16, i1)

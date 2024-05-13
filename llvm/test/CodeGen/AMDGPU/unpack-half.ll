@@ -1,5 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
 
 ; On gfx6 and gfx7, this test shows a bug in SelectionDAG where scalarizing the
 ; extension of a vector of f16 generates an illegal node that errors later.
@@ -9,7 +10,7 @@
 
 define amdgpu_gs void @main(i32 inreg %arg) local_unnamed_addr #0 {
 .entry:
-  %tmp = load volatile float, float addrspace(1)* undef
+  %tmp = load volatile float, ptr addrspace(1) undef
   %tmp1 = bitcast float %tmp to i32
   %im0.i = lshr i32 %tmp1, 16
   %tmp2 = insertelement <2 x i32> undef, i32 %im0.i, i32 1
@@ -18,9 +19,8 @@ define amdgpu_gs void @main(i32 inreg %arg) local_unnamed_addr #0 {
   %tmp5 = fpext <2 x half> %tmp4 to <2 x float>
   %bc = bitcast <2 x float> %tmp5 to <2 x i32>
   %tmp6 = extractelement <2 x i32> %bc, i32 1
-  store volatile i32 %tmp6, i32 addrspace(1)* undef
+  store volatile i32 %tmp6, ptr addrspace(1) undef
   ret void
 }
 
 attributes #0 = { nounwind }
-

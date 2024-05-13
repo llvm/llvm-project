@@ -1,5 +1,5 @@
 ; Do not promote null value because it may be unsafe to do so.
-; RUN: opt < %s -licm -S | not grep promoted
+; RUN: opt < %s -passes=licm -S | not grep promoted
 
 define i32 @f(i32 %foo, i32 %bar, i32 %com) {
 entry:
@@ -25,7 +25,7 @@ cond_true11:		; preds = %bb6
 	br label %return
 
 cond_next14:		; preds = %bb6
-	store i8 0, i8* null
+	store i8 0, ptr null
 	br label %bb15
 
 bb15:		; preds = %cond_next14, %bb

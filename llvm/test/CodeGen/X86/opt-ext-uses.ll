@@ -8,7 +8,7 @@
 
 define signext i16 @t()   {
 entry:
-        %tmp180 = load i16, i16* null, align 2               ; <i16> [#uses=3]
+        %tmp180 = load i16, ptr null, align 2               ; <i16> [#uses=3]
         %tmp180181 = sext i16 %tmp180 to i32            ; <i32> [#uses=1]
         %tmp182 = add i16 %tmp180, 10
         %tmp185 = icmp slt i16 %tmp182, 0               ; <i1> [#uses=1]

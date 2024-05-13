@@ -5,12 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements a map that provides insertion order iteration. The
-// interface is purposefully minimal. The key is assumed to be cheap to copy
-// and 2 copies are kept, one for indexing in a DenseMap, one for iteration in
-// a std::vector.
-//
+///
+/// \file
+/// This file implements a map that provides insertion order iteration. The
+/// interface is purposefully minimal. The key is assumed to be cheap to copy
+/// and 2 copies are kept, one for indexing in a DenseMap, one for iteration in
+/// a SmallVector.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_MAPVECTOR_H
@@ -18,31 +19,30 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 
 /// This class implements a map that also provides access to all stored values
-/// in a deterministic order. The values are kept in a std::vector and the
+/// in a deterministic order. The values are kept in a SmallVector<*, 0> and the
 /// mapping is done with DenseMap from Keys to indexes in that vector.
-template<typename KeyT, typename ValueT,
-         typename MapType = DenseMap<KeyT, unsigned>,
-         typename VectorType = std::vector<std::pair<KeyT, ValueT>>>
+template <typename KeyT, typename ValueT,
+          typename MapType = DenseMap<KeyT, unsigned>,
+          typename VectorType = SmallVector<std::pair<KeyT, ValueT>, 0>>
 class MapVector {
   MapType Map;
   VectorType Vector;
 
   static_assert(
-      std::is_integral<typename MapType::mapped_type>::value,
+      std::is_integral_v<typename MapType::mapped_type>,
       "The mapped_type of the specified Map must be an integral type");
 
 public:
+  using key_type = KeyT;
   using value_type = typename VectorType::value_type;
   using size_type = typename VectorType::size_type;
 
@@ -108,41 +108,61 @@ public:
 
   // Returns a copy of the value.  Only allowed if ValueT is copyable.
   ValueT lookup(const KeyT &Key) const {
-    static_assert(std::is_copy_constructible<ValueT>::value,
+    static_assert(std::is_copy_constructible_v<ValueT>,
                   "Cannot call lookup() if ValueT is not copyable.");
     typename MapType::const_iterator Pos = Map.find(Key);
     return Pos == Map.end()? ValueT() : Vector[Pos->second].second;
   }
 
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&...Args) {
+    auto [It, Inserted] = Map.insert(std::make_pair(Key, 0));
+    if (Inserted) {
+      It->second = Vector.size();
+      Vector.emplace_back(std::piecewise_construct, std::forward_as_tuple(Key),
+                          std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return std::make_pair(std::prev(end()), true);
+    }
+    return std::make_pair(begin() + It->second, false);
+  }
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
+    auto [It, Inserted] = Map.insert(std::make_pair(Key, 0));
+    if (Inserted) {
+      It->second = Vector.size();
+      Vector.emplace_back(std::piecewise_construct,
+                          std::forward_as_tuple(std::move(Key)),
+                          std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return std::make_pair(std::prev(end()), true);
+    }
+    return std::make_pair(begin() + It->second, false);
+  }
+
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
-    std::pair<KeyT, typename MapType::mapped_type> Pair = std::make_pair(KV.first, 0);
-    std::pair<typename MapType::iterator, bool> Result = Map.insert(Pair);
-    auto &I = Result.first->second;
-    if (Result.second) {
-      Vector.push_back(std::make_pair(KV.first, KV.second));
-      I = Vector.size() - 1;
-      return std::make_pair(std::prev(end()), true);
-    }
-    return std::make_pair(begin() + I, false);
+    return try_emplace(KV.first, KV.second);
   }
-
   std::pair<iterator, bool> insert(std::pair<KeyT, ValueT> &&KV) {
-    // Copy KV.first into the map, then move it into the vector.
-    std::pair<KeyT, typename MapType::mapped_type> Pair = std::make_pair(KV.first, 0);
-    std::pair<typename MapType::iterator, bool> Result = Map.insert(Pair);
-    auto &I = Result.first->second;
-    if (Result.second) {
-      Vector.push_back(std::move(KV));
-      I = Vector.size() - 1;
-      return std::make_pair(std::prev(end()), true);
-    }
-    return std::make_pair(begin() + I, false);
+    return try_emplace(std::move(KV.first), std::move(KV.second));
   }
 
-  size_type count(const KeyT &Key) const {
-    typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? 0 : 1;
+  template <typename V>
+  std::pair<iterator, bool> insert_or_assign(const KeyT &Key, V &&Val) {
+    auto Ret = try_emplace(Key, std::forward<V>(Val));
+    if (!Ret.second)
+      Ret.first->second = std::forward<V>(Val);
+    return Ret;
   }
+  template <typename V>
+  std::pair<iterator, bool> insert_or_assign(KeyT &&Key, V &&Val) {
+    auto Ret = try_emplace(std::move(Key), std::forward<V>(Val));
+    if (!Ret.second)
+      Ret.first->second = std::forward<V>(Val);
+    return Ret;
+  }
+
+  bool contains(const KeyT &Key) const { return Map.find(Key) != Map.end(); }
+
+  size_type count(const KeyT &Key) const { return contains(Key) ? 1 : 0; }
 
   iterator find(const KeyT &Key) {
     typename MapType::const_iterator Pos = Map.find(Key);

@@ -50,10 +50,13 @@ code imported into the tree. Generally, our preference is for standards
 conforming, modern, and portable C++ code as the implementation language of
 choice.
 
+For automation, build-systems and utility scripts Python is preferred and
+is widely used in the LLVM repository already.
+
 C++ Standard Versions
 ---------------------
 
-Unless otherwise documented, LLVM subprojects are written using standard C++14
+Unless otherwise documented, LLVM subprojects are written using standard C++17
 code and avoid unnecessary vendor-specific extensions.
 
 Nevertheless, we restrict ourselves to features which are available in the
@@ -63,8 +66,17 @@ section `Software`).
 Each toolchain provides a good reference for what it accepts:
 
 * Clang: https://clang.llvm.org/cxx_status.html
-* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx14
-* MSVC: https://msdn.microsoft.com/en-us/library/hh567368.aspx
+
+  * libc++: https://libcxx.llvm.org/Status/Cxx17.html
+
+* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx17
+
+  * libstdc++: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html#status.iso.2017
+
+* MSVC: https://learn.microsoft.com/cpp/overview/visual-cpp-language-conformance
+
+Additionally, there are compiler comparison tables of supported C++ features on
+`cppreference.com <https://en.cppreference.com/w/cpp/compiler_support/17>`_.
 
 
 C++ Standard Library
@@ -93,27 +105,53 @@ use LLVM's streams library (raw_ostream_). More detailed information on these
 subjects is available in the :doc:`ProgrammersManual`.
 
 For more information about LLVM's data structures and the tradeoffs they make,
-please consult [that section of the programmer's
-manual](https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task).
+please consult `that section of the programmer's manual
+<https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task>`_.
 
-Guidelines for Go code
-----------------------
+Python version and Source Code Formatting
+-----------------------------------------
 
-Any code written in the Go programming language is not subject to the
-formatting rules below. Instead, we adopt the formatting rules enforced by
-the `gofmt`_ tool.
+The current minimum version of Python required is documented in the :doc:`GettingStarted`
+section. Python code in the LLVM repository should only use language features
+available in this version of Python.
 
-Go code should strive to be idiomatic. Two good sets of guidelines for what
-this means are `Effective Go`_ and `Go Code Review Comments`_.
+The Python code within the LLVM repository should adhere to the formatting guidelines
+outlined in `PEP 8 <https://peps.python.org/pep-0008/>`_.
 
-.. _gofmt:
-  https://golang.org/cmd/gofmt/
+For consistency and to limit churn, code should be automatically formatted with
+the `black <https://github.com/psf/black>`_ utility, which is PEP 8 compliant.
+Use its default rules. For example, avoid specifying ``--line-length`` even
+though it does not default to 80. The default rules can change between major
+versions of black. In order to avoid unnecessary churn in the formatting rules,
+we currently use black version 23.x in LLVM.
 
-.. _Effective Go:
-  https://golang.org/doc/effective_go.html
+When contributing a patch unrelated to formatting, you should format only the
+Python code that the patch modifies. For this purpose, use the `darker
+<https://pypi.org/project/darker/>`_ utility, which runs default black rules
+over only the modified Python code. Doing so should ensure the patch will pass
+the Python format checks in LLVM's pre-commit CI, which also uses darker. When
+contributing a patch specifically for reformatting Python files, use black,
+which currently only supports formatting entire files.
 
-.. _Go Code Review Comments:
-  https://github.com/golang/go/wiki/CodeReviewComments
+Here are some quick examples, but see the black and darker documentation for
+details:
+
+.. code-block:: bash
+
+    $ pip install black=='23.*' darker # install black 23.x and darker
+    $ darker test.py                   # format uncommitted changes
+    $ darker -r HEAD^ test.py          # also format changes from last commit
+    $ black test.py                    # format entire file
+
+Instead of individual file names, you can specify directories to
+darker, and it will find the changed files. However, if a directory is
+large, like a clone of the LLVM repository, darker can be painfully
+slow. In that case, you might wish to use git to list changed files.
+For example:
+
+.. code-block:: bash
+
+   $ darker -r HEAD^ $(git diff --name-only --diff-filter=d HEAD^)
 
 Mechanical Source Issues
 ========================
@@ -178,10 +216,10 @@ Header Guard
 """"""""""""
 
 The header file's guard should be the all-caps path that a user of this header
-would #include, using '_' instead of path separator and extension marker. 
+would #include, using '_' instead of path separator and extension marker.
 For example, the header file
-``llvm/include/llvm/Analysis/Utils/Local.h`` would be ``#include``-ed as 
-``#include "llvm/Analysis/Utils/Local.h"``, so its guard is 
+``llvm/include/llvm/Analysis/Utils/Local.h`` would be ``#include``-ed as
+``#include "llvm/Analysis/Utils/Local.h"``, so its guard is
 ``LLVM_ANALYSIS_UTILS_LOCAL_H``.
 
 Class overviews
@@ -555,6 +593,19 @@ templates like :ref:`isa\<>, cast\<>, and dyn_cast\<> <isa>`.
 This form of RTTI is opt-in and can be
 :doc:`added to any class <HowToSetUpLLVMStyleRTTI>`.
 
+Prefer C++-style casts
+^^^^^^^^^^^^^^^^^^^^^^
+
+When casting, use ``static_cast``, ``reinterpret_cast``, and ``const_cast``,
+rather than C-style casts. There are two exceptions to this:
+
+* When casting to ``void`` to suppress warnings about unused variables (as an
+  alternative to ``[[maybe_unused]]``). Prefer C-style casts in this instance.
+
+* When casting between integral types (including enums that are not strongly-
+  typed), functional-style casts are permitted as an alternative to
+  ``static_cast``.
+
 .. _static constructor:
 
 Do not use Static Constructors
@@ -565,7 +616,7 @@ constructor or destructor) should not be added to the code base, and should be
 removed wherever possible.
 
 Globals in different source files are initialized in `arbitrary order
-<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`, making the code more
+<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_, making the code more
 difficult to reason about.
 
 Static constructors have negative impact on launch time of programs that use
@@ -844,7 +895,7 @@ function declared in the header:
   namespace llvm {
   int foo(char *s) { // Mismatch between "const char *" and "char *"
   }
-  } // end namespace llvm
+  } // namespace llvm
 
 This error will not be caught until the build is nearly complete, when the
 linker fails to find a definition for any uses of the original function.  If the
@@ -1019,6 +1070,24 @@ Or better yet (in this case) as:
 
 The idea is to reduce indentation and the amount of code you have to keep track
 of when reading the code.
+
+Note: this advice does not apply to a ``constexpr if`` statement. The
+substatement of the ``else`` clause may be a discarded statement, so removing
+the ``else`` can cause unexpected template instantiations. Thus, the following
+example is correct:
+
+.. code-block:: c++
+
+  template<typename T>
+  static constexpr bool VarTempl = true;
+
+  template<typename T>
+  int func() {
+    if constexpr (VarTempl<T>)
+      return 1;
+    else
+      static_assert(!VarTempl<T>);
+  }
 
 Turn Predicate Loops into Predicate Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1312,7 +1381,7 @@ loops wherever possible for all newly added code. For example:
     ... use I ...
 
 Usage of ``std::for_each()``/``llvm::for_each()`` functions is discouraged,
-unless the the callable object already exists.
+unless the callable object already exists.
 
 Don't evaluate ``end()`` every time through a loop
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1508,8 +1577,8 @@ being closed by a ``}``.  For example:
 
   };
 
-  } // end namespace knowledge
-  } // end namespace llvm
+  } // namespace knowledge
+  } // namespace llvm
 
 
 Feel free to skip the closing comment when the namespace being closed is
@@ -1550,7 +1619,7 @@ as possible, and only use them for class declarations.  For example:
     StringSort(...)
     bool operator<(const char *RHS) const;
   };
-  } // end anonymous namespace
+  } // namespace
 
   static void runHelper() {
     ...
@@ -1574,7 +1643,7 @@ Avoid putting declarations other than classes into anonymous namespaces:
 
   // ... many declarations ...
 
-  } // end anonymous namespace
+  } // namespace
 
 When you are looking at "``runHelper``" in the middle of a large C++ file,
 you have no immediate way to tell if this function is local to the file.  In
@@ -1584,22 +1653,23 @@ faraway places in the file to tell that the function is local.
 Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When writing the body of an ``if``, ``else``, or loop statement, we prefer to
-omit the braces to avoid unnecessary line noise. However, braces should be used
-in cases where the omission of braces harm the readability and maintainability
-of the code.
+When writing the body of an ``if``, ``else``, or for/while loop statement, we
+prefer to omit the braces to avoid unnecessary line noise. However, braces
+should be used in cases where the omission of braces harm the readability and
+maintainability of the code.
 
 We consider that readability is harmed when omitting the brace in the presence
 of a single statement that is accompanied by a comment (assuming the comment
 can't be hoisted above the ``if`` or loop statement, see below).
+
 Similarly, braces should be used when a single-statement body is complex enough
 that it becomes difficult to see where the block containing the following
 statement began. An ``if``/``else`` chain or a loop is considered a single
 statement for this rule, and this rule applies recursively.
 
-This list is not exhaustive, for example, readability is also harmed if an
+This list is not exhaustive. For example, readability is also harmed if an
 ``if``/``else`` chain does not use braced bodies for either all or none of its
-members, with complex conditionals, deep nesting, etc. The examples below
+members, or has complex conditionals, deep nesting, etc. The examples below
 intend to provide some guidelines.
 
 Maintainability is harmed if the body of an ``if`` ends with a (directly or
@@ -1609,12 +1679,12 @@ would help to avoid running into a "dangling else" situation.
 
 .. code-block:: c++
 
-  // Omit the braces, since the body is simple and clearly associated with the if.
+  // Omit the braces since the body is simple and clearly associated with the
+  // `if`.
   if (isa<FunctionDecl>(D))
     handleFunctionDecl(D);
   else if (isa<VarDecl>(D))
     handleVarDecl(D);
-
 
   // Here we document the condition itself and not the body.
   if (isa<VarDecl>(D)) {
@@ -1622,51 +1692,59 @@ would help to avoid running into a "dangling else" situation.
     // comment, so it would be unclear without the braces whether the following
     // statement is in the scope of the `if`.
     // Because the condition is documented, we can't really hoist this
-    // comment that applies to the body above the if.
+    // comment that applies to the body above the `if`.
     handleOtherDecl(D);
   }
 
-  // Use braces on the outer `if` to avoid a potential dangling else situation.
+  // Use braces on the outer `if` to avoid a potential dangling `else`
+  // situation.
   if (isa<VarDecl>(D)) {
-    for (auto *A : D.attrs())
-      if (shouldProcessAttr(A))
-        handleAttr(A);
+    if (shouldProcessAttr(A))
+      handleAttr(A);
   }
 
-  // Use braces for the `if` block to keep it uniform with the else block.
+  // Use braces for the `if` block to keep it uniform with the `else` block.
   if (isa<FunctionDecl>(D)) {
     handleFunctionDecl(D);
   } else {
-    // In this else case, it is necessary that we explain the situation with this
-    // surprisingly long comment, so it would be unclear without the braces whether
-    // the following statement is in the scope of the `if`.
+    // In this `else` case, it is necessary that we explain the situation with
+    // this surprisingly long comment, so it would be unclear without the braces
+    // whether the following statement is in the scope of the `if`.
     handleOtherDecl(D);
   }
 
-  // This should also omit braces.  The `for` loop contains only a single statement,
-  // so it shouldn't have braces.  The `if` also only contains a single simple
-  // statement (the for loop), so it also should omit braces.
+  // This should also omit braces.  The `for` loop contains only a single
+  // statement, so it shouldn't have braces.  The `if` also only contains a
+  // single simple statement (the `for` loop), so it also should omit braces.
   if (isa<FunctionDecl>(D))
     for (auto *A : D.attrs())
       handleAttr(A);
 
+  // Use braces for a `do-while` loop and its enclosing statement.
+  if (Tok->is(tok::l_brace)) {
+    do {
+      Tok = Tok->Next;
+    } while (Tok);
+  }
+
   // Use braces for the outer `if` since the nested `for` is braced.
   if (isa<FunctionDecl>(D)) {
     for (auto *A : D.attrs()) {
-      // In this for loop body, it is necessary that we explain the situation
+      // In this `for` loop body, it is necessary that we explain the situation
       // with this surprisingly long comment, forcing braces on the `for` block.
       handleAttr(A);
     }
   }
 
-  // Use braces on the outer block because there are more than two levels of nesting.
+  // Use braces on the outer block because there are more than two levels of
+  // nesting.
   if (isa<FunctionDecl>(D)) {
     for (auto *A : D.attrs())
       for (ssize_t i : llvm::seq<ssize_t>(count))
-         handleAttrOnDecl(D, A, i);
+        handleAttrOnDecl(D, A, i);
   }
 
-  // Use braces on the outer block because of a nested `if`, otherwise the
+  // Use braces on the outer block because of a nested `if`; otherwise the
   // compiler would warn: `add explicit braces to avoid dangling else`
   if (auto *D = dyn_cast<FunctionDecl>(D)) {
     if (shouldProcess(D))

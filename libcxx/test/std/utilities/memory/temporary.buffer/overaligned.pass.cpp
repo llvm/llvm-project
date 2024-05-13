@@ -11,11 +11,9 @@
 // Aligned allocations are not supported on macOS < 10.13
 // Note: use 'unsupported' instead of 'xfail' to ensure
 // we won't pass prior to c++17.
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.12
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.11
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.10
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.9
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <memory>
 
@@ -27,8 +25,10 @@
 //   void
 //   return_temporary_buffer(T* p);
 
-#include <memory>
 #include <cassert>
+#include <cstdint>
+#include <memory>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -40,7 +40,7 @@ int main(int, char**)
 {
     std::pair<A*, std::ptrdiff_t> ip = std::get_temporary_buffer<A>(5);
     assert(!(ip.first == nullptr) ^ (ip.second == 0));
-    assert(reinterpret_cast<uintptr_t>(ip.first) % alignof(A) == 0);
+    assert(reinterpret_cast<std::uintptr_t>(ip.first) % alignof(A) == 0);
     std::return_temporary_buffer(ip.first);
 
   return 0;

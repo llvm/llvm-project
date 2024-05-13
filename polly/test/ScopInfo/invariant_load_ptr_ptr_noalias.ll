@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -tbaa -polly-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing \
-; RUN:                -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -tbaa -polly-print-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing \
+; RUN:                -disable-output < %s | FileCheck %s
 ;
 ; Note: The order of the invariant accesses is important because A is the
 ;       base pointer of tmp3 and we will generate code in the same order as
@@ -13,14 +13,14 @@
 ; CHECK: }
 ;
 ; CHECK: Arrays {
-; CHECK:   i32** MemRef_A[*];
-; CHECK:   i32* MemRef_tmp3[*]; [BasePtrOrigin: MemRef_A]
+; CHECK:   ptr MemRef_A[*];
+; CHECK:   ptr MemRef_tmp3[*]; [BasePtrOrigin: MemRef_A]
 ; CHECK:   i32 MemRef_tmp5[*]; [BasePtrOrigin: MemRef_tmp3]
 ; CHECK: }
 ;
 ; CHECK: Arrays (Bounds as pw_affs) {
-; CHECK:   i32** MemRef_A[*];
-; CHECK:   i32* MemRef_tmp3[*]; [BasePtrOrigin: MemRef_A]
+; CHECK:   ptr MemRef_A[*];
+; CHECK:   ptr MemRef_tmp3[*]; [BasePtrOrigin: MemRef_A]
 ; CHECK:   i32 MemRef_tmp5[*]; [BasePtrOrigin: MemRef_tmp3]
 ; CHECK: }
 ;
@@ -31,7 +31,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32*** %A) {
+define void @f(ptr %A) {
 bb:
   br label %bb1
 
@@ -41,12 +41,12 @@ bb1:                                              ; preds = %bb7, %bb
   br i1 %exitcond, label %bb2, label %bb8
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i32**, i32*** %A, i64 42
-  %tmp3 = load i32**, i32*** %tmp, align 8
-  %tmp4 = getelementptr inbounds i32*, i32** %tmp3, i64 32
-  %tmp5 = load i32*, i32** %tmp4, align 8
-  %tmp6 = getelementptr inbounds i32, i32* %tmp5, i64 %indvars.iv
-  store i32 0, i32* %tmp6, align 4
+  %tmp = getelementptr inbounds ptr, ptr %A, i64 42
+  %tmp3 = load ptr, ptr %tmp, align 8
+  %tmp4 = getelementptr inbounds ptr, ptr %tmp3, i64 32
+  %tmp5 = load ptr, ptr %tmp4, align 8
+  %tmp6 = getelementptr inbounds i32, ptr %tmp5, i64 %indvars.iv
+  store i32 0, ptr %tmp6, align 4
   br label %bb7
 
 bb7:                                              ; preds = %bb2

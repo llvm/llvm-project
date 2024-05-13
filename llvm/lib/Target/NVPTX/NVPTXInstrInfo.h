@@ -34,18 +34,21 @@ public:
    * They are not implemented because the existing interface and the logic
    * at the caller side do not work for the elementized vector load and store.
    *
-   * virtual unsigned isLoadFromStackSlot(const MachineInstr *MI,
+   * virtual Register isLoadFromStackSlot(const MachineInstr *MI,
    *                                  int &FrameIndex) const;
-   * virtual unsigned isStoreToStackSlot(const MachineInstr *MI,
+   * virtual Register isStoreToStackSlot(const MachineInstr *MI,
    *                                 int &FrameIndex) const;
    * virtual void storeRegToStackSlot(MachineBasicBlock &MBB,
    *                              MachineBasicBlock::iterator MBBI,
    *                             unsigned SrcReg, bool isKill, int FrameIndex,
-   *                              const TargetRegisterClass *RC) const;
+   *                              const TargetRegisterClass *RC,
+   *                              Register VReg) const;
    * virtual void loadRegFromStackSlot(MachineBasicBlock &MBB,
    *                               MachineBasicBlock::iterator MBBI,
    *                               unsigned DestReg, int FrameIndex,
-   *                               const TargetRegisterClass *RC) const;
+   *                               const TargetRegisterClass *RC,
+   *                               const TargetRegisterInfo *TRI,
+   *                               Register VReg) const;
    */
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,

@@ -1,10 +1,22 @@
-// RUN: %clang_cc1 -verify -fopenmp -ast-print %s -Wsign-conversion | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -ast-print %s -Wsign-conversion | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -ast-print %s -Wsign-conversion -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP51
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -std=c++11 -include-pch %t -verify %s -ast-print -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -ast-print %s -Wsign-conversion -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP52
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -verify %s -ast-print -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s -Wsign-conversion | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s -Wsign-conversion | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -ast-print %s -Wsign-conversion -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP51
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -std=c++11 -include-pch %t -verify %s -ast-print -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -ast-print %s -Wsign-conversion -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP52
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=52 -std=c++11 -include-pch %t -verify %s -ast-print -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -36,7 +48,11 @@ public:
 #pragma omp for lastprivate(a) lastprivate(this->a) lastprivate(T::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
+#if defined(OMP52)
+#pragma omp for linear(c: val)
+#else
 #pragma omp for linear(val(c))
+#endif
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -47,7 +63,11 @@ public:
 #pragma omp for lastprivate(a) lastprivate(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
+#if defined(OMP52)
+#pragma omp for linear(this->b: uval)
+#else
 #pragma omp for linear(uval(this->b))
+#endif
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
@@ -56,13 +76,13 @@ public:
 
 // CHECK: #pragma omp for private(this->a) private(this->a) private(T::a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(T::a)
-// CHECK: #pragma omp for linear(val(this->c))
+// CHECK: #pragma omp for linear(this->c: val)
 // CHECK: #pragma omp for private(this->a) private(this->a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a)
-// CHECK: #pragma omp for linear(uval(this->b))
+// CHECK: #pragma omp for linear(this->b: uval)
 // CHECK: #pragma omp for private(this->a) private(this->a) private(this->S::a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(this->S::a)
-// CHECK: #pragma omp for linear(val(this->c))
+// CHECK: #pragma omp for linear(this->c: val)
 
 class S8 : public S7<S> {
   S8() {}
@@ -75,7 +95,11 @@ public:
 #pragma omp for lastprivate(a) lastprivate(this->a) lastprivate(S7<S>::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
+#if defined(OMP52)
+#pragma omp for linear(S7<S>::d: ref)
+#else
 #pragma omp for linear(ref(S7<S>::d))
+#endif
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -95,7 +119,7 @@ public:
 
 // CHECK: #pragma omp for private(this->a) private(this->a) private(this->S7<S>::a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(this->S7<S>::a)
-// CHECK: #pragma omp for linear(ref(this->S7<S>::d))
+// CHECK: #pragma omp for linear(this->S7<S>::d: ref)
 // CHECK: #pragma omp for private(this->a) private(this->a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a)
 // CHECK: #pragma omp for linear(this->c)
@@ -221,20 +245,32 @@ int main(int argc, char **argv) {
   float arr[20];
   static int a;
 // CHECK: static int a;
+#ifdef OMP52
+#pragma omp for schedule(guided, argc) reduction(+:argv[0][:1]) order(unconstrained:concurrent)
+#elif OMP51
+#pragma omp for schedule(guided, argc) reduction(+:argv[0][:1]) order(unconstrained:concurrent)
+#else
 #pragma omp for schedule(guided, argc) reduction(+:argv[0][:1]) order(concurrent)
-  // CHECK-NEXT: #pragma omp for schedule(guided, argc) reduction(+: argv[0][:1]) order(concurrent)
+#endif // OMP51
+  // OMP50: #pragma omp for schedule(guided, argc) reduction(+: argv[0][:1]) order(concurrent)
+  // OMP51: #pragma omp for schedule(guided, argc) reduction(+: argv[0][:1]) order(unconstrained: concurrent)
+  // OMP52: #pragma omp for schedule(guided, argc) reduction(+: argv[0][:1]) order(unconstrained: concurrent)
   for (int i = argc; i < c; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = argc; i < c; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp parallel
+#ifdef OMP52 
+#pragma omp for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(3) schedule(auto) ordered nowait linear(g: step(-1)) reduction(task, +:e)
+#else
 #pragma omp for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(3) schedule(auto) ordered nowait linear(g:-1) reduction(task, +:e)
+#endif
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       for (auto x : arr)
         foo(), (void)x;
   // CHECK-NEXT: #pragma omp parallel
-  // CHECK-NEXT: #pragma omp for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(3) schedule(auto) ordered nowait linear(g: -1) reduction(task, +: e)
+  // CHECK-NEXT: #pragma omp for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(3) schedule(auto) ordered nowait linear(g: step(-1)) reduction(task, +: e)
   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: for (auto x : arr)

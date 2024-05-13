@@ -1,8 +1,8 @@
 ; There is no real check here. If the test doesn't 
 ; assert it passes.
-; RUN: llc -march=mips64el -filetype=obj -mcpu=mips64r2 -disable-mips-delay-filler < %s 
+; RUN: llc -mtriple=mips64el -filetype=obj -mcpu=mips64r2 -disable-mips-delay-filler < %s 
 ; Run it again without extra nop in delay slot
-; RUN: llc -march=mips64el -filetype=obj -mcpu=mips64r2 < %s 
+; RUN: llc -mtriple=mips64el -filetype=obj -mcpu=mips64r2 < %s 
 
 define i32 @bosco1(i32 %x) nounwind readnone {
 entry:

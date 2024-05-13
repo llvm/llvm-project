@@ -16,6 +16,12 @@
 
 using namespace llvm;
 
+bool DWARFDebugRangeList::RangeListEntry::isBaseAddressSelectionEntry(
+    uint8_t AddressSize) const {
+  assert(DWARFContext::isAddressSizeSupported(AddressSize));
+  return StartAddress == dwarf::computeTombstoneAddress(AddressSize);
+}
+
 void DWARFDebugRangeList::clear() {
   Offset = -1ULL;
   AddressSize = 0;
@@ -30,9 +36,10 @@ Error DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
                        "invalid range list offset 0x%" PRIx64, *offset_ptr);
 
   AddressSize = data.getAddressSize();
-  if (AddressSize != 4 && AddressSize != 8)
-    return createStringError(errc::invalid_argument,
-                       "invalid address size: %" PRIu8, AddressSize);
+  if (Error SizeErr = DWARFContext::checkAddressSizeSupported(
+          AddressSize, errc::invalid_argument,
+          "range list at offset 0x%" PRIx64, *offset_ptr))
+    return SizeErr;
   Offset = *offset_ptr;
   while (true) {
     RangeListEntry Entry;
@@ -58,17 +65,27 @@ Error DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
 }
 
 void DWARFDebugRangeList::dump(raw_ostream &OS) const {
-  for (const RangeListEntry &RLE : Entries) {
-    const char *format_str =
-        (AddressSize == 4 ? "%08" PRIx64 " %08" PRIx64 " %08" PRIx64 "\n"
-                          : "%08" PRIx64 " %016" PRIx64 " %016" PRIx64 "\n");
-    OS << format(format_str, Offset, RLE.StartAddress, RLE.EndAddress);
+  const char *AddrFmt;
+  switch (AddressSize) {
+  case 2:
+    AddrFmt = "%08" PRIx64 " %04" PRIx64 " %04" PRIx64 "\n";
+    break;
+  case 4:
+    AddrFmt = "%08" PRIx64 " %08" PRIx64 " %08" PRIx64 "\n";
+    break;
+  case 8:
+    AddrFmt = "%08" PRIx64 " %016" PRIx64 " %016" PRIx64 "\n";
+    break;
+  default:
+    llvm_unreachable("unsupported address size");
   }
+  for (const RangeListEntry &RLE : Entries)
+    OS << format(AddrFmt, Offset, RLE.StartAddress, RLE.EndAddress);
   OS << format("%08" PRIx64 " <End of list>\n", Offset);
 }
 
 DWARFAddressRangesVector DWARFDebugRangeList::getAbsoluteRanges(
-    llvm::Optional<object::SectionedAddress> BaseAddr) const {
+    std::optional<object::SectionedAddress> BaseAddr) const {
   DWARFAddressRangesVector Res;
   // debug_addr can't use the max integer tombstone because that's used for the
   // base address specifier entry - so use max-1.

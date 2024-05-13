@@ -41,7 +41,7 @@ With an additional ``...=trace-pc,indirect-calls`` flag
 
 The functions `__sanitizer_cov_trace_pc_*` should be defined by the user.
 
-Example: 
+Example:
 
 .. code-block:: c++
 
@@ -74,7 +74,7 @@ Example:
   extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
     if (!*guard) return;  // Duplicate the guard check.
     // If you set *guard to 0 this code will not be called again for this edge.
-    // Now you can get the PC and do whatever you want: 
+    // Now you can get the PC and do whatever you want:
     //   store it somewhere or symbolize it and print right away.
     // The values of `*guard` are as you set them in
     // __sanitizer_cov_trace_pc_guard_init and so you can make them consecutive
@@ -96,7 +96,7 @@ Example:
   }
 
 .. code-block:: console
-  
+
   clang++ -g  -fsanitize-coverage=trace-pc-guard trace-pc-guard-example.cc -c
   clang++ trace-pc-guard-cb.cc trace-pc-guard-example.o -fsanitize=address
   ASAN_OPTIONS=strip_path_prefix=`pwd`/ ./a.out
@@ -275,6 +275,12 @@ integer division instructions (to capture the right argument of division)
 and with  ``-fsanitize-coverage=trace-gep`` --
 the `LLVM GEP instructions <https://llvm.org/docs/GetElementPtr.html>`_
 (to capture array indices).
+Similarly, with ``-fsanitize-coverage=trace-loads`` and ``-fsanitize-coverage=trace-stores``
+the compiler will instrument loads and stores, respectively.
+
+Currently, these flags do not work by themselves - they require one
+of ``-fsanitize-coverage={trace-pc,inline-8bit-counters,inline-bool}``
+flags to work.
 
 Unless ``no-prune`` option is provided, some of the comparison instructions
 will not be instrumented.
@@ -289,7 +295,7 @@ will not be instrumented.
   void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2);
 
   // Called before a comparison instruction if exactly one of the arguments is constant.
-  // Arg1 and Arg2 are arguments of the comparison, Arg1 is a compile-time constant. 
+  // Arg1 and Arg2 are arguments of the comparison, Arg1 is a compile-time constant.
   // These callbacks are emitted by -fsanitize-coverage=trace-cmp since 2017-08-11
   void __sanitizer_cov_trace_const_cmp1(uint8_t Arg1, uint8_t Arg2);
   void __sanitizer_cov_trace_const_cmp2(uint16_t Arg1, uint16_t Arg2);
@@ -312,6 +318,74 @@ will not be instrumented.
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
 
+  // Called before a load of appropriate size. Addr is the address of the load.
+  void __sanitizer_cov_load1(uint8_t *addr);
+  void __sanitizer_cov_load2(uint16_t *addr);
+  void __sanitizer_cov_load4(uint32_t *addr);
+  void __sanitizer_cov_load8(uint64_t *addr);
+  void __sanitizer_cov_load16(__int128 *addr);
+  // Called before a store of appropriate size. Addr is the address of the store.
+  void __sanitizer_cov_store1(uint8_t *addr);
+  void __sanitizer_cov_store2(uint16_t *addr);
+  void __sanitizer_cov_store4(uint32_t *addr);
+  void __sanitizer_cov_store8(uint64_t *addr);
+  void __sanitizer_cov_store16(__int128 *addr);
+
+
+Tracing control flow
+====================
+
+With ``-fsanitize-coverage=control-flow`` the compiler will create a table to collect
+control flow for each function. More specifically, for each basic block in the function,
+two lists are populated. One list for successors of the basic block and another list for
+non-intrinsic called functions.
+
+**TODO:** in the current implementation, indirect calls are not tracked
+and are only marked with special value (-1) in the list.
+
+Each table row consists of the basic block address
+followed by ``null``-ended lists of successors and callees.
+The table is encoded in a special section named ``sancov_cfs``
+
+Example:
+
+.. code-block:: c++
+
+  int foo (int x) {
+    if (x > 0)
+      bar(x);
+    else
+      x = 0;
+    return x;
+  }
+
+The code above contains 4 basic blocks, let's name them A, B, C, D:
+
+.. code-block:: none
+
+    A
+    |\
+    | \
+    B  C
+    | /
+    |/
+    D
+
+The collected control flow table is as follows:
+``A, B, C, null, null, B, D, null, @bar, null, C, D, null, null, D, null, null.``
+
+Users need to implement a single function to capture the CF table at startup:
+
+.. code-block:: c++
+
+  extern "C"
+  void __sanitizer_cov_cfs_init(const uintptr_t *cfs_beg,
+                                const uintptr_t *cfs_end) {
+    // [cfs_beg,cfs_end) is the array of ptr-sized integers representing
+    // the collected control flow.
+  }
+
+
 Disabling instrumentation with ``__attribute__((no_sanitize("coverage")))``
 ===========================================================================
 
@@ -326,7 +400,7 @@ Disabling instrumentation without source modification
 It is sometimes useful to tell SanitizerCoverage to instrument only a subset of the
 functions in your target without modifying source files.
 With ``-fsanitize-coverage-allowlist=allowlist.txt``
-and ``-fsanitize-coverage-blocklist=blocklist.txt``,
+and ``-fsanitize-coverage-ignorelist=blocklist.txt``,
 you can specify such a subset through the combination of an allowlist and a blocklist.
 
 SanitizerCoverage will only instrument functions that satisfy two conditions.
@@ -422,11 +496,11 @@ offsets in the corresponding binary/DSO that were executed during the run.
 Sancov Tool
 -----------
 
-An simple ``sancov`` tool is provided to process coverage files.
+A simple ``sancov`` tool is provided to process coverage files.
 The tool is part of LLVM project and is currently supported only on Linux.
 It can handle symbolization tasks autonomously without any extra support
-from the environment. You need to pass .sancov files (named 
-``<module_name>.<pid>.sancov`` and paths to all corresponding binary elf files. 
+from the environment. You need to pass .sancov files (named
+``<module_name>.<pid>.sancov`` and paths to all corresponding binary elf files.
 Sancov matches these files using module names and binaries file names.
 
 .. code-block:: console

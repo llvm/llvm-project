@@ -1,4 +1,4 @@
-; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
+; RUN: opt < %s -debug-only=loop-vectorize -passes=loop-vectorize -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that the register usage estimation is not affected by the presence of
@@ -21,16 +21,16 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: LV: Checking a loop in "test_g"
+; CHECK: LV: Checking a loop in 'test_g'
 ; CHECK: LV(REG): Found max usage: 2 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
 ; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
 
-define i32 @test_g(i32* nocapture readonly %a, i32 %n) local_unnamed_addr !dbg !6 {
+define i32 @test_g(ptr nocapture readonly %a, i32 %n) local_unnamed_addr !dbg !6 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %a, i64 0, metadata !12, metadata !16), !dbg !17
+  tail call void @llvm.dbg.value(metadata ptr %a, i64 0, metadata !12, metadata !16), !dbg !17
   tail call void @llvm.dbg.value(metadata i32 %n, i64 0, metadata !13, metadata !16), !dbg !18
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !15, metadata !16), !dbg !19
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !14, metadata !16), !dbg !20
@@ -46,8 +46,8 @@ for.body.preheader:                               ; preds = %entry
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %r.08 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv, !dbg !27
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !27, !tbaa !28
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv, !dbg !27
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !27, !tbaa !28
   %add = add i32 %0, %r.08, !dbg !32
   tail call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !15, metadata !16), !dbg !19
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !33
@@ -63,14 +63,14 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret i32 %r.0.lcssa, !dbg !38
 }
 
-; CHECK: LV: Checking a loop in "test"
+; CHECK: LV: Checking a loop in 'test'
 ; CHECK: LV(REG): Found max usage: 2 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
 ; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
 
-define i32 @test(i32* nocapture readonly %a, i32 %n) local_unnamed_addr {
+define i32 @test(ptr nocapture readonly %a, i32 %n) local_unnamed_addr {
 entry:
   %cmp6 = icmp eq i32 %n, 0
   br i1 %cmp6, label %for.end, label %for.body.preheader
@@ -82,8 +82,8 @@ for.body.preheader:                               ; preds = %entry
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %r.08 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4, !tbaa !28
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4, !tbaa !28
   %add = add i32 %0, %r.08
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count

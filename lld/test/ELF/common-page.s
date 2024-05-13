@@ -11,7 +11,7 @@ _start:
 # of 4k. If the last loadable segment is executable then lld aligns the next
 # section using the common page size.
 
-# RUN: ld.lld -z max-page-size=0x10000 -z common-page-size=0x1000 %t -o %t2
+# RUN: ld.lld -z max-page-size=0x10000 -z common-page-size=0x1000 %t -o %t2 2>&1 | count 0
 # RUN: llvm-readobj --sections -l %t2 | FileCheck --check-prefix=CHECK-MAX %s
 
 # CHECK-MAX:      Sections [
@@ -221,3 +221,8 @@ _start:
 # CHECK-COMMON-NEXT:       PF_W (0x2)
 # CHECK-COMMON-NEXT:     ]
 # CHECK-COMMON-NEXT:     Alignment: 0
+
+# RUN: not ld.lld -z max-page-size=0x10001 -z common-page-size=0x1001 %t -o /dev/null 2>&1 | FileCheck %s --check-prefix=INVALID
+
+# INVALID:      error: max-page-size: value isn't a power of 2
+# INVALID-NEXT: error: common-page-size: value isn't a power of 2

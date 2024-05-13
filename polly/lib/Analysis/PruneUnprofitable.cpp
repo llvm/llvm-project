@@ -22,6 +22,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-prune-unprofitable"
 
 namespace {
@@ -57,7 +58,7 @@ static void updateStatistics(Scop &S, bool Pruned) {
 
 static bool runPruneUnprofitable(Scop &S) {
   if (PollyProcessUnprofitable) {
-    LLVM_DEBUG(
+    POLLY_DEBUG(
         dbgs() << "NOTE: -polly-process-unprofitable active, won't prune "
                   "anything\n");
     return false;
@@ -66,7 +67,7 @@ static bool runPruneUnprofitable(Scop &S) {
   ScopsProcessed++;
 
   if (!S.isProfitable(true)) {
-    LLVM_DEBUG(
+    POLLY_DEBUG(
         dbgs() << "SCoP pruned because it probably cannot be optimized in "
                   "a significant way\n");
     S.invalidate(PROFITABLE, DebugLoc());
@@ -78,7 +79,7 @@ static bool runPruneUnprofitable(Scop &S) {
   return false;
 }
 
-class PruneUnprofitableWrapperPass : public ScopPass {
+class PruneUnprofitableWrapperPass final : public ScopPass {
 public:
   static char ID;
 

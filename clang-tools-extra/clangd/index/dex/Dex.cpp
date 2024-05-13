@@ -10,14 +10,23 @@
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Quality.h"
+#include "URI.h"
 #include "index/Index.h"
 #include "index/dex/Iterator.h"
+#include "index/dex/Token.h"
+#include "index/dex/Trigram.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
+#include <optional>
 #include <queue>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -73,23 +82,38 @@ public:
   }
 
   // Assemble the final compressed posting lists for the added symbols.
-  llvm::DenseMap<Token, PostingList> build() {
+  llvm::DenseMap<Token, PostingList> build() && {
     llvm::DenseMap<Token, PostingList> Result(/*InitialReserve=*/
                                               TrigramDocs.size() +
                                               RestrictedCCDocs.size() +
                                               TypeDocs.size() +
                                               ScopeDocs.size() +
                                               ProximityDocs.size());
-    for (const auto &E : TrigramDocs)
+    // Tear down intermediate structs as we go to reduce memory usage.
+    // Since we're trying to get rid of underlying allocations, clearing the
+    // containers is not enough.
+    auto CreatePostingList =
+        [&Result](Token::Kind TK, llvm::StringMap<std::vector<DocID>> &Docs) {
+          for (auto &E : Docs) {
+            Result.try_emplace(Token(TK, E.first()), E.second);
+            E.second = {};
+          }
+          Docs = {};
+        };
+    CreatePostingList(Token::Kind::Type, TypeDocs);
+    CreatePostingList(Token::Kind::Scope, ScopeDocs);
+    CreatePostingList(Token::Kind::ProximityURI, ProximityDocs);
+
+    // TrigramDocs are stored in a DenseMap and RestrictedCCDocs is not even a
+    // map, treat them specially.
+    for (auto &E : TrigramDocs) {
       Result.try_emplace(Token(Token::Kind::Trigram, E.first.str()), E.second);
-    for (const auto &E : TypeDocs)
-      Result.try_emplace(Token(Token::Kind::Type, E.first()), E.second);
-    for (const auto &E : ScopeDocs)
-      Result.try_emplace(Token(Token::Kind::Scope, E.first()), E.second);
-    for (const auto &E : ProximityDocs)
-      Result.try_emplace(Token(Token::Kind::ProximityURI, E.first()), E.second);
+      E.second = {};
+    }
+    TrigramDocs = llvm::DenseMap<Trigram, std::vector<DocID>>{};
     if (!RestrictedCCDocs.empty())
-      Result.try_emplace(RestrictedForCodeCompletion, RestrictedCCDocs);
+      Result.try_emplace(RestrictedForCodeCompletion,
+                         std::move(RestrictedCCDocs));
     return Result;
   }
 };
@@ -122,7 +146,7 @@ void Dex::buildIndex() {
   IndexBuilder Builder;
   for (DocID SymbolRank = 0; SymbolRank < Symbols.size(); ++SymbolRank)
     Builder.add(*Symbols[SymbolRank], SymbolRank);
-  InvertedIndex = Builder.build();
+  InvertedIndex = std::move(Builder).build();
 }
 
 std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {
@@ -140,8 +164,8 @@ std::unique_ptr<Iterator> Dex::createFileProximityIterator(
   llvm::StringMap<SourceParams> Sources;
   for (const auto &Path : ProximityPaths) {
     Sources[Path] = SourceParams();
-    auto PathURI = URI::create(Path);
-    const auto PathProximityURIs = generateProximityURIs(PathURI.toString());
+    auto PathURI = URI::create(Path).toString();
+    const auto PathProximityURIs = generateProximityURIs(PathURI.c_str());
     for (const auto &ProximityURI : PathProximityURIs)
       ParentURIs.insert(ProximityURI);
   }
@@ -203,7 +227,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   std::vector<std::unique_ptr<Iterator>> TrigramIterators;
   for (const auto &Trigram : TrigramTokens)
     TrigramIterators.push_back(iterator(Trigram));
-  Criteria.push_back(Corpus.intersect(move(TrigramIterators)));
+  Criteria.push_back(Corpus.intersect(std::move(TrigramIterators)));
 
   // Generate scope tokens for search query.
   std::vector<std::unique_ptr<Iterator>> ScopeIterators;
@@ -212,7 +236,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   if (Req.AnyScope)
     ScopeIterators.push_back(
         Corpus.boost(Corpus.all(), ScopeIterators.empty() ? 1.0 : 0.2));
-  Criteria.push_back(Corpus.unionOf(move(ScopeIterators)));
+  Criteria.push_back(Corpus.unionOf(std::move(ScopeIterators)));
 
   // Add proximity paths boosting (all symbols, some boosted).
   Criteria.push_back(createFileProximityIterator(Req.ProximityPaths));
@@ -224,12 +248,12 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
 
   // Use TRUE iterator if both trigrams and scopes from the query are not
   // present in the symbol index.
-  auto Root = Corpus.intersect(move(Criteria));
+  auto Root = Corpus.intersect(std::move(Criteria));
   // Retrieve more items than it was requested: some of  the items with high
   // final score might not be retrieved otherwise.
   // FIXME(kbobyrev): Tune this ratio.
   if (Req.Limit)
-    Root = Corpus.limit(move(Root), *Req.Limit * 100);
+    Root = Corpus.limit(std::move(Root), *Req.Limit * 100);
   SPAN_ATTACH(Tracer, "query", llvm::to_string(*Root));
   vlog("Dex query tree: {0}", *Root);
 
@@ -244,7 +268,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   for (const auto &IDAndScore : IDAndScores) {
     const DocID SymbolDocID = IDAndScore.first;
     const auto *Sym = Symbols[SymbolDocID];
-    const llvm::Optional<float> Score = Filter.match(Sym->Name);
+    const std::optional<float> Score = Filter.match(Sym->Name);
     if (!Score)
       continue;
     // Combine Fuzzy Matching score, precomputed symbol quality and boosting
@@ -277,8 +301,7 @@ void Dex::lookup(const LookupRequest &Req,
 bool Dex::refs(const RefsRequest &Req,
                llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("Dex refs");
-  uint32_t Remaining =
-      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
   for (const auto &ID : Req.IDs)
     for (const auto &Ref : Refs.lookup(ID)) {
       if (!static_cast<int>(Req.Filter & Ref.Kind))
@@ -295,8 +318,7 @@ void Dex::relations(
     const RelationsRequest &Req,
     llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
   trace::Span Tracer("Dex relations");
-  uint32_t Remaining =
-      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
   for (const SymbolID &Subject : Req.Subjects) {
     LookupRequest LookupReq;
     auto It = Relations.find(
@@ -332,30 +354,49 @@ size_t Dex::estimateMemoryUsage() const {
   return Bytes + BackingDataSize;
 }
 
-std::vector<std::string> generateProximityURIs(llvm::StringRef URIPath) {
-  std::vector<std::string> Result;
-  auto ParsedURI = URI::parse(URIPath);
-  assert(ParsedURI &&
-         "Non-empty argument of generateProximityURIs() should be a valid "
-         "URI.");
-  llvm::StringRef Body = ParsedURI->body();
-  // FIXME(kbobyrev): Currently, this is a heuristic which defines the maximum
-  // size of resulting vector. Some projects might want to have higher limit if
-  // the file hierarchy is deeper. For the generic case, it would be useful to
-  // calculate Limit in the index build stage by calculating the maximum depth
-  // of the project source tree at runtime.
-  size_t Limit = 5;
-  // Insert original URI before the loop: this would save a redundant iteration
-  // with a URI parse.
-  Result.emplace_back(ParsedURI->toString());
-  while (!Body.empty() && --Limit > 0) {
-    // FIXME(kbobyrev): Parsing and encoding path to URIs is not necessary and
-    // could be optimized.
-    Body = llvm::sys::path::parent_path(Body, llvm::sys::path::Style::posix);
-    if (!Body.empty())
-      Result.emplace_back(
-          URI(ParsedURI->scheme(), ParsedURI->authority(), Body).toString());
+// Given foo://bar/one/two
+// Returns        ~~~~~~~~  (or empty for bad URI)
+llvm::StringRef findPathInURI(llvm::StringRef S) {
+  S = S.split(':').second;   // Eat scheme.
+  if (S.consume_front("//")) // Eat authority.
+    S = S.drop_until([](char C) { return C == '/'; });
+  return S;
+}
+
+// FIXME(kbobyrev): Currently, this is a heuristic which defines the maximum
+// size of resulting vector. Some projects might want to have higher limit if
+// the file hierarchy is deeper. For the generic case, it would be useful to
+// calculate Limit in the index build stage by calculating the maximum depth
+// of the project source tree at runtime.
+constexpr unsigned ProximityURILimit = 5;
+
+llvm::SmallVector<llvm::StringRef, ProximityURILimit>
+generateProximityURIs(llvm::StringRef URI) {
+  // This function is hot when indexing, so don't parse/reserialize URIPath,
+  // just emit substrings of it instead.
+  //
+  // foo://bar/one/two
+  //          ~~~~~~~~
+  //            Path
+  llvm::StringRef Path = findPathInURI(URI);
+  if (Path.empty())
+    return {}; // Bad URI.
+  assert(Path.begin() >= URI.begin() && Path.begin() < URI.end() &&
+         Path.end() == URI.end());
+
+  // The original is a proximity URI.
+  llvm::SmallVector<llvm::StringRef, ProximityURILimit> Result = {URI};
+  // Form proximity URIs by chopping before each slash in the path part.
+  for (auto Slash = Path.rfind('/'); Slash > 0 && Slash != StringRef::npos;
+       Slash = Path.rfind('/')) {
+    Path = Path.substr(0, Slash);
+    Result.push_back(URI.substr(0, Path.end() - URI.data()));
+    if (Result.size() == ProximityURILimit)
+      return Result;
   }
+  // The root foo://bar/ is a proximity URI.
+  if (Path.starts_with("/"))
+    Result.push_back(URI.substr(0, Path.begin() + 1 - URI.data()));
   return Result;
 }
 

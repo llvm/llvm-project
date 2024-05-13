@@ -15,12 +15,12 @@ define void @test() {
 ; CHECK-NEXT: nop
 
   %memPos = alloca float, align 4
-  store float 1.500000e+01, float* %memPos
-  %valPos = load float, float* %memPos
+  store float 1.500000e+01, ptr %memPos
+  %valPos = load float, ptr %memPos
 
   %memNeg = alloca float, align 4
-  store float -1.500000e+01, float* %memNeg
-  %valNeg = load float, float* %memNeg
+  store float -1.500000e+01, ptr %memNeg
+  %valNeg = load float, ptr %memNeg
 
   %FloatToIntPos = fptosi float %valPos to i32
   call void @func(i32 15, i32 %FloatToIntPos)

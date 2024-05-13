@@ -7,46 +7,48 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
-// ranges::prev(iterator, count)
+// ranges::prev(it, n)
 
 #include <iterator>
 
-#include <array>
 #include <cassert>
+#include <concepts>
+#include <utility>
 
-#include "check_round_trip.h"
 #include "test_iterators.h"
 
-using range_t = std::array<int, 10>;
-
-template <std::input_or_output_iterator I>
-constexpr void iterator_count_impl(I first, std::ptrdiff_t const n, range_t::const_iterator const expected) {
-  auto result = std::ranges::prev(stride_counting_iterator(std::move(first)), n);
-  assert(std::move(result).base().base() == expected);
-  check_round_trip(result, n);
+template <typename It>
+constexpr void check(int* first, std::iter_difference_t<It> n, int* expected) {
+  It it(first);
+  std::same_as<It> auto result = std::ranges::prev(std::move(it), n);
+  assert(base(result) == expected);
 }
 
-constexpr bool check_iterator_count() {
-  constexpr auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  iterator_count_impl(bidirectional_iterator(&range[8]), 6, &range[2]);
-  iterator_count_impl(random_access_iterator(&range[7]), 4, &range[3]);
-  iterator_count_impl(contiguous_iterator(&range[5]), 5, &range[0]);
+constexpr bool test() {
+  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-  iterator_count_impl(bidirectional_iterator(&range[2]), 0, &range[2]);
-  iterator_count_impl(random_access_iterator(&range[3]), 0, &range[3]);
-  iterator_count_impl(contiguous_iterator(&range[0]), 0, &range[0]);
+  // Check prev() forward
+  for (int n = 0; n != 10; ++n) {
+    check<bidirectional_iterator<int*>>(range+n, n, range);
+    check<random_access_iterator<int*>>(range+n, n, range);
+    check<contiguous_iterator<int*>>(   range+n, n, range);
+    check<int*>(                        range+n, n, range);
+  }
 
-  iterator_count_impl(bidirectional_iterator(&range[3]), -5, &range[8]);
-  iterator_count_impl(random_access_iterator(&range[3]), -3, &range[6]);
-  iterator_count_impl(contiguous_iterator(&range[3]), -1, &range[4]);
+  // Check prev() backward
+  for (int n = 0; n != 10; ++n) {
+    check<bidirectional_iterator<int*>>(range, -n, range+n);
+    check<random_access_iterator<int*>>(range, -n, range+n);
+    check<contiguous_iterator<int*>>(   range, -n, range+n);
+    check<int*>(                        range, -n, range+n);
+  }
+
   return true;
 }
 
 int main(int, char**) {
-  static_assert(check_iterator_count());
-  check_iterator_count();
+  test();
+  static_assert(test());
   return 0;
 }

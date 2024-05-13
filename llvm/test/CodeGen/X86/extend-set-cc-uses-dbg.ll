@@ -3,13 +3,13 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"
 
-define void @foo(i32* %p) !dbg !4 {
+define void @foo(ptr %p) !dbg !4 {
 bb:
-  %tmp = load i32, i32* %p, align 4, !dbg !7
-  ; CHECK: $eax = MOV32rm killed {{.*}} $rdi, {{.*}} debug-location !7 :: (load 4 from %ir.p)
+  %tmp = load i32, ptr %p, align 4, !dbg !7
+  ; CHECK: $eax = MOV32rm killed {{.*}} $rdi, {{.*}} debug-location !7 :: (load (s32) from %ir.p)
   ; CHECK-NEXT: $rax = KILL killed renamable $eax, debug-location !7
-  ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -8, $noreg, $rax :: (store 8 into %stack.0)
-  ; CHECK-NEXT: SUB64ri8 renamable $rax, 3, implicit-def $eflags, debug-location !7
+  ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -8, $noreg, $rax :: (store (s64) into %stack.0)
+  ; CHECK-NEXT: SUB64ri32 renamable $rax, 3, implicit-def $eflags, debug-location !7
 
   switch i32 %tmp, label %bb7 [
     i32 0, label %bb1
@@ -38,7 +38,7 @@ bb7:                                              ; preds = %bb
 !llvm.module.flags = !{!2, !3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 7.0.0 (trunk 330770) (llvm/trunk 330769)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
-!1 = !DIFile(filename: "/Users/vsk/src/llvm.org-master/llvm/lib/Demangle/ItaniumDemangle.cpp", directory: "/Users/vsk/src/builds/llvm.org-master-RA-stage2")
+!1 = !DIFile(filename: "/Users/vsk/src/llvm.org-main/llvm/lib/Demangle/ItaniumDemangle.cpp", directory: "/Users/vsk/src/builds/llvm.org-main-RA-stage2")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !{i32 7, !"PIC Level", i32 2}
 !4 = distinct !DISubprogram(name: "printLeft", scope: !1, file: !1, line: 1306, type: !5, isLocal: true, isDefinition: true, scopeLine: 1306, flags: DIFlagPrototyped, isOptimized: true, unit: !0)

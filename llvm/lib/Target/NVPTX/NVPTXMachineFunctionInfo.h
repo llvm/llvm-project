@@ -24,7 +24,14 @@ private:
   SmallVector<std::string, 8> ImageHandleList;
 
 public:
-  NVPTXMachineFunctionInfo(MachineFunction &MF) {}
+  NVPTXMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override {
+    return DestMF.cloneInfo<NVPTXMachineFunctionInfo>(*this);
+  }
 
   /// Returns the index for the symbol \p Symbol. If the symbol was previously,
   /// added, the same index is returned. Otherwise, the symbol is added and the

@@ -24,11 +24,11 @@
 
 ; REMARK-COUNT-3: single-impl: devirtualized a call to _ZNK1A1fEv
 
-; IMPORT:       define available_externally hidden i32 @_ZNK1A1fEv(%struct.A* %this)
+; IMPORT:       define available_externally hidden {{(noundef )?}}i32 @_ZNK1A1fEv(ptr %this)
 ; IMPORT-NEXT:  entry:
 ; IMPORT-NEXT:      ret i32 3
 
-; CODEGEN:        define hidden i32 @main()
+; CODEGEN:        define hidden {{(noundef )?}}i32 @main()
 ; CODEGEN-NEXT:   entry:
 ; CODEGEN-NEXT:     ret i32 23
 

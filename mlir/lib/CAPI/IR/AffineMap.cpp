@@ -68,7 +68,7 @@ MlirAffineMap mlirAffineMapMinorIdentityGet(MlirContext ctx, intptr_t dims,
 MlirAffineMap mlirAffineMapPermutationGet(MlirContext ctx, intptr_t size,
                                           unsigned *permutation) {
   return wrap(AffineMap::getPermutationMap(
-      llvm::makeArrayRef(permutation, static_cast<size_t>(size)), unwrap(ctx)));
+      llvm::ArrayRef(permutation, static_cast<size_t>(size)), unwrap(ctx)));
 }
 
 bool mlirAffineMapIsIdentity(MlirAffineMap affineMap) {
@@ -136,6 +136,15 @@ MlirAffineMap mlirAffineMapGetMajorSubMap(MlirAffineMap affineMap,
 MlirAffineMap mlirAffineMapGetMinorSubMap(MlirAffineMap affineMap,
                                           intptr_t numResults) {
   return wrap(unwrap(affineMap).getMinorSubMap(numResults));
+}
+
+MlirAffineMap mlirAffineMapReplace(MlirAffineMap affineMap,
+                                   MlirAffineExpr expression,
+                                   MlirAffineExpr replacement,
+                                   intptr_t numResultDims,
+                                   intptr_t numResultSyms) {
+  return wrap(unwrap(affineMap).replace(unwrap(expression), unwrap(replacement),
+                                        numResultDims, numResultSyms));
 }
 
 void mlirAffineMapCompressUnusedSymbols(

@@ -1,7 +1,7 @@
-; RUN: opt -constmerge -S < %s | FileCheck %s
+; RUN: opt -passes=constmerge -S < %s | FileCheck %s
 ; PR8978
 
-declare i32 @zed(%struct.foobar*, %struct.foobar*)
+declare i32 @zed(ptr, ptr)
 
 %struct.foobar = type { i32 }
 ; CHECK: bar.d
@@ -11,7 +11,7 @@ declare i32 @zed(%struct.foobar*, %struct.foobar*)
 define i32 @main() nounwind ssp {
 entry:
 ; CHECK: bar.d
-  %call2 = tail call i32 @zed(%struct.foobar* @foo.d, %struct.foobar* @bar.d)
+  %call2 = tail call i32 @zed(ptr @foo.d, ptr @bar.d)
 nounwind
   ret i32 0
 }

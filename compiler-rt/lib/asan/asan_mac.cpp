@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 
 #include "asan_interceptors.h"
 #include "asan_internal.h"
@@ -49,13 +49,8 @@ void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 bool IsSystemHeapAddress (uptr addr) { return false; }
 
-// No-op. Mac does not support static linkage anyway.
-void *AsanDoesNotSupportStaticLinkage() {
-  return 0;
-}
-
 uptr FindDynamicShadowStart() {
-  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), SHADOW_SCALE,
+  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), ASAN_SHADOW_SCALE,
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
@@ -95,10 +90,6 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
   ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
 }
 
-void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
-  UNIMPLEMENTED();
-}
-
 // Support for the following functions from libdispatch on Mac OS:
 //   dispatch_async_f()
 //   dispatch_async()
@@ -134,6 +125,20 @@ typedef void* dispatch_source_t;
 typedef u64 dispatch_time_t;
 typedef void (*dispatch_function_t)(void *block);
 typedef void* (*worker_t)(void *block);
+typedef unsigned long dispatch_mach_reason;
+typedef void *dispatch_mach_msg_t;
+typedef int mach_error_t;
+typedef void *dispatch_mach_t;
+
+typedef void (*dispatch_mach_handler_function_t)(void *context,
+                                                 dispatch_mach_reason reason,
+                                                 dispatch_mach_msg_t message,
+                                                 mach_error_t error);
+#  if !defined(MISSING_BLOCKS_SUPPORT)
+typedef void (^dispatch_mach_handler_t)(dispatch_mach_reason reason,
+                                        dispatch_mach_msg_t message,
+                                        mach_error_t error);
+#  endif
 
 // A wrapper for the ObjC blocks used to support libdispatch.
 typedef struct {
@@ -146,8 +151,7 @@ ALWAYS_INLINE
 void asan_register_worker_thread(int parent_tid, StackTrace *stack) {
   AsanThread *t = GetCurrentThread();
   if (!t) {
-    t = AsanThread::Create(/* start_routine */ nullptr, /* arg */ nullptr,
-                           parent_tid, stack, /* detached */ true);
+    t = AsanThread::Create(parent_tid, stack, /* detached */ true);
     t->Init();
     asanThreadRegistry().StartThread(t->tid(), GetTid(), ThreadType::Worker,
                                      nullptr);
@@ -164,7 +168,7 @@ void asan_dispatch_call_block_and_release(void *block) {
   VReport(2,
           "asan_dispatch_call_block_and_release(): "
           "context: %p, pthread_self: %p\n",
-          block, pthread_self());
+          block, (void*)pthread_self());
   asan_register_worker_thread(context->parent_tid, &stack);
   // Call the original dispatcher for the block.
   context->func(context->block);
@@ -197,7 +201,7 @@ asan_block_context_t *alloc_asan_context(void *ctxt, dispatch_function_t func,
     asan_block_context_t *asan_ctxt = alloc_asan_context(ctxt, func, &stack); \
     if (Verbosity() >= 2) {                                     \
       Report(#dispatch_x_f "(): context: %p, pthread_self: %p\n",             \
-             asan_ctxt, pthread_self());                                      \
+             (void*)asan_ctxt, (void*)pthread_self());                        \
       PRINT_CURRENT_STACK();                                                  \
     }                                                                         \
     return REAL(dispatch_x_f)(dq, (void*)asan_ctxt,                           \
@@ -214,7 +218,7 @@ INTERCEPTOR(void, dispatch_after_f, dispatch_time_t when,
   GET_STACK_TRACE_THREAD;
   asan_block_context_t *asan_ctxt = alloc_asan_context(ctxt, func, &stack);
   if (Verbosity() >= 2) {
-    Report("dispatch_after_f: %p\n", asan_ctxt);
+    Report("dispatch_after_f: %p\n", (void*)asan_ctxt);
     PRINT_CURRENT_STACK();
   }
   return REAL(dispatch_after_f)(when, dq, (void*)asan_ctxt,
@@ -228,7 +232,7 @@ INTERCEPTOR(void, dispatch_group_async_f, dispatch_group_t group,
   asan_block_context_t *asan_ctxt = alloc_asan_context(ctxt, func, &stack);
   if (Verbosity() >= 2) {
     Report("dispatch_group_async_f(): context: %p, pthread_self: %p\n",
-           asan_ctxt, pthread_self());
+           (void*)asan_ctxt, (void*)pthread_self());
     PRINT_CURRENT_STACK();
   }
   REAL(dispatch_group_async_f)(group, dq, (void*)asan_ctxt,
@@ -245,6 +249,8 @@ void dispatch_after(dispatch_time_t when, dispatch_queue_t queue,
 void dispatch_source_set_cancel_handler(dispatch_source_t ds,
                                         void(^work)(void));
 void dispatch_source_set_event_handler(dispatch_source_t ds, void(^work)(void));
+dispatch_mach_t dispatch_mach_create(const char *label, dispatch_queue_t queue,
+                                     dispatch_mach_handler_t handler);
 }
 
 #define GET_ASAN_BLOCK(work) \
@@ -294,6 +300,34 @@ INTERCEPTOR(void, dispatch_source_set_event_handler,
   GET_ASAN_BLOCK(work);
   REAL(dispatch_source_set_event_handler)(ds, asan_block);
 }
+
+INTERCEPTOR(void *, dispatch_mach_create, const char *label,
+            dispatch_queue_t dq, dispatch_mach_handler_t handler) {
+  int parent_tid = GetCurrentTidOrInvalid();
+  return REAL(dispatch_mach_create)(
+      label, dq,
+      ^(dispatch_mach_reason reason, dispatch_mach_msg_t message,
+        mach_error_t error) {
+        GET_STACK_TRACE_THREAD;
+        asan_register_worker_thread(parent_tid, &stack);
+        handler(reason, message, error);
+      });
+}
+
+INTERCEPTOR(void *, dispatch_mach_create_f, const char *label,
+            dispatch_queue_t dq, void *ctxt,
+            dispatch_mach_handler_function_t handler) {
+  int parent_tid = GetCurrentTidOrInvalid();
+  return REAL(dispatch_mach_create)(
+      label, dq,
+      ^(dispatch_mach_reason reason, dispatch_mach_msg_t message,
+        mach_error_t error) {
+        GET_STACK_TRACE_THREAD;
+        asan_register_worker_thread(parent_tid, &stack);
+        handler(ctxt, reason, message, error);
+      });
+}
+
 #endif
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

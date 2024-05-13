@@ -28,14 +28,14 @@ typedef enum NSIntegerEnum : NSInteger {
   EnumValueB
 } NSIntegerEnum;
 
-CFIndex getCFIndex();
-NSInteger getNSInteger();
-NSUInteger getNSUInteger();
-SInt32 getSInt32();
-UInt32 getUInt32();
-NSIntegerEnum getNSIntegerEnum();
+CFIndex getCFIndex(void);
+NSInteger getNSInteger(void);
+NSUInteger getNSUInteger(void);
+SInt32 getSInt32(void);
+UInt32 getUInt32(void);
+NSIntegerEnum getNSIntegerEnum(void);
 
-void testCorrectionInAllCases() {
+void testCorrectionInAllCases(void) {
   printf("%s", getNSInteger()); // expected-warning{{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
   printf("%s", getNSUInteger()); // expected-warning{{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
   printf("%s", getSInt32()); // expected-warning{{values of type 'SInt32' should not be used as format arguments; add an explicit cast to 'int' instead}}
@@ -105,7 +105,7 @@ void testParens(Foo *obj, struct Bar *record) {
 
 #if __LP64__
 
-void testWarn() {
+void testWarn(void) {
   printf("%d", getNSInteger()); // expected-warning{{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
   printf("%u", getNSUInteger()); // expected-warning{{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
   printf("%ld", getSInt32()); // expected-warning{{values of type 'SInt32' should not be used as format arguments; add an explicit cast to 'int' instead}}
@@ -134,7 +134,7 @@ void testWarn() {
   // CHECK-64: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"(long)"
 }
 
-void testPreserveHex() {
+void testPreserveHex(void) {
   printf("%x", getNSInteger()); // expected-warning{{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
   printf("%x", getNSUInteger()); // expected-warning{{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
 
@@ -155,7 +155,7 @@ void testSignedness(NSInteger i, NSUInteger u) {
   // CHECK-64: fix-it:"{{.*}}":{[[@LINE-4]]:11-[[@LINE-4]]:13}:"%ld"
 }
 
-void testNoWarn() {
+void testNoWarn(void) {
   printf("%ld", getNSInteger()); // no-warning
   printf("%lu", getNSUInteger()); // no-warning
   printf("%d", getSInt32()); // no-warning
@@ -165,7 +165,7 @@ void testNoWarn() {
 
 #else
 
-void testWarn() {
+void testWarn(void) {
   printf("%ld", getNSInteger()); // expected-warning{{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
   printf("%lu", getNSUInteger()); // expected-warning{{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
   printf("%d", getSInt32()); // expected-warning{{values of type 'SInt32' should not be used as format arguments; add an explicit cast to 'int' instead}}
@@ -185,7 +185,7 @@ void testWarn() {
   // CHECK-32: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:"(long)"
 }
 
-void testPreserveHex() {
+void testPreserveHex(void) {
   printf("%lx", getNSInteger()); // expected-warning{{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
   printf("%lx", getNSUInteger()); // expected-warning{{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
 
@@ -193,7 +193,7 @@ void testPreserveHex() {
   // CHECK-32: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:17}:"(unsigned long)"
 }
 
-void testNoWarn() {
+void testNoWarn(void) {
   printf("%d", getNSInteger()); // no-warning
   printf("%u", getNSUInteger()); // no-warning
   printf("%ld", getSInt32()); // no-warning
@@ -212,7 +212,7 @@ void testSignedness(NSInteger i, NSUInteger u) {
 #endif
 
 
-void testCasts() {
+void testCasts(void) {
   printf("%s", (NSInteger)0); // expected-warning{{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
   printf("%s", (NSUInteger)0); // expected-warning{{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
   printf("%s", (SInt32)0); // expected-warning{{values of type 'SInt32' should not be used as format arguments; add an explicit cast to 'int' instead}}
@@ -241,7 +241,7 @@ void testCasts() {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:25}:"(long)"
 }
 
-void testCapitals() {
+void testCapitals(void) {
   printf("%D", 1); // expected-warning{{conversion specifier is not supported by ISO C}} expected-note {{did you mean to use 'd'?}}
   printf("%U", 1); // expected-warning{{conversion specifier is not supported by ISO C}} expected-note {{did you mean to use 'u'?}}
   printf("%O", 1); // expected-warning{{conversion specifier is not supported by ISO C}} expected-note {{did you mean to use 'o'?}}

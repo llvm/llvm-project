@@ -64,7 +64,7 @@ if (POLLY_BUNDLED_ISL)
     check_c_source_compiles("
     ${_includes}
     ${_type} typeVar;
-    int main() {
+    int main(void) {
     return 0;
     }
     " ${_variable})
@@ -73,7 +73,7 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles("
   int func(void) __attribute__((__warn_unused_result__));
-  int main() { return 0; }
+  int main(void) { return 0; }
   " HAS_ATTRIBUTE_WARN_UNUSED_RESULT)
   set(GCC_WARN_UNUSED_RESULT)
   if (HAS_ATTRIBUTE_WARN_UNUSED_RESULT)
@@ -82,22 +82,22 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles("
   __attribute__ ((unused)) static void foo(void);
-  int main() { return 0; }
+  int main(void) { return 0; }
   " HAVE___ATTRIBUTE__)
 
 
   check_c_source_compiles_numeric("
   #include <strings.h>
-  int main() { (void)ffs(0); return 0; }
+  int main(void) { (void)ffs(0); return 0; }
   " HAVE_DECL_FFS)
 
   check_c_source_compiles_numeric("
-  int main() { (void)__builtin_ffs(0); return 0; }
+  int main(void) { (void)__builtin_ffs(0); return 0; }
   " HAVE_DECL___BUILTIN_FFS)
 
   check_c_source_compiles_numeric("
   #include <intrin.h>
-  int main() { (void)_BitScanForward(NULL, 0); return 0; }
+  int main(void) { (void)_BitScanForward(NULL, 0); return 0; }
   " HAVE_DECL__BITSCANFORWARD)
 
   if (NOT HAVE_DECL_FFS AND
@@ -109,12 +109,12 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles_numeric("
   #include <strings.h>
-  int main() { (void)strcasecmp(\"\", \"\"); return 0; }
+  int main(void) { (void)strcasecmp(\"\", \"\"); return 0; }
   " HAVE_DECL_STRCASECMP)
 
   check_c_source_compiles_numeric("
   #include <string.h>
-  int main() { (void)_stricmp(\"\", \"\"); return 0; }
+  int main(void) { (void)_stricmp(\"\", \"\"); return 0; }
   " HAVE_DECL__STRICMP)
 
   if (NOT HAVE_DECL_STRCASECMP AND NOT HAVE_DECL__STRICMP)
@@ -124,12 +124,12 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles_numeric("
   #include <strings.h>
-  int main() { (void)strncasecmp(\"\", \"\", 0); return 0; }
+  int main(void) { (void)strncasecmp(\"\", \"\", 0); return 0; }
   " HAVE_DECL_STRNCASECMP)
 
   check_c_source_compiles_numeric("
   #include <string.h>
-  int main() { (void)_strnicmp(\"\", \"\", 0); return 0; }
+  int main(void) { (void)_strnicmp(\"\", \"\", 0); return 0; }
   " HAVE_DECL__STRNICMP)
 
   if (NOT HAVE_DECL_STRNCASECMP AND NOT HAVE_DECL__STRNICMP)
@@ -139,12 +139,12 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles_numeric("
   #include <stdio.h>
-  int main() { snprintf((void*)0, 0, \" \"); return 0; }
+  int main(void) { snprintf((void*)0, 0, \" \"); return 0; }
   " HAVE_DECL_SNPRINTF)
 
   check_c_source_compiles_numeric("
   #include <stdio.h>
-  int main() { _snprintf((void*)0, 0, \" \"); return 0; }
+  int main(void) { _snprintf((void*)0, 0, \" \"); return 0; }
   " HAVE_DECL__SNPRINTF)
 
   if (NOT HAVE_DECL_SNPRINTF AND NOT HAVE_DECL__SNPRINTF)
@@ -254,6 +254,8 @@ if (POLLY_BUNDLED_ISL)
     isl/isl_schedule_read.c
     isl/isl_schedule_tree.c
     isl/isl_scheduler.c
+    isl/isl_scheduler_clustering.c
+    isl/isl_scheduler_scc.c
     isl/isl_seq.c
     isl/isl_set_list.c
     isl/isl_set_to_ast_graft_list.c
@@ -290,7 +292,7 @@ if (POLLY_BUNDLED_ISL)
     install(DIRECTORY
       ${ISL_SOURCE_DIR}/include/
       ${ISL_BINARY_DIR}/include/
-      DESTINATION include/polly
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/polly"
       FILES_MATCHING
       PATTERN "*.h"
       PATTERN "CMakeFiles" EXCLUDE
@@ -304,6 +306,7 @@ if (POLLY_BUNDLED_ISL)
 
   target_link_libraries(polly-isl-test PRIVATE
     PollyISL
+    LLVMSupport
     )
 
   # ISL requires at least C99 to compile. gcc < 5.0 use -std=gnu89 as default.
@@ -312,91 +315,3 @@ if (POLLY_BUNDLED_ISL)
   target_compile_options(PollyISL PRIVATE ${DISABLE_WARNING_FLAGS})
   target_compile_options(polly-isl-test PRIVATE ${DISABLE_WARNING_FLAGS})
 endif (POLLY_BUNDLED_ISL)
-
-
-# External: Polyhedral Parallel Code Generator
-if (GPU_CODEGEN)
-  set(PET_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pet")
-  set(PPCG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ppcg")
-  set(PPCG_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/ppcg")
-
-  # Determine version of ppcg
-  if (EXISTS "${PPCG_SOURCE_DIR}/GIT_HEAD_ID")
-    # The source comes from a 'make dist' archive
-    file(READ "${PPCG_SOURCE_DIR}/GIT_HEAD_ID" PPCG_GIT_HEAD_ID)
-    string(STRIP "${PPCG_GIT_HEAD_ID}" PPCG_GIT_HEAD_ID)
-  elseif (EXISTS "${PPCG_SOURCE_DIR}/gitversion.h")
-    # The source directory is preconfigured
-    file(READ "${PPCG_SOURCE_DIR}/gitversion.h" GITVERSION_H)
-    string(REGEX REPLACE ".*\\\"([^\\\"]*)\\\".*" "\\1" PPCG_GIT_HEAD_ID "${GITVERSION_H}")
-  elseif ()
-    # Unknown revision
-    # TODO: We could look for a .git and get the revision from HEAD
-    set(PPCG_GIT_HEAD_ID "UNKNOWN")
-  endif ()
-
-  message(STATUS "PPCG version: ${PPCG_GIT_HEAD_ID}")
-
-  set (PPCG_FILES
-       ppcg/cuda.c
-       ppcg/cuda_common.c
-       ppcg/external.c
-       ppcg/gpu_array_tile.c
-       ppcg/gpu.c
-       ppcg/gpu_array_tile.c
-       ppcg/gpu_group.c
-       ppcg/gpu_hybrid.c
-       ppcg/gpu_print.c
-       ppcg/gpu_tree.c
-       ppcg/grouping.c
-       ppcg/hybrid.c
-       ppcg/ppcg.c
-       ppcg/ppcg_options.c
-       ppcg/print.c
-       ppcg/schedule.c
-       ppcg/util.c
-       )
-
-  include_directories(BEFORE
-    ${PPCG_BINARY_DIR}
-    ${PPCG_SOURCE_DIR}/imath
-    ${PPCG_SOURCE_DIR}/include
-    ${PET_SOURCE_DIR}/include
-  )
-
-  add_polly_library(PollyPPCG
-    ${PPCG_FILES}
-  )
-
-  target_link_libraries(PollyPPCG PUBLIC ${ISL_TARGET})
-
-  # Disable warnings for upstream projects.
-  if (MSVC)
-    set(DISABLE_WARNING_FLAGS
-      -wd4018 # 'expression' : signed/unsigned mismatch
-      -wd4090 # 'operation' : different 'modifier' qualifiers
-      -wd4200 # nonstandard extension used: zero-sized array in struct/union
-      -wd4201 # nonstandard extension used: nameless struct/union
-      -wd4334 # 'operator': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
-      -wd4221 # nonstandard extension used : 'identifier' : cannot be initialized using address of automatic variable
-    )
-    if (POLLY_BUNDLED_ISL)
-      target_compile_options(PollyISL PRIVATE ${DISABLE_WARNING_FLAGS})
-      target_compile_options(polly-isl-test PRIVATE ${DISABLE_WARNING_FLAGS})
-    endif (POLLY_BUNDLED_ISL)
-    target_compile_options(PollyPPCG PRIVATE ${DISABLE_WARNING_FLAGS})
-  else ()
-    if (POLLY_BUNDLED_ISL)
-      set_target_properties(PollyISL polly-isl-test PROPERTIES COMPILE_FLAGS "-w")
-    endif (POLLY_BUNDLED_ISL)
-    set_target_properties(PollyPPCG PROPERTIES COMPILE_FLAGS "-w")
-  endif ()
-
-  if(MSVC)
-    # In the Windows API (with some exceptions), the maximum length for a path is
-    # MAX_PATH, which is defined as 260 characters.
-    target_compile_definitions(PollyPPCG PRIVATE "-DPATH_MAX=260")
-  endif ()
-
-  target_compile_options(PollyPPCG PRIVATE ${DISABLE_WARNING_FLAGS})
-endif ()

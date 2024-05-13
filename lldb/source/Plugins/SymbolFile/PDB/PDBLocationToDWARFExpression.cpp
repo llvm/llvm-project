@@ -9,11 +9,11 @@
 #include "PDBLocationToDWARFExpression.h"
 
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamBuffer.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/StreamBuffer.h"
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
@@ -25,6 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::npdb;
+using namespace lldb_private::dwarf;
 using namespace llvm::pdb;
 
 static std::unique_ptr<IPDBFrameData>
@@ -174,7 +175,7 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
   DataBufferSP buffer =
       std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
   DataExtractor extractor(buffer, byte_order, address_size, byte_size);
-  DWARFExpression result(module, extractor, nullptr);
+  DWARFExpression result(extractor);
   result.SetRegisterKind(register_kind);
 
   return result;

@@ -5,22 +5,26 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines a hash set that can be used to remove duplication of nodes
-// in a graph.  This code was originally created by Chris Lattner for use with
-// SelectionDAGCSEMap, but was isolated to provide use across the llvm code set.
-//
+///
+/// \file
+/// This file defines a hash set that can be used to remove duplication of nodes
+/// in a graph.  This code was originally created by Chris Lattner for use with
+/// SelectionDAGCSEMap, but was isolated to provide use across the llvm code
+/// set.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -254,8 +258,8 @@ template<typename T> struct DefaultFoldingSetTrait {
 /// through template specialization the behavior can be tailored for specific
 /// types.  Combined with the FoldingSetNodeWrapper class, one can add objects
 /// to FoldingSets that were not originally designed to have that behavior.
-template<typename T> struct FoldingSetTrait
-  : public DefaultFoldingSetTrait<T> {};
+template <typename T, typename Enable = void>
+struct FoldingSetTrait : public DefaultFoldingSetTrait<T> {};
 
 /// DefaultContextualFoldingSetTrait - Like DefaultFoldingSetTrait, but
 /// for ContextualFoldingSets.
@@ -292,7 +296,9 @@ public:
 
   /// ComputeHash - Compute a strong hash value for this FoldingSetNodeIDRef,
   /// used to lookup the node in the FoldingSetBase.
-  unsigned ComputeHash() const;
+  unsigned ComputeHash() const {
+    return static_cast<unsigned>(hash_combine_range(Data, Data + Size));
+  }
 
   bool operator==(FoldingSetNodeIDRef) const;
 
@@ -322,13 +328,33 @@ public:
     : Bits(Ref.getData(), Ref.getData() + Ref.getSize()) {}
 
   /// Add* - Add various data types to Bit data.
-  void AddPointer(const void *Ptr);
-  void AddInteger(signed I);
-  void AddInteger(unsigned I);
-  void AddInteger(long I);
-  void AddInteger(unsigned long I);
-  void AddInteger(long long I);
-  void AddInteger(unsigned long long I);
+  void AddPointer(const void *Ptr) {
+    // Note: this adds pointers to the hash using sizes and endianness that
+    // depend on the host. It doesn't matter, however, because hashing on
+    // pointer values is inherently unstable. Nothing should depend on the
+    // ordering of nodes in the folding set.
+    static_assert(sizeof(uintptr_t) <= sizeof(unsigned long long),
+                  "unexpected pointer size");
+    AddInteger(reinterpret_cast<uintptr_t>(Ptr));
+  }
+  void AddInteger(signed I) { Bits.push_back(I); }
+  void AddInteger(unsigned I) { Bits.push_back(I); }
+  void AddInteger(long I) { AddInteger((unsigned long)I); }
+  void AddInteger(unsigned long I) {
+    if (sizeof(long) == sizeof(int))
+      AddInteger(unsigned(I));
+    else if (sizeof(long) == sizeof(long long)) {
+      AddInteger((unsigned long long)I);
+    } else {
+      llvm_unreachable("unexpected sizeof(long)");
+    }
+  }
+  void AddInteger(long long I) { AddInteger((unsigned long long)I); }
+  void AddInteger(unsigned long long I) {
+    AddInteger(unsigned(I));
+    AddInteger(unsigned(I >> 32));
+  }
+
   void AddBoolean(bool B) { AddInteger(B ? 1U : 0U); }
   void AddString(StringRef String);
   void AddNodeID(const FoldingSetNodeID &ID);
@@ -342,7 +368,9 @@ public:
 
   /// ComputeHash - Compute a strong hash value for this FoldingSetNodeID, used
   /// to lookup the node in the FoldingSetBase.
-  unsigned ComputeHash() const;
+  unsigned ComputeHash() const {
+    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).ComputeHash();
+  }
 
   /// operator== - Used to compare two nodes to each other.
   bool operator==(const FoldingSetNodeID &RHS) const;
@@ -799,6 +827,13 @@ struct FoldingSetTrait<std::pair<T1, T2>> {
                              FoldingSetNodeID &ID) {
     ID.Add(P.first);
     ID.Add(P.second);
+  }
+};
+
+template <typename T>
+struct FoldingSetTrait<T, std::enable_if_t<std::is_enum<T>::value>> {
+  static void Profile(const T &X, FoldingSetNodeID &ID) {
+    ID.AddInteger(llvm::to_underlying(X));
   }
 };
 

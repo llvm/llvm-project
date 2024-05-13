@@ -1,15 +1,13 @@
-# RUN: llvm-ifs -action write-ifs -o - %s | FileCheck %s
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s | FileCheck %s
 
-# CHECK: --- !experimental-ifs-v2
-# CHECK-NEXT: IfsVersion: 2.0
-# CHECK-NEXT: Triple: x86_64-unknown-linux-gnu
-# CHECK-NEXT: ObjectFileFormat: ELF
+# CHECK: --- !ifs-v1
+# CHECK-NEXT: IfsVersion: 3.0
+# CHECK-NEXT: Target: x86_64-unknown-linux-gnu
 # CHECK-NEXT: Symbols: []
 # CHECK: ...
 
---- !experimental-ifs-v2
-IfsVersion:      2.0
-Triple:          x86_64-unknown-linux-gnu
-ObjectFileFormat: ELF
+--- !ifs-v1
+IfsVersion:      3.0
+Target:          x86_64-unknown-linux-gnu
 Symbols:         []
 ...

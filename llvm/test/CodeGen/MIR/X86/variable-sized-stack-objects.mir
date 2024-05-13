@@ -9,9 +9,9 @@
     %b = alloca i32
     %x = alloca i64
     %y = alloca i32, i32 %a
-    store i32 %a, i32* %b
-    store i64 2, i64* %x
-    %c = load i32, i32* %b
+    store i32 %a, ptr %b
+    store i64 2, ptr %x
+    %c = load i32, ptr %b
     ret i32 %c
   }
 
@@ -40,5 +40,5 @@ body: |
     MOV32mr $rsp, 1, _, -4, _, $edi
     MOV64mi32 $rsp, 1, _, -16, _, 2
     $eax = MOV32rm $rsp, 1, _, -4, _
-    RETQ $eax
+    RET64 $eax
 ...

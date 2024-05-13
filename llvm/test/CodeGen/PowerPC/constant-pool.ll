@@ -9,8 +9,8 @@
  define float @FloatConstantPool() {
 ; CHECK-LABEL: FloatConstantPool:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxsplti32dx vs1, 0, 0
-; CHECK-NEXT:    xxsplti32dx vs1, 1, 8388577
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 940572664
+; CHECK-NEXT:    xxsplti32dx vs1, 1, 1073741824
 ; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
@@ -72,7 +72,7 @@ entry:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs34, 0, r3
+; CHECK-P9-NEXT:    lxv vs34, 0(r3)
 ; CHECK-P9-NEXT:    blr
 entry:
   ret fp128 0xL00000000000000003C00FFFFC5D02B3A
@@ -88,7 +88,7 @@ entry:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs34, 0, r3
+; CHECK-P9-NEXT:    lxv vs34, 0(r3)
 ; CHECK-P9-NEXT:    blr
 entry:
   ret <16 x i8> <i8 -128, i8 -127, i8 -126, i8 -125, i8 -124, i8 -123, i8 -122, i8 -121, i8 -120, i8 -119, i8 -118, i8 -117, i8 -116, i8 -115, i8 -114, i8 -113>
@@ -104,7 +104,7 @@ entry:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs34, 0, r3
+; CHECK-P9-NEXT:    lxv vs34, 0(r3)
 ; CHECK-P9-NEXT:    blr
 entry:
   ret <8 x i16> <i16 -32768, i16 -32767, i16 -32766, i16 -32765, i16 -32764, i16 -32763, i16 -32762, i16 -32761>
@@ -120,7 +120,7 @@ entry:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI6_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI6_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs34, 0, r3
+; CHECK-P9-NEXT:    lxv vs34, 0(r3)
 ; CHECK-P9-NEXT:    blr
 entry:
   ret <4 x i32> <i32 -2147483648, i32 -2147483647, i32 -2147483646, i32 -2147483645>
@@ -136,7 +136,7 @@ entry:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI7_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs34, 0, r3
+; CHECK-P9-NEXT:    lxv vs34, 0(r3)
 ; CHECK-P9-NEXT:    blr
 entry:
   ret <2 x i64> <i64 -9223372036854775808, i64 -9223372036854775807>
@@ -152,7 +152,7 @@ entry:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI8_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI8_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs34, 0, r3
+; CHECK-P9-NEXT:    lxv vs34, 0(r3)
 ; CHECK-P9-NEXT:    blr
 entry:
   ret <1 x i128> <i128 -27670116110564327424>
@@ -168,7 +168,7 @@ entry:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI9_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI9_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs34, 0, r3
+; CHECK-P9-NEXT:    lxv vs34, 0(r3)
 ; CHECK-P9-NEXT:    blr
 entry:
   ret <4 x float> <float 0x380FFFF840000000, float 0x380FFF57C0000000, float 0x3843FFFB20000000, float 0x3843FF96C0000000>
@@ -184,7 +184,7 @@ entry:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI10_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI10_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs34, 0, r3
+; CHECK-P9-NEXT:    lxv vs34, 0(r3)
 ; CHECK-P9-NEXT:    blr
 entry:
   ret <2 x double> <double 2.225070e-308, double 2.225000e-308>
@@ -337,15 +337,15 @@ define fp128 @three_constants_f128(fp128 %a, fp128 %c) {
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI15_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs35, 0, r3
+; CHECK-P9-NEXT:    lxv vs35, 0(r3)
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI15_1@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI15_1@toc@l
 ; CHECK-P9-NEXT:    xsaddqp v2, v2, v3
-; CHECK-P9-NEXT:    lxvx vs35, 0, r3
+; CHECK-P9-NEXT:    lxv vs35, 0(r3)
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI15_2@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI15_2@toc@l
 ; CHECK-P9-NEXT:    xsaddqp v2, v2, v3
-; CHECK-P9-NEXT:    lxvx vs35, 0, r3
+; CHECK-P9-NEXT:    lxv vs35, 0(r3)
 ; CHECK-P9-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-P9-NEXT:    blr
 entry:
@@ -360,25 +360,28 @@ define ppc_fp128 @three_constants_ppcf128(ppc_fp128 %a, ppc_fp128 %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
-; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-DAG:     xxlxor f4, f4, f4
-; CHECK-DAG:     xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    .cfi_offset v31, -16
+; CHECK-NEXT:    xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    xxlxor f4, f4, f4
+; CHECK-NEXT:    stxv vs63, 32(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    xxsplti32dx vs63, 0, 1074935889
 ; CHECK-NEXT:    xxsplti32dx vs3, 1, -343597384
 ; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
-; CHECK-DAG:     xxlxor f4, f4, f4
-; CHECK-DAG:     xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    xxlxor f4, f4, f4
 ; CHECK-NEXT:    xxsplti32dx vs3, 1, -1719329096
 ; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
-; CHECK-DAG:     xxlxor f4, f4, f4
-; CHECK-DAG:     xxsplti32dx vs3, 0, 1074935889
-; CHECK-NEXT:    xxsplti32dx vs3, 1, 8724152
-; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
+; CHECK-NEXT:    xxsplti32dx vs63, 1, 8724152
+; CHECK-NEXT:    xxlxor f4, f4, f4
+; CHECK-NEXT:    xscpsgndp f3, vs63, vs63
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
-; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    lxv vs63, 32(r1) # 16-byte Folded Reload
+; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
@@ -386,8 +389,8 @@ define ppc_fp128 @three_constants_ppcf128(ppc_fp128 %a, ppc_fp128 %c) {
 ; CHECK-P9-LABEL: three_constants_ppcf128:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    mflr r0
-; CHECK-P9-NEXT:    std r0, 16(r1)
 ; CHECK-P9-NEXT:    stdu r1, -32(r1)
+; CHECK-P9-NEXT:    std r0, 48(r1)
 ; CHECK-P9-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P9-NEXT:    .cfi_offset lr, 16
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
@@ -430,10 +433,10 @@ define <2 x double> @three_constants_vector(<2 x double> %a, <2 x double> %c) {
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI17_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI17_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs0, 0, r3
+; CHECK-P9-NEXT:    lxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI17_1@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI17_1@toc@l
-; CHECK-P9-NEXT:    lxvx vs2, 0, r3
+; CHECK-P9-NEXT:    lxv vs2, 0(r3)
 ; CHECK-P9-NEXT:    xvadddp vs1, vs34, vs0
 ; CHECK-P9-NEXT:    xvadddp vs1, vs1, vs2
 ; CHECK-P9-NEXT:    xvadddp vs34, vs1, vs0

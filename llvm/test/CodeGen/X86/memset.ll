@@ -37,36 +37,31 @@ define void @t() nounwind  {
 ;
 ; YMM-LABEL: t:
 ; YMM:       ## %bb.0: ## %entry
-; YMM-NEXT:    pushl %ebp
-; YMM-NEXT:    movl %esp, %ebp
-; YMM-NEXT:    andl $-32, %esp
-; YMM-NEXT:    subl $96, %esp
+; YMM-NEXT:    subl $60, %esp
 ; YMM-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; YMM-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; YMM-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
+; YMM-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
 ; YMM-NEXT:    movl %eax, (%esp)
 ; YMM-NEXT:    vzeroupper
 ; YMM-NEXT:    calll _foo
-; YMM-NEXT:    movl %ebp, %esp
-; YMM-NEXT:    popl %ebp
+; YMM-NEXT:    addl $60, %esp
 ; YMM-NEXT:    retl
 entry:
-	%up_mvd = alloca [8 x %struct.x]		; <[8 x %struct.x]*> [#uses=2]
-	%up_mvd116 = getelementptr [8 x %struct.x], [8 x %struct.x]* %up_mvd, i32 0, i32 0		; <%struct.x*> [#uses=1]
-	%tmp110117 = bitcast [8 x %struct.x]* %up_mvd to i8*		; <i8*> [#uses=1]
+	%up_mvd = alloca [8 x %struct.x]		; <ptr> [#uses=2]
+	%up_mvd116 = getelementptr [8 x %struct.x], ptr %up_mvd, i32 0, i32 0		; <ptr> [#uses=1]
 
-	call void @llvm.memset.p0i8.i64(i8* align 8 %tmp110117, i8 0, i64 32, i1 false)
-	call void @foo( %struct.x* %up_mvd116 ) nounwind
+	call void @llvm.memset.p0.i64(ptr align 8 %up_mvd, i8 0, i64 32, i1 false)
+	call void @foo( ptr %up_mvd116 ) nounwind
 	ret void
 }
 
-declare void @foo(%struct.x*)
+declare void @foo(ptr)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 ; Ensure that alignment of '0' in an @llvm.memset intrinsic results in
 ; unaligned loads and stores.
-define void @PR15348(i8* %a) {
+define void @PR15348(ptr %a) {
 ; X86-LABEL: PR15348:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -94,6 +89,6 @@ define void @PR15348(i8* %a) {
 ; YMM-NEXT:    vmovups %xmm0, (%eax)
 ; YMM-NEXT:    movb $0, 16(%eax)
 ; YMM-NEXT:    retl
-  call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 17, i1 false)
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 17, i1 false)
   ret void
 }

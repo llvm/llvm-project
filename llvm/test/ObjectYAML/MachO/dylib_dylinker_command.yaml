@@ -14,7 +14,7 @@ LoadCommands:
   - cmd:             LC_LOAD_DYLINKER
     cmdsize:         32
     name:            12
-    PayloadString:   /usr/lib/dyld
+    Content:         /usr/lib/dyld
     ZeroPadBytes:    7
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         48
@@ -23,7 +23,7 @@ LoadCommands:
       timestamp:       2
       current_version: 7864576
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libc++.1.dylib'
+    Content:         '/usr/lib/libc++.1.dylib'
     ZeroPadBytes:    1
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         56
@@ -32,7 +32,7 @@ LoadCommands:
       timestamp:       2
       current_version: 80349697
       compatibility_version: 65536
-    PayloadString:   /usr/lib/libSystem.B.dylib
+    Content:         /usr/lib/libSystem.B.dylib
     ZeroPadBytes:    6
 ...
 
@@ -40,7 +40,7 @@ LoadCommands:
 #CHECK:   - cmd:             LC_LOAD_DYLINKER
 #CHECK:     cmdsize:         32
 #CHECK:     name:            12
-#CHECK:     PayloadString:   '/usr/lib/dyld'
+#CHECK:     Content:         '/usr/lib/dyld'
 #CHECK:     ZeroPadBytes:    7
 #CHECK:   - cmd:             LC_LOAD_DYLIB
 #CHECK:     cmdsize:         48
@@ -49,7 +49,7 @@ LoadCommands:
 #CHECK:       timestamp:       2
 #CHECK:       current_version: 7864576
 #CHECK:       compatibility_version: 65536
-#CHECK:     PayloadString:   '/usr/lib/libc++.1.dylib'
+#CHECK:     Content:         '/usr/lib/libc++.1.dylib'
 #CHECK:     ZeroPadBytes:    1
 #CHECK:   - cmd:             LC_LOAD_DYLIB
 #CHECK:     cmdsize:         56
@@ -58,5 +58,5 @@ LoadCommands:
 #CHECK:       timestamp:       2
 #CHECK:       current_version: 80349697
 #CHECK:       compatibility_version: 65536
-#CHECK:     PayloadString:   '/usr/lib/libSystem.B.dylib'
+#CHECK:     Content:         '/usr/lib/libSystem.B.dylib'
 #CHECK:     ZeroPadBytes:    6

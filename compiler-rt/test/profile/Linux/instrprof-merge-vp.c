@@ -14,7 +14,7 @@
 int __llvm_profile_runtime = 0;
 int __llvm_profile_write_file();
 void __llvm_profile_reset_counters(void);
-void __llvm_profile_merge_from_buffer(const char *, uint64_t);
+int __llvm_profile_merge_from_buffer(const char *, uint64_t);
 void __llvm_profile_set_filename(const char *);
 struct __llvm_profile_data;
 struct ValueProfData;

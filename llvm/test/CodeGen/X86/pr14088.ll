@@ -10,7 +10,7 @@
 ; We can't produce the above sequence without special SD-level
 ; heuristics. Now we produce this:
 
-define i32 @f(i1 %foo, i16* %tm_year2, i8* %bar, i16 %zed, i32 %zed2) {
+define i32 @f(i1 %foo, ptr %tm_year2, ptr %bar, i16 %zed, i32 %zed2) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $-1, %eax
@@ -26,8 +26,7 @@ define i32 @f(i1 %foo, i16* %tm_year2, i8* %bar, i16 %zed, i32 %zed2) {
 ; CHECK-NEXT:    imull $100, %ecx, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    movw %ax, (%rsi)
-; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    cltq
+; CHECK-NEXT:    movswq %ax, %rax
 ; CHECK-NEXT:    imulq $1717986919, %rax, %rax # imm = 0x66666667
 ; CHECK-NEXT:    movq %rax, %rcx
 ; CHECK-NEXT:    shrq $63, %rcx
@@ -43,12 +42,12 @@ entry:
 if.end:
   %rem = srem i32 %zed2, 100
   %conv3 = trunc i32 %rem to i16
-  store i16 %conv3, i16* %tm_year2
+  store i16 %conv3, ptr %tm_year2
   %sext = shl i32 %rem, 16
   %conv5 = ashr exact i32 %sext, 16
   %div = sdiv i32 %conv5, 10
   %conv6 = trunc i32 %div to i8
-  store i8 %conv6, i8* %bar
+  store i8 %conv6, ptr %bar
   br label %return
 
 return:

@@ -17,20 +17,19 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    assert( std::char_traits<char>::lt('\0', 'A'));
-    assert(!std::char_traits<char>::lt('A', '\0'));
+int main(int, char**) {
+  assert(std::char_traits<char>::lt('\0', 'A') == ('\0' < 'A'));
+  assert(std::char_traits<char>::lt('A', '\0') == ('A' < '\0'));
 
-    assert(!std::char_traits<char>::lt('a', 'a'));
-    assert( std::char_traits<char>::lt('A', 'a'));
-    assert(!std::char_traits<char>::lt('a', 'A'));
+  assert(std::char_traits<char>::lt('a', 'a') == ('a' < 'a'));
+  assert(std::char_traits<char>::lt('A', 'a') == ('A' < 'a'));
+  assert(std::char_traits<char>::lt('a', 'A') == ('a' < 'A'));
 
-    assert( std::char_traits<char>::lt('a', 'z'));
-    assert( std::char_traits<char>::lt('A', 'Z'));
+  assert(std::char_traits<char>::lt('a', 'z') == ('a' < 'z'));
+  assert(std::char_traits<char>::lt('A', 'Z') == ('A' < 'Z'));
 
-    assert( std::char_traits<char>::lt(' ', 'A'));
-    assert( std::char_traits<char>::lt('A', '~'));
+  assert(std::char_traits<char>::lt(' ', 'A') == (' ' < 'A'));
+  assert(std::char_traits<char>::lt('A', '~') == ('A' < '~'));
 
   return 0;
 }

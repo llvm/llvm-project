@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Test comes from a bug (15771) or better a feature request. It was not allowed
 ; in Polly in the old domain generation as ScalarEvolution cannot figure out the
@@ -36,7 +36,7 @@ for.body.lr.ph:                                   ; preds = %entry.split
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %indvar = phi i64 [ 0, %for.body.lr.ph ], [ %indvar.next, %for.next ]
-  %arrayidx = getelementptr [100 x i32], [100 x i32]* @A, i64 0, i64 %indvar
+  %arrayidx = getelementptr [100 x i32], ptr @A, i64 0, i64 %indvar
   %0 = mul i64 %indvar, 2
   %1 = add i64 %0, 2
   %add1 = trunc i64 %1 to i32
@@ -45,9 +45,9 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   br i1 %cmp, label %for.next, label %for.cond.for.end_crit_edge
 
 for.next:
-  %2 = load i32, i32* %arrayidx, align 4
+  %2 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %2, 1
-  store i32 %add, i32* %arrayidx, align 4
+  store i32 %add, ptr %arrayidx, align 4
   br label %for.body
 
 for.cond.for.end_crit_edge:                       ; preds = %for.body

@@ -1,12 +1,16 @@
 add_mlir_dialect_library(MLIRX86VectorTransforms
+  AVXTranspose.cpp
   LegalizeForLLVMExport.cpp
 
   DEPENDS
   MLIRX86VectorConversionsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRX86Vector
+  MLIRArithDialect
+  MLIRX86VectorDialect
   MLIRIR
-  MLIRLLVMIR
-  MLIRStandardToLLVM
+  MLIRLLVMCommonConversion
+  MLIRLLVMDialect
+  MLIRVectorDialect
+  MLIRVectorUtils
   )

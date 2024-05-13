@@ -52,11 +52,11 @@ void foo(Derived* src, Derived* dest) {
 }
 #endif
 
-// CHECK-C: call i8* @objc_memmove_collectable
-// CHECK-C: call i8* @objc_memmove_collectable
-// CHECK-C: call i8* @objc_memmove_collectable
+// CHECK-C: call ptr @objc_memmove_collectable
+// CHECK-C: call ptr @objc_memmove_collectable
+// CHECK-C: call ptr @objc_memmove_collectable
 
-// CHECK-CP: call i8* @objc_memmove_collectable
-// CHECK-CP: call i8* @objc_memmove_collectable
-// CHECK-CP: call i8* @objc_memmove_collectable
-// CHECK-CP: call i8* @objc_memmove_collectable
+// CHECK-CP: call ptr @objc_memmove_collectable
+// CHECK-CP: call ptr @objc_memmove_collectable
+// CHECK-CP: call ptr @objc_memmove_collectable
+// CHECK-CP: call ptr @objc_memmove_collectable

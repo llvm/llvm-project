@@ -30,15 +30,21 @@ template <int KIND>
 std::optional<Expr<SubscriptInteger>>
 Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
   using T = std::optional<Expr<SubscriptInteger>>;
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const Constant<Result> &c) -> T {
             return AsExpr(Constant<SubscriptInteger>{c.LEN()});
           },
-          [](const ArrayConstructor<Result> &a) -> T { return a.LEN(); },
+          [](const ArrayConstructor<Result> &a) -> T {
+            if (const auto *len{a.LEN()}) {
+              return T{*len};
+            } else {
+              return std::nullopt;
+            }
+          },
           [](const Parentheses<Result> &x) { return x.left().LEN(); },
           [](const Convert<Result> &x) {
-            return std::visit(
+            return common::visit(
                 [&](const auto &kx) { return kx.LEN(); }, x.left().u);
           },
           [](const Concat<KIND> &c) -> T {
@@ -84,7 +90,7 @@ std::optional<DynamicType> ExpressionBase<A>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
     return Result::GetType();
   } else {
-    return std::visit(
+    return common::visit(
         [&](const auto &x) -> std::optional<DynamicType> {
           if constexpr (!common::HasMember<decltype(x), TypelessExpression>) {
             return x.GetType();
@@ -96,7 +102,7 @@ std::optional<DynamicType> ExpressionBase<A>::GetType() const {
 }
 
 template <typename A> int ExpressionBase<A>::Rank() const {
-  return std::visit(
+  return common::visit(
       [](const auto &x) {
         if constexpr (common::HasMember<decltype(x), TypelessExpression>) {
           return 0;
@@ -106,6 +112,16 @@ template <typename A> int ExpressionBase<A>::Rank() const {
       },
       derived().u);
 }
+
+DynamicType Parentheses<SomeDerived>::GetType() const {
+  return left().GetType().value();
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+template <typename A> LLVM_DUMP_METHOD void ExpressionBase<A>::dump() const {
+  llvm::errs() << "Expr is <{" << AsFortran() << "}>\n";
+}
+#endif
 
 // Equality testing
 
@@ -130,6 +146,13 @@ template <typename R>
 bool ArrayConstructorValues<R>::operator==(
     const ArrayConstructorValues<R> &that) const {
   return values_ == that.values_;
+}
+
+template <int KIND>
+auto ArrayConstructor<Type<TypeCategory::Character, KIND>>::set_LEN(
+    Expr<SubscriptInteger> &&len) -> ArrayConstructor & {
+  length_.emplace(std::move(len));
+  return *this;
 }
 
 template <int KIND>
@@ -299,20 +322,23 @@ void GenericAssignmentWrapper::Deleter(GenericAssignmentWrapper *p) {
 }
 
 template <TypeCategory CAT> int Expr<SomeKind<CAT>>::GetKind() const {
-  return std::visit(
+  return common::visit(
       [](const auto &kx) { return std::decay_t<decltype(kx)>::Result::kind; },
       u);
 }
 
 int Expr<SomeCharacter>::GetKind() const {
-  return std::visit(
+  return common::visit(
       [](const auto &kx) { return std::decay_t<decltype(kx)>::Result::kind; },
       u);
 }
 
 std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {
-  return std::visit([](const auto &kx) { return kx.LEN(); }, u);
+  return common::visit([](const auto &kx) { return kx.LEN(); }, u);
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_EXPRESSION_TEMPLATES
 } // namespace Fortran::evaluate

@@ -16,9 +16,14 @@
 #include "host.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Evaluate/expression.h"
+#include <cfloat>
 #include <cmath>
 #include <complex>
 #include <functional>
+#if HAS_QUADMATHLIB
+#include "quadmath.h"
+#include "flang/Common/float128.h"
+#endif
 #include <type_traits>
 
 namespace Fortran::evaluate {
@@ -148,7 +153,7 @@ static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
   Scalar<TR> result{};
   std::tuple<Scalar<TA>...> scalarArgs{
       GetScalarConstantValue<TA>(args[I]).value()...};
-  if (context.flushSubnormalsToZero() &&
+  if (context.targetCharacteristics().areSubnormalsFlushedToZero() &&
       !hostFPE.hasSubnormalFlushingHardwareControl()) {
     hostResult = func(host::CastFortranToHost<TA>(
         FlushSubnormals<TA>(std::move(std::get<I>(scalarArgs))))...);
@@ -192,7 +197,13 @@ private:
 
 // Define host runtime libraries that can be used for folding and
 // fill their description if they are available.
-enum class LibraryVersion { Libm, PgmathFast, PgmathRelaxed, PgmathPrecise };
+enum class LibraryVersion {
+  Libm,
+  LibmExtensions,
+  PgmathFast,
+  PgmathRelaxed,
+  PgmathPrecise
+};
 template <typename HostT, LibraryVersion> struct HostRuntimeLibrary {
   // When specialized, this class holds a static constexpr table containing
   // all the HostRuntimeLibrary for functions of library LibraryVersion
@@ -202,13 +213,12 @@ template <typename HostT, LibraryVersion> struct HostRuntimeLibrary {
 using HostRuntimeMap = common::StaticMultimapView<HostRuntimeFunction>;
 
 // Map numerical intrinsic to  <cmath>/<complex> functions
+// (Note: ABS() is folded in fold-real.cpp.)
 template <typename HostT>
 struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
   using F = FuncPointer<HostT, HostT>;
   using F2 = FuncPointer<HostT, HostT, HostT>;
-  using ComplexToRealF = FuncPointer<HostT, const std::complex<HostT> &>;
   static constexpr HostRuntimeFunction table[]{
-      FolderFactory<ComplexToRealF, ComplexToRealF{std::abs}>::Create("abs"),
       FolderFactory<F, F{std::acos}>::Create("acos"),
       FolderFactory<F, F{std::acosh}>::Create("acosh"),
       FolderFactory<F, F{std::asin}>::Create("asin"),
@@ -222,15 +232,12 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
       FolderFactory<F, F{std::erfc}>::Create("erfc"),
       FolderFactory<F, F{std::exp}>::Create("exp"),
       FolderFactory<F, F{std::tgamma}>::Create("gamma"),
-      FolderFactory<F2, F2{std::hypot}>::Create("hypot"),
       FolderFactory<F, F{std::log}>::Create("log"),
       FolderFactory<F, F{std::log10}>::Create("log10"),
       FolderFactory<F, F{std::lgamma}>::Create("log_gamma"),
-      FolderFactory<F2, F2{std::fmod}>::Create("mod"),
       FolderFactory<F2, F2{std::pow}>::Create("pow"),
       FolderFactory<F, F{std::sin}>::Create("sin"),
       FolderFactory<F, F{std::sinh}>::Create("sinh"),
-      FolderFactory<F, F{std::sqrt}>::Create("sqrt"),
       FolderFactory<F, F{std::tan}>::Create("tan"),
       FolderFactory<F, F{std::tanh}>::Create("tanh"),
   };
@@ -280,6 +287,132 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
+// Note regarding cmath:
+//  - cmath does not have modulo and erfc_scaled equivalent
+//  - C++17 defined standard Bessel math functions std::cyl_bessel_j
+//    and std::cyl_neumann that can be used for Fortran j and y
+//    bessel functions. However, they are not yet implemented in
+//    clang libc++ (ok in GNU libstdc++). Instead, the Posix libm
+//    extensions are used when available below.
+
+#if _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
+/// Define libm extensions
+/// Bessel functions are defined in POSIX.1-2001.
+
+// Remove float bessel functions for AIX and Darwin as they are not supported
+#if !defined(_AIX) && !defined(__APPLE__)
+template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<float, float>;
+  using FN = FuncPointer<float, int, float>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0f}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1f}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnf}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0f}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1f}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynf}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif
+
+#if HAS_QUADMATHLIB
+template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
+  using F = FuncPointer<__float128, __float128>;
+  using F2 = FuncPointer<__float128, __float128, __float128>;
+  using FN = FuncPointer<__float128, int, __float128>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::acosq}>::Create("acos"),
+      FolderFactory<F, F{::acoshq}>::Create("acosh"),
+      FolderFactory<F, F{::asinq}>::Create("asin"),
+      FolderFactory<F, F{::asinhq}>::Create("asinh"),
+      FolderFactory<F, F{::atanq}>::Create("atan"),
+      FolderFactory<F2, F2{::atan2q}>::Create("atan2"),
+      FolderFactory<F, F{::atanhq}>::Create("atanh"),
+      FolderFactory<F, F{::j0q}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1q}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnq}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0q}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1q}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynq}>::Create("bessel_yn"),
+      FolderFactory<F, F{::cosq}>::Create("cos"),
+      FolderFactory<F, F{::coshq}>::Create("cosh"),
+      FolderFactory<F, F{::erfq}>::Create("erf"),
+      FolderFactory<F, F{::erfcq}>::Create("erfc"),
+      FolderFactory<F, F{::expq}>::Create("exp"),
+      FolderFactory<F, F{::tgammaq}>::Create("gamma"),
+      FolderFactory<F, F{::logq}>::Create("log"),
+      FolderFactory<F, F{::log10q}>::Create("log10"),
+      FolderFactory<F, F{::lgammaq}>::Create("log_gamma"),
+      FolderFactory<F2, F2{::powq}>::Create("pow"),
+      FolderFactory<F, F{::sinq}>::Create("sin"),
+      FolderFactory<F, F{::sinhq}>::Create("sinh"),
+      FolderFactory<F, F{::tanq}>::Create("tan"),
+      FolderFactory<F, F{::tanhq}>::Create("tanh"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+template <> struct HostRuntimeLibrary<__complex128, LibraryVersion::Libm> {
+  using F = FuncPointer<__complex128, __complex128>;
+  using F2 = FuncPointer<__complex128, __complex128, __complex128>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::cacosq}>::Create("acos"),
+      FolderFactory<F, F{::cacoshq}>::Create("acosh"),
+      FolderFactory<F, F{::casinq}>::Create("asin"),
+      FolderFactory<F, F{::casinhq}>::Create("asinh"),
+      FolderFactory<F, F{::catanq}>::Create("atan"),
+      FolderFactory<F, F{::catanhq}>::Create("atanh"),
+      FolderFactory<F, F{::ccosq}>::Create("cos"),
+      FolderFactory<F, F{::ccoshq}>::Create("cosh"),
+      FolderFactory<F, F{::cexpq}>::Create("exp"),
+      FolderFactory<F, F{::clogq}>::Create("log"),
+      FolderFactory<F2, F2{::cpowq}>::Create("pow"),
+      FolderFactory<F, F{::csinq}>::Create("sin"),
+      FolderFactory<F, F{::csinhq}>::Create("sinh"),
+      FolderFactory<F, F{::csqrtq}>::Create("sqrt"),
+      FolderFactory<F, F{::ctanq}>::Create("tan"),
+      FolderFactory<F, F{::ctanhq}>::Create("tanh"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif
+
+template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<double, double>;
+  using FN = FuncPointer<double, int, double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jn}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::yn}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+
+#if LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
+template <>
+struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<long double, long double>;
+  using FN = FuncPointer<long double, int, long double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0l}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1l}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnl}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0l}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1l}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynl}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif // LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
+#endif //_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
 
 /// Define pgmath description
 #if LINK_WITH_LIBPGMATH
@@ -287,7 +420,7 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
 // First declare all libpgmaths functions
 #define PGMATH_LINKING
 #define PGMATH_DECLARE
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
 
 #define REAL_FOLDER(name, func) \
   FolderFactory<decltype(&func), &func>::Create(#name)
@@ -295,7 +428,7 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::PgmathFast> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_FAST
 #define PGMATH_USE_S(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -304,7 +437,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::PgmathFast> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_FAST
 #define PGMATH_USE_D(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -313,7 +446,7 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::PgmathRelaxed> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_RELAXED
 #define PGMATH_USE_S(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -322,7 +455,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::PgmathRelaxed> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_RELAXED
 #define PGMATH_USE_D(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -331,7 +464,7 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::PgmathPrecise> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_PRECISE
 #define PGMATH_USE_S(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -340,7 +473,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::PgmathPrecise> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_PRECISE
 #define PGMATH_USE_D(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -389,6 +522,12 @@ static const HostRuntimeMap *GetHostRuntimeMapVersion(DynamicType resultType) {
             GetHostRuntimeMapHelper<long double, version>(resultType)}) {
       return map;
     }
+#if HAS_QUADMATHLIB
+    if (const auto *map{
+            GetHostRuntimeMapHelper<__float128, version>(resultType)}) {
+      return map;
+    }
+#endif
   }
   if (resultType.category() == TypeCategory::Complex) {
     if (const auto *map{GetHostRuntimeMapHelper<std::complex<float>, version>(
@@ -404,6 +543,12 @@ static const HostRuntimeMap *GetHostRuntimeMapVersion(DynamicType resultType) {
                 resultType)}) {
       return map;
     }
+#if HAS_QUADMATHLIB
+    if (const auto *map{
+            GetHostRuntimeMapHelper<__complex128, version>(resultType)}) {
+      return map;
+    }
+#endif
   }
   return nullptr;
 }
@@ -412,6 +557,8 @@ static const HostRuntimeMap *GetHostRuntimeMap(
   switch (version) {
   case LibraryVersion::Libm:
     return GetHostRuntimeMapVersion<LibraryVersion::Libm>(resultType);
+  case LibraryVersion::LibmExtensions:
+    return GetHostRuntimeMapVersion<LibraryVersion::LibmExtensions>(resultType);
   case LibraryVersion::PgmathPrecise:
     return GetHostRuntimeMapVersion<LibraryVersion::PgmathPrecise>(resultType);
   case LibraryVersion::PgmathRelaxed:
@@ -452,6 +599,13 @@ static const HostRuntimeFunction *SearchHostRuntime(const std::string &name,
   // Default to libm if functions or types are not available in pgmath.
 #endif
   if (const auto *map{GetHostRuntimeMap(LibraryVersion::Libm, resultType)}) {
+    if (const auto *hostFunction{
+            SearchInHostRuntimeMap(*map, name, resultType, argTypes)}) {
+      return hostFunction;
+    }
+  }
+  if (const auto *map{
+          GetHostRuntimeMap(LibraryVersion::LibmExtensions, resultType)}) {
     if (const auto *hostFunction{
             SearchInHostRuntimeMap(*map, name, resultType, argTypes)}) {
       return hostFunction;

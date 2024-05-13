@@ -1,17 +1,17 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf --arm-add-build-attributes %s -o %t.o
 // RUN: ld.lld --fix-cortex-a8 -verbose %t.o -o %t2 2>&1 | FileCheck %s
-// RUN: llvm-objdump -d %t2 --start-address=0x29004 --stop-address=0x29024 --no-show-raw-insn | FileCheck --check-prefix=CHECK-PATCHES %s
-// RUN: llvm-objdump -d %t2 --start-address=0x21ffa --stop-address=0x22002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE1 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x22ffa --stop-address=0x23002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE2 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x23ffa --stop-address=0x24002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE3 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x24ff4 --stop-address=0x25002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE4 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x25ffa --stop-address=0x26002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE5 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x26ffa --stop-address=0x27002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE6 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x27ffa --stop-address=0x28002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE7 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x28ff4 --stop-address=0x29002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE8 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x29004 --stop-address=0x29024 --no-show-raw-insn | FileCheck --check-prefix=CHECK-PATCHES %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x21ffa --stop-address=0x22002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x22ffa --stop-address=0x23002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x23ffa --stop-address=0x24002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE3 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x24ff4 --stop-address=0x25002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE4 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x25ffa --stop-address=0x26002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE5 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x26ffa --stop-address=0x27002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE6 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x27ffa --stop-address=0x28002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE7 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x28ff4 --stop-address=0x29002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE8 %s
 // RUN: ld.lld --fix-cortex-a8 -verbose -r %t.o -o %t3 2>&1 | FileCheck --check-prefix=CHECK-RELOCATABLE-LLD %s
-// RUN: llvm-objdump --no-show-raw-insn -d %t3 --start-address=0xffa --stop-address=0x1002 | FileCheck --check-prefix=CHECK-RELOCATABLE %s
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t3 --start-address=0xffa --stop-address=0x1002 | FileCheck --check-prefix=CHECK-RELOCATABLE %s
 
 // CHECK:      ld.lld: detected cortex-a8-657419 erratum sequence starting at 22FFE in unpatched output.
 // CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 23FFE in unpatched output.
@@ -26,7 +26,7 @@
 // CHECK-RELOCATABLE-LLD-NOT: ld.lld: detected cortex-a8-657419 erratum sequence
 
 /// Basic tests for the -fix-cortex-a8 erratum fix. The full details of the
-/// erratum and the patch are in ARMA8ErrataFix.cpp . The test creates an
+/// erratum and the patch are in ARMErrataFix.cpp . The test creates an
 /// instance of the erratum every 4KiB (32-bit non-branch, followed by 32-bit
 /// branch instruction, where the branch instruction spans two 4 KiB regions,
 /// and the branch destination is in the first 4KiB region.
@@ -55,11 +55,11 @@ target:
 
 // CALLSITE1:      00021ffa <target>:
 // CALLSITE1-NEXT:    21ffa:            nop.w
-// CALLSITE1-NEXT:    21ffe:            b.w     #28674
+// CALLSITE1-NEXT:    21ffe:            b.w     0x29004 <__CortexA8657417_21FFE>
 /// Expect no patch when doing a relocatable link ld -r.
 // CHECK-RELOCATABLE: 00000ffa <target>:
 // CHECK-RELOCATABLE-NEXT:      ffa:            nop.w
-// CHECK-RELOCATABLE-NEXT:      ffe:            b.w     #-4
+// CHECK-RELOCATABLE-NEXT:      ffe:            b.w     {{.+}} @ imm = #-4
 
  .space 4088
  .type target2, %function
@@ -72,7 +72,7 @@ target2:
 
 // CALLSITE2:      00022ffa <target2>:
 // CALLSITE2-NEXT:    22ffa:            nop.w
-// CALLSITE2-NEXT:    22ffe:            bl      #24582
+// CALLSITE2-NEXT:    22ffe:            bl      0x29008 <__CortexA8657417_22FFE>
 
  .space 4088
  .type target3, %function
@@ -85,7 +85,7 @@ target3:
 
 // CALLSITE3:      00023ffa <target3>:
 // CALLSITE3-NEXT:    23ffa:            nop.w
-// CALLSITE3-NEXT:    23ffe:            beq.w   #20490
+// CALLSITE3-NEXT:    23ffe:            beq.w   0x2900c <__CortexA8657417_23FFE>
 
  .space 4082
  .type target4, %function
@@ -106,7 +106,7 @@ target4:
 // CALLSITE4-NEXT:    24ff4:            bx      lr
 // CALLSITE4:         24ff8:    00 00           .short  0x0000
 // CALLSITE4:         24ffa:            nop.w
-// CALLSITE4-NEXT:    24ffe:            blx     #16400
+// CALLSITE4-NEXT:    24ffe:            blx     0x29010 <__CortexA8657417_24FFE>
 
 /// Separate sections for source and destination of branches to force
 /// a relocation.
@@ -126,7 +126,7 @@ target5:
 
 /// Target = 0x19014 __CortexA8657417_16FFE
 // CALLSITE5:         25ffa:            nop.w
-// CALLSITE5-NEXT:    25ffe:            b.w     #12306
+// CALLSITE5-NEXT:    25ffe:            b.w     0x29014 <__CortexA8657417_25FFE>
 
  .section .text.2, "ax", %progbits
  .balign 2
@@ -144,7 +144,7 @@ target6:
 
 /// Target = 0x19018 __CortexA8657417_17FFE
 // CALLSITE6:         26ffa:            nop.w
-// CALLSITE6-NEXT:    26ffe:            bl      #8214
+// CALLSITE6-NEXT:    26ffe:            bl      0x29018 <__CortexA8657417_26FFE>
 
  .section .text.4, "ax", %progbits
  .global target7
@@ -160,10 +160,10 @@ target7:
  bne.w target7
 
 // CALLSITE7:         27ffa:            nop.w
-// CALLSITE7-NEXT:    27ffe:            bne.w   #4122
+// CALLSITE7-NEXT:    27ffe:            bne.w   0x2901c <__CortexA8657417_27FFE>
 
  .section .text.6, "ax", %progbits
- .space 4082
+ .space 4080
  .arm
  .global target8
  .type target8, %function
@@ -184,28 +184,28 @@ target8:
 // CALLSITE8-NEXT:    28ff4:            bx      lr
 // CALLSITE8:         28ff8:    00 00           .short  0x0000
 // CALLSITE8:         28ffa:            nop.w
-// CALLSITE8-NEXT:    28ffe:            blx     #32
+// CALLSITE8-NEXT:    28ffe:            blx     0x29020 <__CortexA8657417_28FFE>
 
 // CHECK-PATCHES: 00029004 <__CortexA8657417_21FFE>:
-// CHECK-PATCHES-NEXT:    29004:        b.w     #-28686
+// CHECK-PATCHES-NEXT:    29004:        b.w     0x21ffa <target>
 
 // CHECK-PATCHES:      00029008 <__CortexA8657417_22FFE>:
-// CHECK-PATCHES-NEXT:    29008:        b.w     #-24594
+// CHECK-PATCHES-NEXT:    29008:        b.w     0x22ffa <target2>
 
 // CHECK-PATCHES:      0002900c <__CortexA8657417_23FFE>:
-// CHECK-PATCHES-NEXT:    2900c:        b.w     #-20502
+// CHECK-PATCHES-NEXT:    2900c:        b.w     0x23ffa <target3>
 
 // CHECK-PATCHES:      00029010 <__CortexA8657417_24FFE>:
-// CHECK-PATCHES-NEXT:    29010:        b       #-16420
+// CHECK-PATCHES-NEXT:    29010:        b       0x24ff4 <target4>
 
 // CHECK-PATCHES:      00029014 <__CortexA8657417_25FFE>:
-// CHECK-PATCHES-NEXT:    29014:        b.w     #-16406
+// CHECK-PATCHES-NEXT:    29014:        b.w     0x25002 <target5>
 
 // CHECK-PATCHES:      00029018 <__CortexA8657417_26FFE>:
-// CHECK-PATCHES-NEXT:    29018:        b.w     #-12314
+// CHECK-PATCHES-NEXT:    29018:        b.w     0x26002 <target6>
 
 // CHECK-PATCHES:      0002901c <__CortexA8657417_27FFE>:
-// CHECK-PATCHES-NEXT:    2901c:        b.w     #-8222
+// CHECK-PATCHES-NEXT:    2901c:        b.w     0x27002 <target7>
 
 // CHECK-PATCHES:      00029020 <__CortexA8657417_28FFE>:
-// CHECK-PATCHES-NEXT:    29020:        b       #-52
+// CHECK-PATCHES-NEXT:    29020:        b       0x28ff4 <target8>

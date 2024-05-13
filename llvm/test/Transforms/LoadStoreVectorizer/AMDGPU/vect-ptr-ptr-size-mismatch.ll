@@ -1,4 +1,4 @@
-; RUN: opt -load-store-vectorizer -S < %s | FileCheck %s
+; RUN: opt -passes=load-store-vectorizer -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64-p1:64:64-p5:32:32"
 
@@ -7,89 +7,99 @@ target datalayout = "e-p:64:64-p1:64:64-p5:32:32"
 ; The p5:32:32 portion of the data layout is critical for the test.
 
 ; CHECK-LABEL: @cast_to_ptr
-; CHECK: store i32* undef, i32** %tmp9, align 8
-; CHECK: store i32* undef, i32** %tmp7, align 8
+; CHECK: store ptr undef, ptr %tmp9, align 8
+; CHECK: store ptr undef, ptr %tmp7, align 8
 define void @cast_to_ptr() {
 entry:
-  %ascast = addrspacecast i32* addrspace(5)* null to i32**
+  %ascast = addrspacecast ptr addrspace(5) null to ptr
   %tmp4 = icmp eq i32 undef, 0
-  %tmp6 = select i1 false, i32** undef, i32** undef
-  %tmp7 = select i1 %tmp4, i32** null, i32** %tmp6
-  %tmp9 = select i1 %tmp4, i32** %ascast, i32** null
-  store i32* undef, i32** %tmp9, align 8
-  store i32* undef, i32** %tmp7, align 8
+  %tmp6 = select i1 false, ptr undef, ptr undef
+  %tmp7 = select i1 %tmp4, ptr null, ptr %tmp6
+  %tmp9 = select i1 %tmp4, ptr %ascast, ptr null
+  store ptr undef, ptr %tmp9, align 8
+  store ptr undef, ptr %tmp7, align 8
   unreachable
 }
 
 ; CHECK-LABEL: @cast_to_cast
-; CHECK: %tmp4 = load i32*, i32** %tmp1, align 8
-; CHECK: %tmp5 = load i32*, i32** %tmp3, align 8
+; CHECK: %tmp4 = load ptr, ptr %tmp1, align 8
+; CHECK: %tmp5 = load ptr, ptr %tmp3, align 8
 define void @cast_to_cast() {
 entry:
-  %a.ascast = addrspacecast i32* addrspace(5)* undef to i32**
-  %b.ascast = addrspacecast i32* addrspace(5)* null to i32**
-  %tmp1 = select i1 false, i32** %a.ascast, i32** undef
-  %tmp3 = select i1 false, i32** %b.ascast, i32** undef
-  %tmp4 = load i32*, i32** %tmp1, align 8
-  %tmp5 = load i32*, i32** %tmp3, align 8
+  %a.ascast = addrspacecast ptr addrspace(5) undef to ptr
+  %b.ascast = addrspacecast ptr addrspace(5) null to ptr
+  %tmp1 = select i1 false, ptr %a.ascast, ptr undef
+  %tmp3 = select i1 false, ptr %b.ascast, ptr undef
+  %tmp4 = load ptr, ptr %tmp1, align 8
+  %tmp5 = load ptr, ptr %tmp3, align 8
   unreachable
 }
 
 ; CHECK-LABEL: @all_to_cast
 ; CHECK: load <4 x float>
-define void @all_to_cast(i8* nocapture readonly align 16 dereferenceable(16) %alloc1) {
+define void @all_to_cast(ptr nocapture readonly align 16 dereferenceable(16) %alloc1) {
 entry:
-  %alloc16 = addrspacecast i8* %alloc1 to i8 addrspace(1)*
-  %tmp = bitcast i8 addrspace(1)* %alloc16 to float addrspace(1)*
-  %tmp1 = load float, float addrspace(1)* %tmp, align 16, !invariant.load !0
-  %tmp6 = getelementptr inbounds i8, i8 addrspace(1)* %alloc16, i64 4
-  %tmp7 = bitcast i8 addrspace(1)* %tmp6 to float addrspace(1)*
-  %tmp8 = load float, float addrspace(1)* %tmp7, align 4, !invariant.load !0
-  %tmp15 = getelementptr inbounds i8, i8 addrspace(1)* %alloc16, i64 8
-  %tmp16 = bitcast i8 addrspace(1)* %tmp15 to float addrspace(1)*
-  %tmp17 = load float, float addrspace(1)* %tmp16, align 8, !invariant.load !0
-  %tmp24 = getelementptr inbounds i8, i8 addrspace(1)* %alloc16, i64 12
-  %tmp25 = bitcast i8 addrspace(1)* %tmp24 to float addrspace(1)*
-  %tmp26 = load float, float addrspace(1)* %tmp25, align 4, !invariant.load !0
+  %alloc16 = addrspacecast ptr %alloc1 to ptr addrspace(1)
+  %tmp1 = load float, ptr addrspace(1) %alloc16, align 16, !invariant.load !0
+  %tmp6 = getelementptr inbounds i8, ptr addrspace(1) %alloc16, i64 4
+  %tmp8 = load float, ptr addrspace(1) %tmp6, align 4, !invariant.load !0
+  %tmp15 = getelementptr inbounds i8, ptr addrspace(1) %alloc16, i64 8
+  %tmp17 = load float, ptr addrspace(1) %tmp15, align 8, !invariant.load !0
+  %tmp24 = getelementptr inbounds i8, ptr addrspace(1) %alloc16, i64 12
+  %tmp26 = load float, ptr addrspace(1) %tmp24, align 4, !invariant.load !0
   ret void
 }
 
 ; CHECK-LABEL: @ext_ptr
 ; CHECK: load <2 x i32>
-define void @ext_ptr(i32 addrspace(5)* %p) {
+define void @ext_ptr(ptr addrspace(5) %p) {
 entry:
-  %gep1 = getelementptr inbounds i32, i32 addrspace(5)* %p, i64 0
-  %gep2 = getelementptr inbounds i32, i32 addrspace(5)* %p, i64 1
-  %a.ascast = addrspacecast i32 addrspace(5)* %gep1 to i32*
-  %b.ascast = addrspacecast i32 addrspace(5)* %gep2 to i32*
-  %tmp1 = load i32, i32* %a.ascast, align 8
-  %tmp2 = load i32, i32* %b.ascast, align 8
+  %gep2 = getelementptr inbounds i32, ptr addrspace(5) %p, i64 1
+  %a.ascast = addrspacecast ptr addrspace(5) %p to ptr
+  %b.ascast = addrspacecast ptr addrspace(5) %gep2 to ptr
+  %tmp1 = load i32, ptr %a.ascast, align 8
+  %tmp2 = load i32, ptr %b.ascast, align 8
+  unreachable
+}
+
+; CHECK-LABEL: @select_different_as
+; CHECK: load <2 x i32>
+define void @select_different_as(ptr addrspace(1) %p0, ptr addrspace(5) %q0, i1 %cond) {
+entry:
+  %p1 = getelementptr inbounds i32, ptr addrspace(1) %p0, i64 1
+  %q1 = getelementptr inbounds i32, ptr addrspace(5) %q0, i64 1
+  %p0.ascast = addrspacecast ptr addrspace(1) %p0 to ptr
+  %p1.ascast = addrspacecast ptr addrspace(1) %p1 to ptr
+  %q0.ascast = addrspacecast ptr addrspace(5) %q0 to ptr
+  %q1.ascast = addrspacecast ptr addrspace(5) %q1 to ptr
+  %sel0 = select i1 %cond, ptr %p0.ascast, ptr %q0.ascast
+  %sel1 = select i1 %cond, ptr %p1.ascast, ptr %q1.ascast
+  %tmp1 = load i32, ptr %sel0, align 8
+  %tmp2 = load i32, ptr %sel1, align 8
   unreachable
 }
 
 ; CHECK-LABEL: @shrink_ptr
 ; CHECK: load <2 x i32>
-define void @shrink_ptr(i32* %p) {
+define void @shrink_ptr(ptr %p) {
 entry:
-  %gep1 = getelementptr inbounds i32, i32* %p, i64 0
-  %gep2 = getelementptr inbounds i32, i32* %p, i64 1
-  %a.ascast = addrspacecast i32* %gep1 to i32 addrspace(5)*
-  %b.ascast = addrspacecast i32* %gep2 to i32 addrspace(5)*
-  %tmp1 = load i32, i32 addrspace(5)* %a.ascast, align 8
-  %tmp2 = load i32, i32 addrspace(5)* %b.ascast, align 8
+  %gep2 = getelementptr inbounds i32, ptr %p, i64 1
+  %a.ascast = addrspacecast ptr %p to ptr addrspace(5)
+  %b.ascast = addrspacecast ptr %gep2 to ptr addrspace(5)
+  %tmp1 = load i32, ptr addrspace(5) %a.ascast, align 8
+  %tmp2 = load i32, ptr addrspace(5) %b.ascast, align 8
   unreachable
 }
 
 ; CHECK-LABEL: @ext_ptr_wrap
 ; CHECK: load <2 x i8>
-define void @ext_ptr_wrap(i8 addrspace(5)* %p) {
+define void @ext_ptr_wrap(ptr addrspace(5) %p) {
 entry:
-  %gep1 = getelementptr inbounds i8, i8 addrspace(5)* %p, i64 0
-  %gep2 = getelementptr inbounds i8, i8 addrspace(5)* %p, i64 4294967295
-  %a.ascast = addrspacecast i8 addrspace(5)* %gep1 to i8*
-  %b.ascast = addrspacecast i8 addrspace(5)* %gep2 to i8*
-  %tmp1 = load i8, i8* %a.ascast, align 1
-  %tmp2 = load i8, i8* %b.ascast, align 1
+  %gep2 = getelementptr inbounds i8, ptr addrspace(5) %p, i64 4294967295
+  %a.ascast = addrspacecast ptr addrspace(5) %p to ptr
+  %b.ascast = addrspacecast ptr addrspace(5) %gep2 to ptr
+  %tmp1 = load i8, ptr %a.ascast, align 1
+  %tmp2 = load i8, ptr %b.ascast, align 2
   unreachable
 }
 

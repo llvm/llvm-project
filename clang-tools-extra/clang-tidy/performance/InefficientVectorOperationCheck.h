@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 /// Finds possible inefficient `std::vector` operations (e.g. `push_back`) in
 /// for loops that may cause unnecessary memory reallocations.
@@ -22,7 +20,7 @@ namespace performance {
 /// field without calling Reserve() first.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/inefficient-vector-operation.html
 class InefficientVectorOperationCheck : public ClangTidyCheck {
 public:
   InefficientVectorOperationCheck(StringRef Name, ClangTidyContext *Context);
@@ -34,18 +32,16 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  void AddMatcher(const ast_matchers::DeclarationMatcher &TargetRecordDecl,
+  void addMatcher(const ast_matchers::DeclarationMatcher &TargetRecordDecl,
                   StringRef VarDeclName, StringRef VarDeclStmtName,
                   const ast_matchers::DeclarationMatcher &AppendMethodDecl,
                   StringRef AppendCallName, ast_matchers::MatchFinder *Finder);
-  const std::vector<std::string> VectorLikeClasses;
+  const std::vector<StringRef> VectorLikeClasses;
 
   // If true, also check inefficient operations for proto repeated fields.
   bool EnableProto;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENT_VECTOR_OPERATION_H

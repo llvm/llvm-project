@@ -1,9 +1,9 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
-define i32 @somefunc(double* %arr) {
+define i32 @somefunc(ptr %arr) {
 ; CHECK-LABEL: @somefunc(
 entry:
   br label %for.cond.1.preheader
@@ -23,7 +23,7 @@ for.body.3:                                       ; preds = %for.body.3, %for.bo
   %index2.010 = phi i32 [ 0, %for.body.3.lr.ph ], [ %inc8, %for.body.3 ]
   %inc = add nsw i32 %index3.111, 1
   %idxprom = sext i32 %index3.111 to i64
-  %arrayidx = getelementptr inbounds double, double* %arr, i64 %idxprom
+  %arrayidx = getelementptr inbounds double, ptr %arr, i64 %idxprom
   %idxprom4 = sext i32 %index2.010 to i64
   %inc8 = add nsw i32 %index2.010, 1
   %cmp2 = icmp slt i32 %inc8, %index.012

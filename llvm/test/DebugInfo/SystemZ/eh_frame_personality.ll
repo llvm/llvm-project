@@ -6,13 +6,13 @@ declare i32 @__gxx_personality_v0(...)
 
 declare void @bar()
 
-define i64 @foo(i64 %lhs, i64 %rhs) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i64 @foo(i64 %lhs, i64 %rhs) personality ptr @__gxx_personality_v0 {
   invoke void @bar() to label %end unwind label %clean
 end:
  ret i64 0
 
 clean:
-  %tst = landingpad { i8*, i32 } cleanup
+  %tst = landingpad { ptr, i32 } cleanup
   ret i64 42
 }
 
@@ -39,7 +39,7 @@ clean:
 ; CHECK-REF: .cfi_lsda 27, .Lexception0
 ; CHECK-REF: .hidden	DW.ref.__gxx_personality_v0
 ; CHECK-REF: .weak	DW.ref.__gxx_personality_v0
-; CHECK-REF: .section	.data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
+; CHECK-REF: .section	.data.DW.ref.__gxx_personality_v0,"awG",@progbits,DW.ref.__gxx_personality_v0,comdat
 ; CHECK-REF-NEXT: .p2align	3
 ; CHECK-REF-NEXT: .type	DW.ref.__gxx_personality_v0,@object
 ; CHECK-REF-NEXT: .size	DW.ref.__gxx_personality_v0, 8

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions -polly-scops -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Two PHIs, cross-referencing each other. The PHI READs must be carried-out
 ; before the PHI WRITEs to ensure that the value when entering the block is
@@ -17,7 +17,7 @@
 ;   A[0] = valA;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -25,7 +25,7 @@ for:
   %j = phi i32 [0, %entry], [%j.inc, %for]
   %valA = phi double [42.0, %entry], [%valB, %for]
   %valB = phi double [21.0, %entry], [%valA, %for]
-  store double %valA, double* %A
+  store double %valA, ptr %A
   %j.cmp = icmp slt i32 %j, %n
   %j.inc = add nuw nsw i32 %j, 1
   br i1 %j.cmp, label %for, label %exit
@@ -57,6 +57,6 @@ return:
 ; CHECK-NEXT:         Instructions {
 ; CHECK-NEXT:               %valA = phi double [ 4.200000e+01, %entry ], [ %valB, %for ]
 ; CHECK-NEXT:               %valB = phi double [ 2.100000e+01, %entry ], [ %valA, %for ]
-; CHECK-NEXT:               store double %valA, double* %A, align 8
+; CHECK-NEXT:               store double %valA, ptr %A, align 8
 ; CHECK-NEXT:         }
 ; CHECK-NEXT: }

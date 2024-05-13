@@ -31,6 +31,14 @@ template <bool EnableSentinelTracking> struct ilist_sentinel_tracking {};
 /// simultaneously.  See \a ilist_node for usage examples.
 template <class Tag> struct ilist_tag {};
 
+/// Option to add extra bits to the ilist_iterator.
+///
+/// Some use-cases (debug-info) need to know whether a position is intended
+/// to be half-open or fully open, i.e. whether to include any immediately
+/// adjacent debug-info in an operation. This option adds two bits to the
+/// iterator class to store that information.
+template <bool ExtraIteratorBits> struct ilist_iterator_bits {};
+
 namespace ilist_detail {
 
 /// Helper trait for recording whether an option is specified explicitly.
@@ -86,8 +94,25 @@ struct extract_tag<ilist_tag<Tag>, Options...> {
 };
 template <class Option1, class... Options>
 struct extract_tag<Option1, Options...> : extract_tag<Options...> {};
-template <> struct extract_tag<> { typedef void type; };
+template <> struct extract_tag<> {
+  typedef void type;
+};
 template <class Tag> struct is_valid_option<ilist_tag<Tag>> : std::true_type {};
+
+/// Extract iterator bits option.
+///
+/// Look through \p Options for the \a ilist_iterator_bits option. Defaults
+/// to false.
+template <class... Options> struct extract_iterator_bits;
+template <bool IteratorBits, class... Options>
+struct extract_iterator_bits<ilist_iterator_bits<IteratorBits>, Options...>
+    : std::integral_constant<bool, IteratorBits> {};
+template <class Option1, class... Options>
+struct extract_iterator_bits<Option1, Options...>
+    : extract_iterator_bits<Options...> {};
+template <> struct extract_iterator_bits<> : std::false_type, is_implicit {};
+template <bool IteratorBits>
+struct is_valid_option<ilist_iterator_bits<IteratorBits>> : std::true_type {};
 
 /// Check whether options are valid.
 ///
@@ -103,7 +128,7 @@ struct check_options<Option1, Options...>
 ///
 /// This is usually computed via \a compute_node_options.
 template <class T, bool EnableSentinelTracking, bool IsSentinelTrackingExplicit,
-          class TagT>
+          class TagT, bool HasIteratorBits>
 struct node_options {
   typedef T value_type;
   typedef T *pointer;
@@ -113,6 +138,7 @@ struct node_options {
 
   static const bool enable_sentinel_tracking = EnableSentinelTracking;
   static const bool is_sentinel_tracking_explicit = IsSentinelTrackingExplicit;
+  static const bool has_iterator_bits = HasIteratorBits;
   typedef TagT tag;
   typedef ilist_node_base<enable_sentinel_tracking> node_base_type;
   typedef ilist_base<enable_sentinel_tracking> list_base_type;
@@ -121,7 +147,8 @@ struct node_options {
 template <class T, class... Options> struct compute_node_options {
   typedef node_options<T, extract_sentinel_tracking<Options...>::value,
                        extract_sentinel_tracking<Options...>::is_explicit,
-                       typename extract_tag<Options...>::type>
+                       typename extract_tag<Options...>::type,
+                       extract_iterator_bits<Options...>::value>
       type;
 };
 

@@ -1,4 +1,4 @@
-//===------------------- uncaught_exceptions.pass.cpp ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,12 +9,7 @@
 // UNSUPPORTED: no-exceptions
 
 // __cxa_uncaught_exceptions is not re-exported from libc++ until macOS 10.15.
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.14
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
 
 #include <cxxabi.h>
 #include <cassert>

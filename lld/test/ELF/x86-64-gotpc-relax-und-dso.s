@@ -1,10 +1,10 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-pc-linux %S/Inputs/gotpc-relax-und-dso.s -o %tdso.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/gotpc-relax-und-dso.s -o %tdso.o
 # RUN: ld.lld -shared %tdso.o -soname=t.so -o %t.so
 # RUN: ld.lld --hash-style=sysv -shared %t.o %t.so -o %t
 # RUN: llvm-readobj -r -S %t | FileCheck --check-prefix=RELOC %s
-# RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck --check-prefix=DISASM %s
 
 # RELOC:      Relocations [
 # RELOC-NEXT:   Section ({{.*}}) .rela.dyn {
@@ -23,22 +23,22 @@
 # DISASM:      <hid>:
 # DISASM-NEXT:     nop
 # DISASM:      <_start>:
-# DISASM-NEXT:    movq    4367(%rip), %rax
-# DISASM-NEXT:    movq    4360(%rip), %rax
-# DISASM-NEXT:    movq    4361(%rip), %rax
-# DISASM-NEXT:    movq    4354(%rip), %rax
+# DISASM-NEXT:    movq    4375(%rip), %rax
+# DISASM-NEXT:    movq    4368(%rip), %rax
+# DISASM-NEXT:    movq    4369(%rip), %rax
+# DISASM-NEXT:    movq    4362(%rip), %rax
 # DISASM-NEXT:    leaq    -36(%rip), %rax
 # DISASM-NEXT:    leaq    -43(%rip), %rax
-# DISASM-NEXT:    movq    4341(%rip), %rax
-# DISASM-NEXT:    movq    4334(%rip), %rax
-# DISASM-NEXT:    movq    4311(%rip), %rax
-# DISASM-NEXT:    movq    4304(%rip), %rax
-# DISASM-NEXT:    movq    4305(%rip), %rax
-# DISASM-NEXT:    movq    4298(%rip), %rax
+# DISASM-NEXT:    movq    4325(%rip), %rax
+# DISASM-NEXT:    movq    4318(%rip), %rax
+# DISASM-NEXT:    movq    4319(%rip), %rax
+# DISASM-NEXT:    movq    4312(%rip), %rax
+# DISASM-NEXT:    movq    4313(%rip), %rax
+# DISASM-NEXT:    movq    4306(%rip), %rax
 # DISASM-NEXT:    leaq    -92(%rip), %rax
 # DISASM-NEXT:    leaq    -99(%rip), %rax
-# DISASM-NEXT:    movq    4285(%rip), %rax
-# DISASM-NEXT:    movq    4278(%rip), %rax
+# DISASM-NEXT:    movq    4269(%rip), %rax
+# DISASM-NEXT:    movq    4262(%rip), %rax
 
 .text
 .globl foo

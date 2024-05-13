@@ -5,6 +5,7 @@
 #define xFN(TYPE,NAME) TYPE ## _ ## NAME
 #define FN(TYPE,NAME) xFN(TYPE,NAME)
 
+#undef TESTS
 #define TESTS CAT(reparse_,CAT(BASE,_tests))
 
 /* Test parsing of objects of type TYPE by printing

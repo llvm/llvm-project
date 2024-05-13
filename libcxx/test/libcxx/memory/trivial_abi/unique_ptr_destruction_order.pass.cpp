@@ -9,18 +9,15 @@
 // <memory>
 
 // Test arguments destruction order involving unique_ptr<T> with trivial_abi.
-// Note: Unlike other tests in this directory, this is the only test that
-// exhibits a difference between the two modes in Microsft ABI.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
 
-// There were assertion failures in both parse and codegen, which are fixed in clang 11.
-// UNSUPPORTED: gcc, clang-4, clang-5, clang-6, clang-7, clang-8, clang-9, clang-10
-
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// XFAIL: gcc
 
 #include <memory>
 #include <cassert>
+
+#include "test_macros.h"
 
 __attribute__((noinline)) void call_something() { asm volatile(""); }
 
@@ -31,6 +28,8 @@ struct Base {
 
   explicit Base(char* buf, int* idx, char ch)
       : shared_buff(buf), cur_idx(idx), id(ch) {}
+  Base(const Base& other) = default;
+  Base& operator=(const Base&) = delete;
   ~Base() { shared_buff[(*cur_idx)++] = id; }
 };
 
@@ -58,7 +57,12 @@ int main(int, char**) {
   func(A(shared_buf, &cur_idx), std::unique_ptr<B>(new B(shared_buf, &cur_idx)),
        C(shared_buf, &cur_idx));
 
+#if defined(TEST_ABI_MICROSOFT)
+  // On Microsoft ABI, the dtor order is always A,B,C (because callee-destroyed)
+  assert(shared_buf[0] == 'A' && shared_buf[1] == 'B' && shared_buf[2] == 'C');
+#else
   // With trivial_abi, the std::unique_ptr<B> arg is always destructed first.
   assert(shared_buf[0] == 'B');
+#endif
   return 0;
 }

@@ -13,6 +13,7 @@
 #include "llvm-cxxdump.h"
 #include "Error.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolSize.h"
@@ -20,7 +21,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,9 +33,10 @@ using namespace llvm::object;
 using namespace llvm::support;
 
 namespace opts {
+cl::OptionCategory CXXDumpCategory("CXX Dump Options");
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<input object files>"),
-                                     cl::ZeroOrMore);
+                                     cl::cat(CXXDumpCategory));
 } // namespace opts
 
 namespace llvm {
@@ -48,7 +49,7 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN static void error(Error Err) {
+[[noreturn]] static void error(Error Err) {
   logAllUnhandledErrors(std::move(Err), WithColor::error(outs()),
                         "reading file: ");
   outs().flush();
@@ -216,7 +217,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
     // VFTables in the MS-ABI start with '??_7' and are contained within their
     // own COMDAT section.  We then determine the contents of the VFTable by
     // looking at each relocation in the section.
-    if (SymName.startswith("??_7")) {
+    if (SymName.starts_with("??_7")) {
       // Each relocation either names a virtual method or a thunk.  We note the
       // offset into the section and the symbol used for the relocation.
       collectRelocationOffsets(Obj, Sec, SecAddress, SecAddress, SecSize,
@@ -224,48 +225,48 @@ static void dumpCXXData(const ObjectFile *Obj) {
     }
     // VBTables in the MS-ABI start with '??_8' and are filled with 32-bit
     // offsets of virtual bases.
-    else if (SymName.startswith("??_8")) {
+    else if (SymName.starts_with("??_8")) {
       ArrayRef<little32_t> VBTableData(
           reinterpret_cast<const little32_t *>(SymContents.data()),
           SymContents.size() / sizeof(little32_t));
       VBTables[SymName] = VBTableData;
     }
     // Complete object locators in the MS-ABI start with '??_R4'
-    else if (SymName.startswith("??_R4")) {
+    else if (SymName.starts_with("??_R4")) {
       CompleteObjectLocator COL;
-      COL.Data = makeArrayRef(
-          reinterpret_cast<const little32_t *>(SymContents.data()), 3);
+      COL.Data =
+          ArrayRef(reinterpret_cast<const little32_t *>(SymContents.data()), 3);
       StringRef *I = std::begin(COL.Symbols), *E = std::end(COL.Symbols);
       collectRelocatedSymbols(Obj, Sec, SecAddress, SymAddress, SymSize, I, E);
       COLs[SymName] = COL;
     }
     // Class hierarchy descriptors in the MS-ABI start with '??_R3'
-    else if (SymName.startswith("??_R3")) {
+    else if (SymName.starts_with("??_R3")) {
       ClassHierarchyDescriptor CHD;
-      CHD.Data = makeArrayRef(
-          reinterpret_cast<const little32_t *>(SymContents.data()), 3);
+      CHD.Data =
+          ArrayRef(reinterpret_cast<const little32_t *>(SymContents.data()), 3);
       StringRef *I = std::begin(CHD.Symbols), *E = std::end(CHD.Symbols);
       collectRelocatedSymbols(Obj, Sec, SecAddress, SymAddress, SymSize, I, E);
       CHDs[SymName] = CHD;
     }
     // Class hierarchy descriptors in the MS-ABI start with '??_R2'
-    else if (SymName.startswith("??_R2")) {
+    else if (SymName.starts_with("??_R2")) {
       // Each relocation names a base class descriptor.  We note the offset into
       // the section and the symbol used for the relocation.
       collectRelocationOffsets(Obj, Sec, SecAddress, SymAddress, SymSize,
                                SymName, BCAEntries);
     }
     // Base class descriptors in the MS-ABI start with '??_R1'
-    else if (SymName.startswith("??_R1")) {
+    else if (SymName.starts_with("??_R1")) {
       BaseClassDescriptor BCD;
-      BCD.Data = makeArrayRef(
+      BCD.Data = ArrayRef(
           reinterpret_cast<const little32_t *>(SymContents.data()) + 1, 5);
       StringRef *I = std::begin(BCD.Symbols), *E = std::end(BCD.Symbols);
       collectRelocatedSymbols(Obj, Sec, SecAddress, SymAddress, SymSize, I, E);
       BCDs[SymName] = BCD;
     }
     // Type descriptors in the MS-ABI start with '??_R0'
-    else if (SymName.startswith("??_R0")) {
+    else if (SymName.starts_with("??_R0")) {
       const char *DataPtr = SymContents.drop_front(BytesInAddress).data();
       TypeDescriptor TD;
       if (BytesInAddress == 8)
@@ -278,7 +279,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
       TDs[SymName] = TD;
     }
     // Throw descriptors in the MS-ABI start with '_TI'
-    else if (SymName.startswith("_TI") || SymName.startswith("__TI")) {
+    else if (SymName.starts_with("_TI") || SymName.starts_with("__TI")) {
       ThrowInfo TI;
       TI.Flags = *reinterpret_cast<const little32_t *>(SymContents.data());
       collectRelocationOffsets(Obj, Sec, SecAddress, SymAddress, SymSize,
@@ -286,7 +287,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
       TIs[SymName] = TI;
     }
     // Catchable type arrays in the MS-ABI start with _CTA or __CTA.
-    else if (SymName.startswith("_CTA") || SymName.startswith("__CTA")) {
+    else if (SymName.starts_with("_CTA") || SymName.starts_with("__CTA")) {
       CatchableTypeArray CTA;
       CTA.NumEntries =
           *reinterpret_cast<const little32_t *>(SymContents.data());
@@ -295,7 +296,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
       CTAs[SymName] = CTA;
     }
     // Catchable types in the MS-ABI start with _CT or __CT.
-    else if (SymName.startswith("_CT") || SymName.startswith("__CT")) {
+    else if (SymName.starts_with("_CT") || SymName.starts_with("__CT")) {
       const little32_t *DataPtr =
           reinterpret_cast<const little32_t *>(SymContents.data());
       CatchableType CT;
@@ -309,16 +310,16 @@ static void dumpCXXData(const ObjectFile *Obj) {
       CTs[SymName] = CT;
     }
     // Construction vtables in the Itanium ABI start with '_ZTT' or '__ZTT'.
-    else if (SymName.startswith("_ZTT") || SymName.startswith("__ZTT")) {
+    else if (SymName.starts_with("_ZTT") || SymName.starts_with("__ZTT")) {
       collectRelocationOffsets(Obj, Sec, SecAddress, SymAddress, SymSize,
                                SymName, VTTEntries);
     }
     // Typeinfo names in the Itanium ABI start with '_ZTS' or '__ZTS'.
-    else if (SymName.startswith("_ZTS") || SymName.startswith("__ZTS")) {
+    else if (SymName.starts_with("_ZTS") || SymName.starts_with("__ZTS")) {
       TINames[SymName] = SymContents.slice(0, SymContents.find('\0'));
     }
     // Vtables in the Itanium ABI start with '_ZTV' or '__ZTV'.
-    else if (SymName.startswith("_ZTV") || SymName.startswith("__ZTV")) {
+    else if (SymName.starts_with("_ZTV") || SymName.starts_with("__ZTV")) {
       collectRelocationOffsets(Obj, Sec, SecAddress, SymAddress, SymSize,
                                SymName, VTableSymEntries);
       for (uint64_t SymOffI = 0; SymOffI < SymSize; SymOffI += BytesInAddress) {
@@ -336,7 +337,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
       }
     }
     // Typeinfo structures in the Itanium ABI start with '_ZTI' or '__ZTI'.
-    else if (SymName.startswith("_ZTI") || SymName.startswith("__ZTI")) {
+    else if (SymName.starts_with("_ZTI") || SymName.starts_with("__ZTI")) {
       // FIXME: Do something with these!
     }
   }
@@ -498,7 +499,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
 
 static void dumpArchive(const Archive *Arc) {
   Error Err = Error::success();
-  for (auto &ArcC : Arc->children(Err)) {
+  for (const auto &ArcC : Arc->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = ArcC.getAsBinary();
     if (!ChildOrErr) {
       // Ignore non-object files.
@@ -549,6 +550,7 @@ int main(int argc, const char *argv[]) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
+  cl::HideUnrelatedOptions({&opts::CXXDumpCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "LLVM C++ ABI Data Dumper\n");
 
   // Default to stdin if no filename is specified.

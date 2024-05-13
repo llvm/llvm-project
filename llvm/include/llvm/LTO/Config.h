@@ -25,6 +25,7 @@
 #include "llvm/Target/TargetOptions.h"
 
 #include <functional>
+#include <optional>
 
 namespace llvm {
 
@@ -43,22 +44,21 @@ struct Config {
     ELF,
   };
   // Note: when adding fields here, consider whether they need to be added to
-  // computeCacheKey in LTO.cpp.
+  // computeLTOCacheKey in LTO.cpp.
   std::string CPU;
   TargetOptions Options;
   std::vector<std::string> MAttrs;
+  std::vector<std::string> MllvmArgs;
   std::vector<std::string> PassPlugins;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
-  Optional<Reloc::Model> RelocModel = Reloc::PIC_;
-  Optional<CodeModel::Model> CodeModel = None;
-  CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
-  CodeGenFileType CGFileType = CGFT_ObjectFile;
+  std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
+  std::optional<CodeModel::Model> CodeModel;
+  CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Default;
+  CodeGenFileType CGFileType = CodeGenFileType::ObjectFile;
   unsigned OptLevel = 2;
+  bool VerifyEach = false;
   bool DisableVerify = false;
-
-  /// Use the new pass manager
-  bool UseNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
 
   /// Flag to indicate that the optimizer should not assume builtins are present
   /// on the target.
@@ -70,9 +70,18 @@ struct Config {
   /// Run PGO context sensitive IR instrumentation.
   bool RunCSIRInstr = false;
 
+  /// Turn on/off the warning about a hash mismatch in the PGO profile data.
+  bool PGOWarnMismatch = true;
+
   /// Asserts whether we can assume whole program visibility during the LTO
   /// link.
   bool HasWholeProgramVisibility = false;
+
+  /// We're validating that all native vtables have corresponding type infos.
+  bool ValidateAllVtablesHaveTypeInfos = false;
+  /// If all native vtables have corresponding type infos, allow
+  /// usage of RTTI to block devirtualization on types used in native files.
+  bool AllVtablesHaveTypeInfos = false;
 
   /// Always emit a Regular LTO object even when it is empty because no Regular
   /// LTO modules were linked. This option is useful for some build system which
@@ -148,7 +157,7 @@ struct Config {
   ///                    compilation.
   ///
   /// If threshold option is not specified, it is disabled by default.
-  llvm::Optional<uint64_t> RemarksHotnessThreshold = 0;
+  std::optional<uint64_t> RemarksHotnessThreshold = 0;
 
   /// The format used for serializing remarks (default: YAML).
   std::string RemarksFormat;
@@ -260,8 +269,12 @@ struct Config {
   /// the given output file name, and (2) creates a resolution file whose name
   /// is prefixed by the given output file name and sets ResolutionFile to its
   /// file handle.
+  ///
+  /// SaveTempsArgs can be specified to select which temps to save.
+  /// If SaveTempsArgs is not provided, all temps are saved.
   Error addSaveTemps(std::string OutputFileName,
-                     bool UseInputModulePath = false);
+                     bool UseInputModulePath = false,
+                     const DenseSet<StringRef> &SaveTempsArgs = {});
 };
 
 struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {

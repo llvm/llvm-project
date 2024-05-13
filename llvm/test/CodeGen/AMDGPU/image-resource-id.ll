@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=juniper < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=juniper < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; === 1 image arg, read_only ===================================================
 
@@ -7,12 +7,12 @@
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 0(
-define amdgpu_kernel void @test_2d_rd_1_0(%opencl.image2d_t addrspace(1)* %in, ; read_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_rd_1_0(ptr addrspace(1) %in, ; read_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -21,12 +21,12 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 0(
-define amdgpu_kernel void @test_3d_rd_1_0(%opencl.image3d_t addrspace(1)* %in, ; read_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_rd_1_0(ptr addrspace(1) %in, ; read_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -37,12 +37,12 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 0(
-define amdgpu_kernel void @test_2d_wr_1_0(%opencl.image2d_t addrspace(1)* %in, ; write_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_wr_1_0(ptr addrspace(1) %in, ; write_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -51,12 +51,12 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 0(
-define amdgpu_kernel void @test_3d_wr_1_0(%opencl.image3d_t addrspace(1)* %in, ; write_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_wr_1_0(ptr addrspace(1) %in, ; write_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -67,13 +67,13 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 0(
-define amdgpu_kernel void @test_2d_rd_2_0(%opencl.image2d_t addrspace(1)* %in1, ; read_only
-                            %opencl.image2d_t addrspace(1)* %in2, ; read_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_rd_2_0(ptr addrspace(1) %in1, ; read_only
+                            ptr addrspace(1) %in2, ; read_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in1) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in1) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -82,13 +82,13 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 1(
-define amdgpu_kernel void @test_2d_rd_2_1(%opencl.image2d_t addrspace(1)* %in1, ; read_only
-                            %opencl.image2d_t addrspace(1)* %in2, ; read_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_rd_2_1(ptr addrspace(1) %in1, ; read_only
+                            ptr addrspace(1) %in2, ; read_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in2) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in2) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -97,13 +97,13 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 0(
-define amdgpu_kernel void @test_3d_rd_2_0(%opencl.image3d_t addrspace(1)* %in1, ; read_only
-                            %opencl.image3d_t addrspace(1)* %in2, ; read_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_rd_2_0(ptr addrspace(1) %in1, ; read_only
+                            ptr addrspace(1) %in2, ; read_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in1) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in1) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -112,13 +112,13 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 1(
-define amdgpu_kernel void @test_3d_rd_2_1(%opencl.image3d_t addrspace(1)* %in1, ; read_only
-                            %opencl.image3d_t addrspace(1)* %in2, ; read_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_rd_2_1(ptr addrspace(1) %in1, ; read_only
+                            ptr addrspace(1) %in2, ; read_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in2) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in2) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -129,13 +129,13 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 0(
-define amdgpu_kernel void @test_2d_wr_2_0(%opencl.image2d_t addrspace(1)* %in1, ; write_only
-                            %opencl.image2d_t addrspace(1)* %in2, ; write_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_wr_2_0(ptr addrspace(1) %in1, ; write_only
+                            ptr addrspace(1) %in2, ; write_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in1) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in1) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -144,13 +144,13 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 1(
-define amdgpu_kernel void @test_2d_wr_2_1(%opencl.image2d_t addrspace(1)* %in1, ; write_only
-                            %opencl.image2d_t addrspace(1)* %in2, ; write_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_wr_2_1(ptr addrspace(1) %in1, ; write_only
+                            ptr addrspace(1) %in2, ; write_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in2) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in2) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -159,13 +159,13 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 0(
-define amdgpu_kernel void @test_3d_wr_2_0(%opencl.image3d_t addrspace(1)* %in1, ; write_only
-                            %opencl.image3d_t addrspace(1)* %in2, ; write_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_wr_2_0(ptr addrspace(1) %in1, ; write_only
+                            ptr addrspace(1) %in2, ; write_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in1) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in1) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -174,13 +174,13 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 1(
-define amdgpu_kernel void @test_3d_wr_2_1(%opencl.image3d_t addrspace(1)* %in1, ; write_only
-                            %opencl.image3d_t addrspace(1)* %in2, ; write_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_wr_2_1(ptr addrspace(1) %in1, ; write_only
+                            ptr addrspace(1) %in2, ; write_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in2) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in2) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -191,14 +191,14 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 2(
-define amdgpu_kernel void @test_2d_rd_3_0(%opencl.image2d_t addrspace(1)* %in1, ; read_only
-                            %opencl.image3d_t addrspace(1)* %in2, ; read_only
-                            %opencl.image2d_t addrspace(1)* %in3, ; read_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_rd_3_0(ptr addrspace(1) %in1, ; read_only
+                            ptr addrspace(1) %in2, ; read_only
+                            ptr addrspace(1) %in3, ; read_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in3) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in3) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -208,14 +208,14 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 2(
-define amdgpu_kernel void @test_3d_rd_3_0(%opencl.image3d_t addrspace(1)* %in1, ; read_only
-                            %opencl.image2d_t addrspace(1)* %in2, ; read_only
-                            %opencl.image3d_t addrspace(1)* %in3, ; read_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_rd_3_0(ptr addrspace(1) %in1, ; read_only
+                            ptr addrspace(1) %in2, ; read_only
+                            ptr addrspace(1) %in3, ; read_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in3) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in3) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -226,14 +226,14 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 2(
-define amdgpu_kernel void @test_2d_wr_3_0(%opencl.image2d_t addrspace(1)* %in1, ; write_only
-                            %opencl.image3d_t addrspace(1)* %in2, ; write_only
-                            %opencl.image2d_t addrspace(1)* %in3, ; write_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_wr_3_0(ptr addrspace(1) %in1, ; write_only
+                            ptr addrspace(1) %in2, ; write_only
+                            ptr addrspace(1) %in3, ; write_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in3) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in3) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -243,14 +243,14 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 2(
-define amdgpu_kernel void @test_3d_wr_3_0(%opencl.image3d_t addrspace(1)* %in1, ; write_only
-                            %opencl.image2d_t addrspace(1)* %in2, ; write_only
-                            %opencl.image3d_t addrspace(1)* %in3, ; write_only
-                            i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_wr_3_0(ptr addrspace(1) %in1, ; write_only
+                            ptr addrspace(1) %in2, ; write_only
+                            ptr addrspace(1) %in3, ; write_only
+                            ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in3) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in3) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -261,14 +261,14 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 1(
-define amdgpu_kernel void @test_2d_mix_3_0(%opencl.image2d_t addrspace(1)* %in1, ; write_only
-                             %opencl.image3d_t addrspace(1)* %in2, ; read_only
-                             %opencl.image2d_t addrspace(1)* %in3, ; read_only
-                             i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_mix_3_0(ptr addrspace(1) %in1, ; write_only
+                             ptr addrspace(1) %in2, ; read_only
+                             ptr addrspace(1) %in3, ; read_only
+                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in3) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in3) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -277,14 +277,14 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 1(
-define amdgpu_kernel void @test_3d_mix_3_0(%opencl.image3d_t addrspace(1)* %in1, ; write_only
-                             %opencl.image2d_t addrspace(1)* %in2, ; read_only
-                             %opencl.image3d_t addrspace(1)* %in3, ; read_only
-                             i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_mix_3_0(ptr addrspace(1) %in1, ; write_only
+                             ptr addrspace(1) %in2, ; read_only
+                             ptr addrspace(1) %in3, ; read_only
+                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in3) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in3) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -293,14 +293,14 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 1(
-define amdgpu_kernel void @test_2d_mix_3_1(%opencl.image2d_t addrspace(1)* %in1, ; write_only
-                             %opencl.image3d_t addrspace(1)* %in2, ; read_only
-                             %opencl.image2d_t addrspace(1)* %in3, ; write_only
-                             i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2d_mix_3_1(ptr addrspace(1) %in1, ; write_only
+                             ptr addrspace(1) %in2, ; read_only
+                             ptr addrspace(1) %in3, ; write_only
+                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.2d(
-      %opencl.image2d_t addrspace(1)* %in3) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in3) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -309,14 +309,14 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 1(
-define amdgpu_kernel void @test_3d_mix_3_1(%opencl.image3d_t addrspace(1)* %in1, ; write_only
-                             %opencl.image2d_t addrspace(1)* %in2, ; read_only
-                             %opencl.image3d_t addrspace(1)* %in3, ; write_only
-                             i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_3d_mix_3_1(ptr addrspace(1) %in1, ; write_only
+                             ptr addrspace(1) %in2, ; read_only
+                             ptr addrspace(1) %in3, ; write_only
+                             ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.image.get.resource.id.3d(
-      %opencl.image3d_t addrspace(1)* %in3) #0
-  store i32 %0, i32 addrspace(1)* %out
+      ptr addrspace(1) %in3) #0
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -324,20 +324,20 @@ entry:
 %opencl.image2d_t = type opaque
 %opencl.image3d_t = type opaque
 
-declare i32 @llvm.OpenCL.image.get.resource.id.2d(%opencl.image2d_t addrspace(1)*) #0
-declare i32 @llvm.OpenCL.image.get.resource.id.3d(%opencl.image3d_t addrspace(1)*) #0
+declare i32 @llvm.OpenCL.image.get.resource.id.2d(ptr addrspace(1)) #0
+declare i32 @llvm.OpenCL.image.get.resource.id.3d(ptr addrspace(1)) #0
 
 attributes #0 = { readnone }
 
 !opencl.kernels = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13,
                     !14, !15, !16, !17, !18, !19}
-!0 = !{void (%opencl.image2d_t addrspace(1)*, i32 addrspace(1)*)* @test_2d_rd_1_0,
+!0 = !{ptr @test_2d_rd_1_0,
        !110, !120, !130, !140, !150}
-!1 = !{void (%opencl.image3d_t addrspace(1)*, i32 addrspace(1)*)* @test_3d_rd_1_0,
+!1 = !{ptr @test_3d_rd_1_0,
        !110, !120, !131, !141, !150}
-!2 = !{void (%opencl.image2d_t addrspace(1)*, i32 addrspace(1)*)* @test_2d_wr_1_0,
+!2 = !{ptr @test_2d_wr_1_0,
        !110, !121, !130, !140, !150}
-!3 = !{void (%opencl.image3d_t addrspace(1)*, i32 addrspace(1)*)* @test_3d_wr_1_0,
+!3 = !{ptr @test_3d_wr_1_0,
        !110, !121, !131, !141, !150}
 !110 = !{!"kernel_arg_addr_space", i32 1, i32 1}
 !120 = !{!"kernel_arg_access_qual", !"read_only", !"none"}
@@ -348,22 +348,14 @@ attributes #0 = { readnone }
 !141 = !{!"kernel_arg_base_type", !"image3d_t", !"int*"}
 !150 = !{!"kernel_arg_type_qual", !"", !""}
 
-!4  = !{void (%opencl.image2d_t addrspace(1)*, %opencl.image2d_t addrspace(1)*,
-              i32 addrspace(1)*)* @test_2d_rd_2_0, !112, !122, !132, !142, !152}
-!5  = !{void (%opencl.image2d_t addrspace(1)*, %opencl.image2d_t addrspace(1)*,
-              i32 addrspace(1)*)* @test_2d_rd_2_1, !112, !122, !132, !142, !152}
-!6  = !{void (%opencl.image3d_t addrspace(1)*, %opencl.image3d_t addrspace(1)*,
-              i32 addrspace(1)*)* @test_3d_rd_2_0, !112, !122, !133, !143, !152}
-!7  = !{void (%opencl.image3d_t addrspace(1)*, %opencl.image3d_t addrspace(1)*,
-              i32 addrspace(1)*)* @test_3d_rd_2_1, !112, !122, !133, !143, !152}
-!8  = !{void (%opencl.image2d_t addrspace(1)*, %opencl.image2d_t addrspace(1)*,
-              i32 addrspace(1)*)* @test_2d_wr_2_0, !112, !123, !132, !142, !152}
-!9  = !{void (%opencl.image2d_t addrspace(1)*, %opencl.image2d_t addrspace(1)*,
-              i32 addrspace(1)*)* @test_2d_wr_2_1, !112, !123, !132, !142, !152}
-!10 = !{void (%opencl.image3d_t addrspace(1)*, %opencl.image3d_t addrspace(1)*,
-              i32 addrspace(1)*)* @test_3d_wr_2_0, !112, !123, !133, !143, !152}
-!11 = !{void (%opencl.image3d_t addrspace(1)*, %opencl.image3d_t addrspace(1)*,
-              i32 addrspace(1)*)* @test_3d_wr_2_1, !112, !123, !133, !143, !152}
+!4  = !{ptr @test_2d_rd_2_0, !112, !122, !132, !142, !152}
+!5  = !{ptr @test_2d_rd_2_1, !112, !122, !132, !142, !152}
+!6  = !{ptr @test_3d_rd_2_0, !112, !122, !133, !143, !152}
+!7  = !{ptr @test_3d_rd_2_1, !112, !122, !133, !143, !152}
+!8  = !{ptr @test_2d_wr_2_0, !112, !123, !132, !142, !152}
+!9  = !{ptr @test_2d_wr_2_1, !112, !123, !132, !142, !152}
+!10 = !{ptr @test_3d_wr_2_0, !112, !123, !133, !143, !152}
+!11 = !{ptr @test_3d_wr_2_1, !112, !123, !133, !143, !152}
 !112 = !{!"kernel_arg_addr_space", i32 1, i32 1, i32 1}
 !122 = !{!"kernel_arg_access_qual", !"read_only", !"read_only", !"none"}
 !123 = !{!"kernel_arg_access_qual", !"write_only", !"write_only", !"none"}
@@ -373,29 +365,21 @@ attributes #0 = { readnone }
 !143 = !{!"kernel_arg_base_type", !"image3d_t", !"image3d_t", !"int*"}
 !152 = !{!"kernel_arg_type_qual", !"", !"", !""}
 
-!12 = !{void (%opencl.image2d_t addrspace(1)*, %opencl.image3d_t addrspace(1)*,
-              %opencl.image2d_t addrspace(1)*, i32 addrspace(1)*)* @test_2d_rd_3_0,
+!12 = !{ptr @test_2d_rd_3_0,
               !114, !124, !134, !144, !154}
-!13 = !{void (%opencl.image3d_t addrspace(1)*, %opencl.image2d_t addrspace(1)*,
-              %opencl.image3d_t addrspace(1)*, i32 addrspace(1)*)* @test_3d_rd_3_0,
+!13 = !{ptr @test_3d_rd_3_0,
               !114, !124, !135, !145, !154}
-!14 = !{void (%opencl.image2d_t addrspace(1)*, %opencl.image3d_t addrspace(1)*,
-              %opencl.image2d_t addrspace(1)*, i32 addrspace(1)*)* @test_2d_wr_3_0,
+!14 = !{ptr @test_2d_wr_3_0,
               !114, !125, !134, !144, !154}
-!15 = !{void (%opencl.image3d_t addrspace(1)*, %opencl.image2d_t addrspace(1)*,
-              %opencl.image3d_t addrspace(1)*, i32 addrspace(1)*)* @test_3d_wr_3_0,
+!15 = !{ptr @test_3d_wr_3_0,
               !114, !125, !135, !145, !154}
-!16 = !{void (%opencl.image2d_t addrspace(1)*, %opencl.image3d_t addrspace(1)*,
-              %opencl.image2d_t addrspace(1)*, i32 addrspace(1)*)* @test_2d_mix_3_0,
+!16 = !{ptr @test_2d_mix_3_0,
               !114, !126, !134, !144, !154}
-!17 = !{void (%opencl.image3d_t addrspace(1)*, %opencl.image2d_t addrspace(1)*,
-              %opencl.image3d_t addrspace(1)*, i32 addrspace(1)*)* @test_3d_mix_3_0,
+!17 = !{ptr @test_3d_mix_3_0,
               !114, !126, !135, !145, !154}
-!18 = !{void (%opencl.image2d_t addrspace(1)*, %opencl.image3d_t addrspace(1)*,
-              %opencl.image2d_t addrspace(1)*, i32 addrspace(1)*)* @test_2d_mix_3_1,
+!18 = !{ptr @test_2d_mix_3_1,
               !114, !127, !134, !144, !154}
-!19 = !{void (%opencl.image3d_t addrspace(1)*, %opencl.image2d_t addrspace(1)*,
-              %opencl.image3d_t addrspace(1)*, i32 addrspace(1)*)* @test_3d_mix_3_1,
+!19 = !{ptr @test_3d_mix_3_1,
               !114, !127, !135, !145, !154}
 !114 = !{!"kernel_arg_addr_space", i32 1, i32 1, i32 1, i32 1}
 !124 = !{!"kernel_arg_access_qual", !"read_only", !"read_only", !"read_only", !"none"}

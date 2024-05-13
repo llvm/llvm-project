@@ -13,7 +13,7 @@ target triple = "hexagon-unknown--elf"
 declare void @f0() #0
 
 ; Function Attrs: nounwind
-define void @f1(i8* %a0, i32 %a1, i8* %a2, i32* %a3, i32 %a4) #0 {
+define void @f1(ptr %a0, i32 %a1, ptr %a2, ptr %a3, i32 %a4) #0 {
 b0:
   br i1 undef, label %b8, label %b1
 
@@ -22,26 +22,26 @@ b1:                                               ; preds = %b0
   br i1 false, label %b8, label %b2
 
 b2:                                               ; preds = %b1
-  %v0 = getelementptr inbounds i8, i8* %a0, i32 undef
+  %v0 = getelementptr inbounds i8, ptr %a0, i32 undef
   %v1 = sub i32 0, %a1
   %v2 = icmp eq i32 %a1, %a4
   br label %b3
 
 b3:                                               ; preds = %b6, %b2
-  %v3 = phi i8* [ %a2, %b2 ], [ %v17, %b6 ]
-  %v4 = phi i8* [ %v0, %b2 ], [ null, %b6 ]
+  %v3 = phi ptr [ %a2, %b2 ], [ %v17, %b6 ]
+  %v4 = phi ptr [ %v0, %b2 ], [ null, %b6 ]
   %v5 = phi i32 [ 1, %b2 ], [ 0, %b6 ]
   br i1 %v2, label %b4, label %b5
 
 b4:                                               ; preds = %b3
-  %v6 = load i8, i8* %v3, align 1
+  %v6 = load i8, ptr %v3, align 1
   br label %b6
 
 b5:                                               ; preds = %b3
-  %v7 = load i8, i8* %v4, align 1
+  %v7 = load i8, ptr %v4, align 1
   %v8 = zext i8 %v7 to i32
-  %v9 = getelementptr inbounds i8, i8* %v4, i32 %v1
-  %v10 = load i8, i8* %v9, align 1
+  %v9 = getelementptr inbounds i8, ptr %v4, i32 %v1
+  %v10 = load i8, ptr %v9, align 1
   %v11 = zext i8 %v10 to i32
   %v12 = sub nsw i32 %v8, %v11
   br label %b6
@@ -51,7 +51,7 @@ b6:                                               ; preds = %b5, %b4
   %v14 = phi i32 [ %v12, %b5 ], [ 0, %b4 ]
   %v15 = zext i8 %v13 to i32
   %v16 = mul nsw i32 %v14, %v14
-  %v17 = getelementptr inbounds i8, i8* %v3, i32 1
+  %v17 = getelementptr inbounds i8, ptr %v3, i32 1
   %v18 = sub nsw i32 0, %v15
   %v19 = mul nsw i32 %v18, %v18
   %v20 = add nuw i32 %v16, 0
@@ -60,7 +60,7 @@ b6:                                               ; preds = %b5, %b4
   %v23 = lshr i32 %v22, 1
   %v24 = add nuw nsw i32 %v23, %v19
   %v25 = add nsw i32 %v24, 0
-  store i32 %v25, i32* %a3, align 4
+  store i32 %v25, ptr %a3, align 4
   %v26 = icmp eq i32 %v5, %a4
   br i1 %v26, label %b7, label %b3
 

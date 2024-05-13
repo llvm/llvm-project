@@ -112,6 +112,20 @@ public:
                                          StringRef SectionName,
                                          bool IsReadOnly) = 0;
 
+    /// An allocated TLS section
+    struct TLSSection {
+      /// The pointer to the initialization image
+      uint8_t *InitializationImage;
+      /// The TLS offset
+      intptr_t Offset;
+    };
+
+    /// Allocate a memory block of (at least) the given size to be used for
+    /// thread-local storage (TLS).
+    virtual TLSSection allocateTLSSection(uintptr_t Size, unsigned Alignment,
+                                          unsigned SectionID,
+                                          StringRef SectionName);
+
     /// Inform the memory manager about the total amount of memory required to
     /// allocate all sections to be loaded:
     /// \p CodeSize - the total size of all code sections
@@ -120,11 +134,10 @@ public:
     ///
     /// Note that by default the callback is disabled. To enable it
     /// redefine the method needsToReserveAllocationSpace to return true.
-    virtual void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
-                                        uintptr_t RODataSize,
-                                        uint32_t RODataAlign,
+    virtual void reserveAllocationSpace(uintptr_t CodeSize, Align CodeAlign,
+                                        uintptr_t RODataSize, Align RODataAlign,
                                         uintptr_t RWDataSize,
-                                        uint32_t RWDataAlign) {}
+                                        Align RWDataAlign) {}
 
     /// Override to return true to enable the reserveAllocationSpace callback.
     virtual bool needsToReserveAllocationSpace() { return false; }
@@ -217,7 +230,7 @@ public:
   StringRef getSectionContent(unsigned SectionID) const;
 
   /// If the section was loaded, return the section's load address,
-  /// otherwise return None.
+  /// otherwise return std::nullopt.
   uint64_t getSectionLoadAddress(unsigned SectionID) const;
 
   /// Set the NotifyStubEmitted callback. This is used for debugging

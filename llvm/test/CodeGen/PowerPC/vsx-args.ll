@@ -28,7 +28,7 @@ entry:
 ; CHECK-FISL: vmr 4, 3
 ; CHECK-FISL: lxvd2x 35, 1, 3
 ; CHECK-FISL: 3, 144
-; CHCEK-FISL: stxvd2x 36, 1, 3
+; CHECK-FISL: stxvd2x 36, 1, 3
 ; CHECK-FISL: vmr 4, 2
 ; CHECK-FISL: bl sv
 

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -25,7 +26,9 @@ using namespace ento;
 namespace {
 class ReturnPointerRangeChecker :
     public Checker< check::PreStmt<ReturnStmt> > {
-  mutable std::unique_ptr<BuiltinBug> BT;
+  // FIXME: This bug correspond to CWE-466.  Eventually we should have bug
+  // types explicitly reference such exploit categories (when applicable).
+  const BugType BT{this, "Buffer overflow"};
 
 public:
     void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
@@ -38,6 +41,10 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
 
   const Expr *RetE = RS->getRetValue();
   if (!RetE)
+    return;
+
+  // Skip "body farmed" functions.
+  if (RetE->getSourceRange().isInvalid())
     return;
 
   SVal V = C.getSVal(RetE);
@@ -63,32 +70,55 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
   if (Idx == ElementCount)
     return;
 
-  ProgramStateRef StInBound = state->assumeInBound(Idx, ElementCount, true);
-  ProgramStateRef StOutBound = state->assumeInBound(Idx, ElementCount, false);
+  ProgramStateRef StInBound, StOutBound;
+  std::tie(StInBound, StOutBound) = state->assumeInBoundDual(Idx, ElementCount);
   if (StOutBound && !StInBound) {
     ExplodedNode *N = C.generateErrorNode(StOutBound);
 
     if (!N)
       return;
 
-    // FIXME: This bug correspond to CWE-466.  Eventually we should have bug
-    // types explicitly reference such exploit categories (when applicable).
-    if (!BT)
-      BT.reset(new BuiltinBug(
-          this, "Buffer overflow",
-          "Returned pointer value points outside the original object "
-          "(potential buffer overflow)"));
-
-    // FIXME: It would be nice to eventually make this diagnostic more clear,
-    // e.g., by referencing the original declaration or by saying *why* this
-    // reference is outside the range.
+    constexpr llvm::StringLiteral Msg =
+        "Returned pointer value points outside the original object "
+        "(potential buffer overflow)";
 
     // Generate a report for this bug.
-    auto report =
-        std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
+    Report->addRange(RetE->getSourceRange());
 
-    report->addRange(RetE->getSourceRange());
-    C.emitReport(std::move(report));
+    const auto ConcreteElementCount = ElementCount.getAs<nonloc::ConcreteInt>();
+    const auto ConcreteIdx = Idx.getAs<nonloc::ConcreteInt>();
+
+    const auto *DeclR = ER->getSuperRegion()->getAs<DeclRegion>();
+
+    if (DeclR)
+      Report->addNote("Original object declared here",
+                      {DeclR->getDecl(), C.getSourceManager()});
+
+    if (ConcreteElementCount) {
+      SmallString<128> SBuf;
+      llvm::raw_svector_ostream OS(SBuf);
+      OS << "Original object ";
+      if (DeclR) {
+        OS << "'";
+        DeclR->getDecl()->printName(OS);
+        OS << "' ";
+      }
+      OS << "is an array of " << ConcreteElementCount->getValue() << " '";
+      ER->getValueType().print(OS,
+                               PrintingPolicy(C.getASTContext().getLangOpts()));
+      OS << "' objects";
+      if (ConcreteIdx) {
+        OS << ", returned pointer points at index " << ConcreteIdx->getValue();
+      }
+
+      Report->addNote(SBuf,
+                      {RetE, C.getSourceManager(), C.getLocationContext()});
+    }
+
+    bugreporter::trackExpressionValue(N, RetE, *Report);
+
+    C.emitReport(std::move(Report));
   }
 }
 

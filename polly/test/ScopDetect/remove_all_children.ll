@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-define void @remove_all_children(i32* %eclass) {
+define void @remove_all_children(ptr %eclass) {
 entry:
   br label %while.body
 
@@ -21,7 +21,6 @@ if.end33:                                         ; preds = %while.end30
 
 while.body36:                                     ; preds = %while.body36, %while.body36.lr.ph
   %indvar77 = phi i64 [ 0, %if.end33 ], [ %indvar.next78, %while.body36 ]
-  %arrayidx40 = getelementptr i32, i32* %eclass, i64 0
   %indvar.next78 = add i64 %indvar77, 1
   br i1 false, label %while.body36, label %while.end44
 
@@ -30,8 +29,7 @@ while.end44:                                      ; preds = %while.body36, %if.e
 
 while.body50:                                     ; preds = %while.body50, %while.body50.lr.ph
   %indvar79 = phi i64 [ 0, %while.end44 ], [ %indvar.next80, %while.body50 ]
-  %arrayidx55 = getelementptr i32, i32* %eclass, i64 0
-  store i32 0, i32* %arrayidx55, align 4
+  store i32 0, ptr %eclass, align 4
   %indvar.next80 = add i64 %indvar79, 1
   br i1 false, label %while.body50, label %while.cond.loopexit
 

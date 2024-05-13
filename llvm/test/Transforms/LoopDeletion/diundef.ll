@@ -1,4 +1,5 @@
-; RUN: opt %s -loop-deletion -S | FileCheck %s
+; RUN: opt %s -passes=loop-deletion -S | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt %s -passes=loop-deletion -S --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -6,6 +7,12 @@ target triple = "x86_64-apple-macosx10.14.0"
 @a = common local_unnamed_addr global i32 0, align 4, !dbg !0
 
 define i32 @b() local_unnamed_addr !dbg !12 {
+; CHECK-LABEL: entry
+; CHECK:       call void @llvm.dbg.value(metadata i32 0, metadata ![[IVAR:[0-9]+]],
+; CHECK-LABEL: for.end:
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 undef, metadata ![[IVAR]], metadata !DIExpression()), !dbg !17
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 undef, metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg !17
+; CHECK-NEXT:  %call = tail call i32 {{.*}} @patatino()
 entry:
   call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !DIExpression()), !dbg !17
   br label %for.cond, !dbg !18
@@ -15,14 +22,13 @@ for.cond:                                         ; preds = %for.cond, %entry
   call void @llvm.dbg.value(metadata i32 %i.0, metadata !16, metadata !DIExpression()), !dbg !17
   %inc = add nuw nsw i32 %i.0, 1, !dbg !21
   call void @llvm.dbg.value(metadata i32 %inc, metadata !16, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.value(metadata i32 %inc, metadata !37, metadata !DIExpression()), !dbg !17
   %exitcond = icmp ne i32 %inc, 3, !dbg !23
   br i1 %exitcond, label %for.cond, label %for.end, !dbg !24, !llvm.loop !25
 
-; CHECK: call void @llvm.dbg.value(metadata i32 undef, metadata !16, metadata !DIExpression()), !dbg !17
-; CHECK-NEXT: %call = tail call i32 {{.*}} @patatino()
 for.end:                                          ; preds = %for.cond
   %call = tail call i32 (...) @patatino() #3, !dbg !27
-  %0 = load i32, i32* @a, align 4, !dbg !28
+  %0 = load i32, ptr @a, align 4, !dbg !28
   ret i32 %0, !dbg !33
 }
 
@@ -33,6 +39,11 @@ entry:
   %call = call i32 @b(), !dbg !35
   ret i32 0, !dbg !36
 }
+
+; CHECK: declare void @llvm.dbg.value(metadata,
+
+; CHECK: ![[IVAR]] = !DILocalVariable(name: "i",
+; CHECK: ![[JVAR]] = !DILocalVariable(name: "j",
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
@@ -73,3 +84,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !34 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 9, type: !13, scopeLine: 9, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !4)
 !35 = !DILocation(line: 9, column: 14, scope: !34)
 !36 = !DILocation(line: 9, column: 19, scope: !34)
+!37 = !DILocalVariable(name: "j", scope: !12, file: !3, line: 3, type: !6)

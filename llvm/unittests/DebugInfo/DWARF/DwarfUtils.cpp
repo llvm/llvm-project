@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfUtils.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -48,12 +48,6 @@ Triple llvm::dwarf::utils::getDefaultTargetTripleForAddrSize(uint8_t AddrSize) {
 }
 
 bool llvm::dwarf::utils::isConfigurationSupported(Triple &T) {
-  initLLVMIfNeeded();
-  std::string Err;
-  return TargetRegistry::lookupTarget(T.getTriple(), Err);
-}
-
-bool llvm::dwarf::utils::isObjectEmissionSupported(Triple &T) {
   initLLVMIfNeeded();
   std::string Err;
   const Target *TheTarget = TargetRegistry::lookupTarget(T.getTriple(), Err);

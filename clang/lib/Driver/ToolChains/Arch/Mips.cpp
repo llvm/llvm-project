@@ -39,12 +39,6 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     DefMips64CPU = "mips64r6";
   }
 
-  // MIPS64r6 is the default for Android MIPS64 (mips64el-linux-android).
-  if (Triple.isAndroid()) {
-    DefMips32CPU = "mips32";
-    DefMips64CPU = "mips64r6";
-  }
-
   // MIPS3 is the default for mips64*-unknown-openbsd.
   if (Triple.isOSOpenBSD())
     DefMips64CPU = "mips3";
@@ -227,6 +221,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   bool IsN64 = ABIName == "64";
   bool IsPIC = false;
   bool NonPIC = false;
+  bool HasNaN2008Opt = false;
 
   Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
                                     options::OPT_fpic, options::OPT_fno_pic,
@@ -291,9 +286,10 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (Arg *A = Args.getLastArg(options::OPT_mnan_EQ)) {
     StringRef Val = StringRef(A->getValue());
     if (Val == "2008") {
-      if (mips::getIEEE754Standard(CPUName) & mips::Std2008)
+      if (mips::getIEEE754Standard(CPUName) & mips::Std2008) {
         Features.push_back("+nan2008");
-      else {
+        HasNaN2008Opt = true;
+      } else {
         Features.push_back("-nan2008");
         D.Diag(diag::warn_target_unsupported_nan2008) << CPUName;
       }
@@ -306,7 +302,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       }
     } else
       D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Val;
+          << A->getSpelling() << Val;
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mabs_EQ)) {
@@ -327,8 +323,10 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       }
     } else {
       D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Val;
+          << A->getSpelling() << Val;
     }
+  } else if (HasNaN2008Opt) {
+    Features.push_back("+abs2008");
   }
 
   AddTargetFeature(Args, Features, options::OPT_msingle_float,
@@ -343,6 +341,15 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                    "dspr2");
   AddTargetFeature(Args, Features, options::OPT_mmsa, options::OPT_mno_msa,
                    "msa");
+  if (Arg *A = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (A->getOption().matches(options::OPT_mstrict_align) ||
+        A->getOption().matches(options::OPT_mno_unaligned_access))
+      Features.push_back(Args.MakeArgString("+strict-align"));
+    else
+      Features.push_back(Args.MakeArgString("-strict-align"));
+  }
 
   // Add the last -mfp32/-mfpxx/-mfp64, if none are given and the ABI is O32
   // pass -mfpxx, or if none are given and fp64a is default, pass fp64 and
@@ -441,7 +448,8 @@ bool mips::isUCLibc(const ArgList &Args) {
   return A && A->getOption().matches(options::OPT_muclibc);
 }
 
-bool mips::isNaN2008(const ArgList &Args, const llvm::Triple &Triple) {
+bool mips::isNaN2008(const Driver &D, const ArgList &Args,
+                     const llvm::Triple &Triple) {
   if (Arg *NaNArg = Args.getLastArg(options::OPT_mnan_EQ))
     return llvm::StringSwitch<bool>(NaNArg->getValue())
         .Case("2008", true)
@@ -449,7 +457,7 @@ bool mips::isNaN2008(const ArgList &Args, const llvm::Triple &Triple) {
         .Default(false);
 
   // NaN2008 is the default for MIPS32r6/MIPS64r6.
-  return llvm::StringSwitch<bool>(getCPUName(Args, Triple))
+  return llvm::StringSwitch<bool>(getCPUName(D, Args, Triple))
       .Cases("mips32r6", "mips64r6", true)
       .Default(false);
 }
@@ -466,11 +474,6 @@ bool mips::isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName) {
 
 bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
                          StringRef ABIName, mips::FloatABI FloatABI) {
-  if (Triple.getVendor() != llvm::Triple::ImaginationTechnologies &&
-      Triple.getVendor() != llvm::Triple::MipsTechnologies &&
-      !Triple.isAndroid())
-    return false;
-
   if (ABIName != "32")
     return false;
 

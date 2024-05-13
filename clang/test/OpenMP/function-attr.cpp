@@ -14,7 +14,7 @@ struct S {
   ~S() {}
 };
 
-// CHECK: define internal void @.omp.copyprivate.copy_func(i8* %0, i8* %1) [[ATTR0:#[0-9]+]] {
+// CHECK: define internal void @.omp.copyprivate.copy_func(ptr noundef %0, ptr noundef %1) [[ATTR0:#[0-9]+]] {
 
 void foo0();
 
@@ -30,8 +30,8 @@ int foo1() {
 }
 
 // CHECK: define internal void @.omp_task_privates_map.({{.*}}) [[ATTR3:#[0-9]+]] {
-// CHECK: define internal i32 @.omp_task_entry.({{.*}}) [[ATTR0]] {
-// CHECK: define internal i32 @.omp_task_destructor.({{.*}}) [[ATTR0]] {
+// CHECK: define internal noundef i32 @.omp_task_entry.({{.*}}) [[ATTR0]] {
+// CHECK: define internal noundef i32 @.omp_task_destructor.({{.*}}) [[ATTR0]] {
 
 int foo2() {
   S<double> s_arr[] = {1, 2};
@@ -41,7 +41,7 @@ int foo2() {
   return 0;
 }
 
-// CHECK: define internal void @.omp.reduction.reduction_func(i8* %0, i8* %1) [[ATTR0]] {
+// CHECK: define internal void @_Z4foo3iPfS_.omp_outlined.omp.reduction.reduction_func(ptr noundef %0, ptr noundef %1) [[ATTR0]] {
 
 float foo3(int n, float *a, float *b) {
   int i;

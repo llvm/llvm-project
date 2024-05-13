@@ -1,9 +1,8 @@
 //===-------- PPCXCOFFStreamer.cpp - XCOFF Object Output ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -22,12 +21,13 @@
 #include "PPCMCCodeEmitter.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -46,7 +46,7 @@ void PPCXCOFFStreamer::emitPrefixedInstruction(const MCInst &Inst,
   // prefixed instruction. Align to 64 bytes if possible but add a maximum of 4
   // bytes when trying to do that. If alignment requires adding more than 4
   // bytes then the instruction won't be aligned.
-  emitCodeAlignment(64, 4);
+  emitCodeAlignment(Align(64), &STI, 4);
 
   // Emit the instruction.
   // Since the previous emit created a new fragment then adding this instruction

@@ -10,17 +10,24 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPESTREAMMERGER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+template <typename T> class SmallVectorImpl;
 namespace codeview {
 
 class TypeIndex;
 struct GloballyHashedType;
 class GlobalTypeTableBuilder;
 class MergingTypeTableBuilder;
+
+/// Used to forward information about PCH.OBJ (precompiled) files, when
+/// applicable.
+struct PCHMergerInfo {
+  uint32_t PCHSignature{};
+  uint32_t EndPrecompIndex = ~0U;
+};
 
 /// Merge one set of type records into another.  This method assumes
 /// that all records are type records, and there are no Id records present.
@@ -83,20 +90,20 @@ Error mergeTypeAndIdRecords(MergingTypeTableBuilder &DestIds,
                             MergingTypeTableBuilder &DestTypes,
                             SmallVectorImpl<TypeIndex> &SourceToDest,
                             const CVTypeArray &IdsAndTypes,
-                            Optional<uint32_t> &PCHSignature);
+                            std::optional<PCHMergerInfo> &PCHInfo);
 
 Error mergeTypeAndIdRecords(GlobalTypeTableBuilder &DestIds,
                             GlobalTypeTableBuilder &DestTypes,
                             SmallVectorImpl<TypeIndex> &SourceToDest,
                             const CVTypeArray &IdsAndTypes,
                             ArrayRef<GloballyHashedType> Hashes,
-                            Optional<uint32_t> &PCHSignature);
+                            std::optional<PCHMergerInfo> &PCHInfo);
 
 Error mergeTypeRecords(GlobalTypeTableBuilder &Dest,
                        SmallVectorImpl<TypeIndex> &SourceToDest,
                        const CVTypeArray &Types,
                        ArrayRef<GloballyHashedType> Hashes,
-                       Optional<uint32_t> &PCHSignature);
+                       std::optional<PCHMergerInfo> &PCHInfo);
 
 Error mergeIdRecords(GlobalTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
                      SmallVectorImpl<TypeIndex> &SourceToDest,

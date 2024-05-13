@@ -1,6 +1,10 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=expected,omp51 -fopenmp -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
 
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp-simd -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=expected,omp51 -fopenmp-simd -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
 
 
 #pragma omp begin // expected-error {{expected an OpenMP directive}}
@@ -11,7 +15,7 @@
 #pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp variant begin // expected-error {{expected an OpenMP directive}}
 #pragma omp declare variant end // expected-error {{function declaration is expected after 'declare variant' directive}}
-#pragma omp begin declare variant // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+#pragma omp begin declare variant // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp end declare variant
 // TODO: Issue an error message
 #pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
@@ -22,9 +26,9 @@
 int foo(void);
 const int var;
 
-#pragma omp begin declare variant // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+#pragma omp begin declare variant // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp end declare variant
-#pragma omp begin declare variant xxx // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+#pragma omp begin declare variant xxx // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match // expected-error {{expected '(' after 'match'}}
 #pragma omp end declare variant
@@ -54,15 +58,15 @@ const int var;
 #pragma omp end declare variant
 #pragma omp begin declare variant match(implementation={vendor}) // expected-warning {{the context selector 'vendor' in context set 'implementation' requires a context property defined in parentheses; selector ignored}} expected-note {{the ignored selector spans until here}}
 #pragma omp end declare variant
-#pragma omp begin declare variant match(implementation={vendor(}) // expected-error {{expected ')'}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
+#pragma omp begin declare variant match(implementation={vendor(}) // expected-error {{expected ')'}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
 #pragma omp end declare variant
-#pragma omp begin declare variant match(implementation={vendor()}) // expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'pgi' 'ti' 'unknown'}}
+#pragma omp begin declare variant match(implementation={vendor()}) // expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match(implementation={vendor(score ibm)}) // expected-error {{expected '(' after 'score'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}}
 #pragma omp end declare variant
-#pragma omp begin declare variant match(implementation={vendor(score( ibm)}) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
+#pragma omp begin declare variant match(implementation={vendor(score( ibm)}) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
 #pragma omp end declare variant
-#pragma omp begin declare variant match(implementation={vendor(score(2 ibm)}) // expected-error {{expected ')'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{to match this '('}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
+#pragma omp begin declare variant match(implementation={vendor(score(2 ibm)}) // expected-error {{expected ')'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{to match this '('}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match(implementation={vendor(score(foo()) ibm)}) // expected-warning {{expected '':'' after the score expression; '':'' assumed}}
 #pragma omp end declare variant

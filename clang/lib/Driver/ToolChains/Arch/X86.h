@@ -11,8 +11,8 @@
 
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Option.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 #include <vector>
 
@@ -21,7 +21,7 @@ namespace driver {
 namespace tools {
 namespace x86 {
 
-std::string getX86TargetCPU(const llvm::opt::ArgList &Args,
+std::string getX86TargetCPU(const Driver &D, const llvm::opt::ArgList &Args,
                             const llvm::Triple &Triple);
 
 void getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,

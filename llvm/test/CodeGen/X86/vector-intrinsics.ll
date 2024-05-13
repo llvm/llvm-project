@@ -4,7 +4,7 @@
 declare <4 x double> @llvm.sin.v4f64(<4 x double> %p)
 declare <4 x double> @llvm.cos.v4f64(<4 x double> %p)
 declare <4 x double> @llvm.pow.v4f64(<4 x double> %p, <4 x double> %q)
-declare <4 x double> @llvm.powi.v4f64(<4 x double> %p, i32)
+declare <4 x double> @llvm.powi.v4f64.i32(<4 x double> %p, i32)
 
 define <4 x double> @foo(<4 x double> %p)
 ; CHECK-LABEL: foo:
@@ -13,20 +13,20 @@ define <4 x double> @foo(<4 x double> %p)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    callq sin
+; CHECK-NEXT:    callq sin@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq sin
+; CHECK-NEXT:    callq sin@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    callq sin
+; CHECK-NEXT:    callq sin@PLT
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq sin
+; CHECK-NEXT:    callq sin@PLT
 ; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -44,20 +44,20 @@ define <4 x double> @goo(<4 x double> %p)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    callq cos
+; CHECK-NEXT:    callq cos@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq cos
+; CHECK-NEXT:    callq cos@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    callq cos
+; CHECK-NEXT:    callq cos@PLT
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq cos
+; CHECK-NEXT:    callq cos@PLT
 ; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -78,25 +78,25 @@ define <4 x double> @moo(<4 x double> %p, <4 x double> %q)
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm2, %xmm1
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -118,23 +118,23 @@ define <4 x double> @zoo(<4 x double> %p, i32 %q)
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movl %ebx, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movl %ebx, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movl %ebx, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -144,16 +144,16 @@ define <4 x double> @zoo(<4 x double> %p, i32 %q)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 {
-  %t = call <4 x double> @llvm.powi.v4f64(<4 x double> %p, i32 %q)
+  %t = call <4 x double> @llvm.powi.v4f64.i32(<4 x double> %p, i32 %q)
   ret <4 x double> %t
 }
 
 
 declare <9 x double> @llvm.exp.v9f64(<9 x double> %a)
 declare <9 x double> @llvm.pow.v9f64(<9 x double> %a, <9 x double> %b)
-declare <9 x double> @llvm.powi.v9f64(<9 x double> %a, i32)
+declare <9 x double> @llvm.powi.v9f64.i32(<9 x double> %a, i32)
 
-define void @a(<9 x double>* %p) nounwind {
+define void @a(ptr %p) nounwind {
 ; CHECK-LABEL: a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -169,44 +169,44 @@ define void @a(<9 x double>* %p) nounwind {
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps 48(%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    callq exp
+; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq exp
+; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    callq exp
+; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq exp
+; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    callq exp
+; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq exp
+; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    callq exp
+; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq exp
+; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    callq exp
+; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movsd %xmm0, 64(%rbx)
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps %xmm0, (%rbx)
@@ -219,12 +219,12 @@ define void @a(<9 x double>* %p) nounwind {
 ; CHECK-NEXT:    addq $96, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
-  %a = load <9 x double>, <9 x double>* %p
+  %a = load <9 x double>, ptr %p
   %r = call <9 x double> @llvm.exp.v9f64(<9 x double> %a)
-  store <9 x double> %r, <9 x double>* %p
+  store <9 x double> %r, ptr %p
   ret void
 }
-define void @b(<9 x double>* %p, <9 x double>* %q) nounwind {
+define void @b(ptr %p, ptr %q) nounwind {
 ; CHECK-LABEL: b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -251,49 +251,49 @@ define void @b(<9 x double>* %p, <9 x double>* %q) nounwind {
 ; CHECK-NEXT:    movaps 48(%rsi), %xmm1
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm2, %xmm0
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
@@ -301,7 +301,7 @@ define void @b(<9 x double>* %p, <9 x double>* %q) nounwind {
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movsd %xmm0, 64(%rbx)
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps %xmm0, (%rbx)
@@ -314,13 +314,13 @@ define void @b(<9 x double>* %p, <9 x double>* %q) nounwind {
 ; CHECK-NEXT:    addq $160, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
-  %a = load <9 x double>, <9 x double>* %p
-  %b = load <9 x double>, <9 x double>* %q
+  %a = load <9 x double>, ptr %p
+  %b = load <9 x double>, ptr %q
   %r = call <9 x double> @llvm.pow.v9f64(<9 x double> %a, <9 x double> %b)
-  store <9 x double> %r, <9 x double>* %p
+  store <9 x double> %r, ptr %p
   ret void
 }
-define void @c(<9 x double>* %p, i32 %n) nounwind {
+define void @c(ptr %p, i32 %n) nounwind {
 ; CHECK-LABEL: c:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -339,52 +339,52 @@ define void @c(<9 x double>* %p, i32 %n) nounwind {
 ; CHECK-NEXT:    movaps 48(%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    callq __powidf2
+; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movsd %xmm0, 64(%rbx)
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps %xmm0, (%rbx)
@@ -398,8 +398,8 @@ define void @c(<9 x double>* %p, i32 %n) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
-  %a = load <9 x double>, <9 x double>* %p
-  %r = call <9 x double> @llvm.powi.v9f64(<9 x double> %a, i32 %n)
-  store <9 x double> %r, <9 x double>* %p
+  %a = load <9 x double>, ptr %p
+  %r = call <9 x double> @llvm.powi.v9f64.i32(<9 x double> %a, i32 %n)
+  store <9 x double> %r, ptr %p
   ret void
 }

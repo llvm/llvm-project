@@ -218,9 +218,8 @@ namespace {
     bool runOnMachineFunction(MachineFunction &F) override {
       TM = &F.getTarget();
       bool Changed = false;
-      for (MachineFunction::iterator FI = F.begin(), FE = F.end();
-           FI != FE; ++FI)
-        Changed |= runOnMachineBasicBlock(*FI);
+      for (MachineBasicBlock &MBB : F)
+        Changed |= runOnMachineBasicBlock(MBB);
 
       // This pass invalidates liveness information when it reorders
       // instructions to fill delay slot. Without this, -verify-machineinstrs
@@ -310,20 +309,19 @@ INITIALIZE_PASS(MipsDelaySlotFiller, DEBUG_TYPE,
 static void insertDelayFiller(Iter Filler, const BB2BrMap &BrMap) {
   MachineFunction *MF = Filler->getParent()->getParent();
 
-  for (BB2BrMap::const_iterator I = BrMap.begin(); I != BrMap.end(); ++I) {
-    if (I->second) {
-      MIBundleBuilder(I->second).append(MF->CloneMachineInstr(&*Filler));
+  for (const auto &I : BrMap) {
+    if (I.second) {
+      MIBundleBuilder(I.second).append(MF->CloneMachineInstr(&*Filler));
       ++UsefulSlots;
     } else {
-      I->first->insert(I->first->end(), MF->CloneMachineInstr(&*Filler));
+      I.first->push_back(MF->CloneMachineInstr(&*Filler));
     }
   }
 }
 
 /// This function adds registers Filler defines to MBB's live-in register list.
 static void addLiveInRegs(Iter Filler, MachineBasicBlock &MBB) {
-  for (unsigned I = 0, E = Filler->getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = Filler->getOperand(I);
+  for (const MachineOperand &MO : Filler->operands()) {
     unsigned R;
 
     if (!MO.isReg() || !MO.isDef() || !(R = MO.getReg()))
@@ -367,7 +365,8 @@ void RegDefsUses::setCallerSaved(const MachineInstr &MI) {
   // Add RA/RA_64 to Defs to prevent users of RA/RA_64 from going into
   // the delay slot. The reason is that RA/RA_64 must not be changed
   // in the delay slot so that the callee can return to the caller.
-  if (MI.definesRegister(Mips::RA) || MI.definesRegister(Mips::RA_64)) {
+  if (MI.definesRegister(Mips::RA, /*TRI=*/nullptr) ||
+      MI.definesRegister(Mips::RA_64, /*TRI=*/nullptr)) {
     Defs.set(Mips::RA);
     Defs.set(Mips::RA_64);
   }
@@ -401,10 +400,9 @@ void RegDefsUses::setUnallocatableRegs(const MachineFunction &MF) {
 
 void RegDefsUses::addLiveOut(const MachineBasicBlock &MBB,
                              const MachineBasicBlock &SuccBB) {
-  for (MachineBasicBlock::const_succ_iterator SI = MBB.succ_begin(),
-       SE = MBB.succ_end(); SI != SE; ++SI)
-    if (*SI != &SuccBB)
-      for (const auto &LI : (*SI)->liveins())
+  for (const MachineBasicBlock *S : MBB.successors())
+    if (S != &SuccBB)
+      for (const auto &LI : S->liveins())
         Uses.set(LI.PhysReg);
 }
 
@@ -613,7 +611,8 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
       continue;
 
     // Delay slot filling is disabled at -O0, or in microMIPS32R6.
-    if (!DisableDelaySlotFiller && (TM->getOptLevel() != CodeGenOpt::None) &&
+    if (!DisableDelaySlotFiller &&
+        (TM->getOptLevel() != CodeGenOptLevel::None) &&
         !(InMicroMipsMode && STI.hasMips32r6())) {
 
       bool Filled = false;
@@ -679,7 +678,7 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     // Bundle the NOP to the instruction with the delay slot.
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": could not fill delay slot for ";
                I->dump());
-    BuildMI(MBB, std::next(I), I->getDebugLoc(), TII->get(Mips::NOP));
+    TII->insertNop(MBB, std::next(I), I->getDebugLoc());
     MIBundleBuilder(MBB, I, std::next(I, 2));
     ++FilledSlots;
     Changed = true;
@@ -839,9 +838,8 @@ bool MipsDelaySlotFiller::searchSuccBBs(MachineBasicBlock &MBB,
   auto *Fn = MBB.getParent();
 
   // Iterate over SuccBB's predecessor list.
-  for (MachineBasicBlock::pred_iterator PI = SuccBB->pred_begin(),
-       PE = SuccBB->pred_end(); PI != PE; ++PI)
-    if (!examinePred(**PI, *SuccBB, RegDU, HasMultipleSuccs, BrMap))
+  for (MachineBasicBlock *Pred : SuccBB->predecessors())
+    if (!examinePred(*Pred, *SuccBB, RegDU, HasMultipleSuccs, BrMap))
       return false;
 
   // Do not allow moving instructions which have unallocatable register operands

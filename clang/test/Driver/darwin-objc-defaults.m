@@ -92,3 +92,11 @@
 // CHECK-CHECK-ARMV7_IPHONE3_0: -fobjc-runtime=ios-3.0
 // CHECK-CHECK-ARMV7_IPHONE3_0-NOT: -fobjc-dispatch-method
 // CHECK-CHECK-ARMV7_IPHONE3_0: darwin-objc-defaults
+
+// RUN: %clang -target x86_64-apple-ios13.1-macabi -S -### %s 2> %t
+// RUN: FileCheck --check-prefix CHECK-CHECK-MACCATALYST < %t %s
+
+// CHECK-CHECK-MACCATALYST: "-cc1"
+// CHECK-CHECK-MACCATALYST: -fobjc-runtime=macosx-10.15
+// CHECK-CHECK-MACCATALYST-NOT: -fobjc-dispatch-method
+// CHECK-CHECK-MACCATALYST: darwin-objc-defaults

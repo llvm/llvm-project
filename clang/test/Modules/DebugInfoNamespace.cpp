@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -x objective-c++ -std=c++11 -debug-info-kind=standalone \
 // RUN:     -dwarf-ext-refs -fmodules \

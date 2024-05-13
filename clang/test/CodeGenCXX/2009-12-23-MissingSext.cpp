@@ -8,11 +8,11 @@ struct foo {
 };
 int bar(struct foo p, int x) {
 // CHECK: bar
-// CHECK: %[[val:.*]] = load i32, i32* {{.*}}
+// CHECK: %[[val:.*]] = load i32, ptr {{.*}}
 // CHECK-NEXT:          ashr i32 %[[val]]
-// CHECK:             = load i32, i32* {{.*}}
-// CHECK:             = load i32, i32* {{.*}}
-// CHECK: %[[val:.*]] = load i32, i32* {{.*}}
+// CHECK:             = load i32, ptr {{.*}}
+// CHECK:             = load i32, ptr {{.*}}
+// CHECK: %[[val:.*]] = load i32, ptr {{.*}}
 // CHECK-NEXT:          ashr i32 %[[val]]
   x = (p.y > x ? x : p.y);
   return x;

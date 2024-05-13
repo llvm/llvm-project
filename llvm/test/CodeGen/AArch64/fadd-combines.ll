@@ -114,13 +114,13 @@ define double @test7(double %a, double %b) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fmov d2, #-2.00000000
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    fmul d1, d1, d2
 ; CHECK-NEXT:    fadd d8, d0, d1
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov d0, d8
 ; CHECK-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %mul = fmul double %b, -2.000000e+00
@@ -132,13 +132,13 @@ define double @test7(double %a, double %b) nounwind {
 define float @fadd_const_multiuse_fmf(float %x) {
 ; CHECK-LABEL: fadd_const_multiuse_fmf:
 ; CHECK:       // %bb.0:
-; CHECK-DAG:     mov  [[W59:w[0-9]+]], #1114374144
-; CHECK-DAG:     mov  [[W42:w[0-9]+]], #1109917696
-; CHECK-DAG:     fmov [[FP59:s[0-9]+]], [[W59]]
-; CHECK-DAG:     fmov [[FP42:s[0-9]+]], [[W42]]
-; CHECK-NEXT:    fadd [[TMP1:s[0-9]+]], s0, [[FP42]]
-; CHECK-NEXT:    fadd [[TMP2:s[0-9]+]], s0, [[FP59]]
-; CHECK-NEXT:    fadd s0, [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
+; CHECK-NEXT:    mov w9, #1114374144 // =0x426c0000
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fadd s1, s0, s1
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s1, s0
 ; CHECK-NEXT:    ret
   %a1 = fadd float %x, 42.0
   %a2 = fadd nsz reassoc float %a1, 17.0
@@ -150,13 +150,13 @@ define float @fadd_const_multiuse_fmf(float %x) {
 define float @fadd_const_multiuse_attr(float %x) {
 ; CHECK-LABEL: fadd_const_multiuse_attr:
 ; CHECK:       // %bb.0:
-; CHECK-DAG:     mov  [[W17:w[0-9]+]], #1109917696
-; CHECK-DAG:     mov  [[W59:w[0-9]+]], #1114374144
-; CHECK-NEXT:    fmov [[FP17:s[0-9]+]], [[W17]]
-; CHECK-NEXT:    fmov [[FP59:s[0-9]+]], [[W59]]
-; CHECK-NEXT:    fadd [[TMP1:s[0-9]+]], s0, [[FP17]]
-; CHECK-NEXT:    fadd [[TMP2:s[0-9]+]], s0, [[FP59]]
-; CHECK-NEXT:    fadd s0, [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
+; CHECK-NEXT:    mov w9, #1114374144 // =0x426c0000
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fadd s1, s0, s1
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s1, s0
 ; CHECK-NEXT:    ret
   %a1 = fadd fast float %x, 42.0
   %a2 = fadd fast float %a1, 17.0
@@ -217,10 +217,10 @@ define float @fadd_fma_fmul_fmf(float %a, float %b, float %c, float %d, float %n
 ; CHECK-NEXT:    fmadd s2, s2, s3, s4
 ; CHECK-NEXT:    fmadd s0, s0, s1, s2
 ; CHECK-NEXT:    ret
-  %m1 = fmul float %a, %b
-  %m2 = fmul float %c, %d
+  %m1 = fmul contract float %a, %b
+  %m2 = fmul contract float %c, %d
   %a1 = fadd contract float %m1, %m2
-  %a2 = fadd reassoc float %n0, %a1
+  %a2 = fadd contract reassoc float %n0, %a1
   ret float %a2
 }
 
@@ -263,16 +263,16 @@ define <2 x double> @fadd_fma_fmul_3(<2 x double> %x1, <2 x double> %x2, <2 x do
 
 ; negative test
 
-define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_extra_use_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul s1, s0, s1
 ; CHECK-NEXT:    fmadd s0, s2, s3, s1
-; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    str s1, [x0]
+; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    ret
   %m1 = fmul fast float %a, %b
-  store float %m1, float* %p
+  store float %m1, ptr %p
   %m2 = fmul fast float %c, %d
   %a1 = fadd fast float %m1, %m2
   %a2 = fadd fast float %n0, %a1
@@ -281,17 +281,17 @@ define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, 
 
 ; negative test
 
-define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_extra_use_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul s2, s2, s3
 ; CHECK-NEXT:    fmadd s0, s0, s1, s2
-; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    str s2, [x0]
+; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    ret
   %m1 = fmul fast float %a, %b
   %m2 = fmul fast float %c, %d
-  store float %m2, float* %p
+  store float %m2, ptr %p
   %a1 = fadd fast float %m1, %m2
   %a2 = fadd fast float %n0, %a1
   ret float %a2
@@ -299,7 +299,7 @@ define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, 
 
 ; negative test
 
-define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_extra_use_3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul s2, s2, s3
@@ -310,10 +310,42 @@ define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, 
   %m1 = fmul fast float %a, %b
   %m2 = fmul fast float %c, %d
   %a1 = fadd fast float %m1, %m2
-  store float %a1, float* %p
+  store float %a1, ptr %p
   %a2 = fadd fast float %n0, %a1
   ret float %a2
 }
+
+define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %d, float %e, float %f, float %g) {
+; CHECK-LABEL: fmac_sequence_innermost_fmul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmadd s0, s0, s1, s6
+; CHECK-NEXT:    fmadd s0, s2, s3, s0
+; CHECK-NEXT:    fmadd s0, s4, s5, s0
+; CHECK-NEXT:    ret
+  %t0 = fmul float %a, %b
+  %t1 = fmul contract float %c, %d
+  %t2 = fadd contract float %t0, %t1
+  %t3 = fmul contract float %e, %f
+  %t4 = fadd contract float %t2, %t3
+  %t5 = fadd contract reassoc float %t4, %g
+  ret float %t5
+}
+
+define float @fmac_sequence_innermost_fmul_intrinsics(float %a, float %b, float %c, float %d, float %e, float %f, float %g) {
+; CHECK-LABEL: fmac_sequence_innermost_fmul_intrinsics:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmadd s0, s0, s1, s6
+; CHECK-NEXT:    fmadd s0, s2, s3, s0
+; CHECK-NEXT:    fmadd s0, s4, s5, s0
+; CHECK-NEXT:    ret
+  %t0 = fmul float %a, %b
+  %t1 = call float @llvm.fma.f32(float %c, float %d, float %t0)
+  %t2 = call float @llvm.fma.f32(float %e, float %f, float %t1)
+  %t5 = fadd contract reassoc float %t2, %g
+  ret float %t5
+}
+
+declare float @llvm.fma.f32(float, float, float)
 
 declare void @use(double)
 

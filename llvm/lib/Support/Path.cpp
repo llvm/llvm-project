@@ -12,6 +12,9 @@
 
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
@@ -20,7 +23,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include <cctype>
-#include <cstring>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -37,15 +39,16 @@ namespace {
   using llvm::sys::path::Style;
 
   inline Style real_style(Style style) {
-#ifdef _WIN32
-    return (style == Style::posix) ? Style::posix : Style::windows;
-#else
-    return (style == Style::windows) ? Style::windows : Style::posix;
-#endif
+    if (style != Style::native)
+      return style;
+    if (is_style_posix(style))
+      return Style::posix;
+    return LLVM_WINDOWS_PREFER_FORWARD_SLASH ? Style::windows_slash
+                                             : Style::windows_backslash;
   }
 
   inline const char *separators(Style style) {
-    if (real_style(style) == Style::windows)
+    if (is_style_windows(style))
       return "\\/";
     return "/";
   }
@@ -66,7 +69,7 @@ namespace {
     if (path.empty())
       return path;
 
-    if (real_style(style) == Style::windows) {
+    if (is_style_windows(style)) {
       // C:
       if (path.size() >= 2 &&
           std::isalpha(static_cast<unsigned char>(path[0])) && path[1] == ':')
@@ -98,9 +101,9 @@ namespace {
 
     size_t pos = str.find_last_of(separators(style), str.size() - 1);
 
-    if (real_style(style) == Style::windows) {
+    if (is_style_windows(style)) {
       if (pos == StringRef::npos)
-        pos = str.find_last_of(':', str.size() - 2);
+        pos = str.find_last_of(':', str.size() - 1);
     }
 
     if (pos == StringRef::npos || (pos == 1 && is_separator(str[0], style)))
@@ -113,7 +116,7 @@ namespace {
   // directory in str, it returns StringRef::npos.
   size_t root_dir_start(StringRef str, Style style) {
     // case "c:/"
-    if (real_style(style) == Style::windows) {
+    if (is_style_windows(style)) {
       if (str.size() > 2 && str[1] == ':' && is_separator(str[2], style))
         return 2;
     }
@@ -259,7 +262,7 @@ const_iterator &const_iterator::operator++() {
     // Root dir.
     if (was_net ||
         // c:/
-        (real_style(S) == Style::windows && Component.endswith(":"))) {
+        (is_style_windows(S) && Component.ends_with(":"))) {
       Component = Path.substr(Position, 1);
       return *this;
     }
@@ -348,7 +351,7 @@ StringRef root_path(StringRef path, Style style) {
   if (b != e) {
     bool has_net =
         b->size() > 2 && is_separator((*b)[0], style) && (*b)[1] == (*b)[0];
-    bool has_drive = (real_style(style) == Style::windows) && b->endswith(":");
+    bool has_drive = is_style_windows(style) && b->ends_with(":");
 
     if (has_net || has_drive) {
       if ((++pos != e) && is_separator((*pos)[0], style)) {
@@ -373,7 +376,7 @@ StringRef root_name(StringRef path, Style style) {
   if (b != e) {
     bool has_net =
         b->size() > 2 && is_separator((*b)[0], style) && (*b)[1] == (*b)[0];
-    bool has_drive = (real_style(style) == Style::windows) && b->endswith(":");
+    bool has_drive = is_style_windows(style) && b->ends_with(":");
 
     if (has_net || has_drive) {
       // just {C:,//net}, return the first component.
@@ -390,7 +393,7 @@ StringRef root_directory(StringRef path, Style style) {
   if (b != e) {
     bool has_net =
         b->size() > 2 && is_separator((*b)[0], style) && (*b)[1] == (*b)[0];
-    bool has_drive = (real_style(style) == Style::windows) && b->endswith(":");
+    bool has_drive = is_style_windows(style) && b->ends_with(":");
 
     if ((has_net || has_drive) &&
         // {C:,//net}, skip to the next component.
@@ -472,7 +475,7 @@ StringRef parent_path(StringRef path, Style style) {
 void remove_filename(SmallVectorImpl<char> &path, Style style) {
   size_t end_pos = parent_path_end(StringRef(path.begin(), path.size()), style);
   if (end_pos != StringRef::npos)
-    path.set_size(end_pos);
+    path.truncate(end_pos);
 }
 
 void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
@@ -484,7 +487,7 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
   // Erase existing extension.
   size_t pos = p.find_last_of('.');
   if (pos != StringRef::npos && pos >= filename_pos(p, style))
-    path.set_size(pos);
+    path.truncate(pos);
 
   // Append '.' if needed.
   if (ext.size() > 0 && ext[0] != '.')
@@ -497,7 +500,7 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
 static bool starts_with(StringRef Path, StringRef Prefix,
                         Style style = Style::native) {
   // Windows prefix matching : case and separator insensitive
-  if (real_style(style) == Style::windows) {
+  if (is_style_windows(style)) {
     if (Path.size() < Prefix.size())
       return false;
     for (size_t I = 0, E = Prefix.size(); I != E; ++I) {
@@ -510,7 +513,7 @@ static bool starts_with(StringRef Path, StringRef Prefix,
     }
     return true;
   }
-  return Path.startswith(Prefix);
+  return Path.starts_with(Prefix);
 }
 
 bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
@@ -548,8 +551,10 @@ void native(const Twine &path, SmallVectorImpl<char> &result, Style style) {
 void native(SmallVectorImpl<char> &Path, Style style) {
   if (Path.empty())
     return;
-  if (real_style(style) == Style::windows) {
-    std::replace(Path.begin(), Path.end(), '/', '\\');
+  if (is_style_windows(style)) {
+    for (char &Ch : Path)
+      if (is_separator(Ch, style))
+        Ch = preferred_separator(style);
     if (Path[0] == '~' && (Path.size() == 1 || is_separator(Path[1], style))) {
       SmallString<128> PathHome;
       home_directory(PathHome);
@@ -557,14 +562,12 @@ void native(SmallVectorImpl<char> &Path, Style style) {
       Path = PathHome;
     }
   } else {
-    for (auto PI = Path.begin(), PE = Path.end(); PI < PE; ++PI)
-      if (*PI == '\\')
-        *PI = '/';
+    std::replace(Path.begin(), Path.end(), '\\', '/');
   }
 }
 
 std::string convert_to_slash(StringRef path, Style style) {
-  if (real_style(style) != Style::windows)
+  if (is_style_posix(style))
     return std::string(path);
 
   std::string s = path.str();
@@ -599,7 +602,7 @@ StringRef extension(StringRef path, Style style) {
 bool is_separator(char value, Style style) {
   if (value == '/')
     return true;
-  if (real_style(style) == Style::windows)
+  if (is_style_windows(style))
     return value == '\\';
   return false;
 }
@@ -671,8 +674,7 @@ bool is_absolute(const Twine &path, Style style) {
   StringRef p = path.toStringRef(path_storage);
 
   bool rootDir = has_root_directory(p, style);
-  bool rootName =
-      (real_style(style) != Style::windows) || has_root_name(p, style);
+  bool rootName = is_style_posix(style) || has_root_name(p, style);
 
   return rootDir && rootName;
 }
@@ -686,7 +688,7 @@ bool is_absolute_gnu(const Twine &path, Style style) {
   if (!p.empty() && is_separator(p.front(), style))
     return true;
 
-  if (real_style(style) == Style::windows) {
+  if (is_style_windows(style)) {
     // Handle drive letter pattern (a character followed by ':') on Windows.
     if (p.size() >= 2 && (p[0] && p[1] == ':'))
       return true;
@@ -759,14 +761,18 @@ bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
     }
   }
 
+  SmallString<256> buffer = root;
+  // "root" could be "/", which may need to be translated into "\".
+  make_preferred(buffer, style);
+  needs_change |= root != buffer;
+
   // Avoid rewriting the path unless we have to.
   if (!needs_change)
     return false;
 
-  SmallString<256> buffer = root;
   if (!components.empty()) {
     buffer += components[0];
-    for (StringRef C : makeArrayRef(components).drop_front()) {
+    for (StringRef C : ArrayRef(components).drop_front()) {
       buffer += preferred_separator(style);
       buffer += C;
     }
@@ -843,7 +849,7 @@ createTemporaryFile(const Twine &Model, int &ResultFD,
          "Model must be a simple filename.");
   // Use P.begin() so that createUniqueEntity doesn't need to recreate Storage.
   return createUniqueEntity(P.begin(), ResultFD, ResultPath, true, Type, Flags,
-                            owner_read | owner_write);
+                            all_read | all_write);
 }
 
 static std::error_code
@@ -906,8 +912,7 @@ void make_absolute(const Twine &current_directory,
   bool rootName = path::has_root_name(p);
 
   // Already absolute.
-  if ((rootName || real_style(Style::native) != Style::windows) &&
-      rootDirectory)
+  if ((rootName || is_style_posix(Style::native)) && rootDirectory)
     return;
 
   // All of the following conditions will need the current directory.
@@ -1004,7 +1009,7 @@ static std::error_code copy_file_internal(int ReadFD, int WriteFD) {
   delete[] Buf;
 
   if (BytesRead < 0 || BytesWritten < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 
@@ -1050,11 +1055,11 @@ ErrorOr<MD5::MD5Result> md5_contents(int FD) {
     BytesRead = read(FD, Buf.data(), BufSize);
     if (BytesRead <= 0)
       break;
-    Hash.update(makeArrayRef(Buf.data(), BytesRead));
+    Hash.update(ArrayRef(Buf.data(), BytesRead));
   }
 
   if (BytesRead < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   MD5::MD5Result Result;
   Hash.final(Result);
   return Result;
@@ -1139,7 +1144,7 @@ void directory_entry::replace_filename(const Twine &Filename, file_type Type,
                                        basic_file_status Status) {
   SmallString<128> PathStr = path::parent_path(Path);
   path::append(PathStr, Filename);
-  this->Path = std::string(PathStr.str());
+  this->Path = std::string(PathStr);
   this->Type = Type;
   this->Status = Status;
 }
@@ -1167,6 +1172,25 @@ const char *mapped_file_region::const_data() const {
   return reinterpret_cast<const char *>(Mapping);
 }
 
+Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
+                          ssize_t ChunkSize) {
+  // Install a handler to truncate the buffer to the correct size on exit.
+  size_t Size = Buffer.size();
+  auto TruncateOnExit = make_scope_exit([&]() { Buffer.truncate(Size); });
+
+  // Read into Buffer until we hit EOF.
+  for (;;) {
+    Buffer.resize_for_overwrite(Size + ChunkSize);
+    Expected<size_t> ReadBytes = readNativeFile(
+        FileHandle, MutableArrayRef(Buffer.begin() + Size, ChunkSize));
+    if (!ReadBytes)
+      return ReadBytes.takeError();
+    if (*ReadBytes == 0)
+      return Error::success();
+    Size += *ReadBytes;
+  }
+}
+
 } // end namespace fs
 } // end namespace sys
 } // end namespace llvm
@@ -1182,6 +1206,7 @@ const char *mapped_file_region::const_data() const {
 namespace llvm {
 namespace sys {
 namespace fs {
+
 TempFile::TempFile(StringRef Name, int FD)
     : TmpName(std::string(Name)), FD(FD) {}
 TempFile::TempFile(TempFile &&Other) { *this = std::move(Other); }
@@ -1190,6 +1215,10 @@ TempFile &TempFile::operator=(TempFile &&Other) {
   FD = Other.FD;
   Other.Done = true;
   Other.FD = -1;
+#ifdef _WIN32
+  RemoveOnClose = Other.RemoveOnClose;
+  Other.RemoveOnClose = false;
+#endif
   return *this;
 }
 
@@ -1198,26 +1227,29 @@ TempFile::~TempFile() { assert(Done); }
 Error TempFile::discard() {
   Done = true;
   if (FD != -1 && close(FD) == -1) {
-    std::error_code EC = std::error_code(errno, std::generic_category());
+    std::error_code EC = errnoAsErrorCode();
     return errorCodeToError(EC);
   }
   FD = -1;
 
 #ifdef _WIN32
-  // On windows closing will remove the file.
-  TmpName = "";
-  return Error::success();
+  // On Windows, closing will remove the file, if we set the delete
+  // disposition. If not, remove it manually.
+  bool Remove = RemoveOnClose;
 #else
-  // Always try to close and remove.
+  // Always try to remove the file.
+  bool Remove = true;
+#endif
   std::error_code RemoveEC;
-  if (!TmpName.empty()) {
+  if (Remove && !TmpName.empty()) {
     RemoveEC = fs::remove(TmpName);
     sys::DontRemoveFileOnSignal(TmpName);
     if (!RemoveEC)
       TmpName = "";
+  } else {
+    TmpName = "";
   }
   return errorCodeToError(RemoveEC);
-#endif
 }
 
 Error TempFile::keep(const Twine &Name) {
@@ -1227,20 +1259,28 @@ Error TempFile::keep(const Twine &Name) {
 #ifdef _WIN32
   // If we can't cancel the delete don't rename.
   auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-  std::error_code RenameEC = setDeleteDisposition(H, false);
+  std::error_code RenameEC =
+      RemoveOnClose ? std::error_code() : setDeleteDisposition(H, false);
+  bool ShouldDelete = false;
   if (!RenameEC) {
     RenameEC = rename_handle(H, Name);
     // If rename failed because it's cross-device, copy instead
     if (RenameEC ==
       std::error_code(ERROR_NOT_SAME_DEVICE, std::system_category())) {
       RenameEC = copy_file(TmpName, Name);
-      setDeleteDisposition(H, true);
+      ShouldDelete = true;
     }
   }
 
-  // If we can't rename, discard the temporary file.
+  // If we can't rename or copy, discard the temporary file.
   if (RenameEC)
-    setDeleteDisposition(H, true);
+    ShouldDelete = true;
+  if (ShouldDelete) {
+    if (!RemoveOnClose)
+      setDeleteDisposition(H, true);
+    else
+      remove(TmpName);
+  }
 #else
   std::error_code RenameEC = fs::rename(TmpName, Name);
   if (RenameEC) {
@@ -1250,16 +1290,14 @@ Error TempFile::keep(const Twine &Name) {
     if (RenameEC)
       remove(TmpName);
   }
-  sys::DontRemoveFileOnSignal(TmpName);
 #endif
+  sys::DontRemoveFileOnSignal(TmpName);
 
   if (!RenameEC)
     TmpName = "";
 
-  if (close(FD) == -1) {
-    std::error_code EC(errno, std::generic_category());
-    return errorCodeToError(EC);
-  }
+  if (close(FD) == -1)
+    return errorCodeToError(errnoAsErrorCode());
   FD = -1;
 
   return errorCodeToError(RenameEC);
@@ -1273,37 +1311,43 @@ Error TempFile::keep() {
   auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   if (std::error_code EC = setDeleteDisposition(H, false))
     return errorCodeToError(EC);
-#else
-  sys::DontRemoveFileOnSignal(TmpName);
 #endif
+  sys::DontRemoveFileOnSignal(TmpName);
 
   TmpName = "";
 
-  if (close(FD) == -1) {
-    std::error_code EC(errno, std::generic_category());
-    return errorCodeToError(EC);
-  }
+  if (close(FD) == -1)
+    return errorCodeToError(errnoAsErrorCode());
   FD = -1;
 
   return Error::success();
 }
 
-Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
+Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode,
+                                    OpenFlags ExtraFlags) {
   int FD;
   SmallString<128> ResultPath;
   if (std::error_code EC =
-          createUniqueFile(Model, FD, ResultPath, OF_Delete, Mode))
+          createUniqueFile(Model, FD, ResultPath, OF_Delete | ExtraFlags, Mode))
     return errorCodeToError(EC);
 
   TempFile Ret(ResultPath, FD);
-#ifndef _WIN32
-  if (sys::RemoveFileOnSignal(ResultPath)) {
+#ifdef _WIN32
+  auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  bool SetSignalHandler = false;
+  if (std::error_code EC = setDeleteDisposition(H, true)) {
+    Ret.RemoveOnClose = true;
+    SetSignalHandler = true;
+  }
+#else
+  bool SetSignalHandler = true;
+#endif
+  if (SetSignalHandler && sys::RemoveFileOnSignal(ResultPath)) {
     // Make sure we delete the file when RemoveFileOnSignal fails.
     consumeError(Ret.discard());
     std::error_code EC(errc::operation_not_permitted);
     return errorCodeToError(EC);
   }
-#endif
   return std::move(Ret);
 }
 } // namespace fs

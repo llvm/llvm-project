@@ -5,7 +5,8 @@
 # RUN:   /delayload:library.dll /out:%t.exe
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck -check-prefix=IMPORT %s
 # RUN: llvm-readobj --coff-basereloc %t.exe | FileCheck -check-prefix=BASEREL %s
-# RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t.exe | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=DIR %s
 
 # IMPORT:      Format: COFF-ARM
 # IMPORT-NEXT: Arch: thumb
@@ -13,9 +14,9 @@
 # IMPORT-NEXT: DelayImport {
 # IMPORT-NEXT:   Name: library.dll
 # IMPORT-NEXT:   Attributes: 0x1
-# IMPORT-NEXT:   ModuleHandle: 0x3000
-# IMPORT-NEXT:   ImportAddressTable: 0x3008
-# IMPORT-NEXT:   ImportNameTable: 0x2040
+# IMPORT-NEXT:   ModuleHandle: 0x3008
+# IMPORT-NEXT:   ImportAddressTable: 0x3010
+# IMPORT-NEXT:   ImportNameTable: 0x2044
 # IMPORT-NEXT:   BoundDelayImportTable: 0x0
 # IMPORT-NEXT:   UnloadDelayImportTable: 0x0
 # IMPORT-NEXT:   Import {
@@ -43,7 +44,7 @@
 # BASEREL-NEXT:   }
 # BASEREL-NEXT:   Entry {
 # BASEREL-NEXT:     Type: HIGHLOW
-# BASEREL-NEXT:     Address: 0x3008
+# BASEREL-NEXT:     Address: 0x3010
 # BASEREL-NEXT:   }
 # BASEREL-NEXT:   Entry {
 # BASEREL-NEXT:     Type: ABSOLUTE
@@ -51,20 +52,25 @@
 # BASEREL-NEXT:   }
 # BASEREL-NEXT: ]
 #
-# DISASM:      40100c:       43 f2 08 0c     movw r12, #12296
-# DISASM-NEXT:               c0 f2 40 0c     movt    r12, #64
-# DISASM-NEXT:               00 f0 00 b8     b.w     #0
-# DISASM-NEXT:               2d e9 0f 48     push.w  {r0, r1, r2, r3, r11, lr}
-# DISASM-NEXT:               0d f2 10 0b     addw    r11, sp, #16
-# DISASM-NEXT:               2d ed 10 0b     vpush   {d0, d1, d2, d3, d4, d5, d6, d7}
-# DISASM-NEXT:               61 46           mov     r1, r12
-# DISASM-NEXT:               42 f2 00 00     movw r0, #8192
-# DISASM-NEXT:               c0 f2 40 00     movt    r0, #64
-# DISASM-NEXT:               ff f7 e7 ff     bl      #-50
-# DISASM-NEXT:               84 46           mov     r12, r0
-# DISASM-NEXT:               bd ec 10 0b     vpop    {d0, d1, d2, d3, d4, d5, d6, d7}
-# DISASM-NEXT:               bd e8 0f 48     pop.w   {r0, r1, r2, r3, r11, lr}
-# DISASM-NEXT:               60 47           bx      r12
+# DISASM:    00401000 <.text>:
+# DISASM:      40100c:       f243 0c10       movw r12, #12304
+# DISASM-NEXT:               f2c0 0c40       movt    r12, #64
+# DISASM-NEXT:               f000 b800       b.w     {{.+}} @ imm = #0
+# DISASM-NEXT:               e92d 480f       push.w  {r0, r1, r2, r3, r11, lr}
+# DISASM-NEXT:               f20d 0b10       addw    r11, sp, #16
+# DISASM-NEXT:               ed2d 0b10       vpush   {d0, d1, d2, d3, d4, d5, d6, d7}
+# DISASM-NEXT:               4661            mov     r1, r12
+# DISASM-NEXT:               f242 0004       movw r0, #8196
+# DISASM-NEXT:               f2c0 0040       movt    r0, #64
+# DISASM-NEXT:               f7ff ffe7       bl      0x401000 <.text>
+# DISASM-NEXT:               4684            mov     r12, r0
+# DISASM-NEXT:               ecbd 0b10       vpop    {d0, d1, d2, d3, d4, d5, d6, d7}
+# DISASM-NEXT:               e8bd 480f       pop.w   {r0, r1, r2, r3, r11, lr}
+# DISASM-NEXT:               4760            bx      r12
+#
+# DIR:         DelayImportDescriptorRVA: 0x2004
+# DIR-NEXT:    DelayImportDescriptorSize: 0x40
+
 
 --- !COFF
 header:
@@ -79,6 +85,14 @@ sections:
       - VirtualAddress:  0
         SymbolName:      __imp_function
         Type:            IMAGE_REL_ARM_MOV32T
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     01
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       1
+    SectionData:     02
 symbols:
   - Name:            .text
     Value:           0

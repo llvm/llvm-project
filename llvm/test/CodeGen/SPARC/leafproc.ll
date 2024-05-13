@@ -70,11 +70,33 @@ define i32 @leaf_proc_with_local_array(i32 %a, i32 %b, i32 %c) {
 entry:
   %array = alloca [2 x i32], align 4
   %0 = sub nsw i32 %b, %c
-  %1 = getelementptr inbounds [2 x i32], [2 x i32]* %array, i32 0, i32 0
-  store i32 1, i32* %1, align 4
-  %2 = getelementptr inbounds [2 x i32], [2 x i32]* %array, i32 0, i32 1
-  store i32 2, i32* %2, align 4
-  %3 = getelementptr inbounds [2 x i32], [2 x i32]* %array, i32 0, i32 %a
-  %4 = load i32, i32* %3, align 4
+  %1 = getelementptr inbounds [2 x i32], ptr %array, i32 0, i32 0
+  store i32 1, ptr %1, align 4
+  %2 = getelementptr inbounds [2 x i32], ptr %array, i32 0, i32 1
+  store i32 2, ptr %2, align 4
+  %3 = getelementptr inbounds [2 x i32], ptr %array, i32 0, i32 %a
+  %4 = load i32, ptr %3, align 4
   ret i32 %4
+}
+
+; Here we have a leaf function where it contains inline assembly, which means
+; that register renumbering might interfere with the register constraints.
+; As a result the function is not marked as being a leaf one.
+
+; CHECK-LABEL: leaf_proc_give_up
+; CHECK: save %sp, -96, %sp
+; CHECK: ld [%fp+92], %o5
+; CHECK: mov %i0, %g1
+; CHECK: mov %i1, %o0
+; CHECK: mov %i2, %o1
+; CHECK: mov %i3, %o2
+; CHECK: mov %i4, %o3
+; CHECK: mov %i5, %o4
+; CHECK: ret
+; CHECK-NEXT: restore %g0, %o0, %o0
+
+define i32 @leaf_proc_give_up(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6) {
+Entry:
+  %g = call i32 asm sideeffect "", "={o0},{g1},{o0},{o1},{o2},{o3},{o4},{o5}"(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6)
+  ret i32 %g
 }

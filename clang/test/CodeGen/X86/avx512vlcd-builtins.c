@@ -7,9 +7,8 @@ __m128i test_mm_broadcastmb_epi64(__m128i a,__m128i b) {
   // CHECK-LABEL: @test_mm_broadcastmb_epi64
   // CHECK: icmp eq <4 x i32> %{{.*}}, %{{.*}}
   // CHECK: shufflevector <4 x i1> %{{.*}}, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: bitcast <8 x i1> %{{.*}} to i8
   // CHECK: zext i8 %{{.*}} to i64
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_broadcastmb_epi64(_mm_cmpeq_epi32_mask (a, b)); 
 }
@@ -18,9 +17,8 @@ __m256i test_mm256_broadcastmb_epi64(__m256i a, __m256i b) {
   // CHECK-LABEL: @test_mm256_broadcastmb_epi64
   // CHECK: icmp eq <4 x i64> %{{.*}}, %{{.*}}
   // CHECK: shufflevector <4 x i1> %{{.*}}, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: bitcast <8 x i1> %{{.*}} to i8
   // CHECK: zext i8 %{{.*}} to i64
-  // CHECK: insertelement <4 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 2
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 3
@@ -30,9 +28,8 @@ __m256i test_mm256_broadcastmb_epi64(__m256i a, __m256i b) {
 __m128i test_mm_broadcastmw_epi32(__m512i a, __m512i b) {
   // CHECK-LABEL: @test_mm_broadcastmw_epi32
   // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: bitcast <16 x i1> %{{.*}} to i16
   // CHECK: zext i16 %{{.*}} to i32
-  // CHECK: insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 3
@@ -42,9 +39,8 @@ __m128i test_mm_broadcastmw_epi32(__m512i a, __m512i b) {
 __m256i test_mm256_broadcastmw_epi32(__m512i a, __m512i b) {
   // CHECK-LABEL: @test_mm256_broadcastmw_epi32
   // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: bitcast <16 x i1> %{{.*}} to i16
   // CHECK: zext i16 %{{.*}} to i32
-  // CHECK: insertelement <8 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 3

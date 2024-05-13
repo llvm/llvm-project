@@ -126,6 +126,30 @@ OPTIONS
 
  Use BSD output format. Alias for ``--format=bsd``.
 
+.. option:: -X
+
+ Specify the type of XCOFF object file, ELF object file, or IR object file input
+ from command line or from archive files that llvm-nm should examine. The
+ mode must be one of the following:
+ 
+   32
+         Process only 32-bit object files.
+   64
+         Process only 64-bit object files.
+   32_64
+         Process both 32-bit and 64-bit object files.
+   any
+         Process all the supported object files.
+
+  On AIX OS, the default is to process 32-bit object files only and to ignore
+  64-bit objects. The can be changed by setting the OBJECT_MODE environment
+  variable. For example, OBJECT_MODE=64 causes :program:`llvm-nm` to process
+  64-bit objects and ignore 32-bit objects. The -X flag overrides the OBJECT_MODE
+  variable.
+
+  On other operating systems, the default is to process all object files: the
+  OBJECT_MODE environment variable is not supported.
+
 .. option:: --debug-syms, -a
 
  Show all symbols, even those usually suppressed.
@@ -142,6 +166,11 @@ OPTIONS
 
  Display dynamic symbols instead of normal symbols.
 
+.. option:: --export-symbols
+
+ Print sorted symbols with their visibility (if applicable), with duplicates
+ removed.
+
 .. option:: --extern-only, -g
 
  Print only symbols whose definitions are external; that is, accessible from
@@ -157,13 +186,15 @@ OPTIONS
 
  Print a summary of command-line options and their meanings.
 
-.. option:: --help-list
-
- Print an uncategorized summary of command-line options and their meanings.
-
-.. option:: --just-symbol-name, -j
+.. option:: -j
 
  Print just the symbol names. Alias for `--format=just-symbols``.
+
+.. option:: --line-numbers, -l
+
+ Use debugging information to print the filenames and line numbers where
+ symbols are defined. Undefined symbols have the location of their first
+ relocation printed instead.
 
 .. option:: -m
 
@@ -193,7 +224,7 @@ OPTIONS
 
  Use POSIX.2 output format.  Alias for ``--format=posix``.
 
-.. option:: --print-armap, -M
+.. option:: --print-armap
 
  Print the archive symbol table, in addition to the symbols.
 
@@ -235,10 +266,6 @@ OPTIONS
  Display the version of the :program:`llvm-nm` executable, then exit. Does not
  stack with other commands.
 
-.. option:: --without-aliases
-
- Exclude aliases from the output.
-
 .. option:: @<FILE>
 
  Read command-line options from response file `<FILE>`.
@@ -267,13 +294,20 @@ MACH-O SPECIFIC OPTIONS
 
  Do not add any symbols from the dyldinfo.
 
-.. option:: -s=<segment section>
+.. option:: -s <segment> <section>
 
  Dump only symbols from this segment and section name.
 
 .. option:: -x
 
  Print symbol entry in hex.
+
+XCOFF SPECIFIC OPTIONS
+----------------------
+
+.. option:: --no-rsrc
+
+  Exclude resource file symbols (``__rsrc``) from export symbol list.
 
 BUGS
 ----

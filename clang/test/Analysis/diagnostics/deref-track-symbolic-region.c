@@ -7,7 +7,7 @@ struct S {
   int y;
 };
 
-int *foo();
+int *foo(void);
 
 void test(struct S syz, int *pp) {
   int m = 0;

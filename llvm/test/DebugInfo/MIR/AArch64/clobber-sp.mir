@@ -32,16 +32,16 @@
   entry:
     %x.addr = alloca i32, align 4
     tail call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !19, metadata !22), !dbg !23
-    store i32 %x, i32* %x.addr, align 4, !tbaa !24
+    store i32 %x, ptr %x.addr, align 4, !tbaa !24
     tail call void @llvm.dbg.value(metadata i32 %y, i64 0, metadata !20, metadata !22), !dbg !28
-    tail call void @llvm.dbg.declare(metadata %struct.Rect* undef, metadata !21, metadata !22), !dbg !29
+    tail call void @llvm.dbg.declare(metadata ptr undef, metadata !21, metadata !22), !dbg !29
     tail call void @g([4 x double] %s.coerce) #4, !dbg !30
     %tobool = icmp eq i32 %y, 0, !dbg !31
     br i1 %tobool, label %if.end, label %if.then, !dbg !33
 
   if.then:                                          ; preds = %entry
-    tail call void @llvm.dbg.value(metadata i32* %x.addr, i64 0, metadata !19, metadata !22), !dbg !23
-    call void @h(i32* nonnull %x.addr) #4, !dbg !34
+    tail call void @llvm.dbg.value(metadata ptr %x.addr, i64 0, metadata !19, metadata !22), !dbg !23
+    call void @h(ptr nonnull %x.addr) #4, !dbg !34
     br label %if.end, !dbg !34
 
   if.end:                                           ; preds = %if.then, %entry
@@ -50,9 +50,9 @@
 
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
   declare void @g([4 x double]) local_unnamed_addr #2
-  declare void @h(i32*) local_unnamed_addr #2
+  declare void @h(ptr) local_unnamed_addr #2
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-  declare void @llvm.stackprotector(i8*, i8**) #3
+  declare void @llvm.stackprotector(ptr, ptr) #3
 
   attributes #0 = { nounwind optsize ssp }
   attributes #1 = { nounwind readnone speculatable }
@@ -143,15 +143,15 @@ body:             |
     liveins: $w0, $w1, $d0, $d1, $d2, $d3, $lr
 
     $sp = frame-setup SUBXri $sp, 32, 0
-    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.3), (store 8 into %stack.2)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.3), (store (s64) into %stack.2)
     $fp = frame-setup ADDXri $sp, 16, 0
     DBG_VALUE $w0, _, !19, !22, debug-location !23
-    STURWi killed $w0, $fp, -4 :: (store 4 into %stack.0.x.addr)
+    STURWi killed $w0, $fp, -4 :: (store (s32) into %stack.0.x.addr)
     DBG_VALUE $w1, _, !20, !22, debug-location !28
-    STRWui killed $w1, $sp, 2, debug-location !30 :: (store 4 into %stack.1)
+    STRWui killed $w1, $sp, 2, debug-location !30 :: (store (s32) into %stack.1)
     DBG_VALUE $sp, 0, !20, !36, debug-location !28
     BL @g, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $d0, implicit killed $d1, implicit killed $d2, implicit killed $d3, implicit-def $sp, debug-location !30
-    $w0 = LDRWui $sp, 2, debug-location !33 :: (load 4 from %stack.1)
+    $w0 = LDRWui $sp, 2, debug-location !33 :: (load (s32) from %stack.1)
     CBZW killed $w0, %bb.2.if.end, debug-location !33
 
   bb.1.if.then:
@@ -166,7 +166,7 @@ body:             |
     DBG_VALUE $sp, 0, !20, !36, debug-location !28
     $w8 = MOVZWi 0, 0
     $x0 = ORRXrs $xzr, undef $x8, 0, implicit killed $w8, debug-location !35
-    $fp, $lr = LDPXi $sp, 2, debug-location !35 :: (load 8 from %stack.3), (load 8 from %stack.2)
+    $fp, $lr = LDPXi $sp, 2, debug-location !35 :: (load (s64) from %stack.3), (load (s64) from %stack.2)
     $sp = ADDXri $sp, 32, 0, debug-location !35
     RET undef $lr, implicit killed $w0, debug-location !35
 

@@ -190,8 +190,8 @@ static struct cname {
  * other clumsinesses
  */
 struct parse {
-	char *next;		/* next character in RE */
-	char *end;		/* end of string (-> NUL normally) */
+	const char *next;	/* next character in RE */
+	const char *end;	/* end of string (-> NUL normally) */
 	int error;		/* has an error been seen? */
 	sop *strip;		/* malloced strip */
 	sopno ssize;		/* malloced strip size (allocated) */
@@ -249,10 +249,10 @@ static char nuls[10];		/* place to point scanner in event of error */
  */
 #define	PEEK()	(*p->next)
 #define	PEEK2()	(*(p->next+1))
-#define	MORE()	(p->next < p->end)
-#define	MORE2()	(p->next+1 < p->end)
+#define	MORE()	(p->end - p->next > 0)
+#define	MORE2()	(p->end - p->next > 1)
 #define	SEE(c)	(MORE() && PEEK() == (c))
-#define	SEETWO(a, b)	(MORE() && MORE2() && PEEK() == (a) && PEEK2() == (b))
+#define	SEETWO(a, b)	(MORE2() && PEEK() == (a) && PEEK2() == (b))
 #define	EAT(c)	((SEE(c)) ? (NEXT(), 1) : 0)
 #define	EATTWO(a, b)	((SEETWO(a, b)) ? (NEXT2(), 1) : 0)
 #define	NEXT()	(p->next++)
@@ -329,7 +329,7 @@ llvm_regcomp(llvm_regex_t *preg, const char *pattern, int cflags)
 
 	/* set things up */
 	p->g = g;
-	p->next = (char *)pattern;	/* convenience; we do not modify it */
+	p->next = pattern;
 	p->end = p->next + len;
 	p->error = 0;
 	p->ncsalloc = 0;
@@ -525,8 +525,8 @@ p_ere_exp(struct parse *p)
 			assert(backrefnum <= p->g->nsub);
 			EMIT(OBACK_, backrefnum);
 			assert(p->pbegin[backrefnum] != 0);
-			assert(OP(p->strip[p->pbegin[backrefnum]]) != OLPAREN);
-			assert(OP(p->strip[p->pend[backrefnum]]) != ORPAREN);
+			assert(OP(p->strip[p->pbegin[backrefnum]]) == OLPAREN);
+			assert(OP(p->strip[p->pend[backrefnum]]) == ORPAREN);
 			(void) dupl(p, p->pbegin[backrefnum]+1, p->pend[backrefnum]);
 			EMIT(O_BACK, backrefnum);
 			p->g->backrefs = 1;
@@ -800,15 +800,17 @@ p_bracket(struct parse *p)
 	int invert = 0;
 
 	/* Dept of Truly Sickening Special-Case Kludges */
-	if (p->next + 5 < p->end && strncmp(p->next, "[:<:]]", 6) == 0) {
-		EMIT(OBOW, 0);
-		NEXTn(6);
-		return;
-	}
-	if (p->next + 5 < p->end && strncmp(p->next, "[:>:]]", 6) == 0) {
-		EMIT(OEOW, 0);
-		NEXTn(6);
-		return;
+	if (p->end - p->next > 5) {
+		if (strncmp(p->next, "[:<:]]", 6) == 0) {
+			EMIT(OBOW, 0);
+			NEXTn(6);
+			return;
+		}
+		if (strncmp(p->next, "[:>:]]", 6) == 0) {
+			EMIT(OEOW, 0);
+			NEXTn(6);
+			return;
+		}
 	}
 
 	if ((cs = allocset(p)) == NULL) {
@@ -938,7 +940,7 @@ p_b_term(struct parse *p, cset *cs)
 static void
 p_b_cclass(struct parse *p, cset *cs)
 {
-	char *sp = p->next;
+	const char *sp = p->next;
 	struct cclass *cp;
 	size_t len;
 	const char *u;
@@ -1002,7 +1004,7 @@ static char			/* value of collating element */
 p_b_coll_elem(struct parse *p,
     int endc)			/* name ended by endc,']' */
 {
-	char *sp = p->next;
+	const char *sp = p->next;
 	struct cname *cp;
 	size_t len;
 
@@ -1046,8 +1048,8 @@ othercase(int ch)
 static void
 bothcases(struct parse *p, int ch)
 {
-	char *oldnext = p->next;
-	char *oldend = p->end;
+	const char *oldnext = p->next;
+	const char *oldend = p->end;
 	char bracket[3];
 
 	ch = (uch)ch;
@@ -1088,16 +1090,12 @@ ordinary(struct parse *p, int ch)
 static void
 nonnewline(struct parse *p)
 {
-	char *oldnext = p->next;
-	char *oldend = p->end;
-	char bracket[4];
+	const char *oldnext = p->next;
+	const char *oldend = p->end;
+	static const char bracket[4] = {'^', '\n', ']', '\0'};
 
 	p->next = bracket;
 	p->end = bracket+3;
-	bracket[0] = '^';
-	bracket[1] = '\n';
-	bracket[2] = ']';
-	bracket[3] = '\0';
 	p_bracket(p);
 	assert(p->next == bracket+3);
 	p->next = oldnext;

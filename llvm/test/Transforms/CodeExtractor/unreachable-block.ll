@@ -1,4 +1,4 @@
-; RUN: opt -S -partial-inliner %s | FileCheck %s
+; RUN: opt -S -passes=partial-inliner %s | FileCheck %s
 
 ; CHECK-LABEL: define void @dipsy(
 ; CHECK-NEXT:   call void @tinkywinky.1.ontrue()
@@ -9,11 +9,11 @@
 ; CHECK-LABEL: define internal void @tinkywinky.1.ontrue() {
 ; CHECK-NEXT: newFuncRoot:
 ; CHECK-NEXT:   br label %ontrue
-; CHECK: onfalse{{.*}}:
-; CHECK-NEXT:   ret void
 ; CHECK: ontrue:
 ; CHECK-NEXT:   call void @patatino()
 ; CHECK-NEXT:   br label %onfalse{{.*}}
+; CHECK: onfalse{{.*}}:
+; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 
 declare void @patatino()

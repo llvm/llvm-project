@@ -1,11 +1,10 @@
 // Test that LargeMmapAllocator's chunks aren't reachable via some internal data structure.
-// RUN: LSAN_BASE="report_objects=1:use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=report_objects=1:use_stacks=0:use_registers=0 not %run %t 2>&1 | FileCheck %s
 
 // For 32 bit LSan it's pretty likely that large chunks are "reachable" from some
 // internal data structures (e.g. Glibc global data).
-// UNSUPPORTED: x86,i686,arm
+// UNSUPPORTED: i686,target={{(x86|arm).*}}
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,4 +19,4 @@ int main() {
 // CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (33554432 bytes)
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:

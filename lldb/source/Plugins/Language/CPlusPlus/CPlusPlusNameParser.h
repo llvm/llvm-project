@@ -10,12 +10,12 @@
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CPLUSPLUSNAMEPARSER_H
 
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -33,6 +33,7 @@ public:
     ParsedName name;
     llvm::StringRef arguments;
     llvm::StringRef qualifiers;
+    llvm::StringRef return_type;
   };
 
   // Treats given text as a function definition and parses it.
@@ -44,7 +45,7 @@ public:
   //    std::vector<int>::push_back(int)
   //    int& map<int, pair<short, int>>::operator[](short) const
   //    int (*get_function(const chat *))()
-  llvm::Optional<ParsedFunction> ParseAsFunctionDefinition();
+  std::optional<ParsedFunction> ParseAsFunctionDefinition();
 
   // Treats given text as a potentially nested name of C++ entity (function,
   // class, field) and parses it.
@@ -54,7 +55,7 @@ public:
   //    std::vector<int>::push_back
   //    map<int, pair<short, int>>::operator[]
   //    func<C>(int, C&)::nested_class::method
-  llvm::Optional<ParsedName> ParseAsFullName();
+  std::optional<ParsedName> ParseAsFullName();
 
 private:
   // A C++ definition to parse.
@@ -69,7 +70,7 @@ private:
     size_t begin_index = 0;
     size_t end_index = 0;
 
-    Range() {}
+    Range() = default;
     Range(size_t begin, size_t end) : begin_index(begin), end_index(end) {
       assert(end >= begin);
     }
@@ -117,16 +118,17 @@ private:
   void Advance();
   void TakeBack();
   bool ConsumeToken(clang::tok::TokenKind kind);
+
   template <typename... Ts> bool ConsumeToken(Ts... kinds);
   Bookmark SetBookmark();
   size_t GetCurrentPosition();
   clang::Token &Peek();
   bool ConsumeBrackets(clang::tok::TokenKind left, clang::tok::TokenKind right);
 
-  llvm::Optional<ParsedFunction> ParseFunctionImpl(bool expect_return_type);
+  std::optional<ParsedFunction> ParseFunctionImpl(bool expect_return_type);
 
   // Parses functions returning function pointers 'string (*f(int x))(float y)'
-  llvm::Optional<ParsedFunction> ParseFuncPtr(bool expect_return_type);
+  std::optional<ParsedFunction> ParseFuncPtr(bool expect_return_type);
 
   // Consumes function arguments enclosed within '(' ... ')'
   bool ConsumeArguments();
@@ -164,7 +166,17 @@ private:
   // Consumes full type name like 'Namespace::Class<int>::Method()::InnerClass'
   bool ConsumeTypename();
 
-  llvm::Optional<ParsedNameRanges> ParseFullNameImpl();
+  /// Consumes ABI tags enclosed within '[abi:' ... ']'
+  ///
+  /// Since there is no restriction on what the ABI tag
+  /// string may contain, this API supports parsing a small
+  /// set of special characters.
+  ///
+  /// The following regex describes the set of supported characters:
+  ///   [A-Za-z,.\s\d]+
+  bool ConsumeAbiTag();
+
+  std::optional<ParsedNameRanges> ParseFullNameImpl();
   llvm::StringRef GetTextForRange(const Range &range);
 
   // Populate m_tokens by calling clang lexer on m_text.

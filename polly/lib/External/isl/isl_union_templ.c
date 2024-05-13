@@ -201,9 +201,7 @@ static __isl_give UNION *FN(UNION,add_part_generic)(__isl_take UNION *u,
 			goto error;
 		entry->data = FN(PART,union_add_)(entry->data,
 						FN(PART,copy)(part));
-		if (!entry->data)
-			goto error;
-		empty = FN(PART,IS_ZERO)(part);
+		empty = FN(PART,IS_ZERO)(entry->data);
 		if (empty < 0)
 			goto error;
 		if (empty)
@@ -455,13 +453,12 @@ error:
 __isl_give UNION *FN(UNION,align_params)(__isl_take UNION *u,
 	__isl_take isl_space *model)
 {
+	isl_space *space;
 	isl_bool equal_params;
 	isl_reordering *r;
 
-	if (!u || !model)
-		goto error;
-
-	equal_params = isl_space_has_equal_params(u->space, model);
+	space = FN(UNION,peek_space)(u);
+	equal_params = isl_space_has_equal_params(space, model);
 	if (equal_params < 0)
 		goto error;
 	if (equal_params) {
@@ -469,7 +466,7 @@ __isl_give UNION *FN(UNION,align_params)(__isl_take UNION *u,
 		return u;
 	}
 
-	r = isl_parameter_alignment_reordering(u->space, model);
+	r = isl_parameter_alignment_reordering(space, model);
 	isl_space_free(model);
 
 	return FN(UNION,realign_domain)(u, r);
@@ -524,6 +521,20 @@ error:
 	return NULL;
 }
 
+#if !DEFAULT_IS_ZERO
+
+/* Compute the sum of "u1" and "u2" on the union of their domains,
+ * with the actual sum on the shared domain and
+ * the defined expression on the symmetric difference of the domains.
+ */
+__isl_give UNION *FN(UNION,union_add)(__isl_take UNION *u1,
+	__isl_take UNION *u2)
+{
+	return FN(UNION,union_add_)(u1, u2);
+}
+
+#endif
+
 __isl_give UNION *FN(FN(UNION,from),BASE)(__isl_take PART *part)
 {
 	isl_space *space;
@@ -541,6 +552,14 @@ __isl_give UNION *FN(FN(UNION,from),BASE)(__isl_take PART *part)
 	u = FN(FN(UNION,add),BASE)(u, part);
 
 	return u;
+}
+
+/* This function performs the same operation as isl_union_pw_*_from_pw_*,
+ * but is considered as a function on an isl_pw_* when exported.
+ */
+__isl_give UNION *FN(FN(PART,to_union),BASE)(__isl_take PART *part)
+{
+	return FN(FN(UNION,from),BASE)(part);
 }
 
 S(UNION,match_bin_data) {
@@ -641,15 +660,6 @@ __isl_give UNION *FN(UNION,add)(__isl_take UNION *u1, __isl_take UNION *u2)
 	return FN(UNION,match_bin_op)(u1, u2, &FN(PART,add));
 #endif
 }
-
-#ifndef NO_SUB
-/* Subtract "u2" from "u1" and return the result.
- */
-__isl_give UNION *FN(UNION,sub)(__isl_take UNION *u1, __isl_take UNION *u2)
-{
-	return FN(UNION,match_bin_op)(u1, u2, &FN(PART,sub));
-}
-#endif
 
 S(UNION,any_set_data) {
 	isl_set *set;

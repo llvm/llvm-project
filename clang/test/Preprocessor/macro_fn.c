@@ -31,23 +31,22 @@ two(,)      /* expected-warning 2 {{empty macro arguments are a C99 feature}} */
 
 
 
-/* PR4006 & rdar://6807000 */
+/* PR4006 */
 #define e(...) __VA_ARGS__  /* expected-warning {{variadic macros are a C99 feature}} */
 e(x)
 e()
 
 zero_dot()
-one_dot(x)  /* empty ... argument: expected-warning {{must specify at least one argument for '...' parameter of variadic macro}}  */
-one_dot()   /* empty first argument, elided ...: expected-warning {{must specify at least one argument for '...' parameter of variadic macro}} */
+one_dot(x)  /* empty ... argument: expected-warning {{passing no argument for the '...' parameter of a variadic macro is a C23 extension}}  */
+one_dot()   /* empty first argument, elided ...: expected-warning {{passing no argument for the '...' parameter of a variadic macro is a C23 extension}} */
 
 
-/* rdar://6816766 - Crash with function-like macro test at end of directive. */
+/* Crash with function-like macro test at end of directive. */
 #define E() (i == 0)
 #if E
 #endif
 
 
-/* <rdar://problem/12292192> */
 #define NSAssert(condition, desc, ...) /* expected-warning {{variadic macros are a C99 feature}} */ \
     SomeComplicatedStuff((desc), ##__VA_ARGS__) /* expected-warning {{token pasting of ',' and __VA_ARGS__ is a GNU extension}} */
 NSAssert(somecond, somedesc)

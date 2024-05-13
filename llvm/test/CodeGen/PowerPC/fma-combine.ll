@@ -60,42 +60,40 @@ define dso_local double @fma_combine_two_uses(double %a, double %b, double %c) {
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnegdp 0, 1
 ; CHECK-FAST-NEXT:    addis 3, 2, v@toc@ha
-; CHECK-FAST-NEXT:    addis 4, 2, z@toc@ha
 ; CHECK-FAST-NEXT:    xsnmaddadp 1, 3, 2
-; CHECK-FAST-NEXT:    xsnegdp 2, 3
 ; CHECK-FAST-NEXT:    stfd 0, v@toc@l(3)
-; CHECK-FAST-NEXT:    stfd 2, z@toc@l(4)
+; CHECK-FAST-NEXT:    xsnegdp 0, 3
+; CHECK-FAST-NEXT:    addis 3, 2, z@toc@ha
+; CHECK-FAST-NEXT:    stfd 0, z@toc@l(3)
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine_two_uses:
 ; CHECK-FAST-NOVSX:       # %bb.0: # %entry
-; CHECK-FAST-NOVSX-NEXT:    fnmadd 0, 3, 2, 1
-; CHECK-FAST-NOVSX-NEXT:    fneg 2, 1
+; CHECK-FAST-NOVSX-NEXT:    fneg 0, 1
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, v@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    addis 4, 2, z@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    fneg 3, 3
-; CHECK-FAST-NOVSX-NEXT:    fmr 1, 0
-; CHECK-FAST-NOVSX-NEXT:    stfd 2, v@toc@l(3)
-; CHECK-FAST-NOVSX-NEXT:    stfd 3, z@toc@l(4)
+; CHECK-FAST-NOVSX-NEXT:    fnmadd 1, 3, 2, 1
+; CHECK-FAST-NOVSX-NEXT:    stfd 0, v@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    fneg 0, 3
+; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, z@toc@ha
+; CHECK-FAST-NOVSX-NEXT:    stfd 0, z@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    blr
 ;
 ; CHECK-LABEL: fma_combine_two_uses:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsnegdp 3, 3
+; CHECK-NEXT:    xsnegdp 0, 1
 ; CHECK-NEXT:    addis 3, 2, v@toc@ha
-; CHECK-NEXT:    addis 4, 2, z@toc@ha
-; CHECK-NEXT:    xsmuldp 0, 3, 2
-; CHECK-NEXT:    stfd 3, z@toc@l(4)
-; CHECK-NEXT:    xsnegdp 2, 1
-; CHECK-NEXT:    xssubdp 0, 0, 1
-; CHECK-NEXT:    stfd 2, v@toc@l(3)
-; CHECK-NEXT:    fmr 1, 0
+; CHECK-NEXT:    stfd 0, v@toc@l(3)
+; CHECK-NEXT:    xsnegdp 0, 3
+; CHECK-NEXT:    addis 3, 2, z@toc@ha
+; CHECK-NEXT:    stfd 0, z@toc@l(3)
+; CHECK-NEXT:    xsmuldp 0, 0, 2
+; CHECK-NEXT:    xssubdp 1, 0, 1
 ; CHECK-NEXT:    blr
 entry:
   %fneg = fneg double %a
-  store double %fneg, double* @v, align 8
+  store double %fneg, ptr @v, align 8
   %fneg1 = fneg double %c
-  store double %fneg1, double* @z, align 8
+  store double %fneg1, ptr @z, align 8
   %mul = fmul double %fneg1, %b
   %add = fsub double %mul, %a
   ret double %add
@@ -105,33 +103,31 @@ define dso_local double @fma_combine_one_use(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine_one_use:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnegdp 0, 1
-; CHECK-FAST-NEXT:    addis 3, 2, v@toc@ha
 ; CHECK-FAST-NEXT:    xsnmaddadp 1, 3, 2
+; CHECK-FAST-NEXT:    addis 3, 2, v@toc@ha
 ; CHECK-FAST-NEXT:    stfd 0, v@toc@l(3)
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine_one_use:
 ; CHECK-FAST-NOVSX:       # %bb.0: # %entry
-; CHECK-FAST-NOVSX-NEXT:    fnmadd 0, 3, 2, 1
-; CHECK-FAST-NOVSX-NEXT:    fneg 2, 1
+; CHECK-FAST-NOVSX-NEXT:    fneg 0, 1
+; CHECK-FAST-NOVSX-NEXT:    fnmadd 1, 3, 2, 1
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, v@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    fmr 1, 0
-; CHECK-FAST-NOVSX-NEXT:    stfd 2, v@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    stfd 0, v@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    blr
 ;
 ; CHECK-LABEL: fma_combine_one_use:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsnegdp 0, 3
+; CHECK-NEXT:    xsnegdp 0, 1
 ; CHECK-NEXT:    addis 3, 2, v@toc@ha
+; CHECK-NEXT:    stfd 0, v@toc@l(3)
+; CHECK-NEXT:    xsnegdp 0, 3
 ; CHECK-NEXT:    xsmuldp 0, 0, 2
-; CHECK-NEXT:    xsnegdp 2, 1
-; CHECK-NEXT:    xssubdp 0, 0, 1
-; CHECK-NEXT:    stfd 2, v@toc@l(3)
-; CHECK-NEXT:    fmr 1, 0
+; CHECK-NEXT:    xssubdp 1, 0, 1
 ; CHECK-NEXT:    blr
 entry:
   %fneg = fneg double %a
-  store double %fneg, double* @v, align 8
+  store double %fneg, ptr @v, align 8
   %fneg1 = fneg double %c
   %mul = fmul double %fneg1, %b
   %add = fsub double %mul, %a
@@ -141,13 +137,13 @@ entry:
 define dso_local float @fma_combine_no_ice() {
 ; CHECK-FAST-LABEL: fma_combine_no_ice:
 ; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    vspltisw 2, 1
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; CHECK-FAST-NEXT:    addis 4, 2, .LCPI4_1@toc@ha
+; CHECK-FAST-NEXT:    xvcvsxwdp 3, 34
 ; CHECK-FAST-NEXT:    lfs 0, .LCPI4_0@toc@l(3)
-; CHECK-FAST-NEXT:    lfsx 2, 0, 3
-; CHECK-FAST-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
-; CHECK-FAST-NEXT:    lfs 3, .LCPI4_1@toc@l(4)
-; CHECK-FAST-NEXT:    lfs 1, .LCPI4_2@toc@l(3)
+; CHECK-FAST-NEXT:    lfs 2, 0(3)
+; CHECK-FAST-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
+; CHECK-FAST-NEXT:    lfs 1, .LCPI4_1@toc@l(3)
 ; CHECK-FAST-NEXT:    xsmaddasp 3, 2, 0
 ; CHECK-FAST-NEXT:    xsmaddasp 1, 2, 3
 ; CHECK-FAST-NEXT:    xsnmsubasp 1, 3, 2
@@ -155,45 +151,45 @@ define dso_local float @fma_combine_no_ice() {
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine_no_ice:
 ; CHECK-FAST-NOVSX:       # %bb.0:
+; CHECK-FAST-NOVSX-NEXT:    lfs 0, 0(3)
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    lfs 0, .LCPI4_0@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    lfs 1, .LCPI4_0@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    lfs 1, 0(3)
 ; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI4_1@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    fmadds 0, 1, 2, 0
+; CHECK-FAST-NOVSX-NEXT:    fmadds 1, 0, 2, 1
 ; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI4_2@toc@l(3)
-; CHECK-FAST-NOVSX-NEXT:    fmadds 2, 1, 0, 2
-; CHECK-FAST-NOVSX-NEXT:    fnmsubs 1, 0, 1, 2
+; CHECK-FAST-NOVSX-NEXT:    fmadds 2, 0, 1, 2
+; CHECK-FAST-NOVSX-NEXT:    fnmsubs 1, 1, 0, 2
 ; CHECK-FAST-NOVSX-NEXT:    blr
 ;
 ; CHECK-LABEL: fma_combine_no_ice:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vspltisw 2, 1
 ; CHECK-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LCPI4_1@toc@ha
+; CHECK-NEXT:    xvcvsxwdp 3, 34
 ; CHECK-NEXT:    lfs 0, .LCPI4_0@toc@l(3)
-; CHECK-NEXT:    lfsx 2, 0, 3
-; CHECK-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
-; CHECK-NEXT:    lfs 3, .LCPI4_1@toc@l(4)
-; CHECK-NEXT:    lfs 1, .LCPI4_2@toc@l(3)
+; CHECK-NEXT:    lfs 2, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
+; CHECK-NEXT:    lfs 1, .LCPI4_1@toc@l(3)
 ; CHECK-NEXT:    fmr 4, 3
 ; CHECK-NEXT:    xsmaddasp 3, 2, 0
 ; CHECK-NEXT:    xsnmaddasp 4, 2, 0
 ; CHECK-NEXT:    xsmaddasp 1, 2, 3
 ; CHECK-NEXT:    xsmaddasp 1, 4, 2
 ; CHECK-NEXT:    blr
-  %tmp = load float, float* undef, align 4
-  %tmp2 = load float, float* undef, align 4
-  %tmp3 = fmul reassoc float %tmp, 0x3FE372D780000000
-  %tmp4 = fadd reassoc float %tmp3, 1.000000e+00
-  %tmp5 = fmul reassoc float %tmp2, %tmp4
-  %tmp6 = load float, float* undef, align 4
-  %tmp7 = load float, float* undef, align 4
-  %tmp8 = fmul reassoc float %tmp7, 0x3FE372D780000000
-  %tmp9 = fsub reassoc nsz float -1.000000e+00, %tmp8
-  %tmp10 = fmul reassoc float %tmp9, %tmp6
-  %tmp11 = fadd reassoc float %tmp5, 5.000000e-01
-  %tmp12 = fadd reassoc float %tmp11, %tmp10
+  %tmp = load float, ptr undef, align 4
+  %tmp2 = load float, ptr undef, align 4
+  %tmp3 = fmul contract reassoc float %tmp, 0x3FE372D780000000
+  %tmp4 = fadd contract reassoc float %tmp3, 1.000000e+00
+  %tmp5 = fmul contract reassoc float %tmp2, %tmp4
+  %tmp6 = load float, ptr undef, align 4
+  %tmp7 = load float, ptr undef, align 4
+  %tmp8 = fmul contract reassoc float %tmp7, 0x3FE372D780000000
+  %tmp9 = fsub contract reassoc nsz float -1.000000e+00, %tmp8
+  %tmp10 = fmul contract reassoc float %tmp9, %tmp6
+  %tmp11 = fadd contract reassoc float %tmp5, 5.000000e-01
+  %tmp12 = fadd contract reassoc float %tmp11, %tmp10
   ret float %tmp12
 }
 
@@ -201,22 +197,23 @@ define dso_local float @fma_combine_no_ice() {
 define dso_local double @getNegatedExpression_crash(double %x, double %y) {
 ; CHECK-FAST-LABEL: getNegatedExpression_crash:
 ; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
-; CHECK-FAST-NEXT:    addis 4, 2, .LCPI5_0@toc@ha
-; CHECK-FAST-NEXT:    lfs 3, .LCPI5_1@toc@l(3)
-; CHECK-FAST-NEXT:    lfs 4, .LCPI5_0@toc@l(4)
-; CHECK-FAST-NEXT:    xssubdp 0, 1, 3
-; CHECK-FAST-NEXT:    xsmaddadp 3, 1, 4
-; CHECK-FAST-NEXT:    xsmaddadp 0, 3, 2
+; CHECK-FAST-NEXT:    vspltisw 2, -1
+; CHECK-FAST-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
+; CHECK-FAST-NEXT:    xvcvsxwdp 4, 34
+; CHECK-FAST-NEXT:    lfs 3, .LCPI5_0@toc@l(3)
+; CHECK-FAST-NEXT:    xssubdp 0, 1, 4
+; CHECK-FAST-NEXT:    # kill: def $f4 killed $f4 killed $vsl4
+; CHECK-FAST-NEXT:    xsmaddadp 4, 1, 3
+; CHECK-FAST-NEXT:    xsmaddadp 0, 4, 2
 ; CHECK-FAST-NEXT:    fmr 1, 0
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: getNegatedExpression_crash:
 ; CHECK-FAST-NOVSX:       # %bb.0:
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    addis 4, 2, .LCPI5_1@toc@ha
 ; CHECK-FAST-NOVSX-NEXT:    lfs 0, .LCPI5_0@toc@l(3)
-; CHECK-FAST-NOVSX-NEXT:    lfs 3, .LCPI5_1@toc@l(4)
+; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
+; CHECK-FAST-NOVSX-NEXT:    lfs 3, .LCPI5_1@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    fmadd 3, 1, 3, 0
 ; CHECK-FAST-NOVSX-NEXT:    fsub 0, 1, 0
 ; CHECK-FAST-NOVSX-NEXT:    fmadd 1, 3, 2, 0
@@ -224,13 +221,14 @@ define dso_local double @getNegatedExpression_crash(double %x, double %y) {
 ;
 ; CHECK-LABEL: getNegatedExpression_crash:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LCPI5_0@toc@ha
-; CHECK-NEXT:    lfs 3, .LCPI5_1@toc@l(3)
-; CHECK-NEXT:    lfs 4, .LCPI5_0@toc@l(4)
-; CHECK-NEXT:    xssubdp 0, 1, 3
-; CHECK-NEXT:    xsmaddadp 3, 1, 4
-; CHECK-NEXT:    xsmaddadp 0, 3, 2
+; CHECK-NEXT:    vspltisw 2, -1
+; CHECK-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
+; CHECK-NEXT:    xvcvsxwdp 4, 34
+; CHECK-NEXT:    lfs 3, .LCPI5_0@toc@l(3)
+; CHECK-NEXT:    xssubdp 0, 1, 4
+; CHECK-NEXT:    # kill: def $f4 killed $f4 killed $vsl4
+; CHECK-NEXT:    xsmaddadp 4, 1, 3
+; CHECK-NEXT:    xsmaddadp 0, 4, 2
 ; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    blr
   %neg = fneg reassoc double %x
@@ -289,7 +287,6 @@ define <2 x double> @vec_neg_fma_flag_propagation(<2 x double> %a) {
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI8_0@toc@ha
 ; CHECK-FAST-NEXT:    addi 3, 3, .LCPI8_0@toc@l
 ; CHECK-FAST-NEXT:    lxvd2x 0, 0, 3
-; CHECK-FAST-NEXT:    xxswapd 0, 0
 ; CHECK-FAST-NEXT:    xvmaddadp 34, 34, 0
 ; CHECK-FAST-NEXT:    blr
 ;
@@ -305,7 +302,6 @@ define <2 x double> @vec_neg_fma_flag_propagation(<2 x double> %a) {
 ; CHECK-NEXT:    addis 3, 2, .LCPI8_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI8_0@toc@l
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    xxswapd 0, 0
 ; CHECK-NEXT:    xvmaddadp 34, 34, 0
 ; CHECK-NEXT:    blr
 entry:
@@ -334,10 +330,10 @@ define dso_local double @fma_combine_const(double %a, double %b) {
 ; CHECK-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
 ; CHECK-NEXT:    lfd 0, .LCPI9_0@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, .LCPI9_1@toc@ha
-; CHECK-NEXT:    lfd 3, .LCPI9_1@toc@l(3)
 ; CHECK-NEXT:    xsmuldp 0, 1, 0
+; CHECK-NEXT:    lfd 1, .LCPI9_1@toc@l(3)
+; CHECK-NEXT:    xsmaddadp 2, 0, 1
 ; CHECK-NEXT:    fmr 1, 2
-; CHECK-NEXT:    xsmaddadp 1, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   %0 = fmul double %a, 1.1

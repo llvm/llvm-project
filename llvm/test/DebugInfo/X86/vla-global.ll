@@ -1,4 +1,6 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o - -filetype=obj | llvm-dwarfdump - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-apple-darwin %s -o - -filetype=obj | llvm-dwarfdump - | FileCheck %s
+
 ; CHECK: 0x00000[[G:.*]]:     DW_TAG_variable
 ; CHECK-NEXT:                DW_AT_name	("g")
 ; CHECK: DW_TAG_array_type
@@ -17,12 +19,12 @@ target triple = "x86_64-apple-macosx10.13.0"
 
 define void @f() !dbg !12 {
 entry:
-  %0 = load i32, i32* @g, align 4, !dbg !22
+  %0 = load i32, ptr @g, align 4, !dbg !22
   %1 = zext i32 %0 to i64, !dbg !22
   %vla = alloca i32, i64 %1, align 16, !dbg !22
-  call void @llvm.dbg.declare(metadata i32* %vla, metadata !16, metadata !DIExpression()), !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %vla, metadata !16, metadata !DIExpression()), !dbg !22
   call void @llvm.dbg.value(metadata i32 2, metadata !21, metadata !DIExpression()), !dbg !22
-  %call = call i32 (i32*, ...) bitcast (i32 (...)* @use to i32 (i32*, ...)*)(i32* nonnull %vla), !dbg !22
+  %call = call i32 (ptr, ...) @use(ptr nonnull %vla), !dbg !22
   ret void, !dbg !22
 }
 

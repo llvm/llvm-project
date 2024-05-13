@@ -15,9 +15,9 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/type_traits.h"
 
 using namespace llvm;
 using namespace object;

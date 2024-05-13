@@ -174,7 +174,7 @@ bool HexagonStoreWidening::instrAliased(InstrGroup &Stores,
 
   MemoryLocation L(MMO.getValue(), MMO.getSize(), MMO.getAAInfo());
 
-  for (auto SI : Stores) {
+  for (auto *SI : Stores) {
     const MachineMemOperand &SMO = getStoreTarget(SI);
     if (!SMO.getValue())
       return true;
@@ -292,8 +292,8 @@ bool HexagonStoreWidening::storesAreAdjacent(const MachineInstr *S1,
   int Off1 = S1->getOperand(1).getImm();
   int Off2 = S2->getOperand(1).getImm();
 
-  return (Off1 >= 0) ? Off1+S1MO.getSize() == unsigned(Off2)
-                     : int(Off1+S1MO.getSize()) == Off2;
+  return (Off1 >= 0) ? Off1 + S1MO.getSize().getValue() == unsigned(Off2)
+                     : int(Off1 + S1MO.getSize().getValue()) == Off2;
 }
 
 /// Given a sequence of adjacent stores, and a maximum size of a single wide
@@ -315,7 +315,7 @@ bool HexagonStoreWidening::selectStores(InstrGroup::iterator Begin,
   assert(!FirstMI->memoperands_empty() && "Expecting some memory operands");
   const MachineMemOperand &FirstMMO = getStoreTarget(FirstMI);
   unsigned Alignment = FirstMMO.getAlign().value();
-  unsigned SizeAccum = FirstMMO.getSize();
+  unsigned SizeAccum = FirstMMO.getSize().getValue();
   unsigned FirstOffset = getStoreOffset(FirstMI);
 
   // The initial value of SizeAccum should always be a power of 2.
@@ -357,7 +357,7 @@ bool HexagonStoreWidening::selectStores(InstrGroup::iterator Begin,
     if (!storesAreAdjacent(S1, S2))
       break;
 
-    unsigned S2Size = getStoreTarget(S2).getSize();
+    unsigned S2Size = getStoreTarget(S2).getSize().getValue();
     if (SizeAccum + S2Size > std::min(MaxSize, Alignment))
       break;
 
@@ -400,13 +400,12 @@ bool HexagonStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
   unsigned Acc = 0;  // Value accumulator.
   unsigned Shift = 0;
 
-  for (InstrGroup::iterator I = OG.begin(), E = OG.end(); I != E; ++I) {
-    MachineInstr *MI = *I;
+  for (MachineInstr *MI : OG) {
     const MachineMemOperand &MMO = getStoreTarget(MI);
     MachineOperand &SO = MI->getOperand(2);  // Source.
     assert(SO.isImm() && "Expecting an immediate operand");
 
-    unsigned NBits = MMO.getSize()*8;
+    unsigned NBits = MMO.getSize().getValue() * 8;
     unsigned Mask = (0xFFFFFFFFU >> (32-NBits));
     unsigned Val = (SO.getImm() & Mask) << Shift;
     Acc |= Val;
@@ -491,7 +490,7 @@ bool HexagonStoreWidening::replaceStores(InstrGroup &OG, InstrGroup &NG) {
 
   // Create a set of all instructions in OG (for quick lookup).
   SmallPtrSet<MachineInstr*, 4> InstrSet;
-  for (auto I : OG)
+  for (auto *I : OG)
     InstrSet.insert(I);
 
   // Traverse the block, until we hit an instruction from OG.
@@ -515,7 +514,7 @@ bool HexagonStoreWidening::replaceStores(InstrGroup &OG, InstrGroup &NG) {
   else
     AtBBStart = true;
 
-  for (auto I : OG)
+  for (auto *I : OG)
     I->eraseFromParent();
 
   if (!AtBBStart)
@@ -523,7 +522,7 @@ bool HexagonStoreWidening::replaceStores(InstrGroup &OG, InstrGroup &NG) {
   else
     InsertAt = MBB->begin();
 
-  for (auto I : NG)
+  for (auto *I : NG)
     MBB->insert(InsertAt, I);
 
   return true;

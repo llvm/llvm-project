@@ -17,25 +17,26 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
-#include "llvm/IR/Attributes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 #include <functional>
 
 namespace llvm {
 
+class AttributeList;
 class CallBase;
 class DataLayout;
 class Function;
 class FunctionLoweringInfo;
 class MachineIRBuilder;
+class MachineFunction;
 struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
@@ -71,11 +72,17 @@ public:
     /// arguments.
     const Value *OrigValue = nullptr;
 
-    ArgInfo(ArrayRef<Register> Regs, Type *Ty,
+    /// Index original Function's argument.
+    unsigned OrigArgIndex;
+
+    /// Sentinel value for implicit machine-level input arguments.
+    static const unsigned NoArgIndex = UINT_MAX;
+
+    ArgInfo(ArrayRef<Register> Regs, Type *Ty, unsigned OrigIndex,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
             bool IsFixed = true, const Value *OrigValue = nullptr)
         : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs.begin(), Regs.end()),
-          OrigValue(OrigValue) {
+          OrigValue(OrigValue), OrigArgIndex(OrigIndex) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".
@@ -84,12 +91,12 @@ public:
              "only void types should have no register");
     }
 
-    ArgInfo(ArrayRef<Register> Regs, const Value &OrigValue,
+    ArgInfo(ArrayRef<Register> Regs, const Value &OrigValue, unsigned OrigIndex,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
             bool IsFixed = true)
-        : ArgInfo(Regs, OrigValue.getType(), Flags, IsFixed, &OrigValue) {}
+      : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, IsFixed, &OrigValue) {}
 
-    ArgInfo() : BaseArgInfo() {}
+    ArgInfo() = default;
   };
 
   struct CallLoweringInfo {
@@ -109,6 +116,12 @@ public:
     /// Valid if the call has a swifterror inout parameter, and contains the
     /// vreg that the swifterror should be copied into after the call.
     Register SwiftErrorVReg;
+
+    /// Valid if the call is a controlled convergent operation.
+    Register ConvergenceCtrlToken;
+
+    /// Original IR callsite corresponding to this call, if available.
+    const CallBase *CB = nullptr;
 
     MDNode *KnownCallees = nullptr;
 
@@ -134,6 +147,12 @@ public:
 
     /// The stack index for sret demotion.
     int DemoteStackIndex;
+
+    /// Expected type identifier for indirect calls with a CFI check.
+    const ConstantInt *CFIType = nullptr;
+
+    /// True if this call results in convergent operations.
+    bool IsConvergent = true;
   };
 
   /// Argument handling is mostly uniform between the four places that
@@ -175,7 +194,7 @@ public:
       if (getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
                                         State))
         return true;
-      StackOffset = State.getNextStackOffset();
+      StackSize = State.getStackSize();
       return false;
     }
 
@@ -186,9 +205,8 @@ public:
     /// as AssignFn on most targets.
     CCAssignFn *AssignFnVarArg;
 
-    /// Stack offset for next argument. At the end of argument evaluation, this
-    /// is typically the total stack size.
-    uint64_t StackOffset = 0;
+    /// The size of the currently allocated portion of the stack.
+    uint64_t StackSize = 0;
 
     /// Select the appropriate assignment function depending on whether this is
     /// a variadic call.
@@ -236,7 +254,7 @@ public:
     /// direct SP manipulation, depending on the context. \p MPO
     /// should be initialized to an appropriate description of the
     /// address created.
-    virtual Register getStackAddress(uint64_t Size, int64_t Offset,
+    virtual Register getStackAddress(uint64_t MemSize, int64_t Offset,
                                      MachinePointerInfo &MPO,
                                      ISD::ArgFlagsTy Flags) = 0;
 
@@ -245,38 +263,42 @@ public:
     ///
     /// This is overridable primarily for targets to maintain compatibility with
     /// hacks around the existing DAG call lowering infrastructure.
-    virtual uint64_t getStackValueStoreSize(const DataLayout &DL,
-                                            const CCValAssign &VA) const;
+    virtual LLT getStackValueStoreType(const DataLayout &DL,
+                                       const CCValAssign &VA,
+                                       ISD::ArgFlagsTy Flags) const;
 
     /// The specified value has been assigned to a physical register,
     /// handle the appropriate COPY (either to or from) and mark any
     /// relevant uses/defines as needed.
     virtual void assignValueToReg(Register ValVReg, Register PhysReg,
-                                  CCValAssign &VA) = 0;
+                                  const CCValAssign &VA) = 0;
 
     /// The specified value has been assigned to a stack
     /// location. Load or store it there, with appropriate extension
     /// if necessary.
     virtual void assignValueToAddress(Register ValVReg, Register Addr,
-                                      uint64_t Size, MachinePointerInfo &MPO,
-                                      CCValAssign &VA) = 0;
+                                      LLT MemTy, const MachinePointerInfo &MPO,
+                                      const CCValAssign &VA) = 0;
 
     /// An overload which takes an ArgInfo if additional information about the
     /// arg is needed. \p ValRegIndex is the index in \p Arg.Regs for the value
     /// to store.
     virtual void assignValueToAddress(const ArgInfo &Arg, unsigned ValRegIndex,
-                                      Register Addr, uint64_t Size,
-                                      MachinePointerInfo &MPO,
-                                      CCValAssign &VA) {
-      assignValueToAddress(Arg.Regs[ValRegIndex], Addr, Size, MPO, VA);
+                                      Register Addr, LLT MemTy,
+                                      const MachinePointerInfo &MPO,
+                                      const CCValAssign &VA) {
+      assignValueToAddress(Arg.Regs[ValRegIndex], Addr, MemTy, MPO, VA);
     }
 
     /// Handle custom values, which may be passed into one or more of \p VAs.
-    /// \return The number of \p VAs that have been assigned after the first
-    ///         one, and which should therefore be skipped from further
+    /// \p If the handler wants the assignments to be delayed until after
+    /// mem loc assignments, then it sets \p Thunk to the thunk to do the
+    /// assignment.
+    /// \return The number of \p VAs that have been assigned including the
+    ///         first one, and which should therefore be skipped from further
     ///         processing.
-    virtual unsigned assignCustomValue(const ArgInfo &Arg,
-                                       ArrayRef<CCValAssign> VAs) {
+    virtual unsigned assignCustomValue(ArgInfo &Arg, ArrayRef<CCValAssign> VAs,
+                                       std::function<void()> *Thunk = nullptr) {
       // This is not a pure virtual method because not all targets need to worry
       // about custom values.
       llvm_unreachable("Custom values not supported");
@@ -292,7 +314,7 @@ public:
 
     /// Extend a register to the location type given in VA, capped at extending
     /// to at most MaxSize bits. If MaxSizeBits is 0 then no maximum is set.
-    Register extendRegister(Register ValReg, CCValAssign &VA,
+    Register extendRegister(Register ValReg, const CCValAssign &VA,
                             unsigned MaxSizeBits = 0);
   };
 
@@ -304,11 +326,12 @@ public:
 
     /// Insert G_ASSERT_ZEXT/G_ASSERT_SEXT or other hint instruction based on \p
     /// VA, returning the new register if a hint was inserted.
-    Register buildExtensionHint(CCValAssign &VA, Register SrcReg, LLT NarrowTy);
+    Register buildExtensionHint(const CCValAssign &VA, Register SrcReg,
+                                LLT NarrowTy);
 
     /// Provides a default implementation for argument handling.
     void assignValueToReg(Register ValVReg, Register PhysReg,
-                          CCValAssign &VA) override;
+                          const CCValAssign &VA) override;
   };
 
   /// Base class for ValueHandlers used for arguments passed to a function call,
@@ -335,6 +358,9 @@ protected:
   ISD::ArgFlagsTy getAttributesForArgIdx(const CallBase &Call,
                                          unsigned ArgIdx) const;
 
+  /// \returns Flags corresponding to the attributes on the return from \p Call.
+  ISD::ArgFlagsTy getAttributesForReturn(const CallBase &Call) const;
+
   /// Adds flags to \p Flags based off of the attributes in \p Attrs.
   /// \p OpIdx is the index in \p Attrs to add flags from.
   void addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
@@ -348,17 +374,13 @@ protected:
   /// Break \p OrigArgInfo into one or more pieces the calling convention can
   /// process, returned in \p SplitArgs. For example, this should break structs
   /// down into individual fields.
+  ///
+  /// If \p Offsets is non-null, it points to a vector to be filled in
+  /// with the in-memory offsets of each of the individual values.
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL, CallingConv::ID CallConv) const;
-
-  /// Generate instructions for unpacking \p SrcReg into the \p DstRegs
-  /// corresponding to the aggregate type \p PackedTy.
-  ///
-  /// \param DstRegs should contain one virtual register for each base type in
-  ///        \p PackedTy, as returned by computeValueLLTs.
-  void unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg, Type *PackedTy,
-                  MachineIRBuilder &MIRBuilder) const;
+                         const DataLayout &DL, CallingConv::ID CallConv,
+                         SmallVectorImpl<uint64_t> *Offsets = nullptr) const;
 
   /// Analyze the argument list in \p Args, using \p Assigner to populate \p
   /// CCInfo. This will determine the types and locations to use for passed or
@@ -379,21 +401,20 @@ protected:
   /// \p Handler to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool determineAndHandleAssignments(ValueHandler &Handler,
-                                     ValueAssigner &Assigner,
-                                     SmallVectorImpl<ArgInfo> &Args,
-                                     MachineIRBuilder &MIRBuilder,
-                                     CallingConv::ID CallConv, bool IsVarArg,
-                                     Register ThisReturnReg = Register()) const;
+  bool determineAndHandleAssignments(
+      ValueHandler &Handler, ValueAssigner &Assigner,
+      SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
+      CallingConv::ID CallConv, bool IsVarArg,
+      ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
 
   /// Use \p Handler to insert code to handle the argument/return values
   /// represented by \p Args. It's expected determineAssignments previously
   /// processed these arguments to populate \p CCState and \p ArgLocs.
-  bool handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
-                         CCState &CCState,
-                         SmallVectorImpl<CCValAssign> &ArgLocs,
-                         MachineIRBuilder &MIRBuilder,
-                         Register ThisReturnReg = Register()) const;
+  bool
+  handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
+                    CCState &CCState, SmallVectorImpl<CCValAssign> &ArgLocs,
+                    MachineIRBuilder &MIRBuilder,
+                    ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
@@ -566,7 +587,12 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &Call,
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
+                 Register ConvergenceCtrlToken,
                  std::function<unsigned()> GetCalleeReg) const;
+
+  /// For targets which want to use big-endian can enable it with
+  /// enableBigEndian() hook
+  virtual bool enableBigEndian() const { return false; }
 
   /// For targets which support the "returned" parameter attribute, returns
   /// true if the given type is a valid one to use with "returned".

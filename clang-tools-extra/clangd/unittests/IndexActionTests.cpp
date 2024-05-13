@@ -8,10 +8,15 @@
 
 #include "Headers.h"
 #include "TestFS.h"
+#include "URI.h"
 #include "index/IndexAction.h"
+#include "index/Serialization.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Tooling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -27,22 +32,27 @@ using ::testing::UnorderedPointwise;
 
 std::string toUri(llvm::StringRef Path) { return URI::create(Path).toString(); }
 
-MATCHER(IsTU, "") { return arg.Flags & IncludeGraphNode::SourceFlag::IsTU; }
+MATCHER(isTU, "") { return arg.Flags & IncludeGraphNode::SourceFlag::IsTU; }
 
-MATCHER_P(HasDigest, Digest, "") { return arg.Digest == Digest; }
+MATCHER_P(hasDigest, Digest, "") { return arg.Digest == Digest; }
 
-MATCHER_P(HasName, Name, "") { return arg.Name == Name; }
+MATCHER_P(hasName, Name, "") { return arg.Name == Name; }
 
-MATCHER(HasSameURI, "") {
+MATCHER(hasSameURI, "") {
   llvm::StringRef URI = ::testing::get<0>(arg);
   const std::string &Path = ::testing::get<1>(arg);
   return toUri(Path) == URI;
 }
 
+MATCHER_P(includeHeader, P, "") {
+  return (arg.IncludeHeaders.size() == 1) &&
+         (arg.IncludeHeaders.begin()->IncludeHeader == P);
+}
+
 ::testing::Matcher<const IncludeGraphNode &>
-IncludesAre(const std::vector<std::string> &Includes) {
+includesAre(const std::vector<std::string> &Includes) {
   return ::testing::Field(&IncludeGraphNode::DirectIncludes,
-                          UnorderedPointwise(HasSameURI(), Includes));
+                          UnorderedPointwise(hasSameURI(), Includes));
 }
 
 void checkNodesAreInitialized(const IndexFileIn &IndexFile,
@@ -127,14 +137,14 @@ TEST_F(IndexActionTest, CollectIncludeGraph) {
   EXPECT_THAT(Nodes,
               UnorderedElementsAre(
                   Pair(toUri(MainFilePath),
-                       AllOf(IsTU(), IncludesAre({Level1HeaderPath}),
-                             HasDigest(digest(MainCode)))),
+                       AllOf(isTU(), includesAre({Level1HeaderPath}),
+                             hasDigest(digest(MainCode)))),
                   Pair(toUri(Level1HeaderPath),
-                       AllOf(Not(IsTU()), IncludesAre({Level2HeaderPath}),
-                             HasDigest(digest(Level1HeaderCode)))),
+                       AllOf(Not(isTU()), includesAre({Level2HeaderPath}),
+                             hasDigest(digest(Level1HeaderCode)))),
                   Pair(toUri(Level2HeaderPath),
-                       AllOf(Not(IsTU()), IncludesAre({}),
-                             HasDigest(digest(Level2HeaderCode))))));
+                       AllOf(Not(isTU()), includesAre({}),
+                             hasDigest(digest(Level2HeaderCode))))));
 }
 
 TEST_F(IndexActionTest, IncludeGraphSelfInclude) {
@@ -156,10 +166,10 @@ TEST_F(IndexActionTest, IncludeGraphSelfInclude) {
   EXPECT_THAT(
       Nodes,
       UnorderedElementsAre(
-          Pair(toUri(MainFilePath), AllOf(IsTU(), IncludesAre({HeaderPath}),
-                                          HasDigest(digest(MainCode)))),
-          Pair(toUri(HeaderPath), AllOf(Not(IsTU()), IncludesAre({HeaderPath}),
-                                        HasDigest(digest(HeaderCode))))));
+          Pair(toUri(MainFilePath), AllOf(isTU(), includesAre({HeaderPath}),
+                                          hasDigest(digest(MainCode)))),
+          Pair(toUri(HeaderPath), AllOf(Not(isTU()), includesAre({HeaderPath}),
+                                        hasDigest(digest(HeaderCode))))));
 }
 
 TEST_F(IndexActionTest, IncludeGraphSkippedFile) {
@@ -191,14 +201,14 @@ TEST_F(IndexActionTest, IncludeGraphSkippedFile) {
   EXPECT_THAT(
       Nodes, UnorderedElementsAre(
                  Pair(toUri(MainFilePath),
-                      AllOf(IsTU(), IncludesAre({HeaderPath, CommonHeaderPath}),
-                            HasDigest(digest(MainCode)))),
+                      AllOf(isTU(), includesAre({HeaderPath, CommonHeaderPath}),
+                            hasDigest(digest(MainCode)))),
                  Pair(toUri(HeaderPath),
-                      AllOf(Not(IsTU()), IncludesAre({CommonHeaderPath}),
-                            HasDigest(digest(HeaderCode)))),
+                      AllOf(Not(isTU()), includesAre({CommonHeaderPath}),
+                            hasDigest(digest(HeaderCode)))),
                  Pair(toUri(CommonHeaderPath),
-                      AllOf(Not(IsTU()), IncludesAre({}),
-                            HasDigest(digest(CommonHeaderCode))))));
+                      AllOf(Not(isTU()), includesAre({}),
+                            hasDigest(digest(CommonHeaderCode))))));
 }
 
 TEST_F(IndexActionTest, IncludeGraphDynamicInclude) {
@@ -224,10 +234,10 @@ TEST_F(IndexActionTest, IncludeGraphDynamicInclude) {
       Nodes,
       UnorderedElementsAre(
           Pair(toUri(MainFilePath),
-               AllOf(IsTU(), IncludesAre({MainFilePath, HeaderPath}),
-                     HasDigest(digest(MainCode)))),
-          Pair(toUri(HeaderPath), AllOf(Not(IsTU()), IncludesAre({}),
-                                        HasDigest(digest(HeaderCode))))));
+               AllOf(isTU(), includesAre({MainFilePath, HeaderPath}),
+                     hasDigest(digest(MainCode)))),
+          Pair(toUri(HeaderPath), AllOf(Not(isTU()), includesAre({}),
+                                        hasDigest(digest(HeaderCode))))));
 }
 
 TEST_F(IndexActionTest, NoWarnings) {
@@ -248,7 +258,7 @@ TEST_F(IndexActionTest, NoWarnings) {
       MainFilePath, {"-ferror-limit=1", "-Wparentheses", "-Werror"});
   ASSERT_TRUE(IndexFile.Sources);
   ASSERT_NE(0u, IndexFile.Sources->size());
-  EXPECT_THAT(*IndexFile.Symbols, ElementsAre(HasName("foo"), HasName("bar")));
+  EXPECT_THAT(*IndexFile.Symbols, ElementsAre(hasName("foo"), hasName("bar")));
 }
 
 TEST_F(IndexActionTest, SkipFiles) {
@@ -270,12 +280,12 @@ TEST_F(IndexActionTest, SkipFiles) {
     auto unskippable2() { return S(); }
   )cpp");
   Opts.FileFilter = [](const SourceManager &SM, FileID F) {
-    return !SM.getFileEntryForID(F)->getName().endswith("bad.h");
+    return !SM.getFileEntryRefForID(F)->getName().ends_with("bad.h");
   };
   IndexFileIn IndexFile = runIndexingAction(MainFilePath, {"-std=c++14"});
   EXPECT_THAT(*IndexFile.Symbols,
-              UnorderedElementsAre(HasName("S"), HasName("s"), HasName("f1"),
-                                   HasName("unskippable1")));
+              UnorderedElementsAre(hasName("S"), hasName("s"), hasName("f1"),
+                                   hasName("unskippable1")));
   for (const auto &Pair : *IndexFile.Refs)
     for (const auto &Ref : Pair.second)
       EXPECT_THAT(Ref.Location.FileURI, EndsWith("good.h"));
@@ -307,9 +317,59 @@ TEST_F(IndexActionTest, SkipNestedSymbols) {
   }
   })cpp");
   IndexFileIn IndexFile = runIndexingAction(MainFilePath, {"-std=c++14"});
-  EXPECT_THAT(*IndexFile.Symbols, testing::Contains(HasName("foo")));
-  EXPECT_THAT(*IndexFile.Symbols, testing::Contains(HasName("Bar")));
-  EXPECT_THAT(*IndexFile.Symbols, Not(testing::Contains(HasName("Baz"))));
+  EXPECT_THAT(*IndexFile.Symbols, testing::Contains(hasName("foo")));
+  EXPECT_THAT(*IndexFile.Symbols, testing::Contains(hasName("Bar")));
+  EXPECT_THAT(*IndexFile.Symbols, Not(testing::Contains(hasName("Baz"))));
+}
+
+TEST_F(IndexActionTest, SymbolFromCC) {
+  std::string MainFilePath = testPath("main.cpp");
+  addFile(MainFilePath, R"cpp(
+ #include "main.h"
+ void foo() {}
+ )cpp");
+  addFile(testPath("main.h"), R"cpp(
+ #pragma once
+ void foo();
+ )cpp");
+  Opts.FileFilter = [](const SourceManager &SM, FileID F) {
+    return !SM.getFileEntryRefForID(F)->getName().ends_with("main.h");
+  };
+  IndexFileIn IndexFile = runIndexingAction(MainFilePath, {"-std=c++14"});
+  EXPECT_THAT(*IndexFile.Symbols,
+              UnorderedElementsAre(AllOf(
+                  hasName("foo"),
+                  includeHeader(URI::create(testPath("main.h")).toString()))));
+}
+
+TEST_F(IndexActionTest, IncludeHeaderForwardDecls) {
+  std::string MainFilePath = testPath("main.cpp");
+  addFile(MainFilePath, R"cpp(
+#include "fwd.h"
+#include "full.h"
+ )cpp");
+  addFile(testPath("fwd.h"), R"cpp(
+#ifndef _FWD_H_
+#define _FWD_H_
+struct Foo;
+#endif
+ )cpp");
+  addFile(testPath("full.h"), R"cpp(
+#ifndef _FULL_H_
+#define _FULL_H_
+struct Foo {};
+
+// This decl is important, as otherwise we detect control macro for the file,
+// before handling definition of Foo.
+void other();
+#endif
+ )cpp");
+  IndexFileIn IndexFile = runIndexingAction(MainFilePath);
+  EXPECT_THAT(*IndexFile.Symbols,
+              testing::Contains(AllOf(
+                  hasName("Foo"),
+                  includeHeader(URI::create(testPath("full.h")).toString()))))
+      << *IndexFile.Symbols->begin();
 }
 } // namespace
 } // namespace clangd

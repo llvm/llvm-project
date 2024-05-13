@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -inline -pass-remarks=inline \
+; RUN: opt < %s -S -passes=inline -pass-remarks=inline \
 ; RUN:    -pass-remarks-with-hotness 2>&1 | FileCheck %s
 
 ; RUN: opt < %s -S -passes=inline -pass-remarks-output=%t -pass-remarks=inline \
@@ -18,7 +18,7 @@
 ;  4       return foo();
 ;  5     }
 
-; CHECK: remark: /tmp/s.c:4:10: foo inlined into bar with (cost={{[0-9\-]+}}, threshold={{[0-9]+}})
+; CHECK: remark: /tmp/s.c:4:10: 'foo' inlined into 'bar' with (cost={{[0-9\-]+}}, threshold={{[0-9]+}})
 ; THRESHOLD-NOT: remark
 
 ; ModuleID = '/tmp/s.c'

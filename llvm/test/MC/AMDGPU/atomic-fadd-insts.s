@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck --check-prefix=GFX908 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefix=GFX908-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck --check-prefix=GFX908 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefix=GFX908-ERR --implicit-check-not=error: %s
 
 buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:4095
 // GFX908: encoding: [0xff,0x0f,0x34,0xe1,0x00,0x05,0x02,0x03]
@@ -41,7 +41,7 @@ buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:7
 // GFX908: encoding: [0x07,0x00,0x34,0xe1,0x00,0x05,0x02,0x03]
 
 buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:4095 glc
-// GFX908-ERR: error: instruction must not use glc
+// GFX908-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:4095 slc
 // GFX908: encoding: [0xff,0x0f,0x36,0xe1,0x00,0x05,0x02,0x03]
@@ -86,7 +86,7 @@ buffer_atomic_pk_add_f16 v5, off, s[8:11], s3 offset:7
 // GFX908: encoding: [0x07,0x00,0x38,0xe1,0x00,0x05,0x02,0x03]
 
 buffer_atomic_pk_add_f16 v5, off, s[8:11], s3 offset:4095 glc
-// GFX908-ERR: error: instruction must not use glc
+// GFX908-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_pk_add_f16 v5, off, s[8:11], s3 offset:4095 slc
 // GFX908: encoding: [0xff,0x0f,0x3a,0xe1,0x00,0x05,0x02,0x03]

@@ -1,13 +1,13 @@
 // RUN: cp %s %t
-// RUN: %clang_cc1 -triple thumbv7-apple-ios8.0.0 -fsyntax-only -Wformat -Werror -fixit %t
+// RUN: %clang_cc1 -triple thumbv7-apple-ios8.0.0 -Wformat -Werror -fixit %t
 
 int printf(const char *restrict, ...);
 typedef unsigned int NSUInteger;
 typedef int NSInteger;
-NSUInteger getNSUInteger();
-NSInteger getNSInteger();
+NSUInteger getNSUInteger(void);
+NSInteger getNSInteger(void);
 
-void test() {
+void test(void) {
   // For thumbv7-apple-ios8.0.0 the underlying type of ssize_t is long
   // and the underlying type of size_t is unsigned long.
 

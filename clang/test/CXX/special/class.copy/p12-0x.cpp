@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-defaulted-function-deleted
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins -Wno-defaulted-function-deleted
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
 
 // expected-no-diagnostics
 
@@ -28,7 +29,25 @@ using _ = not_trivially_copyable<UserProvided>;
 struct NonConstCopy {
   NonConstCopy(NonConstCopy &) = default;
 };
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 14
+// Up until (and including) Clang 14, non-const copy constructors were not trivial because of dr2171
 using _ = not_trivially_copyable<NonConstCopy>;
+#else
+// In the latest Clang version, all defaulted constructors are trivial, even if non-const, because
+// dr2171 is fixed.
+static_assert(__has_trivial_copy(NonConstCopy), "");
+static_assert(__is_trivially_constructible(NonConstCopy, NonConstCopy &), "");
+static_assert(!__is_trivially_constructible(NonConstCopy, NonConstCopy), "");
+static_assert(!__is_trivially_constructible(NonConstCopy, const NonConstCopy &), "");
+static_assert(!__is_trivially_constructible(NonConstCopy, NonConstCopy &&), "");
+
+struct DefaultedSpecialMembers {
+  DefaultedSpecialMembers(const DefaultedSpecialMembers &) = default;
+  DefaultedSpecialMembers(DefaultedSpecialMembers &) = default;
+  DefaultedSpecialMembers(DefaultedSpecialMembers &&) = default;
+};
+using _ = trivially_copyable<DefaultedSpecialMembers>;
+#endif
 
 // class X has no virtual functions
 struct VFn {

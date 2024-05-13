@@ -26,11 +26,9 @@ template <class T, unsigned n> class SmallSetVector;
 namespace clang {
 
 class CXXConstructorDecl;
-class CXXDeleteExpr;
 class CXXRecordDecl;
 class DeclaratorDecl;
 class LookupResult;
-struct ObjCMethodList;
 class Scope;
 class Sema;
 class TypedefNameDecl;
@@ -231,6 +229,11 @@ public:
                                                 QualType T) {
     return false;
   }
+
+  /// Notify the external source that a lambda was assigned a mangling number.
+  /// This enables the external source to track the correspondence between
+  /// lambdas and mangling numbers if necessary.
+  virtual void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) {}
 
   /// LLVM-style RTTI.
   /// \{

@@ -10,32 +10,35 @@ from lldbsuite.test import lldbutil
 
 
 class StdTupleDataFormatterTestCase(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libstdcxx"])
+    @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
     def test_with_run_command(self):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_source_regexp(
-            self, "Set break point at this line.")
+        lldbutil.run_break_set_by_source_regexp(self, "Set break point at this line.")
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped', 'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         frame = self.frame()
         self.assertTrue(frame.IsValid())
 
-        self.expect("frame variable ti", substrs=['[0] = 1'])
+        self.expect("frame variable ti", substrs=["[0] = 1"])
         self.expect("frame variable ts", substrs=['[0] = "foobar"'])
-        self.expect("frame variable tt", substrs=['[0] = 1', '[1] = "baz"', '[2] = 2'])
+        self.expect("frame variable tt", substrs=["[0] = 1", '[1] = "baz"', "[2] = 2"])
 
         self.assertEqual(1, frame.GetValueForVariablePath("ti[0]").GetValueAsUnsigned())
         self.assertFalse(frame.GetValueForVariablePath("ti[1]").IsValid())
 
-        self.assertEqual('"foobar"', frame.GetValueForVariablePath("ts[0]").GetSummary())
+        self.assertEqual(
+            '"foobar"', frame.GetValueForVariablePath("ts[0]").GetSummary()
+        )
         self.assertFalse(frame.GetValueForVariablePath("ts[1]").IsValid())
 
         self.assertEqual(1, frame.GetValueForVariablePath("tt[0]").GetValueAsUnsigned())

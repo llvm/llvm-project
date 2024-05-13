@@ -7,7 +7,7 @@ struct Word {
   short quux;
 } *word_limit;
 
-void foo ()
+void foo (void)
 {
   word_limit->final = (word_limit->final && word_limit->final);
 }

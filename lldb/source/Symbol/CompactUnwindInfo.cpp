@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CompactUnwindInfo.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -15,6 +16,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -153,9 +155,8 @@ FLAGS_ANONYMOUS_ENUM(){
 #endif
 
 #define EXTRACT_BITS(value, mask)                                              \
-  ((value >>                                                                   \
-    llvm::countTrailingZeros(static_cast<uint32_t>(mask), llvm::ZB_Width)) &   \
-   (((1 << llvm::countPopulation(static_cast<uint32_t>(mask)))) - 1))
+  ((value >> llvm::countr_zero(static_cast<uint32_t>(mask))) &                 \
+   (((1 << llvm::popcount(static_cast<uint32_t>(mask)))) - 1))
 
 // constructor
 
@@ -167,7 +168,7 @@ CompactUnwindInfo::CompactUnwindInfo(ObjectFile &objfile, SectionSP &section_sp)
 
 // destructor
 
-CompactUnwindInfo::~CompactUnwindInfo() {}
+CompactUnwindInfo::~CompactUnwindInfo() = default;
 
 bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
                                       UnwindPlan &unwind_plan) {
@@ -182,7 +183,7 @@ bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
 
     if (ArchSpec arch = m_objfile.GetArchitecture()) {
 
-      Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+      Log *log = GetLog(LLDBLog::Unwind);
       if (log && log->GetVerbose()) {
         StreamString strm;
         addr.Dump(
@@ -251,7 +252,7 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
     return;
   }
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
   if (log)
     m_objfile.GetModule()->LogMessage(
         log, "Reading compact unwind first-level indexes");
@@ -316,9 +317,8 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
             m_unwindinfo_data.GetByteSize() ||
         indexSectionOffset > m_unwindinfo_data.GetByteSize() ||
         offset > m_unwindinfo_data.GetByteSize()) {
-      Host::SystemLog(Host::eSystemLogError, "error: Invalid offset "
-                                             "encountered in compact unwind "
-                                             "info, skipping\n");
+      Debugger::ReportError(
+          "Invalid offset encountered in compact unwind info, skipping");
       // don't trust anything from this compact_unwind section if it looks
       // blatantly invalid data in the header.
       m_indexes_computed = eLazyBoolNo;
@@ -515,7 +515,7 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
   key.function_offset = function_offset;
 
   std::vector<UnwindIndex>::const_iterator it;
-  it = std::lower_bound(m_indexes.begin(), m_indexes.end(), key);
+  it = llvm::lower_bound(m_indexes, key);
   if (it == m_indexes.end()) {
     return false;
   }

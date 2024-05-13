@@ -11,20 +11,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Analysis/AffineAnalysis.h"
-#include "mlir/Analysis/LoopAnalysis.h"
-#include "mlir/Analysis/NestedMatcher.h"
+#include "mlir/Dialect/Affine/Passes.h"
+
+#include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
+
+namespace mlir {
+namespace affine {
+#define GEN_PASS_DEF_AFFINEVECTORIZE
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
+} // namespace mlir
 
 using namespace mlir;
+using namespace affine;
 using namespace vector;
 
 ///
@@ -253,7 +267,8 @@ using namespace vector;
 ///           transfer read and write operations.
 ///         * Scalar constant operations/operands are converted to vector
 ///           constant operations (splat).
-///         * Uniform operands (only operands defined outside of the loop nest,
+///         * Uniform operands (only induction variables of loops not mapped to
+///           a vector dimension, or operands defined outside of the loop nest
 ///           for now) are broadcasted to a vector.
 ///           TODO: Support more uniform cases.
 ///         * Affine for operations with 'iter_args' are vectorized by
@@ -343,8 +358,8 @@ using namespace vector;
 ///   %A = alloc (%M, %N) : memref<?x?xf32, 0>
 ///   %B = alloc (%M, %N) : memref<?x?xf32, 0>
 ///   %C = alloc (%M, %N) : memref<?x?xf32, 0>
-///   %f1 = constant 1.0 : f32
-///   %f2 = constant 2.0 : f32
+///   %f1 = arith.constant 1.0 : f32
+///   %f2 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %M {
 ///     affine.for %i1 = 0 to %N {
 ///       // non-scoped %f1
@@ -361,39 +376,39 @@ using namespace vector;
 ///     affine.for %i5 = 0 to %N {
 ///       %a5 = affine.load %A[%i4, %i5] : memref<?x?xf32, 0>
 ///       %b5 = affine.load %B[%i4, %i5] : memref<?x?xf32, 0>
-///       %s5 = addf %a5, %b5 : f32
+///       %s5 = arith.addf %a5, %b5 : f32
 ///       // non-scoped %f1
-///       %s6 = addf %s5, %f1 : f32
+///       %s6 = arith.addf %s5, %f1 : f32
 ///       // non-scoped %f2
-///       %s7 = addf %s5, %f2 : f32
+///       %s7 = arith.addf %s5, %f2 : f32
 ///       // diamond dependency.
-///       %s8 = addf %s7, %s6 : f32
+///       %s8 = arith.addf %s7, %s6 : f32
 ///       affine.store %s8, %C[%i4, %i5] : memref<?x?xf32, 0>
 ///     }
 ///   }
-///   %c7 = constant 7 : index
-///   %c42 = constant 42 : index
+///   %c7 = arith.constant 7 : index
+///   %c42 = arith.constant 42 : index
 ///   %res = load %C[%c7, %c42] : memref<?x?xf32, 0>
 ///   return %res : f32
 /// }
 /// ```
 ///
-/// The -affine-vectorize pass with the following arguments:
+/// The -affine-super-vectorize pass with the following arguments:
 /// ```
-/// -affine-vectorize="virtual-vector-size=256 test-fastest-varying=0"
+/// -affine-super-vectorize="virtual-vector-size=256 test-fastest-varying=0"
 /// ```
 ///
 /// produces this standard innermost-loop vectorized code:
 /// ```mlir
 /// func @vector_add_2d(%arg0 : index, %arg1 : index) -> f32 {
-///   %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %cst = constant 1.0 : f32
-///   %cst_0 = constant 2.0 : f32
+///   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %cst = arith.constant 1.0 : f32
+///   %cst_0 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %arg0 {
 ///     affine.for %i1 = 0 to %arg1 step 256 {
-///       %cst_1 = constant dense<vector<256xf32>, 1.0> :
+///       %cst_1 = arith.constant dense<vector<256xf32>, 1.0> :
 ///                vector<256xf32>
 ///       vector.transfer_write %cst_1, %0[%i0, %i1] :
 ///                vector<256xf32>, memref<?x?xf32>
@@ -401,7 +416,7 @@ using namespace vector;
 ///   }
 ///   affine.for %i2 = 0 to %arg0 {
 ///     affine.for %i3 = 0 to %arg1 step 256 {
-///       %cst_2 = constant dense<vector<256xf32>, 2.0> :
+///       %cst_2 = arith.constant dense<vector<256xf32>, 2.0> :
 ///                vector<256xf32>
 ///       vector.transfer_write %cst_2, %1[%i2, %i3] :
 ///                vector<256xf32>, memref<?x?xf32>
@@ -413,41 +428,42 @@ using namespace vector;
 ///            memref<?x?xf32>, vector<256xf32>
 ///       %4 = vector.transfer_read %1[%i4, %i5] :
 ///            memref<?x?xf32>, vector<256xf32>
-///       %5 = addf %3, %4 : vector<256xf32>
-///       %cst_3 = constant dense<vector<256xf32>, 1.0> :
+///       %5 = arith.addf %3, %4 : vector<256xf32>
+///       %cst_3 = arith.constant dense<vector<256xf32>, 1.0> :
 ///                vector<256xf32>
-///       %6 = addf %5, %cst_3 : vector<256xf32>
-///       %cst_4 = constant dense<vector<256xf32>, 2.0> :
+///       %6 = arith.addf %5, %cst_3 : vector<256xf32>
+///       %cst_4 = arith.constant dense<vector<256xf32>, 2.0> :
 ///                vector<256xf32>
-///       %7 = addf %5, %cst_4 : vector<256xf32>
-///       %8 = addf %7, %6 : vector<256xf32>
+///       %7 = arith.addf %5, %cst_4 : vector<256xf32>
+///       %8 = arith.addf %7, %6 : vector<256xf32>
 ///       vector.transfer_write %8, %2[%i4, %i5] :
 ///                vector<256xf32>, memref<?x?xf32>
 ///     }
 ///   }
-///   %c7 = constant 7 : index
-///   %c42 = constant 42 : index
+///   %c7 = arith.constant 7 : index
+///   %c42 = arith.constant 42 : index
 ///   %9 = load %2[%c7, %c42] : memref<?x?xf32>
 ///   return %9 : f32
 /// }
 /// ```
 ///
-/// The -affine-vectorize pass with the following arguments:
+/// The -affine-super-vectorize pass with the following arguments:
 /// ```
-/// -affine-vectorize="virtual-vector-size=32,256 test-fastest-varying=1,0"
+/// -affine-super-vectorize="virtual-vector-size=32,256 \
+///                          test-fastest-varying=1,0"
 /// ```
 ///
 /// produces this more interesting mixed outer-innermost-loop vectorized code:
 /// ```mlir
 /// func @vector_add_2d(%arg0 : index, %arg1 : index) -> f32 {
-///   %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %cst = constant 1.0 : f32
-///   %cst_0 = constant 2.0 : f32
+///   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %cst = arith.constant 1.0 : f32
+///   %cst_0 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %arg0 step 32 {
 ///     affine.for %i1 = 0 to %arg1 step 256 {
-///       %cst_1 = constant dense<vector<32x256xf32>, 1.0> :
+///       %cst_1 = arith.constant dense<vector<32x256xf32>, 1.0> :
 ///                vector<32x256xf32>
 ///       vector.transfer_write %cst_1, %0[%i0, %i1] :
 ///                vector<32x256xf32>, memref<?x?xf32>
@@ -455,7 +471,7 @@ using namespace vector;
 ///   }
 ///   affine.for %i2 = 0 to %arg0 step 32 {
 ///     affine.for %i3 = 0 to %arg1 step 256 {
-///       %cst_2 = constant dense<vector<32x256xf32>, 2.0> :
+///       %cst_2 = arith.constant dense<vector<32x256xf32>, 2.0> :
 ///                vector<32x256xf32>
 ///       vector.transfer_write %cst_2, %1[%i2, %i3] :
 ///                vector<32x256xf32>, memref<?x?xf32>
@@ -467,20 +483,20 @@ using namespace vector;
 ///                memref<?x?xf32> vector<32x256xf32>
 ///       %4 = vector.transfer_read %1[%i4, %i5] :
 ///                memref<?x?xf32>, vector<32x256xf32>
-///       %5 = addf %3, %4 : vector<32x256xf32>
-///       %cst_3 = constant dense<vector<32x256xf32>, 1.0> :
+///       %5 = arith.addf %3, %4 : vector<32x256xf32>
+///       %cst_3 = arith.constant dense<vector<32x256xf32>, 1.0> :
 ///                vector<32x256xf32>
-///       %6 = addf %5, %cst_3 : vector<32x256xf32>
-///       %cst_4 = constant dense<vector<32x256xf32>, 2.0> :
+///       %6 = arith.addf %5, %cst_3 : vector<32x256xf32>
+///       %cst_4 = arith.constant dense<vector<32x256xf32>, 2.0> :
 ///                vector<32x256xf32>
-///       %7 = addf %5, %cst_4 : vector<32x256xf32>
-///       %8 = addf %7, %6 : vector<32x256xf32>
+///       %7 = arith.addf %5, %cst_4 : vector<32x256xf32>
+///       %8 = arith.addf %7, %6 : vector<32x256xf32>
 ///       vector.transfer_write %8, %2[%i4, %i5] :
 ///                vector<32x256xf32>, memref<?x?xf32>
 ///     }
 ///   }
-///   %c7 = constant 7 : index
-///   %c42 = constant 42 : index
+///   %c7 = arith.constant 7 : index
+///   %c42 = arith.constant 42 : index
 ///   %9 = load %2[%c7, %c42] : memref<?x?xf32>
 ///   return %9 : f32
 /// }
@@ -510,43 +526,43 @@ using namespace vector;
 /// Consider the following example:
 /// ```mlir
 /// func @vecred(%in: memref<512xf32>) -> f32 {
-///   %cst = constant 0.000000e+00 : f32
+///   %cst = arith.constant 0.000000e+00 : f32
 ///   %sum = affine.for %i = 0 to 500 iter_args(%part_sum = %cst) -> (f32) {
 ///     %ld = affine.load %in[%i] : memref<512xf32>
 ///     %cos = math.cos %ld : f32
-///     %add = addf %part_sum, %cos : f32
+///     %add = arith.addf %part_sum, %cos : f32
 ///     affine.yield %add : f32
 ///   }
 ///   return %sum : f32
 /// }
 /// ```
 ///
-/// The -affine-vectorize pass with the following arguments:
+/// The -affine-super-vectorize pass with the following arguments:
 /// ```
-/// -affine-vectorize="virtual-vector-size=128 test-fastest-varying=0 \
-///                    vectorize-reductions=true"
+/// -affine-super-vectorize="virtual-vector-size=128 test-fastest-varying=0 \
+///                          vectorize-reductions=true"
 /// ```
 /// produces the following output:
 /// ```mlir
 /// #map = affine_map<(d0) -> (-d0 + 500)>
 /// func @vecred(%arg0: memref<512xf32>) -> f32 {
-///   %cst = constant 0.000000e+00 : f32
-///   %cst_0 = constant dense<0.000000e+00> : vector<128xf32>
+///   %cst = arith.constant 0.000000e+00 : f32
+///   %cst_0 = arith.constant dense<0.000000e+00> : vector<128xf32>
 ///   %0 = affine.for %arg1 = 0 to 500 step 128 iter_args(%arg2 = %cst_0)
 ///           -> (vector<128xf32>) {
 ///     // %2 is the number of iterations left in the original loop.
 ///     %2 = affine.apply #map(%arg1)
 ///     %3 = vector.create_mask %2 : vector<128xi1>
-///     %cst_1 = constant 0.000000e+00 : f32
+///     %cst_1 = arith.constant 0.000000e+00 : f32
 ///     %4 = vector.transfer_read %arg0[%arg1], %cst_1 :
 ///                     memref<512xf32>, vector<128xf32>
 ///     %5 = math.cos %4 : vector<128xf32>
-///     %6 = addf %arg2, %5 : vector<128xf32>
+///     %6 = arith.addf %arg2, %5 : vector<128xf32>
 ///     // We filter out the effect of last 12 elements using the mask.
 ///     %7 = select %3, %6, %arg2 : vector<128xi1>, vector<128xf32>
 ///     affine.yield %7 : vector<128xf32>
 ///   }
-///   %1 = vector.reduction "add", %0 : vector<128xf32> into f32
+///   %1 = vector.reduction <add>, %0 : vector<128xf32> into f32
 ///   return %1 : f32
 /// }
 /// ```
@@ -569,10 +585,10 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
 /// Up to 3-D patterns are supported.
 /// If the command line argument requests a pattern of higher order, returns an
 /// empty pattern list which will conservatively result in no vectorization.
-static Optional<NestedPattern>
+static std::optional<NestedPattern>
 makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
             ArrayRef<int64_t> fastestVaryingPattern) {
-  using matcher::For;
+  using affine::matcher::For;
   int64_t d0 = fastestVaryingPattern.empty() ? -1 : fastestVaryingPattern[0];
   int64_t d1 = fastestVaryingPattern.size() < 2 ? -1 : fastestVaryingPattern[1];
   int64_t d2 = fastestVaryingPattern.size() < 3 ? -1 : fastestVaryingPattern[2];
@@ -587,15 +603,14 @@ makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
                For(isVectorizableLoopPtrFactory(parallelLoops, d1),
                    For(isVectorizableLoopPtrFactory(parallelLoops, d2))));
   default: {
-    return llvm::None;
+    return std::nullopt;
   }
   }
 }
 
 static NestedPattern &vectorTransferPattern() {
-  static auto pattern = matcher::Op([](Operation &op) {
-    return isa<vector::TransferReadOp, vector::TransferWriteOp>(op);
-  });
+  static auto pattern = affine::matcher::Op(
+      llvm::IsaPred<vector::TransferReadOp, vector::TransferWriteOp>);
   return pattern;
 }
 
@@ -603,17 +618,13 @@ namespace {
 
 /// Base state for the vectorize pass.
 /// Command line arguments are preempted by non-empty pass arguments.
-struct Vectorize : public AffineVectorizeBase<Vectorize> {
-  Vectorize() = default;
-  Vectorize(ArrayRef<int64_t> virtualVectorSize);
-  void runOnFunction() override;
+struct Vectorize : public affine::impl::AffineVectorizeBase<Vectorize> {
+  using Base::Base;
+
+  void runOnOperation() override;
 };
 
-} // end anonymous namespace
-
-Vectorize::Vectorize(ArrayRef<int64_t> virtualVectorSize) {
-  vectorSizes = virtualVectorSize;
-}
+} // namespace
 
 static void vectorizeLoopIfProfitable(Operation *loop, unsigned depthInPattern,
                                       unsigned patternDepth,
@@ -673,8 +684,8 @@ struct VectorizationState {
   /// the vectorized operations.
   ///
   /// Example:
-  ///   * 'replaced': %0 = addf %1, %2 : f32
-  ///   * 'replacement': %0 = addf %1, %2 : vector<128xf32>
+  ///   * 'replaced': %0 = arith.addf %1, %2 : f32
+  ///   * 'replacement': %0 = arith.addf %1, %2 : vector<128xf32>
   void registerOpVectorReplacement(Operation *replaced, Operation *replacement);
 
   /// Registers the vector replacement of a scalar value. The replacement
@@ -699,18 +710,16 @@ struct VectorizationState {
                                          BlockArgument replacement);
 
   /// Registers the scalar replacement of a scalar value. 'replacement' must be
-  /// scalar. Both values must be block arguments. Operation results should be
-  /// replaced using the 'registerOp*' utilitites.
+  /// scalar.
   ///
   /// This utility is used to register the replacement of block arguments
-  /// that are within the loop to be vectorized and will continue being scalar
-  /// within the vector loop.
+  /// or affine.apply results that are within the loop be vectorized and will
+  /// continue being scalar within the vector loop.
   ///
   /// Example:
   ///   * 'replaced': induction variable of a loop to be vectorized.
   ///   * 'replacement': new induction variable in the new vector loop.
-  void registerValueScalarReplacement(BlockArgument replaced,
-                                      BlockArgument replacement);
+  void registerValueScalarReplacement(Value replaced, Value replacement);
 
   /// Registers the scalar replacement of a scalar result returned from a
   /// reduction loop. 'replacement' must be scalar.
@@ -720,7 +729,8 @@ struct VectorizationState {
   ///
   /// Example 2:
   ///   * 'replaced': %0 = affine.for %i = 0 to 512 iter_args(%x = ...) -> (f32)
-  ///   * 'replacement': %1 = vector.reduction "add" %0 : vector<4xf32> into f32
+  ///   * 'replacement': %1 = vector.reduction <add>, %0 : vector<4xf32> into
+  ///   f32
   void registerLoopResultScalarReplacement(Value replaced, Value replacement);
 
   /// Returns in 'replacedVals' the scalar replacement for values in
@@ -738,10 +748,10 @@ struct VectorizationState {
   // Maps input scalar operations to their vector counterparts.
   DenseMap<Operation *, Operation *> opVectorReplacement;
   // Maps input scalar values to their vector counterparts.
-  BlockAndValueMapping valueVectorReplacement;
+  IRMapping valueVectorReplacement;
   // Maps input scalar values to their new scalar counterparts in the vector
   // loop nest.
-  BlockAndValueMapping valueScalarReplacement;
+  IRMapping valueScalarReplacement;
   // Maps results of reduction loops to their new scalar counterparts.
   DenseMap<Value, Value> loopResultScalarReplacement;
 
@@ -753,16 +763,15 @@ struct VectorizationState {
   DenseMap<Operation *, Value> vecLoopToMask;
 
   // The strategy drives which loop to vectorize by which amount.
-  const VectorizationStrategy *strategy;
+  const VectorizationStrategy *strategy = nullptr;
 
 private:
   /// Internal implementation to map input scalar values to new vector or scalar
   /// values.
   void registerValueVectorReplacementImpl(Value replaced, Value replacement);
-  void registerValueScalarReplacementImpl(Value replaced, Value replacement);
 };
 
-} // end namespace
+} // namespace
 
 /// Registers the vector replacement of a scalar operation and its result
 /// values. Both operations must have the same number of results.
@@ -771,8 +780,8 @@ private:
 /// the vectorized operations.
 ///
 /// Example:
-///   * 'replaced': %0 = addf %1, %2 : f32
-///   * 'replacement': %0 = addf %1, %2 : vector<128xf32>
+///   * 'replaced': %0 = arith.addf %1, %2 : f32
+///   * 'replacement': %0 = arith.addf %1, %2 : vector<128xf32>
 void VectorizationState::registerOpVectorReplacement(Operation *replaced,
                                                      Operation *replacement) {
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ commit vectorized op:\n");
@@ -825,25 +834,28 @@ void VectorizationState::registerValueVectorReplacementImpl(Value replaced,
                                                             Value replacement) {
   assert(!valueVectorReplacement.contains(replaced) &&
          "Vector replacement already registered");
-  assert(replacement.getType().isa<VectorType>() &&
+  assert(isa<VectorType>(replacement.getType()) &&
          "Expected vector type in vector replacement");
   valueVectorReplacement.map(replaced, replacement);
 }
 
 /// Registers the scalar replacement of a scalar value. 'replacement' must be
-/// scalar. Both values must be block arguments. Operation results should be
-/// replaced using the 'registerOp*' utilitites.
+/// scalar.
 ///
 /// This utility is used to register the replacement of block arguments
-/// that are within the loop to be vectorized and will continue being scalar
-/// within the vector loop.
+/// or affine.apply results that are within the loop be vectorized and will
+/// continue being scalar within the vector loop.
 ///
 /// Example:
 ///   * 'replaced': induction variable of a loop to be vectorized.
 ///   * 'replacement': new induction variable in the new vector loop.
-void VectorizationState::registerValueScalarReplacement(
-    BlockArgument replaced, BlockArgument replacement) {
-  registerValueScalarReplacementImpl(replaced, replacement);
+void VectorizationState::registerValueScalarReplacement(Value replaced,
+                                                        Value replacement) {
+  assert(!valueScalarReplacement.contains(replaced) &&
+         "Scalar value replacement already registered");
+  assert(!isa<VectorType>(replacement.getType()) &&
+         "Expected scalar type in scalar replacement");
+  valueScalarReplacement.map(replaced, replacement);
 }
 
 /// Registers the scalar replacement of a scalar result returned from a
@@ -854,7 +866,7 @@ void VectorizationState::registerValueScalarReplacement(
 ///
 /// Example 2:
 ///   * 'replaced': %0 = affine.for %i = 0 to 512 iter_args(%x = ...) -> (f32)
-///   * 'replacement': %1 = vector.reduction "add" %0 : vector<4xf32> into f32
+///   * 'replacement': %1 = vector.reduction <add>, %0 : vector<4xf32> into f32
 void VectorizationState::registerLoopResultScalarReplacement(
     Value replaced, Value replacement) {
   assert(isa<AffineForOp>(replaced.getDefiningOp()));
@@ -864,15 +876,6 @@ void VectorizationState::registerLoopResultScalarReplacement(
                        "with scalar: "
                     << replacement);
   loopResultScalarReplacement[replaced] = replacement;
-}
-
-void VectorizationState::registerValueScalarReplacementImpl(Value replaced,
-                                                            Value replacement) {
-  assert(!valueScalarReplacement.contains(replaced) &&
-         "Scalar value replacement already registered");
-  assert(!replacement.getType().isa<VectorType>() &&
-         "Expected scalar type in scalar replacement");
-  valueScalarReplacement.map(replaced, replacement);
 }
 
 /// Returns in 'replacedVals' the scalar replacement for values in 'inputVals'.
@@ -916,8 +919,7 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
                              int fastestVaryingMemRefDimension) {
   return [&parallelLoops, fastestVaryingMemRefDimension](Operation &forOp) {
     auto loop = cast<AffineForOp>(forOp);
-    auto parallelIt = parallelLoops.find(loop);
-    if (parallelIt == parallelLoops.end())
+    if (!parallelLoops.contains(loop))
       return false;
     int memRefDim = -1;
     auto vectorizableBody =
@@ -933,34 +935,72 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
 /// strategy on the scalar type.
 static VectorType getVectorType(Type scalarTy,
                                 const VectorizationStrategy *strategy) {
-  assert(!scalarTy.isa<VectorType>() && "Expected scalar type");
+  assert(!isa<VectorType>(scalarTy) && "Expected scalar type");
   return VectorType::get(strategy->vectorSizes, scalarTy);
 }
 
 /// Tries to transform a scalar constant into a vector constant. Returns the
 /// vector constant if the scalar type is valid vector element type. Returns
 /// nullptr, otherwise.
-static ConstantOp vectorizeConstant(ConstantOp constOp,
-                                    VectorizationState &state) {
+static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
+                                           VectorizationState &state) {
   Type scalarTy = constOp.getType();
   if (!VectorType::isValidElementType(scalarTy))
     return nullptr;
 
   auto vecTy = getVectorType(scalarTy, state.strategy);
   auto vecAttr = DenseElementsAttr::get(vecTy, constOp.getValue());
-  auto newConstOp = state.builder.create<ConstantOp>(constOp.getLoc(), vecAttr);
+
+  OpBuilder::InsertionGuard guard(state.builder);
+  Operation *parentOp = state.builder.getInsertionBlock()->getParentOp();
+  // Find the innermost vectorized ancestor loop to insert the vector constant.
+  while (parentOp && !state.vecLoopToVecDim.count(parentOp))
+    parentOp = parentOp->getParentOp();
+  assert(parentOp && state.vecLoopToVecDim.count(parentOp) &&
+         isa<AffineForOp>(parentOp) && "Expected a vectorized for op");
+  auto vecForOp = cast<AffineForOp>(parentOp);
+  state.builder.setInsertionPointToStart(vecForOp.getBody());
+  auto newConstOp =
+      state.builder.create<arith::ConstantOp>(constOp.getLoc(), vecAttr);
 
   // Register vector replacement for future uses in the scope.
   state.registerOpVectorReplacement(constOp, newConstOp);
   return newConstOp;
 }
 
+/// We have no need to vectorize affine.apply. However, we still need to
+/// generate it and replace the operands with values in valueScalarReplacement.
+static Operation *vectorizeAffineApplyOp(AffineApplyOp applyOp,
+                                         VectorizationState &state) {
+  SmallVector<Value, 8> updatedOperands;
+  for (Value operand : applyOp.getOperands()) {
+    if (state.valueVectorReplacement.contains(operand)) {
+      LLVM_DEBUG(
+          dbgs() << "\n[early-vect]+++++ affine.apply on vector operand\n");
+      return nullptr;
+    } else {
+      Value updatedOperand = state.valueScalarReplacement.lookupOrNull(operand);
+      if (!updatedOperand)
+        updatedOperand = operand;
+      updatedOperands.push_back(updatedOperand);
+    }
+  }
+
+  auto newApplyOp = state.builder.create<AffineApplyOp>(
+      applyOp.getLoc(), applyOp.getAffineMap(), updatedOperands);
+
+  // Register the new affine.apply result.
+  state.registerValueScalarReplacement(applyOp.getResult(),
+                                       newApplyOp.getResult());
+  return newApplyOp;
+}
+
 /// Creates a constant vector filled with the neutral elements of the given
 /// reduction. The scalar type of vector elements will be taken from
 /// `oldOperand`.
-static ConstantOp createInitialVector(AtomicRMWKind reductionKind,
-                                      Value oldOperand,
-                                      VectorizationState &state) {
+static arith::ConstantOp createInitialVector(arith::AtomicRMWKind reductionKind,
+                                             Value oldOperand,
+                                             VectorizationState &state) {
   Type scalarTy = oldOperand.getType();
   if (!VectorType::isValidElementType(scalarTy))
     return nullptr;
@@ -970,7 +1010,7 @@ static ConstantOp createInitialVector(AtomicRMWKind reductionKind,
   auto vecTy = getVectorType(scalarTy, state.strategy);
   auto vecAttr = DenseElementsAttr::get(vecTy, valueAttr);
   auto newConstOp =
-      state.builder.create<ConstantOp>(oldOperand.getLoc(), vecAttr);
+      state.builder.create<arith::ConstantOp>(oldOperand.getLoc(), vecAttr);
 
   return newConstOp;
 }
@@ -998,7 +1038,7 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
   if (vecForOp.hasConstantBounds()) {
     int64_t originalTripCount =
         vecForOp.getConstantUpperBound() - vecForOp.getConstantLowerBound();
-    if (originalTripCount % vecForOp.getStep() == 0)
+    if (originalTripCount % vecForOp.getStepAsInt() == 0)
       return nullptr;
   }
 
@@ -1006,7 +1046,7 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
   state.builder.setInsertionPointToStart(vecForOp.getBody());
 
   // We generate the mask using the `vector.create_mask` operation which accepts
-  // the number of meaningful elements (i.e. the legth of the prefix of 1s).
+  // the number of meaningful elements (i.e. the length of the prefix of 1s).
   // To compute the number of meaningful elements we subtract the current value
   // of the iteration variable from the upper bound of the loop. Example:
   //
@@ -1052,10 +1092,15 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
 
 /// Returns true if the provided value is vector uniform given the vectorization
 /// strategy.
-// TODO: For now, only values that are invariants to all the loops in the
-// vectorization strategy are considered vector uniforms.
+// TODO: For now, only values that are induction variables of loops not in
+// `loopToVectorDim` or invariants to all the loops in the vectorization
+// strategy are considered vector uniforms.
 static bool isUniformDefinition(Value value,
                                 const VectorizationStrategy *strategy) {
+  AffineForOp forOp = getForInductionVarOwner(value);
+  if (forOp && strategy->loopToVectorDim.count(forOp) == 0)
+    return true;
+
   for (auto loopToDim : strategy->loopToVectorDim) {
     auto loop = cast<AffineForOp>(loopToDim.first);
     if (!loop.isDefinedOutsideOfLoop(value))
@@ -1069,11 +1114,13 @@ static bool isUniformDefinition(Value value,
 static Operation *vectorizeUniform(Value uniformVal,
                                    VectorizationState &state) {
   OpBuilder::InsertionGuard guard(state.builder);
-  state.builder.setInsertionPointAfterValue(uniformVal);
+  Value uniformScalarRepl =
+      state.valueScalarReplacement.lookupOrDefault(uniformVal);
+  state.builder.setInsertionPointAfterValue(uniformScalarRepl);
 
   auto vectorTy = getVectorType(uniformVal.getType(), state.strategy);
   auto bcastOp = state.builder.create<BroadcastOp>(uniformVal.getLoc(),
-                                                   vectorTy, uniformVal);
+                                                   vectorTy, uniformScalarRepl);
   state.registerValueVectorReplacement(uniformVal, bcastOp);
   return bcastOp;
 }
@@ -1106,12 +1153,12 @@ static Value vectorizeOperand(Value operand, VectorizationState &state) {
   // An vector operand that is not in the replacement map should never reach
   // this point. Reaching this point could mean that the code was already
   // vectorized and we shouldn't try to vectorize already vectorized code.
-  assert(!operand.getType().isa<VectorType>() &&
+  assert(!isa<VectorType>(operand.getType()) &&
          "Vector op not found in replacement map");
 
   // Vectorize constant.
-  if (auto constOp = operand.getDefiningOp<ConstantOp>()) {
-    ConstantOp vecConstant = vectorizeConstant(constOp, state);
+  if (auto constOp = operand.getDefiningOp<arith::ConstantOp>()) {
+    auto vecConstant = vectorizeConstant(constOp, state);
     LLVM_DEBUG(dbgs() << "-> constant: " << vecConstant);
     return vecConstant.getResult();
   }
@@ -1154,11 +1201,17 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   SmallVector<Value, 8> indices;
   indices.reserve(memRefType.getRank());
   if (loadOp.getAffineMap() !=
-      state.builder.getMultiDimIdentityMap(memRefType.getRank()))
+      state.builder.getMultiDimIdentityMap(memRefType.getRank())) {
+    // Check the operand in loadOp affine map does not come from AffineApplyOp.
+    for (auto op : mapOperands) {
+      if (op.getDefiningOp<AffineApplyOp>())
+        return nullptr;
+    }
     computeMemoryOpIndices(loadOp, loadOp.getAffineMap(), mapOperands, state,
                            indices);
-  else
+  } else {
     indices.append(mapOperands.begin(), mapOperands.end());
+  }
 
   // Compute permutation map using the information of new vector loops.
   auto permutationMap = makePermutationMap(state.builder.getInsertionBlock(),
@@ -1225,15 +1278,15 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
 
 /// Returns true if `value` is a constant equal to the neutral element of the
 /// given vectorizable reduction.
-static bool isNeutralElementConst(AtomicRMWKind reductionKind, Value value,
-                                  VectorizationState &state) {
+static bool isNeutralElementConst(arith::AtomicRMWKind reductionKind,
+                                  Value value, VectorizationState &state) {
   Type scalarTy = value.getType();
   if (!VectorType::isValidElementType(scalarTy))
     return false;
   Attribute valueAttr = getIdentityValueAttr(reductionKind, scalarTy,
                                              state.builder, value.getLoc());
-  if (auto constOp = dyn_cast_or_null<ConstantOp>(value.getDefiningOp()))
-    return constOp.value() == valueAttr;
+  if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(value.getDefiningOp()))
+    return constOp.getValue() == valueAttr;
   return false;
 }
 
@@ -1266,9 +1319,9 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     unsigned vectorDim = loopToVecDimIt->second;
     assert(vectorDim < strategy.vectorSizes.size() && "vector dim overflow");
     int64_t forOpVecFactor = strategy.vectorSizes[vectorDim];
-    newStep = forOp.getStep() * forOpVecFactor;
+    newStep = forOp.getStepAsInt() * forOpVecFactor;
   } else {
-    newStep = forOp.getStep();
+    newStep = forOp.getStepAsInt();
   }
 
   // Get information about reduction kinds.
@@ -1285,13 +1338,13 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
   // Vectorize 'iter_args'.
   SmallVector<Value, 8> vecIterOperands;
   if (!isLoopVecDim) {
-    for (auto operand : forOp.getIterOperands())
+    for (auto operand : forOp.getInits())
       vecIterOperands.push_back(vectorizeOperand(operand, state));
   } else {
     // For reduction loops we need to pass a vector of neutral elements as an
     // initial value of the accumulator. We will add the original initial value
     // later.
-    for (auto redAndOperand : llvm::zip(reductions, forOp.getIterOperands())) {
+    for (auto redAndOperand : llvm::zip(reductions, forOp.getInits())) {
       vecIterOperands.push_back(createInitialVector(
           std::get<0>(redAndOperand).kind, std::get<1>(redAndOperand), state));
     }
@@ -1304,7 +1357,6 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
       /*bodyBuilder=*/[](OpBuilder &, Location, Value, ValueRange) {
         // Make sure we don't create a default terminator in the loop body as
         // the proper terminator will be added during vectorization.
-        return;
       });
 
   // Register loop-related replacements:
@@ -1341,7 +1393,8 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
       Value origInit = forOp.getOperand(forOp.getNumControlOperands() + i);
       Value finalRes = reducedRes;
       if (!isNeutralElementConst(reductions[i].kind, origInit, state))
-        finalRes = getReductionOp(reductions[i].kind, state.builder,
+        finalRes =
+            arith::getReductionOp(reductions[i].kind, state.builder,
                                   reducedRes.getLoc(), reducedRes, origInit);
       state.registerLoopResultScalarReplacement(forOp.getResult(i), finalRes);
     }
@@ -1386,10 +1439,9 @@ static Operation *widenOp(Operation *op, VectorizationState &state) {
   // name that works both in scalar mode and vector mode.
   // TODO: Is it worth considering an Operation.clone operation which
   // changes the type so we can promote an Operation with less boilerplate?
-  OperationState vecOpState(op->getLoc(), op->getName().getStringRef(),
-                            vectorOperands, vectorTypes, op->getAttrs(),
-                            /*successors=*/{}, /*regions=*/{});
-  Operation *vecOp = state.builder.createOperation(vecOpState);
+  Operation *vecOp =
+      state.builder.create(op->getLoc(), op->getName().getIdentifier(),
+                           vectorOperands, vectorTypes, op->getAttrs());
   state.registerOpVectorReplacement(op, vecOp);
   return vecOp;
 }
@@ -1407,21 +1459,29 @@ static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
   // being added to the accumulator by inserting `select` operations, for
   // example:
   //
-  //   %res = addf %acc, %val : vector<128xf32>
-  //   %res_masked = select %mask, %res, %acc : vector<128xi1>, vector<128xf32>
-  //   affine.yield %res_masked : vector<128xf32>
+  //   %val_masked = select %mask, %val, %neutralCst : vector<128xi1>,
+  //   vector<128xf32>
+  //   %res = arith.addf %acc, %val_masked : vector<128xf32>
+  //   affine.yield %res : vector<128xf32>
   //
   if (Value mask = state.vecLoopToMask.lookup(newParentOp)) {
     state.builder.setInsertionPoint(newYieldOp);
     for (unsigned i = 0; i < newYieldOp->getNumOperands(); ++i) {
-      Value result = newYieldOp->getOperand(i);
-      Value iterArg = cast<AffineForOp>(newParentOp).getRegionIterArgs()[i];
-      Value maskedResult = state.builder.create<SelectOp>(result.getLoc(), mask,
-                                                          result, iterArg);
+      SmallVector<Operation *> combinerOps;
+      Value reducedVal = matchReduction(
+          cast<AffineForOp>(newParentOp).getRegionIterArgs(), i, combinerOps);
+      assert(reducedVal && "expect non-null value for parallel reduction loop");
+      assert(combinerOps.size() == 1 && "expect only one combiner op");
+      // IterOperands are neutral element vectors.
+      Value neutralVal = cast<AffineForOp>(newParentOp).getInits()[i];
+      state.builder.setInsertionPoint(combinerOps.back());
+      Value maskedReducedVal = state.builder.create<arith::SelectOp>(
+          reducedVal.getLoc(), mask, reducedVal, neutralVal);
       LLVM_DEBUG(
-          dbgs() << "\n[early-vect]+++++ masking a yielded vector value: "
-                 << maskedResult);
-      newYieldOp->setOperand(i, maskedResult);
+          dbgs() << "\n[early-vect]+++++ masking an input to a binary op that"
+                    "produces value for a yield Op: "
+                 << maskedReducedVal);
+      combinerOps.back()->replaceUsesOfWith(reducedVal, maskedReducedVal);
     }
   }
 
@@ -1454,8 +1514,10 @@ static Operation *vectorizeOneOperation(Operation *op,
     return vectorizeAffineForOp(forOp, state);
   if (auto yieldOp = dyn_cast<AffineYieldOp>(op))
     return vectorizeAffineYieldOp(yieldOp, state);
-  if (auto constant = dyn_cast<ConstantOp>(op))
+  if (auto constant = dyn_cast<arith::ConstantOp>(op))
     return vectorizeConstant(constant, state);
+  if (auto applyOp = dyn_cast<AffineApplyOp>(op))
+    return vectorizeAffineApplyOp(applyOp, state);
 
   // Other ops with regions are not supported.
   if (op->getNumRegions() != 0)
@@ -1474,7 +1536,7 @@ getMatchedAffineLoopsRec(NestedMatch match, unsigned currentLevel,
   // Add a new empty level to the output if it doesn't exist already.
   assert(currentLevel <= loops.size() && "Unexpected currentLevel");
   if (currentLevel == loops.size())
-    loops.push_back(SmallVector<AffineForOp, 2>());
+    loops.emplace_back();
 
   // Add current match and recursively visit its children.
   loops[currentLevel].push_back(cast<AffineForOp>(match.getMatchedOperation()));
@@ -1611,7 +1673,7 @@ static void computeIntersectionBuckets(
     // it.
     if (!intersects) {
       bucketRoots.push_back(matchRoot);
-      intersectionBuckets.push_back(SmallVector<NestedMatch, 8>());
+      intersectionBuckets.emplace_back();
       intersectionBuckets.back().push_back(match);
     }
   }
@@ -1631,9 +1693,9 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
          "Vectorizing reductions is supported only for 1-D vectors");
 
   // Compute 1-D, 2-D or 3-D loop pattern to be matched on the target loops.
-  Optional<NestedPattern> pattern =
+  std::optional<NestedPattern> pattern =
       makePattern(loops, vectorSizes.size(), fastestVaryingPattern);
-  if (!pattern.hasValue()) {
+  if (!pattern) {
     LLVM_DEBUG(dbgs() << "\n[early-vect] pattern couldn't be computed\n");
     return;
   }
@@ -1679,18 +1741,10 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
   LLVM_DEBUG(dbgs() << "\n");
 }
 
-std::unique_ptr<OperationPass<FuncOp>>
-createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
-  return std::make_unique<Vectorize>(virtualVectorSize);
-}
-std::unique_ptr<OperationPass<FuncOp>> createSuperVectorizePass() {
-  return std::make_unique<Vectorize>();
-}
-
 /// Applies vectorization to the current function by searching over a bunch of
 /// predetermined patterns.
-void Vectorize::runOnFunction() {
-  FuncOp f = getFunction();
+void Vectorize::runOnOperation() {
+  func::FuncOp f = getOperation();
   if (!fastestVaryingPattern.empty() &&
       fastestVaryingPattern.size() != vectorSizes.size()) {
     f.emitRemark("Fastest varying pattern specified with different size than "
@@ -1700,6 +1754,11 @@ void Vectorize::runOnFunction() {
 
   if (vectorizeReductions && vectorSizes.size() != 1) {
     f.emitError("Vectorizing reductions is supported only for 1-D vectors.");
+    return signalPassFailure();
+  }
+
+  if (llvm::any_of(vectorSizes, [](int64_t size) { return size <= 0; })) {
+    f.emitError("Vectorization factor must be greater than zero.");
     return signalPassFailure();
   }
 
@@ -1769,7 +1828,6 @@ verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
   return success();
 }
 
-namespace mlir {
 
 /// External utility to vectorize affine loops in 'loops' using the n-D
 /// vectorization factors in 'vectorSizes'. By default, each vectorization
@@ -1779,10 +1837,10 @@ namespace mlir {
 /// If `reductionLoops` is not empty, the given reduction loops may be
 /// vectorized along the reduction dimension.
 /// TODO: Vectorizing reductions is supported only for 1-D vectorization.
-void vectorizeAffineLoops(Operation *parentOp, DenseSet<Operation *> &loops,
-                          ArrayRef<int64_t> vectorSizes,
-                          ArrayRef<int64_t> fastestVaryingPattern,
-                          const ReductionLoopMap &reductionLoops) {
+void mlir::affine::vectorizeAffineLoops(
+    Operation *parentOp, DenseSet<Operation *> &loops,
+    ArrayRef<int64_t> vectorSizes, ArrayRef<int64_t> fastestVaryingPattern,
+    const ReductionLoopMap &reductionLoops) {
   // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
   NestedPatternContext mlContext;
   vectorizeLoops(parentOp, loops, vectorSizes, fastestVaryingPattern,
@@ -1824,22 +1882,12 @@ void vectorizeAffineLoops(Operation *parentOp, DenseSet<Operation *> &loops,
 /// loops = {{%i2}}, to vectorize only the first innermost loop;
 /// loops = {{%i3}}, to vectorize only the second innermost loop;
 /// loops = {{%i1}}, to vectorize only the middle loop.
-LogicalResult
-vectorizeAffineLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
-                        const VectorizationStrategy &strategy) {
+LogicalResult mlir::affine::vectorizeAffineLoopNest(
+    std::vector<SmallVector<AffineForOp, 2>> &loops,
+    const VectorizationStrategy &strategy) {
   // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
   NestedPatternContext mlContext;
   if (failed(verifyLoopNesting(loops)))
     return failure();
   return vectorizeLoopNest(loops, strategy);
 }
-
-std::unique_ptr<OperationPass<FuncOp>>
-createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
-  return std::make_unique<Vectorize>(virtualVectorSize);
-}
-std::unique_ptr<OperationPass<FuncOp>> createSuperVectorizePass() {
-  return std::make_unique<Vectorize>();
-}
-
-} // namespace mlir

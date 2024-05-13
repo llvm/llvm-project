@@ -6,4 +6,4 @@
 
 ; CHECK: Appending variables linked with different const'ness
 
-@var = appending constant [1 x i8* ] undef
+@var = appending constant [1 x ptr ] undef

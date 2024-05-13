@@ -178,7 +178,7 @@ RegisterContextFreeBSD_powerpc::RegisterContextFreeBSD_powerpc(
     const ArchSpec &target_arch)
     : RegisterInfoInterface(target_arch) {}
 
-RegisterContextFreeBSD_powerpc::~RegisterContextFreeBSD_powerpc() {}
+RegisterContextFreeBSD_powerpc::~RegisterContextFreeBSD_powerpc() = default;
 
 size_t RegisterContextFreeBSD_powerpc::GetGPRSize() const {
   // This is an 'abstract' base, so no GPR struct.
@@ -186,7 +186,6 @@ size_t RegisterContextFreeBSD_powerpc::GetGPRSize() const {
 }
 
 const RegisterInfo *RegisterContextFreeBSD_powerpc::GetRegisterInfo() const {
-  // assert (m_target_arch.GetCore() == ArchSpec::eCore_powerpc);
   llvm_unreachable("Abstract class!");
   return nullptr;
 }
@@ -197,14 +196,13 @@ RegisterContextFreeBSD_powerpc32::RegisterContextFreeBSD_powerpc32(
     const ArchSpec &target_arch)
     : RegisterContextFreeBSD_powerpc(target_arch) {}
 
-RegisterContextFreeBSD_powerpc32::~RegisterContextFreeBSD_powerpc32() {}
+RegisterContextFreeBSD_powerpc32::~RegisterContextFreeBSD_powerpc32() = default;
 
 size_t RegisterContextFreeBSD_powerpc32::GetGPRSize() const {
   return sizeof(GPR32);
 }
 
 const RegisterInfo *RegisterContextFreeBSD_powerpc32::GetRegisterInfo() const {
-  // assert (m_target_arch.GetCore() == ArchSpec::eCore_powerpc);
   return g_register_infos_powerpc32;
 }
 
@@ -217,15 +215,14 @@ RegisterContextFreeBSD_powerpc64::RegisterContextFreeBSD_powerpc64(
     const ArchSpec &target_arch)
     : RegisterContextFreeBSD_powerpc(target_arch) {}
 
-RegisterContextFreeBSD_powerpc64::~RegisterContextFreeBSD_powerpc64() {}
+RegisterContextFreeBSD_powerpc64::~RegisterContextFreeBSD_powerpc64() = default;
 
 size_t RegisterContextFreeBSD_powerpc64::GetGPRSize() const {
   return sizeof(GPR64);
 }
 
 const RegisterInfo *RegisterContextFreeBSD_powerpc64::GetRegisterInfo() const {
-  // assert (m_target_arch.GetCore() == ArchSpec::eCore_powerpc);
-  if (m_target_arch.GetMachine() == llvm::Triple::ppc)
+  if (GetTargetArchitecture().GetMachine() == llvm::Triple::ppc)
     return g_register_infos_powerpc64_32;
   return g_register_infos_powerpc64;
 }

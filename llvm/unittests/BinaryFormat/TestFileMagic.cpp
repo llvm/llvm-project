@@ -46,6 +46,7 @@ protected:
 };
 
 const char archive[] = "!<arch>\x0A";
+const char big_archive[] = "<bigaf>\x0A";
 const char bitcode[] = "\xde\xc0\x17\x0b";
 const char coff_object[] = "\x00\x00......";
 const char coff_bigobj[] =
@@ -54,6 +55,8 @@ const char coff_bigobj[] =
 const char coff_import_library[] = "\x00\x00\xff\xff....";
 const char elf_relocatable[] = {0x7f, 'E', 'L', 'F', 1, 2, 1, 0, 0,
                                 0,    0,   0,   0,   0, 0, 0, 0, 1};
+
+const char goff_object[] = "\x03\xF0\x00";
 const char macho_universal_binary[] = "\xca\xfe\xba\xbe...\x00";
 const char macho_object[] =
     "\xfe\xed\xfa\xce........\x00\x00\x00\x01............";
@@ -84,6 +87,8 @@ const char pdb[] = "Microsoft C/C++ MSF 7.00\r\n\x1a"
                    "DS\x00\x00\x00";
 const char tapi_file[] = "--- !tapi-tbd-v1\n";
 const char tapi_file_tbd_v1[] = "---\narchs: [";
+const char spirv_object_le[] = "\x03\x02\x23\x07";
+const char spirv_object_be[] = "\x07\x23\x02\x03";
 
 TEST_F(MagicTest, Magic) {
   struct type {
@@ -94,12 +99,14 @@ TEST_F(MagicTest, Magic) {
   } types[] = {
 #define DEFINE(magic) {#magic, magic, sizeof(magic), file_magic::magic}
       DEFINE(archive),
+      {"big_archive", big_archive, sizeof(big_archive), file_magic::archive},
       DEFINE(bitcode),
       DEFINE(coff_object),
       {"coff_bigobj", coff_bigobj, sizeof(coff_bigobj),
        file_magic::coff_object},
       DEFINE(coff_import_library),
       DEFINE(elf_relocatable),
+      DEFINE(goff_object),
       DEFINE(macho_universal_binary),
       DEFINE(macho_object),
       DEFINE(macho_executable),
@@ -112,6 +119,10 @@ TEST_F(MagicTest, Magic) {
       DEFINE(macho_dynamically_linked_shared_lib_stub),
       DEFINE(macho_dsym_companion),
       DEFINE(macho_kext_bundle),
+      {"spirv_object_le", spirv_object_le, sizeof(spirv_object_le),
+       file_magic ::spirv_object},
+      {"spirv_object_be", spirv_object_be, sizeof(spirv_object_be),
+       file_magic ::spirv_object},
       DEFINE(windows_resource),
       DEFINE(pdb),
       {"ms_dos_stub_broken", ms_dos_stub_broken, sizeof(ms_dos_stub_broken),
@@ -123,7 +134,7 @@ TEST_F(MagicTest, Magic) {
   };
 
   // Create some files filled with magic.
-  for (type *i = types, *e = types + (sizeof(types) / sizeof(type)); i != e;
+  for (type *i = types, *e = types + std::size(types); i != e;
        ++i) {
     SmallString<128> file_pathname(TestDirectory);
     llvm::sys::path::append(file_pathname, i->filename);

@@ -1,0 +1,49 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=+hbc -disassemble %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8.8a -disassemble %s | FileCheck %s
+# RUN: not llvm-mc -triple=aarch64 -disassemble %s 2>&1 | FileCheck --check-prefix=ERROR-NO-HBC %s
+
+[0x30,0x00,0x00,0x54]
+# CHECK: bc.eq #4
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x51,0x00,0x00,0x54]
+# CHECK: bc.ne #8
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x92,0x00,0x00,0x54]
+# CHECK: bc.hs #16
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x13,0x01,0x00,0x54]
+# CHECK: bc.lo #32
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x14,0x02,0x00,0x54]
+# CHECK: bc.mi #64
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x15,0x04,0x00,0x54]
+# CHECK: bc.pl #128
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x16,0x08,0x00,0x54]
+# CHECK: bc.vs #256
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x17,0x10,0x00,0x54]
+# CHECK: bc.vc #512
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x18,0x20,0x00,0x54]
+# CHECK: bc.hi #1024
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x19,0x40,0x00,0x54]
+# CHECK: bc.ls #2048
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x1a,0x80,0x00,0x54]
+# CHECK: bc.ge #4096
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x1b,0x00,0x01,0x54]
+# CHECK: bc.lt #8192
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x1c,0x00,0x02,0x54]
+# CHECK: bc.gt #16384
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x1d,0x00,0x04,0x54]
+# CHECK: bc.le #32768
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x1e,0x00,0x08,0x54]
+# CHECK: bc.al #65536
+# ERROR-NO-HBC: [[@LINE-2]]:2: warning: invalid instruction encoding

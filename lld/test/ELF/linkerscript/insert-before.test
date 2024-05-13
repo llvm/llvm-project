@@ -7,14 +7,16 @@
 
 # RUN: ld.lld %t1.o -o %t1 --script %p/Inputs/insert-after.script --script %s
 # RUN: llvm-readelf -S -l %t1 | FileCheck %s
-# CHECK:      Name      Type     Address          Off
-# CHECK-NEXT:           NULL     0000000000000000 000000
-# CHECK-NEXT: .foo.text PROGBITS 0000000000000000 001000
-# CHECK-NEXT: .text     PROGBITS 0000000000000008 001008
-# CHECK-NEXT: .foo.data PROGBITS 0000000000000010 001010
-# CHECK-NEXT: .data     PROGBITS 0000000000000018 001018
+# CHECK:      Name      Type     Address          Off    Size   ES Flg
+# CHECK-NEXT:           NULL
+# CHECK-NEXT: .foo.text PROGBITS 0000000000000000 001000 000008 00  AX 0
+# CHECK-NEXT: .text     PROGBITS 0000000000000008 001008 000008 00  AX 0
+# CHECK-NEXT: .byte     PROGBITS 0000000000000010 001010 000001 00  A  0
+# CHECK-NEXT: .foo.data PROGBITS 0000000000000011 001011 000008 00  WA 0
+# CHECK-NEXT: .data     PROGBITS 0000000000000019 001019 000008 00  WA 0
 # CHECK:      Type
 # CHECK-NEXT: LOAD {{.*}} R E
+# CHECK-NEXT: LOAD {{.*}} R
 # CHECK-NEXT: LOAD {{.*}} RW
 # CHECK-NEXT: GNU_STACK {{.*}} RW
 
@@ -22,21 +24,30 @@
 ## without making more layout changes. Address/offset assignments are different
 ## with a main linker script.
 
-# RUN: ld.lld --script %s %t1.o -o %t2
-# RUN: llvm-readelf -S -l %t2 | FileCheck --check-prefix=CHECK2 %s
-# CHECK2:      Name      Type     Address          Off
-# CHECK2-NEXT:           NULL     0000000000000000 000000
-# CHECK2-NEXT: .foo.text PROGBITS 0000000000201158 000158
-# CHECK2-NEXT: .text     PROGBITS 0000000000201160 000160
-# CHECK2-NEXT: .foo.data PROGBITS 0000000000202168 000168
-# CHECK2-NEXT: .data     PROGBITS 0000000000202170 000170
-# CHECK2:      Type
-# CHECK2-NEXT: PHDR {{.*}} R
-# CHECK2-NEXT: LOAD {{.*}} R
-# CHECK2-NEXT: LOAD {{.*}} R E
-# CHECK2-NEXT: LOAD {{.*}} RW
+## Test non-contiguous OutputDescs in script->sectionCommands.
+# RUN: ld.lld --defsym y0=1 %s --defsym y1=1 %t1.o -o %t2
+# RUN: llvm-readelf -S -l -sX %t2 | FileCheck --check-prefix=CHECK2 %s
+# CHECK2:      Name      Type     Address            Off      Size   ES Flg
+# CHECK2-NEXT:           NULL
+# CHECK2-NEXT: .foo.text PROGBITS 000000000020{{.*}} [[#%x,]] 000008 00  AX
+# CHECK2-NEXT: .text     PROGBITS [[#%x,]]           [[#%x,]] 000008 00  AX
+# CHECK2-NEXT: .byte     PROGBITS [[#%x,]]           [[#%x,]] 000001 00  WA
+# CHECK2-NEXT: .foo.data PROGBITS [[#%x,]]           [[#%x,]] 000008 00  WA
+# CHECK2-NEXT: .data     PROGBITS [[#%x,]]           [[#%x,]] 000008 00  WA
+# CHECK2:      Type      {{.*}} Flg Align
+# CHECK2-NEXT: PHDR      {{.*}} R   0x8
+# CHECK2-NEXT: LOAD      {{.*}} R   0x1000
+# CHECK2-NEXT: LOAD      {{.*}} R E 0x1000
+# CHECK2-NEXT: LOAD      {{.*}} RW  0x1000
+# CHECK2-NEXT: GNU_STACK {{.*}} RW  0
+
+# CHECK2:      NOTYPE  GLOBAL DEFAULT  ABS               y0
+# CHECK2:      NOTYPE  GLOBAL DEFAULT  [[#]] (.foo.text) x0
+# CHECK2:      NOTYPE  GLOBAL DEFAULT  ABS               y1
+
+SECTIONS { .byte : { BYTE(0) } } INSERT BEFORE .data;
 
 SECTIONS { .foo.data : { *(.foo.data) } } INSERT BEFORE .data;
 
 ## The input section .foo.text is an orphan. It will be placed in .foo.text
-SECTIONS { .foo.text : {} } INSERT BEFORE .text;
+SECTIONS { .foo.text : { x0 = .; } } INSERT BEFORE .text;

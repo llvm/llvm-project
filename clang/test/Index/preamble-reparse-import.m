@@ -7,6 +7,6 @@
 
 #import "preamble-reparse-import.m-1.h"
 
-void foo();
+void foo(void);
 #import "preamble-reparse-import.m-2.h"
 #import "preamble-reparse-import.m-1.h"

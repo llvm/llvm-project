@@ -1,27 +1,27 @@
 // RUN: mlir-opt %s \
-// RUN:   -gpu-kernel-outlining \
-// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin)' \
-// RUN:   -gpu-async-region -gpu-to-llvm \
-// RUN:   -async-to-async-runtime -async-runtime-ref-counting \
-// RUN:   -convert-async-to-llvm -convert-std-to-llvm \
+// RUN: | mlir-opt -gpu-kernel-outlining \
+// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm),nvvm-attach-target)' \
+// RUN: | mlir-opt -gpu-async-region -gpu-to-llvm -gpu-module-to-binary="format=%gpu_compilation_format" \
+// RUN: | mlir-opt -async-to-async-runtime -async-runtime-ref-counting \
+// RUN: | mlir-opt -convert-async-to-llvm -convert-func-to-llvm \
 // RUN: | mlir-cpu-runner \
-// RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
-// RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext \
-// RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:   --shared-libs=%mlir_cuda_runtime \
+// RUN:   --shared-libs=%mlir_async_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void -O0 \
 // RUN: | FileCheck %s
 
-func @main() {
-  %c0    = constant 0 : index
-  %c1    = constant 1 : index
-  %count = constant 2 : index
+func.func @main() {
+  %c0    = arith.constant 0 : index
+  %c1    = arith.constant 1 : index
+  %count = arith.constant 2 : index
 
   // initialize h0 on host
   %h0 = memref.alloc(%count) : memref<?xi32>
   %h0_unranked = memref.cast %h0 : memref<?xi32> to memref<*xi32>
   gpu.host_register %h0_unranked : memref<*xi32>
 
-  %v0 = constant 42 : i32
+  %v0 = arith.constant 42 : i32
   memref.store %v0, %h0[%c0] : memref<?xi32>
   memref.store %v0, %h0[%c1] : memref<?xi32>
 
@@ -57,7 +57,7 @@ func @main() {
                threads(%tx, %ty, %tz) in (%block_x = %count, %block_y = %c1, %block_z = %c1) {
       %v1 = memref.load %b1[%tx] : memref<?xi32>
       %v2 = memref.load %b2[%tx] : memref<?xi32>
-      %sum = addi %v1, %v2 : i32
+      %sum = arith.addi %v1, %v2 : i32
       memref.store %sum, %h0[%tx] : memref<?xi32>
       gpu.terminator
     }
@@ -66,8 +66,8 @@ func @main() {
 
   async.await %t3 : !async.token
   // CHECK: [84, 84]
-  call @print_memref_i32(%h0_unranked) : (memref<*xi32>) -> ()
+  call @printMemrefI32(%h0_unranked) : (memref<*xi32>) -> ()
   return
 }
 
-func private @print_memref_i32(memref<*xi32>)
+func.func private @printMemrefI32(memref<*xi32>)

@@ -7,7 +7,7 @@ entry:
   %aMyAlloca = alloca i32, align 32
   %dest = alloca <1 x i64>, align 32
 
-  %a32 = load i32, i32* %aMyAlloca, align 4
+  %a32 = load i32, ptr %aMyAlloca, align 4
   %aconv = trunc i32 %a32 to i16
   %a36 = insertelement <4 x i16> undef, i16 %aconv, i32 0
   %a37 = insertelement <4 x i16> %a36, i16 %aconv, i32 1
@@ -23,6 +23,6 @@ a48:
   unreachable
 
 a49:
-  store <1 x i64> %a41, <1 x i64>* %dest, align 8 ; !!!
+  store <1 x i64> %a41, ptr %dest, align 8 ; !!!
   ret void
 }

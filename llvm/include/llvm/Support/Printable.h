@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_PRINTABLE_H
 
 #include <functional>
+#include <utility>
 
 namespace llvm {
 
@@ -23,12 +24,12 @@ class raw_ostream;
 /// This class is useful to construct print helpers for raw_ostream.
 ///
 /// Example:
-///     Printable PrintRegister(unsigned Register) {
+///     Printable printRegister(unsigned Register) {
 ///       return Printable([Register](raw_ostream &OS) {
 ///         OS << getRegisterName(Register);
-///       }
+///       });
 ///     }
-///     ... OS << PrintRegister(Register); ...
+///     ... OS << printRegister(Register); ...
 ///
 /// Implementation note: Ideally this would just be a typedef, but doing so
 /// leads to operator << being ambiguous as function has matching constructors
@@ -46,6 +47,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Printable &P) {
   return OS;
 }
 
-}
+} // namespace llvm
 
 #endif

@@ -2,7 +2,7 @@
 // immediates.
 // RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
 
-void foo() {
+void foo(void) {
   // CHECK: i32 789514
   __asm__         volatile("/* " "pickANumber" ": %c0 */"::"i"(0xC0C0A));
 

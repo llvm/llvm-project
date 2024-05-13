@@ -8,8 +8,10 @@ include_directories(../..)
 set(MSAN_LIBCXX_CFLAGS
   -fsanitize=memory
   -fsanitize-memory-track-origins
+  -fno-sanitize-memory-param-retval  # unittests test mostly this mode.
   -Wno-pedantic
-  -Xclang -fdepfile-entry=${COMPILER_RT_OUTPUT_DIR}/share/msan_ignorelist.txt
+    # Do not instrument __gxx_personality_v0 (part of libcxxabi)
+  -fsanitize-ignorelist=${COMPILER_RT_OUTPUT_DIR}/share/msan_ignorelist.txt
   )
 
 # Unittest sources and build flags.
@@ -41,6 +43,7 @@ set(MSAN_UNITTEST_COMMON_CFLAGS
   -Wno-uninitialized
   -Werror=sign-compare
   -Wno-gnu-zero-variadic-macro-arguments
+  -fno-sanitize-memory-param-retval  # unittests test mostly this mode.
 )
 # Remove -stdlib= which is unused when passing -nostdinc++.
 string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
@@ -52,7 +55,9 @@ set(MSAN_UNITTEST_INSTRUMENTED_CFLAGS
   -mllvm -msan-keep-going=1
 )
 set(MSAN_UNITTEST_LINK_FLAGS
+  -nostdlib++
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
   -fsanitize=memory
   # Don't need -stdlib=libc++ because we explicitly list libc++.a in the linker
   # inputs.
@@ -64,9 +69,9 @@ macro(msan_compile obj_list source arch kind cflags)
   sanitizer_test_compile(
     ${obj_list} ${source} ${arch}
     KIND ${kind}
-    COMPILE_DEPS ${MSAN_UNITTEST_HEADERS}
-    DEPS gtest msan
-    CFLAGS -isystem ${CMAKE_CURRENT_BINARY_DIR}/../libcxx_msan_${arch}/include/c++/v1
+    COMPILE_DEPS ${MSAN_UNITTEST_HEADERS} libcxx_msan_${arch}-build
+    DEPS msan
+    CFLAGS -isystem ${MSAN_LIBCXX_DIR}/../include/c++/v1
            ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags}
   )
 endmacro()
@@ -75,9 +80,7 @@ macro(msan_link_shared so_list so_name arch kind)
   cmake_parse_arguments(SOURCE "" "" "OBJECTS;LINK_FLAGS;DEPS" ${ARGN})
   set(output_so "${CMAKE_CURRENT_BINARY_DIR}/${so_name}.${arch}${kind}.so")
   get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND SOURCE_DEPS msan)
-  endif()
+  list(APPEND SOURCE_DEPS msan)
   clang_link_shared(${output_so}
                 OBJECTS ${SOURCE_OBJECTS}
                 LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS} ${TARGET_LINK_FLAGS} ${SOURCE_LINK_FLAGS}
@@ -117,9 +120,7 @@ macro(add_msan_tests_for_arch arch kind cflags)
   set(MSAN_TEST_DEPS ${MSAN_TEST_OBJECTS} libcxx_msan_${arch}-build
                      ${MSAN_LOADABLE_SO}
 		     "${MSAN_LIBCXX_DIR}/libc++.a" "${MSAN_LIBCXX_DIR}/libc++abi.a")
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND MSAN_TEST_DEPS msan)
-  endif()
+  list(APPEND MSAN_TEST_DEPS msan libcxx_msan_${arch}-build)
   get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
   add_compiler_rt_test(MsanUnitTests "Msan-${arch}${kind}-Test" ${arch}
     OBJECTS ${MSAN_TEST_OBJECTS} "${MSAN_LIBCXX_DIR}/libc++.a" "${MSAN_LIBCXX_DIR}/libc++abi.a"

@@ -12,7 +12,7 @@
 #include <memory>
 
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -24,7 +24,6 @@ void InitializeAArch64ExegesisTarget();
 
 namespace {
 
-using testing::Gt;
 using testing::IsEmpty;
 using testing::Not;
 using testing::NotNull;

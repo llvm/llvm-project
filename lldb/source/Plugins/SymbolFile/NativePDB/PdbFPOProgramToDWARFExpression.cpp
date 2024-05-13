@@ -9,7 +9,6 @@
 #include "PdbFPOProgramToDWARFExpression.h"
 #include "CodeViewRegisterMapping.h"
 
-#include "lldb/Core/StreamBuffer.h"
 #include "lldb/Symbol/PostfixExpression.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Stream.h"
@@ -18,6 +17,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -41,7 +41,7 @@ static uint32_t ResolveLLDBRegisterNum(llvm::StringRef reg_name, llvm::Triple::A
   auto it = llvm::find_if(
       register_names,
       [&reg_name](const llvm::EnumEntry<uint16_t> &register_entry) {
-        return reg_name.compare_lower(register_entry.Name) == 0;
+        return reg_name.compare_insensitive(register_entry.Name) == 0;
       });
 
   if (it == register_names.end())

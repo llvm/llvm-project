@@ -1,5 +1,5 @@
-# RUN: llvm-mc -filetype=obj -arch=hexagon -mcpu=hexagonv67 -mhvx %s | llvm-objdump -d --mcpu=hexagonv67 --mattr=+hvx - | FileCheck %s
-# RUN: not llvm-mc -arch=hexagon -mcpu=hexagonv65 -mhvx -filetype=asm %s 2>%t; FileCheck --check-prefix=CHECK-V65 --implicit-check-not="error:" %s <%t
+# RUN: llvm-mc -filetype=obj -triple=hexagon -mcpu=hexagonv67 -mhvx %s | llvm-objdump --no-print-imm-hex -d --mcpu=hexagonv67 --mattr=+hvx - | FileCheck %s
+# RUN: not llvm-mc -triple=hexagon -mcpu=hexagonv65 -mhvx -filetype=asm %s 2>%t; FileCheck --check-prefix=CHECK-V65 --implicit-check-not="error:" %s <%t
 
 v1:0.w = vadd(v0.h, v1.h) // Normal
 # CHECK: 1ca1c080

@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx10.9.0 -filetype=obj -O0 < %s \
 ; RUN:   | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-apple-macosx10.9.0 -filetype=obj -O0 < %s \
+; RUN:   | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; ModuleID = 'aggregate-indirect-arg.cpp'
 ; extracted from debuginfo-tests/aggregate-indirect-arg.cpp
 
@@ -19,26 +21,26 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
 
-%class.SVal = type { i8*, i32 }
+%class.SVal = type { ptr, i32 }
 %class.A = type { i8 }
 
-declare void @_Z3barR4SVal(%class.SVal* %v)
+declare void @_Z3barR4SVal(ptr %v)
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 declare i32 @main()
 ; Function Attrs: nounwind ssp uwtable
-define linkonce_odr void @_ZN1A3fooE4SVal(%class.A* %this, %class.SVal* %v) nounwind ssp uwtable align 2 !dbg !35 {
+define linkonce_odr void @_ZN1A3fooE4SVal(ptr %this, ptr %v) nounwind ssp uwtable align 2 !dbg !35 {
 entry:
-  %this.addr = alloca %class.A*, align 8
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !59, metadata !DIExpression()), !dbg !61
-  call void @llvm.dbg.value(metadata %class.SVal* %v, metadata !62, metadata !DIExpression(DW_OP_deref)), !dbg !61
-  %this1 = load %class.A*, %class.A** %this.addr
-  call void @_Z3barR4SVal(%class.SVal* %v), !dbg !61
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !59, metadata !DIExpression()), !dbg !61
+  call void @llvm.dbg.value(metadata ptr %v, metadata !62, metadata !DIExpression(DW_OP_deref)), !dbg !61
+  %this1 = load ptr, ptr %this.addr
+  call void @_Z3barR4SVal(ptr %v), !dbg !61
   ret void, !dbg !61
 }
-declare void @_ZN4SValD1Ev(%class.SVal* %this)
-declare void @_ZN4SValD2Ev(%class.SVal* %this)
+declare void @_ZN4SValD1Ev(ptr %this)
+declare void @_ZN4SValD2Ev(ptr %this)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!47, !68}

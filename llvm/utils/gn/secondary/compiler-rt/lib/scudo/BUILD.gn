@@ -1,51 +1,21 @@
+import("//llvm/lib/Target/targets.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 supported_toolchains = []
 if (target_os == "linux" || target_os == "fuchsia") {
   supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
-if (android_ndk_path != "") {
-  supported_toolchains += [
-    "//llvm/utils/gn/build/toolchain:stage2_android_aarch64",
-    "//llvm/utils/gn/build/toolchain:stage2_android_arm",
-  ]
-}
+supported_toolchains += supported_android_toolchains
 
 group("scudo") {
   deps = []
   foreach(toolchain, supported_toolchains) {
     deps += [
-      "standalone/benchmarks:ScudoBenchmarks($toolchain)",
       "standalone/tests:ScudoCUnitTest($toolchain)",
       "standalone/tests:ScudoCxxUnitTest($toolchain)",
+      "standalone/tests:ScudoHooksUnitTest($toolchain)",
       "standalone/tests:ScudoUnitTest($toolchain)",
     ]
   }
   testonly = true
-}
-
-# This target is unused, it only exists to satisfy
-# sync_source_lists_from_cmake.py.
-source_set("sources") {
-  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
-  configs += [ "//llvm/utils/gn/build:crt_code" ]
-  sources = [
-    "scudo_allocator.cpp",
-    "scudo_allocator.h",
-    "scudo_allocator_combined.h",
-    "scudo_allocator_secondary.h",
-    "scudo_crc32.cpp",
-    "scudo_crc32.h",
-    "scudo_errors.cpp",
-    "scudo_errors.h",
-    "scudo_flags.cpp",
-    "scudo_flags.h",
-    "scudo_interface_internal.h",
-    "scudo_malloc.cpp",
-    "scudo_platform.h",
-    "scudo_termination.cpp",
-    "scudo_tsd.h",
-    "scudo_tsd_exclusive.cpp",
-    "scudo_tsd_shared.cpp",
-  ]
 }

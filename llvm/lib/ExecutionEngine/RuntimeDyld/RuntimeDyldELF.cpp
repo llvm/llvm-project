@@ -15,12 +15,12 @@
 #include "Targets/RuntimeDyldELFMips.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -35,7 +35,8 @@ static void or32AArch64Imm(void *L, uint64_t Imm) {
 }
 
 template <class T> static void write(bool isBE, void *P, T V) {
-  isBE ? write<T, support::big>(P, V) : write<T, support::little>(P, V);
+  isBE ? write<T, llvm::endianness::big>(P, V)
+       : write<T, llvm::endianness::little>(P, V);
 }
 
 static void write32AArch64Addr(void *L, uint64_t Imm) {
@@ -216,7 +217,7 @@ namespace llvm {
 RuntimeDyldELF::RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
                                JITSymbolResolver &Resolver)
     : RuntimeDyldImpl(MemMgr, Resolver), GOTSectionID(0), CurrentGOTIndex(0) {}
-RuntimeDyldELF::~RuntimeDyldELF() {}
+RuntimeDyldELF::~RuntimeDyldELF() = default;
 
 void RuntimeDyldELF::registerEHFrames() {
   for (int i = 0, e = UnregisteredEHFrameSections.size(); i != e; ++i) {
@@ -345,6 +346,32 @@ void RuntimeDyldELF::resolveX86_64Relocation(const SectionEntry &Section,
     support::ulittle64_t::ref(Section.getAddressWithOffset(Offset)) = GOTOffset;
     break;
   }
+  case ELF::R_X86_64_DTPMOD64: {
+    // We only have one DSO, so the module id is always 1.
+    support::ulittle64_t::ref(Section.getAddressWithOffset(Offset)) = 1;
+    break;
+  }
+  case ELF::R_X86_64_DTPOFF64:
+  case ELF::R_X86_64_TPOFF64: {
+    // DTPOFF64 should resolve to the offset in the TLS block, TPOFF64 to the
+    // offset in the *initial* TLS block. Since we are statically linking, all
+    // TLS blocks already exist in the initial block, so resolve both
+    // relocations equally.
+    support::ulittle64_t::ref(Section.getAddressWithOffset(Offset)) =
+        Value + Addend;
+    break;
+  }
+  case ELF::R_X86_64_DTPOFF32:
+  case ELF::R_X86_64_TPOFF32: {
+    // As for the (D)TPOFF64 relocations above, both DTPOFF32 and TPOFF32 can
+    // be resolved equally.
+    int64_t RealValue = Value + Addend;
+    assert(RealValue >= INT32_MIN && RealValue <= INT32_MAX);
+    int32_t TruncValue = RealValue;
+    support::ulittle32_t::ref(Section.getAddressWithOffset(Offset)) =
+        TruncValue;
+    break;
+  }
   }
 }
 
@@ -396,15 +423,19 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
   default:
     report_fatal_error("Relocation type not implemented yet!");
     break;
+  case ELF::R_AARCH64_NONE:
+    break;
   case ELF::R_AARCH64_ABS16: {
     uint64_t Result = Value + Addend;
-    assert(static_cast<int64_t>(Result) >= INT16_MIN && Result < UINT16_MAX);
+    assert(Result == static_cast<uint64_t>(llvm::SignExtend64(Result, 16)) ||
+           (Result >> 16) == 0);
     write(isBE, TargetPtr, static_cast<uint16_t>(Result & 0xffffU));
     break;
   }
   case ELF::R_AARCH64_ABS32: {
     uint64_t Result = Value + Addend;
-    assert(static_cast<int64_t>(Result) >= INT32_MIN && Result < UINT32_MAX);
+    assert(Result == static_cast<uint64_t>(llvm::SignExtend64(Result, 32)) ||
+           (Result >> 32) == 0);
     write(isBE, TargetPtr, static_cast<uint32_t>(Result & 0xffffffffU));
     break;
   }
@@ -416,6 +447,13 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
     assert(static_cast<int64_t>(Result) >= INT32_MIN &&
            static_cast<int64_t>(Result) <= INT32_MAX);
     write(isBE, TargetPtr, static_cast<uint32_t>(Result));
+    break;
+  }
+  case ELF::R_AARCH64_PREL16: {
+    uint64_t Result = Value + Addend - FinalAddress;
+    assert(static_cast<int64_t>(Result) >= INT16_MIN &&
+           static_cast<int64_t>(Result) <= UINT16_MAX);
+    write(isBE, TargetPtr, static_cast<uint16_t>(Result & 0xffffU));
     break;
   }
   case ELF::R_AARCH64_PREL32: {
@@ -442,9 +480,11 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
 
     assert(isInt<16>(BranchImm));
 
-    *TargetPtr &= 0xfff8001fU;
+    uint32_t RawInstr = *(support::little32_t *)TargetPtr;
+    *(support::little32_t *)TargetPtr = RawInstr & 0xfff8001fU;
+
     // Immediate:15:2 goes in bits 18:5 of TBZ, TBNZ
-    or32le(TargetPtr, (BranchImm & 0x0FFFFFFC) << 3);
+    or32le(TargetPtr, (BranchImm & 0x0000FFFC) << 3);
     break;
   }
   case ELF::R_AARCH64_CALL26: // fallthrough
@@ -608,7 +648,7 @@ void RuntimeDyldELF::resolveARMRelocation(const SectionEntry &Section,
 
 void RuntimeDyldELF::setMipsABI(const ObjectFile &Obj) {
   if (Arch == Triple::UnknownArch ||
-      !StringRef(Triple::getArchTypePrefix(Arch)).equals("mips")) {
+      Triple::getArchTypePrefix(Arch) != "mips") {
     IsMipsO32ABI = false;
     IsMipsN32ABI = false;
     IsMipsN64ABI = false;
@@ -619,7 +659,7 @@ void RuntimeDyldELF::setMipsABI(const ObjectFile &Obj) {
     IsMipsO32ABI = AbiVariant & ELF::EF_MIPS_ABI_O32;
     IsMipsN32ABI = AbiVariant & ELF::EF_MIPS_ABI2;
   }
-  IsMipsN64ABI = Obj.getFileFormatName().equals("elf64-mips");
+  IsMipsN64ABI = Obj.getFileFormatName() == "elf64-mips";
 }
 
 // Return the .TOC. section and offset.
@@ -674,7 +714,7 @@ Error RuntimeDyldELF::findOPDEntrySection(const ELFObjectFileBase &Obj,
 
     Expected<section_iterator> RelSecOrErr = si->getRelocatedSection();
     if (!RelSecOrErr)
-      report_fatal_error(toString(RelSecOrErr.takeError()));
+      report_fatal_error(Twine(toString(RelSecOrErr.takeError())));
 
     section_iterator RelSecI = *RelSecOrErr;
     if (RelSecI == Obj.section_end())
@@ -1210,8 +1250,7 @@ RuntimeDyldELF::processRelocationRef(
       std::string Buf;
       raw_string_ostream OS(Buf);
       logAllUnhandledErrors(SymTypeOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
     SymType = *SymTypeOrErr;
   }
@@ -1231,8 +1270,7 @@ RuntimeDyldELF::processRelocationRef(
         std::string Buf;
         raw_string_ostream OS(Buf);
         logAllUnhandledErrors(SectionOrErr.takeError(), OS);
-        OS.flush();
-        report_fatal_error(Buf);
+        report_fatal_error(Twine(OS.str()));
       }
       section_iterator si = *SectionOrErr;
       if (si == Obj.section_end())
@@ -1249,6 +1287,7 @@ RuntimeDyldELF::processRelocationRef(
     }
     case SymbolRef::ST_Data:
     case SymbolRef::ST_Function:
+    case SymbolRef::ST_Other:
     case SymbolRef::ST_Unknown: {
       Value.SymbolName = TargetName.data();
       Value.Addend = Addend;
@@ -1277,7 +1316,7 @@ RuntimeDyldELF::processRelocationRef(
         MemMgr.allowStubAllocation()) {
       resolveAArch64Branch(SectionID, Value, RelI, Stubs);
     } else if (RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
-      // Craete new GOT entry or find existing one. If GOT entry is
+      // Create new GOT entry or find existing one. If GOT entry is
       // to be created, then we also emit ABS64 relocation for it.
       uint64_t GOTOffset = findOrAllocGOTEntry(Value, ELF::R_AARCH64_ABS64);
       resolveGOTOffsetRelocation(SectionID, Offset, GOTOffset + Addend,
@@ -1697,10 +1736,8 @@ RuntimeDyldELF::processRelocationRef(
       LLVM_DEBUG(dbgs() << " Create a new stub function\n");
 
       uintptr_t BaseAddress = uintptr_t(Section.getAddress());
-      uintptr_t StubAlignment = getStubAlignment();
       StubAddress =
-          (BaseAddress + Section.getStubOffset() + StubAlignment - 1) &
-          -StubAlignment;
+          alignTo(BaseAddress + Section.getStubOffset(), getStubAlignment());
       unsigned StubOffset = StubAddress - BaseAddress;
 
       Stubs[Value] = StubOffset;
@@ -1751,10 +1788,8 @@ RuntimeDyldELF::processRelocationRef(
           LLVM_DEBUG(dbgs() << " Create a new stub function\n");
 
           uintptr_t BaseAddress = uintptr_t(Section->getAddress());
-          uintptr_t StubAlignment = getStubAlignment();
-          StubAddress =
-              (BaseAddress + Section->getStubOffset() + StubAlignment - 1) &
-              -StubAlignment;
+          StubAddress = alignTo(BaseAddress + Section->getStubOffset(),
+                                getStubAlignment());
           unsigned StubOffset = StubAddress - BaseAddress;
           Stubs[Value] = StubOffset;
           createStubFunction((uint8_t *)StubAddress);
@@ -1813,10 +1848,13 @@ RuntimeDyldELF::processRelocationRef(
         addRelocationForSymbol(RE, Value.SymbolName);
       else
         addRelocationForSection(RE, Value.SectionID);
-    } else if (RelType == ELF::R_X86_64_GOTPC64) {
+    } else if (RelType == ELF::R_X86_64_GOTPC32) {
       // Materialize the address of the base of the GOT relative to the PC.
       // This doesn't create a GOT entry, but it does mean we need a GOT
       // section.
+      (void)allocateGOTEntries(0);
+      resolveGOTOffsetRelocation(SectionID, Offset, Addend, ELF::R_X86_64_PC32);
+    } else if (RelType == ELF::R_X86_64_GOTPC64) {
       (void)allocateGOTEntries(0);
       resolveGOTOffsetRelocation(SectionID, Offset, Addend, ELF::R_X86_64_PC64);
     } else if (RelType == ELF::R_X86_64_GOTOFF64) {
@@ -1829,6 +1867,15 @@ RuntimeDyldELF::processRelocationRef(
     } else if (RelType == ELF::R_X86_64_PC64) {
       Value.Addend += support::ulittle64_t::ref(computePlaceholderAddress(SectionID, Offset));
       processSimpleRelocation(SectionID, Offset, RelType, Value);
+    } else if (RelType == ELF::R_X86_64_GOTTPOFF) {
+      processX86_64GOTTPOFFRelocation(SectionID, Offset, Value, Addend);
+    } else if (RelType == ELF::R_X86_64_TLSGD ||
+               RelType == ELF::R_X86_64_TLSLD) {
+      // The next relocation must be the relocation for __tls_get_addr.
+      ++RelI;
+      auto &GetAddrRelocation = *RelI;
+      processX86_64TLSRelocation(SectionID, Offset, RelType, Value, Addend,
+                                 GetAddrRelocation);
     } else {
       processSimpleRelocation(SectionID, Offset, RelType, Value);
     }
@@ -1839,6 +1886,330 @@ RuntimeDyldELF::processRelocationRef(
     processSimpleRelocation(SectionID, Offset, RelType, Value);
   }
   return ++RelI;
+}
+
+void RuntimeDyldELF::processX86_64GOTTPOFFRelocation(unsigned SectionID,
+                                                     uint64_t Offset,
+                                                     RelocationValueRef Value,
+                                                     int64_t Addend) {
+  // Use the approach from "x86-64 Linker Optimizations" from the TLS spec
+  // to replace the GOTTPOFF relocation with a TPOFF relocation. The spec
+  // only mentions one optimization even though there are two different
+  // code sequences for the Initial Exec TLS Model. We match the code to
+  // find out which one was used.
+
+  // A possible TLS code sequence and its replacement
+  struct CodeSequence {
+    // The expected code sequence
+    ArrayRef<uint8_t> ExpectedCodeSequence;
+    // The negative offset of the GOTTPOFF relocation to the beginning of
+    // the sequence
+    uint64_t TLSSequenceOffset;
+    // The new code sequence
+    ArrayRef<uint8_t> NewCodeSequence;
+    // The offset of the new TPOFF relocation
+    uint64_t TpoffRelocationOffset;
+  };
+
+  std::array<CodeSequence, 2> CodeSequences;
+
+  // Initial Exec Code Model Sequence
+  {
+    static const std::initializer_list<uint8_t> ExpectedCodeSequenceList = {
+        0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00,
+        0x00,                                    // mov %fs:0, %rax
+        0x48, 0x03, 0x05, 0x00, 0x00, 0x00, 0x00 // add x@gotpoff(%rip),
+                                                 // %rax
+    };
+    CodeSequences[0].ExpectedCodeSequence =
+        ArrayRef<uint8_t>(ExpectedCodeSequenceList);
+    CodeSequences[0].TLSSequenceOffset = 12;
+
+    static const std::initializer_list<uint8_t> NewCodeSequenceList = {
+        0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0, %rax
+        0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00 // lea x@tpoff(%rax), %rax
+    };
+    CodeSequences[0].NewCodeSequence = ArrayRef<uint8_t>(NewCodeSequenceList);
+    CodeSequences[0].TpoffRelocationOffset = 12;
+  }
+
+  // Initial Exec Code Model Sequence, II
+  {
+    static const std::initializer_list<uint8_t> ExpectedCodeSequenceList = {
+        0x48, 0x8b, 0x05, 0x00, 0x00, 0x00, 0x00, // mov x@gotpoff(%rip), %rax
+        0x64, 0x48, 0x8b, 0x00, 0x00, 0x00, 0x00  // mov %fs:(%rax), %rax
+    };
+    CodeSequences[1].ExpectedCodeSequence =
+        ArrayRef<uint8_t>(ExpectedCodeSequenceList);
+    CodeSequences[1].TLSSequenceOffset = 3;
+
+    static const std::initializer_list<uint8_t> NewCodeSequenceList = {
+        0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00,             // 6 byte nop
+        0x64, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:x@tpoff, %rax
+    };
+    CodeSequences[1].NewCodeSequence = ArrayRef<uint8_t>(NewCodeSequenceList);
+    CodeSequences[1].TpoffRelocationOffset = 10;
+  }
+
+  bool Resolved = false;
+  auto &Section = Sections[SectionID];
+  for (const auto &C : CodeSequences) {
+    assert(C.ExpectedCodeSequence.size() == C.NewCodeSequence.size() &&
+           "Old and new code sequences must have the same size");
+
+    if (Offset < C.TLSSequenceOffset ||
+        (Offset - C.TLSSequenceOffset + C.NewCodeSequence.size()) >
+            Section.getSize()) {
+      // This can't be a matching sequence as it doesn't fit in the current
+      // section
+      continue;
+    }
+
+    auto TLSSequenceStartOffset = Offset - C.TLSSequenceOffset;
+    auto *TLSSequence = Section.getAddressWithOffset(TLSSequenceStartOffset);
+    if (ArrayRef<uint8_t>(TLSSequence, C.ExpectedCodeSequence.size()) !=
+        C.ExpectedCodeSequence) {
+      continue;
+    }
+
+    memcpy(TLSSequence, C.NewCodeSequence.data(), C.NewCodeSequence.size());
+
+    // The original GOTTPOFF relocation has an addend as it is PC relative,
+    // so it needs to be corrected. The TPOFF32 relocation is used as an
+    // absolute value (which is an offset from %fs:0), so remove the addend
+    // again.
+    RelocationEntry RE(SectionID,
+                       TLSSequenceStartOffset + C.TpoffRelocationOffset,
+                       ELF::R_X86_64_TPOFF32, Value.Addend - Addend);
+
+    if (Value.SymbolName)
+      addRelocationForSymbol(RE, Value.SymbolName);
+    else
+      addRelocationForSection(RE, Value.SectionID);
+
+    Resolved = true;
+    break;
+  }
+
+  if (!Resolved) {
+    // The GOTTPOFF relocation was not used in one of the sequences
+    // described in the spec, so we can't optimize it to a TPOFF
+    // relocation.
+    uint64_t GOTOffset = allocateGOTEntries(1);
+    resolveGOTOffsetRelocation(SectionID, Offset, GOTOffset + Addend,
+                               ELF::R_X86_64_PC32);
+    RelocationEntry RE =
+        computeGOTOffsetRE(GOTOffset, Value.Offset, ELF::R_X86_64_TPOFF64);
+    if (Value.SymbolName)
+      addRelocationForSymbol(RE, Value.SymbolName);
+    else
+      addRelocationForSection(RE, Value.SectionID);
+  }
+}
+
+void RuntimeDyldELF::processX86_64TLSRelocation(
+    unsigned SectionID, uint64_t Offset, uint64_t RelType,
+    RelocationValueRef Value, int64_t Addend,
+    const RelocationRef &GetAddrRelocation) {
+  // Since we are statically linking and have no additional DSOs, we can resolve
+  // the relocation directly without using __tls_get_addr.
+  // Use the approach from "x86-64 Linker Optimizations" from the TLS spec
+  // to replace it with the Local Exec relocation variant.
+
+  // Find out whether the code was compiled with the large or small memory
+  // model. For this we look at the next relocation which is the relocation
+  // for the __tls_get_addr function. If it's a 32 bit relocation, it's the
+  // small code model, with a 64 bit relocation it's the large code model.
+  bool IsSmallCodeModel;
+  // Is the relocation for the __tls_get_addr a PC-relative GOT relocation?
+  bool IsGOTPCRel = false;
+
+  switch (GetAddrRelocation.getType()) {
+  case ELF::R_X86_64_GOTPCREL:
+  case ELF::R_X86_64_REX_GOTPCRELX:
+  case ELF::R_X86_64_GOTPCRELX:
+    IsGOTPCRel = true;
+    [[fallthrough]];
+  case ELF::R_X86_64_PLT32:
+    IsSmallCodeModel = true;
+    break;
+  case ELF::R_X86_64_PLTOFF64:
+    IsSmallCodeModel = false;
+    break;
+  default:
+    report_fatal_error(
+        "invalid TLS relocations for General/Local Dynamic TLS Model: "
+        "expected PLT or GOT relocation for __tls_get_addr function");
+  }
+
+  // The negative offset to the start of the TLS code sequence relative to
+  // the offset of the TLSGD/TLSLD relocation
+  uint64_t TLSSequenceOffset;
+  // The expected start of the code sequence
+  ArrayRef<uint8_t> ExpectedCodeSequence;
+  // The new TLS code sequence that will replace the existing code
+  ArrayRef<uint8_t> NewCodeSequence;
+
+  if (RelType == ELF::R_X86_64_TLSGD) {
+    // The offset of the new TPOFF32 relocation (offset starting from the
+    // beginning of the whole TLS sequence)
+    uint64_t TpoffRelocOffset;
+
+    if (IsSmallCodeModel) {
+      if (!IsGOTPCRel) {
+        static const std::initializer_list<uint8_t> CodeSequence = {
+            0x66, // data16 (no-op prefix)
+            0x48, 0x8d, 0x3d, 0x00, 0x00,
+            0x00, 0x00,                  // lea <disp32>(%rip), %rdi
+            0x66, 0x66,                  // two data16 prefixes
+            0x48,                        // rex64 (no-op prefix)
+            0xe8, 0x00, 0x00, 0x00, 0x00 // call __tls_get_addr@plt
+        };
+        ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+        TLSSequenceOffset = 4;
+      } else {
+        // This code sequence is not described in the TLS spec but gcc
+        // generates it sometimes.
+        static const std::initializer_list<uint8_t> CodeSequence = {
+            0x66, // data16 (no-op prefix)
+            0x48, 0x8d, 0x3d, 0x00, 0x00,
+            0x00, 0x00, // lea <disp32>(%rip), %rdi
+            0x66,       // data16 prefix (no-op prefix)
+            0x48,       // rex64 (no-op prefix)
+            0xff, 0x15, 0x00, 0x00, 0x00,
+            0x00 // call *__tls_get_addr@gotpcrel(%rip)
+        };
+        ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+        TLSSequenceOffset = 4;
+      }
+
+      // The replacement code for the small code model. It's the same for
+      // both sequences.
+      static const std::initializer_list<uint8_t> SmallSequence = {
+          0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00,
+          0x00,                                    // mov %fs:0, %rax
+          0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00 // lea x@tpoff(%rax),
+                                                   // %rax
+      };
+      NewCodeSequence = ArrayRef<uint8_t>(SmallSequence);
+      TpoffRelocOffset = 12;
+    } else {
+      static const std::initializer_list<uint8_t> CodeSequence = {
+          0x48, 0x8d, 0x3d, 0x00, 0x00, 0x00, 0x00, // lea <disp32>(%rip),
+                                                    // %rdi
+          0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x00,             // movabs $__tls_get_addr@pltoff, %rax
+          0x48, 0x01, 0xd8, // add %rbx, %rax
+          0xff, 0xd0        // call *%rax
+      };
+      ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+      TLSSequenceOffset = 3;
+
+      // The replacement code for the large code model
+      static const std::initializer_list<uint8_t> LargeSequence = {
+          0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00,
+          0x00,                                     // mov %fs:0, %rax
+          0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00, // lea x@tpoff(%rax),
+                                                    // %rax
+          0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00        // nopw 0x0(%rax,%rax,1)
+      };
+      NewCodeSequence = ArrayRef<uint8_t>(LargeSequence);
+      TpoffRelocOffset = 12;
+    }
+
+    // The TLSGD/TLSLD relocations are PC-relative, so they have an addend.
+    // The new TPOFF32 relocations is used as an absolute offset from
+    // %fs:0, so remove the TLSGD/TLSLD addend again.
+    RelocationEntry RE(SectionID, Offset - TLSSequenceOffset + TpoffRelocOffset,
+                       ELF::R_X86_64_TPOFF32, Value.Addend - Addend);
+    if (Value.SymbolName)
+      addRelocationForSymbol(RE, Value.SymbolName);
+    else
+      addRelocationForSection(RE, Value.SectionID);
+  } else if (RelType == ELF::R_X86_64_TLSLD) {
+    if (IsSmallCodeModel) {
+      if (!IsGOTPCRel) {
+        static const std::initializer_list<uint8_t> CodeSequence = {
+            0x48, 0x8d, 0x3d, 0x00, 0x00, 0x00, // leaq <disp32>(%rip), %rdi
+            0x00, 0xe8, 0x00, 0x00, 0x00, 0x00  // call __tls_get_addr@plt
+        };
+        ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+        TLSSequenceOffset = 3;
+
+        // The replacement code for the small code model
+        static const std::initializer_list<uint8_t> SmallSequence = {
+            0x66, 0x66, 0x66, // three data16 prefixes (no-op)
+            0x64, 0x48, 0x8b, 0x04, 0x25,
+            0x00, 0x00, 0x00, 0x00 // mov %fs:0, %rax
+        };
+        NewCodeSequence = ArrayRef<uint8_t>(SmallSequence);
+      } else {
+        // This code sequence is not described in the TLS spec but gcc
+        // generates it sometimes.
+        static const std::initializer_list<uint8_t> CodeSequence = {
+            0x48, 0x8d, 0x3d, 0x00,
+            0x00, 0x00, 0x00, // leaq <disp32>(%rip), %rdi
+            0xff, 0x15, 0x00, 0x00,
+            0x00, 0x00 // call
+                       // *__tls_get_addr@gotpcrel(%rip)
+        };
+        ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+        TLSSequenceOffset = 3;
+
+        // The replacement is code is just like above but it needs to be
+        // one byte longer.
+        static const std::initializer_list<uint8_t> SmallSequence = {
+            0x0f, 0x1f, 0x40, 0x00, // 4 byte nop
+            0x64, 0x48, 0x8b, 0x04, 0x25,
+            0x00, 0x00, 0x00, 0x00 // mov %fs:0, %rax
+        };
+        NewCodeSequence = ArrayRef<uint8_t>(SmallSequence);
+      }
+    } else {
+      // This is the same sequence as for the TLSGD sequence with the large
+      // memory model above
+      static const std::initializer_list<uint8_t> CodeSequence = {
+          0x48, 0x8d, 0x3d, 0x00, 0x00, 0x00, 0x00, // lea <disp32>(%rip),
+                                                    // %rdi
+          0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x48,       // movabs $__tls_get_addr@pltoff, %rax
+          0x01, 0xd8, // add %rbx, %rax
+          0xff, 0xd0  // call *%rax
+      };
+      ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+      TLSSequenceOffset = 3;
+
+      // The replacement code for the large code model
+      static const std::initializer_list<uint8_t> LargeSequence = {
+          0x66, 0x66, 0x66, // three data16 prefixes (no-op)
+          0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00,
+          0x00,                                                // 10 byte nop
+          0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00 // mov %fs:0,%rax
+      };
+      NewCodeSequence = ArrayRef<uint8_t>(LargeSequence);
+    }
+  } else {
+    llvm_unreachable("both TLS relocations handled above");
+  }
+
+  assert(ExpectedCodeSequence.size() == NewCodeSequence.size() &&
+         "Old and new code sequences must have the same size");
+
+  auto &Section = Sections[SectionID];
+  if (Offset < TLSSequenceOffset ||
+      (Offset - TLSSequenceOffset + NewCodeSequence.size()) >
+          Section.getSize()) {
+    report_fatal_error("unexpected end of section in TLS sequence");
+  }
+
+  auto *TLSSequence = Section.getAddressWithOffset(Offset - TLSSequenceOffset);
+  if (ArrayRef<uint8_t>(TLSSequence, ExpectedCodeSequence.size()) !=
+      ExpectedCodeSequence) {
+    report_fatal_error(
+        "invalid TLS sequence for Global/Local Dynamic TLS Model");
+  }
+
+  memcpy(TLSSequence, NewCodeSequence.data(), NewCodeSequence.size());
 }
 
 size_t RuntimeDyldELF::getGOTEntrySize() {
@@ -1923,18 +2294,75 @@ RelocationEntry RuntimeDyldELF::computeGOTOffsetRE(uint64_t GOTOffset,
   return RelocationEntry(GOTSectionID, GOTOffset, Type, SymbolOffset);
 }
 
+void RuntimeDyldELF::processNewSymbol(const SymbolRef &ObjSymbol, SymbolTableEntry& Symbol) {
+  // This should never return an error as `processNewSymbol` wouldn't have been
+  // called if getFlags() returned an error before.
+  auto ObjSymbolFlags = cantFail(ObjSymbol.getFlags());
+
+  if (ObjSymbolFlags & SymbolRef::SF_Indirect) {
+    if (IFuncStubSectionID == 0) {
+      // Create a dummy section for the ifunc stubs. It will be actually
+      // allocated in finalizeLoad() below.
+      IFuncStubSectionID = Sections.size();
+      Sections.push_back(
+          SectionEntry(".text.__llvm_IFuncStubs", nullptr, 0, 0, 0));
+      // First 64B are reserverd for the IFunc resolver
+      IFuncStubOffset = 64;
+    }
+
+    IFuncStubs.push_back(IFuncStub{IFuncStubOffset, Symbol});
+    // Modify the symbol so that it points to the ifunc stub instead of to the
+    // resolver function.
+    Symbol = SymbolTableEntry(IFuncStubSectionID, IFuncStubOffset,
+                              Symbol.getFlags());
+    IFuncStubOffset += getMaxIFuncStubSize();
+  }
+}
+
 Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
                                   ObjSectionToIDMap &SectionMap) {
   if (IsMipsO32ABI)
     if (!PendingRelocs.empty())
       return make_error<RuntimeDyldError>("Can't find matching LO16 reloc");
 
+  // Create the IFunc stubs if necessary. This must be done before processing
+  // the GOT entries, as the IFunc stubs may create some.
+  if (IFuncStubSectionID != 0) {
+    uint8_t *IFuncStubsAddr = MemMgr.allocateCodeSection(
+        IFuncStubOffset, 1, IFuncStubSectionID, ".text.__llvm_IFuncStubs");
+    if (!IFuncStubsAddr)
+      return make_error<RuntimeDyldError>(
+          "Unable to allocate memory for IFunc stubs!");
+    Sections[IFuncStubSectionID] =
+        SectionEntry(".text.__llvm_IFuncStubs", IFuncStubsAddr, IFuncStubOffset,
+                     IFuncStubOffset, 0);
+
+    createIFuncResolver(IFuncStubsAddr);
+
+    LLVM_DEBUG(dbgs() << "Creating IFunc stubs SectionID: "
+                      << IFuncStubSectionID << " Addr: "
+                      << Sections[IFuncStubSectionID].getAddress() << '\n');
+    for (auto &IFuncStub : IFuncStubs) {
+      auto &Symbol = IFuncStub.OriginalSymbol;
+      LLVM_DEBUG(dbgs() << "\tSectionID: " << Symbol.getSectionID()
+                        << " Offset: " << format("%p", Symbol.getOffset())
+                        << " IFuncStubOffset: "
+                        << format("%p\n", IFuncStub.StubOffset));
+      createIFuncStub(IFuncStubSectionID, 0, IFuncStub.StubOffset,
+                      Symbol.getSectionID(), Symbol.getOffset());
+    }
+
+    IFuncStubSectionID = 0;
+    IFuncStubOffset = 0;
+    IFuncStubs.clear();
+  }
+
   // If necessary, allocate the global offset table
   if (GOTSectionID != 0) {
     // Allocate memory for the section
     size_t TotalSize = CurrentGOTIndex * getGOTEntrySize();
     uint8_t *Addr = MemMgr.allocateDataSection(TotalSize, getGOTEntrySize(),
-                                                GOTSectionID, ".got", false);
+                                               GOTSectionID, ".got", false);
     if (!Addr)
       return make_error<RuntimeDyldError>("Unable to allocate memory for GOT!");
 
@@ -1957,7 +2385,7 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
 
           section_iterator RelocatedSection = *RelSecOrErr;
           ObjSectionToIDMap::iterator i = SectionMap.find(*RelocatedSection);
-          assert (i != SectionMap.end());
+          assert(i != SectionMap.end());
           SectionToGOTMap[i->second] = GOTSectionID;
         }
       }
@@ -1983,6 +2411,7 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
     }
   }
 
+  GOTOffsetMap.clear();
   GOTSectionID = 0;
   CurrentGOTIndex = 0;
 
@@ -1991,6 +2420,110 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
 
 bool RuntimeDyldELF::isCompatibleFile(const object::ObjectFile &Obj) const {
   return Obj.isELF();
+}
+
+void RuntimeDyldELF::createIFuncResolver(uint8_t *Addr) const {
+  if (Arch == Triple::x86_64) {
+    // The adddres of the GOT1 entry is in %r11, the GOT2 entry is in %r11+8
+    // (see createIFuncStub() for details)
+    // The following code first saves all registers that contain the original
+    // function arguments as those registers are not saved by the resolver
+    // function. %r11 is saved as well so that the GOT2 entry can be updated
+    // afterwards. Then it calls the actual IFunc resolver function whose
+    // address is stored in GOT2. After the resolver function returns, all
+    // saved registers are restored and the return value is written to GOT1.
+    // Finally, jump to the now resolved function.
+    // clang-format off
+    const uint8_t StubCode[] = {
+        0x57,                   // push %rdi
+        0x56,                   // push %rsi
+        0x52,                   // push %rdx
+        0x51,                   // push %rcx
+        0x41, 0x50,             // push %r8
+        0x41, 0x51,             // push %r9
+        0x41, 0x53,             // push %r11
+        0x41, 0xff, 0x53, 0x08, // call *0x8(%r11)
+        0x41, 0x5b,             // pop %r11
+        0x41, 0x59,             // pop %r9
+        0x41, 0x58,             // pop %r8
+        0x59,                   // pop %rcx
+        0x5a,                   // pop %rdx
+        0x5e,                   // pop %rsi
+        0x5f,                   // pop %rdi
+        0x49, 0x89, 0x03,       // mov %rax,(%r11)
+        0xff, 0xe0              // jmp *%rax
+    };
+    // clang-format on
+    static_assert(sizeof(StubCode) <= 64,
+                  "maximum size of the IFunc resolver is 64B");
+    memcpy(Addr, StubCode, sizeof(StubCode));
+  } else {
+    report_fatal_error(
+        "IFunc resolver is not supported for target architecture");
+  }
+}
+
+void RuntimeDyldELF::createIFuncStub(unsigned IFuncStubSectionID,
+                                     uint64_t IFuncResolverOffset,
+                                     uint64_t IFuncStubOffset,
+                                     unsigned IFuncSectionID,
+                                     uint64_t IFuncOffset) {
+  auto &IFuncStubSection = Sections[IFuncStubSectionID];
+  auto *Addr = IFuncStubSection.getAddressWithOffset(IFuncStubOffset);
+
+  if (Arch == Triple::x86_64) {
+    // The first instruction loads a PC-relative address into %r11 which is a
+    // GOT entry for this stub. This initially contains the address to the
+    // IFunc resolver. We can use %r11 here as it's caller saved but not used
+    // to pass any arguments. In fact, x86_64 ABI even suggests using %r11 for
+    // code in the PLT. The IFunc resolver will use %r11 to update the GOT
+    // entry.
+    //
+    // The next instruction just jumps to the address contained in the GOT
+    // entry. As mentioned above, we do this two-step jump by first setting
+    // %r11 so that the IFunc resolver has access to it.
+    //
+    // The IFunc resolver of course also needs to know the actual address of
+    // the actual IFunc resolver function. This will be stored in a GOT entry
+    // right next to the first one for this stub. So, the IFunc resolver will
+    // be able to call it with %r11+8.
+    //
+    // In total, two adjacent GOT entries (+relocation) and one additional
+    // relocation are required:
+    // GOT1: Address of the IFunc resolver.
+    // GOT2: Address of the IFunc resolver function.
+    // IFuncStubOffset+3: 32-bit PC-relative address of GOT1.
+    uint64_t GOT1 = allocateGOTEntries(2);
+    uint64_t GOT2 = GOT1 + getGOTEntrySize();
+
+    RelocationEntry RE1(GOTSectionID, GOT1, ELF::R_X86_64_64,
+                        IFuncResolverOffset, {});
+    addRelocationForSection(RE1, IFuncStubSectionID);
+    RelocationEntry RE2(GOTSectionID, GOT2, ELF::R_X86_64_64, IFuncOffset, {});
+    addRelocationForSection(RE2, IFuncSectionID);
+
+    const uint8_t StubCode[] = {
+        0x4c, 0x8d, 0x1d, 0x00, 0x00, 0x00, 0x00, // leaq 0x0(%rip),%r11
+        0x41, 0xff, 0x23                          // jmpq *(%r11)
+    };
+    assert(sizeof(StubCode) <= getMaxIFuncStubSize() &&
+           "IFunc stub size must not exceed getMaxIFuncStubSize()");
+    memcpy(Addr, StubCode, sizeof(StubCode));
+
+    // The PC-relative value starts 4 bytes from the end of the leaq
+    // instruction, so the addend is -4.
+    resolveGOTOffsetRelocation(IFuncStubSectionID, IFuncStubOffset + 3,
+                               GOT1 - 4, ELF::R_X86_64_PC32);
+  } else {
+    report_fatal_error("IFunc stub is not supported for target architecture");
+  }
+}
+
+unsigned RuntimeDyldELF::getMaxIFuncStubSize() const {
+  if (Arch == Triple::x86_64) {
+    return 10;
+  }
+  return 0;
 }
 
 bool RuntimeDyldELF::relocationNeedsGot(const RelocationRef &R) const {

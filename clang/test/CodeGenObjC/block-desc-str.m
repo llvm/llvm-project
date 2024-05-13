@@ -6,10 +6,10 @@
 
 // CHECK-COMDAT: $"__block_descriptor_40_8_32o_e5_v8\01?0l" = comdat any
 // CHECK-COMDAT: @[[STR:.*]] = private unnamed_addr constant [6 x i8] c"v8@?0\00"
-// CHECK-COMDAT: @"__block_descriptor_40_8_32o_e5_v8\01?0l" = linkonce_odr hidden unnamed_addr constant { i64, i64, i8*, i8*, i8*, {{.*}} } { i64 0, i64 40, i8* bitcast ({{.*}} to i8*), i8* bitcast ({{.*}} to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @[[STR]], i32 0, i32 0), {{.*}} }, comdat, align 8
+// CHECK-COMDAT: @"__block_descriptor_40_8_32o_e5_v8\01?0l" = linkonce_odr hidden unnamed_addr constant { i64, i64, ptr, ptr, ptr, {{.*}} } { i64 0, i64 40, ptr {{.*}}, ptr @[[STR]], {{.*}} }, comdat, align 8
 
 // CHECK: @[[STR:.*]] = private unnamed_addr constant [6 x i8] c"v8@?0\00"
-// CHECK: @"__block_descriptor_40_8_32o_e5_v8\01?0l" = linkonce_odr hidden unnamed_addr constant { i64, i64, i8*, i8*, i8*, {{.*}} } { i64 0, i64 40, i8* bitcast ({{.*}} to i8*), i8* bitcast ({{.*}} to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @[[STR]], i32 0, i32 0), {{.*}} }, align 8
+// CHECK: @"__block_descriptor_40_8_32o_e5_v8\01?0l" = linkonce_odr hidden unnamed_addr constant { i64, i64, ptr, ptr, ptr, {{.*}} } { i64 0, i64 40, ptr {{.*}}, ptr {{.*}}, ptr @[[STR]], {{.*}} }, align 8
 
 typedef void (^BlockTy)(void);
 

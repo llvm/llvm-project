@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
 // CHECK: call void @__kmpc_for_static_init_8(
 // CHECK-NOT: @k
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: store i32 %{{.+}}, i32* @k
+// CHECK: store i32 %{{.+}}, ptr @k
 #pragma omp for lastprivate(k) collapse(2)
   for (int i = 0; i < 2; ++i)
     for (k = 0; k < argc; k++)
@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 // CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
 // CHECK-NOT: @k{{.+}}!llvm.access.group
 // CHECK: sdiv i32
-// CHECK: store i32 %{{.+}}, i32* @k,
+// CHECK: store i32 %{{.+}}, ptr @k,
 #pragma omp simd linear(k : 2)
   for (k = 0; k < argc; k++)
     bar();
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
 // CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
 // CHECK-NOT: @k{{.+}}!llvm.access.group
 // CHECK: sdiv i32
-// CHECK: store i32 %{{.+}}, i32* @k,
+// CHECK: store i32 %{{.+}}, ptr @k,
   foo();
 #pragma omp simd lastprivate(k) collapse(2)
   for (int i = 0; i < 2; ++i)
@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
 // CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
 // CHECK-NOT: @k{{.+}}!llvm.access.group
 // CHECK: sdiv i32
-// CHECK: store i32 %{{.+}}, i32* @k,
+// CHECK: store i32 %{{.+}}, ptr @k,
 #pragma omp simd
   for (k = 0; k < argc; k++)
     bar();
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 // CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
 // CHECK-NOT: @k{{.+}}!llvm.access.group
 // CHECK: sdiv i32
-// CHECK: store i32 %{{.+}}, i32* @k,
+// CHECK: store i32 %{{.+}}, ptr @k,
 #pragma omp simd collapse(2)
   for (int i = 0; i < 2; ++i)
     for (k = 0; k < argc; k++)
@@ -90,16 +90,16 @@ struct S {
   foo();
 // CHECK: @{{.+}}foo
 // CHECK: call void @__kmpc_for_static_init_4(
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 #pragma omp for private(k)
     for (k = 0; k < argc; k++)
       ;
   foo();
 // CHECK: @{{.+}}foo
 // CHECK: call void @__kmpc_for_static_init_8(
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: call void @__kmpc_for_static_fini(
 #pragma omp for lastprivate(k) collapse(2)
     for (int i = 0; i < 2; ++i)
@@ -107,54 +107,54 @@ struct S {
         ;
   foo();
 // CHECK: @{{.+}}foo
-// CHECK: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: br i1
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: add nsw i32 %{{.+}}, 1
 // CHECK: br label {{.+}}, !llvm.loop
-// CHECK: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 #pragma omp simd linear(k : 2)
     for (k = 0; k < argc; k++)
       bar();
   foo();
 // CHECK: @{{.+}}foo
-// CHECK: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: br i1
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: add nsw i64 %{{.+}}, 1
 // CHECK: br label {{.+}}, !llvm.loop
-// CHECK: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 #pragma omp simd lastprivate(k) collapse(2)
     for (int i = 0; i < 2; ++i)
       for (k = 0; k < argc; k++)
         bar();
   foo();
 // CHECK: @{{.+}}foo
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: br i1
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: add nsw i32 %{{.+}}, 1
 // CHECK: br label {{.+}}, !llvm.loop
-// CHECK: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 #pragma omp simd
     for (k = 0; k < argc; k++)
       bar();
   foo();
 // CHECK: @{{.+}}foo
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: br i1
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
-// CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK-NOT: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 // CHECK: add nsw i64 %{{.+}}, 1
 // CHECK: br label {{.+}}, !llvm.loop
-// CHECK: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.S, ptr %{{.+}}, i32 0, i32 0
 #pragma omp simd collapse(2)
     for (int i = 0; i < 2; ++i)
       for (k = 0; k < argc; k++)

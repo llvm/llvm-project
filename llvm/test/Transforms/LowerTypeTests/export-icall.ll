@@ -1,4 +1,4 @@
-; RUN: opt -S -lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/export-icall.yaml -lowertypetests-write-summary=%t < %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/export-icall.yaml -lowertypetests-write-summary=%t %s | FileCheck %s
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -36,19 +36,19 @@ define void @f3(i32 %x) !type !8 {
 !8 = !{i64 0, !"typeid3"}
 
 
-; CHECK-DAG: @__typeid_typeid1_global_addr = hidden alias i8, bitcast (void ()* [[JT1:.*]] to i8*)
-; CHECK-DAG: @__typeid_typeid1_align = hidden alias i8, inttoptr (i8 3 to i8*)
-; CHECK-DAG: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 4 to i8*)
+; CHECK-DAG: @__typeid_typeid1_global_addr = hidden alias i8, ptr [[JT1:.*]]
+; CHECK-DAG: @__typeid_typeid1_align = hidden alias i8, inttoptr (i8 3 to ptr)
+; CHECK-DAG: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 4 to ptr)
 
-; CHECK-DAG: @h                    = alias void (i8), bitcast (void ()* [[JT1]] to void (i8)*)
-; CHECK-DAG: @f                    = alias void (i32), {{.*}}getelementptr {{.*}}void ()* [[JT1]]
-; CHECK-DAG: @f2                   = alias void (i32), {{.*}}getelementptr {{.*}}void ()* [[JT1]]
-; CHECK-DAG: @external.cfi_jt      = hidden alias void (), {{.*}}getelementptr {{.*}}void ()* [[JT1]]
-; CHECK-DAG: @external_weak.cfi_jt = hidden alias void (), {{.*}}getelementptr {{.*}}void ()* [[JT1]]
+; CHECK-DAG: @h                    = alias void (i8), ptr [[JT1]]
+; CHECK-DAG: @f                    = alias void (i32), {{.*}}getelementptr {{.*}}ptr [[JT1]]
+; CHECK-DAG: @f2                   = alias void (i32), {{.*}}getelementptr {{.*}}ptr [[JT1]]
+; CHECK-DAG: @external.cfi_jt      = hidden alias void (), {{.*}}getelementptr {{.*}}ptr [[JT1]]
+; CHECK-DAG: @external_weak.cfi_jt = hidden alias void (), {{.*}}getelementptr {{.*}}ptr [[JT1]]
 
-; CHECK-DAG: @__typeid_typeid2_global_addr = hidden alias i8, bitcast (void ()* [[JT2:.*]] to i8*)
+; CHECK-DAG: @__typeid_typeid2_global_addr = hidden alias i8, ptr [[JT2:.*]]
 
-; CHECK-DAG: @g                    = alias void (), void ()* [[JT2]]
+; CHECK-DAG: @g                    = alias void (), ptr [[JT2]]
 
 ; CHECK-DAG: define hidden void @h.cfi(i8 {{.*}}) !type !{{.*}}
 ; CHECK-DAG: declare !type !{{.*}} void @external()

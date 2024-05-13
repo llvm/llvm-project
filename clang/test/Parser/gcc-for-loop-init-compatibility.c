@@ -6,7 +6,7 @@
 // expected-no-diagnostics
 #endif
 
-void foo() {
+void foo(void) {
 #ifndef C99
   // expected-warning@+2{{GCC does not allow variable declarations in for loop initializers before C99}}
 #endif

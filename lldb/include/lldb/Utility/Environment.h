@@ -56,8 +56,8 @@ public:
   using Base::try_emplace;
   using Base::operator[];
 
-  Environment() : Base() {}
-  Environment(const Environment &RHS) : Base(RHS) {}
+  Environment() {}
+  Environment(const Environment &RHS) : Base(static_cast<const Base&>(RHS)) {}
   Environment(Environment &&RHS) : Base(std::move(RHS)) {}
   Environment(char *const *Env)
       : Environment(const_cast<const char *const *>(Env)) {}
@@ -73,7 +73,7 @@ public:
     return insert(std::make_pair(Split.first, std::string(Split.second)));
   }
 
-  void insert(const_iterator first, const_iterator last);
+  void insert(iterator first, iterator last);
 
   Envp getEnvp() const { return Envp(*this); }
 

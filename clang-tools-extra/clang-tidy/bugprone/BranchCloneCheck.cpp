@@ -1,14 +1,15 @@
 //===--- BranchCloneCheck.cpp - clang-tidy --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "BranchCloneCheck.h"
+#include "../utils/ASTUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/CloneDetection.h"
 #include "clang/Lex/Lexer.h"
@@ -16,15 +17,6 @@
 
 using namespace clang;
 using namespace clang::ast_matchers;
-
-/// Returns true when the statements are Type I clones of each other.
-static bool areStatementsIdentical(const Stmt *LHS, const Stmt *RHS,
-                                   const ASTContext &Context) {
-  llvm::FoldingSetNodeID DataLHS, DataRHS;
-  LHS->Profile(DataLHS, Context, false);
-  RHS->Profile(DataRHS, Context, false);
-  return (DataLHS == DataRHS);
-}
 
 namespace {
 /// A branch in a switch may consist of several statements; while a branch in
@@ -35,8 +27,8 @@ using SwitchBranch = llvm::SmallVector<const Stmt *, 2>;
 /// Determines if the bodies of two branches in a switch statements are Type I
 /// clones of each other. This function only examines the body of the branch
 /// and ignores the `case X:` or `default:` at the start of the branch.
-static bool areSwitchBranchesIdentical(const SwitchBranch LHS,
-                                       const SwitchBranch RHS,
+static bool areSwitchBranchesIdentical(const SwitchBranch &LHS,
+                                       const SwitchBranch &RHS,
                                        const ASTContext &Context) {
   if (LHS.size() != RHS.size())
     return false;
@@ -44,9 +36,10 @@ static bool areSwitchBranchesIdentical(const SwitchBranch LHS,
   for (size_t I = 0, Size = LHS.size(); I < Size; I++) {
     // NOTE: We strip goto labels and annotations in addition to stripping
     // the `case X:` or `default:` labels, but it is very unlikely that this
-    // would casue false positives in real-world code.
-    if (!areStatementsIdentical(LHS[I]->stripLabelLikeStatements(),
-                                RHS[I]->stripLabelLikeStatements(), Context)) {
+    // would cause false positives in real-world code.
+    if (!tidy::utils::areStatementsIdentical(LHS[I]->stripLabelLikeStatements(),
+                                             RHS[I]->stripLabelLikeStatements(),
+                                             Context)) {
       return false;
     }
   }
@@ -54,9 +47,51 @@ static bool areSwitchBranchesIdentical(const SwitchBranch LHS,
   return true;
 }
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
+  struct SwitchCaseVisitor : RecursiveASTVisitor<SwitchCaseVisitor> {
+    using RecursiveASTVisitor<SwitchCaseVisitor>::DataRecursionQueue;
+
+    bool TraverseLambdaExpr(LambdaExpr *, DataRecursionQueue * = nullptr) {
+      return true; // Ignore lambdas
+    }
+
+    bool TraverseDecl(Decl *) {
+      return true; // No need to check declarations
+    }
+
+    bool TraverseSwitchStmt(SwitchStmt *, DataRecursionQueue * = nullptr) {
+      return true; // Ignore sub-switches
+    }
+
+    bool TraverseSwitchCase(SwitchCase *, DataRecursionQueue * = nullptr) {
+      return true; // Ignore cases
+    }
+
+    bool TraverseDefaultStmt(DefaultStmt *, DataRecursionQueue * = nullptr) {
+      return true; // Ignore defaults
+    }
+
+    bool TraverseAttributedStmt(AttributedStmt *S) {
+      if (!S)
+        return true;
+
+      for (const Attr *A : S->getAttrs()) {
+        if (isa<FallThroughAttr>(A))
+          return false;
+      }
+
+      return true;
+    }
+  } Visitor;
+
+  for (const Stmt *Elem : Branch) {
+    if (!Visitor.TraverseStmt(const_cast<Stmt *>(Elem)))
+      return true;
+  }
+  return false;
+}
+
+namespace clang::tidy::bugprone {
 
 void BranchCloneCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -81,8 +116,8 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (!isa<IfStmt>(Else)) {
       // Just a simple if with no `else if` branch.
-      if (areStatementsIdentical(Then->IgnoreContainers(),
-                                 Else->IgnoreContainers(), Context)) {
+      if (utils::areStatementsIdentical(Then->IgnoreContainers(),
+                                        Else->IgnoreContainers(), Context)) {
         diag(IS->getBeginLoc(), "if with identical then and else branches");
         diag(IS->getElseLoc(), "else branch starts here", DiagnosticIDs::Note);
       }
@@ -122,9 +157,9 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
       int NumCopies = 1;
 
       for (size_t J = I + 1; J < N; J++) {
-        if (KnownAsClone[J] ||
-            !areStatementsIdentical(Branches[I]->IgnoreContainers(),
-                                    Branches[J]->IgnoreContainers(), Context))
+        if (KnownAsClone[J] || !utils::areStatementsIdentical(
+                                   Branches[I]->IgnoreContainers(),
+                                   Branches[J]->IgnoreContainers(), Context))
           continue;
 
         NumCopies++;
@@ -133,7 +168,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         if (NumCopies == 2) {
           // We report the first occurrence only when we find the second one.
           diag(Branches[I]->getBeginLoc(),
-               "repeated branch in conditional chain");
+               "repeated branch body in conditional chain");
           SourceLocation End =
               Lexer::getLocForEndOfToken(Branches[I]->getEndLoc(), 0,
                                          *Result.SourceManager, getLangOpts());
@@ -152,7 +187,8 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *CO = Result.Nodes.getNodeAs<ConditionalOperator>("condOp")) {
     // We do not try to detect chains of ?: operators.
-    if (areStatementsIdentical(CO->getTrueExpr(), CO->getFalseExpr(), Context))
+    if (utils::areStatementsIdentical(CO->getTrueExpr(), CO->getFalseExpr(),
+                                      Context))
       diag(CO->getQuestionLoc(),
            "conditional operator with identical true and false expressions");
 
@@ -160,7 +196,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *SS = Result.Nodes.getNodeAs<SwitchStmt>("switch")) {
-    const CompoundStmt *Body = dyn_cast_or_null<CompoundStmt>(SS->getBody());
+    const auto *Body = dyn_cast_or_null<CompoundStmt>(SS->getBody());
 
     // Code like
     //   switch (x) case 0: case 1: foobar();
@@ -188,37 +224,45 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         Branches.back().push_back(S);
     }
 
-    auto End = Branches.end();
-    auto BeginCurrent = Branches.begin();
+    auto *End = Branches.end();
+    auto *BeginCurrent = Branches.begin();
     while (BeginCurrent < End) {
-      auto EndCurrent = BeginCurrent + 1;
+      if (isFallthroughSwitchBranch(*BeginCurrent)) {
+        ++BeginCurrent;
+        continue;
+      }
+
+      auto *EndCurrent = BeginCurrent + 1;
       while (EndCurrent < End &&
              areSwitchBranchesIdentical(*BeginCurrent, *EndCurrent, Context)) {
         ++EndCurrent;
       }
       // At this point the iterator range {BeginCurrent, EndCurrent} contains a
       // complete family of consecutive identical branches.
-      if (EndCurrent > BeginCurrent + 1) {
-        diag(BeginCurrent->front()->getBeginLoc(),
-             "switch has %0 consecutive identical branches")
-            << static_cast<int>(std::distance(BeginCurrent, EndCurrent));
 
-        SourceLocation EndLoc = (EndCurrent - 1)->back()->getEndLoc();
-        // If the case statement is generated from a macro, it's SourceLocation
-        // may be invalid, resulting in an assertion failure down the line.
-        // While not optimal, try the begin location in this case, it's still
-        // better then nothing.
-        if (EndLoc.isInvalid())
-          EndLoc = (EndCurrent - 1)->back()->getBeginLoc();
+      if (EndCurrent == (BeginCurrent + 1)) {
+        // No consecutive identical branches that start on BeginCurrent
+        BeginCurrent = EndCurrent;
+        continue;
+      }
 
-        if (EndLoc.isMacroID())
-          EndLoc = Context.getSourceManager().getExpansionLoc(EndLoc);
-        EndLoc = Lexer::getLocForEndOfToken(EndLoc, 0, *Result.SourceManager,
-                                            getLangOpts());
+      diag(BeginCurrent->front()->getBeginLoc(),
+           "switch has %0 consecutive identical branches")
+          << static_cast<int>(std::distance(BeginCurrent, EndCurrent));
 
-        if (EndLoc.isValid()) {
-          diag(EndLoc, "last of these clones ends here", DiagnosticIDs::Note);
-        }
+      SourceLocation EndLoc = (EndCurrent - 1)->back()->getEndLoc();
+      // If the case statement is generated from a macro, it's SourceLocation
+      // may be invalid, resulting in an assertion failure down the line.
+      // While not optimal, try the begin location in this case, it's still
+      // better then nothing.
+      if (EndLoc.isInvalid())
+        EndLoc = (EndCurrent - 1)->back()->getBeginLoc();
+      if (EndLoc.isMacroID())
+        EndLoc = Context.getSourceManager().getExpansionLoc(EndLoc);
+      EndLoc = Lexer::getLocForEndOfToken(EndLoc, 0, *Result.SourceManager,
+                                          getLangOpts());
+      if (EndLoc.isValid()) {
+        diag(EndLoc, "last of these clones ends here", DiagnosticIDs::Note);
       }
       BeginCurrent = EndCurrent;
     }
@@ -228,6 +272,4 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
   llvm_unreachable("No if statement and no switch statement.");
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

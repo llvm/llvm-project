@@ -17,7 +17,7 @@
 #include <cassert>
 
 // Flag that makes the copy constructor for CMyClass throw an exception
-static bool gCopyConstructorShouldThow = false;
+static bool gCopyConstructorShouldThrow = false;
 
 class CMyClass {
     public: CMyClass(int tag);
@@ -51,8 +51,8 @@ CMyClass::CMyClass(const CMyClass& iOther) :
     fMagicValue(kStartedConstructionMagicValue), fTag(iOther.fTag)
 {
     // If requested, throw an exception _before_ setting fMagicValue to kFinishedConstructionMagicValue
-    if (gCopyConstructorShouldThow) {
-        throw std::exception();
+    if (gCopyConstructorShouldThrow) {
+      throw std::exception();
     }
     // Signal that the constructor has finished running
     fMagicValue = kFinishedConstructionMagicValue;
@@ -74,23 +74,24 @@ int main(int, char**)
     vec.push_back(instance);
     std::deque<CMyClass> vec2(vec);
 
-    gCopyConstructorShouldThow = true;
+    gCopyConstructorShouldThrow = true;
     try {
         vec.push_back(instance);
         assert(false);
     }
     catch (...) {
-        gCopyConstructorShouldThow = false;
-        assert(vec==vec2);
+      gCopyConstructorShouldThrow = false;
+      assert(vec == vec2);
     }
     }
 
     {
+    test_allocator_statistics alloc_stats;
     typedef std::deque<CMyClass, test_allocator<CMyClass> > C;
-    C vec;
-    C vec2(vec);
+    C vec((test_allocator<CMyClass>(&alloc_stats)));
+    C vec2(vec, test_allocator<CMyClass>(&alloc_stats));
 
-    C::allocator_type::throw_after = 1;
+    alloc_stats.throw_after = 1;
     try {
         vec.push_back(instance);
         assert(false);

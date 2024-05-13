@@ -17,6 +17,10 @@
 // hardware type maps to Fortran intrinsic type T. Then HostType<T> can be used
 // to safely refer to this hardware type.
 
+#if HAS_QUADMATHLIB
+#include "quadmath.h"
+#include "flang/Common/float128.h"
+#endif
 #include "flang/Evaluate/type.h"
 #include <cfenv>
 #include <complex>
@@ -80,22 +84,27 @@ inline constexpr Scalar<FTN_T> CastHostToFortran(const HostType<FTN_T> &x) {
   }
 }
 
-// Scalar conversion utilities from  F18 scalars to host scalars
+// Scalar conversion utilities from F18 scalars to host scalars.
 template <typename FTN_T>
 inline constexpr HostType<FTN_T> CastFortranToHost(const Scalar<FTN_T> &x) {
   static_assert(HostTypeExists<FTN_T>());
-  if constexpr (FTN_T::category == TypeCategory::Complex &&
-      sizeof(Scalar<FTN_T>) != sizeof(HostType<FTN_T>)) {
-    // X87 is usually padded to 12 or 16bytes. Need to cast piecewise for
-    // complex
-    return HostType<FTN_T>{CastFortranToHost<typename FTN_T::Part>(x.REAL()),
-        CastFortranToHost<typename FTN_T::Part>(x.AIMAG())};
+  if constexpr (FTN_T::category == TypeCategory::Complex) {
+    using FortranPartType = typename FTN_T::Part;
+    return HostType<FTN_T>{CastFortranToHost<FortranPartType>(x.REAL()),
+        CastFortranToHost<FortranPartType>(x.AIMAG())};
+  } else if constexpr (std::is_same_v<FTN_T, Type<TypeCategory::Real, 10>>) {
+    // x87 80-bit floating-point occupies 16 bytes as a C "long double";
+    // copy the data to avoid a legitimate (but benign due to little-endianness)
+    // warning from GCC >= 11.2.0.
+    HostType<FTN_T> y;
+    std::memcpy(&y, &x, sizeof x);
+    return y;
   } else {
+    static_assert(sizeof x == sizeof(HostType<FTN_T>));
     return *reinterpret_cast<const HostType<FTN_T> *>(&x);
   }
 }
 
-// Defining the actual mapping
 template <> struct HostTypeHelper<Type<TypeCategory::Integer, 1>> {
   using Type = std::int8_t;
 };
@@ -151,21 +160,33 @@ struct HostTypeHelper<
       long double, UnsupportedType>;
 };
 
-template <>
-struct HostTypeHelper<
-    Type<TypeCategory::Real, common::RealKindForPrecision(113)>> {
+#if HAS_QUADMATHLIB
+template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
+  // IEEE 754 128bits
+  using Type = __float128;
+};
+#else
+template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
   // IEEE 754 128bits
   using Type = std::conditional_t<sizeof(long double) == 16 &&
           std::numeric_limits<long double>::digits == 113 &&
           std::numeric_limits<long double>::max_exponent == 16384,
       long double, UnsupportedType>;
 };
+#endif
 
 template <int KIND> struct HostTypeHelper<Type<TypeCategory::Complex, KIND>> {
   using RealT = Fortran::evaluate::Type<TypeCategory::Real, KIND>;
   using Type = std::conditional_t<HostTypeExists<RealT>(),
       std::complex<HostType<RealT>>, UnsupportedType>;
 };
+
+#if HAS_QUADMATHLIB
+template <> struct HostTypeHelper<Type<TypeCategory::Complex, 16>> {
+  using RealT = Fortran::evaluate::Type<TypeCategory::Real, 16>;
+  using Type = __complex128;
+};
+#endif
 
 template <int KIND> struct HostTypeHelper<Type<TypeCategory::Logical, KIND>> {
   using Type = std::conditional_t<KIND <= 8, std::uint8_t, UnsupportedType>;

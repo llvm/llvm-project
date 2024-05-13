@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print -trace-hex-vector-stores-only < %s | FileCheck --check-prefix=VSTPRINT %s
+; RUN: llc -no-integrated-as -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -no-integrated-as -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print -trace-hex-vector-stores-only < %s | FileCheck --check-prefix=VSTPRINT %s
 ;   generate .long XXXX which is a vector debug print instruction.
 ; CHECK: .long 0x1dffe0
 ; CHECK: .long 0x1dffe0
@@ -10,15 +10,12 @@ target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define void @do_vecs(i8* nocapture readonly %a, i8* nocapture readonly %b, i8* nocapture %c) #0 {
+define void @do_vecs(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %c) #0 {
 entry:
-  %0 = bitcast i8* %a to <16 x i32>*
-  %1 = load <16 x i32>, <16 x i32>* %0, align 4, !tbaa !1
-  %2 = bitcast i8* %b to <16 x i32>*
-  %3 = load <16 x i32>, <16 x i32>* %2, align 4, !tbaa !1
-  %4 = tail call <16 x i32> @llvm.hexagon.V6.vaddw(<16 x i32> %1, <16 x i32> %3)
-  %5 = bitcast i8* %c to <16 x i32>*
-  store <16 x i32> %4, <16 x i32>* %5, align 4, !tbaa !1
+  %0 = load <16 x i32>, ptr %a, align 4, !tbaa !1
+  %1 = load <16 x i32>, ptr %b, align 4, !tbaa !1
+  %2 = tail call <16 x i32> @llvm.hexagon.V6.vaddw(<16 x i32> %0, <16 x i32> %1)
+  store <16 x i32> %2, ptr %c, align 4, !tbaa !1
   ret void
 }
 

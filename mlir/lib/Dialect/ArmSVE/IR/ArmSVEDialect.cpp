@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
@@ -20,57 +20,36 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
-
-static Type getI1SameShape(Type type);
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/ArmSVE/ArmSVE.cpp.inc"
-
-#define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/ArmSVE/ArmSVETypes.cpp.inc"
-
-void arm_sve::ArmSVEDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/ArmSVE/ArmSVE.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/ArmSVE/ArmSVETypes.cpp.inc"
-      >();
-}
-
-//===----------------------------------------------------------------------===//
-// ScalableVectorType
-//===----------------------------------------------------------------------===//
-
-Type arm_sve::ArmSVEDialect::parseType(DialectAsmParser &parser) const {
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
-  {
-    Type genType;
-    auto parseResult = generatedTypeParser(parser.getBuilder().getContext(),
-                                           parser, "vector", genType);
-    if (parseResult.hasValue())
-      return genType;
-  }
-  parser.emitError(typeLoc, "unknown type in ArmSVE dialect");
-  return Type();
-}
-
-void arm_sve::ArmSVEDialect::printType(Type type, DialectAsmPrinter &os) const {
-  if (failed(generatedTypePrinter(type, os)))
-    llvm_unreachable("unexpected 'arm_sve' type kind");
-}
+using namespace mlir::arm_sve;
 
 //===----------------------------------------------------------------------===//
 // ScalableVector versions of general helpers for comparison ops
 //===----------------------------------------------------------------------===//
 
-// Return the scalable vector of the same shape and containing i1.
+/// Return the scalable vector of the same shape and containing i1.
 static Type getI1SameShape(Type type) {
   auto i1Type = IntegerType::get(type.getContext(), 1);
-  if (auto sVectorType = type.dyn_cast<arm_sve::ScalableVectorType>())
-    return arm_sve::ScalableVectorType::get(type.getContext(),
-                                            sVectorType.getShape(), i1Type);
+  if (auto sVectorType = llvm::dyn_cast<VectorType>(type))
+    return VectorType::get(sVectorType.getShape(), i1Type,
+                           sVectorType.getScalableDims());
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Tablegen Definitions
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.cpp.inc"
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/ArmSVE/IR/ArmSVE.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/ArmSVE/IR/ArmSVETypes.cpp.inc"
+
+void ArmSVEDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/ArmSVE/IR/ArmSVE.cpp.inc"
+      >();
 }

@@ -11,7 +11,7 @@
 
 ; Function Attrs: norecurse nounwind readonly
 define dso_local i32 @test() local_unnamed_addr #0 {
-  %1 = load i32, i32* @g, align 4, !tbaa !2
+  %1 = load i32, ptr @g, align 4, !tbaa !2
   ret i32 %1
 }
 

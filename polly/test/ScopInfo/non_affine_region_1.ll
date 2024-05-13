@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Verify only the incoming scalar x is modeled as a read in the non-affine
 ; region.
@@ -55,7 +55,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32 %b) {
+define void @f(ptr %A, i32 %b) {
 bb:
   br label %bb1
 
@@ -85,15 +85,15 @@ bb8:                                              ; preds = %bb4
 bb10:                                             ; preds = %bb9, %bb3
   %x.1 = phi i32 [ 0, %bb3 ], [ 3, %bb7 ], [ %b, %bb8 ]
   %tmp11 = sext i32 %x.1 to i64
-  %tmp12 = getelementptr inbounds i32, i32* %A, i64 %tmp11
-  %tmp13 = load i32,  i32* %tmp12, align 4
+  %tmp12 = getelementptr inbounds i32, ptr %A, i64 %tmp11
+  %tmp13 = load i32,  ptr %tmp12, align 4
   %tmp14 = icmp eq i32 %tmp13, 0
   br i1 %tmp14, label %bb18, label %bb15
 
 bb15:                                             ; preds = %bb10
   %tmp16 = sext i32 %x.1 to i64
-  %tmp17 = getelementptr inbounds i32, i32* %A, i64 %tmp16
-  store i32 0, i32* %tmp17, align 4
+  %tmp17 = getelementptr inbounds i32, ptr %A, i64 %tmp16
+  store i32 0, ptr %tmp17, align 4
   br label %bb18
 
 bb18:                                             ; preds = %bb10, %bb15

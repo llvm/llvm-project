@@ -61,16 +61,16 @@ bb22:                                             ; preds = %bb24.preheader
   br i1 undef, label %bb2.i.i, label %bb.i.i49
 
 bb.i.i49:                                         ; preds = %bb22
-  %0 = load float, float* undef, align 4                 ; <float> [#uses=1]
+  %0 = load float, ptr undef, align 4                 ; <float> [#uses=1]
   %1 = insertelement <4 x float> undef, float %0, i32 0 ; <<4 x float>> [#uses=1]
   %2 = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> <float 1.000000e+00, float undef, float undef, float undef>, <4 x float> %1) nounwind readnone ; <<4 x float>> [#uses=1]
   %3 = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %2, <4 x float> <float 0.000000e+00, float undef, float undef, float undef>) nounwind readnone ; <<4 x float>> [#uses=1]
   %4 = extractelement <4 x float> %3, i32 0       ; <float> [#uses=1]
-  store float %4, float* undef, align 4
+  store float %4, ptr undef, align 4
   %5 = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> <float 1.000000e+00, float undef, float undef, float undef>, <4 x float> undef) nounwind readnone ; <<4 x float>> [#uses=1]
   %6 = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %5, <4 x float> <float 0.000000e+00, float undef, float undef, float undef>) nounwind readnone ; <<4 x float>> [#uses=1]
   %7 = extractelement <4 x float> %6, i32 0       ; <float> [#uses=1]
-  store float %7, float* undef, align 4
+  store float %7, ptr undef, align 4
   unreachable
 
 bb2.i.i:                                          ; preds = %bb22

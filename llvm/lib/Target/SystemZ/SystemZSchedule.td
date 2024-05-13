@@ -53,12 +53,14 @@ foreach Num = ["", "2", "3", "4", "5", "6"] in {
   def "DFU"#Num : SchedWrite;
 }
 
-def VecFPd : SchedWrite; // Blocking BFP div/sqrt unit.
+def VecFPd   : SchedWrite; // Blocking BFP div/sqrt unit (30 cycles).
+def VecFPd20 : SchedWrite; // Blocking BFP div/sqrt unit, 20 cycles.
 
 def VBU : SchedWrite; // Virtual branching unit
 
 def MCD : SchedWrite; // Millicode
 
+include "SystemZScheduleZ16.td"
 include "SystemZScheduleZ15.td"
 include "SystemZScheduleZ14.td"
 include "SystemZScheduleZ13.td"

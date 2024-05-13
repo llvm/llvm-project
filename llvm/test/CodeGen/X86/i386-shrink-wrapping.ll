@@ -20,8 +20,6 @@ target triple = "i386-apple-macosx10.5"
 define i32 @eflagsLiveInPrologue() #0 {
 ; ENABLE-LABEL: eflagsLiveInPrologue:
 ; ENABLE:       ## %bb.0: ## %entry
-; ENABLE-NEXT:    pushl %esi
-; ENABLE-NEXT:    subl $8, %esp
 ; ENABLE-NEXT:    movl L_a$non_lazy_ptr, %eax
 ; ENABLE-NEXT:    cmpl $0, (%eax)
 ; ENABLE-NEXT:    je LBB0_2
@@ -37,6 +35,8 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    jmp LBB0_3
 ; ENABLE-NEXT:  LBB0_4: ## %for.end
+; ENABLE-NEXT:    pushl %esi
+; ENABLE-NEXT:    subl $8, %esp
 ; ENABLE-NEXT:    xorl %edx, %edx
 ; ENABLE-NEXT:    cmpb $0, _d
 ; ENABLE-NEXT:    movl $6, %ecx
@@ -94,16 +94,16 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; DISABLE-NEXT:    popl %esi
 ; DISABLE-NEXT:    retl
 entry:
-  %tmp = load i32, i32* @a, align 4
+  %tmp = load i32, ptr @a, align 4
   %tobool = icmp eq i32 %tmp, 0
   br i1 %tobool, label %for.cond.preheader, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i1 true, i1* @d, align 1
+  store i1 true, ptr @d, align 1
   br label %for.cond.preheader
 
 for.cond.preheader:                               ; preds = %if.then, %entry
-  %tmp1 = load i32, i32* @b, align 4
+  %tmp1 = load i32, ptr @b, align 4
   %tobool14 = icmp eq i32 %tmp1, 0
   br i1 %tobool14, label %for.end, label %for.body.preheader
 
@@ -114,21 +114,21 @@ for.body:                                         ; preds = %for.body, %for.body
   br label %for.body
 
 for.end:                                          ; preds = %for.cond.preheader
-  %.b3 = load i1, i1* @d, align 1
+  %.b3 = load i1, ptr @d, align 1
   %tmp2 = select i1 %.b3, i8 0, i8 6
-  store i8 %tmp2, i8* @e, align 1
-  %tmp3 = load i8, i8* @e, align 1
+  store i8 %tmp2, ptr @e, align 1
+  %tmp3 = load i8, ptr @e, align 1
   %conv = sext i8 %tmp3 to i32
   %add = add nsw i32 %conv, 1
   %rem = srem i32 %tmp1, %add
-  store i32 %rem, i32* @c, align 4
+  store i32 %rem, ptr @c, align 4
   %conv2 = select i1 %.b3, i32 0, i32 6
-  %call = tail call i32 (i8*, ...) @varfunc(i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %conv2) #1
+  %call = tail call i32 (ptr, ...) @varfunc(ptr nonnull @.str, i32 %conv2) #1
   ret i32 0
 }
 
 ; Function Attrs: nounwind
-declare i32 @varfunc(i8* nocapture readonly, ...) #0
+declare i32 @varfunc(ptr nocapture readonly, ...) #0
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind }

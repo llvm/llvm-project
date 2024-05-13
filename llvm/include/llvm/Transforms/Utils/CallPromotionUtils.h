@@ -19,6 +19,7 @@ class CallBase;
 class CastInst;
 class Function;
 class MDNode;
+class Value;
 
 /// Return true if the given indirect call site can be made to call \p Callee.
 ///
@@ -72,6 +73,15 @@ CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
 ///     i8* bitcast (void (%class.Impl*)* @_ZN4Impl3RunEv to i8*)] }
 ///
 bool tryPromoteCall(CallBase &CB);
+
+/// Predicate and clone the given call site.
+///
+/// This function creates an if-then-else structure at the location of the call
+/// site. The "if" condition compares the call site's called value to the given
+/// callee. The original call site is moved into the "else" block, and a clone
+/// of the call site is placed in the "then" block. The cloned instruction is
+/// returned.
+CallBase &versionCallSite(CallBase &CB, Value *Callee, MDNode *BranchWeights);
 
 } // end namespace llvm
 

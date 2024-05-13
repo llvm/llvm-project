@@ -9,6 +9,7 @@
 #ifndef FORTRAN_EVALUATE_COMMON_H_
 #define FORTRAN_EVALUATE_COMMON_H_
 
+#include "flang/Common/Fortran-features.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Common/enum-set.h"
@@ -19,6 +20,8 @@
 #include "flang/Parser/message.h"
 #include <cinttypes>
 #include <map>
+#include <set>
+#include <string>
 
 namespace Fortran::semantics {
 class DerivedTypeSpec;
@@ -26,6 +29,7 @@ class DerivedTypeSpec;
 
 namespace Fortran::evaluate {
 class IntrinsicProcTable;
+class TargetCharacteristics;
 
 using common::ConstantSubscript;
 using common::RelationalOperator;
@@ -37,6 +41,26 @@ ENUM_CLASS(Relation, Less, Equal, Greater, Unordered)
 template <typename A>
 static constexpr Ordering Compare(const A &x, const A &y) {
   if (x < y) {
+    return Ordering::Less;
+  } else if (x > y) {
+    return Ordering::Greater;
+  } else {
+    return Ordering::Equal;
+  }
+}
+
+template <typename CH>
+static constexpr Ordering Compare(
+    const std::basic_string<CH> &x, const std::basic_string<CH> &y) {
+  std::size_t xLen{x.size()}, yLen{y.size()};
+  using String = std::basic_string<CH>;
+  // Fortran CHARACTER comparison is defined with blank padding
+  // to extend a shorter operand.
+  if (xLen < yLen) {
+    return Compare(String{x}.append(yLen - xLen, CH{' '}), y);
+  } else if (xLen > yLen) {
+    return Compare(x, String{y}.append(xLen - yLen, CH{' '}));
+  } else if (x < y) {
     return Ordering::Less;
   } else if (x > y) {
     return Ordering::Greater;
@@ -99,7 +123,7 @@ static constexpr bool Satisfies(RelationalOperator op, Relation relation) {
   case Relation::Greater:
     return Satisfies(op, Ordering::Greater);
   case Relation::Unordered:
-    return false;
+    return op == RelationalOperator::NE;
   }
   return false; // silence g++ warning
 }
@@ -118,24 +142,9 @@ template <typename A> struct ValueWithRealFlags {
   RealFlags flags{};
 };
 
-struct Rounding {
-  common::RoundingMode mode{common::RoundingMode::TiesToEven};
-  // When set, emulate status flag behavior peculiar to x86
-  // (viz., fail to set the Underflow flag when an inexact product of a
-  // multiplication is rounded up to a normal number from a subnormal
-  // in some rounding modes)
-#if __x86_64__
-  bool x86CompatibleBehavior{true};
-#else
-  bool x86CompatibleBehavior{false};
-#endif
-};
-
-static constexpr Rounding defaultRounding;
-
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if FLANG_BIG_ENDIAN
 constexpr bool isHostLittleEndian{false};
-#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#elif FLANG_LITTLE_ENDIAN
 constexpr bool isHostLittleEndian{true};
 #else
 #error host endianness is not known
@@ -207,37 +216,53 @@ template <typename A> class Expr;
 
 class FoldingContext {
 public:
-  FoldingContext(
-      const common::IntrinsicTypeDefaultKinds &d, const IntrinsicProcTable &t)
-      : defaults_{d}, intrinsics_{t} {}
+  FoldingContext(const common::IntrinsicTypeDefaultKinds &d,
+      const IntrinsicProcTable &t, const TargetCharacteristics &c,
+      const common::LanguageFeatureControl &lfc,
+      std::set<std::string> &tempNames)
+      : defaults_{d}, intrinsics_{t}, targetCharacteristics_{c},
+        languageFeatures_{lfc}, tempNames_{tempNames} {}
   FoldingContext(const parser::ContextualMessages &m,
       const common::IntrinsicTypeDefaultKinds &d, const IntrinsicProcTable &t,
-      Rounding round = defaultRounding, bool flush = false)
-      : messages_{m}, defaults_{d}, intrinsics_{t}, rounding_{round},
-        flushSubnormalsToZero_{flush} {}
+      const TargetCharacteristics &c, const common::LanguageFeatureControl &lfc,
+      std::set<std::string> &tempNames)
+      : messages_{m}, defaults_{d}, intrinsics_{t}, targetCharacteristics_{c},
+        languageFeatures_{lfc}, tempNames_{tempNames} {}
   FoldingContext(const FoldingContext &that)
       : messages_{that.messages_}, defaults_{that.defaults_},
-        intrinsics_{that.intrinsics_}, rounding_{that.rounding_},
-        flushSubnormalsToZero_{that.flushSubnormalsToZero_},
-        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
+        intrinsics_{that.intrinsics_},
+        targetCharacteristics_{that.targetCharacteristics_},
+        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_},
+        languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_} {
+  }
   FoldingContext(
       const FoldingContext &that, const parser::ContextualMessages &m)
-      : messages_{m}, defaults_{that.defaults_},
-        intrinsics_{that.intrinsics_}, rounding_{that.rounding_},
-        flushSubnormalsToZero_{that.flushSubnormalsToZero_},
-        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
+      : messages_{m}, defaults_{that.defaults_}, intrinsics_{that.intrinsics_},
+        targetCharacteristics_{that.targetCharacteristics_},
+        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_},
+        languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_} {
+  }
 
   parser::ContextualMessages &messages() { return messages_; }
   const parser::ContextualMessages &messages() const { return messages_; }
   const common::IntrinsicTypeDefaultKinds &defaults() const {
     return defaults_;
   }
-  Rounding rounding() const { return rounding_; }
-  bool flushSubnormalsToZero() const { return flushSubnormalsToZero_; }
-  bool bigEndian() const { return bigEndian_; }
-  std::size_t maxAlignment() const { return maxAlignment_; }
   const semantics::DerivedTypeSpec *pdtInstance() const { return pdtInstance_; }
   const IntrinsicProcTable &intrinsics() const { return intrinsics_; }
+  const TargetCharacteristics &targetCharacteristics() const {
+    return targetCharacteristics_;
+  }
+  const common::LanguageFeatureControl &languageFeatures() const {
+    return languageFeatures_;
+  }
+  std::optional<parser::CharBlock> moduleFileName() const {
+    return moduleFileName_;
+  }
+  FoldingContext &set_moduleFileName(std::optional<parser::CharBlock> n) {
+    moduleFileName_ = n;
+    return *this;
+  }
 
   ConstantSubscript &StartImpliedDo(parser::CharBlock, ConstantSubscript = 1);
   std::optional<ConstantSubscript> GetImpliedDo(parser::CharBlock) const;
@@ -251,17 +276,24 @@ public:
       const semantics::DerivedTypeSpec &spec) {
     return common::ScopedSet(pdtInstance_, &spec);
   }
+  common::Restorer<const semantics::DerivedTypeSpec *> WithoutPDTInstance() {
+    return common::ScopedSet(pdtInstance_, nullptr);
+  }
+
+  parser::CharBlock SaveTempName(std::string &&name) {
+    return {*tempNames_.emplace(std::move(name)).first};
+  }
 
 private:
   parser::ContextualMessages messages_;
   const common::IntrinsicTypeDefaultKinds &defaults_;
   const IntrinsicProcTable &intrinsics_;
-  Rounding rounding_{defaultRounding};
-  bool flushSubnormalsToZero_{false};
-  static constexpr bool bigEndian_{false}; // TODO: configure for target
-  static constexpr std::size_t maxAlignment_{8}; // TODO: configure for target
+  const TargetCharacteristics &targetCharacteristics_;
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
+  std::optional<parser::CharBlock> moduleFileName_;
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
+  const common::LanguageFeatureControl &languageFeatures_;
+  std::set<std::string> &tempNames_;
 };
 
 void RealFlagWarnings(FoldingContext &, const RealFlags &, const char *op);

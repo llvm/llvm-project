@@ -32,12 +32,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "windows"; }
 
-  static const char *GetPluginDescriptionStatic();
-
-  // Constructors and destructors
-  ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   ~ProcessWindows();
 
@@ -45,9 +42,7 @@ public:
   size_t GetSTDERR(char *buf, size_t buf_size, Status &error) override;
   size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
 
-  // lldb_private::Process overrides
-  ConstString GetPluginName() override;
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
@@ -73,6 +68,8 @@ public:
                           ThreadList &new_thread_list) override;
   bool IsAlive() override;
 
+  ArchSpec GetSystemArchitecture() override;
+
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override;
   size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
@@ -80,8 +77,6 @@ public:
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
                                 Status &error) override;
   Status DoDeallocateMemory(lldb::addr_t ptr) override;
-  Status GetMemoryRegionInfo(lldb::addr_t vm_addr,
-                             MemoryRegionInfo &info) override;
 
   lldb::addr_t GetImageInfoAddress() override;
 
@@ -100,10 +95,17 @@ public:
   void OnDebugString(const std::string &string) override;
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
-  Status GetWatchpointSupportInfo(uint32_t &num) override;
-  Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
-  Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
-  Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  std::optional<uint32_t> GetWatchpointSlotCount() override;
+  Status EnableWatchpoint(lldb::WatchpointSP wp_sp,
+                          bool notify = true) override;
+  Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
+                           bool notify = true) override;
+
+protected:
+  ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+
+  Status DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
+                               MemoryRegionInfo &info) override;
 
 private:
   struct WatchpointInfo {

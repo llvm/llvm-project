@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -inline | FileCheck %s
+; RUN: opt < %s -S -passes=inline | FileCheck %s
 ; RUN: opt < %s -S -passes='cgscc(inline)' | FileCheck %s
 ;
 ; The purpose of this test is to check that inline pass preserves debug info
@@ -14,7 +14,7 @@
 ;;    return x;
 ;; }
 ;;
-;; void bar(float *dst)
+;; void bar(ptr dst)
 ;; {
 ;;    dst[0] = foo(dst[0]);
 ;; }
@@ -27,9 +27,9 @@ target triple = "i686-pc-windows-msvc"
 define float @foo(float %x) #0 !dbg !4 {
 entry:
   %x.addr = alloca float, align 4
-  store float %x, float* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata float* %x.addr, metadata !16, metadata !17), !dbg !18
-  %0 = load float, float* %x.addr, align 4, !dbg !19
+  store float %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !16, metadata !17), !dbg !18
+  %0 = load float, ptr %x.addr, align 4, !dbg !19
   ret float %0, !dbg !19
 }
 
@@ -39,26 +39,24 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 ; CHECK: define void @bar
 
 ; Function Attrs: nounwind
-define void @bar(float* %dst) #0 !dbg !9 {
+define void @bar(ptr %dst) #0 !dbg !9 {
 entry:
 
 ; CHECK: [[x_addr_i:%.+]] = alloca float, align 4
-; CHECK: store float {{.*}}, float* [[x_addr_i]]
-; CHECK-NEXT: void @llvm.dbg.declare(metadata float* [[x_addr_i]], metadata [[m23:![0-9]+]], metadata !DIExpression()), !dbg [[m24:![0-9]+]]
+; CHECK: store float {{.*}}, ptr [[x_addr_i]]
+; CHECK-NEXT: void @llvm.dbg.declare(metadata ptr [[x_addr_i]], metadata [[m23:![0-9]+]], metadata !DIExpression()), !dbg [[m24:![0-9]+]]
 
-  %dst.addr = alloca float*, align 4
-  store float* %dst, float** %dst.addr, align 4
-  call void @llvm.dbg.declare(metadata float** %dst.addr, metadata !20, metadata !17), !dbg !21
-  %0 = load float*, float** %dst.addr, align 4, !dbg !22
-  %arrayidx = getelementptr inbounds float, float* %0, i32 0, !dbg !22
-  %1 = load float, float* %arrayidx, align 4, !dbg !22
+  %dst.addr = alloca ptr, align 4
+  store ptr %dst, ptr %dst.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %dst.addr, metadata !20, metadata !17), !dbg !21
+  %0 = load ptr, ptr %dst.addr, align 4, !dbg !22
+  %1 = load float, ptr %0, align 4, !dbg !22
   %call = call float @foo(float %1), !dbg !22
 
 ; CHECK-NOT: call float @foo
 
-  %2 = load float*, float** %dst.addr, align 4, !dbg !22
-  %arrayidx1 = getelementptr inbounds float, float* %2, i32 0, !dbg !22
-  store float %call, float* %arrayidx1, align 4, !dbg !22
+  %2 = load ptr, ptr %dst.addr, align 4, !dbg !22
+  store float %call, ptr %2, align 4, !dbg !22
   ret void, !dbg !23
 }
 

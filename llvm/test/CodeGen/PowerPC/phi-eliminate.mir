@@ -2,15 +2,15 @@
 # RUN:   -run-pass=livevars,phi-node-elimination | FileCheck %s
 
 --- |
-  define void @phi_eliminate(i32 %0, i32 %1, i8* %2) {
-    %scevgep3 = getelementptr i8, i8* %2, i64 undef
+  define void @phi_eliminate(i32 %0, i32 %1, ptr %2) {
+    %scevgep3 = getelementptr i8, ptr %2, i64 undef
     call void @llvm.set.loop.iterations.i64(i64 undef)
     br label %4
 
   4:                                                ; preds = %4, %3
     %5 = phi i32 [ %8, %4 ], [ %0, %3 ]
-    %6 = phi i8* [ %scevgep3, %3 ], [ %7, %4 ]
-    %7 = getelementptr i8, i8* %6, i64 -1
+    %6 = phi ptr [ %scevgep3, %3 ], [ %7, %4 ]
+    %7 = getelementptr i8, ptr %6, i64 -1
     %8 = sdiv i32 %5, %1
     %9 = mul nsw i32 %8, %1
     %10 = sub nsw i32 %5, %9
@@ -18,7 +18,7 @@
     %12 = trunc i32 %10 to i8
     %13 = select i1 %11, i8 48, i8 55
     %14 = add i8 %13, %12
-    store i8 %14, i8* %7, align 1
+    store i8 %14, ptr %7, align 1
     %15 = call i1 @llvm.loop.decrement.i64(i64 1)
     br i1 %15, label %4, label %16
 
@@ -30,7 +30,7 @@
 
   declare i1 @llvm.loop.decrement.i64(i64)
 
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
 ...
 ---
 name:            phi_eliminate
@@ -158,8 +158,8 @@ body:             |
   ; CHECK:   %21:gprc = SUBF killed %20, killed %8
   ; CHECK:   %22:crrc = CMPLWI %21, 10
   ; CHECK:   %23:gprc = ISEL %15, %14, killed %22.sub_lt
-  ; CEHCK:   %24:gprc = ADD4 killed %23, killed %21
-  ; CHECK:   %25:g8rc_and_g8rc_nox0 = STBU killed %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store 1 into %ir.7)
+  ; CHECK:   %24:gprc = ADD4 killed %23, killed %21
+  ; CHECK:   %25:g8rc_and_g8rc_nox0 = STBU killed %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store (s8) into %ir.7)
   ; CHECK:   %26:gprc = DIVW %19, %9
   ; CHECK:   %57:gprc = COPY killed %26
   ; CHECK:   %58:gprc = COPY %19
@@ -243,7 +243,7 @@ body:             |
     %22:crrc = CMPLWI %21, 10
     %23:gprc = ISEL %15, %14, killed %22.sub_lt
     %24:gprc = ADD4 killed %23, killed %21
-    %25:g8rc_and_g8rc_nox0 = STBU killed %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store 1 into %ir.7)
+    %25:g8rc_and_g8rc_nox0 = STBU killed %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store (s8) into %ir.7)
     %26:gprc = DIVW %19, %9
     BDZ8 %bb.4, implicit-def $ctr8, implicit $ctr8
     B %bb.3

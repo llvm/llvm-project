@@ -7,11 +7,9 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define void @foo(float inreg %s.coerce) nounwind {
 entry:
-  %s = alloca %struct.Sf1, align 4
-  %coerce.dive = getelementptr %struct.Sf1, %struct.Sf1* %s, i32 0, i32 0
-  store float %s.coerce, float* %coerce.dive, align 1
-  %coerce.dive1 = getelementptr %struct.Sf1, %struct.Sf1* %s, i32 0, i32 0
-  %0 = load float, float* %coerce.dive1, align 1
+  %s = alloca %struct.Sf1, align 8
+  store float %s.coerce, ptr %s, align 1
+  %0 = load float, ptr %s, align 1
   call void (i32, ...) @testvaSf1(i32 1, float inreg %0)
   ret void
 }

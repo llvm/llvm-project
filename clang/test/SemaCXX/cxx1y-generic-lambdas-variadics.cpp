@@ -104,7 +104,9 @@ namespace variadic_expansion {
 
 namespace PR33082 {
   template<int ...I> void a() {
-    int arr[] = { [](auto ...K) { (void)I; } ... }; // expected-error {{no viable conversion}} expected-note {{candidate}}
+    int arr[] = { [](auto ...K) { (void)I; } ... };
+    // expected-error@-1   {{no viable conversion}}
+    // expected-note-re@-2 {{candidate template ignored: could not match 'auto (*)(type-parameter-0-0...){{.*}}' against 'int'}}
   }
 
   template<typename ...T> struct Pack {};

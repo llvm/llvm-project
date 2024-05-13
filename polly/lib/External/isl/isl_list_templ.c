@@ -289,7 +289,7 @@ __isl_give EL *FN(FN(LIST(EL),get),EL_BASE)(__isl_keep LIST(EL) *list,
 
 /* Replace the element at position "index" in "list" by "el".
  */
-__isl_give LIST(EL) *FN(FN(LIST(EL),set),EL_BASE)(__isl_take LIST(EL) *list,
+__isl_give LIST(EL) *FN(LIST(EL),set_at)(__isl_take LIST(EL) *list,
 	int index, __isl_take EL *el)
 {
 	if (!list || !el)
@@ -310,6 +310,14 @@ error:
 	FN(EL,free)(el);
 	FN(LIST(EL),free)(list);
 	return NULL;
+}
+
+/* This is an alternative name for the function above.
+ */
+__isl_give LIST(EL) *FN(FN(LIST(EL),set),EL_BASE)(__isl_take LIST(EL) *list,
+	int index, __isl_take EL *el)
+{
+	return FN(LIST(EL),set_at)(list, index, el);
 }
 
 /* Return the element at position "index" of "list".
@@ -604,6 +612,14 @@ __isl_give LIST(EL) *FN(FN(LIST(EL),from),EL_BASE)(__isl_take EL *el)
 error:
 	FN(EL,free)(el);
 	return NULL;
+}
+
+/* This function performs the same operation as isl_*_list_from_*,
+ * but is considered as a function on the element when exported.
+ */
+__isl_give LIST(EL) *FN(EL,to_list)(__isl_take EL *el)
+{
+	return FN(FN(LIST(EL),from),EL_BASE)(el);
 }
 
 /* Append the elements of "list2" to "list1", where "list1" is known

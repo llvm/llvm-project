@@ -27,10 +27,10 @@ int main(int, char**)
         c.push_front(1);
         c.push_front(3);
         c.pop_front();
-        assert(distance(c.begin(), c.end()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 1);
         assert(c.front() == 1);
         c.pop_front();
-        assert(distance(c.begin(), c.end()) == 0);
+        assert(std::distance(c.begin(), c.end()) == 0);
     }
 #if TEST_STD_VER >= 11
     {
@@ -40,10 +40,10 @@ int main(int, char**)
         c.push_front(1);
         c.push_front(3);
         c.pop_front();
-        assert(distance(c.begin(), c.end()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 1);
         assert(c.front() == 1);
         c.pop_front();
-        assert(distance(c.begin(), c.end()) == 0);
+        assert(std::distance(c.begin(), c.end()) == 0);
     }
     {
         typedef int T;
@@ -53,10 +53,10 @@ int main(int, char**)
         c.push_front(1);
         c.push_front(3);
         c.pop_front();
-        assert(distance(c.begin(), c.end()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 1);
         assert(c.front() == 1);
         c.pop_front();
-        assert(distance(c.begin(), c.end()) == 0);
+        assert(std::distance(c.begin(), c.end()) == 0);
     }
     {
         typedef MoveOnly T;
@@ -65,10 +65,10 @@ int main(int, char**)
         c.push_front(1);
         c.push_front(3);
         c.pop_front();
-        assert(distance(c.begin(), c.end()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 1);
         assert(c.front() == 1);
         c.pop_front();
-        assert(distance(c.begin(), c.end()) == 0);
+        assert(std::distance(c.begin(), c.end()) == 0);
     }
 #endif
 

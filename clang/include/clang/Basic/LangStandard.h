@@ -12,6 +12,10 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
+namespace llvm {
+class Triple;
+}
+
 namespace clang {
 
 /// The language for the input, used to select and validate the language
@@ -22,8 +26,9 @@ enum class Language : uint8_t {
   /// Assembly: we accept this only so that we can preprocess it.
   Asm,
 
-  /// LLVM IR: we accept this so that we can run the optimizer on it,
-  /// and compile it to assembly or object code.
+  /// LLVM IR & CIR: we accept these so that we can run the optimizer on them,
+  /// and compile them to assembly or object code (or LLVM for CIR).
+  CIR,
   LLVM_IR,
 
   ///@{ Languages that the frontend can parse and compile.
@@ -36,26 +41,29 @@ enum class Language : uint8_t {
   CUDA,
   RenderScript,
   HIP,
+  HLSL,
   ///@}
 };
+StringRef languageToString(Language L);
 
 enum LangFeatures {
   LineComment = (1 << 0),
   C99 = (1 << 1),
   C11 = (1 << 2),
   C17 = (1 << 3),
-  C2x = (1 << 4),
+  C23 = (1 << 4),
   CPlusPlus = (1 << 5),
   CPlusPlus11 = (1 << 6),
   CPlusPlus14 = (1 << 7),
   CPlusPlus17 = (1 << 8),
   CPlusPlus20 = (1 << 9),
-  CPlusPlus2b = (1 << 10),
-  Digraphs = (1 << 11),
-  GNUMode = (1 << 12),
-  HexFloat = (1 << 13),
-  ImplicitInt = (1 << 14),
-  OpenCL = (1 << 15)
+  CPlusPlus23 = (1 << 10),
+  CPlusPlus26 = (1 << 11),
+  Digraphs = (1 << 12),
+  GNUMode = (1 << 13),
+  HexFloat = (1 << 14),
+  OpenCL = (1 << 15),
+  HLSL = (1 << 16)
 };
 
 /// LangStandard - Information about the properties of a particular language
@@ -95,8 +103,8 @@ public:
   /// isC17 - Language is a superset of C17.
   bool isC17() const { return Flags & C17; }
 
-  /// isC2x - Language is a superset of C2x.
-  bool isC2x() const { return Flags & C2x; }
+  /// isC23 - Language is a superset of C23.
+  bool isC23() const { return Flags & C23; }
 
   /// isCPlusPlus - Language is a C++ variant.
   bool isCPlusPlus() const { return Flags & CPlusPlus; }
@@ -113,8 +121,11 @@ public:
   /// isCPlusPlus20 - Language is a C++20 variant (or later).
   bool isCPlusPlus20() const { return Flags & CPlusPlus20; }
 
-  /// isCPlusPlus2b - Language is a post-C++20 variant (or later).
-  bool isCPlusPlus2b() const { return Flags & CPlusPlus2b; }
+  /// isCPlusPlus23 - Language is a post-C++23 variant (or later).
+  bool isCPlusPlus23() const { return Flags & CPlusPlus23; }
+
+  /// isCPlusPlus26 - Language is a post-C++26 variant (or later).
+  bool isCPlusPlus26() const { return Flags & CPlusPlus26; }
 
   /// hasDigraphs - Language supports digraphs.
   bool hasDigraphs() const { return Flags & Digraphs; }
@@ -125,16 +136,17 @@ public:
   /// hasHexFloats - Language supports hexadecimal float constants.
   bool hasHexFloats() const { return Flags & HexFloat; }
 
-  /// hasImplicitInt - Language allows variables to be typed as int implicitly.
-  bool hasImplicitInt() const { return Flags & ImplicitInt; }
-
   /// isOpenCL - Language is a OpenCL variant.
   bool isOpenCL() const { return Flags & OpenCL; }
 
   static Kind getLangKind(StringRef Name);
+  static Kind getHLSLLangKind(StringRef Name);
   static const LangStandard &getLangStandardForKind(Kind K);
   static const LangStandard *getLangStandardForName(StringRef Name);
 };
+
+LangStandard::Kind getDefaultLanguageStandard(clang::Language Lang,
+                                              const llvm::Triple &T);
 
 }  // end namespace clang
 

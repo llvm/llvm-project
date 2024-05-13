@@ -11,17 +11,17 @@
 # RUN: ld.lld %t-so.o -shared -soname=t.so -o %t.so
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o %t.so -script %t.script -o %t.exe
-# RUN: llvm-objdump -d --no-show-raw-insn %t.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.exe \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,DEFAULT
 # RUN: ld.lld %t-so.o -shared -soname=t.so -o %t.so -z hazardplt
 # RUN: ld.lld %t.o %t.so -script %t.script -o %t.exe -z hazardplt
-# RUN: llvm-objdump -d --no-show-raw-insn %t.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.exe \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,HAZARDPLT
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: <__start>:
-# CHECK-NEXT:    20000:       jal     131120
+# CHECK-NEXT:    20000:       jal     0x20030
 # CHECK-NEXT:    20004:       nop
 # CHECK-EMPTY:
 # CHECK-NEXT: Disassembly of section .plt:

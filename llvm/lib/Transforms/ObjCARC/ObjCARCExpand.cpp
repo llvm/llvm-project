@@ -22,16 +22,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ObjCARC.h"
+#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,12 +53,10 @@ static bool runImpl(Function &F) {
   LLVM_DEBUG(dbgs() << "ObjCARCExpand: Visiting Function: " << F.getName()
                     << "\n");
 
-  for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E; ++I) {
-    Instruction *Inst = &*I;
+  for (Instruction &Inst : instructions(&F)) {
+    LLVM_DEBUG(dbgs() << "ObjCARCExpand: Visiting: " << Inst << "\n");
 
-    LLVM_DEBUG(dbgs() << "ObjCARCExpand: Visiting: " << *Inst << "\n");
-
-    switch (GetBasicARCInstKind(Inst)) {
+    switch (GetBasicARCInstKind(&Inst)) {
     case ARCInstKind::Retain:
     case ARCInstKind::RetainRV:
     case ARCInstKind::Autorelease:
@@ -73,12 +68,12 @@ static bool runImpl(Function &F) {
       // harder. Undo any uses of this optimization that the front-end
       // emitted here. We'll redo them in the contract pass.
       Changed = true;
-      Value *Value = cast<CallInst>(Inst)->getArgOperand(0);
-      LLVM_DEBUG(dbgs() << "ObjCARCExpand: Old = " << *Inst
+      Value *Value = cast<CallInst>(&Inst)->getArgOperand(0);
+      LLVM_DEBUG(dbgs() << "ObjCARCExpand: Old = " << Inst
                         << "\n"
                            "               New = "
                         << *Value << "\n");
-      Inst->replaceAllUsesWith(Value);
+      Inst.replaceAllUsesWith(Value);
       break;
     }
     default:
@@ -91,30 +86,7 @@ static bool runImpl(Function &F) {
   return Changed;
 }
 
-/// Early ARC transformations.
-class ObjCARCExpand : public FunctionPass {
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnFunction(Function &F) override;
-
-public:
-  static char ID;
-  ObjCARCExpand() : FunctionPass(ID) {
-    initializeObjCARCExpandPass(*PassRegistry::getPassRegistry());
-  }
-};
 } // namespace
-
-char ObjCARCExpand::ID = 0;
-INITIALIZE_PASS(ObjCARCExpand, "objc-arc-expand", "ObjC ARC expansion", false,
-                false)
-
-Pass *llvm::createObjCARCExpandPass() { return new ObjCARCExpand(); }
-
-void ObjCARCExpand::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-}
-
-bool ObjCARCExpand::runOnFunction(Function &F) { return runImpl(F); }
 
 PreservedAnalyses ObjCARCExpandPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {

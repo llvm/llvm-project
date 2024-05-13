@@ -9,7 +9,6 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -89,6 +88,7 @@ void AsmToken::dump(raw_ostream &OS) const {
   case AsmToken::Pipe:               OS << "Pipe"; break;
   case AsmToken::PipePipe:           OS << "PipePipe"; break;
   case AsmToken::Plus:               OS << "Plus"; break;
+  case AsmToken::Question:           OS << "Question"; break;
   case AsmToken::RBrac:              OS << "RBrac"; break;
   case AsmToken::RCurly:             OS << "RCurly"; break;
   case AsmToken::RParen:             OS << "RParen"; break;

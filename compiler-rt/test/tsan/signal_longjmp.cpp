@@ -6,7 +6,7 @@
 // This test fails on powerpc64 BE (VMA=44), a segmentation fault
 // error happens at the second assignment
 // "((volatile int *volatile)mem)[1] = 1".
-// XFAIL: powerpc64-unknown-linux-gnu
+// XFAIL: target=powerpc64-unknown-linux-gnu{{.*}}
 
 #include <setjmp.h>
 #include <signal.h>

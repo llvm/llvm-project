@@ -46,15 +46,37 @@ struct FrameInfo {
   const MCSymbol *Symbol = nullptr;
   MCSection *TextSection = nullptr;
   uint32_t PackedInfo = 0;
+  uint32_t PrologCodeBytes = 0;
 
   bool HandlesUnwind = false;
   bool HandlesExceptions = false;
   bool EmitAttempted = false;
+  bool Fragment = false;
 
   int LastFrameInst = -1;
   const FrameInfo *ChainedParent = nullptr;
   std::vector<Instruction> Instructions;
-  MapVector<MCSymbol*, std::vector<Instruction>> EpilogMap;
+  struct Epilog {
+    std::vector<Instruction> Instructions;
+    unsigned Condition;
+    MCSymbol *End;
+  };
+  MapVector<MCSymbol *, Epilog> EpilogMap;
+
+  // For splitting unwind info of large functions
+  struct Segment {
+    int64_t Offset;
+    int64_t Length;
+    bool HasProlog;
+    MCSymbol *Symbol = nullptr;
+    // Map an Epilog's symbol to its offset within the function.
+    MapVector<MCSymbol *, int64_t> Epilogs;
+
+    Segment(int64_t Offset, int64_t Length, bool HasProlog = false)
+        : Offset(Offset), Length(Length), HasProlog(HasProlog) {}
+  };
+
+  std::vector<Segment> Segments;
 
   FrameInfo() = default;
   FrameInfo(const MCSymbol *Function, const MCSymbol *BeginFuncEHLabel)
@@ -68,7 +90,7 @@ struct FrameInfo {
     if (!Instructions.empty())
       return false;
     for (const auto &E : EpilogMap)
-      if (!E.second.empty())
+      if (!E.second.Instructions.empty())
         return false;
     return true;
   }

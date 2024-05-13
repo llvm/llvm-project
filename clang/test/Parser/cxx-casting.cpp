@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 

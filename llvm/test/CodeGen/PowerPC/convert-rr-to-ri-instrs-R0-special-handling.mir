@@ -34,32 +34,32 @@
   }
   
   ; Function Attrs: norecurse nounwind readonly
-  define i64 @unsafeLDXR3R0(i64* nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
+  define i64 @unsafeLDXR3R0(ptr nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
   entry:
-    %0 = bitcast i64* %ptr to i8*
-    %add.ptr = getelementptr inbounds i8, i8* %0, i64 %off
-    %1 = bitcast i8* %add.ptr to i64*
-    %2 = load i64, i64* %1, align 8, !tbaa !3
+    %0 = bitcast ptr %ptr to ptr
+    %add.ptr = getelementptr inbounds i8, ptr %0, i64 %off
+    %1 = bitcast ptr %add.ptr to ptr
+    %2 = load i64, ptr %1, align 8, !tbaa !3
     ret i64 %2
   }
   
   ; Function Attrs: norecurse nounwind readonly
-  define i64 @safeLDXZeroR3(i64* nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
+  define i64 @safeLDXZeroR3(ptr nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
   entry:
-    %0 = bitcast i64* %ptr to i8*
-    %add.ptr = getelementptr inbounds i8, i8* %0, i64 %off
-    %1 = bitcast i8* %add.ptr to i64*
-    %2 = load i64, i64* %1, align 8, !tbaa !3
+    %0 = bitcast ptr %ptr to ptr
+    %add.ptr = getelementptr inbounds i8, ptr %0, i64 %off
+    %1 = bitcast ptr %add.ptr to ptr
+    %2 = load i64, ptr %1, align 8, !tbaa !3
     ret i64 %2
   }
   
   ; Function Attrs: norecurse nounwind readonly
-  define i64 @safeLDXR3R0(i64* nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
+  define i64 @safeLDXR3R0(ptr nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
   entry:
-    %0 = bitcast i64* %ptr to i8*
-    %add.ptr = getelementptr inbounds i8, i8* %0, i64 %off
-    %1 = bitcast i8* %add.ptr to i64*
-    %2 = load i64, i64* %1, align 8, !tbaa !3
+    %0 = bitcast ptr %ptr to ptr
+    %add.ptr = getelementptr inbounds i8, ptr %0, i64 %off
+    %1 = bitcast ptr %add.ptr to ptr
+    %2 = load i64, ptr %1, align 8, !tbaa !3
     ret i64 %2
   }
   
@@ -333,7 +333,7 @@ body:             |
   
     %1:g8rc = COPY $x4
     %0:g8rc_and_g8rc_nox0 = LI8 44
-    %2:g8rc = LDX %0, $x0 :: (load 8 from %ir.1, !tbaa !3)
+    %2:g8rc = LDX %0, $x0 :: (load (s64) from %ir.1, !tbaa !3)
     ; CHECK: li 3, 44
     ; CHECK: ldx 3, 3, 0
     $x3 = COPY %2
@@ -381,7 +381,7 @@ body:             |
   
     %1:g8rc = LI8 44
     %0:g8rc_and_g8rc_nox0 = LI8 44
-    %2:g8rc = LDX $zero8, %1 :: (load 8 from %ir.1, !tbaa !3)
+    %2:g8rc = LDX $zero8, %1 :: (load (s64) from %ir.1, !tbaa !3)
     ; CHECK: ld 3, 44(0)
     $x3 = COPY %2
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -428,7 +428,7 @@ body:             |
   
     $x0 = LI8 44
     %0:g8rc_and_g8rc_nox0 = COPY $x3
-    %2:g8rc = LDX %0, $x0 :: (load 8 from %ir.1, !tbaa !3)
+    %2:g8rc = LDX %0, $x0 :: (load (s64) from %ir.1, !tbaa !3)
     ; CHECK: ld 3, 44(3)
     $x3 = COPY %2
     BLR8 implicit $lr8, implicit $rm, implicit $x3

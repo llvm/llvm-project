@@ -18,9 +18,9 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-/// openbsd -- Directly call GNU Binutils assembler and linker
+/// Directly call GNU Binutils assembler and linker
 namespace openbsd {
-class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
+class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
 public:
   Assembler(const ToolChain &TC)
       : Tool("openbsd::Assembler", "assembler", TC) {}
@@ -33,7 +33,7 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("openbsd::Linker", "linker", TC) {}
 
@@ -59,7 +59,9 @@ public:
 
   bool IsMathErrnoDefault() const override { return false; }
   bool IsObjCNonFragileABIDefault() const override { return true; }
-  bool isPIEDefault() const override { return true; }
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return true;
+  }
 
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
@@ -79,6 +81,9 @@ public:
 
   std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
                             FileType Type = ToolChain::FT_Static) const override;
+
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
 
   LangOptions::StackProtectorMode
   GetDefaultStackProtectorLevel(bool KernelOrKext) const override {

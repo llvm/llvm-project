@@ -1,12 +1,22 @@
-; RUN: opt -callsite-splitting -S < %s | FileCheck %s
+; RUN: opt -passes=callsite-splitting -S < %s | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt -passes=callsite-splitting -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
+
+;; Test that DebugLocs are preserved, and that dbg.values are duplicated.
+
+; CHECK: declare void @llvm.dbg.value(metadata,
 
 ; CHECK-LABEL: @test1
-; CHECK:         [[R1:%.+]] = call i32 @callee(i32 0, i32 %dd), !dbg [[DBG1:!.*]]
-; CHECK:         [[R2:%.+]] = call i32 @callee(i32 1, i32 %dd), !dbg [[DBG1]]
+; CHECK:         call void @llvm.dbg.value(metadata i32 0,
+; CHECK-NEXT:    [[R1:%.+]] = call i32 @callee(i32 0, i32 %dd), !dbg [[DBG1:!.*]]
+; CHECK:         call void @llvm.dbg.value(metadata i32 0,
+; CHECK-NEXT:    [[R2:%.+]] = call i32 @callee(i32 1, i32 %dd), !dbg [[DBG1]]
 ; CHECK-LABEL: CallSite:
 ; CHECK-NEXT:    phi i32 [ [[R2]], %land.rhs.split ], [ [[R1]], %entry.split ], !dbg [[DBG1]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 1,
 
-define i32 @test1(i32* dereferenceable(4) %cc, i32 %dd) !dbg !6 {
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+define i32 @test1(ptr dereferenceable(4) %cc, i32 %dd) !dbg !6 {
 entry:
   br i1 undef, label %CallSite, label %land.rhs
 
@@ -15,20 +25,25 @@ land.rhs:                                         ; preds = %entry
 
 CallSite:                                         ; preds = %land.rhs, %entry
   %pv = phi i32 [ 0, %entry ], [ 1, %land.rhs ]
+  call void @llvm.dbg.value(metadata i32 0, metadata !9, metadata !DIExpression()), !dbg !18
   %call = call i32 @callee(i32 %pv, i32 %dd), !dbg !18
+  call void @llvm.dbg.value(metadata i32 1, metadata !9, metadata !DIExpression()), !dbg !18
   ret i32 %call
 }
 
 ; CHECK-LABEL: @test2
-; CHECK:         [[LV1:%.*]] = load i32, i32* %ptr, align 4, !dbg [[DBG_LV:!.*]]
+; CHECK:         [[LV1:%.*]] = load i32, ptr %ptr, align 4, !dbg [[DBG_LV:!.*]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 0,
 ; CHECK-NEXT:    [[R1:%.+]] = call i32 @callee(i32 0, i32 10), !dbg [[DBG_CALL:!.*]]
-; CHECK:         [[LV2:%.*]] = load i32, i32* %ptr, align 4, !dbg [[DBG_LV]]
+; CHECK:         [[LV2:%.*]] = load i32, ptr %ptr, align 4, !dbg [[DBG_LV]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 0,
 ; CHECK-NEXT:    [[R2:%.+]] = call i32 @callee(i32 0, i32 %i), !dbg [[DBG_CALL]]
 ; CHECK-LABEL: CallSite:
 ; CHECK-NEXT:    phi i32 [ [[LV1]], %Header.split ], [ [[LV2]], %TBB.split ], !dbg [[DBG_LV]]
 ; CHECK-NEXT:    phi i32 [ [[R1]], %Header.split ], [ [[R2]], %TBB.split ], !dbg [[DBG_CALL]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 1,
 
-define void @test2(i32* %ptr, i32 %i) !dbg !19 {
+define void @test2(ptr %ptr, i32 %i) !dbg !19 {
 Header:
   %tobool = icmp ne i32 %i, 10
   br i1 %tobool, label %TBB, label %CallSite
@@ -37,8 +52,10 @@ TBB:                                              ; preds = %Header
   br i1 undef, label %CallSite, label %End
 
 CallSite:                                         ; preds = %TBB, %Header
-  %lv = load i32, i32* %ptr, align 4, !dbg !25
+  %lv = load i32, ptr %ptr, align 4, !dbg !25
+  call void @llvm.dbg.value(metadata i32 0, metadata !21, metadata !DIExpression()), !dbg !26
   %cv = call i32 @callee(i32 0, i32 %i), !dbg !26
+  call void @llvm.dbg.value(metadata i32 1, metadata !21, metadata !DIExpression()), !dbg !26
   %sub = sub nsw i32 %lv, %cv
   br label %End
 

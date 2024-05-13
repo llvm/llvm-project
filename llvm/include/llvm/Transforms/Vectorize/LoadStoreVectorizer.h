@@ -12,6 +12,8 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class Pass;
+class Function;
 
 class LoadStoreVectorizerPass : public PassInfoMixin<LoadStoreVectorizerPass> {
 public:

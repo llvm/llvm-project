@@ -1,4 +1,4 @@
-//===-- M68kSubtarget.cpp - M68k Subtarget Information ------*- C++ -*-===//
+//===-- M68kSubtarget.cpp - M68k Subtarget Information ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "M68kSubtarget.h"
+#include "GISel/M68kCallLowering.h"
+#include "GISel/M68kLegalizerInfo.h"
+#include "GISel/M68kRegisterBankInfo.h"
 
 #include "M68k.h"
 #include "M68kMachineFunction.h"
@@ -21,9 +24,9 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -47,19 +50,39 @@ void M68kSubtarget::anchor() {}
 
 M68kSubtarget::M68kSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                              const M68kTargetMachine &TM)
-    : M68kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
-      UserReservedRegister(M68k::NUM_TARGET_REGS), TM(TM), TSInfo(),
+    : M68kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TM(TM), TSInfo(),
       InstrInfo(initializeSubtargetDependencies(CPU, TT, FS, TM)),
       FrameLowering(*this, this->getStackAlignment()), TLInfo(TM, *this),
-      TargetTriple(TT) {}
+      TargetTriple(TT) {
+  CallLoweringInfo.reset(new M68kCallLowering(*getTargetLowering()));
+  Legalizer.reset(new M68kLegalizerInfo(*this));
+
+  auto *RBI = new M68kRegisterBankInfo(*getRegisterInfo());
+  RegBankInfo.reset(RBI);
+  InstSelector.reset(createM68kInstructionSelector(TM, *this, *RBI));
+}
+
+const CallLowering *M68kSubtarget::getCallLowering() const {
+  return CallLoweringInfo.get();
+}
+
+InstructionSelector *M68kSubtarget::getInstructionSelector() const {
+  return InstSelector.get();
+}
+
+const LegalizerInfo *M68kSubtarget::getLegalizerInfo() const {
+  return Legalizer.get();
+}
+
+const RegisterBankInfo *M68kSubtarget::getRegBankInfo() const {
+  return RegBankInfo.get();
+}
 
 bool M68kSubtarget::isPositionIndependent() const {
   return TM.isPositionIndependent();
 }
 
 bool M68kSubtarget::isLegalToCallImmediateAddr() const { return true; }
-
-bool M68kSubtarget::abiUsesSoftFloat() const { return true; }
 
 M68kSubtarget &M68kSubtarget::initializeSubtargetDependencies(
     StringRef CPU, Triple TT, StringRef FS, const M68kTargetMachine &TM) {
@@ -152,7 +175,7 @@ M68kSubtarget::classifyLocalReference(const GlobalValue *GV) const {
 }
 
 unsigned char M68kSubtarget::classifyExternalReference(const Module &M) const {
-  if (TM.shouldAssumeDSOLocal(M, nullptr))
+  if (TM.shouldAssumeDSOLocal(nullptr))
     return classifyLocalReference(nullptr);
 
   if (isPositionIndependent())
@@ -168,7 +191,7 @@ M68kSubtarget::classifyGlobalReference(const GlobalValue *GV) const {
 
 unsigned char M68kSubtarget::classifyGlobalReference(const GlobalValue *GV,
                                                      const Module &M) const {
-  if (TM.shouldAssumeDSOLocal(M, GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return classifyLocalReference(GV);
 
   switch (TM.getCodeModel()) {
@@ -217,7 +240,7 @@ unsigned char
 M68kSubtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
                                                const Module &M) const {
   // local always use pc-rel referencing
-  if (TM.shouldAssumeDSOLocal(M, GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return M68kII::MO_NO_FLAG;
 
   // If the function is marked as non-lazy, generate an indirect call
@@ -228,6 +251,6 @@ M68kSubtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
     return M68kII::MO_GOTPCREL;
   }
 
-  // otherwise linker will figure this out
-  return M68kII::MO_PLT;
+  // Ensure that we don't emit PLT relocations when in non-pic modes.
+  return isPositionIndependent() ? M68kII::MO_PLT : M68kII::MO_ABSOLUTE_ADDRESS;
 }

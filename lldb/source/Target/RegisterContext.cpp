@@ -54,53 +54,27 @@ RegisterContext::GetRegisterInfoByName(llvm::StringRef reg_name,
   if (reg_name.empty())
     return nullptr;
 
+  // Generic register names take precedence over specific register names.
+  // For example, on x86 we want "sp" to refer to the complete RSP/ESP register
+  // rather than the 16-bit SP pseudo-register.
+  uint32_t generic_reg = Args::StringToGenericRegister(reg_name);
+  if (generic_reg != LLDB_INVALID_REGNUM) {
+    const RegisterInfo *reg_info =
+        GetRegisterInfo(eRegisterKindGeneric, generic_reg);
+    if (reg_info)
+      return reg_info;
+  }
+
   const uint32_t num_registers = GetRegisterCount();
   for (uint32_t reg = start_idx; reg < num_registers; ++reg) {
     const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
 
-    if (reg_name.equals_lower(reg_info->name) ||
-        reg_name.equals_lower(reg_info->alt_name))
+    if (reg_name.equals_insensitive(reg_info->name) ||
+        reg_name.equals_insensitive(reg_info->alt_name))
       return reg_info;
   }
+
   return nullptr;
-}
-
-uint32_t
-RegisterContext::UpdateDynamicRegisterSize(const lldb_private::ArchSpec &arch,
-                                           RegisterInfo *reg_info) {
-  ExecutionContext exe_ctx(CalculateThread());
-
-  // In MIPS, the floating point registers size is depends on FR bit of SR
-  // register. if SR.FR  == 1 then all floating point registers are 64 bits.
-  // else they are all 32 bits.
-
-  int expr_result;
-  uint32_t addr_size = arch.GetAddressByteSize();
-  const uint8_t *dwarf_opcode_ptr = reg_info->dynamic_size_dwarf_expr_bytes;
-  const size_t dwarf_opcode_len = reg_info->dynamic_size_dwarf_len;
-
-  DataExtractor dwarf_data(dwarf_opcode_ptr, dwarf_opcode_len,
-                           arch.GetByteOrder(), addr_size);
-  ModuleSP opcode_ctx;
-  DWARFExpression dwarf_expr(opcode_ctx, dwarf_data, nullptr);
-  Value result;
-  Status error;
-  if (dwarf_expr.Evaluate(&exe_ctx, this, opcode_ctx, dwarf_data, nullptr,
-                          eRegisterKindDWARF, nullptr, nullptr, result,
-                          &error)) {
-    expr_result = result.GetScalar().SInt(-1);
-    switch (expr_result) {
-    case 0:
-      return 4;
-    case 1:
-      return 8;
-    default:
-      return reg_info->byte_size;
-    }
-  } else {
-    printf("Error executing DwarfExpression::Evaluate %s\n", error.AsCString());
-    return reg_info->byte_size;
-  }
 }
 
 const RegisterInfo *RegisterContext::GetRegisterInfo(lldb::RegisterKind kind,
@@ -133,6 +107,12 @@ uint64_t RegisterContext::GetPC(uint64_t fail_value) {
   }
 
   return pc;
+}
+
+uint64_t RegisterContext::GetThreadPointer(uint64_t fail_value) {
+  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
+                                                     LLDB_REGNUM_GENERIC_TP);
+  return ReadRegisterAsUnsigned(reg, fail_value);
 }
 
 bool RegisterContext::SetPC(uint64_t pc) {
@@ -346,11 +326,6 @@ Status RegisterContext::ReadRegisterValueFromMemory(
   //   |AABB| Address contents
   //   |AABB0000| Register contents [on little-endian hardware]
   //   |0000AABB| Register contents [on big-endian hardware]
-  if (src_len > RegisterValue::kMaxRegisterByteSize) {
-    error.SetErrorString("register too small to receive memory data");
-    return error;
-  }
-
   const uint32_t dst_len = reg_info->byte_size;
 
   if (src_len > dst_len) {
@@ -362,11 +337,11 @@ Status RegisterContext::ReadRegisterValueFromMemory(
 
   ProcessSP process_sp(m_thread.GetProcess());
   if (process_sp) {
-    uint8_t src[RegisterValue::kMaxRegisterByteSize];
+    RegisterValue::BytesContainer src(src_len);
 
     // Read the memory
     const uint32_t bytes_read =
-        process_sp->ReadMemory(src_addr, src, src_len, error);
+        process_sp->ReadMemory(src_addr, src.data(), src_len, error);
 
     // Make sure the memory read succeeded...
     if (bytes_read != src_len) {
@@ -383,7 +358,7 @@ Status RegisterContext::ReadRegisterValueFromMemory(
     // TODO: we might need to add a parameter to this function in case the byte
     // order of the memory data doesn't match the process. For now we are
     // assuming they are the same.
-    reg_value.SetFromMemoryData(reg_info, src, src_len,
+    reg_value.SetFromMemoryData(*reg_info, src.data(), src_len,
                                 process_sp->GetByteOrder(), error);
   } else
     error.SetErrorString("invalid process");
@@ -394,37 +369,41 @@ Status RegisterContext::ReadRegisterValueFromMemory(
 Status RegisterContext::WriteRegisterValueToMemory(
     const RegisterInfo *reg_info, lldb::addr_t dst_addr, uint32_t dst_len,
     const RegisterValue &reg_value) {
-  uint8_t dst[RegisterValue::kMaxRegisterByteSize];
-
   Status error;
-
   ProcessSP process_sp(m_thread.GetProcess());
-  if (process_sp) {
 
-    // TODO: we might need to add a parameter to this function in case the byte
-    // order of the memory data doesn't match the process. For now we are
-    // assuming they are the same.
+  if (!process_sp) {
+    error.SetErrorString("invalid process");
+    return error;
+  }
 
-    const uint32_t bytes_copied = reg_value.GetAsMemoryData(
-        reg_info, dst, dst_len, process_sp->GetByteOrder(), error);
+  if (reg_info == nullptr) {
+    error.SetErrorString("Invalid register info argument.");
+    return error;
+  }
 
-    if (error.Success()) {
-      if (bytes_copied == 0) {
-        error.SetErrorString("byte copy failed.");
-      } else {
-        const uint32_t bytes_written =
-            process_sp->WriteMemory(dst_addr, dst, bytes_copied, error);
-        if (bytes_written != bytes_copied) {
-          if (error.Success()) {
-            // This might happen if we read _some_ bytes but not all
-            error.SetErrorStringWithFormat("only wrote %u of %u bytes",
-                                           bytes_written, bytes_copied);
-          }
+  // TODO: we might need to add a parameter to this function in case the byte
+  // order of the memory data doesn't match the process. For now we are
+  // assuming they are the same.
+  RegisterValue::BytesContainer dst(dst_len);
+  const uint32_t bytes_copied = reg_value.GetAsMemoryData(
+      *reg_info, dst.data(), dst_len, process_sp->GetByteOrder(), error);
+
+  if (error.Success()) {
+    if (bytes_copied == 0) {
+      error.SetErrorString("byte copy failed.");
+    } else {
+      const uint32_t bytes_written =
+          process_sp->WriteMemory(dst_addr, dst.data(), bytes_copied, error);
+      if (bytes_written != bytes_copied) {
+        if (error.Success()) {
+          // This might happen if we read _some_ bytes but not all
+          error.SetErrorStringWithFormat("only wrote %u of %u bytes",
+                                         bytes_written, bytes_copied);
         }
       }
     }
-  } else
-    error.SetErrorString("invalid process");
+  }
 
   return error;
 }

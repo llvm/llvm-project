@@ -1,48 +1,92 @@
-# The END MRI command is optional. Scripts that omit
-# or include END should be handled by llvm-ar.
-RUN: rm -rf %t && mkdir -p %t
+## The END MRI command is optional. Scripts that omit
+## or include END should be handled by llvm-ar.
 
-# Empty File
-RUN: yaml2obj %S/Inputs/elf.yaml -o %t/elf.o
+# RUN: rm -rf %t && split-file %s %t
+# RUN: cd %t
 
-RUN: touch %t/empty.mri
-RUN: llvm-ar -M < %t/empty.mri
+# RUN: yaml2obj %S/Inputs/elf.yaml -o elf.o
 
-RUN: echo "END" > %t/empty-end.mri
-RUN: llvm-ar -M < %t/empty-end.mri
+## Empty file.
+# RUN: touch empty.mri
+# RUN: llvm-ar -M < empty.mri
+# RUN: llvm-ar -M < empty-end.mri
 
-# Comment only
-RUN: echo "; a comment" > %t/comment.mri
-RUN: llvm-ar -M < %t/comment.mri
+## Comment only.
+# RUN: llvm-ar -M < comment.mri
+# RUN: llvm-ar -M < comment-end.mri
 
-RUN: echo "; a comment" > %t/comment-end.mri
-RUN: echo "END" > %t/comment-end.mri
-RUN: llvm-ar -M < %t/comment-end.mri
+## Without SAVE.
+# RUN: llvm-ar -M < no-save.mri
+# RUN: test ! -e no-save.ar
 
-# Without Save
-RUN: echo "create %t/mri.ar" > %t/no-save.mri
-RUN: echo "addmod %t/elf.o" >> %t/no-save.mri
-RUN: llvm-ar -M < %t/no-save.mri
-RUN: test ! -e %t/mri.ar
+# RUN: llvm-ar -M < no-save-end.mri
+# RUN: test ! -e no-save-end.ar
 
-RUN: echo "create %t/mri.ar" > %t/no-save-end.mri
-RUN: echo "addmod %t/elf.o" >> %t/no-save-end.mri
-RUN: echo "END" > %t/no-save-end.mri
-RUN: llvm-ar -M < %t/no-save-end.mri
-RUN: test ! -e %t/mri.ar
+## With SAVE.
+# RUN: llvm-ar -M < save.mri
+# RUN: llvm-ar t save.ar | FileCheck %s
 
-# With Save
-RUN: echo "create %t/mri.ar" > %t/save.mri
-RUN: echo "addmod %t/elf.o" >> %t/save.mri
-RUN: echo "save" >> %t/save.mri
-RUN: llvm-ar -M < %t/save.mri
-RUN: llvm-ar t %t/mri.ar | FileCheck %s
+# RUN: llvm-ar -M < save-end.mri
+# RUN: llvm-ar t save-end.ar | FileCheck %s
 
-RUN: echo "create %t/mri.ar" > %t/save-end.mri
-RUN: echo "addmod %t/elf.o" >> %t/save-end.mri
-RUN: echo "save" >> %t/save-end.mri
-RUN: echo "END" > %t/no-save-end.mri
-RUN: llvm-ar -M < %t/save-end.mri
-RUN: llvm-ar t %t/mri.ar | FileCheck %s
+## Duplicate use of END.
+# RUN: llvm-ar -M < duplicate-end-no-save.mri
+# RUN: test ! -e duplicate-end-no-save.ar
 
-CHECK: elf.o
+# RUN: llvm-ar -M < duplicate-end-save.mri
+# RUN: llvm-ar t duplicate-end-save.ar | FileCheck %s
+
+## Use of END before saving.
+# RUN: llvm-ar -M < end-before-save.mri
+# RUN: llvm-ar t end-before-save.ar | FileCheck %s
+
+# CHECK: elf.o
+
+#--- empty-end.mri
+END
+
+#--- comment.mri
+; a comment
+
+#--- comment-end.mri
+; a comment
+END
+
+#--- no-save.mri
+create no-save.ar
+addmod elf.o
+
+#--- no-save-end.mri
+create no-save-end.ar
+addmod elf.o
+END
+
+#--- save.mri
+create save.ar
+addmod elf.o
+save
+
+#--- save-end.mri
+create save-end.ar
+addmod elf.o
+save
+end
+
+#--- duplicate-end-no-save.mri
+create duplicate-end-no-save.ar
+addmod elf.o
+END
+END
+
+#--- duplicate-end-save.mri
+create duplicate-end-save.ar
+addmod elf.o
+save
+END
+END
+
+#--- end-before-save.mri
+create end-before-save.ar
+addmod elf.o
+end
+save

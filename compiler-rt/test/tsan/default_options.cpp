@@ -1,7 +1,11 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 #include <pthread.h>
+#include <sanitizer/tsan_interface.h>
 #include <stdio.h>
 
+#if (__APPLE__)
+__attribute__((weak))
+#endif
 extern "C" const char *__tsan_default_options() {
   return "report_bugs=0";
 }

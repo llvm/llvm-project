@@ -11,9 +11,18 @@
 namespace llvm {
 namespace exegesis {
 
+CodeTemplate::CodeTemplate(const CodeTemplate &) = default;
+
 CodeTemplate::CodeTemplate(CodeTemplate &&) = default;
 
 CodeTemplate &CodeTemplate::operator=(CodeTemplate &&) = default;
+
+CodeTemplate &CodeTemplate::operator=(const CodeTemplate &) = default;
+
+CodeTemplate CodeTemplate::clone() const {
+  CodeTemplate CT = *this;
+  return CT;
+}
 
 InstructionTemplate::InstructionTemplate(const Instruction *Instr)
     : Instr(Instr), VariableValues(Instr->Variables.size()) {}
@@ -100,7 +109,7 @@ ArrayRef<ExecutionMode> getAllExecutionBits() {
       ExecutionMode::ALWAYS_PARALLEL_MISSING_USE_OR_DEF,
       ExecutionMode::PARALLEL_VIA_EXPLICIT_REGS,
   };
-  return makeArrayRef(kAllExecutionModeBits);
+  return ArrayRef(kAllExecutionModeBits);
 }
 
 SmallVector<ExecutionMode, 4> getExecutionModeBits(ExecutionMode Execution) {

@@ -14,28 +14,17 @@
 #define MLIR_TRANSFORMS_VIEWOPGRAPH_H_
 
 #include "mlir/Support/LLVM.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
-class Block;
-class ModuleOp;
-template <typename T> class OperationPass;
+class Pass;
 
-/// Displays the graph in a window. This is for use from the debugger and
-/// depends on Graphviz to generate the graph.
-void viewGraph(Block &block, const Twine &name, bool shortNames = false,
-               const Twine &title = "",
-               llvm::GraphProgram::Name program = llvm::GraphProgram::DOT);
-
-raw_ostream &writeGraph(raw_ostream &os, Block &block, bool shortNames = false,
-                        const Twine &title = "");
+#define GEN_PASS_DECL_VIEWOPGRAPH
+#include "mlir/Transforms/Passes.h.inc"
 
 /// Creates a pass to print op graphs.
-std::unique_ptr<OperationPass<ModuleOp>>
-createPrintOpGraphPass(raw_ostream &os = llvm::errs(), bool shortNames = false,
-                       const Twine &title = "");
+std::unique_ptr<Pass> createPrintOpGraphPass(raw_ostream &os = llvm::errs());
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_VIEWOPGRAPH_H_

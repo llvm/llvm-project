@@ -9,8 +9,8 @@
 #include "lldb/DataFormatters/TypeCategoryMap.h"
 
 #include "lldb/DataFormatters/FormatClasses.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-
 
 using namespace lldb;
 using namespace lldb_private;
@@ -24,20 +24,32 @@ TypeCategoryMap::TypeCategoryMap(IFormatChangeListener *lst)
   Enable(default_cs, First);
 }
 
-void TypeCategoryMap::Add(KeyType name, const ValueSP &entry) {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  m_map[name] = entry;
+void TypeCategoryMap::Add(KeyType name, const TypeCategoryImplSP &entry) {
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    m_map[name] = entry;
+  }
+  // Release the mutex to avoid a potential deadlock between
+  // TypeCategoryMap::m_map_mutex and
+  // FormatManager::m_language_categories_mutex which can be acquired in
+  // reverse order when calling FormatManager::Changed.
   if (listener)
     listener->Changed();
 }
 
 bool TypeCategoryMap::Delete(KeyType name) {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  MapIterator iter = m_map.find(name);
-  if (iter == m_map.end())
-    return false;
-  m_map.erase(name);
-  Disable(name);
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    MapIterator iter = m_map.find(name);
+    if (iter == m_map.end())
+      return false;
+    m_map.erase(name);
+    Disable(name);
+  }
+  // Release the mutex to avoid a potential deadlock between
+  // TypeCategoryMap::m_map_mutex and
+  // FormatManager::m_language_categories_mutex which can be acquired in
+  // reverse order when calling FormatManager::Changed.
   if (listener)
     listener->Changed();
   return true;
@@ -45,7 +57,7 @@ bool TypeCategoryMap::Delete(KeyType name) {
 
 bool TypeCategoryMap::Enable(KeyType category_name, Position pos) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  ValueSP category;
+  TypeCategoryImplSP category;
   if (!Get(category_name, category))
     return false;
   return Enable(category, pos);
@@ -53,13 +65,13 @@ bool TypeCategoryMap::Enable(KeyType category_name, Position pos) {
 
 bool TypeCategoryMap::Disable(KeyType category_name) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  ValueSP category;
+  TypeCategoryImplSP category;
   if (!Get(category_name, category))
     return false;
   return Disable(category);
 }
 
-bool TypeCategoryMap::Enable(ValueSP category, Position pos) {
+bool TypeCategoryMap::Enable(TypeCategoryImplSP category, Position pos) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   if (category.get()) {
     Position pos_w = pos;
@@ -81,7 +93,7 @@ bool TypeCategoryMap::Enable(ValueSP category, Position pos) {
   return false;
 }
 
-bool TypeCategoryMap::Disable(ValueSP category) {
+bool TypeCategoryMap::Disable(TypeCategoryImplSP category) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   if (category.get()) {
     m_active_categories.remove_if(delete_matching_categories(category));
@@ -93,7 +105,7 @@ bool TypeCategoryMap::Disable(ValueSP category) {
 
 void TypeCategoryMap::EnableAllCategories() {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  std::vector<ValueSP> sorted_categories(m_map.size(), ValueSP());
+  std::vector<TypeCategoryImplSP> sorted_categories(m_map.size(), TypeCategoryImplSP());
   MapType::iterator iter = m_map.begin(), end = m_map.end();
   for (; iter != end; ++iter) {
     if (iter->second->IsEnabled())
@@ -102,7 +114,7 @@ void TypeCategoryMap::EnableAllCategories() {
     if (pos >= sorted_categories.size()) {
       auto iter = std::find_if(
           sorted_categories.begin(), sorted_categories.end(),
-          [](const ValueSP &sp) -> bool { return sp.get() == nullptr; });
+          [](const TypeCategoryImplSP &sp) -> bool { return sp.get() == nullptr; });
       pos = std::distance(sorted_categories.begin(), iter);
     }
     sorted_categories.at(pos) = iter->second;
@@ -123,14 +135,20 @@ void TypeCategoryMap::DisableAllCategories() {
 }
 
 void TypeCategoryMap::Clear() {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  m_map.clear();
-  m_active_categories.clear();
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    m_map.clear();
+    m_active_categories.clear();
+  }
+  // Release the mutex to avoid a potential deadlock between
+  // TypeCategoryMap::m_map_mutex and
+  // FormatManager::m_language_categories_mutex which can be acquired in
+  // reverse order when calling FormatManager::Changed.
   if (listener)
     listener->Changed();
 }
 
-bool TypeCategoryMap::Get(KeyType name, ValueSP &entry) {
+bool TypeCategoryMap::Get(KeyType name, TypeCategoryImplSP &entry) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   MapIterator iter = m_map.find(name);
   if (iter == m_map.end())
@@ -139,29 +157,16 @@ bool TypeCategoryMap::Get(KeyType name, ValueSP &entry) {
   return true;
 }
 
-bool TypeCategoryMap::Get(uint32_t pos, ValueSP &entry) {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  MapIterator iter = m_map.begin();
-  MapIterator end = m_map.end();
-  while (pos > 0) {
-    iter++;
-    pos--;
-    if (iter == end)
-      return false;
-  }
-  entry = iter->second;
-  return false;
-}
-
 bool TypeCategoryMap::AnyMatches(
-    ConstString type_name, TypeCategoryImpl::FormatCategoryItems items,
-    bool only_enabled, const char **matching_category,
+    const FormattersMatchCandidate &candidate_type,
+    TypeCategoryImpl::FormatCategoryItems items, bool only_enabled,
+    const char **matching_category,
     TypeCategoryImpl::FormatCategoryItems *matching_type) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
 
   MapIterator pos, end = m_map.end();
   for (pos = m_map.begin(); pos != end; pos++) {
-    if (pos->second->AnyMatches(type_name, items, only_enabled,
+    if (pos->second->AnyMatches(candidate_type, items, only_enabled,
                                 matching_category, matching_type))
       return true;
   }
@@ -174,7 +179,7 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
 
   ActiveCategoriesIterator begin, end = m_active_categories.end();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
 
   if (log) {
     for (auto match : match_data.GetMatchesVector()) {

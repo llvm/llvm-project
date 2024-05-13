@@ -1,177 +1,151 @@
-; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-load=1 -S | FileCheck %s --check-prefix=COMBINE_PTR_LABEL
-; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-load=0 -S | FileCheck %s --check-prefix=NO_COMBINE_PTR_LABEL
+; RUN: opt < %s -passes=dfsan -dfsan-combine-pointer-labels-on-load=true -S | FileCheck %s --check-prefixes=CHECK,COMBINE_LOAD_PTR
+; RUN: opt < %s -passes=dfsan -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define {} @load0({}* %p) {
-  ; COMBINE_PTR_LABEL: @"dfs$load0"
-  ; COMBINE_PTR_LABEL: load
-  ; COMBINE_PTR_LABEL-NOT: load
+; CHECK: @__dfsan_arg_tls = external thread_local(initialexec) global [[TLS_ARR:\[100 x i64\]]]
+; CHECK: @__dfsan_retval_tls = external thread_local(initialexec) global [[TLS_ARR]]
 
-  ; NO_COMBINE_PTR_LABEL: @"dfs$load0"
-  ; NO_COMBINE_PTR_LABEL: load
-  ; NO_COMBINE_PTR_LABEL-NOT: load
-  %a = load {}, {}* %p
+define {} @load0(ptr %p) {
+  ; CHECK-LABEL:           @load0.dfsan
+  ; CHECK-NEXT:            %a = load {}, ptr %p, align 1
+  ; CHECK-NEXT:            store {} zeroinitializer, ptr @__dfsan_retval_tls, align [[ALIGN:2]]
+  ; CHECK-NEXT:            ret {} %a
+
+  %a = load {}, ptr %p
   ret {} %a
 }
 
-define i8 @load8(i8* %p) {
-  ; COMBINE_PTR_LABEL: @"dfs$load8"
-  ; COMBINE_PTR_LABEL: load i16, i16*
-  ; COMBINE_PTR_LABEL: ptrtoint i8* {{.*}} to i64
-  ; COMBINE_PTR_LABEL: and i64
-  ; COMBINE_PTR_LABEL: mul i64
-  ; COMBINE_PTR_LABEL: inttoptr i64
-  ; COMBINE_PTR_LABEL: load i16, i16*
-  ; COMBINE_PTR_LABEL: icmp ne i16
-  ; COMBINE_PTR_LABEL: call zeroext i16 @__dfsan_union
-  ; COMBINE_PTR_LABEL: load i8, i8*
-  ; COMBINE_PTR_LABEL: store i16 {{.*}} @__dfsan_retval_tls
-  ; COMBINE_PTR_LABEL: ret i8
+define i8 @load8(ptr %p) {
+  ; CHECK-LABEL:           @load8.dfsan
+  ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint ptr %p to i64
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
+  ; CHECK-NEXT:            %[[#SHADOW:]] = load i8, ptr %[[#SHADOW_PTR]]
+  ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i8 %[[#SHADOW]], %[[#PS]]
+  ; CHECK-NEXT:            %a = load i8, ptr %p
+  ; CHECK-NEXT:            store i8 %[[#SHADOW]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            ret i8 %a
 
-  ; NO_COMBINE_PTR_LABEL: @"dfs$load8"
-  ; NO_COMBINE_PTR_LABEL: ptrtoint i8*
-  ; NO_COMBINE_PTR_LABEL: and i64
-  ; NO_COMBINE_PTR_LABEL: mul i64
-  ; NO_COMBINE_PTR_LABEL: inttoptr i64 {{.*}} to i16*
-  ; NO_COMBINE_PTR_LABEL: load i16, i16*
-  ; NO_COMBINE_PTR_LABEL: load i8, i8*
-  ; NO_COMBINE_PTR_LABEL: store i16 {{.*}} @__dfsan_retval_tls
-  ; NO_COMBINE_PTR_LABEL: ret i8
-
-  %a = load i8, i8* %p
+  %a = load i8, ptr %p
   ret i8 %a
 }
 
-define i16 @load16(i16* %p) {
-  ; COMBINE_PTR_LABEL: @"dfs$load16"
-  ; COMBINE_PTR_LABEL: ptrtoint i16*
-  ; COMBINE_PTR_LABEL: and i64
-  ; COMBINE_PTR_LABEL: mul i64
-  ; COMBINE_PTR_LABEL: inttoptr i64 {{.*}} i16*
-  ; COMBINE_PTR_LABEL: getelementptr i16
-  ; COMBINE_PTR_LABEL: load i16, i16*
-  ; COMBINE_PTR_LABEL: load i16, i16*
-  ; COMBINE_PTR_LABEL: icmp ne
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union
-  ; COMBINE_PTR_LABEL: icmp ne i16
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union
-  ; COMBINE_PTR_LABEL: load i16, i16*
-  ; COMBINE_PTR_LABEL: store {{.*}} @__dfsan_retval_tls
-  ; COMBINE_PTR_LABEL: ret i16
+define i16 @load16(ptr %p) {
+  ; CHECK-LABEL:           @load16.dfsan
+  ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint ptr %p to i64
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
+  ; CHECK-NEXT:            %[[#SHADOW_PTR+1]] = getelementptr i8, ptr %[[#SHADOW_PTR]], i64 1
+  ; CHECK-NEXT:            %[[#SHADOW:]]  = load i8, ptr %[[#SHADOW_PTR]]
+  ; CHECK-NEXT:            %[[#SHADOW+1]] = load i8, ptr %[[#SHADOW_PTR+1]]
 
-  ; NO_COMBINE_PTR_LABEL: @"dfs$load16"
-  ; NO_COMBINE_PTR_LABEL: ptrtoint i16*
-  ; NO_COMBINE_PTR_LABEL: and i64
-  ; NO_COMBINE_PTR_LABEL: mul i64
-  ; NO_COMBINE_PTR_LABEL: inttoptr i64 {{.*}} i16*
-  ; NO_COMBINE_PTR_LABEL: getelementptr i16, i16*
-  ; NO_COMBINE_PTR_LABEL: load i16, i16*
-  ; NO_COMBINE_PTR_LABEL: load i16, i16*
-  ; NO_COMBINE_PTR_LABEL: icmp ne i16
-  ; NO_COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union
-  ; NO_COMBINE_PTR_LABEL: load i16, i16*
-  ; NO_COMBINE_PTR_LABEL: store i16 {{.*}} @__dfsan_retval_tls
-  ; NO_COMBINE_PTR_LABEL: ret i16
+  ; CHECK-NEXT:            %[[#SHADOW:]] = or i8 %[[#SHADOW]], %[[#SHADOW+1]]
+  ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i8 %[[#SHADOW]], %[[#PS]]
+  ; CHECK-NEXT:            %a = load i16, ptr %p
+  ; CHECK-NEXT:            store i8 %[[#SHADOW]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            ret i16 %a
 
-  %a = load i16, i16* %p
+  %a = load i16, ptr %p
   ret i16 %a
 }
 
-define i32 @load32(i32* %p) {
-  ; COMBINE_PTR_LABEL: @"dfs$load32"
-  ; COMBINE_PTR_LABEL: ptrtoint i32*
-  ; COMBINE_PTR_LABEL: and i64
-  ; COMBINE_PTR_LABEL: mul i64
-  ; COMBINE_PTR_LABEL: inttoptr i64 {{.*}} i16*
-  ; COMBINE_PTR_LABEL: bitcast i16* {{.*}} i64*
-  ; COMBINE_PTR_LABEL: load i64, i64*
-  ; COMBINE_PTR_LABEL: trunc i64 {{.*}} i16
-  ; COMBINE_PTR_LABEL: shl i64
-  ; COMBINE_PTR_LABEL: lshr i64
-  ; COMBINE_PTR_LABEL: or i64
-  ; COMBINE_PTR_LABEL: icmp eq i64
-  ; COMBINE_PTR_LABEL: icmp ne i16
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union
-  ; COMBINE_PTR_LABEL: load i32, i32*
-  ; COMBINE_PTR_LABEL: store i16 {{.*}} @__dfsan_retval_tls
-  ; COMBINE_PTR_LABEL: ret i32
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union_load
+define i32 @load32(ptr %p) {
+  ; CHECK-LABEL:           @load32.dfsan
+  ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint ptr %p to i64
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = load i[[#WSBITS:32]], ptr %[[#SHADOW_PTR]], align 1
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i[[#WSBITS]] %[[#WIDE_SHADOW]], 16
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i[[#WSBITS]] %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i[[#WSBITS]] %[[#WIDE_SHADOW]], 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i[[#WSBITS]] %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#SHADOW:]] = trunc i[[#WSBITS]] %[[#WIDE_SHADOW]] to i8
+  ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i8 %[[#SHADOW]], %[[#PS]]
+  ; CHECK-NEXT:            %a = load i32, ptr %p, align 4
+  ; CHECK-NEXT:            store i8 %[[#SHADOW]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            ret i32 %a
 
-  ; NO_COMBINE_PTR_LABEL: @"dfs$load32"
-  ; NO_COMBINE_PTR_LABEL: ptrtoint i32*
-  ; NO_COMBINE_PTR_LABEL: and i64
-  ; NO_COMBINE_PTR_LABEL: mul i64
-  ; NO_COMBINE_PTR_LABEL: inttoptr i64 {{.*}} i16*
-  ; NO_COMBINE_PTR_LABEL: bitcast i16* {{.*}} i64*
-  ; NO_COMBINE_PTR_LABEL: load i64, i64*
-  ; NO_COMBINE_PTR_LABEL: trunc i64 {{.*}} i16
-  ; NO_COMBINE_PTR_LABEL: shl i64
-  ; NO_COMBINE_PTR_LABEL: lshr i64
-  ; NO_COMBINE_PTR_LABEL: or i64
-  ; NO_COMBINE_PTR_LABEL: icmp eq i64
-  ; NO_COMBINE_PTR_LABEL: load i32, i32*
-  ; NO_COMBINE_PTR_LABEL: store i16 {{.*}} @__dfsan_retval_tls
-  ; NO_COMBINE_PTR_LABEL: ret i32
-  ; NO_COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union_load
-  
-
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   ret i32 %a
 }
 
-define i64 @load64(i64* %p) {
-  ; COMBINE_PTR_LABEL: @"dfs$load64"
-  ; COMBINE_PTR_LABEL: ptrtoint i64*
-  ; COMBINE_PTR_LABEL: and i64
-  ; COMBINE_PTR_LABEL: mul i64
-  ; COMBINE_PTR_LABEL: inttoptr i64 {{.*}} i16*
-  ; COMBINE_PTR_LABEL: bitcast i16* {{.*}} i64*
-  ; COMBINE_PTR_LABEL: load i64, i64*
-  ; COMBINE_PTR_LABEL: trunc i64 {{.*}} i16
-  ; COMBINE_PTR_LABEL: shl i64
-  ; COMBINE_PTR_LABEL: lshr i64
-  ; COMBINE_PTR_LABEL: or i64
-  ; COMBINE_PTR_LABEL: icmp eq i64
-  ; COMBINE_PTR_LABEL: icmp ne i16
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union
-  ; COMBINE_PTR_LABEL: load i64, i64*
-  ; COMBINE_PTR_LABEL: store i16 {{.*}} @__dfsan_retval_tls
-  ; COMBINE_PTR_LABEL: ret i64
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union_load
-  ; COMBINE_PTR_LABEL: getelementptr i64, i64* {{.*}} i64
-  ; COMBINE_PTR_LABEL: load i64, i64*
-  ; COMBINE_PTR_LABEL: icmp eq i64
+define i64 @load64(ptr %p) {
+  ; CHECK-LABEL:           @load64.dfsan
+  ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint ptr %p to i64
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = load i64, ptr %[[#SHADOW_PTR]], align 1
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 16
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#SHADOW:]] = trunc i64 %[[#WIDE_SHADOW]] to i8
+  ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i8 %[[#SHADOW]], %[[#PS]]
+  ; CHECK-NEXT:            %a = load i64, ptr %p, align 8
+  ; CHECK-NEXT:            store i8 %[[#SHADOW]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            ret i64 %a
 
-  ; NO_COMBINE_PTR_LABEL: @"dfs$load64"
-  ; NO_COMBINE_PTR_LABEL: ptrtoint i64*
-  ; NO_COMBINE_PTR_LABEL: and i64
-  ; NO_COMBINE_PTR_LABEL: mul i64
-  ; NO_COMBINE_PTR_LABEL: inttoptr i64 {{.*}} i16*
-  ; NO_COMBINE_PTR_LABEL: bitcast i16* {{.*}} i64*
-  ; NO_COMBINE_PTR_LABEL: load i64, i64*
-  ; NO_COMBINE_PTR_LABEL: trunc i64 {{.*}} i16
-  ; NO_COMBINE_PTR_LABEL: shl i64
-  ; NO_COMBINE_PTR_LABEL: lshr i64
-  ; NO_COMBINE_PTR_LABEL: or i64
-  ; NO_COMBINE_PTR_LABEL: icmp eq i64
-  ; NO_COMBINE_PTR_LABEL: load i64, i64*
-  ; NO_COMBINE_PTR_LABEL: store i16 {{.*}} @__dfsan_retval_tls
-  ; NO_COMBINE_PTR_LABEL: ret i64
-  ; NO_COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union_load
-  ; NO_COMBINE_PTR_LABEL: getelementptr i64, i64* {{.*}} i64
-  ; NO_COMBINE_PTR_LABEL: load i64, i64*
-  ; NO_COMBINE_PTR_LABEL: icmp eq i64
-
-  %a = load i64, i64* %p
+  %a = load i64, ptr %p
   ret i64 %a
+}
+
+define i128 @load128(ptr %p) {
+  ; CHECK-LABEL:           @load128.dfsan
+  ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint ptr %p to i64
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = load i64, ptr %[[#SHADOW_PTR]], align 1
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR2:]] = getelementptr i64, ptr %[[#SHADOW_PTR]], i64 1
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW2:]] = load i64, ptr %[[#WIDE_SHADOW_PTR2]], align 1
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW2]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 16
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#SHADOW:]] = trunc i64 %[[#WIDE_SHADOW]] to i8
+  ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i8 %[[#SHADOW]], %[[#PS]]
+  ; CHECK-NEXT:            %a = load i128, ptr %p, align 8
+  ; CHECK-NEXT:            store i8 %[[#SHADOW]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            ret i128 %a
+
+  %a = load i128, ptr %p
+  ret i128 %a
+}
+
+
+define i17 @load17(ptr %p) {
+  ; CHECK-LABEL:           @load17.dfsan
+  ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint ptr %p to i64
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
+  ; CHECK-NEXT:            %[[#SHADOW:]] = call zeroext i8 @__dfsan_union_load(ptr %[[#SHADOW_PTR]], i64 3)
+  ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i8 %[[#SHADOW]], %[[#PS]]
+  ; CHECK-NEXT:            %a = load i17, ptr %p
+  ; CHECK-NEXT:            store i8 %[[#SHADOW]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            ret i17 %a
+
+  %a = load i17, ptr %p
+  ret i17 %a
 }
 
 @X = constant i1 1
 define i1 @load_global() {
-  ; NO_COMBINE_PTR_LABEL: @"dfs$load_global"
-  ; NO_COMBINE_PTR_LABEL: store i16 0, i16* bitcast ([100 x i64]* @__dfsan_retval_tls to i16*), align 2
+  ; CHECK-LABEL:           @load_global.dfsan
+  ; CHECK-NEXT:            %a = load i1, ptr @X
+  ; CHECK-NEXT:            store i8 0, ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            ret i1 %a
 
-  %a = load i1, i1* @X
+  %a = load i1, ptr @X
   ret i1 %a
 }

@@ -175,8 +175,8 @@ public:
 
 protected:
   // Member variables
-  int m_primary_fd;   ///< The file descriptor for the primary.
-  int m_secondary_fd; ///< The file descriptor for the secondary.
+  int m_primary_fd = invalid_fd;   ///< The file descriptor for the primary.
+  int m_secondary_fd = invalid_fd; ///< The file descriptor for the secondary.
 
 private:
   PseudoTerminal(const PseudoTerminal &) = delete;

@@ -9,33 +9,49 @@
 // This file implements full lowering of Toy operations to LLVM MLIR dialect.
 // 'toy.print' is lowered to a loop nest that calls `printf` on each element of
 // the input array. The file also sets up the ToyToLLVMLoweringPass. This pass
-// lowers the combination of Affine + SCF + Standard dialects to the LLVM one:
+// lowers the combination of Arithmetic + Affine + SCF + Func dialects to the
+// LLVM one:
 //
 //                         Affine --
 //                                  |
 //                                  v
-//                                  Standard --> LLVM (Dialect)
+//                       Arithmetic + Func --> LLVM (Dialect)
 //                                  ^
 //                                  |
 //     'toy.print' --> Loop (SCF) --
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/TypeID.h"
 #include "toy/Dialect.h"
 #include "toy/Passes.h"
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
-#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Casting.h"
+#include <memory>
+#include <utility>
 
 using namespace mlir;
 
@@ -54,7 +70,8 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto memRefType = (*op->operand_type_begin()).cast<MemRefType>();
+    auto *context = rewriter.getContext();
+    auto memRefType = llvm::cast<MemRefType>((*op->operand_type_begin()));
     auto memRefShape = memRefType.getShape();
     auto loc = op->getLoc();
 
@@ -70,9 +87,10 @@ public:
     // Create a loop for each of the dimensions within the shape.
     SmallVector<Value, 4> loopIvs;
     for (unsigned i = 0, e = memRefShape.size(); i != e; ++i) {
-      auto lowerBound = rewriter.create<ConstantIndexOp>(loc, 0);
-      auto upperBound = rewriter.create<ConstantIndexOp>(loc, memRefShape[i]);
-      auto step = rewriter.create<ConstantIndexOp>(loc, 1);
+      auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+      auto upperBound =
+          rewriter.create<arith::ConstantIndexOp>(loc, memRefShape[i]);
+      auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
       auto loop =
           rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
       for (Operation &nested : *loop.getBody())
@@ -84,8 +102,8 @@ public:
 
       // Insert a newline after each of the inner dimensions of the shape.
       if (i != e - 1)
-        rewriter.create<CallOp>(loc, printfRef, rewriter.getIntegerType(32),
-                                newLineCst);
+        rewriter.create<LLVM::CallOp>(loc, getPrintfType(context), printfRef,
+                                      newLineCst);
       rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointToStart(loop.getBody());
     }
@@ -93,9 +111,10 @@ public:
     // Generate a call to printf for the current element of the loop.
     auto printOp = cast<toy::PrintOp>(op);
     auto elementLoad =
-        rewriter.create<memref::LoadOp>(loc, printOp.input(), loopIvs);
-    rewriter.create<CallOp>(loc, printfRef, rewriter.getIntegerType(32),
-                            ArrayRef<Value>({formatSpecifierCst, elementLoad}));
+        rewriter.create<memref::LoadOp>(loc, printOp.getInput(), loopIvs);
+    rewriter.create<LLVM::CallOp>(
+        loc, getPrintfType(context), printfRef,
+        ArrayRef<Value>({formatSpecifierCst, elementLoad}));
 
     // Notify the rewriter that this operation has been removed.
     rewriter.eraseOp(op);
@@ -103,6 +122,16 @@ public:
   }
 
 private:
+  /// Create a function declaration for printf, the signature is:
+  ///   * `i32 (i8*, ...)`
+  static LLVM::LLVMFunctionType getPrintfType(MLIRContext *context) {
+    auto llvmI32Ty = IntegerType::get(context, 32);
+    auto llvmPtrTy = LLVM::LLVMPointerType::get(context);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI32Ty, llvmPtrTy,
+                                                  /*isVarArg=*/true);
+    return llvmFnType;
+  }
+
   /// Return a symbol reference to the printf function, inserting it into the
   /// module if necessary.
   static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
@@ -111,17 +140,11 @@ private:
     if (module.lookupSymbol<LLVM::LLVMFuncOp>("printf"))
       return SymbolRefAttr::get(context, "printf");
 
-    // Create a function declaration for printf, the signature is:
-    //   * `i32 (i8*, ...)`
-    auto llvmI32Ty = IntegerType::get(context, 32);
-    auto llvmI8PtrTy = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
-    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI32Ty, llvmI8PtrTy,
-                                                  /*isVarArg=*/true);
-
     // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(module.getBody());
-    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), "printf", llvmFnType);
+    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), "printf",
+                                      getPrintfType(context));
     return SymbolRefAttr::get(context, "printf");
   }
 
@@ -145,16 +168,14 @@ private:
 
     // Get the pointer to the first character in the global string.
     Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
-    Value cst0 = builder.create<LLVM::ConstantOp>(
-        loc, IntegerType::get(builder.getContext(), 64),
-        builder.getIntegerAttr(builder.getIndexType(), 0));
+    Value cst0 = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
+                                                  builder.getIndexAttr(0));
     return builder.create<LLVM::GEPOp>(
-        loc,
-        LLVM::LLVMPointerType::get(IntegerType::get(builder.getContext(), 8)),
+        loc, LLVM::LLVMPointerType::get(builder.getContext()), global.getType(),
         globalPtr, ArrayRef<Value>({cst0, cst0}));
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // ToyToLLVMLoweringPass
@@ -163,12 +184,14 @@ private:
 namespace {
 struct ToyToLLVMLoweringPass
     : public PassWrapper<ToyToLLVMLoweringPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToLLVMLoweringPass)
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect>();
   }
   void runOnOperation() final;
 };
-} // end anonymous namespace
+} // namespace
 
 void ToyToLLVMLoweringPass::runOnOperation() {
   // The first thing to define is the conversion target. This will define the
@@ -194,8 +217,11 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   // set of legal ones.
   RewritePatternSet patterns(&getContext());
   populateAffineToStdConversionPatterns(patterns);
-  populateLoopToStdConversionPatterns(patterns);
-  populateStdToLLVMConversionPatterns(typeConverter, patterns);
+  populateSCFToControlFlowConversionPatterns(patterns);
+  mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
+  populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
+  cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
+  populateFuncToLLVMConversionPatterns(typeConverter, patterns);
 
   // The only remaining operation to lower from the `toy` dialect, is the
   // PrintOp.

@@ -51,8 +51,8 @@ def pcrel16 : Operand<i32>;
 // number
 //
 class FI16_ins<bits<5> op, string asmstr, InstrItinClass itin>:
-  FI16<op, (outs), (ins brtarget:$imm16),
-            !strconcat(asmstr, "\t$imm16 # 16 bit inst"), [], itin>;
+  FI16<op, (outs), (ins brtarget:$imm11),
+            !strconcat(asmstr, "\t$imm11 # 16 bit inst"), [], itin>;
 
 //
 //
@@ -61,16 +61,16 @@ class FI16_ins<bits<5> op, string asmstr, InstrItinClass itin>:
 
 class FI816_ins_base<bits<3> _func, string asmstr,
                      string asmstr2, InstrItinClass itin>:
-  FI816<_func, (outs), (ins simm16:$imm), !strconcat(asmstr, asmstr2),
+  FI816<_func, (outs), (ins simm16:$imm8), !strconcat(asmstr, asmstr2),
         [], itin>;
 
 class FI816_ins<bits<3> _func, string asmstr,
                 InstrItinClass itin>:
-  FI816_ins_base<_func, asmstr, "\t$imm  # 16 bit inst", itin>;
+  FI816_ins_base<_func, asmstr, "\t$imm8  # 16 bit inst", itin>;
 
 class FI816_SP_ins<bits<3> _func, string asmstr,
                    InstrItinClass itin>:
-  FI816_ins_base<_func, asmstr, "\t$$sp, $imm # 16 bit inst", itin>;
+  FI816_ins_base<_func, asmstr, "\t$$sp, $imm8 # 16 bit inst", itin>;
 
 //
 // RI instruction format
@@ -79,38 +79,38 @@ class FI816_SP_ins<bits<3> _func, string asmstr,
 
 class FRI16_ins_base<bits<5> op, string asmstr, string asmstr2,
                      InstrItinClass itin>:
-  FRI16<op, (outs CPU16Regs:$rx), (ins simm16:$imm),
+  FRI16<op, (outs CPU16Regs:$rx), (ins simm16:$imm8),
         !strconcat(asmstr, asmstr2), [], itin>;
 
 class FRI16_ins<bits<5> op, string asmstr,
                 InstrItinClass itin>:
-  FRI16_ins_base<op, asmstr, "\t$rx, $imm \t# 16 bit inst", itin>;
+  FRI16_ins_base<op, asmstr, "\t$rx, $imm8 \t# 16 bit inst", itin>;
 
 class FRI16_TCP_ins<bits<5> _op, string asmstr,
                     InstrItinClass itin>:
-  FRI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm, i32imm:$size),
-            !strconcat(asmstr, "\t$rx, $imm\t# 16 bit inst"), [], itin>;
+  FRI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm8, i32imm:$size),
+            !strconcat(asmstr, "\t$rx, $imm8\t# 16 bit inst"), [], itin>;
 
 class FRI16R_ins_base<bits<5> op, string asmstr, string asmstr2,
                      InstrItinClass itin>:
-  FRI16<op, (outs), (ins CPU16Regs:$rx, simm16:$imm),
+  FRI16<op, (outs), (ins CPU16Regs:$rx, simm16:$imm8),
         !strconcat(asmstr, asmstr2), [], itin>;
 
 class FRI16R_ins<bits<5> op, string asmstr,
                 InstrItinClass itin>:
-  FRI16R_ins_base<op, asmstr, "\t$rx, $imm \t# 16 bit inst", itin>;
+  FRI16R_ins_base<op, asmstr, "\t$rx, $imm8 \t# 16 bit inst", itin>;
 
 class F2RI16_ins<bits<5> _op, string asmstr,
                      InstrItinClass itin>:
-  FRI16<_op, (outs CPU16Regs:$rx), (ins CPU16Regs:$rx_, simm16:$imm),
-        !strconcat(asmstr, "\t$rx, $imm\t# 16 bit inst"), [], itin> {
+  FRI16<_op, (outs CPU16Regs:$rx), (ins CPU16Regs:$rx_, simm16:$imm8),
+        !strconcat(asmstr, "\t$rx, $imm8\t# 16 bit inst"), [], itin> {
   let Constraints = "$rx_ = $rx";
 }
 
 class FRI16_B_ins<bits<5> _op, string asmstr,
                   InstrItinClass itin>:
-  FRI16<_op, (outs), (ins  CPU16Regs:$rx, brtarget:$imm),
-        !strconcat(asmstr, "\t$rx, $imm  # 16 bit inst"), [], itin>;
+  FRI16<_op, (outs), (ins  CPU16Regs:$rx, brtarget:$imm8),
+        !strconcat(asmstr, "\t$rx, $imm8  # 16 bit inst"), [], itin>;
 //
 // Compare a register and immediate and place result in CC
 // Implicit use of T8
@@ -128,8 +128,8 @@ class FEXT_CCRXI16_ins<string asmstr>:
 //
 class FJAL16_ins<bits<1> _X, string asmstr,
                  InstrItinClass itin>:
-  FJAL16<_X, (outs), (ins uimm26:$imm),
-         !strconcat(asmstr, "\t$imm\n\tnop"),[],
+  FJAL16<_X, (outs), (ins uimm26:$imm26),
+         !strconcat(asmstr, "\t$imm26\n\tnop"),[],
          itin>  {
   let isCodeGenOnly=1;
   let Size=6;
@@ -137,8 +137,8 @@ class FJAL16_ins<bits<1> _X, string asmstr,
 
 class FJALB16_ins<bits<1> _X, string asmstr,
                  InstrItinClass itin>:
-  FJAL16<_X, (outs), (ins uimm26:$imm),
-         !strconcat(asmstr, "\t$imm\t# branch\n\tnop"),[],
+  FJAL16<_X, (outs), (ins uimm26:$imm26),
+         !strconcat(asmstr, "\t$imm26\t# branch\n\tnop"),[],
          itin>  {
   let isCodeGenOnly=1;
   let Size=6;
@@ -157,16 +157,16 @@ class FEXT_I16_ins<bits<5> eop, string asmstr, InstrItinClass itin> :
 
 class FEXT_I816_ins_base<bits<3> _func, string asmstr,
                          string asmstr2, InstrItinClass itin>:
-  FEXT_I816<_func, (outs), (ins simm16:$imm), !strconcat(asmstr, asmstr2),
+  FEXT_I816<_func, (outs), (ins simm16:$imm16), !strconcat(asmstr, asmstr2),
             [], itin>;
 
 class FEXT_I816_ins<bits<3> _func, string asmstr,
                     InstrItinClass itin>:
-  FEXT_I816_ins_base<_func, asmstr, "\t$imm", itin>;
+  FEXT_I816_ins_base<_func, asmstr, "\t$imm16", itin>;
 
 class FEXT_I816_SP_ins<bits<3> _func, string asmstr,
                        InstrItinClass itin>:
-      FEXT_I816_ins_base<_func, asmstr, "\t$$sp, $imm", itin>;
+      FEXT_I816_ins_base<_func, asmstr, "\t$$sp, $imm16", itin>;
 
 //
 // Assembler formats in alphabetical order.
@@ -190,39 +190,39 @@ class FCCRR16_ins<string asmstr> :
 
 class FEXT_RI16_ins_base<bits<5> _op, string asmstr, string asmstr2,
                          InstrItinClass itin>:
-  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins simm16:$imm),
+  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins simm16:$imm16),
                   !strconcat(asmstr, asmstr2), [], itin>;
 
 class FEXT_RI16_ins<bits<5> _op, string asmstr,
                     InstrItinClass itin>:
-  FEXT_RI16_ins_base<_op, asmstr, "\t$rx, $imm", itin>;
+  FEXT_RI16_ins_base<_op, asmstr, "\t$rx, $imm16", itin>;
 
 class FEXT_RI16R_ins_base<bits<5> _op, string asmstr, string asmstr2,
                          InstrItinClass itin>:
-  FEXT_RI16<_op, (outs ), (ins CPU16Regs:$rx, simm16:$imm),
+  FEXT_RI16<_op, (outs ), (ins CPU16Regs:$rx, simm16:$imm16),
                   !strconcat(asmstr, asmstr2), [], itin>;
 
 class FEXT_RI16R_ins<bits<5> _op, string asmstr,
                     InstrItinClass itin>:
-  FEXT_RI16R_ins_base<_op, asmstr, "\t$rx, $imm", itin>;
+  FEXT_RI16R_ins_base<_op, asmstr, "\t$rx, $imm16", itin>;
 
 class FEXT_RI16_PC_ins<bits<5> _op, string asmstr, InstrItinClass itin>:
-  FEXT_RI16_ins_base<_op, asmstr, "\t$rx, $$pc, $imm", itin>;
+  FEXT_RI16_ins_base<_op, asmstr, "\t$rx, $$pc, $imm16", itin>;
 
 class FEXT_RI16_B_ins<bits<5> _op, string asmstr,
                       InstrItinClass itin>:
-  FEXT_RI16<_op, (outs), (ins  CPU16Regs:$rx, brtarget:$imm),
-            !strconcat(asmstr, "\t$rx, $imm"), [], itin>;
+  FEXT_RI16<_op, (outs), (ins  CPU16Regs:$rx, brtarget:$imm16),
+            !strconcat(asmstr, "\t$rx, $imm16"), [], itin>;
 
 class FEXT_RI16_TCP_ins<bits<5> _op, string asmstr,
                         InstrItinClass itin>:
-  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm, i32imm:$size),
-            !strconcat(asmstr, "\t$rx, $imm"), [], itin>;
+  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm16, i32imm:$size),
+            !strconcat(asmstr, "\t$rx, $imm16"), [], itin>;
 
 class FEXT_2RI16_ins<bits<5> _op, string asmstr,
                      InstrItinClass itin>:
-  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins CPU16Regs:$rx_, simm16:$imm),
-            !strconcat(asmstr, "\t$rx, $imm"), [], itin> {
+  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins CPU16Regs:$rx_, simm16:$imm16),
+            !strconcat(asmstr, "\t$rx, $imm16"), [], itin> {
   let Constraints = "$rx_ = $rx";
 }
 
@@ -232,12 +232,12 @@ class FEXT_2RI16_ins<bits<5> _op, string asmstr,
 
 class FEXT_RRI16_mem_ins<bits<5> op, string asmstr, Operand MemOpnd,
                          InstrItinClass itin>:
-  FEXT_RRI16<op, (outs CPU16Regs:$ry), (ins  MemOpnd:$addr),
+  FEXT_RRI16<op, (outs CPU16Regs:$ry), (ins  (MemOpnd $rx, $imm16):$addr),
              !strconcat(asmstr, "\t$ry, $addr"), [], itin>;
 
 class FEXT_RRI16_mem2_ins<bits<5> op, string asmstr, Operand MemOpnd,
                           InstrItinClass itin>:
-  FEXT_RRI16<op, (outs ), (ins  CPU16Regs:$ry, MemOpnd:$addr),
+  FEXT_RRI16<op, (outs ), (ins  CPU16Regs:$ry, (MemOpnd $rx, $imm16):$addr),
              !strconcat(asmstr, "\t$ry, $addr"), [], itin>;
 
 //
@@ -247,15 +247,15 @@ class FEXT_RRI16_mem2_ins<bits<5> op, string asmstr, Operand MemOpnd,
 
 class FEXT_RRI_A16_mem_ins<bits<1> op, string asmstr, Operand MemOpnd,
                            InstrItinClass itin>:
-  FEXT_RRI_A16<op, (outs CPU16Regs:$ry), (ins  MemOpnd:$addr),
+  FEXT_RRI_A16<op, (outs CPU16Regs:$ry), (ins  (MemOpnd $rx, $imm15):$addr),
                !strconcat(asmstr, "\t$ry, $addr"), [], itin>;
 
 //
 // EXT-SHIFT instruction format
 //
 class FEXT_SHIFT16_ins<bits<2> _f, string asmstr, InstrItinClass itin>:
-  FEXT_SHIFT16<_f, (outs CPU16Regs:$rx), (ins CPU16Regs:$ry, uimm5:$sa),
-               !strconcat(asmstr, "\t$rx, $ry, $sa"), [], itin>;
+  FEXT_SHIFT16<_f, (outs CPU16Regs:$rx), (ins CPU16Regs:$ry, uimm5:$sa6),
+               !strconcat(asmstr, "\t$rx, $ry, $sa6"), [], itin>;
 
 //
 // EXT-T8I8
@@ -287,8 +287,8 @@ class FEXT_T8I8I16_ins<string asmstr, string asmstr2>:
 // I8_MOVR32 instruction format (used only by the MOVR32 instructio
 //
 class FI8_MOVR3216_ins<string asmstr, InstrItinClass itin>:
-       FI8_MOVR3216<(outs CPU16Regs:$rz), (ins GPR32:$r32),
-       !strconcat(asmstr,  "\t$rz, $r32"), [], itin>;
+       FI8_MOVR3216<(outs CPU16Regs:$ry), (ins GPR32:$r32),
+       !strconcat(asmstr,  "\t$ry, $r32"), [], itin>;
 
 //
 // I8_MOV32R instruction format (used only by MOV32R instruction)
@@ -304,14 +304,14 @@ class FI8_MOV32R16_ins<string asmstr, InstrItinClass itin>:
 //
 // MULT
 //
-class FMULT16_ins<string asmstr, InstrItinClass itin> :
+class FMULT16_ins<string asmstr> :
   MipsPseudo16<(outs), (ins CPU16Regs:$rx, CPU16Regs:$ry),
                !strconcat(asmstr, "\t$rx, $ry"), []>;
 
 //
 // MULT-LO
 //
-class FMULT16_LO_ins<string asmstr, InstrItinClass itin> :
+class FMULT16_LO_ins<string asmstr> :
   MipsPseudo16<(outs CPU16Regs:$rz), (ins CPU16Regs:$rx, CPU16Regs:$ry),
                !strconcat(asmstr, "\t$rx, $ry\n\tmflo\t$rz"), []> {
   let isCodeGenOnly=1;
@@ -374,8 +374,8 @@ class FRR16_JALRC_RA_only_ins<bits<1> nd_, bits<1> l_,
 
 class FRR16_JALRC_ins<bits<1> nd, bits<1> l, bits<1> ra,
                       string asmstr, InstrItinClass itin>:
-  FRR16_JALRC<nd, l, ra, (outs), (ins CPU16Regs:$rx),
-              !strconcat(asmstr, "\t$rx"), [], itin> ;
+  FRR16_JALRC<nd, l, ra, (outs), (ins CPU16Regs:$rs),
+              !strconcat(asmstr, "\t$rs"), [], itin> ;
 
 class FRR_SF16_ins
   <bits<5> _funct, bits<3> _subfunc,
@@ -537,6 +537,7 @@ def AddiuRxRxImmX16: FEXT_2RI16_ins<0b01001, "addiu", IIM16Alu>,
   let isCodeGenOnly = 1;
 }
 
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def AddiuRxRyOffMemX16:
   FEXT_RRI_A16_mem_ins<0, "addiu", mem16_ea, IIM16Alu>;
 
@@ -775,6 +776,7 @@ def JrcRa16: FRR16_JALRC_RA_only_ins<1, 1, "jrc", IIM16Alu> {
 }
 
 def JrcRx16: FRR16_JALRC_ins<1, 1, 0, "jrc", IIM16Alu> {
+  let rx = 0b000;
   let isBranch = 1;
   let isIndirectBranch = 1;
   let isTerminator=1;
@@ -849,6 +851,7 @@ def LwRxRyOffMemX16: FEXT_RRI16_mem_ins<0b10011, "lw", mem16, II_LW>, MayLoad{
 // Purpose: Load Word (SP-Relative, Extended)
 // To load an SP-relative word from memory as a signed value.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def LwRxSpImmX16: FEXT_RRI16_mem_ins<0b10010, "lw", mem16sp, II_LW>, MayLoad;
 
 def LwRxPcTcp16: FRI16_TCP_ins<0b10110, "lw", II_LW>, MayLoad;
@@ -876,6 +879,7 @@ def MoveR3216: FI8_MOVR3216_ins<"move", IIM16Alu> {
 // To copy the special purpose HI register to a GPR.
 //
 def Mfhi16: FRR16_M_ins<0b10000, "mfhi", IIM16Alu> {
+  let ry = 0b000; // no 'ry' field
   let Uses = [HI0];
   let hasSideEffects = 0;
   let isMoveReg = 1;
@@ -887,6 +891,7 @@ def Mfhi16: FRR16_M_ins<0b10000, "mfhi", IIM16Alu> {
 // To copy the special purpose LO register to a GPR.
 //
 def Mflo16: FRR16_M_ins<0b10010, "mflo", IIM16Alu> {
+  let ry = 0b000; // no 'ry' field
   let Uses = [LO0];
   let hasSideEffects = 0;
   let isMoveReg = 0;
@@ -895,13 +900,13 @@ def Mflo16: FRR16_M_ins<0b10010, "mflo", IIM16Alu> {
 //
 // Pseudo Instruction for mult
 //
-def MultRxRy16:  FMULT16_ins<"mult",  IIM16Alu> {
+def MultRxRy16:  FMULT16_ins<"mult"> {
   let isCommutable = 1;
   let hasSideEffects = 0;
   let Defs = [HI0, LO0];
 }
 
-def MultuRxRy16: FMULT16_ins<"multu", IIM16Alu> {
+def MultuRxRy16: FMULT16_ins<"multu"> {
   let isCommutable = 1;
   let hasSideEffects = 0;
   let Defs = [HI0, LO0];
@@ -912,7 +917,7 @@ def MultuRxRy16: FMULT16_ins<"multu", IIM16Alu> {
 // Purpose: Multiply Word
 // To multiply 32-bit signed integers.
 //
-def MultRxRyRz16: FMULT16_LO_ins<"mult", IIM16Alu> {
+def MultRxRyRz16: FMULT16_LO_ins<"mult"> {
   let isCommutable = 1;
   let hasSideEffects = 0;
   let Defs = [HI0, LO0];
@@ -923,7 +928,7 @@ def MultRxRyRz16: FMULT16_LO_ins<"mult", IIM16Alu> {
 // Purpose: Multiply Unsigned Word
 // To multiply 32-bit unsigned integers.
 //
-def MultuRxRyRz16: FMULT16_LO_ins<"multu", IIM16Alu> {
+def MultuRxRyRz16: FMULT16_LO_ins<"multu"> {
   let isCommutable = 1;
   let hasSideEffects = 0;
   let Defs = [HI0, LO0];
@@ -1003,6 +1008,7 @@ def SaveX16:
 // Purpose: Store Byte (Extended)
 // To store a byte to memory.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def SbRxRyOffMemX16:
   FEXT_RRI16_mem2_ins<0b11000, "sb", mem16, II_SB>, MayStore;
 
@@ -1141,6 +1147,7 @@ def SelTBtneZSltiu: SeliT<"btnez", "sltiu">;
 // Purpose: Store Halfword (Extended)
 // To store a halfword to memory.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def ShRxRyOffMemX16:
   FEXT_RRI16_mem2_ins<0b11001, "sh", mem16, II_SH>, MayStore;
 
@@ -1277,6 +1284,7 @@ def SubuRxRyRz16: FRRR16_ins<0b11, "subu", IIM16Alu>, ArithLogic16Defs<0>;
 // Purpose: Store Word (Extended)
 // To store a word to memory.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def SwRxRyOffMemX16: FEXT_RRI16_mem2_ins<0b11011, "sw", mem16, II_SW>, MayStore;
 
 //
@@ -1284,6 +1292,7 @@ def SwRxRyOffMemX16: FEXT_RRI16_mem2_ins<0b11011, "sw", mem16, II_SW>, MayStore;
 // Purpose: Store Word rx (SP-Relative)
 // To store an SP-relative word to memory.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def SwRxSpImmX16: FEXT_RRI16_mem2_ins<0b11010, "sw", mem16sp, II_SW>, MayStore;
 
 //
@@ -1376,8 +1385,8 @@ def: Mips16Pat<(brind CPU16Regs:$rs), (JrcRx16 CPU16Regs:$rs)> {
 // Jump and Link (Call)
 let isCall=1, hasDelaySlot=0 in
 def JumpLinkReg16:
-  FRR16_JALRC<0, 0, 0, (outs), (ins CPU16Regs:$rs),
-              "jalrc\t$rs", [(MipsJmpLink CPU16Regs:$rs)], II_JALRC> {
+  FRR16_JALRC<0, 0, 0, (outs), (ins CPU16Regs:$rx),
+              "jalrc\t$rx", [(MipsJmpLink CPU16Regs:$rx)], II_JALRC> {
   let Defs = [RA];
 }
 

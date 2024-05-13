@@ -18,8 +18,8 @@ void i(void) {
   }
 }
 
-// CHECK: call arm_aapcs_vfpcc i8* @objc_begin_catch
+// CHECK: call arm_aapcs_vfpcc ptr @objc_begin_catch
 // CHECK: call arm_aapcs_vfpcc void @objc_end_catch
-// CHECK-NOT: call i8* @objc_begin_catch
+// CHECK-NOT: call ptr @objc_begin_catch
 // CHECK-NOT: call void @objc_end_catch
 

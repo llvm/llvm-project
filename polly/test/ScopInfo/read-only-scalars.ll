@@ -1,8 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=false -polly-scops \
-; RUN:                -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=true -polly-scops \
-; RUN:                -analyze < %s | FileCheck %s \
-; RUN:                -check-prefix=SCALARS
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=false -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=true  -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCALARS
 
 ; CHECK-NOT: Memref_scalar
 
@@ -14,7 +11,7 @@
 ; SCALARS:     { Stmt_stmt1[i0] -> MemRef_scalar2[] };
 
 
-define void @foo(float* noalias %A, float* %B, float %scalar, float %scalar2) {
+define void @foo(ptr noalias %A, ptr %B, float %scalar, float %scalar2) {
 entry:
   br label %loop
 
@@ -23,10 +20,10 @@ loop:
   br label %stmt1
 
 stmt1:
-  %val = load float, float* %A
+  %val = load float, ptr %A
   %sum = fadd float %val, %scalar
-  store float %sum, float* %A
-  store float %scalar2, float* %B
+  store float %sum, ptr %A
+  store float %scalar2, ptr %B
   br label %loop.backedge
 
 loop.backedge:

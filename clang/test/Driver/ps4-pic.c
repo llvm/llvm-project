@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target
-
 // Test the driver's control over the PIC behavior for PS4 compiler.
 // These consist of tests of the relocation model flags and the
 // pic level flags passed to CC1.
@@ -78,11 +76,11 @@
 // Disregard any of the PIC-specific flags if we have a trump-card flag.
 // RUN: %clang -c %s -target x86_64-scei-ps4 -mkernel -fPIC -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
-// RUN: %clang -c %s -target x86_64-scei-ps4 -mdynamic-no-pic -fPIC -### 2>&1 \
+// RUN: not %clang -c %s --target=x86_64-scei-ps4 -mdynamic-no-pic -fPIC -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-DYNAMIC-NO-PIC2
 //
 // -static not supported at all.
-// RUN: %clang -c %s -target x86_64-scei-ps4 -static -### 2>&1 \
+// RUN: not %clang -c %s --target=x86_64-scei-ps4 -static -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-STATIC-ERR
 //
 // -fno-PIC etc. is obeyed if -mcmodel=kernel is also present.

@@ -1,10 +1,5 @@
-; RUN: opt %loadPolly -polly-process-unprofitable=false \
-; RUN: \
-; RUN: -polly-detect -analyze < %s | FileCheck %s
-
-; RUN: opt %loadPolly -polly-process-unprofitable=true \
-; RUN: \
-; RUN: -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-process-unprofitable=true -polly-print-detect -disable-output < %s | FileCheck %s
 
 ; CHECK: Valid Region for Scop:
 
@@ -19,7 +14,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(float* %A, float* %B, i64 %N) {
+define void @foo(ptr %A, ptr %B, i64 %N) {
 entry:
   br label %bb
 
@@ -37,10 +32,10 @@ bb3:                                              ; preds = %bb9, %bb2
 
 bb4:                                              ; preds = %bb3
   %tmp5 = sitofp i64 %i.0 to float
-  %tmp6 = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp7 = load float, float* %tmp6, align 4
+  %tmp6 = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp7 = load float, ptr %tmp6, align 4
   %tmp8 = fadd float %tmp7, %tmp5
-  store float %tmp8, float* %tmp6, align 4
+  store float %tmp8, ptr %tmp6, align 4
   br label %bb9
 
 bb9:                                              ; preds = %bb4
@@ -60,10 +55,10 @@ bb13:                                             ; preds = %bb19, %bb12
 
 bb14:                                             ; preds = %bb13
   %tmp15 = sitofp i64 %i1.0 to float
-  %tmp16 = getelementptr inbounds float, float* %B, i64 %i1.0
-  %tmp17 = load float, float* %tmp16, align 4
+  %tmp16 = getelementptr inbounds float, ptr %B, i64 %i1.0
+  %tmp17 = load float, ptr %tmp16, align 4
   %tmp18 = fadd float %tmp17, %tmp15
-  store float %tmp18, float* %tmp16, align 4
+  store float %tmp18, ptr %tmp16, align 4
   br label %bb19
 
 bb19:                                             ; preds = %bb14

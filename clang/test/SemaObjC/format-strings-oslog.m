@@ -25,11 +25,9 @@ void test_os_log_format(const char *pc, int i, void *p, void *buf) {
   printf("%{private}s", pc); // expected-warning {{using 'private' format specifier annotation outside of os_log()/os_trace()}}
   __builtin_os_log_format(buf, "%{private}s", pc);
 
-  // <rdar://problem/23835805>
   __builtin_os_log_format_buffer_size("no-args");
   __builtin_os_log_format(buf, "%s", "hi");
 
-  // <rdar://problem/24828090>
   wchar_t wc = 'a';
   __builtin_os_log_format(buf, "%C", wc);
   printf("%C", wc);
@@ -46,15 +44,18 @@ void test_os_log_format(const char *pc, int i, void *p, void *buf) {
 }
 
 // Test os_log_format primitive with ObjC string literal format argument.
-void test_objc(const char *pc, int i, void *p, void *buf, NSString *nss) {
+void test_objc(const char *pc, int i, void *p, void *buf, NSString *nss, id obj) {
   __builtin_os_log_format(buf, @"");
   __builtin_os_log_format(buf, @"%d"); // expected-warning {{more '%' conversions than data arguments}}
   __builtin_os_log_format(buf, @"%d", i);
+
   __builtin_os_log_format(buf, @"%P", p); // expected-warning {{using '%P' format specifier without precision}}
   __builtin_os_log_format(buf, @"%.10P", p);
   __builtin_os_log_format(buf, @"%.*P", p); // expected-warning {{field precision should have type 'int', but argument has type 'void *'}}
   __builtin_os_log_format(buf, @"%.*P", i, p);
   __builtin_os_log_format(buf, @"%.*P", i, i); // expected-warning {{format specifies type 'void *' but the argument has type 'int'}}
+  __builtin_os_log_format(buf, @"%.8P", nss);    // expected-warning {{using '%P' format specifier with an Objective-C pointer results in dumping runtime object structure, not object value}}
+  __builtin_os_log_format(buf, @"%.*P", i, obj); // expected-warning {{using '%P' format specifier with an Objective-C pointer results in dumping runtime object structure, not object value}}
 
   __builtin_os_log_format(buf, @"%{private}s", pc);
   __builtin_os_log_format(buf, @"%@", nss);

@@ -27,7 +27,7 @@ using namespace clang;
 
 ObjCArrayLiteral::ObjCArrayLiteral(ArrayRef<Expr *> Elements, QualType T,
                                    ObjCMethodDecl *Method, SourceRange SR)
-    : Expr(ObjCArrayLiteralClass, T, VK_RValue, OK_Ordinary),
+    : Expr(ObjCArrayLiteralClass, T, VK_PRValue, OK_Ordinary),
       NumElements(Elements.size()), Range(SR), ArrayWithObjectsMethod(Method) {
   Expr **SaveElements = getElements();
   for (unsigned I = 0, N = Elements.size(); I != N; ++I)
@@ -54,7 +54,7 @@ ObjCDictionaryLiteral::ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK,
                                              bool HasPackExpansions, QualType T,
                                              ObjCMethodDecl *method,
                                              SourceRange SR)
-    : Expr(ObjCDictionaryLiteralClass, T, VK_RValue, OK_Ordinary),
+    : Expr(ObjCDictionaryLiteralClass, T, VK_PRValue, OK_Ordinary),
       NumElements(VK.size()), HasPackExpansions(HasPackExpansions), Range(SR),
       DictWithObjectsMethod(method) {
   KeyValuePair *KeyValues = getTrailingObjects<KeyValuePair>();
@@ -271,20 +271,7 @@ QualType ObjCMessageExpr::getCallReturnType(ASTContext &Ctx) const {
     }
     return QT;
   }
-
-  // Expression type might be different from an expected call return type,
-  // as expression type would never be a reference even if call returns a
-  // reference. Reconstruct the original expression type.
-  QualType QT = getType();
-  switch (getValueKind()) {
-  case VK_LValue:
-    return Ctx.getLValueReferenceType(QT);
-  case VK_XValue:
-    return Ctx.getRValueReferenceType(QT);
-  case VK_RValue:
-    return QT;
-  }
-  llvm_unreachable("Unsupported ExprValueKind");
+  return Ctx.getReferenceQualifiedType(this);
 }
 
 SourceRange ObjCMessageExpr::getReceiverRange() const {

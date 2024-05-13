@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -17,12 +16,7 @@
 #include <initializer_list>
 #include <iterator>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     std::initializer_list<int> c = { 4 };
     std::empty(c); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    return 0;
 }

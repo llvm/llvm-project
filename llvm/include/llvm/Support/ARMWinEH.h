@@ -199,13 +199,14 @@ inline bool EpilogueFolding(const RuntimeFunction &RF) {
 inline uint16_t StackAdjustment(const RuntimeFunction &RF) {
   uint16_t Adjustment = RF.StackAdjust();
   if (Adjustment >= 0x3f4)
-    return (Adjustment & 0x3) ? ((Adjustment & 0x3) << 2) - 1 : 0;
+    return (Adjustment & 0x3) + 1;
   return Adjustment;
 }
 
 /// SavedRegisterMask - Utility function to calculate the set of saved general
 /// purpose (r0-r15) and VFP (d0-d31) registers.
-std::pair<uint16_t, uint32_t> SavedRegisterMask(const RuntimeFunction &RF);
+std::pair<uint16_t, uint32_t> SavedRegisterMask(const RuntimeFunction &RF,
+                                                bool Prologue = true);
 
 /// RuntimeFunctionARM64 - An entry in the table of procedure data (.pdata)
 ///
@@ -485,7 +486,7 @@ struct ExceptionDataRecord {
   ArrayRef<support::ulittle32_t> EpilogueScopes() const {
     assert(E() == 0 && "epilogue scopes are only present when the E bit is 0");
     size_t Offset = HeaderWords(*this);
-    return makeArrayRef(&Data[Offset], EpilogueCount());
+    return ArrayRef(&Data[Offset], EpilogueCount());
   }
 
   ArrayRef<uint8_t> UnwindByteCode() const {
@@ -493,7 +494,7 @@ struct ExceptionDataRecord {
                         + (E() ? 0 :  EpilogueCount());
     const uint8_t *ByteCode =
       reinterpret_cast<const uint8_t *>(&Data[Offset]);
-    return makeArrayRef(ByteCode, CodeWords() * sizeof(uint32_t));
+    return ArrayRef(ByteCode, CodeWords() * sizeof(uint32_t));
   }
 
   uint32_t ExceptionHandlerRVA() const {

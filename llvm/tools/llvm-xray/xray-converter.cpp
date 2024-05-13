@@ -57,6 +57,15 @@ static cl::opt<bool>
                      cl::init(false), cl::sub(Convert));
 static cl::alias ConvertSymbolize2("y", cl::aliasopt(ConvertSymbolize),
                                    cl::desc("Alias for -symbolize"));
+static cl::opt<bool>
+    NoDemangle("no-demangle",
+               cl::desc("determines whether to demangle function name "
+                        "when symbolizing function ids from the input log"),
+               cl::init(false), cl::sub(Convert));
+
+static cl::opt<bool> Demangle("demangle",
+                              cl::desc("demangle symbols (default)"),
+                              cl::sub(Convert));
 
 static cl::opt<std::string>
     ConvertInstrMap("instr_map",
@@ -95,7 +104,7 @@ void TraceConverter::exportAsYAML(const Trace &Records, raw_ostream &OS) {
 void TraceConverter::exportAsRAWv1(const Trace &Records, raw_ostream &OS) {
   // First write out the file header, in the correct endian-appropriate format
   // (XRay assumes currently little endian).
-  support::endian::Writer Writer(OS, support::endianness::little);
+  support::endian::Writer Writer(OS, llvm::endianness::little);
   const auto &FH = Records.getFileHeader();
   Writer.write(FH.Version);
   Writer.write(FH.Type);
@@ -181,7 +190,7 @@ findSiblings(StackTrieNode *parent, int32_t FnId, uint32_t TId,
   SmallVector<StackTrieNode *, 4> Siblings{};
 
   if (parent == nullptr) {
-    for (auto map_iter : StackRootsByThreadId) {
+    for (const auto &map_iter : StackRootsByThreadId) {
       // Only look for siblings in other threads.
       if (map_iter.first != TId)
         for (auto node_iter : map_iter.second) {
@@ -373,7 +382,10 @@ static CommandRegistration Unused(&Convert, []() -> Error {
   }
 
   const auto &FunctionAddresses = Map.getFunctionAddresses();
-  symbolize::LLVMSymbolizer Symbolizer;
+  symbolize::LLVMSymbolizer::Options SymbolizerOpts;
+  if (Demangle.getPosition() < NoDemangle.getPosition())
+    SymbolizerOpts.Demangle = false;
+  symbolize::LLVMSymbolizer Symbolizer(SymbolizerOpts);
   llvm::xray::FuncIdConversionHelper FuncIdHelper(ConvertInstrMap, Symbolizer,
                                                   FunctionAddresses);
   llvm::xray::TraceConverter TC(FuncIdHelper, ConvertSymbolize);

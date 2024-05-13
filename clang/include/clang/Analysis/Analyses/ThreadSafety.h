@@ -47,7 +47,13 @@ enum ProtectedOperationKind {
   POK_PassByRef,
 
   /// Passing a pt-guarded variable by reference.
-  POK_PtPassByRef
+  POK_PtPassByRef,
+
+  /// Returning a guarded variable by reference.
+  POK_ReturnByRef,
+
+  /// Returning a pt-guarded variable by reference.
+  POK_PtReturnByRef,
 };
 
 /// This enum distinguishes between different kinds of lock actions. For
@@ -98,9 +104,8 @@ public:
   virtual ~ThreadSafetyHandler();
 
   /// Warn about lock expressions which fail to resolve to lockable objects.
-  /// \param Kind -- the capability's name parameter (role, mutex, etc).
   /// \param Loc -- the SourceLocation of the unresolved expression.
-  virtual void handleInvalidLockExp(StringRef Kind, SourceLocation Loc) {}
+  virtual void handleInvalidLockExp(SourceLocation Loc) {}
 
   /// Warn about unlock function calls that do not have a prior matching lock
   /// expression.
@@ -169,14 +174,12 @@ public:
                                         SourceLocation Loc2) {}
 
   /// Warn when a protected operation occurs while no locks are held.
-  /// \param Kind -- the capability's name parameter (role, mutex, etc).
   /// \param D -- The decl for the protected variable or function
   /// \param POK -- The kind of protected operation (e.g. variable access)
   /// \param AK -- The kind of access (i.e. read or write) that occurred
   /// \param Loc -- The location of the protected operation.
-  virtual void handleNoMutexHeld(StringRef Kind, const NamedDecl *D,
-                                 ProtectedOperationKind POK, AccessKind AK,
-                                 SourceLocation Loc) {}
+  virtual void handleNoMutexHeld(const NamedDecl *D, ProtectedOperationKind POK,
+                                 AccessKind AK, SourceLocation Loc) {}
 
   /// Warn when a protected operation occurs while the specific mutex protecting
   /// the operation is not locked.

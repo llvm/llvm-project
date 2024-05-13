@@ -17,6 +17,7 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -25,10 +26,189 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
+
+/// Information about a pointer-authentication related instruction.
+struct PtrauthInstructionInfo {
+  bool IsAuthenticated;
+  bool IsLoad;
+  bool DoesBranch;
+};
+
+/// Get any pointer-authentication related information about the instruction
+/// at address \p at_addr.
+static std::optional<PtrauthInstructionInfo>
+GetPtrauthInstructionInfo(Target &target, const ArchSpec &arch,
+                          const Address &at_addr) {
+  const char *plugin_name = nullptr;
+  const char *flavor = nullptr;
+  AddressRange range_bounds(at_addr, 4);
+  const bool prefer_file_cache = true;
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      arch, plugin_name, flavor, target, range_bounds, prefer_file_cache);
+  if (!disassembler_sp)
+    return std::nullopt;
+
+  InstructionList &insn_list = disassembler_sp->GetInstructionList();
+  InstructionSP insn = insn_list.GetInstructionAtIndex(0);
+  if (!insn)
+    return std::nullopt;
+
+  return PtrauthInstructionInfo{insn->IsAuthenticated(), insn->IsLoad(),
+                                insn->DoesBranch()};
+}
+
+/// Describe the load address of \p addr using the format filename:line:col.
+static void DescribeAddressBriefly(Stream &strm, const Address &addr,
+                                   Target &target) {
+  strm.Printf("at address=0x%" PRIx64, addr.GetLoadAddress(&target));
+  StreamString s;
+  if (addr.GetDescription(s, target, eDescriptionLevelBrief))
+    strm.Printf(" %s", s.GetString().data());
+  strm.Printf(".\n");
+}
+
+bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
+  bool IsBreakpoint = m_value == 6; // EXC_BREAKPOINT
+  bool IsBadAccess = m_value == 1;  // EXC_BAD_ACCESS
+  if (!IsBreakpoint && !IsBadAccess)
+    return false;
+
+  // Check that we have a live process.
+  if (!exe_ctx.HasProcessScope() || !exe_ctx.HasThreadScope() ||
+      !exe_ctx.HasTargetScope())
+    return false;
+
+  Thread &thread = *exe_ctx.GetThreadPtr();
+  StackFrameSP current_frame = thread.GetStackFrameAtIndex(0);
+  if (!current_frame)
+    return false;
+
+  Target &target = *exe_ctx.GetTargetPtr();
+  Process &process = *exe_ctx.GetProcessPtr();
+  ABISP abi_sp = process.GetABI();
+  const ArchSpec &arch = target.GetArchitecture();
+  assert(abi_sp && "Missing ABI info");
+
+  // Check for a ptrauth-enabled target.
+  const bool ptrauth_enabled_target =
+      arch.GetCore() == ArchSpec::eCore_arm_arm64e;
+  if (!ptrauth_enabled_target)
+    return false;
+
+  // Set up a stream we can write a diagnostic into.
+  StreamString strm;
+  auto emit_ptrauth_prologue = [&](uint64_t at_address) {
+    strm.Printf("EXC_BAD_ACCESS (code=%" PRIu64 ", address=0x%" PRIx64 ")\n",
+                m_exc_code, at_address);
+    strm.Printf("Note: Possible pointer authentication failure detected.\n");
+  };
+
+  // Check if we have a "brk 0xc47x" trap, where the value that failed to
+  // authenticate is in x16.
+  Address current_address = current_frame->GetFrameCodeAddress();
+  if (IsBreakpoint) {
+    RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
+    if (!reg_ctx)
+      return false;
+
+    const RegisterInfo *X16Info = reg_ctx->GetRegisterInfoByName("x16");
+    RegisterValue X16Val;
+    if (!reg_ctx->ReadRegister(X16Info, X16Val))
+      return false;
+    uint64_t bad_address = X16Val.GetAsUInt64();
+
+    uint64_t fixed_bad_address = abi_sp->FixCodeAddress(bad_address);
+    Address brk_address;
+    if (!target.ResolveLoadAddress(fixed_bad_address, brk_address))
+      return false;
+
+    auto brk_ptrauth_info =
+        GetPtrauthInstructionInfo(target, arch, current_address);
+    if (brk_ptrauth_info && brk_ptrauth_info->IsAuthenticated) {
+      emit_ptrauth_prologue(bad_address);
+      strm.Printf("Found value that failed to authenticate ");
+      DescribeAddressBriefly(strm, brk_address, target);
+      m_description = std::string(strm.GetString());
+      return true;
+    }
+    return false;
+  }
+
+  assert(IsBadAccess && "Handle EXC_BAD_ACCESS only after this point");
+
+  // Check that we have the "bad address" from an EXC_BAD_ACCESS.
+  if (m_exc_data_count < 2)
+    return false;
+
+  // Ok, we know the Target is valid and that it describes a ptrauth-enabled
+  // device. Now, we need to determine whether this exception was caused by a
+  // ptrauth failure.
+
+  uint64_t bad_address = m_exc_subcode;
+  uint64_t fixed_bad_address = abi_sp->FixCodeAddress(bad_address);
+  uint64_t current_pc = current_address.GetLoadAddress(&target);
+
+  // Detect: LDRAA, LDRAB (Load Register, with pointer authentication).
+  //
+  // If an authenticated load results in an exception, the instruction at the
+  // current PC should be one of LDRAx.
+  if (bad_address != current_pc && fixed_bad_address != current_pc) {
+    auto ptrauth_info =
+        GetPtrauthInstructionInfo(target, arch, current_address);
+    if (ptrauth_info && ptrauth_info->IsAuthenticated && ptrauth_info->IsLoad) {
+      emit_ptrauth_prologue(bad_address);
+      strm.Printf("Found authenticated load instruction ");
+      DescribeAddressBriefly(strm, current_address, target);
+      m_description = std::string(strm.GetString());
+      return true;
+    }
+  }
+
+  // Detect: BLRAA, BLRAAZ, BLRAB, BLRABZ (Branch with Link to Register, with
+  // pointer authentication).
+  //
+  // TODO: Detect: BRAA, BRAAZ, BRAB, BRABZ (Branch to Register, with pointer
+  // authentication). At a minimum, this requires call site info support for
+  // indirect calls.
+  //
+  // If an authenticated call or tail call results in an exception, stripping
+  // the bad address should give the current PC, which points to the address
+  // we tried to branch to.
+  if (bad_address != current_pc && fixed_bad_address == current_pc) {
+    if (StackFrameSP parent_frame = thread.GetStackFrameAtIndex(1)) {
+      addr_t return_pc =
+          parent_frame->GetFrameCodeAddress().GetLoadAddress(&target);
+      Address blr_address;
+      if (!target.ResolveLoadAddress(return_pc - 4, blr_address))
+        return false;
+
+      auto blr_ptrauth_info =
+          GetPtrauthInstructionInfo(target, arch, blr_address);
+      if (blr_ptrauth_info && blr_ptrauth_info->IsAuthenticated &&
+          blr_ptrauth_info->DoesBranch) {
+        emit_ptrauth_prologue(bad_address);
+        strm.Printf("Found authenticated indirect branch ");
+        DescribeAddressBriefly(strm, blr_address, target);
+        m_description = std::string(strm.GetString());
+        return true;
+      }
+    }
+  }
+
+  // TODO: Detect: RETAA, RETAB (Return from subroutine, with pointer
+  // authentication).
+  //
+  // Is there a motivating, non-malicious code snippet that corrupts LR?
+
+  return false;
+}
 
 const char *StopInfoMachException::GetDescription() {
   if (!m_description.empty())
@@ -77,6 +257,11 @@ const char *StopInfoMachException::GetDescription() {
         code_desc = "EXC_ARM_DA_DEBUG";
         break;
       }
+      break;
+
+    case llvm::Triple::aarch64:
+      if (DeterminePtrauthFailure(exe_ctx))
+        return m_description.c_str();
       break;
 
     default:
@@ -190,6 +375,11 @@ const char *StopInfoMachException::GetDescription() {
       }
       break;
 
+    case llvm::Triple::aarch64:
+      if (DeterminePtrauthFailure(exe_ctx))
+        return m_description.c_str();
+      break;
+
     default:
       break;
     }
@@ -223,7 +413,8 @@ const char *StopInfoMachException::GetDescription() {
 
       switch (resource_type) {
       case RESOURCE_TYPE_CPU:
-        exc_desc = "EXC_RESOURCE RESOURCE_TYPE_CPU";
+        exc_desc =
+            "EXC_RESOURCE (RESOURCE_TYPE_CPU: CPU usage monitor tripped)";
         snprintf(code_desc_buf, sizeof(code_desc_buf), "%d%%",
                  (int)EXC_RESOURCE_CPUMONITOR_DECODE_PERCENTAGE(m_exc_code));
         snprintf(subcode_desc_buf, sizeof(subcode_desc_buf), "%d%%",
@@ -231,7 +422,8 @@ const char *StopInfoMachException::GetDescription() {
                      m_exc_subcode));
         break;
       case RESOURCE_TYPE_WAKEUPS:
-        exc_desc = "EXC_RESOURCE RESOURCE_TYPE_WAKEUPS";
+        exc_desc = "EXC_RESOURCE (RESOURCE_TYPE_WAKEUPS: idle wakeups monitor "
+                   "tripped)";
         snprintf(
             code_desc_buf, sizeof(code_desc_buf), "%d w/s",
             (int)EXC_RESOURCE_CPUMONITOR_DECODE_WAKEUPS_PERMITTED(m_exc_code));
@@ -240,11 +432,12 @@ const char *StopInfoMachException::GetDescription() {
                      m_exc_subcode));
         break;
       case RESOURCE_TYPE_MEMORY:
-        exc_desc = "EXC_RESOURCE RESOURCE_TYPE_MEMORY";
+        exc_desc = "EXC_RESOURCE (RESOURCE_TYPE_MEMORY: high watermark memory "
+                   "limit exceeded)";
         snprintf(code_desc_buf, sizeof(code_desc_buf), "%d MB",
                  (int)EXC_RESOURCE_HWM_DECODE_LIMIT(m_exc_code));
         subcode_desc = nullptr;
-        subcode_label = "unused";
+        subcode_label = nullptr;
         break;
 #if defined(RESOURCE_TYPE_IO)
       // RESOURCE_TYPE_IO is introduced in macOS SDK 10.12.
@@ -281,9 +474,9 @@ const char *StopInfoMachException::GetDescription() {
   }
 
   if (m_exc_data_count >= 2) {
-    if (subcode_desc)
+    if (subcode_label && subcode_desc)
       strm.Printf(", %s=%s", subcode_label, subcode_desc);
-    else
+    else if (subcode_label)
       strm.Printf(", %s=0x%" PRIx64, subcode_label, m_exc_subcode);
   }
 
@@ -301,14 +494,12 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
   // Try hardware watchpoint.
   if (target) {
     // The exc_sub_code indicates the data break address.
-    lldb::WatchpointSP wp_sp =
-        target->GetWatchpointList().FindByAddress((lldb::addr_t)exc_sub_code);
-    if (wp_sp && wp_sp->IsEnabled()) {
-      // Debugserver may piggyback the hardware index of the fired watchpoint
-      // in the exception data. Set the hardware index if that's the case.
-      if (exc_data_count >= 3)
-        wp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
-      return StopInfo::CreateStopReasonWithWatchpointID(thread, wp_sp->GetID());
+    WatchpointResourceSP wp_rsrc_sp =
+        target->GetProcessSP()->GetWatchpointResourceList().FindByAddress(
+            (addr_t)exc_sub_code);
+    if (wp_rsrc_sp && wp_rsrc_sp->GetNumberOfConstituents() > 0) {
+      return StopInfo::CreateStopReasonWithWatchpointID(
+          thread, wp_rsrc_sp->GetConstituentAtIndex(0)->GetID());
     }
   }
 
@@ -320,10 +511,6 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
         process_sp->GetBreakpointSiteList().FindByAddress(
             (lldb::addr_t)exc_sub_code);
     if (bp_sp && bp_sp->IsEnabled()) {
-      // Debugserver may piggyback the hardware index of the fired breakpoint
-      // in the exception data. Set the hardware index if that's the case.
-      if (exc_data_count >= 3)
-        bp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
       return StopInfo::CreateStopReasonWithBreakpointSiteID(thread,
                                                             bp_sp->GetID());
     }
@@ -332,6 +519,78 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
   return nullptr;
 }
 
+#if defined(__APPLE__)
+const char *
+StopInfoMachException::MachException::Name(exception_type_t exc_type) {
+  switch (exc_type) {
+  case EXC_BAD_ACCESS:
+    return "EXC_BAD_ACCESS";
+  case EXC_BAD_INSTRUCTION:
+    return "EXC_BAD_INSTRUCTION";
+  case EXC_ARITHMETIC:
+    return "EXC_ARITHMETIC";
+  case EXC_EMULATION:
+    return "EXC_EMULATION";
+  case EXC_SOFTWARE:
+    return "EXC_SOFTWARE";
+  case EXC_BREAKPOINT:
+    return "EXC_BREAKPOINT";
+  case EXC_SYSCALL:
+    return "EXC_SYSCALL";
+  case EXC_MACH_SYSCALL:
+    return "EXC_MACH_SYSCALL";
+  case EXC_RPC_ALERT:
+    return "EXC_RPC_ALERT";
+#ifdef EXC_CRASH
+  case EXC_CRASH:
+    return "EXC_CRASH";
+#endif
+  case EXC_RESOURCE:
+    return "EXC_RESOURCE";
+#ifdef EXC_GUARD
+  case EXC_GUARD:
+    return "EXC_GUARD";
+#endif
+#ifdef EXC_CORPSE_NOTIFY
+  case EXC_CORPSE_NOTIFY:
+    return "EXC_CORPSE_NOTIFY";
+#endif
+#ifdef EXC_CORPSE_VARIANT_BIT
+  case EXC_CORPSE_VARIANT_BIT:
+    return "EXC_CORPSE_VARIANT_BIT";
+#endif
+  default:
+    break;
+  }
+  return NULL;
+}
+
+std::optional<exception_type_t>
+StopInfoMachException::MachException::ExceptionCode(const char *name) {
+  return llvm::StringSwitch<std::optional<exception_type_t>>(name)
+      .Case("EXC_BAD_ACCESS", EXC_BAD_ACCESS)
+      .Case("EXC_BAD_INSTRUCTION", EXC_BAD_INSTRUCTION)
+      .Case("EXC_ARITHMETIC", EXC_ARITHMETIC)
+      .Case("EXC_EMULATION", EXC_EMULATION)
+      .Case("EXC_SOFTWARE", EXC_SOFTWARE)
+      .Case("EXC_BREAKPOINT", EXC_BREAKPOINT)
+      .Case("EXC_SYSCALL", EXC_SYSCALL)
+      .Case("EXC_MACH_SYSCALL", EXC_MACH_SYSCALL)
+      .Case("EXC_RPC_ALERT", EXC_RPC_ALERT)
+#ifdef EXC_CRASH
+      .Case("EXC_CRASH", EXC_CRASH)
+#endif
+      .Case("EXC_RESOURCE", EXC_RESOURCE)
+#ifdef EXC_GUARD
+      .Case("EXC_GUARD", EXC_GUARD)
+#endif
+#ifdef EXC_CORPSE_NOTIFY
+      .Case("EXC_CORPSE_NOTIFY", EXC_CORPSE_NOTIFY)
+#endif
+      .Default(std::nullopt);
+}
+#endif
+
 StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     Thread &thread, uint32_t exc_type, uint32_t exc_data_count,
     uint64_t exc_code, uint64_t exc_sub_code, uint64_t exc_sub_sub_code,
@@ -339,6 +598,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   if (exc_type == 0)
     return StopInfoSP();
 
+  bool not_stepping_but_got_singlestep_exception = false;
   uint32_t pc_decrement = 0;
   ExecutionContext exe_ctx(thread.shared_from_this());
   Target *target = exe_ctx.GetTargetPtr();
@@ -411,6 +671,9 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     case llvm::Triple::thumb:
       if (exc_code == 0x102) // EXC_ARM_DA_DEBUG
       {
+        // LWP_TODO: We need to find the WatchpointResource that matches
+        // the address, and evaluate its Watchpoints.
+
         // It's a watchpoint, then, if the exc_sub_code indicates a
         // known/enabled data break address from our watchpoint list.
         lldb::WatchpointSP wp_sp;
@@ -418,11 +681,6 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
           wp_sp = target->GetWatchpointList().FindByAddress(
               (lldb::addr_t)exc_sub_code);
         if (wp_sp && wp_sp->IsEnabled()) {
-          // Debugserver may piggyback the hardware index of the fired
-          // watchpoint in the exception data. Set the hardware index if
-          // that's the case.
-          if (exc_data_count >= 3)
-            wp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
           return StopInfo::CreateStopReasonWithWatchpointID(thread,
                                                             wp_sp->GetID());
         } else {
@@ -445,15 +703,34 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
 
     case llvm::Triple::aarch64_32:
     case llvm::Triple::aarch64: {
+      // xnu describes three things with type EXC_BREAKPOINT:
+      //
+      //   exc_code 0x102 [EXC_ARM_DA_DEBUG], exc_sub_code addr-of-insn
+      //      Watchpoint access.  exc_sub_code is the address of the
+      //      instruction which trigged the watchpoint trap.
+      //      debugserver may add the watchpoint number that was triggered
+      //      in exc_sub_sub_code.
+      //
+      //   exc_code 1 [EXC_ARM_BREAKPOINT], exc_sub_code 0
+      //      Instruction step has completed.
+      //
+      //   exc_code 1 [EXC_ARM_BREAKPOINT], exc_sub_code address-of-instruction
+      //      Software breakpoint instruction executed.
+
       if (exc_code == 1 && exc_sub_code == 0) // EXC_ARM_BREAKPOINT
       {
         // This is hit when we single instruction step aka MDSCR_EL1 SS bit 0
         // is set
-        is_actual_breakpoint = false;
+        is_actual_breakpoint = true;
         is_trace_if_actual_breakpoint_missing = true;
+        if (thread.GetTemporaryResumeState() != eStateStepping)
+          not_stepping_but_got_singlestep_exception = true;
       }
       if (exc_code == 0x102) // EXC_ARM_DA_DEBUG
       {
+        // LWP_TODO: We need to find the WatchpointResource that matches
+        // the address, and evaluate its Watchpoints.
+
         // It's a watchpoint, then, if the exc_sub_code indicates a
         // known/enabled data break address from our watchpoint list.
         lldb::WatchpointSP wp_sp;
@@ -461,11 +738,6 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
           wp_sp = target->GetWatchpointList().FindByAddress(
               (lldb::addr_t)exc_sub_code);
         if (wp_sp && wp_sp->IsEnabled()) {
-          // Debugserver may piggyback the hardware index of the fired
-          // watchpoint in the exception data. Set the hardware index if
-          // that's the case.
-          if (exc_data_count >= 3)
-            wp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
           return StopInfo::CreateStopReasonWithWatchpointID(thread,
                                                             wp_sp->GetID());
         }
@@ -509,7 +781,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
         // operating system thread ID, so we can't make any assumptions about
         // the thread ID so we must always report the breakpoint regardless
         // of the thread.
-        if (bp_site_sp->ValidForThisThread(&thread) ||
+        if (bp_site_sp->ValidForThisThread(thread) ||
             thread.GetProcess()->GetOperatingSystem() != nullptr)
           return StopInfo::CreateStopReasonWithBreakpointSiteID(
               thread, bp_site_sp->GetID());
@@ -534,6 +806,56 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     break;
   }
 
-  return StopInfoSP(new StopInfoMachException(thread, exc_type, exc_data_count,
-                                              exc_code, exc_sub_code));
+  return std::make_shared<StopInfoMachException>(
+      thread, exc_type, exc_data_count, exc_code, exc_sub_code,
+      not_stepping_but_got_singlestep_exception);
+}
+
+// Detect an unusual situation on Darwin where:
+//
+//   0. We did an instruction-step before this.
+//   1. We have a hardware breakpoint or watchpoint set.
+//   2. We resumed the process, but not with an instruction-step.
+//   3. The thread gets an "instruction-step completed" mach exception.
+//   4. The pc has not advanced - it is the same as before.
+//
+// This method returns true for that combination of events.
+bool StopInfoMachException::WasContinueInterrupted(Thread &thread) {
+  Log *log = GetLog(LLDBLog::Step);
+
+  // We got an instruction-step completed mach exception but we were not
+  // doing an instruction step on this thread.
+  if (!m_not_stepping_but_got_singlestep_exception)
+    return false;
+
+  RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+  std::optional<addr_t> prev_pc = thread.GetPreviousFrameZeroPC();
+  if (!reg_ctx_sp || !prev_pc)
+    return false;
+
+  // The previous pc value and current pc value are the same.
+  if (*prev_pc != reg_ctx_sp->GetPC())
+    return false;
+
+  // We have a watchpoint -- this is the kernel bug.
+  ProcessSP process_sp = thread.GetProcess();
+  if (process_sp->GetWatchpointResourceList().GetSize()) {
+    LLDB_LOGF(log,
+              "Thread stopped with insn-step completed mach exception but "
+              "thread was not stepping; there is a hardware watchpoint set.");
+    return true;
+  }
+
+  // We have a hardware breakpoint -- this is the kernel bug.
+  auto &bp_site_list = process_sp->GetBreakpointSiteList();
+  for (auto &site : bp_site_list.Sites()) {
+    if (site->IsHardware() && site->IsEnabled()) {
+      LLDB_LOGF(log,
+                "Thread stopped with insn-step completed mach exception but "
+                "thread was not stepping; there is a hardware breakpoint set.");
+      return true;
+    }
+  }
+
+  return false;
 }

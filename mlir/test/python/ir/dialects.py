@@ -1,66 +1,66 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
+import sys
 from mlir.ir import *
+from mlir.dialects._ods_common import _cext
 
 
 def run(f):
-  print("\nTEST:", f.__name__)
-  f()
-  gc.collect()
-  assert Context._get_live_count() == 0
-  return f
+    print("\nTEST:", f.__name__)
+    f()
+    gc.collect()
+    assert Context._get_live_count() == 0
+    return f
 
 
 # CHECK-LABEL: TEST: testDialectDescriptor
 @run
 def testDialectDescriptor():
-  ctx = Context()
-  d = ctx.get_dialect_descriptor("std")
-  # CHECK: <DialectDescriptor std>
-  print(d)
-  # CHECK: std
-  print(d.namespace)
-  try:
-    _ = ctx.get_dialect_descriptor("not_existing")
-  except ValueError:
-    pass
-  else:
-    assert False, "Expected exception"
+    ctx = Context()
+    d = ctx.get_dialect_descriptor("func")
+    # CHECK: <DialectDescriptor func>
+    print(d)
+    # CHECK: func
+    print(d.namespace)
+    try:
+        _ = ctx.get_dialect_descriptor("not_existing")
+    except ValueError:
+        pass
+    else:
+        assert False, "Expected exception"
 
 
 # CHECK-LABEL: TEST: testUserDialectClass
 @run
 def testUserDialectClass():
-  ctx = Context()
-  # Access using attribute.
-  d = ctx.dialects.std
-  # Note that the standard dialect namespace prints as ''. Others will print
-  # as "<Dialect %namespace (..."
-  # CHECK: <Dialect (class mlir.dialects._std_ops_gen._Dialect)>
-  print(d)
-  try:
-    _ = ctx.dialects.not_existing
-  except AttributeError:
-    pass
-  else:
-    assert False, "Expected exception"
+    ctx = Context()
+    # Access using attribute.
+    d = ctx.dialects.func
+    # CHECK: <Dialect func (class mlir.dialects._func_ops_gen._Dialect)>
+    print(d)
+    try:
+        _ = ctx.dialects.not_existing
+    except AttributeError:
+        pass
+    else:
+        assert False, "Expected exception"
 
-  # Access using index.
-  d = ctx.dialects["std"]
-  # CHECK: <Dialect (class mlir.dialects._std_ops_gen._Dialect)>
-  print(d)
-  try:
-    _ = ctx.dialects["not_existing"]
-  except IndexError:
-    pass
-  else:
-    assert False, "Expected exception"
+    # Access using index.
+    d = ctx.dialects["func"]
+    # CHECK: <Dialect func (class mlir.dialects._func_ops_gen._Dialect)>
+    print(d)
+    try:
+        _ = ctx.dialects["not_existing"]
+    except IndexError:
+        pass
+    else:
+        assert False, "Expected exception"
 
-  # Using the 'd' alias.
-  d = ctx.d["std"]
-  # CHECK: <Dialect (class mlir.dialects._std_ops_gen._Dialect)>
-  print(d)
+    # Using the 'd' alias.
+    d = ctx.d["func"]
+    # CHECK: <Dialect func (class mlir.dialects._func_ops_gen._Dialect)>
+    print(d)
 
 
 # CHECK-LABEL: TEST: testCustomOpView
@@ -69,40 +69,55 @@ def testUserDialectClass():
 # additional capabilities come online.
 @run
 def testCustomOpView():
+    def createInput():
+        op = Operation.create("pytest_dummy.intinput", results=[f32])
+        # TODO: Auto result cast from operation
+        return op.results[0]
 
-  def createInput():
-    op = Operation.create("pytest_dummy.intinput", results=[f32])
-    # TODO: Auto result cast from operation
-    return op.results[0]
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        m = Module.create()
 
-  with Context() as ctx, Location.unknown():
-    ctx.allow_unregistered_dialects = True
-    m = Module.create()
+        with InsertionPoint(m.body):
+            f32 = F32Type.get()
+            # Create via dialects context collection.
+            input1 = createInput()
+            input2 = createInput()
+            op1 = ctx.dialects.arith.AddFOp(input1, input2)
 
-    with InsertionPoint(m.body):
-      f32 = F32Type.get()
-      # Create via dialects context collection.
-      input1 = createInput()
-      input2 = createInput()
-      op1 = ctx.dialects.std.AddFOp(input1.type, input1, input2)
+            # Create via an import
+            from mlir.dialects.arith import AddFOp
 
-      # Create via an import
-      from mlir.dialects.std import AddFOp
-      AddFOp(input1.type, input1, op1.result)
+            AddFOp(input1, op1.result)
 
-  # CHECK: %[[INPUT0:.*]] = "pytest_dummy.intinput"
-  # CHECK: %[[INPUT1:.*]] = "pytest_dummy.intinput"
-  # CHECK: %[[R0:.*]] = addf %[[INPUT0]], %[[INPUT1]] : f32
-  # CHECK: %[[R1:.*]] = addf %[[INPUT0]], %[[R0]] : f32
-  m.operation.print()
+    # CHECK: %[[INPUT0:.*]] = "pytest_dummy.intinput"
+    # CHECK: %[[INPUT1:.*]] = "pytest_dummy.intinput"
+    # CHECK: %[[R0:.*]] = arith.addf %[[INPUT0]], %[[INPUT1]] : f32
+    # CHECK: %[[R1:.*]] = arith.addf %[[INPUT0]], %[[R0]] : f32
+    m.operation.print()
 
 
 # CHECK-LABEL: TEST: testIsRegisteredOperation
 @run
 def testIsRegisteredOperation():
-  ctx = Context()
+    ctx = Context()
 
-  # CHECK: std.cond_br: True
-  print(f"std.cond_br: {ctx.is_registered_operation('std.cond_br')}")
-  # CHECK: std.not_existing: False
-  print(f"std.not_existing: {ctx.is_registered_operation('std.not_existing')}")
+    # CHECK: cf.cond_br: True
+    print(f"cf.cond_br: {ctx.is_registered_operation('cf.cond_br')}")
+    # CHECK: func.not_existing: False
+    print(f"func.not_existing: {ctx.is_registered_operation('func.not_existing')}")
+
+
+# CHECK-LABEL: TEST: testAppendPrefixSearchPath
+@run
+def testAppendPrefixSearchPath():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        assert not _cext.globals._check_dialect_module_loaded("custom")
+        Operation.create("custom.op")
+        assert not _cext.globals._check_dialect_module_loaded("custom")
+
+        sys.path.append(".")
+        _cext.globals.append_dialect_search_prefix("custom_dialect")
+        assert _cext.globals._check_dialect_module_loaded("custom")

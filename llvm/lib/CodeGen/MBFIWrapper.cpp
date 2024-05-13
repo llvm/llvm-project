@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -31,32 +31,20 @@ void MBFIWrapper::setBlockFreq(const MachineBasicBlock *MBB,
   MergedBBFreq[MBB] = F;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 MBFIWrapper::getBlockProfileCount(const MachineBasicBlock *MBB) const {
   auto I = MergedBBFreq.find(MBB);
 
   // Modified block frequency also impacts profile count. So we should compute
   // profile count from new block frequency if it has been changed.
   if (I != MergedBBFreq.end())
-    return MBFI.getProfileCountFromFreq(I->second.getFrequency());
+    return MBFI.getProfileCountFromFreq(I->second);
 
   return MBFI.getBlockProfileCount(MBB);
-}
-
-raw_ostream & MBFIWrapper::printBlockFreq(raw_ostream &OS,
-                                          const MachineBasicBlock *MBB) const {
-  return MBFI.printBlockFreq(OS, getBlockFreq(MBB));
-}
-
-raw_ostream & MBFIWrapper::printBlockFreq(raw_ostream &OS,
-                                          const BlockFrequency Freq) const {
-  return MBFI.printBlockFreq(OS, Freq);
 }
 
 void MBFIWrapper::view(const Twine &Name, bool isSimple) {
   MBFI.view(Name, isSimple);
 }
 
-uint64_t MBFIWrapper::getEntryFreq() const {
-  return MBFI.getEntryFreq();
-}
+BlockFrequency MBFIWrapper::getEntryFreq() const { return MBFI.getEntryFreq(); }

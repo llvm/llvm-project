@@ -1,7 +1,7 @@
 ; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --match-full-lines
 
 ; Make sure the promoted trunc doesn't get a debug location associated.
-; CHECK: %promoted = trunc i32 %or to i16
+; CHECK: %promoted3 = trunc i32 %or to i16
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"
@@ -12,7 +12,7 @@ declare void @bar(i64)
 
 define i32 @foo(i16 %kkk) !dbg !6 {
 entry:
-  %t4 = load i16, i16* @b, align 2, !dbg !8
+  %t4 = load i16, ptr @b, align 2, !dbg !8
   %conv4 = zext i16 %t4 to i32, !dbg !9
   %or = or i16 %kkk, %t4, !dbg !10
   %c = sext i16 %or to i64, !dbg !11

@@ -17,9 +17,10 @@
 #undef NOMINMAX // undef a previous definition to avoid warning
 #define NOMINMAX
 #include <windows.h>
+#undef CreateProcess
+#undef GetMessage
 #undef GetUserName
 #undef LoadImage
-#undef CreateProcess
 #undef Yield
 #undef far
 #undef near

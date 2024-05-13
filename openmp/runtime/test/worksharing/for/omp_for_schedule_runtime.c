@@ -8,8 +8,8 @@
 // RUN: env OMP_SCHEDULE=auto %libomp-run 4 1
 // RUN: env OMP_SCHEDULE=trapezoidal %libomp-run 101 1
 // RUN: env OMP_SCHEDULE=trapezoidal,13 %libomp-run 101 13
-// RUN: env OMP_SCHEDULE=static_steal %libomp-run 102 1
-// RUN: env OMP_SCHEDULE=static_steal,14 %libomp-run 102 14
+// RUN: env OMP_SCHEDULE=static_steal %libomp-run 2 1
+// RUN: env OMP_SCHEDULE=static_steal,14 %libomp-run 2 14
 
 #include <stdio.h>
 #include <stdlib.h>

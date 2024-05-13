@@ -14,9 +14,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 
 using namespace llvm;
@@ -57,7 +54,7 @@ void SyntheticCountsUtils<CallGraphType>::propagateFromSCC(
     if (!OptProfCount)
       continue;
     auto Callee = CGT::edge_dest(E.second);
-    AdditionalCounts[Callee] += OptProfCount.getValue();
+    AdditionalCounts[Callee] += *OptProfCount;
   }
 
   // Update the counts for the nodes in the SCC.
@@ -70,7 +67,7 @@ void SyntheticCountsUtils<CallGraphType>::propagateFromSCC(
     if (!OptProfCount)
       continue;
     auto Callee = CGT::edge_dest(E.second);
-    AddCount(Callee, OptProfCount.getValue());
+    AddCount(Callee, *OptProfCount);
   }
 }
 

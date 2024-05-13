@@ -28,6 +28,6 @@ int also_after(void) {
   return 0;
 }
 
-int test() {
+int test(void) {
   return also_after() + also_before();
 }

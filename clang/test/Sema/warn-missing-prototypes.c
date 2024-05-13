@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wmissing-prototypes -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wmissing-prototypes -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wmissing-prototypes -Wno-deprecated-non-prototype -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wmissing-prototypes -Wno-deprecated-non-prototype -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 int f(); // expected-note{{this declaration is not a prototype; add parameter declarations to make it one}}
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:{{.*}}-[[@LINE-1]]:{{.*}}}:"{{.*}}"
@@ -43,7 +43,6 @@ int f2();
 
 int f2(int x) { return x; }
 
-// rdar://6759522
 int main(void) { return 0; }
 
 void not_a_prototype_test(); // expected-note{{this declaration is not a prototype; add 'void' to make it a prototype for a zero-parameter function}}

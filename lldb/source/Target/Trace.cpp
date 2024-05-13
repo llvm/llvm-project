@@ -17,40 +17,73 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Target/ThreadPostMortemTrace.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
-// Helper structs used to extract the type of a trace session json without
-// having to parse the entire object.
+// Helper structs used to extract the type of a JSON trace bundle description
+// object without having to parse the entire object.
 
-struct JSONSimplePluginSettings {
+struct JSONSimpleTraceBundleDescription {
   std::string type;
-};
-
-struct JSONSimpleTraceSession {
-  JSONSimplePluginSettings trace;
 };
 
 namespace llvm {
 namespace json {
 
-bool fromJSON(const Value &value, JSONSimplePluginSettings &plugin_settings,
+bool fromJSON(const Value &value, JSONSimpleTraceBundleDescription &bundle,
               Path path) {
   json::ObjectMapper o(value, path);
-  return o && o.map("type", plugin_settings.type);
-}
-
-bool fromJSON(const Value &value, JSONSimpleTraceSession &session, Path path) {
-  json::ObjectMapper o(value, path);
-  return o && o.map("trace", session.trace);
+  return o && o.map("type", bundle.type);
 }
 
 } // namespace json
 } // namespace llvm
+
+/// Helper functions for fetching data in maps and returning Optionals or
+/// pointers instead of iterators for simplicity. It's worth mentioning that the
+/// Optionals version can't return the inner data by reference because of
+/// limitations in move constructors.
+/// \{
+template <typename K, typename V>
+static std::optional<V> Lookup(DenseMap<K, V> &map, K k) {
+  auto it = map.find(k);
+  if (it == map.end())
+    return std::nullopt;
+  return it->second;
+}
+
+template <typename K, typename V>
+static V *LookupAsPtr(DenseMap<K, V> &map, K k) {
+  auto it = map.find(k);
+  if (it == map.end())
+    return nullptr;
+  return &it->second;
+}
+
+/// Similar to the methods above but it looks for an item in a map of maps.
+template <typename K1, typename K2, typename V>
+static std::optional<V> Lookup(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1,
+                               K2 k2) {
+  auto it = map.find(k1);
+  if (it == map.end())
+    return std::nullopt;
+  return Lookup(it->second, k2);
+}
+
+/// Similar to the methods above but it looks for an item in a map of maps.
+template <typename K1, typename K2, typename V>
+static V *LookupAsPtr(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1, K2 k2) {
+  auto it = map.find(k1);
+  if (it == map.end())
+    return nullptr;
+  return LookupAsPtr(it->second, k2);
+}
+/// \}
 
 static Error createInvalidPlugInError(StringRef plugin_name) {
   return createStringError(
@@ -60,416 +93,438 @@ static Error createInvalidPlugInError(StringRef plugin_name) {
 }
 
 Expected<lldb::TraceSP>
-Trace::FindPluginForPostMortemProcess(Debugger &debugger,
-                                      const json::Value &trace_session_file,
-                                      StringRef session_file_dir) {
-  JSONSimpleTraceSession json_session;
-  json::Path::Root root("traceSession");
-  if (!json::fromJSON(trace_session_file, json_session, root))
-    return root.getError();
+Trace::LoadPostMortemTraceFromFile(Debugger &debugger,
+                                   const FileSpec &trace_description_file) {
 
-  ConstString plugin_name(json_session.trace.type);
-  if (auto create_callback = PluginManager::GetTraceCreateCallback(plugin_name))
-    return create_callback(trace_session_file, session_file_dir, debugger);
+  auto buffer_or_error =
+      MemoryBuffer::getFile(trace_description_file.GetPath());
+  if (!buffer_or_error) {
+    return createStringError(std::errc::invalid_argument,
+                             "could not open input file: %s - %s.",
+                             trace_description_file.GetPath().c_str(),
+                             buffer_or_error.getError().message().c_str());
+  }
 
-  return createInvalidPlugInError(json_session.trace.type);
+  Expected<json::Value> session_file =
+      json::parse(buffer_or_error.get()->getBuffer().str());
+  if (!session_file) {
+    return session_file.takeError();
+  }
+
+  return Trace::FindPluginForPostMortemProcess(
+      debugger, *session_file,
+      trace_description_file.GetDirectory().AsCString());
 }
 
-Expected<lldb::TraceSP>
-Trace::FindPluginForLiveProcess(llvm::StringRef plugin_name, Process &process) {
+Expected<lldb::TraceSP> Trace::FindPluginForPostMortemProcess(
+    Debugger &debugger, const json::Value &trace_bundle_description,
+    StringRef bundle_dir) {
+  JSONSimpleTraceBundleDescription json_bundle;
+  json::Path::Root root("traceBundle");
+  if (!json::fromJSON(trace_bundle_description, json_bundle, root))
+    return root.getError();
+
+  if (auto create_callback =
+          PluginManager::GetTraceCreateCallback(json_bundle.type))
+    return create_callback(trace_bundle_description, bundle_dir, debugger);
+
+  return createInvalidPlugInError(json_bundle.type);
+}
+
+Expected<lldb::TraceSP> Trace::FindPluginForLiveProcess(llvm::StringRef name,
+                                                        Process &process) {
   if (!process.IsLiveDebugSession())
     return createStringError(inconvertibleErrorCode(),
                              "Can't trace non-live processes");
 
-  ConstString name(plugin_name);
   if (auto create_callback =
           PluginManager::GetTraceCreateCallbackForLiveProcess(name))
     return create_callback(process);
 
-  return createInvalidPlugInError(plugin_name);
+  return createInvalidPlugInError(name);
 }
 
 Expected<StringRef> Trace::FindPluginSchema(StringRef name) {
-  ConstString plugin_name(name);
-  StringRef schema = PluginManager::GetTraceSchema(plugin_name);
+  StringRef schema = PluginManager::GetTraceSchema(name);
   if (!schema.empty())
     return schema;
 
   return createInvalidPlugInError(name);
 }
 
-static int GetNumberOfDigits(size_t num) {
-  return num == 0 ? 1 : static_cast<int>(log10(num)) + 1;
-}
-
-/// \return
-///     \b true if the provided line entries match line, column and source file.
-///     This function assumes that the line entries are valid.
-static bool FileLineAndColumnMatches(const LineEntry &a, const LineEntry &b) {
-  if (a.line != b.line)
-    return false;
-  if (a.column != b.column)
-    return false;
-  return a.file == b.file;
-}
-
-// This custom LineEntry validator is neded because some line_entries have
-// 0 as line, which is meaningless. Notice that LineEntry::IsValid only
-// checks that line is not LLDB_INVALID_LINE_NUMBER, i.e. UINT32_MAX.
-static bool IsLineEntryValid(const LineEntry &line_entry) {
-  return line_entry.IsValid() && line_entry.line > 0;
-}
-
-/// Helper structure for \a TraverseInstructionsWithSymbolInfo.
-struct InstructionSymbolInfo {
-  SymbolContext sc;
-  Address address;
-  lldb::addr_t load_address;
-  lldb::DisassemblerSP disassembler;
-  lldb::InstructionSP instruction;
-  lldb_private::ExecutionContext exe_ctx;
-};
-
-/// InstructionSymbolInfo object with symbol information for the given
-/// instruction, calculated efficiently.
-///
-/// \param[in] symbol_scope
-///     If not \b 0, then the \a InstructionSymbolInfo will have its
-///     SymbolContext calculated up to that level.
-///
-/// \param[in] include_disassembler
-///     If \b true, then the \a InstructionSymbolInfo will have the
-///     \a disassembler and \a instruction objects calculated.
-static void TraverseInstructionsWithSymbolInfo(
-    Trace &trace, Thread &thread, size_t position,
-    Trace::TraceDirection direction, SymbolContextItem symbol_scope,
-    bool include_disassembler,
-    std::function<bool(size_t index, Expected<InstructionSymbolInfo> insn)>
-        callback) {
-  InstructionSymbolInfo prev_insn;
-
-  Target &target = thread.GetProcess()->GetTarget();
-  ExecutionContext exe_ctx;
-  target.CalculateExecutionContext(exe_ctx);
-  const ArchSpec &arch = target.GetArchitecture();
-
-  // Find the symbol context for the given address reusing the previous
-  // instruction's symbol context when possible.
-  auto calculate_symbol_context = [&](const Address &address) {
-    AddressRange range;
-    if (prev_insn.sc.GetAddressRange(symbol_scope, 0,
-                                     /*inline_block_range*/ false, range) &&
-        range.Contains(address))
-      return prev_insn.sc;
-
-    SymbolContext sc;
-    address.CalculateSymbolContext(&sc, symbol_scope);
-    return sc;
-  };
-
-  // Find the disassembler for the given address reusing the previous
-  // instruction's disassembler when possible.
-  auto calculate_disass = [&](const Address &address, const SymbolContext &sc) {
-    if (prev_insn.disassembler) {
-      if (InstructionSP instruction =
-              prev_insn.disassembler->GetInstructionList()
-                  .GetInstructionAtAddress(address))
-        return std::make_tuple(prev_insn.disassembler, instruction);
-    }
-
-    if (sc.function) {
-      if (DisassemblerSP disassembler =
-              sc.function->GetInstructions(exe_ctx, nullptr)) {
-        if (InstructionSP instruction =
-                disassembler->GetInstructionList().GetInstructionAtAddress(
-                    address))
-          return std::make_tuple(disassembler, instruction);
-      }
-    }
-    // We fallback to a single instruction disassembler
-    AddressRange range(address, arch.GetMaximumOpcodeByteSize());
-    DisassemblerSP disassembler =
-        Disassembler::DisassembleRange(arch, /*plugin_name*/ nullptr,
-                                       /*flavor*/ nullptr, target, range);
-    return std::make_tuple(disassembler,
-                           disassembler ? disassembler->GetInstructionList()
-                                              .GetInstructionAtAddress(address)
-                                        : InstructionSP());
-  };
-
-  trace.TraverseInstructions(
-      thread, position, direction,
-      [&](size_t index, Expected<lldb::addr_t> load_address) -> bool {
-        if (!load_address)
-          return callback(index, load_address.takeError());
-
-        InstructionSymbolInfo insn;
-        insn.load_address = *load_address;
-        insn.exe_ctx = exe_ctx;
-        insn.address.SetLoadAddress(*load_address, &target);
-        if (symbol_scope != 0)
-          insn.sc = calculate_symbol_context(insn.address);
-        if (include_disassembler)
-          std::tie(insn.disassembler, insn.instruction) =
-              calculate_disass(insn.address, insn.sc);
-        prev_insn = insn;
-        return callback(index, insn);
-      });
-}
-
-/// Compare the symbol contexts of the provided \a InstructionSymbolInfo
-/// objects.
-///
-/// \return
-///     \a true if both instructions belong to the same scope level analized
-///     in the following order:
-///       - module
-///       - symbol
-///       - function
-///       - line
-static bool
-IsSameInstructionSymbolContext(const InstructionSymbolInfo &prev_insn,
-                               const InstructionSymbolInfo &insn) {
-  // module checks
-  if (insn.sc.module_sp != prev_insn.sc.module_sp)
-    return false;
-
-  // symbol checks
-  if (insn.sc.symbol != prev_insn.sc.symbol)
-    return false;
-
-  // function checks
-  if (!insn.sc.function && !prev_insn.sc.function)
-    return true;
-  else if (insn.sc.function != prev_insn.sc.function)
-    return false;
-
-  // line entry checks
-  const bool curr_line_valid = IsLineEntryValid(insn.sc.line_entry);
-  const bool prev_line_valid = IsLineEntryValid(prev_insn.sc.line_entry);
-  if (curr_line_valid && prev_line_valid)
-    return FileLineAndColumnMatches(insn.sc.line_entry,
-                                    prev_insn.sc.line_entry);
-  return curr_line_valid == prev_line_valid;
-}
-
-/// Dump the symbol context of the given instruction address if it's different
-/// from the symbol context of the previous instruction in the trace.
-///
-/// \param[in] prev_sc
-///     The symbol context of the previous instruction in the trace.
-///
-/// \param[in] address
-///     The address whose symbol information will be dumped.
-///
-/// \return
-///     The symbol context of the current address, which might differ from the
-///     previous one.
-static void
-DumpInstructionSymbolContext(Stream &s,
-                             Optional<InstructionSymbolInfo> prev_insn,
-                             InstructionSymbolInfo &insn) {
-  if (prev_insn && IsSameInstructionSymbolContext(*prev_insn, insn))
-    return;
-
-  s.Printf("  ");
-
-  if (!insn.sc.module_sp)
-    s.Printf("(none)");
-  else if (!insn.sc.function && !insn.sc.symbol)
-    s.Printf("%s`(none)",
-             insn.sc.module_sp->GetFileSpec().GetFilename().AsCString());
-  else
-    insn.sc.DumpStopContext(&s, insn.exe_ctx.GetTargetPtr(), insn.address,
-                            /*show_fullpath*/ false,
-                            /*show_module*/ true, /*show_inlined_frames*/ false,
-                            /*show_function_arguments*/ true,
-                            /*show_function_name*/ true);
-  s.Printf("\n");
-}
-
-static void DumpInstructionDisassembly(Stream &s, InstructionSymbolInfo &insn) {
-  if (!insn.instruction)
-    return;
-  s.Printf("    ");
-  insn.instruction->Dump(&s, /*show_address*/ false, /*show_bytes*/ false,
-                         /*max_opcode_byte_size*/ 0, &insn.exe_ctx, &insn.sc,
-                         /*prev_sym_ctx*/ nullptr,
-                         /*disassembly_addr_format*/ nullptr,
-                         /*max_address_text_size*/ 0);
-}
-
-void Trace::DumpTraceInstructions(Thread &thread, Stream &s, size_t count,
-                                  size_t end_position, bool raw) {
-  Optional<size_t> instructions_count = GetInstructionCount(thread);
-  if (!instructions_count) {
-    s.Printf("thread #%u: tid = %" PRIu64 ", not traced\n", thread.GetIndexID(),
-             thread.GetID());
-    return;
-  }
-
-  s.Printf("thread #%u: tid = %" PRIu64 ", total instructions = %zu\n",
-           thread.GetIndexID(), thread.GetID(), *instructions_count);
-
-  if (count == 0 || end_position >= *instructions_count)
-    return;
-
-  int digits_count = GetNumberOfDigits(end_position);
-  size_t start_position =
-      end_position + 1 < count ? 0 : end_position + 1 - count;
-  auto printInstructionIndex = [&](size_t index) {
-    s.Printf("    [%*zu] ", digits_count, index);
-  };
-
-  bool was_prev_instruction_an_error = false;
-  Optional<InstructionSymbolInfo> prev_insn;
-
-  TraverseInstructionsWithSymbolInfo(
-      *this, thread, start_position, TraceDirection::Forwards,
-      eSymbolContextEverything, /*disassembler*/ true,
-      [&](size_t index, Expected<InstructionSymbolInfo> insn) -> bool {
-        if (!insn) {
-          printInstructionIndex(index);
-          s << toString(insn.takeError());
-
-          prev_insn = None;
-          was_prev_instruction_an_error = true;
-        } else {
-          if (was_prev_instruction_an_error)
-            s.Printf("    ...missing instructions\n");
-
-          if (!raw)
-            DumpInstructionSymbolContext(s, prev_insn, *insn);
-
-          printInstructionIndex(index);
-          s.Printf("0x%016" PRIx64, insn->load_address);
-
-          if (!raw)
-            DumpInstructionDisassembly(s, *insn);
-
-          prev_insn = *insn;
-          was_prev_instruction_an_error = false;
-        }
-
-        s.Printf("\n");
-        return index < end_position;
-      });
-}
-
 Error Trace::Start(const llvm::json::Value &request) {
   if (!m_live_process)
-    return createStringError(inconvertibleErrorCode(),
-                             "Tracing requires a live process.");
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Attempted to start tracing without a live process.");
   return m_live_process->TraceStart(request);
 }
 
-Error Trace::StopProcess() {
+Error Trace::Stop() {
   if (!m_live_process)
-    return createStringError(inconvertibleErrorCode(),
-                             "Tracing requires a live process.");
-  return m_live_process->TraceStop(
-      TraceStopRequest(GetPluginName().AsCString()));
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Attempted to stop tracing without a live process.");
+  return m_live_process->TraceStop(TraceStopRequest(GetPluginName()));
 }
 
-Error Trace::StopThreads(const std::vector<lldb::tid_t> &tids) {
+Error Trace::Stop(llvm::ArrayRef<lldb::tid_t> tids) {
   if (!m_live_process)
-    return createStringError(inconvertibleErrorCode(),
-                             "Tracing requires a live process.");
-  return m_live_process->TraceStop(
-      TraceStopRequest(GetPluginName().AsCString(), tids));
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Attempted to stop tracing without a live process.");
+  return m_live_process->TraceStop(TraceStopRequest(GetPluginName(), tids));
 }
 
 Expected<std::string> Trace::GetLiveProcessState() {
   if (!m_live_process)
-    return createStringError(inconvertibleErrorCode(),
-                             "Tracing requires a live process.");
-  return m_live_process->TraceGetState(GetPluginName().AsCString());
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Attempted to fetch live trace information without a live process.");
+  return m_live_process->TraceGetState(GetPluginName());
 }
 
-Optional<size_t> Trace::GetLiveThreadBinaryDataSize(lldb::tid_t tid,
-                                                    llvm::StringRef kind) {
-  auto it = m_live_thread_data.find(tid);
-  if (it == m_live_thread_data.end())
-    return None;
-  std::unordered_map<std::string, size_t> &single_thread_data = it->second;
-  auto single_thread_data_it = single_thread_data.find(kind.str());
-  if (single_thread_data_it == single_thread_data.end())
-    return None;
-  return single_thread_data_it->second;
+std::optional<uint64_t>
+Trace::GetLiveThreadBinaryDataSize(lldb::tid_t tid, llvm::StringRef kind) {
+  Storage &storage = GetUpdatedStorage();
+  return Lookup(storage.live_thread_data, tid, ConstString(kind));
 }
 
-Optional<size_t> Trace::GetLiveProcessBinaryDataSize(llvm::StringRef kind) {
-  auto data_it = m_live_process_data.find(kind.str());
-  if (data_it == m_live_process_data.end())
-    return None;
-  return data_it->second;
+std::optional<uint64_t> Trace::GetLiveCpuBinaryDataSize(lldb::cpu_id_t cpu_id,
+                                                        llvm::StringRef kind) {
+  Storage &storage = GetUpdatedStorage();
+  return Lookup(storage.live_cpu_data_sizes, cpu_id, ConstString(kind));
+}
+
+std::optional<uint64_t>
+Trace::GetLiveProcessBinaryDataSize(llvm::StringRef kind) {
+  Storage &storage = GetUpdatedStorage();
+  return Lookup(storage.live_process_data, ConstString(kind));
+}
+
+Expected<std::vector<uint8_t>>
+Trace::GetLiveTraceBinaryData(const TraceGetBinaryDataRequest &request,
+                              uint64_t expected_size) {
+  if (!m_live_process)
+    return createStringError(
+        inconvertibleErrorCode(),
+        formatv("Attempted to fetch live trace data without a live process. "
+                "Data kind = {0}, tid = {1}, cpu id = {2}.",
+                request.kind, request.tid, request.cpu_id));
+
+  Expected<std::vector<uint8_t>> data =
+      m_live_process->TraceGetBinaryData(request);
+
+  if (!data)
+    return data.takeError();
+
+  if (data->size() != expected_size)
+    return createStringError(
+        inconvertibleErrorCode(),
+        formatv("Got incomplete live trace data. Data kind = {0}, expected "
+                "size = {1}, actual size = {2}, tid = {3}, cpu id = {4}",
+                request.kind, expected_size, data->size(), request.tid,
+                request.cpu_id));
+
+  return data;
 }
 
 Expected<std::vector<uint8_t>>
 Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
-  if (!m_live_process)
-    return createStringError(inconvertibleErrorCode(),
-                             "Tracing requires a live process.");
-  llvm::Optional<size_t> size = GetLiveThreadBinaryDataSize(tid, kind);
+  std::optional<uint64_t> size = GetLiveThreadBinaryDataSize(tid, kind);
   if (!size)
     return createStringError(
         inconvertibleErrorCode(),
         "Tracing data \"%s\" is not available for thread %" PRIu64 ".",
         kind.data(), tid);
 
-  TraceGetBinaryDataRequest request{GetPluginName().AsCString(), kind.str(),
-                                    static_cast<int64_t>(tid), 0,
-                                    static_cast<int64_t>(*size)};
+  TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(), tid,
+                                    /*cpu_id=*/std::nullopt};
+  return GetLiveTraceBinaryData(request, *size);
+}
+
+Expected<std::vector<uint8_t>>
+Trace::GetLiveCpuBinaryData(lldb::cpu_id_t cpu_id, llvm::StringRef kind) {
+  if (!m_live_process)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Attempted to fetch live cpu data without a live process.");
+  std::optional<uint64_t> size = GetLiveCpuBinaryDataSize(cpu_id, kind);
+  if (!size)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Tracing data \"%s\" is not available for cpu_id %" PRIu64 ".",
+        kind.data(), cpu_id);
+
+  TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(),
+                                    /*tid=*/std::nullopt, cpu_id};
   return m_live_process->TraceGetBinaryData(request);
 }
 
 Expected<std::vector<uint8_t>>
 Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
-  if (!m_live_process)
-    return createStringError(inconvertibleErrorCode(),
-                             "Tracing requires a live process.");
-  llvm::Optional<size_t> size = GetLiveProcessBinaryDataSize(kind);
+  std::optional<uint64_t> size = GetLiveProcessBinaryDataSize(kind);
   if (!size)
     return createStringError(
         inconvertibleErrorCode(),
         "Tracing data \"%s\" is not available for the process.", kind.data());
 
-  TraceGetBinaryDataRequest request{GetPluginName().AsCString(), kind.str(),
-                                    None, 0, static_cast<int64_t>(*size)};
-  return m_live_process->TraceGetBinaryData(request);
+  TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(),
+                                    /*tid=*/std::nullopt,
+                                    /*cpu_id*/ std::nullopt};
+  return GetLiveTraceBinaryData(request, *size);
 }
 
-void Trace::RefreshLiveProcessState() {
+Trace::Storage &Trace::GetUpdatedStorage() {
+  RefreshLiveProcessState();
+  return m_storage;
+}
+
+const char *Trace::RefreshLiveProcessState() {
   if (!m_live_process)
-    return;
+    return nullptr;
 
   uint32_t new_stop_id = m_live_process->GetStopID();
   if (new_stop_id == m_stop_id)
-    return;
+    return nullptr;
+
+  Log *log = GetLog(LLDBLog::Target);
+  LLDB_LOG(log, "Trace::RefreshLiveProcessState invoked");
 
   m_stop_id = new_stop_id;
-  m_live_thread_data.clear();
+  m_storage = Trace::Storage();
 
-  Expected<std::string> json_string = GetLiveProcessState();
-  if (!json_string) {
-    DoRefreshLiveProcessState(json_string.takeError());
-    return;
+  auto do_refresh = [&]() -> Error {
+    Expected<std::string> json_string = GetLiveProcessState();
+    if (!json_string)
+      return json_string.takeError();
+
+    Expected<TraceGetStateResponse> live_process_state =
+        json::parse<TraceGetStateResponse>(*json_string,
+                                           "TraceGetStateResponse");
+    if (!live_process_state)
+      return live_process_state.takeError();
+
+    if (live_process_state->warnings) {
+      for (std::string &warning : *live_process_state->warnings)
+        LLDB_LOG(log, "== Warning when fetching the trace state: {0}", warning);
+    }
+
+    for (const TraceThreadState &thread_state :
+         live_process_state->traced_threads) {
+      for (const TraceBinaryData &item : thread_state.binary_data)
+        m_storage.live_thread_data[thread_state.tid].insert(
+            {ConstString(item.kind), item.size});
+    }
+
+    LLDB_LOG(log, "== Found {0} threads being traced",
+             live_process_state->traced_threads.size());
+
+    if (live_process_state->cpus) {
+      m_storage.cpus.emplace();
+      for (const TraceCpuState &cpu_state : *live_process_state->cpus) {
+        m_storage.cpus->push_back(cpu_state.id);
+        for (const TraceBinaryData &item : cpu_state.binary_data)
+          m_storage.live_cpu_data_sizes[cpu_state.id].insert(
+              {ConstString(item.kind), item.size});
+      }
+      LLDB_LOG(log, "== Found {0} cpu cpus being traced",
+               live_process_state->cpus->size());
+    }
+
+    for (const TraceBinaryData &item : live_process_state->process_binary_data)
+      m_storage.live_process_data.insert({ConstString(item.kind), item.size});
+
+    return DoRefreshLiveProcessState(std::move(*live_process_state),
+                                     *json_string);
+  };
+
+  if (Error err = do_refresh()) {
+    m_storage.live_refresh_error = toString(std::move(err));
+    return m_storage.live_refresh_error->c_str();
   }
-  Expected<TraceGetStateResponse> live_process_state =
-      json::parse<TraceGetStateResponse>(*json_string, "TraceGetStateResponse");
-  if (!live_process_state) {
-    DoRefreshLiveProcessState(live_process_state.takeError());
-    return;
-  }
 
-  for (const TraceThreadState &thread_state :
-       live_process_state->tracedThreads) {
-    for (const TraceBinaryData &item : thread_state.binaryData)
-      m_live_thread_data[thread_state.tid][item.kind] = item.size;
-  }
+  return nullptr;
+}
 
-  for (const TraceBinaryData &item : live_process_state->processBinaryData)
-    m_live_process_data[item.kind] = item.size;
+Trace::Trace(ArrayRef<ProcessSP> postmortem_processes,
+             std::optional<std::vector<lldb::cpu_id_t>> postmortem_cpus) {
+  for (ProcessSP process_sp : postmortem_processes)
+    m_storage.postmortem_processes.push_back(process_sp.get());
+  m_storage.cpus = postmortem_cpus;
+}
 
-  DoRefreshLiveProcessState(std::move(live_process_state));
+Process *Trace::GetLiveProcess() { return m_live_process; }
+
+ArrayRef<Process *> Trace::GetPostMortemProcesses() {
+  return m_storage.postmortem_processes;
+}
+
+std::vector<Process *> Trace::GetAllProcesses() {
+  if (Process *proc = GetLiveProcess())
+    return {proc};
+  return GetPostMortemProcesses();
+}
+
+uint32_t Trace::GetStopID() {
+  RefreshLiveProcessState();
+  return m_stop_id;
+}
+
+llvm::Expected<FileSpec>
+Trace::GetPostMortemThreadDataFile(lldb::tid_t tid, llvm::StringRef kind) {
+  Storage &storage = GetUpdatedStorage();
+  if (std::optional<FileSpec> file =
+          Lookup(storage.postmortem_thread_data, tid, ConstString(kind)))
+    return *file;
+  else
+    return createStringError(
+        inconvertibleErrorCode(),
+        formatv("The thread with tid={0} doesn't have the tracing data {1}",
+                tid, kind));
+}
+
+llvm::Expected<FileSpec> Trace::GetPostMortemCpuDataFile(lldb::cpu_id_t cpu_id,
+                                                         llvm::StringRef kind) {
+  Storage &storage = GetUpdatedStorage();
+  if (std::optional<FileSpec> file =
+          Lookup(storage.postmortem_cpu_data, cpu_id, ConstString(kind)))
+    return *file;
+  else
+    return createStringError(
+        inconvertibleErrorCode(),
+        formatv("The cpu with id={0} doesn't have the tracing data {1}", cpu_id,
+                kind));
+}
+
+void Trace::SetPostMortemThreadDataFile(lldb::tid_t tid, llvm::StringRef kind,
+                                        FileSpec file_spec) {
+  Storage &storage = GetUpdatedStorage();
+  storage.postmortem_thread_data[tid].insert({ConstString(kind), file_spec});
+}
+
+void Trace::SetPostMortemCpuDataFile(lldb::cpu_id_t cpu_id,
+                                     llvm::StringRef kind, FileSpec file_spec) {
+  Storage &storage = GetUpdatedStorage();
+  storage.postmortem_cpu_data[cpu_id].insert({ConstString(kind), file_spec});
+}
+
+llvm::Error
+Trace::OnLiveThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
+                                  OnBinaryDataReadCallback callback) {
+  Expected<std::vector<uint8_t>> data = GetLiveThreadBinaryData(tid, kind);
+  if (!data)
+    return data.takeError();
+  return callback(*data);
+}
+
+llvm::Error Trace::OnLiveCpuBinaryDataRead(lldb::cpu_id_t cpu_id,
+                                           llvm::StringRef kind,
+                                           OnBinaryDataReadCallback callback) {
+  Storage &storage = GetUpdatedStorage();
+  if (std::vector<uint8_t> *cpu_data =
+          LookupAsPtr(storage.live_cpu_data, cpu_id, ConstString(kind)))
+    return callback(*cpu_data);
+
+  Expected<std::vector<uint8_t>> data = GetLiveCpuBinaryData(cpu_id, kind);
+  if (!data)
+    return data.takeError();
+  auto it = storage.live_cpu_data[cpu_id].insert(
+      {ConstString(kind), std::move(*data)});
+  return callback(it.first->second);
+}
+
+llvm::Error Trace::OnDataFileRead(FileSpec file,
+                                  OnBinaryDataReadCallback callback) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> trace_or_error =
+      MemoryBuffer::getFile(file.GetPath());
+  if (std::error_code err = trace_or_error.getError())
+    return createStringError(
+        inconvertibleErrorCode(), "Failed fetching trace-related file %s. %s",
+        file.GetPath().c_str(), toString(errorCodeToError(err)).c_str());
+
+  MemoryBuffer &data = **trace_or_error;
+  ArrayRef<uint8_t> array_ref(
+      reinterpret_cast<const uint8_t *>(data.getBufferStart()),
+      data.getBufferSize());
+  return callback(array_ref);
+}
+
+llvm::Error
+Trace::OnPostMortemThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
+                                        OnBinaryDataReadCallback callback) {
+  if (Expected<FileSpec> file = GetPostMortemThreadDataFile(tid, kind))
+    return OnDataFileRead(*file, callback);
+  else
+    return file.takeError();
+}
+
+llvm::Error
+Trace::OnPostMortemCpuBinaryDataRead(lldb::cpu_id_t cpu_id,
+                                     llvm::StringRef kind,
+                                     OnBinaryDataReadCallback callback) {
+  if (Expected<FileSpec> file = GetPostMortemCpuDataFile(cpu_id, kind))
+    return OnDataFileRead(*file, callback);
+  else
+    return file.takeError();
+}
+
+llvm::Error Trace::OnThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
+                                          OnBinaryDataReadCallback callback) {
+  if (m_live_process)
+    return OnLiveThreadBinaryDataRead(tid, kind, callback);
+  else
+    return OnPostMortemThreadBinaryDataRead(tid, kind, callback);
+}
+
+llvm::Error
+Trace::OnAllCpusBinaryDataRead(llvm::StringRef kind,
+                               OnCpusBinaryDataReadCallback callback) {
+  DenseMap<cpu_id_t, ArrayRef<uint8_t>> buffers;
+  Storage &storage = GetUpdatedStorage();
+  if (!storage.cpus)
+    return Error::success();
+
+  std::function<Error(std::vector<cpu_id_t>::iterator)> process_cpu =
+      [&](std::vector<cpu_id_t>::iterator cpu_id) -> Error {
+    if (cpu_id == storage.cpus->end())
+      return callback(buffers);
+
+    return OnCpuBinaryDataRead(*cpu_id, kind,
+                               [&](ArrayRef<uint8_t> data) -> Error {
+                                 buffers.try_emplace(*cpu_id, data);
+                                 auto next_id = cpu_id;
+                                 next_id++;
+                                 return process_cpu(next_id);
+                               });
+  };
+  return process_cpu(storage.cpus->begin());
+}
+
+llvm::Error Trace::OnCpuBinaryDataRead(lldb::cpu_id_t cpu_id,
+                                       llvm::StringRef kind,
+                                       OnBinaryDataReadCallback callback) {
+  if (m_live_process)
+    return OnLiveCpuBinaryDataRead(cpu_id, kind, callback);
+  else
+    return OnPostMortemCpuBinaryDataRead(cpu_id, kind, callback);
+}
+
+ArrayRef<lldb::cpu_id_t> Trace::GetTracedCpus() {
+  Storage &storage = GetUpdatedStorage();
+  if (storage.cpus)
+    return *storage.cpus;
+  return {};
+}
+
+std::vector<Process *> Trace::GetTracedProcesses() {
+  std::vector<Process *> processes;
+  Storage &storage = GetUpdatedStorage();
+
+  for (Process *proc : storage.postmortem_processes)
+    processes.push_back(proc);
+
+  if (m_live_process)
+    processes.push_back(m_live_process);
+  return processes;
 }

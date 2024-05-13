@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld --image-base=0x10000000 %t -o %t2
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi --no-show-raw-insn -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi --no-show-raw-insn -d %t2 | FileCheck %s
 
 /// Check that the ARM ABI rules for undefined weak symbols are applied.
 /// Branch instructions are resolved to the next instruction. Undefined
@@ -13,6 +13,9 @@
 
  .weak target
  .type target, %function
+ .weak undefweak2
+ .hidden undefweak2
+ .type undefweak2, %function
 
  .text
  .global _start
@@ -30,12 +33,17 @@ _start:
 /// R_ARM_REL32
  .word target - .
 
+bl_undefweak2:
+ bl undefweak2
+
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: 100100b4 <_start>:
-// CHECK-NEXT: 100100b4: b       #-4
-// CHECK-NEXT: 100100b8: bl      #-4
-// CHECK-NEXT: 100100bc: bl      #-4
+// CHECK-NEXT: 100100b4: b       {{.+}} @ imm = #-4
+// CHECK-NEXT: 100100b8: bl      {{.+}} @ imm = #-4
+// CHECK-NEXT: 100100bc: bl      {{.+}} @ imm = #-4
 // CHECK-NEXT: 100100c0: movt    r0, #0
 // CHECK-NEXT: 100100c4: movw    r0, #0
 // CHECK:      100100c8: 00 00 00 00     .word   0x00000000
+// CHECK-LABEL: <bl_undefweak2>
+// CHECK-NEXT:    bl {{.*}} <bl_undefweak2+0x4>

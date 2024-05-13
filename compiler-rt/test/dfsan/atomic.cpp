@@ -1,7 +1,5 @@
-// RUN: %clangxx_dfsan -mllvm -dfsan-fast-16-labels=true %s -fno-exceptions -o %t && %run %t
-// RUN: %clangxx_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -fno-exceptions -o %t && %run %t
-//
-// REQUIRES: x86_64-target-arch
+// RUN: %clangxx_dfsan %s -fno-exceptions -o %t && %run %t
+// RUN: %clangxx_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 %s -fno-exceptions -o %t && %run %t
 //
 // Use -fno-exceptions to turn off exceptions to avoid instrumenting
 // __cxa_begin_catch, std::terminate and __gxx_personality_v0.

@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -arm-atomic-cfg-tidy=0 | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -arm-atomic-cfg-tidy=0 -arm-default-it | FileCheck %s
-; RUN: llc < %s -mtriple=thumbv8-apple-ios -arm-atomic-cfg-tidy=0 -arm-no-restrict-it | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv8-apple-ios -arm-atomic-cfg-tidy=0 | FileCheck %s
 
 define void @foo(i32 %X, i32 %Y) {
 entry:
@@ -26,9 +26,9 @@ declare i32 @bar(...)
 
 ; FIXME: Need post-ifcvt branch folding to get rid of the extra br at end of BB1.
 
-	%struct.quad_struct = type { i32, i32, %struct.quad_struct*, %struct.quad_struct*, %struct.quad_struct*, %struct.quad_struct*, %struct.quad_struct* }
+	%struct.quad_struct = type { i32, i32, ptr, ptr, ptr, ptr, ptr }
 
-define fastcc i32 @CountTree(%struct.quad_struct* %tree) {
+define fastcc i32 @CountTree(ptr %tree) {
 entry:
 ; CHECK-LABEL: CountTree:
 ; CHECK: bne
@@ -38,36 +38,36 @@ entry:
 	br label %tailrecurse
 
 tailrecurse:		; preds = %bb, %entry
-	%tmp6 = load %struct.quad_struct*, %struct.quad_struct** null		; <%struct.quad_struct*> [#uses=1]
-	%tmp9 = load %struct.quad_struct*, %struct.quad_struct** null		; <%struct.quad_struct*> [#uses=2]
-	%tmp12 = load %struct.quad_struct*, %struct.quad_struct** null		; <%struct.quad_struct*> [#uses=1]
-	%tmp14 = icmp eq %struct.quad_struct* null, null		; <i1> [#uses=1]
-	%tmp17 = icmp eq %struct.quad_struct* %tmp6, null		; <i1> [#uses=1]
-	%tmp23 = icmp eq %struct.quad_struct* %tmp9, null		; <i1> [#uses=1]
-	%tmp29 = icmp eq %struct.quad_struct* %tmp12, null		; <i1> [#uses=1]
+	%tmp6 = load ptr, ptr null		; <ptr> [#uses=1]
+	%tmp9 = load ptr, ptr null		; <ptr> [#uses=2]
+	%tmp12 = load ptr, ptr null		; <ptr> [#uses=1]
+	%tmp14 = icmp eq ptr null, null		; <i1> [#uses=1]
+	%tmp17 = icmp eq ptr %tmp6, null		; <i1> [#uses=1]
+	%tmp23 = icmp eq ptr %tmp9, null		; <i1> [#uses=1]
+	%tmp29 = icmp eq ptr %tmp12, null		; <i1> [#uses=1]
 	%bothcond = and i1 %tmp17, %tmp14		; <i1> [#uses=1]
 	%bothcond1 = and i1 %bothcond, %tmp23		; <i1> [#uses=1]
 	%bothcond2 = and i1 %bothcond1, %tmp29		; <i1> [#uses=1]
 	br i1 %bothcond2, label %return, label %bb
 
 bb:		; preds = %tailrecurse
-	%tmp41 = tail call fastcc i32 @CountTree( %struct.quad_struct* %tmp9 )		; <i32> [#uses=0]
+	%tmp41 = tail call fastcc i32 @CountTree( ptr %tmp9 )		; <i32> [#uses=0]
 	br label %tailrecurse
 
 return:		; preds = %tailrecurse
 	ret i32 0
 }
 
-	%struct.SString = type { i8*, i32, i32 }
+	%struct.SString = type { ptr, i32, i32 }
 
 declare void @abort()
 
-define fastcc void @t1(%struct.SString* %word, i8 signext  %c) {
+define fastcc void @t1(ptr %word, i8 signext  %c) {
 entry:
 ; CHECK-LABEL: t1:
 ; CHECK: it ne
 ; CHECK: bxne lr
-	%tmp1 = icmp eq %struct.SString* %word, null		; <i1> [#uses=1]
+	%tmp1 = icmp eq ptr %word, null		; <i1> [#uses=1]
 	br i1 %tmp1, label %cond_true, label %cond_false
 
 cond_true:		; preds = %entry

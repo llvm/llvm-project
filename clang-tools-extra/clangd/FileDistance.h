@@ -39,15 +39,10 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FILEDISTANCE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FILEDISTANCE_H
 
-#include "URI.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/StringSaver.h"
 #include <memory>
 
 namespace clang {

@@ -22,9 +22,7 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
     ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[ADD]](s32)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s1) = G_EXTRACT [[COPY]](s32), 0
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[EXTRACT]](s1)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK: $w0 = COPY [[COPY]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
     ; CHECK: $x0 = COPY [[COPY1]](s64)
     %0:_(s32) = COPY $w0

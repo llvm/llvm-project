@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 %s -mllvm -warn-stack-size=0 -emit-codegen-only -triple=i386-apple-darwin 2>&1 | FileCheck %s
+// RUN: %clang_cc1 %s -fwarn-stack-size=0 -emit-codegen-only -triple=i386-apple-darwin 2>&1 | FileCheck %s
 
 // TODO: Emit rich diagnostics for thunks and move this into the appropriate test file.
 // Until then, test that we fall back and display the LLVM backend diagnostic.
@@ -12,8 +12,8 @@ namespace frameSizeThunkWarning {
     virtual void f();
   };
 
-  // CHECK: warning: stack frame size of {{[0-9]+}} bytes in function 'frameSizeThunkWarning::B::f'
-  // CHECK: warning: stack size limit exceeded ({{[0-9]+}}) in {{[^ ]+}}
+  // CHECK: warning: stack frame size ([[#]]) exceeds limit ([[#]]) in 'frameSizeThunkWarning::B::f()'
+  // CHECK: warning: <unknown>:0:0: stack frame size ([[#]]) exceeds limit ([[#]]) in function '_ZTv0_n12_N21frameSizeThunkWarning1B1fEv'
   void B::f() {
     volatile int x = 0; // Ensure there is stack usage.
   }

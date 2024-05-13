@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/RegisterValue.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace lldb_private;
 using llvm::APInt;
@@ -24,11 +25,11 @@ TEST(RegisterValueTest, GetSet8) {
 
 TEST(RegisterValueTest, GetScalarValue) {
   using RV = RegisterValue;
-  const auto &Get = [](const RV &V) -> llvm::Optional<Scalar> {
+  const auto &Get = [](const RV &V) -> std::optional<Scalar> {
     Scalar S;
     if (V.GetScalarValue(S))
       return S;
-    return llvm::None;
+    return std::nullopt;
   };
   EXPECT_EQ(Get(RV(uint8_t(47))), Scalar(47));
   EXPECT_EQ(Get(RV(uint16_t(4747))), Scalar(4747));

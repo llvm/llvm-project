@@ -174,15 +174,13 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKHARD-NEXT:    vmov r1, s0
 ; CHECKHARD-NEXT:    vmovx.f16 s12, s1
 ; CHECKHARD-NEXT:    vmov r0, s12
-; CHECKHARD-NEXT:    vext.16 d16, d4, d5, #2
+; CHECKHARD-NEXT:    vrev32.16 d16, d3
+; CHECKHARD-NEXT:    vext.16 d17, d4, d5, #2
 ; CHECKHARD-NEXT:    vmovx.f16 s12, s4
-; CHECKHARD-NEXT:    vdup.16 q11, d3[1]
-; CHECKHARD-NEXT:    vrev32.16 d17, d16
-; CHECKHARD-NEXT:    vext.16 d16, d16, d17, #3
-; CHECKHARD-NEXT:    vrev32.16 d17, d3
-; CHECKHARD-NEXT:    vext.16 d17, d17, d3, #1
-; CHECKHARD-NEXT:    vext.16 d16, d16, d17, #2
-; CHECKHARD-NEXT:    vext.16 d17, d16, d16, #2
+; CHECKHARD-NEXT:    vext.16 d16, d16, d3, #1
+; CHECKHARD-NEXT:    vext.16 d16, d17, d16, #2
+; CHECKHARD-NEXT:    vext.16 d16, d16, d17, #1
+; CHECKHARD-NEXT:    vext.16 d17, d16, d16, #1
 ; CHECKHARD-NEXT:    vmov.16 d16[0], r1
 ; CHECKHARD-NEXT:    vmov.16 d16[1], r0
 ; CHECKHARD-NEXT:    vmov r0, s3
@@ -194,37 +192,38 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKHARD-NEXT:    vmov.16 d16[3], r0
 ; CHECKHARD-NEXT:    vmov r0, s2
 ; CHECKHARD-NEXT:    vmov.16 d18[0], r1
-; CHECKHARD-NEXT:    vmov r1, s8
 ; CHECKHARD-NEXT:    vmov.16 d18[1], r0
 ; CHECKHARD-NEXT:    vmov r0, s12
+; CHECKHARD-NEXT:    vdup.16 q3, d3[1]
+; CHECKHARD-NEXT:    vmov r1, s12
 ; CHECKHARD-NEXT:    vmovx.f16 s12, s9
-; CHECKHARD-NEXT:    vmov.16 d20[1], r1
 ; CHECKHARD-NEXT:    vmov.16 d18[2], r0
 ; CHECKHARD-NEXT:    vmov r0, s5
 ; CHECKHARD-NEXT:    vmov.16 d18[3], r0
+; CHECKHARD-NEXT:    vmov r0, s8
+; CHECKHARD-NEXT:    vmov.16 d19[0], r1
+; CHECKHARD-NEXT:    vmov.16 d19[1], r0
 ; CHECKHARD-NEXT:    vmov r0, s12
-; CHECKHARD-NEXT:    vmov.16 d20[2], r0
+; CHECKHARD-NEXT:    vmov.16 d19[2], r0
 ; CHECKHARD-NEXT:    vmov r0, s11
-; CHECKHARD-NEXT:    vmov.16 d20[3], r0
-; CHECKHARD-NEXT:    vmov r0, s10
-; CHECKHARD-NEXT:    vext.16 d20, d20, d22, #1
-; CHECKHARD-NEXT:    vdup.16 q11, d3[2]
-; CHECKHARD-NEXT:    vext.16 d19, d20, d20, #3
+; CHECKHARD-NEXT:    vmov.16 d19[3], r0
 ; CHECKHARD-NEXT:    vadd.f16 q8, q8, q9
 ; CHECKHARD-NEXT:    vext.16 d18, d0, d1, #2
 ; CHECKHARD-NEXT:    vmovx.f16 s0, s8
-; CHECKHARD-NEXT:    vmov r1, s0
-; CHECKHARD-NEXT:    vmovx.f16 s0, s11
+; CHECKHARD-NEXT:    vmov r0, s0
+; CHECKHARD-NEXT:    vdup.16 q0, d3[2]
 ; CHECKHARD-NEXT:    vext.16 d19, d18, d2, #3
+; CHECKHARD-NEXT:    vmov r1, s0
 ; CHECKHARD-NEXT:    vext.16 d18, d2, d18, #1
+; CHECKHARD-NEXT:    vmovx.f16 s0, s11
 ; CHECKHARD-NEXT:    vext.16 d18, d18, d19, #2
 ; CHECKHARD-NEXT:    vext.16 d18, d18, d18, #1
-; CHECKHARD-NEXT:    vmov.16 d20[1], r1
-; CHECKHARD-NEXT:    vmov.16 d20[2], r0
+; CHECKHARD-NEXT:    vmov.16 d19[0], r1
+; CHECKHARD-NEXT:    vmov.16 d19[1], r0
+; CHECKHARD-NEXT:    vmov r0, s10
+; CHECKHARD-NEXT:    vmov.16 d19[2], r0
 ; CHECKHARD-NEXT:    vmov r0, s0
-; CHECKHARD-NEXT:    vmov.16 d20[3], r0
-; CHECKHARD-NEXT:    vext.16 d20, d20, d22, #1
-; CHECKHARD-NEXT:    vext.16 d19, d20, d20, #3
+; CHECKHARD-NEXT:    vmov.16 d19[3], r0
 ; CHECKHARD-NEXT:    vadd.f16 q0, q8, q9
 ; CHECKHARD-NEXT:    bx lr
 ;
@@ -233,15 +232,13 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKSOFT-NEXT:    vmov r1, s0
 ; CHECKSOFT-NEXT:    vmovx.f16 s12, s1
 ; CHECKSOFT-NEXT:    vmov r0, s12
-; CHECKSOFT-NEXT:    vext.16 d16, d4, d5, #2
+; CHECKSOFT-NEXT:    vrev32.16 d16, d3
+; CHECKSOFT-NEXT:    vext.16 d17, d4, d5, #2
 ; CHECKSOFT-NEXT:    vmovx.f16 s12, s4
-; CHECKSOFT-NEXT:    vdup.16 q11, d3[1]
-; CHECKSOFT-NEXT:    vrev32.16 d17, d16
-; CHECKSOFT-NEXT:    vext.16 d16, d16, d17, #3
-; CHECKSOFT-NEXT:    vrev32.16 d17, d3
-; CHECKSOFT-NEXT:    vext.16 d17, d17, d3, #1
-; CHECKSOFT-NEXT:    vext.16 d16, d16, d17, #2
-; CHECKSOFT-NEXT:    vext.16 d17, d16, d16, #2
+; CHECKSOFT-NEXT:    vext.16 d16, d16, d3, #1
+; CHECKSOFT-NEXT:    vext.16 d16, d17, d16, #2
+; CHECKSOFT-NEXT:    vext.16 d16, d16, d17, #1
+; CHECKSOFT-NEXT:    vext.16 d17, d16, d16, #1
 ; CHECKSOFT-NEXT:    vmov.16 d16[0], r1
 ; CHECKSOFT-NEXT:    vmov.16 d16[1], r0
 ; CHECKSOFT-NEXT:    vmov r0, s3
@@ -253,37 +250,38 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKSOFT-NEXT:    vmov.16 d16[3], r0
 ; CHECKSOFT-NEXT:    vmov r0, s2
 ; CHECKSOFT-NEXT:    vmov.16 d18[0], r1
-; CHECKSOFT-NEXT:    vmov r1, s8
 ; CHECKSOFT-NEXT:    vmov.16 d18[1], r0
 ; CHECKSOFT-NEXT:    vmov r0, s12
+; CHECKSOFT-NEXT:    vdup.16 q3, d3[1]
+; CHECKSOFT-NEXT:    vmov r1, s12
 ; CHECKSOFT-NEXT:    vmovx.f16 s12, s9
-; CHECKSOFT-NEXT:    vmov.16 d20[1], r1
 ; CHECKSOFT-NEXT:    vmov.16 d18[2], r0
 ; CHECKSOFT-NEXT:    vmov r0, s5
 ; CHECKSOFT-NEXT:    vmov.16 d18[3], r0
+; CHECKSOFT-NEXT:    vmov r0, s8
+; CHECKSOFT-NEXT:    vmov.16 d19[0], r1
+; CHECKSOFT-NEXT:    vmov.16 d19[1], r0
 ; CHECKSOFT-NEXT:    vmov r0, s12
-; CHECKSOFT-NEXT:    vmov.16 d20[2], r0
+; CHECKSOFT-NEXT:    vmov.16 d19[2], r0
 ; CHECKSOFT-NEXT:    vmov r0, s11
-; CHECKSOFT-NEXT:    vmov.16 d20[3], r0
-; CHECKSOFT-NEXT:    vmov r0, s10
-; CHECKSOFT-NEXT:    vext.16 d20, d20, d22, #1
-; CHECKSOFT-NEXT:    vdup.16 q11, d3[2]
-; CHECKSOFT-NEXT:    vext.16 d19, d20, d20, #3
+; CHECKSOFT-NEXT:    vmov.16 d19[3], r0
 ; CHECKSOFT-NEXT:    vadd.f16 q8, q8, q9
 ; CHECKSOFT-NEXT:    vext.16 d18, d0, d1, #2
 ; CHECKSOFT-NEXT:    vmovx.f16 s0, s8
-; CHECKSOFT-NEXT:    vmov r1, s0
-; CHECKSOFT-NEXT:    vmovx.f16 s0, s11
+; CHECKSOFT-NEXT:    vmov r0, s0
+; CHECKSOFT-NEXT:    vdup.16 q0, d3[2]
 ; CHECKSOFT-NEXT:    vext.16 d19, d18, d2, #3
+; CHECKSOFT-NEXT:    vmov r1, s0
 ; CHECKSOFT-NEXT:    vext.16 d18, d2, d18, #1
+; CHECKSOFT-NEXT:    vmovx.f16 s0, s11
 ; CHECKSOFT-NEXT:    vext.16 d18, d18, d19, #2
 ; CHECKSOFT-NEXT:    vext.16 d18, d18, d18, #1
-; CHECKSOFT-NEXT:    vmov.16 d20[1], r1
-; CHECKSOFT-NEXT:    vmov.16 d20[2], r0
+; CHECKSOFT-NEXT:    vmov.16 d19[0], r1
+; CHECKSOFT-NEXT:    vmov.16 d19[1], r0
+; CHECKSOFT-NEXT:    vmov r0, s10
+; CHECKSOFT-NEXT:    vmov.16 d19[2], r0
 ; CHECKSOFT-NEXT:    vmov r0, s0
-; CHECKSOFT-NEXT:    vmov.16 d20[3], r0
-; CHECKSOFT-NEXT:    vext.16 d20, d20, d22, #1
-; CHECKSOFT-NEXT:    vext.16 d19, d20, d20, #3
+; CHECKSOFT-NEXT:    vmov.16 d19[3], r0
 ; CHECKSOFT-NEXT:    vadd.f16 q0, q8, q9
 ; CHECKSOFT-NEXT:    bx lr
 entry:
@@ -295,3 +293,76 @@ entry:
   ret <8 x half> %r
 }
 
+define i16 @extract_v4i16(<4 x half> %a) {
+; CHECKHARD-LABEL: extract_v4i16:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    vmov.u16 r0, d0[0]
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: extract_v4i16:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov d16, r0, r1
+; CHECKSOFT-NEXT:    vmov.u16 r0, d16[0]
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %elt = extractelement <4 x half> %a, i32 0
+  %t = bitcast half %elt to i16
+  ret i16 %t
+}
+
+define i16 @extract_v8i16(<8 x half> %a) {
+; CHECKHARD-LABEL: extract_v8i16:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    vmov.u16 r0, d0[0]
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: extract_v8i16:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov d16, r0, r1
+; CHECKSOFT-NEXT:    vmov.u16 r0, d16[0]
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %elt = extractelement <8 x half> %a, i32 0
+  %t = bitcast half %elt to i16
+  ret i16 %t
+}
+
+define i32 @extract_v4s32(<4 x half> %a) {
+; CHECKHARD-LABEL: extract_v4s32:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    vmov.u16 r0, d0[0]
+; CHECKHARD-NEXT:    sxth r0, r0
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: extract_v4s32:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov d16, r0, r1
+; CHECKSOFT-NEXT:    vmov.u16 r0, d16[0]
+; CHECKSOFT-NEXT:    sxth r0, r0
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %elt = extractelement <4 x half> %a, i32 0
+  %t = bitcast half %elt to i16
+  %s = sext i16 %t to i32
+  ret i32 %s
+}
+
+define i32 @extract_v8s32(<8 x half> %a) {
+; CHECKHARD-LABEL: extract_v8s32:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    vmov.u16 r0, d0[0]
+; CHECKHARD-NEXT:    sxth r0, r0
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: extract_v8s32:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov d16, r0, r1
+; CHECKSOFT-NEXT:    vmov.u16 r0, d16[0]
+; CHECKSOFT-NEXT:    sxth r0, r0
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %elt = extractelement <8 x half> %a, i32 0
+  %t = bitcast half %elt to i16
+  %s = sext i16 %t to i32
+  ret i32 %s
+}

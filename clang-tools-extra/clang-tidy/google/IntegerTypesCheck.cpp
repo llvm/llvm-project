@@ -36,9 +36,41 @@ static Token getTokenAtLoc(SourceLocation Loc,
   return Tok;
 }
 
-namespace tidy {
-namespace google {
-namespace runtime {
+namespace {
+AST_MATCHER(FunctionDecl, isUserDefineLiteral) {
+  return Node.getLiteralIdentifier() != nullptr;
+}
+
+AST_MATCHER(TypeLoc, isValidAndNotInMacro) {
+  const SourceLocation Loc = Node.getBeginLoc();
+  return Loc.isValid() && !Loc.isMacroID();
+}
+
+AST_MATCHER(TypeLoc, isBuiltinType) {
+  TypeLoc TL = Node;
+  if (auto QualLoc = Node.getAs<QualifiedTypeLoc>())
+    TL = QualLoc.getUnqualifiedLoc();
+
+  const auto BuiltinLoc = TL.getAs<BuiltinTypeLoc>();
+  if (!BuiltinLoc)
+    return false;
+
+  switch (BuiltinLoc.getTypePtr()->getKind()) {
+  case BuiltinType::Short:
+  case BuiltinType::Long:
+  case BuiltinType::LongLong:
+  case BuiltinType::UShort:
+  case BuiltinType::ULong:
+  case BuiltinType::ULongLong:
+    return true;
+  default:
+    return false;
+  }
+}
+
+} // namespace
+
+namespace tidy::google::runtime {
 
 IntegerTypesCheck::IntegerTypesCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -58,20 +90,20 @@ void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
   // http://google.github.io/styleguide/cppguide.html#64-bit_Portability
   // "Where possible, avoid passing arguments of types specified by
   // bitwidth typedefs to printf-based APIs."
-  Finder->addMatcher(typeLoc(loc(isInteger()),
-                             unless(hasAncestor(callExpr(
-                                 callee(functionDecl(hasAttr(attr::Format)))))))
-                         .bind("tl"),
-                     this);
+  Finder->addMatcher(
+      typeLoc(loc(isInteger()), isValidAndNotInMacro(), isBuiltinType(),
+              unless(hasAncestor(
+                  callExpr(callee(functionDecl(hasAttr(attr::Format)))))),
+              unless(hasParent(parmVarDecl(
+                  hasAncestor(functionDecl(isUserDefineLiteral()))))))
+          .bind("tl"),
+      this);
   IdentTable = std::make_unique<IdentifierTable>(getLangOpts());
 }
 
 void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   auto TL = *Result.Nodes.getNodeAs<TypeLoc>("tl");
   SourceLocation Loc = TL.getBeginLoc();
-
-  if (Loc.isInvalid() || Loc.isMacroID())
-    return;
 
   // Look through qualification.
   if (auto QualLoc = TL.getAs<QualifiedTypeLoc>())
@@ -90,8 +122,8 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
                    tok::kw_signed))
     return;
 
-  bool IsSigned;
-  unsigned Width;
+  bool IsSigned = false;
+  unsigned Width = 0;
   const TargetInfo &TargetInfo = Result.Context->getTargetInfo();
 
   // Look for uses of short, long, long long and their unsigned versions.
@@ -129,7 +161,7 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   const StringRef Port = "unsigned short port";
   const char *Data = Result.SourceManager->getCharacterData(Loc);
   if (!std::strncmp(Data, Port.data(), Port.size()) &&
-      !isIdentifierBody(Data[Port.size()]))
+      !isAsciiIdentifierContinue(Data[Port.size()]))
     return;
 
   std::string Replacement =
@@ -144,7 +176,5 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
                                                << Replacement;
 }
 
-} // namespace runtime
-} // namespace google
-} // namespace tidy
+} // namespace tidy::google::runtime
 } // namespace clang

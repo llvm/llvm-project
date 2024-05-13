@@ -103,7 +103,7 @@ target triple = "x86_64-pc-windows-msvc19.11.25506"
 ; Function Attrs: noinline nounwind optnone uwtable
 define void @"\01?f@@YAXXZ"() #0 !dbg !31 {
   %1 = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !34, metadata !DIExpression()), !dbg !36
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !34, metadata !DIExpression()), !dbg !36
   ret void, !dbg !37
 }
 
@@ -111,20 +111,17 @@ define void @"\01?f@@YAXXZ"() #0 !dbg !31 {
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define float @"\01?g@@YAMPEAUS@@@Z"(%struct.S*) #0 !dbg !38 {
-  %2 = alloca %struct.S*, align 8
+define float @"\01?g@@YAMPEAUS@@@Z"(ptr) #0 !dbg !38 {
+  %2 = alloca ptr, align 8
   %3 = alloca %union.pun, align 4
-  store %struct.S* %0, %struct.S** %2, align 8
-  call void @llvm.dbg.declare(metadata %struct.S** %2, metadata !43, metadata !DIExpression()), !dbg !44
-  call void @llvm.dbg.declare(metadata %union.pun* %3, metadata !45, metadata !DIExpression()), !dbg !50
-  %4 = load %struct.S*, %struct.S** %2, align 8, !dbg !51
-  %5 = getelementptr inbounds %struct.S, %struct.S* %4, i32 0, i32 0, !dbg !52
-  %6 = load i32, i32* %5, align 4, !dbg !52
-  %7 = bitcast %union.pun* %3 to i32*, !dbg !53
-  store i32 %6, i32* %7, align 4, !dbg !54
-  %8 = bitcast %union.pun* %3 to float*, !dbg !55
-  %9 = load float, float* %8, align 4, !dbg !55
-  ret float %9, !dbg !56
+  store ptr %0, ptr %2, align 8
+  call void @llvm.dbg.declare(metadata ptr %2, metadata !43, metadata !DIExpression()), !dbg !44
+  call void @llvm.dbg.declare(metadata ptr %3, metadata !45, metadata !DIExpression()), !dbg !50
+  %4 = load ptr, ptr %2, align 8, !dbg !51
+  %5 = load i32, ptr %4, align 4, !dbg !52
+  store i32 %5, ptr %3, align 4, !dbg !54
+  %6 = load float, ptr %3, align 4, !dbg !55
+  ret float %6, !dbg !56
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -217,7 +217,7 @@ define dso_local float @test_zext_fcmp_une(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_une:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpneqss %xmm1, %xmm0
-; CMOV-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CMOV-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CMOV-NEXT:    andps %xmm1, %xmm0
 ; CMOV-NEXT:    retq
 ;
@@ -255,7 +255,7 @@ define dso_local float @test_zext_fcmp_oeq(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_oeq:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpeqss %xmm1, %xmm0
-; CMOV-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CMOV-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CMOV-NEXT:    andps %xmm1, %xmm0
 ; CMOV-NEXT:    retq
 ;
@@ -320,7 +320,7 @@ define dso_local void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) nounwi
 ; CMOV-NEXT:    cmovlel %ecx, %eax
 ; CMOV-NEXT:    testl %edi, %edi
 ; CMOV-NEXT:    cmovnel %ecx, %eax
-; CMOV-NEXT:    movb %al, {{.*}}(%rip)
+; CMOV-NEXT:    movb %al, g8(%rip)
 ; CMOV-NEXT:    retq
 ;
 ; NOCMOV-LABEL: no_cascade_opt:
@@ -339,7 +339,7 @@ define dso_local void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) nounwi
 ; NOCMOV-NEXT:    movb %al, g8
 ; NOCMOV-NEXT:    retl
 ; NOCMOV-NEXT:  .LBB7_1: # %entry
-; NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    jg .LBB7_4
 ; NOCMOV-NEXT:  .LBB7_3: # %entry
 ; NOCMOV-NEXT:    movl %ecx, %eax
@@ -357,6 +357,6 @@ entry:
   %sel0 = select i1 %c1, i8 20, i8 %trunc
   %sel1 = select i1 %c2, i8 20, i8 %sel0
   %sel2 = select i1 %c0, i8 %sel1, i8 %sel0
-  store volatile i8 %sel2, i8* @g8
+  store volatile i8 %sel2, ptr @g8
   ret void
 }

@@ -16,15 +16,16 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
 
 #include <cstdio>
+#include <variant>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -60,7 +61,7 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   if (!obj)
     return obj.takeError();
   PyObject *str_obj = PyObject_Str(obj.get().get());
-  if (!obj)
+  if (!str_obj)
     return llvm::make_error<PythonException>();
   auto str = Take<PythonString>(str_obj);
   auto utf8 = str.AsUTF8();
@@ -69,15 +70,33 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   return std::string(utf8.get());
 }
 
+static bool python_is_finalizing() {
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13) || (PY_MAJOR_VERSION > 3)
+  return Py_IsFinalizing();
+#elif PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
+  return _Py_Finalizing != nullptr;
+#else
+  return _Py_IsFinalizing();
+#endif
+}
+
+void PythonObject::Reset() {
+  if (m_py_obj && Py_IsInitialized()) {
+    if (python_is_finalizing()) {
+      // Leak m_py_obj rather than crashing the process.
+      // https://docs.python.org/3/c-api/init.html#c.PyGILState_Ensure
+    } else {
+      PyGILState_STATE state = PyGILState_Ensure();
+      Py_DECREF(m_py_obj);
+      PyGILState_Release(state);
+    }
+  }
+  m_py_obj = nullptr;
+}
+
 Expected<long long> PythonObject::AsLongLong() const {
   if (!m_py_obj)
     return nullDeref();
-#if PY_MAJOR_VERSION < 3
-  if (!PyLong_Check(m_py_obj)) {
-    PythonInteger i(PyRefType::Borrowed, m_py_obj);
-    return i.AsLongLong();
-  }
-#endif
   assert(!PyErr_Occurred());
   long long r = PyLong_AsLongLong(m_py_obj);
   if (PyErr_Occurred())
@@ -85,15 +104,9 @@ Expected<long long> PythonObject::AsLongLong() const {
   return r;
 }
 
-Expected<long long> PythonObject::AsUnsignedLongLong() const {
+Expected<unsigned long long> PythonObject::AsUnsignedLongLong() const {
   if (!m_py_obj)
     return nullDeref();
-#if PY_MAJOR_VERSION < 3
-  if (!PyLong_Check(m_py_obj)) {
-    PythonInteger i(PyRefType::Borrowed, m_py_obj);
-    return i.AsUnsignedLongLong();
-  }
-#endif
   assert(!PyErr_Occurred());
   long long r = PyLong_AsUnsignedLongLong(m_py_obj);
   if (PyErr_Occurred())
@@ -105,14 +118,9 @@ Expected<long long> PythonObject::AsUnsignedLongLong() const {
 Expected<unsigned long long> PythonObject::AsModuloUnsignedLongLong() const {
   if (!m_py_obj)
     return nullDeref();
-#if PY_MAJOR_VERSION < 3
-  if (!PyLong_Check(m_py_obj)) {
-    PythonInteger i(PyRefType::Borrowed, m_py_obj);
-    return i.AsModuloUnsignedLongLong();
-  }
-#endif
   assert(!PyErr_Occurred());
   unsigned long long r = PyLong_AsUnsignedLongLongMask(m_py_obj);
+  // FIXME: We should fetch the exception message and hoist it.
   if (PyErr_Occurred())
     return exception();
   return r;
@@ -158,10 +166,8 @@ PyObjectType PythonObject::GetObjectType() const {
     return PyObjectType::Dictionary;
   if (PythonString::Check(m_py_obj))
     return PyObjectType::String;
-#if PY_MAJOR_VERSION >= 3
   if (PythonBytes::Check(m_py_obj))
     return PyObjectType::Bytes;
-#endif
   if (PythonByteArray::Check(m_py_obj))
     return PyObjectType::ByteArray;
   if (PythonBoolean::Check(m_py_obj))
@@ -257,6 +263,7 @@ PythonObject PythonObject::GetAttributeValue(llvm::StringRef attr) const {
 }
 
 StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
+  assert(PyGILState_Check());
   switch (GetObjectType()) {
   case PyObjectType::Dictionary:
     return PythonDictionary(PyRefType::Borrowed, m_py_obj)
@@ -264,9 +271,15 @@ StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   case PyObjectType::Boolean:
     return PythonBoolean(PyRefType::Borrowed, m_py_obj)
         .CreateStructuredBoolean();
-  case PyObjectType::Integer:
-    return PythonInteger(PyRefType::Borrowed, m_py_obj)
-        .CreateStructuredInteger();
+  case PyObjectType::Integer: {
+    StructuredData::IntegerSP int_sp =
+        PythonInteger(PyRefType::Borrowed, m_py_obj).CreateStructuredInteger();
+    if (std::holds_alternative<StructuredData::UnsignedIntegerSP>(int_sp))
+      return std::get<StructuredData::UnsignedIntegerSP>(int_sp);
+    if (std::holds_alternative<StructuredData::SignedIntegerSP>(int_sp))
+      return std::get<StructuredData::SignedIntegerSP>(int_sp);
+    return nullptr;
+  };
   case PyObjectType::List:
     return PythonList(PyRefType::Borrowed, m_py_obj).CreateStructuredArray();
   case PyObjectType::String:
@@ -279,7 +292,8 @@ StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   case PyObjectType::None:
     return StructuredData::ObjectSP();
   default:
-    return StructuredData::ObjectSP(new StructuredPythonObject(m_py_obj));
+    return StructuredData::ObjectSP(new StructuredPythonObject(
+        PythonObject(PyRefType::Borrowed, m_py_obj)));
   }
 }
 
@@ -369,11 +383,7 @@ StructuredData::StringSP PythonByteArray::CreateStructuredString() const {
 // PythonString
 
 Expected<PythonString> PythonString::FromUTF8(llvm::StringRef string) {
-#if PY_MAJOR_VERSION >= 3
   PyObject *str = PyUnicode_FromStringAndSize(string.data(), string.size());
-#else
-  PyObject *str = PyString_FromStringAndSize(string.data(), string.size());
-#endif
   if (!str)
     return llvm::make_error<PythonException>();
   return Take<PythonString>(str);
@@ -387,33 +397,7 @@ bool PythonString::Check(PyObject *py_obj) {
 
   if (PyUnicode_Check(py_obj))
     return true;
-#if PY_MAJOR_VERSION < 3
-  if (PyString_Check(py_obj))
-    return true;
-#endif
   return false;
-}
-
-void PythonString::Convert(PyRefType &type, PyObject *&py_obj) {
-#if PY_MAJOR_VERSION < 3
-  // In Python 2, Don't store PyUnicode objects directly, because we need
-  // access to their underlying character buffers which Python 2 doesn't
-  // provide.
-  if (PyUnicode_Check(py_obj)) {
-    PyObject *s = PyUnicode_AsUTF8String(py_obj);
-    if (s == nullptr) {
-      PyErr_Clear();
-      if (type == PyRefType::Owned)
-        Py_DECREF(py_obj);
-      return;
-    }
-    if (type == PyRefType::Owned)
-      Py_DECREF(py_obj);
-    else
-      type = PyRefType::Owned;
-    py_obj = s;
-  }
-#endif
 }
 
 llvm::StringRef PythonString::GetString() const {
@@ -432,15 +416,7 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
   Py_ssize_t size;
   const char *data;
 
-#if PY_MAJOR_VERSION >= 3
   data = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
-#else
-  char *c = NULL;
-  int r = PyString_AsStringAndSize(m_py_obj, &c, &size);
-  if (r < 0)
-    c = NULL;
-  data = c;
-#endif
 
   if (!data)
     return exception();
@@ -450,14 +426,10 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
 
 size_t PythonString::GetSize() const {
   if (IsValid()) {
-#if PY_MAJOR_VERSION >= 3
 #if PY_MINOR_VERSION >= 3
     return PyUnicode_GetLength(m_py_obj);
 #else
     return PyUnicode_GetSize(m_py_obj);
-#endif
-#else
-    return PyString_Size(m_py_obj);
 #endif
   }
   return 0;
@@ -487,41 +459,9 @@ bool PythonInteger::Check(PyObject *py_obj) {
   if (!py_obj)
     return false;
 
-#if PY_MAJOR_VERSION >= 3
   // Python 3 does not have PyInt_Check.  There is only one type of integral
   // value, long.
   return PyLong_Check(py_obj);
-#else
-  return PyLong_Check(py_obj) || PyInt_Check(py_obj);
-#endif
-}
-
-void PythonInteger::Convert(PyRefType &type, PyObject *&py_obj) {
-#if PY_MAJOR_VERSION < 3
-  // Always store this as a PyLong, which makes interoperability between Python
-  // 2.x and Python 3.x easier.  This is only necessary in 2.x, since 3.x
-  // doesn't even have a PyInt.
-  if (PyInt_Check(py_obj)) {
-    // Since we converted the original object to a different type, the new
-    // object is an owned object regardless of the ownership semantics
-    // requested by the user.
-    long long value = PyInt_AsLong(py_obj);
-    PyObject *l = nullptr;
-    if (!PyErr_Occurred())
-      l = PyLong_FromLongLong(value);
-    if (l == nullptr) {
-      PyErr_Clear();
-      if (type == PyRefType::Owned)
-        Py_DECREF(py_obj);
-      return;
-    }
-    if (type == PyRefType::Owned)
-      Py_DECREF(py_obj);
-    else
-      type = PyRefType::Owned;
-    py_obj = l;
-  }
-#endif
 }
 
 void PythonInteger::SetInteger(int64_t value) {
@@ -529,17 +469,32 @@ void PythonInteger::SetInteger(int64_t value) {
 }
 
 StructuredData::IntegerSP PythonInteger::CreateStructuredInteger() const {
-  StructuredData::IntegerSP result(new StructuredData::Integer);
-  // FIXME this is really not ideal.   Errors are silently converted to 0
-  // and overflows are silently wrapped.   But we'd need larger changes
-  // to StructuredData to fix it, so that's how it is for now.
-  llvm::Expected<unsigned long long> value = AsModuloUnsignedLongLong();
-  if (!value) {
+  StructuredData::UnsignedIntegerSP uint_sp = CreateStructuredUnsignedInteger();
+  return uint_sp ? StructuredData::IntegerSP(uint_sp)
+                 : CreateStructuredSignedInteger();
+}
+
+StructuredData::UnsignedIntegerSP
+PythonInteger::CreateStructuredUnsignedInteger() const {
+  StructuredData::UnsignedIntegerSP result = nullptr;
+  llvm::Expected<unsigned long long> value = AsUnsignedLongLong();
+  if (!value)
     llvm::consumeError(value.takeError());
-    result->SetValue(0);
-  } else {
-    result->SetValue(value.get());
-  }
+  else
+    result = std::make_shared<StructuredData::UnsignedInteger>(value.get());
+
+  return result;
+}
+
+StructuredData::SignedIntegerSP
+PythonInteger::CreateStructuredSignedInteger() const {
+  StructuredData::SignedIntegerSP result = nullptr;
+  llvm::Expected<long long> value = AsLongLong();
+  if (!value)
+    llvm::consumeError(value.takeError());
+  else
+    result = std::make_shared<StructuredData::SignedInteger>(value.get());
+
   return result;
 }
 
@@ -708,6 +663,20 @@ bool PythonDictionary::Check(PyObject *py_obj) {
   return PyDict_Check(py_obj);
 }
 
+bool PythonDictionary::HasKey(const llvm::Twine &key) const {
+  if (!IsValid())
+    return false;
+
+  PythonString key_object(key.isSingleStringRef() ? key.getSingleStringRef()
+                                                  : key.str());
+
+  if (int res = PyDict_Contains(m_py_obj, key_object.get()) > 0)
+    return res;
+
+  PyErr_Print();
+  return false;
+}
+
 uint32_t PythonDictionary::GetSize() const {
   if (IsValid())
     return PyDict_Size(m_py_obj);
@@ -733,13 +702,9 @@ Expected<PythonObject>
 PythonDictionary::GetItem(const PythonObject &key) const {
   if (!IsValid())
     return nullDeref();
-#if PY_MAJOR_VERSION >= 3
   PyObject *o = PyDict_GetItemWithError(m_py_obj, key.get());
   if (PyErr_Occurred())
     return exception();
-#else
-  PyObject *o = PyDict_GetItem(m_py_obj, key.get());
-#endif
   if (!o)
     return keyError();
   return Retain<PythonObject>(o);
@@ -797,13 +762,7 @@ PythonDictionary::CreateStructuredDictionary() const {
   return result;
 }
 
-PythonModule PythonModule::BuiltinsModule() {
-#if PY_MAJOR_VERSION >= 3
-  return AddModule("builtins");
-#else
-  return AddModule("__builtin__");
-#endif
-}
+PythonModule PythonModule::BuiltinsModule() { return AddModule("builtins"); }
 
 PythonModule PythonModule::MainModule() { return AddModule("__main__"); }
 
@@ -971,9 +930,6 @@ operator()(std::initializer_list<PythonObject> args) {
 bool PythonFile::Check(PyObject *py_obj) {
   if (!py_obj)
     return false;
-#if PY_MAJOR_VERSION < 3
-  return PyFile_Check(py_obj);
-#else
   // In Python 3, there is no `PyFile_Check`, and in fact PyFile is not even a
   // first-class object type anymore.  `PyFile_FromFd` is just a thin wrapper
   // over `io.open()`, which returns some object derived from `io.IOBase`. As a
@@ -995,22 +951,7 @@ bool PythonFile::Check(PyObject *py_obj) {
     return false;
   }
   return !!r;
-#endif
 }
-
-namespace {
-class GIL {
-public:
-  GIL() {
-    m_state = PyGILState_Ensure();
-    assert(!PyErr_Occurred());
-  }
-  ~GIL() { PyGILState_Release(m_state); }
-
-protected:
-  PyGILState_STATE m_state;
-};
-} // namespace
 
 const char *PythonException::toCString() const {
   if (!m_repr_bytes)
@@ -1020,7 +961,7 @@ const char *PythonException::toCString() const {
 
 PythonException::PythonException(const char *caller) {
   assert(PyErr_Occurred());
-  m_exception_type = m_exception = m_traceback = m_repr_bytes = NULL;
+  m_exception_type = m_exception = m_traceback = m_repr_bytes = nullptr;
   PyErr_Fetch(&m_exception_type, &m_exception, &m_traceback);
   PyErr_NormalizeException(&m_exception_type, &m_exception, &m_traceback);
   PyErr_Clear();
@@ -1036,7 +977,7 @@ PythonException::PythonException(const char *caller) {
       PyErr_Clear();
     }
   }
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT);
+  Log *log = GetLog(LLDBLog::Script);
   if (caller)
     LLDB_LOGF(log, "%s failed with exception: %s", caller, toCString());
   else
@@ -1048,7 +989,7 @@ void PythonException::Restore() {
   } else {
     PyErr_SetString(PyExc_Exception, toCString());
   }
-  m_exception_type = m_exception = m_traceback = NULL;
+  m_exception_type = m_exception = m_traceback = nullptr;
 }
 
 PythonException::~PythonException() {
@@ -1106,7 +1047,6 @@ char PythonException::ID = 0;
 
 llvm::Expected<File::OpenOptions>
 GetOptionsForPyObject(const PythonObject &obj) {
-#if PY_MAJOR_VERSION >= 3
   auto options = File::OpenOptions(0);
   auto readable = As<bool>(obj.CallMethod("readable"));
   if (!readable)
@@ -1114,15 +1054,13 @@ GetOptionsForPyObject(const PythonObject &obj) {
   auto writable = As<bool>(obj.CallMethod("writable"));
   if (!writable)
     return writable.takeError();
-  if (readable.get())
-    options |= File::eOpenOptionRead;
-  if (writable.get())
-    options |= File::eOpenOptionWrite;
+  if (readable.get() && writable.get())
+    options |= File::eOpenOptionReadWrite;
+  else if (writable.get())
+    options |= File::eOpenOptionWriteOnly;
+  else if (readable.get())
+    options |= File::eOpenOptionReadOnly;
   return options;
-#else
-  PythonString py_mode = obj.GetAttributeValue("mode").AsType<PythonString>();
-  return File::GetOptionsFromMode(py_mode.GetString());
-#endif
 }
 
 // Base class template for python files.   All it knows how to do
@@ -1205,8 +1143,6 @@ public:
 };
 char SimplePythonFile::ID = 0;
 } // namespace
-
-#if PY_MAJOR_VERSION >= 3
 
 namespace {
 class PythonBuffer {
@@ -1397,8 +1333,6 @@ public:
 };
 } // namespace
 
-#endif
-
 llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
   if (!IsValid())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1413,7 +1347,10 @@ llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
   if (!options)
     return options.takeError();
 
-  if (options.get() & File::eOpenOptionWrite) {
+  File::OpenOptions rw =
+      options.get() & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                       File::eOpenOptionReadWrite);
+  if (rw == File::eOpenOptionWriteOnly || rw == File::eOpenOptionReadWrite) {
     // LLDB and python will not share I/O buffers.  We should probably
     // flush the python buffers now.
     auto r = CallMethod("flush");
@@ -1423,7 +1360,7 @@ llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
 
   FileSP file_sp;
   if (borrowed) {
-    // In this case we we don't need to retain the python
+    // In this case we don't need to retain the python
     // object at all.
     file_sp = std::make_shared<NativeFile>(fd, options.get(), false);
   } else {
@@ -1445,13 +1382,6 @@ PythonFile::ConvertToFileForcingUseOfScriptingIOMethods(bool borrowed) {
   if (!IsValid())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid PythonFile");
-
-#if PY_MAJOR_VERSION < 3
-
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "not supported on python 2");
-
-#else
 
   int fd = PyObject_AsFileDescriptor(m_py_obj);
   if (fd < 0) {
@@ -1502,8 +1432,6 @@ PythonFile::ConvertToFileForcingUseOfScriptingIOMethods(bool borrowed) {
                                    "invalid File");
 
   return file_sp;
-
-#endif
 }
 
 Expected<PythonFile> PythonFile::FromFile(File &file, const char *mode) {
@@ -1513,10 +1441,8 @@ Expected<PythonFile> PythonFile::FromFile(File &file, const char *mode) {
 
   if (auto *simple = llvm::dyn_cast<SimplePythonFile>(&file))
     return Retain<PythonFile>(simple->GetPythonObject());
-#if PY_MAJOR_VERSION >= 3
   if (auto *pythonio = llvm::dyn_cast<PythonIOFile>(&file))
     return Retain<PythonFile>(pythonio->GetPythonObject());
-#endif
 
   if (!mode) {
     auto m = file.GetOpenMode();
@@ -1526,26 +1452,8 @@ Expected<PythonFile> PythonFile::FromFile(File &file, const char *mode) {
   }
 
   PyObject *file_obj;
-#if PY_MAJOR_VERSION >= 3
   file_obj = PyFile_FromFd(file.GetDescriptor(), nullptr, mode, -1, nullptr,
                            "ignore", nullptr, /*closefd=*/0);
-#else
-  // I'd like to pass ::fflush here if the file is writable,  so that
-  // when the python side destructs the file object it will be flushed.
-  // However, this would be dangerous.    It can cause fflush to be called
-  // after fclose if the python program keeps a reference to the file after
-  // the original lldb_private::File has been destructed.
-  //
-  // It's all well and good to ask a python program not to use a closed file
-  // but asking a python program to make sure objects get released in a
-  // particular order is not safe.
-  //
-  // The tradeoff here is that if a python 2 program wants to make sure this
-  // file gets flushed, they'll have to do it explicitly or wait untill the
-  // original lldb File itself gets flushed.
-  file_obj = PyFile_FromFile(file.GetStream(), py2_const_cast(""),
-                             py2_const_cast(mode), [](FILE *) { return 0; });
-#endif
 
   if (!file_obj)
     return exception();
@@ -1592,12 +1500,7 @@ python::runStringOneLine(const llvm::Twine &string,
     return exception();
   auto code_ref = Take<PythonObject>(code);
 
-#if PY_MAJOR_VERSION < 3
-  PyObject *result =
-      PyEval_EvalCode((PyCodeObject *)code, globals.get(), locals.get());
-#else
   PyObject *result = PyEval_EvalCode(code, globals.get(), locals.get());
-#endif
 
   if (!result)
     return exception();

@@ -1,7 +1,7 @@
-; RUN: opt -basic-aa -loop-vectorize -force-vector-width=2 \
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 \
 ; RUN:     -force-vector-interleave=1 -S < %s \
 ; RUN:     | FileCheck %s -check-prefix=BOTH -check-prefix=LV
-; RUN: opt -basic-aa -scoped-noalias-aa -loop-vectorize -dse -force-vector-width=2 \
+; RUN: opt -passes=loop-vectorize,dse -force-vector-width=2 \
 ; RUN:     -force-vector-interleave=1 -S < %s \
 ; RUN:     | FileCheck %s -check-prefix=BOTH -check-prefix=DSE
 
@@ -22,7 +22,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; store to C[i] can be DSE'd.
 
 
-define void @f(i32* %a, i32* %b, i32* %c) {
+define void @f(ptr %a, ptr %b, ptr %c) {
 entry:
   br label %for.body
 
@@ -31,30 +31,30 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %inc, %for.body ]
 
-  %arrayidxA = getelementptr inbounds i32, i32* %a, i64 %ind
+  %arrayidxA = getelementptr inbounds i32, ptr %a, i64 %ind
 ; Scope 1
 ; LV: = load {{.*}} !alias.scope !0
-  %loadA = load i32, i32* %arrayidxA, align 4
+  %loadA = load i32, ptr %arrayidxA, align 4
 
   %add = add nuw i32 %loadA, 2
 
-  %arrayidxC = getelementptr inbounds i32, i32* %c, i64 %ind
+  %arrayidxC = getelementptr inbounds i32, ptr %c, i64 %ind
 ; Noalias with scope 1 and 6
 ; LV: store {{.*}} !alias.scope !3, !noalias !5
 ; DSE-NOT: store
-  store i32 %add, i32* %arrayidxC, align 4
+  store i32 %add, ptr %arrayidxC, align 4
 
-  %arrayidxB = getelementptr inbounds i32, i32* %b, i64 %ind
+  %arrayidxB = getelementptr inbounds i32, ptr %b, i64 %ind
 ; Scope 6
 ; LV: = load {{.*}} !alias.scope !7
-  %loadB = load i32, i32* %arrayidxB, align 4
+  %loadB = load i32, ptr %arrayidxB, align 4
 
   %add2 = add nuw i32 %add, %loadB
 
 ; Noalias with scope 1 and 6
 ; LV: store {{.*}} !alias.scope !3, !noalias !5
 ; DSE: store
-  store i32 %add2, i32* %arrayidxC, align 4
+  store i32 %add2, ptr %arrayidxC, align 4
 
   %inc = add nuw nsw i64 %ind, 1
   %exitcond = icmp eq i64 %inc, 20

@@ -37,7 +37,7 @@ public:
   bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
-    // Make sure the stack call frame addresses are are 4 byte aligned
+    // Make sure the stack call frame addresses are 4 byte aligned
     if (cfa & (4ull - 1ull))
       return false; // Not 4 byte aligned
     if (cfa == 0)
@@ -71,13 +71,11 @@ public:
 
   static lldb::ABISP CreateInstance(lldb::ProcessSP process_sp, const lldb_private::ArchSpec &arch);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "SysV-arm"; }
 
   // PluginInterface protocol
 
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   lldb::ValueObjectSP

@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -o - %s -std=gnu++17 -fsyntax-only -verify
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++17 -fsyntax-only -verify
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++20 -fsyntax-only -verify
+
 
 namespace test0 {
 struct Indestructible {
@@ -101,7 +103,7 @@ void test() {
 namespace test8 {
 typedef int arr[];
 int v = arr(); // expected-error {{array types cannot be value-initialized}} \
-                  expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'test8::arr'}}
+                  expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'arr'}}
 }
 
 namespace test9 {
@@ -133,6 +135,51 @@ struct S { // expected-note {{candidate}}
 template <typename T> S(T t) -> S<void *>;
 
 void baz() {
-  bar(S(123)); // expected-error {{no matching conversion}}
+  bar(S(123)); // expected-error {{no matching conversion for functional-style cast from 'int' to 'S<void *>'}}
 }
 } // namespace test11
+
+namespace test12 {
+// Verify we do not crash.
+int fun(int *foo = no_such_function()); // expected-error {{undeclared identifier}}
+void crash1() { fun(); }
+void crash2() { constexpr int s = fun(); }
+} // namespace test12
+
+namespace test13 {
+enum Circular {             // expected-note {{not complete until the closing '}'}}
+  Circular_A = Circular(1), // expected-error {{'Circular' is an incomplete type}}
+};
+// Enumerators can be evaluated (they evaluate as zero, but we don't care).
+static_assert(Circular_A == 0 && Circular_A != 0, ""); // expected-error {{static assertion failed}} \
+                                                       // expected-note {{evaluates to '0 != 0'}}
+}
+
+namespace test14 {
+extern "C" void *memset(void *, int b, unsigned long) {
+  int * const c(undef()); // expected-error {{undeclared identifier}}
+  // Verify we do not crash on evaluating *c whose initializer is a NULL-type ParenListExpr!
+  memset(c, 0, *c); // crash1
+
+  b = __builtin_object_size(c, 0); // crash2
+}
+}
+
+namespace test15 {
+void f() {
+  struct {
+    void m(int (&)[undefined()]) {} // expected-error {{undeclared identifier}}
+  } S;
+  S.m(1); // no crash
+}
+}
+
+namespace test16 {
+// verify we do not crash on incomplete class type.
+template<typename T, typename U> struct A; // expected-note 5{{template is declared here}}
+A<int, int> foo() { // expected-error {{implicit instantiation of undefined template}}
+  if (1 == 1)
+    return A<int, int>{1}; // expected-error 2{{implicit instantiation of undefined template}}
+  return A<int, int>(1); // expected-error 2{{implicit instantiation of undefined template}}
+}
+}

@@ -15,14 +15,13 @@
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY VETargetInfo : public TargetInfo {
-  static const Builtin::Info BuiltinInfo[];
 
 public:
   VETargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -41,6 +40,7 @@ public:
     Int64Type = SignedLong;
     RegParmMax = 8;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    HasUnalignedAccess = true;
 
     WCharType = UnsignedInt;
     WIntType = UnsignedInt;
@@ -70,7 +70,7 @@ public:
     }
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override {
     static const char *const GCCRegNames[] = {
@@ -84,7 +84,7 @@ public:
         "sx48", "sx49", "sx50", "sx51", "sx52", "sx53", "sx54", "sx55",
         "sx56", "sx57", "sx58", "sx59", "sx60", "sx61", "sx62", "sx63",
     };
-    return llvm::makeArrayRef(GCCRegNames);
+    return llvm::ArrayRef(GCCRegNames);
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
@@ -154,7 +154,7 @@ public:
         {{"s62"}, "sx62"},
         {{"s63"}, "sx63"},
     };
-    return llvm::makeArrayRef(GCCRegAliases);
+    return llvm::ArrayRef(GCCRegAliases);
   }
 
   bool validateAsmConstraint(const char *&Name,

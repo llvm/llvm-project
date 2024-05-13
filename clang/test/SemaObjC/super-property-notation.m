@@ -22,13 +22,12 @@
 }
 @end
 
-void f0() {
+void f0(void) {
   // FIXME: not implemented yet.
   //int l1 = A.classGetter;
   int l2 = [A classGetter2];
 }
 
-// rdar://13349296
 __attribute__((objc_root_class)) @interface ClassBase 
 @property (nonatomic, retain) ClassBase * foo; // expected-note {{property declared here}}
 @end

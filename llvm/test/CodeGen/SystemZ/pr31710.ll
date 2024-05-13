@@ -5,27 +5,27 @@
 ; release mode or hitting an assert if they're enabled.
 
 ; CHECK: btldata:
-define void @btldata(i64* %u0, i32** %p0, i32** %p1, i32** %p3, i32** %p5, i32** %p7) {
+define void @btldata(ptr %u0, ptr %p0, ptr %p1, ptr %p3, ptr %p5, ptr %p7) {
 entry:
-  %x0 = load i32*, i32** %p0, align 8, !tbaa !0
-  store i64 0, i64* %u0, align 8, !tbaa !4
-  %x1 = load i32*, i32** %p1, align 8, !tbaa !0
-  %x2 = load i32, i32* %x1, align 4, !tbaa !6
+  %x0 = load ptr, ptr %p0, align 8, !tbaa !0
+  store i64 0, ptr %u0, align 8, !tbaa !4
+  %x1 = load ptr, ptr %p1, align 8, !tbaa !0
+  %x2 = load i32, ptr %x1, align 4, !tbaa !6
   %x2ext = sext i32 %x2 to i64
-  store i32 %x2, i32* %x1, align 4, !tbaa !6
-  %x3 = load i32*, i32** %p3, align 8, !tbaa !0
-  %ptr = getelementptr inbounds i32, i32* %x3, i64 %x2ext
-  %x4 = load i32, i32* %ptr, align 4, !tbaa !6
+  store i32 %x2, ptr %x1, align 4, !tbaa !6
+  %x3 = load ptr, ptr %p3, align 8, !tbaa !0
+  %ptr = getelementptr inbounds i32, ptr %x3, i64 %x2ext
+  %x4 = load i32, ptr %ptr, align 4, !tbaa !6
   %x4inc = add nsw i32 %x4, 1
-  store i32 %x4inc, i32* %ptr, align 4, !tbaa !6
-  store i64 undef, i64* %u0, align 8, !tbaa !4
-  %x5 = load i32*, i32** %p5, align 8, !tbaa !0
-  %x6 = load i32, i32* %x5, align 4, !tbaa !6
-  store i32 %x6, i32* %x5, align 4, !tbaa !6
-  %x7 = load i32*, i32** %p7, align 8, !tbaa !0
-  %x8 = load i32, i32* %x7, align 4, !tbaa !6
+  store i32 %x4inc, ptr %ptr, align 4, !tbaa !6
+  store i64 undef, ptr %u0, align 8, !tbaa !4
+  %x5 = load ptr, ptr %p5, align 8, !tbaa !0
+  %x6 = load i32, ptr %x5, align 4, !tbaa !6
+  store i32 %x6, ptr %x5, align 4, !tbaa !6
+  %x7 = load ptr, ptr %p7, align 8, !tbaa !0
+  %x8 = load i32, ptr %x7, align 4, !tbaa !6
   %x8inc = add nsw i32 %x8, 1
-  store i32 %x8inc, i32* %x7, align 4, !tbaa !6
+  store i32 %x8inc, ptr %x7, align 4, !tbaa !6
   ret void
 }
 

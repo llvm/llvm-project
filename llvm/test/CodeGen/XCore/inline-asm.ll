@@ -39,7 +39,7 @@ entry:
 ; CHECK: retsp 0
 define i32 @f5() nounwind {
 entry:
-  %asmtmp = call i32 asm "ldw $0, $1", "=r,*m"(i32* @x) nounwind
+  %asmtmp = call i32 asm "ldw $0, $1", "=r,*m"(ptr elementtype(i32) @x) nounwind
   ret i32 %asmtmp
 }
 
@@ -48,6 +48,6 @@ entry:
 ; CHECK: retsp 0
 define i32 @f6() nounwind {
 entry:
-  %asmtmp = call i32 asm "ldw $0, $1", "=r,*m"(i32* @y) nounwind
+  %asmtmp = call i32 asm "ldw $0, $1", "=r,*m"(ptr elementtype(i32) @y) nounwind
   ret i32 %asmtmp
 }

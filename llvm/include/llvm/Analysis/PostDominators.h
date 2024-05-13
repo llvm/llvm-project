@@ -68,6 +68,8 @@ public:
   explicit PostDominatorTreePrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 struct PostDominatorTreeWrapperPass : public FunctionPass {
@@ -102,10 +104,7 @@ template <> struct GraphTraits<PostDominatorTree*>
   }
 
   static nodes_iterator nodes_begin(PostDominatorTree *N) {
-    if (getEntryNode(N))
-      return df_begin(getEntryNode(N));
-    else
-      return df_end(getEntryNode(N));
+    return df_begin(getEntryNode(N));
   }
 
   static nodes_iterator nodes_end(PostDominatorTree *N) {

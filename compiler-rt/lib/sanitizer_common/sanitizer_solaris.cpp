@@ -160,6 +160,13 @@ DECLARE__REAL_AND_INTERNAL(uptr, sched_yield, void) {
   return sched_yield();
 }
 
+DECLARE__REAL_AND_INTERNAL(void, usleep, u64 useconds) {
+  struct timespec ts;
+  ts.tv_sec = useconds / 1000000;
+  ts.tv_nsec = (useconds % 1000000) * 1000;
+  nanosleep(&ts, nullptr);
+}
+
 DECLARE__REAL_AND_INTERNAL(uptr, execve, const char *filename,
                            char *const argv[], char *const envp[]) {
   return _REAL(execve)(filename, argv, envp);
@@ -211,29 +218,12 @@ uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp) {
 }
 
 // ----------------- sanitizer_common.h
-BlockingMutex::BlockingMutex() {
-  CHECK(sizeof(mutex_t) <= sizeof(opaque_storage_));
-  internal_memset(this, 0, sizeof(*this));
-  CHECK_EQ(mutex_init((mutex_t *)&opaque_storage_, USYNC_THREAD, NULL), 0);
+void FutexWait(atomic_uint32_t *p, u32 cmp) {
+  // FIXME: implement actual blocking.
+  sched_yield();
 }
 
-void BlockingMutex::Lock() {
-  CHECK(sizeof(mutex_t) <= sizeof(opaque_storage_));
-  CHECK_NE(owner_, (uptr)thr_self());
-  CHECK_EQ(mutex_lock((mutex_t *)&opaque_storage_), 0);
-  CHECK(!owner_);
-  owner_ = (uptr)thr_self();
-}
-
-void BlockingMutex::Unlock() {
-  CHECK(owner_ == (uptr)thr_self());
-  owner_ = 0;
-  CHECK_EQ(mutex_unlock((mutex_t *)&opaque_storage_), 0);
-}
-
-void BlockingMutex::CheckLocked() {
-  CHECK_EQ((uptr)thr_self(), owner_);
-}
+void FutexWake(atomic_uint32_t *p, u32 count) {}
 
 }  // namespace __sanitizer
 

@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
+
 // <string_view>
 //   The string_views's value type must be the same as the traits's char_type
 
 #include <string_view>
 
-int main(int, char**)
-{
-    std::basic_string_view<char, std::char_traits<wchar_t>> s;
+int main(int, char**) {
+  std::basic_string_view<char, std::char_traits<wchar_t>> s;
 
   return 0;
 }

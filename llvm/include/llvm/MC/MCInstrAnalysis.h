@@ -14,10 +14,13 @@
 #ifndef LLVM_MC_MCINSTRANALYSIS_H
 #define LLVM_MC_MCINSTRANALYSIS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include <cstdint>
+#include <vector>
 
 namespace llvm {
 
@@ -33,6 +36,21 @@ protected:
 public:
   MCInstrAnalysis(const MCInstrInfo *Info) : Info(Info) {}
   virtual ~MCInstrAnalysis() = default;
+
+  /// Clear the internal state. See updateState for more information.
+  virtual void resetState() {}
+
+  /// Update internal state with \p Inst at \p Addr.
+  ///
+  /// For some types of analyses, inspecting a single instruction is not
+  /// sufficient. Some examples are auipc/jalr pairs on RISC-V or adrp/ldr pairs
+  /// on AArch64. To support inspecting multiple instructions, targets may keep
+  /// track of an internal state while analysing instructions. Clients should
+  /// call updateState for every instruction which allows later calls to one of
+  /// the analysis functions to take previous instructions into account.
+  /// Whenever state becomes irrelevant (e.g., when starting to disassemble a
+  /// new function), clients should call resetState to clear it.
+  virtual void updateState(const MCInst &Inst, uint64_t Addr) {}
 
   virtual bool isBranch(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isBranch();
@@ -60,6 +78,17 @@ public:
 
   virtual bool isTerminator(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isTerminator();
+  }
+
+  virtual bool mayAffectControlFlow(const MCInst &Inst,
+                                    const MCRegisterInfo &MCRI) const {
+    if (isBranch(Inst) || isCall(Inst) || isReturn(Inst) ||
+        isIndirectBranch(Inst))
+      return true;
+    unsigned PC = MCRI.getProgramCounter();
+    if (PC == 0)
+      return false;
+    return Info->get(Inst.getOpcode()).hasDefOfPhysReg(Inst, PC, MCRI);
   }
 
   /// Returns true if at least one of the register writes performed by
@@ -94,14 +123,14 @@ public:
   /// broken. Each bit of the mask is associated with a specific input operand.
   /// Bits associated with explicit input operands are laid out first in the
   /// mask; implicit operands come after explicit operands.
-  /// 
+  ///
   /// Dependencies are broken only for operands that have their corresponding bit
   /// set. Operands that have their bit cleared, or that don't have a
   /// corresponding bit in the mask don't have their dependency broken.  Note
   /// that Mask may not be big enough to describe all operands.  The assumption
   /// for operands that don't have a correspondent bit in the mask is that those
   /// are still data dependent.
-  /// 
+  ///
   /// The only exception to the rule is for when Mask has all zeroes.
   /// A zero mask means: dependencies are broken for all explicit register
   /// operands.
@@ -154,14 +183,19 @@ public:
 
   /// Given an instruction tries to get the address of a memory operand. Returns
   /// the address on success.
-  virtual Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
-                                                          uint64_t Addr,
-                                                          uint64_t Size) const;
+  virtual std::optional<uint64_t>
+  evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
+                               uint64_t Addr, uint64_t Size) const;
+
+  /// Given an instruction with a memory operand that could require relocation,
+  /// returns the offset within the instruction of that relocation.
+  virtual std::optional<uint64_t>
+  getMemoryOperandRelocationOffset(const MCInst &Inst, uint64_t Size) const;
 
   /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
   virtual std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 uint64_t GotPltSectionVA, const Triple &TargetTriple) const {
+                 const Triple &TargetTriple) const {
     return {};
   }
 };

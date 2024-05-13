@@ -11,16 +11,18 @@
 // Error reporting.
 //===----------------------------------------------------------------------===//
 
+#include "msan_report.h"
+
 #include "msan.h"
 #include "msan_chained_origin_depot.h"
 #include "msan_origin.h"
-#include "msan_report.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "sanitizer_common/sanitizer_stacktrace_printer.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 
 using namespace __sanitizer;
@@ -36,24 +38,19 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
 
 static void DescribeStackOrigin(const char *so, uptr pc) {
   Decorator d;
-  char *s = internal_strdup(so);
-  char *sep = internal_strchr(s, '@');
-  CHECK(sep);
-  *sep = '\0';
   Printf("%s", d.Origin());
-  Printf(
-      "  %sUninitialized value was created by an allocation of '%s%s%s'"
-      " in the stack frame of function '%s%s%s'%s\n",
-      d.Origin(), d.Name(), s, d.Origin(), d.Name(), sep + 1, d.Origin(),
-      d.Default());
-  InternalFree(s);
-
-  if (pc) {
-    // For some reason function address in LLVM IR is 1 less then the address
-    // of the first instruction.
-    pc = StackTrace::GetNextInstructionPc(pc);
-    StackTrace(&pc, 1).Print();
+  if (so) {
+    Printf(
+        "  %sUninitialized value was created by an allocation of '%s%s%s'"
+        " in the stack frame%s\n",
+        d.Origin(), d.Name(), so, d.Origin(), d.Default());
+  } else {
+    Printf("  %sUninitialized value was created in the stack frame%s\n",
+           d.Origin(), d.Default());
   }
+
+  if (pc)
+    StackTrace(&pc, 1).Print();
 }
 
 static void DescribeOrigin(u32 id) {
@@ -84,6 +81,13 @@ static void DescribeOrigin(u32 id) {
         break;
       case STACK_TRACE_TAG_POISON:
         Printf("  %sMemory was marked as uninitialized%s\n", d.Origin(),
+               d.Default());
+        break;
+      case STACK_TRACE_TAG_FIELDS:
+        Printf("  %sMember fields were destroyed%s\n", d.Origin(), d.Default());
+        break;
+      case STACK_TRACE_TAG_VPTR:
+        Printf("  %sVirtual table ptr was destroyed%s\n", d.Origin(),
                d.Default());
         break;
       default:
@@ -122,17 +126,17 @@ void ReportStats() {
   ScopedErrorReportLock l;
 
   if (__msan_get_track_origins() > 0) {
-    StackDepotStats *stack_depot_stats = StackDepotGetStats();
+    StackDepotStats stack_depot_stats = StackDepotGetStats();
     // FIXME: we want this at normal exit, too!
     // FIXME: but only with verbosity=1 or something
-    Printf("Unique heap origins: %zu\n", stack_depot_stats->n_uniq_ids);
-    Printf("Stack depot allocated bytes: %zu\n", stack_depot_stats->allocated);
+    Printf("Unique heap origins: %zu\n", stack_depot_stats.n_uniq_ids);
+    Printf("Stack depot allocated bytes: %zu\n", stack_depot_stats.allocated);
 
-    StackDepotStats *chained_origin_depot_stats = ChainedOriginDepotGetStats();
+    StackDepotStats chained_origin_depot_stats = ChainedOriginDepotGetStats();
     Printf("Unique origin histories: %zu\n",
-           chained_origin_depot_stats->n_uniq_ids);
+           chained_origin_depot_stats.n_uniq_ids);
     Printf("History depot allocated bytes: %zu\n",
-           chained_origin_depot_stats->allocated);
+           chained_origin_depot_stats.allocated);
   }
 }
 
@@ -201,13 +205,18 @@ void DescribeMemoryRange(const void *x, uptr size) {
 
   Decorator d;
   Printf("%s", d.Warning());
-  Printf("Shadow map of [%p, %p), %zu bytes:\n", start, end, end - start);
+  uptr start_x = reinterpret_cast<uptr>(x);
+  Printf("Shadow map [%p, %p) of [%p, %p), %zu bytes:\n",
+         reinterpret_cast<void *>(start), reinterpret_cast<void *>(end),
+         reinterpret_cast<void *>(start_x),
+         reinterpret_cast<void *>(start_x + end - start), end - start);
   Printf("%s", d.Default());
   while (s < e) {
     // Line start.
     if (pos % 16 == 0) {
       for (int i = 0; i < 4; ++i) origin_ids[i] = -1;
-      Printf("%p:", s);
+      Printf("%p[%p]:", reinterpret_cast<void *>(s),
+             reinterpret_cast<void *>(start_x - start + s));
     }
     // Group start.
     if (pos % 4 == 0) {
@@ -258,12 +267,13 @@ void DescribeMemoryRange(const void *x, uptr size) {
   }
 }
 
-void ReportUMRInsideAddressRange(const char *what, const void *start, uptr size,
-                                 uptr offset) {
+void ReportUMRInsideAddressRange(const char *function, const void *start,
+                                 uptr size, uptr offset) {
+  function = StackTracePrinter::GetOrInit()->StripFunctionName(function);
   Decorator d;
   Printf("%s", d.Warning());
   Printf("%sUninitialized bytes in %s%s%s at offset %zu inside [%p, %zu)%s\n",
-         d.Warning(), d.Name(), what, d.Warning(), offset, start, size,
+         d.Warning(), d.Name(), function, d.Warning(), offset, start, size,
          d.Default());
   if (__sanitizer::Verbosity())
     DescribeMemoryRange(start, size);

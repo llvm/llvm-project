@@ -1,4 +1,4 @@
-//===-- M68kInstrBuilder.h - Functions to build M68k insts --*- C++ -*-===//
+//===-- M68kInstrBuilder.h - Functions to build M68k insts ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -91,4 +91,4 @@ addMemOperand(const MachineInstrBuilder &MIB, int FI, int Offset = 0) {
 } // end namespace M68k
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_M6800_M6800INSTRBUILDER_H
+#endif // LLVM_LIB_TARGET_M68K_M68KINSTRBUILDER_H

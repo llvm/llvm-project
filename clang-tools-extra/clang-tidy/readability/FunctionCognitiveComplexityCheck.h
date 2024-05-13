@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Checks function Cognitive Complexity metric.
 ///
@@ -30,7 +28,7 @@ namespace readability {
 ///     macros. Default is `false`.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-function-cognitive-complexity.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/function-cognitive-complexity.html
 class FunctionCognitiveComplexityCheck : public ClangTidyCheck {
 public:
   FunctionCognitiveComplexityCheck(StringRef Name, ClangTidyContext *Context);
@@ -38,7 +36,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
 
@@ -48,8 +46,6 @@ private:
   const bool IgnoreMacros;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_FUNCTIONCOGNITIVECOMPLEXITYCHECK_H

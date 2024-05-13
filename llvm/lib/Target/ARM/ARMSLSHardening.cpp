@@ -161,16 +161,32 @@ static const struct ThunkNameRegMode {
     {"__llvm_slsblr_thunk_thumb_pc", ARM::PC, true},
 };
 
+// An enum for tracking whether Arm and Thumb thunks have been inserted into the
+// current module so far.
+enum ArmInsertedThunks { ArmThunk = 1, ThumbThunk = 2 };
+
+inline ArmInsertedThunks &operator|=(ArmInsertedThunks &X,
+                                     ArmInsertedThunks Y) {
+  return X = static_cast<ArmInsertedThunks>(X | Y);
+}
+
 namespace {
-struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
+struct SLSBLRThunkInserter
+    : ThunkInserter<SLSBLRThunkInserter, ArmInsertedThunks> {
   const char *getThunkPrefix() { return SLSBLRNamePrefix; }
-  bool mayUseThunk(const MachineFunction &MF) {
+  bool mayUseThunk(const MachineFunction &MF,
+                   ArmInsertedThunks InsertedThunks) {
+    if ((InsertedThunks & ArmThunk &&
+         !MF.getSubtarget<ARMSubtarget>().isThumb()) ||
+        (InsertedThunks & ThumbThunk &&
+         MF.getSubtarget<ARMSubtarget>().isThumb()))
+      return false;
     ComdatThunks &= !MF.getSubtarget<ARMSubtarget>().hardenSlsNoComdat();
     // FIXME: This could also check if there are any indirect calls in the
     // function to more accurately reflect if a thunk will be needed.
     return MF.getSubtarget<ARMSubtarget>().hardenSlsBlr();
   }
-  void insertThunks(MachineModuleInfo &MMI);
+  ArmInsertedThunks insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
   void populateThunk(MachineFunction &MF);
 
 private:
@@ -178,18 +194,23 @@ private:
 };
 } // namespace
 
-void SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI) {
+ArmInsertedThunks SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
+                                                    MachineFunction &MF) {
   // FIXME: It probably would be possible to filter which thunks to produce
   // based on which registers are actually used in indirect calls in this
   // function. But would that be a worthwhile optimization?
+  const ARMSubtarget *ST = &MF.getSubtarget<ARMSubtarget>();
   for (auto T : SLSBLRThunks)
-    createThunkFunction(MMI, T.Name, ComdatThunks);
+    if (ST->isThumb() == T.isThumb)
+      createThunkFunction(MMI, T.Name, ComdatThunks,
+                          T.isThumb ? "+thumb-mode" : "");
+  return ST->isThumb() ? ThumbThunk : ArmThunk;
 }
 
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
   // FIXME: How to better communicate Register number, rather than through
   // name and lookup table?
-  assert(MF.getName().startswith(getThunkPrefix()));
+  assert(MF.getName().starts_with(getThunkPrefix()));
   auto ThunkIt = llvm::find_if(
       SLSBLRThunks, [&MF](auto T) { return T.Name == MF.getName(); });
   assert(ThunkIt != std::end(SLSBLRThunks));
@@ -322,8 +343,8 @@ MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
   assert(ImpSPOpIdx != -1);
   int FirstOpIdxToRemove = std::max(ImpLROpIdx, ImpSPOpIdx);
   int SecondOpIdxToRemove = std::min(ImpLROpIdx, ImpSPOpIdx);
-  BL->RemoveOperand(FirstOpIdxToRemove);
-  BL->RemoveOperand(SecondOpIdxToRemove);
+  BL->removeOperand(FirstOpIdxToRemove);
+  BL->removeOperand(SecondOpIdxToRemove);
   // Now copy over the implicit operands from the original IndirectCall
   BL->copyImplicitOps(MF, IndirectCall);
   MF.moveCallSiteInfo(&IndirectCall, BL);
@@ -383,20 +404,15 @@ public:
 private:
   std::tuple<SLSBLRThunkInserter> TIs;
 
-  // FIXME: When LLVM moves to C++17, these can become folds
   template <typename... ThunkInserterT>
   static void initTIs(Module &M,
                       std::tuple<ThunkInserterT...> &ThunkInserters) {
-    (void)std::initializer_list<int>{
-        (std::get<ThunkInserterT>(ThunkInserters).init(M), 0)...};
+    (..., std::get<ThunkInserterT>(ThunkInserters).init(M));
   }
   template <typename... ThunkInserterT>
   static bool runTIs(MachineModuleInfo &MMI, MachineFunction &MF,
                      std::tuple<ThunkInserterT...> &ThunkInserters) {
-    bool Modified = false;
-    (void)std::initializer_list<int>{
-        Modified |= std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF)...};
-    return Modified;
+    return (0 | ... | std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF));
   }
 };
 

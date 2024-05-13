@@ -7,7 +7,7 @@ define x86_intrcc void @no_args() {
   ret void
 }
 
-; CHECK: define x86_intrcc void @byval_arg(i32* byval(i32) %0) {
-define x86_intrcc void @byval_arg(i32* byval(i32)) {
+; CHECK: define x86_intrcc void @byval_arg(ptr byval(i32) %0) {
+define x86_intrcc void @byval_arg(ptr byval(i32)) {
   ret void
 }

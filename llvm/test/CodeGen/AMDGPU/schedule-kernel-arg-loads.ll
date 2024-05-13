@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=SI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=VI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=SI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=VI -check-prefix=GCN %s
 
 ; FUNC-LABEL: {{^}}cluster_arg_loads:
 ; SI: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x9
@@ -7,9 +7,9 @@
 
 ; VI: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x24
 ; VI-NEXT: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x34
-define amdgpu_kernel void @cluster_arg_loads(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 %x, i32 %y) nounwind {
-  store i32 %x, i32 addrspace(1)* %out0, align 4
-  store i32 %y, i32 addrspace(1)* %out1, align 4
+define amdgpu_kernel void @cluster_arg_loads(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i32 %x, i32 %y) nounwind {
+  store i32 %x, ptr addrspace(1) %out0, align 4
+  store i32 %y, ptr addrspace(1) %out1, align 4
   ret void
 }
 
@@ -21,7 +21,7 @@ define amdgpu_kernel void @cluster_arg_loads(i32 addrspace(1)* %out0, i32 addrsp
 ; GCN: s_load_dwordx2
 ; GCN: s_load_dwordx2
 ; GCN: s_endpgm
-define amdgpu_kernel void @same_base_ptr_crash(i64 addrspace(1)* %out,
+define amdgpu_kernel void @same_base_ptr_crash(ptr addrspace(1) %out,
     i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %arg5, i64 %arg6, i64 %arg7,
     i64 %arg8, i64 %arg9, i64 %arg10, i64 %arg11, i64 %arg12, i64 %arg13, i64 %arg14, i64 %arg15,
     i64 %arg16, i64 %arg17, i64 %arg18, i64 %arg19, i64 %arg20, i64 %arg21, i64 %arg22, i64 %arg23,
@@ -40,6 +40,6 @@ define amdgpu_kernel void @same_base_ptr_crash(i64 addrspace(1)* %out,
     i64 %arg120, i64 %arg121, i64 %arg122, i64 %arg123, i64 %arg124, i64 %arg125, i64 %arg126) {
 entry:
   %value = add i64 %arg124, %arg126
-  store i64 %value, i64 addrspace(1)* %out, align 8
+  store i64 %value, ptr addrspace(1) %out, align 8
   ret void
 }

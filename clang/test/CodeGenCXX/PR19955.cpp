@@ -6,22 +6,22 @@ extern void __declspec(dllimport) fun();
 
 extern int *varp;
 int *varp = &var;
-// CHECK-DAG: @"?varp@@3PAHA" = dso_local global i32* null
-// X64-DAG: @"?varp@@3PEAHEA" = dso_local global i32* null
+// CHECK-DAG: @"?varp@@3PAHA" = dso_local global ptr null
+// X64-DAG: @"?varp@@3PEAHEA" = dso_local global ptr null
 
 extern void (*funp)();
 void (*funp)() = &fun;
-// CHECK-DAG: @"?funp@@3P6AXXZA" = dso_local global void ()* null
-// X64-DAG: @"?funp@@3P6AXXZEA" = dso_local global void ()* null
+// CHECK-DAG: @"?funp@@3P6AXXZA" = dso_local global ptr null
+// X64-DAG: @"?funp@@3P6AXXZEA" = dso_local global ptr null
 
 // CHECK-LABEL: @"??__Evarp@@YAXXZ"
-// CHECK-DAG: store i32* @"?var@@3HA", i32** @"?varp@@3PAHA"
+// CHECK-DAG: store ptr @"?var@@3HA", ptr @"?varp@@3PAHA"
 
 // X64-LABEL: @"??__Evarp@@YAXXZ"
-// X64-DAG: store i32* @"?var@@3HA", i32** @"?varp@@3PEAHEA"
+// X64-DAG: store ptr @"?var@@3HA", ptr @"?varp@@3PEAHEA"
 
 // CHECK-LABEL: @"??__Efunp@@YAXXZ"()
-// CHECK-DAG: store void ()* @"?fun@@YAXXZ", void ()** @"?funp@@3P6AXXZA"
+// CHECK-DAG: store ptr @"?fun@@YAXXZ", ptr @"?funp@@3P6AXXZA"
 
 // X64-LABEL: @"??__Efunp@@YAXXZ"()
-// X64-DAG: store void ()* @"?fun@@YAXXZ", void ()** @"?funp@@3P6AXXZEA"
+// X64-DAG: store ptr @"?fun@@YAXXZ", ptr @"?funp@@3P6AXXZEA"

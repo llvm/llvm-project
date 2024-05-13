@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -17,17 +18,15 @@
 // void assign(path const&);
 // void replace_filename(path const&);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
+namespace fs = std::filesystem;
 
-TEST_SUITE(directory_entry_ctor_suite)
-
-TEST_CASE(test_move_assign_operator) {
+static void test_move_assign_operator() {
   using namespace fs;
   // Copy
   {
@@ -44,7 +43,7 @@ TEST_CASE(test_move_assign_operator) {
   }
 }
 
-TEST_CASE(move_assign_copies_cache) {
+static void move_assign_copies_cache() {
   using namespace fs;
   scoped_test_env env;
   const path dir = env.create_dir("dir");
@@ -58,8 +57,8 @@ TEST_CASE(move_assign_copies_cache) {
 
     directory_entry ent_cp;
     ent_cp = std::move(ent);
-    TEST_CHECK(ent_cp.path() == sym);
-    TEST_CHECK(ent_cp.is_symlink());
+    assert(ent_cp.path() == sym);
+    assert(ent_cp.is_symlink());
   }
 
   {
@@ -69,9 +68,14 @@ TEST_CASE(move_assign_copies_cache) {
 
     directory_entry ent_cp;
     ent_cp = std::move(ent);
-    TEST_CHECK(ent_cp.path() == file);
-    TEST_CHECK(ent_cp.is_regular_file());
+    assert(ent_cp.path() == file);
+    assert(ent_cp.is_regular_file());
   }
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+  test_move_assign_operator();
+  move_assign_copies_cache();
+
+  return 0;
+}

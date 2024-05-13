@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple amdgcn-- -mcpu=kaveri -show-encoding %s | llvm-readobj -relocations - | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple amdgcn-- -mcpu=kaveri -show-encoding %s | llvm-readobj -r - | FileCheck %s
 
 // CHECK: Relocations [
 // CHECK: .rel.text {
@@ -9,6 +9,7 @@
 // CHECK: R_AMDGPU_GOTPCREL32_HI global_var2
 // CHECK: R_AMDGPU_REL32_LO global_var3
 // CHECK: R_AMDGPU_REL32_HI global_var4
+// CHECK: R_AMDGPU_REL16 .text.unlikely
 // CHECK: R_AMDGPU_ABS32 var
 // CHECK: }
 // CHECK: .rel.data {
@@ -25,6 +26,11 @@ kernel:
   s_mov_b32 s4, global_var2@gotpcrel32@hi
   s_mov_b32 s5, global_var3@rel32@lo
   s_mov_b32 s6, global_var4@rel32@hi
+  s_branch cold
+
+  .section .text.unlikely
+cold:
+  s_add_i32 s15, s15, 1
 
 .globl global_var0
 .globl global_var1

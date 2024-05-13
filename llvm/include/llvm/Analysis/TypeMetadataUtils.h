@@ -14,15 +14,18 @@
 #ifndef LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 #define LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 
-#include "llvm/ADT/SmallVector.h"
 #include <cstdint>
+#include <utility>
 
 namespace llvm {
 
+template <typename T> class SmallVectorImpl;
 class CallBase;
 class CallInst;
 class Constant;
+class Function;
 class DominatorTree;
+class GlobalVariable;
 class Instruction;
 class Module;
 
@@ -56,7 +59,37 @@ void findDevirtualizableCallsForTypeCheckedLoad(
     SmallVectorImpl<Instruction *> &Preds, bool &HasNonCallUses,
     const CallInst *CI, DominatorTree &DT);
 
-Constant *getPointerAtOffset(Constant *I, uint64_t Offset, Module &M);
-}
+/// Processes a Constant recursively looking into elements of arrays, structs
+/// and expressions to find a trivial pointer element that is located at the
+/// given offset (relative to the beginning of the whole outer Constant).
+///
+/// Used for example from GlobalDCE to find an entry in a C++ vtable that
+/// matches a vcall offset.
+///
+/// To support relative vtables, getPointerAtOffset can see through "relative
+/// pointers", i.e. (sub-)expressions of the form of:
+///
+/// @symbol = ... {
+///   i32 trunc (i64 sub (
+///     i64 ptrtoint (<type> @target to i64), i64 ptrtoint (... @symbol to i64)
+///   ) to i32)
+/// }
+///
+/// For such (sub-)expressions, getPointerAtOffset returns the @target pointer.
+Constant *getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
+                             Constant *TopLevelGlobal = nullptr);
+
+/// Given a vtable and a specified offset, returns the function and the trivial
+/// pointer at the specified offset in pair iff the pointer at the specified
+/// offset is a function or an alias to a function. Returns a pair of nullptr
+/// otherwise.
+std::pair<Function *, Constant *>
+getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset, Module &M);
+
+/// Finds the same "relative pointer" pattern as described above, where the
+/// target is `C`, and replaces the entire pattern with a constant zero.
+void replaceRelativePointerUsersWithZero(Constant *C);
+
+} // namespace llvm
 
 #endif

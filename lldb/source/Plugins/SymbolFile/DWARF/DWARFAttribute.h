@@ -14,6 +14,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include <vector>
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFUnit;
 
 class DWARFAttribute {
@@ -31,9 +33,6 @@ public:
     form = m_form;
     val = m_value;
   }
-  typedef std::vector<DWARFAttribute> collection;
-  typedef collection::iterator iterator;
-  typedef collection::const_iterator const_iterator;
 
 protected:
   dw_attr_t m_attr;
@@ -55,7 +54,7 @@ public:
   dw_attr_t AttributeAtIndex(uint32_t i) const {
     return m_infos[i].attr.get_attr();
   }
-  dw_attr_t FormAtIndex(uint32_t i) const { return m_infos[i].attr.get_form(); }
+  dw_form_t FormAtIndex(uint32_t i) const { return m_infos[i].attr.get_form(); }
   DWARFFormValue::ValueType ValueAtIndex(uint32_t i) const {
     return m_infos[i].attr.get_value();
   }
@@ -76,5 +75,7 @@ protected:
   typedef llvm::SmallVector<AttributeValue, 8> collection;
   collection m_infos;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFATTRIBUTE_H

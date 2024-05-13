@@ -5,16 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: apple-clang-9
 
 // type_traits
 
 // is_trivially_destructible
-
-// Prevent warning when testing the Abstract test type.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wdelete-non-virtual-dtor"
-#endif
 
 #include <type_traits>
 #include "test_macros.h"

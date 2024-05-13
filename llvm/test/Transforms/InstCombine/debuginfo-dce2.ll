@@ -1,11 +1,12 @@
-; RUN: opt -instcombine -S %s -o - | FileCheck %s
+; RUN: opt -passes=instcombine -S %s -o - | FileCheck %s
+; RUN: opt -passes=instcombine -S %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
-; In this example, the cast from i8* to i32* becomes trivially dead. We should
+; In this example, the cast from ptr to ptr becomes trivially dead. We should
 ; salvage its debug info.
 
 ; C source:
-; void use_as_void(void *);
-; void f(void *p) {
+; void use_as_void(ptr);
+; void f(ptr p) {
 ;   int *q = (int *)p;
 ;   use_as_void(q);
 ; }
@@ -16,27 +17,25 @@ target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.11.25508"
 
 ; Function Attrs: nounwind uwtable
-define void @f(i8* %p) !dbg !11 {
+define void @f(ptr %p) !dbg !11 {
 entry:
-  call void @llvm.dbg.value(metadata i8* %p, metadata !16, metadata !DIExpression()), !dbg !18
-  %0 = bitcast i8* %p to i32*, !dbg !19
-  call void @llvm.dbg.value(metadata i32* %0, metadata !17, metadata !DIExpression()), !dbg !20
-  %1 = bitcast i32* %0 to i8*, !dbg !21
-  call void @use_as_void(i8* %1), !dbg !22
+  call void @llvm.dbg.value(metadata ptr %p, metadata !16, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %p, metadata !17, metadata !DIExpression()), !dbg !20
+  call void @use_as_void(ptr %p), !dbg !22
   ret void, !dbg !23
 }
 
-; CHECK-LABEL: define void @f(i8* %p)
-; CHECK: call void @llvm.dbg.value(metadata i8* %p, metadata ![[P_VAR:[0-9]+]], metadata !DIExpression())
+; CHECK-LABEL: define void @f(ptr %p)
+; CHECK: call void @llvm.dbg.value(metadata ptr %p, metadata ![[P_VAR:[0-9]+]], metadata !DIExpression())
 ; CHECK-NOT: bitcast
-; CHECK: call void @llvm.dbg.value(metadata i8* %p, metadata ![[Q_VAR:[0-9]+]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.value(metadata ptr %p, metadata ![[Q_VAR:[0-9]+]], metadata !DIExpression())
 ; CHECK-NOT: bitcast
 ; CHECK: ret void
 
 ; CHECK: ![[P_VAR]] = !DILocalVariable(name: "p", {{.*}})
 ; CHECK: ![[Q_VAR]] = !DILocalVariable(name: "q", {{.*}})
 
-declare void @use_as_void(i8*)
+declare void @use_as_void(ptr)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

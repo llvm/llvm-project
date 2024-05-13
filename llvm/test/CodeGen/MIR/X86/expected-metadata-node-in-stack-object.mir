@@ -3,8 +3,8 @@
   define i32 @test(i32 %x) {
   entry:
     %xa = alloca i32, align 4
-    store i32 %x, i32* %xa, align 4
-    %0 = load i32, i32* %xa, align 4
+    store i32 %x, ptr %xa, align 4
+    %0 = load i32, ptr %xa, align 4
     ret i32 %0
   }
 ...
@@ -20,7 +20,7 @@ body: |
   bb.0.entry:
     liveins: $edi
 
-    MOV32mr $rsp, 1, _, -4, _, $edi :: (store 4 into %ir.xa)
+    MOV32mr $rsp, 1, _, -4, _, $edi :: (store (s32) into %ir.xa)
     $eax = COPY killed $edi
-    RETQ killed $eax
+    RET64 killed $eax
 ...

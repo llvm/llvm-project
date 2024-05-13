@@ -8,6 +8,7 @@
 
 #include "SystemZSubtarget.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -27,13 +28,14 @@ static cl::opt<bool> UseSubRegLiveness(
 // Pin the vtable to this file.
 void SystemZSubtarget::anchor() {}
 
-SystemZSubtarget &
-SystemZSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  StringRef CPUName = CPU;
-  if (CPUName.empty())
-    CPUName = "generic";
+SystemZSubtarget &SystemZSubtarget::initializeSubtargetDependencies(
+    StringRef CPU, StringRef TuneCPU, StringRef FS) {
+  if (CPU.empty())
+    CPU = "generic";
+  if (TuneCPU.empty())
+    TuneCPU = CPU;
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+  ParseSubtargetFeatures(CPU, TuneCPU, FS);
 
   // -msoft-float implies -mno-vx.
   if (HasSoftFloat)
@@ -45,6 +47,7 @@ SystemZSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
     HasVectorEnhancements2 = false;
     HasVectorPackedDecimal = false;
     HasVectorPackedDecimalEnhancement = false;
+    HasVectorPackedDecimalEnhancement2 = false;
   }
 
   return *this;
@@ -56,45 +59,59 @@ SystemZSubtarget::initializeSpecialRegisters() {
     return new SystemZXPLINK64Registers;
   else if (isTargetELF())
     return new SystemZELFRegisters;
-  else {
-    llvm_unreachable("Invalid Calling Convention. Cannot initialize Special "
-                     "Call Registers!");
-  }
+  llvm_unreachable("Invalid Calling Convention. Cannot initialize Special "
+                   "Call Registers!");
 }
 
 SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
+                                   const std::string &TuneCPU,
                                    const std::string &FS,
                                    const TargetMachine &TM)
-    : SystemZGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
-      HasDistinctOps(false), HasLoadStoreOnCond(false), HasHighWord(false),
-      HasFPExtension(false), HasPopulationCount(false),
-      HasMessageSecurityAssist3(false), HasMessageSecurityAssist4(false),
-      HasResetReferenceBitsMultiple(false), HasFastSerialization(false),
-      HasInterlockedAccess1(false), HasMiscellaneousExtensions(false),
-      HasExecutionHint(false), HasLoadAndTrap(false),
-      HasTransactionalExecution(false), HasProcessorAssist(false),
-      HasDFPZonedConversion(false), HasEnhancedDAT2(false), HasVector(false),
-      HasLoadStoreOnCond2(false), HasLoadAndZeroRightmostByte(false),
-      HasMessageSecurityAssist5(false), HasDFPPackedConversion(false),
-      HasMiscellaneousExtensions2(false), HasGuardedStorage(false),
-      HasMessageSecurityAssist7(false), HasMessageSecurityAssist8(false),
-      HasVectorEnhancements1(false), HasVectorPackedDecimal(false),
-      HasInsertReferenceBitsMultiple(false), HasMiscellaneousExtensions3(false),
-      HasMessageSecurityAssist9(false), HasVectorEnhancements2(false),
-      HasVectorPackedDecimalEnhancement(false), HasEnhancedSort(false),
-      HasDeflateConversion(false), HasSoftFloat(false), TargetTriple(TT),
+    : SystemZGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
       SpecialRegisters(initializeSpecialRegisters()),
-      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
-      TSInfo(), FrameLowering() {}
-
-SystemZSubtarget::~SystemZSubtarget() { delete getSpecialRegisters(); }
+      InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
+      TLInfo(TM, *this), FrameLowering(SystemZFrameLowering::create(*this)) {}
 
 bool SystemZSubtarget::enableSubRegLiveness() const {
   return UseSubRegLiveness;
 }
 
+bool SystemZSubtarget::isAddressedViaADA(const GlobalValue *GV) const {
+  if (const auto *GO = dyn_cast<GlobalObject>(GV)) {
+    // A R/O variable is placed in code section. If the R/O variable has as
+    // least two byte alignment, then generated code can use relative
+    // instructions to address the variable. Otherwise, use the ADA to address
+    // the variable.
+    if (GO->getAlignment() & 0x1) {
+      return true;
+    }
+
+    // getKindForGlobal only works with definitions
+    if (GO->isDeclaration()) {
+      return true;
+    }
+
+    // check AvailableExternallyLinkage here as getKindForGlobal() asserts
+    if (GO->hasAvailableExternallyLinkage()) {
+      return true;
+    }
+
+    SectionKind GOKind = TargetLoweringObjectFile::getKindForGlobal(
+        GO, TLInfo.getTargetMachine());
+    if (!GOKind.isReadOnly()) {
+      return true;
+    }
+
+    return false; // R/O variable with multiple of 2 byte alignment
+  }
+  return true;
+}
+
 bool SystemZSubtarget::isPC32DBLSymbol(const GlobalValue *GV,
                                        CodeModel::Model CM) const {
+  if (isTargetzOS())
+    return !isAddressedViaADA(GV);
+
   // PC32DBL accesses require the low bit to be clear.
   //
   // FIXME: Explicitly check for functions: the datalayout is currently
@@ -105,7 +122,7 @@ bool SystemZSubtarget::isPC32DBLSymbol(const GlobalValue *GV,
 
   // For the small model, all locally-binding symbols are in range.
   if (CM == CodeModel::Small)
-    return TLInfo.getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+    return TLInfo.getTargetMachine().shouldAssumeDSOLocal(GV);
 
   // For Medium and above, assume that the symbol is not within the 4GB range.
   // Taking the address of locally-defined text would be OK, but that

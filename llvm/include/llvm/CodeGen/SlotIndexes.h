@@ -28,7 +28,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
 #include <algorithm>
 #include <cassert>
@@ -59,20 +58,6 @@ class raw_ostream;
     void setIndex(unsigned index) {
       this->index = index;
     }
-
-#ifdef EXPENSIVE_CHECKS
-    // When EXPENSIVE_CHECKS is defined, "erased" index list entries will
-    // actually be moved to a "graveyard" list, and have their pointers
-    // poisoned, so that dangling SlotIndex access can be reliably detected.
-    void setPoison() {
-      intptr_t tmp = reinterpret_cast<intptr_t>(mi);
-      assert(((tmp & 0x1) == 0x0) && "Pointer already poisoned?");
-      tmp |= 0x1;
-      mi = reinterpret_cast<MachineInstr*>(tmp);
-    }
-
-    bool isPoisoned() const { return (reinterpret_cast<intptr_t>(mi) & 0x1) == 0x1; }
-#endif // EXPENSIVE_CHECKS
   };
 
   template <>
@@ -109,15 +94,8 @@ class raw_ostream;
 
     PointerIntPair<IndexListEntry*, 2, unsigned> lie;
 
-    SlotIndex(IndexListEntry *entry, unsigned slot)
-      : lie(entry, slot) {}
-
     IndexListEntry* listEntry() const {
       assert(isValid() && "Attempt to compare reserved index.");
-#ifdef EXPENSIVE_CHECKS
-      assert(!lie.getPointer()->isPoisoned() &&
-             "Attempt to access deleted list-entry.");
-#endif // EXPENSIVE_CHECKS
       return lie.getPointer();
     }
 
@@ -140,10 +118,14 @@ class raw_ostream;
     /// Construct an invalid index.
     SlotIndex() = default;
 
+    // Creates a SlotIndex from an IndexListEntry and a slot. Generally should
+    // not be used. This method is only public to facilitate writing certain
+    // unit tests.
+    SlotIndex(IndexListEntry *entry, unsigned slot) : lie(entry, slot) {}
+
     // Construct a new slot index from the given one, and set the slot.
     SlotIndex(const SlotIndex &li, Slot s) : lie(li.listEntry(), unsigned(s)) {
-      assert(lie.getPointer() != nullptr &&
-             "Attempt to construct index with 0 pointer.");
+      assert(isValid() && "Attempt to construct index with 0 pointer.");
     }
 
     /// Returns true if this is a valid index. Invalid indices do
@@ -195,7 +177,7 @@ class raw_ostream;
 
     /// isSameInstr - Return true if A and B refer to the same instruction.
     static bool isSameInstr(SlotIndex A, SlotIndex B) {
-      return A.lie.getPointer() == B.lie.getPointer();
+      return A.listEntry() == B.listEntry();
     }
 
     /// isEarlierInstr - Return true if A refers to an instruction earlier than
@@ -216,8 +198,12 @@ class raw_ostream;
     }
 
     /// Return the scaled distance from this index to the given one, where all
-    /// slots on the same instruction have zero distance.
-    int getInstrDistance(SlotIndex other) const {
+    /// slots on the same instruction have zero distance, assuming that the slot
+    /// indices are packed as densely as possible. There are normally gaps
+    /// between instructions, so this assumption often doesn't hold. This
+    /// results in this function often returning a value greater than the actual
+    /// instruction distance.
+    int getApproxInstrDistance(SlotIndex other) const {
       return (other.listEntry()->getIndex() - listEntry()->getIndex())
         / Slot_Count;
     }
@@ -319,7 +305,7 @@ class raw_ostream;
     using IndexList = ilist<IndexListEntry>;
     IndexList indexList;
 
-    MachineFunction *mf;
+    MachineFunction *mf = nullptr;
 
     using Mi2IndexMap = DenseMap<const MachineInstr *, SlotIndex>;
     Mi2IndexMap mi2iMap;
@@ -401,7 +387,7 @@ class raw_ostream;
     /// Returns the instruction for the given index, or null if the given
     /// index has no instruction associated with it.
     MachineInstr* getInstructionFromIndex(SlotIndex index) const {
-      return index.isValid() ? index.listEntry()->getInstr() : nullptr;
+      return index.listEntry()->getInstr();
     }
 
     /// Returns the next non-null index, if one exists.
@@ -486,18 +472,25 @@ class raw_ostream;
     /// begin and basic block)
     using MBBIndexIterator = SmallVectorImpl<IdxMBBPair>::const_iterator;
 
-    /// Move iterator to the next IdxMBBPair where the SlotIndex is greater or
-    /// equal to \p To.
-    MBBIndexIterator advanceMBBIndex(MBBIndexIterator I, SlotIndex To) const {
-      return std::partition_point(
-          I, idx2MBBMap.end(),
-          [=](const IdxMBBPair &IM) { return IM.first < To; });
+    /// Get an iterator pointing to the first IdxMBBPair with SlotIndex greater
+    /// than or equal to \p Idx. If \p Start is provided, only search the range
+    /// from \p Start to the end of the function.
+    MBBIndexIterator getMBBLowerBound(MBBIndexIterator Start,
+                                      SlotIndex Idx) const {
+      return std::lower_bound(
+          Start, MBBIndexEnd(), Idx,
+          [](const IdxMBBPair &IM, SlotIndex Idx) { return IM.first < Idx; });
+    }
+    MBBIndexIterator getMBBLowerBound(SlotIndex Idx) const {
+      return getMBBLowerBound(MBBIndexBegin(), Idx);
     }
 
-    /// Get an iterator pointing to the IdxMBBPair with the biggest SlotIndex
-    /// that is greater or equal to \p Idx.
-    MBBIndexIterator findMBBIndex(SlotIndex Idx) const {
-      return advanceMBBIndex(idx2MBBMap.begin(), Idx);
+    /// Get an iterator pointing to the first IdxMBBPair with SlotIndex greater
+    /// than \p Idx.
+    MBBIndexIterator getMBBUpperBound(SlotIndex Idx) const {
+      return std::upper_bound(
+          MBBIndexBegin(), MBBIndexEnd(), Idx,
+          [](SlotIndex Idx, const IdxMBBPair &IM) { return Idx < IM.first; });
     }
 
     /// Returns an iterator for the begin of the idx2MBBMap.
@@ -515,16 +508,11 @@ class raw_ostream;
       if (MachineInstr *MI = getInstructionFromIndex(index))
         return MI->getParent();
 
-      MBBIndexIterator I = findMBBIndex(index);
-      // Take the pair containing the index
-      MBBIndexIterator J =
-        ((I != MBBIndexEnd() && I->first > index) ||
-         (I == MBBIndexEnd() && !idx2MBBMap.empty())) ? std::prev(I) : I;
-
-      assert(J != MBBIndexEnd() && J->first <= index &&
-             index < getMBBEndIdx(J->second) &&
+      MBBIndexIterator I = std::prev(getMBBUpperBound(index));
+      assert(I != MBBIndexEnd() && I->first <= index &&
+             index < getMBBEndIdx(I->second) &&
              "index does not correspond to an MBB");
-      return J->second;
+      return I->second;
     }
 
     /// Insert the given machine instruction into the mapping. Returns the
@@ -535,7 +523,7 @@ class raw_ostream;
     SlotIndex insertMachineInstrInMaps(MachineInstr &MI, bool Late = false) {
       assert(!MI.isInsideBundle() &&
              "Instructions inside bundles should use bundle start's slot.");
-      assert(mi2iMap.find(&MI) == mi2iMap.end() && "Instr already indexed.");
+      assert(!mi2iMap.contains(&MI) && "Instr already indexed.");
       // Numbering debug instructions could cause code generation to be
       // affected by debug information.
       assert(!MI.isDebugInstr() && "Cannot number debug instructions.");
@@ -635,6 +623,9 @@ class raw_ostream;
       renumberIndexes(newItr);
       llvm::sort(idx2MBBMap, less_first());
     }
+
+    /// Renumber all indexes using the default instruction distance.
+    void packIndexes();
   };
 
   // Specialize IntervalMapInfo for half-open slot index intervals.

@@ -14,9 +14,9 @@
 #ifndef LLVM_CLANG_BASIC_SOURCELOCATION_H
 #define LLVM_CLANG_BASIC_SOURCELOCATION_H
 
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -24,10 +24,8 @@
 
 namespace llvm {
 
-template <typename T> struct DenseMapInfo;
-
 class FoldingSetNodeID;
-template <typename T> struct FoldingSetTrait;
+template <typename T, typename Enable> struct FoldingSetTrait;
 
 } // namespace llvm
 
@@ -61,6 +59,7 @@ private:
   friend class ASTWriter;
   friend class ASTReader;
   friend class SourceManager;
+  friend class SourceManagerTestHelper;
 
   static FileID get(int V) {
     FileID F;
@@ -90,13 +89,17 @@ class SourceLocation {
   friend class ASTReader;
   friend class ASTWriter;
   friend class SourceManager;
-  friend struct llvm::FoldingSetTrait<SourceLocation>;
+  friend struct llvm::FoldingSetTrait<SourceLocation, void>;
+  friend class SourceLocationEncoding;
 
-  unsigned ID = 0;
+public:
+  using UIntTy = uint32_t;
+  using IntTy = int32_t;
 
-  enum : unsigned {
-    MacroIDBit = 1U << 31
-  };
+private:
+  UIntTy ID = 0;
+
+  enum : UIntTy { MacroIDBit = 1ULL << (8 * sizeof(UIntTy) - 1) };
 
 public:
   bool isFileID() const  { return (ID & MacroIDBit) == 0; }
@@ -112,18 +115,16 @@ public:
 
 private:
   /// Return the offset into the manager's global input view.
-  unsigned getOffset() const {
-    return ID & ~MacroIDBit;
-  }
+  UIntTy getOffset() const { return ID & ~MacroIDBit; }
 
-  static SourceLocation getFileLoc(unsigned ID) {
+  static SourceLocation getFileLoc(UIntTy ID) {
     assert((ID & MacroIDBit) == 0 && "Ran out of source locations!");
     SourceLocation L;
     L.ID = ID;
     return L;
   }
 
-  static SourceLocation getMacroLoc(unsigned ID) {
+  static SourceLocation getMacroLoc(UIntTy ID) {
     assert((ID & MacroIDBit) == 0 && "Ran out of source locations!");
     SourceLocation L;
     L.ID = MacroIDBit | ID;
@@ -133,7 +134,7 @@ private:
 public:
   /// Return a source location with the specified offset from this
   /// SourceLocation.
-  SourceLocation getLocWithOffset(int Offset) const {
+  SourceLocation getLocWithOffset(IntTy Offset) const {
     assert(((getOffset()+Offset) & MacroIDBit) == 0 && "offset overflow");
     SourceLocation L;
     L.ID = ID+Offset;
@@ -145,13 +146,13 @@ public:
   ///
   /// This should only be passed to SourceLocation::getFromRawEncoding, it
   /// should not be inspected directly.
-  unsigned getRawEncoding() const { return ID; }
+  UIntTy getRawEncoding() const { return ID; }
 
   /// Turn a raw encoding of a SourceLocation object into
   /// a real SourceLocation.
   ///
   /// \see getRawEncoding.
-  static SourceLocation getFromRawEncoding(unsigned Encoding) {
+  static SourceLocation getFromRawEncoding(UIntTy Encoding) {
     SourceLocation X;
     X.ID = Encoding;
     return X;
@@ -171,7 +172,7 @@ public:
   /// Turn a pointer encoding of a SourceLocation object back
   /// into a real SourceLocation.
   static SourceLocation getFromPtrEncoding(const void *Encoding) {
-    return getFromRawEncoding((unsigned)(uintptr_t)Encoding);
+    return getFromRawEncoding((SourceLocation::UIntTy)(uintptr_t)Encoding);
   }
 
   static bool isPairOfFileLocations(SourceLocation Start, SourceLocation End) {
@@ -358,11 +359,13 @@ public:
   }
 };
 
-class FileEntry;
-
 /// A SourceLocation and its associated SourceManager.
 ///
 /// This is useful for argument passing to functions that expect both objects.
+///
+/// This class does not guarantee the presence of either the SourceManager or
+/// a valid SourceLocation. Clients should use `isValid()` and `hasManager()`
+/// before calling the member functions.
 class FullSourceLoc : public SourceLocation {
   const SourceManager *SrcMgr = nullptr;
 
@@ -373,13 +376,10 @@ public:
   explicit FullSourceLoc(SourceLocation Loc, const SourceManager &SM)
       : SourceLocation(Loc), SrcMgr(&SM) {}
 
-  bool hasManager() const {
-      bool hasSrcMgr =  SrcMgr != nullptr;
-      assert(hasSrcMgr == isValid() && "FullSourceLoc has location but no manager");
-      return hasSrcMgr;
-  }
+  /// Checks whether the SourceManager is present.
+  bool hasManager() const { return SrcMgr != nullptr; }
 
-  /// \pre This FullSourceLoc has an associated SourceManager.
+  /// \pre hasManager()
   const SourceManager &getManager() const {
     assert(SrcMgr && "SourceManager is NULL.");
     return *SrcMgr;
@@ -399,6 +399,12 @@ public:
   unsigned getExpansionLineNumber(bool *Invalid = nullptr) const;
   unsigned getExpansionColumnNumber(bool *Invalid = nullptr) const;
 
+  /// Decompose the underlying \c SourceLocation into a raw (FileID + Offset)
+  /// pair, after walking through all expansion records.
+  ///
+  /// \see SourceManager::getDecomposedExpansionLoc
+  std::pair<FileID, unsigned> getDecomposedExpansionLoc() const;
+
   unsigned getSpellingLineNumber(bool *Invalid = nullptr) const;
   unsigned getSpellingColumnNumber(bool *Invalid = nullptr) const;
 
@@ -408,6 +414,7 @@ public:
   unsigned getColumnNumber(bool *Invalid = nullptr) const;
 
   const FileEntry *getFileEntry() const;
+  OptionalFileEntryRef getFileEntryRef() const;
 
   /// Return a StringRef to the source buffer data for the
   /// specified FileID.
@@ -466,7 +473,7 @@ namespace llvm {
   /// Define DenseMapInfo so that FileID's can be used as keys in DenseMap and
   /// DenseSets.
   template <>
-  struct DenseMapInfo<clang::FileID> {
+  struct DenseMapInfo<clang::FileID, void> {
     static clang::FileID getEmptyKey() {
       return {};
     }
@@ -487,13 +494,15 @@ namespace llvm {
   /// Define DenseMapInfo so that SourceLocation's can be used as keys in
   /// DenseMap and DenseSet. This trait class is eqivalent to
   /// DenseMapInfo<unsigned> which uses SourceLocation::ID is used as a key.
-  template <> struct DenseMapInfo<clang::SourceLocation> {
+  template <> struct DenseMapInfo<clang::SourceLocation, void> {
     static clang::SourceLocation getEmptyKey() {
-      return clang::SourceLocation::getFromRawEncoding(~0U);
+      constexpr clang::SourceLocation::UIntTy Zero = 0;
+      return clang::SourceLocation::getFromRawEncoding(~Zero);
     }
 
     static clang::SourceLocation getTombstoneKey() {
-      return clang::SourceLocation::getFromRawEncoding(~0U - 1);
+      constexpr clang::SourceLocation::UIntTy Zero = 0;
+      return clang::SourceLocation::getFromRawEncoding(~Zero - 1);
     }
 
     static unsigned getHashValue(clang::SourceLocation Loc) {
@@ -506,22 +515,8 @@ namespace llvm {
   };
 
   // Allow calling FoldingSetNodeID::Add with SourceLocation object as parameter
-  template <> struct FoldingSetTrait<clang::SourceLocation> {
+  template <> struct FoldingSetTrait<clang::SourceLocation, void> {
     static void Profile(const clang::SourceLocation &X, FoldingSetNodeID &ID);
-  };
-
-  // Teach SmallPtrSet how to handle SourceLocation.
-  template<>
-  struct PointerLikeTypeTraits<clang::SourceLocation> {
-    static constexpr int NumLowBitsAvailable = 0;
-
-    static void *getAsVoidPointer(clang::SourceLocation L) {
-      return L.getPtrEncoding();
-    }
-
-    static clang::SourceLocation getFromVoidPointer(void *P) {
-      return clang::SourceLocation::getFromRawEncoding((unsigned)(uintptr_t)P);
-    }
   };
 
 } // namespace llvm

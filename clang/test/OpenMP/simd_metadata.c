@@ -19,63 +19,63 @@ void h1(float *c, float *a, double b[], int size)
 // CHECK-LABEL: define{{.*}} void @h1
   int t = 0;
 #pragma omp simd safelen(16) linear(t) aligned(c:32) aligned(a,b)
-  // CHECK:         call void @llvm.assume(i1 true) [ "align"(float* [[PTR4:%.*]], {{i64|i32}} 32) ]
+  // CHECK:         call void @llvm.assume(i1 true) [ "align"(ptr [[PTR4:%.*]], {{i64|i32}} 32) ]
   // CHECK-NEXT:    load
 
-  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 16) ]
-  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 32) ]
-  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 64) ]
-  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 16) ]
+  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 16) ]
+  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 32) ]
+  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 64) ]
+  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 16) ]
   // CHECK-NEXT:     load
 
-  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 16) ]
-  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 32) ]
-  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 64) ]
-  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 16) ]
+  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 16) ]
+  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 32) ]
+  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 64) ]
+  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 16) ]
   for (int i = 0; i < size; ++i) {
     c[i] = a[i] * a[i] + b[i] * b[t];
     ++t;
   }
 // do not emit llvm.access.group metadata due to usage of safelen clause.
-// CHECK-NOT: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group {{![0-9]+}}
+// CHECK-NOT: store float {{.+}}, ptr {{.+}}, align {{.+}}, !llvm.access.group {{![0-9]+}}
 #pragma omp simd safelen(16) linear(t) aligned(c:32) aligned(a,b) simdlen(8)
-  // CHECK:         call void @llvm.assume(i1 true) [ "align"(float* [[PTR4:%.*]], {{i64|i32}} 32) ]
+  // CHECK:         call void @llvm.assume(i1 true) [ "align"(ptr [[PTR4:%.*]], {{i64|i32}} 32) ]
   // CHECK-NEXT:    load
 
-  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 16) ]
-  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 32) ]
-  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 64) ]
-  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 16) ]
+  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 16) ]
+  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 32) ]
+  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 64) ]
+  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 16) ]
   // CHECK-NEXT:     load
 
-  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 16) ]
-  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 32) ]
-  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 64) ]
-  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 16) ]
+  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 16) ]
+  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 32) ]
+  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 64) ]
+  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 16) ]
   for (int i = 0; i < size; ++i) {
     c[i] = a[i] * a[i] + b[i] * b[t];
     ++t;
   }
 // do not emit llvm.access.group metadata due to usage of safelen clause.
-// CHECK-NOT: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group {{![0-9]+}}
+// CHECK-NOT: store float {{.+}}, ptr {{.+}}, align {{.+}}, !llvm.access.group {{![0-9]+}}
 #pragma omp simd linear(t) aligned(c:32) aligned(a,b) simdlen(8)
-  // CHECK:         call void @llvm.assume(i1 true) [ "align"(float* [[PTR4:%.*]], {{i64|i32}} 32) ]
+  // CHECK:         call void @llvm.assume(i1 true) [ "align"(ptr [[PTR4:%.*]], {{i64|i32}} 32) ]
   // CHECK-NEXT:    load
 
-  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 16) ]
-  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 32) ]
-  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 64) ]
-  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(float* [[PTR5:%.*]], {{i64|i32}} 16) ]
+  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 16) ]
+  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 32) ]
+  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 64) ]
+  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR5:%.*]], {{i64|i32}} 16) ]
   // CHECK-NEXT:     load
 
-  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 16) ]
-  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 32) ]
-  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 64) ]
-  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(double* [[PTR6:%.*]], {{i64|i32}} 16) ]
+  // X86-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 16) ]
+  // X86-AVX-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 32) ]
+  // X86-AVX512-NEXT:call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 64) ]
+  // PPC-NEXT:       call void @llvm.assume(i1 true) [ "align"(ptr [[PTR6:%.*]], {{i64|i32}} 16) ]
   for (int i = 0; i < size; ++i) {
     c[i] = a[i] * a[i] + b[i] * b[t];
     ++t;
-// CHECK: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_7:[0-9]+]]
+// CHECK: store float {{.+}}, ptr {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_7:[0-9]+]]
   }
 }
 
@@ -87,7 +87,7 @@ void h2(float *c, float *a, float *b, int size)
   for (int i = 0; i < size; ++i) {
     c[i] = a[i] * a[i] + b[i] * b[t];
     ++t;
-// CHECK: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_10:[0-9]+]]
+// CHECK: store float {{.+}}, ptr {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_10:[0-9]+]]
   }
 // CHECK: br label %{{.+}}, !llvm.loop [[LOOP_H2_HEADER:![0-9]+]]
 }
@@ -100,7 +100,7 @@ void h3(float *c, float *a, float *b, int size)
     for (int j = 0; j < size; ++j) {
       c[j*i] = a[i] * b[j];
     }
-// CHECK: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_13:[0-9]+]]
+// CHECK: store float {{.+}}, ptr {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_13:[0-9]+]]
   }
   // CHECK: br label %{{.+}}, !llvm.loop [[LOOP_H3_HEADER_INNER:![0-9]+]]
   // CHECK: br label %{{.+}}, !llvm.loop [[LOOP_H3_HEADER:![0-9]+]]

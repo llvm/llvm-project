@@ -6,6 +6,7 @@
 
 # CHECK:      Contents of section .comment:
 # CHECK-NEXT: foo..LLD 1.0.bar
+# CHECK-NEXT: .{{$}}
 
 .ident "foo"
 

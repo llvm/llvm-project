@@ -5,21 +5,21 @@
 
 ## Check LLVM output style.
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --cg-profile --addrsig         \
+# RUN:              --section-groups --cg-profile --addrsig         \
 # RUN:              --demangle %t.so > %t.llvm.long
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --cg-profile --addrsig         \
+# RUN:              --section-groups --cg-profile --addrsig         \
 # RUN:              -C %t.so > %t.llvm.short
 # RUN: FileCheck %s --input-file %t.llvm.long --check-prefixes=LLVM-COMMON,LLVM-DEMANGLE
 # RUN: diff %t.llvm.long %t.llvm.short
 
 ## Check that default is no demangling.
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --cg-profile --addrsig         \
+# RUN:              --section-groups --cg-profile --addrsig         \
 # RUN:              %t.so > %t.llvm.default
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --cg-profile --addrsig         \
-# RUN:              --demangle=false %t.so > %t.llvm.nodemangle
+# RUN:              --section-groups --cg-profile --addrsig         \
+# RUN:              --no-demangle %t.so > %t.llvm.nodemangle
 # RUN: FileCheck %s --input-file %t.llvm.default --check-prefixes=LLVM-COMMON,LLVM-MANGLED
 # RUN: diff %t.llvm.default %t.llvm.nodemangle
 
@@ -68,17 +68,17 @@
 
 ## Check GNU output style.
 # RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --addrsig --demangle %t.so > %t.gnu.long
+# RUN:              --section-groups --addrsig --demangle %t.so > %t.gnu.long
 # RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --addrsig -C %t.so > %t.gnu.short
+# RUN:              --section-groups --addrsig -C %t.so > %t.gnu.short
 # RUN: FileCheck %s --input-file %t.gnu.long --check-prefixes=GNU-COMMON,GNU-DEMANGLE
 # RUN: diff %t.gnu.long %t.gnu.short
 
 ## Check that default is no demangling.
 # RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --addrsig %t.so > %t.gnu.default
+# RUN:              --section-groups --addrsig %t.so > %t.gnu.default
 # RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --addrsig --demangle=false %t.so > %t.gnu.nodemangle
+# RUN:              --section-groups --addrsig --no-demangle %t.so > %t.gnu.nodemangle
 # RUN: FileCheck %s --input-file %t.gnu.default --check-prefixes=GNU-COMMON,GNU-MANGLED
 # RUN: diff %t.gnu.default %t.gnu.nodemangle
 
@@ -197,8 +197,17 @@ Sections:
   - Name: .llvm.call-graph-profile
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     Link: .symtab
-    EntSize: 16
-    Content: "01000000020000002000000000000000"
+    EntSize: 8
+    Content: "2000000000000000"
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
+    Info: .llvm.call-graph-profile
+    Relocations:
+      - Symbol: 1
+        Type:   R_X86_64_NONE
+      - Offset: 0x1
+        Symbol: 2
+        Type:   R_X86_64_NONE
   - Name: .llvm_addrsig
     Type: SHT_LLVM_ADDRSIG
     Link: .symtab

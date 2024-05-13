@@ -1,12 +1,12 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
-; RUN: -analyze -polly-ast -polly-target-1st-cache-level-associativity=8 \
+; RUN: -polly-target-1st-cache-level-associativity=8 \
 ; RUN: -polly-target-2nd-cache-level-associativity=8 \
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-target-2nd-cache-level-size=262144 < %s \
-; RUN: | FileCheck %s
+; RUN: -polly-target-2nd-cache-level-size=262144 \
+; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;    /* C := A * B + C */
 ;    /* Elements of the matrices B, C have the double type. */
@@ -29,9 +29,9 @@
 ; CHECK-NEXT:        for (int c4 = 256 * c1; c4 <= 256 * c1 + 255; c4 += 1)
 ; CHECK-NEXT:          CopyStmt_0(0, c3, c4);
 ; CHECK-NEXT:      for (int c2 = 0; c2 <= 10; c2 += 1) {
-; CHECK-NEXT:        for (int c3 = 96 * c2; c3 <= min(1023, 96 * c2 + 95); c3 += 1)
-; CHECK-NEXT:          for (int c5 = 256 * c1; c5 <= 256 * c1 + 255; c5 += 1)
-; CHECK-NEXT:            CopyStmt_1(c3, 0, c5);
+; CHECK-NEXT:        for (int c6 = 96 * c2; c6 <= min(1023, 96 * c2 + 95); c6 += 1)
+; CHECK-NEXT:          for (int c7 = 256 * c1; c7 <= 256 * c1 + 255; c7 += 1)
+; CHECK-NEXT:            CopyStmt_1(0, c1, c2, c6, c7);
 ; CHECK-NEXT:        // 1st level tiling - Points
 ; CHECK-NEXT:        // Register tiling - Tiles
 ; CHECK-NEXT:        for (int c3 = 0; c3 <= 127; c3 += 1)
@@ -81,7 +81,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
 
 ; Function Attrs: noinline nounwind uwtable
-define internal void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, [1024 x double]* %C, [1024 x float]* %A, [1024 x double]* %B) #0 {
+define internal void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, ptr %C, ptr %A, ptr %B) #0 {
 entry:
   br label %entry.split
 
@@ -98,16 +98,16 @@ for.cond4.preheader:                              ; preds = %for.inc17, %for.con
 
 for.body6:                                        ; preds = %for.body6, %for.cond4.preheader
   %indvars.iv = phi i64 [ 0, %for.cond4.preheader ], [ %indvars.iv.next, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [1024 x float], [1024 x float]* %A, i64 %indvars.iv41, i64 %indvars.iv
-  %tmp = load float, float* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds [1024 x float], ptr %A, i64 %indvars.iv41, i64 %indvars.iv
+  %tmp = load float, ptr %arrayidx8, align 4
   %conv = fpext float %tmp to double
-  %arrayidx12 = getelementptr inbounds [1024 x double], [1024 x double]* %B, i64 %indvars.iv, i64 %indvars.iv38
-  %tmp1 = load double, double* %arrayidx12, align 8
+  %arrayidx12 = getelementptr inbounds [1024 x double], ptr %B, i64 %indvars.iv, i64 %indvars.iv38
+  %tmp1 = load double, ptr %arrayidx12, align 8
   %mul = fmul double %conv, %tmp1
-  %arrayidx16 = getelementptr inbounds [1024 x double], [1024 x double]* %C, i64 %indvars.iv41, i64 %indvars.iv38
-  %tmp2 = load double, double* %arrayidx16, align 8
+  %arrayidx16 = getelementptr inbounds [1024 x double], ptr %C, i64 %indvars.iv41, i64 %indvars.iv38
+  %tmp2 = load double, ptr %arrayidx16, align 8
   %add = fadd double %tmp2, %mul
-  store double %add, double* %arrayidx16, align 8
+  store double %add, ptr %arrayidx16, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.body6, label %for.inc17

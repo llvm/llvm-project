@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config suppress-null-return-paths=true -analyzer-output=text -verify %s
 // expected-no-diagnostics
 
-int *returnNull() { return 0; }
-int coin();
+int *returnNull(void) { return 0; }
+int coin(void);
 
 // Use a float parameter to ensure that the value is unknown. This will create
 // a cycle in the generated ExplodedGraph.

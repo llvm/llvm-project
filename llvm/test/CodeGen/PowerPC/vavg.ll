@@ -140,7 +140,7 @@ define <8 x i16> @test_v8i16_sign_negative(<8 x i16> %m, <8 x i16> %n) {
 ; CHECK-P9-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
 ; CHECK-P9-NEXT:    vadduhm 2, 2, 3
 ; CHECK-P9-NEXT:    addi 3, 3, .LCPI6_0@toc@l
-; CHECK-P9-NEXT:    lxvx 35, 0, 3
+; CHECK-P9-NEXT:    lxv 35, 0(3)
 ; CHECK-P9-NEXT:    vadduhm 2, 2, 3
 ; CHECK-P9-NEXT:    vspltish 3, 1
 ; CHECK-P9-NEXT:    vsrah 2, 2, 3
@@ -150,22 +150,24 @@ define <8 x i16> @test_v8i16_sign_negative(<8 x i16> %m, <8 x i16> %n) {
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
 ; CHECK-P8-NEXT:    vadduhm 2, 2, 3
-; CHECK-P8-NEXT:    vspltish 4, 1
+; CHECK-P8-NEXT:    vspltish 5, 1
 ; CHECK-P8-NEXT:    addi 3, 3, .LCPI6_0@toc@l
-; CHECK-P8-NEXT:    lvx 3, 0, 3
-; CHECK-P8-NEXT:    vadduhm 2, 2, 3
-; CHECK-P8-NEXT:    vsrah 2, 2, 4
+; CHECK-P8-NEXT:    lxvd2x 0, 0, 3
+; CHECK-P8-NEXT:    xxswapd 36, 0
+; CHECK-P8-NEXT:    vadduhm 2, 2, 4
+; CHECK-P8-NEXT:    vsrah 2, 2, 5
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_v8i16_sign_negative:
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
 ; CHECK-P7-NEXT:    vadduhm 2, 2, 3
-; CHECK-P7-NEXT:    vspltish 4, 1
 ; CHECK-P7-NEXT:    addi 3, 3, .LCPI6_0@toc@l
-; CHECK-P7-NEXT:    lvx 3, 0, 3
-; CHECK-P7-NEXT:    vadduhm 2, 2, 3
-; CHECK-P7-NEXT:    vsrah 2, 2, 4
+; CHECK-P7-NEXT:    vspltish 5, 1
+; CHECK-P7-NEXT:    lxvd2x 0, 0, 3
+; CHECK-P7-NEXT:    xxswapd 36, 0
+; CHECK-P7-NEXT:    vadduhm 2, 2, 4
+; CHECK-P7-NEXT:    vsrah 2, 2, 5
 ; CHECK-P7-NEXT:    blr
 entry:
   %add = add <8 x i16> %m, <i16 1, i16 1, i16 1, i16 -1, i16 1, i16 1, i16 1, i16 1>
@@ -217,20 +219,20 @@ define <4 x i32> @test_v4i32_sign_negative(<4 x i32> %m, <4 x i32> %n) {
 ;
 ; CHECK-P8-LABEL: test_v4i32_sign_negative:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    xxleqv 36, 36, 36
 ; CHECK-P8-NEXT:    vadduwm 2, 2, 3
-; CHECK-P8-NEXT:    vspltisw 3, 1
-; CHECK-P8-NEXT:    vadduwm 2, 2, 4
-; CHECK-P8-NEXT:    vsraw 2, 2, 3
+; CHECK-P8-NEXT:    xxleqv 35, 35, 35
+; CHECK-P8-NEXT:    vspltisw 4, 1
+; CHECK-P8-NEXT:    vadduwm 2, 2, 3
+; CHECK-P8-NEXT:    vsraw 2, 2, 4
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_v4i32_sign_negative:
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    vspltisb 4, -1
 ; CHECK-P7-NEXT:    vadduwm 2, 2, 3
-; CHECK-P7-NEXT:    vspltisw 3, 1
+; CHECK-P7-NEXT:    vspltisw 5, 1
 ; CHECK-P7-NEXT:    vadduwm 2, 2, 4
-; CHECK-P7-NEXT:    vsraw 2, 2, 3
+; CHECK-P7-NEXT:    vsraw 2, 2, 5
 ; CHECK-P7-NEXT:    blr
 entry:
   %add = add <4 x i32> %m, <i32 -1, i32 -1, i32 -1, i32 -1>

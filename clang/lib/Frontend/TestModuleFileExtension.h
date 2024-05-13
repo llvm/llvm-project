@@ -55,7 +55,7 @@ public:
 
   ModuleFileExtensionMetadata getExtensionMetadata() const override;
 
-  llvm::hash_code hashExtension(llvm::hash_code Code) const override;
+  void hashExtension(ExtensionHashBuilder &HBuilder) const override;
 
   std::unique_ptr<ModuleFileExtensionWriter>
   createExtensionWriter(ASTWriter &Writer) override;

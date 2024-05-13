@@ -1,6 +1,8 @@
 // REQUIRES: arm
 // RUN: llvm-mc --triple=armv7a-none-eabi --arm-add-build-attributes -filetype=obj -o %t.o %s
 // RUN: ld.lld %t.o -o %t
+/// R_ARM_ALU_PC_G0 referencing a non-preemptible symbol can be used in PIC links.
+// RUN: ld.lld %t.o --shared -o /dev/null
 // RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-eabi %t | FileCheck %s
 
 /// Test the short range cases of R_ARM_ALU_PC_G0. The range of the instruction
@@ -87,9 +89,9 @@ afunc:
 /// 0x20804 + 0x8 - 0x3f8 = 0x11414 = dat2
 // CHECK-NEXT: 20804: sub     r0, pc, #1016
 /// 0x20808 + 0x8 + 0x400 = 0x11c10 = dat3
-// CHECK-NEXT: 20808: add     r0, pc, #1024
+// CHECK-NEXT: 20808: add     r0, pc, #64, #28
 /// 0x2080c + 0x8 + 0x400 = 0x11c14 = dat4
-// CHECK-NEXT: 2080c: add     r0, pc, #1024
+// CHECK-NEXT: 2080c: add     r0, pc, #64, #28
 
 // CHECK:      00020c10 <dat3>:
 // CHECK-NEXT: 20c10: andeq   r0, r0, r0

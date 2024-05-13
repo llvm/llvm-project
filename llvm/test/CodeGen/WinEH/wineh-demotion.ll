@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -winehprepare  < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -win-eh-prepare  < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare  < %s | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
 
@@ -13,7 +14,7 @@ declare i1 @i()
 declare void @llvm.bar() nounwind
 
 ; CHECK-LABEL: @test1(
-define void @test1(i1 %B) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1(i1 %B) personality ptr @__CxxFrameHandler3 {
 entry:
   ; Spill slot should be inserted here
   ; CHECK: [[Slot:%[^ ]+]] = alloca
@@ -24,13 +25,13 @@ entry:
   br i1 %B, label %left, label %right
 left:
   ; CHECK: left:
-  ; CHECK-NEXT: store i32 %x, i32* [[Slot]]
+  ; CHECK-NEXT: store i32 %x, ptr [[Slot]]
   ; CHECK-NEXT: invoke void @f
   invoke void @f()
           to label %exit unwind label %merge
 right:
   ; CHECK: right:
-  ; CHECK-NEXT: store i32 %y, i32* [[Slot]]
+  ; CHECK-NEXT: store i32 %y, ptr [[Slot]]
   ; CHECK-NEXT: invoke void @f
   invoke void @f()
           to label %exit unwind label %merge
@@ -43,7 +44,7 @@ merge:
 catch:
   %cp = catchpad within %cs1 []
   ; CHECK: catch:
-  ; CHECK: [[Reload:%[^ ]+]] = load i32, i32* [[Slot]]
+  ; CHECK: [[Reload:%[^ ]+]] = load i32, ptr [[Slot]]
   ; CHECK-NEXT: call void @h(i32 [[Reload]])
   call void @h(i32 %phi) [ "funclet"(token %cp) ]
   catchret from %cp to label %exit
@@ -53,22 +54,22 @@ exit:
 }
 
 ; CHECK-LABEL: @test2(
-define void @test2(i1 %B) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test2(i1 %B) personality ptr @__CxxFrameHandler3 {
 entry:
   br i1 %B, label %left, label %right
 left:
   ; Need two stores here because %x and %y interfere so they need 2 slots
   ; CHECK: left:
-  ; CHECK:   store i32 1, i32* [[Slot1:%[^ ]+]]
-  ; CHECK:   store i32 1, i32* [[Slot2:%[^ ]+]]
+  ; CHECK:   store i32 1, ptr [[Slot1:%[^ ]+]]
+  ; CHECK:   store i32 1, ptr [[Slot2:%[^ ]+]]
   ; CHECK-NEXT: invoke void @f
   invoke void @f()
           to label %exit unwind label %merge.inner
 right:
   ; Need two stores here because %x and %y interfere so they need 2 slots
   ; CHECK: right:
-  ; CHECK-DAG:   store i32 2, i32* [[Slot1]]
-  ; CHECK-DAG:   store i32 2, i32* [[Slot2]]
+  ; CHECK-DAG:   store i32 2, ptr [[Slot1]]
+  ; CHECK-DAG:   store i32 2, ptr [[Slot2]]
   ; CHECK: invoke void @f
   invoke void @f()
           to label %exit unwind label %merge.inner
@@ -105,8 +106,8 @@ catch.outer:
   ; CHECK: [[CatchPad:%[^ ]+]] = catchpad within %cs2 []
   ; Need to load x and y from two different slots since they're both live
   ; and can have different values (if we came from catch.inner)
-  ; CHECK-DAG: load i32, i32* [[Slot1]]
-  ; CHECK-DAG: load i32, i32* [[Slot2]]
+  ; CHECK-DAG: load i32, ptr [[Slot1]]
+  ; CHECK-DAG: load i32, ptr [[Slot2]]
   ; CHECK: catchret from [[CatchPad]] to label
   call void @h(i32 %x) [ "funclet"(token %cpouter) ]
   call void @h(i32 %y) [ "funclet"(token %cpouter) ]
@@ -119,7 +120,7 @@ exit:
 ; test4: don't need stores for %phi.inner, as its only use is to feed %phi.outer
 ;        %phi.outer needs stores in %left, %right, and %join
 ; CHECK-LABEL: @test4(
-define void @test4(i1 %B) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test4(i1 %B) personality ptr @__CxxFrameHandler3 {
 entry:
   ; CHECK:      entry:
   ; CHECK:        [[Slot:%[^ ]+]] = alloca
@@ -128,7 +129,7 @@ entry:
 left:
   ; CHECK: left:
   ; CHECK-NOT: store
-  ; CHECK: store i32 %l, i32* [[Slot]]
+  ; CHECK: store i32 %l, ptr [[Slot]]
   ; CHECK-NEXT: invoke void @f
   %l = call i32 @g()
   invoke void @f()
@@ -136,7 +137,7 @@ left:
 right:
   ; CHECK: right:
   ; CHECK-NOT: store
-  ; CHECK: store i32 %r, i32* [[Slot]]
+  ; CHECK: store i32 %r, ptr [[Slot]]
   ; CHECK-NEXT: invoke void @f
   %r = call i32 @g()
   invoke void @f()
@@ -152,7 +153,7 @@ catch.inner:
 join:
   ; CHECK: join:
   ; CHECK-NOT: store
-  ; CHECK: store i32 %j, i32* [[Slot]]
+  ; CHECK: store i32 %j, ptr [[Slot]]
   ; CHECK-NEXT: invoke void @f
    %j = call i32 @g()
    invoke void @f()
@@ -165,7 +166,7 @@ catchpad.outer:
    %cs2 = catchswitch within none [label %catch.outer] unwind to caller
 catch.outer:
    ; CHECK: catch.outer:
-   ; CHECK:   [[Reload:%[^ ]+]] = load i32, i32* [[Slot]]
+   ; CHECK:   [[Reload:%[^ ]+]] = load i32, ptr [[Slot]]
    ; CHECK:   call void @h(i32 [[Reload]])
    %cp2 = catchpad within %cs2 []
    call void @h(i32 %phi.outer) [ "funclet"(token %cp2) ]
@@ -175,11 +176,11 @@ exit:
 }
 
 ; CHECK-LABEL: @test5(
-define void @test5() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test5() personality ptr @__CxxFrameHandler3 {
 entry:
   ; need store for %phi.cleanup
   ; CHECK:      entry:
-  ; CHECK:        store i32 1, i32* [[CleanupSlot:%[^ ]+]]
+  ; CHECK:        store i32 1, ptr [[CleanupSlot:%[^ ]+]]
   ; CHECK-NEXT:   invoke void @f
   invoke void @f()
           to label %invoke.cont unwind label %cleanup
@@ -187,7 +188,7 @@ entry:
 invoke.cont:
   ; need store for %phi.cleanup
   ; CHECK:      invoke.cont:
-  ; CHECK-NEXT:   store i32 2, i32* [[CleanupSlot]]
+  ; CHECK-NEXT:   store i32 2, ptr [[CleanupSlot]]
   ; CHECK-NEXT:   invoke void @f
   invoke void @f()
           to label %invoke.cont2 unwind label %cleanup
@@ -196,7 +197,7 @@ cleanup:
   ; cleanup phi can be loaded at cleanup entry
   ; CHECK: cleanup:
   ; CHECK-NEXT: cleanuppad within none []
-  ; CHECK: [[CleanupReload:%[^ ]+]] = load i32, i32* [[CleanupSlot]]
+  ; CHECK: [[CleanupReload:%[^ ]+]] = load i32, ptr [[CleanupSlot]]
   %phi.cleanup = phi i32 [ 1, %entry ], [ 2, %invoke.cont ]
   %cp = cleanuppad within none []
   %b = call i1 @i() [ "funclet"(token %cp) ]
@@ -217,14 +218,14 @@ right:
 merge:
   ; need store for %phi.catch
   ; CHECK:      merge:
-  ; CHECK-NEXT:   store i32 [[CleanupReload]], i32* [[CatchSlot:%[^ ]+]]
+  ; CHECK-NEXT:   store i32 [[CleanupReload]], ptr [[CatchSlot:%[^ ]+]]
   ; CHECK-NEXT:   cleanupret
   cleanupret from %cp unwind label %catchswitch
 
 invoke.cont2:
   ; need store for %phi.catch
   ; CHECK:      invoke.cont2:
-  ; CHECK-NEXT:   store i32 3, i32* [[CatchSlot]]
+  ; CHECK-NEXT:   store i32 3, ptr [[CatchSlot]]
   ; CHECK-NEXT:   invoke void @f
   invoke void @f()
           to label %exit unwind label %catchswitch
@@ -238,7 +239,7 @@ catchswitch:
 catch:
   ; CHECK: catch:
   ; CHECK:   catchpad within %cs1
-  ; CHECK:   [[CatchReload:%[^ ]+]] = load i32, i32* [[CatchSlot]]
+  ; CHECK:   [[CatchReload:%[^ ]+]] = load i32, ptr [[CatchSlot]]
   ; CHECK:   call void @h(i32 [[CatchReload]]
   %cp2 = catchpad within %cs1 []
   call void @h(i32 %phi.catch) [ "funclet"(token %cp2) ]
@@ -250,7 +251,7 @@ exit:
 
 ; We used to demote %x, but we don't need to anymore.
 ; CHECK-LABEL: @test6(
-define void @test6() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test6() personality ptr @__CxxFrameHandler3 {
 entry:
   ; CHECK: entry:
   ; CHECK: %x = invoke i32 @g()
@@ -272,18 +273,18 @@ cleanup:
 }
 
 ; CHECK-LABEL: @test7(
-define void @test7() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test7() personality ptr @__CxxFrameHandler3 {
 entry:
   ; %x is an EH pad phi, so gets stored in pred here
   ; CHECK: entry:
-  ; CHECK:   store i32 1, i32* [[SlotX:%[^ ]+]]
+  ; CHECK:   store i32 1, ptr [[SlotX:%[^ ]+]]
   ; CHECK:   invoke void @f()
   invoke void @f()
      to label %invoke.cont unwind label %catchpad
 invoke.cont:
   ; %x is an EH pad phi, so gets stored in pred here
   ; CHECK: invoke.cont:
-  ; CHECK:   store i32 2, i32* [[SlotX]]
+  ; CHECK:   store i32 2, ptr [[SlotX]]
   ; CHECK:   invoke void @f()
   invoke void @f()
     to label %exit unwind label %catchpad
@@ -306,7 +307,7 @@ left:
   ; CHECK-NEXT: catchret from %[[CatchPad]] to label %[[SplitLeft:[^ ]+]]
   catchret from %cp to label %join
   ; CHECK: [[SplitLeft]]:
-  ; CHECK:   [[LoadX:%[^ ]+]] = load i32, i32* [[SlotX]]
+  ; CHECK:   [[LoadX:%[^ ]+]] = load i32, ptr [[SlotX]]
   ; CHECK:   br label %join
 right:
   ; Edge from %right to %join needs to be split so that
@@ -327,7 +328,7 @@ exit:
 }
 
 ; CHECK-LABEL: @test8(
-define void @test8() personality i32 (...)* @__CxxFrameHandler3 { entry:
+define void @test8() personality ptr @__CxxFrameHandler3 { entry:
   invoke void @f()
           to label %done unwind label %cleanup1
   invoke void @f()

@@ -14,7 +14,7 @@
 # liveness flags are added.
 --- |
   target triple = "thumbv7-apple-ios"
-  define arm_aapcs_vfpcc <4 x float> @foo(float* %ptr) {
+  define arm_aapcs_vfpcc <4 x float> @foo(ptr %ptr) {
     ret <4 x float> undef
   }
 ...
@@ -28,16 +28,16 @@ body:             |
     liveins: $r0
 
     ; CHECK-LABEL: name: foo
-    ; CHECK: $s3 = VLDRS $r0, 2, 14 /* CC::al */, $noreg, implicit killed undef $q0, implicit-def $q0 :: (load 4)
-    ; CHECK: VLDMSIA $r0, 14 /* CC::al */, $noreg, def $s0, def $s1, implicit-def $noreg :: (load 4)
-    ; CHECK: $s2 = VLDRS killed $r0, 4, 14 /* CC::al */, $noreg, implicit killed $q0, implicit-def $q0 :: (load 4)
+    ; CHECK: $s3 = VLDRS $r0, 2, 14 /* CC::al */, $noreg, implicit killed undef $q0, implicit-def $q0 :: (load (s32))
+    ; CHECK: VLDMSIA $r0, 14 /* CC::al */, $noreg, def $s0, def $s1, implicit-def $noreg :: (load (s32))
+    ; CHECK: $s2 = VLDRS killed $r0, 4, 14 /* CC::al */, $noreg, implicit killed $q0, implicit-def $q0 :: (load (s32))
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $q0
-    $s1 = VLDRS $r0, 1, 14, $noreg, implicit-def $q0 :: (load 4)
-    $s3 = VLDRS $r0, 2, 14, $noreg, implicit killed $q0, implicit-def $q0 :: (load 4)
+    $s1 = VLDRS $r0, 1, 14, $noreg, implicit-def $q0 :: (load (s32))
+    $s3 = VLDRS $r0, 2, 14, $noreg, implicit killed $q0, implicit-def $q0 :: (load (s32))
 
-    $s0 = VLDRS $r0, 0, 14, $noreg, implicit killed $q0, implicit-def $q0 :: (load 4)
+    $s0 = VLDRS $r0, 0, 14, $noreg, implicit killed $q0, implicit-def $q0 :: (load (s32))
 
-    $s2 = VLDRS killed $r0, 4, 14, $noreg, implicit killed $q0, implicit-def $q0 :: (load 4)
+    $s2 = VLDRS killed $r0, 4, 14, $noreg, implicit killed $q0, implicit-def $q0 :: (load (s32))
 
     tBX_RET 14, $noreg, implicit $q0
 ...

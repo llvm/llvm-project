@@ -17,22 +17,21 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
+#include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormattersContainer.h"
 #include "lldb/DataFormatters/TypeCategory.h"
 
 namespace lldb_private {
 class TypeCategoryMap {
 private:
-  typedef ConstString KeyType;
-  typedef TypeCategoryImpl ValueType;
-  typedef ValueType::SharedPointer ValueSP;
   typedef std::list<lldb::TypeCategoryImplSP> ActiveCategoriesList;
   typedef ActiveCategoriesList::iterator ActiveCategoriesIterator;
 
 public:
-  typedef std::map<KeyType, ValueSP> MapType;
+  typedef ConstString KeyType;
+  typedef std::map<KeyType, lldb::TypeCategoryImplSP> MapType;
   typedef MapType::iterator MapIterator;
-  typedef std::function<bool(const ValueSP &)> ForEachCallback;
+  typedef std::function<bool(const lldb::TypeCategoryImplSP &)> ForEachCallback;
 
   typedef uint32_t Position;
 
@@ -42,7 +41,7 @@ public:
 
   TypeCategoryMap(IFormatChangeListener *lst);
 
-  void Add(KeyType name, const ValueSP &entry);
+  void Add(KeyType name, const lldb::TypeCategoryImplSP &entry);
 
   bool Delete(KeyType name);
 
@@ -50,9 +49,9 @@ public:
 
   bool Disable(KeyType category_name);
 
-  bool Enable(ValueSP category, Position pos = Default);
+  bool Enable(lldb::TypeCategoryImplSP category, Position pos = Default);
 
-  bool Disable(ValueSP category);
+  bool Disable(lldb::TypeCategoryImplSP category);
 
   void EnableAllCategories();
 
@@ -60,16 +59,14 @@ public:
 
   void Clear();
 
-  bool Get(KeyType name, ValueSP &entry);
-
-  bool Get(uint32_t pos, ValueSP &entry);
+  bool Get(KeyType name, lldb::TypeCategoryImplSP &entry);
 
   void ForEach(ForEachCallback callback);
 
   lldb::TypeCategoryImplSP GetAtIndex(uint32_t);
 
   bool
-  AnyMatches(ConstString type_name,
+  AnyMatches(const FormattersMatchCandidate &candidate_type,
              TypeCategoryImpl::FormatCategoryItems items =
                  TypeCategoryImpl::ALL_ITEM_TYPES,
              bool only_enabled = true, const char **matching_category = nullptr,
@@ -97,15 +94,6 @@ private:
 
   MapType m_map;
   ActiveCategoriesList m_active_categories;
-
-  MapType &map() { return m_map; }
-
-  ActiveCategoriesList &active_list() { return m_active_categories; }
-
-  std::recursive_mutex &mutex() { return m_map_mutex; }
-
-  friend class FormattersContainer<ValueType>;
-  friend class FormatManager;
 };
 } // namespace lldb_private
 

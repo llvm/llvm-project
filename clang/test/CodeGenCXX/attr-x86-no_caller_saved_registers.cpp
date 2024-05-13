@@ -17,7 +17,7 @@ __attribute((no_caller_saved_registers)) void (*foobar)(void);
 // CHECK-LABEL: @main
 int main(int argc, char **argv) {
   St::baz(&argc);
-  // CHECK: [[FOOBAR:%.+]] = load void ()*, void ()** @{{.*}}foobar{{.*}},
+  // CHECK: [[FOOBAR:%.+]] = load ptr, ptr @{{.*}}foobar{{.*}},
   // CHECK-NEXT: call void [[FOOBAR]]() #[[ATTRS1:.+]]
   foobar();
   return 0;

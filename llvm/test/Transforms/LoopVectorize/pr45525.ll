@@ -1,8 +1,8 @@
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S | FileCheck %s
 
 ; Test case for PR45525. Checks that phi's with a single predecessor and a mask are supported.
 
-define void @main(i1 %cond, i32* %arr) {
+define void @main(i1 %cond, ptr %arr) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  bb.0:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -26,8 +26,8 @@ bb.2:                                             ; preds = %bb.1
 
 bb.3:                                             ; preds = %bb.2, %bb.1
   %stored.value = phi i32 [ 7, %bb.1 ], [ %mult, %bb.2 ]
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i32 %iv
-  store i32 %stored.value, i32* %arrayidx
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i32 %iv
+  store i32 %stored.value, ptr %arrayidx
   %iv.next = add i32 %iv, 1
   %continue = icmp ult i32 %iv.next, 32
   br i1 %continue, label %bb.1, label %bb.4

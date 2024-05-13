@@ -32,7 +32,7 @@ int main(int, char**)
         C c0(I(std::begin(t)), I(std::end(t)), A(10));
         C c(std::move(c0), A(10));
         unsigned n = 0;
-        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
+        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, (void) ++n)
             assert(*i == n);
         assert(n == static_cast<unsigned>(std::end(t) - std::begin(t)));
         assert(c0.empty());
@@ -47,7 +47,7 @@ int main(int, char**)
         C c0(I(std::begin(t)), I(std::end(t)), A(10));
         C c(std::move(c0), A(9));
         unsigned n = 0;
-        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
+        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, (void) ++n)
             assert(*i == n);
         assert(n == static_cast<unsigned>(std::end(t) - std::begin(t)));
         assert(!c0.empty());
@@ -62,7 +62,7 @@ int main(int, char**)
         C c0(I(std::begin(t)), I(std::end(t)), A());
         C c(std::move(c0), A());
         unsigned n = 0;
-        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
+        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, (void) ++n)
             assert(*i == n);
         assert(n == static_cast<unsigned>(std::end(t) - std::begin(t)));
         assert(c0.empty());

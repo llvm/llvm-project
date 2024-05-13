@@ -123,24 +123,24 @@ define dso_local void @test_lleqsll_store(i64 %a, i64 %b) {
 ; CHECK-BE-LABEL: test_lleqsll_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    cntlzd r3, r3
 ; CHECK-BE-NEXT:    rldicl r3, r3, 58, 63
-; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lleqsll_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    cntlzd r3, r3
 ; CHECK-LE-NEXT:    rldicl r3, r3, 58, 63
-; CHECK-LE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp eq i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -157,24 +157,24 @@ define dso_local void @test_lleqsll_sext_store(i64 %a, i64 %b) {
 ; CHECK-BE-LABEL: test_lleqsll_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    addic r3, r3, -1
 ; CHECK-BE-NEXT:    subfe r3, r3, r3
-; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lleqsll_sext_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    addic r3, r3, -1
 ; CHECK-LE-NEXT:    subfe r3, r3, r3
-; CHECK-LE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp eq i64 %a, %b
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -205,7 +205,7 @@ define dso_local void @test_lleqsll_z_store(i64 %a) {
 entry:
   %cmp = icmp eq i64 %a, 0
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -236,6 +236,6 @@ define dso_local void @test_lleqsll_sext_z_store(i64 %a) {
 entry:
   %cmp = icmp eq i64 %a, 0
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }

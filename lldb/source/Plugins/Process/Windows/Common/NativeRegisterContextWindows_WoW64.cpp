@@ -37,8 +37,8 @@ static const uint32_t g_gpr_regnums_WoW64[] = {
 };
 
 static const RegisterSet g_reg_sets_WoW64[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_regnums_WoW64) - 1, g_gpr_regnums_WoW64},
+    {"General Purpose Registers", "gpr", std::size(g_gpr_regnums_WoW64) - 1,
+     g_gpr_regnums_WoW64},
 };
 enum { k_num_register_sets = 1 };
 
@@ -60,7 +60,7 @@ static Status
 GetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
                             PWOW64_CONTEXT context_ptr,
                             const DWORD control_flag = kWoW64ContextFlags) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
   memset(context_ptr, 0, sizeof(::WOW64_CONTEXT));
   context_ptr->ContextFlags = control_flag;
@@ -75,7 +75,7 @@ GetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
 
 static Status SetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
                                           PWOW64_CONTEXT context_ptr) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
   if (!::Wow64SetThreadContext(thread_handle, context_ptr)) {
     error.SetError(GetLastError(), eErrorTypeWin32);
@@ -367,7 +367,7 @@ Status NativeRegisterContextWindows_WoW64::WriteRegister(
 }
 
 Status NativeRegisterContextWindows_WoW64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   const size_t data_size = REG_CONTEXT_SIZE;
   data_sp = std::make_shared<DataBufferHeap>(data_size, 0);
   ::WOW64_CONTEXT tls_context;

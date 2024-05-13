@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -pass-pipeline='module(test-dynamic-pipeline{op-name=inner_mod1, dynamic-pipeline=func(cse,canonicalize)})'  --mlir-disable-threading  -print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD1-ONLY --check-prefix=CHECK
-// RUN: mlir-opt %s -pass-pipeline='module(test-dynamic-pipeline{op-name=inner_mod2, dynamic-pipeline=func(cse,canonicalize)})'  --mlir-disable-threading  -print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD2 --check-prefix=MOD2-ONLY --check-prefix=CHECK
-// RUN: mlir-opt %s -pass-pipeline='module(test-dynamic-pipeline{op-name=inner_mod1,inner_mod2, dynamic-pipeline=func(cse,canonicalize)})'  --mlir-disable-threading  -print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD2 --check-prefix=CHECK
-// RUN: mlir-opt %s -pass-pipeline='module(test-dynamic-pipeline{dynamic-pipeline=func(cse,canonicalize)})'  --mlir-disable-threading  -print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD2 --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-dynamic-pipeline{op-name=inner_mod1, dynamic-pipeline=func.func(cse,canonicalize)}))'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD1-ONLY --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-dynamic-pipeline{op-name=inner_mod2, dynamic-pipeline=func.func(cse,canonicalize)}))'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD2 --check-prefix=MOD2-ONLY --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-dynamic-pipeline{op-name=inner_mod1,inner_mod2, dynamic-pipeline=func.func(cse,canonicalize)}))'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD2 --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-dynamic-pipeline{dynamic-pipeline=func.func(cse,canonicalize)}))'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD2 --check-prefix=CHECK
 
 
-func @f() {
+func.func @f() {
   return
 }
 
@@ -17,14 +17,14 @@ module @inner_mod1 {
 // MOD1-NEXT: @foo
 // MOD1: Dump Before Canonicalizer
 // MOD1-NEXT: @foo
-  func @foo() {
+  func.func @foo() {
     return
   }
 // MOD1: Dump Before CSE
 // MOD1-NEXT: @baz
 // MOD1: Dump Before Canonicalizer
 // MOD1-NEXT: @baz
-  func @baz() {
+  func.func @baz() {
     return
   }
 }
@@ -38,7 +38,7 @@ module @inner_mod2 {
 // MOD2-NEXT: @foo
 // MOD2: Dump Before Canonicalizer
 // MOD2-NEXT: @foo
-  func @foo() {
+  func.func @foo() {
     return
   }
 }

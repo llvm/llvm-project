@@ -8,12 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_optional_access is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
-
 // <optional>
 
 // class bad_optional_access : public exception

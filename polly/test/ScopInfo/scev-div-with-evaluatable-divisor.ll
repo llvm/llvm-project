@@ -1,15 +1,15 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; Derived from test-suite/SingleSource/UnitTests/Vector/SSE/sse.stepfft.c
 
-; The values %mul.i44 is simplified to constant 4 by ScalarEvolution, but 
+; The values %mul.i44 is simplified to constant 4 by ScalarEvolution, but
 ; SCEVAffinator used to check whether the sdiv's argument was constant.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define void @cfft2(i32 %n, double* %A) local_unnamed_addr #0 {
+define void @cfft2(i32 %n, ptr %A) local_unnamed_addr #0 {
 entry:
   br i1 true, label %for.body.lr.ph, label %for.end
 
@@ -38,7 +38,7 @@ for.body.i58.us:                                  ; preds = %for.body.i58.us, %f
   br i1 false, label %for.inc, label %for.body.i58.us
 
 for.body.i58:                                     ; preds = %for.body.i58, %for.body.i58.preheader
-  store double 0.0, double* %A
+  store double 0.0, ptr %A
   %exitcond42 = icmp eq i32 0, %div.i45
   br i1 %exitcond42, label %for.inc, label %for.body.i58
 

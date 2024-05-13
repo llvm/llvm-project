@@ -6,7 +6,7 @@
 #include "xray_defs.h"
 #include "xray_interface_internal.h"
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #elif SANITIZER_FUCHSIA
@@ -82,11 +82,11 @@ uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
   }
   return TSCFrequency == -1 ? 0 : static_cast<uint64_t>(TSCFrequency);
 }
-#elif SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
+#elif SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
 uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
     long long TSCFrequency = -1;
     size_t tscfreqsz = sizeof(TSCFrequency);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
     if (internal_sysctlbyname("machdep.tsc.frequency", &TSCFrequency,
                               &tscfreqsz, NULL, 0) != -1) {
 
@@ -148,7 +148,8 @@ bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
   int64_t TrampolineOffset = reinterpret_cast<int64_t>(Trampoline) -
                              (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
-    Report("XRay Entry trampoline (%p) too far from sled (%p)\n", Trampoline,
+    Report("XRay Entry trampoline (%p) too far from sled (%p)\n",
+           reinterpret_cast<void *>(Trampoline),
            reinterpret_cast<void *>(Address));
     return false;
   }
@@ -195,7 +196,8 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
                              (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Exit trampoline (%p) too far from sled (%p)\n",
-           __xray_FunctionExit, reinterpret_cast<void *>(Address));
+           reinterpret_cast<void *>(__xray_FunctionExit),
+           reinterpret_cast<void *>(Address));
     return false;
   }
   if (Enable) {
@@ -224,7 +226,8 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
       (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Tail Exit trampoline (%p) too far from sled (%p)\n",
-           __xray_FunctionTailExit, reinterpret_cast<void *>(Address));
+           reinterpret_cast<void *>(__xray_FunctionTailExit),
+           reinterpret_cast<void *>(Address));
     return false;
   }
   if (Enable) {
@@ -247,10 +250,8 @@ bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
                       const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
   // Here we do the dance of replacing the following sled:
   //
-  // In Version 0:
-  //
   // xray_sled_n:
-  //   jmp +20          // 2 bytes
+  //   jmp +15          // 2 bytes
   //   ...
   //
   // With the following:
@@ -259,36 +260,17 @@ bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
   //   ...
   //
   //
-  // The "unpatch" should just turn the 'nopw' back to a 'jmp +20'.
-  //
-  // ---
-  //
-  // In Version 1 or 2:
-  //
-  //   The jump offset is now 15 bytes (0x0f), so when restoring the nopw back
-  //   to a jmp, use 15 bytes instead.
-  //
+  // The "unpatch" should just turn the 'nopw' back to a 'jmp +15'.
   const uint64_t Address = Sled.address();
   if (Enable) {
     std::atomic_store_explicit(
         reinterpret_cast<std::atomic<uint16_t> *>(Address), NopwSeq,
         std::memory_order_release);
   } else {
-    switch (Sled.Version) {
-    case 1:
-    case 2:
-      std::atomic_store_explicit(
-          reinterpret_cast<std::atomic<uint16_t> *>(Address), Jmp15Seq,
-          std::memory_order_release);
-      break;
-    case 0:
-    default:
-      std::atomic_store_explicit(
-          reinterpret_cast<std::atomic<uint16_t> *>(Address), Jmp20Seq,
-          std::memory_order_release);
-      break;
-    }
-    }
+    std::atomic_store_explicit(
+        reinterpret_cast<std::atomic<uint16_t> *>(Address), Jmp15Seq,
+        std::memory_order_release);
+  }
   return false;
 }
 

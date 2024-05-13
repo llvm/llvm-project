@@ -22,9 +22,9 @@ public:
   int Member;
   // CTRGEN-LABEL: define {{.*}} @_ZN6SimpleC2Ei(
   // CTRUSE-LABEL: define {{.*}} @_ZN6SimpleC2Ei(
-  // CTRGEN: store {{.*}} @[[SCC:__profc__ZN6SimpleC2Ei]], i64 0, i64 0
+  // CTRGEN: store {{.*}} @[[SCC:__profc__ZN6SimpleC2Ei]]
   explicit Simple(int Member) : Member(Member) {
-    // CTRGEN: store {{.*}} @[[SCC]], i64 0, i64 1
+    // CTRGEN: store {{.*}} @[[SCC]], i32 0, i32 1
     // CTRUSE: br {{.*}} !prof ![[SC1:[0-9]+]]
     if (Member) {}
     // CTRGEN-NOT: store {{.*}} @[[SCC]],
@@ -35,9 +35,9 @@ public:
 
   // DTRGEN-LABEL: define {{.*}} @_ZN6SimpleD2Ev(
   // DTRUSE-LABEL: define {{.*}} @_ZN6SimpleD2Ev(
-  // DTRGEN: store {{.*}} @[[SDC:__profc__ZN6SimpleD2Ev]], i64 0, i64 0
+  // DTRGEN: store {{.*}} @[[SDC:__profc__ZN6SimpleD2Ev]]
   ~Simple() {
-    // DTRGEN: store {{.*}} @[[SDC]], i64 0, i64 1
+    // DTRGEN: store {{.*}} @[[SDC]], i32 0, i32 1
     // DTRUSE: br {{.*}} !prof ![[SD1:[0-9]+]]
     if (Member) {}
     // DTRGEN-NOT: store {{.*}} @[[SDC]],
@@ -48,9 +48,9 @@ public:
 
   // MTHGEN-LABEL: define {{.*}} @_ZN6Simple6methodEv(
   // MTHUSE-LABEL: define {{.*}} @_ZN6Simple6methodEv(
-  // MTHGEN: store {{.*}} @[[SMC:__profc__ZN6Simple6methodEv]], i64 0, i64 0
+  // MTHGEN: store {{.*}} @[[SMC:__profc__ZN6Simple6methodEv]]
   void method() {
-    // MTHGEN: store {{.*}} @[[SMC]], i64 0, i64 1
+    // MTHGEN: store {{.*}} @[[SMC]], i32 0, i32 1
     // MTHUSE: br {{.*}} !prof ![[SM1:[0-9]+]]
     if (Member) {}
     // MTHGEN-NOT: store {{.*}} @[[SMC]],
@@ -64,9 +64,9 @@ class Derived : virtual public Simple {
 public:
   // VCTRGEN-LABEL: define {{.*}} @_ZN7DerivedC1Ev(
   // VCTRUSE-LABEL: define {{.*}} @_ZN7DerivedC1Ev(
-  // VCTRGEN: store {{.*}} @[[SCC:__profc__ZN7DerivedC1Ev]], i64 0, i64 0
+  // VCTRGEN: store {{.*}} @[[SCC:__profc__ZN7DerivedC1Ev]]
   Derived() : Simple(0) {
-    // VCTRGEN: store {{.*}} @[[SCC]], i64 0, i64 1
+    // VCTRGEN: store {{.*}} @[[SCC]], i32 0, i32 1
     // VCTRUSE: br {{.*}} !prof ![[SC1:[0-9]+]]
     if (Member) {}
     // VCTRGEN-NOT: store {{.*}} @[[SCC]],
@@ -77,9 +77,9 @@ public:
 
   // VDTRGEN-LABEL: define {{.*}} @_ZN7DerivedD2Ev(
   // VDTRUSE-LABEL: define {{.*}} @_ZN7DerivedD2Ev(
-  // VDTRGEN: store {{.*}} @[[SDC:__profc__ZN7DerivedD2Ev]], i64 0, i64 0
+  // VDTRGEN: store {{.*}} @[[SDC:__profc__ZN7DerivedD2Ev]]
   ~Derived() {
-    // VDTRGEN: store {{.*}} @[[SDC]], i64 0, i64 1
+    // VDTRGEN: store {{.*}} @[[SDC]], i32 0, i32 1
     // VDTRUSE: br {{.*}} !prof ![[SD1:[0-9]+]]
     if (Member) {}
     // VDTRGEN-NOT: store {{.*}} @[[SDC]],
@@ -91,9 +91,9 @@ public:
 
 // WRPGEN-LABEL: define {{.*}} @_Z14simple_wrapperv(
 // WRPUSE-LABEL: define {{.*}} @_Z14simple_wrapperv(
-// WRPGEN: store {{.*}} @[[SWC:__profc__Z14simple_wrapperv]], i64 0, i64 0
+// WRPGEN: store {{.*}} @[[SWC:__profc__Z14simple_wrapperv]]
 void simple_wrapper() {
-  // WRPGEN: store {{.*}} @[[SWC]], i64 0, i64 1
+  // WRPGEN: store {{.*}} @[[SWC]], i32 0, i32 1
   // WRPUSE: br {{.*}} !prof ![[SW1:[0-9]+]]
   for (int I = 0; I < 100; ++I) {
     Derived d;

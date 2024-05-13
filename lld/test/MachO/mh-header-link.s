@@ -9,10 +9,10 @@
 ## (but not in other types of files)
 
 # RUN: llvm-mc %t/dylib.s -triple=x86_64-apple-macos10.15 -filetype=obj -o %t/dylib.o
-# RUN: %lld -pie -dylib -dead_strip %t/dylib.o -o %t/dylib.out
+# RUN: %lld -dylib -dead_strip %t/dylib.o -o %t/dylib.out
 # RUN: llvm-objdump -m --syms %t/dylib.out | FileCheck %s --check-prefix DYLIB
 
-# RUN: not %lld -pie -o /dev/null %t/dylib.o 2>&1 | FileCheck %s --check-prefix ERR-DYLIB
+# RUN: not %lld -o /dev/null %t/dylib.o 2>&1 | FileCheck %s --check-prefix ERR-DYLIB
 
 # DYLIB:      SYMBOL TABLE:
 # DYLIB-NEXT: {{[0-9a-f]+}} g     F __TEXT,__text _main
@@ -21,10 +21,10 @@
 
 ## Test that in an executable, we can link against __mh_execute_header
 # RUN: llvm-mc %t/main.s -triple=x86_64-apple-macos10.15 -filetype=obj -o %t/exec.o
-# RUN: %lld -pie -dead_strip -lSystem %t/exec.o -o %t/exec.out
+# RUN: %lld -dead_strip -lSystem %t/exec.o -o %t/exec.out
 
 ## But it would be an error trying to reference __mh_execute_header in a dylib
-# RUN: not %lld -pie -o /dev/null -dylib %t/exec.o 2>&1 | FileCheck %s --check-prefix ERR-EXEC
+# RUN: not %lld -o /dev/null -dylib %t/exec.o 2>&1 | FileCheck %s --check-prefix ERR-EXEC
 
 # ERR-EXEC: error: undefined symbol: __mh_execute_header
 

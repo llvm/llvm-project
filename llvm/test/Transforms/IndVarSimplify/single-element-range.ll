@@ -1,16 +1,16 @@
-; RUN: opt < %s -indvars
+; RUN: opt < %s -passes=indvars
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:64:64-v128:128:128-a0:0:64"
 target triple = "armv6-apple-darwin10"
 
-define void @sqlite3_free_table(i8** %azResult) nounwind {
+define void @sqlite3_free_table(ptr %azResult) nounwind {
 entry:
 	br i1 undef, label %return, label %bb
 
 bb:		; preds = %entry
-	%0 = load i8*, i8** undef, align 4		; <i8*> [#uses=2]
-	%1 = ptrtoint i8* %0 to i32		; <i32> [#uses=1]
-	%2 = icmp sgt i8* %0, inttoptr (i32 1 to i8*)		; <i1> [#uses=1]
+	%0 = load ptr, ptr undef, align 4		; <ptr> [#uses=2]
+	%1 = ptrtoint ptr %0 to i32		; <i32> [#uses=1]
+	%2 = icmp sgt ptr %0, inttoptr (i32 1 to ptr)		; <i1> [#uses=1]
 	br i1 %2, label %bb1, label %bb5
 
 bb1:		; preds = %bb1, %bb

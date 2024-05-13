@@ -1,5 +1,5 @@
-; RUN: opt -S -tbaa -gvn < %s | FileCheck -check-prefix=BASICAA %s
-; RUN: opt -S -tbaa -disable-basic-aa -gvn < %s | FileCheck %s
+; RUN: opt -S -aa-pipeline=basic-aa,tbaa -passes=gvn < %s | FileCheck -check-prefix=BASICAA %s
+; RUN: opt -S -aa-pipeline=tbaa -passes=gvn < %s | FileCheck %s
 ; rdar://8875631, rdar://8875069
 
 ; BasicAA should notice that the store stores to the entire %u object,
@@ -18,13 +18,11 @@ define i32 @signbit(double %x) nounwind {
 ; CHECK:   ret i32 0
 entry:
   %u = alloca %union.anon, align 8
-  %tmp9 = getelementptr inbounds %union.anon, %union.anon* %u, i64 0, i32 0
-  store double %x, double* %tmp9, align 8, !tbaa !0
-  %tmp2 = load i32, i32* bitcast (i64* @endianness_test to i32*), align 8, !tbaa !3
+  store double %x, ptr %u, align 8, !tbaa !0
+  %tmp2 = load i32, ptr @endianness_test, align 8, !tbaa !3
   %idxprom = sext i32 %tmp2 to i64
-  %tmp4 = bitcast %union.anon* %u to [2 x i32]*
-  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %tmp4, i64 0, i64 %idxprom
-  %tmp5 = load i32, i32* %arrayidx, align 4, !tbaa !3
+  %arrayidx = getelementptr inbounds [2 x i32], ptr %u, i64 0, i64 %idxprom
+  %tmp5 = load i32, ptr %arrayidx, align 4, !tbaa !3
   %tmp5.lobit = lshr i32 %tmp5, 31
   ret i32 %tmp5.lobit
 }

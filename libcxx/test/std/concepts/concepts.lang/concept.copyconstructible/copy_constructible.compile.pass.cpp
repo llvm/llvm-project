@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class T>
 // concept copy_constructible;
@@ -173,5 +172,3 @@ struct ExplicitlyCopyable {
 };
 static_assert(!std::copy_constructible<ExplicitlyCopyable>);
 } // namespace CopyConstructibleTests
-
-int main(int, char**) { return 0; }

@@ -11,23 +11,23 @@ entry:
 }
 
 ; CHECK-LABEL: find
-define zeroext i1 @find(i8** readonly %begin, i8** readnone %end, i1 (i8*)* nocapture %hasProp) {
+define zeroext i1 @find(ptr readonly %begin, ptr readnone %end, ptr nocapture %hasProp) {
 entry:
-  %cmp.4 = icmp eq i8** %begin, %end
+  %cmp.4 = icmp eq ptr %begin, %end
   br i1 %cmp.4, label %cleanup, label %for.body.preheader
 
 for.body.preheader:                               ; preds = %entry
   br label %for.body
 
 for.cond:                                         ; preds = %for.body
-  %cmp = icmp eq i8** %incdec.ptr, %end
+  %cmp = icmp eq ptr %incdec.ptr, %end
   br i1 %cmp, label %cleanup.loopexit, label %for.body
 
 for.body:                                         ; preds = %for.body.preheader, %for.cond
-  %curr.05 = phi i8** [ %incdec.ptr, %for.cond ], [ %begin, %for.body.preheader ]
-  %0 = load i8*, i8** %curr.05, align 8
-  %call = tail call zeroext i1 %hasProp(i8* %0)
-  %incdec.ptr = getelementptr inbounds i8*, i8** %curr.05, i64 1
+  %curr.05 = phi ptr [ %incdec.ptr, %for.cond ], [ %begin, %for.body.preheader ]
+  %0 = load ptr, ptr %curr.05, align 8
+  %call = tail call zeroext i1 %hasProp(ptr %0)
+  %incdec.ptr = getelementptr inbounds ptr, ptr %curr.05, i64 1
   br i1 %call, label %cleanup.loopexit, label %for.cond
 
 cleanup.loopexit:                                 ; preds = %for.body, %for.cond
@@ -58,23 +58,23 @@ entry:
 }
 
 ; CHECK-LABEL: find_cont
-define void @find_cont(i8** readonly %begin, i8** readnone %end, i1 (i8*)* nocapture %hasProp, void (i1)* nocapture %cont) {
+define void @find_cont(ptr readonly %begin, ptr readnone %end, ptr nocapture %hasProp, ptr nocapture %cont) {
 entry:
-  %cmp.4 = icmp eq i8** %begin, %end
+  %cmp.4 = icmp eq ptr %begin, %end
   br i1 %cmp.4, label %cleanup, label %for.body.preheader
 
 for.body.preheader:                               ; preds = %entry
   br label %for.body
 
 for.cond:                                         ; preds = %for.body
-  %cmp = icmp eq i8** %incdec.ptr, %end
+  %cmp = icmp eq ptr %incdec.ptr, %end
   br i1 %cmp, label %cleanup.loopexit, label %for.body
 
 for.body:                                         ; preds = %for.body.preheader, %for.cond
-  %curr.05 = phi i8** [ %incdec.ptr, %for.cond ], [ %begin, %for.body.preheader ]
-  %0 = load i8*, i8** %curr.05, align 8
-  %call = tail call zeroext i1 %hasProp(i8* %0)
-  %incdec.ptr = getelementptr inbounds i8*, i8** %curr.05, i64 1
+  %curr.05 = phi ptr [ %incdec.ptr, %for.cond ], [ %begin, %for.body.preheader ]
+  %0 = load ptr, ptr %curr.05, align 8
+  %call = tail call zeroext i1 %hasProp(ptr %0)
+  %incdec.ptr = getelementptr inbounds ptr, ptr %curr.05, i64 1
   br i1 %call, label %cleanup.loopexit, label %for.cond
 
 cleanup.loopexit:                                 ; preds = %for.body, %for.cond
@@ -92,23 +92,23 @@ cleanup:                                          ; preds = %cleanup.loopexit, %
 }
 
 ; CHECK-LABEL: find_cont_ret
-define zeroext i1 @find_cont_ret(i8** readonly %begin, i8** readnone %end, i1 (i8*)* nocapture %hasProp, void (i1)* nocapture %cont) {
+define zeroext i1 @find_cont_ret(ptr readonly %begin, ptr readnone %end, ptr nocapture %hasProp, ptr nocapture %cont) {
 entry:
-  %cmp.4 = icmp eq i8** %begin, %end
+  %cmp.4 = icmp eq ptr %begin, %end
   br i1 %cmp.4, label %cleanup, label %for.body.preheader
 
 for.body.preheader:                               ; preds = %entry
   br label %for.body
 
 for.cond:                                         ; preds = %for.body
-  %cmp = icmp eq i8** %incdec.ptr, %end
+  %cmp = icmp eq ptr %incdec.ptr, %end
   br i1 %cmp, label %cleanup.loopexit, label %for.body
 
 for.body:                                         ; preds = %for.body.preheader, %for.cond
-  %curr.05 = phi i8** [ %incdec.ptr, %for.cond ], [ %begin, %for.body.preheader ]
-  %0 = load i8*, i8** %curr.05, align 8
-  %call = tail call zeroext i1 %hasProp(i8* %0)
-  %incdec.ptr = getelementptr inbounds i8*, i8** %curr.05, i64 1
+  %curr.05 = phi ptr [ %incdec.ptr, %for.cond ], [ %begin, %for.body.preheader ]
+  %0 = load ptr, ptr %curr.05, align 8
+  %call = tail call zeroext i1 %hasProp(ptr %0)
+  %incdec.ptr = getelementptr inbounds ptr, ptr %curr.05, i64 1
   br i1 %call, label %cleanup.loopexit, label %for.cond
 
 cleanup.loopexit:                                 ; preds = %for.body, %for.cond

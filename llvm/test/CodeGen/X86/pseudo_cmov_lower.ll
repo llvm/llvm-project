@@ -138,37 +138,27 @@ define void @foo8(i32 %v1,
                   <4 x double> %v82, <4 x double> %v83,
                   <16 x float> %v92, <16 x float> %v93,
                   <8 x double> %v102, <8 x double> %v103,
-                  i8 * %dst) nounwind {
+                  ptr %dst) nounwind {
 entry:
-  %add.ptr11 = getelementptr inbounds i8, i8* %dst, i32 2
-  %a11 = bitcast i8* %add.ptr11 to i16*
+  %add.ptr11 = getelementptr inbounds i8, ptr %dst, i32 2
 
-  %add.ptr21 = getelementptr inbounds i8, i8* %dst, i32 4
-  %a21 = bitcast i8* %add.ptr21 to i32*
+  %add.ptr21 = getelementptr inbounds i8, ptr %dst, i32 4
 
-  %add.ptr31 = getelementptr inbounds i8, i8* %dst, i32 8
-  %a31 = bitcast i8* %add.ptr31 to float*
+  %add.ptr31 = getelementptr inbounds i8, ptr %dst, i32 8
 
-  %add.ptr41 = getelementptr inbounds i8, i8* %dst, i32 16
-  %a41 = bitcast i8* %add.ptr41 to double*
+  %add.ptr41 = getelementptr inbounds i8, ptr %dst, i32 16
 
-  %add.ptr51 = getelementptr inbounds i8, i8* %dst, i32 32
-  %a51 = bitcast i8* %add.ptr51 to <4 x float>*
+  %add.ptr51 = getelementptr inbounds i8, ptr %dst, i32 32
 
-  %add.ptr61 = getelementptr inbounds i8, i8* %dst, i32 48
-  %a61 = bitcast i8* %add.ptr61 to <2 x double>*
+  %add.ptr61 = getelementptr inbounds i8, ptr %dst, i32 48
 
-  %add.ptr71 = getelementptr inbounds i8, i8* %dst, i32 64
-  %a71 = bitcast i8* %add.ptr71 to <8 x float>*
+  %add.ptr71 = getelementptr inbounds i8, ptr %dst, i32 64
 
-  %add.ptr81 = getelementptr inbounds i8, i8* %dst, i32 128
-  %a81 = bitcast i8* %add.ptr81 to <4 x double>*
+  %add.ptr81 = getelementptr inbounds i8, ptr %dst, i32 128
 
-  %add.ptr91 = getelementptr inbounds i8, i8* %dst, i32 64
-  %a91 = bitcast i8* %add.ptr91 to <16 x float>*
+  %add.ptr91 = getelementptr inbounds i8, ptr %dst, i32 64
 
-  %add.ptr101 = getelementptr inbounds i8, i8* %dst, i32 128
-  %a101 = bitcast i8* %add.ptr101 to <8 x double>*
+  %add.ptr101 = getelementptr inbounds i8, ptr %dst, i32 128
 
   ; These operations are necessary, because select of two single use loads
   ; ends up getting optimized into a select of two leas, followed by a
@@ -196,16 +186,16 @@ entry:
   %t91 = select i1 %cmp, <16 x float> %v92, <16 x float> %t93
   %t101 = select i1 %cmp, <8 x double> %v102, <8 x double> %t103
 
-  store i16 %t11, i16* %a11, align 2
-  store i32 %t21, i32* %a21, align 4
-  store float %t31, float* %a31, align 4
-  store double %t41, double* %a41, align 8
-  store <4 x float> %t51, <4 x float>* %a51, align 16
-  store <2 x double> %t61, <2 x double>* %a61, align 16
-  store <8 x float> %t71, <8 x float>* %a71, align 32
-  store <4 x double> %t81, <4 x double>* %a81, align 32
-  store <16 x float> %t91, <16 x float>* %a91, align 32
-  store <8 x double> %t101, <8 x double>* %a101, align 32
+  store i16 %t11, ptr %add.ptr11, align 2
+  store i32 %t21, ptr %add.ptr21, align 4
+  store float %t31, ptr %add.ptr31, align 4
+  store double %t41, ptr %add.ptr41, align 8
+  store <4 x float> %t51, ptr %add.ptr51, align 16
+  store <2 x double> %t61, ptr %add.ptr61, align 16
+  store <8 x float> %t71, ptr %add.ptr71, align 32
+  store <4 x double> %t81, ptr %add.ptr81, align 32
+  store <16 x float> %t91, ptr %add.ptr91, align 32
+  store <8 x double> %t101, ptr %add.ptr101, align 32
 
   ret void
 }
@@ -230,19 +220,14 @@ define void @foo9(i32 %v1,
                   <16 x i1> %v22, <16 x i1> %v23,
                   <32 x i1> %v32, <32 x i1> %v33,
                   <64 x i1> %v42, <64 x i1> %v43,
-                  i8 * %dst) nounwind {
+                  ptr %dst) nounwind {
 entry:
-  %add.ptr11 = getelementptr inbounds i8, i8* %dst, i32 0
-  %a11 = bitcast i8* %add.ptr11 to <8 x i1>*
 
-  %add.ptr21 = getelementptr inbounds i8, i8* %dst, i32 4
-  %a21 = bitcast i8* %add.ptr21 to <16 x i1>*
+  %add.ptr21 = getelementptr inbounds i8, ptr %dst, i32 4
 
-  %add.ptr31 = getelementptr inbounds i8, i8* %dst, i32 8
-  %a31 = bitcast i8* %add.ptr31 to <32 x i1>*
+  %add.ptr31 = getelementptr inbounds i8, ptr %dst, i32 8
 
-  %add.ptr41 = getelementptr inbounds i8, i8* %dst, i32 16
-  %a41 = bitcast i8* %add.ptr41 to <64 x i1>*
+  %add.ptr41 = getelementptr inbounds i8, ptr %dst, i32 16
 
   ; These operations are necessary, because select of two single use loads
   ; ends up getting optimized into a select of two leas, followed by a
@@ -258,10 +243,10 @@ entry:
   %t31 = select i1 %cmp, <32 x i1> %v32, <32 x i1> %t33
   %t41 = select i1 %cmp, <64 x i1> %v42, <64 x i1> %t43
 
-  store <8 x i1> %t11, <8 x i1>* %a11, align 16
-  store <16 x i1> %t21, <16 x i1>* %a21, align 4
-  store <32 x i1> %t31, <32 x i1>* %a31, align 8
-  store <64 x i1> %t41, <64 x i1>* %a41, align 16
+  store <8 x i1> %t11, ptr %dst, align 16
+  store <16 x i1> %t21, ptr %add.ptr21, align 4
+  store <32 x i1> %t31, ptr %add.ptr31, align 8
+  store <64 x i1> %t41, ptr %add.ptr41, align 16
 
   ret void
 }

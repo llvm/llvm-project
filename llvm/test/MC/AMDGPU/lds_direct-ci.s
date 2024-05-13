@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=CI
+// RUN: llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=CI
 
 v_readfirstlane_b32 s0, lds_direct
 // CI: v_readfirstlane_b32 s0, src_lds_direct ; encoding: [0xfe,0x04,0x00,0x7e]

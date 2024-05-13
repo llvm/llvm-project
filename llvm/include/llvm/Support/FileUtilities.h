@@ -15,10 +15,10 @@
 #define LLVM_SUPPORT_FILEUTILITIES_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
+
+#include <system_error>
 
 namespace llvm {
 
@@ -76,40 +76,27 @@ namespace llvm {
     void releaseFile() { DeleteIt = false; }
   };
 
-  enum class atomic_write_error {
-    failed_to_create_uniq_file = 0,
-    output_stream_error,
-    failed_to_rename_temp_file
-  };
-
-  class AtomicFileWriteError : public llvm::ErrorInfo<AtomicFileWriteError> {
+  /// FilePermssionsApplier helps to copy permissions from an input file to
+  /// an output one. It memorizes the status of the input file and can apply
+  /// permissions and dates to the output file.
+  class FilePermissionsApplier {
   public:
-    AtomicFileWriteError(atomic_write_error Error) : Error(Error) {}
+    static Expected<FilePermissionsApplier> create(StringRef InputFilename);
 
-    void log(raw_ostream &OS) const override;
-
-    const atomic_write_error Error;
-    static char ID;
+    /// Apply stored permissions to the \p OutputFilename.
+    /// Copy LastAccess and ModificationTime if \p CopyDates is true.
+    /// Overwrite stored permissions if \p OverwritePermissions is specified.
+    Error
+    apply(StringRef OutputFilename, bool CopyDates = false,
+          std::optional<sys::fs::perms> OverwritePermissions = std::nullopt);
 
   private:
-    // Users are not expected to use error_code.
-    std::error_code convertToErrorCode() const override {
-      return llvm::inconvertibleErrorCode();
-    }
+    FilePermissionsApplier(StringRef InputFilename, sys::fs::file_status Status)
+        : InputFilename(InputFilename), InputStatus(Status) {}
+
+    StringRef InputFilename;
+    sys::fs::file_status InputStatus;
   };
-
-  // atomic_write_error + whatever the Writer can return
-
-  /// Creates a unique file with name according to the given \p TempPathModel,
-  /// writes content of \p Buffer to the file and renames it to \p FinalPath.
-  ///
-  /// \returns \c AtomicFileWriteError in case of error.
-  llvm::Error writeFileAtomically(StringRef TempPathModel, StringRef FinalPath,
-                                  StringRef Buffer);
-
-  llvm::Error
-  writeFileAtomically(StringRef TempPathModel, StringRef FinalPath,
-                      std::function<llvm::Error(llvm::raw_ostream &)> Writer);
 } // End llvm namespace
 
 #endif

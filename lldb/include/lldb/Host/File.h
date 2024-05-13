@@ -10,6 +10,7 @@
 #define LLDB_HOST_FILE_H
 
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Host/Terminal.h"
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
@@ -18,6 +19,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <mutex>
+#include <optional>
 #include <sys/types.h>
 
 namespace lldb_private {
@@ -39,24 +41,29 @@ public:
   // NB this enum is used in the lldb platform gdb-remote packet
   // vFile:open: and existing values cannot be modified.
   //
-  // FIXME
-  // These values do not match the values used by GDB
+  // The first set of values is defined by gdb headers and can be found
+  // in the documentation at:
   // * https://sourceware.org/gdb/onlinedocs/gdb/Open-Flags.html#Open-Flags
-  // * rdar://problem/46788934
+  //
+  // The second half are LLDB extensions and use the highest uint32_t bits
+  // to avoid risk of collisions with future gdb remote protocol changes.
   enum OpenOptions : uint32_t {
-    eOpenOptionRead = (1u << 0),  // Open file for reading
-    eOpenOptionWrite = (1u << 1), // Open file for writing
+    eOpenOptionReadOnly = 0x0,  // Open file for reading (only)
+    eOpenOptionWriteOnly = 0x1, // Open file for writing (only)
+    eOpenOptionReadWrite = 0x2, // Open file for both reading and writing
     eOpenOptionAppend =
-        (1u << 2), // Don't truncate file when opening, append to end of file
-    eOpenOptionTruncate = (1u << 3),    // Truncate file when opening
-    eOpenOptionNonBlocking = (1u << 4), // File reads
-    eOpenOptionCanCreate = (1u << 5),   // Create file if doesn't already exist
+        0x8, // Don't truncate file when opening, append to end of file
+    eOpenOptionCanCreate = 0x200, // Create file if doesn't already exist
+    eOpenOptionTruncate = 0x400,  // Truncate file when opening
     eOpenOptionCanCreateNewOnly =
-        (1u << 6), // Can create file only if it doesn't already exist
-    eOpenOptionDontFollowSymlinks = (1u << 7),
+        0x800, // Can create file only if it doesn't already exist
+
+    eOpenOptionNonBlocking = (1u << 28), // File reads
+    eOpenOptionDontFollowSymlinks = (1u << 29),
     eOpenOptionCloseOnExec =
-        (1u << 8), // Close the file when executing a new process
-    LLVM_MARK_AS_BITMASK_ENUM(/* largest_value= */ eOpenOptionCloseOnExec)
+        (1u << 30), // Close the file when executing a new process
+    eOpenOptionInvalid = (1u << 31), // Used as invalid value
+    LLVM_MARK_AS_BITMASK_ENUM(/* largest_value= */ eOpenOptionInvalid)
   };
 
   static mode_t ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options);
@@ -65,10 +72,7 @@ public:
   static llvm::Expected<const char *>
   GetStreamOpenModeFromOptions(OpenOptions options);
 
-  File()
-      : IOObject(eFDTypeFile), m_is_interactive(eLazyBoolCalculate),
-        m_is_real_terminal(eLazyBoolCalculate),
-        m_supports_colors(eLazyBoolCalculate){};
+  File() : IOObject(eFDTypeFile){};
 
   /// Read bytes from a file from the current file position into buf.
   ///
@@ -222,7 +226,7 @@ public:
   ///     A buffer where to put the bytes that are read.
   ///
   /// \param[in,out] num_bytes
-  ///     The number of bytes to read form the current file position
+  ///     The number of bytes to read from the current file position
   ///     which gets modified with the number of bytes that were read.
   ///
   /// \param[in,out] offset
@@ -306,8 +310,8 @@ public:
   /// Some options like eOpenOptionDontFollowSymlinks only make
   /// sense when a file is being opened (or not at all)
   /// and may not be preserved for this method.  But any valid
-  /// File should return either or both of eOpenOptionRead and
-  /// eOpenOptionWrite here.
+  /// File should return either eOpenOptionReadOnly, eOpenOptionWriteOnly
+  /// or eOpenOptionReadWrite here.
   ///
   /// \return
   ///    OpenOptions flags for this file, or an error.
@@ -360,9 +364,9 @@ public:
   static bool classof(const File *file) { return file->isA(&ID); }
 
 protected:
-  LazyBool m_is_interactive;
-  LazyBool m_is_real_terminal;
-  LazyBool m_supports_colors;
+  LazyBool m_is_interactive = eLazyBoolCalculate;
+  LazyBool m_is_real_terminal = eLazyBoolCalculate;
+  LazyBool m_supports_colors = eLazyBoolCalculate;
 
   void CalculateInteractiveAndTerminal();
 
@@ -373,9 +377,7 @@ private:
 
 class NativeFile : public File {
 public:
-  NativeFile()
-      : m_descriptor(kInvalidDescriptor), m_own_descriptor(false),
-        m_stream(kInvalidStream), m_options(), m_own_stream(false) {}
+  NativeFile() : m_descriptor(kInvalidDescriptor), m_stream(kInvalidStream) {}
 
   NativeFile(FILE *fh, bool transfer_ownership)
       : m_descriptor(kInvalidDescriptor), m_own_descriptor(false), m_stream(fh),
@@ -387,9 +389,7 @@ public:
 
   ~NativeFile() override { Close(); }
 
-  bool IsValid() const override {
-    return DescriptorIsValid() || StreamIsValid();
-  }
+  bool IsValid() const override;
 
   Status Read(void *buf, size_t &num_bytes) override;
   Status Write(const void *buf, size_t &num_bytes) override;
@@ -409,28 +409,89 @@ public:
   llvm::Expected<OpenOptions> GetOptions() const override;
 
   static char ID;
-  virtual bool isA(const void *classID) const override {
+  bool isA(const void *classID) const override {
     return classID == &ID || File::isA(classID);
   }
   static bool classof(const File *file) { return file->isA(&ID); }
 
 protected:
-  bool DescriptorIsValid() const {
+  struct ValueGuard {
+    ValueGuard(std::mutex &m, bool b) : guard(m, std::adopt_lock), value(b) {}
+    std::lock_guard<std::mutex> guard;
+    bool value;
+    operator bool() { return value; }
+  };
+
+  bool DescriptorIsValidUnlocked() const {
+
     return File::DescriptorIsValid(m_descriptor);
   }
-  bool StreamIsValid() const { return m_stream != kInvalidStream; }
 
-  // Member variables
+  bool StreamIsValidUnlocked() const { return m_stream != kInvalidStream; }
+
+  ValueGuard DescriptorIsValid() const {
+    m_descriptor_mutex.lock();
+    return ValueGuard(m_descriptor_mutex, DescriptorIsValidUnlocked());
+  }
+
+  ValueGuard StreamIsValid() const {
+    m_stream_mutex.lock();
+    return ValueGuard(m_stream_mutex, StreamIsValidUnlocked());
+  }
+
   int m_descriptor;
-  bool m_own_descriptor;
+  bool m_own_descriptor = false;
+  mutable std::mutex m_descriptor_mutex;
+
   FILE *m_stream;
-  OpenOptions m_options;
-  bool m_own_stream;
+  mutable std::mutex m_stream_mutex;
+
+  OpenOptions m_options{};
+  bool m_own_stream = false;
   std::mutex offset_access_mutex;
 
 private:
   NativeFile(const NativeFile &) = delete;
   const NativeFile &operator=(const NativeFile &) = delete;
+};
+
+class SerialPort : public NativeFile {
+public:
+  struct Options {
+    std::optional<unsigned int> BaudRate;
+    std::optional<Terminal::Parity> Parity;
+    std::optional<Terminal::ParityCheck> ParityCheck;
+    std::optional<unsigned int> StopBits;
+  };
+
+  // Obtain Options corresponding to the passed URL query string
+  // (i.e. the part after '?').
+  static llvm::Expected<Options> OptionsFromURL(llvm::StringRef urlqs);
+
+  static llvm::Expected<std::unique_ptr<SerialPort>>
+  Create(int fd, OpenOptions options, Options serial_options,
+         bool transfer_ownership);
+
+  bool IsValid() const override {
+    return NativeFile::IsValid() && m_is_interactive == eLazyBoolYes;
+  }
+
+  Status Close() override;
+
+  static char ID;
+  bool isA(const void *classID) const override {
+    return classID == &ID || File::isA(classID);
+  }
+  static bool classof(const File *file) { return file->isA(&ID); }
+
+private:
+  SerialPort(int fd, OpenOptions options, Options serial_options,
+             bool transfer_ownership);
+
+  SerialPort(const SerialPort &) = delete;
+  const SerialPort &operator=(const SerialPort &) = delete;
+
+  TerminalState m_state;
 };
 
 } // namespace lldb_private

@@ -7,21 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/sigemptyset.h"
-#include "include/errno.h" // For E* macros.
-#include "src/errno/llvmlibc_errno.h"
-#include "src/signal/linux/signal.h"
+#include "src/errno/libc_errno.h"
+#include "src/signal/linux/signal_utils.h"
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+#include <signal.h>
+
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, sigemptyset, (sigset_t * set)) {
   if (!set) {
-    llvmlibc_errno = EINVAL;
+    libc_errno = EINVAL;
     return -1;
   }
-  *set = __llvm_libc::Sigset::emptySet();
+  *set = empty_set();
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

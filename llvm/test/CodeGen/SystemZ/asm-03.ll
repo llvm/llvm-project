@@ -9,8 +9,8 @@ define void @f1(i64 %base) {
 ; CHECK: blah -524288(%r2)
 ; CHECK: br %r14
   %add = add i64 %base, -524288
-  %addr = inttoptr i64 %add to i64 *
-  call void asm "blah $0", "=*S" (i64 *%addr)
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah $0", "=*S" (ptr elementtype(i64) %addr)
   ret void
 }
 
@@ -21,8 +21,8 @@ define void @f2(i64 %base) {
 ; CHECK: blah 0(%r2)
 ; CHECK: br %r14
   %add = add i64 %base, -524289
-  %addr = inttoptr i64 %add to i64 *
-  call void asm "blah $0", "=*S" (i64 *%addr)
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah $0", "=*S" (ptr elementtype(i64) %addr)
   ret void
 }
 
@@ -32,8 +32,8 @@ define void @f3(i64 %base) {
 ; CHECK: blah 524287(%r2)
 ; CHECK: br %r14
   %add = add i64 %base, 524287
-  %addr = inttoptr i64 %add to i64 *
-  call void asm "blah $0", "=*S" (i64 *%addr)
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah $0", "=*S" (ptr elementtype(i64) %addr)
   ret void
 }
 
@@ -44,7 +44,7 @@ define void @f4(i64 %base) {
 ; CHECK: blah 0(%r2)
 ; CHECK: br %r14
   %add = add i64 %base, 524288
-  %addr = inttoptr i64 %add to i64 *
-  call void asm "blah $0", "=*S" (i64 *%addr)
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah $0", "=*S" (ptr elementtype(i64) %addr)
   ret void
 }

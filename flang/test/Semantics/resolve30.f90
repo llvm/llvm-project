@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 subroutine s1
   integer x
   block
@@ -30,10 +30,17 @@ subroutine s3
 end
 
 subroutine s4
-  real :: i, j
+  real :: j
   !ERROR: Must have INTEGER type, but is REAL(4)
-  real :: a(16) = [(i, i=1, 16)]
+  real :: a(16) = [(x, x=1, 16)]
   real :: b(16)
   !ERROR: Must have INTEGER type, but is REAL(4)
   data(b(j), j=1, 16) / 16 * 0.0 /
+end
+
+subroutine s5
+  implicit none
+  data x/1./
+  !PORTABILITY: 'x' appeared in a DATA statement before its type was declared under IMPLICIT NONE(TYPE)
+  real x
 end

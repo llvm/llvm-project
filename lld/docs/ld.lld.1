@@ -4,7 +4,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd May 12, 2019
+.Dd Jul 25, 2023
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -27,8 +27,8 @@ It accepts most of the same command line arguments and linker scripts
 as GNU linkers.
 .Pp
 .Nm
-currently supports i386, x86-64, ARM, AArch64, PowerPC32, PowerPC64,
-MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
+currently supports i386, x86-64, ARM, AArch64, LoongArch, PowerPC32,
+PowerPC64, MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
 .Nm
 acts as a Microsoft link.exe-compatible linker if invoked as
 .Nm lld-link
@@ -82,9 +82,17 @@ Bind default visibility defined symbols locally for
 Also set the
 .Dv DF_SYMBOLIC
 flag.
+.It Fl Bsymbolic-non-weak
+Bind default visibility defined STB_GLOBAL symbols locally for
+.Fl shared.
 .It Fl Bsymbolic-functions
 Bind default visibility defined function symbols locally for
 .Fl shared.
+.It Fl Bsymbolic-non-weak-functions
+Bind default visibility defined STB_GLOBAL function symbols locally for
+.Fl shared.
+.It Fl --be8
+Write a Big Endian ELF File using BE8 format(AArch32 only)
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -112,6 +120,19 @@ is not intended to be cryptographically secure.
 .It Fl -build-id
 Synonym for
 .Fl -build-id Ns = Ns Cm fast .
+.It Fl -call-graph-profile-sort Ns = Ns Ar algorithm
+.Ar algorithm
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm none
+Ignore call graph profile.
+.It Cm hfsort
+Use hfsort.
+.It Cm cdsort
+Use cdsort (default).
+.El
+.Pp
 .It Fl -color-diagnostics Ns = Ns Ar value
 Use colors in diagnostics.
 .Ar value
@@ -127,20 +148,38 @@ Alias for
 .Fl -color-diagnostics Ns = Ns Cm auto .
 .It Fl -compress-debug-sections Ns = Ns Ar value
 Compress DWARF debug sections.
-.Ar value
+.Cm value
 may be
-.Cm none
-or
-.Cm zlib .
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm none
+No compression.
+.It Cm zlib
 The default compression level is 1 (fastest) as the debug info usually
-compresses well at that level, but if you want to compress it more,
-you can specify
-.Fl O2
-to set the compression level to 6.
+compresses well at that level.
+.It Cm zstd
+Use the default compression level in zstd.
+.El
+.Pp
+.It Fl -compress-sections Ns = Ns Ar section-glob={none,zlib,zstd}[:level]
+Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+The compression level is
+.Cm level
+(if specified) or a default speed-focused level.
+This is like a generalized
+.Cm --compress-debug-sections.
 .It Fl -cref
-Output cross reference table.
-.It Fl -define-common , Fl d
-Assign space to common symbols.
+Output cross reference table. If
+.Fl Map
+is specified, print to the map file.
+.It Fl -debug-names
+Generate a merged
+.Li .debug_names
+section.
+.It Fl -default-script Ns = Ns Ar file , Fl dT Ar file
+In the absence of
+.Fl -script ,
+read this default linker script.
 .It Fl -defsym Ns = Ns Ar symbol Ns = Ns Ar expression
 Define a symbol alias.
 .Ar expression
@@ -164,10 +203,9 @@ Specify the dynamic linker to be used for a dynamically linked executable.
 This is recorded in an ELF segment of type
 .Dv PT_INTERP .
 .It Fl -dynamic-list Ns = Ns Ar file
-Read a list of dynamic symbols from
-.Ar file .
-(executable) Put matched non-local defined symbols to the dynamic symbol table.
-(shared object) References to matched non-local STV_DEFAULT symbols shouldn't be bound to definitions within the shared object. Implies
+Similar to
+.Cm --export-dynamic-symbol-list .
+When creating a shared object, implies
 .Cm -Bsymbolic
 but does not set DF_SYMBOLIC
 .It Fl -EB
@@ -222,6 +260,12 @@ Put symbols in the dynamic symbol table.
 .Cm -Bsymbolic-functions
 or
 .Cm --dynamic-list
+.It Fl -export-dynamic-symbol-list Ns = Ns Ar file
+Read a list of dynamic symbol patterns from
+.Ar file .
+Apply
+.Cm --export-dynamic-symbol
+on each pattern.
 .It Fl -fatal-warnings
 Treat warnings as errors.
 .It Fl -filter Ns = Ns Ar value , Fl F Ar value
@@ -316,8 +360,6 @@ Always set
 for shared libraries.
 .It Fl -no-color-diagnostics
 Do not use colors in diagnostics.
-.It Fl -no-define-common
-Do not assign space to common symbols.
 .It Fl -no-demangle
 Do not demangle symbol names.
 .It Fl -no-dynamic-linker
@@ -337,15 +379,20 @@ Page align sections.
 .It Fl -no-omagic
 Do not set the text data sections to be writable, page align sections.
 .It Fl -no-relax
-Disable target-specific relaxations. This is currently a no-op.
+Disable target-specific relaxations. For x86-64 this disables R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX GOT optimization.
 .It Fl -no-rosegment
 Do not put read-only non-executable sections in their own segment.
-.It Fl -no-undefined-version
-Report version scripts that refer undefined symbols.
+.It Fl -undefined-version
+Do not report version scripts that refer to undefined symbols.
 .It Fl -no-undefined
 Report unresolved symbols even if the linker is creating a shared library.
+.It Fl -no-warn-mismatch
+Do not reject unknown section types.
 .It Fl -no-warn-symbol-ordering
 Do not warn about problems with the symbol ordering file or call graph profile.
+.It Fl -no-warnings , Fl w
+Suppress warnings and cancel
+.Cm --fatal-warnings.
 .It Fl -no-whole-archive
 Restores the default behavior of loading archive members.
 .It Fl -no-pie , Fl -no-pic-executable
@@ -446,6 +493,20 @@ is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
 Create a position independent executable.
+.It Fl -power10-stubs Ns = Ns Cm mode
+Whether to use Power10 instructions in call stubs for R_PPC64_REL24_NOTOC and TOC/NOTOC interworking.
+.Ar mode
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm yes
+(default) Use.
+.It Cm auto
+Currently the same as yes.
+.It Cm no
+Don't use.
+.El
+
 .It Fl -print-gc-sections
 List removed unused sections.
 .It Fl -print-icf-sections
@@ -462,10 +523,27 @@ Save the current state of
 and
 .Fl -whole-archive.
 .It Fl -pop-state
-Undo the effect of
+Restore the states saved by
 .Fl -push-state.
+.It Fl --relax-gp
+Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r
 Create relocatable object file.
+.It Fl -remap-inputs Ns = Ns Ar from-glob=to-file
+Input files matching
+.Cm from-glob
+are mapped to
+.Cm to-file.
+Use
+.Cm /dev/null
+to ignore an input file.
+.It Fl -remap-inputs-file Ns = Ns Ar file
+Remap input files based on patterns in
+.Ar file .
+Each line in the remap file is of the format
+.Cm from-glob=to-file
+or a comment starting with
+.Cm # .
 .It Fl -reproduce Ns = Ns Ar path
 Write a tar file to
 .Ar path,
@@ -573,6 +651,10 @@ Number of threads.
 (default) means all of concurrent threads supported.
 .Cm 1
 disables multi-threading.
+.It Fl -fat-lto-objects
+Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.
+.It Fl -no-fat-lto-objects
+Ignore the .llvm.lto section in relocatable object files (default).
 .It Fl -time-trace
 Record time trace.
 .It Fl -time-trace-file Ns = Ns Ar file
@@ -611,10 +693,10 @@ Creates a separate output section for every orphan input section.
 Determine how to handle unresolved symbols.
 .It Fl -use-android-relr-tags
 Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*.
-.It Fl v
+.It Fl v , Fl V
 Display the version number and proceed with linking if object files are
 specified.
-.It Fl V , Fl -version
+.It Fl -version
 Display the version number and exit.
 .It Fl -verbose
 Verbose mode.
@@ -650,6 +732,8 @@ linkers, and may be removed in the future.
 Report unresolved symbols as warnings.
 .It Fl -whole-archive
 Force load of all members in a static library.
+.It Fl -why-extract Ns = Ns Ar file
+Print to a file about why archive members are extracted.
 .It Fl -wrap Ns = Ns Ar symbol
 Redirect
 .Ar symbol
@@ -675,6 +759,21 @@ Make the main stack executable.
 Stack permissions are recorded in the
 .Dv PT_GNU_STACK
 segment.
+.Pp
+.It Cm bti-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm cet-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY_X86_FEATURE_1_SHSTK properties.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm pauth-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_PAUTH property.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
 .Pp
 .It Cm force-bti
 Force enable AArch64 BTI instruction in PLT, warn if Input ELF file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.
@@ -710,6 +809,9 @@ Set the
 flag to indicate to the runtime linker that the object is an interposer.
 During symbol resolution interposers are searched after the application
 but before other dependencies.
+.Pp
+.It Cm lrodata-after-bss
+Place .lrodata after .bss.
 .Pp
 .It Cm muldefs
 Do not error if a symbol is defined multiple times.
@@ -775,6 +877,12 @@ processing.
 .It Cm pac-plt
 AArch64 only, use pointer authentication in PLT.
 .Pp
+.It Cm pack-relative-relocs
+Similar to
+.Cm -pack-dyn-relocs=relr
+, but synthesizes the GLIBC_ABI_DT_RELR version dependency if there is a GLIBC_2.* version dependency.
+glibc ld.so rejects loading a dynamically linked object without the GLIBC_ABI_DT_RELR version dependency.
+.Pp
 .It Cm rel
 Use REL format for dynamic relocations.
 .Pp
@@ -830,6 +938,22 @@ Create a
 segment.
 .El
 .El
+
+.Sh ENVIRONMENT VARIABLES
+.Bl -tag -width LC_CTYPE
+.It Ev LLD_REPRODUCE
+Create a reproduce tarball with the specified filename. If
+.Fl -reproduce
+is specified,
+.Fl -reproduce
+takes precedence.
+.It Ev LLD_VERSION
+ld.lld creates a section named
+.Cm .comment
+containing the LLD version string. The version string can be overridden by this environment variable,
+which is useful to eliminate differences in the binary caused by LLD version number differences.
+.El
+
 .Sh IMPLEMENTATION NOTES
 .Nm Ap s
 handing of archive files (those with a

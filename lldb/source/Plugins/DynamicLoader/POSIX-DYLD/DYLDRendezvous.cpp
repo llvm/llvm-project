@@ -14,6 +14,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
@@ -24,28 +25,61 @@
 using namespace lldb;
 using namespace lldb_private;
 
-/// Locates the address of the rendezvous structure.  Returns the address on
-/// success and LLDB_INVALID_ADDRESS on failure.
-static addr_t ResolveRendezvousAddress(Process *process) {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+const char *DYLDRendezvous::StateToCStr(RendezvousState state) {
+  switch (state) {
+    case DYLDRendezvous::eConsistent:
+      return "eConsistent";
+    case DYLDRendezvous::eAdd:
+      return "eAdd";
+    case DYLDRendezvous::eDelete:
+      return "eDelete";
+  }
+  return "<invalid RendezvousState>";
+}
+
+const char *DYLDRendezvous::ActionToCStr(RendezvousAction action) {
+  switch (action) {
+  case DYLDRendezvous::RendezvousAction::eTakeSnapshot:
+    return "eTakeSnapshot";
+  case DYLDRendezvous::RendezvousAction::eAddModules:
+    return "eAddModules";
+  case DYLDRendezvous::RendezvousAction::eRemoveModules:
+    return "eRemoveModules";
+  case DYLDRendezvous::RendezvousAction::eNoAction:
+    return "eNoAction";
+  }
+  return "<invalid RendezvousAction>";
+}
+
+DYLDRendezvous::DYLDRendezvous(Process *process)
+    : m_process(process), m_rendezvous_addr(LLDB_INVALID_ADDRESS),
+      m_executable_interpreter(false), m_current(), m_previous(),
+      m_loaded_modules(), m_soentries(), m_added_soentries(),
+      m_removed_soentries() {
+  m_thread_info.valid = false;
+  UpdateExecutablePath();
+}
+
+addr_t DYLDRendezvous::ResolveRendezvousAddress() {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   addr_t info_location;
   addr_t info_addr;
   Status error;
 
-  if (!process) {
+  if (!m_process) {
     LLDB_LOGF(log, "%s null process provided", __FUNCTION__);
     return LLDB_INVALID_ADDRESS;
   }
 
   // Try to get it from our process.  This might be a remote process and might
   // grab it via some remote-specific mechanism.
-  info_location = process->GetImageInfoAddress();
+  info_location = m_process->GetImageInfoAddress();
   LLDB_LOGF(log, "%s info_location = 0x%" PRIx64, __FUNCTION__, info_location);
 
   // If the process fails to return an address, fall back to seeing if the
   // local object file can help us find it.
   if (info_location == LLDB_INVALID_ADDRESS) {
-    Target *target = &process->GetTarget();
+    Target *target = &m_process->GetTarget();
     if (target) {
       ObjectFile *obj_file = target->GetExecutableModule()->GetObjectFile();
       Address addr = obj_file->GetImageInfoAddress(target);
@@ -56,6 +90,20 @@ static addr_t ResolveRendezvousAddress(Process *process) {
                   "%s resolved via direct object file approach to 0x%" PRIx64,
                   __FUNCTION__, info_location);
       } else {
+        const Symbol *_r_debug =
+            target->GetExecutableModule()->FindFirstSymbolWithNameAndType(
+                ConstString("_r_debug"));
+        if (_r_debug) {
+          info_addr = _r_debug->GetAddress().GetLoadAddress(target);
+          if (info_addr != LLDB_INVALID_ADDRESS) {
+            LLDB_LOGF(log,
+                      "%s resolved by finding symbol '_r_debug' whose value is "
+                      "0x%" PRIx64,
+                      __FUNCTION__, info_addr);
+            m_executable_interpreter = true;
+            return info_addr;
+          }
+        }
         LLDB_LOGF(log,
                   "%s FAILED - direct object file approach did not yield a "
                   "valid address",
@@ -70,9 +118,9 @@ static addr_t ResolveRendezvousAddress(Process *process) {
   }
 
   LLDB_LOGF(log, "%s reading pointer (%" PRIu32 " bytes) from 0x%" PRIx64,
-            __FUNCTION__, process->GetAddressByteSize(), info_location);
+            __FUNCTION__, m_process->GetAddressByteSize(), info_location);
 
-  info_addr = process->ReadPointerFromMemory(info_location, error);
+  info_addr = m_process->ReadPointerFromMemory(info_location, error);
   if (error.Fail()) {
     LLDB_LOGF(log, "%s FAILED - could not read from the info location: %s",
               __FUNCTION__, error.AsCString());
@@ -90,22 +138,14 @@ static addr_t ResolveRendezvousAddress(Process *process) {
   return info_addr;
 }
 
-DYLDRendezvous::DYLDRendezvous(Process *process)
-    : m_process(process), m_rendezvous_addr(LLDB_INVALID_ADDRESS), m_current(),
-      m_previous(), m_loaded_modules(), m_soentries(), m_added_soentries(),
-      m_removed_soentries() {
-  m_thread_info.valid = false;
-  UpdateExecutablePath();
-}
-
 void DYLDRendezvous::UpdateExecutablePath() {
   if (m_process) {
-    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+    Log *log = GetLog(LLDBLog::DynamicLoader);
     Module *exe_mod = m_process->GetTarget().GetExecutableModulePointer();
     if (exe_mod) {
       m_exe_file_spec = exe_mod->GetPlatformFileSpec();
       LLDB_LOGF(log, "DYLDRendezvous::%s exe module executable path set: '%s'",
-                __FUNCTION__, m_exe_file_spec.GetCString());
+                __FUNCTION__, m_exe_file_spec.GetPath().c_str());
     } else {
       LLDB_LOGF(log,
                 "DYLDRendezvous::%s cannot cache exe module path: null "
@@ -115,8 +155,15 @@ void DYLDRendezvous::UpdateExecutablePath() {
   }
 }
 
+void DYLDRendezvous::Rendezvous::DumpToLog(Log *log, const char *label) {
+  LLDB_LOGF(log, "%s Rendezvous: version = %" PRIu64 ", map_addr = 0x%16.16"
+            PRIx64 ", brk = 0x%16.16" PRIx64 ", state = %" PRIu64
+            " (%s), ldbase = 0x%16.16" PRIx64, label ? label : "", version,
+            map_addr, brk, state, StateToCStr((RendezvousState)state), ldbase);
+}
+
 bool DYLDRendezvous::Resolve() {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
 
   const size_t word_size = 4;
   Rendezvous info;
@@ -132,7 +179,8 @@ bool DYLDRendezvous::Resolve() {
             __FUNCTION__, uint64_t(address_size), uint64_t(padding));
 
   if (m_rendezvous_addr == LLDB_INVALID_ADDRESS)
-    cursor = info_addr = ResolveRendezvousAddress(m_process);
+    cursor = info_addr =
+        ResolveRendezvousAddress();
   else
     cursor = info_addr = m_rendezvous_addr;
   LLDB_LOGF(log, "DYLDRendezvous::%s cursor = 0x%" PRIx64, __FUNCTION__,
@@ -161,6 +209,9 @@ bool DYLDRendezvous::Resolve() {
   m_previous = m_current;
   m_current = info;
 
+  m_previous.DumpToLog(log, "m_previous");
+  m_current.DumpToLog(log, "m_current ");
+
   if (m_current.map_addr == 0)
     return false;
 
@@ -175,6 +226,14 @@ bool DYLDRendezvous::IsValid() {
 }
 
 DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
+  // If we have a core file, we will read the current rendezvous state
+  // from the core file's memory into m_current which can be in an inconsistent
+  // state, so we can't rely on its state to determine what we should do. We
+  // always need it to load all of the shared libraries one time when we attach
+  // to a core file.
+  if (IsCoreFile())
+    return eTakeSnapshot;
+
   switch (m_current.state) {
 
   case eConsistent:
@@ -194,29 +253,93 @@ DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
     break;
 
   case eAdd:
+    // If the main executable or a shared library defines a publicly visible
+    // symbol named "_r_debug", then it will cause problems once the executable
+    // that contains the symbol is loaded into the process. The correct
+    // "_r_debug" structure is currently found by LLDB by looking through
+    // the .dynamic section in the main executable and finding the DT_DEBUG tag
+    // entry.
+    //
+    // An issue comes up if someone defines another publicly visible "_r_debug"
+    // struct in their program. Sample code looks like:
+    //
+    //    #include <link.h>
+    //    r_debug _r_debug;
+    //
+    // If code like this is in an executable or shared library, this creates a
+    // new "_r_debug" structure and it causes problems once the executable is
+    // loaded due to the way symbol lookups happen in linux: the shared library
+    // list from _r_debug.r_map will be searched for a symbol named "_r_debug"
+    // and the first match will be the new version that is used. The dynamic
+    // loader is always last in this list. So at some point the dynamic loader
+    // will start updating the copy of "_r_debug" that gets found first. The
+    // issue is that LLDB will only look at the copy that is pointed to by the
+    // DT_DEBUG entry, or the initial version from the ld.so binary.
+    //
+    // Steps that show the problem are:
+    //
+    // - LLDB finds the "_r_debug" structure via the DT_DEBUG entry in the
+    //   .dynamic section and this points to the "_r_debug" in ld.so
+    // - ld.so uodates its copy of "_r_debug" with "state = eAdd" before it
+    //   loads the dependent shared libraries for the main executable and
+    //   any dependencies of all shared libraries from the executable's list
+    //   and ld.so code calls the debugger notification function
+    //   that LLDB has set a breakpoint on.
+    // - LLDB hits the breakpoint and the breakpoint has a callback function
+    //   where we read the _r_debug.state (eAdd) state and we do nothing as the
+    //   "eAdd" state indicates that the shared libraries are about to be added.
+    // - ld.so finishes loading the main executable and any dependent shared
+    //   libraries and it will update the "_r_debug.state" member with a
+    //   "eConsistent", but it now updates the "_r_debug" in the a.out program
+    //   and it calls the debugger notification function.
+    // - lldb hits the notification breakpoint and checks the ld.so copy of
+    //   "_r_debug.state" which still has a state of "eAdd", but LLDB needs to see a
+    //   "eConsistent" state to trigger the shared libraries to get loaded into
+    //   the debug session, but LLDB the ld.so _r_debug.state which still
+    //   contains "eAdd" and doesn't do anyhing and library load is missed.
+    //   The "_r_debug" in a.out has the state set correctly to "eConsistent"
+    //   but LLDB is still looking at the "_r_debug" from ld.so.
+    //
+    // So if we detect two "eAdd" states in a row, we assume this is the issue
+    // and we now load shared libraries correctly and will emit a log message
+    // in the "log enable lldb dyld" log channel which states there might be
+    // multiple "_r_debug" structs causing problems.
+    //
+    // The correct solution is that no one should be adding a duplicate
+    // publicly visible "_r_debug" symbols to their binaries, but we have
+    // programs that are doing this already and since it can be done, we should
+    // be able to work with this and keep debug sessions working as expected.
+    //
+    // If a user includes the <link.h> file, they can just use the existing
+    // "_r_debug" structure as it is defined in this header file as "extern
+    // struct r_debug _r_debug;" and no local copies need to be made.
+    if (m_previous.state == eAdd) {
+      Log *log = GetLog(LLDBLog::DynamicLoader);
+      LLDB_LOG(log, "DYLDRendezvous::GetAction() found two eAdd states in a "
+               "row, check process for multiple \"_r_debug\" symbols. "
+               "Returning eAddModules to ensure shared libraries get loaded "
+               "correctly");
+      return eAddModules;
+    }
+    return eNoAction;
   case eDelete:
-    // Some versions of the android dynamic linker might send two
-    // notifications with state == eAdd back to back. Ignore them until we
-    // get an eConsistent notification.
-    if (!(m_previous.state == eConsistent ||
-          (m_previous.state == eAdd && m_current.state == eDelete)))
-      return eNoAction;
-
-    return eTakeSnapshot;
+    return eNoAction;
   }
 
   return eNoAction;
 }
 
 bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
-  auto action = GetAction();
+  const auto action = GetAction();
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  LLDB_LOG(log, "{0} action = {1}", LLVM_PRETTY_FUNCTION, ActionToCStr(action));
 
   if (action == eNoAction)
     return false;
 
+  m_added_soentries.clear();
+  m_removed_soentries.clear();
   if (action == eTakeSnapshot) {
-    m_added_soentries.clear();
-    m_removed_soentries.clear();
     // We already have the loaded list from the previous update so no need to
     // find all the modules again.
     if (!m_loaded_modules.m_list.empty())
@@ -245,11 +368,14 @@ bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
 }
 
 bool DYLDRendezvous::UpdateSOEntries() {
-  switch (GetAction()) {
+  m_added_soentries.clear();
+  m_removed_soentries.clear();
+  const auto action = GetAction();
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  LLDB_LOG(log, "{0} action = {1}", LLVM_PRETTY_FUNCTION, ActionToCStr(action));
+  switch (action) {
   case eTakeSnapshot:
     m_soentries.clear();
-    m_added_soentries.clear();
-    m_removed_soentries.clear();
     return TakeSnapshot(m_soentries);
   case eAddModules:
     return AddSOEntries();
@@ -296,8 +422,10 @@ bool DYLDRendezvous::SaveSOEntriesFromRemote(
       return false;
 
     // Only add shared libraries and not the executable.
-    if (!SOEntryIsMainExecutable(entry))
+    if (!SOEntryIsMainExecutable(entry)) {
+      UpdateFileSpecIfNecessary(entry);
       m_soentries.push_back(entry);
+    }
   }
 
   m_loaded_modules = module_list;
@@ -324,6 +452,7 @@ bool DYLDRendezvous::AddSOEntriesFromRemote(
 
     // Only add shared libraries and not the executable.
     if (!SOEntryIsMainExecutable(entry)) {
+      UpdateFileSpecIfNecessary(entry);
       m_soentries.push_back(entry);
       m_added_soentries.push_back(entry);
     }
@@ -353,7 +482,7 @@ bool DYLDRendezvous::RemoveSOEntriesFromRemote(
 
     // Only add shared libraries and not the executable.
     if (!SOEntryIsMainExecutable(entry)) {
-      auto pos = std::find(m_soentries.begin(), m_soentries.end(), entry);
+      auto pos = llvm::find(m_soentries, entry);
       if (pos == m_soentries.end())
         return false;
 
@@ -383,8 +512,9 @@ bool DYLDRendezvous::AddSOEntries() {
     if (SOEntryIsMainExecutable(entry))
       continue;
 
-    pos = std::find(m_soentries.begin(), m_soentries.end(), entry);
-    if (pos == m_soentries.end()) {
+    UpdateFileSpecIfNecessary(entry);
+
+    if (!llvm::is_contained(m_soentries, entry)) {
       m_soentries.push_back(entry);
       m_added_soentries.push_back(entry);
     }
@@ -403,8 +533,7 @@ bool DYLDRendezvous::RemoveSOEntries() {
     return false;
 
   for (iterator I = begin(); I != end(); ++I) {
-    pos = std::find(entry_list.begin(), entry_list.end(), *I);
-    if (pos == entry_list.end())
+    if (!llvm::is_contained(entry_list, *I))
       m_removed_soentries.push_back(*I);
   }
 
@@ -420,10 +549,15 @@ bool DYLDRendezvous::SOEntryIsMainExecutable(const SOEntry &entry) {
   switch (triple.getOS()) {
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
+  case llvm::Triple::OpenBSD:
     return entry.file_spec == m_exe_file_spec;
   case llvm::Triple::Linux:
     if (triple.isAndroid())
       return entry.file_spec == m_exe_file_spec;
+    // If we are debugging ld.so, then all SOEntries should be treated as
+    // libraries, including the "main" one (denoted by an empty string).
+    if (!entry.file_spec && m_executable_interpreter)
+      return false;
     return !entry.file_spec;
   default:
     return false;
@@ -446,6 +580,8 @@ bool DYLDRendezvous::TakeSnapshot(SOEntryList &entry_list) {
     // Only add shared libraries and not the executable.
     if (SOEntryIsMainExecutable(entry))
       continue;
+
+    UpdateFileSpecIfNecessary(entry);
 
     entry_list.push_back(entry);
   }
@@ -512,6 +648,19 @@ void DYLDRendezvous::UpdateBaseAddrIfNecessary(SOEntry &entry,
   }
 }
 
+void DYLDRendezvous::UpdateFileSpecIfNecessary(SOEntry &entry) {
+  // Updates filename if empty. It is useful while debugging ld.so,
+  // when the link map returns empty string for the main executable.
+  if (!entry.file_spec) {
+    MemoryRegionInfo region;
+    Status region_status =
+        m_process->GetMemoryRegionInfo(entry.dyn_addr, region);
+    if (!region.GetName().IsEmpty())
+      entry.file_spec.SetFile(region.GetName().AsCString(),
+                              FileSpec::Style::native);
+  }
+}
+
 bool DYLDRendezvous::ReadSOEntryFromMemory(lldb::addr_t addr, SOEntry &entry) {
   entry.clear();
 
@@ -562,16 +711,19 @@ bool DYLDRendezvous::FindMetadata(const char *name, PThreadField field,
   target.GetImages().FindSymbolsWithNameAndType(ConstString(name),
                                                 eSymbolTypeAny, list);
   if (list.IsEmpty())
-  return false;
-
-  Address address = list[0].symbol->GetAddress();
-  addr_t addr = address.GetLoadAddress(&target);
-  if (addr == LLDB_INVALID_ADDRESS)
     return false;
 
+  Address address = list[0].symbol->GetAddress();
+  address.SetOffset(address.GetOffset() + field * sizeof(uint32_t));
+
+  // Read from target memory as this allows us to try process memory and
+  // fallback to reading from read only sections from the object files. Here we
+  // are reading read only data from libpthread.so to find data in the thread
+  // specific area for the data we want and this won't be saved into process
+  // memory due to it being read only.
   Status error;
-  value = (uint32_t)m_process->ReadUnsignedIntegerFromMemory(
-      addr + field * sizeof(uint32_t), sizeof(uint32_t), 0, error);
+  value =
+      target.ReadUnsignedIntegerFromMemory(address, sizeof(uint32_t), 0, error);
   if (error.Fail())
     return false;
 
@@ -626,11 +778,15 @@ void DYLDRendezvous::DumpToLog(Log *log) const {
     log->PutCString("DYLDRendezvous SOEntries:");
 
   for (int i = 1; I != E; ++I, ++i) {
-    LLDB_LOGF(log, "\n   SOEntry [%d] %s", i, I->file_spec.GetCString());
+    LLDB_LOGF(log, "\n   SOEntry [%d] %s", i, I->file_spec.GetPath().c_str());
     LLDB_LOGF(log, "      Base : %" PRIx64, I->base_addr);
     LLDB_LOGF(log, "      Path : %" PRIx64, I->path_addr);
     LLDB_LOGF(log, "      Dyn  : %" PRIx64, I->dyn_addr);
     LLDB_LOGF(log, "      Next : %" PRIx64, I->next);
     LLDB_LOGF(log, "      Prev : %" PRIx64, I->prev);
   }
+}
+
+bool DYLDRendezvous::IsCoreFile() const {
+  return !m_process->IsLiveDebugSession();
 }

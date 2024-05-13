@@ -15,36 +15,34 @@ from lldbsuite.test import lldbutil
 class WatchpointSizeTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
 
         # Source filename.
-        self.source = 'main.c'
+        self.source = "main.c"
 
         # Output filename.
         self.exe_name = self.getBuildArtifact("a.out")
-        self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
+        self.d = {"C_SOURCES": self.source, "EXE": self.exe_name}
 
     # Read-write watchpoints not supported on SystemZ
-    @expectedFailureAll(archs=['s390x'])
+    @expectedFailureAll(archs=["s390x"])
     def test_byte_size_watchpoints_with_byte_selection(self):
         """Test to selectively watch different bytes in a 8-byte array."""
-        self.run_watchpoint_size_test('byteArray', 8, '1')
+        self.run_watchpoint_size_test("byteArray", 8, "1")
 
     # Read-write watchpoints not supported on SystemZ
-    @expectedFailureAll(archs=['s390x'])
+    @expectedFailureAll(archs=["s390x"])
     def test_two_byte_watchpoints_with_word_selection(self):
         """Test to selectively watch different words in an 8-byte word array."""
-        self.run_watchpoint_size_test('wordArray', 4, '2')
+        self.run_watchpoint_size_test("wordArray", 4, "2")
 
     # Read-write watchpoints not supported on SystemZ
-    @expectedFailureAll(archs=['s390x'])
+    @expectedFailureAll(archs=["s390x"])
     def test_four_byte_watchpoints_with_dword_selection(self):
         """Test to selectively watch two double words in an 8-byte dword array."""
-        self.run_watchpoint_size_test('dwordArray', 2, '4')
+        self.run_watchpoint_size_test("dwordArray", 2, "4")
 
     def run_watchpoint_size_test(self, arrayName, array_size, watchsize):
         self.build(dictionary=self.d)
@@ -54,11 +52,12 @@ class WatchpointSizeTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Detect line number after which we are going to increment arrayName.
-        loc_line = line_number('main.c', '// About to write ' + arrayName)
+        loc_line = line_number("main.c", "// About to write " + arrayName)
 
         # Set a breakpoint on the line detected above.
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.c", loc_line, num_expected_locations=1, loc_exact=True)
+            self, "main.c", loc_line, num_expected_locations=1, loc_exact=True
+        )
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -66,56 +65,57 @@ class WatchpointSizeTestCase(TestBase):
         for i in range(array_size):
             # We should be stopped again due to the breakpoint.
             # The stop reason of the thread should be breakpoint.
-            self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                        substrs=['stopped', 'stop reason = breakpoint'])
+            self.expect(
+                "thread list",
+                STOPPED_DUE_TO_BREAKPOINT,
+                substrs=["stopped", "stop reason = breakpoint"],
+            )
 
             # Set a read_write type watchpoint arrayName
             watch_loc = arrayName + "[" + str(i) + "]"
             self.expect(
-                "watchpoint set variable -w read_write " +
-                watch_loc,
+                "watchpoint set variable -w read_write " + watch_loc,
                 WATCHPOINT_CREATED,
-                substrs=[
-                    'Watchpoint created',
-                    'size = ' +
-                    watchsize,
-                    'type = rw'])
+                substrs=["Watchpoint created", "size = " + watchsize, "type = rw"],
+            )
 
             # Use the '-v' option to do verbose listing of the watchpoint.
             # The hit count should be 0 initially.
-            self.expect("watchpoint list -v", substrs=['hit_count = 0'])
+            self.expect("watchpoint list -v", substrs=["hit_count = 0"])
 
             self.runCmd("process continue")
 
             # We should be stopped due to the watchpoint.
             # The stop reason of the thread should be watchpoint.
-            self.expect("thread list", STOPPED_DUE_TO_WATCHPOINT,
-                        substrs=['stopped', 'stop reason = watchpoint'])
+            self.expect(
+                "thread list",
+                STOPPED_DUE_TO_WATCHPOINT,
+                substrs=["stopped", "stop reason = watchpoint"],
+            )
 
             # Use the '-v' option to do verbose listing of the watchpoint.
             # The hit count should now be 1.
-            self.expect("watchpoint list -v",
-                        substrs=['hit_count = 1'])
+            self.expect("watchpoint list -v", substrs=["hit_count = 1"])
 
             self.runCmd("process continue")
 
             # We should be stopped due to the watchpoint.
             # The stop reason of the thread should be watchpoint.
-            self.expect("thread list", STOPPED_DUE_TO_WATCHPOINT,
-                        substrs=['stopped', 'stop reason = watchpoint'])
+            self.expect(
+                "thread list",
+                STOPPED_DUE_TO_WATCHPOINT,
+                substrs=["stopped", "stop reason = watchpoint"],
+            )
 
             # Use the '-v' option to do verbose listing of the watchpoint.
             # The hit count should now be 1.
             # Verify hit_count has been updated after value has been read.
-            self.expect("watchpoint list -v",
-                        substrs=['hit_count = 2'])
+            self.expect("watchpoint list -v", substrs=["hit_count = 2"])
 
             # Delete the watchpoint immediately, but set auto-confirm to true
             # first.
             self.runCmd("settings set auto-confirm true")
-            self.expect(
-                "watchpoint delete",
-                substrs=['All watchpoints removed.'])
+            self.expect("watchpoint delete", substrs=["All watchpoints removed."])
             # Restore the original setting of auto-confirm.
             self.runCmd("settings clear auto-confirm")
 

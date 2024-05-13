@@ -5,3 +5,8 @@ module header1 {
 module header2 {
     header "header2.h"
 }
+
+module header3 {
+  header "header.h"
+  header "header3.h"
+}

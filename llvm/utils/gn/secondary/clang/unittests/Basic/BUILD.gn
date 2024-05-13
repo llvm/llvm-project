@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("BasicTests") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
@@ -6,14 +6,17 @@ unittest("BasicTests") {
     "//clang/lib/Basic",
     "//clang/lib/Lex",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "CharInfoTest.cpp",
+    "DarwinSDKInfoTest.cpp",
     "DiagnosticTest.cpp",
     "FileEntryTest.cpp",
     "FileManagerTest.cpp",
     "LineOffsetMappingTest.cpp",
     "SanitizersTest.cpp",
+    "SarifTest.cpp",
     "SourceManagerTest.cpp",
   ]
 }

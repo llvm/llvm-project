@@ -12,7 +12,7 @@ define void @func1() nounwind {
 ; X86-LABEL: func1:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movq LCPI0_0, %mm0 ## mm0 = 0x200000000
+; X86-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}, %mm0 ## mm0 = 0x200000000
 ; X86-NEXT:    calll _func2
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -20,7 +20,7 @@ define void @func1() nounwind {
 ; X64-LABEL: func1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movq {{.*}}(%rip), %mm0 ## mm0 = 0x200000000
+; X64-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %mm0 ## mm0 = 0x200000000
 ; X64-NEXT:    movq2dq %mm0, %xmm0
 ; X64-NEXT:    callq _func2
 ; X64-NEXT:    popq %rax

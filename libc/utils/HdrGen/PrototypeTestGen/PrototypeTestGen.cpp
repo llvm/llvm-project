@@ -22,12 +22,20 @@ llvm::cl::list<std::string>
 } // anonymous namespace
 
 bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
-  OS << "#include \"TypeTraits.h\"\n";
+  OS << "#include \"src/__support/CPP/type_traits.h\"\n";
   llvm_libc::APIIndexer G(records);
   std::unordered_set<std::string> headerFileSet;
   for (const auto &entrypoint : EntrypointNamesOption) {
+    if (entrypoint == "errno")
+      continue;
     auto match = G.FunctionToHeaderMap.find(entrypoint);
     if (match == G.FunctionToHeaderMap.end()) {
+      auto objectMatch = G.ObjectToHeaderMap.find(entrypoint);
+      if (objectMatch != G.ObjectToHeaderMap.end()) {
+        headerFileSet.insert(objectMatch->second);
+        continue;
+      }
+
       llvm::errs() << "ERROR: entrypoint '" << entrypoint
                    << "' could not be found in spec in any public header\n";
       return true;
@@ -39,10 +47,23 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
 
   OS << '\n';
 
-  OS << "int main() {\n";
+  OS << "extern \"C\" int main() {\n";
   for (const auto &entrypoint : EntrypointNamesOption) {
+    if (entrypoint == "errno")
+      continue;
     auto match = G.FunctionSpecMap.find(entrypoint);
     if (match == G.FunctionSpecMap.end()) {
+      auto objectMatch = G.ObjectSpecMap.find(entrypoint);
+      if (objectMatch != G.ObjectSpecMap.end()) {
+        auto entrypointPtr = entrypoint + "_ptr";
+        llvm::Record *objectSpec = G.ObjectSpecMap[entrypoint];
+        auto objectType = objectSpec->getValueAsString("Type");
+        // We just make sure that the global object is present.
+        OS << "  " << objectType << " *" << entrypointPtr << " = &"
+           << entrypoint << ";\n";
+        OS << "  ++" << entrypointPtr << ";\n"; // To avoid unused var warning.
+        continue;
+      }
       llvm::errs() << "ERROR: entrypoint '" << entrypoint
                    << "' could not be found in spec in any public header\n";
       return true;
@@ -56,7 +77,8 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
     if (llvm::StringRef(returnType).contains("_Noreturn"))
       returnType = "void";
 
-    OS << "  static_assert(__llvm_libc::cpp::IsSame<" << returnType << '(';
+    OS << "  static_assert(LIBC_NAMESPACE::cpp::is_same_v<" << returnType
+       << '(';
     auto args = functionSpec->getValueAsListOfDefs("Args");
     for (size_t i = 0, size = args.size(); i < size; ++i) {
       llvm::Record *argType = args[i]->getValueAsDef("ArgType");
@@ -64,7 +86,7 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
       if (i < size - 1)
         OS << ", ";
     }
-    OS << "), decltype(" << entrypoint << ")>::Value, ";
+    OS << ") __NOEXCEPT, decltype(" << entrypoint << ")>, ";
     OS << '"' << entrypoint
        << " prototype in TableGen does not match public header" << '"';
     OS << ");\n";

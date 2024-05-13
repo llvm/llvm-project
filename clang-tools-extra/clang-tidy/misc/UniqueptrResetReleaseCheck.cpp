@@ -12,15 +12,14 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 UniqueptrResetReleaseCheck::UniqueptrResetReleaseCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM)) {}
+                                        utils::IncludeSorter::IS_LLVM),
+               areDiagsSelfContained()) {}
 
 void UniqueptrResetReleaseCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -124,7 +123,7 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
     AssignmentText = " = std::move(*";
     TrailingText = ")";
     NeedsUtilityInclude = true;
-  } else if (!Right->isRValue()) {
+  } else if (!Right->isPRValue()) {
     AssignmentText = " = std::move(";
     TrailingText = ")";
     NeedsUtilityInclude = true;
@@ -147,6 +146,4 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
         Result.SourceManager->getFileID(ResetMember->getBeginLoc()),
         "<utility>");
 }
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

@@ -392,19 +392,19 @@ define i32 @test_mul_by_13(i32 %x) {
 define i32 @test_mul_by_14(i32 %x) {
 ; X86-LABEL: test_mul_by_14:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax), %ecx
 ; X86-NEXT:    shll $4, %eax
-; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mul_by_14:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    leal (%rax,%rax), %ecx
 ; X64-NEXT:    shll $4, %eax
-; X64-NEXT:    subl %edi, %eax
-; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
 ;
 ; X86-NOOPT-LABEL: test_mul_by_14:
@@ -487,7 +487,6 @@ define i32 @test_mul_by_17(i32 %x) {
 ;
 ; X64-LABEL: test_mul_by_17:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $4, %eax
 ; X64-NEXT:    addl %edi, %eax
@@ -901,10 +900,10 @@ define i32 @test_mul_by_28(i32 %x) {
 define i32 @test_mul_by_29(i32 %x) {
 ; X86-LABEL: test_mul_by_29:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,8), %eax
-; X86-NEXT:    leal (%eax,%eax,2), %eax
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,8), %ecx
+; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
+; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -947,19 +946,19 @@ define i32 @test_mul_by_29(i32 %x) {
 define i32 @test_mul_by_30(i32 %x) {
 ; X86-LABEL: test_mul_by_30:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax), %ecx
 ; X86-NEXT:    shll $5, %eax
-; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mul_by_30:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    leal (%rax,%rax), %ecx
 ; X64-NEXT:    shll $5, %eax
-; X64-NEXT:    subl %edi, %eax
-; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
 ;
 ; X86-NOOPT-LABEL: test_mul_by_30:
@@ -1115,19 +1114,19 @@ define i32 @test_mul_by_41(i32 %x) {
 define i32 @test_mul_by_62(i32 %x) {
 ; X86-LABEL: test_mul_by_62:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax), %ecx
 ; X86-NEXT:    shll $6, %eax
-; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mul_by_62:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    leal (%rax,%rax), %ecx
 ; X64-NEXT:    shll $6, %eax
-; X64-NEXT:    subl %edi, %eax
-; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
 ;
 ; X86-NOOPT-LABEL: test_mul_by_62:
@@ -1181,9 +1180,8 @@ define i32 @test_mul_by_66(i32 %x) {
 ; X64-SLM-LABEL: test_mul_by_66:
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-SLM-NEXT:    movl %edi, %eax
-; X64-SLM-NEXT:    shll $6, %eax
-; X64-SLM-NEXT:    addl %edi, %eax
+; X64-SLM-NEXT:    leal (%rdi,%rdi), %eax
+; X64-SLM-NEXT:    shll $6, %edi
 ; X64-SLM-NEXT:    addl %edi, %eax
 ; X64-SLM-NEXT:    retq
   %mul = mul nsw i32 %x, 66

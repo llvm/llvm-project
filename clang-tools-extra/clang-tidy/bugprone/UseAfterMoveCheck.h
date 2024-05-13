@@ -11,15 +11,13 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// The check warns if an object is used after it has been moved, without an
 /// intervening reinitialization.
 ///
 /// For details, see the user-facing documentation:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-use-after-move.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/use-after-move.html
 class UseAfterMoveCheck : public ClangTidyCheck {
 public:
   UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
@@ -31,8 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_USEAFTERMOVECHECK_H

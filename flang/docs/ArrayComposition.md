@@ -8,9 +8,10 @@
 
 # Array Composition
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 This note attempts to describe the motivation for and design of an

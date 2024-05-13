@@ -12,8 +12,8 @@ target triple = "x86_64-unknown-unknown"
 define <16 x i32> @stack_fold_valignd(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: stack_fold_valignd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -22,7 +22,7 @@ define <16 x i32> @stack_fold_valignd(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    valignd $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -30,11 +30,11 @@ define <16 x i32> @stack_fold_valignd(<16 x i32> %a, <16 x i32> %b) {
   ret <16 x i32> %2
 }
 
-define <16 x i32> @stack_fold_valignd_mask(<16 x i32> %a, <16 x i32> %b, <16 x i32>* %passthru, i16 %mask) {
+define <16 x i32> @stack_fold_valignd_mask(<16 x i32> %a, <16 x i32> %b, ptr %passthru, i16 %mask) {
 ; CHECK-LABEL: stack_fold_valignd_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -46,13 +46,13 @@ define <16 x i32> @stack_fold_valignd_mask(<16 x i32> %a, <16 x i32> %b, <16 x i
 ; CHECK-NEXT:    valignd $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
   %3 = bitcast i16 %mask to <16 x i1>
-  %4 = load <16 x i32>, <16 x i32>* %passthru
+  %4 = load <16 x i32>, ptr %passthru
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -60,8 +60,8 @@ define <16 x i32> @stack_fold_valignd_mask(<16 x i32> %a, <16 x i32> %b, <16 x i
 define <16 x i32> @stack_fold_valignd_maskz(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; CHECK-LABEL: stack_fold_valignd_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -71,7 +71,7 @@ define <16 x i32> @stack_fold_valignd_maskz(<16 x i32> %a, <16 x i32> %b, i16 %m
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    valignd $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -84,8 +84,8 @@ define <16 x i32> @stack_fold_valignd_maskz(<16 x i32> %a, <16 x i32> %b, i16 %m
 define <8 x i64> @stack_fold_valignq(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: stack_fold_valignq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -94,7 +94,7 @@ define <8 x i64> @stack_fold_valignq(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    valignq $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = mem[1,2,3,4,5,6,7],zmm0[0]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -102,11 +102,11 @@ define <8 x i64> @stack_fold_valignq(<8 x i64> %a, <8 x i64> %b) {
   ret <8 x i64> %2
 }
 
-define <8 x i64> @stack_fold_valignq_mask(<8 x i64> %a, <8 x i64> %b, <8 x i64>* %passthru, i8 %mask) {
+define <8 x i64> @stack_fold_valignq_mask(<8 x i64> %a, <8 x i64> %b, ptr %passthru, i8 %mask) {
 ; CHECK-LABEL: stack_fold_valignq_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -118,13 +118,13 @@ define <8 x i64> @stack_fold_valignq_mask(<8 x i64> %a, <8 x i64> %b, <8 x i64>*
 ; CHECK-NEXT:    valignq $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = mem[1,2,3,4,5,6,7],zmm0[0]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = shufflevector <8 x i64> %a, <8 x i64> %b, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %3 = bitcast i8 %mask to <8 x i1>
-  %4 = load <8 x i64>, <8 x i64>* %passthru
+  %4 = load <8 x i64>, ptr %passthru
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
@@ -132,8 +132,8 @@ define <8 x i64> @stack_fold_valignq_mask(<8 x i64> %a, <8 x i64> %b, <8 x i64>*
 define <8 x i64> @stack_fold_valignq_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 ; CHECK-LABEL: stack_fold_valignq_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -143,7 +143,7 @@ define <8 x i64> @stack_fold_valignq_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mask)
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    valignq $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = mem[1,2,3,4,5,6,7],zmm0[0]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -182,7 +182,7 @@ define <64 x i8> @stack_fold_pavgb_commuted(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %2
 }
 
-define <64 x i8> @stack_fold_pavgb_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %a2, i64 %mask) {
+define <64 x i8> @stack_fold_pavgb_mask(<64 x i8> %a0, <64 x i8> %a1, ptr %a2, i64 %mask) {
 ; CHECK-LABEL: stack_fold_pavgb_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -198,12 +198,12 @@ define <64 x i8> @stack_fold_pavgb_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>*
   %2 = call <64 x i8> @llvm.x86.avx512.pavg.b.512(<64 x i8> %a0, <64 x i8> %a1)
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <64 x i8>, <64 x i8>* %a2
+  %4 = load <64 x i8>, ptr %a2
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
 
-define <64 x i8> @stack_fold_pavgb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %a2, i64 %mask) {
+define <64 x i8> @stack_fold_pavgb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, ptr %a2, i64 %mask) {
 ; CHECK-LABEL: stack_fold_pavgb_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -219,7 +219,7 @@ define <64 x i8> @stack_fold_pavgb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, <
   %2 = call <64 x i8> @llvm.x86.avx512.pavg.b.512(<64 x i8> %a1, <64 x i8> %a0)
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <64 x i8>, <64 x i8>* %a2
+  %4 = load <64 x i8>, ptr %a2
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
@@ -287,7 +287,7 @@ define <32 x i16> @stack_fold_pavgw_commuted(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %2
 }
 
-define <32 x i16> @stack_fold_pavgw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_pavgw_mask(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pavgw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -303,12 +303,12 @@ define <32 x i16> @stack_fold_pavgw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x i
   %2 = call <32 x i16> @llvm.x86.avx512.pavg.w.512(<32 x i16> %a0, <32 x i16> %a1)
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
 
-define <32 x i16> @stack_fold_pavgw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_pavgw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pavgw_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -324,7 +324,7 @@ define <32 x i16> @stack_fold_pavgw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1
   %2 = call <32 x i16> @llvm.x86.avx512.pavg.w.512(<32 x i16> %a1, <32 x i16> %a0)
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
@@ -490,8 +490,8 @@ define <64 x i8> @stack_fold_pabsb(<64 x i8> %a0) {
 define <64 x i8> @stack_fold_pabsb_mask(<64 x i8> %passthru, <64 x i8> %a0, i64 %mask) {
 ; CHECK-LABEL: stack_fold_pabsb_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -500,7 +500,7 @@ define <64 x i8> @stack_fold_pabsb_mask(<64 x i8> %passthru, <64 x i8> %a0, i64 
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpabsb {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -550,8 +550,8 @@ define <16 x i32> @stack_fold_pabsd(<16 x i32> %a0) {
 define <16 x i32> @stack_fold_pabsd_mask(<16 x i32> %passthru, <16 x i32> %a0, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pabsd_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -560,7 +560,7 @@ define <16 x i32> @stack_fold_pabsd_mask(<16 x i32> %passthru, <16 x i32> %a0, i
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -610,8 +610,8 @@ define <8 x i64> @stack_fold_pabsq(<8 x i64> %a0) {
 define <8 x i64> @stack_fold_pabsq_mask(<8 x i64> %passthru, <8 x i64> %a0, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pabsq_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -620,7 +620,7 @@ define <8 x i64> @stack_fold_pabsq_mask(<8 x i64> %passthru, <8 x i64> %a0, i8 %
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpabsq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -670,8 +670,8 @@ define <32 x i16> @stack_fold_pabsw(<32 x i16> %a0) {
 define <32 x i16> @stack_fold_pabsw_mask(<32 x i16> %passthru, <32 x i16> %a0, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pabsw_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -680,7 +680,7 @@ define <32 x i16> @stack_fold_pabsw_mask(<32 x i16> %passthru, <32 x i16> %a0, i
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpabsw {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -756,7 +756,7 @@ define <32 x i16> @stack_fold_packusdw(<16 x i32> %a0, <16 x i32> %a1) {
 }
 declare <32 x i16> @llvm.x86.avx512.packusdw.512(<16 x i32>, <16 x i32>) nounwind readnone
 
-define <32 x i16> @stack_fold_packusdw_mask(<32 x i16>* %passthru, <16 x i32> %a0, <16 x i32> %a1, i32 %mask) {
+define <32 x i16> @stack_fold_packusdw_mask(ptr %passthru, <16 x i32> %a0, <16 x i32> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_packusdw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -769,7 +769,7 @@ define <32 x i16> @stack_fold_packusdw_mask(<32 x i16>* %passthru, <16 x i32> %a
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load <32 x i16>, <32 x i16>* %passthru
+  %2 = load <32 x i16>, ptr %passthru
   %3 = call <32 x i16> @llvm.x86.avx512.packusdw.512(<16 x i32> %a0, <16 x i32> %a1)
   %4 = bitcast i32 %mask to <32 x i1>
   %5 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %2
@@ -836,7 +836,7 @@ define <64 x i8> @stack_fold_paddb_commuted(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %2
 }
 
-define <64 x i8> @stack_fold_paddb_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %a2, i64 %mask) {
+define <64 x i8> @stack_fold_paddb_mask(<64 x i8> %a0, <64 x i8> %a1, ptr %a2, i64 %mask) {
 ; CHECK-LABEL: stack_fold_paddb_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -852,12 +852,12 @@ define <64 x i8> @stack_fold_paddb_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>*
   %2 = add <64 x i8> %a0, %a1
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <64 x i8>, <64 x i8>* %a2
+  %4 = load <64 x i8>, ptr %a2
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
 
-define <64 x i8> @stack_fold_paddb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %a2, i64 %mask) {
+define <64 x i8> @stack_fold_paddb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, ptr %a2, i64 %mask) {
 ; CHECK-LABEL: stack_fold_paddb_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -873,7 +873,7 @@ define <64 x i8> @stack_fold_paddb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, <
   %2 = add <64 x i8> %a1, %a0
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <64 x i8>, <64 x i8>* %a2
+  %4 = load <64 x i8>, ptr %a2
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
@@ -940,7 +940,7 @@ define <16 x i32> @stack_fold_paddd_commuted(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %2
 }
 
-define <16 x i32> @stack_fold_paddd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_paddd_mask(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_paddd_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -956,12 +956,12 @@ define <16 x i32> @stack_fold_paddd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i
   %2 = add <16 x i32> %a0, %a1
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
 
-define <16 x i32> @stack_fold_paddd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_paddd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_paddd_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -977,7 +977,7 @@ define <16 x i32> @stack_fold_paddd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1
   %2 = add <16 x i32> %a1, %a0
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -1044,7 +1044,7 @@ define <8 x i64> @stack_fold_paddq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %2
 }
 
-define <8 x i64> @stack_fold_paddq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_paddq_mask(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_paddq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1060,12 +1060,12 @@ define <8 x i64> @stack_fold_paddq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>*
   %2 = add <8 x i64> %a0, %a1
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
 
-define <8 x i64> @stack_fold_paddq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_paddq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_paddq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1081,7 +1081,7 @@ define <8 x i64> @stack_fold_paddq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <
   %2 = add <8 x i64> %a1, %a0
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
@@ -1148,7 +1148,7 @@ define <64 x i8> @stack_fold_paddsb_commuted(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %2
 }
 
-define <64 x i8> @stack_fold_paddsb_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %a2, i64 %mask) {
+define <64 x i8> @stack_fold_paddsb_mask(<64 x i8> %a0, <64 x i8> %a1, ptr %a2, i64 %mask) {
 ; CHECK-LABEL: stack_fold_paddsb_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1164,12 +1164,12 @@ define <64 x i8> @stack_fold_paddsb_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>
   %2 = call <64 x i8> @llvm.sadd.sat.v64i8(<64 x i8> %a0, <64 x i8> %a1)
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <64 x i8>, <64 x i8>* %a2
+  %4 = load <64 x i8>, ptr %a2
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
 
-define <64 x i8> @stack_fold_paddsb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %a2, i64 %mask) {
+define <64 x i8> @stack_fold_paddsb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, ptr %a2, i64 %mask) {
 ; CHECK-LABEL: stack_fold_paddsb_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1185,7 +1185,7 @@ define <64 x i8> @stack_fold_paddsb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, 
   %2 = call <64 x i8> @llvm.sadd.sat.v64i8(<64 x i8> %a1, <64 x i8> %a0)
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <64 x i8>, <64 x i8>* %a2
+  %4 = load <64 x i8>, ptr %a2
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
@@ -1252,7 +1252,7 @@ define <32 x i16> @stack_fold_paddsw_commuted(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %2
 }
 
-define <32 x i16> @stack_fold_paddsw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_paddsw_mask(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_paddsw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1268,12 +1268,12 @@ define <32 x i16> @stack_fold_paddsw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x 
   %2 = call <32 x i16> @llvm.sadd.sat.v32i16(<32 x i16> %a0, <32 x i16> %a1)
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
 
-define <32 x i16> @stack_fold_paddsw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_paddsw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_paddsw_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1289,7 +1289,7 @@ define <32 x i16> @stack_fold_paddsw_mask_commuted(<32 x i16> %a0, <32 x i16> %a
   %2 = call <32 x i16> @llvm.sadd.sat.v32i16(<32 x i16> %a1, <32 x i16> %a0)
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
@@ -1356,7 +1356,7 @@ define <64 x i8> @stack_fold_paddusb_commuted(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %2
 }
 
-define <64 x i8> @stack_fold_paddusb_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %a2, i64 %mask) {
+define <64 x i8> @stack_fold_paddusb_mask(<64 x i8> %a0, <64 x i8> %a1, ptr %a2, i64 %mask) {
 ; CHECK-LABEL: stack_fold_paddusb_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1372,12 +1372,12 @@ define <64 x i8> @stack_fold_paddusb_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8
   %2 = call <64 x i8> @llvm.uadd.sat.v64i8(<64 x i8> %a0, <64 x i8> %a1)
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <64 x i8>, <64 x i8>* %a2
+  %4 = load <64 x i8>, ptr %a2
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
 
-define <64 x i8> @stack_fold_paddusb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %a2, i64 %mask) {
+define <64 x i8> @stack_fold_paddusb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, ptr %a2, i64 %mask) {
 ; CHECK-LABEL: stack_fold_paddusb_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1393,7 +1393,7 @@ define <64 x i8> @stack_fold_paddusb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1,
   %2 = call <64 x i8> @llvm.uadd.sat.v64i8(<64 x i8> %a1, <64 x i8> %a0)
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <64 x i8>, <64 x i8>* %a2
+  %4 = load <64 x i8>, ptr %a2
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
@@ -1460,7 +1460,7 @@ define <32 x i16> @stack_fold_paddusw_commuted(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %2
 }
 
-define <32 x i16> @stack_fold_paddusw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_paddusw_mask(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_paddusw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1476,12 +1476,12 @@ define <32 x i16> @stack_fold_paddusw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x
   %2 = call <32 x i16> @llvm.uadd.sat.v32i16(<32 x i16> %a0, <32 x i16> %a1)
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
 
-define <32 x i16> @stack_fold_paddusw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_paddusw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_paddusw_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1497,7 +1497,7 @@ define <32 x i16> @stack_fold_paddusw_mask_commuted(<32 x i16> %a0, <32 x i16> %
   %2 = call <32 x i16> @llvm.uadd.sat.v32i16(<32 x i16> %a1, <32 x i16> %a0)
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
@@ -1564,7 +1564,7 @@ define <32 x i16> @stack_fold_paddw_commuted(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %2
 }
 
-define <32 x i16> @stack_fold_paddw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_paddw_mask(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_paddw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1580,12 +1580,12 @@ define <32 x i16> @stack_fold_paddw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x i
   %2 = add <32 x i16> %a0, %a1
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
 
-define <32 x i16> @stack_fold_paddw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_paddw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_paddw_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1601,7 +1601,7 @@ define <32 x i16> @stack_fold_paddw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1
   %2 = add <32 x i16> %a1, %a0
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
@@ -1643,8 +1643,8 @@ define <32 x i16> @stack_fold_paddw_maskz_commuted(<32 x i16> %a0, <32 x i16> %a
 define <64 x i8> @stack_fold_palignr(<64 x i8> %a0, <64 x i8> %a1) {
 ; CHECK-LABEL: stack_fold_palignr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -1653,7 +1653,7 @@ define <64 x i8> @stack_fold_palignr(<64 x i8> %a0, <64 x i8> %a1) {
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpalignr $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],zmm0[16],mem[33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],zmm0[32],mem[49,50,51,52,53,54,55,56,57,58,59,60,61,62,63],zmm0[48]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -1661,11 +1661,11 @@ define <64 x i8> @stack_fold_palignr(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %2
 }
 
-define <64 x i8> @stack_fold_palignr_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %passthru, i64 %mask) {
+define <64 x i8> @stack_fold_palignr_mask(<64 x i8> %a0, <64 x i8> %a1, ptr %passthru, i64 %mask) {
 ; CHECK-LABEL: stack_fold_palignr_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -1677,13 +1677,13 @@ define <64 x i8> @stack_fold_palignr_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8
 ; CHECK-NEXT:    vpalignr $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],zmm0[16],mem[33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],zmm0[32],mem[49,50,51,52,53,54,55,56,57,58,59,60,61,62,63],zmm0[48]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = shufflevector <64 x i8> %a1, <64 x i8> %a0, <64 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 80, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 96, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 112>
   %3 = bitcast i64 %mask to <64 x i1>
-  %4 = load <64 x i8>, <64 x i8>* %passthru
+  %4 = load <64 x i8>, ptr %passthru
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
@@ -1691,8 +1691,8 @@ define <64 x i8> @stack_fold_palignr_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8
 define <64 x i8> @stack_fold_palignr_maskz(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; CHECK-LABEL: stack_fold_palignr_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -1702,7 +1702,7 @@ define <64 x i8> @stack_fold_palignr_maskz(<64 x i8> %a0, <64 x i8> %a1, i64 %ma
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpalignr $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],zmm0[16],mem[33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],zmm0[32],mem[49,50,51,52,53,54,55,56,57,58,59,60,61,62,63],zmm0[48]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -1740,7 +1740,7 @@ define <16 x i32> @stack_fold_pandd_commuted(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %2
 }
 
-define <16 x i32> @stack_fold_pandd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pandd_mask(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pandd_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1756,12 +1756,12 @@ define <16 x i32> @stack_fold_pandd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i
   %2 = and <16 x i32> %a0, %a1
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
 
-define <16 x i32> @stack_fold_pandd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pandd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pandd_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1777,7 +1777,7 @@ define <16 x i32> @stack_fold_pandd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1
   %2 = and <16 x i32> %a1, %a0
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -1844,7 +1844,7 @@ define <8 x i64> @stack_fold_pandq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %2
 }
 
-define <8 x i64> @stack_fold_pandq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pandq_mask(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pandq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1860,12 +1860,12 @@ define <8 x i64> @stack_fold_pandq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>*
   %2 = and <8 x i64> %a0, %a1
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
 
-define <8 x i64> @stack_fold_pandq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pandq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pandq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1881,7 +1881,7 @@ define <8 x i64> @stack_fold_pandq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <
   %2 = and <8 x i64> %a1, %a0
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
@@ -2020,11 +2020,11 @@ define i32 @stack_fold_pcmpeqw(<32 x i16> %a0, <32 x i16> %a1) {
   ret i32 %3
 }
 
-define <16 x i32> @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
+define <16 x i32> @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
 ; CHECK-LABEL: stack_fold_pcmpeqd_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $184, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    subq $136, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    vmovups %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm2, (%rsp) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2037,13 +2037,14 @@ define <16 x i32> @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcmpeqd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vpblendmd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $184, %rsp
+; CHECK-NEXT:    vmovdqu64 (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   ; load and add are here to keep the operations below the side effecting block and to avoid folding the wrong load
-  %2 = load <16 x i32>, <16 x i32>* %a2
+  %2 = load <16 x i32>, ptr %a2
   %3 = add <16 x i32> %a1, %2
   %4 = bitcast i16 %mask to <16 x i1>
   %5 = icmp eq <16 x i32> %3, %a0
@@ -2052,11 +2053,11 @@ define <16 x i32> @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
   ret <16 x i32> %7
 }
 
-define <16 x i32> @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
+define <16 x i32> @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
 ; CHECK-LABEL: stack_fold_pcmpeqd_mask_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $184, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    subq $136, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    vmovups %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm2, (%rsp) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2069,13 +2070,14 @@ define <16 x i32> @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcmpeqd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vpblendmd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $184, %rsp
+; CHECK-NEXT:    vmovdqu64 (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   ; load and add are here to keep the operations below the side effecting block and to avoid folding the wrong load
-  %2 = load <16 x i32>, <16 x i32>* %a2
+  %2 = load <16 x i32>, ptr %a2
   %3 = add <16 x i32> %a1, %2
   %4 = bitcast i16 %mask to <16 x i1>
   %5 = icmp eq <16 x i32> %a0, %3
@@ -2084,11 +2086,11 @@ define <16 x i32> @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %
   ret <16 x i32> %7
 }
 
-define <16 x i32> @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
+define <16 x i32> @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
 ; CHECK-LABEL: stack_fold_pcmpled_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $184, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    subq $136, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    vmovups %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm2, (%rsp) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2101,13 +2103,14 @@ define <16 x i32> @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcmpled {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vpblendmd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $184, %rsp
+; CHECK-NEXT:    vmovdqu64 (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   ; load and add are here to keep the operations below the side effecting block and to avoid folding the wrong load
-  %2 = load <16 x i32>, <16 x i32>* %a2
+  %2 = load <16 x i32>, ptr %a2
   %3 = add <16 x i32> %a1, %2
   %4 = bitcast i16 %mask to <16 x i1>
   %5 = icmp sge <16 x i32> %a0, %3
@@ -2116,11 +2119,11 @@ define <16 x i32> @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
   ret <16 x i32> %7
 }
 
-define i16 @stack_fold_pcmpleud(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define i16 @stack_fold_pcmpleud(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pcmpleud:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -2132,12 +2135,12 @@ define i16 @stack_fold_pcmpleud(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2,
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load <16 x i32>, <16 x i32>* %a2
+  %2 = load <16 x i32>, ptr %a2
   %3 = add <16 x i32> %a1, %2
   %4 = bitcast i16 %mask to <16 x i1>
   %5 = icmp uge <16 x i32> %a0, %3
@@ -2161,7 +2164,7 @@ define <64 x i8> @stack_fold_permbvar(<64 x i8> %a0, <64 x i8> %a1) {
 }
 declare <64 x i8> @llvm.x86.avx512.permvar.qi.512(<64 x i8>, <64 x i8>) nounwind readonly
 
-define <64 x i8> @stack_fold_permbvar_mask(<64 x i8>* %passthru, <64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
+define <64 x i8> @stack_fold_permbvar_mask(ptr %passthru, <64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; CHECK-LABEL: stack_fold_permbvar_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2177,7 +2180,7 @@ define <64 x i8> @stack_fold_permbvar_mask(<64 x i8>* %passthru, <64 x i8> %a0, 
   %2 = call <64 x i8> @llvm.x86.avx512.permvar.qi.512(<64 x i8> %a1, <64 x i8> %a0)
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled above the asm block
-  %4 = load <64 x i8>, <64 x i8>* %passthru
+  %4 = load <64 x i8>, ptr %passthru
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
@@ -2293,7 +2296,7 @@ define <8 x i64> @stack_fold_permq(<8 x i64> %a0) {
   ret <8 x i64> %3
 }
 
-define <8 x i64> @stack_fold_permq_mask(<8 x i64>* %passthru, <8 x i64> %a0, i8 %mask) {
+define <8 x i64> @stack_fold_permq_mask(ptr %passthru, <8 x i64> %a0, i8 %mask) {
 ; CHECK-LABEL: stack_fold_permq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2311,14 +2314,14 @@ define <8 x i64> @stack_fold_permq_mask(<8 x i64>* %passthru, <8 x i64> %a0, i8 
   %2 = shufflevector <8 x i64> %a0, <8 x i64> undef, <8 x i32> <i32 3, i32 2, i32 2, i32 3, i32 7, i32 6, i32 6, i32 7>
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled above the asm block
-  %4 = load <8 x i64>, <8 x i64>* %passthru
+  %4 = load <8 x i64>, ptr %passthru
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ; add forces execution domain
   %6 = add <8 x i64> %5, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
   ret <8 x i64> %6
 }
 
-define <8 x i64> @stack_fold_permq_maskz(<8 x i64>* %passthru, <8 x i64> %a0, i8 %mask) {
+define <8 x i64> @stack_fold_permq_maskz(ptr %passthru, <8 x i64> %a0, i8 %mask) {
 ; CHECK-LABEL: stack_fold_permq_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2355,7 +2358,7 @@ define <8 x i64> @stack_fold_permqvar(<8 x i64> %a0, <8 x i64> %a1) {
 }
 declare <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64>, <8 x i64>) nounwind readonly
 
-define <8 x i64> @stack_fold_permqvar_mask(<8 x i64>* %passthru, <8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
+define <8 x i64> @stack_fold_permqvar_mask(ptr %passthru, <8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
 ; CHECK-LABEL: stack_fold_permqvar_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2372,7 +2375,7 @@ define <8 x i64> @stack_fold_permqvar_mask(<8 x i64>* %passthru, <8 x i64> %a0, 
   %2 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %a1, <8 x i64> %a0)
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled above the asm block
-  %4 = load <8 x i64>, <8 x i64>* %passthru
+  %4 = load <8 x i64>, ptr %passthru
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ; add forces execution domain
   %6 = add <8 x i64> %5, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
@@ -2454,7 +2457,7 @@ define <32 x i16> @stack_fold_permwvar(<32 x i16> %a0, <32 x i16> %a1) {
 }
 declare <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16>, <32 x i16>) nounwind readonly
 
-define <32 x i16> @stack_fold_permwvar_mask(<32 x i16>* %passthru, <32 x i16> %a0, <32 x i16> %a1, i32 %mask) {
+define <32 x i16> @stack_fold_permwvar_mask(ptr %passthru, <32 x i16> %a0, <32 x i16> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_permwvar_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2470,7 +2473,7 @@ define <32 x i16> @stack_fold_permwvar_mask(<32 x i16>* %passthru, <32 x i16> %a
   %2 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %a1, <32 x i16> %a0)
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled above the asm block
-  %4 = load <32 x i16>, <32 x i16>* %passthru
+  %4 = load <32 x i16>, ptr %passthru
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
@@ -2802,7 +2805,7 @@ define <32 x i16> @stack_fold_pmaddubsw_zmm(<64 x i8> %a0, <64 x i8> %a1) {
 }
 declare <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8>, <64 x i8>) nounwind readnone
 
-define <32 x i16> @stack_fold_pmaddubsw_zmm_mask(<32 x i16>* %passthru, <64 x i8> %a0, <64 x i8> %a1, i32 %mask) {
+define <32 x i16> @stack_fold_pmaddubsw_zmm_mask(ptr %passthru, <64 x i8> %a0, <64 x i8> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pmaddubsw_zmm_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2818,7 +2821,7 @@ define <32 x i16> @stack_fold_pmaddubsw_zmm_mask(<32 x i16>* %passthru, <64 x i8
   %2 = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> %a0, <64 x i8> %a1)
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %passthru
+  %4 = load <32 x i16>, ptr %passthru
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
@@ -2869,7 +2872,7 @@ define <16 x i32> @stack_fold_pmaddwd_zmm_commuted(<32 x i16> %a0, <32 x i16> %a
   ret <16 x i32> %2
 }
 
-define <16 x i32> @stack_fold_pmaddwd_zmm_mask(<16 x i32>* %passthru, <32 x i16> %a0, <32 x i16> %a1, i16 %mask) {
+define <16 x i32> @stack_fold_pmaddwd_zmm_mask(ptr %passthru, <32 x i16> %a0, <32 x i16> %a1, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pmaddwd_zmm_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2885,12 +2888,12 @@ define <16 x i32> @stack_fold_pmaddwd_zmm_mask(<16 x i32>* %passthru, <32 x i16>
   %2 = call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> %a0, <32 x i16> %a1)
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %passthru
+  %4 = load <16 x i32>, ptr %passthru
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
 
-define <16 x i32> @stack_fold_pmaddwd_zmm_mask_commuted(<16 x i32>* %passthru, <32 x i16> %a0, <32 x i16> %a1, i16 %mask) {
+define <16 x i32> @stack_fold_pmaddwd_zmm_mask_commuted(ptr %passthru, <32 x i16> %a0, <32 x i16> %a1, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pmaddwd_zmm_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2906,12 +2909,12 @@ define <16 x i32> @stack_fold_pmaddwd_zmm_mask_commuted(<16 x i32>* %passthru, <
   %2 = call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> %a1, <32 x i16> %a0)
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %passthru
+  %4 = load <16 x i32>, ptr %passthru
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
 
-define <16 x i32> @stack_fold_pmaddwd_zmm_maskz(<16 x i32>* %passthru, <32 x i16> %a0, <32 x i16> %a1, i16 %mask) {
+define <16 x i32> @stack_fold_pmaddwd_zmm_maskz(ptr %passthru, <32 x i16> %a0, <32 x i16> %a1, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pmaddwd_zmm_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2928,7 +2931,7 @@ define <16 x i32> @stack_fold_pmaddwd_zmm_maskz(<16 x i32>* %passthru, <32 x i16
   ret <16 x i32> %4
 }
 
-define <16 x i32> @stack_fold_pmaddwd_zmm_maskz_commuted(<16 x i32>* %passthru, <32 x i16> %a0, <32 x i16> %a1, i16 %mask) {
+define <16 x i32> @stack_fold_pmaddwd_zmm_maskz_commuted(ptr %passthru, <32 x i16> %a0, <32 x i16> %a1, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pmaddwd_zmm_maskz_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2975,7 +2978,7 @@ define <64 x i8> @stack_fold_pmaxsb_commuted(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %3
 }
 
-define <64 x i8> @stack_fold_pmaxsb_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, <64 x i8>* %passthru) {
+define <64 x i8> @stack_fold_pmaxsb_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxsb_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2992,12 +2995,12 @@ define <64 x i8> @stack_fold_pmaxsb_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask
   %3 = select <64 x i1> %2, <64 x i8> %a0, <64 x i8> %a1
   %4 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <64 x i8>, <64 x i8>* %passthru
+  %5 = load <64 x i8>, ptr %passthru
   %6 = select <64 x i1> %4, <64 x i8> %3, <64 x i8> %5
   ret <64 x i8> %6
 }
 
-define <64 x i8> @stack_fold_pmaxsb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, <64 x i8>* %passthru) {
+define <64 x i8> @stack_fold_pmaxsb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxsb_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3014,7 +3017,7 @@ define <64 x i8> @stack_fold_pmaxsb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, 
   %3 = select <64 x i1> %2, <64 x i8> %a1, <64 x i8> %a0
   %4 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <64 x i8>, <64 x i8>* %passthru
+  %5 = load <64 x i8>, ptr %passthru
   %6 = select <64 x i1> %4, <64 x i8> %3, <64 x i8> %5
   ret <64 x i8> %6
 }
@@ -3085,7 +3088,7 @@ define <16 x i32> @stack_fold_pmaxsd_commuted(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %3
 }
 
-define <16 x i32> @stack_fold_pmaxsd_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, <16 x i32>* %passthru) {
+define <16 x i32> @stack_fold_pmaxsd_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxsd_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3102,12 +3105,12 @@ define <16 x i32> @stack_fold_pmaxsd_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %m
   %3 = select <16 x i1> %2, <16 x i32> %a0, <16 x i32> %a1
   %4 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <16 x i32>, <16 x i32>* %passthru
+  %5 = load <16 x i32>, ptr %passthru
   %6 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %5
   ret <16 x i32> %6
 }
 
-define <16 x i32> @stack_fold_pmaxsd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, <16 x i32>* %passthru) {
+define <16 x i32> @stack_fold_pmaxsd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxsd_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3124,7 +3127,7 @@ define <16 x i32> @stack_fold_pmaxsd_mask_commuted(<16 x i32> %a0, <16 x i32> %a
   %3 = select <16 x i1> %2, <16 x i32> %a1, <16 x i32> %a0
   %4 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <16 x i32>, <16 x i32>* %passthru
+  %5 = load <16 x i32>, ptr %passthru
   %6 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %5
   ret <16 x i32> %6
 }
@@ -3195,7 +3198,7 @@ define <8 x i64> @stack_fold_pmaxsq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %3
 }
 
-define <8 x i64> @stack_fold_pmaxsq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_pmaxsq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxsq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3212,12 +3215,12 @@ define <8 x i64> @stack_fold_pmaxsq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask,
   %3 = select <8 x i1> %2, <8 x i64> %a0, <8 x i64> %a1
   %4 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <8 x i64>, <8 x i64>* %passthru
+  %5 = load <8 x i64>, ptr %passthru
   %6 = select <8 x i1> %4, <8 x i64> %3, <8 x i64> %5
   ret <8 x i64> %6
 }
 
-define <8 x i64> @stack_fold_pmaxsq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_pmaxsq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxsq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3234,7 +3237,7 @@ define <8 x i64> @stack_fold_pmaxsq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, 
   %3 = select <8 x i1> %2, <8 x i64> %a1, <8 x i64> %a0
   %4 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <8 x i64>, <8 x i64>* %passthru
+  %5 = load <8 x i64>, ptr %passthru
   %6 = select <8 x i1> %4, <8 x i64> %3, <8 x i64> %5
   ret <8 x i64> %6
 }
@@ -3305,7 +3308,7 @@ define <32 x i16> @stack_fold_pmaxsw_commuted(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %3
 }
 
-define <32 x i16> @stack_fold_pmaxsw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, <32 x i16>* %passthru) {
+define <32 x i16> @stack_fold_pmaxsw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxsw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3322,12 +3325,12 @@ define <32 x i16> @stack_fold_pmaxsw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %m
   %3 = select <32 x i1> %2, <32 x i16> %a0, <32 x i16> %a1
   %4 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <32 x i16>, <32 x i16>* %passthru
+  %5 = load <32 x i16>, ptr %passthru
   %6 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %5
   ret <32 x i16> %6
 }
 
-define <32 x i16> @stack_fold_pmaxsw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, <32 x i16>* %passthru) {
+define <32 x i16> @stack_fold_pmaxsw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxsw_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3344,7 +3347,7 @@ define <32 x i16> @stack_fold_pmaxsw_mask_commuted(<32 x i16> %a0, <32 x i16> %a
   %3 = select <32 x i1> %2, <32 x i16> %a1, <32 x i16> %a0
   %4 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <32 x i16>, <32 x i16>* %passthru
+  %5 = load <32 x i16>, ptr %passthru
   %6 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %5
   ret <32 x i16> %6
 }
@@ -3415,7 +3418,7 @@ define <64 x i8> @stack_fold_pmaxub_commuted(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %3
 }
 
-define <64 x i8> @stack_fold_pmaxub_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, <64 x i8>* %passthru) {
+define <64 x i8> @stack_fold_pmaxub_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxub_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3432,12 +3435,12 @@ define <64 x i8> @stack_fold_pmaxub_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask
   %3 = select <64 x i1> %2, <64 x i8> %a0, <64 x i8> %a1
   %4 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <64 x i8>, <64 x i8>* %passthru
+  %5 = load <64 x i8>, ptr %passthru
   %6 = select <64 x i1> %4, <64 x i8> %3, <64 x i8> %5
   ret <64 x i8> %6
 }
 
-define <64 x i8> @stack_fold_pmaxub_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, <64 x i8>* %passthru) {
+define <64 x i8> @stack_fold_pmaxub_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxub_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3454,7 +3457,7 @@ define <64 x i8> @stack_fold_pmaxub_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, 
   %3 = select <64 x i1> %2, <64 x i8> %a1, <64 x i8> %a0
   %4 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <64 x i8>, <64 x i8>* %passthru
+  %5 = load <64 x i8>, ptr %passthru
   %6 = select <64 x i1> %4, <64 x i8> %3, <64 x i8> %5
   ret <64 x i8> %6
 }
@@ -3525,7 +3528,7 @@ define <16 x i32> @stack_fold_pmaxud_commuted(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %3
 }
 
-define <16 x i32> @stack_fold_pmaxud_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, <16 x i32>* %passthru) {
+define <16 x i32> @stack_fold_pmaxud_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxud_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3542,12 +3545,12 @@ define <16 x i32> @stack_fold_pmaxud_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %m
   %3 = select <16 x i1> %2, <16 x i32> %a0, <16 x i32> %a1
   %4 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <16 x i32>, <16 x i32>* %passthru
+  %5 = load <16 x i32>, ptr %passthru
   %6 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %5
   ret <16 x i32> %6
 }
 
-define <16 x i32> @stack_fold_pmaxud_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, <16 x i32>* %passthru) {
+define <16 x i32> @stack_fold_pmaxud_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxud_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3564,7 +3567,7 @@ define <16 x i32> @stack_fold_pmaxud_mask_commuted(<16 x i32> %a0, <16 x i32> %a
   %3 = select <16 x i1> %2, <16 x i32> %a1, <16 x i32> %a0
   %4 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <16 x i32>, <16 x i32>* %passthru
+  %5 = load <16 x i32>, ptr %passthru
   %6 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %5
   ret <16 x i32> %6
 }
@@ -3635,7 +3638,7 @@ define <8 x i64> @stack_fold_pmaxuq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %3
 }
 
-define <8 x i64> @stack_fold_pmaxuq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_pmaxuq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxuq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3652,12 +3655,12 @@ define <8 x i64> @stack_fold_pmaxuq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask,
   %3 = select <8 x i1> %2, <8 x i64> %a0, <8 x i64> %a1
   %4 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <8 x i64>, <8 x i64>* %passthru
+  %5 = load <8 x i64>, ptr %passthru
   %6 = select <8 x i1> %4, <8 x i64> %3, <8 x i64> %5
   ret <8 x i64> %6
 }
 
-define <8 x i64> @stack_fold_pmaxuq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_pmaxuq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxuq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3674,7 +3677,7 @@ define <8 x i64> @stack_fold_pmaxuq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, 
   %3 = select <8 x i1> %2, <8 x i64> %a1, <8 x i64> %a0
   %4 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <8 x i64>, <8 x i64>* %passthru
+  %5 = load <8 x i64>, ptr %passthru
   %6 = select <8 x i1> %4, <8 x i64> %3, <8 x i64> %5
   ret <8 x i64> %6
 }
@@ -3745,7 +3748,7 @@ define <32 x i16> @stack_fold_pmaxuw_commuted(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %3
 }
 
-define <32 x i16> @stack_fold_pmaxuw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, <32 x i16>* %passthru) {
+define <32 x i16> @stack_fold_pmaxuw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxuw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3762,12 +3765,12 @@ define <32 x i16> @stack_fold_pmaxuw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %m
   %3 = select <32 x i1> %2, <32 x i16> %a0, <32 x i16> %a1
   %4 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <32 x i16>, <32 x i16>* %passthru
+  %5 = load <32 x i16>, ptr %passthru
   %6 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %5
   ret <32 x i16> %6
 }
 
-define <32 x i16> @stack_fold_pmaxuw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, <32 x i16>* %passthru) {
+define <32 x i16> @stack_fold_pmaxuw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pmaxuw_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3784,7 +3787,7 @@ define <32 x i16> @stack_fold_pmaxuw_mask_commuted(<32 x i16> %a0, <32 x i16> %a
   %3 = select <32 x i1> %2, <32 x i16> %a1, <32 x i16> %a0
   %4 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <32 x i16>, <32 x i16>* %passthru
+  %5 = load <32 x i16>, ptr %passthru
   %6 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %5
   ret <32 x i16> %6
 }
@@ -3855,7 +3858,7 @@ define <64 x i8> @stack_fold_pminsb_commuted(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %3
 }
 
-define <64 x i8> @stack_fold_pminsb_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, <64 x i8>* %passthru) {
+define <64 x i8> @stack_fold_pminsb_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminsb_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3872,12 +3875,12 @@ define <64 x i8> @stack_fold_pminsb_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask
   %3 = select <64 x i1> %2, <64 x i8> %a0, <64 x i8> %a1
   %4 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <64 x i8>, <64 x i8>* %passthru
+  %5 = load <64 x i8>, ptr %passthru
   %6 = select <64 x i1> %4, <64 x i8> %3, <64 x i8> %5
   ret <64 x i8> %6
 }
 
-define <64 x i8> @stack_fold_pminsb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, <64 x i8>* %passthru) {
+define <64 x i8> @stack_fold_pminsb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminsb_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3894,7 +3897,7 @@ define <64 x i8> @stack_fold_pminsb_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, 
   %3 = select <64 x i1> %2, <64 x i8> %a1, <64 x i8> %a0
   %4 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <64 x i8>, <64 x i8>* %passthru
+  %5 = load <64 x i8>, ptr %passthru
   %6 = select <64 x i1> %4, <64 x i8> %3, <64 x i8> %5
   ret <64 x i8> %6
 }
@@ -3965,7 +3968,7 @@ define <16 x i32> @stack_fold_pminsd_commuted(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %3
 }
 
-define <16 x i32> @stack_fold_pminsd_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, <16 x i32>* %passthru) {
+define <16 x i32> @stack_fold_pminsd_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminsd_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -3982,12 +3985,12 @@ define <16 x i32> @stack_fold_pminsd_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %m
   %3 = select <16 x i1> %2, <16 x i32> %a0, <16 x i32> %a1
   %4 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <16 x i32>, <16 x i32>* %passthru
+  %5 = load <16 x i32>, ptr %passthru
   %6 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %5
   ret <16 x i32> %6
 }
 
-define <16 x i32> @stack_fold_pminsd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, <16 x i32>* %passthru) {
+define <16 x i32> @stack_fold_pminsd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminsd_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4004,7 +4007,7 @@ define <16 x i32> @stack_fold_pminsd_mask_commuted(<16 x i32> %a0, <16 x i32> %a
   %3 = select <16 x i1> %2, <16 x i32> %a1, <16 x i32> %a0
   %4 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <16 x i32>, <16 x i32>* %passthru
+  %5 = load <16 x i32>, ptr %passthru
   %6 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %5
   ret <16 x i32> %6
 }
@@ -4075,7 +4078,7 @@ define <8 x i64> @stack_fold_pminsq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %3
 }
 
-define <8 x i64> @stack_fold_pminsq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_pminsq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminsq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4092,12 +4095,12 @@ define <8 x i64> @stack_fold_pminsq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask,
   %3 = select <8 x i1> %2, <8 x i64> %a0, <8 x i64> %a1
   %4 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <8 x i64>, <8 x i64>* %passthru
+  %5 = load <8 x i64>, ptr %passthru
   %6 = select <8 x i1> %4, <8 x i64> %3, <8 x i64> %5
   ret <8 x i64> %6
 }
 
-define <8 x i64> @stack_fold_pminsq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_pminsq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminsq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4114,7 +4117,7 @@ define <8 x i64> @stack_fold_pminsq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, 
   %3 = select <8 x i1> %2, <8 x i64> %a1, <8 x i64> %a0
   %4 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <8 x i64>, <8 x i64>* %passthru
+  %5 = load <8 x i64>, ptr %passthru
   %6 = select <8 x i1> %4, <8 x i64> %3, <8 x i64> %5
   ret <8 x i64> %6
 }
@@ -4185,7 +4188,7 @@ define <32 x i16> @stack_fold_pminsw_commuted(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %3
 }
 
-define <32 x i16> @stack_fold_pminsw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, <32 x i16>* %passthru) {
+define <32 x i16> @stack_fold_pminsw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminsw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4202,12 +4205,12 @@ define <32 x i16> @stack_fold_pminsw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %m
   %3 = select <32 x i1> %2, <32 x i16> %a0, <32 x i16> %a1
   %4 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <32 x i16>, <32 x i16>* %passthru
+  %5 = load <32 x i16>, ptr %passthru
   %6 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %5
   ret <32 x i16> %6
 }
 
-define <32 x i16> @stack_fold_pminsw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, <32 x i16>* %passthru) {
+define <32 x i16> @stack_fold_pminsw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminsw_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4224,7 +4227,7 @@ define <32 x i16> @stack_fold_pminsw_mask_commuted(<32 x i16> %a0, <32 x i16> %a
   %3 = select <32 x i1> %2, <32 x i16> %a1, <32 x i16> %a0
   %4 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <32 x i16>, <32 x i16>* %passthru
+  %5 = load <32 x i16>, ptr %passthru
   %6 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %5
   ret <32 x i16> %6
 }
@@ -4295,7 +4298,7 @@ define <64 x i8> @stack_fold_pminub_commuted(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %3
 }
 
-define <64 x i8> @stack_fold_pminub_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, <64 x i8>* %passthru) {
+define <64 x i8> @stack_fold_pminub_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminub_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4312,12 +4315,12 @@ define <64 x i8> @stack_fold_pminub_mask(<64 x i8> %a0, <64 x i8> %a1, i64 %mask
   %3 = select <64 x i1> %2, <64 x i8> %a0, <64 x i8> %a1
   %4 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <64 x i8>, <64 x i8>* %passthru
+  %5 = load <64 x i8>, ptr %passthru
   %6 = select <64 x i1> %4, <64 x i8> %3, <64 x i8> %5
   ret <64 x i8> %6
 }
 
-define <64 x i8> @stack_fold_pminub_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, <64 x i8>* %passthru) {
+define <64 x i8> @stack_fold_pminub_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, i64 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminub_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4334,7 +4337,7 @@ define <64 x i8> @stack_fold_pminub_mask_commuted(<64 x i8> %a0, <64 x i8> %a1, 
   %3 = select <64 x i1> %2, <64 x i8> %a1, <64 x i8> %a0
   %4 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <64 x i8>, <64 x i8>* %passthru
+  %5 = load <64 x i8>, ptr %passthru
   %6 = select <64 x i1> %4, <64 x i8> %3, <64 x i8> %5
   ret <64 x i8> %6
 }
@@ -4405,7 +4408,7 @@ define <16 x i32> @stack_fold_pminud_commuted(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %3
 }
 
-define <16 x i32> @stack_fold_pminud_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, <16 x i32>* %passthru) {
+define <16 x i32> @stack_fold_pminud_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminud_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4422,12 +4425,12 @@ define <16 x i32> @stack_fold_pminud_mask(<16 x i32> %a0, <16 x i32> %a1, i16 %m
   %3 = select <16 x i1> %2, <16 x i32> %a0, <16 x i32> %a1
   %4 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <16 x i32>, <16 x i32>* %passthru
+  %5 = load <16 x i32>, ptr %passthru
   %6 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %5
   ret <16 x i32> %6
 }
 
-define <16 x i32> @stack_fold_pminud_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, <16 x i32>* %passthru) {
+define <16 x i32> @stack_fold_pminud_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, i16 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminud_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4444,7 +4447,7 @@ define <16 x i32> @stack_fold_pminud_mask_commuted(<16 x i32> %a0, <16 x i32> %a
   %3 = select <16 x i1> %2, <16 x i32> %a1, <16 x i32> %a0
   %4 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <16 x i32>, <16 x i32>* %passthru
+  %5 = load <16 x i32>, ptr %passthru
   %6 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %5
   ret <16 x i32> %6
 }
@@ -4515,7 +4518,7 @@ define <8 x i64> @stack_fold_pminuq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %3
 }
 
-define <8 x i64> @stack_fold_pminuq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_pminuq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminuq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4532,12 +4535,12 @@ define <8 x i64> @stack_fold_pminuq_mask(<8 x i64> %a0, <8 x i64> %a1, i8 %mask,
   %3 = select <8 x i1> %2, <8 x i64> %a0, <8 x i64> %a1
   %4 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <8 x i64>, <8 x i64>* %passthru
+  %5 = load <8 x i64>, ptr %passthru
   %6 = select <8 x i1> %4, <8 x i64> %3, <8 x i64> %5
   ret <8 x i64> %6
 }
 
-define <8 x i64> @stack_fold_pminuq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_pminuq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminuq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4554,7 +4557,7 @@ define <8 x i64> @stack_fold_pminuq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, 
   %3 = select <8 x i1> %2, <8 x i64> %a1, <8 x i64> %a0
   %4 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <8 x i64>, <8 x i64>* %passthru
+  %5 = load <8 x i64>, ptr %passthru
   %6 = select <8 x i1> %4, <8 x i64> %3, <8 x i64> %5
   ret <8 x i64> %6
 }
@@ -4625,7 +4628,7 @@ define <32 x i16> @stack_fold_pminuw_commuted(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %3
 }
 
-define <32 x i16> @stack_fold_pminuw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, <32 x i16>* %passthru) {
+define <32 x i16> @stack_fold_pminuw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminuw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4642,12 +4645,12 @@ define <32 x i16> @stack_fold_pminuw_mask(<32 x i16> %a0, <32 x i16> %a1, i32 %m
   %3 = select <32 x i1> %2, <32 x i16> %a0, <32 x i16> %a1
   %4 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <32 x i16>, <32 x i16>* %passthru
+  %5 = load <32 x i16>, ptr %passthru
   %6 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %5
   ret <32 x i16> %6
 }
 
-define <32 x i16> @stack_fold_pminuw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, <32 x i16>* %passthru) {
+define <32 x i16> @stack_fold_pminuw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_pminuw_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -4664,7 +4667,7 @@ define <32 x i16> @stack_fold_pminuw_mask_commuted(<32 x i16> %a0, <32 x i16> %a
   %3 = select <32 x i1> %2, <32 x i16> %a1, <32 x i16> %a0
   %4 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %5 = load <32 x i16>, <32 x i16>* %passthru
+  %5 = load <32 x i16>, ptr %passthru
   %6 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %5
   ret <32 x i16> %6
 }
@@ -5229,7 +5232,7 @@ define <16 x i32> @stack_fold_pmulld_commuted(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %2
 }
 
-define <16 x i32> @stack_fold_pmulld_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pmulld_mask(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pmulld_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5245,12 +5248,12 @@ define <16 x i32> @stack_fold_pmulld_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x 
   %2 = mul <16 x i32> %a0, %a1
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
 
-define <16 x i32> @stack_fold_pmulld_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pmulld_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pmulld_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5266,7 +5269,7 @@ define <16 x i32> @stack_fold_pmulld_mask_commuted(<16 x i32> %a0, <16 x i32> %a
   %2 = mul <16 x i32> %a1, %a0
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -5333,7 +5336,7 @@ define <8 x i64> @stack_fold_pmullq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %2
 }
 
-define <8 x i64> @stack_fold_pmullq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pmullq_mask(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pmullq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5349,12 +5352,12 @@ define <8 x i64> @stack_fold_pmullq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>
   %2 = mul <8 x i64> %a0, %a1
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
 
-define <8 x i64> @stack_fold_pmullq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pmullq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pmullq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5370,7 +5373,7 @@ define <8 x i64> @stack_fold_pmullq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, 
   %2 = mul <8 x i64> %a1, %a0
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
@@ -5437,7 +5440,7 @@ define <32 x i16> @stack_fold_pmullw_commuted(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %2
 }
 
-define <32 x i16> @stack_fold_pmullw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_pmullw_mask(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pmullw_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5453,12 +5456,12 @@ define <32 x i16> @stack_fold_pmullw_mask(<32 x i16> %a0, <32 x i16> %a1, <32 x 
   %2 = mul <32 x i16> %a0, %a1
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
 
-define <32 x i16> @stack_fold_pmullw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, <32 x i16>* %a2, i32 %mask) {
+define <32 x i16> @stack_fold_pmullw_mask_commuted(<32 x i16> %a0, <32 x i16> %a1, ptr %a2, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pmullw_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5474,7 +5477,7 @@ define <32 x i16> @stack_fold_pmullw_mask_commuted(<32 x i16> %a0, <32 x i16> %a
   %2 = mul <32 x i16> %a1, %a0
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <32 x i16>, <32 x i16>* %a2
+  %4 = load <32 x i16>, ptr %a2
   %5 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %4
   ret <32 x i16> %5
 }
@@ -5549,7 +5552,7 @@ define <8 x i64> @stack_fold_pmuldq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %6
 }
 
-define <8 x i64> @stack_fold_pmuldq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pmuldq_mask(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pmuldq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5569,12 +5572,12 @@ define <8 x i64> @stack_fold_pmuldq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>
   %6 = mul <8 x i64> %3, %5
   %7 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %8 = load <8 x i64>, <8 x i64>* %a2
+  %8 = load <8 x i64>, ptr %a2
   %9 = select <8 x i1> %7, <8 x i64> %6, <8 x i64> %8
   ret <8 x i64> %9
 }
 
-define <8 x i64> @stack_fold_pmuldq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pmuldq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pmuldq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5594,7 +5597,7 @@ define <8 x i64> @stack_fold_pmuldq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, 
   %6 = mul <8 x i64> %5, %3
   %7 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %8 = load <8 x i64>, <8 x i64>* %a2
+  %8 = load <8 x i64>, ptr %a2
   %9 = select <8 x i1> %7, <8 x i64> %6, <8 x i64> %8
   ret <8 x i64> %9
 }
@@ -5676,7 +5679,7 @@ define <8 x i64> @stack_fold_pmuludq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %4
 }
 
-define <8 x i64> @stack_fold_pmuludq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pmuludq_mask(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pmuludq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5694,12 +5697,12 @@ define <8 x i64> @stack_fold_pmuludq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64
   %4 = mul <8 x i64> %2, %3
   %5 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %6 = load <8 x i64>, <8 x i64>* %a2
+  %6 = load <8 x i64>, ptr %a2
   %7 = select <8 x i1> %5, <8 x i64> %4, <8 x i64> %6
   ret <8 x i64> %7
 }
 
-define <8 x i64> @stack_fold_pmuludq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pmuludq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pmuludq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5717,7 +5720,7 @@ define <8 x i64> @stack_fold_pmuludq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1,
   %4 = mul <8 x i64> %3, %2
   %5 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %6 = load <8 x i64>, <8 x i64>* %a2
+  %6 = load <8 x i64>, ptr %a2
   %7 = select <8 x i1> %5, <8 x i64> %4, <8 x i64> %6
   ret <8 x i64> %7
 }
@@ -5818,7 +5821,7 @@ define <16 x i32> @stack_fold_pord_commuted(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %2
 }
 
-define <16 x i32> @stack_fold_pord_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pord_mask(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pord_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5834,12 +5837,12 @@ define <16 x i32> @stack_fold_pord_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i3
   %2 = or <16 x i32> %a0, %a1
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
 
-define <16 x i32> @stack_fold_pord_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pord_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pord_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5855,7 +5858,7 @@ define <16 x i32> @stack_fold_pord_mask_commuted(<16 x i32> %a0, <16 x i32> %a1,
   %2 = or <16 x i32> %a1, %a0
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -5922,7 +5925,7 @@ define <8 x i64> @stack_fold_porq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %2
 }
 
-define <8 x i64> @stack_fold_porq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_porq_mask(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_porq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5938,12 +5941,12 @@ define <8 x i64> @stack_fold_porq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* 
   %2 = or <8 x i64> %a0, %a1
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
 
-define <8 x i64> @stack_fold_porq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_porq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_porq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -5959,7 +5962,7 @@ define <8 x i64> @stack_fold_porq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <8
   %2 = or <8 x i64> %a1, %a0
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
@@ -6042,7 +6045,7 @@ define <64 x i8> @stack_fold_pshufb_zmm(<64 x i8> %a0, <64 x i8> %a1) {
 }
 declare <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8>, <64 x i8>)
 
-define <64 x i8> @stack_fold_pshufb_zmm_mask(<64 x i8>* %passthru, <64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
+define <64 x i8> @stack_fold_pshufb_zmm_mask(ptr %passthru, <64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; CHECK-LABEL: stack_fold_pshufb_zmm_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -6055,7 +6058,7 @@ define <64 x i8> @stack_fold_pshufb_zmm_mask(<64 x i8>* %passthru, <64 x i8> %a0
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load <64 x i8>, <64 x i8>* %passthru
+  %2 = load <64 x i8>, ptr %passthru
   %3 = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> %a0, <64 x i8> %a1)
   %4 = bitcast i64 %mask to <64 x i1>
   %5 = select <64 x i1> %4, <64 x i8> %3, <64 x i8> %2
@@ -6100,8 +6103,8 @@ define <16 x i32> @stack_fold_pshufd_zmm(<16 x i32> %a0) {
 define <16 x i32> @stack_fold_pshufd_zmm_mask(<16 x i32> %passthru, <16 x i32> %a0, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pshufd_zmm_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6111,7 +6114,7 @@ define <16 x i32> @stack_fold_pshufd_zmm_mask(<16 x i32> %passthru, <16 x i32> %
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpshufd $27, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} = mem[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6157,8 +6160,8 @@ define <32 x i16> @stack_fold_pshufhw_zmm(<32 x i16> %a0) {
 define <32 x i16> @stack_fold_pshufhw_zmm_mask(<32 x i16> %passthru, <32 x i16> %a0, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pshufhw_zmm_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6168,7 +6171,7 @@ define <32 x i16> @stack_fold_pshufhw_zmm_mask(<32 x i16> %passthru, <32 x i16> 
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpshufhw $27, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} = mem[0,1,2,3,7,6,5,4,8,9,10,11,15,14,13,12,16,17,18,19,23,22,21,20,24,25,26,27,31,30,29,28]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6214,8 +6217,8 @@ define <32 x i16> @stack_fold_pshuflw_zmm(<32 x i16> %a0) {
 define <32 x i16> @stack_fold_pshuflw_zmm_mask(<32 x i16> %passthru, <32 x i16> %a0, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pshuflw_zmm_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6225,7 +6228,7 @@ define <32 x i16> @stack_fold_pshuflw_zmm_mask(<32 x i16> %passthru, <32 x i16> 
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpshuflw $27, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} = mem[3,2,1,0,4,5,6,7,11,10,9,8,12,13,14,15,19,18,17,16,20,21,22,23,27,26,25,24,28,29,30,31]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6268,7 +6271,7 @@ define <16 x i32> @stack_fold_pslld(<16 x i32> %a0, <4 x i32> %a1) {
 }
 declare <16 x i32> @llvm.x86.avx512.psll.d.512(<16 x i32>, <4 x i32>) nounwind readnone
 
-define <16 x i32> @stack_fold_pslld_mask(<16 x i32>* %passthru, <16 x i32> %a0, <4 x i32> %a1, i16 %mask) {
+define <16 x i32> @stack_fold_pslld_mask(ptr %passthru, <16 x i32> %a0, <4 x i32> %a1, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pslld_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -6283,7 +6286,7 @@ define <16 x i32> @stack_fold_pslld_mask(<16 x i32>* %passthru, <16 x i32> %a0, 
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i32> @llvm.x86.avx512.psll.d.512(<16 x i32> %a0, <4 x i32> %a1)
   %3 = bitcast i16 %mask to <16 x i1>
-  %4 = load <16 x i32>, <16 x i32>* %passthru
+  %4 = load <16 x i32>, ptr %passthru
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -6320,7 +6323,7 @@ define <16 x i32> @stack_fold_pslldi(<16 x i32> %a0) {
 }
 declare <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32>, i32) nounwind readnone
 
-define <16 x i32> @stack_fold_pslldi_mask(<16 x i32>* %passthru, <16 x i32> %a0, i16 %mask) {
+define <16 x i32> @stack_fold_pslldi_mask(ptr %passthru, <16 x i32> %a0, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pslldi_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -6335,7 +6338,7 @@ define <16 x i32> @stack_fold_pslldi_mask(<16 x i32>* %passthru, <16 x i32> %a0,
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32> %a0, i32 1)
   %3 = bitcast i16 %mask to <16 x i1>
-  %4 = load <16 x i32>, <16 x i32>* %passthru
+  %4 = load <16 x i32>, ptr %passthru
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -6417,7 +6420,7 @@ define <16 x i32> @stack_fold_psllvd(<16 x i32> %a0, <16 x i32> %a1) {
 }
 declare <16 x i32> @llvm.x86.avx512.psllv.d.512(<16 x i32>, <16 x i32>) nounwind readnone
 
-define <16 x i32> @stack_fold_psllvd_mask(<16 x i32>* %passthru, <16 x i32> %a0, <16 x i32> %a1, i16 %mask) {
+define <16 x i32> @stack_fold_psllvd_mask(ptr %passthru, <16 x i32> %a0, <16 x i32> %a1, i16 %mask) {
 ; CHECK-LABEL: stack_fold_psllvd_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -6432,7 +6435,7 @@ define <16 x i32> @stack_fold_psllvd_mask(<16 x i32>* %passthru, <16 x i32> %a0,
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i32> @llvm.x86.avx512.psllv.d.512(<16 x i32> %a0, <16 x i32> %a1)
   %3 = bitcast i16 %mask to <16 x i1>
-  %4 = load <16 x i32>, <16 x i32>* %passthru
+  %4 = load <16 x i32>, ptr %passthru
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -6914,8 +6917,8 @@ define <32 x i16> @stack_fold_psubw(<32 x i16> %a0, <32 x i16> %a1) {
 define <8 x i64> @stack_fold_shufi64x2(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: stack_fold_shufi64x2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6924,7 +6927,7 @@ define <8 x i64> @stack_fold_shufi64x2(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vshufi64x2 $24, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = zmm0[0,1,4,5],mem[2,3,0,1]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6932,11 +6935,11 @@ define <8 x i64> @stack_fold_shufi64x2(<8 x i64> %a, <8 x i64> %b) {
   ret <8 x i64> %2
 }
 
-define <8 x i64> @stack_fold_shufi64x2_mask(<8 x i64> %a, <8 x i64> %b, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_shufi64x2_mask(<8 x i64> %a, <8 x i64> %b, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_shufi64x2_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6948,23 +6951,23 @@ define <8 x i64> @stack_fold_shufi64x2_mask(<8 x i64> %a, <8 x i64> %b, i8 %mask
 ; CHECK-NEXT:    vshufi64x2 $24, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = zmm0[0,1,4,5],mem[2,3,0,1]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = shufflevector <8 x i64> %a, <8 x i64> %b, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 10, i32 11, i32 8, i32 9>
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled above the asm block
-  %4 = load <8 x i64>, <8 x i64>* %passthru
+  %4 = load <8 x i64>, ptr %passthru
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
 
-define <8 x i64> @stack_fold_shufi64x2_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mask, <8 x i64>* %passthru) {
+define <8 x i64> @stack_fold_shufi64x2_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_shufi64x2_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6974,7 +6977,7 @@ define <8 x i64> @stack_fold_shufi64x2_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mas
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vshufi64x2 $24, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = zmm0[0,1,4,5],mem[2,3,0,1]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6984,11 +6987,11 @@ define <8 x i64> @stack_fold_shufi64x2_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mas
   ret <8 x i64> %4
 }
 
-define <16 x i32> @stack_fold_shufi32x4_mask(<16 x i32> %a, <16 x i32> %b, i16 %mask, <16 x i32>* %passthru) {
+define <16 x i32> @stack_fold_shufi32x4_mask(<16 x i32> %a, <16 x i32> %b, i16 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_shufi32x4_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -7000,14 +7003,14 @@ define <16 x i32> @stack_fold_shufi32x4_mask(<16 x i32> %a, <16 x i32> %b, i16 %
 ; CHECK-NEXT:    vshufi32x4 $20, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = zmm0[0,1,2,3,4,5,6,7],mem[4,5,6,7,0,1,2,3]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 16, i32 17, i32 18, i32 19>
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled above the asm block
-  %4 = load <16 x i32>, <16 x i32>* %passthru
+  %4 = load <16 x i32>, ptr %passthru
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -7015,8 +7018,8 @@ define <16 x i32> @stack_fold_shufi32x4_mask(<16 x i32> %a, <16 x i32> %b, i16 %
 define <16 x i32> @stack_fold_shufi32x4_maskz(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; CHECK-LABEL: stack_fold_shufi32x4_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -7026,7 +7029,7 @@ define <16 x i32> @stack_fold_shufi32x4_maskz(<16 x i32> %a, <16 x i32> %b, i16 
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vshufi32x4 $20, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = zmm0[0,1,2,3,4,5,6,7],mem[4,5,6,7,0,1,2,3]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -7082,7 +7085,7 @@ define <64 x i8> @stack_fold_punpckhbw_zmm(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %2
 }
 
-define <64 x i8> @stack_fold_punpckhbw_mask_zmm(<64 x i8>* %passthru, <64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
+define <64 x i8> @stack_fold_punpckhbw_mask_zmm(ptr %passthru, <64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; CHECK-LABEL: stack_fold_punpckhbw_mask_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -7099,7 +7102,7 @@ define <64 x i8> @stack_fold_punpckhbw_mask_zmm(<64 x i8>* %passthru, <64 x i8> 
   %2 = shufflevector <64 x i8> %a0, <64 x i8> %a1, <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <64 x i8>, <64 x i8>* %passthru
+  %4 = load <64 x i8>, ptr %passthru
   %5 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> %4
   ret <64 x i8> %5
 }
@@ -7150,7 +7153,7 @@ define <16 x i32> @stack_fold_pxord_commuted(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %2
 }
 
-define <16 x i32> @stack_fold_pxord_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pxord_mask(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pxord_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -7166,12 +7169,12 @@ define <16 x i32> @stack_fold_pxord_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i
   %2 = xor <16 x i32> %a0, %a1
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
 
-define <16 x i32> @stack_fold_pxord_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pxord_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, ptr %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pxord_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -7187,7 +7190,7 @@ define <16 x i32> @stack_fold_pxord_mask_commuted(<16 x i32> %a0, <16 x i32> %a1
   %2 = xor <16 x i32> %a1, %a0
   %3 = bitcast i16 %mask to <16 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <16 x i32>, <16 x i32>* %a2
+  %4 = load <16 x i32>, ptr %a2
   %5 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %4
   ret <16 x i32> %5
 }
@@ -7254,7 +7257,7 @@ define <8 x i64> @stack_fold_pxorq_commuted(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %2
 }
 
-define <8 x i64> @stack_fold_pxorq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pxorq_mask(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pxorq_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -7270,12 +7273,12 @@ define <8 x i64> @stack_fold_pxorq_mask(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>*
   %2 = xor <8 x i64> %a0, %a1
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }
 
-define <8 x i64> @stack_fold_pxorq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <8 x i64>* %a2, i8 %mask) {
+define <8 x i64> @stack_fold_pxorq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, ptr %a2, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pxorq_mask_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -7291,7 +7294,7 @@ define <8 x i64> @stack_fold_pxorq_mask_commuted(<8 x i64> %a0, <8 x i64> %a1, <
   %2 = xor <8 x i64> %a1, %a0
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled about the asm block
-  %4 = load <8 x i64>, <8 x i64>* %a2
+  %4 = load <8 x i64>, ptr %a2
   %5 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %4
   ret <8 x i64> %5
 }

@@ -4,18 +4,28 @@
 ; RUN:     | FileCheck -check-prefix=RELAX-DWARFDUMP %s
 ;
 ; RELAX:      Section ({{.*}}) .rela.eh_frame {
-; RELAX-NEXT:   0x1C R_RISCV_32_PCREL - 0x0
-; RELAX-NEXT:   0x20 R_RISCV_ADD32 - 0x0
-; RELAX-NEXT:   0x20 R_RISCV_SUB32 - 0x0
-; RELAX-NOT:  }
-; RELAX:        0x39 R_RISCV_SET6 - 0x0
-; RELAX-NEXT:   0x39 R_RISCV_SUB6 - 0x0
-;
+; RELAX-NEXT:   0x1C R_RISCV_32_PCREL .L0  0x0
+; RELAX-NEXT:   0x30 R_RISCV_32_PCREL .L0  0x0
+; RELAX-NEXT:   0x44 R_RISCV_32_PCREL .L0  0x0
+; RELAX-NEXT:   0x48 R_RISCV_ADD32 .L0  0x0
+; RELAX-NEXT:   0x48 R_RISCV_SUB32 .L0  0x0
+; RELAX-NEXT:  }
+
 ; RELAX-DWARFDUMP-NOT: error: failed to compute relocation
-; RELAX-DWARFDUMP: CIE
-; RELAX-DWARFDUMP: DW_CFA_advance_loc
-; RELAX-DWARFDUMP: DW_CFA_def_cfa_offset
-; RELAX-DWARFDUMP: DW_CFA_offset
+; RELAX-DWARFDUMP:      FDE
+; RELAX-DWARFDUMP-NEXT: Format:
+; RELAX-DWARFDUMP:      DW_CFA_advance_loc: 4
+; RELAX-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +16
+; RELAX-DWARFDUMP-EMPTY:
+
+; RELAX-DWARFDUMP:      FDE
+; RELAX-DWARFDUMP:      Format:
+; RELAX-DWARFDUMP-NEXT: DW_CFA_advance_loc: 4
+; RELAX-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +16
+; RELAX-DWARFDUMP-NEXT: DW_CFA_advance_loc: 4
+; RELAX-DWARFDUMP-NEXT: DW_CFA_offset: X1 -4
+; RELAX-DWARFDUMP-NEXT: DW_CFA_nop
+; RELAX-DWARFDUMP-EMPTY:
 source_filename = "frame.c"
 
 ; Function Attrs: noinline nounwind optnone
@@ -28,8 +38,8 @@ entry:
 define i32 @foo(i32 signext %value) {
 entry:
   %value.addr = alloca i32, align 4
-  store i32 %value, i32* %value.addr, align 4
-  %0 = load i32, i32* %value.addr, align 4
+  store i32 %value, ptr %value.addr, align 4
+  %0 = load i32, ptr %value.addr, align 4
   ret i32 %0
 }
 
@@ -39,11 +49,11 @@ entry:
   %result = alloca i32, align 4
   %v = alloca i32, align 4
   %call = call i32 @init()
-  store i32 %call, i32* %v, align 4
-  %0 = load i32, i32* %v, align 4
+  store i32 %call, ptr %v, align 4
+  %0 = load i32, ptr %v, align 4
   %call1 = call i32 @foo(i32 signext %0)
-  store i32 %call1, i32* %result, align 4
-  %1 = load i32, i32* %result, align 4
+  store i32 %call1, ptr %result, align 4
+  %1 = load i32, ptr %result, align 4
   ret i32 %1
 }
 

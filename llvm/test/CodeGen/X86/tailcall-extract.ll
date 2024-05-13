@@ -1,28 +1,26 @@
 ; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
-; RUN: opt -codegenprepare -S -mtriple=x86_64-linux < %s | FileCheck %s --check-prefix OPT
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S -mtriple=x86_64-linux < %s | FileCheck %s --check-prefix OPT
 
 
 ; The exit block containing extractvalue can be duplicated into the BB
 ; containing call. And later tail call can be generated.
 
 ; CHECK-LABEL: test1:
+; CHECK:       je foo # TAILCALL
 ; CHECK:       jmp bar # TAILCALL
-; CHECK:       jmp foo # TAILCALL
 
 ; OPT-LABEL:   test1
 ; OPT:         if.then.i:
-; OPT-NEXT:    tail call { i8*, i64 } @bar
+; OPT-NEXT:    tail call { ptr, i64 } @bar
 ; OPT-NEXT:    extractvalue
-; OPT-NEXT:    bitcast
 ; OPT-NEXT:    ret
 ;
 ; OPT:         if.end.i:
-; OPT-NEXT:    tail call { i8*, i64 } @foo
+; OPT-NEXT:    tail call { ptr, i64 } @foo
 ; OPT-NEXT:    extractvalue
-; OPT-NEXT:    bitcast
 ; OPT-NEXT:    ret
 
-define i64* @test1(i64 %size) {
+define ptr @test1(i64 %size) {
 entry:
   %cmp.i.i = icmp ugt i64 %size, 16384
   %add.i.i = add i64 %size, 7
@@ -32,18 +30,17 @@ entry:
   %cmp.i = or i1 %cmp.i.i, %cmp1.i
   br i1 %cmp.i, label %if.end.i, label %if.then.i
   if.then.i:                                        ; preds = %entry
-  %call1.i = tail call { i8*, i64 } @bar(i64 %size)
+  %call1.i = tail call { ptr, i64 } @bar(i64 %size)
   br label %exit
 
 if.end.i:                                         ; preds = %entry
-  %call2.i = tail call { i8*, i64 } @foo(i64 %size)
+  %call2.i = tail call { ptr, i64 } @foo(i64 %size)
   br label %exit
 
 exit:
-  %call1.i.sink = phi { i8*, i64 } [ %call1.i, %if.then.i ], [ %call2.i, %if.end.i ]
-  %ev = extractvalue { i8*, i64 } %call1.i.sink, 0
-  %result = bitcast i8* %ev to i64*
-  ret i64* %result
+  %call1.i.sink = phi { ptr, i64 } [ %call1.i, %if.then.i ], [ %call2.i, %if.end.i ]
+  %ev = extractvalue { ptr, i64 } %call1.i.sink, 0
+  ret ptr %ev
 }
 
 
@@ -56,11 +53,11 @@ exit:
 
 ; OPT-LABEL:   test2
 ; OPT:         if.then.i:
-; OPT-NEXT:    tail call { i8*, i64 } @bar
+; OPT-NEXT:    tail call { ptr, i64 } @bar
 ; OPT-NEXT:    br label %exit
 ;
 ; OPT:         if.end.i:
-; OPT-NEXT:    tail call { i8*, i64 } @foo
+; OPT-NEXT:    tail call { ptr, i64 } @foo
 ; OPT-NEXT:    br label %exit
 ;
 ; OPT:         exit:
@@ -78,16 +75,16 @@ entry:
   %cmp.i = or i1 %cmp.i.i, %cmp1.i
   br i1 %cmp.i, label %if.end.i, label %if.then.i
   if.then.i:                                        ; preds = %entry
-  %call1.i = tail call { i8*, i64 } @bar(i64 %size)
+  %call1.i = tail call { ptr, i64 } @bar(i64 %size)
   br label %exit
 
 if.end.i:                                         ; preds = %entry
-  %call2.i = tail call { i8*, i64 } @foo(i64 %size)
+  %call2.i = tail call { ptr, i64 } @foo(i64 %size)
   br label %exit
 
 exit:
-  %call1.i.sink = phi { i8*, i64 } [ %call1.i, %if.then.i ], [ %call2.i, %if.end.i ]
-  %ev = extractvalue { i8*, i64 } %call1.i.sink, 1
+  %call1.i.sink = phi { ptr, i64 } [ %call1.i, %if.then.i ], [ %call2.i, %if.end.i ]
+  %ev = extractvalue { ptr, i64 } %call1.i.sink, 1
   ret i64 %ev
 }
 
@@ -96,23 +93,21 @@ exit:
 ; offset, so the exit block can still be duplicated, and tail call generated.
 
 ; CHECK-LABEL: test3:
+; CHECK:       je qux # TAILCALL
 ; CHECK:       jmp baz # TAILCALL
-; CHECK:       jmp qux # TAILCALL
 
 ; OPT-LABEL:   test3
 ; OPT:         if.then.i:
-; OPT-NEXT:    tail call { { i8*, i64 }, i64 } @baz
+; OPT-NEXT:    tail call { { ptr, i64 }, i64 } @baz
 ; OPT-NEXT:    extractvalue
-; OPT-NEXT:    bitcast
 ; OPT-NEXT:    ret
 ;
 ; OPT:         if.end.i:
-; OPT-NEXT:    tail call { { i8*, i64 }, i64 } @qux
+; OPT-NEXT:    tail call { { ptr, i64 }, i64 } @qux
 ; OPT-NEXT:    extractvalue
-; OPT-NEXT:    bitcast
 ; OPT-NEXT:    ret
 
-define i64* @test3(i64 %size) {
+define ptr @test3(i64 %size) {
 entry:
   %cmp.i.i = icmp ugt i64 %size, 16384
   %add.i.i = add i64 %size, 7
@@ -123,18 +118,17 @@ entry:
   br i1 %cmp.i, label %if.end.i, label %if.then.i
 
 if.then.i:                                        ; preds = %entry
-  %call1.i = tail call { {i8*, i64}, i64 } @baz(i64 %size)
+  %call1.i = tail call { {ptr, i64}, i64 } @baz(i64 %size)
   br label %exit
 
 if.end.i:                                         ; preds = %entry
-  %call2.i = tail call { {i8*, i64}, i64 } @qux(i64 %size)
+  %call2.i = tail call { {ptr, i64}, i64 } @qux(i64 %size)
   br label %exit
 
 exit:
-  %call1.i.sink = phi { {i8*, i64}, i64 } [ %call1.i, %if.then.i ], [ %call2.i, %if.end.i ]
-  %ev = extractvalue { {i8*, i64}, i64 } %call1.i.sink, 0, 0
-  %result = bitcast i8* %ev to i64*
-  ret i64* %result
+  %call1.i.sink = phi { {ptr, i64}, i64 } [ %call1.i, %if.then.i ], [ %call2.i, %if.end.i ]
+  %ev = extractvalue { {ptr, i64}, i64 } %call1.i.sink, 0, 0
+  ret ptr %ev
 }
 
 
@@ -147,11 +141,11 @@ exit:
 
 ; OPT-LABEL:   test4
 ; OPT:         if.then.i:
-; OPT-NEXT:    tail call { { i8*, i64 }, i64 } @baz
+; OPT-NEXT:    tail call { { ptr, i64 }, i64 } @baz
 ; OPT-NEXT:    br label %exit
 ;
 ; OPT:         if.end.i:
-; OPT-NEXT:    tail call { { i8*, i64 }, i64 } @qux
+; OPT-NEXT:    tail call { { ptr, i64 }, i64 } @qux
 ; OPT-NEXT:    br label %exit
 ;
 ; OPT:         exit:
@@ -170,21 +164,21 @@ entry:
   br i1 %cmp.i, label %if.end.i, label %if.then.i
 
 if.then.i:                                        ; preds = %entry
-  %call1.i = tail call { {i8*, i64}, i64 } @baz(i64 %size)
+  %call1.i = tail call { {ptr, i64}, i64 } @baz(i64 %size)
   br label %exit
 
 if.end.i:                                         ; preds = %entry
-  %call2.i = tail call { {i8*, i64}, i64 } @qux(i64 %size)
+  %call2.i = tail call { {ptr, i64}, i64 } @qux(i64 %size)
   br label %exit
 
 exit:
-  %call1.i.sink = phi { {i8*, i64}, i64 } [ %call1.i, %if.then.i ], [ %call2.i, %if.end.i ]
-  %ev = extractvalue { {i8*, i64}, i64 } %call1.i.sink, 0, 1
+  %call1.i.sink = phi { {ptr, i64}, i64 } [ %call1.i, %if.then.i ], [ %call2.i, %if.end.i ]
+  %ev = extractvalue { {ptr, i64}, i64 } %call1.i.sink, 0, 1
   ret i64 %ev
 }
 
 
-declare dso_local { i8*, i64 } @foo(i64)
-declare dso_local { i8*, i64 } @bar(i64)
-declare dso_local { {i8*, i64}, i64 } @baz(i64)
-declare dso_local { {i8*, i64}, i64 } @qux(i64)
+declare dso_local { ptr, i64 } @foo(i64)
+declare dso_local { ptr, i64 } @bar(i64)
+declare dso_local { {ptr, i64}, i64 } @baz(i64)
+declare dso_local { {ptr, i64}, i64 } @qux(i64)

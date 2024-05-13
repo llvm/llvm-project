@@ -23,18 +23,20 @@ public:
   ~AArch64TargetStreamer() override;
 
   void finish() override;
+  void emitConstantPools() override;
 
   /// Callback used to implement the ldr= pseudo.
   /// Add a new entry to the constant pool for the current section and return an
   /// MCExpr that can be used to refer to the constant pool location.
   const MCExpr *addConstantPoolEntry(const MCExpr *, unsigned Size, SMLoc Loc);
 
-  /// Callback used to implemnt the .ltorg directive.
+  /// Callback used to implement the .ltorg directive.
   /// Emit contents of constant pool for the current section.
   void emitCurrentConstantPool();
 
   /// Callback used to implement the .note.gnu.property section.
-  void emitNoteSection(unsigned Flags);
+  void emitNoteSection(unsigned Flags, uint64_t PAuthABIPlatform = -1,
+                       uint64_t PAuthABIVersion = -1);
 
   /// Callback used to implement the .inst directive.
   virtual void emitInst(uint32_t Inst);
@@ -42,30 +44,44 @@ public:
   /// Callback used to implement the .variant_pcs directive.
   virtual void emitDirectiveVariantPCS(MCSymbol *Symbol) {};
 
-  virtual void EmitARM64WinCFIAllocStack(unsigned Size) {}
-  virtual void EmitARM64WinCFISaveR19R20X(int Offset) {}
-  virtual void EmitARM64WinCFISaveFPLR(int Offset) {}
-  virtual void EmitARM64WinCFISaveFPLRX(int Offset) {}
-  virtual void EmitARM64WinCFISaveReg(unsigned Reg, int Offset) {}
-  virtual void EmitARM64WinCFISaveRegX(unsigned Reg, int Offset) {}
-  virtual void EmitARM64WinCFISaveRegP(unsigned Reg, int Offset) {}
-  virtual void EmitARM64WinCFISaveRegPX(unsigned Reg, int Offset) {}
-  virtual void EmitARM64WinCFISaveLRPair(unsigned Reg, int Offset) {}
-  virtual void EmitARM64WinCFISaveFReg(unsigned Reg, int Offset) {}
-  virtual void EmitARM64WinCFISaveFRegX(unsigned Reg, int Offset) {}
-  virtual void EmitARM64WinCFISaveFRegP(unsigned Reg, int Offset) {}
-  virtual void EmitARM64WinCFISaveFRegPX(unsigned Reg, int Offset) {}
-  virtual void EmitARM64WinCFISetFP() {}
-  virtual void EmitARM64WinCFIAddFP(unsigned Size) {}
-  virtual void EmitARM64WinCFINop() {}
-  virtual void EmitARM64WinCFISaveNext() {}
-  virtual void EmitARM64WinCFIPrologEnd() {}
-  virtual void EmitARM64WinCFIEpilogStart() {}
-  virtual void EmitARM64WinCFIEpilogEnd() {}
-  virtual void EmitARM64WinCFITrapFrame() {}
-  virtual void EmitARM64WinCFIMachineFrame() {}
-  virtual void EmitARM64WinCFIContext() {}
-  virtual void EmitARM64WinCFIClearUnwoundToCall() {}
+  virtual void emitARM64WinCFIAllocStack(unsigned Size) {}
+  virtual void emitARM64WinCFISaveR19R20X(int Offset) {}
+  virtual void emitARM64WinCFISaveFPLR(int Offset) {}
+  virtual void emitARM64WinCFISaveFPLRX(int Offset) {}
+  virtual void emitARM64WinCFISaveReg(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveRegX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveRegP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveRegPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveLRPair(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveFReg(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveFRegX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveFRegP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveFRegPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISetFP() {}
+  virtual void emitARM64WinCFIAddFP(unsigned Size) {}
+  virtual void emitARM64WinCFINop() {}
+  virtual void emitARM64WinCFISaveNext() {}
+  virtual void emitARM64WinCFIPrologEnd() {}
+  virtual void emitARM64WinCFIEpilogStart() {}
+  virtual void emitARM64WinCFIEpilogEnd() {}
+  virtual void emitARM64WinCFITrapFrame() {}
+  virtual void emitARM64WinCFIMachineFrame() {}
+  virtual void emitARM64WinCFIContext() {}
+  virtual void emitARM64WinCFIECContext() {}
+  virtual void emitARM64WinCFIClearUnwoundToCall() {}
+  virtual void emitARM64WinCFIPACSignLR() {}
+  virtual void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegIP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegD(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegDP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQ(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegIX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegIPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegDX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
 
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
@@ -95,37 +111,53 @@ public:
 
   // The unwind codes on ARM64 Windows are documented at
   // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
-  void EmitARM64WinCFIAllocStack(unsigned Size) override;
-  void EmitARM64WinCFISaveR19R20X(int Offset) override;
-  void EmitARM64WinCFISaveFPLR(int Offset) override;
-  void EmitARM64WinCFISaveFPLRX(int Offset) override;
-  void EmitARM64WinCFISaveReg(unsigned Reg, int Offset) override;
-  void EmitARM64WinCFISaveRegX(unsigned Reg, int Offset) override;
-  void EmitARM64WinCFISaveRegP(unsigned Reg, int Offset) override;
-  void EmitARM64WinCFISaveRegPX(unsigned Reg, int Offset) override;
-  void EmitARM64WinCFISaveLRPair(unsigned Reg, int Offset) override;
-  void EmitARM64WinCFISaveFReg(unsigned Reg, int Offset) override;
-  void EmitARM64WinCFISaveFRegX(unsigned Reg, int Offset) override;
-  void EmitARM64WinCFISaveFRegP(unsigned Reg, int Offset) override;
-  void EmitARM64WinCFISaveFRegPX(unsigned Reg, int Offset) override;
-  void EmitARM64WinCFISetFP() override;
-  void EmitARM64WinCFIAddFP(unsigned Size) override;
-  void EmitARM64WinCFINop() override;
-  void EmitARM64WinCFISaveNext() override;
-  void EmitARM64WinCFIPrologEnd() override;
-  void EmitARM64WinCFIEpilogStart() override;
-  void EmitARM64WinCFIEpilogEnd() override;
-  void EmitARM64WinCFITrapFrame() override;
-  void EmitARM64WinCFIMachineFrame() override;
-  void EmitARM64WinCFIContext() override;
-  void EmitARM64WinCFIClearUnwoundToCall() override;
+  void emitARM64WinCFIAllocStack(unsigned Size) override;
+  void emitARM64WinCFISaveR19R20X(int Offset) override;
+  void emitARM64WinCFISaveFPLR(int Offset) override;
+  void emitARM64WinCFISaveFPLRX(int Offset) override;
+  void emitARM64WinCFISaveReg(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveRegX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveRegP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveRegPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveLRPair(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveFReg(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveFRegX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveFRegP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveFRegPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISetFP() override;
+  void emitARM64WinCFIAddFP(unsigned Size) override;
+  void emitARM64WinCFINop() override;
+  void emitARM64WinCFISaveNext() override;
+  void emitARM64WinCFIPrologEnd() override;
+  void emitARM64WinCFIEpilogStart() override;
+  void emitARM64WinCFIEpilogEnd() override;
+  void emitARM64WinCFITrapFrame() override;
+  void emitARM64WinCFIMachineFrame() override;
+  void emitARM64WinCFIContext() override;
+  void emitARM64WinCFIECContext() override;
+  void emitARM64WinCFIClearUnwoundToCall() override;
+  void emitARM64WinCFIPACSignLR() override;
+  void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegIP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegD(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegDP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQ(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegIX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegIPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegDX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override;
 
 private:
-  void EmitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);
+  void emitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);
 };
 
 MCTargetStreamer *
 createAArch64ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
+
+MCTargetStreamer *createAArch64NullTargetStreamer(MCStreamer &S);
 
 } // end namespace llvm
 

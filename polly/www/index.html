@@ -7,13 +7,6 @@
   <title>Polly - Polyhedral optimizations for LLVM</title>
   <link type="text/css" rel="stylesheet" href="menu.css">
   <link type="text/css" rel="stylesheet" href="content.css">
-  <script src="video-js/video.js" type="text/javascript" charset="utf-8"></script>
-  <script type="text/javascript">
-    VideoJS.setupAllWhenReady();
-  </script>
-
-  <!-- Include the VideoJS Stylesheet -->
-  <link rel="stylesheet" href="video-js/video-js.css" type="text/css" media="screen" title="Video JS">
 </head>
 <body>
 <div id="box">
@@ -28,8 +21,7 @@
   on integer polyhedra to analyze and optimize the memory access pattern of a
   program. We currently perform classical loop transformations, especially
   tiling and loop fusion to improve data-locality. Polly can also exploit
-  OpenMP level parallelism, expose SIMDization opportunities. Work has also be
-  done in the area of automatic GPU code generation.</p>
+  OpenMP level parallelism, expose SIMDization opportunities.</p>
 
   For many users, however, it's not the existing optimizations in Polly that are
   of most interest, but the new analyses and optimizations enabled by the Polly
@@ -110,7 +102,7 @@
       mappings are lowered to efficient C/LLVM code.
       <li><b>User-defined constraint sets for run-time checks</b> We discuss how
       arbitrary sets of constraints can be used to automatically create run-time
-      checks that ensure a set of constrainst actually hold. This feature is
+      checks that ensure a set of constraints actually hold. This feature is
       very useful to verify at run-time various assumptions that have been taken
       program optimization.
     </ul>
@@ -142,7 +134,7 @@
   The support for ScopLib as an exchange format has been removed as recent
   versions of clan, candl and pluto all support the OpenScop exchange format.
 
-  The support of the external optmizer PoCC has been dropped in favor of the
+  The support of the external optimizer PoCC has been dropped in favor of the
   isl optimizer (default) and the still available pluto support.
   </td>
   </tr>
@@ -154,7 +146,7 @@
   and David Peixotto's (both Qualcomm) recent <a
   href="https://repo.or.cz/w/isl.git/commit/60703e3ee89b9d5d4d1afb6a3f611292c0884574">commit</a>
   to isl, isl's latest development version can be built with imath instead of
-  GMP. With both CLooG and gmp having become optional, the last obilgatory
+  GMP. With both CLooG and gmp having become optional, the last obligatory
   dependency to GPL licensed software has been removed. Now Polly only depends
   on isl (and the included imath), which are both MIT licensed.
   </td>
@@ -377,7 +369,7 @@ research tool.<br \>
 
   <tr><td><b><br>2010</b></td></tr>
   <tr>
-  <td><p> Dezember </p></td>
+  <td><p> December </p></td>
   <td><p>Basic vectorization support </p></td>
   </tr>
 

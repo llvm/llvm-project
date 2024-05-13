@@ -19,8 +19,8 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include <optional>
 
 namespace clang {
 /// Kinds of LV computation.  The linkage side of the computation is
@@ -29,12 +29,15 @@ namespace clang {
 struct LVComputationKind {
   /// The kind of entity whose visibility is ultimately being computed;
   /// visibility computations for types and non-types follow different rules.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ExplicitKind : 1;
   /// Whether explicit visibility attributes should be ignored. When set,
   /// visibility may only be restricted by the visibility of template arguments.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IgnoreExplicitVisibility : 1;
   /// Whether all visibility should be ignored. When set, we're only interested
   /// in computing linkage.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IgnoreAllVisibility : 1;
 
   enum { NumLVComputationKindBits = 3 };
@@ -91,11 +94,11 @@ class LinkageComputer {
     return QueryType(ND, Kind.toBits());
   }
 
-  llvm::Optional<LinkageInfo> lookup(const NamedDecl *ND,
-                                     LVComputationKind Kind) const {
+  std::optional<LinkageInfo> lookup(const NamedDecl *ND,
+                                    LVComputationKind Kind) const {
     auto Iter = CachedLinkageInfo.find(makeCacheKey(ND, Kind));
     if (Iter == CachedLinkageInfo.end())
-      return None;
+      return std::nullopt;
     return Iter->second;
   }
 

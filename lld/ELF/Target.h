@@ -9,9 +9,13 @@
 #ifndef LLD_ELF_TARGET_H
 #define LLD_ELF_TARGET_H
 
+#include "Config.h"
 #include "InputSection.h"
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
 
@@ -87,6 +91,12 @@ public:
   void relocateNoSym(uint8_t *loc, RelType type, uint64_t val) const {
     relocate(loc, Relocation{R_NONE, type, 0, 0, nullptr}, val);
   }
+  virtual void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const;
+
+  // Do a linker relaxation pass and return true if we changed something.
+  virtual bool relaxOnce(int pass) const { return false; }
+  // Do finalize relaxation after collecting relaxation infos.
+  virtual void finalizeRelax(int passes) const {}
 
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
@@ -109,11 +119,11 @@ public:
   uint64_t getImageBase() const;
 
   // True if _GLOBAL_OFFSET_TABLE_ is relative to .got.plt, false if .got.
-  bool gotBaseSymInGotPlt = true;
+  bool gotBaseSymInGotPlt = false;
 
+  static constexpr RelType noneRel = 0;
   RelType copyRel;
   RelType gotRel;
-  RelType noneRel;
   RelType pltRel;
   RelType relativeRel;
   RelType iRelativeRel;
@@ -134,6 +144,12 @@ public:
   // On PPC ELF V2 abi, the first entry in the .got is the .TOC.
   unsigned gotHeaderEntriesNum = 0;
 
+  // On PPC ELF V2 abi, the dynamic section needs DT_PPC64_OPT (DT_LOPROC + 3)
+  // to be set to 0x2 if there can be multiple TOC's. Although we do not emit
+  // multiple TOC's, there can be a mix of TOC and NOTOC addressing which
+  // is functionally equivalent.
+  int ppc64DynamicSectionOpt = 0;
+
   bool needsThunks = false;
 
   // A 4-byte field corresponding to one or more trap instructions, used to pad
@@ -142,7 +158,7 @@ public:
 
   // Stores the NOP instructions of different sizes for the target and is used
   // to pad sections that are relaxed.
-  llvm::Optional<std::vector<std::vector<uint8_t>>> nopInstrs;
+  std::optional<std::vector<std::vector<uint8_t>>> nopInstrs;
 
   // If a target needs to rewrite calls to __morestack to instead call
   // __morestack_non_split when a split-stack enabled caller calls a
@@ -152,16 +168,6 @@ public:
   virtual RelExpr adjustTlsExpr(RelType type, RelExpr expr) const;
   virtual RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                                   const uint8_t *loc) const;
-  virtual void relaxGot(uint8_t *loc, const Relocation &rel,
-                        uint64_t val) const;
-  virtual void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                              uint64_t val) const;
-  virtual void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                              uint64_t val) const;
-  virtual void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                              uint64_t val) const;
-  virtual void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                              uint64_t val) const;
 
 protected:
   // On FreeBSD x86_64 the first page cannot be mmaped.
@@ -176,11 +182,13 @@ TargetInfo *getAMDGPUTargetInfo();
 TargetInfo *getARMTargetInfo();
 TargetInfo *getAVRTargetInfo();
 TargetInfo *getHexagonTargetInfo();
+TargetInfo *getLoongArchTargetInfo();
 TargetInfo *getMSP430TargetInfo();
 TargetInfo *getPPC64TargetInfo();
 TargetInfo *getPPCTargetInfo();
 TargetInfo *getRISCVTargetInfo();
 TargetInfo *getSPARCV9TargetInfo();
+TargetInfo *getSystemZTargetInfo();
 TargetInfo *getX86TargetInfo();
 TargetInfo *getX86_64TargetInfo();
 template <class ELFT> TargetInfo *getMipsTargetInfo();
@@ -188,6 +196,7 @@ template <class ELFT> TargetInfo *getMipsTargetInfo();
 struct ErrorPlace {
   InputSectionBase *isec;
   std::string loc;
+  std::string srcLoc;
 };
 
 // Returns input section and corresponding source string for the given location.
@@ -197,10 +206,12 @@ static inline std::string getErrorLocation(const uint8_t *loc) {
   return getErrorPlace(loc).loc;
 }
 
+void processArmCmseSymbols();
+
 void writePPC32GlinkSection(uint8_t *buf, size_t numEntries);
 
-bool tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc);
 unsigned getPPCDFormOp(unsigned secondaryOp);
+unsigned getPPCDSFormOp(unsigned secondaryOp);
 
 // In the PowerPC64 Elf V2 abi a function can have 2 entry points.  The first
 // is a global entry point (GEP) which typically is used to initialize the TOC
@@ -211,10 +222,6 @@ unsigned getPPCDFormOp(unsigned secondaryOp);
 // to the local entry-point.
 unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
 
-// Returns true if a relocation is a small code model relocation that accesses
-// the .toc section.
-bool isPPC64SmallCodeModelTocReloc(RelType type);
-
 // Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
 // instruction (regardless of endianness). Therefore, the prefix is always in
 // lower memory than the instruction.
@@ -223,8 +230,18 @@ void writePrefixedInstruction(uint8_t *loc, uint64_t insn);
 void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
+template <typename ELFT> void writeARMCmseImportLib();
+uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
+void riscvFinalizeRelax(int passes);
+void mergeRISCVAttributesSections();
+void addArmInputSectionMappingSymbols();
+void addArmSyntheticSectionMappingSymbol(Defined *);
+void sortArmMappingSymbols();
+void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
+void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
+void initSymbolAnchors();
 
-extern const TargetInfo *target;
+LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
 TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
@@ -288,7 +305,38 @@ inline void write32(void *p, uint32_t v) {
 inline void write64(void *p, uint64_t v) {
   llvm::support::endian::write64(p, v, config->endianness);
 }
+
+// Overwrite a ULEB128 value and keep the original length.
+inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
+  while (*bufLoc & 0x80) {
+    *bufLoc++ = 0x80 | (val & 0x7f);
+    val >>= 7;
+  }
+  *bufLoc = val;
+  return val;
+}
 } // namespace elf
 } // namespace lld
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
+#define invokeELFT(f, ...)                                                     \
+  switch (config->ekind) {                                                     \
+  case lld::elf::ELF32LEKind:                                                  \
+    f<llvm::object::ELF32LE>(__VA_ARGS__);                                     \
+    break;                                                                     \
+  case lld::elf::ELF32BEKind:                                                  \
+    f<llvm::object::ELF32BE>(__VA_ARGS__);                                     \
+    break;                                                                     \
+  case lld::elf::ELF64LEKind:                                                  \
+    f<llvm::object::ELF64LE>(__VA_ARGS__);                                     \
+    break;                                                                     \
+  case lld::elf::ELF64BEKind:                                                  \
+    f<llvm::object::ELF64BE>(__VA_ARGS__);                                     \
+    break;                                                                     \
+  default:                                                                     \
+    llvm_unreachable("unknown config->ekind");                                 \
+  }
 
 #endif

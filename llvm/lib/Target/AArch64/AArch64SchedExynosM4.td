@@ -25,7 +25,9 @@ def ExynosM4Model : SchedMachineModel {
   let CompleteModel         =   1; // Use the default model otherwise.
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F);
+                                                    PAUnsupported.F,
+                                                    SMEUnsupported.F,
+                                                    [HasMTE, HasCSSC]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -140,7 +142,7 @@ def M4WriteZ4 : SchedWriteRes<[]> { let Latency = 4;
 def M4WriteA1 : SchedWriteRes<[M4UnitALU]> { let Latency = 1; }
 def M4WriteA2 : SchedWriteRes<[M4UnitALU]> { let Latency = 2; }
 def M4WriteAA : SchedWriteRes<[M4UnitALU]> { let Latency = 2;
-                                             let ResourceCycles = [2]; }
+                                             let ReleaseAtCycles = [2]; }
 def M4WriteAB : SchedWriteRes<[M4UnitALU,
                                M4UnitC]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
@@ -164,8 +166,8 @@ def M4WriteAV : SchedWriteVariant<[SchedVar<ExynosResetPred,   [M4WriteZ0]>,
 def M4WriteAX : SchedWriteVariant<[SchedVar<ExynosArithPred,   [M4WriteA1]>,
                                    SchedVar<ExynosLogicExPred, [M4WriteA1]>,
                                    SchedVar<NoSchedPred,       [M4WriteAA]>]>;
-def M4WriteAY : SchedWriteVariant<[SchedVar<ExynosRotateRightImmPred, [M4WriteA1]>,
-                                   SchedVar<NoSchedPred,              [M4WriteAF]>]>;
+def M4WriteAY : SchedWriteVariant<[SchedVar<IsRORImmIdiomPred, [M4WriteA1]>,
+                                   SchedVar<NoSchedPred,       [M4WriteAF]>]>;
 
 def M4WriteB1 : SchedWriteRes<[M4UnitB]> { let Latency = 1; }
 def M4WriteBX : SchedWriteVariant<[SchedVar<ExynosBranchLinkLRPred, [M4WriteAC]>,
@@ -174,12 +176,12 @@ def M4WriteBX : SchedWriteVariant<[SchedVar<ExynosBranchLinkLRPred, [M4WriteAC]>
 def M4WriteC1 : SchedWriteRes<[M4UnitC]> { let Latency = 1; }
 def M4WriteC3 : SchedWriteRes<[M4UnitC]> { let Latency = 3; }
 def M4WriteCA : SchedWriteRes<[M4UnitC]> { let Latency = 4;
-                                           let ResourceCycles = [2]; }
+                                           let ReleaseAtCycles = [2]; }
 
 def M4WriteD12 : SchedWriteRes<[M4UnitD]> { let Latency = 12;
-                                            let ResourceCycles = [12]; }
+                                            let ReleaseAtCycles = [12]; }
 def M4WriteD21 : SchedWriteRes<[M4UnitD]> { let Latency = 21;
-                                            let ResourceCycles = [21]; }
+                                            let ReleaseAtCycles = [21]; }
 
 def M4WriteE2 : SchedWriteRes<[M4UnitE]> { let Latency = 2; }
 
@@ -263,22 +265,22 @@ def M4WriteNEONR   : SchedWriteRes<[M4UnitFCVT0,
                                                     let NumMicroOps = 1; }
 def M4WriteNEONV   : SchedWriteRes<[M4UnitFDIV,
                                     M4UnitFDIV]>  { let Latency = 7;
-                                                    let ResourceCycles = [6, 6]; }
+                                                    let ReleaseAtCycles = [6, 6]; }
 def M4WriteNEONVH  : SchedWriteRes<[M4UnitFDIVH,
                                     M4UnitFDIVH]> { let Latency = 7;
-                                                    let ResourceCycles = [6, 6]; }
+                                                    let ReleaseAtCycles = [6, 6]; }
 def M4WriteNEONW   : SchedWriteRes<[M4UnitFDIV,
                                     M4UnitFDIV]>  { let Latency = 12;
-                                                    let ResourceCycles = [9, 9]; }
+                                                    let ReleaseAtCycles = [9, 9]; }
 def M4WriteNEONX   : SchedWriteRes<[M4UnitFSQR,
                                     M4UnitFSQR]>  { let Latency = 8;
-                                                    let ResourceCycles = [7, 7]; }
+                                                    let ReleaseAtCycles = [7, 7]; }
 def M4WriteNEONXH  : SchedWriteRes<[M4UnitFSQRH,
                                     M4UnitFSQRH]> { let Latency = 7;
-                                                    let ResourceCycles = [6, 6]; }
+                                                    let ReleaseAtCycles = [6, 6]; }
 def M4WriteNEONY   : SchedWriteRes<[M4UnitFSQR,
                                     M4UnitFSQR]>  { let Latency = 12;
-                                                    let ResourceCycles = [9, 9]; }
+                                                    let ReleaseAtCycles = [9, 9]; }
 def M4WriteNEONZ   : SchedWriteVariant<[SchedVar<ExynosQFormPred, [M4WriteNEONO]>,
                                         SchedVar<NoSchedPred,     [M4WriteNEONN]>]>;
 
@@ -296,25 +298,24 @@ def M4WriteFCVT4A  : SchedWriteRes<[M4UnitFCVT0]> { let Latency = 4; }
 def M4WriteFCVT6A  : SchedWriteRes<[M4UnitFCVT0]> { let Latency = 6; }
 
 def M4WriteFDIV7   : SchedWriteRes<[M4UnitFDIV]>  { let Latency = 7;
-                                                    let ResourceCycles = [6]; }
+                                                    let ReleaseAtCycles = [6]; }
 def M4WriteFDIV7H  : SchedWriteRes<[M4UnitFDIVH]> { let Latency = 7;
-                                                    let ResourceCycles = [6]; }
+                                                    let ReleaseAtCycles = [6]; }
 def M4WriteFDIV12  : SchedWriteRes<[M4UnitFDIV]>  { let Latency = 12;
-                                                    let ResourceCycles = [9]; }
+                                                    let ReleaseAtCycles = [9]; }
 
 def M4WriteFMAC2H  : SchedWriteRes<[M4UnitFMACH]> { let Latency = 2; }
 def M4WriteFMAC3H  : SchedWriteRes<[M4UnitFMACH]> { let Latency = 3; }
 def M4WriteFMAC3   : SchedWriteRes<[M4UnitFMAC]>  { let Latency = 3; }
 def M4WriteFMAC4   : SchedWriteRes<[M4UnitFMAC]>  { let Latency = 4; }
 def M4WriteFMAC4H  : SchedWriteRes<[M4UnitFMACH]> { let Latency = 4; }
-def M4WriteFMAC5   : SchedWriteRes<[M4UnitFMAC]>  { let Latency = 5; }
 
 def M4WriteFSQR7H  : SchedWriteRes<[M4UnitFSQRH]> { let Latency = 7;
-                                                    let ResourceCycles = [6]; }
+                                                    let ReleaseAtCycles = [6]; }
 def M4WriteFSQR8   : SchedWriteRes<[M4UnitFSQR]>  { let Latency = 8;
-                                                    let ResourceCycles = [7]; }
+                                                    let ReleaseAtCycles = [7]; }
 def M4WriteFSQR12  : SchedWriteRes<[M4UnitFSQR]>  { let Latency = 12;
-                                                    let ResourceCycles = [9]; }
+                                                    let ReleaseAtCycles = [9]; }
 
 def M4WriteNALU1   : SchedWriteRes<[M4UnitNALU]>  { let Latency = 1; }
 def M4WriteNALU1H  : SchedWriteRes<[M4UnitNALUH]> { let Latency = 1; }
@@ -337,16 +338,16 @@ def M4WriteNSHF1   : SchedWriteRes<[M4UnitNSHF]>  { let Latency = 1; }
 def M4WriteNSHF1H  : SchedWriteRes<[M4UnitNSHFH]> { let Latency = 1; }
 def M4WriteNSHF3   : SchedWriteRes<[M4UnitNSHF]>  { let Latency = 3; }
 def M4WriteNSHFA   : SchedWriteRes<[M4UnitNSHF]>  { let Latency = 1;
-                                                    let ResourceCycles = [2]; }
+                                                    let ReleaseAtCycles = [2]; }
 def M4WriteNSHFB   : SchedWriteRes<[M4UnitNSHF]>  { let Latency = 2;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [2]; }
+                                                    let ReleaseAtCycles = [2]; }
 def M4WriteNSHFC   : SchedWriteRes<[M4UnitNSHF]>  { let Latency = 3;
                                                     let NumMicroOps = 3;
-                                                    let ResourceCycles = [4]; }
+                                                    let ReleaseAtCycles = [4]; }
 def M4WriteNSHFD   : SchedWriteRes<[M4UnitNSHF]>  { let Latency = 4;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [4]; }
+                                                    let ReleaseAtCycles = [4]; }
 
 def M4WriteNSHT1   : SchedWriteRes<[M4UnitNSHT]>  { let Latency = 1; }
 def M4WriteNSHT2   : SchedWriteRes<[M4UnitNSHT]>  { let Latency = 2; }
@@ -368,41 +369,41 @@ def M4WriteVLDC    : SchedWriteRes<[M4UnitL,
 def M4WriteVLDD    : SchedWriteRes<[M4UnitL,
                                     M4UnitNSHF]>  { let Latency = 6;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [2, 1]; }
+                                                    let ReleaseAtCycles = [2, 1]; }
 def M4WriteVLDF    : SchedWriteRes<[M4UnitL,
                                     M4UnitL]>     { let Latency = 10;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [3, 3]; }
+                                                    let ReleaseAtCycles = [3, 3]; }
 def M4WriteVLDG    : SchedWriteRes<[M4UnitL,
                                     M4UnitNSHF,
                                     M4UnitNSHF]>  { let Latency = 6;
                                                     let NumMicroOps = 3;
-                                                    let ResourceCycles = [2, 1, 1]; }
+                                                    let ReleaseAtCycles = [2, 1, 1]; }
 def M4WriteVLDI    : SchedWriteRes<[M4UnitL,
                                     M4UnitL,
                                     M4UnitL]>     { let Latency = 12;
                                                     let NumMicroOps = 3;
-                                                    let ResourceCycles = [3, 3, 3]; }
+                                                    let ReleaseAtCycles = [3, 3, 3]; }
 def M4WriteVLDJ    : SchedWriteRes<[M4UnitL,
                                     M4UnitNSHF,
                                     M4UnitNSHF,
                                     M4UnitNSHF]>  { let Latency = 7;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [3, 1, 1, 1]; }
+                                                    let ReleaseAtCycles = [3, 1, 1, 1]; }
 def M4WriteVLDK    : SchedWriteRes<[M4UnitL,
                                     M4UnitNSHF,
                                     M4UnitNSHF,
                                     M4UnitNSHF,
                                     M4UnitNSHF]>  { let Latency = 7;
                                                     let NumMicroOps = 5;
-                                                    let ResourceCycles = [3, 1, 1, 1, 1]; }
+                                                    let ReleaseAtCycles = [3, 1, 1, 1, 1]; }
 def M4WriteVLDL    : SchedWriteRes<[M4UnitL,
                                     M4UnitNSHF,
                                     M4UnitNSHF,
                                     M4UnitL,
                                     M4UnitNSHF]>  { let Latency = 7;
                                                     let NumMicroOps = 5;
-                                                    let ResourceCycles = [3, 1, 1, 6, 1]; }
+                                                    let ReleaseAtCycles = [3, 1, 1, 6, 1]; }
 def M4WriteVLDM    : SchedWriteRes<[M4UnitL,
                                     M4UnitNSHF,
                                     M4UnitNSHF,
@@ -410,13 +411,13 @@ def M4WriteVLDM    : SchedWriteRes<[M4UnitL,
                                     M4UnitNSHF,
                                     M4UnitNSHF]>  { let Latency = 7;
                                                     let NumMicroOps = 6;
-                                                    let ResourceCycles = [3, 1, 1, 3, 1, 1]; }
+                                                    let ReleaseAtCycles = [3, 1, 1, 3, 1, 1]; }
 def M4WriteVLDN    : SchedWriteRes<[M4UnitL,
                                     M4UnitL,
                                     M4UnitL,
                                     M4UnitL]>     { let Latency = 14;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [3, 3, 3, 3]; }
+                                                    let ReleaseAtCycles = [3, 3, 3, 3]; }
 
 def M4WriteVST1    : SchedWriteRes<[M4UnitS,
                                     M4UnitFST]>  { let Latency = 1;
@@ -437,7 +438,7 @@ def M4WriteVSTF    : SchedWriteRes<[M4UnitNSHF,
                                     M4UnitS,
                                     M4UnitFST]>   { let Latency = 4;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [1, 2, 1, 2, 1]; }
+                                                    let ReleaseAtCycles = [1, 2, 1, 2, 1]; }
 def M4WriteVSTG    : SchedWriteRes<[M4UnitNSHF,
                                     M4UnitNSHF,
                                     M4UnitNSHF,
@@ -448,7 +449,7 @@ def M4WriteVSTG    : SchedWriteRes<[M4UnitNSHF,
                                     M4UnitS,
                                     M4UnitFST]>   { let Latency = 5;
                                                     let NumMicroOps = 6;
-                                                    let ResourceCycles = [1, 1, 1, 2, 1, 2, 1, 2, 1]; }
+                                                    let ReleaseAtCycles = [1, 1, 1, 2, 1, 2, 1, 2, 1]; }
 def M4WriteVSTI    : SchedWriteRes<[M4UnitNSHF,
                                     M4UnitNSHF,
                                     M4UnitNSHF,
@@ -462,7 +463,7 @@ def M4WriteVSTI    : SchedWriteRes<[M4UnitNSHF,
                                     M4UnitS,
                                     M4UnitFST]>   { let Latency = 8;
                                                     let NumMicroOps = 5;
-                                                    let ResourceCycles = [1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1]; }
+                                                    let ReleaseAtCycles = [1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1]; }
 def M4WriteVSTJ    : SchedWriteRes<[M4UnitA,
                                     M4UnitS,
                                     M4UnitFST,
@@ -480,7 +481,7 @@ def M4WriteVSTL    : SchedWriteRes<[M4UnitNSHF,
                                     M4UnitS,
                                     M4UnitFST]>   { let Latency = 4;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [1, 1, 2, 1, 2, 1]; }
+                                                    let ReleaseAtCycles = [1, 1, 2, 1, 2, 1]; }
 def M4WriteVSTY    : SchedWriteVariant<[SchedVar<ExynosScaledIdxPred, [M4WriteVSTK]>,
                                         SchedVar<NoSchedPred,         [WriteVST]>]>;
 
@@ -493,8 +494,7 @@ def M4WriteMOVI    : SchedWriteVariant<[SchedVar<IsZeroFPIdiomPred, [M4WriteZ0]>
 // Fast forwarding.
 def M4ReadAESM1    : SchedReadAdvance<+1, [M4WriteNCRY1]>;
 def M4ReadFMACM1   : SchedReadAdvance<+1, [M4WriteFMAC4,
-                                           M4WriteFMAC4H,
-                                           M4WriteFMAC5]>;
+                                           M4WriteFMAC4H]>;
 def M4ReadNMULM1   : SchedReadAdvance<+1, [M4WriteNMUL3]>;
 def M4ReadNMULP2   : SchedReadAdvance<-2, [M4WriteNMUL3]>;
 
@@ -557,7 +557,8 @@ def : SchedAlias<WriteVLD, M4WriteL5>;
 def : SchedAlias<WriteVST, M4WriteVST1>;
 
 // ASIMD FP instructions.
-def : SchedAlias<WriteV, M4WriteNALU1>;
+def : SchedAlias<WriteVd, M4WriteNALU1>;
+def : SchedAlias<WriteVq, M4WriteNALU1>;
 
 // Other miscellaneous instructions.
 def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }
@@ -580,6 +581,7 @@ def : ReadAdvance<ReadID,      0>;
 def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadVLD,     0>;
+def : ReadAdvance<ReadST,      0>;
 
 //===----------------------------------------------------------------------===//
 // Finer scheduling model.
@@ -807,7 +809,7 @@ def : InstRW<[M4WriteNALU1],  (instregex "^RBITv")>;
 def : InstRW<[M4WriteNALU1],  (instregex "^(BIF|BIT|BSL|BSP)v")>;
 def : InstRW<[M4WriteNALU1],  (instregex "^CL[STZ]v")>;
 def : InstRW<[M4WriteNEONB],  (instregex "^DUPv.+gpr")>;
-def : InstRW<[M4WriteNSHF1],  (instregex "^CPY")>;
+def : InstRW<[M4WriteNSHF1],  (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[M4WriteNSHF1],  (instregex "^DUPv.+lane")>;
 def : InstRW<[M4WriteNSHF1],  (instregex "^EXTv")>;
 def : InstRW<[M4WriteNSHT4A], (instregex "^XTNv")>;

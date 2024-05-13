@@ -36,14 +36,14 @@
 - (void)methodOnSubclass2;
 @end
 
-// Sanity check: the basic initialization pattern.
-void test_instancetype_alloc_init_simple() {
+// Check the basic initialization pattern.
+void test_instancetype_alloc_init_simple(void) {
   Root *r1 = [[Root alloc] init];
   Subclass1 *sc1 = [[Subclass1 alloc] init];
 }
 
 // Test that message sends to instancetype methods have the right type.
-void test_instancetype_narrow_method_search() {
+void test_instancetype_narrow_method_search(void) {
   // instancetype on class methods
   Subclass1 *sc1 = [[Subclass1 alloc] initSubclass2]; // expected-warning{{'Subclass1' may not respond to 'initSubclass2'}}
   Subclass2 *sc2 = [[Subclass2 alloc] initSubclass2]; // okay
@@ -156,7 +156,7 @@ void test_instancetype_narrow_method_search() {
 
 // Check that inherited related return types influence the types of
 // message sends.
-void test_instancetype_inherited() {
+void test_instancetype_inherited(void) {
   [[Subclass4 alloc] initSubclass1]; // expected-warning{{'Subclass4' may not respond to 'initSubclass1'}}
   [[Subclass4 alloc] initOther];
 }
@@ -188,7 +188,6 @@ void test_instancetype_inherited() {
 
 @end
 
-// rdar://12493140
 @protocol P4
 - (instancetype) foo; // expected-note {{current method is explicitly declared 'instancetype' and is expected to return an instance of its class type}}
 @end

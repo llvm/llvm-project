@@ -26,20 +26,18 @@ define <32 x i8> @test_consume_arg([9 x double], <32 x i8> %vec) {
 define void @test_produce_arg() {
 ; CHECK-LABEL: test_produce_arg:
 
-; CHECK-V7K: add r[[BASE:[0-9]+]], sp, #32
-; CHECK-V7K: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]:128]
 ; CHECK-V7K: add r[[BASE:[0-9]+]], sp, #16
+; CHECK-V7K: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]:128]!
 ; CHECK-V7K: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]:128]
 
-; CHECK-AAPCS: add r[[BASE:[0-9]+]], sp, #24
-; CHECK-AAPCS: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]]
 ; CHECK-AAPCS: add r[[BASE:[0-9]+]], sp, #8
+; CHECK-AAPCS: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]]!
 ; CHECK-AAPCS: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]]
 
-; CHECK-APCS: add r[[BASE:[0-9]+]], sp, #60
-; CHECK-APCS: vst1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]]
+; CHECK-APCS: mov r[[R4:[0-9]+]], sp
 ; CHECK-APCS: mov r[[BASE:[0-9]+]], sp
-; CHECK-APCS: str {{r[0-9]+}}, [r[[BASE]]], #76
+; CHECK-APCS: str {{r[0-9]+}}, [r[[BASE]]], #60
+; CHECK-APCS: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]]!
 ; CHECK-APCS: vst1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]]
 
 call <32 x i8> @test_consume_arg([9 x double] undef, <32 x i8> zeroinitializer)

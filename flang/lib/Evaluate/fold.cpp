@@ -9,6 +9,8 @@
 #include "flang/Evaluate/fold.h"
 #include "fold-implementation.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/initial-image.h"
+#include "flang/Evaluate/tools.h"
 
 namespace Fortran::evaluate {
 
@@ -21,7 +23,7 @@ characteristics::TypeAndShape Fold(
 std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
     FoldingContext &context, Subscript &ss, const NamedEntity &base, int dim) {
   ss = FoldOperation(context, std::move(ss));
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](IndirectSubscriptIntegerExpr &expr)
               -> std::optional<Constant<SubscriptInteger>> {
@@ -36,12 +38,13 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
             auto lower{triplet.lower()}, upper{triplet.upper()};
             std::optional<ConstantSubscript> stride{ToInt64(triplet.stride())};
             if (!lower) {
-              lower = GetLowerBound(context, base, dim);
+              lower = GetLBOUND(context, base, dim);
             }
             if (!upper) {
-              upper =
-                  ComputeUpperBound(context, GetLowerBound(context, base, dim),
-                      GetExtent(context, base, dim));
+              if (auto lb{GetLBOUND(context, base, dim)}) {
+                upper = ComputeUpperBound(
+                    context, std::move(*lb), GetExtent(context, base, dim));
+              }
             }
             auto lbi{ToInt64(lower)}, ubi{ToInt64(upper)};
             if (lbi && ubi && stride && *stride != 0) {
@@ -65,29 +68,50 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
 Expr<SomeDerived> FoldOperation(
     FoldingContext &context, StructureConstructor &&structure) {
   StructureConstructor ctor{structure.derivedTypeSpec()};
-  bool constantExtents{true};
+  bool isConstant{true};
+  auto restorer{context.WithPDTInstance(structure.derivedTypeSpec())};
   for (auto &&[symbol, value] : std::move(structure)) {
     auto expr{Fold(context, std::move(value.value()))};
-    if (!IsPointer(symbol)) {
-      bool ok{false};
+    if (IsPointer(symbol)) {
+      if (IsNullPointer(expr)) {
+        // Handle x%c when x designates a named constant of derived
+        // type and %c is NULL() in that constant.
+        expr = Expr<SomeType>{NullPointer{}};
+      } else if (IsProcedure(symbol)) {
+        isConstant &= IsInitialProcedureTarget(expr);
+      } else {
+        isConstant &= IsInitialDataTarget(expr);
+      }
+    } else if (IsAllocatable(symbol)) {
+      // F2023: 10.1.12 (3)(a)
+      // If comp-spec is not null() for the allocatable component the
+      // structure constructor is not a constant expression.
+      isConstant &= IsNullPointer(expr);
+    } else {
+      isConstant &= IsActuallyConstant(expr) || IsNullPointer(expr);
       if (auto valueShape{GetConstantExtents(context, expr)}) {
         if (auto componentShape{GetConstantExtents(context, symbol)}) {
           if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0) {
             expr = ScalarConstantExpander{std::move(*componentShape)}.Expand(
                 std::move(expr));
-            ok = expr.Rank() > 0;
+            isConstant &= expr.Rank() > 0;
           } else {
-            ok = *valueShape == *componentShape;
+            isConstant &= *valueShape == *componentShape;
+          }
+          if (*valueShape == *componentShape) {
+            if (auto lbounds{AsConstantExtents(
+                    context, GetLBOUNDs(context, NamedEntity{symbol}))}) {
+              expr =
+                  ArrayConstantBoundChanger{std::move(*lbounds)}.ChangeLbounds(
+                      std::move(expr));
+            }
           }
         }
       }
-      if (!ok) {
-        constantExtents = false;
-      }
     }
-    ctor.Add(symbol, Fold(context, std::move(expr)));
+    ctor.Add(symbol, std::move(expr));
   }
-  if (constantExtents && IsConstantExpr(ctor)) {
+  if (isConstant) {
     return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
   } else {
     return Expr<SomeDerived>{std::move(ctor)};
@@ -115,16 +139,16 @@ Triplet FoldOperation(FoldingContext &context, Triplet &&triplet) {
 }
 
 Subscript FoldOperation(FoldingContext &context, Subscript &&subscript) {
-  return std::visit(common::visitors{
-                        [&](IndirectSubscriptIntegerExpr &&expr) {
-                          expr.value() = Fold(context, std::move(expr.value()));
-                          return Subscript(std::move(expr));
-                        },
-                        [&](Triplet &&triplet) {
-                          return Subscript(
-                              FoldOperation(context, std::move(triplet)));
-                        },
-                    },
+  return common::visit(
+      common::visitors{
+          [&](IndirectSubscriptIntegerExpr &&expr) {
+            expr.value() = Fold(context, std::move(expr.value()));
+            return Subscript(std::move(expr));
+          },
+          [&](Triplet &&triplet) {
+            return Subscript(FoldOperation(context, std::move(triplet)));
+          },
+      },
       std::move(subscript.u));
 }
 
@@ -158,12 +182,13 @@ CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
 }
 
 DataRef FoldOperation(FoldingContext &context, DataRef &&dataRef) {
-  return std::visit(common::visitors{
-                        [&](SymbolRef symbol) { return DataRef{*symbol}; },
-                        [&](auto &&x) {
-                          return DataRef{FoldOperation(context, std::move(x))};
-                        },
-                    },
+  return common::visit(common::visitors{
+                           [&](SymbolRef symbol) { return DataRef{*symbol}; },
+                           [&](auto &&x) {
+                             return DataRef{
+                                 FoldOperation(context, std::move(x))};
+                           },
+                       },
       std::move(dataRef.u));
 }
 
@@ -185,24 +210,9 @@ ComplexPart FoldOperation(FoldingContext &context, ComplexPart &&complexPart) {
       FoldOperation(context, std::move(complex)), complexPart.part()};
 }
 
-std::optional<std::int64_t> GetInt64Arg(
-    const std::optional<ActualArgument> &arg) {
-  if (const auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(arg)}) {
-    return ToInt64(*intExpr);
-  } else {
-    return std::nullopt;
-  }
-}
-
 std::optional<std::int64_t> GetInt64ArgOr(
     const std::optional<ActualArgument> &arg, std::int64_t defaultValue) {
-  if (!arg) {
-    return defaultValue;
-  } else if (const auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(arg)}) {
-    return ToInt64(*intExpr);
-  } else {
-    return std::nullopt;
-  }
+  return arg ? ToInt64(*arg) : defaultValue;
 }
 
 Expr<ImpliedDoIndex::Result> FoldOperation(
@@ -212,6 +222,76 @@ Expr<ImpliedDoIndex::Result> FoldOperation(
   } else {
     return Expr<ImpliedDoIndex::Result>{std::move(iDo)};
   }
+}
+
+// TRANSFER (F'2018 16.9.193)
+std::optional<Expr<SomeType>> FoldTransfer(
+    FoldingContext &context, const ActualArguments &arguments) {
+  CHECK(arguments.size() == 2 || arguments.size() == 3);
+  const auto *source{UnwrapExpr<Expr<SomeType>>(arguments[0])};
+  std::optional<std::size_t> sourceBytes;
+  if (source) {
+    if (auto sourceTypeAndShape{
+            characteristics::TypeAndShape::Characterize(*source, context)}) {
+      if (auto sourceBytesExpr{
+              sourceTypeAndShape->MeasureSizeInBytes(context)}) {
+        sourceBytes = ToInt64(*sourceBytesExpr);
+      }
+    }
+  }
+  std::optional<DynamicType> moldType;
+  std::optional<std::int64_t> moldLength;
+  if (arguments[1]) { // MOLD=
+    moldType = arguments[1]->GetType();
+    if (moldType && moldType->category() == TypeCategory::Character) {
+      if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(arguments[1])}) {
+        moldLength = ToInt64(Fold(context, chExpr->LEN()));
+      }
+    }
+  }
+  std::optional<ConstantSubscripts> extents;
+  if (arguments.size() == 2) { // no SIZE=
+    if (moldType && sourceBytes) {
+      if (arguments[1]->Rank() == 0) { // scalar MOLD=
+        extents = ConstantSubscripts{}; // empty extents (scalar result)
+      } else if (auto moldBytesExpr{
+                     moldType->MeasureSizeInBytes(context, true)}) {
+        if (auto moldBytes{ToInt64(Fold(context, std::move(*moldBytesExpr)))};
+            *moldBytes > 0) {
+          extents = ConstantSubscripts{
+              static_cast<ConstantSubscript>((*sourceBytes) + *moldBytes - 1) /
+              *moldBytes};
+        }
+      }
+    }
+  } else if (arguments[2]) { // SIZE= is present
+    if (const auto *sizeExpr{arguments[2]->UnwrapExpr()}) {
+      if (auto sizeValue{ToInt64(*sizeExpr)}) {
+        extents = ConstantSubscripts{*sizeValue};
+      }
+    }
+  }
+  if (sourceBytes && IsActuallyConstant(*source) && moldType && extents &&
+      (moldLength || moldType->category() != TypeCategory::Character)) {
+    std::size_t elements{
+        extents->empty() ? 1 : static_cast<std::size_t>((*extents)[0])};
+    std::size_t totalBytes{*sourceBytes * elements};
+    // Don't fold intentional overflow cases from sneaky tests
+    if (totalBytes < std::size_t{1000000} &&
+        (elements == 0 || totalBytes / elements == *sourceBytes)) {
+      InitialImage image{*sourceBytes};
+      auto status{image.Add(0, *sourceBytes, *source, context)};
+      if (status == InitialImage::Ok) {
+        return image.AsConstant(
+            context, *moldType, moldLength, *extents, true /*pad with 0*/);
+      } else {
+        // Can fail due to an allocatable or automatic component;
+        // a warning will also have been produced.
+        CHECK(status == InitialImage::NotAConstant);
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 template class ExpressionBase<SomeDerived>;

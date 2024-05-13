@@ -1,12 +1,8 @@
 ; RUN: llc -mtriple=mipsel-linux-gnu < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-O32,O32 %s
-; RUN: llc -mtriple=mipsel-linux-android < %s -asm-verbose -relocation-model=pic | \
-; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-O32,O32 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu -target-abi=n32 < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-NEW,N32 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu < %s -asm-verbose -relocation-model=pic | \
-; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-NEW,N64 %s
-; RUN: llc -mtriple=mips64el-linux-android < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-NEW,N64 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-NEW,N64 %s
@@ -15,15 +11,15 @@
 ; RUN: llc -mtriple=mips64-unknown-freebsd11.0 < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,FREEBSD,FREEBSD-NEW,N64 %s
 
-@_ZTISt9exception = external constant i8*
+@_ZTISt9exception = external constant ptr
 
-define i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @main() personality ptr @__gxx_personality_v0 {
 ; ALL: .cfi_startproc
 
 ; Linux must rely on the assembler/linker converting the encodings.
-; LINUX: .cfi_personality 128, DW.ref.__gxx_personality_v0
-; LINUX-O32: .cfi_lsda 0, $exception0
-; LINUX-NEW: .cfi_lsda 0, .Lexception0
+; LINUX: .cfi_personality 155, DW.ref.__gxx_personality_v0
+; LINUX-O32: .cfi_lsda 27, $exception0
+; LINUX-NEW: .cfi_lsda 27, .Lexception0
 
 ; FreeBSD can (and must) be more direct about the encodings it wants.
 ; FREEBSD: .cfi_personality 155, DW.ref.__gxx_personality_v0
@@ -36,9 +32,9 @@ entry:
 ; ALL: jalr
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-    catch i8* null
-    catch i8* bitcast (i8** @_ZTISt9exception to i8*)
+  %0 = landingpad { ptr, i32 }
+    catch ptr null
+    catch ptr @_ZTISt9exception
   ret i32 0
 
 cont:
@@ -66,7 +62,7 @@ declare void @foo()
 ; N64: .8byte _ZTISt9exception
 ; ALL: .hidden DW.ref.__gxx_personality_v0
 ; ALL: .weak DW.ref.__gxx_personality_v0
-; ALL: .section .data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
+; ALL: .section .data.DW.ref.__gxx_personality_v0,"awG",@progbits,DW.ref.__gxx_personality_v0,comdat
 ; O32: .p2align 2
 ; N32: .p2align 2
 ; N64: .p2align 3

@@ -11,26 +11,46 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/GraphWriter.h"
+
+#include "DebugOptions.h"
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <system_error>
+
+#ifdef __APPLE__
+#include "llvm/Support/CommandLine.h"
+#endif
+
 #include <string>
+#include <system_error>
 #include <vector>
 
 using namespace llvm;
 
-static cl::opt<bool> ViewBackground("view-background", cl::Hidden,
-  cl::desc("Execute graph viewer in the background. Creates tmp file litter."));
+#ifdef __APPLE__
+namespace {
+struct CreateViewBackground {
+  static void *call() {
+    return new cl::opt<bool>("view-background", cl::Hidden,
+                             cl::desc("Execute graph viewer in the background. "
+                                      "Creates tmp file litter."));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool>, CreateViewBackground> ViewBackground;
+void llvm::initGraphWriterOptions() { *ViewBackground; }
+#else
+void llvm::initGraphWriterOptions() {}
+#endif
 
 std::string llvm::DOT::EscapeString(const std::string &Label) {
   std::string Str(Label);
@@ -54,7 +74,7 @@ std::string llvm::DOT::EscapeString(const std::string &Label) {
             Str.erase(Str.begin()+i); continue;
           default: break;
         }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case '{': case '}':
     case '<': case '>':
     case '|': case '"':
@@ -78,11 +98,8 @@ StringRef llvm::DOT::getColorString(unsigned ColorNumber) {
 
 static std::string replaceIllegalFilenameChars(std::string Filename,
                                                const char ReplacementChar) {
-#ifdef _WIN32
-  std::string IllegalChars = "\\/:?\"<>|";
-#else
-  std::string IllegalChars = "/";
-#endif
+  std::string IllegalChars =
+      is_style_windows(sys::path::Style::native) ? "\\/:?\"<>|" : "/";
 
   for (char IllegalChar : IllegalChars) {
     std::replace(Filename.begin(), Filename.end(), IllegalChar,
@@ -98,7 +115,8 @@ std::string llvm::createGraphFilename(const Twine &Name, int &FD) {
 
   // Windows can't always handle long paths, so limit the length of the name.
   std::string N = Name.str();
-  N = N.substr(0, std::min<std::size_t>(N.size(), 140));
+  if (N.size() > 140)
+    N.resize(140);
 
   // Replace illegal characters in graph Filename with '_' if needed
   std::string CleansedName = replaceIllegalFilenameChars(N, '_');
@@ -111,7 +129,7 @@ std::string llvm::createGraphFilename(const Twine &Name, int &FD) {
   }
 
   errs() << "Writing '" << Filename << "'... ";
-  return std::string(Filename.str());
+  return std::string(Filename);
 }
 
 // Execute the graph viewer. Return true if there were errors.
@@ -119,14 +137,14 @@ static bool ExecGraphViewer(StringRef ExecPath, std::vector<StringRef> &args,
                             StringRef Filename, bool wait,
                             std::string &ErrMsg) {
   if (wait) {
-    if (sys::ExecuteAndWait(ExecPath, args, None, {}, 0, 0, &ErrMsg)) {
+    if (sys::ExecuteAndWait(ExecPath, args, std::nullopt, {}, 0, 0, &ErrMsg)) {
       errs() << "Error: " << ErrMsg << "\n";
       return true;
     }
     sys::fs::remove(Filename);
     errs() << " done. \n";
   } else {
-    sys::ExecuteNoWait(ExecPath, args, None, {}, 0, &ErrMsg);
+    sys::ExecuteNoWait(ExecPath, args, std::nullopt, {}, 0, &ErrMsg);
     errs() << "Remember to erase graph file: " << Filename << "\n";
   }
   return false;
@@ -178,7 +196,7 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
   GraphSession S;
 
 #ifdef __APPLE__
-  wait &= !ViewBackground;
+  wait &= !*ViewBackground;
   if (S.TryFindProgram("open", ViewerPath)) {
     std::vector<StringRef> args;
     args.push_back(ViewerPath);

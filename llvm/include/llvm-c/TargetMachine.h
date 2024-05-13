@@ -25,6 +25,13 @@
 
 LLVM_C_EXTERN_C_BEGIN
 
+/**
+ * @addtogroup LLVMCTarget
+ *
+ * @{
+ */
+
+typedef struct LLVMOpaqueTargetMachineOptions *LLVMTargetMachineOptionsRef;
 typedef struct LLVMOpaqueTargetMachine *LLVMTargetMachineRef;
 typedef struct LLVMTarget *LLVMTargetRef;
 
@@ -60,6 +67,12 @@ typedef enum {
     LLVMObjectFile
 } LLVMCodeGenFileType;
 
+typedef enum {
+  LLVMGlobalISelAbortEnable,
+  LLVMGlobalISelAbortDisable,
+  LLVMGlobalISelAbortDisableWithDiag,
+} LLVMGlobalISelAbortMode;
+
 /** Returns the first llvm::Target in the registered targets list. */
 LLVMTargetRef LLVMGetFirstTarget(void);
 /** Returns the next llvm::Target given a previous one (or null if there's none) */
@@ -92,6 +105,55 @@ LLVMBool LLVMTargetHasTargetMachine(LLVMTargetRef T);
 LLVMBool LLVMTargetHasAsmBackend(LLVMTargetRef T);
 
 /*===-- Target Machine ----------------------------------------------------===*/
+/**
+ * Create a new set of options for an llvm::TargetMachine.
+ *
+ * The returned option structure must be released with
+ * LLVMDisposeTargetMachineOptions() after the call to
+ * LLVMCreateTargetMachineWithOptions().
+ */
+LLVMTargetMachineOptionsRef LLVMCreateTargetMachineOptions(void);
+
+/**
+ * Dispose of an LLVMTargetMachineOptionsRef instance.
+ */
+void LLVMDisposeTargetMachineOptions(LLVMTargetMachineOptionsRef Options);
+
+void LLVMTargetMachineOptionsSetCPU(LLVMTargetMachineOptionsRef Options,
+                                    const char *CPU);
+
+/**
+ * Set the list of features for the target machine.
+ *
+ * \param Features a comma-separated list of features.
+ */
+void LLVMTargetMachineOptionsSetFeatures(LLVMTargetMachineOptionsRef Options,
+                                         const char *Features);
+
+void LLVMTargetMachineOptionsSetABI(LLVMTargetMachineOptionsRef Options,
+                                    const char *ABI);
+
+void LLVMTargetMachineOptionsSetCodeGenOptLevel(
+    LLVMTargetMachineOptionsRef Options, LLVMCodeGenOptLevel Level);
+
+void LLVMTargetMachineOptionsSetRelocMode(LLVMTargetMachineOptionsRef Options,
+                                          LLVMRelocMode Reloc);
+
+void LLVMTargetMachineOptionsSetCodeModel(LLVMTargetMachineOptionsRef Options,
+                                          LLVMCodeModel CodeModel);
+
+/**
+ * Create a new llvm::TargetMachine.
+ *
+ * \param T the target to create a machine for.
+ * \param Triple a triple describing the target machine.
+ * \param Options additional configuration (see
+ *                LLVMCreateTargetMachineOptions()).
+ */
+LLVMTargetMachineRef
+LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *Triple,
+                                   LLVMTargetMachineOptionsRef Options);
+
 /** Creates a new llvm::TargetMachine. See llvm::Target::createTargetMachine */
 LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
   const char *Triple, const char *CPU, const char *Features,
@@ -126,11 +188,28 @@ LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T);
 void LLVMSetTargetMachineAsmVerbosity(LLVMTargetMachineRef T,
                                       LLVMBool VerboseAsm);
 
+/** Enable fast-path instruction selection. */
+void LLVMSetTargetMachineFastISel(LLVMTargetMachineRef T, LLVMBool Enable);
+
+/** Enable global instruction selection. */
+void LLVMSetTargetMachineGlobalISel(LLVMTargetMachineRef T, LLVMBool Enable);
+
+/** Set abort behaviour when global instruction selection fails to lower/select
+ * an instruction. */
+void LLVMSetTargetMachineGlobalISelAbort(LLVMTargetMachineRef T,
+                                         LLVMGlobalISelAbortMode Mode);
+
+/** Enable the MachineOutliner pass. */
+void LLVMSetTargetMachineMachineOutliner(LLVMTargetMachineRef T,
+                                         LLVMBool Enable);
+
 /** Emits an asm or object file for the given module to the filename. This
   wraps several c++ only classes (among them a file stream). Returns any
   error in ErrorMessage. Use LLVMDisposeMessage to dispose the message. */
 LLVMBool LLVMTargetMachineEmitToFile(LLVMTargetMachineRef T, LLVMModuleRef M,
-  char *Filename, LLVMCodeGenFileType codegen, char **ErrorMessage);
+                                     const char *Filename,
+                                     LLVMCodeGenFileType codegen,
+                                     char **ErrorMessage);
 
 /** Compile the LLVM IR stored in \p M and store the result in \p OutMemBuf. */
 LLVMBool LLVMTargetMachineEmitToMemoryBuffer(LLVMTargetMachineRef T, LLVMModuleRef M,
@@ -155,6 +234,10 @@ char* LLVMGetHostCPUFeatures(void);
 
 /** Adds the target-specific analysis passes to the pass manager. */
 void LLVMAddAnalysisPasses(LLVMTargetMachineRef T, LLVMPassManagerRef PM);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S > %t
+; RUN: opt < %s -passes=instcombine -S > %t
 ; RUN: grep "xor" %t
 ; RUN: grep "and" %t
 ; RUN: not grep "div" %t

@@ -10,9 +10,13 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecordMapping.h"
+#include "llvm/DebugInfo/CodeView/TypeCollection.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -320,7 +324,7 @@ StringRef llvm::codeview::getSymbolName(CVSymbol Sym) {
   if (Sym.kind() == SymbolKind::S_CONSTANT) {
     // S_CONSTANT is preceded by an APSInt, which has a variable length.  So we
     // have to do a full deserialization.
-    BinaryStreamReader Reader(Sym.content(), llvm::support::little);
+    BinaryStreamReader Reader(Sym.content(), llvm::endianness::little);
     // The container doesn't matter for single records.
     SymbolRecordMapping Mapping(Reader, CodeViewContainer::ObjectFile);
     ConstantSym Const(SymbolKind::S_CONSTANT);

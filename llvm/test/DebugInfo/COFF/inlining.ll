@@ -160,11 +160,18 @@
 ; OBJ:     FunctionType: baz (0x1004)
 ; OBJ:     CodeOffset: ?baz@@YAXXZ+0x0
 ; OBJ:     Segment: 0x0
-; OBJ:     Flags [ (0x0)
+; OBJ:     Flags [ (0x80)
+; OBJ:       HasOptimizedDebugInfo (0x80)
 ; OBJ:     ]
 ; OBJ:     DisplayName: baz
 ; OBJ:     LinkageName: ?baz@@YAXXZ
 ; OBJ:   }
+; OBJ:   InlineesSym {
+; OBJ-NEXT:  Kind: S_INLINEES (0x1168)
+; OBJ-NEXT:  Inlinees [
+; OBJ-NEXT:    FuncID: bar (0x1002)
+; OBJ-NEXT:  ]
+; OBJ-NEXT:}
 ; OBJ:   InlineSiteSym {
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
@@ -206,41 +213,40 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 define void @"\01?baz@@YAXXZ"() #0 !dbg !4 {
 entry:
   %y.i.i = alloca i32, align 4
-  %0 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !12, !tbaa !13
+  %0 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !12, !tbaa !13
   %add = add nsw i32 %0, 6, !dbg !12
-  store volatile i32 %add, i32* @"\01?x@@3HC", align 4, !dbg !12, !tbaa !13
-  %1 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !17, !tbaa !13
+  store volatile i32 %add, ptr @"\01?x@@3HC", align 4, !dbg !12, !tbaa !13
+  %1 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !17, !tbaa !13
   %add.i = add nsw i32 %1, 4, !dbg !17
-  store volatile i32 %add.i, i32* @"\01?x@@3HC", align 4, !dbg !17, !tbaa !13
-  %2 = bitcast i32* %y.i.i to i8*, !dbg !19
-  call void @llvm.lifetime.start(i64 4, i8* %2) #2, !dbg !19
-  store i32 1, i32* %y.i.i, align 4, !dbg !21, !tbaa !13
-  %3 = ptrtoint i32* %y.i.i to i64, !dbg !22
-  %4 = trunc i64 %3 to i32, !dbg !22
-  %5 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !23, !tbaa !13
-  %add.i.i = add nsw i32 %5, %4, !dbg !23
-  store volatile i32 %add.i.i, i32* @"\01?x@@3HC", align 4, !dbg !23, !tbaa !13
-  %6 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !24, !tbaa !13
-  %add1.i.i = add nsw i32 %6, 2, !dbg !24
-  store volatile i32 %add1.i.i, i32* @"\01?x@@3HC", align 4, !dbg !24, !tbaa !13
-  %7 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !25, !tbaa !13
-  %add2.i.i = add nsw i32 %7, 3, !dbg !25
-  store volatile i32 %add2.i.i, i32* @"\01?x@@3HC", align 4, !dbg !25, !tbaa !13
-  call void @llvm.lifetime.end(i64 4, i8* %2) #2, !dbg !26
-  %8 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !27, !tbaa !13
-  %add1.i = add nsw i32 %8, 5, !dbg !27
-  store volatile i32 %add1.i, i32* @"\01?x@@3HC", align 4, !dbg !27, !tbaa !13
-  %9 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !28, !tbaa !13
-  %add1 = add nsw i32 %9, 7, !dbg !28
-  store volatile i32 %add1, i32* @"\01?x@@3HC", align 4, !dbg !28, !tbaa !13
+  store volatile i32 %add.i, ptr @"\01?x@@3HC", align 4, !dbg !17, !tbaa !13
+  call void @llvm.lifetime.start(i64 4, ptr %y.i.i) #2, !dbg !19
+  store i32 1, ptr %y.i.i, align 4, !dbg !21, !tbaa !13
+  %2 = ptrtoint ptr %y.i.i to i64, !dbg !22
+  %3 = trunc i64 %2 to i32, !dbg !22
+  %4 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !23, !tbaa !13
+  %add.i.i = add nsw i32 %4, %3, !dbg !23
+  store volatile i32 %add.i.i, ptr @"\01?x@@3HC", align 4, !dbg !23, !tbaa !13
+  %5 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !24, !tbaa !13
+  %add1.i.i = add nsw i32 %5, 2, !dbg !24
+  store volatile i32 %add1.i.i, ptr @"\01?x@@3HC", align 4, !dbg !24, !tbaa !13
+  %6 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !25, !tbaa !13
+  %add2.i.i = add nsw i32 %6, 3, !dbg !25
+  store volatile i32 %add2.i.i, ptr @"\01?x@@3HC", align 4, !dbg !25, !tbaa !13
+  call void @llvm.lifetime.end(i64 4, ptr %y.i.i) #2, !dbg !26
+  %7 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !27, !tbaa !13
+  %add1.i = add nsw i32 %7, 5, !dbg !27
+  store volatile i32 %add1.i, ptr @"\01?x@@3HC", align 4, !dbg !27, !tbaa !13
+  %8 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !28, !tbaa !13
+  %add1 = add nsw i32 %8, 7, !dbg !28
+  store volatile i32 %add1, ptr @"\01?x@@3HC", align 4, !dbg !28, !tbaa !13
   ret void, !dbg !29
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start(i64, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end(i64, ptr nocapture) #1
 
 attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

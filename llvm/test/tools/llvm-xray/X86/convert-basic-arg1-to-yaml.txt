@@ -1,4 +1,4 @@
-; RUN: llvm-xray convert %S/Inputs/naive-with-arg1-entries.xray -f=yaml -o - | FileCheck %s
+; RUN: llvm-xray convert %S/Inputs/naive-with-arg1-entries.xray -f yaml -o - | FileCheck %s
 
 ; CHECK:      ---
 ; CHECK-NEXT: header:

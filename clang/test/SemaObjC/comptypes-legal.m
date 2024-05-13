@@ -11,7 +11,7 @@ void __setRetained(id *ivar, id value, NSObject **o) {
     *ivar = value;
 }
 static NSString *_logProcessPrefix = 0;
-void func() {
+void func(void) {
   __setRetained(&_logProcessPrefix, _logProcessPrefix, &_logProcessPrefix);
 }
 @implementation NSObject (ScopeAdditions)
@@ -31,12 +31,11 @@ typedef id FuncSignature (NSObject *arg1, Derived *arg2);
 
 void foo(void)
 {
-  // GCC currently allows this (it has some fiarly new support for covariant return types and contravariant argument types).
+  // GCC currently allows this (it has some fairly new support for covariant return types and contravariant argument types).
   // Since registerFunc: expects a Derived object as it's second argument, I don't know why this would be legal.
-  [Derived registerFunc: ExternFunc];  // expected-warning{{incompatible function pointer types sending 'NSObject *(NSObject *, NSObject *)' to parameter of type 'FuncSignature *' (aka 'id (*)(NSObject *, Derived *)')}}
+  [Derived registerFunc: ExternFunc];  // expected-error{{incompatible function pointer types sending 'NSObject *(NSObject *, NSObject *)' to parameter of type 'FuncSignature *' (aka 'id (*)(NSObject *, Derived *)')}}
 }
 
-// rdar://10751015
 @protocol NSCopying @end
 @interface I
 - (void) Meth : (id <NSCopying>)aKey; // expected-note {{passing argument to parameter 'aKey' here}}

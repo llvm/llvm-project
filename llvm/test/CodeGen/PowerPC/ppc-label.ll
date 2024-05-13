@@ -13,7 +13,7 @@
 ;   };
 ;
 ;   unsigned int ret = foo();
-;   void* g = (void *) ((unsigned int)&&L + arr[ret]);
+;   ptr g = (ptr) ((unsigned int)&&L + arr[ret]);
 ;   goto *g;
 ;
 ; x:
@@ -32,7 +32,7 @@ entry:
   br label %L
 
 L:                                                ; preds = %L, %entry
-  indirectbr i8* inttoptr (i32 add (i32 ptrtoint (i8* blockaddress(@main, %L) to i32), i32 sub (i32 ptrtoint (i8* blockaddress(@main, %return) to i32), i32 ptrtoint (i8* blockaddress(@main, %L) to i32))) to i8*), [label %return, label %L]
+  indirectbr ptr inttoptr (i32 add (i32 ptrtoint (ptr blockaddress(@main, %L) to i32), i32 sub (i32 ptrtoint (ptr blockaddress(@main, %return) to i32), i32 ptrtoint (ptr blockaddress(@main, %L) to i32))) to ptr), [label %return, label %L]
 
 return:                                           ; preds = %L
   ret i32 15

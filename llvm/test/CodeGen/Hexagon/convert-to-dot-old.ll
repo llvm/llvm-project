@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv55 -filetype=obj -o /dev/null
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv55 -filetype=obj -o /dev/null
 ; REQUIRES: asserts
 ; There should be no output (nothing on stderr).
 
@@ -11,7 +11,7 @@
 
 target triple = "hexagon"
 
-define void @fred(i16* nocapture %a0, i16* nocapture %a1, i16* nocapture %a2, i16 signext %a3, i16* %a4, i16 signext %a5, i16 signext %a6, i16 signext %a7, i32 %a8, i16 signext %a9, i16 signext %a10) local_unnamed_addr #0 {
+define void @fred(ptr nocapture %a0, ptr nocapture %a1, ptr nocapture %a2, i16 signext %a3, ptr %a4, i16 signext %a5, i16 signext %a6, i16 signext %a7, i32 %a8, i16 signext %a9, i16 signext %a10) local_unnamed_addr #0 {
 b11:
   %v12 = sext i16 %a5 to i32
   %v13 = tail call i32 @llvm.hexagon.A2.sxth(i32 %v12)
@@ -37,7 +37,7 @@ b11:
   %v33 = select i1 %v32, i32 %v30, i32 undef
   %v34 = trunc i32 %v33 to i16
   %v35 = trunc i32 %v24 to i16
-  call void @foo(i16* nonnull undef, i32* nonnull undef, i16* %a4, i16 signext %v35, i16 signext %v34, i16 signext 2) #4
+  call void @foo(ptr nonnull undef, ptr nonnull undef, ptr %a4, i16 signext %v35, i16 signext %v34, i16 signext 2) #4
   %v36 = call i32 @llvm.hexagon.S2.asr.r.r.sat(i32 %v18, i32 undef)
   %v37 = call i32 @llvm.hexagon.A2.asrh(i32 %v36)
   %v38 = call i32 @llvm.hexagon.A2.sub(i32 %v13, i32 undef)
@@ -47,23 +47,23 @@ b11:
   %v42 = call i32 @llvm.hexagon.A2.sath(i32 %v41)
   %v43 = select i1 undef, i32 %v42, i32 %v37
   %v44 = trunc i32 %v43 to i16
-  call void @foo(i16* nonnull undef, i32* nonnull undef, i16* %a4, i16 signext undef, i16 signext %v44, i16 signext 2) #4
+  call void @foo(ptr nonnull undef, ptr nonnull undef, ptr %a4, i16 signext undef, i16 signext %v44, i16 signext 2) #4
   %v45 = call i32 @llvm.hexagon.A2.sath(i32 undef)
   %v46 = select i1 undef, i32 undef, i32 %v45
   %v47 = trunc i32 %v46 to i16
-  call void @foo(i16* nonnull undef, i32* nonnull undef, i16* %a4, i16 signext %v47, i16 signext undef, i16 signext 2) #4
+  call void @foo(ptr nonnull undef, ptr nonnull undef, ptr %a4, i16 signext %v47, i16 signext undef, i16 signext 2) #4
   %v48 = call i32 @llvm.hexagon.A2.sub(i32 undef, i32 %v15)
   %v49 = call i32 @llvm.hexagon.A2.sath(i32 %v48)
   %v50 = trunc i32 %v49 to i16
-  store i16 %v50, i16* undef, align 2
-  store i16 %a3, i16* %a0, align 2
+  store i16 %v50, ptr undef, align 2
+  store i16 %a3, ptr %a0, align 2
   %v51 = sext i16 %a10 to i32
   %v52 = call i32 @llvm.hexagon.A2.sxth(i32 %v51)
   %v53 = call i32 @llvm.hexagon.A2.add(i32 undef, i32 %v52)
   %v54 = call i32 @llvm.hexagon.A2.sath(i32 %v53)
   %v55 = trunc i32 %v54 to i16
-  store i16 %v55, i16* %a1, align 2
-  store i16 %a7, i16* %a2, align 2
+  store i16 %v55, ptr %a1, align 2
+  store i16 %a7, ptr %a2, align 2
   %v56 = sext i16 %a9 to i32
   %v57 = call i32 @llvm.hexagon.A2.sxth(i32 %v56)
   br i1 undef, label %b58, label %b62
@@ -72,7 +72,7 @@ b58:                                              ; preds = %b11
   %v59 = call i32 @llvm.hexagon.A2.add(i32 %v57, i32 %v52)
   %v60 = call i32 @llvm.hexagon.A2.sath(i32 %v59)
   %v61 = trunc i32 %v60 to i16
-  store i16 %v61, i16* %a1, align 2
+  store i16 %v61, ptr %a1, align 2
   br label %b63
 
 b62:                                              ; preds = %b11
@@ -87,7 +87,7 @@ b66:                                              ; preds = %b63
   br i1 undef, label %b67, label %b68
 
 b67:                                              ; preds = %b66, %b63
-  store i16 0, i16* %a2, align 2
+  store i16 0, ptr %a2, align 2
   br label %b68
 
 b68:                                              ; preds = %b67, %b66
@@ -101,7 +101,7 @@ declare i32 @llvm.hexagon.A2.sub(i32, i32) #2
 declare i32 @llvm.hexagon.A2.asrh(i32) #2
 declare i32 @llvm.hexagon.S2.asr.r.r.sat(i32, i32) #2
 declare i32 @llvm.hexagon.A2.aslh(i32) #2
-declare void @foo(i16*, i32*, i16*, i16 signext, i16 signext, i16 signext) local_unnamed_addr #3
+declare void @foo(ptr, ptr, ptr, i16 signext, i16 signext, i16 signext) local_unnamed_addr #3
 
 attributes #0 = { nounwind optsize "target-cpu"="hexagonv55" "target-features"="-hvx,-long-calls" }
 attributes #1 = { argmemonly nounwind }

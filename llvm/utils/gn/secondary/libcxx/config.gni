@@ -1,10 +1,10 @@
 declare_args() {
-  # ABI version of libc++. Can be either 1 or 2, where 2 is currently not stable. Defaults to 1.
+  # libc++ ABI version. Either 1 (default) or 2 (unstable).
   libcxx_abi_version = 1
 
-  # The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.
+  # libc++ inline ABI namespace. Defaults to __n, where n is the ABI version.
   libcxx_abi_namespace = ""
 
-  # Unstable ABI of libc++.
-  libcxx_abi_unstable = false
+  # Build timezone database as part of libc++experimental.
+  libcxx_enable_time_zone_database = target_os == "linux"
 }

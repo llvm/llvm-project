@@ -2,23 +2,24 @@
 ; REQUIRES: asserts
 ; REQUIRES: x86_64-linux
 ; RUN: llc -O1 -regalloc=pbqp < %s | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -O1 -regalloc=pbqp < %s | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: test:
-define dso_local void @test(i32* %a) local_unnamed_addr #0 !dbg !7 {
+define dso_local void @test(ptr %a) local_unnamed_addr #0 !dbg !7 {
 entry:
   ; CHECK: DEBUG_VALUE: i <- 0
-  call void @llvm.dbg.value(metadata i32* %a, metadata !14, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.value(metadata ptr %a, metadata !14, metadata !DIExpression()), !dbg !17
   call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !DIExpression()), !dbg !17
   br label %for.cond, !dbg !17
 
 for.cond:                                         ; preds = %for.body, %entry
-  %a.addr.0 = phi i32* [ %a, %entry ], [ %incdec.ptr, %for.body ]
+  %a.addr.0 = phi ptr [ %a, %entry ], [ %incdec.ptr, %for.body ]
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ], !dbg !17
   call void @llvm.dbg.value(metadata i32 %i.0, metadata !15, metadata !DIExpression()), !dbg !17
-  call void @llvm.dbg.value(metadata i32* %a.addr.0, metadata !14, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.value(metadata ptr %a.addr.0, metadata !14, metadata !DIExpression()), !dbg !17
   %cmp = icmp slt i32 %i.0, 32, !dbg !17
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !17
 
@@ -26,9 +27,9 @@ for.cond.cleanup:                                 ; preds = %for.cond
   ret void, !dbg !17
 
 for.body:                                         ; preds = %for.cond
-  %incdec.ptr = getelementptr inbounds i32, i32* %a.addr.0, i32 1, !dbg !17
-  call void @llvm.dbg.value(metadata i32* %incdec.ptr, metadata !14, metadata !DIExpression()), !dbg !17
-  store i32 42, i32* %a.addr.0, align 4, !dbg !17
+  %incdec.ptr = getelementptr inbounds i32, ptr %a.addr.0, i32 1, !dbg !17
+  call void @llvm.dbg.value(metadata ptr %incdec.ptr, metadata !14, metadata !DIExpression()), !dbg !17
+  store i32 42, ptr %a.addr.0, align 4, !dbg !17
   %inc = add nsw i32 %i.0, 1, !dbg !17
   call void @llvm.dbg.value(metadata i32 %inc, metadata !15, metadata !DIExpression()), !dbg !17
   br label %for.cond, !dbg !17

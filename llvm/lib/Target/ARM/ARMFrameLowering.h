@@ -46,6 +46,7 @@ public:
   bool enableCalleeSaveSkip(const MachineFunction &MF) const override;
 
   bool hasFP(const MachineFunction &MF) const override;
+  bool isFPReserved(const MachineFunction &MF) const;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
@@ -57,6 +58,13 @@ public:
                       BitVector &SavedRegs) const override;
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
+
+  /// Update the IsRestored flag on LR if it is spilled, based on the return
+  /// instructions.
+  static void updateLRRestored(MachineFunction &MF);
+
+  void processFunctionBeforeFrameFinalized(
+      MachineFunction &MF, RegScavenger *RS = nullptr) const override;
 
   void adjustForSegmentedStacks(MachineFunction &MF,
                                 MachineBasicBlock &MBB) const override;

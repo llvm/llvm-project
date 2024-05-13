@@ -6,8 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
+
+// Until we drop support for the synchronization library in C++11/14/17
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <barrier>
 
@@ -20,7 +23,7 @@
 int main(int, char**)
 {
   static_assert(std::barrier<>::max() > 0, "");
-  auto l = [](){};
+  auto l = []() noexcept {};
   static_assert(std::barrier<decltype(l)>::max() > 0, "");
   return 0;
 }

@@ -28,14 +28,19 @@
 
 namespace llvm {
 
+extern cl::opt<bool> UseContextLessSummary;
+extern cl::opt<int> ProfileSummaryCutoffHot;
+extern cl::opt<int> ProfileSummaryCutoffCold;
+extern cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold;
+extern cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold;
+extern cl::opt<uint64_t> ProfileSummaryHotCount;
+extern cl::opt<uint64_t> ProfileSummaryColdCount;
+
 namespace sampleprof {
 
 class FunctionSamples;
 
 } // end namespace sampleprof
-
-inline const char *getHotSectionPrefix() { return "hot"; }
-inline const char *getUnlikelySectionPrefix() { return "unlikely"; }
 
 class ProfileSummaryBuilder {
 private:
@@ -66,9 +71,9 @@ public:
 
   /// Find the summary entry for a desired percentile of counts.
   static const ProfileSummaryEntry &
-  getEntryForPercentile(SummaryEntryVector &DS, uint64_t Percentile);
-  static uint64_t getHotCountThreshold(SummaryEntryVector &DS);
-  static uint64_t getColdCountThreshold(SummaryEntryVector &DS);
+  getEntryForPercentile(const SummaryEntryVector &DS, uint64_t Percentile);
+  static uint64_t getHotCountThreshold(const SummaryEntryVector &DS);
+  static uint64_t getColdCountThreshold(const SummaryEntryVector &DS);
 };
 
 class InstrProfSummaryBuilder final : public ProfileSummaryBuilder {
@@ -92,8 +97,8 @@ public:
 
   void addRecord(const sampleprof::FunctionSamples &FS,
                  bool isCallsiteSample = false);
-  std::unique_ptr<ProfileSummary> computeSummaryForProfiles(
-      const StringMap<sampleprof::FunctionSamples> &Profiles);
+  std::unique_ptr<ProfileSummary>
+  computeSummaryForProfiles(const sampleprof::SampleProfileMap &Profiles);
   std::unique_ptr<ProfileSummary> getSummary();
 };
 

@@ -3,16 +3,15 @@
 ; expressions. As a result, the compilation never fisished.
 ; This test checks that we are folding constant expression
 ; PR 28418
-; RUN: opt -gvn -S < %s | FileCheck %s
+; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 %2 = type { i32, i32, i32, i32, i32 }
 define i32 @_Z16vector3util_mainv(i32 %x, i32 %y)  {
   %tmp1 = alloca %2, align 4
-  %tmp114 = getelementptr inbounds %2, %2* %tmp1, i64 0, i32 1
-  %tmp115 = bitcast i32* %tmp114 to <4 x i32>*
-  store <4 x i32> <i32 234567891, i32 345678912, i32 456789123, i32 0>, <4 x i32>* %tmp115, align 4
-  %tmp1683 = getelementptr inbounds %2, %2* %tmp1, i64 0, i32 1
-  %tmp1688 = load i32, i32* %tmp1683, align 4
+  %tmp114 = getelementptr inbounds %2, ptr %tmp1, i64 0, i32 1
+  store <4 x i32> <i32 234567891, i32 345678912, i32 456789123, i32 0>, ptr %tmp114, align 4
+  %tmp1683 = getelementptr inbounds %2, ptr %tmp1, i64 0, i32 1
+  %tmp1688 = load i32, ptr %tmp1683, align 4
   %tmp1693 = shl i32 %tmp1688, 5
   %tmp1694 = xor i32 %tmp1693, %tmp1688
   %tmp1695 = lshr i32 %tmp1694, 7
@@ -37,10 +36,10 @@ define i32 @_Z16vector3util_mainv(i32 %x, i32 %y)  {
   %tmp1738 = xor i32 %tmp1737, %tmp1736
   %tmp1739 = shl i32 %tmp1738, 22
   %tmp1740 = xor i32 %tmp1739, %tmp1738
-  store i32 %tmp1740, i32* %tmp1683, align 4
-; CHECK: store i32 310393545, i32* %tmp114, align 4
-  %tmp1756 = getelementptr inbounds %2, %2* %tmp1, i64 0, i32 1
-  %tmp1761 = load i32, i32* %tmp1756, align 4
+  store i32 %tmp1740, ptr %tmp1683, align 4
+; CHECK: store i32 310393545, ptr %tmp114, align 4
+  %tmp1756 = getelementptr inbounds %2, ptr %tmp1, i64 0, i32 1
+  %tmp1761 = load i32, ptr %tmp1756, align 4
   %tmp1766 = shl i32 %tmp1761, 5
   %tmp1767 = xor i32 %tmp1766, %tmp1761
   %tmp1768 = lshr i32 %tmp1767, 7
@@ -65,10 +64,10 @@ define i32 @_Z16vector3util_mainv(i32 %x, i32 %y)  {
   %tmp1811 = xor i32 %tmp1810, %tmp1809
   %tmp1812 = shl i32 %tmp1811, 22
   %tmp1813 = xor i32 %tmp1812, %tmp1811
-  store i32 %tmp1813, i32* %tmp1756, align 4
-; CHECK: store i32 -383584258, i32* %tmp114, align 4
-  %tmp2645 = getelementptr inbounds %2, %2* %tmp1, i64 0, i32 1
-  %tmp2650 = load i32, i32* %tmp2645, align 4
+  store i32 %tmp1813, ptr %tmp1756, align 4
+; CHECK: store i32 -383584258, ptr %tmp114, align 4
+  %tmp2645 = getelementptr inbounds %2, ptr %tmp1, i64 0, i32 1
+  %tmp2650 = load i32, ptr %tmp2645, align 4
   %tmp2655 = shl i32 %tmp2650, 5
   %tmp2656 = xor i32 %tmp2655, %tmp2650
   %tmp2657 = lshr i32 %tmp2656, 7
@@ -93,7 +92,7 @@ define i32 @_Z16vector3util_mainv(i32 %x, i32 %y)  {
   %tmp2700 = xor i32 %tmp2699, %tmp2698
   %tmp2701 = shl i32 %tmp2700, 22
   %tmp2702 = xor i32 %tmp2701, %tmp2700
-  store i32 %tmp2702, i32* %tmp2645, align 4
-; CHECK: store i32 -57163022, i32* %tmp114, align 4
+  store i32 %tmp2702, ptr %tmp2645, align 4
+; CHECK: store i32 -57163022, ptr %tmp114, align 4
   ret i32 0
 }

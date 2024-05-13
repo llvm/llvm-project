@@ -15,12 +15,13 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 #define LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/ValueHandle.h"
+#include <utility>
 
 namespace llvm {
 
+class Type;
+class WeakTrackingVH;
+template <typename T> class SmallVectorImpl;
 class CastInst;
 class DominatorTree;
 class Loop;
@@ -47,11 +48,16 @@ public:
 };
 
 /// simplifyUsersOfIV - Simplify instructions that use this induction variable
-/// by using ScalarEvolution to analyze the IV's recurrence.
-bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
-                       LoopInfo *LI, const TargetTransformInfo *TTI,
-                       SmallVectorImpl<WeakTrackingVH> &Dead,
-                       SCEVExpander &Rewriter, IVVisitor *V = nullptr);
+/// by using ScalarEvolution to analyze the IV's recurrence. Returns a pair
+/// where the first entry indicates that the function makes changes and the
+/// second entry indicates that it introduced new opportunities for loop
+/// unswitching.
+std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
+                                        DominatorTree *DT, LoopInfo *LI,
+                                        const TargetTransformInfo *TTI,
+                                        SmallVectorImpl<WeakTrackingVH> &Dead,
+                                        SCEVExpander &Rewriter,
+                                        IVVisitor *V = nullptr);
 
 /// SimplifyLoopIVs - Simplify users of induction variables within this
 /// loop. This does not actually change or add IVs.

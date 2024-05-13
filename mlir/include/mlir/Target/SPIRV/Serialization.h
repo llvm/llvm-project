@@ -22,13 +22,20 @@ class MLIRContext;
 namespace spirv {
 class ModuleOp;
 
+struct SerializationOptions {
+  /// Whether to emit `OpName` instructions for SPIR-V symbol ops.
+  bool emitSymbolName = true;
+  /// Whether to emit `OpLine` location information for SPIR-V ops.
+  bool emitDebugInfo = false;
+};
+
 /// Serializes the given SPIR-V `module` and writes to `binary`. On failure,
 /// reports errors to the error handler registered with the MLIR context for
 /// `module`.
 LogicalResult serialize(ModuleOp module, SmallVectorImpl<uint32_t> &binary,
-                        bool emitDebugInfo = false);
+                        const SerializationOptions &options = {});
 
-} // end namespace spirv
-} // end namespace mlir
+} // namespace spirv
+} // namespace mlir
 
 #endif // MLIR_TARGET_SPIRV_SERIALIZATION_H

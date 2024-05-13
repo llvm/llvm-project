@@ -13,39 +13,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjCARC.h"
-#include "llvm-c/Initialization.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-
-namespace llvm {
-  class PassRegistry;
-}
 
 using namespace llvm;
 using namespace llvm::objcarc;
 
-/// initializeObjCARCOptsPasses - Initialize all passes linked into the
-/// ObjCARCOpts library.
-void llvm::initializeObjCARCOpts(PassRegistry &Registry) {
-  initializeObjCARCAAWrapperPassPass(Registry);
-  initializeObjCARCAPElimPass(Registry);
-  initializeObjCARCExpandPass(Registry);
-  initializeObjCARCContractLegacyPassPass(Registry);
-  initializeObjCARCOptLegacyPassPass(Registry);
-  initializePAEvalPass(Registry);
-}
-
-void LLVMInitializeObjCARCOpts(LLVMPassRegistryRef R) {
-  initializeObjCARCOpts(*unwrap(R));
-}
-
 CallInst *objcarc::createCallInstWithColors(
     FunctionCallee Func, ArrayRef<Value *> Args, const Twine &NameStr,
-    Instruction *InsertBefore,
+    BasicBlock::iterator InsertBefore,
     const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
   FunctionType *FTy = Func.getFunctionType();
   Value *Callee = Func.getCallee();
@@ -86,26 +64,25 @@ BundledRetainClaimRVs::insertAfterInvokes(Function &F, DominatorTree *DT) {
 
     // We don't have to call insertRVCallWithColors since DestBB is the normal
     // destination of the invoke.
-    insertRVCall(&*DestBB->getFirstInsertionPt(), I);
+    insertRVCall(DestBB->getFirstInsertionPt(), I);
     Changed = true;
   }
 
   return std::make_pair(Changed, CFGChanged);
 }
 
-CallInst *BundledRetainClaimRVs::insertRVCall(Instruction *InsertPt,
+CallInst *BundledRetainClaimRVs::insertRVCall(BasicBlock::iterator InsertPt,
                                               CallBase *AnnotatedCall) {
   DenseMap<BasicBlock *, ColorVector> BlockColors;
   return insertRVCallWithColors(InsertPt, AnnotatedCall, BlockColors);
 }
 
 CallInst *BundledRetainClaimRVs::insertRVCallWithColors(
-    Instruction *InsertPt, CallBase *AnnotatedCall,
+    BasicBlock::iterator InsertPt, CallBase *AnnotatedCall,
     const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
-  IRBuilder<> Builder(InsertPt);
-  bool IsRetainRV = objcarc::hasAttachedCallOpBundle(AnnotatedCall, true);
-  Function *Func = EP.get(IsRetainRV ? ARCRuntimeEntryPointKind::RetainRV
-                                     : ARCRuntimeEntryPointKind::ClaimRV);
+  IRBuilder<> Builder(InsertPt->getParent(), InsertPt);
+  Function *Func = *objcarc::getAttachedARCFunction(AnnotatedCall);
+  assert(Func && "operand isn't a Function");
   Type *ParamTy = Func->getArg(0)->getType();
   Value *CallArg = Builder.CreateBitCast(AnnotatedCall, ParamTy);
   auto *Call =
@@ -115,17 +92,18 @@ CallInst *BundledRetainClaimRVs::insertRVCallWithColors(
 }
 
 BundledRetainClaimRVs::~BundledRetainClaimRVs() {
-  if (ContractPass) {
-    // At this point, we know that the annotated calls can't be tail calls as
-    // they are followed by marker instructions and retainRV/claimRV calls. Mark
-    // them as notail, so that the backend knows these calls can't be tail
-    // calls.
-    for (auto P : RVCalls)
-      if (auto *CI = dyn_cast<CallInst>(P.second))
+  for (auto P : RVCalls) {
+    if (ContractPass) {
+      CallBase *CB = P.second;
+      // At this point, we know that the annotated calls can't be tail calls
+      // as they are followed by marker instructions and retainRV/claimRV
+      // calls. Mark them as notail so that the backend knows these calls
+      // can't be tail calls.
+      if (auto *CI = dyn_cast<CallInst>(CB))
         CI->setTailCallKind(CallInst::TCK_NoTail);
-  } else {
-    for (auto P : RVCalls)
-      EraseInstruction(P.first);
+    }
+
+    EraseInstruction(P.first);
   }
 
   RVCalls.clear();

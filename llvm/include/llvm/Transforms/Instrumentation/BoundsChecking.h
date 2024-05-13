@@ -12,6 +12,7 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class Function;
 
 /// A pass to instrument code and perform run-time bounds checking on loads,
 /// stores, and other memory intrinsics.
@@ -19,10 +20,6 @@ struct BoundsCheckingPass : PassInfoMixin<BoundsCheckingPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
-
-
-/// Legacy pass creation function for the above pass.
-FunctionPass *createBoundsCheckingLegacyPass();
 
 } // end namespace llvm
 

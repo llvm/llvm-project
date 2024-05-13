@@ -9,8 +9,8 @@
 #ifndef LLVM_SUPPORT_NATIVEFORMATTING_H
 #define LLVM_SUPPORT_NATIVEFORMATTING_H
 
-#include "llvm/ADT/Optional.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 class raw_ostream;
@@ -38,9 +38,9 @@ void write_integer(raw_ostream &S, long long N, size_t MinDigits,
                    IntegerStyle Style);
 
 void write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
-               Optional<size_t> Width = None);
+               std::optional<size_t> Width = std::nullopt);
 void write_double(raw_ostream &S, double D, FloatStyle Style,
-                  Optional<size_t> Precision = None);
+                  std::optional<size_t> Precision = std::nullopt);
 }
 
 #endif

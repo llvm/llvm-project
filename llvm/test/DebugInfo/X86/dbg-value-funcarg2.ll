@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s -experimental-debug-variable-locations=false | FileCheck %s --check-prefixes=CHECK,COMMON
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s -experimental-debug-variable-locations=true | FileCheck %s --check-prefixes=INSTRREF,COMMON
 
 ; Test case was generated from the following C code,
 ; using: clang -g -O1 -S -emit-llvm s.c -o s.ll
@@ -17,18 +18,21 @@
 
 ; Catch metadata references for involved variables.
 ;
-; CHECK-DAG: ![[S1:.*]] = !DILocalVariable(name: "s1"
-; CHECK-DAG: ![[S2:.*]] = !DILocalVariable(name: "s2"
+; COMMON-DAG: ![[S1:.*]] = !DILocalVariable(name: "s1"
+; COMMON-DAG: ![[S2:.*]] = !DILocalVariable(name: "s2"
 
 define dso_local i32 @f(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %s2.coerce1) local_unnamed_addr #0 !dbg !7 {
 ; We expect DBG_VALUE instructions for the arguments at the entry.
-; CHECK-LABEL: name:            f
-; CHECK-NOT: DBG_VALUE
-; CHECK-DAG: DBG_VALUE $rdi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; CHECK-DAG: DBG_VALUE $rsi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
-; CHECK-DAG: DBG_VALUE $rdx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; CHECK-DAG: DBG_VALUE $rcx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
-; CHECK-NOT: DBG_VALUE
+; In instr-ref mode, there'll be some DBG_PHIs in there too.
+; COMMON-LABEL: name:            f
+; COMMON-NOT: DBG_VALUE
+; INSTRREF-DAG: DBG_PHI $rcx, 2
+; INSTRREF-DAG: DBG_PHI $rdx, 1
+; COMMON-DAG: DBG_VALUE $rdi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
+; COMMON-DAG: DBG_VALUE $rsi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+; COMMON-DAG: DBG_VALUE $rdx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
+; COMMON-DAG: DBG_VALUE $rcx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+; COMMON-NOT: DBG_
 
 ; Then arguments are copied to virtual registers.
 ; CHECK-NOT: DBG_VALUE
@@ -43,8 +47,8 @@ define dso_local i32 @f(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %
 ; CHECK-NOT: DBG_VALUE
 
 ; We have the call to bar.
-; CHECK:     ADJCALLSTACKDOWN
-; CHECK:     CALL64pcrel32 @bar
+; COMMON:     ADJCALLSTACKDOWN
+; COMMON:     CALL64pcrel32 @bar
 
 ; After the call we expect to find new DBG_VALUE instructions for "s1".
 ; CHECK:     ADJCALLSTACKUP
@@ -52,39 +56,44 @@ define dso_local i32 @f(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %
 ; CHECK-DAG: DBG_VALUE %[[R2]], $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
 ; CHECK-DAG: DBG_VALUE %[[R1]], $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
 
-; And then no more DBG_VALUE instructions before the add.
-; CHECK-NOT: DBG_VALUE
-; CHECK:     ADD32rr
+;; In instruction referencing mode, we should refer to the instruction number
+;; of the earlier DBG_PHIs.
+; INSTRREF:     ADJCALLSTACKUP
+; INSTRREF-NOT: DBG_
+; INSTRREF-DAG: DBG_INSTR_REF ![[S1]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 64), dbg-instr-ref(1, 0)
+; INSTRREF-DAG: DBG_INSTR_REF ![[S1]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(2, 0)
+
+; And then no more DBG_ instructions before the add.
+; COMMON-NOT: DBG_
+; COMMON:     ADD32rr
 
 entry:
   %tmp.sroa.0 = alloca i64, align 8
   %tmp.sroa.4 = alloca i64, align 8
-  call void @llvm.dbg.declare(metadata i64* %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !21
-  call void @llvm.dbg.declare(metadata i64* %tmp.sroa.4, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %tmp.sroa.4, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !21
   call void @llvm.dbg.value(metadata i64 %s1.coerce0, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !22
   call void @llvm.dbg.value(metadata i64 %s1.coerce1, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !22
   call void @llvm.dbg.value(metadata i64 %s2.coerce0, metadata !18, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !23
   call void @llvm.dbg.value(metadata i64 %s2.coerce1, metadata !18, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !23
-  %tmp.sroa.0.0..sroa_cast = bitcast i64* %tmp.sroa.0 to i8*, !dbg !24
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %tmp.sroa.0.0..sroa_cast), !dbg !24
-  %tmp.sroa.4.0..sroa_cast = bitcast i64* %tmp.sroa.4 to i8*, !dbg !24
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %tmp.sroa.4.0..sroa_cast), !dbg !24
-  store volatile i64 0, i64* %tmp.sroa.0, align 8, !dbg !21
-  store volatile i64 0, i64* %tmp.sroa.4, align 8, !dbg !21
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %tmp.sroa.0), !dbg !24
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %tmp.sroa.4), !dbg !24
+  store volatile i64 0, ptr %tmp.sroa.0, align 8, !dbg !21
+  store volatile i64 0, ptr %tmp.sroa.4, align 8, !dbg !21
   tail call void @bar(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %s2.coerce1, i64 0, i64 0) #4, !dbg !25
   call void @llvm.dbg.value(metadata i64 %s2.coerce0, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !22
   call void @llvm.dbg.value(metadata i64 %s2.coerce1, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !22
   %s2.coerce1.tr = trunc i64 %s2.coerce1 to i32, !dbg !26
   %conv = shl i32 %s2.coerce1.tr, 1, !dbg !26
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %tmp.sroa.0.0..sroa_cast), !dbg !27
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %tmp.sroa.4.0..sroa_cast), !dbg !27
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %tmp.sroa.0), !dbg !27
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %tmp.sroa.4), !dbg !27
   ret i32 %conv, !dbg !28
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
 declare dso_local void @bar(i64, i64, i64, i64, i64, i64) local_unnamed_addr
 

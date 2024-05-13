@@ -8,22 +8,24 @@
 
 #include "BitcodeReader.h"
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 namespace doc {
 
 using Record = llvm::SmallVector<uint64_t, 1024>;
 
-llvm::Error decodeRecord(Record R, llvm::SmallVectorImpl<char> &Field,
+// This implements decode for SmallString.
+llvm::Error decodeRecord(const Record &R, llvm::SmallVectorImpl<char> &Field,
                          llvm::StringRef Blob) {
   Field.assign(Blob.begin(), Blob.end());
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, SymbolID &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, SymbolID &Field,
+                         llvm::StringRef Blob) {
   if (R[0] != BitCodeConstants::USRHashSize)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "incorrect USR size");
@@ -35,12 +37,12 @@ llvm::Error decodeRecord(Record R, SymbolID &Field, llvm::StringRef Blob) {
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, bool &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, bool &Field, llvm::StringRef Blob) {
   Field = R[0] != 0;
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, int &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, int &Field, llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
@@ -48,7 +50,7 @@ llvm::Error decodeRecord(Record R, int &Field, llvm::StringRef Blob) {
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, AccessSpecifier &Field,
+llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
                          llvm::StringRef Blob) {
   switch (R[0]) {
   case AS_public:
@@ -63,22 +65,22 @@ llvm::Error decodeRecord(Record R, AccessSpecifier &Field,
   }
 }
 
-llvm::Error decodeRecord(Record R, TagTypeKind &Field, llvm::StringRef Blob) {
-  switch (R[0]) {
-  case TTK_Struct:
-  case TTK_Interface:
-  case TTK_Union:
-  case TTK_Class:
-  case TTK_Enum:
-    Field = (TagTypeKind)R[0];
+llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
+                         llvm::StringRef Blob) {
+  switch (static_cast<TagTypeKind>(R[0])) {
+  case TagTypeKind::Struct:
+  case TagTypeKind::Interface:
+  case TagTypeKind::Union:
+  case TagTypeKind::Class:
+  case TagTypeKind::Enum:
+    Field = static_cast<TagTypeKind>(R[0]);
     return llvm::Error::success();
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid value for TagTypeKind");
   }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid value for TagTypeKind");
 }
 
-llvm::Error decodeRecord(Record R, llvm::Optional<Location> &Field,
+llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
                          llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -87,13 +89,15 @@ llvm::Error decodeRecord(Record R, llvm::Optional<Location> &Field,
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, InfoType &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, InfoType &Field,
+                         llvm::StringRef Blob) {
   switch (auto IT = static_cast<InfoType>(R[0])) {
   case InfoType::IT_namespace:
   case InfoType::IT_record:
   case InfoType::IT_function:
   case InfoType::IT_default:
   case InfoType::IT_enum:
+  case InfoType::IT_typedef:
     Field = IT;
     return llvm::Error::success();
   }
@@ -101,7 +105,8 @@ llvm::Error decodeRecord(Record R, InfoType &Field, llvm::StringRef Blob) {
                                  "invalid value for InfoType");
 }
 
-llvm::Error decodeRecord(Record R, FieldId &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, FieldId &Field,
+                         llvm::StringRef Blob) {
   switch (auto F = static_cast<FieldId>(R[0])) {
   case FieldId::F_namespace:
   case FieldId::F_parent:
@@ -117,14 +122,15 @@ llvm::Error decodeRecord(Record R, FieldId &Field, llvm::StringRef Blob) {
                                  "invalid value for FieldId");
 }
 
-llvm::Error decodeRecord(Record R,
+llvm::Error decodeRecord(const Record &R,
                          llvm::SmallVectorImpl<llvm::SmallString<16>> &Field,
                          llvm::StringRef Blob) {
   Field.push_back(Blob);
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, llvm::SmallVectorImpl<Location> &Field,
+llvm::Error decodeRecord(const Record &R,
+                         llvm::SmallVectorImpl<Location> &Field,
                          llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -133,7 +139,7 @@ llvm::Error decodeRecord(Record R, llvm::SmallVectorImpl<Location> &Field,
   return llvm::Error::success();
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         const unsigned VersionNo) {
   if (ID == VERSION && R[0] == VersionNo)
     return llvm::Error::success();
@@ -141,7 +147,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
                                  "mismatched bitcode version number");
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         NamespaceInfo *I) {
   switch (ID) {
   case NAMESPACE_USR:
@@ -156,7 +162,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         RecordInfo *I) {
   switch (ID) {
   case RECORD_USR:
@@ -179,7 +185,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         BaseRecordInfo *I) {
   switch (ID) {
   case BASE_RECORD_USR:
@@ -202,7 +208,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         EnumInfo *I) {
   switch (ID) {
   case ENUM_USR:
@@ -213,8 +219,6 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->DefLoc, Blob);
   case ENUM_LOCATION:
     return decodeRecord(R, I->Loc, Blob);
-  case ENUM_MEMBER:
-    return decodeRecord(R, I->Members, Blob);
   case ENUM_SCOPED:
     return decodeRecord(R, I->Scoped, Blob);
   default:
@@ -223,7 +227,39 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TypedefInfo *I) {
+  switch (ID) {
+  case TYPEDEF_USR:
+    return decodeRecord(R, I->USR, Blob);
+  case TYPEDEF_NAME:
+    return decodeRecord(R, I->Name, Blob);
+  case TYPEDEF_DEFLOCATION:
+    return decodeRecord(R, I->DefLoc, Blob);
+  case TYPEDEF_IS_USING:
+    return decodeRecord(R, I->IsUsing, Blob);
+  default:
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid field for TypedefInfo");
+  }
+}
+
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        EnumValueInfo *I) {
+  switch (ID) {
+  case ENUM_VALUE_NAME:
+    return decodeRecord(R, I->Name, Blob);
+  case ENUM_VALUE_VALUE:
+    return decodeRecord(R, I->Value, Blob);
+  case ENUM_VALUE_EXPR:
+    return decodeRecord(R, I->ValueExpr, Blob);
+  default:
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid field for EnumValueInfo");
+  }
+}
+
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         FunctionInfo *I) {
   switch (ID) {
   case FUNCTION_USR:
@@ -244,23 +280,25 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         TypeInfo *I) {
   return llvm::Error::success();
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         FieldTypeInfo *I) {
   switch (ID) {
   case FIELD_TYPE_NAME:
     return decodeRecord(R, I->Name, Blob);
+  case FIELD_DEFAULT_VALUE:
+    return decodeRecord(R, I->DefaultValue, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for TypeInfo");
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         MemberTypeInfo *I) {
   switch (ID) {
   case MEMBER_TYPE_NAME:
@@ -273,7 +311,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         CommentInfo *I) {
   switch (ID) {
   case COMMENT_KIND:
@@ -304,19 +342,19 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         Reference *I, FieldId &F) {
   switch (ID) {
   case REFERENCE_USR:
     return decodeRecord(R, I->USR, Blob);
   case REFERENCE_NAME:
     return decodeRecord(R, I->Name, Blob);
+  case REFERENCE_QUAL_NAME:
+    return decodeRecord(R, I->QualName, Blob);
   case REFERENCE_TYPE:
     return decodeRecord(R, I->RefType, Blob);
   case REFERENCE_PATH:
     return decodeRecord(R, I->Path, Blob);
-  case REFERENCE_IS_IN_GLOBAL_NAMESPACE:
-    return decodeRecord(R, I->IsInGlobalNamespace, Blob);
   case REFERENCE_FIELD:
     return decodeRecord(R, F, Blob);
   default:
@@ -325,29 +363,56 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TemplateInfo *I) {
+  // Currently there are no child records of TemplateInfo (only child blocks).
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid field for TemplateParamInfo");
+}
+
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TemplateSpecializationInfo *I) {
+  if (ID == TEMPLATE_SPECIALIZATION_OF)
+    return decodeRecord(R, I->SpecializationOf, Blob);
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid field for TemplateParamInfo");
+}
+
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TemplateParamInfo *I) {
+  if (ID == TEMPLATE_PARAM_CONTENTS)
+    return decodeRecord(R, I->Contents, Blob);
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid field for TemplateParamInfo");
+}
+
 template <typename T> llvm::Expected<CommentInfo *> getCommentInfo(T I) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid type cannot contain CommentInfo");
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(FunctionInfo *I) {
-  I->Description.emplace_back();
-  return &I->Description.back();
+  return &I->Description.emplace_back();
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(NamespaceInfo *I) {
-  I->Description.emplace_back();
-  return &I->Description.back();
+  return &I->Description.emplace_back();
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(RecordInfo *I) {
-  I->Description.emplace_back();
-  return &I->Description.back();
+  return &I->Description.emplace_back();
+}
+
+template <> llvm::Expected<CommentInfo *> getCommentInfo(MemberTypeInfo *I) {
+  return &I->Description.emplace_back();
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumInfo *I) {
-  I->Description.emplace_back();
-  return &I->Description.back();
+  return &I->Description.emplace_back();
+}
+
+template <> llvm::Expected<CommentInfo *> getCommentInfo(TypedefInfo *I) {
+  return &I->Description.emplace_back();
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {
@@ -360,6 +425,9 @@ llvm::Expected<CommentInfo *> getCommentInfo(std::unique_ptr<CommentInfo> &I) {
   return getCommentInfo(I.get());
 }
 
+// When readSubBlock encounters a TypeInfo sub-block, it calls addTypeInfo on
+// the parent block to set it. The template specializations define what to do
+// for each supported parent block.
 template <typename T, typename TTypeInfo>
 llvm::Error addTypeInfo(T I, TTypeInfo &&TI) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -383,6 +451,16 @@ template <> llvm::Error addTypeInfo(FunctionInfo *I, TypeInfo &&T) {
 
 template <> llvm::Error addTypeInfo(FunctionInfo *I, FieldTypeInfo &&T) {
   I->Params.emplace_back(std::move(T));
+  return llvm::Error::success();
+}
+
+template <> llvm::Error addTypeInfo(EnumInfo *I, TypeInfo &&T) {
+  I->BaseType = std::move(T);
+  return llvm::Error::success();
+}
+
+template <> llvm::Error addTypeInfo(TypedefInfo *I, TypeInfo &&T) {
+  I->Underlying = std::move(T);
   return llvm::Error::success();
 }
 
@@ -437,6 +515,17 @@ template <> llvm::Error addReference(EnumInfo *I, Reference &&R, FieldId F) {
   }
 }
 
+template <> llvm::Error addReference(TypedefInfo *I, Reference &&R, FieldId F) {
+  switch (F) {
+  case FieldId::F_namespace:
+    I->Namespace.emplace_back(std::move(R));
+    return llvm::Error::success();
+  default:
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid type cannot contain Reference");
+  }
+}
+
 template <>
 llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
   switch (F) {
@@ -444,10 +533,10 @@ llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
     I->Namespace.emplace_back(std::move(R));
     return llvm::Error::success();
   case FieldId::F_child_namespace:
-    I->ChildNamespaces.emplace_back(std::move(R));
+    I->Children.Namespaces.emplace_back(std::move(R));
     return llvm::Error::success();
   case FieldId::F_child_record:
-    I->ChildRecords.emplace_back(std::move(R));
+    I->Children.Records.emplace_back(std::move(R));
     return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -482,7 +571,7 @@ template <> llvm::Error addReference(RecordInfo *I, Reference &&R, FieldId F) {
     I->VirtualParents.emplace_back(std::move(R));
     return llvm::Error::success();
   case FieldId::F_child_record:
-    I->ChildRecords.emplace_back(std::move(R));
+    I->Children.Records.emplace_back(std::move(R));
     return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -496,28 +585,76 @@ void addChild(T I, ChildInfoType &&R) {
   exit(1);
 }
 
+// Namespace children:
 template <> void addChild(NamespaceInfo *I, FunctionInfo &&R) {
-  I->ChildFunctions.emplace_back(std::move(R));
+  I->Children.Functions.emplace_back(std::move(R));
 }
-
 template <> void addChild(NamespaceInfo *I, EnumInfo &&R) {
-  I->ChildEnums.emplace_back(std::move(R));
+  I->Children.Enums.emplace_back(std::move(R));
+}
+template <> void addChild(NamespaceInfo *I, TypedefInfo &&R) {
+  I->Children.Typedefs.emplace_back(std::move(R));
 }
 
+// Record children:
 template <> void addChild(RecordInfo *I, FunctionInfo &&R) {
-  I->ChildFunctions.emplace_back(std::move(R));
+  I->Children.Functions.emplace_back(std::move(R));
 }
-
 template <> void addChild(RecordInfo *I, EnumInfo &&R) {
-  I->ChildEnums.emplace_back(std::move(R));
+  I->Children.Enums.emplace_back(std::move(R));
+}
+template <> void addChild(RecordInfo *I, TypedefInfo &&R) {
+  I->Children.Typedefs.emplace_back(std::move(R));
 }
 
+// Other types of children:
+template <> void addChild(EnumInfo *I, EnumValueInfo &&R) {
+  I->Members.emplace_back(std::move(R));
+}
 template <> void addChild(RecordInfo *I, BaseRecordInfo &&R) {
   I->Bases.emplace_back(std::move(R));
 }
-
 template <> void addChild(BaseRecordInfo *I, FunctionInfo &&R) {
-  I->ChildFunctions.emplace_back(std::move(R));
+  I->Children.Functions.emplace_back(std::move(R));
+}
+
+// TemplateParam children. These go into either a TemplateInfo (for template
+// parameters) or TemplateSpecializationInfo (for the specialization's
+// parameters).
+template <typename T> void addTemplateParam(T I, TemplateParamInfo &&P) {
+  llvm::errs() << "invalid container for template parameter";
+  exit(1);
+}
+template <> void addTemplateParam(TemplateInfo *I, TemplateParamInfo &&P) {
+  I->Params.emplace_back(std::move(P));
+}
+template <>
+void addTemplateParam(TemplateSpecializationInfo *I, TemplateParamInfo &&P) {
+  I->Params.emplace_back(std::move(P));
+}
+
+// Template info. These apply to either records or functions.
+template <typename T> void addTemplate(T I, TemplateInfo &&P) {
+  llvm::errs() << "invalid container for template info";
+  exit(1);
+}
+template <> void addTemplate(RecordInfo *I, TemplateInfo &&P) {
+  I->Template.emplace(std::move(P));
+}
+template <> void addTemplate(FunctionInfo *I, TemplateInfo &&P) {
+  I->Template.emplace(std::move(P));
+}
+
+// Template specializations go only into template records.
+template <typename T>
+void addTemplateSpecialization(T I, TemplateSpecializationInfo &&TSI) {
+  llvm::errs() << "invalid container for template specialization info";
+  exit(1);
+}
+template <>
+void addTemplateSpecialization(TemplateInfo *I,
+                               TemplateSpecializationInfo &&TSI) {
+  I->Specialization.emplace(std::move(TSI));
 }
 
 // Read records from bitcode into a given info.
@@ -575,8 +712,7 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
   switch (ID) {
-  // Blocks can only have Comment, Reference, TypeInfo, FunctionInfo, or
-  // EnumInfo subblocks
+  // Blocks can only have certain types of sub blocks.
   case BI_COMMENT_BLOCK_ID: {
     auto Comment = getCommentInfo(I);
     if (!Comment)
@@ -636,6 +772,41 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     if (auto Err = readBlock(ID, &E))
       return Err;
     addChild(I, std::move(E));
+    return llvm::Error::success();
+  }
+  case BI_ENUM_VALUE_BLOCK_ID: {
+    EnumValueInfo EV;
+    if (auto Err = readBlock(ID, &EV))
+      return Err;
+    addChild(I, std::move(EV));
+    return llvm::Error::success();
+  }
+  case BI_TEMPLATE_BLOCK_ID: {
+    TemplateInfo TI;
+    if (auto Err = readBlock(ID, &TI))
+      return Err;
+    addTemplate(I, std::move(TI));
+    return llvm::Error::success();
+  }
+  case BI_TEMPLATE_SPECIALIZATION_BLOCK_ID: {
+    TemplateSpecializationInfo TSI;
+    if (auto Err = readBlock(ID, &TSI))
+      return Err;
+    addTemplateSpecialization(I, std::move(TSI));
+    return llvm::Error::success();
+  }
+  case BI_TEMPLATE_PARAM_BLOCK_ID: {
+    TemplateParamInfo TPI;
+    if (auto Err = readBlock(ID, &TPI))
+      return Err;
+    addTemplateParam(I, std::move(TPI));
+    return llvm::Error::success();
+  }
+  case BI_TYPEDEF_BLOCK_ID: {
+    TypedefInfo TI;
+    if (auto Err = readBlock(ID, &TI))
+      return Err;
+    addChild(I, std::move(TI));
     return llvm::Error::success();
   }
   default:
@@ -707,7 +878,7 @@ llvm::Error ClangDocBitcodeReader::validateStream() {
 }
 
 llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
-  Expected<Optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo =
+  Expected<std::optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo =
       Stream.ReadBlockInfoBlock();
   if (!MaybeBlockInfo)
     return MaybeBlockInfo.takeError();
@@ -738,6 +909,8 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
     return createInfo<RecordInfo>(ID);
   case BI_ENUM_BLOCK_ID:
     return createInfo<EnumInfo>(ID);
+  case BI_TYPEDEF_BLOCK_ID:
+    return createInfo<TypedefInfo>(ID);
   case BI_FUNCTION_BLOCK_ID:
     return createInfo<FunctionInfo>(ID);
   default:
@@ -777,6 +950,7 @@ ClangDocBitcodeReader::readBitcode() {
     case BI_NAMESPACE_BLOCK_ID:
     case BI_RECORD_BLOCK_ID:
     case BI_ENUM_BLOCK_ID:
+    case BI_TYPEDEF_BLOCK_ID:
     case BI_FUNCTION_BLOCK_ID: {
       auto InfoOrErr = readBlockToInfo(ID);
       if (!InfoOrErr)

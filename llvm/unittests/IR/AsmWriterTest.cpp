@@ -12,9 +12,11 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using ::testing::HasSubstr;
 
 namespace {
 
@@ -24,15 +26,15 @@ TEST(AsmWriterTest, DebugPrintDetachedInstruction) {
   // has metadata attached but no parent.
   LLVMContext Ctx;
   auto Ty = Type::getInt32Ty(Ctx);
-  auto Undef = UndefValue::get(Ty);
-  std::unique_ptr<BinaryOperator> Add(BinaryOperator::CreateAdd(Undef, Undef));
+  auto Poison = PoisonValue::get(Ty);
+  std::unique_ptr<BinaryOperator> Add(BinaryOperator::CreateAdd(Poison, Poison));
   Add->setMetadata(
       "", MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(Ty, 1))}));
   std::string S;
   raw_string_ostream OS(S);
   Add->print(OS);
-  std::size_t r = OS.str().find("<badref> = add i32 undef, undef, !<empty");
-  EXPECT_TRUE(r != std::string::npos);
+  EXPECT_THAT(OS.str(),
+              HasSubstr("<badref> = add i32 poison, poison, !<empty"));
 }
 
 TEST(AsmWriterTest, DebugPrintDetachedArgument) {
@@ -62,4 +64,45 @@ TEST(AsmWriterTest, DumpDIExpression) {
             OS.str());
 }
 
+TEST(AsmWriterTest, PrintAddrspaceWithNullOperand) {
+  LLVMContext Ctx;
+  Module M("test module", Ctx);
+  SmallVector<Type *, 3> FArgTypes;
+  FArgTypes.push_back(Type::getInt64Ty(Ctx));
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), FArgTypes, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "", &M);
+  Argument *Arg0 = F->getArg(0);
+  Value *Args[] = {Arg0};
+  std::unique_ptr<CallInst> Call(CallInst::Create(F, Args));
+  // This will make Call's operand null.
+  Call->dropAllReferences();
+
+  std::string S;
+  raw_string_ostream OS(S);
+  Call->print(OS);
+  EXPECT_THAT(OS.str(), HasSubstr("<cannot get addrspace!>"));
+}
+
+TEST(AsmWriterTest, PrintNullOperandBundle) {
+  LLVMContext C;
+  Type *Int32Ty = Type::getInt32Ty(C);
+  FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
+  Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
+  std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
+  std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
+  OperandBundleDef Bundle("bundle", UndefValue::get(Int32Ty));
+  std::unique_ptr<InvokeInst> Invoke(
+      InvokeInst::Create(FnTy, Callee, NormalDest.get(), UnwindDest.get(), Args,
+                         Bundle, "result"));
+  // Makes the operand bundle null.
+  Invoke->dropAllReferences();
+  Invoke->setNormalDest(NormalDest.get());
+  Invoke->setUnwindDest(UnwindDest.get());
+
+  std::string S;
+  raw_string_ostream OS(S);
+  Invoke->print(OS);
+  EXPECT_THAT(OS.str(), HasSubstr("<null operand bundle!>"));
+}
 }

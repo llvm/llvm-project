@@ -1,4 +1,4 @@
-//===-------------------------- cxa_demangle.cpp --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,15 +10,20 @@
 // file does not yet support:
 //   - C++ modules TS
 
+#include "abort_message.h"
+#define DEMANGLE_ASSERT(expr, msg) _LIBCXXABI_ASSERT(expr, msg)
+
+#include "demangle/DemangleConfig.h"
 #include "demangle/ItaniumDemangle.h"
 #include "__cxxabi_config.h"
-#include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <functional>
 #include <numeric>
+#include <string_view>
 #include <utility>
 
 using namespace itanium_demangle;
@@ -77,8 +82,8 @@ struct DumpVisitor {
   }
 
   void printStr(const char *S) { fprintf(stderr, "%s", S); }
-  void print(StringView SV) {
-    fprintf(stderr, "\"%.*s\"", (int)SV.size(), SV.begin());
+  void print(std::string_view SV) {
+    fprintf(stderr, "\"%.*s\"", (int)SV.size(), &*SV.begin());
   }
   void print(const Node *N) {
     if (N)
@@ -171,6 +176,50 @@ struct DumpVisitor {
       return printStr("TemplateParamKind::NonType");
     case TemplateParamKind::Template:
       return printStr("TemplateParamKind::Template");
+    }
+  }
+  void print(Node::Prec P) {
+    switch (P) {
+    case Node::Prec::Primary:
+      return printStr("Node::Prec::Primary");
+    case Node::Prec::Postfix:
+      return printStr("Node::Prec::Postfix");
+    case Node::Prec::Unary:
+      return printStr("Node::Prec::Unary");
+    case Node::Prec::Cast:
+      return printStr("Node::Prec::Cast");
+    case Node::Prec::PtrMem:
+      return printStr("Node::Prec::PtrMem");
+    case Node::Prec::Multiplicative:
+      return printStr("Node::Prec::Multiplicative");
+    case Node::Prec::Additive:
+      return printStr("Node::Prec::Additive");
+    case Node::Prec::Shift:
+      return printStr("Node::Prec::Shift");
+    case Node::Prec::Spaceship:
+      return printStr("Node::Prec::Spaceship");
+    case Node::Prec::Relational:
+      return printStr("Node::Prec::Relational");
+    case Node::Prec::Equality:
+      return printStr("Node::Prec::Equality");
+    case Node::Prec::And:
+      return printStr("Node::Prec::And");
+    case Node::Prec::Xor:
+      return printStr("Node::Prec::Xor");
+    case Node::Prec::Ior:
+      return printStr("Node::Prec::Ior");
+    case Node::Prec::AndIf:
+      return printStr("Node::Prec::AndIf");
+    case Node::Prec::OrIf:
+      return printStr("Node::Prec::OrIf");
+    case Node::Prec::Conditional:
+      return printStr("Node::Prec::Conditional");
+    case Node::Prec::Assign:
+      return printStr("Node::Prec::Assign");
+    case Node::Prec::Comma:
+      return printStr("Node::Prec::Comma");
+    case Node::Prec::Default:
+      return printStr("Node::Prec::Default");
     }
   }
 
@@ -342,21 +391,18 @@ __cxa_demangle(const char *MangledName, char *Buf, size_t *N, int *Status) {
 
   int InternalStatus = demangle_success;
   Demangler Parser(MangledName, MangledName + std::strlen(MangledName));
-  OutputStream S;
-
   Node *AST = Parser.parse();
 
   if (AST == nullptr)
     InternalStatus = demangle_invalid_mangled_name;
-  else if (!initializeOutputStream(Buf, N, S, 1024))
-    InternalStatus = demangle_memory_alloc_failure;
   else {
-    assert(Parser.ForwardTemplateRefs.empty());
-    AST->print(S);
-    S += '\0';
+    OutputBuffer O(Buf, N);
+    DEMANGLE_ASSERT(Parser.ForwardTemplateRefs.empty(), "");
+    AST->print(O);
+    O += '\0';
     if (N != nullptr)
-      *N = S.getCurrentPosition();
-    Buf = S.getBuffer();
+      *N = O.getCurrentPosition();
+    Buf = O.getBuffer();
   }
 
   if (Status)

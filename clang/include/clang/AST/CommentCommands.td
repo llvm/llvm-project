@@ -31,6 +31,7 @@ class Command<string name> {
 }
 
 class InlineCommand<string name> : Command<name> {
+  let NumArgs = 1;
   let IsInlineCommand = 1;
 }
 
@@ -62,6 +63,11 @@ class VerbatimLineCommand<string name> : Command<name> {
   let IsVerbatimLineCommand = 1;
 }
 
+class PropertyCommand<string name> : Command<name> {
+  let NumArgs = 0;
+  let IsInlineCommand = 1;
+}
+
 class DeclarationVerbatimLineCommand<string name> :
       VerbatimLineCommand<name> {
   let IsDeclarationCommand = 1;
@@ -86,9 +92,23 @@ def C      : InlineCommand<"c">;
 def P      : InlineCommand<"p">;
 def A      : InlineCommand<"a">;
 def E      : InlineCommand<"e">;
+def N      : InlineCommand<"n"> { let NumArgs = 0; }
 def Em     : InlineCommand<"em">;
-def Ref    : InlineCommand<"ref">;
-def Anchor : InlineCommand<"anchor">;
+def Emoji  : InlineCommand<"emoji">;
+
+def Anchor  : InlineCommand<"anchor">;
+def Ref     : InlineCommand<"ref">;
+def RefItem : InlineCommand<"refitem">;
+def Cite    : InlineCommand<"cite">;
+
+def CopyBrief   : InlineCommand<"copybrief">;
+def CopyDetails : InlineCommand<"copydetails">;
+def CopyDoc     : InlineCommand<"copydoc">;
+
+// Typically not used inline, but they take a single word.
+def Extends    : InlineCommand<"extends">;
+def Implements : InlineCommand<"implements">;
+def MemberOf   : InlineCommand<"memberof">;
 
 //===----------------------------------------------------------------------===//
 // BlockCommand
@@ -141,13 +161,15 @@ def Post       : BlockCommand<"post">;
 def Pre        : BlockCommand<"pre">;
 def Remark     : BlockCommand<"remark">;
 def Remarks    : BlockCommand<"remarks">;
-def Retval     : BlockCommand<"retval">;
+def Retval     : BlockCommand<"retval"> { let NumArgs = 1; }
 def Sa         : BlockCommand<"sa">;
 def See        : BlockCommand<"see">;
 def Since      : BlockCommand<"since">;
+def Test       : BlockCommand<"test">;
 def Todo       : BlockCommand<"todo">;
 def Version    : BlockCommand<"version">;
 def Warning    : BlockCommand<"warning">;
+def XRefItem   : BlockCommand<"xrefitem"> { let NumArgs = 3; }
 // HeaderDoc commands
 def Abstract      : BlockCommand<"abstract"> { let IsBriefCommand = 1; }
 def ClassDesign   : RecordLikeDetailCommand<"classdesign">;
@@ -170,6 +192,8 @@ def SuperClass    : RecordLikeDetailCommand<"superclass">;
 
 defm Code      : VerbatimBlockCommand<"code", "endcode">;
 defm Verbatim  : VerbatimBlockCommand<"verbatim", "endverbatim">;
+
+defm DocbookOnly : VerbatimBlockCommand<"docbookonly", "enddocbookonly">;
 defm Htmlonly  : VerbatimBlockCommand<"htmlonly", "endhtmlonly">;
 defm Latexonly : VerbatimBlockCommand<"latexonly", "endlatexonly">;
 defm Xmlonly   : VerbatimBlockCommand<"xmlonly", "endxmlonly">;
@@ -178,10 +202,19 @@ defm Rtfonly   : VerbatimBlockCommand<"rtfonly", "endrtfonly">;
 
 defm Dot : VerbatimBlockCommand<"dot", "enddot">;
 defm Msc : VerbatimBlockCommand<"msc", "endmsc">;
+defm Uml : VerbatimBlockCommand<"startuml", "enduml">;
+
+// Actually not verbatim blocks, we should also parse commands within them.
+defm Internal   : VerbatimBlockCommand<"internal", "endinternal">;
+// TODO: conflicts with HeaderDoc link, /link.
+//defm Link       : VerbatimBlockCommand<"link", "endlink">;
+defm ParBlock   : VerbatimBlockCommand<"parblock", "endparblock">;
+defm SecRefList : VerbatimBlockCommand<"secreflist", "endsecreflist">;
 
 // These three commands have special support in CommentLexer to recognize their
 // names.
 def  FDollar  : VerbatimBlockCommand<"f$">; // Inline LaTeX formula
+defm FParen   : VerbatimBlockCommand<"f(", "f)">; // Inline LaTeX text
 defm FBracket : VerbatimBlockCommand<"f[", "f]">; // Displayed LaTeX formula
 defm FBrace   : VerbatimBlockCommand<"f{", "f}">; // LaTeX environment
 
@@ -199,11 +232,18 @@ def Addtogroup : VerbatimLineCommand<"addtogroup">;
 def Weakgroup  : VerbatimLineCommand<"weakgroup">;
 def Name       : VerbatimLineCommand<"name">;
 
+// These actually take a single word, but it's optional.
+// And they're used on a separate line typically, not inline.
+def Dir  : VerbatimLineCommand<"dir">;
+def File : VerbatimLineCommand<"file">;
+
 def Section       : VerbatimLineCommand<"section">;
 def Subsection    : VerbatimLineCommand<"subsection">;
 def Subsubsection : VerbatimLineCommand<"subsubsection">;
 def Paragraph     : VerbatimLineCommand<"paragraph">;
+def TableOfContents : VerbatimLineCommand<"tableofcontents">;
 
+def Page     : VerbatimLineCommand<"page">;
 def Mainpage : VerbatimLineCommand<"mainpage">;
 def Subpage  : VerbatimLineCommand<"subpage">;
 
@@ -212,13 +252,80 @@ def Related     : VerbatimLineCommand<"related">;
 def RelatesAlso : VerbatimLineCommand<"relatesalso">;
 def RelatedAlso : VerbatimLineCommand<"relatedalso">;
 
+def AddIndex : VerbatimLineCommand<"addindex">;
+
+// These take a single argument mostly, but since they include a file they'll
+// typically be on their own line.
+def DocbookInclude : VerbatimLineCommand<"docbookinclude">;
+def DontInclude    : VerbatimLineCommand<"dontinclude">;
+def Example        : VerbatimLineCommand<"example">;
+def HtmlInclude    : VerbatimLineCommand<"htmlinclude">;
+def Include        : VerbatimLineCommand<"include">;
+def ManInclude     : VerbatimLineCommand<"maninclude">;
+def LatexInclude   : VerbatimLineCommand<"latexinclude">;
+def RtfInclude     : VerbatimLineCommand<"rtfinclude">;
+def Snippet        : VerbatimLineCommand<"snippet">;
+def VerbInclude    : VerbatimLineCommand<"verbinclude">;
+def XmlInclude     : VerbatimLineCommand<"xmlinclude">;
+
+def Image   : VerbatimLineCommand<"image">;
+def DotFile : VerbatimLineCommand<"dotfile">;
+def MscFile : VerbatimLineCommand<"mscfile">;
+def DiaFile : VerbatimLineCommand<"diafile">;
+
+def Line     : VerbatimLineCommand<"line">;
+def Skip     : VerbatimLineCommand<"skip">;
+def SkipLine : VerbatimLineCommand<"skipline">;
+def Until    : VerbatimLineCommand<"until">;
+
+def NoOp : VerbatimLineCommand<"noop">;
+
+// We might also build proper support for if/ifnot/else/elseif/endif.
+def If     : VerbatimLineCommand<"if">;
+def IfNot  : VerbatimLineCommand<"ifnot">;
+def Else   : VerbatimLineCommand<"else">;
+def ElseIf : VerbatimLineCommand<"elseif">;
+def Endif  : VerbatimLineCommand<"endif">;
+
+// Not treated as VerbatimBlockCommand because it spans multiple comments.
+def Cond    : VerbatimLineCommand<"cond">;
+def EndCond : VerbatimLineCommand<"endcond">;
+
+//===----------------------------------------------------------------------===//
+// PropertyCommand
+//===----------------------------------------------------------------------===//
+
+def CallGraph       : PropertyCommand<"callgraph">;
+def HideCallGraph   : PropertyCommand<"hidecallgraph">;
+def CallerGraph     : PropertyCommand<"callergraph">;
+def HideCallerGraph : PropertyCommand<"hidecallergraph">;
+def ShowInitializer : PropertyCommand<"showinitializer">;
+def HideInitializer : PropertyCommand<"hideinitializer">;
+def ShowRefBy       : PropertyCommand<"showrefby">;
+def HideRefBy       : PropertyCommand<"hiderefby">;
+def ShowRefs        : PropertyCommand<"showrefs">;
+def HideRefs        : PropertyCommand<"hiderefs">;
+
+def Private   : PropertyCommand<"private">;
+def Protected : PropertyCommand<"protected">;
+def Public    : PropertyCommand<"public">;
+def Pure      : PropertyCommand<"pure">;
+def Static    : PropertyCommand<"static">;
+
+def NoSubgrouping    : PropertyCommand<"nosubgrouping">;
+def PrivateSection   : PropertyCommand<"privatesection">;
+def ProtectedSection : PropertyCommand<"protectedsection">;
+def PublicSection    : PropertyCommand<"publicsection">;
+
 //===----------------------------------------------------------------------===//
 // DeclarationVerbatimLineCommand
 //===----------------------------------------------------------------------===//
 
 // Doxygen commands.
+def Concept   : DeclarationVerbatimLineCommand<"concept">;
 def Def       : DeclarationVerbatimLineCommand<"def">;
 def Fn        : DeclarationVerbatimLineCommand<"fn">;
+def IDLExcept : DeclarationVerbatimLineCommand<"idlexcept">;
 def Namespace : DeclarationVerbatimLineCommand<"namespace">;
 def Overload  : DeclarationVerbatimLineCommand<"overload">;
 def Property  : DeclarationVerbatimLineCommand<"property">;

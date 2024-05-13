@@ -1,19 +1,19 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
 define internal void @f() {
 ; CHECK-NOT: @f(
-; CHECK: define void @a
+; CHECK: define dso_local void @a
 	ret void
 }
 
-@a = alias void (), void ()* @f
+@a = dso_local alias void (), ptr @f
 
-define void @g() {
+define hidden void @g() {
 	call void() @a()
 	ret void
 }
 
-@b = internal alias  void (),  void ()* @g
+@b = internal alias  void (),  ptr @g
 ; CHECK-NOT: @b
 
 define void @h() {

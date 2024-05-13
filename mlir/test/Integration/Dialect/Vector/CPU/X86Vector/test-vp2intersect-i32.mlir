@@ -1,18 +1,18 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm="enable-x86vector" -convert-std-to-llvm  | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm="enable-x86vector" -convert-func-to-llvm -reconcile-unrealized-casts  | \
 // RUN: mlir-translate  --mlir-to-llvmir | \
-// RUN: %lli --entry-function=entry --mattr="avx512bw,avx512vp2intersect" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: %lli --entry-function=entry --mattr="avx512bw,avx512vp2intersect" --dlopen=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
 // Note: To run this test, your CPU must support AVX512 vp2intersect.
 
-func @entry() -> i32 {
-  %i0 = constant 0 : i32
-  %i1 = constant 1: i32
-  %i2 = constant 2: i32
-  %i3 = constant 7: i32
-  %i4 = constant 12: i32
-  %i5 = constant -10: i32
-  %i6 = constant -219: i32
+func.func @entry() -> i32 {
+  %i0 = arith.constant 0 : i32
+  %i1 = arith.constant 1: i32
+  %i2 = arith.constant 2: i32
+  %i3 = arith.constant 7: i32
+  %i4 = arith.constant 12: i32
+  %i5 = arith.constant -10: i32
+  %i6 = arith.constant -219: i32
 
   %v0 = vector.broadcast %i1 : i32 to vector<16xi32>
   %v1 = vector.insert %i2, %v0[1] : i32 into vector<16xi32>

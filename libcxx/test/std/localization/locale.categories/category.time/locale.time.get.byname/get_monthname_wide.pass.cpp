@@ -9,6 +9,9 @@
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.zh_CN.UTF-8
+// XFAIL: no-wide-characters
+
+// XFAIL: LIBCXX-FREEBSD-FIXME
 
 // <locale>
 
@@ -57,7 +60,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_monthname(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-        assert(i.base() == in+sizeof(in)/sizeof(in[0])-1);
+        assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
         assert(t.tm_mon == 5);
         assert(err == std::ios_base::eofbit);
     }
@@ -67,7 +70,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_monthname(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-        assert(i.base() == in+sizeof(in)/sizeof(in[0])-1);
+        assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
         assert(t.tm_mon == 5);
         assert(err == std::ios_base::eofbit);
     }
@@ -77,7 +80,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_monthname(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-        assert(i.base() == in+sizeof(in)/sizeof(in[0])-1);
+        assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
         assert(t.tm_mon == 5);
         assert(err == std::ios_base::eofbit);
     }

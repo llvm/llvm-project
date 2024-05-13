@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
+; RUN: llc -mtriple=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; Source Code:
 ; int gbl;
@@ -21,7 +21,7 @@ define i32 @test(i32, i32) local_unnamed_addr #0 {
   br i1 %3, label %4, label %8
 
 ; <label>:4:                                      ; preds = %2
-  %5 = load i32, i32* @gbl, align 4
+  %5 = load i32, ptr @gbl, align 4
   %6 = shl i32 %5, 1
   %7 = mul i32 %6, %5
   br label %13
@@ -31,7 +31,7 @@ define i32 @test(i32, i32) local_unnamed_addr #0 {
 
 ; <label>:8:                                      ; preds = %2
   %9 = icmp eq i32 %0, %1
-  %10 = load i32, i32* @gbl, align 4
+  %10 = load i32, ptr @gbl, align 4
   br i1 %9, label %15, label %11
 
 ; CHECK: r1 = 0 ll
@@ -54,7 +54,7 @@ define i32 @test(i32, i32) local_unnamed_addr #0 {
 
 ; <label>:13:                                     ; preds = %4, %11
   %14 = phi i32 [ %12, %11 ], [ %7, %4 ]
-  store i32 %14, i32* @gbl, align 4
+  store i32 %14, ptr @gbl, align 4
   br label %15
 ; CHECK-LABEL: <LBB0_4>:
 ; CHECK: r1 = 0 ll

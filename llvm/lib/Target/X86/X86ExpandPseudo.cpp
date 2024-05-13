@@ -18,10 +18,11 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -48,7 +49,7 @@ public:
   const X86MachineFunctionInfo *X86FI = nullptr;
   const X86FrameLowering *X86FL = nullptr;
 
-  bool runOnMachineFunction(MachineFunction &Fn) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
@@ -60,23 +61,23 @@ public:
   }
 
 private:
-  void ExpandICallBranchFunnel(MachineBasicBlock *MBB,
+  void expandICallBranchFunnel(MachineBasicBlock *MBB,
                                MachineBasicBlock::iterator MBBI);
   void expandCALL_RVMARKER(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
-  bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
-  bool ExpandMBB(MachineBasicBlock &MBB);
+  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+  bool expandMBB(MachineBasicBlock &MBB);
 
   /// This function expands pseudos which affects control flow.
   /// It is done in separate pass to simplify blocks navigation in main
-  /// pass(calling ExpandMBB).
-  bool ExpandPseudosWhichAffectControlFlow(MachineFunction &MF);
+  /// pass(calling expandMBB).
+  bool expandPseudosWhichAffectControlFlow(MachineFunction &MF);
 
   /// Expand X86::VASTART_SAVE_XMM_REGS into set of xmm copying instructions,
   /// placed into separate block guarded by check for al register(for SystemV
   /// abi).
-  void ExpandVastartSaveXmmRegs(
-      MachineBasicBlock *MBB,
+  void expandVastartSaveXmmRegs(
+      MachineBasicBlock *EntryBlk,
       MachineBasicBlock::iterator VAStartPseudoInstr) const;
 };
 char X86ExpandPseudo::ID = 0;
@@ -86,7 +87,7 @@ char X86ExpandPseudo::ID = 0;
 INITIALIZE_PASS(X86ExpandPseudo, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME, false,
                 false)
 
-void X86ExpandPseudo::ExpandICallBranchFunnel(
+void X86ExpandPseudo::expandICallBranchFunnel(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) {
   MachineBasicBlock *JTMBB = MBB;
   MachineInstr *JTInst = &*MBBI;
@@ -191,8 +192,6 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI) {
   // Expand CALL_RVMARKER pseudo to call instruction, followed by the special
   //"movq %rax, %rdi" marker.
-  // TODO: Mark the sequence as bundle, to avoid passes moving other code
-  // in between.
   MachineInstr &MI = *MBBI;
 
   MachineInstr *OriginalCall;
@@ -209,10 +208,8 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
     llvm_unreachable("unexpected opcode");
 
   OriginalCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
-  unsigned OpStart = 1;
   bool RAXImplicitDead = false;
-  for (; OpStart < MI.getNumOperands(); ++OpStart) {
-    MachineOperand &Op = MI.getOperand(OpStart);
+  for (MachineOperand &Op : llvm::drop_begin(MI.operands())) {
     // RAX may be 'implicit dead', if there are no other users of the return
     // value. We introduce a new use, so change it to 'implicit def'.
     if (Op.isReg() && Op.isImplicit() && Op.isDead() &&
@@ -227,45 +224,47 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
   // Emit marker "movq %rax, %rdi".  %rdi is not callee-saved, so it cannot be
   // live across the earlier call. The call to the ObjC runtime function returns
   // the first argument, so the value of %rax is unchanged after the ObjC
-  // runtime call.
+  // runtime call. On Windows targets, the runtime call follows the regular
+  // x64 calling convention and expects the first argument in %rcx.
+  auto TargetReg = STI->getTargetTriple().isOSWindows() ? X86::RCX : X86::RDI;
   auto *Marker = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::MOV64rr))
-                     .addReg(X86::RDI, RegState::Define)
+                     .addReg(TargetReg, RegState::Define)
                      .addReg(X86::RAX)
                      .getInstr();
   if (MI.shouldUpdateCallSiteInfo())
     MBB.getParent()->moveCallSiteInfo(&MI, Marker);
 
   // Emit call to ObjC runtime.
-  unsigned RuntimeCallType = MI.getOperand(0).getImm();
-  assert(RuntimeCallType <= 1 && "objc runtime call type must be 0 or 1");
-  Module *M = MBB.getParent()->getFunction().getParent();
-  auto &Context = M->getContext();
-  auto *I8PtrTy = PointerType::get(IntegerType::get(Context, 8), 0);
-  FunctionCallee Fn = M->getOrInsertFunction(
-      RuntimeCallType == 0 ? "objc_retainAutoreleasedReturnValue"
-                           : "objc_unsafeClaimAutoreleasedReturnValue",
-      FunctionType::get(I8PtrTy, {I8PtrTy}, false));
   const uint32_t *RegMask =
       TRI->getCallPreservedMask(*MBB.getParent(), CallingConv::C);
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::CALL64pcrel32))
-      .addGlobalAddress(cast<GlobalValue>(Fn.getCallee()), 0, 0)
-      .addRegMask(RegMask)
-      .addReg(X86::RAX,
-              RegState::Implicit |
-                  (RAXImplicitDead ? (RegState::Dead | RegState::Define)
-                                   : RegState::Define))
-      .getInstr();
+  MachineInstr *RtCall =
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::CALL64pcrel32))
+          .addGlobalAddress(MI.getOperand(0).getGlobal(), 0, 0)
+          .addRegMask(RegMask)
+          .addReg(X86::RAX,
+                  RegState::Implicit |
+                      (RAXImplicitDead ? (RegState::Dead | RegState::Define)
+                                       : RegState::Define))
+          .getInstr();
   MI.eraseFromParent();
+
+  auto &TM = MBB.getParent()->getTarget();
+  // On Darwin platforms, wrap the expanded sequence in a bundle to prevent
+  // later optimizations from breaking up the sequence.
+  if (TM.getTargetTriple().isOSDarwin())
+    finalizeBundle(MBB, OriginalCall->getIterator(),
+                   std::next(RtCall->getIterator()));
 }
 
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
 /// \returns true if \p MBBI has been expanded.
-bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
+bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   const DebugLoc &DL = MBBI->getDebugLoc();
+#define GET_EGPR_IF_ENABLED(OPC) (STI->hasEGPR() ? OPC##_EVEX : OPC)
   switch (Opcode) {
   default:
     return false;
@@ -360,6 +359,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     MachineInstr &NewMI = *std::prev(MBBI);
     NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
+    NewMI.setCFIType(*MBB.getParent(), MI.getCFIType());
 
     // Update the call site info.
     if (MBBI->isCandidateForCallSiteEntry())
@@ -403,10 +403,10 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MachineInstrBuilder MIB;
     if (StackAdj == 0) {
       MIB = BuildMI(MBB, MBBI, DL,
-                    TII->get(STI->is64Bit() ? X86::RETQ : X86::RETL));
+                    TII->get(STI->is64Bit() ? X86::RET64 : X86::RET32));
     } else if (isUInt<16>(StackAdj)) {
       MIB = BuildMI(MBB, MBBI, DL,
-                    TII->get(STI->is64Bit() ? X86::RETIQ : X86::RETIL))
+                    TII->get(STI->is64Bit() ? X86::RETI64 : X86::RETI32))
                 .addImm(StackAdj);
     } else {
       assert(!STI->is64Bit() &&
@@ -416,7 +416,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       BuildMI(MBB, MBBI, DL, TII->get(X86::POP32r)).addReg(X86::ECX, RegState::Define);
       X86FL->emitSPUpdate(MBB, MBBI, DL, StackAdj, /*InEpilogue=*/true);
       BuildMI(MBB, MBBI, DL, TII->get(X86::PUSH32r)).addReg(X86::ECX);
-      MIB = BuildMI(MBB, MBBI, DL, TII->get(X86::RETL));
+      MIB = BuildMI(MBB, MBBI, DL, TII->get(X86::RET32));
     }
     for (unsigned I = 1, E = MBBI->getNumOperands(); I != E; ++I)
       MIB.add(MBBI->getOperand(I));
@@ -467,10 +467,12 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Register Reg0 = TRI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = TRI->getSubReg(Reg, X86::sub_mask_1);
 
-    auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWkm))
-      .addReg(Reg0, RegState::Define | getDeadRegState(DstIsDead));
-    auto MIBHi = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWkm))
-      .addReg(Reg1, RegState::Define | getDeadRegState(DstIsDead));
+    auto MIBLo =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWkm)))
+            .addReg(Reg0, RegState::Define | getDeadRegState(DstIsDead));
+    auto MIBHi =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWkm)))
+            .addReg(Reg1, RegState::Define | getDeadRegState(DstIsDead));
 
     for (int i = 0; i < X86::AddrNumOperands; ++i) {
       MIBLo.add(MBBI->getOperand(1 + i));
@@ -501,8 +503,10 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Register Reg0 = TRI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = TRI->getSubReg(Reg, X86::sub_mask_1);
 
-    auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWmk));
-    auto MIBHi = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWmk));
+    auto MIBLo =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWmk)));
+    auto MIBHi =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWmk)));
 
     for (int i = 0; i < X86::AddrNumOperands; ++i) {
       MIBLo.add(MBBI->getOperand(i));
@@ -548,33 +552,43 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     return true;
   }
   case TargetOpcode::ICALL_BRANCH_FUNNEL:
-    ExpandICallBranchFunnel(&MBB, MBBI);
+    expandICallBranchFunnel(&MBB, MBBI);
     return true;
   case X86::PLDTILECFGV: {
-    MI.setDesc(TII->get(X86::LDTILECFG));
+    MI.setDesc(TII->get(GET_EGPR_IF_ENABLED(X86::LDTILECFG)));
     return true;
   }
-  case X86::PTILELOADDV: {
+  case X86::PTILELOADDV:
+  case X86::PTILELOADDT1V: {
     for (unsigned i = 2; i > 0; --i)
-      MI.RemoveOperand(i);
-    MI.setDesc(TII->get(X86::TILELOADD));
+      MI.removeOperand(i);
+    unsigned Opc = Opcode == X86::PTILELOADDV
+                       ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
+                       : GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+    MI.setDesc(TII->get(Opc));
     return true;
   }
+  case X86::PTCMMIMFP16PSV:
+  case X86::PTCMMRLFP16PSV:
   case X86::PTDPBSSDV:
   case X86::PTDPBSUDV:
   case X86::PTDPBUSDV:
   case X86::PTDPBUUDV:
-  case X86::PTDPBF16PSV: {
+  case X86::PTDPBF16PSV:
+  case X86::PTDPFP16PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
+    case X86::PTCMMIMFP16PSV:  Opc = X86::TCMMIMFP16PS; break;
+    case X86::PTCMMRLFP16PSV:  Opc = X86::TCMMRLFP16PS; break;
     case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
     case X86::PTDPBSUDV:   Opc = X86::TDPBSUD; break;
     case X86::PTDPBUSDV:   Opc = X86::TDPBUSD; break;
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
+    case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
     default: llvm_unreachable("Impossible Opcode!");
     }
     MI.setDesc(TII->get(Opc));
@@ -583,13 +597,14 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   }
   case X86::PTILESTOREDV: {
     for (int i = 1; i >= 0; --i)
-      MI.RemoveOperand(i);
-    MI.setDesc(TII->get(X86::TILESTORED));
+      MI.removeOperand(i);
+    MI.setDesc(TII->get(GET_EGPR_IF_ENABLED(X86::TILESTORED)));
     return true;
   }
+#undef GET_EGPR_IF_ENABLED
   case X86::PTILEZEROV: {
     for (int i = 2; i > 0; --i) // Remove row, col
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     MI.setDesc(TII->get(X86::TILEZERO));
     return true;
   }
@@ -598,6 +613,91 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::CALL64m_RVMARKER:
     expandCALL_RVMARKER(MBB, MBBI);
     return true;
+  case X86::ADD32mi_ND:
+  case X86::ADD64mi32_ND:
+  case X86::SUB32mi_ND:
+  case X86::SUB64mi32_ND:
+  case X86::AND32mi_ND:
+  case X86::AND64mi32_ND:
+  case X86::OR32mi_ND:
+  case X86::OR64mi32_ND:
+  case X86::XOR32mi_ND:
+  case X86::XOR64mi32_ND:
+  case X86::ADC32mi_ND:
+  case X86::ADC64mi32_ND:
+  case X86::SBB32mi_ND:
+  case X86::SBB64mi32_ND: {
+    // It's possible for an EVEX-encoded legacy instruction to reach the 15-byte
+    // instruction length limit: 4 bytes of EVEX prefix + 1 byte of opcode + 1
+    // byte of ModRM + 1 byte of SIB + 4 bytes of displacement + 4 bytes of
+    // immediate = 15 bytes in total, e.g.
+    //
+    //  subq    $184, %fs:257(%rbx, %rcx), %rax
+    //
+    // In such a case, no additional (ADSIZE or segment override) prefix can be
+    // used. To resolve the issue, we split the “long” instruction into 2
+    // instructions:
+    //
+    //  movq %fs:257(%rbx, %rcx)，%rax
+    //  subq $184, %rax
+    //
+    //  Therefore we consider the OPmi_ND to be a pseudo instruction to some
+    //  extent.
+    const MachineOperand &ImmOp =
+        MI.getOperand(MI.getNumExplicitOperands() - 1);
+    // If the immediate is a expr, conservatively estimate 4 bytes.
+    if (ImmOp.isImm() && isInt<8>(ImmOp.getImm()))
+      return false;
+    int MemOpNo = X86::getFirstAddrOperandIdx(MI);
+    const MachineOperand &DispOp = MI.getOperand(MemOpNo + X86::AddrDisp);
+    Register Base = MI.getOperand(MemOpNo + X86::AddrBaseReg).getReg();
+    // If the displacement is a expr, conservatively estimate 4 bytes.
+    if (Base && DispOp.isImm() && isInt<8>(DispOp.getImm()))
+      return false;
+    // There can only be one of three: SIB, segment override register, ADSIZE
+    Register Index = MI.getOperand(MemOpNo + X86::AddrIndexReg).getReg();
+    unsigned Count = !!MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
+    if (X86II::needSIB(Base, Index, /*In64BitMode=*/true))
+      ++Count;
+    if (X86MCRegisterClasses[X86::GR32RegClassID].contains(Base) ||
+        X86MCRegisterClasses[X86::GR32RegClassID].contains(Index))
+      ++Count;
+    if (Count < 2)
+      return false;
+    unsigned Opc, LoadOpc;
+    switch (Opcode) {
+#define MI_TO_RI(OP)                                                           \
+  case X86::OP##32mi_ND:                                                       \
+    Opc = X86::OP##32ri;                                                       \
+    LoadOpc = X86::MOV32rm;                                                    \
+    break;                                                                     \
+  case X86::OP##64mi32_ND:                                                     \
+    Opc = X86::OP##64ri32;                                                     \
+    LoadOpc = X86::MOV64rm;                                                    \
+    break;
+
+    default:
+      llvm_unreachable("Unexpected Opcode");
+      MI_TO_RI(ADD);
+      MI_TO_RI(SUB);
+      MI_TO_RI(AND);
+      MI_TO_RI(OR);
+      MI_TO_RI(XOR);
+      MI_TO_RI(ADC);
+      MI_TO_RI(SBB);
+#undef MI_TO_RI
+    }
+    // Insert OPri.
+    Register DestReg = MI.getOperand(0).getReg();
+    BuildMI(MBB, std::next(MBBI), DL, TII->get(Opc), DestReg)
+        .addReg(DestReg)
+        .add(ImmOp);
+    // Change OPmi_ND to MOVrm.
+    for (unsigned I = MI.getNumImplicitOperands() + 1; I != 0; --I)
+      MI.removeOperand(MI.getNumOperands() - 1);
+    MI.setDesc(TII->get(LoadOpc));
+    return true;
+  }
   }
   llvm_unreachable("Previous switch has a fallthrough?");
 }
@@ -616,7 +716,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 //        |                              |
 //        |                              |
 //
-void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
+void X86ExpandPseudo::expandVastartSaveXmmRegs(
     MachineBasicBlock *EntryBlk,
     MachineBasicBlock::iterator VAStartPseudoInstr) const {
   assert(VAStartPseudoInstr->getOpcode() == X86::VASTART_SAVE_XMM_REGS);
@@ -654,37 +754,25 @@ void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
                   EntryBlk->end());
   TailBlk->transferSuccessorsAndUpdatePHIs(EntryBlk);
 
-  int64_t FrameIndex = VAStartPseudoInstr->getOperand(1).getImm();
-  Register BaseReg;
-  uint64_t FrameOffset =
-      X86FL->getFrameIndexReference(*Func, FrameIndex, BaseReg).getFixed();
-  uint64_t VarArgsRegsOffset = VAStartPseudoInstr->getOperand(2).getImm();
+  uint64_t FrameOffset = VAStartPseudoInstr->getOperand(4).getImm();
+  uint64_t VarArgsRegsOffset = VAStartPseudoInstr->getOperand(6).getImm();
 
   // TODO: add support for YMM and ZMM here.
   unsigned MOVOpc = STI->hasAVX() ? X86::VMOVAPSmr : X86::MOVAPSmr;
 
   // In the XMM save block, save all the XMM argument registers.
-  for (int64_t OpndIdx = 3, RegIdx = 0;
+  for (int64_t OpndIdx = 7, RegIdx = 0;
        OpndIdx < VAStartPseudoInstr->getNumOperands() - 1;
        OpndIdx++, RegIdx++) {
-
-    int64_t Offset = FrameOffset + VarArgsRegsOffset + RegIdx * 16;
-
-    MachineMemOperand *MMO = Func->getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(*Func, FrameIndex, Offset),
-        MachineMemOperand::MOStore,
-        /*Size=*/16, Align(16));
-
-    BuildMI(GuardedRegsBlk, DL, TII->get(MOVOpc))
-        .addReg(BaseReg)
-        .addImm(/*Scale=*/1)
-        .addReg(/*IndexReg=*/0)
-        .addImm(/*Disp=*/Offset)
-        .addReg(/*Segment=*/0)
-        .addReg(VAStartPseudoInstr->getOperand(OpndIdx).getReg())
-        .addMemOperand(MMO);
-    assert(Register::isPhysicalRegister(
-        VAStartPseudoInstr->getOperand(OpndIdx).getReg()));
+    auto NewMI = BuildMI(GuardedRegsBlk, DL, TII->get(MOVOpc));
+    for (int i = 0; i < X86::AddrNumOperands; ++i) {
+      if (i == X86::AddrDisp)
+        NewMI.addImm(FrameOffset + VarArgsRegsOffset + RegIdx * 16);
+      else
+        NewMI.add(VAStartPseudoInstr->getOperand(i + 1));
+    }
+    NewMI.addReg(VAStartPseudoInstr->getOperand(OpndIdx).getReg());
+    assert(VAStartPseudoInstr->getOperand(OpndIdx).getReg().isPhysical());
   }
 
   // The original block will now fall through to the GuardedRegsBlk.
@@ -713,27 +801,27 @@ void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
 
 /// Expand all pseudo instructions contained in \p MBB.
 /// \returns true if any expansion occurred for \p MBB.
-bool X86ExpandPseudo::ExpandMBB(MachineBasicBlock &MBB) {
+bool X86ExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   // MBBI may be invalidated by the expansion.
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
     MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= ExpandMI(MBB, MBBI);
+    Modified |= expandMI(MBB, MBBI);
     MBBI = NMBBI;
   }
 
   return Modified;
 }
 
-bool X86ExpandPseudo::ExpandPseudosWhichAffectControlFlow(MachineFunction &MF) {
+bool X86ExpandPseudo::expandPseudosWhichAffectControlFlow(MachineFunction &MF) {
   // Currently pseudo which affects control flow is only
   // X86::VASTART_SAVE_XMM_REGS which is located in Entry block.
   // So we do not need to evaluate other blocks.
   for (MachineInstr &Instr : MF.front().instrs()) {
     if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
-      ExpandVastartSaveXmmRegs(&(MF.front()), Instr);
+      expandVastartSaveXmmRegs(&(MF.front()), Instr);
       return true;
     }
   }
@@ -742,16 +830,16 @@ bool X86ExpandPseudo::ExpandPseudosWhichAffectControlFlow(MachineFunction &MF) {
 }
 
 bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
-  STI = &static_cast<const X86Subtarget &>(MF.getSubtarget());
+  STI = &MF.getSubtarget<X86Subtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   X86FI = MF.getInfo<X86MachineFunctionInfo>();
   X86FL = STI->getFrameLowering();
 
-  bool Modified = ExpandPseudosWhichAffectControlFlow(MF);
+  bool Modified = expandPseudosWhichAffectControlFlow(MF);
 
   for (MachineBasicBlock &MBB : MF)
-    Modified |= ExpandMBB(MBB);
+    Modified |= expandMBB(MBB);
   return Modified;
 }
 

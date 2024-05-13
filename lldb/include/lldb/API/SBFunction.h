@@ -74,7 +74,7 @@ private:
 
   SBFunction(lldb_private::Function *lldb_object_ptr);
 
-  lldb_private::Function *m_opaque_ptr;
+  lldb_private::Function *m_opaque_ptr = nullptr;
 };
 
 } // namespace lldb

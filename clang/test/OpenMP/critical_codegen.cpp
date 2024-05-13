@@ -15,7 +15,7 @@
 #ifndef HEADER
 #define HEADER
 
-// ALL:       [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
+// ALL:       [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, ptr }
 // ALL:       [[UNNAMED_LOCK:@.+]] = common global [8 x i32] zeroinitializer
 // ALL:       [[THE_NAME_LOCK:@.+]] = common global [8 x i32] zeroinitializer
 // ALL:       [[THE_NAME_LOCK1:@.+]] = common global [8 x i32] zeroinitializer
@@ -30,32 +30,38 @@ int main() {
   // ALL:       [[A_ADDR:%.+]] = alloca i8
   char a;
 
-// ALL:       			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
-// ALL:       			call {{.*}}void @__kmpc_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[UNNAMED_LOCK]])
-// ALL-NEXT:  			store i8 2, i8* [[A_ADDR]]
-// ALL-NEXT:  			call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[UNNAMED_LOCK]])
+// ALL:       			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(ptr [[DEFAULT_LOC:@.+]])
+// ALL:       			call {{.*}}void @__kmpc_critical(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[UNNAMED_LOCK]])
+// ALL-NEXT:  			store i8 2, ptr [[A_ADDR]]
+// IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
+// IRBUILDER:			[[AFTER]]
+// ALL-NEXT:  			call {{.*}}void @__kmpc_end_critical(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[UNNAMED_LOCK]])
 #pragma omp critical
   a = 2;
-// IRBUILDER:       [[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
-// ALL:       			call {{.*}}void @__kmpc_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK]])
+// IRBUILDER:       [[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(ptr [[DEFAULT_LOC:@.+]])
+// ALL:       			call {{.*}}void @__kmpc_critical(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[THE_NAME_LOCK]])
 // IRBUILDER-NEXT:	call {{.*}}void [[FOO]]()
 // NORMAL-NEXT:  		invoke {{.*}}void [[FOO]]()
-// ALL:      				call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK]])
+// IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
+// IRBUILDER:			[[AFTER]]
+// ALL:      				call {{.*}}void @__kmpc_end_critical(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[THE_NAME_LOCK]])
 #pragma omp critical(the_name)
   foo();
-// IRBUILDER:   		[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
-// ALL: 	      		call {{.*}}void @__kmpc_critical_with_hint([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK1]], i{{64|32}} 23)
+// IRBUILDER:   		[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(ptr [[DEFAULT_LOC:@.+]])
+// ALL: 	      		call {{.*}}void @__kmpc_critical_with_hint(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[THE_NAME_LOCK1]], i{{64|32}} 23)
 // IRBUILDER-NEXT:	call {{.*}}void [[FOO]]()
 // NORMAL-NEXT:		  invoke {{.*}}void [[FOO]]()
-// ALL:		       		call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK1]])
+// IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
+// IRBUILDER:			[[AFTER]]
+// ALL:		       		call {{.*}}void @__kmpc_end_critical(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[THE_NAME_LOCK1]])
 #pragma omp critical(the_name1) hint(23)
   foo();
-  // IRBUILDER:   		[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
-  // ALL:       call {{.*}}void @__kmpc_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK]])
-  // ALL:       br label
-  // ALL-NOT:   call {{.*}}void @__kmpc_end_critical(
-  // ALL:       br label
-  // ALL-NOT:   call {{.*}}void @__kmpc_end_critical(
+  // IRBUILDER:   		[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(ptr [[DEFAULT_LOC:@.+]])
+  // ALL:       call {{.*}}void @__kmpc_critical(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[THE_NAME_LOCK]])
+  // NORMAL:       br label
+  // NORMAL-NOT:   call {{.*}}void @__kmpc_end_critical(
+  // NORMAL:       br label
+  // NORMAL-NOT:   call {{.*}}void @__kmpc_end_critical(
   // NORMAL:       br label
   if (a)
 #pragma omp critical(the_name)
@@ -98,14 +104,14 @@ struct S {
 };
 // ALL-LABEL: critical_ref
 void critical_ref(S &s) {
-  // ALL: [[S_ADDR:%.+]] = alloca %struct.S*,
-  // ALL: [[S_REF:%.+]] = load %struct.S*, %struct.S** [[S_ADDR]],
-  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, %struct.S* [[S_REF]], i32 0, i32 0
+  // ALL: [[S_ADDR:%.+]] = alloca ptr,
+  // ALL: [[S_REF:%.+]] = load ptr, ptr [[S_ADDR]],
+  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, ptr [[S_REF]], i32 0, i32 0
   ++s.a;
   // ALL: call void @__kmpc_critical(
 #pragma omp critical
-  // ALL: [[S_REF:%.+]] = load %struct.S*, %struct.S** [[S_ADDR]],
-  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, %struct.S* [[S_REF]], i32 0, i32 0
+  // ALL: [[S_REF:%.+]] = load ptr, ptr [[S_ADDR]],
+  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, ptr [[S_REF]], i32 0, i32 0
   ++s.a;
   // ALL: call void @__kmpc_end_critical(
 }

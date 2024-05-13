@@ -18,9 +18,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 
@@ -38,11 +35,13 @@ static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
 
   GetElementPtrInst *GEP =
       dyn_cast<GetElementPtrInst>(GV.use_begin()->getUser());
-  if (!GEP || !GEP->hasOneUse())
+  if (!GEP || !GEP->hasOneUse() ||
+      GV.getValueType() != GEP->getSourceElementType())
     return false;
 
   LoadInst *Load = dyn_cast<LoadInst>(GEP->use_begin()->getUser());
-  if (!Load || !Load->hasOneUse())
+  if (!Load || !Load->hasOneUse() ||
+      Load->getType() != GEP->getResultElementType())
     return false;
 
   // If the original lookup table does not have local linkage and is
@@ -58,11 +57,15 @@ static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
     return false;
 
   ConstantArray *Array = dyn_cast<ConstantArray>(GV.getInitializer());
-  // If values are not pointers, do not generate a relative lookup table.
-  if (!Array || !Array->getType()->getElementType()->isPointerTy())
+  if (!Array)
     return false;
 
+  // If values are not 64-bit pointers, do not generate a relative lookup table.
   const DataLayout &DL = M.getDataLayout();
+  Type *ElemType = Array->getType()->getElementType();
+  if (!ElemType->isPointerTy() || DL.getPointerTypeSizeInBits(ElemType) != 64)
+    return false;
+
   for (const Use &Op : Array->operands()) {
     Constant *ConstOp = cast<Constant>(&Op);
     GlobalValue *GVOp;
@@ -144,18 +147,17 @@ static void convertToRelLookupTable(GlobalVariable &LookupTable) {
   Value *Offset =
       Builder.CreateShl(Index, ConstantInt::get(IntTy, 2), "reltable.shift");
 
+  // Insert the call to load.relative intrinsic before LOAD.
+  // GEP might not be immediately followed by a LOAD, like it can be hoisted
+  // outside the loop or another instruction might be inserted them in between.
+  Builder.SetInsertPoint(Load);
   Function *LoadRelIntrinsic = llvm::Intrinsic::getDeclaration(
       &M, Intrinsic::load_relative, {Index->getType()});
-  Value *Base = Builder.CreateBitCast(RelLookupTable, Builder.getInt8PtrTy());
 
   // Create a call to load.relative intrinsic that computes the target address
   // by adding base address (lookup table address) and relative offset.
-  Value *Result = Builder.CreateCall(LoadRelIntrinsic, {Base, Offset},
+  Value *Result = Builder.CreateCall(LoadRelIntrinsic, {RelLookupTable, Offset},
                                      "reltable.intrinsic");
-
-  // Create a bitcast instruction if necessary.
-  if (Load->getType() != Builder.getInt8PtrTy())
-    Result = Builder.CreateBitCast(Result, Load->getType(), "reltable.bitcast");
 
   // Replace load instruction with the new generated instruction sequence.
   Load->replaceAllUsesWith(Result);
@@ -167,19 +169,21 @@ static void convertToRelLookupTable(GlobalVariable &LookupTable) {
 // Convert lookup tables to relative lookup tables in the module.
 static bool convertToRelativeLookupTables(
     Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
-  Module::iterator FI = M.begin();
-  if (FI == M.end())
-    return false;
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
 
-  // Check if we have a target that supports relative lookup tables.
-  if (!GetTTI(*FI).shouldBuildRelLookupTables())
-    return false;
+    // Check if we have a target that supports relative lookup tables.
+    if (!GetTTI(F).shouldBuildRelLookupTables())
+      return false;
+
+    // We assume that the result is independent of the checked function.
+    break;
+  }
 
   bool Changed = false;
 
-  for (auto GVI = M.global_begin(), E = M.global_end(); GVI != E;) {
-    GlobalVariable &GV = *GVI++;
-
+  for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
     if (!shouldConvertToRelLookupTable(M, GV))
       continue;
 

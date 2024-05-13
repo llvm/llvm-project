@@ -10,12 +10,10 @@ from lldbsuite.test.lldbtest import *
 
 
 class ModuleCacheSanityTestCase(TestBase):
+    NO_DEBUG_INFO_TESTCASE = True
 
-  mydir = TestBase.compute_mydir(__file__)
-
-  NO_DEBUG_INFO_TESTCASE = True
-
-  def test(self):
-    self.expect(
-        'settings show symbols.clang-modules-cache-path',
-        substrs=['lldb-test-build.noindex', 'module-cache-lldb'])
+    def test(self):
+        self.expect(
+            "settings show symbols.clang-modules-cache-path",
+            substrs=["lldb-test-build.noindex", "module-cache-lldb"],
+        )

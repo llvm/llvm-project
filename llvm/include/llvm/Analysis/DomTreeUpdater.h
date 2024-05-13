@@ -150,49 +150,6 @@ public:
   /// awaiting deletion immediately.
   void recalculate(Function &F);
 
-  /// \deprecated { Submit an edge insertion to all available trees. The Eager
-  /// Strategy flushes this update immediately while the Lazy Strategy queues
-  /// the update. An internal function checks if the edge exists in the CFG in
-  /// DEBUG mode. CAUTION! This function has to be called *after* making the
-  /// update on the actual CFG. It is illegal to submit any update that has
-  /// already been applied. }
-  LLVM_ATTRIBUTE_DEPRECATED(void insertEdge(BasicBlock *From, BasicBlock *To),
-                            "Use applyUpdates() instead.");
-
-  /// \deprecated {Submit an edge insertion to all available trees.
-  /// Under either Strategy, an invalid update will be discard silently.
-  /// Invalid update means inserting an edge that does not exist in the CFG.
-  /// The Eager Strategy flushes this update immediately while the Lazy Strategy
-  /// queues the update. It is only recommended to use this method when you
-  /// want to discard an invalid update.
-  /// CAUTION! It is illegal to submit any update that has already been
-  /// submitted. }
-  LLVM_ATTRIBUTE_DEPRECATED(void insertEdgeRelaxed(BasicBlock *From,
-                                                   BasicBlock *To),
-                            "Use applyUpdatesPermissive() instead.");
-
-  /// \deprecated { Submit an edge deletion to all available trees. The Eager
-  /// Strategy flushes this update immediately while the Lazy Strategy queues
-  /// the update. An internal function checks if the edge doesn't exist in the
-  /// CFG in DEBUG mode.
-  /// CAUTION! This function has to be called *after* making the update on the
-  /// actual CFG. It is illegal to submit any update that has already been
-  /// submitted. }
-  LLVM_ATTRIBUTE_DEPRECATED(void deleteEdge(BasicBlock *From, BasicBlock *To),
-                            "Use applyUpdates() instead.");
-
-  /// \deprecated { Submit an edge deletion to all available trees.
-  /// Under either Strategy, an invalid update will be discard silently.
-  /// Invalid update means deleting an edge that exists in the CFG.
-  /// The Eager Strategy flushes this update immediately while the Lazy Strategy
-  /// queues the update. It is only recommended to use this method when you
-  /// want to discard an invalid update.
-  /// CAUTION! It is illegal to submit any update that has already been
-  /// submitted. }
-  LLVM_ATTRIBUTE_DEPRECATED(void deleteEdgeRelaxed(BasicBlock *From,
-                                                   BasicBlock *To),
-                            "Use applyUpdatesPermissive() instead.");
-
   /// Delete DelBB. DelBB will be removed from its Parent and
   /// erased from available trees if it exists and finally get deleted.
   /// Under Eager UpdateStrategy, DelBB will be processed immediately.

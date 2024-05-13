@@ -1,4 +1,5 @@
-; RUN: opt -sroa -S -o - %s | FileCheck %s
+; RUN: opt -passes='sroa' -S -o - %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes='sroa' -S -o - %s | FileCheck %s
 ; Generated from clang -c  -O2 -g -target x86_64-pc-windows-msvc
 ; struct A { double x1[]; };
 ; struct x2 {
@@ -10,7 +11,7 @@
 ;   x2 a(x4());
 ;   return a;
 ; }
-; void *operator new(size_t, void *);
+; ptr operator new(size_t, ptr);
 ; struct B {
 ;   B() { new (x8.x1) x2(x5()); }
 ;   A x8;
@@ -31,10 +32,9 @@ declare i32 @"\01?x4@@YAHXZ"() local_unnamed_addr
 define void @"\01?x9@@YAXXZ"() local_unnamed_addr !dbg !8 {
 entry:
   %agg.tmp.ensured = alloca %struct.B, align 8
-  call void @llvm.dbg.declare(metadata %struct.B* %agg.tmp.ensured, metadata !11, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %agg.tmp.ensured, metadata !11, metadata !DIExpression()), !dbg !24
   %call.i.i = call i32 @"\01?x4@@YAHXZ"(), !dbg !46, !noalias !47
-  %x3.i.i.i = bitcast %struct.B* %agg.tmp.ensured to i32*, !dbg !50
-  store i32 0, i32* %x3.i.i.i, align 4, !dbg !50, !tbaa !57, !alias.scope !47
+  store i32 0, ptr %agg.tmp.ensured, align 4, !dbg !50, !tbaa !57, !alias.scope !47
   ; CHECK: call void @llvm.dbg.value(metadata i32 0, metadata ![[A:.*]], metadata !DIExpression())
   ; CHECK: ![[A]] = !DILocalVariable(name: "a",
   ret void, !dbg !62

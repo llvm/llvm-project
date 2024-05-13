@@ -30,7 +30,7 @@ namespace {
 ///   10*a+10*a
 class ExpandMacro : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
   llvm::StringLiteral kind() const override {
     return CodeAction::REFACTOR_KIND;
   }
@@ -52,7 +52,7 @@ findTokenUnderCursor(const SourceManager &SM,
                      llvm::ArrayRef<syntax::Token> Spelled,
                      unsigned CursorOffset) {
   // Find the token that strats after the offset, then look at a previous one.
-  auto It = llvm::partition_point(Spelled, [&](const syntax::Token &T) {
+  auto *It = llvm::partition_point(Spelled, [&](const syntax::Token &T) {
     assert(T.location().isFileID());
     return SM.getFileOffset(T.location()) <= CursorOffset;
   });

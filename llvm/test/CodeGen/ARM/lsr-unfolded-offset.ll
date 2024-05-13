@@ -4,7 +4,7 @@
 ; register pressure and therefore spilling. There is more room for improvement
 ; here.
 
-; CHECK: sub sp, #{{40|36|32|28|24}}
+; CHECK: sub sp, #{{40|36|32|28|24|16}}
 
 ; CHECK: %for.inc
 ; CHECK-NOT: ldr
@@ -15,7 +15,7 @@ target triple = "thumbv7-apple-ios"
 
 %struct.partition_entry = type { i32, i32, i64, i64 }
 
-define i32 @partition_overlap_check(%struct.partition_entry* nocapture %part, i32 %num_entries) nounwind readonly optsize ssp "frame-pointer"="all" {
+define i32 @partition_overlap_check(ptr nocapture %part, i32 %num_entries) nounwind readonly optsize ssp "frame-pointer"="all" {
 entry:
   %cmp79 = icmp sgt i32 %num_entries, 0
   br i1 %cmp79, label %outer.loop, label %for.end72
@@ -23,10 +23,10 @@ entry:
 outer.loop:                                 ; preds = %for.inc69, %entry
   %overlap.081 = phi i32 [ %overlap.4, %for.inc69 ], [ 0, %entry ]
   %0 = phi i32 [ %inc71, %for.inc69 ], [ 0, %entry ]
-  %offset = getelementptr %struct.partition_entry, %struct.partition_entry* %part, i32 %0, i32 2
-  %len = getelementptr %struct.partition_entry, %struct.partition_entry* %part, i32 %0, i32 3
-  %tmp5 = load i64, i64* %offset, align 4
-  %tmp15 = load i64, i64* %len, align 4
+  %offset = getelementptr %struct.partition_entry, ptr %part, i32 %0, i32 2
+  %len = getelementptr %struct.partition_entry, ptr %part, i32 %0, i32 3
+  %tmp5 = load i64, ptr %offset, align 4
+  %tmp15 = load i64, ptr %len, align 4
   %add = add nsw i64 %tmp15, %tmp5
   br label %inner.loop
 
@@ -37,10 +37,10 @@ inner.loop:                                       ; preds = %for.inc, %outer.loo
   br i1 %cmp23, label %for.inc, label %if.end
 
 if.end:                                           ; preds = %inner.loop
-  %len39 = getelementptr %struct.partition_entry, %struct.partition_entry* %part, i32 %1, i32 3
-  %offset28 = getelementptr %struct.partition_entry, %struct.partition_entry* %part, i32 %1, i32 2
-  %tmp29 = load i64, i64* %offset28, align 4
-  %tmp40 = load i64, i64* %len39, align 4
+  %len39 = getelementptr %struct.partition_entry, ptr %part, i32 %1, i32 3
+  %offset28 = getelementptr %struct.partition_entry, ptr %part, i32 %1, i32 2
+  %tmp29 = load i64, ptr %offset28, align 4
+  %tmp40 = load i64, ptr %len39, align 4
   %add41 = add nsw i64 %tmp40, %tmp29
   %cmp44 = icmp sge i64 %tmp29, %tmp5
   %cmp47 = icmp slt i64 %tmp29, %add

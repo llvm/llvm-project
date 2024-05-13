@@ -9,7 +9,7 @@
 @o = thread_local global i8 0
 
 define i32 @f() {
-  %1 = load i32, i32* @i
+  %1 = load i32, ptr @i
   ret i32 %1
 }
 
@@ -17,19 +17,19 @@ define i32 @f() {
 
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
-; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
-; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
+; CHECK-NEXT: ldr [[INDEX:r[0-9]]], [[[TLS_INDEX]]]
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], [[[TEB]], #44]
+; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], [[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+; CHECK-NEXT: ldr r0, [[[TLS]], [[SLOT]]]
 
 ; CHECK: [[CPI]]:
 ; CHECK-NEXT: .long i(SECREL32)
 
 define i32 @e() {
-  %1 = load i32, i32* @j
+  %1 = load i32, ptr @j
   ret i32 %1
 }
 
@@ -37,19 +37,19 @@ define i32 @e() {
 
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
-; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
-; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
+; CHECK-NEXT: ldr [[INDEX:r[0-9]]], [[[TLS_INDEX]]]
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], [[[TEB]], #44]
+; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], [[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+; CHECK-NEXT: ldr r0, [[[TLS]], [[SLOT]]]
 
 ; CHECK: [[CPI]]:
 ; CHECK-NEXT: .long j(SECREL32)
 
 define i32 @d() {
-  %1 = load i32, i32* @k
+  %1 = load i32, ptr @k
   ret i32 %1
 }
 
@@ -57,19 +57,19 @@ define i32 @d() {
 
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
-; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
-; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
+; CHECK-NEXT: ldr [[INDEX:r[0-9]]], [[[TLS_INDEX]]]
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], [[[TEB]], #44]
+; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], [[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+; CHECK-NEXT: ldr r0, [[[TLS]], [[SLOT]]]
 
 ; CHECK: [[CPI]]:
 ; CHECK-NEXT: .long k(SECREL32)
 
 define i32 @c() {
-  %1 = load i32, i32* @l
+  %1 = load i32, ptr @l
   ret i32 %1
 }
 
@@ -77,19 +77,19 @@ define i32 @c() {
 
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
-; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
-; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
+; CHECK-NEXT: ldr [[INDEX:r[0-9]]], [[[TLS_INDEX]]]
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], [[[TEB]], #44]
+; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], [[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+; CHECK-NEXT: ldr r0, [[[TLS]], [[SLOT]]]
 
 ; CHECK: [[CPI]]:
 ; CHECK-NEXT: .long l(SECREL32)
 
 define i32 @b() {
-  %1 = load i32, i32* @m
+  %1 = load i32, ptr @m
   ret i32 %1
 }
 
@@ -97,19 +97,19 @@ define i32 @b() {
 
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
-; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
-; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
+; CHECK-NEXT: ldr [[INDEX:r[0-9]]], [[[TLS_INDEX]]]
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], [[[TEB]], #44]
+; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], [[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+; CHECK-NEXT: ldr r0, [[[TLS]], [[SLOT]]]
 
 ; CHECK: [[CPI]]:
 ; CHECK: .long m(SECREL32)
 
 define i16 @a() {
-  %1 = load i16, i16* @n
+  %1 = load i16, ptr @n
   ret i16 %1
 }
 
@@ -117,19 +117,19 @@ define i16 @a() {
 
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
-; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
-; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
+; CHECK-NEXT: ldr [[INDEX:r[0-9]]], [[[TLS_INDEX]]]
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], [[[TEB]], #44]
+; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], [[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ldrh r0, {{\[}}[[TLS]], [[SLOT]]]
+; CHECK-NEXT: ldrh r0, [[[TLS]], [[SLOT]]]
 
 ; CHECK: [[CPI]]:
 ; CHECK: .long n(SECREL32)
 
 define i8 @Z() {
-  %1 = load i8, i8* @o
+  %1 = load i8, ptr @o
   ret i8 %1
 }
 
@@ -137,13 +137,13 @@ define i8 @Z() {
 
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
-; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
-; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
+; CHECK-NEXT: ldr [[INDEX:r[0-9]]], [[[TLS_INDEX]]]
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], [[[TEB]], #44]
+; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], [[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ldrb r0, {{\[}}[[TLS]], [[SLOT]]]
+; CHECK-NEXT: ldrb r0, [[[TLS]], [[SLOT]]]
 
 ; CHECK: [[CPI]]:
 ; CHECK-NEXT: .long o(SECREL32)

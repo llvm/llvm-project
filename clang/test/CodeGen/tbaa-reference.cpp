@@ -14,19 +14,19 @@ struct B {
 B::B(S &s) : s(s) {
 // CHECK-LABEL: _ZN1BC2ER1S
 // Check initialization of the reference parameter.
-// CHECK: store %struct.S* {{.*}}, %struct.S** {{.*}}, !tbaa [[TAG_pointer:!.*]]
+// CHECK: store ptr {{.*}}, ptr {{.*}}, !tbaa [[TAG_pointer:!.*]]
 
 // Check loading of the reference parameter.
-// CHECK: load %struct.S*, %struct.S** {{.*}}, !tbaa [[TAG_pointer]]
+// CHECK: load ptr, ptr {{.*}}, !tbaa [[TAG_pointer]]
 
 // Check initialization of the reference member.
-// CHECK: store %struct.S* {{.*}}, %struct.S** {{.*}}, !tbaa [[TAG_pointer]]
+// CHECK: store ptr {{.*}}, ptr {{.*}}, !tbaa [[TAG_pointer]]
 }
 
 S &B::get() {
 // CHECK-LABEL: _ZN1B3getEv
 // Check that we access the reference as a structure member.
-// CHECK: load %struct.S*, %struct.S** {{.*}}, !tbaa [[TAG_B_s:!.*]]
+// CHECK: load ptr, ptr {{.*}}, !tbaa [[TAG_B_s:!.*]]
   return s;
 }
 

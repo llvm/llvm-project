@@ -14,64 +14,47 @@
 
 #include "ReduceFunctions.h"
 #include "Delta.h"
+#include "Utils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <iterator>
-#include <vector>
 
 using namespace llvm;
 
 /// Removes all the Defined Functions
 /// that aren't inside any of the desired Chunks.
-static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
-                                       Module *Program) {
-  Oracle O(ChunksToKeep);
+static void extractFunctionsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
 
   // Record all out-of-chunk functions.
-  std::vector<std::reference_wrapper<Function>> FuncsToRemove;
-  copy_if(Program->functions(), std::back_inserter(FuncsToRemove),
-          [&O](Function &F) {
-            // Intrinsics don't have function bodies that are useful to
-            // reduce. Additionally, intrinsics may have additional operand
-            // constraints. But, do drop intrinsics that are not referenced.
-            return (!F.isIntrinsic() || F.use_empty()) && !O.shouldKeep();
-          });
+  SmallPtrSet<Constant *, 8> FuncsToRemove;
+  for (Function &F : Program.functions()) {
+    // Intrinsics don't have function bodies that are useful to
+    // reduce. Additionally, intrinsics may have additional operand
+    // constraints. But, do drop intrinsics that are not referenced.
+    if ((!F.isIntrinsic() || F.use_empty()) && !hasAliasOrBlockAddressUse(F) &&
+        !O.shouldKeep())
+      FuncsToRemove.insert(&F);
+  }
+
+  removeFromUsedLists(Program, [&FuncsToRemove](Constant *C) {
+    return FuncsToRemove.count(C);
+  });
 
   // Then, drop body of each of them. We want to batch this and do nothing else
   // here so that minimal number of remaining exteranal uses will remain.
-  for (Function &F : FuncsToRemove)
-    F.dropAllReferences();
+  for (Constant *F : FuncsToRemove)
+    F->dropAllReferences();
 
   // And finally, we can actually delete them.
-  for (Function &F : FuncsToRemove) {
-    // Replace all *still* remaining uses with undef.
-    F.replaceAllUsesWith(UndefValue::get(F.getType()));
+  for (Constant *F : FuncsToRemove) {
+    // Replace all *still* remaining uses with the default value.
+    F->replaceAllUsesWith(getDefaultValue(F->getType()));
     // And finally, fully drop it.
-    F.eraseFromParent();
+    cast<Function>(F)->eraseFromParent();
   }
-}
-
-/// Counts the amount of functions and prints their
-/// respective name & index
-static int countFunctions(Module *Program) {
-  // TODO: Silence index with --quiet flag
-  errs() << "----------------------------\n";
-  errs() << "Function Index Reference:\n";
-  int FunctionCount = 0;
-  for (auto &F : *Program) {
-    if (F.isIntrinsic() && !F.use_empty())
-      continue;
-
-    errs() << '\t' << ++FunctionCount << ": " << F.getName() << '\n';
-  }
-
-  errs() << "----------------------------\n";
-  return FunctionCount;
 }
 
 void llvm::reduceFunctionsDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Functions...\n";
-  int Functions = countFunctions(Test.getProgram());
-  runDeltaPass(Test, Functions, extractFunctionsFromModule);
-  errs() << "----------------------------\n";
+  runDeltaPass(Test, extractFunctionsFromModule, "Reducing Functions");
 }

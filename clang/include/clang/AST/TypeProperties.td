@@ -11,7 +11,7 @@ include "clang/Basic/TypeNodes.td"
 
 let Class = ComplexType in {
   def : Property<"elementType", QualType> {
-    let Read = [{ node->getElementType() }];    
+    let Read = [{ node->getElementType() }];
   }
 
   def : Creator<[{ return ctx.getComplexType(elementType); }]>;
@@ -23,6 +23,25 @@ let Class = PointerType in {
   }
 
   def : Creator<[{ return ctx.getPointerType(pointeeType); }]>;
+}
+
+let Class = CountAttributedType in {
+  def : Property<"WrappedTy", QualType> {
+    let Read = [{ node->desugar() }];
+  }
+  def : Property<"CountExpr", ExprRef> {
+    let Read = [{ node->getCountExpr() }];
+  }
+  def : Property<"CountInBytes", Bool> {
+    let Read = [{ node->isCountInBytes() }];
+  }
+  def : Property<"OrNull", Bool> {
+    let Read = [{ node->isOrNull() }];
+  }
+  def : Property<"CoupledDecls", Array<TypeCoupledDeclRefInfo>> {
+    let Read = [{ node->getCoupledDecls() }];
+  }
+  def : Creator<[{ return ctx.getCountAttributedType(WrappedTy, CountExpr, CountInBytes, OrNull, CoupledDecls); }]>;
 }
 
 let Class = AdjustedType in {
@@ -115,6 +134,13 @@ let Class = ConstantArrayType in {
                                     sizeModifier,
                                     indexQualifiers.getCVRQualifiers());
   }]>;
+}
+
+let Class = ArrayParameterType in {
+  def : Creator<[{ return ctx.getAdjustedParameterType(
+                              ctx.getConstantArrayType(elementType,sizeValue,
+                                    size,sizeModifier,
+                                    indexQualifiers.getCVRQualifiers())); }]>;
 }
 
 let Class = IncompleteArrayType in {
@@ -323,6 +349,9 @@ let Class = FunctionProtoType in {
                     ? node->getExtParameterInfos()
                     : llvm::ArrayRef<FunctionProtoType::ExtParameterInfo>() }];
   }
+  def : Property<"AArch64SMEAttributes", UInt32> {
+    let Read = [{ node->getAArch64SMEAttributes() }];
+  }
 
   def : Creator<[{
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
@@ -338,6 +367,7 @@ let Class = FunctionProtoType in {
     epi.ExceptionSpec = exceptionSpecifier;
     epi.ExtParameterInfos =
       extParameterInfo.empty() ? nullptr : extParameterInfo.data();
+    epi.AArch64SMEAttributes = AArch64SMEAttributes;
     return ctx.getFunctionType(returnType, parameters, epi);
   }]>;
 }
@@ -358,7 +388,20 @@ let Class = UnresolvedUsingType in {
   }
 
   def : Creator<[{
-    return ctx.getTypeDeclType(cast<UnresolvedUsingTypenameDecl>(declaration));
+    return ctx.getUnresolvedUsingType(cast<UnresolvedUsingTypenameDecl>(declaration));
+  }]>;
+}
+
+let Class = UsingType in {
+  def : Property<"foundDeclaration", UsingShadowDeclRef> {
+    let Read = [{ node->getFoundDecl() }];
+  }
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->getUnderlyingType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getUsingType(foundDeclaration, underlyingType);
   }]>;
 }
 
@@ -366,16 +409,12 @@ let Class = TypedefType in {
   def : Property<"declaration", DeclRef> {
     let Read = [{ node->getDecl() }];
   }
-  def : Property<"canonicalType", Optional<QualType>> {
-    let Read = [{ makeOptionalFromNullable(node->getCanonicalTypeInternal()) }];
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->desugar() }];
   }
 
   def : Creator<[{
-    QualType finalCanonicalType =
-      canonicalType ? ctx.getCanonicalType(*canonicalType)
-                    : QualType();
-    return ctx.getTypedefType(cast<TypedefNameDecl>(declaration),
-                              finalCanonicalType);
+    return ctx.getTypedefType(cast<TypedefNameDecl>(declaration), underlyingType);
   }]>;
 }
 
@@ -384,18 +423,26 @@ let Class = TypeOfExprType in {
     let Read = [{ node->getUnderlyingExpr() }];
   }
 
+  def : Property<"kind", TypeOfKind> {
+    let Read = [{ node->getKind() }];
+  }
+
   def : Creator<[{
-    return ctx.getTypeOfExprType(expression);
+    return ctx.getTypeOfExprType(expression, kind);
   }]>;
 }
 
 let Class = TypeOfType in {
-  def : Property<"underlyingType", QualType> {
-    let Read = [{ node->getUnderlyingType() }];
+  def : Property<"unmodifiedType", QualType> {
+    let Read = [{ node->getUnmodifiedType() }];
+  }
+
+  def : Property<"kind", TypeOfKind> {
+    let Read = [{ node->getKind() }];
   }
 
   def : Creator<[{
-    return ctx.getTypeOfType(underlyingType);
+    return ctx.getTypeOfType(unmodifiedType, kind);
   }]>;
 }
 
@@ -411,6 +458,20 @@ let Class = DecltypeType in {
     return ctx.getDecltypeType(expression, underlyingType);
   }]>;
 }
+
+let Class = PackIndexingType in {
+  def : Property<"pattern", QualType> {
+    let Read = [{ node->getPattern() }];
+  }
+  def : Property<"indexExpression", ExprRef> {
+    let Read = [{ node->getIndexExpr() }];
+  }
+
+  def : Creator<[{
+    return ctx.getPackIndexingType(pattern, indexExpression);
+  }]>;
+}
+
 
 let Class = UnaryTransformType in {
   def : Property<"baseType", QualType> {
@@ -574,7 +635,7 @@ let Class = ParenType in {
 
   def : Creator<[{
     return ctx.getParenType(innerType);
-  }]>;  
+  }]>;
 }
 
 let Class = MacroQualifiedType in {
@@ -603,6 +664,19 @@ let Class = AttributedType in {
 
   def : Creator<[{
     return ctx.getAttributedType(attribute, modifiedType, equivalentType);
+  }]>;
+}
+
+let Class = BTFTagAttributedType in {
+  def : Property<"attr", BTFTypeTagAttr> {
+    let Read = [{ node->getAttr() }];
+  }
+  def : Property<"wrappedType", QualType> {
+    let Read = [{ node->getWrappedType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getBTFTagAttributedType(attr, wrappedType);
   }]>;
 }
 
@@ -636,16 +710,16 @@ let Class = TemplateSpecializationType in {
   def : Property<"underlyingType", Optional<QualType>> {
     let Read = [{
       node->isTypeAlias()
-        ? llvm::Optional<QualType>(node->getAliasedType())
+        ? std::optional<QualType>(node->getAliasedType())
         : node->isCanonicalUnqualified()
-            ? llvm::None
-            : llvm::Optional<QualType>(node->getCanonicalTypeInternal())
+            ? std::nullopt
+            : std::optional<QualType>(node->getCanonicalTypeInternal())
     }];
   }
 
   def : Creator<[{
     QualType result;
-    if (!underlyingType.hasValue()) {
+    if (!underlyingType) {
       result = ctx.getCanonicalTemplateSpecializationType(templateName,
                                                           templateArguments);
     } else {
@@ -702,18 +776,23 @@ let Class = TemplateTypeParmType in {
 }
 
 let Class = SubstTemplateTypeParmType in {
-  def : Property<"replacedParameter", QualType> {
-    let Read = [{ QualType(node->getReplacedParameter(), 0) }];
-  }
   def : Property<"replacementType", QualType> {
     let Read = [{ node->getReplacementType() }];
   }
+  def : Property<"associatedDecl", DeclRef> {
+    let Read = [{ node->getAssociatedDecl() }];
+  }
+  def : Property<"Index", UInt32> {
+    let Read = [{ node->getIndex() }];
+  }
+  def : Property<"PackIndex", Optional<UInt32>> {
+    let Read = [{ node->getPackIndex() }];
+  }
 
+  // The call to getCanonicalType here existed in ASTReader.cpp, too.
   def : Creator<[{
-    // The call to getCanonicalType here existed in ASTReader.cpp, too.
     return ctx.getSubstTemplateTypeParmType(
-        cast<TemplateTypeParmType>(replacedParameter),
-        ctx.getCanonicalType(replacementType));
+        replacementType, associatedDecl, Index, PackIndex);
   }]>;
 }
 
@@ -732,8 +811,14 @@ let Class = PackExpansionType in {
 }
 
 let Class = SubstTemplateTypeParmPackType in {
-  def : Property<"replacedParameter", QualType> {
-    let Read = [{ QualType(node->getReplacedParameter(), 0) }];
+  def : Property<"associatedDecl", DeclRef> {
+    let Read = [{ node->getAssociatedDecl() }];
+  }
+  def : Property<"Index", UInt32> {
+    let Read = [{ node->getIndex() }];
+  }
+  def : Property<"Final", Bool> {
+    let Read = [{ node->getFinal() }];
   }
   def : Property<"replacementPack", TemplateArgument> {
     let Read = [{ node->getArgumentPack() }];
@@ -741,8 +826,7 @@ let Class = SubstTemplateTypeParmPackType in {
 
   def : Creator<[{
     return ctx.getSubstTemplateTypeParmPackType(
-                         cast<TemplateTypeParmType>(replacedParameter),
-                        replacementPack);
+                        associatedDecl, Index, Final, replacementPack);
   }]>;
 }
 
@@ -773,6 +857,10 @@ let Class = BuiltinType in {
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/RISCVVTypes.def"
 
+#define WASM_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
+
 #define BUILTIN_TYPE(ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/AST/BuiltinTypes.def"
@@ -794,8 +882,8 @@ let Class = DependentNameType in {
   def : Property<"underlyingType", Optional<QualType>> {
     let Read = [{
       node->isCanonicalUnqualified()
-        ? llvm::None
-        : llvm::Optional<QualType>(node->getCanonicalTypeInternal())
+        ? std::nullopt
+        : std::optional<QualType>(node->getCanonicalTypeInternal())
     }];
   }
 
@@ -849,7 +937,7 @@ let Class = ObjCInterfaceType in {
 let Class = ObjCTypeParamType in {
   def : Property<"declaration", ObjCTypeParamDeclRef> {
     let Read = [{ node->getDecl() }];
-  }  
+  }
   def : Property<"qualifiers", Array<ObjCProtocolDeclRef>> {
     let Read = [{ node->getProtocols() }];
   }
@@ -882,7 +970,7 @@ let Class = PipeType in {
   }]>;
 }
 
-let Class = ExtIntType in {
+let Class = BitIntType in {
   def : Property<"isUnsigned", Bool> {
     let Read = [{ node->isUnsigned() }];
   }
@@ -891,11 +979,11 @@ let Class = ExtIntType in {
   }
 
   def : Creator<[{
-    return ctx.getExtIntType(isUnsigned, numBits);
+    return ctx.getBitIntType(isUnsigned, numBits);
   }]>;
 }
 
-let Class = DependentExtIntType in {
+let Class = DependentBitIntType in {
   def : Property<"isUnsigned", Bool> {
     let Read = [{ node->isUnsigned() }];
   }
@@ -903,6 +991,6 @@ let Class = DependentExtIntType in {
     let Read = [{ node->getNumBitsExpr() }];
   }
   def : Creator<[{
-    return ctx.getDependentExtIntType(isUnsigned, numBitsExpr);
+    return ctx.getDependentBitIntType(isUnsigned, numBitsExpr);
   }]>;
 }

@@ -23,99 +23,108 @@
 
 #include <vector>
 #include <cassert>
+#include <stdexcept>
 
 #include "min_allocator.h"
 #include "test_macros.h"
 
 template <class C>
-C
-make(int size, int start = 0)
-{
+TEST_CONSTEXPR_CXX20 C make(int size, int start) {
     C c;
     for (int i = 0; i < size; ++i)
         c.push_back(start + i);
     return c;
 }
 
-int main(int, char**)
-{
-    {
-        typedef std::vector<int> C;
-        C c = make<C>(10);
-        LIBCPP_ASSERT_NOEXCEPT(c[0]);
-        LIBCPP_ASSERT_NOEXCEPT(c.front());
-        LIBCPP_ASSERT_NOEXCEPT(c.back());
-        // at() is NOT noexcept
-        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
-        ASSERT_SAME_TYPE(C::reference, decltype(c.at(0)));
-        ASSERT_SAME_TYPE(C::reference, decltype(c.front()));
-        ASSERT_SAME_TYPE(C::reference, decltype(c.back()));
-        for (int i = 0; i < 10; ++i)
-            assert(c[i] == i);
-        for (int i = 0; i < 10; ++i)
-            assert(c.at(i) == i);
-        assert(c.front() == 0);
-        assert(c.back() == 9);
-    }
-    {
-        typedef std::vector<int> C;
-        const int N = 5;
-        const C c = make<C>(10, N);
-        LIBCPP_ASSERT_NOEXCEPT(c[0]);
-        LIBCPP_ASSERT_NOEXCEPT(c.front());
-        LIBCPP_ASSERT_NOEXCEPT(c.back());
-        // at() is NOT noexcept
-        ASSERT_SAME_TYPE(C::const_reference, decltype(c[0]));
-        ASSERT_SAME_TYPE(C::const_reference, decltype(c.at(0)));
-        ASSERT_SAME_TYPE(C::const_reference, decltype(c.front()));
-        ASSERT_SAME_TYPE(C::const_reference, decltype(c.back()));
-        for (int i = 0; i < 10; ++i)
-            assert(c[i] == N + i);
-        for (int i = 0; i < 10; ++i)
-            assert(c.at(i) == N + i);
-        assert(c.front() == N);
-        assert(c.back() == N + 9);
-    }
-#if TEST_STD_VER >= 11
-    {
-        typedef std::vector<int, min_allocator<int>> C;
-        const int N = 34;
-        C c = make<C>(10, N);
-        LIBCPP_ASSERT_NOEXCEPT(c[0]);
-        LIBCPP_ASSERT_NOEXCEPT(c.front());
-        LIBCPP_ASSERT_NOEXCEPT(c.back());
-        // at() is NOT noexcept
-        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
-        ASSERT_SAME_TYPE(C::reference, decltype(c.at(0)));
-        ASSERT_SAME_TYPE(C::reference, decltype(c.front()));
-        ASSERT_SAME_TYPE(C::reference, decltype(c.back()));
-        for (int i = 0; i < 10; ++i)
-            assert(c[i] == N + i);
-        for (int i = 0; i < 10; ++i)
-            assert(c.at(i) == N + i);
-        assert(c.front() == N);
-        assert(c.back() == N + 9);
-    }
-    {
-        typedef std::vector<int, min_allocator<int>> C;
-        const int N = 23;
-        const C c = make<C>(10, N);
-        LIBCPP_ASSERT_NOEXCEPT(c[0]);
-        LIBCPP_ASSERT_NOEXCEPT(c.front());
-        LIBCPP_ASSERT_NOEXCEPT(c.back());
-        // at() is NOT noexcept
-        ASSERT_SAME_TYPE(C::const_reference, decltype(c[0]));
-        ASSERT_SAME_TYPE(C::const_reference, decltype(c.at(0)));
-        ASSERT_SAME_TYPE(C::const_reference, decltype(c.front()));
-        ASSERT_SAME_TYPE(C::const_reference, decltype(c.back()));
-        for (int i = 0; i < 10; ++i)
-            assert(c[i] == N + i);
-        for (int i = 0; i < 10; ++i)
-            assert(c.at(i) == N + i);
-        assert(c.front() == N);
-        assert(c.back() == N + 9);
+template <class Vector>
+TEST_CONSTEXPR_CXX20 void test_get_basic(Vector& c, int start_value) {
+    const int n = static_cast<int>(c.size());
+    for (int i = 0; i < n; ++i)
+        assert(c[i] == start_value + i);
+    for (int i = 0; i < n; ++i)
+        assert(c.at(i) == start_value + i);
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+        try {
+            TEST_IGNORE_NODISCARD c.at(n);
+            assert(false);
+        } catch (const std::out_of_range&) {}
     }
 #endif
 
-  return 0;
+    assert(c.front() == start_value);
+    assert(c.back() == start_value + n - 1);
+}
+
+template <class Vector>
+TEST_CONSTEXPR_CXX20 void test_get() {
+    int start_value = 35;
+    Vector c = make<Vector>(10, start_value);
+    const Vector& cc = c;
+    test_get_basic(c, start_value);
+    test_get_basic(cc, start_value);
+}
+
+template <class Vector>
+TEST_CONSTEXPR_CXX20 void test_set() {
+    int start_value = 35;
+    const int n = 10;
+    Vector c = make<Vector>(n, start_value);
+
+    for (int i = 0; i < n; ++i) {
+        assert(c[i] == start_value + i);
+        c[i] = start_value + i + 1;
+        assert(c[i] == start_value + i + 1);
+    }
+    for (int i = 0; i < n; ++i) {
+        assert(c.at(i) == start_value + i + 1);
+        c.at(i) = start_value + i + 2;
+        assert(c.at(i) == start_value + i + 2);
+    }
+
+    assert(c.front() == start_value + 2);
+    c.front() = start_value + 3;
+    assert(c.front() == start_value + 3);
+
+    assert(c.back() == start_value + n + 1);
+    c.back() = start_value + n + 2;
+    assert(c.back() == start_value + n + 2);
+}
+
+template <class Vector>
+TEST_CONSTEXPR_CXX20 void test() {
+    test_get<Vector>();
+    test_set<Vector>();
+
+    Vector c;
+    const Vector& cc = c;
+    ASSERT_SAME_TYPE(typename Vector::reference, decltype(c[0]));
+    ASSERT_SAME_TYPE(typename Vector::const_reference, decltype(cc[0]));
+
+    ASSERT_SAME_TYPE(typename Vector::reference, decltype(c.at(0)));
+    ASSERT_SAME_TYPE(typename Vector::const_reference, decltype(cc.at(0)));
+
+    ASSERT_SAME_TYPE(typename Vector::reference, decltype(c.front()));
+    ASSERT_SAME_TYPE(typename Vector::const_reference, decltype(cc.front()));
+
+    ASSERT_SAME_TYPE(typename Vector::reference, decltype(c.back()));
+    ASSERT_SAME_TYPE(typename Vector::const_reference, decltype(cc.back()));
+}
+
+TEST_CONSTEXPR_CXX20 bool tests() {
+    test<std::vector<int> >();
+#if TEST_STD_VER >= 11
+    test<std::vector<int, min_allocator<int> > >();
+    test<std::vector<int, safe_allocator<int> > >();
+#endif
+    return true;
+}
+
+int main(int, char**) {
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

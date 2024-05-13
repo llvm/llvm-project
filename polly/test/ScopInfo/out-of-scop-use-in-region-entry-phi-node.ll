@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; CHECK: MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT: [p_0] -> { Stmt_bb3[] -> MemRef_tmp5[] };
@@ -10,13 +10,13 @@ bb:
   br label %bb2
 
 bb2:                                              ; preds = %bb
-  %tmp = load i64*, i64** undef
+  %tmp = load ptr, ptr undef
   br label %bb3
 
 bb3:                                              ; preds = %bb9, %bb2
-  %tmp4 = phi i64* [ %tmp, %bb2 ], [ %tmp5, %bb9 ]
-  %tmp5 = getelementptr inbounds i64, i64* %tmp4, i64 1
-  %tmp6 = load i64, i64* %tmp5
+  %tmp4 = phi ptr [ %tmp, %bb2 ], [ %tmp5, %bb9 ]
+  %tmp5 = getelementptr inbounds i64, ptr %tmp4, i64 1
+  %tmp6 = load i64, ptr %tmp5
   %tmp7 = and i64 %tmp6, 4160749568
   br i1 false, label %bb8, label %bb9
 

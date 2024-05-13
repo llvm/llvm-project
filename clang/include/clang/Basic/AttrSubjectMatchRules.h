@@ -6,18 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_ATTR_SUBJECT_MATCH_RULES_H
-#define LLVM_CLANG_BASIC_ATTR_SUBJECT_MATCH_RULES_H
+#ifndef LLVM_CLANG_BASIC_ATTRSUBJECTMATCHRULES_H
+#define LLVM_CLANG_BASIC_ATTRSUBJECTMATCHRULES_H
 
-#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
+
+class SourceRange;
+
 namespace attr {
 
 /// A list of all the recognized kinds of attributes.
 enum SubjectMatchRule {
 #define ATTR_MATCH_RULE(X, Spelling, IsAbstract) X,
+#include "clang/Basic/AttrSubMatchRulesList.inc"
+  SubjectMatchRule_Last = -1
+#define ATTR_MATCH_RULE(X, Spelling, IsAbstract) +1
 #include "clang/Basic/AttrSubMatchRulesList.inc"
 };
 

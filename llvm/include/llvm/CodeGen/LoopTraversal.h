@@ -98,7 +98,7 @@ public:
                      bool Done = true)
         : MBB(BB), PrimaryPass(Primary), IsDone(Done) {}
   };
-  LoopTraversal() {}
+  LoopTraversal() = default;
 
   /// Identifies basic blocks that are part of loops and should to be
   ///  visited twice and returns efficient traversal order for all the blocks.

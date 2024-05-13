@@ -15,20 +15,22 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: tbzx_sgt
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   %copy:gpr64 = COPY $x0
-  ; CHECK:   TBZX %copy, 63, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
+  ; CHECK-NEXT:   TBZX %copy, 63, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
     %copy:gpr(s64) = COPY $x0
     %negative_one:gpr(s64) = G_CONSTANT i64 -1
     %cmp:gpr(s32) = G_ICMP intpred(sgt), %copy(s64), %negative_one
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -42,20 +44,22 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: tbzw_sgt
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   %copy:gpr32 = COPY $w0
-  ; CHECK:   TBZW %copy, 31, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
+  ; CHECK-NEXT:   TBZW %copy, 31, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
     %copy:gpr(s32) = COPY $w0
     %negative_one:gpr(s32) = G_CONSTANT i32 -1
     %cmp:gpr(s32) = G_ICMP intpred(sgt), %copy(s32), %negative_one
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -69,21 +73,23 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: no_tbz_not_negative_one
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   %copy:gpr32sp = COPY $w0
-  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri %copy, 1, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 12, %bb.1, implicit $nzcv
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr32sp = COPY $w0
+  ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri %copy, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 12, %bb.1, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
     %copy:gpr(s32) = COPY $w0
     %one:gpr(s32) = G_CONSTANT i32 1
     %cmp:gpr(s32) = G_ICMP intpred(sgt), %copy(s32), %one
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -97,14 +103,17 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_and
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   %copy:gpr64 = COPY $x0
-  ; CHECK:   %and:gpr64sp = ANDXri %copy, 8000
-  ; CHECK:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri %and, 1, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 12, %bb.1, implicit $nzcv
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
+  ; CHECK-NEXT:   %and:gpr64sp = ANDXri %copy, 8000
+  ; CHECK-NEXT:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri %and, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 12, %bb.1, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
@@ -114,8 +123,7 @@ body:             |
     %c:gpr(s64) = G_CONSTANT i64 8
     %and:gpr(s64) = G_AND %copy, %bit
     %cmp:gpr(s32) = G_ICMP intpred(sgt), %and(s64), %negative_one
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -129,22 +137,24 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: dont_commute
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   %copy:gpr64 = COPY $x0
-  ; CHECK:   %negative_one:gpr64 = MOVi64imm -1
-  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr %negative_one, %copy, implicit-def $nzcv
-  ; CHECK:   Bcc 12, %bb.1, implicit $nzcv
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
+  ; CHECK-NEXT:   %negative_one:gpr64 = MOVi64imm -1
+  ; CHECK-NEXT:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr %negative_one, %copy, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 12, %bb.1, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
     %copy:gpr(s64) = COPY $x0
     %negative_one:gpr(s64) = G_CONSTANT i64 -1
     %cmp:gpr(s32) = G_ICMP intpred(sgt), %negative_one, %copy(s64)
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR

@@ -56,7 +56,7 @@ define <16 x i8> @isnonneg_v16i8(<16 x i8> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtb %xmm0, %xmm1
-; CHECK-NEXT:    por {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp sgt <16 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -68,7 +68,7 @@ define <8 x i16> @isnonneg_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: isnonneg_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psraw $15, %xmm0
-; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp sgt <8 x i16> %x, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %r = select <8 x i1> %cond, <8 x i16> <i16 1, i16 542, i16 542, i16 542, i16 542, i16 542, i16 542, i16 1>, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
@@ -79,7 +79,7 @@ define <4 x i32> @isnonneg_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: isnonneg_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %r = select <4 x i1> %cond, <4 x i32> <i32 0, i32 42, i32 -42, i32 1>, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -89,9 +89,9 @@ define <4 x i32> @isnonneg_v4i32(<4 x i32> %x) {
 define <2 x i64> @isnonneg_v2i64(<2 x i64> %x) {
 ; CHECK-LABEL: isnonneg_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    psrad $31, %xmm0
+; CHECK-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp sgt <2 x i64> %x, <i64 -1, i64 -1>
   %r = select <2 x i1> %cond, <2 x i64> <i64 2342342, i64 12>, <2 x i64> <i64 -1, i64 -1>
@@ -153,7 +153,7 @@ define <16 x i8> @isneg_v16i8(<16 x i8> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtb %xmm0, %xmm1
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp slt <16 x i8> %x, zeroinitializer
@@ -165,7 +165,7 @@ define <8 x i16> @isneg_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: isneg_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psraw $15, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp slt <8 x i16> %x, zeroinitializer
   %r = select <8 x i1> %cond, <8 x i16> <i16 1, i16 542, i16 542, i16 542, i16 542, i16 542, i16 542, i16 1>, <8 x i16> zeroinitializer
@@ -176,7 +176,7 @@ define <4 x i32> @isneg_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: isneg_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp slt <4 x i32> %x, zeroinitializer
   %r = select <4 x i1> %cond, <4 x i32> <i32 0, i32 42, i32 -42, i32 1>, <4 x i32> zeroinitializer
@@ -186,9 +186,9 @@ define <4 x i32> @isneg_v4i32(<4 x i32> %x) {
 define <2 x i64> @isneg_v2i64(<2 x i64> %x) {
 ; CHECK-LABEL: isneg_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    psrad $31, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp slt <2 x i64> %x, zeroinitializer
   %r = select <2 x i1> %cond, <2 x i64> <i64 2342342, i64 12>, <2 x i64> zeroinitializer

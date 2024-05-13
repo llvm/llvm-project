@@ -1,9 +1,7 @@
-; RUN: opt -disable-output < %s -disable-basic-aa -scev-aa -aa-eval -print-all-alias-modref-info \
-; RUN:   2>&1 | FileCheck %s
 ; RUN: opt -disable-output < %s -aa-pipeline=scev-aa -passes=aa-eval -print-all-alias-modref-info \
 ; RUN:   2>&1 | FileCheck %s
 
-; At the time of this writing, -basic-aa misses the example of the form
+; At the time of this writing, misses the example of the form
 ; A[i+(j+1)] != A[i+j], which can arise from multi-dimensional array references,
 ; and the example of the form A[0] != A[i+1], where i+1 is known to be positive.
 
@@ -11,23 +9,23 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
 
 ; p[i] and p[i+1] don't alias.
 
-; CHECK: Function: loop: 3 pointers, 0 call sites
+; CHECK-LABEL: Function: loop
 ; CHECK: NoAlias: double* %pi, double* %pi.next
 
-define void @loop(double* nocapture %p, i64 %n) nounwind {
+define void @loop(ptr nocapture %p, i64 %n) nounwind {
 entry:
   %j = icmp sgt i64 %n, 0
   br i1 %j, label %bb, label %return
 
 bb:
   %i = phi i64 [ 0, %entry ], [ %i.next, %bb ]
-  %pi = getelementptr double, double* %p, i64 %i
+  %pi = getelementptr double, ptr %p, i64 %i
   %i.next = add i64 %i, 1
-  %pi.next = getelementptr double, double* %p, i64 %i.next
-  %x = load double, double* %pi
-  %y = load double, double* %pi.next
+  %pi.next = getelementptr double, ptr %p, i64 %i.next
+  %x = load double, ptr %pi
+  %y = load double, ptr %pi.next
   %z = fmul double %x, %y
-  store double %z, double* %pi
+  store double %z, ptr %pi
   %exitcond = icmp eq i64 %i.next, %n
   br i1 %exitcond, label %return, label %bb
 
@@ -37,12 +35,12 @@ return:
 
 ; Slightly more involved: p[j][i], p[j][i+1], and p[j+1][i] don't alias.
 
-; CHECK: Function: nestedloop: 4 pointers, 0 call sites
+; CHECK-LABEL: Function: nestedloop
 ; CHECK: NoAlias: double* %pi.j, double* %pi.next.j
 ; CHECK: NoAlias: double* %pi.j, double* %pi.j.next
 ; CHECK: NoAlias: double* %pi.j.next, double* %pi.next.j
 
-define void @nestedloop(double* nocapture %p, i64 %m) nounwind {
+define void @nestedloop(ptr nocapture %p, i64 %m) nounwind {
 entry:
   %k = icmp sgt i64 %m, 0
   br i1 %k, label %guard, label %return
@@ -60,20 +58,20 @@ bb:
   %i.next = add i64 %i, 1
 
   %e = add i64 %i, %j
-  %pi.j = getelementptr double, double* %p, i64 %e
+  %pi.j = getelementptr double, ptr %p, i64 %e
   %f = add i64 %i.next, %j
-  %pi.next.j = getelementptr double, double* %p, i64 %f
-  %x = load double, double* %pi.j
-  %y = load double, double* %pi.next.j
+  %pi.next.j = getelementptr double, ptr %p, i64 %f
+  %x = load double, ptr %pi.j
+  %y = load double, ptr %pi.next.j
   %z = fmul double %x, %y
-  store double %z, double* %pi.j
+  store double %z, ptr %pi.j
 
   %o = add i64 %j, 91
   %g = add i64 %i, %o
-  %pi.j.next = getelementptr double, double* %p, i64 %g
-  %a = load double, double* %pi.j.next
+  %pi.j.next = getelementptr double, ptr %p, i64 %g
+  %a = load double, ptr %pi.j.next
   %b = fmul double %x, %a
-  store double %b, double* %pi.j.next
+  store double %b, ptr %pi.j.next
 
   %exitcond = icmp eq i64 %i.next, 91
   br i1 %exitcond, label %outer.latch, label %bb
@@ -95,11 +93,11 @@ return:
 ; however the analysis currently doesn't do that.
 ; TODO: Make the analysis smarter and turn that MayAlias into a NoAlias.
 
-; CHECK: Function: nestedloop_more: 4 pointers, 0 call sites
+; CHECK-LABEL: Function: nestedloop_more
 ; CHECK: NoAlias: double* %pi.j, double* %pi.next.j
 ; CHECK: MayAlias: double* %pi.j, double* %pi.j.next
 
-define void @nestedloop_more(double* nocapture %p, i64 %n, i64 %m) nounwind {
+define void @nestedloop_more(ptr nocapture %p, i64 %n, i64 %m) nounwind {
 entry:
   %k = icmp sgt i64 %m, 0
   br i1 %k, label %guard, label %return
@@ -117,20 +115,20 @@ bb:
   %i.next = add i64 %i, 1
 
   %e = add i64 %i, %j
-  %pi.j = getelementptr double, double* %p, i64 %e
+  %pi.j = getelementptr double, ptr %p, i64 %e
   %f = add i64 %i.next, %j
-  %pi.next.j = getelementptr double, double* %p, i64 %f
-  %x = load double, double* %pi.j
-  %y = load double, double* %pi.next.j
+  %pi.next.j = getelementptr double, ptr %p, i64 %f
+  %x = load double, ptr %pi.j
+  %y = load double, ptr %pi.next.j
   %z = fmul double %x, %y
-  store double %z, double* %pi.j
+  store double %z, ptr %pi.j
 
   %o = add i64 %j, %n
   %g = add i64 %i, %o
-  %pi.j.next = getelementptr double, double* %p, i64 %g
-  %a = load double, double* %pi.j.next
+  %pi.j.next = getelementptr double, ptr %p, i64 %g
+  %a = load double, ptr %pi.j.next
   %b = fmul double %x, %a
-  store double %b, double* %pi.j.next
+  store double %b, ptr %pi.j.next
 
   %exitcond = icmp eq i64 %i.next, %n
   br i1 %exitcond, label %outer.latch, label %bb
@@ -151,60 +149,64 @@ return:
 %struct.A = type { %struct.B, i32, i32 }
 %struct.B = type { double }
 
-; CHECK: Function: foo: 7 pointers, 0 call sites
-; CHECK: NoAlias: %struct.B* %B, i32* %Z
-; CHECK: NoAlias: %struct.B* %B, %struct.B* %C
-; CHECK: MustAlias: %struct.B* %C, i32* %Z
-; CHECK: NoAlias: %struct.B* %B, i32* %X
-; CHECK: MustAlias: i32* %X, i32* %Z
-; CHECK: MustAlias: %struct.B* %C, i32* %Y
-; CHECK: MustAlias: i32* %X, i32* %Y
+; CHECK-LABEL: Function: foo
+; CHECK-DAG: NoAlias: %struct.B* %A, i32* %Z
+; CHECK-DAG: NoAlias: %struct.B* %A, %struct.B* %C
+; CHECK-DAG: MustAlias: %struct.B* %C, i32* %Z
+; CHECK-DAG: NoAlias: %struct.B* %A, i32* %C
+; CHECK-DAG: MustAlias: i32* %C, i32* %Z
+; CHECK-DAG: MustAlias: %struct.B* %C, i32* %Y
+; CHECK-DAG: MustAlias: i32* %C, i32* %Y
 
 define void @foo() {
 entry:
   %A = alloca %struct.A
-  %B = getelementptr %struct.A, %struct.A* %A, i32 0, i32 0
-  %Q = bitcast %struct.B* %B to %struct.A*
-  %Z = getelementptr %struct.A, %struct.A* %Q, i32 0, i32 1
-  %C = getelementptr %struct.B, %struct.B* %B, i32 1
-  %X = bitcast %struct.B* %C to i32*
-  %Y = getelementptr %struct.A, %struct.A* %A, i32 0, i32 1
+  %Z = getelementptr %struct.A, ptr %A, i32 0, i32 1
+  %C = getelementptr %struct.B, ptr %A, i32 1
+  %Y = getelementptr %struct.A, ptr %A, i32 0, i32 1
+  load %struct.B, ptr %A
+  load %struct.B, ptr %C
+  load i32, ptr %C
+  load i32, ptr %Y
+  load i32, ptr %Z
   ret void
 }
 
-; CHECK: Function: bar: 7 pointers, 0 call sites
-; CHECK: NoAlias: %struct.B* %N, i32* %P
-; CHECK: NoAlias: %struct.B* %N, %struct.B* %R
-; CHECK: MustAlias: %struct.B* %R, i32* %P
-; CHECK: NoAlias: %struct.B* %N, i32* %W
-; CHECK: MustAlias: i32* %P, i32* %W
-; CHECK: MustAlias: %struct.B* %R, i32* %V
-; CHECK: MustAlias: i32* %V, i32* %W
+; CHECK-LABEL: Function: bar
+; CHECK-DAG: NoAlias: %struct.B* %M, i32* %P
+; CHECK-DAG: NoAlias: %struct.B* %M, %struct.B* %R
+; CHECK-DAG: MustAlias: i32* %P, %struct.B* %R
+; CHECK-DAG: NoAlias: %struct.B* %M, i32* %R
+; CHECK-DAG: MustAlias: i32* %P, i32* %R
+; CHECK-DAG: MustAlias: %struct.B* %R, i32* %V
+; CHECK-DAG: MustAlias: i32* %R, i32* %V
 
 define void @bar() {
   %M = alloca %struct.A
-  %N = getelementptr %struct.A, %struct.A* %M, i32 0, i32 0
-  %O = bitcast %struct.B* %N to %struct.A*
-  %P = getelementptr %struct.A, %struct.A* %O, i32 0, i32 1
-  %R = getelementptr %struct.B, %struct.B* %N, i32 1
-  %W = bitcast %struct.B* %R to i32*
-  %V = getelementptr %struct.A, %struct.A* %M, i32 0, i32 1
+  %P = getelementptr %struct.A, ptr %M, i32 0, i32 1
+  %R = getelementptr %struct.B, ptr %M, i32 1
+  %V = getelementptr %struct.A, ptr %M, i32 0, i32 1
+  load %struct.B, ptr %M
+  load %struct.B, ptr %R
+  load i32, ptr %P
+  load i32, ptr %V
+  load i32, ptr %R
   ret void
 }
 
 ; CHECK: Function: nonnegative: 2 pointers, 0 call sites
 ; CHECK: NoAlias:  i64* %arrayidx, i64* %p
 
-define void @nonnegative(i64* %p) nounwind {
+define void @nonnegative(ptr %p) nounwind {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %i = phi i64 [ %inc, %for.body ], [ 0, %entry ] ; <i64> [#uses=2]
   %inc = add nsw i64 %i, 1                         ; <i64> [#uses=2]
-  %arrayidx = getelementptr inbounds i64, i64* %p, i64 %inc
-  store i64 0, i64* %arrayidx
-  %tmp6 = load i64, i64* %p                            ; <i64> [#uses=1]
+  %arrayidx = getelementptr inbounds i64, ptr %p, i64 %inc
+  store i64 0, ptr %arrayidx
+  %tmp6 = load i64, ptr %p                            ; <i64> [#uses=1]
   %cmp = icmp slt i64 %inc, %tmp6                 ; <i1> [#uses=1]
   br i1 %cmp, label %for.body, label %for.end
 
@@ -212,6 +214,129 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-; CHECK: 14 no alias responses
-; CHECK: 26 may alias responses
-; CHECK: 18 must alias responses
+; CHECK-LABEL: Function: test_no_dom: 3 pointers, 0 call sites
+; CHECK: MayAlias:	double* %addr1, double* %data
+; CHECK: NoAlias:	double* %addr2, double* %data
+; CHECK: MayAlias:	double* %addr1, double* %addr2
+
+; In this case, checking %addr1 and %add2 involves two addrecs in two
+; different loops where neither dominates the other.  This used to crash
+; because we expected the arguments to an AddExpr to have a strict
+; dominance order.
+define void @test_no_dom(ptr %data) {
+entry:
+  load double, ptr %data
+  br label %for.body
+  
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  br i1 undef, label %subloop1, label %subloop2
+
+subloop1:
+  %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]
+  %iv1.next = add i32 %iv1, 1
+  %addr1 = getelementptr double, ptr %data, i32 %iv1
+  store double 0.0, ptr %addr1
+  %cmp1 = icmp slt i32 %iv1, 200
+  br i1 %cmp1, label %subloop1, label %for.latch
+
+subloop2:
+  %iv2 = phi i32 [400, %for.body], [%iv2.next, %subloop2]
+  %iv2.next = add i32 %iv2, 1
+  %addr2 = getelementptr double, ptr %data, i32 %iv2
+  store double 0.0, ptr %addr2
+  %cmp2 = icmp slt i32 %iv2, 600
+  br i1 %cmp2, label %subloop2, label %for.latch
+
+for.latch:
+  br label %for.body
+
+for.end:
+  ret void
+}
+
+declare ptr @get_addr(i32 %i)
+
+; CHECK-LABEL: Function: test_no_dom2: 3 pointers, 2 call sites
+; CHECK: MayAlias:	double* %addr1, double* %data
+; CHECK: MayAlias:	double* %addr2, double* %data
+; CHECK: MayAlias:	double* %addr1, double* %addr2
+
+; In this case, checking %addr1 and %add2 involves two addrecs in two
+; different loops where neither dominates the other.  This is analogous
+; to test_no_dom, but involves SCEVUnknown as opposed to SCEVAddRecExpr.
+define void @test_no_dom2(ptr %data) {
+entry:
+  load double, ptr %data
+  br label %for.body
+  
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  br i1 undef, label %subloop1, label %subloop2
+
+subloop1:
+  %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]
+  %iv1.next = add i32 %iv1, 1
+  %addr1 = call ptr @get_addr(i32 %iv1)
+  store double 0.0, ptr %addr1
+  %cmp1 = icmp slt i32 %iv1, 200
+  br i1 %cmp1, label %subloop1, label %for.latch
+
+subloop2:
+  %iv2 = phi i32 [400, %for.body], [%iv2.next, %subloop2]
+  %iv2.next = add i32 %iv2, 1
+  %addr2 = call ptr @get_addr(i32 %iv2)
+  store double 0.0, ptr %addr2
+  %cmp2 = icmp slt i32 %iv2, 600
+  br i1 %cmp2, label %subloop2, label %for.latch
+
+for.latch:
+  br label %for.body
+
+for.end:
+  ret void
+}
+
+
+; CHECK-LABEL: Function: test_dom: 3 pointers, 0 call sites
+; CHECK: MayAlias:	double* %addr1, double* %data
+; CHECK: NoAlias:	double* %addr2, double* %data
+; CHECK: NoAlias:	double* %addr1, double* %addr2
+
+; This is a variant of test_non_dom where the second subloop is
+; dominated by the first.  As a result of that, we can nest the
+; addrecs and cancel out the %data base pointer.
+define void @test_dom(ptr %data) {
+entry:
+  load double, ptr %data
+  br label %for.body
+  
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  br label %subloop1
+
+subloop1:
+  %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]
+  %iv1.next = add i32 %iv1, 1
+  %addr1 = getelementptr double, ptr %data, i32 %iv1
+  store double 0.0, ptr %addr1
+  %cmp1 = icmp slt i32 %iv1, 200
+  br i1 %cmp1, label %subloop1, label %subloop2
+
+subloop2:
+  %iv2 = phi i32 [400, %subloop1], [%iv2.next, %subloop2]
+  %iv2.next = add i32 %iv2, 1
+  %addr2 = getelementptr double, ptr %data, i32 %iv2
+  store double 0.0, ptr %addr2
+  %cmp2 = icmp slt i32 %iv2, 600
+  br i1 %cmp2, label %subloop2, label %for.latch
+
+for.latch:
+  br label %for.body
+
+for.end:
+  ret void
+}

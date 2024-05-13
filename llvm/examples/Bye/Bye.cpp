@@ -5,7 +5,6 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
 
@@ -44,19 +43,12 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
 
-/* Legacy PM Registration */
-static llvm::RegisterStandardPasses RegisterBye(
-    llvm::PassManagerBuilder::EP_VectorizerStart,
-    [](const llvm::PassManagerBuilder &Builder,
-       llvm::legacy::PassManagerBase &PM) { PM.add(new LegacyBye()); });
-
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getByePluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Bye", LLVM_VERSION_STRING,
           [](PassBuilder &PB) {
             PB.registerVectorizerStartEPCallback(
-                [](llvm::FunctionPassManager &PM,
-                   llvm::PassBuilder::OptimizationLevel Level) {
+                [](llvm::FunctionPassManager &PM, OptimizationLevel Level) {
                   PM.addPass(Bye());
                 });
             PB.registerPipelineParsingCallback(

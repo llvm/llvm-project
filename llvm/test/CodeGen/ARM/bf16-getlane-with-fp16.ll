@@ -43,3 +43,55 @@ entry:
   %0 = extractelement <4 x bfloat> %v, i32 1
   ret bfloat %0
 }
+
+define i16 @bextract_v4i16(<4 x bfloat> %a) {
+; CHECK-LABEL: bextract_v4i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    bx lr
+entry:
+  %elt = extractelement <4 x bfloat> %a, i32 0
+  %t = bitcast bfloat %elt to i16
+  ret i16 %t
+}
+
+define i16 @bextract_v8i16(<8 x bfloat> %a) {
+; CHECK-LABEL: bextract_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    bx lr
+entry:
+  %elt = extractelement <8 x bfloat> %a, i32 0
+  %t = bitcast bfloat %elt to i16
+  ret i16 %t
+}
+
+define i32 @bextract_v4s32(<4 x bfloat> %a) {
+; CHECK-LABEL: bextract_v4s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %elt = extractelement <4 x bfloat> %a, i32 0
+  %t = bitcast bfloat %elt to i16
+  %s = sext i16 %t to i32
+  ret i32 %s
+}
+
+define i32 @bextract_v8s32(<8 x bfloat> %a) {
+; CHECK-LABEL: bextract_v8s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %elt = extractelement <8 x bfloat> %a, i32 0
+  %t = bitcast bfloat %elt to i16
+  %s = sext i16 %t to i32
+  ret i32 %s
+}

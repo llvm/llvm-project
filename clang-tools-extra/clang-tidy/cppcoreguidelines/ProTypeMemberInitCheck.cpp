@@ -20,9 +20,7 @@ using namespace clang::tidy::matchers;
 using llvm::SmallPtrSet;
 using llvm::SmallPtrSetImpl;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 namespace {
 
@@ -33,7 +31,7 @@ AST_MATCHER(CXXRecordDecl, hasDefaultConstructor) {
 // Iterate over all the fields in a record type, both direct and indirect (e.g.
 // if the record contains an anonymous struct).
 template <typename T, typename Func>
-void forEachField(const RecordDecl &Record, const T &Fields, Func &&Fn) {
+void forEachField(const RecordDecl &Record, const T &Fields, const Func &Fn) {
   for (const FieldDecl *F : Fields) {
     if (F->isAnonymousStructOrUnion()) {
       if (const CXXRecordDecl *R = F->getType()->getAsCXXRecordDecl())
@@ -42,6 +40,34 @@ void forEachField(const RecordDecl &Record, const T &Fields, Func &&Fn) {
       Fn(F);
     }
   }
+}
+
+template <typename T, typename Func>
+void forEachFieldWithFilter(const RecordDecl &Record, const T &Fields,
+                            bool &AnyMemberHasInitPerUnion, const Func &Fn) {
+  for (const FieldDecl *F : Fields) {
+    if (F->isAnonymousStructOrUnion()) {
+      if (const CXXRecordDecl *R = F->getType()->getAsCXXRecordDecl()) {
+        AnyMemberHasInitPerUnion = false;
+        forEachFieldWithFilter(*R, R->fields(), AnyMemberHasInitPerUnion, Fn);
+      }
+    } else {
+      Fn(F);
+    }
+    if (Record.isUnion() && AnyMemberHasInitPerUnion)
+      break;
+  }
+}
+
+void removeFieldInitialized(const FieldDecl *M,
+                            SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
+  const RecordDecl *R = M->getParent();
+  if (R && R->isUnion()) {
+    // Erase all members in a union if any member of it is initialized.
+    for (const auto *F : R->fields())
+      FieldDecls.erase(F);
+  } else
+    FieldDecls.erase(M);
 }
 
 void removeFieldsInitializedInBody(
@@ -53,7 +79,7 @@ void removeFieldsInitializedInBody(
                 hasLHS(memberExpr(member(fieldDecl().bind("fieldDecl")))))),
             Stmt, Context);
   for (const auto &Match : Matches)
-    FieldDecls.erase(Match.getNodeAs<FieldDecl>("fieldDecl"));
+    removeFieldInitialized(Match.getNodeAs<FieldDecl>("fieldDecl"), FieldDecls);
 }
 
 StringRef getName(const FieldDecl *Field) { return Field->getName(); }
@@ -105,9 +131,9 @@ enum class InitializerPlacement {
 // insert into the initializer list of a constructor. We use this to ensure
 // proper absolute ordering according to the class declaration relative to the
 // (perhaps improper) ordering in the existing initializer list, if any.
-struct IntializerInsertion {
-  IntializerInsertion(InitializerPlacement Placement,
-                      const CXXCtorInitializer *Where)
+struct InitializerInsertion {
+  InitializerInsertion(InitializerPlacement Placement,
+                       const CXXCtorInitializer *Where)
       : Placement(Placement), Where(Where) {}
 
   SourceLocation getLocation(const ASTContext &Context,
@@ -169,11 +195,11 @@ const RecordDecl *getCanonicalRecordDecl(const QualType &Type) {
 }
 
 template <typename R, typename T>
-SmallVector<IntializerInsertion, 16>
+SmallVector<InitializerInsertion, 16>
 computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
                   const R &OrderedDecls,
                   const SmallPtrSetImpl<const T *> &DeclsToInit) {
-  SmallVector<IntializerInsertion, 16> Insertions;
+  SmallVector<InitializerInsertion, 16> Insertions;
   Insertions.emplace_back(InitializerPlacement::New, nullptr);
 
   typename R::const_iterator Decl = std::begin(OrderedDecls);
@@ -192,7 +218,7 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
       // Add all fields between current field up until the next initializer.
       for (; Decl != std::end(OrderedDecls) && *Decl != InitDecl; ++Decl) {
         if (const auto *D = dyn_cast<T>(*Decl)) {
-          if (DeclsToInit.count(D) > 0)
+          if (DeclsToInit.contains(D))
             Insertions.back().Initializers.emplace_back(getName(D));
         }
       }
@@ -204,7 +230,7 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
   // Add remaining decls that require initialization.
   for (; Decl != std::end(OrderedDecls); ++Decl) {
     if (const auto *D = dyn_cast<T>(*Decl)) {
-      if (DeclsToInit.count(D) > 0)
+      if (DeclsToInit.contains(D))
         Insertions.back().Initializers.emplace_back(getName(D));
     }
   }
@@ -255,8 +281,14 @@ ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
 
 void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   auto IsUserProvidedNonDelegatingConstructor =
-      allOf(isUserProvided(),
-            unless(anyOf(isInstantiated(), isDelegatingConstructor())));
+      allOf(isUserProvided(), unless(isInstantiated()),
+            unless(isDelegatingConstructor()),
+            ofClass(cxxRecordDecl().bind("parent")),
+            unless(hasAnyConstructorInitializer(cxxCtorInitializer(
+                isWritten(), unless(isMemberInitializer()),
+                hasTypeLoc(loc(
+                    qualType(hasDeclaration(equalsBoundNode("parent")))))))));
+
   auto IsNonTrivialDefaultConstructor = allOf(
       isDefaultConstructor(), unless(isUserProvided()),
       hasParent(cxxRecordDecl(unless(isTriviallyDefaultConstructible()))));
@@ -349,8 +381,7 @@ static const char *getInitializer(QualType QT, bool UseAssignment) {
   if (QT->isPointerType())
     return " = nullptr";
 
-  const BuiltinType *BT =
-      dyn_cast<BuiltinType>(QT.getCanonicalType().getTypePtr());
+  const auto *BT = dyn_cast<BuiltinType>(QT.getCanonicalType().getTypePtr());
   if (!BT)
     return DefaultInitializer;
 
@@ -401,13 +432,20 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
 
   // Gather all fields (direct and indirect) that need to be initialized.
   SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
-  forEachField(ClassDecl, ClassDecl.fields(), [&](const FieldDecl *F) {
+  bool AnyMemberHasInitPerUnion = false;
+  forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
+                         AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
     if (IgnoreArrays && F->getType()->isArrayType())
       return;
+    if (F->hasInClassInitializer() && F->getParent()->isUnion()) {
+      AnyMemberHasInitPerUnion = true;
+      removeFieldInitialized(F, FieldsToInit);
+    }
     if (!F->hasInClassInitializer() &&
         utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
                                                             Context) &&
-        !isEmpty(Context, F->getType()) && !F->isUnnamedBitfield())
+        !isEmpty(Context, F->getType()) && !F->isUnnamedBitField() &&
+        !AnyMemberHasInitPerUnion)
       FieldsToInit.insert(F);
   });
   if (FieldsToInit.empty())
@@ -420,7 +458,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
       if (Init->isAnyMemberInitializer() && Init->isWritten()) {
         if (IsUnion)
           return; // We can only initialize one member of a union.
-        FieldsToInit.erase(Init->getAnyMember());
+        removeFieldInitialized(Init->getAnyMember(), FieldsToInit);
       }
     }
     removeFieldsInitializedInBody(*Ctor->getBody(), Context, FieldsToInit);
@@ -433,17 +471,25 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
                [&](const FieldDecl *F) { OrderedFields.push_back(F); });
 
   // Collect all the fields we need to initialize, including indirect fields.
+  // It only includes fields that have not been fixed
   SmallPtrSet<const FieldDecl *, 16> AllFieldsToInit;
-  forEachField(ClassDecl, FieldsToInit,
-               [&](const FieldDecl *F) { AllFieldsToInit.insert(F); });
-  if (AllFieldsToInit.empty())
+  forEachField(ClassDecl, FieldsToInit, [&](const FieldDecl *F) {
+    if (!HasRecordClassMemberSet.contains(F)) {
+      AllFieldsToInit.insert(F);
+      HasRecordClassMemberSet.insert(F);
+    }
+  });
+  if (FieldsToInit.empty())
     return;
 
   DiagnosticBuilder Diag =
       diag(Ctor ? Ctor->getBeginLoc() : ClassDecl.getLocation(),
            "%select{|union }0constructor %select{does not|should}0 initialize "
            "%select{|one of }0these fields: %1")
-      << IsUnion << toCommaSeparatedString(OrderedFields, AllFieldsToInit);
+      << IsUnion << toCommaSeparatedString(OrderedFields, FieldsToInit);
+
+  if (AllFieldsToInit.empty())
+    return;
 
   // Do not propose fixes for constructors in macros since we cannot place them
   // correctly.
@@ -453,8 +499,9 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   // Collect all fields but only suggest a fix for the first member of unions,
   // as initializing more than one union member is an error.
   SmallPtrSet<const FieldDecl *, 16> FieldsToFix;
-  SmallPtrSet<const RecordDecl *, 4> UnionsSeen;
-  forEachField(ClassDecl, OrderedFields, [&](const FieldDecl *F) {
+  AnyMemberHasInitPerUnion = false;
+  forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
+                         AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
     if (!FieldsToInit.count(F))
       return;
     // Don't suggest fixes for enums because we don't know a good default.
@@ -463,8 +510,8 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
     if (F->getType()->isEnumeralType() ||
         (!getLangOpts().CPlusPlus20 && F->isBitField()))
       return;
-    if (!F->getParent()->isUnion() || UnionsSeen.insert(F->getParent()).second)
-      FieldsToFix.insert(F);
+    FieldsToFix.insert(F);
+    AnyMemberHasInitPerUnion = true;
   });
   if (FieldsToFix.empty())
     return;
@@ -535,6 +582,4 @@ void ProTypeMemberInitCheck::checkUninitializedTrivialType(
       Context.getLangOpts().CPlusPlus11 ? "{}" : " = {}");
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

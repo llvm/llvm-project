@@ -15,23 +15,23 @@ define i32 @foo(i32 %i) #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* %i.addr, align 4, !dbg !10
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4, !dbg !10
   %cmp = icmp slt i32 %0, 10, !dbg !10
   br i1 %cmp, label %if.then, label %if.end, !dbg !10
 
 if.then:                                          ; preds = %entry
-  %1 = load i32, i32* %i.addr, align 4, !dbg !14
+  %1 = load i32, ptr %i.addr, align 4, !dbg !14
   %sub = sub nsw i32 %1, 1, !dbg !14
-  store i32 %sub, i32* %retval, !dbg !14
+  store i32 %sub, ptr %retval, !dbg !14
   br label %return, !dbg !14
 
 if.end:                                           ; preds = %entry
-  store i32 0, i32* %retval, !dbg !12
+  store i32 0, ptr %retval, !dbg !12
   br label %return, !dbg !12
 
 return:                                           ; preds = %if.end, %if.then
-  %2 = load i32, i32* %retval, !dbg !13
+  %2 = load i32, ptr %retval, !dbg !13
   ret i32 %2, !dbg !13
 }
 
@@ -57,6 +57,6 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"=
 !14 = !DILocation(line: 2, scope: !15)
 !15 = !DILexicalBlockFile(discriminator: 42, file: !1, scope: !4)
 
-; CHECK: Address            Line   Column File   ISA Discriminator Flags
-; CHECK: ------------------ ------ ------ ------ --- ------------- -------------
-; CHECK: 0x000000000000000a      2      0      1   0            42 {{$}}
+; CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+; CHECK: ------------------ ------ ------ ------ --- ------------- ------- -------------
+; CHECK: 0x000000000000000a      2      0      1   0            42       0 {{$}}

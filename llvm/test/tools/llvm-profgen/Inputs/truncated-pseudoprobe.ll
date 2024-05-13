@@ -46,8 +46,6 @@ if.then:                                          ; preds = %while.body
   call void @llvm.pseudoprobe(i64 -2012135647395072713, i64 1, i32 0, i64 -1) #6, !dbg !44
   %rem.i = urem i32 %inc8, 3, !dbg !45
   %tobool.not.i = icmp eq i32 %rem.i, 0, !dbg !45
-  call void @llvm.pseudoprobe(i64 -2012135647395072713, i64 2, i32 2, i64 -1) #6, !dbg !46
-  call void @llvm.pseudoprobe(i64 -2012135647395072713, i64 3, i32 2, i64 -1) #6, !dbg !47
   %0 = sub i32 0, %s.07, !dbg !48
   %retval.0.p.i = select i1 %tobool.not.i, i32 %s.07, i32 %0, !dbg !48
   %retval.0.i = add i32 %retval.0.p.i, %inc8, !dbg !48
@@ -74,12 +72,12 @@ if.end:                                           ; preds = %if.else, %if.then
 
 while.end:                                        ; preds = %if.end
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 7, i32 0, i64 -1), !dbg !57
-  %call1 = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i64 0, i64 0), i32 %s.1), !dbg !58
+  %call1 = call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 %s.1), !dbg !58
   ret void, !dbg !60
 }
 
 ; Function Attrs: nofree nounwind
-declare dso_local noundef i32 @printf(i8* nocapture noundef readonly, ...) local_unnamed_addr #2
+declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr #2
 
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main() local_unnamed_addr #3 !dbg !61 {

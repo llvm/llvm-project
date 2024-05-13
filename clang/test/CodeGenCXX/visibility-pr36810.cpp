@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -std=c++11 -fvisibility hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -DUNDEF_G -std=c++11 -fvisibility hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -std=c++11 -fvisibility=hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -DUNDEF_G -std=c++11 -fvisibility=hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s
 
 namespace std {
 template <class>

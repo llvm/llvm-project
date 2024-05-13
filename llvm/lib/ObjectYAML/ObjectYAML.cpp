@@ -26,6 +26,8 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
       MappingTraits<ELFYAML::Object>::mapping(IO, *ObjectFile.Elf);
     if (ObjectFile.Coff)
       MappingTraits<COFFYAML::Object>::mapping(IO, *ObjectFile.Coff);
+    if (ObjectFile.Goff)
+      MappingTraits<GOFFYAML::Object>::mapping(IO, *ObjectFile.Goff);
     if (ObjectFile.MachO)
       MappingTraits<MachOYAML::Object>::mapping(IO, *ObjectFile.MachO);
     if (ObjectFile.FatMachO)
@@ -46,6 +48,9 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
     } else if (IO.mapTag("!COFF")) {
       ObjectFile.Coff.reset(new COFFYAML::Object());
       MappingTraits<COFFYAML::Object>::mapping(IO, *ObjectFile.Coff);
+    } else if (IO.mapTag("!GOFF")) {
+      ObjectFile.Goff.reset(new GOFFYAML::Object());
+      MappingTraits<GOFFYAML::Object>::mapping(IO, *ObjectFile.Goff);
     } else if (IO.mapTag("!mach-o")) {
       ObjectFile.MachO.reset(new MachOYAML::Object());
       MappingTraits<MachOYAML::Object>::mapping(IO, *ObjectFile.MachO);
@@ -56,9 +61,19 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
     } else if (IO.mapTag("!minidump")) {
       ObjectFile.Minidump.reset(new MinidumpYAML::Object());
       MappingTraits<MinidumpYAML::Object>::mapping(IO, *ObjectFile.Minidump);
+    } else if (IO.mapTag("!Offload")) {
+      ObjectFile.Offload.reset(new OffloadYAML::Binary());
+      MappingTraits<OffloadYAML::Binary>::mapping(IO, *ObjectFile.Offload);
     } else if (IO.mapTag("!WASM")) {
       ObjectFile.Wasm.reset(new WasmYAML::Object());
       MappingTraits<WasmYAML::Object>::mapping(IO, *ObjectFile.Wasm);
+    } else if (IO.mapTag("!XCOFF")) {
+      ObjectFile.Xcoff.reset(new XCOFFYAML::Object());
+      MappingTraits<XCOFFYAML::Object>::mapping(IO, *ObjectFile.Xcoff);
+    } else if (IO.mapTag("!dxcontainer")) {
+      ObjectFile.DXContainer.reset(new DXContainerYAML::Object());
+      MappingTraits<DXContainerYAML::Object>::mapping(IO,
+                                                      *ObjectFile.DXContainer);
     } else if (const Node *N = In.getCurrentNode()) {
       if (N->getRawTag().empty())
         IO.setError("YAML Object File missing document type tag!");

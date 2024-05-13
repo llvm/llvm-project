@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C701 The type-param-value for a kind type parameter shall be a constant
 ! expression.  This constraint looks like a mistake in the standard.
 integer, parameter :: k = 8
@@ -25,18 +25,25 @@ real :: u(l*2)
 character(len=l) :: v
 !ERROR: Value of named constant 'o' (o) cannot be computed as a constant value
 real, parameter ::  o = o
+!WARNING: INTEGER(4) division by zero
 !ERROR: Must be a constant value
 integer, parameter ::  p = 0/0
+!WARNING: INTEGER(4) division by zero
 !ERROR: Must be a constant value
+!WARNING: INTEGER(4) division by zero
+!WARNING: INTEGER(4) division by zero
+!WARNING: INTEGER(4) division by zero
 integer, parameter ::  q = 1+2*(1/0)
 integer not_constant
 !ERROR: Must be a constant value
 integer, parameter :: s1 = not_constant/2
 !ERROR: Must be a constant value
 integer, parameter :: s2 = 3/not_constant
+!WARNING: INTEGER(4) division by zero
 !ERROR: Must be a constant value
 integer(kind=2/0) r
 integer, parameter :: sok(*)=[1,2]/[1,2]
+!WARNING: INTEGER(4) division by zero
 !ERROR: Must be a constant value
 integer, parameter :: snok(*)=[1,2]/[1,0]
 end

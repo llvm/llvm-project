@@ -12,37 +12,37 @@ from lldbsuite.test import lldbtest
 
 
 class PlatformProcessCrashInfoTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.runCmd("settings set auto-confirm true")
         self.source = "main.c"
-        self.line = line_number(self.source, '// break here')
+        self.line = line_number(self.source, "// break here")
 
     def tearDown(self):
         self.runCmd("settings clear auto-confirm")
         TestBase.tearDown(self)
 
-    @skipIfAsan # The test process intentionally double-frees.
+    @skipIfAsan  # The test process intentionally double-frees.
     @skipUnlessDarwin
     def test_cli(self):
         """Test that `process status --verbose` fetches the extended crash
         information dictionary from the command-line properly."""
         self.build()
         exe = self.getBuildArtifact("a.out")
-        self.expect("file " + exe,
-                    patterns=["Current executable set to .*a.out"])
+        self.expect("file " + exe, patterns=["Current executable set to .*a.out"])
 
-        self.expect('process launch',
-                    patterns=["Process .* launched: .*a.out"])
+        self.expect("process launch", patterns=["Process .* launched: .*a.out"])
 
-        self.expect('process status --verbose',
-                    patterns=["\"message\".*pointer being freed was not allocated"])
+        self.expect(
+            "process status --verbose",
+            patterns=[
+                "Extended Crash Information",
+                "Crash-Info Annotations",
+                "pointer being freed was not allocated",
+            ],
+        )
 
-
-    @skipIfAsan # The test process intentionally hits a memory bug.
+    @skipIfAsan  # The test process intentionally hits a memory bug.
     @skipUnlessDarwin
     def test_api(self):
         """Test that lldb can fetch a crashed process' extended crash information
@@ -63,7 +63,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
 
         error = crash_info.GetAsJSON(stream)
 
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         self.assertTrue(crash_info.IsValid())
 
@@ -75,8 +75,9 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         """Test that lldb doesn't fetch the extended crash information
         dictionary from a 'sane' stopped process."""
         self.build()
-        target, _, _, _ = lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec(self.source),
-                                        self.line)
+        target, _, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line
+        )
 
         stream = lldb.SBStream()
         self.assertTrue(stream)

@@ -1,29 +1,32 @@
-; RUN: llc -enable-fs-discriminator < %s | FileCheck %s
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck %s --check-prefixes=V0,V01
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck %s --check-prefixes=V1,V01
 ;
 ; Check that fs-afdo discriminators are generated.
-; CHECK: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3
-; Check: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
-; CHECK: .loc    1 9 5 is_stmt 0 discriminator 268435458 # foo.c:9:5
-; CHECK: .loc    1 7 3 is_stmt 1 discriminator 3892314114 # foo.c:7:3
+; V01: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3
+; V01: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
+; V0: .loc    1 9 5 is_stmt 0 discriminator 11266 # foo.c:9:5
+; V0: .loc    1 7 3 is_stmt 1 discriminator 11266 # foo.c:7:3
+; V1: .loc    1 9 5 is_stmt 0 discriminator 514 # foo.c:9:5
+; V1: .loc    1 7 3 is_stmt 1 discriminator 258 # foo.c:7:3
 ; Check that variable __llvm_fs_discriminator__ is generated.
-; CHECK: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
-; CHECK: .section        .rodata,"a",@progbits
-; CHECK: .weak   __llvm_fs_discriminator__
-; CHECK: __llvm_fs_discriminator__:
-; CHECK: .byte   1
-; CHECK: .size   __llvm_fs_discriminator__, 1
+; V01: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
+; V01: .section        .rodata,"a",@progbits
+; V01: .weak   __llvm_fs_discriminator__
+; V01: __llvm_fs_discriminator__:
+; V01: .byte   1
+; V01: .size   __llvm_fs_discriminator__, 1
 
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.Node = type { %struct.Node* }
+%struct.Node = type { ptr }
 
-define i32 @foo(%struct.Node* readonly %node, %struct.Node* readnone %root) !dbg !6 {
+define i32 @foo(ptr readonly %node, ptr readnone %root) !dbg !6 {
 entry:
-  %cmp = icmp eq %struct.Node* %node, %root, !dbg !8
+  %cmp = icmp eq ptr %node, %root, !dbg !8
   br i1 %cmp, label %while.end4, label %while.cond1.preheader.lr.ph, !dbg !10
 
 while.cond1.preheader.lr.ph:
-  %tobool = icmp eq %struct.Node* %node, null
+  %tobool = icmp eq ptr %node, null
   br i1 %tobool, label %while.cond1.preheader.us.preheader, label %while.body2.preheader, !dbg !11
 
 while.body2.preheader:
@@ -45,7 +48,7 @@ while.end4:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, emissionKind: LineTablesOnly)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, debugInfoForProfiling: true, emissionKind: LineTablesOnly)
 !1 = !DIFile(filename: "foo.c", directory: "b/")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}

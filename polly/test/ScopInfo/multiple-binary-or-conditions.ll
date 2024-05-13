@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -analyze < %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -disable-output < %s
 ;
 ; void or(float *A, long n, long m) {
 ;   for (long i = 0; i < 100; i++) {
@@ -16,7 +16,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @or(float* nocapture %A, i64 %n, i64 %m, i64 %p) #0 {
+define void @or(ptr nocapture %A, i64 %n, i64 %m, i64 %p) #0 {
 entry:
   br label %for.body
 
@@ -31,10 +31,10 @@ for.body:                                         ; preds = %for.inc, %entry
 
 if.then:                                          ; preds = %for.body
   %conv = sitofp i64 %i.03 to float
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %i.03
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %i.03
+  %0 = load float, ptr %arrayidx, align 4
   %add = fadd float %conv, %0
-  store float %add, float* %arrayidx, align 4
+  store float %add, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.then, %for.body

@@ -1,11 +1,11 @@
 ## Check how llvm-readelf prints section details with --section-details.
 
 ## Check the output for the 64-bit case.
-# RUN: yaml2obj %s -DBITS=64 -o %t64.o
-# RUN: llvm-readelf %t64.o --section-details | \
-# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=GNU64
+# RUN: yaml2obj %s -DBITS=64 -DCHDR=0000000008000000000000000400000000000000 -o %t64.o
+# RUN: llvm-readelf %t64.o --section-details 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t64.o --strict-whitespace --match-full-lines --check-prefix=GNU64
 
-#       GNU64:There are 19 section headers, starting at offset 0xf8:
+#       GNU64:There are 22 section headers, starting at offset 0x198:
 # GNU64-EMPTY:
 #  GNU64-NEXT:Section Headers:
 #  GNU64-NEXT:  [Nr] Name
@@ -17,6 +17,8 @@
 #  GNU64-NEXT:  [ 1] allflags_and_long_fields
 #  GNU64-NEXT:       PROGBITS        1111111111111111 2222222222222222 4444444444444444 5555555555555555 858993459 1717986918 8608480567731124087
 #  GNU64-NEXT:       [ffffffffffffffff]: WRITE, ALLOC, EXEC, MERGE, STRINGS, INFO LINK, LINK ORDER, OS NONCONF, GROUP, TLS, COMPRESSED, EXCLUDE, OS (000000000ff00000), PROC (0000000070000000), UNKNOWN (ffffffff000ff008)
+#  GNU64-NEXT:{{.*}}: warning: '[[FILE]]': SHF_COMPRESSED section 'allflags_and_long_fields' does not have an Elf_Chdr header
+#  GNU64-NEXT:       [<corrupt>]
 #  GNU64-NEXT:  [ 2] noflags
 #  GNU64-NEXT:       PROGBITS        0000000000000000 000040 000000 00   0   0  0
 #  GNU64-NEXT:       [0000000000000000]: {{$}}
@@ -50,23 +52,37 @@
 #  GNU64-NEXT:  [12] tls
 #  GNU64-NEXT:       PROGBITS        0000000000000000 000040 000000 00   0   0  0
 #  GNU64-NEXT:       [0000000000000400]: TLS
-#  GNU64-NEXT:  [13] compressed
-#  GNU64-NEXT:       PROGBITS        0000000000000000 000040 000000 00   0   0  0
-#  GNU64-NEXT:       [0000000000000800]: COMPRESSED
-#  GNU64-NEXT:  [14] exclude
+#  GNU64-NEXT:  [13] exclude
 #  GNU64-NEXT:       PROGBITS        0000000000000000 000040 000000 00   0   0  0
 #  GNU64-NEXT:       [0000000080000000]: EXCLUDE
-#  GNU64-NEXT:  [15] known_and_unknown
+#  GNU64-NEXT:  [14] known_and_unknown
 #  GNU64-NEXT:       PROGBITS        0000000000000000 000040 000000 00   0   0  0
 #  GNU64-NEXT:       [00000000000f0003]: WRITE, ALLOC, UNKNOWN (00000000000f0000)
-#  GNU64-NEXT:  [16] only_unknown
+#  GNU64-NEXT:  [15] only_unknown
 #  GNU64-NEXT:       PROGBITS        0000000000000000 000040 000000 00   0   0  0
 #  GNU64-NEXT:       [00000000000f0000]: UNKNOWN (00000000000f0000)
-#  GNU64-NEXT:  [17] .strtab
-#  GNU64-NEXT:       STRTAB          0000000000000000 000040 000001 00   0   0  1
+#  GNU64-NEXT:  [16] compressed_corrupted
+#  GNU64-NEXT:       PROGBITS        0000000000000000 000040 000000 00   0   0  0
+#  GNU64-NEXT:       [0000000000000800]: COMPRESSED
+#  GNU64-NEXT:{{.*}}: warning: '[[FILE]]': SHF_COMPRESSED section 'compressed_corrupted' does not have an Elf_Chdr header
+#  GNU64-NEXT:       [<corrupt>]
+#  GNU64-NEXT:  [17] compressed_zlib
+#  GNU64-NEXT:       PROGBITS        0000000000000000 000040 000023 00   0   0  0
+#  GNU64-NEXT:       [0000000000000800]: COMPRESSED
+#  GNU64-NEXT:       ZLIB, 0000000000000008, 4
+#  GNU64-NEXT:  [18] compressed_zstd
+#  GNU64-NEXT:       PROGBITS        0000000000000000 000063 000029 00   0   0  0
+#  GNU64-NEXT:       [0000000000000800]: COMPRESSED
+#  GNU64-NEXT:       ZSTD, 0000000000000008, 4
+#  GNU64-NEXT:  [19] compressed_unknown
+#  GNU64-NEXT:       PROGBITS        0000000000000000 00008c 000018 00   0   0  0
+#  GNU64-NEXT:       [0000000000000800]: COMPRESSED
+#  GNU64-NEXT:       [<unknown>: 0x3], 0000000000000008, 4
+#  GNU64-NEXT:  [20] .strtab
+#  GNU64-NEXT:       STRTAB          0000000000000000 0000a4 000001 00   0   0  1
 #  GNU64-NEXT:       [0000000000000000]: {{$}}
-#  GNU64-NEXT:  [18] .shstrtab
-#  GNU64-NEXT:       STRTAB          0000000000000000 000041 0000b0 00   0   0  1
+#  GNU64-NEXT:  [21] .shstrtab
+#  GNU64-NEXT:       STRTAB          0000000000000000 0000a5 0000ed 00   0   0  1
 #  GNU64-NEXT:       [0000000000000000]: {{$}}
 #  GNU64-NOT:{{.}}
 
@@ -120,9 +136,6 @@ Sections:
   - Name:  tls
     Type:  SHT_PROGBITS
     Flags: [ SHF_TLS ]
-  - Name:  compressed
-    Type:  SHT_PROGBITS
-    Flags: [ SHF_COMPRESSED ]
   - Name:  exclude
     Type:  SHT_PROGBITS
     Flags: [ SHF_EXCLUDE ]
@@ -132,13 +145,28 @@ Sections:
   - Name:  only_unknown
     Type:  SHT_PROGBITS
     ShFlags: 0x000f0000
+  - Name:  compressed_corrupted
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_COMPRESSED ]
+  - Name:  compressed_zlib
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_COMPRESSED ]
+    Content: 01000000[[CHDR]]789c636080000000080001
+  - Name:  compressed_zstd
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_COMPRESSED ]
+    Content: 02000000[[CHDR]]28b52ffd20084100000000000000000000
+  - Name:  compressed_unknown
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_COMPRESSED ]
+    Content: 03000000[[CHDR]]
 
 ## Check the output for the 32-bit case.
-# RUN: yaml2obj %s -DBITS=32 -o %t32.o
-# RUN: llvm-readelf %t32.o --section-details | \
-# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=GNU32
+# RUN: yaml2obj %s -DBITS=32 -DCHDR=0400000002000000 -o %t32.o
+# RUN: llvm-readelf %t32.o --section-details 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t32.o --strict-whitespace --match-full-lines --check-prefix=GNU32
 
-#       GNU32:There are 19 section headers, starting at offset 0xe8:
+#       GNU32:There are 22 section headers, starting at offset 0x164:
 # GNU32-EMPTY:
 #  GNU32-NEXT:Section Headers:
 #  GNU32-NEXT:  [Nr] Name
@@ -150,6 +178,8 @@ Sections:
 #  GNU32-NEXT:  [ 1] allflags_and_long_fields
 #  GNU32-NEXT:       PROGBITS        11111111 22222222 44444444 55555555 858993459 1717986918 2004318071
 #  GNU32-NEXT:       [ffffffff]: WRITE, ALLOC, EXEC, MERGE, STRINGS, INFO LINK, LINK ORDER, OS NONCONF, GROUP, TLS, COMPRESSED, EXCLUDE, OS (0ff00000), PROC (70000000), UNKNOWN (000ff008)
+#  GNU32-NEXT:{{.*}}: warning: '[[FILE]]': SHF_COMPRESSED section 'allflags_and_long_fields' does not have an Elf_Chdr header
+#  GNU32-NEXT:       [<corrupt>]
 #  GNU32-NEXT:  [ 2] noflags
 #  GNU32-NEXT:       PROGBITS        00000000 000034 000000 00   0   0  0
 #  GNU32-NEXT:       [00000000]: {{$}}
@@ -183,29 +213,43 @@ Sections:
 #  GNU32-NEXT:  [12] tls
 #  GNU32-NEXT:       PROGBITS        00000000 000034 000000 00   0   0  0
 #  GNU32-NEXT:       [00000400]: TLS
-#  GNU32-NEXT:  [13] compressed
-#  GNU32-NEXT:       PROGBITS        00000000 000034 000000 00   0   0  0
-#  GNU32-NEXT:       [00000800]: COMPRESSED
-#  GNU32-NEXT:  [14] exclude
+#  GNU32-NEXT:  [13] exclude
 #  GNU32-NEXT:       PROGBITS        00000000 000034 000000 00   0   0  0
 #  GNU32-NEXT:       [80000000]: EXCLUDE
-#  GNU32-NEXT:  [15] known_and_unknown
+#  GNU32-NEXT:  [14] known_and_unknown
 #  GNU32-NEXT:       PROGBITS        00000000 000034 000000 00   0   0  0
 #  GNU32-NEXT:       [000f0003]: WRITE, ALLOC, UNKNOWN (000f0000)
-#  GNU32-NEXT:  [16] only_unknown
+#  GNU32-NEXT:  [15] only_unknown
 #  GNU32-NEXT:       PROGBITS        00000000 000034 000000 00   0   0  0
 #  GNU32-NEXT:       [000f0000]: UNKNOWN (000f0000)
-#  GNU32-NEXT:  [17] .strtab
-#  GNU32-NEXT:       STRTAB          00000000 000034 000001 00   0   0  1
+#  GNU32-NEXT:  [16] compressed_corrupted
+#  GNU32-NEXT:       PROGBITS        00000000 000034 000000 00   0   0  0
+#  GNU32-NEXT:       [00000800]: COMPRESSED
+#  GNU32-NEXT:{{.*}}: warning: '[[FILE]]': SHF_COMPRESSED section 'compressed_corrupted' does not have an Elf_Chdr header
+#  GNU32-NEXT:       [<corrupt>]
+#  GNU32-NEXT:  [17] compressed_zlib
+#  GNU32-NEXT:       PROGBITS        00000000 000034 000017 00   0   0  0
+#  GNU32-NEXT:       [00000800]: COMPRESSED
+#  GNU32-NEXT:       ZLIB, 00000004, 2
+#  GNU32-NEXT:  [18] compressed_zstd
+#  GNU32-NEXT:       PROGBITS        00000000 00004b 00001d 00   0   0  0
+#  GNU32-NEXT:       [00000800]: COMPRESSED
+#  GNU32-NEXT:       ZSTD, 00000004, 2
+#  GNU32-NEXT:  [19] compressed_unknown
+#  GNU32-NEXT:       PROGBITS        00000000 000068 00000c 00   0   0  0
+#  GNU32-NEXT:       [00000800]: COMPRESSED
+#  GNU32-NEXT:       [<unknown>: 0x3], 00000004, 2
+#  GNU32-NEXT:  [20] .strtab
+#  GNU32-NEXT:       STRTAB          00000000 000074 000001 00   0   0  1
 #  GNU32-NEXT:       [00000000]: {{$}}
-#  GNU32-NEXT:  [18] .shstrtab
-#  GNU32-NEXT:       STRTAB          00000000 000035 0000b0 00   0   0  1
+#  GNU32-NEXT:  [21] .shstrtab
+#  GNU32-NEXT:       STRTAB          00000000 000075 0000ed 00   0   0  1
 #  GNU32-NEXT:       [00000000]: {{$}}
 #  GNU32-NOT:{{.}}
 
 ## When --section-details and --sections are both specified, --sections is ignored.
-# RUN: llvm-readelf %t64.o --section-details --sections | FileCheck %s --check-prefix=GNU64
-# RUN: llvm-readelf %t64.o --sections --section-details | FileCheck %s --check-prefix=GNU64
+# RUN: llvm-readelf %t64.o --section-details --sections 2>&1 | FileCheck %s -DFILE=%t64.o --check-prefix=GNU64
+# RUN: llvm-readelf %t64.o --sections --section-details 2>&1 | FileCheck %s -DFILE=%t64.o --check-prefix=GNU64
 
 ## Check that we produce the same output with -t (alias).
 # RUN: llvm-readelf --section-details %t64.o > %t.readelf.full

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;    void jacobi1d(long T, long N, float *A, float *B) {
 ;      long t, i, j;
@@ -21,7 +21,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jacobi1d(i64 %T, i64 %N, float* %A, float* %B) {
+define void @jacobi1d(i64 %T, i64 %N, ptr %A, ptr %B) {
 entry:
   %tmp = add i64 %N, -1
   %tmp1 = icmp sgt i64 %tmp, 1
@@ -44,20 +44,20 @@ for.cond1:                                        ; preds = %for.inc, %for.body
 
 for.body3:                                        ; preds = %for.cond1
   %sub4 = add nsw i64 %i.0, -1
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %sub4
-  %tmp2 = load float, float* %arrayidx, align 4
-  %arrayidx5 = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp3 = load float, float* %arrayidx5, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %sub4
+  %tmp2 = load float, ptr %arrayidx, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp3 = load float, ptr %arrayidx5, align 4
   %add = fadd float %tmp2, %tmp3
   %add6 = add nuw nsw i64 %i.0, 1
-  %arrayidx7 = getelementptr inbounds float, float* %A, i64 %add6
-  %tmp4 = load float, float* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %A, i64 %add6
+  %tmp4 = load float, ptr %arrayidx7, align 4
   %add8 = fadd float %add, %tmp4
   %conv = fpext float %add8 to double
   %mul = fmul double %conv, 3.333300e-01
   %conv9 = fptrunc double %mul to float
-  %arrayidx10 = getelementptr inbounds float, float* %B, i64 %i.0
-  store float %conv9, float* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds float, ptr %B, i64 %i.0
+  store float %conv9, ptr %arrayidx10, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3
@@ -75,20 +75,20 @@ for.cond11:                                       ; preds = %for.inc27, %for.end
 
 for.body15:                                       ; preds = %for.cond11
   %sub16 = add nsw i64 %smax, -1
-  %arrayidx17 = getelementptr inbounds float, float* %B, i64 %sub16
-  %tmp5 = load float, float* %arrayidx17, align 4
-  %arrayidx18 = getelementptr inbounds float, float* %B, i64 %smax
-  %tmp6 = load float, float* %arrayidx18, align 4
+  %arrayidx17 = getelementptr inbounds float, ptr %B, i64 %sub16
+  %tmp5 = load float, ptr %arrayidx17, align 4
+  %arrayidx18 = getelementptr inbounds float, ptr %B, i64 %smax
+  %tmp6 = load float, ptr %arrayidx18, align 4
   %add19 = fadd float %tmp5, %tmp6
   %add20 = add nsw i64 %smax, 1
-  %arrayidx21 = getelementptr inbounds float, float* %B, i64 %add20
-  %tmp7 = load float, float* %arrayidx21, align 4
+  %arrayidx21 = getelementptr inbounds float, ptr %B, i64 %add20
+  %tmp7 = load float, ptr %arrayidx21, align 4
   %add22 = fadd float %add19, %tmp7
   %conv23 = fpext float %add22 to double
   %mul24 = fmul double %conv23, 3.333300e-01
   %conv25 = fptrunc double %mul24 to float
-  %arrayidx26 = getelementptr inbounds float, float* %A, i64 %j.0
-  store float %conv25, float* %arrayidx26, align 4
+  %arrayidx26 = getelementptr inbounds float, ptr %A, i64 %j.0
+  store float %conv25, ptr %arrayidx26, align 4
   br label %for.inc27
 
 for.inc27:                                        ; preds = %for.body15

@@ -3,25 +3,25 @@
 
 ; Check that the generated post-increment load has TBAA information.
 ; CHECK-LABEL: Machine code for function fred:
-; CHECK: = V6_vL32b_pi %{{[0-9]+}}{{[^,]*}}, 64 :: (load 64{{.*}}!tbaa
+; CHECK: = V6_vL32b_pi %{{[0-9]+}}{{[^,]*}}, 64 :: (load (s512){{.*}}!tbaa
 
 target triple = "hexagon"
 
 ; Function Attrs: norecurse nounwind
-define void @fred(<16 x i32>* nocapture %p, <16 x i32>* nocapture readonly %q, i32 %n) local_unnamed_addr #0 {
+define void @fred(ptr nocapture %p, ptr nocapture readonly %q, i32 %n) local_unnamed_addr #0 {
 entry:
   %tobool2 = icmp eq i32 %n, 0
   br i1 %tobool2, label %while.end, label %while.body
 
 while.body:                                       ; preds = %entry, %while.body
   %n.addr.05 = phi i32 [ %dec, %while.body ], [ %n, %entry ]
-  %q.addr.04 = phi <16 x i32>* [ %incdec.ptr, %while.body ], [ %q, %entry ]
-  %p.addr.03 = phi <16 x i32>* [ %incdec.ptr1, %while.body ], [ %p, %entry ]
+  %q.addr.04 = phi ptr [ %incdec.ptr, %while.body ], [ %q, %entry ]
+  %p.addr.03 = phi ptr [ %incdec.ptr1, %while.body ], [ %p, %entry ]
   %dec = add i32 %n.addr.05, -1
-  %incdec.ptr = getelementptr inbounds <16 x i32>, <16 x i32>* %q.addr.04, i32 1
-  %0 = load <16 x i32>, <16 x i32>* %q.addr.04, align 64, !tbaa !1
-  %incdec.ptr1 = getelementptr inbounds <16 x i32>, <16 x i32>* %p.addr.03, i32 1
-  store <16 x i32> %0, <16 x i32>* %p.addr.03, align 64, !tbaa !1
+  %incdec.ptr = getelementptr inbounds <16 x i32>, ptr %q.addr.04, i32 1
+  %0 = load <16 x i32>, ptr %q.addr.04, align 64, !tbaa !1
+  %incdec.ptr1 = getelementptr inbounds <16 x i32>, ptr %p.addr.03, i32 1
+  store <16 x i32> %0, ptr %p.addr.03, align 64, !tbaa !1
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %while.end, label %while.body
 

@@ -88,7 +88,7 @@ Slices:
           timestamp:       1
           current_version: 0
           compatibility_version: 0
-        PayloadString:   foo.dylib
+        Content:         foo.dylib
         ZeroPadBytes:    7
       - cmd:             LC_DYLD_INFO_ONLY
         cmdsize:         48

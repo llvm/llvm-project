@@ -1,6 +1,6 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 
-define void @_ZN5ArrayISt7complexIdEEC2ERK10dim_vector() personality i32 (...)* @__gxx_personality_v0 {
+define void @_ZN5ArrayISt7complexIdEEC2ERK10dim_vector() personality ptr @__gxx_personality_v0 {
 entry:
         %tmp.7 = invoke i32 @_ZN5ArrayISt7complexIdEE8get_sizeERK10dim_vector( )
                         to label %invoke_cont.0 unwind label %cond_true.1               ; <i32> [#uses=2]
@@ -16,9 +16,9 @@ no_exit.i:              ; preds = %no_exit.i, %invoke_cont.0
         br label %no_exit.i
 
 cond_true.1:            ; preds = %entry
-        %exn = landingpad {i8*, i32}
+        %exn = landingpad {ptr, i32}
                  cleanup
-        resume { i8*, i32 } %exn
+        resume { ptr, i32 } %exn
 }
 
 declare i32 @__gxx_personality_v0(...)

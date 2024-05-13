@@ -7,43 +7,43 @@
 
 define i32 @_ZN3foo3barERKN1M1XINS_6detail3quxEEE() #0 !dbg !9 {
 entry:
-  %t0 = load i32, i32* @x.addr, align 4
-  %t1 = load i32, i32* @y.addr, align 4
+  %t0 = load i32, ptr @x.addr, align 4
+  %t1 = load i32, ptr @y.addr, align 4
   %add = add nsw i32 %t0, %t1
   ret i32 %add
 }
 
 define i32 @_ZN1M1XE() #0 !dbg !10 {
 entry:
-  %t0 = load i32, i32* @x.addr, align 4
-  %t1 = load i32, i32* @y.addr, align 4
+  %t0 = load i32, ptr @x.addr, align 4
+  %t1 = load i32, ptr @y.addr, align 4
   %sub = sub nsw i32 %t0, %t1
   ret i32 %sub
 }
 
-define void @test(i32 ()*) #0 !dbg !4 {
-  %t2 = alloca i32 ()*
-  store i32 ()* %0, i32 ()** %t2
-  %t3 = load i32 ()*, i32 ()** %t2
+define void @test(ptr) #0 !dbg !4 {
+  %t2 = alloca ptr
+  store ptr %0, ptr %t2
+  %t3 = load ptr, ptr %t2
 ; Check call i32 %t3 has been indirect call promoted and call i32 @_ZN1M1XE
 ; has been inlined.
 ; CHECK-LABEL: @test(
-; CHECK: icmp eq i32 ()* %t3, @_ZN3foo3barERKN1M1XINS_6detail3quxEEE
+; CHECK: icmp eq ptr %t3, @_ZN3foo3barERKN1M1XINS_6detail3quxEEE
 ; CHECK-NOT: call i32 @_ZN1M1XE
   %t4 = call i32 %t3(), !dbg !7
   %t5 = call i32 @_ZN1M1XE(), !dbg !8
   ret void
 }
 
-define void @_ZN1M1X1YE(i32 ()*) #0 !dbg !11 {
-  %t2 = alloca i32 ()*
-  store i32 ()* %0, i32 ()** %t2
-  %t3 = load i32 ()*, i32 ()** %t2
+define void @_ZN1M1X1YE(ptr) #0 !dbg !11 {
+  %t2 = alloca ptr
+  store ptr %0, ptr %t2
+  %t3 = load ptr, ptr %t2
 ; Check call i32 %t3 has got its profile but is not indirect call promoted
 ; because the promotion candidate is a recursive call to the current function.
 ; CHECK-LABEL: @_ZN1M1X1YE(
 ; CHECK: call i32 %t3(), {{.*}} !prof ![[PROFID:[0-9]+]]
-; CHECK-NOT: icmp eq i32 ()* %t3, @_ZN1M1X1YE
+; CHECK-NOT: icmp eq ptr %t3, @_ZN1M1X1YE
   %t4 = call i32 %t3(), !dbg !12
   ret void
 }

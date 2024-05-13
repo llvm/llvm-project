@@ -8,41 +8,102 @@
 
 #include "UseUsingCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclGroup.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+namespace {
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
+  return Node.getLanguage() == clang::LinkageSpecLanguageIDs::C;
+}
+} // namespace
+
+namespace clang::tidy::modernize {
+
+static constexpr llvm::StringLiteral ExternCDeclName = "extern-c-decl";
+static constexpr llvm::StringLiteral ParentDeclName = "parent-decl";
+static constexpr llvm::StringLiteral TagDeclName = "tag-decl";
+static constexpr llvm::StringLiteral TypedefName = "typedef";
+static constexpr llvm::StringLiteral DeclStmtName = "decl-stmt";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
+      IgnoreExternC(Options.get("IgnoreExternC", false)) {}
 
 void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+  Options.store(Opts, "IgnoreExternC", IgnoreExternC);
 }
 
 void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(typedefDecl(unless(isInstantiated())).bind("typedef"),
-                     this);
-  // This matcher used to find tag declarations in source code within typedefs.
-  // They appear in the AST just *prior* to the typedefs.
-  Finder->addMatcher(tagDecl(unless(isImplicit())).bind("tagdecl"), this);
+  Finder->addMatcher(
+      typedefDecl(
+          unless(isInstantiated()),
+          optionally(hasAncestor(
+              linkageSpecDecl(isExternCLinkage()).bind(ExternCDeclName))),
+          anyOf(hasParent(decl().bind(ParentDeclName)),
+                hasParent(declStmt().bind(DeclStmtName))))
+          .bind(TypedefName),
+      this);
+
+  // This matcher is used to find tag declarations in source code within
+  // typedefs. They appear in the AST just *prior* to the typedefs.
+  Finder->addMatcher(
+      tagDecl(
+          anyOf(allOf(unless(anyOf(isImplicit(),
+                                   classTemplateSpecializationDecl())),
+                      anyOf(hasParent(decl().bind(ParentDeclName)),
+                            hasParent(declStmt().bind(DeclStmtName)))),
+                // We want the parent of the ClassTemplateDecl, not the parent
+                // of the specialization.
+                classTemplateSpecializationDecl(hasAncestor(classTemplateDecl(
+                    anyOf(hasParent(decl().bind(ParentDeclName)),
+                          hasParent(declStmt().bind(DeclStmtName))))))))
+          .bind(TagDeclName),
+      this);
 }
 
 void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *ParentDecl = Result.Nodes.getNodeAs<Decl>(ParentDeclName);
+
+  if (!ParentDecl) {
+    const auto *ParentDeclStmt = Result.Nodes.getNodeAs<DeclStmt>(DeclStmtName);
+    if (ParentDeclStmt) {
+      if (ParentDeclStmt->isSingleDecl())
+        ParentDecl = ParentDeclStmt->getSingleDecl();
+      else
+        ParentDecl =
+            ParentDeclStmt->getDeclGroup().getDeclGroup()
+                [ParentDeclStmt->getDeclGroup().getDeclGroup().size() - 1];
+    }
+  }
+
+  if (!ParentDecl)
+    return;
+
   // Match CXXRecordDecl only to store the range of the last non-implicit full
   // declaration, to later check whether it's within the typdef itself.
-  const auto *MatchedTagDecl = Result.Nodes.getNodeAs<TagDecl>("tagdecl");
+  const auto *MatchedTagDecl = Result.Nodes.getNodeAs<TagDecl>(TagDeclName);
   if (MatchedTagDecl) {
-    LastTagDeclRange = MatchedTagDecl->getSourceRange();
+    // It is not sufficient to just track the last TagDecl that we've seen,
+    // because if one struct or union is nested inside another, the last TagDecl
+    // before the typedef will be the nested one (PR#50990). Therefore, we also
+    // keep track of the parent declaration, so that we can look up the last
+    // TagDecl that is a sibling of the typedef in the AST.
+    if (MatchedTagDecl->isThisDeclarationADefinition())
+      LastTagDeclRanges[ParentDecl] = MatchedTagDecl->getSourceRange();
     return;
   }
 
-  const auto *MatchedDecl = Result.Nodes.getNodeAs<TypedefDecl>("typedef");
+  const auto *MatchedDecl = Result.Nodes.getNodeAs<TypedefDecl>(TypedefName);
   if (MatchedDecl->getLocation().isInvalid())
+    return;
+
+  const auto *ExternCDecl =
+      Result.Nodes.getNodeAs<LinkageSpecDecl>(ExternCDeclName);
+  if (ExternCDecl && IgnoreExternC)
     return;
 
   SourceLocation StartLoc = MatchedDecl->getBeginLoc();
@@ -96,25 +157,27 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
         Type.substr(0, FirstTypedefType.size()) == FirstTypedefType)
       Type = FirstTypedefName + Type.substr(FirstTypedefType.size() + 1);
   }
-  if (!ReplaceRange.getEnd().isMacroID())
-    LastReplacementEnd = ReplaceRange.getEnd().getLocWithOffset(Name.size());
+  if (!ReplaceRange.getEnd().isMacroID()) {
+    const SourceLocation::IntTy Offset =
+        MatchedDecl->getFunctionType() ? 0 : Name.size();
+    LastReplacementEnd = ReplaceRange.getEnd().getLocWithOffset(Offset);
+  }
 
   auto Diag = diag(ReplaceRange.getBegin(), UseUsingWarning);
 
   // If typedef contains a full tag declaration, extract its full text.
-  if (LastTagDeclRange.isValid() &&
-      ReplaceRange.fullyContains(LastTagDeclRange)) {
-    bool Invalid;
-    Type = std::string(
-        Lexer::getSourceText(CharSourceRange::getTokenRange(LastTagDeclRange),
-                             *Result.SourceManager, getLangOpts(), &Invalid));
-    if (Invalid)
+  auto LastTagDeclRange = LastTagDeclRanges.find(ParentDecl);
+  if (LastTagDeclRange != LastTagDeclRanges.end() &&
+      LastTagDeclRange->second.isValid() &&
+      ReplaceRange.fullyContains(LastTagDeclRange->second)) {
+    Type = std::string(Lexer::getSourceText(
+        CharSourceRange::getTokenRange(LastTagDeclRange->second),
+        *Result.SourceManager, getLangOpts()));
+    if (Type.empty())
       return;
   }
 
   std::string Replacement = Using + Name + " = " + Type;
   Diag << FixItHint::CreateReplacement(ReplaceRange, Replacement);
 }
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
 
 ; Tests that we do not fuse two guarded loops together.
 ; These loops do not have the same trip count, and the first loop meets the
@@ -6,7 +6,7 @@
 ; loops unsafe to fuse together.
 ; The expected output of this test is the function as below.
 
-; CHECK-LABEL: void @unsafe_exitblock(i32* noalias %A, i32* noalias %B)
+; CHECK-LABEL: void @unsafe_exitblock(ptr noalias %A, ptr noalias %B)
 ; CHECK:       for.first.guard
 ; CHECK:         br i1 %cmp3, label %for.first.preheader, label %for.second.guard
 ; CHECK:       for.first.preheader:
@@ -27,7 +27,7 @@
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 
-define void @unsafe_exitblock(i32* noalias %A, i32* noalias %B) {
+define void @unsafe_exitblock(ptr noalias %A, ptr noalias %B) {
 for.first.guard:
   %cmp3 = icmp slt i64 0, 45
   br i1 %cmp3, label %for.first.preheader, label %for.second.guard
@@ -37,8 +37,8 @@ for.first.preheader:                             ; preds = %for.first.guard
 
 for.first:                                       ; preds = %for.first.preheader, %for.first
   %i.04 = phi i64 [ %inc, %for.first ], [ 0, %for.first.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %i.04
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.04
+  store i32 0, ptr %arrayidx, align 4
   %inc = add nsw i64 %i.04, 1
   %cmp = icmp slt i64 %inc, 45
   br i1 %cmp, label %for.first, label %for.first.exit
@@ -56,8 +56,8 @@ for.second.preheader:                            ; preds = %for.second.guard
 
 for.second:                                      ; preds = %for.second.preheader, %for.second
   %j.02 = phi i64 [ %inc6, %for.second ], [ 2, %for.second.preheader ]
-  %arrayidx4 = getelementptr inbounds i32, i32* %B, i64 %j.02
-  store i32 0, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %B, i64 %j.02
+  store i32 0, ptr %arrayidx4, align 4
   %inc6 = add nsw i64 %j.02, 1
   %cmp2 = icmp slt i64 %inc6, 45
   br i1 %cmp2, label %for.second, label %for.second.exit

@@ -10,6 +10,7 @@
 
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -17,14 +18,16 @@
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
@@ -36,9 +39,11 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -55,12 +60,16 @@ public:
 
   uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
                      lldb::addr_t pc, llvm::MCInst &mc_inst) const;
-  void PrintMCInst(llvm::MCInst &mc_inst, std::string &inst_string,
-                   std::string &comments_string);
+  void PrintMCInst(llvm::MCInst &mc_inst, lldb::addr_t pc,
+                   std::string &inst_string, std::string &comments_string);
   void SetStyle(bool use_hex_immed, HexImmediateStyle hex_style);
+  void SetUseColor(bool use_color);
+  bool GetUseColor() const;
   bool CanBranch(llvm::MCInst &mc_inst) const;
   bool HasDelaySlot(llvm::MCInst &mc_inst) const;
   bool IsCall(llvm::MCInst &mc_inst) const;
+  bool IsLoad(llvm::MCInst &mc_inst) const;
+  bool IsAuthenticated(llvm::MCInst &mc_inst) const;
 
 private:
   MCDisasmInstance(std::unique_ptr<llvm::MCInstrInfo> &&instr_info_up,
@@ -69,7 +78,8 @@ private:
                    std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
                    std::unique_ptr<llvm::MCContext> &&context_up,
                    std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
-                   std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up);
+                   std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up,
+                   std::unique_ptr<llvm::MCInstrAnalysis> &&instr_analysis_up);
 
   std::unique_ptr<llvm::MCInstrInfo> m_instr_info_up;
   std::unique_ptr<llvm::MCRegisterInfo> m_reg_info_up;
@@ -78,7 +88,326 @@ private:
   std::unique_ptr<llvm::MCContext> m_context_up;
   std::unique_ptr<llvm::MCDisassembler> m_disasm_up;
   std::unique_ptr<llvm::MCInstPrinter> m_instr_printer_up;
+  std::unique_ptr<llvm::MCInstrAnalysis> m_instr_analysis_up;
 };
+
+namespace x86 {
+
+/// These are the three values deciding instruction control flow kind.
+/// InstructionLengthDecode function decodes an instruction and get this struct.
+///
+/// primary_opcode
+///    Primary opcode of the instruction.
+///    For one-byte opcode instruction, it's the first byte after prefix.
+///    For two- and three-byte opcodes, it's the second byte.
+///
+/// opcode_len
+///    The length of opcode in bytes. Valid opcode lengths are 1, 2, or 3.
+///
+/// modrm
+///    ModR/M byte of the instruction.
+///    Bits[7:6] indicate MOD. Bits[5:3] specify a register and R/M bits[2:0]
+///    may contain a register or specify an addressing mode, depending on MOD.
+struct InstructionOpcodeAndModrm {
+  uint8_t primary_opcode;
+  uint8_t opcode_len;
+  uint8_t modrm;
+};
+
+/// Determine the InstructionControlFlowKind based on opcode and modrm bytes.
+/// Refer to http://ref.x86asm.net/coder.html for the full list of opcode and
+/// instruction set.
+///
+/// \param[in] opcode_and_modrm
+///    Contains primary_opcode byte, its length, and ModR/M byte.
+///    Refer to the struct InstructionOpcodeAndModrm for details.
+///
+/// \return
+///   The control flow kind of the instruction or
+///   eInstructionControlFlowKindOther if the instruction doesn't affect
+///   the control flow of the program.
+lldb::InstructionControlFlowKind
+MapOpcodeIntoControlFlowKind(InstructionOpcodeAndModrm opcode_and_modrm) {
+  uint8_t opcode = opcode_and_modrm.primary_opcode;
+  uint8_t opcode_len = opcode_and_modrm.opcode_len;
+  uint8_t modrm = opcode_and_modrm.modrm;
+
+  if (opcode_len > 2)
+    return lldb::eInstructionControlFlowKindOther;
+
+  if (opcode >= 0x70 && opcode <= 0x7F) {
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindCondJump;
+    else
+      return lldb::eInstructionControlFlowKindOther;
+  }
+
+  if (opcode >= 0x80 && opcode <= 0x8F) {
+    if (opcode_len == 2)
+      return lldb::eInstructionControlFlowKindCondJump;
+    else
+      return lldb::eInstructionControlFlowKindOther;
+  }
+
+  switch (opcode) {
+  case 0x9A:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarCall;
+    break;
+  case 0xFF:
+    if (opcode_len == 1) {
+      uint8_t modrm_reg = (modrm >> 3) & 7;
+      if (modrm_reg == 2)
+        return lldb::eInstructionControlFlowKindCall;
+      else if (modrm_reg == 3)
+        return lldb::eInstructionControlFlowKindFarCall;
+      else if (modrm_reg == 4)
+        return lldb::eInstructionControlFlowKindJump;
+      else if (modrm_reg == 5)
+        return lldb::eInstructionControlFlowKindFarJump;
+    }
+    break;
+  case 0xE8:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindCall;
+    break;
+  case 0xCD:
+  case 0xCC:
+  case 0xCE:
+  case 0xF1:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarCall;
+    break;
+  case 0xCF:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarReturn;
+    break;
+  case 0xE9:
+  case 0xEB:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindJump;
+    break;
+  case 0xEA:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarJump;
+    break;
+  case 0xE3:
+  case 0xE0:
+  case 0xE1:
+  case 0xE2:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindCondJump;
+    break;
+  case 0xC3:
+  case 0xC2:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindReturn;
+    break;
+  case 0xCB:
+  case 0xCA:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarReturn;
+    break;
+  case 0x05:
+  case 0x34:
+    if (opcode_len == 2)
+      return lldb::eInstructionControlFlowKindFarCall;
+    break;
+  case 0x35:
+  case 0x07:
+    if (opcode_len == 2)
+      return lldb::eInstructionControlFlowKindFarReturn;
+    break;
+  case 0x01:
+    if (opcode_len == 2) {
+      switch (modrm) {
+      case 0xc1:
+        return lldb::eInstructionControlFlowKindFarCall;
+      case 0xc2:
+      case 0xc3:
+        return lldb::eInstructionControlFlowKindFarReturn;
+      default:
+        break;
+      }
+    }
+    break;
+  default:
+    break;
+  }
+
+  return lldb::eInstructionControlFlowKindOther;
+}
+
+/// Decode an instruction into opcode, modrm and opcode_len.
+/// Refer to http://ref.x86asm.net/coder.html for the instruction bytes layout.
+/// Opcodes in x86 are generally the first byte of instruction, though two-byte
+/// instructions and prefixes exist. ModR/M is the byte following the opcode
+/// and adds additional information for how the instruction is executed.
+///
+/// \param[in] inst_bytes
+///    Raw bytes of the instruction
+///
+///
+/// \param[in] bytes_len
+///    The length of the inst_bytes array.
+///
+/// \param[in] is_exec_mode_64b
+///    If true, the execution mode is 64 bit.
+///
+/// \return
+///    Returns decoded instruction as struct InstructionOpcodeAndModrm, holding
+///    primary_opcode, opcode_len and modrm byte. Refer to the struct definition
+///    for more details.
+///    Otherwise if the given instruction is invalid, returns std::nullopt.
+std::optional<InstructionOpcodeAndModrm>
+InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
+                        bool is_exec_mode_64b) {
+  int op_idx = 0;
+  bool prefix_done = false;
+  InstructionOpcodeAndModrm ret = {0, 0, 0};
+
+  // In most cases, the primary_opcode is the first byte of the instruction
+  // but some instructions have a prefix to be skipped for these calculations.
+  // The following mapping is inspired from libipt's instruction decoding logic
+  // in `src/pt_ild.c`
+  while (!prefix_done) {
+    if (op_idx >= bytes_len)
+      return std::nullopt;
+
+    ret.primary_opcode = inst_bytes[op_idx];
+    switch (ret.primary_opcode) {
+    // prefix_ignore
+    case 0x26:
+    case 0x2e:
+    case 0x36:
+    case 0x3e:
+    case 0x64:
+    case 0x65:
+    // prefix_osz, prefix_asz
+    case 0x66:
+    case 0x67:
+    // prefix_lock, prefix_f2, prefix_f3
+    case 0xf0:
+    case 0xf2:
+    case 0xf3:
+      op_idx++;
+      break;
+
+    // prefix_rex
+    case 0x40:
+    case 0x41:
+    case 0x42:
+    case 0x43:
+    case 0x44:
+    case 0x45:
+    case 0x46:
+    case 0x47:
+    case 0x48:
+    case 0x49:
+    case 0x4a:
+    case 0x4b:
+    case 0x4c:
+    case 0x4d:
+    case 0x4e:
+    case 0x4f:
+      if (is_exec_mode_64b)
+        op_idx++;
+      else
+        prefix_done = true;
+      break;
+
+    // prefix_vex_c4, c5
+    case 0xc5:
+      if (!is_exec_mode_64b && (inst_bytes[op_idx + 1] & 0xc0) != 0xc0) {
+        prefix_done = true;
+        break;
+      }
+
+      ret.opcode_len = 2;
+      ret.primary_opcode = inst_bytes[op_idx + 2];
+      ret.modrm = inst_bytes[op_idx + 3];
+      return ret;
+
+    case 0xc4:
+      if (!is_exec_mode_64b && (inst_bytes[op_idx + 1] & 0xc0) != 0xc0) {
+        prefix_done = true;
+        break;
+      }
+      ret.opcode_len = inst_bytes[op_idx + 1] & 0x1f;
+      ret.primary_opcode = inst_bytes[op_idx + 3];
+      ret.modrm = inst_bytes[op_idx + 4];
+      return ret;
+
+    // prefix_evex
+    case 0x62:
+      if (!is_exec_mode_64b && (inst_bytes[op_idx + 1] & 0xc0) != 0xc0) {
+        prefix_done = true;
+        break;
+      }
+      ret.opcode_len = inst_bytes[op_idx + 1] & 0x03;
+      ret.primary_opcode = inst_bytes[op_idx + 4];
+      ret.modrm = inst_bytes[op_idx + 5];
+      return ret;
+
+    default:
+      prefix_done = true;
+      break;
+    }
+  } // prefix done
+
+  ret.primary_opcode = inst_bytes[op_idx];
+  ret.modrm = inst_bytes[op_idx + 1];
+  ret.opcode_len = 1;
+
+  // If the first opcode is 0F, it's two- or three- byte opcodes.
+  if (ret.primary_opcode == 0x0F) {
+    ret.primary_opcode = inst_bytes[++op_idx]; // get the next byte
+
+    if (ret.primary_opcode == 0x38) {
+      ret.opcode_len = 3;
+      ret.primary_opcode = inst_bytes[++op_idx]; // get the next byte
+      ret.modrm = inst_bytes[op_idx + 1];
+    } else if (ret.primary_opcode == 0x3A) {
+      ret.opcode_len = 3;
+      ret.primary_opcode = inst_bytes[++op_idx];
+      ret.modrm = inst_bytes[op_idx + 1];
+    } else if ((ret.primary_opcode & 0xf8) == 0x38) {
+      ret.opcode_len = 0;
+      ret.primary_opcode = inst_bytes[++op_idx];
+      ret.modrm = inst_bytes[op_idx + 1];
+    } else if (ret.primary_opcode == 0x0F) {
+      ret.opcode_len = 3;
+      // opcode is 0x0F, no needs to update
+      ret.modrm = inst_bytes[op_idx + 1];
+    } else {
+      ret.opcode_len = 2;
+      ret.modrm = inst_bytes[op_idx + 1];
+    }
+  }
+
+  return ret;
+}
+
+lldb::InstructionControlFlowKind GetControlFlowKind(bool is_exec_mode_64b,
+                                                    Opcode m_opcode) {
+  std::optional<InstructionOpcodeAndModrm> ret;
+
+  if (m_opcode.GetOpcodeBytes() == nullptr || m_opcode.GetByteSize() <= 0) {
+    // x86_64 and i386 instructions are categorized as Opcode::Type::eTypeBytes
+    return lldb::eInstructionControlFlowKindUnknown;
+  }
+
+  // Opcode bytes will be decoded into primary_opcode, modrm and opcode length.
+  // These are the three values deciding instruction control flow kind.
+  ret = InstructionLengthDecode((const uint8_t *)m_opcode.GetOpcodeBytes(),
+                                m_opcode.GetByteSize(), is_exec_mode_64b);
+  if (!ret)
+    return lldb::eInstructionControlFlowKindUnknown;
+  else
+    return MapOpcodeIntoControlFlowKind(*ret);
+}
+
+} // namespace x86
 
 class InstructionLLVMC : public lldb_private::Instruction {
 public:
@@ -87,8 +416,7 @@ public:
                    AddressClass addr_class)
       : Instruction(address, addr_class),
         m_disasm_wp(std::static_pointer_cast<DisassemblerLLVMC>(
-            disasm.shared_from_this())),
-        m_using_file_addr(false) {}
+            disasm.shared_from_this())) {}
 
   ~InstructionLLVMC() override = default;
 
@@ -100,6 +428,16 @@ public:
   bool HasDelaySlot() override {
     VisitInstruction();
     return m_has_delay_slot;
+  }
+
+  bool IsLoad() override {
+    VisitInstruction();
+    return m_is_load;
+  }
+
+  bool IsAuthenticated() override {
+    VisitInstruction();
+    return m_is_authenticated;
   }
 
   DisassemblerLLVMC::MCDisasmInstance *GetDisasmToUse(bool &is_alternate_isa) {
@@ -209,6 +547,19 @@ public:
     }
   }
 
+  lldb::InstructionControlFlowKind
+  GetControlFlowKind(const lldb_private::ExecutionContext *exe_ctx) override {
+    DisassemblerScope disasm(*this, exe_ctx);
+    if (disasm){
+      if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86)
+        return x86::GetControlFlowKind(/*is_64b=*/false, m_opcode);
+      else if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
+        return x86::GetControlFlowKind(/*is_64b=*/true, m_opcode);
+    }
+
+    return eInstructionControlFlowKindUnknown;
+  }
+
   void CalculateMnemonicOperandsAndComment(
       const lldb_private::ExecutionContext *exe_ctx) override {
     DataExtractor data;
@@ -216,7 +567,9 @@ public:
 
     if (m_opcode.GetData(data)) {
       std::string out_string;
+      std::string markup_out_string;
       std::string comment_string;
+      std::string markup_comment_string;
 
       DisassemblerScope disasm(*this, exe_ctx);
       if (disasm) {
@@ -258,7 +611,14 @@ public:
 
         if (inst_size > 0) {
           mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
-          mc_disasm_ptr->PrintMCInst(inst, out_string, comment_string);
+
+          const bool saved_use_color = mc_disasm_ptr->GetUseColor();
+          mc_disasm_ptr->SetUseColor(false);
+          mc_disasm_ptr->PrintMCInst(inst, pc, out_string, comment_string);
+          mc_disasm_ptr->SetUseColor(true);
+          mc_disasm_ptr->PrintMCInst(inst, pc, markup_out_string,
+                                     markup_comment_string);
+          mc_disasm_ptr->SetUseColor(saved_use_color);
 
           if (!comment_string.empty()) {
             AppendComment(comment_string);
@@ -322,6 +682,11 @@ public:
         if (s_regex.Execute(out_string, &matches)) {
           m_opcode_name = matches[1].str();
           m_mnemonics = matches[2].str();
+        }
+        matches.clear();
+        if (s_regex.Execute(markup_out_string, &matches)) {
+          m_markup_opcode_name = matches[1].str();
+          m_markup_mnemonics = matches[2].str();
         }
       }
     }
@@ -783,8 +1148,7 @@ public:
       }
     }
 
-    if (Log *log =
-            lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS)) {
+    if (Log *log = GetLog(LLDBLog::Process)) {
       StreamString ss;
 
       ss.Printf("[%s] expands to %zu operands:\n", operands_string,
@@ -810,16 +1174,20 @@ protected:
   std::weak_ptr<DisassemblerLLVMC> m_disasm_wp;
 
   bool m_is_valid = false;
-  bool m_using_file_addr;
+  bool m_using_file_addr = false;
   bool m_has_visited_instruction = false;
 
   // Be conservative. If we didn't understand the instruction, say it:
   //   - Might branch
   //   - Does not have a delay slot
   //   - Is not a call
+  //   - Is not a load
+  //   - Is not an authenticated instruction
   bool m_does_branch = true;
   bool m_has_delay_slot = false;
   bool m_is_call = false;
+  bool m_is_load = false;
+  bool m_is_authenticated = false;
 
   void VisitInstruction() {
     if (m_has_visited_instruction)
@@ -849,6 +1217,8 @@ protected:
     m_does_branch = mc_disasm_ptr->CanBranch(inst);
     m_has_delay_slot = mc_disasm_ptr->HasDelaySlot(inst);
     m_is_call = mc_disasm_ptr->IsCall(inst);
+    m_is_load = mc_disasm_ptr->IsLoad(inst);
+    m_is_authenticated = mc_disasm_ptr->IsAuthenticated(inst);
   }
 
 private:
@@ -936,11 +1306,17 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
   if (!instr_printer_up)
     return Instance();
 
-  return Instance(
-      new MCDisasmInstance(std::move(instr_info_up), std::move(reg_info_up),
-                           std::move(subtarget_info_up), std::move(asm_info_up),
-                           std::move(context_up), std::move(disasm_up),
-                           std::move(instr_printer_up)));
+  instr_printer_up->setPrintBranchImmAsAddress(true);
+
+  // Not all targets may have registered createMCInstrAnalysis().
+  std::unique_ptr<llvm::MCInstrAnalysis> instr_analysis_up(
+      curr_target->createMCInstrAnalysis(instr_info_up.get()));
+
+  return Instance(new MCDisasmInstance(
+      std::move(instr_info_up), std::move(reg_info_up),
+      std::move(subtarget_info_up), std::move(asm_info_up),
+      std::move(context_up), std::move(disasm_up), std::move(instr_printer_up),
+      std::move(instr_analysis_up)));
 }
 
 DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
@@ -950,13 +1326,15 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
     std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
     std::unique_ptr<llvm::MCContext> &&context_up,
     std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
-    std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up)
+    std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up,
+    std::unique_ptr<llvm::MCInstrAnalysis> &&instr_analysis_up)
     : m_instr_info_up(std::move(instr_info_up)),
       m_reg_info_up(std::move(reg_info_up)),
       m_subtarget_info_up(std::move(subtarget_info_up)),
       m_asm_info_up(std::move(asm_info_up)),
       m_context_up(std::move(context_up)), m_disasm_up(std::move(disasm_up)),
-      m_instr_printer_up(std::move(instr_printer_up)) {
+      m_instr_printer_up(std::move(instr_printer_up)),
+      m_instr_analysis_up(std::move(instr_analysis_up)) {
   assert(m_instr_info_up && m_reg_info_up && m_subtarget_info_up &&
          m_asm_info_up && m_context_up && m_disasm_up && m_instr_printer_up);
 }
@@ -977,15 +1355,17 @@ uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
 }
 
 void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
-    llvm::MCInst &mc_inst, std::string &inst_string,
+    llvm::MCInst &mc_inst, lldb::addr_t pc, std::string &inst_string,
     std::string &comments_string) {
   llvm::raw_string_ostream inst_stream(inst_string);
   llvm::raw_string_ostream comments_stream(comments_string);
 
+  inst_stream.enable_colors(m_instr_printer_up->getUseColor());
   m_instr_printer_up->setCommentStream(comments_stream);
-  m_instr_printer_up->printInst(&mc_inst, 0, llvm::StringRef(),
+  m_instr_printer_up->printInst(&mc_inst, pc, llvm::StringRef(),
                                 *m_subtarget_info_up, inst_stream);
   m_instr_printer_up->setCommentStream(llvm::nulls());
+
   comments_stream.flush();
 
   static std::string g_newlines("\r\n");
@@ -1012,8 +1392,18 @@ void DisassemblerLLVMC::MCDisasmInstance::SetStyle(
   }
 }
 
+void DisassemblerLLVMC::MCDisasmInstance::SetUseColor(bool use_color) {
+  m_instr_printer_up->setUseColor(use_color);
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::GetUseColor() const {
+  return m_instr_printer_up->getUseColor();
+}
+
 bool DisassemblerLLVMC::MCDisasmInstance::CanBranch(
     llvm::MCInst &mc_inst) const {
+  if (m_instr_analysis_up)
+    return m_instr_analysis_up->mayAffectControlFlow(mc_inst, *m_reg_info_up);
   return m_instr_info_up->get(mc_inst.getOpcode())
       .mayAffectControlFlow(mc_inst, *m_reg_info_up);
 }
@@ -1024,13 +1414,37 @@ bool DisassemblerLLVMC::MCDisasmInstance::HasDelaySlot(
 }
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsCall(llvm::MCInst &mc_inst) const {
+  if (m_instr_analysis_up)
+    return m_instr_analysis_up->isCall(mc_inst);
   return m_instr_info_up->get(mc_inst.getOpcode()).isCall();
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::IsLoad(llvm::MCInst &mc_inst) const {
+  return m_instr_info_up->get(mc_inst.getOpcode()).mayLoad();
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
+    llvm::MCInst &mc_inst) const {
+  const auto &InstrDesc = m_instr_info_up->get(mc_inst.getOpcode());
+
+  // Treat software auth traps (brk 0xc470 + aut key, where 0x70 == 'p', 0xc4
+  // == 'a' + 'c') as authenticated instructions for reporting purposes, in
+  // addition to the standard authenticated instructions specified in ARMv8.3.
+  bool IsBrkC47x = false;
+  if (InstrDesc.isTrap() && mc_inst.getNumOperands() == 1) {
+    const llvm::MCOperand &Op0 = mc_inst.getOperand(0);
+    if (Op0.isImm() && Op0.getImm() >= 0xc470 && Op0.getImm() <= 0xc474)
+      IsBrkC47x = true;
+  }
+
+  return InstrDesc.isAuthenticated() || IsBrkC47x;
 }
 
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
                                      const char *flavor_string)
     : Disassembler(arch, flavor_string), m_exe_ctx(nullptr), m_inst(nullptr),
-      m_data_from_file(false) {
+      m_data_from_file(false), m_adrp_address(LLDB_INVALID_ADDRESS),
+      m_adrp_insn() {
   if (!FlavorValidForArchSpec(arch, m_flavor.c_str())) {
     m_flavor.assign("default");
   }
@@ -1057,21 +1471,21 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       thumb_arch_name.erase(0, 3);
       thumb_arch_name.insert(0, "thumb");
     } else {
-      thumb_arch_name = "thumbv8.7a";
+      thumb_arch_name = "thumbv9.3a";
     }
     thumb_arch.GetTriple().setArchName(llvm::StringRef(thumb_arch_name));
   }
 
   // If no sub architecture specified then use the most recent arm architecture
-  // so the disassembler will return all instruction. Without it we will see a
-  // lot of unknow opcode in case the code uses instructions which are not
-  // available in the oldest arm version (used when no sub architecture is
-  // specified)
+  // so the disassembler will return all instructions. Without it we will see a
+  // lot of unknown opcodes if the code uses instructions which are not
+  // available in the oldest arm version (which is used when no sub architecture
+  // is specified).
   if (triple.getArch() == llvm::Triple::arm &&
       triple.getSubArch() == llvm::Triple::NoSubArch)
-    triple.setArchName("armv8.7a");
+    triple.setArchName("armv9.3a");
 
-  std::string features_str = "";
+  std::string features_str;
   const char *triple_str = triple.getTriple().c_str();
 
   // ARM Cortex M0-M7 devices only execute thumb instructions
@@ -1138,13 +1552,32 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       features_str += "+dspr2,";
   }
 
-  // If any AArch64 variant, enable latest ISA with any optional
-  // extensions like SVE.
+  // If any AArch64 variant, enable latest ISA with all extensions.
   if (triple.isAArch64()) {
-    features_str += "+v8.7a,+sve2,+mte";
+    features_str += "+all,";
 
     if (triple.getVendor() == llvm::Triple::Apple)
       cpu = "apple-latest";
+  }
+
+  if (triple.isRISCV()) {
+    uint32_t arch_flags = arch.GetFlags();
+    if (arch_flags & ArchSpec::eRISCV_rvc)
+      features_str += "+c,";
+    if (arch_flags & ArchSpec::eRISCV_rve)
+      features_str += "+e,";
+    if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
+        ArchSpec::eRISCV_float_abi_single)
+      features_str += "+f,";
+    if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
+        ArchSpec::eRISCV_float_abi_double)
+      features_str += "+f,+d,";
+    if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
+        ArchSpec::eRISCV_float_abi_quad)
+      features_str += "+f,+d,+q,";
+    // FIXME: how do we detect features such as `+a`, `+m`?
+    // Turn them on by default now, since everyone seems to use them
+    features_str += "+a,+m,";
   }
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
@@ -1182,16 +1615,14 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
 
 DisassemblerLLVMC::~DisassemblerLLVMC() = default;
 
-Disassembler *DisassemblerLLVMC::CreateInstance(const ArchSpec &arch,
-                                                const char *flavor) {
+lldb::DisassemblerSP DisassemblerLLVMC::CreateInstance(const ArchSpec &arch,
+                                                       const char *flavor) {
   if (arch.GetTriple().getArch() != llvm::Triple::UnknownArch) {
-    std::unique_ptr<DisassemblerLLVMC> disasm_up(
-        new DisassemblerLLVMC(arch, flavor));
-
-    if (disasm_up.get() && disasm_up->IsValid())
-      return disasm_up.release();
+    auto disasm_sp = std::make_shared<DisassemblerLLVMC>(arch, flavor);
+    if (disasm_sp && disasm_sp->IsValid())
+      return disasm_sp;
   }
-  return nullptr;
+  return lldb::DisassemblerSP();
 }
 
 size_t DisassemblerLLVMC::DecodeInstructions(const Address &base_addr,
@@ -1255,11 +1686,6 @@ void DisassemblerLLVMC::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString DisassemblerLLVMC::GetPluginNameStatic() {
-  static ConstString g_name("llvm-mc");
-  return g_name;
-}
-
 int DisassemblerLLVMC::OpInfoCallback(void *disassembler, uint64_t pc,
                                       uint64_t offset, uint64_t size,
                                       int tag_type, void *tag_bug) {
@@ -1310,6 +1736,46 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
       Target *target = m_exe_ctx ? m_exe_ctx->GetTargetPtr() : nullptr;
       Address value_so_addr;
       Address pc_so_addr;
+      if (target->GetArchitecture().GetMachine() == llvm::Triple::aarch64 ||
+          target->GetArchitecture().GetMachine() == llvm::Triple::aarch64_be ||
+          target->GetArchitecture().GetMachine() == llvm::Triple::aarch64_32) {
+        if (*type_ptr == LLVMDisassembler_ReferenceType_In_ARM64_ADRP) {
+          m_adrp_address = pc;
+          m_adrp_insn = value;
+          *name = nullptr;
+          *type_ptr = LLVMDisassembler_ReferenceType_InOut_None;
+          return nullptr;
+        }
+        // If this instruction is an ADD and
+        // the previous instruction was an ADRP and
+        // the ADRP's register and this ADD's register are the same,
+        // then this is a pc-relative address calculation.
+        if (*type_ptr == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
+            m_adrp_insn && m_adrp_address == pc - 4 &&
+            (*m_adrp_insn & 0x1f) == ((value >> 5) & 0x1f)) {
+          uint32_t addxri_inst;
+          uint64_t adrp_imm, addxri_imm;
+          // Get immlo and immhi bits, OR them together to get the ADRP imm
+          // value.
+          adrp_imm =
+              ((*m_adrp_insn & 0x00ffffe0) >> 3) | ((*m_adrp_insn >> 29) & 0x3);
+          // if high bit of immhi after right-shifting set, sign extend
+          if (adrp_imm & (1ULL << 20))
+            adrp_imm |= ~((1ULL << 21) - 1);
+
+          addxri_inst = value;
+          addxri_imm = (addxri_inst >> 10) & 0xfff;
+          // check if 'sh' bit is set, shift imm value up if so
+          // (this would make no sense, ADRP already gave us this part)
+          if ((addxri_inst >> (12 + 5 + 5)) & 1)
+            addxri_imm <<= 12;
+          value = (m_adrp_address & 0xfffffffffffff000LL) + (adrp_imm << 12) +
+                  addxri_imm;
+        }
+        m_adrp_address = LLDB_INVALID_ADDRESS;
+        m_adrp_insn.reset();
+      }
+
       if (m_inst->UsingFileAddress()) {
         ModuleSP module_sp(m_inst->GetAddress().GetModule());
         if (module_sp) {
@@ -1371,12 +1837,13 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
     }
   }
 
+  // TODO: llvm-objdump sets the type_ptr to the
+  // LLVMDisassembler_ReferenceType_Out_* values
+  // based on where value_so_addr is pointing, with
+  // Mach-O specific augmentations in MachODump.cpp. e.g.
+  // see what AArch64ExternalSymbolizer::tryAddingSymbolicOperand
+  // handles.
   *type_ptr = LLVMDisassembler_ReferenceType_InOut_None;
   *name = nullptr;
   return nullptr;
 }
-
-// PluginInterface protocol
-ConstString DisassemblerLLVMC::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t DisassemblerLLVMC::GetPluginVersion() { return 1; }

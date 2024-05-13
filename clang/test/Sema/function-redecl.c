@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -Wno-strict-prototypes -verify %s
 
 // PR3588
 void g0(int, int);
 void g0(); // expected-note{{previous declaration is here}} expected-note{{'g0' declared here}}
 
-void f0() {
+void f0(void) {
   g0(1, 2, 3); // expected-error{{too many arguments to function call}}
 }
 
@@ -29,7 +29,7 @@ INT g2(x) // expected-error{{conflicting types for 'g2'}}
   return x;
 }
 
-void test() {
+void test(void) {
   int f1;
   {
     void f1(double);
@@ -45,7 +45,7 @@ void test() {
 extern void g3(int); // expected-note{{previous declaration is here}}
 static void g3(int x) { } // expected-error{{static declaration of 'g3' follows non-static declaration}}
 
-void test2() {
+void test2(void) {
   extern int f2; // expected-note 2 {{previous definition is here}}
   {
     void f2(int); // expected-error{{redefinition of 'f2' as different kind of symbol}}
@@ -59,14 +59,13 @@ void test2() {
   }
 }
 
-// <rdar://problem/6127293>
 int outer1(int); // expected-note{{previous declaration is here}}
 struct outer3 { };
 int outer4(int); // expected-note{{previous declaration is here}}
 int outer5; // expected-note{{previous definition is here}}
 int *outer7(int);
 
-void outer_test() {
+void outer_test(void) {
   int outer1(float); // expected-error{{conflicting types for 'outer1'}}
   int outer2(int); // expected-note{{previous declaration is here}}
   int outer3(int); // expected-note{{previous declaration is here}}
@@ -88,7 +87,7 @@ void outer_test2(int x) {
   int *ip2 = outer7(x);
 }
 
-void outer_test3() {
+void outer_test3(void) {
   int *(*fp)(int) = outer8; // expected-error{{use of undeclared identifier 'outer8'}}
 }
 
@@ -96,7 +95,7 @@ enum e { e1, e2 };
 
 // GNU extension: prototypes and K&R function definitions
 int isroot(short x, // expected-note{{previous declaration is here}}
-           enum e); 
+           enum e);
 
 int isroot(x, y)
      short x; // expected-warning{{promoted type 'int' of K&R function parameter is not compatible with the parameter type 'short' declared in a previous prototype}}
@@ -119,13 +118,13 @@ typedef int a();
 typedef int a2(int*);
 a x;
 a2 x2; // expected-note{{passing argument to parameter here}}
-void test_x() {
+void test_x(void) {
   x(5);
-  x2(5); // expected-warning{{incompatible integer to pointer conversion passing 'int' to parameter of type 'int *'}}
+  x2(5); // expected-error{{incompatible integer to pointer conversion passing 'int' to parameter of type 'int *'}}
 }
 
-enum e0 {one}; 
-void f3(); 
+enum e0 {one};
+void f3();
 void f3(enum e0 x) {}
 
 enum incomplete_enum;

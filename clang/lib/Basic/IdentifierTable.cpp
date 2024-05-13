@@ -13,6 +13,7 @@
 
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
@@ -24,7 +25,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdio>
@@ -36,7 +36,7 @@ using namespace clang;
 // A check to make sure the ObjCOrBuiltinID has sufficient room to store the
 // largest possible target/aux-target combination. If we exceed this, we likely
 // need to just change the ObjCOrBuiltinIDBits value in IdentifierTable.h.
-static_assert(2 * LargestBuiltinID < (2 << (ObjCOrBuiltinIDBits - 1)),
+static_assert(2 * LargestBuiltinID < (2 << (InterestingIdentifierBits - 1)),
               "Insufficient ObjCOrBuiltinID Bits");
 
 //===----------------------------------------------------------------------===//
@@ -51,8 +51,7 @@ namespace {
 
 /// A simple identifier lookup iterator that represents an
 /// empty sequence of identifiers.
-class EmptyLookupIterator : public IdentifierIterator
-{
+class EmptyLookupIterator : public IdentifierIterator {
 public:
   StringRef Next() override { return StringRef(); }
 };
@@ -82,7 +81,7 @@ IdentifierTable::IdentifierTable(const LangOptions &LangOpts,
 // Constants for TokenKinds.def
 namespace {
 
-  enum {
+  enum TokenKey : unsigned {
     KEYC99        = 0x1,
     KEYCXX        = 0x2,
     KEYCXX11      = 0x4,
@@ -93,72 +92,158 @@ namespace {
     KEYNOCXX      = 0x80,
     KEYBORLAND    = 0x100,
     KEYOPENCLC    = 0x200,
-    KEYC11        = 0x400,
+    KEYC23        = 0x400,
     KEYNOMS18     = 0x800,
     KEYNOOPENCL   = 0x1000,
     WCHARSUPPORT  = 0x2000,
     HALFSUPPORT   = 0x4000,
     CHAR8SUPPORT  = 0x8000,
-    KEYCONCEPTS   = 0x10000,
-    KEYOBJC       = 0x20000,
-    KEYZVECTOR    = 0x40000,
-    KEYCOROUTINES = 0x80000,
-    KEYMODULES    = 0x100000,
-    KEYCXX20      = 0x200000,
-    KEYOPENCLCXX  = 0x400000,
-    KEYMSCOMPAT   = 0x800000,
-    KEYSYCL       = 0x1000000,
+    KEYOBJC       = 0x10000,
+    KEYZVECTOR    = 0x20000,
+    KEYCOROUTINES = 0x40000,
+    KEYMODULES    = 0x80000,
+    KEYCXX20      = 0x100000,
+    KEYOPENCLCXX  = 0x200000,
+    KEYMSCOMPAT   = 0x400000,
+    KEYSYCL       = 0x800000,
+    KEYCUDA       = 0x1000000,
+    KEYHLSL       = 0x2000000,
+    KEYFIXEDPOINT = 0x4000000,
+    KEYMAX        = KEYFIXEDPOINT, // The maximum key
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
-    KEYALL = (0x1ffffff & ~KEYNOMS18 &
-              ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
+    KEYALL = (KEYMAX | (KEYMAX-1)) & ~KEYNOMS18 &
+             ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
   };
 
-  /// How a keyword is treated in the selected standard.
+  /// How a keyword is treated in the selected standard. This enum is ordered
+  /// intentionally so that the value that 'wins' is the most 'permissive'.
   enum KeywordStatus {
+    KS_Unknown,     // Not yet calculated. Used when figuring out the status.
     KS_Disabled,    // Disabled
+    KS_Future,      // Is a keyword in future standard
     KS_Extension,   // Is an extension
     KS_Enabled,     // Enabled
-    KS_Future       // Is a keyword in future standard
   };
 
 } // namespace
+
+// This works on a single TokenKey flag and checks the LangOpts to get the
+// KeywordStatus based exclusively on this flag, so that it can be merged in
+// getKeywordStatus. Most should be enabled/disabled, but some might imply
+// 'future' versions, or extensions. Returns 'unknown' unless this is KNOWN to
+// be disabled, and the calling function makes it 'disabled' if no other flag
+// changes it. This is necessary for the KEYNOCXX and KEYNOOPENCL flags.
+static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
+                                            TokenKey Flag) {
+  // Flag is a single bit version of TokenKey (that is, not
+  // KEYALL/KEYALLCXX/etc), so we can check with == throughout this function.
+  assert((Flag & ~(Flag - 1)) == Flag && "Multiple bits set?");
+
+  switch (Flag) {
+  case KEYC99:
+    if (LangOpts.C99)
+      return KS_Enabled;
+    return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
+  case KEYC23:
+    if (LangOpts.C23)
+      return KS_Enabled;
+    return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
+  case KEYCXX:
+    return LangOpts.CPlusPlus ? KS_Enabled : KS_Unknown;
+  case KEYCXX11:
+    if (LangOpts.CPlusPlus11)
+      return KS_Enabled;
+    return LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
+  case KEYCXX20:
+    if (LangOpts.CPlusPlus20)
+      return KS_Enabled;
+    return LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
+  case KEYGNU:
+    return LangOpts.GNUKeywords ? KS_Extension : KS_Unknown;
+  case KEYMS:
+    return LangOpts.MicrosoftExt ? KS_Extension : KS_Unknown;
+  case BOOLSUPPORT:
+    if (LangOpts.Bool)      return KS_Enabled;
+    return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
+  case KEYALTIVEC:
+    return LangOpts.AltiVec ? KS_Enabled : KS_Unknown;
+  case KEYBORLAND:
+    return LangOpts.Borland ? KS_Extension : KS_Unknown;
+  case KEYOPENCLC:
+    return LangOpts.OpenCL && !LangOpts.OpenCLCPlusPlus ? KS_Enabled
+                                                        : KS_Unknown;
+  case WCHARSUPPORT:
+    return LangOpts.WChar ? KS_Enabled : KS_Unknown;
+  case HALFSUPPORT:
+    return LangOpts.Half ? KS_Enabled : KS_Unknown;
+  case CHAR8SUPPORT:
+    if (LangOpts.Char8) return KS_Enabled;
+    if (LangOpts.CPlusPlus20) return KS_Unknown;
+    if (LangOpts.CPlusPlus) return KS_Future;
+    return KS_Unknown;
+  case KEYOBJC:
+    // We treat bridge casts as objective-C keywords so we can warn on them
+    // in non-arc mode.
+    return LangOpts.ObjC ? KS_Enabled : KS_Unknown;
+  case KEYZVECTOR:
+    return LangOpts.ZVector ? KS_Enabled : KS_Unknown;
+  case KEYCOROUTINES:
+    return LangOpts.Coroutines ? KS_Enabled : KS_Unknown;
+  case KEYMODULES:
+    return KS_Unknown;
+  case KEYOPENCLCXX:
+    return LangOpts.OpenCLCPlusPlus ? KS_Enabled : KS_Unknown;
+  case KEYMSCOMPAT:
+    return LangOpts.MSVCCompat ? KS_Enabled : KS_Unknown;
+  case KEYSYCL:
+    return LangOpts.isSYCL() ? KS_Enabled : KS_Unknown;
+  case KEYCUDA:
+    return LangOpts.CUDA ? KS_Enabled : KS_Unknown;
+  case KEYHLSL:
+    return LangOpts.HLSL ? KS_Enabled : KS_Unknown;
+  case KEYNOCXX:
+    // This is enabled in all non-C++ modes, but might be enabled for other
+    // reasons as well.
+    return LangOpts.CPlusPlus ? KS_Unknown : KS_Enabled;
+  case KEYNOOPENCL:
+    // The disable behavior for this is handled in getKeywordStatus.
+    return KS_Unknown;
+  case KEYNOMS18:
+    // The disable behavior for this is handled in getKeywordStatus.
+    return KS_Unknown;
+  case KEYFIXEDPOINT:
+    return LangOpts.FixedPoint ? KS_Enabled : KS_Disabled;
+  default:
+    llvm_unreachable("Unknown KeywordStatus flag");
+  }
+}
 
 /// Translates flags as specified in TokenKinds.def into keyword status
 /// in the given language standard.
 static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
                                       unsigned Flags) {
+  // KEYALL means always enabled, so special case this one.
   if (Flags == KEYALL) return KS_Enabled;
-  if (LangOpts.CPlusPlus && (Flags & KEYCXX)) return KS_Enabled;
-  if (LangOpts.CPlusPlus11 && (Flags & KEYCXX11)) return KS_Enabled;
-  if (LangOpts.CPlusPlus20 && (Flags & KEYCXX20)) return KS_Enabled;
-  if (LangOpts.C99 && (Flags & KEYC99)) return KS_Enabled;
-  if (LangOpts.GNUKeywords && (Flags & KEYGNU)) return KS_Extension;
-  if (LangOpts.MicrosoftExt && (Flags & KEYMS)) return KS_Extension;
-  if (LangOpts.MSVCCompat && (Flags & KEYMSCOMPAT)) return KS_Enabled;
-  if (LangOpts.Borland && (Flags & KEYBORLAND)) return KS_Extension;
-  if (LangOpts.Bool && (Flags & BOOLSUPPORT)) return KS_Enabled;
-  if (LangOpts.Half && (Flags & HALFSUPPORT)) return KS_Enabled;
-  if (LangOpts.WChar && (Flags & WCHARSUPPORT)) return KS_Enabled;
-  if (LangOpts.Char8 && (Flags & CHAR8SUPPORT)) return KS_Enabled;
-  if (LangOpts.AltiVec && (Flags & KEYALTIVEC)) return KS_Enabled;
-  if (LangOpts.ZVector && (Flags & KEYZVECTOR)) return KS_Enabled;
-  if (LangOpts.OpenCL && !LangOpts.OpenCLCPlusPlus && (Flags & KEYOPENCLC))
-    return KS_Enabled;
-  if (LangOpts.OpenCLCPlusPlus && (Flags & KEYOPENCLCXX)) return KS_Enabled;
-  if (!LangOpts.CPlusPlus && (Flags & KEYNOCXX)) return KS_Enabled;
-  if (LangOpts.C11 && (Flags & KEYC11)) return KS_Enabled;
-  // We treat bridge casts as objective-C keywords so we can warn on them
-  // in non-arc mode.
-  if (LangOpts.ObjC && (Flags & KEYOBJC)) return KS_Enabled;
-  if (LangOpts.CPlusPlus20 && (Flags & KEYCONCEPTS)) return KS_Enabled;
-  if (LangOpts.Coroutines && (Flags & KEYCOROUTINES)) return KS_Enabled;
-  if (LangOpts.ModulesTS && (Flags & KEYMODULES)) return KS_Enabled;
-  if (LangOpts.CPlusPlus && (Flags & KEYALLCXX)) return KS_Future;
-  if (LangOpts.CPlusPlus && !LangOpts.CPlusPlus20 && (Flags & CHAR8SUPPORT))
-    return KS_Future;
-  if (LangOpts.isSYCL() && (Flags & KEYSYCL))
-    return KS_Enabled;
-  return KS_Disabled;
+  // These are tests that need to 'always win', as they are special in that they
+  // disable based on certain conditions.
+  if (LangOpts.OpenCL && (Flags & KEYNOOPENCL)) return KS_Disabled;
+  if (LangOpts.MSVCCompat && (Flags & KEYNOMS18) &&
+      !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
+    return KS_Disabled;
+
+  KeywordStatus CurStatus = KS_Unknown;
+
+  while (Flags != 0) {
+    unsigned CurFlag = Flags & ~(Flags - 1);
+    Flags = Flags & ~CurFlag;
+    CurStatus = std::max(
+        CurStatus,
+        getKeywordStatusHelper(LangOpts, static_cast<TokenKey>(CurFlag)));
+  }
+
+  if (CurStatus == KS_Unknown)
+    return KS_Disabled;
+  return CurStatus;
 }
 
 /// AddKeyword - This method is used to associate a token ID with specific
@@ -168,15 +253,6 @@ static void AddKeyword(StringRef Keyword,
                        tok::TokenKind TokenCode, unsigned Flags,
                        const LangOptions &LangOpts, IdentifierTable &Table) {
   KeywordStatus AddResult = getKeywordStatus(LangOpts, Flags);
-
-  // Don't add this keyword under MSVCCompat.
-  if (LangOpts.MSVCCompat && (Flags & KEYNOMS18) &&
-      !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
-    return;
-
-  // Don't add this keyword under OpenCL.
-  if (LangOpts.OpenCL && (Flags & KEYNOOPENCL))
-    return;
 
   // Don't add this keyword if disabled in this language.
   if (AddResult == KS_Disabled) return;
@@ -204,6 +280,16 @@ static void AddObjCKeyword(StringRef Name,
   Table.get(Name).setObjCKeywordID(ObjCID);
 }
 
+static void AddNotableIdentifier(StringRef Name,
+                                 tok::NotableIdentifierKind BTID,
+                                 IdentifierTable &Table) {
+  // Don't add 'not_notable' identifier.
+  if (BTID != tok::not_notable) {
+    IdentifierInfo &Info = Table.get(Name, tok::identifier);
+    Info.setNotableIdentifierID(BTID);
+  }
+}
+
 /// AddKeywords - Add all keywords to the symbol table.
 ///
 void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
@@ -220,6 +306,9 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 #define OBJC_AT_KEYWORD(NAME)  \
   if (LangOpts.ObjC)           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
+#define NOTABLE_IDENTIFIER(NAME)                                               \
+  AddNotableIdentifier(StringRef(#NAME), tok::NAME, *this);
+
 #define TESTING_KEYWORD(NAME, FLAGS)
 #include "clang/Basic/TokenKinds.def"
 
@@ -307,6 +396,27 @@ IdentifierInfo::isReserved(const LangOptions &LangOpts) const {
     return ReservedIdentifierStatus::ContainsDoubleUnderscore;
 
   return ReservedIdentifierStatus::NotReserved;
+}
+
+ReservedLiteralSuffixIdStatus
+IdentifierInfo::isReservedLiteralSuffixId() const {
+  StringRef Name = getName();
+
+  if (Name[0] != '_')
+    return ReservedLiteralSuffixIdStatus::NotStartsWithUnderscore;
+
+  if (Name.contains("__"))
+    return ReservedLiteralSuffixIdStatus::ContainsDoubleUnderscore;
+
+  return ReservedLiteralSuffixIdStatus::NotReserved;
+}
+
+StringRef IdentifierInfo::deuglifiedName() const {
+  StringRef Name = getName();
+  if (Name.size() >= 2 && Name.front() == '_' &&
+      (Name[1] == '_' || (Name[1] >= 'A' && Name[1] <= 'Z')))
+    return Name.ltrim('_');
+  return Name;
 }
 
 tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
@@ -405,63 +515,6 @@ unsigned llvm::DenseMapInfo<clang::Selector>::getHashValue(clang::Selector S) {
   return DenseMapInfo<void*>::getHashValue(S.getAsOpaquePtr());
 }
 
-namespace clang {
-
-/// One of these variable length records is kept for each
-/// selector containing more than one keyword. We use a folding set
-/// to unique aggregate names (keyword selectors in ObjC parlance). Access to
-/// this class is provided strictly through Selector.
-class alignas(IdentifierInfoAlignment) MultiKeywordSelector
-    : public detail::DeclarationNameExtra,
-      public llvm::FoldingSetNode {
-  MultiKeywordSelector(unsigned nKeys) : DeclarationNameExtra(nKeys) {}
-
-public:
-  // Constructor for keyword selectors.
-  MultiKeywordSelector(unsigned nKeys, IdentifierInfo **IIV)
-      : DeclarationNameExtra(nKeys) {
-    assert((nKeys > 1) && "not a multi-keyword selector");
-
-    // Fill in the trailing keyword array.
-    IdentifierInfo **KeyInfo = reinterpret_cast<IdentifierInfo **>(this + 1);
-    for (unsigned i = 0; i != nKeys; ++i)
-      KeyInfo[i] = IIV[i];
-  }
-
-  // getName - Derive the full selector name and return it.
-  std::string getName() const;
-
-  using DeclarationNameExtra::getNumArgs;
-
-  using keyword_iterator = IdentifierInfo *const *;
-
-  keyword_iterator keyword_begin() const {
-    return reinterpret_cast<keyword_iterator>(this + 1);
-  }
-
-  keyword_iterator keyword_end() const {
-    return keyword_begin() + getNumArgs();
-  }
-
-  IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
-    assert(i < getNumArgs() && "getIdentifierInfoForSlot(): illegal index");
-    return keyword_begin()[i];
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, keyword_iterator ArgTys,
-                      unsigned NumArgs) {
-    ID.AddInteger(NumArgs);
-    for (unsigned i = 0; i != NumArgs; ++i)
-      ID.AddPointer(ArgTys[i]);
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, keyword_begin(), getNumArgs());
-  }
-};
-
-} // namespace clang.
-
 bool Selector::isKeywordSelector(ArrayRef<StringRef> Names) const {
   assert(!Names.empty() && "must have >= 1 selector slots");
   if (getNumArgs() != Names.size())
@@ -488,7 +541,8 @@ unsigned Selector::getNumArgs() const {
   return SI->getNumArgs();
 }
 
-IdentifierInfo *Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
+const IdentifierInfo *
+Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
   if (getIdentifierInfoFlag() < MultiArg) {
     assert(argIndex == 0 && "illegal keyword index");
     return getAsIdentifierInfo();
@@ -500,7 +554,7 @@ IdentifierInfo *Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
 }
 
 StringRef Selector::getNameForSlot(unsigned int argIndex) const {
-  IdentifierInfo *II = getIdentifierInfoForSlot(argIndex);
+  const IdentifierInfo *II = getIdentifierInfoForSlot(argIndex);
   return II ? II->getName() : StringRef();
 }
 
@@ -517,11 +571,11 @@ std::string MultiKeywordSelector::getName() const {
 }
 
 std::string Selector::getAsString() const {
-  if (InfoPtr == 0)
+  if (isNull())
     return "<null selector>";
 
   if (getIdentifierInfoFlag() < MultiArg) {
-    IdentifierInfo *II = getAsIdentifierInfo();
+    const IdentifierInfo *II = getAsIdentifierInfo();
 
     if (getNumArgs() == 0) {
       assert(II && "If the number of arguments is 0 then II is guaranteed to "
@@ -551,11 +605,11 @@ LLVM_DUMP_METHOD void Selector::dump() const { print(llvm::errs()); }
 static bool startsWithWord(StringRef name, StringRef word) {
   if (name.size() < word.size()) return false;
   return ((name.size() == word.size() || !isLowercase(name[word.size()])) &&
-          name.startswith(word));
+          name.starts_with(word));
 }
 
 ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return OMF_None;
 
   StringRef name = first->getName();
@@ -575,8 +629,7 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
     return OMF_performSelector;
 
   // The other method families may begin with a prefix of underscores.
-  while (!name.empty() && name.front() == '_')
-    name = name.substr(1);
+  name = name.ltrim('_');
 
   if (name.empty()) return OMF_None;
   switch (name.front()) {
@@ -603,7 +656,7 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
 }
 
 ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return OIT_None;
 
   StringRef name = first->getName();
@@ -631,7 +684,7 @@ ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
 }
 
 ObjCStringFormatFamily Selector::getStringFormatFamilyImpl(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return SFF_None;
 
   StringRef name = first->getName();
@@ -689,7 +742,7 @@ SelectorTable::constructSetterSelector(IdentifierTable &Idents,
 
 std::string SelectorTable::getPropertyNameFromSetterSelector(Selector Sel) {
   StringRef Name = Sel.getNameForSlot(0);
-  assert(Name.startswith("set") && "invalid setter name");
+  assert(Name.starts_with("set") && "invalid setter name");
   return (Twine(toLowercase(Name[3])) + Name.drop_front(4)).str();
 }
 
@@ -698,7 +751,8 @@ size_t SelectorTable::getTotalMemory() const {
   return SelTabImpl.Allocator.getTotalMemory();
 }
 
-Selector SelectorTable::getSelector(unsigned nKeys, IdentifierInfo **IIV) {
+Selector SelectorTable::getSelector(unsigned nKeys,
+                                    const IdentifierInfo **IIV) {
   if (nKeys < 2)
     return Selector(IIV[0], nKeys);
 
@@ -764,4 +818,51 @@ StringRef clang::getNullabilitySpelling(NullabilityKind kind,
     return isContextSensitive ? "null_unspecified" : "_Null_unspecified";
   }
   llvm_unreachable("Unknown nullability kind.");
+}
+
+llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
+                                     NullabilityKind NK) {
+  switch (NK) {
+  case NullabilityKind::NonNull:
+    return OS << "NonNull";
+  case NullabilityKind::Nullable:
+    return OS << "Nullable";
+  case NullabilityKind::NullableResult:
+    return OS << "NullableResult";
+  case NullabilityKind::Unspecified:
+    return OS << "Unspecified";
+  }
+  llvm_unreachable("Unknown nullability kind.");
+}
+
+diag::kind
+IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
+                                         const LangOptions &LangOpts) {
+  assert(II.isFutureCompatKeyword() && "diagnostic should not be needed");
+
+  unsigned Flags = llvm::StringSwitch<unsigned>(II.getName())
+#define KEYWORD(NAME, FLAGS) .Case(#NAME, FLAGS)
+#include "clang/Basic/TokenKinds.def"
+#undef KEYWORD
+      ;
+
+  if (LangOpts.CPlusPlus) {
+    if ((Flags & KEYCXX11) == KEYCXX11)
+      return diag::warn_cxx11_keyword;
+
+    // char8_t is not modeled as a CXX20_KEYWORD because it's not
+    // unconditionally enabled in C++20 mode. (It can be disabled
+    // by -fno-char8_t.)
+    if (((Flags & KEYCXX20) == KEYCXX20) ||
+        ((Flags & CHAR8SUPPORT) == CHAR8SUPPORT))
+      return diag::warn_cxx20_keyword;
+  } else {
+    if ((Flags & KEYC99) == KEYC99)
+      return diag::warn_c99_keyword;
+    if ((Flags & KEYC23) == KEYC23)
+      return diag::warn_c23_keyword;
+  }
+
+  llvm_unreachable(
+      "Keyword not known to come from a newer Standard or proposed Standard");
 }

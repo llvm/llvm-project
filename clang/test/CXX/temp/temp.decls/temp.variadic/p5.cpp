@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -fblocks -fms-extensions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -fblocks -fms-extensions -fsyntax-only -verify=expected,cxx11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++23 -fblocks -fms-extensions -fsyntax-only -verify=expected %s
 
 template<typename T, typename U> struct pair;
 template<typename ...> struct tuple;
@@ -26,12 +27,12 @@ struct ExpansionLengthMismatch {
   };
 };
 
-ExpansionLengthMismatch<int, long>::Inner<unsigned int, unsigned long>::type 
+ExpansionLengthMismatch<int, long>::Inner<unsigned int, unsigned long>::type
   *il_pairs;
 tuple<pair<int, unsigned int>, pair<long, unsigned long> >*il_pairs_2 = il_pairs;
 
 ExpansionLengthMismatch<short, int, long>::Inner<unsigned int, unsigned long>::type // expected-note{{in instantiation of template class 'ExpansionLengthMismatch<short, int, long>::Inner<unsigned int, unsigned long>' requested here}}
-  *il_pairs_bad; 
+  *il_pairs_bad;
 
 
 // An appearance of a name of a parameter pack that is not expanded is
@@ -39,7 +40,7 @@ ExpansionLengthMismatch<short, int, long>::Inner<unsigned int, unsigned long>::t
 
 // Test for unexpanded parameter packs in each of the type nodes.
 template<typename T, int N, typename ... Types>
-struct TestPPName 
+struct TestPPName
   : public Types, public T  // expected-error{{base type contains unexpanded parameter pack 'Types'}}
 {
   // BuiltinType is uninteresting
@@ -59,33 +60,35 @@ struct TestPPName
 
   // MemberPointerType
   typedef Types TestPPName::* member_pointer_1; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
-  typedef int Types::*member_pointer_2; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef int Types::*member_pointer_2; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // ConstantArrayType
-  typedef Types constant_array[17]; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef Types constant_array[17]; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // IncompleteArrayType
-  typedef Types incomplete_array[]; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef Types incomplete_array[]; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // VariableArrayType
-  void f(int i) {
-    Types variable_array[i]; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  void f(int i) {            // expected-note {{declared here}}
+    Types variable_array[i]; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} \
+                                expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                expected-note {{function parameter 'i' with unknown value cannot be used in a constant expression}}
   }
 
   // DependentSizedArrayType
-  typedef Types dependent_sized_array[N]; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef Types dependent_sized_array[N]; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // DependentSizedExtVectorType
-  typedef Types dependent_sized_ext_vector __attribute__((ext_vector_type(N))); // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef Types dependent_sized_ext_vector __attribute__((ext_vector_type(N))); // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // VectorType is uninteresting
 
   // ExtVectorType
-  typedef Types ext_vector __attribute__((ext_vector_type(4))); // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef Types ext_vector __attribute__((ext_vector_type(4))); // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // FunctionProtoType
-  typedef Types (function_type_1)(int); // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
-  typedef int (function_type_2)(Types); // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef Types (function_type_1)(int); // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
+  typedef int (function_type_2)(Types); // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // FunctionNoProtoType is uninteresting
   // UnresolvedUsingType is uninteresting
@@ -93,34 +96,34 @@ struct TestPPName
   // TypedefType is uninteresting
 
   // TypeOfExprType
-  typedef __typeof__((static_cast<Types>(0))) typeof_expr; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef __typeof__((static_cast<Types>(0))) typeof_expr; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // TypeOfType
-  typedef __typeof__(Types) typeof_type;  // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef __typeof__(Types) typeof_type;  // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // DecltypeType
-  typedef decltype((static_cast<Types>(0))) typeof_expr; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef decltype((static_cast<Types>(0))) typeof_expr; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // RecordType is uninteresting
   // EnumType is uninteresting
   // ElaboratedType is uninteresting
 
   // TemplateTypeParmType
-  typedef Types template_type_parm; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef Types template_type_parm; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // SubstTemplateTypeParmType is uninteresting
 
   // TemplateSpecializationType
-  typedef pair<Types, int> template_specialization; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef pair<Types, int> template_specialization; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // InjectedClassName is uninteresting.
 
   // DependentNameType
-  typedef typename Types::type dependent_name; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef typename Types::type dependent_name; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // DependentTemplateSpecializationType
-  typedef typename Types::template apply<int> dependent_name_1; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
-  typedef typename T::template apply<Types> dependent_name_2; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}} 
+  typedef typename Types::template apply<int> dependent_name_1; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
+  typedef typename T::template apply<Types> dependent_name_2; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
 
   // ObjCObjectType is uninteresting
   // ObjCInterfaceType is uninteresting
@@ -164,7 +167,9 @@ template<typename T, typename... Types>
 // FIXME: this should test that the diagnostic reads "type contains..."
 struct alignas(Types) TestUnexpandedDecls : T{ // expected-error{{expression contains unexpanded parameter pack 'Types'}}
   void member_function(Types);  // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
+#if __cplusplus < 201703L
   void member_function () throw(Types); // expected-error{{exception type contains unexpanded parameter pack 'Types'}}
+#endif
   void member_function2() noexcept(Types()); // expected-error{{expression contains unexpanded parameter pack 'Types'}}
   operator Types() const; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
   Types data_member;  // expected-error{{data member type contains unexpanded parameter pack 'Types'}}
@@ -191,7 +196,7 @@ struct alignas(Types) TestUnexpandedDecls : T{ // expected-error{{expression con
   }
 
   T in_class_member_init = static_cast<Types>(0); // expected-error{{initializer contains unexpanded parameter pack 'Types'}}
-  TestUnexpandedDecls() : 
+  TestUnexpandedDecls() :
     Types(static_cast<Types>(0)), // expected-error{{initializer contains unexpanded parameter pack 'Types'}}
     Types(static_cast<Types>(0))...,
     in_class_member_init(static_cast<Types>(0)) {} // expected-error{{initializer contains unexpanded parameter pack 'Types'}}
@@ -199,7 +204,7 @@ struct alignas(Types) TestUnexpandedDecls : T{ // expected-error{{expression con
   void default_function_args(T = static_cast<Types>(0)); // expected-error{{default argument contains unexpanded parameter pack 'Types'}}
 
   template<typename = Types*> // expected-error{{default argument contains unexpanded parameter pack 'Types'}}
-    struct default_template_args_1; 
+    struct default_template_args_1;
   template<int = static_cast<Types>(0)> // expected-error{{default argument contains unexpanded parameter pack 'Types'}}
     struct default_template_args_2;
   template<template<typename> class = Types::template apply> // expected-error{{default argument contains unexpanded parameter pack 'Types'}}
@@ -364,9 +369,51 @@ test:
   void f(int arg = values); // expected-error{{default argument contains unexpanded parameter pack 'values'}}
 }
 
-// Test unexpanded parameter packs in partial specializations.
-template<typename ...Types>
-struct TestUnexpandedDecls<int, Types>; // expected-error{{partial specialization contains unexpanded parameter pack 'Types'}}
+// Test unexpanded parameter packs in partial/explicit specializations.
+namespace Specializations {
+  template<typename T, typename... Ts>
+  struct PrimaryClass;
+  template<typename... Ts>
+  struct PrimaryClass<Ts>; // expected-error{{partial specialization contains unexpanded parameter pack 'Ts'}}
+
+  template<typename T, typename... Ts>
+  void PrimaryFunction();
+  template<typename T, typename... Ts>
+  void PrimaryFunction<Ts>(); // expected-error{{function template partial specialization is not allowed}}
+
+#if __cplusplus >= 201402L
+  template<typename T, typename... Ts>
+  constexpr int PrimaryVar = 0;
+  template<typename... Ts>
+  constexpr int PrimaryVar<Ts> = 0; // expected-error{{partial specialization contains unexpanded parameter pack 'Ts'}}
+#endif
+
+  template<typename... Ts>
+  struct OuterClass {
+    template<typename... Us>
+    struct InnerClass;
+    template<>
+    struct InnerClass<Ts>; // expected-error{{explicit specialization contains unexpanded parameter pack 'Ts'}}
+    template<typename U>
+    struct InnerClass<U, Ts>; // expected-error{{partial specialization contains unexpanded parameter pack 'Ts'}}
+
+    template<typename... Us>
+    void InnerFunction();
+    template<>
+    void InnerFunction<Ts>(); // expected-error{{explicit specialization contains unexpanded parameter pack 'Ts'}}
+
+    friend void PrimaryFunction<Ts>(); // expected-error{{friend declaration contains unexpanded parameter pack 'Ts'}}
+
+#if __cplusplus >= 201402L
+    template<typename... Us>
+    constexpr static int InnerVar = 0;
+    template<>
+    constexpr static int InnerVar<Ts> = 0; // expected-error{{explicit specialization contains unexpanded parameter pack 'Ts'}}
+    template<typename U>
+    constexpr static int InnerVar<U, Ts> = 0; // expected-error{{partial specialization contains unexpanded parameter pack 'Ts'}}
+#endif
+  };
+}
 
 // Test for diagnostics in the presence of multiple unexpanded
 // parameter packs.
@@ -387,13 +434,13 @@ struct MemberTemplatePPNames {
 
 // Example from working paper
 namespace WorkingPaperExample {
-  template<typename...> struct Tuple {}; 
+  template<typename...> struct Tuple {};
   template<typename T1, typename T2> struct Pair {};
-  
-  template<class ... Args1> struct zip { 
+
+  template<class ... Args1> struct zip {
     template<class ... Args2> struct with {
       typedef Tuple<Pair<Args1, Args2> ... > type; // expected-error{{pack expansion contains parameter packs 'Args1' and 'Args2' that have different lengths (1 vs. 2)}}
-    }; 
+    };
   };
 
   typedef zip<short, int>::with<unsigned short, unsigned>::type T1; // T1 is Tuple<Pair<short, unsigned short>, Pair<int, unsigned>>
@@ -404,9 +451,9 @@ namespace WorkingPaperExample {
   template<class ... Args> void f(Args...);
   template<class ... Args> void h(Args...);
 
-  template<class ... Args> 
+  template<class ... Args>
   void g(Args ... args) {
-    f(const_cast<const Args*>(&args)...); // OK: "Args" and "args" are expanded within f 
+    f(const_cast<const Args*>(&args)...); // OK: "Args" and "args" are expanded within f
     f(5 ...); // expected-error{{pack expansion does not contain any unexpanded parameter packs}}
     f(args); // expected-error{{expression contains unexpanded parameter pack 'args'}}
     f(h(args ...) + args ...);
@@ -427,7 +474,7 @@ namespace PR16303 {
 namespace PR21289 {
   template<int> using T = int;
   template<typename> struct S { static const int value = 0; };
-  template<typename> const int vt = 0; // expected-warning {{extension}}
+  template<typename> const int vt = 0; // cxx11-warning {{extension}}
   int f(...);
   template<int ...Ns> void g() {
     f(T<Ns>()...);
@@ -467,5 +514,48 @@ int fn() {
 
   FooAlias<int> b;
   bar(b);
+}
+}
+
+namespace GH58452 {
+template <typename... As> struct A {
+  template <typename... Bs> using B = void(As...(Bs));
+};
+
+template <typename... Cs> struct C {
+    template <typename... Ds> using D = typename A<Cs...>::template B<Ds...>;
+};
+
+using t1 = C<int, int>::template D<float, float>;
+
+template <typename A, typename B>
+using ConditionalRewrite = B;
+
+template <typename T>
+using SignatureType = int;
+
+template <typename... Args>
+struct Type1 {
+    template <typename... Params>
+        using Return = SignatureType<int(ConditionalRewrite<Args, Params>...)>;
+
+};
+
+template <typename... Args>
+struct Type2 {
+    using T1 = Type1<Args...>;
+
+      template <typename... Params>
+          using Return = typename T1::template Return<Params...>;
+
+};
+
+template <typename T>
+typename T::template Return<int, int> InvokeMethod() {
+    return 3;
+}
+
+int Function1() {
+    return InvokeMethod<Type2<int, int>>();
 }
 }

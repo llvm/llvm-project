@@ -1,13 +1,13 @@
 
-; RUN: not --crash llc < %s -march=xcore -code-model=medium 2>&1 | FileCheck %s -check-prefix=BAD_CM
-; RUN: not --crash llc < %s -march=xcore -code-model=kernel 2>&1 | FileCheck %s -check-prefix=BAD_CM
-; RUN: not --crash llc < %s -march=xcore -code-model=tiny 2>&1 | FileCheck %s -check-prefix=BAD_CM
+; RUN: not --crash llc < %s -mtriple=xcore -code-model=medium 2>&1 | FileCheck %s -check-prefix=BAD_CM
+; RUN: not --crash llc < %s -mtriple=xcore -code-model=kernel 2>&1 | FileCheck %s -check-prefix=BAD_CM
+; RUN: not --crash llc < %s -mtriple=xcore -code-model=tiny 2>&1 | FileCheck %s -check-prefix=BAD_CM
 ; BAD_CM: Target only supports CodeModel Small or Large
 
 
-; RUN: llc < %s -march=xcore | FileCheck %s
-; RUN: llc < %s -march=xcore -code-model=small | FileCheck %s
-; RUN: llc < %s -march=xcore -code-model=large | FileCheck %s -check-prefix=LARGE
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore -code-model=small | FileCheck %s
+; RUN: llc < %s -mtriple=xcore -code-model=large | FileCheck %s -check-prefix=LARGE
 
 
 ; CHECK-LABEL: test:
@@ -30,10 +30,10 @@
 ; LARGE: retsp 0
 @A1 = external dso_local global [50000 x i32]
 @A2 = external dso_local global [50000 x i32]
-define [50000 x i32]* @test(i1 %bool) nounwind {
+define ptr @test(i1 %bool) nounwind {
 entry:
-  %Addr = select i1 %bool, [50000 x i32]* @A1, [50000 x i32]* @A2
-  ret [50000 x i32]* %Addr
+  %Addr = select i1 %bool, ptr @A1, ptr @A2
+  ret ptr %Addr
 }
 
 
@@ -95,24 +95,24 @@ entry:
 ; LARGE: ldw r1, dp[s+36]
 ; LARGE: add r0, r0, r1
 ; LARGE: retsp 0
-define dso_local i32 @f(i32* %i) {
+define dso_local i32 @f(ptr %i) {
 entry:
-  %0 = getelementptr inbounds i32, i32* %i, i32 16383
-  %1 = load i32, i32* %0
-  %2 = getelementptr inbounds i32, i32* %i, i32 16384
-  %3 = load i32, i32* %2
+  %0 = getelementptr inbounds i32, ptr %i, i32 16383
+  %1 = load i32, ptr %0
+  %2 = getelementptr inbounds i32, ptr %i, i32 16384
+  %3 = load i32, ptr %2
   %4 = add nsw i32 %1, %3
-  %5 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @l, i32 0, i32 0)
+  %5 = load i32, ptr @l
   %6 = add nsw i32 %4, %5
-  %7 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @l, i32 0, i32 1)
+  %7 = load i32, ptr getelementptr inbounds ([100 x i32], ptr @l, i32 0, i32 1)
   %8 = add nsw i32 %6, %7
-  %9 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @l, i32 0, i32 98)
+  %9 = load i32, ptr getelementptr inbounds ([100 x i32], ptr @l, i32 0, i32 98)
   %10 = add nsw i32 %8, %9
-  %11 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @l, i32 0, i32 99)
+  %11 = load i32, ptr getelementptr inbounds ([100 x i32], ptr @l, i32 0, i32 99)
   %12 = add nsw i32 %10, %11
-  %13 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @s, i32 0, i32 0)
+  %13 = load i32, ptr @s
   %14 = add nsw i32 %12, %13
-  %15 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @s, i32 0, i32 9)
+  %15 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @s, i32 0, i32 9)
   %16 = add nsw i32 %14, %15
   ret i32 %16
 }
@@ -133,7 +133,7 @@ entry:
 @NoSize = external dso_local global [0 x i32]
 define dso_local i32 @UnknownSize() nounwind {
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @NoSize, i32 0, i32 10)
+  %0 = load i32, ptr getelementptr inbounds ([0 x i32], ptr @NoSize, i32 0, i32 10)
   ret i32 %0
 }
 
@@ -151,9 +151,9 @@ entry:
 ; LARGE-NEXT: retsp 0
 %Struct = type opaque
 @Unknown = external dso_local global %Struct
-define %Struct* @UnknownStruct() nounwind {
+define ptr @UnknownStruct() nounwind {
 entry:
-  ret %Struct* @Unknown
+  ret ptr @Unknown
 }
 
 

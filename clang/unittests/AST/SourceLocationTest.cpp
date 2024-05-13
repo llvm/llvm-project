@@ -16,11 +16,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "MatchVerifier.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTFwd.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -135,13 +139,19 @@ TEST(LabelStmt, Range) {
 TEST(ParmVarDecl, KNRLocation) {
   LocationVerifier<ParmVarDecl> Verifier;
   Verifier.expectLocation(1, 8);
-  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C99));
+  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C89));
+
+  Verifier.expectLocation(1, 15);
+  EXPECT_TRUE(Verifier.match("void f(i) int i; {}", varDecl(), Lang_C99));
 }
 
 TEST(ParmVarDecl, KNRRange) {
   RangeVerifier<ParmVarDecl> Verifier;
   Verifier.expectRange(1, 8, 1, 8);
-  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C99));
+  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C89));
+
+  Verifier.expectRange(1, 11, 1, 15);
+  EXPECT_TRUE(Verifier.match("void f(i) int i; {}", varDecl(), Lang_C99));
 }
 
 TEST(CXXNewExpr, ArrayRange) {
@@ -213,6 +223,48 @@ TEST(TypeLoc, LongRange) {
   RangeVerifier<TypeLoc> Verifier;
   Verifier.expectRange(1, 1, 1, 1);
   EXPECT_TRUE(Verifier.match("long a;", typeLoc()));
+}
+
+TEST(TypeLoc, DecltypeTypeLocRange) {
+  llvm::Annotations Code(R"(
+    $full1[[decltype(1)]] a;
+    struct A {struct B{};} var;
+    $full2[[decltype(var)]]::B c;
+  )");
+  auto AST = tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{});
+  ASTContext &Ctx = AST->getASTContext();
+  const auto &SM = Ctx.getSourceManager();
+
+  auto MatchedLocs = clang::ast_matchers::match(
+      typeLoc(loc(decltypeType())).bind("target"), Ctx);
+  ASSERT_EQ(MatchedLocs.size(), 2u);
+  auto verify = [&](SourceRange ActualRange,
+                    const llvm::Annotations::Range &Expected) {
+    auto ActualCharRange =
+        Lexer::getAsCharRange(ActualRange, SM, Ctx.getLangOpts());
+    EXPECT_EQ(SM.getFileOffset(ActualCharRange.getBegin()), Expected.Begin);
+    EXPECT_EQ(SM.getFileOffset(ActualCharRange.getEnd()), Expected.End);
+  };
+  const auto *Target1 = MatchedLocs[0].getNodeAs<DecltypeTypeLoc>("target");
+  verify(Target1->getSourceRange(), Code.range("full1"));
+
+  const auto *Target2 = MatchedLocs[1].getNodeAs<DecltypeTypeLoc>("target");
+  verify(Target2->getSourceRange(), Code.range("full2"));
+}
+
+TEST(TypeLoc, AutoTypeLocRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 14);
+  EXPECT_TRUE(Verifier.match("decltype(auto) a = 1;", typeLoc(loc(autoType())),
+                             Lang_CXX14));
+
+  const char *Code =
+      R"cpp(template <typename T> concept C = true;
+C auto abc();
+)cpp";
+  // Should include "C auto" tokens.
+  Verifier.expectRange(2, 1, 2, 3); // token range.
+  EXPECT_TRUE(Verifier.match(Code, typeLoc(loc(autoType())), Lang_CXX20));
 }
 
 TEST(TypeLoc, LongDoubleRange) {
@@ -322,10 +374,10 @@ TEST(CompoundLiteralExpr, CompoundVectorLiteralRange) {
 TEST(CompoundLiteralExpr, ParensCompoundVectorLiteralRange) {
   RangeVerifier<CompoundLiteralExpr> Verifier;
   Verifier.expectRange(2, 20, 2, 31);
-  EXPECT_TRUE(Verifier.match(
-                  "typedef int int2 __attribute__((ext_vector_type(2)));\n"
-                  "constant int2 i2 = (int2)(1, 2);", 
-                  compoundLiteralExpr(), Lang_OpenCL));
+  EXPECT_TRUE(
+      Verifier.match("typedef int int2 __attribute__((ext_vector_type(2)));\n"
+                     "constant int2 i2 = (int2)(1, 2);",
+                     compoundLiteralExpr(), Lang_OpenCL));
 }
 
 TEST(InitListExpr, VectorLiteralListBraceRange) {
@@ -388,6 +440,47 @@ TEST(UnaryTransformTypeLoc, ParensRange) {
       "typedef __underlying_type(T) type;\n"
       "};",
       loc(unaryTransformType())));
+}
+
+TEST(PointerTypeLoc, StarLoc) {
+  llvm::Annotations Example(R"c(
+    int $star^*var;
+  )c");
+
+  auto AST = tooling::buildASTFromCode(Example.code());
+  SourceManager &SM = AST->getSourceManager();
+  auto &Ctx = AST->getASTContext();
+
+  auto *VD = selectFirst<VarDecl>("vd", match(varDecl(hasName("var")).bind("vd"), Ctx));
+  ASSERT_NE(VD, nullptr);
+
+  auto TL =
+      VD->getTypeSourceInfo()->getTypeLoc().castAs<PointerTypeLoc>();
+  ASSERT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("star"));
+}
+
+TEST(PointerTypeLoc, StarLocBehindSugar) {
+  llvm::Annotations Example(R"c(
+    #define NODEREF __attribute__((noderef))
+    char $1st^* NODEREF _Nonnull $2nd^* var;
+  )c");
+
+  auto AST = tooling::buildASTFromCode(Example.code());
+  SourceManager &SM = AST->getSourceManager();
+  auto &Ctx = AST->getASTContext();
+
+  auto *VD = selectFirst<VarDecl>("vd", match(varDecl(hasName("var")).bind("vd"), Ctx));
+  ASSERT_NE(VD, nullptr);
+
+  auto TL = VD->getTypeSourceInfo()->getTypeLoc().castAs<PointerTypeLoc>();
+  EXPECT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("2nd"));
+
+  // Cast intermediate TypeLoc to make sure the structure matches expectations.
+  auto InnerPtrTL = TL.getPointeeLoc().castAs<AttributedTypeLoc>()
+    .getNextTypeLoc().castAs<MacroQualifiedTypeLoc>()
+    .getNextTypeLoc().castAs<AttributedTypeLoc>()
+    .getNextTypeLoc().castAs<PointerTypeLoc>();
+  EXPECT_EQ(SM.getFileOffset(InnerPtrTL.getStarLoc()), Example.point("1st"));
 }
 
 TEST(CXXFunctionalCastExpr, SourceRange) {
@@ -559,7 +652,7 @@ TEST(FriendDecl, FriendDecltypeLocation) {
 
 TEST(FriendDecl, FriendDecltypeRange) {
   RangeVerifier<FriendDecl> Verifier;
-  Verifier.expectRange(4, 1, 4, 8);
+  Verifier.expectRange(4, 1, 4, 22);
   EXPECT_TRUE(Verifier.match("struct A;\n"
                              "A foo();\n"
                              "struct A {\n"
@@ -909,6 +1002,131 @@ TEST(Decl, MemberPointerStarLoc) {
   auto TL =
       VD->getTypeSourceInfo()->getTypeLoc().castAs<MemberPointerTypeLoc>();
   ASSERT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("star"));
+}
+
+class AutoTypeLocConceptReferenceRangeVerifier
+    : public RangeVerifier<AutoTypeLoc> {
+protected:
+  SourceRange getRange(const AutoTypeLoc &Node) override {
+    if (const ConceptReference *ConceptRef = Node.getConceptReference()) {
+      return ConceptRef->getSourceRange();
+    }
+    return SourceRange();
+  }
+};
+
+TEST(LocationVerifier, AutoTypeLocConceptReference) {
+  AutoTypeLocConceptReferenceRangeVerifier Verifier;
+
+  const char *Code =
+      R"cpp(template <typename T> concept CCC = true;
+CCC auto abc();
+)cpp";
+  Verifier.expectRange(2, 1, 2, 1);
+  EXPECT_TRUE(Verifier.match(Code, typeLoc(loc(autoType())), Lang_CXX20));
+
+  const char *Code2 =
+      R"cpp(template <typename T, int> concept CCC = true;
+CCC<10> auto abc();
+)cpp";
+  Verifier.expectRange(2, 1, 2, 7);
+  EXPECT_TRUE(Verifier.match(Code2, typeLoc(loc(autoType())), Lang_CXX20));
+
+  const char *Code3 =
+      R"cpp(namespace NS {
+  template <typename T, int> concept CCC = true;
+}
+NS::CCC<10> auto abc();
+)cpp";
+  Verifier.expectRange(4, 1, 4, 11);
+  EXPECT_TRUE(Verifier.match(Code3, typeLoc(loc(autoType())), Lang_CXX20));
+
+  const char *Code4 =
+      R"cpp(template <typename T> concept CCC = true;
+CCC<> auto abc();
+)cpp";
+  Verifier.expectRange(2, 1, 2, 5);
+  EXPECT_TRUE(Verifier.match(Code4, typeLoc(loc(autoType())), Lang_CXX20));
+}
+
+class TemplateTypeParmDeclConceptReferenceRangeVerifier
+    : public RangeVerifier<TemplateTypeParmDecl> {
+protected:
+  SourceRange getRange(const TemplateTypeParmDecl &Node) override {
+    if (const TypeConstraint *TC = Node.getTypeConstraint()) {
+      if (const ConceptReference *ConceptRef = TC->getConceptReference()) {
+        return ConceptRef->getSourceRange();
+      }
+    }
+    return SourceRange();
+  }
+};
+
+TEST(LocationVerifier, TemplateTypeParmDeclConceptReference) {
+  TemplateTypeParmDeclConceptReferenceRangeVerifier Verifier;
+
+  const char *Code =
+      R"cpp(template <typename S> concept CCC = true;
+template <CCC T> void print(T object);
+)cpp";
+  Verifier.expectRange(2, 11, 2, 11);
+  EXPECT_TRUE(Verifier.match(Code, templateTypeParmDecl(), Lang_CXX20));
+
+  const char *Code2 =
+      R"cpp(template <typename S, typename T> concept CCC = true;
+template <CCC<int> T> void print(T object);
+)cpp";
+  Verifier.expectRange(2, 11, 2, 18);
+  EXPECT_TRUE(Verifier.match(Code2, templateTypeParmDecl(), Lang_CXX20));
+
+  const char *Code3 =
+      R"cpp(namespace X {
+  template <typename S, typename T> concept CCC = true;
+}
+template <X::CCC<int> T> void print(T object);
+)cpp";
+  Verifier.expectRange(4, 11, 4, 21);
+  EXPECT_TRUE(Verifier.match(Code3, templateTypeParmDecl(), Lang_CXX20));
+}
+
+class ConceptSpecializationExprConceptReferenceRangeVerifier
+    : public RangeVerifier<VarTemplateDecl> {
+protected:
+  SourceRange getRange(const VarTemplateDecl &Node) override {
+    assert(Node.hasAssociatedConstraints());
+    SmallVector<const Expr *, 3> ACs;
+    Node.getAssociatedConstraints(ACs);
+    for (const Expr *Constraint : ACs) {
+      if (const ConceptSpecializationExpr *CSConstraint =
+              dyn_cast<ConceptSpecializationExpr>(Constraint)) {
+        return CSConstraint->getConceptReference()->getSourceRange();
+      }
+    }
+    return SourceRange();
+  }
+};
+
+const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
+    varTemplateDecl;
+
+TEST(LocationVerifier, ConceptSpecializationExprConceptReference) {
+  ConceptSpecializationExprConceptReferenceRangeVerifier Verifier;
+
+  const char *Code =
+      R"cpp(template <int X> concept CCC = true;
+template <int X> requires CCC<X> int z = X;
+)cpp";
+  Verifier.expectRange(2, 27, 2, 32);
+  EXPECT_TRUE(Verifier.match(Code, varTemplateDecl(hasName("z")), Lang_CXX20));
+
+  const char *Code2 =
+      R"cpp(namespace NS {
+template <int X> concept CCC = true;
+}
+template <int X> requires NS::CCC<X> int z = X;
+)cpp";
+  Verifier.expectRange(4, 27, 4, 36);
+  EXPECT_TRUE(Verifier.match(Code2, varTemplateDecl(hasName("z")), Lang_CXX20));
 }
 
 } // end namespace

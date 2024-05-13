@@ -1,5 +1,35 @@
 # Test runner infrastructure for LLDB. This configures the LLDB test trees
 # for use by Lit, and delegates to LLVM's lit test handlers.
+# Lit requires a Python3 interpreter, let's be careful and fail early if it's
+# not present.
+if (NOT DEFINED Python3_EXECUTABLE)
+  message(FATAL_ERROR
+    "LLDB test suite requires a Python3 interpreter but none "
+    "was found. Please install Python3 or disable tests with "
+    "`LLDB_INCLUDE_TESTS=OFF`.")
+endif()
+
+if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
+  message(STATUS "Enforcing strict test requirements for LLDB")
+  # Lit uses psutil to do per-test timeouts.
+  set(useful_python_modules psutil)
+
+  if(NOT WIN32)
+    # We no longer vendor pexpect and it is not used on Windows.
+    list(APPEND pexpect)
+  endif()
+
+  foreach(module ${useful_python_modules})
+    lldb_find_python_module(${module})
+    if (NOT PY_${module}_FOUND)
+      message(FATAL_ERROR
+        "Python module '${module}' not found. Please install it via pip or via "
+        "your operating system's package manager. Alternatively, disable "
+        "strict testing requirements with "
+        "`LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=OFF`")
+    endif()
+  endforeach()
+endif()
 
 if(LLDB_BUILT_STANDALONE)
   # In order to run check-lldb-* we need the correct map_config directives in
@@ -12,6 +42,11 @@ if(LLDB_BUILT_STANDALONE)
 endif()
 
 # Configure the build directory.
+# The .noindex suffix is a marker for Spotlight to never index the
+# build directory.  LLDB queries Spotlight to locate .dSYM bundles
+# based on the UUID embedded in a binary, and because the UUID is a
+# hash of filename and .text section, there *will* be conflicts inside
+# the build directory.
 set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
 
 # Configure and create module cache directories.
@@ -19,6 +54,30 @@ set(LLDB_TEST_MODULE_CACHE_LLDB "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-lldb"
 set(LLDB_TEST_MODULE_CACHE_CLANG "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-clang" CACHE PATH "The Clang module cache used by the Clang while building tests.")
 file(MAKE_DIRECTORY ${LLDB_TEST_MODULE_CACHE_LLDB})
 file(MAKE_DIRECTORY ${LLDB_TEST_MODULE_CACHE_CLANG})
+
+# Windows and Linux have no built-in ObjC runtime. Turn this on in order to run tests with GNUstep.
+option(LLDB_TEST_OBJC_GNUSTEP "Enable ObjC tests with GNUstep libobjc2 on non-Apple platforms" Off)
+set(LLDB_TEST_OBJC_GNUSTEP_DIR "" CACHE PATH "Custom path to the GNUstep shared library")
+
+if (LLDB_TEST_OBJC_GNUSTEP)
+  if (LLDB_TEST_OBJC_GNUSTEP_DIR)
+    set(GNUstepObjC_DIR ${LLDB_TEST_OBJC_GNUSTEP_DIR})
+  endif()
+  find_package(GNUstepObjC)
+  if (NOT GNUstepObjC_FOUND)
+    if (LLDB_TEST_OBJC_GNUSTEP_DIR)
+      message(FATAL_ERROR "Failed to find GNUstep libobjc2 in ${LLDB_TEST_OBJC_GNUSTEP_DIR}. "
+                          "Please check LLDB_TEST_OBJC_GNUSTEP_DIR or turn off LLDB_TEST_OBJC_GNUSTEP.")
+    else()
+      message(FATAL_ERROR "Failed to find GNUstep libobjc2. "
+                          "Please set LLDB_TEST_OBJC_GNUSTEP_DIR or turn off LLDB_TEST_OBJC_GNUSTEP.")
+    endif()
+  endif()
+  set(LLDB_TEST_OBJC_GNUSTEP_DIR ${GNUstepObjC_DIR})
+elseif (LLDB_TEST_OBJC_GNUSTEP_DIR)
+  message(STATUS "Reset LLDB_TEST_OBJC_GNUSTEP_DIR since LLDB_TEST_OBJC_GNUSTEP is off")
+  set(LLDB_TEST_OBJC_GNUSTEP_DIR "" CACHE PATH "Custom path to the GNUstep shared library" FORCE)
+endif()
 
 # LLVM_BUILD_MODE is used in lit.site.cfg
 if (CMAKE_CFG_INTDIR STREQUAL ".")
@@ -60,12 +119,8 @@ if(TARGET lldb-server)
   add_lldb_test_dependency(lldb-server)
 endif()
 
-if(TARGET lldb-vscode)
-  add_lldb_test_dependency(lldb-vscode)
-endif()
-
-if(TARGET lldb-instr)
-  add_lldb_test_dependency(lldb-instr)
+if(TARGET lldb-dap)
+  add_lldb_test_dependency(lldb-dap)
 endif()
 
 if(TARGET liblldb)
@@ -89,54 +144,66 @@ if(NOT LLDB_BUILT_STANDALONE)
   )
 endif()
 
+if (LLVM_ENABLE_RUNTIMES)
+  add_lldb_test_dependency(runtimes)
+endif()
+
 # Add dependencies if we test with the in-tree clang.
 # This works with standalone builds as they import the clang target.
 if(TARGET clang)
   add_lldb_test_dependency(clang)
 
-  if(TARGET asan)
-    add_lldb_test_dependency(asan)
+  # TestFullLtoStepping depends on LTO, and only runs when the compiler is clang.
+  add_lldb_test_dependency(LTO)
+
+  if (TARGET libcxx OR ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES))
+    set(LLDB_HAS_LIBCXX ON)
+    if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+      set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+      set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+      set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
+    else()
+      set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+      set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+    endif()
   endif()
 
-  if(TARGET tsan)
-    add_lldb_test_dependency(tsan)
+  if (TARGET compiler-rt OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    set(LLDB_HAS_COMPILER_RT ON)
   endif()
 
-  if(APPLE)
+  if(APPLE AND NOT LLVM_TARGET_IS_CROSSCOMPILE_HOST)
     # FIXME: Standalone builds should import the cxx target as well.
     if(LLDB_BUILT_STANDALONE)
       # For now check that the include directory exists.
-      set(cxx_dir "${LLVM_BINARY_DIR}/include/c++")
-      if(NOT EXISTS ${cxx_dir})
-        message(WARNING "LLDB test suite requires libc++ in llvm/projects/libcxx or an existing build symlinked to ${cxx_dir}")
+      set(cxx_dir "${LLDB_TEST_LIBCXX_ROOT_DIR}/include/c++")
+      if(EXISTS ${cxx_dir})
+        # These variables make sure the API tests can run against a custom
+        # build of libcxx even for standalone builds.
+        set(LLDB_HAS_LIBCXX ON)
+        set(LIBCXX_LIBRARY_DIR "${LLDB_TEST_LIBCXX_ROOT_DIR}/lib${LIBCXX_LIBDIR_SUFFIX}")
+        set(LIBCXX_GENERATED_INCLUDE_DIR "${LLDB_TEST_LIBCXX_ROOT_DIR}/include/c++/v1")
+      else()
+        message(FATAL_ERROR
+            "Couldn't find libcxx build in '${LLDB_TEST_LIBCXX_ROOT_DIR}'. To run the "
+            "test-suite for a standalone LLDB build please build libcxx and point "
+            "LLDB_TEST_LIBCXX_ROOT_DIR to it.")
       endif()
     else()
       # We require libcxx for the test suite, so if we aren't building it,
-      # try to provide a helpful error about how to resolve the situation.
-      if(NOT TARGET cxx AND NOT libcxx IN_LIST LLVM_ENABLE_RUNTIMES)
-        if(LLVM_ENABLE_PROJECTS STREQUAL "")
-          # If `LLVM_ENABLE_PROJECTS` is not being used (implying that we are
-          # using the old layout), suggest checking it out.
-          message(FATAL_ERROR
-            "LLDB test suite requires libc++, but it is currently disabled. "
-            "Please checkout `libcxx` in `llvm/projects` or disable tests "
-            "via `LLDB_INCLUDE_TESTS=OFF`.")
-        else()
-          # If `LLVM_ENABLE_PROJECTS` is being used, suggest adding it.
-          message(FATAL_ERROR
-            "LLDB test suite requires libc++, but it is currently disabled. "
-            "Please add `libcxx` to `LLVM_ENABLE_PROJECTS` or "
-            "`LLVM_ENABLE_RUNTIMES`, or disable tests via "
-            "`LLDB_INCLUDE_TESTS=OFF`.")
-        endif()
+      # provide a helpful error about how to resolve the situation.
+      if(NOT LLDB_HAS_LIBCXX)
+        message(FATAL_ERROR
+          "LLDB test suite requires libc++, but it is currently disabled. "
+          "Please add `libcxx` to `LLVM_ENABLE_RUNTIMES` or disable tests via "
+          "`LLDB_INCLUDE_TESTS=OFF`.")
       endif()
-      add_lldb_test_dependency(cxx)
     endif()
   endif()
 endif()
 
 if (LLDB_BUILT_STANDALONE)
-  set(LLVM_HOST_TRIPLE ${TARGET_TRIPLE})
+  set(LLVM_HOST_TRIPLE ${LLVM_TARGET_TRIPLE})
 endif()
 
 add_lldb_test_dependency(
@@ -151,6 +218,7 @@ add_lldb_test_dependency(
   llvm-objcopy
   llvm-pdbutil
   llvm-readobj
+  llvm-ar
   )
 
 if(TARGET lld)
@@ -174,6 +242,8 @@ llvm_canonicalize_cmake_booleans(
   LLDB_ENABLE_LZMA
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
+  LLDB_HAS_LIBCXX
+  LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS)
 
@@ -196,27 +266,6 @@ add_lit_testsuite(check-lldb "Running lldb lit test suite"
     lldb-shell-test-deps
     lldb-unit-test-deps)
 set_target_properties(check-lldb PROPERTIES FOLDER "lldb tests")
-
-# Add a lit test suite that runs the API & shell test while capturing a
-# reproducer.
-add_lit_testsuite(check-lldb-reproducers-capture
-  "Running lldb test suite with reproducer capture"
-  ${CMAKE_CURRENT_BINARY_DIR}/API
-  ${CMAKE_CURRENT_BINARY_DIR}/Shell
-  PARAMS "lldb-run-with-repro=capture"
-  EXCLUDE_FROM_CHECK_ALL
-  DEPENDS lldb-test-depends)
-
-# Add a lit test suite that runs the API & shell test by replaying a
-# reproducer.
-add_lit_testsuite(check-lldb-reproducers
-  "Running lldb test suite with reproducer replay"
-  ${CMAKE_CURRENT_BINARY_DIR}/API
-  ${CMAKE_CURRENT_BINARY_DIR}/Shell
-  PARAMS "lldb-run-with-repro=replay"
-  EXCLUDE_FROM_CHECK_ALL
-  DEPENDS lldb-test-depends)
-add_dependencies(check-lldb-reproducers check-lldb-reproducers-capture)
 
 if(LLDB_BUILT_STANDALONE)
   # This has to happen *AFTER* add_lit_testsuite.

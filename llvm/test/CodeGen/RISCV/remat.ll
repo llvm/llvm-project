@@ -37,16 +37,16 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui s6, %hi(a)
-; RV32I-NEXT:    lw a0, %lo(a)(s6)
+; RV32I-NEXT:    lui s0, %hi(a)
+; RV32I-NEXT:    lw a0, %lo(a)(s0)
 ; RV32I-NEXT:    beqz a0, .LBB0_11
 ; RV32I-NEXT:  # %bb.1: # %for.body.preheader
-; RV32I-NEXT:    lui s2, %hi(l)
-; RV32I-NEXT:    lui s3, %hi(k)
-; RV32I-NEXT:    lui s4, %hi(j)
-; RV32I-NEXT:    lui s5, %hi(i)
-; RV32I-NEXT:    lui s1, %hi(d)
-; RV32I-NEXT:    lui s0, %hi(e)
+; RV32I-NEXT:    lui s1, %hi(l)
+; RV32I-NEXT:    lui s2, %hi(k)
+; RV32I-NEXT:    lui s3, %hi(j)
+; RV32I-NEXT:    lui s4, %hi(i)
+; RV32I-NEXT:    lui s5, %hi(d)
+; RV32I-NEXT:    lui s6, %hi(e)
 ; RV32I-NEXT:    lui s7, %hi(f)
 ; RV32I-NEXT:    lui s8, %hi(g)
 ; RV32I-NEXT:    lui s9, %hi(h)
@@ -55,144 +55,144 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    j .LBB0_3
 ; RV32I-NEXT:  .LBB0_2: # %for.inc
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; RV32I-NEXT:    lw a0, %lo(a)(s6)
+; RV32I-NEXT:    lw a0, %lo(a)(s0)
 ; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    sw a0, %lo(a)(s6)
+; RV32I-NEXT:    sw a0, %lo(a)(s0)
 ; RV32I-NEXT:    beqz a0, .LBB0_11
 ; RV32I-NEXT:  .LBB0_3: # %for.body
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    lw a1, %lo(l)(s2)
+; RV32I-NEXT:    lw a1, %lo(l)(s1)
 ; RV32I-NEXT:    beqz a1, .LBB0_5
 ; RV32I-NEXT:  # %bb.4: # %if.then
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV32I-NEXT:    lw a1, %lo(b)(s11)
 ; RV32I-NEXT:    lw a2, %lo(c)(s10)
-; RV32I-NEXT:    lw a3, %lo(d)(s1)
-; RV32I-NEXT:    lw a4, %lo(e)(s0)
-; RV32I-NEXT:    addi a5, zero, 32
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    lw a3, %lo(d)(s5)
+; RV32I-NEXT:    lw a4, %lo(e)(s6)
+; RV32I-NEXT:    li a5, 32
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_5: # %if.end
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; RV32I-NEXT:    lw a0, %lo(k)(s3)
+; RV32I-NEXT:    lw a0, %lo(k)(s2)
 ; RV32I-NEXT:    beqz a0, .LBB0_7
 ; RV32I-NEXT:  # %bb.6: # %if.then3
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV32I-NEXT:    lw a0, %lo(b)(s11)
 ; RV32I-NEXT:    lw a1, %lo(c)(s10)
-; RV32I-NEXT:    lw a2, %lo(d)(s1)
-; RV32I-NEXT:    lw a3, %lo(e)(s0)
+; RV32I-NEXT:    lw a2, %lo(d)(s5)
+; RV32I-NEXT:    lw a3, %lo(e)(s6)
 ; RV32I-NEXT:    lw a4, %lo(f)(s7)
-; RV32I-NEXT:    addi a5, zero, 64
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    li a5, 64
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_7: # %if.end5
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; RV32I-NEXT:    lw a0, %lo(j)(s4)
+; RV32I-NEXT:    lw a0, %lo(j)(s3)
 ; RV32I-NEXT:    beqz a0, .LBB0_9
 ; RV32I-NEXT:  # %bb.8: # %if.then7
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV32I-NEXT:    lw a0, %lo(c)(s10)
-; RV32I-NEXT:    lw a1, %lo(d)(s1)
-; RV32I-NEXT:    lw a2, %lo(e)(s0)
+; RV32I-NEXT:    lw a1, %lo(d)(s5)
+; RV32I-NEXT:    lw a2, %lo(e)(s6)
 ; RV32I-NEXT:    lw a3, %lo(f)(s7)
 ; RV32I-NEXT:    lw a4, %lo(g)(s8)
-; RV32I-NEXT:    addi a5, zero, 32
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    li a5, 32
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_9: # %if.end9
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; RV32I-NEXT:    lw a0, %lo(i)(s5)
+; RV32I-NEXT:    lw a0, %lo(i)(s4)
 ; RV32I-NEXT:    beqz a0, .LBB0_2
 ; RV32I-NEXT:  # %bb.10: # %if.then11
 ; RV32I-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; RV32I-NEXT:    lw a0, %lo(d)(s1)
-; RV32I-NEXT:    lw a1, %lo(e)(s0)
+; RV32I-NEXT:    lw a0, %lo(d)(s5)
+; RV32I-NEXT:    lw a1, %lo(e)(s6)
 ; RV32I-NEXT:    lw a2, %lo(f)(s7)
 ; RV32I-NEXT:    lw a3, %lo(g)(s8)
 ; RV32I-NEXT:    lw a4, %lo(h)(s9)
-; RV32I-NEXT:    addi a5, zero, 32
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    li a5, 32
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:    j .LBB0_2
 ; RV32I-NEXT:  .LBB0_11: # %for.end
-; RV32I-NEXT:    addi a0, zero, 1
-; RV32I-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    li a0, 1
 ; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 64
 ; RV32I-NEXT:    ret
 entry:
-  %.pr = load i32, i32* @a, align 4
+  %.pr = load i32, ptr @a, align 4
   %tobool14 = icmp eq i32 %.pr, 0
   br i1 %tobool14, label %for.end, label %for.body
 
 for.body:                                         ; preds = %entry, %for.inc
   %0 = phi i32 [ %dec, %for.inc ], [ %.pr, %entry ]
-  %1 = load i32, i32* @l, align 4
+  %1 = load i32, ptr @l, align 4
   %tobool1 = icmp eq i32 %1, 0
   br i1 %tobool1, label %if.end, label %if.then
 
 if.then:                                          ; preds = %for.body
-  %2 = load i32, i32* @b, align 4
-  %3 = load i32, i32* @c, align 4
-  %4 = load i32, i32* @d, align 4
-  %5 = load i32, i32* @e, align 4
+  %2 = load i32, ptr @b, align 4
+  %3 = load i32, ptr @c, align 4
+  %4 = load i32, ptr @d, align 4
+  %5 = load i32, ptr @e, align 4
   %call = tail call i32 @foo(i32 %0, i32 %2, i32 %3, i32 %4, i32 %5, i32 32)
   br label %if.end
 
 if.end:                                           ; preds = %for.body, %if.then
-  %6 = load i32, i32* @k, align 4
+  %6 = load i32, ptr @k, align 4
   %tobool2 = icmp eq i32 %6, 0
   br i1 %tobool2, label %if.end5, label %if.then3
 
 if.then3:                                         ; preds = %if.end
-  %7 = load i32, i32* @b, align 4
-  %8 = load i32, i32* @c, align 4
-  %9 = load i32, i32* @d, align 4
-  %10 = load i32, i32* @e, align 4
-  %11 = load i32, i32* @f, align 4
+  %7 = load i32, ptr @b, align 4
+  %8 = load i32, ptr @c, align 4
+  %9 = load i32, ptr @d, align 4
+  %10 = load i32, ptr @e, align 4
+  %11 = load i32, ptr @f, align 4
   %call4 = tail call i32 @foo(i32 %7, i32 %8, i32 %9, i32 %10, i32 %11, i32 64)
   br label %if.end5
 
 if.end5:                                          ; preds = %if.end, %if.then3
-  %12 = load i32, i32* @j, align 4
+  %12 = load i32, ptr @j, align 4
   %tobool6 = icmp eq i32 %12, 0
   br i1 %tobool6, label %if.end9, label %if.then7
 
 if.then7:                                         ; preds = %if.end5
-  %13 = load i32, i32* @c, align 4
-  %14 = load i32, i32* @d, align 4
-  %15 = load i32, i32* @e, align 4
-  %16 = load i32, i32* @f, align 4
-  %17 = load i32, i32* @g, align 4
+  %13 = load i32, ptr @c, align 4
+  %14 = load i32, ptr @d, align 4
+  %15 = load i32, ptr @e, align 4
+  %16 = load i32, ptr @f, align 4
+  %17 = load i32, ptr @g, align 4
   %call8 = tail call i32 @foo(i32 %13, i32 %14, i32 %15, i32 %16, i32 %17, i32 32)
   br label %if.end9
 
 if.end9:                                          ; preds = %if.end5, %if.then7
-  %18 = load i32, i32* @i, align 4
+  %18 = load i32, ptr @i, align 4
   %tobool10 = icmp eq i32 %18, 0
   br i1 %tobool10, label %for.inc, label %if.then11
 
 if.then11:                                        ; preds = %if.end9
-  %19 = load i32, i32* @d, align 4
-  %20 = load i32, i32* @e, align 4
-  %21 = load i32, i32* @f, align 4
-  %22 = load i32, i32* @g, align 4
-  %23 = load i32, i32* @h, align 4
+  %19 = load i32, ptr @d, align 4
+  %20 = load i32, ptr @e, align 4
+  %21 = load i32, ptr @f, align 4
+  %22 = load i32, ptr @g, align 4
+  %23 = load i32, ptr @h, align 4
   %call12 = tail call i32 @foo(i32 %19, i32 %20, i32 %21, i32 %22, i32 %23, i32 32)
   br label %for.inc
 
 for.inc:                                          ; preds = %if.end9, %if.then11
-  %24 = load i32, i32* @a, align 4
+  %24 = load i32, ptr @a, align 4
   %dec = add nsw i32 %24, -1
-  store i32 %dec, i32* @a, align 4
+  store i32 %dec, ptr @a, align 4
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %for.end, label %for.body
 

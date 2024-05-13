@@ -21,6 +21,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
+
+#include "DebugOptions.h"
+
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -38,17 +41,21 @@ using namespace llvm;
 /// -stats - Command line option to cause transformations to emit stats about
 /// what they did.
 ///
-static cl::opt<bool> EnableStats(
-    "stats",
-    cl::desc("Enable statistics output from program (available with Asserts)"),
-    cl::Hidden);
-
-static cl::opt<bool> StatsAsJSON("stats-json",
-                                 cl::desc("Display statistics as json data"),
-                                 cl::Hidden);
-
+static bool EnableStats;
+static bool StatsAsJSON;
 static bool Enabled;
 static bool PrintOnExit;
+
+void llvm::initStatisticOptions() {
+  static cl::opt<bool, true> registerEnableStats{
+      "stats",
+      cl::desc(
+          "Enable statistics output from program (available with Asserts)"),
+      cl::location(EnableStats), cl::Hidden};
+  static cl::opt<bool, true> registerStatsAsJson{
+      "stats-json", cl::desc("Display statistics as json data"),
+      cl::location(StatsAsJSON), cl::Hidden};
+}
 
 namespace {
 /// This class is used in a ManagedStatic so that it is created on demand (when
@@ -113,8 +120,9 @@ void TrackingStatistic::RegisterStatistic() {
 }
 
 StatisticInfo::StatisticInfo() {
-  // Ensure timergroup lists are created first so they are destructed after us.
-  TimerGroup::ConstructTimerLists();
+  // Ensure that necessary timer global objects are created first so they are
+  // destructed after us.
+  TimerGroup::constructForStatistics();
 }
 
 // Print information when destroyed, iff command line option is specified.
@@ -128,9 +136,7 @@ void llvm::EnableStatistics(bool DoPrintOnExit) {
   PrintOnExit = DoPrintOnExit;
 }
 
-bool llvm::AreStatisticsEnabled() {
-  return Enabled || EnableStats;
-}
+bool llvm::AreStatisticsEnabled() { return Enabled || EnableStats; }
 
 void StatisticInfo::sort() {
   llvm::stable_sort(
@@ -172,11 +178,10 @@ void llvm::PrintStatistics(raw_ostream &OS) {
 
   // Figure out how long the biggest Value and Name fields are.
   unsigned MaxDebugTypeLen = 0, MaxValLen = 0;
-  for (size_t i = 0, e = Stats.Stats.size(); i != e; ++i) {
-    MaxValLen = std::max(MaxValLen,
-                         (unsigned)utostr(Stats.Stats[i]->getValue()).size());
-    MaxDebugTypeLen = std::max(MaxDebugTypeLen,
-                         (unsigned)std::strlen(Stats.Stats[i]->getDebugType()));
+  for (TrackingStatistic *Stat : Stats.Stats) {
+    MaxValLen = std::max(MaxValLen, (unsigned)utostr(Stat->getValue()).size());
+    MaxDebugTypeLen =
+        std::max(MaxDebugTypeLen, (unsigned)std::strlen(Stat->getDebugType()));
   }
 
   Stats.sort();
@@ -187,11 +192,9 @@ void llvm::PrintStatistics(raw_ostream &OS) {
      << "===" << std::string(73, '-') << "===\n\n";
 
   // Print all of the statistics.
-  for (size_t i = 0, e = Stats.Stats.size(); i != e; ++i)
-    OS << format("%*u %-*s - %s\n",
-                 MaxValLen, Stats.Stats[i]->getValue(),
-                 MaxDebugTypeLen, Stats.Stats[i]->getDebugType(),
-                 Stats.Stats[i]->getDesc());
+  for (TrackingStatistic *Stat : Stats.Stats)
+    OS << format("%*" PRIu64 " %-*s - %s\n", MaxValLen, Stat->getValue(),
+                 MaxDebugTypeLen, Stat->getDebugType(), Stat->getDesc());
 
   OS << '\n';  // Flush the output stream.
   OS.flush();
@@ -251,9 +254,9 @@ void llvm::PrintStatistics() {
 #endif
 }
 
-const std::vector<std::pair<StringRef, unsigned>> llvm::GetStatistics() {
+std::vector<std::pair<StringRef, uint64_t>> llvm::GetStatistics() {
   sys::SmartScopedLock<true> Reader(*StatLock);
-  std::vector<std::pair<StringRef, unsigned>> ReturnStats;
+  std::vector<std::pair<StringRef, uint64_t>> ReturnStats;
 
   for (const auto &Stat : StatInfo->statistics())
     ReturnStats.emplace_back(Stat->getName(), Stat->getValue());

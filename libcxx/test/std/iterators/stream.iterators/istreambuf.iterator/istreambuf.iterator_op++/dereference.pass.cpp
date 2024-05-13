@@ -29,6 +29,7 @@ int main(int, char**)
         ++i;
         assert(*i == 'c');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wistringstream inf(L"abc");
         std::istreambuf_iterator<wchar_t> i(inf);
@@ -38,6 +39,7 @@ int main(int, char**)
         ++i;
         assert(*i == L'c');
     }
+#endif
 
   return 0;
 }

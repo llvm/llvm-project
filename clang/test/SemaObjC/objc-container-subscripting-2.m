@@ -13,14 +13,14 @@ typedef unsigned int size_t;
 - (void)setObject:(id)object forKeyedSubscript:(size_t)key;
 @end
 
-id func() {
+id func(void) {
   NSMutableArray *array;
   float f; 
   array[f] = array; // expected-error {{indexing expression is invalid because subscript type 'float' is not an integral or Objective-C pointer type}}
   return array[3.14]; // expected-error {{indexing expression is invalid because subscript type 'double' is not an integral or Objective-C pointer type}}
 }
 
-void test_unused() {
+void test_unused(void) {
   NSMutableArray *array;
   array[10]; // expected-warning {{container access result unused - container access should not be used for side effects}} 
 

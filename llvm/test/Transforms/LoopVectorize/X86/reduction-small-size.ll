@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -mcpu=core-axv2 -force-vector-interleave=1 -dce -instcombine -debug-only=loop-vectorize -S < %s 2>&1  | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -mcpu=core-axv2 -force-vector-interleave=1 -debug-only=loop-vectorize -S < %s 2>&1  | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -44,7 +44,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 2 For instruction:   %{{.*}} = icmp
 ; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 2 For instruction:   br
 ;
-define i8 @reduction_i8(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %n) {
+define i8 @reduction_i8(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %n) {
 entry:
   %cmp.12 = icmp sgt i32 %n, 0
   br i1 %cmp.12, label %for.body.preheader, label %for.cond.cleanup
@@ -64,11 +64,11 @@ for.cond.cleanup:
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %sum.013 = phi i32 [ %add5, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
-  %arrayidx2 = getelementptr inbounds i8, i8* %b, i64 %indvars.iv
-  %1 = load i8, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %b, i64 %indvars.iv
+  %1 = load i8, ptr %arrayidx2, align 1
   %conv3 = zext i8 %1 to i32
   %conv4 = and i32 %sum.013, 255
   %add = add nuw nsw i32 %conv, %conv4

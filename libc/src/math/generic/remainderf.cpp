@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/remainderf.h"
+#include "src/__support/FPUtil/DivisionAndRemainderOperations.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/DivisionAndRemainderOperations.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, remainderf, (float x, float y)) {
   int quotient;
   return fputil::remquo(x, y, quotient);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

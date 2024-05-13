@@ -33,7 +33,7 @@ TEST(Printf, Basic) {
 
 TEST(Printf, OverflowStr) {
   char buf[] = "123456789";
-  uptr len = internal_snprintf(buf, 4, "%s", "abcdef");  // NOLINT
+  uptr len = internal_snprintf(buf, 4, "%s", "abcdef");
   EXPECT_EQ(len, (uptr)6);
   EXPECT_STREQ("abc", buf);
   EXPECT_EQ(buf[3], 0);
@@ -47,7 +47,7 @@ TEST(Printf, OverflowStr) {
 
 TEST(Printf, OverflowInt) {
   char buf[] = "123456789";
-  internal_snprintf(buf, 4, "%d", -123456789);  // NOLINT
+  internal_snprintf(buf, 4, "%d", -123456789);
   EXPECT_STREQ("-12", buf);
   EXPECT_EQ(buf[3], 0);
   EXPECT_EQ(buf[4], '5');
@@ -66,7 +66,7 @@ TEST(Printf, OverflowUint) {
   } else {
     val = (uptr)0x123456789ULL;
   }
-  internal_snprintf(buf, 4, "a%zx", val);  // NOLINT
+  internal_snprintf(buf, 4, "a%zx", val);
   EXPECT_STREQ("a12", buf);
   EXPECT_EQ(buf[3], 0);
   EXPECT_EQ(buf[4], '5');
@@ -85,7 +85,7 @@ TEST(Printf, OverflowPtr) {
   } else {
     p = (void*)0x123456789ULL;
   }
-  internal_snprintf(buf, 4, "%p", p);  // NOLINT
+  internal_snprintf(buf, 4, "%p", p);
   EXPECT_STREQ("0x0", buf);
   EXPECT_EQ(buf[3], 0);
   EXPECT_EQ(buf[4], '5');
@@ -115,6 +115,9 @@ TEST(Printf, MinMax) {
   TestAgainstLibc<int>("%d-%d", INT_MIN, INT_MAX);
   TestAgainstLibc<unsigned>("%u-%u", 0, UINT_MAX);
   TestAgainstLibc<unsigned>("%x-%x", 0, UINT_MAX);
+  TestAgainstLibc<long>("%ld-%ld", LONG_MIN, LONG_MAX);
+  TestAgainstLibc<unsigned long>("%lu-%lu", 0, LONG_MAX);
+  TestAgainstLibc<unsigned long>("%lx-%lx", 0, LONG_MAX);
 #if !defined(_WIN32)
   // %z* format doesn't seem to be supported by MSVS.
   TestAgainstLibc<long>("%zd-%zd", LONG_MIN, LONG_MAX);
@@ -149,7 +152,7 @@ TEST(Printf, Precision) {
   EXPECT_STREQ("12345 ", buf);
   // Check that width does not overflow the smaller buffer, although
   // 10 chars is requested, it stops at the buffer size, 8.
-  len = internal_snprintf(buf, 8, "%-10s", "12345");  // NOLINT
+  len = internal_snprintf(buf, 8, "%-10s", "12345");
   EXPECT_EQ(10U, len);  // The required size reported.
   EXPECT_STREQ("12345  ", buf);
 }

@@ -1,22 +1,22 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Floating-point expressions are not supported
 //===----------------------------------------------------------------------===//
 
 s_sub_u32 s0, s0, -1.0 + 10000000000
-// NOVI: error: invalid operand for instruction
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 t=10000000000
 s_sub_u32 s0, s0, 1.0 + t
-// NOVI: error: invalid operand for instruction
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_ceil_f32 v1, 1.0 + 1.0
-// NOVI: error: invalid operand for instruction
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_ceil_f32 v1, -1.0 + 1.0
-// NOVI: error: invalid operand for instruction
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 //===----------------------------------------------------------------------===//
 // Constant expressions may be used with SP3 'abs' modifiers |...|
@@ -52,10 +52,10 @@ v_mad_f16 v5, v1, v2, |hm1|
 // Only primary expressions are allowed
 
 v_ceil_f32 v1, |1+i1|
-// NOVI: error: expected vertical bar
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: expected vertical bar
 
 v_ceil_f32 v1, |i1+1|
-// NOVI: error: expected vertical bar
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: expected vertical bar
 
 //===----------------------------------------------------------------------===//
 // Constant expressions may be used with 'abs' and 'neg' modifiers.
@@ -195,29 +195,29 @@ v_and_b32 v0, u+1, v0
 //===----------------------------------------------------------------------===//
 
 v_ceil_f64 v[0:1], u
-// NOVI: error: invalid operand for instruction
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_add_u16 v0, u, v0
-// NOVI: error: invalid operand for instruction
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 s_addk_i32 s2, u
-// NOVI: error: invalid operand for instruction
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 s_load_dword s1, s[2:3], u glc
-// NOVI: error: invalid operand for instruction
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 //===----------------------------------------------------------------------===//
 // Relocatable expressions cannot be used with VOP3 modifiers.
 //===----------------------------------------------------------------------===//
 
 v_ceil_f32 v1, |u|
-// NOVI: error: expected an absolute expression
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: expected an absolute expression
 
 v_ceil_f32 v1, neg(u)
-// NOVI: error: expected an absolute expression
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: expected an absolute expression
 
 v_ceil_f32 v1, abs(u)
-// NOVI: error: expected an absolute expression
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: expected an absolute expression
 
 //===----------------------------------------------------------------------===//
 // Misc tests with symbols.
@@ -271,6 +271,12 @@ BB2:
 s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1
 // VI: s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1 ; encoding: [0x6a,0xff,0xea,0x80,A,A,A,A]
 // VI-NEXT: ;   fixup A - offset: 4, value: (BB2+4)-BB1, kind: FK_Data_4
+s_add_u32 vcc_lo, vcc_lo, (BB2-BB1)&4294967295
+// VI: s_add_u32 vcc_lo, vcc_lo, (BB2-BB1)&4294967295 ; encoding: [0x6a,0xff,0x6a,0x80,A,A,A,A]
+// VI-NEXT: ;   fixup A - offset: 4, value: (BB2-BB1)&4294967295, kind: FK_Data_4
+s_addc_u32 vcc_hi, vcc_hi, (BB2-BB1)>>32
+// VI: s_addc_u32 vcc_hi, vcc_hi, (BB2-BB1)>>32 ; encoding: [0x6b,0xff,0x6b,0x82,A,A,A,A]
+// VI-NEXT: ;   fixup A - offset: 4, value: (BB2-BB1)>>32, kind: FK_Data_4
 
 t=1
 s_sub_u32 s0, s0, -t
@@ -327,8 +333,8 @@ v_sin_f32 v0, -[ttmp0]
 
 s1000=1
 v_sin_f32 v0, -s1000
-// NOVI: error: register index is out of range
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
 
 xnack_mask_lo=1
 v_sin_f32 v0, xnack_mask_lo
-// NOVI: error: register not available on this GPU
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU

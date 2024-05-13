@@ -12,6 +12,8 @@
 
 // charT widen(char c) const;
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <cassert>
 

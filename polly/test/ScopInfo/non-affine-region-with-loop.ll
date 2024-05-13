@@ -1,10 +1,10 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-codegen -analyze
+; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-codegen -disable-output
 ;
 ; CHECK:      Domain :=
 ; CHECK-NEXT:   { Stmt_loop2__TO__loop[] };
 ;
-define void @foo(i64* %A, i64 %p) {
+define void @foo(ptr %A, i64 %p) {
 entry:
   br label %loop
 
@@ -25,7 +25,7 @@ loop2:
   %indvar.2 = phi i64 [0, %next], [%indvar.next.2, %loop2], [0, %cond]
   %indvar.next.2 = add i64 %indvar.2, 1
   %prod = mul i64 %indvar.2, %indvar.2
-  store i64 %indvar, i64* %A
+  store i64 %indvar, ptr %A
   %cmp.2 = icmp eq i64 %prod, 100
   br i1 %cmp.2, label %loop2, label %next2
 

@@ -12,7 +12,8 @@
 @B_Inst = global %B zeroinitializer
 
 define i64 @foo() {
-  ret i64 extractvalue (%Tuple select (i1 icmp eq
-                        (%B* bitcast (%A* @A_Inst to %B*), %B* @B_Inst),
-                        %Tuple { i64 33 }, %Tuple { i64 42 }), 0)
+  %s = select i1 icmp eq (ptr @A_Inst, ptr @B_Inst),
+       %Tuple { i64 33 }, %Tuple { i64 42 }
+  %e = extractvalue %Tuple %s, 0
+  ret i64 %e
 }

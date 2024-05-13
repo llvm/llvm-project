@@ -15,9 +15,12 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_WASMEXCEPTION_H
 
 #include "EHStreamer.h"
-#include "llvm/CodeGen/AsmPrinter.h"
 
 namespace llvm {
+class AsmPrinter;
+class MachineFunction;
+struct LandingPadInfo;
+template <typename T> class SmallVectorImpl;
 
 class LLVM_LIBRARY_VISIBILITY WasmException : public EHStreamer {
 public:
@@ -25,7 +28,6 @@ public:
 
   void endModule() override;
   void beginFunction(const MachineFunction *MF) override {}
-  virtual void markFunctionEnd() override;
   void endFunction(const MachineFunction *MF) override;
 
 protected:

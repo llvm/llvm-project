@@ -153,7 +153,7 @@ cmpsb %es:(%edi), %es:(%esi)
 cmpsl %es:(%edi), %es:(%esi) 
 
 // CHECK: cmpsw %es:(%edi), %es:(%esi) 
-// CHECK: encoding: [0x66,0x26,0xa7]        
+// CHECK: encoding: [0x26,0x66,0xa7]        
 cmpsw %es:(%edi), %es:(%esi) 
 
 // CHECK: insb %dx, %es:(%edi) 
@@ -193,7 +193,7 @@ movsb %es:(%esi), %es:(%edi)
 movsl %es:(%esi), %es:(%edi) 
 
 // CHECK: movsw %es:(%esi), %es:(%edi) 
-// CHECK: encoding: [0x66,0x26,0xa5]        
+// CHECK: encoding: [0x26,0x66,0xa5]        
 movsw %es:(%esi), %es:(%edi) 
 
 // CHECK: outsb %es:(%esi), %dx 
@@ -205,7 +205,7 @@ outsb %es:(%esi), %dx
 outsl %es:(%esi), %dx 
 
 // CHECK: outsw %es:(%esi), %dx 
-// CHECK: encoding: [0x66,0x26,0x6f]        
+// CHECK: encoding: [0x26,0x66,0x6f]        
 outsw %es:(%esi), %dx 
 
 // CHECK: popal 
@@ -249,7 +249,7 @@ rep cmpsb %es:(%edi), %es:(%esi)
 rep cmpsl %es:(%edi), %es:(%esi) 
 
 // CHECK: rep cmpsw %es:(%edi), %es:(%esi) 
-// CHECK: encoding: [0xf3,0x66,0x26,0xa7]       
+// CHECK: encoding: [0xf3,0x26,0x66,0xa7]       
 rep cmpsw %es:(%edi), %es:(%esi) 
 
 // CHECK: rep insb %dx, %es:(%edi) 
@@ -277,7 +277,7 @@ rep movsb %es:(%esi), %es:(%edi)
 rep movsl %es:(%esi), %es:(%edi) 
 
 // CHECK: rep movsw %es:(%esi), %es:(%edi) 
-// CHECK: encoding: [0xf3,0x66,0x26,0xa5]       
+// CHECK: encoding: [0xf3,0x26,0x66,0xa5]       
 rep movsw %es:(%esi), %es:(%edi) 
 
 // CHECK: repne cmpsb %es:(%edi), %es:(%esi) 
@@ -289,7 +289,7 @@ repne cmpsb %es:(%edi), %es:(%esi)
 repne cmpsl %es:(%edi), %es:(%esi) 
 
 // CHECK: repne cmpsw %es:(%edi), %es:(%esi) 
-// CHECK: encoding: [0xf2,0x66,0x26,0xa7]       
+// CHECK: encoding: [0xf2,0x26,0x66,0xa7]       
 repne cmpsw %es:(%edi), %es:(%esi) 
 
 // CHECK: repne insb %dx, %es:(%edi) 
@@ -317,7 +317,7 @@ repne movsb %es:(%esi), %es:(%edi)
 repne movsl %es:(%esi), %es:(%edi) 
 
 // CHECK: repne movsw %es:(%esi), %es:(%edi) 
-// CHECK: encoding: [0xf2,0x66,0x26,0xa5]       
+// CHECK: encoding: [0xf2,0x26,0x66,0xa5]       
 repne movsw %es:(%esi), %es:(%edi) 
 
 // CHECK: repne outsb %es:(%esi), %dx 
@@ -329,7 +329,7 @@ repne outsb %es:(%esi), %dx
 repne outsl %es:(%esi), %dx 
 
 // CHECK: repne outsw %es:(%esi), %dx 
-// CHECK: encoding: [0xf2,0x66,0x26,0x6f]       
+// CHECK: encoding: [0xf2,0x26,0x66,0x6f]       
 repne outsw %es:(%esi), %dx 
 
 // CHECK: repne scasl %es:(%edi), %eax 
@@ -349,7 +349,7 @@ rep outsb %es:(%esi), %dx
 rep outsl %es:(%esi), %dx 
 
 // CHECK: rep outsw %es:(%esi), %dx 
-// CHECK: encoding: [0xf3,0x66,0x26,0x6f]       
+// CHECK: encoding: [0xf3,0x26,0x66,0x6f]       
 rep outsw %es:(%esi), %dx 
 
 // CHECK: rep scasl %es:(%edi), %eax 

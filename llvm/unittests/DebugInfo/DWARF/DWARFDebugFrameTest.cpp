@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
+#include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -30,8 +32,8 @@ dwarf::CIE createCIE(bool IsDWARF64, uint64_t Offset, uint64_t Length) {
                     /*AugmentationData=*/StringRef(),
                     /*FDEPointerEncoding=*/dwarf::DW_EH_PE_absptr,
                     /*LSDAPointerEncoding=*/dwarf::DW_EH_PE_omit,
-                    /*Personality=*/None,
-                    /*PersonalityEnc=*/None,
+                    /*Personality=*/std::nullopt,
+                    /*PersonalityEnc=*/std::nullopt,
                     /*Arch=*/Triple::x86_64);
 }
 
@@ -39,7 +41,9 @@ void expectDumpResult(const dwarf::CIE &TestCIE, bool IsEH,
                       StringRef ExpectedFirstLine) {
   std::string Output;
   raw_string_ostream OS(Output);
-  TestCIE.dump(OS, DIDumpOptions(), /*MRI=*/nullptr, IsEH);
+  auto DumpOpts = DIDumpOptions();
+  DumpOpts.IsEH = IsEH;
+  TestCIE.dump(OS, DumpOpts);
   OS.flush();
   StringRef FirstLine = StringRef(Output).split('\n').first;
   EXPECT_EQ(FirstLine, ExpectedFirstLine);
@@ -49,7 +53,9 @@ void expectDumpResult(const dwarf::FDE &TestFDE, bool IsEH,
                       StringRef ExpectedFirstLine) {
   std::string Output;
   raw_string_ostream OS(Output);
-  TestFDE.dump(OS, DIDumpOptions(), /*MRI=*/nullptr, IsEH);
+  auto DumpOpts = DIDumpOptions();
+  DumpOpts.IsEH = IsEH;
+  TestFDE.dump(OS, DumpOpts);
   OS.flush();
   StringRef FirstLine = StringRef(Output).split('\n').first;
   EXPECT_EQ(FirstLine, ExpectedFirstLine);
@@ -96,7 +102,7 @@ TEST(DWARFDebugFrame, DumpDWARF64FDE) {
                      /*InitialLocation=*/0x5555abcdabcd,
                      /*AddressRange=*/0x111111111111,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
   expectDumpResult(TestFDE, /*IsEH=*/false,
                    "3333abcdabcd 00004444abcdabcd 00001111abcdabcd FDE "
@@ -114,7 +120,7 @@ TEST(DWARFDebugFrame, DumpEH64FDE) {
                      /*InitialLocation=*/0x4444abcdabcd,
                      /*AddressRange=*/0x111111111111,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
   expectDumpResult(TestFDE, /*IsEH=*/true,
                    "1111abcdabcd 00002222abcdabcd 0033abcd FDE "
@@ -122,7 +128,7 @@ TEST(DWARFDebugFrame, DumpEH64FDE) {
 }
 
 static Error parseCFI(dwarf::CIE &C, ArrayRef<uint8_t> Instructions,
-                      Optional<uint64_t> Size = None) {
+                      std::optional<uint64_t> Size = std::nullopt) {
   DWARFDataExtractor Data(Instructions, /*IsLittleEndian=*/true,
                           /*AddressSize=*/8);
   uint64_t Offset = 0;
@@ -162,6 +168,8 @@ TEST(DWARFDebugFrame, InvalidCFIOpcodesTest) {
       dwarf::DW_CFA_offset_extended_sf,
       dwarf::DW_CFA_def_cfa_sf,
       dwarf::DW_CFA_def_cfa_offset_sf,
+      dwarf::DW_CFA_LLVM_def_aspace_cfa,
+      dwarf::DW_CFA_LLVM_def_aspace_cfa_sf,
       dwarf::DW_CFA_val_offset,
       dwarf::DW_CFA_val_offset_sf,
       dwarf::DW_CFA_val_expression,
@@ -268,7 +276,8 @@ TEST(DWARFDebugFrame, ParseTruncatedCFITest) {
   };
 
   for (uint8_t Inst : {dwarf::DW_CFA_offset_extended, dwarf::DW_CFA_register,
-                       dwarf::DW_CFA_def_cfa, dwarf::DW_CFA_val_offset})
+                       dwarf::DW_CFA_def_cfa, dwarf::DW_CFA_LLVM_def_aspace_cfa,
+                       dwarf::DW_CFA_val_offset})
     CheckOp_ULEB128_ULEB128(Inst);
 
   // A test for an instruction with two operands: ULEB128, SLEB128.
@@ -284,8 +293,9 @@ TEST(DWARFDebugFrame, ParseTruncatedCFITest) {
                           "malformed sleb128, extends past end"));
   };
 
-  for (uint8_t Inst : {dwarf::DW_CFA_offset_extended_sf,
-                       dwarf::DW_CFA_def_cfa_sf, dwarf::DW_CFA_val_offset_sf})
+  for (uint8_t Inst :
+       {dwarf::DW_CFA_offset_extended_sf, dwarf::DW_CFA_def_cfa_sf,
+        dwarf::DW_CFA_LLVM_def_aspace_cfa_sf, dwarf::DW_CFA_val_offset_sf})
     CheckOp_ULEB128_SLEB128(Inst);
 
   // Unable to read a truncated DW_CFA_def_cfa_expression instruction.
@@ -416,33 +426,33 @@ TEST(DWARFDebugFrame, RegisterLocations) {
   expectDumpResult(Locs, "reg12=[CFA+4], reg13=[CFA+8], reg14=same");
 
   // Verify RegisterLocations::getRegisterLocation() works as expected.
-  Optional<dwarf::UnwindLocation> OptionalLoc;
+  std::optional<dwarf::UnwindLocation> OptionalLoc;
   OptionalLoc = Locs.getRegisterLocation(0);
-  EXPECT_FALSE(OptionalLoc.hasValue());
+  EXPECT_FALSE(OptionalLoc.has_value());
 
   OptionalLoc = Locs.getRegisterLocation(12);
-  EXPECT_TRUE(OptionalLoc.hasValue());
+  EXPECT_TRUE(OptionalLoc.has_value());
   EXPECT_EQ(*OptionalLoc, Reg12Loc);
 
   OptionalLoc = Locs.getRegisterLocation(13);
-  EXPECT_TRUE(OptionalLoc.hasValue());
+  EXPECT_TRUE(OptionalLoc.has_value());
   EXPECT_EQ(*OptionalLoc, Reg13Loc);
 
   OptionalLoc = Locs.getRegisterLocation(14);
-  EXPECT_TRUE(OptionalLoc.hasValue());
+  EXPECT_TRUE(OptionalLoc.has_value());
   EXPECT_EQ(*OptionalLoc, Reg14Loc);
 
   // Verify registers are correctly removed when multiple exist in the list.
   Locs.removeRegisterLocation(13);
-  EXPECT_FALSE(Locs.getRegisterLocation(13).hasValue());
+  EXPECT_FALSE(Locs.getRegisterLocation(13).has_value());
   EXPECT_TRUE(Locs.hasLocations());
   expectDumpResult(Locs, "reg12=[CFA+4], reg14=same");
   Locs.removeRegisterLocation(14);
-  EXPECT_FALSE(Locs.getRegisterLocation(14).hasValue());
+  EXPECT_FALSE(Locs.getRegisterLocation(14).has_value());
   EXPECT_TRUE(Locs.hasLocations());
   expectDumpResult(Locs, "reg12=[CFA+4]");
   Locs.removeRegisterLocation(12);
-  EXPECT_FALSE(Locs.getRegisterLocation(12).hasValue());
+  EXPECT_FALSE(Locs.getRegisterLocation(12).has_value());
   EXPECT_FALSE(Locs.hasLocations());
   expectDumpResult(Locs, "");
 }
@@ -472,7 +482,7 @@ TEST(DWARFDebugFrame, UnwindTableEmptyRows) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Having an empty instructions list is fine.
@@ -511,7 +521,7 @@ TEST(DWARFDebugFrame, UnwindTableEmptyRows_NOPs) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make an FDE that has only DW_CFA_nop instructions.
@@ -537,7 +547,7 @@ TEST(DWARFDebugFrame, UnwindTableErrorNonAscendingFDERows) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition.
@@ -579,7 +589,7 @@ TEST(DWARFDebugFrame, UnwindTableError_DW_CFA_restore_state) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition.
@@ -614,7 +624,7 @@ TEST(DWARFDebugFrame, UnwindTableError_DW_CFA_GNU_window_save) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition.
@@ -650,7 +660,7 @@ TEST(DWARFDebugFrame, UnwindTableError_DW_CFA_def_cfa_offset) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has an invalid CFA definition. We do this so we can try
@@ -685,7 +695,7 @@ TEST(DWARFDebugFrame, UnwindTableDefCFAOffsetSFCFAError) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has an invalid CFA definition. We do this so we can try
@@ -720,7 +730,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_def_cfa_register) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has only defines the CFA register with no offset. Some
@@ -760,7 +770,7 @@ TEST(DWARFDebugFrame, UnwindTableRowPushingOpcodes) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -848,7 +858,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_restore) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -911,7 +921,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_restore_extended) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -975,7 +985,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_offset) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1031,7 +1041,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_val_offset) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1082,7 +1092,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_nop) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1128,21 +1138,27 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
   // rule for register that we will verify is in all of the pushed rows.
-  EXPECT_THAT_ERROR(parseCFI(TestCIE, {dwarf::DW_CFA_def_cfa, 12, 32}),
+  constexpr uint8_t CFAOff1 = 32;
+  constexpr uint8_t CFAOff2 = 16;
+  constexpr uint8_t Reg1 = 14;
+  constexpr uint8_t Reg2 = 15;
+  constexpr uint8_t Reg3 = 16;
+
+  EXPECT_THAT_ERROR(parseCFI(TestCIE, {dwarf::DW_CFA_def_cfa, 12, CFAOff1}),
                     Succeeded());
 
   // Make a FDE with DWARF call frame instruction opcodes that encodes the
   // follwing rows:
-  // 0x1000: CFA=reg12+32: Reg1=[CFA-8]
-  // 0x1004: CFA=reg12+32: Reg1=[CFA-8] Reg2=[CFA-16]
-  // 0x1008: CFA=reg12+32: Reg1=[CFA-8] Reg2=[CFA-16] Reg3=[CFA-24]
-  // 0x100C: CFA=reg12+32: Reg1=[CFA-8] Reg2=[CFA-16]
-  // 0x1010: CFA=reg12+32: Reg1=[CFA-8]
+  // 0x1000: CFA=reg12+CFAOff1: Reg1=[CFA-8]
+  // 0x1004: CFA=reg12+CFAOff1: Reg1=[CFA-8] Reg2=[CFA-16]
+  // 0x1008: CFA=reg12+CFAOff2: Reg1=[CFA-8] Reg2=[CFA-16] Reg3=[CFA-24]
+  // 0x100C: CFA=reg12+CFAOff1: Reg1=[CFA-8] Reg2=[CFA-16]
+  // 0x1010: CFA=reg12+CFAOff1: Reg1=[CFA-8]
   // This state machine will:
   //  - set Reg1 location
   //  - push a row (from DW_CFA_advance_loc)
@@ -1150,6 +1166,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
   //  - set Reg2 location
   //  - push a row (from DW_CFA_advance_loc)
   //  - remember the state
+  //  - set CFA offset to CFAOff2
   //  - set Reg3 location
   //  - push a row (from DW_CFA_advance_loc)
   //  - remember the state where Reg1 and Reg2 were set
@@ -1157,14 +1174,12 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
   //  - remember the state where only Reg1 was set
   //  - push a row (automatically at the end of instruction parsing)
   // Then we verify that all registers are correct in all generated rows.
-  constexpr uint8_t Reg1 = 14;
-  constexpr uint8_t Reg2 = 15;
-  constexpr uint8_t Reg3 = 16;
   EXPECT_THAT_ERROR(
       parseCFI(TestFDE,
                {dwarf::DW_CFA_offset | Reg1, 1, dwarf::DW_CFA_advance_loc | 4,
                 dwarf::DW_CFA_remember_state, dwarf::DW_CFA_offset | Reg2, 2,
                 dwarf::DW_CFA_advance_loc | 4, dwarf::DW_CFA_remember_state,
+                dwarf::DW_CFA_def_cfa_offset, CFAOff2,
                 dwarf::DW_CFA_offset | Reg3, 3, dwarf::DW_CFA_advance_loc | 4,
                 dwarf::DW_CFA_restore_state, dwarf::DW_CFA_advance_loc | 4,
                 dwarf::DW_CFA_restore_state}),
@@ -1196,18 +1211,28 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
   const dwarf::UnwindTable &Rows = RowsOrErr.get();
   EXPECT_EQ(Rows.size(), 5u);
   EXPECT_EQ(Rows[0].getAddress(), 0x1000u);
+  EXPECT_EQ(Rows[0].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff1));
   EXPECT_EQ(Rows[0].getRegisterLocations(), VerifyLocs1);
 
   EXPECT_EQ(Rows[1].getAddress(), 0x1004u);
+  EXPECT_EQ(Rows[1].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff1));
   EXPECT_EQ(Rows[1].getRegisterLocations(), VerifyLocs2);
 
   EXPECT_EQ(Rows[2].getAddress(), 0x1008u);
+  EXPECT_EQ(Rows[2].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff2));
   EXPECT_EQ(Rows[2].getRegisterLocations(), VerifyLocs3);
 
   EXPECT_EQ(Rows[3].getAddress(), 0x100Cu);
+  EXPECT_EQ(Rows[3].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff1));
   EXPECT_EQ(Rows[3].getRegisterLocations(), VerifyLocs2);
 
   EXPECT_EQ(Rows[4].getAddress(), 0x1010u);
+  EXPECT_EQ(Rows[4].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff1));
   EXPECT_EQ(Rows[4].getRegisterLocations(), VerifyLocs1);
 }
 
@@ -1225,7 +1250,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_undefined) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1270,7 +1295,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_same_value) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1314,7 +1339,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_register) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1360,7 +1385,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_expression) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1412,7 +1437,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_val_expression) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1465,7 +1490,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_def_cfa) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1541,6 +1566,104 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_def_cfa) {
   EXPECT_EQ(
       Rows[4].getCFAValue(),
       dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff2));
+  EXPECT_EQ(Rows[4].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[4].getRegisterLocations(), VerifyLocs);
+}
+
+TEST(DWARFDebugFrame, UnwindTable_DW_CFA_LLVM_def_aspace_cfa) {
+  // Test that DW_CFA_LLVM_def_aspace_cfa, DW_CFA_LLVM_def_aspace_cfa_sf,
+  // DW_CFA_def_cfa_register, DW_CFA_def_cfa_offset, and
+  // DW_CFA_def_cfa_offset_sf works as expected when parsed in the state
+  // machine.
+  dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
+                                 /*Offset=*/0x0,
+                                 /*Length=*/0xff);
+
+  dwarf::FDE TestFDE(/*IsDWARF64=*/true,
+                     /*Offset=*/0x3333abcdabcd,
+                     /*Length=*/0x4444abcdabcd,
+                     /*CIEPointer=*/0x1111abcdabcd,
+                     /*InitialLocation=*/0x1000,
+                     /*AddressRange=*/0x1000,
+                     /*Cie=*/&TestCIE,
+                     /*LSDAAddress=*/std::nullopt,
+                     /*Arch=*/Triple::x86_64);
+
+  // Make a CIE that has a valid CFA definition and a single register unwind
+  // rule for register that we will verify is in all of the pushed rows.
+  constexpr uint8_t CFAReg1 = 12;
+  constexpr uint8_t CFAOff1 = 32;
+  constexpr uint8_t CFAReg2 = 13;
+  constexpr uint8_t CFAOff2 = 48;
+  constexpr uint8_t Reg = 13;
+  constexpr uint8_t InReg = 14;
+  constexpr uint8_t AddrSpace = 2;
+
+  EXPECT_THAT_ERROR(
+      parseCFI(TestCIE, {dwarf::DW_CFA_LLVM_def_aspace_cfa, CFAReg1, CFAOff1,
+                         AddrSpace, dwarf::DW_CFA_register, Reg, InReg}),
+      Succeeded());
+
+  // Make a FDE with DWARF call frame instruction opcodes that use all of the
+  // DW_CFA_def_cfa* opcodes. This will verify that all opcodes that should
+  // create a row are correctly working.
+  EXPECT_THAT_ERROR(
+      parseCFI(
+          TestFDE,
+          {
+              dwarf::DW_CFA_advance_loc | 4, dwarf::DW_CFA_def_cfa_register,
+              CFAReg2, dwarf::DW_CFA_advance_loc | 4,
+              dwarf::DW_CFA_def_cfa_offset, CFAOff2,
+              dwarf::DW_CFA_advance_loc | 4, dwarf::DW_CFA_def_cfa_offset_sf,
+              0x7c, // -4 SLEB to make offset = 32 (CFAOff1)
+              dwarf::DW_CFA_advance_loc | 4, dwarf::DW_CFA_def_cfa_sf, CFAReg1,
+              0x7a, // -6 SLEB to make CFA offset 48 (CFAOff2)
+          }),
+      Succeeded());
+
+  // Create locations that we expect the UnwindRow objects to contain after
+  // parsing the DWARF call frame instructions.
+  dwarf::RegisterLocations VerifyLocs;
+  VerifyLocs.setRegisterLocation(
+      Reg, dwarf::UnwindLocation::createIsRegisterPlusOffset(InReg, 0));
+
+  // Verify we catch state machine error.
+  Expected<dwarf::UnwindTable> RowsOrErr = dwarf::UnwindTable::create(&TestFDE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  const dwarf::UnwindTable &Rows = RowsOrErr.get();
+  EXPECT_EQ(Rows.size(), 5u);
+  EXPECT_EQ(Rows[0].getAddress(), 0x1000u);
+  EXPECT_EQ(Rows[0].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff1,
+                                                              AddrSpace));
+  EXPECT_EQ(Rows[0].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[0].getRegisterLocations(), VerifyLocs);
+
+  EXPECT_EQ(Rows[1].getAddress(), 0x1004u);
+  EXPECT_EQ(Rows[1].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1,
+                                                              AddrSpace));
+  EXPECT_EQ(Rows[1].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[1].getRegisterLocations(), VerifyLocs);
+
+  EXPECT_EQ(Rows[2].getAddress(), 0x1008u);
+  EXPECT_EQ(Rows[2].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff2,
+                                                              AddrSpace));
+  EXPECT_EQ(Rows[2].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[2].getRegisterLocations(), VerifyLocs);
+
+  EXPECT_EQ(Rows[3].getAddress(), 0x100cu);
+  EXPECT_EQ(Rows[3].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1,
+                                                              AddrSpace));
+  EXPECT_EQ(Rows[3].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[3].getRegisterLocations(), VerifyLocs);
+
+  EXPECT_EQ(Rows[4].getAddress(), 0x1010u);
+  EXPECT_EQ(Rows[4].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff2,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[4].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[4].getRegisterLocations(), VerifyLocs);
 }

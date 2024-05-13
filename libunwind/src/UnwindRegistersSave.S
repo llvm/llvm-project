@@ -1,4 +1,4 @@
-//===------------------------ UnwindRegistersSave.S -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,17 @@
 
 #include "assembly.h"
 
+#define FROM_0_TO_15 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+#define FROM_16_TO_31 16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+
+#define FROM_0_TO_31 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+#define FROM_32_TO_63 32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63
+
+#if defined(_AIX)
+    .toc
+#else
     .text
+#endif
 
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 
@@ -27,6 +37,8 @@
 #   +                       +
 #
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+
+  _LIBUNWIND_CET_ENDBR
   push  %eax
   movl  8(%esp), %eax
   movl  %ebx,  4(%eax)
@@ -70,6 +82,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #define TMP %rsi
 #endif
 
+  _LIBUNWIND_CET_ENDBR
   movq  %rax,   (PTR)
   movq  %rbx,  8(PTR)
   movq  %rcx, 16(PTR)
@@ -161,11 +174,13 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   sw    $31, (4 * 31)($4)
   # Store return address to pc
   sw    $31, (4 * 32)($4)
+#if __mips_isa_rev < 6
   # hi and lo
   mfhi  $8
   sw    $8,  (4 * 33)($4)
   mflo  $8
   sw    $8,  (4 * 34)($4)
+#endif
 #ifdef __mips_hard_float
 #if __mips_fpr != 64
   sdc1  $f0, (4 * 36 + 8 * 0)($4)
@@ -237,77 +252,22 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   .set noat
   .set noreorder
   .set nomacro
-  sd    $1, (8 * 1)($4)
-  sd    $2, (8 * 2)($4)
-  sd    $3, (8 * 3)($4)
-  sd    $4, (8 * 4)($4)
-  sd    $5, (8 * 5)($4)
-  sd    $6, (8 * 6)($4)
-  sd    $7, (8 * 7)($4)
-  sd    $8, (8 * 8)($4)
-  sd    $9, (8 * 9)($4)
-  sd    $10, (8 * 10)($4)
-  sd    $11, (8 * 11)($4)
-  sd    $12, (8 * 12)($4)
-  sd    $13, (8 * 13)($4)
-  sd    $14, (8 * 14)($4)
-  sd    $15, (8 * 15)($4)
-  sd    $16, (8 * 16)($4)
-  sd    $17, (8 * 17)($4)
-  sd    $18, (8 * 18)($4)
-  sd    $19, (8 * 19)($4)
-  sd    $20, (8 * 20)($4)
-  sd    $21, (8 * 21)($4)
-  sd    $22, (8 * 22)($4)
-  sd    $23, (8 * 23)($4)
-  sd    $24, (8 * 24)($4)
-  sd    $25, (8 * 25)($4)
-  sd    $26, (8 * 26)($4)
-  sd    $27, (8 * 27)($4)
-  sd    $28, (8 * 28)($4)
-  sd    $29, (8 * 29)($4)
-  sd    $30, (8 * 30)($4)
-  sd    $31, (8 * 31)($4)
+  .irp i,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+    sd $\i, (8 * \i)($4)
+  .endr
   # Store return address to pc
   sd    $31, (8 * 32)($4)
+#if __mips_isa_rev < 6
   # hi and lo
   mfhi  $8
   sd    $8,  (8 * 33)($4)
   mflo  $8
   sd    $8,  (8 * 34)($4)
+#endif
 #ifdef __mips_hard_float
-  sdc1  $f0, (8 * 35)($4)
-  sdc1  $f1, (8 * 36)($4)
-  sdc1  $f2, (8 * 37)($4)
-  sdc1  $f3, (8 * 38)($4)
-  sdc1  $f4, (8 * 39)($4)
-  sdc1  $f5, (8 * 40)($4)
-  sdc1  $f6, (8 * 41)($4)
-  sdc1  $f7, (8 * 42)($4)
-  sdc1  $f8, (8 * 43)($4)
-  sdc1  $f9, (8 * 44)($4)
-  sdc1  $f10, (8 * 45)($4)
-  sdc1  $f11, (8 * 46)($4)
-  sdc1  $f12, (8 * 47)($4)
-  sdc1  $f13, (8 * 48)($4)
-  sdc1  $f14, (8 * 49)($4)
-  sdc1  $f15, (8 * 50)($4)
-  sdc1  $f16, (8 * 51)($4)
-  sdc1  $f17, (8 * 52)($4)
-  sdc1  $f18, (8 * 53)($4)
-  sdc1  $f19, (8 * 54)($4)
-  sdc1  $f20, (8 * 55)($4)
-  sdc1  $f21, (8 * 56)($4)
-  sdc1  $f22, (8 * 57)($4)
-  sdc1  $f23, (8 * 58)($4)
-  sdc1  $f24, (8 * 59)($4)
-  sdc1  $f25, (8 * 60)($4)
-  sdc1  $f26, (8 * 61)($4)
-  sdc1  $f27, (8 * 62)($4)
-  sdc1  $f28, (8 * 63)($4)
-  sdc1  $f29, (8 * 64)($4)
-  sdc1  $f30, (8 * 65)($4)
-  sdc1  $f31, (8 * 66)($4)
+  .irp i,FROM_0_TO_31
+    sdc1 $f\i, (280+8*\i)($4)
+  .endr
 #endif
   jr	$31
   # return UNW_ESUCCESS
@@ -331,8 +291,11 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 // On entry:
 //  thread_state pointer is in r3
 //
+#if defined(_AIX)
+DEFINE_LIBUNWIND_FUNCTION_AND_WEAK_ALIAS(__unw_getcontext, unw_getcontext)
+#else
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
-
+#endif
 // store register (GPR)
 #define PPC64_STR(n) \
   std   n, (8 * (n + 2))(3)
@@ -342,9 +305,21 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   mflr  0
   std   0, PPC64_OFFS_SRR0(3) // store lr as ssr0
   PPC64_STR(1)
+  PPC64_STR(4)        // Save r4 first since it will be used for fixing r2.
+#if defined(_AIX)
+  // The TOC register (r2) was changed by the glue code if unw_getcontext
+  // is called from a different module. Save the original TOC register
+  // in the context if this is the case.
+  mflr   4
+  lwz    4, 0(4)      // Get the first instruction at the return address.
+  xoris  0, 4, 0xe841 // Is it reloading the TOC register "ld 2,40(1)"?
+  cmplwi 0, 0x28
+  bne    0, LnoR2Fix  // No need to fix up r2 if it is not.
+  ld     2, 40(1)     // Use the saved TOC register in the stack.
+LnoR2Fix:
+#endif
   PPC64_STR(2)
   PPC64_STR(3)
-  PPC64_STR(4)
   PPC64_STR(5)
   PPC64_STR(6)
   PPC64_STR(7)
@@ -377,7 +352,12 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   std   0,  PPC64_OFFS_CR(3)
   mfxer 0
   std   0,  PPC64_OFFS_XER(3)
+#if defined(_AIX)
+  // LR value saved from the register is not used, initialize it to 0.
+  li    0,  0
+#else
   mflr  0
+#endif
   std   0,  PPC64_OFFS_LR(3)
   mfctr 0
   std   0,  PPC64_OFFS_CTR(3)
@@ -392,9 +372,20 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   addi  4, 3, PPC64_OFFS_FP
 
 // store VS register
+#ifdef __LITTLE_ENDIAN__
+// For little-endian targets, we need a swap since stxvd2x will store the
+// register in the incorrect doubleword order.
+// FIXME: when supporting targets older than Power9 on LE is no longer required
+//        this can be changed to simply `stxv n, 16 * n(4)`.
+#define PPC64_STVS(n)      \
+  xxswapd n, n            ;\
+  stxvd2x n, 0, 4         ;\
+  addi    4, 4, 16
+#else
 #define PPC64_STVS(n)      \
   stxvd2x n, 0, 4         ;\
   addi    4, 4, 16
+#endif
 
   PPC64_STVS(0)
   PPC64_STVS(1)
@@ -556,7 +547,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   blr
 
 
-#elif defined(__ppc__)
+#elif defined(__powerpc__)
 
 //
 // extern int unw_getcontext(unw_context_t* thread_state)
@@ -564,14 +555,30 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 // On entry:
 //  thread_state pointer is in r3
 //
+#if defined(_AIX)
+DEFINE_LIBUNWIND_FUNCTION_AND_WEAK_ALIAS(__unw_getcontext, unw_getcontext)
+#else
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+#endif
   stw     0,   8(3)
   mflr    0
   stw     0,   0(3) // store lr as ssr0
   stw     1,  12(3)
+  stw     4,  24(3) // Save r4 first since it will be used for fixing r2.
+#if defined(_AIX)
+  // The TOC register (r2) was changed by the glue code if unw_getcontext
+  // is called from a different module. Save the original TOC register
+  // in the context if this is the case.
+  mflr    4
+  lwz     4,  0(4)      // Get the instruction at the return address.
+  xoris   0,  4, 0x8041 // Is it reloading the TOC register "lwz 2,20(1)"?
+  cmplwi  0,  0x14
+  bne     0,  LnoR2Fix  // No need to fix up r2 if it is not.
+  lwz     2,  20(1)     // Use the saved TOC register in the stack.
+LnoR2Fix:
+#endif
   stw     2,  16(3)
   stw     3,  20(3)
-  stw     4,  24(3)
   stw     5,  28(3)
   stw     6,  32(3)
   stw     7,  36(3)
@@ -600,12 +607,19 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   stw     30,128(3)
   stw     31,132(3)
 
+#if defined(__ALTIVEC__)
   // save VRSave register
   mfspr   0, 256
   stw     0, 156(3)
+#endif
   // save CR registers
   mfcr    0
   stw     0, 136(3)
+#if defined(_AIX)
+  // LR value from the register is not used, initialize it to 0.
+  li      0, 0
+  stw     0, 144(3)
+#endif
   // save CTR register
   mfctr   0
   stw     0, 148(3)
@@ -766,7 +780,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 @
 @ On entry:
 @  thread_state pointer is in r0
-@ 
+@
 @ Per EHABI #4.7 this only saves the core integer registers.
 @ EHABI #7.4.5 notes that in general all VRS registers should be restored
 @ however this is very hard to do for VFP registers because it is unknown
@@ -996,6 +1010,64 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 
   jumpr r31
 
+#elif defined(__sparc__) && defined(__arch64__)
+
+#
+# extern int __unw_getcontext(unw_context_t* thread_state)
+#
+# On entry:
+#  thread_state pointer is in %o0
+#
+DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+  .register %g2, #scratch
+  .register %g3, #scratch
+  .register %g6, #scratch
+  .register %g7, #scratch
+  stx  %g1, [%o0 + 0x08]
+  stx  %g2, [%o0 + 0x10]
+  stx  %g3, [%o0 + 0x18]
+  stx  %g4, [%o0 + 0x20]
+  stx  %g5, [%o0 + 0x28]
+  stx  %g6, [%o0 + 0x30]
+  stx  %g7, [%o0 + 0x38]
+  stx  %o0, [%o0 + 0x40]
+  stx  %o1, [%o0 + 0x48]
+  stx  %o2, [%o0 + 0x50]
+  stx  %o3, [%o0 + 0x58]
+  stx  %o4, [%o0 + 0x60]
+  stx  %o5, [%o0 + 0x68]
+  stx  %o6, [%o0 + 0x70]
+  stx  %o7, [%o0 + 0x78]
+  stx  %l0, [%o0 + 0x80]
+  stx  %l1, [%o0 + 0x88]
+  stx  %l2, [%o0 + 0x90]
+  stx  %l3, [%o0 + 0x98]
+  stx  %l4, [%o0 + 0xa0]
+  stx  %l5, [%o0 + 0xa8]
+  stx  %l6, [%o0 + 0xb0]
+  stx  %l7, [%o0 + 0xb8]
+  stx  %i0, [%o0 + 0xc0]
+  stx  %i1, [%o0 + 0xc8]
+  stx  %i2, [%o0 + 0xd0]
+  stx  %i3, [%o0 + 0xd8]
+  stx  %i4, [%o0 + 0xe0]
+  stx  %i5, [%o0 + 0xe8]
+  stx  %i6, [%o0 + 0xf0]
+  stx  %i7, [%o0 + 0xf8]
+
+  # save StackGhost cookie
+  mov  %i7, %g4
+  save %sp, -176, %sp
+  # register window flush necessary even without StackGhost
+  flushw
+  restore
+  ldx  [%sp + 2047 + 0x78], %g5
+  xor  %g4, %g5, %g4
+  stx  %g4, [%o0 + 0x100]
+  retl
+  # return UNW_ESUCCESS
+   clr %o0
+
 #elif defined(__sparc__)
 
 #
@@ -1036,75 +1108,71 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   ISTORE    x1, (RISCV_ISIZE * 0)(a0) // store ra as pc
-  ISTORE    x1, (RISCV_ISIZE * 1)(a0)
-  ISTORE    x2, (RISCV_ISIZE * 2)(a0)
-  ISTORE    x3, (RISCV_ISIZE * 3)(a0)
-  ISTORE    x4, (RISCV_ISIZE * 4)(a0)
-  ISTORE    x5, (RISCV_ISIZE * 5)(a0)
-  ISTORE    x6, (RISCV_ISIZE * 6)(a0)
-  ISTORE    x7, (RISCV_ISIZE * 7)(a0)
-  ISTORE    x8, (RISCV_ISIZE * 8)(a0)
-  ISTORE    x9, (RISCV_ISIZE * 9)(a0)
-  ISTORE    x10, (RISCV_ISIZE * 10)(a0)
-  ISTORE    x11, (RISCV_ISIZE * 11)(a0)
-  ISTORE    x12, (RISCV_ISIZE * 12)(a0)
-  ISTORE    x13, (RISCV_ISIZE * 13)(a0)
-  ISTORE    x14, (RISCV_ISIZE * 14)(a0)
-  ISTORE    x15, (RISCV_ISIZE * 15)(a0)
-  ISTORE    x16, (RISCV_ISIZE * 16)(a0)
-  ISTORE    x17, (RISCV_ISIZE * 17)(a0)
-  ISTORE    x18, (RISCV_ISIZE * 18)(a0)
-  ISTORE    x19, (RISCV_ISIZE * 19)(a0)
-  ISTORE    x20, (RISCV_ISIZE * 20)(a0)
-  ISTORE    x21, (RISCV_ISIZE * 21)(a0)
-  ISTORE    x22, (RISCV_ISIZE * 22)(a0)
-  ISTORE    x23, (RISCV_ISIZE * 23)(a0)
-  ISTORE    x24, (RISCV_ISIZE * 24)(a0)
-  ISTORE    x25, (RISCV_ISIZE * 25)(a0)
-  ISTORE    x26, (RISCV_ISIZE * 26)(a0)
-  ISTORE    x27, (RISCV_ISIZE * 27)(a0)
-  ISTORE    x28, (RISCV_ISIZE * 28)(a0)
-  ISTORE    x29, (RISCV_ISIZE * 29)(a0)
-  ISTORE    x30, (RISCV_ISIZE * 30)(a0)
-  ISTORE    x31, (RISCV_ISIZE * 31)(a0)
+  .irp i,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+    ISTORE x\i, (RISCV_ISIZE * \i)(a0)
+  .endr
 
 # if defined(__riscv_flen)
-  FSTORE    f0, (RISCV_FOFFSET + RISCV_FSIZE * 0)(a0)
-  FSTORE    f1, (RISCV_FOFFSET + RISCV_FSIZE * 1)(a0)
-  FSTORE    f2, (RISCV_FOFFSET + RISCV_FSIZE * 2)(a0)
-  FSTORE    f3, (RISCV_FOFFSET + RISCV_FSIZE * 3)(a0)
-  FSTORE    f4, (RISCV_FOFFSET + RISCV_FSIZE * 4)(a0)
-  FSTORE    f5, (RISCV_FOFFSET + RISCV_FSIZE * 5)(a0)
-  FSTORE    f6, (RISCV_FOFFSET + RISCV_FSIZE * 6)(a0)
-  FSTORE    f7, (RISCV_FOFFSET + RISCV_FSIZE * 7)(a0)
-  FSTORE    f8, (RISCV_FOFFSET + RISCV_FSIZE * 8)(a0)
-  FSTORE    f9, (RISCV_FOFFSET + RISCV_FSIZE * 9)(a0)
-  FSTORE    f10, (RISCV_FOFFSET + RISCV_FSIZE * 10)(a0)
-  FSTORE    f11, (RISCV_FOFFSET + RISCV_FSIZE * 11)(a0)
-  FSTORE    f12, (RISCV_FOFFSET + RISCV_FSIZE * 12)(a0)
-  FSTORE    f13, (RISCV_FOFFSET + RISCV_FSIZE * 13)(a0)
-  FSTORE    f14, (RISCV_FOFFSET + RISCV_FSIZE * 14)(a0)
-  FSTORE    f15, (RISCV_FOFFSET + RISCV_FSIZE * 15)(a0)
-  FSTORE    f16, (RISCV_FOFFSET + RISCV_FSIZE * 16)(a0)
-  FSTORE    f17, (RISCV_FOFFSET + RISCV_FSIZE * 17)(a0)
-  FSTORE    f18, (RISCV_FOFFSET + RISCV_FSIZE * 18)(a0)
-  FSTORE    f19, (RISCV_FOFFSET + RISCV_FSIZE * 19)(a0)
-  FSTORE    f20, (RISCV_FOFFSET + RISCV_FSIZE * 20)(a0)
-  FSTORE    f21, (RISCV_FOFFSET + RISCV_FSIZE * 21)(a0)
-  FSTORE    f22, (RISCV_FOFFSET + RISCV_FSIZE * 22)(a0)
-  FSTORE    f23, (RISCV_FOFFSET + RISCV_FSIZE * 23)(a0)
-  FSTORE    f24, (RISCV_FOFFSET + RISCV_FSIZE * 24)(a0)
-  FSTORE    f25, (RISCV_FOFFSET + RISCV_FSIZE * 25)(a0)
-  FSTORE    f26, (RISCV_FOFFSET + RISCV_FSIZE * 26)(a0)
-  FSTORE    f27, (RISCV_FOFFSET + RISCV_FSIZE * 27)(a0)
-  FSTORE    f28, (RISCV_FOFFSET + RISCV_FSIZE * 28)(a0)
-  FSTORE    f29, (RISCV_FOFFSET + RISCV_FSIZE * 29)(a0)
-  FSTORE    f30, (RISCV_FOFFSET + RISCV_FSIZE * 30)(a0)
-  FSTORE    f31, (RISCV_FOFFSET + RISCV_FSIZE * 31)(a0)
+  .irp i,FROM_0_TO_31
+    FSTORE f\i, (RISCV_FOFFSET + RISCV_FSIZE * \i)(a0)
+  .endr
 # endif
 
   li     a0, 0  // return UNW_ESUCCESS
   ret           // jump to ra
+
+#elif defined(__s390x__)
+
+//
+// extern int __unw_getcontext(unw_context_t* thread_state)
+//
+// On entry:
+//  thread_state pointer is in r2
+//
+DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+
+  // Save GPRs
+  stmg %r0, %r15, 16(%r2)
+
+  // Save PSWM
+  epsw %r0, %r1
+  stm %r0, %r1, 0(%r2)
+
+  // Store return address as PSWA
+  stg %r14, 8(%r2)
+
+  // Save FPRs
+  .irp i,FROM_0_TO_15
+    std %f\i, (144+8*\i)(%r2)
+  .endr
+
+  // Return UNW_ESUCCESS
+  lghi %r2, 0
+  br %r14
+
+#elif defined(__loongarch__) && __loongarch_grlen == 64
+
+#
+# extern int __unw_getcontext(unw_context_t* thread_state)
+#
+# On entry:
+#  thread_state pointer is in $a0($r4)
+#
+DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+  .irp i,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+    st.d $r\i, $a0, (8*\i)
+  .endr
+  st.d    $r1,  $a0, (8 * 32) // store $ra to pc
+
+# if __loongarch_frlen == 64
+  .irp i,FROM_0_TO_31
+    fst.d $f\i, $a0, (8 * 33 + 8 * \i)
+  .endr
+# endif
+
+  move     $a0, $zero  // UNW_ESUCCESS
+  jr       $ra
+
 #endif
 
   WEAK_ALIAS(__unw_getcontext, unw_getcontext)

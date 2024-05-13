@@ -1,4 +1,5 @@
 ; RUN: %llc_dwarf -O2 %s -o - | FileCheck %s
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O2 %s -o - | FileCheck %s
 ; Check struct X for dead variable xyz from inlined function foo.
 
 ; CHECK: {{.section.*debug_info|.*dwinfo:}}
@@ -18,11 +19,11 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 ; Function Attrs: nounwind ssp
 define i32 @bar() #1 !dbg !8 {
 entry:
-  %0 = load i32, i32* @i, align 4, !dbg !11
+  %0 = load i32, ptr @i, align 4, !dbg !11
   tail call void @llvm.dbg.value(metadata i32 %0, metadata !13, metadata !24), !dbg !25
   tail call void @llvm.dbg.declare(metadata !5, metadata !18, metadata !24), !dbg !26
   %1 = mul nsw i32 %0, %0, !dbg !27
-  store i32 %1, i32* @i, align 4, !dbg !11
+  store i32 %1, ptr @i, align 4, !dbg !11
   ret i32 %1, !dbg !28
 }
 

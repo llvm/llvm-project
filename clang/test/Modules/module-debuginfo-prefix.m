@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // REQUIRES: asserts
 
 // Modules:
@@ -22,4 +23,4 @@
 
 // Dir should always be empty, but on Windows we can't recognize /var
 // as being an absolute path.
-// CHECK: !DIFile(filename: "/OVERRIDE/DebugObjC.h", directory: "{{()|(.*:.*)}}")
+// CHECK: !DIFile(filename: "/OVERRIDE{{/|\\\\?}}DebugObjC.h", directory: "{{()|(.*:.*)}}")

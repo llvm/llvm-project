@@ -117,7 +117,7 @@ cl::opt<bool> SilencePasses(
 
 static cl::list<std::string> OptArgs("opt-args", cl::Positional,
                                      cl::desc("<opt arguments>..."),
-                                     cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                     cl::PositionalEatsArgs);
 
 /// runPasses - Run the specified passes on Program, outputting a bitcode file
 /// and writing the filename into OutputFile if successful.  If the
@@ -139,9 +139,9 @@ bool BugDriver::runPasses(Module &Program,
   if (EC) {
     errs() << getToolName()
            << ": Error making unique filename: " << EC.message() << "\n";
-    return 1;
+    return true;
   }
-  OutputFilename = std::string(UniqueFilename.str());
+  OutputFilename = std::string(UniqueFilename);
 
   // set up the input file name
   Expected<sys::fs::TempFile> Temp =
@@ -150,7 +150,7 @@ bool BugDriver::runPasses(Module &Program,
     errs() << getToolName()
            << ": Error making unique filename: " << toString(Temp.takeError())
            << "\n";
-    return 1;
+    return true;
   }
   DiscardTemp Discard{*Temp};
   raw_fd_ostream OS(Temp->FD, /*shouldClose*/ false);
@@ -160,7 +160,7 @@ bool BugDriver::runPasses(Module &Program,
   if (OS.has_error()) {
     errs() << "Error writing bitcode file: " << Temp->TmpName << "\n";
     OS.clear_error();
-    return 1;
+    return true;
   }
 
   std::string tool = OptCmd;
@@ -173,11 +173,11 @@ bool BugDriver::runPasses(Module &Program,
   }
   if (tool.empty()) {
     errs() << "Cannot find `opt' in PATH!\n";
-    return 1;
+    return true;
   }
   if (!sys::fs::exists(tool)) {
     errs() << "Specified `opt' binary does not exist: " << tool << "\n";
-    return 1;
+    return true;
   }
 
   std::string Prog;
@@ -190,7 +190,7 @@ bool BugDriver::runPasses(Module &Program,
     Prog = tool;
   if (Prog.empty()) {
     errs() << "Cannot find `valgrind' in PATH!\n";
-    return 1;
+    return true;
   }
 
   // setup the child process' arguments
@@ -207,7 +207,7 @@ bool BugDriver::runPasses(Module &Program,
     Args.push_back(OptArgs[i]);
   // Pin to legacy PM since bugpoint has lots of infra and hacks revolving
   // around the legacy PM.
-  Args.push_back("-enable-new-pm=0");
+  Args.push_back("-bugpoint-enable-legacy-pm");
   Args.push_back("-disable-symbolication");
   Args.push_back("-o");
   Args.push_back(OutputFilename);
@@ -223,8 +223,8 @@ bool BugDriver::runPasses(Module &Program,
   for (std::vector<std::string>::const_iterator I = pass_args.begin(),
                                                 E = pass_args.end();
        I != E; ++I)
-    Args.push_back(I->c_str());
-  Args.push_back(Temp->TmpName.c_str());
+    Args.push_back(*I);
+  Args.push_back(Temp->TmpName);
   Args.append(ExtraArgs.begin(), ExtraArgs.end());
 
   LLVM_DEBUG(errs() << "\nAbout to run:\t";
@@ -232,7 +232,8 @@ bool BugDriver::runPasses(Module &Program,
              << " " << Args[i];
              errs() << "\n";);
 
-  Optional<StringRef> Redirects[3] = {None, None, None};
+  std::optional<StringRef> Redirects[3] = {std::nullopt, std::nullopt,
+                                           std::nullopt};
   // Redirect stdout and stderr to nowhere if SilencePasses is given.
   if (SilencePasses) {
     Redirects[1] = "";
@@ -240,7 +241,7 @@ bool BugDriver::runPasses(Module &Program,
   }
 
   std::string ErrMsg;
-  int result = sys::ExecuteAndWait(Prog, Args, None, Redirects, Timeout,
+  int result = sys::ExecuteAndWait(Prog, Args, std::nullopt, Redirects, Timeout,
                                    MemoryLimit, &ErrMsg);
 
   // If we are supposed to delete the bitcode file or if the passes crashed,

@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp51 %s -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45 -verify %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp50 -verify %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 -verify %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp51 -verify %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -17,7 +19,7 @@ void xxx(int argc) {
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp for simd'}}
 #pragma omp for simd foo
 
-void test_no_clause() {
+void test_no_clause(void) {
   int i;
 #pragma omp for simd
   for (i = 0; i < 16; ++i)
@@ -28,7 +30,7 @@ void test_no_clause() {
   ++i;
 }
 
-void test_branch_protected_scope() {
+void test_branch_protected_scope(void) {
   int i = 0;
 L1:
   ++i;
@@ -56,7 +58,7 @@ L1:
     goto L1;
 }
 
-void test_invalid_clause() {
+void test_invalid_clause(void) {
   int i;
 #pragma omp parallel
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp for simd' are ignored}}
@@ -65,7 +67,7 @@ void test_invalid_clause() {
     ;
 }
 
-void test_non_identifiers() {
+void test_non_identifiers(void) {
   int i, x;
 
 #pragma omp parallel
@@ -92,8 +94,8 @@ void test_non_identifiers() {
     ;
 }
 
-extern int foo();
-void test_safelen() {
+extern int foo(void);
+void test_safelen(void) {
   int i;
 // expected-error@+1 {{expected '('}}
 #pragma omp for simd safelen
@@ -178,7 +180,7 @@ void test_safelen() {
     ;
 }
 
-void test_simdlen() {
+void test_simdlen(void) {
   int i;
 // expected-error@+1 {{expected '('}}
 #pragma omp for simd simdlen
@@ -263,7 +265,7 @@ void test_simdlen() {
     ;
 }
 
-void test_safelen_simdlen() {
+void test_safelen_simdlen(void) {
   int i;
 // expected-error@+1 {{the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter}}
 #pragma omp for simd simdlen(6) safelen(5)
@@ -275,7 +277,7 @@ void test_safelen_simdlen() {
     ;
 }
 
-void test_collapse() {
+void test_collapse(void) {
   int i;
 #pragma omp parallel
 // expected-error@+1 {{expected '('}}
@@ -393,7 +395,7 @@ void test_collapse() {
         i += j;
 }
 
-void test_linear() {
+void test_linear(void) {
   int i;
 // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
 #pragma omp for simd linear(
@@ -498,7 +500,7 @@ void test_linear() {
     ;
 }
 
-void test_aligned() {
+void test_aligned(void) {
   int i;
 // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
 #pragma omp for simd aligned(
@@ -596,7 +598,7 @@ void test_aligned() {
 }
 
 
-void test_private() {
+void test_private(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected expression}}
@@ -647,7 +649,7 @@ void test_private() {
   }
 }
 
-void test_lastprivate() {
+void test_lastprivate(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
@@ -698,7 +700,7 @@ void test_lastprivate() {
     ;
 }
 
-void test_firstprivate() {
+void test_firstprivate(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
@@ -749,7 +751,7 @@ void test_firstprivate() {
     ;
 }
 
-void test_loop_messages() {
+void test_loop_messages(void) {
   float a[100], b[100], c[100];
 #pragma omp parallel
 // expected-error@+2 {{variable must be of integer or pointer type}}
@@ -765,7 +767,7 @@ void test_loop_messages() {
   }
 }
 
-void test_nontemporal() {
+void test_nontemporal(void) {
   int i;
 // omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp for simd'}} expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
 #pragma omp for simd nontemporal(
@@ -787,7 +789,7 @@ void test_nontemporal() {
 #pragma omp for simd nontemporal(int)
   for (i = 0; i < 16; ++i)
     ;
-// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp for simd'}} omp50-error@+1 {{expected variable name}}
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp for simd'}} omp50-error@+1 {{expected variable name}} omp51-error@+1 {{expected variable name}}
 #pragma omp for simd nontemporal(0)
   for (i = 0; i < 16; ++i)
     ;
@@ -817,8 +819,9 @@ void test_nontemporal() {
   for (i = 0; i < 16; ++i)
     ;
 
+// omp51-note@+3 {{defined as nontemporal}}
 // omp50-note@+2 {{defined as nontemporal}}
-// omp45-error@+1 2 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp for simd'}} omp50-error@+1 {{a variable cannot appear in more than one nontemporal clause}}
+// omp45-error@+1 2 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp for simd'}} omp50-error@+1 {{a variable cannot appear in more than one nontemporal clause}} omp51-error@+1 {{a variable cannot appear in more than one nontemporal clause}}
 #pragma omp for simd nontemporal(x) nontemporal(x)
   for (i = 0; i < 16; ++i)
     ;
@@ -852,16 +855,31 @@ void test_nontemporal() {
 #pragma omp for simd order // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} expected-error {{expected '(' after 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp for simd order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp for simd order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}} omp51-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp for simd order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp for simd order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}} omp51-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp for simd order(concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp for simd order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for simd order(unconstrained:) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}} omp51-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for simd order(reproducible:concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for simd order(reproducible:concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for simd order(unconstrained:concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for simd order(concurrent) order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for simd'}} omp51-error {{directive '#pragma omp for simd' cannot contain more than one 'order' clause}}
   for (int i = 0; i < 10; ++i)
     ;
 }

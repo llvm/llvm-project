@@ -13,14 +13,19 @@
 
 // void open(const wchar_t* s, ios_base::openmode mode = ios_base::out);
 
+// This extension is only provided on Windows.
+// REQUIRES: windows
+// UNSUPPORTED: no-wide-characters
+
+// TODO: This should not be necessary
+// ADDITIONAL_COMPILE_FLAGS:-D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT -D_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT
+
 #include <fstream>
 #include <cassert>
 #include "test_macros.h"
-#include "platform_support.h"
+#include "wide_temp_file.h"
 
-int main(int, char**)
-{
-#ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
+int main(int, char**) {
     std::wstring temp = get_wide_temp_file_name();
     {
         std::ofstream fs;
@@ -56,7 +61,6 @@ int main(int, char**)
         assert(c == L'a');
     }
     _wremove(temp.c_str());
-#endif
 
-  return 0;
+    return 0;
 }

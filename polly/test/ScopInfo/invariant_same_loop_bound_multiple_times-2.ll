@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 ;
 ; Verify that we only have one parameter and one invariant load for all
 ; three loads that occure in the region but actually access the same
@@ -50,7 +50,7 @@ entry:
 
 for.cond:                                         ; preds = %for.inc.16, %entry
   %indvars.iv5 = phi i64 [ %indvars.iv.next6, %for.inc.16 ], [ 0, %entry ]
-  %bounds0l0 = load i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @bounds, i64 0, i64 0), align 4
+  %bounds0l0 = load i32, ptr @bounds, align 4
   %tmp7 = sext i32 %bounds0l0 to i64
   %cmp = icmp slt i64 %indvars.iv5, %tmp7
   br i1 %cmp, label %for.body, label %for.end.18
@@ -61,7 +61,7 @@ for.body:                                         ; preds = %for.cond
 
 for.cond.1:                                       ; preds = %for.inc.13, %for.body
   %indvars.iv3 = phi i64 [ %indvars.iv.next4, %for.inc.13 ], [ 0, %for.body ]
-  %bounds0l1 = load i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @bounds, i64 0, i64 0), align 4
+  %bounds0l1 = load i32, ptr @bounds, align 4
   %tmp9 = sext i32 %bounds0l1 to i64
   %cmp2 = icmp slt i64 %indvars.iv3, %tmp9
   br i1 %cmp2, label %for.body.3, label %for.end.15
@@ -71,7 +71,7 @@ for.body.3:                                       ; preds = %for.cond.1
 
 for.cond.4:                                       ; preds = %for.inc, %for.body.3
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %for.body.3 ]
-  %bounds0l2 = load i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @bounds, i64 0, i64 0), align 4
+  %bounds0l2 = load i32, ptr @bounds, align 4
   %tmp11 = sext i32 %bounds0l2 to i64
   %cmp5 = icmp slt i64 %indvars.iv, %tmp11
   br i1 %cmp5, label %for.body.6, label %for.end
@@ -81,10 +81,10 @@ for.body.6:                                       ; preds = %for.cond.4
   %tmp13 = add nsw i64 %tmp12, %indvars.iv5
   %tmp14 = trunc i64 %tmp13 to i32
   %conv = sitofp i32 %tmp14 to double
-  %arrayidx11 = getelementptr inbounds [1024 x [1024 x [1024 x double]]], [1024 x [1024 x [1024 x double]]]* @data, i64 0, i64 %indvars.iv5, i64 %indvars.iv3, i64 %indvars.iv
-  %tmp15 = load double, double* %arrayidx11, align 8
+  %arrayidx11 = getelementptr inbounds [1024 x [1024 x [1024 x double]]], ptr @data, i64 0, i64 %indvars.iv5, i64 %indvars.iv3, i64 %indvars.iv
+  %tmp15 = load double, ptr %arrayidx11, align 8
   %add12 = fadd double %tmp15, %conv
-  store double %add12, double* %arrayidx11, align 8
+  store double %add12, ptr %arrayidx11, align 8
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body.6

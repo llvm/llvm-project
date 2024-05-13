@@ -8,18 +8,11 @@
 
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
-#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/BinaryByteStream.h"
-#include "llvm/Support/BinaryStreamWriter.h"
-#include "llvm/Support/Endian.h"
-#include "llvm/Support/Error.h"
-#include <algorithm>
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -38,16 +31,16 @@ GlobalTypeTableBuilder::GlobalTypeTableBuilder(BumpPtrAllocator &Storage)
 
 GlobalTypeTableBuilder::~GlobalTypeTableBuilder() = default;
 
-Optional<TypeIndex> GlobalTypeTableBuilder::getFirst() {
+std::optional<TypeIndex> GlobalTypeTableBuilder::getFirst() {
   if (empty())
-    return None;
+    return std::nullopt;
 
   return TypeIndex(TypeIndex::FirstNonSimpleIndex);
 }
 
-Optional<TypeIndex> GlobalTypeTableBuilder::getNext(TypeIndex Prev) {
+std::optional<TypeIndex> GlobalTypeTableBuilder::getNext(TypeIndex Prev) {
   if (++Prev == nextTypeIndex())
-    return None;
+    return std::nullopt;
   return Prev;
 }
 
@@ -88,7 +81,7 @@ static inline ArrayRef<uint8_t> stabilize(BumpPtrAllocator &Alloc,
                                           ArrayRef<uint8_t> Data) {
   uint8_t *Stable = Alloc.Allocate<uint8_t>(Data.size());
   memcpy(Stable, Data.data(), Data.size());
-  return makeArrayRef(Stable, Data.size());
+  return ArrayRef(Stable, Data.size());
 }
 
 TypeIndex GlobalTypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> Record) {

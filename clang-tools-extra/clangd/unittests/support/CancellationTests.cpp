@@ -1,11 +1,11 @@
 #include "support/Cancellation.h"
 #include "support/Context.h"
 #include "support/Threading.h"
-#include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <thread>
 
 namespace clang {
@@ -21,7 +21,7 @@ TEST(CancellationTest, CancellationTest) {
 }
 
 TEST(CancellationTest, CancelerDiesContextLives) {
-  llvm::Optional<WithContext> ContextWithCancellation;
+  std::optional<WithContext> ContextWithCancellation;
   {
     auto Task = cancelableTask();
     ContextWithCancellation.emplace(std::move(Task.first));

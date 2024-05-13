@@ -8,25 +8,15 @@
 
 // <array>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: clang-5, apple-clang-9
-// UNSUPPORTED: libcpp-no-deduction-guides
-// Clang 5 will generate bad implicit deduction guides
-//	Specifically, for the copy constructor.
-
 
 // template <class T, class... U>
 //   array(T, U...) -> array<T, 1 + sizeof...(U)>;
 //
 //  Requires: (is_same_v<T, U> && ...) is true. Otherwise the program is ill-formed.
 
-
 #include <array>
 #include <cassert>
 #include <cstddef>
-
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
 
 #include "test_macros.h"
 

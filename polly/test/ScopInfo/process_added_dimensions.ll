@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; CHECK:      Context:
 ; CHECK-NEXT: {  :  }
@@ -28,14 +28,12 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare noalias i8* @malloc()
+declare noalias ptr @malloc()
 
 define i32 @main() {
 entry:
-  %call = tail call noalias i8* @malloc()
-  %0 = bitcast i8* %call to [6 x [6 x [64 x i32]]]*
-  %arrayidx51.5.phi.trans.insert = getelementptr inbounds i8, i8* %call, i64 8960
-  %1 = bitcast i8* %arrayidx51.5.phi.trans.insert to i32*
+  %call = tail call noalias ptr @malloc()
+  %arrayidx51.5.phi.trans.insert = getelementptr inbounds i8, ptr %call, i64 8960
   br label %for.cond40.preheader.4
 
 for.end76:                                        ; preds = %for.inc71.5
@@ -44,10 +42,10 @@ for.end76:                                        ; preds = %for.inc71.5
 for.cond40.preheader.4:                           ; preds = %for.inc71.5, %entry
   %t.0131 = phi i32 [ 0, %entry ], [ %inc75, %for.inc71.5 ]
   %indvars.iv.next135 = add nuw nsw i64 0, 1
-  %2 = trunc i64 %indvars.iv.next135 to i32
+  %0 = trunc i64 %indvars.iv.next135 to i32
   %indvars.iv.next = add nuw nsw i64 0, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 64
-  %exitcond137 = icmp eq i32 %2, 6
+  %exitcond137 = icmp eq i32 %0, 6
   %indvars.iv.next135.1 = add nuw nsw i64 1, 1
   %indvars.iv.next.1 = add nuw nsw i64 0, 1
   %exitcond.1 = icmp eq i64 %indvars.iv.next.1, 64
@@ -68,8 +66,8 @@ for.cond40.preheader.4:                           ; preds = %for.inc71.5, %entry
   %exitcond.4 = icmp eq i64 %indvars.iv.next.4, 64
   %lftr.wideiv.4 = trunc i64 %indvars.iv.next135.4 to i32
   %exitcond137.4 = icmp eq i32 %lftr.wideiv.4, 6
-  %arrayidx23.5 = getelementptr inbounds [6 x [6 x [64 x i32]]], [6 x [6 x [64 x i32]]]* %0, i64 0, i64 5, i64 5, i64 0
-  store i32 36, i32* %arrayidx23.5, align 4
+  %arrayidx23.5 = getelementptr inbounds [6 x [6 x [64 x i32]]], ptr %call, i64 0, i64 5, i64 5, i64 0
+  store i32 36, ptr %arrayidx23.5, align 4
   %indvars.iv.next.5 = add nuw nsw i64 0, 1
   %exitcond.5 = icmp eq i64 %indvars.iv.next.5, 64
   %indvars.iv.next143 = add nuw nsw i64 1, 1
@@ -104,7 +102,7 @@ for.cond40.preheader.5:                           ; preds = %for.body44.4
   %indvars.iv.next149.4 = add nuw nsw i64 4, 1
   %lftr.wideiv150.4 = trunc i64 %indvars.iv.next149.4 to i32
   %exitcond151.4 = icmp eq i32 %lftr.wideiv150.4, 6
-  %.pre160 = load i32, i32* %1, align 4
+  %.pre160 = load i32, ptr %arrayidx51.5.phi.trans.insert, align 4
   br label %for.body44.5
 
 for.body44.5:                                     ; preds = %for.body44.5, %for.cond40.preheader.5

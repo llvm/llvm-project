@@ -13,16 +13,16 @@
 
 
 // CHECK-X86_32-LABEL: define{{.*}} void @t0()
-// CHECK-X86_32: call void bitcast {{.*}} @objc_msgSend_stret to
+// CHECK-X86_32: call void @objc_msgSend_stret
 // CHECK-X86_32: }
 //
 // CHECK-X86_64-LABEL: define{{.*}} void @t0()
-// CHECK-X86_64: call { x86_fp80, x86_fp80 } bitcast {{.*}} @objc_msgSend_fp2ret to
+// CHECK-X86_64: call { x86_fp80, x86_fp80 } @objc_msgSend_fp2ret
 // CHECK-X86_64: }
 //
 // CHECK-ARMV7-LABEL: define{{.*}} void @t0()
-// CHECK-ARMV7: call i128 bitcast {{.*}} @objc_msgSend to
+// CHECK-ARMV7: call i128 @objc_msgSend
 // CHECK-ARMV7: }
-void t0() {
+void t0(void) {
   [(A*)0 complexLongDoubleValue];
 }

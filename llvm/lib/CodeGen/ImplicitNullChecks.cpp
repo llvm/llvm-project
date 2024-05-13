@@ -26,8 +26,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -96,13 +94,13 @@ class ImplicitNullChecks : public MachineFunctionPass {
     /// computeDependence).
     bool CanReorder;
 
-    /// If non-None, then an instruction in \p Insts that also must be
+    /// If non-std::nullopt, then an instruction in \p Insts that also must be
     /// hoisted.
-    Optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence;
+    std::optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence;
 
     /*implicit*/ DependenceResult(
         bool CanReorder,
-        Optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence)
+        std::optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence)
         : CanReorder(CanReorder), PotentialDependence(PotentialDependence) {
       assert((!PotentialDependence || CanReorder) &&
              "!CanReorder && PotentialDependence.hasValue() not allowed!");
@@ -242,7 +240,7 @@ bool ImplicitNullChecks::canHandle(const MachineInstr *MI) {
   auto IsRegMask = [](const MachineOperand &MO) { return MO.isRegMask(); };
   (void)IsRegMask;
 
-  assert(!llvm::any_of(MI->operands(), IsRegMask) &&
+  assert(llvm::none_of(MI->operands(), IsRegMask) &&
          "Calls were filtered out above!");
 
   auto IsUnordered = [](MachineMemOperand *MMO) { return MMO->isUnordered(); };
@@ -255,18 +253,18 @@ ImplicitNullChecks::computeDependence(const MachineInstr *MI,
   assert(llvm::all_of(Block, canHandle) && "Check this first!");
   assert(!is_contained(Block, MI) && "Block must be exclusive of MI!");
 
-  Optional<ArrayRef<MachineInstr *>::iterator> Dep;
+  std::optional<ArrayRef<MachineInstr *>::iterator> Dep;
 
   for (auto I = Block.begin(), E = Block.end(); I != E; ++I) {
     if (canReorder(*I, MI))
       continue;
 
-    if (Dep == None) {
+    if (Dep == std::nullopt) {
       // Found one possible dependency, keep track of it.
       Dep = I;
     } else {
       // We found two dependencies, so bail out.
-      return {false, None};
+      return {false, std::nullopt};
     }
   }
 
@@ -374,7 +372,7 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
   if (!MI.mayLoadOrStore() || MI.isPredicable())
     return SR_Unsuitable;
   auto AM = TII->getAddrModeFromMemoryOp(MI, TRI);
-  if (!AM)
+  if (!AM || AM->Form != ExtAddrMode::Formula::Basic)
     return SR_Unsuitable;
   auto AddrMode = *AM;
   const Register BaseReg = AddrMode.BaseReg, ScaledReg = AddrMode.ScaledReg;
@@ -758,7 +756,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     ArrayRef<ImplicitNullChecks::NullCheck> NullCheckList) {
   DebugLoc DL;
 
-  for (auto &NC : NullCheckList) {
+  for (const auto &NC : NullCheckList) {
     // Remove the conditional branch dependent on the null check.
     unsigned BranchesRemoved = TII->removeBranch(*NC.getCheckBlock());
     (void)BranchesRemoved;
@@ -780,9 +778,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     // The original operation may define implicit-defs alongside
     // the value.
     MachineBasicBlock *MBB = NC.getMemOperation()->getParent();
-    for (const MachineOperand &MO : FaultingInstr->operands()) {
-      if (!MO.isReg() || !MO.isDef())
-        continue;
+    for (const MachineOperand &MO : FaultingInstr->all_defs()) {
       Register Reg = MO.getReg();
       if (!Reg || MBB->isLiveIn(Reg))
         continue;
@@ -790,8 +786,8 @@ void ImplicitNullChecks::rewriteNullChecks(
     }
 
     if (auto *DepMI = NC.getOnlyDependency()) {
-      for (auto &MO : DepMI->operands()) {
-        if (!MO.isReg() || !MO.getReg() || !MO.isDef() || MO.isDead())
+      for (auto &MO : DepMI->all_defs()) {
+        if (!MO.getReg() || MO.isDead())
           continue;
         if (!NC.getNotNullSucc()->isLiveIn(MO.getReg()))
           NC.getNotNullSucc()->addLiveIn(MO.getReg());
@@ -805,7 +801,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     // Insert an *unconditional* branch to not-null successor - we expect
     // block placement to remove fallthroughs later.
     TII->insertBranch(*NC.getCheckBlock(), NC.getNotNullSucc(), nullptr,
-                      /*Cond=*/None, DL);
+                      /*Cond=*/std::nullopt, DL);
 
     NumImplicitNullChecks++;
   }

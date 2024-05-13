@@ -6,12 +6,12 @@
 --- |
   target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 
-  define void @if-cvt(i32* %p, i1 %c) {
+  define void @if-cvt(ptr %p, i1 %c) {
   entry:
     br i1 %c, label %if, label %endif
 
   if:                                               ; preds = %entry
-    store i32 1, i32* %p, align 4
+    store i32 1, ptr %p, align 4
     br label %endif
   
   endif:                                            ; preds = %if, %entry
@@ -73,7 +73,7 @@ body:             |
 
   bb.1.if:
     successors: %bb.2(0x80000000)
-    S4_storeiri_io %0, 0, 1 :: (store 4 into %ir.p)
+    S4_storeiri_io %0, 0, 1 :: (store (s32) into %ir.p)
 
   bb.2.endif:
     PS_jmpret $r31, implicit-def dead $pc

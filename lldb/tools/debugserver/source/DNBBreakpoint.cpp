@@ -25,7 +25,7 @@ DNBBreakpoint::DNBBreakpoint(nub_addr_t addr, nub_size_t byte_size,
       m_is_watchpoint(0), m_watch_read(0), m_watch_write(0),
       m_hw_index(INVALID_NUB_HW_INDEX) {}
 
-DNBBreakpoint::~DNBBreakpoint() {}
+DNBBreakpoint::~DNBBreakpoint() = default;
 
 void DNBBreakpoint::Dump() const {
   if (IsBreakpoint()) {
@@ -45,9 +45,9 @@ void DNBBreakpoint::Dump() const {
 
 #pragma mark-- DNBBreakpointList
 
-DNBBreakpointList::DNBBreakpointList() {}
+DNBBreakpointList::DNBBreakpointList() = default;
 
-DNBBreakpointList::~DNBBreakpointList() {}
+DNBBreakpointList::~DNBBreakpointList() = default;
 
 DNBBreakpoint *DNBBreakpointList::Add(nub_addr_t addr, nub_size_t length,
                                       bool hardware) {
@@ -80,6 +80,45 @@ const DNBBreakpoint *DNBBreakpointList::FindByAddress(nub_addr_t addr) const {
     return &pos->second;
 
   return NULL;
+}
+
+const DNBBreakpoint *
+DNBBreakpointList::FindByHardwareIndex(uint32_t idx) const {
+  for (const auto &pos : m_breakpoints)
+    if (pos.second.GetHardwareIndex() == idx)
+      return &pos.second;
+
+  return nullptr;
+}
+
+const DNBBreakpoint *
+DNBBreakpointList::FindNearestWatchpoint(nub_addr_t addr) const {
+  // Exact match
+  for (const auto &pos : m_breakpoints) {
+    if (pos.second.IsEnabled()) {
+      nub_addr_t start_addr = pos.second.Address();
+      nub_addr_t end_addr = start_addr + pos.second.ByteSize();
+      if (addr >= start_addr && addr <= end_addr)
+        return &pos.second;
+    }
+  }
+
+  // Find watchpoint nearest to this address
+  // before or after the watched region of memory
+  const DNBBreakpoint *closest = nullptr;
+  uint32_t best_match = UINT32_MAX;
+  for (const auto &pos : m_breakpoints) {
+    if (pos.second.IsEnabled()) {
+      nub_addr_t start_addr = pos.second.Address();
+      nub_addr_t end_addr = start_addr + pos.second.ByteSize();
+      uint32_t delta = addr < start_addr ? start_addr - addr : addr - end_addr;
+      if (delta < best_match) {
+        closest = &pos.second;
+        best_match = delta;
+      }
+    }
+  }
+  return closest;
 }
 
 // Finds the next breakpoint at an address greater than or equal to "addr"

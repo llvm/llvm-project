@@ -1,20 +1,20 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-debuginfo -mlir-pretty-debuginfo | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-debuginfo -mlir-pretty-debuginfo -mlir-print-local-scope | FileCheck %s
 
 #set0 = affine_set<(d0) : (1 == 0)>
 
 // CHECK-LABEL: func @inline_notation
-func @inline_notation() -> i32 {
+func.func @inline_notation() -> i32 {
   // CHECK: -> i32 "foo"
   %1 = "foo"() : () -> i32 loc("foo")
 
-  // CHECK: constant 4 : index "foo" at mysource.cc:10:8
-  %2 = constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
+  // CHECK: arith.constant 4 : index "foo" at mysource.cc:10:8
+  %2 = arith.constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
 
-  // CHECK:      constant 4 : index "foo"
+  // CHECK:      arith.constant 4 : index "foo"
   // CHECK-NEXT:  at mysource1.cc:10:8
   // CHECK-NEXT:  at mysource2.cc:13:8
   // CHECK-NEXT:  at mysource3.cc:100:10
-  %3 = constant 4 : index loc(callsite("foo" at callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:8 at "mysource3.cc":100:10))))
+  %3 = arith.constant 4 : index loc(callsite("foo" at callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:8 at "mysource3.cc":100:10))))
 
   // CHECK: } ["foo", mysource.cc:10:8]
   affine.for %i0 = 0 to 8 {

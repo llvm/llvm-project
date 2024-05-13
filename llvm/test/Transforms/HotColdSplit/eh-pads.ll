@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
+; RUN: opt -S -passes=hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -84,13 +84,16 @@ cold4:
 ; CHECK: sink
 
 ; CHECK-LABEL: define {{.*}}@bar.cold.1(
+; CHECK: sideeffect(i32 0)
+
+; CHECK-LABEL: define {{.*}}@bar.cold.2(
 ; CHECK: sideeffect(i32 1)
 
 ; CHECK-LABEL: define {{.*}}@baz.cold.1(
-; CHECK: sideeffect(i32 1)
+; CHECK: sideeffect(i32 0)
 
 ; CHECK-LABEL: define {{.*}}@baz.cold.2(
-; CHECK: sideeffect(i32 0)
+; CHECK: sideeffect(i32 1)
 
 declare void @sideeffect(i32)
 

@@ -1,0 +1,183 @@
+# RUN: llc %s -run-pass=x86-codegen -o - -experimental-debug-variable-locations | FileCheck %s --implicit-check-not=debug-instr-number
+#
+# The x87 FP instructions below have debug instr numbers attached -- but the
+# operands get rewritten when it's converted to stack-form. Rather than trying
+# to recover from this, drop any instruction numbers.
+#
+## We shouldn't drop numbers from _every_ call though:
+# CHECK:  CALLpcrel32 @ext, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, debug-instr-number 101,
+#
+# Original program, command line 'clang ./test.c -O2 -g -m32 -o out.o -c'
+#
+# long double ext();
+# 
+# long double glob = 1.234;
+# 
+# long double foo(long double a, long double b, long double c) {
+#   a += b;
+#   b += c;
+#   a *= ext();
+#   b /= ext();
+#   if (a < 5.0)
+#     a += glob;
+#   return a - b;
+# }
+# 
+
+--- |
+  ; ModuleID = 'out.ll'
+  source_filename = "./test.c"
+  target datalayout = "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f80:32-n8:16:32-S128"
+  target triple = "i386-unknown-linux-gnu"
+  
+  @glob = dso_local local_unnamed_addr global x86_fp80 0xK3FFF9DF3B645A1CAC000, align 4, !dbg !0
+  
+  ; Function Attrs: nounwind
+  define dso_local x86_fp80 @foo(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c) local_unnamed_addr !dbg !13 {
+  entry:
+    call void @llvm.dbg.value(metadata x86_fp80 %a, metadata !17, metadata !DIExpression()), !dbg !20
+    call void @llvm.dbg.value(metadata x86_fp80 %b, metadata !18, metadata !DIExpression()), !dbg !20
+    call void @llvm.dbg.value(metadata x86_fp80 %c, metadata !19, metadata !DIExpression()), !dbg !20
+    %add = fadd x86_fp80 %a, %b, !dbg !21
+    call void @llvm.dbg.value(metadata x86_fp80 %add, metadata !17, metadata !DIExpression()), !dbg !20
+    call void @llvm.dbg.value(metadata x86_fp80 undef, metadata !18, metadata !DIExpression()), !dbg !20
+    %call = tail call x86_fp80 @ext() #3, !dbg !22
+    %mul = fmul x86_fp80 %add, %call, !dbg !23
+    call void @llvm.dbg.value(metadata x86_fp80 %mul, metadata !17, metadata !DIExpression()), !dbg !20
+    %call2 = tail call x86_fp80 @ext() #3, !dbg !24
+    call void @llvm.dbg.value(metadata x86_fp80 undef, metadata !18, metadata !DIExpression()), !dbg !20
+    %cmp = fcmp olt x86_fp80 %mul, 0xK4001A000000000000000, !dbg !25
+    %0 = load x86_fp80, ptr @glob, align 4, !dbg !27
+    %add3 = fadd x86_fp80 %mul, %0, !dbg !27
+    %a.addr.0 = select i1 %cmp, x86_fp80 %add3, x86_fp80 %mul, !dbg !27
+    %add1 = fadd x86_fp80 %b, %c, !dbg !28
+    call void @llvm.dbg.value(metadata x86_fp80 %add1, metadata !18, metadata !DIExpression()), !dbg !20
+    %div = fdiv x86_fp80 %add1, %call2, !dbg !29
+    call void @llvm.dbg.value(metadata x86_fp80 %div, metadata !18, metadata !DIExpression()), !dbg !20
+    call void @llvm.dbg.value(metadata x86_fp80 %a.addr.0, metadata !17, metadata !DIExpression()), !dbg !20
+    %sub = fsub x86_fp80 %a.addr.0, %div, !dbg !30
+    ret x86_fp80 %sub, !dbg !31
+  }
+  
+  declare dso_local x86_fp80 @ext(...) local_unnamed_addr
+  
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!8, !9, !10, !11}
+  !llvm.ident = !{!12}
+  
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "glob", scope: !2, file: !6, line: 3, type: !7, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, splitDebugInlining: false, nameTableKind: None)
+  !3 = !DIFile(filename: "test.c", directory: "/fast/fs/build34llvm4")
+  !4 = !{}
+  !5 = !{!0}
+  !6 = !DIFile(filename: "./test.c", directory: ".")
+  !7 = !DIBasicType(name: "long double", size: 96, encoding: DW_ATE_float)
+  !8 = !{i32 1, !"NumRegisterParameters", i32 0}
+  !9 = !{i32 7, !"Dwarf Version", i32 4}
+  !10 = !{i32 2, !"Debug Info Version", i32 3}
+  !11 = !{i32 1, !"wchar_size", i32 4}
+  !12 = !{!"clang"}
+  !13 = distinct !DISubprogram(name: "foo", scope: !6, file: !6, line: 5, type: !14, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !16)
+  !14 = !DISubroutineType(types: !15)
+  !15 = !{!7, !7, !7, !7}
+  !16 = !{!17, !18, !19}
+  !17 = !DILocalVariable(name: "a", arg: 1, scope: !13, file: !6, line: 5, type: !7)
+  !18 = !DILocalVariable(name: "b", arg: 2, scope: !13, file: !6, line: 5, type: !7)
+  !19 = !DILocalVariable(name: "c", arg: 3, scope: !13, file: !6, line: 5, type: !7)
+  !20 = !DILocation(line: 0, scope: !13)
+  !21 = !DILocation(line: 6, column: 5, scope: !13)
+  !22 = !DILocation(line: 8, column: 8, scope: !13)
+  !23 = !DILocation(line: 8, column: 5, scope: !13)
+  !24 = !DILocation(line: 9, column: 8, scope: !13)
+  !25 = !DILocation(line: 10, column: 9, scope: !26)
+  !26 = distinct !DILexicalBlock(scope: !13, file: !6, line: 10, column: 7)
+  !27 = !DILocation(line: 10, column: 7, scope: !13)
+  !28 = !DILocation(line: 7, column: 5, scope: !13)
+  !29 = !DILocation(line: 9, column: 5, scope: !13)
+  !30 = !DILocation(line: 12, column: 12, scope: !13)
+  !31 = !DILocation(line: 12, column: 3, scope: !13)
+
+...
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+frameInfo:
+  hasCalls:        true
+fixedStack:
+  - { id: 0, type: default, offset: 24, size: 10, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: default, offset: 12, size: 10, alignment: 4, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: default, offset: 0, size: 10, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 10, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 10, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: 0, size: 10, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:
+  - id:              0
+    value:           'float 5.000000e+00'
+    alignment:       4
+    isTargetSpecific: false
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    renamable $fp0 = nofpexcept LD_Fp80m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 1 :: (load (s80) from %fixed-stack.0, align 8)
+    ST_FpP80m %stack.0, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def $fpsw, implicit $fpcw, debug-instr-number 2 :: (store (s80) into %stack.0, align 4)
+    renamable $fp1 = nofpexcept LD_Fp80m %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 3 :: (load (s80) from %fixed-stack.1, align 4)
+    ST_FpP80m %stack.1, 1, $noreg, 0, $noreg, renamable $fp1, implicit-def $fpsw, implicit $fpcw, debug-instr-number 4 :: (store (s80) into %stack.1, align 4)
+    renamable $fp0 = nofpexcept LD_Fp80m %fixed-stack.2, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 5 :: (load (s80) from %fixed-stack.2, align 16)
+    renamable $fp0 = nofpexcept ADD_Fp80 killed renamable $fp0, killed renamable $fp1, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 6, debug-location !21
+    ST_FpP80m %stack.2, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def $fpsw, implicit $fpcw, debug-instr-number 7 :: (store (s80) into %stack.2, align 4)
+    ADJCALLSTACKDOWN32 0, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp, debug-location !22
+
+    ; This identical call (to the one below) does not touch the FP registers at
+    ; all. Therefore, it shouldn't have any debug instructions dropped.
+    CALLpcrel32 @ext, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, debug-instr-number 101, debug-location !22
+
+    ; Original call: this should have it's location dropped, as it touches the
+    ; FP stack.
+    CALLpcrel32 @ext, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, implicit-def $fp0, debug-instr-number 100, debug-location !22
+
+
+    ADJCALLSTACKUP32 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp, debug-location !22
+    renamable $fp1 = LD_Fp80m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (load (s80) from %stack.2, align 4)
+    renamable $fp0 = nofpexcept MUL_Fp80 killed renamable $fp1, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 8, debug-location !23
+    ST_FpP80m %stack.2, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def $fpsw, implicit $fpcw, debug-instr-number 9 :: (store (s80) into %stack.2, align 4)
+    ADJCALLSTACKDOWN32 0, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp, debug-location !24
+    CALLpcrel32 @ext, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, implicit-def $fp0, debug-location !24
+    ADJCALLSTACKUP32 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp, debug-location !24
+    renamable $fp1 = nofpexcept LD_Fp32m80 $noreg, 1, $noreg, %const.0, $noreg, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 10 :: (load (s32) from constant-pool)
+    renamable $fp2 = LD_Fp80m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw, debug-instr-number 11 :: (load (s80) from %stack.2, align 4)
+    nofpexcept UCOM_FpIr80 killed renamable $fp1, renamable $fp2, implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 12, debug-location !25
+    renamable $fp1 = nofpexcept LD_Fp80m $noreg, 1, $noreg, @glob, $noreg, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 13, debug-location !27 :: (dereferenceable load (s80) from @glob, align 4)
+    renamable $fp1 = nofpexcept ADD_Fp80 renamable $fp2, killed renamable $fp1, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 14, debug-location !27
+    renamable $fp2 = CMOVNBE_Fp80 killed renamable $fp2, killed renamable $fp1, implicit-def dead $fpsw, implicit killed $eflags, debug-instr-number 15, debug-location !27
+    renamable $fp3 = COPY killed renamable $fp2
+    renamable $fp1 = LD_Fp80m %stack.0, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw, debug-instr-number 16 :: (load (s80) from %stack.0, align 4)
+    renamable $fp2 = LD_Fp80m %stack.1, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw, debug-instr-number 17 :: (load (s80) from %stack.1, align 4)
+    renamable $fp1 = nofpexcept ADD_Fp80 killed renamable $fp2, killed renamable $fp1, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 18, debug-location !28
+    renamable $fp0 = nofpexcept DIV_Fp80 killed renamable $fp1, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 19, debug-location !29
+    renamable $fp0 = nofpexcept SUB_Fp80 killed renamable $fp3, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 20, debug-location !30
+    ;; Edited in:
+    renamable $fp0 = ADD_Fp64m killed renamable $fp0, killed $esp, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 21,  :: (load (s64) from `ptr undef`)
+    RET 0, killed renamable $fp0, debug-location !31
+
+...

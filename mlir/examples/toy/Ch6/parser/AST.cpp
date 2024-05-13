@@ -12,9 +12,12 @@
 
 #include "toy/AST.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
 
 using namespace toy;
 
@@ -60,7 +63,8 @@ private:
 } // namespace
 
 /// Return a formatted string for the location of any node
-template <typename T> static std::string loc(T *node) {
+template <typename T>
+static std::string loc(T *node) {
   const auto &loc = node->loc();
   return (llvm::Twine("@") + *loc.file + ":" + llvm::Twine(loc.line) + ":" +
           llvm::Twine(loc.col))
@@ -118,7 +122,7 @@ void ASTDumper::dump(NumberExprAST *num) {
 ///    <2,2>[<2>[ 1, 2 ], <2>[ 3, 4 ] ]
 void printLitHelper(ExprAST *litOrNum) {
   // Inside a literal expression we can have either a number or another literal
-  if (auto num = llvm::dyn_cast<NumberExprAST>(litOrNum)) {
+  if (auto *num = llvm::dyn_cast<NumberExprAST>(litOrNum)) {
     llvm::errs() << num->getValue();
     return;
   }
@@ -154,7 +158,7 @@ void ASTDumper::dump(VariableExprAST *node) {
 void ASTDumper::dump(ReturnExprAST *node) {
   INDENT();
   llvm::errs() << "Return\n";
-  if (node->getExpr().hasValue())
+  if (node->getExpr().has_value())
     return dump(*node->getExpr());
   {
     INDENT();

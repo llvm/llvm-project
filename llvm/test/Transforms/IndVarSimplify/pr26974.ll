@@ -1,4 +1,4 @@
-; RUN: opt -indvars  -S < %s | FileCheck %s
+; RUN: opt -passes=indvars  -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -13,7 +13,7 @@ entry:
   br label %for.body
 
 for.cond1.preheader:                              ; preds = %for.body
-  %0 = load i32, i32* @c, align 4
+  %0 = load i32, ptr @c, align 4
   br i1 undef, label %for.cond1.us.preheader, label %for.cond1
 
 for.cond1.us.preheader:                           ; preds = %for.cond1.preheader

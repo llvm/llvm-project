@@ -17,3 +17,16 @@
 # RUN: rm -f %t.pdb
 # RUN: lld-link /debug:dwarf /pdb:%t.pdb /entry:main /out:%t.exe %p/Inputs/ret42.obj
 # RUN: not ls %t.pdb
+
+# Check that /debug /debug:dwarf or /debug:full,dwarf creates %t.pdb.
+# RUN: rm -f %t.pdb
+# RUN: lld-link /debug /debug:dwarf /entry:main /out:%t.exe %p/Inputs/ret42.obj
+# RUN: ls %t.pdb
+# RUN: rm -f %t.pdb
+# RUN: lld-link /debug:full,dwarf /entry:main /out:%t.exe %p/Inputs/ret42.obj
+# RUN: ls %t.pdb
+
+# Check that /debug /debug:full,nodwarf creates %t.pdb.
+# RUN: rm -f %t.pdb
+# RUN: lld-link /debug:full,nodwarf /entry:main /out:%t.exe %p/Inputs/ret42.obj
+# RUN: ls %t.pdb

@@ -1,14 +1,14 @@
-; RUN: llc %s -march=mipsel -mcpu=mips32r2 -mattr=micromips -filetype=asm \
+; RUN: llc %s -mtriple=mipsel -mcpu=mips32r2 -mattr=micromips -filetype=asm \
 ; RUN:   -relocation-model=static -o - | FileCheck %s
 
 define i32 @sum(i32 %a, i32 %b) nounwind uwtable {
 entry:
   %a.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  store i32 %b, i32* %b.addr, align 4
-  %0 = load i32, i32* %a.addr, align 4
-  %1 = load i32, i32* %b.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  store i32 %b, ptr %b.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4
+  %1 = load i32, ptr %b.addr, align 4
   %add = add nsw i32 %0, %1
   ret i32 %add
 }
@@ -19,12 +19,12 @@ entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
   %z = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = load i32, i32* %y, align 4
-  %1 = load i32, i32* %z, align 4
+  store i32 0, ptr %retval
+  %0 = load i32, ptr %y, align 4
+  %1 = load i32, ptr %z, align 4
   %call = call i32 @sum(i32 %0, i32 %1)
-  store i32 %call, i32* %x, align 4
-  %2 = load i32, i32* %x, align 4
+  store i32 %call, ptr %x, align 4
+  %2 = load i32, ptr %x, align 4
   ret i32 %2
 }
 

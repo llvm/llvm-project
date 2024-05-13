@@ -13,6 +13,7 @@ static_library("abseil") {
   ]
   sources = [
     "AbseilTidyModule.cpp",
+    "CleanupCtadCheck.cpp",
     "DurationAdditionCheck.cpp",
     "DurationComparisonCheck.cpp",
     "DurationConversionCastCheck.cpp",

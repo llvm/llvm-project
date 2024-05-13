@@ -24,7 +24,7 @@ namespace llvm {
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
                                         Align Alignment,
                                         MachineMemOperand::Flags Flags,
-                                        bool *Fast) const override;
+                                        unsigned *Fast) const override;
 
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,

@@ -11,10 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace build {
+namespace clang::tidy::google::build {
 
 /// Finds using namespace directives.
 ///
@@ -33,7 +30,7 @@ namespace build {
 /// Corresponding cpplint.py check name: `build/namespaces`.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/google-build-using-namespace.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/build-using-namespace.html
 class UsingNamespaceDirectiveCheck : public ClangTidyCheck {
 public:
   UsingNamespaceDirectiveCheck(StringRef Name, ClangTidyContext *Context)
@@ -48,9 +45,6 @@ private:
   static bool isStdLiteralsNamespace(const NamespaceDecl *NS);
 };
 
-} // namespace build
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::build
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_USINGNAMESPACEDIRECTIVECHECK_H

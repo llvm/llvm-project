@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 ; This testcase tests insertion of no-cost phis.  That is,
 ; when the value is already available in every predecessor,
 ; and we just need to insert a phi node to merge the available values.
@@ -13,12 +13,12 @@ define i32 @mai(i32 %foo, i32 %a, i32 %b) {
 
 bb1:
   %2 = add nsw i32 %a, %b
-  store i32 %2, i32* @c, align 4
+  store i32 %2, ptr @c, align 4
   br label %mergeblock
 
 bb2:
   %3 = add nsw i32 %a, %b
-  store i32 %3, i32* @d, align 4
+  store i32 %3, ptr @d, align 4
   br label %mergeblock
 
 mergeblock:

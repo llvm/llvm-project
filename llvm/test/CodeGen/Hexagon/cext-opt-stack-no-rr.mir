@@ -14,10 +14,10 @@ body: |
     successors: %bb.1, %bb.2
 
     %0:intregs = IMPLICIT_DEF
-    %1:intregs = L2_loadrub_io killed %0:intregs, 0 :: (load 1 from `i8* undef`, align 2)
+    %1:intregs = L2_loadrub_io killed %0:intregs, 0 :: (load (s8) from `ptr undef`, align 2)
     %2:predregs = C2_cmpeqi %1:intregs, 5
     %3:intregs = A2_tfrsi 0
-    S2_pstorerbt_io %2:predregs, %stack.0, 267, killed %3:intregs :: (store 1 into %stack.0)
+    S2_pstorerbt_io %2:predregs, %stack.0, 267, killed %3:intregs :: (store (s8) into %stack.0)
     J2_jumpt %2:predregs, %bb.2, implicit-def $pc
 
   bb.1:
@@ -25,11 +25,11 @@ body: |
 
     %4:predregs = C2_cmpeqi %1:intregs, 6
     %5:intregs = A2_tfrsi 2
-    S2_pstorerbt_io %4:predregs, %stack.0, 267, killed %5:intregs :: (store 1 into %stack.0)
+    S2_pstorerbt_io %4:predregs, %stack.0, 267, killed %5:intregs :: (store (s8) into %stack.0)
 
   bb.2:
     %6:intregs = A2_tfrsi 32968
-    S2_storerh_io %stack.0, 0, killed %6:intregs :: (store 2 into %stack.0, align 4)
+    S2_storerh_io %stack.0, 0, killed %6:intregs :: (store (s16) into %stack.0, align 4)
     PS_jmpret $r31, implicit-def dead $pc
 ...
 

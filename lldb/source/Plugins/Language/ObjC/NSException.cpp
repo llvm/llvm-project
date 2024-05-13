@@ -13,7 +13,6 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
@@ -69,13 +68,13 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
   InferiorSizedWord userinfo_isw(userinfo, *process_sp);
   InferiorSizedWord reserved_isw(reserved, *process_sp);
 
-  auto *clang_ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
-  if (!clang_ast_context)
+  if (!scratch_ts_sp)
     return false;
 
   CompilerType voidstar =
-      clang_ast_context->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
 
   if (name_sp)
     *name_sp = ValueObject::CreateValueObjectFromData(
@@ -124,11 +123,9 @@ public:
 
   ~NSExceptionSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
-    return 4;
-  }
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return 4; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     switch (idx) {
       case 0: return m_name_sp;
       case 1: return m_reason_sp;
@@ -138,14 +135,17 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  bool Update() override {
+  lldb::ChildCacheState Update() override {
     m_name_sp.reset();
     m_reason_sp.reset();
     m_userinfo_sp.reset();
     m_reserved_sp.reset();
 
-    return ExtractFields(m_backend, &m_name_sp, &m_reason_sp, &m_userinfo_sp,
-                         &m_reserved_sp);
+    const auto ret = ExtractFields(m_backend, &m_name_sp, &m_reason_sp,
+                                   &m_userinfo_sp, &m_reserved_sp);
+
+    return ret ? lldb::ChildCacheState::eReuse
+               : lldb::ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return true; }
@@ -156,14 +156,14 @@ public:
     //   NSString *reason;
     //   NSDictionary *userInfo;
     //   id reserved;
-    static ConstString g___name("name");
-    static ConstString g___reason("reason");
-    static ConstString g___userInfo("userInfo");
-    static ConstString g___reserved("reserved");
-    if (name == g___name) return 0;
-    if (name == g___reason) return 1;
-    if (name == g___userInfo) return 2;
-    if (name == g___reserved) return 3;
+    static ConstString g_name("name");
+    static ConstString g_reason("reason");
+    static ConstString g_userInfo("userInfo");
+    static ConstString g_reserved("reserved");
+    if (name == g_name) return 0;
+    if (name == g_reason) return 1;
+    if (name == g_userInfo) return 2;
+    if (name == g_reserved) return 3;
     return UINT32_MAX;
   }
 

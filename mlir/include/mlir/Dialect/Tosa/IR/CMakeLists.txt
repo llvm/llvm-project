@@ -3,7 +3,11 @@ add_mlir_doc(TosaOps TosaOps Dialects/ -gen-op-doc)
 add_mlir_interface(TosaInterfaces)
 
 set(LLVM_TARGET_DEFINITIONS TosaOps.td)
-mlir_tablegen(TosaStructs.h.inc -gen-struct-attr-decls)
-mlir_tablegen(TosaStructs.cpp.inc -gen-struct-attr-defs)
-add_public_tablegen_target(MLIRTosaStructsIncGen)
+mlir_tablegen(TosaAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(TosaAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRTosaAttributesIncGen)
+
+set(LLVM_TARGET_DEFINITIONS TosaDialectBytecode.td)
+mlir_tablegen(TosaDialectBytecode.cpp.inc -gen-bytecode -bytecode-dialect="Tosa")
+add_public_tablegen_target(MLIRTosaDialectBytecodeIncGen)
 

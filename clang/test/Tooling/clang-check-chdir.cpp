@@ -10,5 +10,5 @@
 
 #include "clang-check-test.h"
 
-// CHECK: C++ requires
+// CHECK: a type specifier is required
 invalid;

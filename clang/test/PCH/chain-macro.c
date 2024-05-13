@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -ast-print -include-pch %t2 %s | FileCheck %s
 // expected-no-diagnostics
 
-// CHECK: void f();
+// CHECK: void f(void);
 FOOBAR
-// CHECK: void g();
+// CHECK: void g(void);
 BARFOO

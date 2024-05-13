@@ -1,18 +1,18 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=TONGA %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=TONGA %s
 
 ; On Tonga and Iceland, limited SGPR availability means care must be taken to
 ; allocate scratch registers correctly. Check that this test compiles without
 ; error.
 ; TONGA-LABEL: test
-define amdgpu_kernel void @test(<256 x i32> addrspace(1)* %out, <256 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 entry:
   %mbcnt.lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo)
-  %aptr = getelementptr <256 x i32>, <256 x i32> addrspace(1)* %in, i32 %tid
-  %a = load <256 x i32>, <256 x i32> addrspace(1)* %aptr
+  %aptr = getelementptr <256 x i32>, ptr addrspace(1) %in, i32 %tid
+  %a = load <256 x i32>, ptr addrspace(1) %aptr
   call void asm sideeffect "", "~{memory}" ()
-  %outptr = getelementptr <256 x i32>, <256 x i32> addrspace(1)* %in, i32 %tid
-  store <256 x i32> %a, <256 x i32> addrspace(1)* %outptr
+  %outptr = getelementptr <256 x i32>, ptr addrspace(1) %in, i32 %tid
+  store <256 x i32> %a, ptr addrspace(1) %outptr
 
 ; mark 128-bit SGPR registers as used so they are unavailable for the
 ; scratch resource descriptor

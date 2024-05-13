@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
+#include <optional>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/dwarf.h"
@@ -17,13 +18,13 @@
 #include "DWARFFormValue.h"
 #include "DWARFUnit.h"
 
-class DWARFUnit;
-
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 void DWARFFormValue::Clear() {
   m_unit = nullptr;
-  m_form = 0;
+  m_form = dw_form_t(0);
   m_value = ValueTypeTag();
 }
 
@@ -125,7 +126,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
       m_value.value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
       break;
     case DW_FORM_indirect:
-      m_form = data.GetULEB128(offset_ptr);
+      m_form = static_cast<dw_form_t>(data.GetULEB128(offset_ptr));
       indirect = true;
       break;
     case DW_FORM_flag_present:
@@ -186,16 +187,16 @@ static FormSize g_form_sizes[] = {
     {1, 8},  // 0x20 DW_FORM_ref_sig8
 };
 
-llvm::Optional<uint8_t>
-DWARFFormValue::GetFixedSize(dw_form_t form, const DWARFUnit *u) {
+std::optional<uint8_t> DWARFFormValue::GetFixedSize(dw_form_t form,
+                                                    const DWARFUnit *u) {
   if (form <= DW_FORM_ref_sig8 && g_form_sizes[form].valid)
-    return g_form_sizes[form].size;
+    return static_cast<uint8_t>(g_form_sizes[form].size);
   if (form == DW_FORM_addr && u)
     return u->GetAddressByteSize();
-  return llvm::None;
+  return std::nullopt;
 }
 
-llvm::Optional<uint8_t> DWARFFormValue::GetFixedSize() const {
+std::optional<uint8_t> DWARFFormValue::GetFixedSize() const {
   return GetFixedSize(m_form, m_unit);
 }
 
@@ -214,22 +215,22 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
   // in the .debug_info
   case DW_FORM_exprloc:
   case DW_FORM_block: {
-    dw_uleb128_t size = debug_info_data.GetULEB128(offset_ptr);
+    uint64_t size = debug_info_data.GetULEB128(offset_ptr);
     *offset_ptr += size;
   }
     return true;
   case DW_FORM_block1: {
-    dw_uleb128_t size = debug_info_data.GetU8(offset_ptr);
+    uint8_t size = debug_info_data.GetU8(offset_ptr);
     *offset_ptr += size;
   }
     return true;
   case DW_FORM_block2: {
-    dw_uleb128_t size = debug_info_data.GetU16(offset_ptr);
+    uint16_t size = debug_info_data.GetU16(offset_ptr);
     *offset_ptr += size;
   }
     return true;
   case DW_FORM_block4: {
-    dw_uleb128_t size = debug_info_data.GetU32(offset_ptr);
+    uint32_t size = debug_info_data.GetU32(offset_ptr);
     *offset_ptr += size;
   }
     return true;
@@ -319,9 +320,10 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
       return true;
 
   case DW_FORM_indirect: {
-    dw_form_t indirect_form = debug_info_data.GetULEB128(offset_ptr);
-    return DWARFFormValue::SkipValue(indirect_form, debug_info_data, offset_ptr,
-                                     unit);
+      auto indirect_form =
+          static_cast<dw_form_t>(debug_info_data.GetULEB128(offset_ptr));
+      return DWARFFormValue::SkipValue(indirect_form, debug_info_data,
+                                       offset_ptr, unit);
   }
 
   default:
@@ -467,7 +469,7 @@ const char *DWARFFormValue::AsCString() const {
       m_form == DW_FORM_strx1 || m_form == DW_FORM_strx2 ||
       m_form == DW_FORM_strx3 || m_form == DW_FORM_strx4) {
 
-    llvm::Optional<uint64_t> offset =
+    std::optional<uint64_t> offset =
         m_unit->GetStringOffsetSectionItem(m_value.value.uval);
     if (!offset)
       return nullptr;
@@ -498,7 +500,8 @@ dw_addr_t DWARFFormValue::Address() const {
       &offset, index_size);
 }
 
-DWARFDIE DWARFFormValue::Reference() const {
+std::pair<DWARFUnit *, uint64_t>
+DWARFFormValue::ReferencedUnitAndOffset() const {
   uint64_t value = m_value.value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
@@ -511,11 +514,10 @@ DWARFDIE DWARFFormValue::Reference() const {
     value += m_unit->GetOffset();
     if (!m_unit->ContainsDIEOffset(value)) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "DW_FORM_ref* DIE reference 0x%" PRIx64 " is outside of its CU",
-          value);
-      return {};
+          "DW_FORM_ref* DIE reference {0:x16} is outside of its CU", value);
+      return {nullptr, 0};
     }
-    return const_cast<DWARFUnit *>(m_unit)->GetDIE(value);
+    return {const_cast<DWARFUnit *>(m_unit), value};
 
   case DW_FORM_ref_addr: {
     DWARFUnit *ref_cu =
@@ -523,24 +525,28 @@ DWARFDIE DWARFFormValue::Reference() const {
             DIERef::Section::DebugInfo, value);
     if (!ref_cu) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "DW_FORM_ref_addr DIE reference 0x%" PRIx64 " has no matching CU",
-          value);
-      return {};
+          "DW_FORM_ref_addr DIE reference {0:x16} has no matching CU", value);
+      return {nullptr, 0};
     }
-    return ref_cu->GetDIE(value);
+    return {ref_cu, value};
   }
 
   case DW_FORM_ref_sig8: {
     DWARFTypeUnit *tu =
         m_unit->GetSymbolFileDWARF().DebugInfo().GetTypeUnitForHash(value);
     if (!tu)
-      return {};
-    return tu->GetDIE(tu->GetTypeOffset());
+      return {nullptr, 0};
+    return {tu, tu->GetTypeOffset()};
   }
 
   default:
-    return {};
+    return {nullptr, 0};
   }
+}
+
+DWARFDIE DWARFFormValue::Reference() const {
+  auto [unit, offset] = ReferencedUnitAndOffset();
+  return unit ? unit->GetDIE(offset) : DWARFDIE();
 }
 
 uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
@@ -573,8 +579,10 @@ bool DWARFFormValue::IsBlockForm(const dw_form_t form) {
   case DW_FORM_block2:
   case DW_FORM_block4:
     return true;
+  default:
+    return false;
   }
-  return false;
+  llvm_unreachable("All cases handled above!");
 }
 
 bool DWARFFormValue::IsDataForm(const dw_form_t form) {
@@ -586,8 +594,10 @@ bool DWARFFormValue::IsDataForm(const dw_form_t form) {
   case DW_FORM_data4:
   case DW_FORM_data8:
     return true;
+  default:
+    return false;
   }
-  return false;
+  llvm_unreachable("All cases handled above!");
 }
 
 bool DWARFFormValue::FormIsSupported(dw_form_t form) {

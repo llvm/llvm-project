@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-simplify -disable-output -verify-loop-info -verify-dom-info < %s
+; RUN: opt -S -passes=loop-simplify -disable-output -verify-loop-info -verify-dom-info < %s
 ; PR5235
 
 ; When loopsimplify inserts a preheader for this loop, it should add the new
@@ -22,19 +22,19 @@ foo:
 ; When loopsimplify generates dedicated exit block for blocks that are landing
 ; pads (i.e. innerLoopExit in this test), we should not get confused with the
 ; unreachable pred (unreachableB) to innerLoopExit.
-define void @baz(i32 %trip) personality i32* ()* @wobble {
+define void @baz(i32 %trip) personality ptr @wobble {
 entry:
   br label %outerHeader
 
 outerHeader:
-  invoke void @foo() 
+  invoke void @foo()
           to label %innerPreheader unwind label %innerLoopExit
 
 innerPreheader:
   br label %innerH
 
 innerH:
-  %tmp50 = invoke i8 * undef()
+  %tmp50 = invoke ptr undef()
           to label %innerLatch unwind label %innerLoopExit
 
 innerLatch:
@@ -42,19 +42,19 @@ innerLatch:
   br i1 %cmp, label %innerH, label %retblock
 
 unreachableB:                                             ; No predecessors!
-  %tmp62 = invoke i8 * undef()
+  %tmp62 = invoke ptr undef()
           to label %retblock unwind label %innerLoopExit
 
 ; undedicated exit block (preds from inner and outer loop)
 ; Also has unreachableB as pred.
 innerLoopExit:
-  %tmp65 = landingpad { i8*, i32 }
+  %tmp65 = landingpad { ptr, i32 }
           cleanup
-  invoke void @foo() 
+  invoke void @foo()
           to label %outerHeader unwind label %unwindblock
 
 unwindblock:
-  %tmp67 = landingpad { i8*, i32 }
+  %tmp67 = landingpad { ptr, i32 }
           cleanup
   ret void
 
@@ -63,7 +63,7 @@ retblock:
 }
 
 ; Function Attrs: nounwind
-declare i32* @wobble()
+declare ptr @wobble()
 
 ; Function Attrs: uwtable
 declare void @foo()

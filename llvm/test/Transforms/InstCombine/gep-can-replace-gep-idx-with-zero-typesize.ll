@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s
+; RUN: opt -S -passes=instcombine < %s
 
 ; This regression test is verifying that the optimization defined by
 ; canReplaceGEPIdxWithZero, which replaces a GEP index with zero iff we can show
@@ -12,9 +12,16 @@
 
 declare void @do_something(<vscale x 4 x i32> %x)
 
-define void @can_replace_gep_idx_with_zero_typesize(i64 %n, <vscale x 4 x i32>* %a, i64 %b) {
-  %idx = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %a, i64 %b
-  %tmp = load <vscale x 4 x i32>, <vscale x 4 x i32>* %idx
+define void @can_replace_gep_idx_with_zero_typesize(i64 %n, ptr %a, i64 %b) {
+  %idx = getelementptr <vscale x 4 x i32>, ptr %a, i64 %b
+  %tmp = load <vscale x 4 x i32>, ptr %idx
+  call void @do_something(<vscale x 4 x i32> %tmp)
+  ret void
+}
+
+define void @can_replace_gep_idx_with_zero_typesize_2(i64 %n, ptr %a, i64 %b) {
+  %idx = getelementptr [2 x <vscale x 4 x i32>], ptr %a, i64 %b, i64 0
+  %tmp = load <vscale x 4 x i32>, ptr %idx
   call void @do_something(<vscale x 4 x i32> %tmp)
   ret void
 }

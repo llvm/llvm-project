@@ -5,11 +5,11 @@ define void @undef_cond() {
 ; CHECK-LABEL: undef_cond:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retl
-  %a_load22 = load <16 x i64>, <16 x i64>* null, align 1
+  %a_load22 = load <16 x i64>, ptr null, align 1
   %bitop = or <16 x i64> %a_load22, <i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736>
-  %v.i = load <16 x i64>, <16 x i64>* null
+  %v.i = load <16 x i64>, ptr null
   %v1.i41 = select <16 x i1> undef, <16 x i64> %bitop, <16 x i64> %v.i
-  store <16 x i64> %v1.i41, <16 x i64>* null
+  store <16 x i64> %v1.i41, ptr null
   ret void
 }
 
@@ -21,7 +21,7 @@ define void @f_f___un_3C_unf_3E_un_3C_unf_3E_(<16 x i1> %x) {
 ; CHECK-NEXT:    vpmovd2m %zmm0, %k1
 ; CHECK-NEXT:    vmovapd 0, %zmm0
 ; CHECK-NEXT:    vmovapd 64, %zmm1
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [68719476736,68719476736,68719476736,68719476736,68719476736,68719476736,68719476736,68719476736]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [0,16,0,16,0,16,0,16,0,16,0,16,0,16,0,16]
 ; CHECK-NEXT:    kshiftrw $8, %k1, %k2
 ; CHECK-NEXT:    vorpd %zmm2, %zmm1, %zmm1 {%k2}
 ; CHECK-NEXT:    vorpd %zmm2, %zmm0, %zmm0 {%k1}
@@ -29,10 +29,10 @@ define void @f_f___un_3C_unf_3E_un_3C_unf_3E_(<16 x i1> %x) {
 ; CHECK-NEXT:    vmovapd %zmm1, 64
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
-  %a_load22 = load <16 x i64>, <16 x i64>* null, align 1
+  %a_load22 = load <16 x i64>, ptr null, align 1
   %bitop = or <16 x i64> %a_load22, <i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736>
-  %v.i = load <16 x i64>, <16 x i64>* null
+  %v.i = load <16 x i64>, ptr null
   %v1.i41 = select <16 x i1> %x, <16 x i64> %bitop, <16 x i64> %v.i
-  store <16 x i64> %v1.i41, <16 x i64>* null
+  store <16 x i64> %v1.i41, ptr null
   ret void
 }

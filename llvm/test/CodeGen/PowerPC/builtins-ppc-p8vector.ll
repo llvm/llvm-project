@@ -15,14 +15,14 @@
 ; Function Attrs: nounwind
 define void @test1() {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @vsc, align 16
-  %1 = load <16 x i8>, <16 x i8>* @vsc2, align 16
+  %0 = load <16 x i8>, ptr @vsc, align 16
+  %1 = load <16 x i8>, ptr @vsc2, align 16
   %2 = call <2 x i64> @llvm.ppc.altivec.vbpermq(<16 x i8> %0, <16 x i8> %1)
-  store <2 x i64> %2, <2 x i64>* @res_vll, align 16
+  store <2 x i64> %2, ptr @res_vll, align 16
   ret void
 ; CHECK-LABEL: @test1
 ; CHECK: lvx [[REG1:[0-9]+]], 0, 3
-; CHECK: lvx [[REG2:[0-9]+]], 0, 4
+; CHECK: lvx [[REG2:[0-9]+]], 0, 3
 ; CHECK: vbpermq {{[0-9]+}}, [[REG1]], [[REG2]]
 ; CHECK-VSX: vbpermq {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 }
@@ -30,14 +30,14 @@ entry:
 ; Function Attrs: nounwind
 define void @test2() {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @vuc, align 16
-  %1 = load <16 x i8>, <16 x i8>* @vuc2, align 16
+  %0 = load <16 x i8>, ptr @vuc, align 16
+  %1 = load <16 x i8>, ptr @vuc2, align 16
   %2 = call <2 x i64> @llvm.ppc.altivec.vbpermq(<16 x i8> %0, <16 x i8> %1)
-  store <2 x i64> %2, <2 x i64>* @res_vull, align 16
+  store <2 x i64> %2, ptr @res_vull, align 16
   ret void
 ; CHECK-LABEL: @test2
 ; CHECK: lvx [[REG1:[0-9]+]], 0, 3
-; CHECK: lvx [[REG2:[0-9]+]], 0, 4
+; CHECK: lvx [[REG2:[0-9]+]], 0, 3
 ; CHECK: vbpermq {{[0-9]+}}, [[REG1]], [[REG2]]
 ; CHECK-VSX: vbpermq {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 }
@@ -45,9 +45,9 @@ entry:
 ; Function Attrs: nounwind
 define void @test3() {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @vsc, align 16
+  %0 = load <16 x i8>, ptr @vsc, align 16
   %1 = call <16 x i8> @llvm.ppc.altivec.vgbbd(<16 x i8> %0)
-  store <16 x i8> %1, <16 x i8>* @res_vsc, align 16
+  store <16 x i8> %1, ptr @res_vsc, align 16
   ret void
 ; CHECK-LABEL: @test3
 ; CHECK: lvx [[REG1:[0-9]+]],
@@ -58,9 +58,9 @@ entry:
 ; Function Attrs: nounwind
 define void @test4() {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @vuc, align 16
+  %0 = load <16 x i8>, ptr @vuc, align 16
   %1 = call <16 x i8> @llvm.ppc.altivec.vgbbd(<16 x i8> %0)
-  store <16 x i8> %1, <16 x i8>* @res_vuc, align 16
+  store <16 x i8> %1, ptr @res_vuc, align 16
   ret void
 ; CHECK-LABEL: @test4
 ; CHECK: lvx [[REG1:[0-9]+]],

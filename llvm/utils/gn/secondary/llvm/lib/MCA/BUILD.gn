@@ -9,6 +9,7 @@ static_library("MCA") {
   sources = [
     "CodeEmitter.cpp",
     "Context.cpp",
+    "CustomBehaviour.cpp",
     "HWEventListener.cpp",
     "HardwareUnits/HardwareUnit.cpp",
     "HardwareUnits/LSUnit.cpp",
@@ -16,6 +17,7 @@ static_library("MCA") {
     "HardwareUnits/ResourceManager.cpp",
     "HardwareUnits/RetireControlUnit.cpp",
     "HardwareUnits/Scheduler.cpp",
+    "IncrementalSourceMgr.cpp",
     "InstrBuilder.cpp",
     "Instruction.cpp",
     "Pipeline.cpp",
@@ -28,5 +30,6 @@ static_library("MCA") {
     "Stages/RetireStage.cpp",
     "Stages/Stage.cpp",
     "Support.cpp",
+    "View.cpp",
   ]
 }

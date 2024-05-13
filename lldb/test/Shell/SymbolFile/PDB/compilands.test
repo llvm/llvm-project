@@ -7,5 +7,5 @@ RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols %T/CompilandsTest.cpp.ex
 ; Link default libraries
 
 CHECK: Module [[CU:.*]]
-CHECK: SymbolFile pdb ([[CU]])
+CHECK: SymbolFile {{(native-)?}}pdb ([[CU]])
 CHECK: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\CompilandsTest.cpp'

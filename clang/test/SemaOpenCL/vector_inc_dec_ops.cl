@@ -5,7 +5,7 @@ typedef __attribute__((ext_vector_type(4)))  unsigned int uint4;
 typedef __attribute__((ext_vector_type(8)))  long long8;
 typedef __attribute__((ext_vector_type(4)))  float float4;
 
-void vectorIncrementDecrementOps()
+void vectorIncrementDecrementOps(void)
 {
   char2 A = (char2)(1);
   uint4 B = (uint4)(1);
@@ -18,7 +18,7 @@ void vectorIncrementDecrementOps()
   C++;
 }
 
-void invalidIncrementDecrementOps() {
+void invalidIncrementDecrementOps(void) {
   ((float4)(1.0f))++; // expected-error{{cannot increment value of type 'float4'}}
   float4 i;
   ++i; // expected-error{{cannot increment value of type '__private float4'}}

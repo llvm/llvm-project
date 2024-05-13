@@ -10,12 +10,15 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "LinkUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Program.h"
@@ -27,34 +30,40 @@ namespace dsymutil {
 namespace MachOUtils {
 
 llvm::Error ArchAndFile::createTempFile() {
-  llvm::SmallString<128> TmpModel;
-  llvm::sys::path::system_temp_directory(true, TmpModel);
-  llvm::sys::path::append(TmpModel, "dsym.tmp%%%%%.dwarf");
-  Expected<sys::fs::TempFile> T = sys::fs::TempFile::create(TmpModel);
+  SmallString<256> SS;
+  std::error_code EC = sys::fs::createTemporaryFile("dsym", "dwarf", FD, SS);
 
-  if (!T)
-    return T.takeError();
+  if (EC)
+    return errorCodeToError(EC);
 
-  File = std::make_unique<sys::fs::TempFile>(std::move(*T));
+  Path = SS.str();
+
   return Error::success();
 }
 
-llvm::StringRef ArchAndFile::path() const { return File->TmpName; }
+llvm::StringRef ArchAndFile::getPath() const {
+  assert(!Path.empty() && "path called before createTempFile");
+  return Path;
+}
+
+int ArchAndFile::getFD() const {
+  assert((FD != -1) && "path called before createTempFile");
+  return FD;
+}
 
 ArchAndFile::~ArchAndFile() {
-  if (File)
-    if (auto E = File->discard())
-      llvm::consumeError(std::move(E));
+  if (!Path.empty())
+    sys::fs::remove(Path);
 }
 
 std::string getArchName(StringRef Arch) {
-  if (Arch.startswith("thumb"))
+  if (Arch.starts_with("thumb"))
     return (llvm::Twine("arm") + Arch.drop_front(5)).str();
   return std::string(Arch);
 }
 
 static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
-  auto Path = sys::findProgramByName("lipo", makeArrayRef(SDKPath));
+  auto Path = sys::findProgramByName("lipo", ArrayRef(SDKPath));
   if (!Path)
     Path = sys::findProgramByName("lipo");
 
@@ -64,7 +73,8 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
   }
 
   std::string ErrMsg;
-  int result = sys::ExecuteAndWait(*Path, Args, None, {}, 0, 0, &ErrMsg);
+  int result =
+      sys::ExecuteAndWait(*Path, Args, std::nullopt, {}, 0, 0, &ErrMsg);
   if (result) {
     WithColor::error() << "lipo: " << ErrMsg << "\n";
     return false;
@@ -75,14 +85,21 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
 
 bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName,
-                             const LinkOptions &Options, StringRef SDKPath) {
+                             const LinkOptions &Options, StringRef SDKPath,
+                             bool Fat64) {
   // No need to merge one file into a universal fat binary.
   if (ArchFiles.size() == 1) {
-    if (auto E = ArchFiles.front().File->keep(OutputFileName)) {
-      WithColor::error() << "while keeping " << ArchFiles.front().path()
-                         << " as " << OutputFileName << ": "
-                         << toString(std::move(E)) << "\n";
-      return false;
+    llvm::StringRef TmpPath = ArchFiles.front().getPath();
+    if (auto EC = sys::fs::rename(TmpPath, OutputFileName)) {
+      // If we can't rename, try to copy to work around cross-device link
+      // issues.
+      EC = sys::fs::copy_file(TmpPath, OutputFileName);
+      if (EC) {
+        WithColor::error() << "while keeping " << TmpPath << " as "
+                           << OutputFileName << ": " << EC.message() << "\n";
+        return false;
+      }
+      sys::fs::remove(TmpPath);
     }
     return true;
   }
@@ -92,15 +109,19 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
   Args.push_back("-create");
 
   for (auto &Thin : ArchFiles)
-    Args.push_back(Thin.path());
+    Args.push_back(Thin.getPath());
 
-  // Align segments to match dsymutil-classic alignment
+  // Align segments to match dsymutil-classic alignment.
   for (auto &Thin : ArchFiles) {
     Thin.Arch = getArchName(Thin.Arch);
     Args.push_back("-segalign");
     Args.push_back(Thin.Arch);
     Args.push_back("20");
   }
+
+  // Use a 64-bit fat header if requested.
+  if (Fat64)
+    Args.push_back("-fat64");
 
   Args.push_back("-output");
   Args.push_back(OutputFileName.data());
@@ -302,7 +323,7 @@ static void transferSegmentAndSections(
 }
 
 // Write the __DWARF segment load command to the output file.
-static void createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
+static bool createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
                                uint64_t FileSize, unsigned NumSections,
                                MCAsmLayout &Layout, MachObjectWriter &Writer) {
   Writer.writeSegmentLoadCommand("__DWARF", NumSections, VMAddr,
@@ -315,16 +336,21 @@ static void createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
     if (Sec->begin() == Sec->end() || !Layout.getSectionFileSize(Sec))
       continue;
 
-    unsigned Align = Sec->getAlignment();
-    if (Align > 1) {
-      VMAddr = alignTo(VMAddr, Align);
-      FileOffset = alignTo(FileOffset, Align);
+    Align Alignment = Sec->getAlign();
+    if (Alignment > 1) {
+      VMAddr = alignTo(VMAddr, Alignment);
+      FileOffset = alignTo(FileOffset, Alignment);
+      if (FileOffset > UINT32_MAX)
+        return error("section " + Sec->getName() +
+                     "'s file offset exceeds 4GB."
+                     " Refusing to produce an invalid Mach-O file.");
     }
     Writer.writeSection(Layout, *Sec, VMAddr, FileOffset, 0, 0, 0);
 
     FileOffset += Layout.getSectionAddressSize(Sec);
     VMAddr += Layout.getSectionAddressSize(Sec);
   }
+  return true;
 }
 
 static bool isExecutable(const object::MachOObjectFile &Obj) {
@@ -332,15 +358,6 @@ static bool isExecutable(const object::MachOObjectFile &Obj) {
     return Obj.getHeader64().filetype != MachO::MH_OBJECT;
   else
     return Obj.getHeader().filetype != MachO::MH_OBJECT;
-}
-
-static bool hasLinkEditSegment(const object::MachOObjectFile &Obj) {
-  bool HasLinkEditSegment = false;
-  iterateOnSegments(Obj, [&](const MachO::segment_command_64 &Segment) {
-    if (StringRef("__LINKEDIT") == Segment.segname)
-      HasLinkEditSegment = true;
-  });
-  return HasLinkEditSegment;
 }
 
 static unsigned segmentLoadCommandSize(bool Is64Bit, unsigned NumSections) {
@@ -354,9 +371,11 @@ static unsigned segmentLoadCommandSize(bool Is64Bit, unsigned NumSections) {
 // Stream a dSYM companion binary file corresponding to the binary referenced
 // by \a DM to \a OutFile. The passed \a MS MCStreamer is setup to write to
 // \a OutFile and it must be using a MachObjectWriter object to do so.
-bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                           const DebugMap &DM, SymbolMapTranslator &Translator,
-                           MCStreamer &MS, raw_fd_ostream &OutFile) {
+bool generateDsymCompanion(
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
+    MCStreamer &MS, raw_fd_ostream &OutFile,
+    const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
+        &RelocationsToApply) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
@@ -394,7 +413,9 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
   unsigned LoadCommandSize = 0;
   unsigned NumLoadCommands = 0;
 
-  // Get LC_UUID and LC_BUILD_VERSION.
+  bool HasSymtab = false;
+
+  // Check LC_SYMTAB and get LC_UUID and LC_BUILD_VERSION.
   MachO::uuid_command UUIDCmd;
   SmallVector<MachO::build_version_command, 2> BuildVersionCmd;
   memset(&UUIDCmd, 0, sizeof(UUIDCmd));
@@ -407,7 +428,7 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
       ++NumLoadCommands;
       LoadCommandSize += sizeof(UUIDCmd);
       break;
-   case MachO::LC_BUILD_VERSION: {
+    case MachO::LC_BUILD_VERSION: {
       MachO::build_version_command Cmd;
       memset(&Cmd, 0, sizeof(Cmd));
       Cmd = InputBinary.getBuildVersionLoadCommand(LCI);
@@ -418,14 +439,16 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
       BuildVersionCmd.push_back(Cmd);
       break;
     }
+    case MachO::LC_SYMTAB:
+      HasSymtab = true;
+      break;
     default:
       break;
     }
   }
 
   // If we have a valid symtab to copy, do it.
-  bool ShouldEmitSymtab =
-      isExecutable(InputBinary) && hasLinkEditSegment(InputBinary);
+  bool ShouldEmitSymtab = HasSymtab && isExecutable(InputBinary);
   if (ShouldEmitSymtab) {
     LoadCommandSize += sizeof(MachO::symtab_command);
     ++NumLoadCommands;
@@ -474,7 +497,7 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
       continue;
 
     if (uint64_t Size = Layout.getSectionFileSize(Sec)) {
-      DwarfSegmentSize = alignTo(DwarfSegmentSize, Sec->getAlignment());
+      DwarfSegmentSize = alignTo(DwarfSegmentSize, Sec->getAlign());
       DwarfSegmentSize += Size;
       ++NumDwarfSections;
     }
@@ -486,12 +509,9 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
   }
 
   SmallString<0> NewSymtab;
-  std::function<StringRef(StringRef)> TranslationLambda =
-      Translator ? [&](StringRef Input) { return Translator(Input); }
-                 : static_cast<std::function<StringRef(StringRef)>>(nullptr);
   // Legacy dsymutil puts an empty string at the start of the line table.
   // thus we set NonRelocatableStringpool(,PutEmptyString=true)
-  NonRelocatableStringpool NewStrings(TranslationLambda, true);
+  NonRelocatableStringpool NewStrings(true);
   unsigned NListSize = Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   unsigned NumSyms = 0;
   uint64_t NewStringsSize = 0;
@@ -567,8 +587,9 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
   }
 
   // Write the load command for the __DWARF segment.
-  createDwarfSegment(DwarfVMAddr, DwarfSegmentStart, DwarfSegmentSize,
-                     NumDwarfSections, Layout, Writer);
+  if (!createDwarfSegment(DwarfVMAddr, DwarfSegmentStart, DwarfSegmentSize,
+                          NumDwarfSections, Layout, Writer))
+    return false;
 
   assert(OutFile.tell() == LoadCommandSize + HeaderSize);
   OutFile.write_zeros(SymtabStart - (LoadCommandSize + HeaderSize));
@@ -613,8 +634,27 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
       continue;
 
     uint64_t Pos = OutFile.tell();
-    OutFile.write_zeros(alignTo(Pos, Sec.getAlignment()) - Pos);
+    OutFile.write_zeros(alignTo(Pos, Sec.getAlign()) - Pos);
     MCAsm.writeSectionData(OutFile, &Sec, Layout);
+  }
+
+  // Apply relocations to the contents of the DWARF segment.
+  // We do this here because the final value written depend on the DWARF vm
+  // addr, which is only calculated in this function.
+  if (!RelocationsToApply.empty()) {
+    if (!OutFile.supportsSeeking())
+      report_fatal_error(
+          "Cannot apply relocations to file that doesn't support seeking!");
+
+    uint64_t Pos = OutFile.tell();
+    for (auto &RelocationToApply : RelocationsToApply) {
+      OutFile.seek(DwarfSegmentStart + RelocationToApply.AddressFromDwarfStart);
+      int32_t Value = RelocationToApply.Value;
+      if (RelocationToApply.ShouldSubtractDwarfVM)
+        Value -= DwarfVMAddr;
+      OutFile.write((char *)&Value, sizeof(int32_t));
+    }
+    OutFile.seek(Pos);
   }
 
   return true;

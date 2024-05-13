@@ -43,7 +43,7 @@ endfunction(check_working_cxx_atomics64)
 # Check for (non-64-bit) atomic operations.
 if(MSVC)
   set(HAVE_CXX_ATOMICS_WITHOUT_LIB True)
-elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL")
   # First check if atomics work without the library.
   check_working_cxx_atomics(HAVE_CXX_ATOMICS_WITHOUT_LIB)
   # If not, check if the library exists, and atomics work with it.
@@ -64,7 +64,7 @@ endif()
 # Check for 64 bit atomic operations.
 if(MSVC)
   set(HAVE_CXX_ATOMICS64_WITHOUT_LIB True)
-elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL")
   # First check if atomics work without the library.
   check_working_cxx_atomics64(HAVE_CXX_ATOMICS64_WITHOUT_LIB)
   # If not, check if the library exists, and atomics work with it.
@@ -80,6 +80,19 @@ elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE)
       message(FATAL_ERROR "Host compiler appears to require libatomic for 64-bit operations, but cannot find it.")
     endif()
   endif()
+endif()
+
+# Set variable LLVM_ATOMIC_LIB specifying flags for linking against libatomic.
+if(HAVE_CXX_ATOMICS_WITH_LIB OR HAVE_CXX_ATOMICS64_WITH_LIB)
+  # Use options --push-state, --as-needed and --pop-state if linker is known to support them.
+  # Use single option -Wl of compiler driver to avoid incorrect re-ordering of options by CMake.
+  if(LLVM_LINKER_IS_GNULD OR LLVM_LINKER_IS_GOLD OR LLVM_LINKER_IS_LLD OR LLVM_LINKER_IS_MOLD)
+    set(LLVM_ATOMIC_LIB "-Wl,--push-state,--as-needed,-latomic,--pop-state")
+  else()
+    set(LLVM_ATOMIC_LIB "-latomic")
+  endif()
+else()
+  set(LLVM_ATOMIC_LIB)
 endif()
 
 ## TODO: This define is only used for the legacy atomic operations in

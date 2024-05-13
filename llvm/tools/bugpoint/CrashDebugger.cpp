@@ -70,6 +70,18 @@ cl::opt<bool> VerboseErrors("verbose-errors",
                             cl::init(false));
 }
 
+static bool isValidModule(std::unique_ptr<Module> &M,
+                          bool ExitOnFailure = true) {
+  if (!llvm::verifyModule(*M.get(), &llvm::errs()))
+    return true;
+
+  if (ExitOnFailure) {
+    llvm::errs() << "verify failed!\n";
+    exit(1);
+  }
+  return false;
+}
+
 namespace llvm {
 class ReducePassList : public ListReducer<std::string> {
   BugDriver &BD;
@@ -269,8 +281,8 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
     std::vector<GlobalValue *> ToRemove;
     // First, remove aliases to functions we're about to purge.
     for (GlobalAlias &Alias : M->aliases()) {
-      GlobalObject *Root = Alias.getBaseObject();
-      Function *F = dyn_cast_or_null<Function>(Root);
+      GlobalObject *Root = Alias.getAliaseeObject();
+      auto *F = dyn_cast<Function>(Root);
       if (F) {
         if (Functions.count(F))
           // We're keeping this function.
@@ -278,7 +290,7 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
       } else if (Root->isNullValue()) {
         // This referenced a globalalias that we've already replaced,
         // so we still need to replace this alias.
-      } else if (!F) {
+      } else {
         // Not a function, therefore not something we mess with.
         continue;
       }
@@ -354,12 +366,11 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
 
   // Build up an AttributeList from the attributes we've been given by the
   // reducer.
-  AttrBuilder AB;
+  AttrBuilder AB(M->getContext());
   for (auto A : Attrs)
     AB.addAttribute(A);
   AttributeList NewAttrs;
-  NewAttrs =
-      NewAttrs.addAttributes(BD.getContext(), AttributeList::FunctionIndex, AB);
+  NewAttrs = NewAttrs.addFnAttributes(BD.getContext(), AB);
 
   // Set this new list of attributes on the function.
   F->setAttributes(NewAttrs);
@@ -369,13 +380,17 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
   if (F->hasFnAttribute(Attribute::OptimizeNone))
     F->addFnAttr(Attribute::NoInline);
 
+  // If modifying the attribute list leads to invalid IR, revert the change
+  if (!isValidModule(M, /*ExitOnFailure=*/false))
+    return false;
+
   // Try running on the hacked up program...
   if (TestFn(BD, M.get())) {
     BD.setNewProgram(std::move(M)); // It crashed, keep the trimmed version...
 
     // Pass along the set of attributes that caused the crash.
     Attrs.clear();
-    for (Attribute A : NewAttrs.getFnAttributes()) {
+    for (Attribute A : NewAttrs.getFnAttrs()) {
       Attrs.push_back(A);
     }
     return true;
@@ -425,7 +440,7 @@ void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
 }
 /// ReduceCrashingBlocks reducer - This works by setting the terminators of
 /// all terminators except the specified basic blocks to a 'ret' instruction,
-/// then running the simplify-cfg pass.  This has the effect of chopping up
+/// then running the simplifycfg pass.  This has the effect of chopping up
 /// the CFG really fast which can reduce large functions quickly.
 ///
 class ReduceCrashingBlocks : public ListReducer<const BasicBlock *> {
@@ -485,7 +500,7 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
           BBTerm->replaceAllUsesWith(Constant::getNullValue(BBTerm->getType()));
 
         // Replace the old terminator instruction.
-        BB.getInstList().pop_back();
+        BB.back().eraseFromParent();
         new UnreachableInst(BB.getContext(), &BB);
       }
     }
@@ -511,14 +526,7 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
     ToProcess.clear();
   }
   // Verify we didn't break anything
-  std::vector<std::string> Passes;
-  Passes.push_back("verify");
-  std::unique_ptr<Module> New = BD.runPassesOn(M.get(), Passes);
-  if (!New) {
-    errs() << "verify failed!\n";
-    exit(1);
-  }
-  M = std::move(New);
+  isValidModule(M);
 
   // Try running on the hacked up program...
   if (TestFn(BD, M.get())) {
@@ -619,14 +627,7 @@ bool ReduceCrashingConditionals::TestBlocks(
     ToProcess.clear();
   }
   // Verify we didn't break anything
-  std::vector<std::string> Passes;
-  Passes.push_back("verify");
-  std::unique_ptr<Module> New = BD.runPassesOn(M.get(), Passes);
-  if (!New) {
-    errs() << "verify failed!\n";
-    exit(1);
-  }
-  M = std::move(New);
+  isValidModule(M);
 
   // Try running on the hacked up program...
   if (TestFn(BD, M.get())) {
@@ -712,14 +713,7 @@ bool ReduceSimplifyCFG::TestBlocks(std::vector<const BasicBlock *> &BBs) {
       simplifyCFG(&*BBIt++, TTI);
     }
   // Verify we didn't break anything
-  std::vector<std::string> Passes;
-  Passes.push_back("verify");
-  std::unique_ptr<Module> New = BD.runPassesOn(M.get(), Passes);
-  if (!New) {
-    errs() << "verify failed!\n";
-    exit(1);
-  }
-  M = std::move(New);
+  isValidModule(M);
 
   // Try running on the hacked up program...
   if (TestFn(BD, M.get())) {
@@ -787,21 +781,18 @@ bool ReduceCrashingInstructions::TestInsts(
 
   for (Module::iterator MI = M->begin(), ME = M->end(); MI != ME; ++MI)
     for (Function::iterator FI = MI->begin(), FE = MI->end(); FI != FE; ++FI)
-      for (BasicBlock::iterator I = FI->begin(), E = FI->end(); I != E;) {
-        Instruction *Inst = &*I++;
-        if (!Instructions.count(Inst) && !Inst->isTerminator() &&
-            !Inst->isEHPad() && !Inst->getType()->isTokenTy() &&
-            !Inst->isSwiftError()) {
-          if (!Inst->getType()->isVoidTy())
-            Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
-          Inst->eraseFromParent();
+      for (Instruction &Inst : llvm::make_early_inc_range(*FI)) {
+        if (!Instructions.count(&Inst) && !Inst.isTerminator() &&
+            !Inst.isEHPad() && !Inst.getType()->isTokenTy() &&
+            !Inst.isSwiftError()) {
+          if (!Inst.getType()->isVoidTy())
+            Inst.replaceAllUsesWith(PoisonValue::get(Inst.getType()));
+          Inst.eraseFromParent();
         }
       }
 
   // Verify that this is still valid.
-  legacy::PassManager Passes;
-  Passes.add(createVerifierPass(/*FatalErrors=*/false));
-  Passes.run(*M);
+  isValidModule(M, /*ExitOnFailure=*/false);
 
   // Try running on the hacked up program...
   if (TestFn(BD, M.get())) {
@@ -871,9 +862,7 @@ bool ReduceCrashingMetadata::TestInsts(std::vector<Instruction *> &Insts) {
     }
 
   // Verify that this is still valid.
-  legacy::PassManager Passes;
-  Passes.add(createVerifierPass(/*FatalErrors=*/false));
-  Passes.run(*M);
+  isValidModule(M, /*ExitOnFailure=*/false);
 
   // Try running on the hacked up program...
   if (TestFn(BD, M.get())) {
@@ -946,9 +935,7 @@ bool ReduceCrashingNamedMD::TestNamedMDs(std::vector<std::string> &NamedMDs) {
     NamedMD->eraseFromParent();
 
   // Verify that this is still valid.
-  legacy::PassManager Passes;
-  Passes.add(createVerifierPass(/*FatalErrors=*/false));
-  Passes.run(*M);
+  isValidModule(M, /*ExitOnFailure=*/false);
 
   // Try running on the hacked up program...
   if (TestFn(BD, M.get())) {
@@ -1011,9 +998,7 @@ bool ReduceCrashingNamedMDOps::TestNamedMDOps(
   }
 
   // Verify that this is still valid.
-  legacy::PassManager Passes;
-  Passes.add(createVerifierPass(/*FatalErrors=*/false));
-  Passes.run(*M);
+  isValidModule(M, /*ExitOnFailure=*/false);
 
   // Try running on the hacked up program...
   if (TestFn(BD, M.get())) {
@@ -1232,7 +1217,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
         assert(Fn && "Could not find function?");
 
         std::vector<Attribute> Attrs;
-        for (Attribute A : Fn->getAttributes().getFnAttributes())
+        for (Attribute A : Fn->getAttributes().getFnAttrs())
           Attrs.push_back(A);
 
         OldSize += Attrs.size();
@@ -1340,7 +1325,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
       // contribute to the crash, bisect the operands of the remaining ones
       std::vector<const MDNode *> NamedMDOps;
       for (auto &NamedMD : BD.getProgram().named_metadata())
-        for (auto op : NamedMD.operands())
+        for (auto *op : NamedMD.operands())
           NamedMDOps.push_back(op);
       Expected<bool> Result =
           ReduceCrashingNamedMDOps(BD, TestFn).reduceList(NamedMDOps);

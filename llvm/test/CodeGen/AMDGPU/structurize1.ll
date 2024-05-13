@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood -r600-if-convert=0 < %s | FileCheck %s
+; RUN: llc -mtriple=r600 -mcpu=redwood -r600-if-convert=0 < %s | FileCheck %s
 
 ; This tests for abug where the AMDILCFGStructurizer was crashing on loops
 ; like this:
@@ -19,7 +19,7 @@
 ; CHECK-LABEL: {{^}}if_inside_loop:
 ; CHECK: LOOP_START_DX10
 ; CHECK: END_LOOP
-define amdgpu_kernel void @if_inside_loop(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) {
+define amdgpu_kernel void @if_inside_loop(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %d) {
 entry:
   br label %for.body
 
@@ -57,6 +57,6 @@ for.inc:
   br i1 %7, label %for.body, label %exit
 
 exit:
-  store i32 %val.for.inc, i32 addrspace(1)* %out
+  store i32 %val.for.inc, ptr addrspace(1) %out
   ret void
 }

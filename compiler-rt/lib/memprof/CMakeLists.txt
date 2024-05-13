@@ -8,7 +8,9 @@ set(MEMPROF_SOURCES
   memprof_interceptors_memintrinsics.cpp
   memprof_linux.cpp
   memprof_malloc_linux.cpp
+  memprof_mibmap.cpp
   memprof_posix.cpp
+  memprof_rawprofile.cpp
   memprof_rtl.cpp
   memprof_shadow_setup.cpp
   memprof_stack.cpp
@@ -35,15 +37,22 @@ SET(MEMPROF_HEADERS
   memprof_interface_internal.h
   memprof_internal.h
   memprof_mapping.h
+  memprof_meminfoblock.h
+  memprof_mibmap.h
+  memprof_rawprofile.h
   memprof_stack.h
   memprof_stats.h
   memprof_thread.h
   )
 
 include_directories(..)
+include_directories(../../include)
 
 set(MEMPROF_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 set(MEMPROF_COMMON_DEFINITIONS "")
+
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format MEMPROF_CFLAGS)
 
 append_rtti_flag(OFF MEMPROF_CFLAGS)
 
@@ -56,7 +65,10 @@ set(MEMPROF_DYNAMIC_CFLAGS ${MEMPROF_CFLAGS})
 append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec MEMPROF_DYNAMIC_CFLAGS)
 
-set(MEMPROF_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
+set(MEMPROF_DYNAMIC_LIBS
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
+  ${SANITIZER_CXX_ABI_LIBRARIES}
+  ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl MEMPROF_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt MEMPROF_DYNAMIC_LIBS)
@@ -115,7 +127,10 @@ set(MEMPROF_COMMON_RUNTIME_OBJECT_LIBS
   RTSanitizerCommon
   RTSanitizerCommonLibc
   RTSanitizerCommonCoverage
-  RTSanitizerCommonSymbolizer)
+  RTSanitizerCommonSymbolizer
+  # FIXME: hangs.
+  # RTSanitizerCommonSymbolizerInternal
+)
 
 add_compiler_rt_runtime(clang_rt.memprof
   STATIC
@@ -189,3 +204,8 @@ foreach(arch ${MEMPROF_SUPPORTED_ARCH})
     add_dependencies(memprof clang_rt.memprof-${arch}-symbols)
   endif()
 endforeach()
+
+
+if(COMPILER_RT_INCLUDE_TESTS)
+  add_subdirectory(tests)
+endif()

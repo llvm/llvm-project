@@ -12,10 +12,10 @@ void test() {
   const A a2;
   // CHECK: `-VarDecl {{.*}} a3 'A'
   A a3 = garbage();
+  // CHECK: `-VarDecl {{.*}} a4 'const A &'
+  const A& a4;
 
 
-  // CHECK: `-VarDecl {{.*}} invalid b1 'const A &'
-  const A& b1;
   // CHECK: `-VarDecl {{.*}} invalid b2 'ForwardDecl'
   ForwardDecl b2;
   // CHECK: `-VarDecl {{.*}} invalid b3 'auto'
@@ -24,4 +24,19 @@ void test() {
   auto b4 = A(1);
   // CHECK: `-VarDecl {{.*}} invalid b5 'auto'
   auto b5 = A{1};
+}
+
+void GH72198() {
+  // CHECK: DecompositionDecl {{.*}} invalid 'int'
+  int [_, b] = {0, 0};
+  [b]{};
+}
+
+namespace GH67495 {
+int get_point();
+void f() {
+  // CHECK: DecompositionDecl {{.*}} invalid 'int &'
+  auto& [x, y] = get_point();
+  [x, y] {};
+}
 }

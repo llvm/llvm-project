@@ -6,7 +6,7 @@
   target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8r-arm-none-eabi"
   
-  define void @Func(i32 %i, i32* nocapture %p) local_unnamed_addr {
+  define void @Func(i32 %i, ptr nocapture %p) local_unnamed_addr {
   entry:
     switch i32 %i, label %sw.epilog [
       i32 0, label %sw.bb
@@ -19,7 +19,7 @@
     br label %sw.epilog.sink.split
   
   sw.bb1:                                           ; preds = %entry
-    store i32 0, i32* %p, align 4
+    store i32 0, ptr %p, align 4
     br label %sw.epilog.sink.split
   
   sw.bb3:                                           ; preds = %entry
@@ -27,7 +27,7 @@
   
   sw.epilog.sink.split:                             ; preds = %sw.bb3, %sw.bb1, %sw.bb, %entry
     %.sink = phi i32 [ 2, %sw.bb3 ], [ 0, %sw.bb ], [ 1, %entry ], [ 1, %sw.bb1 ]
-    store i32 %.sink, i32* %p, align 4
+    store i32 %.sink, ptr %p, align 4
     br label %sw.epilog
   
   sw.epilog:                                        ; preds = %sw.epilog.sink.split, %entry
@@ -102,7 +102,7 @@ body:             |
   
     $r0, dead $cpsr = tMOVi8 0, 14, $noreg
     $r2, dead $cpsr = tMOVi8 1, 14, $noreg
-    tSTRi killed $r0, $r1, 0, 14, $noreg :: (store 4 into %ir.p)
+    tSTRi killed $r0, $r1, 0, 14, $noreg :: (store (s32) into %ir.p)
     t2B %bb.5.sw.epilog.sink.split, 14, $noreg
   
   bb.4.sw.bb3:
@@ -115,7 +115,7 @@ body:             |
     successors: %bb.6.sw.epilog(0x80000000)
     liveins: $r1, $r2
   
-    tSTRi killed $r2, killed $r1, 0, 14, $noreg :: (store 4 into %ir.p)
+    tSTRi killed $r2, killed $r1, 0, 14, $noreg :: (store (s32) into %ir.p)
   
   bb.6.sw.epilog:
     tBX_RET 14, $noreg

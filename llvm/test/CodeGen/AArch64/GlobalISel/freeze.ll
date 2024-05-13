@@ -64,19 +64,19 @@ define <2 x i32> @freeze_ivec() {
   ret <2 x i32> %t1
 }
 
-define i8* @freeze_ptr() {
+define ptr @freeze_ptr() {
 ; CHECK-LABEL: freeze_ptr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x0, x8, #4 // =4
+; CHECK-NEXT:    add x0, x8, #4
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: freeze_ptr:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    add x0, x8, #4 // =4
+; GISEL-NEXT:    add x0, x8, #4
 ; GISEL-NEXT:    ret
-  %y1 = freeze i8* undef
-  %t1 = getelementptr i8, i8* %y1, i64 4
-  ret i8* %t1
+  %y1 = freeze ptr undef
+  %t1 = getelementptr i8, ptr %y1, i64 4
+  ret ptr %t1
 }
 
 define i32 @freeze_struct() {

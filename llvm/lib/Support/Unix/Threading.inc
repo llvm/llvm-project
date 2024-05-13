@@ -13,11 +13,18 @@
 #include "Unix.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
 
 #if defined(__APPLE__)
 #include <mach/mach_init.h>
 #include <mach/mach_port.h>
+#include <pthread/qos.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
 #endif
 
 #include <pthread.h>
@@ -48,22 +55,10 @@
 #include <unistd.h>      // For syscall()
 #endif
 
-static void *threadFuncSync(void *Arg) {
-  SyncThreadInfo *TI = static_cast<SyncThreadInfo *>(Arg);
-  TI->UserFn(TI->UserData);
-  return nullptr;
-}
-
-static void *threadFuncAsync(void *Arg) {
-  std::unique_ptr<AsyncThreadInfo> Info(static_cast<AsyncThreadInfo *>(Arg));
-  (*Info)();
-  return nullptr;
-}
-
-static void
+namespace llvm {
+pthread_t
 llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
-                            llvm::Optional<unsigned> StackSizeInBytes,
-                            JoiningPolicy JP) {
+                            std::optional<unsigned> StackSizeInBytes) {
   int errnum;
 
   // Construct the attributes object.
@@ -90,25 +85,41 @@ llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
   if ((errnum = ::pthread_create(&Thread, &Attr, ThreadFunc, Arg)) != 0)
     ReportErrnumFatal("pthread_create failed", errnum);
 
-  if (JP == JoiningPolicy::Join) {
-    // Wait for the thread
-    if ((errnum = ::pthread_join(Thread, nullptr)) != 0) {
-      ReportErrnumFatal("pthread_join failed", errnum);
-    }
-  } else if (JP == JoiningPolicy::Detach) {
-    if ((errnum = ::pthread_detach(Thread)) != 0) {
-      ReportErrnumFatal("pthread_detach failed", errnum);
-    }
+  return Thread;
+}
+
+void llvm_thread_detach_impl(pthread_t Thread) {
+  int errnum;
+
+  if ((errnum = ::pthread_detach(Thread)) != 0) {
+    ReportErrnumFatal("pthread_detach failed", errnum);
   }
 }
+
+void llvm_thread_join_impl(pthread_t Thread) {
+  int errnum;
+
+  if ((errnum = ::pthread_join(Thread, nullptr)) != 0) {
+    ReportErrnumFatal("pthread_join failed", errnum);
+  }
+}
+
+pthread_t llvm_thread_get_id_impl(pthread_t Thread) { return Thread; }
+
+pthread_t llvm_thread_get_current_id_impl() { return ::pthread_self(); }
+
+} // namespace llvm
 
 uint64_t llvm::get_threadid() {
 #if defined(__APPLE__)
   // Calling "mach_thread_self()" bumps the reference count on the thread
   // port, so we need to deallocate it. mach_task_self() doesn't bump the ref
   // count.
-  thread_port_t Self = mach_thread_self();
-  mach_port_deallocate(mach_task_self(), Self);
+  static thread_local thread_port_t Self = [] {
+    thread_port_t InitSelf = mach_thread_self();
+    mach_port_deallocate(mach_task_self(), Self);
+    return InitSelf;
+  }();
   return Self;
 #elif defined(__FreeBSD__)
   return uint64_t(pthread_getthreadid_np());
@@ -124,7 +135,6 @@ uint64_t llvm::get_threadid() {
   return uint64_t(pthread_self());
 #endif
 }
-
 
 static constexpr uint32_t get_max_thread_name_length_impl() {
 #if defined(__NetBSD__)
@@ -174,7 +184,7 @@ void llvm::set_thread_name(const Twine &Name) {
   ::pthread_set_name_np(::pthread_self(), NameStr.data());
 #elif defined(__NetBSD__)
   ::pthread_setname_np(::pthread_self(), "%s",
-    const_cast<char *>(NameStr.data()));
+                       const_cast<char *>(NameStr.data()));
 #elif defined(__APPLE__)
   ::pthread_setname_np(NameStr.data());
 #endif
@@ -190,8 +200,8 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   struct kinfo_proc *kp = nullptr, *nkp;
   size_t len = 0;
   int error;
-  int ctl[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD,
-    (int)pid };
+  int ctl[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD,
+                (int)pid};
 
   while (1) {
     error = sysctl(ctl, 4, kp, &len, nullptr, 0);
@@ -234,7 +244,7 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
 #elif defined(__linux__)
 #if HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
-  char Buffer[len] = {'\0'};  // FIXME: working around MSan false positive.
+  char Buffer[len] = {'\0'}; // FIXME: working around MSan false positive.
   if (0 == ::pthread_getname_np(::pthread_self(), Buffer, len))
     Name.append(Buffer, Buffer + strlen(Buffer));
 #endif
@@ -253,27 +263,33 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
   // SCHED_OTHER   the standard round-robin time-sharing policy;
   return !pthread_setschedparam(
              pthread_self(),
-             Priority == ThreadPriority::Background ? SCHED_IDLE : SCHED_OTHER,
+             // FIXME: consider SCHED_BATCH for Low
+             Priority == ThreadPriority::Default ? SCHED_OTHER : SCHED_IDLE,
              &priority)
              ? SetThreadPriorityResult::SUCCESS
              : SetThreadPriorityResult::FAILURE;
 #elif defined(__APPLE__)
-  // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/getpriority.2.html
-  // When setting a thread into background state the scheduling priority is set
-  // to lowest value, disk and network IO are throttled. Network IO will be
-  // throttled for any sockets the thread opens after going into background
-  // state. Any previously opened sockets are not affected.
-
-  // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/getiopolicy_np.3.html
-  // I/Os with THROTTLE policy are called THROTTLE I/Os. If a THROTTLE I/O
-  // request occurs within a small time window (usually a fraction of a second)
-  // of another NORMAL I/O request, the thread that issues the THROTTLE I/O is
-  // forced to sleep for a certain interval. This slows down the thread that
-  // issues the THROTTLE I/O so that NORMAL I/Os can utilize most of the disk
-  // I/O bandwidth.
-  return !setpriority(PRIO_DARWIN_THREAD, 0,
-                      Priority == ThreadPriority::Background ? PRIO_DARWIN_BG
-                                                             : 0)
+  // https://developer.apple.com/documentation/apple-silicon/tuning-your-code-s-performance-for-apple-silicon
+  //
+  // Background - Applies to work that isn’t visible to the user and may take
+  // significant time to complete. Examples include indexing, backing up, or
+  // synchronizing data. This class emphasizes energy efficiency.
+  //
+  // Utility - Applies to work that takes anywhere from a few seconds to a few
+  // minutes to complete. Examples include downloading a document or importing
+  // data. This class offers a balance between responsiveness, performance, and
+  // energy efficiency.
+  const auto qosClass = [&]() {
+    switch (Priority) {
+    case ThreadPriority::Background:
+      return QOS_CLASS_BACKGROUND;
+    case ThreadPriority::Low:
+      return QOS_CLASS_UTILITY;
+    case ThreadPriority::Default:
+      return QOS_CLASS_DEFAULT;
+    }
+  }();
+  return !pthread_set_qos_class_self_np(qosClass, 0)
              ? SetThreadPriorityResult::SUCCESS
              : SetThreadPriorityResult::FAILURE;
 #endif
@@ -282,7 +298,7 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
 
 #include <thread>
 
-int computeHostNumHardwareThreads() {
+static int computeHostNumHardwareThreads() {
 #if defined(__FreeBSD__)
   cpuset_t mask;
   CPU_ZERO(&mask);
@@ -309,3 +325,122 @@ llvm::BitVector llvm::get_thread_affinity_mask() {
 }
 
 unsigned llvm::get_cpus() { return 1; }
+
+#if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))
+// On Linux, the number of physical cores can be computed from /proc/cpuinfo,
+// using the number of unique physical/core id pairs. The following
+// implementation reads the /proc/cpuinfo format on an x86_64 system.
+static int computeHostNumPhysicalCores() {
+  // Enabled represents the number of physical id/core id pairs with at least
+  // one processor id enabled by the CPU affinity mask.
+  cpu_set_t Affinity, Enabled;
+  if (sched_getaffinity(0, sizeof(Affinity), &Affinity) != 0)
+    return -1;
+  CPU_ZERO(&Enabled);
+
+  // Read /proc/cpuinfo as a stream (until EOF reached). It cannot be
+  // mmapped because it appears to have 0 size.
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
+      llvm::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
+  if (std::error_code EC = Text.getError()) {
+    llvm::errs() << "Can't read "
+                 << "/proc/cpuinfo: " << EC.message() << "\n";
+    return -1;
+  }
+  SmallVector<StringRef, 8> strs;
+  (*Text)->getBuffer().split(strs, "\n", /*MaxSplit=*/-1,
+                             /*KeepEmpty=*/false);
+  int CurProcessor = -1;
+  int CurPhysicalId = -1;
+  int CurSiblings = -1;
+  int CurCoreId = -1;
+  for (StringRef Line : strs) {
+    std::pair<StringRef, StringRef> Data = Line.split(':');
+    auto Name = Data.first.trim();
+    auto Val = Data.second.trim();
+    // These fields are available if the kernel is configured with CONFIG_SMP.
+    if (Name == "processor")
+      Val.getAsInteger(10, CurProcessor);
+    else if (Name == "physical id")
+      Val.getAsInteger(10, CurPhysicalId);
+    else if (Name == "siblings")
+      Val.getAsInteger(10, CurSiblings);
+    else if (Name == "core id") {
+      Val.getAsInteger(10, CurCoreId);
+      // The processor id corresponds to an index into cpu_set_t.
+      if (CPU_ISSET(CurProcessor, &Affinity))
+        CPU_SET(CurPhysicalId * CurSiblings + CurCoreId, &Enabled);
+    }
+  }
+  return CPU_COUNT(&Enabled);
+}
+#elif (defined(__linux__) && defined(__s390x__)) || defined(_AIX)
+static int computeHostNumPhysicalCores() {
+  return sysconf(_SC_NPROCESSORS_ONLN);
+}
+#elif defined(__linux__) && !defined(__ANDROID__)
+static int computeHostNumPhysicalCores() {
+  cpu_set_t Affinity;
+  if (sched_getaffinity(0, sizeof(Affinity), &Affinity) == 0)
+    return CPU_COUNT(&Affinity);
+
+  // The call to sched_getaffinity() may have failed because the Affinity
+  // mask is too small for the number of CPU's on the system (i.e. the
+  // system has more than 1024 CPUs). Allocate a mask large enough for
+  // twice as many CPUs.
+  cpu_set_t *DynAffinity;
+  DynAffinity = CPU_ALLOC(2048);
+  if (sched_getaffinity(0, CPU_ALLOC_SIZE(2048), DynAffinity) == 0) {
+    int NumCPUs = CPU_COUNT(DynAffinity);
+    CPU_FREE(DynAffinity);
+    return NumCPUs;
+  }
+  return -1;
+}
+#elif defined(__APPLE__)
+// Gets the number of *physical cores* on the machine.
+static int computeHostNumPhysicalCores() {
+  uint32_t count;
+  size_t len = sizeof(count);
+  sysctlbyname("hw.physicalcpu", &count, &len, NULL, 0);
+  if (count < 1) {
+    int nm[2];
+    nm[0] = CTL_HW;
+    nm[1] = HW_AVAILCPU;
+    sysctl(nm, 2, &count, &len, NULL, 0);
+    if (count < 1)
+      return -1;
+  }
+  return count;
+}
+#elif defined(__MVS__)
+static int computeHostNumPhysicalCores() {
+  enum {
+    // Byte offset of the pointer to the Communications Vector Table (CVT) in
+    // the Prefixed Save Area (PSA). The table entry is a 31-bit pointer and
+    // will be zero-extended to uintptr_t.
+    FLCCVT = 16,
+    // Byte offset of the pointer to the Common System Data Area (CSD) in the
+    // CVT. The table entry is a 31-bit pointer and will be zero-extended to
+    // uintptr_t.
+    CVTCSD = 660,
+    // Byte offset to the number of live CPs in the LPAR, stored as a signed
+    // 32-bit value in the table.
+    CSD_NUMBER_ONLINE_STANDARD_CPS = 264,
+  };
+  char *PSA = 0;
+  char *CVT = reinterpret_cast<char *>(
+      static_cast<uintptr_t>(reinterpret_cast<unsigned int &>(PSA[FLCCVT])));
+  char *CSD = reinterpret_cast<char *>(
+      static_cast<uintptr_t>(reinterpret_cast<unsigned int &>(CVT[CVTCSD])));
+  return reinterpret_cast<int &>(CSD[CSD_NUMBER_ONLINE_STANDARD_CPS]);
+}
+#else
+// On other systems, return -1 to indicate unknown.
+static int computeHostNumPhysicalCores() { return -1; }
+#endif
+
+int llvm::get_physical_cores() {
+  static int NumCores = computeHostNumPhysicalCores();
+  return NumCores;
+}

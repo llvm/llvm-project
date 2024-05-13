@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("DebugInfoCodeViewTests") {
   deps = [
@@ -6,6 +6,7 @@ unittest("DebugInfoCodeViewTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "GUIDFormatTest.cpp",
     "RandomAccessVisitorTest.cpp",
     "TypeHashingTest.cpp",
     "TypeIndexDiscoveryTest.cpp",

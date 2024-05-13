@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fobjc-arc -fobjc-runtime-has-weak -verify -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-arc -fobjc-runtime-has-weak -verify -fblocks -Wno-incompatible-pointer-types %s
 
 typedef const void * CFTypeRef;
 CFTypeRef CFBridgingRetain(id X);
@@ -61,9 +61,9 @@ void from_void(void *vp) {
   uip = vp; // expected-error{{implicit conversion of a non-Objective-C pointer type 'void *' to '__unsafe_unretained id *' is disallowed with ARC}}
 }
 
-typedef void (^Block)();
-typedef void (^Block_strong)() __strong;
-typedef void (^Block_autoreleasing)() __autoreleasing;
+typedef void (^Block)(void);
+typedef void (^Block_strong)(void) __strong;
+typedef void (^Block_autoreleasing)(void) __autoreleasing;
 
 @class NSString;
 
@@ -91,8 +91,18 @@ void ownership_transfer_in_cast(void *vp, Block *pblk) {
   (void)(Block*)lv; // expected-error {{cast of an Objective-C pointer to '__strong Block *'}}
 }
 
-// <rdar://problem/10486347>
 void conversion_in_conditional(id a, void* b) {
   id c = 1 ? a : b; // expected-error {{operands to conditional of types 'id' and 'void *' are incompatible in ARC mode}}
   id d = 1 ? b : a; // expected-error {{operands to conditional of types 'void *' and 'id' are incompatible in ARC mode}}
+}
+
+void conversion_pointer_to_id(__strong id *x) {
+  struct S {
+    int a[2];
+  } s, *p;
+
+  x = (__strong id *)&s;
+  x = &s; // expected-error {{implicit conversion of a non-Objective-C pointer type 'struct S *' to '__strong id *' is disallowed with ARC}}
+  p = (struct S *)x;
+  p = x; // expected-error {{implicit conversion of an indirect pointer to an Objective-C pointer to 'struct S *' is disallowed with ARC}}
 }

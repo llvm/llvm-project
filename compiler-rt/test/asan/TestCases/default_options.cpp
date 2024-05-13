@@ -6,9 +6,13 @@
 
 const char *kAsanDefaultOptions = "verbosity=1 help=1";
 
-extern "C"
+// Required for dyld macOS 12.0+
+#if (__APPLE__)
+__attribute__((weak))
+#endif
 __attribute__((no_sanitize_address))
-const char *__asan_default_options() {
+extern "C" const char *
+__asan_default_options() {
   // CHECK: Available flags for AddressSanitizer:
   return kAsanDefaultOptions;
 }

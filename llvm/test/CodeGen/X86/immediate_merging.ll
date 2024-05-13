@@ -36,39 +36,39 @@ define dso_local i32 @foo() optsize {
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $1234, %eax # imm = 0x4D2
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl $12, {{.*}}(%rip)
-; X64-NEXT:    cmpl $12, {{.*}}(%rip)
+; X64-NEXT:    movl %eax, a(%rip)
+; X64-NEXT:    movl %eax, b(%rip)
+; X64-NEXT:    movl $12, c(%rip)
+; X64-NEXT:    cmpl $12, e(%rip)
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
-; X64-NEXT:    movl $1, {{.*}}(%rip)
+; X64-NEXT:    movl $1, x(%rip)
 ; X64-NEXT:  .LBB0_2: # %if.end
-; X64-NEXT:    movl $1234, {{.*}}(%rip) # imm = 0x4D2
+; X64-NEXT:    movl $1234, f(%rip) # imm = 0x4D2
 ; X64-NEXT:    movl $555, %eax # imm = 0x22B
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    addl %eax, {{.*}}(%rip)
+; X64-NEXT:    movl %eax, h(%rip)
+; X64-NEXT:    addl %eax, i(%rip)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  store i32 1234, i32* @a
-  store i32 1234, i32* @b
-  store i32 12, i32* @c
-  %0 = load i32, i32* @e
+  store i32 1234, ptr @a
+  store i32 1234, ptr @b
+  store i32 12, ptr @c
+  %0 = load i32, ptr @e
   %cmp = icmp eq i32 %0, 12
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* @x
+  store i32 1, ptr @x
   br label %if.end
 
 ; New block.. Make sure 1234 isn't live across basic blocks from before.
 if.end:                                           ; preds = %if.then, %entry
-  store i32 1234, i32* @f
-  store i32 555, i32* @h
-  %1 = load i32, i32* @i
+  store i32 1234, ptr @f
+  store i32 555, ptr @h
+  %1 = load i32, ptr @i
   %add1 = add nsw i32 %1, 555
-  store i32 %add1, i32* @i
+  store i32 %add1, ptr @i
   ret i32 0
 }
 
@@ -97,39 +97,39 @@ define dso_local i32 @foo_pgso() !prof !14 {
 ; X64-LABEL: foo_pgso:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $1234, %eax # imm = 0x4D2
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl $12, {{.*}}(%rip)
-; X64-NEXT:    cmpl $12, {{.*}}(%rip)
+; X64-NEXT:    movl %eax, a(%rip)
+; X64-NEXT:    movl %eax, b(%rip)
+; X64-NEXT:    movl $12, c(%rip)
+; X64-NEXT:    cmpl $12, e(%rip)
 ; X64-NEXT:    jne .LBB1_2
 ; X64-NEXT:  # %bb.1: # %if.then
-; X64-NEXT:    movl $1, {{.*}}(%rip)
+; X64-NEXT:    movl $1, x(%rip)
 ; X64-NEXT:  .LBB1_2: # %if.end
-; X64-NEXT:    movl $1234, {{.*}}(%rip) # imm = 0x4D2
+; X64-NEXT:    movl $1234, f(%rip) # imm = 0x4D2
 ; X64-NEXT:    movl $555, %eax # imm = 0x22B
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    addl %eax, {{.*}}(%rip)
+; X64-NEXT:    movl %eax, h(%rip)
+; X64-NEXT:    addl %eax, i(%rip)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  store i32 1234, i32* @a
-  store i32 1234, i32* @b
-  store i32 12, i32* @c
-  %0 = load i32, i32* @e
+  store i32 1234, ptr @a
+  store i32 1234, ptr @b
+  store i32 12, ptr @c
+  %0 = load i32, ptr @e
   %cmp = icmp eq i32 %0, 12
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* @x
+  store i32 1, ptr @x
   br label %if.end
 
 ; New block.. Make sure 1234 isn't live across basic blocks from before.
 if.end:                                           ; preds = %if.then, %entry
-  store i32 1234, i32* @f
-  store i32 555, i32* @h
-  %1 = load i32, i32* @i
+  store i32 1234, ptr @f
+  store i32 555, ptr @h
+  %1 = load i32, ptr @i
   %add1 = add nsw i32 %1, 555
-  store i32 %add1, i32* @i
+  store i32 %add1, ptr @i
   ret i32 0
 }
 
@@ -144,17 +144,17 @@ define dso_local i32 @foo2() {
 ;
 ; X64-LABEL: foo2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl $1234, {{.*}}(%rip) # imm = 0x4D2
-; X64-NEXT:    movl $1234, {{.*}}(%rip) # imm = 0x4D2
+; X64-NEXT:    movl $1234, a(%rip) # imm = 0x4D2
+; X64-NEXT:    movl $1234, b(%rip) # imm = 0x4D2
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  store i32 1234, i32* @a
-  store i32 1234, i32* @b
+  store i32 1234, ptr @a
+  store i32 1234, ptr @b
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #1
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) #1
 
 @AA = common dso_local global [100 x i8] zeroinitializer, align 1
 
@@ -176,12 +176,12 @@ define dso_local void @foomemset() optsize {
 ; X64-LABEL: foomemset:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $2387225703656530209, %rax # imm = 0x2121212121212121
-; X64-NEXT:    movq %rax, AA+{{.*}}(%rip)
-; X64-NEXT:    movq %rax, AA+{{.*}}(%rip)
-; X64-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-NEXT:    movq %rax, AA+16(%rip)
+; X64-NEXT:    movq %rax, AA+8(%rip)
+; X64-NEXT:    movq %rax, AA(%rip)
 ; X64-NEXT:    retq
 entry:
-  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([100 x i8], [100 x i8]* @AA, i32 0, i32 0), i8 33, i32 24, i1 false)
+  call void @llvm.memset.p0.i32(ptr @AA, i8 33, i32 24, i1 false)
   ret void
 }
 
@@ -203,12 +203,12 @@ define dso_local void @foomemset_pgso() !prof !14 {
 ; X64-LABEL: foomemset_pgso:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $2387225703656530209, %rax # imm = 0x2121212121212121
-; X64-NEXT:    movq %rax, AA+{{.*}}(%rip)
-; X64-NEXT:    movq %rax, AA+{{.*}}(%rip)
-; X64-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-NEXT:    movq %rax, AA+16(%rip)
+; X64-NEXT:    movq %rax, AA+8(%rip)
+; X64-NEXT:    movq %rax, AA(%rip)
 ; X64-NEXT:    retq
 entry:
-  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([100 x i8], [100 x i8]* @AA, i32 0, i32 0), i8 33, i32 24, i1 false)
+  call void @llvm.memset.p0.i32(ptr @AA, i8 33, i32 24, i1 false)
   ret void
 }
 

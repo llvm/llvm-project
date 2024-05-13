@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple powerpc64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs -vec-extabi < %s | FileCheck %s
 
-define <16 x i8> @test_l_v16i8(<16 x i8>* %p) #0 {
+define <16 x i8> @test_l_v16i8(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 15
@@ -12,30 +12,30 @@ define <16 x i8> @test_l_v16i8(<16 x i8>* %p) #0 {
 ; CHECK-NEXT:    vperm 2, 4, 2, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <16 x i8>, <16 x i8>* %p, align 1
+  %r = load <16 x i8>, ptr %p, align 1
   ret <16 x i8> %r
 
 }
 
-define <32 x i8> @test_l_v32i8(<32 x i8>* %p) #0 {
+define <32 x i8> @test_l_v32i8(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 31
-; CHECK-NEXT:    lvsl 5, 0, 3
+; CHECK-NEXT:    lvsl 4, 0, 3
 ; CHECK-NEXT:    lvx 2, 3, 4
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lvx 4, 3, 4
-; CHECK-NEXT:    lvx 0, 0, 3
-; CHECK-NEXT:    vperm 3, 4, 2, 5
-; CHECK-NEXT:    vperm 2, 0, 4, 5
+; CHECK-NEXT:    lvx 5, 3, 4
+; CHECK-NEXT:    vperm 3, 5, 2, 4
+; CHECK-NEXT:    lvx 2, 0, 3
+; CHECK-NEXT:    vperm 2, 2, 5, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <32 x i8>, <32 x i8>* %p, align 1
+  %r = load <32 x i8>, ptr %p, align 1
   ret <32 x i8> %r
 
 }
 
-define <8 x i16> @test_l_v8i16(<8 x i16>* %p) #0 {
+define <8 x i16> @test_l_v8i16(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 15
@@ -45,30 +45,30 @@ define <8 x i16> @test_l_v8i16(<8 x i16>* %p) #0 {
 ; CHECK-NEXT:    vperm 2, 4, 2, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <8 x i16>, <8 x i16>* %p, align 2
+  %r = load <8 x i16>, ptr %p, align 2
   ret <8 x i16> %r
 
 }
 
-define <16 x i16> @test_l_v16i16(<16 x i16>* %p) #0 {
+define <16 x i16> @test_l_v16i16(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 31
-; CHECK-NEXT:    lvsl 5, 0, 3
+; CHECK-NEXT:    lvsl 4, 0, 3
 ; CHECK-NEXT:    lvx 2, 3, 4
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lvx 4, 3, 4
-; CHECK-NEXT:    lvx 0, 0, 3
-; CHECK-NEXT:    vperm 3, 4, 2, 5
-; CHECK-NEXT:    vperm 2, 0, 4, 5
+; CHECK-NEXT:    lvx 5, 3, 4
+; CHECK-NEXT:    vperm 3, 5, 2, 4
+; CHECK-NEXT:    lvx 2, 0, 3
+; CHECK-NEXT:    vperm 2, 2, 5, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <16 x i16>, <16 x i16>* %p, align 2
+  %r = load <16 x i16>, ptr %p, align 2
   ret <16 x i16> %r
 
 }
 
-define <4 x i32> @test_l_v4i32(<4 x i32>* %p) #0 {
+define <4 x i32> @test_l_v4i32(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 15
@@ -78,41 +78,41 @@ define <4 x i32> @test_l_v4i32(<4 x i32>* %p) #0 {
 ; CHECK-NEXT:    vperm 2, 4, 2, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <4 x i32>, <4 x i32>* %p, align 4
+  %r = load <4 x i32>, ptr %p, align 4
   ret <4 x i32> %r
 
 }
 
-define <8 x i32> @test_l_v8i32(<8 x i32>* %p) #0 {
+define <8 x i32> @test_l_v8i32(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 31
-; CHECK-NEXT:    lvsl 5, 0, 3
+; CHECK-NEXT:    lvsl 4, 0, 3
 ; CHECK-NEXT:    lvx 2, 3, 4
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lvx 4, 3, 4
-; CHECK-NEXT:    lvx 0, 0, 3
-; CHECK-NEXT:    vperm 3, 4, 2, 5
-; CHECK-NEXT:    vperm 2, 0, 4, 5
+; CHECK-NEXT:    lvx 5, 3, 4
+; CHECK-NEXT:    vperm 3, 5, 2, 4
+; CHECK-NEXT:    lvx 2, 0, 3
+; CHECK-NEXT:    vperm 2, 2, 5, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <8 x i32>, <8 x i32>* %p, align 4
+  %r = load <8 x i32>, ptr %p, align 4
   ret <8 x i32> %r
 
 }
 
-define <2 x i64> @test_l_v2i64(<2 x i64>* %p) #0 {
+define <2 x i64> @test_l_v2i64(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <2 x i64>, <2 x i64>* %p, align 8
+  %r = load <2 x i64>, ptr %p, align 8
   ret <2 x i64> %r
 
 }
 
-define <4 x i64> @test_l_v4i64(<4 x i64>* %p) #0 {
+define <4 x i64> @test_l_v4i64(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -120,12 +120,12 @@ define <4 x i64> @test_l_v4i64(<4 x i64>* %p) #0 {
 ; CHECK-NEXT:    lxvd2x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <4 x i64>, <4 x i64>* %p, align 8
+  %r = load <4 x i64>, ptr %p, align 8
   ret <4 x i64> %r
 
 }
 
-define <4 x float> @test_l_v4float(<4 x float>* %p) #0 {
+define <4 x float> @test_l_v4float(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v4float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 15
@@ -135,41 +135,41 @@ define <4 x float> @test_l_v4float(<4 x float>* %p) #0 {
 ; CHECK-NEXT:    vperm 2, 4, 2, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <4 x float>, <4 x float>* %p, align 4
+  %r = load <4 x float>, ptr %p, align 4
   ret <4 x float> %r
 
 }
 
-define <8 x float> @test_l_v8float(<8 x float>* %p) #0 {
+define <8 x float> @test_l_v8float(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v8float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 31
-; CHECK-NEXT:    lvsl 5, 0, 3
+; CHECK-NEXT:    lvsl 4, 0, 3
 ; CHECK-NEXT:    lvx 2, 3, 4
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lvx 4, 3, 4
-; CHECK-NEXT:    lvx 0, 0, 3
-; CHECK-NEXT:    vperm 3, 4, 2, 5
-; CHECK-NEXT:    vperm 2, 0, 4, 5
+; CHECK-NEXT:    lvx 5, 3, 4
+; CHECK-NEXT:    vperm 3, 5, 2, 4
+; CHECK-NEXT:    lvx 2, 0, 3
+; CHECK-NEXT:    vperm 2, 2, 5, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <8 x float>, <8 x float>* %p, align 4
+  %r = load <8 x float>, ptr %p, align 4
   ret <8 x float> %r
 
 }
 
-define <2 x double> @test_l_v2double(<2 x double>* %p) #0 {
+define <2 x double> @test_l_v2double(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v2double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <2 x double>, <2 x double>* %p, align 8
+  %r = load <2 x double>, ptr %p, align 8
   ret <2 x double> %r
 
 }
 
-define <4 x double> @test_l_v4double(<4 x double>* %p) #0 {
+define <4 x double> @test_l_v4double(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v4double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -177,23 +177,23 @@ define <4 x double> @test_l_v4double(<4 x double>* %p) #0 {
 ; CHECK-NEXT:    lxvd2x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <4 x double>, <4 x double>* %p, align 8
+  %r = load <4 x double>, ptr %p, align 8
   ret <4 x double> %r
 
 }
 
-define <16 x i8> @test_l_p8v16i8(<16 x i8>* %p) #2 {
+define <16 x i8> @test_l_p8v16i8(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <16 x i8>, <16 x i8>* %p, align 1
+  %r = load <16 x i8>, ptr %p, align 1
   ret <16 x i8> %r
 
 }
 
-define <32 x i8> @test_l_p8v32i8(<32 x i8>* %p) #2 {
+define <32 x i8> @test_l_p8v32i8(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -201,23 +201,23 @@ define <32 x i8> @test_l_p8v32i8(<32 x i8>* %p) #2 {
 ; CHECK-NEXT:    lxvw4x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <32 x i8>, <32 x i8>* %p, align 1
+  %r = load <32 x i8>, ptr %p, align 1
   ret <32 x i8> %r
 
 }
 
-define <8 x i16> @test_l_p8v8i16(<8 x i16>* %p) #2 {
+define <8 x i16> @test_l_p8v8i16(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <8 x i16>, <8 x i16>* %p, align 2
+  %r = load <8 x i16>, ptr %p, align 2
   ret <8 x i16> %r
 
 }
 
-define <16 x i16> @test_l_p8v16i16(<16 x i16>* %p) #2 {
+define <16 x i16> @test_l_p8v16i16(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -225,23 +225,23 @@ define <16 x i16> @test_l_p8v16i16(<16 x i16>* %p) #2 {
 ; CHECK-NEXT:    lxvw4x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <16 x i16>, <16 x i16>* %p, align 2
+  %r = load <16 x i16>, ptr %p, align 2
   ret <16 x i16> %r
 
 }
 
-define <4 x i32> @test_l_p8v4i32(<4 x i32>* %p) #2 {
+define <4 x i32> @test_l_p8v4i32(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <4 x i32>, <4 x i32>* %p, align 4
+  %r = load <4 x i32>, ptr %p, align 4
   ret <4 x i32> %r
 
 }
 
-define <8 x i32> @test_l_p8v8i32(<8 x i32>* %p) #2 {
+define <8 x i32> @test_l_p8v8i32(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -249,23 +249,23 @@ define <8 x i32> @test_l_p8v8i32(<8 x i32>* %p) #2 {
 ; CHECK-NEXT:    lxvw4x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <8 x i32>, <8 x i32>* %p, align 4
+  %r = load <8 x i32>, ptr %p, align 4
   ret <8 x i32> %r
 
 }
 
-define <2 x i64> @test_l_p8v2i64(<2 x i64>* %p) #2 {
+define <2 x i64> @test_l_p8v2i64(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <2 x i64>, <2 x i64>* %p, align 8
+  %r = load <2 x i64>, ptr %p, align 8
   ret <2 x i64> %r
 
 }
 
-define <4 x i64> @test_l_p8v4i64(<4 x i64>* %p) #2 {
+define <4 x i64> @test_l_p8v4i64(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -273,23 +273,23 @@ define <4 x i64> @test_l_p8v4i64(<4 x i64>* %p) #2 {
 ; CHECK-NEXT:    lxvd2x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <4 x i64>, <4 x i64>* %p, align 8
+  %r = load <4 x i64>, ptr %p, align 8
   ret <4 x i64> %r
 
 }
 
-define <4 x float> @test_l_p8v4float(<4 x float>* %p) #2 {
+define <4 x float> @test_l_p8v4float(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v4float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <4 x float>, <4 x float>* %p, align 4
+  %r = load <4 x float>, ptr %p, align 4
   ret <4 x float> %r
 
 }
 
-define <8 x float> @test_l_p8v8float(<8 x float>* %p) #2 {
+define <8 x float> @test_l_p8v8float(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v8float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -297,23 +297,23 @@ define <8 x float> @test_l_p8v8float(<8 x float>* %p) #2 {
 ; CHECK-NEXT:    lxvw4x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <8 x float>, <8 x float>* %p, align 4
+  %r = load <8 x float>, ptr %p, align 4
   ret <8 x float> %r
 
 }
 
-define <2 x double> @test_l_p8v2double(<2 x double>* %p) #2 {
+define <2 x double> @test_l_p8v2double(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v2double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <2 x double>, <2 x double>* %p, align 8
+  %r = load <2 x double>, ptr %p, align 8
   ret <2 x double> %r
 
 }
 
-define <4 x double> @test_l_p8v4double(<4 x double>* %p) #2 {
+define <4 x double> @test_l_p8v4double(ptr %p) #2 {
 ; CHECK-LABEL: test_l_p8v4double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -321,23 +321,23 @@ define <4 x double> @test_l_p8v4double(<4 x double>* %p) #2 {
 ; CHECK-NEXT:    lxvd2x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  %r = load <4 x double>, <4 x double>* %p, align 8
+  %r = load <4 x double>, ptr %p, align 8
   ret <4 x double> %r
 
 }
 
-define void @test_s_v16i8(<16 x i8>* %p, <16 x i8> %v) #0 {
+define void @test_s_v16i8(ptr %p, <16 x i8> %v) #0 {
 ; CHECK-LABEL: test_s_v16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  store <16 x i8> %v, <16 x i8>* %p, align 1
+  store <16 x i8> %v, ptr %p, align 1
   ret void
 
 }
 
-define void @test_s_v32i8(<32 x i8>* %p, <32 x i8> %v) #0 {
+define void @test_s_v32i8(ptr %p, <32 x i8> %v) #0 {
 ; CHECK-LABEL: test_s_v32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -345,23 +345,23 @@ define void @test_s_v32i8(<32 x i8>* %p, <32 x i8> %v) #0 {
 ; CHECK-NEXT:    stxvw4x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  store <32 x i8> %v, <32 x i8>* %p, align 1
+  store <32 x i8> %v, ptr %p, align 1
   ret void
 
 }
 
-define void @test_s_v8i16(<8 x i16>* %p, <8 x i16> %v) #0 {
+define void @test_s_v8i16(ptr %p, <8 x i16> %v) #0 {
 ; CHECK-LABEL: test_s_v8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  store <8 x i16> %v, <8 x i16>* %p, align 2
+  store <8 x i16> %v, ptr %p, align 2
   ret void
 
 }
 
-define void @test_s_v16i16(<16 x i16>* %p, <16 x i16> %v) #0 {
+define void @test_s_v16i16(ptr %p, <16 x i16> %v) #0 {
 ; CHECK-LABEL: test_s_v16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -369,23 +369,23 @@ define void @test_s_v16i16(<16 x i16>* %p, <16 x i16> %v) #0 {
 ; CHECK-NEXT:    stxvw4x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  store <16 x i16> %v, <16 x i16>* %p, align 2
+  store <16 x i16> %v, ptr %p, align 2
   ret void
 
 }
 
-define void @test_s_v4i32(<4 x i32>* %p, <4 x i32> %v) #0 {
+define void @test_s_v4i32(ptr %p, <4 x i32> %v) #0 {
 ; CHECK-LABEL: test_s_v4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  store <4 x i32> %v, <4 x i32>* %p, align 4
+  store <4 x i32> %v, ptr %p, align 4
   ret void
 
 }
 
-define void @test_s_v8i32(<8 x i32>* %p, <8 x i32> %v) #0 {
+define void @test_s_v8i32(ptr %p, <8 x i32> %v) #0 {
 ; CHECK-LABEL: test_s_v8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -393,23 +393,23 @@ define void @test_s_v8i32(<8 x i32>* %p, <8 x i32> %v) #0 {
 ; CHECK-NEXT:    stxvw4x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  store <8 x i32> %v, <8 x i32>* %p, align 4
+  store <8 x i32> %v, ptr %p, align 4
   ret void
 
 }
 
-define void @test_s_v2i64(<2 x i64>* %p, <2 x i64> %v) #0 {
+define void @test_s_v2i64(ptr %p, <2 x i64> %v) #0 {
 ; CHECK-LABEL: test_s_v2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  store <2 x i64> %v, <2 x i64>* %p, align 8
+  store <2 x i64> %v, ptr %p, align 8
   ret void
 
 }
 
-define void @test_s_v4i64(<4 x i64>* %p, <4 x i64> %v) #0 {
+define void @test_s_v4i64(ptr %p, <4 x i64> %v) #0 {
 ; CHECK-LABEL: test_s_v4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -417,23 +417,23 @@ define void @test_s_v4i64(<4 x i64>* %p, <4 x i64> %v) #0 {
 ; CHECK-NEXT:    stxvd2x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  store <4 x i64> %v, <4 x i64>* %p, align 8
+  store <4 x i64> %v, ptr %p, align 8
   ret void
 
 }
 
-define void @test_s_v4float(<4 x float>* %p, <4 x float> %v) #0 {
+define void @test_s_v4float(ptr %p, <4 x float> %v) #0 {
 ; CHECK-LABEL: test_s_v4float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  store <4 x float> %v, <4 x float>* %p, align 4
+  store <4 x float> %v, ptr %p, align 4
   ret void
 
 }
 
-define void @test_s_v8float(<8 x float>* %p, <8 x float> %v) #0 {
+define void @test_s_v8float(ptr %p, <8 x float> %v) #0 {
 ; CHECK-LABEL: test_s_v8float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -441,23 +441,23 @@ define void @test_s_v8float(<8 x float>* %p, <8 x float> %v) #0 {
 ; CHECK-NEXT:    stxvw4x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  store <8 x float> %v, <8 x float>* %p, align 4
+  store <8 x float> %v, ptr %p, align 4
   ret void
 
 }
 
-define void @test_s_v2double(<2 x double>* %p, <2 x double> %v) #0 {
+define void @test_s_v2double(ptr %p, <2 x double> %v) #0 {
 ; CHECK-LABEL: test_s_v2double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  store <2 x double> %v, <2 x double>* %p, align 8
+  store <2 x double> %v, ptr %p, align 8
   ret void
 
 }
 
-define void @test_s_v4double(<4 x double>* %p, <4 x double> %v) #0 {
+define void @test_s_v4double(ptr %p, <4 x double> %v) #0 {
 ; CHECK-LABEL: test_s_v4double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
@@ -465,7 +465,7 @@ define void @test_s_v4double(<4 x double>* %p, <4 x double> %v) #0 {
 ; CHECK-NEXT:    stxvd2x 35, 3, 4
 ; CHECK-NEXT:    blr
 entry:
-  store <4 x double> %v, <4 x double>* %p, align 8
+  store <4 x double> %v, ptr %p, align 8
   ret void
 
 }

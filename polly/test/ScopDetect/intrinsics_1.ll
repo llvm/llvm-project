@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Valid Region for Scop: for.cond => for.end
 ;
@@ -15,7 +15,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @jd(i32* noalias %A, float* noalias %B) #0 {
+define void @jd(ptr noalias %A, ptr noalias %B) #0 {
 entry:
   br label %for.cond
 
@@ -36,8 +36,8 @@ for.body:                                         ; preds = %for.cond
   %call4 = call double @floor(double %call3) #2
   %tmp3 = call double @llvm.pow.f64(double %call1, double %call4)
   %conv5 = fptosi double %tmp3 to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %conv5, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %conv5, ptr %arrayidx, align 4
   %tmp4 = trunc i64 %indvars.iv to i32
   %conv6 = sitofp i32 %tmp4 to double
   %call7 = call double @sin(double %conv6) #2
@@ -53,8 +53,8 @@ for.body:                                         ; preds = %for.cond
   %call14 = call double @__exp_finite(double %conv13) #2
   %add15 = fadd fast double %call12, %call14
   %conv16 = fptrunc double %add15 to float
-  %arrayidx18 = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  store float %conv16, float* %arrayidx18, align 4
+  %arrayidx18 = getelementptr inbounds float, ptr %B, i64 %indvars.iv
+  store float %conv16, ptr %arrayidx18, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

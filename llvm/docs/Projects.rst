@@ -94,7 +94,7 @@ Underneath your top level directory, you should have the following directories:
   benchmarks and programs that are known to compile with the Clang front
   end. You can use these programs to test your code, gather statistical
   information, and compare it to the current LLVM performance statistics.
-  
+
   Currently, there is no way to hook your tests directly into the ``llvm/test``
   testing harness. You will simply need to find a way to use the source
   provided within that directory on your own.
@@ -227,7 +227,7 @@ Miscellaneous Variables
     the location of additional directories to search for header files.
 
     It is highly suggested that you append to ``CFLAGS`` and ``CPPFLAGS`` as
-    opposed to overwriting them.  The master ``Makefiles`` may already have
+    opposed to overwriting them.  The LLVM ``Makefiles`` may already have
     useful options in them that you may not want to overwrite.
 
 Placement of Object Code
@@ -253,5 +253,5 @@ Further Help
 
 If you have any questions or need any help creating an LLVM project, the LLVM
 team would be more than happy to help.  You can always post your questions to
-the `LLVM Developers Mailing List
-<http://lists.llvm.org/pipermail/llvm-dev/>`_.
+the `Discourse forums
+<https://discourse.llvm.org>`_.

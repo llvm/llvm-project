@@ -1,18 +1,17 @@
-; RUN: opt -S -strip-nonlinetable-debuginfo %s -o - | FileCheck %s
+; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o - | FileCheck %s
+; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 ; CHECK: define void @f() !dbg ![[F:[0-9]+]]
 define void @f() !dbg !4 {
 entry:
   %i = alloca i32, align 4
-  ; CHECK-NOT: llvm.dbg.{{addr|declare|value}}
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !11, metadata !13), !dbg !14
-  call void @llvm.dbg.addr(metadata i32* %i, metadata !16, metadata !13), !dbg !14
-  store i32 42, i32* %i, align 4, !dbg !14
+  ; CHECK-NOT: llvm.dbg.{{declare|value}}
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !11, metadata !13), !dbg !14
+  store i32 42, ptr %i, align 4, !dbg !14
   call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !13), !dbg !15
   ret void, !dbg !15
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.addr(metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

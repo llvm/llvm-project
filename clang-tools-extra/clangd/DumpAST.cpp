@@ -13,7 +13,6 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -24,6 +23,7 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -88,11 +88,11 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   // Range: most nodes have getSourceRange(), with a couple of exceptions.
   // We only return it if it's valid at both ends and there are no macros.
 
-  template <typename T> llvm::Optional<Range> getRange(const T &Node) {
+  template <typename T> std::optional<Range> getRange(const T &Node) {
     SourceRange SR = getSourceRange(Node);
     auto Spelled = Tokens.spelledForExpanded(Tokens.expandedTokens(SR));
     if (!Spelled)
-      return llvm::None;
+      return std::nullopt;
     return halfOpenToRange(
         Tokens.sourceManager(),
         CharSourceRange::getCharRange(Spelled->front().location(),
@@ -112,14 +112,14 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   // Attr just uses a weird method name. Maybe we should fix it instead?
   SourceRange getSourceRange(const Attr *Node) { return Node->getRange(); }
 
-  // Kind is usualy the class name, without the suffix ("Type" etc).
+  // Kind is usually the class name, without the suffix ("Type" etc).
   // Where there's a set of variants instead, we use the 'Kind' enum values.
 
   std::string getKind(const Decl *D) { return D->getDeclKindName(); }
   std::string getKind(const Stmt *S) {
     std::string Result = S->getStmtClassName();
-    if (llvm::StringRef(Result).endswith("Stmt") ||
-        llvm::StringRef(Result).endswith("Expr"))
+    if (llvm::StringRef(Result).ends_with("Stmt") ||
+        llvm::StringRef(Result).ends_with("Expr"))
       Result.resize(Result.size() - 4);
     return Result;
   }
@@ -143,6 +143,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_ARGUMENT_KIND(Declaration);
       TEMPLATE_ARGUMENT_KIND(Template);
       TEMPLATE_ARGUMENT_KIND(TemplateExpansion);
+      TEMPLATE_ARGUMENT_KIND(StructuralValue);
 #undef TEMPLATE_ARGUMENT_KIND
     }
     llvm_unreachable("Unhandled ArgKind enum");
@@ -185,6 +186,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_KIND(DependentTemplate);
       TEMPLATE_KIND(SubstTemplateTemplateParm);
       TEMPLATE_KIND(SubstTemplateTemplateParmPack);
+      TEMPLATE_KIND(UsingTemplate);
 #undef TEMPLATE_KIND
     }
     llvm_unreachable("Unhandled NameKind enum");
@@ -203,6 +205,11 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
     // There aren't really any variants of CXXBaseSpecifier.
     // To avoid special cases in the API/UI, use public/private as the kind.
     return getAccessSpelling(CBS.getAccessSpecifier()).str();
+  }
+  std::string getKind(const ConceptReference *CR) {
+    // Again there are no variants here.
+    // Kind is "Concept", role is "reference"
+    return "Concept";
   }
 
   // Detail is the single most important fact about the node.
@@ -290,12 +297,12 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   }
   std::string getDetail(const TemplateArgumentLoc &TAL) {
     if (TAL.getArgument().getKind() == TemplateArgument::Integral)
-      return TAL.getArgument().getAsIntegral().toString(10);
+      return toString(TAL.getArgument().getAsIntegral(), 10);
     return "";
   }
   std::string getDetail(const TemplateName &TN) {
     return toString([&](raw_ostream &OS) {
-      TN.print(OS, Ctx.getPrintingPolicy(), /*SuppressNNS=*/true);
+      TN.print(OS, Ctx.getPrintingPolicy(), TemplateName::Qualified::None);
     });
   }
   std::string getDetail(const Attr *A) {
@@ -303,6 +310,9 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   }
   std::string getDetail(const CXXBaseSpecifier &CBS) {
     return CBS.isVirtual() ? "virtual" : "";
+  }
+  std::string getDetail(const ConceptReference *CR) {
+    return CR->getNamedConcept()->getNameAsString();
   }
 
   /// Arcana is produced by TextNodeDumper, for the types it supports.
@@ -337,12 +347,8 @@ public:
   // Generally, these are nodes with position information (TypeLoc, not Type).
 
   bool TraverseDecl(Decl *D) {
-    return !D || isInjectedClassName(D) || traverseNode("declaration", D, [&] {
-      if (isa<TranslationUnitDecl>(D))
-        Base::TraverseAST(const_cast<ASTContext &>(Ctx));
-      else
-        Base::TraverseDecl(D);
-    });
+    return !D || isInjectedClassName(D) ||
+           traverseNode("declaration", D, [&] { Base::TraverseDecl(D); });
   }
   bool TraverseTypeLoc(TypeLoc TL) {
     return !TL || traverseNode("type", TL, [&] { Base::TraverseTypeLoc(TL); });
@@ -367,6 +373,10 @@ public:
   }
   bool TraverseAttr(Attr *A) {
     return !A || traverseNode("attribute", A, [&] { Base::TraverseAttr(A); });
+  }
+  bool TraverseConceptReference(ConceptReference *C) {
+    return !C || traverseNode("reference", C,
+                              [&] { Base::TraverseConceptReference(C); });
   }
   bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &CBS) {
     return traverseNode("base", CBS,
@@ -425,6 +435,8 @@ ASTNode dumpAST(const DynTypedNode &N, const syntax::TokenBuffer &Tokens,
     V.TraverseTemplateArgumentLoc(*const_cast<TemplateArgumentLoc *>(TAL));
   else if (const auto *CBS = N.get<CXXBaseSpecifier>())
     V.TraverseCXXBaseSpecifier(*const_cast<CXXBaseSpecifier *>(CBS));
+  else if (const auto *CR = N.get<ConceptReference>())
+    V.TraverseConceptReference(const_cast<ConceptReference *>(CR));
   else
     elog("dumpAST: unhandled DynTypedNode kind {0}",
          N.getNodeKind().asStringRef());

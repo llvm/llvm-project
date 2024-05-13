@@ -9,8 +9,8 @@
 
 ;; Handle invalid argument.
 ; RUN: llvm-symbolizer "FRAME tmp.o Z" --output-style=JSON | \
-; RUN:   FileCheck %s --check-prefix=INVARG --strict-whitespace --match-full-lines --implicit-check-not={{.}}
-; INVARG:[{"Error":{"Message":"unable to parse arguments: FRAME tmp.o Z"},"ModuleName":"tmp.o"}]
+; RUN:   FileCheck %s -DMSG=%errc_ENOENT --check-prefix=INVARG --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+; INVARG:[{"Error":{"Message":"[[MSG]]"},"ModuleName":"tmp.o","SymName":"Z"}]
 
 ; RUN: llc -filetype=obj -o %t.o %s 
 
@@ -28,14 +28,14 @@ target triple="aarch64--"
 
 define void @f() !dbg !6 {
 entry:
-  %a = alloca i8*
-  %b = alloca i8*
+  %a = alloca ptr
+  %b = alloca ptr
   %c = alloca i32 ; To check a variable with a different size.
   ; Note: The following 2 lines declares the tag offsets we are checking in this test.
   ; The tag offset for the 3rd variable is missing for purpose.
-  call void @llvm.dbg.declare(metadata i8** %a, metadata !12, metadata !DIExpression(DW_OP_LLVM_tag_offset, 0)), !dbg !15
-  call void @llvm.dbg.declare(metadata i8** %b, metadata !13, metadata !DIExpression(DW_OP_LLVM_tag_offset, 1)), !dbg !16
-  call void @llvm.dbg.declare(metadata i32* %c, metadata !14, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression(DW_OP_LLVM_tag_offset, 0)), !dbg !15
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !13, metadata !DIExpression(DW_OP_LLVM_tag_offset, 1)), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !14, metadata !DIExpression()), !dbg !17
   ret void, !dbg !18
 }
 

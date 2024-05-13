@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AssertSideEffectCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -19,13 +21,13 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 namespace {
 
-AST_MATCHER_P(Expr, hasSideEffect, bool, CheckFunctionCalls) {
+AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
+               clang::ast_matchers::internal::Matcher<NamedDecl>,
+               IgnoredFunctionsMatcher) {
   const Expr *E = &Node;
 
   if (const auto *Op = dyn_cast<UnaryOperator>(E)) {
@@ -39,12 +41,18 @@ AST_MATCHER_P(Expr, hasSideEffect, bool, CheckFunctionCalls) {
   }
 
   if (const auto *OpCallExpr = dyn_cast<CXXOperatorCallExpr>(E)) {
+    if (const auto *MethodDecl =
+            dyn_cast_or_null<CXXMethodDecl>(OpCallExpr->getDirectCallee()))
+      if (MethodDecl->isConst())
+        return false;
+
     OverloadedOperatorKind OpKind = OpCallExpr->getOperator();
     return OpKind == OO_Equal || OpKind == OO_PlusEqual ||
            OpKind == OO_MinusEqual || OpKind == OO_StarEqual ||
            OpKind == OO_SlashEqual || OpKind == OO_AmpEqual ||
            OpKind == OO_PipeEqual || OpKind == OO_CaretEqual ||
            OpKind == OO_LessLessEqual || OpKind == OO_GreaterGreaterEqual ||
+           OpKind == OO_LessLess || OpKind == OO_GreaterGreater ||
            OpKind == OO_PlusPlus || OpKind == OO_MinusMinus ||
            OpKind == OO_PercentEqual || OpKind == OO_New ||
            OpKind == OO_Delete || OpKind == OO_Array_New ||
@@ -52,15 +60,26 @@ AST_MATCHER_P(Expr, hasSideEffect, bool, CheckFunctionCalls) {
   }
 
   if (const auto *CExpr = dyn_cast<CallExpr>(E)) {
-    bool Result = CheckFunctionCalls;
+    if (!CheckFunctionCalls)
+      return false;
     if (const auto *FuncDecl = CExpr->getDirectCallee()) {
       if (FuncDecl->getDeclName().isIdentifier() &&
-          FuncDecl->getName() == "__builtin_expect") // exceptions come here
-        Result = false;
-      else if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
-        Result &= !MethodDecl->isConst();
+          IgnoredFunctionsMatcher.matches(*FuncDecl, Finder,
+                                          Builder)) // exceptions come here
+        return false;
+      for (size_t I = 0; I < FuncDecl->getNumParams(); I++) {
+        const ParmVarDecl *P = FuncDecl->getParamDecl(I);
+        const Expr *ArgExpr =
+            I < CExpr->getNumArgs() ? CExpr->getArg(I) : nullptr;
+        const QualType PT = P->getType().getCanonicalType();
+        if (ArgExpr && !ArgExpr->isXValue() && PT->isReferenceType() &&
+            !PT.getNonReferenceType().isConstQualified())
+          return true;
+      }
+      if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
+        return !MethodDecl->isConst();
     }
-    return Result;
+    return true;
   }
 
   return isa<CXXNewExpr>(E) || isa<CXXDeleteExpr>(E) || isa<CXXThrowExpr>(E);
@@ -72,8 +91,9 @@ AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       CheckFunctionCalls(Options.get("CheckFunctionCalls", false)),
-      RawAssertList(Options.get("AssertMacros",
-                                "assert,NSAssert,NSCAssert")) {
+      RawAssertList(Options.get("AssertMacros", "assert,NSAssert,NSCAssert")),
+      IgnoredFunctions(utils::options::parseListPair(
+          "__builtin_expect;", Options.get("IgnoredFunctions", ""))) {
   StringRef(RawAssertList).split(AssertMacros, ",", -1, false);
 }
 
@@ -81,11 +101,17 @@ AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
 void AssertSideEffectCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckFunctionCalls", CheckFunctionCalls);
   Options.store(Opts, "AssertMacros", RawAssertList);
+  Options.store(Opts, "IgnoredFunctions",
+                utils::options::serializeStringList(IgnoredFunctions));
 }
 
 void AssertSideEffectCheck::registerMatchers(MatchFinder *Finder) {
+  auto IgnoredFunctionsMatcher =
+      matchers::matchesAnyListedName(IgnoredFunctions);
+
   auto DescendantWithSideEffect =
-      traverse(TK_AsIs, hasDescendant(expr(hasSideEffect(CheckFunctionCalls))));
+      traverse(TK_AsIs, hasDescendant(expr(hasSideEffect(
+                            CheckFunctionCalls, IgnoredFunctionsMatcher))));
   auto ConditionWithSideEffect = hasCondition(DescendantWithSideEffect);
   Finder->addMatcher(
       stmt(
@@ -107,13 +133,13 @@ void AssertSideEffectCheck::check(const MatchFinder::MatchResult &Result) {
   StringRef AssertMacroName;
   while (Loc.isValid() && Loc.isMacroID()) {
     StringRef MacroName = Lexer::getImmediateMacroName(Loc, SM, LangOpts);
+    Loc = SM.getImmediateMacroCallerLoc(Loc);
 
     // Check if this macro is an assert.
     if (llvm::is_contained(AssertMacros, MacroName)) {
       AssertMacroName = MacroName;
       break;
     }
-    Loc = SM.getImmediateMacroCallerLoc(Loc);
   }
   if (AssertMacroName.empty())
     return;
@@ -122,6 +148,4 @@ void AssertSideEffectCheck::check(const MatchFinder::MatchResult &Result) {
       << AssertMacroName;
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -63,7 +63,7 @@ before starting the build.
 
 GN has extensive built-in help; try e.g. ``llvm/utils/gn/gn.py help gen`` to see
 the help for the ``gen`` command. The full GN reference is also `available
-online <https://gn.googlesource.com/gn/+/master/docs/reference.md>`_.
+online <https://gn.googlesource.com/gn/+/refs/heads/main/docs/reference.md>`_.
 
 GN has an autoformatter:
 ``git ls-files '*.gn' '*.gni' | xargs llvm/utils/gn/gn.py format``

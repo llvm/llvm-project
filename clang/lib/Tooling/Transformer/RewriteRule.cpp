@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -39,8 +38,8 @@ translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
     Expected<CharSourceRange> Range = E.TargetRange(Result);
     if (!Range)
       return Range.takeError();
-    llvm::Optional<CharSourceRange> EditRange =
-        tooling::getRangeForEdit(*Range, *Result.Context);
+    std::optional<CharSourceRange> EditRange =
+        tooling::getFileRangeForEdit(*Range, *Result.Context);
     // FIXME: let user specify whether to treat this case as an error or ignore
     // it as is currently done. This behavior is problematic in that it hides
     // failures from bad ranges. Also, the behavior here differs from
@@ -50,17 +49,27 @@ translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
     // produces a bad range, whereas the latter will simply ignore A.
     if (!EditRange)
       return SmallVector<Edit, 0>();
-    auto Replacement = E.Replacement->eval(Result);
-    if (!Replacement)
-      return Replacement.takeError();
-    auto Metadata = E.Metadata(Result);
-    if (!Metadata)
-      return Metadata.takeError();
     transformer::Edit T;
     T.Kind = E.Kind;
     T.Range = *EditRange;
-    T.Replacement = std::move(*Replacement);
-    T.Metadata = std::move(*Metadata);
+    if (E.Replacement) {
+      auto Replacement = E.Replacement->eval(Result);
+      if (!Replacement)
+        return Replacement.takeError();
+      T.Replacement = std::move(*Replacement);
+    }
+    if (E.Note) {
+      auto Note = E.Note->eval(Result);
+      if (!Note)
+        return Note.takeError();
+      T.Note = std::move(*Note);
+    }
+    if (E.Metadata) {
+      auto Metadata = E.Metadata(Result);
+      if (!Metadata)
+        return Metadata.takeError();
+      T.Metadata = std::move(*Metadata);
+    }
     Edits.push_back(std::move(T));
   }
   return Edits;
@@ -121,6 +130,13 @@ ASTEdit transformer::changeTo(RangeSelector Target, TextGenerator Replacement) {
   return E;
 }
 
+ASTEdit transformer::note(RangeSelector Anchor, TextGenerator Note) {
+  ASTEdit E;
+  E.TargetRange = transformer::before(Anchor);
+  E.Note = std::move(Note);
+  return E;
+}
+
 namespace {
 /// A \c TextGenerator that always returns a fixed string.
 class SimpleTextGenerator : public MatchComputation<std::string> {
@@ -166,10 +182,26 @@ ASTEdit transformer::addInclude(RangeSelector Target, StringRef Header,
   return E;
 }
 
-RewriteRule transformer::makeRule(DynTypedMatcher M, EditGenerator Edits,
-                                  TextGenerator Explanation) {
-  return RewriteRule{{RewriteRule::Case{std::move(M), std::move(Edits),
-                                        std::move(Explanation)}}};
+EditGenerator
+transformer::detail::makeEditGenerator(llvm::SmallVector<ASTEdit, 1> Edits) {
+  return editList(std::move(Edits));
+}
+
+EditGenerator transformer::detail::makeEditGenerator(ASTEdit Edit) {
+  return edit(std::move(Edit));
+}
+
+RewriteRule transformer::detail::makeRule(DynTypedMatcher M,
+                                          EditGenerator Edits) {
+  RewriteRule R;
+  R.Cases = {{std::move(M), std::move(Edits)}};
+  return R;
+}
+
+RewriteRule transformer::makeRule(ast_matchers::internal::DynTypedMatcher M,
+                                  std::initializer_list<ASTEdit> Edits) {
+  return detail::makeRule(std::move(M),
+                          detail::makeEditGenerator(std::move(Edits)));
 }
 
 namespace {
@@ -247,9 +279,8 @@ public:
   void run(const MatchFinder::MatchResult &Result) override {
     if (!Edits)
       return;
-    transformer::RewriteRule::Case Case =
-        transformer::detail::findSelectedCase(Result, Rule);
-    auto Transformations = Case.Edits(Result);
+    size_t I = transformer::detail::findSelectedCase(Result, Rule);
+    auto Transformations = Rule.Cases[I].Edits(Result);
     if (!Transformations) {
       Edits = Transformations.takeError();
       return;
@@ -325,7 +356,7 @@ EditGenerator transformer::rewriteDescendants(std::string NodeId,
   };
 }
 
-void transformer::addInclude(RewriteRule &Rule, StringRef Header,
+void transformer::addInclude(RewriteRuleBase &Rule, StringRef Header,
                              IncludeFormat Format) {
   for (auto &Case : Rule.Cases)
     Case.Edits = flatten(std::move(Case.Edits), addInclude(Header, Format));
@@ -366,7 +397,9 @@ static std::vector<DynTypedMatcher> taggedMatchers(
 // Simply gathers the contents of the various rules into a single rule. The
 // actual work to combine these into an ordered choice is deferred to matcher
 // registration.
-RewriteRule transformer::applyFirst(ArrayRef<RewriteRule> Rules) {
+template <>
+RewriteRuleWith<void>
+transformer::applyFirst(ArrayRef<RewriteRuleWith<void>> Rules) {
   RewriteRule R;
   for (auto &Rule : Rules)
     R.Cases.append(Rule.Cases.begin(), Rule.Cases.end());
@@ -374,12 +407,13 @@ RewriteRule transformer::applyFirst(ArrayRef<RewriteRule> Rules) {
 }
 
 std::vector<DynTypedMatcher>
-transformer::detail::buildMatchers(const RewriteRule &Rule) {
+transformer::detail::buildMatchers(const RewriteRuleBase &Rule) {
   // Map the cases into buckets of matchers -- one for each "root" AST kind,
   // which guarantees that they can be combined in a single anyOf matcher. Each
   // case is paired with an identifying number that is converted to a string id
   // in `taggedMatchers`.
-  std::map<ASTNodeKind, SmallVector<std::pair<size_t, RewriteRule::Case>, 1>>
+  std::map<ASTNodeKind,
+           SmallVector<std::pair<size_t, RewriteRuleBase::Case>, 1>>
       Buckets;
   const SmallVectorImpl<RewriteRule::Case> &Cases = Rule.Cases;
   for (int I = 0, N = Cases.size(); I < N; ++I) {
@@ -405,7 +439,7 @@ transformer::detail::buildMatchers(const RewriteRule &Rule) {
   return Matchers;
 }
 
-DynTypedMatcher transformer::detail::buildMatcher(const RewriteRule &Rule) {
+DynTypedMatcher transformer::detail::buildMatcher(const RewriteRuleBase &Rule) {
   std::vector<DynTypedMatcher> Ms = buildMatchers(Rule);
   assert(Ms.size() == 1 && "Cases must have compatible matchers.");
   return Ms[0];
@@ -415,7 +449,7 @@ SourceLocation transformer::detail::getRuleMatchLoc(const MatchResult &Result) {
   auto &NodesMap = Result.Nodes.getMap();
   auto Root = NodesMap.find(RootID);
   assert(Root != NodesMap.end() && "Transformation failed: missing root node.");
-  llvm::Optional<CharSourceRange> RootRange = tooling::getRangeForEdit(
+  std::optional<CharSourceRange> RootRange = tooling::getFileRangeForEdit(
       CharSourceRange::getTokenRange(Root->second.getSourceRange()),
       *Result.Context);
   if (RootRange)
@@ -428,19 +462,16 @@ SourceLocation transformer::detail::getRuleMatchLoc(const MatchResult &Result) {
 
 // Finds the case that was "selected" -- that is, whose matcher triggered the
 // `MatchResult`.
-const RewriteRule::Case &
-transformer::detail::findSelectedCase(const MatchResult &Result,
-                                  const RewriteRule &Rule) {
+size_t transformer::detail::findSelectedCase(const MatchResult &Result,
+                                             const RewriteRuleBase &Rule) {
   if (Rule.Cases.size() == 1)
-    return Rule.Cases[0];
+    return 0;
 
   auto &NodesMap = Result.Nodes.getMap();
   for (size_t i = 0, N = Rule.Cases.size(); i < N; ++i) {
     std::string Tag = ("Tag" + Twine(i)).str();
     if (NodesMap.find(Tag) != NodesMap.end())
-      return Rule.Cases[i];
+      return i;
   }
   llvm_unreachable("No tag found for this rule.");
 }
-
-const llvm::StringRef RewriteRule::RootID = ::clang::transformer::RootID;

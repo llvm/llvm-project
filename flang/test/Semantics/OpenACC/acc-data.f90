@@ -1,4 +1,4 @@
-! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -pedantic
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.6.5 Data
@@ -44,6 +44,12 @@ program openacc_data_validity
   !$acc enter data copyin(i) copyout(i)
 
   !$acc enter data create(aa) if(.TRUE.)
+
+  !$acc enter data create(a(1:10))
+
+  !$acc enter data create(t%arr)
+
+  !$acc enter data create(t%arr(2:4))
 
   !ERROR: At most one IF clause can appear on the ENTER DATA directive
   !$acc enter data create(aa) if(.TRUE.) if(ifCondition)
@@ -126,7 +132,7 @@ program openacc_data_validity
   !ERROR: At least one of COPYOUT, DELETE, DETACH clause must appear on the EXIT DATA directive
   !$acc exit data
 
-  !ERROR: At least one of ATTACH, COPY, COPYIN, COPYOUT, CREATE, DEFAULT, DEVICEPTR, NO_CREATE, PRESENT clause must appear on the DATA directive
+  !PORTABILITY: At least one of ATTACH, COPY, COPYIN, COPYOUT, CREATE, DEFAULT, DEVICEPTR, NO_CREATE, PRESENT clause should appear on the DATA directive
   !$acc data
   !$acc end data
 
@@ -172,4 +178,55 @@ program openacc_data_validity
   !ERROR: Unmatched PARALLEL directive
   !$acc end parallel
 
+  !$acc data copy(aa) async
+  !$acc end data
+
+  !$acc data copy(aa) wait
+  !$acc end data
+
+  !$acc data copy(aa) device_type(default) wait
+  !$acc end data
+
+  do i = 1, 100
+    !$acc data copy(aa)
+    !ERROR: CYCLE to construct outside of DATA construct is not allowed
+    if (i == 10) cycle
+    !$acc end data
+  end do
+
+  !$acc data copy(aa)
+  do i = 1, 100
+    if (i == 10) cycle
+  end do
+  !$acc end data
+
 end program openacc_data_validity
+
+module mod1
+  type :: t1
+    integer :: a
+  contains
+    procedure :: t1_proc
+  end type
+
+contains
+
+
+  subroutine t1_proc(this)
+    class(t1) :: this
+  end subroutine
+
+  subroutine sub4(t)
+    type(t1) :: t
+
+    !ERROR: Only variables are allowed in data clauses on the DATA directive
+    !$acc data copy(t%t1_proc)
+    !$acc end data
+  end subroutine
+
+  subroutine sub5()
+    integer, parameter :: iparam = 1024
+    !$acc data copyin(iparam)
+    !$acc end data
+  end subroutine
+end module

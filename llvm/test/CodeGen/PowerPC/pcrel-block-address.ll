@@ -8,11 +8,11 @@ define dso_local void @blockaddress() {
 ; CHECK:       paddi r3, 0, .Ltmp0@PCREL, 1
 ; CHECK:       bl helper@notoc
 entry:
-  tail call void @helper(i8* blockaddress(@blockaddress, %label))
+  tail call void @helper(ptr blockaddress(@blockaddress, %label))
   br label %label
 
 label:                                            ; preds = %entry
   ret void
 }
 
-declare void @helper(i8*)
+declare void @helper(ptr)

@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // Test the [[nodiscard]] extension in libc++.
-// REQUIRES: libc++
 
 // template<class I>
 // unspecified iter_move;
@@ -27,12 +24,10 @@ struct WithADL {
   friend constexpr auto iter_move(WithADL&) { return 0; }
 };
 
-int main(int, char**) {
+void f() {
   int* noADL = nullptr;
   std::ranges::iter_move(noADL); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   WithADL adl;
   std::ranges::iter_move(adl); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  return 0;
 }

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16\
-// RUN: -fallow-half-arguments-and-returns -S -disable-O0-optnone -emit-llvm -o - %s \
-// RUN: | opt -S -mem2reg \
+// RUN: -disable-O0-optnone -emit-llvm -o - %s \
+// RUN: | opt -S -passes=mem2reg \
 // RUN: | FileCheck %s
 
 // REQUIRES: aarch64-registered-target
@@ -652,7 +652,7 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 }
 
 // CHECK-LABEL: test_vfmsh_f16
-// CHECK:  [[SUB:%.*]] = fsub half 0xH8000, %b
+// CHECK:  [[SUB:%.*]] = fneg half %b
 // CHECK:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half %c, half %a)
 // CHECK:  ret half [[ADD]]
 float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {

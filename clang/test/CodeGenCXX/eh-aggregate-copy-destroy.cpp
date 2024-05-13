@@ -23,7 +23,7 @@ struct Container {
 int main () {
   try {
     Container c1;
-    // CHECK_LABEL: main
+    // CHECK-LABEL: main
     // CHECK-NOT: call void @_ZN9ThrowCopyC1ERKS_
     // CHECK: invoke void @_ZN9ThrowCopyC1ERKS_
     // CHECK98: invoke void @_ZN12ImplicitCopyD1Ev

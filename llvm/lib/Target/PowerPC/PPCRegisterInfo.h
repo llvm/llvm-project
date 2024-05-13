@@ -91,8 +91,20 @@ public:
   void adjustStackMapLiveOutMask(uint32_t *Mask) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+  bool isAsmClobberable(const MachineFunction &MF,
+                        MCRegister PhysReg) const override;
   bool isCallerPreservedPhysReg(MCRegister PhysReg,
                                 const MachineFunction &MF) const override;
+
+  // Provide hints to the register allocator for allocating subregisters
+  // of primed and unprimed accumulators. For example, if accumulator
+  // ACC5 is assigned, we also want to assign UACC5 to the input.
+  // Similarly if UACC5 is assigned, we want to assign VSRp10, VSRp11
+  // to its inputs.
+  bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                             SmallVectorImpl<MCPhysReg> &Hints,
+                             const MachineFunction &MF, const VirtRegMap *VRM,
+                             const LiveRegMatrix *Matrix) const override;
 
   /// We require the register scavenger.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
@@ -118,17 +130,29 @@ public:
   void lowerCRBitRestore(MachineBasicBlock::iterator II,
                          unsigned FrameIndex) const;
 
+  void lowerOctWordSpilling(MachineBasicBlock::iterator II,
+                            unsigned FrameIndex) const;
   void lowerACCSpilling(MachineBasicBlock::iterator II,
                         unsigned FrameIndex) const;
   void lowerACCRestore(MachineBasicBlock::iterator II,
                        unsigned FrameIndex) const;
+
+  void lowerWACCSpilling(MachineBasicBlock::iterator II,
+                         unsigned FrameIndex) const;
+  void lowerWACCRestore(MachineBasicBlock::iterator II,
+                        unsigned FrameIndex) const;
+
+  void lowerQuadwordSpilling(MachineBasicBlock::iterator II,
+                             unsigned FrameIndex) const;
+  void lowerQuadwordRestore(MachineBasicBlock::iterator II,
+                            unsigned FrameIndex) const;
 
   static void emitAccCopyInfo(MachineBasicBlock &MBB, MCRegister DestReg,
                               MCRegister SrcReg);
 
   bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
-  void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
+  bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
@@ -148,27 +172,8 @@ public:
   Register getBaseRegister(const MachineFunction &MF) const;
   bool hasBasePointer(const MachineFunction &MF) const;
 
-  /// stripRegisterPrefix - This method strips the character prefix from a
-  /// register name so that only the number is left.  Used by for linux asm.
-  static const char *stripRegisterPrefix(const char *RegName) {
-    switch (RegName[0]) {
-      case 'a':
-        if (RegName[1] == 'c' && RegName[2] == 'c')
-          return RegName + 3;
-      break;
-      case 'r':
-      case 'f':
-      case 'v':
-        if (RegName[1] == 's') {
-          if (RegName[2] == 'p')
-            return RegName + 3;
-          return RegName + 2;
-        }
-        return RegName + 1;
-      case 'c': if (RegName[1] == 'r') return RegName + 2;
-    }
-
-    return RegName;
+  bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const override {
+    return Reg == PPC::LR || Reg == PPC::LR8;
   }
 };
 

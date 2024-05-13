@@ -11,7 +11,6 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -58,7 +57,6 @@ static std::string ResourceInc() {
   return std::string(resource_dir);
 }
 
-
 TEST_F(CppModuleConfigurationTest, Linux) {
   // Test the average Linux configuration.
 
@@ -69,10 +67,30 @@ TEST_F(CppModuleConfigurationTest, Linux) {
                                     // C++ library
                                     libcpp + "/vector",
                                     libcpp + "/module.modulemap"};
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre("std"));
   EXPECT_THAT(config.GetIncludeDirs(),
               testing::ElementsAre(libcpp, ResourceInc(), usr));
+}
+
+TEST_F(CppModuleConfigurationTest, LinuxTargetSpecificInclude) {
+  // Test the average Linux configuration.
+
+  std::string usr = "/usr/include";
+  std::string usr_target = "/usr/include/x86_64-linux-gnu";
+  std::string libcpp = "/usr/include/c++/v1";
+  std::string libcpp_target = "/usr/include/x86_64-unknown-linux-gnu/c++/v1";
+  std::vector<std::string> files = {
+      // C library
+      usr + "/stdio.h", usr_target + "/sys/cdefs.h",
+      // C++ library
+      libcpp + "/vector", libcpp + "/module.modulemap"};
+  CppModuleConfiguration config(makeFiles(files),
+                                llvm::Triple("x86_64-unknown-linux-gnu"));
+  EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre("std"));
+  EXPECT_THAT(config.GetIncludeDirs(),
+              testing::ElementsAre(libcpp, ResourceInc(), usr, usr_target,
+                                   libcpp_target));
 }
 
 TEST_F(CppModuleConfigurationTest, Sysroot) {
@@ -85,7 +103,7 @@ TEST_F(CppModuleConfigurationTest, Sysroot) {
                                     // C++ library
                                     libcpp + "/vector",
                                     libcpp + "/module.modulemap"};
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre("std"));
   EXPECT_THAT(config.GetIncludeDirs(),
               testing::ElementsAre(libcpp, ResourceInc(), usr));
@@ -101,7 +119,7 @@ TEST_F(CppModuleConfigurationTest, LinuxLocalLibCpp) {
                                     // C++ library
                                     libcpp + "/vector",
                                     libcpp + "/module.modulemap"};
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre("std"));
   EXPECT_THAT(config.GetIncludeDirs(),
               testing::ElementsAre(libcpp, ResourceInc(), usr));
@@ -119,10 +137,31 @@ TEST_F(CppModuleConfigurationTest, UnrelatedLibrary) {
                                     // C++ library
                                     libcpp + "/vector",
                                     libcpp + "/module.modulemap"};
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre("std"));
   EXPECT_THAT(config.GetIncludeDirs(),
               testing::ElementsAre(libcpp, ResourceInc(), usr));
+}
+
+TEST_F(CppModuleConfigurationTest, UnrelatedLibraryWithTargetSpecificInclude) {
+  // Test that having an unrelated library in /usr/include doesn't break.
+
+  std::string usr = "/usr/include";
+  std::string libcpp = "/home/user/llvm-build/include/c++/v1";
+  std::string libcpp_target =
+      "/home/user/llvm-build/include/x86_64-unknown-linux-gnu/c++/v1";
+  std::vector<std::string> files = {// C library
+                                    usr + "/stdio.h",
+                                    // unrelated library
+                                    usr + "/boost/vector",
+                                    // C++ library
+                                    libcpp + "/vector",
+                                    libcpp + "/module.modulemap"};
+  CppModuleConfiguration config(makeFiles(files),
+                                llvm::Triple("x86_64-unknown-linux-gnu"));
+  EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre("std"));
+  EXPECT_THAT(config.GetIncludeDirs(),
+              testing::ElementsAre(libcpp, ResourceInc(), usr, libcpp_target));
 }
 
 TEST_F(CppModuleConfigurationTest, Xcode) {
@@ -139,7 +178,7 @@ TEST_F(CppModuleConfigurationTest, Xcode) {
       libcpp + "/vector",
       libcpp + "/module.modulemap",
   };
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre("std"));
   EXPECT_THAT(config.GetIncludeDirs(),
               testing::ElementsAre(libcpp, ResourceInc(), usr));
@@ -154,7 +193,7 @@ TEST_F(CppModuleConfigurationTest, LibCppV2) {
                                     // C++ library
                                     libcpp + "/vector",
                                     libcpp + "/module.modulemap"};
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre("std"));
   EXPECT_THAT(config.GetIncludeDirs(),
               testing::ElementsAre("/usr/include/c++/v2", ResourceInc(),
@@ -172,7 +211,7 @@ TEST_F(CppModuleConfigurationTest, UnknownLibCppFile) {
                                     libcpp + "/non_existing_file",
                                     libcpp + "/module.modulemap",
                                     libcpp + "/vector"};
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre("std"));
   EXPECT_THAT(config.GetIncludeDirs(),
               testing::ElementsAre("/usr/include/c++/v1", ResourceInc(),
@@ -186,7 +225,7 @@ TEST_F(CppModuleConfigurationTest, MissingUsrInclude) {
   std::vector<std::string> files = {// C++ library
                                     libcpp + "/vector",
                                     libcpp + "/module.modulemap"};
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre());
   EXPECT_THAT(config.GetIncludeDirs(), testing::ElementsAre());
 }
@@ -199,7 +238,7 @@ TEST_F(CppModuleConfigurationTest, MissingLibCpp) {
       // C library
       usr + "/stdio.h",
   };
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre());
   EXPECT_THAT(config.GetIncludeDirs(), testing::ElementsAre());
 }
@@ -214,7 +253,7 @@ TEST_F(CppModuleConfigurationTest, IgnoreLibStdCpp) {
       // C++ library
       usr + "/c++/8.0.1/vector",
   };
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre());
   EXPECT_THAT(config.GetIncludeDirs(), testing::ElementsAre());
 }
@@ -235,7 +274,7 @@ TEST_F(CppModuleConfigurationTest, AmbiguousCLib) {
       libcpp + "/vector",
       libcpp + "/module.modulemap",
   };
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre());
   EXPECT_THAT(config.GetIncludeDirs(), testing::ElementsAre());
 }
@@ -257,7 +296,7 @@ TEST_F(CppModuleConfigurationTest, AmbiguousLibCpp) {
       libcpp2 + "/vector",
       libcpp2 + "/module.modulemap",
   };
-  CppModuleConfiguration config(makeFiles(files));
+  CppModuleConfiguration config(makeFiles(files), llvm::Triple());
   EXPECT_THAT(config.GetImportedModules(), testing::ElementsAre());
   EXPECT_THAT(config.GetIncludeDirs(), testing::ElementsAre());
 }

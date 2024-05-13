@@ -8,10 +8,7 @@
 // RUN: cp -R %S/Inputs/frameworks %t.dir/Inputs/frameworks
 // RUN: ln -s %t.dir/Inputs/frameworks %t.dir/Inputs/frameworks_symlink
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/subframework_header_dir_symlink_cdb.json > %t.cdb
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -reuse-filemanager=0 | \
-// RUN:   FileCheck %s
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -reuse-filemanager=1 | \
-// RUN:   FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 |  FileCheck %s
 
 #ifndef EMPTY
 #include "Framework/Framework.h"

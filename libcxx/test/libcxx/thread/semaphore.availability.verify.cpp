@@ -7,23 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
-// REQUIRES: use_system_cxx_lib && (x86_64-apple-macosx10.9 || \
-// REQUIRES:                        x86_64-apple-macosx10.10 || \
-// REQUIRES:                        x86_64-apple-macosx10.11 || \
-// REQUIRES:                        x86_64-apple-macosx10.12 || \
-// REQUIRES:                        x86_64-apple-macosx10.13 || \
-// REQUIRES:                        x86_64-apple-macosx10.14 || \
-// REQUIRES:                        x86_64-apple-macosx10.15)
-
+// REQUIRES: availability-synchronization_library-missing
 
 // Test the availability markup on std::counting_semaphore and std::binary_semaphore.
 
 #include <chrono>
 #include <semaphore>
 
-
-int main(int, char**)
-{
+void f() {
     {
         // Tests for std::counting_semaphore with non-default template argument
         std::counting_semaphore<20> sem(10);

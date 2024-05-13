@@ -18,7 +18,7 @@ def RegOperand : RegisterOperand<RegClass> {
   let EncoderMethod = "barEncoder";
 }
 
-def foo : Instruction {
+def foo1 : Instruction {
   let Size = 1;
 
   let OutOperandList = (outs);
@@ -28,9 +28,39 @@ def foo : Instruction {
   bits<8> Inst = bar;
 }
 
-// CHECK: case ::foo: {
+// CHECK: case ::foo1: {
 // CHECK:   op = barEncoder
 // CHECK:   op &= UINT64_C(255);
+// CHECK:   Value |= op;
+// CHECK:   break;
+// CHECK: }
+
+
+// Also check that it works from a complex operand.
+
+def RegPair : Operand<i32> {
+  let MIOperandInfo = (ops RegOperand, RegOperand);
+}
+
+def foo2 : Instruction {
+  let Size = 1;
+
+  let OutOperandList = (outs);
+  let InOperandList = (ins (RegPair $r1, $r2):$r12);
+
+  bits<4> r1;
+  bits<4> r2;
+  bits<8> Inst;
+  let Inst{3-0} = r1;
+  let Inst{7-4} = r2;
+}
+
+// CHECK: case ::foo2: {
+// CHECK:   op = barEncoder
+// CHECK:   op &= UINT64_C(15);
+// CHECK:   Value |= op;
+// CHECK:   op = barEncoder
+// CHECK:   op &= UINT64_C(15);
 // CHECK:   Value |= op;
 // CHECK:   break;
 // CHECK: }

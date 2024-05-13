@@ -1,14 +1,11 @@
 if("ARM" IN_LIST LLVM_TARGETS_TO_BUILD)
-  add_lldb_unittest(DisassemblerTests
-    TestArm64Disassembly.cpp
-    TestArmv7Disassembly.cpp
-    LINK_LIBS
-      lldbCore
-      lldbSymbol
-      lldbTarget
-      lldbPluginDisassemblerLLVMC
-      lldbPluginProcessUtility
-    LINK_COMPONENTS
-      Support
-      ${LLVM_TARGETS_TO_BUILD})
+  add_subdirectory(ARM)
+endif()
+
+if("X86" IN_LIST LLVM_TARGETS_TO_BUILD)
+  add_subdirectory(x86)
+endif()
+
+if("RISCV" IN_LIST LLVM_TARGETS_TO_BUILD)
+	add_subdirectory(RISCV)
 endif()

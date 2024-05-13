@@ -20,21 +20,27 @@ if( LLVM_LIB_FUZZING_ENGINE OR LLVM_USE_SANITIZE_COVERAGE )
   add_subdirectory(fuzzer)
 endif()
 
-install(PROGRAMS clang-format-bbedit.applescript
-  DESTINATION share/clang
+install(FILES clang-format-bbedit.applescript
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
   COMPONENT clang-format)
 install(PROGRAMS clang-format-diff.py
-  DESTINATION share/clang
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
   COMPONENT clang-format)
-install(PROGRAMS clang-format-sublime.py
-  DESTINATION share/clang
+install(FILES clang-format-sublime.py
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
   COMPONENT clang-format)
-install(PROGRAMS clang-format.el
-  DESTINATION share/clang
+install(FILES clang-format.el
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
   COMPONENT clang-format)
-install(PROGRAMS clang-format.py
-  DESTINATION share/clang
+install(FILES clang-format.py
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
   COMPONENT clang-format)
 install(PROGRAMS git-clang-format
-  DESTINATION bin
+  DESTINATION "${CMAKE_INSTALL_BINDIR}"
   COMPONENT clang-format)
+
+if (WIN32 AND NOT CYGWIN)
+  install(PROGRAMS git-clang-format.bat
+    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    COMPONENT clang-format)
+endif()

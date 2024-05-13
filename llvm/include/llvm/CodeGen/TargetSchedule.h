@@ -15,7 +15,6 @@
 #ifndef LLVM_CODEGEN_TARGETSCHEDULE_H
 #define LLVM_CODEGEN_TARGETSCHEDULE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -47,7 +46,7 @@ class TargetSchedModel {
   unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
 
 public:
-  TargetSchedModel() : SchedModel(MCSchedModel::GetDefaultSchedModel()) {}
+  TargetSchedModel() : SchedModel(MCSchedModel::Default) {}
 
   /// Initialize the machine model for instruction scheduling.
   ///
@@ -91,7 +90,7 @@ public:
   bool hasInstrSchedModelOrItineraries() const {
     return hasInstrSchedModel() || hasInstrItineraries();
   }
-
+  bool enableIntervals() const;
   /// Identify the processor corresponding to the current subtarget.
   unsigned getProcessorID() const { return SchedModel.getProcessorID(); }
 

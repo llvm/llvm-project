@@ -53,7 +53,7 @@ struct S4
   int e;
 } s4;
 
-// CHECK: [[struct_ref:%[a-zA-Z0-9_.]+]] = type { [[struct_ref]]* }
+// CHECK: [[struct_ref:%[a-zA-Z0-9_.]+]] = type { ptr }
 // CHECK: [[struct_S:%[a-zA-Z0-9_.]+]] = type { [3 x i8], [[struct_T:%[a-zA-Z0-9_.]+]], [[struct_T2:%[a-zA-Z0-9_.]+]] }
 // CHECK: [[struct_T]] = type <{ i8, i32 }>
 // CHECK: [[struct_T2]] = type { i8, i32 }

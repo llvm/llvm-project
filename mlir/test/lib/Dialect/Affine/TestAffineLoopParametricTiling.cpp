@@ -12,37 +12,51 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Passes.h"
-#include "mlir/Transforms/LoopUtils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 #define DEBUG_TYPE "test-affine-parametric-tile"
 
 namespace {
 struct TestAffineLoopParametricTiling
-    : public PassWrapper<TestAffineLoopParametricTiling, FunctionPass> {
-  void runOnFunction() override;
+    : public PassWrapper<TestAffineLoopParametricTiling,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAffineLoopParametricTiling)
+
+  StringRef getArgument() const final { return "test-affine-parametric-tile"; }
+  StringRef getDescription() const final {
+    return "Tile affine loops using SSA values as tile sizes";
+  }
+  void runOnOperation() override;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Checks if the function enclosing the loop nest has any arguments passed to
 /// it, which can be used as tiling parameters. Assumes that atleast 'n'
 /// arguments are passed, where 'n' is the number of loops in the loop nest.
-static void checkIfTilingParametersExist(ArrayRef<AffineForOp> band) {
+static LogicalResult checkIfTilingParametersExist(ArrayRef<AffineForOp> band) {
   assert(!band.empty() && "no loops in input band");
   AffineForOp topLoop = band[0];
 
-  if (FuncOp funcOp = dyn_cast<FuncOp>(topLoop->getParentOp()))
-    assert(funcOp.getNumArguments() >= band.size() && "Too few tile sizes");
+  if (func::FuncOp funcOp = dyn_cast<func::FuncOp>(topLoop->getParentOp()))
+    if (funcOp.getNumArguments() < band.size())
+      return topLoop->emitError(
+          "too few tile sizes provided in the argument list of the function "
+          "which contains the current band");
+  return success();
 }
 
 /// Captures tiling parameters, which are expected to be passed as arguments
 /// to the function enclosing the loop nest. Also checks if the required
 /// parameters are of index type. This approach is temporary for testing
 /// purposes.
-static void getTilingParameters(ArrayRef<AffineForOp> band,
-                                SmallVectorImpl<Value> &tilingParameters) {
+static LogicalResult
+getTilingParameters(ArrayRef<AffineForOp> band,
+                    SmallVectorImpl<Value> &tilingParameters) {
   AffineForOp topLoop = band[0];
   Region *funcOpRegion = topLoop->getParentRegion();
   unsigned nestDepth = band.size();
@@ -50,42 +64,42 @@ static void getTilingParameters(ArrayRef<AffineForOp> band,
   for (BlockArgument blockArgument :
        funcOpRegion->getArguments().take_front(nestDepth)) {
     if (blockArgument.getArgNumber() < nestDepth) {
-      assert(blockArgument.getType().isIndex() &&
-             "expected tiling parameters to be of index type.");
+      if (!blockArgument.getType().isIndex())
+        return topLoop->emitError(
+            "expected tiling parameters to be of index type");
       tilingParameters.push_back(blockArgument);
     }
   }
+  return success();
 }
 
-void TestAffineLoopParametricTiling::runOnFunction() {
+void TestAffineLoopParametricTiling::runOnOperation() {
   // Bands of loops to tile.
   std::vector<SmallVector<AffineForOp, 6>> bands;
-  getTileableBands(getFunction(), &bands);
+  getTileableBands(getOperation(), &bands);
 
   // Tile each band.
-  for (SmallVectorImpl<AffineForOp> &band : bands) {
+  for (MutableArrayRef<AffineForOp> band : bands) {
     // Capture the tiling parameters from the arguments to the function
     // enclosing this loop nest.
     SmallVector<AffineForOp, 6> tiledNest;
     SmallVector<Value, 6> tilingParameters;
     // Check if tiling parameters are present.
-    checkIfTilingParametersExist(band);
+    if (checkIfTilingParametersExist(band).failed())
+      return;
 
     // Get function arguments as tiling parameters.
-    getTilingParameters(band, tilingParameters);
+    if (getTilingParameters(band, tilingParameters).failed())
+      return;
 
-    if (failed(
-            tilePerfectlyNestedParametric(band, tilingParameters, &tiledNest)))
-      return signalPassFailure();
+    (void)tilePerfectlyNestedParametric(band, tilingParameters, &tiledNest);
   }
 }
 
 namespace mlir {
 namespace test {
 void registerTestAffineLoopParametricTilingPass() {
-  PassRegistration<TestAffineLoopParametricTiling>(
-      "test-affine-parametric-tile",
-      "Tile affine loops using SSA values as tile sizes");
+  PassRegistration<TestAffineLoopParametricTiling>();
 }
 } // namespace test
 } // namespace mlir

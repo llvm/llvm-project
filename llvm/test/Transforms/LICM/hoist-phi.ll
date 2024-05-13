@@ -1,17 +1,15 @@
-; RUN: opt -S -licm < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
-; RUN: opt -S -licm -licm-control-flow-hoisting=1 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
-; RUN: opt -S -licm -licm-control-flow-hoisting=0 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
-; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
-; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=1 -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
-; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=0 -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
+; RUN: opt -S -passes=licm < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
+; RUN: opt -S -passes=licm -licm-control-flow-hoisting=1 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
+; RUN: opt -S -passes=licm -licm-control-flow-hoisting=0 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
+; RUN: opt -passes='require<opt-remark-emit>,loop-mssa(licm)' -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 
 ; RUN: opt -passes='require<opt-remark-emit>,loop-mssa(licm)' -licm-control-flow-hoisting=1 -verify-memoryssa -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
-; Enable run below when adding promotion. e.g. "store i32 %phi, i32* %p" is promoted to phi.lcssa.
+; Enable run below when adding promotion. e.g. "store i32 %phi, ptr %p" is promoted to phi.lcssa.
 ; opt -passes='require<opt-remark-emit>,loop-mssa(licm)' -licm-control-flow-hoisting=0 -verify-memoryssa -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 
 
 ; CHECK-LABEL: @triangle_phi
-define void @triangle_phi(i32 %x, i32* %p) {
+define void @triangle_phi(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK: %cmp1 = icmp sgt i32 %x, 0
 ; CHECK-ENABLED: br i1 %cmp1, label %[[IF_LICM:.*]], label %[[THEN_LICM:.*]]
@@ -24,7 +22,7 @@ entry:
 
 ; CHECK-ENABLED: [[THEN_LICM]]:
 ; CHECK-ENABLED: phi i32 [ %add, %[[IF_LICM]] ], [ %x, %entry ]
-; CHECK-ENABLED: store i32 %phi, i32* %p
+; CHECK-ENABLED: store i32 %phi, ptr %p
 ; CHECK-ENABLED: %cmp2 = icmp ne i32 %phi, 0
 ; CHECK: br label %loop
 
@@ -41,19 +39,19 @@ if:
 ; CHECK-DISABLED: %cmp2 = icmp ne i32 %phi, 0
 then:
   %phi = phi i32 [ %add, %if ], [ %x, %loop ]
-  store i32 %phi, i32* %p
+  store i32 %phi, ptr %p
   %cmp2 = icmp ne i32 %phi, 0
   br i1 %cmp2, label %loop, label %end
 
 ; CHECK-LABEL: end:
 ; CHECK-DISABLED: %[[PHI_LCSSA:.*]] = phi i32 [ %phi, %then ]
-; CHECK-DISABLED: store i32 %[[PHI_LCSSA]], i32* %p
+; CHECK-DISABLED: store i32 %[[PHI_LCSSA]], ptr %p
 end:
   ret void
 }
 
 ; CHECK-LABEL: @diamond_phi
-define void @diamond_phi(i32 %x, i32* %p) {
+define void @diamond_phi(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK: %cmp1 = icmp sgt i32 %x, 0
 ; CHECK-ENABLED: br i1 %cmp1, label %[[IF_LICM:.*]], label %[[ELSE_LICM:.*]]
@@ -70,7 +68,7 @@ entry:
 
 ; CHECK-ENABLED: [[THEN_LICM]]
 ; CHECK-ENABLED: %phi = phi i32 [ %add, %[[IF_LICM]] ], [ %sub, %[[ELSE_LICM]] ]
-; CHECK-ENABLED: store i32 %phi, i32* %p
+; CHECK-ENABLED: store i32 %phi, ptr %p
 ; CHECK-ENABLED: %cmp2 = icmp ne i32 %phi, 0
 ; CHECK: br label %loop
 
@@ -91,20 +89,20 @@ else:
 ; CHECK-DISABLED: %cmp2 = icmp ne i32 %phi, 0
 then:
   %phi = phi i32 [ %add, %if ], [ %sub, %else ]
-  store i32 %phi, i32* %p
+  store i32 %phi, ptr %p
   %cmp2 = icmp ne i32 %phi, 0
   br i1 %cmp2, label %loop, label %end
 
 ; CHECK-LABEL: end:
 ; CHECK-DISABLED: %[[PHI_LCSSA:.*]] = phi i32 [ %phi, %then ]
-; CHECK-DISABLED: store i32 %[[PHI_LCSSA]], i32* %p
+; CHECK-DISABLED: store i32 %[[PHI_LCSSA]], ptr %p
 end:
   ret void
 }
 
 ; TODO: This is currently too complicated for us to be able to hoist the phi.
 ; CHECK-LABEL: @three_way_phi
-define void @three_way_phi(i32 %x, i32* %p) {
+define void @three_way_phi(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cmp1 = icmp sgt i32 %x, 0
 ; CHECK-DAG: %add = add i32 %x, 1
@@ -136,7 +134,7 @@ if.if:
 
 then:
   %phi = phi i32 [ 0, %loop ], [ %add, %if ], [ %sub, %if.if ]
-  store i32 %phi, i32* %p
+  store i32 %phi, ptr %p
   %cmp3 = icmp ne i32 %phi, 0
   br i1 %cmp3, label %loop, label %end
 
@@ -146,7 +144,7 @@ end:
 
 ; TODO: This is currently too complicated for us to be able to hoist the phi.
 ; CHECK-LABEL: @tree_phi
-define void @tree_phi(i32 %x, i32* %p) {
+define void @tree_phi(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cmp1 = icmp sgt i32 %x, 0
 ; CHECK-DAG: %add = add i32 %x, 1
@@ -178,7 +176,7 @@ else:
 
 then:
   %phi = phi i32 [ %add, %if.if ], [ 0, %if.else ], [ %sub, %else ]
-  store i32 %phi, i32* %p
+  store i32 %phi, ptr %p
   %cmp3 = icmp ne i32 %phi, 0
   br i1 %cmp3, label %loop, label %end
 
@@ -188,7 +186,7 @@ end:
 
 ; TODO: We can hoist the first phi, but not the second.
 ; CHECK-LABEL: @phi_phi
-define void @phi_phi(i32 %x, i32* %p) {
+define void @phi_phi(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cmp1 = icmp sgt i32 %x, 0
 ; CHECK-DAG: %add = add i32 %x, 1
@@ -238,7 +236,7 @@ else:
 ; CHECK: %phi2 = phi i32 [ %phi1, %if.then ], [ %sub, %else ]
 then:
   %phi2 = phi i32 [ %phi1, %if.then ], [ %sub, %else ]
-  store i32 %phi2, i32* %p
+  store i32 %phi2, ptr %p
   %cmp3 = icmp ne i32 %phi2, 0
   br i1 %cmp3, label %loop, label %end
 
@@ -471,7 +469,7 @@ end:
 ; The phi is on one branch of a diamond while simultaneously at the end of a
 ; triangle. Check that we duplicate the triangle and not the diamond.
 ; CHECK-LABEL: @triangle_diamond
-define void @triangle_diamond(i32* %ptr, i32 %x, i32 %y) {
+define void @triangle_diamond(ptr %ptr, i32 %x, i32 %y) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cmp1 = icmp ne i32 %x, 0
 ; CHECK-DAG: %cmp2 = icmp ne i32 %y, 0
@@ -498,7 +496,7 @@ if:
 ; CHECK-DISABLED: %phi = phi i32 [ 0, %if ], [ 127, %loop ]
 then:
   %phi = phi i32 [ 0, %if ], [ 127, %loop ]
-  store i32 %phi, i32* %ptr
+  store i32 %phi, ptr %ptr
   br label %end
 
 if.then:
@@ -510,7 +508,7 @@ end:
 
 ; As the previous, but the end of the diamond is the head of the loop.
 ; CHECK-LABEL: @triangle_diamond_backedge
-define void @triangle_diamond_backedge(i32* %ptr, i32 %x, i32 %y) {
+define void @triangle_diamond_backedge(ptr %ptr, i32 %x, i32 %y) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cmp1 = icmp ne i32 %x, 0
 ; CHECK-DAG: %cmp2 = icmp ne i32 %y, 0
@@ -537,7 +535,7 @@ if:
 ; CHECK-DISABLED: %phi = phi i32 [ 0, %if ], [ 127, %loop ]
 then:
   %phi = phi i32 [ 0, %if ], [ 127, %loop ]
-  store i32 %phi, i32* %ptr
+  store i32 %phi, ptr %ptr
   br label %loop
 
 backedge:
@@ -546,7 +544,7 @@ backedge:
 
 ; TODO: The inner diamonds can be hoisted, but not currently the outer diamond
 ; CHECK-LABEL: @diamonds_inside_diamond
-define void @diamonds_inside_diamond(i32 %x, i32* %p) {
+define void @diamonds_inside_diamond(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cmp1 = icmp sgt i32 %x, 0
 ; CHECK-DAG: %cmp3 = icmp slt i32 %x, -10
@@ -616,7 +614,7 @@ else.then:
 ; CHECK: %cmp4 = icmp ne i32 %phi3, 0
 then:
   %phi3 = phi i32 [ %phi1, %if.then ], [ %phi2, %else.then ]
-  store i32 %phi3, i32* %p
+  store i32 %phi3, ptr %p
   %cmp4 = icmp ne i32 %phi3, 0
   br i1 %cmp4, label %loop, label %end
 
@@ -626,22 +624,49 @@ end:
 
 ; We can hoist blocks that contain an edge that exits the loop by ignoring that
 ; edge in the hoisted block.
-; CHECK-LABEL: @triangle_phi_loopexit
-define void @triangle_phi_loopexit(i32 %x, i32* %p) {
-; CHECK-LABEL: entry:
-; CHECK-DAG: %add = add i32 %x, 1
-; CHECK-DAG: %cmp1 = icmp sgt i32 %x, 0
-; CHECK-DAG: %cmp2 = icmp sgt i32 10, %add
-; CHECK-ENABLED: br i1 %cmp1, label %[[IF_LICM:.*]], label %[[THEN_LICM:.*]]
+define void @triangle_phi_loopexit(i32 %x, ptr %p) {
+; CHECK-DISABLED-LABEL: @triangle_phi_loopexit(
+; CHECK-DISABLED-NEXT:  entry:
+; CHECK-DISABLED-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-DISABLED-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-DISABLED-NEXT:    [[CMP2:%.*]] = icmp sgt i32 10, [[ADD]]
+; CHECK-DISABLED-NEXT:    br label [[LOOP:%.*]]
+; CHECK-DISABLED:       loop:
+; CHECK-DISABLED-NEXT:    br i1 [[CMP1]], label [[IF:%.*]], label [[THEN:%.*]]
+; CHECK-DISABLED:       if:
+; CHECK-DISABLED-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[END:%.*]]
+; CHECK-DISABLED:       then:
+; CHECK-DISABLED-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD]], [[IF]] ], [ [[X]], [[LOOP]] ]
+; CHECK-DISABLED-NEXT:    store i32 [[PHI]], ptr [[P:%.*]], align 4
+; CHECK-DISABLED-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[PHI]], 0
+; CHECK-DISABLED-NEXT:    br i1 [[CMP3]], label [[LOOP]], label [[END]]
+; CHECK-DISABLED:       end:
+; CHECK-DISABLED-NEXT:    ret void
+;
+; CHECK-ENABLED-LABEL: @triangle_phi_loopexit(
+; CHECK-ENABLED-NEXT:  entry:
+; CHECK-ENABLED-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-ENABLED-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-ENABLED-NEXT:    [[CMP2:%.*]] = icmp sgt i32 10, [[ADD]]
+; CHECK-ENABLED-NEXT:    br i1 [[CMP1]], label [[IF_LICM:%.*]], label [[THEN_LICM:%.*]]
+; CHECK-ENABLED:       if.licm:
+; CHECK-ENABLED-NEXT:    br label [[THEN_LICM]]
+; CHECK-ENABLED:       then.licm:
+; CHECK-ENABLED-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD]], [[IF_LICM]] ], [ [[X]], [[ENTRY:%.*]] ]
+; CHECK-ENABLED-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[PHI]], 0
+; CHECK-ENABLED-NEXT:    br label [[LOOP:%.*]]
+; CHECK-ENABLED:       loop:
+; CHECK-ENABLED-NEXT:    br i1 [[CMP1]], label [[IF:%.*]], label [[THEN:%.*]]
+; CHECK-ENABLED:       if:
+; CHECK-ENABLED-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[END:%.*]]
+; CHECK-ENABLED:       then:
+; CHECK-ENABLED-NEXT:    store i32 [[PHI]], ptr [[P:%.*]], align 4
+; CHECK-ENABLED-NEXT:    br i1 [[CMP3]], label [[LOOP]], label [[END]]
+; CHECK-ENABLED:       end:
+; CHECK-ENABLED-NEXT:    ret void
+;
 entry:
   br label %loop
-
-; CHECK-ENABLED: [[IF_LICM]]:
-; CHECK-ENABLED: br label %[[THEN_LICM]]
-
-; CHECK-ENABLED: [[THEN_LICM]]:
-; CHECK-ENABLED: %phi = phi i32 [ %add, %[[IF_LICM]] ], [ %x, %entry ]
-; CHECK: br label %loop
 
 loop:
   %cmp1 = icmp sgt i32 %x, 0
@@ -652,11 +677,9 @@ if:
   %cmp2 = icmp sgt i32 10, %add
   br i1 %cmp2, label %then, label %end
 
-; CHECK-LABEL: then:
-; CHECK-DISABLED: %phi = phi i32 [ %add, %if ], [ %x, %loop ]
 then:
   %phi = phi i32 [ %add, %if ], [ %x, %loop ]
-  store i32 %phi, i32* %p
+  store i32 %phi, ptr %p
   %cmp3 = icmp ne i32 %phi, 0
   br i1 %cmp3, label %loop, label %end
 
@@ -665,7 +688,7 @@ end:
 }
 
 ; CHECK-LABEL: @diamond_phi_oneloopexit
-define void @diamond_phi_oneloopexit(i32 %x, i32* %p) {
+define void @diamond_phi_oneloopexit(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %add = add i32 %x, 1
 ; CHECK-DAG: %cmp1 = icmp sgt i32 %x, 0
@@ -703,7 +726,7 @@ else:
 ; CHECK-DISABLED: %phi = phi i32 [ %add, %if ], [ %sub, %else ]
 then:
   %phi = phi i32 [ %add, %if ], [ %sub, %else ]
-  store i32 %phi, i32* %p
+  store i32 %phi, ptr %p
   %cmp3 = icmp ne i32 %phi, 0
   br i1 %cmp3, label %loop, label %end
 
@@ -712,7 +735,7 @@ end:
 }
 
 ; CHECK-LABEL: @diamond_phi_twoloopexit
-define void @diamond_phi_twoloopexit(i32 %x, i32* %p) {
+define void @diamond_phi_twoloopexit(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %sub = sub i32 %x, 1
 ; CHECK-DAG: %add = add i32 %x, 1
@@ -753,7 +776,7 @@ else:
 ; CHECK-DISABLED: %cmp4 = icmp ne i32 %phi, 0
 then:
   %phi = phi i32 [ %add, %if ], [ %sub, %else ]
-  store i32 %phi, i32* %p
+  store i32 %phi, ptr %p
   %cmp4 = icmp ne i32 %phi, 0
   br i1 %cmp4, label %loop, label %end
 
@@ -764,7 +787,7 @@ end:
 ; The store cannot be hoisted, so add and shr cannot be hoisted into a
 ; conditional block.
 ; CHECK-LABEL: @conditional_use
-define void @conditional_use(i32 %x, i32* %p) {
+define void @conditional_use(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cond = icmp ugt i32 %x, 0
 ; CHECK-DAG: %add = add i32 %x, 5
@@ -778,11 +801,11 @@ loop:
   br i1 %cond, label %if, label %else
 
 ; CHECK-LABEL: if:
-; CHECK: store i32 %shr, i32* %p, align 4
+; CHECK: store i32 %shr, ptr %p, align 4
 if:
   %add = add i32 %x, 5
   %shr = ashr i32 %add, 1
-  store i32 %shr, i32* %p, align 4
+  store i32 %shr, ptr %p, align 4
   br label %then
 
 else:
@@ -796,9 +819,9 @@ then:
 ; to check that we have a unique loop preheader when we hoist the store (and so
 ; don't fail an assertion).
 ; CHECK-LABEL: @triangles_in_diamond
-define void @triangles_in_diamond(i32* %ptr) {
+define void @triangles_in_diamond(ptr %ptr) {
 ; CHECK-LABEL: entry:
-; CHECK: store i32 0, i32* %ptr, align 4
+; CHECK: store i32 0, ptr %ptr, align 4
 ; CHECK: br label %loop
 entry:
   br label %loop
@@ -831,16 +854,15 @@ right_triangle.then:
   br label %loop.end
 
 loop.end:
-  store i32 0, i32* %ptr, align 4
+  store i32 0, ptr %ptr, align 4
   br label %loop
 }
 
 ; %cmp dominates its used after being hoisted, but not after %brmerge is rehoisted
 ; CHECK-LABEL: @rehoist
-define void @rehoist(i8* %this, i32 %x) {
+define void @rehoist(ptr %this, i32 %x) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %sub = add nsw i32 %x, -1
-; CHECK-DAG: %fptr = bitcast i8* %this to void (i8*)*
 ; CHECK-DAG: %cmp = icmp eq i32 0, %sub
 ; CHECK-DAG: %brmerge = or i1 %cmp, true
 entry:
@@ -851,8 +873,7 @@ loop:
   br i1 undef, label %if1, label %else1
 
 if1:
-  %fptr = bitcast i8* %this to void (i8*)*
-  call void %fptr(i8* %this)
+  call void %this(ptr %this)
   br label %then1
 
 else1:
@@ -876,7 +897,7 @@ end:
 ; A test case that uses empty blocks in a way that can cause control flow
 ; hoisting to get confused.
 ; CHECK-LABEL: @empty_blocks_multiple_conditional_branches
-define void @empty_blocks_multiple_conditional_branches(float %arg, float* %ptr) {
+define void @empty_blocks_multiple_conditional_branches(float %arg, ptr %ptr) {
 ; CHECK-LABEL: entry
 ; CHECK-DAG: %div1 = fmul float %arg, 4.000000e+00
 ; CHECK-DAG: %div2 = fmul float %arg, 2.000000e+00
@@ -914,7 +935,7 @@ cond2.if:
 ; CHECK-DISABLED: %phi = phi float [ 0.000000e+00, %cond2 ], [ %div1, %cond2.if ]
 cond2.then:
   %phi = phi float [ 0.000000e+00, %cond2 ], [ %div1, %cond2.if ]
-  store float %phi, float* %ptr
+  store float %phi, ptr %ptr
   br label %backedge2
 
 cond3:
@@ -922,7 +943,7 @@ cond3:
 
 cond3.if:
   %div2 = fmul float %arg, 2.000000e+00
-  store float %div2, float* %ptr
+  store float %div2, ptr %ptr
   br label %cond3.then
 
 cond3.then:
@@ -934,10 +955,10 @@ backedge2:
 
 ; We can't do much here, so mainly just check that we don't crash.
 ; CHECK-LABEL: @many_path_phi
-define void @many_path_phi(i32* %ptr1, i32* %ptr2) {
+define void @many_path_phi(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: entry:
-; CHECK-DAG: %gep3 = getelementptr inbounds i32, i32* %ptr2, i32 2
-; CHECK-DAG: %gep2 = getelementptr inbounds i32, i32* %ptr2, i32 2
+; CHECK-DAG: %gep3 = getelementptr inbounds i32, ptr %ptr2, i32 2
+; CHECK-DAG: %gep2 = getelementptr inbounds i32, ptr %ptr2, i32 2
 ; CHECK: br label %loop
 entry:
   br label %loop
@@ -951,8 +972,8 @@ cond1:
   br i1 undef, label %end, label %cond1.else
 
 cond1.else:
-  %gep2 = getelementptr inbounds i32, i32* %ptr2, i32 2
-  %val2 = load i32, i32* %gep2, align 4
+  %gep2 = getelementptr inbounds i32, ptr %ptr2, i32 2
+  %val2 = load i32, ptr %gep2, align 4
   %cmp2 = icmp eq i32 %val2, 13
   br i1 %cmp2, label %cond1.end, label %end
 
@@ -963,8 +984,8 @@ cond2:
   br i1 undef, label %end, label %cond2.else
 
 cond2.else:
-  %gep3 = getelementptr inbounds i32, i32* %ptr2, i32 2
-  %val3 = load i32, i32* %gep3, align 4
+  %gep3 = getelementptr inbounds i32, ptr %ptr2, i32 2
+  %val3 = load i32, ptr %gep3, align 4
   %cmp3 = icmp eq i32 %val3, 13
   br i1 %cmp3, label %cond2.end, label %end
 
@@ -979,9 +1000,9 @@ end:
 ; Check that we correctly handle the hoisting of %gep when theres a critical
 ; edge that branches to the preheader.
 ; CHECK-LABEL: @crit_edge
-define void @crit_edge(i32* %ptr, i32 %idx, i1 %cond1, i1 %cond2) {
+define void @crit_edge(ptr %ptr, i32 %idx, i1 %cond1, i1 %cond2) {
 ; CHECK-LABEL: entry:
-; CHECK: %gep = getelementptr inbounds i32, i32* %ptr, i32 %idx
+; CHECK: %gep = getelementptr inbounds i32, ptr %ptr, i32 %idx
 ; CHECK: br label %preheader
 entry:
   br label %preheader
@@ -993,13 +1014,13 @@ loop:
   br i1 %cond1, label %then, label %if
 
 if:
-  %gep = getelementptr inbounds i32, i32* %ptr, i32 %idx
-  %val = load i32, i32* %gep
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 %idx
+  %val = load i32, ptr %gep
   br label %then
 
 then:
   %phi = phi i32 [ %val, %if ], [ 0, %loop ]
-  store i32 %phi, i32* %ptr
+  store i32 %phi, ptr %ptr
   br i1 %cond2, label %loop, label %crit_edge
 
 crit_edge:
@@ -1009,7 +1030,7 @@ crit_edge:
 ; Check that the conditional sub is correctly hoisted from the inner loop to the
 ; preheader of the outer loop.
 ; CHECK-LABEL: @hoist_from_innermost_loop
-define void @hoist_from_innermost_loop(i32 %nx, i32* %ptr) {
+define void @hoist_from_innermost_loop(i32 %nx, ptr %ptr) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %sub = sub nsw i32 0, %nx
 ; CHECK: br label %outer_loop
@@ -1027,7 +1048,7 @@ inner_loop:
 
 if:
   %sub = sub nsw i32 0, %nx
-  store i32 %sub, i32* %ptr, align 4
+  store i32 %sub, ptr %ptr, align 4
   br label %inner_loop_end
 
 inner_loop_end:
@@ -1043,10 +1064,10 @@ outer_loop_end:
 ; We have a diamond starting from %if, but %if.if is also reachable from %loop,
 ; so %gep should not be conditionally hoisted.
 ; CHECK-LABEL: @diamond_with_extra_in_edge
-define void @diamond_with_extra_in_edge(i32* %ptr1, i32* %ptr2, i32 %arg) {
+define void @diamond_with_extra_in_edge(ptr %ptr1, ptr %ptr2, i32 %arg) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cmp2 = icmp ne i32 0, %arg
-; CHECK-DAG: %gep = getelementptr i32, i32* %ptr1, i32 4
+; CHECK-DAG: %gep = getelementptr i32, ptr %ptr1, i32 4
 ; CHECK: br label %loop
 entry:
   br label %loop
@@ -1061,8 +1082,8 @@ if:
   br i1 %cmp2, label %if.if, label %if.else
 
 if.if:
-  %gep = getelementptr i32, i32* %ptr1, i32 4
-  %val = load i32, i32* %gep, align 4
+  %gep = getelementptr i32, ptr %ptr1, i32 4
+  %val = load i32, ptr %gep, align 4
   br label %then
 
 if.else:
@@ -1070,17 +1091,17 @@ if.else:
 
 then:
   %phi2 = phi i32 [ %val, %if.if ], [ %phi1, %if.else ]
-  store i32 %phi2, i32* %ptr2, align 4
+  store i32 %phi2, ptr %ptr2, align 4
   br label %loop
 }
 
 ; %loop/%if/%then form a triangle, but %loop/%if/%then/%end also form a diamond.
 ; The triangle should be picked for conditional hoisting.
 ; CHECK-LABEL: @both_triangle_and_diamond
-define void @both_triangle_and_diamond(i32* %ptr1, i32* %ptr2, i32 %arg) {
+define void @both_triangle_and_diamond(ptr %ptr1, ptr %ptr2, i32 %arg) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cmp1 = icmp ne i32 0, %arg
-; CHECK-DAG: %gep = getelementptr i32, i32* %ptr1, i32 4
+; CHECK-DAG: %gep = getelementptr i32, ptr %ptr1, i32 4
 ; CHECK-ENABLED: br i1 %cmp1, label %[[IF_LICM:.*]], label %[[THEN_LICM:.*]]
 entry:
   br label %loop
@@ -1098,8 +1119,8 @@ loop:
   br i1 %cmp1, label %if, label %then
 
 if:
-  %gep = getelementptr i32, i32* %ptr1, i32 4
-  %val = load i32, i32* %gep, align 4
+  %gep = getelementptr i32, ptr %ptr1, i32 4
+  %val = load i32, ptr %gep, align 4
   %cmp2 = icmp ugt i32 16, %phi1
   br i1 %cmp2, label %end, label %then
 
@@ -1111,7 +1132,7 @@ then:
 
 end:
   %phi3 = phi i32 [ %phi2, %then ], [ %val, %if ]
-  store i32 %phi3, i32* %ptr2, align 4
+  store i32 %phi3, ptr %ptr2, align 4
   br label %loop
 }
 
@@ -1237,7 +1258,7 @@ exit:
 ; hoisted. This means that we have to rehoist %d, but have to make sure to
 ; rehoist it after %phi.
 ; CHECK-LABEL: @phi_conditional_use
-define i64 @phi_conditional_use(i32 %f, i32* %g) {
+define i64 @phi_conditional_use(i32 %f, ptr %g) {
 ; CHECK-LABEL: entry:
 ; CHECK: %cmp1 = icmp eq i32 %f, 1
 ; CHECK: %cmp2 = icmp eq i32 %f, 0
@@ -1252,7 +1273,7 @@ entry:
 
 ; CHECK-ENABLED: [[IF_END_LICM]]:
 ; CHECK-ENABLED: %phi = phi i64 [ 0, %entry ], [ 1, %[[IF_THEN_LICM]] ]
-; CHECK-ENABLED: %d = getelementptr inbounds i32, i32* %g, i64 %phi
+; CHECK-ENABLED: %d = getelementptr inbounds i32, ptr %g, i64 %phi
 ; CHECK-ENABLED: i1 %cmp2, label %[[LOOP_BACKEDGE_LICM:.*]], label %[[IF_THEN2_LICM:.*]]
 
 ; CHECK-ENABLED: [[IF_THEN2_LICM]]:
@@ -1274,10 +1295,10 @@ if.end:
   br i1 %cmp2, label %loop.backedge, label %if.then2
 
 ; CHECK-LABEL: if.then2:
-; CHECK-DISABLED: %d = getelementptr inbounds i32, i32* %g, i64 %phi
+; CHECK-DISABLED: %d = getelementptr inbounds i32, ptr %g, i64 %phi
 if.then2:
-  %d = getelementptr inbounds i32, i32* %g, i64 %phi
-  store i32 1, i32* %d, align 4
+  %d = getelementptr inbounds i32, ptr %g, i64 %phi
+  store i32 1, ptr %d, align 4
   br label %loop.backedge
 
 loop.backedge:
@@ -1286,7 +1307,7 @@ loop.backedge:
 
 ; As above, but we have two such phis
 ; CHECK-LABEL: @phi_conditional_use_twice
-define i64 @phi_conditional_use_twice(i32 %f, i32* %g) {
+define i64 @phi_conditional_use_twice(i32 %f, ptr %g) {
 ; CHECK-LABEL: entry:
 ; CHECK: %cmp1 = icmp eq i32 %f, 1
 ; CHECK: %cmp2 = icmp eq i32 %f, 0
@@ -1302,7 +1323,7 @@ entry:
 
 ; CHECK-ENABLED: [[IF_END_LICM]]:
 ; CHECK-ENABLED: %phi1 = phi i64 [ 0, %entry ], [ 1, %[[IF_THEN_LICM]] ]
-; CHECK-ENABLED: %d = getelementptr inbounds i32, i32* %g, i64 %phi1
+; CHECK-ENABLED: %d = getelementptr inbounds i32, ptr %g, i64 %phi1
 ; CHECK-ENABLED: i1 %cmp2, label %[[IF_END2_LICM:.*]], label %[[IF_THEN2_LICM:.*]]
 
 ; CHECK-ENABLED: [[IF_THEN2_LICM]]:
@@ -1310,7 +1331,7 @@ entry:
 
 ; CHECK-ENABLED: [[IF_END2_LICM]]:
 ; CHECK-ENABLED: %phi2 = phi i64 [ 2, %[[IF_END_LICM]] ], [ 3, %[[IF_THEN2_LICM]] ]
-; CHECK-ENABLED: %e = getelementptr inbounds i32, i32* %g, i64 %phi2
+; CHECK-ENABLED: %e = getelementptr inbounds i32, ptr %g, i64 %phi2
 ; CHECK-ENABLED: i1 %cmp3, label %[[LOOP_BACKEDGE_LICM:.*]], label %[[IF_THEN3_LICM:.*]]
 
 ; CHECK-ENABLED: [[IF_THEN3_LICM]]:
@@ -1332,10 +1353,10 @@ if.end:
   br i1 %cmp2, label %if.end2, label %if.then2
 
 ; CHECK-LABEL: if.then2:
-; CHECK-DISABLED: %d = getelementptr inbounds i32, i32* %g, i64 %phi1
+; CHECK-DISABLED: %d = getelementptr inbounds i32, ptr %g, i64 %phi1
 if.then2:
-  %d = getelementptr inbounds i32, i32* %g, i64 %phi1
-  store i32 1, i32* %d, align 4
+  %d = getelementptr inbounds i32, ptr %g, i64 %phi1
+  store i32 1, ptr %d, align 4
   br label %if.end2
 
 ; CHECK-LABEL: if.end2:
@@ -1345,10 +1366,10 @@ if.end2:
   br i1 %cmp3, label %loop.backedge, label %if.then3
 
 ; CHECK-LABEL: if.then3:
-; CHECK-DISABLED: %e = getelementptr inbounds i32, i32* %g, i64 %phi2
+; CHECK-DISABLED: %e = getelementptr inbounds i32, ptr %g, i64 %phi2
 if.then3:
-  %e = getelementptr inbounds i32, i32* %g, i64 %phi2
-  store i32 1, i32* %e, align 4
+  %e = getelementptr inbounds i32, ptr %g, i64 %phi2
+  store i32 1, ptr %e, align 4
   br label %loop.backedge
 
 loop.backedge:
@@ -1358,11 +1379,11 @@ loop.backedge:
 ; The order that we hoist instructions from the loop is different to the textual
 ; order in the function. Check that we can rehoist this correctly.
 ; CHECK-LABEL: @rehoist_wrong_order_1
-define void @rehoist_wrong_order_1(i32* %ptr) {
+define void @rehoist_wrong_order_1(ptr %ptr) {
 ; CHECK-LABEL: entry
-; CHECK-DAG: %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
-; CHECK-DAG: %gep3 = getelementptr inbounds i32, i32* %ptr, i64 3
-; CHECK-DAG: %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
+; CHECK-DAG: %gep2 = getelementptr inbounds i32, ptr %ptr, i64 2
+; CHECK-DAG: %gep3 = getelementptr inbounds i32, ptr %ptr, i64 3
+; CHECK-DAG: %gep1 = getelementptr inbounds i32, ptr %ptr, i64 1
 ; CHECK-ENABLED: br i1 undef, label %[[IF1_LICM:.*]], label %[[ELSE1_LICM:.*]]
 entry:
   br label %loop
@@ -1386,21 +1407,21 @@ loop:
   br i1 undef, label %if1, label %else1
 
 if1:
-  %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
-  store i32 0, i32* %gep1, align 4
+  %gep1 = getelementptr inbounds i32, ptr %ptr, i64 1
+  store i32 0, ptr %gep1, align 4
   br label %loop.backedge
 
 else1:
-  %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
-  store i32 0, i32* %gep2, align 4
+  %gep2 = getelementptr inbounds i32, ptr %ptr, i64 2
+  store i32 0, ptr %gep2, align 4
   br i1 undef, label %if2, label %loop.backedge
 
 if2:
   br i1 undef, label %if3, label %end
 
 if3:
-  %gep3 = getelementptr inbounds i32, i32* %ptr, i64 3
-  store i32 0, i32* %gep3, align 4
+  %gep3 = getelementptr inbounds i32, ptr %ptr, i64 3
+  store i32 0, ptr %gep3, align 4
   br label %end
 
 end:
@@ -1412,11 +1433,11 @@ loop.backedge:
 }
 
 ; CHECK-LABEL: @rehoist_wrong_order_2
-define void @rehoist_wrong_order_2(i32* %ptr) {
+define void @rehoist_wrong_order_2(ptr %ptr) {
 ; CHECK-LABEL: entry
-; CHECK-DAG: %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
-; CHECK-DAG: %gep3 = getelementptr inbounds i32, i32* %gep2, i64 3
-; CHECK-DAG: %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
+; CHECK-DAG: %gep2 = getelementptr inbounds i32, ptr %ptr, i64 2
+; CHECK-DAG: %gep3 = getelementptr inbounds i32, ptr %gep2, i64 3
+; CHECK-DAG: %gep1 = getelementptr inbounds i32, ptr %ptr, i64 1
 ; CHECK-ENABLED: br i1 undef, label %[[IF1_LICM:.*]], label %[[ELSE1_LICM:.*]]
 entry:
   br label %loop
@@ -1440,21 +1461,21 @@ loop:
   br i1 undef, label %if1, label %else1
 
 if1:
-  %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
-  store i32 0, i32* %gep1, align 4
+  %gep1 = getelementptr inbounds i32, ptr %ptr, i64 1
+  store i32 0, ptr %gep1, align 4
   br label %loop.backedge
 
 else1:
-  %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
-  store i32 0, i32* %gep2, align 4
+  %gep2 = getelementptr inbounds i32, ptr %ptr, i64 2
+  store i32 0, ptr %gep2, align 4
   br i1 undef, label %if2, label %loop.backedge
 
 if2:
   br i1 undef, label %if3, label %end
 
 if3:
-  %gep3 = getelementptr inbounds i32, i32* %gep2, i64 3
-  store i32 0, i32* %gep3, align 4
+  %gep3 = getelementptr inbounds i32, ptr %gep2, i64 3
+  store i32 0, ptr %gep3, align 4
   br label %end
 
 end:
@@ -1465,10 +1486,10 @@ loop.backedge:
 }
 
 ; CHECK-LABEL: @rehoist_wrong_order_3
-define void @rehoist_wrong_order_3(i32* %ptr) {
+define void @rehoist_wrong_order_3(ptr %ptr) {
 ; CHECK-LABEL: entry
-; CHECK-DAG: %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
-; CHECK-DAG: %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
+; CHECK-DAG: %gep2 = getelementptr inbounds i32, ptr %ptr, i64 2
+; CHECK-DAG: %gep1 = getelementptr inbounds i32, ptr %ptr, i64 1
 ; CHECK-ENABLED: br i1 undef, label %[[IF1_LICM:.*]], label %[[ELSE1_LICM:.*]]
 entry:
   br label %loop
@@ -1480,8 +1501,8 @@ entry:
 ; CHECK-ENABLED: br label %[[IF2_LICM]]
 
 ; CHECK-ENABLED: [[IF2_LICM]]:
-; CHECK-ENABLED: %phi = phi i32* [ %gep1, %[[IF1_LICM]] ], [ %gep2, %[[ELSE1_LICM]] ]
-; CHECK-ENABLED: %gep3 = getelementptr inbounds i32, i32* %phi, i64 3
+; CHECK-ENABLED: %phi = phi ptr [ %gep1, %[[IF1_LICM]] ], [ %gep2, %[[ELSE1_LICM]] ]
+; CHECK-ENABLED: %gep3 = getelementptr inbounds i32, ptr %phi, i64 3
 ; CHECK-ENABLED: br i1 undef, label %[[IF3_LICM:.*]], label %[[END_LICM:.*]]
 
 ; CHECK-ENABLED: [[IF3_LICM]]:
@@ -1494,22 +1515,22 @@ loop:
   br i1 undef, label %if1, label %else1
 
 if1:
-  %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
-  store i32 0, i32* %gep1, align 4
+  %gep1 = getelementptr inbounds i32, ptr %ptr, i64 1
+  store i32 0, ptr %gep1, align 4
   br label %if2
 
 else1:
-  %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
-  store i32 0, i32* %gep2, align 4
+  %gep2 = getelementptr inbounds i32, ptr %ptr, i64 2
+  store i32 0, ptr %gep2, align 4
   br i1 undef, label %if2, label %loop.backedge
 
 if2:
-  %phi = phi i32* [ %gep1, %if1 ], [ %gep2, %else1 ]
+  %phi = phi ptr [ %gep1, %if1 ], [ %gep2, %else1 ]
   br i1 undef, label %if3, label %end
 
 if3:
-  %gep3 = getelementptr inbounds i32, i32* %phi, i64 3
-  store i32 0, i32* %gep3, align 4
+  %gep3 = getelementptr inbounds i32, ptr %phi, i64 3
+  store i32 0, ptr %gep3, align 4
   br label %end
 
 end:

@@ -25,8 +25,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 
-#include <vector>
-
 namespace llvm {
 
 AVRFrameLowering::AVRFrameLowering()
@@ -56,6 +54,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   bool HasFP = hasFP(MF);
 
   // Interrupt handlers re-enable interrupts in function entry.
@@ -68,21 +67,26 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   // Emit special prologue code to save R1, R0 and SREG in interrupt/signal
   // handlers before saving any other registers.
   if (AFI->isInterruptOrSignalHandler()) {
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHWRr))
-        .addReg(AVR::R1R0, RegState::Kill)
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
+        .addReg(STI.getTmpRegister(), RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
 
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::INRdA), AVR::R0)
-        .addImm(0x3f)
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::INRdA), STI.getTmpRegister())
+        .addImm(STI.getIORegSREG())
         .setMIFlag(MachineInstr::FrameSetup);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
-        .addReg(AVR::R0, RegState::Kill)
+        .addReg(STI.getTmpRegister(), RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
-        .addReg(AVR::R0, RegState::Define)
-        .addReg(AVR::R0, RegState::Kill)
-        .addReg(AVR::R0, RegState::Kill)
-        .setMIFlag(MachineInstr::FrameSetup);
+    if (!MRI.reg_empty(STI.getZeroRegister())) {
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
+          .addReg(STI.getZeroRegister(), RegState::Kill)
+          .setMIFlag(MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
+          .addReg(STI.getZeroRegister(), RegState::Define)
+          .addReg(STI.getZeroRegister(), RegState::Kill)
+          .addReg(STI.getZeroRegister(), RegState::Kill)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
   }
 
   // Early exit if the frame pointer is not needed in this function.
@@ -106,9 +110,8 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
 
   // Mark the FramePtr as live-in in every block except the entry.
-  for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
-       I != E; ++I) {
-    I->addLiveIn(AVR::R29R28);
+  for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF)) {
+    MBBJ.addLiveIn(AVR::R29R28);
   }
 
   if (!FrameSize) {
@@ -116,7 +119,8 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Reserve the necessary frame memory by doing FP -= <size>.
-  unsigned Opcode = (isUInt<6>(FrameSize)) ? AVR::SBIWRdK : AVR::SUBIWRdK;
+  unsigned Opcode = (isUInt<6>(FrameSize) && STI.hasADDSUBIW()) ? AVR::SBIWRdK
+                                                                : AVR::SUBIWRdK;
 
   MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opcode), AVR::R29R28)
                          .addReg(AVR::R29R28, RegState::Kill)
@@ -133,6 +137,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
 
 static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
 
@@ -143,11 +148,14 @@ static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
   // Emit special epilogue code to restore R1, R0 and SREG in interrupt/signal
   // handlers at the very end of the function, just before reti.
   if (AFI->isInterruptOrSignalHandler()) {
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
+    if (!MRI.reg_empty(STI.getZeroRegister())) {
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), STI.getZeroRegister());
+    }
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), STI.getTmpRegister());
     BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
-        .addImm(0x3f)
-        .addReg(AVR::R0, RegState::Kill);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
+        .addImm(STI.getIORegSREG())
+        .addReg(STI.getTmpRegister(), RegState::Kill);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), STI.getTmpRegister());
   }
 }
 
@@ -172,7 +180,7 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   const AVRInstrInfo &TII = *STI.getInstrInfo();
 
   // Early exit if there is no need to restore the frame pointer.
-  if (!FrameSize) {
+  if (!FrameSize && !MF.getFrameInfo().hasVarSizedObjects()) {
     restoreStatusRegister(MF, MBB);
     return;
   }
@@ -189,22 +197,24 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
     --MBBI;
   }
 
-  unsigned Opcode;
+  if (FrameSize) {
+    unsigned Opcode;
 
-  // Select the optimal opcode depending on how big it is.
-  if (isUInt<6>(FrameSize)) {
-    Opcode = AVR::ADIWRdK;
-  } else {
-    Opcode = AVR::SUBIWRdK;
-    FrameSize = -FrameSize;
+    // Select the optimal opcode depending on how big it is.
+    if (isUInt<6>(FrameSize) && STI.hasADDSUBIW()) {
+      Opcode = AVR::ADIWRdK;
+    } else {
+      Opcode = AVR::SUBIWRdK;
+      FrameSize = -FrameSize;
+    }
+
+    // Restore the frame pointer by doing FP += <size>.
+    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opcode), AVR::R29R28)
+                           .addReg(AVR::R29R28, RegState::Kill)
+                           .addImm(FrameSize);
+    // The SREG implicit def is dead.
+    MI->getOperand(3).setIsDead();
   }
-
-  // Restore the frame pointer by doing FP += <size>.
-  MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opcode), AVR::R29R28)
-                         .addReg(AVR::R29R28, RegState::Kill)
-                         .addImm(FrameSize);
-  // The SREG implicit def is dead.
-  MI->getOperand(3).setIsDead();
 
   // Write back R29R28 to SP and temporarily disable interrupts.
   BuildMI(MBB, MBBI, DL, TII.get(AVR::SPWRITE), AVR::SP)
@@ -226,7 +236,8 @@ bool AVRFrameLowering::hasFP(const MachineFunction &MF) const {
   const AVRMachineFunctionInfo *FuncInfo = MF.getInfo<AVRMachineFunctionInfo>();
 
   return (FuncInfo->getHasSpills() || FuncInfo->getHasAllocas() ||
-          FuncInfo->getHasStackArgs());
+          FuncInfo->getHasStackArgs() ||
+          MF.getFrameInfo().hasVarSizedObjects());
 }
 
 bool AVRFrameLowering::spillCalleeSavedRegisters(
@@ -243,9 +254,19 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   AVRMachineFunctionInfo *AVRFI = MF.getInfo<AVRMachineFunctionInfo>();
 
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    Register Reg = I.getReg();
     bool IsNotLiveIn = !MBB.isLiveIn(Reg);
+
+    // Check if Reg is a sub register of a 16-bit livein register, and then
+    // add it to the livein list.
+    if (IsNotLiveIn)
+      for (const auto &LiveIn : MBB.liveins())
+        if (STI.getRegisterInfo()->isSubRegister(LiveIn.PhysReg, Reg)) {
+          IsNotLiveIn = false;
+          MBB.addLiveIn(Reg);
+          break;
+        }
 
     assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
            "Invalid register size");
@@ -282,7 +303,7 @@ bool AVRFrameLowering::restoreCalleeSavedRegisters(
   const TargetInstrInfo &TII = *STI.getInstrInfo();
 
   for (const CalleeSavedInfo &CCSI : CSI) {
-    unsigned Reg = CCSI.getReg();
+    Register Reg = CCSI.getReg();
 
     assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
            "Invalid register size");
@@ -296,22 +317,22 @@ bool AVRFrameLowering::restoreCalleeSavedRegisters(
 /// Replace pseudo store instructions that pass arguments through the stack with
 /// real instructions.
 static void fixStackStores(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI,
-                           const TargetInstrInfo &TII, Register FP) {
+                           MachineBasicBlock::iterator StartMI,
+                           const TargetInstrInfo &TII) {
   // Iterate through the BB until we hit a call instruction or we reach the end.
-  for (auto I = MI, E = MBB.end(); I != E && !I->isCall();) {
-    MachineBasicBlock::iterator NextMI = std::next(I);
-    MachineInstr &MI = *I;
-    unsigned Opcode = I->getOpcode();
+  for (MachineInstr &MI :
+       llvm::make_early_inc_range(llvm::make_range(StartMI, MBB.end()))) {
+    if (MI.isCall())
+      break;
+
+    unsigned Opcode = MI.getOpcode();
 
     // Only care of pseudo store instructions where SP is the base pointer.
-    if (Opcode != AVR::STDSPQRr && Opcode != AVR::STDWSPQRr) {
-      I = NextMI;
+    if (Opcode != AVR::STDSPQRr && Opcode != AVR::STDWSPQRr)
       continue;
-    }
 
     assert(MI.getOperand(0).getReg() == AVR::SP &&
-           "Invalid register, should be SP!");
+           "SP is expected as base pointer");
 
     // Replace this instruction with a regular store. Use Y as the base
     // pointer since it is guaranteed to contain a copy of SP.
@@ -319,9 +340,7 @@ static void fixStackStores(MachineBasicBlock &MBB,
         (Opcode == AVR::STDWSPQRr) ? AVR::STDWPtrQRr : AVR::STDPtrQRr;
 
     MI.setDesc(TII.get(STOpc));
-    MI.getOperand(0).setReg(FP);
-
-    I = NextMI;
+    MI.getOperand(0).setReg(AVR::R31R30);
   }
 }
 
@@ -331,11 +350,7 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
 
-  // There is nothing to insert when the call frame memory is allocated during
-  // function entry. Delete the call frame pseudo and replace all pseudo stores
-  // with real store instructions.
   if (hasReservedCallFrame(MF)) {
-    fixStackStores(MBB, MI, TII, AVR::R29R28);
     return MBB.erase(MI);
   }
 
@@ -343,57 +358,58 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
   unsigned int Opcode = MI->getOpcode();
   int Amount = TII.getFrameSize(*MI);
 
-  // ADJCALLSTACKUP and ADJCALLSTACKDOWN are converted to adiw/subi
-  // instructions to read and write the stack pointer in I/O space.
-  if (Amount != 0) {
-    assert(getStackAlign() == Align(1) && "Unsupported stack alignment");
+  if (Amount == 0) {
+    return MBB.erase(MI);
+  }
 
-    if (Opcode == TII.getCallFrameSetupOpcode()) {
-      // Update the stack pointer.
-      // In many cases this can be done far more efficiently by pushing the
-      // relevant values directly to the stack. However, doing that correctly
-      // (in the right order, possibly skipping some empty space for undef
-      // values, etc) is tricky and thus left to be optimized in the future.
-      BuildMI(MBB, MI, DL, TII.get(AVR::SPREAD), AVR::R31R30).addReg(AVR::SP);
+  assert(getStackAlign() == Align(1) && "Unsupported stack alignment");
 
-      MachineInstr *New = BuildMI(MBB, MI, DL, TII.get(AVR::SUBIWRdK), AVR::R31R30)
-                              .addReg(AVR::R31R30, RegState::Kill)
-                              .addImm(Amount);
-      New->getOperand(3).setIsDead();
+  if (Opcode == TII.getCallFrameSetupOpcode()) {
+    // Update the stack pointer.
+    // In many cases this can be done far more efficiently by pushing the
+    // relevant values directly to the stack. However, doing that correctly
+    // (in the right order, possibly skipping some empty space for undef
+    // values, etc) is tricky and thus left to be optimized in the future.
+    BuildMI(MBB, MI, DL, TII.get(AVR::SPREAD), AVR::R31R30).addReg(AVR::SP);
 
-      BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP)
-          .addReg(AVR::R31R30);
+    MachineInstr *New =
+        BuildMI(MBB, MI, DL, TII.get(AVR::SUBIWRdK), AVR::R31R30)
+            .addReg(AVR::R31R30, RegState::Kill)
+            .addImm(Amount);
+    New->getOperand(3).setIsDead();
 
-      // Make sure the remaining stack stores are converted to real store
-      // instructions.
-      fixStackStores(MBB, MI, TII, AVR::R31R30);
+    BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP).addReg(AVR::R31R30);
+
+    // Make sure the remaining stack stores are converted to real store
+    // instructions.
+    fixStackStores(MBB, MI, TII);
+  } else {
+    assert(Opcode == TII.getCallFrameDestroyOpcode());
+
+    // Note that small stack changes could be implemented more efficiently
+    // with a few pop instructions instead of the 8-9 instructions now
+    // required.
+
+    // Select the best opcode to adjust SP based on the offset size.
+    unsigned AddOpcode;
+
+    if (isUInt<6>(Amount) && STI.hasADDSUBIW()) {
+      AddOpcode = AVR::ADIWRdK;
     } else {
-      assert(Opcode == TII.getCallFrameDestroyOpcode());
-
-      // Note that small stack changes could be implemented more efficiently
-      // with a few pop instructions instead of the 8-9 instructions now
-      // required.
-
-      // Select the best opcode to adjust SP based on the offset size.
-      unsigned addOpcode;
-      if (isUInt<6>(Amount)) {
-        addOpcode = AVR::ADIWRdK;
-      } else {
-        addOpcode = AVR::SUBIWRdK;
-        Amount = -Amount;
-      }
-
-      // Build the instruction sequence.
-      BuildMI(MBB, MI, DL, TII.get(AVR::SPREAD), AVR::R31R30).addReg(AVR::SP);
-
-      MachineInstr *New = BuildMI(MBB, MI, DL, TII.get(addOpcode), AVR::R31R30)
-                              .addReg(AVR::R31R30, RegState::Kill)
-                              .addImm(Amount);
-      New->getOperand(3).setIsDead();
-
-      BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP)
-          .addReg(AVR::R31R30, RegState::Kill);
+      AddOpcode = AVR::SUBIWRdK;
+      Amount = -Amount;
     }
+
+    // Build the instruction sequence.
+    BuildMI(MBB, MI, DL, TII.get(AVR::SPREAD), AVR::R31R30).addReg(AVR::SP);
+
+    MachineInstr *New = BuildMI(MBB, MI, DL, TII.get(AddOpcode), AVR::R31R30)
+                            .addReg(AVR::R31R30, RegState::Kill)
+                            .addImm(Amount);
+    New->getOperand(3).setIsDead();
+
+    BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP)
+        .addReg(AVR::R31R30, RegState::Kill);
   }
 
   return MBB.erase(MI);
@@ -420,7 +436,7 @@ struct AVRFrameAnalyzer : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const MachineFrameInfo &MFI = MF.getFrameInfo();
-    AVRMachineFunctionInfo *FuncInfo = MF.getInfo<AVRMachineFunctionInfo>();
+    AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
 
     // If there are no fixed frame indexes during this stage it means there
     // are allocas present in the function.
@@ -431,7 +447,7 @@ struct AVRFrameAnalyzer : public MachineFunctionPass {
       for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
         // Variable sized objects have size 0.
         if (MFI.getObjectSize(i)) {
-          FuncInfo->setHasAllocas(true);
+          AFI->setHasAllocas(true);
           break;
         }
       }
@@ -450,7 +466,8 @@ struct AVRFrameAnalyzer : public MachineFunctionPass {
         int Opcode = MI.getOpcode();
 
         if ((Opcode != AVR::LDDRdPtrQ) && (Opcode != AVR::LDDWRdPtrQ) &&
-            (Opcode != AVR::STDPtrQRr) && (Opcode != AVR::STDWPtrQRr)) {
+            (Opcode != AVR::STDPtrQRr) && (Opcode != AVR::STDWPtrQRr) &&
+            (Opcode != AVR::FRMIDX)) {
           continue;
         }
 
@@ -460,7 +477,7 @@ struct AVRFrameAnalyzer : public MachineFunctionPass {
           }
 
           if (MFI.isFixedObjectIndex(MO.getIndex())) {
-            FuncInfo->setHasStackArgs(true);
+            AFI->setHasStackArgs(true);
             return false;
           }
         }
@@ -478,57 +495,4 @@ char AVRFrameAnalyzer::ID = 0;
 /// Creates instance of the frame analyzer pass.
 FunctionPass *createAVRFrameAnalyzerPass() { return new AVRFrameAnalyzer(); }
 
-/// Create the Dynalloca Stack Pointer Save/Restore pass.
-/// Insert a copy of SP before allocating the dynamic stack memory and restore
-/// it in function exit to restore the original SP state. This avoids the need
-/// of reserving a register pair for a frame pointer.
-struct AVRDynAllocaSR : public MachineFunctionPass {
-  static char ID;
-  AVRDynAllocaSR() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    // Early exit when there are no variable sized objects in the function.
-    if (!MF.getFrameInfo().hasVarSizedObjects()) {
-      return false;
-    }
-
-    const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
-    const TargetInstrInfo &TII = *STI.getInstrInfo();
-    MachineBasicBlock &EntryMBB = MF.front();
-    MachineBasicBlock::iterator MBBI = EntryMBB.begin();
-    DebugLoc DL = EntryMBB.findDebugLoc(MBBI);
-
-    Register SPCopy =
-        MF.getRegInfo().createVirtualRegister(&AVR::DREGSRegClass);
-
-    // Create a copy of SP in function entry before any dynallocas are
-    // inserted.
-    BuildMI(EntryMBB, MBBI, DL, TII.get(AVR::COPY), SPCopy).addReg(AVR::SP);
-
-    // Restore SP in all exit basic blocks.
-    for (MachineBasicBlock &MBB : MF) {
-      // If last instruction is a return instruction, add a restore copy.
-      if (!MBB.empty() && MBB.back().isReturn()) {
-        MBBI = MBB.getLastNonDebugInstr();
-        DL = MBBI->getDebugLoc();
-        BuildMI(MBB, MBBI, DL, TII.get(AVR::COPY), AVR::SP)
-            .addReg(SPCopy, RegState::Kill);
-      }
-    }
-
-    return true;
-  }
-
-  StringRef getPassName() const override {
-    return "AVR dynalloca stack pointer save/restore";
-  }
-};
-
-char AVRDynAllocaSR::ID = 0;
-
-/// createAVRDynAllocaSRPass - returns an instance of the dynalloca stack
-/// pointer save/restore pass.
-FunctionPass *createAVRDynAllocaSRPass() { return new AVRDynAllocaSR(); }
-
 } // end of namespace llvm
-

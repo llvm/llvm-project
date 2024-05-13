@@ -16,7 +16,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 #include <map>
 
@@ -26,7 +26,7 @@ namespace driver {
 namespace tools {
 namespace amdgpu {
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("amdgpu::Linker", "ld.lld", TC) {}
   bool isLinkJob() const override { return true; }
@@ -51,7 +51,7 @@ protected:
   const std::map<options::ID, const StringRef> OptionsDefault;
 
   Tool *buildLinker() const override;
-  const StringRef getOptionDefault(options::ID OptID) const {
+  StringRef getOptionDefault(options::ID OptID) const {
     auto opt = OptionsDefault.find(OptID);
     assert(opt != OptionsDefault.end() && "No Default for Option");
     return opt->second;
@@ -60,15 +60,15 @@ protected:
 public:
   AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
                   const llvm::opt::ArgList &Args);
-  unsigned GetDefaultDwarfVersion() const override { return 4; }
-  bool IsIntegratedAssemblerDefault() const override { return true; }
-  bool IsMathErrnoDefault() const override { return false; }
+  unsigned GetDefaultDwarfVersion() const override { return 5; }
 
-  bool useIntegratedAs() const override { return true; }
+  bool IsMathErrnoDefault() const override { return false; }
   bool isCrossCompiling() const override { return true; }
-  bool isPICDefault() const override { return false; }
-  bool isPIEDefault() const override { return false; }
-  bool isPICDefaultForced() const override { return false; }
+  bool isPICDefault() const override { return true; }
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return false;
+  }
+  bool isPICDefaultForced() const override { return true; }
   bool SupportsProfiling() const override { return false; }
 
   llvm::opt::DerivedArgList *
@@ -97,13 +97,10 @@ public:
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
-  /// Should skip argument.
-  bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;
-
-  /// Uses amdgpu_arch tool to get arch of the system GPU. Will return error
+  /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
-  llvm::Error getSystemGPUArch(const llvm::opt::ArgList &Args,
-                               std::string &GPUArch) const;
+  virtual Expected<SmallVector<std::string>>
+  getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
 protected:
   /// Check and diagnose invalid target ID specified by -mcpu.
@@ -111,9 +108,9 @@ protected:
 
   /// The struct type returned by getParsedTargetID.
   struct ParsedTargetIDType {
-    Optional<std::string> OptionalTargetID;
-    Optional<std::string> OptionalGPUArch;
-    Optional<llvm::StringMap<bool>> OptionalFeatures;
+    std::optional<std::string> OptionalTargetID;
+    std::optional<std::string> OptionalGPUArch;
+    std::optional<llvm::StringMap<bool>> OptionalFeatures;
   };
 
   /// Get target ID, GPU arch, and target ID features if the target ID is
@@ -124,8 +121,9 @@ protected:
   /// Get GPU arch from -mcpu without checking.
   StringRef getGPUArch(const llvm::opt::ArgList &DriverArgs) const;
 
-  llvm::Error detectSystemGPUs(const llvm::opt::ArgList &Args,
-                               SmallVector<std::string, 1> &GPUArchs) const;
+  /// Common warning options shared by AMDGPU HIP, OpenCL and OpenMP toolchains.
+  /// Language specific warning options should go to derived classes.
+  void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
@@ -136,6 +134,12 @@ public:
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         Action::OffloadKind DeviceOffloadKind) const override;
+
+  // Returns a list of device library names shared by different languages
+  llvm::SmallVector<std::string, 12>
+  getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
+                          const std::string &GPUArch,
+                          bool isOpenMP = false) const;
 };
 
 } // end namespace toolchains

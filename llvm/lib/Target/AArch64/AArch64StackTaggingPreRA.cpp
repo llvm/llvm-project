@@ -1,9 +1,8 @@
 //===-- AArch64StackTaggingPreRA.cpp --- Stack Tagging for AArch64 -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,7 +10,6 @@
 #include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -51,7 +49,6 @@ cl::opt<UncheckedLdStMode> ClUncheckedLdSt(
 
 static cl::opt<bool>
     ClFirstSlot("stack-tagging-first-slot-opt", cl::Hidden, cl::init(true),
-                cl::ZeroOrMore,
                 cl::desc("Apply first slot optimization for stack tagging "
                          "(eliminate ADDG Rt, Rn, 0, 0)."));
 
@@ -76,7 +73,7 @@ public:
   bool mayUseUncheckedLoadStore();
   void uncheckUsesOf(unsigned TaggedReg, int FI);
   void uncheckLoadsAndStores();
-  Optional<int> findFirstSlotCandidate();
+  std::optional<int> findFirstSlotCandidate();
 
   bool runOnMachineFunction(MachineFunction &Func) override;
   StringRef getPassName() const override {
@@ -177,27 +174,25 @@ bool AArch64StackTaggingPreRA::mayUseUncheckedLoadStore() {
 }
 
 void AArch64StackTaggingPreRA::uncheckUsesOf(unsigned TaggedReg, int FI) {
-  for (auto UI = MRI->use_instr_begin(TaggedReg), E = MRI->use_instr_end();
-       UI != E;) {
-    MachineInstr *UseI = &*(UI++);
-    if (isUncheckedLoadOrStoreOpcode(UseI->getOpcode())) {
+  for (MachineInstr &UseI :
+       llvm::make_early_inc_range(MRI->use_instructions(TaggedReg))) {
+    if (isUncheckedLoadOrStoreOpcode(UseI.getOpcode())) {
       // FI operand is always the one before the immediate offset.
-      unsigned OpIdx = TII->getLoadStoreImmIdx(UseI->getOpcode()) - 1;
-      if (UseI->getOperand(OpIdx).isReg() &&
-          UseI->getOperand(OpIdx).getReg() == TaggedReg) {
-        UseI->getOperand(OpIdx).ChangeToFrameIndex(FI);
-        UseI->getOperand(OpIdx).setTargetFlags(AArch64II::MO_TAGGED);
+      unsigned OpIdx = TII->getLoadStoreImmIdx(UseI.getOpcode()) - 1;
+      if (UseI.getOperand(OpIdx).isReg() &&
+          UseI.getOperand(OpIdx).getReg() == TaggedReg) {
+        UseI.getOperand(OpIdx).ChangeToFrameIndex(FI);
+        UseI.getOperand(OpIdx).setTargetFlags(AArch64II::MO_TAGGED);
       }
-    } else if (UseI->isCopy() &&
-               Register::isVirtualRegister(UseI->getOperand(0).getReg())) {
-      uncheckUsesOf(UseI->getOperand(0).getReg(), FI);
+    } else if (UseI.isCopy() && UseI.getOperand(0).getReg().isVirtual()) {
+      uncheckUsesOf(UseI.getOperand(0).getReg(), FI);
     }
   }
 }
 
 void AArch64StackTaggingPreRA::uncheckLoadsAndStores() {
   for (auto *I : ReTags) {
-    unsigned TaggedReg = I->getOperand(0).getReg();
+    Register TaggedReg = I->getOperand(0).getReg();
     int FI = I->getOperand(1).getIndex();
     uncheckUsesOf(TaggedReg, FI);
   }
@@ -241,7 +236,7 @@ static bool isSlotPreAllocated(MachineFrameInfo *MFI, int FI) {
 // eliminates a vreg (by replacing it with direct uses of IRG, which is usually
 // live almost everywhere anyway), and therefore needs to happen before
 // regalloc.
-Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
+std::optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
   // Find the best (FI, Tag) pair to pin to offset 0.
   // Looking at the possible uses of a tagged address, the advantage of pinning
   // is:
@@ -258,7 +253,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
   // - Any other instruction may benefit from being pinned to offset 0.
   LLVM_DEBUG(dbgs() << "AArch64StackTaggingPreRA::findFirstSlotCandidate\n");
   if (!ClFirstSlot)
-    return None;
+    return std::nullopt;
 
   DenseMap<SlotWithTag, int> RetagScore;
   SlotWithTag MaxScoreST{-1, -1};
@@ -269,7 +264,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
       continue;
 
     Register RetagReg = I->getOperand(0).getReg();
-    if (!Register::isVirtualRegister(RetagReg))
+    if (!RetagReg.isVirtual())
       continue;
 
     int Score = 0;
@@ -277,19 +272,18 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
     WorkList.push_back(RetagReg);
 
     while (!WorkList.empty()) {
-      Register UseReg = WorkList.back();
-      WorkList.pop_back();
+      Register UseReg = WorkList.pop_back_val();
       for (auto &UseI : MRI->use_instructions(UseReg)) {
         unsigned Opcode = UseI.getOpcode();
-        if (Opcode == AArch64::STGOffset || Opcode == AArch64::ST2GOffset ||
-            Opcode == AArch64::STZGOffset || Opcode == AArch64::STZ2GOffset ||
+        if (Opcode == AArch64::STGi || Opcode == AArch64::ST2Gi ||
+            Opcode == AArch64::STZGi || Opcode == AArch64::STZ2Gi ||
             Opcode == AArch64::STGPi || Opcode == AArch64::STGloop ||
             Opcode == AArch64::STZGloop || Opcode == AArch64::STGloop_wback ||
             Opcode == AArch64::STZGloop_wback)
           continue;
         if (UseI.isCopy()) {
           Register DstReg = UseI.getOperand(0).getReg();
-          if (Register::isVirtualRegister(DstReg))
+          if (DstReg.isVirtual())
             WorkList.push_back(DstReg);
           continue;
         }
@@ -309,7 +303,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
   }
 
   if (MaxScoreST.FI < 0)
-    return None;
+    return std::nullopt;
 
   // If FI's tag is already 0, we are done.
   if (MaxScoreST.Tag == 0)
@@ -382,7 +376,7 @@ bool AArch64StackTaggingPreRA::runOnMachineFunction(MachineFunction &Func) {
   // Find a slot that is used with zero tag offset, like ADDG #fi, 0.
   // If the base tagged pointer is set up to the address of this slot,
   // the ADDG instruction can be eliminated.
-  Optional<int> BaseSlot = findFirstSlotCandidate();
+  std::optional<int> BaseSlot = findFirstSlotCandidate();
   if (BaseSlot)
     AFI->setTaggedBasePointerIndex(*BaseSlot);
 

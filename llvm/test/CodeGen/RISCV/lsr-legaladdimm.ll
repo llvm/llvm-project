@@ -11,7 +11,7 @@
 define i32 @main() nounwind {
 ; RV32I-LABEL: main:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    lui a1, %hi(b)
 ; RV32I-NEXT:    addi a1, a1, %lo(b)
 ; RV32I-NEXT:    lui a2, %hi(a)
@@ -27,7 +27,7 @@ define i32 @main() nounwind {
 ; RV32I-NEXT:    addi a2, a2, 4
 ; RV32I-NEXT:    bne a0, a3, .LBB0_1
 ; RV32I-NEXT:  # %bb.2: # %for.end
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    ret
 entry:
   br label %for.body
@@ -35,10 +35,10 @@ entry:
 for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %sub = add nsw i32 %i.08, -2048
-  %arrayidx = getelementptr inbounds [4096 x i32], [4096 x i32]* @a, i32 0, i32 %i.08
-  store i32 %sub, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds [4096 x i32], [4096 x i32]* @b, i32 0, i32 %i.08
-  store i32 %i.08, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds [4096 x i32], ptr @a, i32 0, i32 %i.08
+  store i32 %sub, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds [4096 x i32], ptr @b, i32 0, i32 %i.08
+  store i32 %i.08, ptr %arrayidx1, align 4
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, 4096
   br i1 %exitcond, label %for.end, label %for.body

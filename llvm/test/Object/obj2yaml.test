@@ -547,7 +547,7 @@
 # ELF-MIPS64EL-NEXT:       Binding:         STB_GLOBAL
 # ELF-MIPS64EL-NEXT: ...
 
-# RUN: yaml2obj %s -o %t-x86-64
+# RUN: yaml2obj --docnum=1 %s -o %t-x86-64
 # RUN: obj2yaml %t-x86-64 | FileCheck %s --check-prefix ELF-X86-64
 
 # ELF-X86-64:      FileHeader:
@@ -678,6 +678,25 @@ Symbols:
   - Name:    puts
     Binding: STB_GLOBAL
 
+# RUN: yaml2obj --docnum=2 %s -o %t-xtensa
+# RUN: obj2yaml %t-xtensa | FileCheck %s --check-prefix ELF-XTENSA
+
+# ELF-XTENSA:      FileHeader:
+# ELF-XTENSA-NEXT:   Class:           ELFCLASS32
+# ELF-XTENSA-NEXT:   Data:            ELFDATA2LSB
+# ELF-XTENSA-NEXT:   Type:            ET_EXEC
+# ELF-XTENSA-NEXT:   Machine:         EM_XTENSA
+## As EF_XTENSA_MACH_NONE == 0, it is always printed by obj2yaml.
+# ELF-XTENSA-NEXT:   Flags:           [ EF_XTENSA_XT_INSN, EF_XTENSA_MACH_NONE, EF_XTENSA_XT_LIT ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_XTENSA
+  Flags:           [ EF_XTENSA_XT_INSN, EF_XTENSA_XT_LIT ]
+
 # RUN: obj2yaml %p/Inputs/trivial-object-test.elf-avr | FileCheck %s --check-prefix ELF-AVR
 
 # ELF-AVR:      FileHeader:
@@ -692,12 +711,14 @@ Symbols:
 # ELF-AVR-NEXT:    FirstSec: .text
 # ELF-AVR-NEXT:    LastSec:  .text
 # ELF-AVR-NEXT:    Align:    0x2
+# ELF-AVR-NEXT:    Offset:   0x74
 # ELF-AVR-NEXT:  - Type:     PT_LOAD
 # ELF-AVR-NEXT:    Flags:    [ PF_W, PF_R ]
 # ELF-AVR-NEXT:    FirstSec: .data
 # ELF-AVR-NEXT:    LastSec:  .data
 # ELF-AVR-NEXT:    VAddr:    0x800060
 # ELF-AVR-NEXT:    PAddr:    0x4
+# ELF-AVR-NEXT:    Offset:   0x78
 # ELF-AVR-NEXT: Sections:
 # ELF-AVR-NEXT:   - Name:            .text
 # ELF-AVR-NEXT:     Type:            SHT_PROGBITS

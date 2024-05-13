@@ -1,10 +1,7 @@
 # Check the various features of the ShTest format.
 
-# FIXME: this test depends on order of tests
-# RUN: rm -f %{inputs}/shtest-format/.lit_test_times.txt
-
 # RUN: rm -f %t.xml
-# RUN: not %{lit} -j 1 -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
+# RUN: not %{lit} -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
 # RUN: FileCheck < %t.out %s
 # RUN: FileCheck --check-prefix=XUNIT < %t.xml %s
 
@@ -20,7 +17,8 @@
 # CHECK-NEXT: line 2: failed test output on stdout
 # CHECK: Command Output (stderr):
 # CHECK-NEXT: --
-# CHECK-NEXT: cat{{(\.exe)?}}: {{cannot open does-not-exist|does-not-exist: No such file or directory}}
+# CHECK-NOT: --
+# CHECK: cat{{(_64)?(\.exe)?}}: {{cannot open does-not-exist|does-not-exist: No such file or directory}}
 # CHECK: --
 
 # CHECK: FAIL: shtest-format :: external_shell/fail_with_bad_encoding.txt
@@ -39,29 +37,34 @@
 
 # CHECK: PASS: shtest-format :: external_shell/pass.txt
 
-# CHECK: FAIL: shtest-format :: fail.txt
-# CHECK-NEXT: *** TEST 'shtest-format :: fail.txt' FAILED ***
-# CHECK-NEXT: Script:
-# CHECK-NEXT: --
-# CHECK-NEXT: printf "line 1
-# CHECK-NEXT: false
-# CHECK-NEXT: --
-# CHECK-NEXT: Exit Code: 1
-#
-# CHECK: Command Output (stdout):
-# CHECK-NEXT: --
-# CHECK-NEXT: $ ":" "RUN: at line 1"
-# CHECK-NEXT: $ "printf"
-# CHECK-NEXT: # command output:
-# CHECK-NEXT: line 1: failed test output on stdout
-# CHECK-NEXT: line 2: failed test output on stdout
+#       CHECK: FAIL: shtest-format :: fail.txt
+#  CHECK-NEXT: *** TEST 'shtest-format :: fail.txt' FAILED ***
+#  CHECK-NEXT: Exit Code: 1
+# CHECK-EMPTY:
+#  CHECK-NEXT: Command Output (stdout):
+#  CHECK-NEXT: --
+#  CHECK-NEXT: # RUN: at line 1
+#  CHECK-NEXT: printf "line 1: failed test output on stdout\nline 2: failed test output on stdout"
+#  CHECK-NEXT: executed command: printf 'line 1: failed test output on stdout\nline 2: failed test output on stdout'
+#  CHECK-NEXT: # .---command stdout------------
+#  CHECK-NEXT: # | line 1: failed test output on stdout
+#  CHECK-NEXT: # | line 2: failed test output on stdout
+#  CHECK-NEXT: # `-----------------------------
+#  CHECK-NEXT: # RUN: at line 2
+#  CHECK-NEXT: false
+#  CHECK-NEXT: # executed command: false
+#  CHECK-NEXT: # note: command had no output on stdout or stderr
+#  CHECK-NEXT: # error: command failed with exit status: 1
+# CHECK-EMPTY:
+#  CHECK-NEXT: --
+
 
 # CHECK: UNRESOLVED: shtest-format :: no-test-line.txt
 # CHECK: PASS: shtest-format :: pass.txt
 # CHECK: UNSUPPORTED: shtest-format :: requires-missing.txt
 # CHECK: PASS: shtest-format :: requires-present.txt
 # CHECK: UNRESOLVED: shtest-format :: requires-star.txt
-# CHECK: UNSUPPORTED: shtest-format :: requires-triple.txt
+# CHECK: PASS: shtest-format :: requires-triple.txt
 # CHECK: PASS: shtest-format :: unsupported-expr-false.txt
 # CHECK: UNSUPPORTED: shtest-format :: unsupported-expr-true.txt
 # CHECK: UNRESOLVED: shtest-format :: unsupported-star.txt
@@ -71,12 +74,18 @@
 # CHECK: XFAIL: shtest-format :: xfail-feature.txt
 # CHECK: XFAIL: shtest-format :: xfail-target.txt
 # CHECK: XFAIL: shtest-format :: xfail.txt
-# CHECK: XPASS: shtest-format :: xpass.txt
-# CHECK-NEXT: *** TEST 'shtest-format :: xpass.txt' FAILED ***
-# CHECK-NEXT: Script
-# CHECK-NEXT: --
-# CHECK-NEXT: true
-# CHECK-NEXT: --
+
+#       CHECK: XPASS: shtest-format :: xpass.txt
+#  CHECK-NEXT: *** TEST 'shtest-format :: xpass.txt' FAILED ***
+#  CHECK-NEXT: Exit Code: 0
+# CHECK-EMPTY:
+#  CHECK-NEXT: Command Output (stdout):
+#  CHECK-NEXT: --
+#  CHECK-NEXT: # RUN: at line 1
+#  CHECK-NEXT: true
+#  CHECK-NEXT: # executed command: true
+# CHECK-EMPTY:
+#  CHECK-NEXT: --
 
 # CHECK: Failed Tests (4)
 # CHECK: shtest-format :: external_shell/fail.txt
@@ -88,8 +97,8 @@
 # CHECK: shtest-format :: xpass.txt
 
 # CHECK: Testing Time:
-# CHECK: Unsupported        : 4
-# CHECK: Passed             : 6
+# CHECK: Unsupported        : 3
+# CHECK: Passed             : 7
 # CHECK: Expectedly Failed  : 4
 # CHECK: Unresolved         : 3
 # CHECK: Failed             : 4
@@ -98,7 +107,7 @@
 
 # XUNIT: <?xml version="1.0" encoding="UTF-8"?>
 # XUNIT-NEXT: <testsuites time="{{[0-9.]+}}">
-# XUNIT-NEXT: <testsuite name="shtest-format" tests="22" failures="8" skipped="4">
+# XUNIT-NEXT: <testsuite name="shtest-format" tests="22" failures="8" skipped="3">
 
 # XUNIT: <testcase classname="shtest-format.external_shell" name="fail.txt" time="{{[0-9]+\.[0-9]+}}">
 # XUNIT-NEXT: <failure{{[ ]*}}>
@@ -111,13 +120,16 @@
 # XUNIT: </failure>
 # XUNIT-NEXT: </testcase>
 
-# XUNIT: <testcase classname="shtest-format.external_shell" name="fail_with_control_chars.txt" time="{{[0-9]+\.[0-9]+}}">
-# XUNIT-NEXT: <failure><![CDATA[Script:
-# XUNIT: Command Output (stdout):
-# XUNIT-NEXT: --
-# XUNIT-NEXT: a line with [2;30;41mcontrol characters[0m.
-# XUNIT: </failure>
-# XUNIT-NEXT: </testcase>
+#       XUNIT: <testcase classname="shtest-format.external_shell" name="fail_with_control_chars.txt" time="{{[0-9]+\.[0-9]+}}">
+#  XUNIT-NEXT: <failure><![CDATA[Exit Code: 1
+# XUNIT-EMPTY:
+#  XUNIT-NEXT: Command Output (stdout):
+#  XUNIT-NEXT: --
+#  XUNIT-NEXT: a line with [2;30;41mcontrol characters[0m.
+# XUNIT-EMPTY:
+#  XUNIT-NEXT: --
+#       XUNIT: ]]></failure>
+#  XUNIT-NEXT: </testcase>
 
 # XUNIT: <testcase classname="shtest-format.external_shell" name="pass.txt" time="{{[0-9]+\.[0-9]+}}"/>
 
@@ -143,9 +155,7 @@
 # XUNIT: </failure>
 # XUNIT-NEXT: </testcase>
 
-
-# XUNIT: <testcase classname="shtest-format.shtest-format" name="requires-triple.txt" time="{{[0-9]+\.[0-9]+}}">
-# XUNIT-NEXT:<skipped message="Missing required feature(s): x86_64"/>
+# XUNIT: <testcase classname="shtest-format.shtest-format" name="requires-triple.txt" time="{{[0-9]+\.[0-9]+}}"/>
 
 # XUNIT: <testcase classname="shtest-format.shtest-format" name="unsupported-expr-false.txt" time="{{[0-9]+\.[0-9]+}}"/>
 

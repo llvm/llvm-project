@@ -6,15 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/FPUtil/TestHelpers.h"
+#ifndef LLVM_LIBC_TEST_SRC_MATH_FMINTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_FMINTEST_H
+
+#include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class FMinTest : public __llvm_libc::testing::Test {
+template <typename T>
+class FMinTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -23,7 +28,7 @@ public:
 
   void testNaN(FMinFunc func) {
     EXPECT_FP_EQ(inf, func(aNaN, inf));
-    EXPECT_FP_EQ(negInf, func(negInf, aNaN));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, aNaN));
     EXPECT_FP_EQ(0.0, func(aNaN, 0.0));
     EXPECT_FP_EQ(-0.0, func(-0.0, aNaN));
     EXPECT_FP_EQ(T(-1.2345), func(aNaN, T(-1.2345)));
@@ -32,7 +37,7 @@ public:
   }
 
   void testInfArg(FMinFunc func) {
-    EXPECT_FP_EQ(negInf, func(negInf, inf));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, inf));
     EXPECT_FP_EQ(0.0, func(inf, 0.0));
     EXPECT_FP_EQ(-0.0, func(-0.0, inf));
     EXPECT_FP_EQ(T(1.2345), func(inf, T(1.2345)));
@@ -40,11 +45,11 @@ public:
   }
 
   void testNegInfArg(FMinFunc func) {
-    EXPECT_FP_EQ(negInf, func(inf, negInf));
-    EXPECT_FP_EQ(negInf, func(negInf, 0.0));
-    EXPECT_FP_EQ(negInf, func(-0.0, negInf));
-    EXPECT_FP_EQ(negInf, func(negInf, T(-1.2345)));
-    EXPECT_FP_EQ(negInf, func(T(1.2345), negInf));
+    EXPECT_FP_EQ(neg_inf, func(inf, neg_inf));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, 0.0));
+    EXPECT_FP_EQ(neg_inf, func(-0.0, neg_inf));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, T(-1.2345)));
+    EXPECT_FP_EQ(neg_inf, func(T(1.2345), neg_inf));
   }
 
   void testBothZero(FMinFunc func) {
@@ -55,11 +60,11 @@ public:
   }
 
   void testRange(FMinFunc func) {
-    constexpr UIntType count = 10000001;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0, w = UIntType(-1); i <= count;
-         ++i, v += step, w -= step) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
+         ++i, v += STEP, w -= STEP) {
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
       if (isnan(x) || isinf(x))
         continue;
       if (isnan(y) || isinf(y))
@@ -83,3 +88,5 @@ public:
   TEST_F(LlvmLibcFMinTest, NegInfArg) { testNegInfArg(&func); }                \
   TEST_F(LlvmLibcFMinTest, BothZero) { testBothZero(&func); }                  \
   TEST_F(LlvmLibcFMinTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_FMINTEST_H

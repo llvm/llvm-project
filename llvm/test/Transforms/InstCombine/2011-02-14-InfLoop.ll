@@ -1,13 +1,13 @@
 ; This testcase causes an infinite loop in the instruction combiner,
 ; because it changes a pattern and the original pattern is almost
 ; identical to the newly-generated pattern.
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 
 ;PR PR9216
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define <4 x float> @m_387(i8* noalias nocapture %A, i8* nocapture %B, <4 x i1> %C) nounwind {
+define <4 x float> @m_387(ptr noalias nocapture %A, ptr nocapture %B, <4 x i1> %C) nounwind {
 entry:
   %movcsext20 = sext <4 x i1> %C to <4 x i32>
   %tmp2389 = xor <4 x i32> %movcsext20, <i32 -1, i32 -1, i32 -1, i32 -1>

@@ -42,7 +42,7 @@ struct emp_9 { // expected-warning {{struct has size 0 in C, non-zero size in C+
 // Checks for pointer subtraction (PR15683)
 struct emp_1 *func_1p(struct emp_1 *x) { return x - 5; }
 
-int func_1() {
+int func_1(void) {
   struct emp_1 v[1];
   return v - v; // expected-warning {{subtraction of pointers to type 'struct emp_1' of zero size has undefined behavior}}
 }
@@ -63,7 +63,7 @@ int func_5(volatile struct emp_1 *x, const struct emp_1 *y) {
   return x - y; // expected-warning {{subtraction of pointers to type 'struct emp_1' of zero size has undefined behavior}}
 }
 
-int func_6() {
+int func_6(void) {
   union emp_2 v[1];
   return v - v; // expected-warning {{subtraction of pointers to type 'union emp_2' of zero size has undefined behavior}}
 }
@@ -75,13 +75,13 @@ int func_7(struct A *x, struct A *y) {
 }
 
 int func_8(struct emp_1 (*x)[10], struct emp_1 (*y)[10]) {
-  return x - y; // expected-warning {{subtraction of pointers to type 'struct emp_1 [10]' of zero size has undefined behavior}}
+  return x - y; // expected-warning {{subtraction of pointers to type 'struct emp_1[10]' of zero size has undefined behavior}}
 }
 
 int func_9(struct emp_1 (*x)[], struct emp_1 (*y)[]) {
-  return x - y; // expected-error {{arithmetic on a pointer to an incomplete type 'struct emp_1 []'}}
+  return x - y; // expected-error {{arithmetic on a pointer to an incomplete type 'struct emp_1[]'}}
 }
 
 int func_10(int (*x)[0], int (*y)[0]) {
-  return x - y; // expected-warning {{subtraction of pointers to type 'int [0]' of zero size has undefined behavior}}
+  return x - y; // expected-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
 }

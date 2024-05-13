@@ -16,7 +16,7 @@ void test1() {
   // CHECK: call void @_ZN1C1fEv
   c.f();
 
-  // CHECK: call void (%struct.C*, i32, ...) @_ZN1C1gEiz
+  // CHECK: call void (ptr, i32, ...) @_ZN1C1gEiz
   c.g(1, 2, 3);
 }
 

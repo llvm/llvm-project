@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-int callee0() __attribute__((not_tail_called,always_inline)); // expected-error{{'always_inline' and 'not_tail_called' attributes are not compatible}} \
+int callee0(void) __attribute__((not_tail_called,always_inline)); // expected-error{{'always_inline' and 'not_tail_called' attributes are not compatible}} \
 // expected-note{{conflicting attribute is here}}
-int callee1() __attribute__((always_inline,not_tail_called)); // expected-error{{'not_tail_called' and 'always_inline' attributes are not compatible}} \
+int callee1(void) __attribute__((always_inline,not_tail_called)); // expected-error{{'not_tail_called' and 'always_inline' attributes are not compatible}} \
 // expected-note{{conflicting attribute is here}}
 
 int foo(int a) {

@@ -106,7 +106,7 @@ int test_stlex(char *addr) {
   return res;
 }
 
-void test_clrex() {
+void test_clrex(void) {
   __builtin_arm_clrex();
   __builtin_arm_clrex(1); // expected-error {{too many arguments to function call}}
 }

@@ -13,11 +13,13 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 void DWARFTypeUnit::Dump(Stream *s) const {
-  s->Printf("0x%8.8x: Type Unit: length = 0x%8.8x, version = 0x%4.4x, "
-            "abbr_offset = 0x%8.8x, addr_size = 0x%2.2x (next CU at "
-            "{0x%8.8x})\n",
-            GetOffset(), GetLength(), GetVersion(), GetAbbrevOffset(),
-            GetAddressByteSize(), GetNextUnitOffset());
+  s->Format("{0:x16}: Type Unit: length = {1:x8}, version = {2:x4}, "
+            "abbr_offset = {3:x8}, addr_size = {4:x2} (next CU at "
+            "[{5:x16}])\n",
+            GetOffset(), (uint32_t)GetLength(), GetVersion(),
+            (uint32_t)GetAbbrevOffset(), GetAddressByteSize(),
+            GetNextUnitOffset());
 }

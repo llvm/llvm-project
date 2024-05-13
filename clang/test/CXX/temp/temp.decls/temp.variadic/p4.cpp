@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fexceptions -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -std=c++2a -fsyntax-only -fexceptions -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fexceptions -fcxx-exceptions -verify=expected,pre20 %s
+// RUN: %clang_cc1 -std=c++2a -fsyntax-only -fexceptions -fcxx-exceptions -verify=expected,post20 %s
 
 template<typename... Types> struct tuple;
 template<int I> struct int_c;
@@ -99,10 +99,12 @@ struct HasMixins : public Mixins... {
   HasMixins(int i);
 };
 
-struct A { }; // expected-note{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const A' for 1st argument}} \
-// expected-note{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to 'A' for 1st argument}} \
-// expected-note{{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
-struct B { };
+struct A { }; // pre20-note{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const A' for 1st argument}} \
+// pre20-note{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to 'A' for 1st argument}} \
+// pre20-note{{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+struct B { }; // pre20-note{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const B' for 1st argument}} \
+// pre20-note{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to 'B' for 1st argument}} \
+// pre20-note{{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
 struct C { };
 struct D { };
 
@@ -123,7 +125,11 @@ template<typename ...Mixins>
 HasMixins<Mixins...>::HasMixins(const HasMixins &other): Mixins(other)... { }
 
 template<typename ...Mixins>
-HasMixins<Mixins...>::HasMixins(int i): Mixins(i)... { } // expected-error{{no matching constructor for initialization of 'A'}}
+HasMixins<Mixins...>::HasMixins(int i): Mixins(i)... { }
+// pre20-error@-1 {{no matching constructor for initialization of 'A'}}
+// pre20-error@-2 {{no matching constructor for initialization of 'B'}}
+// post20-error@-3 {{excess elements in struct initializer}}
+// post20-error@-4 {{excess elements in struct initializer}}
 
 void test_has_mixins() {
   HasMixins<A, B> ab;

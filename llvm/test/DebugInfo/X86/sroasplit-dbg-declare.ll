@@ -1,4 +1,5 @@
-; RUN: opt -S -sroa -o - %s | FileCheck %s
+; RUN: opt -S -passes='sroa' -o - %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S -passes='sroa' -o - %s | FileCheck %s
 
 ; SROA should split the alloca in two new ones, each with its own dbg.declare.
 ; The original alloca and dbg.declare should be removed.
@@ -6,11 +7,9 @@
 define void @f1() {
 entry:
   %0 = alloca [9 x i32]
-  call void @llvm.dbg.declare(metadata [9 x i32]* %0, metadata !11, metadata !DIExpression()), !dbg !17
-  %1 = bitcast [9 x i32]* %0 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 16 %1, i8 0, i64 36, i1 true)
-  %2 = getelementptr [9 x i32], [9 x i32]* %0, i32 0, i32 0
-  store volatile i32 1, i32* %2
+  call void @llvm.dbg.declare(metadata ptr %0, metadata !11, metadata !DIExpression()), !dbg !17
+  call void @llvm.memset.p0.i64(ptr align 16 %0, i8 0, i64 36, i1 true)
+  store volatile i32 1, ptr %0
   ret void
 }
 
@@ -18,7 +17,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #0
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) #0
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone speculatable }
@@ -47,13 +46,13 @@ attributes #1 = { nounwind readnone speculatable }
 !17 = !DILocation(line: 3, column: 18, scope: !7)
 
 ; CHECK-NOT:  = alloca [9 x i32]
-; CHECK-NOT:  call void @llvm.dbg.declare(metadata [9 x i32]*
+; CHECK-NOT:  call void @llvm.dbg.declare(metadata ptr
 
 ; CHECK:      %[[VAR1:.*]] = alloca i32
 ; CHECK-NEXT: %[[VAR2:.*]] = alloca [8 x i32]
-; CHECK-NEXT: call void @llvm.dbg.declare(metadata i32* %[[VAR1]]
-; CHECK-NEXT: call void @llvm.dbg.declare(metadata [8 x i32]* %[[VAR2]]
+; CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %[[VAR1]]
+; CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %[[VAR2]]
 
 ; CHECK-NOT:  = alloca [9 x i32]
-; CHECK-NOT:  call void @llvm.dbg.declare(metadata [9 x i32]*
+; CHECK-NOT:  call void @llvm.dbg.declare(metadata ptr
 

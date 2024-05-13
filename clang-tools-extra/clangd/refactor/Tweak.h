@@ -16,21 +16,18 @@
 //     It is performed when the user actually chooses the action.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_ACTIONS_TWEAK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_ACTIONS_TWEAK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_TWEAK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_TWEAK_H
 
 #include "ParsedAST.h"
-#include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "index/Index.h"
 #include "support/Path.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -76,8 +73,11 @@ public:
 
   struct Effect {
     /// A message to be displayed to the user.
-    llvm::Optional<std::string> ShowMessage;
+    std::optional<std::string> ShowMessage;
     FileEdits ApplyEdits;
+    /// Whether the edits should be formatted before presenting to the client.
+    /// Note that it applies to all files.
+    bool FormatEdits = true;
 
     static Effect showMessage(StringRef S) {
       Effect E;

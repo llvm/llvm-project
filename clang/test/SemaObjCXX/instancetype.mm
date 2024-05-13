@@ -36,7 +36,7 @@
 - (void)methodOnSubclass2;
 @end
 
-// Sanity check: the basic initialization pattern.
+// Verify the basic initialization pattern.
 void test_instancetype_alloc_init_simple() {
   Root *r1 = [[Root alloc] init];
   Subclass1 *sc1 = [[Subclass1 alloc] init];
@@ -188,7 +188,6 @@ void test_instancetype_inherited() {
 
 @end
 
-// rdar://12493140
 @protocol P4
 - (instancetype) foo; // expected-note {{current method is explicitly declared 'instancetype' and is expected to return an instance of its class type}}
 @end

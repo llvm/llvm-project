@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03
 
 // <future>
@@ -23,15 +23,16 @@
 
 int main(int, char**)
 {
-    assert(test_alloc_base::alloc_count == 0);
+    test_allocator_statistics alloc_stats;
+    assert(alloc_stats.alloc_count == 0);
     {
-        std::promise<int> p0(std::allocator_arg, test_allocator<int>());
-        std::promise<int> p(std::allocator_arg, test_allocator<int>());
-        assert(test_alloc_base::alloc_count == 2);
+        std::promise<int> p0(std::allocator_arg, test_allocator<int>(&alloc_stats));
+        std::promise<int> p(std::allocator_arg, test_allocator<int>(&alloc_stats));
+        assert(alloc_stats.alloc_count == 2);
         p = std::move(p0);
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
         std::future<int> f = p.get_future();
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
         assert(f.valid());
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
@@ -44,17 +45,17 @@ int main(int, char**)
             assert(e.code() == make_error_code(std::future_errc::no_state));
         }
 #endif
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
     {
-        std::promise<int&> p0(std::allocator_arg, test_allocator<int>());
-        std::promise<int&> p(std::allocator_arg, test_allocator<int>());
-        assert(test_alloc_base::alloc_count == 2);
+        std::promise<int&> p0(std::allocator_arg, test_allocator<int>(&alloc_stats));
+        std::promise<int&> p(std::allocator_arg, test_allocator<int>(&alloc_stats));
+        assert(alloc_stats.alloc_count == 2);
         p = std::move(p0);
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
         std::future<int&> f = p.get_future();
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
         assert(f.valid());
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
@@ -67,17 +68,17 @@ int main(int, char**)
             assert(e.code() == make_error_code(std::future_errc::no_state));
         }
 #endif
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
     {
-        std::promise<void> p0(std::allocator_arg, test_allocator<void>());
-        std::promise<void> p(std::allocator_arg, test_allocator<void>());
-        assert(test_alloc_base::alloc_count == 2);
+        std::promise<void> p0(std::allocator_arg, test_allocator<void>(&alloc_stats));
+        std::promise<void> p(std::allocator_arg, test_allocator<void>(&alloc_stats));
+        assert(alloc_stats.alloc_count == 2);
         p = std::move(p0);
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
         std::future<void> f = p.get_future();
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
         assert(f.valid());
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
@@ -90,9 +91,9 @@ int main(int, char**)
             assert(e.code() == make_error_code(std::future_errc::no_state));
         }
 #endif
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
 
   return 0;
 }

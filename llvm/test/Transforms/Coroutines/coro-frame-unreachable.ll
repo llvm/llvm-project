@@ -1,15 +1,14 @@
 ; Check that coro-split doesn't choke on intrinsics in unreachable blocks
-; RUN: opt < %s -coro-split -S
-; RUN: opt < %s -passes=coro-split -S
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S
 
-define i8* @f(i1 %arg) "coroutine.presplit"="1" personality i32 0 {
+define ptr @f(i1 %arg) presplitcoroutine personality i32 0 {
 entry:
   %arg.addr = alloca i1
-  store i1 %arg, i1* %arg.addr
-  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
+  store i1 %arg, ptr %arg.addr
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %size = call i32 @llvm.coro.size.i32()
-  %alloc = call i8* @malloc(i32 %size)
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* %alloc)
+  %alloc = call ptr @malloc(i32 %size)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
   br label %cont
 
 cont:
@@ -20,32 +19,32 @@ resume:
   br label %cleanup
 
 cleanup:
-  %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
-  call void @free(i8* %mem)
+  %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
+  call void @free(ptr %mem)
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)
-  ret i8* %hdl
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  ret ptr %hdl
 
 no.predecessors:
-  %argval = load i1, i1* %arg.addr
+  %argval = load i1, ptr %arg.addr
   call void @print(i1 %argval)
   br label %suspend
 
 }
 
-declare i8* @llvm.coro.free(token, i8*)
+declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)
-declare void @llvm.coro.resume(i8*)
-declare void @llvm.coro.destroy(i8*)
+declare void @llvm.coro.resume(ptr)
+declare void @llvm.coro.destroy(ptr)
 
-declare token @llvm.coro.id(i32, i8*, i8*, i8*)
+declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
-declare i8* @llvm.coro.begin(token, i8*)
-declare i1 @llvm.coro.end(i8*, i1)
+declare ptr @llvm.coro.begin(token, ptr)
+declare i1 @llvm.coro.end(ptr, i1, token)
 
-declare noalias i8* @malloc(i32)
+declare noalias ptr @malloc(i32)
 declare void @print(i1)
-declare void @free(i8*)
+declare void @free(ptr)

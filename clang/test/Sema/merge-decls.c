@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only
+// RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-strict-prototypes
 
 void foo(void);
 void foo(void) {} 
@@ -30,7 +30,6 @@ Vi2 g0; // expected-error {{redefinition of 'g0'}}
 _Complex int g1; // expected-note {{previous definition is here}}
 _Complex float g1; // expected-error {{redefinition of 'g1'}}
 
-// rdar://6096412
 extern char i6096412[10];
 extern char i6096412[];
 void foo6096412(void) {
@@ -73,7 +72,7 @@ void test4_f(a)
 
 int test5_f(int (*)[10]);
 int test5_f(int (*x)[]) {
-  return sizeof(*x); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+  return sizeof(*x); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 }
 
 void test6_f(int (*a)[11]);
@@ -91,3 +90,7 @@ void test7_g() {
   int x[5];
   test7_f(&x); // expected-warning {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[10]}}
 }
+
+char d;
+char test8_gh62447[d.undef == 8]; // expected-error {{member reference base type 'char' is not a structure or union}}
+char test8_gh62447[d.undef == 4]; // expected-error {{member reference base type 'char' is not a structure or union}}

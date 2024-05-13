@@ -2,18 +2,15 @@
 ; formats. This checks that we produce the same profile annotations regardless
 ; of the profile format.
 ;
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/fnptr.prof | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/fnptr.binprof | opt -analyze -branch-prob  -enable-new-pm=0| FileCheck %s
-
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/fnptr.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/fnptr.binprof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
-; CHECK:   edge for.body3 -> if.then probability is 0x1a56a56a / 0x80000000 = 20.58%
-; CHECK:   edge for.body3 -> if.else probability is 0x65a95a96 / 0x80000000 = 79.42%
-; CHECK:   edge for.inc -> for.inc12 probability is 0x000fbd1c / 0x80000000 = 0.05%
-; CHECK:   edge for.inc -> for.body3 probability is 0x7ff042e4 / 0x80000000 = 99.95%
-; CHECK:   edge for.inc12 -> for.end14 probability is 0x04000000 / 0x80000000 = 3.12%
-; CHECK:   edge for.inc12 -> for.cond1.preheader probability is 0x7c000000 / 0x80000000 = 96.88%
+; CHECK:   edge %for.body3 -> %if.then probability is 0x1a56a56a / 0x80000000 = 20.58%
+; CHECK:   edge %for.body3 -> %if.else probability is 0x65a95a96 / 0x80000000 = 79.42%
+; CHECK:   edge %for.inc -> %for.inc12 probability is 0x000fbd1c / 0x80000000 = 0.05%
+; CHECK:   edge %for.inc -> %for.body3 probability is 0x7ff042e4 / 0x80000000 = 99.95%
+; CHECK:   edge %for.inc12 -> %for.end14 probability is 0x04000000 / 0x80000000 = 3.12%
+; CHECK:   edge %for.inc12 -> %for.cond1.preheader probability is 0x7c000000 / 0x80000000 = 96.88%
 
 ; Original C++ test case.
 ;
@@ -84,7 +81,7 @@ for.body3:                                        ; preds = %for.inc, %for.cond1
   %call = tail call i32 @rand() #3, !dbg !15
   %rem = srem i32 %call, 100, !dbg !15
   %cmp4 = icmp slt i32 %rem, 30, !dbg !15
-  %_Z3fooi._Z3bari = select i1 %cmp4, double (i32)* @_Z3fooi, double (i32)* @_Z3bari, !dbg !15
+  %_Z3fooi._Z3bari = select i1 %cmp4, ptr @_Z3fooi, ptr @_Z3bari, !dbg !15
   %call5 = tail call i32 @rand() #3, !dbg !16
   %rem6 = srem i32 %call5, 100, !dbg !16
   %cmp7 = icmp slt i32 %rem6, 10, !dbg !16
@@ -117,7 +114,7 @@ for.inc12:                                        ; preds = %for.inc
 
 for.end14:                                        ; preds = %for.inc12
   %S.2.lcssa.lcssa = phi double [ %S.2.lcssa, %for.inc12 ]
-  %call15 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0), double %S.2.lcssa.lcssa), !dbg !24
+  %call15 = tail call i32 (ptr, ...) @printf(ptr @.str, double %S.2.lcssa.lcssa), !dbg !24
   ret i32 0, !dbg !25
 }
 
@@ -125,7 +122,7 @@ for.end14:                                        ; preds = %for.inc12
 declare i32 @rand() #1
 
 ; Function Attrs: nounwind
-declare i32 @printf(i8* nocapture readonly, ...) #1
+declare i32 @printf(ptr nocapture readonly, ...) #1
 
 attributes #0 = {"use-sample-profile"}
 attributes #2 = {"use-sample-profile"}

@@ -1,5 +1,4 @@
-; RUN: opt < %s -mtriple=x86_64-linux -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=0 -S | FileCheck %s
-; RUN: opt < %s -mtriple=x86_64-linux -passes='asan-pipeline' -asan-globals-live-support=0 -S | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-linux -passes=asan -asan-globals-live-support=0 -S | FileCheck %s
 
 $my_var = comdat any
 

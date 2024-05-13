@@ -23,7 +23,7 @@ inline uptr scaledLog2(uptr Size, uptr ZeroLog, uptr LogBits) {
 }
 
 template <typename Config> struct SizeClassMapBase {
-  static u32 getMaxCachedHint(uptr Size) {
+  static u16 getMaxCachedHint(uptr Size) {
     DCHECK_NE(Size, 0);
     u32 N;
     // Force a 32-bit division if the template parameters allow for it.
@@ -31,7 +31,10 @@ template <typename Config> struct SizeClassMapBase {
       N = static_cast<u32>((1UL << Config::MaxBytesCachedLog) / Size);
     else
       N = (1U << Config::MaxBytesCachedLog) / static_cast<u32>(Size);
-    return Max(1U, Min(Config::MaxNumCachedHint, N));
+
+    // Note that Config::MaxNumCachedHint is u16 so the result is guaranteed to
+    // fit in u16.
+    return static_cast<u16>(Max(1U, Min<u32>(Config::MaxNumCachedHint, N)));
   }
 };
 
@@ -65,7 +68,7 @@ class FixedSizeClassMap : public SizeClassMapBase<Config> {
   static const uptr M = (1UL << S) - 1;
 
 public:
-  static const u32 MaxNumCachedHint = Config::MaxNumCachedHint;
+  static const u16 MaxNumCachedHint = Config::MaxNumCachedHint;
 
   static const uptr MaxSize = (1UL << Config::MaxSizeLog) + Config::SizeDelta;
   static const uptr NumClasses =
@@ -99,7 +102,7 @@ public:
     return MidClass + 1 + scaledLog2(Size - 1, Config::MidSizeLog, S);
   }
 
-  static u32 getMaxCachedHint(uptr Size) {
+  static u16 getMaxCachedHint(uptr Size) {
     DCHECK_LE(Size, MaxSize);
     return Base::getMaxCachedHint(Size);
   }
@@ -178,7 +181,7 @@ class TableSizeClassMap : public SizeClassMapBase<Config> {
   static constexpr LSBTable LTable = {};
 
 public:
-  static const u32 MaxNumCachedHint = Config::MaxNumCachedHint;
+  static const u16 MaxNumCachedHint = Config::MaxNumCachedHint;
 
   static const uptr NumClasses = ClassesSize + 1;
   static_assert(NumClasses < 256, "");
@@ -212,7 +215,7 @@ public:
     return SzTable.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
   }
 
-  static u32 getMaxCachedHint(uptr Size) {
+  static u16 getMaxCachedHint(uptr Size) {
     DCHECK_LE(Size, MaxSize);
     return Base::getMaxCachedHint(Size);
   }
@@ -223,7 +226,7 @@ struct DefaultSizeClassConfig {
   static const uptr MinSizeLog = 5;
   static const uptr MidSizeLog = 8;
   static const uptr MaxSizeLog = 17;
-  static const u32 MaxNumCachedHint = 14;
+  static const u16 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = 0;
 };
@@ -235,7 +238,7 @@ struct FuchsiaSizeClassConfig {
   static const uptr MinSizeLog = 5;
   static const uptr MidSizeLog = 8;
   static const uptr MaxSizeLog = 17;
-  static const u32 MaxNumCachedHint = 10;
+  static const u16 MaxNumCachedHint = 12;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = Chunk::getHeaderSize();
 };
@@ -248,10 +251,10 @@ struct AndroidSizeClassConfig {
   static const uptr MinSizeLog = 4;
   static const uptr MidSizeLog = 6;
   static const uptr MaxSizeLog = 16;
-  static const u32 MaxNumCachedHint = 13;
+  static const u16 MaxNumCachedHint = 13;
   static const uptr MaxBytesCachedLog = 13;
 
-  static constexpr u32 Classes[] = {
+  static constexpr uptr Classes[] = {
       0x00020, 0x00030, 0x00040, 0x00050, 0x00060, 0x00070, 0x00090, 0x000b0,
       0x000c0, 0x000e0, 0x00120, 0x00160, 0x001c0, 0x00250, 0x00320, 0x00450,
       0x00670, 0x00830, 0x00a10, 0x00c30, 0x01010, 0x01210, 0x01bd0, 0x02210,
@@ -263,10 +266,10 @@ struct AndroidSizeClassConfig {
   static const uptr MinSizeLog = 4;
   static const uptr MidSizeLog = 7;
   static const uptr MaxSizeLog = 16;
-  static const u32 MaxNumCachedHint = 14;
+  static const u16 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 13;
 
-  static constexpr u32 Classes[] = {
+  static constexpr uptr Classes[] = {
       0x00020, 0x00030, 0x00040, 0x00050, 0x00060, 0x00070, 0x00080, 0x00090,
       0x000a0, 0x000b0, 0x000c0, 0x000e0, 0x000f0, 0x00110, 0x00120, 0x00130,
       0x00150, 0x00160, 0x00170, 0x00190, 0x001d0, 0x00210, 0x00240, 0x002a0,
@@ -286,27 +289,17 @@ typedef TableSizeClassMap<AndroidSizeClassConfig> AndroidSizeClassMap;
 static_assert(AndroidSizeClassMap::usesCompressedLSBFormat(), "");
 #endif
 
-struct SvelteSizeClassConfig {
-#if SCUDO_WORDSIZE == 64U
-  static const uptr NumBits = 4;
-  static const uptr MinSizeLog = 4;
-  static const uptr MidSizeLog = 8;
-  static const uptr MaxSizeLog = 14;
-  static const u32 MaxNumCachedHint = 13;
+struct TrustySizeClassConfig {
+  static const uptr NumBits = 1;
+  static const uptr MinSizeLog = 5;
+  static const uptr MidSizeLog = 5;
+  static const uptr MaxSizeLog = 15;
+  static const u16 MaxNumCachedHint = 12;
   static const uptr MaxBytesCachedLog = 10;
-  static const uptr SizeDelta = Chunk::getHeaderSize();
-#else
-  static const uptr NumBits = 4;
-  static const uptr MinSizeLog = 3;
-  static const uptr MidSizeLog = 7;
-  static const uptr MaxSizeLog = 14;
-  static const u32 MaxNumCachedHint = 14;
-  static const uptr MaxBytesCachedLog = 10;
-  static const uptr SizeDelta = Chunk::getHeaderSize();
-#endif
+  static const uptr SizeDelta = 0;
 };
 
-typedef FixedSizeClassMap<SvelteSizeClassConfig> SvelteSizeClassMap;
+typedef FixedSizeClassMap<TrustySizeClassConfig> TrustySizeClassMap;
 
 template <typename SCMap> inline void printMap() {
   ScopedString Buffer;
@@ -321,8 +314,8 @@ template <typename SCMap> inline void printMap() {
     const uptr L = S ? getMostSignificantSetBitIndex(S) : 0;
     const uptr Cached = SCMap::getMaxCachedHint(S) * S;
     Buffer.append(
-        "C%02zu => S: %zu diff: +%zu %02zu%% L %zu Cached: %zu %zu; id %zu\n",
-        I, S, D, P, L, SCMap::getMaxCachedHint(S), Cached,
+        "C%02zu => S: %zu diff: +%zu %02zu%% L %zu Cached: %u %zu; id %zu\n", I,
+        S, D, P, L, SCMap::getMaxCachedHint(S), Cached,
         SCMap::getClassIdBySize(S));
     TotalCached += Cached;
     PrevS = S;
@@ -331,7 +324,7 @@ template <typename SCMap> inline void printMap() {
   Buffer.output();
 }
 
-template <typename SCMap> static void validateMap() {
+template <typename SCMap> static UNUSED void validateMap() {
   for (uptr C = 0; C < SCMap::NumClasses; C++) {
     if (C == SCMap::BatchClassId)
       continue;

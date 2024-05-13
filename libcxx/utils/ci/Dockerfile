@@ -5,82 +5,294 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===----------------------------------------------------------------------===##
-
 #
-# This Dockerfile describes the base image used to run the various libc++
-# build bots. By default, the image runs the Buildkite Agent, however one
-# can also just start the image with a shell to debug CI failures.
+# This file defines the buildkite and github actions builder images.
+# You can build both images using:
+#
+#   docker compose build
+#
+# Or you can select a single image to build
+#
+#  docker compose build buildkite-builder
+#
+# The final images can be found at
+#
+#  ghcr.io/libcxx/buildkite-builder
+#  ghcr.io/libcxx/actions-builder
+#  ghcr.io/libcxx/android-buildkite-builder
+#
+# Members of the github.com/libcxx/ organizations can push new images to the CI.
+# This is done by GitHub actions in the https://github.com/libcxx/builders repo.
+#
+# ===----------------------------------------------------------------------===##
+#                     Running the buildkite image
+# ===----------------------------------------------------------------------===##
 #
 # To start a Buildkite Agent, run it as:
-#   $ docker run --env-file secrets.env -it $(docker build -q .)
+#   $ docker run --env-file <secrets> -it $(docker build -q libcxx/utils/ci)
 #
-# The environment variables in `secrets.env` must be replaced by the actual
-# tokens for this to work. These should obviously never be checked in.
+# The environment variables in `<secrets>` should be the ones necessary
+# to run a BuildKite agent:
+#
+#   BUILDKITE_AGENT_TOKEN=<token>
 #
 # If you're only looking to run the Docker image locally for debugging a
 # build bot, see the `run-buildbot-container` script located in this directory.
-#
-# A pre-built version of this image is maintained on DockerHub as ldionne/libcxx-builder.
-# To update the image, rebuild it and push it to ldionne/libcxx-builder (which
-# will obviously only work if you have permission to do so).
-#
-#   $ docker build -t ldionne/libcxx-builder .
-#   $ docker push ldionne/libcxx-builder
-#
 
-FROM ubuntu:bionic
+
+# HACK: We set the base image in the docker-compose file depending on the final target (buildkite vs github actions).
+# This means we have a much slower container build, but we can use the same Dockerfile for both targets.
+ARG BASE_IMAGE
+FROM $BASE_IMAGE AS builder-base
 
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y bash curl
+# populated in the docker-compose file
+ARG GCC_LATEST_VERSION
+ENV GCC_LATEST_VERSION=${GCC_LATEST_VERSION}
+
+# populated in the docker-compose file
+ARG LLVM_HEAD_VERSION
+ENV LLVM_HEAD_VERSION=${LLVM_HEAD_VERSION}
+
+# HACK: The github actions runner image already has sudo and requires its use. The buildkite base image does not.
+# Reconcile this.
+RUN <<EOF
+  apt-get update || true
+  apt-get install -y sudo || true
+  echo "ALL ALL = (ALL) NOPASSWD: ALL" | tee /etc/sudoers || true
+EOF
+
+# Installing tzdata before other packages avoids the time zone prompts.
+# These prompts seem to ignore DEBIAN_FRONTEND=noninteractive.
+RUN sudo apt-get update \
+    && sudo apt-get install -y \
+        tzdata
+
+RUN sudo apt-get update \
+    && sudo apt-get install -y \
+        bash \
+        ccache \
+        curl \
+        gdb \
+        git \
+        gpg \
+        language-pack-en \
+        language-pack-fr \
+        language-pack-ja \
+        language-pack-ru \
+        language-pack-zh-hans \
+        libedit-dev \
+        libncurses5-dev \
+        libpython3-dev \
+        libxml2-dev \
+        lsb-release \
+        make \
+        python3 \
+        python3-dev \
+        python3-distutils \
+        python3-psutil \
+        software-properties-common \
+        swig4.0 \
+        unzip \
+        uuid-dev \
+        wget \
+    && sudo rm -rf /var/lib/apt/lists/*
+
 
 # Install various tools used by the build or the test suite
-RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils git gdb
-RUN apt-get update && apt-get install -y libc6-dev-i386 # Required to cross-compile to 32 bits
+#RUN apt-get update && apt-get install -y ninja-build python3 python3-distutils python3-psutil git gdb ccache
+# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
+RUN <<EOF
+  wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
+  gunzip /tmp/ninja.gz
+  chmod a+x /tmp/ninja
+  sudo mv /tmp/ninja /usr/local/bin/ninja
+EOF
 
-# Install the most recently released LLVM
-RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
-RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
-RUN bash /tmp/llvm.sh
-RUN LLVM_VERSION=$(find /usr/bin -regex '^.+/clang-[0-9.]+$') && LLVM_VERSION=${LLVM_VERSION#*clang-} && echo "LLVM_VERSION=$LLVM_VERSION" > /tmp/env.sh
-RUN ln -s $(find /usr/bin -regex '^.+/clang\+\+-[0-9.]+$') /usr/bin/clang++ && [ -e $(readlink /usr/bin/clang++) ]
-RUN ln -s $(find /usr/bin -regex '^.+/clang-[0-9.]+$') /usr/bin/clang && [ -e $(readlink /usr/bin/clang) ]
 
-# Install the not-yet-released LLVM
-RUN . /tmp/env.sh && echo "LLVM_TOT_VERSION=$(($LLVM_VERSION + 1))" >> /tmp/env.sh
-RUN . /tmp/env.sh && bash /tmp/llvm.sh ${LLVM_TOT_VERSION}
-RUN . /tmp/env.sh && ln -s /usr/bin/clang++-${LLVM_TOT_VERSION} /usr/bin/clang++-tot && [ -e $(readlink /usr/bin/clang++-tot) ]
-RUN . /tmp/env.sh && ln -s /usr/bin/clang-${LLVM_TOT_VERSION} /usr/bin/clang-tot && [ -e $(readlink /usr/bin/clang-tot) ]
+# These two locales are not enabled by default so generate them
+RUN <<EOF
+  printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /etc/locale.gen
+  sudo mkdir /usr/local/share/i1en/
+  printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /usr/local/share/i1en/SUPPORTED
+  sudo locale-gen
+EOF
 
-# Install clang-format
-RUN . /tmp/env.sh && apt-get install -y clang-format-$LLVM_VERSION
-RUN ln -s $(find /usr/bin -regex '^.+/clang-format-[0-9.]+$') /usr/bin/clang-format && [ -e $(readlink /usr/bin/clang-format) ]
-RUN ln -s $(find /usr/bin -regex '^.+/git-clang-format-[0-9.]+$') /usr/bin/git-clang-format && [ -e $(readlink /usr/bin/git-clang-format) ]
+# Install Clang <latest>, <latest-1> and ToT, which are the ones we support.
+# We also install <latest-2> because we need to support the "latest-1" of the
+# current LLVM release branch, which is effectively the <latest-2> of the
+# tip-of-trunk LLVM. For example, after branching LLVM 14 but before branching
+# LLVM 15, we still need to have Clang 12 in this Docker image because the LLVM
+# 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
+# though.
+RUN <<EOF
+  sudo apt-get update
+  wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
+  chmod +x /tmp/llvm.sh
+  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 3)) all  # for CI transitions
+  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 2)) all  # previous release
+  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 1)) all  # latest release
+  sudo /tmp/llvm.sh $LLVM_HEAD_VERSION          all  # current ToT
+  sudo apt-get install -y libomp5-$LLVM_HEAD_VERSION
+  sudo rm -rf /var/lib/apt/lists/*
+EOF
 
-# Install a recent GCC
-RUN add-apt-repository ppa:ubuntu-toolchain-r/test
-RUN apt-get update && apt install -y gcc-10 g++-10 gcc-11 g++-11
-RUN ln -f -s /usr/bin/g++-10 /usr/bin/g++ && [ -e $(readlink /usr/bin/g++) ]
-RUN ln -f -s /usr/bin/gcc-10 /usr/bin/gcc && [ -e $(readlink /usr/bin/gcc) ]
+# Install the most recent GCC, like clang install the previous version as a transition.
+RUN <<EOF
+  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+  sudo apt-get update
+  sudo apt-get install -y \
+    gcc-$((GCC_LATEST_VERSION - 1)) \
+    g++-$((GCC_LATEST_VERSION - 1)) \
+    gcc-$GCC_LATEST_VERSION \
+    g++-$GCC_LATEST_VERSION
+  sudo rm -rf /var/lib/apt/lists/*
+EOF
 
-# Install a recent CMake
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2-Linux-x86_64.sh -O /tmp/install-cmake.sh
-RUN bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
-RUN rm /tmp/install-cmake.sh
+RUN <<EOF
+    # Install a recent CMake
+    wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
+    sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
+    rm /tmp/install-cmake.sh
+EOF
 
-# Change the user to a non-root user, since some of the libc++ tests
-# (e.g. filesystem) require running as non-root. Also setup passwordless sudo.
-RUN apt-get update && apt-get install -y sudo
-RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" >> /etc/sudoers
-RUN useradd --create-home libcxx-builder
+# ===----------------------------------------------------------------------===##
+#                       Android Buildkite Image
+# ===----------------------------------------------------------------------===##
+
+FROM ubuntu:jammy AS android-builder-base
+
+ARG ANDROID_CLANG_VERSION
+ARG ANDROID_CLANG_PREBUILTS_COMMIT
+ARG ANDROID_SYSROOT_BID
+
+RUN  apt-get update && apt-get install -y curl unzip git
+
+# Install the Android platform tools (e.g. adb) into /opt/android/sdk.
+RUN <<EOF
+  mkdir -p /opt/android/sdk
+  cd /opt/android/sdk
+  curl -LO https://dl.google.com/android/repository/platform-tools-latest-linux.zip
+  unzip platform-tools-latest-linux.zip
+  rm platform-tools-latest-linux.zip
+EOF
+
+# Install the current Android compiler. Specify the prebuilts commit to retrieve
+# this compiler version even after it's removed from HEAD.
+
+ENV ANDROID_CLANG_VERSION=$ANDROID_CLANG_VERSION
+ENV ANDROID_CLANG_PREBUILTS_COMMIT=$ANDROID_CLANG_PREBUILTS_COMMIT
+RUN <<EOF
+    git clone --filter=blob:none --sparse \
+        https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
+        /opt/android/clang
+    git -C /opt/android/clang checkout ${ANDROID_CLANG_PREBUILTS_COMMIT}
+    git -C /opt/android/clang sparse-checkout add clang-${ANDROID_CLANG_VERSION}
+    rm -fr /opt/android/clang/.git
+    ln -sf /opt/android/clang/clang-${ANDROID_CLANG_VERSION} /opt/android/clang/clang-current
+    # The "git sparse-checkout" and "ln" commands succeed even if nothing was
+    # checked out, so use this "ls" command to fix that.
+    ls /opt/android/clang/clang-current/bin/clang
+EOF
+
+# Install an Android sysroot. New AOSP sysroots are available at
+# https://ci.android.com/builds/branches/aosp-main/grid, the "ndk" target. The
+# NDK also makes its sysroot prebuilt available at
+# https://android.googlesource.com/platform/prebuilts/ndk/+/refs/heads/dev/platform/sysroot.
+
+ENV ANDROID_SYSROOT_BID=$ANDROID_SYSROOT_BID
+RUN <<EOF
+  cd /opt/android
+  curl -L -o ndk_platform.tar.bz2 \
+      https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${ANDROID_SYSROOT_BID}/ndk/attempts/latest/artifacts/ndk_platform.tar.bz2/url
+  tar xf ndk_platform.tar.bz2
+  rm ndk_platform.tar.bz2
+EOF
+
+# Install Docker
+RUN <<EOF
+  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  sh /tmp/get-docker.sh
+  rm /tmp/get-docker.sh
+
+  # Install Docker. Mark the binary setuid so it can be run without prefixing it
+  # with sudo. Adding the container user to the docker group doesn't work because
+  # /var/run/docker.sock is owned by the host's docker GID, not the container's
+  # docker GID.
+  chmod u+s /usr/bin/docker
+EOF
+
+# ===----------------------------------------------------------------------===##
+#                    Buildkite Builder Image
+# ===----------------------------------------------------------------------===##
+#
+# IMAGE: ghcr.io/libcxx/buildkite-builder.
+#
+FROM builder-base AS buildkite-builder
+
+# Create the libcxx-builder user, regardless of if we use it or not
+RUN sudo useradd --create-home libcxx-builder
+
 USER libcxx-builder
 WORKDIR /home/libcxx-builder
 
 # Install the Buildkite agent and dependencies. This must be done as non-root
 # for the Buildkite agent to be installed in a path where we can find it.
-RUN bash -c "$(curl -sL https://raw.githubusercontent.com/buildkite/agent/master/install.sh)"
+RUN <<EOF
+  cd /home/libcxx-builder
+  curl -sL https://raw.githubusercontent.com/buildkite/agent/main/install.sh -o /tmp/install-agent.sh
+  bash /tmp/install-agent.sh
+  rm /tmp/install-agent.sh
+  echo "tags=\"queue=libcxx-builders,arch=$(uname -m),os=linux\"" \
+    >> /home/libcxx-builder/.buildkite-agent/buildkite-agent.cfg
+EOF
+
+USER libcxx-builder
+WORKDIR /home/libcxx-builder
+
 ENV PATH="${PATH}:/home/libcxx-builder/.buildkite-agent/bin"
 
-# By default, start the Buildkite agent (this requires a token).
-CMD buildkite-agent start --tags "queue=libcxx-builders"
+CMD ["buildkite-agent", "start"]
+
+# ===----------------------------------------------------------------------===##
+#                    Android Buildkite Builder Image
+# ===----------------------------------------------------------------------===##
+#
+# IMAGE: ghcr.io/libcxx/android-buildkite-builder.
+#
+FROM buildkite-builder AS android-buildkite-builder
+
+COPY --from=android-builder-base /opt/android /opt/android
+COPY ./vendor/android/container-setup.sh /opt/android/container-setup.sh
+
+ENV PATH="/opt/android/sdk/platform-tools:${PATH}"
+
+USER libcxx-builder
+WORKDIR /home/libcxx-builder
+
+# Reset the configuration, we pass the configuration via the environment.
+RUN cp /home/libcxx-builder/.buildkite-agent/buildkite-agent.dist.cfg \
+       /home/libcxx-builder/.buildkite-agent/buildkite-agent.cfg
+
+# Modify the Buildkite agent cmdline to do Android setup stuff first.
+CMD /opt/android/container-setup.sh && buildkite-agent start
+
+# ===----------------------------------------------------------------------===##
+#                    Github Actions Builder Image
+# ===----------------------------------------------------------------------===##
+#
+# IMAGE: ghcr.io/libcxx/actions-builder.
+#
+FROM builder-base AS actions-builder
+
+# Install 'act' for running github actions locally. This provides an alternative to the run-buildbot script
+# while still providing reproducability.
+RUN curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+
+WORKDIR /home/runner
+USER runner
+
+
+

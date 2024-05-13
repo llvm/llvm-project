@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefix=SI --check-prefix=CHECK %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
-; RUN: llc -march=amdgcn -verify-machineinstrs -mattr=+load-store-opt,+unsafe-ds-offset-folding < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefix=SI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs -mattr=+load-store-opt,+unsafe-ds-offset-folding < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare void @llvm.amdgcn.s.barrier() #1
@@ -23,7 +23,7 @@ declare void @llvm.amdgcn.s.barrier() #1
 ; CI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDR]] offset0:32 offset1:34
 ; CI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR]] offset:256
 ; CHECK: s_endpgm
-define amdgpu_kernel void @signed_ds_offset_addressing_loop(float addrspace(1)* noalias nocapture %out, float addrspace(3)* noalias nocapture readonly %lptr, i32 %n) #2 {
+define amdgpu_kernel void @signed_ds_offset_addressing_loop(ptr addrspace(1) noalias nocapture %out, ptr addrspace(3) noalias nocapture readonly %lptr, i32 %n) #2 {
 entry:
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %mul = shl nsw i32 %x.i, 1
@@ -34,20 +34,20 @@ for.body:                                         ; preds = %for.body, %entry
   %offset.02 = phi i32 [ %mul, %entry ], [ %add14, %for.body ]
   %k.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   tail call void @llvm.amdgcn.s.barrier() #1
-  %arrayidx = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %offset.02
-  %tmp = load float, float addrspace(3)* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr addrspace(3) %lptr, i32 %offset.02
+  %tmp = load float, ptr addrspace(3) %arrayidx, align 4
   %add1 = add nsw i32 %offset.02, 2
-  %arrayidx2 = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %add1
-  %tmp1 = load float, float addrspace(3)* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr addrspace(3) %lptr, i32 %add1
+  %tmp1 = load float, ptr addrspace(3) %arrayidx2, align 4
   %add3 = add nsw i32 %offset.02, 32
-  %arrayidx4 = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %add3
-  %tmp2 = load float, float addrspace(3)* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr addrspace(3) %lptr, i32 %add3
+  %tmp2 = load float, ptr addrspace(3) %arrayidx4, align 4
   %add5 = add nsw i32 %offset.02, 34
-  %arrayidx6 = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %add5
-  %tmp3 = load float, float addrspace(3)* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds float, ptr addrspace(3) %lptr, i32 %add5
+  %tmp3 = load float, ptr addrspace(3) %arrayidx6, align 4
   %add7 = add nsw i32 %offset.02, 64
-  %arrayidx8 = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %add7
-  %tmp4 = load float, float addrspace(3)* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds float, ptr addrspace(3) %lptr, i32 %add7
+  %tmp4 = load float, ptr addrspace(3) %arrayidx8, align 4
   %add9 = fadd float %tmp, %tmp1
   %add10 = fadd float %add9, %tmp2
   %add11 = fadd float %add10, %tmp3
@@ -60,8 +60,8 @@ for.body:                                         ; preds = %for.body, %entry
 
 for.end:                                          ; preds = %for.body
   %tmp5 = sext i32 %x.i to i64
-  %arrayidx15 = getelementptr inbounds float, float addrspace(1)* %out, i64 %tmp5
-  store float %add13, float addrspace(1)* %arrayidx15, align 4
+  %arrayidx15 = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tmp5
+  store float %add13, ptr addrspace(1) %arrayidx15, align 4
   ret void
 }
 

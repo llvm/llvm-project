@@ -26,11 +26,9 @@ define i8 @test_big_stack_frame() {
 ; CHECK-MOVW-MOVT-ADD:       add sp, [[REG1]]
 ; CHECK-MOVW-MOVT-ADD-NOT:   ldr {{r[0-9]+}}, .{{.*}}
 ; CHECK-MOVW-MOVT-ADD:       movw [[REG2:r[0-9]+]], #65532
-; CHECK-MOVW-MOVT-ADD:       movt [[REG2]], #0
 ; CHECK-MOVW-MOVT-ADD:       add [[REG2]], sp
 ; CHECK-MOVW-MOVT-ADD-NOT:   ldr {{r[0-9]+}}, .{{.*}}
 ; CHECK-MOVW-MOVT-ADD:       movw [[REG3:r[0-9]+]], #65532
-; CHECK-MOVW-MOVT-ADD:       movt [[REG3]], #0
 ; CHECK-MOVW-MOVT-ADD:       add [[REG3]], sp
 ; CHECK-MOVW-MOVT-ADD-NOT:   ldr {{r[0-9]+}}, .{{.*}}
 ; CHECK-MOVW-MOVT-ADD:       movw [[REG4:r[0-9]+]], #0
@@ -40,9 +38,9 @@ define i8 @test_big_stack_frame() {
 entry:
   %s1 = alloca i8
   %buffer = alloca [65528 x i8], align 1
-  call void @foo(i8* %s1)
-  %load = load i8, i8* %s1
+  call void @foo(ptr %s1)
+  %load = load i8, ptr %s1
   ret i8 %load
 }
 
-declare void @foo(i8*)
+declare void @foo(ptr)

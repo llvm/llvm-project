@@ -9,16 +9,16 @@ declare i8 @llvm.cttz.i8(i8, i1)
 define i128 @func128(i128 %p) {
 ; CHECK-LABEL: func128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmps.l %s2, %s0, (0)1
-; CHECK-NEXT:    lea %s3, -1(, %s0)
-; CHECK-NEXT:    nnd %s0, %s0, %s3
-; CHECK-NEXT:    pcnt %s3, %s0
-; CHECK-NEXT:    lea %s0, -1(, %s1)
-; CHECK-NEXT:    nnd %s0, %s1, %s0
-; CHECK-NEXT:    pcnt %s0, %s0
-; CHECK-NEXT:    lea %s0, 64(, %s0)
-; CHECK-NEXT:    cmov.l.ne %s0, %s3, %s2
+; CHECK-NEXT:    lea %s2, -1(, %s0)
+; CHECK-NEXT:    nnd %s2, %s0, %s2
+; CHECK-NEXT:    pcnt %s3, %s2
+; CHECK-NEXT:    lea %s2, -1(, %s1)
+; CHECK-NEXT:    nnd %s1, %s1, %s2
+; CHECK-NEXT:    pcnt %s1, %s1
+; CHECK-NEXT:    lea %s2, 64(, %s1)
+; CHECK-NEXT:    cmov.l.ne %s2, %s3, %s0
 ; CHECK-NEXT:    or %s1, 0, (0)1
+; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i128 @llvm.cttz.i128(i128 %p, i1 true)
   ret i128 %r
@@ -64,7 +64,7 @@ define signext i16 @func16s(i16 signext %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.w.sx %s1, -1, %s0
 ; CHECK-NEXT:    nnd %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i16 @llvm.cttz.i16(i16 %p, i1 true)
@@ -76,7 +76,7 @@ define zeroext i16 @func16z(i16 zeroext %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.w.sx %s1, -1, %s0
 ; CHECK-NEXT:    nnd %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i16 @llvm.cttz.i16(i16 %p, i1 true)
@@ -88,7 +88,7 @@ define signext i8 @func8s(i8 signext %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.w.sx %s1, -1, %s0
 ; CHECK-NEXT:    nnd %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i8 @llvm.cttz.i8(i8 %p, i1 true)
@@ -100,7 +100,7 @@ define zeroext i8 @func8z(i8 zeroext %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.w.sx %s1, -1, %s0
 ; CHECK-NEXT:    nnd %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i8 @llvm.cttz.i8(i8 %p, i1 true)

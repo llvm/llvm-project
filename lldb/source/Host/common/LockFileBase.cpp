@@ -11,12 +11,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
+static Status AlreadyLocked() { return Status("Already locked"); }
 
-Status AlreadyLocked() { return Status("Already locked"); }
-
-Status NotLocked() { return Status("Not locked"); }
-}
+static Status NotLocked() { return Status("Not locked"); }
 
 LockFileBase::LockFileBase(int fd)
     : m_fd(fd), m_locked(false), m_start(0), m_len(0) {}

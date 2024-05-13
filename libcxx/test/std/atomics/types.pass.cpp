@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-threads
-
 // <atomic>
 
 // Test nested types
@@ -16,19 +14,18 @@
 // class atomic
 // {
 // public:
-//     typedef T                                        value_type;
+//     typedef T value_type;
 // };
 
 #include <atomic>
-#include <type_traits>
-
-#include <thread>
 #include <chrono>
+#include <memory>
+#include <type_traits>
 
 #include "test_macros.h"
 
-#if TEST_STD_VER >= 20
-# include <memory>
+#ifndef TEST_HAS_NO_THREADS
+#  include <thread>
 #endif
 
 template <class A, bool Integral>
@@ -64,7 +61,7 @@ struct test_atomic<A*, false>
         A a; (void)a;
 #if TEST_STD_VER >= 17
     static_assert((std::is_same_v<typename A::value_type, decltype(a.load())>), "");
-    static_assert((std::is_same_v<typename A::difference_type, ptrdiff_t>), "");
+    static_assert((std::is_same_v<typename A::difference_type, std::ptrdiff_t>), "");
 #endif
     }
 };
@@ -118,44 +115,46 @@ int main(int, char**)
 #endif
     test<char16_t>           ();
     test<char32_t>           ();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>            ();
+#endif
 
-    test<int_least8_t>   ();
-    test<uint_least8_t>  ();
-    test<int_least16_t>  ();
-    test<uint_least16_t> ();
-    test<int_least32_t>  ();
-    test<uint_least32_t> ();
-    test<int_least64_t>  ();
-    test<uint_least64_t> ();
+    test<std::int_least8_t>   ();
+    test<std::uint_least8_t>  ();
+    test<std::int_least16_t>  ();
+    test<std::uint_least16_t> ();
+    test<std::int_least32_t>  ();
+    test<std::uint_least32_t> ();
+    test<std::int_least64_t>  ();
+    test<std::uint_least64_t> ();
 
-    test<int_fast8_t>   ();
-    test<uint_fast8_t>  ();
-    test<int_fast16_t>  ();
-    test<uint_fast16_t> ();
-    test<int_fast32_t>  ();
-    test<uint_fast32_t> ();
-    test<int_fast64_t>  ();
-    test<uint_fast64_t> ();
+    test<std::int_fast8_t>   ();
+    test<std::uint_fast8_t>  ();
+    test<std::int_fast16_t>  ();
+    test<std::uint_fast16_t> ();
+    test<std::int_fast32_t>  ();
+    test<std::uint_fast32_t> ();
+    test<std::int_fast64_t>  ();
+    test<std::uint_fast64_t> ();
 
-    test< int8_t>  ();
-    test<uint8_t>  ();
-    test< int16_t> ();
-    test<uint16_t> ();
-    test< int32_t> ();
-    test<uint32_t> ();
-    test< int64_t> ();
-    test<uint64_t> ();
+    test< std::int8_t>  ();
+    test<std::uint8_t>  ();
+    test< std::int16_t> ();
+    test<std::uint16_t> ();
+    test< std::int32_t> ();
+    test<std::uint32_t> ();
+    test< std::int64_t> ();
+    test<std::uint64_t> ();
 
-    test<intptr_t>  ();
-    test<uintptr_t> ();
-    test<size_t>    ();
-    test<ptrdiff_t> ();
-    test<intmax_t>  ();
-    test<uintmax_t> ();
+    test<std::intptr_t>  ();
+    test<std::uintptr_t> ();
+    test<std::size_t>    ();
+    test<std::ptrdiff_t> ();
+    test<std::intmax_t>  ();
+    test<std::uintmax_t> ();
 
-    test<uintmax_t> ();
-    test<uintmax_t> ();
+    test<std::uintmax_t> ();
+    test<std::uintmax_t> ();
 
     test<TriviallyCopyable>();
     test<PaddedTriviallyCopyable>();
@@ -168,13 +167,20 @@ int main(int, char**)
     test<LargeTriviallyCopyable>();
 #endif
 
+#ifndef TEST_HAS_NO_THREADS
     test<std::thread::id>();
+#endif
     test<std::chrono::nanoseconds>();
     test<float>();
 
 #if TEST_STD_VER >= 20
     test<std::atomic_signed_lock_free::value_type>();
+    static_assert(std::is_signed_v<std::atomic_signed_lock_free::value_type>);
+    static_assert(std::is_integral_v<std::atomic_signed_lock_free::value_type>);
+
     test<std::atomic_unsigned_lock_free::value_type>();
+    static_assert(std::is_unsigned_v<std::atomic_unsigned_lock_free::value_type>);
+    static_assert(std::is_integral_v<std::atomic_unsigned_lock_free::value_type>);
 /*
     test<std::shared_ptr<int>>();
 */

@@ -1,7 +1,7 @@
 // Test that correct vtable ptr and type metadata are passed to llvm.type.test
 // Related to Bugzilla 43390.
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility hidden -std=c++11 -fsanitize=cfi-nvcall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility=hidden -std=c++11 -fsanitize=cfi-nvcall -emit-llvm -o - %s | FileCheck %s
 
 class A1 {
 public:
@@ -20,12 +20,11 @@ public:
     int f1() final { return 2; }
 };
 
-// CHECK-LABEL: define hidden i32 @_Z3foov
+// CHECK-LABEL: define hidden noundef i32 @_Z3foov
 int foo() {
     B b;
     return static_cast<A2*>(&b)->f2();
-    // CHECK: [[P:%[^ ]*]] = bitcast %class.B* %b to i8**
-    // CHECK: [[V:%[^ ]*]] = load i8*, i8** [[P]], align 8
-    // CHECK: call i1 @llvm.type.test(i8* [[V]], metadata !"_ZTS1B")
-    // CHECK: call i1 @llvm.type.test(i8* [[V]], metadata !"all-vtables")
+    // CHECK: [[V:%[^ ]*]] = load ptr, ptr %b, align 8
+    // CHECK: call i1 @llvm.type.test(ptr [[V]], metadata !"_ZTS1B")
+    // CHECK: call i1 @llvm.type.test(ptr [[V]], metadata !"all-vtables")
 }

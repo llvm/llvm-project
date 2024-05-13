@@ -1,4 +1,3 @@
-; RUN: opt < %s -add-discriminators -S | FileCheck %s
 ; RUN: opt < %s -passes=add-discriminators -S | FileCheck %s
 
 ; We should not generate discriminators for DWARF versions prior to 4.
@@ -17,25 +16,25 @@ define i32 @foo(i64 %i) #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
   %i.addr = alloca i64, align 8
-  store i64 %i, i64* %i.addr, align 8
-  call void @llvm.dbg.declare(metadata i64* %i.addr, metadata !13, metadata !DIExpression()), !dbg !14
-  %0 = load i64, i64* %i.addr, align 8, !dbg !15
-; CHECK:  %0 = load i64, i64* %i.addr, align 8, !dbg ![[ENTRY:[0-9]+]]
+  store i64 %i, ptr %i.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !13, metadata !DIExpression()), !dbg !14
+  %0 = load i64, ptr %i.addr, align 8, !dbg !15
+; CHECK:  %0 = load i64, ptr %i.addr, align 8, !dbg ![[ENTRY:[0-9]+]]
   %cmp = icmp slt i64 %0, 5, !dbg !15
 ; CHECK:  %cmp = icmp slt i64 %0, 5, !dbg ![[ENTRY:[0-9]+]]
   br i1 %cmp, label %if.then, label %if.else, !dbg !15
 ; CHECK:  br i1 %cmp, label %if.then, label %if.else, !dbg ![[ENTRY:[0-9]+]]
 
 if.then:                                          ; preds = %entry
-  store i32 2, i32* %retval, !dbg !15
+  store i32 2, ptr %retval, !dbg !15
   br label %return, !dbg !15
 
 if.else:                                          ; preds = %entry
-  store i32 90, i32* %retval, !dbg !15
+  store i32 90, ptr %retval, !dbg !15
   br label %return, !dbg !15
 
 return:                                           ; preds = %if.else, %if.then
-  %1 = load i32, i32* %retval, !dbg !17
+  %1 = load i32, ptr %retval, !dbg !17
   ret i32 %1, !dbg !17
 }
 

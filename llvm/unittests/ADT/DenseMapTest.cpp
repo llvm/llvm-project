@@ -7,9 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
+#include "llvm/ADT/StringRef.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
 #include <set>
+#include <utility>
+#include <variant>
 
 using namespace llvm;
 
@@ -118,6 +124,7 @@ TYPED_TEST(DenseMapTest, EmptyIntMapTest) {
 
   // Lookup tests
   EXPECT_FALSE(this->Map.count(this->getKey()));
+  EXPECT_FALSE(this->Map.contains(this->getKey()));
   EXPECT_TRUE(this->Map.find(this->getKey()) == this->Map.end());
   EXPECT_EQ(typename TypeParam::mapped_type(),
             this->Map.lookup(this->getKey()));
@@ -149,9 +156,19 @@ TYPED_TEST(DenseMapTest, SingleEntryMapTest) {
 
   // Lookup tests
   EXPECT_TRUE(this->Map.count(this->getKey()));
+  EXPECT_TRUE(this->Map.contains(this->getKey()));
   EXPECT_TRUE(this->Map.find(this->getKey()) == this->Map.begin());
   EXPECT_EQ(this->getValue(), this->Map.lookup(this->getKey()));
   EXPECT_EQ(this->getValue(), this->Map[this->getKey()]);
+}
+
+TYPED_TEST(DenseMapTest, AtTest) {
+  this->Map[this->getKey(0)] = this->getValue(0);
+  this->Map[this->getKey(1)] = this->getValue(1);
+  this->Map[this->getKey(2)] = this->getValue(2);
+  EXPECT_EQ(this->getValue(0), this->Map.at(this->getKey(0)));
+  EXPECT_EQ(this->getValue(1), this->Map.at(this->getKey(1)));
+  EXPECT_EQ(this->getValue(2), this->Map.at(this->getKey(2)));
 }
 
 // Test clear() method
@@ -442,6 +459,7 @@ TEST(DenseMapCustomTest, InitFromIterator) {
   std::vector<std::pair<int, CountCopyAndMove>> Values;
   // The size is a random value greater than 64 (hardcoded DenseMap min init)
   const int Count = 65;
+  Values.reserve(Count);
   for (int i = 0; i < Count; i++)
     Values.emplace_back(i, CountCopyAndMove());
 
@@ -547,6 +565,15 @@ TEST(DenseMapCustomTest, FindAsTest) {
   EXPECT_TRUE(map.find_as("d") == map.end());
 }
 
+TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {
+  SmallDenseMap<int, int> M = {{0, 0}, {0, 1}, {1, 2}};
+  EXPECT_EQ(2u, M.size());
+  EXPECT_EQ(1u, M.count(0));
+  EXPECT_EQ(0, M[0]);
+  EXPECT_EQ(1u, M.count(1));
+  EXPECT_EQ(2, M[1]);
+}
+
 struct ContiguousDenseMapInfo {
   static inline unsigned getEmptyKey() { return ~0; }
   static inline unsigned getTombstoneKey() { return ~0U - 1; }
@@ -598,6 +625,15 @@ TEST(DenseMapCustomTest, LargeSmallDenseMapCompaction) {
   EXPECT_TRUE(map.find(0) == map.end());
 }
 
+TEST(DenseMapCustomTest, SmallDenseMapWithNumBucketsNonPowerOf2) {
+  // Is not power of 2.
+  const unsigned NumInitBuckets = 33;
+  // Power of 2 less then NumInitBuckets.
+  constexpr unsigned InlineBuckets = 4;
+  // Constructor should not trigger assert.
+  SmallDenseMap<int, int, InlineBuckets> map(NumInitBuckets);
+}
+
 TEST(DenseMapCustomTest, TryEmplaceTest) {
   DenseMap<int, std::unique_ptr<int>> Map;
   std::unique_ptr<int> P(new int(2));
@@ -646,4 +682,87 @@ TEST(DenseMapCustomTest, OpaquePointerKey) {
   EXPECT_EQ(Map.find(K2), Map.end());
   EXPECT_EQ(Map.find(K3), Map.end());
 }
+} // namespace
+
+namespace {
+struct A {
+  A(int value) : value(value) {}
+  int value;
+};
+struct B : public A {
+  using A::A;
+};
+
+struct AlwaysEqType {
+  bool operator==(const AlwaysEqType &RHS) const { return true; }
+};
+} // namespace
+
+namespace llvm {
+template <typename T>
+struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
+  static inline T getEmptyKey() { return {static_cast<int>(~0)}; }
+  static inline T getTombstoneKey() { return {static_cast<int>(~0U - 1)}; }
+  static unsigned getHashValue(const T &Val) { return Val.value; }
+  static bool isEqual(const T &LHS, const T &RHS) {
+    return LHS.value == RHS.value;
+  }
+};
+
+template <> struct DenseMapInfo<AlwaysEqType> {
+  using T = AlwaysEqType;
+  static inline T getEmptyKey() { return {}; }
+  static inline T getTombstoneKey() { return {}; }
+  static unsigned getHashValue(const T &Val) { return 0; }
+  static bool isEqual(const T &LHS, const T &RHS) {
+    return false;
+  }
+};
+} // namespace llvm
+
+namespace {
+TEST(DenseMapCustomTest, SFINAEMapInfo) {
+  // Test that we can use a pointer to an incomplete type as a DenseMap key.
+  // This is an important build time optimization, since many classes have
+  // DenseMap members.
+  DenseMap<B, int> Map;
+  B Keys[3] = {{0}, {1}, {2}};
+  Map.insert({Keys[0], 1});
+  Map.insert({Keys[1], 2});
+  Map.insert({Keys[2], 3});
+  EXPECT_EQ(Map.count(Keys[0]), 1u);
+  EXPECT_EQ(Map[Keys[0]], 1);
+  EXPECT_EQ(Map[Keys[1]], 2);
+  EXPECT_EQ(Map[Keys[2]], 3);
+  Map.clear();
+  EXPECT_EQ(Map.find(Keys[0]), Map.end());
+  EXPECT_EQ(Map.find(Keys[1]), Map.end());
+  EXPECT_EQ(Map.find(Keys[2]), Map.end());
 }
+
+TEST(DenseMapCustomTest, VariantSupport) {
+  using variant = std::variant<int, int, AlwaysEqType>;
+  DenseMap<variant, int> Map;
+  variant Keys[] = {
+      variant(std::in_place_index<0>, 1),
+      variant(std::in_place_index<1>, 1),
+      variant(std::in_place_index<2>),
+  };
+  Map.try_emplace(Keys[0], 0);
+  Map.try_emplace(Keys[1], 1);
+  EXPECT_THAT(Map, testing::SizeIs(2));
+  EXPECT_NE(DenseMapInfo<variant>::getHashValue(Keys[0]),
+            DenseMapInfo<variant>::getHashValue(Keys[1]));
+  // Check that isEqual dispatches to isEqual of underlying type, and not to
+  // operator==.
+  EXPECT_FALSE(DenseMapInfo<variant>::isEqual(Keys[2], Keys[2]));
+}
+
+// Test that gTest prints map entries as pairs instead of opaque objects.
+// See third-party/unittest/googletest/internal/custom/gtest-printers.h
+TEST(DenseMapCustomTest, PairPrinting) {
+  DenseMap<int, StringRef> Map = {{1, "one"}, {2, "two"}};
+  EXPECT_EQ(R"({ (1, "one"), (2, "two") })", ::testing::PrintToString(Map));
+}
+
+} // namespace

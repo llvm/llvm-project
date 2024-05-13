@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 -S < %s 2>&1 | FileCheck %s
-; RUN: opt -indvars -S < %s 2>&1 | FileCheck %s -check-prefix=INDVARCHECK
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=indvars -S < %s 2>&1 | FileCheck %s -check-prefix=INDVARCHECK
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -30,7 +30,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Verify that a 'udiv' does not appear in the 'loop1.preheader' block, and that
 ; a 'udiv' has been inserted at the top of the 'while.body.preheader' block.
-define void @testCountIncrLoop(i8* %ptr, i32 %lim, i32 %count, i32 %val) {
+define void @testCountIncrLoop(ptr %ptr, i32 %lim, i32 %count, i32 %val) mustprogress {
 ; CHECK-LABEL: @testCountIncrLoop(
 ; CHECK-NEXT:  entry:
 ; CHECK:       loop1.preheader:
@@ -74,8 +74,8 @@ while.end:                                        ; preds = %while.body, %while.
   %conv = trunc i32 %result.0.lcssa to i8
   %inc = add nsw i32 %inx.1, 1
   %idxprom = sext i32 %inx.1 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %ptr, i64 %idxprom
-  store i8 %conv, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %ptr, i64 %idxprom
+  store i8 %conv, ptr %arrayidx, align 1
   br label %loop1.inc
 
 loop1.inc:                                        ; preds = %while.end, %loop1.body
@@ -114,7 +114,7 @@ exit:                                             ; preds = %loop1.inc, %entry
 ; division from the inner loop to the preheader.
 ;
 ; Verify that the 'udiv' is hoisted to the preheader, and is not in the loop body.
-define i32 @NonZeroDivHoist(i32* nocapture readonly %ptr, i32 %start1, i32 %start2) {
+define i32 @NonZeroDivHoist(ptr nocapture readonly %ptr, i32 %start1, i32 %start2) {
 ; INDVARCHECK-LABEL: @NonZeroDivHoist(
 ; INDVARCHECK-NEXT:  entry:
 ; INDVARCHECK:       for.body3.lr.ph:
@@ -134,7 +134,7 @@ for.cond:                                         ; preds = %for.end, %entry
   br i1 %cmp, label %for.body, label %for.end10
 
 for.body:                                         ; preds = %for.cond
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %add = add i32 %tmp, %val.0
   %cmp224 = icmp ult i32 %start2, 10
   br i1 %cmp224, label %for.body3.lr.ph, label %for.end
@@ -149,8 +149,8 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %div = udiv i32 16, %counter1.0
   %add4 = add i32 %div, %index.027
   %idxprom5 = zext i32 %add4 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom5
-  %tmp1 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom5
+  %tmp1 = load i32, ptr %arrayidx6, align 4
   %add7 = add i32 %tmp1, %val.126
   %inc = add i32 %counter2.025, 1
   %cmp2 = icmp ult i32 %inc, 10
@@ -177,7 +177,7 @@ for.end10:                                        ; preds = %for.cond
 ;
 ; Verify that the 'udiv' is not hoisted to the preheader, and it remains in the
 ; loop body.
-define i32 @ZeroDivNoHoist(i32* nocapture readonly %ptr, i32 %start1, i32 %start2) {
+define i32 @ZeroDivNoHoist(ptr nocapture readonly %ptr, i32 %start1, i32 %start2) {
 ; INDVARCHECK-LABEL: @ZeroDivNoHoist(
 ; INDVARCHECK-NEXT:  entry:
 ; INDVARCHECK-NOT:     udiv
@@ -195,7 +195,7 @@ for.cond:                                         ; preds = %for.end, %entry
   br i1 %cmp, label %for.body, label %for.end10
 
 for.body:                                         ; preds = %for.cond
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %add = add i32 %tmp, %val.0
   %cmp224 = icmp ult i32 %start2, 10
   br i1 %cmp224, label %for.body3.lr.ph, label %for.end
@@ -210,8 +210,8 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %div = udiv i32 16, %counter1.0
   %add4 = add i32 %div, %index.027
   %idxprom5 = zext i32 %add4 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom5
-  %tmp1 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom5
+  %tmp1 = load i32, ptr %arrayidx6, align 4
   %add7 = add i32 %tmp1, %val.126
   %inc = add i32 %counter2.025, 1
   %cmp2 = icmp ult i32 %inc, 10
@@ -237,7 +237,7 @@ for.end10:                                        ; preds = %for.cond
 ;
 ; Verify that the division-operation is hoisted, and that it appears as a
 ; right-shift ('lshr') rather than an explicit division.
-define i32 @DivBy16Hoist(i32* nocapture readonly %ptr, i32 %start1, i32 %start2) {
+define i32 @DivBy16Hoist(ptr nocapture readonly %ptr, i32 %start1, i32 %start2) {
 ; INDVARCHECK-LABEL: @DivBy16Hoist(
 ; INDVARCHECK-NEXT:  entry:
 ; INDVARCHECK:       for.cond:
@@ -257,7 +257,7 @@ for.cond:                                         ; preds = %for.end, %entry
   br i1 %cmp, label %for.body, label %for.end10
 
 for.body:                                         ; preds = %for.cond
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %add = add i32 %tmp, %val.0
   %cmp224 = icmp ult i32 %start2, 10
   br i1 %cmp224, label %for.body3.lr.ph, label %for.end
@@ -272,8 +272,8 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %div = udiv i32 %counter1.0, 16
   %add4 = add i32 %div, %index.027
   %idxprom5 = zext i32 %add4 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom5
-  %tmp1 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom5
+  %tmp1 = load i32, ptr %arrayidx6, align 4
   %add7 = add i32 %tmp1, %val.126
   %inc = add i32 %counter2.025, 1
   %cmp2 = icmp ult i32 %inc, 10
@@ -298,7 +298,7 @@ for.end10:                                        ; preds = %for.cond
 ; it remains a division, rather than being transformed to a right-shift.
 ;
 ; Verify that the division-operation is hoisted.
-define i32 @DivBy17Hoist(i32* nocapture readonly %ptr, i32 %start1, i32 %start2) {
+define i32 @DivBy17Hoist(ptr nocapture readonly %ptr, i32 %start1, i32 %start2) {
 ; INDVARCHECK-LABEL: @DivBy17Hoist(
 ; INDVARCHECK-NEXT:  entry:
 ; INDVARCHECK:       for.cond:
@@ -317,7 +317,7 @@ for.cond:                                         ; preds = %for.end, %entry
   br i1 %cmp, label %for.body, label %for.end10
 
 for.body:                                         ; preds = %for.cond
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %add = add i32 %tmp, %val.0
   %cmp224 = icmp ult i32 %start2, 10
   br i1 %cmp224, label %for.body3.lr.ph, label %for.end
@@ -332,8 +332,8 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %div = udiv i32 %counter1.0, 17
   %add4 = add i32 %div, %index.027
   %idxprom5 = zext i32 %add4 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom5
-  %tmp1 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom5
+  %tmp1 = load i32, ptr %arrayidx6, align 4
   %add7 = add i32 %tmp1, %val.126
   %inc = add i32 %counter2.025, 1
   %cmp2 = icmp ult i32 %inc, 10

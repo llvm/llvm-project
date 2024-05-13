@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-dependences -polly-dependences-analysis-level=reference-wise -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-dependences -polly-dependences-analysis-level=access-wise -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-dependences -polly-dependences-analysis-level=reference-wise -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-dependences -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     {  }
@@ -18,7 +18,7 @@
 ; }
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @f(i32* %sum) {
+define void @f(ptr %sum) {
 entry:
   br label %for.cond
 
@@ -39,10 +39,10 @@ for.body3:                                        ; preds = %for.cond1
   %mul = mul nsw i32 %j.0, %i.0
   %mul4 = shl nsw i32 %j.0, 1
   %add = add nsw i32 %i.0, %mul4
-  %arrayidx = getelementptr inbounds i32, i32* %sum, i32 %add
-  %tmp = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %sum, i32 %add
+  %tmp = load i32, ptr %arrayidx, align 4
   %add5 = add nsw i32 %tmp, %mul
-  store i32 %add5, i32* %arrayidx, align 4
+  store i32 %add5, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -ast-print %s -o - | FileCheck %s
-// RUN: %clang_cc1 -DMS_EXT -fsyntax-only -fms-extensions %s -triple x86_64-pc-win32 -ast-print | FileCheck %s --check-prefix=MS-EXT
+// RUN: %clang_cc1 -DMS_EXT -fms-extensions %s -triple x86_64-pc-win32 -ast-print | FileCheck %s --check-prefix=MS-EXT
 
 // CHECK: #pragma clang loop vectorize_width(4)
 // CHECK-NEXT: #pragma clang loop interleave_count(8){{$}}
@@ -93,7 +93,7 @@ void test_templates(int *List, int Length) {
 #ifdef MS_EXT
 #pragma init_seg(compiler)
 // MS-EXT: #pragma init_seg (.CRT$XCC){{$}}
-// MS-EXT-NEXT: int x = 3 __declspec(thread);
-int __declspec(thread) x = 3;
+// MS-EXT-NEXT: __declspec(thread) int x = 3;
+__declspec(thread) int x = 3;
 #endif //MS_EXT
 

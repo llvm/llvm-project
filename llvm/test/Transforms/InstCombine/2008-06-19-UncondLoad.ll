@@ -1,16 +1,16 @@
-; RUN: opt < %s -instcombine -S | grep load | count 3
+; RUN: opt < %s -passes=instcombine -S | grep load | count 3
 ; PR2471
 
-declare i32 @x(i32*)
-define i32 @b(i32* %a, i32* %b) {
+declare i32 @x(ptr)
+define i32 @b(ptr %a, ptr %b) {
 entry:
-        %tmp1 = load i32, i32* %a            
-        %tmp3 = load i32, i32* %b           
+        %tmp1 = load i32, ptr %a            
+        %tmp3 = load i32, ptr %b           
         %add = add i32 %tmp1, %tmp3   
-        %call = call i32 @x( i32* %a )
+        %call = call i32 @x( ptr %a )
         %tobool = icmp ne i32 %add, 0
 	; not safe to turn into an uncond load
-        %cond = select i1 %tobool, i32* %b, i32* %a             
-        %tmp8 = load i32, i32* %cond       
+        %cond = select i1 %tobool, ptr %b, ptr %a             
+        %tmp8 = load i32, ptr %cond       
         ret i32 %tmp8
 }

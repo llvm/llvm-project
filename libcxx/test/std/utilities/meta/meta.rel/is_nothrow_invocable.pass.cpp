@@ -54,30 +54,16 @@ constexpr bool throws_invocable_r() {
          !std::is_nothrow_invocable_r<Ret, Fn, Args...>::value;
 }
 
-// FIXME(EricWF) Don't test the where noexcept is *not* part of the type system
-// once implementations have caught up.
 void test_noexcept_function_pointers() {
   struct Dummy {
     void foo() noexcept {}
     static void bar() noexcept {}
   };
-#if !defined(__cpp_noexcept_function_type)
-  {
-    // Check that PMF's and function pointers *work*. is_nothrow_invocable will always
-    // return false because 'noexcept' is not part of the function type.
-    static_assert(throws_invocable<decltype(&Dummy::foo), Dummy&>(), "");
-    static_assert(throws_invocable<decltype(&Dummy::bar)>(), "");
-  }
-#else
-  {
-    // Check that PMF's and function pointers actually work and that
-    // is_nothrow_invocable returns true for noexcept PMF's and function
-    // pointers.
-    static_assert(
-        std::is_nothrow_invocable<decltype(&Dummy::foo), Dummy&>::value, "");
-    static_assert(std::is_nothrow_invocable<decltype(&Dummy::bar)>::value, "");
-  }
-#endif
+  // Check that PMF's and function pointers actually work and that
+  // is_nothrow_invocable returns true for noexcept PMF's and function
+  // pointers.
+  static_assert(std::is_nothrow_invocable<decltype(&Dummy::foo), Dummy&>::value, "");
+  static_assert(std::is_nothrow_invocable<decltype(&Dummy::bar)>::value, "");
 }
 
 int main(int, char**) {
@@ -198,6 +184,24 @@ int main(int, char**) {
     static_assert(std::is_nothrow_invocable<Fn, Tag&>::value, "");
     static_assert(std::is_nothrow_invocable_r<Implicit, Fn, Tag&>::value, "");
     static_assert(throws_invocable_r<ThrowsImplicit, Fn, Tag&>(), "");
+  }
+  {
+    // Check that it's fine if the result type is non-moveable.
+    struct CantMove {
+      CantMove() = default;
+      CantMove(CantMove&&) = delete;
+    };
+
+    static_assert(!std::is_move_constructible_v<CantMove>);
+    static_assert(!std::is_copy_constructible_v<CantMove>);
+
+    using Fn = CantMove() noexcept;
+
+    static_assert(std::is_nothrow_invocable_r<CantMove, Fn>::value);
+    static_assert(!std::is_nothrow_invocable_r<CantMove, Fn, int>::value);
+
+    static_assert(std::is_nothrow_invocable_r_v<CantMove, Fn>);
+    static_assert(!std::is_nothrow_invocable_r_v<CantMove, Fn, int>);
   }
   {
     // Check for is_nothrow_invocable_v

@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <random>
 #include "CFGBuilder.h"
-#include "gtest/gtest.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
+#include "gtest/gtest.h"
+#include <random>
 
 #define DEBUG_TYPE "batch-update-tests"
 
@@ -21,10 +21,9 @@ namespace {
 const auto CFGInsert = CFGBuilder::ActionKind::Insert;
 const auto CFGDelete = CFGBuilder::ActionKind::Delete;
 
-
 using DomUpdate = DominatorTree::UpdateType;
 static_assert(
-    std::is_same<DomUpdate, PostDominatorTree::UpdateType>::value,
+    std::is_same_v<DomUpdate, PostDominatorTree::UpdateType>,
     "Trees differing only in IsPostDom should have the same update types");
 using DomSNCA = DomTreeBuilder::SemiNCAInfo<DomTreeBuilder::BBDomTree>;
 using PostDomSNCA = DomTreeBuilder::SemiNCAInfo<DomTreeBuilder::BBPostDomTree>;
@@ -62,9 +61,9 @@ TEST(DominatorTreeBatchUpdates, LegalizeDomUpdates) {
   LLVM_DEBUG(for (auto &U : Legalized) { U.dump(); dbgs() << ", "; });
   LLVM_DEBUG(dbgs() << "\n");
   EXPECT_EQ(Legalized.size(), 3UL);
-  EXPECT_NE(llvm::find(Legalized, DomUpdate{Insert, B, C}), Legalized.end());
-  EXPECT_NE(llvm::find(Legalized, DomUpdate{Insert, B, D}), Legalized.end());
-  EXPECT_NE(llvm::find(Legalized, DomUpdate{Delete, A, B}), Legalized.end());
+  EXPECT_TRUE(llvm::is_contained(Legalized, DomUpdate{Insert, B, C}));
+  EXPECT_TRUE(llvm::is_contained(Legalized, DomUpdate{Insert, B, D}));
+  EXPECT_TRUE(llvm::is_contained(Legalized, DomUpdate{Delete, A, B}));
 }
 
 TEST(DominatorTreeBatchUpdates, LegalizePostDomUpdates) {
@@ -85,9 +84,9 @@ TEST(DominatorTreeBatchUpdates, LegalizePostDomUpdates) {
   LLVM_DEBUG(for (auto &U : Legalized) { U.dump(); dbgs() << ", "; });
   LLVM_DEBUG(dbgs() << "\n");
   EXPECT_EQ(Legalized.size(), 3UL);
-  EXPECT_NE(llvm::find(Legalized, DomUpdate{Insert, C, B}), Legalized.end());
-  EXPECT_NE(llvm::find(Legalized, DomUpdate{Insert, D, B}), Legalized.end());
-  EXPECT_NE(llvm::find(Legalized, DomUpdate{Delete, B, A}), Legalized.end());
+  EXPECT_TRUE(llvm::is_contained(Legalized, DomUpdate{Insert, C, B}));
+  EXPECT_TRUE(llvm::is_contained(Legalized, DomUpdate{Insert, D, B}));
+  EXPECT_TRUE(llvm::is_contained(Legalized, DomUpdate{Delete, B, A}));
 }
 
 TEST(DominatorTreeBatchUpdates, SingleInsertion) {

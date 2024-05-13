@@ -26,28 +26,26 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cassert>
+#include <optional>
 #include <vector>
 
 using namespace clang;
 using namespace ento;
 
 bool CheckerManager::hasPathSensitiveCheckers() const {
-  return !StmtCheckers.empty()              ||
-         !PreObjCMessageCheckers.empty()    ||
-         !PostObjCMessageCheckers.empty()   ||
-         !PreCallCheckers.empty()    ||
-         !PostCallCheckers.empty()   ||
-         !LocationCheckers.empty()          ||
-         !BindCheckers.empty()              ||
-         !EndAnalysisCheckers.empty()       ||
-         !EndFunctionCheckers.empty()           ||
-         !BranchConditionCheckers.empty()   ||
-         !LiveSymbolsCheckers.empty()       ||
-         !DeadSymbolsCheckers.empty()       ||
-         !RegionChangesCheckers.empty()     ||
-         !EvalAssumeCheckers.empty()        ||
-         !EvalCallCheckers.empty();
+  const auto IfAnyAreNonEmpty = [](const auto &... Callbacks) -> bool {
+    return (!Callbacks.empty() || ...);
+  };
+  return IfAnyAreNonEmpty(
+      StmtCheckers, PreObjCMessageCheckers, ObjCMessageNilCheckers,
+      PostObjCMessageCheckers, PreCallCheckers, PostCallCheckers,
+      LocationCheckers, BindCheckers, EndAnalysisCheckers,
+      BeginFunctionCheckers, EndFunctionCheckers, BranchConditionCheckers,
+      NewAllocatorCheckers, LiveSymbolsCheckers, DeadSymbolsCheckers,
+      RegionChangesCheckers, PointerEscapeCheckers, EvalAssumeCheckers,
+      EvalCallCheckers, EndOfTranslationUnitCheckers);
 }
 
 void CheckerManager::finishedCheckerRegistration() {
@@ -656,7 +654,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
                                             ExprEngine &Eng,
                                             const EvalCallOptions &CallOpts) {
   for (auto *const Pred : Src) {
-    bool anyEvaluated = false;
+    std::optional<CheckerNameRef> evaluatorChecker;
 
     ExplodedNodeSet checkDst;
     NodeBuilder B(Pred, checkDst, Eng.getBuilderContext());
@@ -675,10 +673,26 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
         CheckerContext C(B, Eng, Pred, L);
         evaluated = EvalCallChecker(Call, C);
       }
-      assert(!(evaluated && anyEvaluated)
-             && "There are more than one checkers evaluating the call");
+#ifndef NDEBUG
+      if (evaluated && evaluatorChecker) {
+        const auto toString = [](const CallEvent &Call) -> std::string {
+          std::string Buf;
+          llvm::raw_string_ostream OS(Buf);
+          Call.dump(OS);
+          OS.flush();
+          return Buf;
+        };
+        std::string AssertionMessage = llvm::formatv(
+            "The '{0}' call has been already evaluated by the {1} checker, "
+            "while the {2} checker also tried to evaluate the same call. At "
+            "most one checker supposed to evaluate a call.",
+            toString(Call), evaluatorChecker->getName(),
+            EvalCallChecker.Checker->getCheckerName());
+        llvm_unreachable(AssertionMessage.c_str());
+      }
+#endif
       if (evaluated) {
-        anyEvaluated = true;
+        evaluatorChecker = EvalCallChecker.Checker->getCheckerName();
         Dst.insert(checkDst);
 #ifdef NDEBUG
         break; // on release don't check that no other checker also evals.
@@ -687,7 +701,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
     }
 
     // If none of the checkers evaluated the call, ask ExprEngine to handle it.
-    if (!anyEvaluated) {
+    if (!evaluatorChecker) {
       NodeBuilder B(Pred, Dst, Eng.getBuilderContext());
       Eng.defaultEvalCall(B, Pred, Call, CallOpts);
     }

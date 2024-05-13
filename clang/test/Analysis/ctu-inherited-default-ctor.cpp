@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
 // RUN:   -emit-pch -o %t/ctudir/ctu-inherited-default-ctor-other.cpp.ast \
 // RUN:    %S/Inputs/ctu-inherited-default-ctor-other.cpp
-// RUN: echo "c:@N@clang@S@DeclContextLookupResult@SingleElementDummyList ctu-inherited-default-ctor-other.cpp.ast" \
+// RUN: echo "59:c:@N@clang@S@DeclContextLookupResult@SingleElementDummyList ctu-inherited-default-ctor-other.cpp.ast" \
 // RUN:   > %t/ctudir/externalDefMap.txt
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \

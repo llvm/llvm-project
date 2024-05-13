@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test resolution of type-bound generics.
 
 module m1
@@ -21,14 +21,14 @@ contains
     type(t) :: x
     integer :: y
     integer :: z
-    !ERROR: No specific procedure of generic 'g' matches the actual arguments
+    !ERROR: No specific function of generic 'g' matches the actual arguments
     z = x%g(y)
   end
   subroutine test2(x, y, z)
     type(t) :: x
     real :: y
     integer :: z
-    !ERROR: No specific procedure of generic 'g' matches the actual arguments
+    !ERROR: No specific function of generic 'g' matches the actual arguments
     z = x%g(x, y)
   end
 end

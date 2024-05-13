@@ -1,9 +1,9 @@
-; RUN: opt < %s -sccp -S | not grep %X
+; RUN: opt < %s -passes=sccp -S | not grep %X
 
-@G = external global [40 x i32]		; <[40 x i32]*> [#uses=1]
+@G = external global [40 x i32]		; <ptr> [#uses=1]
 
-define i32* @test() {
-	%X = getelementptr [40 x i32], [40 x i32]* @G, i64 0, i64 0		; <i32*> [#uses=1]
-	ret i32* %X
+define ptr @test() {
+	%X = getelementptr [40 x i32], ptr @G, i64 0, i64 0		; <ptr> [#uses=1]
+	ret ptr %X
 }
 

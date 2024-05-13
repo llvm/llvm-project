@@ -7,15 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-has-no-filesystem-library
 
-// Filesystem is supported on Apple platforms starting with macosx10.15.
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.14
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.13
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.12
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.11
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.10
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.9
+// UNSUPPORTED: availability-filesystem-missing
 
 // FILE_DEPENDENCIES: test.dat
 
@@ -24,16 +17,48 @@
 // template <class charT, class traits = char_traits<charT> >
 // class basic_ifstream
 
-// explicit basic_ifstream(const filesystem::path& s,
-//     ios_base::openmode mode = ios_base::in);
+// template<class T>
+// explicit basic_ifstream(const T& s, ios_base::openmode mode = ios_base::in); // Since C++17
+// Constraints: is_same_v<T, filesystem::path> is true
 
-#include <fstream>
-#include <filesystem>
 #include <cassert>
+#include <filesystem>
+#include <fstream>
+#include <type_traits>
 
 #include "test_macros.h"
+#include "test_iterators.h"
 
 namespace fs = std::filesystem;
+
+template <class CharT>
+constexpr bool test_non_convert_to_path() {
+  // String types
+  static_assert(!std::is_constructible_v<std::ifstream, std::basic_string_view<CharT>>);
+  static_assert(!std::is_constructible_v<std::ifstream, const std::basic_string_view<CharT>>);
+
+  // Char* pointers
+  if constexpr (!std::is_same_v<CharT, char>)
+    static_assert(!std::is_constructible_v<std::ifstream, const CharT*>);
+
+  // Iterators
+  static_assert(!std::is_convertible_v<std::ifstream, cpp17_input_iterator<const CharT*>>);
+
+  return true;
+}
+
+static_assert(test_non_convert_to_path<char>());
+
+#if !defined(TEST_HAS_NO_WIDE_CHARACTERS) && !defined(TEST_HAS_OPEN_WITH_WCHAR)
+static_assert(test_non_convert_to_path<wchar_t>());
+#endif // !TEST_HAS_NO_WIDE_CHARACTERS && !TEST_HAS_OPEN_WITH_WCHAR
+
+#ifndef TEST_HAS_NO_CHAR8_T
+static_assert(test_non_convert_to_path<char8_t>());
+#endif // TEST_HAS_NO_CHAR8_T
+
+static_assert(test_non_convert_to_path<char16_t>());
+static_assert(test_non_convert_to_path<char32_t>());
 
 int main(int, char**) {
   {
@@ -53,6 +78,8 @@ int main(int, char**) {
   // std::ifstream(const fs::path&, std::ios_base::openmode) is tested in
   // test/std/input.output/file.streams/fstreams/ofstream.cons/string.pass.cpp
   // which creates writable files.
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   {
     std::wifstream fs(fs::path("test.dat"));
     double x = 0;
@@ -62,6 +89,7 @@ int main(int, char**) {
   // std::wifstream(const fs::path&, std::ios_base::openmode) is tested in
   // test/std/input.output/file.streams/fstreams/ofstream.cons/string.pass.cpp
   // which creates writable files.
+#endif
 
   return 0;
 }

@@ -3,7 +3,8 @@
 .. note::
    This document is a work in progress and most of the expected content is not
    yet available. While you can expect changes, we always welcome feedback and
-   additions. Please contact, e.g., through ``openmp-dev@lists.llvm.org``.
+   additions. Please post on the `Discourse forums (Runtimes - 
+   OpenMP) <https://discourse.llvm.org/c/runtimes/openmp/35>`__..
 
 .. toctree::
    :hidden:
@@ -28,6 +29,20 @@ A high-level overview of OpenMP in LLVM can be found :doc:`here <design/Overview
 
    design/Overview
 
+OpenACC Support
+===============
+
+:doc:`OpenACC support <openacc/Overview>` is under development for
+both Flang and Clang.  For this purpose, LLVM's OpenMP runtimes are
+being extended to serve as OpenACC runtimes.  In some cases, Clang
+supports :doc:`OpenMP extensions <openacc/OpenMPExtensions>` to make
+the additional functionality also available in OpenMP applications.
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+
+   openacc/Overview
 
 LLVM/OpenMP Optimizations
 =========================
@@ -76,6 +91,21 @@ please refer to :doc:`remarks/OptimizationRemarks`.
 
    remarks/OptimizationRemarks
 
+OpenMP Command-Line Argument Reference
+======================================
+In addition to the 
+`Clang command-line argument reference <https://clang.llvm.org/docs/ClangCommandLineReference.html>`_ 
+we also recommend the OpenMP 
+:doc:`command-line argument reference <CommandLineArgumentReference>` 
+page that offers a detailed overview of options specific to OpenMP. It also 
+contains a list of OpenMP offloading related command-line arguments.
+
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+
+   CommandLineArgumentReference
 
 Support, Getting Involved, and Frequently Asked Questions (FAQ)
 ===============================================================

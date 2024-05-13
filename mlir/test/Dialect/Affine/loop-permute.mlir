@@ -6,7 +6,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-permutation="permutation-map=2,1,0" | FileCheck %s --check-prefix=CHECK-210
 
 // CHECK-120-LABEL: func @permute
-func @permute(%U0 : index, %U1 : index, %U2 : index) {
+func.func @permute(%U0 : index, %U1 : index, %U2 : index) {
   "abc"() : () -> ()
   affine.for %arg0 = 0 to %U0 {
     affine.for %arg1 = 0 to %U1 {

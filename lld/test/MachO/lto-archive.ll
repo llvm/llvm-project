@@ -10,15 +10,15 @@
 ; RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/references-foo.s -o %t/references-foo.o
 
 ; RUN: %lld -lSystem %t/references-foo.o %t/foo.a -o /dev/null -why_load | FileCheck %s --check-prefix=FOO
-; FOO: _foo forced load of foo.o
+; FOO: _foo forced load of {{.+}}foo.a(foo.o)
 
 ; RUN: %lld -lSystem -force_load %t/foo.a %t/main.o -o /dev/null -why_load | FileCheck %s --check-prefix=FORCE-LOAD
-; FORCE-LOAD: -force_load forced load of foo.o
+; FORCE-LOAD: -force_load forced load of {{.+}}foo.a(foo.o)
 
 ; RUN: %lld -lSystem -ObjC -framework CoreFoundation %t/objc.a %t/main.o \
 ; RUN:   -o /dev/null -why_load | FileCheck %s --check-prefix=OBJC
-; OBJC: -ObjC forced load of has-objc-category.o
-; OBJC: _OBJC_CLASS_$_Foo forced load of has-objc-symbol.o
+; OBJC: _OBJC_CLASS_$_Foo forced load of {{.+}}objc.a(has-objc-symbol.o)
+; OBJC: -ObjC forced load of {{.+}}objc.a(has-objc-category.o)
 
 ; RUN: %lld -lSystem %t/foo.a %t/main.o -o %t/no-force-load -why_load | count 0
 
@@ -51,12 +51,12 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 @"_OBJC_$_CATEGORY_Foo_$_Bar" = internal global %struct._category_t { i8 123 },
   section "__DATA, __objc_const", align 8
 
-@"OBJC_LABEL_CATEGORY_$" = private global [1 x i8*] [
-  i8* bitcast (%struct._category_t* @"_OBJC_$_CATEGORY_Foo_$_Bar" to i8*)
+@"OBJC_LABEL_CATEGORY_$" = private global [1 x ptr] [
+  ptr @"_OBJC_$_CATEGORY_Foo_$_Bar"
   ], section "__DATA,__objc_catlist,regular,no_dead_strip", align 8
 
-@llvm.compiler.used = appending global [1 x i8*] [
-  i8* bitcast ([1 x i8*]* @"OBJC_LABEL_CATEGORY_$" to i8*)
+@llvm.compiler.used = appending global [1 x ptr] [
+  ptr @"OBJC_LABEL_CATEGORY_$"
   ], section "llvm.metadata"
 
 ;--- main.s

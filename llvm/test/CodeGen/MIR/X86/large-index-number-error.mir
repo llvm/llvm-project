@@ -2,9 +2,9 @@
 
 --- |
 
-  define i32 @foo(i32* %p) {
+  define i32 @foo(ptr %p) {
   entry:
-    %a = load i32, i32* %p
+    %a = load i32, ptr %p
     %b = icmp sle i32 %a, 10
     br i1 %b, label %0, label %1
 
@@ -29,5 +29,5 @@ body: |
     $eax = MOV32r0 implicit-def $eflags
 
   bb.2:
-    RETQ $eax
+    RET64 $eax
 ...

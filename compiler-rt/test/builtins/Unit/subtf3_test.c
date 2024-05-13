@@ -16,7 +16,7 @@ int test__subtf3(long double a, long double b,
                  uint64_t expectedHi, uint64_t expectedLo)
 {
     long double x = __subtf3(a, b);
-    int ret = compareResultLD(x, expectedHi, expectedLo);
+    int ret = compareResultF128(x, expectedHi, expectedLo);
 
     if (ret){
         printf("error in test__subtf3(%.20Lf, %.20Lf) = %.20Lf, "
@@ -59,7 +59,8 @@ int main()
         return 1;
 
 #if (defined(__arm__) || defined(__aarch64__)) && defined(__ARM_FP) || \
-    defined(i386) || defined(__x86_64__)
+    defined(i386) || defined(__x86_64__) || (defined(__loongarch__) && \
+    __loongarch_frlen != 0)
     // Rounding mode tests on supported architectures
     const long double m = 1234.02L, n = 0.01L;
 

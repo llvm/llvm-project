@@ -9,38 +9,22 @@
 #ifndef LLDB_SYMBOL_OBJECTFILE_H
 #define LLDB_SYMBOL_OBJECTFILE_H
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/UnwindTable.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
+#include <optional>
 
 namespace lldb_private {
-
-class ObjectFileJITDelegate {
-public:
-  ObjectFileJITDelegate() {}
-
-  virtual ~ObjectFileJITDelegate() {}
-
-  virtual lldb::ByteOrder GetByteOrder() const = 0;
-
-  virtual uint32_t GetAddressByteSize() const = 0;
-
-  virtual void PopulateSymtab(lldb_private::ObjectFile *obj_file,
-                              lldb_private::Symtab &symtab) = 0;
-
-  virtual void PopulateSectionList(lldb_private::ObjectFile *obj_file,
-                                   lldb_private::SectionList &section_list) = 0;
-
-  virtual ArchSpec GetArchitecture() = 0;
-};
 
 /// \class ObjectFile ObjectFile.h "lldb/Symbol/ObjectFile.h"
 /// A plug-in interface definition class for object file parsers.
@@ -114,10 +98,10 @@ public:
   /// more than one architecture or object.
   ObjectFile(const lldb::ModuleSP &module_sp, const FileSpec *file_spec_ptr,
              lldb::offset_t file_offset, lldb::offset_t length,
-             const lldb::DataBufferSP &data_sp, lldb::offset_t data_offset);
+             lldb::DataBufferSP data_sp, lldb::offset_t data_offset);
 
   ObjectFile(const lldb::ModuleSP &module_sp, const lldb::ProcessSP &process_sp,
-             lldb::addr_t header_addr, lldb::DataBufferSP &data_sp);
+             lldb::addr_t header_addr, lldb::DataBufferSP data_sp);
 
   /// Destructor.
   ///
@@ -181,7 +165,7 @@ public:
   static lldb::ObjectFileSP FindPlugin(const lldb::ModuleSP &module_sp,
                                        const lldb::ProcessSP &process_sp,
                                        lldb::addr_t header_addr,
-                                       lldb::DataBufferSP &file_data_sp);
+                                       lldb::WritableDataBufferSP file_data_sp);
 
   static size_t
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,
@@ -322,12 +306,26 @@ public:
   /// Gets the symbol table for the currently selected architecture (and
   /// object for archives).
   ///
-  /// Symbol table parsing can be deferred by ObjectFile instances until this
-  /// accessor is called the first time.
+  /// This function will manage when ParseSymtab(...) is called to actually do
+  /// the symbol table parsing in each plug-in. This function will take care of
+  /// taking all the necessary locks and finalizing the symbol table when the
+  /// symbol table does get parsed.
   ///
   /// \return
   ///     The symbol table for this object file.
-  virtual Symtab *GetSymtab() = 0;
+  Symtab *GetSymtab();
+
+  /// Parse the symbol table into the provides symbol table object.
+  ///
+  /// Symbol table parsing will be done once when this function is called by
+  /// each object file plugin. All of the necessary locks will already be
+  /// acquired before this function is called and the symbol table object to
+  /// populate is supplied as an argument and doesn't need to be created by
+  /// each plug-in.
+  ///
+  /// \param
+  ///     The symbol table to populate.
+  virtual void ParseSymtab(Symtab &symtab) = 0;
 
   /// Perform relocations on the section if necessary.
   ///
@@ -495,17 +493,31 @@ public:
       return std::string();
   }
 
+  /// Some object files may have the number of bits used for addressing
+  /// embedded in them, e.g. a Mach-O core file using an LC_NOTE.  These
+  /// object files can return an AddressableBits object that can can be
+  /// used to set the address masks in the Process.
+  ///
+  /// \return
+  ///     Returns an AddressableBits object which can be used to set
+  ///     the address masks in the Process.
+  virtual lldb_private::AddressableBits GetAddressableBits() { return {}; }
+
   /// When the ObjectFile is a core file, lldb needs to locate the "binary" in
   /// the core file.  lldb can iterate over the pages looking for a valid
   /// binary, but some core files may have metadata  describing where the main
   /// binary is exactly which removes ambiguity when there are multiple
   /// binaries present in the captured memory pages.
   ///
-  /// \param[out] address
-  ///   If the address of the binary is specified, this will be set.
-  ///   This is an address is the virtual address space of the core file
-  ///   memory segments; it is not an offset into the object file.
-  ///   If no address is available, will be set to LLDB_INVALID_ADDRESS.
+  /// \param[out] value
+  ///   The address or offset (slide) where the binary is loaded in memory.
+  ///   LLDB_INVALID_ADDRESS for unspecified.  If an offset is given,
+  ///   this offset should be added to the binary's file address to get
+  ///   the load address.
+  ///
+  /// \param[out] value_is_offset
+  ///   Specifies if \b value is a load address, or an offset to calculate
+  ///   the load address.
   ///
   /// \param[out] uuid
   ///   If the uuid of the binary is specified, this will be set.
@@ -517,10 +529,36 @@ public:
   ///
   /// \return
   ///   Returns true if either address or uuid has been set.
-  virtual bool GetCorefileMainBinaryInfo(lldb::addr_t &address, UUID &uuid,
+  virtual bool GetCorefileMainBinaryInfo(lldb::addr_t &value,
+                                         bool &value_is_offset, UUID &uuid,
                                          ObjectFile::BinaryType &type) {
-    address = LLDB_INVALID_ADDRESS;
+    value = LLDB_INVALID_ADDRESS;
+    value_is_offset = false;
     uuid.Clear();
+    return false;
+  }
+
+  /// Get metadata about threads from the corefile.
+  ///
+  /// The corefile may have metadata (e.g. a Mach-O "thread extrainfo"
+  /// LC_NOTE) which for the threads in the process; this method tries
+  /// to retrieve them.
+  ///
+  /// \param[out] tids
+  ///     Filled in with a vector of tid_t's that matches the number
+  ///     of threads in the corefile (ObjectFile::GetNumThreadContexts).
+  ///     If a tid is not specified for one of the corefile threads,
+  ///     that entry in the vector will have LLDB_INVALID_THREAD_ID and
+  ///     the caller should assign a tid to the thread that does not
+  ///     conflict with the ones provided in this array.
+  ///     As additional metadata are added, this method may return a
+  ///     \a tids vector with no thread id's specified at all; the
+  ///     corefile may only specify one of the other metadata.
+  ///
+  /// \return
+  ///     Returns true if thread metadata was found in this corefile.
+  ///
+  virtual bool GetCorefileThreadExtraInfos(std::vector<lldb::tid_t> &tids) {
     return false;
   }
 
@@ -641,6 +679,13 @@ public:
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
 
+  // Returns the section data size. This is special-cased for PECOFF
+  // due to file alignment.
+  virtual size_t GetSectionDataSize(Section *section) {
+    return section->GetFileSize();
+  }
+
+  /// Returns true if the object file exists only in memory.
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
   // Strip linker annotations (such as @@VERSION) from symbol names.
@@ -648,6 +693,10 @@ public:
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
     return symbol_name;
   }
+
+  /// Can we trust the address ranges accelerator associated with this object
+  /// file to be complete.
+  virtual bool CanTrustAddressRanges() { return false; }
 
   static lldb::SymbolType GetSymbolTypeFromName(
       llvm::StringRef name,
@@ -666,6 +715,33 @@ public:
   /// Creates a plugin-specific call frame info
   virtual std::unique_ptr<CallFrameInfo> CreateCallFrameInfo();
 
+  /// Load binaries listed in a corefile
+  ///
+  /// A corefile may have metadata listing binaries that can be loaded,
+  /// and the offsets at which they were loaded.  This method will try
+  /// to add them to the Target.  If any binaries were loaded,
+  ///
+  /// \param[in] process
+  ///     Process where to load binaries.
+  ///
+  /// \return
+  ///     Returns true if any binaries were loaded.
+
+  virtual bool LoadCoreFileImages(lldb_private::Process &process) {
+    return false;
+  }
+
+  /// Get a hash that can be used for caching object file releated information.
+  ///
+  /// Data for object files can be cached between runs of debug sessions and
+  /// a module can end up using a main file and a symbol file, both of which
+  /// can be object files. So we need a unique hash that identifies an object
+  /// file when storing cached data.
+  uint32_t GetCacheHash();
+
+  static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
+                                        uint64_t Offset);
+
 protected:
   // Member variables.
   FileSpec m_file;
@@ -679,10 +755,17 @@ protected:
   DataExtractor
       m_data; ///< The data for this object file so things can be parsed lazily.
   lldb::ProcessWP m_process_wp;
+  /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
   std::unique_ptr<lldb_private::Symtab> m_symtab_up;
-  uint32_t m_synthetic_symbol_idx;
+  /// We need a llvm::once_flag that we can use to avoid locking the module
+  /// lock and deadlocking LLDB. See comments in ObjectFile::GetSymtab() for
+  /// the full details. We also need to be able to clear the symbol table, so we
+  /// need to use a std::unique_ptr to a llvm::once_flag so if we clear the
+  /// symbol table, we can have a new once flag to use when it is created again.
+  std::unique_ptr<llvm::once_flag> m_symtab_once_up;
+  std::optional<uint32_t> m_cache_hash;
 
   /// Sets the architecture for a module.  At present the architecture can
   /// only be set if it is invalid.  It is not allowed to switch from one
@@ -696,10 +779,8 @@ protected:
   ///     false otherwise.
   bool SetModulesArchitecture(const ArchSpec &new_arch);
 
-  ConstString GetNextSyntheticSymbolName();
-
-  static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
-                                        uint64_t Offset);
+  /// The number of bytes to read when going through the plugins.
+  static size_t g_initial_bytes_to_read;
 
 private:
   ObjectFile(const ObjectFile &) = delete;
@@ -718,6 +799,11 @@ template <> struct format_provider<lldb_private::ObjectFile::Strata> {
   static void format(const lldb_private::ObjectFile::Strata &strata,
                      raw_ostream &OS, StringRef Style);
 };
+
+namespace json {
+bool fromJSON(const llvm::json::Value &value, lldb_private::ObjectFile::Type &,
+              llvm::json::Path path);
+} // namespace json
 } // namespace llvm
 
 #endif // LLDB_SYMBOL_OBJECTFILE_H

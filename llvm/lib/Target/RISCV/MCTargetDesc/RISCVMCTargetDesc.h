@@ -1,4 +1,4 @@
-//===-- RISCVMCTargetDesc.h - RISCV Target Descriptions ---------*- C++ -*-===//
+//===-- RISCVMCTargetDesc.h - RISC-V Target Descriptions --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides RISCV specific target descriptions.
+// This file provides RISC-V specific target descriptions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,7 +29,6 @@ class MCSubtargetInfo;
 class Target;
 
 MCCodeEmitter *createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
-                                        const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
 MCAsmBackend *createRISCVAsmBackend(const Target &T, const MCSubtargetInfo &STI,
@@ -38,7 +37,21 @@ MCAsmBackend *createRISCVAsmBackend(const Target &T, const MCSubtargetInfo &STI,
 
 std::unique_ptr<MCObjectTargetWriter> createRISCVELFObjectWriter(uint8_t OSABI,
                                                                  bool Is64Bit);
-}
+
+namespace RISCVVInversePseudosTable {
+
+struct PseudoInfo {
+  uint16_t Pseudo;
+  uint16_t BaseInstr;
+  uint8_t VLMul;
+  uint8_t SEW;
+};
+
+#define GET_RISCVVInversePseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+
+} // namespace RISCVVInversePseudosTable
+} // namespace llvm
 
 // Defines symbolic names for RISC-V registers.
 #define GET_REGINFO_ENUM
@@ -46,6 +59,7 @@ std::unique_ptr<MCObjectTargetWriter> createRISCVELFObjectWriter(uint8_t OSABI,
 
 // Defines symbolic names for RISC-V instructions.
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "RISCVGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

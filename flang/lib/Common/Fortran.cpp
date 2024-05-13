@@ -60,4 +60,85 @@ const char *AsFortran(RelationalOperator opr) {
   }
 }
 
+const char *AsFortran(DefinedIo x) {
+  switch (x) {
+    SWITCH_COVERS_ALL_CASES
+  case DefinedIo::ReadFormatted:
+    return "read(formatted)";
+  case DefinedIo::ReadUnformatted:
+    return "read(unformatted)";
+  case DefinedIo::WriteFormatted:
+    return "write(formatted)";
+  case DefinedIo::WriteUnformatted:
+    return "write(unformatted)";
+  }
+}
+
+std::string AsFortran(IgnoreTKRSet tkr) {
+  std::string result;
+  if (tkr.test(IgnoreTKR::Type)) {
+    result += 'T';
+  }
+  if (tkr.test(IgnoreTKR::Kind)) {
+    result += 'K';
+  }
+  if (tkr.test(IgnoreTKR::Rank)) {
+    result += 'R';
+  }
+  if (tkr.test(IgnoreTKR::Device)) {
+    result += 'D';
+  }
+  if (tkr.test(IgnoreTKR::Managed)) {
+    result += 'M';
+  }
+  if (tkr.test(IgnoreTKR::Contiguous)) {
+    result += 'C';
+  }
+  return result;
+}
+
+/// Check compatibilty of CUDA attribute.
+/// When `allowUnifiedMatchingRule` is enabled, argument `x` represents the
+/// dummy argument attribute while `y` represents the actual argument attribute.
+bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
+    std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR,
+    bool allowUnifiedMatchingRule) {
+  if (!x && !y) {
+    return true;
+  } else if (x && y && *x == *y) {
+    return true;
+  } else if ((!x && y && *y == CUDADataAttr::Pinned) ||
+      (x && *x == CUDADataAttr::Pinned && !y)) {
+    return true;
+  } else if (ignoreTKR.test(IgnoreTKR::Device) &&
+      x.value_or(CUDADataAttr::Device) == CUDADataAttr::Device &&
+      y.value_or(CUDADataAttr::Device) == CUDADataAttr::Device) {
+    return true;
+  } else if (ignoreTKR.test(IgnoreTKR::Managed) &&
+      x.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed &&
+      y.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed) {
+    return true;
+  } else if (allowUnifiedMatchingRule) {
+    if (!x) { // Dummy argument has no attribute -> host
+      if (y && (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified)) {
+        return true;
+      }
+    } else {
+      if (*x == CUDADataAttr::Device && y &&
+          (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified)) {
+        return true;
+      } else if (*x == CUDADataAttr::Managed && y &&
+          *y == CUDADataAttr::Unified) {
+        return true;
+      } else if (*x == CUDADataAttr::Unified && y &&
+          *y == CUDADataAttr::Managed) {
+        return true;
+      }
+    }
+    return false;
+  } else {
+    return false;
+  }
+}
+
 } // namespace Fortran::common

@@ -17,10 +17,8 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include <memory>
-#include <string>
 
 namespace llvm {
-class Module;
 namespace orc {
 
 /// A layer that applies a transform to emitted modules.

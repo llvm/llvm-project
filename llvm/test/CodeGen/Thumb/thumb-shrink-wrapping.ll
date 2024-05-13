@@ -124,8 +124,8 @@ define i32 @foo(i32 %a, i32 %b) {
   br i1 %tmp2, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
-  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  store i32 %a, ptr %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, ptr %tmp)
   br label %false
 
 false:
@@ -248,8 +248,8 @@ define i32 @bar(i32 %a, i32 %b) {
   br i1 %tmp2, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
-  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  store i32 %a, ptr %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, ptr %tmp)
   br label %false
 
 false:
@@ -257,7 +257,7 @@ false:
 }
 
 ; Function Attrs: optsize
-declare i32 @doSomething(i32, i32*)
+declare i32 @doSomething(i32, ptr)
 
 
 ; Check that we do not perform the restore inside the loop whereas the save
@@ -1442,50 +1442,56 @@ if.end:
   ret i32 %value.addr.0
 }
 
-define i1 @beq_to_bx(i32* %y, i32 %head) {
+define i1 @beq_to_bx(ptr %y, i32 %head) {
 ; ENABLE-V4T-LABEL: beq_to_bx:
 ; ENABLE-V4T:       @ %bb.0: @ %entry
-; ENABLE-V4T-NEXT:    push {r4, lr}
-; ENABLE-V4T-NEXT:    .cfi_def_cfa_offset 8
-; ENABLE-V4T-NEXT:    .cfi_offset lr, -4
-; ENABLE-V4T-NEXT:    .cfi_offset r4, -8
 ; ENABLE-V4T-NEXT:    movs r2, r0
 ; ENABLE-V4T-NEXT:    movs r0, #1
 ; ENABLE-V4T-NEXT:    cmp r2, #0
 ; ENABLE-V4T-NEXT:    beq LBB11_3
 ; ENABLE-V4T-NEXT:  @ %bb.1: @ %if.end
+; ENABLE-V4T-NEXT:    push {r4, lr}
+; ENABLE-V4T-NEXT:    .cfi_def_cfa_offset 8
+; ENABLE-V4T-NEXT:    .cfi_offset lr, -4
+; ENABLE-V4T-NEXT:    .cfi_offset r4, -8
 ; ENABLE-V4T-NEXT:    ldr r3, [r2]
 ; ENABLE-V4T-NEXT:    lsls r4, r3, #30
+; ENABLE-V4T-NEXT:    ldr r4, [sp, #4]
+; ENABLE-V4T-NEXT:    mov lr, r4
+; ENABLE-V4T-NEXT:    pop {r4}
+; ENABLE-V4T-NEXT:    add sp, #4
 ; ENABLE-V4T-NEXT:    bpl LBB11_3
 ; ENABLE-V4T-NEXT:  @ %bb.2: @ %if.end4
 ; ENABLE-V4T-NEXT:    str r1, [r2]
 ; ENABLE-V4T-NEXT:    str r3, [r2]
 ; ENABLE-V4T-NEXT:    movs r0, #0
 ; ENABLE-V4T-NEXT:  LBB11_3: @ %cleanup
-; ENABLE-V4T-NEXT:    pop {r4}
-; ENABLE-V4T-NEXT:    pop {r1}
-; ENABLE-V4T-NEXT:    bx r1
+; ENABLE-V4T-NEXT:    bx lr
 ;
 ; ENABLE-V5T-LABEL: beq_to_bx:
 ; ENABLE-V5T:       @ %bb.0: @ %entry
-; ENABLE-V5T-NEXT:    push {r4, lr}
-; ENABLE-V5T-NEXT:    .cfi_def_cfa_offset 8
-; ENABLE-V5T-NEXT:    .cfi_offset lr, -4
-; ENABLE-V5T-NEXT:    .cfi_offset r4, -8
 ; ENABLE-V5T-NEXT:    movs r2, r0
 ; ENABLE-V5T-NEXT:    movs r0, #1
 ; ENABLE-V5T-NEXT:    cmp r2, #0
 ; ENABLE-V5T-NEXT:    beq LBB11_3
 ; ENABLE-V5T-NEXT:  @ %bb.1: @ %if.end
+; ENABLE-V5T-NEXT:    push {r4, lr}
+; ENABLE-V5T-NEXT:    .cfi_def_cfa_offset 8
+; ENABLE-V5T-NEXT:    .cfi_offset lr, -4
+; ENABLE-V5T-NEXT:    .cfi_offset r4, -8
 ; ENABLE-V5T-NEXT:    ldr r3, [r2]
 ; ENABLE-V5T-NEXT:    lsls r4, r3, #30
+; ENABLE-V5T-NEXT:    ldr r4, [sp, #4]
+; ENABLE-V5T-NEXT:    mov lr, r4
+; ENABLE-V5T-NEXT:    pop {r4}
+; ENABLE-V5T-NEXT:    add sp, #4
 ; ENABLE-V5T-NEXT:    bpl LBB11_3
 ; ENABLE-V5T-NEXT:  @ %bb.2: @ %if.end4
 ; ENABLE-V5T-NEXT:    str r1, [r2]
 ; ENABLE-V5T-NEXT:    str r3, [r2]
 ; ENABLE-V5T-NEXT:    movs r0, #0
 ; ENABLE-V5T-NEXT:  LBB11_3: @ %cleanup
-; ENABLE-V5T-NEXT:    pop {r4, pc}
+; ENABLE-V5T-NEXT:    bx lr
 ;
 ; DISABLE-V4T-LABEL: beq_to_bx:
 ; DISABLE-V4T:       @ %bb.0: @ %entry
@@ -1531,18 +1537,18 @@ define i1 @beq_to_bx(i32* %y, i32 %head) {
 ; DISABLE-V5T-NEXT:  LBB11_3: @ %cleanup
 ; DISABLE-V5T-NEXT:    pop {r4, pc}
 entry:
-  %cmp = icmp eq i32* %y, null
+  %cmp = icmp eq ptr %y, null
   br i1 %cmp, label %cleanup, label %if.end
 
 if.end:
-  %z = load i32, i32* %y, align 4
+  %z = load i32, ptr %y, align 4
   %and = and i32 %z, 2
   %cmp2 = icmp eq i32 %and, 0
   br i1 %cmp2, label %cleanup, label %if.end4
 
 if.end4:
-  store i32 %head, i32* %y, align 4
-  store volatile i32 %z, i32* %y, align 4
+  store i32 %head, ptr %y, align 4
+  store volatile i32 %z, ptr %y, align 4
   br label %cleanup
 
 cleanup:

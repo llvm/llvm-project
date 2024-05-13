@@ -9,20 +9,19 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SDCOMP26094_H
 #define LLVM_LIBC_TEST_SRC_MATH_SDCOMP26094_H
 
-#include "utils/CPP/Array.h"
-#include "utils/FPUtil/BitPatterns.h"
+#include "src/__support/CPP/array.h"
 
-namespace __llvm_libc {
+#include <stdint.h>
+
+namespace LIBC_NAMESPACE {
 namespace testing {
 
-static constexpr __llvm_libc::cpp::Array<fputil::BitPatterns<float>::BitsType,
-                                         10>
-    sdcomp26094Values{
-        0x46427f1b, 0x4647e568, 0x46428bac, 0x4647f1f9, 0x4647fe8a,
-        0x45d8d7f1, 0x45d371a4, 0x45ce0b57, 0x45d35882, 0x45cdf235,
-    };
+static constexpr LIBC_NAMESPACE::cpp::array<uint32_t, 10> SDCOMP26094_VALUES{
+    0x46427f1b, 0x4647e568, 0x46428bac, 0x4647f1f9, 0x4647fe8a,
+    0x45d8d7f1, 0x45d371a4, 0x45ce0b57, 0x45d35882, 0x45cdf235,
+};
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SDCOMP26094_H

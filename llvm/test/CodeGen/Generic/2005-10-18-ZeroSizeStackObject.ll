@@ -1,6 +1,6 @@
 ; RUN: llc < %s
 
 define void @test() {
-        %X = alloca {  }                ; <{  }*> [#uses=0]
+        %X = alloca {  }                ; <ptr> [#uses=0]
         ret void
 }

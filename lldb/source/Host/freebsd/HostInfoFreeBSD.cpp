@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/freebsd/HostInfoFreeBSD.h"
-
+#include "llvm/Support/FormatVariadic.h"
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -30,34 +31,15 @@ llvm::VersionTuple HostInfoFreeBSD::GetOSVersion() {
   return llvm::VersionTuple();
 }
 
-bool HostInfoFreeBSD::GetOSBuildString(std::string &s) {
+std::optional<std::string> HostInfoFreeBSD::GetOSBuildString() {
   int mib[2] = {CTL_KERN, KERN_OSREV};
-  char osrev_str[12];
   uint32_t osrev = 0;
   size_t osrev_len = sizeof(osrev);
 
-  if (::sysctl(mib, 2, &osrev, &osrev_len, NULL, 0) == 0) {
-    ::snprintf(osrev_str, sizeof(osrev_str), "%-8.8u", osrev);
-    s.assign(osrev_str);
-    return true;
-  }
+  if (::sysctl(mib, 2, &osrev, &osrev_len, NULL, 0) == 0)
+    return llvm::formatv("{0,8:8}", osrev).str();
 
-  s.clear();
-  return false;
-}
-
-bool HostInfoFreeBSD::GetOSKernelDescription(std::string &s) {
-  struct utsname un;
-
-  ::memset(&un, 0, sizeof(utsname));
-  s.clear();
-
-  if (uname(&un) < 0)
-    return false;
-
-  s.assign(un.version);
-
-  return true;
+  return std::nullopt;
 }
 
 FileSpec HostInfoFreeBSD::GetProgramFileSpec() {

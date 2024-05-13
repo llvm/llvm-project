@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -Wunreachable-code-aggressive -fblocks -verify %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fexceptions -fsyntax-only -Wunreachable-code-aggressive -fblocks -verify %s
 
 int j;
 int bar();
@@ -76,4 +76,57 @@ void weak_redecl() {
   if (foo)
     return;
   bar(); // no-warning
+}
+
+namespace pr52103 {
+
+void g(int a);
+
+void f(int a) {
+  if (a > 4) [[ likely ]] { // no-warning
+    return;
+  }
+
+  if (a > 4) [[ unlikely ]] { // no-warning
+    return;
+
+    return; // expected-warning {{will never be executed}}
+  }
+
+  [[clang::musttail]] return g(a); // no-warning
+
+  [[clang::musttail]] return g(a); // expected-warning {{will never be executed}}
+}
+
+}
+
+namespace gh57123 {
+  bool foo() {
+    if constexpr (true) {
+      if (true)
+        return true;
+      else
+        return false; // expected-warning {{will never be executed}}
+    }
+    else
+      return false; // no-warning
+  }
+
+  bool bar() {
+    if (true)
+      return true;
+    else
+      return false; // expected-warning {{will never be executed}}
+  }
+
+  bool baz() {
+    if constexpr (true)
+      return true;
+    else {
+      if (true)
+        return true;
+      else
+        return false; // expected-warning {{will never be executed}}
+    }
+  }
 }

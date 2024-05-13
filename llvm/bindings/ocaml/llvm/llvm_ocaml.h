@@ -32,6 +32,32 @@
 value caml_alloc_some(value);
 #endif
 
+/* to_val and from_val convert between an OCaml value and a pointer from LLVM,
+   which points outside the OCaml heap. They assume that all pointers from LLVM
+   are 2-byte aligned: to_val sets the low bit so that OCaml treats the value
+   as an integer, and from_val clears the low bit. */
+value to_val(void *ptr);
+
+void *from_val(value v);
+
+/* from_val_array takes an OCaml array value of LLVM references encoded with
+   the representation described above and returns a malloc'd array
+   of decoded LLVM references. The returned array must be deallocated using
+   free. */
+void *from_val_array(value Elements);
+
+#define DiagnosticInfo_val(v) ((LLVMDiagnosticInfoRef)from_val(v))
+#define Context_val(v) ((LLVMContextRef)from_val(v))
+#define Attribute_val(v) ((LLVMAttributeRef)from_val(v))
+#define Module_val(v) ((LLVMModuleRef)from_val(v))
+#define Metadata_val(v) ((LLVMMetadataRef)from_val(v))
+#define Type_val(v) ((LLVMTypeRef)from_val(v))
+#define Value_val(v) ((LLVMValueRef)from_val(v))
+#define DbgRecord_val(v) ((LLVMDbgRecordRef)from_val(v))
+#define Use_val(v) ((LLVMUseRef)from_val(v))
+#define BasicBlock_val(v) ((LLVMBasicBlockRef)from_val(v))
+#define MemoryBuffer_val(v) ((LLVMMemoryBufferRef)from_val(v))
+
 /* Convert a C pointer to an OCaml option */
 value ptr_to_option(void *Ptr);
 

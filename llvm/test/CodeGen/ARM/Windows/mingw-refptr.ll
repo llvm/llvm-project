@@ -14,7 +14,7 @@ define dso_local i32 @getVar() {
 ; CHECK:    ldr  r0, [r0]
 ; CHECK:    bx   lr
 entry:
-  %0 = load i32, i32* @var, align 4
+  %0 = load i32, ptr @var, align 4
   ret i32 %0
 }
 
@@ -25,7 +25,7 @@ define dso_local i32 @getDsoLocalVar() {
 ; CHECK:    ldr  r0, [r0]
 ; CHECK:    bx   lr
 entry:
-  %0 = load i32, i32* @dsolocalvar, align 4
+  %0 = load i32, ptr @dsolocalvar, align 4
   ret i32 %0
 }
 
@@ -36,7 +36,7 @@ define dso_local i32 @getLocalVar() {
 ; CHECK:    ldr  r0, [r0]
 ; CHECK:    bx   lr
 entry:
-  %0 = load i32, i32* @localvar, align 4
+  %0 = load i32, ptr @localvar, align 4
   ret i32 %0
 }
 
@@ -47,7 +47,7 @@ define dso_local i32 @getLocalCommon() {
 ; CHECK:    ldr  r0, [r0]
 ; CHECK:    bx   lr
 entry:
-  %0 = load i32, i32* @localcommon, align 4
+  %0 = load i32, ptr @localcommon, align 4
   ret i32 %0
 }
 
@@ -59,13 +59,13 @@ define dso_local i32 @getExtVar() {
 ; CHECK:    ldr  r0, [r0]
 ; CHECK:    bx   lr
 entry:
-  %0 = load i32, i32* @extvar, align 4
+  %0 = load i32, ptr @extvar, align 4
   ret i32 %0
 }
 
 define dso_local void @callFunc() {
 ; CHECK-LABEL: callFunc:
-; CHECK:    b otherFunc
+; CHECK:    b.w otherFunc
 entry:
   tail call void @otherFunc()
   ret void

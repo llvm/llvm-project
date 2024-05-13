@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -Wformat-nonliteral -verify %s
+#include <stdarg.h>
+
+int printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
 struct S {
-  static void f(const char*, ...) __attribute__((format(printf, 1, 2)));
-  static const char* f2(const char*) __attribute__((format_arg(1)));
+  static void f(const char *, ...) __attribute__((format(printf, 1, 2)));
+  static const char *f2(const char *) __attribute__((format_arg(1)));
 
   // GCC has a hidden 'this' argument in member functions which is why
   // the format argument is argument 2 here.
@@ -38,6 +42,55 @@ namespace PR8625 {
 
 // Make sure we interpret member operator calls as having an implicit
 // this argument.
-void test_operator_call(S s, const char* str) {
+void test_operator_call(S s, const char *str) {
   s("%s", str);
+}
+
+template <typename... Args>
+void format(const char *fmt, Args &&...args) // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
+    __attribute__((format(printf, 1, 2)));
+
+template <typename Arg>
+Arg &expand(Arg &a) { return a; }
+
+struct foo {
+  int big[10];
+  foo();
+  ~foo();
+
+  template <typename... Args>
+  void format(const char *const fmt, Args &&...args) // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
+      __attribute__((format(printf, 2, 3))) {
+    printf(fmt, expand(args)...);
+  }
+};
+
+void format_invalid_nonpod(const char *fmt, struct foo f) // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
+    __attribute__((format(printf, 1, 2)));
+
+void do_format() {
+  int x = 123;
+  int &y = x;
+  const char *s = "world";
+  bool b = false;
+  format("bare string");
+  format("%s", 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+  format("%s %s %u %d %i %p\n", "hello", s, 10u, x, y, &do_format);
+  format("%s %s %u %d %i %p\n", "hello", s, 10u, x, y, do_format);
+  format("bad format %s"); // expected-warning{{more '%' conversions than data arguments}}
+
+  format("%c %c %hhd %hd %d\n", (char)'a', 'a', 'a', (short)123, (int)123);
+  format("%f %f %f\n", (__fp16)123.f, 123.f, 123.);
+  format("%Lf", (__fp16)123.f); // expected-warning{{format specifies type 'long double' but the argument has type '__fp16'}}
+  format("%Lf", 123.f); // expected-warning{{format specifies type 'long double' but the argument has type 'float'}}
+  format("%hhi %hhu %hi %hu %i %u", b, b, b, b, b, b);
+  format("%li", b); // expected-warning{{format specifies type 'long' but the argument has type 'bool'}}
+
+  struct foo f;
+  format_invalid_nonpod("hello %i", f); // expected-warning{{format specifies type 'int' but the argument has type 'struct foo'}}
+
+  f.format("%s", 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+  f.format("%s %s %u %d %i %p\n", "hello", s, 10u, x, y, &do_format);
+  f.format("%s %s %u %d %i %p\n", "hello", s, 10u, x, y, do_format);
+  f.format("bad format %s"); // expected-warning{{more '%' conversions than data arguments}}
 }

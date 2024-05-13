@@ -1,5 +1,4 @@
 ; Test that types referenced in ThinLTO-style !cfi.functions are known to __cfi_check.
-; RUN: opt -S -cross-dso-cfi < %s | FileCheck %s
 ; RUN: opt -S -passes=cross-dso-cfi < %s | FileCheck %s
 
 ; CHECK:      define void @__cfi_check(

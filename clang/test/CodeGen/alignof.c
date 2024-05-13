@@ -7,6 +7,6 @@ struct s0 {
 };
 
 struct s0 t1_tmp;
-int f0() {
+int f0(void) {
   return __alignof__(t1_tmp);
 }

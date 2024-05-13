@@ -6,7 +6,7 @@
 constexpr int foo = 0;
 
 //CHECK: |-VarDecl {{.*}} foo1 'T' cinit
-//CHECK: `-VarTemplateSpecializationDecl {{.*}} used foo1 '__global long':'__global long' cinit
+//CHECK: `-VarTemplateSpecializationDecl {{.*}} used foo1 '__global long' implicit_instantiation cinit
 template <typename T>
 T foo1 = 0;
 
@@ -51,7 +51,7 @@ struct x2 {
   void foo(x1<T>* xx) {
     m[0] = *xx;
   }
-//CHECK: -FieldDecl {{.*}}  m 'x1<int> [2]'
+//CHECK: -FieldDecl {{.*}}  m 'x1<int>[2]'
   x1<T> m[2];
 };
 

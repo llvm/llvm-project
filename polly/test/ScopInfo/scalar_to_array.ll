@@ -1,12 +1,12 @@
-; RUN: opt %loadPolly -basic-aa -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -basic-aa -polly-function-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-function-scops -disable-output < %s | FileCheck %s
 
 ; ModuleID = 'scalar_to_array.ll'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
 @A = common global [1024 x float] zeroinitializer, align 8
 
-; Terminating loops without side-effects will be optimzied away, hence
+; Terminating loops without side-effects will be optimized away, hence
 ; detecting a scop would be pointless.
 ; CHECK-NOT: Function: empty
 ; Function Attrs: nounwind
@@ -45,9 +45,9 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %exitcond, label %for.body, label %return
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr [1024 x float], [1024 x float]* @A, i64 0, i64 %indvar
+  %arrayidx = getelementptr [1024 x float], ptr @A, i64 0, i64 %indvar
   %float = uitofp i64 %indvar to float
-  store float %float, float* %arrayidx
+  store float %float, ptr %arrayidx
   br label %for.inc
 ; CHECK:     Stmt_for_body
 ; CHECK-NOT:     ReadAccess
@@ -76,8 +76,8 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %exitcond, label %for.body.a, label %return
 
 for.body.a:                                       ; preds = %for.cond
-  %arrayidx = getelementptr [1024 x float], [1024 x float]* @A, i64 0, i64 %indvar
-  %scalar = load float, float* %arrayidx
+  %arrayidx = getelementptr [1024 x float], ptr @A, i64 0, i64 %indvar
+  %scalar = load float, ptr %arrayidx
   br label %for.body.b
 ; CHECK:      Stmt_for_body_a
 ; CHECK:          ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
@@ -86,10 +86,10 @@ for.body.a:                                       ; preds = %for.cond
 ; CHECK-NEXT:         { Stmt_for_body_a[i0] -> MemRef_scalar[] };
 
 for.body.b:                                       ; preds = %for.body.a
-  %arrayidx2 = getelementptr [1024 x float], [1024 x float]* @A, i64 0, i64 %indvar
+  %arrayidx2 = getelementptr [1024 x float], ptr @A, i64 0, i64 %indvar
   %float = uitofp i64 %indvar to float
   %sum = fadd float %scalar, %float
-  store float %sum, float* %arrayidx2
+  store float %sum, ptr %arrayidx2
   br label %for.inc
 ; CHECK:      Stmt_for_body_b
 ; CHECK:          ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
@@ -125,9 +125,9 @@ for.head:                                         ; preds = %for.inc, %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.head
-  %arrayidx = getelementptr [1024 x float], [1024 x float]* @A, i64 0, i64 %indvar
-  %scalar = load float, float* %arrayidx
-  store float %scalar, float* %scalar.s2a
+  %arrayidx = getelementptr [1024 x float], ptr @A, i64 0, i64 %indvar
+  %scalar = load float, ptr %arrayidx
+  store float %scalar, ptr %scalar.s2a
 ; Escaped uses are still required to be rewritten to stack variable.
 ; CHECK:      Stmt_for_body
 ; CHECK:          ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
@@ -142,7 +142,7 @@ for.inc:                                          ; preds = %for.body
   br i1 %exitcond, label %for.head, label %for.after
 
 for.after:                                        ; preds = %for.inc
-  %scalar.loadoutside = load float, float* %scalar.s2a
+  %scalar.loadoutside = load float, ptr %scalar.s2a
   fence seq_cst
   %return_value = fptosi float %scalar.loadoutside to i32
   br label %return
@@ -176,8 +176,8 @@ for.cond:                                         ; preds = %for.inc, %preheader
   br i1 %exitcond, label %for.body, label %return
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr [1024 x float], [1024 x float]* @A, i64 0, i64 %indvar
-  store float %scalar, float* %arrayidx
+  %arrayidx = getelementptr [1024 x float], ptr @A, i64 0, i64 %indvar
+  store float %scalar, ptr %arrayidx
   br label %for.inc
 ; CHECK:      Stmt_for_body
 ; CHECK:          MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]

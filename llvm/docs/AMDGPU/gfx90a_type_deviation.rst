@@ -10,4 +10,4 @@
 Type Deviation
 ==============
 
-*Type* of this operand differs from *type* :ref:`implied by the opcode<amdgpu_syn_instruction_type>`. This tag specifies actual operand *type*.
+The *type* of this operand differs from the *type* :ref:`implied by the opcode<amdgpu_syn_instruction_mnemo>`. This tag specifies the actual operand *type*.

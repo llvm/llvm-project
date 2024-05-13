@@ -3,12 +3,12 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=CHECK --check-prefix=SSE41
 
 ; A single 16-bit load + a single 16-bit store
-define void @load_2_i8(<2 x i8>* %A)  {
+define void @load_2_i8(ptr %A)  {
 ; SSE2-LABEL: load_2_i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl (%rdi), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    paddb {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, (%rdi)
 ; SSE2-NEXT:    retq
@@ -17,77 +17,77 @@ define void @load_2_i8(<2 x i8>* %A)  {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movzwl (%rdi), %eax
 ; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    paddb {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
-   %T = load <2 x i8>, <2 x i8>* %A
+   %T = load <2 x i8>, ptr %A
    %G = add <2 x i8> %T, <i8 9, i8 7>
-   store <2 x i8> %G, <2 x i8>* %A
+   store <2 x i8> %G, ptr %A
    ret void
 }
 
 ; Read 32-bits
-define void @load_2_i16(<2 x i16>* %A)  {
+define void @load_2_i16(ptr %A)  {
 ; CHECK-LABEL: load_2_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    paddw {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
-   %T = load <2 x i16>, <2 x i16>* %A
+   %T = load <2 x i16>, ptr %A
    %G = add <2 x i16> %T, <i16 9, i16 7>
-   store <2 x i16> %G, <2 x i16>* %A
+   store <2 x i16> %G, ptr %A
    ret void
 }
 
-define void @load_2_i32(<2 x i32>* %A)  {
+define void @load_2_i32(ptr %A)  {
 ; CHECK-LABEL: load_2_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
-   %T = load <2 x i32>, <2 x i32>* %A
+   %T = load <2 x i32>, ptr %A
    %G = add <2 x i32> %T, <i32 9, i32 7>
-   store <2 x i32> %G, <2 x i32>* %A
+   store <2 x i32> %G, ptr %A
    ret void
 }
 
-define void @load_4_i8(<4 x i8>* %A)  {
+define void @load_4_i8(ptr %A)  {
 ; CHECK-LABEL: load_4_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    paddb {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
-   %T = load <4 x i8>, <4 x i8>* %A
+   %T = load <4 x i8>, ptr %A
    %G = add <4 x i8> %T, <i8 1, i8 4, i8 9, i8 7>
-   store <4 x i8> %G, <4 x i8>* %A
+   store <4 x i8> %G, ptr %A
    ret void
 }
 
-define void @load_4_i16(<4 x i16>* %A)  {
+define void @load_4_i16(ptr %A)  {
 ; CHECK-LABEL: load_4_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    paddw {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
-   %T = load <4 x i16>, <4 x i16>* %A
+   %T = load <4 x i16>, ptr %A
    %G = add <4 x i16> %T, <i16 1, i16 4, i16 9, i16 7>
-   store <4 x i16> %G, <4 x i16>* %A
+   store <4 x i16> %G, ptr %A
    ret void
 }
 
-define void @load_8_i8(<8 x i8>* %A)  {
+define void @load_8_i8(ptr %A)  {
 ; CHECK-LABEL: load_8_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    paddb %xmm0, %xmm0
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
-   %T = load <8 x i8>, <8 x i8>* %A
+   %T = load <8 x i8>, ptr %A
    %G = add <8 x i8> %T, %T
-   store <8 x i8> %G, <8 x i8>* %A
+   store <8 x i8> %G, ptr %A
    ret void
 }

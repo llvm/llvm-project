@@ -13,8 +13,8 @@
 ; The known set (one) bits for the arguments %xor1 are not the same, so the
 ; transformation should not occur
 define void @foo(i32 %i32In1, i32 %i32In2, i32 %i32In3, i32 %i32In4, 
-                 i32 %i32In5, i32 %i32In6, i32* %i32StarOut, i1 %i1In1, 
-                 i32* %i32SelOut) nounwind {
+                 i32 %i32In5, i32 %i32In6, ptr %i32StarOut, i1 %i1In1, 
+                 ptr %i32SelOut) nounwind {
     %and3 = and i32 %i32In1, 1362779777
     %or2 = or i32 %i32In2, %i32In3
     %and2 = and i32 %or2, 1362779777
@@ -29,10 +29,10 @@ define void @foo(i32 %i32In1, i32 %i32In2, i32 %i32In3, i32 %i32In4,
     ; CHECK-NOT: andl $96239955
     %xor1 = xor i32 %or1, 268567040 ;0x10020200
     ; force an output so not DCE'd
-    store i32 %xor1, i32* %i32StarOut
+    store i32 %xor1, ptr %i32StarOut
     ; force not fast isel by using a select
     %i32SelVal = select i1 %i1In1, i32 %i32In1, i32 %xor1
-    store i32 %i32SelVal, i32* %i32SelOut
+    store i32 %i32SelVal, ptr %i32SelOut
     ; CHECK: ret
     ret void
 }

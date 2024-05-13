@@ -9,7 +9,7 @@
 #ifndef LLVM_CODEGEN_DWARFSTRINGPOOLENTRY_H
 #define LLVM_CODEGEN_DWARFSTRINGPOOLENTRY_H
 
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace llvm {
@@ -20,49 +20,94 @@ class MCSymbol;
 struct DwarfStringPoolEntry {
   static constexpr unsigned NotIndexed = -1;
 
-  MCSymbol *Symbol;
-  uint64_t Offset;
-  unsigned Index;
+  MCSymbol *Symbol = nullptr;
+  uint64_t Offset = 0;
+  unsigned Index = 0;
 
   bool isIndexed() const { return Index != NotIndexed; }
 };
 
-/// String pool entry reference.
-class DwarfStringPoolEntryRef {
-  PointerIntPair<const StringMapEntry<DwarfStringPoolEntry> *, 1, bool>
-      MapEntryAndIndexed;
+/// DwarfStringPoolEntry with string keeping externally.
+struct DwarfStringPoolEntryWithExtString : public DwarfStringPoolEntry {
+  StringRef String;
+};
 
-  const StringMapEntry<DwarfStringPoolEntry> *getMapEntry() const {
-    return MapEntryAndIndexed.getPointer();
-  }
+/// DwarfStringPoolEntryRef: Dwarf string pool entry reference.
+///
+/// Dwarf string pool entry keeps string value and its data.
+/// There are two variants how data are represented:
+///
+///   1. String data in pool  - StringMapEntry<DwarfStringPoolEntry>.
+///   2. External string data - DwarfStringPoolEntryWithExtString.
+///
+/// The external data variant allows reducing memory usage for the case
+/// when string pool entry does not have data: string entry does not
+/// keep any data and so no need to waste space for the full
+/// DwarfStringPoolEntry. It is recommended to use external variant if not all
+/// entries of dwarf string pool have corresponding DwarfStringPoolEntry.
+
+class DwarfStringPoolEntryRef {
+  /// Pointer type for "By value" string entry.
+  using ByValStringEntryPtr = const StringMapEntry<DwarfStringPoolEntry> *;
+
+  /// Pointer type for external string entry.
+  using ExtStringEntryPtr = const DwarfStringPoolEntryWithExtString *;
+
+  /// Pointer to the dwarf string pool Entry.
+  PointerUnion<ByValStringEntryPtr, ExtStringEntryPtr> MapEntry = nullptr;
 
 public:
   DwarfStringPoolEntryRef() = default;
-  DwarfStringPoolEntryRef(const StringMapEntry<DwarfStringPoolEntry> &Entry,
-                          bool Indexed)
-      : MapEntryAndIndexed(&Entry, Indexed) {}
 
-  explicit operator bool() const { return getMapEntry(); }
+  /// ASSUMPTION: DwarfStringPoolEntryRef keeps pointer to \p Entry,
+  /// thus specified entry mustn`t be reallocated.
+  DwarfStringPoolEntryRef(const StringMapEntry<DwarfStringPoolEntry> &Entry)
+      : MapEntry(&Entry) {}
+
+  /// ASSUMPTION: DwarfStringPoolEntryRef keeps pointer to \p Entry,
+  /// thus specified entry mustn`t be reallocated.
+  DwarfStringPoolEntryRef(const DwarfStringPoolEntryWithExtString &Entry)
+      : MapEntry(&Entry) {}
+
+  explicit operator bool() const { return !MapEntry.isNull(); }
+
+  /// \returns symbol for the dwarf string.
   MCSymbol *getSymbol() const {
-    assert(getMapEntry()->second.Symbol && "No symbol available!");
-    return getMapEntry()->second.Symbol;
+    assert(getEntry().Symbol && "No symbol available!");
+    return getEntry().Symbol;
   }
-  uint64_t getOffset() const { return getMapEntry()->second.Offset; }
-  bool isIndexed() const { return MapEntryAndIndexed.getInt(); }
+
+  /// \returns offset for the dwarf string.
+  uint64_t getOffset() const { return getEntry().Offset; }
+
+  /// \returns index for the dwarf string.
   unsigned getIndex() const {
-    assert(isIndexed());
-    assert(getMapEntry()->getValue().isIndexed());
-    return getMapEntry()->second.Index;
+    assert(getEntry().isIndexed() && "Index is not set!");
+    return getEntry().Index;
   }
-  StringRef getString() const { return getMapEntry()->first(); }
-  /// Return the entire string pool entry for convenience.
-  DwarfStringPoolEntry getEntry() const { return getMapEntry()->getValue(); }
+
+  /// \returns string.
+  StringRef getString() const {
+    if (isa<ByValStringEntryPtr>(MapEntry))
+      return cast<ByValStringEntryPtr>(MapEntry)->first();
+
+    return cast<ExtStringEntryPtr>(MapEntry)->String;
+  }
+
+  /// \returns the entire string pool entry for convenience.
+  const DwarfStringPoolEntry &getEntry() const {
+    if (isa<ByValStringEntryPtr>(MapEntry))
+      return cast<ByValStringEntryPtr>(MapEntry)->second;
+
+    return *cast<ExtStringEntryPtr>(MapEntry);
+  }
 
   bool operator==(const DwarfStringPoolEntryRef &X) const {
-    return getMapEntry() == X.getMapEntry();
+    return MapEntry.getOpaqueValue() == X.MapEntry.getOpaqueValue();
   }
+
   bool operator!=(const DwarfStringPoolEntryRef &X) const {
-    return getMapEntry() != X.getMapEntry();
+    return MapEntry.getOpaqueValue() != X.MapEntry.getOpaqueValue();
   }
 };
 

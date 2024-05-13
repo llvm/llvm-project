@@ -17,6 +17,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace lldb_private {
 class ConstString;
@@ -30,9 +31,9 @@ public:
                                     ConstString name,
                                     const CompilerType &cast_type);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
-  size_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   lldb::ValueType GetValueType() const override;
 

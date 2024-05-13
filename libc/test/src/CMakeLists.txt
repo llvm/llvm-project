@@ -1,24 +1,98 @@
+function(add_fp_unittest name)
+  cmake_parse_arguments(
+    "MATH_UNITTEST"
+    "NEED_MPFR;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
+    "" # Single value arguments
+    "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+
+  if(MATH_UNITTEST_NEED_MPFR)
+    if(NOT LIBC_TESTS_CAN_USE_MPFR)
+      message(VERBOSE "Math test ${name} will be skipped as MPFR library is not available.")
+      return()
+    endif()
+  endif()
+
+  if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
+    set(test_type HERMETIC_TEST_ONLY)
+  elseif(MATH_UNITTEST_UNIT_TEST_ONLY)
+    set(test_type UNIT_TEST_ONLY)
+  endif()
+  if(MATH_UNITTEST_NEED_MPFR)
+    if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
+      message(FATAL_ERROR "Hermetic math test cannot require MPFR.")
+    endif()
+    set(test_type UNIT_TEST_ONLY)
+    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
+  endif()
+  list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
+
+  set(deps libc.hdr.math_macros)
+  if(MATH_UNITTEST_DEPENDS)
+    list(APPEND deps ${MATH_UNITTEST_DEPENDS})
+  endif()
+
+  add_libc_test(
+    ${name}
+    ${test_type}
+    LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
+    "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
+    DEPENDS "${deps}"
+  )
+endfunction(add_fp_unittest)
+
 add_subdirectory(__support)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
 add_subdirectory(math)
+add_subdirectory(search)
+add_subdirectory(stdbit)
+add_subdirectory(stdfix)
+add_subdirectory(stdio)
+add_subdirectory(stdlib)
 add_subdirectory(string)
+add_subdirectory(wchar)
+
+# Depends on utilities in stdlib
+add_subdirectory(inttypes)
+
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(fcntl)
+  add_subdirectory(sched)
+  add_subdirectory(sys)
+  add_subdirectory(termios)
+  add_subdirectory(unistd)
+endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
 add_subdirectory(assert)
+add_subdirectory(compiler)
+add_subdirectory(dirent)
+add_subdirectory(network)
+add_subdirectory(setjmp)
 add_subdirectory(signal)
-add_subdirectory(stdio)
-add_subdirectory(stdlib)
-add_subdirectory(sys)
-add_subdirectory(threads)
+add_subdirectory(spawn)
 add_subdirectory(time)
-add_subdirectory(unistd)
 
-set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_integration_test.cpp)
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(pthread)
+endif()
+
+if(LLVM_RUNTIMES_BUILD OR LIBC_HDRGEN_EXE)
+  # The public API test below uses tablegen to generate the test
+  # source file. Since tablegen is not available during a runtimes
+  # build, we will skip the test.
+  # If a different libc-hdrgen binary is being used, then also we
+  # skip the api-test as we cannot generate the test source file.
+  return()
+endif()
+
+set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_api_test.cpp)
 
 set(entrypoints_name_list "")
 foreach(entry IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -32,7 +106,7 @@ list(TRANSFORM entrypoints_name_list PREPEND "-e=")
 
 file(GLOB spec_files ${LIBC_SOURCE_DIR}/spec/*.td)
 
-# Generate integration test souce code.
+# Generate api test souce code.
 add_custom_command(
   OUTPUT ${public_test}
   COMMAND $<TARGET_FILE:libc-prototype-testgen> -o ${public_test}
@@ -42,49 +116,37 @@ add_custom_command(
 
   DEPENDS ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td ${spec_files}
           libc-prototype-testgen ${TARGET_PUBLIC_HEADERS}
-          llvmlibc
+          ${LIBC_TARGET}
 )
 
-add_executable(
-  libc-integration-test
-  EXCLUDE_FROM_ALL
-  ${public_test}
+add_custom_target(libc-api-test)
+add_dependencies(check-libc libc-api-test)
+
+set(
+  allocator_entrypoints
+    libc.src.stdlib.malloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.realloc
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.free
 )
-# Blank out default include directories to prevent accidentally including
-# system headers or our own internal headers.
-set_target_properties(
-  libc-integration-test
-  PROPERTIES
-  INCLUDE_DIRECTORIES ""
+set(api-test-entrypoints ${TARGET_LLVMLIBC_ENTRYPOINTS})
+list(REMOVE_ITEM api-test-entrypoints ${allocator_entrypoints})
+add_integration_test(
+  api-test
+  SUITE
+    libc-api-test
+  SRCS
+    ${public_test}
+  DEPENDS
+    ${api-test-entrypoints}
 )
-# Only include we need is the include for cpp::IsSame and our generated
-# public headers.
-target_include_directories(
-  libc-integration-test BEFORE
-  PRIVATE
-    "${LIBC_SOURCE_DIR}/utils/CPP"
-    "${LIBC_BUILD_DIR}/include"
-)
-target_compile_options(
-  libc-integration-test
-  PRIVATE
-  -ffreestanding
-)
-target_link_options(
-  libc-integration-test
-  PRIVATE "-nostdlib"
-)
-set(library_files)
-foreach(library_name IN LISTS "llvmlibc")
-  get_target_property(library_file ${library_name} "LIBRARY_FILE")
-  list(APPEND library_files ${library_file})
-endforeach()
 
 if(COMPILER_RESOURCE_DIR AND LLVM_LIBC_ENABLE_LINTING)
   add_custom_target(
-    libc-integration-test-tidy
+    libc-api-test-tidy
     VERBATIM
-    COMMAND $<TARGET_FILE:clang-tidy> --system-headers
+    COMMAND ${LLVM_LIBC_CLANG_TIDY} --system-headers
       --checks=-*,llvmlibc-restrict-system-libc-headers
       "--extra-arg=-resource-dir=${COMPILER_RESOURCE_DIR}"
       --header-filter=.*
@@ -96,10 +158,5 @@ if(COMPILER_RESOURCE_DIR AND LLVM_LIBC_ENABLE_LINTING)
     DEPENDS
       clang-tidy ${public_test}
   )
-  add_dependencies(libc-integration-test libc-integration-test-tidy)
+  add_dependencies(libc-api-test libc-api-test-tidy)
 endif()
-
-target_link_libraries(libc-integration-test
-  PRIVATE
-  ${library_files}
-)

@@ -11,21 +11,30 @@ source_set("tweaks") {
     "//clang/lib/Tooling/Core",
     "//llvm/lib/Support",
   ]
-  include_dirs = [ "../.." ]
+  include_dirs = [
+    "../..",
+
+    # For "clang-include-cleaner/..." includes.
+    "//clang-tools-extra/include-cleaner/include",
+  ]
   sources = [
     "AddUsing.cpp",
     "AnnotateHighlightings.cpp",
     "DefineInline.cpp",
     "DefineOutline.cpp",
     "DumpAST.cpp",
-    "ExpandAutoType.cpp",
+    "ExpandDeducedType.cpp",
     "ExpandMacro.cpp",
     "ExtractFunction.cpp",
     "ExtractVariable.cpp",
+    "MemberwiseConstructor.cpp",
     "ObjCLocalizeStringLiteral.cpp",
+    "ObjCMemberwiseInitializer.cpp",
     "PopulateSwitch.cpp",
     "RawStringLiteral.cpp",
     "RemoveUsingNamespace.cpp",
+    "ScopifyEnum.cpp",
+    "SpecialMembers.cpp",
     "SwapIfBranches.cpp",
   ]
 }

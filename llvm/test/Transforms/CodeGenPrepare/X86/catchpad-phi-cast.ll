@@ -1,4 +1,5 @@
-; RUN: opt -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; The following target lines are needed for the test to exercise what it should.
 ; Without these lines, CodeGenPrepare does not try to sink the bitcasts.
@@ -9,26 +10,24 @@ declare i32 @__CxxFrameHandler3(...)
 
 declare void @f()
 
-declare void @g(i8*)
+declare void @g(ptr)
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
 
 ; CodeGenPrepare will want to sink these bitcasts, but it selects the catchpad
 ; blocks as the place to which the bitcast should be sunk.  Since catchpads
-; do not allow non-phi instructions before the terminator, this isn't possible. 
+; do not allow non-phi instructions before the terminator, this isn't possible.
 
 ; CHECK-LABEL: @test(
-define void @test(i32* %addr) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test(ptr %addr) personality ptr @__CxxFrameHandler3 {
 entry:
-  %x = getelementptr i32, i32* %addr, i32 1
-  %p1 = bitcast i32* %x to i8*
+  %x = getelementptr i32, ptr %addr, i32 1
   invoke void @f()
           to label %invoke.cont unwind label %catch1
 
 ; CHECK: invoke.cont:
-; CHECK-NEXT: %y = getelementptr i32, i32* %addr, i32 2
+; CHECK-NEXT: %y = getelementptr i32, ptr %addr, i32 2
 invoke.cont:
-  %y = getelementptr i32, i32* %addr, i32 2
-  %p2 = bitcast i32* %y to i8*
+  %y = getelementptr i32, ptr %addr, i32 2
   invoke void @f()
           to label %done unwind label %catch2
 
@@ -43,7 +42,6 @@ handler1:
   br label %catch.shared
 ; CHECK: handler1:
 ; CHECK-NEXT: catchpad within %cs1
-; CHECK: %[[p1:[0-9]+]] = bitcast i32* %x to i8*
 
 catch2:
   %cs2 = catchswitch within none [label %handler2] unwind to caller
@@ -53,13 +51,12 @@ handler2:
   br label %catch.shared
 ; CHECK: handler2:
 ; CHECK: catchpad within %cs2
-; CHECK: %[[p2:[0-9]+]] = bitcast i32* %y to i8*
 
 ; CHECK: catch.shared:
-; CHECK-NEXT: %p = phi i8* [ %[[p1]], %handler1 ], [ %[[p2]], %handler2 ]
+; CHECK-NEXT: %p = phi ptr [ %x, %handler1 ], [ %y, %handler2 ]
 catch.shared:
-  %p = phi i8* [ %p1, %handler1 ], [ %p2, %handler2 ]
-  call void @g(i8* %p)
+  %p = phi ptr [ %x, %handler1 ], [ %y, %handler2 ]
+  call void @g(ptr %p)
   unreachable
 }
 
@@ -67,7 +64,7 @@ catch.shared:
 ; there is no insertion point in a catchpad block.
 
 ; CHECK-LABEL: @test_dbg_value(
-define void @test_dbg_value() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test_dbg_value() personality ptr @__CxxFrameHandler3 {
 entry:
   %a = alloca i8
   %b = alloca i8
@@ -78,17 +75,17 @@ ret:
   ret void
 
 catch.dispatch:
-  %p = phi i8* [%a, %entry], [%b, %next]
+  %p = phi ptr [%a, %entry], [%b, %next]
   %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:
   %cp1 = catchpad within %cs1 []
-  tail call void @llvm.dbg.value(metadata i8* %p, i64 0, metadata !11, metadata !13), !dbg !14
-  call void @g(i8* %p)
+  tail call void @llvm.dbg.value(metadata ptr %p, i64 0, metadata !11, metadata !13), !dbg !14
+  call void @g(ptr %p)
   catchret from %cp1 to label %ret
 
 ; CHECK: catch.dispatch:
-; CHECK-NEXT: phi i8
+; CHECK-NEXT: phi ptr
 ; CHECK-NEXT: catchswitch
 ; CHECK-NOT: llvm.dbg.value
 

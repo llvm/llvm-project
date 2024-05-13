@@ -4,7 +4,7 @@
 # RUN: rm -rf %t && mkdir -p %t/extracted/
 
 ## Extracting from an empty archive should not warn or error:
-# RUN: llvm-ar cr %t/empty.a
+# RUN: llvm-ar cr --format=gnu %t/empty.a
 # RUN: llvm-ar xv %t/empty.a 2>&1 | count 0
 
 # RUN: echo filea > %t/a.txt
@@ -34,3 +34,21 @@
 # RUN: llvm-ar x %t/archive.a 2>&1 | count 0
 # RUN: diff %t/a.txt %t/extracted/a.txt
 # RUN: diff %t/b.txt %t/extracted/b.txt
+
+## --output specifies the directory to extract archive members to. `1/2` is created by llvm-ar.
+# RUN: llvm-ar --output=1/2 x %t/archive.a
+# RUN: diff %t/a.txt %t/extracted/1/2/a.txt
+# RUN: diff %t/b.txt %t/extracted/1/2/b.txt
+
+## --output can be used with an absolute path and can be specified elsewhere on the command line.
+# RUN: rm 1/2/a.txt
+# RUN: llvm-ar xv %t/archive.a a.txt --output %t/extracted/1/2/../2 | FileCheck %s --check-prefix=OUTPUT-A
+# RUN: diff %t/a.txt %t/extracted/1/2/a.txt
+# OUTPUT-A: x - {{.*}}extracted{{.*}}a.txt
+
+# RUN: not llvm-ar x --output=%t/a.txt %t/archive.a 2>&1 | FileCheck %s --check-prefix=OUTPUT-NOTDIR
+# RUN: not llvm-ar x --output=%t/b.txt/a.txt %t/archive.a 2>&1 | FileCheck %s --check-prefix=OUTPUT-NOTDIR
+# OUTPUT-NOTDIR: error: '{{.*}}a.txt' is not a directory
+
+# RUN: not llvm-ar rc --output=1/2 %t/archive.a %t/a.txt 2>&1 | FileCheck %s --check-prefix=OUTPUT-ERR
+# OUTPUT-ERR: error: --output is only applicable to the 'x' operation

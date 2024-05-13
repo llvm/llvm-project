@@ -50,7 +50,7 @@
 # RUN:   FileCheck -check-prefix=FOO_AND_COMMON %s
 # FOO_AND_COMMON: trace-symbols.s.tmp: reference to foo
 # FOO_AND_COMMON: trace-symbols.s.tmp2: definition of foo
-# FOO_AND_COMMON: trace-symbols.s.tmp1.a: lazy definition of common
+# FOO_AND_COMMON: trace-symbols.s.tmp1.a({{.*}}.tmp1): lazy definition of common
 
 # RUN: ld.lld -y foo -y common %t %t1.so %t2 -o %t3 | \
 # RUN:   FileCheck -check-prefix=SHLIBDCOMMON %s

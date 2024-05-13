@@ -1,9 +1,10 @@
 if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
   # The arpa/inet.h header used in the files here is providing a miscompiled
-  # htonl function on macOS <= 10.15 when local submodule visibility is active.
-  # Disabling modules in this directory until this is is fixed.
-  # See rdar://problem/62886385
-  remove_module_flags()
+  # htonl function on macOS < 14 when local submodule visibility is active.
+  if (CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 14.0)
+    # Disabling modules in this directory.
+    remove_module_flags()
+  endif()
 endif()
 
 macro(add_host_subdirectory group)
@@ -12,6 +13,7 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
+  common/Alarm.cpp
   common/FileAction.cpp
   common/FileCache.cpp
   common/File.cpp
@@ -24,7 +26,7 @@ add_host_subdirectory(common
   common/HostThread.cpp
   common/LockFileBase.cpp
   common/LZMA.cpp
-  common/MainLoop.cpp
+  common/MainLoopBase.cpp
   common/MonitoringProcessLauncher.cpp
   common/NativeProcessProtocol.cpp
   common/NativeRegisterContext.cpp
@@ -35,14 +37,15 @@ add_host_subdirectory(common
   common/ProcessLaunchInfo.cpp
   common/ProcessRunLock.cpp
   common/PseudoTerminal.cpp
+  common/StreamFile.cpp
   common/SocketAddress.cpp
   common/Socket.cpp
-  common/StringConvert.cpp
   common/TCPSocket.cpp
   common/Terminal.cpp
   common/ThreadLauncher.cpp
   common/UDPSocket.cpp
   common/XML.cpp
+  common/ZipFileResolver.cpp
   )
 
 if (LLDB_ENABLE_LIBEDIT)
@@ -64,10 +67,10 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/HostProcessWindows.cpp
     windows/HostThreadWindows.cpp
     windows/LockFileWindows.cpp
+    windows/MainLoopWindows.cpp
     windows/PipeWindows.cpp
     windows/ProcessLauncherWindows.cpp
     windows/ProcessRunLock.cpp
-    windows/Windows.cpp
     )
 else()
   add_host_subdirectory(posix
@@ -77,6 +80,7 @@ else()
     posix/HostProcessPosix.cpp
     posix/HostThreadPosix.cpp
     posix/LockFilePosix.cpp
+    posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
     posix/ProcessLauncherPosixFork.cpp
     )
@@ -137,13 +141,13 @@ if (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
   list(APPEND EXTRA_LIBS kvm)
 endif()
 if (LLDB_ENABLE_LIBXML2)
-  list(APPEND EXTRA_LIBS ${LIBXML2_LIBRARIES})
+  list(APPEND EXTRA_LIBS LibXml2::LibXml2)
 endif()
 if (HAVE_LIBDL)
   list(APPEND EXTRA_LIBS ${CMAKE_DL_LIBS})
 endif()
 if (LLDB_ENABLE_LIBEDIT)
-  list(APPEND EXTRA_LIBS ${LibEdit_LIBRARIES})
+  list(APPEND EXTRA_LIBS LibEdit::LibEdit)
 endif()
 if (LLDB_ENABLE_LZMA)
   list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
@@ -153,13 +157,13 @@ if (WIN32)
 endif()
 
 if (LLDB_ENABLE_LIBEDIT)
-  list(APPEND LLDB_LIBEDIT_LIBS ${LibEdit_LIBRARIES})
+  list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
   if (LLVM_BUILD_STATIC)
     list(APPEND LLDB_SYSTEM_LIBS gpm)
   endif()
 endif()
 
-add_lldb_library(lldbHost
+add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
   ${HOST_SOURCES}
 
   LINK_LIBS
@@ -173,6 +177,3 @@ add_lldb_library(lldbHost
     Support
   )
 
-if (LLDB_ENABLE_LIBEDIT)
-  target_include_directories(lldbHost PUBLIC ${LibEdit_INCLUDE_DIRS})
-endif()

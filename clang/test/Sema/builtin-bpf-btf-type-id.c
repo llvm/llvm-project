@@ -5,9 +5,9 @@ struct {
   int f2;
 } tmp = {};
 
-unsigned invalid1() { return __builtin_btf_type_id(1, tmp); } // expected-error {{__builtin_btf_type_id argument 2 not a constant}}
-unsigned invalid2() { return __builtin_btf_type_id(1, 1, 1); } // expected-error {{too many arguments to function call, expected 2, have 3}}
+unsigned invalid1(void) { return __builtin_btf_type_id(1, tmp); } // expected-error {{__builtin_btf_type_id argument 2 not a constant}}
+unsigned invalid2(void) { return __builtin_btf_type_id(1, 1, 1); } // expected-error {{too many arguments to function call, expected 2, have 3}}
 
-int valid1() { return __builtin_btf_type_id(tmp, 0); }
-int valid2() { return __builtin_btf_type_id(&tmp, 1); }
-int valid3() { return __builtin_btf_type_id(tmp.f1[4], 10); }
+int valid1(void) { return __builtin_btf_type_id(tmp, 0); }
+int valid2(void) { return __builtin_btf_type_id(&tmp, 1); }
+int valid3(void) { return __builtin_btf_type_id(tmp.f1[4], 10); }

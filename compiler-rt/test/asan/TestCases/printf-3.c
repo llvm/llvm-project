@@ -4,7 +4,7 @@
 // RUN: not %run %t 2>&1 | FileCheck --check-prefix=CHECK-ON %s
 
 // FIXME: printf is not intercepted on Windows yet.
-// XFAIL: windows-msvc
+// XFAIL: target={{.*windows-(msvc.*|gnu)}}
 
 // New Bionic rejects %n
 // https://android.googlesource.com/platform/bionic/+/41398d03b7e8e0dfb951660ae713e682e9fc0336

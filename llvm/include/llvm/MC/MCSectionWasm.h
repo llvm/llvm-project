@@ -33,7 +33,7 @@ class MCSectionWasm final : public MCSection {
   // itself and does not include the size of the section header.
   uint64_t SectionOffset = 0;
 
-  // For data sections, this is the index of of the corresponding wasm data
+  // For data sections, this is the index of the corresponding wasm data
   // segment
   uint32_t SegmentIndex = 0;
 
@@ -58,10 +58,10 @@ public:
   const MCSymbolWasm *getGroup() const { return Group; }
   unsigned getSegmentFlags() const { return SegmentFlags; }
 
-  void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             const MCExpr *Subsection) const override;
-  bool UseCodeAlign() const override;
+  bool useCodeAlign() const override;
   bool isVirtualSection() const override;
 
   bool isWasmData() const {

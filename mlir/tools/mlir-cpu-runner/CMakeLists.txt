@@ -5,19 +5,22 @@ set(LLVM_LINK_COMPONENTS
   native
   )
 
-add_llvm_tool(mlir-cpu-runner
+add_mlir_tool(mlir-cpu-runner
   mlir-cpu-runner.cpp
   )
 llvm_update_compile_flags(mlir-cpu-runner)
 target_link_libraries(mlir-cpu-runner PRIVATE
   MLIRAnalysis
+  MLIRBuiltinToLLVMIRTranslation
   MLIRExecutionEngine
   MLIRIR
   MLIRJitRunner
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIRToLLVMIRTranslationRegistration
   MLIRParser
   MLIRTargetLLVMIRExport
   MLIRSupport
   )
+
+export_executable_symbols(mlir-cpu-runner)

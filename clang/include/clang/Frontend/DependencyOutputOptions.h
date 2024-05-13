@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_FRONTEND_DEPENDENCYOUTPUTOPTIONS_H
 #define LLVM_CLANG_FRONTEND_DEPENDENCYOUTPUTOPTIONS_H
 
+#include "clang/Basic/HeaderInclude.h"
 #include <string>
 #include <vector>
 
@@ -32,17 +33,29 @@ enum ExtraDepKind {
 /// file generation.
 class DependencyOutputOptions {
 public:
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IncludeSystemHeaders : 1; ///< Include system header dependencies.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowHeaderIncludes : 1;   ///< Show header inclusions (-H).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UsePhonyTargets : 1;      ///< Include phony targets for each
                                      /// dependency, which can avoid some 'make'
                                      /// problems.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AddMissingHeaderDeps : 1; ///< Add missing headers to dependency list
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IncludeModuleFiles : 1; ///< Include module file dependencies.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowSkippedHeaderIncludes : 1; ///< With ShowHeaderIncludes, show
                                           /// also includes that were skipped
                                           /// due to the "include guard
                                           /// optimization" or #pragma once.
+
+  /// The format of header information.
+  HeaderIncludeFormatKind HeaderIncludeFormat = HIFMT_Textual;
+
+  /// Determine whether header information should be filtered.
+  HeaderIncludeFilteringKind HeaderIncludeFiltering = HIFIL_None;
 
   /// Destination of cl.exe style /showIncludes info.
   ShowIncludesDestination ShowIncludesDest = ShowIncludesDestination::None;
@@ -67,9 +80,6 @@ public:
   /// target.
   std::vector<std::pair<std::string, ExtraDepKind>> ExtraDeps;
 
-  /// In /showIncludes mode, pretend the main TU is a header with this name.
-  std::string ShowIncludesPretendHeader;
-
   /// The file to write GraphViz-formatted header dependencies to.
   std::string DOTOutputFile;
 
@@ -80,7 +90,8 @@ public:
   DependencyOutputOptions()
       : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
         AddMissingHeaderDeps(0), IncludeModuleFiles(0),
-        ShowSkippedHeaderIncludes(0) {}
+        ShowSkippedHeaderIncludes(0), HeaderIncludeFormat(HIFMT_Textual),
+        HeaderIncludeFiltering(HIFIL_None) {}
 };
 
 }  // end namespace clang

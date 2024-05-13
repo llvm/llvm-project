@@ -13,9 +13,9 @@ define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-NEXT:    movl g_5, %eax
 ; SOURCE-SCHED-NEXT:    sarl %eax
 ; SOURCE-SCHED-NEXT:    xorl %ecx, %ecx
-; SOURCE-SCHED-NEXT:    cmpl $1, %eax
-; SOURCE-SCHED-NEXT:    setg %cl
-; SOURCE-SCHED-NEXT:    movb g_73, %dl
+; SOURCE-SCHED-NEXT:    cmpl $2, %eax
+; SOURCE-SCHED-NEXT:    setge %cl
+; SOURCE-SCHED-NEXT:    movzbl g_73, %edx
 ; SOURCE-SCHED-NEXT:    xorl %eax, %eax
 ; SOURCE-SCHED-NEXT:    subb {{[0-9]+}}(%esp), %al
 ; SOURCE-SCHED-NEXT:    testb %dl, %dl
@@ -32,15 +32,15 @@ define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-NEXT:    pushl $0
 ; SOURCE-SCHED-NEXT:    pushl %ecx
 ; SOURCE-SCHED-NEXT:    pushl %edx
-; SOURCE-SCHED-NEXT:    calll func_48
+; SOURCE-SCHED-NEXT:    calll func_48@PLT
 ; SOURCE-SCHED-NEXT:    addl $28, %esp
 ; SOURCE-SCHED-NEXT:    retl
 entry:
-	%0 = load i32, i32* @g_5, align 4
+	%0 = load i32, ptr @g_5, align 4
 	%1 = ashr i32 %0, 1
 	%2 = icmp sgt i32 %1, 1
 	%3 = zext i1 %2 to i32
-	%4 = load i32, i32* @g_73, align 4
+	%4 = load i32, ptr @g_73, align 4
 	%5 = zext i16 %p_46 to i64
 	%6 = sub i64 0, %5
 	%7 = trunc i64 %6 to i8

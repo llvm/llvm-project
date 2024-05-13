@@ -12,9 +12,9 @@ entry:
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %entry
-  %wide.load = load <16 x i8>, <16 x i8>* undef, align 1, !tbaa !1, !alias.scope !4
+  %wide.load = load <16 x i8>, ptr undef, align 1, !tbaa !1, !alias.scope !4
   %0 = zext <16 x i8> %wide.load to <16 x i32>
-  %wide.load279 = load <16 x i8>, <16 x i8>* undef, align 1, !tbaa !1, !alias.scope !4
+  %wide.load279 = load <16 x i8>, ptr undef, align 1, !tbaa !1, !alias.scope !4
   %1 = zext <16 x i8> %wide.load279 to <16 x i32>
   %2 = add nuw nsw <16 x i32> %1, %0
   %3 = add nuw nsw <16 x i32> %2, zeroinitializer
@@ -38,7 +38,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %21 = ashr <16 x i32> %20, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
   %22 = select <16 x i1> undef, <16 x i32> %21, <16 x i32> %19
   %23 = trunc <16 x i32> %22 to <16 x i8>
-  store <16 x i8> %23, <16 x i8>* undef, align 1, !tbaa !1, !alias.scope !7, !noalias !9
+  store <16 x i8> %23, ptr undef, align 1, !tbaa !1, !alias.scope !7, !noalias !9
   br label %vector.body
 }
 

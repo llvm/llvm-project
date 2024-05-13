@@ -13,8 +13,6 @@
 // pos_type seekpos(pos_type sp,
 //                  ios_base::openmode which = ios_base::in | ios_base::out);
 
-// FILE_DEPENDENCIES: underflow.dat
-
 #include <fstream>
 #include <cassert>
 
@@ -43,6 +41,8 @@ int main(int, char**)
         assert(f.sgetc() == 'l');
     }
     std::remove("seekoff.dat");
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         wchar_t buf[10];
         typedef std::filebuf::pos_type pos_type;
@@ -64,6 +64,7 @@ int main(int, char**)
         assert(f.sgetc() == L'l');
     }
     std::remove("seekoff.dat");
+#endif
 
   return 0;
 }

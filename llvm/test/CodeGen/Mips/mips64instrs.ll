@@ -121,8 +121,8 @@ entry:
 ; GPRMULDIV:     ddiv $2, $[[T0]], $[[T1]]
 ; GPRMULDIV:     teq $[[T1]], $zero, 7
 
-  %0 = load i64, i64* @gll0, align 8
-  %1 = load i64, i64* @gll1, align 8
+  %0 = load i64, ptr @gll0, align 8
+  %1 = load i64, ptr @gll1, align 8
   %div = sdiv i64 %0, %1
   ret i64 %div
 }
@@ -140,8 +140,8 @@ entry:
 ; GPRMULDIV:     ddivu $2, $[[T0]], $[[T1]]
 ; GPRMULDIV:     teq $[[T1]], $zero, 7
 
-  %0 = load i64, i64* @gll0, align 8
-  %1 = load i64, i64* @gll1, align 8
+  %0 = load i64, ptr @gll0, align 8
+  %1 = load i64, ptr @gll1, align 8
   %div = udiv i64 %0, %1
   ret i64 %div
 }

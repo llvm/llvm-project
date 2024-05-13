@@ -17,8 +17,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
@@ -47,20 +45,13 @@ static bool convertAnnotation2Metadata(Module &M) {
     auto *OpC = dyn_cast<ConstantStruct>(&Op);
     if (!OpC || OpC->getNumOperands() != 4)
       continue;
-    auto *StrGEP = dyn_cast<ConstantExpr>(OpC->getOperand(1));
-    if (!StrGEP || StrGEP->getNumOperands() < 2)
-      continue;
-    auto *StrC = dyn_cast<GlobalValue>(StrGEP->getOperand(0));
+    auto *StrC = dyn_cast<GlobalValue>(OpC->getOperand(1)->stripPointerCasts());
     if (!StrC)
       continue;
     auto *StrData = dyn_cast<ConstantDataSequential>(StrC->getOperand(0));
     if (!StrData)
       continue;
-    // Look through bitcast.
-    auto *Bitcast = dyn_cast<ConstantExpr>(OpC->getOperand(0));
-    if (!Bitcast || Bitcast->getOpcode() != Instruction::BitCast)
-      continue;
-    auto *Fn = dyn_cast<Function>(Bitcast->getOperand(0));
+    auto *Fn = dyn_cast<Function>(OpC->getOperand(0)->stripPointerCasts());
     if (!Fn)
       continue;
 
@@ -71,36 +62,8 @@ static bool convertAnnotation2Metadata(Module &M) {
   return true;
 }
 
-namespace {
-struct Annotation2MetadataLegacy : public ModulePass {
-  static char ID;
-
-  Annotation2MetadataLegacy() : ModulePass(ID) {
-    initializeAnnotation2MetadataLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override { return convertAnnotation2Metadata(M); }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-};
-
-} // end anonymous namespace
-
-char Annotation2MetadataLegacy::ID = 0;
-
-INITIALIZE_PASS_BEGIN(Annotation2MetadataLegacy, DEBUG_TYPE,
-                      "Annotation2Metadata", false, false)
-INITIALIZE_PASS_END(Annotation2MetadataLegacy, DEBUG_TYPE,
-                    "Annotation2Metadata", false, false)
-
-ModulePass *llvm::createAnnotation2MetadataLegacyPass() {
-  return new Annotation2MetadataLegacy();
-}
-
 PreservedAnalyses Annotation2MetadataPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
-  convertAnnotation2Metadata(M);
-  return PreservedAnalyses::all();
+  return convertAnnotation2Metadata(M) ? PreservedAnalyses::none()
+                                       : PreservedAnalyses::all();
 }

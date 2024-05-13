@@ -16,7 +16,7 @@
 #ifndef LLVM_LIB_MC_MCDISASSEMBLER_DISASSEMBLER_H
 #define LLVM_LIB_MC_MCDISASSEMBLER_DISASSEMBLER_H
 
-#include "llvm-c/Disassembler.h"
+#include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"

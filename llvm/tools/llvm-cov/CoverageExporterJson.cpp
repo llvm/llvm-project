@@ -20,6 +20,8 @@
 //       -- File: dict => Coverage for a single file
 //         -- Branches: array => List of Branches in the file
 //           -- Branch: dict => Describes a branch of the file with counters
+//         -- MCDC Records: array => List of MCDC records in the file
+//           -- MCDC Values: array => List of T/F covered condition values
 //         -- Segments: array => List of Segments contained in the file
 //           -- Segment: dict => Describes a segment of the file with a counter
 //         -- Expansions: array => List of expansion records
@@ -34,6 +36,7 @@
 //           -- FunctionCoverage: dict => Object summarizing function coverage
 //           -- RegionCoverage: dict => Object summarizing region coverage
 //           -- BranchCoverage: dict => Object summarizing branch coverage
+//           -- MCDCCoverage: dict => Object summarizing MC/DC coverage
 //     -- Functions: array => List of objects describing coverage for functions
 //       -- Function: dict => Coverage info for a single function
 //         -- Filenames: array => List of filenames that the function relates to
@@ -43,12 +46,12 @@
 //     -- InstantiationCoverage: dict => Object summarizing inst. coverage
 //     -- RegionCoverage: dict => Object summarizing region coverage
 //     -- BranchCoverage: dict => Object summarizing branch coverage
+//     -- MCDCCoverage: dict => Object summarizing MC/DC coverage
 //
 //===----------------------------------------------------------------------===//
 
 #include "CoverageExporterJson.h"
 #include "CoverageReport.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ThreadPool.h"
@@ -98,6 +101,20 @@ json::Array renderBranch(const coverage::CountedRegion &Region) {
        Region.ExpandedFileID, int64_t(Region.Kind)});
 }
 
+json::Array gatherConditions(const coverage::MCDCRecord &Record) {
+  json::Array Conditions;
+  for (unsigned c = 0; c < Record.getNumConditions(); c++)
+    Conditions.push_back(Record.isConditionIndependencePairCovered(c));
+  return Conditions;
+}
+
+json::Array renderMCDCRecord(const coverage::MCDCRecord &Record) {
+  const llvm::coverage::CounterMappingRegion &CMR = Record.getDecisionRegion();
+  return json::Array({CMR.LineStart, CMR.ColumnStart, CMR.LineEnd,
+                      CMR.ColumnEnd, CMR.ExpandedFileID, int64_t(CMR.Kind),
+                      gatherConditions(Record)});
+}
+
 json::Array renderRegions(ArrayRef<coverage::CountedRegion> Regions) {
   json::Array RegionArray;
   for (const auto &Region : Regions)
@@ -111,6 +128,13 @@ json::Array renderBranchRegions(ArrayRef<coverage::CountedRegion> Regions) {
     if (!Region.Folded)
       RegionArray.push_back(renderBranch(Region));
   return RegionArray;
+}
+
+json::Array renderMCDCRecords(ArrayRef<coverage::MCDCRecord> Records) {
+  json::Array RecordArray;
+  for (auto &Record : Records)
+    RecordArray.push_back(renderMCDCRecord(Record));
+  return RecordArray;
 }
 
 std::vector<llvm::coverage::CountedRegion>
@@ -179,7 +203,14 @@ json::Object renderSummary(const FileCoverageSummary &Summary) {
              {"covered", int64_t(Summary.BranchCoverage.getCovered())},
              {"notcovered", int64_t(Summary.BranchCoverage.getNumBranches() -
                                     Summary.BranchCoverage.getCovered())},
-             {"percent", Summary.BranchCoverage.getPercentCovered()}})}});
+             {"percent", Summary.BranchCoverage.getPercentCovered()}})},
+       {"mcdc",
+        json::Object(
+            {{"count", int64_t(Summary.MCDCCoverage.getNumPairs())},
+             {"covered", int64_t(Summary.MCDCCoverage.getCoveredPairs())},
+             {"notcovered", int64_t(Summary.MCDCCoverage.getNumPairs() -
+                                    Summary.MCDCCoverage.getCoveredPairs())},
+             {"percent", Summary.MCDCCoverage.getPercentCovered()}})}});
 }
 
 json::Array renderFileExpansions(const coverage::CoverageMapping &Coverage,
@@ -207,6 +238,14 @@ json::Array renderFileBranches(const coverage::CoverageData &FileCoverage,
   return BranchArray;
 }
 
+json::Array renderFileMCDC(const coverage::CoverageData &FileCoverage,
+                           const FileCoverageSummary &FileReport) {
+  json::Array MCDCRecordArray;
+  for (const auto &Record : FileCoverage.getMCDCRecords())
+    MCDCRecordArray.push_back(renderMCDCRecord(Record));
+  return MCDCRecordArray;
+}
+
 json::Object renderFile(const coverage::CoverageMapping &Coverage,
                         const std::string &Filename,
                         const FileCoverageSummary &FileReport,
@@ -217,6 +256,7 @@ json::Object renderFile(const coverage::CoverageMapping &Coverage,
     auto FileCoverage = Coverage.getCoverageForFile(Filename);
     File["segments"] = renderFileSegments(FileCoverage, FileReport);
     File["branches"] = renderFileBranches(FileCoverage, FileReport);
+    File["mcdc_records"] = renderFileMCDC(FileCoverage, FileReport);
     if (!Options.SkipExpansions) {
       File["expansions"] =
           renderFileExpansions(Coverage, FileCoverage, FileReport);
@@ -237,7 +277,7 @@ json::Array renderFiles(const coverage::CoverageMapping &Coverage,
     S = heavyweight_hardware_concurrency(SourceFiles.size());
     S.Limit = true;
   }
-  ThreadPool Pool(S);
+  DefaultThreadPool Pool(S);
   json::Array FileArray;
   std::mutex FileArrayMutex;
 
@@ -265,6 +305,7 @@ json::Array renderFunctions(
                       {"count", clamp_uint64_to_int64(F.ExecutionCount)},
                       {"regions", renderRegions(F.CountedRegions)},
                       {"branches", renderBranchRegions(F.CountedBranchRegions)},
+                      {"mcdc_records", renderMCDCRecords(F.MCDCRecords)},
                       {"filenames", json::Array(F.Filenames)}}));
   return FunctionArray;
 }
@@ -291,8 +332,8 @@ void CoverageExporterJson::renderRoot(ArrayRef<std::string> SourceFiles) {
     const json::Object *ObjB = B.getAsObject();
     assert(ObjA != nullptr && "Value A was not an Object");
     assert(ObjB != nullptr && "Value B was not an Object");
-    const StringRef FilenameA = ObjA->getString("filename").getValue();
-    const StringRef FilenameB = ObjB->getString("filename").getValue();
+    const StringRef FilenameA = *ObjA->getString("filename");
+    const StringRef FilenameB = *ObjB->getString("filename");
     return FilenameA.compare(FilenameB) < 0;
   });
   auto Export = json::Object(

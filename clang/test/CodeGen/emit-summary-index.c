@@ -14,4 +14,10 @@
 // RUN: %clang_cc1 -flto -triple x86_64-pc-linux-gnu -emit-llvm-bc -disable-llvm-passes < %s -o %t.bc
 // RUN: %clang_cc1 -flto -triple x86_64-pc-linux-gnu -emit-llvm-bc -x ir < %t.bc | llvm-bcanalyzer -dump | FileCheck --check-prefix=LTOINDEX %s
 
-int main() {}
+/// Check that emitting bitcode works for Unified LTO, when either LTO mode is specified
+// RUN: %clang_cc1 -flto=thin -funified-lto -emit-llvm-bc < %s | llvm-bcanalyzer -dump | FileCheck --check-prefix=UNITHIN %s
+// RUN: %clang_cc1 -flto -funified-lto -emit-llvm-bc < %s | llvm-bcanalyzer -dump | FileCheck --check-prefix=UNITHIN %s
+
+// UNITHIN: <GLOBALVAL_SUMMARY_BLOCK
+
+int main(void) {}

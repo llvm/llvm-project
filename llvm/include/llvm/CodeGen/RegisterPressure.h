@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
@@ -202,6 +201,8 @@ class PressureDiffs {
 
 public:
   PressureDiffs() = default;
+  PressureDiffs &operator=(const PressureDiffs &other) = delete;
+  PressureDiffs(const PressureDiffs &other) = delete;
   ~PressureDiffs() { free(PDiffArray); }
 
   void clear() { Size = 0; }
@@ -273,7 +274,7 @@ private:
 
   using RegSet = SparseSet<IndexMaskPair>;
   RegSet Regs;
-  unsigned NumRegUnits;
+  unsigned NumRegUnits = 0u;
 
   unsigned getSparseIndexFromReg(Register Reg) const {
     if (Reg.isVirtual())
@@ -359,7 +360,7 @@ class RegPressureTracker {
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const RegisterClassInfo *RCI = nullptr;
-  const MachineRegisterInfo *MRI;
+  const MachineRegisterInfo *MRI = nullptr;
   const LiveIntervals *LIS = nullptr;
 
   /// We currently only allow pressure tracking within a block.
@@ -538,6 +539,11 @@ public:
 
   void dump() const;
 
+  void increaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
+                           LaneBitmask NewMask);
+  void decreaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
+                           LaneBitmask NewMask);
+
 protected:
   /// Add Reg to the live out set and increase max pressure.
   void discoverLiveOut(RegisterMaskPair Pair);
@@ -547,11 +553,6 @@ protected:
   /// Get the SlotIndex for the first nondebug instruction including or
   /// after the current position.
   SlotIndex getCurrSlot() const;
-
-  void increaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
-                           LaneBitmask NewMask);
-  void decreaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
-                           LaneBitmask NewMask);
 
   void bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs);
 

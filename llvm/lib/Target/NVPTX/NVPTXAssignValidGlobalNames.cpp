@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -72,12 +73,13 @@ bool NVPTXAssignValidGlobalNames::runOnModule(Module &M) {
 std::string NVPTXAssignValidGlobalNames::cleanUpName(StringRef Name) {
   std::string ValidName;
   raw_string_ostream ValidNameStream(ValidName);
-  for (unsigned I = 0, E = Name.size(); I != E; ++I) {
-    char C = Name[I];
-    if (C == '.' || C == '@') {
-      ValidNameStream << "_$_";
-    } else {
+  for (char C : Name) {
+    // While PTX also allows '%' at the start of identifiers, LLVM will throw a
+    // fatal error for '%' in symbol names in MCSymbol::print. Exclude for now.
+    if (isAlnum(C) || C == '_' || C == '$') {
       ValidNameStream << C;
+    } else {
+      ValidNameStream << "_$_";
     }
   }
 

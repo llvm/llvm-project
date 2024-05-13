@@ -7,21 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class F, class... Args>
 // concept predicate;
 
 #include <concepts>
 
-[[nodiscard]] constexpr bool check_subsumption(std::regular_invocable auto) {
+constexpr bool check_subsumption(std::regular_invocable auto) {
   return false;
 }
 
 // clang-format off
 template<class F>
 requires std::predicate<F> && true
-[[nodiscard]] constexpr bool check_subsumption(F)
+constexpr bool check_subsumption(F)
 {
   return true;
 }

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple i386-apple-macosx10.6.6 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fobjc-exceptions -fcxx-exceptions -fexceptions -o - %s | FileCheck %s
-// rdar://8940528
 
 @interface ns_array
 + (id) array;
@@ -30,10 +29,10 @@ id FUNC() {
     }
     catch( id error )
     { 
-      // CHECK:      landingpad { i8*, i32 }
-      // CHECK-NEXT:   catch i8* bitcast ({ i8*, i8*, i32, i8* }* @_ZTIPU11objcproto1P4INTF to i8*)
-      // CHECK-NEXT:   catch i8* bitcast ({ i8*, i8*, i32, i8* }* @_ZTIP11objc_object to i8*)
-      // CHECK-NEXT:   catch i8* bitcast ({ i8*, i8*, i32, i8* }* @_ZTIP10objc_class to i8*)
+      // CHECK:      landingpad { ptr, i32 }
+      // CHECK-NEXT:   catch ptr @_ZTIPU11objcproto1P4INTF
+      // CHECK-NEXT:   catch ptr @_ZTIP11objc_object
+      // CHECK-NEXT:   catch ptr @_ZTIP10objc_class
       error = error; 
       groups = [ns_array array]; 
     }

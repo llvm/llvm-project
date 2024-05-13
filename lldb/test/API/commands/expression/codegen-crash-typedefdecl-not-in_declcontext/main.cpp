@@ -23,7 +23,7 @@ struct E {
   E(B &b) : b_ref(b) {}
   NS::DW f() { return {}; };
   void g() {
-    return; //%self.expect("p b_ref", substrs=['(B) $0 =', '(spd = NS::DW', 'a = 0)'])
+    return; //%self.expect("expression b_ref", substrs=['(B) $0 =', '(spd = NS::DW', 'a = 0)'])
   }
 
   B &b_ref;

@@ -33,30 +33,32 @@ class NSIndexPathSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   NSIndexPathSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
       : SyntheticChildrenFrontEnd(*valobj_sp.get()), m_descriptor_sp(nullptr),
-        m_impl(), m_ptr_size(0), m_uint_star_type() {
+        m_impl(), m_uint_star_type() {
     m_ptr_size =
         m_backend.GetTargetSP()->GetArchitecture().GetAddressByteSize();
   }
 
   ~NSIndexPathSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return m_impl.GetNumIndexes(); }
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    return m_impl.GetNumIndexes();
+  }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return m_impl.GetIndexAtIndex(idx, m_uint_star_type);
   }
 
-  bool Update() override {
+  lldb::ChildCacheState Update() override {
     m_impl.Clear();
 
-    TypeSystem *type_system = m_backend.GetCompilerType().GetTypeSystem();
+    auto type_system = m_backend.GetCompilerType().GetTypeSystem();
     if (!type_system)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
-    TypeSystemClang *ast = ScratchTypeSystemClang::GetForTarget(
+    auto ast = ScratchTypeSystemClang::GetForTarget(
         *m_backend.GetExecutionContextRef().GetTargetSP());
     if (!ast)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     m_uint_star_type = ast->GetPointerSizedIntType(false);
 
@@ -65,18 +67,18 @@ public:
 
     ProcessSP process_sp = m_backend.GetProcessSP();
     if (!process_sp)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
 
     if (!runtime)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(
         runtime->GetClassDescriptor(m_backend));
 
     if (!descriptor.get() || !descriptor->IsValid())
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     uint64_t info_bits(0), value_bits(0), payload(0);
 
@@ -119,7 +121,7 @@ public:
         }
       }
     }
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return m_impl.m_mode != Mode::Invalid; }
@@ -127,7 +129,7 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();
     uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+    if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
       return UINT32_MAX;
     return idx;
   }
@@ -209,14 +211,13 @@ protected:
         m_process = nullptr;
       }
 
-      InlinedIndexes()
-          : m_indexes(0), m_count(0), m_ptr_size(0), m_process(nullptr) {}
+      InlinedIndexes() {}
 
     private:
-      uint64_t m_indexes;
-      size_t m_count;
-      uint32_t m_ptr_size;
-      Process *m_process;
+      uint64_t m_indexes = 0;
+      size_t m_count = 0;
+      uint32_t m_ptr_size = 0;
+      Process *m_process = nullptr;
 
       // cfr. Foundation for the details of this code
       size_t _lengthForInlinePayload(uint32_t ptr_size) {
@@ -271,10 +272,10 @@ protected:
         m_count = 0;
       }
 
-      OutsourcedIndexes() : m_indexes(nullptr), m_count(0) {}
+      OutsourcedIndexes() {}
 
-      ValueObject *m_indexes;
-      size_t m_count;
+      ValueObject *m_indexes = nullptr;
+      size_t m_count = 0;
     };
 
     union {
@@ -283,17 +284,25 @@ protected:
     };
 
     void Clear() {
+      switch (m_mode) {
+      case Mode::Inlined:
+        m_inlined.Clear();
+        break;
+      case Mode::Outsourced:
+        m_outsourced.Clear();
+        break;
+      case Mode::Invalid:
+        break;
+      }
       m_mode = Mode::Invalid;
-      m_inlined.Clear();
-      m_outsourced.Clear();
     }
 
-    Impl() : m_mode(Mode::Invalid) {}
+    Impl() {}
 
-    Mode m_mode;
+    Mode m_mode = Mode::Invalid;
   } m_impl;
 
-  uint32_t m_ptr_size;
+  uint32_t m_ptr_size = 0;
   CompilerType m_uint_star_type;
 };
 

@@ -22,10 +22,10 @@ the compiler.
 That's API notes.
 
 API notes use a YAML-based file format. YAML is a format best explained by
-example, so here is a `small example`__ from the compiler test suite of API
+example, so here is a `small example
+<https://github.com/llvm/llvm-project/blob/main/clang/test/APINotes/Inputs/Frameworks/SomeKit.framework/Headers/SomeKit.apinotes>`_
+from the compiler test suite of API
 notes for a hypothetical "SomeKit" framework.
-
-__ test/APINotes/Inputs/Frameworks/SomeKit.framework/Headers/SomeKit.apinotes
 
 
 Usage

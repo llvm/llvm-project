@@ -27,7 +27,7 @@ static cl::opt<bool> IgnoreIntegerWrapping(
     "polly-ignore-integer-wrapping",
     cl::desc("Do not build run-time checks to proof absence of integer "
              "wrapping"),
-    cl::Hidden, cl::ZeroOrMore, cl::init(false), cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 // The maximal number of basic sets we allow during the construction of a
 // piecewise affine function. More complex ones will result in very high
@@ -197,7 +197,7 @@ PWACtx SCEVAffinator::visit(const SCEV *Expr) {
 
   auto Key = std::make_pair(Expr, BB);
   PWACtx PWAC = CachedExpressions[Key];
-  if (PWAC.first)
+  if (!PWAC.first.is_null())
     return PWAC;
 
   auto ConstantAndLeftOverPair = extractConstantFactor(Expr, SE);
@@ -264,6 +264,10 @@ PWACtx SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
   isl_local_space *ls = isl_local_space_from_space(Space);
   return getPWACtxFromPWA(
       isl::manage(isl_pw_aff_from_aff(isl_aff_val_on_domain(ls, v))));
+}
+
+PWACtx SCEVAffinator::visitVScale(const SCEVVScale *VScale) {
+  llvm_unreachable("SCEVVScale not yet supported");
 }
 
 PWACtx SCEVAffinator::visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
@@ -463,6 +467,11 @@ PWACtx SCEVAffinator::visitUMaxExpr(const SCEVUMaxExpr *Expr) {
 
 PWACtx SCEVAffinator::visitUMinExpr(const SCEVUMinExpr *Expr) {
   llvm_unreachable("SCEVUMinExpr not yet supported");
+}
+
+PWACtx
+SCEVAffinator::visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
+  llvm_unreachable("SCEVSequentialUMinExpr not yet supported");
 }
 
 PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {

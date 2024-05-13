@@ -8,24 +8,20 @@ from lldbsuite.test.decorators import *
 
 
 class IntegerTypesTestCase(AbstractBase.GenericTester):
-
-    mydir = AbstractBase.GenericTester.compute_mydir(__file__)
-
     def test_int_type(self):
         """Test that int-type variables are displayed correctly."""
-        self.build_and_run('int.cpp', ['int'])
+        self.build_and_run("int.cpp", ["int"])
 
     @skipUnlessDarwin
     def test_int_type_from_block(self):
         """Test that int-type variables are displayed correctly from a block."""
-        self.build_and_run('int.cpp', ['int'])
+        self.build_and_run("int.cpp", ["int"])
 
     def test_unsigned_int_type(self):
         """Test that 'unsigned_int'-type variables are displayed correctly."""
-        self.build_and_run('unsigned_int.cpp', ['unsigned', 'int'])
+        self.build_and_run("unsigned_int.cpp", ["unsigned", "int"])
 
     @skipUnlessDarwin
     def test_unsigned_int_type_from_block(self):
         """Test that 'unsigned int'-type variables are displayed correctly from a block."""
-        self.build_and_run(
-            'unsigned_int.cpp', ['unsigned', 'int'], bc=True)
+        self.build_and_run("unsigned_int.cpp", ["unsigned", "int"], bc=True)

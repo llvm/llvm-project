@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H
 
 #include "Trace.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/StringSaver.h"
 #include <cstddef>
 #include <string>
 #include <vector>

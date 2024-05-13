@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ; Check that the debug location for the hoisted store for "ret = 0" is a
 ; line-0 location.
@@ -26,18 +26,18 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @foo(i32) !dbg !6 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4
-  store i32 1, i32* %3, align 4, !dbg !14
-  %4 = load i32, i32* %2, align 4, !dbg !15
+  store i32 %0, ptr %2, align 4
+  store i32 1, ptr %3, align 4, !dbg !14
+  %4 = load i32, ptr %2, align 4, !dbg !15
   %5 = icmp ne i32 %4, 0, !dbg !15
   br i1 %5, label %6, label %7, !dbg !17
 
 ; <label>:6:                                      ; preds = %1
-  store i32 0, i32* %3, align 4, !dbg !18
+  store i32 0, ptr %3, align 4, !dbg !18
   br label %7, !dbg !19
 
 ; <label>:7:                                      ; preds = %6, %1
-  %8 = load i32, i32* %3, align 4, !dbg !20
+  %8 = load i32, ptr %3, align 4, !dbg !20
   ret i32 %8, !dbg !21
 }
 

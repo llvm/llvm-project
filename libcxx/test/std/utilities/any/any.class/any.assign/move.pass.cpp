@@ -8,12 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_any_cast is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9 && !no-exceptions
-
 // <any>
 
 // any& operator=(any &&);
@@ -26,18 +20,15 @@
 #include "any_helpers.h"
 #include "test_macros.h"
 
-using std::any;
-using std::any_cast;
-
 template <class LHS, class RHS>
 void test_move_assign() {
     assert(LHS::count == 0);
     assert(RHS::count == 0);
     {
         LHS const s1(1);
-        any a(s1);
+        std::any a = s1;
         RHS const s2(2);
-        any a2(s2);
+        std::any a2 = s2;
 
         assert(LHS::count == 2);
         assert(RHS::count == 2);
@@ -61,8 +52,8 @@ template <class LHS>
 void test_move_assign_empty() {
     assert(LHS::count == 0);
     {
-        any a;
-        any a2((LHS(1)));
+        std::any a;
+        std::any a2 = LHS(1);
 
         assert(LHS::count == 1);
 
@@ -78,8 +69,8 @@ void test_move_assign_empty() {
     }
     assert(LHS::count == 0);
     {
-        any a((LHS(1)));
-        any a2;
+        std::any a = LHS(1);
+        std::any a2;
 
         assert(LHS::count == 1);
 
@@ -94,12 +85,9 @@ void test_move_assign_empty() {
 }
 
 void test_move_assign_noexcept() {
-    any a1;
-    any a2;
-    static_assert(
-        noexcept(a1 = std::move(a2))
-      , "any & operator=(any &&) must be noexcept"
-      );
+    std::any a1;
+    std::any a2;
+    ASSERT_NOEXCEPT(a1 = std::move(a2));
 }
 
 int main(int, char**) {

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fobjc-arc -fblocks -Wno-objc-root-class -O0 %s -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fobjc-arc -fblocks -Wno-objc-root-class -O0 -xobjective-c++ -std=c++11 %s -S -emit-llvm -o - | FileCheck %s --check-prefix CHECKXX
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fobjc-arc -fblocks -Wno-objc-root-class -O0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fobjc-arc -fblocks -Wno-objc-root-class -O0 -xobjective-c++ -std=c++11 %s -emit-llvm -o - | FileCheck %s --check-prefix CHECKXX
 
 #define EXT_RET __attribute__((objc_externally_retained))
 
@@ -25,14 +25,14 @@ void param(ObjTy *p) EXT_RET {
   // CHECK: ret
 }
 
-void local() {
+void local(void) {
   EXT_RET ObjTy *local = global;
   // CHECK-LABEL: define{{.*}} void @local
   // CHECK-NOT: llvm.objc.
   // CHECK: ret
 }
 
-void in_init() {
+void in_init(void) {
   // Test that we do the right thing when a variable appears in it's own
   // initializer. Here, we release the value stored in 'wat' after overwriting
   // it, in case it was somehow set to point to a non-null object while it's
@@ -45,21 +45,20 @@ void in_init() {
   // CHECK-NEXT: [[GLOBAL:%.*]] = load {{.*}} @global
   // CHECK-NEXT: [[WAT_LOAD:%.*]] = load {{.*}} [[WAT]]
   // CHECK-NEXT: store {{.*}} [[GLOBAL]], {{.*}} [[WAT]]
-  // CHECK-NEXT: [[CASTED:%.*]] = bitcast {{.*}} [[WAT_LOAD]] to
-  // CHECK-NEXT: call void @llvm.objc.release(i8* [[CASTED]])
+  // CHECK-NEXT: call void @llvm.objc.release(ptr [[WAT_LOAD]])
 
   // CHECK-NOT: llvm.objc.
   // CHECK: ret
 }
 
-void esc(void (^)());
+void esc(void (^)(void));
 
 void block_capture(ObjTy *obj) EXT_RET {
   esc(^{ (void)obj; });
 
   // CHECK-LABEL: define{{.*}} void @block_capture
   // CHECK-NOT: llvm.objc.
-  // CHECK: call i8* @llvm.objc.retain
+  // CHECK: call ptr @llvm.objc.retain
   // CHECK-NOT: llvm.objc.
   // CHECK: call void @esc
   // CHECK-NOT: llvm.objc.
@@ -82,7 +81,7 @@ void block_capture(ObjTy *obj) EXT_RET {
 
 void escp(void (^)(ObjTy *));
 
-void block_param() {
+void block_param(void) {
   escp(^(ObjTy *p) EXT_RET {});
 
   // CHECK-LABEL: define internal void @__block_param_block_invoke

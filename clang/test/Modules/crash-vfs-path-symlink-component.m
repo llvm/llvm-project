@@ -1,7 +1,7 @@
 // REQUIRES: crash-recovery, shell
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
-// XFAIL: windows-gnu
+// XFAIL: target={{.*-windows-gnu}}
 
 // Test that clang is capable of collecting the right header files in the
 // crash reproducer if there's a symbolic link component in the path.
@@ -49,8 +49,8 @@
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
-// CHECKYAML-NEXT:     'name': "module.map",
-// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/i/usr/include/module.map"
+// CHECKYAML-NEXT:     'name': "module.modulemap",
+// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/i/usr/include/module.modulemap"
 // CHECKYAML-NEXT:   },
 
 // Test that by using the previous generated YAML file clang is able to find the

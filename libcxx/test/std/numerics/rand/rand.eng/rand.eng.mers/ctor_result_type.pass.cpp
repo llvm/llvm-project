@@ -18,7 +18,7 @@
 // explicit mersenne_twister_engine(result_type s);                     // C++20
 
 // Serializing/deserializing the state of the RNG requires iostreams
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
 
 #include <random>
 #include <sstream>
@@ -267,8 +267,8 @@ int main(int, char**)
     test1();
     test2();
 
-    test_implicit<std::mt19937, uint_fast32_t>();
-    test_implicit<std::mt19937_64, uint_fast64_t>();
+    test_implicit<std::mt19937, std::uint_fast32_t>();
+    test_implicit<std::mt19937_64, std::uint_fast64_t>();
 
     return 0;
 }

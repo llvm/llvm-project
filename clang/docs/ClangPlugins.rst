@@ -125,6 +125,28 @@ Running the plugin
 ==================
 
 
+Using the compiler driver
+--------------------------
+
+The Clang driver accepts the `-fplugin` option to load a plugin.
+Clang plugins can receive arguments from the compiler driver command
+line via the `fplugin-arg-<plugin name>-<argument>` option. Using this
+method, the plugin name cannot contain dashes itself, but the argument
+passed to the plugin can.
+
+
+.. code-block:: console
+
+  $ export BD=/path/to/build/directory
+  $ make -C $BD CallSuperAttr
+  $ clang++ -fplugin=$BD/lib/CallSuperAttr.so \
+            -fplugin-arg-call_super_plugin-help \
+            test.cpp
+
+If your plugin name contains dashes, either rename the plugin or used the
+cc1 command line options listed below.
+
+
 Using the cc1 command line
 --------------------------
 
@@ -178,3 +200,17 @@ action (i.e. the same as using `-add-plugin`):
   PluginASTAction::ActionType getActionType() override {
     return AddAfterMainAction;
   }
+
+Interaction with ``-clear-ast-before-backend``
+----------------------------------------------
+
+To reduce peak memory usage of the compiler, plugins are recommended to run
+*before* the main action, which is usually code generation. This is because
+having any plugins that run after the codegen action automatically turns off
+``-clear-ast-before-backend``.  ``-clear-ast-before-backend`` reduces peak
+memory by clearing the Clang AST after generating IR and before running IR
+optimizations. Use ``CmdlineBeforeMainAction`` or ``AddBeforeMainAction`` as
+``getActionType`` to run plugins while still benefitting from
+``-clear-ast-before-backend``. Plugins must make sure not to modify the AST,
+otherwise they should run after the main action.
+

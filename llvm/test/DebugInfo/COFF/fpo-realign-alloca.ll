@@ -1,10 +1,11 @@
 ; RUN: llc < %s | FileCheck %s
+; RUN: llc -mtriple=i686-windows-msvc < %s -filetype=obj | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 
 ; C source:
-; void usethings(double *, void *p);
+; void usethings(ptr, ptr p);
 ; int realign_and_alloca(int n) {
 ;   double d = 0;
-;   void *p = __builtin_alloca(n);
+;   ptr p = __builtin_alloca(n);
 ;   usethings(&d, p);
 ;   return 0;
 ; }
@@ -33,6 +34,15 @@
 ; CHECK:         retl
 ; CHECK:         .cv_fpo_endproc
 
+; OBJ-LABEL:     FunctionType: realign_and_alloca (0x1002)
+; OBJ-NEXT:      CodeOffset: _realign_and_alloca+0x0
+; OBJ-NEXT:      Segment: 0x0
+; OBJ-NEXT:      Flags [ (0x81)
+; OBJ-NEXT:        HasFP (0x1)
+; OBJ-NEXT:        HasOptimizedDebugInfo (0x80)
+; OBJ-NEXT:      ]
+; OBJ-NEXT:      DisplayName: realign_and_alloca
+; OBJ-NEXT:      LinkageName: _realign_and_alloca
 
 ; ModuleID = 't.c'
 source_filename = "t.c"
@@ -44,25 +54,24 @@ define i32 @realign_and_alloca(i32 %n) local_unnamed_addr #0 !dbg !8 {
 entry:
   %d = alloca double, align 8
   tail call void @llvm.dbg.value(metadata i32 %n, metadata !13, metadata !DIExpression()), !dbg !18
-  %0 = bitcast double* %d to i8*, !dbg !19
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #4, !dbg !19
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %d) #4, !dbg !19
   tail call void @llvm.dbg.value(metadata double 0.000000e+00, metadata !14, metadata !DIExpression()), !dbg !20
-  store double 0.000000e+00, double* %d, align 8, !dbg !20, !tbaa !21
-  %1 = alloca i8, i32 %n, align 16, !dbg !25
-  tail call void @llvm.dbg.value(metadata i8* %1, metadata !16, metadata !DIExpression()), !dbg !26
-  tail call void @llvm.dbg.value(metadata double* %d, metadata !14, metadata !DIExpression()), !dbg !20
-  call void @usethings(double* nonnull %d, i8* nonnull %1) #4, !dbg !27
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0) #4, !dbg !28
+  store double 0.000000e+00, ptr %d, align 8, !dbg !20, !tbaa !21
+  %0 = alloca i8, i32 %n, align 16, !dbg !25
+  tail call void @llvm.dbg.value(metadata ptr %0, metadata !16, metadata !DIExpression()), !dbg !26
+  tail call void @llvm.dbg.value(metadata ptr %d, metadata !14, metadata !DIExpression()), !dbg !20
+  call void @usethings(ptr nonnull %d, ptr nonnull %0) #4, !dbg !27
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %d) #4, !dbg !28
   ret i32 0, !dbg !29
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
-declare void @usethings(double*, i8*) local_unnamed_addr #2
+declare void @usethings(ptr, ptr) local_unnamed_addr #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

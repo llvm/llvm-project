@@ -12,29 +12,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineStableHash.h"
-#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/CodeGen/MIRFormatter.h"
-#include "llvm/CodeGen/MIRPrinter.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/ADT/ilist_iterator.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineInstrBundleIterator.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/StableHashing.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/IRPrintingPasses.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/ModuleSlotTracker.h"
-#include "llvm/MC/MCDwarf.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "machine-stable-hash"
 
@@ -62,9 +60,12 @@ STATISTIC(StableHashBailingMetadataUnsupported,
 stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
-    if (Register::isVirtualRegister(MO.getReg())) {
+    if (MO.getReg().isVirtual()) {
       const MachineRegisterInfo &MRI = MO.getParent()->getMF()->getRegInfo();
-      return MRI.getVRegDef(MO.getReg())->getOpcode();
+      SmallVector<unsigned> DefOpcodes;
+      for (auto &Def : MRI.def_instructions(MO.getReg()))
+        DefOpcodes.push_back(Def.getOpcode());
+      return hash_combine_range(DefOpcodes.begin(), DefOpcodes.end());
     }
 
     // Register operands don't have target flags.
@@ -115,8 +116,26 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
                         stable_hash_combine_string(MO.getSymbolName()));
 
   case MachineOperand::MO_RegisterMask:
-  case MachineOperand::MO_RegisterLiveOut:
-    return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getRegMask());
+  case MachineOperand::MO_RegisterLiveOut: {
+    if (const MachineInstr *MI = MO.getParent()) {
+      if (const MachineBasicBlock *MBB = MI->getParent()) {
+        if (const MachineFunction *MF = MBB->getParent()) {
+          const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+          unsigned RegMaskSize =
+              MachineOperand::getRegMaskSize(TRI->getNumRegs());
+          const uint32_t *RegMask = MO.getRegMask();
+          std::vector<llvm::stable_hash> RegMaskHashes(RegMask,
+                                                       RegMask + RegMaskSize);
+          return hash_combine(MO.getType(), MO.getTargetFlags(),
+                              stable_hash_combine_array(RegMaskHashes.data(),
+                                                        RegMaskHashes.size()));
+        }
+      }
+    }
+
+    assert(0 && "MachineOperand not associated with any MachineFunction");
+    return hash_combine(MO.getType(), MO.getTargetFlags());
+  }
 
   case MachineOperand::MO_ShuffleMask: {
     std::vector<llvm::stable_hash> ShuffleMaskHashes;
@@ -143,6 +162,9 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   case MachineOperand::MO_Predicate:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                MO.getPredicate());
+  case MachineOperand::MO_DbgInstrRef:
+    return stable_hash_combine(MO.getType(), MO.getInstrRefInstrIndex(),
+                               MO.getInstrRefOpIndex());
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -160,8 +182,7 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
   HashComponents.push_back(MI.getOpcode());
   HashComponents.push_back(MI.getFlags());
   for (const MachineOperand &MO : MI.operands()) {
-    if (!HashVRegs && MO.isReg() && MO.isDef() &&
-        Register::isVirtualRegister(MO.getReg()))
+    if (!HashVRegs && MO.isReg() && MO.isDef() && MO.getReg().isVirtual())
       continue; // Skip virtual register defs.
 
     if (MO.isCPI()) {
@@ -179,16 +200,34 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
   for (const auto *Op : MI.memoperands()) {
     if (!HashMemOperands)
       break;
-    HashComponents.push_back(static_cast<unsigned>(Op->getSize()));
+    HashComponents.push_back(static_cast<unsigned>(Op->getSize().getValue()));
     HashComponents.push_back(static_cast<unsigned>(Op->getFlags()));
     HashComponents.push_back(static_cast<unsigned>(Op->getOffset()));
-    HashComponents.push_back(static_cast<unsigned>(Op->getOrdering()));
+    HashComponents.push_back(static_cast<unsigned>(Op->getSuccessOrdering()));
     HashComponents.push_back(static_cast<unsigned>(Op->getAddrSpace()));
     HashComponents.push_back(static_cast<unsigned>(Op->getSyncScopeID()));
     HashComponents.push_back(static_cast<unsigned>(Op->getBaseAlign().value()));
     HashComponents.push_back(static_cast<unsigned>(Op->getFailureOrdering()));
   }
 
+  return stable_hash_combine_range(HashComponents.begin(),
+                                   HashComponents.end());
+}
+
+stable_hash llvm::stableHashValue(const MachineBasicBlock &MBB) {
+  SmallVector<stable_hash> HashComponents;
+  // TODO: Hash more stuff like block alignment and branch probabilities.
+  for (const auto &MI : MBB)
+    HashComponents.push_back(stableHashValue(MI));
+  return stable_hash_combine_range(HashComponents.begin(),
+                                   HashComponents.end());
+}
+
+stable_hash llvm::stableHashValue(const MachineFunction &MF) {
+  SmallVector<stable_hash> HashComponents;
+  // TODO: Hash lots more stuff like function alignment and stack objects.
+  for (const auto &MBB : MF)
+    HashComponents.push_back(stableHashValue(MBB));
   return stable_hash_combine_range(HashComponents.begin(),
                                    HashComponents.end());
 }

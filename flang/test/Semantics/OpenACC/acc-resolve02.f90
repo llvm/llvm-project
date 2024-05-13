@@ -1,4 +1,4 @@
-! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc
 
 subroutine compute()
   integer :: a(3), c, i

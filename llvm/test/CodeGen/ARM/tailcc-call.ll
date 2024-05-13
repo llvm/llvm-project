@@ -191,3 +191,15 @@ define tailcc void @fromtail_toC() {
   call void @Ccallee_stack4([4 x i32] undef, i32 42)
   ret void
 }
+
+; Don't try to return by popping pc if there's stack to reclaim.
+define tailcc void @notail_stackclean([4 x i32], i32) {
+; COMMON-LABEL: notail_stackclean:
+; COMMON: pop {r7, lr}
+; COMMON: add sp, #8
+; COMMON: bx lr
+
+
+  call void @callee_stack0()
+  ret void
+}

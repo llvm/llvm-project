@@ -1,4 +1,4 @@
-/*===----------- llvm-c/LLJIT.h - OrcV2 LLJIT C bindings --------*- C++ -*-===*\
+/*===----------- llvm-c/LLJIT.h - OrcV2 LLJIT C bindings ----------*- C -*-===*\
 |*                                                                            *|
 |* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
 |* Exceptions.                                                                *|
@@ -30,6 +30,13 @@
 #include "llvm-c/Types.h"
 
 LLVM_C_EXTERN_C_BEGIN
+
+/**
+ * @defgroup LLVMCExecutionEngineLLJIT LLJIT
+ * @ingroup LLVMCExecutionEngine
+ *
+ * @{
+ */
 
 /**
  * A function for constructing an ObjectLinkingLayer instance to be used
@@ -208,13 +215,36 @@ LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(LLVMOrcLLJITRef J,
  * This operation does not take ownership of the Name argument.
  */
 LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
-                                LLVMOrcJITTargetAddress *Result,
+                                LLVMOrcExecutorAddress *Result,
                                 const char *Name);
 
 /**
  * Returns a non-owning reference to the LLJIT instance's object linking layer.
  */
 LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J);
+
+/**
+ * Returns a non-owning reference to the LLJIT instance's object linking layer.
+ */
+LLVMOrcObjectTransformLayerRef
+LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J);
+
+/**
+ * Returns a non-owning reference to the LLJIT instance's IR transform layer.
+ */
+LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J);
+
+/**
+ * Get the LLJIT instance's default data layout string.
+ *
+ * This string is owned by the LLJIT instance and does not need to be freed
+ * by the caller.
+ */
+const char *LLVMOrcLLJITGetDataLayoutStr(LLVMOrcLLJITRef J);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 

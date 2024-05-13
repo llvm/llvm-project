@@ -12,7 +12,7 @@ no_exit.2:              ; preds = %endif.6
         br i1 %tmp.103, label %endif.6, label %else.0
 
 else.0:         ; preds = %no_exit.2
-        store i16 0, i16* null
+        store i16 0, ptr null
         br label %endif.6
 
 endif.6:                ; preds = %else.0, %no_exit.2

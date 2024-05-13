@@ -1,9 +1,0 @@
---- !tapi-tbd-v3
-archs:            [ i386, x86_64 ]
-uuids:            [ 'i386: 00000000-0000-0000-0000-000000000000', 'x86_64: 00000000-0000-0000-0000-000000000001' ]
-platform:         macosx
-install-name:     '/usr/lib/libReexportSystem.dylib'
-exports:
-  - archs:      [ i386, x86_64 ]
-    re-exports: [ '/usr/lib/libSystem.dylib' ]
-...

@@ -63,12 +63,11 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
   auto &MRI = MF.getRegInfo();
 
   for (auto &MBB : MF) {
-    for (auto MII = MBB.begin(); MII != MBB.end();) {
-      MachineInstr *MI = &*MII++;
-      if (MI->getOpcode() != WebAssembly::BR_UNLESS)
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      if (MI.getOpcode() != WebAssembly::BR_UNLESS)
         continue;
 
-      Register Cond = MI->getOperand(1).getReg();
+      Register Cond = MI.getOperand(1).getReg();
       bool Inverted = false;
 
       // Attempt to invert the condition in place.
@@ -189,7 +188,7 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       // instruction to invert it.
       if (!Inverted) {
         Register Tmp = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-        BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::EQZ_I32), Tmp)
+        BuildMI(MBB, &MI, MI.getDebugLoc(), TII.get(WebAssembly::EQZ_I32), Tmp)
             .addReg(Cond);
         MFI.stackifyVReg(MRI, Tmp);
         Cond = Tmp;
@@ -199,10 +198,10 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       // The br_unless condition has now been inverted. Insert a br_if and
       // delete the br_unless.
       assert(Inverted);
-      BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::BR_IF))
-          .add(MI->getOperand(0))
+      BuildMI(MBB, &MI, MI.getDebugLoc(), TII.get(WebAssembly::BR_IF))
+          .add(MI.getOperand(0))
           .addReg(Cond);
-      MBB.erase(MI);
+      MBB.erase(&MI);
     }
   }
 

@@ -5,7 +5,7 @@
 ; to do floating-point negations, because the arguments aren't vectors
 ; and aren't vector-aligned.
 
-define void @foo(float* %p, float* %q, float %s, float %y) {
+define void @foo(ptr %p, ptr %q, float %s, float %y) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -20,7 +20,7 @@ define void @foo(float* %p, float* %q, float %s, float %y) {
 ; CHECK-NEXT:    retl
   %ss = fsub float -0.0, %s
   %yy = fsub float -0.0, %y
-  store float %ss, float* %p
-  store float %yy, float* %q
+  store float %ss, ptr %p
+  store float %yy, ptr %q
   ret void
 }

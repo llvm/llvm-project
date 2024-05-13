@@ -1,3 +1,10 @@
+set(SWIG_EXTRA_FLAGS -c++ -threads -python)
+
+if ("${SWIG_VERSION}" VERSION_LESS "4.1.0")
+  set(SWIG_EXTRA_FLAGS ${SWIG_EXTRA_FLAGS} -py3)
+  message(STATUS "SWIG version ${SWIG_VERSION} uses `-py3` flag.")
+endif()
+
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lldb.py
@@ -7,11 +14,7 @@ add_custom_command(
   COMMAND ${SWIG_EXECUTABLE}
       ${SWIG_COMMON_FLAGS}
       -I${CMAKE_CURRENT_SOURCE_DIR}
-      -c++
-      -shadow
-      -python
-      -py3
-      -threads
+      ${SWIG_EXTRA_FLAGS}
       -outdir ${CMAKE_CURRENT_BINARY_DIR}
       -o ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/python.swig
@@ -22,6 +25,18 @@ add_custom_target(swig_wrapper_python ALL DEPENDS
   ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/lldb.py
 )
+
+if (NOT WIN32)
+add_custom_command(
+  OUTPUT  ${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb-python
+  VERBATIM
+  COMMAND ${CMAKE_COMMAND} -E copy lldb-python ${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb-python
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+add_custom_target(lldb-python-wrapper ALL DEPENDS
+  ${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb-python
+)
+endif()
 
 function(create_python_package swig_target working_dir pkg_dir)
   cmake_parse_arguments(ARG "NOINIT" "" "FILES" ${ARGN})
@@ -40,20 +55,6 @@ function(create_python_package swig_target working_dir pkg_dir)
     WORKING_DIRECTORY ${working_dir})
 endfunction()
 
-function(create_relative_symlink swig_target dest_file output_dir output_name)
-  get_filename_component(dest_file ${dest_file} ABSOLUTE)
-  get_filename_component(output_dir ${output_dir} ABSOLUTE)
-  file(RELATIVE_PATH rel_dest_file ${output_dir} ${dest_file})
-  if(CMAKE_HOST_UNIX)
-    set(LLVM_LINK_OR_COPY create_symlink)
-  else()
-    set(LLVM_LINK_OR_COPY copy)
-  endif()
-  add_custom_command(TARGET ${swig_target} POST_BUILD VERBATIM
-    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} ${rel_dest_file} ${output_name}
-    WORKING_DIRECTORY ${output_dir})
-endfunction()
-
 function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_target_dir)
   # Add a Post-Build Event to copy over Python files and create the symlink to
   # liblldb.so for the Python API(hardlink on Windows).
@@ -61,13 +62,6 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_target_dir}
     DEPENDS ${lldb_python_bindings_dir}/lldb.py
     COMMENT "Python script sym-linking LLDB Python API")
-
-  if(NOT LLDB_USE_SYSTEM_SIX)
-    add_custom_command(TARGET ${swig_target} POST_BUILD VERBATIM
-      COMMAND ${CMAKE_COMMAND} -E copy
-        "${LLDB_SOURCE_DIR}/third_party/Python/module/six/six.py"
-        "${lldb_python_target_dir}/../six.py")
-  endif()
 
   add_custom_command(TARGET ${swig_target} POST_BUILD VERBATIM
     COMMAND ${CMAKE_COMMAND} -E copy
@@ -102,20 +96,25 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     ${lldb_python_target_dir}
     "utils"
     FILES "${LLDB_SOURCE_DIR}/examples/python/in_call_stack.py"
-          "${LLDB_SOURCE_DIR}/examples/python/symbolication.py")
+          "${LLDB_SOURCE_DIR}/examples/python/symbolication.py"
+  )
 
   create_python_package(
     ${swig_target}
     ${lldb_python_target_dir}
     "plugins"
     FILES
-    "${LLDB_SOURCE_DIR}/examples/python/scripted_process/scripted_process.py")
+    "${LLDB_SOURCE_DIR}/examples/python/templates/parsed_cmd.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_process.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_platform.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/operating_system.py")
 
   if(APPLE)
     create_python_package(
       ${swig_target}
       ${lldb_python_target_dir} "macosx"
       FILES "${LLDB_SOURCE_DIR}/examples/python/crashlog.py"
+            "${LLDB_SOURCE_DIR}/examples/python/crashlog_scripted_process.py"
             "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap.py")
 
     create_python_package(
@@ -137,17 +136,14 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   else()
     set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
   endif()
-  if(WIN32)
-    if(CMAKE_BUILD_TYPE STREQUAL Debug)
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb_d.pyd")
-    else()
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.pyd")
-    endif()
-  else()
-    set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.so")
-  endif()
+  set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb${LLDB_PYTHON_EXT_SUFFIX}")
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
                           ${lldb_python_target_dir} ${LIBLLDB_SYMLINK_OUTPUT_FILE})
+
+
+  if (NOT WIN32)
+  add_dependencies(${swig_target} lldb-python-wrapper)
+  endif()
 
   if(NOT LLDB_BUILD_FRAMEWORK)
     set(LLDB_ARGDUMPER_FILENAME "lldb-argdumper${CMAKE_EXECUTABLE_SUFFIX}")
@@ -163,7 +159,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
 
   # Install the LLDB python module
   if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_PYTHON_INSTALL_PATH ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Resources/Python)
+    set(LLDB_PYTHON_INSTALL_PATH ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources/Python)
   else()
     set(LLDB_PYTHON_INSTALL_PATH ${LLDB_PYTHON_RELATIVE_PATH})
   endif()

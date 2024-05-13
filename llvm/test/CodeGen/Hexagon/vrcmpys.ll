@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon --filetype=obj < %s -o - | llvm-objdump -d - | FileCheck %s
+; RUN: llc -mtriple=hexagon --filetype=obj < %s -o - | llvm-objdump -d - | FileCheck %s
 
 @g0 = common global double 0.000000e+00, align 8
 @g1 = common global double 0.000000e+00, align 8
@@ -7,9 +7,9 @@
 ; CHECK: r{{[0-9]}}:{{[0-9]}} += vrcmpys(r{{[0-9]}}:{{[0-9]}},r{{[0-9]}}:{{[0-9]}}):<<1:sat:raw:lo
 define double @f0(i32 %a0, i32 %a1) {
 b0:
-  %v0 = load double, double* @g0, align 8, !tbaa !0
+  %v0 = load double, ptr @g0, align 8, !tbaa !0
   %v1 = fptosi double %v0 to i64
-  %v2 = load double, double* @g1, align 8, !tbaa !0
+  %v2 = load double, ptr @g1, align 8, !tbaa !0
   %v3 = fptosi double %v2 to i64
   %v4 = tail call i64 @llvm.hexagon.M2.vrcmpys.acc.s1(i64 %v1, i64 %v3, i32 %a0)
   %v5 = sitofp i64 %v4 to double
@@ -23,9 +23,9 @@ declare i64 @llvm.hexagon.M2.vrcmpys.acc.s1(i64, i64, i32) #0
 ; CHECK: r{{[0-9]}}:{{[0-9]}} += vrcmpys(r{{[0-9]}}:{{[0-9]}},r{{[0-9]}}:{{[0-9]}}):<<1:sat:raw:hi
 define double @f1(i32 %a0, i32 %a1) {
 b0:
-  %v0 = load double, double* @g0, align 8, !tbaa !0
+  %v0 = load double, ptr @g0, align 8, !tbaa !0
   %v1 = fptosi double %v0 to i64
-  %v2 = load double, double* @g1, align 8, !tbaa !0
+  %v2 = load double, ptr @g1, align 8, !tbaa !0
   %v3 = fptosi double %v2 to i64
   %v4 = tail call i64 @llvm.hexagon.M2.vrcmpys.acc.s1(i64 %v1, i64 %v3, i32 %a1)
   %v5 = sitofp i64 %v4 to double
@@ -36,7 +36,7 @@ b0:
 ; CHECK: r{{[0-9]}}:{{[0-9]}} = vrcmpys(r{{[0-9]}}:{{[0-9]}},r{{[0-9]}}:{{[0-9]}}):<<1:sat:raw:lo
 define double @f2(i32 %a0, i32 %a1) {
 b0:
-  %v0 = load double, double* @g1, align 8, !tbaa !0
+  %v0 = load double, ptr @g1, align 8, !tbaa !0
   %v1 = fptosi double %v0 to i64
   %v2 = tail call i64 @llvm.hexagon.M2.vrcmpys.s1(i64 %v1, i32 %a0)
   %v3 = sitofp i64 %v2 to double
@@ -50,7 +50,7 @@ declare i64 @llvm.hexagon.M2.vrcmpys.s1(i64, i32) #0
 ; CHECK: r{{[0-9]}}:{{[0-9]}} = vrcmpys(r{{[0-9]}}:{{[0-9]}},r{{[0-9]}}:{{[0-9]}}):<<1:sat:raw:hi
 define double @f3(i32 %a0, i32 %a1) {
 b0:
-  %v0 = load double, double* @g1, align 8, !tbaa !0
+  %v0 = load double, ptr @g1, align 8, !tbaa !0
   %v1 = fptosi double %v0 to i64
   %v2 = tail call i64 @llvm.hexagon.M2.vrcmpys.s1(i64 %v1, i32 %a1)
   %v3 = sitofp i64 %v2 to double

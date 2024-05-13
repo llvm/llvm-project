@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -polly-scops -analyze \
-; RUN:                -polly-allow-nonaffine-loops < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-detect -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; The SCoP contains a loop with multiple exit blocks (BBs after leaving
 ; the loop). The current implementation of deriving their domain derives
@@ -17,7 +16,7 @@
 ; CHECK-NEXT:     { Stmt_region_entry__TO__region_exit[i0] -> MemRef_A[0] };
 ; CHECK-NOT: MayWriteAccess
 
-define void @f(i32* %A, i32* %B, i32* %C, float %b) {
+define void @f(ptr %A, ptr %B, ptr %C, float %b) {
 entry:
   br label %for.cond
 
@@ -36,18 +35,18 @@ bb3:
   br label %bb3
 
 guaranteed:
-  %ptr = getelementptr i32, i32* %B, i32 %indvar
-  %val = load i32, i32* %ptr
+  %ptr = getelementptr i32, ptr %B, i32 %indvar
+  %val = load i32, ptr %ptr
   %cmp = icmp eq i32 %val, 0
-  store i32 0, i32* %A
+  store i32 0, ptr %A
   br i1 %cmp, label %bb5, label %bb6
 
 bb5:
   br label %region_exit
 
 bb6:
-  %ptr2 = getelementptr i32, i32* %C, i32 %indvar
-  %val2 = load i32, i32* %ptr2
+  %ptr2 = getelementptr i32, ptr %C, i32 %indvar
+  %val2 = load i32, ptr %ptr2
   %cmp2 = icmp eq i32 %val2, 0
   br i1 %cmp2, label %region_exit, label %region_entry
 

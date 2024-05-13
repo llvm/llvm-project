@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! C735 If EXTENDS appears, SEQUENCE shall not appear.
 ! C738 The same private-or-sequence shall not appear more than once in a
 ! given derived-type-def .
@@ -49,8 +49,10 @@ module m4
   type :: t1
     private
     sequence
-    private  ! not a fatal error
-    sequence ! not a fatal error
+    !WARNING: PRIVATE should not appear more than once in derived type components
+    private
+    !WARNING: SEQUENCE should not appear more than once in derived type components
+    sequence
     real :: t1Field
   end type
   type :: t1a
@@ -66,7 +68,7 @@ module m4
   !ERROR: A sequence type may not have a CONTAINS statement
   contains
   end type
-  !ERROR: A sequence type must have at least one component
+  !WARNING: A sequence type should have at least one component
   type :: emptyType
     sequence
   end type emptyType
@@ -83,6 +85,8 @@ module m4
     class(*), allocatable :: typeStarField
     !ERROR: A sequence type data component must either be of an intrinsic type or a derived sequence type
     type(plainType) :: testField1
+    !WARNING: A sequence type data component that is a pointer to a non-sequence type is not standard
+    type(plainType), pointer :: testField1p
     type(sequenceType) :: testField2
     procedure(real), pointer, nopass :: procField
   end type testType

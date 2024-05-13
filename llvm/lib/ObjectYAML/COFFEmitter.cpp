@@ -16,14 +16,15 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
-#include "llvm/Object/COFF.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -45,11 +46,8 @@ struct COFFParser {
            COFF::MaxNumberOfSections16;
   }
 
-  bool isPE() const { return Obj.OptionalHeader.hasValue(); }
-  bool is64Bit() const {
-    return Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_AMD64 ||
-           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64;
-  }
+  bool isPE() const { return Obj.OptionalHeader.has_value(); }
+  bool is64Bit() const { return COFF::is64Bit(Obj.Header.Machine); }
 
   uint32_t getFileAlignment() const {
     return Obj.OptionalHeader->Header.FileAlignment;
@@ -64,11 +62,7 @@ struct COFFParser {
   }
 
   bool parseSections() {
-    for (std::vector<COFFYAML::Section>::iterator i = Obj.Sections.begin(),
-                                                  e = Obj.Sections.end();
-         i != e; ++i) {
-      COFFYAML::Section &Sec = *i;
-
+    for (COFFYAML::Section &Sec : Obj.Sections) {
       // If the name is less than 8 bytes, store it in place, otherwise
       // store it in the string table.
       StringRef Name = Sec.Name;
@@ -103,11 +97,7 @@ struct COFFParser {
   }
 
   bool parseSymbols() {
-    for (std::vector<COFFYAML::Symbol>::iterator i = Obj.Symbols.begin(),
-                                                 e = Obj.Symbols.end();
-         i != e; ++i) {
-      COFFYAML::Symbol &Sym = *i;
-
+    for (COFFYAML::Symbol &Sym : Obj.Symbols) {
       // If the name is less than 8 bytes, store it in place, otherwise
       // store it in the string table.
       StringRef Name = Sym.Name;
@@ -170,8 +160,8 @@ static bool layoutOptionalHeader(COFFParser &CP) {
   unsigned PEHeaderSize = CP.is64Bit() ? sizeof(object::pe32plus_header)
                                        : sizeof(object::pe32_header);
   CP.Obj.Header.SizeOfOptionalHeader =
-      PEHeaderSize +
-      sizeof(object::data_directory) * (COFF::NUM_DATA_DIRECTORIES + 1);
+      PEHeaderSize + sizeof(object::data_directory) *
+                         CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
   return true;
 }
 
@@ -192,7 +182,7 @@ toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
   }
   uint8_t *Buffer = Allocator.Allocate<uint8_t>(Size);
   MutableArrayRef<uint8_t> Output(Buffer, Size);
-  BinaryStreamWriter Writer(Output, support::little);
+  BinaryStreamWriter Writer(Output, llvm::endianness::little);
 
   Err(Writer.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC));
   for (const auto &B : Builders) {
@@ -244,14 +234,17 @@ static bool layoutCOFF(COFFParser &CP) {
       if (S.SectionData.binary_size() == 0)
         S.SectionData = CodeViewYAML::toDebugT(S.DebugP, CP.Allocator, S.Name);
     } else if (S.Name == ".debug$H") {
-      if (S.DebugH.hasValue() && S.SectionData.binary_size() == 0)
+      if (S.DebugH && S.SectionData.binary_size() == 0)
         S.SectionData = CodeViewYAML::toDebugH(*S.DebugH, CP.Allocator);
     }
 
-    if (S.SectionData.binary_size() > 0) {
+    size_t DataSize = S.SectionData.binary_size();
+    for (auto E : S.StructuredData)
+      DataSize += E.size();
+    if (DataSize > 0) {
       CurrentSectionDataOffset = alignTo(CurrentSectionDataOffset,
                                          CP.isPE() ? CP.getFileAlignment() : 4);
-      S.Header.SizeOfRawData = S.SectionData.binary_size();
+      S.Header.SizeOfRawData = DataSize;
       if (CP.isPE())
         S.Header.SizeOfRawData =
             alignTo(S.Header.SizeOfRawData, CP.getFileAlignment());
@@ -321,8 +314,8 @@ template <typename value_type>
 raw_ostream &operator<<(raw_ostream &OS,
                         const binary_le_impl<value_type> &BLE) {
   char Buffer[sizeof(BLE.Value)];
-  support::endian::write<value_type, support::little, support::unaligned>(
-      Buffer, BLE.Value);
+  support::endian::write<value_type, llvm::endianness::little>(Buffer,
+                                                               BLE.Value);
   OS.write(Buffer, sizeof(BLE.Value));
   return OS;
 }
@@ -366,9 +359,9 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
       SizeOfInitializedData += S.Header.SizeOfRawData;
     if (S.Header.Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
       SizeOfUninitializedData += S.Header.SizeOfRawData;
-    if (S.Name.equals(".text"))
+    if (S.Name == ".text")
       Header->BaseOfCode = S.Header.VirtualAddress; // RVA
-    else if (S.Name.equals(".data"))
+    else if (S.Name == ".data")
       BaseOfData = S.Header.VirtualAddress; // RVA
     if (S.Header.VirtualAddress)
       SizeOfImage += alignTo(S.Header.VirtualSize, Header->SectionAlignment);
@@ -397,7 +390,7 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
   Header->SizeOfStackCommit = CP.Obj.OptionalHeader->Header.SizeOfStackCommit;
   Header->SizeOfHeapReserve = CP.Obj.OptionalHeader->Header.SizeOfHeapReserve;
   Header->SizeOfHeapCommit = CP.Obj.OptionalHeader->Header.SizeOfHeapCommit;
-  Header->NumberOfRvaAndSize = COFF::NUM_DATA_DIRECTORIES + 1;
+  Header->NumberOfRvaAndSize = CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
   return BaseOfData;
 }
 
@@ -458,45 +451,42 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       PEH.BaseOfData = BaseOfData;
       OS.write(reinterpret_cast<char *>(&PEH), sizeof(PEH));
     }
-    for (const Optional<COFF::DataDirectory> &DD :
-         CP.Obj.OptionalHeader->DataDirectories) {
-      if (!DD.hasValue()) {
+    for (uint32_t I = 0; I < CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
+         ++I) {
+      const std::optional<COFF::DataDirectory> *DataDirectories =
+          CP.Obj.OptionalHeader->DataDirectories;
+      uint32_t NumDataDir = std::size(CP.Obj.OptionalHeader->DataDirectories);
+      if (I >= NumDataDir || !DataDirectories[I]) {
         OS << zeros(uint32_t(0));
         OS << zeros(uint32_t(0));
       } else {
-        OS << binary_le(DD->RelativeVirtualAddress);
-        OS << binary_le(DD->Size);
+        OS << binary_le(DataDirectories[I]->RelativeVirtualAddress);
+        OS << binary_le(DataDirectories[I]->Size);
       }
     }
-    OS << zeros(uint32_t(0));
-    OS << zeros(uint32_t(0));
   }
 
   assert(OS.tell() == CP.SectionTableStart);
   // Output section table.
-  for (std::vector<COFFYAML::Section>::iterator i = CP.Obj.Sections.begin(),
-                                                e = CP.Obj.Sections.end();
-       i != e; ++i) {
-    OS.write(i->Header.Name, COFF::NameSize);
-    OS << binary_le(i->Header.VirtualSize)
-       << binary_le(i->Header.VirtualAddress)
-       << binary_le(i->Header.SizeOfRawData)
-       << binary_le(i->Header.PointerToRawData)
-       << binary_le(i->Header.PointerToRelocations)
-       << binary_le(i->Header.PointerToLineNumbers)
-       << binary_le(i->Header.NumberOfRelocations)
-       << binary_le(i->Header.NumberOfLineNumbers)
-       << binary_le(i->Header.Characteristics);
+  for (const COFFYAML::Section &S : CP.Obj.Sections) {
+    OS.write(S.Header.Name, COFF::NameSize);
+    OS << binary_le(S.Header.VirtualSize)
+       << binary_le(S.Header.VirtualAddress)
+       << binary_le(S.Header.SizeOfRawData)
+       << binary_le(S.Header.PointerToRawData)
+       << binary_le(S.Header.PointerToRelocations)
+       << binary_le(S.Header.PointerToLineNumbers)
+       << binary_le(S.Header.NumberOfRelocations)
+       << binary_le(S.Header.NumberOfLineNumbers)
+       << binary_le(S.Header.Characteristics);
   }
   assert(OS.tell() == CP.SectionTableStart + CP.SectionTableSize);
 
   unsigned CurSymbol = 0;
   StringMap<unsigned> SymbolTableIndexMap;
-  for (std::vector<COFFYAML::Symbol>::iterator I = CP.Obj.Symbols.begin(),
-                                               E = CP.Obj.Symbols.end();
-       I != E; ++I) {
-    SymbolTableIndexMap[I->Name] = CurSymbol;
-    CurSymbol += 1 + I->Header.NumberOfAuxSymbols;
+  for (const COFFYAML::Symbol &Sym : CP.Obj.Symbols) {
+    SymbolTableIndexMap[Sym.Name] = CurSymbol;
+    CurSymbol += 1 + Sym.Header.NumberOfAuxSymbols;
   }
 
   // Output section data.
@@ -505,9 +495,12 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       continue;
     assert(S.Header.PointerToRawData >= OS.tell());
     OS.write_zeros(S.Header.PointerToRawData - OS.tell());
+    for (auto E : S.StructuredData)
+      E.writeAsBinary(OS);
     S.SectionData.writeAsBinary(OS);
     assert(S.Header.SizeOfRawData >= S.SectionData.binary_size());
-    OS.write_zeros(S.Header.SizeOfRawData - S.SectionData.binary_size());
+    OS.write_zeros(S.Header.PointerToRawData + S.Header.SizeOfRawData -
+                   OS.tell());
     if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL)
       OS << binary_le<uint32_t>(/*VirtualAddress=*/ S.Relocations.size() + 1)
          << binary_le<uint32_t>(/*SymbolTableIndex=*/ 0)
@@ -595,6 +588,34 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
   if (CP.Obj.Header.PointerToSymbolTable)
     OS.write(&CP.StringTable[0], CP.StringTable.size());
   return true;
+}
+
+size_t COFFYAML::SectionDataEntry::size() const {
+  size_t Size = Binary.binary_size();
+  if (UInt32)
+    Size += sizeof(*UInt32);
+  if (LoadConfig32)
+    Size += LoadConfig32->Size;
+  if (LoadConfig64)
+    Size += LoadConfig64->Size;
+  return Size;
+}
+
+template <typename T> static void writeLoadConfig(T &S, raw_ostream &OS) {
+  OS.write(reinterpret_cast<const char *>(&S),
+           std::min(sizeof(S), static_cast<size_t>(S.Size)));
+  if (sizeof(S) < S.Size)
+    OS.write_zeros(S.Size - sizeof(S));
+}
+
+void COFFYAML::SectionDataEntry::writeAsBinary(raw_ostream &OS) const {
+  if (UInt32)
+    OS << binary_le(*UInt32);
+  Binary.writeAsBinary(OS);
+  if (LoadConfig32)
+    writeLoadConfig(*LoadConfig32, OS);
+  if (LoadConfig64)
+    writeLoadConfig(*LoadConfig64, OS);
 }
 
 namespace llvm {

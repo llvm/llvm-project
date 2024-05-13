@@ -11,7 +11,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; Function Attrs: nounwind
 define dso_local void @foo() #0 {
 entry:
-  tail call void bitcast ([33 x i8]* @something to void ()*)() #0
+  tail call void @something() #0
   ret void
 
 ; CHECK-LABEL: @foo
@@ -30,14 +30,14 @@ entry:
 ; Function Attrs: nounwind
 define dso_local void @bar() #0 {
 entry:
-  tail call void bitcast (%struct.cd* @tls_something to void ()*)() #0
+  tail call void @tls_something() #0
   ret void
 
 ; CHECK-LABEL: @bar
 ; CHECK-DAG: addis [[REG1:[0-9]+]], 13, tls_something@tprel@ha
 ; CHECK-DAG: std 2, 40(1)
 ; CHECK-DAG: addi [[REG3:[0-9]+]], [[REG1]], tls_something@tprel@l
-; CHECK-DAG: ld [[REG2:[0-9]+]], 0([[REG3]])
+; CHECK-DAG: ld [[REG2:[0-9]+]], tls_something@tprel@l([[REG1]])
 ; CHECK-DAG: ld 11, 16([[REG3]])
 ; CHECK-DAG: ld 2, 8([[REG3]])
 ; CHECK-DAG: mtctr [[REG2]]
@@ -49,7 +49,7 @@ entry:
 ; Function Attrs: nounwind
 define dso_local void @ext() #0 {
 entry:
-  tail call void bitcast (%struct.cd* @extern_something to void ()*)() #0
+  tail call void @extern_something() #0
   ret void
 
 ; CHECK-LABEL: @ext

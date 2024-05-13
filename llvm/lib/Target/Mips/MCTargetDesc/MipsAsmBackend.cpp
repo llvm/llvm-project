@@ -197,7 +197,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (int64_t)Value / 2;
     // We now check if Value can be encoded as a 26-bit signed immediate.
     if (!isInt<26>(Value)) {
-      Ctx.reportFatalError(Fixup.getLoc(), "out of range PC26 fixup");
+      Ctx.reportError(Fixup.getLoc(), "out of range PC26 fixup");
       return 0;
     }
     break;
@@ -281,7 +281,7 @@ void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   bool microMipsLEByteOrder = needsMMLEByteOrder((unsigned) Kind);
 
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = Endian == support::little
+    unsigned Idx = Endian == llvm::endianness::little
                        ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
                        : (FullSize - 1 - i);
     CurVal |= (uint64_t)((uint8_t)Data[Offset + Idx]) << (i*8);
@@ -293,15 +293,24 @@ void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   // Write out the fixed up bytes back to the code/data bits.
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = Endian == support::little
+    unsigned Idx = Endian == llvm::endianness::little
                        ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
                        : (FullSize - 1 - i);
     Data[Offset + Idx] = (uint8_t)((CurVal >> (i*8)) & 0xff);
   }
 }
 
-Optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
-  return StringSwitch<Optional<MCFixupKind>>(Name)
+std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
+  unsigned Type = llvm::StringSwitch<unsigned>(Name)
+                      .Case("BFD_RELOC_NONE", ELF::R_MIPS_NONE)
+                      .Case("BFD_RELOC_16", ELF::R_MIPS_16)
+                      .Case("BFD_RELOC_32", ELF::R_MIPS_32)
+                      .Case("BFD_RELOC_64", ELF::R_MIPS_64)
+                      .Default(-1u);
+  if (Type != -1u)
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+
+  return StringSwitch<std::optional<MCFixupKind>>(Name)
       .Case("R_MIPS_NONE", FK_NONE)
       .Case("R_MIPS_32", FK_Data_4)
       .Case("R_MIPS_CALL_HI16", (MCFixupKind)Mips::fixup_Mips_CALL_HI16)
@@ -420,7 +429,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_JALR",                 0,     32,   0 },
     { "fixup_MICROMIPS_JALR",            0,     32,   0 }
   };
-  static_assert(array_lengthof(LittleEndianInfos) == Mips::NumTargetFixupKinds,
+  static_assert(std::size(LittleEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS little endian fixup kinds added!");
 
   const static MCFixupKindInfo BigEndianInfos[] = {
@@ -499,16 +508,18 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_JALR",                  0,     32,   0 },
     { "fixup_MICROMIPS_JALR",             0,     32,   0 }
   };
-  static_assert(array_lengthof(BigEndianInfos) == Mips::NumTargetFixupKinds,
+  static_assert(std::size(BigEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS big endian fixup kinds added!");
 
+  if (Kind >= FirstLiteralRelocationKind)
+    return MCAsmBackend::getFixupKindInfo(FK_NONE);
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
   assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
           "Invalid kind!");
 
-  if (Endian == support::little)
+  if (Endian == llvm::endianness::little)
     return LittleEndianInfos[Kind - FirstTargetFixupKind];
   return BigEndianInfos[Kind - FirstTargetFixupKind];
 }
@@ -518,7 +529,8 @@ getFixupKindInfo(MCFixupKind Kind) const {
 /// it should return an error.
 ///
 /// \return - True on success.
-bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                  const MCSubtargetInfo *STI) const {
   // Check for a less than instruction size number of bytes
   // FIXME: 16 bit instructions are not handled yet here.
   // We shouldn't be using a hard coded number for instruction size.
@@ -532,7 +544,10 @@ bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
 
 bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
-                                           const MCValue &Target) {
+                                           const MCValue &Target,
+                                           const MCSubtargetInfo *STI) {
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+    return true;
   const unsigned FixupKind = Fixup.getKind();
   switch (FixupKind) {
   default:

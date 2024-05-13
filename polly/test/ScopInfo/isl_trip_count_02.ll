@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; TODO: We do not allow unbounded loops at the moment.
 ;
@@ -11,7 +11,7 @@
 ;
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
-define void @f(i32* %A, i32 %N, i32 %M) {
+define void @f(ptr %A, i32 %N, i32 %M) {
 entry:
   br label %entry.split
 
@@ -21,8 +21,8 @@ entry.split:
 
 for.body:
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ %M, %entry.split ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %indvars.iv
-  store i32 %indvars.iv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %indvars.iv
+  store i32 %indvars.iv, ptr %arrayidx, align 4
   %cmp = icmp slt i32 %M, %N
   %indvars.iv.next = add i32 %indvars.iv, 1
   br i1 %cmp, label %for.cond.for.end_crit_edge, label %for.body

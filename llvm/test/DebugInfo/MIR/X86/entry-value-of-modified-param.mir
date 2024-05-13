@@ -1,4 +1,9 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s \
+# RUN:  -experimental-debug-variable-locations=true \
+# RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
+#
+# NB: clone of this test for VarLocBasedLDV is in
+# entry-value-of-modified-param2.mir.
 #
 #extern void fn1 (int, int, int);
 #
@@ -19,8 +24,9 @@
 # CHECK: ![[ARG_A:.*]] = !DILocalVariable(name: "a"
 # CHECK: ![[ARG_B:.*]] = !DILocalVariable(name: "b"
 # CHECK: ![[ARG_C:.*]] = !DILocalVariable(name: "c"
+## TODO: Support KILL instruction, which doesn't clobber parameter value.
 # CHECK: DBG_VALUE $edx, $noreg, ![[ARG_C]], !DIExpression(DW_OP_LLVM_entry_value, 1)
-# CHECK: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+# INSTRREFLDV: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK-NOT: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 #
 --- |
@@ -85,6 +91,7 @@
 ---
 name:            fn2
 alignment:       16
+debugInstrRef: true
 body:             |
   bb.0.entry:
     liveins: $edi, $esi, $rbx
@@ -110,6 +117,6 @@ body:             |
     renamable $al = SETCCr 12, implicit killed $eflags, implicit killed $eax, implicit-def $eax, debug-location !23
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !26
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !26
-    RETQ $eax, debug-location !26
+    RET64 $eax, debug-location !26
 
 ...

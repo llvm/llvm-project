@@ -35,8 +35,8 @@ struct Y : Primary, X {
   virtual std::strong_ordering operator<=>(const Y&) const = default;
 };
 Y y;
-// ITANIUM: @_ZTV1Y = {{.*}}constant {{.*}} null, {{.*}} @_ZTI1Y {{.*}} @_ZN7Primary1fEv {{.*}} @_ZNK1YssERKS_ {{.*}} @_ZN1YaSERKS_ {{.*}} @_ZN1YaSEOS_ {{.*}} @_ZNK1YeqERKS_ {{.*}} -[[POINTERSIZE:4|8]]
-// ITANIUM-SAME: @_ZTI1Y {{.*}} @_ZThn[[POINTERSIZE]]_N1YaSERKS_
+// ITANIUM: @_ZTV1Y = {{.*}}constant {{.*}} null, {{.*}} @_ZTI1Y, {{.*}} @_ZN7Primary1fEv, {{.*}} @_ZNK1YssERKS_, {{.*}} @_ZN1YaSERKS_, {{.*}} @_ZN1YaSEOS_, {{.*}} @_ZNK1YeqERKS_], {{.*}} -[[POINTERSIZE:4|8]]
+// ITANIUM-SAME: @_ZTI1Y, {{.*}} @_ZThn[[POINTERSIZE]]_N1YaSERKS_
 
 struct A {
   void operator<=>(int);

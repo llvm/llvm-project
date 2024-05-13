@@ -1,0 +1,5 @@
+# REQUIRES: mips-registered-target
+## Check that we handle MIPS64 assembly output with an EH asm prologue
+
+# RUN: cp -f %S/Inputs/mips64_eh.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/mips64_eh.ll.expected %t.ll

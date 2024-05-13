@@ -1,0 +1,22 @@
+add_custom_target(libc_termios_unittests)
+
+add_libc_unittest(
+  termios_test
+  SUITE
+    libc_termios_unittests
+  SRCS
+    termios_test.cpp
+  DEPENDS
+    libc.include.termios
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.termios.cfgetispeed
+    libc.src.termios.cfgetospeed
+    libc.src.termios.cfsetispeed
+    libc.src.termios.cfsetospeed
+    libc.src.termios.tcgetattr
+    libc.src.termios.tcgetsid
+    libc.src.termios.tcsetattr
+    libc.src.unistd.close
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

@@ -1,0 +1,168 @@
+# clang-format off
+# REQUIRES: lld, x86
+
+# RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %p/Inputs/inline_sites.s > %t.obj
+# RUN: lld-link -debug:full -nodefaultlib -entry:main -base:0x140000000 %t.obj -out:%t.exe
+# RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+# RUN:     %p/Inputs/inline_sites.lldbinit 2>&1 | FileCheck %s
+
+# CHECK:      (lldb) image dump line-table a.cpp -v
+# CHECK-NEXT: Line table
+# CHECK-NEXT: 0x0000000140001000: /tmp/a.cpp:2
+# CHECK-NEXT: 0x0000000140001004: /tmp/a.h:5, is_start_of_statement = TRUE, is_prologue_end = TRUE
+# CHECK-NEXT: 0x000000014000100c: /tmp/a.h:6
+# CHECK-NEXT: 0x0000000140001010: /tmp/a.h:7
+# CHECK-NEXT: 0x0000000140001018: /tmp/a.h:9
+# CHECK-NEXT: 0x000000014000101c: /tmp/b.h:5, is_start_of_statement = TRUE, is_prologue_end = TRUE
+# CHECK-NEXT: 0x0000000140001022: /tmp/b.h:6
+# CHECK-NEXT: 0x0000000140001026: /tmp/b.h:7
+# CHECK-NEXT: 0x000000014000102a: /tmp/c.h:5, is_start_of_statement = TRUE, is_prologue_end = TRUE
+# CHECK-NEXT: 0x0000000140001031: /tmp/c.h:6
+# CHECK-NEXT: 0x0000000140001035: /tmp/c.h:7
+# CHECK-NEXT: 0x0000000140001039: /tmp/a.cpp:3
+# CHECK-NEXT: 0x000000014000103d: /tmp/a.cpp:4
+# CHECK-NEXT: 0x000000014000103f: /tmp/a.h:20
+# CHECK-NEXT: 0x0000000140001044: /tmp/a.h:8
+# CHECK-NEXT: 0x0000000140001046: /tmp/a.cpp:3, is_terminal_entry = TRUE
+
+#CHECK: (lldb) b a.h:5
+#CHECK: Breakpoint 1: where = {{.*}}`main + 4 [inlined] Namespace1::foo at a.h:5, address = 0x0000000140001004
+#CHECK: (lldb) b a.h:6
+#CHECK: Breakpoint 2: where = {{.*}}`main + 12 [inlined] Namespace1::foo + 8 at a.h:6, address = 0x000000014000100c
+#CHECK: (lldb) b a.h:7
+#CHECK: Breakpoint 3: where = {{.*}}`main + 16 [inlined] Namespace1::foo + 12 at a.h:7, address = 0x0000000140001010
+#CHECK: (lldb) b a.h:8
+#CHECK: Breakpoint 4: where = {{.*}}`main + 68 [inlined] Namespace1::foo + 5 at a.h:8, address = 0x0000000140001044
+#CHECK: (lldb) b a.h:9
+#CHECK: Breakpoint 5: where = {{.*}}`main + 24 [inlined] Namespace1::foo + 20 at a.h:9, address = 0x0000000140001018
+#CHECK: (lldb) b b.h:5
+#CHECK: Breakpoint 6: where = {{.*}}`main + 28 [inlined] Class1::bar at b.h:5, address = 0x000000014000101c
+#CHECK: (lldb) b b.h:6
+#CHECK: Breakpoint 7: where = {{.*}}`main + 34 [inlined] Class1::bar + 6 at b.h:6, address = 0x0000000140001022
+#CHECK: (lldb) b b.h:7
+#CHECK: Breakpoint 8: where = {{.*}}`main + 38 [inlined] Class1::bar + 10 at b.h:7, address = 0x0000000140001026
+#CHECK: (lldb) b c.h:5
+#CHECK: Breakpoint 9: where = {{.*}}`main + 42 [inlined] Namespace2::Class2::func at c.h:5, address = 0x000000014000102a
+#CHECK: (lldb) b c.h:6
+#CHECK: Breakpoint 10: where = {{.*}}`main + 49 [inlined] Namespace2::Class2::func + 7 at c.h:6, address = 0x0000000140001031
+#CHECK: (lldb) b c.h:7
+#CHECK: Breakpoint 11: where = {{.*}}`main + 53 [inlined] Namespace2::Class2::func + 11 at c.h:7, address = 0x0000000140001035
+#CHECK: (lldb) b a.cpp:3
+#CHECK: Breakpoint 12: where = {{.*}}`main + 57 at a.cpp:3, address = 0x0000000140001039
+#CHECK: (lldb) b a.cpp:4
+#CHECK: Breakpoint 13: where = {{.*}}`main + 61 at a.cpp:4, address = 0x000000014000103d
+
+# FIXME: The following variable location have wrong register numbers due to
+# https://github.com/llvm/llvm-project/issues/53575. Fix them after resolving
+# the issue.
+
+# CHECK-LABEL: (lldb) image lookup -a 0x140001003 -v
+# CHECK:       Summary: {{.*}}`main + 3 at a.cpp:2
+# CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
+# CHECK:       Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
+# CHECK:       LineEntry: [0x0000000140001000-0x0000000140001004): /tmp/a.cpp:2
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x000000014000102d) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
+
+# CHECK-LABEL: (lldb) image lookup -a 0x140001004 -v
+# CHECK:       Summary: {{.*}}`main + 4 [inlined] Namespace1::foo at a.h:5
+# CHECK-NEXT:           {{.*}}`main + 4 at a.cpp:3
+# CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
+# CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
+# CHECK-NEXT:            id = {{.*}}, ranges = [0x140001004-0x140001039)[0x14000103f-0x140001046), name = "Namespace1::foo", decl = a.h:4
+# CHECK:       LineEntry: [0x0000000140001004-0x000000014000100c): /tmp/a.h:5
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = <empty>, decl =
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "foo_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001039) -> DW_OP_breg7 RSP+44
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x000000014000102d) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
+
+# CHECK-LABEL: (lldb) image lookup -a 0x140001010 -v
+# CHECK:       Summary: {{.*}}`main + 16 [inlined] Namespace1::foo + 12 at a.h:7
+# CHECK-NEXT:           {{.*}}`main + 4 at a.cpp:3
+# CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
+# CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
+# CHECK-NEXT:            id = {{.*}}, ranges = [0x140001004-0x140001039)[0x14000103f-0x140001046), name = "Namespace1::foo", decl = a.h:4
+# CHECK:       LineEntry: [0x0000000140001010-0x0000000140001018): /tmp/a.h:7
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = <empty>, decl =
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "foo_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001039) -> DW_OP_breg7 RSP+44
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x000000014000102d) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
+
+# CHECK-LABEL: (lldb) image lookup -a 0x14000101c -v
+# CHECK:       Summary: {{.*}}`main + 28 [inlined] Class1::bar at b.h:5
+# CHECK-NEXT:           {{.*}}`main + 28 [inlined] Namespace1::foo + 24 at a.h:9
+# CHECK-NEXT:           {{.*}}`main + 4 at a.cpp:3
+# CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
+# CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
+# CHECK-NEXT:            id = {{.*}}, ranges = [0x140001004-0x140001039)[0x14000103f-0x140001046), name = "Namespace1::foo", decl = a.h:4
+# CHECK-NEXT:            id = {{.*}}, range = [0x14000101c-0x140001039), name = "Class1::bar", decl = b.h:4
+# CHECK:       LineEntry: [0x000000014000101c-0x0000000140001022): /tmp/b.h:5
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = [0x000000014000101c, 0x000000014000101e) -> DW_OP_reg24 XMM7
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "bar_local", type = "int", valid ranges = <block>, location = [0x000000014000101c, 0x0000000140001039) -> DW_OP_breg7 RSP+52
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = <empty>, decl =
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "foo_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001039) -> DW_OP_breg7 RSP+44
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x000000014000102d) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
+
+# CHECK-LABEL: (lldb) image lookup -a 0x14000102a -v
+# CHECK:       Summary: {{.*}}`main + 42 [inlined] Namespace2::Class2::func at c.h:5
+# CHECK-NEXT:           {{.*}}`main + 42 [inlined] Class1::bar + 14 at b.h:7
+# CHECK-NEXT:           {{.*}}`main + 28 [inlined] Namespace1::foo + 24 at a.h:9
+# CHECK-NEXT:           {{.*}}`main + 4 at a.cpp:3
+# CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
+# CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
+# CHECK-NEXT:            id = {{.*}}, ranges = [0x140001004-0x140001039)[0x14000103f-0x140001046), name = "Namespace1::foo", decl = a.h:4
+# CHECK-NEXT:            id = {{.*}}, range = [0x14000101c-0x140001039), name = "Class1::bar", decl = b.h:4
+# CHECK-NEXT:            id = {{.*}}, range = [0x14000102a-0x140001039), name = "Namespace2::Class2::func", decl = c.h:4
+# CHECK:       LineEntry: [0x000000014000102a-0x0000000140001031): /tmp/c.h:5
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = [0x000000014000102a, 0x0000000140001039) -> DW_OP_reg24 XMM7
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "func_local", type = "int", valid ranges = <block>, location = [0x000000014000102a, 0x0000000140001039) -> DW_OP_breg7 RSP+48
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "bar_local", type = "int", valid ranges = <block>, location = [0x000000014000101c, 0x0000000140001039) -> DW_OP_breg7 RSP+52
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = <empty>, decl =
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "foo_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001039) -> DW_OP_breg7 RSP+44
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x000000014000102d) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
+
+# CHECK-LABEL: (lldb) image lookup -a 0x140001039 -v
+# CHECK:       Summary: {{.*}}`main + 57 at a.cpp:3
+# CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
+# CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
+# CHECK:       LineEntry: [0x0000000140001039-0x000000014000103d): /tmp/a.cpp:3
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
+
+# CHECK-LABEL: (lldb) image lookup -a 0x140001044 -v
+# CHECK:       Summary: {{.*}}`main + 68 [inlined] Namespace1::foo + 5 at a.h:8
+# CHECK-NEXT:           {{.*}}`main + 63 at a.cpp:3
+# CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
+# CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
+# CHECK-NEXT:            id = {{.*}}, ranges = [0x140001004-0x140001039)[0x14000103f-0x140001046), name = "Namespace1::foo", decl = a.h:4
+# CHECK:       LineEntry: [0x0000000140001044-0x0000000140001046): /tmp/a.h:8
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = <empty>, decl =
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "foo_local", type = "int", valid ranges = <block>, location = [0x0000000140001044, 0x0000000140001046) -> DW_OP_breg7 RSP+44
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001044, 0x0000000140001045) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
+# CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
+
+# CHECK-LABEL: (lldb) target modules dump ast
+# CHECK-NEXT:  Dumping clang ast for 1 modules.
+# CHECK-NEXT:  TranslationUnitDecl {{.*}} <undeserialized declarations>
+# CHECK-NEXT:  |-FunctionDecl {{.*}} main 'int (int, char **)'
+# CHECK-NEXT:  | |-ParmVarDecl {{.*}} argc 'int'
+# CHECK-NEXT:  | `-ParmVarDecl {{.*}} argv 'char **'
+# CHECK-NEXT:  |-NamespaceDecl {{.*}} Namespace1
+# CHECK-NEXT:  | `-FunctionDecl {{.*}} foo 'int (int)' inline
+# CHECK-NEXT:  |   `-ParmVarDecl {{.*}} x 'int'
+# CHECK-NEXT:  |-CXXRecordDecl {{.*}} <undeserialized declarations> class Class1
+# CHECK-NEXT:  | |-AccessSpecDecl {{.*}} public
+# CHECK-NEXT:  | `-CXXMethodDecl {{.*}} bar 'int (int)' static
+# CHECK-NEXT:  |   `-ParmVarDecl {{.*}} 'int'
+# CHECK-NEXT:  `-NamespaceDecl {{.*}} Namespace2
+# CHECK-NEXT:    `-CXXRecordDecl {{.*}} <undeserialized declarations> class Class2
+# CHECK-NEXT:      |-AccessSpecDecl {{.*}} public
+# CHECK-NEXT:      `-CXXMethodDecl {{.*}} func 'int (int)' static
+# CHECK-NEXT:        `-ParmVarDecl {{.*}} 'int'

@@ -32,5 +32,5 @@ body: |
     %0 = COPY $edi
     %2 = ADD32rr %0, %1, implicit-def dead $eflags
     $eax = COPY %2
-    RETQ $eax
+    RET64 $eax
 ...

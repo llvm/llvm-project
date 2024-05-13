@@ -13,10 +13,11 @@
 #include "lldb/Utility/RangeMap.h"
 #include "llvm/Support/Error.h"
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFDebugAranges {
 protected:
-  typedef lldb_private::RangeDataVector<dw_addr_t, uint32_t, dw_offset_t>
-      RangeToDIE;
+  typedef RangeDataVector<dw_addr_t, uint32_t, dw_offset_t> RangeToDIE;
 
 public:
   typedef RangeToDIE::Entry Range;
@@ -26,14 +27,14 @@ public:
 
   void Clear() { m_aranges.Clear(); }
 
-  void extract(const lldb_private::DWARFDataExtractor &debug_aranges_data);
+  void extract(const DWARFDataExtractor &debug_aranges_data);
 
   // Use append range multiple times and then call sort
   void AppendRange(dw_offset_t cu_offset, dw_addr_t low_pc, dw_addr_t high_pc);
 
   void Sort(bool minimize);
 
-  void Dump(lldb_private::Log *log) const;
+  void Dump(Log *log) const;
 
   dw_offset_t FindAddress(dw_addr_t address) const;
 
@@ -50,5 +51,7 @@ public:
 protected:
   RangeToDIE m_aranges;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGARANGES_H

@@ -1,4 +1,4 @@
-; RUN: opt -S -licm < %s | FileCheck %s
+; RUN: opt -S -passes=licm < %s | FileCheck %s
 
 ; LICM is trying to merge the two `store` in block %14 and %17, but given their
 ; locations disagree, it sets a line zero location instead instead of picking a
@@ -8,16 +8,16 @@
 ; volatile int a;
 ; extern int g;
 ; int g;
-; void f1() { 
-;  while (a) { 
+; void f1() {
+;  while (a) {
 ;    g = 0;
 ;    if (a)
 ;      g = 0;
-;  } 
+;  }
 ; }
 
-; CHECK: %.lcssa = phi i32
-; CHECK-NEXT: store i32 %.lcssa, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g_390, i64 0, i64 1), align 4, !dbg [[storeLocation:![0-9]+]] 
+; CHECK: bb22:
+; CHECK-NEXT: store i32 0, ptr getelementptr inbounds ([2 x i32], ptr @g_390, i64 0, i64 1), align 4, !dbg [[storeLocation:![0-9]+]]
 ; CHECK: [[storeLocation]] = !DILocation(line: 0
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -29,54 +29,53 @@ target triple = "x86_64-apple-macosx10.15.0"
 @a = local_unnamed_addr global i32 0, align 4, !dbg !6
 
 define i32 @main() local_unnamed_addr !dbg !22 {
-  %1 = load volatile i32, i32* @b, align 4, !dbg !37, !tbaa !40
-  %2 = icmp sgt i32 %1, -9, !dbg !44
-  br i1 %2, label %3, label %5, !dbg !45
+bb:
+  %i = load volatile i32, ptr @b, align 4, !dbg !37, !tbaa !40
+  %i1 = icmp sgt i32 %i, -9, !dbg !44
+  br i1 %i1, label %bb2, label %bb4, !dbg !45
 
-3:                                                ; preds = %0
-  br label %9, !dbg !45
+bb2:                                              ; preds = %bb
+  br label %bb8, !dbg !45
 
-4:                                                ; preds = %9
-  br label %5, !dbg !45
+bb3:                                              ; preds = %bb8
+  br label %bb4, !dbg !45
 
-5:                                                ; preds = %4, %0
-  %6 = load volatile i32, i32* @c, align 4, !dbg !46, !tbaa !40
-  %7 = icmp slt i32 %6, 6, !dbg !47
-  br i1 %7, label %8, label %24, !dbg !48
+bb4:                                              ; preds = %bb3, %bb
+  %i5 = load volatile i32, ptr @c, align 4, !dbg !46, !tbaa !40
+  %i6 = icmp slt i32 %i5, 6, !dbg !47
+  br i1 %i6, label %bb7, label %bb23, !dbg !48
 
-8:                                                ; preds = %5
-  br label %14, !dbg !48
+bb7:                                              ; preds = %bb4
+  br label %bb13, !dbg !48
 
-9:                                                ; preds = %3, %9
-  %10 = load volatile i32, i32* @b, align 4, !dbg !49, !tbaa !40
-  %11 = add nsw i32 %10, -1, !dbg !49
-  store volatile i32 %11, i32* @b, align 4, !dbg !49, !tbaa !40
-  %12 = load volatile i32, i32* @b, align 4, !dbg !37, !tbaa !40
-  %13 = icmp sgt i32 %12, -9, !dbg !44
-  br i1 %13, label %9, label %4, !dbg !45, !llvm.loop !50
+bb8:                                              ; preds = %bb8, %bb2
+  %i9 = load volatile i32, ptr @b, align 4, !dbg !49, !tbaa !40
+  %i10 = add nsw i32 %i9, -1, !dbg !49
+  store volatile i32 %i10, ptr @b, align 4, !dbg !49, !tbaa !40
+  %i11 = load volatile i32, ptr @b, align 4, !dbg !37, !tbaa !40
+  %i12 = icmp sgt i32 %i11, -9, !dbg !44
+  br i1 %i12, label %bb8, label %bb3, !dbg !45, !llvm.loop !50
 
-14:                                               ; preds = %8, %18
-  store i32 0, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g_390, i64 0, i64 1), align 4, !dbg !53, !tbaa !40
-  %15 = load volatile i32, i32* @b, align 4, !dbg !54, !tbaa !40
-  %16 = icmp eq i32 %15, 0, !dbg !54
-  br i1 %16, label %17, label %18, !dbg !55
+bb13:                                             ; preds = %bb17, %bb7
+  store i32 0, ptr getelementptr inbounds ([2 x i32], ptr @g_390, i64 0, i64 1), align 4, !dbg !53, !tbaa !40
+  %i14 = load volatile i32, ptr @b, align 4, !dbg !54, !tbaa !40
+  %i15 = icmp eq i32 %i14, 0, !dbg !54
+  br i1 %i15, label %bb16, label %bb17, !dbg !55
 
-17:                                               ; preds = %14
-  store i32 0, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g_390, i64 0, i64 1), align 4, !dbg !56, !tbaa !40
-  br label %18
+bb16:                                             ; preds = %bb13
+  store i32 0, ptr getelementptr inbounds ([2 x i32], ptr @g_390, i64 0, i64 1), align 4, !dbg !56, !tbaa !40
+  br label %bb17
 
-18:                                               ; preds = %14, %17
-  %19 = load volatile i32, i32* @c, align 4, !dbg !57, !tbaa !40
-  %20 = add nsw i32 %19, 1, !dbg !57
-  store volatile i32 %20, i32* @c, align 4, !dbg !57, !tbaa !40
-  %21 = load volatile i32, i32* @c, align 4, !dbg !46, !tbaa !40
-  %22 = icmp slt i32 %21, 6, !dbg !47
-  br i1 %22, label %14, label %23, !dbg !48, !llvm.loop !58
+bb17:                                             ; preds = %bb16, %bb13
+  %i18 = load volatile i32, ptr @c, align 4, !dbg !57, !tbaa !40
+  %i20 = load volatile i32, ptr @c, align 4, !dbg !46, !tbaa !40
+  %i21 = icmp slt i32 %i20, 6, !dbg !47
+  br i1 %i21, label %bb13, label %bb22, !dbg !48, !llvm.loop !58
 
-23:                                               ; preds = %18
-  br label %24, !dbg !48
+bb22:                                             ; preds = %bb17
+  br label %bb23, !dbg !48
 
-24:                                               ; preds = %23, %5
+bb23:                                             ; preds = %bb22, %bb4
   ret i32 0, !dbg !60
 }
 

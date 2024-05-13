@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fblocks -rewrite-objc -fms-extensions %s -o %t-rw.cpp
 // RUN: %clang_cc1 -Werror -fsyntax-only -Wno-address-of-temporary -Wno-c++11-narrowing -std=c++11 -D"Class=void*" -D"id=void*" -D"SEL=void*" -U__declspec -D"__declspec(X)=" %t-rw.cpp
-// rdar://11323187
 
 typedef unsigned long NSUInteger;
 
@@ -34,7 +33,7 @@ typedef struct {
 @implementation Foo
 - (void)x:(Foo *)other {
   bar.x = 0;
-  bar.y = 1;
+  bar.y = -1;
   self->_internal._singleRange._range = (( other ->bar.x) ? &( other ->_internal._singleRange._range) : ((NSRange *)(&(((_NSRangeInfo *)( other ->_internal._multipleRanges._data))->_ranges))))[0];
 }
 @end

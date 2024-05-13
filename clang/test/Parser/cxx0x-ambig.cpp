@@ -122,9 +122,8 @@ namespace ellipsis {
     void f(S(...args[sizeof(T)])); // expected-note {{here}} expected-note {{here}}
     void f(S(...args)[sizeof(T)]); // expected-error {{redeclared}}
     void f(S ...args[sizeof(T)]); // expected-error {{redeclared}}
-    void g(S(...[sizeof(T)])); // expected-note {{here}} expected-warning {{ISO C++11 requires a parenthesized pack declaration to have a name}}
+    void g(S(...[sizeof(T)])); // expected-warning {{ISO C++11 requires a parenthesized pack declaration to have a name}}
     void g(S(...)[sizeof(T)]); // expected-error {{function cannot return array type}}
-    void g(S ...[sizeof(T)]); // expected-error {{redeclared}}
     void h(T(...)); // function type, expected-error {{unexpanded parameter pack}}
     void h(T...); // pack expansion, ok
     void i(int(T...)); // expected-note {{here}}
@@ -163,7 +162,7 @@ namespace ellipsis {
     (void)p1;
 
     UnsignedTmplArgSink<T(CtorSink(t ...)) ...> *t0; // ok
-    UnsignedTmplArgSink<((T *)0, 42u) ...> **t0p = &t0;
+    UnsignedTmplArgSink<((T *)0, 42u) ...> **t0p = &t0; // expected-warning 2{{left operand of comma operator has no effect}}
   }
 
   template void foo(int, int, int); // expected-note {{in instantiation of function template specialization 'ellipsis::foo<int, int>' requested here}}

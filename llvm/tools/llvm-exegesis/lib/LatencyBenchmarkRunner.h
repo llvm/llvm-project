@@ -15,22 +15,27 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_LATENCY_H
 
 #include "BenchmarkRunner.h"
+#include "Target.h"
 
 namespace llvm {
 namespace exegesis {
 
 class LatencyBenchmarkRunner : public BenchmarkRunner {
 public:
-  LatencyBenchmarkRunner(
-      const LLVMState &State, InstructionBenchmark::ModeE Mode,
-      InstructionBenchmark::ResultAggregationModeE ResultAggMode);
+  LatencyBenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
+                         BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
+                         Benchmark::ResultAggregationModeE ResultAggMode,
+                         ExecutionModeE ExecutionMode,
+                         ArrayRef<ValidationEvent> ValCounters,
+                         unsigned BenchmarkRepeatCount);
   ~LatencyBenchmarkRunner() override;
 
 private:
   Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const override;
 
-  InstructionBenchmark::ResultAggregationModeE ResultAggMode;
+  Benchmark::ResultAggregationModeE ResultAggMode;
+  unsigned NumMeasurements;
 };
 } // namespace exegesis
 } // namespace llvm

@@ -26,15 +26,15 @@
 ; 21: }
 ;
 
-; CHECK: Method load [1]: bar, Size = {{[0-9]+}}
-; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[5,6,7,9]}}
-; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[5,6,7,9]}}
-; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[5,6,7,9]}}
-; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[5,6,7,9]}}
+; CHECK: Method load [1]: foo, Size = {{[0-9]+}}
+; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[1,2]}}
+; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[1,2]}}
 
-; CHECK: Method load [2]: foo, Size = {{[0-9]+}}
-; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[1,2]}}
-; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[1,2]}}
+; CHECK: Method load [2]: bar, Size = {{[0-9]+}}
+; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[5,6,7,9]}}
+; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[5,6,7,9]}}
+; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[5,6,7,9]}}
+; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[5,6,7,9]}}
 
 ; CHECK: Method load [3]: fubar, Size = {{[0-9]+}}
 ; CHECK:   Line info @ {{[0-9]+}}: multiple.c, line {{[12,13,15,17,19]}}

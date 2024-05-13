@@ -14,12 +14,17 @@
 #define INTEGERSETDETAIL_H_
 
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/Support/StorageUniquer.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 namespace detail {
 
-struct IntegerSetStorage {
+struct IntegerSetStorage : public StorageUniquer::BaseStorage {
+  /// The hash key used for uniquing.
+  using KeyTy =
+      std::tuple<unsigned, unsigned, ArrayRef<AffineExpr>, ArrayRef<bool>>;
+
   unsigned dimCount;
   unsigned symbolCount;
 
@@ -29,8 +34,24 @@ struct IntegerSetStorage {
 
   // Bits to check whether a constraint is an equality or an inequality.
   ArrayRef<bool> eqFlags;
+
+  bool operator==(const KeyTy &key) const {
+    return std::get<0>(key) == dimCount && std::get<1>(key) == symbolCount &&
+           std::get<2>(key) == constraints && std::get<3>(key) == eqFlags;
+  }
+
+  static IntegerSetStorage *
+  construct(StorageUniquer::StorageAllocator &allocator, const KeyTy &key) {
+    auto *res =
+        new (allocator.allocate<IntegerSetStorage>()) IntegerSetStorage();
+    res->dimCount = std::get<0>(key);
+    res->symbolCount = std::get<1>(key);
+    res->constraints = allocator.copyInto(std::get<2>(key));
+    res->eqFlags = allocator.copyInto(std::get<3>(key));
+    return res;
+  }
 };
 
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 #endif // INTEGERSETDETAIL_H_

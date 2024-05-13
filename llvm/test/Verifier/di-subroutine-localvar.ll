@@ -1,12 +1,12 @@
-; RUN: opt %s -verify 2>&1 | FileCheck %s
+; RUN: opt %s -passes=verify 2>&1 | FileCheck %s
 ; CHECK: invalid type
 ; CHECK: !20 = !DILocalVariable(name: "f", scope: !21, file: !13, line: 970, type: !14)
 ; CHECK: !14 = !DISubroutineType(types: !15)
 
 
 %timespec.0.1.2.3.0.1.2 = type { i64, i64 }
-define internal i64 @init_vdso_clock_gettime(i32, %timespec.0.1.2.3.0.1.2* nonnull) unnamed_addr !dbg !142 {
-  call void @llvm.dbg.value(metadata i64 (i32, %timespec.0.1.2.3.0.1.2*)* null, metadata !162, metadata !DIExpression()), !dbg !167
+define internal i64 @init_vdso_clock_gettime(i32, ptr nonnull) unnamed_addr !dbg !142 {
+  call void @llvm.dbg.value(metadata ptr null, metadata !162, metadata !DIExpression()), !dbg !167
   ret i64 -38, !dbg !168
 }
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0

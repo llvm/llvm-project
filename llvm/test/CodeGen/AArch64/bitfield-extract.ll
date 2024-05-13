@@ -101,15 +101,15 @@ declare void @use(i16 signext, i64)
 ; CHECK: ldr d0, [x0], #8
 ; CHECK: ubfx x[[VAL:[0-9]+]], x0, #5, #27
 ; CHECK: str w[[VAL]], [x2]
-define <2 x i32> @test_complex_node(<2 x i32>* %addr, <2 x i32>** %addr2, i32* %bf ) {
-  %vec = load <2 x i32>, <2 x i32>* %addr
+define <2 x i32> @test_complex_node(ptr %addr, ptr %addr2, ptr %bf ) {
+  %vec = load <2 x i32>, ptr %addr
 
-  %vec.next = getelementptr <2 x i32>, <2 x i32>* %addr, i32 1
-  store <2 x i32>* %vec.next, <2 x i32>** %addr2
-  %lo = ptrtoint <2 x i32>* %vec.next to i32
+  %vec.next = getelementptr <2 x i32>, ptr %addr, i32 1
+  store ptr %vec.next, ptr %addr2
+  %lo = ptrtoint ptr %vec.next to i32
 
   %val = lshr i32 %lo, 5
-  store i32 %val, i32* %bf
+  store i32 %val, ptr %bf
 
   ret <2 x i32> %vec
 }

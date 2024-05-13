@@ -240,25 +240,20 @@ define i32 @test_gt_2(<4 x i32> %A, <4 x i32> %B) {
 
 ; (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
 ; Don't combine with i1 - out of range constant
-define void @test_i1_uge(i1 *%A2) {
+define void @test_i1_uge(ptr%A2) {
 ; CHECK-LABEL: test_i1_uge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb (%rdi), %al
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    xorb $1, %cl
-; CHECK-NEXT:    andb %cl, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negq %rax
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movb %cl, (%rdi,%rax)
+; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    notb %al
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movb %al, (%rdi)
 ; CHECK-NEXT:    retq
-  %L5 = load i1, i1* %A2
+  %L5 = load i1, ptr %A2
   %C3 = icmp ne i1 %L5, true
   %C8 = icmp eq i1 %L5, false
   %C9 = icmp ugt i1 %C3, %C8
-  %G3 = getelementptr i1, i1* %A2, i1 %C9
-  store i1 %C3, i1* %G3
+  %G3 = getelementptr i1, ptr %A2, i1 %C9
+  store i1 %C3, ptr %G3
   ret void
 }
 
@@ -267,9 +262,9 @@ define void @test_i1_uge(i1 *%A2) {
 define i64 @PR40657(i8 %var2, i8 %var9) {
 ; CHECK-LABEL: PR40657:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    addb %dil, %sil
-; CHECK-NEXT:    movzbl %sil, %eax
+; CHECK-NEXT:    addb %sil, %dil
+; CHECK-NEXT:    incb %dil
+; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %var6 = trunc i8 %var9 to i1
@@ -326,11 +321,10 @@ define <4 x float> @sub_to_shift_to_add_vec(<4 x i32> %x, <4 x i32> %y, <4 x flo
 ; SSE2-LABEL: sub_to_shift_to_add_vec:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    paddd %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-NEXT:    pand %xmm0, %xmm2
+; SSE2-NEXT:    pandn %xmm3, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: sub_to_shift_to_add_vec:
@@ -360,3 +354,664 @@ define i64 @sub_constant_to_shift_to_add(i32 %x, i64 %s1, i64 %s2) {
   ret i64 %r
 }
 
+define float @olt(float %x) {
+; CHECK-LABEL: olt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorps %xmm0, %xmm1
+; CHECK-NEXT:    minss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %cmp = fcmp olt float %x, 0.0
+  %neg = fneg float %x
+  %r = select i1 %cmp, float %x, float %neg
+  ret float %r
+}
+
+define double @ogt(double %x) {
+; CHECK-LABEL: ogt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorpd %xmm0, %xmm1
+; CHECK-NEXT:    maxsd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg = fneg double %x
+  %cmp = fcmp ogt double %x, 0.0
+  %r = select i1 %cmp, double %x, double %neg
+  ret double %r
+}
+
+define <4 x float> @olt_swap(<4 x float> %x) {
+; CHECK-LABEL: olt_swap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorps %xmm0, %xmm1
+; CHECK-NEXT:    maxps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %cmp = fcmp olt <4 x float> %x, zeroinitializer
+  %neg = fneg <4 x float> %x
+  %r = select <4 x i1> %cmp, <4 x float> %neg, <4 x float> %x
+  ret <4 x float> %r
+}
+
+define <2 x double> @ogt_swap(<2 x double> %x) {
+; CHECK-LABEL: ogt_swap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorpd %xmm0, %xmm1
+; CHECK-NEXT:    minpd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg = fneg <2 x double> %x
+  %cmp = fcmp ogt <2 x double> %x, zeroinitializer
+  %r = select <2 x i1> %cmp, <2 x double> %neg, <2 x double> %x
+  ret <2 x double> %r
+}
+
+define <4 x float> @ole(<4 x float> %x) {
+; SSE2-LABEL: ole:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    xorps %xmm0, %xmm2
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    cmpleps %xmm2, %xmm1
+; SSE2-NEXT:    andps %xmm1, %xmm2
+; SSE2-NEXT:    andnps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: ole:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    xorps %xmm0, %xmm2
+; SSE41-NEXT:    cmpleps %xmm2, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
+; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %cmp = fcmp ole <4 x float> %x, zeroinitializer
+  %neg = fneg <4 x float> %x
+  %r = select <4 x i1> %cmp, <4 x float> %neg, <4 x float> %x
+  ret <4 x float> %r
+}
+
+define <2 x double> @oge(<2 x double> %x) {
+; SSE2-LABEL: oge:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    xorpd %xmm0, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm1
+; SSE2-NEXT:    cmplepd %xmm0, %xmm1
+; SSE2-NEXT:    andpd %xmm1, %xmm2
+; SSE2-NEXT:    andnpd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm2, %xmm1
+; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: oge:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd %xmm0, %xmm1
+; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    xorpd %xmm0, %xmm2
+; SSE41-NEXT:    movapd %xmm2, %xmm0
+; SSE41-NEXT:    cmplepd %xmm1, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %neg = fneg <2 x double> %x
+  %cmp = fcmp oge <2 x double> %x, zeroinitializer
+  %r = select <2 x i1> %cmp, <2 x double> %neg, <2 x double> %x
+  ret <2 x double> %r
+}
+
+; negative test - don't create an fneg to replace 0.0 operand
+
+define double @ogt_no_fneg(double %x, double %y) {
+; CHECK-LABEL: ogt_no_fneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorpd %xmm2, %xmm2
+; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
+; CHECK-NEXT:    andpd %xmm2, %xmm0
+; CHECK-NEXT:    andnpd %xmm1, %xmm2
+; CHECK-NEXT:    orpd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %cmp = fcmp ogt double %x, 0.0
+  %r = select i1 %cmp, double %x, double %y
+  ret double %r
+}
+
+; negative test - can't change the setcc for non-zero constant
+
+define double @ogt_no_zero(double %x) {
+; CHECK-LABEL: ogt_no_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorpd %xmm0, %xmm1
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
+; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
+; CHECK-NEXT:    andpd %xmm2, %xmm0
+; CHECK-NEXT:    andnpd %xmm1, %xmm2
+; CHECK-NEXT:    orpd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %neg = fneg double %x
+  %cmp = fcmp ogt double %x, 1.0
+  %r = select i1 %cmp, double %x, double %neg
+  ret double %r
+}
+
+define i64 @cmp_sgt_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_sgt_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq %rdi, %rsi
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp sgt i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_sgt_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_sgt_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $-43, %rdi
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp sgt i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_sgt_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: cmp_sgt_not_with_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp sgt <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+
+define i64 @cmp_ugt_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_ugt_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    notq %rdi
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp ugt i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_ugt_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_ugt_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $-43, %rdi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp ugt i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_ugt_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; SSE2-LABEL: cmp_ugt_not_with_vec:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: cmp_ugt_not_with_vec:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pminud %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    pxor %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp ugt <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+
+define i64 @cmp_sge_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_sge_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq %rdi, %rsi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp sge i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_sge_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_sge_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $-42, %rdi
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp sge i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_sge_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; SSE2-LABEL: cmp_sge_not_with_vec:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: cmp_sge_not_with_vec:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmaxud %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp uge <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+
+define i64 @cmp_uge_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_uge_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq %rdi, %rsi
+; CHECK-NEXT:    adcq $-1, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp uge i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_uge_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_uge_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $-42, %rdi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp uge i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_uge_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; SSE2-LABEL: cmp_uge_not_with_vec:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: cmp_uge_not_with_vec:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmaxud %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp uge <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+
+define i64 @cmp_sle_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_sle_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq %rdi, %rsi
+; CHECK-NEXT:    setle %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp sle i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_sle_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_sle_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $-43, %rdi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp sle i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_sle_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: cmp_sle_not_with_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp sle <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+
+define i64 @cmp_slt_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_slt_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq %rdi, %rsi
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp slt i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_slt_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_slt_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $-42, %rdi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp slt i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_slt_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: cmp_slt_not_with_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp slt <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+
+
+define i64 @cmp_ult_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_ult_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    notq %rsi
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    addq %rdi, %rsi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp ult i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_ult_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_ult_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    addq $42, %rdi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp ult i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_ult_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; SSE2-LABEL: cmp_ult_not_with_vec:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: cmp_ult_not_with_vec:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmaxud %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    pxor %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp ult <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+
+define i64 @cmp_ule_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_ule_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq %rsi, %rdi
+; CHECK-NEXT:    adcq $-1, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp ule i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_ule_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_ule_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $-43, %rdi
+; CHECK-NEXT:    adcq $-1, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp ule i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_ule_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; SSE2-LABEL: cmp_ule_not_with_vec:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: cmp_ule_not_with_vec:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pminud %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp ule <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+
+define i64 @cmp_eq_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_eq_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq %rsi, %rdi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp eq i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_eq_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_eq_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $-43, %rdi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp eq i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_eq_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: cmp_eq_not_with_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp eq <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+define i64 @cmp_ne_not(i64 %a, i64 %b) {
+; CHECK-LABEL: cmp_ne_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq %rsi, %rdi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp ne i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_ne_not_with_constant(i64 %a) {
+; CHECK-LABEL: cmp_ne_not_with_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $-43, %rdi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp ne i64 %na, 42
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <4 x i32> @cmp_ne_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: cmp_ne_not_with_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %na = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %nb = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = icmp ne <4 x i32> %na, %nb
+  %r = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %r
+}
+
+define i64 @cmp_uge_not_commute(i64 %b, i64 %a) {
+; CHECK-LABEL: cmp_uge_not_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq %rsi, %rdi
+; CHECK-NEXT:    adcq $-1, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %nb = xor i64 %b, -1
+  %c = icmp uge i64 %na, %nb
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define i64 @cmp_ult_not_with_constant_commute(i64 %a) {
+; CHECK-LABEL: cmp_ult_not_with_constant_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $43, %rdi
+; CHECK-NEXT:    adcq $-1, %rax
+; CHECK-NEXT:    retq
+  %na = xor i64 %a, -1
+  %c = icmp ult i64 42, %a
+  %r = sext i1 %c to i64
+  ret i64 %r
+}
+
+define <2 x i64> @cmp_uge_not_with_vec2xi64(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: cmp_uge_not_with_vec2xi64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
+; CHECK-NEXT:    pxor %xmm2, %xmm1
+; CHECK-NEXT:    pxor %xmm2, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pand %xmm3, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %na = xor <2 x i64> %a, <i64 -1, i64 -1>
+  %nb = xor <2 x i64> %b, <i64 -1, i64 -1>
+  %c = icmp uge <2 x i64> %na, %nb
+  %r = sext <2 x i1> %c to <2 x i64>
+  ret <2 x i64> %r
+}

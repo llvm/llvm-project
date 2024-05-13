@@ -14,19 +14,21 @@
 #ifndef LLVM_CLANG_AST_EXPRCONCEPTS_H
 #define LLVM_CLANG_AST_EXPRCONCEPTS_H
 
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclarationName.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TrailingObjects.h"
-#include <utility>
 #include <string>
+#include <utility>
 
 namespace clang {
 class ASTStmtReader;
@@ -37,74 +39,91 @@ class ASTStmtWriter;
 ///
 /// According to C++2a [expr.prim.id]p3 an id-expression that denotes the
 /// specialization of a concept results in a prvalue of type bool.
-class ConceptSpecializationExpr final : public Expr, public ConceptReference,
-      private llvm::TrailingObjects<ConceptSpecializationExpr,
-                                    TemplateArgument> {
+class ConceptSpecializationExpr final : public Expr {
+  friend class ASTReader;
   friend class ASTStmtReader;
-  friend TrailingObjects;
-public:
-  using SubstitutionDiagnostic = std::pair<SourceLocation, std::string>;
 
-protected:
-  /// \brief The number of template arguments in the tail-allocated list of
-  /// converted template arguments.
-  unsigned NumTemplateArgs;
+private:
+  ConceptReference *ConceptRef;
+
+  /// \brief The Implicit Concept Specialization Decl, which holds the template
+  /// arguments for this specialization.
+  ImplicitConceptSpecializationDecl *SpecDecl;
 
   /// \brief Information about the satisfaction of the named concept with the
   /// given arguments. If this expression is value dependent, this is to be
   /// ignored.
   ASTConstraintSatisfaction *Satisfaction;
 
-  ConceptSpecializationExpr(const ASTContext &C, NestedNameSpecifierLoc NNS,
-                            SourceLocation TemplateKWLoc,
-                            DeclarationNameInfo ConceptNameInfo,
-                            NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
-                            const ASTTemplateArgumentListInfo *ArgsAsWritten,
-                            ArrayRef<TemplateArgument> ConvertedArgs,
+  ConceptSpecializationExpr(const ASTContext &C, ConceptReference *ConceptRef,
+                            ImplicitConceptSpecializationDecl *SpecDecl,
                             const ConstraintSatisfaction *Satisfaction);
 
-  ConceptSpecializationExpr(const ASTContext &C, ConceptDecl *NamedConcept,
-                            ArrayRef<TemplateArgument> ConvertedArgs,
+  ConceptSpecializationExpr(const ASTContext &C, ConceptReference *ConceptRef,
+                            ImplicitConceptSpecializationDecl *SpecDecl,
                             const ConstraintSatisfaction *Satisfaction,
                             bool Dependent,
                             bool ContainsUnexpandedParameterPack);
-
-  ConceptSpecializationExpr(EmptyShell Empty, unsigned NumTemplateArgs);
+  ConceptSpecializationExpr(EmptyShell Empty);
 
 public:
-
   static ConceptSpecializationExpr *
-  Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
-         SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
-         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
-         const ASTTemplateArgumentListInfo *ArgsAsWritten,
-         ArrayRef<TemplateArgument> ConvertedArgs,
+  Create(const ASTContext &C, ConceptReference *ConceptRef,
+         ImplicitConceptSpecializationDecl *SpecDecl,
          const ConstraintSatisfaction *Satisfaction);
 
   static ConceptSpecializationExpr *
-  Create(const ASTContext &C, ConceptDecl *NamedConcept,
-         ArrayRef<TemplateArgument> ConvertedArgs,
-         const ConstraintSatisfaction *Satisfaction,
-         bool Dependent,
+  Create(const ASTContext &C, ConceptReference *ConceptRef,
+         ImplicitConceptSpecializationDecl *SpecDecl,
+         const ConstraintSatisfaction *Satisfaction, bool Dependent,
          bool ContainsUnexpandedParameterPack);
 
-  static ConceptSpecializationExpr *
-  Create(ASTContext &C, EmptyShell Empty, unsigned NumTemplateArgs);
-
   ArrayRef<TemplateArgument> getTemplateArguments() const {
-    return ArrayRef<TemplateArgument>(getTrailingObjects<TemplateArgument>(),
-                                      NumTemplateArgs);
+    return SpecDecl->getTemplateArguments();
   }
 
-  /// \brief Set new template arguments for this concept specialization.
-  void setTemplateArguments(ArrayRef<TemplateArgument> Converted);
+  ConceptReference *getConceptReference() const { return ConceptRef; }
+
+  ConceptDecl *getNamedConcept() const { return ConceptRef->getNamedConcept(); }
+
+  // FIXME: Several of the following functions can be removed. Instead the
+  // caller can directly work with the ConceptReference.
+  bool hasExplicitTemplateArgs() const {
+    return ConceptRef->hasExplicitTemplateArgs();
+  }
+
+  SourceLocation getConceptNameLoc() const {
+    return ConceptRef->getConceptNameLoc();
+  }
+  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
+    return ConceptRef->getTemplateArgsAsWritten();
+  }
+
+  const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
+    return ConceptRef->getNestedNameSpecifierLoc();
+  }
+
+  SourceLocation getTemplateKWLoc() const {
+    return ConceptRef->getTemplateKWLoc();
+  }
+
+  NamedDecl *getFoundDecl() const { return ConceptRef->getFoundDecl(); }
+
+  const DeclarationNameInfo &getConceptNameInfo() const {
+    return ConceptRef->getConceptNameInfo();
+  }
+
+  const ImplicitConceptSpecializationDecl *getSpecializationDecl() const {
+    assert(SpecDecl && "Template Argument Decl not initialized");
+    return SpecDecl;
+  }
 
   /// \brief Whether or not the concept with the given arguments was satisfied
   /// when the expression was created.
   /// The expression must not be dependent.
   bool isSatisfied() const {
-    assert(!isValueDependent()
-           && "isSatisfied called on a dependent ConceptSpecializationExpr");
+    assert(!isValueDependent() &&
+           "isSatisfied called on a dependent ConceptSpecializationExpr");
     return Satisfaction->IsSatisfied;
   }
 
@@ -112,8 +131,8 @@ public:
   /// satisfaction of the named concept.
   /// The expression must not be dependent.
   const ASTConstraintSatisfaction &getSatisfaction() const {
-    assert(!isValueDependent()
-           && "getSatisfaction called on dependent ConceptSpecializationExpr");
+    assert(!isValueDependent() &&
+           "getSatisfaction called on dependent ConceptSpecializationExpr");
     return *Satisfaction;
   }
 
@@ -122,15 +141,15 @@ public:
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    return ConceptName.getBeginLoc();
+    return ConceptRef->getBeginLoc();
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY {
-    // If the ConceptSpecializationExpr is the ImmediatelyDeclaredConstraint
-    // of a TypeConstraint written syntactically as a constrained-parameter,
-    // there may not be a template argument list.
-    return ArgsAsWritten->RAngleLoc.isValid() ? ArgsAsWritten->RAngleLoc
-                                              : ConceptName.getEndLoc();
+    return ConceptRef->getEndLoc();
+  }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return ConceptRef->getLocation();
   }
 
   // Iterators
@@ -154,8 +173,11 @@ public:
 private:
   const RequirementKind Kind;
   // FIXME: use RequirementDependence to model dependence?
+  LLVM_PREFERRED_TYPE(bool)
   bool Dependent : 1;
+  LLVM_PREFERRED_TYPE(bool)
   bool ContainsUnexpandedParameterPack : 1;
+  LLVM_PREFERRED_TYPE(bool)
   bool Satisfied : 1;
 public:
   struct SubstitutionDiagnostic {
@@ -275,12 +297,12 @@ public:
       friend ASTStmtWriter;
 
       /// \brief No return type requirement was specified.
-      ReturnTypeRequirement() : TypeConstraintInfo(nullptr, 0) {}
+      ReturnTypeRequirement() : TypeConstraintInfo(nullptr, false) {}
 
       /// \brief A return type requirement was specified but it was a
       /// substitution failure.
       ReturnTypeRequirement(SubstitutionDiagnostic *SubstDiag) :
-          TypeConstraintInfo(SubstDiag, 0) {}
+          TypeConstraintInfo(SubstDiag, false) {}
 
       /// \brief A 'type constraint' style return type requirement.
       /// \param TPL an invented template parameter list containing a single
@@ -405,57 +427,61 @@ public:
 /// \brief A requires-expression requirement which is satisfied when a general
 /// constraint expression is satisfied ('nested' requirements).
 class NestedRequirement : public Requirement {
-  llvm::PointerUnion<Expr *, SubstitutionDiagnostic *> Value;
+  Expr *Constraint = nullptr;
   const ASTConstraintSatisfaction *Satisfaction = nullptr;
+  bool HasInvalidConstraint = false;
+  StringRef InvalidConstraintEntity;
 
 public:
   friend ASTStmtReader;
   friend ASTStmtWriter;
 
-  NestedRequirement(SubstitutionDiagnostic *SubstDiag) :
-      Requirement(RK_Nested, /*Dependent=*/false,
-                  /*ContainsUnexpandedParameterPack*/false,
-                  /*Satisfied=*/false), Value(SubstDiag) {}
-
-  NestedRequirement(Expr *Constraint) :
-      Requirement(RK_Nested, /*Dependent=*/true,
-                  Constraint->containsUnexpandedParameterPack()),
-      Value(Constraint) {
+  NestedRequirement(Expr *Constraint)
+      : Requirement(RK_Nested, /*IsDependent=*/true,
+                    Constraint->containsUnexpandedParameterPack()),
+        Constraint(Constraint) {
     assert(Constraint->isInstantiationDependent() &&
            "Nested requirement with non-dependent constraint must be "
            "constructed with a ConstraintSatisfaction object");
   }
 
   NestedRequirement(ASTContext &C, Expr *Constraint,
-                    const ConstraintSatisfaction &Satisfaction) :
-      Requirement(RK_Nested, Constraint->isInstantiationDependent(),
-                  Constraint->containsUnexpandedParameterPack(),
-                  Satisfaction.IsSatisfied),
-      Value(Constraint),
-      Satisfaction(ASTConstraintSatisfaction::Create(C, Satisfaction)) {}
+                    const ConstraintSatisfaction &Satisfaction)
+      : Requirement(RK_Nested, Constraint->isInstantiationDependent(),
+                    Constraint->containsUnexpandedParameterPack(),
+                    Satisfaction.IsSatisfied),
+        Constraint(Constraint),
+        Satisfaction(ASTConstraintSatisfaction::Create(C, Satisfaction)) {}
 
-  bool isSubstitutionFailure() const {
-    return Value.is<SubstitutionDiagnostic *>();
-  }
+  NestedRequirement(StringRef InvalidConstraintEntity,
+                    const ASTConstraintSatisfaction *Satisfaction)
+      : Requirement(RK_Nested,
+                    /*IsDependent=*/false,
+                    /*ContainsUnexpandedParameterPack*/ false,
+                    Satisfaction->IsSatisfied),
+        Satisfaction(Satisfaction), HasInvalidConstraint(true),
+        InvalidConstraintEntity(InvalidConstraintEntity) {}
 
-  SubstitutionDiagnostic *getSubstitutionDiagnostic() const {
-    assert(isSubstitutionFailure() &&
-           "getSubstitutionDiagnostic() may not be called when there was no "
-           "substitution failure.");
-    return Value.get<SubstitutionDiagnostic *>();
+  NestedRequirement(ASTContext &C, StringRef InvalidConstraintEntity,
+                    const ConstraintSatisfaction &Satisfaction)
+      : NestedRequirement(InvalidConstraintEntity,
+                          ASTConstraintSatisfaction::Create(C, Satisfaction)) {}
+
+  bool hasInvalidConstraint() const { return HasInvalidConstraint; }
+
+  StringRef getInvalidConstraintEntity() {
+    assert(hasInvalidConstraint());
+    return InvalidConstraintEntity;
   }
 
   Expr *getConstraintExpr() const {
-    assert(!isSubstitutionFailure() && "getConstraintExpr() may not be called "
-                                       "on nested requirements with "
-                                       "substitution failures.");
-    return Value.get<Expr *>();
+    assert(!hasInvalidConstraint() &&
+           "getConstraintExpr() may not be called "
+           "on nested requirements with invalid constraint.");
+    return Constraint;
   }
 
   const ASTConstraintSatisfaction &getConstraintSatisfaction() const {
-    assert(!isSubstitutionFailure() && "getConstraintSatisfaction() may not be "
-                                       "called on nested requirements with "
-                                       "substitution failures.");
     return *Satisfaction;
   }
 
@@ -463,6 +489,13 @@ public:
     return R->getKind() == RK_Nested;
   }
 };
+
+using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;
+
+/// \brief create a Requirement::SubstitutionDiagnostic with only a
+/// SubstitutedEntity and DiagLoc using Sema's allocator.
+Requirement::SubstitutionDiagnostic *
+createSubstDiagAt(Sema &S, SourceLocation Location, EntityPrinter Printer);
 
 } // namespace concepts
 
@@ -481,6 +514,8 @@ class RequiresExpr final : public Expr,
   unsigned NumLocalParameters;
   unsigned NumRequirements;
   RequiresExprBodyDecl *Body;
+  SourceLocation LParenLoc;
+  SourceLocation RParenLoc;
   SourceLocation RBraceLoc;
 
   unsigned numTrailingObjects(OverloadToken<ParmVarDecl *>) const {
@@ -492,19 +527,22 @@ class RequiresExpr final : public Expr,
   }
 
   RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
-               RequiresExprBodyDecl *Body,
+               RequiresExprBodyDecl *Body, SourceLocation LParenLoc,
                ArrayRef<ParmVarDecl *> LocalParameters,
+               SourceLocation RParenLoc,
                ArrayRef<concepts::Requirement *> Requirements,
                SourceLocation RBraceLoc);
   RequiresExpr(ASTContext &C, EmptyShell Empty, unsigned NumLocalParameters,
                unsigned NumRequirements);
 
 public:
-  static RequiresExpr *
-  Create(ASTContext &C, SourceLocation RequiresKWLoc,
-         RequiresExprBodyDecl *Body, ArrayRef<ParmVarDecl *> LocalParameters,
-         ArrayRef<concepts::Requirement *> Requirements,
-         SourceLocation RBraceLoc);
+  static RequiresExpr *Create(ASTContext &C, SourceLocation RequiresKWLoc,
+                              RequiresExprBodyDecl *Body,
+                              SourceLocation LParenLoc,
+                              ArrayRef<ParmVarDecl *> LocalParameters,
+                              SourceLocation RParenLoc,
+                              ArrayRef<concepts::Requirement *> Requirements,
+                              SourceLocation RBraceLoc);
   static RequiresExpr *
   Create(ASTContext &C, EmptyShell Empty, unsigned NumLocalParameters,
          unsigned NumRequirements);
@@ -527,10 +565,18 @@ public:
     return RequiresExprBits.IsSatisfied;
   }
 
+  void setSatisfied(bool IsSatisfied) {
+    assert(!isValueDependent() &&
+           "setSatisfied called on a dependent RequiresExpr");
+    RequiresExprBits.IsSatisfied = IsSatisfied;
+  }
+
   SourceLocation getRequiresKWLoc() const {
     return RequiresExprBits.RequiresKWLoc;
   }
 
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
 
   static bool classof(const Stmt *T) {

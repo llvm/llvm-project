@@ -58,22 +58,21 @@ display their output.  For brevity, the '-t' output is not included here.
 Notice the 'expected failures=1' message at the end of the run.  This is because
 of a bug currently in lldb such that setting target.process.output-path to
 'stdout.txt' does not have any effect on the redirection of the standard output
-of the subsequent launched process.  We are using unittest2 (a backport of new
-unittest features for Python 2.4-2.6) to decorate (mark) the particular test
-method as such:
+of the subsequent launched process.  We are using unittest to decorate (mark)
+the particular test method as such:
 
-    @unittest2.expectedFailure
+    @unittest.expectedFailure
     # rdar://problem/8435794
     # settings set target.process.output-path does not seem to work
     def test_set_output_path(self):
 
-See http://pypi.python.org/pypi/unittest2 for more details.
+See http://docs.python.org/library/unittest.html for more details.
 
 Now let's look inside the test method:
 
     def test_set_output_path(self):
         """Test that setting target.process.output-path for the launched process works."""
-        self.buildDefault()
+        self.build()
 
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -96,49 +95,12 @@ Now let's look inside the test method:
         self.expect(output, exe=False,
             startstr = "This message should go to standard out.")
 
-The self.buildDefault() statement is used to build a default binary for this
-test instance.  For this particular test case, since we don't really care what
-debugging format is used, we instruct the build subsystem to build the default
-binary for us.  The base class TestBase has defined three instance methods:
-
-    def buildDefault(self, architecture=None, compiler=None, dictionary=None):
-        """Platform specific way to build the default binaries."""
-        module = __import__(sys.platform)
-        if not module.buildDefault(self, architecture, compiler, dictionary):
-            raise Exception("Don't know how to build default binary")
-
-    def buildDsym(self, architecture=None, compiler=None, dictionary=None):
-        """Platform specific way to build binaries with dsym info."""
-        module = __import__(sys.platform)
-        if not module.buildDsym(self, architecture, compiler, dictionary):
-            raise Exception("Don't know how to build binary with dsym")
-
-    def buildDwarf(self, architecture=None, compiler=None, dictionary=None):
-        """Platform specific way to build binaries with dwarf maps."""
-        module = __import__(sys.platform)
-        if not module.buildDwarf(self, architecture, compiler, dictionary):
-            raise Exception("Don't know how to build binary with dwarf")
-
-And the test/plugins/darwin.py provides the implementation for all three build
-methods using the makefile mechanism.  We envision that linux plugin can use a
-similar approach to accomplish the task of building the binaries.
-
-macOS provides an additional way to manipulate archived DWARF debug symbol
-files and produces dSYM files.  The buildDsym() instance method is used by the
-test method to build the binary with dsym info.  For an example of this,
-see test/array_types/TestArrayTypes.py:
-
-    @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
-    def test_with_dsym_and_run_command(self):
-        """Test 'frame variable var_name' on some variables with array types."""
-        self.buildDsym()
-        self.array_types()
-
-This method is decorated with a skipUnless decorator so that it will only gets
-included into the test suite if the platform it is running on is 'darwin', a.k.a.
-macOS.
-
-Type 'man dsymutil' for more details. 
+The self.build() statement is used to build a binary for this
+test instance. This will build the binary for the current debug info format. If
+we wanted to avoid running the test for every supported debug info format we
+could annotate it with @no_debug_info_test. The test would then only be run for
+the default format.  The logic for building a test binary resides in the builder
+modules (packages/Python/lldbsuite/test/builders/builder.py)
 
 After the binary is built, it is time to specify the file to be used as the main
 executable by lldb:
@@ -147,19 +109,9 @@ executable by lldb:
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-This is where the attribute assignment:
-
-class SettingsCommandTestCase(TestBase):
-
-    mydir = "settings"
-
-which happens right after the SettingsCommandTestCase class declaration comes
-into place. It specifies the relative directory to the top level 'test' so that
-the test harness can change its working directory in order to find the
-executable as well as the source code files. The runCmd() method is defined in
-the TestBase base class (within test/lldbtest.py) and its purpose is to pass the
-specified command to the lldb command interpreter. It's like you're typing the
-command within an interactive lldb session.
+The runCmd() method is defined in the TestBase base class and its purpose is to
+pass the specified command to the lldb command interpreter. It's like you're
+typing the command within an interactive lldb session.
 
 The CURRENT_EXECUTABLE_SET is an assert message defined in the lldbtest module
 so that it can be reused from other test modules.

@@ -176,16 +176,11 @@ template <typename T>
   return ::testing::AssertionSuccess();
 }
 
-::testing::AssertionResult HasParamCommandAt(
-                              const Comment *C,
-                              const CommandTraits &Traits,
-                              size_t Idx,
-                              ParamCommandComment *&PCC,
-                              StringRef CommandName,
-                              ParamCommandComment::PassDirection Direction,
-                              bool IsDirectionExplicit,
-                              StringRef ParamName,
-                              ParagraphComment *&Paragraph) {
+::testing::AssertionResult
+HasParamCommandAt(const Comment *C, const CommandTraits &Traits, size_t Idx,
+                  ParamCommandComment *&PCC, StringRef CommandName,
+                  ParamCommandPassDirection Direction, bool IsDirectionExplicit,
+                  StringRef ParamName, ParagraphComment *&Paragraph) {
   ::testing::AssertionResult AR = GetChildAt(C, Idx, PCC);
   if (!AR)
     return AR;
@@ -198,8 +193,9 @@ template <typename T>
 
   if (PCC->getDirection() != Direction)
     return ::testing::AssertionFailure()
-        << "ParamCommandComment has direction " << PCC->getDirection() << ", "
-           "expected " << Direction;
+           << "ParamCommandComment has direction "
+           << llvm::to_underlying(PCC->getDirection()) << ", expected "
+           << llvm::to_underlying(Direction);
 
   if (PCC->isDirectionExplicit() != IsDirectionExplicit)
     return ::testing::AssertionFailure()
@@ -664,7 +660,7 @@ TEST_F(CommentParserTest, ParagraphSplitting1) {
     "*/"),
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -756,10 +752,9 @@ TEST_F(CommentParserTest, ParamCommand1) {
   {
     ParamCommandComment *PCC;
     ParagraphComment *PC;
-    ASSERT_TRUE(HasParamCommandAt(FC, Traits, 1, PCC, "param",
-                                  ParamCommandComment::In,
-                                  /* IsDirectionExplicit = */ false,
-                                  "aaa", PC));
+    ASSERT_TRUE(HasParamCommandAt(
+        FC, Traits, 1, PCC, "param", ParamCommandPassDirection::In,
+        /* IsDirectionExplicit = */ false, "aaa", PC));
     ASSERT_TRUE(HasChildCount(PCC, 1));
     ASSERT_TRUE(HasChildCount(PC, 0));
   }
@@ -776,9 +771,8 @@ TEST_F(CommentParserTest, ParamCommand2) {
     ParamCommandComment *PCC;
     ParagraphComment *PC;
     ASSERT_TRUE(HasParamCommandAt(FC, Traits, 1, PCC, "param",
-                                  ParamCommandComment::In,
-                                  /* IsDirectionExplicit = */ false,
-                                  "", PC));
+                                  ParamCommandPassDirection::In,
+                                  /* IsDirectionExplicit = */ false, "", PC));
     ASSERT_TRUE(HasChildCount(PCC, 1));
     ASSERT_TRUE(HasChildCount(PC, 0));
   }
@@ -801,7 +795,7 @@ TEST_F(CommentParserTest, ParamCommand3) {
     "// Bbb\n")
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -809,10 +803,9 @@ TEST_F(CommentParserTest, ParamCommand3) {
     {
       ParamCommandComment *PCC;
       ParagraphComment *PC;
-      ASSERT_TRUE(HasParamCommandAt(FC, Traits, 1, PCC, "param",
-                                    ParamCommandComment::In,
-                                    /* IsDirectionExplicit = */ false,
-                                    "aaa", PC));
+      ASSERT_TRUE(HasParamCommandAt(
+          FC, Traits, 1, PCC, "param", ParamCommandPassDirection::In,
+          /* IsDirectionExplicit = */ false, "aaa", PC));
       ASSERT_TRUE(HasChildCount(PCC, 1));
       ASSERT_TRUE(HasParagraphCommentAt(PCC, 0, " Bbb"));
     }
@@ -831,7 +824,7 @@ TEST_F(CommentParserTest, ParamCommand4) {
     "// Bbb\n"),
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -839,10 +832,9 @@ TEST_F(CommentParserTest, ParamCommand4) {
     {
       ParamCommandComment *PCC;
       ParagraphComment *PC;
-      ASSERT_TRUE(HasParamCommandAt(FC, Traits, 1, PCC, "param",
-                                    ParamCommandComment::In,
-                                    /* IsDirectionExplicit = */ true,
-                                    "aaa", PC));
+      ASSERT_TRUE(HasParamCommandAt(
+          FC, Traits, 1, PCC, "param", ParamCommandPassDirection::In,
+          /* IsDirectionExplicit = */ true, "aaa", PC));
       ASSERT_TRUE(HasChildCount(PCC, 1));
       ASSERT_TRUE(HasParagraphCommentAt(PCC, 0, " Bbb"));
     }
@@ -861,7 +853,7 @@ TEST_F(CommentParserTest, ParamCommand5) {
     "// Bbb\n"),
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -869,10 +861,9 @@ TEST_F(CommentParserTest, ParamCommand5) {
     {
       ParamCommandComment *PCC;
       ParagraphComment *PC;
-      ASSERT_TRUE(HasParamCommandAt(FC, Traits, 1, PCC, "param",
-                                    ParamCommandComment::Out,
-                                    /* IsDirectionExplicit = */ true,
-                                    "aaa", PC));
+      ASSERT_TRUE(HasParamCommandAt(
+          FC, Traits, 1, PCC, "param", ParamCommandPassDirection::Out,
+          /* IsDirectionExplicit = */ true, "aaa", PC));
       ASSERT_TRUE(HasChildCount(PCC, 1));
       ASSERT_TRUE(HasParagraphCommentAt(PCC, 0, " Bbb"));
     }
@@ -892,7 +883,7 @@ TEST_F(CommentParserTest, ParamCommand6) {
     "// Bbb\n"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -900,10 +891,9 @@ TEST_F(CommentParserTest, ParamCommand6) {
     {
       ParamCommandComment *PCC;
       ParagraphComment *PC;
-      ASSERT_TRUE(HasParamCommandAt(FC, Traits, 1, PCC, "param",
-                                    ParamCommandComment::InOut,
-                                    /* IsDirectionExplicit = */ true,
-                                    "aaa", PC));
+      ASSERT_TRUE(HasParamCommandAt(
+          FC, Traits, 1, PCC, "param", ParamCommandPassDirection::InOut,
+          /* IsDirectionExplicit = */ true, "aaa", PC));
       ASSERT_TRUE(HasChildCount(PCC, 1));
       ASSERT_TRUE(HasParagraphCommentAt(PCC, 0, " Bbb"));
     }
@@ -921,10 +911,9 @@ TEST_F(CommentParserTest, ParamCommand7) {
   {
     ParamCommandComment *PCC;
     ParagraphComment *PC;
-    ASSERT_TRUE(HasParamCommandAt(FC, Traits, 1, PCC, "param",
-                                  ParamCommandComment::In,
-                                  /* IsDirectionExplicit = */ false,
-                                  "aaa", PC));
+    ASSERT_TRUE(HasParamCommandAt(
+        FC, Traits, 1, PCC, "param", ParamCommandPassDirection::In,
+        /* IsDirectionExplicit = */ false, "aaa", PC));
     ASSERT_TRUE(HasChildCount(PCC, 1));
 
     ASSERT_TRUE(HasChildCount(PC, 5));
@@ -947,7 +936,7 @@ TEST_F(CommentParserTest, TParamCommand1) {
     "// Bbb\n"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1081,7 +1070,7 @@ TEST_F(CommentParserTest, HTML1) {
     "// <a >"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1103,7 +1092,7 @@ TEST_F(CommentParserTest, HTML2) {
     "// <br />"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1127,7 +1116,7 @@ TEST_F(CommentParserTest, HTML3) {
     "// <a href >",
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1149,7 +1138,7 @@ TEST_F(CommentParserTest, HTML4) {
     "// <a href=\"bbb\">",
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1172,7 +1161,7 @@ TEST_F(CommentParserTest, HTML5) {
     "// </a >"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1285,7 +1274,7 @@ TEST_F(CommentParserTest, VerbatimBlock5) {
     " *\\endverbatim*/"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1309,7 +1298,7 @@ TEST_F(CommentParserTest, VerbatimBlock6) {
     " * \\endverbatim*/"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1336,7 +1325,7 @@ TEST_F(CommentParserTest, VerbatimBlock7) {
     " * \\endverbatim*/"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1364,7 +1353,7 @@ TEST_F(CommentParserTest, VerbatimBlock8) {
     " * Bbb\n"
     " * \\endverbatim*/"
   };
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1387,7 +1376,7 @@ TEST_F(CommentParserTest, VerbatimLine1) {
     "// \\fn\n"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1405,7 +1394,7 @@ TEST_F(CommentParserTest, VerbatimLine2) {
     "/** \\fn void *foo(const char *zzz = \"\\$\");*/"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1424,7 +1413,7 @@ TEST_F(CommentParserTest, Deprecated) {
     "/// @deprecated\n"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 

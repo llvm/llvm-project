@@ -13,16 +13,11 @@ import lldb.runtime.objc.objc_runtime
 import lldb.formatters.metrics
 import lldb.formatters.Logger
 
-try:
-    basestring
-except NameError:
-    basestring = str
-
 statistics = lldb.formatters.metrics.Metrics()
-statistics.add_metric('invalid_isa')
-statistics.add_metric('invalid_pointer')
-statistics.add_metric('unknown_class')
-statistics.add_metric('code_notrun')
+statistics.add_metric("invalid_isa")
+statistics.add_metric("invalid_pointer")
+statistics.add_metric("unknown_class")
+statistics.add_metric("code_notrun")
 
 # despite the similary to synthetic children providers, these classes are not
 # trying to provide anything but the length for an CFBinaryHeap, so they need not
@@ -30,7 +25,6 @@ statistics.add_metric('code_notrun')
 
 
 class CFBinaryHeapRef_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -38,13 +32,15 @@ class CFBinaryHeapRef_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
         self.update()
 
     def update(self):
@@ -61,12 +57,12 @@ class CFBinaryHeapRef_SummaryProvider:
     def length(self):
         logger = lldb.formatters.Logger.Logger()
         size = self.valobj.CreateChildAtOffset(
-            "count", self.offset(), self.sys_params.types_cache.NSUInteger)
+            "count", self.offset(), self.sys_params.types_cache.NSUInteger
+        )
         return size.GetValueAsUnsigned(0)
 
 
 class CFBinaryHeapUnknown_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -85,25 +81,31 @@ class CFBinaryHeapUnknown_SummaryProvider:
         stream = lldb.SBStream()
         self.valobj.GetExpressionPath(stream)
         num_children_vo = self.valobj.CreateValueFromExpression(
-            "count", "(int)CFBinaryHeapGetCount(" + stream.GetData() + " )")
+            "count", "(int)CFBinaryHeapGetCount(" + stream.GetData() + " )"
+        )
         if num_children_vo.IsValid():
             return num_children_vo.GetValueAsUnsigned(0)
-        return '<variable is not CFBinaryHeap>'
+        return "<variable is not CFBinaryHeap>"
 
 
 def GetSummary_Impl(valobj):
     logger = lldb.formatters.Logger.Logger()
     global statistics
-    class_data, wrapper = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
-        valobj, statistics)
+    (
+        class_data,
+        wrapper,
+    ) = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
+        valobj, statistics
+    )
     if wrapper:
         return wrapper
 
     name_string = class_data.class_name()
     actual_name = class_data.class_name()
 
-    logger >> "name string got was " + \
-        str(name_string) + " but actual name is " + str(actual_name)
+    logger >> "name string got was " + str(name_string) + " but actual name is " + str(
+        actual_name
+    )
 
     if class_data.is_cftype():
         # CFBinaryHeap does not expose an actual NSWrapper type, so we have to check that this is
@@ -113,18 +115,12 @@ def GetSummary_Impl(valobj):
             valobj_type = valobj_type.GetPointeeType()
             if valobj_type.IsValid():
                 actual_name = valobj_type.GetName()
-        if actual_name == '__CFBinaryHeap':
-            wrapper = CFBinaryHeapRef_SummaryProvider(
-                valobj, class_data.sys_params)
-            statistics.metric_hit('code_notrun', valobj)
+        if actual_name == "__CFBinaryHeap":
+            wrapper = CFBinaryHeapRef_SummaryProvider(valobj, class_data.sys_params)
+            statistics.metric_hit("code_notrun", valobj)
             return wrapper
-    wrapper = CFBinaryHeapUnknown_SummaryProvider(
-        valobj, class_data.sys_params)
-    statistics.metric_hit(
-        'unknown_class',
-        valobj.GetName() +
-        " seen as " +
-        name_string)
+    wrapper = CFBinaryHeapUnknown_SummaryProvider(valobj, class_data.sys_params)
+    statistics.metric_hit("unknown_class", valobj.GetName() + " seen as " + name_string)
     return wrapper
 
 
@@ -133,8 +129,8 @@ def CFBinaryHeap_SummaryProvider(valobj, dict):
     provider = GetSummary_Impl(valobj)
     if provider is not None:
         if isinstance(
-                provider,
-                lldb.runtime.objc.objc_runtime.SpecialSituation_Description):
+            provider, lldb.runtime.objc.objc_runtime.SpecialSituation_Description
+        ):
             return provider.message()
         try:
             summary = provider.length()
@@ -147,20 +143,21 @@ def CFBinaryHeap_SummaryProvider(valobj, dict):
         # (if counts start looking weird, then most probably
         #  the mask needs to be changed)
         if summary is None:
-            summary = '<variable is not CFBinaryHeap>'
-        elif isinstance(summary, basestring):
+            summary = "<variable is not CFBinaryHeap>"
+        elif isinstance(summary, str):
             pass
         else:
             if provider.sys_params.is_64_bit:
-                summary = summary & ~0x1fff000000000000
+                summary = summary & ~0x1FFF000000000000
             if summary == 1:
                 return '@"1 item"'
             else:
                 summary = '@"' + str(summary) + ' items"'
         return summary
-    return 'Summary Unavailable'
+    return "Summary Unavailable"
 
 
 def __lldb_init_module(debugger, dict):
     debugger.HandleCommand(
-        "type summary add -F CFBinaryHeap.CFBinaryHeap_SummaryProvider CFBinaryHeapRef")
+        "type summary add -F CFBinaryHeap.CFBinaryHeap_SummaryProvider CFBinaryHeapRef"
+    )

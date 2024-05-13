@@ -23,13 +23,13 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-DEFINE_PPC_REGCLASSES;
+DEFINE_PPC_REGCLASSES
 
 // Evaluate an expression containing condition register
 // or condition register field symbols.  Returns positive
@@ -103,11 +103,11 @@ class PPCAsmParser : public MCTargetAsmParser {
 
   bool isPPC64() const { return IsPPC64; }
 
-  bool MatchRegisterName(unsigned &RegNo, int64_t &IntVal);
+  bool MatchRegisterName(MCRegister &RegNo, int64_t &IntVal);
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   const MCExpr *ExtractModifierFromExpr(const MCExpr *E,
                                         PPCMCExpr::VariantKind &Variant);
@@ -121,6 +121,7 @@ class PPCAsmParser : public MCTargetAsmParser {
   bool ParseDirectiveMachine(SMLoc L);
   bool ParseDirectiveAbiVersion(SMLoc L);
   bool ParseDirectiveLocalEntry(SMLoc L);
+  bool ParseGNUAttribute(SMLoc L);
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -201,7 +202,8 @@ struct PPCOperand : public MCParsedAsmOperand {
     struct TLSRegOp TLSReg;
   };
 
-  PPCOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
+  PPCOperand(KindTy K) : Kind(K) {}
+
 public:
   PPCOperand(const PPCOperand &o) : MCParsedAsmOperand() {
     Kind = o.Kind;
@@ -274,9 +276,16 @@ public:
     return TLSReg.Sym;
   }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override { llvm_unreachable("Not implemented"); }
+
+  unsigned getRegNum() const {
     assert(isRegNumber() && "Invalid access!");
-    return (unsigned) Imm.Val;
+    return (unsigned)Imm.Val;
+  }
+
+  unsigned getFpReg() const {
+    assert(isEvenRegNumber() && "Invalid access!");
+    return (unsigned)(Imm.Val >> 1);
   }
 
   unsigned getVSReg() const {
@@ -289,9 +298,34 @@ public:
     return (unsigned) Imm.Val;
   }
 
+  unsigned getDMRROWReg() const {
+    assert(isDMRROWRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
+  }
+
+  unsigned getDMRROWpReg() const {
+    assert(isDMRROWpRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
+  }
+
+  unsigned getDMRReg() const {
+    assert(isDMRRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
+  }
+
+  unsigned getDMRpReg() const {
+    assert(isDMRpRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
+  }
+
   unsigned getVSRpEvenReg() const {
     assert(isVSRpEvenRegNumber() && "Invalid access!");
     return (unsigned) Imm.Val >> 1;
+  }
+
+  unsigned getG8pReg() const {
+    assert(isEvenRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
   }
 
   unsigned getCCReg() const {
@@ -306,7 +340,7 @@ public:
 
   unsigned getCRBitMask() const {
     assert(isCRBitMask() && "Invalid access!");
-    return 7 - countTrailingZeros<uint64_t>(Imm.Val);
+    return 7 - llvm::countr_zero<uint64_t>(Imm.Val);
   }
 
   bool isToken() const override { return Kind == Token; }
@@ -334,31 +368,11 @@ public:
 
   bool isU10Imm() const { return Kind == Immediate && isUInt<10>(getImm()); }
   bool isU12Imm() const { return Kind == Immediate && isUInt<12>(getImm()); }
-  bool isU16Imm() const {
-    switch (Kind) {
-      case Expression:
-        return true;
-      case Immediate:
-      case ContextImmediate:
-        return isUInt<16>(getImmU16Context());
-      default:
-        return false;
-    }
-  }
-  bool isS16Imm() const {
-    switch (Kind) {
-      case Expression:
-        return true;
-      case Immediate:
-      case ContextImmediate:
-        return isInt<16>(getImmS16Context());
-      default:
-        return false;
-    }
-  }
-  bool isS16ImmX4() const { return Kind == Expression ||
-                                   (Kind == Immediate && isInt<16>(getImm()) &&
-                                    (getImm() & 3) == 0); }
+  bool isU16Imm() const { return isExtImm<16>(/*Signed*/ false, 1); }
+  bool isS16Imm() const { return isExtImm<16>(/*Signed*/ true, 1); }
+  bool isS16ImmX4() const { return isExtImm<16>(/*Signed*/ true, 4); }
+  bool isS16ImmX16() const { return isExtImm<16>(/*Signed*/ true, 16); }
+  bool isS17Imm() const { return isExtImm<17>(/*Signed*/ true, 1); }
 
   bool isHashImmX8() const {
     // The Hash Imm form is used for instructions that check or store a hash.
@@ -368,9 +382,6 @@ public:
             (getImm() & 7) == 0);
   }
 
-  bool isS16ImmX16() const { return Kind == Expression ||
-                                    (Kind == Immediate && isInt<16>(getImm()) &&
-                                     (getImm() & 15) == 0); }
   bool isS34ImmX16() const {
     return Kind == Expression ||
            (Kind == Immediate && isInt<34>(getImm()) && (getImm() & 15) == 0);
@@ -381,17 +392,6 @@ public:
     return Kind == Expression || (Kind == Immediate && isInt<34>(getImm()));
   }
 
-  bool isS17Imm() const {
-    switch (Kind) {
-      case Expression:
-        return true;
-      case Immediate:
-      case ContextImmediate:
-        return isInt<17>(getImmS16Context());
-      default:
-        return false;
-    }
-  }
   bool isTLSReg() const { return Kind == TLSRegister; }
   bool isDirectBr() const {
     if (Kind == Expression)
@@ -418,6 +418,18 @@ public:
   bool isACCRegNumber() const {
     return Kind == Immediate && isUInt<3>(getImm());
   }
+  bool isDMRROWRegNumber() const {
+    return Kind == Immediate && isUInt<6>(getImm());
+  }
+  bool isDMRROWpRegNumber() const {
+    return Kind == Immediate && isUInt<5>(getImm());
+  }
+  bool isDMRRegNumber() const {
+    return Kind == Immediate && isUInt<3>(getImm());
+  }
+  bool isDMRpRegNumber() const {
+    return Kind == Immediate && isUInt<2>(getImm());
+  }
   bool isVSRpEvenRegNumber() const {
     return Kind == Immediate && isUInt<6>(getImm()) && ((getImm() & 1) == 0);
   }
@@ -432,8 +444,13 @@ public:
                                        && isUInt<5>(getExprCRVal())) ||
                                       (Kind == Immediate
                                        && isUInt<5>(getImm())); }
-  bool isCRBitMask() const { return Kind == Immediate && isUInt<8>(getImm()) &&
-                                    isPowerOf2_32(getImm()); }
+
+  bool isEvenRegNumber() const { return isRegNumber() && (getImm() & 1) == 0; }
+
+  bool isCRBitMask() const {
+    return Kind == Immediate && isUInt<8>(getImm()) &&
+           llvm::has_single_bit<uint32_t>(getImm());
+  }
   bool isATBitsAsHint() const { return false; }
   bool isMem() const override { return false; }
   bool isReg() const override { return false; }
@@ -444,22 +461,27 @@ public:
 
   void addRegGPRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(RRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(RRegs[getRegNum()]));
   }
 
   void addRegGPRCNoR0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(RRegsNoR0[getReg()]));
+    Inst.addOperand(MCOperand::createReg(RRegsNoR0[getRegNum()]));
   }
 
   void addRegG8RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(XRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(XRegs[getRegNum()]));
   }
 
   void addRegG8RCNoX0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(XRegsNoX0[getReg()]));
+    Inst.addOperand(MCOperand::createReg(XRegsNoX0[getRegNum()]));
+  }
+
+  void addRegG8pRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(XRegs[getG8pReg()]));
   }
 
   void addRegGxRCOperands(MCInst &Inst, unsigned N) const {
@@ -478,22 +500,27 @@ public:
 
   void addRegF4RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(FRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(FRegs[getRegNum()]));
   }
 
   void addRegF8RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(FRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(FRegs[getRegNum()]));
+  }
+
+  void addRegFpRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(FpRegs[getFpReg()]));
   }
 
   void addRegVFRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(VFRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(VFRegs[getRegNum()]));
   }
 
   void addRegVRRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(VRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(VRegs[getRegNum()]));
   }
 
   void addRegVSRCOperands(MCInst &Inst, unsigned N) const {
@@ -513,17 +540,47 @@ public:
 
   void addRegSPE4RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(RRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(RRegs[getRegNum()]));
   }
 
   void addRegSPERCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(SPERegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(SPERegs[getRegNum()]));
   }
 
   void addRegACCRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(ACCRegs[getACCReg()]));
+  }
+
+  void addRegDMRROWRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(DMRROWRegs[getDMRROWReg()]));
+  }
+
+  void addRegDMRROWpRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(DMRROWpRegs[getDMRROWpReg()]));
+  }
+
+  void addRegDMRRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(DMRRegs[getDMRReg()]));
+  }
+
+  void addRegDMRpRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(DMRpRegs[getDMRpReg()]));
+  }
+
+  void addRegWACCRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(WACCRegs[getACCReg()]));
+  }
+
+  void addRegWACC_HIRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(WACC_HIRegs[getACCReg()]));
   }
 
   void addRegVSRpRCOperands(MCInst &Inst, unsigned N) const {
@@ -697,6 +754,25 @@ public:
 
     return CreateExpr(Val, S, E, IsPPC64);
   }
+
+private:
+  template <unsigned Width>
+  bool isExtImm(bool Signed, unsigned Multiple) const {
+    switch (Kind) {
+    default:
+      return false;
+    case Expression:
+      return true;
+    case Immediate:
+    case ContextImmediate:
+      if (Signed)
+        return isInt<Width>(getImmS16Context()) &&
+               (getImmS16Context() & (Multiple - 1)) == 0;
+      else
+        return isUInt<Width>(getImmU16Context()) &&
+               (getImmU16Context() & (Multiple - 1)) == 0;
+    }
+  }
 };
 
 } // end anonymous namespace.
@@ -812,9 +888,38 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
     Inst = TmpInst;
     break;
   }
+  case PPC::PLA8:
+  case PPC::PLA: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Opcode == PPC::PLA ? PPC::PADDI : PPC::PADDI8);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(1));
+    TmpInst.addOperand(Inst.getOperand(2));
+    Inst = TmpInst;
+    break;
+  }
+  case PPC::PLA8pc:
+  case PPC::PLApc: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Opcode == PPC::PLApc ? PPC::PADDIpc : PPC::PADDI8pc);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(MCOperand::createImm(0));
+    TmpInst.addOperand(Inst.getOperand(1));
+    Inst = TmpInst;
+    break;
+  }
   case PPC::SUBI: {
     MCInst TmpInst;
     TmpInst.setOpcode(PPC::ADDI);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(1));
+    addNegOperand(TmpInst, Inst.getOperand(2), getContext());
+    Inst = TmpInst;
+    break;
+  }
+  case PPC::PSUBI: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(PPC::PADDI);
     TmpInst.addOperand(Inst.getOperand(0));
     TmpInst.addOperand(Inst.getOperand(1));
     addNegOperand(TmpInst, Inst.getOperand(2), getContext());
@@ -1135,7 +1240,7 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
     break;
   }
   case PPC::MFTB: {
-    if (getSTI().getFeatureBits()[PPC::FeatureMFTB]) {
+    if (getSTI().hasFeature(PPC::FeatureMFTB)) {
       assert(Inst.getNumOperands() == 2 && "Expecting two operands");
       Inst.setOpcode(PPC::MFSPR);
     }
@@ -1186,7 +1291,7 @@ bool PPCAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
+bool PPCAsmParser::MatchRegisterName(MCRegister &RegNo, int64_t &IntVal) {
   if (getParser().getTok().is(AsmToken::Percent))
     getParser().Lex(); // Eat the '%'.
 
@@ -1194,54 +1299,74 @@ bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
     return true;
 
   StringRef Name = getParser().getTok().getString();
-  if (Name.equals_lower("lr")) {
+  if (Name.equals_insensitive("lr")) {
     RegNo = isPPC64() ? PPC::LR8 : PPC::LR;
     IntVal = 8;
-  } else if (Name.equals_lower("ctr")) {
+  } else if (Name.equals_insensitive("ctr")) {
     RegNo = isPPC64() ? PPC::CTR8 : PPC::CTR;
     IntVal = 9;
-  } else if (Name.equals_lower("vrsave")) {
+  } else if (Name.equals_insensitive("vrsave")) {
     RegNo = PPC::VRSAVE;
     IntVal = 256;
-  } else if (Name.startswith_lower("r") &&
+  } else if (Name.starts_with_insensitive("r") &&
              !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = isPPC64() ? XRegs[IntVal] : RRegs[IntVal];
-  } else if (Name.startswith_lower("f") &&
+  } else if (Name.starts_with_insensitive("f") &&
              !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = FRegs[IntVal];
-  } else if (Name.startswith_lower("vs") &&
+  } else if (Name.starts_with_insensitive("vs") &&
              !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
     RegNo = VSRegs[IntVal];
-  } else if (Name.startswith_lower("v") &&
+  } else if (Name.starts_with_insensitive("v") &&
              !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = VRegs[IntVal];
-  } else if (Name.startswith_lower("cr") &&
+  } else if (Name.starts_with_insensitive("cr") &&
              !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = CRRegs[IntVal];
+  } else if (Name.starts_with_insensitive("acc") &&
+             !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = ACCRegs[IntVal];
+  } else if (Name.starts_with_insensitive("wacc_hi") &&
+             !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = ACCRegs[IntVal];
+  } else if (Name.starts_with_insensitive("wacc") &&
+             !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = WACCRegs[IntVal];
+  } else if (Name.starts_with_insensitive("dmrrowp") &&
+             !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 32) {
+    RegNo = DMRROWpRegs[IntVal];
+  } else if (Name.starts_with_insensitive("dmrrow") &&
+             !Name.substr(6).getAsInteger(10, IntVal) && IntVal < 64) {
+    RegNo = DMRROWRegs[IntVal];
+  } else if (Name.starts_with_insensitive("dmrp") &&
+             !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 4) {
+    RegNo = DMRROWpRegs[IntVal];
+  } else if (Name.starts_with_insensitive("dmr") &&
+             !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = DMRRegs[IntVal];
   } else
     return true;
   getParser().Lex();
   return false;
 }
 
-bool PPCAsmParser::
-ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) {
-  if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
+bool PPCAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                 SMLoc &EndLoc) {
+  if (!tryParseRegister(Reg, StartLoc, EndLoc).isSuccess())
     return TokError("invalid register name");
   return false;
 }
 
-OperandMatchResultTy PPCAsmParser::tryParseRegister(unsigned &RegNo,
-                                                    SMLoc &StartLoc,
-                                                    SMLoc &EndLoc) {
+ParseStatus PPCAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                           SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
-  RegNo = 0;
+  Reg = PPC::NoRegister;
   int64_t IntVal;
-  if (MatchRegisterName(RegNo, IntVal))
-    return MatchOperand_NoMatch;
-  return MatchOperand_Success;
+  if (MatchRegisterName(Reg, IntVal))
+    return ParseStatus::NoMatch;
+  return ParseStatus::Success;
 }
 
 /// Extract \code @l/@ha \endcode modifier from expression.  Recursively scan
@@ -1419,7 +1544,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   // Special handling for register names.  These are interpreted
   // as immediates corresponding to the register number.
   case AsmToken::Percent: {
-    unsigned RegNo;
+    MCRegister RegNo;
     int64_t IntVal;
     if (MatchRegisterName(RegNo, IntVal))
       return Error(S, "invalid register name");
@@ -1439,7 +1564,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
     if (!ParseExpression(EVal))
       break;
     // Fall-through
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return Error(S, "unknown operand");
   }
@@ -1448,34 +1573,64 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   Operands.push_back(PPCOperand::CreateFromMCExpr(EVal, S, E, isPPC64()));
 
   // Check whether this is a TLS call expression
-  bool TLSCall = false;
-  if (const MCSymbolRefExpr *Ref = dyn_cast<MCSymbolRefExpr>(EVal))
-    TLSCall = Ref->getSymbol().getName() == "__tls_get_addr";
+  const char TlsGetAddr[] = "__tls_get_addr";
+  bool TlsCall = false;
+  const MCExpr *TlsCallAddend = nullptr;
+  if (auto *Ref = dyn_cast<MCSymbolRefExpr>(EVal)) {
+    TlsCall = Ref->getSymbol().getName() == TlsGetAddr;
+  } else if (auto *Bin = dyn_cast<MCBinaryExpr>(EVal);
+             Bin && Bin->getOpcode() == MCBinaryExpr::Add) {
+    if (auto *Ref = dyn_cast<MCSymbolRefExpr>(Bin->getLHS())) {
+      TlsCall = Ref->getSymbol().getName() == TlsGetAddr;
+      TlsCallAddend = Bin->getRHS();
+    }
+  }
 
-  if (TLSCall && getLexer().is(AsmToken::LParen)) {
+  if (TlsCall && parseOptionalToken(AsmToken::LParen)) {
     const MCExpr *TLSSym;
-
-    Parser.Lex(); // Eat the '('.
-    S = Parser.getTok().getLoc();
+    const SMLoc S2 = Parser.getTok().getLoc();
     if (ParseExpression(TLSSym))
-      return Error(S, "invalid TLS call expression");
-    if (getLexer().isNot(AsmToken::RParen))
-      return Error(Parser.getTok().getLoc(), "missing ')'");
+      return Error(S2, "invalid TLS call expression");
     E = Parser.getTok().getLoc();
-    Parser.Lex(); // Eat the ')'.
+    if (parseToken(AsmToken::RParen, "expected ')'"))
+      return true;
+    // PPC32 allows bl __tls_get_addr[+a](x@tlsgd)@plt+b. Parse "@plt[+b]".
+    if (!isPPC64() && parseOptionalToken(AsmToken::At)) {
+      AsmToken Tok = getTok();
+      if (!(parseOptionalToken(AsmToken::Identifier) &&
+            Tok.getString().compare_insensitive("plt") == 0))
+        return Error(Tok.getLoc(), "expected 'plt'");
+      EVal = MCSymbolRefExpr::create(TlsGetAddr, MCSymbolRefExpr::VK_PLT,
+                                     getContext());
+      if (parseOptionalToken(AsmToken::Plus)) {
+        const MCExpr *Addend = nullptr;
+        SMLoc EndLoc;
+        if (parsePrimaryExpr(Addend, EndLoc))
+          return true;
+        if (TlsCallAddend) // __tls_get_addr+a(x@tlsgd)@plt+b
+          TlsCallAddend =
+              MCBinaryExpr::createAdd(TlsCallAddend, Addend, getContext());
+        else // __tls_get_addr(x@tlsgd)@plt+b
+          TlsCallAddend = Addend;
+      }
+      if (TlsCallAddend)
+        EVal = MCBinaryExpr::createAdd(EVal, TlsCallAddend, getContext());
+      // Add a __tls_get_addr operand with addend a, b, or a+b.
+      Operands.back() = PPCOperand::CreateFromMCExpr(
+          EVal, S, Parser.getTok().getLoc(), false);
+    }
 
     Operands.push_back(PPCOperand::CreateFromMCExpr(TLSSym, S, E, isPPC64()));
   }
 
   // Otherwise, check for D-form memory operands
-  if (!TLSCall && getLexer().is(AsmToken::LParen)) {
-    Parser.Lex(); // Eat the '('.
+  if (!TlsCall && parseOptionalToken(AsmToken::LParen)) {
     S = Parser.getTok().getLoc();
 
     int64_t IntVal;
     switch (getLexer().getKind()) {
     case AsmToken::Percent: {
-      unsigned RegNo;
+      MCRegister RegNo;
       if (MatchRegisterName(RegNo, IntVal))
         return Error(S, "invalid register name");
       break;
@@ -1556,11 +1711,21 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   //  where th can be omitted when it is 0. dcbtst is the same. We take the
   //  server form to be the default, so swap the operands if we're parsing for
   //  an embedded core (they'll be swapped again upon printing).
-  if (getSTI().getFeatureBits()[PPC::FeatureBookE] &&
+  if (getSTI().hasFeature(PPC::FeatureBookE) &&
       Operands.size() == 4 &&
       (Name == "dcbt" || Name == "dcbtst")) {
     std::swap(Operands[1], Operands[3]);
     std::swap(Operands[2], Operands[1]);
+  }
+
+  // Handle base mnemonic for atomic loads where the EH bit is zero.
+  if (Name == "lqarx" || Name == "ldarx" || Name == "lwarx" ||
+      Name == "lharx" || Name == "lbarx") {
+    if (Operands.size() != 5)
+      return false;
+    PPCOperand &EHOp = (PPCOperand &)*Operands[4];
+    if (EHOp.isU1Imm() && EHOp.getImm() == 0)
+      Operands.pop_back();
   }
 
   return false;
@@ -1581,6 +1746,8 @@ bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
     ParseDirectiveAbiVersion(DirectiveID.getLoc());
   else if (IDVal == ".localentry")
     ParseDirectiveLocalEntry(DirectiveID.getLoc());
+  else if (IDVal.starts_with(".gnu_attribute"))
+    ParseGNUAttribute(DirectiveID.getLoc());
   else
     return true;
   return false;
@@ -1623,7 +1790,7 @@ bool PPCAsmParser::ParseDirectiveTC(unsigned Size, AsmToken ID) {
     return addErrorSuffix(" in '.tc' directive");
 
   // Align to word size.
-  getParser().getStreamer().emitValueToAlignment(Size);
+  getParser().getStreamer().emitValueToAlignment(Align(Size));
 
   // Emit expressions.
   return ParseDirectiveWord(Size, ID);
@@ -1696,7 +1863,16 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
   return false;
 }
 
+bool PPCAsmParser::ParseGNUAttribute(SMLoc L) {
+  int64_t Tag;
+  int64_t IntegerValue;
+  if (!getParser().parseGNUAttribute(L, Tag, IntegerValue))
+    return false;
 
+  getParser().getStreamer().emitGNUAttribute(Tag, IntegerValue);
+
+  return true;
+}
 
 /// Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmParser() {
@@ -1732,7 +1908,7 @@ unsigned PPCAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   }
 
   PPCOperand &Op = static_cast<PPCOperand &>(AsmOp);
-  if (Op.isImm() && Op.getImm() == ImmVal)
+  if (Op.isU3Imm() && Op.getImm() == ImmVal)
     return Match_Success;
 
   return Match_InvalidOperand;

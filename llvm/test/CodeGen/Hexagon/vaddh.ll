@@ -6,10 +6,10 @@
 
 define void @f0() #0 {
 b0:
-  %v0 = load i32, i32* @g0, align 4
-  %v1 = load i32, i32* @g1, align 4
+  %v0 = load i32, ptr @g0, align 4
+  %v1 = load i32, ptr @g1, align 4
   %v2 = call i32 @llvm.hexagon.A2.svaddh(i32 %v0, i32 %v1)
-  store i32 %v2, i32* @g1, align 4
+  store i32 %v2, ptr @g1, align 4
   ret void
 }
 

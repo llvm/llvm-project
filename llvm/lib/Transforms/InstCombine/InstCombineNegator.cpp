@@ -15,14 +15,11 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constant.h"
@@ -46,14 +43,11 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 
 namespace llvm {
-class AssumptionCache;
 class DataLayout;
-class DominatorTree;
 class LLVMContext;
 } // namespace llvm
 
@@ -100,14 +94,13 @@ static cl::opt<unsigned>
                     cl::desc("What is the maximal lookup depth when trying to "
                              "check for viability of negation sinking."));
 
-Negator::Negator(LLVMContext &C, const DataLayout &DL_, AssumptionCache &AC_,
-                 const DominatorTree &DT_, bool IsTrulyNegation_)
-    : Builder(C, TargetFolder(DL_),
+Negator::Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation_)
+    : Builder(C, TargetFolder(DL),
               IRBuilderCallbackInserter([&](Instruction *I) {
                 ++NegatorNumInstructionsCreatedTotal;
                 NewInstructions.push_back(I);
               })),
-      DL(DL_), AC(AC_), DT(DT_), IsTrulyNegation(IsTrulyNegation_) {}
+      IsTrulyNegation(IsTrulyNegation_) {}
 
 #if LLVM_ENABLE_STATS
 Negator::~Negator() {
@@ -130,7 +123,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
 
 // FIXME: can this be reworked into a worklist-based algorithm while preserving
 // the depth-first, early bailout traversal?
-LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
+[[nodiscard]] Value *Negator::visitImpl(Value *V, bool IsNSW, unsigned Depth) {
   // -(undef) -> undef.
   if (match(V, m_Undef()))
     return V;
@@ -147,7 +140,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
 
   // Integral constants can be freely negated.
   if (match(V, m_AnyIntegralConstant()))
-    return ConstantExpr::getNeg(cast<Constant>(V), /*HasNUW=*/false,
+    return ConstantExpr::getNeg(cast<Constant>(V),
                                 /*HasNSW=*/false);
 
   // If we have a non-instruction, then give up.
@@ -215,6 +208,20 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
                  : Builder.CreateSExt(I->getOperand(0), I->getType(),
                                       I->getName() + ".neg");
     break;
+  case Instruction::Select: {
+    // If both arms of the select are constants, we don't need to recurse.
+    // Therefore, this transform is not limited by uses.
+    auto *Sel = cast<SelectInst>(I);
+    Constant *TrueC, *FalseC;
+    if (match(Sel->getTrueValue(), m_ImmConstant(TrueC)) &&
+        match(Sel->getFalseValue(), m_ImmConstant(FalseC))) {
+      Constant *NegTrueC = ConstantExpr::getNeg(TrueC);
+      Constant *NegFalseC = ConstantExpr::getNeg(FalseC);
+      return Builder.CreateSelect(Sel->getCondition(), NegTrueC, NegFalseC,
+                                  I->getName() + ".neg", /*MDFrom=*/I);
+    }
+    break;
+  }
   default:
     break; // Other instructions require recursive reasoning.
   }
@@ -225,7 +232,8 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     // However, only do this either if the old `sub` doesn't stick around, or
     // it was subtracting from a constant. Otherwise, this isn't profitable.
     return Builder.CreateSub(I->getOperand(1), I->getOperand(0),
-                             I->getName() + ".neg");
+                             I->getName() + ".neg", /* HasNUW */ false,
+                             IsNSW && I->hasNoSignedWrap());
   }
 
   // Some other cases, while still don't require recursion,
@@ -234,6 +242,33 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     return nullptr;
 
   switch (I->getOpcode()) {
+  case Instruction::ZExt: {
+    // Negation of zext of signbit is signbit splat:
+    // 0 - (zext (i8 X u>> 7) to iN) --> sext (i8 X s>> 7) to iN
+    Value *SrcOp = I->getOperand(0);
+    unsigned SrcWidth = SrcOp->getType()->getScalarSizeInBits();
+    const APInt &FullShift = APInt(SrcWidth, SrcWidth - 1);
+    if (IsTrulyNegation &&
+        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowPoison(FullShift)))) {
+      Value *Ashr = Builder.CreateAShr(X, FullShift);
+      return Builder.CreateSExt(Ashr, I->getType());
+    }
+    break;
+  }
+  case Instruction::And: {
+    Constant *ShAmt;
+    // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)
+    if (match(I, m_And(m_OneUse(m_TruncOrSelf(
+                           m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
+                       m_One()))) {
+      unsigned BW = X->getType()->getScalarSizeInBits();
+      Constant *BWMinusOne = ConstantInt::get(X->getType(), BW - 1);
+      Value *R = Builder.CreateShl(X, Builder.CreateSub(BWMinusOne, ShAmt));
+      R = Builder.CreateAShr(R, BWMinusOne);
+      return Builder.CreateTruncOrBitCast(R, I->getType());
+    }
+    break;
+  }
   case Instruction::SDiv:
     // `sdiv` is negatible if divisor is not undef/INT_MIN/1.
     // While this is normally not behind a use-check,
@@ -263,7 +298,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   switch (I->getOpcode()) {
   case Instruction::Freeze: {
     // `freeze` is negatible if its operand is negatible.
-    Value *NegOp = negate(I->getOperand(0), Depth + 1);
+    Value *NegOp = negate(I->getOperand(0), IsNSW, Depth + 1);
     if (!NegOp) // Early return.
       return nullptr;
     return Builder.CreateFreeze(NegOp, I->getName() + ".neg");
@@ -274,7 +309,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     SmallVector<Value *, 4> NegatedIncomingValues(PHI->getNumOperands());
     for (auto I : zip(PHI->incoming_values(), NegatedIncomingValues)) {
       if (!(std::get<1>(I) =
-                negate(std::get<0>(I), Depth + 1))) // Early return.
+                negate(std::get<0>(I), IsNSW, Depth + 1))) // Early return.
         return nullptr;
     }
     // All incoming values are indeed negatible. Create negated PHI node.
@@ -285,7 +320,8 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     return NegatedPHI;
   }
   case Instruction::Select: {
-    if (isKnownNegation(I->getOperand(1), I->getOperand(2))) {
+    if (isKnownNegation(I->getOperand(1), I->getOperand(2), /*NeedNSW=*/false,
+                        /*AllowPoison=*/false)) {
       // Of one hand of select is known to be negation of another hand,
       // just swap the hands around.
       auto *NewSelect = cast<SelectInst>(I->clone());
@@ -297,10 +333,10 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
       return NewSelect;
     }
     // `select` is negatible if both hands of `select` are negatible.
-    Value *NegOp1 = negate(I->getOperand(1), Depth + 1);
+    Value *NegOp1 = negate(I->getOperand(1), IsNSW, Depth + 1);
     if (!NegOp1) // Early return.
       return nullptr;
-    Value *NegOp2 = negate(I->getOperand(2), Depth + 1);
+    Value *NegOp2 = negate(I->getOperand(2), IsNSW, Depth + 1);
     if (!NegOp2)
       return nullptr;
     // Do preserve the metadata!
@@ -310,10 +346,10 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   case Instruction::ShuffleVector: {
     // `shufflevector` is negatible if both operands are negatible.
     auto *Shuf = cast<ShuffleVectorInst>(I);
-    Value *NegOp0 = negate(I->getOperand(0), Depth + 1);
+    Value *NegOp0 = negate(I->getOperand(0), IsNSW, Depth + 1);
     if (!NegOp0) // Early return.
       return nullptr;
-    Value *NegOp1 = negate(I->getOperand(1), Depth + 1);
+    Value *NegOp1 = negate(I->getOperand(1), IsNSW, Depth + 1);
     if (!NegOp1)
       return nullptr;
     return Builder.CreateShuffleVector(NegOp0, NegOp1, Shuf->getShuffleMask(),
@@ -322,7 +358,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   case Instruction::ExtractElement: {
     // `extractelement` is negatible if source operand is negatible.
     auto *EEI = cast<ExtractElementInst>(I);
-    Value *NegVector = negate(EEI->getVectorOperand(), Depth + 1);
+    Value *NegVector = negate(EEI->getVectorOperand(), IsNSW, Depth + 1);
     if (!NegVector) // Early return.
       return nullptr;
     return Builder.CreateExtractElement(NegVector, EEI->getIndexOperand(),
@@ -332,10 +368,10 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     // `insertelement` is negatible if both the source vector and
     // element-to-be-inserted are negatible.
     auto *IEI = cast<InsertElementInst>(I);
-    Value *NegVector = negate(IEI->getOperand(0), Depth + 1);
+    Value *NegVector = negate(IEI->getOperand(0), IsNSW, Depth + 1);
     if (!NegVector) // Early return.
       return nullptr;
-    Value *NegNewElt = negate(IEI->getOperand(1), Depth + 1);
+    Value *NegNewElt = negate(IEI->getOperand(1), IsNSW, Depth + 1);
     if (!NegNewElt) // Early return.
       return nullptr;
     return Builder.CreateInsertElement(NegVector, NegNewElt, IEI->getOperand(2),
@@ -343,27 +379,28 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   }
   case Instruction::Trunc: {
     // `trunc` is negatible if its operand is negatible.
-    Value *NegOp = negate(I->getOperand(0), Depth + 1);
+    Value *NegOp = negate(I->getOperand(0), /* IsNSW */ false, Depth + 1);
     if (!NegOp) // Early return.
       return nullptr;
     return Builder.CreateTrunc(NegOp, I->getType(), I->getName() + ".neg");
   }
   case Instruction::Shl: {
     // `shl` is negatible if the first operand is negatible.
-    if (Value *NegOp0 = negate(I->getOperand(0), Depth + 1))
-      return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg");
+    IsNSW &= I->hasNoSignedWrap();
+    if (Value *NegOp0 = negate(I->getOperand(0), IsNSW, Depth + 1))
+      return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg",
+                               /* HasNUW */ false, IsNSW);
     // Otherwise, `shl %x, C` can be interpreted as `mul %x, 1<<C`.
     auto *Op1C = dyn_cast<Constant>(I->getOperand(1));
-    if (!Op1C) // Early return.
+    if (!Op1C || !IsTrulyNegation)
       return nullptr;
     return Builder.CreateMul(
         I->getOperand(0),
         ConstantExpr::getShl(Constant::getAllOnesValue(Op1C->getType()), Op1C),
-        I->getName() + ".neg");
+        I->getName() + ".neg", /* HasNUW */ false, IsNSW);
   }
   case Instruction::Or: {
-    if (!haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1), DL, &AC, I,
-                             &DT))
+    if (!cast<PossiblyDisjointInst>(I)->isDisjoint())
       return nullptr; // Don't know how to handle `or` in general.
     std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `or`/`add` are interchangeable when operands have no common bits set.
@@ -371,14 +408,14 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     if (match(Ops[1], m_One()))
       return Builder.CreateNot(Ops[0], I->getName() + ".neg");
     // Else, just defer to Instruction::Add handling.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case Instruction::Add: {
     // `add` is negatible if both of its operands are negatible.
     SmallVector<Value *, 2> NegatedOps, NonNegatedOps;
     for (Value *Op : I->operands()) {
       // Can we sink the negation into this operand?
-      if (Value *NegOp = negate(Op, Depth + 1)) {
+      if (Value *NegOp = negate(Op, /* IsNSW */ false, Depth + 1)) {
         NegatedOps.emplace_back(NegOp); // Successfully negated operand!
         continue;
       }
@@ -389,7 +426,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
       NonNegatedOps.emplace_back(Op); // Just record which operand that was.
     }
     assert((NegatedOps.size() + NonNegatedOps.size()) == 2 &&
-           "Internal consistency sanity check.");
+           "Internal consistency check failed.");
     // Did we manage to sink negation into both of the operands?
     if (NegatedOps.size() == 2) // Then we get to keep the `add`!
       return Builder.CreateAdd(NegatedOps[0], NegatedOps[1],
@@ -407,9 +444,11 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     // `xor` is negatible if one of its operands is invertible.
     // FIXME: InstCombineInverter? But how to connect Inverter and Negator?
     if (auto *C = dyn_cast<Constant>(Ops[1])) {
-      Value *Xor = Builder.CreateXor(Ops[0], ConstantExpr::getNot(C));
-      return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
-                               I->getName() + ".neg");
+      if (IsTrulyNegation) {
+        Value *Xor = Builder.CreateXor(Ops[0], ConstantExpr::getNot(C));
+        return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
+                                 I->getName() + ".neg");
+      }
     }
     return nullptr;
   }
@@ -419,16 +458,17 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     Value *NegatedOp, *OtherOp;
     // First try the second operand, in case it's a constant it will be best to
     // just invert it instead of sinking the `neg` deeper.
-    if (Value *NegOp1 = negate(Ops[1], Depth + 1)) {
+    if (Value *NegOp1 = negate(Ops[1], /* IsNSW */ false, Depth + 1)) {
       NegatedOp = NegOp1;
       OtherOp = Ops[0];
-    } else if (Value *NegOp0 = negate(Ops[0], Depth + 1)) {
+    } else if (Value *NegOp0 = negate(Ops[0], /* IsNSW */ false, Depth + 1)) {
       NegatedOp = NegOp0;
       OtherOp = Ops[1];
     } else
       // Can't negate either of them.
       return nullptr;
-    return Builder.CreateMul(NegatedOp, OtherOp, I->getName() + ".neg");
+    return Builder.CreateMul(NegatedOp, OtherOp, I->getName() + ".neg",
+                             /* HasNUW */ false, IsNSW && I->hasNoSignedWrap());
   }
   default:
     return nullptr; // Don't know, likely not negatible for free.
@@ -437,7 +477,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   llvm_unreachable("Can't get here. We always return from switch.");
 }
 
-LLVM_NODISCARD Value *Negator::negate(Value *V, unsigned Depth) {
+[[nodiscard]] Value *Negator::negate(Value *V, bool IsNSW, unsigned Depth) {
   NegatorMaxDepthVisited.updateMax(Depth);
   ++NegatorNumValuesVisited;
 
@@ -467,27 +507,28 @@ LLVM_NODISCARD Value *Negator::negate(Value *V, unsigned Depth) {
 #endif
 
   // No luck. Try negating it for real.
-  Value *NegatedV = visitImpl(V, Depth);
+  Value *NegatedV = visitImpl(V, IsNSW, Depth);
   // And cache the (real) result for the future.
   NegationsCache[V] = NegatedV;
 
   return NegatedV;
 }
 
-LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {
-  Value *Negated = negate(Root, /*Depth=*/0);
+[[nodiscard]] std::optional<Negator::Result> Negator::run(Value *Root,
+                                                          bool IsNSW) {
+  Value *Negated = negate(Root, IsNSW, /*Depth=*/0);
   if (!Negated) {
     // We must cleanup newly-inserted instructions, to avoid any potential
     // endless combine looping.
     for (Instruction *I : llvm::reverse(NewInstructions))
       I->eraseFromParent();
-    return llvm::None;
+    return std::nullopt;
   }
   return std::make_pair(ArrayRef<Instruction *>(NewInstructions), Negated);
 }
 
-LLVM_NODISCARD Value *Negator::Negate(bool LHSIsZero, Value *Root,
-                                      InstCombinerImpl &IC) {
+[[nodiscard]] Value *Negator::Negate(bool LHSIsZero, bool IsNSW, Value *Root,
+                                     InstCombinerImpl &IC) {
   ++NegatorTotalNegationsAttempted;
   LLVM_DEBUG(dbgs() << "Negator: attempting to sink negation into " << *Root
                     << "\n");
@@ -495,9 +536,8 @@ LLVM_NODISCARD Value *Negator::Negate(bool LHSIsZero, Value *Root,
   if (!NegatorEnabled || !DebugCounter::shouldExecute(NegatorCounter))
     return nullptr;
 
-  Negator N(Root->getContext(), IC.getDataLayout(), IC.getAssumptionCache(),
-            IC.getDominatorTree(), LHSIsZero);
-  Optional<Result> Res = N.run(Root);
+  Negator N(Root->getContext(), IC.getDataLayout(), LHSIsZero);
+  std::optional<Result> Res = N.run(Root, IsNSW);
   if (!Res) { // Negation failed.
     LLVM_DEBUG(dbgs() << "Negator: failed to sink negation into " << *Root
                       << "\n");

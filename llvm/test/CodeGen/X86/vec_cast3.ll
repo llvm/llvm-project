@@ -54,7 +54,8 @@ define <2 x float> @cvt_v2u32_v2f32(<2 x i32> %src) {
 ; CHECK-LABEL: cvt_v2u32_v2f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; CHECK-NEXT:    ## xmm1 = mem[0,0]
 ; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtpd2ps %xmm0, %xmm0
@@ -67,7 +68,8 @@ define <2 x i8> @cvt_v2f32_v2i8(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2i8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = fptosi <2 x float> %src to <2 x i8>
   ret <2 x i8> %res
@@ -77,7 +79,7 @@ define <2 x i16> @cvt_v2f32_v2i16(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2i16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; CHECK-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = fptosi <2 x float> %src to <2 x i16>
   ret <2 x i16> %res
@@ -96,7 +98,8 @@ define <2 x i8> @cvt_v2f32_v2u8(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2u8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = fptoui <2 x float> %src to <2 x i8>
   ret <2 x i8> %res
@@ -106,7 +109,7 @@ define <2 x i16> @cvt_v2f32_v2u16(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2u16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; CHECK-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = fptoui <2 x float> %src to <2 x i16>
   ret <2 x i16> %res
@@ -115,13 +118,12 @@ define <2 x i16> @cvt_v2f32_v2u16(<2 x float> %src) {
 define <2 x i32> @cvt_v2f32_v2u32(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2u32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
-; CHECK-NEXT:    vcmpltps %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vsubps %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    vcvttps2dq %xmm1, %xmm1
-; CHECK-NEXT:    vxorps LCPI11_1, %xmm1, %xmm1
+; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm1
+; CHECK-NEXT:    vpsrad $31, %xmm1, %xmm2
+; CHECK-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = fptoui <2 x float> %src to <2 x i32>
   ret <2 x i32> %res

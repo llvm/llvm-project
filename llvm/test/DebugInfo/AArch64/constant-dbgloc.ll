@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm %s -o - | FileCheck %s
+; RUN: llc -filetype=asm --aarch64-enable-sink-fold=true %s -o - | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "aarch64--linux-gnueabihf"
@@ -16,7 +16,7 @@ target triple = "aarch64--linux-gnueabihf"
 define i32 @main() !dbg !4 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   ret i32 -1, !dbg !11
 }
 

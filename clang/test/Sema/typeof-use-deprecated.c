@@ -16,11 +16,11 @@ struct foo { int x; } __attribute__((deprecated)); // expected-note {{'foo' has 
 typedef struct foo bar __attribute__((deprecated)); // expected-note {{'bar' has been explicitly marked deprecated here}}
 bar x1;	// expected-warning {{'bar' is deprecated}}
 
-int main() { typeof(x1) y; }	// expected-warning {{'foo' is deprecated}}
+int main(void) { typeof(x1) y; }	// expected-warning {{'foo' is deprecated}}
 
 struct gorf { int x; };
 typedef struct gorf T __attribute__((deprecated));  // expected-note {{'T' has been explicitly marked deprecated here}}
 T t;	// expected-warning {{'T' is deprecated}}
-void wee() { typeof(t) y; }
+void wee(void) { typeof(t) y; }
 
 

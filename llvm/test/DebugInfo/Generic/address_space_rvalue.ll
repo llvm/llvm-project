@@ -1,3 +1,4 @@
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; This nonsensical example tests that address spaces for rvalue
@@ -7,7 +8,7 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_address_class	(0x00000001)
 
-@y = global i8* null, align 8, !dbg !0
+@y = global ptr null, align 8, !dbg !0
 
 !llvm.dbg.cu = !{!5}
 !llvm.module.flags = !{!8, !9}

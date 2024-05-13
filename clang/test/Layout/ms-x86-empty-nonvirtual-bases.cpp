@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s --strict-whitespace
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s --strict-whitespace
 
 extern "C" int printf(const char *fmt, ...);
@@ -148,7 +148,7 @@ struct I {
 };
 
 // CHECK-LABEL:   0 | struct I{{$}}
-// CHECK-NEXT:    0 |   int [0] i0
+// CHECK-NEXT:    0 |   int[0] i0
 // CHECK-NEXT:      | [sizeof={{1|4}}, align=4,
 // CHECK-NEXT:      |  nvsize=0, nvalign=4]
 
@@ -158,7 +158,7 @@ struct J : I {
 
 // CHECK-LABEL:  0 | struct J{{$}}
 // CHECK-NEXT:   0 |   struct I (base)
-// CHECK-NEXT:   0 |     int [0] i0
+// CHECK-NEXT:   0 |     int[0] i0
 // CHECK-NEXT:   0 |   int j
 // CHECK-NEXT:     | [sizeof=4, align=4,
 // CHECK-NEXT:     |  nvsize=4, nvalign=4]

@@ -238,5 +238,22 @@ void placement_new_and_delete() {
   a->~A_t2();
 }
 
+namespace TypedefInLocalClassOfAMemberOfTemplateClass {
+template<typename> struct A {
+  void foo() {
+    struct Inner {
+      typedef int Int; // no-diag
+      typedef char Char; // expected-warning {{unused typedef 'Char'}}
+      Int m;
+    } b;
+  }
+};
+
+void foo() {
+  A<int> x;
+  x.foo();
+}
+} // TypedefInLocalClassOfTemplateClassMember
+
 // This should not disable any warnings:
 #pragma clang diagnostic ignored "-Wunused-local-typedef"

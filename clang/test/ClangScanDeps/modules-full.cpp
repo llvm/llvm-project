@@ -10,48 +10,36 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb.json > %t.cdb
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl.json > %t_clangcl.cdb
 //
-// RUN: echo %t.dir > %t.result
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources >> %t.result
-// RUN: cat %t.result | sed 's/\\/\//g' | FileCheck --check-prefixes=CHECK,CHECK-NO-ABS %s
+// RUN:   -mode preprocess-dependency-directives > %t.result
+// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir %s
 //
-// RUN: echo %t.dir > %t.result
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
-// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources >> %t.result
-// RUN: cat %t.result | sed 's/\\/\//g' | FileCheck --check-prefixes=CHECK,CHECK-ABS %s
-//
-// RUN: echo %t.dir > %t_clangcl.result
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 4 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources >> %t_clangcl.result
-// RUN: cat %t_clangcl.result | sed 's/\\/\//g' | FileCheck --check-prefixes=CHECK,CHECK-NO-ABS %s
-
-// FIXME: Backslash issues.
-// XFAIL: system-windows
+// RUN:   -mode preprocess-dependency-directives > %t_clangcl.result
+// RUN: cat %t_clangcl.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir %s
 
 #include "header.h"
 
-// CHECK: [[PREFIX:.*]]
-// CHECK-NEXT: {
+// CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
-// CHECK-NEXT:           "context-hash": "[[CONTEXT_HASH_H1:[A-Z0-9]+]]",
+// CHECK-NEXT:           "context-hash": "[[HASH_H2_DINCLUDE:[A-Z0-9]+]]",
 // CHECK-NEXT:           "module-name": "header2"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1"
-// CHECK-NO-ABS-NOT:   "-fmodule-map-file={{.*}}"
-// CHECK-ABS:          "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
 // CHECK:              "-emit-module"
-// CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
-// CHECK-ABS:          "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm"
+// CHECK:              "-fno-modules-prune-non-affecting-module-map-files"
+// CHECK:              "-fmodule-file={{.*}}[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H2_DINCLUDE]]/header2-{{[A-Z0-9]+}}.pcm"
+// CHECK-NOT:          "-fimplicit-module-maps"
 // CHECK:              "-fmodule-name=header1"
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ],
-// CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H1]]",
+// CHECK-NEXT:       "context-hash": "[[HASH_H1_DINCLUDE:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
@@ -64,10 +52,12 @@
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1",
 // CHECK:              "-emit-module",
+// CHECK:              "-fno-modules-prune-non-affecting-module-map-files"
+// CHECK-NOT:          "-fimplicit-module-maps",
 // CHECK:              "-fmodule-name=header1",
 // CHECK:              "-fno-implicit-modules",
 // CHECK:            ],
-// CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H2:[A-Z0-9]+]]",
+// CHECK-NEXT:       "context-hash": "[[HASH_H1:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
@@ -80,10 +70,12 @@
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1",
 // CHECK:              "-emit-module",
+// CHECK:              "-fno-modules-prune-non-affecting-module-map-files"
 // CHECK:              "-fmodule-name=header2",
+// CHECK-NOT:          "-fimplicit-module-maps",
 // CHECK:              "-fno-implicit-modules",
 // CHECK:            ],
-// CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H1]]",
+// CHECK-NEXT:       "context-hash": "[[HASH_H2_DINCLUDE]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
@@ -93,90 +85,96 @@
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "[[CONTEXT_HASH_H2]]",
-// CHECK-NEXT:       "clang-module-deps": [
+// CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
-// CHECK-NEXT:           "context-hash": "[[CONTEXT_HASH_H2]]",
-// CHECK-NEXT:           "module-name": "header1"
+// CHECK-NEXT:           "clang-context-hash": "[[HASH_TU_DINCLUDE:[A-Z0-9]+]]",
+// CHECK-NEXT:           "clang-module-deps": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "context-hash": "[[HASH_H1_DINCLUDE]]",
+// CHECK-NEXT:               "module-name": "header1"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "command-line": [
+// CHECK-NOT:              "-fimplicit-modules"
+// CHECK-NOT:              "-fimplicit-module-maps"
+// CHECK:                  "-fmodule-file={{.*}}[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1_DINCLUDE]]/header1-{{[A-Z0-9]+}}.pcm"
+// CHECK:                ],
+// CHECK-NEXT:           "executable": "{{.*}}clang{{.*}}"
+// CHECK-NEXT:           "file-deps": [
+// CHECK-NEXT:             "[[PREFIX]]/modules_cdb_input2.cpp"
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "input-file": "[[PREFIX]]/modules_cdb_input2.cpp"
 // CHECK-NEXT:         }
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules"
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
-// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H2]]/header1-{{[A-Z0-9]+}}.pcm"
-// CHECK-NO-ABS-NOT:   "-fmodule-map-file={{.*}}"
-// CHECK-ABS-NEXT:     "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/modules_cdb_input.cpp"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
+// CHECK-NEXT:       ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "[[CONTEXT_HASH_H2]]",
-// CHECK-NEXT:       "clang-module-deps": [
+// CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
-// CHECK-NEXT:           "context-hash": "[[CONTEXT_HASH_H2]]",
-// CHECK-NEXT:           "module-name": "header1"
+// CHECK-NEXT:           "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
+// CHECK-NEXT:           "clang-module-deps": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "context-hash": "[[HASH_H1]]",
+// CHECK-NEXT:               "module-name": "header1"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "command-line": [
+// CHECK-NOT:              "-fimplicit-modules"
+// CHECK-NOT:              "-fimplicit-module-maps"
+// CHECK:                  "-fmodule-file={{.*}}[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
+// CHECK:                ],
+// CHECK-NEXT:           "executable": "{{.*}}clang{{.*}}"
+// CHECK-NEXT:           "file-deps": [
+// CHECK-NEXT:             "[[PREFIX]]/modules_cdb_input.cpp"
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:         }
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules"
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}},
-// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H2]]/header1-{{[A-Z0-9]+}}.pcm"
-// CHECK-NO-ABS-NOT:   "-fmodule-map-file={{.*}}
-// CHECK-ABS-NEXT:     "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/modules_cdb_input.cpp"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
+// CHECK-NEXT:       ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "[[CONTEXT_HASH_H2]]",
-// CHECK-NEXT:       "clang-module-deps": [
+// CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
-// CHECK-NEXT:           "context-hash": "[[CONTEXT_HASH_H2]]",
-// CHECK-NEXT:           "module-name": "header1"
+// CHECK-NEXT:           "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
+// CHECK-NEXT:           "clang-module-deps": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "context-hash": "[[HASH_H1]]",
+// CHECK-NEXT:               "module-name": "header1"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "command-line": [
+// CHECK-NOT:              "-fimplicit-modules"
+// CHECK-NOT:              "-fimplicit-module-maps"
+// CHECK:                  "-fmodule-file={{.*}}[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
+// CHECK:                ],
+// CHECK-NEXT:           "executable": "{{.*}}clang{{.*}}"
+// CHECK-NEXT:           "file-deps": [
+// CHECK-NEXT:             "[[PREFIX]]/modules_cdb_input.cpp"
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:         }
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules"
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
-// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H2]]/header1-{{[A-Z0-9]+}}.pcm"
-// CHECK-NO-ABS-NOT:   "-fmodule-map-file={{.*}}"
-// CHECK-ABS-NEXT:     "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/modules_cdb_input.cpp"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
+// CHECK-NEXT:       ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "[[CONTEXT_HASH_H1]]",
-// CHECK-NEXT:       "clang-module-deps": [
+// CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
-// CHECK-NEXT:           "context-hash": "[[CONTEXT_HASH_H1]]",
-// CHECK-NEXT:           "module-name": "header1"
+// CHECK-NEXT:           "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
+// CHECK-NEXT:           "clang-module-deps": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "context-hash": "[[HASH_H1]]",
+// CHECK-NEXT:               "module-name": "header1"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "command-line": [
+// CHECK-NOT:              "-fimplicit-modules"
+// CHECK-NOT:              "-fimplicit-module-maps"
+// CHECK:                  "-fmodule-file={{.*}}[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
+// CHECK:                ],
+// CHECK-NEXT:           "executable": "{{.*}}clang{{.*}}"
+// CHECK-NEXT:           "file-deps": [
+// CHECK-NEXT:             "[[PREFIX]]/modules_cdb_input.cpp"
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:         }
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules"
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
-// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm"
-// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
-// CHECK-NO-ABS-NOT:   "-fmodule-map-file={{.*}}"
-// CHECK-ABS-NEXT:     "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
-// CHECK-ABS-NEXT:     "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/modules_cdb_input2.cpp"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "input-file": "[[PREFIX]]/modules_cdb_input2.cpp"
+// CHECK-NEXT:       ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]
 // CHECK-NEXT: }

@@ -1,4 +1,4 @@
-; REQUIRES: default_triple, object-emission
+; REQUIRES: object-emission
 
 ; RUN: llvm-link %s %p/type-unique-simple-b.ll -S -o %t
 ; RUN: cat %t | FileCheck %s -check-prefix=LINK
@@ -7,10 +7,10 @@
 
 ; Make sure the backend generates a single DIE and uses ref_addr.
 ; CHECK: 0x[[BASE:.*]]: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name {{.*}} = "Base"
+; CHECK-NEXT: DW_AT_name {{.*}}"Base"
 ; CHECK-NOT: DW_TAG_structure_type
 ; CHECK: 0x[[INT:.*]]: DW_TAG_base_type
-; CHECK-NEXT: DW_AT_name {{.*}} = "int"
+; CHECK-NEXT: DW_AT_name {{.*}}"int"
 ; CHECK-NOT: DW_TAG_base_type
 
 ; CHECK: DW_TAG_compile_unit
@@ -53,9 +53,9 @@ define void @_Z1fi(i32 %a) #0 !dbg !10 {
 entry:
   %a.addr = alloca i32, align 4
   %t = alloca %struct.Base, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  call void @llvm.dbg.declare(metadata %struct.Base* %t, metadata !17, metadata !DIExpression()), !dbg !18
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !17, metadata !DIExpression()), !dbg !18
   ret void, !dbg !19
 }
 
@@ -81,7 +81,7 @@ attributes #1 = { nounwind readnone }
 !11 = !DIFile(filename: "foo.cpp", directory: "/Users/mren/c_testing/type_unique_air/simple")
 !12 = !DISubroutineType(types: !13)
 !13 = !{null, !8}
-!14 = !{i32 2, !"Dwarf Version", i32 2}
+!14 = !{i32 2, !"Dwarf Version", i32 3}
 !15 = !DILocalVariable(name: "a", line: 3, arg: 1, scope: !10, file: !11, type: !8)
 !16 = !DILocation(line: 3, scope: !10)
 !17 = !DILocalVariable(name: "t", line: 4, scope: !10, file: !11, type: !4)

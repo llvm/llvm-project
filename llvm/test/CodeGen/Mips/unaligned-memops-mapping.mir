@@ -1,20 +1,20 @@
-# RUN: llc -O0 -march=mips -mcpu=mips32r3 -mattr=+micromips,+eva -start-after=finalize-isel \
-# RUN:     -filetype obj %s -o - | llvm-objdump --mattr=+eva -d - | FileCheck %s
+# RUN: llc -O0 -mtriple=mips -mcpu=mips32r3 -mattr=+micromips,+eva -start-after=finalize-isel \
+# RUN:     -filetype obj %s -o - | llvm-objdump --no-print-imm-hex --mattr=+eva -d - | FileCheck %s
 
 # Test that MIPS unaligned load/store instructions can be mapped to their
 # corresponding microMIPS instructions.
 --- |
-  define void @g(i32* %a, i32* %b) {
+  define void @g(ptr %a, ptr %b) {
   entry:
-    %0 = load i32, i32* %a, align 1
-    store i32 %0, i32* %b, align 1
+    %0 = load i32, ptr %a, align 1
+    store i32 %0, ptr %b, align 1
     ret void
   }
 
-  define void @g2(i32* %a, i32* %b) {
+  define void @g2(ptr %a, ptr %b) {
   entry:
-    %0 = load i32, i32* %a, align 1
-    store i32 %0, i32* %b, align 1
+    %0 = load i32, ptr %a, align 1
+    store i32 %0, ptr %b, align 1
     ret void
   }
 ...
@@ -57,10 +57,10 @@ body:             |
     %1:gpr32 = COPY $a1
     %0:gpr32 = COPY $a0
     %3:gpr32 = IMPLICIT_DEF
-    %2:gpr32 = LWL %0, 0, %3 :: (load 4 from %ir.a, align 1)
-    %4:gpr32 = LWR %0, 3, %2 :: (load 4 from %ir.a, align 1)
-    SWL %4, %1, 0 :: (store 4 into %ir.b, align 1)
-    SWR %4, %1, 3 :: (store 4 into %ir.b, align 1)
+    %2:gpr32 = LWL %0, 0, %3 :: (load (s32) from %ir.a, align 1)
+    %4:gpr32 = LWR %0, 3, %2 :: (load (s32) from %ir.a, align 1)
+    SWL %4, %1, 0 :: (store (s32) into %ir.b, align 1)
+    SWR %4, %1, 3 :: (store (s32) into %ir.b, align 1)
     RetRA
 
 ...
@@ -103,10 +103,10 @@ body:             |
     %1:gpr32 = COPY $a1
     %0:gpr32 = COPY $a0
     %3:gpr32 = IMPLICIT_DEF
-    %2:gpr32 = LWLE %0, 0, %3 :: (load 4 from %ir.a, align 1)
-    %4:gpr32 = LWRE %0, 3, %2 :: (load 4 from %ir.a, align 1)
-    SWLE %4, %1, 0 :: (store 4 into %ir.b, align 1)
-    SWRE %4, %1, 3 :: (store 4 into %ir.b, align 1)
+    %2:gpr32 = LWLE %0, 0, %3 :: (load (s32) from %ir.a, align 1)
+    %4:gpr32 = LWRE %0, 3, %2 :: (load (s32) from %ir.a, align 1)
+    SWLE %4, %1, 0 :: (store (s32) into %ir.b, align 1)
+    SWRE %4, %1, 3 :: (store (s32) into %ir.b, align 1)
     RetRA
 
 ...

@@ -22,16 +22,16 @@
   define arm_aapcs_vfpcc i32 @b(double %c) local_unnamed_addr #0 !dbg !16 {
   entry:
     call void @llvm.dbg.value(metadata double %c, metadata !18, metadata !DIExpression()), !dbg !19
-    %call = tail call arm_aapcs_vfpcc i32 bitcast (i32 (...)* @d to i32 ()*)(), !dbg !20
+    %call = tail call arm_aapcs_vfpcc i32 @d(), !dbg !20
     %call1 = tail call arm_aapcs_vfpcc i32 @a(double %c), !dbg !21
     ret i32 undef, !dbg !22
   }
   declare arm_aapcs_vfpcc i32 @d(...) local_unnamed_addr #0
   declare !dbg !4 arm_aapcs_vfpcc i32 @a(double) local_unnamed_addr #0
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
 
-  attributes #0 = { "disable-tail-calls"="false" "frame-pointer"="all" }
+  attributes #0 = { "disable-tail-calls"="false" "frame-pointer"="all" "target-features"="+thumb-mode,+vfp2" }
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!10, !11, !12, !13, !14}

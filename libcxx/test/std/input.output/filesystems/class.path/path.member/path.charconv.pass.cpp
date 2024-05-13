@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-localization
-// UNSUPPORTED: c++03
+// UNSUPPORTED: no-localization
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: availability-filesystem-missing
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <filesystem>
@@ -31,18 +32,16 @@
 // system APIs consumes in the functions that take narrow strings as path
 // names.
 
-
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-#include "filesystem_test_helper.h"
 
-// libstdc++ doesn't define conversions from/to wchar_t outside of windows.
-#if defined(__GLIBCXX__) && !defined(_WIN32)
-#  define HAS_NO_WCHAR
+#ifdef _WIN32
+#  include <windows.h> // SetFileApisToANSI & friends
 #endif
+namespace fs = std::filesystem;
 
 // Test conversion with strings that fit within the latin1 charset, that fit
 // within one code point in UTF-16, and that can be expressible in certain
@@ -57,7 +56,7 @@ static void test_latin_unicode()
 #else
   const char u8str[] = { char(0xc3), char(0xa5), char(0xc3), char(0xa4), char(0xc3), char(0xb6), 0x00 };
 #endif
-#ifndef HAS_NO_WCHAR
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   const wchar_t wstr[] = { 0xe5, 0xe4, 0xf6, 0x00 };
 #endif
 
@@ -112,7 +111,7 @@ static void test_latin_unicode()
     assert(p.string<char8_t>() == u8str);
   }
 #endif
-#ifndef HAS_NO_WCHAR
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   // Test conversion to/from wchar_t.
   {
     const fs::path p(u16str);
@@ -132,7 +131,7 @@ static void test_latin_unicode()
     assert(p.u32string() == u32str);
     assert(p.string<wchar_t>() == wstr);
   }
-#endif
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 #ifndef _WIN32
   // Test conversion to/from regular char-based string. On POSIX, this
   // is implied to convert to/from UTF-8.
@@ -226,14 +225,13 @@ static void test_wide_unicode()
     assert(p.u16string() == u16str);
     assert(p.u32string() == u32str);
   }
-#if !defined(HAS_NO_WCHAR) && defined(__SIZEOF_WCHAR_T__)
-#if __SIZEOF_WCHAR_T__ == 2
+#if !defined(TEST_HAS_NO_WIDE_CHARACTERS) && defined(__SIZEOF_WCHAR_T__)
+# if __SIZEOF_WCHAR_T__ == 2
   const wchar_t wstr[] = { 0xd801, 0xdc37, 0x00 };
-#else
+# else
   const wchar_t wstr[] = { 0x10437, 0x00 };
-#endif
+# endif
   // Test conversion to/from wchar_t.
-  // libstdc++ doesn't define conversions from/to wchar_t outside of windows.
   {
     const fs::path p = fs::u8path(str);
     assert(p.wstring() == wstr);
@@ -253,7 +251,7 @@ static void test_wide_unicode()
     assert(p.u32string() == u32str);
     assert(p.wstring() == wstr);
   }
-#endif
+#endif // !defined(TEST_HAS_NO_WIDE_CHARACTERS) && defined(__SIZEOF_WCHAR_T__)
 }
 
 // Test appending paths in different encodings.
@@ -273,14 +271,13 @@ static void test_append()
     p /= u32str;
     assert(p.u32string() == u32ref);
   }
-#if !defined(HAS_NO_WCHAR) && defined(__SIZEOF_WCHAR_T__)
-#if __SIZEOF_WCHAR_T__ == 2
+#if !defined(TEST_HAS_NO_WIDE_CHARACTERS) && defined(__SIZEOF_WCHAR_T__)
+# if __SIZEOF_WCHAR_T__ == 2
   const wchar_t wstr[] = { 0xd801, 0xdc37, 0x00 };
-#else
+# else
   const wchar_t wstr[] = { 0x10437, 0x00 };
-#endif
+# endif
   // Test conversion from wchar_t.
-  // libstdc++ doesn't define conversions from/to wchar_t outside of windows.
   {
     fs::path p = fs::path(u16str) / wstr / u32str;
     assert(p.u32string() == u32ref);
@@ -291,7 +288,7 @@ static void test_append()
     p /= u32str;
     assert(p.u32string() == u32ref);
   }
-#endif
+#endif // !defined(TEST_HAS_NO_WIDE_CHARACTERS) && defined(__SIZEOF_WCHAR_T__)
 }
 
 static void test_concat()
@@ -308,14 +305,13 @@ static void test_concat()
     p = fs::u8path(str).concat(u16str).concat(u32str);
     assert(p.u32string() == u32ref);
   }
-#if !defined(HAS_NO_WCHAR) && defined(__SIZEOF_WCHAR_T__)
-#if __SIZEOF_WCHAR_T__ == 2
+#if !defined(TEST_HAS_NO_WIDE_CHARACTERS) && defined(__SIZEOF_WCHAR_T__)
+# if __SIZEOF_WCHAR_T__ == 2
   const wchar_t wstr[] = { 0xd801, 0xdc37, 0x00 };
-#else
+# else
   const wchar_t wstr[] = { 0x10437, 0x00 };
-#endif
+# endif
   // Test conversion from wchar_t.
-  // libstdc++ doesn't define conversions from/to wchar_t outside of windows.
   {
     fs::path p = fs::path(u16str);
     p += wstr;
@@ -324,7 +320,7 @@ static void test_concat()
     p = fs::path(u16str).concat(wstr).concat(u32str);
     assert(p.u32string() == u32ref);
   }
-#endif
+#endif // !defined(TEST_HAS_NO_WIDE_CHARACTERS) && defined(__SIZEOF_WCHAR_T__)
 }
 
 static void test_append_concat_narrow()

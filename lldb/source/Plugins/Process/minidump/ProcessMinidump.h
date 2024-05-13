@@ -20,7 +20,7 @@
 
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-
+#include <optional>
 
 namespace lldb_private {
 
@@ -37,9 +37,9 @@ public:
 
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "minidump"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   ProcessMinidump(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                   const FileSpec &core_file, lldb::DataBufferSP code_data);
@@ -55,9 +55,7 @@ public:
 
   DynamicLoader *GetDynamicLoader() override { return nullptr; }
 
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   SystemRuntime *GetSystemRuntime() override { return nullptr; }
 
@@ -77,9 +75,6 @@ public:
 
   ArchSpec GetArchitecture();
 
-  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
-                             MemoryRegionInfo &range_info) override;
-
   Status GetMemoryRegions(
       lldb_private::MemoryRegionInfos &region_list) override;
 
@@ -87,19 +82,21 @@ public:
 
   Status WillResume() override {
     Status error;
-    error.SetErrorStringWithFormat(
-        "error: %s does not support resuming processes",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support resuming processes", GetPluginName());
     return error;
   }
 
-  llvm::Optional<MinidumpParser> m_minidump_parser;
+  std::optional<MinidumpParser> m_minidump_parser;
 
 protected:
   void Clear();
 
   bool DoUpdateThreadList(ThreadList &old_thread_list,
                           ThreadList &new_thread_list) override;
+
+  Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
+                               MemoryRegionInfo &range_info) override;
 
   void ReadModuleList();
 
@@ -110,13 +107,12 @@ protected:
   JITLoaderList &GetJITLoaders() override;
 
 private:
-  FileSpec m_core_file;
   lldb::DataBufferSP m_core_data;
   llvm::ArrayRef<minidump::Thread> m_thread_list;
   const minidump::ExceptionStream *m_active_exception;
   lldb::CommandObjectSP m_command_sp;
   bool m_is_wow64;
-  llvm::Optional<MemoryRegionInfos> m_memory_regions;
+  std::optional<MemoryRegionInfos> m_memory_regions;
 
   void BuildMemoryRegions();
 };

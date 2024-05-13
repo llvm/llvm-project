@@ -23,14 +23,9 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
-#include <fstream>
-#include <set>
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-extract"
@@ -282,4 +277,14 @@ PreservedAnalyses LoopExtractorPass::run(Module &M, ModuleAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserve<LoopAnalysis>();
   return PA;
+}
+
+void LoopExtractorPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LoopExtractorPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  if (NumLoops == 1)
+    OS << "single";
+  OS << '>';
 }

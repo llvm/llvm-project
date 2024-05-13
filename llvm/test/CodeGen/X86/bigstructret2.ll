@@ -12,9 +12,9 @@
 
 declare fastcc %0 @ReturnBigStruct() nounwind readnone
 
-define void @test(%0* %p) {
+define void @test(ptr %p) {
   %1 = call fastcc %0 @ReturnBigStruct()
-  store %0 %1, %0* %p
+  store %0 %1, ptr %p
   ret void
 }
 

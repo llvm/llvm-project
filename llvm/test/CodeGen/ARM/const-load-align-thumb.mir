@@ -6,8 +6,8 @@
   define hidden i32 @main() {
   entry:
     %P5 = alloca half, align 2
-    store half 0xH3FE0, half* %P5, align 2
-    %0 = load half, half* %P5, align 2
+    store half 0xH3FE0, ptr %P5, align 2
+    %0 = load half, ptr %P5, align 2
     call void @z_bar(half %0)
     ret i32 0
   }
@@ -46,9 +46,9 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r7, -8
     $sp = frame-setup tSUBspi $sp, 2, 14 /* CC::al */, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 16
-    renamable $s0 = VLDRH %const.0, 0, 14, $noreg :: (load 2 from constant-pool)
-    VSTRH killed renamable $s0, $sp, 3, 14, $noreg :: (store 2 into %ir.P5)
-    renamable $r0 = t2LDRHi12 $sp, 6, 14 /* CC::al */, $noreg :: (dereferenceable load 2 from %ir.P5)
+    renamable $s0 = VLDRH %const.0, 0, 14, $noreg :: (load (s16) from constant-pool)
+    VSTRH killed renamable $s0, $sp, 3, 14, $noreg :: (store (s16) into %ir.P5)
+    renamable $r0 = t2LDRHi12 $sp, 6, 14 /* CC::al */, $noreg :: (dereferenceable load (s16) from %ir.P5)
     tBL 14 /* CC::al */, $noreg, @z_bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp
     renamable $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
     $sp = frame-destroy tADDspi $sp, 2, 14 /* CC::al */, $noreg

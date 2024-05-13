@@ -214,3 +214,95 @@ Sections:
     Address:      0x4000
     AddressAlign: 0x1000
     Content:      "c3c3c3c3"
+
+## If .bss is converted to non-SHT_NOBITS, align its new offset. This may affect
+## the output size.
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-objcopy -O binary --set-section-flags .bss=alloc,contents %t7 %t7.out
+# RUN: od -A x -t x2 %t7.out | FileCheck %s --check-prefix=FILLNOBITS --ignore-case
+
+# FILLNOBITS:      000000 c3c3 0000 0000 0000 0000 0000 0000 0000
+# FILLNOBITS-NEXT: 000010 0000 00
+# FILLNOBITS-NEXT: 000013
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x1000
+    Content:      "c3c3"
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC ]
+    ## sh_offset is not aligned.
+    ShOffset:     0x1002
+    Size:         0x3
+    AddressAlign: 0x10
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W, PF_X ]
+    Offset:   0x1000
+    VAddr:    0x1000
+    PAddr:    0x1000
+    FileSize: 0x2
+    MemSize:  0x13
+    Align:    0x1000
+
+## Test that sections do not move relative to their physical addresses if
+## the physical address is not aligned. This behavior matches GNU objcopy
+## and is important for embedded images where the physical address is
+## used to store the initial data image. Without converting the type of a
+## NOBITS section, don't align the offset. This matches GNU objcopy when
+## the physical address of a section is not aligned.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-objcopy -O binary --only-section=.text --only-section=.data %t8 %t8.out
+# RUN: od -A x -t x1 %t8.out | FileCheck %s --check-prefix=PHYSUNALIGNED --ignore-case
+
+# PHYSUNALIGNED:      000000 11 22 33 44 55 66 77 88 99 aa bb cc dd ee ff 00
+# PHYSUNALIGNED-NEXT: 000010 11 22 33 44 bd ac cd ab
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x200000
+    PAddr:           0x200000
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .data
+    LastSec:         .data
+    VAddr:           0x400000
+    PAddr:           0x200014
+## PAddr is not aligned by sh_addralign(.data)
+    Align:           0x1000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x200000
+    AddressAlign:    0x1
+    Offset:          0x1000
+    Content:         112233445566778899aabbccddeeff0011223344
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x400000
+    AddressAlign:    0x8
+    Offset:          0x2000
+    Content:         BDACCDAB

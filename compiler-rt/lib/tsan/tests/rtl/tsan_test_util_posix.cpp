@@ -14,10 +14,9 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "tsan_interface.h"
 #include "tsan_posix_util.h"
+#include "tsan_rtl.h"
 #include "tsan_test_util.h"
 #include "tsan_report.h"
-
-#include "gtest/gtest.h"
 
 #include <assert.h>
 #include <pthread.h>
@@ -29,11 +28,13 @@
 
 #define CALLERPC (__builtin_return_address(0))
 
-using namespace __tsan;
-
 static __thread bool expect_report;
 static __thread bool expect_report_reported;
-static __thread ReportType expect_report_type;
+static __thread __tsan::ReportType expect_report_type;
+
+void ThreadSanitizer::TearDown() {
+  __tsan::ctx->racy_stacks.Reset();
+}
 
 static void *BeforeInitThread(void *param) {
   (void)param;
@@ -75,11 +76,11 @@ bool OnReport(const ReportDesc *rep, bool suppressed) {
 
 static void* allocate_addr(int size, int offset_from_aligned = 0) {
   static uintptr_t foo;
-  static atomic_uintptr_t uniq = {(uintptr_t)&foo};  // Some real address.
+  static __tsan::atomic_uintptr_t uniq = {(uintptr_t)&foo}; // Some real address.
   const int kAlign = 16;
   CHECK(offset_from_aligned < kAlign);
   size = (size + 2 * kAlign) & ~(kAlign - 1);
-  uintptr_t addr = atomic_fetch_add(&uniq, size, memory_order_relaxed);
+  uintptr_t addr = atomic_fetch_add(&uniq, size, __tsan::memory_order_relaxed);
   return (void*)(addr + offset_from_aligned);
 }
 
@@ -90,16 +91,11 @@ MemLoc::MemLoc(int offset_from_aligned)
 MemLoc::~MemLoc() {
 }
 
-Mutex::Mutex(Type type)
-  : alive_()
-  , type_(type) {
-}
+UserMutex::UserMutex(Type type) : alive_(), type_(type) {}
 
-Mutex::~Mutex() {
-  CHECK(!alive_);
-}
+UserMutex::~UserMutex() { CHECK(!alive_); }
 
-void Mutex::Init() {
+void UserMutex::Init() {
   CHECK(!alive_);
   alive_ = true;
   if (type_ == Normal)
@@ -114,7 +110,7 @@ void Mutex::Init() {
     CHECK(0);
 }
 
-void Mutex::StaticInit() {
+void UserMutex::StaticInit() {
   CHECK(!alive_);
   CHECK(type_ == Normal);
   alive_ = true;
@@ -122,7 +118,7 @@ void Mutex::StaticInit() {
   memcpy(mtx_, &tmp, sizeof(tmp));
 }
 
-void Mutex::Destroy() {
+void UserMutex::Destroy() {
   CHECK(alive_);
   alive_ = false;
   if (type_ == Normal)
@@ -135,7 +131,7 @@ void Mutex::Destroy() {
     CHECK_EQ(__interceptor_pthread_rwlock_destroy((pthread_rwlock_t*)mtx_), 0);
 }
 
-void Mutex::Lock() {
+void UserMutex::Lock() {
   CHECK(alive_);
   if (type_ == Normal)
     CHECK_EQ(__interceptor_pthread_mutex_lock((pthread_mutex_t*)mtx_), 0);
@@ -147,7 +143,7 @@ void Mutex::Lock() {
     CHECK_EQ(__interceptor_pthread_rwlock_wrlock((pthread_rwlock_t*)mtx_), 0);
 }
 
-bool Mutex::TryLock() {
+bool UserMutex::TryLock() {
   CHECK(alive_);
   if (type_ == Normal)
     return __interceptor_pthread_mutex_trylock((pthread_mutex_t*)mtx_) == 0;
@@ -160,7 +156,7 @@ bool Mutex::TryLock() {
   return false;
 }
 
-void Mutex::Unlock() {
+void UserMutex::Unlock() {
   CHECK(alive_);
   if (type_ == Normal)
     CHECK_EQ(__interceptor_pthread_mutex_unlock((pthread_mutex_t*)mtx_), 0);
@@ -172,19 +168,19 @@ void Mutex::Unlock() {
     CHECK_EQ(__interceptor_pthread_rwlock_unlock((pthread_rwlock_t*)mtx_), 0);
 }
 
-void Mutex::ReadLock() {
+void UserMutex::ReadLock() {
   CHECK(alive_);
   CHECK(type_ == RW);
   CHECK_EQ(__interceptor_pthread_rwlock_rdlock((pthread_rwlock_t*)mtx_), 0);
 }
 
-bool Mutex::TryReadLock() {
+bool UserMutex::TryReadLock() {
   CHECK(alive_);
   CHECK(type_ == RW);
   return __interceptor_pthread_rwlock_tryrdlock((pthread_rwlock_t*)mtx_) ==  0;
 }
 
-void Mutex::ReadUnlock() {
+void UserMutex::ReadUnlock() {
   CHECK(alive_);
   CHECK(type_ == RW);
   CHECK_EQ(__interceptor_pthread_rwlock_unlock((pthread_rwlock_t*)mtx_), 0);
@@ -215,7 +211,7 @@ struct Event {
   uptr arg2;
   bool res;
   bool expect_report;
-  ReportType report_type;
+  __tsan::ReportType report_type;
 
   explicit Event(Type type, const void *ptr = 0, uptr arg = 0, uptr arg2 = 0)
       : type(type),
@@ -226,7 +222,7 @@ struct Event {
         expect_report(),
         report_type() {}
 
-  void ExpectReport(ReportType type) {
+  void ExpectReport(__tsan::ReportType type) {
     expect_report = true;
     report_type = type;
   }
@@ -236,7 +232,7 @@ struct ScopedThread::Impl {
   pthread_t thread;
   bool main;
   bool detached;
-  atomic_uintptr_t event;  // Event*
+  __tsan::atomic_uintptr_t event;  // Event*
 
   static void *ScopedThreadCallback(void *arg);
   void send(Event *ev);
@@ -310,28 +306,28 @@ void ScopedThread::Impl::HandleEvent(Event *ev) {
     __tsan_func_exit();
     break;
   case Event::MUTEX_CREATE:
-    static_cast<Mutex*>(ev->ptr)->Init();
+    static_cast<UserMutex *>(ev->ptr)->Init();
     break;
   case Event::MUTEX_DESTROY:
-    static_cast<Mutex*>(ev->ptr)->Destroy();
+    static_cast<UserMutex *>(ev->ptr)->Destroy();
     break;
   case Event::MUTEX_LOCK:
-    static_cast<Mutex*>(ev->ptr)->Lock();
+    static_cast<UserMutex *>(ev->ptr)->Lock();
     break;
   case Event::MUTEX_TRYLOCK:
-    ev->res = static_cast<Mutex*>(ev->ptr)->TryLock();
+    ev->res = static_cast<UserMutex *>(ev->ptr)->TryLock();
     break;
   case Event::MUTEX_UNLOCK:
-    static_cast<Mutex*>(ev->ptr)->Unlock();
+    static_cast<UserMutex *>(ev->ptr)->Unlock();
     break;
   case Event::MUTEX_READLOCK:
-    static_cast<Mutex*>(ev->ptr)->ReadLock();
+    static_cast<UserMutex *>(ev->ptr)->ReadLock();
     break;
   case Event::MUTEX_TRYREADLOCK:
-    ev->res = static_cast<Mutex*>(ev->ptr)->TryReadLock();
+    ev->res = static_cast<UserMutex *>(ev->ptr)->TryReadLock();
     break;
   case Event::MUTEX_READUNLOCK:
-    static_cast<Mutex*>(ev->ptr)->ReadUnlock();
+    static_cast<UserMutex *>(ev->ptr)->ReadUnlock();
     break;
   case Event::MEMCPY:
     __interceptor_memcpy(ev->ptr, (void*)ev->arg, ev->arg2);
@@ -352,17 +348,18 @@ void *ScopedThread::Impl::ScopedThreadCallback(void *arg) {
   __tsan_func_entry(CALLERPC);
   Impl *impl = (Impl*)arg;
   for (;;) {
-    Event* ev = (Event*)atomic_load(&impl->event, memory_order_acquire);
+    Event *ev =
+        (Event *)atomic_load(&impl->event, __tsan::memory_order_acquire);
     if (ev == 0) {
       sched_yield();
       continue;
     }
     if (ev->type == Event::SHUTDOWN) {
-      atomic_store(&impl->event, 0, memory_order_release);
+      atomic_store(&impl->event, 0, __tsan::memory_order_release);
       break;
     }
     impl->HandleEvent(ev);
-    atomic_store(&impl->event, 0, memory_order_release);
+    atomic_store(&impl->event, 0, __tsan::memory_order_release);
   }
   __tsan_func_exit();
   return 0;
@@ -372,9 +369,9 @@ void ScopedThread::Impl::send(Event *e) {
   if (main) {
     HandleEvent(e);
   } else {
-    CHECK_EQ(atomic_load(&event, memory_order_relaxed), 0);
-    atomic_store(&event, (uintptr_t)e, memory_order_release);
-    while (atomic_load(&event, memory_order_acquire) != 0)
+    CHECK_EQ(atomic_load(&event, __tsan::memory_order_relaxed), 0);
+    atomic_store(&event, (uintptr_t)e, __tsan::memory_order_release);
+    while (atomic_load(&event, __tsan::memory_order_acquire) != 0)
       sched_yield();
   }
 }
@@ -383,7 +380,7 @@ ScopedThread::ScopedThread(bool detached, bool main) {
   impl_ = new Impl;
   impl_->main = main;
   impl_->detached = detached;
-  atomic_store(&impl_->event, 0, memory_order_relaxed);
+  atomic_store(&impl_->event, 0, __tsan::memory_order_relaxed);
   if (!main) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -417,7 +414,7 @@ void ScopedThread::Access(void *addr, bool is_write,
   Event event(is_write ? Event::WRITE : Event::READ, addr, size,
               (uptr)CALLERPC);
   if (expect_race)
-    event.ExpectReport(ReportTypeRace);
+    event.ExpectReport(__tsan::ReportTypeRace);
   impl_->send(&event);
 }
 
@@ -426,7 +423,7 @@ void ScopedThread::VptrUpdate(const MemLoc &vptr,
                               bool expect_race) {
   Event event(Event::VPTR_UPDATE, vptr.loc(), (uptr)new_val.loc());
   if (expect_race)
-    event.ExpectReport(ReportTypeRace);
+    event.ExpectReport(__tsan::ReportTypeRace);
   impl_->send(&event);
 }
 
@@ -440,44 +437,44 @@ void ScopedThread::Return() {
   impl_->send(&event);
 }
 
-void ScopedThread::Create(const Mutex &m) {
+void ScopedThread::Create(const UserMutex &m) {
   Event event(Event::MUTEX_CREATE, &m);
   impl_->send(&event);
 }
 
-void ScopedThread::Destroy(const Mutex &m) {
+void ScopedThread::Destroy(const UserMutex &m) {
   Event event(Event::MUTEX_DESTROY, &m);
   impl_->send(&event);
 }
 
-void ScopedThread::Lock(const Mutex &m) {
+void ScopedThread::Lock(const UserMutex &m) {
   Event event(Event::MUTEX_LOCK, &m);
   impl_->send(&event);
 }
 
-bool ScopedThread::TryLock(const Mutex &m) {
+bool ScopedThread::TryLock(const UserMutex &m) {
   Event event(Event::MUTEX_TRYLOCK, &m);
   impl_->send(&event);
   return event.res;
 }
 
-void ScopedThread::Unlock(const Mutex &m) {
+void ScopedThread::Unlock(const UserMutex &m) {
   Event event(Event::MUTEX_UNLOCK, &m);
   impl_->send(&event);
 }
 
-void ScopedThread::ReadLock(const Mutex &m) {
+void ScopedThread::ReadLock(const UserMutex &m) {
   Event event(Event::MUTEX_READLOCK, &m);
   impl_->send(&event);
 }
 
-bool ScopedThread::TryReadLock(const Mutex &m) {
+bool ScopedThread::TryReadLock(const UserMutex &m) {
   Event event(Event::MUTEX_TRYREADLOCK, &m);
   impl_->send(&event);
   return event.res;
 }
 
-void ScopedThread::ReadUnlock(const Mutex &m) {
+void ScopedThread::ReadUnlock(const UserMutex &m) {
   Event event(Event::MUTEX_READUNLOCK, &m);
   impl_->send(&event);
 }
@@ -486,7 +483,7 @@ void ScopedThread::Memcpy(void *dst, const void *src, int size,
                           bool expect_race) {
   Event event(Event::MEMCPY, dst, (uptr)src, size);
   if (expect_race)
-    event.ExpectReport(ReportTypeRace);
+    event.ExpectReport(__tsan::ReportTypeRace);
   impl_->send(&event);
 }
 
@@ -494,6 +491,6 @@ void ScopedThread::Memset(void *dst, int val, int size,
                           bool expect_race) {
   Event event(Event::MEMSET, dst, val, size);
   if (expect_race)
-    event.ExpectReport(ReportTypeRace);
+    event.ExpectReport(__tsan::ReportTypeRace);
   impl_->send(&event);
 }

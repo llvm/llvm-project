@@ -1,6 +1,9 @@
 ; RUN: llc < %s
 ; PR9900
 
+; NVPTX does not support zero sized type arg
+; UNSUPPORTED: target=nvptx{{.*}}
+
 %zero = type [0 x i8]
 %foobar = type { i32, %zero }
 

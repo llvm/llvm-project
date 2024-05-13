@@ -3,8 +3,8 @@
 
 ; PPC32: foo
 ; PPC32: mflr 0
-; PPC32: stw 0, 4(1)
 ; PPC32: stwu 1, -[[STACK:[0-9]+]](1)
+; PPC32: stw 0, 20(1)
 ; PPC32: lwz [[REG:[0-9]+]], [[RETADDR:[0-9]+]](1)
 ; PPC32: stw [[REG]], 0(3)
 ; PPC32: lwz 0, [[RETADDR]](1)
@@ -14,21 +14,21 @@
 
 ; PPC64: foo
 ; PPC64: mflr 0
-; PPC64: std 0, [[RETADDR:[0-9]+]]
-; PPC64: stdu 1, -[[STACK:[0-9]+]]
+; PPC64: stdu 1, -[[#%d,STACK:]]
+; PPC64: std 0, [[#%d,RETADDR:]]
 ; PPC64: ld [[REG:[0-9]+]]
 ; PPC64: std [[REG]], 0(3)
-; PPC64: addi 1, 1, [[STACK]]
-; PPC64: ld 0, [[RETADDR]]
+; PPC64: addi 1, 1, [[#%d,STACK]]
+; PPC64: ld 0, [[#%d,RETADDR-STACK]]
 ; PPC64: mtlr 0
 ; PPC64: blr
 
-define void @foo(i8** %X) nounwind {
+define void @foo(ptr %X) nounwind {
 entry:
-	%tmp = tail call i8* @llvm.returnaddress( i32 0 )		; <i8*> [#uses=1]
-	store i8* %tmp, i8** %X, align 4
+	%tmp = tail call ptr @llvm.returnaddress( i32 0 )		; <ptr> [#uses=1]
+	store ptr %tmp, ptr %X, align 4
 	ret void
 }
 
-declare i8* @llvm.returnaddress(i32)
+declare ptr @llvm.returnaddress(i32)
 

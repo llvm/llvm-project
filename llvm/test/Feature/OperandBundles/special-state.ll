@@ -1,4 +1,4 @@
-; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
+; RUN: opt -S -passes=early-cse -earlycse-debug-hash < %s | FileCheck %s
 
 ; This test isn't directly related to EarlyCSE or varargs.  It is just
 ; using these as a vehicle for testing the correctness of

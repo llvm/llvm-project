@@ -23,8 +23,8 @@ define dso_local fastcc void @_ZN15UsecaseSelector26IsAllowedImplDefinedFormatE1
   br i1 undef, label %4, label %13
 
 ; <label>:4:                                      ; preds = %3
-  %5 = getelementptr inbounds [16 x i32], [16 x i32]* bitcast (<{ i32, i32, i32, i32, [12 x i32] }>* @_ZN15UsecaseSelector25AllowedImplDefinedFormatsE to [16 x i32]*), i32 0, i32 undef
-  %6 = load i32, i32* %5, align 4
+  %5 = getelementptr inbounds [16 x i32], ptr @_ZN15UsecaseSelector25AllowedImplDefinedFormatsE, i32 0, i32 undef
+  %6 = load i32, ptr %5, align 4
   %7 = icmp eq i32 10, %6
   br i1 %7, label %9, label %8
 

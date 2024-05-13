@@ -19,3 +19,16 @@ int main() {
   func<bool>(true);
   return 0;
 }
+
+namespace structural_value_crash {
+  template <int* p>
+  void tpl_fn() {
+    (void)p;
+  }
+
+  int arr[] = {1, 2, 3};
+
+  void test() {
+    tpl_fn<arr>();
+  }
+}

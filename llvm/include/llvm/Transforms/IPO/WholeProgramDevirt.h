@@ -14,20 +14,20 @@
 #ifndef LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 #define LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 
-#include "llvm/IR/Module.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/IPO/FunctionImport.h"
 #include <cassert>
 #include <cstdint>
+#include <map>
 #include <set>
 #include <utility>
 #include <vector>
 
 namespace llvm {
+class Module;
 
 template <typename T> class ArrayRef;
 template <typename T> class MutableArrayRef;
-class Function;
 class GlobalVariable;
 class ModuleSummaryIndex;
 struct ValueInfo;
@@ -117,14 +117,14 @@ struct TypeMemberInfo {
 
 // A virtual call target, i.e. an entry in a particular vtable.
 struct VirtualCallTarget {
-  VirtualCallTarget(Function *Fn, const TypeMemberInfo *TM);
+  VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM);
 
   // For testing only.
   VirtualCallTarget(const TypeMemberInfo *TM, bool IsBigEndian)
       : Fn(nullptr), TM(TM), IsBigEndian(IsBigEndian), WasDevirt(false) {}
 
-  // The function stored in the vtable.
-  Function *Fn;
+  // The function (or an alias to a function) stored in the vtable.
+  GlobalValue *Fn;
 
   // A pointer to the type identifier member through which the pointer to Fn is
   // accessed.
@@ -238,13 +238,23 @@ struct VTableSlotSummary {
   StringRef TypeID;
   uint64_t ByteOffset;
 };
-
+bool hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO);
+void updatePublicTypeTestCalls(Module &M,
+                               bool WholeProgramVisibilityEnabledInLTO);
 void updateVCallVisibilityInModule(
     Module &M, bool WholeProgramVisibilityEnabledInLTO,
-    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols);
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
+    bool ValidateAllVtablesHaveTypeInfos,
+    function_ref<bool(StringRef)> IsVisibleToRegularObj);
 void updateVCallVisibilityInIndex(
     ModuleSummaryIndex &Index, bool WholeProgramVisibilityEnabledInLTO,
-    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols);
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
+    const DenseSet<GlobalValue::GUID> &VisibleToRegularObjSymbols);
+
+void getVisibleToRegularObjVtableGUIDs(
+    ModuleSummaryIndex &Index,
+    DenseSet<GlobalValue::GUID> &VisibleToRegularObjSymbols,
+    function_ref<bool(StringRef)> IsVisibleToRegularObj);
 
 /// Perform index-based whole program devirtualization on the \p Summary
 /// index. Any devirtualized targets used by a type test in another module

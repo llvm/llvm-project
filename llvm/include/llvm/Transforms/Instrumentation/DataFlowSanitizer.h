@@ -8,12 +8,12 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_DATAFLOWSANITIZER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_DATAFLOWSANITIZER_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include <string>
 #include <vector>
 
 namespace llvm {
+class Module;
 
 class DataFlowSanitizerPass : public PassInfoMixin<DataFlowSanitizerPass> {
 private:

@@ -8,7 +8,10 @@ add_mlir_conversion_library(MLIRVectorToSCF
   Core
 
   LINK_LIBS PUBLIC
-  MLIRLLVMIR
-  MLIRMemRef
+  MLIRArithDialect
+  MLIRLLVMDialect
+  MLIRMemRefDialect
   MLIRTransforms
+  MLIRVectorDialect
+  MLIRVectorTransforms
   )

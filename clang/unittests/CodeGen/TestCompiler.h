@@ -20,7 +20,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace llvm {
 
@@ -48,7 +48,7 @@ struct TestCompiler {
         std::make_shared<clang::TargetOptions>(compiler.getTargetOpts())));
 
     const clang::TargetInfo &TInfo = compiler.getTarget();
-    PtrSize = TInfo.getPointerWidth(0) / 8;
+    PtrSize = TInfo.getPointerWidth(clang::LangAS::Default) / 8;
 
     compiler.createFileManager();
     compiler.createSourceManager(compiler.getFileManager());
@@ -56,12 +56,10 @@ struct TestCompiler {
 
     compiler.createASTContext();
 
-    CG.reset(CreateLLVMCodeGen(compiler.getDiagnostics(),
-                               "main-module",
-                               compiler.getHeaderSearchOpts(),
-                               compiler.getPreprocessorOpts(),
-                               compiler.getCodeGenOpts(),
-                               Context));
+    CG.reset(CreateLLVMCodeGen(
+        compiler.getDiagnostics(), "main-module",
+        &compiler.getVirtualFileSystem(), compiler.getHeaderSearchOpts(),
+        compiler.getPreprocessorOpts(), compiler.getCodeGenOpts(), Context));
   }
 
   void init(const char *TestProgram,

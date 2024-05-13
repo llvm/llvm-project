@@ -27,10 +27,10 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetRegistry.h"
 #include <memory>
 #include <utility>
 
@@ -45,6 +45,7 @@ class PCHContainerGenerator : public ASTConsumer {
   const std::string OutputFileName;
   ASTContext *Ctx;
   ModuleMap &MMap;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   const HeaderSearchOptions &HeaderSearchOpts;
   const PreprocessorOptions &PreprocessorOpts;
   CodeGenOptions CodeGenOpts;
@@ -96,13 +97,17 @@ class PCHContainerGenerator : public ASTConsumer {
     }
 
     bool VisitFunctionDecl(FunctionDecl *D) {
+      // Skip deduction guides.
+      if (isa<CXXDeductionGuideDecl>(D))
+        return true;
+
       if (isa<CXXMethodDecl>(D))
         // This is not yet supported. Constructing the `this' argument
         // mandates a CodeGenFunction.
         return true;
 
       SmallVector<QualType, 16> ArgTypes;
-      for (auto i : D->parameters())
+      for (auto *i : D->parameters())
         ArgTypes.push_back(i->getType());
       QualType RetTy = D->getReturnType();
       QualType FnTy = Ctx.getFunctionType(RetTy, ArgTypes,
@@ -121,7 +126,7 @@ class PCHContainerGenerator : public ASTConsumer {
       ArgTypes.push_back(D->getSelfType(Ctx, D->getClassInterface(),
                                         selfIsPseudoStrong, selfIsConsumed));
       ArgTypes.push_back(Ctx.getObjCSelType());
-      for (auto i : D->parameters())
+      for (auto *i : D->parameters())
         ArgTypes.push_back(i->getType());
       QualType RetTy = D->getReturnType();
       QualType FnTy = Ctx.getFunctionType(RetTy, ArgTypes,
@@ -140,6 +145,7 @@ public:
       : Diags(CI.getDiagnostics()), MainFileName(MainFileName),
         OutputFileName(OutputFileName), Ctx(nullptr),
         MMap(CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()),
+        FS(&CI.getVirtualFileSystem()),
         HeaderSearchOpts(CI.getHeaderSearchOpts()),
         PreprocessorOpts(CI.getPreprocessorOpts()),
         TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
@@ -152,10 +158,14 @@ public:
     // When building a module MainFileName is the name of the modulemap file.
     CodeGenOpts.MainFileName =
         LangOpts.CurrentModule.empty() ? MainFileName : LangOpts.CurrentModule;
-    CodeGenOpts.setDebugInfo(codegenoptions::FullDebugInfo);
+    CodeGenOpts.setDebugInfo(llvm::codegenoptions::FullDebugInfo);
     CodeGenOpts.setDebuggerTuning(CI.getCodeGenOpts().getDebuggerTuning());
+    CodeGenOpts.DwarfVersion = CI.getCodeGenOpts().DwarfVersion;
+    CodeGenOpts.DebugCompilationDir =
+        CI.getInvocation().getCodeGenOpts().DebugCompilationDir;
     CodeGenOpts.DebugPrefixMap =
         CI.getInvocation().getCodeGenOpts().DebugPrefixMap;
+    CodeGenOpts.DebugStrictDwarf = CI.getCodeGenOpts().DebugStrictDwarf;
   }
 
   ~PCHContainerGenerator() override = default;
@@ -168,7 +178,7 @@ public:
     M.reset(new llvm::Module(MainFileName, *VMContext));
     M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
     Builder.reset(new CodeGen::CodeGenModule(
-        *Ctx, HeaderSearchOpts, PreprocessorOpts, CodeGenOpts, *M, Diags));
+        *Ctx, FS, HeaderSearchOpts, PreprocessorOpts, CodeGenOpts, *M, Diags));
 
     // Prepare CGDebugInfo to emit debug info for a clang module.
     auto *DI = Builder->getModuleDebugInfo();
@@ -264,31 +274,48 @@ public:
     std::string Error;
     auto Triple = Ctx.getTargetInfo().getTriple();
     if (!llvm::TargetRegistry::lookupTarget(Triple.getTriple(), Error))
-      llvm::report_fatal_error(Error);
+      llvm::report_fatal_error(llvm::Twine(Error));
 
     // Emit the serialized Clang AST into its own section.
     assert(Buffer->IsComplete && "serialization did not complete");
     auto &SerializedAST = Buffer->Data;
     auto Size = SerializedAST.size();
-    auto Int8Ty = llvm::Type::getInt8Ty(*VMContext);
-    auto *Ty = llvm::ArrayType::get(Int8Ty, Size);
-    auto *Data = llvm::ConstantDataArray::getString(
-        *VMContext, StringRef(SerializedAST.data(), Size),
-        /*AddNull=*/false);
-    auto *ASTSym = new llvm::GlobalVariable(
-        *M, Ty, /*constant*/ true, llvm::GlobalVariable::InternalLinkage, Data,
-        "__clang_ast");
-    // The on-disk hashtable needs to be aligned.
-    ASTSym->setAlignment(llvm::Align(8));
 
-    // Mach-O also needs a segment name.
-    if (Triple.isOSBinFormatMachO())
-      ASTSym->setSection("__CLANG,__clangast");
-    // COFF has an eight character length limit.
-    else if (Triple.isOSBinFormatCOFF())
-      ASTSym->setSection("clangast");
-    else
-      ASTSym->setSection("__clangast");
+    if (Triple.isOSBinFormatWasm()) {
+      // Emit __clangast in custom section instead of named data segment
+      // to find it while iterating sections.
+      // This could be avoided if all data segements (the wasm sense) were
+      // represented as their own sections (in the llvm sense).
+      // TODO: https://github.com/WebAssembly/tool-conventions/issues/138
+      llvm::NamedMDNode *MD =
+          M->getOrInsertNamedMetadata("wasm.custom_sections");
+      llvm::Metadata *Ops[2] = {
+          llvm::MDString::get(*VMContext, "__clangast"),
+          llvm::MDString::get(*VMContext,
+                              StringRef(SerializedAST.data(), Size))};
+      auto *NameAndContent = llvm::MDTuple::get(*VMContext, Ops);
+      MD->addOperand(NameAndContent);
+    } else {
+      auto Int8Ty = llvm::Type::getInt8Ty(*VMContext);
+      auto *Ty = llvm::ArrayType::get(Int8Ty, Size);
+      auto *Data = llvm::ConstantDataArray::getString(
+          *VMContext, StringRef(SerializedAST.data(), Size),
+          /*AddNull=*/false);
+      auto *ASTSym = new llvm::GlobalVariable(
+          *M, Ty, /*constant*/ true, llvm::GlobalVariable::InternalLinkage,
+          Data, "__clang_ast");
+      // The on-disk hashtable needs to be aligned.
+      ASTSym->setAlignment(llvm::Align(8));
+
+      // Mach-O also needs a segment name.
+      if (Triple.isOSBinFormatMachO())
+        ASTSym->setSection("__CLANG,__clangast");
+      // COFF has an eight character length limit.
+      else if (Triple.isOSBinFormatCOFF())
+        ASTSym->setSection("clangast");
+      else
+        ASTSym->setSection("__clangast");
+    }
 
     LLVM_DEBUG({
       // Print the IR for the PCH container to the debug output.
@@ -296,7 +323,7 @@ public:
       clang::EmitBackendOutput(
           Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
           Ctx.getTargetInfo().getDataLayoutString(), M.get(),
-          BackendAction::Backend_EmitLL,
+          BackendAction::Backend_EmitLL, FS,
           std::make_unique<llvm::raw_svector_ostream>(Buffer));
       llvm::dbgs() << Buffer;
     });
@@ -305,7 +332,7 @@ public:
     clang::EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
                              LangOpts,
                              Ctx.getTargetInfo().getDataLayoutString(), M.get(),
-                             BackendAction::Backend_EmitObj, std::move(OS));
+                             BackendAction::Backend_EmitObj, FS, std::move(OS));
 
     // Free the memory for the temporary buffer.
     llvm::SmallVector<char, 0> Empty;
@@ -323,6 +350,11 @@ ObjectFilePCHContainerWriter::CreatePCHContainerGenerator(
     std::shared_ptr<PCHBuffer> Buffer) const {
   return std::make_unique<PCHContainerGenerator>(
       CI, MainFileName, OutputFileName, std::move(OS), Buffer);
+}
+
+ArrayRef<StringRef> ObjectFilePCHContainerReader::getFormats() const {
+  static StringRef Formats[] = {"obj", "raw"};
+  return Formats;
 }
 
 StringRef

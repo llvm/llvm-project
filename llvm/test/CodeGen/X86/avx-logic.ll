@@ -23,7 +23,7 @@ entry:
 define <4 x double> @andpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; ANY-LABEL: andpd256fold:
 ; ANY:       # %bb.0: # %entry
-; ANY-NEXT:    vandpd {{.*}}(%rip), %ymm0, %ymm0
+; ANY-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; ANY-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ANY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; ANY-NEXT:    retq
@@ -52,7 +52,7 @@ entry:
 define <8 x float> @andps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; ANY-LABEL: andps256fold:
 ; ANY:       # %bb.0: # %entry
-; ANY-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; ANY-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; ANY-NEXT:    retq
 entry:
   %0 = bitcast <8 x float> %y to <8 x i32>
@@ -81,7 +81,7 @@ entry:
 define <4 x double> @xorpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; ANY-LABEL: xorpd256fold:
 ; ANY:       # %bb.0: # %entry
-; ANY-NEXT:    vxorpd {{.*}}(%rip), %ymm0, %ymm0
+; ANY-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; ANY-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ANY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; ANY-NEXT:    retq
@@ -110,7 +110,7 @@ entry:
 define <8 x float> @xorps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; ANY-LABEL: xorps256fold:
 ; ANY:       # %bb.0: # %entry
-; ANY-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; ANY-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; ANY-NEXT:    retq
 entry:
   %0 = bitcast <8 x float> %y to <8 x i32>
@@ -139,7 +139,7 @@ entry:
 define <4 x double> @orpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; ANY-LABEL: orpd256fold:
 ; ANY:       # %bb.0: # %entry
-; ANY-NEXT:    vorpd {{.*}}(%rip), %ymm0, %ymm0
+; ANY-NEXT:    vorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; ANY-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ANY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; ANY-NEXT:    retq
@@ -168,7 +168,7 @@ entry:
 define <8 x float> @orps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; ANY-LABEL: orps256fold:
 ; ANY:       # %bb.0: # %entry
-; ANY-NEXT:    vorps {{.*}}(%rip), %ymm0, %ymm0
+; ANY-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; ANY-NEXT:    retq
 entry:
   %0 = bitcast <8 x float> %y to <8 x i32>
@@ -195,7 +195,7 @@ entry:
   ret <4 x double> %3
 }
 
-define <4 x double> @andnotpd256fold(<4 x double> %y, <4 x double>* nocapture %x) nounwind uwtable readonly ssp {
+define <4 x double> @andnotpd256fold(<4 x double> %y, ptr nocapture %x) nounwind uwtable readonly ssp {
 ; ANY-LABEL: andnotpd256fold:
 ; ANY:       # %bb.0: # %entry
 ; ANY-NEXT:    vandnpd (%rdi), %ymm0, %ymm0
@@ -203,7 +203,7 @@ define <4 x double> @andnotpd256fold(<4 x double> %y, <4 x double>* nocapture %x
 ; ANY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; ANY-NEXT:    retq
 entry:
-  %tmp2 = load <4 x double>, <4 x double>* %x, align 32
+  %tmp2 = load <4 x double>, ptr %x, align 32
   %0 = bitcast <4 x double> %y to <4 x i64>
   %neg.i = xor <4 x i64> %0, <i64 -1, i64 -1, i64 -1, i64 -1>
   %1 = bitcast <4 x double> %tmp2 to <4 x i64>
@@ -228,13 +228,13 @@ entry:
   ret <8 x float> %2
 }
 
-define <8 x float> @andnotps256fold(<8 x float> %y, <8 x float>* nocapture %x) nounwind uwtable readonly ssp {
+define <8 x float> @andnotps256fold(<8 x float> %y, ptr nocapture %x) nounwind uwtable readonly ssp {
 ; ANY-LABEL: andnotps256fold:
 ; ANY:       # %bb.0: # %entry
 ; ANY-NEXT:    vandnps (%rdi), %ymm0, %ymm0
 ; ANY-NEXT:    retq
 entry:
-  %tmp2 = load <8 x float>, <8 x float>* %x, align 32
+  %tmp2 = load <8 x float>, ptr %x, align 32
   %0 = bitcast <8 x float> %y to <8 x i32>
   %neg.i = xor <8 x i32> %0, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %1 = bitcast <8 x float> %tmp2 to <8 x i32>
@@ -275,7 +275,7 @@ define <2 x i64> @vpand(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ss
 define <4 x i32> @and_xor_splat1_v4i32(<4 x i32> %x) nounwind {
 ; AVX1-LABEL: and_xor_splat1_v4i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandnps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vandnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; INT256-LABEL: and_xor_splat1_v4i32:
@@ -291,7 +291,7 @@ define <4 x i32> @and_xor_splat1_v4i32(<4 x i32> %x) nounwind {
 define <4 x i64> @and_xor_splat1_v4i64(<4 x i64> %x) nounwind {
 ; AVX1-LABEL: and_xor_splat1_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandnps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; INT256-LABEL: and_xor_splat1_v4i64:
@@ -314,7 +314,7 @@ define <8 x i32> @and_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -326,7 +326,7 @@ define <8 x i32> @and_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; INT256-LABEL: and_disguised_i8_elts:
 ; INT256:       # %bb.0:
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; INT256-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; INT256-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
   %a = add <8 x i32> %x, %y
@@ -342,7 +342,7 @@ define <8 x i32> @andn_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255]
 ; AVX1-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -354,7 +354,7 @@ define <8 x i32> @andn_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ; INT256-LABEL: andn_disguised_i8_elts:
 ; INT256:       # %bb.0:
 ; INT256-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; INT256-NEXT:    vpandn {{.*}}(%rip), %ymm0, %ymm0
+; INT256-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
   %add = add <8 x i32> %y, %x
@@ -393,7 +393,7 @@ define <8 x i32> @andn_variable_mask_operand_no_concat(<8 x i32> %x, <8 x i32> %
 define <8 x i32> @andn_constant_mask_operand_no_concat(<8 x i32> %x, <8 x i32> %y) {
 ; AVX1-LABEL: andn_constant_mask_operand_no_concat:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandnps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
@@ -403,7 +403,7 @@ define <8 x i32> @andn_constant_mask_operand_no_concat(<8 x i32> %x, <8 x i32> %
 ;
 ; INT256-LABEL: andn_constant_mask_operand_no_concat:
 ; INT256:       # %bb.0:
-; INT256-NEXT:    vpandn {{.*}}(%rip), %ymm0, %ymm0
+; INT256-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; INT256-NEXT:    retq
   %xor = xor <8 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
@@ -450,7 +450,7 @@ define <8 x i32> @or_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z)
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -479,7 +479,7 @@ define <8 x i32> @xor_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255]
 ; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -537,7 +537,7 @@ define <8 x i32> @or_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -566,7 +566,7 @@ define <8 x i32> @xor_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0

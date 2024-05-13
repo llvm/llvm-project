@@ -8,9 +8,8 @@ define void @f(i16 %v) {
 ; CHECK: sth 3, -2(1)
 ; CHECK: lbz 3, -2(1)
   %p32 = alloca i16
-  store i16 %v, i16* %p32
-  %p16 = bitcast i16* %p32 to i8*
-  %tmp = load i8, i8* %p16
-  store i8 %tmp, i8* @g
+  store i16 %v, ptr %p32
+  %tmp = load i8, ptr %p32
+  store i8 %tmp, ptr @g
   ret void
 }

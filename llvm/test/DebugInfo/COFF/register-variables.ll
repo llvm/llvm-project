@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc < %s -filetype=obj | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
+; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck %s --check-prefix=ASM
+; RUN: llc < %s -filetype=obj -experimental-debug-variable-locations=true | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 
 ; Generated from:
 ; volatile int x;
@@ -29,7 +29,6 @@
 ; ASM:         subq    $32, %rsp
 ; ASM:         movl    %ecx, %esi
 ; ASM: [[p_ecx_esi:\.Ltmp.*]]:
-; ASM:         #DEBUG_VALUE: f:p <- $esi
 ; ASM:         callq   getint
 ; ASM: [[after_getint:\.Ltmp.*]]:
 ; ASM:         testl   %esi, %esi
@@ -46,7 +45,9 @@
 ; ASM: [[after_if:\.Ltmp.*]]:
 ; ASM: .LBB0_2:                                # %if.else
 ; ASM:         #DEBUG_VALUE: f:p <- $esi
-; ASM:         #DEBUG_VALUE: c <- $eax
+;; FIXME: tail-merging causes the location of "c" to be dropped in instruction
+;; referencing mode.
+; ASM:         #DEBUG_VALUE: c <- undef
 ; ASM:         movl    %eax, %ecx
 ; ASM:         addq    $32, %rsp
 ; ASM:         popq    %rsi
@@ -56,8 +57,8 @@
 
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "p"
-; ASM:         .cv_def_range    .Lfunc_begin0 [[p_ecx_esi]], reg, 18
-; ASM:         .cv_def_range    [[p_ecx_esi]] [[func_end]], reg, 23
+; ASM:         .cv_def_range    .Lfunc_begin0 [[after_getint]], reg, 18
+; ASM:         .cv_def_range    [[after_getint]] [[func_end]], reg, 23
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "c"
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
@@ -94,15 +95,15 @@
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x0
 ; OBJ:       ISectStart: 0x0
-; OBJ:       Range: 0x7
+; OBJ:       Range: 0xC
 ; OBJ:     }
 ; OBJ:   }
 ; OBJ:   DefRangeRegisterSym {
 ; OBJ:     Register: ESI (0x17)
 ; OBJ:     LocalVariableAddrRange {
-; OBJ:       OffsetStart: .text+0x7
+; OBJ:       OffsetStart: .text+0xC
 ; OBJ:       ISectStart: 0x0
-; OBJ:       Range: 0x1A
+; OBJ:       Range: 0x15
 ; OBJ:     }
 ; OBJ:   }
 ; OBJ:   LocalSym {
@@ -185,9 +186,9 @@ if.then:                                          ; preds = %entry
   tail call void @llvm.dbg.value(metadata i32 %call2, metadata !29, metadata !23), !dbg !35
   %add.i = add nsw i32 %call2, 1, !dbg !37
   tail call void @llvm.dbg.value(metadata i32 %add.i, metadata !34, metadata !23), !dbg !38
-  %0 = load volatile i32, i32* @x, align 4, !dbg !39, !tbaa !40
+  %0 = load volatile i32, ptr @x, align 4, !dbg !39, !tbaa !40
   %inc.i = add nsw i32 %0, 1, !dbg !39
-  store volatile i32 %inc.i, i32* @x, align 4, !dbg !39, !tbaa !40
+  store volatile i32 %inc.i, ptr @x, align 4, !dbg !39, !tbaa !40
   tail call void @llvm.dbg.value(metadata i32 %add.i, metadata !20, metadata !23), !dbg !44
   tail call void @putint(i32 %add.i) #3, !dbg !45
   br label %if.end, !dbg !46
@@ -208,7 +209,7 @@ declare void @putint(i32) #1
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "tune-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind }

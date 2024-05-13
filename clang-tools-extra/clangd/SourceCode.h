@@ -16,17 +16,19 @@
 #include "Protocol.h"
 #include "support/Context.h"
 #include "support/ThreadsafeFS.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/SHA1.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -39,7 +41,7 @@ namespace clangd {
 // of hashing function at every place that needs to store this information.
 using FileDigest = std::array<uint8_t, 8>;
 FileDigest digest(StringRef Content);
-Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID);
+std::optional<FileDigest> digestFile(const SourceManager &SM, FileID FID);
 
 // This context variable controls the behavior of functions in this file
 // that convert between LSP offsets and native clang byte offsets.
@@ -109,9 +111,9 @@ bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM);
 /// User input (e.g. cursor position) is expressed as a file location, so this
 /// function can be viewed as a way to normalize the ranges used in the clang
 /// AST so that they are comparable with ranges coming from the user input.
-llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &Mgr,
-                                                const LangOptions &LangOpts,
-                                                SourceRange R);
+std::optional<SourceRange> toHalfOpenFileRange(const SourceManager &Mgr,
+                                               const LangOptions &LangOpts,
+                                               SourceRange R);
 
 /// Returns true iff all of the following conditions hold:
 ///   - start and end locations are valid,
@@ -128,6 +130,9 @@ llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R);
 // Converts a half-open clang source range to an LSP range.
 // Note that clang also uses closed source ranges, which this can't handle!
 Range halfOpenToRange(const SourceManager &SM, CharSourceRange R);
+
+// Expand range `A` to also contain `B`.
+void unionRanges(Range &A, Range B);
 
 // Converts an offset to a clang line/column (1-based, columns are bytes).
 // The offset must be in range [0, Code.size()].
@@ -158,17 +163,21 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 /// This function should be used when paths needs to be used outside the
 /// component that generate it, so that paths are normalized as much as
 /// possible.
-llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
-                                             const SourceManager &SourceMgr);
+std::optional<std::string> getCanonicalPath(const FileEntryRef F,
+                                            FileManager &FileMgr);
 
 /// Choose the clang-format style we should apply to a certain file.
 /// This will usually use FS to look for .clang-format directories.
 /// FIXME: should we be caching the .clang-format file search?
 /// This uses format::DefaultFormatStyle and format::DefaultFallbackStyle,
 /// though the latter may have been overridden in main()!
+/// \p FormatFile indicates whether the returned FormatStyle is used
+/// to format the entire main file (or a range selected by the user
+/// which can be arbitrarily long).
 format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           llvm::StringRef Content,
-                                          const ThreadsafeFS &TFS);
+                                          const ThreadsafeFS &TFS,
+                                          bool FormatFile);
 
 /// Cleanup and format the given replacements.
 llvm::Expected<tooling::Replacements>
@@ -247,9 +256,9 @@ struct SpelledWord {
   const syntax::Token *ExpandedToken = nullptr;
 
   // Find the unique word that contains SpelledLoc or starts/ends there.
-  static llvm::Optional<SpelledWord> touching(SourceLocation SpelledLoc,
-                                              const syntax::TokenBuffer &TB,
-                                              const LangOptions &LangOpts);
+  static std::optional<SpelledWord> touching(SourceLocation SpelledLoc,
+                                             const syntax::TokenBuffer &TB,
+                                             const LangOptions &LangOpts);
 };
 
 /// Return true if the \p TokenName is in the list of reversed keywords of the
@@ -310,17 +319,32 @@ struct DefinedMacro {
 };
 /// Gets the macro referenced by \p SpelledTok. It must be a spelled token
 /// aligned to the beginning of an identifier.
-llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
-                                           Preprocessor &PP);
+std::optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
+                                          Preprocessor &PP);
 
 /// Infers whether this is a header from the FileName and LangOpts (if
 /// presents).
 bool isHeaderFile(llvm::StringRef FileName,
-                  llvm::Optional<LangOptions> LangOpts = llvm::None);
+                  std::optional<LangOptions> LangOpts = std::nullopt);
 
 /// Returns true if the given location is in a generated protobuf file.
 bool isProtoFile(SourceLocation Loc, const SourceManager &SourceMgr);
 
+/// Returns true if Name is reserved, like _Foo or __Vector_base.
+inline bool isReservedName(llvm::StringRef Name) {
+  // This doesn't catch all cases, but the most common.
+  return Name.size() >= 2 && Name[0] == '_' &&
+         (isUppercase(Name[1]) || Name[1] == '_');
+}
+
+/// Translates locations inside preamble patch to their main-file equivalent
+/// using presumed locations. Returns \p Loc if it isn't inside preamble patch.
+SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
+                                              const SourceManager &SM);
+
+/// Returns the range starting at offset and spanning the whole line. Escaped
+/// newlines are not handled.
+clangd::Range rangeTillEOL(llvm::StringRef Code, unsigned HashOffset);
 } // namespace clangd
 } // namespace clang
 #endif

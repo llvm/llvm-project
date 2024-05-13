@@ -24,7 +24,7 @@ void foo() {
 // The following tests used to be crash bugs.
 
 // PR21815
-// expected-error@+2{{C++ requires a type specifier for all declarations}}
+// expected-error@+2{{a type specifier is required for all declarations}}
 // expected-error@+1{{expected unqualified-id}}
 a (::( ));
 

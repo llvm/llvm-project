@@ -14,9 +14,9 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -56,10 +56,6 @@ void InstrumentationRuntimeUBSan::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString InstrumentationRuntimeUBSan::GetPluginNameStatic() {
-  return ConstString("UndefinedBehaviorSanitizer");
-}
-
 lldb::InstrumentationRuntimeType InstrumentationRuntimeUBSan::GetTypeStatic() {
   return eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer;
 }
@@ -71,19 +67,18 @@ __ubsan_get_current_report_data(const char **OutIssueKind,
     const char **OutMessage, const char **OutFilename, unsigned *OutLine,
     unsigned *OutCol, char **OutMemoryAddr);
 }
+)";
 
-struct data {
+static const char *ub_sanitizer_retrieve_report_data_command = R"(
+struct {
   const char *issue_kind;
   const char *message;
   const char *filename;
   unsigned line;
   unsigned col;
   char *memory_addr;
-};
-)";
+} t;
 
-static const char *ub_sanitizer_retrieve_report_data_command = R"(
-data t;
 __ubsan_get_current_report_data(&t.issue_kind, &t.message, &t.filename, &t.line,
                                 &t.col, &t.memory_addr);
 t;
@@ -113,7 +108,8 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
     return StructuredData::ObjectSP();
 
   ThreadSP thread_sp = exe_ctx_ref.GetThreadSP();
-  StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
+  StackFrameSP frame_sp =
+      thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
   ModuleSP runtime_module_sp = GetRuntimeModuleSP();
   Target &target = process_sp->GetTarget();
 
@@ -140,9 +136,11 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
       exe_ctx, options, ub_sanitizer_retrieve_report_data_command, "",
       main_value, eval_error);
   if (result != eExpressionCompleted) {
-    target.GetDebugger().GetAsyncOutputStream()->Printf(
-        "Warning: Cannot evaluate UndefinedBehaviorSanitizer expression:\n%s\n",
-        eval_error.AsCString());
+    StreamString ss;
+    ss << "cannot evaluate UndefinedBehaviorSanitizer expression:\n";
+    ss << eval_error.AsCString();
+    Debugger::ReportWarning(ss.GetString().str(),
+                            process_sp->GetTarget().GetDebugger().GetID());
     return StructuredData::ObjectSP();
   }
 
@@ -156,7 +154,7 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
       continue;
 
     lldb::addr_t PC = FCA.GetLoadAddress(&target);
-    trace->AddItem(StructuredData::ObjectSP(new StructuredData::Integer(PC)));
+    trace->AddIntegerItem(PC);
   }
 
   std::string IssueKind = RetrieveString(main_value, process_sp, ".issue_kind");
@@ -277,8 +275,9 @@ void InstrumentationRuntimeUBSan::Activate() {
           .CreateBreakpoint(symbol_address, /*internal=*/true,
                             /*hardware=*/false)
           .get();
+  const bool sync = false;
   breakpoint->SetCallback(InstrumentationRuntimeUBSan::NotifyBreakpointHit,
-                          this, true);
+                          this, sync);
   breakpoint->SetBreakpointKind("undefined-behavior-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
 
@@ -313,7 +312,7 @@ InstrumentationRuntimeUBSan::GetBacktracesFromExtendedStopInfo(
   std::vector<lldb::addr_t> PCs;
   auto trace = info->GetObjectForDotSeparatedPath("trace")->GetAsArray();
   trace->ForEach([&PCs](StructuredData::Object *PC) -> bool {
-    PCs.push_back(PC->GetAsInteger()->GetValue());
+    PCs.push_back(PC->GetUnsignedIntegerValue());
     return true;
   });
 
@@ -322,7 +321,7 @@ InstrumentationRuntimeUBSan::GetBacktracesFromExtendedStopInfo(
 
   StructuredData::ObjectSP thread_id_obj =
       info->GetObjectForDotSeparatedPath("tid");
-  tid_t tid = thread_id_obj ? thread_id_obj->GetIntegerValue() : 0;
+  tid_t tid = thread_id_obj ? thread_id_obj->GetUnsignedIntegerValue() : 0;
 
   // We gather symbolication addresses above, so no need for HistoryThread to
   // try to infer the call addresses.

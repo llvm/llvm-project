@@ -12,7 +12,7 @@ body:             |
     ; CHECK-LABEL: name: fcmeq
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK: %rhs:fpr128 = COPY $q1
-    ; CHECK: %fcmp:fpr128 = FCMEQv2f64 %lhs, %rhs
+    ; CHECK: %fcmp:fpr128 = nofpexcept FCMEQv2f64 %lhs, %rhs
     ; CHECK: $q0 = COPY %fcmp
     ; CHECK: RET_ReallyLR implicit $q0
     %lhs:fpr(<2 x s64>) = COPY $q0
@@ -32,7 +32,7 @@ body:             |
     ; CHECK-LABEL: name: fcmge
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK: %rhs:fpr128 = COPY $q1
-    ; CHECK: %fcmp:fpr128 = FCMGEv2f64 %lhs, %rhs
+    ; CHECK: %fcmp:fpr128 = nofpexcept FCMGEv2f64 %lhs, %rhs
     ; CHECK: $q0 = COPY %fcmp
     ; CHECK: RET_ReallyLR implicit $q0
     %lhs:fpr(<2 x s64>) = COPY $q0
@@ -52,7 +52,7 @@ body:             |
     ; CHECK-LABEL: name: fcmgt
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK: %rhs:fpr128 = COPY $q1
-    ; CHECK: %fcmp:fpr128 = FCMGTv2f64 %lhs, %rhs
+    ; CHECK: %fcmp:fpr128 = nofpexcept FCMGTv2f64 %lhs, %rhs
     ; CHECK: $q0 = COPY %fcmp
     ; CHECK: RET_ReallyLR implicit $q0
     %lhs:fpr(<2 x s64>) = COPY $q0
@@ -71,7 +71,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmeqz
     ; CHECK: %lhs:fpr128 = COPY $q0
-    ; CHECK: %fcmp:fpr128 = FCMEQv2i64rz %lhs
+    ; CHECK: %fcmp:fpr128 = nofpexcept FCMEQv2i64rz %lhs
     ; CHECK: $q0 = COPY %fcmp
     ; CHECK: RET_ReallyLR implicit $q0
     %lhs:fpr(<2 x s64>) = COPY $q0
@@ -91,7 +91,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmgez
     ; CHECK: %lhs:fpr128 = COPY $q0
-    ; CHECK: %fcmp:fpr128 = FCMGEv2i64rz %lhs
+    ; CHECK: %fcmp:fpr128 = nofpexcept FCMGEv2i64rz %lhs
     ; CHECK: $q0 = COPY %fcmp
     ; CHECK: RET_ReallyLR implicit $q0
     %lhs:fpr(<2 x s64>) = COPY $q0
@@ -111,7 +111,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmgtz
     ; CHECK: %lhs:fpr128 = COPY $q0
-    ; CHECK: %fcmp:fpr128 = FCMGTv2i64rz %lhs
+    ; CHECK: %fcmp:fpr128 = nofpexcept FCMGTv2i64rz %lhs
     ; CHECK: $q0 = COPY %fcmp
     ; CHECK: RET_ReallyLR implicit $q0
     %lhs:fpr(<2 x s64>) = COPY $q0
@@ -131,7 +131,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmlez
     ; CHECK: %lhs:fpr128 = COPY $q0
-    ; CHECK: %fcmp:fpr128 = FCMLEv2i64rz %lhs
+    ; CHECK: %fcmp:fpr128 = nofpexcept FCMLEv2i64rz %lhs
     ; CHECK: $q0 = COPY %fcmp
     ; CHECK: RET_ReallyLR implicit $q0
     %lhs:fpr(<2 x s64>) = COPY $q0
@@ -151,7 +151,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmltz
     ; CHECK: %lhs:fpr128 = COPY $q0
-    ; CHECK: %fcmp:fpr128 = FCMLTv2i64rz %lhs
+    ; CHECK: %fcmp:fpr128 = nofpexcept FCMLTv2i64rz %lhs
     ; CHECK: $q0 = COPY %fcmp
     ; CHECK: RET_ReallyLR implicit $q0
     %lhs:fpr(<2 x s64>) = COPY $q0

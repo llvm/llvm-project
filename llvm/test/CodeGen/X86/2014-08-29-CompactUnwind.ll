@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-apple-darwin11 -mcpu corei7 -filetype=obj -o - | llvm-objdump -d --unwind-info -s - | FileCheck %s
+; RUN: llc < %s -mtriple x86_64-apple-darwin11 -mcpu corei7 -emit-compact-unwind-non-canonical=true -filetype=obj -o - | llvm-objdump -d --unwind-info -s - | FileCheck %s
 ; Regression test for http://llvm.org/bugs/show_bug.cgi?id=20800.
 
 ; ModuleID = 'asan_report.ii'
@@ -32,15 +32,14 @@ define void @__asan_report_error(i64 %step) #0 {
 print_shadow_bytes.exit.i: ; preds = %print_shadow_bytes.exit.i, %0
   %iv.i = phi i64 [ -5, %0 ], [ %iv.next.i, %print_shadow_bytes.exit.i ]
   %reg15 = icmp eq i64 %iv.i, 0
-  %.str..str1.i = select i1 %reg15, [3 x i8]* @.str, [3 x i8]* @.str1
-  %reg16 = getelementptr inbounds [3 x i8], [3 x i8]* %.str..str1.i, i64 0, i64 0
+  %.str..str1.i = select i1 %reg15, ptr @.str, ptr @.str1
   %reg17 = shl i64 %iv.i, 1
-  %reg19 = inttoptr i64 %reg17 to i8*
-  call void (i64*, i8*, ...) @append(i64* %str.i, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i8* %reg16, i8* %reg19)
+  %reg19 = inttoptr i64 %reg17 to ptr
+  call void (ptr, ptr, ...) @append(ptr %str.i, ptr @.str2, ptr %.str..str1.i, ptr %reg19)
   %iv.next.i = add nsw i64 %iv.i, %step
   br label %print_shadow_bytes.exit.i
 }
 
-declare void @append(i64*, i8*, ...)
+declare void @append(ptr, ptr, ...)
 
 attributes #0 = { "frame-pointer"="none" }

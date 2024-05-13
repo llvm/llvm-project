@@ -11,21 +11,24 @@
 target triple = "hexagon"
 
 @g0 = external global [32768 x i8], align 8
-@g1 = external local_unnamed_addr global [15 x i8*], align 8
+@g1 = external local_unnamed_addr global [15 x ptr], align 8
 
 ; Function Attrs: nounwind
 define void @f0() local_unnamed_addr #0 {
 b0:
-  store i8* inttoptr (i32 and (i32 sext (i8 ptrtoint (i8* getelementptr inbounds ([32768 x i8], [32768 x i8]* @g0, i32 0, i32 10000) to i8) to i32), i32 -65536) to i8*), i8** getelementptr inbounds ([15 x i8*], [15 x i8*]* @g1, i32 0, i32 1), align 4
-  store i8* inttoptr (i32 and (i32 sext (i8 ptrtoint (i8* getelementptr inbounds ([32768 x i8], [32768 x i8]* @g0, i32 0, i32 10000) to i8) to i32), i32 -65536) to i8*), i8** getelementptr inbounds ([15 x i8*], [15 x i8*]* @g1, i32 0, i32 6), align 8
+  %ext = sext i8 ptrtoint (ptr getelementptr inbounds ([32768 x i8], ptr @g0, i32 0, i32 10000) to i8) to i32
+  %and = and i32 %ext, -65536
+  %ptr = inttoptr i32 %and to ptr
+  store ptr %ptr, ptr getelementptr inbounds ([15 x ptr], ptr @g1, i32 0, i32 1), align 4
+  store ptr %ptr, ptr getelementptr inbounds ([15 x ptr], ptr @g1, i32 0, i32 6), align 8
   tail call void @f1()
-  %v0 = load i8*, i8** getelementptr inbounds ([15 x i8*], [15 x i8*]* @g1, i32 0, i32 0), align 8
-  tail call void @llvm.hexagon.Y5.l2fetch(i8* %v0, i64 -9223372036854775808)
+  %v0 = load ptr, ptr @g1, align 8
+  tail call void @llvm.hexagon.Y5.l2fetch(ptr %v0, i64 -9223372036854775808)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.hexagon.Y5.l2fetch(i8*, i64) #1
+declare void @llvm.hexagon.Y5.l2fetch(ptr, i64) #1
 
 ; Function Attrs: nounwind
 declare void @f1() #1

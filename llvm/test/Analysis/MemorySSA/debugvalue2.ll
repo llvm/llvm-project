@@ -1,4 +1,4 @@
-; RUN: opt -disable-basic-aa -enable-new-pm=0 -print-memoryssa -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<memoryssa>' -disable-output %s 2>&1 | FileCheck %s
 
 ; Note that the test crashes the MemorySSA verification when doing loop-rotate,
 ; if debuginfo is modelled in MemorySSA, due to the fact that MemorySSA is not
@@ -19,7 +19,7 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 undef, label %for.end, label %for.body
 
 for.body:                                         ; preds = %for.cond
-  %0 = load i16, i16* undef, align 1
+  %0 = load i16, ptr undef, align 1
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond

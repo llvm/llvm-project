@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
 #include <cstdio>
-#if HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
 
 #include <cstdlib>
 #include <map>
@@ -31,7 +27,6 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -53,6 +48,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -60,6 +56,7 @@
 #include "clang/AST/DeclObjC.h"
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 using namespace lldb_private;
 
@@ -67,22 +64,21 @@ char ClangUserExpression::ID;
 
 ClangUserExpression::ClangUserExpression(
     ExecutionContextScope &exe_scope, llvm::StringRef expr,
-    llvm::StringRef prefix, lldb::LanguageType language,
-    ResultType desired_type, const EvaluateExpressionOptions &options,
-    ValueObject *ctx_obj)
+    llvm::StringRef prefix, SourceLanguage language, ResultType desired_type,
+    const EvaluateExpressionOptions &options, ValueObject *ctx_obj)
     : LLVMUserExpression(exe_scope, expr, prefix, language, desired_type,
                          options),
       m_type_system_helper(*m_target_wp.lock(), options.GetExecutionPolicy() ==
                                                     eExecutionPolicyTopLevel),
       m_result_delegate(exe_scope.CalculateTarget()), m_ctx_obj(ctx_obj) {
-  switch (m_language) {
-  case lldb::eLanguageTypeC_plus_plus:
+  switch (m_language.name) {
+  case llvm::dwarf::DW_LNAME_C_plus_plus:
     m_allow_cxx = true;
     break;
-  case lldb::eLanguageTypeObjC:
+  case llvm::dwarf::DW_LNAME_ObjC:
     m_allow_objc = true;
     break;
-  case lldb::eLanguageTypeObjC_plus_plus:
+  case llvm::dwarf::DW_LNAME_ObjC_plus_plus:
   default:
     m_allow_cxx = true;
     m_allow_objc = true;
@@ -90,10 +86,10 @@ ClangUserExpression::ClangUserExpression(
   }
 }
 
-ClangUserExpression::~ClangUserExpression() {}
+ClangUserExpression::~ClangUserExpression() = default;
 
 void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOGF(log, "ClangUserExpression::ScanContext()");
 
@@ -155,35 +151,32 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     m_needs_object_ptr = true;
   } else if (clang::CXXMethodDecl *method_decl =
           TypeSystemClang::DeclContextGetAsCXXMethodDecl(decl_context)) {
-    if (m_allow_cxx) {
-      if (method_decl->isInstance()) {
-        if (m_enforce_valid_object) {
-          lldb::VariableListSP variable_list_sp(
-              function_block->GetBlockVariableList(true));
+    if (m_allow_cxx && method_decl->isInstance()) {
+      if (m_enforce_valid_object) {
+        lldb::VariableListSP variable_list_sp(
+            function_block->GetBlockVariableList(true));
 
-          const char *thisErrorString =
-              "Stopped in a C++ method, but 'this' "
-              "isn't available; pretending we are in a "
-              "generic context";
+        const char *thisErrorString = "Stopped in a C++ method, but 'this' "
+                                      "isn't available; pretending we are in a "
+                                      "generic context";
 
-          if (!variable_list_sp) {
-            err.SetErrorString(thisErrorString);
-            return;
-          }
-
-          lldb::VariableSP this_var_sp(
-              variable_list_sp->FindVariable(ConstString("this")));
-
-          if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
-              !this_var_sp->LocationIsValidForFrame(frame)) {
-            err.SetErrorString(thisErrorString);
-            return;
-          }
+        if (!variable_list_sp) {
+          err.SetErrorString(thisErrorString);
+          return;
         }
-        m_needs_object_ptr = true;
+
+        lldb::VariableSP this_var_sp(
+            variable_list_sp->FindVariable(ConstString("this")));
+
+        if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
+            !this_var_sp->LocationIsValidForFrame(frame)) {
+          err.SetErrorString(thisErrorString);
+          return;
+        }
       }
+
       m_in_cplusplus_method = true;
-      m_in_static_method = !method_decl->isInstance();
+      m_needs_object_ptr = true;
     }
   } else if (clang::ObjCMethodDecl *method_decl =
                  TypeSystemClang::DeclContextGetAsObjCMethodDecl(
@@ -338,12 +331,11 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
       m_result_delegate.RegisterPersistentState(persistent_state);
     } else {
       diagnostic_manager.PutString(
-          eDiagnosticSeverityError,
-          "couldn't start parsing (no persistent data)");
+          lldb::eSeverityError, "couldn't start parsing (no persistent data)");
       return false;
     }
   } else {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "error: couldn't start parsing (no target)");
     return false;
   }
@@ -391,12 +383,11 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
     // The error stream already contains several Clang diagnostics that might
     // be either errors or warnings, so just print them all as one remark
     // diagnostic to prevent that the message starts with "error: error:".
-    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
-                                 error_stream.GetString());
+    diagnostic_manager.PutString(lldb::eSeverityInfo, error_stream.GetString());
     return;
   }
 
-  diagnostic_manager.PutString(eDiagnosticSeverityError,
+  diagnostic_manager.PutString(lldb::eSeverityError,
                                "Unknown error while loading modules needed for "
                                "current compilation unit.");
 }
@@ -405,11 +396,9 @@ ClangExpressionSourceCode::WrapKind ClangUserExpression::GetWrapKind() const {
   assert(m_options.GetExecutionPolicy() != eExecutionPolicyTopLevel &&
          "Top level expressions aren't wrapped.");
   using Kind = ClangExpressionSourceCode::WrapKind;
-  if (m_in_cplusplus_method) {
-    if (m_in_static_method)
-      return Kind::CppStaticMemberFunction;
+  if (m_in_cplusplus_method)
     return Kind::CppMemberFunction;
-  } else if (m_in_objectivec_method) {
+  else if (m_in_objectivec_method) {
     if (m_in_static_method)
       return Kind::ObjCStaticMethod;
     return Kind::ObjCInstanceMethod;
@@ -433,7 +422,7 @@ void ClangUserExpression::CreateSourceCode(
 
     if (!m_source_code->GetText(m_transformed_text, exe_ctx, !m_ctx_obj,
                                 for_completion, modules_to_import)) {
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
+      diagnostic_manager.PutString(lldb::eSeverityError,
                                    "couldn't construct expression body");
       return;
     }
@@ -465,14 +454,14 @@ static bool SupportsCxxModuleImport(lldb::LanguageType language) {
 /// Utility method that puts a message into the expression log and
 /// returns an invalid module configuration.
 static CppModuleConfiguration LogConfigError(const std::string &msg) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "[C++ module config] {0}", msg);
   return CppModuleConfiguration();
 }
 
 CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
                                        ExecutionContext &exe_ctx) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   // Don't do anything if this is not a C++ module configuration.
   if (!SupportsCxxModuleImport(language))
@@ -497,18 +486,18 @@ CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
 
   // Build a list of files we need to analyze to build the configuration.
   FileSpecList files;
-  for (const FileSpec &f : sc.comp_unit->GetSupportFiles())
-    files.AppendIfUnique(f);
+  for (auto &f : sc.comp_unit->GetSupportFiles())
+    files.AppendIfUnique(f->Materialize());
   // We also need to look at external modules in the case of -gmodules as they
   // contain the support files for libc++ and the C library.
   llvm::DenseSet<SymbolFile *> visited_symbol_files;
   sc.comp_unit->ForEachExternalModule(
       visited_symbol_files, [&files](Module &module) {
         for (std::size_t i = 0; i < module.GetNumCompileUnits(); ++i) {
-          const FileSpecList &support_files =
+          const SupportFileList &support_files =
               module.GetCompileUnitAtIndex(i)->GetSupportFiles();
-          for (const FileSpec &f : support_files) {
-            files.AppendIfUnique(f);
+          for (auto &f : support_files) {
+            files.AppendIfUnique(f->Materialize());
           }
         }
         return false;
@@ -517,7 +506,7 @@ CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
   LLDB_LOG(log, "[C++ module config] Found {0} support files to analyze",
            files.GetSize());
   if (log && log->GetVerbose()) {
-    for (const FileSpec &f : files)
+    for (auto &f : files)
       LLDB_LOGV(log, "[C++ module config] Analyzing support file: {0}",
                 f.GetPath());
   }
@@ -525,7 +514,7 @@ CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
   // Try to create a configuration from the files. If there is no valid
   // configuration possible with the files, this just returns an invalid
   // configuration.
-  return CppModuleConfiguration(files);
+  return CppModuleConfiguration(files, target->GetArchitecture().GetTriple());
 }
 
 bool ClangUserExpression::PrepareForParsing(
@@ -540,7 +529,7 @@ bool ClangUserExpression::PrepareForParsing(
   ScanContext(exe_ctx, err);
 
   if (!err.Success()) {
-    diagnostic_manager.PutString(eDiagnosticSeverityWarning, err.AsCString());
+    diagnostic_manager.PutString(lldb::eSeverityWarning, err.AsCString());
   }
 
   ////////////////////////////////////
@@ -562,9 +551,9 @@ bool ClangUserExpression::PrepareForParsing(
 }
 
 bool ClangUserExpression::TryParse(
-    DiagnosticManager &diagnostic_manager, ExecutionContextScope *exe_scope,
-    ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
-    bool keep_result_in_memory, bool generate_debug_info) {
+    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+    lldb_private::ExecutionPolicy execution_policy, bool keep_result_in_memory,
+    bool generate_debug_info) {
   m_materializer_up = std::make_unique<Materializer>();
 
   ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
@@ -573,7 +562,7 @@ bool ClangUserExpression::TryParse(
 
   if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "current process state is unsuitable for expression parsing");
     return false;
   }
@@ -583,7 +572,8 @@ bool ClangUserExpression::TryParse(
   }
 
   m_parser = std::make_unique<ClangExpressionParser>(
-      exe_scope, *this, generate_debug_info, m_include_directories, m_filename);
+      exe_ctx.GetBestExecutionContextScope(), *this, generate_debug_info,
+      m_include_directories, m_filename);
 
   unsigned num_errors = m_parser->Parse(diagnostic_manager);
 
@@ -619,9 +609,9 @@ bool ClangUserExpression::TryParse(
     if (!jit_error.Success()) {
       const char *error_cstr = jit_error.AsCString();
       if (error_cstr && error_cstr[0])
-        diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
+        diagnostic_manager.PutString(lldb::eSeverityError, error_cstr);
       else
-        diagnostic_manager.PutString(eDiagnosticSeverityError,
+        diagnostic_manager.PutString(lldb::eSeverityError,
                                      "expression can't be interpreted or run");
       return false;
     }
@@ -630,9 +620,10 @@ bool ClangUserExpression::TryParse(
 }
 
 void ClangUserExpression::SetupCppModuleImports(ExecutionContext &exe_ctx) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
-  CppModuleConfiguration module_config = GetModuleConfig(m_language, exe_ctx);
+  CppModuleConfiguration module_config =
+      GetModuleConfig(m_language.AsLanguageType(), exe_ctx);
   m_imported_cpp_modules = module_config.GetImportedModules();
   m_include_directories = module_config.GetIncludeDirs();
 
@@ -656,7 +647,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 lldb_private::ExecutionPolicy execution_policy,
                                 bool keep_result_in_memory,
                                 bool generate_debug_info) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (!PrepareForParsing(diagnostic_manager, exe_ctx, /*for_completion*/ false))
     return false;
@@ -670,7 +661,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   Target *target = exe_ctx.GetTargetPtr();
 
   if (!target) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError, "invalid target");
+    diagnostic_manager.PutString(lldb::eSeverityError, "invalid target");
     return false;
   }
 
@@ -678,15 +669,8 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   // Parse the expression
   //
 
-  Process *process = exe_ctx.GetProcessPtr();
-  ExecutionContextScope *exe_scope = process;
-
-  if (!exe_scope)
-    exe_scope = exe_ctx.GetTargetPtr();
-
-  bool parse_success = TryParse(diagnostic_manager, exe_scope, exe_ctx,
-                                execution_policy, keep_result_in_memory,
-                                generate_debug_info);
+  bool parse_success = TryParse(diagnostic_manager, exe_ctx, execution_policy,
+                                keep_result_in_memory, generate_debug_info);
   // If the expression failed to parse, check if retrying parsing with a loaded
   // C++ module is possible.
   if (!parse_success && shouldRetryWithCppModule(*target, execution_policy)) {
@@ -694,15 +678,21 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     SetupCppModuleImports(exe_ctx);
     // If we did load any modules, then retry parsing.
     if (!m_imported_cpp_modules.empty()) {
+      // Create a dedicated diagnostic manager for the second parse attempt.
+      // These diagnostics are only returned to the caller if using the fallback
+      // actually succeeded in getting the expression to parse. This prevents
+      // that module-specific issues regress diagnostic quality with the
+      // fallback mode.
+      DiagnosticManager retry_manager;
       // The module imports are injected into the source code wrapper,
       // so recreate those.
-      CreateSourceCode(diagnostic_manager, exe_ctx, m_imported_cpp_modules,
+      CreateSourceCode(retry_manager, exe_ctx, m_imported_cpp_modules,
                        /*for_completion*/ false);
-      // Clear the error diagnostics from the previous parse attempt.
-      diagnostic_manager.Clear();
-      parse_success = TryParse(diagnostic_manager, exe_scope, exe_ctx,
-                               execution_policy, keep_result_in_memory,
-                               generate_debug_info);
+      parse_success = TryParse(retry_manager, exe_ctx, execution_policy,
+                               keep_result_in_memory, generate_debug_info);
+      // Return the parse diagnostics if we were successful.
+      if (parse_success)
+        diagnostic_manager = std::move(retry_manager);
     }
   }
   if (!parse_success)
@@ -715,11 +705,9 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     if (!static_init_error.Success()) {
       const char *error_cstr = static_init_error.AsCString();
       if (error_cstr && error_cstr[0])
-        diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                  "%s\n",
-                                  error_cstr);
+        diagnostic_manager.Printf(lldb::eSeverityError, "%s\n", error_cstr);
       else
-        diagnostic_manager.PutString(eDiagnosticSeverityError,
+        diagnostic_manager.PutString(lldb::eSeverityError,
                                      "couldn't run static initializers\n");
       return false;
     }
@@ -743,7 +731,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     if (register_execution_unit) {
       if (auto *persistent_state =
               exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(
-                  m_language))
+                  m_language.AsLanguageType()))
         persistent_state->RegisterExecutionUnit(m_execution_unit_sp);
     }
   }
@@ -754,13 +742,14 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     if (jit_module_sp) {
       ConstString const_func_name(FunctionName());
       FileSpec jit_file;
-      jit_file.GetFilename() = const_func_name;
+      jit_file.SetFilename(const_func_name);
       jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
       m_jit_module_wp = jit_module_sp;
       target->GetImages().Append(jit_module_sp);
     }
   }
 
+  Process *process = exe_ctx.GetProcessPtr();
   if (process && m_jit_start_addr != LLDB_INVALID_ADDRESS)
     m_jit_process_wp = lldb::ProcessWP(process->shared_from_this());
   return true;
@@ -808,7 +797,7 @@ static void AbsPosToLineColumnPos(size_t abs_pos, llvm::StringRef code,
 bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
                                    CompletionRequest &request,
                                    unsigned complete_pos) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   // We don't want any visible feedback when completing an expression. Mostly
   // because the results we get from an incomplete invocation are probably not
@@ -832,7 +821,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
 
   if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "current process state is unsuitable for expression parsing");
 
     return false;
@@ -842,13 +831,8 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
     DeclMap()->SetLookupsEnabled(true);
   }
 
-  Process *process = exe_ctx.GetProcessPtr();
-  ExecutionContextScope *exe_scope = process;
-
-  if (!exe_scope)
-    exe_scope = exe_ctx.GetTargetPtr();
-
-  ClangExpressionParser parser(exe_scope, *this, false);
+  ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this,
+                               false);
 
   // We have to find the source code location where the user text is inside
   // the transformed expression code. When creating the transformed text, we
@@ -859,7 +843,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   // The line and column of the user expression inside the transformed source
   // code.
   unsigned user_expr_line, user_expr_column;
-  if (m_user_expression_start_pos.hasValue())
+  if (m_user_expression_start_pos)
     AbsPosToLineColumnPos(*m_user_expression_start_pos, m_transformed_text,
                           user_expr_line, user_expr_column);
   else
@@ -871,6 +855,33 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   parser.Complete(request, user_expr_line, completion_column, complete_pos);
 
   return true;
+}
+
+lldb::addr_t ClangUserExpression::GetCppObjectPointer(
+    lldb::StackFrameSP frame_sp, llvm::StringRef object_name, Status &err) {
+  auto valobj_sp =
+      GetObjectPointerValueObject(std::move(frame_sp), object_name, err);
+
+  // We're inside a C++ class method. This could potentially be an unnamed
+  // lambda structure. If the lambda captured a "this", that should be
+  // the object pointer.
+  if (auto thisChildSP = valobj_sp->GetChildMemberWithName("this")) {
+    valobj_sp = thisChildSP;
+  }
+
+  if (!err.Success() || !valobj_sp.get())
+    return LLDB_INVALID_ADDRESS;
+
+  lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+
+  if (ret == LLDB_INVALID_ADDRESS) {
+    err.SetErrorStringWithFormatv(
+        "Couldn't load '{0}' because its value couldn't be evaluated",
+        object_name);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  return ret;
 }
 
 bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
@@ -885,18 +896,17 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
     if (!frame_sp)
       return true;
 
-    ConstString object_name;
-
-    if (m_in_cplusplus_method) {
-      object_name.SetCString("this");
-    } else if (m_in_objectivec_method) {
-      object_name.SetCString("self");
-    } else {
+    if (!m_in_cplusplus_method && !m_in_objectivec_method) {
       diagnostic_manager.PutString(
-          eDiagnosticSeverityError,
+          lldb::eSeverityError,
           "need object pointer but don't know the language");
       return false;
     }
+
+    static constexpr llvm::StringLiteral g_cplusplus_object_name("this");
+    static constexpr llvm::StringLiteral g_objc_object_name("self");
+    llvm::StringRef object_name =
+        m_in_cplusplus_method ? g_cplusplus_object_name : g_objc_object_name;
 
     Status object_ptr_error;
 
@@ -907,24 +917,30 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
           address_type != eAddressTypeLoad)
         object_ptr_error.SetErrorString("Can't get context object's "
                                         "debuggee address");
-    } else
-      object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
+    } else {
+      if (m_in_cplusplus_method) {
+        object_ptr =
+            GetCppObjectPointer(frame_sp, object_name, object_ptr_error);
+      } else {
+        object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
+      }
+    }
 
     if (!object_ptr_error.Success()) {
-      exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Printf(
-          "warning: `%s' is not accessible (substituting 0)\n",
-          object_name.AsCString());
+      exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Format(
+          "warning: `{0}' is not accessible (substituting 0). {1}\n",
+          object_name, object_ptr_error.AsCString());
       object_ptr = 0;
     }
 
     if (m_in_objectivec_method) {
-      ConstString cmd_name("_cmd");
+      static constexpr llvm::StringLiteral cmd_name("_cmd");
 
       cmd_ptr = GetObjectPointer(frame_sp, cmd_name, object_ptr_error);
 
       if (!object_ptr_error.Success()) {
         diagnostic_manager.Printf(
-            eDiagnosticSeverityWarning,
+            lldb::eSeverityWarning,
             "couldn't get cmd pointer (substituting NULL): %s",
             object_ptr_error.AsCString());
         cmd_ptr = 0;
@@ -947,6 +963,8 @@ lldb::ExpressionVariableSP ClangUserExpression::GetResultAfterDematerialization(
     ExecutionContextScope *exe_scope) {
   return m_result_delegate.GetVariable();
 }
+
+char ClangUserExpression::ClangUserExpressionHelper::ID;
 
 void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx,

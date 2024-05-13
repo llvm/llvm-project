@@ -15,21 +15,21 @@
     %retval = alloca i32, align 4
     %mul = alloca i32, align 4
     %mul1 = mul nsw i32 %a, %b
-    store i32 %mul1, i32* %mul, align 4
-    %0 = load i32, i32* %mul, align 4
+    store i32 %mul1, ptr %mul, align 4
+    %0 = load i32, ptr %mul, align 4
     %cmp = icmp sle i32 %0, 0
     br i1 %cmp, label %if.then, label %if.end
 
   if.then:                                          ; preds = %entry
-    store i32 42, i32* %retval, align 4
+    store i32 42, ptr %retval, align 4
     br label %return
 
   if.end:                                           ; preds = %entry
-    store i32 1, i32* %retval, align 4
+    store i32 1, ptr %retval, align 4
     br label %return
 
   return:                                           ; preds = %if.end, %if.then
-    %1 = load i32, i32* %retval, align 4
+    %1 = load i32, ptr %retval, align 4
     ret i32 %1
   }
 
@@ -81,22 +81,22 @@ body:             |
     %1 = COPY $r1
     %0 = COPY $r0
     %2, $cpsr = tMUL %0, %1, 14, $noreg
-    tSTRspi %2, %stack.1.mul, 0, 14, $noreg :: (store 4 into %ir.mul)
+    tSTRspi %2, %stack.1.mul, 0, 14, $noreg :: (store (s32) into %ir.mul)
     tCMPi8 %2, 0, 14, $noreg, implicit-def $cpsr
     tBcc %bb.2.if.end, 12, $cpsr
     tB %bb.1.if.then, 14, $noreg
 
   bb.1.if.then:
     %4, $cpsr = tMOVi8 42, 14, $noreg
-    tSTRspi killed %4, %stack.0.retval, 0, 14, $noreg :: (store 4 into %ir.retval)
+    tSTRspi killed %4, %stack.0.retval, 0, 14, $noreg :: (store (s32) into %ir.retval)
     tB %bb.3.return, 14, $noreg
 
   bb.2.if.end:
     %3, $cpsr = tMOVi8 1, 14, $noreg
-    tSTRspi killed %3, %stack.0.retval, 0, 14, $noreg :: (store 4 into %ir.retval)
+    tSTRspi killed %3, %stack.0.retval, 0, 14, $noreg :: (store (s32) into %ir.retval)
 
   bb.3.return:
-    %5 = tLDRspi %stack.0.retval, 0, 14, $noreg :: (dereferenceable load 4 from %ir.retval)
+    %5 = tLDRspi %stack.0.retval, 0, 14, $noreg :: (dereferenceable load (s32) from %ir.retval)
     $r0 = COPY %5
     tBX_RET 14, $noreg, implicit $r0
 

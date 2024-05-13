@@ -87,6 +87,9 @@ public:
   /// Return the current Hit Count.
   uint32_t GetHitCount() const { return m_hit_counter.GetValue(); }
 
+  /// Resets the current Hit Count.
+  void ResetHitCount() { m_hit_counter.Reset(); }
+
   /// Return the current Ignore Count.
   ///
   /// \return
@@ -202,8 +205,8 @@ public:
   /// hasn't been done already
   ///
   /// \return
-  ///    A pointer to the breakpoint options.
-  BreakpointOptions *GetLocationOptions();
+  ///    A reference to the breakpoint options.
+  BreakpointOptions &GetLocationOptions();
 
   /// Use this to access breakpoint options from this breakpoint location.
   /// This will return the options that have a setting for the specified
@@ -214,10 +217,10 @@ public:
   /// \return
   ///     A pointer to the containing breakpoint's options if this
   ///     location doesn't have its own copy.
-  const BreakpointOptions *GetOptionsSpecifyingKind(
-      BreakpointOptions::OptionKind kind) const;
+  const BreakpointOptions &
+  GetOptionsSpecifyingKind(BreakpointOptions::OptionKind kind) const;
 
-  bool ValidForThisThread(Thread *thread);
+  bool ValidForThisThread(Thread &thread);
 
   /// Invoke the callback action when the breakpoint is hit.
   ///
@@ -310,6 +313,17 @@ private:
 
   void UndoBumpHitCount();
 
+  /// Updates the thread ID internally.
+  ///
+  /// This method was created to handle actually mutating the thread ID
+  /// internally because SetThreadID broadcasts an event in addition to mutating
+  /// state. The constructor calls this instead of SetThreadID to avoid the
+  /// broadcast.
+  ///
+  /// \param[in] thread_id
+  ///   The new thread ID.
+  void SetThreadIDInternal(lldb::tid_t thread_id);
+
   // Constructors and Destructors
   //
   // Only the Breakpoint can make breakpoint locations, and it owns them.
@@ -334,7 +348,6 @@ private:
                      bool check_for_resolver = true);
 
   // Data members:
-  bool m_being_created;
   bool m_should_resolve_indirect_functions;
   bool m_is_reexported;
   bool m_is_indirect;

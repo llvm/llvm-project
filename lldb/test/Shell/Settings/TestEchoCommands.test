@@ -1,4 +1,8 @@
 # RUN: %lldb -x -b -o 'settings set interpreter.echo-comment-commands true'  -s %S/Inputs/EchoCommandsTest.in | FileCheck %S/Inputs/EchoCommandsAll.out
 # RUN: %lldb -x -b -o 'settings set interpreter.echo-comment-commands false' -s %S/Inputs/EchoCommandsTest.in | FileCheck %S/Inputs/EchoCommandsNoComments.out
 # RUN: %lldb -x -b -o 'settings set interpreter.echo-commands false'         -s %S/Inputs/EchoCommandsTest.in | FileCheck %S/Inputs/EchoCommandsNone.out
-# RUN: %lldb -x -b --source-quietly                                          -s %S/Inputs/EchoCommandsTest.in | FileCheck %S/Inputs/EchoCommandsQuiet.out
+
+RUN: echo start >%t.file
+RUN: %lldb -x -b --source-quietly -s %S/Inputs/EchoCommandsTest.in >>%t.file
+RUN: echo done >>%t.file
+RUN: FileCheck  %S/Inputs/EchoCommandsQuiet.out <%t.file

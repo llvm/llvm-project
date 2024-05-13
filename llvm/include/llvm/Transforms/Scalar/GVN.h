@@ -17,10 +17,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -28,6 +26,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -39,11 +38,11 @@ class AssumptionCache;
 class BasicBlock;
 class BranchInst;
 class CallInst;
-class Constant;
 class ExtractValueInst;
 class Function;
 class FunctionPass;
-class IntrinsicInst;
+class GetElementPtrInst;
+class ImplicitControlFlowTracking;
 class LoadInst;
 class LoopInfo;
 class MemDepResult;
@@ -57,7 +56,7 @@ class TargetLibraryInfo;
 class Value;
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
-namespace gvn LLVM_LIBRARY_VISIBILITY {
+namespace LLVM_LIBRARY_VISIBILITY gvn {
 
 struct AvailableValue;
 struct AvailableValueInBlock;
@@ -73,11 +72,11 @@ class GVNLegacyPass;
 /// Intended use is to create a default object, modify parameters with
 /// additional setters and then pass it to GVN.
 struct GVNOptions {
-  Optional<bool> AllowPRE = None;
-  Optional<bool> AllowLoadPRE = None;
-  Optional<bool> AllowLoadInLoopPRE = None;
-  Optional<bool> AllowLoadPRESplitBackedge = None;
-  Optional<bool> AllowMemDep = None;
+  std::optional<bool> AllowPRE;
+  std::optional<bool> AllowLoadPRE;
+  std::optional<bool> AllowLoadInLoopPRE;
+  std::optional<bool> AllowLoadPRESplitBackedge;
+  std::optional<bool> AllowMemDep;
 
   GVNOptions() = default;
 
@@ -115,16 +114,19 @@ struct GVNOptions {
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
-class GVN : public PassInfoMixin<GVN> {
+class GVNPass : public PassInfoMixin<GVNPass> {
   GVNOptions Options;
 
 public:
   struct Expression;
 
-  GVN(GVNOptions Options = {}) : Options(Options) {}
+  GVNPass(GVNOptions Options = {}) : Options(Options) {}
 
   /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
@@ -177,13 +179,14 @@ public:
     Expression createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
                              Value *LHS, Value *RHS);
     Expression createExtractvalueExpr(ExtractValueInst *EI);
+    Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                              uint32_t Num, GVN &Gvn);
+                              uint32_t Num, GVNPass &Gvn);
     bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
-                          const BasicBlock *PhiBlock, GVN &Gvn);
+                          const BasicBlock *PhiBlock, GVNPass &Gvn);
     std::pair<uint32_t, bool> assignExpNewValueNum(Expression &exp);
-    bool areAllValsInBB(uint32_t num, const BasicBlock *BB, GVN &Gvn);
+    bool areAllValsInBB(uint32_t num, const BasicBlock *BB, GVNPass &Gvn);
 
   public:
     ValueTable();
@@ -197,7 +200,7 @@ public:
     uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
                             Value *LHS, Value *RHS);
     uint32_t phiTranslate(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                          uint32_t Num, GVN &Gvn);
+                          uint32_t Num, GVNPass &Gvn);
     void eraseTranslateCacheEntry(uint32_t Num, const BasicBlock &CurrBlock);
     bool exists(Value *V) const;
     void add(Value *V, uint32_t num);
@@ -229,13 +232,67 @@ private:
 
   /// A mapping from value numbers to lists of Value*'s that
   /// have that value number.  Use findLeader to query it.
-  struct LeaderTableEntry {
-    Value *Val;
-    const BasicBlock *BB;
-    LeaderTableEntry *Next;
+  class LeaderMap {
+  public:
+    struct LeaderTableEntry {
+      Value *Val;
+      const BasicBlock *BB;
+    };
+
+  private:
+    struct LeaderListNode {
+      LeaderTableEntry Entry;
+      LeaderListNode *Next;
+    };
+    DenseMap<uint32_t, LeaderListNode> NumToLeaders;
+    BumpPtrAllocator TableAllocator;
+
+  public:
+    class leader_iterator {
+      const LeaderListNode *Current;
+
+    public:
+      using iterator_category = std::forward_iterator_tag;
+      using value_type = const LeaderTableEntry;
+      using difference_type = std::ptrdiff_t;
+      using pointer = value_type *;
+      using reference = value_type &;
+
+      leader_iterator(const LeaderListNode *C) : Current(C) {}
+      leader_iterator &operator++() {
+        assert(Current && "Dereferenced end of leader list!");
+        Current = Current->Next;
+        return *this;
+      }
+      bool operator==(const leader_iterator &Other) const {
+        return Current == Other.Current;
+      }
+      bool operator!=(const leader_iterator &Other) const {
+        return Current != Other.Current;
+      }
+      reference operator*() const { return Current->Entry; }
+    };
+
+    iterator_range<leader_iterator> getLeaders(uint32_t N) {
+      auto I = NumToLeaders.find(N);
+      if (I == NumToLeaders.end()) {
+        return iterator_range(leader_iterator(nullptr),
+                              leader_iterator(nullptr));
+      }
+
+      return iterator_range(leader_iterator(&I->second),
+                            leader_iterator(nullptr));
+    }
+
+    void insert(uint32_t N, Value *V, const BasicBlock *BB);
+    void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
+    void verifyRemoved(const Value *Inst) const;
+    void clear() {
+      NumToLeaders.clear();
+      TableAllocator.Reset();
+    }
   };
-  DenseMap<uint32_t, LeaderTableEntry> LeaderTable;
-  BumpPtrAllocator TableAllocator;
+  LeaderMap LeaderTable;
 
   // Block-local map of equivalent values to their leader, does not
   // propagate to any successors. Entries added mid-block are applied
@@ -258,53 +315,8 @@ private:
 
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                const TargetLibraryInfo &RunTLI, AAResults &RunAA,
-               MemoryDependenceResults *RunMD, LoopInfo *LI,
+               MemoryDependenceResults *RunMD, LoopInfo &LI,
                OptimizationRemarkEmitter *ORE, MemorySSA *MSSA = nullptr);
-
-  /// Push a new Value to the LeaderTable onto the list for its value number.
-  void addToLeaderTable(uint32_t N, Value *V, const BasicBlock *BB) {
-    LeaderTableEntry &Curr = LeaderTable[N];
-    if (!Curr.Val) {
-      Curr.Val = V;
-      Curr.BB = BB;
-      return;
-    }
-
-    LeaderTableEntry *Node = TableAllocator.Allocate<LeaderTableEntry>();
-    Node->Val = V;
-    Node->BB = BB;
-    Node->Next = Curr.Next;
-    Curr.Next = Node;
-  }
-
-  /// Scan the list of values corresponding to a given
-  /// value number, and remove the given instruction if encountered.
-  void removeFromLeaderTable(uint32_t N, Instruction *I, BasicBlock *BB) {
-    LeaderTableEntry *Prev = nullptr;
-    LeaderTableEntry *Curr = &LeaderTable[N];
-
-    while (Curr && (Curr->Val != I || Curr->BB != BB)) {
-      Prev = Curr;
-      Curr = Curr->Next;
-    }
-
-    if (!Curr)
-      return;
-
-    if (Prev) {
-      Prev->Next = Curr->Next;
-    } else {
-      if (!Curr->Next) {
-        Curr->Val = nullptr;
-        Curr->BB = nullptr;
-      } else {
-        LeaderTableEntry *Next = Curr->Next;
-        Curr->Val = Next->Val;
-        Curr->BB = Next->BB;
-        Curr->Next = Next->Next;
-      }
-    }
-  }
 
   // List of critical edges to be split between iterations.
   SmallVector<std::pair<Instruction *, unsigned>, 4> toSplit;
@@ -315,10 +327,9 @@ private:
   bool processAssumeIntrinsic(AssumeInst *II);
 
   /// Given a local dependency (Def or Clobber) determine if a value is
-  /// available for the load.  Returns true if an value is known to be
-  /// available and populates Res.  Returns false otherwise.
-  bool AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
-                               Value *Address, gvn::AvailableValue &Res);
+  /// available for the load.
+  std::optional<gvn::AvailableValue>
+  AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo, Value *Address);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
@@ -326,6 +337,11 @@ private:
   void AnalyzeLoadAvailability(LoadInst *Load, LoadDepVect &Deps,
                                AvailValInBlkVect &ValuesPerBlock,
                                UnavailBlkVect &UnavailableBlocks);
+
+  /// Given a critical edge from Pred to LoadBB, find a load instruction
+  /// which is identical to Load from another successor of Pred.
+  LoadInst *findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
+                                    LoadInst *Load);
 
   bool PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
                       UnavailBlkVect &UnavailableBlocks);
@@ -340,7 +356,8 @@ private:
   /// AvailableLoads (connected by Phis if needed).
   void eliminatePartiallyRedundantLoad(
       LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
-      MapVector<BasicBlock *, Value *> &AvailableLoads);
+      MapVector<BasicBlock *, Value *> &AvailableLoads,
+      MapVector<BasicBlock *, LoadInst *> *CriticalEdgePredAndLoad);
 
   // Other helper routines
   bool processInstruction(Instruction *I);
@@ -353,6 +370,7 @@ private:
                                  BasicBlock *Curr, unsigned int ValNo);
   Value *findLeader(const BasicBlock *BB, uint32_t num);
   void cleanupGlobalSets();
+  void removeInstruction(Instruction *I);
   void verifyRemoved(const Instruction *I) const;
   bool splitCriticalEdges();
   BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);

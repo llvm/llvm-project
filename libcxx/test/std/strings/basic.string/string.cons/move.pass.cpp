@@ -10,7 +10,7 @@
 
 // <string>
 
-// basic_string(basic_string<charT,traits,Allocator>&& str);
+// basic_string(basic_string<charT,traits,Allocator>&& str); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -18,36 +18,44 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S>
-void
-test(S s0)
-{
-    S s1 = s0;
-    S s2 = std::move(s0);
-    LIBCPP_ASSERT(s2.__invariants());
-    LIBCPP_ASSERT(s0.__invariants());
-    assert(s2 == s1);
-    assert(s2.capacity() >= s2.size());
-    assert(s2.get_allocator() == s1.get_allocator());
+TEST_CONSTEXPR_CXX20 void test(S s0) {
+  S s1 = s0;
+  S s2 = std::move(s0);
+  LIBCPP_ASSERT(s2.__invariants());
+  LIBCPP_ASSERT(s0.__invariants());
+  assert(s2 == s1);
+  assert(s2.capacity() >= s2.size());
+  assert(s2.get_allocator() == s1.get_allocator());
+  LIBCPP_ASSERT(is_string_asan_correct(s0));
+  LIBCPP_ASSERT(is_string_asan_correct(s1));
+  LIBCPP_ASSERT(is_string_asan_correct(s2));
 }
 
-int main(int, char**)
-{
-    {
-    typedef test_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(A(3)));
-    test(S("1", A(5)));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A(7)));
-    }
-    {
-    typedef min_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(A{}));
-    test(S("1", A()));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()));
-    }
+template <class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string(Alloc const& a) {
+  using S = std::basic_string<char, std::char_traits<char>, Alloc>;
+  test(S(Alloc(a)));
+  test(S("1", Alloc(a)));
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a)));
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string(std::allocator<char>());
+  test_string(test_allocator<char>());
+  test_string(test_allocator<char>(3));
+  test_string(min_allocator<char>());
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
 
   return 0;
 }

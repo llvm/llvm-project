@@ -6,15 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-stdin
+// QEMU does not detect EOF, when reading from stdin
+// "echo -n" suppresses any characters after the output and so the test hangs.
+// https://gitlab.com/qemu-project/qemu/-/issues/1963
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
+// This test hangs on Android devices that lack shell_v2, which was added in
+// Android N (API 24).
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME && android-device-api={{2[1-3]}}
 
 // <iostream>
 
 // istream cin;
 
-// FILE_DEPENDENCIES: ../send-stdin.sh
 // RUN: %{build}
-// RUN: %{exec} bash send-stdin.sh "%t.exe" "1234"
+// RUN: echo -n 1234 > %t.input
+// RUN: %{exec} %t.exe < %t.input
 
 #include <iostream>
 #include <cassert>

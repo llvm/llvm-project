@@ -124,6 +124,11 @@ public:
     return Raw;
   }
 
+  MemoryBufferRef getBinary() const {
+    assert(getKind() == Type::Binary);
+    return MemoryBufferRef(Raw, "");
+  }
+
   /// Get an ArrayDocNode for an array node. If Convert, convert the node to an
   /// array node if necessary.
   ArrayDocNode &getArray(bool Convert = false) {
@@ -201,6 +206,7 @@ public:
   /// that restriction.
   DocNode &operator=(const char *Val) { return *this = StringRef(Val); }
   DocNode &operator=(StringRef Val);
+  DocNode &operator=(MemoryBufferRef Val);
   DocNode &operator=(bool Val);
   DocNode &operator=(int Val);
   DocNode &operator=(unsigned Val);
@@ -218,7 +224,7 @@ private:
 /// A DocNode that is a map.
 class MapDocNode : public DocNode {
 public:
-  MapDocNode() {}
+  MapDocNode() = default;
   MapDocNode(DocNode &N) : DocNode(N) { assert(getKind() == Type::Map); }
 
   // Map access methods.
@@ -248,7 +254,7 @@ public:
 /// A DocNode that is an array.
 class ArrayDocNode : public DocNode {
 public:
-  ArrayDocNode() {}
+  ArrayDocNode() = default;
   ArrayDocNode(DocNode &N) : DocNode(N) { assert(getKind() == Type::Array); }
 
   // Array access methods.
@@ -366,6 +372,17 @@ public:
   /// string must remain valid for the lifetime of the Document.
   DocNode getNode(const char *V, bool Copy = false) {
     return getNode(StringRef(V), Copy);
+  }
+
+  /// Create a Binary node associated with this Document. If !Copy, the passed
+  /// buffer must remain valid for the lifetime of the Document.
+  DocNode getNode(MemoryBufferRef V, bool Copy = false) {
+    auto Raw = V.getBuffer();
+    if (Copy)
+      Raw = addString(Raw);
+    auto N = DocNode(&KindAndDocs[size_t(Type::Binary)]);
+    N.Raw = Raw;
+    return N;
   }
 
   /// Create an empty Map node associated with this Document.

@@ -89,8 +89,8 @@ entry:
   %l1 = alloca i32, align 4
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
-  %l1.0.l1.0. = load volatile i32, i32* %l1, align 4
-  %add1 = add nsw i32 %add, %l1.0.l1.0.
+  %l1.0.l1.0. = load volatile i32, ptr %l1, align 4
+  %add1 = or i32 %add, %l1.0.l1.0.
   %call = tail call i32 @g()
   %add2 = add nsw i32 %add1, %call
   ret i32 %add2
@@ -148,20 +148,20 @@ entry:
   %l1 = alloca i32, align 4
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
-  %l1.0.l1.0. = load volatile i32, i32* %l1, align 4
+  %l1.0.l1.0. = load volatile i32, ptr %l1, align 4
   %add1 = add nsw i32 %add, %l1.0.l1.0.
   ret i32 %add1
 }
 ; CHECK-LABEL: novla_nodynamicrealign_nocall
 ;   Check that space is reserved for one local variable on the stack.
-; CHECK:	sub	sp, sp, #16             // =16
+; CHECK:	sub	sp, sp, #16
 ;   Check correct access to arguments passed on the stack, through stack pointer
 ; CHECK: ldr	d[[DARG:[0-9]+]], [sp, #40]
 ; CHECK: ldr	w[[IARG:[0-9]+]], [sp, #24]
 ;   Check correct access to local variable on the stack, through stack pointer
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [sp, #12]
 ;   Check epilogue:
-; CHECK: add	sp, sp, #16             // =16
+; CHECK: add	sp, sp, #16
 ; CHECK: ret
 
 
@@ -170,8 +170,8 @@ entry:
   %l1 = alloca i32, align 128
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
-  %l1.0.l1.0. = load volatile i32, i32* %l1, align 128
-  %add1 = add nsw i32 %add, %l1.0.l1.0.
+  %l1.0.l1.0. = load volatile i32, ptr %l1, align 128
+  %add1 = or i32 %add, %l1.0.l1.0.
   %call = tail call i32 @g()
   %add2 = add nsw i32 %add1, %call
   ret i32 %add2
@@ -241,7 +241,7 @@ entry:
   %l1 = alloca i32, align 128
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
-  %l1.0.l1.0. = load volatile i32, i32* %l1, align 128
+  %l1.0.l1.0. = load volatile i32, ptr %l1, align 128
   %add1 = add nsw i32 %add, %l1.0.l1.0.
   ret i32 %add1
 }
@@ -272,11 +272,11 @@ entry:
   %vla = alloca i32, i64 %0, align 4
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
-  %l1.0.l1.0. = load volatile i32, i32* %l1, align 4
-  %add1 = add nsw i32 %add, %l1.0.l1.0.
+  %l1.0.l1.0. = load volatile i32, ptr %l1, align 4
+  %add1 = or i32 %add, %l1.0.l1.0.
   %call = tail call i32 @g()
   %add2 = add nsw i32 %add1, %call
-  %1 = load volatile i32, i32* %vla, align 4, !tbaa !1
+  %1 = load volatile i32, ptr %vla, align 4, !tbaa !1
   %add3 = add nsw i32 %add2, %1
   ret i32 %add3
 }
@@ -297,16 +297,15 @@ entry:
 ; CHECK: .cfi_offset w20, -16
 ; CHECK: .cfi_offset w30, -24
 ; CHECK: .cfi_offset w29, -32
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+; CHECK: ubfiz	 x8, x0, #2, #32
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #56]
-;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
-; CHECK: mov	w9, w0
+; CHECK: add	 x8, x8, #15
+; CHECK: and	 x8, x8, #0x7fffffff0
 ; CHECK: mov	 x10, sp
-; CHECK: lsl	x9, x9, #2
-; CHECK: add	x9, x9, #15
-; CHECK: and	x9, x9, #0x7fffffff0
-; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through frame pointer
 ; CHECK: ldur	w[[ILOC:[0-9]+]], [x29, #-4]
@@ -329,9 +328,9 @@ entry:
   %vla = alloca i32, i64 %0, align 4
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
-  %l1.0.l1.0. = load volatile i32, i32* %l1, align 4
+  %l1.0.l1.0. = load volatile i32, ptr %l1, align 4
   %add1 = add nsw i32 %add, %l1.0.l1.0.
-  %1 = load volatile i32, i32* %vla, align 4, !tbaa !1
+  %1 = load volatile i32, ptr %vla, align 4, !tbaa !1
   %add2 = add nsw i32 %add1, %1
   ret i32 %add2
 }
@@ -343,18 +342,17 @@ entry:
 ;   Check that space is reserved on the stack for the local variable,
 ;   rounded up to a multiple of 16 to keep the stack pointer 16-byte aligned.
 ; CHECK: sub	sp, sp, #16
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+; CHECK: ubfiz	x8, x0, #2, #32
 ;   Check correctness of cfi pseudo-instructions
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #24]
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #40]
-;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
-; CHECK: mov	w9, w0
-; CHECK: mov	 x10, sp
-; CHECK: lsl	x9, x9, #2
-; CHECK: add	x9, x9, #15
-; CHECK: and	x9, x9, #0x7fffffff0
-; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
-; CHECK: mov	 sp, x[[VLASPTMP]]
+; CHECK: add	x8, x8, #15
+; CHECK: and	x8, x8, #0x7fffffff0
+; CHECK: mov	x10, sp
+; CHECK: sub	x[[VLASPTMP:[0-9]+]], x10, x8
+; CHECK: mov	sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through frame pointer
 ; CHECK: ldur	w[[ILOC:[0-9]+]], [x29, #-4]
 ;   Check correct accessing of the VLA variable through the base pointer
@@ -373,11 +371,11 @@ entry:
   %vla = alloca i32, i64 %0, align 4
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
-  %l1.0.l1.0. = load volatile i32, i32* %l1, align 128
-  %add1 = add nsw i32 %add, %l1.0.l1.0.
+  %l1.0.l1.0. = load volatile i32, ptr %l1, align 128
+  %add1 = or i32 %add, %l1.0.l1.0.
   %call = tail call i32 @g()
   %add2 = add nsw i32 %add1, %call
-  %1 = load volatile i32, i32* %vla, align 4, !tbaa !1
+  %1 = load volatile i32, ptr %vla, align 4, !tbaa !1
   %add3 = add nsw i32 %add2, %1
   ret i32 %add3
 }
@@ -394,7 +392,7 @@ entry:
 ;   bytes & the base pointer (x19) gets initialized to
 ;   this 128-byte aligned area for local variables &
 ;   spill slots
-; CHECK: sub	x9, sp, #80            // =80
+; CHECK: sub	x9, sp, #80
 ; CHECK: and	sp, x9, #0xffffffffffffff80
 ; CHECK: mov    x19, sp
 ;   Check correctness of cfi pseudo-instructions
@@ -404,17 +402,16 @@ entry:
 ; CHECK: .cfi_offset w21, -32
 ; CHECK: .cfi_offset w30, -40
 ; CHECK: .cfi_offset w29, -48
-;   Check correct access to arguments passed on the stack, through frame pointer
-; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #56]
-; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #72]
 ;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
 ;   and set-up of base pointer (x19).
-; CHECK: mov	w9, w0
+; CHECK: ubfiz	 x8, x0, #2, #32
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #56]
+; CHECK: ldr	 d[[DARG:[0-9]+]], [x29, #72]
+; CHECK: add	 x8, x8, #15
+; CHECK: and	 x8, x8, #0x7fffffff0
 ; CHECK: mov	 x10, sp
-; CHECK: lsl	x9, x9, #2
-; CHECK: add	x9, x9, #15
-; CHECK: and	x9, x9, #0x7fffffff0
-; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -451,17 +448,16 @@ entry:
 ; CHECK-MACHO: .cfi_offset w20, -32
 ; CHECK-MACHO: .cfi_offset w21, -40
 ; CHECK-MACHO: .cfi_offset w22, -48
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+;   and set-up of base pointer (x19).
+; CHECK-MACHO: ubfiz	 x8, x0, #2, #32
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
-;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
-;   and set-up of base pointer (x19).
-; CHECK-MACHO: mov	w9, w0
+; CHECK-MACHO: add	 x8, x8, #15
+; CHECK-MACHO: and	 x8, x8, #0x7fffffff0
 ; CHECK-MACHO: mov	 x10, sp
-; CHECK-MACHO: lsl	x9, x9, #2
-; CHECK-MACHO: add	x9, x9, #15
-; CHECK-MACHO: and	x9, x9, #0x7fffffff0
-; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK-MACHO: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -484,9 +480,9 @@ entry:
   %vla = alloca i32, i64 %0, align 4
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
-  %l1.0.l1.0. = load volatile i32, i32* %l1, align 128
+  %l1.0.l1.0. = load volatile i32, ptr %l1, align 128
   %add1 = add nsw i32 %add, %l1.0.l1.0.
-  %1 = load volatile i32, i32* %vla, align 4, !tbaa !1
+  %1 = load volatile i32, ptr %vla, align 4, !tbaa !1
   %add2 = add nsw i32 %add1, %1
   ret i32 %add2
 }
@@ -504,17 +500,16 @@ entry:
 ; CHECK: sub	x9, sp, #96
 ; CHECK: and	sp, x9, #0xffffffffffffff80
 ; CHECK: mov    x19, sp
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+;   and set-up of base pointer (x19).
+; CHECK: ubfiz	 x8, x0, #2, #32
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #56]
-;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
-;   and set-up of base pointer (x19).
-; CHECK: mov	w9, w0
+; CHECK: add	 x8, x8, #15
+; CHECK: and	 x8, x8, #0x7fffffff0
 ; CHECK: mov	 x10, sp
-; CHECK: lsl	x9, x9, #2
-; CHECK: add	x9, x9, #15
-; CHECK: and	x9, x9, #0x7fffffff0
-; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -539,17 +534,16 @@ entry:
 ; CHECK-MACHO: sub	x9, sp, #96
 ; CHECK-MACHO: and	sp, x9, #0xffffffffffffff80
 ; CHECK-MACHO: mov    x19, sp
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+;   and set-up of base pointer (x19).
+; CHECK-MACHO: ubfiz	 x8, x0, #2, #32
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
-;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
-;   and set-up of base pointer (x19).
-; CHECK-MACHO: mov	w9, w0
+; CHECK-MACHO: add 	 x8, x8, #15
+; CHECK-MACHO: and	 x8, x8, #0x7fffffff0
 ; CHECK-MACHO: mov	 x10, sp
-; CHECK-MACHO: lsl	x9, x9, #2
-; CHECK-MACHO: add	x9, x9, #15
-; CHECK-MACHO: and	x9, x9, #0x7fffffff0
-; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK-MACHO: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -570,9 +564,9 @@ entry:
   %vla = alloca i32, i64 %0, align 4
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
-  %l1.0.l1.0. = load volatile i32, i32* %l1, align 32768
+  %l1.0.l1.0. = load volatile i32, ptr %l1, align 32768
   %add1 = add nsw i32 %add, %l1.0.l1.0.
-  %1 = load volatile i32, i32* %vla, align 4, !tbaa !1
+  %1 = load volatile i32, ptr %vla, align 4, !tbaa !1
   %add2 = add nsw i32 %add1, %1
   ret i32 %add2
 }
@@ -590,17 +584,16 @@ entry:
 ; CHECK: sub	x9, sp, #7, lsl #12
 ; CHECK: and	sp, x9, #0xffffffffffff8000
 ; CHECK: mov    x19, sp
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+;   and set-up of base pointer (x19).
+; CHECK: ubfiz	 x8, x0, #2, #32
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #56]
-;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
-;   and set-up of base pointer (x19).
-; CHECK: mov	w9, w0
+; CHECK: add	 x8, x8, #15
+; CHECK: and	 x8, x8, #0x7fffffff0
 ; CHECK: mov	 x10, sp
-; CHECK: lsl	x9, x9, #2
-; CHECK: add	x9, x9, #15
-; CHECK: and	x9, x9, #0x7fffffff0
-; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -625,17 +618,16 @@ entry:
 ; CHECK-MACHO: sub	x9, sp, #7, lsl #12
 ; CHECK-MACHO: and	sp, x9, #0xffffffffffff8000
 ; CHECK-MACHO: mov    x19, sp
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+;   and set-up of base pointer (x19).
+; CHECK-MACHO: ubfiz	 x8, x0, #2, #32
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
-;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
-;   and set-up of base pointer (x19).
-; CHECK-MACHO: mov	w9, w0
+; CHECK-MACHO: add	 x8, x8, #15
+; CHECK-MACHO: and	 x8, x8, #0x7fffffff0
 ; CHECK-MACHO: mov	 x10, sp
-; CHECK-MACHO: lsl	x9, x9, #2
-; CHECK-MACHO: add	x9, x9, #15
-; CHECK-MACHO: and	x9, x9, #0x7fffffff0
-; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK-MACHO: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -647,13 +639,15 @@ entry:
 ; CHECK-MACHO: ldp	x20, x19, [sp], #32
 ; CHECK-MACHO: ret
 
+declare void @use(ptr)
 
-define void @realign_conditional(i1 %b) {
+define void @realign_conditional(i1 %b, ptr %p) {
 entry:
   br i1 %b, label %bb0, label %bb1
 
 bb0:
   %MyAlloca = alloca i8, i64 64, align 32
+  store ptr %MyAlloca, ptr %p
   br label %bb1
 
 bb1:
@@ -667,18 +661,20 @@ bb1:
 ; CHECK:  tbz  {{.*}} .[[LABEL:.*]]
 ; Stack is realigned in a non-entry BB.
 ; CHECK:  sub  [[REG:x[01-9]+]], sp, #64
-; CHECK:  and  sp, [[REG]], #0xffffffffffffffe0
+; CHECK:  and  [[REG]], [[REG]], #0xffffffffffffffe0
+; CHECK:  mov  sp, [[REG]]
 ; CHECK:  .[[LABEL]]:
 ; CHECK:  ret
 
 
-define void @realign_conditional2(i1 %b) {
+define void @realign_conditional2(i1 %b, ptr %p) {
 entry:
   %tmp = alloca i8, i32 16
   br i1 %b, label %bb0, label %bb1
 
 bb0:
   %MyAlloca = alloca i8, i64 64, align 32
+  store ptr %MyAlloca, ptr %p
   br label %bb1
 
 bb1:
@@ -688,12 +684,13 @@ bb1:
 ; CHECK-LABEL: realign_conditional2
 ; Extra realignment in the prologue (performance issue).
 ; CHECK:  tbz  {{.*}} .[[LABEL:.*]]
-; CHECK:  sub  x9, sp, #32            // =32
+; CHECK:  sub  x9, sp, #32
 ; CHECK:  and  sp, x9, #0xffffffffffffffe0
 ; CHECK:  mov   x19, sp
 ; Stack is realigned in a non-entry BB.
 ; CHECK:  sub  [[REG:x[01-9]+]], sp, #64
-; CHECK:  and  sp, [[REG]], #0xffffffffffffffe0
+; CHECK:  and  [[REG]], [[REG]], #0xffffffffffffffe0
+; CHECK:  mov  sp, [[REG]]
 ; CHECK:  .[[LABEL]]:
 ; CHECK:  ret
 

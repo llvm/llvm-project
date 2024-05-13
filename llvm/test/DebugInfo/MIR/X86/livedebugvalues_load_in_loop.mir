@@ -10,7 +10,7 @@
   ; In a register:
 
   ; CHECK-LABEL: bb.0.entry:
-  ; CHECK:       DBG_VALUE $rdi, $noreg, !16, !DIExpression()
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
   ; CHECK-LABEL: bb.1.bb1:
   ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
   ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
@@ -52,7 +52,7 @@
   !3 = !{!4}
   !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
   !5 = distinct !DIGlobalVariable(name: "start", scope: !0, file: !1, line: 4, type: !6, isLocal: false, isDefinition: true)
-  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !6 = !DIBasicType(name: "int", size: 64, encoding: DW_ATE_signed)
   !7 = !{i32 2, !"Dwarf Version", i32 4}
   !8 = !{i32 2, !"Debug Info Version", i32 3}
   !9 = !{i32 1, !"wchar_size", i32 2}
@@ -69,6 +69,7 @@
 ---
 name: _Z8bb_to_bb
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 stack:
@@ -79,8 +80,8 @@ body:  |
   bb.0.entry:
   liveins: $rdi
     successors: %bb.1, %bb.2
-    DBG_VALUE $rdi, $noreg, !16, !DIExpression(), debug-location !17
     $rbp = MOV64rr $rdi, debug-location !17
+    DBG_VALUE $rbp, $noreg, !16, !DIExpression(), debug-location !17
     dead $rcx = MOV64ri 0, debug-location !17
     CALL64pcrel32 @bees, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, debug-location !17
     CMP64ri8 renamable $rax, 1, implicit-def $eflags, debug-location !17
@@ -103,11 +104,11 @@ body:  |
     JCC_1 %bb.5, 4, implicit killed $eflags, debug-location !17
   bb.4:
   liveins: $rax, $rbp
-    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rbp :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rbp :: (store (s64) into %stack.0)
     JMP_1 %bb.6
   bb.5:
   liveins: $rax, $rbp
   bb.6:
   liveins: $rax, $rbp
-    RETQ $rax, debug-location !17
+    RET64 $rax, debug-location !17
 ...

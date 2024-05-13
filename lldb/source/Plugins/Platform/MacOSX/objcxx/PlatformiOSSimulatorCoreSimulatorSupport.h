@@ -11,6 +11,7 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_OBJCXX_PLATFORMIOSSIMULATORCORESIMULATORSUPPORT_H
 
 #include <functional>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -24,7 +25,6 @@ typedef void *id;
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
-#include "llvm/ADT/Optional.h"
 
 // And now the actual magic
 namespace CoreSimulatorSupport {
@@ -73,7 +73,8 @@ public:
     iPhone = 1,
     iPad = 2,
     appleTV = 3,
-    appleWatch = 4
+    appleWatch = 4,
+    appleXR = 7,
   };
 
   DeviceType();
@@ -93,8 +94,8 @@ public:
   ProductFamilyID GetProductFamilyID();
 
 private:
-  id m_dev;
-  llvm::Optional<ModelIdentifier> m_model_identifier;
+  id m_dev = nullptr;
+  std::optional<ModelIdentifier> m_model_identifier;
 };
 
 class OSVersion {
@@ -129,8 +130,8 @@ public:
   bool IsAvailable();
 
 private:
-  id m_dev;
-  llvm::Optional<OSVersion> m_os_version;
+  id m_dev = nullptr;
+  std::optional<OSVersion> m_os_version;
 };
 
 class Device {
@@ -169,9 +170,9 @@ public:
   Process Spawn(lldb_private::ProcessLaunchInfo &launch_info);
 
 private:
-  id m_dev;
-  llvm::Optional<DeviceType> m_dev_type;
-  llvm::Optional<DeviceRuntime> m_dev_runtime;
+  id m_dev = nullptr;
+  std::optional<DeviceType> m_dev_type;
+  std::optional<DeviceRuntime> m_dev_runtime;
 
   friend class DeviceSet;
 };

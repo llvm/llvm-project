@@ -1,15 +1,15 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm="enable-amx" -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-amx" -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
-// RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
 // Note: To run this test, your CPU must support AMX.
 
-func @print(%arg0: memref<16x4xi32>) {
-  %iu = constant -1: i32
-  %c0 = constant 0: index
-  %c1 = constant 1: index
-  %c16 = constant 16: index
+func.func @print(%arg0: memref<16x4xi32>) {
+  %iu = arith.constant -1: i32
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c16 = arith.constant 16: index
   scf.for %i = %c0 to %c16 step %c1 {
     %0 = vector.transfer_read %arg0[%i, %c0], %iu: memref<16x4xi32>, vector<4xi32>
     vector.print %0 : vector<4xi32>
@@ -17,10 +17,10 @@ func @print(%arg0: memref<16x4xi32>) {
   return
 }
 
-func @kernel1(%arg0: memref<16x16xi8>,
+func.func @kernel1(%arg0: memref<16x16xi8>,
               %arg1: memref<4x16xi8>,
               %arg2: memref<16x4xi32>) {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<16x16xi8>  into vector<16x16xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<4x16xi8>  into vector<4x16xi8>
   %3 = amx.tile_zero : vector<16x4xi32>
@@ -29,10 +29,10 @@ func @kernel1(%arg0: memref<16x16xi8>,
   return
 }
 
-func @kernel2(%arg0: memref<16x16xi8>,
+func.func @kernel2(%arg0: memref<16x16xi8>,
               %arg1: memref<4x16xi8>,
               %arg2: memref<16x4xi32>) {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<16x16xi8>  into vector<16x16xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<4x16xi8>  into vector<4x16xi8>
   %3 = amx.tile_zero : vector<16x4xi32>
@@ -41,10 +41,10 @@ func @kernel2(%arg0: memref<16x16xi8>,
   return
 }
 
-func @kernel3(%arg0: memref<16x16xi8>,
+func.func @kernel3(%arg0: memref<16x16xi8>,
               %arg1: memref<4x16xi8>,
               %arg2: memref<16x4xi32>) {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<16x16xi8>  into vector<16x16xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<4x16xi8>  into vector<4x16xi8>
   %3 = amx.tile_zero : vector<16x4xi32>
@@ -53,10 +53,10 @@ func @kernel3(%arg0: memref<16x16xi8>,
   return
 }
 
-func @kernel4(%arg0: memref<16x16xi8>,
+func.func @kernel4(%arg0: memref<16x16xi8>,
               %arg1: memref<4x16xi8>,
               %arg2: memref<16x4xi32>) {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<16x16xi8>  into vector<16x16xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<4x16xi8>  into vector<4x16xi8>
   %3 = amx.tile_zero : vector<16x4xi32>
@@ -65,15 +65,15 @@ func @kernel4(%arg0: memref<16x16xi8>,
   return
 }
 
-func @entry() -> i32 {
-  %c0 = constant 0: index
+func.func @entry() -> i32 {
+  %c0 = arith.constant 0: index
 
   // Set up memory.
   %a = memref.alloc() : memref<16x16xi8>
   %b = memref.alloc() : memref<4x16xi8>
   %c = memref.alloc() : memref<16x4xi32>
 
-  %0 = std.constant dense<
+  %0 = arith.constant dense<
     [ [  0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15 ],
       [ 16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31 ],
       [ 32,  33,  34,  35,  36,  37,  38,  39,  40,  41,  42,  43,  44,  45,  46,  47 ],
@@ -91,7 +91,7 @@ func @entry() -> i32 {
       [224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239 ],
       [240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255 ] ]> : vector<16x16xi8>
 
-  %1 = std.constant dense<
+  %1 = arith.constant dense<
     [ [192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207 ],
       [208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223 ],
       [224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239 ],
@@ -193,6 +193,6 @@ func @entry() -> i32 {
   memref.dealloc %b : memref<4x16xi8>
   memref.dealloc %c : memref<16x4xi32>
 
-  %i0 = constant 0 : i32
+  %i0 = arith.constant 0 : i32
   return %i0 : i32
 }

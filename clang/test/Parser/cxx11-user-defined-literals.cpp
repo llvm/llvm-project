@@ -129,6 +129,10 @@ int operator""_\U00010000(char) {} // expected-error {{redefinition of 'operator
 int operator""_℮""_\u212e""_\U0000212e""(const char*, size_t);
 int operator""_\u212e""_\U0000212e""_℮""(const char*, size_t);
 int operator""_\U0000212e""_℮""_\u212e""(const char*, size_t);
+
+int operator""_\u{212f}(char);
+int operator""_\N{SCRIPT SMALL E}(char);
+
 int mix_ucn_utf8 = ""_℮""_\u212e""_\U0000212e"";
 
 void operator""_℮""_ℯ(unsigned long long) {} // expected-error {{differing user-defined suffixes ('_℮' and '_ℯ') in string literal concatenation}}
@@ -140,6 +144,6 @@ void operator""_℮""_℮(unsigned long long) {} // expected-note {{previous}}
 void operator""_\u212e""_\u212e(unsigned long long) {} // expected-error {{redefinition}}
 
 #define ¢ *0.01 // expected-error {{macro name must be an identifier}}
-constexpr int operator""_¢(long double d) { return d * 100; } // expected-error {{non-ASCII}}
-constexpr int operator""_¢(unsigned long long n) { return n; } // expected-error {{non-ASCII}}
-static_assert(0.02_¢ == 2_¢, ""); // expected-error 2{{non-ASCII}}
+constexpr int operator""_¢(long double d) { return d * 100; }  // expected-error {{character <U+00A2> not allowed in an identifier}}
+constexpr int operator""_¢(unsigned long long n) { return n; } // expected-error {{character <U+00A2> not allowed in an identifier}}
+static_assert(0.02_¢ == 2_¢, "");                              // expected-error 2{{character <U+00A2> not allowed in an identifier}}

@@ -1,4 +1,3 @@
-; RUN: opt -S -march=x86 -scalarizer %s | FileCheck %s
 ; RUN: opt -S -march=x86 -passes='function(scalarizer)' %s | FileCheck %s
 
 ; Reproducer for pr27938

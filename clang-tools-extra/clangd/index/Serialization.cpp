@@ -9,9 +9,10 @@
 #include "Serialization.h"
 #include "Headers.h"
 #include "RIFF.h"
-#include "SymbolLocation.h"
-#include "SymbolOrigin.h"
-#include "dex/Dex.h"
+#include "index/MemIndex.h"
+#include "index/SymbolLocation.h"
+#include "index/SymbolOrigin.h"
+#include "index/dex/Dex.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -115,7 +116,7 @@ public:
   // Read a varint (as consumeVar) and resize the container accordingly.
   // If the size is invalid, return false and mark an error.
   // (The caller should abort in this case).
-  template <typename T> LLVM_NODISCARD bool consumeSize(T &Container) {
+  template <typename T> [[nodiscard]] bool consumeSize(T &Container) {
     auto Size = consumeVar();
     // Conservatively assume each element is at least one byte.
     if (Size > (size_t)(End - Begin)) {
@@ -189,11 +190,12 @@ public:
       RawTable.append(std::string(S));
       RawTable.push_back(0);
     }
-    if (llvm::zlib::isAvailable()) {
-      llvm::SmallString<1> Compressed;
-      llvm::cantFail(llvm::zlib::compress(RawTable, Compressed));
+    if (llvm::compression::zlib::isAvailable()) {
+      llvm::SmallVector<uint8_t, 0> Compressed;
+      llvm::compression::zlib::compress(llvm::arrayRefFromStringRef(RawTable),
+                                        Compressed);
       write32(RawTable.size(), OS);
-      OS << Compressed;
+      OS << llvm::toStringRef(Compressed);
     } else {
       write32(0, OS); // No compression.
       OS << RawTable;
@@ -219,10 +221,10 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
     return error("Truncated string table");
 
   llvm::StringRef Uncompressed;
-  llvm::SmallString<1> UncompressedStorage;
+  llvm::SmallVector<uint8_t, 0> UncompressedStorage;
   if (UncompressedSize == 0) // No compression
     Uncompressed = R.rest();
-  else if (llvm::zlib::isAvailable()) {
+  else if (llvm::compression::zlib::isAvailable()) {
     // Don't allocate a massive buffer if UncompressedSize was corrupted
     // This is effective for sharded index, but not big monolithic ones, as
     // once compressed size reaches 4MB nothing can be ruled out.
@@ -232,10 +234,11 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
       return error("Bad stri table: uncompress {0} -> {1} bytes is implausible",
                    R.rest().size(), UncompressedSize);
 
-    if (llvm::Error E = llvm::zlib::uncompress(R.rest(), UncompressedStorage,
-                                               UncompressedSize))
+    if (llvm::Error E = llvm::compression::zlib::decompress(
+            llvm::arrayRefFromStringRef(R.rest()), UncompressedStorage,
+            UncompressedSize))
       return std::move(E);
-    Uncompressed = UncompressedStorage;
+    Uncompressed = toStringRef(UncompressedStorage);
   } else
     return error("Compressed string table, but zlib is unavailable");
 
@@ -320,7 +323,6 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
   writeLocation(Sym.CanonicalDeclaration, Strings, OS);
   writeVar(Sym.References, OS);
   OS.write(static_cast<uint8_t>(Sym.Flags));
-  OS.write(static_cast<uint8_t>(Sym.Origin));
   writeVar(Strings.index(Sym.Signature), OS);
   writeVar(Strings.index(Sym.CompletionSnippetSuffix), OS);
   writeVar(Strings.index(Sym.Documentation), OS);
@@ -329,14 +331,15 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
 
   auto WriteInclude = [&](const Symbol::IncludeHeaderWithReferences &Include) {
     writeVar(Strings.index(Include.IncludeHeader), OS);
-    writeVar(Include.References, OS);
+    writeVar((Include.References << 2) | Include.SupportedDirectives, OS);
   };
   writeVar(Sym.IncludeHeaders.size(), OS);
   for (const auto &Include : Sym.IncludeHeaders)
     WriteInclude(Include);
 }
 
-Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
+Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings,
+                  SymbolOrigin Origin) {
   Symbol Sym;
   Sym.ID = Data.consumeID();
   Sym.SymInfo.Kind = static_cast<index::SymbolKind>(Data.consume8());
@@ -348,7 +351,7 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   Sym.CanonicalDeclaration = readLocation(Data, Strings);
   Sym.References = Data.consumeVar();
   Sym.Flags = static_cast<Symbol::SymbolFlag>(Data.consume8());
-  Sym.Origin = static_cast<SymbolOrigin>(Data.consume8());
+  Sym.Origin = Origin;
   Sym.Signature = Data.consumeString(Strings);
   Sym.CompletionSnippetSuffix = Data.consumeString(Strings);
   Sym.Documentation = Data.consumeString(Strings);
@@ -358,7 +361,9 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
     return Sym;
   for (auto &I : Sym.IncludeHeaders) {
     I.IncludeHeader = Data.consumeString(Strings);
-    I.References = Data.consumeVar();
+    uint32_t RefsWithDirectives = Data.consumeVar();
+    I.References = RefsWithDirectives >> 2;
+    I.SupportedDirectives = RefsWithDirectives & 0x3;
   }
   return Sym;
 }
@@ -452,9 +457,10 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 16;
+constexpr static uint32_t Version = 19;
 
-llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
+llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
+                                     SymbolOrigin Origin) {
   auto RIFF = riff::readFile(Data);
   if (!RIFF)
     return RIFF.takeError();
@@ -503,7 +509,7 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
     Reader SymbolReader(Chunks.lookup("symb"));
     SymbolSlab::Builder Symbols;
     while (!SymbolReader.eof())
-      Symbols.insert(readSymbol(SymbolReader, Strings->Strings));
+      Symbols.insert(readSymbol(SymbolReader, Strings->Strings, Origin));
     if (SymbolReader.err())
       return error("malformed or truncated symbol");
     Result.Symbols = std::move(Symbols).build();
@@ -670,7 +676,7 @@ void writeRIFF(const IndexFileOut &Data, llvm::raw_ostream &OS) {
 
 // Defined in YAMLSerialization.cpp.
 void writeYAML(const IndexFileOut &, llvm::raw_ostream &);
-llvm::Expected<IndexFileIn> readYAML(llvm::StringRef);
+llvm::Expected<IndexFileIn> readYAML(llvm::StringRef, SymbolOrigin Origin);
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
   switch (O.Format) {
@@ -684,10 +690,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
   return OS;
 }
 
-llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data) {
-  if (Data.startswith("RIFF")) {
-    return readRIFF(Data);
-  } else if (auto YAMLContents = readYAML(Data)) {
+llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data,
+                                          SymbolOrigin Origin) {
+  if (Data.starts_with("RIFF")) {
+    return readRIFF(Data, Origin);
+  }
+  if (auto YAMLContents = readYAML(Data, Origin)) {
     return std::move(*YAMLContents);
   } else {
     return error("Not a RIFF file and failed to parse as YAML: {0}",
@@ -696,7 +704,7 @@ llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data) {
 }
 
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
-                                       bool UseDex) {
+                                       SymbolOrigin Origin, bool UseDex) {
   trace::Span OverallTracer("LoadIndex");
   auto Buffer = llvm::MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
@@ -709,7 +717,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   RelationSlab Relations;
   {
     trace::Span Tracer("ParseIndex");
-    if (auto I = readIndexFile(Buffer->get()->getBuffer())) {
+    if (auto I = readIndexFile(Buffer->get()->getBuffer(), Origin)) {
       if (I->Symbols)
         Symbols = std::move(*I->Symbols);
       if (I->Refs)

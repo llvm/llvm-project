@@ -5,7 +5,7 @@
 // RUN: %env_lsan_opts= %run %t 2>&1
 // RUN: %env_lsan_opts= not %run %t foo 2>&1 | FileCheck %s
 // Missing 'getcontext' and 'makecontext' on Android.
-// UNSUPPORTED: arm,aarch64,powerpc64,android
+// UNSUPPORTED: target={{(arm|aarch64|loongarch64|powerpc64).*}},android
 
 #include "sanitizer_common/sanitizer_ucontext.h"
 #include <stdio.h>
@@ -41,4 +41,4 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 2664 byte(s) leaked in 1 allocation(s)
+// CHECK: SUMMARY: {{.*}}Sanitizer: 2664 byte(s) leaked in 1 allocation(s)

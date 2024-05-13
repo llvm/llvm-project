@@ -26,7 +26,7 @@ target triple = "x86_64-apple-darwin"
 ;	FP_REG_KILL implicit-def %fp0, implicit-def %fp1, implicit-def %fp2, implicit-def %fp3, implicit-def %fp4, implicit-def %fp5, implicit-def %fp6
 ;	JMP_4 <%bb.5>
 
-define fastcc i32 @sqlite3AtoF(i8* %z, double* nocapture %pResult) nounwind ssp {
+define fastcc i32 @sqlite3AtoF(ptr %z, ptr nocapture %pResult) nounwind ssp {
 entry:
   br i1 undef, label %bb2, label %bb1.i.i
 

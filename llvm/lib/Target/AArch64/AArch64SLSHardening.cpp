@@ -14,8 +14,6 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -60,7 +58,7 @@ private:
   bool hardenReturnsAndBRs(MachineBasicBlock &MBB) const;
   bool hardenBLRs(MachineBasicBlock &MBB) const;
   MachineBasicBlock &ConvertBLRToBL(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator) const;
+                                    MachineBasicBlock::instr_iterator) const;
 };
 
 } // end anonymous namespace
@@ -185,13 +183,15 @@ static const struct ThunkNameAndReg {
 namespace {
 struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
   const char *getThunkPrefix() { return SLSBLRNamePrefix; }
-  bool mayUseThunk(const MachineFunction &MF) {
+  bool mayUseThunk(const MachineFunction &MF, bool InsertedThunks) {
+    if (InsertedThunks)
+      return false;
     ComdatThunks &= !MF.getSubtarget<AArch64Subtarget>().hardenSlsNoComdat();
     // FIXME: This could also check if there are any BLRs in the function
     // to more accurately reflect if a thunk will be needed.
     return MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr();
   }
-  void insertThunks(MachineModuleInfo &MMI);
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
   void populateThunk(MachineFunction &MF);
 
 private:
@@ -199,18 +199,20 @@ private:
 };
 } // namespace
 
-void SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI) {
+bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
+                                       MachineFunction &MF) {
   // FIXME: It probably would be possible to filter which thunks to produce
   // based on which registers are actually used in BLR instructions in this
   // function. But would that be a worthwhile optimization?
   for (auto T : SLSBLRThunks)
     createThunkFunction(MMI, T.Name, ComdatThunks);
+  return true;
 }
 
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
   // FIXME: How to better communicate Register number, rather than through
   // name and lookup table?
-  assert(MF.getName().startswith(getThunkPrefix()));
+  assert(MF.getName().starts_with(getThunkPrefix()));
   auto ThunkIt = llvm::find_if(
       SLSBLRThunks, [&MF](auto T) { return T.Name == MF.getName(); });
   assert(ThunkIt != std::end(SLSBLRThunks));
@@ -218,7 +220,20 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
 
   const TargetInstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
-  assert (MF.size() == 1);
+
+  // Depending on whether this pass is in the same FunctionPassManager as the
+  // IR->MIR conversion, the thunk may be completely empty, or contain a single
+  // basic block with a single return instruction. Normalise it to contain a
+  // single empty basic block.
+  if (MF.size() == 1) {
+    assert(MF.front().size() == 1);
+    assert(MF.front().front().getOpcode() == AArch64::RET);
+    MF.front().erase(MF.front().begin());
+  } else {
+    assert(MF.size() == 0);
+    MF.push_back(MF.CreateMachineBasicBlock());
+  }
+
   MachineBasicBlock *Entry = &MF.front();
   Entry->clear();
 
@@ -241,9 +256,8 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
                            Entry->end(), DebugLoc(), true /*AlwaysUseISBDSB*/);
 }
 
-MachineBasicBlock &
-AArch64SLSHardening::ConvertBLRToBL(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MBBI) const {
+MachineBasicBlock &AArch64SLSHardening::ConvertBLRToBL(
+    MachineBasicBlock &MBB, MachineBasicBlock::instr_iterator MBBI) const {
   // Transform a BLR to a BL as follows:
   // Before:
   //   |-----------------------------|
@@ -360,8 +374,8 @@ AArch64SLSHardening::ConvertBLRToBL(MachineBasicBlock &MBB,
   assert(ImpSPOpIdx != -1);
   int FirstOpIdxToRemove = std::max(ImpLROpIdx, ImpSPOpIdx);
   int SecondOpIdxToRemove = std::min(ImpLROpIdx, ImpSPOpIdx);
-  BL->RemoveOperand(FirstOpIdxToRemove);
-  BL->RemoveOperand(SecondOpIdxToRemove);
+  BL->removeOperand(FirstOpIdxToRemove);
+  BL->removeOperand(SecondOpIdxToRemove);
   // Now copy over the implicit operands from the original BLR
   BL->copyImplicitOps(MF, BLR);
   MF.moveCallSiteInfo(&BLR, BL);
@@ -378,8 +392,9 @@ bool AArch64SLSHardening::hardenBLRs(MachineBasicBlock &MBB) const {
   if (!ST->hardenSlsBlr())
     return false;
   bool Modified = false;
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  MachineBasicBlock::iterator NextMBBI;
+  MachineBasicBlock::instr_iterator MBBI = MBB.instr_begin(),
+                                    E = MBB.instr_end();
+  MachineBasicBlock::instr_iterator NextMBBI;
   for (; MBBI != E; MBBI = NextMBBI) {
     MachineInstr &MI = *MBBI;
     NextMBBI = std::next(MBBI);
@@ -410,20 +425,15 @@ public:
 private:
   std::tuple<SLSBLRThunkInserter> TIs;
 
-  // FIXME: When LLVM moves to C++17, these can become folds
   template <typename... ThunkInserterT>
   static void initTIs(Module &M,
                       std::tuple<ThunkInserterT...> &ThunkInserters) {
-    (void)std::initializer_list<int>{
-        (std::get<ThunkInserterT>(ThunkInserters).init(M), 0)...};
+    (..., std::get<ThunkInserterT>(ThunkInserters).init(M));
   }
   template <typename... ThunkInserterT>
   static bool runTIs(MachineModuleInfo &MMI, MachineFunction &MF,
                      std::tuple<ThunkInserterT...> &ThunkInserters) {
-    bool Modified = false;
-    (void)std::initializer_list<int>{
-        Modified |= std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF)...};
-    return Modified;
+    return (0 | ... | std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF));
   }
 };
 

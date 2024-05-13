@@ -2,10 +2,10 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @load1_s8_to_zextLoad1_s32(i8* %px) {entry: ret void}
-  define void @load2_s16_to_zextLoad2_s32(i16* %px) {entry: ret void}
-  define void @load1_s8_to_sextLoad1_s32(i8* %px) {entry: ret void}
-  define void @load2_s16_to_sextLoad2_s32(i16* %px) {entry: ret void}
+  define void @load1_s8_to_zextLoad1_s32(ptr %px) {entry: ret void}
+  define void @load2_s16_to_zextLoad2_s32(ptr %px) {entry: ret void}
+  define void @load1_s8_to_sextLoad1_s32(ptr %px) {entry: ret void}
+  define void @load2_s16_to_sextLoad2_s32(ptr %px) {entry: ret void}
 
 ...
 ---
@@ -21,11 +21,11 @@ body:             |
     ; MIPS32-LABEL: name: load1_s8_to_zextLoad1_s32
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[LBu:%[0-9]+]]:gpr32 = LBu [[COPY]], 0 :: (load 1 from %ir.px)
+    ; MIPS32: [[LBu:%[0-9]+]]:gpr32 = LBu [[COPY]], 0 :: (load (s8) from %ir.px)
     ; MIPS32: $v0 = COPY [[LBu]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
-    %2:gprb(s32) = G_ZEXTLOAD %0(p0) :: (load 1 from %ir.px)
+    %2:gprb(s32) = G_ZEXTLOAD %0(p0) :: (load (s8) from %ir.px)
     $v0 = COPY %2(s32)
     RetRA implicit $v0
 
@@ -43,11 +43,11 @@ body:             |
     ; MIPS32-LABEL: name: load2_s16_to_zextLoad2_s32
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[LHu:%[0-9]+]]:gpr32 = LHu [[COPY]], 0 :: (load 2 from %ir.px)
+    ; MIPS32: [[LHu:%[0-9]+]]:gpr32 = LHu [[COPY]], 0 :: (load (s16) from %ir.px)
     ; MIPS32: $v0 = COPY [[LHu]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
-    %2:gprb(s32) = G_ZEXTLOAD %0(p0) :: (load 2 from %ir.px)
+    %2:gprb(s32) = G_ZEXTLOAD %0(p0) :: (load (s16) from %ir.px)
     $v0 = COPY %2(s32)
     RetRA implicit $v0
 
@@ -65,11 +65,11 @@ body:             |
     ; MIPS32-LABEL: name: load1_s8_to_sextLoad1_s32
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[LB:%[0-9]+]]:gpr32 = LB [[COPY]], 0 :: (load 1 from %ir.px)
+    ; MIPS32: [[LB:%[0-9]+]]:gpr32 = LB [[COPY]], 0 :: (load (s8) from %ir.px)
     ; MIPS32: $v0 = COPY [[LB]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
-    %2:gprb(s32) = G_SEXTLOAD %0(p0) :: (load 1 from %ir.px)
+    %2:gprb(s32) = G_SEXTLOAD %0(p0) :: (load (s8) from %ir.px)
     $v0 = COPY %2(s32)
     RetRA implicit $v0
 
@@ -87,11 +87,11 @@ body:             |
     ; MIPS32-LABEL: name: load2_s16_to_sextLoad2_s32
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[LH:%[0-9]+]]:gpr32 = LH [[COPY]], 0 :: (load 2 from %ir.px)
+    ; MIPS32: [[LH:%[0-9]+]]:gpr32 = LH [[COPY]], 0 :: (load (s16) from %ir.px)
     ; MIPS32: $v0 = COPY [[LH]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
-    %2:gprb(s32) = G_SEXTLOAD %0(p0) :: (load 2 from %ir.px)
+    %2:gprb(s32) = G_SEXTLOAD %0(p0) :: (load (s16) from %ir.px)
     $v0 = COPY %2(s32)
     RetRA implicit $v0
 

@@ -18,6 +18,10 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+
+#define GENERATE_NEON
+#define GENERATE_NEON_INS
+
 struct Operator;
 
 // Masks are 4-nibble hex numbers.  Values 0-7 in any nibble means that it takes
@@ -143,6 +147,11 @@ struct Operator {
   }
 };
 
+#ifdef GENERATE_NEON_INS
+// Special case "insert" op identifier used below
+static Operator InsOp(0, "ins", 15, 1);
+#endif
+
 static const char *getZeroCostOpName(unsigned short Op) {
   if (ShufTab[Op].Arg0 == 0x0123)
     return "LHS";
@@ -172,6 +181,11 @@ static void PrintOperation(unsigned ValNo, unsigned short Vals[]) {
       }
   }
 
+#ifdef GENERATE_NEON_INS
+  if (ShufTab[ThisOp].Op == &InsOp) {
+    std::cerr << ", lane " << ShufTab[ThisOp].Arg1;
+  } else
+#endif
   if (!ShufTab[Vals[ValNo]].Op->isOnlyLHSOperator()) {
     std::cerr << ", ";
     if (ShufTab[ShufTab[ThisOp].Arg1].Cost == 0) {
@@ -199,6 +213,13 @@ static unsigned getNumEntered() {
 static void EvaluateOps(unsigned short Elt, unsigned short Vals[],
                         unsigned &NumVals) {
   if (ShufTab[Elt].Cost == 0) return;
+#ifdef GENERATE_NEON_INS
+  if (ShufTab[Elt].Op == &InsOp) {
+    EvaluateOps(ShufTab[Elt].Arg0, Vals, NumVals);
+    Vals[NumVals++] = Elt;
+    return;
+  }
+#endif
 
   // If this value has already been evaluated, it is free.  FIXME: match undefs.
   for (unsigned i = 0, e = NumVals; i != e; ++i)
@@ -288,6 +309,43 @@ int main() {
           ShufTab[i] = ShufTab[MinVal];
         }
       }
+#ifdef GENERATE_NEON_INS
+      else {
+        // Similarly, if we take the mask (eg 3,6,1,0) and take the cost with
+        // undef for each lane (eg u,6,1,0 or 3,u,1,0 etc), we can use a single
+        // lane insert to fixup the result.
+        for (unsigned LaneIdx = 0; LaneIdx < 4; LaneIdx++) {
+          if (getMaskElt(i, LaneIdx) == 8)
+            continue;
+          unsigned NewElt = setMaskElt(i, LaneIdx, 8);
+          if (ShufTab[NewElt].Cost + 1 < ShufTab[i].Cost) {
+            MadeChange = true;
+            ShufTab[i].Cost = ShufTab[NewElt].Cost + 1;
+            ShufTab[i].Op = &InsOp;
+            ShufTab[i].Arg0 = NewElt;
+            ShufTab[i].Arg1 = LaneIdx;
+          }
+        }
+
+        // Similar idea for using a D register mov, masking out 2 lanes to undef
+        for (unsigned LaneIdx = 0; LaneIdx < 4; LaneIdx += 2) {
+          unsigned Ln0 = getMaskElt(i, LaneIdx);
+          unsigned Ln1 = getMaskElt(i, LaneIdx + 1);
+          if ((Ln0 == 0 && Ln1 == 1) || (Ln0 == 2 && Ln1 == 3) ||
+              (Ln0 == 4 && Ln1 == 5) || (Ln0 == 6 && Ln1 == 7)) {
+            unsigned NewElt = setMaskElt(i, LaneIdx, 8);
+            NewElt = setMaskElt(NewElt, LaneIdx + 1, 8);
+            if (ShufTab[NewElt].Cost + 1 < ShufTab[i].Cost) {
+              MadeChange = true;
+              ShufTab[i].Cost = ShufTab[NewElt].Cost + 1;
+              ShufTab[i].Op = &InsOp;
+              ShufTab[i].Arg0 = NewElt;
+              ShufTab[i].Arg1 = (LaneIdx >> 1) | 0x4;
+            }
+          }
+        }
+      }
+#endif
     }
 
     for (unsigned LHS = 0; LHS != 0x8889; ++LHS) {
@@ -301,6 +359,10 @@ int main() {
 
       for (unsigned opnum = 0, e = TheOperators.size(); opnum != e; ++opnum) {
         Operator *Op = TheOperators[opnum];
+#ifdef GENERATE_NEON_INS
+        if (Op == &InsOp)
+          continue;
+#endif
 
         // Evaluate op(LHS,LHS)
         unsigned ResultMask = Op->getTransformedMask(LHS, LHS);
@@ -419,11 +481,17 @@ int main() {
         PrintMask(ShufTab[i].Arg1, std::cout);
       }
     }
+#ifdef GENERATE_NEON_INS
+    else if (ShufTab[i].Op == &InsOp) {
+      std::cout << ", lane " << ShufTab[i].Arg1;
+    }
+#endif
+
     std::cout << "\n";
   }
   std::cout << "  0\n};\n";
 
-  if (0) {
+  if (false) {
     // Print out the table.
     for (unsigned i = 0; i != 0x8889; ++i) {
       if (!isValidMask(i)) continue;
@@ -497,8 +565,6 @@ vsldoi<3> the_vsldoi3("vsldoi12", OP_VSLDOI12);
 
 #endif
 
-#define GENERATE_NEON
-
 #ifdef GENERATE_NEON
 enum {
   OP_COPY = 0,   // Copy, used for things like <u,u,u,3> to say it is <0,1,2,3>
@@ -545,27 +611,27 @@ vext<2> the_vext2("vext2", OP_VEXT2);
 vext<3> the_vext3("vext3", OP_VEXT3);
 
 struct vuzpl : public Operator {
-  vuzpl() : Operator(0x0246, "vuzpl", OP_VUZPL, 2) {}
+  vuzpl() : Operator(0x0246, "vuzpl", OP_VUZPL, 1) {}
 } the_vuzpl;
 
 struct vuzpr : public Operator {
-  vuzpr() : Operator(0x1357, "vuzpr", OP_VUZPR, 2) {}
+  vuzpr() : Operator(0x1357, "vuzpr", OP_VUZPR, 1) {}
 } the_vuzpr;
 
 struct vzipl : public Operator {
-  vzipl() : Operator(0x0415, "vzipl", OP_VZIPL, 2) {}
+  vzipl() : Operator(0x0415, "vzipl", OP_VZIPL, 1) {}
 } the_vzipl;
 
 struct vzipr : public Operator {
-  vzipr() : Operator(0x2637, "vzipr", OP_VZIPR, 2) {}
+  vzipr() : Operator(0x2637, "vzipr", OP_VZIPR, 1) {}
 } the_vzipr;
 
 struct vtrnl : public Operator {
-  vtrnl() : Operator(0x0426, "vtrnl", OP_VTRNL, 2) {}
+  vtrnl() : Operator(0x0426, "vtrnl", OP_VTRNL, 1) {}
 } the_vtrnl;
 
 struct vtrnr : public Operator {
-  vtrnr() : Operator(0x1537, "vtrnr", OP_VTRNR, 2) {}
+  vtrnr() : Operator(0x1537, "vtrnr", OP_VTRNR, 1) {}
 } the_vtrnr;
 
 #endif

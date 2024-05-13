@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC___COMMON_H
-#define LLVM_LIBC___COMMON_H
+#ifndef LLVM_LIBC_COMMON_H
+#define LLVM_LIBC_COMMON_H
 
 #ifdef __cplusplus
 
@@ -20,6 +20,21 @@
 #undef _Noreturn
 #define _Noreturn [[noreturn]]
 
+#undef _Alignas
+#define _Alignas alignas
+
+#undef _Static_assert
+#define _Static_assert static_assert
+
+#undef _Alignof
+#define _Alignof alignof
+
+#undef _Thread_local
+#define _Thread_local thread_local
+
+#undef __NOEXCEPT
+#define __NOEXCEPT noexcept
+
 #else // not __cplusplus
 
 #undef __BEGIN_C_DECLS
@@ -31,6 +46,9 @@
 #undef __restrict
 #define __restrict restrict // C99 and above support the restrict keyword.
 
+#undef __NOEXCEPT
+#define __NOEXCEPT
+
 #endif // __cplusplus
 
-#endif // LLVM_LIBC___COMMON_H
+#endif // LLVM_LIBC_COMMON_H

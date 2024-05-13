@@ -14,6 +14,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include <optional>
 
 namespace clang {
 
@@ -110,14 +112,13 @@ Nullability getNullabilityAnnotation(QualType Type) {
   return Nullability::Unspecified;
 }
 
-llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
-                                       const Preprocessor &PP) {
+std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP) {
   const auto *MacroII = PP.getIdentifierInfo(Macro);
   if (!MacroII)
-    return llvm::None;
+    return std::nullopt;
   const MacroInfo *MI = PP.getMacroInfo(MacroII);
   if (!MI)
-    return llvm::None;
+    return std::nullopt;
 
   // Filter out parens.
   std::vector<Token> FilteredTokens;
@@ -131,12 +132,12 @@ llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
   // FIXME: EOF macro token coming from a PCH file on macOS while marked as
   //        literal, doesn't contain any literal data
   if (!T.isLiteral() || !T.getLiteralData())
-    return llvm::None;
+    return std::nullopt;
   StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
   llvm::APInt IntValue;
   constexpr unsigned AutoSenseRadix = 0;
   if (ValueStr.getAsInteger(AutoSenseRadix, IntValue))
-    return llvm::None;
+    return std::nullopt;
 
   // Parse an optional minus sign.
   size_t Size = FilteredTokens.size();
@@ -146,6 +147,47 @@ llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
   }
 
   return IntValue.getSExtValue();
+}
+
+OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
+                                                 bool IsBinary) {
+  llvm::StringMap<BinaryOperatorKind> BinOps{
+#define BINARY_OPERATION(Name, Spelling) {Spelling, BO_##Name},
+#include "clang/AST/OperationKinds.def"
+  };
+  llvm::StringMap<UnaryOperatorKind> UnOps{
+#define UNARY_OPERATION(Name, Spelling) {Spelling, UO_##Name},
+#include "clang/AST/OperationKinds.def"
+  };
+
+  switch (OOK) {
+#define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)  \
+  case OO_##Name:                                                              \
+    if (IsBinary) {                                                            \
+      auto BinOpIt = BinOps.find(Spelling);                                    \
+      if (BinOpIt != BinOps.end())                                             \
+        return OperatorKind(BinOpIt->second);                                  \
+      else                                                                     \
+        llvm_unreachable("operator was expected to be binary but is not");     \
+    } else {                                                                   \
+      auto UnOpIt = UnOps.find(Spelling);                                      \
+      if (UnOpIt != UnOps.end())                                               \
+        return OperatorKind(UnOpIt->second);                                   \
+      else                                                                     \
+        llvm_unreachable("operator was expected to be unary but is not");      \
+    }                                                                          \
+    break;
+#include "clang/Basic/OperatorKinds.def"
+  default:
+    llvm_unreachable("unexpected operator kind");
+  }
+}
+
+std::optional<SVal> getPointeeVal(SVal PtrSVal, ProgramStateRef State) {
+  if (const auto *Ptr = PtrSVal.getAsRegion()) {
+    return State->getSVal(Ptr);
+  }
+  return std::nullopt;
 }
 
 } // namespace ento

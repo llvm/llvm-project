@@ -6,119 +6,53 @@
 ; Scalars
 ;
 
-define void @test_lshr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
+define void @test_lshr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_lshr_i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
 ; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
-; i686-NEXT:    subl $20, %esp
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    movb {{[0-9]+}}(%esp), %al
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl %ebp, %esi
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    shrdl %cl, %edi, %esi
-; i686-NEXT:    shrl %cl, %edx
-; i686-NEXT:    shrl %cl, %edi
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    jne .LBB0_1
-; i686-NEXT:  # %bb.2: # %entry
-; i686-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; i686-NEXT:    jmp .LBB0_3
-; i686-NEXT:  .LBB0_1:
-; i686-NEXT:    movl %edi, %esi
-; i686-NEXT:    movl $0, (%esp) # 4-byte Folded Spill
-; i686-NEXT:    xorl %edi, %edi
-; i686-NEXT:  .LBB0_3: # %entry
-; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %eax, %edx
-; i686-NEXT:    subb $64, %dl
-; i686-NEXT:    jb .LBB0_5
-; i686-NEXT:  # %bb.4: # %entry
-; i686-NEXT:    xorl %edi, %edi
-; i686-NEXT:  .LBB0_5: # %entry
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    negb %dl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    shldl %cl, %ebp, %edi
-; i686-NEXT:    movl %ebp, %esi
-; i686-NEXT:    shll %cl, %esi
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    movl %esi, %ebx
-; i686-NEXT:    jne .LBB0_7
-; i686-NEXT:  # %bb.6: # %entry
-; i686-NEXT:    movl %edi, %ebx
-; i686-NEXT:  .LBB0_7: # %entry
-; i686-NEXT:    movb %al, %ah
-; i686-NEXT:    addb $-64, %ah
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movb %ah, %cl
-; i686-NEXT:    shrl %cl, %edi
-; i686-NEXT:    testb $32, %ah
-; i686-NEXT:    movl $0, %ecx
-; i686-NEXT:    jne .LBB0_9
-; i686-NEXT:  # %bb.8: # %entry
-; i686-NEXT:    movl %edi, %ecx
-; i686-NEXT:  .LBB0_9: # %entry
-; i686-NEXT:    cmpb $64, %al
-; i686-NEXT:    jb .LBB0_10
-; i686-NEXT:  # %bb.11: # %entry
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    jmp .LBB0_12
-; i686-NEXT:  .LBB0_10:
-; i686-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; i686-NEXT:    orl %ebx, %ecx
-; i686-NEXT:  .LBB0_12: # %entry
-; i686-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    jne .LBB0_14
-; i686-NEXT:  # %bb.13: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB0_14: # %entry
-; i686-NEXT:    movl %ebx, %edx
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    shrdl %cl, %esi, %edx
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    jne .LBB0_16
-; i686-NEXT:  # %bb.15: # %entry
-; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB0_16: # %entry
-; i686-NEXT:    movb %ah, %cl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    shrdl %cl, %edx, %ebp
-; i686-NEXT:    testb $32, %ah
-; i686-NEXT:    jne .LBB0_18
-; i686-NEXT:  # %bb.17: # %entry
-; i686-NEXT:    movl %ebp, %edi
-; i686-NEXT:  .LBB0_18: # %entry
-; i686-NEXT:    cmpb $64, %al
-; i686-NEXT:    jae .LBB0_20
-; i686-NEXT:  # %bb.19:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
-; i686-NEXT:  .LBB0_20: # %entry
+; i686-NEXT:    subl $32, %esp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    testb %al, %al
-; i686-NEXT:    je .LBB0_22
-; i686-NEXT:  # %bb.21: # %entry
-; i686-NEXT:    movl %edi, %ebx
-; i686-NEXT:    movl (%esp), %esi # 4-byte Reload
-; i686-NEXT:  .LBB0_22: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl %eax, 12(%ecx)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl %eax, 8(%ecx)
-; i686-NEXT:    movl %esi, 4(%ecx)
-; i686-NEXT:    movl %ebx, (%ecx)
-; i686-NEXT:    addl $20, %esp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %eax, (%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ecx, %eax
+; i686-NEXT:    andb $7, %al
+; i686-NEXT:    shrb $3, %cl
+; i686-NEXT:    andb $15, %cl
+; i686-NEXT:    movzbl %cl, %ebp
+; i686-NEXT:    movl 4(%esp,%ebp), %edx
+; i686-NEXT:    movl %edx, %esi
+; i686-NEXT:    movl %eax, %ecx
+; i686-NEXT:    shrl %cl, %esi
+; i686-NEXT:    notb %cl
+; i686-NEXT:    movl 8(%esp,%ebp), %ebx
+; i686-NEXT:    leal (%ebx,%ebx), %edi
+; i686-NEXT:    shll %cl, %edi
+; i686-NEXT:    orl %esi, %edi
+; i686-NEXT:    movl (%esp,%ebp), %esi
+; i686-NEXT:    movl 12(%esp,%ebp), %ebp
+; i686-NEXT:    movl %eax, %ecx
+; i686-NEXT:    shrdl %cl, %ebp, %ebx
+; i686-NEXT:    shrdl %cl, %edx, %esi
+; i686-NEXT:    shrl %cl, %ebp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    movl %ebp, 12(%eax)
+; i686-NEXT:    movl %ebx, 8(%eax)
+; i686-NEXT:    movl %esi, (%eax)
+; i686-NEXT:    movl %edi, 4(%eax)
+; i686-NEXT:    addl $32, %esp
 ; i686-NEXT:    popl %esi
 ; i686-NEXT:    popl %edi
 ; i686-NEXT:    popl %ebx
@@ -139,127 +73,58 @@ define void @test_lshr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
 ; x86_64-NEXT:    retq
 entry:
 	%0 = lshr i128 %x, %a
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
+define void @test_ashr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_ashr_i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
 ; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
-; i686-NEXT:    subl $24, %esp
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    movb {{[0-9]+}}(%esp), %al
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl %ebp, %esi
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    shrdl %cl, %ebx, %esi
-; i686-NEXT:    shrl %cl, %edx
-; i686-NEXT:    movl %ebx, %edi
-; i686-NEXT:    sarl %cl, %edi
-; i686-NEXT:    sarl $31, %ebx
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    jne .LBB1_1
-; i686-NEXT:  # %bb.2: # %entry
-; i686-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; i686-NEXT:    jmp .LBB1_3
-; i686-NEXT:  .LBB1_1:
-; i686-NEXT:    movl %edi, %esi
-; i686-NEXT:    movl $0, (%esp) # 4-byte Folded Spill
-; i686-NEXT:    movl %ebx, %edi
-; i686-NEXT:  .LBB1_3: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %eax, %edx
-; i686-NEXT:    subb $64, %dl
-; i686-NEXT:    jb .LBB1_5
-; i686-NEXT:  # %bb.4: # %entry
-; i686-NEXT:    movl %ebx, %edi
-; i686-NEXT:  .LBB1_5: # %entry
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    negb %dl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    shldl %cl, %ebp, %edi
-; i686-NEXT:    movl %ebp, %esi
-; i686-NEXT:    shll %cl, %esi
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    movl %esi, %ecx
-; i686-NEXT:    jne .LBB1_7
-; i686-NEXT:  # %bb.6: # %entry
-; i686-NEXT:    movl %edi, %ecx
-; i686-NEXT:  .LBB1_7: # %entry
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movb %al, %ah
-; i686-NEXT:    addb $-64, %ah
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movb %ah, %cl
-; i686-NEXT:    sarl %cl, %edi
-; i686-NEXT:    testb $32, %ah
-; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:    jne .LBB1_9
-; i686-NEXT:  # %bb.8: # %entry
-; i686-NEXT:    movl %edi, %ecx
-; i686-NEXT:  .LBB1_9: # %entry
-; i686-NEXT:    cmpb $64, %al
-; i686-NEXT:    jb .LBB1_10
-; i686-NEXT:  # %bb.11: # %entry
-; i686-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    jmp .LBB1_12
-; i686-NEXT:  .LBB1_10:
-; i686-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; i686-NEXT:  .LBB1_12: # %entry
-; i686-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    jne .LBB1_14
-; i686-NEXT:  # %bb.13: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB1_14: # %entry
-; i686-NEXT:    movl %ebx, %edx
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    shrdl %cl, %esi, %edx
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    jne .LBB1_16
-; i686-NEXT:  # %bb.15: # %entry
-; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB1_16: # %entry
-; i686-NEXT:    movb %ah, %cl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    shrdl %cl, %edx, %ebp
-; i686-NEXT:    testb $32, %ah
-; i686-NEXT:    jne .LBB1_18
-; i686-NEXT:  # %bb.17: # %entry
-; i686-NEXT:    movl %ebp, %edi
-; i686-NEXT:  .LBB1_18: # %entry
-; i686-NEXT:    cmpb $64, %al
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    jae .LBB1_20
-; i686-NEXT:  # %bb.19:
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; i686-NEXT:    movl %ecx, %edi
-; i686-NEXT:  .LBB1_20: # %entry
+; i686-NEXT:    subl $32, %esp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    testb %al, %al
-; i686-NEXT:    je .LBB1_22
-; i686-NEXT:  # %bb.21: # %entry
-; i686-NEXT:    movl %edi, %ebx
-; i686-NEXT:    movl (%esp), %esi # 4-byte Reload
-; i686-NEXT:  .LBB1_22: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl %eax, 12(%ecx)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl %eax, 8(%ecx)
-; i686-NEXT:    movl %esi, 4(%ecx)
-; i686-NEXT:    movl %ebx, (%ecx)
-; i686-NEXT:    addl $24, %esp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %eax, (%esp)
+; i686-NEXT:    sarl $31, %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ecx, %eax
+; i686-NEXT:    andb $7, %al
+; i686-NEXT:    shrb $3, %cl
+; i686-NEXT:    andb $15, %cl
+; i686-NEXT:    movzbl %cl, %ebp
+; i686-NEXT:    movl 4(%esp,%ebp), %edx
+; i686-NEXT:    movl %edx, %esi
+; i686-NEXT:    movl %eax, %ecx
+; i686-NEXT:    shrl %cl, %esi
+; i686-NEXT:    notb %cl
+; i686-NEXT:    movl 8(%esp,%ebp), %ebx
+; i686-NEXT:    leal (%ebx,%ebx), %edi
+; i686-NEXT:    shll %cl, %edi
+; i686-NEXT:    orl %esi, %edi
+; i686-NEXT:    movl (%esp,%ebp), %esi
+; i686-NEXT:    movl 12(%esp,%ebp), %ebp
+; i686-NEXT:    movl %eax, %ecx
+; i686-NEXT:    shrdl %cl, %ebp, %ebx
+; i686-NEXT:    shrdl %cl, %edx, %esi
+; i686-NEXT:    sarl %cl, %ebp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    movl %ebp, 12(%eax)
+; i686-NEXT:    movl %ebx, 8(%eax)
+; i686-NEXT:    movl %esi, (%eax)
+; i686-NEXT:    movl %edi, 4(%eax)
+; i686-NEXT:    addl $32, %esp
 ; i686-NEXT:    popl %esi
 ; i686-NEXT:    popl %edi
 ; i686-NEXT:    popl %ebx
@@ -281,124 +146,62 @@ define void @test_ashr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
 ; x86_64-NEXT:    retq
 entry:
 	%0 = ashr i128 %x, %a
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
+define void @test_shl_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_shl_i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
 ; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
-; i686-NEXT:    subl $20, %esp
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movb {{[0-9]+}}(%esp), %al
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    shll %cl, %ebx
-; i686-NEXT:    movl %ebp, %esi
-; i686-NEXT:    shll %cl, %esi
-; i686-NEXT:    movl %edi, %edx
-; i686-NEXT:    shldl %cl, %ebp, %edx
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    jne .LBB2_1
-; i686-NEXT:  # %bb.2: # %entry
-; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ebx, (%esp) # 4-byte Spill
-; i686-NEXT:    jmp .LBB2_3
-; i686-NEXT:  .LBB2_1:
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl $0, (%esp) # 4-byte Folded Spill
-; i686-NEXT:    xorl %esi, %esi
-; i686-NEXT:  .LBB2_3: # %entry
-; i686-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %eax, %edx
-; i686-NEXT:    subb $64, %dl
-; i686-NEXT:    jb .LBB2_5
-; i686-NEXT:  # %bb.4: # %entry
-; i686-NEXT:    xorl %esi, %esi
-; i686-NEXT:  .LBB2_5: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    negb %dl
-; i686-NEXT:    movl %edi, %esi
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    shrl %cl, %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    shrdl %cl, %edi, %ebx
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    movl %esi, %ebp
-; i686-NEXT:    jne .LBB2_7
-; i686-NEXT:  # %bb.6: # %entry
-; i686-NEXT:    movl %ebx, %ebp
-; i686-NEXT:  .LBB2_7: # %entry
-; i686-NEXT:    movb %al, %ah
-; i686-NEXT:    addb $-64, %ah
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    movb %ah, %cl
-; i686-NEXT:    shll %cl, %ebx
-; i686-NEXT:    testb $32, %ah
-; i686-NEXT:    movl $0, %ecx
-; i686-NEXT:    jne .LBB2_9
-; i686-NEXT:  # %bb.8: # %entry
-; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:  .LBB2_9: # %entry
-; i686-NEXT:    cmpb $64, %al
-; i686-NEXT:    jb .LBB2_10
-; i686-NEXT:  # %bb.11: # %entry
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    jmp .LBB2_12
-; i686-NEXT:  .LBB2_10:
-; i686-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; i686-NEXT:    orl %ebp, %ecx
-; i686-NEXT:  .LBB2_12: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    jne .LBB2_14
-; i686-NEXT:  # %bb.13: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB2_14: # %entry
-; i686-NEXT:    movl %edx, %esi
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    shldl %cl, %ebp, %esi
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    jne .LBB2_16
-; i686-NEXT:  # %bb.15: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB2_16: # %entry
-; i686-NEXT:    movb %ah, %cl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    shldl %cl, %esi, %edi
-; i686-NEXT:    testb $32, %ah
-; i686-NEXT:    jne .LBB2_18
-; i686-NEXT:  # %bb.17: # %entry
-; i686-NEXT:    movl %edi, %ebx
-; i686-NEXT:  .LBB2_18: # %entry
-; i686-NEXT:    cmpb $64, %al
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; i686-NEXT:    jae .LBB2_20
-; i686-NEXT:  # %bb.19:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Folded Reload
-; i686-NEXT:  .LBB2_20: # %entry
+; i686-NEXT:    subl $32, %esp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    testb %al, %al
-; i686-NEXT:    je .LBB2_22
-; i686-NEXT:  # %bb.21: # %entry
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; i686-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, (%esp)
+; i686-NEXT:    movl %ecx, %eax
+; i686-NEXT:    andb $7, %al
+; i686-NEXT:    shrb $3, %cl
+; i686-NEXT:    andb $15, %cl
+; i686-NEXT:    negb %cl
+; i686-NEXT:    movsbl %cl, %ebp
+; i686-NEXT:    movl 24(%esp,%ebp), %ebx
 ; i686-NEXT:    movl %ebx, %edx
-; i686-NEXT:    movl (%esp), %ebp # 4-byte Reload
-; i686-NEXT:  .LBB2_22: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl %eax, 4(%ecx)
-; i686-NEXT:    movl %esi, (%ecx)
-; i686-NEXT:    movl %edx, 12(%ecx)
-; i686-NEXT:    movl %ebp, 8(%ecx)
-; i686-NEXT:    addl $20, %esp
+; i686-NEXT:    movl %eax, %ecx
+; i686-NEXT:    shll %cl, %edx
+; i686-NEXT:    notb %cl
+; i686-NEXT:    movl 20(%esp,%ebp), %edi
+; i686-NEXT:    movl %edi, %esi
+; i686-NEXT:    shrl %esi
+; i686-NEXT:    shrl %cl, %esi
+; i686-NEXT:    orl %edx, %esi
+; i686-NEXT:    movl 16(%esp,%ebp), %edx
+; i686-NEXT:    movl 28(%esp,%ebp), %ebp
+; i686-NEXT:    movl %eax, %ecx
+; i686-NEXT:    shldl %cl, %ebx, %ebp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; i686-NEXT:    movl %ebp, 12(%ecx)
+; i686-NEXT:    movl %edx, %ebx
+; i686-NEXT:    movl %eax, %ecx
+; i686-NEXT:    shll %cl, %ebx
+; i686-NEXT:    shldl %cl, %edx, %edi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    movl %edi, 4(%eax)
+; i686-NEXT:    movl %ebx, (%eax)
+; i686-NEXT:    movl %esi, 8(%eax)
+; i686-NEXT:    addl $32, %esp
 ; i686-NEXT:    popl %esi
 ; i686-NEXT:    popl %edi
 ; i686-NEXT:    popl %ebx
@@ -419,37 +222,37 @@ define void @test_shl_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
 ; x86_64-NEXT:    retq
 entry:
 	%0 = shl i128 %x, %a
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_lshr_i128_outofrange(i128 %x, i128* nocapture %r) nounwind {
+define void @test_lshr_i128_outofrange(i128 %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_lshr_i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = lshr i128 %x, -1
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_i128_outofrange(i128 %x, i128* nocapture %r) nounwind {
+define void @test_ashr_i128_outofrange(i128 %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_ashr_i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = ashr i128 %x, -1
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_i128_outofrange(i128 %x, i128* nocapture %r) nounwind {
+define void @test_shl_i128_outofrange(i128 %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_shl_i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = shl i128 %x, -1
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
@@ -457,272 +260,119 @@ entry:
 ; Vectors
 ;
 
-define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture %r) nounwind {
+define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_lshr_v2i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
 ; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
-; i686-NEXT:    subl $68, %esp
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; i686-NEXT:    subl $100, %esp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    movl %ebx, %edi
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    shrl %cl, %edi
-; i686-NEXT:    movl %esi, %ebp
-; i686-NEXT:    shrl %cl, %ebp
-; i686-NEXT:    shrdl %cl, %esi, %edx
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    jne .LBB6_1
-; i686-NEXT:  # %bb.2: # %entry
-; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    jmp .LBB6_3
-; i686-NEXT:  .LBB6_1:
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:  .LBB6_3: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    shrdl %cl, %ebx, %esi
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    jne .LBB6_5
-; i686-NEXT:  # %bb.4: # %entry
-; i686-NEXT:    movl %esi, %edi
-; i686-NEXT:  .LBB6_5: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    shrl %cl, %ebx
-; i686-NEXT:    shrl %cl, %ebp
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    subl $64, %ecx
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    sbbl $0, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    sbbl $0, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    sbbl $0, %ecx
-; i686-NEXT:    setb {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    movl $0, %ecx
-; i686-NEXT:    jne .LBB6_7
-; i686-NEXT:  # %bb.6: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:  .LBB6_7: # %entry
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    shrdl %cl, %ebp, %esi
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    jne .LBB6_9
-; i686-NEXT:  # %bb.8: # %entry
-; i686-NEXT:    movl %esi, %ebx
-; i686-NEXT:  .LBB6_9: # %entry
-; i686-NEXT:    movl %edi, %esi
-; i686-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    shrl %cl, %ebp
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movl $0, %ecx
-; i686-NEXT:    jne .LBB6_11
-; i686-NEXT:  # %bb.10: # %entry
-; i686-NEXT:    movl %ebp, %ecx
-; i686-NEXT:  .LBB6_11: # %entry
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movb $64, %cl
-; i686-NEXT:    subb %dl, %cl
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    shldl %cl, %ebx, %edi
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ebx, %edi
-; i686-NEXT:    shll %cl, %edi
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movb $64, %bl
-; i686-NEXT:    jne .LBB6_12
-; i686-NEXT:  # %bb.13: # %entry
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    jmp .LBB6_14
-; i686-NEXT:  .LBB6_12:
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:  .LBB6_14: # %entry
-; i686-NEXT:    movl %esi, %edi
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    shrdl %cl, %ebp, %esi
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    jne .LBB6_16
-; i686-NEXT:  # %bb.15: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB6_16: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    subb %al, %bl
+; i686-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:    shll %cl, %ebp
-; i686-NEXT:    testb $32, %bl
-; i686-NEXT:    movl $0, %ecx
-; i686-NEXT:    jne .LBB6_18
-; i686-NEXT:  # %bb.17: # %entry
-; i686-NEXT:    movl %ebp, %ecx
-; i686-NEXT:  .LBB6_18: # %entry
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    subl $64, %ecx
-; i686-NEXT:    sbbl $0, %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    sbbl $0, %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    sbbl $0, %esi
-; i686-NEXT:    setae %bh
-; i686-NEXT:    jb .LBB6_20
-; i686-NEXT:  # %bb.19: # %entry
-; i686-NEXT:    xorl %edi, %edi
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:  .LBB6_20: # %entry
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    shrdl %cl, %esi, %edi
-; i686-NEXT:    shrl %cl, %esi
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    jne .LBB6_22
-; i686-NEXT:  # %bb.21: # %entry
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB6_22: # %entry
-; i686-NEXT:    testb %bh, %bh
-; i686-NEXT:    jne .LBB6_24
-; i686-NEXT:  # %bb.23:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB6_24: # %entry
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movl $0, %ecx
-; i686-NEXT:    jne .LBB6_26
-; i686-NEXT:  # %bb.25: # %entry
+; i686-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; i686-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; i686-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; i686-NEXT:    movl %esi, %ecx
-; i686-NEXT:  .LBB6_26: # %entry
+; i686-NEXT:    andl $7, %ecx
 ; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    shldl %cl, %edi, %esi
-; i686-NEXT:    testb $32, %bl
-; i686-NEXT:    jne .LBB6_28
-; i686-NEXT:  # %bb.27: # %entry
-; i686-NEXT:    movl %esi, %ebp
-; i686-NEXT:  .LBB6_28: # %entry
-; i686-NEXT:    testb %bh, %bh
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    jne .LBB6_30
-; i686-NEXT:  # %bb.29:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    orl %ebp, %ecx
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB6_30: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    jne .LBB6_32
-; i686-NEXT:  # %bb.31: # %entry
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:  .LBB6_32: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    shrdl %cl, %ebp, %edi
-; i686-NEXT:    movl %edi, %ebp
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; i686-NEXT:    je .LBB6_33
-; i686-NEXT:  # %bb.34: # %entry
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    jne .LBB6_35
-; i686-NEXT:  .LBB6_36: # %entry
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    je .LBB6_38
-; i686-NEXT:  .LBB6_37:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB6_38: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    orl %ecx, %edx
-; i686-NEXT:    je .LBB6_40
-; i686-NEXT:  # %bb.39: # %entry
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; i686-NEXT:  .LBB6_40: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    orl %edx, %eax
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    je .LBB6_42
-; i686-NEXT:  # %bb.41: # %entry
+; i686-NEXT:    shrl $3, %esi
+; i686-NEXT:    andl $15, %esi
+; i686-NEXT:    movl 40(%esp,%esi), %eax
+; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    shrl %cl, %eax
+; i686-NEXT:    notl %ecx
+; i686-NEXT:    movl 44(%esp,%esi), %edx
+; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    addl %edx, %edx
+; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
+; i686-NEXT:    shll %cl, %edx
+; i686-NEXT:    orl %eax, %edx
+; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    movl 36(%esp,%esi), %eax
+; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ebx, %edx
+; i686-NEXT:    andl $7, %edx
+; i686-NEXT:    shrl $3, %ebx
+; i686-NEXT:    andl $15, %ebx
+; i686-NEXT:    movl 72(%esp,%ebx), %ebp
+; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    movl %edx, %ecx
+; i686-NEXT:    shrl %cl, %ebp
+; i686-NEXT:    movl %edx, %ecx
+; i686-NEXT:    notl %ecx
+; i686-NEXT:    movl 76(%esp,%ebx), %eax
+; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    leal (%eax,%eax), %edi
+; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
+; i686-NEXT:    shll %cl, %edi
+; i686-NEXT:    orl %ebp, %edi
+; i686-NEXT:    movl 48(%esp,%esi), %esi
+; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; i686-NEXT:  .LBB6_42: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; i686-NEXT:    movl %edx, 28(%ecx)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; i686-NEXT:    movl %edx, 24(%ecx)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; i686-NEXT:    movl %edx, 12(%ecx)
+; i686-NEXT:    movl %eax, %ecx
+; i686-NEXT:    shrdl %cl, %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; i686-NEXT:    movl 68(%esp,%ebx), %ecx
+; i686-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; i686-NEXT:    movl 80(%esp,%ebx), %esi
+; i686-NEXT:    movl %edx, %ecx
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; i686-NEXT:    shrdl %cl, %esi, %ebx
+; i686-NEXT:    movl %eax, %ecx
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
+; i686-NEXT:    shrdl %cl, %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
+; i686-NEXT:    shrl %cl, %ebp
+; i686-NEXT:    movl %edx, %ecx
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; i686-NEXT:    shrdl %cl, %eax, (%esp) # 4-byte Folded Spill
+; i686-NEXT:    shrl %cl, %esi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; i686-NEXT:    movl %esi, 28(%ecx)
+; i686-NEXT:    movl %ebx, 24(%ecx)
+; i686-NEXT:    movl (%esp), %eax # 4-byte Reload
+; i686-NEXT:    movl %eax, 16(%ecx)
+; i686-NEXT:    movl %ebp, 12(%ecx)
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; i686-NEXT:    movl %edx, 8(%ecx)
-; i686-NEXT:    movl %esi, 20(%ecx)
-; i686-NEXT:    movl %eax, 16(%ecx)
-; i686-NEXT:    movl %ebx, 4(%ecx)
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; i686-NEXT:    movl %edx, (%ecx)
+; i686-NEXT:    movl %edi, 20(%ecx)
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl %eax, (%ecx)
-; i686-NEXT:    addl $68, %esp
+; i686-NEXT:    movl %eax, 4(%ecx)
+; i686-NEXT:    addl $100, %esp
 ; i686-NEXT:    popl %esi
 ; i686-NEXT:    popl %edi
 ; i686-NEXT:    popl %ebx
 ; i686-NEXT:    popl %ebp
 ; i686-NEXT:    retl
-; i686-NEXT:  .LBB6_33: # %entry
-; i686-NEXT:    movl %ebp, %edi
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    je .LBB6_36
-; i686-NEXT:  .LBB6_35:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; i686-NEXT:    movl %ecx, %edi
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    jne .LBB6_37
-; i686-NEXT:    jmp .LBB6_38
 ;
 ; x86_64-LABEL: test_lshr_v2i128:
 ; x86_64:       # %bb.0: # %entry
 ; x86_64-NEXT:    movq %rcx, %rax
 ; x86_64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; x86_64-NEXT:    movb {{[0-9]+}}(%rsp), %r9b
+; x86_64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r9d
 ; x86_64-NEXT:    movl %r9d, %ecx
 ; x86_64-NEXT:    shrdq %cl, %rax, %rdx
 ; x86_64-NEXT:    movl %r8d, %ecx
@@ -744,579 +394,264 @@ define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocaptur
 ; x86_64-NEXT:    retq
 entry:
 	%0 = lshr <2 x i128> %x, %a
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture %r) nounwind {
+define void @test_ashr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_ashr_v2i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
 ; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
-; i686-NEXT:    subl $80, %esp
+; i686-NEXT:    subl $92, %esp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    movl %ebp, %ebx
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    sarl %cl, %ebx
-; i686-NEXT:    movl %esi, %edi
-; i686-NEXT:    shrl %cl, %edi
-; i686-NEXT:    shrdl %cl, %esi, %edx
-; i686-NEXT:    sarl $31, %ebp
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    jne .LBB7_1
-; i686-NEXT:  # %bb.2: # %entry
-; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    jmp .LBB7_3
-; i686-NEXT:  .LBB7_1:
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB7_3: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    shrdl %cl, %edx, %edi
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    jne .LBB7_5
-; i686-NEXT:  # %bb.4: # %entry
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    sarl $31, %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; i686-NEXT:    sarl $31, %eax
+; i686-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; i686-NEXT:    movl %edi, %ebx
-; i686-NEXT:  .LBB7_5: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl %ebp, %edi
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    sarl %cl, %edi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    shrl %cl, %esi
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    sarl $31, %ebp
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    subl $64, %ecx
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    sbbl $0, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    sbbl $0, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    sbbl $0, %ecx
-; i686-NEXT:    setb {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    movl $0, %esi
+; i686-NEXT:    andl $7, %ebx
+; i686-NEXT:    shrl $3, %edi
+; i686-NEXT:    andl $15, %edi
+; i686-NEXT:    movl 32(%esp,%edi), %eax
+; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    movl %ebx, %ecx
+; i686-NEXT:    shrl %cl, %eax
+; i686-NEXT:    movl %ebx, %ecx
+; i686-NEXT:    notl %ecx
+; i686-NEXT:    movl 36(%esp,%edi), %edx
+; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    addl %edx, %edx
+; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
+; i686-NEXT:    shll %cl, %edx
+; i686-NEXT:    orl %eax, %edx
+; i686-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    movl %ebp, %eax
+; i686-NEXT:    movl %ebp, %edx
+; i686-NEXT:    andl $7, %edx
+; i686-NEXT:    shrl $3, %eax
+; i686-NEXT:    andl $15, %eax
+; i686-NEXT:    movl 64(%esp,%eax), %ebp
 ; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ebp, %ecx
-; i686-NEXT:    jne .LBB7_7
-; i686-NEXT:  # %bb.6: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; i686-NEXT:    movl %edi, %ecx
-; i686-NEXT:  .LBB7_7: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; i686-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; i686-NEXT:    shrl %cl, %ebp
+; i686-NEXT:    movl %edx, %ecx
+; i686-NEXT:    notl %ecx
+; i686-NEXT:    movl 68(%esp,%eax), %esi
+; i686-NEXT:    leal (%esi,%esi), %eax
+; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
+; i686-NEXT:    shll %cl, %eax
+; i686-NEXT:    orl %ebp, %eax
+; i686-NEXT:    movl 28(%esp,%edi), %ecx
+; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    movl 40(%esp,%edi), %edi
+; i686-NEXT:    movl %ebx, %ecx
+; i686-NEXT:    shrdl %cl, %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; i686-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; i686-NEXT:    movl 60(%esp,%ecx), %ebp
+; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    movl 72(%esp,%ecx), %ebp
+; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    shrdl %cl, %ebp, %esi
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    jne .LBB7_9
-; i686-NEXT:  # %bb.8: # %entry
-; i686-NEXT:    movl %esi, %edi
-; i686-NEXT:  .LBB7_9: # %entry
-; i686-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    sarl %cl, %esi
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    jne .LBB7_11
-; i686-NEXT:  # %bb.10: # %entry
-; i686-NEXT:    movl %esi, %ecx
-; i686-NEXT:  .LBB7_11: # %entry
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movb $64, %cl
-; i686-NEXT:    subb %dl, %cl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    shldl %cl, %ebx, %ebp
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ebx, %ebp
-; i686-NEXT:    shll %cl, %ebp
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movb $64, %bl
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    je .LBB7_13
-; i686-NEXT:  # %bb.12:
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    xorl %ebp, %ebp
-; i686-NEXT:  .LBB7_13: # %entry
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    shrdl %cl, %edi, %esi
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    jne .LBB7_15
-; i686-NEXT:  # %bb.14: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB7_15: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    subb %al, %bl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; i686-NEXT:    movl %esi, (%esp) # 4-byte Spill
 ; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:    shll %cl, %ebp
-; i686-NEXT:    testb $32, %bl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    jne .LBB7_17
-; i686-NEXT:  # %bb.16: # %entry
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB7_17: # %entry
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    subl $64, %ecx
-; i686-NEXT:    sbbl $0, %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    sbbl $0, %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    sbbl $0, %esi
-; i686-NEXT:    setae %bh
-; i686-NEXT:    jb .LBB7_19
-; i686-NEXT:  # %bb.18: # %entry
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB7_19: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    shrdl %cl, %edi, %esi
+; i686-NEXT:    shrdl %cl, %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; i686-NEXT:    sarl %cl, %edi
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    je .LBB7_20
-; i686-NEXT:  # %bb.21: # %entry
-; i686-NEXT:    testb %bh, %bh
-; i686-NEXT:    je .LBB7_22
-; i686-NEXT:  .LBB7_23: # %entry
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    jne .LBB7_25
-; i686-NEXT:  .LBB7_24: # %entry
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB7_25: # %entry
-; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    shldl %cl, %esi, %edi
-; i686-NEXT:    testb $32, %bl
-; i686-NEXT:    jne .LBB7_27
-; i686-NEXT:  # %bb.26: # %entry
-; i686-NEXT:    movl %edi, %ebp
-; i686-NEXT:  .LBB7_27: # %entry
-; i686-NEXT:    testb %bh, %bh
+; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; i686-NEXT:    jne .LBB7_29
-; i686-NEXT:  # %bb.28:
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; i686-NEXT:    orl %ebp, %ebx
-; i686-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB7_29: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    jne .LBB7_31
-; i686-NEXT:  # %bb.30: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB7_31: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    shrdl %cl, %ebp, %ebx
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    jne .LBB7_33
-; i686-NEXT:  # %bb.32: # %entry
-; i686-NEXT:    movl %ebx, %esi
-; i686-NEXT:  .LBB7_33: # %entry
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; i686-NEXT:    je .LBB7_35
-; i686-NEXT:  # %bb.34:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    orl %ebx, %ecx
-; i686-NEXT:    movl %ecx, %esi
-; i686-NEXT:  .LBB7_35: # %entry
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    je .LBB7_37
-; i686-NEXT:  # %bb.36:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB7_37: # %entry
+; i686-NEXT:    shrdl %cl, %esi, %ebx
+; i686-NEXT:    sarl %cl, %ebp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    orl %ecx, %edx
-; i686-NEXT:    je .LBB7_39
-; i686-NEXT:  # %bb.38: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB7_39: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    orl %edx, %eax
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    je .LBB7_41
-; i686-NEXT:  # %bb.40: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; i686-NEXT:  .LBB7_41: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; i686-NEXT:    movl %edx, 28(%ecx)
-; i686-NEXT:    movl %edi, 24(%ecx)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; i686-NEXT:    movl %edx, 12(%ecx)
+; i686-NEXT:    movl %ebp, 28(%ecx)
+; i686-NEXT:    movl (%esp), %edx # 4-byte Reload
+; i686-NEXT:    movl %edx, 24(%ecx)
+; i686-NEXT:    movl %ebx, 16(%ecx)
+; i686-NEXT:    movl %edi, 12(%ecx)
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; i686-NEXT:    movl %edx, 8(%ecx)
-; i686-NEXT:    movl %esi, 20(%ecx)
-; i686-NEXT:    movl %eax, 16(%ecx)
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; i686-NEXT:    movl %edx, (%ecx)
+; i686-NEXT:    movl %eax, 20(%ecx)
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; i686-NEXT:    movl %eax, 4(%ecx)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl %eax, (%ecx)
-; i686-NEXT:    addl $80, %esp
+; i686-NEXT:    addl $92, %esp
 ; i686-NEXT:    popl %esi
 ; i686-NEXT:    popl %edi
 ; i686-NEXT:    popl %ebx
 ; i686-NEXT:    popl %ebp
 ; i686-NEXT:    retl
-; i686-NEXT:  .LBB7_20: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    testb %bh, %bh
-; i686-NEXT:    jne .LBB7_23
-; i686-NEXT:  .LBB7_22:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    je .LBB7_24
-; i686-NEXT:    jmp .LBB7_25
 ;
 ; x86_64-LABEL: test_ashr_v2i128:
 ; x86_64:       # %bb.0: # %entry
-; x86_64-NEXT:    movq %rcx, %r11
+; x86_64-NEXT:    movq %rcx, %rax
 ; x86_64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; x86_64-NEXT:    movb {{[0-9]+}}(%rsp), %r9b
+; x86_64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r9d
 ; x86_64-NEXT:    movl %r9d, %ecx
-; x86_64-NEXT:    shrdq %cl, %r11, %rdx
+; x86_64-NEXT:    shrdq %cl, %rax, %rdx
 ; x86_64-NEXT:    movl %r8d, %ecx
 ; x86_64-NEXT:    shrdq %cl, %rsi, %rdi
-; x86_64-NEXT:    movq %rsi, %rax
-; x86_64-NEXT:    sarq %cl, %rax
+; x86_64-NEXT:    movq %rsi, %r11
+; x86_64-NEXT:    sarq %cl, %r11
 ; x86_64-NEXT:    sarq $63, %rsi
 ; x86_64-NEXT:    testb $64, %r8b
-; x86_64-NEXT:    cmovneq %rax, %rdi
-; x86_64-NEXT:    cmoveq %rax, %rsi
-; x86_64-NEXT:    movq %r11, %rax
+; x86_64-NEXT:    cmovneq %r11, %rdi
+; x86_64-NEXT:    cmoveq %r11, %rsi
+; x86_64-NEXT:    movq %rax, %r8
 ; x86_64-NEXT:    movl %r9d, %ecx
-; x86_64-NEXT:    sarq %cl, %rax
-; x86_64-NEXT:    sarq $63, %r11
+; x86_64-NEXT:    sarq %cl, %r8
+; x86_64-NEXT:    sarq $63, %rax
 ; x86_64-NEXT:    testb $64, %r9b
-; x86_64-NEXT:    cmovneq %rax, %rdx
-; x86_64-NEXT:    cmoveq %rax, %r11
-; x86_64-NEXT:    movq %r11, 24(%r10)
+; x86_64-NEXT:    cmovneq %r8, %rdx
+; x86_64-NEXT:    cmoveq %r8, %rax
+; x86_64-NEXT:    movq %rax, 24(%r10)
 ; x86_64-NEXT:    movq %rdx, 16(%r10)
 ; x86_64-NEXT:    movq %rsi, 8(%r10)
 ; x86_64-NEXT:    movq %rdi, (%r10)
 ; x86_64-NEXT:    retq
 entry:
 	%0 = ashr <2 x i128> %x, %a
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture %r) nounwind {
+define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_shl_v2i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
 ; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
-; i686-NEXT:    subl $72, %esp
+; i686-NEXT:    subl $100, %esp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:    shll %cl, %ebp
-; i686-NEXT:    shll %cl, %esi
-; i686-NEXT:    movl %edx, %eax
-; i686-NEXT:    subl $64, %eax
-; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    sbbl $0, %eax
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    sbbl $0, %eax
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    sbbl $0, %eax
-; i686-NEXT:    setb {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    testb $32, %bl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl $0, %eax
-; i686-NEXT:    movl $0, %ecx
-; i686-NEXT:    jne .LBB8_2
-; i686-NEXT:  # %bb.1: # %entry
-; i686-NEXT:    movl %esi, %eax
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; i686-NEXT:    movl %ebp, %ecx
-; i686-NEXT:  .LBB8_2: # %entry
+; i686-NEXT:    shrl $3, %ebp
+; i686-NEXT:    andl $15, %ebp
+; i686-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    subl %ebp, %eax
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl 8(%eax), %edx
+; i686-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; i686-NEXT:    andl $7, %ecx
 ; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %edi, %eax
-; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    shldl %cl, %edi, %eax
-; i686-NEXT:    testb $32, %bl
-; i686-NEXT:    jne .LBB8_4
-; i686-NEXT:  # %bb.3: # %entry
-; i686-NEXT:    movl %eax, %esi
-; i686-NEXT:  .LBB8_4: # %entry
+; i686-NEXT:    shll %cl, %edx
+; i686-NEXT:    movl 4(%eax), %esi
 ; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movb $64, %cl
-; i686-NEXT:    subb %bl, %cl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl %edi, %esi
+; i686-NEXT:    shrl %esi
+; i686-NEXT:    notl %ecx
+; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; i686-NEXT:    shrl %cl, %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    shrdl %cl, %edi, %eax
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    jne .LBB8_5
-; i686-NEXT:  # %bb.6: # %entry
+; i686-NEXT:    orl %edx, %esi
 ; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    jmp .LBB8_7
-; i686-NEXT:  .LBB8_5:
-; i686-NEXT:    movl %esi, %eax
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:  .LBB8_7: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; i686-NEXT:    movl (%eax), %eax
+; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    movl %ebx, %edx
+; i686-NEXT:    shrl $3, %edx
+; i686-NEXT:    andl $15, %edx
+; i686-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; i686-NEXT:    subl %edx, %esi
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    andl $7, %ebx
+; i686-NEXT:    movl 8(%esi), %edi
+; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    shldl %cl, %esi, %edi
-; i686-NEXT:    testb $32, %bl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; i686-NEXT:    shll %cl, %edi
+; i686-NEXT:    movl 4(%esi), %eax
+; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    shrl %eax
+; i686-NEXT:    movl %ebx, %ecx
+; i686-NEXT:    notl %ecx
+; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
+; i686-NEXT:    shrl %cl, %eax
+; i686-NEXT:    orl %edi, %eax
+; i686-NEXT:    movl (%esi), %ecx
 ; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    jne .LBB8_9
-; i686-NEXT:  # %bb.8: # %entry
-; i686-NEXT:    movl %edi, %ebp
-; i686-NEXT:  .LBB8_9: # %entry
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ecx, %ebp
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    shll %cl, %ebp
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    shll %cl, %esi
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    movl $0, %edi
-; i686-NEXT:    movl $0, %ecx
-; i686-NEXT:    jne .LBB8_11
-; i686-NEXT:  # %bb.10: # %entry
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; i686-NEXT:    movl %esi, %edi
-; i686-NEXT:    movl %ebp, %ecx
-; i686-NEXT:  .LBB8_11: # %entry
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    shldl %cl, %ebx, %edi
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    jne .LBB8_13
-; i686-NEXT:  # %bb.12: # %entry
-; i686-NEXT:    movl %edi, %ebp
-; i686-NEXT:  .LBB8_13: # %entry
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movb $64, %cl
-; i686-NEXT:    subb %dl, %cl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    shrl %cl, %ebx
-; i686-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movl $0, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    jne .LBB8_15
-; i686-NEXT:  # %bb.14: # %entry
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:  .LBB8_15: # %entry
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    shldl %cl, %ebp, %edi
-; i686-NEXT:    testb $32, %dl
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    jne .LBB8_17
-; i686-NEXT:  # %bb.16: # %entry
-; i686-NEXT:    movl %edi, %esi
-; i686-NEXT:  .LBB8_17: # %entry
-; i686-NEXT:    orl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    movl %ebx, %eax
-; i686-NEXT:    subl $64, %eax
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    sbbl $0, %ecx
-; i686-NEXT:    movl %ebp, %ecx
-; i686-NEXT:    sbbl $0, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    sbbl $0, %ecx
-; i686-NEXT:    setb {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
-; i686-NEXT:    jb .LBB8_19
-; i686-NEXT:  # %bb.18: # %entry
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:  .LBB8_19: # %entry
-; i686-NEXT:    jb .LBB8_21
-; i686-NEXT:  # %bb.20: # %entry
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:  .LBB8_21: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; i686-NEXT:    movl %ebp, %ebx
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    shll %cl, %ebx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    shldl %cl, %ebp, %edi
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    movl %ebx, %ecx
-; i686-NEXT:    jne .LBB8_23
-; i686-NEXT:  # %bb.22: # %entry
-; i686-NEXT:    movl %edi, %ecx
-; i686-NEXT:  .LBB8_23: # %entry
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl %eax, %ecx
 ; i686-NEXT:    shll %cl, %edi
 ; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    movl $0, %edi
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; i686-NEXT:    jne .LBB8_25
-; i686-NEXT:  # %bb.24: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; i686-NEXT:  .LBB8_25: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    jne .LBB8_27
-; i686-NEXT:  # %bb.26: # %entry
-; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB8_27: # %entry
-; i686-NEXT:    movl %eax, %ecx
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; i686-NEXT:    shldl %cl, %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; i686-NEXT:    negl %ebp
+; i686-NEXT:    movl 64(%esp,%ebp), %esi
+; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
+; i686-NEXT:    movl (%esp), %edi # 4-byte Reload
 ; i686-NEXT:    shldl %cl, %edi, %esi
-; i686-NEXT:    testb $32, %al
-; i686-NEXT:    jne .LBB8_29
-; i686-NEXT:  # %bb.28: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB8_29: # %entry
-; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    jne .LBB8_30
-; i686-NEXT:  # %bb.31: # %entry
-; i686-NEXT:    testb %al, %al
-; i686-NEXT:    je .LBB8_32
-; i686-NEXT:  .LBB8_33: # %entry
-; i686-NEXT:    testb $32, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    jne .LBB8_35
-; i686-NEXT:  .LBB8_34: # %entry
-; i686-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB8_35: # %entry
-; i686-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    shrdl %cl, %ebx, %esi
-; i686-NEXT:    testb $32, %cl
-; i686-NEXT:    jne .LBB8_37
-; i686-NEXT:  # %bb.36: # %entry
-; i686-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB8_37: # %entry
-; i686-NEXT:    testb %al, %al
+; i686-NEXT:    movl %esi, (%esp) # 4-byte Spill
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    jne .LBB8_38
-; i686-NEXT:  # %bb.39: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; i686-NEXT:    movl %esi, %edi
+; i686-NEXT:    movl %ebx, %ecx
+; i686-NEXT:    shll %cl, %edi
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; i686-NEXT:    testb %al, %al
-; i686-NEXT:    jne .LBB8_41
-; i686-NEXT:    jmp .LBB8_42
-; i686-NEXT:  .LBB8_30:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    orl %ebp, %ecx
-; i686-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    testb %al, %al
-; i686-NEXT:    jne .LBB8_33
-; i686-NEXT:  .LBB8_32: # %entry
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; i686-NEXT:    testb $32, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; i686-NEXT:    je .LBB8_34
-; i686-NEXT:    jmp .LBB8_35
-; i686-NEXT:  .LBB8_38:
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
+; i686-NEXT:    shldl %cl, %esi, %ebp
+; i686-NEXT:    negl %edx
+; i686-NEXT:    movl 96(%esp,%edx), %edx
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; i686-NEXT:    shldl %cl, %ebx, %edx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; i686-NEXT:    testb %al, %al
-; i686-NEXT:    je .LBB8_42
-; i686-NEXT:  .LBB8_41:
+; i686-NEXT:    movl %edx, 28(%ecx)
+; i686-NEXT:    movl %ebp, 20(%ecx)
+; i686-NEXT:    movl %edi, 16(%ecx)
+; i686-NEXT:    movl (%esp), %edx # 4-byte Reload
+; i686-NEXT:    movl %edx, 12(%ecx)
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; i686-NEXT:    movl %edx, 4(%ecx)
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; i686-NEXT:    movl %edx, (%ecx)
+; i686-NEXT:    movl %eax, 24(%ecx)
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB8_42: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    orl %eax, %edx
-; i686-NEXT:    je .LBB8_44
-; i686-NEXT:  # %bb.43: # %entry
-; i686-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:  .LBB8_44: # %entry
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    orl {{[0-9]+}}(%esp), %ebx
-; i686-NEXT:    orl %edx, %ebx
-; i686-NEXT:    je .LBB8_46
-; i686-NEXT:  # %bb.45: # %entry
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; i686-NEXT:  .LBB8_46: # %entry
-; i686-NEXT:    movl %esi, 20(%eax)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; i686-NEXT:    movl %edx, 16(%eax)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; i686-NEXT:    movl %edx, 4(%eax)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; i686-NEXT:    movl %edx, (%eax)
-; i686-NEXT:    movl %edi, 28(%eax)
-; i686-NEXT:    movl %ecx, 24(%eax)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    movl %ecx, 12(%eax)
-; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; i686-NEXT:    movl %ecx, 8(%eax)
-; i686-NEXT:    addl $72, %esp
+; i686-NEXT:    movl %eax, 8(%ecx)
+; i686-NEXT:    addl $100, %esp
 ; i686-NEXT:    popl %esi
 ; i686-NEXT:    popl %edi
 ; i686-NEXT:    popl %ebx
@@ -1327,7 +662,7 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture
 ; x86_64:       # %bb.0: # %entry
 ; x86_64-NEXT:    movq %rcx, %rax
 ; x86_64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; x86_64-NEXT:    movb {{[0-9]+}}(%rsp), %r9b
+; x86_64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r9d
 ; x86_64-NEXT:    movl %r9d, %ecx
 ; x86_64-NEXT:    shldq %cl, %rdx, %rax
 ; x86_64-NEXT:    movl %r8d, %ecx
@@ -1349,41 +684,41 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture
 ; x86_64-NEXT:    retq
 entry:
 	%0 = shl <2 x i128> %x, %a
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_lshr_v2i128_outofrange(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_lshr_v2i128_outofrange(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_lshr_v2i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = lshr <2 x i128> %x, <i128 -1, i128 -1>
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_v2i128_outofrange(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_ashr_v2i128_outofrange(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_ashr_v2i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = ashr <2 x i128> %x, <i128 -1, i128 -1>
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_v2i128_outofrange(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_shl_v2i128_outofrange(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_shl_v2i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = shl <2 x i128> %x, <i128 -1, i128 -1>
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_lshr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_lshr_v2i128_outofrange_sum(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_lshr_v2i128_outofrange_sum:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1406,11 +741,11 @@ define void @test_lshr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocaptur
 entry:
 	%0 = lshr <2 x i128> %x, <i128 -1, i128 -1>
 	%1 = lshr <2 x i128> %0, <i128  1, i128  1>
-	store <2 x i128> %1, <2 x i128>* %r, align 16
+	store <2 x i128> %1, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_ashr_v2i128_outofrange_sum(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_ashr_v2i128_outofrange_sum:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1433,11 +768,11 @@ define void @test_ashr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocaptur
 entry:
 	%0 = ashr <2 x i128> %x, <i128 -1, i128 -1>
 	%1 = ashr <2 x i128> %0, <i128  1, i128  1>
-	store <2 x i128> %1, <2 x i128>* %r, align 16
+	store <2 x i128> %1, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_shl_v2i128_outofrange_sum(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_shl_v2i128_outofrange_sum:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1460,7 +795,7 @@ define void @test_shl_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture
 entry:
 	%0 = shl <2 x i128> %x, <i128 -1, i128 -1>
 	%1 = shl <2 x i128> %0, <i128  1, i128  1>
-	store <2 x i128> %1, <2 x i128>* %r, align 16
+	store <2 x i128> %1, ptr %r, align 16
 	ret void
 }
 

@@ -4,14 +4,14 @@
 // a different codepath when we have already emitted an error.)
 
 int PotentiallyEvaluatedSizeofWarn(int n) {
-  return (int)sizeof *(0 << 32,(int(*)[n])0); // expected-warning {{expression result unused}} expected-warning {{shift count >= width of type}}
+  return (int)sizeof *(0 << 32,(int(*)[n])0); // expected-warning {{left operand of comma operator has no effect}} expected-warning {{shift count >= width of type}}
 }
 
 void PotentiallyEvaluatedTypeofWarn(int n) {
-  __typeof(*(0 << 32,(int(*)[n])0)) x; // expected-warning {{expression result unused}} expected-warning {{shift count >= width of type}}
+  __typeof(*(0 << 32,(int(*)[n])0)) x; // expected-warning {{left operand of comma operator has no effect}} expected-warning {{shift count >= width of type}}
   (void)x;
 }
 
 void PotentiallyEvaluatedArrayBoundWarn(int n) {
-  (void)*(int(*)[(0 << 32,n)])0; // FIXME: We should warn here.
+  (void)*(int(*)[(0 << 32,n)])0; // expected-warning {{left operand of comma operator has no effect}}
 }

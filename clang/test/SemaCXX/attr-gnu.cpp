@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -std=gnu++03 -fsyntax-only -fms-compatibility -Wno-c++11-extensions -Wno-c++17-extensions -verify %s
 // RUN: %clang_cc1 -std=gnu++17 -fsyntax-only -fms-compatibility -verify %s
 
 void f() {
@@ -13,10 +14,10 @@ void f() {
 void g(int a[static [[]] 5]); // expected-error {{static array size is a C99 feature, not permitted in C++}}
 
 template<typename T> struct A {
-  int x[sizeof(T)] __attribute((vector_size(8))); // expected-error {{invalid vector element type 'int [sizeof(T)]'}}
+  int x[sizeof(T)] __attribute((vector_size(8))); // expected-error {{invalid vector element type 'int[sizeof(T)]'}}
 };
 
-typedef int myvect[4] __attribute__((vector_size(16))); // expected-error {{invalid vector element type 'int [4]'}}
+typedef int myvect[4] __attribute__((vector_size(16))); // expected-error {{invalid vector element type 'int[4]'}}
 void foo(myvect *in, myvect *out) { (*out)[0] = (*in)[0]; }
 
 namespace {

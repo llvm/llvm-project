@@ -18,8 +18,10 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -34,22 +36,27 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
 
   // Get types from global variables.
   for (const auto &G : M.globals()) {
-    incorporateType(G.getType());
+    incorporateType(G.getValueType());
     if (G.hasInitializer())
       incorporateValue(G.getInitializer());
   }
 
   // Get types from aliases.
   for (const auto &A : M.aliases()) {
-    incorporateType(A.getType());
+    incorporateType(A.getValueType());
     if (const Value *Aliasee = A.getAliasee())
       incorporateValue(Aliasee);
   }
 
+  // Get types from ifuncs.
+  for (const auto &GI : M.ifuncs())
+    incorporateType(GI.getValueType());
+
   // Get types from functions.
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDForInst;
   for (const Function &FI : M) {
-    incorporateType(FI.getType());
+    incorporateType(FI.getFunctionType());
+    incorporateAttributes(FI.getAttributes());
 
     for (const Use &U : FI.operands())
       incorporateValue(U.get());
@@ -68,6 +75,13 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
         for (const auto &O : I.operands())
           if (&*O && !isa<Instruction>(&*O))
             incorporateValue(&*O);
+
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
+          incorporateType(GEP->getSourceElementType());
+        if (auto *AI = dyn_cast<AllocaInst>(&I))
+          incorporateType(AI->getAllocatedType());
+        if (const auto *CB = dyn_cast<CallBase>(&I))
+          incorporateAttributes(CB->getAttributes());
 
         // Incorporate types hiding in metadata.
         I.getAllMetadataOtherThanDebugLoc(MDForInst);
@@ -106,11 +120,9 @@ void TypeFinder::incorporateType(Type *Ty) {
         StructTypes.push_back(STy);
 
     // Add all unvisited subtypes to worklist for processing
-    for (Type::subtype_reverse_iterator I = Ty->subtype_rbegin(),
-                                        E = Ty->subtype_rend();
-         I != E; ++I)
-      if (VisitedTypes.insert(*I).second)
-        TypeWorklist.push_back(*I);
+    for (Type *SubTy : llvm::reverse(Ty->subtypes()))
+      if (VisitedTypes.insert(SubTy).second)
+        TypeWorklist.push_back(SubTy);
   } while (!TypeWorklist.empty());
 }
 
@@ -124,6 +136,11 @@ void TypeFinder::incorporateValue(const Value *V) {
       return incorporateMDNode(N);
     if (const auto *MDV = dyn_cast<ValueAsMetadata>(M->getMetadata()))
       return incorporateValue(MDV->getValue());
+    if (const auto *AL = dyn_cast<DIArgList>(M->getMetadata())) {
+      for (auto *Arg : AL->getArgs())
+        incorporateValue(Arg->getValue());
+      return;
+    }
     return;
   }
 
@@ -140,6 +157,9 @@ void TypeFinder::incorporateValue(const Value *V) {
   if (isa<Instruction>(V))
     return;
 
+  if (auto *GEP = dyn_cast<GEPOperator>(V))
+    incorporateType(GEP->getSourceElementType());
+
   // Look in operands for types.
   const User *U = cast<User>(V);
   for (const auto &I : U->operands())
@@ -152,14 +172,6 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
   // Already visited?
   if (!VisitedMetadata.insert(V).second)
     return;
-
-  // The arguments in DIArgList are not exposed as operands, so handle such
-  // nodes specifically here.
-  if (const auto *AL = dyn_cast<DIArgList>(V)) {
-    for (auto *Arg : AL->getArgs())
-      incorporateValue(Arg->getValue());
-    return;
-  }
 
   // Look in operands for types.
   for (Metadata *Op : V->operands()) {
@@ -174,4 +186,14 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
       continue;
     }
   }
+}
+
+void TypeFinder::incorporateAttributes(AttributeList AL) {
+  if (!VisitedAttributes.insert(AL).second)
+    return;
+
+  for (AttributeSet AS : AL)
+    for (Attribute A : AS)
+      if (A.isTypeAttribute())
+        incorporateType(A.getValueAsType());
 }

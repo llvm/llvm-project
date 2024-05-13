@@ -102,9 +102,9 @@ symbols:         []
 ## This test has a correct TLS Directory size but the RVA is invalid.
 
 # RUN: yaml2obj %s --docnum=2 -o %t.bad-tls-rva.exe -DTLSRVA=999999 -DTLSSIZE=40
-# RUN: not llvm-readobj --coff-tls-directory %t.bad-tls-rva.exe 2>&1 | FileCheck %s --check-prefix BAD-TLS-RVA-ERR
+# RUN: not llvm-readobj --coff-tls-directory %t.bad-tls-rva.exe 2>&1 | FileCheck -DFILE=%t.bad-tls-rva.exe %s --check-prefix BAD-TLS-RVA-ERR
 
-# BAD-TLS-RVA-ERR: error: '{{.*}}': Invalid data was encountered while parsing the file
+# BAD-TLS-RVA-ERR: error: '[[FILE]]': RVA 0xf423f for TLS directory not found
 
 --- !COFF
 OptionalHeader:

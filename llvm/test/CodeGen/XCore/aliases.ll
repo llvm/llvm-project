@@ -5,30 +5,30 @@ define void @a_val() nounwind {
 @b_val = constant i32 42, section ".cp.rodata"
 @c_val = global i32 42
 
-@a = alias void (), void ()* @a_val
-@b = alias i32, i32* @b_val
-@c = alias i32, i32* @c_val
+@a = alias void (), ptr @a_val
+@b = alias i32, ptr @b_val
+@c = alias i32, ptr @c_val
 
 ; CHECK-LABEL: a_addr:
 ; CHECK: ldap r11, a
 ; CHECK: retsp
-define void ()* @a_addr() nounwind {
+define ptr @a_addr() nounwind {
 entry:
-  ret void ()* @a
+  ret ptr @a
 }
 
 ; CHECK-LABEL: b_addr:
 ; CHECK: ldaw r11, cp[b]
 ; CHECK: retsp
-define i32 *@b_addr() nounwind {
+define ptr @b_addr() nounwind {
 entry:
-  ret i32* @b
+  ret ptr @b
 }
 
 ; CHECK-LABEL: c_addr:
 ; CHECK: ldaw r0, dp[c]
 ; CHECK: retsp
-define i32 *@c_addr() nounwind {
+define ptr @c_addr() nounwind {
 entry:
-  ret i32* @c
+  ret ptr @c
 }

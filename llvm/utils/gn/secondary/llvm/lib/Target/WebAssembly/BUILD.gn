@@ -28,6 +28,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ "." ]
   sources = [
@@ -36,6 +37,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyAsmPrinter.cpp",
     "WebAssemblyCFGSort.cpp",
     "WebAssemblyCFGStackify.cpp",
+    "WebAssemblyCleanCodeAfterTrap.cpp",
     "WebAssemblyDebugFixup.cpp",
     "WebAssemblyDebugValueManager.cpp",
     "WebAssemblyExceptionInfo.cpp",
@@ -51,15 +53,16 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyLateEHPrepare.cpp",
     "WebAssemblyLowerBrUnless.cpp",
     "WebAssemblyLowerEmscriptenEHSjLj.cpp",
-    "WebAssemblyLowerGlobalDtors.cpp",
+    "WebAssemblyLowerRefTypesIntPtrConv.cpp",
     "WebAssemblyMCInstLower.cpp",
+    "WebAssemblyMCLowerPrePass.cpp",
     "WebAssemblyMachineFunctionInfo.cpp",
     "WebAssemblyMemIntrinsicResults.cpp",
     "WebAssemblyNullifyDebugValueLists.cpp",
     "WebAssemblyOptimizeLiveIntervals.cpp",
     "WebAssemblyOptimizeReturned.cpp",
     "WebAssemblyPeephole.cpp",
-    "WebAssemblyPrepareForLiveIntervals.cpp",
+    "WebAssemblyRefTypeMem2Local.cpp",
     "WebAssemblyRegColoring.cpp",
     "WebAssemblyRegNumbering.cpp",
     "WebAssemblyRegStackify.cpp",
@@ -73,6 +76,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyTargetMachine.cpp",
     "WebAssemblyTargetObjectFile.cpp",
     "WebAssemblyTargetTransformInfo.cpp",
+    "WebAssemblyUtilities.cpp",
   ]
 }
 

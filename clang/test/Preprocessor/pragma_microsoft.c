@@ -1,8 +1,5 @@
 // RUN: %clang_cc1 -triple i686-unknown-windows-msvc %s -fsyntax-only -verify -fms-extensions -Wunknown-pragmas
 // RUN: not %clang_cc1 -triple i686-unknown-windows-msvc %s -fms-extensions -E | FileCheck %s
-// UNSUPPORTED: ps4
-
-// rdar://6495941
 
 #define FOO 1
 #define BAR "2"
@@ -53,7 +50,7 @@ __pragma(comment(linker," bar=" BAR))
 
 #define PRAGMA_IN_ARGS(p) p
 
-void f()
+void f(void)
 {
   __pragma() // expected-warning{{unknown pragma ignored}}
 // CHECK: #pragma
@@ -112,7 +109,7 @@ void test( void ) {
 // Test to make sure there are no use-after-free problems
 #define B "pp-record.h"
 #pragma include_alias("quux.h", B)
-void g() {}
+void g(int k) {}
 #include "quux.h"
 
 // Make sure that empty includes don't work
@@ -201,13 +198,46 @@ void g() {}
 #pragma clang diagnostic pop
 #pragma intrinsic(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
 
+// Test pragma function
+#pragma function(memset)                 // no-warning
+#pragma function(memcpy, strlen, strlen) // no-warning
+#pragma function()                       // no-warning
+#pragma function(asdf)                   // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
+#pragma function(main)                   // expected-warning {{'main' is not a recognized builtin; consider including <intrin.h>}}
+#pragma function(                        // expected-warning {{missing ')' after}}
+#pragma function(int)                    // expected-warning {{missing ')' after}}
+#pragma function(strcmp) asdf            // expected-warning {{extra tokens at end}}
+
+#define __INTRIN_H       // there should be no notes after defining __INTRIN_H
+#pragma function(asdf)   // expected-warning-re {{'asdf' is not a recognized builtin{{$}}}}
+#pragma function(memset) // no-warning
+#undef __INTRIN_H
+#pragma function(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
+
+// MSVC accepts this, but we decide to reject it based on the MS docs saying the pragma must appear at the global level
+void pragma_function_foo() {
+#pragma function(memset) // expected-error {{'#pragma function' can only appear at file scope}}
+}
+
 #pragma optimize          // expected-warning{{missing '(' after '#pragma optimize'}}
 #pragma optimize(         // expected-warning{{expected string literal in '#pragma optimize'}}
 #pragma optimize(a        // expected-warning{{expected string literal in '#pragma optimize'}}
 #pragma optimize("g"      // expected-warning{{expected ',' in '#pragma optimize'}}
 #pragma optimize("g",     // expected-warning{{missing argument to '#pragma optimize'; expected 'on' or 'off'}}
 #pragma optimize("g",xyz  // expected-warning{{unexpected argument 'xyz' to '#pragma optimize'; expected 'on' or 'off'}}
-#pragma optimize("g",on)  // expected-warning{{#pragma optimize' is not supported}}
+#pragma optimize("g",on)  // expected-warning{{unexpected argument 'g' to '#pragma optimize'; expected ""}}
+#pragma optimize("",on)  // no-warning
+#pragma optimize("", on) asdf // expected-warning{{extra tokens at end of '#pragma optimize'}}
+
+void pragma_optimize_foo() {
+#pragma optimize("", on) // expected-error {{'#pragma optimize' can only appear at file scope}}
+}
+
+#pragma managed            // no-warning
+#pragma unmanaged          // no-warning
+#pragma managed(push, on)  // no-warning
+#pragma managed(pop)       // no-warning
+#pragma managed2           // expected-warning{{unknown pragma ignored}}
 
 #pragma execution_character_set                 // expected-warning {{expected '('}}
 #pragma execution_character_set(                // expected-warning {{expected 'push' or 'pop'}}

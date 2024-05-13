@@ -15,8 +15,7 @@
 
 using namespace lldb_private;
 
-SystemLifetimeManager::SystemLifetimeManager()
-    : m_mutex(), m_initialized(false) {}
+SystemLifetimeManager::SystemLifetimeManager() : m_mutex() {}
 
 SystemLifetimeManager::~SystemLifetimeManager() {
   assert(!m_initialized &&

@@ -9,12 +9,11 @@
 #include "src/math/sin.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, sin, (double x)) {
-  double result;
-  __asm__ __volatile__("fsin" : "=t"(result) : "f"(x));
-  return result;
+  __asm__ __volatile__("fsin" : "+t"(x));
+  return x;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

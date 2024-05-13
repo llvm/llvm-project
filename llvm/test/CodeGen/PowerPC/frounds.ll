@@ -43,10 +43,10 @@ define i32 @foo() {
 ; PPC64LE-NEXT:    mffs 0
 ; PPC64LE-NEXT:    stfd 0, -16(1)
 ; PPC64LE-NEXT:    lwz 3, -16(1)
-; PPC64LE-NEXT:    not 4, 3
-; PPC64LE-NEXT:    clrlwi 3, 3, 30
-; PPC64LE-NEXT:    rlwinm 4, 4, 31, 31, 31
-; PPC64LE-NEXT:    xor 3, 3, 4
+; PPC64LE-NEXT:    clrlwi 4, 3, 30
+; PPC64LE-NEXT:    not 3, 3
+; PPC64LE-NEXT:    rlwinm 3, 3, 31, 31, 31
+; PPC64LE-NEXT:    xor 3, 4, 3
 ; PPC64LE-NEXT:    stw 3, -8(1)
 ; PPC64LE-NEXT:    stw 3, -4(1)
 ; PPC64LE-NEXT:    blr
@@ -55,26 +55,26 @@ define i32 @foo() {
 ; DM:       # %bb.0: # %entry
 ; DM-NEXT:    mffs 0
 ; DM-NEXT:    mffprd 3, 0
-; DM-NEXT:    not 4, 3
-; DM-NEXT:    clrlwi 3, 3, 30
-; DM-NEXT:    rlwinm 4, 4, 31, 31, 31
-; DM-NEXT:    xor 3, 3, 4
+; DM-NEXT:    clrlwi 4, 3, 30
+; DM-NEXT:    not 3, 3
+; DM-NEXT:    rlwinm 3, 3, 31, 31, 31
+; DM-NEXT:    xor 3, 4, 3
 ; DM-NEXT:    stw 3, -8(1)
 ; DM-NEXT:    stw 3, -4(1)
 ; DM-NEXT:    blr
 entry:
-	%retval = alloca i32		; <i32*> [#uses=2]
-	%tmp = alloca i32		; <i32*> [#uses=2]
+	%retval = alloca i32		; <ptr> [#uses=2]
+	%tmp = alloca i32		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	%tmp1 = call i32 @llvm.flt.rounds( )		; <i32> [#uses=1]
-	store i32 %tmp1, i32* %tmp, align 4
-	%tmp2 = load i32, i32* %tmp, align 4		; <i32> [#uses=1]
-	store i32 %tmp2, i32* %retval, align 4
+	%tmp1 = call i32 @llvm.get.rounding( )		; <i32> [#uses=1]
+	store i32 %tmp1, ptr %tmp, align 4
+	%tmp2 = load i32, ptr %tmp, align 4		; <i32> [#uses=1]
+	store i32 %tmp2, ptr %retval, align 4
 	br label %return
 
 return:		; preds = %entry
-	%retval3 = load i32, i32* %retval		; <i32> [#uses=1]
+	%retval3 = load i32, ptr %retval		; <i32> [#uses=1]
 	ret i32 %retval3
 }
 
-declare i32 @llvm.flt.rounds() nounwind
+declare i32 @llvm.get.rounding() nounwind

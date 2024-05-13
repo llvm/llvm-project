@@ -32,6 +32,18 @@ dwo_LT_5a:
 dwo_LT_5b:
         .asciz "DWODirectory5b"
 
+        .section	.debug_str_offsets.dwo,"e",@progbits
+        .long	Lstr_offsets_end-Lstr_offsets_start                              # Length of String Offsets Set
+        Lstr_offsets_start:
+	.short	5
+	.short	0
+	.long	dwo_TU_5-.debug_str.dwo
+	.long	dwo_producer-.debug_str.dwo
+	.long	dwo_CU_5-.debug_str.dwo
+	.long	dwo_LT_5a-.debug_str.dwo
+	.long	dwo_LT_5b-.debug_str.dwo
+        Lstr_offsets_end:
+
 # All CUs/TUs use the same abbrev section for simplicity.
         .section .debug_abbrev,"",@progbits
         .byte 0x01  # Abbrev code
@@ -74,9 +86,9 @@ dwo_LT_5b:
         .byte 0x11  # DW_TAG_compile_unit
         .byte 0x00  # DW_CHILDREN_no
         .byte 0x25  # DW_AT_producer
-        .byte 0x0e  # DW_FORM_strp
+        .byte 0x25  # DW_FORM_strx1
         .byte 0x03  # DW_AT_name
-        .byte 0x0e  # DW_FORM_strp
+        .byte 0x25  # DW_FORM_strx1
         .byte 0x10  # DW_AT_stmt_list
         .byte 0x17  # DW_FORM_sec_offset
         .byte 0x00  # EOM(1)
@@ -85,14 +97,14 @@ dwo_LT_5b:
         .byte 0x41  # DW_TAG_type_unit
         .byte 0x01  # DW_CHILDREN_yes
         .byte 0x03  # DW_AT_name
-        .byte 0x0e  # DW_FORM_strp
+        .byte 0x25  # DW_FORM_strx1
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x03  # Abbrev code
         .byte 0x13  # DW_TAG_structure_type
         .byte 0x00  # DW_CHILDREN_no (no members)
         .byte 0x03  # DW_AT_name
-        .byte 0x0e  # DW_FORM_strp
+        .byte 0x25  # DW_FORM_strx1
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x00  # EOM(3)
@@ -160,17 +172,17 @@ CU_split_5_version:
         .short 5                # DWARF version number
         .byte 5                 # DWARF Unit Type
         .byte 8                 # Address Size (in bytes)
-        .long .debug_abbrev.dwo # Offset Into Abbrev. Section
+        .long 0 # Offset Into Abbrev. Section
         .quad 0x5a              # DWO ID
 # The split compile-unit DIE, with DW_AT_producer, DW_AT_name, DW_AT_stmt_list.
         .byte 1
-        .long dwo_producer
-        .long dwo_CU_5
-        .long dwo_LH_5_start
+        .byte 1
+        .byte 2
+        .long 0
         .byte 0 # NULL
 CU_split_5_end:
 
-# CHECK: 0x00000000: Compile Unit: length = 0x0000001e, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = 0x000000000000005a (next unit at 0x00000022)
+# CHECK: 0x00000000: Compile Unit: length = 0x00000018, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = 0x000000000000005a (next unit at 0x0000001c)
 # CHECK: 0x00000014: DW_TAG_compile_unit
 # CHECK-NEXT: DW_AT_producer {{.*}} "Handmade DWO producer"
 # CHECK-NEXT: DW_AT_name {{.*}} "V5_dwo_compile_unit"
@@ -190,21 +202,21 @@ TU_split_5_version:
         .short 5               # DWARF version number
         .byte 6                # DWARF Unit Type
         .byte 8                # Address Size (in bytes)
-        .long .debug_abbrev.dwo    # Offset Into Abbrev. Section
+        .long 0    # Offset Into Abbrev. Section
         .quad 0x8899aabbccddeeff # Type Signature
         .long TU_split_5_type-TU_split_5_start  # Type offset
 # The type-unit DIE, which has a name.
         .byte 2
-        .long dwo_TU_5
+        .byte 0
 # The type DIE, which has a name.
 TU_split_5_type:
         .byte 3
-        .long dwo_TU_5
+        .byte 0
         .byte 0 # NULL
         .byte 0 # NULL
 TU_split_5_end:
 
-# CHECK: 0x00000000: Type Unit: length = 0x00000020, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_type, abbr_offset = 0x0000, addr_size = 0x08, name = 'V5_split_type_unit', type_signature = 0x8899aabbccddeeff, type_offset = 0x001d (next unit at 0x00000024)
+# CHECK: 0x00000000: Type Unit: length = 0x0000001a, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_type, abbr_offset = 0x0000, addr_size = 0x08, name = 'V5_split_type_unit', type_signature = 0x8899aabbccddeeff, type_offset = 0x001a (next unit at 0x0000001e)
 # CHECK: 0x00000018: DW_TAG_type_unit
 
         .section .debug_types,"",@progbits
@@ -415,11 +427,11 @@ dwo_LH_5_params:
         # Directory table format
         .byte   1               # One element per directory entry
         .byte   1               # DW_LNCT_path
-        .byte   0x0e            # DW_FORM_strp (-> .debug_str.dwo)
+        .byte   0x25            # DW_FORM_strx1 (-> .debug_str.dwo)
         # Directory table entries
         .byte   2               # Two directories
-        .long   dwo_LT_5a
-        .long   dwo_LT_5b
+        .byte   3
+        .byte   4
         # File table format
         .byte   4               # Four elements per file entry
         .byte   1               # DW_LNCT_path
@@ -449,8 +461,8 @@ dwo_LH_5_end:
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  0] = .debug_str[0x0000003d] = "DWODirectory5a"
-# CHECK: include_directories[  1] = .debug_str[0x0000004c] = "DWODirectory5b"
+# CHECK: include_directories[  0] = indexed (00000003) string = "DWODirectory5a"
+# CHECK: include_directories[  1] = indexed (00000004) string = "DWODirectory5b"
 # CHECK-NOT: include_directories
 # CHECK: file_names[  0]:
 # CHECK-NEXT: name: "DWOFile5a"

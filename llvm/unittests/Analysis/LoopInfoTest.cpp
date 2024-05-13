@@ -11,6 +11,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -269,8 +270,8 @@ TEST(LoopInfoTest, CanonicalLoop) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -328,8 +329,8 @@ TEST(LoopInfoTest, LoopWithInverseGuardSuccs) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -387,8 +388,8 @@ TEST(LoopInfoTest, LoopWithSwappedGuardCmp) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -446,8 +447,8 @@ TEST(LoopInfoTest, LoopWithInverseLatchSuccs) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -505,8 +506,8 @@ TEST(LoopInfoTest, LoopWithLatchCmpNE) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -565,8 +566,8 @@ TEST(LoopInfoTest, LoopWithGuardCmpSLE) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -624,8 +625,8 @@ TEST(LoopInfoTest, LoopNonConstantStep) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -680,8 +681,8 @@ TEST(LoopInfoTest, LoopUnsignedBounds) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -739,8 +740,8 @@ TEST(LoopInfoTest, DecreasingLoop) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         EXPECT_EQ(Bounds->getInitialIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
@@ -799,8 +800,8 @@ TEST(LoopInfoTest, CannotFindDirection) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -859,8 +860,8 @@ TEST(LoopInfoTest, ZextIndVar) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -920,8 +921,8 @@ TEST(LoopInfoTest, MultiExitingLoop) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -980,8 +981,8 @@ TEST(LoopInfoTest, MultiExitLoop) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -1032,8 +1033,8 @@ TEST(LoopInfoTest, UnguardedLoop) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -1090,8 +1091,8 @@ TEST(LoopInfoTest, UnguardedLoopWithControlFlow) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -1161,8 +1162,8 @@ TEST(LoopInfoTest, LoopNest) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -1187,8 +1188,8 @@ TEST(LoopInfoTest, LoopNest) {
         L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> InnerBounds = L->getBounds(SE);
-        EXPECT_NE(InnerBounds, None);
+        std::optional<Loop::LoopBounds> InnerBounds = L->getBounds(SE);
+        EXPECT_NE(InnerBounds, std::nullopt);
         InitialIVValue =
             dyn_cast<ConstantInt>(&InnerBounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -1254,8 +1255,8 @@ TEST(LoopInfoTest, AuxiliaryIV) {
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
-        EXPECT_NE(Bounds, None);
+        std::optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, std::nullopt);
         ConstantInt *InitialIVValue =
             dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
@@ -1545,5 +1546,104 @@ TEST(LoopInfoTest, LoopUserBranch) {
 
     // L should not have a guard branch
     EXPECT_EQ(L->getLoopGuardBranch(), nullptr);
+  });
+}
+
+TEST(LoopInfoTest, LoopInductionVariable) {
+  const char *ModuleStr =
+      "define i32 @foo(i32* %addr) {\n"
+      "entry:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %sum.08 = phi i32 [ 0, %entry ], [ %add, %for.body ]\n"
+      "  %addr.addr.06 = phi i32* [ %addr, %entry ], [ %incdec.ptr, %for.body "
+      "]\n"
+      "  %count.07 = phi i32 [ 6000, %entry ], [ %dec, %for.body ]\n"
+      "  %0 = load i32, i32* %addr.addr.06, align 4\n"
+      "  %add = add nsw i32 %0, %sum.08\n"
+      "  %dec = add nsw i32 %count.07, -1\n"
+      "  %incdec.ptr = getelementptr inbounds i32, i32* %addr.addr.06, i64 1\n"
+      "  %cmp = icmp ugt i32 %count.07, 1\n"
+      "  br i1 %cmp, label %for.body, label %for.end\n"
+      "for.end:\n"
+      "  %cmp1 = icmp eq i32 %add, -1\n"
+      "  %conv = zext i1 %cmp1 to i32\n"
+      "  ret i32 %conv\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfoPlus(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        BasicBlock *Header = &*(++FI);
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        EXPECT_EQ(L->getInductionVariable(SE)->getName(), "count.07");
+      });
+}
+
+// Test that we correctly identify tokens breaching LCSSA form.
+TEST(LoopInfoTest, TokenLCSSA) {
+  const char *ModuleStr =
+      "define void @test() gc \"statepoint-example\" {\n"
+      "entry:\n"
+      "  br label %outer_loop\n"
+      "outer_loop:\n"
+      "  br label %inner_loop\n"
+      "inner_loop:\n"
+      "  %token = call token (i64, i32, i8 addrspace(1)* (i64, i32, i32, "
+      "i32)*, i32, i32, ...) "
+      "@llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64 2882400000, "
+      "i32 0, i8 addrspace(1)* (i64, i32, i32, i32)* nonnull elementtype(i8 "
+      "addrspace(1)* (i64, i32, i32, i32)) @foo, i32 4, i32 0, i64 undef, i32 "
+      "5, i32 5, i32 undef, i32 0, i32 0) [ \"deopt\"(), \"gc-live\"(i8 "
+      "addrspace(1)* undef) ]\n"
+      "  br i1 undef, label %inner_loop, label %outer_backedge\n"
+      "outer_backedge:\n"
+      "  br i1 undef, label %outer_loop, label %exit\n"
+      "exit:\n"
+      "  %tmp35 = call coldcc i8 addrspace(1)* "
+      "@llvm.experimental.gc.relocate.p1i8(token %token, i32 0, i32 0) ; "
+      "(undef, undef)\n"
+      "  ret void\n"
+      "}\n"
+      "declare i8 addrspace(1)* @foo(i64, i32, i32, i32)\n"
+      "declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32 "
+      "immarg, i32 immarg) #0\n"
+      "declare token "
+      "@llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64 immarg, i32 "
+      "immarg, i8 addrspace(1)* (i64, i32, i32, i32)*, i32 immarg, i32 immarg, "
+      "...)\n"
+      "attributes #0 = { nounwind readnone }\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfoPlus(*M, "test",
+                      [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    Function::iterator FI = F.begin();
+    BasicBlock *OuterHeader = &*(++FI);
+    Loop *OuterLoop = LI.getLoopFor(OuterHeader);
+    BasicBlock *InnerHeader = &*(++FI);
+    Loop *InnerLoop = LI.getLoopFor(InnerHeader);
+    EXPECT_NE(OuterLoop, nullptr);
+    EXPECT_NE(InnerLoop, nullptr);
+    DominatorTree DT(F);
+    EXPECT_TRUE(OuterLoop->isLCSSAForm(DT, /*IgnoreTokens*/ true));
+    EXPECT_FALSE(OuterLoop->isLCSSAForm(DT, /*IgnoreTokens*/ false));
+    EXPECT_TRUE(InnerLoop->isLCSSAForm(DT, /*IgnoreTokens*/ true));
+    EXPECT_FALSE(InnerLoop->isLCSSAForm(DT, /*IgnoreTokens*/ false));
+    EXPECT_TRUE(
+        OuterLoop->isRecursivelyLCSSAForm(DT, LI, /*IgnoreTokens*/ true));
+    EXPECT_FALSE(
+        OuterLoop->isRecursivelyLCSSAForm(DT, LI, /*IgnoreTokens*/ false));
+    EXPECT_TRUE(
+        InnerLoop->isRecursivelyLCSSAForm(DT, LI, /*IgnoreTokens*/ true));
+    EXPECT_FALSE(
+        InnerLoop->isRecursivelyLCSSAForm(DT, LI, /*IgnoreTokens*/ false));
   });
 }

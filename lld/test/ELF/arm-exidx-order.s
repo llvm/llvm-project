@@ -134,32 +134,32 @@ f3:
 // CHECK-SCRIPT: Disassembly of section .text:
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: <func4>:
-// CHECK-SCRIPT-NEXT:    11000:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    11000:       e12fff1e        bx      lr
 // CHECK-SCRIPT:      <func5>:
-// CHECK-SCRIPT-NEXT:    11004:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    11004:       e12fff1e        bx      lr
 // CHECK-SCRIPT:      <_start>:
-// CHECK-SCRIPT-NEXT:    11008:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    11008:       e12fff1e        bx      lr
 // CHECK-SCRIPT:      <f1>:
-// CHECK-SCRIPT-NEXT:    1100c:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    1100c:       e12fff1e        bx      lr
 // CHECK-SCRIPT:      <f2>:
-// CHECK-SCRIPT-NEXT:    11010:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    11010:       e12fff1e        bx      lr
 // CHECK-SCRIPT:      <f3>:
-// CHECK-SCRIPT-NEXT:    11014:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    11014:       e12fff1e        bx      lr
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: Disassembly of section .func1:
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: <func1>:
-// CHECK-SCRIPT-NEXT:    11018:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    11018:       e12fff1e        bx      lr
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: Disassembly of section .func2:
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: <func2>:
-// CHECK-SCRIPT-NEXT:    1101c:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    1101c:       e12fff1e        bx      lr
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: Disassembly of section .func3:
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: <func3>:
-// CHECK-SCRIPT-NEXT:    11020:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    11020:       e12fff1e        bx      lr
 
 /// Check that the .ARM.exidx section is sorted in order as the functions
 /// The offset in field 1, is 32-bit so in the binary the most significant bit

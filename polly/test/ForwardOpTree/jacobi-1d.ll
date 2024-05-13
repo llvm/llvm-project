@@ -1,20 +1,20 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-optree-normalize-phi=true -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-optree-normalize-phi=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define internal fastcc void @kernel_jacobi_1d(double* noalias nocapture %A, double* noalias nocapture %B) unnamed_addr #0 {
+define internal fastcc void @kernel_jacobi_1d(ptr noalias nocapture %A, ptr noalias nocapture %B) unnamed_addr #0 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %arrayidx6.phi.trans.insert = getelementptr inbounds double, double* %A, i64 1
-  %arrayidx21.phi.trans.insert = getelementptr inbounds double, double* %B, i64 1
+  %arrayidx6.phi.trans.insert = getelementptr inbounds double, ptr %A, i64 1
+  %arrayidx21.phi.trans.insert = getelementptr inbounds double, ptr %B, i64 1
   br label %for.body
 
 for.body:                                         ; preds = %for.inc33, %entry.split
   %t.03 = phi i32 [ 0, %entry.split ], [ %inc34, %for.inc33 ]
-  %.pre = load double, double* %A, align 8, !tbaa !6
-  %.pre10 = load double, double* %arrayidx6.phi.trans.insert, align 8, !tbaa !6
+  %.pre = load double, ptr %A, align 8, !tbaa !6
+  %.pre10 = load double, ptr %arrayidx6.phi.trans.insert, align 8, !tbaa !6
   br label %for.body3
 
 for.body3:                                        ; preds = %for.body3, %for.body
@@ -23,18 +23,18 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %indvars.iv = phi i64 [ 1, %for.body ], [ %indvars.iv.next, %for.body3 ]
   %add = fadd double %1, %0
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %arrayidx9 = getelementptr inbounds double, double* %A, i64 %indvars.iv.next
-  %2 = load double, double* %arrayidx9, align 8, !tbaa !6
+  %arrayidx9 = getelementptr inbounds double, ptr %A, i64 %indvars.iv.next
+  %2 = load double, ptr %arrayidx9, align 8, !tbaa !6
   %add10 = fadd double %add, %2
   %mul = fmul double %add10, 3.333300e-01
-  %arrayidx12 = getelementptr inbounds double, double* %B, i64 %indvars.iv
-  store double %mul, double* %arrayidx12, align 8, !tbaa !6
+  %arrayidx12 = getelementptr inbounds double, ptr %B, i64 %indvars.iv
+  store double %mul, ptr %arrayidx12, align 8, !tbaa !6
   %exitcond = icmp eq i64 %indvars.iv.next, 3
   br i1 %exitcond, label %for.end, label %for.body3
 
 for.end:                                          ; preds = %for.body3
-  %.pre11 = load double, double* %B, align 8, !tbaa !6
-  %.pre12 = load double, double* %arrayidx21.phi.trans.insert, align 8, !tbaa !6
+  %.pre11 = load double, ptr %B, align 8, !tbaa !6
+  %.pre12 = load double, ptr %arrayidx21.phi.trans.insert, align 8, !tbaa !6
   br label %for.inc33
 
 for.inc33:                                        ; preds = %for.body16
@@ -77,8 +77,8 @@ attributes #0 = { noinline norecurse nounwind uwtable "correctly-rounded-divide-
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_for_body[i0] -> MemRef2__phi[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %.pre = load double, double* %A, align 8, !tbaa !2
-; CHECK-NEXT:                   %.pre10 = load double, double* %arrayidx6.phi.trans.insert, align 8, !tbaa !2
+; CHECK-NEXT:                   %.pre = load double, ptr %A, align 8, !tbaa !2
+; CHECK-NEXT:                   %.pre10 = load double, ptr %arrayidx6.phi.trans.insert, align 8, !tbaa !2
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_for_body3
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
@@ -99,10 +99,10 @@ attributes #0 = { noinline norecurse nounwind uwtable "correctly-rounded-divide-
 ; CHECK-NEXT:                   %0 = phi double [ %.pre10, %for.body ], [ %2, %for.body3 ]
 ; CHECK-NEXT:                   %1 = phi double [ %.pre, %for.body ], [ %0, %for.body3 ]
 ; CHECK-NEXT:                   %add = fadd double %1, %0
-; CHECK-NEXT:                   %2 = load double, double* %arrayidx9, align 8, !tbaa !2
+; CHECK-NEXT:                   %2 = load double, ptr %arrayidx9, align 8, !tbaa !2
 ; CHECK-NEXT:                   %add10 = fadd double %add, %2
 ; CHECK-NEXT:                   %mul = fmul double %add10, 3.333300e-01
-; CHECK-NEXT:                   store double %mul, double* %arrayidx12, align 8, !tbaa !2
+; CHECK-NEXT:                   store double %mul, ptr %arrayidx12, align 8, !tbaa !2
 ; CHECK-NEXT:                   %exitcond = icmp eq i64 %indvars.iv.next, 3
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

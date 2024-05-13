@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass converts vector operations into scalar operations, in order
-/// to expose optimization opportunities on the individual scalar operations.
+/// This pass converts vector operations into scalar operations (or, optionally,
+/// operations on smaller vector widths), in order to expose optimization
+/// opportunities on the individual scalar operations.
 /// It is mainly intended for targets that do not have vector units, but it
 /// may also be useful for revectorizing code to different vector widths.
 //
@@ -18,17 +19,37 @@
 #define LLVM_TRANSFORMS_SCALAR_SCALARIZER_H
 
 #include "llvm/IR/PassManager.h"
+#include <optional>
 
 namespace llvm {
 
-class ScalarizerPass : public PassInfoMixin<ScalarizerPass> {
-public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+class Function;
+
+struct ScalarizerPassOptions {
+  // These options correspond 1:1 to cl::opt options defined in
+  // Scalarizer.cpp. When the cl::opt are specified, they take precedence.
+  // When the cl::opt are not specified, the present optional values allow to
+  // override the cl::opt's default values.
+  std::optional<bool> ScalarizeVariableInsertExtract;
+  std::optional<bool> ScalarizeLoadStore;
+  std::optional<unsigned> ScalarizeMinBits;
 };
 
-/// Create a legacy pass manager instance of the Scalarizer pass
-FunctionPass *createScalarizerPass();
+class ScalarizerPass : public PassInfoMixin<ScalarizerPass> {
+  ScalarizerPassOptions Options;
 
+public:
+  ScalarizerPass() = default;
+  ScalarizerPass(const ScalarizerPassOptions &Options) : Options(Options) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  void setScalarizeVariableInsertExtract(bool Value) {
+    Options.ScalarizeVariableInsertExtract = Value;
+  }
+  void setScalarizeLoadStore(bool Value) { Options.ScalarizeLoadStore = Value; }
+  void setScalarizeMinBits(unsigned Value) { Options.ScalarizeMinBits = Value; }
+};
 }
 
 #endif /* LLVM_TRANSFORMS_SCALAR_SCALARIZER_H */

@@ -9,8 +9,7 @@
 ## The TLS definition mismatches a non-TLS reference.
 # RUN: echo '.type tls1,@object; movq tls1,%rax' | llvm-mc -filetype=obj -triple=x86_64 - -o %t2.o
 # RUN: not ld.lld %t2.o %t.o -o /dev/null 2>&1 | FileCheck %s
-## We fail to flag the swapped case.
-# RUN: ld.lld %t.o %t2.o -o /dev/null
+# RUN: not ld.lld %t.o %t2.o -o /dev/null 2>&1 | FileCheck %s
 
 ## We fail to flag the STT_NOTYPE reference. This usually happens with hand-written
 ## assembly because compiler-generated code properly sets symbol types.
@@ -18,10 +17,11 @@
 # RUN: ld.lld %t3.o %t.o -o /dev/null
 
 ## Overriding a TLS definition with a non-TLS definition does not make sense.
-# RUN: not ld.lld --defsym tls1=42 %t.o -o /dev/null 2>&1 | FileCheck %s
+## We fail to flag this case.
+# RUN: ld.lld --defsym tls1=42 %t.o -o /dev/null 2>&1 | count 0
 
 ## Part of PR36049: This should probably be allowed.
-# RUN: not ld.lld --defsym tls1=tls2 %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --defsym tls1=tls2 %t.o -o /dev/null 2>&1 | count 0
 
 ## An undefined symbol in module-level inline assembly of a bitcode file
 ## is considered STT_NOTYPE. We should not error.
@@ -32,6 +32,8 @@
 # RUN: ld.lld %t.bc %t.o -o /dev/null
 
 # CHECK: error: TLS attribute mismatch: tls1
+# CHECK-NEXT: >>> in {{.*}}.tmp.o
+# CHECK-NEXT: >>> in {{.*}}
 
 .globl _start
 _start:

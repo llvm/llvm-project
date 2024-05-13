@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=aarch64-arm-none-eabi -O1 -opt-bisect-limit=2 -o - %s  2> /dev/null | FileCheck %s
+; RUN: llc -mtriple=aarch64 -O1 -opt-bisect-limit=2 -o - %s  2> /dev/null | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=aarch64 -O1 -opt-bisect-limit=2 -o - %s  2> /dev/null | FileCheck %s
 
 define dso_local i32 @a() #0 !dbg !7 {
 entry:
@@ -12,7 +13,7 @@ entry:
 for.cond:
   br label %for.cond, !dbg !15, !llvm.loop !18
 }
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
@@ -41,4 +42,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 !18 = distinct !{!18, !19, !20}
 !19 = !DILocation(line: 3, column: 3, scope: !17)
 !20 = !DILocation(line: 4, column: 5, scope: !17)
- 
+

@@ -11,57 +11,118 @@
 
 #include "test_macros.h"
 
-#if TEST_STD_VER >= 11
-
 #include <cstddef>
 #include <functional>
 
 class MoveOnly
 {
-    MoveOnly(const MoveOnly&);
-    MoveOnly& operator=(const MoveOnly&);
-
     int data_;
 public:
-    constexpr MoveOnly(int data = 1) : data_(data) {}
-    TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& x)
+    TEST_CONSTEXPR MoveOnly(int data = 1) : data_(data) {}
+
+    MoveOnly(const MoveOnly&) = delete;
+    MoveOnly& operator=(const MoveOnly&) = delete;
+
+    TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& x) TEST_NOEXCEPT
         : data_(x.data_) {x.data_ = 0;}
     TEST_CONSTEXPR_CXX14 MoveOnly& operator=(MoveOnly&& x)
         {data_ = x.data_; x.data_ = 0; return *this;}
 
-    constexpr int get() const {return data_;}
+    TEST_CONSTEXPR int get() const {return data_;}
 
-    friend constexpr bool operator==(const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator==(const MoveOnly& x, const MoveOnly& y)
         { return x.data_ == y.data_; }
-    friend constexpr bool operator!=(const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator!=(const MoveOnly& x, const MoveOnly& y)
         { return x.data_ != y.data_; }
-    friend constexpr bool operator< (const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator< (const MoveOnly& x, const MoveOnly& y)
         { return x.data_ <  y.data_; }
-    friend constexpr bool operator<=(const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator<=(const MoveOnly& x, const MoveOnly& y)
         { return x.data_ <= y.data_; }
-    friend constexpr bool operator> (const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator> (const MoveOnly& x, const MoveOnly& y)
         { return x.data_ >  y.data_; }
-    friend constexpr bool operator>=(const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator>=(const MoveOnly& x, const MoveOnly& y)
         { return x.data_ >= y.data_; }
 
-    TEST_CONSTEXPR_CXX14 MoveOnly operator+(const MoveOnly& x) const
-        { return MoveOnly{data_ + x.data_}; }
-    TEST_CONSTEXPR_CXX14 MoveOnly operator*(const MoveOnly& x) const
-        { return MoveOnly{data_ * x.data_}; }
-};
+#if TEST_STD_VER > 17
+    friend constexpr auto operator<=>(const MoveOnly&, const MoveOnly&) = default;
+#endif // TEST_STD_VER > 17
 
-namespace std {
+    TEST_CONSTEXPR_CXX14 MoveOnly operator+(const MoveOnly& x) const
+        { return MoveOnly(data_ + x.data_); }
+    TEST_CONSTEXPR_CXX14 MoveOnly operator*(const MoveOnly& x) const
+        { return MoveOnly(data_ * x.data_); }
+
+    template<class T>
+    friend void operator,(MoveOnly const&, T) = delete;
+
+    template<class T>
+    friend void operator,(T, MoveOnly const&) = delete;
+};
 
 template <>
-struct hash<MoveOnly>
+struct std::hash<MoveOnly>
 {
     typedef MoveOnly argument_type;
-    typedef size_t result_type;
-    constexpr size_t operator()(const MoveOnly& x) const {return x.get();}
+    typedef std::size_t result_type;
+    TEST_CONSTEXPR std::size_t operator()(const MoveOnly& x) const {return static_cast<size_t>(x.get());}
 };
 
-}
+class TrivialMoveOnly {
+    int data_;
 
-#endif // TEST_STD_VER >= 11
+  public:
+    TEST_CONSTEXPR TrivialMoveOnly(int data = 1) : data_(data) {}
+
+    TrivialMoveOnly(const TrivialMoveOnly&)            = delete;
+    TrivialMoveOnly& operator=(const TrivialMoveOnly&) = delete;
+
+    TrivialMoveOnly(TrivialMoveOnly&&)            = default;
+    TrivialMoveOnly& operator=(TrivialMoveOnly&&) = default;
+
+    TEST_CONSTEXPR int get() const { return data_; }
+
+    friend TEST_CONSTEXPR bool operator==(const TrivialMoveOnly& x, const TrivialMoveOnly& y) {
+      return x.data_ == y.data_;
+    }
+    friend TEST_CONSTEXPR bool operator!=(const TrivialMoveOnly& x, const TrivialMoveOnly& y) {
+      return x.data_ != y.data_;
+    }
+    friend TEST_CONSTEXPR bool operator<(const TrivialMoveOnly& x, const TrivialMoveOnly& y) {
+      return x.data_ < y.data_;
+    }
+    friend TEST_CONSTEXPR bool operator<=(const TrivialMoveOnly& x, const TrivialMoveOnly& y) {
+      return x.data_ <= y.data_;
+    }
+    friend TEST_CONSTEXPR bool operator>(const TrivialMoveOnly& x, const TrivialMoveOnly& y) {
+      return x.data_ > y.data_;
+    }
+    friend TEST_CONSTEXPR bool operator>=(const TrivialMoveOnly& x, const TrivialMoveOnly& y) {
+      return x.data_ >= y.data_;
+    }
+
+#if TEST_STD_VER > 17
+    friend constexpr auto operator<=>(const TrivialMoveOnly&, const TrivialMoveOnly&) = default;
+#endif // TEST_STD_VER > 17
+
+    TEST_CONSTEXPR_CXX14 TrivialMoveOnly operator+(const TrivialMoveOnly& x) const {
+      return TrivialMoveOnly(data_ + x.data_);
+    }
+    TEST_CONSTEXPR_CXX14 TrivialMoveOnly operator*(const TrivialMoveOnly& x) const {
+      return TrivialMoveOnly(data_ * x.data_);
+    }
+
+    template<class T>
+    friend void operator,(TrivialMoveOnly const&, T) = delete;
+
+    template<class T>
+    friend void operator,(T, TrivialMoveOnly const&) = delete;
+};
+
+template <>
+struct std::hash<TrivialMoveOnly> {
+    typedef TrivialMoveOnly argument_type;
+    typedef std::size_t result_type;
+    TEST_CONSTEXPR std::size_t operator()(const TrivialMoveOnly& x) const { return static_cast<size_t>(x.get()); }
+};
 
 #endif // MOVEONLY_H

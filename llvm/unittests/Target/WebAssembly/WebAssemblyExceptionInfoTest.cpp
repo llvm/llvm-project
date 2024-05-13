@@ -11,8 +11,8 @@
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
@@ -23,8 +23,8 @@ namespace {
 
 std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("wasm32-unknown-unknown"));
-  std::string CPU("");
-  std::string FS("");
+  std::string CPU;
+  std::string FS;
 
   LLVMInitializeWebAssemblyTargetInfo();
   LLVMInitializeWebAssemblyTarget();
@@ -34,9 +34,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   assert(TheTarget);
 
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
-      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), None, None,
-                                     CodeGenOpt::Default)));
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
+                                     std::nullopt, CodeGenOptLevel::Default)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,

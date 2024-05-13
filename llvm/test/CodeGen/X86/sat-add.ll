@@ -230,7 +230,6 @@ define i8 @unsigned_sat_variable_i8_using_cmp_notval(i8 %x, i8 %y) {
 define i16 @unsigned_sat_variable_i16_using_min(i16 %x, i16 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i16_using_min:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    # kill: def $esi killed $esi def $rsi
 ; ANY-NEXT:    movl %esi, %eax
 ; ANY-NEXT:    notl %eax
 ; ANY-NEXT:    cmpw %ax, %di
@@ -277,7 +276,6 @@ define i16 @unsigned_sat_variable_i16_using_cmp_notval(i16 %x, i16 %y) {
 define i32 @unsigned_sat_variable_i32_using_min(i32 %x, i32 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i32_using_min:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    # kill: def $esi killed $esi def $rsi
 ; ANY-NEXT:    movl %esi, %eax
 ; ANY-NEXT:    notl %eax
 ; ANY-NEXT:    cmpl %eax, %edi
@@ -364,14 +362,14 @@ define i64 @unsigned_sat_variable_i64_using_cmp_notval(i64 %x, i64 %y) {
 define <16 x i8> @unsigned_sat_constant_v16i8_using_min(<16 x i8> %x) {
 ; SSE-LABEL: unsigned_sat_constant_v16i8_using_min:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pminub {{.*}}(%rip), %xmm0
-; SSE-NEXT:    paddb {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: unsigned_sat_constant_v16i8_using_min:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpminub {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpaddb {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %c = icmp ult <16 x i8> %x, <i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43>
   %s = select <16 x i1> %c, <16 x i8> %x, <16 x i8> <i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43>
@@ -382,12 +380,12 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_min(<16 x i8> %x) {
 define <16 x i8> @unsigned_sat_constant_v16i8_using_cmp_sum(<16 x i8> %x) {
 ; SSE-LABEL: unsigned_sat_constant_v16i8_using_cmp_sum:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    paddusb {{.*}}(%rip), %xmm0
+; SSE-NEXT:    paddusb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: unsigned_sat_constant_v16i8_using_cmp_sum:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddusb {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddusb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %a = add <16 x i8> %x, <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>
   %c = icmp ugt <16 x i8> %x, %a
@@ -398,12 +396,12 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_cmp_sum(<16 x i8> %x) {
 define <16 x i8> @unsigned_sat_constant_v16i8_using_cmp_notval(<16 x i8> %x) {
 ; SSE-LABEL: unsigned_sat_constant_v16i8_using_cmp_notval:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    paddusb {{.*}}(%rip), %xmm0
+; SSE-NEXT:    paddusb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: unsigned_sat_constant_v16i8_using_cmp_notval:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddusb {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddusb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %a = add <16 x i8> %x, <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>
   %c = icmp ugt <16 x i8> %x, <i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43>
@@ -415,21 +413,21 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_min(<8 x i16> %x) {
 ; SSE2-LABEL: unsigned_sat_constant_v8i16_using_min:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psubusw {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    psubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    psubw %xmm1, %xmm0
-; SSE2-NEXT:    paddw {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: unsigned_sat_constant_v8i16_using_min:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pminuw {{.*}}(%rip), %xmm0
-; SSE4-NEXT:    paddw {{.*}}(%rip), %xmm0
+; SSE4-NEXT:    pminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: unsigned_sat_constant_v8i16_using_min:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpminuw {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %c = icmp ult <8 x i16> %x, <i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43>
   %s = select <8 x i1> %c, <8 x i16> %x, <8 x i16> <i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43>
@@ -440,12 +438,12 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_min(<8 x i16> %x) {
 define <8 x i16> @unsigned_sat_constant_v8i16_using_cmp_sum(<8 x i16> %x) {
 ; SSE-LABEL: unsigned_sat_constant_v8i16_using_cmp_sum:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    paddusw {{.*}}(%rip), %xmm0
+; SSE-NEXT:    paddusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: unsigned_sat_constant_v8i16_using_cmp_sum:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddusw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %a = add <8 x i16> %x, <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
   %c = icmp ugt <8 x i16> %x, %a
@@ -456,12 +454,12 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_cmp_sum(<8 x i16> %x) {
 define <8 x i16> @unsigned_sat_constant_v8i16_using_cmp_notval(<8 x i16> %x) {
 ; SSE-LABEL: unsigned_sat_constant_v8i16_using_cmp_notval:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    paddusw {{.*}}(%rip), %xmm0
+; SSE-NEXT:    paddusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: unsigned_sat_constant_v8i16_using_cmp_notval:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddusw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %a = add <8 x i16> %x, <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
   %c = icmp ugt <8 x i16> %x, <i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43>
@@ -474,18 +472,19 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_min(<4 x i32> %x) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483605,2147483605,2147483605,2147483605]
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pandn {{.*}}(%rip), %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: unsigned_sat_constant_v4i32_using_min:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pminud {{.*}}(%rip), %xmm0
-; SSE4-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE4-NEXT:    pminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v4i32_using_min:
@@ -498,8 +497,8 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_min(<4 x i32> %x) {
 ;
 ; AVX512-LABEL: unsigned_sat_constant_v4i32_using_min:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %c = icmp ult <4 x i32> %x, <i32 -43, i32 -43, i32 -43, i32 -43>
   %s = select <4 x i1> %c, <4 x i32> %x, <4 x i32> <i32 -43, i32 -43, i32 -43, i32 -43>
@@ -521,8 +520,8 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_sum(<4 x i32> %x) {
 ;
 ; SSE4-LABEL: unsigned_sat_constant_v4i32_using_cmp_sum:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pminud {{.*}}(%rip), %xmm0
-; SSE4-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE4-NEXT:    pminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v4i32_using_cmp_sum:
@@ -535,8 +534,8 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_sum(<4 x i32> %x) {
 ;
 ; AVX512-LABEL: unsigned_sat_constant_v4i32_using_cmp_sum:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
   %c = icmp ugt <4 x i32> %x, %a
@@ -549,15 +548,15 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval(<4 x i32> %x) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [42,42,42,42]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pminud {{.*}}(%rip), %xmm0
-; SSE4-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE4-NEXT:    pminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval:
@@ -570,8 +569,8 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval(<4 x i32> %x) {
 ;
 ; AVX512-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
   %c = icmp ugt <4 x i32> %x, <i32 -43, i32 -43, i32 -43, i32 -43>
@@ -584,21 +583,21 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval_nonsplat(<4 x i32
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [43,44,45,46]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval_nonsplat:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pminud {{.*}}(%rip), %xmm0
-; SSE4-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE4-NEXT:    pminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval_nonsplat:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %a = add <4 x i32> %x, <i32 43, i32 44, i32 45, i32 46>
   %c = icmp ugt <4 x i32> %x, <i32 -44, i32 -45, i32 -46, i32 -47>
@@ -612,18 +611,17 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372034707292117,9223372034707292117]
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm1
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-NEXT:    pand %xmm4, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    por %xmm1, %xmm2
 ; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pandn {{.*}}(%rip), %xmm2
+; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    paddq {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: unsigned_sat_constant_v2i64_using_min:
@@ -640,37 +638,33 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    por %xmm3, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
-; SSE41-NEXT:    paddq {{.*}}(%rip), %xmm2
+; SSE41-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: unsigned_sat_constant_v2i64_using_min:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm1
-; SSE42-NEXT:    movapd {{.*#+}} xmm2 = [18446744073709551573,18446744073709551573]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    pxor %xmm0, %xmm3
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [9223372036854775765,9223372036854775765]
-; SSE42-NEXT:    pcmpgtq %xmm3, %xmm0
-; SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
-; SSE42-NEXT:    paddq {{.*}}(%rip), %xmm2
-; SSE42-NEXT:    movdqa %xmm2, %xmm0
+; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [9223372036854775808,9223372036854775808]
+; SSE42-NEXT:    pxor %xmm1, %xmm0
+; SSE42-NEXT:    pcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE42-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE42-NEXT:    movdqa %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v2i64_using_min:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovapd {{.*#+}} xmm1 = [18446744073709551573,18446744073709551573]
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [9223372036854775765,9223372036854775765]
-; AVX2-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vblendvpd %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: unsigned_sat_constant_v2i64_using_min:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpminuq {{.*}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %c = icmp ult <2 x i64> %x, <i64 -43, i64 -43>
   %s = select <2 x i1> %c, <2 x i64> %x, <2 x i64> <i64 -43, i64 -43>
@@ -699,7 +693,7 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_sum(<2 x i64> %x) {
 ;
 ; SSE41-LABEL: unsigned_sat_constant_v2i64_using_cmp_sum:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [42,42]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm1 = [42,42]
 ; SSE41-NEXT:    paddq %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
@@ -717,21 +711,20 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_sum(<2 x i64> %x) {
 ;
 ; SSE42-LABEL: unsigned_sat_constant_v2i64_using_cmp_sum:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    movdqa %xmm0, %xmm1
-; SSE42-NEXT:    pxor %xmm2, %xmm1
-; SSE42-NEXT:    paddq {{.*}}(%rip), %xmm0
-; SSE42-NEXT:    pxor %xmm0, %xmm2
-; SSE42-NEXT:    pcmpgtq %xmm2, %xmm1
-; SSE42-NEXT:    por %xmm0, %xmm1
-; SSE42-NEXT:    movdqa %xmm1, %xmm0
+; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; SSE42-NEXT:    movdqa %xmm0, %xmm2
+; SSE42-NEXT:    pxor %xmm1, %xmm2
+; SSE42-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    pxor %xmm0, %xmm1
+; SSE42-NEXT:    pcmpgtq %xmm1, %xmm2
+; SSE42-NEXT:    por %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v2i64_using_cmp_sum:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
@@ -739,8 +732,8 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_sum(<2 x i64> %x) {
 ;
 ; AVX512-LABEL: unsigned_sat_constant_v2i64_using_cmp_sum:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpminuq {{.*}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a = add <2 x i64> %x, <i64 42, i64 42>
   %c = icmp ugt <2 x i64> %x, %a
@@ -753,53 +746,44 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_notval(<2 x i64> %x) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [42,42]
 ; SSE2-NEXT:    paddq %xmm0, %xmm1
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372034707292117,9223372034707292117]
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    pcmpgtd %xmm2, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pand %xmm4, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: unsigned_sat_constant_v2i64_using_cmp_notval:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [42,42]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm1 = [42,42]
 ; SSE41-NEXT:    paddq %xmm0, %xmm1
-; SSE41-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [9223372034707292117,9223372034707292117]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pcmpgtd %xmm2, %xmm3
-; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE41-NEXT:    pand %xmm4, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,1,3,3]
+; SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; SSE41-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE41-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
-; SSE41-NEXT:    por %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: unsigned_sat_constant_v2i64_using_cmp_notval:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    movdqa %xmm0, %xmm1
-; SSE42-NEXT:    pxor %xmm2, %xmm1
-; SSE42-NEXT:    paddq {{.*}}(%rip), %xmm0
-; SSE42-NEXT:    pxor %xmm0, %xmm2
-; SSE42-NEXT:    pcmpgtq %xmm2, %xmm1
-; SSE42-NEXT:    por %xmm0, %xmm1
-; SSE42-NEXT:    movdqa %xmm1, %xmm0
+; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; SSE42-NEXT:    movdqa %xmm0, %xmm2
+; SSE42-NEXT:    pxor %xmm1, %xmm2
+; SSE42-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    pxor %xmm0, %xmm1
+; SSE42-NEXT:    pcmpgtq %xmm1, %xmm2
+; SSE42-NEXT:    por %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v2i64_using_cmp_notval:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
@@ -807,8 +791,8 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_notval(<2 x i64> %x) {
 ;
 ; AVX512-LABEL: unsigned_sat_constant_v2i64_using_cmp_notval:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpminuq {{.*}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a = add <2 x i64> %x, <i64 42, i64 42>
   %c = icmp ugt <2 x i64> %x, <i64 -43, i64 -43>
@@ -965,8 +949,8 @@ define <8 x i16> @unsigned_sat_variable_v8i16_using_cmp_notval(<8 x i16> %x, <8 
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    paddw %xmm1, %xmm2
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm1
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pcmpgtw %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
@@ -1020,10 +1004,9 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_min(<4 x i32> %x, <4 x i32> 
 ; SSE2-NEXT:    pxor %xmm1, %xmm4
 ; SSE2-NEXT:    pcmpgtd %xmm3, %xmm4
 ; SSE2-NEXT:    pand %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm4
 ; SSE2-NEXT:    pxor %xmm2, %xmm4
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1102,8 +1085,8 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_cmp_notval(<4 x i32> %x, <4 
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    paddd %xmm1, %xmm2
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm1
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
@@ -1133,11 +1116,11 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_cmp_notval(<4 x i32> %x, <4 
 ;
 ; AVX512-LABEL: unsigned_sat_variable_v4i32_using_cmp_notval:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpnleud %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm3, %xmm2 {%k1}
+; AVX512-NEXT:    vmovdqa %xmm1, %xmm3
+; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm3
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpleud %xmm3, %xmm0, %k1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %noty = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -1164,10 +1147,9 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_min(<2 x i64> %x, <2 x i64> 
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
 ; SSE2-NEXT:    por %xmm3, %xmm4
 ; SSE2-NEXT:    pand %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm4
 ; SSE2-NEXT:    pxor %xmm2, %xmm4
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddq %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1210,8 +1192,8 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_min(<2 x i64> %x, <2 x i64> 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm2
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm3
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm1, %xmm4
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm4
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3
 ; AVX2-NEXT:    vblendvpd %xmm3, %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
@@ -1269,16 +1251,17 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_sum(<2 x i64> %x, <2 x i
 ; SSE42-LABEL: unsigned_sat_variable_v2i64_using_cmp_sum:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    paddq %xmm0, %xmm1
-; SSE42-NEXT:    pxor %xmm2, %xmm0
-; SSE42-NEXT:    pxor %xmm1, %xmm2
-; SSE42-NEXT:    pcmpgtq %xmm2, %xmm0
-; SSE42-NEXT:    por %xmm1, %xmm0
+; SSE42-NEXT:    movdqa %xmm0, %xmm3
+; SSE42-NEXT:    pxor %xmm2, %xmm3
+; SSE42-NEXT:    paddq %xmm1, %xmm0
+; SSE42-NEXT:    pxor %xmm0, %xmm2
+; SSE42-NEXT:    pcmpgtq %xmm2, %xmm3
+; SSE42-NEXT:    por %xmm3, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: unsigned_sat_variable_v2i64_using_cmp_sum:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm3
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm1
@@ -1304,8 +1287,8 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_notval(<2 x i64> %x, <2 
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    paddq %xmm1, %xmm2
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm1
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
@@ -1321,8 +1304,8 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_notval(<2 x i64> %x, <2 
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    paddq %xmm1, %xmm2
-; SSE41-NEXT:    pxor {{.*}}(%rip), %xmm1
-; SSE41-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; SSE41-NEXT:    pcmpgtd %xmm1, %xmm3
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
@@ -1338,8 +1321,8 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_notval(<2 x i64> %x, <2 
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
 ; SSE42-NEXT:    paddq %xmm1, %xmm2
-; SSE42-NEXT:    pxor {{.*}}(%rip), %xmm1
-; SSE42-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE42-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE42-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE42-NEXT:    por %xmm2, %xmm0
 ; SSE42-NEXT:    retq
@@ -1347,19 +1330,19 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_notval(<2 x i64> %x, <2 
 ; AVX2-LABEL: unsigned_sat_variable_v2i64_using_cmp_notval:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: unsigned_sat_variable_v2i64_using_cmp_notval:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovdqa64 %xmm3, %xmm2 {%k1}
+; AVX512-NEXT:    vmovdqa %xmm1, %xmm3
+; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm3
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpleuq %xmm3, %xmm0, %k1
+; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %noty = xor <2 x i64> %y, <i64 -1, i64 -1>

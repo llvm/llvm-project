@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Reduction over parametric number of elements and a loopguard if the
 ; reduction loop is not executed at all, such that A[j] is also not accessed.
@@ -15,7 +15,7 @@
 ;      }
 ;    }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -33,8 +33,8 @@ outer.for:
       br i1 %guard.cmp, label %reduction.skip, label %reduction.preheader
 
     reduction.preheader:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      %init = load double, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      %init = load double, ptr %A_idx
       br label %reduction.for
 
     reduction.for:
@@ -56,7 +56,7 @@ outer.for:
       br i1 %i.cmp, label %reduction.for, label %reduction.exit
 
     reduction.exit:
-      store double %add, double* %A_idx
+      store double %add, ptr %A_idx
       br label %reduction.skip
 
     reduction.skip:

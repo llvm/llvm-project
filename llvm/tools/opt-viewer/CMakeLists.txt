@@ -8,7 +8,7 @@ set (files
 
 foreach (file ${files})
   install(PROGRAMS ${file}
-    DESTINATION share/opt-viewer
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/opt-viewer"
     COMPONENT opt-viewer)
 endforeach (file)
 

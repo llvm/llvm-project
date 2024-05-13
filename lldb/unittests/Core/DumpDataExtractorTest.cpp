@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DumpDataExtractor.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -17,6 +19,20 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+// This is needed for the tests because they rely on the Target global
+// properties.
+class DumpDataExtractorTest : public ::testing::Test {
+public:
+  void SetUp() override {
+    FileSystem::Initialize();
+    HostInfo::Initialize();
+  }
+  void TearDown() override {
+    HostInfo::Terminate();
+    FileSystem::Terminate();
+  }
+};
 
 static void TestDumpWithAddress(uint64_t base_addr, size_t item_count,
                                 llvm::StringRef expected) {
@@ -32,7 +48,7 @@ static void TestDumpWithAddress(uint64_t base_addr, size_t item_count,
   ASSERT_EQ(expected, result.GetString());
 }
 
-TEST(DumpDataExtractorTest, BaseAddress) {
+TEST_F(DumpDataExtractorTest, BaseAddress) {
   TestDumpWithAddress(0x12341234, 1, "0x12341234: 0x11");
   TestDumpWithAddress(LLDB_INVALID_ADDRESS, 1, "0x11");
   TestDumpWithAddress(0x12341234, 2, "0x12341234: 0x11\n0x12341235: 0x22");
@@ -53,7 +69,7 @@ static void TestDumpWithOffset(offset_t start_offset,
   ASSERT_EQ(expected, result.GetString());
 }
 
-TEST(DumpDataExtractorTest, StartOffset) {
+TEST_F(DumpDataExtractorTest, StartOffset) {
   TestDumpWithOffset(0, "0x00000000: 0x11 0x22 0x33");
   // The offset applies to the DataExtractor, not the address used when
   // formatting.
@@ -62,7 +78,7 @@ TEST(DumpDataExtractorTest, StartOffset) {
   TestDumpWithOffset(3, "");
 }
 
-TEST(DumpDataExtractorTest, NullStream) {
+TEST_F(DumpDataExtractorTest, NullStream) {
   // We don't do any work if there is no output stream.
   uint8_t c = 0x11;
   StreamString result;
@@ -112,7 +128,7 @@ static void TestDump(const std::vector<T> data, lldb::Format format,
                LLDB_INVALID_ADDRESS, format, expected);
 }
 
-TEST(DumpDataExtractorTest, Formats) {
+TEST_F(DumpDataExtractorTest, Formats) {
   TestDump<uint8_t>(1, lldb::eFormatDefault, "0x01");
   TestDump<uint8_t>(1, lldb::eFormatBoolean, "true");
   TestDump<uint8_t>(0xAA, lldb::eFormatBinary, "0b10101010");
@@ -121,7 +137,7 @@ TEST(DumpDataExtractorTest, Formats) {
   TestDump('?', lldb::eFormatChar, "'?'");
   TestDump('\x1A', lldb::eFormatCharPrintable, ".");
   TestDump('#', lldb::eFormatCharPrintable, "#");
-  TestDump(std::complex<float>(1.2, 3.4), lldb::eFormatComplex, "1.2 + 3.4i");
+  TestDump(std::complex<float>(1.2f, 3.4f), lldb::eFormatComplex, "1.2 + 3.4i");
   TestDump(std::complex<double>(4.5, 6.7), lldb::eFormatComplex, "4.5 + 6.7i");
 
   // long double is not tested here because for some platforms we treat it as 10
@@ -131,14 +147,22 @@ TEST(DumpDataExtractorTest, Formats) {
   // set of bytes to match the 10 byte format but then if the test runs on a
   // machine where we don't use 10 it'll break.
 
+  // Test printable characters.
   TestDump(llvm::StringRef("aardvark"), lldb::Format::eFormatCString,
            "\"aardvark\"");
+  // Test unprintable characters.
+  TestDump(llvm::StringRef("\xcf\xfa\xed\xfe\f"), lldb::Format::eFormatCString,
+           "\"\\xcf\\xfa\\xed\\xfe\\f\"");
+  // Test a mix of printable and unprintable characters.
+  TestDump(llvm::StringRef("\xcf\xfa\ffoo"), lldb::Format::eFormatCString,
+           "\"\\xcf\\xfa\\ffoo\"");
+
   TestDump<uint16_t>(99, lldb::Format::eFormatDecimal, "99");
   // Just prints as a signed integer.
   TestDump(-1, lldb::Format::eFormatEnum, "-1");
   TestDump(0xcafef00d, lldb::Format::eFormatHex, "0xcafef00d");
   TestDump(0xcafef00d, lldb::Format::eFormatHexUppercase, "0xCAFEF00D");
-  TestDump(0.456, lldb::Format::eFormatFloat, "0.456");
+  TestDump(0.456, lldb::Format::eFormatFloat, "0.45600000000000002");
   TestDump(9, lldb::Format::eFormatOctal, "011");
   // Chars packed into an integer.
   TestDump<uint32_t>(0x4C4C4442, lldb::Format::eFormatOSType, "'LLDB'");
@@ -180,44 +204,39 @@ TEST(DumpDataExtractorTest, Formats) {
            lldb::Format::eFormatVectorOfFloat16, "{0 -0}");
   // Some subnormal numbers.
   TestDump(std::vector<uint16_t>{0x0001, 0x8001},
-           lldb::Format::eFormatVectorOfFloat16, "{5.96046e-08 -5.96046e-08}");
+           lldb::Format::eFormatVectorOfFloat16, "{5.9605E-8 -5.9605E-8}");
   // A full mantisse and empty expontent.
   TestDump(std::vector<uint16_t>{0x83ff, 0x03ff},
-           lldb::Format::eFormatVectorOfFloat16, "{-6.09756e-05 6.09756e-05}");
+           lldb::Format::eFormatVectorOfFloat16, "{-6.0976E-5 6.0976E-5}");
   // Some normal numbers.
   TestDump(std::vector<uint16_t>{0b0100001001001000},
-           lldb::Format::eFormatVectorOfFloat16,
-#ifdef _WIN32
-           // FIXME: This should print the same on all platforms.
-           "{3.14063}");
-#else
-           "{3.14062}");
-#endif
+           lldb::Format::eFormatVectorOfFloat16, "{3.1406}");
   // Largest and smallest normal number.
   TestDump(std::vector<uint16_t>{0x0400, 0x7bff},
-           lldb::Format::eFormatVectorOfFloat16, "{6.10352e-05 65504}");
+           lldb::Format::eFormatVectorOfFloat16, "{6.1035E-5 65504}");
   TestDump(std::vector<uint16_t>{0xabcd, 0x1234},
-           lldb::Format::eFormatVectorOfFloat16, "{-0.0609436 0.000757217}");
+           lldb::Format::eFormatVectorOfFloat16, "{-0.060944 7.5722E-4}");
 
   // quiet/signaling NaNs.
   TestDump(std::vector<uint16_t>{0xffff, 0xffc0, 0x7fff, 0x7fc0},
-           lldb::Format::eFormatVectorOfFloat16, "{-nan -nan nan nan}");
+           lldb::Format::eFormatVectorOfFloat16, "{NaN NaN NaN NaN}");
   // +/-Inf.
   TestDump(std::vector<uint16_t>{0xfc00, 0x7c00},
-           lldb::Format::eFormatVectorOfFloat16, "{-inf inf}");
+           lldb::Format::eFormatVectorOfFloat16, "{-Inf +Inf}");
 
   TestDump(std::vector<float>{std::numeric_limits<float>::min(),
                               std::numeric_limits<float>::max()},
-           lldb::Format::eFormatVectorOfFloat32, "{1.17549e-38 3.40282e+38}");
+           lldb::Format::eFormatVectorOfFloat32,
+           "{1.17549435E-38 3.40282347E+38}");
   TestDump(std::vector<float>{std::numeric_limits<float>::quiet_NaN(),
                               std::numeric_limits<float>::signaling_NaN(),
                               -std::numeric_limits<float>::quiet_NaN(),
                               -std::numeric_limits<float>::signaling_NaN()},
-           lldb::Format::eFormatVectorOfFloat32, "{nan nan -nan -nan}");
+           lldb::Format::eFormatVectorOfFloat32, "{NaN NaN NaN NaN}");
   TestDump(std::vector<double>{std::numeric_limits<double>::min(),
                                std::numeric_limits<double>::max()},
            lldb::Format::eFormatVectorOfFloat64,
-           "{2.2250738585072e-308 1.79769313486232e+308}");
+           "{2.2250738585072014E-308 1.7976931348623157E+308}");
   TestDump(
       std::vector<double>{
           std::numeric_limits<double>::quiet_NaN(),
@@ -225,7 +244,7 @@ TEST(DumpDataExtractorTest, Formats) {
           -std::numeric_limits<double>::quiet_NaN(),
           -std::numeric_limits<double>::signaling_NaN(),
       },
-      lldb::Format::eFormatVectorOfFloat64, "{nan nan -nan -nan}");
+      lldb::Format::eFormatVectorOfFloat64, "{NaN NaN NaN NaN}");
 
   // Not sure we can rely on having uint128_t everywhere so emulate with
   // uint64_t.
@@ -255,7 +274,7 @@ TEST(DumpDataExtractorTest, Formats) {
   TestDump<int>(99, lldb::Format::eFormatVoid, "0x00000063");
 }
 
-TEST(DumpDataExtractorTest, FormatCharArray) {
+TEST_F(DumpDataExtractorTest, FormatCharArray) {
   // Unlike the other formats, charArray isn't 1 array of N chars.
   // It must be passed as N chars of 1 byte each.
   // (eFormatVectorOfChar does this swap for you)
@@ -296,7 +315,7 @@ void TestDumpMultiLine(const T *data, size_t num_items, lldb::Format format,
                0x80000000, format, expected);
 }
 
-TEST(DumpDataExtractorTest, MultiLine) {
+TEST_F(DumpDataExtractorTest, MultiLine) {
   // A vector counts as 1 item regardless of size.
   TestDumpMultiLine(std::vector<uint8_t>{0x11},
                     lldb::Format::eFormatVectorOfUInt8, 1,
@@ -351,7 +370,7 @@ void TestDumpWithItemByteSize(size_t item_byte_size, lldb::Format format,
                expected);
 }
 
-TEST(DumpDataExtractorTest, ItemByteSizeErrors) {
+TEST_F(DumpDataExtractorTest, ItemByteSizeErrors) {
   TestDumpWithItemByteSize(
       16, lldb::Format::eFormatBoolean,
       "error: unsupported byte size (16) for boolean format");

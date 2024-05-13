@@ -105,13 +105,13 @@ void testNewInvalidationPlacement(PtrWrapper *w) {
 
 void testUseZeroAlloc1() {
   int *p = (int *)operator new(0);
-  *p = 1; // newdelete-warning {{Use of zero-allocated memory}}
+  *p = 1; // newdelete-warning {{Use of memory allocated with size zero}}
   delete p;
 }
 
 int testUseZeroAlloc2() {
   int *p = (int *)operator new[](0);
-  return p[0]; // newdelete-warning {{Use of zero-allocated memory}}
+  return p[0]; // newdelete-warning {{Use of memory allocated with size zero}}
   delete[] p;
 }
 
@@ -119,7 +119,7 @@ void f(int);
 
 void testUseZeroAlloc3() {
   int *p = new int[0];
-  f(*p); // newdelete-warning {{Use of zero-allocated memory}}
+  f(*p); // newdelete-warning {{Use of memory allocated with size zero}}
   delete[] p;
 }
 
@@ -385,7 +385,11 @@ class DerefClass{
 public:
   int *x;
   DerefClass() {}
-  ~DerefClass() {*x = 1;}
+  ~DerefClass() {
+    int i = 0;
+    x = &i;
+    *x = 1;
+  }
 };
 
 void testDoubleDeleteClassInstance() {
@@ -421,3 +425,36 @@ void shouldNotReportLeak() {
   Derived *p = (Derived *)allocate();
   delete p;
 }
+
+template<void *allocate_fn(size_t)>
+void* allocate_via_nttp(size_t n) {
+  return allocate_fn(n);
+}
+
+template<void deallocate_fn(void*)>
+void deallocate_via_nttp(void* ptr) {
+  deallocate_fn(ptr);
+}
+
+void testNTTPNewNTTPDelete() {
+  void* p = allocate_via_nttp<::operator new>(10);
+  deallocate_via_nttp<::operator delete>(p);
+} // no warn
+
+void testNTTPNewDirectDelete() {
+  void* p = allocate_via_nttp<::operator new>(10);
+  ::operator delete(p);
+} // no warn
+
+void testDirectNewNTTPDelete() {
+  void* p = ::operator new(10);
+  deallocate_via_nttp<::operator delete>(p);
+}
+
+void not_free(void*) {
+}
+
+void testLeakBecauseNTTPIsNotDeallocation() {
+  void* p = ::operator new(10);
+  deallocate_via_nttp<not_free>(p);
+}  // leak-warning{{Potential leak of memory pointed to by 'p'}}

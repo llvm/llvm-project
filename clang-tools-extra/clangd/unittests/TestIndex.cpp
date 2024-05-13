@@ -8,6 +8,7 @@
 
 #include "TestIndex.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Regex.h"
 
 namespace clang {
@@ -37,7 +38,7 @@ static std::string replace(llvm::StringRef Haystack, llvm::StringRef Needle,
 // Helpers to produce fake index symbols for memIndex() or completions().
 // USRFormat is a regex replacement string for the unqualified part of the USR.
 Symbol sym(llvm::StringRef QName, index::SymbolKind Kind,
-           llvm::StringRef USRFormat) {
+           llvm::StringRef USRFormat, llvm::StringRef Signature) {
   Symbol Sym;
   std::string USR = "c:"; // We synthesize a few simple cases of USRs by hand!
   size_t Pos = QName.rfind("::");
@@ -54,6 +55,7 @@ Symbol sym(llvm::StringRef QName, index::SymbolKind Kind,
   Sym.SymInfo.Kind = Kind;
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
   Sym.Origin = SymbolOrigin::Static;
+  Sym.Signature = Signature;
   return Sym;
 }
 
@@ -65,12 +67,55 @@ Symbol cls(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Class, "@S@\\0");
 }
 
+Symbol enm(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::Enum, "@E@\\0");
+}
+
+Symbol enmConstant(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::EnumConstant, "@\\0");
+}
+
 Symbol var(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Variable, "@\\0");
 }
 
 Symbol ns(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Namespace, "@N@\\0");
+}
+
+Symbol conceptSym(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::Concept, "@CT@\\0");
+}
+
+Symbol macro(llvm::StringRef Name, llvm::StringRef ArgList) {
+  return sym(Name, index::SymbolKind::Macro, "@macro@\\0", ArgList);
+}
+
+Symbol objcSym(llvm::StringRef Name, index::SymbolKind Kind,
+               llvm::StringRef USRPrefix) {
+  Symbol Sym;
+  std::string USR = USRPrefix.str() + Name.str();
+  Sym.Name = Name;
+  Sym.Scope = "";
+  Sym.ID = SymbolID(USR);
+  Sym.SymInfo.Kind = Kind;
+  Sym.SymInfo.Lang = index::SymbolLanguage::ObjC;
+  Sym.Flags |= Symbol::IndexedForCodeCompletion;
+  Sym.Origin = SymbolOrigin::Static;
+  return Sym;
+}
+
+Symbol objcClass(llvm::StringRef Name) {
+  return objcSym(Name, index::SymbolKind::Class, "objc(cs)");
+}
+
+Symbol objcCategory(llvm::StringRef Name, llvm::StringRef CategoryName) {
+  std::string USRPrefix = ("objc(cy)" + Name + "@").str();
+  return objcSym(CategoryName, index::SymbolKind::Extension, USRPrefix);
+}
+
+Symbol objcProtocol(llvm::StringRef Name) {
+  return objcSym(Name, index::SymbolKind::Protocol, "objc(pl)");
 }
 
 SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames) {
@@ -82,8 +127,8 @@ SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames) {
 
 SymbolSlab generateNumSymbols(int Begin, int End) {
   std::vector<std::string> Names;
-  for (int i = Begin; i <= End; i++)
-    Names.push_back(std::to_string(i));
+  for (int I = Begin; I <= End; I++)
+    Names.push_back(std::to_string(I));
   return generateSymbols(Names);
 }
 

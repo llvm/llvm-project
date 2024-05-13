@@ -6,6 +6,6 @@ struct S {
 
 void (^b)(S) = ^(S) {};
 
-// CHECK: [[DESCRIPTOR:%.*]] = getelementptr inbounds <{ i8*, %struct.S, [3 x i8] }>, <{ i8*, %struct.S, [3 x i8] }>* %0, i32 0, i32 0
-// CHECK: load i8*, i8** [[DESCRIPTOR]]
+// CHECK: [[DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, %struct.S, [3 x i8] }>, ptr %0, i32 0, i32 0
+// CHECK: load ptr, ptr [[DESCRIPTOR]]
 

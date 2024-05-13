@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
 ;
 ; We have privatization dependences from a textually later statement to a
 ; textually earlier one, but the dependences still go forward in time.
@@ -24,7 +24,7 @@
 ;
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @f(i32* %sum)  {
+define void @f(ptr %sum)  {
 entry:
   br label %for.cond
 
@@ -38,10 +38,10 @@ for.body:                                         ; preds = %for.cond
 
 S1:                                               ; preds = %for.body
   %add = add nsw i32 %i.0, 1
-  %arrayidx = getelementptr inbounds i32, i32* %sum, i32 %add
-  %tmp = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %sum, i32 %add
+  %tmp = load i32, ptr %arrayidx, align 4
   %add1 = add nsw i32 %tmp, 42
-  store i32 %add1, i32* %arrayidx, align 4
+  store i32 %add1, ptr %arrayidx, align 4
   br label %for.cond2
 
 for.cond2:                                        ; preds = %for.inc, %S1
@@ -54,10 +54,10 @@ for.body4:                                        ; preds = %for.cond2
 
 S2:                                               ; preds = %for.body4
   %mul = mul nsw i32 %i.0, %j.0
-  %arrayidx5 = getelementptr inbounds i32, i32* %sum, i32 %i.0
-  %tmp2 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %sum, i32 %i.0
+  %tmp2 = load i32, ptr %arrayidx5, align 4
   %add6 = add nsw i32 %tmp2, %mul
-  store i32 %add6, i32* %arrayidx5, align 4
+  store i32 %add6, ptr %arrayidx5, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %S2
@@ -69,10 +69,10 @@ for.end:                                          ; preds = %for.cond2
 
 S3:                                               ; preds = %for.end
   %add7 = add nsw i32 %i.0, 1
-  %arrayidx8 = getelementptr inbounds i32, i32* %sum, i32 %add7
-  %tmp3 = load i32, i32* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %sum, i32 %add7
+  %tmp3 = load i32, ptr %arrayidx8, align 4
   %add9 = add nsw i32 %tmp3, 7
-  store i32 %add9, i32* %arrayidx8, align 4
+  store i32 %add9, ptr %arrayidx8, align 4
   br label %for.inc10
 
 for.inc10:                                        ; preds = %S3

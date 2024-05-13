@@ -73,14 +73,14 @@ bool RegisterContextCorePOSIX_x86_64::ReadRegister(const RegisterInfo *reg_info,
   }
 
   Status error;
-  value.SetFromMemoryData(reg_info, src + offset, reg_info->byte_size,
+  value.SetFromMemoryData(*reg_info, src + offset, reg_info->byte_size,
                           lldb::eByteOrderLittle, error);
 
   return error.Success();
 }
 
 bool RegisterContextCorePOSIX_x86_64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 

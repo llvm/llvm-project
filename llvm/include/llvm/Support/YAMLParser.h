@@ -11,7 +11,6 @@
 //  See http://www.yaml.org/spec/1.2/spec.html for the full standard.
 //
 //  This currently does not implement the following:
-//    * Multi-line literal folding.
 //    * Tag resolution.
 //    * UTF-16.
 //    * BOMs anywhere other than the first Unicode scalar value in the file.
@@ -46,6 +45,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 
@@ -79,7 +79,7 @@ bool scanTokens(StringRef Input);
 std::string escape(StringRef Input, bool EscapePrintable = true);
 
 /// Parse \p S as a bool according to https://yaml.org/type/bool.html.
-llvm::Optional<bool> parseBool(StringRef S);
+std::optional<bool> parseBool(StringRef S);
 
 /// This class represents a YAML stream potentially containing multiple
 ///        documents.
@@ -240,9 +240,14 @@ public:
 private:
   StringRef Value;
 
-  StringRef unescapeDoubleQuoted(StringRef UnquotedValue,
-                                 StringRef::size_type Start,
+  StringRef getDoubleQuotedValue(StringRef UnquotedValue,
                                  SmallVectorImpl<char> &Storage) const;
+
+  static StringRef getSingleQuotedValue(StringRef RawValue,
+                                        SmallVectorImpl<char> &Storage);
+
+  static StringRef getPlainValue(StringRef RawValue,
+                                 SmallVectorImpl<char> &Storage);
 };
 
 /// A block scalar node is an opaque datum that can be presented as a
@@ -611,7 +616,7 @@ public:
     return *this;
   }
 
-  Document &operator*() { return *Doc->get(); }
+  Document &operator*() { return **Doc; }
 
   std::unique_ptr<Document> &operator->() { return *Doc; }
 

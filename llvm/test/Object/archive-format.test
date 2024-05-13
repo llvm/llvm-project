@@ -89,3 +89,6 @@ RUN: cat -v %t/foo.a | FileCheck -strict-whitespace --check-prefix=SOLARIS %s
 SOLARIS:      !<arch>
 SOLARIS-NEXT: /               0           0     0     0       8         `
 SOLARIS-NEXT: ^@^@^@^@^@^@^@^@foo.o/
+
+RUN: not llvm-ar -format=gnu rc %t.a 0123456789abcde 2>&1 | FileCheck --check-prefix=ONE-DASH %s
+ONE-DASH: error: unknown option f

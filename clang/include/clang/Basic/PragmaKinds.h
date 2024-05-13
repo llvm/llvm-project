@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_PRAGMA_KINDS_H
-#define LLVM_CLANG_BASIC_PRAGMA_KINDS_H
+#ifndef LLVM_CLANG_BASIC_PRAGMAKINDS_H
+#define LLVM_CLANG_BASIC_PRAGMAKINDS_H
 
 namespace clang {
 
@@ -33,6 +33,14 @@ enum PragmaFloatControlKind {
   PFC_NoExcept,  // #pragma float_control(except, off)
   PFC_Push,      // #pragma float_control(push)
   PFC_Pop        // #pragma float_control(pop)
+};
+
+enum PragmaFPKind {
+  PFK_Contract,    // #pragma clang fp contract
+  PFK_Reassociate, // #pragma clang fp reassociate
+  PFK_Reciprocal,  // #pragma clang fp reciprocal
+  PFK_Exceptions,  // #pragma clang fp exceptions
+  PFK_EvalMethod   // #pragma clang fp eval_method
 };
 }
 

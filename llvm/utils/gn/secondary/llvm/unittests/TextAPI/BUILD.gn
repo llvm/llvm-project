@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("TextAPITests") {
   deps = [
@@ -6,9 +6,11 @@ unittest("TextAPITests") {
     "//llvm/lib/TextAPI",
   ]
   sources = [
+    "RecordTests.cpp",
     "TextStubV1Tests.cpp",
     "TextStubV2Tests.cpp",
     "TextStubV3Tests.cpp",
     "TextStubV4Tests.cpp",
+    "TextStubV5Tests.cpp",
   ]
 }

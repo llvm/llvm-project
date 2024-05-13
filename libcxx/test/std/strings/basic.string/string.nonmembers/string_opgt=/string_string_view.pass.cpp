@@ -17,55 +17,45 @@
 #include "min_allocator.h"
 
 template <class S, class SV>
-void
-test(const S& lhs, SV rhs, bool x)
-{
-    assert((lhs >= rhs) == x);
+TEST_CONSTEXPR_CXX20 void test(const S& lhs, SV rhs, bool x) {
+  assert((lhs >= rhs) == x);
 }
 
-int main(int, char**)
-{
-    {
-    typedef std::string S;
-    typedef std::string_view SV;
-    test(S(""), SV(""), true);
-    test(S(""), SV("abcde"), false);
-    test(S(""), SV("abcdefghij"), false);
-    test(S(""), SV("abcdefghijklmnopqrst"), false);
-    test(S("abcde"), SV(""), true);
-    test(S("abcde"), SV("abcde"), true);
-    test(S("abcde"), SV("abcdefghij"), false);
-    test(S("abcde"), SV("abcdefghijklmnopqrst"), false);
-    test(S("abcdefghij"), SV(""), true);
-    test(S("abcdefghij"), SV("abcde"), true);
-    test(S("abcdefghij"), SV("abcdefghij"), true);
-    test(S("abcdefghij"), SV("abcdefghijklmnopqrst"), false);
-    test(S("abcdefghijklmnopqrst"), SV(""), true);
-    test(S("abcdefghijklmnopqrst"), SV("abcde"), true);
-    test(S("abcdefghijklmnopqrst"), SV("abcdefghij"), true);
-    test(S("abcdefghijklmnopqrst"), SV("abcdefghijklmnopqrst"), true);
-    }
+template <class CharT, template <class> class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  using S  = std::basic_string<CharT, std::char_traits<CharT>, Alloc<CharT> >;
+  using SV = std::basic_string_view<CharT, std::char_traits<CharT> >;
+  test(S(""), SV(""), true);
+  test(S(""), SV("abcde"), false);
+  test(S(""), SV("abcdefghij"), false);
+  test(S(""), SV("abcdefghijklmnopqrst"), false);
+  test(S("abcde"), SV(""), true);
+  test(S("abcde"), SV("abcde"), true);
+  test(S("abcde"), SV("abcdefghij"), false);
+  test(S("abcde"), SV("abcdefghijklmnopqrst"), false);
+  test(S("abcdefghij"), SV(""), true);
+  test(S("abcdefghij"), SV("abcde"), true);
+  test(S("abcdefghij"), SV("abcdefghij"), true);
+  test(S("abcdefghij"), SV("abcdefghijklmnopqrst"), false);
+  test(S("abcdefghijklmnopqrst"), SV(""), true);
+  test(S("abcdefghijklmnopqrst"), SV("abcde"), true);
+  test(S("abcdefghijklmnopqrst"), SV("abcdefghij"), true);
+  test(S("abcdefghijklmnopqrst"), SV("abcdefghijklmnopqrst"), true);
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string<char, std::allocator>();
 #if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    typedef std::basic_string_view<char, std::char_traits<char>> SV;
-    test(S(""), SV(""), true);
-    test(S(""), SV("abcde"), false);
-    test(S(""), SV("abcdefghij"), false);
-    test(S(""), SV("abcdefghijklmnopqrst"), false);
-    test(S("abcde"), SV(""), true);
-    test(S("abcde"), SV("abcde"), true);
-    test(S("abcde"), SV("abcdefghij"), false);
-    test(S("abcde"), SV("abcdefghijklmnopqrst"), false);
-    test(S("abcdefghij"), SV(""), true);
-    test(S("abcdefghij"), SV("abcde"), true);
-    test(S("abcdefghij"), SV("abcdefghij"), true);
-    test(S("abcdefghij"), SV("abcdefghijklmnopqrst"), false);
-    test(S("abcdefghijklmnopqrst"), SV(""), true);
-    test(S("abcdefghijklmnopqrst"), SV("abcde"), true);
-    test(S("abcdefghijklmnopqrst"), SV("abcdefghij"), true);
-    test(S("abcdefghijklmnopqrst"), SV("abcdefghijklmnopqrst"), true);
-    }
+  test_string<char, min_allocator>();
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
 #endif
 
   return 0;

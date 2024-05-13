@@ -15,11 +15,15 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 
+#include "llvm/Object/Archive.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Path.h"
 
 #include <map>
 #include <memory>
 #include <mutex>
+
+enum class ArchiveType { Invalid, Archive, ThinArchive };
 
 class ObjectContainerBSDArchive : public lldb_private::ObjectContainer {
 public:
@@ -27,7 +31,8 @@ public:
                             lldb::DataBufferSP &data_sp,
                             lldb::offset_t data_offset,
                             const lldb_private::FileSpec *file,
-                            lldb::offset_t offset, lldb::offset_t length);
+                            lldb::offset_t offset, lldb::offset_t length,
+                            ArchiveType archive_type);
 
   ~ObjectContainerBSDArchive() override;
 
@@ -36,9 +41,11 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "bsd-archive"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic() {
+    return "BSD Archive object container reader.";
+  }
 
   static lldb_private::ObjectContainer *
   CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
@@ -52,7 +59,7 @@ public:
                                         lldb::offset_t length,
                                         lldb_private::ModuleSpecList &specs);
 
-  static bool MagicBytesMatch(const lldb_private::DataExtractor &data);
+  static ArchiveType MagicBytesMatch(const lldb_private::DataExtractor &data);
 
   // Member Functions
   bool ParseHeader() override;
@@ -63,14 +70,10 @@ public:
     return 0;
   }
 
-  void Dump(lldb_private::Stream *s) const override;
-
   lldb::ObjectFileSP GetObjectFile(const lldb_private::FileSpec *file) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   struct Object {
@@ -78,31 +81,28 @@ protected:
 
     void Clear();
 
+    lldb::offset_t ExtractFromThin(const lldb_private::DataExtractor &data,
+                                   lldb::offset_t offset,
+                                   llvm::StringRef stringTable);
+
     lldb::offset_t Extract(const lldb_private::DataExtractor &data,
                            lldb::offset_t offset);
     /// Object name in the archive.
     lldb_private::ConstString ar_name;
 
     /// Object modification time in the archive.
-    uint32_t modification_time;
-
-    /// Object user id in the archive.
-    uint16_t uid;
-
-    /// Object group id in the archive.
-    uint16_t gid;
-
-    /// Object octal file permissions in the archive.
-    uint16_t mode;
+    uint32_t modification_time = 0;
 
     /// Object size in bytes in the archive.
-    uint32_t size;
+    uint32_t size = 0;
 
     /// File offset in bytes from the beginning of the file of the object data.
-    lldb::offset_t file_offset;
+    lldb::offset_t file_offset = 0;
 
     /// Length of the object data.
-    lldb::offset_t file_size;
+    lldb::offset_t file_size = 0;
+
+    void Dump() const;
   };
 
   class Archive {
@@ -112,7 +112,7 @@ protected:
 
     Archive(const lldb_private::ArchSpec &arch,
             const llvm::sys::TimePoint<> &mod_time, lldb::offset_t file_offset,
-            lldb_private::DataExtractor &data);
+            lldb_private::DataExtractor &data, ArchiveType archive_type);
 
     ~Archive();
 
@@ -127,7 +127,7 @@ protected:
     static Archive::shared_ptr ParseAndCacheArchiveForFile(
         const lldb_private::FileSpec &file, const lldb_private::ArchSpec &arch,
         const llvm::sys::TimePoint<> &mod_time, lldb::offset_t file_offset,
-        lldb_private::DataExtractor &data);
+        lldb_private::DataExtractor &data, ArchiveType archive_type);
 
     size_t GetNumObjects() const { return m_objects.size(); }
 
@@ -156,6 +156,8 @@ protected:
 
     lldb_private::DataExtractor &GetData() { return m_data; }
 
+    ArchiveType GetArchiveType() { return m_archive_type; }
+
   protected:
     typedef lldb_private::UniqueCStringMap<uint32_t> ObjectNameToIndexMap;
     // Member Variables
@@ -167,11 +169,14 @@ protected:
     lldb_private::DataExtractor m_data; ///< The data for this object container
                                         ///so we don't lose data if the .a files
                                         ///gets modified
+    ArchiveType m_archive_type;
   };
 
   void SetArchive(Archive::shared_ptr &archive_sp);
 
   Archive::shared_ptr m_archive_sp;
+
+  ArchiveType m_archive_type;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_BSD_ARCHIVE_OBJECTCONTAINERBSDARCHIVE_H

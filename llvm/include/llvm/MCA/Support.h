@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace llvm {
 namespace mca {
@@ -47,12 +48,12 @@ template <typename T> char InstructionError<T>::ID;
 /// number of resources, are kept separate.  This is used by the
 /// ResourcePressureView to calculate the average resource cycles
 /// per instruction/iteration.
-class ResourceCycles {
+class ReleaseAtCycles {
   unsigned Numerator, Denominator;
 
 public:
-  ResourceCycles() : Numerator(0), Denominator(1) {}
-  ResourceCycles(unsigned Cycles, unsigned ResourceUnits = 1)
+  ReleaseAtCycles() : Numerator(0), Denominator(1) {}
+  ReleaseAtCycles(unsigned Cycles, unsigned ResourceUnits = 1)
       : Numerator(Cycles), Denominator(ResourceUnits) {}
 
   operator double() const {
@@ -66,7 +67,7 @@ public:
   // Add the components of RHS to this instance.  Instead of calculating
   // the final value here, we keep track of the numerator and denominator
   // separately, to reduce floating point error.
-  ResourceCycles &operator+=(const ResourceCycles &RHS);
+  ReleaseAtCycles &operator+=(const ReleaseAtCycles &RHS);
 };
 
 /// Populates vector Masks with processor resource masks.
@@ -98,13 +99,13 @@ void computeProcResourceMasks(const MCSchedModel &SM,
 // the highest bit set can be used to construct a resource mask identifier.
 inline unsigned getResourceStateIndex(uint64_t Mask) {
   assert(Mask && "Processor Resource Mask cannot be zero!");
-  return (std::numeric_limits<uint64_t>::digits - countLeadingZeros(Mask)) - 1;
+  return llvm::Log2_64(Mask);
 }
 
 /// Compute the reciprocal block throughput from a set of processor resource
 /// cycles. The reciprocal block throughput is computed as the MAX between:
 ///  - NumMicroOps / DispatchWidth
-///  - ProcResourceCycles / #ProcResourceUnits  (for every consumed resource).
+///  - ProcReleaseAtCycles / #ProcResourceUnits  (for every consumed resource).
 double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
                                unsigned NumMicroOps,
                                ArrayRef<unsigned> ProcResourceUsage);

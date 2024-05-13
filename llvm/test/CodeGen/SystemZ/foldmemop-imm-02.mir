@@ -4,18 +4,18 @@
 # Test folding of a memory operand into logical compare with an immediate.
 
 --- |
-  define i32 @fun0(i32* %src, i32 %arg) { ret i32 0 }
-  define i64 @fun1(i64* %src, i64 %arg) { ret i64 0 }
-  define i32 @fun2(i32* %src, i32 %arg) { ret i32 0 }
-  define i64 @fun3(i64* %src, i64 %arg) { ret i64 0 }
+  define i32 @fun0(ptr %src, i32 %arg) { ret i32 0 }
+  define i64 @fun1(ptr %src, i64 %arg) { ret i64 0 }
+  define i32 @fun2(ptr %src, i32 %arg) { ret i32 0 }
+  define i64 @fun3(ptr %src, i64 %arg) { ret i64 0 }
 ...
 
 
 # CHECK-LABEL: fun0:
-# CHECK: 	mvhi	164(%r15), 0            # 4-byte Folded Spill
-# CHECK:	mvc	164(4,%r15), 0(%r2)     # 4-byte Folded Spill
+# CHECK: 	mvhi	160(%r15), 0            # 4-byte Folded Spill
+# CHECK:	mvc	160(4,%r15), 0(%r2)     # 4-byte Folded Spill
 # CHECK-LABEL: .LBB0_2:
-# CHECK:	clfhsi	164(%r15), 2            # 4-byte Folded Reload
+# CHECK:	clfhsi	160(%r15), 2            # 4-byte Folded Reload
 ---
 name:            fun0
 alignment:       16
@@ -51,7 +51,7 @@ body:             |
     J %bb.1
   
   bb.1:
-    %8:grx32bit = LMux %2, 0, $noreg :: (load 4 from %ir.src)
+    %8:grx32bit = LMux %2, 0, $noreg :: (load (s32) from %ir.src)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
   
   bb.2:
@@ -66,10 +66,10 @@ body:             |
 
 
 # CHECK-LABEL: fun1:
-# CHECK: 	mvghi	168(%r15), 0            # 8-byte Folded Spill
-# CHECK:	mvc	168(8,%r15), 0(%r2)     # 8-byte Folded Spill
+# CHECK: 	mvghi	160(%r15), 0            # 8-byte Folded Spill
+# CHECK:	mvc	160(8,%r15), 0(%r2)     # 8-byte Folded Spill
 # CHECK-LABEL: .LBB1_2:
-# CHECK:	clghsi	168(%r15), 2            # 8-byte Folded Reload
+# CHECK:	clghsi	160(%r15), 2            # 8-byte Folded Reload
 ---
 name:            fun1
 alignment:       16
@@ -105,7 +105,7 @@ body:             |
     J %bb.1
   
   bb.1:
-    %8:gr64bit = LG %2, 0, $noreg :: (load 8 from %ir.src)
+    %8:gr64bit = LG %2, 0, $noreg :: (load (s64) from %ir.src)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
   
   bb.2:
@@ -122,10 +122,10 @@ body:             |
 # 17-bit immediate can not be folded
 
 # CHECK-LABEL: fun2:
-# CHECK: 	mvhi	164(%r15), 0            # 4-byte Folded Spill
-# CHECK:	mvc	164(4,%r15), 0(%r2)     # 4-byte Folded Spill
+# CHECK: 	mvhi	160(%r15), 0            # 4-byte Folded Spill
+# CHECK:	mvc	160(4,%r15), 0(%r2)     # 4-byte Folded Spill
 # CHECK-LABEL: .LBB2_2:
-# CHECK:        l       %r0, 164(%r15)          # 4-byte Folded Reload
+# CHECK:        l       %r0, 160(%r15)          # 4-byte Folded Reload
 # CHECK:        clfi    %r0, 65536
 ---
 name:            fun2
@@ -162,7 +162,7 @@ body:             |
     J %bb.1
   
   bb.1:
-    %8:grx32bit = LMux %2, 0, $noreg :: (load 4 from %ir.src)
+    %8:grx32bit = LMux %2, 0, $noreg :: (load (s32) from %ir.src)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
   
   bb.2:
@@ -179,10 +179,10 @@ body:             |
 # 17-bit immediate can not be folded
 
 # CHECK-LABEL: fun3:
-# CHECK: 	mvghi	168(%r15), 0            # 8-byte Folded Spill
-# CHECK:	mvc	168(8,%r15), 0(%r2)     # 8-byte Folded Spill
+# CHECK: 	mvghi	160(%r15), 0            # 8-byte Folded Spill
+# CHECK:	mvc	160(8,%r15), 0(%r2)     # 8-byte Folded Spill
 # CHECK-LABEL: .LBB3_2:
-# CHECK:        lg      %r0, 168(%r15)          # 8-byte Folded Reload
+# CHECK:        lg      %r0, 160(%r15)          # 8-byte Folded Reload
 # CHECK:        clgfi   %r0, 65536
 ---
 name:            fun3
@@ -219,7 +219,7 @@ body:             |
     J %bb.1
   
   bb.1:
-    %8:gr64bit = LG %2, 0, $noreg :: (load 8 from %ir.src)
+    %8:gr64bit = LG %2, 0, $noreg :: (load (s64) from %ir.src)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
   
   bb.2:

@@ -32,9 +32,9 @@
   </ul>
 </li>
 <li>
-  Mailing Lists
+  Mailing List & Forums
   <ul>
-    <li><a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a></li>
+    <li><a href="https://discourse.llvm.org/c/clang">Clang Frontend Forums</a></li>
     <li><a href="http://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits</a></li>
   </ul>
 </li>

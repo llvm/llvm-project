@@ -17,7 +17,7 @@
 /// \param LANG - The Language for which this is a standard.
 /// \param DESC - A short description of the standard.
 /// \param FEATURES - The standard features as flags, these are enums from the
-/// clang::frontend namespace, which is assumed to be be available.
+/// clang::frontend namespace, which is assumed to be available.
 
 /// LANGSTANDARD_ALIAS(IDENT, ALIAS)
 /// \param IDENT - The name of the standard as a C++ identifier.
@@ -36,18 +36,17 @@
 
 // C89-ish modes.
 LANGSTANDARD(c89, "c89",
-             C, "ISO C 1990",
-             ImplicitInt)
+             C, "ISO C 1990", 0)
 LANGSTANDARD_ALIAS(c89, "c90")
 LANGSTANDARD_ALIAS(c89, "iso9899:1990")
 
 LANGSTANDARD(c94, "iso9899:199409",
              C, "ISO C 1990 with amendment 1",
-             Digraphs | ImplicitInt)
+             Digraphs)
 
 LANGSTANDARD(gnu89, "gnu89",
              C, "ISO C 1990 with GNU extensions",
-             LineComment | Digraphs | GNUMode | ImplicitInt)
+             LineComment | Digraphs | GNUMode)
 LANGSTANDARD_ALIAS(gnu89, "gnu90")
 
 // C99-ish modes
@@ -88,13 +87,17 @@ LANGSTANDARD(gnu17, "gnu17",
              LineComment | C99 | C11 | C17 | Digraphs | GNUMode | HexFloat)
 LANGSTANDARD_ALIAS(gnu17, "gnu18")
 
-// C2x modes
-LANGSTANDARD(c2x, "c2x",
-             C, "Working Draft for ISO C2x",
-             LineComment | C99 | C11 | C17 | C2x | Digraphs | HexFloat)
-LANGSTANDARD(gnu2x, "gnu2x",
-             C, "Working Draft for ISO C2x with GNU extensions",
-             LineComment | C99 | C11 | C17 | C2x | Digraphs | GNUMode | HexFloat)
+// C23 modes
+LANGSTANDARD(c23, "c23",
+             C, "Working Draft for ISO C23",
+             LineComment | C99 | C11 | C17 | C23 | Digraphs | HexFloat)
+LANGSTANDARD_ALIAS_DEPR(c23, "c2x")
+LANGSTANDARD(gnu23, "gnu23",
+             C, "Working Draft for ISO C23 with GNU extensions",
+             LineComment | C99 | C11 | C17 | C23 | Digraphs | GNUMode | HexFloat)
+LANGSTANDARD_ALIAS_DEPR(gnu23, "gnu2x")
+// FIXME: Add the alias for iso9899:202* once we know the year ISO publishes
+// the document (expected to be 2024).
 
 // C++ modes
 LANGSTANDARD(cxx98, "c++98",
@@ -152,15 +155,29 @@ LANGSTANDARD(gnucxx20, "gnu++20",
              CPlusPlus20 | Digraphs | HexFloat | GNUMode)
 LANGSTANDARD_ALIAS_DEPR(gnucxx20, "gnu++2a")
 
-LANGSTANDARD(cxx2b, "c++2b",
-             CXX, "Working draft for ISO C++ 2023 DIS",
+LANGSTANDARD(cxx23, "c++23",
+             CXX, "ISO C++ 2023 DIS",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
-             CPlusPlus20 | CPlusPlus2b | Digraphs | HexFloat)
+             CPlusPlus20 | CPlusPlus23 | Digraphs | HexFloat)
+LANGSTANDARD_ALIAS_DEPR(cxx23, "c++2b")
 
-LANGSTANDARD(gnucxx2b, "gnu++2b",
-             CXX, "Working draft for ISO C++ 2023 DIS with GNU extensions",
+LANGSTANDARD(gnucxx23, "gnu++23",
+             CXX, "ISO C++ 2023 DIS with GNU extensions",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
-             CPlusPlus20 | CPlusPlus2b | Digraphs | HexFloat | GNUMode)
+             CPlusPlus20 | CPlusPlus23 | Digraphs | HexFloat | GNUMode)
+LANGSTANDARD_ALIAS_DEPR(gnucxx23, "gnu++2b")
+
+LANGSTANDARD(cxx26, "c++2c",
+             CXX, "Working draft for C++2c",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | Digraphs | HexFloat)
+LANGSTANDARD_ALIAS(cxx26, "c++26")
+
+LANGSTANDARD(gnucxx26, "gnu++2c",
+             CXX, "Working draft for C++2c with GNU extensions",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | Digraphs | HexFloat | GNUMode)
+LANGSTANDARD_ALIAS(gnucxx26, "gnu++26")
 
 // OpenCL
 LANGSTANDARD(opencl10, "cl1.0",
@@ -180,8 +197,15 @@ LANGSTANDARD(opencl20, "cl2.0",
 LANGSTANDARD(opencl30, "cl3.0",
              OpenCL, "OpenCL 3.0",
              LineComment | C99 | Digraphs | HexFloat | OpenCL)
-LANGSTANDARD(openclcpp, "clc++",
-             OpenCL, "C++ for OpenCL",
+
+LANGSTANDARD(openclcpp10, "clc++1.0",
+             OpenCL, "C++ for OpenCL 1.0",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             Digraphs | HexFloat | OpenCL)
+LANGSTANDARD_ALIAS(openclcpp10, "clc++")
+
+LANGSTANDARD(openclcpp2021, "clc++2021",
+             OpenCL, "C++ for OpenCL 2021",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
              Digraphs | HexFloat | OpenCL)
 
@@ -190,15 +214,39 @@ LANGSTANDARD_ALIAS_DEPR(opencl11, "CL1.1")
 LANGSTANDARD_ALIAS_DEPR(opencl12, "CL1.2")
 LANGSTANDARD_ALIAS_DEPR(opencl20, "CL2.0")
 LANGSTANDARD_ALIAS_DEPR(opencl30, "CL3.0")
-LANGSTANDARD_ALIAS_DEPR(openclcpp, "CLC++")
+LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++")
+LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++1.0")
+LANGSTANDARD_ALIAS_DEPR(openclcpp2021, "CLC++2021")
 
-// CUDA
-LANGSTANDARD(cuda, "cuda", CUDA, "NVIDIA CUDA(tm)",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
+// HLSL
+LANGSTANDARD(hlsl, "hlsl",
+             HLSL, "High Level Shader Language",
+             LineComment | HLSL | CPlusPlus )
 
-// HIP
-LANGSTANDARD(hip, "hip", HIP, "HIP",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
+LANGSTANDARD(hlsl2015, "hlsl2015",
+             HLSL, "High Level Shader Language 2015",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2016, "hlsl2016",
+             HLSL, "High Level Shader Language 2016",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2017, "hlsl2017",
+             HLSL, "High Level Shader Language 2017",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2018, "hlsl2018",
+             HLSL, "High Level Shader Language 2018",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2021, "hlsl2021",
+             HLSL, "High Level Shader Language 2021",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl202x, "hlsl202x",
+             HLSL, "High Level Shader Language 202x",
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
+
 
 #undef LANGSTANDARD
 #undef LANGSTANDARD_ALIAS

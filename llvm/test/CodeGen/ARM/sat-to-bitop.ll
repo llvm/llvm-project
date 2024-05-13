@@ -37,8 +37,7 @@ define i16 @sat0_base_16bit(i16 %x) #0 {
 ; CHECK-ARM-LABEL: sat0_base_16bit:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    lsl r1, r0, #16
-; CHECK-ARM-NEXT:    asr r1, r1, #16
-; CHECK-ARM-NEXT:    cmp r1, #0
+; CHECK-ARM-NEXT:    asrs r1, r1, #16
 ; CHECK-ARM-NEXT:    movmi r0, #0
 ; CHECK-ARM-NEXT:    mov pc, lr
 ;
@@ -71,8 +70,7 @@ define i8 @sat0_base_8bit(i8 %x) #0 {
 ; CHECK-ARM-LABEL: sat0_base_8bit:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    lsl r1, r0, #24
-; CHECK-ARM-NEXT:    asr r1, r1, #24
-; CHECK-ARM-NEXT:    cmp r1, #0
+; CHECK-ARM-NEXT:    asrs r1, r1, #24
 ; CHECK-ARM-NEXT:    movmi r0, #0
 ; CHECK-ARM-NEXT:    mov pc, lr
 ;

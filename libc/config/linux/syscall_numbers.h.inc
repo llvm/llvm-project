@@ -170,8 +170,16 @@
 #define SYS_clock_gettime __NR_clock_gettime
 #endif
 
+#ifdef __NR_clock_gettime64
+#define SYS_clock_gettime64 __NR_clock_gettime64
+#endif
+
 #ifdef __NR_clock_nanosleep
 #define SYS_clock_nanosleep __NR_clock_nanosleep
+#endif
+
+#ifdef __NR_clock_nanosleep_time64
+#define SYS_clock_nanosleep_time64 __NR_clock_nanosleep_time64
 #endif
 
 #ifdef __NR_clock_settime
@@ -250,6 +258,10 @@
 #define SYS_epoll_pwait __NR_epoll_pwait
 #endif
 
+#ifdef __NR_epoll_pwait2
+#define SYS_epoll_pwait2 __NR_epoll_pwait2
+#endif
+
 #ifdef __NR_epoll_wait
 #define SYS_epoll_wait __NR_epoll_wait
 #endif
@@ -324,6 +336,10 @@
 
 #ifdef __NR_fchmodat
 #define SYS_fchmodat __NR_fchmodat
+#endif
+
+#ifdef __NR_fchmodat2
+#define SYS_fchmodat2 __NR_fchmodat2
 #endif
 
 #ifdef __NR_fchown
@@ -420,6 +436,10 @@
 
 #ifdef __NR_futex
 #define SYS_futex __NR_futex
+#endif
+
+#ifdef __NR_futex_time64
+#define SYS_futex_time64 __NR_futex_time64
 #endif
 
 #ifdef __NR_futimesat
@@ -1534,6 +1554,10 @@
 #define SYS_pselect6 __NR_pselect6
 #endif
 
+#ifdef __NR_pselect6_time64
+#define SYS_pselect6_time64 __NR_pselect6_time64
+#endif
+
 #ifdef __NR_ptrace
 #define SYS_ptrace __NR_ptrace
 #endif
@@ -1728,6 +1752,10 @@
 
 #ifdef __NR_sched_rr_get_interval
 #define SYS_sched_rr_get_interval __NR_sched_rr_get_interval
+#endif
+
+#ifdef __NR_sched_rr_get_interval_time64
+#define SYS_sched_rr_get_interval_time64 __NR_sched_rr_get_interval_time64
 #endif
 
 #ifdef __NR_sched_set_affinity
@@ -2317,4 +2345,3 @@
 #ifdef __NR_writev
 #define SYS_writev __NR_writev
 #endif
-

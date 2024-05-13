@@ -10,12 +10,12 @@
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/ProcessTrace.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
@@ -39,7 +39,7 @@ constexpr lldb_private::HostInfo::SharedLibraryDirectoryHelper
 
 #else
 constexpr lldb_private::HostInfo::SharedLibraryDirectoryHelper
-    *g_shlib_dir_helper = 0;
+    *g_shlib_dir_helper = nullptr;
 #endif
 
 using namespace lldb_private;
@@ -50,21 +50,15 @@ SystemInitializerFull::~SystemInitializerFull() = default;
 
 llvm::Error SystemInitializerFull::Initialize() {
   llvm::Error error = SystemInitializerCommon::Initialize();
-  if (error) {
-    // During active replay, the ::Initialize call is replayed like any other
-    // SB API call and the return value is ignored. Since we can't intercept
-    // this, we terminate here before the uninitialized debugger inevitably
-    // crashes.
-    if (repro::Reproducer::Instance().IsReplaying())
-      llvm::report_fatal_error(std::move(error));
+  if (error)
     return error;
-  }
 
   // Initialize LLVM and Clang
   llvm::InitializeAllTargets();
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();
+
   // Initialize the command line parser in LLVM. This usually isn't necessary
   // as we aren't dealing with command line options here, but otherwise some
   // other code in Clang/LLVM might be tempted to call this function from a
@@ -73,18 +67,21 @@ llvm::Error SystemInitializerFull::Initialize() {
   const char *arg0 = "lldb";
   llvm::cl::ParseCommandLineOptions(1, &arg0);
 
+  // Initialize the progress manager.
+  ProgressManager::Initialize();
+
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_INITIALIZE(p);
 #include "Plugins/Plugins.def"
 
-  // Initialize plug-ins in core LLDB
-  ProcessTrace::Initialize();
-
-  // Scan for any system or user LLDB plug-ins
+  // Scan for any system or user LLDB plug-ins.
   PluginManager::Initialize();
 
   // The process settings need to know about installed plug-ins, so the
   // Settings must be initialized AFTER PluginManager::Initialize is called.
   Debugger::SettingsInitialize();
+
+  // Use the Debugger's LLDBAssert callback.
+  SetLLDBAssertCallback(Debugger::AssertCallback);
 
   return llvm::Error::success();
 }
@@ -92,14 +89,17 @@ llvm::Error SystemInitializerFull::Initialize() {
 void SystemInitializerFull::Terminate() {
   Debugger::SettingsTerminate();
 
-  // Terminate plug-ins in core LLDB
+  // Terminate plug-ins in core LLDB.
   ProcessTrace::Terminate();
 
-  // Terminate and unload and loaded system or user LLDB plug-ins
+  // Terminate and unload and loaded system or user LLDB plug-ins.
   PluginManager::Terminate();
 
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_TERMINATE(p);
 #include "Plugins/Plugins.def"
+
+  // Terminate the progress manager.
+  ProgressManager::Terminate();
 
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();

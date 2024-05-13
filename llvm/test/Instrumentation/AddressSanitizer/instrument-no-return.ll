@@ -1,5 +1,4 @@
-; RUN: opt < %s -asan -enable-new-pm=0 -S | FileCheck %s
-; RUN: opt < %s -passes='asan-function-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes=asan -S | FileCheck %s
 ; AddressSanitizer must insert __asan_handle_no_return
 ; before noreturn calls that aren't inserted by sanitizers.
 
@@ -47,7 +46,7 @@ define i32 @Call4() {
 
 declare i32 @__gxx_personality_v0(...)
 
-define i64 @Invoke1() nounwind uwtable ssp sanitize_address personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i64 @Invoke1() nounwind uwtable ssp sanitize_address personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @NoReturnFunc()
           to label %invoke.cont unwind label %lpad
@@ -56,8 +55,8 @@ invoke.cont:
   ret i64 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          filter [0 x i8*] zeroinitializer
+  %0 = landingpad { ptr, i32 }
+          filter [0 x ptr] zeroinitializer
   ret i64 1
 }
 ; CHECK-LABEL:  @Invoke1

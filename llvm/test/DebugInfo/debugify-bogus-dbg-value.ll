@@ -1,4 +1,5 @@
-; RUN: opt -check-debugify < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=check-debugify < %s 2>&1 | FileCheck %s
+; RUN: opt --experimental-debuginfo-iterators=false -passes=check-debugify < %s 2>&1 | FileCheck %s
 
 define <2 x i64> @test-fun(<2 x i64> %A) !dbg !6 {
   %and = and <2 x i64> %A, <i64 23, i64 42>, !dbg !14
@@ -34,7 +35,7 @@ attributes #0 = { nounwind readnone speculatable }
 !llvm.module.flags = !{!5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-!1 = !DIFile(filename: "/Users/vsk/src/llvm.org-master/llvm/test/DebugInfo/debugify-bogus-dbg-value.ll", directory: "/")
+!1 = !DIFile(filename: "/Users/vsk/src/llvm.org-main/llvm/test/DebugInfo/debugify-bogus-dbg-value.ll", directory: "/")
 !2 = !{}
 !3 = !{i32 4}
 !4 = !{i32 4}

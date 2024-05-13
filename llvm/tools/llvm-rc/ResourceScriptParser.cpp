@@ -11,6 +11,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "ResourceScriptParser.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -79,6 +80,8 @@ RCParser::ParseType RCParser::parseSingleResource() {
     Result = parseIconResource();
   else if (TypeToken->equalsLower("MENU"))
     Result = parseMenuResource();
+  else if (TypeToken->equalsLower("MENUEX"))
+    Result = parseMenuExResource();
   else if (TypeToken->equalsLower("RCDATA"))
     Result = parseUserDefinedResource(RkRcData);
   else if (TypeToken->equalsLower("VERSIONINFO"))
@@ -215,7 +218,7 @@ Expected<IntWithNotMask> RCParser::parseIntExpr2() {
   }
 
   case Kind::Identifier: {
-    if (!read().value().equals_lower("not"))
+    if (!read().value().equals_insensitive("not"))
       return getExpectedError(ErrorMsg, true);
     ASSIGN_OR_RETURN(Result, parseIntExpr2());
     return IntWithNotMask(0, (*Result).getValue());
@@ -235,7 +238,24 @@ Expected<StringRef> RCParser::readString() {
 Expected<StringRef> RCParser::readFilename() {
   if (!isNextTokenKind(Kind::String) && !isNextTokenKind(Kind::Identifier))
     return getExpectedError("string");
-  return read().value();
+  const RCToken &Token = read();
+  StringRef Str = Token.value();
+  if (Token.kind() != Kind::String)
+    return Str;
+  while (isNextTokenKind(Kind::String)) {
+    const RCToken &NextToken = read();
+    StringRef Next = NextToken.value();
+    bool IsWide = Str.consume_front_insensitive("L");
+    Next.consume_front_insensitive("L");
+    bool StrUnquoted = Str.consume_front("\"") && Str.consume_back("\"");
+    bool NextUnquoted = Next.consume_front("\"") && Next.consume_back("\"");
+    assert(StrUnquoted && NextUnquoted);
+    (void)StrUnquoted;
+    (void)NextUnquoted;
+
+    Str = Saver.save(Twine(IsWide ? "L" : "") + "\"" + Str + Next + "\"");
+  }
+  return Str;
 }
 
 Expected<StringRef> RCParser::readIdentifier() {
@@ -330,7 +350,7 @@ Expected<uint32_t> RCParser::parseFlags(ArrayRef<StringRef> FlagDesc,
     bool FoundFlag = false;
 
     for (size_t FlagId = 0; FlagId < FlagDesc.size(); ++FlagId) {
-      if (!FlagResult->equals_lower(FlagDesc[FlagId]))
+      if (!FlagResult->equals_insensitive(FlagDesc[FlagId]))
         continue;
 
       Result |= FlagValues[FlagId];
@@ -351,23 +371,23 @@ uint16_t RCParser::parseMemoryFlags(uint16_t Flags) {
     if (Token.kind() != Kind::Identifier)
       return Flags;
     const StringRef Ident = Token.value();
-    if (Ident.equals_lower("PRELOAD"))
+    if (Ident.equals_insensitive("PRELOAD"))
       Flags |= MfPreload;
-    else if (Ident.equals_lower("LOADONCALL"))
+    else if (Ident.equals_insensitive("LOADONCALL"))
       Flags &= ~MfPreload;
-    else if (Ident.equals_lower("FIXED"))
+    else if (Ident.equals_insensitive("FIXED"))
       Flags &= ~(MfMoveable | MfDiscardable);
-    else if (Ident.equals_lower("MOVEABLE"))
+    else if (Ident.equals_insensitive("MOVEABLE"))
       Flags |= MfMoveable;
-    else if (Ident.equals_lower("DISCARDABLE"))
+    else if (Ident.equals_insensitive("DISCARDABLE"))
       Flags |= MfDiscardable | MfMoveable | MfPure;
-    else if (Ident.equals_lower("PURE"))
+    else if (Ident.equals_insensitive("PURE"))
       Flags |= MfPure;
-    else if (Ident.equals_lower("IMPURE"))
+    else if (Ident.equals_insensitive("IMPURE"))
       Flags &= ~(MfPure | MfDiscardable);
-    else if (Ident.equals_lower("SHARED"))
+    else if (Ident.equals_insensitive("SHARED"))
       Flags |= MfPure;
-    else if (Ident.equals_lower("NONSHARED"))
+    else if (Ident.equals_insensitive("NONSHARED"))
       Flags &= ~(MfPure | MfDiscardable);
     else
       return Flags;
@@ -392,24 +412,26 @@ RCParser::parseOptionalStatements(OptStmtType StmtsType) {
 Expected<std::unique_ptr<OptionalStmt>>
 RCParser::parseSingleOptionalStatement(OptStmtType StmtsType) {
   ASSIGN_OR_RETURN(TypeToken, readIdentifier());
-  if (TypeToken->equals_lower("CHARACTERISTICS"))
+  if (TypeToken->equals_insensitive("CHARACTERISTICS"))
     return parseCharacteristicsStmt();
-  if (TypeToken->equals_lower("LANGUAGE"))
+  if (TypeToken->equals_insensitive("LANGUAGE"))
     return parseLanguageStmt();
-  if (TypeToken->equals_lower("VERSION"))
+  if (TypeToken->equals_insensitive("VERSION"))
     return parseVersionStmt();
 
   if (StmtsType != OptStmtType::BasicStmt) {
-    if (TypeToken->equals_lower("CAPTION"))
+    if (TypeToken->equals_insensitive("CAPTION"))
       return parseCaptionStmt();
-    if (TypeToken->equals_lower("CLASS"))
+    if (TypeToken->equals_insensitive("CLASS"))
       return parseClassStmt();
-    if (TypeToken->equals_lower("EXSTYLE"))
+    if (TypeToken->equals_insensitive("EXSTYLE"))
       return parseExStyleStmt();
-    if (TypeToken->equals_lower("FONT"))
+    if (TypeToken->equals_insensitive("FONT"))
       return parseFontStmt(StmtsType);
-    if (TypeToken->equals_lower("STYLE"))
+    if (TypeToken->equals_insensitive("STYLE"))
       return parseStyleStmt();
+    if (TypeToken->equals_insensitive("MENU"))
+      return parseMenuStmt();
   }
 
   return getExpectedError("optional statement type, BEGIN or '{'",
@@ -496,9 +518,10 @@ RCParser::ParseType RCParser::parseUserDefinedResource(IntOrString Type) {
   // Check if this is a file resource.
   switch (look().kind()) {
   case Kind::String:
-  case Kind::Identifier:
-    return std::make_unique<UserDefinedResource>(Type, read().value(),
-                                                  MemoryFlags);
+  case Kind::Identifier: {
+    ASSIGN_OR_RETURN(Filename, readFilename());
+    return std::make_unique<UserDefinedResource>(Type, *Filename, MemoryFlags);
+  }
   default:
     break;
   }
@@ -506,19 +529,18 @@ RCParser::ParseType RCParser::parseUserDefinedResource(IntOrString Type) {
   RETURN_IF_ERROR(consumeType(Kind::BlockBegin));
   std::vector<IntOrString> Data;
 
-  // Consume comma before each consecutive token except the first one.
-  bool ConsumeComma = false;
   while (!consumeOptionalType(Kind::BlockEnd)) {
-    if (ConsumeComma)
-      RETURN_IF_ERROR(consumeType(Kind::Comma));
-    ConsumeComma = true;
-
     ASSIGN_OR_RETURN(Item, readIntOrString());
     Data.push_back(*Item);
+
+    // There can be zero or more commas after each token (but not before
+    // the first one).
+    while (consumeOptionalType(Kind::Comma)) {
+    }
   }
 
   return std::make_unique<UserDefinedResource>(Type, std::move(Data),
-                                                MemoryFlags);
+                                               MemoryFlags);
 }
 
 RCParser::ParseType RCParser::parseVersionInfoResource() {
@@ -555,9 +577,10 @@ Expected<Control> RCParser::parseControl() {
   RETURN_IF_ERROR(consumeType(Kind::Comma));
 
   IntOrString Class;
-  Optional<IntWithNotMask> Style;
+  std::optional<IntWithNotMask> Style;
   if (ClassUpper == "CONTROL") {
-    // CONTROL text, id, class, style, x, y, width, height [, exstyle] [, helpID]
+    // CONTROL text, id, class, style, x, y, width, height [, exstyle] [,
+    // helpID]
     ASSIGN_OR_RETURN(ClassStr, readString());
     RETURN_IF_ERROR(consumeType(Kind::Comma));
     Class = *ClassStr;
@@ -578,19 +601,19 @@ Expected<Control> RCParser::parseControl() {
     }
   }
 
-  Optional<uint32_t> ExStyle;
+  std::optional<uint32_t> ExStyle;
   if (consumeOptionalType(Kind::Comma)) {
     ASSIGN_OR_RETURN(Val, readInt());
     ExStyle = *Val;
   }
-  Optional<uint32_t> HelpID;
+  std::optional<uint32_t> HelpID;
   if (consumeOptionalType(Kind::Comma)) {
     ASSIGN_OR_RETURN(Val, readInt());
     HelpID = *Val;
   }
 
-  return Control(*ClassResult, Caption, *ID, (*Args)[0], (*Args)[1],
-                 (*Args)[2], (*Args)[3], Style, ExStyle, HelpID, Class);
+  return Control(*ClassResult, Caption, *ID, (*Args)[0], (*Args)[1], (*Args)[2],
+                 (*Args)[3], Style, ExStyle, HelpID, Class);
 }
 
 RCParser::ParseType RCParser::parseBitmapResource() {
@@ -620,7 +643,14 @@ RCParser::ParseType RCParser::parseMenuResource() {
   ASSIGN_OR_RETURN(OptStatements, parseOptionalStatements());
   ASSIGN_OR_RETURN(Items, parseMenuItemsList());
   return std::make_unique<MenuResource>(std::move(*OptStatements),
-                                         std::move(*Items), MemoryFlags);
+                                        std::move(*Items), MemoryFlags);
+}
+
+RCParser::ParseType RCParser::parseMenuExResource() {
+  uint16_t MemoryFlags =
+      parseMemoryFlags(MenuExResource::getDefaultMemoryFlags());
+  ASSIGN_OR_RETURN(Items, parseMenuExItemsList());
+  return std::make_unique<MenuExResource>(std::move(*Items), MemoryFlags);
 }
 
 Expected<MenuDefinitionList> RCParser::parseMenuItemsList() {
@@ -635,15 +665,15 @@ Expected<MenuDefinitionList> RCParser::parseMenuItemsList() {
   while (!consumeOptionalType(Kind::BlockEnd)) {
     ASSIGN_OR_RETURN(ItemTypeResult, readIdentifier());
 
-    bool IsMenuItem = ItemTypeResult->equals_lower("MENUITEM");
-    bool IsPopup = ItemTypeResult->equals_lower("POPUP");
+    bool IsMenuItem = ItemTypeResult->equals_insensitive("MENUITEM");
+    bool IsPopup = ItemTypeResult->equals_insensitive("POPUP");
     if (!IsMenuItem && !IsPopup)
       return getExpectedError("MENUITEM, POPUP, END or '}'", true);
 
     if (IsMenuItem && isNextTokenKind(Kind::Identifier)) {
       // Now, expecting SEPARATOR.
       ASSIGN_OR_RETURN(SeparatorResult, readIdentifier());
-      if (SeparatorResult->equals_lower("SEPARATOR")) {
+      if (SeparatorResult->equals_insensitive("SEPARATOR")) {
         List.addDefinition(std::make_unique<MenuSeparator>());
         continue;
       }
@@ -682,6 +712,95 @@ Expected<MenuDefinitionList> RCParser::parseMenuItemsList() {
   return std::move(List);
 }
 
+Expected<MenuDefinitionList> RCParser::parseMenuExItemsList() {
+  RETURN_IF_ERROR(consumeType(Kind::BlockBegin));
+
+  MenuDefinitionList List;
+
+  // Read a set of items. Each item is of one of two kinds:
+  //   MENUITEM caption:String [,[id][, [type][, state]]]]
+  //   POPUP caption:String [,[id][, [type][, [state][, helpID]]]] { popupBody }
+  while (!consumeOptionalType(Kind::BlockEnd)) {
+    ASSIGN_OR_RETURN(ItemTypeResult, readIdentifier());
+
+    bool IsMenuItem = ItemTypeResult->equals_insensitive("MENUITEM");
+    bool IsPopup = ItemTypeResult->equals_insensitive("POPUP");
+    if (!IsMenuItem && !IsPopup)
+      return getExpectedError("MENUITEM, POPUP, END or '}'", true);
+
+    // Not a separator. Read the caption.
+    ASSIGN_OR_RETURN(CaptionResult, readString());
+
+    // If MENUITEM, expect [,[id][, [type][, state]]]]
+    if (IsMenuItem) {
+      uint32_t MenuId = 0;
+      uint32_t MenuType = 0;
+      uint32_t MenuState = 0;
+
+      if (consumeOptionalType(Kind::Comma)) {
+        auto IntId = readInt();
+        if (IntId) {
+          MenuId = *IntId;
+        }
+        if (consumeOptionalType(Kind::Comma)) {
+          auto IntType = readInt();
+          if (IntType) {
+            MenuType = *IntType;
+          }
+          if (consumeOptionalType(Kind::Comma)) {
+            auto IntState = readInt();
+            if (IntState) {
+              MenuState = *IntState;
+            }
+          }
+        }
+      }
+      List.addDefinition(std::make_unique<MenuExItem>(*CaptionResult, MenuId,
+                                                      MenuType, MenuState));
+      continue;
+    }
+
+    assert(IsPopup);
+
+    uint32_t PopupId = 0;
+    uint32_t PopupType = 0;
+    uint32_t PopupState = 0;
+    uint32_t PopupHelpID = 0;
+
+    if (consumeOptionalType(Kind::Comma)) {
+      auto IntId = readInt();
+      if (IntId) {
+        PopupId = *IntId;
+      }
+      if (consumeOptionalType(Kind::Comma)) {
+        auto IntType = readInt();
+        if (IntType) {
+          PopupType = *IntType;
+        }
+        if (consumeOptionalType(Kind::Comma)) {
+          auto IntState = readInt();
+          if (IntState) {
+            PopupState = *IntState;
+          }
+          if (consumeOptionalType(Kind::Comma)) {
+            auto IntHelpID = readInt();
+            if (IntHelpID) {
+              PopupHelpID = *IntHelpID;
+            }
+          }
+        }
+      }
+    }
+    // If POPUP, read submenu items recursively.
+    ASSIGN_OR_RETURN(SubMenuResult, parseMenuExItemsList());
+    List.addDefinition(std::make_unique<PopupExItem>(
+        *CaptionResult, PopupId, PopupType, PopupState, PopupHelpID,
+        std::move(*SubMenuResult)));
+  }
+
+  return std::move(List);
+}
+
 RCParser::ParseType RCParser::parseStringTableResource() {
   uint16_t MemoryFlags =
       parseMemoryFlags(StringTableResource::getDefaultMemoryFlags());
@@ -689,7 +808,7 @@ RCParser::ParseType RCParser::parseStringTableResource() {
   RETURN_IF_ERROR(consumeType(Kind::BlockBegin));
 
   auto Table = std::make_unique<StringTableResource>(std::move(*OptStatements),
-                                                      MemoryFlags);
+                                                     MemoryFlags);
 
   // Read strings until we reach the end of the block.
   while (!consumeOptionalType(Kind::BlockEnd)) {
@@ -731,18 +850,18 @@ Expected<std::unique_ptr<VersionInfoStmt>> RCParser::parseVersionInfoStmt() {
   // Expect either BLOCK or VALUE, then a name or a key (a string).
   ASSIGN_OR_RETURN(TypeResult, readIdentifier());
 
-  if (TypeResult->equals_lower("BLOCK")) {
+  if (TypeResult->equals_insensitive("BLOCK")) {
     ASSIGN_OR_RETURN(NameResult, readString());
     return parseVersionInfoBlockContents(*NameResult);
   }
 
-  if (TypeResult->equals_lower("VALUE")) {
+  if (TypeResult->equals_insensitive("VALUE")) {
     ASSIGN_OR_RETURN(KeyResult, readString());
     // Read a non-empty list of strings and/or ints, each
     // possibly preceded by a comma. Unfortunately, the tool behavior depends
     // on them existing or not, so we need to memorize where we found them.
     std::vector<IntOrString> Values;
-    std::vector<bool> PrecedingCommas;
+    BitVector PrecedingCommas;
     RETURN_IF_ERROR(consumeType(Kind::Comma));
     while (!isNextTokenKind(Kind::Identifier) &&
            !isNextTokenKind(Kind::BlockEnd)) {
@@ -753,7 +872,7 @@ Expected<std::unique_ptr<VersionInfoStmt>> RCParser::parseVersionInfoStmt() {
       PrecedingCommas.push_back(HadComma);
     }
     return std::make_unique<VersionInfoValue>(*KeyResult, std::move(Values),
-                                               std::move(PrecedingCommas));
+                                              std::move(PrecedingCommas));
   }
 
   return getExpectedError("BLOCK or VALUE", true);
@@ -835,7 +954,7 @@ RCParser::ParseOptionType RCParser::parseFontStmt(OptStmtType DialogType) {
     }
   }
   return std::make_unique<FontStmt>(*SizeResult, *NameResult, FontWeight,
-                                     FontItalic, FontCharset);
+                                    FontItalic, FontCharset);
 }
 
 RCParser::ParseOptionType RCParser::parseStyleStmt() {
@@ -846,6 +965,11 @@ RCParser::ParseOptionType RCParser::parseStyleStmt() {
 RCParser::ParseOptionType RCParser::parseExStyleStmt() {
   ASSIGN_OR_RETURN(Arg, readInt());
   return std::make_unique<ExStyleStmt>(*Arg);
+}
+
+RCParser::ParseOptionType RCParser::parseMenuStmt() {
+  ASSIGN_OR_RETURN(Arg, readIntOrString());
+  return std::make_unique<MenuStmt>(*Arg);
 }
 
 Error RCParser::getExpectedError(const Twine &Message, bool IsAlreadyRead) {

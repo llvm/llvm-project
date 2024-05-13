@@ -5,7 +5,7 @@ int foo(int arg);
 
 void empty_function(void);
 
-int main() {
+int main(void) {
   empty_function();
   return foo(1);
 }

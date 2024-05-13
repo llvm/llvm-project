@@ -1,5 +1,4 @@
 ; RUN: llvm-profdata merge %S/Inputs/diag_FE.proftext -o %t.profdata
-; RUN: not opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S  2>&1 | FileCheck %s
 ; RUN: not opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S  2>&1 | FileCheck %s
 
 ; CHECK: Not an IR level instrumentation profile

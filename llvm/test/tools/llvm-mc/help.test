@@ -1,0 +1,7 @@
+# RUN: llvm-mc --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
+
+# HELP: OVERVIEW: llvm machine code playground
+# HELP: USAGE
+# HELP: Color Options
+# HELP: Generic Options
+# HELP: MC Options

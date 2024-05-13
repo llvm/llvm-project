@@ -7,7 +7,7 @@
 #include "not_real.h"
 #include "real.h"
 
-void foo() {
+void foo(void) {
   bar();
   baz();
 }

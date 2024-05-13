@@ -13,8 +13,8 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXREGISTERINFO_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXREGISTERINFO_H
 
-#include "ManagedStringPool.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Support/StringSaver.h"
 #include <sstream>
 
 #define GET_REGINFO_HEADER
@@ -24,7 +24,8 @@ namespace llvm {
 class NVPTXRegisterInfo : public NVPTXGenRegisterInfo {
 private:
   // Hold Strings that can be free'd all together with NVPTXRegisterInfo
-  ManagedStringPool ManagedStrPool;
+  BumpPtrAllocator StrAlloc;
+  UniqueStringSaver StrPool;
 
 public:
   NVPTXRegisterInfo();
@@ -38,20 +39,21 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
-  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+  bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
+  Register getFrameLocalRegister(const MachineFunction &MF) const;
 
-  ManagedStringPool *getStrPool() const {
-    return const_cast<ManagedStringPool *>(&ManagedStrPool);
+  UniqueStringSaver &getStrPool() const {
+    return const_cast<UniqueStringSaver &>(StrPool);
   }
 
   const char *getName(unsigned RegNo) const {
     std::stringstream O;
     O << "reg" << RegNo;
-    return getStrPool()->getManagedString(O.str().c_str())->c_str();
+    return getStrPool().save(O.str()).data();
   }
 
 };

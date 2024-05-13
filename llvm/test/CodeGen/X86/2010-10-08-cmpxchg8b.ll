@@ -12,12 +12,12 @@
 ; Note that this case requires a loop around the cmpxchg to force
 ; machine licm to query alias anlysis, exposing a bad
 ; MachineMemOperand.
-define void @foo(i64* %ptr) nounwind inlinehint {
+define void @foo(ptr %ptr) nounwind inlinehint {
 entry:
   br label %loop
 loop:
 ; CHECK: lock cmpxchg8b
-  %pair = cmpxchg i64* %ptr, i64 0, i64 1 monotonic monotonic
+  %pair = cmpxchg ptr %ptr, i64 0, i64 1 monotonic monotonic
   %r = extractvalue { i64, i1 } %pair, 0
   %stored1  = icmp eq i64 %r, 0
   br i1 %stored1, label %loop, label %continue

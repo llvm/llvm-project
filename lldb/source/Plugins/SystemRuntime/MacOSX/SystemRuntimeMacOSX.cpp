@@ -24,6 +24,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -60,7 +61,8 @@ SystemRuntime *SystemRuntimeMacOSX::CreateInstance(Process *process) {
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+      case llvm::Triple::XROS:
+      case llvm::Triple::BridgeOS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -219,8 +221,7 @@ void SystemRuntimeMacOSX::AddThreadExtendedInfoPacketHints(
 }
 
 bool SystemRuntimeMacOSX::SafeToCallFunctionsOnThisThread(ThreadSP thread_sp) {
-  if (thread_sp && thread_sp->GetStackFrameCount() > 0 &&
-      thread_sp->GetFrameWithConcreteFrameIndex(0)) {
+  if (thread_sp && thread_sp->GetFrameWithConcreteFrameIndex(0)) {
     const SymbolContext sym_ctx(
         thread_sp->GetFrameWithConcreteFrameIndex(0)->GetSymbolContext(
             eSymbolContextSymbol));
@@ -413,14 +414,15 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
         }
 #endif
 
-    TypeSystemClang *ast_ctx =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
     if (m_dispatch_tsd_indexes_addr != LLDB_INVALID_ADDRESS) {
       CompilerType uint16 =
-          ast_ctx->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
-      CompilerType dispatch_tsd_indexes_s = ast_ctx->CreateRecordType(
+          scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
+      CompilerType dispatch_tsd_indexes_s = scratch_ts_sp->CreateRecordType(
           nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-          "__lldb_dispatch_tsd_indexes_s", clang::TTK_Struct,
+          "__lldb_dispatch_tsd_indexes_s",
+          llvm::to_underlying(clang::TagTypeKind::Struct),
           lldb::eLanguageTypeC);
 
       TypeSystemClang::StartTagDeclarationDefinition(dispatch_tsd_indexes_s);
@@ -442,13 +444,13 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
                                         dispatch_tsd_indexes_s);
 
       m_libdispatch_tsd_indexes.dti_version =
-          struct_reader.GetField<uint16_t>(ConstString("dti_version"));
+          struct_reader.GetField<uint16_t>("dti_version");
       m_libdispatch_tsd_indexes.dti_queue_index =
-          struct_reader.GetField<uint16_t>(ConstString("dti_queue_index"));
+          struct_reader.GetField<uint16_t>("dti_queue_index");
       m_libdispatch_tsd_indexes.dti_voucher_index =
-          struct_reader.GetField<uint16_t>(ConstString("dti_voucher_index"));
+          struct_reader.GetField<uint16_t>("dti_voucher_index");
       m_libdispatch_tsd_indexes.dti_qos_class_index =
-          struct_reader.GetField<uint16_t>(ConstString("dti_qos_class_index"));
+          struct_reader.GetField<uint16_t>("dti_qos_class_index");
     }
   }
 }
@@ -501,6 +503,46 @@ ThreadSP SystemRuntimeMacOSX::GetExtendedBacktraceThread(ThreadSP real_thread,
         m_page_to_free_size = ret.item_buffer_size;
       }
     }
+  } else if (type == "Application Specific Backtrace") {
+    StructuredData::ObjectSP thread_extended_sp =
+        real_thread->GetExtendedInfo();
+
+    if (!thread_extended_sp)
+      return {};
+
+    StructuredData::Array *thread_extended_info =
+        thread_extended_sp->GetAsArray();
+
+    if (!thread_extended_info || !thread_extended_info->GetSize())
+      return {};
+
+    std::vector<addr_t> app_specific_backtrace_pcs;
+
+    auto extract_frame_pc =
+        [&app_specific_backtrace_pcs](StructuredData::Object *obj) -> bool {
+      if (!obj)
+        return false;
+
+      StructuredData::Dictionary *dict = obj->GetAsDictionary();
+      if (!dict)
+        return false;
+
+      lldb::addr_t pc = LLDB_INVALID_ADDRESS;
+      if (!dict->GetValueForKeyAsInteger("pc", pc))
+        return false;
+
+      app_specific_backtrace_pcs.push_back(pc);
+
+      return pc != LLDB_INVALID_ADDRESS;
+    };
+
+    if (!thread_extended_info->ForEach(extract_frame_pc))
+      return {};
+
+    originating_thread_sp =
+        std::make_shared<HistoryThread>(*m_process, real_thread->GetIndexID(),
+                                        app_specific_backtrace_pcs, true);
+    originating_thread_sp->SetQueueName(type.AsCString());
   }
   return originating_thread_sp;
 }
@@ -673,6 +715,7 @@ const std::vector<ConstString> &
 SystemRuntimeMacOSX::GetExtendedBacktraceTypes() {
   if (m_types.size() == 0) {
     m_types.push_back(ConstString("libdispatch"));
+    m_types.push_back(ConstString("Application Specific Backtrace"));
     // We could have pthread as another type in the future if we have a way of
     // gathering that information & it's useful to distinguish between them.
   }
@@ -746,7 +789,7 @@ void SystemRuntimeMacOSX::PopulateQueueList(
 
 SystemRuntimeMacOSX::PendingItemsForQueue
 SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
-  PendingItemsForQueue pending_item_refs;
+  PendingItemsForQueue pending_item_refs = {};
   AppleGetPendingItemsHandler::GetPendingItemsReturnInfo pending_items_pointer;
   ThreadSP cur_thread_sp(
       m_process->GetThreadList().GetExpressionExecutionThread());
@@ -786,14 +829,14 @@ SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
           //   }
 
           offset_t offset = 0;
-          int i = 0;
+          uint64_t i = 0;
           uint32_t version = extractor.GetU32(&offset);
           if (version == 1) {
             pending_item_refs.new_style = true;
             uint32_t item_size = extractor.GetU32(&offset);
             uint32_t start_of_array_offset = offset;
             while (offset < pending_items_pointer.items_buffer_size &&
-                   static_cast<size_t>(i) < pending_items_pointer.count) {
+                   i < pending_items_pointer.count) {
               offset = start_of_array_offset + (i * item_size);
               ItemRefAndCodeAddress item;
               item.item_ref = extractor.GetAddress(&offset);
@@ -805,7 +848,7 @@ SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
             offset = 0;
             pending_item_refs.new_style = false;
             while (offset < pending_items_pointer.items_buffer_size &&
-                   static_cast<size_t>(i) < pending_items_pointer.count) {
+                   i < pending_items_pointer.count) {
               ItemRefAndCodeAddress item;
               item.item_ref = extractor.GetAddress(&offset);
               item.code_address = LLDB_INVALID_ADDRESS;
@@ -880,7 +923,7 @@ void SystemRuntimeMacOSX::PopulateQueuesUsingLibBTR(
     lldb_private::QueueList &queue_list) {
   Status error;
   DataBufferHeap data(queues_buffer_size, 0);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
+  Log *log = GetLog(LLDBLog::SystemRuntime);
   if (m_process->ReadMemory(queues_buffer, data.GetBytes(), queues_buffer_size,
                             error) == queues_buffer_size &&
       error.Success()) {
@@ -976,26 +1019,11 @@ SystemRuntimeMacOSX::ItemInfo SystemRuntimeMacOSX::ExtractItemInfoFromBuffer(
 }
 
 void SystemRuntimeMacOSX::Initialize() {
-  PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                GetPluginDescriptionStatic(), CreateInstance);
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(),
+      "System runtime plugin for Mac OS X native libraries.", CreateInstance);
 }
 
 void SystemRuntimeMacOSX::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString SystemRuntimeMacOSX::GetPluginNameStatic() {
-  static ConstString g_name("systemruntime-macosx");
-  return g_name;
-}
-
-const char *SystemRuntimeMacOSX::GetPluginDescriptionStatic() {
-  return "System runtime plugin for Mac OS X native libraries.";
-}
-
-// PluginInterface protocol
-lldb_private::ConstString SystemRuntimeMacOSX::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t SystemRuntimeMacOSX::GetPluginVersion() { return 1; }

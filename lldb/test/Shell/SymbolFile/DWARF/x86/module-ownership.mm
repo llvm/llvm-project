@@ -1,3 +1,4 @@
+// RUN: rm -rf %t.cache
 // RUN: %clang --target=x86_64-apple-macosx -g -gmodules -Wno-objc-root-class \
 // RUN:    -fmodules -fmodules-cache-path=%t.cache \
 // RUN:    -c -o %t.o %s -I%S/Inputs
@@ -25,7 +26,7 @@ Struct s2;
 // CHECK-ANON-S1: CXXRecordDecl {{.*}} imported in A struct
 
 StructB s3;
-// CHECK-ANON-S2: CXXRecordDecl {{.*}} imported in A.B {{.*}} struct
+// CHECK-ANON-S2: CXXRecordDecl {{.*}} imported in A.B {{.*}}struct
 // CHECK-ANON-S2: -FieldDecl {{.*}} in A.B anon_field_b 'int'
 
 Nested s4;

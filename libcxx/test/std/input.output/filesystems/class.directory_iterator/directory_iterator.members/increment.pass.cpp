@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -15,20 +18,17 @@
 // directory_iterator& operator++();
 // directory_iterator& increment(error_code& ec);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <set>
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
-TEST_SUITE(directory_iterator_increment_tests)
-
-TEST_CASE(test_increment_signatures)
+static void test_increment_signatures()
 {
     directory_iterator d; ((void)d);
     std::error_code ec; ((void)ec);
@@ -40,7 +40,7 @@ TEST_CASE(test_increment_signatures)
     ASSERT_NOT_NOEXCEPT(d.increment(ec));
 }
 
-TEST_CASE(test_prefix_increment)
+static void test_prefix_increment()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
@@ -50,21 +50,21 @@ TEST_CASE(test_prefix_increment)
 
     std::error_code ec;
     directory_iterator it(testDir, ec);
-    TEST_REQUIRE(!ec);
+    assert(!ec);
 
     std::set<path> unseen_entries = dir_contents;
     while (!unseen_entries.empty()) {
-        TEST_REQUIRE(it != endIt);
+        assert(it != endIt);
         const path entry = *it;
-        TEST_REQUIRE(unseen_entries.erase(entry) == 1);
+        assert(unseen_entries.erase(entry) == 1);
         directory_iterator& it_ref = ++it;
-        TEST_CHECK(&it_ref == &it);
+        assert(&it_ref == &it);
     }
 
-    TEST_CHECK(it == endIt);
+    assert(it == endIt);
 }
 
-TEST_CASE(test_postfix_increment)
+static void test_postfix_increment()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
@@ -74,22 +74,22 @@ TEST_CASE(test_postfix_increment)
 
     std::error_code ec;
     directory_iterator it(testDir, ec);
-    TEST_REQUIRE(!ec);
+    assert(!ec);
 
     std::set<path> unseen_entries = dir_contents;
     while (!unseen_entries.empty()) {
-        TEST_REQUIRE(it != endIt);
+        assert(it != endIt);
         const path entry = *it;
-        TEST_REQUIRE(unseen_entries.erase(entry) == 1);
+        assert(unseen_entries.erase(entry) == 1);
         const path entry2 = *it++;
-        TEST_CHECK(entry2 == entry);
+        assert(entry2 == entry);
     }
 
-    TEST_CHECK(it == endIt);
+    assert(it == endIt);
 }
 
 
-TEST_CASE(test_increment_method)
+static void test_increment_method()
 {
     static_test_env static_env;
     const path testDir = static_env.Dir;
@@ -99,19 +99,26 @@ TEST_CASE(test_increment_method)
 
     std::error_code ec;
     directory_iterator it(testDir, ec);
-    TEST_REQUIRE(!ec);
+    assert(!ec);
 
     std::set<path> unseen_entries = dir_contents;
     while (!unseen_entries.empty()) {
-        TEST_REQUIRE(it != endIt);
+        assert(it != endIt);
         const path entry = *it;
-        TEST_REQUIRE(unseen_entries.erase(entry) == 1);
+        assert(unseen_entries.erase(entry) == 1);
         directory_iterator& it_ref = it.increment(ec);
-        TEST_REQUIRE(!ec);
-        TEST_CHECK(&it_ref == &it);
+        assert(!ec);
+        assert(&it_ref == &it);
     }
 
-    TEST_CHECK(it == endIt);
+    assert(it == endIt);
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    test_increment_signatures();
+    test_prefix_increment();
+    test_postfix_increment();
+    test_increment_method();
+
+    return 0;
+}

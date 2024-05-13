@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 %s -Wno-private-extern -triple i386-pc-linux-gnu -verify -fsyntax-only
 
-
-void f() {
+void f(void) {
   int i;
 
   asm ("foo\n" : : "a" (i + 2));
@@ -19,7 +18,7 @@ void f() {
   asm ("foo\n" : "=a" (i) : "" (i)); // expected-error {{invalid input constraint '' in asm}}
 }
 
-void clobbers() {
+void clobbers(void) {
   asm ("nop" : : : "ax", "#ax", "%ax");
   asm ("nop" : : : "eax", "rax", "ah", "al");
   asm ("nop" : : : "0", "%0", "#0");
@@ -40,18 +39,17 @@ void clobbers() {
   asm ("nop" : "=a" (a) : "b" (b) : "%rcx", "%rbx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}} 
 }
 
-// rdar://6094010
-void test3() {
+void test3(void) {
   int x;
   asm(L"foo" : "=r"(x)); // expected-error {{wide string}}
   asm("foo" : L"=r"(x)); // expected-error {{wide string}}
 }
 
-// <rdar://problem/6156893>
 void test4(const volatile void *addr)
 {
-    asm ("nop" : : "r"(*addr)); // expected-error {{invalid type 'const volatile void' in asm input for constraint 'r'}}
-    asm ("nop" : : "m"(*addr));
+    asm ("nop" : : "r"(*addr)); /* expected-error {{invalid type 'const volatile void' in asm input for constraint 'r'}}
+                                   expected-warning {{ISO C does not allow indirection on operand of type 'const volatile void *'}} */
+    asm ("nop" : : "m"(*addr)); // expected-warning {{ISO C does not allow indirection on operand of type 'const volatile void *'}}
 
     asm ("nop" : : "r"(test4(addr))); // expected-error {{invalid type 'void' in asm input for constraint 'r'}}
     asm ("nop" : : "m"(test4(addr))); // expected-error {{invalid lvalue in asm input for constraint 'm'}}
@@ -59,8 +57,7 @@ void test4(const volatile void *addr)
     asm ("nop" : : "m"(f())); // expected-error {{invalid lvalue in asm input for constraint 'm'}}
 }
 
-// <rdar://problem/6512595>
-void test5() {
+void test5(void) {
   asm("nop" : : "X" (8));
 }
 
@@ -118,7 +115,6 @@ void test10(void){
 
 // This is just an assert because of the boolean conversion.
 // Feel free to change the assembly to something sensible if it causes a problem.
-// rdar://problem/9414925
 void test11(void) {
   _Bool b;
   asm volatile ("movb %%gs:%P2,%b0" : "=q"(b) : "0"(0), "i"(5L));
@@ -134,7 +130,6 @@ void test13(void) {
   __asm__ volatile ("mov %%esp, %o" : "=r"(esp) : : ); // expected-error {{invalid % escape in inline assembly string}}
 }
 
-// <rdar://problem/12700799>
 struct S;  // expected-note 2 {{forward declaration of 'struct S'}}
 void test14(struct S *s) {
   __asm("": : "a"(*s)); // expected-error {{dereference of pointer to incomplete type 'struct S'}}
@@ -142,7 +137,7 @@ void test14(struct S *s) {
 }
 
 // PR15759.
-double test15() {
+double test15(void) {
   double ret = 0;
   __asm("0.0":"="(ret)); // expected-error {{invalid output constraint '=' in asm}}
   __asm("0.0":"=&"(ret)); // expected-error {{invalid output constraint '=&' in asm}}
@@ -209,40 +204,40 @@ double f_output_constraint(void) {
   return result;
 }
 
-void fn1() {
+void fn1(void) {
   int l;
   __asm__(""
           : [l] "=r"(l)
           : "[l],m"(l)); // expected-error {{asm constraint has an unexpected number of alternatives: 1 vs 2}}
 }
 
-void fn2() {
+void fn2(void) {
   int l;
  __asm__(""
           : "+&m"(l)); // expected-error {{invalid output constraint '+&m' in asm}}
 }
 
-void fn3() {
+void fn3(void) {
   int l;
  __asm__(""
           : "+#r"(l)); // expected-error {{invalid output constraint '+#r' in asm}}
 }
 
-void fn4() {
+void fn4(void) {
   int l;
  __asm__(""
           : "=r"(l)
           : "m#"(l));
 }
 
-void fn5() {
+void fn5(void) {
   int l;
     __asm__(""
           : [g] "+r"(l)
           : "[g]"(l)); // expected-error {{invalid input constraint '[g]' in asm}}
 }
 
-void fn6() {
+void fn6(void) {
     int a;
   __asm__(""
             : "=rm"(a), "=rm"(a)
@@ -258,7 +253,7 @@ typedef struct test16_foo {
 typedef __attribute__((vector_size(16))) int test16_bar;
 register int test16_baz asm("esp");
 
-void test16()
+void test16(void)
 {
   test16_foo a;
   test16_bar b;
@@ -292,7 +287,7 @@ int test17(int t0)
   return r0 + r1;
 }
 
-void test18()
+void test18(void)
 {
   // expected-error@+2 {{duplicate use of asm operand name "lab"}}
   // expected-note@+1 {{asm operand name "lab" first referenced here}}
@@ -312,4 +307,55 @@ lab2:;
   // expected-error@+1 {{invalid operand number in inline asm string}}
   asm ("jne %l0":::);
   asm goto ("jne %l0"::::lab);
+}
+
+typedef struct _st_size64 {
+  int a;
+  char b;
+} st_size64;
+
+typedef struct _st_size96 {
+  int a;
+  int b;
+  int c;
+} st_size96;
+
+typedef struct _st_size16 {
+  char a;
+  char b;
+} st_size16;
+
+typedef struct _st_size32 {
+  char a;
+  char b;
+  char c;
+  char d;
+} st_size32;
+
+typedef struct _st_size128 {
+  int a;
+  int b;
+  int c;
+  int d;
+} st_size128;
+
+void test19(long long x)
+{
+  st_size64 a;
+  st_size96 b;
+  st_size16 c;
+  st_size32 d;
+  st_size128 e;
+  asm ("" : "=rm" (a): "0" (1)); // no-error
+  asm ("" : "=rm" (d): "0" (1)); // no-error
+  asm ("" : "=rm" (c): "0" (x)); // no-error
+  // FIXME: This case is actually supported by codegen.
+  asm ("" : "=rm" (x): "0" (a)); // expected-error {{unsupported inline asm: input with type 'st_size64' (aka 'struct _st_size64') matching output with type 'long long'}}
+  // FIXME: This case is actually supported by codegen.
+  asm ("" : "=rm" (a): "0" (d)); // expected-error {{unsupported inline asm: input with type 'st_size32' (aka 'struct _st_size32') matching output with type 'st_size64' (aka 'struct _st_size64')}}
+  asm ("" : "=rm" (b): "0" (1)); // expected-error {{impossible constraint in asm: can't store value into a register}}
+  // FIXME: This case should be supported by codegen, but it fails now.
+  asm ("" : "=rm" (e): "0" (1)); // no-error
+  // FIXME: This case should be supported by codegen, but it fails now.
+  asm ("" : "=rm" (x): "0" (e)); // expected-error {{unsupported inline asm: input with type 'st_size128' (aka 'struct _st_size128') matching output with type 'long long'}}
 }

@@ -13,22 +13,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Target/SPIRV/Serialization.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTGPULAUNCHFUNCTOVULKANLAUNCHFUNC
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 static constexpr const char *kSPIRVBlobAttrName = "spirv_blob";
 static constexpr const char *kSPIRVEntryPointAttrName = "spirv_entry_point";
+static constexpr const char *kSPIRVElementTypesAttrName = "spirv_element_types";
 static constexpr const char *kVulkanLaunch = "vulkanLaunch";
 
 namespace {
@@ -38,7 +45,7 @@ namespace {
 /// function and attaching binary data and entry point name as an attributes to
 /// created vulkan launch call op.
 class ConvertGpuLaunchFuncToVulkanLaunchFunc
-    : public ConvertGpuLaunchFuncToVulkanLaunchFuncBase<
+    : public impl::ConvertGpuLaunchFuncToVulkanLaunchFuncBase<
           ConvertGpuLaunchFuncToVulkanLaunchFunc> {
 public:
   void runOnOperation() override;
@@ -54,7 +61,7 @@ private:
 
   /// Checks where the given type is supported by Vulkan runtime.
   bool isSupportedType(Type type) {
-    if (auto memRefType = type.dyn_cast_or_null<MemRefType>()) {
+    if (auto memRefType = dyn_cast_or_null<MemRefType>(type)) {
       auto elementType = memRefType.getElementType();
       return memRefType.hasRank() &&
              (memRefType.getRank() >= 1 && memRefType.getRank() <= 3) &&
@@ -74,7 +81,7 @@ private:
   static constexpr unsigned kVulkanLaunchNumConfigOperands = 3;
 };
 
-} // anonymous namespace
+} // namespace
 
 void ConvertGpuLaunchFuncToVulkanLaunchFunc::runOnOperation() {
   bool done = false;
@@ -123,7 +130,7 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::declareVulkanLaunchFunc(
 
   // Declare vulkan launch function.
   auto funcType = builder.getFunctionType(vulkanLaunchTypes, {});
-  builder.create<FuncOp>(loc, kVulkanLaunch, funcType).setPrivate();
+  builder.create<func::FuncOp>(loc, kVulkanLaunch, funcType).setPrivate();
 
   return success();
 }
@@ -134,7 +141,7 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::createBinaryShader(
   SmallVector<uint32_t, 0> binary;
   for (auto spirvModule : module.getOps<spirv::ModuleOp>()) {
     if (done)
-      return spirvModule.emitError("should only contain one 'spv.module' op");
+      return spirvModule.emitError("should only contain one 'spirv.module' op");
     done = true;
 
     if (failed(spirv::serialize(spirvModule, binary)))
@@ -170,19 +177,30 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
                               gpuLaunchOperands.end());
 
   // Create vulkan launch call op.
-  auto vulkanLaunchCallOp = builder.create<CallOp>(
-      loc, TypeRange{}, builder.getSymbolRefAttr(kVulkanLaunch),
+  auto vulkanLaunchCallOp = builder.create<func::CallOp>(
+      loc, TypeRange{}, SymbolRefAttr::get(builder.getContext(), kVulkanLaunch),
       vulkanLaunchOperands);
 
   // Set SPIR-V binary shader data as an attribute.
   vulkanLaunchCallOp->setAttr(
       kSPIRVBlobAttrName,
-      StringAttr::get(loc->getContext(), {binary.data(), binary.size()}));
+      builder.getStringAttr(StringRef(binary.data(), binary.size())));
 
   // Set entry point name as an attribute.
-  vulkanLaunchCallOp->setAttr(
-      kSPIRVEntryPointAttrName,
-      StringAttr::get(loc->getContext(), launchOp.getKernelName()));
+  vulkanLaunchCallOp->setAttr(kSPIRVEntryPointAttrName,
+                              launchOp.getKernelName());
+
+  // Add MemRef element types before they're lost when lowering to LLVM.
+  SmallVector<Type> elementTypes;
+  for (Type type : llvm::drop_begin(launchOp.getOperandTypes(),
+                                    gpu::LaunchOp::kNumConfigOperands)) {
+    // The below cast always succeeds as it has already been verified in
+    // 'declareVulkanLaunchFunc' that these are MemRefs with compatible element
+    // types.
+    elementTypes.push_back(cast<MemRefType>(type).getElementType());
+  }
+  vulkanLaunchCallOp->setAttr(kSPIRVElementTypesAttrName,
+                              builder.getTypeArrayAttr(elementTypes));
 
   launchOp.erase();
 }

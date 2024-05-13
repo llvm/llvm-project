@@ -38,7 +38,7 @@ define <2 x i64> @test2(i64 %arg) nounwind {
 ; X64-LABEL: test2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andl $1234567, %edi # imm = 0x12D687
-; X64-NEXT:    movq %rdi, %xmm0
+; X64-NEXT:    movd %edi, %xmm0
 ; X64-NEXT:    retq
   %A = and i64 %arg, 1234567
   %B = insertelement <2 x i64> undef, i64 %A, i32 0

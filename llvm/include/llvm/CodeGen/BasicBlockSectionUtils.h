@@ -25,6 +25,17 @@ using MachineBasicBlockComparator =
 void sortBasicBlocksAndUpdateBranches(MachineFunction &MF,
                                       MachineBasicBlockComparator MBBCmp);
 
+void avoidZeroOffsetLandingPad(MachineFunction &MF);
+
+/// This checks if the source of this function has drifted since this binary was
+/// profiled previously.
+/// For now, we are piggy backing on what PGO does to
+/// detect this with instrumented profiles.  PGO emits an hash of the IR and
+/// checks if the hash has changed.  Advanced basic block layout is usually done
+/// on top of PGO optimized binaries and hence this check works well in
+/// practice.
+bool hasInstrProfHashMismatch(MachineFunction &MF);
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_BASICBLOCKSECTIONUTILS_H

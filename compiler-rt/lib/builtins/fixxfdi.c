@@ -25,16 +25,16 @@
 // mmmm mmmm mmmm
 
 #if defined(_MSC_VER) && !defined(__clang__)
-// MSVC throws a warning about 'unitialized variable use' here,
+// MSVC throws a warning about 'uninitialized variable use' here,
 // disable it for builds that warn-as-error
 #pragma warning(push)
 #pragma warning(disable : 4700)
 #endif
 
-COMPILER_RT_ABI di_int __fixxfdi(long double a) {
+COMPILER_RT_ABI di_int __fixxfdi(xf_float a) {
   const di_int di_max = (di_int)((~(du_int)0) / 2);
   const di_int di_min = -di_max - 1;
-  long_double_bits fb;
+  xf_bits fb;
   fb.f = a;
   int e = (fb.u.high.s.low & 0x00007FFF) - 16383;
   if (e < 0)

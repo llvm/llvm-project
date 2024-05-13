@@ -10,31 +10,30 @@ body:             |
   bb.0:
     ; X64-LABEL: name: test_memop_s8tos32
     ; X64: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
-    ; X64: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p0) :: (load 1)
-    ; X64: [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p0) :: (load 1)
-    ; X64: [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p0) :: (load 2)
-    ; X64: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load 4)
-    ; X64: [[LOAD4:%[0-9]+]]:_(p0) = G_LOAD [[DEF]](p0) :: (load 4)
+    ; X64: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p0) :: (load (s1))
+    ; X64: [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p0) :: (load (s8))
+    ; X64: [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p0) :: (load (s16))
+    ; X64: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32))
+    ; X64: [[LOAD4:%[0-9]+]]:_(p0) = G_LOAD [[DEF]](p0) :: (load (p0))
     ; X64: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; X64: [[COPY:%[0-9]+]]:_(s8) = COPY [[LOAD]](s8)
-    ; X64: [[AND:%[0-9]+]]:_(s8) = G_AND [[COPY]], [[C]]
-    ; X64: G_STORE [[AND]](s8), [[DEF]](p0) :: (store 1)
-    ; X64: G_STORE [[LOAD1]](s8), [[DEF]](p0) :: (store 1)
-    ; X64: G_STORE [[LOAD2]](s16), [[DEF]](p0) :: (store 2)
-    ; X64: G_STORE [[LOAD3]](s32), [[DEF]](p0) :: (store 4)
-    ; X64: G_STORE [[LOAD4]](p0), [[DEF]](p0) :: (store 4)
+    ; X64: [[AND:%[0-9]+]]:_(s8) = G_AND [[LOAD]], [[C]]
+    ; X64: G_STORE [[AND]](s8), [[DEF]](p0) :: (store (s1))
+    ; X64: G_STORE [[LOAD1]](s8), [[DEF]](p0) :: (store (s8))
+    ; X64: G_STORE [[LOAD2]](s16), [[DEF]](p0) :: (store (s16))
+    ; X64: G_STORE [[LOAD3]](s32), [[DEF]](p0) :: (store (s32))
+    ; X64: G_STORE [[LOAD4]](p0), [[DEF]](p0) :: (store (p0))
     %0:_(p0) = IMPLICIT_DEF
-    %9:_(s1) = G_LOAD %0(p0) :: (load 1)
-    %1:_(s8) = G_LOAD %0(p0) :: (load 1)
-    %2:_(s16) = G_LOAD %0(p0) :: (load 2)
-    %3:_(s32) = G_LOAD %0(p0) :: (load 4)
-    %4:_(p0) = G_LOAD %0(p0) :: (load 4)
+    %9:_(s1) = G_LOAD %0(p0) :: (load (s1))
+    %1:_(s8) = G_LOAD %0(p0) :: (load (s8))
+    %2:_(s16) = G_LOAD %0(p0) :: (load (s16))
+    %3:_(s32) = G_LOAD %0(p0) :: (load (s32))
+    %4:_(p0) = G_LOAD %0(p0) :: (load (p0))
 
-    G_STORE %9, %0 :: (store 1)
-    G_STORE %1, %0 :: (store 1)
-    G_STORE %2, %0 :: (store 2)
-    G_STORE %3, %0 :: (store 4)
-    G_STORE %4, %0 :: (store 4)
+    G_STORE %9, %0 :: (store (s1))
+    G_STORE %1, %0 :: (store (s8))
+    G_STORE %2, %0 :: (store (s16))
+    G_STORE %3, %0 :: (store (s32))
+    G_STORE %4, %0 :: (store (p0))
 ...
 ---
 name:            test_memop_s64
@@ -47,11 +46,11 @@ body:             |
 
     ; X64-LABEL: name: test_memop_s64
     ; X64: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
-    ; X64: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[DEF]](p0) :: (load 8)
-    ; X64: G_STORE [[LOAD]](s64), [[DEF]](p0) :: (store 8)
+    ; X64: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[DEF]](p0) :: (load (s64))
+    ; X64: G_STORE [[LOAD]](s64), [[DEF]](p0) :: (store (s64))
     %0:_(p0) = IMPLICIT_DEF
-    %1:_(s64) = G_LOAD %0 :: (load 8)
+    %1:_(s64) = G_LOAD %0 :: (load (s64))
 
-    G_STORE %1, %0 :: (store 8)
+    G_STORE %1, %0 :: (store (s64))
 
 ...

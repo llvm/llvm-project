@@ -10,7 +10,7 @@
 // RUN: echo >> %t.c "// expected""-note@* {{'EnumWithAttributes3' has been explicitly marked deprecated here}}"
 // RUN: %clang_cc1 -fsyntax-only %t.c -verify
 
-typedef void func_typedef();
+typedef void func_typedef(void);
 func_typedef xxx;
 
 typedef void func_t(int x);
@@ -69,7 +69,7 @@ struct pair_t {
 // CHECK: struct pair_t p = {a: 3, .b = 4};
 struct pair_t p = {a: 3, .b = 4}; // expected-warning {{use of GNU old-style field designator extension}}
 
-void initializers() {
+void initializers(void) {
   // CHECK: int *x = ((void *)0), *y = ((void *)0);
   int *x = ((void *)0), *y = ((void *)0);
   struct Z{};
@@ -94,7 +94,7 @@ enum EnumWithAttributes { // expected-warning {{'EnumWithAttributes' is deprecat
 enum __attribute__((deprecated)) EnumWithAttributes2 *EnumWithAttributes2Ptr;
 
 // CHECK-LABEL: EnumWithAttributes3Fn
-void EnumWithAttributes3Fn() {
+void EnumWithAttributes3Fn(void) {
   // CHECK-NEXT: enum __attribute__((deprecated(""))) EnumWithAttributes3 *EnumWithAttributes3Ptr;
   // expected-warning@+2 {{'EnumWithAttributes3' is deprecated}}
   // expected-note@+1 {{'EnumWithAttributes3' has been explicitly marked deprecated here}}

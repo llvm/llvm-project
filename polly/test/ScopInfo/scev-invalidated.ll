@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops < %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Region: %if.then6---%return
 ;
@@ -16,7 +16,7 @@ if.then6:
 if.else:
   %add16 = add nsw i64 %rem7, 1474560
   %rem7.add16 = select i1 undef, i64 %rem7, i64 %add16
-  store i64 %rem7.add16, i64* %ang2.2.reg2mem
+  store i64 %rem7.add16, ptr %ang2.2.reg2mem
   br label %return
 
 return:

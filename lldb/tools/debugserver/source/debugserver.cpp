@@ -368,7 +368,7 @@ RNBRunLoopMode RNBRunLoopLaunchAttaching(RNBRemote *remote,
   DNBLogThreadedIf(LOG_RNB_MINIMAL, "%s Attaching to pid %i...", __FUNCTION__,
                    attach_pid);
   char err_str[1024];
-  pid = DNBProcessAttach(attach_pid, NULL, ctx.GetUnmaskSignals(), err_str,
+  pid = DNBProcessAttach(attach_pid, NULL, ctx.GetIgnoredExceptions(), err_str,
                          sizeof(err_str));
   g_pid = pid;
 
@@ -526,10 +526,6 @@ RNBRunLoopMode RNBRunLoopInferiorExecuting(RNBRemote *remote) {
       // packets
       event_mask &= ~RNBContext::event_proc_stdio_available;
       event_mask &= ~RNBContext::event_proc_profile_data;
-      // When we enable async structured data packets over another logical
-      // channel,
-      // this can be relaxed.
-      event_mask &= ~RNBContext::event_darwin_log_data_available;
     }
 
     // We want to make sure we consume all process state changes and have
@@ -554,10 +550,6 @@ RNBRunLoopMode RNBRunLoopInferiorExecuting(RNBRemote *remote) {
 
       if (set_events & RNBContext::event_proc_profile_data) {
         remote->SendAsyncProfileData();
-      }
-
-      if (set_events & RNBContext::event_darwin_log_data_available) {
-        remote->SendAsyncDarwinLogData();
       }
 
       if (set_events & RNBContext::event_read_packet_available) {
@@ -953,6 +945,21 @@ int main(int argc, char *argv[]) {
   sigaddset(&sigset, SIGCHLD);
   sigprocmask(SIG_BLOCK, &sigset, NULL);
 
+  // Set up DNB logging by default. If the user passes different log flags or a
+  // log file, these settings will be modified after processing the command line
+  // arguments.
+  auto log_callback = OsLogger::GetLogFunction();
+  if (log_callback) {
+    // if os_log() support is available, log through that.
+    DNBLogSetLogCallback(log_callback, nullptr);
+    DNBLog("debugserver will use os_log for internal logging.");
+  } else {
+    // Fall back to ASL support.
+    DNBLogSetLogCallback(ASLLogCallback, nullptr);
+    DNBLog("debugserver will use ASL for internal logging.");
+  }
+  DNBLogSetLogMask(/*log_flags*/ 0);
+
   g_remoteSP = std::make_shared<RNBRemote>();
 
   RNBRemote *remote = g_remoteSP.get();
@@ -1283,7 +1290,7 @@ int main(int argc, char *argv[]) {
       break;
 
     case 'U':
-      ctx.SetUnmaskSignals(true);
+      ctx.AddDefaultIgnoredExceptions();
       break;
 
     case '2':
@@ -1326,27 +1333,13 @@ int main(int argc, char *argv[]) {
   // It is ok for us to set NULL as the logfile (this will disable any logging)
 
   if (log_file != NULL) {
+    DNBLog("debugserver is switching to logging to a file.");
     DNBLogSetLogCallback(FileLogCallback, log_file);
     // If our log file was set, yet we have no log flags, log everything!
     if (log_flags == 0)
       log_flags = LOG_ALL | LOG_RNB_ALL;
-
-    DNBLogSetLogMask(log_flags);
-  } else {
-    // Enable DNB logging
-
-    // if os_log() support is available, log through that.
-    auto log_callback = OsLogger::GetLogFunction();
-    if (log_callback) {
-      DNBLogSetLogCallback(log_callback, nullptr);
-      DNBLog("debugserver will use os_log for internal logging.");
-    } else {
-      // Fall back to ASL support.
-      DNBLogSetLogCallback(ASLLogCallback, NULL);
-      DNBLog("debugserver will use ASL for internal logging.");
-    }
-    DNBLogSetLogMask(log_flags);
   }
+  DNBLogSetLogMask(log_flags);
 
   if (DNBLogEnabled()) {
     for (i = 0; i < argc; i++)
@@ -1582,7 +1575,7 @@ int main(int argc, char *argv[]) {
 
         RNBLogSTDOUT("Attaching to process %s...\n", attach_pid_name.c_str());
         nub_process_t pid = DNBProcessAttachByName(
-            attach_pid_name.c_str(), timeout_ptr, ctx.GetUnmaskSignals(),
+            attach_pid_name.c_str(), timeout_ptr, ctx.GetIgnoredExceptions(),
             err_str, sizeof(err_str));
         g_pid = pid;
         if (pid == INVALID_NUB_PROCESS) {

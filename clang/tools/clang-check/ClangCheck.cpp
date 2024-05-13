@@ -25,6 +25,7 @@
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
+#include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "clang/Tooling/Syntax/Tree.h"
 #include "clang/Tooling/Tooling.h"
@@ -76,6 +77,10 @@ static cl::opt<bool>
     Analyze("analyze",
             cl::desc(Options.getOptionHelpText(options::OPT_analyze)),
             cl::cat(ClangCheckCategory));
+static cl::opt<std::string>
+    AnalyzerOutput("analyzer-output-path",
+                   cl::desc(Options.getOptionHelpText(options::OPT_o)),
+                   cl::cat(ClangCheckCategory));
 
 static cl::opt<bool>
     Fixit("fixit", cl::desc(Options.getOptionHelpText(options::OPT_fixit)),
@@ -153,9 +158,11 @@ public:
         clang::syntax::TokenBuffer TB = std::move(Collector).consume();
         if (TokensDump)
           llvm::outs() << TB.dumpForTests();
-        clang::syntax::Arena A(AST.getSourceManager(), AST.getLangOpts(), TB);
-        llvm::outs() << clang::syntax::buildSyntaxTree(A, AST)->dump(
-            AST.getSourceManager());
+        clang::syntax::TokenBufferTokenManager TBTM(TB, AST.getLangOpts(),
+                                                    AST.getSourceManager());
+        clang::syntax::Arena A;
+        llvm::outs()
+            << clang::syntax::buildSyntaxTree(A, TBTM, AST)->dump(TBTM);
       }
 
     private:
@@ -204,15 +211,37 @@ int main(int argc, const char **argv) {
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
 
-  // Clear adjusters because -fsyntax-only is inserted by the default chain.
-  Tool.clearArgumentsAdjusters();
-  Tool.appendArgumentsAdjuster(getClangStripOutputAdjuster());
-  Tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
+  if (Analyze) {
+    // Set output path if is provided by user.
+    //
+    // As the original -o options have been removed by default via the
+    // strip-output adjuster, we only need to add the analyzer -o options here
+    // when it is provided by users.
+    if (!AnalyzerOutput.empty())
+      Tool.appendArgumentsAdjuster(
+          getInsertArgumentAdjuster(CommandLineArguments{"-o", AnalyzerOutput},
+                                    ArgumentInsertPosition::END));
 
-  // Running the analyzer requires --analyze. Other modes can work with the
-  // -fsyntax-only option.
-  Tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(
-      Analyze ? "--analyze" : "-fsyntax-only", ArgumentInsertPosition::BEGIN));
+    // Running the analyzer requires --analyze. Other modes can work with the
+    // -fsyntax-only option.
+    //
+    // The syntax-only adjuster is installed by default.
+    // Good: It also strips options that trigger extra output, like -save-temps.
+    // Bad:  We don't want the -fsyntax-only when executing the static analyzer.
+    //
+    // To enable the static analyzer, we first strip all -fsyntax-only options
+    // and then add an --analyze option to the front.
+    Tool.appendArgumentsAdjuster(
+        [&](const CommandLineArguments &Args, StringRef /*unused*/) {
+          CommandLineArguments AdjustedArgs;
+          for (const std::string &Arg : Args)
+            if (Arg != "-fsyntax-only")
+              AdjustedArgs.emplace_back(Arg);
+          return AdjustedArgs;
+        });
+    Tool.appendArgumentsAdjuster(
+        getInsertArgumentAdjuster("--analyze", ArgumentInsertPosition::BEGIN));
+  }
 
   ClangCheckActionFactory CheckFactory;
   std::unique_ptr<FrontendActionFactory> FrontendFactory;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_SYMBOL_OCCURRENCES_H
-#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_SYMBOL_OCCURRENCES_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_RENAME_SYMBOLOCCURRENCES_H
+#define LLVM_CLANG_TOOLING_REFACTORING_RENAME_SYMBOLOCCURRENCES_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -70,7 +70,7 @@ public:
 
   ArrayRef<SourceRange> getNameRanges() const {
     if (MultipleRanges)
-      return llvm::makeArrayRef(MultipleRanges.get(), NumRanges);
+      return llvm::ArrayRef(MultipleRanges.get(), NumRanges);
     return SingleRange;
   }
 
@@ -88,4 +88,4 @@ using SymbolOccurrences = std::vector<SymbolOccurrence>;
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_SYMBOL_OCCURRENCES_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_RENAME_SYMBOLOCCURRENCES_H

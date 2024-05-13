@@ -100,7 +100,7 @@ GCONST int glb = 5;
 # define SCONST
 #endif
 
-void foo() {
+void foo(void) {
   LCONST int loc = 5;
   SCONST static int sta = 5;
   // We don't actually expect 1-2 occurrences of this error.  We're just

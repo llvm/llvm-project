@@ -1,21 +1,22 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-unknown-unknown"
 
-define void @PR24303(float* %f) {
+define void @PR24303(ptr %f) {
 ; CHECK-LABEL: .visible .entry PR24303(
 ; Do not use mov.f or mov.u to convert between float and int.
 ; CHECK-NOT: mov.{{f|u}}{{32|64}} %f{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK-NOT: mov.{{f|u}}{{32|64}} %r{{[0-9]+}}, %f{{[0-9]+}}
 entry:
-  %arrayidx1 = getelementptr inbounds float, float* %f, i64 1
-  %0 = load float, float* %f, align 4
-  %1 = load float, float* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %f, i64 2
-  %arrayidx3 = getelementptr inbounds float, float* %f, i64 3
-  %2 = load float, float* %arrayidx2, align 4
-  %3 = load float, float* %arrayidx3, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %f, i64 1
+  %0 = load float, ptr %f, align 4
+  %1 = load float, ptr %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %f, i64 2
+  %arrayidx3 = getelementptr inbounds float, ptr %f, i64 3
+  %2 = load float, ptr %arrayidx2, align 4
+  %3 = load float, ptr %arrayidx3, align 4
   %mul.i = fmul float %0, %2
   %mul4.i = fmul float %1, %3
   %mul5.i = fmul float %0, %3
@@ -208,12 +209,10 @@ if.then.93.i:                                     ; preds = %if.then.88.i, %if.e
 _ZN12cuda_builtinmlIfEENS_7complexIT_EERKS3_S5_.exit: ; preds = %if.then.93.i, %lor.lhs.false.67.i, %land.lhs.true.i, %entry
   %84 = phi i32 [ %4, %land.lhs.true.i ], [ %4, %entry ], [ %82, %if.then.93.i ], [ %4, %lor.lhs.false.67.i ]
   %85 = phi i32 [ %5, %land.lhs.true.i ], [ %5, %entry ], [ %83, %if.then.93.i ], [ %5, %lor.lhs.false.67.i ]
-  %arrayidx5 = getelementptr inbounds float, float* %f, i64 5
-  %86 = bitcast float* %arrayidx5 to i32*
-  store i32 %84, i32* %86, align 4
-  %arrayidx7 = getelementptr inbounds float, float* %f, i64 6
-  %87 = bitcast float* %arrayidx7 to i32*
-  store i32 %85, i32* %87, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %f, i64 5
+  store i32 %84, ptr %arrayidx5, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %f, i64 6
+  store i32 %85, ptr %arrayidx7, align 4
   ret void
 }
 
@@ -221,4 +220,4 @@ declare float @llvm.nvvm.fabs.f(float)
 
 !nvvm.annotations = !{!0}
 
-!0 = !{void (float*)* @PR24303, !"kernel", i32 1}
+!0 = !{ptr @PR24303, !"kernel", i32 1}

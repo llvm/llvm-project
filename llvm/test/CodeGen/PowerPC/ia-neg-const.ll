@@ -8,8 +8,8 @@ target triple = "powerpc64-unknown-linux-gnu"
 define i64 @main() #0 {
 entry:
   %x = alloca i64, align 8
-  store i64 0, i64* %x, align 8
-  %0 = call i64 asm sideeffect "ld       $0,$1\0A\09add${2:I}   $0,$0,$2", "=&r,*m,Ir"(i64* %x, i64 -1) #0
+  store i64 0, ptr %x, align 8
+  %0 = call i64 asm sideeffect "ld       $0,$1\0A\09add${2:I}   $0,$0,$2", "=&r,*m,Ir"(ptr elementtype(i64) %x, i64 -1) #0
   ret i64 %0
 }
 
@@ -19,7 +19,7 @@ entry:
 ; CHECK: blr
 
 ; Function Attrs: nounwind
-declare signext i32 @printf(i8* nocapture readonly, ...) #0
+declare signext i32 @printf(ptr nocapture readonly, ...) #0
 
 attributes #0 = { nounwind }
 

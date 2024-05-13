@@ -1,4 +1,4 @@
-; RUN: opt < %s -globaldce -S | FileCheck %s
+; RUN: opt < %s -passes=globaldce -S | FileCheck %s
 
 ; test_global should not be emitted to the .s file.
 ; CHECK-NOT: @test_global =
@@ -6,7 +6,7 @@
 
 ; test_global2 is a normal global using an available externally function.
 ; CHECK: @test_global2 =
-@test_global2 = global i32 ()* @test_function2
+@test_global2 = global ptr @test_function2
 
 ; test_function should not be emitted to the .s file.
 ; CHECK-NOT: define {{.*}} @test_function()

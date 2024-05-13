@@ -230,10 +230,9 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
 
   unsigned RegResult = State.AllocateRegBlock(RegList, PendingMembers.size());
   if (RegResult) {
-    for (SmallVectorImpl<CCValAssign>::iterator It = PendingMembers.begin();
-         It != PendingMembers.end(); ++It) {
-      It->convertToReg(RegResult);
-      State.addLoc(*It);
+    for (CCValAssign &PendingMember : PendingMembers) {
+      PendingMember.convertToReg(RegResult);
+      State.addLoc(PendingMember);
       ++RegResult;
     }
     PendingMembers.clear();
@@ -242,7 +241,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
 
   // Register allocation failed, we'll be needing the stack
   unsigned Size = LocVT.getSizeInBits() / 8;
-  if (LocVT == MVT::i32 && State.getNextStackOffset() == 0) {
+  if (LocVT == MVT::i32 && State.getStackSize() == 0) {
     // If nothing else has used the stack until this point, a non-HFA aggregate
     // can be split between regs and stack.
     unsigned RegIdx = State.getFirstUnallocated(RegList);

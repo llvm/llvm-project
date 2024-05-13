@@ -3,8 +3,8 @@
 ; RUN: llc < %s -relocation-model=static -mtriple=thumbv7-apple-darwin | FileCheck %s -check-prefix=THUMB2
 ; RUN: llc < %s -relocation-model=static -mtriple=thumbv8-apple-darwin | FileCheck %s -check-prefix=THUMB2
 
-@nextaddr = global i8* null                       ; <i8**> [#uses=2]
-@C.0.2070 = private constant [5 x i8*] [i8* blockaddress(@foo, %L1), i8* blockaddress(@foo, %L2), i8* blockaddress(@foo, %L3), i8* blockaddress(@foo, %L4), i8* blockaddress(@foo, %L5)] ; <[5 x i8*]*> [#uses=1]
+@nextaddr = global ptr null                       ; <ptr> [#uses=2]
+@C.0.2070 = private constant [5 x ptr] [ptr blockaddress(@foo, %L1), ptr blockaddress(@foo, %L2), ptr blockaddress(@foo, %L3), ptr blockaddress(@foo, %L4), ptr blockaddress(@foo, %L5)] ; <ptr> [#uses=1]
 
 define internal i32 @foo(i32 %i) nounwind {
 ; ARM-LABEL: foo:
@@ -16,8 +16,8 @@ entry:
 ; THUMB: [[NEXTADDR_PCBASE:LPC0_[0-9]]]:
 ; THUMB: add r[[NEXTADDR_REG]], pc
 
-  %0 = load i8*, i8** @nextaddr, align 4               ; <i8*> [#uses=2]
-  %1 = icmp eq i8* %0, null                       ; <i1> [#uses=1]
+  %0 = load ptr, ptr @nextaddr, align 4               ; <ptr> [#uses=2]
+  %1 = icmp eq ptr %0, null                       ; <i1> [#uses=1]
 ; indirect branch gets duplicated here
 ; ARM: bx
 ; THUMB: mov pc,
@@ -25,14 +25,14 @@ entry:
   br i1 %1, label %bb3, label %bb2
 
 bb2:                                              ; preds = %entry, %bb3
-  %gotovar.4.0 = phi i8* [ %gotovar.4.0.pre, %bb3 ], [ %0, %entry ] ; <i8*> [#uses=1]
+  %gotovar.4.0 = phi ptr [ %gotovar.4.0.pre, %bb3 ], [ %0, %entry ] ; <ptr> [#uses=1]
 ; ARM: bx
 ; THUMB: mov pc,
-  indirectbr i8* %gotovar.4.0, [label %L5, label %L4, label %L3, label %L2, label %L1]
+  indirectbr ptr %gotovar.4.0, [label %L5, label %L4, label %L3, label %L2, label %L1]
 
 bb3:                                              ; preds = %entry
-  %2 = getelementptr inbounds [5 x i8*], [5 x i8*]* @C.0.2070, i32 0, i32 %i ; <i8**> [#uses=1]
-  %gotovar.4.0.pre = load i8*, i8** %2, align 4        ; <i8*> [#uses=1]
+  %2 = getelementptr inbounds [5 x ptr], ptr @C.0.2070, i32 0, i32 %i ; <ptr> [#uses=1]
+  %gotovar.4.0.pre = load ptr, ptr %2, align 4        ; <ptr> [#uses=1]
   br label %bb2
 
 L5:                                               ; preds = %bb2
@@ -47,8 +47,6 @@ L3:                                               ; preds = %L4, %bb2
   br label %L2
 
 L2:                                               ; preds = %L3, %bb2
-; THUMB-LABEL: %.split4
-; THUMB: muls
   %res.2 = phi i32 [ %res.1, %L3 ], [ 1, %bb2 ]   ; <i32> [#uses=1]
   %phitmp = mul i32 %res.2, 6                     ; <i32> [#uses=1]
   br label %L1
@@ -60,16 +58,22 @@ L1:                                               ; preds = %L2, %bb2
 ; ARM: ldr [[R1:r[0-9]+]], LCPI
 ; ARM: add [[R_NEXTADDR_b:r[0-9]+]], pc, [[R_NEXTADDR]]
 ; ARM: add [[R1b:r[0-9]+]], pc, [[R1]]
-; ARM: str [[R1b]], {{\[}}[[R_NEXTADDR_b]]]
+; ARM: str [[R1b]], [[[R_NEXTADDR_b]]]
 
-; THUMB-LABEL: %L1
+; THUMB: %L1
+; THUMB: b [[SPLITBB:LBB[0-9_]+]]
+
+; THUMB: %.split4
+; THUMB: muls
+
+; THUMB: [[SPLITBB]]:
 ; THUMB: ldr [[R2:r[0-9]+]], LCPI
 ; THUMB: add [[R2]], pc
 ; THUMB: str [[R2]], [r[[NEXTADDR_REG]]]
 ; THUMB2-LABEL: %L1
 ; THUMB2: ldr [[R2:r[0-9]+]], LCPI
 ; THUMB2-NEXT: str{{(.w)?}} [[R2]]
-  store i8* blockaddress(@foo, %L5), i8** @nextaddr, align 4
+  store ptr blockaddress(@foo, %L5), ptr @nextaddr, align 4
   ret i32 %res.3
 }
 ; ARM: .long Ltmp0-(LPC{{.*}}+8)

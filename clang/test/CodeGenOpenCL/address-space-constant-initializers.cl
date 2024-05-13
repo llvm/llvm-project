@@ -12,10 +12,10 @@ typedef struct {
     __constant float* constant_float_ptr;
 } ConstantArrayPointerStruct;
 
-// FAKE: %struct.ConstantArrayPointerStruct = type { float addrspace(2)* }
-// FAKE: addrspace(2) constant %struct.ConstantArrayPointerStruct { float addrspace(2)* bitcast (i8 addrspace(2)* getelementptr (i8, i8 addrspace(2)* bitcast (%struct.ArrayStruct addrspace(2)* @constant_array_struct to i8 addrspace(2)*), i64 4) to float addrspace(2)*) }
-// AMDGCN: %struct.ConstantArrayPointerStruct = type { float addrspace(4)* }
-// AMDGCN: addrspace(4) constant %struct.ConstantArrayPointerStruct { float addrspace(4)* bitcast (i8 addrspace(4)* getelementptr (i8, i8 addrspace(4)* bitcast (%struct.ArrayStruct addrspace(4)* @constant_array_struct to i8 addrspace(4)*), i64 4) to float addrspace(4)*) }
+// FAKE: %struct.ConstantArrayPointerStruct = type { ptr addrspace(2) }
+// FAKE: addrspace(2) constant %struct.ConstantArrayPointerStruct { ptr addrspace(2) getelementptr (i8, ptr addrspace(2) @constant_array_struct, i64 4) }
+// AMDGCN: %struct.ConstantArrayPointerStruct = type { ptr addrspace(4) }
+// AMDGCN: addrspace(4) constant %struct.ConstantArrayPointerStruct { ptr addrspace(4) getelementptr (i8, ptr addrspace(4) @constant_array_struct, i64 4) }
 // Bug  18567
 __constant ConstantArrayPointerStruct constant_array_pointer_struct = {
     &constant_array_struct.f

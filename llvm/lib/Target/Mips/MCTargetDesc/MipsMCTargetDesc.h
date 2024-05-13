@@ -31,10 +31,8 @@ class Target;
 class Triple;
 
 MCCodeEmitter *createMipsMCCodeEmitterEB(const MCInstrInfo &MCII,
-                                         const MCRegisterInfo &MRI,
                                          MCContext &Ctx);
 MCCodeEmitter *createMipsMCCodeEmitterEL(const MCInstrInfo &MCII,
-                                         const MCRegisterInfo &MRI,
                                          MCContext &Ctx);
 
 MCAsmBackend *createMipsAsmBackend(const Target &T, const MCSubtargetInfo &STI,
@@ -57,6 +55,7 @@ StringRef selectMipsCPU(const Triple &TT, StringRef CPU);
 
 // Defines symbolic names for the Mips instructions.
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "MipsGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

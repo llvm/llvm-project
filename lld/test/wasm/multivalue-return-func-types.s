@@ -9,23 +9,6 @@
 .globl fn_i64_f64_i32_f32
 
 
-_start:
-  .functype _start () -> ()
-  call fn_i32
-  drop
-  call fn_i32_i32
-  drop
-  drop
-  call fn_i32_i64
-  drop
-  drop
-  call fn_i64_f64_i32_f32
-  drop
-  drop
-  drop
-  drop
-  end_function
-
 fn_i32:
   .functype fn_i32 () -> (i32)
   i32.const 1
@@ -49,6 +32,23 @@ fn_i64_f64_i32_f32:
   f64.const 1.0
   i32.const 1
   f32.const 1.0
+  end_function
+
+_start:
+  .functype _start () -> ()
+  call fn_i32
+  drop
+  call fn_i32_i32
+  drop
+  drop
+  call fn_i32_i64
+  drop
+  drop
+  call fn_i64_f64_i32_f32
+  drop
+  drop
+  drop
+  drop
   end_function
 
 

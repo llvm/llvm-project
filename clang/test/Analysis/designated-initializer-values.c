@@ -2,7 +2,7 @@
 
 void clang_analyzer_eval(int);
 
-void array_init() {
+void array_init(void) {
   int a[5] = {[4] = 29, [2] = 15, [0] = 4};
   clang_analyzer_eval(a[0] == 4);  // expected-warning{{TRUE}}
   clang_analyzer_eval(a[1] == 0);  // expected-warning{{TRUE}}
@@ -21,13 +21,13 @@ struct point {
   int x, y;
 };
 
-void struct_init() {
+void struct_init(void) {
   struct point p = {.y = 5, .x = 3};
   clang_analyzer_eval(p.x == 3); // expected-warning{{TRUE}}
   clang_analyzer_eval(p.y == 5); // expected-warning{{TRUE}}
 }
 
-void array_of_struct() {
+void array_of_struct(void) {
   struct point ptarray[3] = { [2].y = 1, [2].x = 2, [0].x = 3 };
   clang_analyzer_eval(ptarray[0].x == 3); // expected-warning{{TRUE}}
   clang_analyzer_eval(ptarray[0].y == 0); // expected-warning{{TRUE}}

@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
 
 ; Check that the stores are not hoisted: it is invalid to hoist stores if they
 ; are not executed on all paths. In this testcase, there are paths in the loop
@@ -10,49 +10,47 @@
 ; CHECK: store
 
 
-%struct._MUSIC_OP_API_ = type { %struct._FILE_OPERATE_*, %struct.__MUSIC_API* }
-%struct._FILE_OPERATE_ = type { %struct._FILE_OPERATE_INIT_*, %struct._lg_dev_info_* }
-%struct._FILE_OPERATE_INIT_ = type { i32, i32, i32, i32, i32*, i8*, i32 }
-%struct._lg_dev_info_ = type { %struct.os_event, i32, i32, %struct._lg_dev_hdl_*, i8, i8, i8, i8, i8 }
-%struct.os_event = type { i8, i32, i8*, %union.anon }
+%struct._MUSIC_OP_API_ = type { ptr, ptr }
+%struct._FILE_OPERATE_ = type { ptr, ptr }
+%struct._FILE_OPERATE_INIT_ = type { i32, i32, i32, i32, ptr, ptr, i32 }
+%struct._lg_dev_info_ = type { %struct.os_event, i32, i32, ptr, i8, i8, i8, i8, i8 }
+%struct.os_event = type { i8, i32, ptr, %union.anon }
 %union.anon = type { %struct.event_cnt }
 %struct.event_cnt = type { i16 }
-%struct._lg_dev_hdl_ = type { i8*, i8*, i8*, i8*, i8* }
-%struct.__MUSIC_API = type <{ i8*, i8*, i32, %struct._DEC_API, %struct._DEC_API_IO*, %struct._FS_BRK_POINT* }>
-%struct._DEC_API = type { %struct._DEC_PHY*, i8*, i8*, i8* (i8*)*, i32* (i8*)*, i8*, %struct._AAC_DEFAULT_SETTING, i32, i32, i8*, %struct.decoder_inf*, i32, i8, i8*, i8, i8* }
-%struct._DEC_PHY = type { i8*, %struct.__audio_decoder_ops*, i8*, %struct.if_decoder_io, %struct.if_dec_file*, i8*, i32 (i8*)*, i32, i8, %struct.__FF_FR }
-%struct.__audio_decoder_ops = type { i8*, i32 (i8*, %struct.if_decoder_io*, i8*)*, i32 (i8*)*, i32 (i8*, i32)*, %struct.decoder_inf* (i8*)*, i32 (i8*)*, i32 (i8*)*, i32 (...)*, i32 (...)*, i32 (...)*, void (i8*, i32)*, void (i8*, i32, i8*, i32)*, i32 (i8*, i32, i8*)* }
-%struct.if_decoder_io = type { i8*, i32 (i8*, i32, i8*, i32, i8)*, i32 (i8*, i32, i8*)*, void (i8*, i8*, i32)*, i32 (i8*)*, i32 (i8*, i32, i32)* }
-%struct.if_dec_file = type { i32 (i8*, i8*, i32)*, i32 (i8*, i32, i32)* }
+%struct._lg_dev_hdl_ = type { ptr, ptr, ptr, ptr, ptr }
+%struct.__MUSIC_API = type <{ ptr, ptr, i32, %struct._DEC_API, ptr, ptr }>
+%struct._DEC_API = type { ptr, ptr, ptr, ptr, ptr, ptr, %struct._AAC_DEFAULT_SETTING, i32, i32, ptr, ptr, i32, i8, ptr, i8, ptr }
+%struct._DEC_PHY = type { ptr, ptr, ptr, %struct.if_decoder_io, ptr, ptr, ptr, i32, i8, %struct.__FF_FR }
+%struct.__audio_decoder_ops = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+%struct.if_decoder_io = type { ptr, ptr, ptr, ptr, ptr, ptr }
+%struct.if_dec_file = type { ptr, ptr }
 %struct.__FF_FR = type { i32, i32, i8, i8, i8 }
 %struct._AAC_DEFAULT_SETTING = type { i32, i32, i32 }
 %struct.decoder_inf = type { i16, i16, i32, i32 }
-%struct._DEC_API_IO = type { i8*, i8*, i16 (i8*, i8*, i16)*, i32 (i8*, i8, i32)*, i32 (%struct.decoder_inf*, i32)*, %struct.__OP_IO, i32, i32 }
-%struct.__OP_IO = type { i8*, i8* (i8*, i8*, i32)* }
+%struct._DEC_API_IO = type { ptr, ptr, ptr, ptr, ptr, %struct.__OP_IO, i32, i32 }
+%struct.__OP_IO = type { ptr, ptr }
 %struct._FS_BRK_POINT = type { %struct._FS_BRK_INFO, i32, i32 }
 %struct._FS_BRK_INFO = type { i32, i32, [8 x i8], i8, i8, i16 }
 
 @.str = external hidden unnamed_addr constant [10 x i8], align 1
 
-define void @music_task(i8* nocapture readnone %p) local_unnamed_addr {
+define void @music_task(ptr nocapture readnone %p) local_unnamed_addr {
 entry:
-  %mapi = alloca %struct._MUSIC_OP_API_*, align 8
-  %0 = bitcast %struct._MUSIC_OP_API_** %mapi to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %0)
-  store %struct._MUSIC_OP_API_* null, %struct._MUSIC_OP_API_** %mapi, align 8, !tbaa !1
-  %call = call i32 @music_decoder_init(%struct._MUSIC_OP_API_** nonnull %mapi)
+  %mapi = alloca ptr, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr %mapi)
+  store ptr null, ptr %mapi, align 8, !tbaa !1
+  %call = call i32 @music_decoder_init(ptr nonnull %mapi)
   br label %while.cond
 
 while.cond.loopexit:                              ; preds = %while.cond2
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond.loopexit, %entry
-  %1 = load %struct._MUSIC_OP_API_*, %struct._MUSIC_OP_API_** %mapi, align 8, !tbaa !1
-  %dop_api = getelementptr inbounds %struct._MUSIC_OP_API_, %struct._MUSIC_OP_API_* %1, i64 0, i32 1
-  %2 = load %struct.__MUSIC_API*, %struct.__MUSIC_API** %dop_api, align 8, !tbaa !5
-  %file_num = getelementptr inbounds %struct.__MUSIC_API, %struct.__MUSIC_API* %2, i64 0, i32 2
-  %3 = bitcast i32* %file_num to i8*
-  %call1 = call i32 @music_play_api(%struct._MUSIC_OP_API_* %1, i32 33, i32 0, i32 28, i8* %3)
+  %0 = load ptr, ptr %mapi, align 8, !tbaa !1
+  %dop_api = getelementptr inbounds %struct._MUSIC_OP_API_, ptr %0, i64 0, i32 1
+  %1 = load ptr, ptr %dop_api, align 8, !tbaa !5
+  %file_num = getelementptr inbounds %struct.__MUSIC_API, ptr %1, i64 0, i32 2
+  %call1 = call i32 @music_play_api(ptr %0, i32 33, i32 0, i32 28, ptr %file_num)
   br label %while.cond2
 
 while.cond2:                                      ; preds = %while.cond2.backedge, %while.cond
@@ -65,37 +63,35 @@ while.cond2:                                      ; preds = %while.cond2.backedg
   ]
 
 sw.bb:                                            ; preds = %while.cond2
-  %4 = load %struct._MUSIC_OP_API_*, %struct._MUSIC_OP_API_** %mapi, align 8, !tbaa !1
-  %dop_api4 = getelementptr inbounds %struct._MUSIC_OP_API_, %struct._MUSIC_OP_API_* %4, i64 0, i32 1
-  %5 = load %struct.__MUSIC_API*, %struct.__MUSIC_API** %dop_api4, align 8, !tbaa !5
-  %file_num5 = getelementptr inbounds %struct.__MUSIC_API, %struct.__MUSIC_API* %5, i64 0, i32 2
-  %6 = load i32, i32* %file_num5, align 1, !tbaa !7
-  %call6 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str, i64 0, i64 0), i32 %6)
+  %2 = load ptr, ptr %mapi, align 8, !tbaa !1
+  %dop_api4 = getelementptr inbounds %struct._MUSIC_OP_API_, ptr %2, i64 0, i32 1
+  %3 = load ptr, ptr %dop_api4, align 8, !tbaa !5
+  %file_num5 = getelementptr inbounds %struct.__MUSIC_API, ptr %3, i64 0, i32 2
+  %4 = load i32, ptr %file_num5, align 1, !tbaa !7
+  %call6 = call i32 (ptr, ...) @printf(ptr @.str, i32 %4)
   br label %while.cond2.backedge
 
 sw.bb7:                                           ; preds = %while.cond2
-  %7 = load %struct._MUSIC_OP_API_*, %struct._MUSIC_OP_API_** %mapi, align 8, !tbaa !1
-  %dop_api8 = getelementptr inbounds %struct._MUSIC_OP_API_, %struct._MUSIC_OP_API_* %7, i64 0, i32 1
-  %8 = load %struct.__MUSIC_API*, %struct.__MUSIC_API** %dop_api8, align 8, !tbaa !5
-  %file_num9 = getelementptr inbounds %struct.__MUSIC_API, %struct.__MUSIC_API* %8, i64 0, i32 2
-  store i32 1, i32* %file_num9, align 1, !tbaa !7
-  %9 = bitcast i32* %file_num9 to i8*
-  %call12 = call i32 @music_play_api(%struct._MUSIC_OP_API_* %7, i32 34, i32 0, i32 24, i8* %9)
+  %5 = load ptr, ptr %mapi, align 8, !tbaa !1
+  %dop_api8 = getelementptr inbounds %struct._MUSIC_OP_API_, ptr %5, i64 0, i32 1
+  %6 = load ptr, ptr %dop_api8, align 8, !tbaa !5
+  %file_num9 = getelementptr inbounds %struct.__MUSIC_API, ptr %6, i64 0, i32 2
+  store i32 1, ptr %file_num9, align 1, !tbaa !7
+  %call12 = call i32 @music_play_api(ptr %5, i32 34, i32 0, i32 24, ptr %file_num9)
   br label %while.cond2.backedge
 
 sw.bb13:                                          ; preds = %while.cond2
-  %10 = load %struct._MUSIC_OP_API_*, %struct._MUSIC_OP_API_** %mapi, align 8, !tbaa !1
-  %dop_api14 = getelementptr inbounds %struct._MUSIC_OP_API_, %struct._MUSIC_OP_API_* %10, i64 0, i32 1
-  %11 = load %struct.__MUSIC_API*, %struct.__MUSIC_API** %dop_api14, align 8, !tbaa !5
-  %file_num15 = getelementptr inbounds %struct.__MUSIC_API, %struct.__MUSIC_API* %11, i64 0, i32 2
-  store i32 1, i32* %file_num15, align 1, !tbaa !7
-  %12 = bitcast i32* %file_num15 to i8*
-  %call18 = call i32 @music_play_api(%struct._MUSIC_OP_API_* %10, i32 35, i32 0, i32 26, i8* %12)
+  %7 = load ptr, ptr %mapi, align 8, !tbaa !1
+  %dop_api14 = getelementptr inbounds %struct._MUSIC_OP_API_, ptr %7, i64 0, i32 1
+  %8 = load ptr, ptr %dop_api14, align 8, !tbaa !5
+  %file_num15 = getelementptr inbounds %struct.__MUSIC_API, ptr %8, i64 0, i32 2
+  store i32 1, ptr %file_num15, align 1, !tbaa !7
+  %call18 = call i32 @music_play_api(ptr %7, i32 35, i32 0, i32 26, ptr %file_num15)
   br label %while.cond2.backedge
 
 sw.default:                                       ; preds = %while.cond2
-  %13 = load %struct._MUSIC_OP_API_*, %struct._MUSIC_OP_API_** %mapi, align 8, !tbaa !1
-  %call19 = call i32 @music_play_api(%struct._MUSIC_OP_API_* %13, i32 33, i32 0, i32 22, i8* null)
+  %9 = load ptr, ptr %mapi, align 8, !tbaa !1
+  %call19 = call i32 @music_play_api(ptr %9, i32 33, i32 0, i32 22, ptr null)
   br label %while.cond2.backedge
 
 while.cond2.backedge:                             ; preds = %sw.default, %sw.bb13, %sw.bb7, %sw.bb
@@ -103,10 +99,10 @@ while.cond2.backedge:                             ; preds = %sw.default, %sw.bb1
   br label %while.cond2
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare i32 @music_decoder_init(%struct._MUSIC_OP_API_**)
-declare i32 @music_play_api(%struct._MUSIC_OP_API_*, i32, i32, i32, i8*)
-declare i32 @printf(i8* nocapture readonly, ...)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare i32 @music_decoder_init(ptr)
+declare i32 @music_play_api(ptr, i32, i32, i32, ptr)
+declare i32 @printf(ptr nocapture readonly, ...)
 
 !0 = !{!"clang version 4.0.0 "}
 !1 = !{!2, !2, i64 0}

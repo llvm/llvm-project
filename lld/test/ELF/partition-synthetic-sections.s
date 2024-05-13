@@ -3,7 +3,7 @@
 // REQUIRES: x86
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/verneed1.s -o %t1.o
-// RUN: echo "v1 {}; v2 {}; v3 { local: *; };" > %t1.script
+// RUN: echo "v1 {}; v2 {}; v3 { global: f1; local: *; };" > %t1.script
 // RUN: ld.lld -shared %t1.o --version-script %t1.script -o %t1.so -soname verneed1.so.0 -z separate-code
 
 // RUN: llvm-mc %s -o %t.o -filetype=obj --triple=x86_64-unknown-linux
@@ -41,6 +41,7 @@
 // PART0-NEXT: .plt              PROGBITS
 // PART0-NEXT: .init_array       INIT_ARRAY      {{0*}}[[INIT_ARRAY_ADDR:[^ ]*]]
 // CHECK-NEXT: .dynamic          DYNAMIC         {{0*}}[[DYNAMIC_ADDR:[^ ]*]]
+// PART0-NEXT: .relro_padding    NOBITS
 // PART0-NEXT: .data             PROGBITS        000000000000[[DATA_SEGMENT:.]]178
 // PART1-NEXT: .data             PROGBITS        000000000000[[DATA_SEGMENT:.]]130
 // PART0-NEXT: .got.plt          PROGBITS        {{0*}}[[GOT_PLT_ADDR:[^ ]*]]
@@ -123,7 +124,7 @@
 // CHECK: .eh_frame section
 // CHECK: 0x[[EH_FRAME_ADDR]]] CIE length=20
 // CHECK-NOT: FDE
-// CHECK: 0x[[FDE_ADDR]]] FDE length=20 cie={{.}}0x[[EH_FRAME_ADDR]]
+// CHECK: 0x[[FDE_ADDR]]] FDE length=16 cie={{.}}0x[[EH_FRAME_ADDR]]
 // CHECK-NEXT: initial_location: 0x[[TEXT_ADDR]]
 // CHECK-NOT: FDE
 // CHECK: CIE length=0
@@ -139,15 +140,15 @@
 // CHECK-EMPTY:
 
 // PART0: Symbol table '.symtab'
-// PART0: 000000000000048c     0 NOTYPE  LOCAL  HIDDEN    {{.*}} __part_index_begin
-// PART0: 0000000000000498     0 NOTYPE  LOCAL  HIDDEN    {{.*}} __part_index_end
+// PART0: 0000000000000488     0 NOTYPE  LOCAL  HIDDEN    {{.*}} __part_index_begin
+// PART0: 0000000000000494     0 NOTYPE  LOCAL  HIDDEN    {{.*}} __part_index_end
 
 // PART-INDEX: Contents of section .dynstr:
 // PART-INDEX-NEXT: 03a8 00703000 66310066 32007061 72743100 .p0.f1.f2.part1.
 // PART-INDEX: Contents of section .rodata:
 //                       0x48c + 0xffffff26 = 0x3b2
 //                                0x490 + 0x3b70 = 0x4000
-// PART-INDEX-NEXT: 048c 26ffffff 703b0000 50410000
+// PART-INDEX-NEXT: 0488 2affffff 743b0000 50410000
 
 // CHECK: Version symbols section '.gnu.version'
 // CHECK-NEXT: Addr:

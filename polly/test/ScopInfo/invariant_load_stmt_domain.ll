@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 
 ; This test case verifies that the statement domain of the invariant access
 ; is the universe. In earlier versions of Polly, we accidentally computed an
@@ -36,7 +36,7 @@
 ; CHECK-NEXT:              { Stmt_loop_next[i0] -> MemRef_val__phi[] };
 ; CHECK-NEXT:  }
 
-define void @foo(float* %a, float* noalias %B) {
+define void @foo(ptr %a, ptr noalias %B) {
 entry:
   br label %loop
 
@@ -44,14 +44,14 @@ loop:
   %indvar = phi i64 [0, %entry], [%indvar.next, %loop.next]
   %val = phi float [1.0, %entry], [%a.val, %loop.next]
   %indvar.next = add nuw nsw i64 %indvar, 1
-  %ptr = getelementptr float, float* %B, i64 %indvar
-  store float %val, float* %ptr
+  %ptr = getelementptr float, ptr %B, i64 %indvar
+  store float %val, ptr %ptr
   %icmp = icmp eq i64 %indvar.next, 2
   br i1 %icmp, label %ret, label %loop.next
 
 loop.next:
-  %Aptr = getelementptr float, float* %a, i64 %indvar.next
-  %a.val = load float, float* %Aptr
+  %Aptr = getelementptr float, ptr %a, i64 %indvar.next
+  %a.val = load float, ptr %Aptr
   br label %loop
 
 ret:

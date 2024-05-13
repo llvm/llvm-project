@@ -3,7 +3,7 @@
 
 #include "Inputs/system-header-simulator.h"
 
-void foo();
+void foo(void);
 
 // Ensure that child process is properly checked.
 int f1(int x, int y) {
@@ -15,7 +15,7 @@ int f1(int x, int y) {
   case 0:
     // Ensure that modifying pid is ok.
     pid = 1; // no-warning
-    // Ensure that calling whitelisted routines is ok.
+    // Ensure that calling allowlisted routines is ok.
     switch (y) {
     case 0:
       execl("", "", 0); // no-warning
@@ -65,7 +65,7 @@ int f2(int x) {
   case 0:
     // Ensure that writing pid is ok.
     pid = 1; // no-warning
-    // Ensure that calling whitelisted routines is ok.
+    // Ensure that calling allowlisted routines is ok.
     execl("", "", 0); // no-warning
     _exit(1); // no-warning
     break;
@@ -125,7 +125,7 @@ void f4(int x) {
 } //no-warning
 
 
-void f5() {
+void f5(void) {
   // See "libxtables: move some code to avoid cautions in vfork man page"
   // (http://lists.netfilter.org/pipermail/netfilter-buglog/2014-October/003280.html).
   if (vfork() == 0) { // expected-warning{{Call to function 'vfork' is insecure}}

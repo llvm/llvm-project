@@ -29,7 +29,6 @@ enum : uint64_t {
 };
 }
 
-class AMDGPUTargetMachine;
 class DFAPacketizer;
 class MachineFunction;
 class MachineInstr;
@@ -175,7 +174,7 @@ public:
                         int *BytesAdded = nullptr) const override;
 
   unsigned removeBranch(MachineBasicBlock &MBB,
-                        int *BytesRemvoed = nullptr) const override;
+                        int *BytesRemoved = nullptr) const override;
 
   bool isPredicated(const MachineInstr &MI) const override;
 
@@ -211,7 +210,7 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  /// Reserve the registers that may be accesed using indirect addressing.
+  /// Reserve the registers that may be accessed using indirect addressing.
   void reserveIndirectRegisters(BitVector &Reserved,
                                 const MachineFunction &MF,
                                 const R600RegisterInfo &TRI) const;
@@ -220,7 +219,7 @@ public:
   /// \p Channel
   ///
   /// We model indirect addressing using a virtual address space that can be
-  /// accesed with loads and stores.  The "Indirect Address" is the memory
+  /// accessed with loads and stores.  The "Indirect Address" is the memory
   /// address in this virtual address space that maps to the given \p RegIndex
   /// and \p Channel.
   unsigned calculateIndirectAddress(unsigned RegIndex, unsigned Channel) const;
@@ -321,9 +320,6 @@ public:
   bool isRegisterLoad(const MachineInstr &MI) const {
     return get(MI.getOpcode()).TSFlags & R600InstrFlags::REGISTER_LOAD;
   }
-
-  unsigned getAddressSpaceForPseudoSourceKind(
-      unsigned Kind) const override;
 };
 
 namespace R600 {

@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s
 
 declare void @bar()
 
-define void @foo(float* %A, i64 %p) {
+define void @foo(ptr %A, i64 %p) {
 start:
    br label %next
 
@@ -19,13 +19,13 @@ ok:
 
 merge:
    %phi = phi i64 [0, %error], [1, %ok]
-   store float 42.0, float* %A
+   store float 42.0, ptr %A
    %cmp = icmp eq i64 %phi, %p
    br i1 %cmp, label %loop, label %exit
 
 loop:
    %indvar = phi i64 [0, %merge], [%indvar.next, %loop]
-   store float 42.0, float* %A
+   store float 42.0, ptr %A
    %indvar.next = add i64 %indvar, 1
    %cmp2 = icmp sle i64 %indvar, 1024
    br i1 %cmp2, label %loop, label %exit

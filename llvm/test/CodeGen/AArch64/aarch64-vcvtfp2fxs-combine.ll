@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-linux-eabi -o - | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -o - | FileCheck %s
 
 %struct.a= type { i64, i64, i64, i64 }
 
@@ -12,9 +12,9 @@ define void @fun1() local_unnamed_addr {
 entry:
   %mul = fmul <4 x double> zeroinitializer, <double 6.553600e+04, double 6.553600e+04, double 6.553600e+04, double 6.553600e+04>
   %toi = fptosi <4 x double> %mul to <4 x i64>
-  %ptr = getelementptr inbounds %struct.a, %struct.a* undef, i64 0, i32 2
+  %ptr = getelementptr inbounds %struct.a, ptr undef, i64 0, i32 2
   %elem = extractelement <4 x i64> %toi, i32 1
-  store i64 %elem, i64* %ptr, align 8
+  store i64 %elem, ptr %ptr, align 8
   call void @llvm.trap()
   unreachable
 }

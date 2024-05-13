@@ -10,7 +10,7 @@ struct S0 {
 void foo1(void (S0::*_Nonnull f)());
 
 // ITANIUM-LABEL: @_ZN10method_ptr5test1Ev(){{.*}} {
-// ITANIUM: br i1 icmp ne (i64 ptrtoint (void (%"struct.method_ptr::S0"*)* @_ZN10method_ptr2S04foo1Ev to i64), i64 0), label %[[CONT:.*]], label %[[FAIL:[^,]*]]
+// ITANIUM: br i1 icmp ne (i64 ptrtoint (ptr @_ZN10method_ptr2S04foo1Ev to i64), i64 0), label %[[CONT:.*]], label %[[FAIL:[^,]*]]
 // ITANIUM-EMPTY:
 // ITANIUM-NEXT: [[FAIL]]:
 // ITANIUM-NEXT:   call void @__ubsan_handle_nullability_arg

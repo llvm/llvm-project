@@ -1,4 +1,4 @@
-; RUN: opt -hotcoldsplit-threshold=0 -hotcoldsplit -S < %s | FileCheck %s
+; RUN: opt -hotcoldsplit-threshold=0 -passes=hotcoldsplit -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -12,10 +12,9 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-NEXT:  ]
 ;
 ; CHECK:  codeRepl:
-; CHECK-NEXT:    bitcast
 ; CHECK-NEXT:    lifetime.start
-; CHECK-NEXT:    call void @pluto.cold.1(i1* %tmp8.ce.loc)
-; CHECK-NEXT:    %tmp8.ce.reload = load i1, i1* %tmp8.ce.loc
+; CHECK-NEXT:    call void @pluto.cold.1(ptr %tmp8.ce.loc)
+; CHECK-NEXT:    %tmp8.ce.reload = load i1, ptr %tmp8.ce.loc
 ; CHECK-NEXT:    lifetime.end
 ; CHECK-NEXT:    br label %bb7
 ;

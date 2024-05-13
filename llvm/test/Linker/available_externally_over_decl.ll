@@ -6,9 +6,9 @@ define available_externally void @g() {
   ret void
 }
 
-define void ()* @main() {
+define ptr @main() {
   call void @g()
-  ret void ()* @f
+  ret ptr @f
 }
 
 ; CHECK-DAG: define available_externally void @g() {

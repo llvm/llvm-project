@@ -1,5 +1,7 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
+; RUN: llc -force-instr-ref-livedebugvalues=1 < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN: llc -force-instr-ref-livedebugvalues=1 < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 ; Values in registers should be clobbered by calls, which use a regmask instead
 ; of individual register def operands.
@@ -34,24 +36,24 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 @x = common global i32 0, align 4, !dbg !0
 
 ; Function Attrs: nounwind uwtable
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) #0 !dbg !12 {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) #0 !dbg !12 {
 entry:
-  tail call void @llvm.dbg.value(metadata i8** %argv, metadata !19, metadata !21), !dbg !22
+  tail call void @llvm.dbg.value(metadata ptr %argv, metadata !19, metadata !21), !dbg !22
   tail call void @llvm.dbg.value(metadata i32 %argc, metadata !20, metadata !21), !dbg !23
-  store volatile i32 1, i32* @x, align 4, !dbg !24, !tbaa !25
+  store volatile i32 1, ptr @x, align 4, !dbg !24, !tbaa !25
   tail call void @clobber() #2, !dbg !29
-  store volatile i32 2, i32* @x, align 4, !dbg !30, !tbaa !25
-  %0 = load volatile i32, i32* @x, align 4, !dbg !31, !tbaa !25
+  store volatile i32 2, ptr @x, align 4, !dbg !30, !tbaa !25
+  %0 = load volatile i32, ptr @x, align 4, !dbg !31, !tbaa !25
   %tobool = icmp eq i32 %0, 0, !dbg !31
   br i1 %tobool, label %if.else, label %if.then, !dbg !33
 
 if.then:                                          ; preds = %entry
-  store volatile i32 3, i32* @x, align 4, !dbg !34, !tbaa !25
+  store volatile i32 3, ptr @x, align 4, !dbg !34, !tbaa !25
   br label %if.end, !dbg !36
 
 if.else:                                          ; preds = %entry
 
-  store volatile i32 4, i32* @x, align 4, !dbg !37, !tbaa !25
+  store volatile i32 4, ptr @x, align 4, !dbg !37, !tbaa !25
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

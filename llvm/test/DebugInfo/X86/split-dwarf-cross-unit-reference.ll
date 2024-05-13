@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=x86_64-linux -split-dwarf-cross-cu-references -split-dwarf-file=foo.dwo -filetype=obj -o %t < %s
-; RUN: llvm-objdump -r %t | FileCheck %s
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO --check-prefix=DWO --check-prefix=CROSS %s
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
+; RUN: llvm-objdump -r %t | FileCheck --check-prefix=CHECK --check-prefix=RELO_CROSS %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=DWO --check-prefix=CROSS %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL %s
 
 ; RUN: llc -mtriple=x86_64-linux -split-dwarf-file=foo.dwo -filetype=obj -o %t < %s
-; RUN: llvm-objdump -r %t | FileCheck %s
+; RUN: llvm-objdump -r %t | FileCheck --check-prefix=CHECK %s
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=DWO --check-prefix=NOCROSS %s
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL %s
 
 ; Testing cross-CU references for types, subprograms, and variables
 ; Built from code something like this:
@@ -48,8 +48,8 @@
 ; CHECK-NOT: RELOCATION RECORDS
 ; Expect one relocation in debug_info, from the inlined f1 in foo to its
 ; abstract origin in bar
-; CHECK: R_X86_64_32 .debug_info
-; CHECK-NOT: RELOCATION RECORDS
+; RELO_CROSS: R_X86_64_32 .debug_info
+; Expect no relocations in debug_info when disabling multiple CUs in Split DWARF
 ; CHECK-NOT: .debug_info
 ; CHECK: RELOCATION RECORDS
 ; CHECK-NOT: .rel{{a?}}.debug_info.dwo
@@ -75,29 +75,22 @@
 ; DWO:       DW_TAG_formal_parameter
 ; DWO:         DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[F1T]]}
 
-; ALL: Compile Unit
-; ALL: DW_TAG_compile_unit
-; DWO:   DW_AT_name {{.*}} "bar.cpp"
-; NOCROSS: 0x[[BAR_F1:.*]]: DW_TAG_subprogram
-; NOCROSS: DW_AT_name {{.*}} "f1"
-; NOCROSS: 0x[[BAR_F1T:.*]]: DW_TAG_formal_parameter
-; NOCROSS:   DW_AT_name {{.*}} "t"
-; NOCROSS:   DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[BAR_T1:.*]]}
-; NOCROSS: NULL
-; NOCROSS: 0x[[BAR_T1]]: DW_TAG_structure_type
-; NOCROSS: DW_AT_name {{.*}} "t1"
+; NOCROSS-NOT: DW_TAG_compile_unit
+; CROSS: Compile Unit
+; CROSS: DW_TAG_compile_unit
+; CROSS:   DW_AT_name {{.*}} "bar.cpp"
 ; ALL:   DW_TAG_subprogram
 ; ALL:     DW_AT_name {{.*}} "bar"
 ; DWO:     DW_TAG_formal_parameter
 ; DWO:       DW_AT_name {{.*}} "t"
 ; CROSS:     DW_AT_type [DW_FORM_ref_addr] (0x00000000[[T1]]
-; NOCROSS:   DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[BAR_T1]]}
+; NOCROSS:   DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[T1]]}
 ; ALL:     DW_TAG_inlined_subroutine
-; INFO:     DW_AT_abstract_origin [DW_FORM_ref_addr] (0x00000000[[F1]]
-; NOCROSS:   DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[BAR_F1]]}
+; CROSS:     DW_AT_abstract_origin [DW_FORM_ref_addr] (0x00000000[[F1]]
+; NOCROSS:   DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[F1]]}
 ; DWO:       DW_TAG_formal_parameter
 ; CROSS:       DW_AT_abstract_origin [DW_FORM_ref_addr] (0x00000000[[F1T]]
-; NOCROSS:     DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[BAR_F1T]]
+; NOCROSS:     DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[F1T]]
 
 %struct.t1 = type { i32 }
 
@@ -110,43 +103,33 @@ declare void @_Z1fv() #2
 define void @_Z3foo2t1(i32 %t.coerce) #3 !dbg !20 {
 entry:
   %t.i = alloca %struct.t1, align 4
-  call void @llvm.dbg.declare(metadata %struct.t1* %t.i, metadata !15, metadata !16), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %t.i, metadata !15, metadata !16), !dbg !21
   %t = alloca %struct.t1, align 4
   %agg.tmp = alloca %struct.t1, align 4
-  %coerce.dive = getelementptr inbounds %struct.t1, %struct.t1* %t, i32 0, i32 0
-  store i32 %t.coerce, i32* %coerce.dive, align 4
-  call void @llvm.dbg.declare(metadata %struct.t1* %t, metadata !23, metadata !16), !dbg !24
-  %0 = bitcast %struct.t1* %agg.tmp to i8*, !dbg !25
-  %1 = bitcast %struct.t1* %t to i8*, !dbg !25
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 4, i1 false), !dbg !25
-  %coerce.dive1 = getelementptr inbounds %struct.t1, %struct.t1* %agg.tmp, i32 0, i32 0, !dbg !26
-  %2 = load i32, i32* %coerce.dive1, align 4, !dbg !26
-  %coerce.dive.i = getelementptr inbounds %struct.t1, %struct.t1* %t.i, i32 0, i32 0
-  store i32 %2, i32* %coerce.dive.i, align 4
+  store i32 %t.coerce, ptr %t, align 4
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !23, metadata !16), !dbg !24
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %t, i64 4, i1 false), !dbg !25
+  %0 = load i32, ptr %agg.tmp, align 4, !dbg !26
+  store i32 %0, ptr %t.i, align 4
   call void @_Z1fv(), !dbg !27
   ret void, !dbg !28
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #4
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #4
 
 ; Function Attrs: noinline uwtable
 define void @_Z3bar2t1(i32 %t.coerce) #3 !dbg !29 {
 entry:
   %t.i = alloca %struct.t1, align 4
-  call void @llvm.dbg.declare(metadata %struct.t1* %t.i, metadata !15, metadata !16), !dbg !30
+  call void @llvm.dbg.declare(metadata ptr %t.i, metadata !15, metadata !16), !dbg !30
   %t = alloca %struct.t1, align 4
   %agg.tmp = alloca %struct.t1, align 4
-  %coerce.dive = getelementptr inbounds %struct.t1, %struct.t1* %t, i32 0, i32 0
-  store i32 %t.coerce, i32* %coerce.dive, align 4
-  call void @llvm.dbg.declare(metadata %struct.t1* %t, metadata !32, metadata !16), !dbg !33
-  %0 = bitcast %struct.t1* %agg.tmp to i8*, !dbg !34
-  %1 = bitcast %struct.t1* %t to i8*, !dbg !34
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 4, i1 false), !dbg !34
-  %coerce.dive1 = getelementptr inbounds %struct.t1, %struct.t1* %agg.tmp, i32 0, i32 0, !dbg !35
-  %2 = load i32, i32* %coerce.dive1, align 4, !dbg !35
-  %coerce.dive.i = getelementptr inbounds %struct.t1, %struct.t1* %t.i, i32 0, i32 0
-  store i32 %2, i32* %coerce.dive.i, align 4
+  store i32 %t.coerce, ptr %t, align 4
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !32, metadata !16), !dbg !33
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %t, i64 4, i1 false), !dbg !34
+  %0 = load i32, ptr %agg.tmp, align 4, !dbg !35
+  store i32 %0, ptr %t.i, align 4
   call void @_Z1fv(), !dbg !36
   ret void, !dbg !37
 }

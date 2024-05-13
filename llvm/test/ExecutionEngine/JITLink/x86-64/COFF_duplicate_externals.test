@@ -1,0 +1,52 @@
+# REQUIRES: asserts
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-jitlink -noexec -abs __ImageBase=0xfff00000 \
+# RUN: --debug-only=jitlink \
+# RUN: -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN: %t 2>&1 | FileCheck %s
+# 
+# Check duplicate undefined external symbols are handled correctly.
+#
+# CHECK: Creating graph symbols...
+# CHECK: 3: Creating external graph symbol for COFF symbol "func" in (external) (index: 0)
+# CHECK-NEXT: 4: Creating external graph symbol for COFF symbol "func" in (external) (index: 0)
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     '0000000000000000'
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      CheckSum:            0
+      NumberOfLinenumbers: 0
+      Number:          1
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            func
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            func
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL

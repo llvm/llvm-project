@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple i386-pc-linux-gnu -ffreestanding -Wno-pointer-to-int-cast -verify -emit-llvm -o - %s | FileCheck %s
+// setting strict FP behaviour in the run line below tests that the compiler
+// does the right thing for global compound literals (compoundliteral test)
+// RUN: %clang_cc1 -triple i386-pc-linux-gnu -ffreestanding -Wno-pointer-to-int-cast -Wno-int-conversion -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck %s
 
 #include <stdint.h>
 
@@ -11,10 +13,10 @@ char a2[2][5] = { "asdf" };
 
 // Double-implicit-conversions of array/functions (not legal C, but
 // clang accepts it for gcc compat).
-intptr_t b = a; // expected-warning {{incompatible pointer to integer conversion}}
-int c();
+intptr_t b = a;
+int c(void);
 void *d = c;
-intptr_t e = c; // expected-warning {{incompatible pointer to integer conversion}}
+intptr_t e = c;
 
 int f, *g = __extension__ &f, *h = (1 != 1) ? &f : &f;
 
@@ -59,24 +61,24 @@ struct {
 } __attribute__((__packed__)) gv1  = { .a = 0x0, .b = 7,  };
 
 // PR5118
-// CHECK: @gv2 ={{.*}} global %struct.anon.0 <{ i8 1, i8* null }>, align 1 
+// CHECK: @gv2 ={{.*}} global %struct.anon.0 <{ i8 1, ptr null }>, align 1
 struct {
   unsigned char a;
   char *b;
 } __attribute__((__packed__)) gv2 = { 1, (void*)0 };
 
 // Global references
-// CHECK: @g11.l0 = internal global i32 ptrtoint (i32 ()* @g11 to i32)
-long g11() { 
+// CHECK: @g11.l0 = internal global i32 ptrtoint (ptr @g11 to i32)
+long g11(void) {
   static long l0 = (long) g11;
-  return l0; 
+  return l0;
 }
 
-// CHECK: @g12 ={{.*}} global i32 ptrtoint (i8* @g12_tmp to i32)
+// CHECK: @g12 ={{.*}} global i32 ptrtoint (ptr @g12_tmp to i32)
 static char g12_tmp;
 long g12 = (long) &g12_tmp;
 
-// CHECK: @g13 ={{.*}} global [1 x %struct.g13_s0] [%struct.g13_s0 { i32 ptrtoint (i8* @g12_tmp to i32) }]
+// CHECK: @g13 ={{.*}} global [1 x %struct.g13_s0] [%struct.g13_s0 { i32 ptrtoint (ptr @g12_tmp to i32) }]
 struct g13_s0 {
    long a;
 };
@@ -84,7 +86,7 @@ struct g13_s0 g13[] = {
    { (long) &g12_tmp }
 };
 
-// CHECK: @g14 ={{.*}} global i8* inttoptr (i32 100 to i8*)
+// CHECK: @g14 ={{.*}} global ptr inttoptr (i32 100 to ptr)
 void *g14 = (void*) 100;
 
 // CHECK: @g15 ={{.*}} global i32 -1
@@ -93,16 +95,16 @@ int g15 = (int) (char) ((void*) 0 + 255);
 // CHECK: @g16 ={{.*}} global i64 4294967295
 long long g16 = (long long) ((void*) 0xFFFFFFFF);
 
-// CHECK: @g17 ={{.*}} global i32* @g15
+// CHECK: @g17 ={{.*}} global ptr @g15
 int *g17 = (int *) ((long) &g15);
 
-// CHECK: @g18.p = internal global [1 x i32*] [i32* @g19]
+// CHECK: @g18.p = internal global [1 x ptr] [ptr @g19]
 void g18(void) {
   extern int g19;
   static int *p[] = { &g19 };
 }
 
-// CHECK: @g20.l0 = internal global %struct.g20_s1 { %struct.g20_s0* null, %struct.g20_s0** getelementptr inbounds (%struct.g20_s1, %struct.g20_s1* @g20.l0, i32 0, i32 0) }
+// CHECK: @g20.l0 = internal global %struct.g20_s1 { ptr null, ptr @g20.l0 }
 struct g20_s0;
 struct g20_s1 {
   struct g20_s0 *f0, **f1;
@@ -121,47 +123,48 @@ struct g22 {int x;} __attribute((packed));
 struct g23 {char a; short b; char c; struct g22 d;};
 struct g23 g24 = {1,2,3,4};
 
-// CHECK: @g25.g26 = internal global i8* getelementptr inbounds ([4 x i8], [4 x i8]* @[[FUNC:.*]], i32 0, i32 0)
+// CHECK: @g25.g26 = internal global ptr @[[FUNC:.*]], align 4
 // CHECK: @[[FUNC]] = private unnamed_addr constant [4 x i8] c"g25\00"
-int g25() {
+int g25(void) {
   static const char *g26 = __func__;
   return *g26;
 }
 
-// CHECK: @g27.x = internal global i8* bitcast (i8** @g27.x to i8*), align 4
-void g27() { // PR8073
+// CHECK: @g27.x = internal global ptr @g27.x, align 4
+void g27(void) { // PR8073
   static void *x = &x;
 }
 
-void g28() {
+void g28(void) {
   typedef long long v1i64 __attribute((vector_size(8)));
   typedef short v12i16 __attribute((vector_size(24)));
   typedef long double v2f80 __attribute((vector_size(24)));
   // CHECK: @g28.a = internal global <1 x i64> <i64 10>
-  // CHECK: @g28.b = internal global <12 x i16> <i16 0, i16 0, i16 0, i16 -32768, i16 16383, i16 0, i16 0, i16 0, i16 0, i16 -32768, i16 16384, i16 0>
-  // CHECK: @g28.c = internal global <2 x x86_fp80> <x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000>, align 32
+  // @g28.b = internal global <12 x i16> <i16 0, i16 0, i16 0, i16 -32768, i16 16383, i16 0, i16 0, i16 0, i16 0, i16 -32768, i16 16384, i16 0>
+  // @g28.c = internal global <2 x x86_fp80> <x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000>, align 32
   static v1i64 a = (v1i64)10LL;
-  static v12i16 b = (v12i16)(v2f80){1,2};
-  static v2f80 c = (v2f80)(v12i16){0,0,0,-32768,16383,0,0,0,0,-32768,16384,0};
+  //FIXME: support constant bitcast between vectors of x86_fp80
+  //static v12i16 b = (v12i16)(v2f80){1,2};
+  //static v2f80 c = (v2f80)(v12i16){0,0,0,-32768,16383,0,0,0,0,-32768,16384,0};
 }
 
 // PR13643
-void g29() {
+void g29(void) {
   typedef char DCC_PASSWD[2];
   typedef struct
   {
       DCC_PASSWD passwd;
   } DCC_SRVR_NM;
   // CHECK: @g29.a = internal global %struct.DCC_SRVR_NM { [2 x i8] c"@\00" }, align 1
-  // CHECK: @g29.b = internal global [1 x i32] [i32 ptrtoint ([5 x i8]* @.str.1 to i32)], align 4
+  // CHECK: @g29.b = internal global [1 x i32] [i32 ptrtoint (ptr @.str.1 to i32)], align 4
   // CHECK: @g29.c = internal global [1 x i32] [i32 97], align 4
   static DCC_SRVR_NM a = { {"@"} };
-  static int b[1] = { "asdf" }; // expected-warning {{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char [5]'}}
+  static int b[1] = { "asdf" };
   static int c[1] = { L"a" };
 }
 
 // PR21300
-void g30() {
+void g30(void) {
 #pragma pack(1)
   static struct {
     int : 1;
@@ -171,7 +174,7 @@ void g30() {
 #pragma pack()
 }
 
-void g31() {
+void g31(void) {
 #pragma pack(4)
   static struct {
     short a;
@@ -181,3 +184,38 @@ void g31() {
 #pragma pack()
   // CHECK: @g31.a = internal global %struct.anon.2 { i16 23122, i32 -12312731, i16 -312 }, align 4
 }
+
+// Clang should evaluate this in constant context, so floating point mode should
+// have no effect.
+// CHECK: @.compoundliteral = internal global [1 x float] [float 0x3FB99999A0000000], align 4
+struct { const float *floats; } compoundliteral = {
+  (float[1]) { 0.1, },
+};
+
+struct PR4517_foo {
+  int x;
+};
+struct PR4517_bar {
+  struct PR4517_foo foo;
+};
+const struct PR4517_foo my_foo = {.x = 42};
+struct PR4517_bar my_bar = {.foo = my_foo};
+struct PR4517_bar my_bar2 = (struct PR4517_bar){.foo = my_foo};
+struct PR4517_bar my_bar3 = {my_foo};
+struct PR4517_bar my_bar4 = (struct PR4517_bar){my_foo};
+// CHECK: @my_foo = constant %struct.PR4517_foo { i32 42 }, align 4
+// CHECK: @my_bar = global %struct.PR4517_bar { %struct.PR4517_foo { i32 42 } }, align 4
+// CHECK: @my_bar2 = global %struct.PR4517_bar { %struct.PR4517_foo { i32 42 } }, align 4
+// CHECK: @my_bar3 = global %struct.PR4517_bar { %struct.PR4517_foo { i32 42 } }, align 4
+// CHECK: @my_bar4 = global %struct.PR4517_bar { %struct.PR4517_foo { i32 42 } }, align 4
+const int PR4517_arrc[2] = {41, 42};
+int PR4517_x = PR4517_arrc[1];
+const int PR4517_idx = 1;
+int PR4517_x2 = PR4517_arrc[PR4517_idx];
+// CHECK: @PR4517_arrc = constant [2 x i32] [i32 41, i32 42], align 4
+// CHECK: @PR4517_x = global i32 42, align 4
+// CHECK: @PR4517_idx = constant i32 1, align 4
+// CHECK: @PR4517_x2 = global i32 42, align 4
+
+// CHECK: @GH84784_inf = constant i8 1
+_Bool const GH84784_inf = (1.0/0.0);

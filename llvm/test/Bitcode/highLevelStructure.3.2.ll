@@ -13,39 +13,39 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 module asm "some assembly"
 
 ; Named Types Test
-; CHECK: %mytype = type { %mytype*, i32 }
+; CHECK: %mytype = type { ptr, i32 }
 %mytype = type { %mytype*, i32 }
 
 ; Aliases Test
 ; CHECK: @glob1 = global i32 1
 @glob1 = global i32 1
-; CHECK: @aliased1 = alias i32, i32* @glob1
+; CHECK: @aliased1 = alias i32, ptr @glob1
 @aliased1 = alias i32, i32* @glob1
-; CHECK-NEXT: @aliased2 = internal alias i32, i32* @glob1
+; CHECK-NEXT: @aliased2 = internal alias i32, ptr @glob1
 @aliased2 = internal alias i32, i32* @glob1
-; CHECK-NEXT: @aliased3 = alias i32, i32* @glob1
+; CHECK-NEXT: @aliased3 = alias i32, ptr @glob1
 @aliased3 = external alias i32, i32* @glob1
-; CHECK-NEXT: @aliased4 = weak alias i32, i32* @glob1
+; CHECK-NEXT: @aliased4 = weak alias i32, ptr @glob1
 @aliased4 = weak alias i32, i32* @glob1
-; CHECK-NEXT: @aliased5 = weak_odr alias i32, i32* @glob1
+; CHECK-NEXT: @aliased5 = weak_odr alias i32, ptr @glob1
 @aliased5 = weak_odr alias i32, i32* @glob1
 
 ;Parameter Attribute Test
 ; CHECK: declare void @ParamAttr1(i8 zeroext)
 declare void @ParamAttr1(i8 zeroext)
-; CHECK: declare void @ParamAttr2(i8* nest)
+; CHECK: declare void @ParamAttr2(ptr nest)
 declare void @ParamAttr2(i8* nest)
-; CHECK: declare void @ParamAttr3(i8* sret(i8))
+; CHECK: declare void @ParamAttr3(ptr sret(i8))
 declare void @ParamAttr3(i8* sret(i8))
 ; CHECK: declare void @ParamAttr4(i8 signext)
 declare void @ParamAttr4(i8 signext)
-; CHECK: declare void @ParamAttr5(i8* inreg)
+; CHECK: declare void @ParamAttr5(ptr inreg)
 declare void @ParamAttr5(i8* inreg)
-; CHECK: declare void @ParamAttr6(i8* byval(i8))
+; CHECK: declare void @ParamAttr6(ptr byval(i8))
 declare void @ParamAttr6(i8* byval(i8))
-; CHECK: declare void @ParamAttr7(i8* noalias)
+; CHECK: declare void @ParamAttr7(ptr noalias)
 declare void @ParamAttr7(i8* noalias)
-; CHECK: declare void @ParamAttr8(i8* nocapture)
+; CHECK: declare void @ParamAttr8(ptr nocapture)
 declare void @ParamAttr8(i8* nocapture)
 ; CHECK: declare void @ParamAttr9{{[(i8* nest noalias nocapture) | (i8* noalias nocapture nest)]}}
 declare void @ParamAttr9(i8* nest noalias nocapture)

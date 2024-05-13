@@ -12,6 +12,8 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandCompletions.h"
+#include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
@@ -32,11 +34,15 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
   Status error;
   const int short_option = g_process_launch_options[option_idx].short_option;
 
+  TargetSP target_sp =
+      execution_context ? execution_context->GetTargetSP() : TargetSP();
   switch (short_option) {
   case 's': // Stop at program entry point
     launch_info.GetFlags().Set(eLaunchFlagStopAtEntry);
     break;
-
+  case 'm': // Stop at user entry point
+    target_sp->CreateBreakpointAtUserEntry(error);
+    break;
   case 'i': // STDIN for read only
   {
     FileAction action;
@@ -87,8 +93,6 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     break;
 
   case 'a': {
-    TargetSP target_sp =
-        execution_context ? execution_context->GetTargetSP() : TargetSP();
     PlatformSP platform_sp =
         target_sp ? target_sp->GetPlatform() : PlatformSP();
     launch_info.GetArchitecture() =
@@ -143,5 +147,5 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
 }
 
 llvm::ArrayRef<OptionDefinition> CommandOptionsProcessLaunch::GetDefinitions() {
-  return llvm::makeArrayRef(g_process_launch_options);
+  return llvm::ArrayRef(g_process_launch_options);
 }

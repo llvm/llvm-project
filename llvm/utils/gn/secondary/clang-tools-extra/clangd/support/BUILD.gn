@@ -17,6 +17,7 @@ static_library("support") {
     "MemoryTree.cpp",
     "Path.cpp",
     "Shutdown.cpp",
+    "ThreadCrashReporter.cpp",
     "Threading.cpp",
     "ThreadsafeFS.cpp",
     "Trace.cpp",

@@ -3,8 +3,8 @@
 ; The only way the subtarget knows that the si machine scheduler is being used
 ; is to specify -mattr=si-scheduler.  If we just pass --misched=si, the backend
 ; won't know what scheduler we are using.
-; RUN: llc -march=amdgcn -mcpu=tahiti --misched=si -mattr=si-scheduler < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 --misched=si -mattr=si-scheduler < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti --misched=si -mattr=si-scheduler < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 --misched=si -mattr=si-scheduler < %s | FileCheck %s
 
 ; The test checks the "si" machine scheduler pass works correctly.
 
@@ -17,12 +17,10 @@
 ; CHECK: s_waitcnt vmcnt(0)
 ; CHECK: exp
 ; CHECK: s_endpgm
-define amdgpu_ps void @main([6 x <16 x i8>] addrspace(4)* inreg %arg, [17 x <16 x i8>] addrspace(4)* inreg %arg1, [17 x <4 x i32>] addrspace(4)* inreg %arg2, [34 x <8 x i32>] addrspace(4)* inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
+define amdgpu_ps void @main(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
 main_body:
-  %tmp = bitcast [34 x <8 x i32>] addrspace(4)* %arg3 to <32 x i8> addrspace(4)*
-  %tmp22 = load <32 x i8>, <32 x i8> addrspace(4)* %tmp, align 32, !tbaa !0
-  %tmp23 = bitcast [17 x <4 x i32>] addrspace(4)* %arg2 to <16 x i8> addrspace(4)*
-  %tmp24 = load <16 x i8>, <16 x i8> addrspace(4)* %tmp23, align 16, !tbaa !0
+  %tmp22 = load <32 x i8>, ptr addrspace(4) %arg3, align 32, !tbaa !0
+  %tmp24 = load <16 x i8>, ptr addrspace(4) %arg2, align 16, !tbaa !0
   %i.i = extractelement <2 x i32> %arg11, i32 0
   %j.i = extractelement <2 x i32> %arg11, i32 1
   %i.f.i = bitcast i32 %i.i to float
@@ -70,8 +68,8 @@ define amdgpu_ps void @_amdgpu_ps_main(i32 %arg) local_unnamed_addr {
 .entry:
   %tmp = insertelement <2 x i32> zeroinitializer, i32 %arg, i32 0
   %tmp1 = bitcast <2 x i32> %tmp to i64
-  %tmp2 = inttoptr i64 %tmp1 to <4 x i32> addrspace(4)*
-  %tmp3 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp2, align 16
+  %tmp2 = inttoptr i64 %tmp1 to ptr addrspace(4)
+  %tmp3 = load <4 x i32>, ptr addrspace(4) %tmp2, align 16
   %tmp4 = tail call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %tmp3, i32 0, i32 0) #0
   switch i32 %tmp4, label %bb [
     i32 0, label %bb5

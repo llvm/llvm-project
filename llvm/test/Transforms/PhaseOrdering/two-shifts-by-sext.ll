@@ -31,18 +31,18 @@ define i32 @two_shifts_by_sext(i32 %val, i8 signext %len) {
 ; CHECK-LABEL: @two_shifts_by_sext(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[LEN:%.*]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL:%.*]], [[CONV]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SHL]], [[CONV]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[SHL]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %val.addr = alloca i32, align 4
   %len.addr = alloca i8, align 1
-  store i32 %val, i32* %val.addr, align 4
-  store i8 %len, i8* %len.addr, align 1
-  %val.reloaded = load i32, i32* %val.addr, align 4
-  %len.reloaded.0 = load i8, i8* %len.addr, align 1
+  store i32 %val, ptr %val.addr, align 4
+  store i8 %len, ptr %len.addr, align 1
+  %val.reloaded = load i32, ptr %val.addr, align 4
+  %len.reloaded.0 = load i8, ptr %len.addr, align 1
   %conv = sext i8 %len.reloaded.0 to i32
   %shl = shl i32 %val.reloaded, %conv
-  %len.reloaded.1 = load i8, i8* %len.addr, align 1
+  %len.reloaded.1 = load i8, ptr %len.addr, align 1
   %conv1 = sext i8 %len.reloaded.1 to i32
   %shr = ashr i32 %shl, %conv1
   ret i32 %shr
@@ -52,21 +52,21 @@ define i32 @two_shifts_by_same_sext(i32 %val, i8 signext %len) {
 ; CHECK-LABEL: @two_shifts_by_same_sext(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[LEN:%.*]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL:%.*]], [[CONV]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SHL]], [[CONV]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[SHL]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %val.addr = alloca i32, align 4
   %len.addr = alloca i8, align 1
   %wide_len = alloca i32, align 4
-  store i32 %val, i32* %val.addr, align 4
-  store i8 %len, i8* %len.addr, align 1
-  %len.reloaded.0 = load i8, i8* %len.addr, align 1
+  store i32 %val, ptr %val.addr, align 4
+  store i8 %len, ptr %len.addr, align 1
+  %len.reloaded.0 = load i8, ptr %len.addr, align 1
   %conv = sext i8 %len.reloaded.0 to i32
-  store i32 %conv, i32* %wide_len, align 4
-  %val.reloaded = load i32, i32* %val.addr, align 4
-  %len.reloaded.1 = load i32, i32* %wide_len, align 4
+  store i32 %conv, ptr %wide_len, align 4
+  %val.reloaded = load i32, ptr %val.addr, align 4
+  %len.reloaded.1 = load i32, ptr %wide_len, align 4
   %shl = shl i32 %val.reloaded, %len.reloaded.1
-  %len.reloaded.2 = load i32, i32* %wide_len, align 4
+  %len.reloaded.2 = load i32, ptr %wide_len, align 4
   %shr = ashr i32 %shl, %len.reloaded.2
   ret i32 %shr
 }
@@ -74,23 +74,23 @@ define i32 @two_shifts_by_same_sext(i32 %val, i8 signext %len) {
 define i32 @two_shifts_by_sext_with_extra_use(i32 %val, i8 signext %len) {
 ; CHECK-LABEL: @two_shifts_by_sext_with_extra_use(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[LEN:%.*]] to i32
-; CHECK-NEXT:    call void @use_int32(i32 [[CONV]])
+; CHECK-NEXT:    tail call void @use_int32(i32 [[CONV]])
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL:%.*]], [[CONV]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SHL]], [[CONV]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[SHL]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %val.addr = alloca i32, align 4
   %len.addr = alloca i8, align 1
-  store i32 %val, i32* %val.addr, align 4
-  store i8 %len, i8* %len.addr, align 1
-  %len.reloaded.0 = load i8, i8* %len.addr, align 1
+  store i32 %val, ptr %val.addr, align 4
+  store i8 %len, ptr %len.addr, align 1
+  %len.reloaded.0 = load i8, ptr %len.addr, align 1
   %conv = sext i8 %len.reloaded.0 to i32
   call void @use_int32(i32 %conv)
-  %val.reloaded = load i32, i32* %val.addr, align 4
-  %len.reloaded.1 = load i8, i8* %len.addr, align 1
+  %val.reloaded = load i32, ptr %val.addr, align 4
+  %len.reloaded.1 = load i8, ptr %len.addr, align 1
   %conv1 = sext i8 %len.reloaded.1 to i32
   %shl = shl i32 %val.reloaded, %conv1
-  %len.reloaded.2 = load i8, i8* %len.addr, align 1
+  %len.reloaded.2 = load i8, ptr %len.addr, align 1
   %conv2 = sext i8 %len.reloaded.2 to i32
   %shr = ashr i32 %shl, %conv2
   ret i32 %shr
@@ -101,25 +101,25 @@ declare void @use_int32(i32)
 define i32 @two_shifts_by_same_sext_with_extra_use(i32 %val, i8 signext %len) {
 ; CHECK-LABEL: @two_shifts_by_same_sext_with_extra_use(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[LEN:%.*]] to i32
-; CHECK-NEXT:    call void @use_int32(i32 [[CONV]])
+; CHECK-NEXT:    tail call void @use_int32(i32 [[CONV]])
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL:%.*]], [[CONV]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SHL]], [[CONV]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[SHL]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %val.addr = alloca i32, align 4
   %len.addr = alloca i8, align 1
   %wide_len = alloca i32, align 4
-  store i32 %val, i32* %val.addr, align 4
-  store i8 %len, i8* %len.addr, align 1
-  %len.reloaded.0 = load i8, i8* %len.addr, align 1
+  store i32 %val, ptr %val.addr, align 4
+  store i8 %len, ptr %len.addr, align 1
+  %len.reloaded.0 = load i8, ptr %len.addr, align 1
   %conv = sext i8 %len.reloaded.0 to i32
-  store i32 %conv, i32* %wide_len, align 4
-  %val.reloaded = load i32, i32* %wide_len, align 4
+  store i32 %conv, ptr %wide_len, align 4
+  %val.reloaded = load i32, ptr %wide_len, align 4
   call void @use_int32(i32 %val.reloaded)
-  %len.reloaded.1 = load i32, i32* %val.addr, align 4
-  %len.reloaded.2 = load i32, i32* %wide_len, align 4
+  %len.reloaded.1 = load i32, ptr %val.addr, align 4
+  %len.reloaded.2 = load i32, ptr %wide_len, align 4
   %shl = shl i32 %len.reloaded.1, %len.reloaded.2
-  %wide_len.reloaded = load i32, i32* %wide_len, align 4
+  %wide_len.reloaded = load i32, ptr %wide_len, align 4
   %shr = ashr i32 %shl, %wide_len.reloaded
   ret i32 %shr
 }

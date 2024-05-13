@@ -22,11 +22,11 @@
 # CHECK-NEXT:     stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true,
 # CHECK-NEXT:     debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 
-# CHECK:      early-clobber $sp = frame-setup STPXpre killed $x19, killed $x20, $sp, -6 :: (store 8 into %stack.4), (store 8 into %stack.5)
+# CHECK:      early-clobber $sp = frame-setup STPXpre killed $x19, killed $x20, $sp, -6 :: (store (s64) into %stack.4), (store (s64) into %stack.5)
 # CHECK-NEXT: frame-setup SEH_SaveRegP_X 19, 20, -48
-# CHECK-NEXT: frame-setup STPXi killed $x21, killed $x22, $sp, 2 :: (store 8 into %stack.2), (store 8 into %stack.3)
+# CHECK-NEXT: frame-setup STPXi killed $x21, killed $x22, $sp, 2 :: (store (s64) into %stack.2), (store (s64) into %stack.3)
 # CHECK-NEXT: frame-setup SEH_SaveRegP 21, 22, 16
-# CHECK-NEXT: frame-setup STRXui killed $x23, $sp, 4 :: (store 8 into %stack.1)
+# CHECK-NEXT: frame-setup STRXui killed $x23, $sp, 4 :: (store (s64) into %stack.1)
 # CHECK-NEXT: frame-setup SEH_SaveReg 23, 32
 # CHECK-NEXT: frame-setup SEH_PrologEnd
 

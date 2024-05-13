@@ -22,45 +22,67 @@ def HasAddr32 : Predicate<"!Subtarget->hasAddr64()">;
 
 def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
 
-def HasSIMD128 :
-    Predicate<"Subtarget->hasSIMD128()">,
-    AssemblerPredicate<(all_of FeatureSIMD128), "simd128">;
-
 def HasAtomics :
     Predicate<"Subtarget->hasAtomics()">,
     AssemblerPredicate<(all_of FeatureAtomics), "atomics">;
-
-def HasMultivalue :
-    Predicate<"Subtarget->hasMultivalue()">,
-    AssemblerPredicate<(all_of FeatureMultivalue), "multivalue">;
-
-def HasNontrappingFPToInt :
-    Predicate<"Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<(all_of FeatureNontrappingFPToInt), "nontrapping-fptoint">;
-
-def NotHasNontrappingFPToInt :
-    Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)), "nontrapping-fptoint">;
-
-def HasSignExt :
-    Predicate<"Subtarget->hasSignExt()">,
-    AssemblerPredicate<(all_of FeatureSignExt), "sign-ext">;
-
-def HasTailCall :
-    Predicate<"Subtarget->hasTailCall()">,
-    AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
-
-def HasExceptionHandling :
-    Predicate<"Subtarget->hasExceptionHandling()">,
-    AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
 
 def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,
     AssemblerPredicate<(all_of FeatureBulkMemory), "bulk-memory">;
 
+def HasExceptionHandling :
+    Predicate<"Subtarget->hasExceptionHandling()">,
+    AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
+
+def HasExtendedConst :
+    Predicate<"Subtarget->hasExtendedConst()">,
+    AssemblerPredicate<(all_of FeatureExtendedConst), "extended-const">;
+
+def HasHalfPrecision :
+    Predicate<"Subtarget->hasHalfPrecision()">,
+    AssemblerPredicate<(all_of FeatureHalfPrecision), "half-precision">;
+
+def HasMultiMemory :
+    Predicate<"Subtarget->hasMultiMemory()">,
+    AssemblerPredicate<(all_of FeatureMultiMemory), "multimemory">;
+
+def HasMultivalue :
+    Predicate<"Subtarget->hasMultivalue()">,
+    AssemblerPredicate<(all_of FeatureMultivalue), "multivalue">;
+
+def HasMutableGlobals:
+    Predicate<"Subtarget->hasMutableGlobals()">,
+    AssemblerPredicate<(all_of FeatureMutableGlobals), "mutable-globals">;
+
+def HasNontrappingFPToInt :
+    Predicate<"Subtarget->hasNontrappingFPToInt()">,
+    AssemblerPredicate<(all_of FeatureNontrappingFPToInt),
+                       "nontrapping-fptoint">;
+
+def NotHasNontrappingFPToInt :
+    Predicate<"!Subtarget->hasNontrappingFPToInt()">,
+    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)),
+                       "nontrapping-fptoint">;
+
 def HasReferenceTypes :
     Predicate<"Subtarget->hasReferenceTypes()">,
     AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
+
+def HasRelaxedSIMD :
+    Predicate<"Subtarget->hasRelaxedSIMD()">,
+    AssemblerPredicate<(all_of FeatureRelaxedSIMD), "relaxed-simd">;
+
+def HasSignExt :
+    Predicate<"Subtarget->hasSignExt()">,
+    AssemblerPredicate<(all_of FeatureSignExt), "sign-ext">;
+
+def HasSIMD128 :
+    Predicate<"Subtarget->hasSIMD128()">,
+    AssemblerPredicate<(all_of FeatureSIMD128), "simd128">;
+
+def HasTailCall :
+    Predicate<"Subtarget->hasTailCall()">,
+    AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
@@ -77,10 +99,6 @@ def SDT_WebAssemblyLocalSet   : SDTypeProfile<0, 2, [SDTCisVT<0, i32>]>;
 def SDT_WebAssemblyReturn     : SDTypeProfile<0, -1, []>;
 def SDT_WebAssemblyWrapper    : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                      SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyWrapperPIC : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                     SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyThrow      : SDTypeProfile<0, -1, []>;
-def SDT_WebAssemblyCatch      : SDTypeProfile<1, 1, [SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyGlobalGet  : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
 def SDT_WebAssemblyGlobalSet  : SDTypeProfile<0, 2, [SDTCisPtrTy<1>]>;
 
@@ -102,14 +120,10 @@ def WebAssemblyargument : SDNode<"WebAssemblyISD::ARGUMENT",
 def WebAssemblyreturn   : SDNode<"WebAssemblyISD::RETURN",
                                  SDT_WebAssemblyReturn,
                                  [SDNPHasChain, SDNPVariadic]>;
-def WebAssemblywrapper  : SDNode<"WebAssemblyISD::Wrapper",
+def WebAssemblyWrapper  : SDNode<"WebAssemblyISD::Wrapper",
                                  SDT_WebAssemblyWrapper>;
-def WebAssemblywrapperPIC  : SDNode<"WebAssemblyISD::WrapperPIC",
-                                     SDT_WebAssemblyWrapperPIC>;
-def WebAssemblythrow : SDNode<"WebAssemblyISD::THROW", SDT_WebAssemblyThrow,
-                              [SDNPHasChain, SDNPVariadic]>;
-def WebAssemblycatch : SDNode<"WebAssemblyISD::CATCH", SDT_WebAssemblyCatch,
-                              [SDNPHasChain, SDNPSideEffect]>;
+def WebAssemblyWrapperREL  : SDNode<"WebAssemblyISD::WrapperREL",
+                                     SDT_WebAssemblyWrapper>;
 def WebAssemblyglobal_get :
     SDNode<"WebAssemblyISD::GLOBAL_GET", SDT_WebAssemblyGlobalGet,
            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -196,19 +210,14 @@ def P2Align : Operand<i32> {
   let PrintMethod = "printWebAssemblyP2AlignOperand";
 }
 
-let OperandType = "OPERAND_EVENT" in
-def event_op : Operand<i32>;
+let OperandType = "OPERAND_TAG" in
+def tag_op : Operand<i32>;
 
 } // OperandType = "OPERAND_P2ALIGN"
 
 let OperandType = "OPERAND_SIGNATURE" in
 def Signature : Operand<i32> {
   let PrintMethod = "printWebAssemblySignatureOperand";
-}
-
-let OperandType = "OPERAND_HEAPTYPE" in
-def HeapType : Operand<i32> {
-  let PrintMethod = "printWebAssemblyHeapTypeOperand";
 }
 
 let OperandType = "OPERAND_TYPEINDEX" in
@@ -230,8 +239,21 @@ def getStackOpcode : InstrMapping {
   let FilterClass = "StackRel";
   let RowFields = ["BaseName"];
   let ColFields = ["StackBased"];
-  let KeyCol = ["false"];
-  let ValueCols = [["true"]];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
+}
+
+//===----------------------------------------------------------------------===//
+// WebAssembly Stack to Register instruction mapping
+//===----------------------------------------------------------------------===//
+
+class RegisterRel;
+def getRegisterOpcode : InstrMapping {
+  let FilterClass = "RegisterRel";
+  let RowFields = ["BaseName"];
+  let ColFields = ["StackBased"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
 }
 
 //===----------------------------------------------------------------------===//
@@ -243,8 +265,8 @@ def getWasm64Opcode : InstrMapping {
   let FilterClass = "Wasm64Rel";
   let RowFields = ["Wasm32Name"];
   let ColFields = ["IsWasm64"];
-  let KeyCol = ["false"];
-  let ValueCols = [["true"]];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
 }
 
 //===----------------------------------------------------------------------===//
@@ -335,10 +357,10 @@ multiclass LOCAL<WebAssemblyRegClass rc, Operand global_op> {
   } // hasSideEffects = 0
   foreach vt = rc.RegTypes in {
     def : Pat<(vt (WebAssemblyglobal_get
-                   (WebAssemblywrapper tglobaladdr:$addr))),
+                   (WebAssemblyWrapper tglobaladdr:$addr))),
               (!cast<NI>("GLOBAL_GET_" # rc) tglobaladdr:$addr)>;
     def : Pat<(WebAssemblyglobal_set
-               vt:$src, (WebAssemblywrapper tglobaladdr:$addr)),
+               vt:$src, (WebAssemblyWrapper tglobaladdr:$addr)),
               (!cast<NI>("GLOBAL_SET_" # rc) tglobaladdr:$addr, vt:$src)>;
     def : Pat<(vt (WebAssemblylocal_get (i32 timm:$local))),
               (!cast<NI>("LOCAL_GET_" # rc) timm:$local)>;
@@ -373,38 +395,45 @@ defm CONST_F64 : I<(outs F64:$res), (ins f64imm_op:$imm),
                    "f64.const\t$res, $imm", "f64.const\t$imm", 0x44>;
 } // isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1
 
-def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
+def : Pat<(i32 (WebAssemblyWrapper tglobaladdr:$addr)),
           (CONST_I32 tglobaladdr:$addr)>, Requires<[IsNotPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper tglobaladdr:$addr)),
+def : Pat<(i64 (WebAssemblyWrapper tglobaladdr:$addr)),
           (CONST_I64 tglobaladdr:$addr)>, Requires<[IsNotPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
+def : Pat<(i32 (WebAssemblyWrapper tglobaladdr:$addr)),
           (GLOBAL_GET_I32 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper tglobaladdr:$addr)),
+def : Pat<(i64 (WebAssemblyWrapper tglobaladdr:$addr)),
           (GLOBAL_GET_I64 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapperPIC tglobaladdr:$addr)),
+def : Pat<(i32 (WebAssemblyWrapperREL tglobaladdr:$addr)),
           (CONST_I32 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapperPIC tglobaladdr:$addr)),
+def : Pat<(i64 (WebAssemblyWrapperREL tglobaladdr:$addr)),
           (CONST_I64 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper tglobaltlsaddr:$addr)),
+def : Pat<(i32 (WebAssemblyWrapperREL tglobaltlsaddr:$addr)),
           (CONST_I32 tglobaltlsaddr:$addr)>, Requires<[HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper tglobaltlsaddr:$addr)),
+def : Pat<(i64 (WebAssemblyWrapperREL tglobaltlsaddr:$addr)),
           (CONST_I64 tglobaltlsaddr:$addr)>, Requires<[HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
+def : Pat<(i32 (WebAssemblyWrapper tglobaltlsaddr:$addr)),
+          (GLOBAL_GET_I32 tglobaltlsaddr:$addr)>, Requires<[HasAddr32]>;
+def : Pat<(i64 (WebAssemblyWrapper tglobaltlsaddr:$addr)),
+          (GLOBAL_GET_I64 tglobaltlsaddr:$addr)>, Requires<[HasAddr64]>;
+
+def : Pat<(i32 (WebAssemblyWrapper texternalsym:$addr)),
           (GLOBAL_GET_I32 texternalsym:$addr)>, Requires<[IsPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper texternalsym:$addr)),
+def : Pat<(i64 (WebAssemblyWrapper texternalsym:$addr)),
           (GLOBAL_GET_I64 texternalsym:$addr)>, Requires<[IsPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
+def : Pat<(i32 (WebAssemblyWrapper texternalsym:$addr)),
           (CONST_I32 texternalsym:$addr)>, Requires<[IsNotPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper texternalsym:$addr)),
+def : Pat<(i64 (WebAssemblyWrapper texternalsym:$addr)),
           (CONST_I64 texternalsym:$addr)>, Requires<[IsNotPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper mcsym:$sym)), (CONST_I32 mcsym:$sym)>;
-def : Pat<(i64 (WebAssemblywrapper mcsym:$sym)), (CONST_I64 mcsym:$sym)>;
+def : Pat<(i32 (WebAssemblyWrapperREL texternalsym:$addr)),
+          (CONST_I32 texternalsym:$addr)>, Requires<[IsPIC, HasAddr32]>;
+def : Pat<(i64 (WebAssemblyWrapperREL texternalsym:$addr)),
+          (CONST_I64 texternalsym:$addr)>, Requires<[IsPIC, HasAddr64]>;
 
 //===----------------------------------------------------------------------===//
 // Additional sets of instructions.

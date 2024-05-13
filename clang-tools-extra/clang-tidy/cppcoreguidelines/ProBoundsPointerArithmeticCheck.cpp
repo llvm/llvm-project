@@ -12,17 +12,17 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  const auto AllPointerTypes = anyOf(
-      hasType(pointerType()), hasType(autoType(hasDeducedType(pointerType()))),
-      hasType(decltypeType(hasUnderlyingType(pointerType()))));
+  const auto AllPointerTypes =
+      anyOf(hasType(pointerType()),
+            hasType(autoType(
+                hasDeducedType(hasUnqualifiedDesugaredType(pointerType())))),
+            hasType(decltypeType(hasUnderlyingType(pointerType()))));
 
   // Flag all operators +, -, +=, -=, ++, -- that result in a pointer
   Finder->addMatcher(
@@ -54,6 +54,4 @@ void ProBoundsPointerArithmeticCheck::check(
   diag(MatchedExpr->getExprLoc(), "do not use pointer arithmetic");
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

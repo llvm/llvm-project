@@ -2,6 +2,6 @@
 @interface A
 @end
 
-void f() {
+void f(void) {
   (A){ 0 }; // expected-error{{cannot initialize Objective-C class type 'A'}}
 }

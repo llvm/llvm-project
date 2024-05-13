@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/Support/DataExtractor.h"
+#include <optional>
 
 using namespace llvm;
 using namespace gsym;
@@ -36,12 +37,11 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
 llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
                                                   uint64_t BaseAddr) {
   FunctionInfo FI;
-  FI.Range.Start = BaseAddr;
   uint64_t Offset = 0;
   if (!Data.isValidOffsetForDataOfSize(Offset, 4))
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": missing FunctionInfo Size", Offset);
-  FI.Range.End = FI.Range.Start + Data.getU32(&Offset);
+  FI.Range = {BaseAddr, BaseAddr + Data.getU32(&Offset)};
   if (!Data.isValidOffsetForDataOfSize(Offset, 4))
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": missing FunctionInfo Name", Offset);
@@ -96,57 +96,83 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
   return std::move(FI);
 }
 
-llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
+uint64_t FunctionInfo::cacheEncoding() {
+  EncodingCache.clear();
+  if (!isValid())
+    return 0;
+  raw_svector_ostream OutStrm(EncodingCache);
+  FileWriter FW(OutStrm, llvm::endianness::native);
+  llvm::Expected<uint64_t> Result = encode(FW);
+  if (!Result) {
+    EncodingCache.clear();
+    consumeError(Result.takeError());
+    return 0;
+  }
+  return EncodingCache.size();
+}
+
+llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out) const {
   if (!isValid())
     return createStringError(std::errc::invalid_argument,
         "attempted to encode invalid FunctionInfo object");
   // Align FunctionInfo data to a 4 byte alignment.
-  O.alignTo(4);
-  const uint64_t FuncInfoOffset = O.tell();
+  Out.alignTo(4);
+  const uint64_t FuncInfoOffset = Out.tell();
+  // Check if we have already encoded this function info into EncodingCache.
+  // This will be non empty when creating segmented GSYM files as we need to
+  // precompute exactly how big FunctionInfo objects encode into so we can
+  // accurately make segments of a specific size.
+  if (!EncodingCache.empty() &&
+      llvm::endianness::native == Out.getByteOrder()) {
+    // We already encoded this object, just write out the bytes.
+    Out.writeData(llvm::ArrayRef<uint8_t>((const uint8_t *)EncodingCache.data(),
+                                          EncodingCache.size()));
+    return FuncInfoOffset;
+  }
   // Write the size in bytes of this function as a uint32_t. This can be zero
   // if we just have a symbol from a symbol table and that symbol has no size.
-  O.writeU32(size());
+  Out.writeU32(size());
   // Write the name of this function as a uint32_t string table offset.
-  O.writeU32(Name);
+  Out.writeU32(Name);
 
-  if (OptLineTable.hasValue()) {
-    O.writeU32(InfoType::LineTableInfo);
+  if (OptLineTable) {
+    Out.writeU32(InfoType::LineTableInfo);
     // Write a uint32_t length as zero for now, we will fix this up after
     // writing the LineTable out with the number of bytes that were written.
-    O.writeU32(0);
-    const auto StartOffset = O.tell();
-    llvm::Error err = OptLineTable->encode(O, Range.Start);
+    Out.writeU32(0);
+    const auto StartOffset = Out.tell();
+    llvm::Error err = OptLineTable->encode(Out, Range.start());
     if (err)
       return std::move(err);
-    const auto Length = O.tell() - StartOffset;
+    const auto Length = Out.tell() - StartOffset;
     if (Length > UINT32_MAX)
         return createStringError(std::errc::invalid_argument,
             "LineTable length is greater than UINT32_MAX");
     // Fixup the size of the LineTable data with the correct size.
-    O.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
+    Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
   }
 
   // Write out the inline function info if we have any and if it is valid.
-  if (Inline.hasValue()) {
-    O.writeU32(InfoType::InlineInfo);
+  if (Inline) {
+    Out.writeU32(InfoType::InlineInfo);
     // Write a uint32_t length as zero for now, we will fix this up after
     // writing the LineTable out with the number of bytes that were written.
-    O.writeU32(0);
-    const auto StartOffset = O.tell();
-    llvm::Error err = Inline->encode(O, Range.Start);
+    Out.writeU32(0);
+    const auto StartOffset = Out.tell();
+    llvm::Error err = Inline->encode(Out, Range.start());
     if (err)
       return std::move(err);
-    const auto Length = O.tell() - StartOffset;
+    const auto Length = Out.tell() - StartOffset;
     if (Length > UINT32_MAX)
         return createStringError(std::errc::invalid_argument,
             "InlineInfo length is greater than UINT32_MAX");
     // Fixup the size of the InlineInfo data with the correct size.
-    O.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
+    Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
   }
 
   // Terminate the data chunks with and end of list with zero size
-  O.writeU32(InfoType::EndOfList);
-  O.writeU32(0);
+  Out.writeU32(InfoType::EndOfList);
+  Out.writeU32(0);
   return FuncInfoOffset;
 }
 
@@ -157,9 +183,8 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
                                                   uint64_t Addr) {
   LookupResult LR;
   LR.LookupAddr = Addr;
-  LR.FuncRange.Start = FuncAddr;
   uint64_t Offset = 0;
-  LR.FuncRange.End = FuncAddr + Data.getU32(&Offset);
+  LR.FuncRange = {FuncAddr, FuncAddr + Data.getU32(&Offset)};
   uint32_t NameOffset = Data.getU32(&Offset);
   // The "lookup" functions doesn't report errors as accurately as the "decode"
   // function as it is meant to be fast. For more accurage errors we could call
@@ -180,8 +205,8 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
         Offset - 4);
   LR.FuncName = GR.getString(NameOffset);
   bool Done = false;
-  Optional<LineEntry> LineEntry;
-  Optional<DataExtractor> InlineInfoData;
+  std::optional<LineEntry> LineEntry;
+  std::optional<DataExtractor> InlineInfoData;
   while (!Done) {
     if (!Data.isValidOffsetForDataOfSize(Offset, 8))
       return createStringError(std::errc::io_error,
@@ -228,7 +253,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
     return LR;
   }
 
-  Optional<FileEntry> LineEntryFile = GR.getFile(LineEntry->File);
+  std::optional<FileEntry> LineEntryFile = GR.getFile(LineEntry->File);
   if (!LineEntryFile)
     return createStringError(std::errc::invalid_argument,
                               "failed to extract file[%" PRIu32 "]",

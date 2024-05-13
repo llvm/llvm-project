@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
 
-int bar();
-int test0() {
+int bar(void);
+int test0(void) {
   int i;
   i = 1 + 2;
   do {
@@ -12,7 +12,7 @@ int test0() {
 }
 
 
-int test1() {
+int test1(void) {
   int i;
   i = 1 + 2;
   do {
@@ -25,7 +25,7 @@ int test1() {
 }
 
 
-int test2() {
+int test2(void) {
   int i;
   i = 1 + 2;
   do {
@@ -38,7 +38,7 @@ int test2() {
 }
 
 
-int test3() {
+int test3(void) {
   int i;
   i = 1 + 2;
   do {
@@ -50,7 +50,7 @@ int test3() {
 }
 
 
-int test4() {
+int test4(void) {
   int i;
   i = 1 + 2;
   do {
@@ -61,14 +61,13 @@ int test4() {
   return i;
 }
 
-// rdar://6103124
-void test5() {
+void test5(void) {
   do { break; } while(0);
 }
 
 // PR14191
 void test6f(void);
-void test6() {
+void test6(void) {
   do {
   } while (test6f(), 0);
   // CHECK: call {{.*}}void @test6f()

@@ -5,7 +5,7 @@
 
 target triple = "thumbv8m-unknown-linux-android"
 
-define void @d(i32* %c) {
+define void @d(ptr %c) {
 entry:
   br i1 false, label %f.exit, label %i.d
 
@@ -13,10 +13,10 @@ i.d:
   br label %i.d
 
 f.exit:
-  %0 = getelementptr i32, i32* %c, i32 57
+  %0 = getelementptr i32, ptr %c, i32 57
   br label %if.g
 
 if.g:
-  store i32 0, i32* %0
+  store i32 0, ptr %0
   ret void
 }

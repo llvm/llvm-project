@@ -11,24 +11,22 @@
 
 #include "ClangTidyOptions.h"
 #include "ClangTidyProfiling.h"
+#include "FileExtensionsSet.h"
+#include "NoLintDirectiveHandler.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
+#include <optional>
 
 namespace clang {
 
 class ASTContext;
-class CompilerInstance;
 class SourceManager;
-namespace ast_matchers {
-class MatchFinder;
-}
-namespace tooling {
-class CompilationDatabase;
-}
 
 namespace tidy {
+class CachedGlobList;
 
 /// A detected error complete with information to display diagnostic and
 /// automatic fix.
@@ -45,18 +43,13 @@ struct ClangTidyError : tooling::Diagnostic {
   std::vector<std::string> EnabledDiagnosticAliases;
 };
 
-/// Contains displayed and ignored diagnostic counters for a ClangTidy
-/// run.
+/// Contains displayed and ignored diagnostic counters for a ClangTidy run.
 struct ClangTidyStats {
-  ClangTidyStats()
-      : ErrorsDisplayed(0), ErrorsIgnoredCheckFilter(0), ErrorsIgnoredNOLINT(0),
-        ErrorsIgnoredNonUserCode(0), ErrorsIgnoredLineFilter(0) {}
-
-  unsigned ErrorsDisplayed;
-  unsigned ErrorsIgnoredCheckFilter;
-  unsigned ErrorsIgnoredNOLINT;
-  unsigned ErrorsIgnoredNonUserCode;
-  unsigned ErrorsIgnoredLineFilter;
+  unsigned ErrorsDisplayed = 0;
+  unsigned ErrorsIgnoredCheckFilter = 0;
+  unsigned ErrorsIgnoredNOLINT = 0;
+  unsigned ErrorsIgnoredNonUserCode = 0;
+  unsigned ErrorsIgnoredLineFilter = 0;
 
   unsigned errorsIgnored() const {
     return ErrorsIgnoredNOLINT + ErrorsIgnoredCheckFilter +
@@ -77,7 +70,8 @@ class ClangTidyContext {
 public:
   /// Initializes \c ClangTidyContext instance.
   ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
-                   bool AllowEnablingAnalyzerAlphaCheckers = false);
+                   bool AllowEnablingAnalyzerAlphaCheckers = false,
+                   bool EnableModuleHeadersParsing = false);
   /// Sets the DiagnosticsEngine that diag() will emit diagnostics to.
   // FIXME: this is required initialization, and should be a constructor param.
   // Fix the context -> diag engine -> consumer -> context initialization cycle.
@@ -93,16 +87,38 @@ public:
   /// tablegen'd diagnostic IDs.
   /// FIXME: Figure out a way to manage ID spaces.
   DiagnosticBuilder diag(StringRef CheckName, SourceLocation Loc,
-                         StringRef Message,
+                         StringRef Description,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
 
-  DiagnosticBuilder diag(StringRef CheckName, StringRef Message,
+  DiagnosticBuilder diag(StringRef CheckName, StringRef Description,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
+
+  DiagnosticBuilder diag(const tooling::Diagnostic &Error);
 
   /// Report any errors to do with reading the configuration using this method.
   DiagnosticBuilder
   configurationDiag(StringRef Message,
                     DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
+
+  /// Check whether a given diagnostic should be suppressed due to the presence
+  /// of a "NOLINT" suppression comment.
+  /// This is exposed so that other tools that present clang-tidy diagnostics
+  /// (such as clangd) can respect the same suppression rules as clang-tidy.
+  /// This does not handle suppression of notes following a suppressed
+  /// diagnostic; that is left to the caller as it requires maintaining state in
+  /// between calls to this function.
+  /// If any NOLINT is malformed, e.g. a BEGIN without a subsequent END, output
+  /// \param NoLintErrors will return an error about it.
+  /// If \param AllowIO is false, the function does not attempt to read source
+  /// files from disk which are not already mapped into memory; such files are
+  /// treated as not containing a suppression comment.
+  /// \param EnableNoLintBlocks controls whether to honor NOLINTBEGIN/NOLINTEND
+  /// blocks; if false, only considers line-level disabling.
+  bool
+  shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                           const Diagnostic &Info,
+                           SmallVectorImpl<tooling::Diagnostic> &NoLintErrors,
+                           bool AllowIO = true, bool EnableNoLintBlocks = true);
 
   /// Sets the \c SourceManager of the used \c DiagnosticsEngine.
   ///
@@ -146,6 +162,14 @@ public:
   /// \c CurrentFile.
   ClangTidyOptions getOptionsForFile(StringRef File) const;
 
+  const FileExtensionsSet &getHeaderFileExtensions() const {
+    return HeaderFileExtensions;
+  }
+
+  const FileExtensionsSet &getImplementationFileExtensions() const {
+    return ImplementationFileExtensions;
+  }
+
   /// Returns \c ClangTidyStats containing issued and ignored diagnostic
   /// counters.
   const ClangTidyStats &getStats() const { return Stats; }
@@ -156,7 +180,7 @@ public:
 
   /// Control storage of profile date.
   void setProfileStoragePrefix(StringRef ProfilePrefix);
-  llvm::Optional<ClangTidyProfiling::StorageParams>
+  std::optional<ClangTidyProfiling::StorageParams>
   getProfileStorageParams() const;
 
   /// Should be called when starting to process new translation unit.
@@ -165,7 +189,7 @@ public:
   }
 
   /// Returns build directory of the current translation unit.
-  const std::string &getCurrentBuildDirectory() {
+  const std::string &getCurrentBuildDirectory() const {
     return CurrentBuildDirectory;
   }
 
@@ -175,28 +199,46 @@ public:
     return AllowEnablingAnalyzerAlphaCheckers;
   }
 
+  // This method determines whether preprocessor-level module header parsing is
+  // enabled using the `--experimental-enable-module-headers-parsing` option.
+  bool canEnableModuleHeadersParsing() const {
+    return EnableModuleHeadersParsing;
+  }
+
+  void setSelfContainedDiags(bool Value) { SelfContainedDiags = Value; }
+
+  bool areDiagsSelfContained() const { return SelfContainedDiags; }
+
   using DiagLevelAndFormatString = std::pair<DiagnosticIDs::Level, std::string>;
   DiagLevelAndFormatString getDiagLevelAndFormatString(unsigned DiagnosticID,
                                                        SourceLocation Loc) {
-    return DiagLevelAndFormatString(
+    return {
         static_cast<DiagnosticIDs::Level>(
             DiagEngine->getDiagnosticLevel(DiagnosticID, Loc)),
         std::string(
-            DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID)));
+            DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID))};
   }
+
+  void setOptionsCollector(llvm::StringSet<> *Collector) {
+    OptionsCollector = Collector;
+  }
+  llvm::StringSet<> *getOptionsCollector() const { return OptionsCollector; }
 
 private:
   // Writes to Stats.
   friend class ClangTidyDiagnosticConsumer;
 
-  DiagnosticsEngine *DiagEngine;
+  DiagnosticsEngine *DiagEngine = nullptr;
   std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider;
 
   std::string CurrentFile;
   ClangTidyOptions CurrentOptions;
-  class CachedGlobList;
+
   std::unique_ptr<CachedGlobList> CheckFilter;
   std::unique_ptr<CachedGlobList> WarningAsErrorFilter;
+
+  FileExtensionsSet HeaderFileExtensions;
+  FileExtensionsSet ImplementationFileExtensions;
 
   LangOptions LangOpts;
 
@@ -206,25 +248,17 @@ private:
 
   llvm::DenseMap<unsigned, std::string> CheckNamesByDiagnosticID;
 
-  bool Profile;
+  bool Profile = false;
   std::string ProfilePrefix;
 
   bool AllowEnablingAnalyzerAlphaCheckers;
-};
+  bool EnableModuleHeadersParsing;
 
-/// Check whether a given diagnostic should be suppressed due to the presence
-/// of a "NOLINT" suppression comment.
-/// This is exposed so that other tools that present clang-tidy diagnostics
-/// (such as clangd) can respect the same suppression rules as clang-tidy.
-/// This does not handle suppression of notes following a suppressed diagnostic;
-/// that is left to the caller is it requires maintaining state in between calls
-/// to this function.
-/// If `AllowIO` is false, the function does not attempt to read source files
-/// from disk which are not already mapped into memory; such files are treated
-/// as not containing a suppression comment.
-bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                              const Diagnostic &Info, ClangTidyContext &Context,
-                              bool AllowIO = true);
+  bool SelfContainedDiags = false;
+
+  NoLintDirectiveHandler NoLintHandler;
+  llvm::StringSet<> *OptionsCollector = nullptr;
+};
 
 /// Gets the Fix attached to \p Diagnostic.
 /// If there isn't a Fix attached to the diagnostic and \p AnyFix is true, Check
@@ -235,15 +269,17 @@ getFixIt(const tooling::Diagnostic &Diagnostic, bool AnyFix);
 
 /// A diagnostic consumer that turns each \c Diagnostic into a
 /// \c SourceManager-independent \c ClangTidyError.
-//
 // FIXME: If we move away from unit-tests, this can be moved to a private
 // implementation file.
 class ClangTidyDiagnosticConsumer : public DiagnosticConsumer {
 public:
+  /// \param EnableNolintBlocks Enables diagnostic-disabling inside blocks of
+  /// code, delimited by NOLINTBEGIN and NOLINTEND.
   ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx,
                               DiagnosticsEngine *ExternalDiagEngine = nullptr,
                               bool RemoveIncompatibleErrors = true,
-                              bool GetFixesFromNotes = false);
+                              bool GetFixesFromNotes = false,
+                              bool EnableNolintBlocks = true);
 
   // FIXME: The concept of converting between FixItHints and Replacements is
   // more generic and should be pulled out into a more useful Diagnostics
@@ -274,11 +310,12 @@ private:
   DiagnosticsEngine *ExternalDiagEngine;
   bool RemoveIncompatibleErrors;
   bool GetFixesFromNotes;
+  bool EnableNolintBlocks;
   std::vector<ClangTidyError> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;
-  bool LastErrorRelatesToUserCode;
-  bool LastErrorPassesLineFilter;
-  bool LastErrorWasIgnored;
+  bool LastErrorRelatesToUserCode = false;
+  bool LastErrorPassesLineFilter = false;
+  bool LastErrorWasIgnored = false;
 };
 
 } // end namespace tidy

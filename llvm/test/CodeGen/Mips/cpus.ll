@@ -4,6 +4,9 @@
 ; RUN:   | llvm-readelf -A - | FileCheck %s --check-prefix=GENERIC
 ; GENERIC: ISA: MIPS32
 
+; RUN: llc -mtriple=mips -mcpu=mips1 -filetype=obj < %s \
+; RUN:   | llvm-readelf -A - | FileCheck %s --check-prefix=MIPS1
+; MIPS1: ISA: MIPS1
 ; RUN: llc -mtriple=mips -mcpu=mips2 -filetype=obj < %s \
 ; RUN:   | llvm-readelf -A - | FileCheck %s --check-prefix=MIPS2
 ; MIPS2: ISA: MIPS2
@@ -57,9 +60,7 @@
 
 ; Check that we reject CPUs that are not implemented.
 
-; RUN: not --crash llc < %s -o /dev/null -mtriple=mips -mcpu=mips1 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=ERROR
-; RUN: not --crash llc < %s -o /dev/null -mtriple=mips64 -mcpu=mips5 2>&1 \
+; RUN: not llc < %s -o /dev/null -mtriple=mips64 -mcpu=mips5 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=ERROR
 
 ; ERROR: LLVM ERROR: Code generation for MIPS-{{.}} is not implemented

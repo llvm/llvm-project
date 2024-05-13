@@ -12,7 +12,7 @@ declare i32 @__CxxFrameHandler3(...)
 
 declare void @g()
 
-define void @f() personality i32 (...)* @__CxxFrameHandler3 {
+define void @f() personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @g()
           to label %invoke.cont.3 unwind label %catch.dispatch
@@ -21,11 +21,11 @@ catch.dispatch:                                   ; preds = %entry
   %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %0 = catchpad within %cs1 [ptr null, i32 64, ptr null]
   catchret from %0 to label %nrvo.skipdtor
 
 invoke.cont.3:                                    ; preds = %entry
-  store i32 123, i32* @some_global
+  store i32 123, ptr @some_global
   br label %nrvo.skipdtor
 
 nrvo.skipdtor:                                    ; preds = %invoke.cont.3, %invoke.cont.4

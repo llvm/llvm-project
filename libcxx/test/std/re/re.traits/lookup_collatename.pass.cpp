@@ -9,6 +9,9 @@
 // NetBSD does not support LC_COLLATE at the moment
 // XFAIL: netbsd
 
+// XFAIL: LIBCXX-AIX-FIXME
+// XFAIL: LIBCXX-FREEBSD-FIXME
+
 // REQUIRES: locale.cs_CZ.ISO8859-2
 
 // <regex>
@@ -20,7 +23,7 @@
 //   lookup_collatename(ForwardIterator first, ForwardIterator last) const;
 
 // TODO: investigation needed
-// XFAIL: linux-gnu
+// XFAIL: target={{.*}}-linux-gnu{{.*}}
 
 #include <regex>
 #include <iterator>
@@ -117,6 +120,7 @@ int main(int, char**)
     test("ch", std::string("ch"));
     std::locale::global(std::locale("C"));
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test(L"NUL", std::wstring(L"\x00", 1));
     test(L"alert", std::wstring(L"\x07"));
     test(L"backspace", std::wstring(L"\x08"));
@@ -192,6 +196,7 @@ int main(int, char**)
     std::locale::global(std::locale(LOCALE_cs_CZ_ISO8859_2));
     test(L"ch", std::wstring(L"ch"));
     std::locale::global(std::locale("C"));
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

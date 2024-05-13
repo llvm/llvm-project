@@ -1,4 +1,4 @@
-; RUN: opt -loop-deletion %s -o /dev/null --pass-remarks-output=%t --pass-remarks-filter=loop-delete
+; RUN: opt -passes=loop-deletion %s -o /dev/null --pass-remarks-output=%t --pass-remarks-filter=loop-delete
 ; RUN: cat %t | FileCheck %s
 
 ; Check that we use the right debug location: the loop header.

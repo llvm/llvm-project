@@ -97,9 +97,8 @@ public:
   void parseTParamCommandArgs(TParamCommandComment *TPC,
                               TextTokenRetokenizer &Retokenizer);
 
-  void parseBlockCommandArgs(BlockCommandComment *BC,
-                             TextTokenRetokenizer &Retokenizer,
-                             unsigned NumArgs);
+  ArrayRef<Comment::Argument>
+  parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs);
 
   BlockCommandComment *parseBlockCommand();
   InlineCommandComment *parseInlineCommand();

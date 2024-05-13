@@ -165,8 +165,8 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT:  1      0     0.25                        vpxor	%xmm3, %xmm3, %xmm5
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    67
-# CHECK-NEXT: Max number of mappings used:         43
+# CHECK-NEXT: Total number of mappings created:    26
+# CHECK-NEXT: Max number of mappings used:         22
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider
@@ -302,16 +302,16 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: [0,47]    .    .    .D=====eE------R.   vandnps	%ymm2, %ymm2, %ymm5
 # CHECK-NEXT: [0,48]    .    .    . D=====eE-----R.   vandnpd	%ymm1, %ymm1, %ymm5
 # CHECK-NEXT: [0,49]    .    .    . D------------R.   xorps	%xmm0, %xmm0
-# CHECK-NEXT: [0,50]    .    .    . D==E---------R.   xorpd	%xmm1, %xmm1
-# CHECK-NEXT: [0,51]    .    .    . D=E----------R.   vxorps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT: [0,52]    .    .    .  D=E---------R.   vxorpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT: [0,53]    .    .    .  DE----------R.   vxorps	%ymm2, %ymm2, %ymm2
-# CHECK-NEXT: [0,54]    .    .    .  D=E---------R.   vxorpd	%ymm1, %ymm1, %ymm1
+# CHECK-NEXT: [0,50]    .    .    . D------------R.   xorpd	%xmm1, %xmm1
+# CHECK-NEXT: [0,51]    .    .    . D------------R.   vxorps	%xmm2, %xmm2, %xmm2
+# CHECK-NEXT: [0,52]    .    .    .  D-----------R.   vxorpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT: [0,53]    .    .    .  D-----------R.   vxorps	%ymm2, %ymm2, %ymm2
+# CHECK-NEXT: [0,54]    .    .    .  D-----------R.   vxorpd	%ymm1, %ymm1, %ymm1
 # CHECK-NEXT: [0,55]    .    .    .  D==========eER   pxor	%mm2, %mm2
 # CHECK-NEXT: [0,56]    .    .    .   D-----------R   pxor	%xmm2, %xmm2
 # CHECK-NEXT: [0,57]    .    .    .   D-----------R   vpxor	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT: [0,58]    .    .    .   D-----------R   vxorps	%xmm4, %xmm4, %xmm5
-# CHECK-NEXT: [0,59]    .    .    .   DE----------R   vxorpd	%xmm1, %xmm1, %xmm3
+# CHECK-NEXT: [0,59]    .    .    .   D-----------R   vxorpd	%xmm1, %xmm1, %xmm3
 # CHECK-NEXT: [0,60]    .    .    .    D----------R   vxorps	%ymm4, %ymm4, %ymm5
 # CHECK-NEXT: [0,61]    .    .    .    D----------R   vxorpd	%ymm1, %ymm1, %ymm3
 # CHECK-NEXT: [0,62]    .    .    .    D----------R   vpxor	%xmm3, %xmm3, %xmm5
@@ -373,17 +373,17 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: 47.    1     6.0    3.0    6.0       vandnps	%ymm2, %ymm2, %ymm5
 # CHECK-NEXT: 48.    1     6.0    3.0    5.0       vandnpd	%ymm1, %ymm1, %ymm5
 # CHECK-NEXT: 49.    1     0.0    0.0    12.0      xorps	%xmm0, %xmm0
-# CHECK-NEXT: 50.    1     3.0    0.0    9.0       xorpd	%xmm1, %xmm1
-# CHECK-NEXT: 51.    1     2.0    0.0    10.0      vxorps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT: 52.    1     2.0    0.0    9.0       vxorpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT: 53.    1     1.0    0.0    10.0      vxorps	%ymm2, %ymm2, %ymm2
-# CHECK-NEXT: 54.    1     2.0    0.0    9.0       vxorpd	%ymm1, %ymm1, %ymm1
+# CHECK-NEXT: 50.    1     0.0    0.0    12.0      xorpd	%xmm1, %xmm1
+# CHECK-NEXT: 51.    1     0.0    0.0    12.0      vxorps	%xmm2, %xmm2, %xmm2
+# CHECK-NEXT: 52.    1     0.0    0.0    11.0      vxorpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT: 53.    1     0.0    0.0    11.0      vxorps	%ymm2, %ymm2, %ymm2
+# CHECK-NEXT: 54.    1     0.0    0.0    11.0      vxorpd	%ymm1, %ymm1, %ymm1
 # CHECK-NEXT: 55.    1     11.0   0.0    0.0       pxor	%mm2, %mm2
 # CHECK-NEXT: 56.    1     0.0    0.0    11.0      pxor	%xmm2, %xmm2
 # CHECK-NEXT: 57.    1     0.0    0.0    11.0      vpxor	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT: 58.    1     0.0    0.0    11.0      vxorps	%xmm4, %xmm4, %xmm5
-# CHECK-NEXT: 59.    1     1.0    0.0    10.0      vxorpd	%xmm1, %xmm1, %xmm3
+# CHECK-NEXT: 59.    1     0.0    0.0    11.0      vxorpd	%xmm1, %xmm1, %xmm3
 # CHECK-NEXT: 60.    1     0.0    0.0    10.0      vxorps	%ymm4, %ymm4, %ymm5
 # CHECK-NEXT: 61.    1     0.0    0.0    10.0      vxorpd	%ymm1, %ymm1, %ymm3
 # CHECK-NEXT: 62.    1     0.0    0.0    10.0      vpxor	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:        1     2.1    0.3    8.7       <total>
+# CHECK-NEXT:        1     1.9    0.3    8.9       <total>

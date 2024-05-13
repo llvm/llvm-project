@@ -14,6 +14,8 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolPublicSymbol.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Object/COFF.h"
 
 using namespace llvm;
@@ -60,6 +62,13 @@ DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
   Result.Column = LineInfo->getColumnNumber();
   Result.Line = LineInfo->getLineNumber();
   return Result;
+}
+
+DILineInfo
+PDBContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
+  // Unimplemented. S_GDATA and S_LDATA in CodeView (used to describe global
+  // variables) aren't capable of carrying line information.
+  return DILineInfo();
 }
 
 DILineInfoTable

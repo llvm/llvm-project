@@ -31,7 +31,7 @@ T template_muladd(T a, T b, T c) {
 
 float fp_contract_3(float a, float b, float c) {
 // CHECK: _Z13fp_contract_3fff
-// CHECK: tail call float @llvm.fmuladd
+// CHECK: tail call noundef float @llvm.fmuladd
   return template_muladd<float>(a, b, c);
 }
 
@@ -88,4 +88,55 @@ float fp_contract_9(float a, float b, float c) {
 // CHECK: tail call float @llvm.fmuladd
   #pragma STDC FP_CONTRACT ON
   return c - a * b;
+}
+
+float fp_contract_10(float a, float b, float c) {
+// CHECK: _Z14fp_contract_10fff
+// CHECK: fneg float %a
+// CHECK: tail call float @llvm.fmuladd
+  #pragma STDC FP_CONTRACT ON
+  return -(a * b) + c;
+}
+
+float fp_contract_11(float a, float b, float c) {
+// CHECK: _Z14fp_contract_11fff
+// CHECK: fneg float %a
+// CHECK: fneg float %c
+// CHECK: tail call float @llvm.fmuladd
+  #pragma STDC FP_CONTRACT ON
+  return -(a * b) - c;
+}
+
+float fp_contract_12(float a, float b, float c) {
+// CHECK: _Z14fp_contract_12fff
+// CHECK: fneg float %a
+// CHECK: tail call float @llvm.fmuladd
+  #pragma STDC FP_CONTRACT ON
+  return c + -(a * b);
+}
+
+float fp_contract_13(float a, float b, float c) {
+// CHECK: _Z14fp_contract_13fff
+// CHECK-NOT: fneg float %a
+// CHECK: tail call float @llvm.fmuladd
+  #pragma STDC FP_CONTRACT ON
+  return c - -(a * b);
+}
+
+float fp_contract_14(float a, float b, float c) {
+// CHECK: _Z14fp_contract_14fff
+// CHECK: %[[M:.+]] = fmul float %a, %b
+// CHECK-NEXT: %add = fsub float %c, %[[M]]
+  #pragma STDC FP_CONTRACT ON
+  float d;
+  return (d = -(a * b)) + c;
+}
+
+float fp_contract_15(float a, float b, float c) {
+// CHECK: _Z14fp_contract_15fff
+// CHECK: %[[M:.+]] = fmul float %a, %b
+// CHECK-NEXT: %add = fsub float %c, %[[M]]
+  #pragma STDC FP_CONTRACT ON
+  float d;
+  return -(d = (a * b)) + c;
 }

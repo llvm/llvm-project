@@ -15,6 +15,7 @@
 #include "ASTTableGen.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/Error.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;
@@ -32,7 +33,7 @@ llvm::StringRef clang::tblgen::HasProperties::getName() const {
 
 static StringRef removeExpectedNodeNameSuffix(Record *node, StringRef suffix) {
   StringRef nodeName = node->getName();
-  if (!nodeName.endswith(suffix)) {
+  if (!nodeName.ends_with(suffix)) {
     PrintFatalError(node->getLoc(),
                     Twine("name of node doesn't end in ") + suffix);
   }
@@ -81,7 +82,7 @@ void PropertyType::emitCXXValueTypeName(bool forRead, raw_ostream &out) const {
     elementType.emitCXXValueTypeName(forRead, out);
     out << ">";
   } else if (auto valueType = getOptionalElementType()) {
-    out << "llvm::Optional<";
+    out << "std::optional<";
     valueType.emitCXXValueTypeName(forRead, out);
     out << ">";
   } else {
@@ -107,7 +108,7 @@ static void visitASTNodeRecursive(ASTNode node, ASTNode base,
 static void visitHierarchy(RecordKeeper &records,
                            StringRef nodeClassName,
                            ASTNodeHierarchyVisitor<ASTNode> visit) {
-  // Check for the node class, just as a sanity check.
+  // Check for the node class, just as a basic correctness check.
   if (!records.getClass(nodeClassName)) {
     PrintFatalError(Twine("cannot find definition for node class ")
                       + nodeClassName);

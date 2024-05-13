@@ -21,8 +21,10 @@
  */
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
-    const uint64_t *CountersBegin, const uint64_t *CountersEnd,
-    const char *NamesBegin, const char *NamesEnd);
+    const char *CountersBegin, const char *CountersEnd, const char *BitmapBegin,
+    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd,
+    const VTableProfData *VTableBegin, const VTableProfData *VTableEnd,
+    const char *VNamesBegin, const char *VNamesEnd);
 
 /*!
  * \brief Write instrumentation data to the given buffer, given explicit
@@ -35,8 +37,9 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
  */
 int __llvm_profile_write_buffer_internal(
     char *Buffer, const __llvm_profile_data *DataBegin,
-    const __llvm_profile_data *DataEnd, const uint64_t *CountersBegin,
-    const uint64_t *CountersEnd, const char *NamesBegin, const char *NamesEnd);
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
+    const char *NamesBegin, const char *NamesEnd);
 
 /*!
  * The data structure describing the data to be written by the
@@ -145,17 +148,19 @@ typedef struct VPDataReaderType {
                                         uint32_t N);
 } VPDataReaderType;
 
-/* Write profile data to destinitation. If SkipNameDataWrite is set to 1,
-   the name data is already in destintation, we just skip over it. */
+/* Write profile data to destination. If SkipNameDataWrite is set to 1,
+   the name data is already in destination, we just skip over it. */
 int lprofWriteData(ProfDataWriter *Writer, VPDataReaderType *VPDataReader,
                    int SkipNameDataWrite);
 int lprofWriteDataImpl(ProfDataWriter *Writer,
                        const __llvm_profile_data *DataBegin,
                        const __llvm_profile_data *DataEnd,
-                       const uint64_t *CountersBegin,
-                       const uint64_t *CountersEnd,
+                       const char *CountersBegin, const char *CountersEnd,
+                       const char *BitmapBegin, const char *BitmapEnd,
                        VPDataReaderType *VPDataReader, const char *NamesBegin,
-                       const char *NamesEnd, int SkipNameDataWrite);
+                       const char *NamesEnd, const VTableProfData *VTableBegin,
+                       const VTableProfData *VTableEnd, const char *VNamesBegin,
+                       const char *VNamesEnd, int SkipNameDataWrite);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */
@@ -184,10 +189,6 @@ uint64_t lprofGetLoadModuleSignature();
 unsigned lprofProfileDumped(void);
 void lprofSetProfileDumped(unsigned);
 
-/* Return non zero value if counters are being relocated at runtime. */
-unsigned lprofRuntimeCounterRelocation(void);
-void lprofSetRuntimeCounterRelocation(unsigned);
-
 COMPILER_RT_VISIBILITY extern void (*FreeHook)(void *);
 COMPILER_RT_VISIBILITY extern uint8_t *DynamicBufferIOBuffer;
 COMPILER_RT_VISIBILITY extern uint32_t VPBufferSize;
@@ -196,5 +197,19 @@ COMPILER_RT_VISIBILITY extern uint32_t VPMaxNumValsPerSite;
 COMPILER_RT_VISIBILITY extern ValueProfNode *CurrentVNode;
 COMPILER_RT_VISIBILITY extern ValueProfNode *EndVNode;
 extern void (*VPMergeHook)(struct ValueProfData *, __llvm_profile_data *);
+
+/*
+ * Write binary ids into profiles if writer is given.
+ * Return -1 if an error occurs, otherwise, return total size of binary ids.
+ */
+int __llvm_write_binary_ids(ProfDataWriter *Writer);
+
+/*
+ * Write binary id length and then its data, because binary id does not
+ * have a fixed length.
+ */
+int lprofWriteOneBinaryId(ProfDataWriter *Writer, uint64_t BinaryIdLen,
+                          const uint8_t *BinaryIdData,
+                          uint64_t BinaryIdPadding);
 
 #endif

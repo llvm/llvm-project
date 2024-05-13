@@ -12,12 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 
 #include "interception/interception.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
 #include "tsan_interface_ann.h"
+#include "tsan_spinlock_defs_mac.h"
 #include "sanitizer_common/sanitizer_addrhashmap.h"
 
 #include <errno.h>
@@ -44,8 +45,9 @@ namespace __tsan {
 // actually aliases of each other, and we cannot have different interceptors for
 // them, because they're actually the same function.  Thus, we have to stay
 // conservative and treat the non-barrier versions as mo_acq_rel.
-static const morder kMacOrderBarrier = mo_acq_rel;
-static const morder kMacOrderNonBarrier = mo_acq_rel;
+static constexpr morder kMacOrderBarrier = mo_acq_rel;
+static constexpr morder kMacOrderNonBarrier = mo_acq_rel;
+static constexpr morder kMacFailureOrder = mo_relaxed;
 
 #define OSATOMIC_INTERCEPTOR(return_t, t, tsan_t, f, tsan_atomic_f, mo) \
   TSAN_INTERCEPTOR(return_t, f, t x, volatile t *ptr) {                 \
@@ -110,7 +112,7 @@ OSATOMIC_INTERCEPTORS_BITWISE(OSAtomicXor, fetch_xor,
     SCOPED_TSAN_INTERCEPTOR(f, old_value, new_value, ptr);                  \
     return tsan_atomic_f##_compare_exchange_strong(                         \
         (volatile tsan_t *)ptr, (tsan_t *)&old_value, (tsan_t)new_value,    \
-        kMacOrderNonBarrier, kMacOrderNonBarrier);                          \
+        kMacOrderNonBarrier, kMacFailureOrder);                             \
   }                                                                         \
                                                                             \
   TSAN_INTERCEPTOR(bool, f##Barrier, t old_value, t new_value,              \
@@ -118,7 +120,7 @@ OSATOMIC_INTERCEPTORS_BITWISE(OSAtomicXor, fetch_xor,
     SCOPED_TSAN_INTERCEPTOR(f##Barrier, old_value, new_value, ptr);         \
     return tsan_atomic_f##_compare_exchange_strong(                         \
         (volatile tsan_t *)ptr, (tsan_t *)&old_value, (tsan_t)new_value,    \
-        kMacOrderBarrier, kMacOrderNonBarrier);                             \
+        kMacOrderBarrier, kMacFailureOrder);                                \
   }
 
 OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwapInt, __tsan_atomic32, a32, int)
@@ -364,7 +366,7 @@ static uptr GetOrCreateSyncAddress(uptr addr, ThreadState *thr, uptr pc) {
   if (h.created()) {
     ThreadIgnoreBegin(thr, pc);
     *h = (uptr) user_alloc(thr, pc, /*size=*/1);
-    ThreadIgnoreEnd(thr, pc);
+    ThreadIgnoreEnd(thr);
   }
   return *h;
 }
@@ -404,8 +406,8 @@ TSAN_INTERCEPTOR(int, swapcontext, ucontext_t *oucp, const ucontext_t *ucp) {
   {
     SCOPED_INTERCEPTOR_RAW(swapcontext, oucp, ucp);
   }
-  // Bacause of swapcontext() semantics we have no option but to copy its
-  // impementation here
+  // Because of swapcontext() semantics we have no option but to copy its
+  // implementation here
   if (!oucp || !ucp) {
     errno = EINVAL;
     return -1;
@@ -517,4 +519,4 @@ STDCXX_INTERCEPTOR(void, _ZNSt3__111__call_onceERVmPvPFvS2_E, void *flag,
 
 }  // namespace __tsan
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

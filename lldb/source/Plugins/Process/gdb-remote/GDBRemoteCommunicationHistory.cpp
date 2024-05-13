@@ -9,7 +9,6 @@
 #include "GDBRemoteCommunicationHistory.h"
 
 // Other libraries and framework includes
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
 
@@ -19,13 +18,12 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
 GDBRemoteCommunicationHistory::GDBRemoteCommunicationHistory(uint32_t size)
-    : m_packets(), m_curr_idx(0), m_total_packet_count(0),
-      m_dumped_to_log(false) {
+    : m_packets() {
   if (size)
     m_packets.resize(size);
 }
 
-GDBRemoteCommunicationHistory::~GDBRemoteCommunicationHistory() {}
+GDBRemoteCommunicationHistory::~GDBRemoteCommunicationHistory() = default;
 
 void GDBRemoteCommunicationHistory::AddPacket(char packet_char,
                                               GDBRemotePacket::Type type,
@@ -40,8 +38,6 @@ void GDBRemoteCommunicationHistory::AddPacket(char packet_char,
   m_packets[idx].bytes_transmitted = bytes_transmitted;
   m_packets[idx].packet_idx = m_total_packet_count;
   m_packets[idx].tid = llvm::get_threadid();
-  if (m_recorder)
-    m_recorder->Record(m_packets[idx]);
 }
 
 void GDBRemoteCommunicationHistory::AddPacket(const std::string &src,
@@ -58,8 +54,6 @@ void GDBRemoteCommunicationHistory::AddPacket(const std::string &src,
   m_packets[idx].bytes_transmitted = bytes_transmitted;
   m_packets[idx].packet_idx = m_total_packet_count;
   m_packets[idx].tid = llvm::get_threadid();
-  if (m_recorder)
-    m_recorder->Record(m_packets[idx]);
 }
 
 void GDBRemoteCommunicationHistory::Dump(Stream &strm) const {

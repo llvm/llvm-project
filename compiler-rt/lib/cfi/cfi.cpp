@@ -51,7 +51,11 @@ using namespace __sanitizer;
 
 namespace __cfi {
 
+#if SANITIZER_LOONGARCH64
+#define kCfiShadowLimitsStorageSize 16384 // 16KiB on loongarch64 per page
+#else
 #define kCfiShadowLimitsStorageSize 4096 // 1 page
+#endif
 // Lets hope that the data segment is mapped with 4K pages.
 // The pointer to the cfi shadow region is stored at the start of this page.
 // The rest of the page is unused and re-mapped read-only.
@@ -230,7 +234,7 @@ uptr find_cfi_check_in_dso(dl_phdr_info *info) {
   }
 
   if (symtab > strtab) {
-    VReport(1, "Can not handle: symtab > strtab (%p > %zx)\n", symtab, strtab);
+    VReport(1, "Can not handle: symtab > strtab (%zx > %zx)\n", symtab, strtab);
     return 0;
   }
 
@@ -250,7 +254,7 @@ uptr find_cfi_check_in_dso(dl_phdr_info *info) {
   if (phdr_idx == info->dlpi_phnum) {
     // Nope, either different segments or just bogus pointers.
     // Can not handle this.
-    VReport(1, "Can not handle: symtab %p, strtab %zx\n", symtab, strtab);
+    VReport(1, "Can not handle: symtab %zx, strtab %zx\n", symtab, strtab);
     return 0;
   }
 
@@ -320,16 +324,16 @@ void InitShadow() {
 }
 
 THREADLOCAL int in_loader;
-BlockingMutex shadow_update_lock(LINKER_INITIALIZED);
+Mutex shadow_update_lock;
 
-void EnterLoader() {
+void EnterLoader() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   if (in_loader == 0) {
     shadow_update_lock.Lock();
   }
   ++in_loader;
 }
 
-void ExitLoader() {
+void ExitLoader() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   CHECK(in_loader > 0);
   --in_loader;
   UpdateShadow();
@@ -359,7 +363,7 @@ ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
     return;
   }
   CFICheckFn cfi_check = sv.get_cfi_check();
-  VReport(2, "__cfi_check at %p\n", cfi_check);
+  VReport(2, "__cfi_check at %p\n", (void *)cfi_check);
   cfi_check(CallSiteTypeId, Ptr, DiagData);
 }
 
@@ -436,11 +440,11 @@ INTERCEPTOR(int, dlclose, void *handle) {
   return res;
 }
 
-static BlockingMutex interceptor_init_lock(LINKER_INITIALIZED);
+static Mutex interceptor_init_lock;
 static bool interceptors_inited = false;
 
 static void EnsureInterceptorsInitialized() {
-  BlockingMutexLock lock(&interceptor_init_lock);
+  Lock lock(&interceptor_init_lock);
   if (interceptors_inited)
     return;
 

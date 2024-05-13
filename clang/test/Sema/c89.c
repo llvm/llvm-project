@@ -1,6 +1,6 @@
-/* RUN: %clang_cc1 %s -std=c89 -pedantic -fsyntax-only -verify -Wimplicit-function-declaration
+/* RUN: %clang_cc1 %s -std=c89 -pedantic -fsyntax-only -verify -Wimplicit-function-declaration -Wno-strict-prototypes
  */
-void test1() {
+void test1(void) {
   {
     int i;
     i = i + 1;
@@ -36,23 +36,19 @@ int *__restrict;  /* expected-error {{expected identifier}} */
 
 
 /* Implicit int, always ok */
-test6() { return 0; }
+test6(void) { return 0; }
 
 /* PR2012 */
-test7;  /* expected-warning {{declaration specifier missing, defaulting to 'int'}} */
+test7;
 
-void test8(int, x);  /* expected-warning {{declaration specifier missing, defaulting to 'int'}} */
+void test8(int, x);
 
 typedef int sometype;
-int a(sometype, y) {return 0;}  /* expected-warning {{declaration specifier missing, defaulting to 'int'}} \
-                                   expected-warning {{omitting the parameter name in a function definition is a C2x extension}}*/
+int a(sometype, y) {return 0;}  /* expected-warning {{omitting the parameter name in a function definition is a C23 extension}}*/
 
-
-
-
-void bar (void *); 
+void bar (void *);
 void f11 (z)       /* expected-error {{may not have 'void' type}} */
-void z; 
+void z;
 { bar (&z); }
 
 typedef void T;
@@ -79,14 +75,14 @@ void test13b() {
 }
 
 /* Make sure we allow *test14 as a "function designator" */
-int test14() { return (&*test14)(); }
+int test14(void) { return (&*test14)(); }
 
 int test15[5] = { [2] = 1 }; /* expected-warning {{designated initializers are a C99 feature}} */
 
 extern int printf(__const char *__restrict __format, ...);
 
 /* Warn, but don't suggest typo correction. */
-void test16() {
+void test16(void) {
   printg("Hello, world!\n"); /* expected-warning {{implicit declaration of function 'printg'}} */
 }
 
@@ -109,9 +105,9 @@ const array_of_CI mine2; /* expected-warning {{duplicate 'const' declaration spe
 typedef CI *array_of_pointer_to_CI[5];
 const array_of_pointer_to_CI mine3;
 
-void main() {} /* expected-error {{'main' must return 'int'}} */
+void main(void) {} /* expected-error {{'main' must return 'int'}} */
 
-const int main() {} /* expected-error {{'main' must return 'int'}} */
+const int main(void) {} /* expected-error {{'main' must return 'int'}} */
 
 long long ll1 = /* expected-warning {{'long long' is an extension when C99 mode is not enabled}} */
          -42LL; /* expected-warning {{'long long' is an extension when C99 mode is not enabled}} */

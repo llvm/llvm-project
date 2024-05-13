@@ -1,5 +1,4 @@
 add_llvm_component_library(LLVMLTO
-  Caching.cpp
   LTO.cpp
   LTOBackend.cpp
   LTOModule.cpp
@@ -14,6 +13,9 @@ add_llvm_component_library(LLVMLTO
   intrinsics_gen
   llvm_vcsrevision_h
 
+  LINK_LIBS
+  ${LLVM_PTHREAD_LIB}
+
   LINK_COMPONENTS
   AggressiveInstCombine
   Analysis
@@ -21,10 +23,12 @@ add_llvm_component_library(LLVMLTO
   BitReader
   BitWriter
   CodeGen
+  CodeGenTypes
   Core
   Extensions
   IPO
   InstCombine
+  Instrumentation
   Linker
   MC
   ObjCARC
@@ -34,5 +38,6 @@ add_llvm_component_library(LLVMLTO
   Scalar
   Support
   Target
+  TargetParser
   TransformUtils
-)
+  )

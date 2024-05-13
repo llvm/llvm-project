@@ -8,11 +8,11 @@
 ;      /      \        \
 ; loop.0.0  loop.0.1  loop.1.0
 ;
-; CHECK: Running pass: NoOpLoopPass on Loop at depth 2 containing: %loop.0.0
-; CHECK: Running pass: NoOpLoopPass on Loop at depth 2 containing: %loop.0.1
-; CHECK: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop.0
-; CHECK: Running pass: NoOpLoopPass on Loop at depth 2 containing: %loop.1.0
-; CHECK: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop.1
+; CHECK: Running pass: NoOpLoopPass on loop %loop.0.0 in function f
+; CHECK: Running pass: NoOpLoopPass on loop %loop.0.1 in function f
+; CHECK: Running pass: NoOpLoopPass on loop %loop.0 in function f
+; CHECK: Running pass: NoOpLoopPass on loop %loop.1.0 in function f
+; CHECK: Running pass: NoOpLoopPass on loop %loop.1 in function f
 
 define void @f() {
 entry:

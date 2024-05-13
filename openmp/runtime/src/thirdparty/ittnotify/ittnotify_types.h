@@ -29,6 +29,7 @@ typedef enum ___itt_group_id {
   __itt_group_structure = 1 << 12,
   __itt_group_suppress = 1 << 13,
   __itt_group_arrays = 1 << 14,
+  __itt_group_module = 1 << 15,
   __itt_group_all = -1
 } __itt_group_id;
 
@@ -57,6 +58,7 @@ typedef struct ___itt_group_list {
                                        {__itt_group_structure, "structure"},   \
                                        {__itt_group_suppress, "suppress"},     \
                                        {__itt_group_arrays, "arrays"},         \
+                                       {__itt_group_module, "module"},         \
                                        {__itt_group_none, NULL}}
 
 #endif /* _ITTNOTIFY_TYPES_H_ */

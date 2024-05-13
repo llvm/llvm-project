@@ -83,7 +83,7 @@ void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
   auto HeaderSpecList = StandardSpec->getValueAsListOfDefs("Headers");
   for (llvm::Record *HeaderSpec : HeaderSpecList) {
     llvm::StringRef Header = HeaderSpec->getValueAsString("Name");
-    if (!StdHeader.hasValue() || Header == StdHeader) {
+    if (!StdHeader.has_value() || Header == StdHeader) {
       PublicHeaders.emplace(Header);
       auto MacroSpecList = HeaderSpec->getValueAsListOfDefs("Macros");
       // TODO: Trigger a fatal error on duplicate specs.
@@ -108,6 +108,13 @@ void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
         EnumerationSpecMap[std::string(
             EnumerationSpec->getValueAsString("Name"))] = EnumerationSpec;
       }
+
+      auto ObjectSpecList = HeaderSpec->getValueAsListOfDefs("Objects");
+      for (llvm::Record *ObjectSpec : ObjectSpecList) {
+        auto ObjectName = std::string(ObjectSpec->getValueAsString("Name"));
+        ObjectSpecMap[ObjectName] = ObjectSpec;
+        ObjectToHeaderMap[ObjectName] = std::string(Header);
+      }
     }
   }
 }
@@ -120,9 +127,9 @@ void APIIndexer::indexPublicAPIDef(llvm::Record *PublicAPI) {
   for (llvm::Record *MacroDef : MacroDefList)
     MacroDefsMap[std::string(MacroDef->getValueAsString("Name"))] = MacroDef;
 
-  auto TypeDeclList = PublicAPI->getValueAsListOfDefs("TypeDeclarations");
-  for (llvm::Record *TypeDecl : TypeDeclList)
-    TypeDeclsMap[std::string(TypeDecl->getValueAsString("Name"))] = TypeDecl;
+  auto TypeList = PublicAPI->getValueAsListOfStrings("Types");
+  for (llvm::StringRef TypeName : TypeList)
+    RequiredTypes.insert(std::string(TypeName));
 
   auto StructList = PublicAPI->getValueAsListOfStrings("Structs");
   for (llvm::StringRef StructName : StructList)
@@ -135,6 +142,10 @@ void APIIndexer::indexPublicAPIDef(llvm::Record *PublicAPI) {
   auto EnumerationList = PublicAPI->getValueAsListOfStrings("Enumerations");
   for (llvm::StringRef EnumerationName : EnumerationList)
     Enumerations.insert(std::string(EnumerationName));
+
+  auto ObjectList = PublicAPI->getValueAsListOfStrings("Objects");
+  for (llvm::StringRef ObjectName : ObjectList)
+    Objects.insert(std::string(ObjectName));
 }
 
 void APIIndexer::index(llvm::RecordKeeper &Records) {
@@ -152,7 +163,7 @@ void APIIndexer::index(llvm::RecordKeeper &Records) {
     if (isaStandardSpec(Def))
       indexStandardSpecDef(Def);
     if (isaPublicAPI(Def)) {
-      if (!StdHeader.hasValue() ||
+      if (!StdHeader.has_value() ||
           Def->getValueAsString("HeaderName") == StdHeader)
         indexPublicAPIDef(Def);
     }

@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-void foo();
+void foo(void);
 void branch(int x) {
 // CHECK-LABEL: define{{.*}} void @branch(
 

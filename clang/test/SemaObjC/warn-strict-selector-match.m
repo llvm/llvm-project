@@ -8,7 +8,7 @@
 -(float) method;	// expected-note {{also found}}
 @end
 
-int main() { [(id)0 method]; } // expected-warning {{multiple methods named 'method' found}}
+int main(void) { [(id)0 method]; } // expected-warning {{multiple methods named 'method' found}}
 
 @interface Object @end
 
@@ -72,7 +72,6 @@ void foo1(void) {
   [(Class)0 port]; // OK - gcc issues warning but there is only one Class method so no ambiguity to warn
 }
 
-// rdar://19265430
 @interface NSObject 
 - (id)class;
 - (id) alloc;

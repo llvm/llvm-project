@@ -5,61 +5,61 @@
 
 ; The overflow check may be against the input rather than the sum.
 
-define i1 @uaddo_i64_increment_alt(i64 %x, i64* %p) {
+define i1 @uaddo_i64_increment_alt(i64 %x, ptr %p) {
 ; CHECK-LABEL: uaddo_i64_increment_alt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, #1 // =1
+; CHECK-NEXT:    adds x8, x0, #1
 ; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %a = add i64 %x, 1
-  store i64 %a, i64* %p
+  store i64 %a, ptr %p
   %ov = icmp eq i64 %x, -1
   ret i1 %ov
 }
 
 ; Make sure insertion is done correctly based on dominance.
 
-define i1 @uaddo_i64_increment_alt_dom(i64 %x, i64* %p) {
+define i1 @uaddo_i64_increment_alt_dom(i64 %x, ptr %p) {
 ; CHECK-LABEL: uaddo_i64_increment_alt_dom:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, #1 // =1
+; CHECK-NEXT:    adds x8, x0, #1
 ; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %ov = icmp eq i64 %x, -1
   %a = add i64 %x, 1
-  store i64 %a, i64* %p
+  store i64 %a, ptr %p
   ret i1 %ov
 }
 
 ; The overflow check may be against the input rather than the sum.
 
-define i1 @uaddo_i64_decrement_alt(i64 %x, i64* %p) {
+define i1 @uaddo_i64_decrement_alt(i64 %x, ptr %p) {
 ; CHECK-LABEL: uaddo_i64_decrement_alt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, #1 // =1
+; CHECK-NEXT:    subs x8, x0, #1
 ; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %a = add i64 %x, -1
-  store i64 %a, i64* %p
+  store i64 %a, ptr %p
   %ov = icmp ne i64 %x, 0
   ret i1 %ov
 }
 
 ; Make sure insertion is done correctly based on dominance.
 
-define i1 @uaddo_i64_decrement_alt_dom(i64 %x, i64* %p) {
+define i1 @uaddo_i64_decrement_alt_dom(i64 %x, ptr %p) {
 ; CHECK-LABEL: uaddo_i64_decrement_alt_dom:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, #1 // =1
+; CHECK-NEXT:    subs x8, x0, #1
 ; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %ov = icmp ne i64 %x, 0
   %a = add i64 %x, -1
-  store i64 %a, i64* %p
+  store i64 %a, ptr %p
   ret i1 %ov
 }
 

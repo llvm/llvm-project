@@ -36,8 +36,8 @@ def InstB : TestInstruction {
 // CHECK:      /* 0 */       MCD::OPC_ExtractField, 4, 4,  // Inst{7-4} ...
 // CHECK-NEXT: /* 3 */       MCD::OPC_FilterValue, 0, 18, 0, 0, // Skip to: 26
 // CHECK-NEXT: /* 8 */       MCD::OPC_CheckField, 2, 2, 0, 7, 0, 0, // Skip to: 22
-// CHECK-NEXT: /* 15 */      MCD::OPC_TryDecode, {{[0-9]+}}, 1, 0, 0, 0, 0, // Opcode: InstB, skip to: 22
-// CHECK-NEXT: /* 22 */      MCD::OPC_Decode, {{[0-9]+}}, 1, 1, // Opcode: InstA
+// CHECK-NEXT: /* 15 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, 0, // Opcode: InstB, skip to: 22
+// CHECK-NEXT: /* 22 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA
 // CHECK-NEXT: /* 26 */      MCD::OPC_Fail,
 
-// CHECK: if (DecodeInstB(MI, insn, Address, Decoder) == MCDisassembler::Fail) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }

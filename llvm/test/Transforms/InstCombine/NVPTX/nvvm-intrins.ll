@@ -6,11 +6,11 @@
 
 ; RUN: cat %s > %t.ftz
 ; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "preserve-sign" }' >> %t.ftz
-; RUN: opt < %t.ftz -instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ
+; RUN: opt < %t.ftz -passes=instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ
 
 ; RUN: cat %s > %t.noftz
 ; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "ieee" }' >> %t.noftz
-; RUN: opt < %t.noftz -instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ
+; RUN: opt < %t.noftz -passes=instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ
 
 ; We handle nvvm intrinsics with ftz variants as follows:
 ;  - If the module is in ftz mode, the ftz variant is transformed into the
@@ -49,15 +49,13 @@ define double @fabs_double(double %a) #0 {
 }
 ; CHECK-LABEL: @fabs_float
 define float @fabs_float(float %a) #0 {
-; NOFTZ: call float @llvm.fabs.f32
-; FTZ: call float @llvm.nvvm.fabs.f
+; CHECK: call float @llvm.nvvm.fabs.f
   %ret = call float @llvm.nvvm.fabs.f(float %a)
   ret float %ret
 }
 ; CHECK-LABEL: @fabs_float_ftz
 define float @fabs_float_ftz(float %a) #0 {
-; NOFTZ: call float @llvm.nvvm.fabs.ftz.f
-; FTZ: call float @llvm.fabs.f32
+; CHECK: call float @llvm.nvvm.fabs.ftz.f
   %ret = call float @llvm.nvvm.fabs.ftz.f(float %a)
   ret float %ret
 }
@@ -148,21 +146,19 @@ define float @fmin_float_ftz(float %a, float %b) #0 {
 
 ; CHECK-LABEL: @round_double
 define double @round_double(double %a) #0 {
-; CHECK: call double @llvm.round.f64
+; CHECK: call double @llvm.nvvm.round.d
   %ret = call double @llvm.nvvm.round.d(double %a)
   ret double %ret
 }
 ; CHECK-LABEL: @round_float
 define float @round_float(float %a) #0 {
-; NOFTZ: call float @llvm.round.f32
-; FTZ: call float @llvm.nvvm.round.f
+; CHECK: call float @llvm.nvvm.round.f
   %ret = call float @llvm.nvvm.round.f(float %a)
   ret float %ret
 }
 ; CHECK-LABEL: @round_float_ftz
 define float @round_float_ftz(float %a) #0 {
-; NOFTZ: call float @llvm.nvvm.round.ftz.f
-; FTZ: call float @llvm.round.f32
+; CHECK: call float @llvm.nvvm.round.ftz.f
   %ret = call float @llvm.nvvm.round.ftz.f(float %a)
   ret float %ret
 }
@@ -292,42 +288,38 @@ define float @test_ull2f(i64 %a) #0 {
 
 ; CHECK-LABEL: @test_add_rn_d
 define double @test_add_rn_d(double %a, double %b) #0 {
-; CHECK: fadd
+; CHECK: call double @llvm.nvvm.add.rn.d
   %ret = call double @llvm.nvvm.add.rn.d(double %a, double %b)
   ret double %ret
 }
 ; CHECK-LABEL: @test_add_rn_f
 define float @test_add_rn_f(float %a, float %b) #0 {
-; NOFTZ: fadd
-; FTZ: call float @llvm.nvvm.add.rn.f
+; CHECK: call float @llvm.nvvm.add.rn.f
   %ret = call float @llvm.nvvm.add.rn.f(float %a, float %b)
   ret float %ret
 }
 ; CHECK-LABEL: @test_add_rn_f_ftz
 define float @test_add_rn_f_ftz(float %a, float %b) #0 {
-; NOFTZ: call float @llvm.nvvm.add.rn.f
-; FTZ: fadd
+; CHECK: call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
   %ret = call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
   ret float %ret
 }
 
 ; CHECK-LABEL: @test_mul_rn_d
 define double @test_mul_rn_d(double %a, double %b) #0 {
-; CHECK: fmul
+; CHECK: call double @llvm.nvvm.mul.rn.d
   %ret = call double @llvm.nvvm.mul.rn.d(double %a, double %b)
   ret double %ret
 }
 ; CHECK-LABEL: @test_mul_rn_f
 define float @test_mul_rn_f(float %a, float %b) #0 {
-; NOFTZ: fmul
-; FTZ: call float @llvm.nvvm.mul.rn.f
+; CHECK: call float @llvm.nvvm.mul.rn.f
   %ret = call float @llvm.nvvm.mul.rn.f(float %a, float %b)
   ret float %ret
 }
 ; CHECK-LABEL: @test_mul_rn_f_ftz
 define float @test_mul_rn_f_ftz(float %a, float %b) #0 {
-; NOFTZ: call float @llvm.nvvm.mul.rn.f
-; FTZ: fmul
+; CHECK: call float @llvm.nvvm.mul.rn.ftz.f(float %a, float %b)
   %ret = call float @llvm.nvvm.mul.rn.ftz.f(float %a, float %b)
   ret float %ret
 }
@@ -340,15 +332,13 @@ define double @test_div_rn_d(double %a, double %b) #0 {
 }
 ; CHECK-LABEL: @test_div_rn_f
 define float @test_div_rn_f(float %a, float %b) #0 {
-; NOFTZ: fdiv
-; FTZ: call float @llvm.nvvm.div.rn.f
+; CHECK: call float @llvm.nvvm.div.rn.f
   %ret = call float @llvm.nvvm.div.rn.f(float %a, float %b)
   ret float %ret
 }
 ; CHECK-LABEL: @test_div_rn_f_ftz
 define float @test_div_rn_f_ftz(float %a, float %b) #0 {
-; NOFTZ: call float @llvm.nvvm.div.rn.f
-; FTZ: fdiv
+; CHECK: call float @llvm.nvvm.div.rn.ftz.f(float %a, float %b)
   %ret = call float @llvm.nvvm.div.rn.ftz.f(float %a, float %b)
   ret float %ret
 }
@@ -357,15 +347,13 @@ define float @test_div_rn_f_ftz(float %a, float %b) #0 {
 
 ; CHECK-LABEL: @test_rcp_rn_f
 define float @test_rcp_rn_f(float %a) #0 {
-; NOFTZ: fdiv float 1.0{{.*}} %a
-; FTZ: call float @llvm.nvvm.rcp.rn.f
+; CHECK: call float @llvm.nvvm.rcp.rn.f
   %ret = call float @llvm.nvvm.rcp.rn.f(float %a)
   ret float %ret
 }
 ; CHECK-LABEL: @test_rcp_rn_f_ftz
 define float @test_rcp_rn_f_ftz(float %a) #0 {
-; NOFTZ: call float @llvm.nvvm.rcp.rn.f
-; FTZ: fdiv float 1.0{{.*}} %a
+; CHECK: call float @llvm.nvvm.rcp.rn.ftz.f(float %a)
   %ret = call float @llvm.nvvm.rcp.rn.ftz.f(float %a)
   ret float %ret
 }
@@ -385,15 +373,13 @@ define float @test_sqrt_f(float %a) #0 {
 }
 ; CHECK-LABEL: @test_sqrt_rn_f
 define float @test_sqrt_rn_f(float %a) #0 {
-; NOFTZ: call float @llvm.sqrt.f32(float %a)
-; FTZ: call float @llvm.nvvm.sqrt.rn.f
+; CHECK: call float @llvm.nvvm.sqrt.rn.f
   %ret = call float @llvm.nvvm.sqrt.rn.f(float %a)
   ret float %ret
 }
 ; CHECK-LABEL: @test_sqrt_rn_f_ftz
 define float @test_sqrt_rn_f_ftz(float %a) #0 {
-; NOFTZ: call float @llvm.nvvm.sqrt.rn.f
-; FTZ: call float @llvm.sqrt.f32(float %a)
+; CHECK: call float @llvm.nvvm.sqrt.rn.ftz.f(float %a)
   %ret = call float @llvm.nvvm.sqrt.rn.ftz.f(float %a)
   ret float %ret
 }

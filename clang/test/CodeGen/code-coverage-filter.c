@@ -18,7 +18,7 @@
 #include "Inputs/code-coverage-filter1.h"
 #include "Inputs/code-coverage-filter2.h"
 
-void test() {
+void test(void) {
   test1();
   test2();
 }

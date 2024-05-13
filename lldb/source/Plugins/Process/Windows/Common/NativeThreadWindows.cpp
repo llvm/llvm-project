@@ -13,6 +13,7 @@
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -48,12 +49,29 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
     return Status();
 
   if (resume_state == eStateStepping) {
+    Log *log = GetLog(LLDBLog::Thread);
+
     uint32_t flags_index =
         GetRegisterContext().ConvertRegisterKindToRegisterNumber(
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
     uint64_t flags_value =
         GetRegisterContext().ReadRegisterAsUnsigned(flags_index, 0);
-    flags_value |= 0x100; // Set the trap flag on the CPU
+    NativeProcessProtocol &process = GetProcess();
+    const ArchSpec &arch = process.GetArchitecture();
+    switch (arch.GetMachine()) {
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      flags_value |= 0x100; // Set the trap flag on the CPU
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::arm:
+    case llvm::Triple::thumb:
+      flags_value |= 0x200000; // The SS bit in PState
+      break;
+    default:
+      LLDB_LOG(log, "single stepping unsupported on this architecture");
+      break;
+    }
     GetRegisterContext().WriteRegisterFromUnsigned(flags_index, flags_value);
   }
 
@@ -101,7 +119,7 @@ void NativeThreadWindows::SetStopReason(ThreadStopInfo stop_info,
 
 bool NativeThreadWindows::GetStopReason(ThreadStopInfo &stop_info,
                                         std::string &description) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   switch (m_state) {
   case eStateStopped:

@@ -71,24 +71,24 @@ define dso_local void @test_ilesi_store(i32 signext %a, i32 signext %b) {
 ; CHECK-BE-LABEL: test_ilesi_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sub r3, r4, r3
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    xori r3, r3, 1
-; CHECK-BE-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_ilesi_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sub r3, r4, r3
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-LE-NEXT:    xori r3, r3, 1
-; CHECK-LE-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sle i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @glob, align 4
+  store i32 %conv, ptr @glob, align 4
   ret void
 }
 
@@ -104,23 +104,23 @@ define dso_local void @test_ilesi_sext_store(i32 signext %a, i32 signext %b) {
 ; CHECK-BE-LABEL: test_ilesi_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sub r3, r4, r3
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    addi r3, r3, -1
-; CHECK-BE-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_ilesi_sext_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sub r3, r4, r3
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-LE-NEXT:    addi r3, r3, -1
-; CHECK-LE-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sle i32 %a, %b
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob, align 4
+  store i32 %sub, ptr @glob, align 4
   ret void
 }

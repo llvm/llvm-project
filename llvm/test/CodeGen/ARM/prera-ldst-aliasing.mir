@@ -2,14 +2,14 @@
 --- |
   target triple = "thumbv7---eabi"
 
-  define void @ldrd_strd_aa(i32* noalias nocapture %x, i32* noalias nocapture readonly %y) {
+  define void @ldrd_strd_aa(ptr noalias nocapture %x, ptr noalias nocapture readonly %y) {
   entry:
-    %0 = load i32, i32* %y, align 4
-    store i32 %0, i32* %x, align 4
-    %arrayidx2 = getelementptr inbounds i32, i32* %y, i32 1
-    %1 = load i32, i32* %arrayidx2, align 4
-    %arrayidx3 = getelementptr inbounds i32, i32* %x, i32 1
-    store i32 %1, i32* %arrayidx3, align 4
+    %0 = load i32, ptr %y, align 4
+    store i32 %0, ptr %x, align 4
+    %arrayidx2 = getelementptr inbounds i32, ptr %y, i32 1
+    %1 = load i32, ptr %arrayidx2, align 4
+    %arrayidx3 = getelementptr inbounds i32, ptr %x, i32 1
+    store i32 %1, ptr %arrayidx3, align 4
     ret void
   }
 ...
@@ -26,14 +26,12 @@ body:             |
 
     %1 : gpr = COPY $r1
     %0 : gpr = COPY $r0
-    %2 : gpr = t2LDRi12 %1, 0, 14, $noreg :: (load 4 from %ir.y)
-    t2STRi12 killed %2, %0, 0, 14, $noreg :: (store 4 into %ir.x)
-    %3 : gpr = t2LDRi12 %1, 4, 14, $noreg :: (load 4 from %ir.arrayidx2)
-    t2STRi12 killed %3, %0, 4, 14, $noreg :: (store 4 into %ir.arrayidx3)
-    ; CHECK: t2LDRi12
-    ; CHECK-NEXT: t2LDRi12
-    ; CHECK-NEXT: t2STRi12
-    ; CHECK-NEXT: t2STRi12
+    %2 : gpr = t2LDRi12 %1, 0, 14, $noreg :: (load (s32) from %ir.y)
+    t2STRi12 killed %2, %0, 0, 14, $noreg :: (store (s32) into %ir.x)
+    %3 : gpr = t2LDRi12 %1, 4, 14, $noreg :: (load (s32) from %ir.arrayidx2)
+    t2STRi12 killed %3, %0, 4, 14, $noreg :: (store (s32) into %ir.arrayidx3)
+    ; CHECK: t2LDRDi8
+    ; CHECK-NEXT: t2STRDi8
     tBX_RET 14, $noreg
 
 ...

@@ -15,9 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 namespace {
 AST_MATCHER_P(Type, isBuiltinType, BuiltinType::Kind, Kind) {
@@ -32,8 +30,8 @@ TypePromotionInMathFnCheck::TypePromotionInMathFnCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM)) {
-}
+                                               utils::IncludeSorter::IS_LLVM),
+                      areDiagsSelfContained()) {}
 
 void TypePromotionInMathFnCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
@@ -195,6 +193,4 @@ void TypePromotionInMathFnCheck::check(const MatchFinder::MatchResult &Result) {
         "<cmath>");
 }
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance

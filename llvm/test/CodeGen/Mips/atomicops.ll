@@ -2,9 +2,9 @@
 
 @.str = private unnamed_addr constant [8 x i8] c"%d, %d\0A\00", align 1
 
-define i32 @foo(i32* %mem, i32 %val, i32 %c) nounwind {
+define i32 @foo(ptr %mem, i32 %val, i32 %c) nounwind {
 entry:
-  %0 = atomicrmw add i32* %mem, i32 %val seq_cst
+  %0 = atomicrmw add ptr %mem, i32 %val seq_cst
   %add = add nsw i32 %0, %c
   ret i32 %add
 ; 16-LABEL: foo:
@@ -12,21 +12,30 @@ entry:
 ; 16: 	lw	${{[0-9]+}}, %call16(__sync_fetch_and_add_4)(${{[0-9]+}})
 }
 
+define i32 @atomic_load_sub(ptr %mem, i32 %val, i32 %c) nounwind {
+; 16-LABEL: atomic_load_sub:
+; 16:	lw	${{[0-9]+}}, %call16(__sync_synchronize)(${{[0-9]+}})
+; 16: 	lw	${{[0-9]+}}, %call16(__sync_fetch_and_sub_4)(${{[0-9]+}})
+entry:
+  %0 = atomicrmw sub ptr %mem, i32 %val seq_cst
+  ret i32 %0
+}
+
 define i32 @main() nounwind {
 entry:
   %x = alloca i32, align 4
-  store volatile i32 0, i32* %x, align 4
-  %0 = atomicrmw add i32* %x, i32 1 seq_cst
+  store volatile i32 0, ptr %x, align 4
+  %0 = atomicrmw add ptr %x, i32 1 seq_cst
   %add.i = add nsw i32 %0, 2
-  %1 = load volatile i32, i32* %x, align 4
-  %call1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0), i32 %add.i, i32 %1) nounwind
-  %pair = cmpxchg i32* %x, i32 1, i32 2 seq_cst seq_cst
+  %1 = load volatile i32, ptr %x, align 4
+  %call1 = call i32 (ptr, ...) @printf(ptr @.str, i32 %add.i, i32 %1) nounwind
+  %pair = cmpxchg ptr %x, i32 1, i32 2 seq_cst seq_cst
   %2 = extractvalue { i32, i1 } %pair, 0
-  %3 = load volatile i32, i32* %x, align 4
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0), i32 %2, i32 %3) nounwind
-  %4 = atomicrmw xchg i32* %x, i32 1 seq_cst
-  %5 = load volatile i32, i32* %x, align 4
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0), i32 %4, i32 %5) nounwind
+  %3 = load volatile i32, ptr %x, align 4
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, i32 %2, i32 %3) nounwind
+  %4 = atomicrmw xchg ptr %x, i32 1 seq_cst
+  %5 = load volatile i32, ptr %x, align 4
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, i32 %4, i32 %5) nounwind
 ; 16-LABEL: main:
 ; 16:	lw	${{[0-9]+}}, %call16(__sync_synchronize)(${{[0-9]+}})
 ; 16: 	lw	${{[0-9]+}}, %call16(__sync_fetch_and_add_4)(${{[0-9]+}})
@@ -36,6 +45,4 @@ entry:
   ret i32 0
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
-
-
+declare i32 @printf(ptr nocapture, ...) nounwind

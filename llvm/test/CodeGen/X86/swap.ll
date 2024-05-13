@@ -2,13 +2,13 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=haswell | FileCheck %s -check-prefix=NOAA
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=haswell -combiner-global-alias-analysis=1 | FileCheck %s -check-prefix=AA
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 %struct.S = type { [16 x i8] }
 
-define dso_local void @_Z4SwapP1SS0_(%struct.S* nocapture %a, %struct.S* nocapture %b) local_unnamed_addr {
+define dso_local void @_Z4SwapP1SS0_(ptr nocapture %a, ptr nocapture %b) local_unnamed_addr {
 ; NOAA-LABEL: _Z4SwapP1SS0_:
 ; NOAA:       # %bb.0: # %entry
 ; NOAA-NEXT:    vmovups (%rdi), %xmm0
@@ -28,18 +28,15 @@ define dso_local void @_Z4SwapP1SS0_(%struct.S* nocapture %a, %struct.S* nocaptu
 ; AA-NEXT:    retq
 entry:
   %tmp.sroa.0 = alloca [16 x i8], align 1
-  %tmp.sroa.0.0..sroa_idx6 = getelementptr inbounds [16 x i8], [16 x i8]* %tmp.sroa.0, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %tmp.sroa.0.0..sroa_idx6)
-  %tmp.sroa.0.0..sroa_idx1 = getelementptr inbounds %struct.S, %struct.S* %a, i64 0, i32 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %tmp.sroa.0.0..sroa_idx6, i8* align 1 %tmp.sroa.0.0..sroa_idx1, i64 16, i1 false)
-  %0 = getelementptr inbounds %struct.S, %struct.S* %b, i64 0, i32 0, i64 0
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %tmp.sroa.0.0..sroa_idx1, i8* align 1 %0, i64 16, i1 false), !tbaa.struct !2
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %0, i8* nonnull align 1 %tmp.sroa.0.0..sroa_idx6, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %tmp.sroa.0.0..sroa_idx6)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %tmp.sroa.0)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %tmp.sroa.0, ptr align 1 %a, i64 16, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 %a, ptr align 1 %b, i64 16, i1 false), !tbaa.struct !2
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %b, ptr nonnull align 1 %tmp.sroa.0, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %tmp.sroa.0)
   ret void
 }
 
-define dso_local void @onealloc_noreadback(i8* nocapture %a, i8* nocapture %b) local_unnamed_addr {
+define dso_local void @onealloc_noreadback(ptr nocapture %a, ptr nocapture %b) local_unnamed_addr {
 ; NOAA-LABEL: onealloc_noreadback:
 ; NOAA:       # %bb.0: # %entry
 ; NOAA-NEXT:    retq
@@ -49,19 +46,18 @@ define dso_local void @onealloc_noreadback(i8* nocapture %a, i8* nocapture %b) l
 ; AA-NEXT:    retq
 entry:
   %alloc = alloca [16 x i8], i8 2, align 1
-  %part1 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc, i64 0, i64 0
-  %part2 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc, i64 1, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part1)
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part2)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %part1, i8* align 1 %a, i64 16, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %part2, i8* align 1 %b, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part1)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part2)
+  %part2 = getelementptr inbounds [16 x i8], ptr %alloc, i64 1, i64 0
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %alloc)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %part2)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %alloc, ptr align 1 %a, i64 16, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %part2, ptr align 1 %b, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %alloc)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %part2)
   ret void
 }
 
 
-define dso_local void @twoallocs_trivial(i8* nocapture %a, i8* nocapture %b) local_unnamed_addr {
+define dso_local void @twoallocs_trivial(ptr nocapture %a, ptr nocapture %b) local_unnamed_addr {
 ; NOAA-LABEL: twoallocs_trivial:
 ; NOAA:       # %bb.0: # %entry
 ; NOAA-NEXT:    retq
@@ -72,18 +68,16 @@ define dso_local void @twoallocs_trivial(i8* nocapture %a, i8* nocapture %b) loc
 entry:
   %alloc1 = alloca [16 x i8], align 1
   %alloc2 = alloca [16 x i8], align 1
-  %part1 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc1, i64 0, i64 0
-  %part2 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc2, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part1)
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part2)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %part1, i8* align 1 %a, i64 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %part2, i8* align 1 %b, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part1)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %alloc1)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %alloc2)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %alloc1, ptr align 1 %a, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %alloc2, ptr align 1 %b, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %alloc1)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %alloc2)
   ret void
 }
 
-define dso_local void @twoallocs(i8* nocapture %a, i8* nocapture %b) local_unnamed_addr {
+define dso_local void @twoallocs(ptr nocapture %a, ptr nocapture %b) local_unnamed_addr {
 ; NOAA-LABEL: twoallocs:
 ; NOAA:       # %bb.0: # %entry
 ; NOAA-NEXT:    vmovups (%rdi), %xmm0
@@ -100,19 +94,16 @@ define dso_local void @twoallocs(i8* nocapture %a, i8* nocapture %b) local_unnam
 entry:
   %alloc1 = alloca [16 x i8], align 1
   %alloc2 = alloca [16 x i8], align 1
-  %part1 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc1, i64 0, i64 0
-  %part2 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc2, i64 0, i64 0
-  %part2_alias = getelementptr inbounds [16 x i8], [16 x i8]* %alloc2, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part1)
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part2)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %part2, i8* align 1 %a, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part1)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %b, i8* align 1 %part2_alias, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %alloc1)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %alloc2)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %alloc2, ptr align 1 %a, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %alloc1)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %b, ptr align 1 %alloc2, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %alloc2)
   ret void
 }
 
-define dso_local void @onealloc_readback_1(i8* nocapture %a, i8* nocapture %b) local_unnamed_addr {
+define dso_local void @onealloc_readback_1(ptr nocapture %a, ptr nocapture %b) local_unnamed_addr {
 ; NOAA-LABEL: onealloc_readback_1:
 ; NOAA:       # %bb.0: # %entry
 ; NOAA-NEXT:    vmovups (%rdi), %xmm0
@@ -130,19 +121,18 @@ define dso_local void @onealloc_readback_1(i8* nocapture %a, i8* nocapture %b) l
 ; AA-NEXT:    retq
 entry:
   %alloc = alloca [16 x i8], i8 2, align 1
-  %part2 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc, i64 0, i64 0
-  %part1 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc, i64 1, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part1)
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part2)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %part1, i8* align 1 %a, i64 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %part2, i8* align 1 %b, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part1)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %a, i8* align 1 %part2, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part2)
+  %part1 = getelementptr inbounds [16 x i8], ptr %alloc, i64 1, i64 0
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %part1)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %alloc)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %part1, ptr align 1 %a, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %alloc, ptr align 1 %b, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %part1)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %a, ptr align 1 %alloc, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %alloc)
   ret void
 }
 
-define dso_local void @onealloc_readback_2(i8* nocapture %a, i8* nocapture %b) local_unnamed_addr {
+define dso_local void @onealloc_readback_2(ptr nocapture %a, ptr nocapture %b) local_unnamed_addr {
 ; NOAA-LABEL: onealloc_readback_2:
 ; NOAA:       # %bb.0: # %entry
 ; NOAA-NEXT:    vmovups (%rdi), %xmm0
@@ -160,15 +150,14 @@ define dso_local void @onealloc_readback_2(i8* nocapture %a, i8* nocapture %b) l
 ; AA-NEXT:    retq
 entry:
   %alloc = alloca [16 x i8], i8 2, align 1
-  %part1 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc, i64 0, i64 0
-  %part2 = getelementptr inbounds [16 x i8], [16 x i8]* %alloc, i64 1, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part1)
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %part2)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %part1, i8* align 1 %a, i64 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %part2, i8* align 1 %b, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part1)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %a, i8* align 1 %part2, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %part2)
+  %part2 = getelementptr inbounds [16 x i8], ptr %alloc, i64 1, i64 0
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %alloc)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %part2)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %alloc, ptr align 1 %a, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %part2, ptr align 1 %b, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %alloc)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %a, ptr align 1 %part2, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %part2)
   ret void
 }
 

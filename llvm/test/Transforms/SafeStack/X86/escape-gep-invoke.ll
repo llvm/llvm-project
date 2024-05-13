@@ -1,5 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 %struct.pair = type { i32, i32 }
 
@@ -9,26 +11,24 @@
 ;   (GEP followed by an invoke)
 ;  safestack attribute
 ; Requires protector.
-define i32 @foo() uwtable safestack personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @foo() uwtable safestack personality ptr @__gxx_personality_v0 {
 entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   %c = alloca %struct.pair, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
-  %a = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  store i32 0, i32* %a, align 4
-  %a1 = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  invoke void @_Z3exceptPi(i32* %a1)
+  store i32 0, ptr %c, align 4
+  invoke void @_Z3exceptPi(ptr %c)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret i32 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 0
 }
 
-declare void @_Z3exceptPi(i32*)
+declare void @_Z3exceptPi(ptr)
 declare i32 @__gxx_personality_v0(...)

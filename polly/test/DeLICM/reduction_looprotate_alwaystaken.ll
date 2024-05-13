@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-overapproximate-writes=true -polly-delicm-compute-known=true -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-overapproximate-writes=true -polly-delicm-compute-known=true -polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; Verify that delicm can cope with never taken PHI incoming edges.
 ; The edge %body -> %body_phi is never taken, hence the access MemoryKind::PHI,
@@ -16,7 +16,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A, double* noalias nonnull %dummy) {
+define void @func(ptr noalias nonnull %A, ptr noalias nonnull %dummy) {
 entry:
   br label %outer.preheader
 
@@ -30,7 +30,7 @@ outer.for:
 
 
     reduction.preheader:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
       br label %reduction.for
 
     reduction.for:
@@ -44,7 +44,7 @@ outer.for:
           br i1 %cond, label %alwaystaken, label %body_phi
 
         alwaystaken:
-          store double 0.0, double* %dummy
+          store double 0.0, ptr %dummy
           br label %body_phi
 
         body_phi:
@@ -59,7 +59,7 @@ outer.for:
       br i1 %i.cmp, label %reduction.for, label %reduction.exit
 
     reduction.exit:
-      store double %phi, double* %A_idx
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

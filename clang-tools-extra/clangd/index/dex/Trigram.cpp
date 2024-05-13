@@ -8,14 +8,18 @@
 
 #include "Trigram.h"
 #include "FuzzyMatch.h"
-#include "Token.h"
+#include "index/dex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include <cctype>
+#include <limits>
 #include <queue>
 #include <string>
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -24,22 +28,24 @@ namespace dex {
 // Produce trigrams (including duplicates) and pass them to Out().
 template <typename Func>
 static void identifierTrigrams(llvm::StringRef Identifier, Func Out) {
+  assert(!Identifier.empty());
   // Apply fuzzy matching text segmentation.
-  std::vector<CharRole> Roles(Identifier.size());
+  llvm::SmallVector<CharRole> Roles(Identifier.size());
   calculateRoles(Identifier,
-                 llvm::makeMutableArrayRef(Roles.data(), Identifier.size()));
+                 llvm::MutableArrayRef(Roles.data(), Identifier.size()));
 
   std::string LowercaseIdentifier = Identifier.lower();
 
   // For each character, store indices of the characters to which fuzzy matching
-  // algorithm can jump. There are 3 possible variants:
+  // algorithm can jump. There are 2 possible variants:
   //
   // * Next Tail - next character from the same segment
   // * Next Head - front character of the next segment
   //
   // Next stores tuples of three indices in the presented order, if a variant is
   // not available then 0 is stored.
-  std::vector<std::array<unsigned, 3>> Next(LowercaseIdentifier.size());
+  llvm::SmallVector<std::array<unsigned, 2>, 12> Next(
+      LowercaseIdentifier.size());
   unsigned NextTail = 0, NextHead = 0;
   for (int I = LowercaseIdentifier.size() - 1; I >= 0; --I) {
     Next[I] = {{NextTail, NextHead}};
@@ -51,14 +57,14 @@ static void identifierTrigrams(llvm::StringRef Identifier, Func Out) {
 
   // Iterate through valid sequences of three characters Fuzzy Matcher can
   // process.
-  for (size_t I = 0; I < LowercaseIdentifier.size(); ++I) {
+  for (unsigned I = 0; I < LowercaseIdentifier.size(); ++I) {
     // Skip delimiters.
     if (Roles[I] != Head && Roles[I] != Tail)
       continue;
-    for (const unsigned J : Next[I]) {
+    for (unsigned J : Next[I]) {
       if (J == 0)
         continue;
-      for (const unsigned K : Next[J]) {
+      for (unsigned K : Next[J]) {
         if (K == 0)
           continue;
         Out(Trigram(LowercaseIdentifier[I], LowercaseIdentifier[J],
@@ -66,16 +72,29 @@ static void identifierTrigrams(llvm::StringRef Identifier, Func Out) {
       }
     }
   }
-  // Emit short-query trigrams: FooBar -> f, fo, fb.
-  if (!LowercaseIdentifier.empty())
-    Out(Trigram(LowercaseIdentifier[0]));
-  if (LowercaseIdentifier.size() >= 2)
-    Out(Trigram(LowercaseIdentifier[0], LowercaseIdentifier[1]));
-  for (size_t I = 1; I < LowercaseIdentifier.size(); ++I)
-    if (Roles[I] == Head) {
-      Out(Trigram(LowercaseIdentifier[0], LowercaseIdentifier[I]));
+  // Short queries semantics are different. When the user dosn't type enough
+  // symbols to form trigrams, we still want to serve meaningful results. To
+  // achieve that, we form incomplete trigrams (bi- and unigrams) for the
+  // identifiers and also generate short trigrams on the query side from what
+  // is available. We allow a small number of short trigram types in order to
+  // prevent excessive memory usage and increase the quality of the search.
+  // Only the first few symbols are allowed to be used in incomplete trigrams.
+  //
+  // Example - for "_abc_def_ghi_jkl" we'll get following incomplete trigrams:
+  // "_", "_a", "a", "ab", "ad", "d", "de", "dg"
+  for (unsigned Position = 0, HeadsSeen = 0; HeadsSeen < 2;) {
+    // The first symbol might be a separator, so the loop condition should be
+    // stopping as soon as there is no next head or we have seen two heads.
+    if (Roles[Position] == Head)
+      ++HeadsSeen;
+    Out(Trigram(LowercaseIdentifier[Position]));
+    for (unsigned I : Next[Position])
+      if (I != 0)
+        Out(Trigram(LowercaseIdentifier[Position], LowercaseIdentifier[I]));
+    Position = Next[Position][1];
+    if (Position == 0)
       break;
-    }
+  }
 }
 
 void generateIdentifierTrigrams(llvm::StringRef Identifier,
@@ -86,6 +105,9 @@ void generateIdentifierTrigrams(llvm::StringRef Identifier,
   // The magic number was tuned by running IndexBenchmark.DexBuild.
   constexpr unsigned ManyTrigramsIdentifierThreshold = 14;
   Result.clear();
+  if (Identifier.empty())
+    return;
+
   if (Identifier.size() < ManyTrigramsIdentifierThreshold) {
     identifierTrigrams(Identifier, [&](Trigram T) {
       if (!llvm::is_contained(Result, T))
@@ -101,17 +123,16 @@ void generateIdentifierTrigrams(llvm::StringRef Identifier,
 std::vector<Token> generateQueryTrigrams(llvm::StringRef Query) {
   if (Query.empty())
     return {};
-  std::string LowercaseQuery = Query.lower();
-  if (Query.size() < 3) // short-query trigrams only
-    return {Token(Token::Kind::Trigram, LowercaseQuery)};
 
   // Apply fuzzy matching text segmentation.
-  std::vector<CharRole> Roles(Query.size());
-  calculateRoles(Query, llvm::makeMutableArrayRef(Roles.data(), Query.size()));
+  llvm::SmallVector<CharRole> Roles(Query.size());
+  calculateRoles(Query, llvm::MutableArrayRef(Roles.data(), Query.size()));
+
+  std::string LowercaseQuery = Query.lower();
 
   llvm::DenseSet<Token> UniqueTrigrams;
   std::string Chars;
-  for (unsigned I = 0; I < Query.size(); ++I) {
+  for (unsigned I = 0; I < LowercaseQuery.size(); ++I) {
     if (Roles[I] != Head && Roles[I] != Tail)
       continue; // Skip delimiters.
     Chars.push_back(LowercaseQuery[I]);
@@ -119,6 +140,18 @@ std::vector<Token> generateQueryTrigrams(llvm::StringRef Query) {
       Chars.erase(Chars.begin());
     if (Chars.size() == 3)
       UniqueTrigrams.insert(Token(Token::Kind::Trigram, Chars));
+  }
+
+  // For queries with very few letters, generateIdentifierTrigrams emulates
+  // outputs of this function to match the semantics.
+  if (UniqueTrigrams.empty()) {
+    // If bigram can't be formed out of letters/numbers, we prepend separator.
+    std::string Result(1, LowercaseQuery.front());
+    for (unsigned I = 1; I < LowercaseQuery.size(); ++I)
+      if (Roles[I] == Head || Roles[I] == Tail)
+        Result += LowercaseQuery[I];
+    UniqueTrigrams.insert(
+        Token(Token::Kind::Trigram, llvm::StringRef(Result).take_back(2)));
   }
 
   return {UniqueTrigrams.begin(), UniqueTrigrams.end()};

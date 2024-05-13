@@ -14,16 +14,25 @@ using namespace mlir;
 
 namespace {
 struct TestMemRefStrideCalculation
-    : public PassWrapper<TestMemRefStrideCalculation, FunctionPass> {
-  void runOnFunction() override;
+    : public PassWrapper<TestMemRefStrideCalculation,
+                         InterfacePass<SymbolOpInterface>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMemRefStrideCalculation)
+
+  StringRef getArgument() const final {
+    return "test-memref-stride-calculation";
+  }
+  StringRef getDescription() const final {
+    return "Test operation constant folding";
+  }
+  void runOnOperation() override;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Traverse AllocOp and compute strides of each MemRefType independently.
-void TestMemRefStrideCalculation::runOnFunction() {
-  llvm::outs() << "Testing: " << getFunction().getName() << "\n";
-  getFunction().walk([&](memref::AllocOp allocOp) {
-    auto memrefType = allocOp.getResult().getType().cast<MemRefType>();
+void TestMemRefStrideCalculation::runOnOperation() {
+  llvm::outs() << "Testing: " << getOperation().getName() << "\n";
+  getOperation().walk([&](memref::AllocOp allocOp) {
+    auto memrefType = cast<MemRefType>(allocOp.getResult().getType());
     int64_t offset;
     SmallVector<int64_t, 4> strides;
     if (failed(getStridesAndOffset(memrefType, strides, offset))) {
@@ -32,13 +41,13 @@ void TestMemRefStrideCalculation::runOnFunction() {
       return;
     }
     llvm::outs() << "MemRefType offset: ";
-    if (offset == MemRefType::getDynamicStrideOrOffset())
+    if (ShapedType::isDynamic(offset))
       llvm::outs() << "?";
     else
       llvm::outs() << offset;
     llvm::outs() << " strides: ";
     llvm::interleaveComma(strides, llvm::outs(), [&](int64_t v) {
-      if (v == MemRefType::getDynamicStrideOrOffset())
+      if (ShapedType::isDynamic(v))
         llvm::outs() << "?";
       else
         llvm::outs() << v;
@@ -51,8 +60,7 @@ void TestMemRefStrideCalculation::runOnFunction() {
 namespace mlir {
 namespace test {
 void registerTestMemRefStrideCalculation() {
-  PassRegistration<TestMemRefStrideCalculation> pass(
-      "test-memref-stride-calculation", "Test operation constant folding");
+  PassRegistration<TestMemRefStrideCalculation>();
 }
 } // namespace test
 } // namespace mlir

@@ -7,11 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.h"
-#include "support/Logger.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
 #include <limits>
 
 namespace clang {
@@ -49,12 +45,12 @@ bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request,
 llvm::json::Value toJSON(const FuzzyFindRequest &Request) {
   return llvm::json::Object{
       {"Query", Request.Query},
-      {"Scopes", llvm::json::Array{Request.Scopes}},
+      {"Scopes", Request.Scopes},
       {"AnyScope", Request.AnyScope},
       {"Limit", Request.Limit},
       {"RestrictForCodeCompletion", Request.RestrictForCodeCompletion},
-      {"ProximityPaths", llvm::json::Array{Request.ProximityPaths}},
-      {"PreferredTypes", llvm::json::Array{Request.PreferredTypes}},
+      {"ProximityPaths", Request.ProximityPaths},
+      {"PreferredTypes", Request.PreferredTypes},
   };
 }
 

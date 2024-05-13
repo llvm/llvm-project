@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown -mattr=+sse2,-sse4.1 | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+sse2,-sse4.1 | FileCheck %s --check-prefix=X64
 
-define void @test(<8 x i16>* %b, i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i16 %a5, i16 %a6, i16 %a7) nounwind {
+define void @test(ptr %b, i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i16 %a5, i16 %a6, i16 %a7) nounwind {
 ; X86-LABEL: test:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -51,7 +51,7 @@ define void @test(<8 x i16>* %b, i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i1
   %tmp10 = insertelement <8 x i16> %tmp8, i16 %a5, i32 5
   %tmp12 = insertelement <8 x i16> %tmp10, i16 %a6, i32 6
   %tmp14 = insertelement <8 x i16> %tmp12, i16 %a7, i32 7
-  store <8 x i16> %tmp14, <8 x i16>* %b
+  store <8 x i16> %tmp14, ptr %b
   ret void
 }
 

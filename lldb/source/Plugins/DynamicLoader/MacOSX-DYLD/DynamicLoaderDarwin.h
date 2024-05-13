@@ -20,7 +20,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UUID.h"
 
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace lldb_private {
 
@@ -71,21 +71,21 @@ protected:
 
   lldb::ModuleSP GetDYLDModule();
 
+  void ClearDYLDModule();
+
   class Segment {
   public:
-    Segment()
-        : name(), vmaddr(LLDB_INVALID_ADDRESS), vmsize(0), fileoff(0),
-          filesize(0), maxprot(0), initprot(0), nsects(0), flags(0) {}
+    Segment() : name() {}
 
     lldb_private::ConstString name;
-    lldb::addr_t vmaddr;
-    lldb::addr_t vmsize;
-    lldb::addr_t fileoff;
-    lldb::addr_t filesize;
-    uint32_t maxprot;
-    uint32_t initprot;
-    uint32_t nsects;
-    uint32_t flags;
+    lldb::addr_t vmaddr = LLDB_INVALID_ADDRESS;
+    lldb::addr_t vmsize = 0;
+    lldb::addr_t fileoff = 0;
+    lldb::addr_t filesize = 0;
+    uint32_t maxprot = 0;
+    uint32_t initprot = 0;
+    uint32_t nsects = 0;
+    uint32_t flags = 0;
 
     bool operator==(const Segment &rhs) const {
       return name == rhs.name && vmaddr == rhs.vmaddr && vmsize == rhs.vmsize;
@@ -100,8 +100,6 @@ protected:
     /// The amount to slide all segments by if there is a global
     /// slide.
     lldb::addr_t slide = 0;
-    /// Modification date for this dylib.
-    lldb::addr_t mod_date = 0;
     /// Resolved path for this dylib.
     lldb_private::FileSpec file_spec;
     /// UUID for this dylib if it has one, else all zeros.
@@ -128,7 +126,6 @@ protected:
       if (!load_cmd_data_only) {
         address = LLDB_INVALID_ADDRESS;
         slide = 0;
-        mod_date = 0;
         file_spec.Clear();
         ::memset(&header, 0, sizeof(header));
       }
@@ -142,8 +139,7 @@ protected:
 
     bool operator==(const ImageInfo &rhs) const {
       return address == rhs.address && slide == rhs.slide &&
-             mod_date == rhs.mod_date && file_spec == rhs.file_spec &&
-             uuid == rhs.uuid &&
+             file_spec == rhs.file_spec && uuid == rhs.uuid &&
              memcmp(&header, &rhs.header, sizeof(header)) == 0 &&
              segments == rhs.segments && os_type == rhs.os_type &&
              os_env == rhs.os_env;

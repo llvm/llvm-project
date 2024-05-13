@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-simplify -analyze < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ; Do not combine stores that write different values.
 ;
@@ -7,7 +7,7 @@
 ;   A[0] = 42.0;
 ; }
 ;
-define void @nocoalesce_differentvalues(i32 %n, double* noalias nonnull %A) {
+define void @nocoalesce_differentvalues(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -17,8 +17,8 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 21.0, double* %A
-      store double 42.0, double* %A
+      store double 21.0, ptr %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:

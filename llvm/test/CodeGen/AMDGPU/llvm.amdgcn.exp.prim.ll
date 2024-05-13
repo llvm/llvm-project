@@ -1,5 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=NOPRIM %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=PRIM %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=NOPRIM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=PRIM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=PRIM %s
 
 declare void @llvm.amdgcn.exp.i32(i32, i32, i32, i32, i32, i32, i1, i1) #1
 

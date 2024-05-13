@@ -153,7 +153,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
     return nullptr;
 
   // Since we may modify cmp of this MBB, make sure NZCV does not live out.
-  for (auto SuccBB : MBB->successors())
+  for (auto *SuccBB : MBB->successors())
     if (SuccBB->isLiveIn(AArch64::NZCV))
       return nullptr;
 
@@ -163,7 +163,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
     MachineInstr &I = *It;
     assert(!I.isTerminator() && "Spurious terminator");
     // Check if there is any use of NZCV between CMP and Bcc.
-    if (I.readsRegister(AArch64::NZCV))
+    if (I.readsRegister(AArch64::NZCV, /*TRI=*/nullptr))
       return nullptr;
     switch (I.getOpcode()) {
     // cmp is an alias for subs with a dead destination register.

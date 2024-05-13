@@ -27,6 +27,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Tooling/Syntax/Nodes.h"
+#include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "clang/Tooling/Syntax/Tree.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -155,9 +156,8 @@ private:
 } // namespace
 
 static CallExpr::arg_range dropDefaultArgs(CallExpr::arg_range Args) {
-  auto FirstDefaultArg = std::find_if(Args.begin(), Args.end(), [](auto It) {
-    return isa<CXXDefaultArgExpr>(It);
-  });
+  auto FirstDefaultArg =
+      llvm::find_if(Args, [](auto It) { return isa<CXXDefaultArgExpr>(It); });
   return llvm::make_range(Args.begin(), FirstDefaultArg);
 }
 
@@ -366,21 +366,24 @@ private:
 /// Call finalize() to finish building the tree and consume the root node.
 class syntax::TreeBuilder {
 public:
-  TreeBuilder(syntax::Arena &Arena) : Arena(Arena), Pending(Arena) {
-    for (const auto &T : Arena.getTokenBuffer().expandedTokens())
+  TreeBuilder(syntax::Arena &Arena, TokenBufferTokenManager& TBTM)
+      : Arena(Arena),
+        TBTM(TBTM),
+        Pending(Arena, TBTM.tokenBuffer()) {
+    for (const auto &T : TBTM.tokenBuffer().expandedTokens())
       LocationToToken.insert({T.location(), &T});
   }
 
   llvm::BumpPtrAllocator &allocator() { return Arena.getAllocator(); }
   const SourceManager &sourceManager() const {
-    return Arena.getSourceManager();
+    return TBTM.sourceManager();
   }
 
   /// Populate children for \p New node, assuming it covers tokens from \p
   /// Range.
   void foldNode(ArrayRef<syntax::Token> Range, syntax::Tree *New, ASTPtr From) {
     assert(New);
-    Pending.foldChildren(Arena, Range, New);
+    Pending.foldChildren(TBTM.tokenBuffer(), Range, New);
     if (From)
       Mapping.add(From, New);
   }
@@ -393,7 +396,7 @@ public:
   void foldNode(llvm::ArrayRef<syntax::Token> Range, syntax::Tree *New,
                 NestedNameSpecifierLoc From) {
     assert(New);
-    Pending.foldChildren(Arena, Range, New);
+    Pending.foldChildren(TBTM.tokenBuffer(), Range, New);
     if (From)
       Mapping.add(From, New);
   }
@@ -404,7 +407,7 @@ public:
                 ASTPtr From) {
     assert(New);
     auto ListRange = Pending.shrinkToFitList(SuperRange);
-    Pending.foldChildren(Arena, ListRange, New);
+    Pending.foldChildren(TBTM.tokenBuffer(), ListRange, New);
     if (From)
       Mapping.add(From, New);
   }
@@ -435,12 +438,12 @@ public:
 
   /// Finish building the tree and consume the root node.
   syntax::TranslationUnit *finalize() && {
-    auto Tokens = Arena.getTokenBuffer().expandedTokens();
+    auto Tokens = TBTM.tokenBuffer().expandedTokens();
     assert(!Tokens.empty());
     assert(Tokens.back().kind() == tok::eof);
 
     // Build the root of the tree, consuming all the children.
-    Pending.foldChildren(Arena, Tokens.drop_back(),
+    Pending.foldChildren(TBTM.tokenBuffer(), Tokens.drop_back(),
                          new (Arena.getAllocator()) syntax::TranslationUnit);
 
     auto *TU = cast<syntax::TranslationUnit>(std::move(Pending).finalize());
@@ -465,8 +468,8 @@ public:
     assert(First.isValid());
     assert(Last.isValid());
     assert(First == Last ||
-           Arena.getSourceManager().isBeforeInTranslationUnit(First, Last));
-    return llvm::makeArrayRef(findToken(First), std::next(findToken(Last)));
+           TBTM.sourceManager().isBeforeInTranslationUnit(First, Last));
+    return llvm::ArrayRef(findToken(First), std::next(findToken(Last)));
   }
 
   ArrayRef<syntax::Token>
@@ -549,7 +552,7 @@ private:
     assert(Tokens.back().kind() != tok::eof);
     // We never consume 'eof', so looking at the next token is ok.
     if (Tokens.back().kind() != tok::semi && Tokens.end()->kind() == tok::semi)
-      return llvm::makeArrayRef(Tokens.begin(), Tokens.end() + 1);
+      return llvm::ArrayRef(Tokens.begin(), Tokens.end() + 1);
     return Tokens;
   }
 
@@ -565,15 +568,16 @@ private:
   ///
   /// Ensures that added nodes properly nest and cover the whole token stream.
   struct Forest {
-    Forest(syntax::Arena &A) {
-      assert(!A.getTokenBuffer().expandedTokens().empty());
-      assert(A.getTokenBuffer().expandedTokens().back().kind() == tok::eof);
+    Forest(syntax::Arena &A, const syntax::TokenBuffer &TB) {
+      assert(!TB.expandedTokens().empty());
+      assert(TB.expandedTokens().back().kind() == tok::eof);
       // Create all leaf nodes.
       // Note that we do not have 'eof' in the tree.
-      for (const auto &T : A.getTokenBuffer().expandedTokens().drop_back()) {
-        auto *L = new (A.getAllocator()) syntax::Leaf(&T);
+      for (const auto &T : TB.expandedTokens().drop_back()) {
+        auto *L = new (A.getAllocator())
+            syntax::Leaf(reinterpret_cast<TokenManager::Key>(&T));
         L->Original = true;
-        L->CanModify = A.getTokenBuffer().spelledForExpanded(T).hasValue();
+        L->CanModify = TB.spelledForExpanded(T).has_value();
         Trees.insert(Trees.end(), {&T, L});
       }
     }
@@ -621,8 +625,8 @@ private:
     }
 
     /// Add \p Node to the forest and attach child nodes based on \p Tokens.
-    void foldChildren(const syntax::Arena &A, ArrayRef<syntax::Token> Tokens,
-                      syntax::Tree *Node) {
+    void foldChildren(const syntax::TokenBuffer &TB,
+                      ArrayRef<syntax::Token> Tokens, syntax::Tree *Node) {
       // Attach children to `Node`.
       assert(Node->getFirstChild() == nullptr && "node already has children");
 
@@ -647,7 +651,7 @@ private:
       // Mark that this node came from the AST and is backed by the source code.
       Node->Original = true;
       Node->CanModify =
-          A.getTokenBuffer().spelledForExpanded(Tokens).hasValue();
+          TB.spelledForExpanded(Tokens).has_value();
 
       Trees.erase(BeginChildren, EndChildren);
       Trees.insert({FirstToken, Node});
@@ -661,18 +665,18 @@ private:
       return Root;
     }
 
-    std::string str(const syntax::Arena &A) const {
+    std::string str(const syntax::TokenBufferTokenManager &STM) const {
       std::string R;
       for (auto It = Trees.begin(); It != Trees.end(); ++It) {
         unsigned CoveredTokens =
             It != Trees.end()
                 ? (std::next(It)->first - It->first)
-                : A.getTokenBuffer().expandedTokens().end() - It->first;
+                : STM.tokenBuffer().expandedTokens().end() - It->first;
 
         R += std::string(
             formatv("- '{0}' covers '{1}'+{2} tokens\n", It->second->getKind(),
-                    It->first->text(A.getSourceManager()), CoveredTokens));
-        R += It->second->dump(A.getSourceManager());
+                    It->first->text(STM.sourceManager()), CoveredTokens));
+        R += It->second->dump(STM);
       }
       return R;
     }
@@ -685,9 +689,10 @@ private:
   };
 
   /// For debugging purposes.
-  std::string str() { return Pending.str(Arena); }
+  std::string str() { return Pending.str(TBTM); }
 
   syntax::Arena &Arena;
+  TokenBufferTokenManager& TBTM;
   /// To quickly find tokens by their start location.
   llvm::DenseMap<SourceLocation, const syntax::Token *> LocationToToken;
   Forest Pending;
@@ -763,7 +768,7 @@ public:
     // Build TemplateDeclaration nodes if we had template parameters.
     auto ConsumeTemplateParameters = [&](const TemplateParameterList &L) {
       const auto *TemplateKW = Builder.findToken(L.getTemplateLoc());
-      auto R = llvm::makeArrayRef(TemplateKW, DeclarationRange.end());
+      auto R = llvm::ArrayRef(TemplateKW, DeclarationRange.end());
       Result =
           foldTemplateDeclaration(R, TemplateKW, DeclarationRange, nullptr);
       DeclarationRange = R;
@@ -1634,7 +1639,7 @@ private:
     auto Return = Builder.getRange(ReturnedType.getSourceRange());
     const auto *Arrow = Return.begin() - 1;
     assert(Arrow->kind() == tok::arrow);
-    auto Tokens = llvm::makeArrayRef(Arrow, Return.end());
+    auto Tokens = llvm::ArrayRef(Arrow, Return.end());
     Builder.markChildToken(Arrow, syntax::NodeRole::ArrowToken);
     if (ReturnDeclarator)
       Builder.markChild(ReturnDeclarator, syntax::NodeRole::Declarator);
@@ -1719,7 +1724,7 @@ void syntax::TreeBuilder::markStmtChild(Stmt *Child, NodeRole Role) {
     markExprChild(ChildExpr, NodeRole::Expression);
     ChildNode = new (allocator()) syntax::ExpressionStatement;
     // (!) 'getStmtRange()' ensures this covers a trailing semicolon.
-    Pending.foldChildren(Arena, getStmtRange(Child), ChildNode);
+    Pending.foldChildren(TBTM.tokenBuffer(), getStmtRange(Child), ChildNode);
   } else {
     ChildNode = Mapping.find(Child);
   }
@@ -1746,8 +1751,9 @@ const syntax::Token *syntax::TreeBuilder::findToken(SourceLocation L) const {
 }
 
 syntax::TranslationUnit *syntax::buildSyntaxTree(Arena &A,
+                                                 TokenBufferTokenManager& TBTM,
                                                  ASTContext &Context) {
-  TreeBuilder Builder(A);
+  TreeBuilder Builder(A, TBTM);
   BuildTreeVisitor(Context, Builder).TraverseAST(Context);
   return std::move(Builder).finalize();
 }

@@ -218,6 +218,9 @@ FLOATING_TYPE(BFloat16, BFloat16Ty)
 // '__float128'
 FLOATING_TYPE(Float128, Float128Ty)
 
+// '__ibm128'
+FLOATING_TYPE(Ibm128, Ibm128Ty)
+
 //===- Language-specific types --------------------------------------------===//
 
 // This is the type of C++0x 'nullptr'.
@@ -282,6 +285,9 @@ PLACEHOLDER_TYPE(Overload, OverloadTy)
 //   x->foo       # if only contains non-static members
 PLACEHOLDER_TYPE(BoundMember, BoundMemberTy)
 
+// The type of an unresolved template. Used in UnresolvedLookupExpr.
+PLACEHOLDER_TYPE(UnresolvedTemplate, UnresolvedTemplateTy)
+
 // The type of an expression which refers to a pseudo-object,
 // such as those introduced by Objective C's @property or
 // VS.NET's __property declarations.  A placeholder type.  The
@@ -317,7 +323,7 @@ PLACEHOLDER_TYPE(ARCUnbridgedCast, ARCUnbridgedCastTy)
 PLACEHOLDER_TYPE(IncompleteMatrixIdx, IncompleteMatrixIdxTy)
 
 // A placeholder type for OpenMP array sections.
-PLACEHOLDER_TYPE(OMPArraySection, OMPArraySectionTy)
+PLACEHOLDER_TYPE(ArraySection, ArraySectionTy)
 
 // A placeholder type for OpenMP array shaping operation.
 PLACEHOLDER_TYPE(OMPArrayShaping, OMPArrayShapingTy)

@@ -8,17 +8,20 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeEnumInjectedSources.h"
 
-#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 
 namespace llvm {
 namespace pdb {
 
 namespace {
 
-Expected<std::string> readStreamData(BinaryStream &Stream, uint32_t Limit) {
-  uint32_t Offset = 0, DataLength = std::min(Limit, Stream.getLength());
+Expected<std::string> readStreamData(BinaryStream &Stream, uint64_t Limit) {
+  uint64_t Offset = 0, DataLength = std::min(Limit, Stream.getLength());
   std::string Result;
   Result.reserve(DataLength);
   while (Offset < DataLength) {

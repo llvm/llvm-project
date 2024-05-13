@@ -15,11 +15,11 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_os_ostream.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <tuple>
 
 namespace clang {
@@ -34,7 +34,7 @@ MATCHER_P2(Pos, Line, Col, "") {
   return arg.line == int(Line) && arg.character == int(Col);
 }
 
-MATCHER_P(MacroName, Name, "") { return arg.Name == Name; }
+MATCHER_P(macroName, Name, "") { return arg.Name == Name; }
 
 /// A helper to make tests easier to read.
 Position position(int Line, int Character) {
@@ -315,6 +315,16 @@ TEST(SourceCodeTests, SourceLocationInMainFile) {
   }
 }
 
+TEST(SourceCodeTests, isReservedName) {
+  EXPECT_FALSE(isReservedName(""));
+  EXPECT_FALSE(isReservedName("_"));
+  EXPECT_FALSE(isReservedName("foo"));
+  EXPECT_FALSE(isReservedName("_foo"));
+  EXPECT_TRUE(isReservedName("__foo"));
+  EXPECT_TRUE(isReservedName("_Foo"));
+  EXPECT_FALSE(isReservedName("foo__bar")) << "FIXME";
+}
+
 TEST(SourceCodeTests, CollectIdentifiers) {
   auto Style = format::getLLVMStyle();
   auto IDs = collectIdentifiers(R"cpp(
@@ -346,9 +356,9 @@ TEST(SourceCodeTests, CollectWords) {
 }
 
 class SpelledWordsTest : public ::testing::Test {
-  llvm::Optional<ParsedAST> AST;
+  std::optional<ParsedAST> AST;
 
-  llvm::Optional<SpelledWord> tryWord(const char *Text) {
+  std::optional<SpelledWord> tryWord(const char *Text) {
     llvm::Annotations A(Text);
     auto TU = TestTU::withCode(A.code());
     AST = TU.build();
@@ -367,7 +377,7 @@ protected:
   SpelledWord word(const char *Text) {
     auto Result = tryWord(Text);
     EXPECT_TRUE(Result) << Text;
-    return Result.getValueOr(SpelledWord());
+    return Result.value_or(SpelledWord());
   }
 
   void noWord(const char *Text) { EXPECT_FALSE(tryWord(Text)) << Text; }
@@ -532,7 +542,7 @@ TEST(SourceCodeTests, GetMacros) {
   ASSERT_TRUE(Id);
   auto Result = locateMacroAt(*Id, AST.getPreprocessor());
   ASSERT_TRUE(Result);
-  EXPECT_THAT(*Result, MacroName("MACRO"));
+  EXPECT_THAT(*Result, macroName("MACRO"));
 }
 
 TEST(SourceCodeTests, WorksAtBeginOfFile) {
@@ -546,7 +556,7 @@ TEST(SourceCodeTests, WorksAtBeginOfFile) {
   ASSERT_TRUE(Id);
   auto Result = locateMacroAt(*Id, AST.getPreprocessor());
   ASSERT_TRUE(Result);
-  EXPECT_THAT(*Result, MacroName("MACRO"));
+  EXPECT_THAT(*Result, macroName("MACRO"));
 }
 
 TEST(SourceCodeTests, IsInsideMainFile) {
@@ -624,7 +634,7 @@ TEST(SourceCodeTests, HalfOpenFileRange) {
     const NamedDecl &Decl = findUnqualifiedDecl(AST, Name);
     auto FileRange = toHalfOpenFileRange(SM, LangOpts, Decl.getSourceRange());
     SCOPED_TRACE("Checking range: " + Name);
-    ASSERT_NE(FileRange, llvm::None);
+    ASSERT_NE(FileRange, std::nullopt);
     Range HalfOpenRange = SourceRangeToRange(*FileRange);
     EXPECT_EQ(HalfOpenRange, Test.ranges(Name)[0]);
   };
@@ -653,7 +663,7 @@ TEST(SourceCodeTests, HalfOpenFileRangePathologicalPreprocessor) {
   const auto &Func = cast<FunctionDecl>(findDecl(AST, "test"));
   const auto &Body = cast<CompoundStmt>(Func.getBody());
   const auto &Loop = cast<WhileStmt>(*Body->child_begin());
-  llvm::Optional<SourceRange> Range = toHalfOpenFileRange(
+  std::optional<SourceRange> Range = toHalfOpenFileRange(
       AST.getSourceManager(), AST.getLangOpts(), Loop->getSourceRange());
   ASSERT_TRUE(Range) << "Failed to get file range";
   EXPECT_EQ(AST.getSourceManager().getFileOffset(Range->getBegin()),
@@ -803,6 +813,25 @@ TEST(SourceCodeTests, isKeywords) {
   EXPECT_FALSE(isKeyword("override", LangOpts));
 }
 
+TEST(SourceCodeTests, isSpelledInSource) {
+  Annotations Test("");
+  ParsedAST AST = TestTU::withCode(Test.code()).build();
+  const SourceManager &SM = AST.getSourceManager();
+
+  EXPECT_TRUE(
+      isSpelledInSource(SM.getLocForStartOfFile(SM.getMainFileID()), SM));
+
+  // Check that isSpelledInSource() handles various invalid source locations
+  // gracefully.
+  //
+  // Returning true for SourceLocation() is a behavior that falls out of the
+  // current implementation, which has an early exit for isFileID().
+  // FIXME: Should it return false on SourceLocation()? Does it matter?
+  EXPECT_TRUE(isSpelledInSource(SourceLocation(), SM));
+  EXPECT_FALSE(isSpelledInSource(
+      SourceLocation::getFromRawEncoding(SourceLocation::UIntTy(1 << 31)), SM));
+}
+
 struct IncrementalTestStep {
   llvm::StringRef Src;
   llvm::StringRef Contents;
@@ -945,6 +974,44 @@ TEST(ApplyEditsTest, WrongRangeLength) {
                                       "the computed range length (2)."));
 }
 
+// Test that we correct observed buggy edits from Neovim.
+TEST(ApplyEditsTets, BuggyNeovimEdits) {
+  TextDocumentContentChangeEvent Change;
+  Change.range.emplace();
+
+  // https://github.com/neovim/neovim/issues/17085
+  // Adding a blank line after a (missing) newline
+  std::string Code = "a";
+  Change.range->start.line = 1;
+  Change.range->start.character = 0;
+  Change.range->end.line = 1;
+  Change.range->start.character = 0;
+  Change.rangeLength = 0;
+  Change.text = "\n";
+  EXPECT_THAT_ERROR(applyChange(Code, Change), llvm::Succeeded());
+  EXPECT_EQ(Code, "a\n\n");
+
+  // https://github.com/neovim/neovim/issues/17085#issuecomment-1269162264
+  // Replacing the (missing) newline with \n\n in an empty file.
+  Code = "";
+  Change.range->start.line = 0;
+  Change.range->start.character = 0;
+  Change.range->end.line = 1;
+  Change.range->end.character = 0;
+  Change.rangeLength = 1;
+  Change.text = "\n\n";
+
+  EXPECT_THAT_ERROR(applyChange(Code, Change), llvm::Succeeded());
+  EXPECT_EQ(Code, "\n\n");
+
+  // We do not apply the heuristic fixes if the rangeLength doesn't match.
+  Code = "";
+  Change.rangeLength = 0;
+  EXPECT_THAT_ERROR(applyChange(Code, Change),
+                    FailedWithMessage("Change's rangeLength (0) doesn't match "
+                                      "the computed range length (1)."));
+}
+
 TEST(ApplyEditsTest, EndBeforeStart) {
   std::string Code = "int main() {}\n";
 
@@ -1021,6 +1088,44 @@ TEST(ApplyEditsTest, EndLineOutOfRange) {
 
   EXPECT_THAT_ERROR(applyChange(Code, Change),
                     FailedWithMessage("Line value is out of range (100)"));
+}
+
+TEST(FormatStyleForFile, LanguageGuessingHeuristic) {
+  StringRef ObjCContent = "@interface Foo\n@end\n";
+  StringRef CppContent = "class Foo {};\n";
+  using LK = format::FormatStyle::LanguageKind;
+  struct TestCase {
+    llvm::StringRef Filename;
+    llvm::StringRef Contents;
+    bool FormatFile;
+    LK ExpectedLanguage;
+  } TestCases[] = {
+      // If the file extension identifies the file as ObjC, the guessed
+      // language should be ObjC regardless of content or FormatFile flag.
+      {"foo.mm", ObjCContent, true, LK::LK_ObjC},
+      {"foo.mm", ObjCContent, false, LK::LK_ObjC},
+      {"foo.mm", CppContent, true, LK::LK_ObjC},
+      {"foo.mm", CppContent, false, LK::LK_ObjC},
+
+      // If the file extension is ambiguous like .h, FormatFile=true should
+      // result in using libFormat's heuristic to guess the language based
+      // on the file contents.
+      {"foo.h", ObjCContent, true, LK::LK_ObjC},
+      {"foo.h", CppContent, true, LK::LK_Cpp},
+
+      // With FomatFile=false, the language guessing heuristic should be
+      // bypassed
+      {"foo.h", ObjCContent, false, LK::LK_Cpp},
+      {"foo.h", CppContent, false, LK::LK_Cpp},
+  };
+
+  MockFS FS;
+  for (const auto &[Filename, Contents, FormatFile, ExpectedLanguage] :
+       TestCases) {
+    EXPECT_EQ(
+        getFormatStyleForFile(Filename, Contents, FS, FormatFile).Language,
+        ExpectedLanguage);
+  }
 }
 
 } // namespace

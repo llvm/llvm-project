@@ -7,21 +7,21 @@
 
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define void @test_basic() #0 {
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
 	ret void
 
-; ARM-linux:      test_basic:
+; ARM-linux-LABEL: test_basic:
 
 ; ARM-linux:      push    {r4, r5}
 ; ARM-linux-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-linux-NEXT: mov     r5, sp
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB0_2
+; ARM-linux-NEXT: bls     .LBB0_2
 
 ; ARM-linux:      mov     r4, #48
 ; ARM-linux-NEXT: mov     r5, #0
@@ -33,14 +33,14 @@ define void @test_basic() #0 {
 
 ; ARM-linux:      pop     {r4, r5}
 
-; ARM-android:      test_basic:
+; ARM-android-LABEL: test_basic:
 
 ; ARM-android:      push    {r4, r5}
 ; ARM-android-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-android-NEXT: mov     r5, sp
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB0_2
+; ARM-android-NEXT: bls     .LBB0_2
 
 ; ARM-android:      mov     r4, #48
 ; ARM-android-NEXT: mov     r5, #0
@@ -54,21 +54,21 @@ define void @test_basic() #0 {
 
 }
 
-define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
-       %addend = load i32 , i32 * %closure
+define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
+       %addend = load i32 , ptr %closure
        %result = add i32 %other, %addend
        %mem = alloca i32, i32 10
-       call void @dummy_use (i32* %mem, i32 10)
+       call void @dummy_use (ptr %mem, i32 10)
        ret i32 %result
 
-; ARM-linux:      test_nested:
+; ARM-linux-LABEL: test_nested:
 
 ; ARM-linux:      push    {r4, r5}
 ; ARM-linux-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-linux-NEXT: mov     r5, sp
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB1_2
+; ARM-linux-NEXT: bls     .LBB1_2
 
 ; ARM-linux:      mov     r4, #56
 ; ARM-linux-NEXT: mov     r5, #0
@@ -80,14 +80,14 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 
 ; ARM-linux:      pop     {r4, r5}
 
-; ARM-android:      test_nested:
+; ARM-android-LABEL: test_nested:
 
 ; ARM-android:      push    {r4, r5}
 ; ARM-android-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-android-NEXT: mov     r5, sp
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB1_2
+; ARM-android-NEXT: bls     .LBB1_2
 
 ; ARM-android:      mov     r4, #56
 ; ARM-android-NEXT: mov     r5, #0
@@ -103,19 +103,20 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 
 define void @test_large() #0 {
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 0)
+        call void @dummy_use (ptr %mem, i32 0)
         ret void
 
-; ARM-linux:      test_large:
+; ARM-linux-LABEL: test_large:
 
 ; ARM-linux:      push    {r4, r5}
+; ARM-linux-NEXT: ldr     r4, .LCPI2_0
+; ARM-linux-NEXT: sub     r5, sp, r4
 ; ARM-linux-NEXT: mrc     p15, #0, r4, c13, c0, #3
-; ARM-linux-NEXT: sub     r5, sp, #40192
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB2_2
+; ARM-linux-NEXT: bls     .LBB2_2
 
-; ARM-linux:      mov     r4, #40192
+; ARM-linux:      ldr     r4, .LCPI2_0
 ; ARM-linux-NEXT: mov     r5, #0
 ; ARM-linux-NEXT: stmdb   sp!, {lr}
 ; ARM-linux-NEXT: bl      __morestack
@@ -125,16 +126,20 @@ define void @test_large() #0 {
 
 ; ARM-linux:      pop     {r4, r5}
 
-; ARM-android:      test_large:
+; ARM-linux:      .LCPI2_0:
+; ARM-linux-NEXT: .long   40192
+
+; ARM-android-LABEL: test_large:
 
 ; ARM-android:      push    {r4, r5}
+; ARM-android-NEXT: ldr     r4, .LCPI2_0
+; ARM-android-NEXT: sub     r5, sp, r4
 ; ARM-android-NEXT: mrc     p15, #0, r4, c13, c0, #3
-; ARM-android-NEXT: sub     r5, sp, #40192
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB2_2
+; ARM-android-NEXT: bls     .LBB2_2
 
-; ARM-android:      mov     r4, #40192
+; ARM-android:      ldr     r4, .LCPI2_0
 ; ARM-android-NEXT: mov     r5, #0
 ; ARM-android-NEXT: stmdb   sp!, {lr}
 ; ARM-android-NEXT: bl      __morestack
@@ -144,21 +149,24 @@ define void @test_large() #0 {
 
 ; ARM-android:      pop     {r4, r5}
 
+; ARM-android:      .LCPI2_0:
+; ARM-android-NEXT: .long   40192
+
 }
 
 define fastcc void @test_fastcc() #0 {
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
         ret void
 
-; ARM-linux:      test_fastcc:
+; ARM-linux-LABEL: test_fastcc:
 
 ; ARM-linux:      push    {r4, r5}
 ; ARM-linux-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-linux-NEXT: mov     r5, sp
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB3_2
+; ARM-linux-NEXT: bls     .LBB3_2
 
 ; ARM-linux:      mov     r4, #48
 ; ARM-linux-NEXT: mov     r5, #0
@@ -170,14 +178,14 @@ define fastcc void @test_fastcc() #0 {
 
 ; ARM-linux:      pop     {r4, r5}
 
-; ARM-android:      test_fastcc:
+; ARM-android-LABEL: test_fastcc:
 
 ; ARM-android:      push    {r4, r5}
 ; ARM-android-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-android-NEXT: mov     r5, sp
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB3_2
+; ARM-android-NEXT: bls     .LBB3_2
 
 ; ARM-android:      mov     r4, #48
 ; ARM-android-NEXT: mov     r5, #0
@@ -193,19 +201,20 @@ define fastcc void @test_fastcc() #0 {
 
 define fastcc void @test_fastcc_large() #0 {
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 0)
+        call void @dummy_use (ptr %mem, i32 0)
         ret void
 
-; ARM-linux:      test_fastcc_large:
+; ARM-linux-LABEL: test_fastcc_large:
 
 ; ARM-linux:      push    {r4, r5}
+; ARM-linux-NEXT: ldr     r4, .LCPI4_0
+; ARM-linux-NEXT: sub     r5, sp, r4
 ; ARM-linux-NEXT: mrc     p15, #0, r4, c13, c0, #3
-; ARM-linux-NEXT: sub     r5, sp, #40192
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB4_2
+; ARM-linux-NEXT: bls     .LBB4_2
 
-; ARM-linux:      mov     r4, #40192
+; ARM-linux:      ldr     r4, .LCPI4_0
 ; ARM-linux-NEXT: mov     r5, #0
 ; ARM-linux-NEXT: stmdb   sp!, {lr}
 ; ARM-linux-NEXT: bl      __morestack
@@ -215,16 +224,20 @@ define fastcc void @test_fastcc_large() #0 {
 
 ; ARM-linux:      pop     {r4, r5}
 
-; ARM-android:      test_fastcc_large:
+; ARM-linux:      .LCPI4_0:
+; ARM-linux-NEXT: .long   40192
+
+; ARM-android-LABEL: test_fastcc_large:
 
 ; ARM-android:      push    {r4, r5}
+; ARM-android-NEXT: ldr     r4, .LCPI4_0
+; ARM-android-NEXT: sub     r5, sp, r4
 ; ARM-android-NEXT: mrc     p15, #0, r4, c13, c0, #3
-; ARM-android-NEXT: sub     r5, sp, #40192
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB4_2
+; ARM-android-NEXT: bls     .LBB4_2
 
-; ARM-android:      mov     r4, #40192
+; ARM-android:      ldr     r4, .LCPI4_0
 ; ARM-android-NEXT: mov     r5, #0
 ; ARM-android-NEXT: stmdb   sp!, {lr}
 ; ARM-android-NEXT: bl      __morestack
@@ -233,6 +246,9 @@ define fastcc void @test_fastcc_large() #0 {
 ; ARM-android-NEXT: bx      lr
 
 ; ARM-android:      pop     {r4, r5}
+
+; ARM-android:      .LCPI4_0:
+; ARM-android-NEXT: .long   40192
 
 }
 
@@ -256,12 +272,32 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
   %call = tail call i32 @callee(i32 %x) #0
   ret i32 %call
 
-; ARM-linux:      test_sibling_call_empty_frame:
+; ARM-linux-LABEL: test_sibling_call_empty_frame:
 ; ARM-linux:      bl      __morestack
 
-; ARM-android:      test_sibling_call_empty_frame:
+; ARM-android-LABEL: test_sibling_call_empty_frame:
 ; ARM-android:      bl      __morestack
 
+}
+
+
+declare void @panic() unnamed_addr
+
+; We used to crash while compiling the following function.
+; ARM-linux-LABEL: build_should_not_segfault:
+; ARM-android-LABEL: build_should_not_segfault:
+define void @build_should_not_segfault(i8 %x) unnamed_addr #0 {
+start:
+  %_0 = icmp ult i8 %x, 16
+  %or.cond = select i1 undef, i1 true, i1 %_0
+  br i1 %or.cond, label %bb1, label %bb2
+
+bb1:
+  ret void
+
+bb2:
+  call void @panic()
+  unreachable
 }
 
 attributes #0 = { "split-stack" }

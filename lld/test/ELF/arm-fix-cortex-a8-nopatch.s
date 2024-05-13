@@ -28,8 +28,8 @@ target:
  b.w target
 
 // CALLSITE1:      00021ffa <target>:
-// CALLSITE1-NEXT:    21ffa:            b.w     #-4
-// CALLSITE1-NEXT:    21ffe:            b.w     #-8
+// CALLSITE1-NEXT:    21ffa:            b.w     0x21ffa <target>
+// CALLSITE1-NEXT:    21ffe:            b.w     0x21ffa <target>
 
  .space 4088
  .type target2, %function
@@ -43,7 +43,7 @@ target2:
 // CALLSITE2:      00022ffa <target2>:
 // CALLSITE2-NEXT:    22ffa:            nop
 // CALLSITE2-NEXT:    22ffc:            nop
-// CALLSITE2-NEXT:    22ffe:            bl      #-8
+// CALLSITE2-NEXT:    22ffe:            bl      0x22ffa <target2>
 
  .space 4088
  .type target3, %function
@@ -56,7 +56,7 @@ target3:
 
 // CALLSITE3:      00023ffa <target3>:
 // CALLSITE3-NEXT:    23ffa:            nop.w
-// CALLSITE3-NEXT:    23ffe:            beq.w   #-4104
+// CALLSITE3-NEXT:    23ffe:            beq.w   0x22ffa <target2>
 
  .space 4088
  .type source4, %function
@@ -71,11 +71,11 @@ target4:
 
 // CALLSITE4:      00024ffa <source4>:
 // CALLSITE4-NEXT:    24ffa:            nop.w
-// CALLSITE4-NEXT:    24ffe:            beq.w   #0
+// CALLSITE4-NEXT:    24ffe:            beq.w   0x25002 <target4>
 // CALLSITE4:      00025002 <target4>:
 // CALLSITE4-NEXT:    25002:            nop.w
 
- .space 4084
+ .space 4082
  .type target5, %function
 
 target5:
@@ -83,14 +83,15 @@ target5:
 /// a 32-bit thumb instruction, but in ARM state (illegal instruction), we
 /// should not decode and match it as Thumb, expect no patch.
  .arm
- .inst 0x800f3af /// nop.w encoding in Thumb
+ .short 0xbf00 // nop encoding in Thumb for alignment
+ .inst 0xf3af8000 /// nop.w encoding in Thumb
  .thumb
  .thumb_func
 source5:
  beq.w target5
 
 // CALLSITE5:      00025ffe <source5>:
-// CALLSITE5-NEXT:    25ffe:            beq.w   #-8
+// CALLSITE5-NEXT:    25ffe:            beq.w   0x25ff8 <target5>
 
 /// Edge case where two word sequence starts at offset 0xffc, check that
 /// we don't match. In this case the branch will be completely in the 2nd
@@ -105,7 +106,7 @@ target6:
  bl target6
 
 // CALLSITE6:      00027000 <target6>:
-// CALLSITE6-NEXT:    27000:            bl      #-4
+// CALLSITE6-NEXT:    27000:            bl      0x27000 <target6>
 
 /// Edge case where two word sequence starts at offset 0xffe, check that
 /// we don't match. In this case the branch will be completely in the 2nd
@@ -120,4 +121,4 @@ target7:
  bl target7
 
 // CALLSITE7:      00028002 <target7>:
-// CALLSITE7:         28002:            bl      #-4
+// CALLSITE7:         28002:            bl      0x28002 <target7>

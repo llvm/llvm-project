@@ -11,14 +11,12 @@
 
 #include "ARMBuildAttributes.h"
 #include "ELFAttributeParser.h"
-#include "ScopedPrinter.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
-class StringRef;
+
+class ScopedPrinter;
 
 class ARMAttributeParser : public ELFAttributeParser {
   struct DisplayHandler {
@@ -67,13 +65,18 @@ class ARMAttributeParser : public ELFAttributeParser {
   Error DSP_extension(ARMBuildAttrs::AttrType tag);
   Error T2EE_use(ARMBuildAttrs::AttrType tag);
   Error Virtualization_use(ARMBuildAttrs::AttrType tag);
+  Error PAC_extension(ARMBuildAttrs::AttrType tag);
+  Error BTI_extension(ARMBuildAttrs::AttrType tag);
+  Error PACRET_use(ARMBuildAttrs::AttrType tag);
+  Error BTI_use(ARMBuildAttrs::AttrType tag);
   Error nodefaults(ARMBuildAttrs::AttrType tag);
+  Error also_compatible_with(ARMBuildAttrs::AttrType tag);
 
 public:
   ARMAttributeParser(ScopedPrinter *sw)
-      : ELFAttributeParser(sw, ARMBuildAttrs::ARMAttributeTags, "aeabi") {}
+      : ELFAttributeParser(sw, ARMBuildAttrs::getARMAttributeTags(), "aeabi") {}
   ARMAttributeParser()
-      : ELFAttributeParser(ARMBuildAttrs::ARMAttributeTags, "aeabi") {}
+      : ELFAttributeParser(ARMBuildAttrs::getARMAttributeTags(), "aeabi") {}
 };
 }
 

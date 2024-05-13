@@ -18,6 +18,7 @@
 #include <cassert>
 #include <memory>
 
+#include "test_iterators.h"
 #include "test_macros.h"
 
 class A
@@ -25,6 +26,8 @@ class A
     int data_;
 public:
     A() : data_(1) {}
+    A(const A&) = default;
+    A& operator=(const A&) = default;
     ~A() {data_ = -1;}
 
     friend bool operator==(const A& x, const A& y)
@@ -47,28 +50,42 @@ struct do_nothing
 };
 
 
-int main(int, char**)
-{
-    {
-        A a;
-        test(&a, A());
-    }
+int main(int, char**) {
+  {
+    A a;
+    test(&a, A());
+  }
 #if TEST_STD_VER >= 11
-    {
-        int i;
-        std::unique_ptr<int, do_nothing> p(&i);
-        test(&p, std::unique_ptr<int, do_nothing>(&i));
-    }
+  {
+    int i;
+    std::unique_ptr<int, do_nothing> p(&i);
+    test(&p, std::unique_ptr<int, do_nothing>(&i));
+  }
 #endif
 #if TEST_STD_VER > 14
-    {
+  {
     constexpr const char *p = "123456789";
     typedef std::move_iterator<const char *> MI;
     constexpr MI it1 = std::make_move_iterator(p);
     constexpr MI it2 = std::make_move_iterator(p+1);
     static_assert(*it1 == p[0], "");
     static_assert(*it2 == p[1], "");
-    }
+  }
+#endif
+
+#if TEST_STD_VER > 17
+  // Ensure the `iter_move` customization point is being used.
+  {
+    int a[] = {0, 1, 2};
+
+    int iter_moves = 0;
+    adl::Iterator i = adl::Iterator::TrackMoves(a, iter_moves);
+    std::move_iterator<adl::Iterator> mi(i);
+
+    auto x = *mi;
+    assert(x == 0);
+    assert(iter_moves == 1);
+  }
 #endif
 
   return 0;

@@ -1,9 +1,9 @@
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39452.
-; RUN: llc -stop-before=finalize-isel -pre-RA-sched=linearize -verify-machineinstrs=0 < %s | FileCheck %s
+; RUN: llc -stop-before=finalize-isel -pre-RA-sched=linearize -verify-machineinstrs=0 < %s -experimental-debug-variable-locations=false | FileCheck %s
 source_filename = "linear-dbg-value.ll"
 
 ; Function Attrs: nounwind readonly uwtable
-define i32 @foo(i32* nocapture readonly %a, i32 %N) local_unnamed_addr #0 !dbg !6 {
+define i32 @foo(ptr nocapture readonly %a, i32 %N) local_unnamed_addr #0 !dbg !6 {
 entry:
   %cmp6 = icmp sgt i32 %N, 0, !dbg !11
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup, !dbg !15
@@ -26,8 +26,8 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK: DBG_VALUE {{.*}} ![[X]], !DIExpression()
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %x.07 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv, !dbg !17
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !17
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv, !dbg !17
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !17
   %add = add nsw i32 %0, %x.07, !dbg !17
   call void @llvm.dbg.value(metadata i32 %add, metadata !9, metadata !DIExpression()), !dbg !20
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !21

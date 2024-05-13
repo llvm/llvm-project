@@ -7,7 +7,7 @@
 define i16 @foo(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw %cl, %ax
 ; X86-NEXT:    retl
@@ -32,7 +32,7 @@ define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    shldw %cl, %dx, %ax
 ; X86-NEXT:    retl
@@ -56,7 +56,7 @@ define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 define i16 @un(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86-LABEL: un:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rorw %cl, %ax
 ; X86-NEXT:    retl
@@ -81,7 +81,7 @@ define i16 @bu(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    shrdw %cl, %dx, %ax
 ; X86-NEXT:    retl
@@ -220,10 +220,9 @@ define i16 @rot16_trunc(i32 %x, i32 %y) nounwind {
 ; X64-LABEL: rot16_trunc:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    shrl $11, %ecx
-; X64-NEXT:    shll $5, %eax
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    shrl $11, %eax
+; X64-NEXT:    shll $5, %edi
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 	%t0 = lshr i32 %x, 11
@@ -257,7 +256,7 @@ define i16 @rotate16(i16 %x) {
 
 ; TODO: Should this always be rolw with memory operand?
 
-define void @rotate16_in_place_memory(i8* %p) {
+define void @rotate16_in_place_memory(ptr %p) {
 ; X86-BASE-LABEL: rotate16_in_place_memory:
 ; X86-BASE:       # %bb.0:
 ; X86-BASE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -281,16 +280,15 @@ define void @rotate16_in_place_memory(i8* %p) {
 ; X64-MOVBE-NEXT:    movzwl (%rdi), %eax
 ; X64-MOVBE-NEXT:    movbew %ax, (%rdi)
 ; X64-MOVBE-NEXT:    retq
-  %p0 = getelementptr i8, i8* %p, i64 0
-  %p1 = getelementptr i8, i8* %p, i64 1
-  %i0 = load i8, i8* %p0, align 1
-  %i1 = load i8, i8* %p1, align 1
-  store i8 %i1, i8* %p0, align 1
-  store i8 %i0, i8* %p1, align 1
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %i0 = load i8, ptr %p, align 1
+  %i1 = load i8, ptr %p1, align 1
+  store i8 %i1, ptr %p, align 1
+  store i8 %i0, ptr %p1, align 1
   ret void
 }
 
-define void @rotate16_memory(i8* %p, i8* %q) {
+define void @rotate16_memory(ptr %p, ptr %q) {
 ; X86-BASE-LABEL: rotate16_memory:
 ; X86-BASE:       # %bb.0:
 ; X86-BASE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -320,14 +318,12 @@ define void @rotate16_memory(i8* %p, i8* %q) {
 ; X64-MOVBE-NEXT:    movzwl (%rdi), %eax
 ; X64-MOVBE-NEXT:    movbew %ax, (%rsi)
 ; X64-MOVBE-NEXT:    retq
-  %p0 = getelementptr i8, i8* %p, i64 0
-  %p1 = getelementptr i8, i8* %p, i64 1
-  %q0 = getelementptr i8, i8* %q, i64 0
-  %q1 = getelementptr i8, i8* %q, i64 1
-  %i0 = load i8, i8* %p0, align 1
-  %i1 = load i8, i8* %p1, align 1
-  store i8 %i1, i8* %q0, align 1
-  store i8 %i0, i8* %q1, align 1
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %q1 = getelementptr i8, ptr %q, i64 1
+  %i0 = load i8, ptr %p, align 1
+  %i1 = load i8, ptr %p1, align 1
+  store i8 %i1, ptr %q, align 1
+  store i8 %i0, ptr %q1, align 1
   ret void
 }
 

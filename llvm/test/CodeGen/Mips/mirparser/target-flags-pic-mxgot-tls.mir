@@ -19,32 +19,32 @@
   entry:
     %call = tail call i32 @_Z1gi(i32 signext %asd)
     %add = add nsw i32 %call, %asd
-    %0 = load i32, i32* @v, align 4
+    %0 = load i32, ptr @v, align 4
     %add1 = add nsw i32 %add, %0
-    %.b.i.i = load i1, i1* @__tls_guard, align 1
+    %.b.i.i = load i1, ptr @__tls_guard, align 1
     br i1 %.b.i.i, label %entry._ZTW1k.exit_crit_edge, label %init.i.i
 
   entry._ZTW1k.exit_crit_edge:
-    %.pre = load i32, i32* @k, align 4
+    %.pre = load i32, ptr @k, align 4
     br label %_ZTW1k.exit
 
   init.i.i:
-    store i1 true, i1* @__tls_guard, align 1
+    store i1 true, ptr @__tls_guard, align 1
     %call.i.i.i = tail call i32 @_Z1gi(i32 signext 3)
-    store i32 %call.i.i.i, i32* @k, align 4
+    store i32 %call.i.i.i, ptr @k, align 4
     br label %_ZTW1k.exit
 
   _ZTW1k.exit:
     %1 = phi i32 [ %.pre, %entry._ZTW1k.exit_crit_edge ], [ %call.i.i.i, %init.i.i ]
     %add2 = add nsw i32 %add1, %1
-    br i1 icmp ne (void ()* @_ZTH1j, void ()* null), label %2, label %_ZTW1j.exit
+    br i1 icmp ne (ptr @_ZTH1j, ptr null), label %2, label %_ZTW1j.exit
 
   ; <label>:2:
     tail call void @_ZTH1j()
     br label %_ZTW1j.exit
 
   _ZTW1j.exit:
-    %3 = load i32, i32* @j, align 4
+    %3 = load i32, ptr @j, align 4
     %add3 = add nsw i32 %add2, %3
     ret i32 %add3
   }
@@ -152,7 +152,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %7 = LUi64 target-flags(mips-call-hi16) @_Z1gi
     %8 = DADDu killed %7, %6
-    %9 = LD killed %8, target-flags(mips-call-lo16) @_Z1gi :: (load 8 from call-entry @_Z1gi)
+    %9 = LD killed %8, target-flags(mips-call-lo16) @_Z1gi :: (load (s64) from call-entry @_Z1gi)
     $a0_64 = COPY %5
     $gp_64 = COPY %6
     JALR64Pseudo killed %9, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0
@@ -162,13 +162,13 @@ body:             |
     %12 = ADDu %10, killed %11
     %13 = LUi64 target-flags(mips-got-hi16) @v
     %14 = DADDu killed %13, %6
-    %15 = LD killed %14, target-flags(mips-got-lo16) @v :: (load 8 from got)
-    %16 = LW killed %15, 0 :: (dereferenceable load 4 from @v)
+    %15 = LD killed %14, target-flags(mips-got-lo16) @v :: (load (s64) from got)
+    %16 = LW killed %15, 0 :: (dereferenceable load (s32) from @v)
     %0 = ADDu killed %12, killed %16
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %17 = LUi64 target-flags(mips-call-hi16) &__tls_get_addr
     %18 = DADDu killed %17, %6
-    %19 = LD killed %18, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
+    %19 = LD killed %18, target-flags(mips-call-lo16) &__tls_get_addr :: (load (s64) from call-entry &__tls_get_addr)
     %20 = DADDiu %6, target-flags(mips-tlsldm) @__tls_guard
     $a0_64 = COPY %20
     $gp_64 = COPY %6
@@ -176,7 +176,7 @@ body:             |
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %21 = COPY $v0_64
     %22 = DADDiu %21, target-flags(mips-dtprel-hi) @__tls_guard
-    %23 = LBu killed %22, target-flags(mips-dtprel-lo) @__tls_guard :: (dereferenceable load 1 from @__tls_guard)
+    %23 = LBu killed %22, target-flags(mips-dtprel-lo) @__tls_guard :: (dereferenceable load (s8) from @__tls_guard)
     BEQ killed %23, $zero, %bb.2.init.i.i, implicit-def dead $at
     B %bb.1.entry._ZTW1k.exit_crit_edge, implicit-def dead $at
 
@@ -186,14 +186,14 @@ body:             |
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %39 = LUi64 target-flags(mips-call-hi16) &__tls_get_addr
     %40 = DADDu killed %39, %6
-    %41 = LD killed %40, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
+    %41 = LD killed %40, target-flags(mips-call-lo16) &__tls_get_addr :: (load (s64) from call-entry &__tls_get_addr)
     %42 = DADDiu %6, target-flags(mips-tlsgd) @k
     $a0_64 = COPY %42
     $gp_64 = COPY %6
     JALR64Pseudo killed %41, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %43 = COPY $v0_64
-    %1 = LW %43, 0 :: (dereferenceable load 4 from @k)
+    %1 = LW %43, 0 :: (dereferenceable load (s32) from @k)
     B %bb.3._ZTW1k.exit, implicit-def dead $at
 
   bb.2.init.i.i:
@@ -202,7 +202,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %24 = LUi64 target-flags(mips-call-hi16) &__tls_get_addr
     %25 = DADDu killed %24, %6
-    %26 = LD %25, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
+    %26 = LD %25, target-flags(mips-call-lo16) &__tls_get_addr :: (load (s64) from call-entry &__tls_get_addr)
     %27 = DADDiu %6, target-flags(mips-tlsldm) @__tls_guard
     $a0_64 = COPY %27
     $gp_64 = COPY %6
@@ -211,26 +211,26 @@ body:             |
     %28 = COPY $v0_64
     %29 = DADDiu %28, target-flags(mips-dtprel-hi) @__tls_guard
     %30 = ADDiu $zero, 1
-    SB killed %30, killed %29, target-flags(mips-dtprel-lo) @__tls_guard :: (store 1 into @__tls_guard)
+    SB killed %30, killed %29, target-flags(mips-dtprel-lo) @__tls_guard :: (store (s8) into @__tls_guard)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %31 = LUi64 target-flags(mips-call-hi16) @_Z1gi
     %32 = DADDu killed %31, %6
     %33 = DADDiu $zero_64, 3
-    %34 = LD killed %32, target-flags(mips-call-lo16) @_Z1gi :: (load 8 from call-entry @_Z1gi)
+    %34 = LD killed %32, target-flags(mips-call-lo16) @_Z1gi :: (load (s64) from call-entry @_Z1gi)
     $a0_64 = COPY %33
     $gp_64 = COPY %6
     JALR64Pseudo killed %34, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %35 = COPY $v0
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    %36 = LD %25, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
+    %36 = LD %25, target-flags(mips-call-lo16) &__tls_get_addr :: (load (s64) from call-entry &__tls_get_addr)
     %37 = DADDiu %6, target-flags(mips-tlsgd) @k
     $a0_64 = COPY %37
     $gp_64 = COPY %6
     JALR64Pseudo killed %36, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %38 = COPY $v0_64
-    SW %35, %38, 0 :: (store 4 into @k)
+    SW %35, %38, 0 :: (store (s32) into @k)
     %2 = COPY %35
 
   bb.3._ZTW1k.exit:
@@ -240,7 +240,7 @@ body:             |
     %4 = ADDu %0, %3
     %44 = LUi64 target-flags(mips-got-hi16) @_ZTH1j
     %45 = DADDu killed %44, %6
-    %46 = LD killed %45, target-flags(mips-got-lo16) @_ZTH1j :: (load 8 from got)
+    %46 = LD killed %45, target-flags(mips-got-lo16) @_ZTH1j :: (load (s64) from got)
     BEQ64 killed %46, $zero_64, %bb.5._ZTW1j.exit, implicit-def dead $at
     B %bb.4, implicit-def dead $at
 
@@ -250,7 +250,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %47 = LUi64 target-flags(mips-call-hi16) @_ZTH1j
     %48 = DADDu killed %47, %6
-    %49 = LD killed %48, target-flags(mips-call-lo16) @_ZTH1j :: (load 8 from call-entry @_ZTH1j)
+    %49 = LD killed %48, target-flags(mips-call-lo16) @_ZTH1j :: (load (s64) from call-entry @_ZTH1j)
     $gp_64 = COPY %6
     JALR64Pseudo killed %49, csr_n64, implicit-def dead $ra, implicit $gp_64, implicit-def $sp
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
@@ -259,14 +259,14 @@ body:             |
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %50 = LUi64 target-flags(mips-call-hi16) &__tls_get_addr
     %51 = DADDu killed %50, %6
-    %52 = LD killed %51, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
+    %52 = LD killed %51, target-flags(mips-call-lo16) &__tls_get_addr :: (load (s64) from call-entry &__tls_get_addr)
     %53 = DADDiu %6, target-flags(mips-tlsgd) @j
     $a0_64 = COPY %53
     $gp_64 = COPY %6
     JALR64Pseudo killed %52, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %54 = COPY $v0_64
-    %55 = LW %54, 0 :: (dereferenceable load 4 from @j)
+    %55 = LW %54, 0 :: (dereferenceable load (s32) from @j)
     %56 = ADDu %4, killed %55
     $v0 = COPY %56
     RetRA implicit $v0

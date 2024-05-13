@@ -1,9 +1,8 @@
 //===- MemoryOpRemark.h - Memory operation remark analysis -*- C++ ------*-===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,6 +16,8 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include <optional>
 
 namespace llvm {
 
@@ -27,7 +28,6 @@ class Instruction;
 class IntrinsicInst;
 class Value;
 class OptimizationRemarkEmitter;
-class OptimizationRemarkMissed;
 class StoreInst;
 
 // FIXME: Once we get to more remarks like this one, we need to re-evaluate how
@@ -50,12 +50,17 @@ struct MemoryOpRemark {
   void visit(const Instruction *I);
 
 protected:
-  virtual std::string explainSource(StringRef Type);
+  virtual std::string explainSource(StringRef Type) const;
 
   enum RemarkKind { RK_Store, RK_Unknown, RK_IntrinsicCall, RK_Call };
-  virtual StringRef remarkName(RemarkKind RK);
+  virtual StringRef remarkName(RemarkKind RK) const;
+
+  virtual DiagnosticKind diagnosticKind() const { return DK_OptimizationRemarkAnalysis; }
 
 private:
+  template<typename ...Ts>
+  std::unique_ptr<DiagnosticInfoIROptimization> makeRemark(Ts... Args);
+
   /// Emit a remark using information from the store's destination, size, etc.
   void visitStore(const StoreInst &SI);
   /// Emit a generic auto-init remark.
@@ -68,23 +73,23 @@ private:
   /// Add callee information to a remark: whether it's known, the function name,
   /// etc.
   template <typename FTy>
-  void visitCallee(FTy F, bool KnownLibCall, OptimizationRemarkMissed &R);
+  void visitCallee(FTy F, bool KnownLibCall, DiagnosticInfoIROptimization &R);
   /// Add operand information to a remark based on knowledge we have for known
   /// libcalls.
   void visitKnownLibCall(const CallInst &CI, LibFunc LF,
-                         OptimizationRemarkMissed &R);
+                         DiagnosticInfoIROptimization &R);
   /// Add the memory operation size to a remark.
-  void visitSizeOperand(Value *V, OptimizationRemarkMissed &R);
+  void visitSizeOperand(Value *V, DiagnosticInfoIROptimization &R);
 
   struct VariableInfo {
-    Optional<StringRef> Name;
-    Optional<uint64_t> Size;
+    std::optional<StringRef> Name;
+    std::optional<uint64_t> Size;
     bool isEmpty() const { return !Name && !Size; }
   };
   /// Gather more information about \p V as a variable. This can be debug info,
   /// information from the alloca, etc. Since \p V can represent more than a
   /// single variable, they will all be added to the remark.
-  void visitPtr(Value *V, bool IsSrc, OptimizationRemarkMissed &R);
+  void visitPtr(Value *V, bool IsSrc, DiagnosticInfoIROptimization &R);
   void visitVariable(const Value *V, SmallVectorImpl<VariableInfo> &Result);
 };
 
@@ -98,8 +103,11 @@ struct AutoInitRemark : public MemoryOpRemark {
   static bool canHandle(const Instruction *I);
 
 protected:
-  virtual std::string explainSource(StringRef Type) override;
-  virtual StringRef remarkName(RemarkKind RK) override;
+  std::string explainSource(StringRef Type) const override;
+  StringRef remarkName(RemarkKind RK) const override;
+  DiagnosticKind diagnosticKind() const override {
+    return DK_OptimizationRemarkMissed;
+  }
 };
 
 } // namespace llvm

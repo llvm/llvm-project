@@ -15,14 +15,14 @@ int printf(const char * _Format, ...);
 size_t strlen(const char *s);
 char *strcpy(char *s1, const char *s2);
 
-// DEF: define {{.*}}void @test1(i8* %msg) #[[A:.*]] {
+// DEF: define {{.*}}void @test1(ptr noundef %msg) #[[A:.*]] {
 void test1(const char *msg) {
   char a[strlen(msg) + 1];
   strcpy(a, msg);
   printf("%s\n", a);
 }
 
-// DEF: define {{.*}}void @test2(i8* %msg) #[[B:.*]] {
+// DEF: define {{.*}}void @test2(ptr noundef %msg) #[[B:.*]] {
 __attribute__((no_stack_protector))
 void test2(const char *msg) {
   char a[strlen(msg) + 1];

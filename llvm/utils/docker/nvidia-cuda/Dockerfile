@@ -11,7 +11,7 @@ LABEL maintainer "LLVM Developers"
 # Install llvm build dependencies.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates cmake python \
-        subversion ninja-build && \
+        subversion ninja-build git && \
     rm -rf /var/lib/apt/lists/*
 
 ADD checksums /tmp/checksums

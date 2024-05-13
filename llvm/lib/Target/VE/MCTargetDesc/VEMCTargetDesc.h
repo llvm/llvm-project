@@ -27,13 +27,8 @@ class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
-class Triple;
-class StringRef;
-class raw_pwrite_stream;
-class raw_ostream;
 
-MCCodeEmitter *createVEMCCodeEmitter(const MCInstrInfo &MCII,
-                                     const MCRegisterInfo &MRI, MCContext &Ctx);
+MCCodeEmitter *createVEMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 MCAsmBackend *createVEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                  const MCRegisterInfo &MRI,
                                  const MCTargetOptions &Options);
@@ -49,6 +44,7 @@ std::unique_ptr<MCObjectTargetWriter> createVEELFObjectWriter(uint8_t OSABI);
 // Defines symbolic names for the VE instructions.
 //
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "VEGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

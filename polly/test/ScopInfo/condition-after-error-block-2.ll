@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; Verify that we do not allow PHI nodes such as %phi, if they reference an error
 ; block and are used by anything else than a terminator instruction.
@@ -17,7 +17,7 @@
 
 declare void @bar()
 
-define void @foo(float* %X, i64 %p) {
+define void @foo(ptr %X, i64 %p) {
 entry:
   br label %br
 
@@ -32,7 +32,7 @@ br2:
 loop:
   %indvar = phi i64 [0, %br2], [%indvar.next, %loop]
   %indvar.next = add nsw i64 %indvar, 1
-  store float 41.0, float* %X
+  store float 41.0, ptr %X
   %cmp2 = icmp sle i64 %indvar, 1024
   br i1 %cmp2, label %loop, label %merge
 
@@ -49,12 +49,12 @@ merge:
   br i1 %add, label %A, label %B
 
 A:
-  store float 42.0, float* %X
+  store float 42.0, ptr %X
   br label %exit
 
 B:
   call void @bar()
-  store float 41.0, float* %X
+  store float 41.0, ptr %X
   br label %exit
 
 exit:

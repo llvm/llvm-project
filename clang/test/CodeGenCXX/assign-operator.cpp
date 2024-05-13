@@ -13,7 +13,7 @@ void f(int i, int j) {
   // CHECK: load i32
   // CHECK: add nsw i32
   // CHECK: store i32
-  // CHECK: store i32 17, i32
+  // CHECK: store i32 17, ptr
   // CHECK: ret
   (i += j) = 17;
 }

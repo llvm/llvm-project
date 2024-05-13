@@ -17,18 +17,18 @@ define void @main() local_unnamed_addr #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lhi %r0, 1
 ; CHECK-NEXT:    larl %r1, g_938
-; CHECK-NEXT:    lhi %r2, 0
+; CHECK-NEXT:    lhi %r2, 3
 ; CHECK-NEXT:    lhi %r3, 4
 ; CHECK-NEXT:    larl %r4, g_11
 ; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    strl %r0, g_73
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
 ; CHECK-NEXT:    strl %r2, g_69
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
 ; CHECK-NEXT:    lrl %r5, g_832
 ; CHECK-NEXT:    lrl %r5, g_832
 ; CHECK-NEXT:    lrl %r5, g_832
@@ -52,47 +52,47 @@ define void @main() local_unnamed_addr #0 {
   br label %1
 
 ; <label>:1:                                      ; preds = %1, %0
-  store i32 1, i32* @g_73, align 4
-  %2 = load i64, i64* @g_938, align 8
-  store i32 0, i32* @g_69, align 4
-  %3 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  %4 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  %5 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  %6 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 1, i32* @g_69, align 4
-  %7 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  %8 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 3, i32* @g_69, align 4
-  %9 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  %10 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 1, i32* @g_69, align 4
-  %11 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 2, i32* @g_69, align 4
-  %12 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 3, i32* @g_69, align 4
-  %13 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 0, i32* @g_69, align 4
-  %14 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  %15 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  %16 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  %17 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 1, i32* @g_69, align 4
-  %18 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 2, i32* @g_69, align 4
-  %19 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 3, i32* @g_69, align 4
-  %20 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 0, i32* @g_69, align 4
-  %21 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 1, i32* @g_69, align 4
-  %22 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 2, i32* @g_69, align 4
-  %23 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 3, i32* @g_69, align 4
+  store i32 1, ptr @g_73, align 4
+  %2 = load i64, ptr @g_938, align 8
+  store i32 0, ptr @g_69, align 4
+  %3 = load volatile i32, ptr @g_832, align 4
+  %4 = load volatile i32, ptr @g_832, align 4
+  %5 = load volatile i32, ptr @g_832, align 4
+  %6 = load volatile i32, ptr @g_832, align 4
+  store i32 1, ptr @g_69, align 4
+  %7 = load volatile i32, ptr @g_832, align 4
+  %8 = load volatile i32, ptr @g_832, align 4
+  store i32 3, ptr @g_69, align 4
+  %9 = load volatile i32, ptr @g_832, align 4
+  %10 = load volatile i32, ptr @g_832, align 4
+  store i32 1, ptr @g_69, align 4
+  %11 = load volatile i32, ptr @g_832, align 4
+  store i32 2, ptr @g_69, align 4
+  %12 = load volatile i32, ptr @g_832, align 4
+  store i32 3, ptr @g_69, align 4
+  %13 = load volatile i32, ptr @g_832, align 4
+  store i32 0, ptr @g_69, align 4
+  %14 = load volatile i32, ptr @g_832, align 4
+  %15 = load volatile i32, ptr @g_832, align 4
+  %16 = load volatile i32, ptr @g_832, align 4
+  %17 = load volatile i32, ptr @g_832, align 4
+  store i32 1, ptr @g_69, align 4
+  %18 = load volatile i32, ptr @g_832, align 4
+  store i32 2, ptr @g_69, align 4
+  %19 = load volatile i32, ptr @g_832, align 4
+  store i32 3, ptr @g_69, align 4
+  %20 = load volatile i32, ptr @g_832, align 4
+  store i32 0, ptr @g_69, align 4
+  %21 = load volatile i32, ptr @g_832, align 4
+  store i32 1, ptr @g_69, align 4
+  %22 = load volatile i32, ptr @g_832, align 4
+  store i32 2, ptr @g_69, align 4
+  %23 = load volatile i32, ptr @g_832, align 4
+  store i32 3, ptr @g_69, align 4
   %24 = add i64 %2, 24
-  store i64 %24, i64* @g_938, align 8
-  %25 = load volatile i32, i32* getelementptr inbounds (%0, %0* @g_832, i64 0, i32 0), align 4
-  store i32 4, i32* @g_69, align 4
-  store i1 true, i1* @g_11, align 4
+  store i64 %24, ptr @g_938, align 8
+  %25 = load volatile i32, ptr @g_832, align 4
+  store i32 4, ptr @g_69, align 4
+  store i1 true, ptr @g_11, align 4
   br label %1
 }

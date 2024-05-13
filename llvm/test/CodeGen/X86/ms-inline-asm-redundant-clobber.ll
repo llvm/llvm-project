@@ -12,13 +12,15 @@ define dso_local void @foo() local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK:         clc
-; CHECK-NEXT:    cmpxchg8b {{.*}}(%rip)
-; CHECK-NEXT:    cmpxchg16b {{.*}}(%rip)
+; CHECK-EMPTY:
 ; CHECK-NEXT:    clc
-; CHECK:         #NO_APP
+; CHECK-NEXT:    cmpxchg8b test_mem(%rip)
+; CHECK-NEXT:    cmpxchg16b test_mem(%rip)
+; CHECK-NEXT:    clc
+; CHECK-EMPTY:
+; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    retq
 entry:
-  tail call void asm sideeffect inteldialect "clc\0A\09cmpxchg8b $0\0A\09cmpxchg16b $1\0A\09clc", "=*m,=*m,~{eax},~{edx},~{flags},~{rax},~{rdx},~{dirflag},~{fpsr},~{flags}"([16 x i8]* nonnull @test_mem, [16 x i8]* nonnull @test_mem) #1
+  tail call void asm sideeffect inteldialect "clc\0A\09cmpxchg8b $0\0A\09cmpxchg16b $1\0A\09clc", "=*m,=*m,~{eax},~{edx},~{flags},~{rax},~{rdx},~{dirflag},~{fpsr},~{flags}"(ptr elementtype([16 x i8]) nonnull @test_mem, ptr elementtype([16 x i8]) nonnull @test_mem) #1
   ret void
 }

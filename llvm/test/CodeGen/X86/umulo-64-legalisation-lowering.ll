@@ -22,23 +22,22 @@ define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    setne %dl
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    setne %bl
-; X86-NEXT:    andb %dl, %bl
+; X86-NEXT:    setne %cl
+; X86-NEXT:    andb %dl, %cl
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    seto %cl
+; X86-NEXT:    seto %bl
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ebp
-; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    seto %ch
+; X86-NEXT:    orb %bl, %ch
 ; X86-NEXT:    orb %cl, %ch
-; X86-NEXT:    addl %edi, %esi
+; X86-NEXT:    leal (%edi,%eax), %esi
 ; X86-NEXT:    movl %ebp, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %esi, %edx
 ; X86-NEXT:    setb %cl
 ; X86-NEXT:    orb %ch, %cl
-; X86-NEXT:    orb %bl, %cl
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi

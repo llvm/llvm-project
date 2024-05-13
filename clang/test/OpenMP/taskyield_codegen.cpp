@@ -14,7 +14,7 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, i8* }
+// CHECK: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, ptr }
 
 void foo() {}
 
@@ -29,19 +29,19 @@ T tmain(T argc) {
 int main(int argc, char **argv) {
   static int a;
 #pragma omp taskyield
-  // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T]]* @{{.+}})
-  // CHECK: call i32 @__kmpc_omp_taskyield([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i32 0)
+  // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
+  // CHECK: call i32 @__kmpc_omp_taskyield(ptr @{{.+}}, i32 [[GTID]], i32 0)
   // CHECK: call {{.+}} [[TMAIN_INT:@.+]](i{{[0-9][0-9]}}
   // CHECK: call {{.+}} [[TMAIN_CHAR:@.+]](i{{[0-9]}}
   return tmain(argc) + tmain(argv[0][0]) + a;
 }
 
 // CHECK: define {{.+}} [[TMAIN_INT]](
-// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T]]* @{{.+}})
-// CHECK: call i32 @__kmpc_omp_taskyield([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i32 0)
+// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
+// CHECK: call i32 @__kmpc_omp_taskyield(ptr @{{.+}}, i32 [[GTID]], i32 0)
 
 // CHECK: define {{.+}} [[TMAIN_CHAR]](
-// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T]]* @{{.+}})
-// CHECK: call i32 @__kmpc_omp_taskyield([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i32 0)
+// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
+// CHECK: call i32 @__kmpc_omp_taskyield(ptr @{{.+}}, i32 [[GTID]], i32 0)
 
 #endif

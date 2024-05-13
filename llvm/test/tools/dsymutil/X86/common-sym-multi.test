@@ -1,6 +1,9 @@
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/common/common.x86_64 -f -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/common/common.x86_64 -dump-debug-map | FileCheck %s --check-prefix DEBUGMAP
 
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/common/common.x86_64 -f -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/common/common.x86_64 -dump-debug-map | FileCheck %s --check-prefix DEBUGMAP
+
 The test was compiled from two source files:
 $ cd /private/tmp/common
 $ cat common1.c

@@ -22,6 +22,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -62,13 +63,11 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
       CGF.CGM.getContext().getObjCObjectPointerType(InterfaceTy);
   QualType IvarTy =
       Ivar->getUsageType(ObjectPtrTy).withCVRQualifiers(CVRQualifiers);
-  llvm::Type *LTy = CGF.CGM.getTypes().ConvertTypeForMem(IvarTy);
-  llvm::Value *V = CGF.Builder.CreateBitCast(BaseValue, CGF.Int8PtrTy);
+  llvm::Value *V = BaseValue;
   V = CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, V, Offset, "add.ptr");
 
   if (!Ivar->isBitField()) {
-    V = CGF.Builder.CreateBitCast(V, llvm::PointerType::getUnqual(LTy));
-    LValue LV = CGF.MakeNaturalAlignAddrLValue(V, IvarTy);
+    LValue LV = CGF.MakeNaturalAlignRawAddrLValue(V, IvarTy);
     return LV;
   }
 
@@ -106,10 +105,10 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
                              CGF.CGM.getContext().toBits(StorageSize),
                              CharUnits::fromQuantity(0)));
 
-  Address Addr(V, Alignment);
-  Addr = CGF.Builder.CreateElementBitCast(Addr,
-                                   llvm::Type::getIntNTy(CGF.getLLVMContext(),
-                                                         Info->StorageSize));
+  Address Addr =
+      Address(V, llvm::Type::getIntNTy(CGF.getLLVMContext(), Info->StorageSize),
+              Alignment);
+
   return LValue::MakeBitfield(Addr, *Info, IvarTy,
                               LValueBaseInfo(AlignmentSource::Decl),
                               TBAAAccessInfo());
@@ -163,8 +162,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
 
   // Enter the catch, if there is one.
   if (S.getNumCatchStmts()) {
-    for (unsigned I = 0, N = S.getNumCatchStmts(); I != N; ++I) {
-      const ObjCAtCatchStmt *CatchStmt = S.getCatchStmt(I);
+    for (const ObjCAtCatchStmt *CatchStmt : S.catch_stmts()) {
       const VarDecl *CatchDecl = CatchStmt->getCatchParamDecl();
 
       Handlers.push_back(CatchHandler());
@@ -228,21 +226,24 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     CatchHandler &Handler = Handlers[I];
 
     CGF.EmitBlock(Handler.Block);
-    llvm::CatchPadInst *CPI = nullptr;
-    SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(CGF.CurrentFuncletPad);
-    if (useFunclets)
-      if ((CPI = dyn_cast_or_null<llvm::CatchPadInst>(Handler.Block->getFirstNonPHI()))) {
+
+    CodeGenFunction::LexicalScope Cleanups(CGF, Handler.Body->getSourceRange());
+    SaveAndRestore RevertAfterScope(CGF.CurrentFuncletPad);
+    if (useFunclets) {
+      llvm::Instruction *CPICandidate = Handler.Block->getFirstNonPHI();
+      if (auto *CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate)) {
         CGF.CurrentFuncletPad = CPI;
-        CPI->setOperand(2, CGF.getExceptionSlot().getPointer());
+        CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
+        CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
       }
+    }
+
     llvm::Value *RawExn = CGF.getExceptionFromSlot();
 
     // Enter the catch.
     llvm::Value *Exn = RawExn;
     if (beginCatchFn)
       Exn = CGF.EmitNounwindRuntimeCall(beginCatchFn, RawExn, "exn.adjusted");
-
-    CodeGenFunction::LexicalScope cleanups(CGF, Handler.Body->getSourceRange());
 
     if (endCatchFn) {
       // Add a cleanup to leave the catch.
@@ -261,15 +262,13 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       CGF.EmitAutoVarDecl(*CatchParam);
       EmitInitOfCatchParam(CGF, CastExn, CatchParam);
     }
-    if (CPI)
-        CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
 
     CGF.ObjCEHValueStack.push_back(Exn);
     CGF.EmitStmt(Handler.Body);
     CGF.ObjCEHValueStack.pop_back();
 
     // Leave any cleanups associated with the catch.
-    cleanups.ForceCleanup();
+    Cleanups.ForceCleanup();
 
     CGF.EmitBranchThroughCleanup(Cont);
   }
@@ -294,7 +293,7 @@ void CGObjCRuntime::EmitInitOfCatchParam(CodeGenFunction &CGF,
   switch (paramDecl->getType().getQualifiers().getObjCLifetime()) {
   case Qualifiers::OCL_Strong:
     exn = CGF.EmitARCRetainNonBlock(exn);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case Qualifiers::OCL_None:
   case Qualifiers::OCL_ExplicitNone:
@@ -361,13 +360,15 @@ CGObjCRuntime::MessageSendInfo
 CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
                                   QualType resultType,
                                   CallArgList &callArgs) {
+  unsigned ProgramAS = CGM.getDataLayout().getProgramAddressSpace();
+
+  llvm::PointerType *signatureType =
+      llvm::PointerType::get(CGM.getLLVMContext(), ProgramAS);
+
   // If there's a method, use information from that.
   if (method) {
     const CGFunctionInfo &signature =
       CGM.getTypes().arrangeObjCMessageSendSignature(method, callArgs[0].Ty);
-
-    llvm::PointerType *signatureType =
-      CGM.getTypes().GetFunctionType(signature)->getPointerTo();
 
     const CGFunctionInfo &signatureForCall =
       CGM.getTypes().arrangeCall(signature, callArgs);
@@ -379,10 +380,84 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
   const CGFunctionInfo &argsInfo =
     CGM.getTypes().arrangeUnprototypedObjCMessageSend(resultType, callArgs);
 
-  // Derive the signature to call from that.
-  llvm::PointerType *signatureType =
-    CGM.getTypes().GetFunctionType(argsInfo)->getPointerTo();
   return MessageSendInfo(argsInfo, signatureType);
+}
+
+bool CGObjCRuntime::canMessageReceiverBeNull(CodeGenFunction &CGF,
+                                             const ObjCMethodDecl *method,
+                                             bool isSuper,
+                                       const ObjCInterfaceDecl *classReceiver,
+                                             llvm::Value *receiver) {
+  // Super dispatch assumes that self is non-null; even the messenger
+  // doesn't have a null check internally.
+  if (isSuper)
+    return false;
+
+  // If this is a direct dispatch of a class method, check whether the class,
+  // or anything in its hierarchy, was weak-linked.
+  if (classReceiver && method && method->isClassMethod())
+    return isWeakLinkedClass(classReceiver);
+
+  // If we're emitting a method, and self is const (meaning just ARC, for now),
+  // and the receiver is a load of self, then self is a valid object.
+  if (auto curMethod =
+               dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
+    auto self = curMethod->getSelfDecl();
+    if (self->getType().isConstQualified()) {
+      if (auto LI = dyn_cast<llvm::LoadInst>(receiver->stripPointerCasts())) {
+        llvm::Value *selfAddr = CGF.GetAddrOfLocalVar(self).emitRawPointer(CGF);
+        if (selfAddr == LI->getPointerOperand()) {
+          return false;
+        }
+      }
+    }
+  }
+
+  // Otherwise, assume it can be null.
+  return true;
+}
+
+bool CGObjCRuntime::isWeakLinkedClass(const ObjCInterfaceDecl *ID) {
+  do {
+    if (ID->isWeakImported())
+      return true;
+  } while ((ID = ID->getSuperClass()));
+
+  return false;
+}
+
+void CGObjCRuntime::destroyCalleeDestroyedArguments(CodeGenFunction &CGF,
+                                              const ObjCMethodDecl *method,
+                                              const CallArgList &callArgs) {
+  CallArgList::const_iterator I = callArgs.begin();
+  for (auto i = method->param_begin(), e = method->param_end();
+         i != e; ++i, ++I) {
+    const ParmVarDecl *param = (*i);
+    if (param->hasAttr<NSConsumedAttr>()) {
+      RValue RV = I->getRValue(CGF);
+      assert(RV.isScalar() &&
+             "NullReturnState::complete - arg not on object");
+      CGF.EmitARCRelease(RV.getScalarVal(), ARCImpreciseLifetime);
+    } else {
+      QualType QT = param->getType();
+      auto *RT = QT->getAs<RecordType>();
+      if (RT && RT->getDecl()->isParamDestroyedInCallee()) {
+        RValue RV = I->getRValue(CGF);
+        QualType::DestructionKind DtorKind = QT.isDestructedType();
+        switch (DtorKind) {
+        case QualType::DK_cxx_destructor:
+          CGF.destroyCXXObject(CGF, RV.getAggregateAddress(), QT);
+          break;
+        case QualType::DK_nontrivial_c_struct:
+          CGF.destroyNonTrivialCStruct(CGF, RV.getAggregateAddress(), QT);
+          break;
+        default:
+          llvm_unreachable("unexpected dtor kind");
+          break;
+        }
+      }
+    }
+  }
 }
 
 llvm::Constant *

@@ -65,14 +65,23 @@ void BinarySymExpr::dumpToStreamImpl(raw_ostream &OS,
 }
 
 void SymbolCast::dumpToStream(raw_ostream &os) const {
-  os << '(' << ToTy.getAsString() << ") (";
+  os << '(' << ToTy << ") (";
   Operand->dumpToStream(os);
   os << ')';
 }
 
+void UnarySymExpr::dumpToStream(raw_ostream &os) const {
+  os << UnaryOperator::getOpcodeStr(Op);
+  bool Binary = isa<BinarySymExpr>(Operand);
+  if (Binary)
+    os << '(';
+  Operand->dumpToStream(os);
+  if (Binary)
+    os << ')';
+}
+
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
-  os << getKindStr() << getSymbolID() << '{' << T.getAsString() << ", LC"
-     << LCtx->getID();
+  os << getKindStr() << getSymbolID() << '{' << T << ", LC" << LCtx->getID();
   if (S)
     os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
   else
@@ -90,15 +99,13 @@ void SymbolExtent::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolMetadata::dumpToStream(raw_ostream &os) const {
-  os << getKindStr() << getSymbolID() << '{' << getRegion() << ','
-     << T.getAsString() << '}';
+  os << getKindStr() << getSymbolID() << '{' << getRegion() << ',' << T << '}';
 }
 
 void SymbolData::anchor() {}
 
 void SymbolRegionValue::dumpToStream(raw_ostream &os) const {
-  os << getKindStr() << getSymbolID() << '<' << getType().getAsString() << ' '
-     << R << '>';
+  os << getKindStr() << getSymbolID() << '<' << getType() << ' ' << R << '>';
 }
 
 bool SymExpr::symbol_iterator::operator==(const symbol_iterator &X) const {
@@ -137,6 +144,9 @@ void SymExpr::symbol_iterator::expand() {
     case SymExpr::SymbolCastKind:
       itr.push_back(cast<SymbolCast>(SE)->getOperand());
       return;
+    case SymExpr::UnarySymExprKind:
+      itr.push_back(cast<UnarySymExpr>(SE)->getOperand());
+      return;
     case SymExpr::SymIntExprKind:
       itr.push_back(cast<SymIntExpr>(SE)->getLHS());
       return;
@@ -160,8 +170,7 @@ SymbolManager::getRegionValueSymbol(const TypedValueRegion* R) {
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = (SymExpr*) BPAlloc.Allocate<SymbolRegionValue>();
-    new (SD) SymbolRegionValue(SymbolCounter, R);
+    SD = new (BPAlloc) SymbolRegionValue(SymbolCounter, R);
     DataSet.InsertNode(SD, InsertPos);
     ++SymbolCounter;
   }
@@ -179,8 +188,7 @@ const SymbolConjured* SymbolManager::conjureSymbol(const Stmt *E,
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = (SymExpr*) BPAlloc.Allocate<SymbolConjured>();
-    new (SD) SymbolConjured(SymbolCounter, E, LCtx, T, Count, SymbolTag);
+    SD = new (BPAlloc) SymbolConjured(SymbolCounter, E, LCtx, T, Count, SymbolTag);
     DataSet.InsertNode(SD, InsertPos);
     ++SymbolCounter;
   }
@@ -196,8 +204,7 @@ SymbolManager::getDerivedSymbol(SymbolRef parentSymbol,
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = (SymExpr*) BPAlloc.Allocate<SymbolDerived>();
-    new (SD) SymbolDerived(SymbolCounter, parentSymbol, R);
+    SD = new (BPAlloc) SymbolDerived(SymbolCounter, parentSymbol, R);
     DataSet.InsertNode(SD, InsertPos);
     ++SymbolCounter;
   }
@@ -212,8 +219,7 @@ SymbolManager::getExtentSymbol(const SubRegion *R) {
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = (SymExpr*) BPAlloc.Allocate<SymbolExtent>();
-    new (SD) SymbolExtent(SymbolCounter, R);
+    SD = new (BPAlloc) SymbolExtent(SymbolCounter, R);
     DataSet.InsertNode(SD, InsertPos);
     ++SymbolCounter;
   }
@@ -230,8 +236,7 @@ SymbolManager::getMetadataSymbol(const MemRegion* R, const Stmt *S, QualType T,
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = (SymExpr*) BPAlloc.Allocate<SymbolMetadata>();
-    new (SD) SymbolMetadata(SymbolCounter, R, S, T, LCtx, Count, SymbolTag);
+    SD = new (BPAlloc) SymbolMetadata(SymbolCounter, R, S, T, LCtx, Count, SymbolTag);
     DataSet.InsertNode(SD, InsertPos);
     ++SymbolCounter;
   }
@@ -247,8 +252,7 @@ SymbolManager::getCastSymbol(const SymExpr *Op,
   void *InsertPos;
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
   if (!data) {
-    data = (SymbolCast*) BPAlloc.Allocate<SymbolCast>();
-    new (data) SymbolCast(Op, From, To);
+    data = new (BPAlloc) SymbolCast(Op, From, To);
     DataSet.InsertNode(data, InsertPos);
   }
 
@@ -265,8 +269,7 @@ const SymIntExpr *SymbolManager::getSymIntExpr(const SymExpr *lhs,
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!data) {
-    data = (SymIntExpr*) BPAlloc.Allocate<SymIntExpr>();
-    new (data) SymIntExpr(lhs, op, v, t);
+    data = new (BPAlloc) SymIntExpr(lhs, op, v, t);
     DataSet.InsertNode(data, InsertPos);
   }
 
@@ -283,8 +286,7 @@ const IntSymExpr *SymbolManager::getIntSymExpr(const llvm::APSInt& lhs,
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!data) {
-    data = (IntSymExpr*) BPAlloc.Allocate<IntSymExpr>();
-    new (data) IntSymExpr(lhs, op, rhs, t);
+    data = new (BPAlloc) IntSymExpr(lhs, op, rhs, t);
     DataSet.InsertNode(data, InsertPos);
   }
 
@@ -301,12 +303,26 @@ const SymSymExpr *SymbolManager::getSymSymExpr(const SymExpr *lhs,
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!data) {
-    data = (SymSymExpr*) BPAlloc.Allocate<SymSymExpr>();
-    new (data) SymSymExpr(lhs, op, rhs, t);
+    data = new (BPAlloc) SymSymExpr(lhs, op, rhs, t);
     DataSet.InsertNode(data, InsertPos);
   }
 
   return cast<SymSymExpr>(data);
+}
+
+const UnarySymExpr *SymbolManager::getUnarySymExpr(const SymExpr *Operand,
+                                                   UnaryOperator::Opcode Opc,
+                                                   QualType T) {
+  llvm::FoldingSetNodeID ID;
+  UnarySymExpr::Profile(ID, Operand, Opc, T);
+  void *InsertPos;
+  SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
+  if (!data) {
+    data = new (BPAlloc) UnarySymExpr(Operand, Opc, T);
+    DataSet.InsertNode(data, InsertPos);
+  }
+
+  return cast<UnarySymExpr>(data);
 }
 
 QualType SymbolConjured::getType() const {
@@ -372,7 +388,7 @@ void SymbolReaper::markDependentsLive(SymbolRef sym) {
 
   if (const SymbolRefSmallVectorTy *Deps = SymMgr.getDependentSymbols(sym)) {
     for (const auto I : *Deps) {
-      if (TheLiving.find(I) != TheLiving.end())
+      if (TheLiving.contains(I))
         continue;
       markLive(I);
     }
@@ -385,8 +401,12 @@ void SymbolReaper::markLive(SymbolRef sym) {
 }
 
 void SymbolReaper::markLive(const MemRegion *region) {
-  RegionRoots.insert(region->getBaseRegion());
+  LiveRegionRoots.insert(region->getBaseRegion());
   markElementIndicesLive(region);
+}
+
+void SymbolReaper::markLazilyCopied(const clang::ento::MemRegion *region) {
+  LazilyCopiedRegionRoots.insert(region->getBaseRegion());
 }
 
 void SymbolReaper::markElementIndicesLive(const MemRegion *region) {
@@ -394,8 +414,8 @@ void SymbolReaper::markElementIndicesLive(const MemRegion *region) {
        SR = dyn_cast<SubRegion>(SR->getSuperRegion())) {
     if (const auto ER = dyn_cast<ElementRegion>(SR)) {
       SVal Idx = ER->getIndex();
-      for (auto SI = Idx.symbol_begin(), SE = Idx.symbol_end(); SI != SE; ++SI)
-        markLive(*SI);
+      for (SymbolRef Sym : Idx.symbols())
+        markLive(Sym);
     }
   }
 }
@@ -411,8 +431,7 @@ bool SymbolReaper::isLiveRegion(const MemRegion *MR) {
   // is not used later in the path, we can diagnose a leak of a value within
   // that field earlier than, say, the variable that contains the field dies.
   MR = MR->getBaseRegion();
-
-  if (RegionRoots.count(MR))
+  if (LiveRegionRoots.count(MR))
     return true;
 
   if (const auto *SR = dyn_cast<SymbolicRegion>(MR))
@@ -425,19 +444,16 @@ bool SymbolReaper::isLiveRegion(const MemRegion *MR) {
   // tell if anything still refers to this region. Unlike SymbolicRegions,
   // AllocaRegions don't have associated symbols, though, so we don't actually
   // have a way to track their liveness.
-  if (isa<AllocaRegion>(MR))
-    return true;
+  return isa<AllocaRegion, CXXThisRegion, MemSpaceRegion, CodeTextRegion>(MR);
+}
 
-  if (isa<CXXThisRegion>(MR))
-    return true;
+bool SymbolReaper::isLazilyCopiedRegion(const MemRegion *MR) const {
+  // TODO: See comment in isLiveRegion.
+  return LazilyCopiedRegionRoots.count(MR->getBaseRegion());
+}
 
-  if (isa<MemSpaceRegion>(MR))
-    return true;
-
-  if (isa<CodeTextRegion>(MR))
-    return true;
-
-  return false;
+bool SymbolReaper::isReadableRegion(const MemRegion *MR) {
+  return isLiveRegion(MR) || isLazilyCopiedRegion(MR);
 }
 
 bool SymbolReaper::isLive(SymbolRef sym) {
@@ -450,7 +466,7 @@ bool SymbolReaper::isLive(SymbolRef sym) {
 
   switch (sym->getKind()) {
   case SymExpr::SymbolRegionValueKind:
-    KnownLive = isLiveRegion(cast<SymbolRegionValue>(sym)->getRegion());
+    KnownLive = isReadableRegion(cast<SymbolRegionValue>(sym)->getRegion());
     break;
   case SymExpr::SymbolConjuredKind:
     KnownLive = false;
@@ -479,6 +495,9 @@ bool SymbolReaper::isLive(SymbolRef sym) {
     break;
   case SymExpr::SymbolCastKind:
     KnownLive = isLive(cast<SymbolCast>(sym)->getOperand());
+    break;
+  case SymExpr::UnarySymExprKind:
+    KnownLive = isLive(cast<UnarySymExpr>(sym)->getOperand());
     break;
   }
 

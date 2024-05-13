@@ -1,4 +1,5 @@
 REQUIRES: msan
+UNSUPPORTED: target=arm{{.*}}
 RUN: %msan_compiler %S/MsanParamUnpoison.cpp -o %t
 RUN: %run %t -seed=1 -runs=1000 2>&1 | FileCheck %s
 

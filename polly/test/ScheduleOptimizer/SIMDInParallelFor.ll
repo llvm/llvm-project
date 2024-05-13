@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-parallel -polly-vectorizer=stripmine -polly-codegen-verify -polly-opt-isl -polly-ast -polly-codegen -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-parallel -polly-vectorizer=stripmine -polly-codegen-verify -polly-opt-isl -polly-print-ast -polly-codegen -disable-output < %s | FileCheck %s
 ;
 ; Check that there are no nested #pragma omp parallel for inside a
 ; #pragma omp parallel for loop.
@@ -36,10 +36,10 @@ for.cond66.preheader:
 
 for.body75:
   %indvars.iv215 = phi i64 [ %indvars.iv213, %for.cond66.preheader ], [ %indvars.iv.next216, %for.body75 ]
-  %arrayidx83 = getelementptr inbounds [1984 x [1984 x double]], [1984 x [1984 x double]]* @b, i64 0, i64 %indvars.iv219, i64 %indvars.iv215
-  %tmp3 = load double, double* %arrayidx83, align 8
-  %arrayidx87 = getelementptr inbounds [1984 x [1984 x double]], [1984 x [1984 x double]]* @c, i64 0, i64 %indvars.iv223, i64 %indvars.iv215
-  store double undef, double* %arrayidx87, align 8
+  %arrayidx83 = getelementptr inbounds [1984 x [1984 x double]], ptr @b, i64 0, i64 %indvars.iv219, i64 %indvars.iv215
+  %tmp3 = load double, ptr %arrayidx83, align 8
+  %arrayidx87 = getelementptr inbounds [1984 x [1984 x double]], ptr @c, i64 0, i64 %indvars.iv223, i64 %indvars.iv215
+  store double undef, ptr %arrayidx87, align 8
   %indvars.iv.next216 = add nuw nsw i64 %indvars.iv215, 1
   %cmp74 = icmp ult i64 %indvars.iv.next216, %tmp2
   br i1 %cmp74, label %for.body75, label %for.inc92

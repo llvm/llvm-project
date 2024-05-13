@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/legacy/LTOModule.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
@@ -26,18 +25,19 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include <system_error>
 using namespace llvm;
@@ -50,7 +50,7 @@ LTOModule::LTOModule(std::unique_ptr<Module> M, MemoryBufferRef MBRef,
   SymTab.addModule(Mod.get());
 }
 
-LTOModule::~LTOModule() {}
+LTOModule::~LTOModule() = default;
 
 /// isBitcodeFile - Returns 'true' if the file (or memory contents) is LLVM
 /// bitcode.
@@ -91,7 +91,7 @@ bool LTOModule::isBitcodeForTarget(MemoryBuffer *Buffer,
       expectedToErrorOrAndEmitErrors(Context, getBitcodeTargetTriple(*BCOrErr));
   if (!TripleOrErr)
     return false;
-  return StringRef(*TripleOrErr).startswith(TriplePrefix);
+  return StringRef(*TripleOrErr).starts_with(TriplePrefix);
 }
 
 std::string LTOModule::getProducerString(MemoryBuffer *Buffer) {
@@ -229,8 +229,8 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
       CPU = "cyclone";
   }
 
-  TargetMachine *target =
-      march->createTargetMachine(TripleStr, CPU, FeatureStr, options, None);
+  TargetMachine *target = march->createTargetMachine(TripleStr, CPU, FeatureStr,
+                                                     options, std::nullopt);
 
   std::unique_ptr<LTOModule> Ret(new LTOModule(std::move(M), Buffer, target));
   Ret->parseSymbols();
@@ -348,7 +348,7 @@ void LTOModule::addDefinedDataSymbol(ModuleSymbolTable::Symbol Sym) {
     Buffer.c_str();
   }
 
-  const GlobalValue *V = Sym.get<GlobalValue *>();
+  const GlobalValue *V = cast<GlobalValue *>(Sym);
   addDefinedDataSymbol(Buffer, V);
 }
 
@@ -382,17 +382,17 @@ void LTOModule::addDefinedDataSymbol(StringRef Name, const GlobalValue *v) {
   // special case if this data blob is an ObjC class definition
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(v)) {
     StringRef Section = GV->getSection();
-    if (Section.startswith("__OBJC,__class,")) {
+    if (Section.starts_with("__OBJC,__class,")) {
       addObjCClass(GV);
     }
 
     // special case if this data blob is an ObjC category definition
-    else if (Section.startswith("__OBJC,__category,")) {
+    else if (Section.starts_with("__OBJC,__category,")) {
       addObjCCategory(GV);
     }
 
     // special case if this data blob is the list of referenced classes
-    else if (Section.startswith("__OBJC,__cls_refs,")) {
+    else if (Section.starts_with("__OBJC,__cls_refs,")) {
       addObjCClassRef(GV);
     }
   }
@@ -406,7 +406,7 @@ void LTOModule::addDefinedFunctionSymbol(ModuleSymbolTable::Symbol Sym) {
     Buffer.c_str();
   }
 
-  const Function *F = cast<Function>(Sym.get<GlobalValue *>());
+  const Function *F = cast<Function>(cast<GlobalValue *>(Sym));
   addDefinedFunctionSymbol(Buffer, F);
 }
 
@@ -545,7 +545,8 @@ void LTOModule::addPotentialUndefinedSymbol(ModuleSymbolTable::Symbol Sym,
     name.c_str();
   }
 
-  auto IterBool = _undefines.insert(std::make_pair(name, NameAndAttributes()));
+  auto IterBool =
+      _undefines.insert(std::make_pair(name.str(), NameAndAttributes()));
 
   // we already have the symbol
   if (!IterBool.second)
@@ -555,7 +556,7 @@ void LTOModule::addPotentialUndefinedSymbol(ModuleSymbolTable::Symbol Sym,
 
   info.name = IterBool.first->first();
 
-  const GlobalValue *decl = Sym.dyn_cast<GlobalValue *>();
+  const GlobalValue *decl = dyn_cast_if_present<GlobalValue *>(Sym);
 
   if (decl->hasExternalWeakLinkage())
     info.attributes = LTO_SYMBOL_DEFINITION_WEAKUNDEF;
@@ -568,7 +569,7 @@ void LTOModule::addPotentialUndefinedSymbol(ModuleSymbolTable::Symbol Sym,
 
 void LTOModule::parseSymbols() {
   for (auto Sym : SymTab.symbols()) {
-    auto *GV = Sym.dyn_cast<GlobalValue *>();
+    auto *GV = dyn_cast_if_present<GlobalValue *>(Sym);
     uint32_t Flags = SymTab.getSymbolFlags(Sym);
     if (Flags & object::BasicSymbolRef::SF_FormatSpecific)
       continue;
@@ -582,7 +583,7 @@ void LTOModule::parseSymbols() {
         SymTab.printSymbolName(OS, Sym);
         Buffer.c_str();
       }
-      StringRef Name(Buffer);
+      StringRef Name = Buffer;
 
       if (IsUndefined)
         addAsmGlobalSymbolUndef(Name);
@@ -686,4 +687,17 @@ Expected<uint32_t> LTOModule::getMachOCPUType() const {
 
 Expected<uint32_t> LTOModule::getMachOCPUSubType() const {
   return MachO::getCPUSubType(Triple(Mod->getTargetTriple()));
+}
+
+bool LTOModule::hasCtorDtor() const {
+  for (auto Sym : SymTab.symbols()) {
+    if (auto *GV = dyn_cast_if_present<GlobalValue *>(Sym)) {
+      StringRef Name = GV->getName();
+      if (Name.consume_front("llvm.global_")) {
+        if (Name == "ctors" || Name == "dtors")
+          return true;
+      }
+    }
+  }
+  return false;
 }

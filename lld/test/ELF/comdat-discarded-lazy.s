@@ -26,6 +26,7 @@
 # AA-NEXT: >>> defined in {{.*}}aa.o
 # AA-NEXT: >>> section group signature: foo
 # AA-NEXT: >>> prevailing definition is in {{.*}}1.o
+# AA-NEXT: >>> or the symbol in the prevailing group {{.*}}
 # AA-NEXT: >>> referenced by {{.*}}aa.o:(.text+0x1)
 
 ## Test the case when the symbol causing a "discarded section" is ordered
@@ -45,14 +46,15 @@
 # ZZ-NEXT: >>> defined in {{.*}}zz.o
 # ZZ-NEXT: >>> section group signature: foo
 # ZZ-NEXT: >>> prevailing definition is in {{.*}}1.o
+# ZZ-NEXT: >>> or the symbol in the prevailing group {{.*}}
 # ZZ-NEXT: >>> referenced by {{.*}}zz.o:(.text+0x1)
 
-## Don't error if the symbol which would cause "discarded section"
-## was inserted before %tzz.o
+## The definition in %tdef.o is outside a group. Currently we give an error
+## because %tdef.o is not extracted.
 # RUN: echo '.globl zz; zz:' | llvm-mc -filetype=obj -triple=x86_64 - -o %tdef.o
-# RUN: ld.lld %t.o --start-lib %t1.o %tdef.o %tzz.o --end-lib -o /dev/null
+# RUN: not ld.lld %t.o --start-lib %t1.o %tdef.o %tzz.o --end-lib -o /dev/null 2>&1 | FileCheck --check-prefix=ZZ %s
 # RUN: rm -f %tdef.a && llvm-ar rc %tdef.a %tdef.o
-# RUN: ld.lld %t.o --start-lib %t1.o %tdef.a %tzz.o --end-lib -o /dev/null
+# RUN: not ld.lld %t.o --start-lib %t1.o %tdef.a %tzz.o --end-lib -o /dev/null 2>&1 | FileCheck --check-prefix=ZZ %s
 
 .globl _start
 _start:

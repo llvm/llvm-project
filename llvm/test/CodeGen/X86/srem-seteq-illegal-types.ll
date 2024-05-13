@@ -33,39 +33,42 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; X86-LABEL: test_srem_even:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    shlb $4, %al
-; X86-NEXT:    sarb $4, %al
-; X86-NEXT:    movsbl %al, %ecx
-; X86-NEXT:    imull $43, %ecx, %ecx
-; X86-NEXT:    movzwl %cx, %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shlb $4, %cl
+; X86-NEXT:    sarb $4, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    shrl $15, %edx
-; X86-NEXT:    addb %ch, %dl
-; X86-NEXT:    movzbl %dl, %ecx
+; X86-NEXT:    shrb $7, %dl
+; X86-NEXT:    shrb $4, %cl
+; X86-NEXT:    addb %dl, %cl
+; X86-NEXT:    movzbl %cl, %ecx
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    andb $15, %al
 ; X86-NEXT:    cmpb $1, %al
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_srem_even:
 ; X64:       # %bb.0:
-; X64-NEXT:    shlb $4, %dil
-; X64-NEXT:    sarb $4, %dil
-; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    imull $43, %eax, %ecx
-; X64-NEXT:    movzwl %cx, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    shrl $15, %edx
-; X64-NEXT:    shrl $8, %ecx
-; X64-NEXT:    addb %dl, %cl
-; X64-NEXT:    movzbl %cl, %ecx
-; X64-NEXT:    addl %ecx, %ecx
-; X64-NEXT:    leal (%rcx,%rcx,2), %ecx
-; X64-NEXT:    subb %cl, %al
-; X64-NEXT:    cmpb $1, %al
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shlb $4, %al
+; X64-NEXT:    sarb $4, %al
+; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    leal (%rax,%rax,2), %eax
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    shrb $7, %cl
+; X64-NEXT:    shrb $4, %al
+; X64-NEXT:    addb %cl, %al
+; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    leal (%rax,%rax,2), %eax
+; X64-NEXT:    subb %al, %dil
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    cmpb $1, %dil
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %srem = srem i4 %X, 6
@@ -76,7 +79,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; X86-LABEL: test_srem_pow2_setne:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shlb $2, %cl
 ; X86-NEXT:    sarb $5, %cl
@@ -206,8 +209,8 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE2-NEXT:    addq %rcx, %rax
 ; SSE2-NEXT:    movq %rax, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pcmpeqd {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pcmpeqd {{.*}}(%rip), %xmm2
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,2]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,3]
@@ -215,9 +218,9 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %dl
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %cl
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_srem_vec:
@@ -247,7 +250,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE41-NEXT:    subq %rax, %rdi
 ; SSE41-NEXT:    movq %rdi, %xmm0
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [8589934591,8589934591]
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm1 = [4294967295,1,4294967295,1]
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    movabsq $2049638230412172401, %rdx # imm = 0x1C71C71C71C71C71
 ; SSE41-NEXT:    movq %rcx, %rax
@@ -261,14 +264,16 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE41-NEXT:    addq %rcx, %rax
 ; SSE41-NEXT:    movq %rax, %xmm2
 ; SSE41-NEXT:    pand %xmm1, %xmm2
-; SSE41-NEXT:    pcmpeqq {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    pcmpeqq {{.*}}(%rip), %xmm2
-; SSE41-NEXT:    pxor %xmm1, %xmm2
-; SSE41-NEXT:    pextrb $0, %xmm0, %eax
+; SSE41-NEXT:    movl $3, %eax
+; SSE41-NEXT:    movq %rax, %xmm3
+; SSE41-NEXT:    pcmpeqq %xmm2, %xmm3
+; SSE41-NEXT:    pxor %xmm1, %xmm3
+; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    pextrb $8, %xmm0, %edx
-; SSE41-NEXT:    pextrb $0, %xmm2, %ecx
+; SSE41-NEXT:    pextrb $0, %xmm3, %ecx
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE41-NEXT:    # kill: def $dl killed $dl killed $edx
 ; SSE41-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -313,16 +318,18 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; AVX1-NEXT:    addq %rcx, %rax
 ; AVX1-NEXT:    vmovq %rax, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX1-NEXT:    vpextrb $8, %xmm0, %edx
-; AVX1-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX1-NEXT:    movl $3, %eax
+; AVX1-NEXT:    vmovq %rax, %xmm2
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vpextrb $4, %xmm0, %edx
+; AVX1-NEXT:    vpextrb $8, %xmm0, %ecx
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    # kill: def $dl killed $dl killed $edx
 ; AVX1-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -370,13 +377,14 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [8589934591,8589934591,8589934591,8589934591]
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqq {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX2-NEXT:    vpextrb $8, %xmm0, %edx
-; AVX2-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    notl %eax
+; AVX2-NEXT:    vpextrb $8, %xmm1, %edx
+; AVX2-NEXT:    vpextrb $0, %xmm2, %ecx
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    # kill: def $dl killed $dl killed $edx
 ; AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -422,8 +430,8 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; AVX512VL-NEXT:    addq %rcx, %rax
 ; AVX512VL-NEXT:    vmovq %rax, %xmm1
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpandq {{.*}}(%rip){1to4}, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpcmpneqq {{.*}}(%rip), %ymm0, %k0
+; AVX512VL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpcmpneqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
 ; AVX512VL-NEXT:    kshiftrw $1, %k0, %k1
 ; AVX512VL-NEXT:    kmovw %k1, %edx
 ; AVX512VL-NEXT:    kshiftrw $2, %k0, %k1

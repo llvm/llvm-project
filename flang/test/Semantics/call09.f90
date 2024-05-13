@@ -1,7 +1,7 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Test 15.5.2.9(2,3,5) dummy procedure requirements
 ! C843
-!   An entity with the INTENT attribute shall be a dummy data object or a 
+!   An entity with the INTENT attribute shall be a dummy data object or a
 !   dummy procedure pointer.
 
 module m
@@ -22,6 +22,9 @@ module m
   subroutine s02(p)
     procedure(realfunc), pointer :: p
   end subroutine
+  subroutine s02b(p)
+    procedure(real), pointer :: p
+  end subroutine
   subroutine s03(p)
     procedure(realfunc) :: p
   end subroutine
@@ -29,8 +32,12 @@ module m
     !ERROR: A dummy procedure without the POINTER attribute may not have an INTENT attribute
     procedure(realfunc), intent(in) :: p
   end subroutine
+  subroutine s05(p)
+    procedure(realfunc), pointer, intent(in out) :: p
+  end subroutine
 
   subroutine selemental1(p)
+    !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
     procedure(cos) :: p ! ok
   end subroutine
 
@@ -57,46 +64,46 @@ module m
     procedure(realfunc), pointer :: p
     procedure(intfunc), pointer :: ip
     integer, pointer :: intPtr
-    external :: extfunc
-    external :: extfuncPtr
-    pointer :: extfuncPtr
     p => realfunc
     ip => intfunc
     call s01(realfunc) ! ok
-    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p='
+    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': function results have distinct types: REAL(4) vs INTEGER(4)
     call s01(intfunc)
     call s01(p) ! ok
     call s01(procptr()) ! ok
-    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p='
+    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': function results have distinct types: REAL(4) vs INTEGER(4)
     call s01(intprocptr())
     call s01(null()) ! ok
     call s01(null(p)) ! ok
-    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p='
+    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': function results have distinct types: REAL(4) vs INTEGER(4)
     call s01(null(ip))
     call s01(sin) ! ok
     !ERROR: Actual argument associated with procedure dummy argument 'p=' is not a procedure
     call s01(null(intPtr))
     !ERROR: Actual argument associated with procedure dummy argument 'p=' is typeless
     call s01(B"0101")
-    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
-    call s01(extfunc)
-    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
     call s02(realfunc)
     call s02(p) ! ok
-    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p='
+    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': function results have distinct types: REAL(4) vs INTEGER(4)
     call s02(ip)
-    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
     call s02(procptr())
-    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
-    call s02(null())
-    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
-    call s02(null(p))
-    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
+    call s02(null()) ! ok
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
+    call s05(null())
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
     call s02(sin)
-    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
-    call s02(extfunc)
-    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
-    call s03(extfuncPtr)
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
+    call s02b(realfunc)
+    call s02b(p) ! ok
+    !ERROR: Actual argument function associated with procedure dummy argument 'p=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
+    call s02b(ip)
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
+    call s02b(procptr())
+    call s02b(null())
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a pointer unless INTENT(IN)
+    call s02b(sin)
   end subroutine
 
   subroutine callsub(s)
@@ -163,13 +170,13 @@ module m
     call takesrealfunc1(ds)
     !ERROR: Actual argument associated with procedure dummy argument 'f=' is a subroutine but must be a function
     call takesrealfunc1(ps)
-    !ERROR: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+    !ERROR: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
     call takesrealfunc1(intfunc)
-    !ERROR: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+    !ERROR: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
     call takesrealfunc1(dif)
-    !ERROR: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+    !ERROR: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
     call takesrealfunc1(pif)
-    !ERROR: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+    !ERROR: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
     call takesrealfunc1(intfunc)
     !ERROR: Actual argument associated with procedure dummy argument 'f=' is a subroutine but must be a function
     call takesrealfunc2(callsub)
@@ -177,13 +184,13 @@ module m
     call takesrealfunc2(ds)
     !ERROR: Actual argument associated with procedure dummy argument 'f=' is a subroutine but must be a function
     call takesrealfunc2(ps)
-    !ERROR: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+    !ERROR: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
     call takesrealfunc2(intfunc)
-    !ERROR: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+    !ERROR: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
     call takesrealfunc2(dif)
-    !ERROR: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+    !ERROR: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
     call takesrealfunc2(pif)
-    !ERROR: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+    !ERROR: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: REAL(4) vs INTEGER(4)
     call takesrealfunc2(intfunc)
   end subroutine
 end module

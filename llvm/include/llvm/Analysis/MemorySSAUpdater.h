@@ -31,7 +31,6 @@
 #ifndef LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 #define LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -39,15 +38,14 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/CFGDiff.h"
-#include <utility>
 
 namespace llvm {
 
 class BasicBlock;
-class BranchInst;
 class DominatorTree;
 class Instruction;
 class LoopBlocksRPO;
+template <typename T, unsigned int N> class SmallSetVector;
 
 using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
 using PhiToDefMap = SmallDenseMap<MemoryPhi *, MemoryAccess *>;
@@ -176,36 +174,33 @@ public:
   // the edge cases right, and the above calls already operate in near-optimal
   // time bounds.
 
-  /// Create a MemoryAccess in MemorySSA at a specified point in a block,
-  /// with a specified clobbering definition.
+  /// Create a MemoryAccess in MemorySSA at a specified point in a block.
   ///
-  /// Returns the new MemoryAccess.
-  /// This should be called when a memory instruction is created that is being
-  /// used to replace an existing memory instruction. It will *not* create PHI
-  /// nodes, or verify the clobbering definition. The insertion place is used
-  /// solely to determine where in the memoryssa access lists the instruction
-  /// will be placed. The caller is expected to keep ordering the same as
-  /// instructions.
-  /// It will return the new MemoryAccess.
+  /// When used by itself, this method will only insert the new MemoryAccess
+  /// into the access list, but not make any other changes, such as inserting
+  /// MemoryPHI nodes, or updating users to point to the new MemoryAccess. You
+  /// must specify a correct Definition in this case.
+  ///
+  /// Usually, this API is instead combined with insertUse() or insertDef(),
+  /// which will perform all the necessary MSSA updates. If these APIs are used,
+  /// then nullptr can be used as Definition, as the correct defining access
+  /// will be automatically determined.
+  ///
   /// Note: If a MemoryAccess already exists for I, this function will make it
   /// inaccessible and it *must* have removeMemoryAccess called on it.
   MemoryAccess *createMemoryAccessInBB(Instruction *I, MemoryAccess *Definition,
                                        const BasicBlock *BB,
                                        MemorySSA::InsertionPlace Point);
 
-  /// Create a MemoryAccess in MemorySSA before or after an existing
-  /// MemoryAccess.
+  /// Create a MemoryAccess in MemorySSA before an existing MemoryAccess.
   ///
-  /// Returns the new MemoryAccess.
-  /// This should be called when a memory instruction is created that is being
-  /// used to replace an existing memory instruction. It will *not* create PHI
-  /// nodes, or verify the clobbering definition.
-  ///
-  /// Note: If a MemoryAccess already exists for I, this function will make it
-  /// inaccessible and it *must* have removeMemoryAccess called on it.
+  /// See createMemoryAccessInBB() for usage details.
   MemoryUseOrDef *createMemoryAccessBefore(Instruction *I,
                                            MemoryAccess *Definition,
                                            MemoryUseOrDef *InsertPt);
+  /// Create a MemoryAccess in MemorySSA after an existing MemoryAccess.
+  ///
+  /// See createMemoryAccessInBB() for usage details.
   MemoryUseOrDef *createMemoryAccessAfter(Instruction *I,
                                           MemoryAccess *Definition,
                                           MemoryAccess *InsertPt);
@@ -239,11 +234,6 @@ public:
   /// I's block that follow I (inclusive), and update the Phis in the blocks'
   /// successors.
   void changeToUnreachable(const Instruction *I);
-
-  /// Conditional branch BI is changed or replaced with an unconditional branch
-  /// to `To`. Update Phis in BI's successors to remove BI's BB.
-  void changeCondBranchToUnconditionalTo(const BranchInst *BI,
-                                         const BasicBlock *To);
 
   /// Get handle on MemorySSA.
   MemorySSA* getMemorySSA() const { return MSSA; }

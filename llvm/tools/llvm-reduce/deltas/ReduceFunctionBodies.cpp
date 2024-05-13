@@ -13,45 +13,50 @@
 
 #include "ReduceFunctionBodies.h"
 #include "Delta.h"
+#include "Utils.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
 /// Removes all the bodies of defined functions that aren't inside any of the
 /// desired Chunks.
-static void
-extractFunctionBodiesFromModule(const std::vector<Chunk> &ChunksToKeep,
-                                Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractFunctionBodiesFromModule(Oracle &O,
+                                            ReducerWorkItem &WorkItem) {
   // Delete out-of-chunk function bodies
-  std::vector<Function *> FuncDefsToReduce;
-  for (auto &F : *Program)
-    if (!F.isDeclaration() && !O.shouldKeep()) {
+  for (auto &F : WorkItem.getModule()) {
+    if (!F.isDeclaration() && !hasAliasUse(F) && !O.shouldKeep()) {
       F.deleteBody();
       F.setComdat(nullptr);
     }
-}
-
-/// Counts the amount of non-declaration functions and prints their
-/// respective name & index
-static int countFunctionDefinitions(Module *Program) {
-  // TODO: Silence index with --quiet flag
-  errs() << "----------------------------\n";
-  errs() << "Function Definition Index Reference:\n";
-  int FunctionDefinitionCount = 0;
-  for (auto &F : *Program)
-    if (!F.isDeclaration())
-      errs() << "\t" << ++FunctionDefinitionCount << ": " << F.getName()
-             << "\n";
-
-  errs() << "----------------------------\n";
-  return FunctionDefinitionCount;
+  }
 }
 
 void llvm::reduceFunctionBodiesDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Function Bodies...\n";
-  int Functions = countFunctionDefinitions(Test.getProgram());
-  runDeltaPass(Test, Functions, extractFunctionBodiesFromModule);
-  errs() << "----------------------------\n";
+  runDeltaPass(Test, extractFunctionBodiesFromModule,
+               "Reducing Function Bodies");
+}
+
+static void reduceFunctionData(Oracle &O, ReducerWorkItem &WorkItem) {
+  for (Function &F : WorkItem.getModule()) {
+    if (F.hasPersonalityFn()) {
+      if (none_of(F,
+                  [](const BasicBlock &BB) {
+                    return BB.isEHPad() || isa<ResumeInst>(BB.getTerminator());
+                  }) &&
+          !O.shouldKeep()) {
+        F.setPersonalityFn(nullptr);
+      }
+    }
+
+    if (F.hasPrefixData() && !O.shouldKeep())
+      F.setPrefixData(nullptr);
+
+    if (F.hasPrologueData() && !O.shouldKeep())
+      F.setPrologueData(nullptr);
+  }
+}
+
+void llvm::reduceFunctionDataDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, reduceFunctionData, "Reducing Function Data");
 }

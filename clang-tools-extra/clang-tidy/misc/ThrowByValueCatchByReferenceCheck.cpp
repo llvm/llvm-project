@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 ThrowByValueCatchByReferenceCheck::ThrowByValueCatchByReferenceCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -47,43 +45,43 @@ void ThrowByValueCatchByReferenceCheck::check(
 }
 
 bool ThrowByValueCatchByReferenceCheck::isFunctionParameter(
-    const DeclRefExpr *declRefExpr) {
-  return isa<ParmVarDecl>(declRefExpr->getDecl());
+    const DeclRefExpr *DeclRefExpr) {
+  return isa<ParmVarDecl>(DeclRefExpr->getDecl());
 }
 
 bool ThrowByValueCatchByReferenceCheck::isCatchVariable(
-    const DeclRefExpr *declRefExpr) {
-  auto *valueDecl = declRefExpr->getDecl();
-  if (auto *varDecl = dyn_cast<VarDecl>(valueDecl))
-    return varDecl->isExceptionVariable();
+    const DeclRefExpr *DeclRefExpr) {
+  auto *ValueDecl = DeclRefExpr->getDecl();
+  if (auto *VarDecl = dyn_cast<clang::VarDecl>(ValueDecl))
+    return VarDecl->isExceptionVariable();
   return false;
 }
 
 bool ThrowByValueCatchByReferenceCheck::isFunctionOrCatchVar(
-    const DeclRefExpr *declRefExpr) {
-  return isFunctionParameter(declRefExpr) || isCatchVariable(declRefExpr);
+    const DeclRefExpr *DeclRefExpr) {
+  return isFunctionParameter(DeclRefExpr) || isCatchVariable(DeclRefExpr);
 }
 
 void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
-    const CXXThrowExpr *throwExpr) {
-  if (!throwExpr)
+    const CXXThrowExpr *ThrowExpr) {
+  if (!ThrowExpr)
     return;
-  auto *subExpr = throwExpr->getSubExpr();
-  if (!subExpr)
+  auto *SubExpr = ThrowExpr->getSubExpr();
+  if (!SubExpr)
     return;
-  auto qualType = subExpr->getType();
-  if (qualType->isPointerType()) {
+  auto QualType = SubExpr->getType();
+  if (QualType->isPointerType()) {
     // The code is throwing a pointer.
-    // In case it is strng literal, it is safe and we return.
-    auto *inner = subExpr->IgnoreParenImpCasts();
-    if (isa<StringLiteral>(inner))
+    // In case it is string literal, it is safe and we return.
+    auto *Inner = SubExpr->IgnoreParenImpCasts();
+    if (isa<StringLiteral>(Inner))
       return;
     // If it's a variable from a catch statement, we return as well.
-    auto *declRef = dyn_cast<DeclRefExpr>(inner);
-    if (declRef && isCatchVariable(declRef)) {
+    auto *DeclRef = dyn_cast<DeclRefExpr>(Inner);
+    if (DeclRef && isCatchVariable(DeclRef)) {
       return;
     }
-    diag(subExpr->getBeginLoc(), "throw expression throws a pointer; it should "
+    diag(SubExpr->getBeginLoc(), "throw expression throws a pointer; it should "
                                  "throw a non-pointer value instead");
   }
   // If the throw statement does not throw by pointer then it throws by value
@@ -100,61 +98,62 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
   // When encountering a CopyOrMoveConstructor: emit message if after casts,
   // the expression is a LValue
   if (CheckAnonymousTemporaries) {
-    bool emit = false;
-    auto *currentSubExpr = subExpr->IgnoreImpCasts();
-    const auto *variableReference = dyn_cast<DeclRefExpr>(currentSubExpr);
-    const auto *constructorCall = dyn_cast<CXXConstructExpr>(currentSubExpr);
+    bool Emit = false;
+    auto *CurrentSubExpr = SubExpr->IgnoreImpCasts();
+    const auto *VariableReference = dyn_cast<DeclRefExpr>(CurrentSubExpr);
+    const auto *ConstructorCall = dyn_cast<CXXConstructExpr>(CurrentSubExpr);
     // If we have a DeclRefExpr, we flag for emitting a diagnosis message in
     // case the referenced variable is neither a function parameter nor a
     // variable declared in the catch statement.
-    if (variableReference)
-      emit = !isFunctionOrCatchVar(variableReference);
-    else if (constructorCall &&
-             constructorCall->getConstructor()->isCopyOrMoveConstructor()) {
+    if (VariableReference)
+      Emit = !isFunctionOrCatchVar(VariableReference);
+    else if (ConstructorCall &&
+             ConstructorCall->getConstructor()->isCopyOrMoveConstructor()) {
       // If we have a copy / move construction, we emit a diagnosis message if
       // the object that we copy construct from is neither a function parameter
       // nor a variable declared in a catch statement
-      auto argIter =
-          constructorCall
+      auto ArgIter =
+          ConstructorCall
               ->arg_begin(); // there's only one for copy constructors
-      auto *currentSubExpr = (*argIter)->IgnoreImpCasts();
-      if (currentSubExpr->isLValue()) {
-        if (auto *tmp = dyn_cast<DeclRefExpr>(currentSubExpr))
-          emit = !isFunctionOrCatchVar(tmp);
-        else if (isa<CallExpr>(currentSubExpr))
-          emit = true;
+      auto *CurrentSubExpr = (*ArgIter)->IgnoreImpCasts();
+      if (CurrentSubExpr->isLValue()) {
+        if (auto *Tmp = dyn_cast<DeclRefExpr>(CurrentSubExpr))
+          Emit = !isFunctionOrCatchVar(Tmp);
+        else if (isa<CallExpr>(CurrentSubExpr))
+          Emit = true;
       }
     }
-    if (emit)
-      diag(subExpr->getBeginLoc(),
+    if (Emit)
+      diag(SubExpr->getBeginLoc(),
            "throw expression should throw anonymous temporary values instead");
   }
 }
 
 void ThrowByValueCatchByReferenceCheck::diagnoseCatchLocations(
-    const CXXCatchStmt *catchStmt, ASTContext &context) {
-  if (!catchStmt)
+    const CXXCatchStmt *CatchStmt, ASTContext &Context) {
+  if (!CatchStmt)
     return;
-  auto caughtType = catchStmt->getCaughtType();
-  if (caughtType.isNull())
+  auto CaughtType = CatchStmt->getCaughtType();
+  if (CaughtType.isNull())
     return;
-  auto *varDecl = catchStmt->getExceptionDecl();
-  if (const auto *PT = caughtType.getCanonicalType()->getAs<PointerType>()) {
-    const char *diagMsgCatchReference = "catch handler catches a pointer value; "
-                                        "should throw a non-pointer value and "
-                                        "catch by reference instead";
+  auto *VarDecl = CatchStmt->getExceptionDecl();
+  if (const auto *PT = CaughtType.getCanonicalType()->getAs<PointerType>()) {
+    const char *DiagMsgCatchReference =
+        "catch handler catches a pointer value; "
+        "should throw a non-pointer value and "
+        "catch by reference instead";
     // We do not diagnose when catching pointer to strings since we also allow
     // throwing string literals.
     if (!PT->getPointeeType()->isAnyCharacterType())
-      diag(varDecl->getBeginLoc(), diagMsgCatchReference);
-  } else if (!caughtType->isReferenceType()) {
-    const char *diagMsgCatchReference = "catch handler catches by value; "
+      diag(VarDecl->getBeginLoc(), DiagMsgCatchReference);
+  } else if (!CaughtType->isReferenceType()) {
+    const char *DiagMsgCatchReference = "catch handler catches by value; "
                                         "should catch by reference instead";
     // If it's not a pointer and not a reference then it must be caught "by
     // value". In this case we should emit a diagnosis message unless the type
     // is trivial.
-    if (!caughtType.isTrivialType(context)) {
-      diag(varDecl->getBeginLoc(), diagMsgCatchReference);
+    if (!CaughtType.isTrivialType(Context)) {
+      diag(VarDecl->getBeginLoc(), DiagMsgCatchReference);
     } else if (WarnOnLargeObject) {
       // If the type is trivial, then catching it by reference is not dangerous.
       // However, catching large objects by value decreases the performance.
@@ -162,13 +161,11 @@ void ThrowByValueCatchByReferenceCheck::diagnoseCatchLocations(
       // We can now access `ASTContext` so if `MaxSize` is an extremal value
       // then set it to the size of `size_t`.
       if (MaxSize == std::numeric_limits<uint64_t>::max())
-        MaxSize = context.getTypeSize(context.getSizeType());
-      if (context.getTypeSize(caughtType) > MaxSize)
-        diag(varDecl->getBeginLoc(), diagMsgCatchReference);
+        MaxSize = Context.getTypeSize(Context.getSizeType());
+      if (Context.getTypeSize(CaughtType) > MaxSize)
+        diag(VarDecl->getBeginLoc(), DiagMsgCatchReference);
     }
   }
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

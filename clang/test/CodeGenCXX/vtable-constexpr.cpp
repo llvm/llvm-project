@@ -8,7 +8,7 @@ struct DoNotEmit {
 };
 constexpr void DoNotEmit::f() {}
 
-// CHECK-DAG: @_ZTV1B = {{.*}} constant { [3 x i8*] } { {{.*}} null, {{.*}} @_ZTI1B {{.*}} @_ZN1B1fEv
+// CHECK-DAG: @_ZTV1B = {{.*}} constant { [3 x ptr] } { {{.*}} null, {{.*}} @_ZTI1B, {{.*}} @_ZN1B1fEv
 struct B {
   // CHECK-DAG: define {{.*}} @_ZN1B1fEv
   virtual constexpr void f() {}
@@ -19,7 +19,7 @@ struct CBase {
   virtual constexpr void f(); // not key function
 };
 
-// CHECK-DAG: @_ZTV1C = {{.*}} constant {{.*}} null, {{.*}} @_ZTI1C {{.*}} @_ZN1C1fEv
+// CHECK-DAG: @_ZTV1C = {{.*}} constant {{.*}} null, {{.*}} @_ZTI1C, {{.*}} @_ZN1C1fEv
 struct C : CBase {
   void f(); // key function
 };

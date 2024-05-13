@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=i686-pc-linux | FileCheck %s -check-prefix=LINUX -check-prefix=CHECK
 ; RUN: llc < %s -mtriple=i686-apple-darwin | FileCheck %s -check-prefix=DARWIN -check-prefix=CHECK
+; RUN: llc < %s -mtriple=i686-pc-linux -stop-after=prologepilog | FileCheck %s --check-prefix=PEI
 
 declare i32 @__gxx_personality_v0(...)
 declare void @good(i32 %a, i32 %b, i32 %c, i32 %d)
@@ -25,14 +26,20 @@ declare void @empty()
 ; LINUX: .cfi_adjust_cfa_offset -16
 ; DARWIN-NOT: .cfi_escape
 ; DARWIN-NOT: pushl
-define void @test1_nofp() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+
+; PEI-LABEL: name: test1_nofp
+; PEI:         $esp = frame-setup SUB32ri $esp, 12, implicit-def dead $eflags
+; PEI-NEXT:    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+; PEI-NOT:     frame-setup CFI_INSTRUCTION
+; PEI:         ...
+define void @test1_nofp() #0 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @good(i32 1, i32 2, i32 3, i32 4)
           to label %continue unwind label %cleanup
 continue:
   ret void
 cleanup:  
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }
@@ -48,14 +55,14 @@ cleanup:
 ; DARWIN: pushl %ebp
 ; DARWIN-NOT: .cfi_escape
 ; DARWIN-NOT: pushl
-define void @test1_fp() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test1_fp() #1 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @good(i32 1, i32 2, i32 3, i32 4)
           to label %continue unwind label %cleanup
 continue:
   ret void
 cleanup:  
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }
@@ -78,7 +85,7 @@ cleanup:
 ; LINUX: .cfi_adjust_cfa_offset -28
 ; DARWIN-NOT: .cfi_escape
 ; DARWIN-NOT: pushl
-define void @test2_nofp() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test2_nofp() #0 personality ptr @__gxx_personality_v0 {
 entry:
   call void @good(i32 1, i32 2, i32 3, i32 4)
   ret void
@@ -93,7 +100,7 @@ entry:
 ; CHECK-NEXT: pushl   $1
 ; CHECK-NEXT: call
 ; CHECK-NEXT: addl $24, %esp
-define void @test2_fp() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test2_fp() #1 personality ptr @__gxx_personality_v0 {
 entry:
   call void @good(i32 1, i32 2, i32 3, i32 4)
   ret void
@@ -106,14 +113,14 @@ entry:
 ; LINUX-NOT: .cfi_adjust_cfa_offset
 ; LINUX-NOT: pushl
 ; LINUX: retl
-define void @test3_nofp() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test3_nofp() #0 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @empty()
           to label %continue unwind label %cleanup
 continue:
   ret void
 cleanup:  
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }
@@ -126,14 +133,14 @@ cleanup:
 ; LINUX-NOT: .cfi_adjust_cfa_offset
 ; LINUX-NOT: pushl
 ; LINUX: retl
-define void @test3_fp() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test3_fp() #1 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @empty()
           to label %continue unwind label %cleanup
 continue:
   ret void
 cleanup:  
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }
@@ -157,7 +164,7 @@ cleanup:
 ; LINUX-NEXT: pushl   $6
 ; LINUX-NEXT: calll   large
 ; LINUX-NEXT: addl $32, %esp
-define void @test4() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test4() #1 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @good(i32 1, i32 2, i32 3, i32 4)
           to label %continue1 unwind label %cleanup
@@ -167,7 +174,7 @@ continue1:
 continue2:
   ret void          
 cleanup:  
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }
@@ -191,7 +198,7 @@ cleanup:
 ; LINUX: .cfi_escape 0x2e, 0x00
 ; LINUX-NOT: .cfi_adjust_cfa_offset
 ; LINUX: call
-define void @test5_nofp() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test5_nofp() #0 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @good(i32 1, i32 2, i32 3, i32 4)
           to label %continue1 unwind label %cleanup
@@ -201,7 +208,7 @@ continue1:
 continue2:
   ret void          
 cleanup:  
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }
@@ -217,7 +224,7 @@ cleanup:
 ; LINUX: .cfi_escape 0x2e, 0x00
 ; LINUX-NOT: .cfi_adjust_cfa_offset
 ; LINUX: call
-define void @test5_fp() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test5_fp() #1 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @good(i32 1, i32 2, i32 3, i32 4)
           to label %continue1 unwind label %cleanup
@@ -227,7 +234,7 @@ continue1:
 continue2:
   ret void          
 cleanup:  
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }
@@ -238,7 +245,7 @@ cleanup:
 ; LINUX: call
 ; LINUX: .cfi_escape 0x2e, 0x10
 ; LINUX: call
-define void @test6() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test6() #1 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @good(i32 1, i32 2, i32 3, i32 4)
           to label %continue1 unwind label %cleanup
@@ -248,7 +255,7 @@ continue1:
 continue2:
   ret void          
 cleanup:  
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }
@@ -265,7 +272,7 @@ cleanup:
 ; DARWIN-NEXT: pushl   $2
 ; DARWIN-NEXT: pushl   $1
 ; DARWIN-NEXT: call
-define void @test7() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test7() #1 personality ptr @__gxx_personality_v0 {
 entry:
   call void @good(i32 1, i32 2, i32 3, i32 4)
   ret void
@@ -276,14 +283,14 @@ entry:
 ; DARWIN: movl %esp, %ebp
 ; DARWIN-NOT: .cfi_adjust_cfa_offset
 ; DARWIN-NOT: pushl
-define void @test8() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test8() #1 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @good(i32 1, i32 2, i32 3, i32 4)
           to label %continue unwind label %cleanup
 continue:
   ret void
 cleanup:  
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }

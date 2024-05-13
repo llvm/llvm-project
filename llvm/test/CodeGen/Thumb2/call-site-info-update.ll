@@ -13,70 +13,62 @@ target triple = "thumbv7-unknown-linux-gnueabi"
 @l = dso_local local_unnamed_addr global i8 0, align 1, !dbg !0
 
 ; Function Attrs: nounwind
-define dso_local zeroext i1 @_ZN1z2agEv(%class.z* nocapture readonly %this) local_unnamed_addr align 2 !dbg !17 {
+define dso_local zeroext i1 @_ZN1z2agEv(ptr nocapture readonly %this) local_unnamed_addr align 2 !dbg !17 {
 entry:
   %a = alloca %struct.y, align 1
   %b = alloca %struct.y, align 1
   %c = alloca %class.ae, align 1
-  call void @llvm.dbg.value(metadata %class.z* %this, metadata !28, metadata !DIExpression()), !dbg !75
-  %s = getelementptr inbounds %class.z, %class.z* %this, i32 0, i32 0, !dbg !75
-  %0 = load i8, i8* %s, align 1, !dbg !75
+  call void @llvm.dbg.value(metadata ptr %this, metadata !28, metadata !DIExpression()), !dbg !75
+  %0 = load i8, ptr %this, align 1, !dbg !75
   %tobool = icmp eq i8 %0, 0, !dbg !75
   br i1 %tobool, label %if.end, label %if.then, !dbg !75
 
 if.then:                                          ; preds = %entry
-  %1 = getelementptr inbounds %struct.y, %struct.y* %a, i32 0, i32 0, i32 0, i32 0, !dbg !82
-  %u.i = getelementptr inbounds %struct.y, %struct.y* %a, i32 0, i32 0, !dbg !94
-  %n.i.i = getelementptr inbounds %struct.y, %struct.y* %a, i32 0, i32 0, i32 0, !dbg !82
-  %call.i.i = call %"struct.ac::m"* @_ZN2ac1mC1EPc(%"struct.ac::m"* nonnull %n.i.i, i8* null), !dbg !82
-  %call2.i.i = call i8* @_ZN2ac2adEv(%class.ac* nonnull %u.i), !dbg !82
-  %cmp.i.i = icmp eq i8* %call2.i.i, null, !dbg !82
+  %call.i.i = call ptr @_ZN2ac1mC1EPc(ptr nonnull %a, ptr null), !dbg !82
+  %call2.i.i = call ptr @_ZN2ac2adEv(ptr nonnull %a), !dbg !82
+  %cmp.i.i = icmp eq ptr %call2.i.i, null, !dbg !82
   %frombool.i.i = zext i1 %cmp.i.i to i8, !dbg !82
-  store i8 %frombool.i.i, i8* @l, align 1, !dbg !82
+  store i8 %frombool.i.i, ptr @l, align 1, !dbg !82
   br i1 %cmp.i.i, label %_ZN1yC2Ev.exit, label %if.then.i.i, !dbg !82
 
 if.then.i.i:                                      ; preds = %if.then
   call void @llvm.dbg.value(metadata i32 1, metadata !144, metadata !DIExpression()), !dbg !145
-  call void @_ZdlPv(i8* null), !dbg !145
+  call void @_ZdlPv(ptr null), !dbg !145
   br label %_ZN1yC2Ev.exit, !dbg !145
 
 _ZN1yC2Ev.exit:                                   ; preds = %if.then, %if.then.i.i
   call void @llvm.dbg.value(metadata i8 1, metadata !31, metadata !DIExpression()), !dbg !75
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %1), !dbg !75
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %a), !dbg !75
   br label %cleanup
 
 if.end:                                           ; preds = %entry
-  %ah = getelementptr inbounds %class.z, %class.z* %this, i32 0, i32 1, !dbg !150
-  %2 = load i8, i8* %ah, align 1, !dbg !150
-  %tobool3 = icmp eq i8 %2, 0, !dbg !150
+  %ah = getelementptr inbounds %class.z, ptr %this, i32 0, i32 1, !dbg !150
+  %1 = load i8, ptr %ah, align 1, !dbg !150
+  %tobool3 = icmp eq i8 %1, 0, !dbg !150
   br i1 %tobool3, label %if.end7, label %if.then4, !dbg !150
 
 if.then4:                                         ; preds = %if.end
-  %3 = getelementptr inbounds %struct.y, %struct.y* %b, i32 0, i32 0, i32 0, i32 0, !dbg !153
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %3), !dbg !153
-  %u.i11 = getelementptr inbounds %struct.y, %struct.y* %b, i32 0, i32 0, !dbg !153
-  %n.i.i12 = getelementptr inbounds %struct.y, %struct.y* %b, i32 0, i32 0, i32 0, !dbg !153
-  %call.i.i13 = call %"struct.ac::m"* @_ZN2ac1mC1EPc(%"struct.ac::m"* nonnull %n.i.i12, i8* null), !dbg !153
-  %call2.i.i14 = call i8* @_ZN2ac2adEv(%class.ac* nonnull %u.i11), !dbg !153
-  %cmp.i.i15 = icmp eq i8* %call2.i.i14, null, !dbg !153
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %b), !dbg !153
+  %call.i.i13 = call ptr @_ZN2ac1mC1EPc(ptr nonnull %b, ptr null), !dbg !153
+  %call2.i.i14 = call ptr @_ZN2ac2adEv(ptr nonnull %b), !dbg !153
+  %cmp.i.i15 = icmp eq ptr %call2.i.i14, null, !dbg !153
   %frombool.i.i16 = zext i1 %cmp.i.i15 to i8, !dbg !153
-  store i8 %frombool.i.i16, i8* @l, align 1, !dbg !153
+  store i8 %frombool.i.i16, ptr @l, align 1, !dbg !153
   br i1 %cmp.i.i15, label %_ZN1yC2Ev.exit18, label %if.then.i.i17, !dbg !153
 
 if.then.i.i17:                                    ; preds = %if.then4
-  call void @_ZdlPv(i8* null), !dbg !170
+  call void @_ZdlPv(ptr null), !dbg !170
   br label %_ZN1yC2Ev.exit18, !dbg !170
 
 _ZN1yC2Ev.exit18:                                 ; preds = %if.then4, %if.then.i.i17
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %3), !dbg !173
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %b), !dbg !173
   br label %cleanup
 
 if.end7:                                          ; preds = %if.end
-  %4 = getelementptr inbounds %class.ae, %class.ae* %c, i32 0, i32 0, !dbg !173
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %4), !dbg !173
-  %call8 = call %class.ae* @_ZN2aeC1Ei(%class.ae* nonnull %c, i32 1), !dbg !173
-  call void @_ZN2ae1xES_(%class.ae* nonnull %c, [1 x i32] zeroinitializer), !dbg !173
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %4), !dbg !173
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %c), !dbg !173
+  %call8 = call ptr @_ZN2aeC1Ei(ptr nonnull %c, i32 1), !dbg !173
+  call void @_ZN2ae1xES_(ptr nonnull %c, [1 x i32] zeroinitializer), !dbg !173
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %c), !dbg !173
   br label %cleanup
 
 cleanup:                                          ; preds = %if.end7, %_ZN1yC2Ev.exit18, %_ZN1yC2Ev.exit
@@ -85,21 +77,21 @@ cleanup:                                          ; preds = %if.end7, %_ZN1yC2Ev
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
-declare dso_local %class.ae* @_ZN2aeC1Ei(%class.ae* returned, i32) unnamed_addr
+declare dso_local ptr @_ZN2aeC1Ei(ptr returned, i32) unnamed_addr
 
-declare dso_local void @_ZN2ae1xES_(%class.ae*, [1 x i32]) local_unnamed_addr
+declare dso_local void @_ZN2ae1xES_(ptr, [1 x i32]) local_unnamed_addr
 
-declare dso_local %"struct.ac::m"* @_ZN2ac1mC1EPc(%"struct.ac::m"* returned, i8*) unnamed_addr
+declare dso_local ptr @_ZN2ac1mC1EPc(ptr returned, ptr) unnamed_addr
 
-declare dso_local i8* @_ZN2ac2adEv(%class.ac*) local_unnamed_addr
+declare dso_local ptr @_ZN2ac2adEv(ptr) local_unnamed_addr
 
 ; Function Attrs: nobuiltin nounwind
-declare !dbg !6 dso_local void @_ZdlPv(i8*) local_unnamed_addr
+declare !dbg !6 dso_local void @_ZdlPv(ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata)

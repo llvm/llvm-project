@@ -1,4 +1,3 @@
-; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=-1 -pass-remarks=hotcoldsplit -enable-cold-section=true -S < %s 2>&1 | FileCheck %s
 ; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=-1 -pass-remarks=hotcoldsplit -enable-cold-section=true -S < %s 2>&1 | FileCheck %s
 
 ; This test case is copied over from split-cold-2.ll, modified

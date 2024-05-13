@@ -28,15 +28,15 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
 #include <cmath>
 #include <cstring>
 #include <mutex>
@@ -197,7 +197,7 @@ std::string ExecutionEngine::getMangledName(const GlobalValue *GV) {
       : GV->getParent()->getDataLayout();
 
   Mangler::getNameWithPrefix(FullName, GV->getName(), DL);
-  return std::string(FullName.str());
+  return std::string(FullName);
 }
 
 void ExecutionEngine::addGlobalMapping(const GlobalValue *GV, void *Addr) {
@@ -340,7 +340,7 @@ void *ArgvArray::reset(LLVMContext &C, ExecutionEngine *EE,
   Array = std::make_unique<char[]>((InputArgv.size()+1)*PtrSize);
 
   LLVM_DEBUG(dbgs() << "JIT: ARGV = " << (void *)Array.get() << "\n");
-  Type *SBytePtr = Type::getInt8PtrTy(C);
+  Type *SBytePtr = PointerType::getUnqual(C);
 
   for (unsigned i = 0; i != InputArgv.size(); ++i) {
     unsigned Size = InputArgv[i].size()+1;
@@ -386,7 +386,7 @@ void ExecutionEngine::runStaticConstructorsDestructors(Module &module,
 
     Constant *FP = CS->getOperand(1);
     if (FP->isNullValue())
-      continue;  // Found a sentinal value, ignore.
+      continue;  // Found a sentinel value, ignore.
 
     // Strip off constant expression casts.
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(FP))
@@ -395,7 +395,7 @@ void ExecutionEngine::runStaticConstructorsDestructors(Module &module,
 
     // Execute the ctor/dtor function!
     if (Function *F = dyn_cast<Function>(FP))
-      runFunction(F, None);
+      runFunction(F, std::nullopt);
 
     // FIXME: It is marginally lame that we just do nothing here if we see an
     // entry we don't recognize. It might not be unreasonable for the verifier
@@ -430,7 +430,7 @@ int ExecutionEngine::runFunctionAsMain(Function *Fn,
   // Check main() type
   unsigned NumArgs = Fn->getFunctionType()->getNumParams();
   FunctionType *FTy = Fn->getFunctionType();
-  Type* PPInt8Ty = Type::getInt8PtrTy(Fn->getContext())->getPointerTo();
+  Type *PPInt8Ty = PointerType::get(Fn->getContext(), 0);
 
   // Check the argument types.
   if (NumArgs > 3)
@@ -471,7 +471,7 @@ EngineBuilder::EngineBuilder() : EngineBuilder(nullptr) {}
 
 EngineBuilder::EngineBuilder(std::unique_ptr<Module> M)
     : M(std::move(M)), WhichEngine(EngineKind::Either), ErrorStr(nullptr),
-      OptLevel(CodeGenOpt::Default), MemMgr(nullptr), Resolver(nullptr) {
+      OptLevel(CodeGenOptLevel::Default), MemMgr(nullptr), Resolver(nullptr) {
 // IR module verification is enabled by default in debug builds, and disabled
 // by default in release builds.
 #ifndef NDEBUG
@@ -618,7 +618,18 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       case Type::ScalableVectorTyID:
         report_fatal_error(
             "Scalable vector support not yet implemented in ExecutionEngine");
-      case Type::FixedVectorTyID:
+      case Type::ArrayTyID: {
+        auto *ArrTy = cast<ArrayType>(C->getType());
+        Type *ElemTy = ArrTy->getElementType();
+        unsigned int elemNum = ArrTy->getNumElements();
+        Result.AggregateVal.resize(elemNum);
+        if (ElemTy->isIntegerTy())
+          for (unsigned int i = 0; i < elemNum; ++i)
+            Result.AggregateVal[i].IntVal =
+                APInt(ElemTy->getPrimitiveSizeInBits(), 0);
+        break;
+      }
+      case Type::FixedVectorTyID: {
         // if the whole vector is 'undef' just reserve memory for the value.
         auto *VTy = cast<FixedVectorType>(C->getType());
         Type *ElemTy = VTy->getElementType();
@@ -629,6 +640,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
             Result.AggregateVal[i].IntVal =
                 APInt(ElemTy->getPrimitiveSizeInBits(), 0);
         break;
+      }
     }
     return Result;
   }
@@ -719,7 +731,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         APFloat apf = APFloat(APFloat::x87DoubleExtended(), GV.IntVal);
         uint64_t v;
         bool ignored;
-        (void)apf.convertToInteger(makeMutableArrayRef(v), BitWidth,
+        (void)apf.convertToInteger(MutableArrayRef(v), BitWidth,
                                    CE->getOpcode()==Instruction::FPToSI,
                                    APFloat::rmTowardZero, &ignored);
         GV.IntVal = v; // endian?
@@ -878,6 +890,12 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     report_fatal_error(OS.str());
   }
 
+  if (auto *TETy = dyn_cast<TargetExtType>(C->getType())) {
+    assert(TETy->hasProperty(TargetExtType::HasZeroInit) && C->isNullValue() &&
+           "TargetExtType only supports null constant value");
+    C = Constant::getNullValue(TETy->getLayoutType());
+  }
+
   // Otherwise, we have a simple constant.
   GenericValue Result;
   switch (C->getType()->getTypeID()) {
@@ -1017,6 +1035,11 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
 
 void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
                                          GenericValue *Ptr, Type *Ty) {
+  // It is safe to treat TargetExtType as its layout type since the underlying
+  // bits are only copied and are not inspected.
+  if (auto *TETy = dyn_cast<TargetExtType>(Ty))
+    Ty = TETy->getLayoutType();
+
   const unsigned StoreBytes = getDataLayout().getTypeStoreSize(Ty);
 
   switch (Ty->getTypeID()) {
@@ -1068,6 +1091,9 @@ void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
 void ExecutionEngine::LoadValueFromMemory(GenericValue &Result,
                                           GenericValue *Ptr,
                                           Type *Ty) {
+  if (auto *TETy = dyn_cast<TargetExtType>(Ty))
+    Ty = TETy->getLayoutType();
+
   const unsigned LoadBytes = getDataLayout().getTypeStoreSize(Ty);
 
   switch (Ty->getTypeID()) {
@@ -1256,8 +1282,7 @@ void ExecutionEngine::emitGlobals() {
     // If there are multiple modules, map the non-canonical globals to their
     // canonical location.
     if (!NonCanonicalGlobals.empty()) {
-      for (unsigned i = 0, e = NonCanonicalGlobals.size(); i != e; ++i) {
-        const GlobalValue *GV = NonCanonicalGlobals[i];
+      for (const GlobalValue *GV : NonCanonicalGlobals) {
         const GlobalValue *CGV = LinkedGlobalsMap[std::make_pair(
             std::string(GV->getName()), GV->getType())];
         void *Ptr = getPointerToGlobalIfAvailable(CGV);

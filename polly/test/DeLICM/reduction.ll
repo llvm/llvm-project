@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm-partial-writes=true -polly-delicm -analyze < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm-partial-writes=true -polly-print-delicm -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
@@ -9,7 +9,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.for
 
@@ -38,8 +38,8 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %phi, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

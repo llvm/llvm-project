@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s
 
 ; There could be more than one LCSSA PHIs in loop exit block.
 

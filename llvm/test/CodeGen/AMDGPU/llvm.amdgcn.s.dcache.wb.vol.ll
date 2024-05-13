@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -show-mc-encoding < %s | FileCheck -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -show-mc-encoding < %s | FileCheck -check-prefix=VI %s
 
 declare void @llvm.amdgcn.s.dcache.wb.vol() #0
 declare void @llvm.amdgcn.s.waitcnt(i32) #0
@@ -14,7 +14,7 @@ define amdgpu_kernel void @test_s_dcache_wb_vol() #0 {
 
 ; VI-LABEL: {{^}}test_s_dcache_wb_vol_insert_wait:
 ; VI-NEXT: ; %bb.0:
-; VI-NEXT: s_dcache_wb_vol
+; VI: s_dcache_wb_vol
 ; VI: s_waitcnt lgkmcnt(0) ; encoding
 define amdgpu_kernel void @test_s_dcache_wb_vol_insert_wait() #0 {
   call void @llvm.amdgcn.s.dcache.wb.vol()
@@ -22,7 +22,7 @@ define amdgpu_kernel void @test_s_dcache_wb_vol_insert_wait() #0 {
   br label %end
 
 end:
-  store volatile i32 3, i32 addrspace(1)* undef
+  store volatile i32 3, ptr addrspace(1) undef
   ret void
 }
 

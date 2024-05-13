@@ -13,48 +13,30 @@ function show_usage() {
   cat << EOF
 Usage: checkout.sh [options]
 
-Checkout svn sources into /tmp/clang-build/src. Used inside a docker container.
+Checkout git sources into /tmp/clang-build/src. Used inside a docker container.
 
 Available options:
   -h|--help           show this help message
-  -b|--branch         svn branch to checkout, i.e. 'trunk',
-                      'branches/release_40'
-                      (default: 'trunk')
-  -r|--revision       svn revision to checkout
+  -b|--branch         git branch to checkout, i.e. 'main',
+                      'release/10.x'
+                      (default: 'main')
+  -r|--revision       git revision to checkout
   -c|--cherrypick     revision to cherry-pick. Can be specified multiple times.
                       Cherry-picks are performed in the sorted order using the
                       following command:
-                      'svn patch <(svn diff -c \$rev)'.
-  -p|--llvm-project   name of an svn project to checkout.
-                      For clang, please use 'clang', not 'cfe'.
-                      Project 'llvm' is always included and ignored, if
-                      specified.
-                      Can be specified multiple times.
+                      'git cherry-pick \$rev)'.
 EOF
 }
 
-LLVM_SVN_REV=""
+LLVM_GIT_REV=""
 CHERRYPICKS=""
 LLVM_BRANCH=""
-# We always checkout llvm
-LLVM_PROJECTS="llvm"
-
-function contains_project() {
-  local TARGET_PROJ="$1"
-  local PROJ
-  for PROJ in $LLVM_PROJECTS; do
-    if [ "$PROJ" == "$TARGET_PROJ" ]; then
-      return 0
-    fi
-  done
-  return 1
-}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -r|--revision)
       shift
-      LLVM_SVN_REV="$1"
+      LLVM_GIT_REV="$1"
       shift
       ;;
     -c|--cherrypick)
@@ -67,25 +49,6 @@ while [[ $# -gt 0 ]]; do
       LLVM_BRANCH="$1"
       shift
       ;;
-    -p|--llvm-project)
-      shift
-      PROJ="$1"
-      shift
-
-      if [ "$PROJ" == "cfe" ]; then
-        PROJ="clang"
-      fi
-
-      if ! contains_project "$PROJ" ; then
-        if [ "$PROJ" == "clang-tools-extra" ] && [ ! contains_project "clang" ]; then
-          echo "Project 'clang-tools-extra' specified before 'clang'. Adding 'clang' to a list of projects first."
-          LLVM_PROJECTS="$LLVM_PROJECTS clang"
-        fi
-        LLVM_PROJECTS="$LLVM_PROJECTS $PROJ"
-      else
-        echo "Project '$PROJ' is already enabled, ignoring extra occurrences."
-      fi
-      ;;
     -h|--help)
       show_usage
       exit 0
@@ -97,15 +60,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ "$LLVM_BRANCH" == "" ]; then
-  LLVM_BRANCH="trunk"
+  LLVM_BRANCH="main"
 fi
 
-if [ "$LLVM_SVN_REV" != "" ]; then
-  SVN_REV_ARG="-r$LLVM_SVN_REV"
-  echo "Checking out svn revision r$LLVM_SVN_REV."
+if [ "$LLVM_GIT_REV" != "" ]; then
+  GIT_REV_ARG="$LLVM_GIT_REV"
+  echo "Checking out git revision $LLVM_GIT_REV."
 else
-  SVN_REV_ARG=""
-  echo "Checking out latest svn revision."
+  GIT_REV_ARG=""
+  echo "Checking out latest git revision."
 fi
 
 # Sort cherrypicks and remove duplicates.
@@ -119,12 +82,8 @@ function apply_cherrypicks() {
 
   # This function is always called on a sorted list of cherrypicks.
   for CHERRY_REV in $CHERRYPICKS; do
-    echo "Cherry-picking r$CHERRY_REV into $CHECKOUT_DIR"
-
-    local PATCH_FILE="$(mktemp)"
-    svn diff -c $CHERRY_REV > "$PATCH_FILE"
-    svn patch "$PATCH_FILE"
-    rm "$PATCH_FILE"
+    echo "Cherry-picking $CHERRY_REV into $CHECKOUT_DIR"
+    EMAIL="someone@somewhere.net" git cherry-pick $CHERRY_REV
   done
 
   popd
@@ -132,32 +91,24 @@ function apply_cherrypicks() {
 
 CLANG_BUILD_DIR=/tmp/clang-build
 
-# Get the sources from svn.
-echo "Checking out sources from svn"
+# Get the sources from git.
+echo "Checking out sources from git"
 mkdir -p "$CLANG_BUILD_DIR/src"
-for LLVM_PROJECT in $LLVM_PROJECTS; do
-  if [ "$LLVM_PROJECT" == "clang" ]; then
-    SVN_PROJECT="cfe"
-  else
-    SVN_PROJECT="$LLVM_PROJECT"
-  fi
+CHECKOUT_DIR="$CLANG_BUILD_DIR/src"
 
-  if [ "$SVN_PROJECT" != "clang-tools-extra" ]; then
-    CHECKOUT_DIR="$CLANG_BUILD_DIR/src/$LLVM_PROJECT"
-  else
-    CHECKOUT_DIR="$CLANG_BUILD_DIR/src/clang/tools/extra"
-  fi
+echo "Checking out https://github.com/llvm/llvm-project.git to $CHECKOUT_DIR"
+git clone -b $LLVM_BRANCH --single-branch \
+  "https://github.com/llvm/llvm-project.git" \
+  "$CHECKOUT_DIR"
 
-  echo "Checking out https://llvm.org/svn/llvm-project/$SVN_PROJECT to $CHECKOUT_DIR"
-  svn co -q $SVN_REV_ARG \
-    "https://llvm.org/svn/llvm-project/$SVN_PROJECT/$LLVM_BRANCH" \
-    "$CHECKOUT_DIR"
+pushd $CHECKOUT_DIR
+git checkout -q $GIT_REV_ARG
+popd
 
   # We apply cherrypicks to all repositories regardless of whether the revision
   # changes this repository or not. For repositories not affected by the
   # cherrypick, applying the cherrypick is a no-op.
   apply_cherrypicks "$CHECKOUT_DIR"
-done
 
 CHECKSUMS_FILE="/tmp/checksums/checksums.txt"
 

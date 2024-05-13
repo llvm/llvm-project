@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.14 -emit-llvm -x objective-c %s -o - | FileCheck %s
-// rdar://16203115
 
 @interface NSObject @end
 
@@ -13,7 +12,7 @@
 +(Class) getClass { return self; }
 @end
 
-int main() {
+int main(void) {
   Protocol *P0 = @protocol(P0);
   return 0;
 }
@@ -23,12 +22,12 @@ int main() {
 // CHECK: @"_OBJC_CLASS_PROTOCOLS_$_A" = internal global
 // CHECK: @"_OBJC_PROTOCOL_REFERENCE_$_P0" = weak hidden global
 
-// CHECK: llvm.used = appending global [3 x i8*]
+// CHECK: llvm.used = appending global [3 x ptr]
 // CHECK-SAME: "_OBJC_PROTOCOL_$_P0"
 // CHECK-SAME: "_OBJC_LABEL_PROTOCOL_$_P0"
 // CHECK-SAME: "_OBJC_PROTOCOL_REFERENCE_$_P0"
 
-// CHECK: llvm.compiler.used = appending global [7 x i8*]
+// CHECK: llvm.compiler.used = appending global [7 x ptr]
 // CHECK-SAME: OBJC_CLASS_NAME_
 // CHECK-SAME: OBJC_METH_VAR_NAME_
 // CHECK-SAME: OBJC_METH_VAR_TYPE_

@@ -20,7 +20,7 @@ define i32 @test_tbh(i1 %tst, i32 %sw, i32 %l) {
 ; T1-LABEL: test_tbh:
 ; T1: lsls [[x:r[0-9]+]], r4, #1
 ; T1: add [[x]], pc
-; T1: ldrh [[x]], {{\[}}[[x]], #4]
+; T1: ldrh [[x]], [[[x]], #4]
 ; T1: lsls [[x]], [[x]], #1
 ; T1: [[ANCHOR:.LCPI[0-9_]+]]:
 ; T1: add pc, [[x]]

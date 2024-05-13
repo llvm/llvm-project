@@ -113,3 +113,122 @@ namespace p0936r0_examples {
   std::map<std::string, std::string> m;
   const std::string &v = findOrDefault(m, "foo"s, "bar"s); // expected-warning {{temporary bound to local reference 'v'}}
 }
+
+// definitions for std::move, std::forward et al.
+namespace std {
+inline namespace foo {
+
+template <class T> struct remove_reference {
+    typedef T type;
+};
+template <class T> struct remove_reference<T &> {
+    typedef T type;
+};
+template <class T> struct remove_reference<T &&> {
+    typedef T type;
+};
+
+template <class T> constexpr typename remove_reference<T>::type &&move(T &&t) {
+    return static_cast<typename remove_reference<T>::type>(t);
+}
+
+template <class T>
+constexpr T &&forward(typename remove_reference<T>::type &t) {
+    return static_cast<T &&>(t);
+}
+
+template <class T>
+constexpr T &&forward(typename remove_reference<T>::type &&t) {
+    return static_cast<T &&>(t);
+}
+
+template <class T> constexpr const T &as_const(T &x) { return x; }
+
+template <class T, bool RValueRef> struct PickRef {
+    using type = typename remove_reference<T>::type &;
+};
+template <class T> struct PickRef<T, true> {
+    using type = typename remove_reference<T>::type &&;
+};
+
+template <class T> struct is_lvalue_reference {
+    static constexpr bool value = false;
+};
+
+template <class T> struct is_lvalue_reference<T &> {
+    static constexpr bool value = true;
+};
+
+template <class T> struct is_const {
+    static constexpr bool value = false;
+};
+
+template <class T> struct is_const<const T> {
+    static constexpr bool value = true;
+};
+
+template <bool B, class T, class F> struct conditional {
+    using type = T;
+};
+
+template <class T, class F> struct conditional<false, T, F> {
+    using type = F;
+};
+
+template <class U, class T>
+using CopyConst = typename conditional<is_const<remove_reference<U>>::value,
+                                       const T, T>::type;
+
+template <class U, class T>
+using OverrideRef =
+    typename conditional<is_lvalue_reference<U &&>::value,
+                         typename remove_reference<T>::type &,
+                         typename remove_reference<T>::type &&>::type;
+
+template <class U, class T>
+using ForwardLikeRetType = OverrideRef<U &&, CopyConst<U, T>>;
+
+template <class U>
+constexpr auto forward_like(auto &&t) -> ForwardLikeRetType<U, decltype(t)> {
+    return static_cast<ForwardLikeRetType<U, decltype(t)>>(t);
+}
+
+template <class T>
+auto move_if_noexcept(T &t) ->
+    typename PickRef<T, noexcept(T(static_cast<T &&>(t)))>::type {
+    return static_cast<
+        typename PickRef<T, noexcept(T(static_cast<T &&>(t)))>::type>(t);
+}
+
+template <class T> T *addressof(T &arg) {
+    return reinterpret_cast<T *>(
+        &const_cast<char &>(reinterpret_cast<const volatile char &>(arg)));
+}
+
+} // namespace foo
+} // namespace std
+
+namespace move_forward_et_al_examples {
+  struct S {
+    S &self() [[clang::lifetimebound]] { return *this; }
+  };
+
+  S &&Move = std::move(S{}); // expected-warning {{temporary bound to local reference 'Move' will be destroyed at the end of the full-expression}}
+  S MoveOk = std::move(S{});
+
+  S &&Forward = std::forward<S &&>(S{}); // expected-warning {{temporary bound to local reference 'Forward' will be destroyed at the end of the full-expression}}
+  S ForwardOk = std::forward<S &&>(S{});
+
+  S &&ForwardLike = std::forward_like<int&&>(S{}); // expected-warning {{temporary bound to local reference 'ForwardLike' will be destroyed at the end of the full-expression}}
+  S ForwardLikeOk = std::forward_like<int&&>(S{});
+
+  const S &Const = std::as_const(S{}.self()); // expected-warning {{temporary bound to local reference 'Const' will be destroyed at the end of the full-expression}}
+  const S ConstOk = std::as_const(S{}.self());
+
+  S &&MoveIfNoExcept = std::move_if_noexcept(S{}.self()); // expected-warning {{temporary bound to local reference 'MoveIfNoExcept' will be destroyed at the end of the full-expression}}
+  S MoveIfNoExceptOk = std::move_if_noexcept(S{}.self());
+
+  S *AddressOf = std::addressof(S{}.self()); // expected-warning {{temporary whose address is used as value of local variable 'AddressOf' will be destroyed at the end of the full-expression}}
+  S X;
+  S *AddressOfOk = std::addressof(X);
+} // namespace move_forward_et_al_examples

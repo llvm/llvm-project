@@ -1,4 +1,4 @@
-; RUN: opt < %s -add-discriminators -S | FileCheck %s
+; RUN: opt < %s -passes=add-discriminators -S | FileCheck %s
 ;
 ; Generated at -O3 from:
 ; g();f(){for(;;){g();}}g(){__builtin___memset_chk(0,0,0,__builtin_object_size(1,0));}
@@ -13,12 +13,12 @@ target triple = "arm64-apple-ios"
 ; Function Attrs: noreturn nounwind ssp
 define i32 @f() local_unnamed_addr #0 !dbg !7 {
 entry:
-  %0 = tail call i64 @llvm.objectsize.i64.p0i8(i8* inttoptr (i64 1 to i8*), i1 false) #2, !dbg !11
+  %0 = tail call i64 @llvm.objectsize.i64.p0(ptr inttoptr (i64 1 to ptr), i1 false) #2, !dbg !11
   br label %for.cond, !dbg !18
 
 for.cond:                                         ; preds = %for.cond, %entry
   ; CHECK: %call.i
-  %call.i = tail call i8* @__memset_chk(i8* null, i32 0, i64 0, i64 %0) #2, !dbg !19 
+  %call.i = tail call ptr @__memset_chk(ptr null, i32 0, i64 0, i64 %0) #2, !dbg !19 
   ; CHECK: br label %for.cond, !dbg ![[BR:[0-9]+]]
   br label %for.cond, !dbg !20, !llvm.loop !21
 }
@@ -26,16 +26,16 @@ for.cond:                                         ; preds = %for.cond, %entry
 ; Function Attrs: nounwind ssp
 define i32 @g() local_unnamed_addr #1 !dbg !12 {
 entry:
-  %0 = tail call i64 @llvm.objectsize.i64.p0i8(i8* inttoptr (i64 1 to i8*), i1 false), !dbg !22
-  %call = tail call i8* @__memset_chk(i8* null, i32 0, i64 0, i64 %0) #2, !dbg !23
+  %0 = tail call i64 @llvm.objectsize.i64.p0(ptr inttoptr (i64 1 to ptr), i1 false), !dbg !22
+  %call = tail call ptr @__memset_chk(ptr null, i32 0, i64 0, i64 %0) #2, !dbg !23
   ret i32 undef, !dbg !24
 }
 
 ; Function Attrs: nounwind
-declare i8* @__memset_chk(i8*, i32, i64, i64) local_unnamed_addr #2
+declare ptr @__memset_chk(ptr, i32, i64, i64) local_unnamed_addr #2
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.objectsize.i64.p0i8(i8*, i1) #3
+declare i64 @llvm.objectsize.i64.p0(ptr, i1) #3
 
 attributes #0 = { noreturn nounwind ssp }
 attributes #1 = { nounwind ssp  }

@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: locale.en_US.UTF-8
+// XFAIL: win32-broken-utf8-wchar-ctype
+
+// Bionic has minimal locale support, investigate this later.
+// XFAIL: LIBCXX-ANDROID-FIXME
 
 // <locale>
 
@@ -57,6 +61,7 @@ int main(int, char**)
             assert(f.toupper('\xFA') == '\xFA');
         }
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::locale l;
         {
@@ -91,6 +96,7 @@ int main(int, char**)
             assert(f.toupper(L'\xFA') == L'\xFA');
         }
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

@@ -87,7 +87,7 @@ private:
   void AppendVariables(bool can_create, bool get_parent_variables,
                        lldb_private::VariableList *var_list);
 
-  lldb_private::Block *m_opaque_ptr;
+  lldb_private::Block *m_opaque_ptr = nullptr;
 };
 
 } // namespace lldb

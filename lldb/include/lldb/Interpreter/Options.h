@@ -20,6 +20,7 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
@@ -86,7 +87,7 @@ public:
                                 const OptionDefinition &option_def,
                                 uint32_t output_max_columns);
 
-  void GenerateOptionUsage(Stream &strm, CommandObject *cmd,
+  void GenerateOptionUsage(Stream &strm, CommandObject &cmd,
                            uint32_t screen_width);
 
   bool SupportsLongOption(const char *long_option);
@@ -169,7 +170,7 @@ public:
   /// user wants returned.
   ///
   /// \return
-  ///     \btrue if we were in an option, \bfalse otherwise.
+  ///     \b true if we were in an option, \b false otherwise.
   bool HandleOptionCompletion(lldb_private::CompletionRequest &request,
                               OptionElementVector &option_map,
                               CommandInterpreter &interpreter);
@@ -254,7 +255,7 @@ public:
 
 class OptionGroupOptions : public Options {
 public:
-  OptionGroupOptions() : m_did_finalize(false) {}
+  OptionGroupOptions() = default;
 
   ~OptionGroupOptions() override = default;
 
@@ -290,6 +291,21 @@ public:
   ///     copying the option definition.
   void Append(OptionGroup *group, uint32_t src_mask, uint32_t dst_mask);
 
+  /// Append selected options from a OptionGroup class.
+  ///
+  /// Append the subset of options from \a group, where the "long_option" value
+  /// is _not_ in \a exclude_long_options.
+  ///
+  /// \param[in] group
+  ///     A group of options to take option values from and copy their
+  ///     definitions into this class.
+  ///
+  /// \param[in] exclude_long_options
+  ///     A set of long option strings which indicate which option values values
+  ///     to limit from \a group.
+  void Append(OptionGroup *group,
+              llvm::ArrayRef<llvm::StringRef> exclude_long_options);
+
   void Finalize();
 
   bool DidFinalize() { return m_did_finalize; }
@@ -317,8 +333,43 @@ public:
 
   std::vector<OptionDefinition> m_option_defs;
   OptionInfos m_option_infos;
-  bool m_did_finalize;
+  bool m_did_finalize = false;
 };
+
+/// Creates an error that represents the failure to parse an command line option
+/// argument. This creates an error containing all information needed to show
+/// the developer what went wrong when parsing their command. It is recommended
+/// to use this instead of writing an error by hand.
+///
+/// \param[in] option_arg
+///   The argument that was attempted to be parsed.
+///
+/// \param[in] short_option
+///   The short form of the option. For example, if the flag is -f, the short
+///   option is "f".
+///
+/// \param[in] long_option
+///   The long form of the option. This field is optional. If the flag is
+///   --force, then the long option is "force".
+///
+/// \param[in] additional_context
+///   This is extra context that will get included in the error. This field is
+///   optional.
+///
+/// \return
+///   An llvm::Error that contains a standardized format for what went wrong
+///   when parsing and why.
+llvm::Error CreateOptionParsingError(llvm::StringRef option_arg,
+                                     const char short_option,
+                                     llvm::StringRef long_option = {},
+                                     llvm::StringRef additional_context = {});
+
+static constexpr llvm::StringLiteral g_bool_parsing_error_message =
+    "Failed to parse as boolean";
+static constexpr llvm::StringLiteral g_int_parsing_error_message =
+    "Failed to parse as integer";
+static constexpr llvm::StringLiteral g_language_parsing_error_message =
+    "Unknown language";
 
 } // namespace lldb_private
 

@@ -11,13 +11,13 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 #include <utility>
 
 namespace llvm {
 
 class raw_ostream;
+class DataExtractor;
 
 class DWARFGdbIndex {
   uint32_t Version;

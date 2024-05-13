@@ -4,10 +4,10 @@
 define i8 @shl_and(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: shl_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shlb $2, %sil
-; CHECK-NEXT:    shlb $5, %al
-; CHECK-NEXT:    andb %sil, %al
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (,%rsi,4), %eax
+; CHECK-NEXT:    shlb $5, %dil
+; CHECK-NEXT:    andb %dil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %sh0 = shl i8 %x, 3
@@ -90,12 +90,12 @@ define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK-LABEL: ashr_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrlw $2, %xmm1
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; CHECK-NEXT:    pxor %xmm2, %xmm1
 ; CHECK-NEXT:    psubb %xmm2, %xmm1
 ; CHECK-NEXT:    psrlw $5, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; CHECK-NEXT:    pxor %xmm2, %xmm0
 ; CHECK-NEXT:    psubb %xmm2, %xmm0
@@ -110,15 +110,13 @@ define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %y) nounwind {
 define <2 x i64> @ashr_or(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: ashr_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
 ; CHECK-NEXT:    psrad $7, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; CHECK-NEXT:    psrlq $7, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,3,2,3]
 ; CHECK-NEXT:    psrad $12, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; CHECK-NEXT:    psrlq $12, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
@@ -172,7 +170,7 @@ define i32 @ashr_overshift_xor(i32 %x, i32 %y) nounwind {
   ret i32 %sh1
 }
 
-define i32 @lshr_or_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
+define i32 @lshr_or_extra_use(i32 %x, i32 %y, ptr %p) nounwind {
 ; CHECK-LABEL: lshr_or_extra_use:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
@@ -183,7 +181,7 @@ define i32 @lshr_or_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
 ; CHECK-NEXT:    retq
   %sh0 = lshr i32 %x, 5
   %r = or i32 %sh0, %y
-  store i32 %r, i32* %p
+  store i32 %r, ptr %p
   %sh1 = lshr i32 %r, 7
   ret i32 %sh1
 }

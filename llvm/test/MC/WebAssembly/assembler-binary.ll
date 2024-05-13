@@ -1,13 +1,12 @@
-; RUN: llc -filetype=asm -asm-verbose=false %s -o %t.s
+; RUN: llc -mcpu=mvp -filetype=asm -asm-verbose=false %s -o %t.s
 ; RUN: FileCheck -check-prefix=ASM -input-file %t.s %s
 ; RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=asm %t.s -o - | FileCheck -check-prefix=ASM %s
-; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -mcpu=mvp -filetype=obj %s -o - | obj2yaml | FileCheck %s
 ; RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj %t.s -o - | obj2yaml | FileCheck %s
 
 ; This specifically tests that we can generate a binary from the assembler
 ; that produces the same binary as the backend would.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare void @bar()
@@ -23,12 +22,12 @@ entry:
 
 ; ASM:     	.text
 ; ASM:      	.file	"assembler-binary.ll"
+; ASM:       	.functype	bar () -> ()
 ; ASM:      	.globl	foo
 ; ASM:      foo:
 ; ASM-NEXT: 	.functype	foo (i32) -> ()
 ; ASM-NEXT: 	call	bar
 ; ASM-NEXT: 	end_function
-; ASM:       	.functype	bar () -> ()
 
 
 ; CHECK:      --- !WASM

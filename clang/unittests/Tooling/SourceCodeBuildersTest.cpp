@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Transformer/SourceCodeBuilders.h"
+#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -24,8 +26,23 @@ using llvm::ValueIs;
 
 // Create a valid translation unit from a statement.
 static std::string wrapSnippet(StringRef StatementCode) {
-  return ("struct S { S(); S(int); int field; };\n"
+  return ("namespace std {\n"
+          "template <typename T> struct unique_ptr {\n"
+          "  T* operator->() const;\n"
+          "  T& operator*() const;\n"
+          "};\n"
+          "template <typename T> struct shared_ptr {\n"
+          "  T* operator->() const;\n"
+          "  T& operator*() const;\n"
+          "};\n"
+          "}\n"
+          "struct A { void super(); };\n"
+          "struct S : public A { S(); S(int); int Field; };\n"
           "S operator+(const S &a, const S &b);\n"
+          "struct Smart {\n"
+          "  S* operator->() const;\n"
+          "  S& operator*() const;\n"
+          "};\n"
           "auto test_snippet = []{" +
           StatementCode + "};")
       .str();
@@ -49,19 +66,20 @@ struct TestMatch {
 // matcher correspondingly. `Matcher` should match one of the statements in
 // `StatementCode` exactly -- that is, produce exactly one match. However,
 // `StatementCode` may contain other statements not described by `Matcher`.
-static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
-                                           StatementMatcher Matcher) {
-  auto AstUnit = buildASTFromCode(wrapSnippet(StatementCode));
+static std::optional<TestMatch> matchStmt(StringRef StatementCode,
+                                          StatementMatcher Matcher) {
+  auto AstUnit = buildASTFromCodeWithArgs(wrapSnippet(StatementCode),
+                                          {"-Wno-unused-value"});
   if (AstUnit == nullptr) {
     ADD_FAILURE() << "AST construction failed";
-    return llvm::None;
+    return std::nullopt;
   }
   ASTContext &Context = AstUnit->getASTContext();
   auto Matches = ast_matchers::match(wrapMatcher(Matcher), Context);
   // We expect a single, exact match for the statement.
   if (Matches.size() != 1) {
     ADD_FAILURE() << "Wrong number of matches: " << Matches.size();
-    return llvm::None;
+    return std::nullopt;
   }
   return TestMatch{std::move(AstUnit), MatchResult(Matches[0], &Context)};
 }
@@ -95,7 +113,7 @@ TEST(SourceCodeBuildersTest, needParensAfterUnaryOperator) {
   testPredicate(needParensAfterUnaryOperator, "int(3.0);", false);
   testPredicate(needParensAfterUnaryOperator, "void f(); f();", false);
   testPredicate(needParensAfterUnaryOperator, "int a[3]; a[0];", false);
-  testPredicate(needParensAfterUnaryOperator, "S x; x.field;", false);
+  testPredicate(needParensAfterUnaryOperator, "S x; x.Field;", false);
   testPredicate(needParensAfterUnaryOperator, "int x = 1; --x;", false);
   testPredicate(needParensAfterUnaryOperator, "int x = 1; -x;", false);
 }
@@ -117,7 +135,7 @@ TEST(SourceCodeBuildersTest, mayEverNeedParens) {
   testPredicate(mayEverNeedParens, "int(3.0);", false);
   testPredicate(mayEverNeedParens, "void f(); f();", false);
   testPredicate(mayEverNeedParens, "int a[3]; a[0];", false);
-  testPredicate(mayEverNeedParens, "S x; x.field;", false);
+  testPredicate(mayEverNeedParens, "S x; x.Field;", false);
 }
 
 TEST(SourceCodeBuildersTest, mayEverNeedParensInImplictConversion) {
@@ -126,13 +144,66 @@ TEST(SourceCodeBuildersTest, mayEverNeedParensInImplictConversion) {
   testPredicateOnArg(mayEverNeedParens, "void f(S); f(3 + 5);", true);
 }
 
+TEST(SourceCodeBuildersTest, isKnownPointerLikeTypeUniquePtr) {
+  std::string Snippet = "std::unique_ptr<int> P; P;";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("ty"))));
+  ASSERT_TRUE(StmtMatch) << "Snippet: " << Snippet;
+  EXPECT_TRUE(
+      isKnownPointerLikeType(*StmtMatch->Result.Nodes.getNodeAs<QualType>("ty"),
+                             *StmtMatch->Result.Context))
+      << "Snippet: " << Snippet;
+}
+
+TEST(SourceCodeBuildersTest, isKnownPointerLikeTypeSharedPtr) {
+  std::string Snippet = "std::shared_ptr<int> P; P;";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("ty"))));
+  ASSERT_TRUE(StmtMatch) << "Snippet: " << Snippet;
+  EXPECT_TRUE(
+      isKnownPointerLikeType(*StmtMatch->Result.Nodes.getNodeAs<QualType>("ty"),
+                             *StmtMatch->Result.Context))
+      << "Snippet: " << Snippet;
+}
+
+TEST(SourceCodeBuildersTest, isKnownPointerLikeTypeUnknownTypeFalse) {
+  std::string Snippet = "Smart P; P;";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("ty"))));
+  ASSERT_TRUE(StmtMatch) << "Snippet: " << Snippet;
+  EXPECT_FALSE(
+      isKnownPointerLikeType(*StmtMatch->Result.Nodes.getNodeAs<QualType>("ty"),
+                             *StmtMatch->Result.Context))
+      << "Snippet: " << Snippet;
+}
+
+TEST(SourceCodeBuildersTest, isKnownPointerLikeTypeNormalTypeFalse) {
+  std::string Snippet = "int *P; P;";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("ty"))));
+  ASSERT_TRUE(StmtMatch) << "Snippet: " << Snippet;
+  EXPECT_FALSE(
+      isKnownPointerLikeType(*StmtMatch->Result.Nodes.getNodeAs<QualType>("ty"),
+                             *StmtMatch->Result.Context))
+      << "Snippet: " << Snippet;
+}
+
 static void testBuilder(
-    llvm::Optional<std::string> (*Builder)(const Expr &, const ASTContext &),
+    std::optional<std::string> (*Builder)(const Expr &, const ASTContext &),
     StringRef Snippet, StringRef Expected) {
   auto StmtMatch = matchStmt(Snippet, expr().bind("expr"));
   ASSERT_TRUE(StmtMatch);
   EXPECT_THAT(Builder(*StmtMatch->Result.Nodes.getNodeAs<Expr>("expr"),
                       *StmtMatch->Result.Context),
+              ValueIs(std::string(Expected)));
+}
+
+static void testBuildAccess(StringRef Snippet, StringRef Expected,
+                            PLTClass C = PLTClass::Pointer) {
+  auto StmtMatch = matchStmt(Snippet, expr().bind("expr"));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT(buildAccess(*StmtMatch->Result.Nodes.getNodeAs<Expr>("expr"),
+                          *StmtMatch->Result.Context, C),
               ValueIs(std::string(Expected)));
 }
 
@@ -170,6 +241,24 @@ TEST(SourceCodeBuildersTest, BuildAddressOfPointerDereferenceIgnoresParens) {
 
 TEST(SourceCodeBuildersTest, BuildAddressOfBinaryOperation) {
   testBuilder(buildAddressOf, "S x; x + x;", "&(x + x)");
+}
+
+TEST(SourceCodeBuildersTest, BuildAddressOfImplicitThis) {
+  StringRef Snippet = R"cc(
+    struct Struct {
+      void foo() {}
+      void bar() {
+        foo();
+      }
+    };
+  )cc";
+  auto StmtMatch = matchStmt(
+      Snippet,
+      cxxMemberCallExpr(onImplicitObjectArgument(cxxThisExpr().bind("expr"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT(buildAddressOf(*StmtMatch->Result.Nodes.getNodeAs<Expr>("expr"),
+                             *StmtMatch->Result.Context),
+              ValueIs(std::string("this")));
 }
 
 TEST(SourceCodeBuildersTest, BuildDereferencePointer) {
@@ -226,5 +315,118 @@ TEST(SourceCodeBuildersTest, BuildArrowBinaryOperation) {
 
 TEST(SourceCodeBuildersTest, BuildArrowValueAddressWithParens) {
   testBuilder(buildArrow, "S x; &(true ? x : x);", "(true ? x : x).");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessValue) {
+  testBuildAccess("S x; x;", "x.");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessPointerDereference) {
+  testBuildAccess("S *x; *x;", "x->");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessPointerDereferenceIgnoresParens) {
+  testBuildAccess("S *x; *(x);", "x->");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessValueBinaryOperation) {
+  testBuildAccess("S x; x + x;", "(x + x).");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessPointerDereferenceExprWithParens) {
+  testBuildAccess("S *x; *(x + 1);", "(x + 1)->");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessPointer) {
+  testBuildAccess("S *x; x;", "x->");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessValueAddress) {
+  testBuildAccess("S x; &x;", "x.");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessValueAddressIgnoresParens) {
+  testBuildAccess("S x; &(x);", "x.");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessPointerBinaryOperation) {
+  testBuildAccess("S *x; x + 1;", "(x + 1)->");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessValueAddressWithParens) {
+  testBuildAccess("S x; &(true ? x : x);", "(true ? x : x).");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessSmartPointer) {
+  testBuildAccess("std::unique_ptr<int> x; x;", "x->");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessSmartPointerAsValue) {
+  testBuildAccess("std::unique_ptr<int> x; x;", "x.", PLTClass::Value);
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessSmartPointerDeref) {
+  testBuildAccess("std::unique_ptr<int> x; *x;", "x->");
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessSmartPointerDerefAsValue) {
+  testBuildAccess("std::unique_ptr<int> x; *x;", "(*x).", PLTClass::Value);
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessSmartPointerMemberCall) {
+  StringRef Snippet = R"cc(
+    Smart x;
+    x->Field;
+  )cc";
+  auto StmtMatch =
+      matchStmt(Snippet, memberExpr(hasObjectExpression(expr().bind("expr"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT(buildAccess(*StmtMatch->Result.Nodes.getNodeAs<Expr>("expr"),
+                          *StmtMatch->Result.Context),
+              ValueIs(std::string("x->")));
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessIgnoreImplicit) {
+  StringRef Snippet = R"cc(
+    S x;
+    A *a;
+    a = &x;
+  )cc";
+  auto StmtMatch =
+      matchStmt(Snippet, binaryOperator(isAssignmentOperator(),
+                                        hasRHS(expr().bind("expr"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT(buildAccess(*StmtMatch->Result.Nodes.getNodeAs<Expr>("expr"),
+                          *StmtMatch->Result.Context),
+              ValueIs(std::string("x.")));
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessImplicitThis) {
+  StringRef Snippet = R"cc(
+    struct Struct {
+      void foo() {}
+      void bar() {
+        foo();
+      }
+    };
+  )cc";
+  auto StmtMatch = matchStmt(
+      Snippet,
+      cxxMemberCallExpr(onImplicitObjectArgument(cxxThisExpr().bind("expr"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT(buildAccess(*StmtMatch->Result.Nodes.getNodeAs<Expr>("expr"),
+                          *StmtMatch->Result.Context),
+              ValueIs(std::string()));
+}
+
+TEST(SourceCodeBuildersTest, BuildAccessImplicitThisIgnoreImplicitCasts) {
+  StringRef Snippet = "struct B : public A { void f() { super(); } };";
+  auto StmtMatch = matchStmt(
+      Snippet,
+      cxxMemberCallExpr(onImplicitObjectArgument(expr().bind("expr"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT(buildAccess(*StmtMatch->Result.Nodes.getNodeAs<Expr>("expr"),
+                          *StmtMatch->Result.Context),
+              ValueIs(std::string()));
 }
 } // namespace

@@ -12,7 +12,9 @@
 //     RealType generate_canonical(URNG& g);
 
 #include <random>
+
 #include <cassert>
+#include <limits>
 
 #include "test_macros.h"
 #include "truncate_fp.h"

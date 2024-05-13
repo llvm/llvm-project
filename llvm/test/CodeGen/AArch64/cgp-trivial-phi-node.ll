@@ -1,32 +1,32 @@
 ; Checks that case when GEP is bound to trivial PHI node is correctly handled.
-; RUN: opt %s -mtriple=aarch64-linux-gnu -codegenprepare -S -o - | FileCheck %s
+; RUN: opt %s -mtriple=aarch64-linux-gnu -passes='require<profile-summary>,function(codegenprepare)' -S -o - | FileCheck %s
 
-; CHECK:      define void @crash([65536 x i32]** %s, i32 %n) {
+; CHECK:      define void @crash(ptr %s, i32 %n) {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   %struct = load [65536 x i32]*, [65536 x i32]** %s
-; CHECK-NEXT:   %gep0 = getelementptr [65536 x i32], [65536 x i32]* %struct, i64 0, i32 20000
-; CHECK-NEXT:   store i32 %n, i32* %gep0
+; CHECK-NEXT:   %struct = load ptr, ptr %s
+; CHECK-NEXT:   %gep0 = getelementptr [65536 x i32], ptr %struct, i64 0, i32 20000
+; CHECK-NEXT:   store i32 %n, ptr %gep0
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 
-define void @crash([65536 x i32]** %s, i32 %n) {
+define void @crash(ptr %s, i32 %n) {
 entry:
-  %struct = load [65536 x i32]*, [65536 x i32]** %s
+  %struct = load ptr, ptr %s
   %cmp = icmp slt i32 0, %n
   br i1 %cmp, label %baz, label %bar
 baz:
   br label %bar
 
 foo:
-  %gep0 = getelementptr [65536 x i32], [65536 x i32]* %phi2, i64 0, i32 20000
+  %gep0 = getelementptr [65536 x i32], ptr %phi2, i64 0, i32 20000
   br label %st
 
 st:
-  store i32 %n, i32* %gep0
+  store i32 %n, ptr %gep0
   br label %out
 
 bar:
-  %phi2 = phi [65536 x i32]* [ %struct, %baz ], [ %struct, %entry ]
+  %phi2 = phi ptr [ %struct, %baz ], [ %struct, %entry ]
   br label %foo
 out:
   ret void

@@ -26,7 +26,7 @@ static_assert(cn == 11);
 constexpr int bn = __builtin_is_constant_evaluated() ? dummy : 42; // expected-note {{non-const variable 'dummy' is not allowed}}
 
 const int n2 = __builtin_is_constant_evaluated() ? dummy : 42; // expected-note {{declared here}}
-static_assert(n2 == 42);                                       // expected-error {{static_assert expression is not an integral constant}}
+static_assert(n2 == 42);                                       // expected-error {{static assertion expression is not an integral constant}}
 // expected-note@-1 {{initializer of 'n2' is not a constant expression}}
 
 template <bool V, bool Default = std::is_constant_evaluated()>

@@ -53,7 +53,7 @@ struct S {
   struct S0 __attribute__((aligned(4))) s0;
 };
 
-void test4() {
+void test4(void) {
   struct S s;
   int *i = (int *)s.a;
   i = (int *)&s.s0;
@@ -66,4 +66,12 @@ unsigned int func5(void);
 
 FnTy test5(void) {
   return (FnTy)&func5;
+}
+
+void test6(void) {
+  struct {
+    int hello;
+    doesnotexist world; // expected-error {{unknown type name 'doesnotexist'}}
+  } foo;
+  void **repro = (void **)&foo.hello; // expected-warning {{cast from 'int *' to 'void **' increases required alignment from 4 to 8}}
 }

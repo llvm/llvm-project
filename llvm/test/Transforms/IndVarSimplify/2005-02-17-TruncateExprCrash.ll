@@ -1,16 +1,16 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 
 declare void @q_atomic_increment()
 
 declare void @_Z9qt_assertPKcS0_i()
 
-define void @_ZN13QMetaResourceC1EPKh() personality i32 (...)* @__gxx_personality_v0 {
+define void @_ZN13QMetaResourceC1EPKh() personality ptr @__gxx_personality_v0 {
 entry:
 	invoke void @_Z9qt_assertPKcS0_i( )
 			to label %endif.1 unwind label %then.i.i551
 
 then.i.i551:		; preds = %entry
-        %exn551 = landingpad {i8*, i32}
+        %exn551 = landingpad {ptr, i32}
                  cleanup
 	ret void
 
@@ -22,7 +22,7 @@ then.2:		; preds = %endif.1
 			to label %loopentry.0 unwind label %invoke_catch.6
 
 invoke_catch.6:		; preds = %then.2
-        %exn6 = landingpad {i8*, i32}
+        %exn6 = landingpad {ptr, i32}
                  cleanup
 	ret void
 
@@ -45,7 +45,7 @@ then.4:		; preds = %_ZNK7QString2atEi.exit
 	ret void
 
 endif.4:		; preds = %_ZNK7QString2atEi.exit
-	%tmp.115 = load i8, i8* null		; <i8> [#uses=1]
+	%tmp.115 = load i8, ptr null		; <i8> [#uses=1]
 	br i1 false, label %loopexit.1, label %no_exit.0
 
 no_exit.0:		; preds = %no_exit.0, %endif.4

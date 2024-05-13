@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-void foo() {
+void foo(void) {
   int a;
   __builtin_prefetch(&a);
   __builtin_prefetch(&a, 1);

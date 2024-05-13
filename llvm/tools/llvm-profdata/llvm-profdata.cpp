@@ -14,35 +14,434 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
+#include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfReader.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
+#include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Discriminator.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cmath>
+#include <optional>
+#include <queue>
 
 using namespace llvm;
+using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
+
+// https://llvm.org/docs/CommandGuide/llvm-profdata.html has documentations
+// on each subcommand.
+cl::SubCommand ShowSubcommand(
+    "show",
+    "Takes a profile data file and displays the profiles. See detailed "
+    "documentation in "
+    "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-show");
+cl::SubCommand OrderSubcommand(
+    "order",
+    "Reads temporal profiling traces from a profile and outputs a function "
+    "order that reduces the number of page faults for those traces. See "
+    "detailed documentation in "
+    "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-order");
+cl::SubCommand OverlapSubcommand(
+    "overlap",
+    "Computes and displays the overlap between two profiles. See detailed "
+    "documentation in "
+    "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-overlap");
+cl::SubCommand MergeSubcommand(
+    "merge",
+    "Takes several profiles and merge them together. See detailed "
+    "documentation in "
+    "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-merge");
+
+namespace {
+enum ProfileKinds { instr, sample, memory };
+enum FailureMode { warnOnly, failIfAnyAreInvalid, failIfAllAreInvalid };
+} // namespace
 
 enum ProfileFormat {
   PF_None = 0,
   PF_Text,
-  PF_Compact_Binary,
+  PF_Compact_Binary, // Deprecated
   PF_Ext_Binary,
   PF_GCC,
   PF_Binary
 };
+
+enum class ShowFormat { Text, Json, Yaml };
+
+// Common options.
+cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
+                                    cl::init("-"), cl::desc("Output file"),
+                                    cl::sub(ShowSubcommand),
+                                    cl::sub(OrderSubcommand),
+                                    cl::sub(OverlapSubcommand),
+                                    cl::sub(MergeSubcommand));
+// NOTE: cl::alias must not have cl::sub(), since aliased option's cl::sub()
+// will be used. llvm::cl::alias::done() method asserts this condition.
+cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
+                          cl::aliasopt(OutputFilename));
+
+// Options common to at least two commands.
+cl::opt<ProfileKinds> ProfileKind(
+    cl::desc("Profile kind:"), cl::sub(MergeSubcommand),
+    cl::sub(OverlapSubcommand), cl::init(instr),
+    cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
+               clEnumVal(sample, "Sample profile")));
+cl::opt<std::string> Filename(cl::Positional, cl::desc("<profdata-file>"),
+                              cl::sub(ShowSubcommand),
+                              cl::sub(OrderSubcommand));
+cl::opt<unsigned> MaxDbgCorrelationWarnings(
+    "max-debug-info-correlation-warnings",
+    cl::desc("The maximum number of warnings to emit when correlating "
+             "profile from debug info (0 = no limit)"),
+    cl::sub(MergeSubcommand), cl::sub(ShowSubcommand), cl::init(5));
+cl::opt<std::string> ProfiledBinary(
+    "profiled-binary", cl::init(""),
+    cl::desc("Path to binary from which the profile was collected."),
+    cl::sub(ShowSubcommand), cl::sub(MergeSubcommand));
+cl::opt<std::string> DebugInfoFilename(
+    "debug-info", cl::init(""),
+    cl::desc(
+        "For show, read and extract profile metadata from debug info and show "
+        "the functions it found. For merge, use the provided debug info to "
+        "correlate the raw profile."),
+    cl::sub(ShowSubcommand), cl::sub(MergeSubcommand));
+cl::opt<std::string>
+    BinaryFilename("binary-file", cl::init(""),
+                   cl::desc("For merge, use the provided unstripped bianry to "
+                            "correlate the raw profile."),
+                   cl::sub(MergeSubcommand));
+cl::opt<std::string> FuncNameFilter(
+    "function",
+    cl::desc("Only functions matching the filter are shown in the output. For "
+             "overlapping CSSPGO, this takes a function name with calling "
+             "context."),
+    cl::sub(ShowSubcommand), cl::sub(OverlapSubcommand),
+    cl::sub(MergeSubcommand));
+
+// TODO: Consider creating a template class (e.g., MergeOption, ShowOption) to
+// factor out the common cl::sub in cl::opt constructor for subcommand-specific
+// options.
+
+// Options specific to merge subcommand.
+cl::list<std::string> InputFilenames(cl::Positional, cl::sub(MergeSubcommand),
+                                     cl::desc("<filename...>"));
+cl::list<std::string> WeightedInputFilenames("weighted-input",
+                                             cl::sub(MergeSubcommand),
+                                             cl::desc("<weight>,<filename>"));
+cl::opt<ProfileFormat> OutputFormat(
+    cl::desc("Format of output profile"), cl::sub(MergeSubcommand),
+    cl::init(PF_Ext_Binary),
+    cl::values(clEnumValN(PF_Binary, "binary", "Binary encoding"),
+               clEnumValN(PF_Ext_Binary, "extbinary",
+                          "Extensible binary encoding "
+                          "(default)"),
+               clEnumValN(PF_Text, "text", "Text encoding"),
+               clEnumValN(PF_GCC, "gcc",
+                          "GCC encoding (only meaningful for -sample)")));
+cl::opt<std::string>
+    InputFilenamesFile("input-files", cl::init(""), cl::sub(MergeSubcommand),
+                       cl::desc("Path to file containing newline-separated "
+                                "[<weight>,]<filename> entries"));
+cl::alias InputFilenamesFileA("f", cl::desc("Alias for --input-files"),
+                              cl::aliasopt(InputFilenamesFile));
+cl::opt<bool> DumpInputFileList(
+    "dump-input-file-list", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Dump the list of input files and their weights, then exit"));
+cl::opt<std::string> RemappingFile("remapping-file", cl::value_desc("file"),
+                                   cl::sub(MergeSubcommand),
+                                   cl::desc("Symbol remapping file"));
+cl::alias RemappingFileA("r", cl::desc("Alias for --remapping-file"),
+                         cl::aliasopt(RemappingFile));
+cl::opt<bool>
+    UseMD5("use-md5", cl::init(false), cl::Hidden,
+           cl::desc("Choose to use MD5 to represent string in name table (only "
+                    "meaningful for -extbinary)"),
+           cl::sub(MergeSubcommand));
+cl::opt<bool> CompressAllSections(
+    "compress-all-sections", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Compress all sections when writing the profile (only "
+             "meaningful for -extbinary)"));
+cl::opt<bool> SampleMergeColdContext(
+    "sample-merge-cold-context", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc(
+        "Merge context sample profiles whose count is below cold threshold"));
+cl::opt<bool> SampleTrimColdContext(
+    "sample-trim-cold-context", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc(
+        "Trim context sample profiles whose count is below cold threshold"));
+cl::opt<uint32_t> SampleColdContextFrameDepth(
+    "sample-frame-depth-for-cold-context", cl::init(1),
+    cl::sub(MergeSubcommand),
+    cl::desc("Keep the last K frames while merging cold profile. 1 means the "
+             "context-less base profile"));
+cl::opt<size_t> OutputSizeLimit(
+    "output-size-limit", cl::init(0), cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Trim cold functions until profile size is below specified "
+             "limit in bytes. This uses a heursitic and functions may be "
+             "excessively trimmed"));
+cl::opt<bool> GenPartialProfile(
+    "gen-partial-profile", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
+cl::opt<std::string> SupplInstrWithSample(
+    "supplement-instr-with-sample", cl::init(""), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Supplement an instr profile with sample profile, to correct "
+             "the profile unrepresentativeness issue. The sample "
+             "profile is the input of the flag. Output will be in instr "
+             "format (The flag only works with -instr)"));
+cl::opt<float> ZeroCounterThreshold(
+    "zero-counter-threshold", cl::init(0.7), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("For the function which is cold in instr profile but hot in "
+             "sample profile, if the ratio of the number of zero counters "
+             "divided by the total number of counters is above the "
+             "threshold, the profile of the function will be regarded as "
+             "being harmful for performance and will be dropped."));
+cl::opt<unsigned> SupplMinSizeThreshold(
+    "suppl-min-size-threshold", cl::init(10), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("If the size of a function is smaller than the threshold, "
+             "assume it can be inlined by PGO early inliner and it won't "
+             "be adjusted based on sample profile."));
+cl::opt<unsigned> InstrProfColdThreshold(
+    "instr-prof-cold-threshold", cl::init(0), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("User specified cold threshold for instr profile which will "
+             "override the cold threshold got from profile summary. "));
+// WARNING: This reservoir size value is propagated to any input indexed
+// profiles for simplicity. Changing this value between invocations could
+// result in sample bias.
+cl::opt<uint64_t> TemporalProfTraceReservoirSize(
+    "temporal-profile-trace-reservoir-size", cl::init(100),
+    cl::sub(MergeSubcommand),
+    cl::desc("The maximum number of stored temporal profile traces (default: "
+             "100)"));
+cl::opt<uint64_t> TemporalProfMaxTraceLength(
+    "temporal-profile-max-trace-length", cl::init(10000),
+    cl::sub(MergeSubcommand),
+    cl::desc("The maximum length of a single temporal profile trace "
+             "(default: 10000)"));
+cl::opt<std::string> FuncNameNegativeFilter(
+    "no-function", cl::init(""),
+    cl::sub(MergeSubcommand),
+    cl::desc("Exclude functions matching the filter from the output."));
+
+cl::opt<FailureMode>
+    FailMode("failure-mode", cl::init(failIfAnyAreInvalid),
+             cl::desc("Failure mode:"), cl::sub(MergeSubcommand),
+             cl::values(clEnumValN(warnOnly, "warn",
+                                   "Do not fail and just print warnings."),
+                        clEnumValN(failIfAnyAreInvalid, "any",
+                                   "Fail if any profile is invalid."),
+                        clEnumValN(failIfAllAreInvalid, "all",
+                                   "Fail only if all profiles are invalid.")));
+
+cl::opt<bool> OutputSparse(
+    "sparse", cl::init(false), cl::sub(MergeSubcommand),
+    cl::desc("Generate a sparse profile (only meaningful for -instr)"));
+cl::opt<unsigned> NumThreads(
+    "num-threads", cl::init(0), cl::sub(MergeSubcommand),
+    cl::desc("Number of merge threads to use (default: autodetect)"));
+cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
+                      cl::aliasopt(NumThreads));
+
+cl::opt<std::string> ProfileSymbolListFile(
+    "prof-sym-list", cl::init(""), cl::sub(MergeSubcommand),
+    cl::desc("Path to file containing the list of function symbols "
+             "used to populate profile symbol list"));
+
+cl::opt<SampleProfileLayout> ProfileLayout(
+    "convert-sample-profile-layout",
+    cl::desc("Convert the generated profile to a profile with a new layout"),
+    cl::sub(MergeSubcommand), cl::init(SPL_None),
+    cl::values(
+        clEnumValN(SPL_Nest, "nest",
+                   "Nested profile, the input should be CS flat profile"),
+        clEnumValN(SPL_Flat, "flat",
+                   "Profile with nested inlinee flatten out")));
+
+cl::opt<bool> DropProfileSymbolList(
+    "drop-profile-symbol-list", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Drop the profile symbol list when merging AutoFDO profiles "
+             "(only meaningful for -sample)"));
+
+// Temporary support for writing the previous version of the format, to enable
+// some forward compatibility.
+// TODO: Consider enabling this with future version changes as well, to ease
+// deployment of newer versions of llvm-profdata.
+cl::opt<bool> DoWritePrevVersion(
+    "write-prev-version", cl::init(false), cl::Hidden,
+    cl::desc("Write the previous version of indexed format, to enable "
+             "some forward compatibility."));
+
+cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
+    "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Specify the version of the memprof format to use"),
+    cl::init(memprof::Version0),
+    cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
+               clEnumValN(memprof::Version1, "1", "version 1"),
+               clEnumValN(memprof::Version2, "2", "version 2")));
+
+cl::opt<bool> MemProfFullSchema(
+    "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Use the full schema for serialization"), cl::init(false));
+
+// Options specific to overlap subcommand.
+cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
+                                  cl::desc("<base profile file>"),
+                                  cl::sub(OverlapSubcommand));
+cl::opt<std::string> TestFilename(cl::Positional, cl::Required,
+                                  cl::desc("<test profile file>"),
+                                  cl::sub(OverlapSubcommand));
+
+cl::opt<unsigned long long> SimilarityCutoff(
+    "similarity-cutoff", cl::init(0),
+    cl::desc("For sample profiles, list function names (with calling context "
+             "for csspgo) for overlapped functions "
+             "with similarities below the cutoff (percentage times 10000)."),
+    cl::sub(OverlapSubcommand));
+
+cl::opt<bool> IsCS(
+    "cs", cl::init(false),
+    cl::desc("For context sensitive PGO counts. Does not work with CSSPGO."),
+    cl::sub(OverlapSubcommand));
+
+cl::opt<unsigned long long> OverlapValueCutoff(
+    "value-cutoff", cl::init(-1),
+    cl::desc(
+        "Function level overlap information for every function (with calling "
+        "context for csspgo) in test "
+        "profile with max count value greater then the parameter value"),
+    cl::sub(OverlapSubcommand));
+
+// Options unique to show subcommand.
+cl::opt<bool> ShowCounts("counts", cl::init(false),
+                         cl::desc("Show counter values for shown functions"),
+                         cl::sub(ShowSubcommand));
+cl::opt<ShowFormat>
+    SFormat("show-format", cl::init(ShowFormat::Text),
+            cl::desc("Emit output in the selected format if supported"),
+            cl::sub(ShowSubcommand),
+            cl::values(clEnumValN(ShowFormat::Text, "text",
+                                  "emit normal text output (default)"),
+                       clEnumValN(ShowFormat::Json, "json", "emit JSON"),
+                       clEnumValN(ShowFormat::Yaml, "yaml", "emit YAML")));
+// TODO: Consider replacing this with `--show-format=text-encoding`.
+cl::opt<bool>
+    TextFormat("text", cl::init(false),
+               cl::desc("Show instr profile data in text dump format"),
+               cl::sub(ShowSubcommand));
+cl::opt<bool>
+    JsonFormat("json",
+               cl::desc("Show sample profile data in the JSON format "
+                        "(deprecated, please use --show-format=json)"),
+               cl::sub(ShowSubcommand));
+cl::opt<bool> ShowIndirectCallTargets(
+    "ic-targets", cl::init(false),
+    cl::desc("Show indirect call site target values for shown functions"),
+    cl::sub(ShowSubcommand));
+cl::opt<bool> ShowVTables("show-vtables", cl::init(false),
+                          cl::desc("Show vtable names for shown functions"),
+                          cl::sub(ShowSubcommand));
+cl::opt<bool> ShowMemOPSizes(
+    "memop-sizes", cl::init(false),
+    cl::desc("Show the profiled sizes of the memory intrinsic calls "
+             "for shown functions"),
+    cl::sub(ShowSubcommand));
+cl::opt<bool> ShowDetailedSummary("detailed-summary", cl::init(false),
+                                  cl::desc("Show detailed profile summary"),
+                                  cl::sub(ShowSubcommand));
+cl::list<uint32_t> DetailedSummaryCutoffs(
+    cl::CommaSeparated, "detailed-summary-cutoffs",
+    cl::desc(
+        "Cutoff percentages (times 10000) for generating detailed summary"),
+    cl::value_desc("800000,901000,999999"), cl::sub(ShowSubcommand));
+cl::opt<bool>
+    ShowHotFuncList("hot-func-list", cl::init(false),
+                    cl::desc("Show profile summary of a list of hot functions"),
+                    cl::sub(ShowSubcommand));
+cl::opt<bool> ShowAllFunctions("all-functions", cl::init(false),
+                               cl::desc("Details for each and every function"),
+                               cl::sub(ShowSubcommand));
+cl::opt<bool> ShowCS("showcs", cl::init(false),
+                     cl::desc("Show context sensitive counts"),
+                     cl::sub(ShowSubcommand));
+cl::opt<ProfileKinds> ShowProfileKind(
+    cl::desc("Profile kind supported by show:"), cl::sub(ShowSubcommand),
+    cl::init(instr),
+    cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
+               clEnumVal(sample, "Sample profile"),
+               clEnumVal(memory, "MemProf memory access profile")));
+cl::opt<uint32_t> TopNFunctions(
+    "topn", cl::init(0),
+    cl::desc("Show the list of functions with the largest internal counts"),
+    cl::sub(ShowSubcommand));
+cl::opt<uint32_t> ShowValueCutoff(
+    "value-cutoff", cl::init(0),
+    cl::desc("Set the count value cutoff. Functions with the maximum count "
+             "less than this value will not be printed out. (Default is 0)"),
+    cl::sub(ShowSubcommand));
+cl::opt<bool> OnlyListBelow(
+    "list-below-cutoff", cl::init(false),
+    cl::desc("Only output names of functions whose max count values are "
+             "below the cutoff value"),
+    cl::sub(ShowSubcommand));
+cl::opt<bool> ShowProfileSymbolList(
+    "show-prof-sym-list", cl::init(false),
+    cl::desc("Show profile symbol list if it exists in the profile. "),
+    cl::sub(ShowSubcommand));
+cl::opt<bool> ShowSectionInfoOnly(
+    "show-sec-info-only", cl::init(false),
+    cl::desc("Show the information of each section in the sample profile. "
+             "The flag is only usable when the sample profile is in "
+             "extbinary format"),
+    cl::sub(ShowSubcommand));
+cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
+                            cl::desc("Show binary ids in the profile. "),
+                            cl::sub(ShowSubcommand));
+cl::opt<bool> ShowTemporalProfTraces(
+    "temporal-profile-traces",
+    cl::desc("Show temporal profile traces in the profile."),
+    cl::sub(ShowSubcommand));
+
+cl::opt<bool>
+    ShowCovered("covered", cl::init(false),
+                cl::desc("Show only the functions that have been executed."),
+                cl::sub(ShowSubcommand));
+
+cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
+                                 cl::desc("Show profile version. "),
+                                 cl::sub(ShowSubcommand));
+
+// We use this string to indicate that there are
+// multiple static functions map to the same name.
+const std::string DuplicateNameStr = "----";
 
 static void warn(Twine Message, std::string Whence = "",
                  std::string Hint = "") {
@@ -79,11 +478,12 @@ static void exitWithError(Error E, StringRef Whence = "") {
       instrprof_error instrError = IPE.get();
       StringRef Hint = "";
       if (instrError == instrprof_error::unrecognized_format) {
-        // Hint for common error of forgetting --sample for sample profiles.
-        Hint = "Perhaps you forgot to use the --sample option?";
+        // Hint in case user missed specifying the profile type.
+        Hint = "Perhaps you forgot to use the --sample or --memory option?";
       }
       exitWithError(IPE.message(), std::string(Whence), std::string(Hint));
     });
+    return;
   }
 
   exitWithError(toString(std::move(E)), std::string(Whence));
@@ -91,11 +491,6 @@ static void exitWithError(Error E, StringRef Whence = "") {
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
   exitWithError(EC.message(), std::string(Whence));
-}
-
-namespace {
-enum ProfileKinds { instr, sample };
-enum FailureMode { failIfAnyAreInvalid, failIfAllAreInvalid };
 }
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
@@ -180,6 +575,14 @@ public:
     StringRef New = RemappingTable.lookup(Name);
     return New.empty() ? Name : New;
   }
+
+  FunctionId operator()(FunctionId Name) {
+    // MD5 name cannot be remapped.
+    if (!Name.isStringRef())
+      return Name;
+    StringRef New = RemappingTable.lookup(Name.stringRef());
+    return New.empty() ? Name : FunctionId(New);
+  }
 };
 }
 
@@ -198,9 +601,11 @@ struct WriterContext {
   SmallSet<instrprof_error, 4> &WriterErrorCodes;
 
   WriterContext(bool IsSparse, std::mutex &ErrLock,
-                SmallSet<instrprof_error, 4> &WriterErrorCodes)
-      : Lock(), Writer(IsSparse), Errors(), ErrLock(ErrLock),
-        WriterErrorCodes(WriterErrorCodes) {}
+                SmallSet<instrprof_error, 4> &WriterErrorCodes,
+                uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
+      : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
+               MemProfVersionRequested, MemProfFullSchema),
+        ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
 /// Computer the overlap b/w profile BaseFilename and TestFileName,
@@ -210,12 +615,14 @@ static void overlapInput(const std::string &BaseFilename,
                          OverlapStats &Overlap,
                          const OverlapFuncFilters &FuncFilter,
                          raw_fd_ostream &OS, bool IsCS) {
-  auto ReaderOrErr = InstrProfReader::create(TestFilename);
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = InstrProfReader::create(TestFilename, *FS);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning sliently.
-    instrprof_error IPE = InstrProfError::take(std::move(E));
-    if (IPE != instrprof_error::empty_raw_profile)
-      WC->Errors.emplace_back(make_error<InstrProfError>(IPE), TestFilename);
+    auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
+    if (ErrorCode != instrprof_error::empty_raw_profile)
+      WC->Errors.emplace_back(make_error<InstrProfError>(ErrorCode, Msg),
+                              TestFilename);
     return;
   }
 
@@ -231,7 +638,8 @@ static void overlapInput(const std::string &BaseFilename,
 
 /// Load an input into a writer context.
 static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
-                      WriterContext *WC) {
+                      const InstrProfCorrelator *Correlator,
+                      const StringRef ProfiledBinary, WriterContext *WC) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
   // Copy the filename, because llvm::ThreadPool copied the input "const
@@ -239,19 +647,89 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   // invalid outside of this packaged task.
   std::string Filename = Input.Filename;
 
-  auto ReaderOrErr = InstrProfReader::create(Input.Filename);
+  using ::llvm::memprof::RawMemProfReader;
+  if (RawMemProfReader::hasFormat(Input.Filename)) {
+    auto ReaderOrErr = RawMemProfReader::create(Input.Filename, ProfiledBinary);
+    if (!ReaderOrErr) {
+      exitWithError(ReaderOrErr.takeError(), Input.Filename);
+    }
+    std::unique_ptr<RawMemProfReader> Reader = std::move(ReaderOrErr.get());
+    // Check if the profile types can be merged, e.g. clang frontend profiles
+    // should not be merged with memprof profiles.
+    if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
+      consumeError(std::move(E));
+      WC->Errors.emplace_back(
+          make_error<StringError>(
+              "Cannot merge MemProf profile with Clang generated profile.",
+              std::error_code()),
+          Filename);
+      return;
+    }
+
+    auto MemProfError = [&](Error E) {
+      auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
+      WC->Errors.emplace_back(make_error<InstrProfError>(ErrorCode, Msg),
+                              Filename);
+    };
+
+    // Add the frame mappings into the writer context.
+    const auto &IdToFrame = Reader->getFrameMapping();
+    for (const auto &I : IdToFrame) {
+      bool Succeeded = WC->Writer.addMemProfFrame(
+          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
+      // If we weren't able to add the frame mappings then it doesn't make sense
+      // to try to add the records from this profile.
+      if (!Succeeded)
+        return;
+    }
+
+    // Add the call stacks into the writer context.
+    const auto &CSIdToCallStacks = Reader->getCallStacks();
+    for (const auto &I : CSIdToCallStacks) {
+      bool Succeeded = WC->Writer.addMemProfCallStack(
+          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
+      // If we weren't able to add the call stacks then it doesn't make sense
+      // to try to add the records from this profile.
+      if (!Succeeded)
+        return;
+    }
+
+    const auto &FunctionProfileData = Reader->getProfileData();
+    // Add the memprof records into the writer context.
+    for (const auto &[GUID, Record] : FunctionProfileData) {
+      WC->Writer.addMemProfRecord(GUID, Record);
+    }
+    return;
+  }
+
+  auto FS = vfs::getRealFileSystem();
+  // TODO: This only saves the first non-fatal error from InstrProfReader, and
+  // then added to WriterContext::Errors. However, this is not extensible, if
+  // we have more non-fatal errors from InstrProfReader in the future. How
+  // should this interact with different -failure-mode?
+  std::optional<std::pair<Error, std::string>> ReaderWarning;
+  auto Warn = [&](Error E) {
+    if (ReaderWarning) {
+      consumeError(std::move(E));
+      return;
+    }
+    // Only show the first time an error occurs in this file.
+    auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+    ReaderWarning = {make_error<InstrProfError>(ErrCode, Msg), Filename};
+  };
+  auto ReaderOrErr =
+      InstrProfReader::create(Input.Filename, *FS, Correlator, Warn);
   if (Error E = ReaderOrErr.takeError()) {
-    // Skip the empty profiles by returning sliently.
-    instrprof_error IPE = InstrProfError::take(std::move(E));
-    if (IPE != instrprof_error::empty_raw_profile)
-      WC->Errors.emplace_back(make_error<InstrProfError>(IPE), Filename);
+    // Skip the empty profiles by returning silently.
+    auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+    if (ErrCode != instrprof_error::empty_raw_profile)
+      WC->Errors.emplace_back(make_error<InstrProfError>(ErrCode, Msg),
+                              Filename);
     return;
   }
 
   auto Reader = std::move(ReaderOrErr.get());
-  bool IsIRProfile = Reader->isIRLevelProfile();
-  bool HasCSIRProfile = Reader->hasCSIRLevelProfile();
-  if (Error E = WC->Writer.setIsIRLevelProfile(IsIRProfile, HasCSIRProfile)) {
+  if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
     consumeError(std::move(E));
     WC->Errors.emplace_back(
         make_error<StringError>(
@@ -260,7 +738,6 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
         Filename);
     return;
   }
-  WC->Writer.setInstrEntryBBEnabled(Reader->instrEntryBBEnabled());
 
   for (auto &I : *Reader) {
     if (Remapper)
@@ -274,16 +751,45 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       }
       Reported = true;
       // Only show hint the first time an error occurs.
-      instrprof_error IPE = InstrProfError::take(std::move(E));
+      auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
       std::unique_lock<std::mutex> ErrGuard{WC->ErrLock};
-      bool firstTime = WC->WriterErrorCodes.insert(IPE).second;
-      handleMergeWriterError(make_error<InstrProfError>(IPE), Input.Filename,
-                             FuncName, firstTime);
+      bool firstTime = WC->WriterErrorCodes.insert(ErrCode).second;
+      handleMergeWriterError(make_error<InstrProfError>(ErrCode, Msg),
+                             Input.Filename, FuncName, firstTime);
     });
   }
-  if (Reader->hasError())
-    if (Error E = Reader->getError())
+
+  const InstrProfSymtab &symtab = Reader->getSymtab();
+  const auto &VTableNames = symtab.getVTableNames();
+
+  for (const auto &kv : VTableNames) {
+    WC->Writer.addVTableName(kv.getKey());
+  }
+
+  if (Reader->hasTemporalProfile()) {
+    auto &Traces = Reader->getTemporalProfTraces(Input.Weight);
+    if (!Traces.empty())
+      WC->Writer.addTemporalProfileTraces(
+          Traces, Reader->getTemporalProfTraceStreamSize());
+  }
+  if (Reader->hasError()) {
+    if (Error E = Reader->getError()) {
       WC->Errors.emplace_back(std::move(E), Filename);
+      return;
+    }
+  }
+
+  std::vector<llvm::object::BuildID> BinaryIds;
+  if (Error E = Reader->readBinaryIds(BinaryIds)) {
+    WC->Errors.emplace_back(std::move(E), Filename);
+    return;
+  }
+  WC->Writer.addBinaryIds(BinaryIds);
+
+  if (ReaderWarning) {
+    WC->Errors.emplace_back(std::move(ReaderWarning->first),
+                            ReaderWarning->second);
+  }
 }
 
 /// Merge the \p Src writer context into \p Dst.
@@ -292,13 +798,72 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
     Dst->Errors.push_back(std::move(ErrorPair));
   Src->Errors.clear();
 
+  if (Error E = Dst->Writer.mergeProfileKind(Src->Writer.getProfileKind()))
+    exitWithError(std::move(E));
+
   Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
-    instrprof_error IPE = InstrProfError::take(std::move(E));
+    auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
     std::unique_lock<std::mutex> ErrGuard{Dst->ErrLock};
-    bool firstTime = Dst->WriterErrorCodes.insert(IPE).second;
+    bool firstTime = Dst->WriterErrorCodes.insert(ErrorCode).second;
     if (firstTime)
-      warn(toString(make_error<InstrProfError>(IPE)));
+      warn(toString(make_error<InstrProfError>(ErrorCode, Msg)));
   });
+}
+
+static StringRef
+getFuncName(const StringMap<InstrProfWriter::ProfilingData>::value_type &Val) {
+  return Val.first();
+}
+
+static std::string
+getFuncName(const SampleProfileMap::value_type &Val) {
+  return Val.second.getContext().toString();
+}
+
+template <typename T>
+static void filterFunctions(T &ProfileMap) {
+  bool hasFilter = !FuncNameFilter.empty();
+  bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
+  if (!hasFilter && !hasNegativeFilter)
+    return;
+
+  // If filter starts with '?' it is MSVC mangled name, not a regex.
+  llvm::Regex ProbablyMSVCMangledName("[?@$_0-9A-Za-z]+");
+  if (hasFilter && FuncNameFilter[0] == '?' &&
+      ProbablyMSVCMangledName.match(FuncNameFilter))
+    FuncNameFilter = llvm::Regex::escape(FuncNameFilter);
+  if (hasNegativeFilter && FuncNameNegativeFilter[0] == '?' &&
+      ProbablyMSVCMangledName.match(FuncNameNegativeFilter))
+    FuncNameNegativeFilter = llvm::Regex::escape(FuncNameNegativeFilter);
+
+  size_t Count = ProfileMap.size();
+  llvm::Regex Pattern(FuncNameFilter);
+  llvm::Regex NegativePattern(FuncNameNegativeFilter);
+  std::string Error;
+  if (hasFilter && !Pattern.isValid(Error))
+    exitWithError(Error);
+  if (hasNegativeFilter && !NegativePattern.isValid(Error))
+    exitWithError(Error);
+
+  // Handle MD5 profile, so it is still able to match using the original name.
+  std::string MD5Name = std::to_string(llvm::MD5Hash(FuncNameFilter));
+  std::string NegativeMD5Name =
+      std::to_string(llvm::MD5Hash(FuncNameNegativeFilter));
+
+  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
+    auto Tmp = I++;
+    const auto &FuncName = getFuncName(*Tmp);
+    // Negative filter has higher precedence than positive filter.
+    if ((hasNegativeFilter &&
+         (NegativePattern.match(FuncName) ||
+          (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
+        (hasFilter && !(Pattern.match(FuncName) ||
+                        (FunctionSamples::UseMD5 && MD5Name == FuncName))))
+      ProfileMap.erase(Tmp);
+  }
+
+  llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions "
+               << "in the original profile are filtered.\n";
 }
 
 static void writeInstrProfile(StringRef OutputFilename,
@@ -315,6 +880,8 @@ static void writeInstrProfile(StringRef OutputFilename,
     if (Error E = Writer.writeText(Output))
       warn(std::move(E));
   } else {
+    if (Output.is_displayed())
+      exitWithError("cannot write a non-text format profile to the terminal");
     if (Error E = Writer.write(Output))
       warn(std::move(E));
   }
@@ -322,15 +889,38 @@ static void writeInstrProfile(StringRef OutputFilename,
 
 static void mergeInstrProfile(const WeightedFileVector &Inputs,
                               SymbolRemapper *Remapper,
-                              StringRef OutputFilename,
-                              ProfileFormat OutputFormat, bool OutputSparse,
-                              unsigned NumThreads, FailureMode FailMode) {
-  if (OutputFilename.compare("-") == 0)
-    exitWithError("Cannot write indexed profdata format to stdout.");
+                              int MaxDbgCorrelationWarnings,
+                              const StringRef ProfiledBinary) {
+  const uint64_t TraceReservoirSize = TemporalProfTraceReservoirSize.getValue();
+  const uint64_t MaxTraceLength = TemporalProfMaxTraceLength.getValue();
+  if (OutputFormat == PF_Compact_Binary)
+    exitWithError("Compact Binary is deprecated");
+  if (OutputFormat != PF_Binary && OutputFormat != PF_Ext_Binary &&
+      OutputFormat != PF_Text)
+    exitWithError("unknown format is specified");
 
-  if (OutputFormat != PF_Binary && OutputFormat != PF_Compact_Binary &&
-      OutputFormat != PF_Ext_Binary && OutputFormat != PF_Text)
-    exitWithError("Unknown format is specified.");
+  // TODO: Maybe we should support correlation with mixture of different
+  // correlation modes(w/wo debug-info/object correlation).
+  if (!DebugInfoFilename.empty() && !BinaryFilename.empty())
+    exitWithError("Expected only one of -debug-info, -binary-file");
+  std::string CorrelateFilename;
+  ProfCorrelatorKind CorrelateKind = ProfCorrelatorKind::NONE;
+  if (!DebugInfoFilename.empty()) {
+    CorrelateFilename = DebugInfoFilename;
+    CorrelateKind = ProfCorrelatorKind::DEBUG_INFO;
+  } else if (!BinaryFilename.empty()) {
+    CorrelateFilename = BinaryFilename;
+    CorrelateKind = ProfCorrelatorKind::BINARY;
+  }
+
+  std::unique_ptr<InstrProfCorrelator> Correlator;
+  if (CorrelateKind != InstrProfCorrelator::NONE) {
+    if (auto Err = InstrProfCorrelator::get(CorrelateFilename, CorrelateKind)
+                       .moveInto(Correlator))
+      exitWithError(std::move(Err), CorrelateFilename);
+    if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
+      exitWithError(std::move(Err), CorrelateFilename);
+  }
 
   std::mutex ErrorLock;
   SmallSet<instrprof_error, 4> WriterErrorCodes;
@@ -339,26 +929,26 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if (NumThreads == 0)
     NumThreads = std::min(hardware_concurrency().compute_thread_count(),
                           unsigned((Inputs.size() + 1) / 2));
-  // FIXME: There's a bug here, where setting NumThreads = Inputs.size() fails
-  // the merge_empty_profile.test because the InstrProfWriter.ProfileKind isn't
-  // merged, thus the emitted file ends up with a PF_Unknown kind.
 
   // Initialize the writer contexts.
   SmallVector<std::unique_ptr<WriterContext>, 4> Contexts;
   for (unsigned I = 0; I < NumThreads; ++I)
     Contexts.emplace_back(std::make_unique<WriterContext>(
-        OutputSparse, ErrorLock, WriterErrorCodes));
+        OutputSparse, ErrorLock, WriterErrorCodes, TraceReservoirSize,
+        MaxTraceLength));
 
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
-      loadInput(Input, Remapper, Contexts[0].get());
+      loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
+                Contexts[0].get());
   } else {
-    ThreadPool Pool(hardware_concurrency(NumThreads));
+    DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
     for (const auto &Input : Inputs) {
-      Pool.async(loadInput, Input, Remapper, Contexts[Ctx].get());
+      Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
+                 Contexts[Ctx].get());
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();
@@ -391,9 +981,11 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       warn(toString(std::move(ErrorPair.first)), ErrorPair.second);
     }
   }
-  if (NumErrors == Inputs.size() ||
+  if ((NumErrors == Inputs.size() && FailMode == failIfAllAreInvalid) ||
       (NumErrors > 0 && FailMode == failIfAnyAreInvalid))
-    exitWithError("No profiles could be merged.");
+    exitWithError("no profile can be merged");
+
+  filterFunctions(Contexts[0]->Writer.getProfileData());
 
   writeInstrProfile(OutputFilename, OutputFormat, Contexts[0]->Writer);
 }
@@ -401,6 +993,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 /// The profile entry for a function in instrumentation profile.
 struct InstrProfileEntry {
   uint64_t MaxCount = 0;
+  uint64_t NumEdgeCounters = 0;
   float ZeroCounterRatio = 0.0;
   InstrProfRecord *ProfRecord;
   InstrProfileEntry(InstrProfRecord *Record);
@@ -416,33 +1009,49 @@ InstrProfileEntry::InstrProfileEntry(InstrProfRecord *Record) {
     ZeroCntNum += !Record->Counts[I];
   }
   ZeroCounterRatio = (float)ZeroCntNum / CntNum;
+  NumEdgeCounters = CntNum;
 }
 
-/// Either set all the counters in the instr profile entry \p IFE to -1
-/// in order to drop the profile or scale up the counters in \p IFP to
-/// be above hot threshold. We use the ratio of zero counters in the
-/// profile of a function to decide the profile is helpful or harmful
-/// for performance, and to choose whether to scale up or drop it.
-static void updateInstrProfileEntry(InstrProfileEntry &IFE,
+/// Either set all the counters in the instr profile entry \p IFE to
+/// -1 / -2 /in order to drop the profile or scale up the
+/// counters in \p IFP to be above hot / cold threshold. We use
+/// the ratio of zero counters in the profile of a function to
+/// decide the profile is helpful or harmful for performance,
+/// and to choose whether to scale up or drop it.
+static void updateInstrProfileEntry(InstrProfileEntry &IFE, bool SetToHot,
                                     uint64_t HotInstrThreshold,
+                                    uint64_t ColdInstrThreshold,
                                     float ZeroCounterThreshold) {
   InstrProfRecord *ProfRecord = IFE.ProfRecord;
   if (!IFE.MaxCount || IFE.ZeroCounterRatio > ZeroCounterThreshold) {
     // If all or most of the counters of the function are zero, the
-    // profile is unaccountable and shuld be dropped. Reset all the
-    // counters to be -1 and PGO profile-use will drop the profile.
+    // profile is unaccountable and should be dropped. Reset all the
+    // counters to be -1 / -2 and PGO profile-use will drop the profile.
     // All counters being -1 also implies that the function is hot so
     // PGO profile-use will also set the entry count metadata to be
     // above hot threshold.
-    for (size_t I = 0; I < ProfRecord->Counts.size(); ++I)
-      ProfRecord->Counts[I] = -1;
+    // All counters being -2 implies that the function is warm so
+    // PGO profile-use will also set the entry count metadata to be
+    // above cold threshold.
+    auto Kind =
+        (SetToHot ? InstrProfRecord::PseudoHot : InstrProfRecord::PseudoWarm);
+    ProfRecord->setPseudoCount(Kind);
     return;
   }
 
-  // Scale up the MaxCount to be multiple times above hot threshold.
+  // Scale up the MaxCount to be multiple times above hot / cold threshold.
   const unsigned MultiplyFactor = 3;
-  uint64_t Numerator = HotInstrThreshold * MultiplyFactor;
+  uint64_t Threshold = (SetToHot ? HotInstrThreshold : ColdInstrThreshold);
+  uint64_t Numerator = Threshold * MultiplyFactor;
+
+  // Make sure Threshold for warm counters is below the HotInstrThreshold.
+  if (!SetToHot && Threshold >= HotInstrThreshold) {
+    Threshold = (HotInstrThreshold + ColdInstrThreshold) / 2;
+  }
+
   uint64_t Denominator = IFE.MaxCount;
+  if (Numerator <= Denominator)
+    return;
   ProfRecord->scale(Numerator, Denominator, [&](instrprof_error E) {
     warn(toString(make_error<InstrProfError>(E)));
   });
@@ -450,6 +1059,25 @@ static void updateInstrProfileEntry(InstrProfileEntry &IFE,
 
 const uint64_t ColdPercentileIdx = 15;
 const uint64_t HotPercentileIdx = 11;
+
+using sampleprof::FSDiscriminatorPass;
+
+// Internal options to set FSDiscriminatorPass. Used in merge and show
+// commands.
+static cl::opt<FSDiscriminatorPass> FSDiscriminatorPassOption(
+    "fs-discriminator-pass", cl::init(PassLast), cl::Hidden,
+    cl::desc("Zero out the discriminator bits for the FS discrimiantor "
+             "pass beyond this value. The enum values are defined in "
+             "Support/Discriminator.h"),
+    cl::values(clEnumVal(Base, "Use base discriminators only"),
+               clEnumVal(Pass1, "Use base and pass 1 discriminators"),
+               clEnumVal(Pass2, "Use base and pass 1-2 discriminators"),
+               clEnumVal(Pass3, "Use base and pass 1-3 discriminators"),
+               clEnumVal(PassLast, "Use all discriminator bits (default)")));
+
+static unsigned getDiscriminatorMask() {
+  return getN1Bits(getFSPassBitEnd(FSDiscriminatorPassOption.getValue()));
+}
 
 /// Adjust the instr profile in \p WC based on the sample profile in
 /// \p Reader.
@@ -460,7 +1088,169 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
                    unsigned InstrProfColdThreshold) {
   // Function to its entry in instr profile.
   StringMap<InstrProfileEntry> InstrProfileMap;
+  StringMap<StringRef> StaticFuncMap;
   InstrProfSummaryBuilder IPBuilder(ProfileSummaryBuilder::DefaultCutoffs);
+
+  auto checkSampleProfileHasFUnique = [&Reader]() {
+    for (const auto &PD : Reader->getProfiles()) {
+      auto &FContext = PD.second.getContext();
+      if (FContext.toString().find(FunctionSamples::UniqSuffix) !=
+          std::string::npos) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  bool SampleProfileHasFUnique = checkSampleProfileHasFUnique();
+
+  auto buildStaticFuncMap = [&StaticFuncMap,
+                             SampleProfileHasFUnique](const StringRef Name) {
+    std::string FilePrefixes[] = {".cpp", "cc", ".c", ".hpp", ".h"};
+    size_t PrefixPos = StringRef::npos;
+    for (auto &FilePrefix : FilePrefixes) {
+      std::string NamePrefix = FilePrefix + kGlobalIdentifierDelimiter;
+      PrefixPos = Name.find_insensitive(NamePrefix);
+      if (PrefixPos == StringRef::npos)
+        continue;
+      PrefixPos += NamePrefix.size();
+      break;
+    }
+
+    if (PrefixPos == StringRef::npos) {
+      return;
+    }
+
+    StringRef NewName = Name.drop_front(PrefixPos);
+    StringRef FName = Name.substr(0, PrefixPos - 1);
+    if (NewName.size() == 0) {
+      return;
+    }
+
+    // This name should have a static linkage.
+    size_t PostfixPos = NewName.find(FunctionSamples::UniqSuffix);
+    bool ProfileHasFUnique = (PostfixPos != StringRef::npos);
+
+    // If sample profile and instrumented profile do not agree on symbol
+    // uniqification.
+    if (SampleProfileHasFUnique != ProfileHasFUnique) {
+      // If instrumented profile uses -funique-internal-linkage-symbols,
+      // we need to trim the name.
+      if (ProfileHasFUnique) {
+        NewName = NewName.substr(0, PostfixPos);
+      } else {
+        // If sample profile uses -funique-internal-linkage-symbols,
+        // we build the map.
+        std::string NStr =
+            NewName.str() + getUniqueInternalLinkagePostfix(FName);
+        NewName = StringRef(NStr);
+        StaticFuncMap[NewName] = Name;
+        return;
+      }
+    }
+
+    if (!StaticFuncMap.contains(NewName)) {
+      StaticFuncMap[NewName] = Name;
+    } else {
+      StaticFuncMap[NewName] = DuplicateNameStr;
+    }
+  };
+
+  // We need to flatten the SampleFDO profile as the InstrFDO
+  // profile does not have inlined callsite profiles.
+  // One caveat is the pre-inlined function -- their samples
+  // should be collapsed into the caller function.
+  // Here we do a DFS traversal to get the flatten profile
+  // info: the sum of entrycount and the max of maxcount.
+  // Here is the algorithm:
+  //   recursive (FS, root_name) {
+  //      name = FS->getName();
+  //      get samples for FS;
+  //      if (InstrProf.find(name) {
+  //        root_name = name;
+  //      } else {
+  //        if (name is in static_func map) {
+  //          root_name = static_name;
+  //        }
+  //      }
+  //      update the Map entry for root_name;
+  //      for (subfs: FS) {
+  //        recursive(subfs, root_name);
+  //      }
+  //   }
+  //
+  // Here is an example.
+  //
+  // SampleProfile:
+  // foo:12345:1000
+  // 1: 1000
+  // 2.1: 1000
+  // 15: 5000
+  // 4: bar:1000
+  //  1: 1000
+  //  2: goo:3000
+  //   1: 3000
+  // 8: bar:40000
+  //  1: 10000
+  //  2: goo:30000
+  //   1: 30000
+  //
+  // InstrProfile has two entries:
+  //  foo
+  //  bar.cc;bar
+  //
+  // After BuildMaxSampleMap, we should have the following in FlattenSampleMap:
+  // {"foo", {1000, 5000}}
+  // {"bar.cc;bar", {11000, 30000}}
+  //
+  // foo's has an entry count of 1000, and max body count of 5000.
+  // bar.cc;bar has an entry count of 11000 (sum two callsites of 1000 and
+  // 10000), and max count of 30000 (from the callsite in line 8).
+  //
+  // Note that goo's count will remain in bar.cc;bar() as it does not have an
+  // entry in InstrProfile.
+  llvm::StringMap<std::pair<uint64_t, uint64_t>> FlattenSampleMap;
+  auto BuildMaxSampleMap = [&FlattenSampleMap, &StaticFuncMap,
+                            &InstrProfileMap](const FunctionSamples &FS,
+                                              const StringRef &RootName) {
+    auto BuildMaxSampleMapImpl = [&](const FunctionSamples &FS,
+                                     const StringRef &RootName,
+                                     auto &BuildImpl) -> void {
+      std::string NameStr = FS.getFunction().str();
+      const StringRef Name = NameStr;
+      const StringRef *NewRootName = &RootName;
+      uint64_t EntrySample = FS.getHeadSamplesEstimate();
+      uint64_t MaxBodySample = FS.getMaxCountInside(/* SkipCallSite*/ true);
+
+      auto It = InstrProfileMap.find(Name);
+      if (It != InstrProfileMap.end()) {
+        NewRootName = &Name;
+      } else {
+        auto NewName = StaticFuncMap.find(Name);
+        if (NewName != StaticFuncMap.end()) {
+          It = InstrProfileMap.find(NewName->second.str());
+          if (NewName->second != DuplicateNameStr) {
+            NewRootName = &NewName->second;
+          }
+        } else {
+          // Here the EntrySample is of an inlined function, so we should not
+          // update the EntrySample in the map.
+          EntrySample = 0;
+        }
+      }
+      EntrySample += FlattenSampleMap[*NewRootName].first;
+      MaxBodySample =
+          std::max(FlattenSampleMap[*NewRootName].second, MaxBodySample);
+      FlattenSampleMap[*NewRootName] =
+          std::make_pair(EntrySample, MaxBodySample);
+
+      for (const auto &C : FS.getCallsiteSamples())
+        for (const auto &F : C.second)
+          BuildImpl(F.second, *NewRootName, BuildImpl);
+    };
+    BuildMaxSampleMapImpl(FS, RootName, BuildMaxSampleMapImpl);
+  };
+
   for (auto &PD : WC->Writer.getProfileData()) {
     // Populate IPBuilder.
     for (const auto &PDV : PD.getValue()) {
@@ -474,13 +1264,26 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
     // Initialize InstrProfileMap.
     InstrProfRecord *R = &PD.getValue().begin()->second;
-    InstrProfileMap[PD.getKey()] = InstrProfileEntry(R);
+    StringRef FullName = PD.getKey();
+    InstrProfileMap[FullName] = InstrProfileEntry(R);
+    buildStaticFuncMap(FullName);
+  }
+
+  for (auto &PD : Reader->getProfiles()) {
+    sampleprof::FunctionSamples &FS = PD.second;
+    std::string Name = FS.getFunction().str();
+    BuildMaxSampleMap(FS, Name);
   }
 
   ProfileSummary InstrPS = *IPBuilder.getSummary();
   ProfileSummary SamplePS = Reader->getSummary();
 
   // Compute cold thresholds for instr profile and sample profile.
+  uint64_t HotSampleThreshold =
+      ProfileSummaryBuilder::getEntryForPercentile(
+          SamplePS.getDetailedSummary(),
+          ProfileSummaryBuilder::DefaultCutoffs[HotPercentileIdx])
+          .MinCount;
   uint64_t ColdSampleThreshold =
       ProfileSummaryBuilder::getEntryForPercentile(
           SamplePS.getDetailedSummary(),
@@ -501,17 +1304,30 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   // Find hot/warm functions in sample profile which is cold in instr profile
   // and adjust the profiles of those functions in the instr profile.
-  for (const auto &PD : Reader->getProfiles()) {
-    StringRef FName = PD.getKey();
-    const sampleprof::FunctionSamples &FS = PD.getValue();
-    auto It = InstrProfileMap.find(FName);
-    if (FS.getHeadSamples() > ColdSampleThreshold &&
-        It != InstrProfileMap.end() &&
-        It->second.MaxCount <= ColdInstrThreshold &&
-        FS.getBodySamples().size() >= SupplMinSizeThreshold) {
-      updateInstrProfileEntry(It->second, HotInstrThreshold,
-                              ZeroCounterThreshold);
+  for (const auto &E : FlattenSampleMap) {
+    uint64_t SampleMaxCount = std::max(E.second.first, E.second.second);
+    if (SampleMaxCount < ColdSampleThreshold)
+      continue;
+    StringRef Name = E.first();
+    auto It = InstrProfileMap.find(Name);
+    if (It == InstrProfileMap.end()) {
+      auto NewName = StaticFuncMap.find(Name);
+      if (NewName != StaticFuncMap.end()) {
+        It = InstrProfileMap.find(NewName->second.str());
+        if (NewName->second == DuplicateNameStr) {
+          WithColor::warning()
+              << "Static function " << Name
+              << " has multiple promoted names, cannot adjust profile.\n";
+        }
+      }
     }
+    if (It == InstrProfileMap.end() ||
+        It->second.MaxCount > ColdInstrThreshold ||
+        It->second.NumEdgeCounters < SupplMinSizeThreshold)
+      continue;
+    bool SetToHot = SampleMaxCount >= HotSampleThreshold;
+    updateInstrProfileEntry(It->second, SetToHot, HotInstrThreshold,
+                            ColdInstrThreshold, ZeroCounterThreshold);
   }
 }
 
@@ -526,24 +1342,25 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 /// should be dropped. \p InstrProfColdThreshold is the user specified
 /// cold threshold which will override the cold threshold got from the
 /// instr profile summary.
-static void supplementInstrProfile(
-    const WeightedFileVector &Inputs, StringRef SampleFilename,
-    StringRef OutputFilename, ProfileFormat OutputFormat, bool OutputSparse,
-    unsigned SupplMinSizeThreshold, float ZeroCounterThreshold,
-    unsigned InstrProfColdThreshold) {
-  if (OutputFilename.compare("-") == 0)
-    exitWithError("Cannot write indexed profdata format to stdout.");
+static void supplementInstrProfile(const WeightedFileVector &Inputs,
+                                   StringRef SampleFilename, bool OutputSparse,
+                                   unsigned SupplMinSizeThreshold,
+                                   float ZeroCounterThreshold,
+                                   unsigned InstrProfColdThreshold) {
+  if (OutputFilename == "-")
+    exitWithError("cannot write indexed profdata format to stdout");
   if (Inputs.size() != 1)
-    exitWithError("Expect one input to be an instr profile.");
+    exitWithError("expect one input to be an instr profile");
   if (Inputs[0].Weight != 1)
-    exitWithError("Expect instr profile doesn't have weight.");
+    exitWithError("expect instr profile doesn't have weight");
 
   StringRef InstrFilename = Inputs[0].Filename;
 
   // Read sample profile.
   LLVMContext Context;
-  auto ReaderOrErr =
-      sampleprof::SampleProfileReader::create(SampleFilename.str(), Context);
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = sampleprof::SampleProfileReader::create(
+      SampleFilename.str(), Context, *FS, FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, SampleFilename);
   auto Reader = std::move(ReaderOrErr.get());
@@ -555,7 +1372,7 @@ static void supplementInstrProfile(
   SmallSet<instrprof_error, 4> WriterErrorCodes;
   auto WC = std::make_unique<WriterContext>(OutputSparse, ErrorLock,
                                             WriterErrorCodes);
-  loadInput(Inputs[0], nullptr, WC.get());
+  loadInput(Inputs[0], nullptr, nullptr, /*ProfiledBinary=*/"", WC.get());
   if (WC->Errors.size() > 0)
     exitWithError(std::move(WC->Errors[0].first), InstrFilename);
 
@@ -570,17 +1387,18 @@ static sampleprof::FunctionSamples
 remapSamples(const sampleprof::FunctionSamples &Samples,
              SymbolRemapper &Remapper, sampleprof_error &Error) {
   sampleprof::FunctionSamples Result;
-  Result.setName(Remapper(Samples.getName()));
+  Result.setFunction(Remapper(Samples.getFunction()));
   Result.addTotalSamples(Samples.getTotalSamples());
   Result.addHeadSamples(Samples.getHeadSamples());
   for (const auto &BodySample : Samples.getBodySamples()) {
-    Result.addBodySamples(BodySample.first.LineOffset,
-                          BodySample.first.Discriminator,
+    uint32_t MaskedDiscriminator =
+        BodySample.first.Discriminator & getDiscriminatorMask();
+    Result.addBodySamples(BodySample.first.LineOffset, MaskedDiscriminator,
                           BodySample.second.getSamples());
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
-                                    BodySample.first.Discriminator,
-                                    Remapper(Target.first()), Target.second);
+                                    MaskedDiscriminator,
+                                    Remapper(Target.first), Target.second);
     }
   }
   for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
@@ -589,8 +1407,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
     for (const auto &Callsite : CallsiteSamples.second) {
       sampleprof::FunctionSamples Remapped =
           remapSamples(Callsite.second, Remapper, Error);
-      MergeResult(Error,
-                  Target[std::string(Remapped.getName())].merge(Remapped));
+      MergeResult(Error, Target[Remapped.getFunction()].merge(Remapped));
     }
   }
   return Result;
@@ -599,7 +1416,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
 static sampleprof::SampleProfileFormat FormatMap[] = {
     sampleprof::SPF_None,
     sampleprof::SPF_Text,
-    sampleprof::SPF_Compact_Binary,
+    sampleprof::SPF_None,
     sampleprof::SPF_Ext_Binary,
     sampleprof::SPF_GCC,
     sampleprof::SPF_Binary};
@@ -625,8 +1442,8 @@ static void populateProfileSymbolList(MemoryBuffer *Buffer,
   StringRef Data = Buffer->getBuffer();
   Data.split(SymbolVec, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 
-  for (StringRef symbol : SymbolVec)
-    PSL.add(symbol);
+  for (StringRef SymbolStr : SymbolVec)
+    PSL.add(SymbolStr.trim());
 }
 
 static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
@@ -662,22 +1479,21 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
   }
 }
 
-static void
-mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
-                   StringRef OutputFilename, ProfileFormat OutputFormat,
-                   StringRef ProfileSymbolListFile, bool CompressAllSections,
-                   bool UseMD5, bool GenPartialProfile,
-                   bool SampleMergeColdContext, bool SampleTrimColdContext,
-                   FailureMode FailMode) {
+static void mergeSampleProfile(const WeightedFileVector &Inputs,
+                               SymbolRemapper *Remapper,
+                               StringRef ProfileSymbolListFile,
+                               size_t OutputSizeLimit) {
   using namespace sampleprof;
-  StringMap<FunctionSamples> ProfileMap;
+  SampleProfileMap ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
   LLVMContext Context;
   sampleprof::ProfileSymbolList WriterList;
-  Optional<bool> ProfileIsProbeBased;
-  Optional<bool> ProfileIsCS;
+  std::optional<bool> ProfileIsProbeBased;
+  std::optional<bool> ProfileIsCS;
   for (const auto &Input : Inputs) {
-    auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context);
+    auto FS = vfs::getRealFileSystem();
+    auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context, *FS,
+                                                   FSDiscriminatorPassOption);
     if (std::error_code EC = ReaderOrErr.getError()) {
       warnOrExitGivenError(FailMode, EC, Input.Filename);
       continue;
@@ -695,35 +1511,37 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
       continue;
     }
 
-    StringMap<FunctionSamples> &Profiles = Reader->getProfiles();
-    if (ProfileIsProbeBased.hasValue() &&
+    SampleProfileMap &Profiles = Reader->getProfiles();
+    if (ProfileIsProbeBased &&
         ProfileIsProbeBased != FunctionSamples::ProfileIsProbeBased)
       exitWithError(
           "cannot merge probe-based profile with non-probe-based profile");
     ProfileIsProbeBased = FunctionSamples::ProfileIsProbeBased;
-    if (ProfileIsCS.hasValue() && ProfileIsCS != FunctionSamples::ProfileIsCS)
+    if (ProfileIsCS && ProfileIsCS != FunctionSamples::ProfileIsCS)
       exitWithError("cannot merge CS profile with non-CS profile");
     ProfileIsCS = FunctionSamples::ProfileIsCS;
-    for (StringMap<FunctionSamples>::iterator I = Profiles.begin(),
-                                              E = Profiles.end();
+    for (SampleProfileMap::iterator I = Profiles.begin(), E = Profiles.end();
          I != E; ++I) {
       sampleprof_error Result = sampleprof_error::success;
       FunctionSamples Remapped =
           Remapper ? remapSamples(I->second, *Remapper, Result)
                    : FunctionSamples();
       FunctionSamples &Samples = Remapper ? Remapped : I->second;
-      StringRef FName = Samples.getNameWithContext();
-      MergeResult(Result, ProfileMap[FName].merge(Samples, Input.Weight));
+      SampleContext FContext = Samples.getContext();
+      MergeResult(Result, ProfileMap[FContext].merge(Samples, Input.Weight));
       if (Result != sampleprof_error::success) {
         std::error_code EC = make_error_code(Result);
-        handleMergeWriterError(errorCodeToError(EC), Input.Filename, FName);
+        handleMergeWriterError(errorCodeToError(EC), Input.Filename,
+                               FContext.toString());
       }
     }
 
-    std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
-        Reader->getProfileSymbolList();
-    if (ReaderList)
-      WriterList.merge(*ReaderList);
+    if (!DropProfileSymbolList) {
+      std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
+          Reader->getProfileSymbolList();
+      if (ReaderList)
+        WriterList.merge(*ReaderList);
+    }
   }
 
   if (ProfileIsCS && (SampleMergeColdContext || SampleTrimColdContext)) {
@@ -736,10 +1554,21 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
 
     // Trim and merge cold context profile using cold threshold above;
     SampleContextTrimmer(ProfileMap)
-        .trimAndMergeColdContextProfiles(SampleProfColdThreshold,
-                                         SampleTrimColdContext,
-                                         SampleMergeColdContext);
+        .trimAndMergeColdContextProfiles(
+            SampleProfColdThreshold, SampleTrimColdContext,
+            SampleMergeColdContext, SampleColdContextFrameDepth, false);
   }
+
+  if (ProfileLayout == llvm::sampleprof::SPL_Flat) {
+    ProfileConverter::flattenProfile(ProfileMap, FunctionSamples::ProfileIsCS);
+    ProfileIsCS = FunctionSamples::ProfileIsCS = false;
+  } else if (ProfileIsCS && ProfileLayout == llvm::sampleprof::SPL_Nest) {
+    ProfileConverter CSConverter(ProfileMap);
+    CSConverter.convertCSProfiles();
+    ProfileIsCS = FunctionSamples::ProfileIsCS = false;
+  }
+
+  filterFunctions(ProfileMap);
 
   auto WriterOrErr =
       SampleProfileWriter::create(OutputFilename, FormatMap[OutputFormat]);
@@ -752,7 +1581,10 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   auto Buffer = getInputFileBuf(ProfileSymbolListFile);
   handleExtBinaryWriter(*Writer, OutputFormat, Buffer.get(), WriterList,
                         CompressAllSections, UseMD5, GenPartialProfile);
-  if (std::error_code EC = Writer->write(ProfileMap))
+
+  // If OutputSizeLimit is 0 (default), it is the same as write().
+  if (std::error_code EC =
+          Writer->writeWithSizeLimit(ProfileMap, OutputSizeLimit))
     exitWithErrorCode(std::move(EC));
 }
 
@@ -762,7 +1594,7 @@ static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
 
   uint64_t Weight;
   if (WeightStr.getAsInteger(10, Weight) || Weight < 1)
-    exitWithError("Input weight must be a positive integer.");
+    exitWithError("input weight must be a positive integer");
 
   return {std::string(FileName), Weight};
 }
@@ -812,10 +1644,10 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
   for (const StringRef &FileWeightEntry : Entries) {
     StringRef SanitizedEntry = FileWeightEntry.trim(" \t\v\f\r");
     // Skip comments.
-    if (SanitizedEntry.startswith("#"))
+    if (SanitizedEntry.starts_with("#"))
       continue;
     // If there's no comma, it's an unweighted profile.
-    else if (SanitizedEntry.find(',') == StringRef::npos)
+    else if (!SanitizedEntry.contains(','))
       addWeightedInput(WFV, {std::string(SanitizedEntry), 1});
     else
       addWeightedInput(WFV, parseWeightedFile(SanitizedEntry));
@@ -823,103 +1655,6 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
 }
 
 static int merge_main(int argc, const char *argv[]) {
-  cl::list<std::string> InputFilenames(cl::Positional,
-                                       cl::desc("<filename...>"));
-  cl::list<std::string> WeightedInputFilenames("weighted-input",
-                                               cl::desc("<weight>,<filename>"));
-  cl::opt<std::string> InputFilenamesFile(
-      "input-files", cl::init(""),
-      cl::desc("Path to file containing newline-separated "
-               "[<weight>,]<filename> entries"));
-  cl::alias InputFilenamesFileA("f", cl::desc("Alias for --input-files"),
-                                cl::aliasopt(InputFilenamesFile));
-  cl::opt<bool> DumpInputFileList(
-      "dump-input-file-list", cl::init(false), cl::Hidden,
-      cl::desc("Dump the list of input files and their weights, then exit"));
-  cl::opt<std::string> RemappingFile("remapping-file", cl::value_desc("file"),
-                                     cl::desc("Symbol remapping file"));
-  cl::alias RemappingFileA("r", cl::desc("Alias for --remapping-file"),
-                           cl::aliasopt(RemappingFile));
-  cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
-                                      cl::init("-"), cl::Required,
-                                      cl::desc("Output file"));
-  cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
-                            cl::aliasopt(OutputFilename));
-  cl::opt<ProfileKinds> ProfileKind(
-      cl::desc("Profile kind:"), cl::init(instr),
-      cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
-                 clEnumVal(sample, "Sample profile")));
-  cl::opt<ProfileFormat> OutputFormat(
-      cl::desc("Format of output profile"), cl::init(PF_Binary),
-      cl::values(
-          clEnumValN(PF_Binary, "binary", "Binary encoding (default)"),
-          clEnumValN(PF_Compact_Binary, "compbinary",
-                     "Compact binary encoding"),
-          clEnumValN(PF_Ext_Binary, "extbinary", "Extensible binary encoding"),
-          clEnumValN(PF_Text, "text", "Text encoding"),
-          clEnumValN(PF_GCC, "gcc",
-                     "GCC encoding (only meaningful for -sample)")));
-  cl::opt<FailureMode> FailureMode(
-      "failure-mode", cl::init(failIfAnyAreInvalid), cl::desc("Failure mode:"),
-      cl::values(clEnumValN(failIfAnyAreInvalid, "any",
-                            "Fail if any profile is invalid."),
-                 clEnumValN(failIfAllAreInvalid, "all",
-                            "Fail only if all profiles are invalid.")));
-  cl::opt<bool> OutputSparse("sparse", cl::init(false),
-      cl::desc("Generate a sparse profile (only meaningful for -instr)"));
-  cl::opt<unsigned> NumThreads(
-      "num-threads", cl::init(0),
-      cl::desc("Number of merge threads to use (default: autodetect)"));
-  cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
-                        cl::aliasopt(NumThreads));
-  cl::opt<std::string> ProfileSymbolListFile(
-      "prof-sym-list", cl::init(""),
-      cl::desc("Path to file containing the list of function symbols "
-               "used to populate profile symbol list"));
-  cl::opt<bool> CompressAllSections(
-      "compress-all-sections", cl::init(false), cl::Hidden,
-      cl::desc("Compress all sections when writing the profile (only "
-               "meaningful for -extbinary)"));
-  cl::opt<bool> UseMD5(
-      "use-md5", cl::init(false), cl::Hidden,
-      cl::desc("Choose to use MD5 to represent string in name table (only "
-               "meaningful for -extbinary)"));
-  cl::opt<bool> SampleMergeColdContext(
-      "sample-merge-cold-context", cl::init(false), cl::Hidden,
-      cl::desc(
-          "Merge context sample profiles whose count is below cold threshold"));
-  cl::opt<bool> SampleTrimColdContext(
-      "sample-trim-cold-context", cl::init(false), cl::Hidden,
-      cl::desc(
-          "Trim context sample profiles whose count is below cold threshold"));
-  cl::opt<bool> GenPartialProfile(
-      "gen-partial-profile", cl::init(false), cl::Hidden,
-      cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
-  cl::opt<std::string> SupplInstrWithSample(
-      "supplement-instr-with-sample", cl::init(""), cl::Hidden,
-      cl::desc("Supplement an instr profile with sample profile, to correct "
-               "the profile unrepresentativeness issue. The sample "
-               "profile is the input of the flag. Output will be in instr "
-               "format (The flag only works with -instr)"));
-  cl::opt<float> ZeroCounterThreshold(
-      "zero-counter-threshold", cl::init(0.7), cl::Hidden,
-      cl::desc("For the function which is cold in instr profile but hot in "
-               "sample profile, if the ratio of the number of zero counters "
-               "divided by the the total number of counters is above the "
-               "threshold, the profile of the function will be regarded as "
-               "being harmful for performance and will be dropped. "));
-  cl::opt<unsigned> SupplMinSizeThreshold(
-      "suppl-min-size-threshold", cl::init(10), cl::Hidden,
-      cl::desc("If the size of a function is smaller than the threshold, "
-               "assume it can be inlined by PGO early inliner and it won't "
-               "be adjusted based on sample profile. "));
-  cl::opt<unsigned> InstrProfColdThreshold(
-      "instr-prof-cold-threshold", cl::init(0), cl::Hidden,
-      cl::desc("User specified cold threshold for instr profile which will "
-               "override the cold threshold got from profile summary. "));
-
-  cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
-
   WeightedFileVector WeightedInputs;
   for (StringRef Filename : InputFilenames)
     addWeightedInput(WeightedInputs, {std::string(Filename), 1});
@@ -932,8 +1667,8 @@ static int merge_main(int argc, const char *argv[]) {
   parseInputFilenamesFile(Buffer.get(), WeightedInputs);
 
   if (WeightedInputs.empty())
-    exitWithError("No input files specified. See " +
-                  sys::path::filename(argv[0]) + " -help");
+    exitWithError("no input files specified. See " +
+                  sys::path::filename(argv[0]) + " " + argv[1] + " -help");
 
   if (DumpInputFileList) {
     for (auto &WF : WeightedInputs)
@@ -950,21 +1685,18 @@ static int merge_main(int argc, const char *argv[]) {
       exitWithError(
           "-supplement-instr-with-sample can only work with -instr. ");
 
-    supplementInstrProfile(WeightedInputs, SupplInstrWithSample, OutputFilename,
-                           OutputFormat, OutputSparse, SupplMinSizeThreshold,
-                           ZeroCounterThreshold, InstrProfColdThreshold);
+    supplementInstrProfile(WeightedInputs, SupplInstrWithSample, OutputSparse,
+                           SupplMinSizeThreshold, ZeroCounterThreshold,
+                           InstrProfColdThreshold);
     return 0;
   }
 
   if (ProfileKind == instr)
-    mergeInstrProfile(WeightedInputs, Remapper.get(), OutputFilename,
-                      OutputFormat, OutputSparse, NumThreads, FailureMode);
+    mergeInstrProfile(WeightedInputs, Remapper.get(), MaxDbgCorrelationWarnings,
+                      ProfiledBinary);
   else
-    mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
-                       OutputFormat, ProfileSymbolListFile, CompressAllSections,
-                       UseMD5, GenPartialProfile, SampleMergeColdContext,
-                       SampleTrimColdContext, FailureMode);
-
+    mergeSampleProfile(WeightedInputs, Remapper.get(), ProfileSymbolListFile,
+                       OutputSizeLimit);
   return 0;
 }
 
@@ -980,7 +1712,7 @@ static void overlapInstrProfile(const std::string &BaseFilename,
   OverlapStats Overlap;
   Error E = Overlap.accumulateCounts(BaseFilename, TestFilename, IsCS);
   if (E)
-    exitWithError(std::move(E), "Error in getting profile count sums");
+    exitWithError(std::move(E), "error in getting profile count sums");
   if (Overlap.Base.CountSum < 1.0f) {
     OS << "Sum of edge counts for profile " << BaseFilename << " is 0.\n";
     exit(0);
@@ -989,7 +1721,7 @@ static void overlapInstrProfile(const std::string &BaseFilename,
     OS << "Sum of edge counts for profile " << TestFilename << " is 0.\n";
     exit(0);
   }
-  loadInput(WeightedInput, nullptr, &Context);
+  loadInput(WeightedInput, nullptr, nullptr, /*ProfiledBinary=*/"", &Context);
   overlapInput(BaseFilename, TestFilename, &Context, Overlap, FuncFilter, OS,
                IsCS);
   Overlap.dump(OS);
@@ -997,47 +1729,43 @@ static void overlapInstrProfile(const std::string &BaseFilename,
 
 namespace {
 struct SampleOverlapStats {
-  StringRef BaseName;
-  StringRef TestName;
+  SampleContext BaseName;
+  SampleContext TestName;
   // Number of overlap units
-  uint64_t OverlapCount;
+  uint64_t OverlapCount = 0;
   // Total samples of overlap units
-  uint64_t OverlapSample;
+  uint64_t OverlapSample = 0;
   // Number of and total samples of units that only present in base or test
   // profile
-  uint64_t BaseUniqueCount;
-  uint64_t BaseUniqueSample;
-  uint64_t TestUniqueCount;
-  uint64_t TestUniqueSample;
+  uint64_t BaseUniqueCount = 0;
+  uint64_t BaseUniqueSample = 0;
+  uint64_t TestUniqueCount = 0;
+  uint64_t TestUniqueSample = 0;
   // Number of units and total samples in base or test profile
-  uint64_t BaseCount;
-  uint64_t BaseSample;
-  uint64_t TestCount;
-  uint64_t TestSample;
+  uint64_t BaseCount = 0;
+  uint64_t BaseSample = 0;
+  uint64_t TestCount = 0;
+  uint64_t TestSample = 0;
   // Number of and total samples of units that present in at least one profile
-  uint64_t UnionCount;
-  uint64_t UnionSample;
+  uint64_t UnionCount = 0;
+  uint64_t UnionSample = 0;
   // Weighted similarity
-  double Similarity;
+  double Similarity = 0.0;
   // For SampleOverlapStats instances representing functions, weights of the
   // function in base and test profiles
-  double BaseWeight;
-  double TestWeight;
+  double BaseWeight = 0.0;
+  double TestWeight = 0.0;
 
-  SampleOverlapStats()
-      : OverlapCount(0), OverlapSample(0), BaseUniqueCount(0),
-        BaseUniqueSample(0), TestUniqueCount(0), TestUniqueSample(0),
-        BaseCount(0), BaseSample(0), TestCount(0), TestSample(0), UnionCount(0),
-        UnionSample(0), Similarity(0.0), BaseWeight(0.0), TestWeight(0.0) {}
+  SampleOverlapStats() = default;
 };
 } // end anonymous namespace
 
 namespace {
 struct FuncSampleStats {
-  uint64_t SampleSum;
-  uint64_t MaxSample;
-  uint64_t HotBlockCount;
-  FuncSampleStats() : SampleSum(0), MaxSample(0), HotBlockCount(0) {}
+  uint64_t SampleSum = 0;
+  uint64_t MaxSample = 0;
+  uint64_t HotBlockCount = 0;
+  FuncSampleStats() = default;
   FuncSampleStats(uint64_t SampleSum, uint64_t MaxSample,
                   uint64_t HotBlockCount)
       : SampleSum(SampleSum), MaxSample(MaxSample),
@@ -1201,6 +1929,9 @@ public:
   /// Load profiles specified by BaseFilename and TestFilename.
   std::error_code loadProfiles();
 
+  using FuncSampleStatsMap =
+      std::unordered_map<SampleContext, FuncSampleStats, SampleContext::Hash>;
+
 private:
   SampleOverlapStats ProfOverlap;
   SampleOverlapStats HotFuncOverlap;
@@ -1211,8 +1942,8 @@ private:
   std::unique_ptr<sampleprof::SampleProfileReader> TestReader;
   // BaseStats and TestStats hold FuncSampleStats for each function, with
   // function name as the key.
-  StringMap<FuncSampleStats> BaseStats;
-  StringMap<FuncSampleStats> TestStats;
+  FuncSampleStatsMap BaseStats;
+  FuncSampleStatsMap TestStats;
   // Low similarity threshold in floating point number
   double LowSimilarityThreshold;
   // Block samples above BaseHotThreshold or TestHotThreshold are considered hot
@@ -1251,8 +1982,8 @@ private:
   void updateHotBlockOverlap(uint64_t BaseSample, uint64_t TestSample,
                              uint64_t HotBlockCount);
 
-  void getHotFunctions(const StringMap<FuncSampleStats> &ProfStats,
-                       StringMap<FuncSampleStats> &HotFunc,
+  void getHotFunctions(const FuncSampleStatsMap &ProfStats,
+                       FuncSampleStatsMap &HotFunc,
                        uint64_t HotThreshold) const;
 
   void computeHotFuncOverlap();
@@ -1356,26 +2087,26 @@ void SampleOverlapAggregator::updateHotBlockOverlap(uint64_t BaseSample,
 }
 
 void SampleOverlapAggregator::getHotFunctions(
-    const StringMap<FuncSampleStats> &ProfStats,
-    StringMap<FuncSampleStats> &HotFunc, uint64_t HotThreshold) const {
+    const FuncSampleStatsMap &ProfStats, FuncSampleStatsMap &HotFunc,
+    uint64_t HotThreshold) const {
   for (const auto &F : ProfStats) {
     if (isFunctionHot(F.second, HotThreshold))
-      HotFunc.try_emplace(F.first(), F.second);
+      HotFunc.emplace(F.first, F.second);
   }
 }
 
 void SampleOverlapAggregator::computeHotFuncOverlap() {
-  StringMap<FuncSampleStats> BaseHotFunc;
+  FuncSampleStatsMap BaseHotFunc;
   getHotFunctions(BaseStats, BaseHotFunc, BaseHotThreshold);
   HotFuncOverlap.BaseCount = BaseHotFunc.size();
 
-  StringMap<FuncSampleStats> TestHotFunc;
+  FuncSampleStatsMap TestHotFunc;
   getHotFunctions(TestStats, TestHotFunc, TestHotThreshold);
   HotFuncOverlap.TestCount = TestHotFunc.size();
   HotFuncOverlap.UnionCount = HotFuncOverlap.TestCount;
 
   for (const auto &F : BaseHotFunc) {
-    if (TestHotFunc.count(F.first()))
+    if (TestHotFunc.count(F.first))
       ++HotFuncOverlap.OverlapCount;
     else
       ++HotFuncOverlap.UnionCount;
@@ -1587,23 +2318,25 @@ double SampleOverlapAggregator::computeSampleFunctionOverlap(
 void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
   using namespace sampleprof;
 
-  StringMap<const FunctionSamples *> BaseFuncProf;
+  std::unordered_map<SampleContext, const FunctionSamples *,
+                     SampleContext::Hash>
+      BaseFuncProf;
   const auto &BaseProfiles = BaseReader->getProfiles();
   for (const auto &BaseFunc : BaseProfiles) {
-    BaseFuncProf.try_emplace(BaseFunc.second.getNameWithContext(),
-                             &(BaseFunc.second));
+    BaseFuncProf.emplace(BaseFunc.second.getContext(), &(BaseFunc.second));
   }
   ProfOverlap.UnionCount = BaseFuncProf.size();
 
   const auto &TestProfiles = TestReader->getProfiles();
   for (const auto &TestFunc : TestProfiles) {
     SampleOverlapStats FuncOverlap;
-    FuncOverlap.TestName = TestFunc.second.getNameWithContext();
+    FuncOverlap.TestName = TestFunc.second.getContext();
     assert(TestStats.count(FuncOverlap.TestName) &&
            "TestStats should have records for all functions in test profile "
            "except inlinees");
     FuncOverlap.TestSample = TestStats[FuncOverlap.TestName].SampleSum;
 
+    bool Matched = false;
     const auto Match = BaseFuncProf.find(FuncOverlap.TestName);
     if (Match == BaseFuncProf.end()) {
       const FuncSampleStats &FuncStats = TestStats[FuncOverlap.TestName];
@@ -1625,7 +2358,7 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
 
       // Two functions match with each other. Compute function-level overlap and
       // aggregate them into profile-level overlap.
-      FuncOverlap.BaseName = Match->second->getNameWithContext();
+      FuncOverlap.BaseName = Match->second->getContext();
       assert(BaseStats.count(FuncOverlap.BaseName) &&
              "BaseStats should have records for all functions in base profile "
              "except inlinees");
@@ -1648,6 +2381,7 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
       // Remove matched base functions for later reporting functions not found
       // in test profile.
       BaseFuncProf.erase(Match);
+      Matched = true;
     }
 
     // Print function-level similarity information if specified by options.
@@ -1655,11 +2389,10 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
            "TestStats should have records for all functions in test profile "
            "except inlinees");
     if (TestStats[FuncOverlap.TestName].MaxSample >= FuncFilter.ValueCutoff ||
-        (Match != BaseFuncProf.end() &&
-         FuncOverlap.Similarity < LowSimilarityThreshold) ||
-        (Match != BaseFuncProf.end() && !FuncFilter.NameFilter.empty() &&
-         FuncOverlap.BaseName.find(FuncFilter.NameFilter) !=
-             FuncOverlap.BaseName.npos)) {
+        (Matched && FuncOverlap.Similarity < LowSimilarityThreshold) ||
+        (Matched && !FuncFilter.NameFilter.empty() &&
+         FuncOverlap.BaseName.toString().find(FuncFilter.NameFilter) !=
+             std::string::npos)) {
       assert(ProfOverlap.BaseSample > 0 &&
              "Total samples in base profile should be greater than 0");
       FuncOverlap.BaseWeight =
@@ -1674,11 +2407,10 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
 
   // Traverse through functions in base profile but not in test profile.
   for (const auto &F : BaseFuncProf) {
-    assert(BaseStats.count(F.second->getNameWithContext()) &&
+    assert(BaseStats.count(F.second->getContext()) &&
            "BaseStats should have records for all functions in base profile "
            "except inlinees");
-    const FuncSampleStats &FuncStats =
-        BaseStats[F.second->getNameWithContext()];
+    const FuncSampleStats &FuncStats = BaseStats[F.second->getContext()];
     ++ProfOverlap.BaseUniqueCount;
     ProfOverlap.BaseUniqueSample += FuncStats.SampleSum;
 
@@ -1709,7 +2441,7 @@ void SampleOverlapAggregator::initializeSampleProfileOverlap() {
     FuncSampleStats FuncStats;
     getFuncSampleStats(I.second, FuncStats, BaseHotThreshold);
     ProfOverlap.BaseSample += FuncStats.SampleSum;
-    BaseStats.try_emplace(I.second.getNameWithContext(), FuncStats);
+    BaseStats.emplace(I.second.getContext(), FuncStats);
   }
 
   const auto &TestProf = TestReader->getProfiles();
@@ -1718,7 +2450,7 @@ void SampleOverlapAggregator::initializeSampleProfileOverlap() {
     FuncSampleStats FuncStats;
     getFuncSampleStats(I.second, FuncStats, TestHotThreshold);
     ProfOverlap.TestSample += FuncStats.SampleSum;
-    TestStats.try_emplace(I.second.getNameWithContext(), FuncStats);
+    TestStats.emplace(I.second.getContext(), FuncStats);
   }
 
   ProfOverlap.BaseName = StringRef(BaseFilename);
@@ -1782,13 +2514,15 @@ void SampleOverlapAggregator::dumpFuncSimilarity(raw_fd_ostream &OS) const {
     FOS.PadToColumn(TestSampleCol);
     FOS << F.second.TestSample;
     FOS.PadToColumn(FuncNameCol);
-    FOS << F.second.TestName << "\n";
+    FOS << F.second.TestName.toString() << "\n";
   }
 }
 
 void SampleOverlapAggregator::dumpProgramSummary(raw_fd_ostream &OS) const {
-  OS << "Profile overlap infomation for base_profile: " << ProfOverlap.BaseName
-     << " and test_profile: " << ProfOverlap.TestName << "\nProgram level:\n";
+  OS << "Profile overlap infomation for base_profile: "
+     << ProfOverlap.BaseName.toString()
+     << " and test_profile: " << ProfOverlap.TestName.toString()
+     << "\nProgram level:\n";
 
   OS << "  Whole program profile similarity: "
      << format("%.3f%%", ProfOverlap.Similarity * 100) << "\n";
@@ -1859,11 +2593,14 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   using namespace sampleprof;
 
   LLVMContext Context;
-  auto BaseReaderOrErr = SampleProfileReader::create(BaseFilename, Context);
+  auto FS = vfs::getRealFileSystem();
+  auto BaseReaderOrErr = SampleProfileReader::create(BaseFilename, Context, *FS,
+                                                     FSDiscriminatorPassOption);
   if (std::error_code EC = BaseReaderOrErr.getError())
     exitWithErrorCode(EC, BaseFilename);
 
-  auto TestReaderOrErr = SampleProfileReader::create(TestFilename, Context);
+  auto TestReaderOrErr = SampleProfileReader::create(TestFilename, Context, *FS,
+                                                     FSDiscriminatorPassOption);
   if (std::error_code EC = TestReaderOrErr.getError())
     exitWithErrorCode(EC, TestFilename);
 
@@ -1882,22 +2619,13 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
 
   // Load BaseHotThreshold and TestHotThreshold as 99-percentile threshold in
   // profile summary.
-  const uint64_t HotCutoff = 990000;
   ProfileSummary &BasePS = BaseReader->getSummary();
-  for (const auto &SummaryEntry : BasePS.getDetailedSummary()) {
-    if (SummaryEntry.Cutoff == HotCutoff) {
-      BaseHotThreshold = SummaryEntry.MinCount;
-      break;
-    }
-  }
-
   ProfileSummary &TestPS = TestReader->getSummary();
-  for (const auto &SummaryEntry : TestPS.getDetailedSummary()) {
-    if (SummaryEntry.Cutoff == HotCutoff) {
-      TestHotThreshold = SummaryEntry.MinCount;
-      break;
-    }
-  }
+  BaseHotThreshold =
+      ProfileSummaryBuilder::getHotCountThreshold(BasePS.getDetailedSummary());
+  TestHotThreshold =
+      ProfileSummaryBuilder::getHotCountThreshold(TestPS.getDetailedSummary());
+
   return std::error_code();
 }
 
@@ -1927,63 +2655,32 @@ void overlapSampleProfile(const std::string &BaseFilename,
 }
 
 static int overlap_main(int argc, const char *argv[]) {
-  cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
-                                    cl::desc("<base profile file>"));
-  cl::opt<std::string> TestFilename(cl::Positional, cl::Required,
-                                    cl::desc("<test profile file>"));
-  cl::opt<std::string> Output("output", cl::value_desc("output"), cl::init("-"),
-                              cl::desc("Output file"));
-  cl::alias OutputA("o", cl::desc("Alias for --output"), cl::aliasopt(Output));
-  cl::opt<bool> IsCS(
-      "cs", cl::init(false),
-      cl::desc("For context sensitive PGO counts. Does not work with CSSPGO."));
-  cl::opt<unsigned long long> ValueCutoff(
-      "value-cutoff", cl::init(-1),
-      cl::desc(
-          "Function level overlap information for every function (with calling "
-          "context for csspgo) in test "
-          "profile with max count value greater then the parameter value"));
-  cl::opt<std::string> FuncNameFilter(
-      "function",
-      cl::desc("Function level overlap information for matching functions. For "
-               "CSSPGO this takes a a function name with calling context"));
-  cl::opt<unsigned long long> SimilarityCutoff(
-      "similarity-cutoff", cl::init(0),
-      cl::desc("For sample profiles, list function names (with calling context "
-               "for csspgo) for overlapped functions "
-               "with similarities below the cutoff (percentage times 10000)."));
-  cl::opt<ProfileKinds> ProfileKind(
-      cl::desc("Profile kind:"), cl::init(instr),
-      cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
-                 clEnumVal(sample, "Sample profile")));
-  cl::ParseCommandLineOptions(argc, argv, "LLVM profile data overlap tool\n");
-
   std::error_code EC;
-  raw_fd_ostream OS(Output.data(), EC, sys::fs::OF_TextWithCRLF);
+  raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
-    exitWithErrorCode(EC, Output);
+    exitWithErrorCode(EC, OutputFilename);
 
   if (ProfileKind == instr)
     overlapInstrProfile(BaseFilename, TestFilename,
-                        OverlapFuncFilters{ValueCutoff, FuncNameFilter}, OS,
-                        IsCS);
+                        OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter},
+                        OS, IsCS);
   else
     overlapSampleProfile(BaseFilename, TestFilename,
-                         OverlapFuncFilters{ValueCutoff, FuncNameFilter},
+                         OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter},
                          SimilarityCutoff, OS);
 
   return 0;
 }
 
-typedef struct ValueSitesStats {
-  ValueSitesStats()
-      : TotalNumValueSites(0), TotalNumValueSitesWithValueProfile(0),
-        TotalNumValues(0) {}
-  uint64_t TotalNumValueSites;
-  uint64_t TotalNumValueSitesWithValueProfile;
-  uint64_t TotalNumValues;
+namespace {
+struct ValueSitesStats {
+  ValueSitesStats() = default;
+  uint64_t TotalNumValueSites = 0;
+  uint64_t TotalNumValueSitesWithValueProfile = 0;
+  uint64_t TotalNumValues = 0;
   std::vector<unsigned> ValueSitesHistogram;
-} ValueSitesStats;
+};
+} // namespace
 
 static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
                                   ValueSitesStats &Stats, raw_fd_ostream &OS,
@@ -2012,7 +2709,7 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
       if (Symtab == nullptr)
         OS << format("%4" PRIu64, VD[V].Value);
       else
-        OS << Symtab->getFuncName(VD[V].Value);
+        OS << Symtab->getFuncOrVarName(VD[V].Value);
       OS << ", " << format("%10" PRId64, VD[V].Count) << " ] ("
          << format("%.2f%%", (VD[V].Count * 100.0 / SiteSum)) << ")\n";
     }
@@ -2033,18 +2730,16 @@ static void showValueSitesStats(raw_fd_ostream &OS, uint32_t VK,
   }
 }
 
-static int showInstrProfile(const std::string &Filename, bool ShowCounts,
-                            uint32_t TopN, bool ShowIndirectCallTargets,
-                            bool ShowMemOPSizes, bool ShowDetailedSummary,
-                            std::vector<uint32_t> DetailedSummaryCutoffs,
-                            bool ShowAllFunctions, bool ShowCS,
-                            uint64_t ValueCutoff, bool OnlyListBelow,
-                            const std::string &ShowFunction, bool TextFormat,
-                            raw_fd_ostream &OS) {
-  auto ReaderOrErr = InstrProfReader::create(Filename);
+static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+  if (SFormat == ShowFormat::Json)
+    exitWithError("JSON output is not supported for instr profiles");
+  if (SFormat == ShowFormat::Yaml)
+    exitWithError("YAML output is not supported for instr profiles");
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
   if (ShowDetailedSummary && Cutoffs.empty()) {
-    Cutoffs = {800000, 900000, 950000, 990000, 999000, 999900, 999990};
+    Cutoffs = ProfileSummaryBuilder::DefaultCutoffs;
   }
   InstrProfSummaryBuilder Builder(std::move(Cutoffs));
   if (Error E = ReaderOrErr.takeError())
@@ -2069,7 +2764,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
 
   if (!TextFormat && OnlyListBelow) {
     OS << "The list of functions with the maximum counter less than "
-       << ValueCutoff << ":\n";
+       << ShowValueCutoff << ":\n";
   }
 
   // Add marker so that IR-level instrumentation round-trips properly.
@@ -2082,9 +2777,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
       if (FuncIsCS != ShowCS)
         continue;
     }
-    bool Show =
-        ShowAllFunctions || (!ShowFunction.empty() &&
-                             Func.Name.find(ShowFunction) != Func.Name.npos);
+    bool Show = ShowAllFunctions ||
+                (!FuncNameFilter.empty() && Func.Name.contains(FuncNameFilter));
 
     bool doTextFormatDump = (Show && TextFormat);
 
@@ -2098,16 +2792,40 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     assert(Func.Counts.size() > 0 && "function missing entry counter");
     Builder.addRecord(Func);
 
+    if (ShowCovered) {
+      if (llvm::any_of(Func.Counts, [](uint64_t C) { return C; }))
+        OS << Func.Name << "\n";
+      continue;
+    }
+
     uint64_t FuncMax = 0;
     uint64_t FuncSum = 0;
+
+    auto PseudoKind = Func.getCountPseudoKind();
+    if (PseudoKind != InstrProfRecord::NotPseudo) {
+      if (Show) {
+        if (!ShownFunctions)
+          OS << "Counters:\n";
+        ++ShownFunctions;
+        OS << "  " << Func.Name << ":\n"
+           << "    Hash: " << format("0x%016" PRIx64, Func.Hash) << "\n"
+           << "    Counters: " << Func.Counts.size();
+        if (PseudoKind == InstrProfRecord::PseudoHot)
+          OS << "    <PseudoHot>\n";
+        else if (PseudoKind == InstrProfRecord::PseudoWarm)
+          OS << "    <PseudoWarm>\n";
+        else
+          llvm_unreachable("Unknown PseudoKind");
+      }
+      continue;
+    }
+
     for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
-      if (Func.Counts[I] == (uint64_t)-1)
-        continue;
       FuncMax = std::max(FuncMax, Func.Counts[I]);
       FuncSum += Func.Counts[I];
     }
 
-    if (FuncMax < ValueCutoff) {
+    if (FuncMax < ShowValueCutoff) {
       ++BelowCutoffFunctions;
       if (OnlyListBelow) {
         OS << "  " << Func.Name << ": (Max = " << FuncMax
@@ -2117,8 +2835,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     } else if (OnlyListBelow)
       continue;
 
-    if (TopN) {
-      if (HottestFuncs.size() == TopN) {
+    if (TopNFunctions) {
+      if (HottestFuncs.size() == TopNFunctions) {
         if (HottestFuncs.top().second < FuncMax) {
           HottestFuncs.pop();
           HottestFuncs.emplace(std::make_pair(std::string(Func.Name), FuncMax));
@@ -2143,6 +2861,10 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
         OS << "    Indirect Call Site Count: "
            << Func.getNumValueSites(IPVK_IndirectCallTarget) << "\n";
 
+      if (ShowVTables)
+        OS << "    Number of instrumented vtables: "
+           << Func.getNumValueSites(IPVK_VTableTarget) << "\n";
+
       uint32_t NumMemOPCalls = Func.getNumValueSites(IPVK_MemOPSize);
       if (ShowMemOPSizes && NumMemOPCalls > 0)
         OS << "    Number of Memory Intrinsics Calls: " << NumMemOPCalls
@@ -2164,6 +2886,13 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                               &(Reader->getSymtab()));
       }
 
+      if (ShowVTables) {
+        OS << "    VTable Results:\n";
+        traverseAllValueSites(Func, IPVK_VTableTarget,
+                              VPStats[IPVK_VTableTarget], OS,
+                              &(Reader->getSymtab()));
+      }
+
       if (ShowMemOPSizes && NumMemOPCalls > 0) {
         OS << "    Memory Intrinsic Size Results:\n";
         traverseAllValueSites(Func, IPVK_MemOPSize, VPStats[IPVK_MemOPSize], OS,
@@ -2174,7 +2903,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (Reader->hasError())
     exitWithError(Reader->getError(), Filename);
 
-  if (TextFormat)
+  if (TextFormat || ShowCovered)
     return 0;
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   bool IsIR = Reader->isIRLevelProfile();
@@ -2182,25 +2911,25 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (IsIR)
     OS << "  entry_first = " << Reader->instrEntryBBEnabled();
   OS << "\n";
-  if (ShowAllFunctions || !ShowFunction.empty())
+  if (ShowAllFunctions || !FuncNameFilter.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
   OS << "Total functions: " << PS->getNumFunctions() << "\n";
-  if (ValueCutoff > 0) {
-    OS << "Number of functions with maximum count (< " << ValueCutoff
+  if (ShowValueCutoff > 0) {
+    OS << "Number of functions with maximum count (< " << ShowValueCutoff
        << "): " << BelowCutoffFunctions << "\n";
-    OS << "Number of functions with maximum count (>= " << ValueCutoff
+    OS << "Number of functions with maximum count (>= " << ShowValueCutoff
        << "): " << PS->getNumFunctions() - BelowCutoffFunctions << "\n";
   }
   OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
   OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
 
-  if (TopN) {
+  if (TopNFunctions) {
     std::vector<std::pair<std::string, uint64_t>> SortedHottestFuncs;
     while (!HottestFuncs.empty()) {
       SortedHottestFuncs.emplace_back(HottestFuncs.top());
       HottestFuncs.pop();
     }
-    OS << "Top " << TopN
+    OS << "Top " << TopNFunctions
        << " functions with the largest internal block counts: \n";
     for (auto &hotfunc : llvm::reverse(SortedHottestFuncs))
       OS << "  " << hotfunc.first << ", max count = " << hotfunc.second << "\n";
@@ -2210,6 +2939,11 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     OS << "Statistics for indirect call sites profile:\n";
     showValueSitesStats(OS, IPVK_IndirectCallTarget,
                         VPStats[IPVK_IndirectCallTarget]);
+  }
+
+  if (ShownFunctions && ShowVTables) {
+    OS << "Statistics for vtable profile:\n";
+    showValueSitesStats(OS, IPVK_VTableTarget, VPStats[IPVK_VTableTarget]);
   }
 
   if (ShownFunctions && ShowMemOPSizes) {
@@ -2222,6 +2956,26 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     OS << "Total count: " << PS->getTotalCount() << "\n";
     PS->printDetailedSummary(OS);
   }
+
+  if (ShowBinaryIds)
+    if (Error E = Reader->printBinaryIds(OS))
+      exitWithError(std::move(E), Filename);
+
+  if (ShowProfileVersion)
+    OS << "Profile version: " << Reader->getVersion() << "\n";
+
+  if (ShowTemporalProfTraces) {
+    auto &Traces = Reader->getTemporalProfTraces();
+    OS << "Temporal Profile Traces (samples=" << Traces.size()
+       << " seen=" << Reader->getTemporalProfTraceStreamSize() << "):\n";
+    for (unsigned i = 0; i < Traces.size(); i++) {
+      OS << "  Temporal Profile Trace " << i << " (weight=" << Traces[i].Weight
+         << " count=" << Traces[i].FunctionNameRefs.size() << "):\n";
+      for (auto &NameRef : Traces[i].FunctionNameRefs)
+        OS << "    " << Reader->getSymtab().getFuncOrVarName(NameRef) << "\n";
+    }
+  }
+
   return 0;
 }
 
@@ -2237,19 +2991,17 @@ static void showSectionInfo(sampleprof::SampleProfileReader *Reader,
 
 namespace {
 struct HotFuncInfo {
-  StringRef FuncName;
-  uint64_t TotalCount;
-  double TotalCountPercent;
-  uint64_t MaxCount;
-  uint64_t EntryCount;
+  std::string FuncName;
+  uint64_t TotalCount = 0;
+  double TotalCountPercent = 0.0f;
+  uint64_t MaxCount = 0;
+  uint64_t EntryCount = 0;
 
-  HotFuncInfo()
-      : FuncName(), TotalCount(0), TotalCountPercent(0.0f), MaxCount(0),
-        EntryCount(0) {}
+  HotFuncInfo() = default;
 
   HotFuncInfo(StringRef FN, uint64_t TS, double TSP, uint64_t MS, uint64_t ES)
-      : FuncName(FN), TotalCount(TS), TotalCountPercent(TSP), MaxCount(MS),
-        EntryCount(ES) {}
+      : FuncName(FN.begin(), FN.end()), TotalCount(TS), TotalCountPercent(TSP),
+        MaxCount(MS), EntryCount(ES) {}
 };
 } // namespace
 
@@ -2264,7 +3016,7 @@ static void dumpHotFunctionList(const std::vector<std::string> &ColumnTitle,
                                 uint64_t HotFuncCount, uint64_t TotalFuncCount,
                                 uint64_t HotProfCount, uint64_t TotalProfCount,
                                 const std::string &HotFuncMetric,
-                                raw_fd_ostream &OS) {
+                                uint32_t TopNFunctions, raw_fd_ostream &OS) {
   assert(ColumnOffset.size() == ColumnTitle.size() &&
          "ColumnOffset and ColumnTitle should have the same size");
   assert(ColumnTitle.size() >= 4 &&
@@ -2293,7 +3045,10 @@ static void dumpHotFunctionList(const std::vector<std::string> &ColumnTitle,
   }
   FOS << "\n";
 
-  for (const HotFuncInfo &R : PrintValues) {
+  uint32_t Count = 0;
+  for (const auto &R : PrintValues) {
+    if (TopNFunctions && (Count++ == TopNFunctions))
+      break;
     FOS.PadToColumn(ColumnOffset[0]);
     FOS << R.TotalCount << " (" << format("%.2f%%", R.TotalCountPercent) << ")";
     FOS.PadToColumn(ColumnOffset[1]);
@@ -2305,9 +3060,9 @@ static void dumpHotFunctionList(const std::vector<std::string> &ColumnTitle,
   }
 }
 
-static int
-showHotFunctionList(const StringMap<sampleprof::FunctionSamples> &Profiles,
-                    ProfileSummary &PS, raw_fd_ostream &OS) {
+static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
+                               ProfileSummary &PS, uint32_t TopN,
+                               raw_fd_ostream &OS) {
   using namespace sampleprof;
 
   const uint32_t HotFuncCutoff = 990000;
@@ -2356,31 +3111,30 @@ showHotFunctionList(const StringMap<sampleprof::FunctionSamples> &Profiles,
         (ProfileTotalSample > 0)
             ? (Func.getTotalSamples() * 100.0) / ProfileTotalSample
             : 0;
-    PrintValues.emplace_back(HotFuncInfo(
-        Func.getNameWithContext(), Func.getTotalSamples(), TotalSamplePercent,
-        FuncPair.second.second, Func.getEntrySamples()));
+    PrintValues.emplace_back(
+        HotFuncInfo(Func.getContext().toString(), Func.getTotalSamples(),
+                    TotalSamplePercent, FuncPair.second.second,
+                    Func.getHeadSamplesEstimate()));
   }
   dumpHotFunctionList(ColumnTitle, ColumnOffset, PrintValues, HotFuncCount,
                       Profiles.size(), HotFuncSample, ProfileTotalSample,
-                      Metric, OS);
+                      Metric, TopN, OS);
 
   return 0;
 }
 
-static int showSampleProfile(const std::string &Filename, bool ShowCounts,
-                             bool ShowAllFunctions, bool ShowDetailedSummary,
-                             const std::string &ShowFunction,
-                             bool ShowProfileSymbolList,
-                             bool ShowSectionInfoOnly, bool ShowHotFuncList,
-                             raw_fd_ostream &OS) {
+static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+  if (SFormat == ShowFormat::Yaml)
+    exitWithError("YAML output is not supported for sample profiles");
   using namespace sampleprof;
   LLVMContext Context;
-  auto ReaderOrErr = SampleProfileReader::create(Filename, Context);
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = SampleProfileReader::create(Filename, Context, *FS,
+                                                 FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
-
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
     return 0;
@@ -2389,10 +3143,21 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
   if (std::error_code EC = Reader->read())
     exitWithErrorCode(EC, Filename);
 
-  if (ShowAllFunctions || ShowFunction.empty())
-    Reader->dump(OS);
-  else
-    Reader->dumpFunctionProfile(ShowFunction, OS);
+  if (ShowAllFunctions || FuncNameFilter.empty()) {
+    if (SFormat == ShowFormat::Json)
+      Reader->dumpJson(OS);
+    else
+      Reader->dump(OS);
+  } else {
+    if (SFormat == ShowFormat::Json)
+      exitWithError(
+          "the JSON format is supported only when all functions are to "
+          "be printed");
+
+    // TODO: parse context string to support filtering by contexts.
+    FunctionSamples *FS = Reader->getSamplesFor(StringRef(FuncNameFilter));
+    Reader->dumpFunctionProfile(FS ? *FS : FunctionSamples(), OS);
+  }
 
   if (ShowProfileSymbolList) {
     std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
@@ -2406,142 +3171,161 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
     PS.printDetailedSummary(OS);
   }
 
-  if (ShowHotFuncList)
-    showHotFunctionList(Reader->getProfiles(), Reader->getSummary(), OS);
+  if (ShowHotFuncList || TopNFunctions)
+    showHotFunctionList(Reader->getProfiles(), Reader->getSummary(),
+                        TopNFunctions, OS);
+
+  return 0;
+}
+
+static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+  if (SFormat == ShowFormat::Json)
+    exitWithError("JSON output is not supported for MemProf");
+  auto ReaderOr = llvm::memprof::RawMemProfReader::create(
+      Filename, ProfiledBinary, /*KeepNames=*/true);
+  if (Error E = ReaderOr.takeError())
+    // Since the error can be related to the profile or the binary we do not
+    // pass whence. Instead additional context is provided where necessary in
+    // the error message.
+    exitWithError(std::move(E), /*Whence*/ "");
+
+  std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
+      ReaderOr.get().release());
+
+  Reader->printYAML(OS);
+  return 0;
+}
+
+static int showDebugInfoCorrelation(const std::string &Filename,
+                                    ShowFormat SFormat, raw_fd_ostream &OS) {
+  if (SFormat == ShowFormat::Json)
+    exitWithError("JSON output is not supported for debug info correlation");
+  std::unique_ptr<InstrProfCorrelator> Correlator;
+  if (auto Err =
+          InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO)
+              .moveInto(Correlator))
+    exitWithError(std::move(Err), Filename);
+  if (SFormat == ShowFormat::Yaml) {
+    if (auto Err = Correlator->dumpYaml(MaxDbgCorrelationWarnings, OS))
+      exitWithError(std::move(Err), Filename);
+    return 0;
+  }
+
+  if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
+    exitWithError(std::move(Err), Filename);
+
+  InstrProfSymtab Symtab;
+  if (auto Err = Symtab.create(
+          StringRef(Correlator->getNamesPointer(), Correlator->getNamesSize())))
+    exitWithError(std::move(Err), Filename);
+
+  if (ShowProfileSymbolList)
+    Symtab.dumpNames(OS);
+  // TODO: Read "Profile Data Type" from debug info to compute and show how many
+  // counters the section holds.
+  if (ShowDetailedSummary)
+    OS << "Counters section size: 0x"
+       << Twine::utohexstr(Correlator->getCountersSectionSize()) << " bytes\n";
+  OS << "Found " << Correlator->getDataSize() << " functions\n";
 
   return 0;
 }
 
 static int show_main(int argc, const char *argv[]) {
-  cl::opt<std::string> Filename(cl::Positional, cl::Required,
-                                cl::desc("<profdata-file>"));
-
-  cl::opt<bool> ShowCounts("counts", cl::init(false),
-                           cl::desc("Show counter values for shown functions"));
-  cl::opt<bool> TextFormat(
-      "text", cl::init(false),
-      cl::desc("Show instr profile data in text dump format"));
-  cl::opt<bool> ShowIndirectCallTargets(
-      "ic-targets", cl::init(false),
-      cl::desc("Show indirect call site target values for shown functions"));
-  cl::opt<bool> ShowMemOPSizes(
-      "memop-sizes", cl::init(false),
-      cl::desc("Show the profiled sizes of the memory intrinsic calls "
-               "for shown functions"));
-  cl::opt<bool> ShowDetailedSummary("detailed-summary", cl::init(false),
-                                    cl::desc("Show detailed profile summary"));
-  cl::list<uint32_t> DetailedSummaryCutoffs(
-      cl::CommaSeparated, "detailed-summary-cutoffs",
-      cl::desc(
-          "Cutoff percentages (times 10000) for generating detailed summary"),
-      cl::value_desc("800000,901000,999999"));
-  cl::opt<bool> ShowHotFuncList(
-      "hot-func-list", cl::init(false),
-      cl::desc("Show profile summary of a list of hot functions"));
-  cl::opt<bool> ShowAllFunctions("all-functions", cl::init(false),
-                                 cl::desc("Details for every function"));
-  cl::opt<bool> ShowCS("showcs", cl::init(false),
-                       cl::desc("Show context sensitive counts"));
-  cl::opt<std::string> ShowFunction("function",
-                                    cl::desc("Details for matching functions"));
-
-  cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
-                                      cl::init("-"), cl::desc("Output file"));
-  cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
-                            cl::aliasopt(OutputFilename));
-  cl::opt<ProfileKinds> ProfileKind(
-      cl::desc("Profile kind:"), cl::init(instr),
-      cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
-                 clEnumVal(sample, "Sample profile")));
-  cl::opt<uint32_t> TopNFunctions(
-      "topn", cl::init(0),
-      cl::desc("Show the list of functions with the largest internal counts"));
-  cl::opt<uint32_t> ValueCutoff(
-      "value-cutoff", cl::init(0),
-      cl::desc("Set the count value cutoff. Functions with the maximum count "
-               "less than this value will not be printed out. (Default is 0)"));
-  cl::opt<bool> OnlyListBelow(
-      "list-below-cutoff", cl::init(false),
-      cl::desc("Only output names of functions whose max count values are "
-               "below the cutoff value"));
-  cl::opt<bool> ShowProfileSymbolList(
-      "show-prof-sym-list", cl::init(false),
-      cl::desc("Show profile symbol list if it exists in the profile. "));
-  cl::opt<bool> ShowSectionInfoOnly(
-      "show-sec-info-only", cl::init(false),
-      cl::desc("Show the information of each section in the sample profile. "
-               "The flag is only usable when the sample profile is in "
-               "extbinary format"));
-
-  cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
-
-  if (OutputFilename.empty())
-    OutputFilename = "-";
+  if (Filename.empty() && DebugInfoFilename.empty())
+    exitWithError(
+        "the positional argument '<profdata-file>' is required unless '--" +
+        DebugInfoFilename.ArgStr + "' is provided");
 
   if (Filename == OutputFilename) {
-    errs() << sys::path::filename(argv[0])
+    errs() << sys::path::filename(argv[0]) << " " << argv[1]
            << ": Input file name cannot be the same as the output file name!\n";
     return 1;
   }
+  if (JsonFormat)
+    SFormat = ShowFormat::Json;
 
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
     exitWithErrorCode(EC, OutputFilename);
 
-  if (ShowAllFunctions && !ShowFunction.empty())
+  if (ShowAllFunctions && !FuncNameFilter.empty())
     WithColor::warning() << "-function argument ignored: showing all functions\n";
 
-  if (ProfileKind == instr)
-    return showInstrProfile(Filename, ShowCounts, TopNFunctions,
-                            ShowIndirectCallTargets, ShowMemOPSizes,
-                            ShowDetailedSummary, DetailedSummaryCutoffs,
-                            ShowAllFunctions, ShowCS, ValueCutoff,
-                            OnlyListBelow, ShowFunction, TextFormat, OS);
-  else
-    return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
-                             ShowDetailedSummary, ShowFunction,
-                             ShowProfileSymbolList, ShowSectionInfoOnly,
-                             ShowHotFuncList, OS);
+  if (!DebugInfoFilename.empty())
+    return showDebugInfoCorrelation(DebugInfoFilename, SFormat, OS);
+
+  if (ShowProfileKind == instr)
+    return showInstrProfile(SFormat, OS);
+  if (ShowProfileKind == sample)
+    return showSampleProfile(SFormat, OS);
+  return showMemProfProfile(SFormat, OS);
 }
 
-int main(int argc, const char *argv[]) {
-  InitLLVM X(argc, argv);
+static int order_main(int argc, const char *argv[]) {
+  std::error_code EC;
+  raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
+  if (EC)
+    exitWithErrorCode(EC, OutputFilename);
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
+  if (Error E = ReaderOrErr.takeError())
+    exitWithError(std::move(E), Filename);
+
+  auto Reader = std::move(ReaderOrErr.get());
+  for (auto &I : *Reader) {
+    // Read all entries
+    (void)I;
+  }
+  auto &Traces = Reader->getTemporalProfTraces();
+  auto Nodes = TemporalProfTraceTy::createBPFunctionNodes(Traces);
+  BalancedPartitioningConfig Config;
+  BalancedPartitioning BP(Config);
+  BP.run(Nodes);
+
+  OS << "# Ordered " << Nodes.size() << " functions\n";
+  OS << "# Warning: Mach-O may prefix symbols with \"_\" depending on the "
+        "linkage and this output does not take that into account. Some "
+        "post-processing may be required before passing to the linker via "
+        "-order_file.\n";
+  for (auto &N : Nodes) {
+    auto [Filename, ParsedFuncName] =
+        getParsedIRPGOName(Reader->getSymtab().getFuncOrVarName(N.Id));
+    if (!Filename.empty())
+      OS << "# " << Filename << "\n";
+    OS << ParsedFuncName << "\n";
+  }
+  return 0;
+}
+
+int llvm_profdata_main(int argc, char **argvNonConst,
+                       const llvm::ToolContext &) {
+  const char **argv = const_cast<const char **>(argvNonConst);
 
   StringRef ProgName(sys::path::filename(argv[0]));
-  if (argc > 1) {
-    int (*func)(int, const char *[]) = nullptr;
 
-    if (strcmp(argv[1], "merge") == 0)
-      func = merge_main;
-    else if (strcmp(argv[1], "show") == 0)
-      func = show_main;
-    else if (strcmp(argv[1], "overlap") == 0)
-      func = overlap_main;
-
-    if (func) {
-      std::string Invocation(ProgName.str() + " " + argv[1]);
-      argv[1] = Invocation.c_str();
-      return func(argc - 1, argv + 1);
-    }
-
-    if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-help") == 0 ||
-        strcmp(argv[1], "--help") == 0) {
-
-      errs() << "OVERVIEW: LLVM profile data tools\n\n"
-             << "USAGE: " << ProgName << " <command> [args...]\n"
-             << "USAGE: " << ProgName << " <command> -help\n\n"
-             << "See each individual command --help for more details.\n"
-             << "Available commands: merge, show, overlap\n";
-      return 0;
-    }
+  if (argc < 2) {
+    errs() << ProgName
+           << ": No subcommand specified! Run llvm-profata --help for usage.\n";
+    return 1;
   }
 
-  if (argc < 2)
-    errs() << ProgName << ": No command specified!\n";
-  else
-    errs() << ProgName << ": Unknown command!\n";
+  cl::ParseCommandLineOptions(argc, argv, "LLVM profile data\n");
 
-  errs() << "USAGE: " << ProgName << " <merge|show|overlap> [args...]\n";
+  if (ShowSubcommand)
+    return show_main(argc, argv);
+
+  if (OrderSubcommand)
+    return order_main(argc, argv);
+
+  if (OverlapSubcommand)
+    return overlap_main(argc, argv);
+
+  if (MergeSubcommand)
+    return merge_main(argc, argv);
+
+  errs() << ProgName
+         << ": Unknown command. Run llvm-profdata --help for usage.\n";
   return 1;
 }

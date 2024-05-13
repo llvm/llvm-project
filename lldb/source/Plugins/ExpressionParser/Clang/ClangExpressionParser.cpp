@@ -46,9 +46,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "ClangDiagnostic.h"
 #include "ClangExpressionParser.h"
@@ -71,7 +71,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/File.h"
@@ -84,17 +83,17 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
-#include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
 
 #include <cctype>
 #include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace llvm;
@@ -189,7 +188,7 @@ public:
       // when we move the expression result ot the ScratchASTContext). Let's at
       // least log these diagnostics until we find a way to properly render
       // them and display them to the user.
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+      Log *log = GetLog(LLDBLog::Expressions);
       if (log) {
         llvm::SmallVector<char, 32> diag_str;
         Info.FormatDiagnostic(diag_str);
@@ -208,20 +207,20 @@ public:
     m_passthrough->HandleDiagnostic(DiagLevel, Info);
     m_os->flush();
 
-    lldb_private::DiagnosticSeverity severity;
+    lldb::Severity severity;
     bool make_new_diagnostic = true;
 
     switch (DiagLevel) {
     case DiagnosticsEngine::Level::Fatal:
     case DiagnosticsEngine::Level::Error:
-      severity = eDiagnosticSeverityError;
+      severity = lldb::eSeverityError;
       break;
     case DiagnosticsEngine::Level::Warning:
-      severity = eDiagnosticSeverityWarning;
+      severity = lldb::eSeverityWarning;
       break;
     case DiagnosticsEngine::Level::Remark:
     case DiagnosticsEngine::Level::Ignored:
-      severity = eDiagnosticSeverityRemark;
+      severity = lldb::eSeverityInfo;
       break;
     case DiagnosticsEngine::Level::Note:
       m_manager->AppendMessageToDiagnostic(m_output);
@@ -239,7 +238,7 @@ public:
       if (!clang_diag || clang_diag->HasFixIts())
         break;
       // Ignore all Fix-Its that are not associated with an error.
-      if (clang_diag->GetSeverity() != eDiagnosticSeverityError)
+      if (clang_diag->GetSeverity() != lldb::eSeverityError)
         break;
       AddAllFixIts(clang_diag, Info);
       break;
@@ -257,7 +256,7 @@ public:
       // enough context in an expression for the warning to be useful.
       // FIXME: Should we try to filter out FixIts that apply to our generated
       // code, and not the user's expression?
-      if (severity == eDiagnosticSeverityError)
+      if (severity == lldb::eSeverityError)
         AddAllFixIts(new_diagnostic.get(), Info);
 
       m_manager->AddDiagnostic(std::move(new_diagnostic));
@@ -282,7 +281,7 @@ private:
 static void SetupModuleHeaderPaths(CompilerInstance *compiler,
                                    std::vector<std::string> include_directories,
                                    lldb::TargetSP target_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   HeaderSearchOptions &search_opts = compiler->getHeaderSearchOpts();
 
@@ -364,7 +363,7 @@ ClangExpressionParser::ClangExpressionParser(
       m_pp_callbacks(nullptr),
       m_include_directories(std::move(include_directories)),
       m_filename(std::move(filename)) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   // We can't compile expressions without a target.  So if the exe_scope is
   // null or doesn't have a target, then we just need to get out of here.  I'll
@@ -390,25 +389,11 @@ ClangExpressionParser::ClangExpressionParser(
   // 1. Create a new compiler instance.
   m_compiler = std::make_unique<CompilerInstance>();
 
-  // When capturing a reproducer, hook up the file collector with clang to
-  // collector modules and headers.
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-    m_compiler->setModuleDepCollector(
-        std::make_shared<ModuleDependencyCollectorAdaptor>(
-            fp.GetFileCollector()));
-    DependencyOutputOptions &opts = m_compiler->getDependencyOutputOpts();
-    opts.IncludeSystemHeaders = true;
-    opts.IncludeModuleFiles = true;
-  }
-
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
-  lldb::LanguageType frame_lang =
-      expr.Language(); // defaults to lldb::eLanguageTypeUnknown
-  bool overridden_target_opts = false;
-  lldb_private::LanguageRuntime *lang_rt = nullptr;
+  // Defaults to lldb::eLanguageTypeUnknown.
+  lldb::LanguageType frame_lang = expr.Language().AsLanguageType();
 
   std::string abi;
   ArchSpec target_arch;
@@ -425,10 +410,9 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure the user hasn't provided a preferred execution language with
   // `expression --language X -- ...`
   if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
-    frame_lang = frame_sp->GetLanguage();
+    frame_lang = frame_sp->GetLanguage().AsLanguageType();
 
   if (process_sp && frame_lang != lldb::eLanguageTypeUnknown) {
-    lang_rt = process_sp->GetLanguageRuntime(frame_lang);
     LLDB_LOGF(log, "Frame has language of type %s",
               Language::GetNameForLanguageType(frame_lang));
   }
@@ -461,8 +445,8 @@ ClangExpressionParser::ClangExpressionParser(
   // Supported subsets of x86
   if (target_machine == llvm::Triple::x86 ||
       target_machine == llvm::Triple::x86_64) {
-    m_compiler->getTargetOpts().Features.push_back("+sse");
-    m_compiler->getTargetOpts().Features.push_back("+sse2");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse2");
   }
 
   // Set the target CPU to generate code for. This will be empty for any CPU
@@ -475,34 +459,7 @@ ClangExpressionParser::ClangExpressionParser(
   if (!abi.empty())
     m_compiler->getTargetOpts().ABI = abi;
 
-  // 3. Now allow the runtime to provide custom configuration options for the
-  // target. In this case, a specialized language runtime is available and we
-  // can query it for extra options. For 99% of use cases, this will not be
-  // needed and should be provided when basic platform detection is not enough.
-  // FIXME: Generalize this. Only RenderScriptRuntime currently supports this
-  // currently. Hardcoding this isn't ideal but it's better than LanguageRuntime
-  // having knowledge of clang::TargetOpts.
-  if (auto *renderscript_rt =
-          llvm::dyn_cast_or_null<RenderScriptRuntime>(lang_rt))
-    overridden_target_opts =
-        renderscript_rt->GetOverrideExprOptions(m_compiler->getTargetOpts());
-
-  if (overridden_target_opts)
-    if (log && log->GetVerbose()) {
-      LLDB_LOGV(
-          log, "Using overridden target options for the expression evaluation");
-
-      auto opts = m_compiler->getTargetOpts();
-      LLDB_LOGV(log, "Triple: '{0}'", opts.Triple);
-      LLDB_LOGV(log, "CPU: '{0}'", opts.CPU);
-      LLDB_LOGV(log, "FPMath: '{0}'", opts.FPMath);
-      LLDB_LOGV(log, "ABI: '{0}'", opts.ABI);
-      LLDB_LOGV(log, "LinkerVersion: '{0}'", opts.LinkerVersion);
-      StringList::LogDump(log, opts.FeaturesAsWritten, "FeaturesAsWritten");
-      StringList::LogDump(log, opts.Features, "Features");
-    }
-
-  // 4. Create and install the target on the compiler.
+  // 3. Create and install the target on the compiler.
   m_compiler->createDiagnostics();
   // Limit the number of error diagnostics we emit.
   // A value of 0 means no limit for both LLDB and Clang.
@@ -511,8 +468,6 @@ ClangExpressionParser::ClangExpressionParser(
   auto target_info = TargetInfo::CreateTargetInfo(
       m_compiler->getDiagnostics(), m_compiler->getInvocation().TargetOpts);
   if (log) {
-    LLDB_LOGF(log, "Using SIMD alignment: %d",
-              target_info->getSimdDefaultAlign());
     LLDB_LOGF(log, "Target datalayout string: '%s'",
               target_info->getDataLayoutString());
     LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
@@ -523,8 +478,8 @@ ClangExpressionParser::ClangExpressionParser(
 
   assert(m_compiler->hasTarget());
 
-  // 5. Set language options.
-  lldb::LanguageType language = expr.Language();
+  // 4. Set language options.
+  lldb::LanguageType language = expr.Language().AsLanguageType();
   LangOptions &lang_opts = m_compiler->getLangOpts();
 
   switch (language) {
@@ -553,15 +508,28 @@ ClangExpressionParser::ClangExpressionParser(
     // be re-evaluated in the future.
     lang_opts.CPlusPlus11 = true;
     break;
+  case lldb::eLanguageTypeC_plus_plus_20:
+    lang_opts.CPlusPlus20 = true;
+    [[fallthrough]];
+  case lldb::eLanguageTypeC_plus_plus_17:
+    // FIXME: add a separate case for CPlusPlus14. Currently folded into C++17
+    // because C++14 is the default standard for Clang but enabling CPlusPlus14
+    // expression evaluatino doesn't pass the test-suite cleanly.
+    lang_opts.CPlusPlus14 = true;
+    lang_opts.CPlusPlus17 = true;
+    [[fallthrough]];
   case lldb::eLanguageTypeC_plus_plus:
   case lldb::eLanguageTypeC_plus_plus_11:
   case lldb::eLanguageTypeC_plus_plus_14:
     lang_opts.CPlusPlus11 = true;
     m_compiler->getHeaderSearchOpts().UseLibcxx = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case lldb::eLanguageTypeC_plus_plus_03:
     lang_opts.CPlusPlus = true;
-    if (process_sp)
+    if (process_sp
+        // We're stopped in a frame without debug-info. The user probably
+        // intends to make global queries (which should include Objective-C).
+        && !(frame_sp && frame_sp->HasDebugInformation()))
       lang_opts.ObjC =
           process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
     break;
@@ -609,8 +577,8 @@ ClangExpressionParser::ClangExpressionParser(
     // FIXME: We should ask the driver for the appropriate default flags.
     lang_opts.GNUMode = true;
     lang_opts.GNUKeywords = true;
-    lang_opts.DoubleSquareBracketAttributes = true;
     lang_opts.CPlusPlus11 = true;
+    lang_opts.BuiltinHeadersInSystemModules = true;
 
     // The Darwin libc expects this macro to be set.
     lang_opts.GNUCVersion = 40201;
@@ -621,12 +589,19 @@ ClangExpressionParser::ClangExpressionParser(
 
   if (process_sp && lang_opts.ObjC) {
     if (auto *runtime = ObjCLanguageRuntime::Get(*process_sp)) {
-      if (runtime->GetRuntimeVersion() ==
-          ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
+      switch (runtime->GetRuntimeVersion()) {
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2:
         lang_opts.ObjCRuntime.set(ObjCRuntime::MacOSX, VersionTuple(10, 7));
-      else
+        break;
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eObjC_VersionUnknown:
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V1:
         lang_opts.ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
                                   VersionTuple(10, 7));
+        break;
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eGNUstep_libobjc2:
+        lang_opts.ObjCRuntime.set(ObjCRuntime::GNUstep, VersionTuple(2, 0));
+        break;
+      }
 
       if (runtime->HasNewLiteralsAndIndexing())
         lang_opts.DebuggerObjCLiteral = true;
@@ -658,15 +633,16 @@ ClangExpressionParser::ClangExpressionParser(
   //
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
-  m_compiler->getTarget().adjust(m_compiler->getLangOpts());
+  m_compiler->getTarget().adjust(m_compiler->getDiagnostics(),
+		                 m_compiler->getLangOpts());
 
-  // 6. Set up the diagnostic buffer for reporting errors
+  // 5. Set up the diagnostic buffer for reporting errors
 
   auto diag_mgr = new ClangDiagnosticManagerAdapter(
       m_compiler->getDiagnostics().getDiagnosticOptions());
   m_compiler->getDiagnostics().setClient(diag_mgr);
 
-  // 7. Set up the source management objects inside the compiler
+  // 6. Set up the source management objects inside the compiler
   m_compiler->createFileManager();
   if (!m_compiler->hasSourceManager())
     m_compiler->createSourceManager(m_compiler->getFileManager());
@@ -701,7 +677,7 @@ ClangExpressionParser::ClangExpressionParser(
     }
   }
 
-  // 8. Most of this we get from the CompilerInstance, but we also want to give
+  // 7. Most of this we get from the CompilerInstance, but we also want to give
   // the context an ExternalASTSource.
 
   auto &PP = m_compiler->getPreprocessor();
@@ -712,7 +688,7 @@ ClangExpressionParser::ClangExpressionParser(
   m_compiler->createASTContext();
   clang::ASTContext &ast_context = m_compiler->getASTContext();
 
-  m_ast_context = std::make_unique<TypeSystemClang>(
+  m_ast_context = std::make_shared<TypeSystemClang>(
       "Expression ASTContext for '" + m_filename + "'", ast_context);
 
   std::string module_name("$__lldb_module");
@@ -720,11 +696,12 @@ ClangExpressionParser::ClangExpressionParser(
   m_llvm_context = std::make_unique<LLVMContext>();
   m_code_generator.reset(CreateLLVMCodeGen(
       m_compiler->getDiagnostics(), module_name,
-      m_compiler->getHeaderSearchOpts(), m_compiler->getPreprocessorOpts(),
-      m_compiler->getCodeGenOpts(), *m_llvm_context));
+      &m_compiler->getVirtualFileSystem(), m_compiler->getHeaderSearchOpts(),
+      m_compiler->getPreprocessorOpts(), m_compiler->getCodeGenOpts(),
+      *m_llvm_context));
 }
 
-ClangExpressionParser::~ClangExpressionParser() {}
+ClangExpressionParser::~ClangExpressionParser() = default;
 
 namespace {
 
@@ -860,13 +837,13 @@ public:
     case CodeCompletionResult::RK_Declaration:
       return !(
           Result.Declaration->getIdentifier() &&
-          Result.Declaration->getIdentifier()->getName().startswith(Filter));
+          Result.Declaration->getIdentifier()->getName().starts_with(Filter));
     case CodeCompletionResult::RK_Keyword:
-      return !StringRef(Result.Keyword).startswith(Filter);
+      return !StringRef(Result.Keyword).starts_with(Filter);
     case CodeCompletionResult::RK_Macro:
-      return !Result.Macro->getName().startswith(Filter);
+      return !Result.Macro->getName().starts_with(Filter);
     case CodeCompletionResult::RK_Pattern:
-      return !StringRef(Result.Pattern->getAsString()).startswith(Filter);
+      return !StringRef(Result.Pattern->getAsString()).starts_with(Filter);
     }
     // If we trigger this assert or the above switch yields a warning, then
     // CodeCompletionResult has been enhanced with more kinds of completion
@@ -884,9 +861,9 @@ private:
   /// non-deterministic order, so this function should have no side effects.
   /// To make this easier to enforce, this function and all its parameters
   /// should always be const-qualified.
-  /// \return Returns llvm::None if no completion should be provided for the
+  /// \return Returns std::nullopt if no completion should be provided for the
   ///         given CodeCompletionResult.
-  llvm::Optional<CompletionWithPriority>
+  std::optional<CompletionWithPriority>
   getCompletionForResult(const CodeCompletionResult &R) const {
     std::string ToInsert;
     std::string Description;
@@ -930,10 +907,10 @@ private:
     }
     // We also filter some internal lldb identifiers here. The user
     // shouldn't see these.
-    if (llvm::StringRef(ToInsert).startswith("$__lldb_"))
-      return llvm::None;
+    if (llvm::StringRef(ToInsert).starts_with("$__lldb_"))
+      return std::nullopt;
     if (ToInsert.empty())
-      return llvm::None;
+      return std::nullopt;
     // Merge the suggested Token into the existing command line to comply
     // with the kind of result the lldb API expects.
     std::string CompletionSuggestion =
@@ -975,7 +952,7 @@ public:
         continue;
 
       CodeCompletionResult &R = Results[I];
-      llvm::Optional<CompletionWithPriority> CompletionAndPriority =
+      std::optional<CompletionWithPriority> CompletionAndPriority =
           getCompletionForResult(R);
       if (!CompletionAndPriority)
         continue;
@@ -994,7 +971,8 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates,
-                                 SourceLocation OpenParLoc) override {
+                                 SourceLocation OpenParLoc,
+                                 bool Braced) override {
     // At the moment we don't filter out any overloaded candidates.
   }
 
@@ -1068,7 +1046,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     }
 
     if (temp_fd != -1) {
-      lldb_private::NativeFile file(temp_fd, File::eOpenOptionWrite, true);
+      lldb_private::NativeFile file(temp_fd, File::eOpenOptionWriteOnly, true);
       const size_t expr_text_len = strlen(expr_text);
       size_t bytes_written = expr_text_len;
       if (file.Write(expr_text, bytes_written).Success()) {
@@ -1103,13 +1081,14 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   // While parsing the Sema will call this consumer with the provided
   // completion suggestions.
   if (completion_consumer) {
-    auto main_file = source_mgr.getFileEntryForID(source_mgr.getMainFileID());
+    auto main_file =
+        source_mgr.getFileEntryRefForID(source_mgr.getMainFileID());
     auto &PP = m_compiler->getPreprocessor();
     // Lines and columns start at 1 in Clang, but code completion positions are
     // indexed from 0, so we need to add 1 to the line and column here.
     ++completion_line;
     ++completion_column;
-    PP.SetCodeCompletionPoint(main_file, completion_line, completion_column);
+    PP.SetCodeCompletionPoint(*main_file, completion_line, completion_column);
   }
 
   ASTConsumer *ast_transformer =
@@ -1185,7 +1164,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
   if (m_pp_callbacks && m_pp_callbacks->hasErrors()) {
     num_errors++;
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "while importing modules:");
     diagnostic_manager.AppendMessageToDiagnostic(
         m_pp_callbacks->getErrorString());
@@ -1308,7 +1287,7 @@ static bool FindFunctionInModule(ConstString &mangled_name,
                                  llvm::Module *module, const char *orig_name) {
   for (const auto &func : module->getFunctionList()) {
     const StringRef &name = func.getName();
-    if (name.find(orig_name) != StringRef::npos) {
+    if (name.contains(orig_name)) {
       mangled_name.SetString(name);
       return true;
     }
@@ -1323,7 +1302,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
     bool &can_interpret, ExecutionPolicy execution_policy) {
   func_addr = LLDB_INVALID_ADDRESS;
   func_end = LLDB_INVALID_ADDRESS;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   lldb_private::Status err;
 
@@ -1365,10 +1344,10 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   {
     auto lang = m_expr.Language();
     LLDB_LOGF(log, "%s - Current expression language is %s\n", __FUNCTION__,
-              Language::GetNameForLanguageType(lang));
+              lang.GetDescription().data());
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
     if (process_sp && lang != lldb::eLanguageTypeUnknown) {
-      auto runtime = process_sp->GetLanguageRuntime(lang);
+      auto runtime = process_sp->GetLanguageRuntime(lang.AsLanguageType());
       if (runtime)
         runtime->GetIRPasses(custom_passes);
     }
@@ -1444,14 +1423,12 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
           ClangDynamicCheckerFunctions *dynamic_checkers =
               new ClangDynamicCheckerFunctions();
 
-          DiagnosticManager install_diagnostics;
-
-          if (!dynamic_checkers->Install(install_diagnostics, exe_ctx)) {
-            if (install_diagnostics.Diagnostics().size())
-              err.SetErrorString(install_diagnostics.GetString().c_str());
-            else
-              err.SetErrorString("couldn't install checkers, unknown error");
-
+          DiagnosticManager install_diags;
+          if (Error Err = dynamic_checkers->Install(install_diags, exe_ctx)) {
+            std::string ErrMsg = "couldn't install checkers: " + toString(std::move(Err));
+            if (install_diags.Diagnostics().size())
+              ErrMsg = ErrMsg + "\n" + install_diags.GetString().c_str();
+            err.SetErrorString(ErrMsg);
             return err;
           }
 

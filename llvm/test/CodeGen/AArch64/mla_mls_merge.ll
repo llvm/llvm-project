@@ -6,7 +6,7 @@ define <4 x i16> @test_mla0(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    umull v2.8h, v2.8b, v3.8b
 ; CHECK-NEXT:    umlal v2.8h, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %vmull.i = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %a, <8 x i8> %b)
@@ -22,7 +22,7 @@ define <4 x i16> @test_mla1(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v2.8h, v2.8b, v3.8b
 ; CHECK-NEXT:    smlal v2.8h, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %vmull.i = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %a, <8 x i8> %b)
@@ -38,7 +38,7 @@ define <2 x i32> @test_mla2(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    umull v2.4s, v2.4h, v3.4h
 ; CHECK-NEXT:    umlal v2.4s, v0.4h, v1.4h
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %a, <4 x i16> %b)
@@ -54,7 +54,7 @@ define <2 x i32> @test_mla3(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v2.4s, v2.4h, v3.4h
 ; CHECK-NEXT:    smlal v2.4s, v0.4h, v1.4h
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %a, <4 x i16> %b)
@@ -70,7 +70,7 @@ define <1 x i64> @test_mla4(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    umull v2.2d, v2.2s, v3.2s
 ; CHECK-NEXT:    umlal v2.2d, v0.2s, v1.2s
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %a, <2 x i32> %b)
@@ -86,7 +86,7 @@ define <1 x i64> @test_mla5(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v2.2d, v2.2s, v3.2s
 ; CHECK-NEXT:    smlal v2.2d, v0.2s, v1.2s
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %a, <2 x i32> %b)

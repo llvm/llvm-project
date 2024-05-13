@@ -24,9 +24,9 @@ template<typename T> using B = A<T>; // expected-note {{template}}
 B() -> B<int>; // expected-error {{cannot specify deduction guide for alias template 'B'}}
 // FIXME: expected-error@-1 {{declarator requires an identifier}}
 template<typename T> int C;
-C() -> int; // expected-error {{requires a type specifier}}
+C() -> int; // expected-error {{a type specifier is required}}
 template<typename T> void D();
-D() -> int; // expected-error {{requires a type specifier}}
+D() -> int; // expected-error {{a type specifier is required}}
 template<template<typename> typename TT> struct E { // expected-note 2{{template}}
   // FIXME: Should only diagnose this once!
   TT(int) -> TT<int>; // expected-error 2{{cannot specify deduction guide for template template parameter 'TT'}} expected-error {{requires an identifier}}
@@ -55,6 +55,7 @@ namespace WrongScope {
   }
   using N::NamedNS1;
   NamedNS1(int) -> NamedNS1<int>; // expected-error {{deduction guide must be declared in the same scope as template}}
+
   using namespace N;
   NamedNS2(int) -> NamedNS2<int>; // expected-error {{deduction guide must be declared in the same scope as template}}
   struct ClassMemberA {

@@ -92,12 +92,32 @@ public:
   /// Predicate to determine if an instruction can go in a forbidden slot.
   bool SafeInForbiddenSlot(const MachineInstr &MI) const;
 
+  /// Predicate to determine if an instruction can go in an FPU delay slot.
+  bool SafeInFPUDelaySlot(const MachineInstr &MIInSlot,
+                          const MachineInstr &FPUMI) const;
+
+  /// Predicate to determine if an instruction can go in a load delay slot.
+  bool SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
+                           const MachineInstr &LoadMI) const;
+
   /// Predicate to determine if an instruction has a forbidden slot.
   bool HasForbiddenSlot(const MachineInstr &MI) const;
+
+  /// Predicate to determine if an instruction has an FPU delay slot.
+  bool HasFPUDelaySlot(const MachineInstr &MI) const;
+
+  /// Predicate to determine if an instruction has a load delay slot.
+  bool HasLoadDelaySlot(const MachineInstr &MI) const;
 
   /// Insert nop instruction when hazard condition is found
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
+
+  /// Insert an ISA appropriate `nop`.
+  // FIXME: Add support for MIPS16e.
+  MachineInstrBuilder insertNop(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI,
+                                DebugLoc DL) const;
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
@@ -114,18 +134,19 @@ public:
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI,
-                           Register SrcReg, bool isKill, int FrameIndex,
+                           MachineBasicBlock::iterator MBBI, Register SrcReg,
+                           bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override {
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override {
     storeRegToStack(MBB, MBBI, SrcReg, isKill, FrameIndex, RC, TRI, 0);
   }
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI,
-                            Register DestReg, int FrameIndex,
-                            const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override {
+                            MachineBasicBlock::iterator MBBI, Register DestReg,
+                            int FrameIndex, const TargetRegisterClass *RC,
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override {
     loadRegFromStack(MBB, MBBI, DestReg, FrameIndex, RC, TRI, 0);
   }
 
@@ -165,11 +186,11 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  Optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
-                                      Register Reg) const override;
+  std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
+                                           Register Reg) const override;
 
-  Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
-                                                 Register Reg) const override;
+  std::optional<ParamLoadedValue>
+  describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
 protected:
   bool isZeroImm(const MachineOperand &op) const;

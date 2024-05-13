@@ -8,6 +8,5 @@
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 2>&1 | FileCheck %s
 // CHECK-NOT: unable to open file
 // CHECK: strip_diag_serialize_input.cpp
-// CHECK: strip_diag_serialize_input_clangcl.cpp
 
 #warning "diagnostic"

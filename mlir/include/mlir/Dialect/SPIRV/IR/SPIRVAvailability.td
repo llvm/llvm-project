@@ -19,6 +19,8 @@ include "mlir/IR/OpBase.td"
 class Availability {
   // The following are fields for controlling the generated C++ OpInterface.
 
+  // The namespace for the generated C++ OpInterface subclass.
+  string cppNamespace = ?;
   // The name for the generated C++ OpInterface subclass.
   string interfaceName = ?;
   // The documentation for the generated C++ OpInterface subclass.
@@ -54,35 +56,41 @@ class Availability {
   string instance = ?;
 }
 
-class MinVersionBase<string name, I32EnumAttr scheme, I32EnumAttrCase min>
+class MinVersionBase<string name, EnumAttr scheme, I32EnumAttrCase min>
     : Availability {
   let interfaceName = name;
 
-  let queryFnRetType = scheme.returnType;
+  let queryFnRetType = "std::optional<" # scheme.returnType # ">";
   let queryFnName = "getMinVersion";
 
-  let mergeAction = "$overall = static_cast<" # scheme.returnType # ">("
-                      "std::max($overall, $instance))";
-  let initializer = "static_cast<" # scheme.returnType # ">(uint32_t(0))";
-  let instanceType = scheme.cppNamespace # "::" # scheme.className;
+  let mergeAction = "{ "
+    "if ($overall) { "
+      "$overall = static_cast<" # scheme.returnType # ">("
+                  "std::max(*$overall, $instance)); "
+    "} else { $overall = $instance; }}";
+  let initializer = "::std::nullopt";
+  let instanceType = scheme.cppNamespace # "::" # scheme.enum.className;
 
-  let instance = scheme.cppNamespace # "::" # scheme.className # "::" #
+  let instance = scheme.cppNamespace # "::" # scheme.enum.className # "::" #
                  min.symbol;
 }
 
-class MaxVersionBase<string name, I32EnumAttr scheme, I32EnumAttrCase max>
+class MaxVersionBase<string name, EnumAttr scheme, I32EnumAttrCase max>
     : Availability {
   let interfaceName = name;
 
-  let queryFnRetType = scheme.returnType;
+  let queryFnRetType = "std::optional<" # scheme.returnType # ">";
   let queryFnName = "getMaxVersion";
 
-  let mergeAction = "$overall = static_cast<" # scheme.returnType # ">("
-                      "std::min($overall, $instance))";
-  let initializer = "static_cast<" # scheme.returnType # ">(~uint32_t(0))";
-  let instanceType = scheme.cppNamespace # "::" # scheme.className;
+  let mergeAction = "{ "
+    "if ($overall) { "
+      "$overall = static_cast<" # scheme.returnType # ">("
+                  "std::min(*$overall, $instance)); "
+    "} else { $overall = $instance; }}";
+  let initializer = "::std::nullopt";
+  let instanceType = scheme.cppNamespace # "::" # scheme.enum.className;
 
-  let instance = scheme.cppNamespace # "::" # scheme.className # "::" #
+  let instance = scheme.cppNamespace # "::" # scheme.enum.className # "::" #
                  max.symbol;
 }
 

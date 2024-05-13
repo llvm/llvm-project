@@ -3,11 +3,11 @@
 # Test the emission of heap alloc site instruction labels.
 
 --- |
-  declare i8* @alloc(i32) nounwind
+  declare ptr @alloc(i32) nounwind
 
   define i32 @test(i32 %x) nounwind !dbg !6 {
   entry:
-    call i8* @alloc(i32 %x), !dbg !11, !heapallocsite !2
+    call ptr @alloc(i32 %x), !dbg !11, !heapallocsite !2
     ret i32 0, !dbg !12
   }
 
@@ -34,6 +34,7 @@ name: test
 # CHECK-LABEL: {{^}}test:
 tracksRegLiveness: true
 frameInfo:
+  adjustsStack:    true
   hasCalls: true
 body: |
   bb.0.entry:

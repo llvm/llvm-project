@@ -10,7 +10,7 @@
 ; CHECK: .section .data.b,"awo",@progbits,foo
 
 ;; No 'L' (SHF_LINK_ORDER). sh_link=0.
-; SEC; Name    {{.*}} Flg Lk Inf
+; SEC: Name    {{.*}} Flg Lk Inf
 ; SEC: .data.a {{.*}} WAL  0   0
 ; SEC: .data.b {{.*}} WAL  0   0
 
@@ -20,4 +20,4 @@ declare void @foo()
 @a = global i32 1, !associated !0
 @b = global i32 1, !associated !0
 
-!0 = !{void ()* @foo}
+!0 = !{ptr @foo}

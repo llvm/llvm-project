@@ -18,6 +18,16 @@ def DefaultPfmCounters : ProcPfmCounters {}
 def : PfmCountersDefaultBinding<DefaultPfmCounters>;
 
 // Intel X86 Counters.
+defvar DefaultIntelPfmValidationCounters = [
+  PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">,
+  PfmValidationCounter<L1DCacheLoadMiss, "MEM_LOAD_UOPS_RETIRED:L1_MISS">,
+  PfmValidationCounter<L1ICacheLoadMiss, "L1-ICACHE-LOAD-MISSES">,
+  PfmValidationCounter<DataTLBLoadMiss, "DTLB_LOAD_MISSES:MISS_CAUSES_A_WALK">,
+  PfmValidationCounter<DataTLBStoreMiss, "DTLB_STORE_MISSES:MISS_CAUSES_A_WALK">,
+  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB_MISSES:MISS_CAUSES_A_WALK">,
+  PfmValidationCounter<BranchPredictionMiss, "BRANCH-MISSES">
+];
+
 def PentiumPfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
   let UopsCounter = PfmCounter<"uops_retired">;
@@ -34,11 +44,6 @@ def CorePfmCounters : ProcPfmCounters {
 }
 def : PfmCountersBinding<"yonah", CorePfmCounters>;
 def : PfmCountersBinding<"prescott", CorePfmCounters>;
-def : PfmCountersBinding<"core2", CorePfmCounters>;
-def : PfmCountersBinding<"penryn", CorePfmCounters>;
-def : PfmCountersBinding<"nehalem", CorePfmCounters>;
-def : PfmCountersBinding<"corei7", CorePfmCounters>;
-def : PfmCountersBinding<"westmere", CorePfmCounters>;
 
 def AtomPfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
@@ -50,6 +55,9 @@ def : PfmCountersBinding<"atom", AtomPfmCounters>;
 def SLMPfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
   let UopsCounter = PfmCounter<"uops_retired:any">;
+  let IssueCounters = [
+    PfmIssueCounter<"SLM_MEC_RSV", "mem_uop_retired:any_ld + mem_uop_retired:any_st">
+  ];
 }
 def : PfmCountersBinding<"silvermont", SLMPfmCounters>;
 def : PfmCountersBinding<"goldmont", SLMPfmCounters>;
@@ -63,6 +71,35 @@ def KnightPfmCounters : ProcPfmCounters {
 def : PfmCountersBinding<"knl", KnightPfmCounters>;
 def : PfmCountersBinding<"knm", KnightPfmCounters>;
 
+def Core2PfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = PfmCounter<"uops_retired:any">;
+  let IssueCounters = [
+    PfmIssueCounter<"SBPort0",  "rs_uops_dispatched_cycles:port_0">,
+    PfmIssueCounter<"SBPort1",  "rs_uops_dispatched_cycles:port_1">,
+    PfmIssueCounter<"SBPort23", "rs_uops_dispatched_cycles:port_2 + rs_uops_dispatched_cycles:port_3">,
+    PfmIssueCounter<"SBPort4",  "rs_uops_dispatched_cycles:port_4">,
+    PfmIssueCounter<"SBPort5",  "rs_uops_dispatched_cycles:port_5">
+  ];
+}
+def : PfmCountersBinding<"core2", Core2PfmCounters>;
+def : PfmCountersBinding<"penryn", Core2PfmCounters>;
+
+def NehalemPfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = PfmCounter<"uops_retired:any">;
+  let IssueCounters = [
+    PfmIssueCounter<"SBPort0",  "uops_executed:port0">,
+    PfmIssueCounter<"SBPort1",  "uops_executed:port1">,
+    PfmIssueCounter<"SBPort23", "uops_executed:port2_core + uops_executed:port3_core">,
+    PfmIssueCounter<"SBPort4",  "uops_executed:port4_core">,
+    PfmIssueCounter<"SBPort5",  "uops_executed:port5">
+  ];
+}
+def : PfmCountersBinding<"nehalem", NehalemPfmCounters>;
+def : PfmCountersBinding<"corei7", NehalemPfmCounters>;
+def : PfmCountersBinding<"westmere", NehalemPfmCounters>;
+
 def SandyBridgePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
   let UopsCounter = UopsIssuedPfmCounter;
@@ -73,6 +110,7 @@ def SandyBridgePfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SBPort4",  "uops_dispatched_port:port_4">,
     PfmIssueCounter<"SBPort5",  "uops_dispatched_port:port_5">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"sandybridge", SandyBridgePfmCounters>;
 def : PfmCountersBinding<"ivybridge", SandyBridgePfmCounters>;
@@ -90,6 +128,7 @@ def HaswellPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"HWPort6", "uops_executed_port:port_6">,
     PfmIssueCounter<"HWPort7", "uops_executed_port:port_7">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"haswell", HaswellPfmCounters>;
 
@@ -106,6 +145,7 @@ def BroadwellPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"BWPort6", "uops_executed_port:port_6">,
     PfmIssueCounter<"BWPort7", "uops_executed_port:port_7">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"broadwell", BroadwellPfmCounters>;
 
@@ -122,6 +162,7 @@ def SkylakeClientPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SKLPort6", "uops_dispatched_port:port_6">,
     PfmIssueCounter<"SKLPort7", "uops_dispatched_port:port_7">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"skylake", SkylakeClientPfmCounters>;
 
@@ -138,14 +179,58 @@ def SkylakeServerPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SKXPort6", "uops_dispatched_port:port_6">,
     PfmIssueCounter<"SKXPort7", "uops_dispatched_port:port_7">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"skylake-avx512", SkylakeServerPfmCounters>;
 def : PfmCountersBinding<"cascadelake", SkylakeServerPfmCounters>;
 def : PfmCountersBinding<"cannonlake", SkylakeServerPfmCounters>;
-def : PfmCountersBinding<"icelake-client", SkylakeServerPfmCounters>;
-def : PfmCountersBinding<"icelake-server", SkylakeServerPfmCounters>;
+
+def IceLakePfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    PfmIssueCounter<"ICXPort0",  "uops_dispatched_port:port_0">,
+    PfmIssueCounter<"ICXPort1",  "uops_dispatched_port:port_1">,
+    PfmIssueCounter<"ICXPort23", "uops_dispatched_port:port_2_3">,
+    PfmIssueCounter<"ICXPort49", "uops_dispatched_port:port_4_9">,
+    PfmIssueCounter<"ICXPort5",  "uops_dispatched_port:port_5">,
+    PfmIssueCounter<"ICXPort6",  "uops_dispatched_port:port_6">,
+    PfmIssueCounter<"ICXPort78", "uops_dispatched_port:port_7_8">
+  ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
+}
+def : PfmCountersBinding<"icelake-client", IceLakePfmCounters>;
+def : PfmCountersBinding<"icelake-server", IceLakePfmCounters>;
+def : PfmCountersBinding<"rocketlake", IceLakePfmCounters>;
+def : PfmCountersBinding<"tigerlake", IceLakePfmCounters>;
+
+def AlderLakePfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    PfmIssueCounter<"ADLPPort00", "uops_dispatched_port:port_0">,
+    PfmIssueCounter<"ADLPPort01", "uops_dispatched_port:port_1">,
+    PfmIssueCounter<"ADLPPort02_03_10", "uops_dispatched_port:port_2_3_10">,
+    PfmIssueCounter<"ADLPPort04_09", "uops_dispatched_port:port_4_9">,
+    PfmIssueCounter<"ADLPPort05_11", "uops_dispatched_port:port_5_11">,
+    PfmIssueCounter<"ADLPPort06", "uops_dispatched_port:port_6">,
+    PfmIssueCounter<"ADLPPort07_08", "uops_dispatched_port:port_7_8">
+  ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
+}
+def : PfmCountersBinding<"alderlake", AlderLakePfmCounters>;
 
 // AMD X86 Counters.
+defvar DefaultAMDPfmValidationCounters = [
+  PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">,
+  PfmValidationCounter<L1DCacheLoadMiss, "L1-DCACHE-LOAD-MISSES">,
+  PfmValidationCounter<L1DCacheStoreMiss, "L1-DCACHE-STORE-MISSES">,
+  PfmValidationCounter<L1ICacheLoadMiss, "L1-ICACHE-LOAD-MISSES">,
+  PfmValidationCounter<DataTLBLoadMiss, "DTLB-LOAD-MISSES">,
+  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB-LOAD-MISSES">,
+  PfmValidationCounter<BranchPredictionMiss, "BRANCH-MISSES">
+];
+
 // Set basic counters for AMD cpus that we know libpfm4 supports.
 def DefaultAMDPfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
@@ -219,8 +304,10 @@ def ZnVer1PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"ZnFPU1", "fpu_pipe_assignment:total1">,
     PfmIssueCounter<"ZnFPU2", "fpu_pipe_assignment:total2">,
     PfmIssueCounter<"ZnFPU3", "fpu_pipe_assignment:total3">,
+    PfmIssueCounter<"ZnAGU", "ls_dispatch:ld_st_dispatch + ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">,
     PfmIssueCounter<"ZnDivider", "div_op_count">
   ];
+  let ValidationCounters = DefaultAMDPfmValidationCounters;
 }
 def : PfmCountersBinding<"znver1", ZnVer1PfmCounters>;
 
@@ -228,9 +315,10 @@ def ZnVer2PfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cycles_not_in_halt">;
   let UopsCounter = PfmCounter<"retired_uops">;
   let IssueCounters = [
-    PfmIssueCounter<"Zn2AGU", "ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">,
+    PfmIssueCounter<"Zn2AGU", "ls_dispatch:ld_st_dispatch + ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">,
     PfmIssueCounter<"Zn2Divider", "div_op_count">
   ];
+  let ValidationCounters = DefaultAMDPfmValidationCounters;
 }
 def : PfmCountersBinding<"znver2", ZnVer2PfmCounters>;
 
@@ -244,5 +332,21 @@ def ZnVer3PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"Zn3Store", "ls_dispatch:store_dispatch">,
     PfmIssueCounter<"Zn3Divider", "div_op_count">
   ];
+  let ValidationCounters = DefaultAMDPfmValidationCounters;
 }
 def : PfmCountersBinding<"znver3", ZnVer3PfmCounters>;
+
+def ZnVer4PfmCounters : ProcPfmCounters {
+  let CycleCounter = PfmCounter<"cycles_not_in_halt">;
+  let UopsCounter = PfmCounter<"retired_ops">;
+  let IssueCounters = [
+    PfmIssueCounter<"Zn4Int", "ops_type_dispatched_from_decoder:int_disp_retire_mode">,
+    PfmIssueCounter<"Zn4FPU", "ops_type_dispatched_from_decoder:fp_disp_retire_mode">,
+    PfmIssueCounter<"Zn4Load", "ls_dispatch:ld_dispatch">,
+    PfmIssueCounter<"Zn4Store", "ls_dispatch:store_dispatch">,
+    PfmIssueCounter<"Zn4Divider", "div_op_count">,
+    PfmIssueCounter<"Zn4AGU", "ls_dispatch:ld_st_dispatch + ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">
+  ];
+  let ValidationCounters = DefaultAMDPfmValidationCounters;
+}
+def : PfmCountersBinding<"znver4", ZnVer4PfmCounters>;

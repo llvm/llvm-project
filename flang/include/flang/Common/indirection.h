@@ -148,17 +148,21 @@ public:
   A *operator->() const { return p_; }
   operator bool() const { return p_ != nullptr; }
   A *get() { return p_; }
+  auto get() const { return reinterpret_cast<std::add_const_t<A> *>(p_); }
   A *release() {
     A *result{p_};
     p_ = nullptr;
     return result;
   }
 
-  void Reset(A *p, void (*del)(A *)) {
+  void Reset(A *p = nullptr) {
     if (p_) {
       deleter_(p_);
     }
     p_ = p;
+  }
+  void Reset(A *p, void (*del)(A *)) {
+    Reset(p);
     deleter_ = del;
   }
 

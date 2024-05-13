@@ -1,17 +1,16 @@
 ; Check that we can handle edge splits leading into a landingpad
-; RUN: opt < %s -coro-split -S | FileCheck %s
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: define internal fastcc void @h.resume(
-define void @h(i1 %cond, i32 %x, i32 %y) "coroutine.presplit"="1" personality i32 0 {
+define void @h(i1 %cond, i32 %x, i32 %y) presplitcoroutine personality i32 0 {
 entry:
-  %id = call token @llvm.coro.id(i32 16, i8* null, i8* null, i8* null)
+  %id = call token @llvm.coro.id(i32 16, ptr null, ptr null, ptr null)
   %size = tail call i64 @llvm.coro.size.i64()
-  %alloc = call i8* @malloc(i64 %size)
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* %alloc)
+  %alloc = call ptr @malloc(i64 %size)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
   %sp = call i8 @llvm.coro.suspend(token none, i1 false)
   switch i8 %sp, label %coro.ret [
     i8 0, label %resume
@@ -32,14 +31,14 @@ invoke2:
 
 ; CHECK: pad.with.phi.from.invoke2:
 ; CHECK:   %0 = cleanuppad within none []
-; CHECK:   %y.reload.addr = getelementptr inbounds %h.Frame, %h.Frame* %FramePtr, i32 0, i32 3
-; CHECK:   %y.reload = load i32, i32* %y.reload.addr
+; CHECK:   %y.reload.addr = getelementptr inbounds %h.Frame, ptr %hdl, i32 0, i32 3
+; CHECK:   %y.reload = load i32, ptr %y.reload.addr
 ; CHECK:   cleanupret from %0 unwind label %pad.with.phi
 
 ; CHECK: pad.with.phi.from.invoke1:
 ; CHECK:   %1 = cleanuppad within none []
-; CHECK:   %x.reload.addr = getelementptr inbounds %h.Frame, %h.Frame* %FramePtr, i32 0, i32 2
-; CHECK:   %x.reload = load i32, i32* %x.reload.addr
+; CHECK:   %x.reload.addr = getelementptr inbounds %h.Frame, ptr %hdl, i32 0, i32 2
+; CHECK:   %x.reload = load i32, ptr %x.reload.addr
 ; CHECK:   cleanupret from %1 unwind label %pad.with.phi
 
 ; CHECK: pad.with.phi:
@@ -50,40 +49,40 @@ pad.with.phi:
   %switch = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %pad = catchpad within %switch [i8* null, i32 64, i8* null]
+  %pad = catchpad within %switch [ptr null, i32 64, ptr null]
   call void @use_val(i32 %val)
   catchret from %pad to label %coro.ret
 
 cleanup:                                        ; preds = %invoke.cont15, %if.else, %if.then, %ehcleanup21, %init.suspend
-  %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
-  call void @free(i8* %mem)
+  %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
+  call void @free(ptr %mem)
   br label %coro.ret
 
 coro.ret:
-  call i1 @llvm.coro.end(i8* null, i1 false)
+  call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind readonly
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
-declare noalias i8* @malloc(i64)
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
+declare noalias ptr @malloc(i64)
 declare i64 @llvm.coro.size.i64()
-declare i8* @llvm.coro.begin(token, i8* writeonly)
+declare ptr @llvm.coro.begin(token, ptr writeonly)
 
 ; Function Attrs: nounwind
-declare token @llvm.coro.save(i8*)
+declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
 
 ; Function Attrs: argmemonly nounwind
 declare void @may_throw1()
 declare void @may_throw2()
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @use_val(i32)
 declare void @__cxa_end_catch()
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(i8*, i1)
-declare void @free(i8*)
-declare i8* @llvm.coro.free(token, i8* nocapture readonly)
+declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @free(ptr)
+declare ptr @llvm.coro.free(token, ptr nocapture readonly)

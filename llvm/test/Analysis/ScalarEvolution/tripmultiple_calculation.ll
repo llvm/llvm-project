@@ -1,4 +1,3 @@
-; RUN: opt -S -analyze -enable-new-pm=0 -scalar-evolution < %s 2>&1 | FileCheck %s
 ; RUN: opt -S -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 2>&1 | FileCheck %s
 
 ; umin is represented using -1 * umax in scalar evolution. -1 is considered as the
@@ -14,7 +13,7 @@
 ;
 ; CHECK: Loop %for.body: Trip multiple is 1
 
-define i32 @foo(i32 %a, i32 %b, i32* %c) {
+define i32 @foo(i32 %a, i32 %b, ptr %c) {
 entry:
   %cmp = icmp ult i32 %a, %b
   %cond = select i1 %cmp, i32 %a, i32 %b
@@ -33,8 +32,8 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %c, i32 %i.09
-  store i32 %i.09, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %c, i32 %i.09
+  store i32 %i.09, ptr %arrayidx, align 4
   %inc = add nuw i32 %i.09, 1
   %cmp1 = icmp ult i32 %inc, %add
   br i1 %cmp1, label %for.body, label %for.cond.cleanup.loopexit
@@ -71,13 +70,13 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str2, i32 0, i32 0), i32 %i.05)
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str2, i32 %i.05)
   %inc = add nuw i32 %i.05, 1
   %cmp = icmp eq i32 %inc, %mul
   br i1 %cmp, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-declare i32 @printf(i8* nocapture readonly, ...)
+declare i32 @printf(ptr nocapture readonly, ...)
 
 
 ; If we couldn't prove no overflow for the multiply expression 24 * n,

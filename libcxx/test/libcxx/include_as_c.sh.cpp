@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -8,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // We're building as C, so this test doesn't work when building with modules.
-// UNSUPPORTED: -fmodules
+// UNSUPPORTED: clang-modules-build
 
 // GCC complains about unrecognized arguments because we're compiling the
 // file as C, but we're passing C++ flags on the command-line.
@@ -35,6 +34,7 @@
 #endif
 #include <math.h>
 #include <setjmp.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -46,8 +46,10 @@
 #ifndef _MSC_VER
 #    include <tgmath.h>
 #endif
-#include <wchar.h>
-#include <wctype.h>
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#   include <wchar.h>
+#   include <wctype.h>
+#endif
 
 int main(int argc, char **argv) {
   (void)argc;

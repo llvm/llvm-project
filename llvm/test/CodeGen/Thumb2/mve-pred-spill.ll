@@ -2,9 +2,77 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-LE
 ; RUN: llc -mtriple=thumbebv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-BE
 
+declare arm_aapcs_vfpcc <2 x i64> @ext_i64(<2 x i64> %c)
 declare arm_aapcs_vfpcc <4 x i32> @ext_i32(<4 x i32> %c)
 declare arm_aapcs_vfpcc <8 x i16> @ext_i16(<8 x i16> %c)
 declare arm_aapcs_vfpcc <16 x i8> @ext_i8(<16 x i8> %c)
+
+define arm_aapcs_vfpcc <2 x i64> @shuffle1_v2i64(<2 x i64> %src, <2 x i64> %a) {
+; CHECK-LE-LABEL: shuffle1_v2i64:
+; CHECK-LE:       @ %bb.0: @ %entry
+; CHECK-LE-NEXT:    .save {r7, lr}
+; CHECK-LE-NEXT:    push {r7, lr}
+; CHECK-LE-NEXT:    .vsave {d8, d9}
+; CHECK-LE-NEXT:    vpush {d8, d9}
+; CHECK-LE-NEXT:    .pad #8
+; CHECK-LE-NEXT:    sub sp, #8
+; CHECK-LE-NEXT:    vmov r0, r1, d0
+; CHECK-LE-NEXT:    vmov q4, q1
+; CHECK-LE-NEXT:    orrs r0, r1
+; CHECK-LE-NEXT:    mov.w r1, #0
+; CHECK-LE-NEXT:    csetm r0, eq
+; CHECK-LE-NEXT:    bfi r1, r0, #0, #8
+; CHECK-LE-NEXT:    vmov r0, r2, d1
+; CHECK-LE-NEXT:    vmov.i32 q0, #0x0
+; CHECK-LE-NEXT:    orrs r0, r2
+; CHECK-LE-NEXT:    csetm r0, eq
+; CHECK-LE-NEXT:    bfi r1, r0, #8, #8
+; CHECK-LE-NEXT:    vmsr p0, r1
+; CHECK-LE-NEXT:    vpsel q0, q1, q0
+; CHECK-LE-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
+; CHECK-LE-NEXT:    bl ext_i64
+; CHECK-LE-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-LE-NEXT:    vpsel q0, q4, q0
+; CHECK-LE-NEXT:    add sp, #8
+; CHECK-LE-NEXT:    vpop {d8, d9}
+; CHECK-LE-NEXT:    pop {r7, pc}
+;
+; CHECK-BE-LABEL: shuffle1_v2i64:
+; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    .save {r7, lr}
+; CHECK-BE-NEXT:    push {r7, lr}
+; CHECK-BE-NEXT:    .vsave {d8, d9}
+; CHECK-BE-NEXT:    vpush {d8, d9}
+; CHECK-BE-NEXT:    .pad #8
+; CHECK-BE-NEXT:    sub sp, #8
+; CHECK-BE-NEXT:    vmov q4, q1
+; CHECK-BE-NEXT:    vrev64.32 q1, q0
+; CHECK-BE-NEXT:    vmov r0, r1, d2
+; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
+; CHECK-BE-NEXT:    orrs r0, r1
+; CHECK-BE-NEXT:    mov.w r1, #0
+; CHECK-BE-NEXT:    csetm r0, eq
+; CHECK-BE-NEXT:    bfi r1, r0, #0, #8
+; CHECK-BE-NEXT:    vmov r0, r2, d3
+; CHECK-BE-NEXT:    orrs r0, r2
+; CHECK-BE-NEXT:    csetm r0, eq
+; CHECK-BE-NEXT:    bfi r1, r0, #8, #8
+; CHECK-BE-NEXT:    vmsr p0, r1
+; CHECK-BE-NEXT:    vpsel q0, q4, q0
+; CHECK-BE-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
+; CHECK-BE-NEXT:    bl ext_i64
+; CHECK-BE-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-BE-NEXT:    vpsel q0, q4, q0
+; CHECK-BE-NEXT:    add sp, #8
+; CHECK-BE-NEXT:    vpop {d8, d9}
+; CHECK-BE-NEXT:    pop {r7, pc}
+entry:
+  %c = icmp eq <2 x i64> %src, zeroinitializer
+  %s1 = select <2 x i1> %c, <2 x i64> %a, <2 x i64> zeroinitializer
+  %ext = call arm_aapcs_vfpcc <2 x i64> @ext_i64(<2 x i64> %s1)
+  %s = select <2 x i1> %c, <2 x i64> %a, <2 x i64> %ext
+  ret <2 x i64> %s
+}
 
 define arm_aapcs_vfpcc <4 x i32> @shuffle1_v4i32(<4 x i32> %src, <4 x i32> %a) {
 ; CHECK-LE-LABEL: shuffle1_v4i32:

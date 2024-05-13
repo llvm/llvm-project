@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx802 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx802 -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK: s_waitcnt
 define <2 x i16> @main(<2 x float>) #0 {

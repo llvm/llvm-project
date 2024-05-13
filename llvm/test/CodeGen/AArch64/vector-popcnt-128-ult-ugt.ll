@@ -4,8 +4,8 @@
 define <16 x i8> @ugt_1_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ugt_1_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #1
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -17,8 +17,8 @@ define <16 x i8> @ugt_1_v16i8(<16 x i8> %0) {
 define <16 x i8> @ult_2_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ult_2_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #2
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -30,8 +30,8 @@ define <16 x i8> @ult_2_v16i8(<16 x i8> %0) {
 define <16 x i8> @ugt_2_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ugt_2_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #2
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -43,8 +43,8 @@ define <16 x i8> @ugt_2_v16i8(<16 x i8> %0) {
 define <16 x i8> @ult_3_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ult_3_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #3
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -56,8 +56,8 @@ define <16 x i8> @ult_3_v16i8(<16 x i8> %0) {
 define <16 x i8> @ugt_3_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ugt_3_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #3
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -69,8 +69,8 @@ define <16 x i8> @ugt_3_v16i8(<16 x i8> %0) {
 define <16 x i8> @ult_4_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ult_4_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #4
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -82,8 +82,8 @@ define <16 x i8> @ult_4_v16i8(<16 x i8> %0) {
 define <16 x i8> @ugt_4_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ugt_4_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #4
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -95,8 +95,8 @@ define <16 x i8> @ugt_4_v16i8(<16 x i8> %0) {
 define <16 x i8> @ult_5_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ult_5_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #5
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -108,8 +108,8 @@ define <16 x i8> @ult_5_v16i8(<16 x i8> %0) {
 define <16 x i8> @ugt_5_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ugt_5_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #5
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -121,8 +121,8 @@ define <16 x i8> @ugt_5_v16i8(<16 x i8> %0) {
 define <16 x i8> @ult_6_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ult_6_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #6
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -134,8 +134,8 @@ define <16 x i8> @ult_6_v16i8(<16 x i8> %0) {
 define <16 x i8> @ugt_6_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ugt_6_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #6
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -147,8 +147,8 @@ define <16 x i8> @ugt_6_v16i8(<16 x i8> %0) {
 define <16 x i8> @ult_7_v16i8(<16 x i8> %0) {
 ; CHECK-LABEL: ult_7_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.16b, #7
+; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cmhi v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
@@ -188,8 +188,8 @@ define <8 x i16> @ugt_2_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_2_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #2
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -202,8 +202,8 @@ define <8 x i16> @ult_3_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_3_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #3
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -216,8 +216,8 @@ define <8 x i16> @ugt_3_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_3_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #3
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -230,8 +230,8 @@ define <8 x i16> @ult_4_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_4_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #4
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -244,8 +244,8 @@ define <8 x i16> @ugt_4_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_4_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #4
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -258,8 +258,8 @@ define <8 x i16> @ult_5_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_5_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #5
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -272,8 +272,8 @@ define <8 x i16> @ugt_5_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_5_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #5
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -286,8 +286,8 @@ define <8 x i16> @ult_6_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_6_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #6
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -300,8 +300,8 @@ define <8 x i16> @ugt_6_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_6_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #6
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -314,8 +314,8 @@ define <8 x i16> @ult_7_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_7_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #7
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -328,8 +328,8 @@ define <8 x i16> @ugt_7_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_7_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #7
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -342,8 +342,8 @@ define <8 x i16> @ult_8_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_8_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -356,8 +356,8 @@ define <8 x i16> @ugt_8_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_8_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -370,8 +370,8 @@ define <8 x i16> @ult_9_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_9_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #9
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -384,8 +384,8 @@ define <8 x i16> @ugt_9_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_9_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #9
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -398,8 +398,8 @@ define <8 x i16> @ult_10_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_10_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #10
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -412,8 +412,8 @@ define <8 x i16> @ugt_10_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_10_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #10
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -426,8 +426,8 @@ define <8 x i16> @ult_11_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_11_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #11
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -440,8 +440,8 @@ define <8 x i16> @ugt_11_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_11_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #11
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -454,8 +454,8 @@ define <8 x i16> @ult_12_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_12_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #12
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -468,8 +468,8 @@ define <8 x i16> @ugt_12_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_12_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #12
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -482,8 +482,8 @@ define <8 x i16> @ult_13_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_13_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #13
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -496,8 +496,8 @@ define <8 x i16> @ugt_13_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_13_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #13
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -510,8 +510,8 @@ define <8 x i16> @ult_14_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_14_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #14
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -524,8 +524,8 @@ define <8 x i16> @ugt_14_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ugt_14_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #14
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -538,8 +538,8 @@ define <8 x i16> @ult_15_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: ult_15_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    movi v1.8h, #15
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
@@ -579,9 +579,9 @@ define <4 x i32> @ugt_2_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_2_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #2
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #2
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -594,9 +594,9 @@ define <4 x i32> @ult_3_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_3_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #3
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #3
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -609,9 +609,9 @@ define <4 x i32> @ugt_3_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_3_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #3
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #3
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -624,9 +624,9 @@ define <4 x i32> @ult_4_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_4_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #4
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #4
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -639,9 +639,9 @@ define <4 x i32> @ugt_4_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_4_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #4
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #4
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -654,9 +654,9 @@ define <4 x i32> @ult_5_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_5_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #5
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #5
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -669,9 +669,9 @@ define <4 x i32> @ugt_5_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_5_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #5
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #5
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -684,9 +684,9 @@ define <4 x i32> @ult_6_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_6_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #6
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #6
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -699,9 +699,9 @@ define <4 x i32> @ugt_6_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_6_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #6
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #6
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -714,9 +714,9 @@ define <4 x i32> @ult_7_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_7_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #7
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #7
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -729,9 +729,9 @@ define <4 x i32> @ugt_7_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_7_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #7
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #7
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -744,9 +744,9 @@ define <4 x i32> @ult_8_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_8_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #8
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -759,9 +759,9 @@ define <4 x i32> @ugt_8_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_8_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #8
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -774,9 +774,9 @@ define <4 x i32> @ult_9_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_9_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #9
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #9
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -789,9 +789,9 @@ define <4 x i32> @ugt_9_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_9_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #9
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #9
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -804,9 +804,9 @@ define <4 x i32> @ult_10_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_10_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #10
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #10
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -819,9 +819,9 @@ define <4 x i32> @ugt_10_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_10_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #10
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #10
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -834,9 +834,9 @@ define <4 x i32> @ult_11_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_11_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #11
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #11
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -849,9 +849,9 @@ define <4 x i32> @ugt_11_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_11_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #11
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #11
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -864,9 +864,9 @@ define <4 x i32> @ult_12_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_12_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #12
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #12
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -879,9 +879,9 @@ define <4 x i32> @ugt_12_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_12_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #12
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #12
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -894,9 +894,9 @@ define <4 x i32> @ult_13_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_13_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #13
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #13
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -909,9 +909,9 @@ define <4 x i32> @ugt_13_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_13_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #13
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #13
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -924,9 +924,9 @@ define <4 x i32> @ult_14_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_14_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #14
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #14
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -939,9 +939,9 @@ define <4 x i32> @ugt_14_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_14_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #14
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #14
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -954,9 +954,9 @@ define <4 x i32> @ult_15_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_15_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #15
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #15
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -969,9 +969,9 @@ define <4 x i32> @ugt_15_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_15_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #15
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #15
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -984,9 +984,9 @@ define <4 x i32> @ult_16_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_16_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #16
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #16
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -999,9 +999,9 @@ define <4 x i32> @ugt_16_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_16_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #16
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #16
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1014,9 +1014,9 @@ define <4 x i32> @ult_17_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_17_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #17
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #17
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1029,9 +1029,9 @@ define <4 x i32> @ugt_17_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_17_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #17
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #17
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1044,9 +1044,9 @@ define <4 x i32> @ult_18_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_18_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #18
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #18
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1059,9 +1059,9 @@ define <4 x i32> @ugt_18_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_18_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #18
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #18
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1074,9 +1074,9 @@ define <4 x i32> @ult_19_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_19_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #19
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #19
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1089,9 +1089,9 @@ define <4 x i32> @ugt_19_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_19_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #19
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #19
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1104,9 +1104,9 @@ define <4 x i32> @ult_20_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_20_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #20
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #20
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1119,9 +1119,9 @@ define <4 x i32> @ugt_20_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_20_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #20
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #20
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1134,9 +1134,9 @@ define <4 x i32> @ult_21_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_21_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #21
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #21
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1149,9 +1149,9 @@ define <4 x i32> @ugt_21_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_21_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #21
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #21
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1164,9 +1164,9 @@ define <4 x i32> @ult_22_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_22_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #22
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #22
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1179,9 +1179,9 @@ define <4 x i32> @ugt_22_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_22_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #22
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #22
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1194,9 +1194,9 @@ define <4 x i32> @ult_23_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_23_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #23
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #23
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1209,9 +1209,9 @@ define <4 x i32> @ugt_23_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_23_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #23
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #23
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1224,9 +1224,9 @@ define <4 x i32> @ult_24_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_24_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #24
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #24
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1239,9 +1239,9 @@ define <4 x i32> @ugt_24_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_24_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #24
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #24
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1254,9 +1254,9 @@ define <4 x i32> @ult_25_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_25_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #25
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #25
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1269,9 +1269,9 @@ define <4 x i32> @ugt_25_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_25_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #25
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #25
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1284,9 +1284,9 @@ define <4 x i32> @ult_26_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_26_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #26
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #26
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1299,9 +1299,9 @@ define <4 x i32> @ugt_26_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_26_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #26
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #26
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1314,9 +1314,9 @@ define <4 x i32> @ult_27_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_27_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #27
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #27
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1329,9 +1329,9 @@ define <4 x i32> @ugt_27_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_27_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #27
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #27
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1344,9 +1344,9 @@ define <4 x i32> @ult_28_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_28_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #28
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #28
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1359,9 +1359,9 @@ define <4 x i32> @ugt_28_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_28_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #28
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #28
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1374,9 +1374,9 @@ define <4 x i32> @ult_29_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_29_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #29
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #29
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1389,9 +1389,9 @@ define <4 x i32> @ugt_29_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_29_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #29
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #29
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1404,9 +1404,9 @@ define <4 x i32> @ult_30_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_30_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #30
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #30
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1419,9 +1419,9 @@ define <4 x i32> @ugt_30_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ugt_30_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #30
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #30
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1434,9 +1434,9 @@ define <4 x i32> @ult_31_v4i32(<4 x i32> %0) {
 ; CHECK-LABEL: ult_31_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    movi v1.4s, #31
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    movi v1.4s, #31
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -1476,11 +1476,11 @@ define <2 x i64> @ugt_2_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_2_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #2
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1493,11 +1493,11 @@ define <2 x i64> @ult_3_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_3_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #3
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1510,11 +1510,11 @@ define <2 x i64> @ugt_3_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_3_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #3
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1527,11 +1527,11 @@ define <2 x i64> @ult_4_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_4_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1544,11 +1544,11 @@ define <2 x i64> @ugt_4_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_4_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1561,11 +1561,11 @@ define <2 x i64> @ult_5_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_5_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1578,11 +1578,11 @@ define <2 x i64> @ugt_5_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_5_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1595,11 +1595,11 @@ define <2 x i64> @ult_6_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_6_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1612,11 +1612,11 @@ define <2 x i64> @ugt_6_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_6_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1629,11 +1629,11 @@ define <2 x i64> @ult_7_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_7_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1646,11 +1646,11 @@ define <2 x i64> @ugt_7_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_7_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1663,11 +1663,11 @@ define <2 x i64> @ult_8_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_8_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1680,11 +1680,11 @@ define <2 x i64> @ugt_8_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_8_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1697,11 +1697,11 @@ define <2 x i64> @ult_9_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_9_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #9
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1714,11 +1714,11 @@ define <2 x i64> @ugt_9_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_9_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #9
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1731,11 +1731,11 @@ define <2 x i64> @ult_10_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_10_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1748,11 +1748,11 @@ define <2 x i64> @ugt_10_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_10_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1765,11 +1765,11 @@ define <2 x i64> @ult_11_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_11_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #11
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1782,11 +1782,11 @@ define <2 x i64> @ugt_11_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_11_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #11
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1799,11 +1799,11 @@ define <2 x i64> @ult_12_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_12_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #12
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1816,11 +1816,11 @@ define <2 x i64> @ugt_12_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_12_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #12
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1833,11 +1833,11 @@ define <2 x i64> @ult_13_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_13_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #13
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1850,11 +1850,11 @@ define <2 x i64> @ugt_13_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_13_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #13
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1867,11 +1867,11 @@ define <2 x i64> @ult_14_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_14_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #14
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1884,11 +1884,11 @@ define <2 x i64> @ugt_14_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_14_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #14
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1901,11 +1901,11 @@ define <2 x i64> @ult_15_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_15_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #15
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1918,11 +1918,11 @@ define <2 x i64> @ugt_15_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_15_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #15
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1935,11 +1935,11 @@ define <2 x i64> @ult_16_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_16_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #16
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1952,11 +1952,11 @@ define <2 x i64> @ugt_16_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_16_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #16
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1969,11 +1969,11 @@ define <2 x i64> @ult_17_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_17_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #17
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -1986,11 +1986,11 @@ define <2 x i64> @ugt_17_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_17_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #17
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2003,11 +2003,11 @@ define <2 x i64> @ult_18_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_18_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #18
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2020,11 +2020,11 @@ define <2 x i64> @ugt_18_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_18_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #18
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2037,11 +2037,11 @@ define <2 x i64> @ult_19_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_19_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #19
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2054,11 +2054,11 @@ define <2 x i64> @ugt_19_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_19_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #19
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2071,11 +2071,11 @@ define <2 x i64> @ult_20_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_20_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #20
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2088,11 +2088,11 @@ define <2 x i64> @ugt_20_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_20_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #20
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2105,11 +2105,11 @@ define <2 x i64> @ult_21_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_21_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #21
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2122,11 +2122,11 @@ define <2 x i64> @ugt_21_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_21_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #21
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2139,11 +2139,11 @@ define <2 x i64> @ult_22_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_22_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #22
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2156,11 +2156,11 @@ define <2 x i64> @ugt_22_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_22_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #22
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2173,11 +2173,11 @@ define <2 x i64> @ult_23_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_23_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #23
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2190,11 +2190,11 @@ define <2 x i64> @ugt_23_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_23_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #23
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2207,11 +2207,11 @@ define <2 x i64> @ult_24_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_24_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #24
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2224,11 +2224,11 @@ define <2 x i64> @ugt_24_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_24_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #24
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2241,11 +2241,11 @@ define <2 x i64> @ult_25_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_25_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #25
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2258,11 +2258,11 @@ define <2 x i64> @ugt_25_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_25_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #25
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2275,11 +2275,11 @@ define <2 x i64> @ult_26_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_26_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #26
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2292,11 +2292,11 @@ define <2 x i64> @ugt_26_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_26_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #26
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2309,11 +2309,11 @@ define <2 x i64> @ult_27_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_27_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #27
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2326,11 +2326,11 @@ define <2 x i64> @ugt_27_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_27_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #27
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2343,11 +2343,11 @@ define <2 x i64> @ult_28_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_28_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #28
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2360,11 +2360,11 @@ define <2 x i64> @ugt_28_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_28_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #28
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2377,11 +2377,11 @@ define <2 x i64> @ult_29_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_29_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #29
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2394,11 +2394,11 @@ define <2 x i64> @ugt_29_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_29_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #29
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2411,11 +2411,11 @@ define <2 x i64> @ult_30_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_30_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #30
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2428,11 +2428,11 @@ define <2 x i64> @ugt_30_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_30_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #30
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2445,11 +2445,11 @@ define <2 x i64> @ult_31_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_31_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2462,11 +2462,11 @@ define <2 x i64> @ugt_31_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_31_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2479,11 +2479,11 @@ define <2 x i64> @ult_32_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_32_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2496,11 +2496,11 @@ define <2 x i64> @ugt_32_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_32_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2513,11 +2513,11 @@ define <2 x i64> @ult_33_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_33_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2530,11 +2530,11 @@ define <2 x i64> @ugt_33_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_33_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2547,11 +2547,11 @@ define <2 x i64> @ult_34_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_34_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #34
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2564,11 +2564,11 @@ define <2 x i64> @ugt_34_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_34_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #34
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2581,11 +2581,11 @@ define <2 x i64> @ult_35_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_35_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #35
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2598,11 +2598,11 @@ define <2 x i64> @ugt_35_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_35_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #35
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2615,11 +2615,11 @@ define <2 x i64> @ult_36_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_36_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #36
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2632,11 +2632,11 @@ define <2 x i64> @ugt_36_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_36_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #36
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2649,11 +2649,11 @@ define <2 x i64> @ult_37_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_37_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #37
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2666,11 +2666,11 @@ define <2 x i64> @ugt_37_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_37_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #37
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2683,11 +2683,11 @@ define <2 x i64> @ult_38_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_38_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #38
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2700,11 +2700,11 @@ define <2 x i64> @ugt_38_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_38_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #38
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2717,11 +2717,11 @@ define <2 x i64> @ult_39_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_39_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #39
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2734,11 +2734,11 @@ define <2 x i64> @ugt_39_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_39_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #39
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2751,11 +2751,11 @@ define <2 x i64> @ult_40_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_40_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #40
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2768,11 +2768,11 @@ define <2 x i64> @ugt_40_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_40_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #40
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2785,11 +2785,11 @@ define <2 x i64> @ult_41_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_41_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2802,11 +2802,11 @@ define <2 x i64> @ugt_41_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_41_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2819,11 +2819,11 @@ define <2 x i64> @ult_42_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_42_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2836,11 +2836,11 @@ define <2 x i64> @ugt_42_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_42_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2853,11 +2853,11 @@ define <2 x i64> @ult_43_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_43_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #43
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2870,11 +2870,11 @@ define <2 x i64> @ugt_43_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_43_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #43
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2887,11 +2887,11 @@ define <2 x i64> @ult_44_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_44_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #44
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2904,11 +2904,11 @@ define <2 x i64> @ugt_44_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_44_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #44
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2921,11 +2921,11 @@ define <2 x i64> @ult_45_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_45_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #45
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2938,11 +2938,11 @@ define <2 x i64> @ugt_45_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_45_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #45
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2955,11 +2955,11 @@ define <2 x i64> @ult_46_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_46_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #46
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2972,11 +2972,11 @@ define <2 x i64> @ugt_46_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_46_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #46
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -2989,11 +2989,11 @@ define <2 x i64> @ult_47_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_47_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #47
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3006,11 +3006,11 @@ define <2 x i64> @ugt_47_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_47_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #47
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3023,11 +3023,11 @@ define <2 x i64> @ult_48_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_48_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #48
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3040,11 +3040,11 @@ define <2 x i64> @ugt_48_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_48_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #48
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3057,11 +3057,11 @@ define <2 x i64> @ult_49_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_49_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #49
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3074,11 +3074,11 @@ define <2 x i64> @ugt_49_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_49_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #49
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3091,11 +3091,11 @@ define <2 x i64> @ult_50_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_50_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #50
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3108,11 +3108,11 @@ define <2 x i64> @ugt_50_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_50_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #50
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3125,11 +3125,11 @@ define <2 x i64> @ult_51_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_51_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #51
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3142,11 +3142,11 @@ define <2 x i64> @ugt_51_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_51_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #51
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3159,11 +3159,11 @@ define <2 x i64> @ult_52_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_52_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #52
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3176,11 +3176,11 @@ define <2 x i64> @ugt_52_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_52_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #52
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3193,11 +3193,11 @@ define <2 x i64> @ult_53_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_53_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #53
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3210,11 +3210,11 @@ define <2 x i64> @ugt_53_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_53_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #53
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3227,11 +3227,11 @@ define <2 x i64> @ult_54_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_54_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #54
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3244,11 +3244,11 @@ define <2 x i64> @ugt_54_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_54_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #54
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3261,11 +3261,11 @@ define <2 x i64> @ult_55_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_55_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #55
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3278,11 +3278,11 @@ define <2 x i64> @ugt_55_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_55_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #55
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3295,11 +3295,11 @@ define <2 x i64> @ult_56_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_56_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #56
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3312,11 +3312,11 @@ define <2 x i64> @ugt_56_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_56_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #56
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3329,11 +3329,11 @@ define <2 x i64> @ult_57_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_57_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #57
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3346,11 +3346,11 @@ define <2 x i64> @ugt_57_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_57_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #57
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3363,11 +3363,11 @@ define <2 x i64> @ult_58_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_58_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #58
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3380,11 +3380,11 @@ define <2 x i64> @ugt_58_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_58_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #58
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3397,11 +3397,11 @@ define <2 x i64> @ult_59_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_59_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #59
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3414,11 +3414,11 @@ define <2 x i64> @ugt_59_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_59_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #59
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3431,11 +3431,11 @@ define <2 x i64> @ult_60_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_60_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #60
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3448,11 +3448,11 @@ define <2 x i64> @ugt_60_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_60_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #60
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3465,11 +3465,11 @@ define <2 x i64> @ult_61_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_61_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #61
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3482,11 +3482,11 @@ define <2 x i64> @ugt_61_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_61_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #61
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3499,11 +3499,11 @@ define <2 x i64> @ult_62_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_62_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #62
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3516,11 +3516,11 @@ define <2 x i64> @ugt_62_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_62_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #62
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -3533,11 +3533,11 @@ define <2 x i64> @ult_63_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_63_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)

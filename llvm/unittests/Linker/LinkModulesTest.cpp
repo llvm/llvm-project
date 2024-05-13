@@ -27,8 +27,9 @@ class LinkModuleTest : public testing::Test {
 protected:
   void SetUp() override {
     M.reset(new Module("MyModule", Ctx));
-    FunctionType *FTy = FunctionType::get(
-        Type::getInt8PtrTy(Ctx), Type::getInt32Ty(Ctx), false /*=isVarArg*/);
+    FunctionType *FTy =
+        FunctionType::get(PointerType::getUnqual(Ctx), Type::getInt32Ty(Ctx),
+                          false /*=isVarArg*/);
     F = Function::Create(FTy, Function::ExternalLinkage, "ba_func", M.get());
     F->setCallingConv(CallingConv::C);
 
@@ -37,7 +38,7 @@ protected:
     SwitchCase2BB = BasicBlock::Create(Ctx, "switch.case.2", F);
     ExitBB = BasicBlock::Create(Ctx, "exit", F);
 
-    AT = ArrayType::get(Type::getInt8PtrTy(Ctx), 3);
+    AT = ArrayType::get(PointerType::getUnqual(Ctx), 3);
 
     GV = new GlobalVariable(*M.get(), AT, false /*=isConstant*/,
                             GlobalValue::InternalLinkage, nullptr,"switch.bas");
@@ -51,8 +52,8 @@ protected:
     Init.push_back(SwitchCase2BA);
 
     ConstantInt *One = ConstantInt::get(Type::getInt32Ty(Ctx), 1);
-    Constant *OnePtr = ConstantExpr::getCast(Instruction::IntToPtr, One,
-                                             Type::getInt8PtrTy(Ctx));
+    Constant *OnePtr =
+        ConstantExpr::getIntToPtr(One, PointerType::getUnqual(Ctx));
     Init.push_back(OnePtr);
 
     GV->setInitializer(ConstantArray::get(AT, Init));
@@ -71,7 +72,7 @@ protected:
   BasicBlock *ExitBB;
 };
 
-static void expectNoDiags(const DiagnosticInfo &DI, void *C) {
+static void expectNoDiags(const DiagnosticInfo *DI, void *C) {
   llvm_unreachable("expectNoDiags called!");
 }
 
@@ -94,7 +95,7 @@ TEST_F(LinkModuleTest, BlockAddress) {
   Builder.CreateBr(ExitBB);
 
   Builder.SetInsertPoint(ExitBB);
-  Builder.CreateRet(ConstantPointerNull::get(Type::getInt8PtrTy(Ctx)));
+  Builder.CreateRet(ConstantPointerNull::get(PointerType::getUnqual(Ctx)));
 
   Module *LinkedModule = new Module("MyModuleLinked", Ctx);
   Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
@@ -109,7 +110,7 @@ TEST_F(LinkModuleTest, BlockAddress) {
   //    i8* blockaddress(@ba_func, %switch.case.2),
   //    i8* inttoptr (i32 1 to i8*)]
 
-  ArrayType *AT = ArrayType::get(Type::getInt8PtrTy(Ctx), 3);
+  ArrayType *AT = ArrayType::get(PointerType::getUnqual(Ctx), 3);
   EXPECT_EQ(AT, Init->getType());
 
   Value *Elem = Init->getOperand(0);
@@ -133,7 +134,7 @@ static Module *getExternal(LLVMContext &Ctx, StringRef FuncName) {
   // Create a module with an empty externally-linked function
   Module *M = new Module("ExternalModule", Ctx);
   FunctionType *FTy = FunctionType::get(
-      Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx), false /*=isVarArgs*/);
+      Type::getVoidTy(Ctx), PointerType::getUnqual(Ctx), false /*=isVarArgs*/);
 
   Function *F =
       Function::Create(FTy, Function::ExternalLinkage, FuncName, M);
@@ -148,7 +149,7 @@ static Module *getExternal(LLVMContext &Ctx, StringRef FuncName) {
 static Module *getInternal(LLVMContext &Ctx) {
   Module *InternalM = new Module("InternalModule", Ctx);
   FunctionType *FTy = FunctionType::get(
-      Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx), false /*=isVarArgs*/);
+      Type::getVoidTy(Ctx), PointerType::getUnqual(Ctx), false /*=isVarArgs*/);
 
   Function *F =
       Function::Create(FTy, Function::InternalLinkage, "bar", InternalM);
@@ -315,35 +316,35 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   // type in the signature are properly remangled.
   const char *FooStr =
     "%struct.rtx_def = type { i16 }\n"
-    "define void @foo(%struct.rtx_def* %a, i8 %b, i32 %c) {\n"
-    "  call void  @llvm.memset.p0s_struct.rtx_defs.i32(%struct.rtx_def* %a, i8 %b, i32 %c, i32 4, i1 true)\n"
+    "define void @foo(%struct.rtx_def %a) {\n"
+    "  call %struct.rtx_def @llvm.ssa.copy.s_struct.rtx_defs(%struct.rtx_def %a)\n"
     "  ret void\n"
     "}\n"
-    "declare void @llvm.memset.p0s_struct.rtx_defs.i32(%struct.rtx_def*, i8, i32, i32, i1)\n";
+    "declare %struct.rtx_def @llvm.ssa.copy.s_struct.rtx_defs(%struct.rtx_def)\n";
 
   const char *BarStr =
     "%struct.rtx_def = type { i16 }\n"
-    "define void @bar(%struct.rtx_def* %a, i8 %b, i32 %c) {\n"
-    "  call void  @llvm.memset.p0s_struct.rtx_defs.i32(%struct.rtx_def* %a, i8 %b, i32 %c, i32 4, i1 true)\n"
+    "define void @bar(%struct.rtx_def %a) {\n"
+    "  call %struct.rtx_def @llvm.ssa.copy.s_struct.rtx_defs(%struct.rtx_def %a)\n"
     "  ret void\n"
     "}\n"
-    "declare void @llvm.memset.p0s_struct.rtx_defs.i32(%struct.rtx_def*, i8, i32, i32, i1)\n";
+    "declare %struct.rtx_def @llvm.ssa.copy.s_struct.rtx_defs(%struct.rtx_def)\n";
 
   std::unique_ptr<Module> Foo = parseAssemblyString(FooStr, Err, C);
   assert(Foo);
   ASSERT_TRUE(Foo.get());
   // Foo is loaded first, so the type and the intrinsic have theis original
   // names.
-  ASSERT_TRUE(Foo->getFunction("llvm.memset.p0s_struct.rtx_defs.i32"));
-  ASSERT_FALSE(Foo->getFunction("llvm.memset.p0s_struct.rtx_defs.0.i32"));
+  ASSERT_TRUE(Foo->getFunction("llvm.ssa.copy.s_struct.rtx_defs"));
+  ASSERT_FALSE(Foo->getFunction("llvm.ssa.copy.s_struct.rtx_defs.0"));
 
   std::unique_ptr<Module> Bar = parseAssemblyString(BarStr, Err, C);
   assert(Bar);
   ASSERT_TRUE(Bar.get());
   // Bar is loaded after Foo, so the type is renamed to struct.rtx_def.0. Check
   // that the intrinsic is also renamed.
-  ASSERT_FALSE(Bar->getFunction("llvm.memset.p0s_struct.rtx_defs.i32"));
-  ASSERT_TRUE(Bar->getFunction("llvm.memset.p0s_struct.rtx_def.0s.i32"));
+  ASSERT_FALSE(Bar->getFunction("llvm.ssa.copy.s_struct.rtx_defs"));
+  ASSERT_TRUE(Bar->getFunction("llvm.ssa.copy.s_struct.rtx_def.0s"));
 
   // Link two modules together.
   auto Dst = std::make_unique<Module>("Linked", C);
@@ -355,7 +356,7 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   // "struct.rtx_def" from Foo and "struct.rtx_def.0" from Bar are isomorphic
   // types, so they must be uniquified by linker. Check that they use the same
   // intrinsic definition.
-  Function *F = Foo->getFunction("llvm.memset.p0s_struct.rtx_defs.i32");
+  Function *F = Foo->getFunction("llvm.ssa.copy.s_struct.rtx_defs");
   ASSERT_EQ(F->getNumUses(), (unsigned)2);
 }
 

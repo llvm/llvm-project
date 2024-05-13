@@ -5,7 +5,7 @@
 # RUN:  .text : AT (0x4200) { *(.text) } \
 # RUN: }" > %t.script
 # RUN: ld.lld %t.o --script %t.script -o %t
-# RUN: llvm-readelf -program-headers %t | FileCheck %s
+# RUN: llvm-readelf -l %t | FileCheck %s
 
 # Test that we put the header in the first PT_LOAD. We used to create a PT_LOAD
 # just for it and it would have a different virtual to physical address delta.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o -
+// RUN: %clang_cc1 %s -std=c89 -emit-llvm -o -
 // PR2797
 
 unsigned int

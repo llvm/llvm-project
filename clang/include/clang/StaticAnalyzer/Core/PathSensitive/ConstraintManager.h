@@ -17,9 +17,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -36,7 +36,7 @@ class ExprEngine;
 class SymbolReaper;
 
 class ConditionTruthVal {
-  Optional<bool> Val;
+  std::optional<bool> Val;
 
 public:
   /// Construct a ConditionTruthVal indicating the constraint is constrained
@@ -53,25 +53,17 @@ public:
   }
 
   /// Return true if the constraint is perfectly constrained to 'true'.
-  bool isConstrainedTrue() const {
-    return Val.hasValue() && Val.getValue();
-  }
+  bool isConstrainedTrue() const { return Val && *Val; }
 
   /// Return true if the constraint is perfectly constrained to 'false'.
-  bool isConstrainedFalse() const {
-    return Val.hasValue() && !Val.getValue();
-  }
+  bool isConstrainedFalse() const { return Val && !*Val; }
 
   /// Return true if the constrained is perfectly constrained.
-  bool isConstrained() const {
-    return Val.hasValue();
-  }
+  bool isConstrained() const { return Val.has_value(); }
 
   /// Return true if the constrained is underconstrained and we do not know
   /// if the constraint is true of value.
-  bool isUnderconstrained() const {
-    return !Val.hasValue();
-  }
+  bool isUnderconstrained() const { return !Val.has_value(); }
 };
 
 class ConstraintManager {
@@ -82,74 +74,55 @@ public:
   virtual bool haveEqualConstraints(ProgramStateRef S1,
                                     ProgramStateRef S2) const = 0;
 
-  virtual ProgramStateRef assume(ProgramStateRef state,
-                                 DefinedSVal Cond,
-                                 bool Assumption) = 0;
+  ProgramStateRef assume(ProgramStateRef state, DefinedSVal Cond,
+                         bool Assumption);
 
   using ProgramStatePair = std::pair<ProgramStateRef, ProgramStateRef>;
 
   /// Returns a pair of states (StTrue, StFalse) where the given condition is
   /// assumed to be true or false, respectively.
-  ProgramStatePair assumeDual(ProgramStateRef State, DefinedSVal Cond) {
-    ProgramStateRef StTrue = assume(State, Cond, true);
+  /// (Note that these two states might be equal if the parent state turns out
+  /// to be infeasible. This may happen if the underlying constraint solver is
+  /// not perfectly precise and this may happen very rarely.)
+  ProgramStatePair assumeDual(ProgramStateRef State, DefinedSVal Cond);
 
-    // If StTrue is infeasible, asserting the falseness of Cond is unnecessary
-    // because the existing constraints already establish this.
-    if (!StTrue) {
-#ifdef EXPENSIVE_CHECKS
-      assert(assume(State, Cond, false) && "System is over constrained.");
-#endif
-      return ProgramStatePair((ProgramStateRef)nullptr, State);
-    }
+  ProgramStateRef assumeInclusiveRange(ProgramStateRef State, NonLoc Value,
+                                       const llvm::APSInt &From,
+                                       const llvm::APSInt &To, bool InBound);
 
-    ProgramStateRef StFalse = assume(State, Cond, false);
-    if (!StFalse) {
-      // We are careful to return the original state, /not/ StTrue,
-      // because we want to avoid having callers generate a new node
-      // in the ExplodedGraph.
-      return ProgramStatePair(State, (ProgramStateRef)nullptr);
-    }
-
-    return ProgramStatePair(StTrue, StFalse);
-  }
-
-  virtual ProgramStateRef assumeInclusiveRange(ProgramStateRef State,
-                                               NonLoc Value,
-                                               const llvm::APSInt &From,
-                                               const llvm::APSInt &To,
-                                               bool InBound) = 0;
-
-  virtual ProgramStatePair assumeInclusiveRangeDual(ProgramStateRef State,
-                                                    NonLoc Value,
-                                                    const llvm::APSInt &From,
-                                                    const llvm::APSInt &To) {
-    ProgramStateRef StInRange =
-        assumeInclusiveRange(State, Value, From, To, true);
-
-    // If StTrue is infeasible, asserting the falseness of Cond is unnecessary
-    // because the existing constraints already establish this.
-    if (!StInRange)
-      return ProgramStatePair((ProgramStateRef)nullptr, State);
-
-    ProgramStateRef StOutOfRange =
-        assumeInclusiveRange(State, Value, From, To, false);
-    if (!StOutOfRange) {
-      // We are careful to return the original state, /not/ StTrue,
-      // because we want to avoid having callers generate a new node
-      // in the ExplodedGraph.
-      return ProgramStatePair(State, (ProgramStateRef)nullptr);
-    }
-
-    return ProgramStatePair(StInRange, StOutOfRange);
-  }
+  /// Returns a pair of states (StInRange, StOutOfRange) where the given value
+  /// is assumed to be in the range or out of the range, respectively.
+  /// (Note that these two states might be equal if the parent state turns out
+  /// to be infeasible. This may happen if the underlying constraint solver is
+  /// not perfectly precise and this may happen very rarely.)
+  ProgramStatePair assumeInclusiveRangeDual(ProgramStateRef State, NonLoc Value,
+                                            const llvm::APSInt &From,
+                                            const llvm::APSInt &To);
 
   /// If a symbol is perfectly constrained to a constant, attempt
   /// to return the concrete value.
   ///
   /// Note that a ConstraintManager is not obligated to return a concretized
   /// value for a symbol, even if it is perfectly constrained.
+  /// It might return null.
   virtual const llvm::APSInt* getSymVal(ProgramStateRef state,
                                         SymbolRef sym) const {
+    return nullptr;
+  }
+
+  /// Attempt to return the minimal possible value for a given symbol. Note
+  /// that a ConstraintManager is not obligated to return a lower bound, it may
+  /// also return nullptr.
+  virtual const llvm::APSInt *getSymMinVal(ProgramStateRef state,
+                                           SymbolRef sym) const {
+    return nullptr;
+  }
+
+  /// Attempt to return the minimal possible value for a given symbol. Note
+  /// that a ConstraintManager is not obligated to return a lower bound, it may
+  /// also return nullptr.
+  virtual const llvm::APSInt *getSymMaxVal(ProgramStateRef state,
+                                           SymbolRef sym) const {
     return nullptr;
   }
 
@@ -162,22 +135,38 @@ public:
                          const char *NL, unsigned int Space,
                          bool IsDot) const = 0;
 
+  virtual void printValue(raw_ostream &Out, ProgramStateRef State,
+                          SymbolRef Sym) {}
+
   /// Convenience method to query the state to see if a symbol is null or
   /// not null, or if neither assumption can be made.
   ConditionTruthVal isNull(ProgramStateRef State, SymbolRef Sym) {
-    SaveAndRestore<bool> DisableNotify(NotifyAssumeClients, false);
-
     return checkNull(State, Sym);
   }
 
 protected:
-  /// A flag to indicate that clients should be notified of assumptions.
-  /// By default this is the case, but sometimes this needs to be restricted
-  /// to avoid infinite recursions within the ConstraintManager.
-  ///
-  /// Note that this flag allows the ConstraintManager to be re-entrant,
-  /// but not thread-safe.
-  bool NotifyAssumeClients = true;
+  /// A helper class to simulate the call stack of nested assume calls.
+  class AssumeStackTy {
+  public:
+    void push(const ProgramState *S) { Aux.push_back(S); }
+    void pop() { Aux.pop_back(); }
+    bool contains(const ProgramState *S) const {
+      return llvm::is_contained(Aux, S);
+    }
+
+  private:
+    llvm::SmallVector<const ProgramState *, 4> Aux;
+  };
+  AssumeStackTy AssumeStack;
+
+  virtual ProgramStateRef assumeInternal(ProgramStateRef state,
+                                         DefinedSVal Cond, bool Assumption) = 0;
+
+  virtual ProgramStateRef assumeInclusiveRangeInternal(ProgramStateRef State,
+                                                       NonLoc Value,
+                                                       const llvm::APSInt &From,
+                                                       const llvm::APSInt &To,
+                                                       bool InBound) = 0;
 
   /// canReasonAbout - Not all ConstraintManagers can accurately reason about
   ///  all SVal values.  This method returns true if the ConstraintManager can
@@ -189,6 +178,10 @@ protected:
   /// Returns whether or not a symbol is known to be null ("true"), known to be
   /// non-null ("false"), or may be either ("underconstrained").
   virtual ConditionTruthVal checkNull(ProgramStateRef State, SymbolRef Sym);
+
+  template <typename AssumeFunction>
+  ProgramStatePair assumeDualImpl(ProgramStateRef &State,
+                                  AssumeFunction &Assume);
 };
 
 std::unique_ptr<ConstraintManager>

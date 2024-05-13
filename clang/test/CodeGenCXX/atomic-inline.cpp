@@ -28,9 +28,9 @@ void store8() {
 bool cmpxchg8() {
   AM8 am;
   // CHECK-LABEL: @_Z8cmpxchg8v
-  // CHECK: cmpxchg i64* {{.*}} monotonic, align 8
+  // CHECK: cmpxchg ptr {{.*}} monotonic, align 8
   // CORE2-LABEL: @_Z8cmpxchg8v
-  // CORE2: cmpxchg i64* {{.*}} monotonic, align 8
+  // CORE2: cmpxchg ptr {{.*}} monotonic, align 8
   return __atomic_compare_exchange(&m8, &s8, &am, 0, 0, 0);
 }
 
@@ -42,7 +42,7 @@ AM16 m16;
 AM16 load16() {
   AM16 am;
   // CHECK-LABEL: @_Z6load16v
-  // CHECK: call void @__atomic_load
+  // CHECK: load atomic i128, {{.*}} monotonic, align 16
   // CORE2-LABEL: @_Z6load16v
   // CORE2: load atomic i128, {{.*}} monotonic, align 16
   __atomic_load(&m16, &am, 0);
@@ -52,7 +52,7 @@ AM16 load16() {
 AM16 s16;
 void store16() {
   // CHECK-LABEL: @_Z7store16v
-  // CHECK: call void @__atomic_store
+  // CHECK: store atomic i128 {{.*}} monotonic, align 16
   // CORE2-LABEL: @_Z7store16v
   // CORE2: store atomic i128 {{.*}} monotonic, align 16
   __atomic_store(&m16, &s16, 0);
@@ -61,8 +61,8 @@ void store16() {
 bool cmpxchg16() {
   AM16 am;
   // CHECK-LABEL: @_Z9cmpxchg16v
-  // CHECK: call zeroext i1 @__atomic_compare_exchange
+  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align 16
   // CORE2-LABEL: @_Z9cmpxchg16v
-  // CORE2: cmpxchg i128* {{.*}} monotonic monotonic, align 16
+  // CORE2: cmpxchg ptr {{.*}} monotonic monotonic, align 16
   return __atomic_compare_exchange(&m16, &s16, &am, 0, 0, 0);
 }

@@ -12,23 +12,25 @@ sym_a:
 .set sym_b, sym_a + 4
 
 # CHECK-LABEL: SYMBOL TABLE:
-# CHECK-NEXT: 00000000 l     O DATA foo
-# CHECK-NEXT: 00000004 l     O DATA sym_a
-# CHECK-NEXT: 00000008 l     O DATA sym_b
-# CHECK-NEXT: 00000001 l     F CODE main
+# CHECK-NEXT: 00000000 l     O DATA 00000004 foo
+# CHECK-NEXT: 00000004 l     O DATA 00000008 sym_a
+# CHECK-NEXT: 00000008 l     O DATA 00000004 sym_b
+# CHECK-NEXT: 00000001 l     F CODE 00000012 main
 
   .text
   .section    .text,"",@
 main:
   .functype   main () -> ()
+  i32.const 0
   i32.const sym_a
   i32.store sym_b
   end_function
 
 # CHECK-LABEL: <main>:
 # CHECK-EMPTY:
-# CHECK-NEXT:       3: 41 84 80 80 80 00     i32.const       4
-# CHECK-NEXT:                        00000004:  R_WASM_MEMORY_ADDR_SLEB      sym_a+0
-# CHECK-NEXT:       9: 36 02 88 80 80 80 00  i32.store       8
-# CHECK-NEXT:                        0000000b:  R_WASM_MEMORY_ADDR_LEB      sym_b+0
-# CHECK-NEXT:      10: 0b            end
+# CHECK-NEXT:       3: 41 00                 i32.const       0
+# CHECK-NEXT:       5: 41 84 80 80 80 00     i32.const       4
+# CHECK-NEXT:                        00000006:  R_WASM_MEMORY_ADDR_SLEB      sym_a+0
+# CHECK-NEXT:       b: 36 02 88 80 80 80 00  i32.store       8
+# CHECK-NEXT:                        0000000d:  R_WASM_MEMORY_ADDR_LEB      sym_b+0
+# CHECK-NEXT:      12: 0b            end

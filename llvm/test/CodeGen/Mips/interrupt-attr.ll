@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=mips32r2 -march=mipsel -relocation-model=static -o - %s | FileCheck %s
+; RUN: llc -mcpu=mips32r2 -mtriple=mipsel -relocation-model=static -o - %s | FileCheck %s
 
 define void @isr_sw0() #0 {
 ; CHECK-LABEL: isr_sw0:
@@ -34,7 +34,7 @@ define void @isr_sw0() #0 {
 ; CHECK: sw      $26, [[R3:[0-9]+]]($sp)
 ; CHECK: mfhi    $26
 ; CHECK: sw      $26, [[R4:[0-9]+]]($sp)
-  call void bitcast (void (...)* @write to void ()*)()
+  call void @write()
 ; CHECK: lw      $26, [[R4:[0-9]+]]($sp)
 ; CHECK: mthi    $26
 ; CHECK: lw      $26, [[R3:[0-9]+]]($sp)

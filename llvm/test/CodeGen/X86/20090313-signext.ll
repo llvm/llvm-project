@@ -10,7 +10,7 @@ define signext i16 @f() nounwind {
 ; CHECK-NEXT:    callq h@PLT
 ; CHECK-NEXT:    movswl %ax, %edi
 ; CHECK-NEXT:    callq g@PLT
-; CHECK-NEXT:    movq x@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq x@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movzwl (%rax), %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -18,7 +18,7 @@ entry:
 	%0 = tail call signext i16 @h() nounwind
 	%1 = sext i16 %0 to i32
 	tail call void @g(i32 %1) nounwind
-	%2 = load i16, i16* @x, align 2
+	%2 = load i16, ptr @x, align 2
 	ret i16 %2
 }
 

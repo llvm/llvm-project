@@ -4,14 +4,14 @@
 ; Make sure we're emitting DW_AT_main_subprogram.
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "main"
+; CHECK:   DW_AT_name {{.*}}"main"
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_AT_main_subprogram [DW_FORM_flag_present] (true)
 
 define i32 @main() #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   ret i32 0, !dbg !10
 }
 

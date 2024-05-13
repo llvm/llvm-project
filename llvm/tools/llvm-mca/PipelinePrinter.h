@@ -16,15 +16,19 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 #define LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 
-#include "Views/View.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MCA/Context.h"
 #include "llvm/MCA/Pipeline.h"
+#include "llvm/MCA/View.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "llvm-mca"
 
 namespace llvm {
 namespace mca {
+
+class CodeRegion;
 
 /// A printer class that knows how to collects statistics on the
 /// code analyzed by the llvm-mca tool.
@@ -35,12 +39,21 @@ namespace mca {
 /// resource pressure.
 class PipelinePrinter {
   Pipeline &P;
+  const CodeRegion &Region;
+  unsigned RegionIdx;
+  const MCSubtargetInfo &STI;
+  const PipelineOptions &PO;
   llvm::SmallVector<std::unique_ptr<View>, 8> Views;
-  View::OutputKind OutputKind;
+
+  void printRegionHeader(llvm::raw_ostream &OS) const;
+  json::Object getJSONReportRegion() const;
+  json::Object getJSONTargetInfo() const;
+  json::Object getJSONSimulationParameters() const;
 
 public:
-  PipelinePrinter(Pipeline &pipeline, View::OutputKind OutputKind)
-      : P(pipeline), OutputKind(OutputKind) {}
+  PipelinePrinter(Pipeline &Pipe, const CodeRegion &R, unsigned Idx,
+                  const MCSubtargetInfo &STI, const PipelineOptions &PO)
+      : P(Pipe), Region(R), RegionIdx(Idx), STI(STI), PO(PO) {}
 
   void addView(std::unique_ptr<View> V) {
     P.addEventListener(V.get());
@@ -48,6 +61,7 @@ public:
   }
 
   void printReport(llvm::raw_ostream &OS) const;
+  void printReport(json::Object &JO) const;
 };
 } // namespace mca
 } // namespace llvm

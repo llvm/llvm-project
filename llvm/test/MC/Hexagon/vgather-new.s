@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=hexagon -mcpu=hexagonv65 -mhvx -show-encoding %s -o - | FileCheck %s
+// RUN: llvm-mc -triple=hexagon -mcpu=hexagonv65 -mhvx -show-encoding %s -o - | FileCheck %s
 
 // TypeCVI_FIRST was set incorrectly, causing vgather not to be considered
 // a vector instruction. This resulted in an incorrect encoding of the vtmp.new

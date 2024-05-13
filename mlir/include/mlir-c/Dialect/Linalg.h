@@ -10,7 +10,7 @@
 #ifndef MLIR_C_DIALECT_LINALG_H
 #define MLIR_C_DIALECT_LINALG_H
 
-#include "mlir-c/Registration.h"
+#include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
 #ifdef __cplusplus
@@ -18,11 +18,9 @@ extern "C" {
 #endif
 
 /// Apply the special region builder for the builtin named Linalg op.
-/// The list of `capture` MlirValue is passed as-is to the region builder.
-/// Assert that `op` is a builtin named Linalg op.
+/// Assert that `mlirOp` is a builtin named Linalg op.
 MLIR_CAPI_EXPORTED void
-mlirLinalgFillBuiltinNamedOpRegion(MlirDialect linalgDialect, MlirOperation op,
-                                   intptr_t n, MlirValue const *mlirCaptures);
+mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp);
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Linalg, linalg);
 

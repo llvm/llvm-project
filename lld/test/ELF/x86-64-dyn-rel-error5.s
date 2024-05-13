@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
-# RUN: not ld.lld -pie %t.o -o /dev/null 2>&1 | FileCheck --check-prefixes=CHECK,PIE %s
-# RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck --check-prefixes=CHECK,SHARED %s
+# RUN: not ld.lld -pie %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s
 
 ## Check we don't create dynamic relocations in a writable section,
 ## if the number of bits is smaller than the wordsize.
@@ -17,8 +17,7 @@ hidden:
 # CHECK: error: relocation R_X86_64_16 cannot be used against local symbol; recompile with -fPIC
 # CHECK: error: relocation R_X86_64_32 cannot be used against local symbol; recompile with -fPIC
 
-# PIE: error: cannot preempt symbol: hidden
-# SHARED: error: relocation R_X86_64_32 cannot be used against symbol hidden; recompile with -fPIC
+# CHECK: error: relocation R_X86_64_32 cannot be used against symbol 'hidden'; recompile with -fPIC
 
 .data
 .byte local     # R_X86_64_8

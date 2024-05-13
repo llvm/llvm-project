@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: %lld -o %t %t.o
+# RUN: %lld -dylib -o %t %t.o
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s
 
 # CHECK:                 cmd LC_DYLD_INFO_ONLY
@@ -13,7 +13,8 @@
 # CHECK-NEXT: weak_bind_size 0
 # CHECK-NEXT:  lazy_bind_off 0
 # CHECK-NEXT: lazy_bind_size 0
+# CHECK-NEXT: export_off     0
+# CHECK-NEXT: export_size    0
 
-.globl _main
-_main:
-  ret
+_not_exported:
+  .space 1

@@ -15,7 +15,8 @@
 @brief Public User API functions and types
 @mainpage
 
-The ITT API is used to annotate a user's program with additional information
+The Instrumentation and Tracing Technology API (ITT API) is used to
+annotate a user's program with additional information
 that can be used by correctness and performance tools. The user inserts
 calls in their program. Those calls generate information that is collected
 at runtime, and used by Intel(R) Threading Tools.
@@ -180,7 +181,13 @@ The same ID may not be reused for different instances, unless a previous
 
 #if ITT_PLATFORM == ITT_PLATFORM_WIN
 /* use __forceinline (VC++ specific) */
-#define ITT_INLINE __forceinline
+#if defined(__MINGW32__) && !defined(__cplusplus)
+#define ITT_INLINE                                                             \
+  static __inline__ __attribute__((__always_inline__, __gnu_inline__))
+#else
+#define ITT_INLINE static __forceinline
+#endif /* __MINGW32__ */
+
 #define ITT_INLINE_ATTRIBUTE /* nothing */
 #else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 /*
@@ -373,6 +380,91 @@ ITT_STUBV(ITTAPI, void, detach, (void))
 /** @endcond */
 
 /**
+ * @defgroup Intel Processor Trace control
+ * API from this group provides control over collection and analysis of Intel
+ * Processor Trace (Intel PT) data Information about Intel Processor Trace
+ * technology can be found here (Volume 3 chapter 35):
+ * https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf
+ * Use this API to mark particular code regions for loading detailed performance
+ * statistics. This mode makes your analysis faster and more accurate.
+ * @{
+ */
+typedef unsigned char __itt_pt_region;
+
+/**
+ * @brief function saves a region name marked with Intel PT API and returns a
+ * region id. Only 7 names can be registered. Attempts to register more names
+ * will be ignored and a region id with auto names will be returned. For
+ * automatic naming of regions pass NULL as function parameter
+ */
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+__itt_pt_region ITTAPI __itt_pt_region_createA(const char *name);
+__itt_pt_region ITTAPI __itt_pt_region_createW(const wchar_t *name);
+#if defined(UNICODE) || defined(_UNICODE)
+#define __itt_pt_region_create __itt_pt_region_createW
+#else /* UNICODE */
+#define __itt_pt_region_create __itt_pt_region_createA
+#endif /* UNICODE */
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+__itt_pt_region ITTAPI __itt_pt_region_create(const char *name);
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, __itt_pt_region, pt_region_createA, (const char *name))
+ITT_STUB(ITTAPI, __itt_pt_region, pt_region_createW, (const wchar_t *name))
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, __itt_pt_region, pt_region_create, (const char *name))
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+#define __itt_pt_region_createA ITTNOTIFY_DATA(pt_region_createA)
+#define __itt_pt_region_createA_ptr ITTNOTIFY_NAME(pt_region_createA)
+#define __itt_pt_region_createW ITTNOTIFY_DATA(pt_region_createW)
+#define __itt_pt_region_createW_ptr ITTNOTIFY_NAME(pt_region_createW)
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_pt_region_create ITTNOTIFY_DATA(pt_region_create)
+#define __itt_pt_region_create_ptr ITTNOTIFY_NAME(pt_region_create)
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#else /* INTEL_NO_ITTNOTIFY_API */
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+#define __itt_pt_region_createA(name) (__itt_pt_region)0
+#define __itt_pt_region_createA_ptr 0
+#define __itt_pt_region_createW(name) (__itt_pt_region)0
+#define __itt_pt_region_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_pt_region_create(name) (__itt_pt_region)0
+#define __itt_pt_region_create_ptr 0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else /* INTEL_NO_MACRO_BODY */
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+#define __itt_pt_region_createA_ptr 0
+#define __itt_pt_region_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_pt_region_create_ptr 0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief function contains a special code pattern identified on the
+ * post-processing stage and marks the beginning of a code region targeted for
+ * Intel PT analysis
+ * @param[in] region - region id, 0 <= region < 8
+ */
+void __itt_mark_pt_region_begin(__itt_pt_region region);
+/**
+ * @brief function contains a special code pattern identified on the
+ * post-processing stage and marks the end of a code region targeted for Intel
+ * PT analysis
+ * @param[in] region - region id, 0 <= region < 8
+ */
+void __itt_mark_pt_region_end(__itt_pt_region region);
+/** @} Intel PT control group*/
+
+/**
  * @defgroup threads Threads
  * @ingroup public
  * Give names to threads
@@ -467,11 +559,9 @@ ITT_STUBV(ITTAPI, void, thread_ignore, (void))
  * @{
  */
 
-// clang-format off
-/*****************************************************************//**
+/*********************************************************************
  * @name group of functions used for error suppression in correctness tools
  *********************************************************************/
-// clang-format on
 /** @{ */
 /**
  * @hideinitializer
@@ -765,11 +855,9 @@ ITT_STUBV(ITTAPI, void, sync_destroy, (void *addr))
 #endif /* INTEL_NO_MACRO_BODY */
 /** @endcond */
 
-// clang-format off
-/*****************************************************************//**
+/*********************************************************************
  * @name group of functions is used for performance measurement tools
  *********************************************************************/
-// clang-format on
 /** @{ */
 /**
  * @brief Enter spin loop on user-defined sync object
@@ -855,11 +943,9 @@ ITT_STUBV(ITTAPI, void, sync_releasing, (void *addr))
 
 /** @} sync group */
 
-// clang-format off
-/**************************************************************//**
+/******************************************************************
  * @name group of functions is used for correctness checking tools
  ******************************************************************/
-// clang-format on
 /** @{ */
 /**
  * @ingroup legacy
@@ -2449,7 +2535,7 @@ ITT_STUBV(ITTAPI, void, marker,
  * name of the metadata), and a value (the actual data). The encoding of
  * the value depends on the type of the metadata.
  *
- * The type of metadata is specified by an enumerated type __itt_metadata_type.
+ * The type of metadata is specified by an enumerated type __itt_metdata_type.
  * @{
  */
 
@@ -3530,7 +3616,7 @@ ITT_STUBV(ITTAPI, void, relation_add_ex,
   ITTNOTIFY_VOID_D5(relation_add_ex, d, x, y, z, a, b)
 #define __itt_relation_add_ex_ptr ITTNOTIFY_NAME(relation_add_ex)
 #else /* INTEL_NO_ITTNOTIFY_API */
-#define __itt_relation_add_to_current_ex(domain, clock_domain, timestamp,      \
+#define __itt_relation_add_to_current_ex(domain, clock_domain, timestame,      \
                                          relation, tail)
 #define __itt_relation_add_to_current_ex_ptr 0
 #define __itt_relation_add_ex(domain, clock_domain, timestamp, head, relation, \
@@ -3903,11 +3989,13 @@ ITT_STUBV(ITTAPI, void, enable_attach, (void))
 /** @endcond */
 
 /**
- * @brief Module load info
- * This API is used to report necessary information in case of module relocation
- * @param[in] start_addr - relocated module start address
- * @param[in] end_addr - relocated module end address
- * @param[in] path - file system path to the module
+ * @brief Module load notification
+ * This API is used to report necessary information in case of bypassing default
+ * system loader. Notification should be done immidiatelly after this module is
+ * loaded to process memory.
+ * @param[in] start_addr - module start address
+ * @param[in] end_addr - module end address
+ * @param[in] path - file system full path to the module
  */
 #if ITT_PLATFORM == ITT_PLATFORM_WIN
 void ITTAPI __itt_module_loadA(void *start_addr, void *end_addr,
@@ -3965,6 +4053,319 @@ ITT_STUB(ITTAPI, void, module_load,
 #else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #define __itt_module_load_ptr 0
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Report module unload
+ * This API is used to report necessary information in case of bypassing default
+ * system loader. Notification should be done just before the module is unloaded
+ * from process memory.
+ * @param[in] addr - base address of loaded module
+ */
+void ITTAPI __itt_module_unload(void *addr);
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, module_unload, (void *addr))
+#define __itt_module_unload ITTNOTIFY_VOID(module_unload)
+#define __itt_module_unload_ptr ITTNOTIFY_NAME(module_unload)
+#else /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_module_unload(addr)
+#define __itt_module_unload_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else /* INTEL_NO_MACRO_BODY */
+#define __itt_module_unload_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/** @cond exclude_from_documentation */
+typedef enum {
+  __itt_module_type_unknown = 0,
+  __itt_module_type_elf,
+  __itt_module_type_coff
+} __itt_module_type;
+/** @endcond */
+
+/** @cond exclude_from_documentation */
+typedef enum {
+  itt_section_type_unknown,
+  itt_section_type_bss, /* notifies that the section contains uninitialized
+                         * data. These are the relevant section types and the
+                         * modules that contain them: ELF module:  SHT_NOBITS
+                         * section type COFF module:
+                         * IMAGE_SCN_CNT_UNINITIALIZED_DATA section type
+                         */
+  itt_section_type_data, /* notifies that section contains initialized data.
+                          * These are the relevant section types and the modules
+                          * that contain them: ELF module:  SHT_PROGBITS section
+                          * type COFF module: IMAGE_SCN_CNT_INITIALIZED_DATA
+                          * section type
+                          */
+  itt_section_type_text /* notifies that the section contains executable code.
+                         * These are the relevant section types and the modules
+                         * that contain them: ELF module:  SHT_PROGBITS section
+                         * type COFF module: IMAGE_SCN_CNT_CODE section type
+                         */
+} __itt_section_type;
+/** @endcond */
+
+/**
+ * @hideinitializer
+ * @brief bit-mask, detects a section attribute that indicates whether a section
+ * can be executed as code: These are the relevant section attributes and the
+ * modules that contain them: ELF module:  PF_X section attribute COFF module:
+ * IMAGE_SCN_MEM_EXECUTE attribute
+ */
+#define __itt_section_exec 0x20000000
+
+/**
+ * @hideinitializer
+ * @brief bit-mask, detects a section attribute that indicates whether a section
+ * can be read. These are the relevant section attributes and the modules that
+ * contain them: ELF module:  PF_R attribute COFF module: IMAGE_SCN_MEM_READ
+ * attribute
+ */
+#define __itt_section_read 0x40000000
+
+/**
+ * @hideinitializer
+ * @brief bit-mask, detects a section attribute that indicates whether a section
+ * can be written to. These are the relevant section attributes and the modules
+ * that contain them: ELF module:  PF_W attribute COFF module:
+ * IMAGE_SCN_MEM_WRITE attribute
+ */
+#define __itt_section_write 0x80000000
+
+/** @cond exclude_from_documentation */
+#pragma pack(push, 8)
+
+typedef struct ___itt_section_info {
+  const char *name; /*!< Section name in UTF8 */
+  __itt_section_type type; /*!< Section content and semantics description */
+  size_t flags; /*!< Section bit flags that describe attributes using bit mask
+                 * Zero if disabled, non-zero if enabled
+                 */
+  void *start_addr; /*!< Section load(relocated) start address */
+  size_t size; /*!< Section file offset */
+  size_t file_offset; /*!< Section size */
+} __itt_section_info;
+
+#pragma pack(pop)
+/** @endcond */
+
+/** @cond exclude_from_documentation */
+#pragma pack(push, 8)
+
+typedef struct ___itt_module_object {
+  unsigned int version; /*!< API version*/
+  __itt_id module_id; /*!< Unique identifier. This is unchanged for sections
+                         that belong to the same module */
+  __itt_module_type module_type; /*!< Binary module format */
+  const char *module_name; /*!< Unique module name or path to module in UTF8
+                            * Contains module name when module_bufer and
+                            * module_size exist Contains module path when
+                            * module_bufer and module_size absent module_name
+                            * remains the same for the certain module_id
+                            */
+  void *module_buffer; /*!< Module buffer content */
+  size_t module_size; /*!< Module buffer size */
+  /*!< If module_buffer and module_size exist, the binary module is dumped onto
+   * the system. If module_buffer and module_size do not exist, the binary
+   * module exists on the system already. The module_name parameter contains the
+   * path to the module.
+   */
+  __itt_section_info *section_array; /*!< Reference to section information */
+  size_t section_number;
+} __itt_module_object;
+
+#pragma pack(pop)
+/** @endcond */
+
+/**
+ * @brief Load module content and its loaded(relocated) sections.
+ * This API is useful to save a module, or specify its location on the system
+ * and report information about loaded sections. The target module is saved on
+ * the system if module buffer content and size are available. If module buffer
+ * content and size are unavailable, the module name contains the path to the
+ * existing binary module.
+ * @param[in] module_obj - provides module and section information, along with
+ * unique module identifiers (name,module ID) which bind the binary module to
+ * particular sections.
+ */
+void ITTAPI __itt_module_load_with_sections(__itt_module_object *module_obj);
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, module_load_with_sections,
+          (__itt_module_object * module_obj))
+#define __itt_module_load_with_sections                                        \
+  ITTNOTIFY_VOID(module_load_with_sections)
+#define __itt_module_load_with_sections_ptr                                    \
+  ITTNOTIFY_NAME(module_load_with_sections)
+#else /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_module_load_with_sections(module_obj)
+#define __itt_module_load_with_sections_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else /* INTEL_NO_MACRO_BODY */
+#define __itt_module_load_with_sections_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Unload a module and its loaded(relocated) sections.
+ * This API notifies that the module and its sections were unloaded.
+ * @param[in] module_obj - provides module and sections information, along with
+ * unique module identifiers (name,module ID) which bind the binary module to
+ * particular sections.
+ */
+void ITTAPI __itt_module_unload_with_sections(__itt_module_object *module_obj);
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, module_unload_with_sections,
+          (__itt_module_object * module_obj))
+#define __itt_module_unload_with_sections                                      \
+  ITTNOTIFY_VOID(module_unload_with_sections)
+#define __itt_module_unload_with_sections_ptr                                  \
+  ITTNOTIFY_NAME(module_unload_with_sections)
+#else /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_module_unload_with_sections(module_obj)
+#define __itt_module_unload_with_sections_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else /* INTEL_NO_MACRO_BODY */
+#define __itt_module_unload_with_sections_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/** @cond exclude_from_documentation */
+#pragma pack(push, 8)
+
+typedef struct ___itt_histogram {
+  const __itt_domain *domain; /*!< Domain of the histogram*/
+  const char *nameA; /*!< Name of the histogram */
+#if defined(UNICODE) || defined(_UNICODE)
+  const wchar_t *nameW;
+#else /* UNICODE || _UNICODE */
+  void *nameW;
+#endif /* UNICODE || _UNICODE */
+  __itt_metadata_type x_type; /*!< Type of the histogram X axis */
+  __itt_metadata_type y_type; /*!< Type of the histogram Y axis */
+  int extra1; /*!< Reserved to the runtime */
+  void *extra2; /*!< Reserved to the runtime */
+  struct ___itt_histogram *next;
+} __itt_histogram;
+
+#pragma pack(pop)
+/** @endcond */
+
+/**
+ * @brief Create a typed histogram instance with given name/domain.
+ * @param[in] domain The domain controlling the call.
+ * @param[in] name   The name of the histogram.
+ * @param[in] x_type The type of the X axis in histogram (may be 0 to calculate
+ * batch statistics).
+ * @param[in] y_type The type of the Y axis in histogram.
+ */
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+__itt_histogram *ITTAPI __itt_histogram_createA(const __itt_domain *domain,
+                                                const char *name,
+                                                __itt_metadata_type x_type,
+                                                __itt_metadata_type y_type);
+__itt_histogram *ITTAPI __itt_histogram_createW(const __itt_domain *domain,
+                                                const wchar_t *name,
+                                                __itt_metadata_type x_type,
+                                                __itt_metadata_type y_type);
+#if defined(UNICODE) || defined(_UNICODE)
+#define __itt_histogram_create __itt_histogram_createW
+#define __itt_histogram_create_ptr __itt_histogram_createW_ptr
+#else /* UNICODE */
+#define __itt_histogram_create __itt_histogram_createA
+#define __itt_histogram_create_ptr __itt_histogram_createA_ptr
+#endif /* UNICODE */
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+__itt_histogram *ITTAPI __itt_histogram_create(const __itt_domain *domain,
+                                               const char *name,
+                                               __itt_metadata_type x_type,
+                                               __itt_metadata_type y_type);
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, __itt_histogram *, histogram_createA,
+         (const __itt_domain *domain, const char *name,
+          __itt_metadata_type x_type, __itt_metadata_type y_type))
+ITT_STUB(ITTAPI, __itt_histogram *, histogram_createW,
+         (const __itt_domain *domain, const wchar_t *name,
+          __itt_metadata_type x_type, __itt_metadata_type y_type))
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, __itt_histogram *, histogram_create,
+         (const __itt_domain *domain, const char *name,
+          __itt_metadata_type x_type, __itt_metadata_type y_type))
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+#define __itt_histogram_createA ITTNOTIFY_DATA(histogram_createA)
+#define __itt_histogram_createA_ptr ITTNOTIFY_NAME(histogram_createA)
+#define __itt_histogram_createW ITTNOTIFY_DATA(histogram_createW)
+#define __itt_histogram_createW_ptr ITTNOTIFY_NAME(histogram_createW)
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_histogram_create ITTNOTIFY_DATA(histogram_create)
+#define __itt_histogram_create_ptr ITTNOTIFY_NAME(histogram_create)
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#else /* INTEL_NO_ITTNOTIFY_API */
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+#define __itt_histogram_createA(domain, name, x_type, y_type)                  \
+  (__itt_histogram *)0
+#define __itt_histogram_createA_ptr 0
+#define __itt_histogram_createW(domain, name, x_type, y_type)                  \
+  (__itt_histogram *)0
+#define __itt_histogram_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_histogram_create(domain, name, x_type, y_type)                   \
+  (__itt_histogram *)0
+#define __itt_histogram_create_ptr 0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else /* INTEL_NO_MACRO_BODY */
+#if ITT_PLATFORM == ITT_PLATFORM_WIN
+#define __itt_histogram_createA_ptr 0
+#define __itt_histogram_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_histogram_create_ptr 0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Submit statistics for a histogram instance.
+ * @param[in] hist    Pointer to the histogram instance to which the histogram
+ * statistic is to be dumped.
+ * @param[in] length  The number of elements in dumped axis data array.
+ * @param[in] x_data  The X axis dumped data itself (may be NULL to calculate
+ * batch statistics).
+ * @param[in] y_data  The Y axis dumped data itself.
+ */
+void ITTAPI __itt_histogram_submit(__itt_histogram *hist, size_t length,
+                                   void *x_data, void *y_data);
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, histogram_submit,
+          (__itt_histogram * hist, size_t length, void *x_data, void *y_data))
+#define __itt_histogram_submit ITTNOTIFY_VOID(histogram_submit)
+#define __itt_histogram_submit_ptr ITTNOTIFY_NAME(histogram_submit)
+#else /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_histogram_submit(hist, length, x_data, y_data)
+#define __itt_histogram_submit_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else /* INTEL_NO_MACRO_BODY */
+#define __itt_histogram_submit_ptr 0
 #endif /* INTEL_NO_MACRO_BODY */
 /** @endcond */
 

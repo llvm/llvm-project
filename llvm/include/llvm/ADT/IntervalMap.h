@@ -5,30 +5,31 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements a coalescing interval map for small objects.
-//
-// KeyT objects are mapped to ValT objects. Intervals of keys that map to the
-// same value are represented in a compressed form.
-//
-// Iterators provide ordered access to the compressed intervals rather than the
-// individual keys, and insert and erase operations use key intervals as well.
-//
-// Like SmallVector, IntervalMap will store the first N intervals in the map
-// object itself without any allocations. When space is exhausted it switches to
-// a B+-tree representation with very small overhead for small key and value
-// objects.
-//
-// A Traits class specifies how keys are compared. It also allows IntervalMap to
-// work with both closed and half-open intervals.
-//
-// Keys and values are not stored next to each other in a std::pair, so we don't
-// provide such a value_type. Dereferencing iterators only returns the mapped
-// value. The interval bounds are accessible through the start() and stop()
-// iterator methods.
-//
-// IntervalMap is optimized for small key and value objects, 4 or 8 bytes each
-// is the optimal size. For large objects use std::map instead.
+///
+/// \file
+/// This file implements a coalescing interval map for small objects.
+///
+/// KeyT objects are mapped to ValT objects. Intervals of keys that map to the
+/// same value are represented in a compressed form.
+///
+/// Iterators provide ordered access to the compressed intervals rather than the
+/// individual keys, and insert and erase operations use key intervals as well.
+///
+/// Like SmallVector, IntervalMap will store the first N intervals in the map
+/// object itself without any allocations. When space is exhausted it switches
+/// to a B+-tree representation with very small overhead for small key and
+/// value objects.
+///
+/// A Traits class specifies how keys are compared. It also allows IntervalMap
+/// to work with both closed and half-open intervals.
+///
+/// Keys and values are not stored next to each other in a std::pair, so we
+/// don't provide such a value_type. Dereferencing iterators only returns the
+/// mapped value. The interval bounds are accessible through the start() and
+/// stop() iterator methods.
+///
+/// IntervalMap is optimized for small key and value objects, 4 or 8 bytes
+/// each is the optimal size. For large objects use std::map instead.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -105,13 +106,10 @@
 
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/bit.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <iterator>
 #include <new>
 #include <utility>
@@ -968,39 +966,39 @@ public:
 
 private:
   // The root data is either a RootLeaf or a RootBranchData instance.
-  AlignedCharArrayUnion<RootLeaf, RootBranchData> data;
+  union {
+    RootLeaf leaf;
+    RootBranchData branchData;
+  };
 
   // Tree height.
   // 0: Leaves in root.
   // 1: Root points to leaf.
   // 2: root->branch->leaf ...
-  unsigned height;
+  unsigned height = 0;
 
   // Number of entries in the root node.
-  unsigned rootSize;
+  unsigned rootSize = 0;
 
   // Allocator used for creating external nodes.
-  Allocator &allocator;
-
-  /// Represent data as a node type without breaking aliasing rules.
-  template <typename T> T &dataAs() const { return *bit_cast<T *>(&data); }
+  Allocator *allocator = nullptr;
 
   const RootLeaf &rootLeaf() const {
     assert(!branched() && "Cannot acces leaf data in branched root");
-    return dataAs<RootLeaf>();
+    return leaf;
   }
   RootLeaf &rootLeaf() {
     assert(!branched() && "Cannot acces leaf data in branched root");
-    return dataAs<RootLeaf>();
+    return leaf;
   }
 
-  RootBranchData &rootBranchData() const {
+  const RootBranchData &rootBranchData() const {
     assert(branched() && "Cannot access branch data in non-branched root");
-    return dataAs<RootBranchData>();
+    return branchData;
   }
   RootBranchData &rootBranchData() {
     assert(branched() && "Cannot access branch data in non-branched root");
-    return dataAs<RootBranchData>();
+    return branchData;
   }
 
   const RootBranch &rootBranch() const { return rootBranchData().node; }
@@ -1009,12 +1007,12 @@ private:
   KeyT &rootBranchStart()      { return rootBranchData().start; }
 
   template <typename NodeT> NodeT *newNode() {
-    return new(allocator.template Allocate<NodeT>()) NodeT();
+    return new (allocator->template Allocate<NodeT>()) NodeT();
   }
 
   template <typename NodeT> void deleteNode(NodeT *P) {
     P->~NodeT();
-    allocator.Deallocate(P);
+    allocator->Deallocate(P);
   }
 
   IdxPair branchRoot(unsigned Position);
@@ -1040,11 +1038,59 @@ private:
   void deleteNode(IntervalMapImpl::NodeRef Node, unsigned Level);
 
 public:
-  explicit IntervalMap(Allocator &a) : height(0), rootSize(0), allocator(a) {
-    assert((uintptr_t(&data) & (alignof(RootLeaf) - 1)) == 0 &&
-           "Insufficient alignment");
-    new(&rootLeaf()) RootLeaf();
+  explicit IntervalMap(Allocator &a) : allocator(&a) {
+    new (&rootLeaf()) RootLeaf();
   }
+
+  ///@{
+  /// NOTE: The moved-from or copied-from object's allocator needs to have a
+  /// lifetime equal to or exceeding the moved-to or copied-to object to avoid
+  /// undefined behaviour.
+  IntervalMap(IntervalMap const &RHS) : IntervalMap(*RHS.allocator) {
+    // Future-proofing assertion: this function assumes the IntervalMap
+    // constructor doesn't add any nodes.
+    assert(empty() && "Expected emptry tree");
+    *this = RHS;
+  }
+  IntervalMap &operator=(IntervalMap const &RHS) {
+    clear();
+    allocator = RHS.allocator;
+    for (auto It = RHS.begin(), End = RHS.end(); It != End; ++It)
+      insert(It.start(), It.stop(), It.value());
+    return *this;
+  }
+
+  IntervalMap(IntervalMap &&RHS) : IntervalMap(*RHS.allocator) {
+    // Future-proofing assertion: this function assumes the IntervalMap
+    // constructor doesn't add any nodes.
+    assert(empty() && "Expected emptry tree");
+    *this = std::move(RHS);
+  }
+  IntervalMap &operator=(IntervalMap &&RHS) {
+    // Calling clear deallocates memory and switches to rootLeaf.
+    clear();
+    // Destroy the new rootLeaf.
+    rootLeaf().~RootLeaf();
+
+    height = RHS.height;
+    rootSize = RHS.rootSize;
+    allocator = RHS.allocator;
+
+    // rootLeaf and rootBranch are both uninitialized. Move RHS data into
+    // appropriate field.
+    if (RHS.branched()) {
+      rootBranch() = std::move(RHS.rootBranch());
+      // Prevent RHS deallocating memory LHS now owns by replacing RHS
+      // rootBranch with a new rootLeaf.
+      RHS.rootBranch().~RootBranch();
+      RHS.height = 0;
+      new (&RHS.rootLeaf()) RootLeaf();
+    } else {
+      rootLeaf() = std::move(RHS.rootLeaf());
+    }
+    return *this;
+  }
+  ///@}
 
   ~IntervalMap() {
     clear();
@@ -1137,7 +1183,7 @@ public:
 
   /// overlaps(a, b) - Return true if the intervals in this map overlap with the
   /// interval [a;b].
-  bool overlaps(KeyT a, KeyT b) {
+  bool overlaps(KeyT a, KeyT b) const {
     assert(Traits::nonEmpty(a, b));
     const_iterator I = find(a);
     if (!I.valid())
@@ -1175,7 +1221,7 @@ branchRoot(unsigned Position) {
   unsigned size[Nodes];
   IdxPair NewOffset(0, Position);
 
-  // Is is very common for the root node to be smaller than external nodes.
+  // It is very common for the root node to be smaller than external nodes.
   if (Nodes == 1)
     size[0] = rootSize;
   else
@@ -1216,7 +1262,7 @@ splitRoot(unsigned Position) {
   unsigned Size[Nodes];
   IdxPair NewOffset(0, Position);
 
-  // Is is very common for the root node to be smaller than external nodes.
+  // It is very common for the root node to be smaller than external nodes.
   if (Nodes == 1)
     Size[0] = rootSize;
   else
@@ -1768,7 +1814,7 @@ iterator::insertNode(unsigned Level, IntervalMapImpl::NodeRef Node, KeyT Stop) {
 
   // Insert into the branch node at Level-1.
   if (P.size(Level) == Branch::Capacity) {
-    // Branch node is full, handle handle the overflow.
+    // Branch node is full, handle the overflow.
     assert(!SplitRoot && "Cannot overflow after splitting the root");
     SplitRoot = overflow<Branch>(Level);
     Level += SplitRoot;

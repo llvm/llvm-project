@@ -1,7 +1,11 @@
 // RUN: llvm-mc -triple aarch64-windows -filetype obj -o %t.obj %s
-// RUN: llvm-readobj -r %t.obj | FileCheck %s
-// RUN: llvm-objdump -d %t.obj | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-mc -triple arm64ec-windows -filetype obj -o %t-ec.obj %s
+// RUN: llvm-readobj -r %t.obj | FileCheck %s --check-prefixes=CHECK,CHECK-ARM64
+// RUN: llvm-readobj -r %t-ec.obj | FileCheck %s --check-prefixes=CHECK,CHECK-ARM64EC
+// RUN: llvm-objdump --no-print-imm-hex -d %t.obj | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex -d %t-ec.obj | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %t.obj | FileCheck %s --check-prefix=DATA
+// RUN: llvm-objdump -s %t-ec.obj | FileCheck %s --check-prefix=DATA
 
 // IMAGE_REL_ARM64_ADDR32
 .Linfo_foo:
@@ -67,8 +71,14 @@ tbz x0, #0, target
 .word .Linfo_bar - .Ltable
 .word .Linfo_foo - .Ltable
 
-// CHECK: Format: COFF-ARM64
-// CHECK: Arch: aarch64
+// As an extension, we allow 64-bit label differences. They lower to
+// IMAGE_REL_ARM64_REL32 because IMAGE_REL_ARM64_REL64 does not exist.
+.xword .Linfo_foo - .Ltable
+
+// CHECK-ARM64: Format: COFF-ARM64
+// CHECK-ARM64EC: Format: COFF-ARM64EC
+// CHECK-ARM64: Arch: aarch64
+// CHECK-ARM64EC: Arch: aarch64
 // CHECK: AddressSize: 64bit
 // CHECK: Relocations [
 // CHECK:   Section (1) .text {
@@ -96,17 +106,18 @@ tbz x0, #0, target
 // CHECK:   Section (4) .rdata {
 // CHECK: 0x0 IMAGE_REL_ARM64_REL32 .text
 // CHECK: 0x4 IMAGE_REL_ARM64_REL32 .text
+// CHECK: 0x8 IMAGE_REL_ARM64_REL32 .text
 // CHECK:   }
 // CHECK: ]
 
-// DISASM: 30:       20 1a 09 b0     adrp    x0, 0x12345000
-// DISASM: 34:       00 14 0d 91     add     x0, x0, #837
-// DISASM: 38:       00 14 4d 39     ldrb    w0, [x0, #837]
-// DISASM: 3c:       00 a4 41 f9     ldr     x0, [x0, #840]
-// DISASM: 40:       00 00 00 91     add     x0, x0, #0
-// DISASM: 44:       00 00 40 91     add     x0, x0, #0, lsl #12
-// DISASM: 48:       00 00 40 f9     ldr     x0, [x0]
-// DISASM: 4c:       20 1a 09 30     adr     x0, #74565
+// DISASM: 30:       b0091a20     adrp    x0, 0x12345000
+// DISASM: 34:       910d1400     add     x0, x0, #837
+// DISASM: 38:       394d1400     ldrb    w0, [x0, #837]
+// DISASM: 3c:       f941a400     ldr     x0, [x0, #840]
+// DISASM: 40:       91000000     add     x0, x0, #0
+// DISASM: 44:       91400000     add     x0, x0, #0, lsl #12
+// DISASM: 48:       f9400000     ldr     x0, [x0]
+// DISASM: 4c:       30091a20     adr     x0, 0x12391
 
 // DATA: Contents of section .rdata:
 // DATA-NEXT:  0000 30000000 08000000

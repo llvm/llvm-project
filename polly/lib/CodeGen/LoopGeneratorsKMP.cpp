@@ -57,7 +57,8 @@ void ParallelLoopGeneratorKMP::createCallSpawnThreads(Value *SubFn,
                    Stride,
                    SubFnParam};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorKMP::deployParallelExecution(Function *SubFn,
@@ -80,7 +81,7 @@ Function *ParallelLoopGeneratorKMP::prepareSubFnDefinition(Function *F) const {
                                    LongType,
                                    LongType,
                                    LongType,
-                                   Builder.getInt8PtrTy()};
+                                   Builder.getPtrTy()};
 
   FunctionType *FT = FunctionType::get(Builder.getVoidTy(), Arguments, false);
   Function *SubFn = Function::Create(FT, Function::InternalLinkage,
@@ -174,11 +175,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   std::advance(AI, 1);
   Value *Shared = &*AI;
 
-  Value *UserContext = Builder.CreateBitCast(Shared, StructData->getType(),
-                                             "polly.par.userContext");
-
-  extractValuesFromStruct(Data, StructData->getAllocatedType(), UserContext,
-                          Map);
+  extractValuesFromStruct(Data, StructData->getAllocatedType(), Shared, Map);
 
   const auto Alignment = llvm::Align(is64BitArch() ? 8 : 4);
   Value *ID = Builder.CreateAlignedLoad(Builder.getInt32Ty(), IDPtr, Alignment,
@@ -329,7 +326,9 @@ Value *ParallelLoopGeneratorKMP::createCallGlobalThreadNum() {
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
-  return Builder.CreateCall(F, {SourceLocationInfo});
+  CallInst *Call = Builder.CreateCall(F, {SourceLocationInfo});
+  Call->setDebugLoc(DLGenerated);
+  return Call;
 }
 
 void ParallelLoopGeneratorKMP::createCallPushNumThreads(Value *GlobalThreadID,
@@ -352,7 +351,8 @@ void ParallelLoopGeneratorKMP::createCallPushNumThreads(Value *GlobalThreadID,
 
   Value *Args[] = {SourceLocationInfo, GlobalThreadID, NumThreads};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorKMP::createCallStaticInit(Value *GlobalThreadID,
@@ -397,7 +397,8 @@ void ParallelLoopGeneratorKMP::createCallStaticInit(Value *GlobalThreadID,
       ConstantInt::get(LongType, 1),
       ChunkSize};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorKMP::createCallStaticFini(Value *GlobalThreadID) {
@@ -416,7 +417,8 @@ void ParallelLoopGeneratorKMP::createCallStaticFini(Value *GlobalThreadID) {
 
   Value *Args[] = {SourceLocationInfo, GlobalThreadID};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorKMP::createCallDispatchInit(Value *GlobalThreadID,
@@ -456,7 +458,8 @@ void ParallelLoopGeneratorKMP::createCallDispatchInit(Value *GlobalThreadID,
       Inc,
       ChunkSize};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 Value *ParallelLoopGeneratorKMP::createCallDispatchNext(Value *GlobalThreadID,
@@ -488,7 +491,9 @@ Value *ParallelLoopGeneratorKMP::createCallDispatchNext(Value *GlobalThreadID,
   Value *Args[] = {SourceLocationInfo, GlobalThreadID, IsLastPtr, LBPtr, UBPtr,
                    StridePtr};
 
-  return Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
+  return Call;
 }
 
 // TODO: This function currently creates a source location dummy. It might be
@@ -507,7 +512,7 @@ GlobalVariable *ParallelLoopGeneratorKMP::createSourceLocation() {
     if (!IdentTy) {
       Type *LocMembers[] = {Builder.getInt32Ty(), Builder.getInt32Ty(),
                             Builder.getInt32Ty(), Builder.getInt32Ty(),
-                            Builder.getInt8PtrTy()};
+                            Builder.getPtrTy()};
 
       IdentTy =
           StructType::create(M->getContext(), LocMembers, StructName, false);
@@ -517,8 +522,9 @@ GlobalVariable *ParallelLoopGeneratorKMP::createSourceLocation() {
         llvm::ArrayType::get(Builder.getInt8Ty(), /* Length */ 23);
 
     // Global Variable Definitions
-    GlobalVariable *StrVar = new GlobalVariable(
-        *M, ArrayType, true, GlobalValue::PrivateLinkage, 0, ".str.ident");
+    GlobalVariable *StrVar =
+        new GlobalVariable(*M, ArrayType, true, GlobalValue::PrivateLinkage,
+                           nullptr, ".str.ident");
     StrVar->setAlignment(llvm::Align(1));
 
     SourceLocDummy = new GlobalVariable(

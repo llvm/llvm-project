@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the SmallPtrSet class.  See the doxygen comment for
-// SmallPtrSetImplBase for more details on the algorithm used.
+///
+/// \file
+/// This file defines the SmallPtrSet class.  See the doxygen comment for
+/// SmallPtrSetImplBase for more details on the algorithm used.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,6 +25,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <utility>
 
 namespace llvm {
@@ -88,7 +90,7 @@ public:
 
   SmallPtrSetImplBase &operator=(const SmallPtrSetImplBase &) = delete;
 
-  LLVM_NODISCARD bool empty() const { return size() == 0; }
+  [[nodiscard]] bool empty() const { return size() == 0; }
   size_type size() const { return NumNonEmpty - NumTombstones; }
 
   void clear() {
@@ -263,8 +265,9 @@ protected:
 
 /// SmallPtrSetIterator - This implements a const_iterator for SmallPtrSet.
 template <typename PtrTy>
-class SmallPtrSetIterator : public SmallPtrSetIteratorImpl,
-                            DebugEpochBase::HandleBase {
+class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIterator
+    : public SmallPtrSetIteratorImpl,
+      DebugEpochBase::HandleBase {
   using PtrTraits = PointerLikeTypeTraits<PtrTy>;
 
 public:
@@ -307,31 +310,6 @@ public:
     ++*this;
     return tmp;
   }
-};
-
-/// RoundUpToPowerOfTwo - This is a helper template that rounds N up to the next
-/// power of two (which means N itself if N is already a power of two).
-template<unsigned N>
-struct RoundUpToPowerOfTwo;
-
-/// RoundUpToPowerOfTwoH - If N is not a power of two, increase it.  This is a
-/// helper template used to implement RoundUpToPowerOfTwo.
-template<unsigned N, bool isPowerTwo>
-struct RoundUpToPowerOfTwoH {
-  enum { Val = N };
-};
-template<unsigned N>
-struct RoundUpToPowerOfTwoH<N, false> {
-  enum {
-    // We could just use NextVal = N+1, but this converges faster.  N|(N-1) sets
-    // the right-most zero bits to one all at once, e.g. 0b0011000 -> 0b0011111.
-    Val = RoundUpToPowerOfTwo<(N|(N-1)) + 1>::Val
-  };
-};
-
-template<unsigned N>
-struct RoundUpToPowerOfTwo {
-  enum { Val = RoundUpToPowerOfTwoH<N, (N&(N-1)) == 0>::Val };
 };
 
 /// A templated base class for \c SmallPtrSet which provides the
@@ -454,8 +432,18 @@ class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
 
   using BaseT = SmallPtrSetImpl<PtrType>;
 
+  // A constexpr version of llvm::bit_ceil.
+  // TODO: Replace this with std::bit_ceil once C++20 is available.
+  static constexpr size_t RoundUpToPowerOfTwo(size_t X) {
+    size_t C = 1;
+    size_t CMax = C << (std::numeric_limits<size_t>::digits - 1);
+    while (C < X && C < CMax)
+      C <<= 1;
+    return C;
+  }
+
   // Make sure that SmallSize is a power of two, round up if not.
-  enum { SmallSizePowTwo = RoundUpToPowerOfTwo<SmallSize>::Val };
+  static constexpr size_t SmallSizePowTwo = RoundUpToPowerOfTwo(SmallSize);
   /// SmallStorage - Fixed size storage used in 'small mode'.
   const void *SmallStorage[SmallSizePowTwo];
 

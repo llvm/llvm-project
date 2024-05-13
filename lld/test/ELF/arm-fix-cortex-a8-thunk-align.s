@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf --arm-add-build-attributes %s -o %t.o
 // RUN: ld.lld --fix-cortex-a8 --shared %t.o -o %t2
-// RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t2 | FileCheck %s
 
 /// Test case that for an OutputSection larger than the ThunkSectionSpacing
 /// --fix-cortex-a8 will cause the size of the ThunkSection to be rounded up to
@@ -28,7 +28,7 @@ thumb_target:
 // CHECK-NEXT:        add     r12, pc
 // CHECK-NEXT:        bx      r12
 // CHECK:  00013004 <__CortexA8657417_11FFE>:
-// CHECK-NEXT: 13004: b.w     #-8196
+// CHECK-NEXT: 13004: b.w     0x11004 <thumb_target>
  .section .text.02
  /// Take us over thunk section spacing
  .space 16 * 1024 * 1024

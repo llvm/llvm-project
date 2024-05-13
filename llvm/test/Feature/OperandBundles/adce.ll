@@ -1,4 +1,4 @@
-; RUN: opt -S -adce < %s | FileCheck %s
+; RUN: opt -S -passes=adce < %s | FileCheck %s
 
 ; While it is normally okay to DCE out calls to @readonly_function and
 ; @readnone_function, we cannot do that if they're carrying operand

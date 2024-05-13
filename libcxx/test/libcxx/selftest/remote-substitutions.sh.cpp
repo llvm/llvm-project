@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-FREEBSD-FIXME
+
 // Make sure that test-executables can appear in RUN lines and be executed
 // effectively. This somewhat difficult-to-understand test checks that when
 // we run with a remote executor, test-executables are copied to the remote
@@ -15,6 +17,7 @@
 // We also check that the path of test-executables is replaced whether they
 // appear first in the command-line or not.
 
+// UNSUPPORTED: executor-has-no-bash
 // RUN: %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe 0
 // RUN: %{exec} bash -c '! %t.exe 1'

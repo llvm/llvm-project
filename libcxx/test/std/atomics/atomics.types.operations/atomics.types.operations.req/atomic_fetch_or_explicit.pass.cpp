@@ -5,18 +5,20 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
+
+// XFAIL: !has-64-bit-atomics
 
 // <atomic>
 
-// template <class Integral>
-//     Integral
-//     atomic_fetch_or_explicit(volatile atomic<Integral>* obj, Integral op);
+// template<class T>
+//     T
+//     atomic_fetch_or_explicit(volatile atomic<T>*, atomic<T>::value_type,
+//                              memory_order) noexcept;
 //
-// template <class Integral>
-//     Integral
-//     atomic_fetch_or_explicit(atomic<Integral>* obj, Integral op);
+// template<class T>
+//     T
+//     atomic_fetch_or_explicit(atomic<T>*, atomic<T>::value_type,
+//                              memory_order) noexcept;
 
 #include <atomic>
 #include <type_traits>
@@ -30,19 +32,21 @@ struct TestFn {
   void operator()() const {
     {
         typedef std::atomic<T> A;
-        A t;
-        std::atomic_init(&t, T(1));
+        A t(T(1));
         assert(std::atomic_fetch_or_explicit(&t, T(2),
                std::memory_order_seq_cst) == T(1));
         assert(t == T(3));
+
+        ASSERT_NOEXCEPT(std::atomic_fetch_or_explicit(&t, T(2), std::memory_order_seq_cst));
     }
     {
         typedef std::atomic<T> A;
-        volatile A t;
-        std::atomic_init(&t, T(3));
+        volatile A t(T(3));
         assert(std::atomic_fetch_or_explicit(&t, T(2),
                std::memory_order_seq_cst) == T(3));
         assert(t == T(3));
+
+        ASSERT_NOEXCEPT(std::atomic_fetch_or_explicit(&t, T(2), std::memory_order_seq_cst));
     }
   }
 };

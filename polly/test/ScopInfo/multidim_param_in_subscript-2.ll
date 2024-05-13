@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
-; RUN:  -polly-precise-fold-accesses  < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-precise-fold-accesses -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void foo(long n, long m, float A[][n][m]) {
 ;      for (long i = 0; i < 100; i++)
@@ -18,7 +17,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64 %n, i64 %m, float* %A) {
+define void @foo(i64 %n, i64 %m, ptr %A) {
 entry:
   br label %for.cond
 
@@ -53,17 +52,17 @@ for.body6:                                        ; preds = %for.cond4
   %tmp2 = mul nsw i64 %sub9, %m
   %arrayidx.sum = add i64 %tmp1, %tmp2
   %arrayidx10.sum = add i64 %arrayidx.sum, %sub7
-  %arrayidx11 = getelementptr inbounds float, float* %A, i64 %arrayidx10.sum
-  %tmp3 = load float, float* %arrayidx11, align 4
+  %arrayidx11 = getelementptr inbounds float, ptr %A, i64 %arrayidx10.sum
+  %tmp3 = load float, ptr %arrayidx11, align 4
   %tmp4 = mul nuw i64 %n, %m
   %tmp5 = mul nsw i64 %i.0, %tmp4
   %tmp6 = mul nsw i64 %j.0, %m
   %arrayidx12.sum = add i64 %tmp5, %tmp6
   %arrayidx13.sum = add i64 %arrayidx12.sum, %k.0
-  %arrayidx14 = getelementptr inbounds float, float* %A, i64 %arrayidx13.sum
-  %tmp7 = load float, float* %arrayidx14, align 4
+  %arrayidx14 = getelementptr inbounds float, ptr %A, i64 %arrayidx13.sum
+  %tmp7 = load float, ptr %arrayidx14, align 4
   %add = fadd float %tmp7, %tmp3
-  store float %add, float* %arrayidx14, align 4
+  store float %add, ptr %arrayidx14, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body6

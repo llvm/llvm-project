@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
 target triple = "nvptx-unknown-nvcl"
 
@@ -12,5 +13,5 @@ define void @foo(i64 %img, i32 %val, i32 %idx) {
 }
 
 !nvvm.annotations = !{!1, !2}
-!1 = !{void (i64, i32, i32)* @foo, !"kernel", i32 1}
-!2 = !{void (i64, i32, i32)* @foo, !"wroimage", i32 0}
+!1 = !{ptr @foo, !"kernel", i32 1}
+!2 = !{ptr @foo, !"wroimage", i32 0}

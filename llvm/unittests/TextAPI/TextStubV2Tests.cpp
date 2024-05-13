@@ -17,24 +17,24 @@ using namespace llvm;
 using namespace llvm::MachO;
 
 static ExportedSymbol TBDv2Symbols[] = {
-    {SymbolKind::GlobalSymbol, "$ld$hide$os9.0$_sym1", false, false},
-    {SymbolKind::GlobalSymbol, "_sym1", false, false},
-    {SymbolKind::GlobalSymbol, "_sym2", false, false},
-    {SymbolKind::GlobalSymbol, "_sym3", false, false},
-    {SymbolKind::GlobalSymbol, "_sym4", false, false},
-    {SymbolKind::GlobalSymbol, "_sym5", false, false},
-    {SymbolKind::GlobalSymbol, "_tlv1", false, true},
-    {SymbolKind::GlobalSymbol, "_tlv2", false, true},
-    {SymbolKind::GlobalSymbol, "_tlv3", false, true},
-    {SymbolKind::GlobalSymbol, "_weak1", true, false},
-    {SymbolKind::GlobalSymbol, "_weak2", true, false},
-    {SymbolKind::GlobalSymbol, "_weak3", true, false},
-    {SymbolKind::ObjectiveCClass, "class1", false, false},
-    {SymbolKind::ObjectiveCClass, "class2", false, false},
-    {SymbolKind::ObjectiveCClass, "class3", false, false},
-    {SymbolKind::ObjectiveCInstanceVariable, "class1._ivar1", false, false},
-    {SymbolKind::ObjectiveCInstanceVariable, "class1._ivar2", false, false},
-    {SymbolKind::ObjectiveCInstanceVariable, "class1._ivar3", false, false},
+    {EncodeKind::GlobalSymbol, "$ld$hide$os9.0$_sym1", false, false},
+    {EncodeKind::GlobalSymbol, "_sym1", false, false},
+    {EncodeKind::GlobalSymbol, "_sym2", false, false},
+    {EncodeKind::GlobalSymbol, "_sym3", false, false},
+    {EncodeKind::GlobalSymbol, "_sym4", false, false},
+    {EncodeKind::GlobalSymbol, "_sym5", false, false},
+    {EncodeKind::GlobalSymbol, "_tlv1", false, true},
+    {EncodeKind::GlobalSymbol, "_tlv2", false, true},
+    {EncodeKind::GlobalSymbol, "_tlv3", false, true},
+    {EncodeKind::GlobalSymbol, "_weak1", true, false},
+    {EncodeKind::GlobalSymbol, "_weak2", true, false},
+    {EncodeKind::GlobalSymbol, "_weak3", true, false},
+    {EncodeKind::ObjectiveCClass, "class1", false, false},
+    {EncodeKind::ObjectiveCClass, "class2", false, false},
+    {EncodeKind::ObjectiveCClass, "class3", false, false},
+    {EncodeKind::ObjectiveCInstanceVariable, "class1._ivar1", false, false},
+    {EncodeKind::ObjectiveCInstanceVariable, "class1._ivar2", false, false},
+    {EncodeKind::ObjectiveCInstanceVariable, "class1._ivar3", false, false},
 };
 
 namespace TBDv2 {
@@ -73,7 +73,7 @@ TEST(TBDv2, ReadFile) {
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
   auto Archs = AK_armv7 | AK_armv7s | AK_armv7k | AK_arm64;
-  auto Platform = PlatformKind::iOS;
+  auto Platform = PLATFORM_IOS;
   TargetList Targets;
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
@@ -87,7 +87,6 @@ TEST(TBDv2, ReadFile) {
   EXPECT_EQ(ObjCConstraintType::Retain_Release, File->getObjCConstraint());
   EXPECT_TRUE(File->isTwoLevelNamespace());
   EXPECT_TRUE(File->isApplicationExtensionSafe());
-  EXPECT_TRUE(File->isInstallAPI());
   InterfaceFileRef client("clientA", Targets);
   InterfaceFileRef reexport("/usr/lib/libfoo.dylib", Targets);
   EXPECT_EQ(1U, File->allowableClients().size());
@@ -103,9 +102,9 @@ TEST(TBDv2, ReadFile) {
         ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
                        Sym->isWeakDefined(), Sym->isThreadLocalValue()});
   }
-  llvm::sort(Exports.begin(), Exports.end());
+  llvm::sort(Exports);
 
-  EXPECT_EQ(sizeof(TBDv2Symbols) / sizeof(ExportedSymbol), Exports.size());
+  EXPECT_EQ(std::size(TBDv2Symbols), Exports.size());
   EXPECT_TRUE(
       std::equal(Exports.begin(), Exports.end(), std::begin(TBDv2Symbols)));
 }
@@ -145,7 +144,7 @@ TEST(TBDv2, ReadFile2) {
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
   auto Archs = AK_armv7 | AK_armv7s | AK_armv7k | AK_arm64;
-  auto Platform = PlatformKind::iOS;
+  auto Platform = PLATFORM_IOS;
   TargetList Targets;
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
@@ -159,7 +158,6 @@ TEST(TBDv2, ReadFile2) {
   EXPECT_EQ(ObjCConstraintType::Retain_Release, File->getObjCConstraint());
   EXPECT_FALSE(File->isTwoLevelNamespace());
   EXPECT_FALSE(File->isApplicationExtensionSafe());
-  EXPECT_FALSE(File->isInstallAPI());
   EXPECT_EQ(0U, File->allowableClients().size());
   EXPECT_EQ(0U, File->reexportedLibraries().size());
 }
@@ -189,7 +187,7 @@ TEST(TBDv2, WriteFile) {
   InterfaceFile File;
   TargetList Targets;
   for (auto &&arch : AK_i386 | AK_x86_64)
-    Targets.emplace_back(Target(arch, PlatformKind::macOS));
+    Targets.emplace_back(Target(arch, PLATFORM_MACOS));
   File.setPath("libfoo.dylib");
   File.setInstallName("/usr/lib/libfoo.dylib");
   File.setFileType(FileType::TBD_V2);
@@ -201,14 +199,14 @@ TEST(TBDv2, WriteFile) {
   File.setObjCConstraint(ObjCConstraintType::Retain_Release);
   File.addAllowableClient("clientA", Targets[1]);
   File.addReexportedLibrary("/usr/lib/libfoo.dylib", Targets[1]);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym1", {Targets[0]});
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym2", {Targets[0]},
+  File.addSymbol(EncodeKind::GlobalSymbol, "_sym1", {Targets[0]});
+  File.addSymbol(EncodeKind::GlobalSymbol, "_sym2", {Targets[0]},
                  SymbolFlags::WeakDefined);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym3", {Targets[0]},
+  File.addSymbol(EncodeKind::GlobalSymbol, "_sym3", {Targets[0]},
                  SymbolFlags::ThreadLocalValue);
-  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", {Targets[1]});
-  File.addSymbol(SymbolKind::ObjectiveCClassEHType, "Class1", {Targets[1]});
-  File.addSymbol(SymbolKind::ObjectiveCInstanceVariable, "Class1._ivar1",
+  File.addSymbol(EncodeKind::ObjectiveCClass, "Class1", {Targets[1]});
+  File.addSymbol(EncodeKind::ObjectiveCClassEHType, "Class1", {Targets[1]});
+  File.addSymbol(EncodeKind::ObjectiveCInstanceVariable, "Class1._ivar1",
                  {Targets[1]});
 
   SmallString<4096> Buffer;
@@ -229,7 +227,7 @@ TEST(TBDv2, Platform_macOS) {
       TextAPIReader::get(MemoryBufferRef(TBDv2PlatformMacOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   TBDFile File = std::move(Result.get());
-  auto Platform = PlatformKind::macOS;
+  auto Platform = PLATFORM_MACOS;
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
@@ -245,7 +243,7 @@ TEST(TBDv2, Platform_iOS) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv2PlatformiOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::iOS;
+  auto Platform = PLATFORM_IOS;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -262,7 +260,7 @@ TEST(TBDv2, Platform_watchOS) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv2PlatformWatchOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::watchOS;
+  auto Platform = PLATFORM_WATCHOS;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -279,7 +277,7 @@ TEST(TBDv2, Platform_tvOS) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv2PlatformtvOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::tvOS;
+  auto Platform = PLATFORM_TVOS;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -296,7 +294,7 @@ TEST(TBDv2, Platform_bridgeOS) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv2BridgeOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::bridgeOS;
+  auto Platform = PLATFORM_BRIDGEOS;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);

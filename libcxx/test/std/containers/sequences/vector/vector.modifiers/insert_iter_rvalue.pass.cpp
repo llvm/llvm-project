@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
     {
         std::vector<MoveOnly> v(100);
@@ -50,8 +50,8 @@ int main(int, char**)
             assert(v[j] == MoveOnly());
     }
     {
-        std::vector<MoveOnly, min_allocator<MoveOnly>> v(100);
-        std::vector<MoveOnly, min_allocator<MoveOnly>>::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
+        std::vector<MoveOnly, min_allocator<MoveOnly> > v(100);
+        std::vector<MoveOnly, min_allocator<MoveOnly> >::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
         assert(v.size() == 101);
         assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);
@@ -62,6 +62,28 @@ int main(int, char**)
         for (++j; j < 101; ++j)
             assert(v[j] == MoveOnly());
     }
+    {
+      std::vector<MoveOnly, safe_allocator<MoveOnly> > v(100);
+      std::vector<MoveOnly, safe_allocator<MoveOnly> >::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
+      assert(v.size() == 101);
+      assert(is_contiguous_container_asan_correct(v));
+      assert(i == v.begin() + 10);
+      int j;
+      for (j = 0; j < 10; ++j)
+        assert(v[j] == MoveOnly());
+      assert(v[j] == MoveOnly(3));
+      for (++j; j < 101; ++j)
+        assert(v[j] == MoveOnly());
+    }
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

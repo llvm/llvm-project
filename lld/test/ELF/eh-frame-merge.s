@@ -1,12 +1,39 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-// RUN: ld.lld --hash-style=sysv %t.o %t.o -o %t -shared
-// RUN: llvm-readobj -S --section-data %t | FileCheck %s
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: ld.lld %t.o %t.o -shared --emit-relocs -o %t.so
+# RUN: llvm-readelf -S -r %t.so | FileCheck %s --check-prefixes=CHECK,RELOC
+# RUN: llvm-dwarfdump --eh-frame %t.so | FileCheck %s --check-prefix=EH
 
-/// Also show that the merging happens when going via a -r link.
-// RUN: ld.lld -r %t.o %t.o -o %t.r.o
-// RUN: ld.lld --hash-style=sysv %t.r.o -o %t2 -shared
-// RUN: llvm-readobj -S --section-data %t2 | FileCheck %s
+## Also show that the merging happens when going via a -r link.
+# RUN: ld.lld -r %t.o %t.o -o %t.ro
+# RUN: ld.lld %t.ro -o %t2.so -shared
+# RUN: llvm-readelf -S -r %t2.so | FileCheck %s
+
+# CHECK:       Name      Type     Address              Off      Size   ES Flg Lk Inf Al
+# CHECK:      .eh_frame  PROGBITS [[#%x,]]             [[#%x,]] 000058 00   A  0   0  8
+# CHECK:      foo        PROGBITS {{0*}}[[#%x,FOO:]]   [[#%x,]] 000002 00  AX  0   0  1
+# CHECK-NEXT: bar        PROGBITS {{0*}}[[#%x,FOO+2]]  [[#%x,]] 000002 00  AX  0   0  1
+
+# RELOC:        Offset             Info     Type          Symbol's Value  Symbol's Name + Addend
+# RELOC-NEXT: {{0*}}[[#%x,OFF:]]   [[#%x,]] R_X86_64_PC32 [[#%x,]]        foo + 0
+# RELOC-NEXT: {{0*}}[[#%x,OFF+20]] [[#%x,]] R_X86_64_PC32 [[#%x,]]        bar + 0
+# RELOC-NEXT: {{0*}}[[#OFF+40]]    [[#%x,]] R_X86_64_PC32 [[#%x,]]        foo + 1
+# RELOC-NEXT: {{0*}}[[#%x,OFF-24]] [[#%x,]] R_X86_64_NONE 0{{$}}
+
+# EH:          Format:                DWARF32
+# EH:        00000018 00000010 0000001c FDE cie=00000000 pc={{0*}}[[#%x,FOO:]]...
+# EH-SAME:   {{0*}}[[#%x,FOO+1]]
+# EH-COUNT-3:  DW_CFA_nop:
+# EH-EMPTY:  
+# EH:        0000002c 00000010 00000030 FDE cie=00000000 pc={{0*}}[[#%x,FOO+2]]...{{0*}}[[#%x,FOO+4]]
+# EH-COUNT-3:  DW_CFA_nop:
+# EH-EMPTY:
+# EH:        00000040 00000010 00000044 FDE cie=00000000 pc={{0*}}[[#%x,FOO+1]]...{{0*}}[[#%x,FOO+2]]
+# EH-COUNT-3:  DW_CFA_nop:
+# EH-EMPTY:
+# EH-NEXT:     0x[[#%x,]]: CFA=RSP+8: RIP=[CFA-8]
+# EH-EMPTY:
+# EH-NEXT:   00000054 ZERO terminator
 
         .section	foo,"ax",@progbits
 	.cfi_startproc
@@ -18,47 +45,3 @@
         nop
         nop
 	.cfi_endproc
-
-// FIXME: We could really use a .eh_frame parser.
-// The intention is to show that:
-// * There is only one copy of the CIE
-// * There are two copies of the first FDE
-// * There is only one copy of the second FDE
-
-// CHECK:      Name: .eh_frame
-// CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address:
-// CHECK-NEXT: Offset:
-// CHECK-NEXT: Size: 100
-// CHECK-NEXT: Link: 0
-// CHECK-NEXT: Info: 0
-// CHECK-NEXT: AddressAlignment: 8
-// CHECK-NEXT: EntrySize: 0
-// CHECK-NEXT: SectionData (
-// CHECK-NEXT: 0000: 14000000 00000000 017A5200 01781001  |
-// CHECK-NEXT: 0010: 1B0C0708 90010000 14000000 1C000000  |
-// CHECK-NEXT: 0020: 44100000 01000000 00000000 00000000  |
-// CHECK-NEXT: 0030: 14000000 34000000 2E100000 02000000  |
-// CHECK-NEXT: 0040: 00000000 00000000 14000000 4C000000  |
-// CHECK-NEXT: 0050: 15100000 01000000 00000000 00000000  |
-// CHECK-NEXT: 0060: 00000000
-// CHECK-NEXT: )
-
-// CHECK:      Name: foo
-// CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_EXECINSTR
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x125C
-
-// CHECK:      Name: bar
-// CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_EXECINSTR
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x125E

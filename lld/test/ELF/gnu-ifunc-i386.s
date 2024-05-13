@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
 // RUN: ld.lld -static %t.o -o %tout
-// RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-readobj -r --symbols --sections %tout | FileCheck %s
 
 // CHECK:      Sections [
@@ -11,13 +11,12 @@
 // CHECK-NEXT:  Type: SHT_REL
 // CHECK-NEXT:  Flags [
 // CHECK-NEXT:    SHF_ALLOC
-// CHECK-NEXT:    SHF_INFO_LINK
 // CHECK-NEXT:  ]
 // CHECK-NEXT:  Address: [[RELA:.*]]
 // CHECK-NEXT:  Offset: 0xD4
 // CHECK-NEXT:  Size: 16
 // CHECK-NEXT:  Link: 0
-// CHECK-NEXT:  Info: 4
+// CHECK-NEXT:  Info: 0
 // CHECK-NEXT:  AddressAlignment: 4
 // CHECK-NEXT:  EntrySize: 8
 // CHECK-NEXT: }
@@ -62,7 +61,7 @@
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: bar
-// CHECK-NEXT:   Value: 0x401110
+// CHECK-NEXT:   Value: 0x401100
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Global
 // CHECK-NEXT:   Type: Function
@@ -80,7 +79,7 @@
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: foo
-// CHECK-NEXT:   Value: 0x401100
+// CHECK-NEXT:   Value: 0x401110
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Global
 // CHECK-NEXT:   Type: Function
@@ -114,18 +113,18 @@
 // DISASM:      <foo_resolver>:
 // DISASM-NEXT:   4010e5:       retl
 // DISASM:      <_start>:
-// DISASM-NEXT:   4010e6:       calll 0x401100 <foo>
-// DISASM-NEXT:                 calll 0x401110 <bar>
+// DISASM-NEXT:   4010e6:       calll 0x401110 <foo>
+// DISASM-NEXT:                 calll 0x401100 <bar>
 // DISASM-NEXT:                 movl $4194516, %edx
 // DISASM-NEXT:                 movl $4194532, %edx
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: <foo>:
+// DISASM-NEXT: <bar>:
 // DISASM-NEXT:   401100:       jmpl *4202784
 // DISASM-NEXT:                 pushl $0
 // DISASM-NEXT:                 jmp 0x0
-// DISASM:      <bar>:
+// DISASM:      <foo>:
 // DISASM-NEXT:   401110:       jmpl *4202788
 // DISASM-NEXT:                 pushl $8
 // DISASM-NEXT:                 jmp 0x0

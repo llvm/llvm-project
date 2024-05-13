@@ -14,19 +14,19 @@ target triple = "hexagon"
 ; Function Attrs: norecurse nounwind
 define void @_Z14SigUsr1Handleri(i32) local_unnamed_addr #0 {
 entry:
-  store volatile i32 1, i32* @_ZL13g_usr1_called, align 4
+  store volatile i32 1, ptr @_ZL13g_usr1_called, align 4
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
 define zeroext i1 @_Z27CheckForMonitorCancellationv() local_unnamed_addr #0 {
 entry:
-  %0 = load volatile i32, i32* @_ZL13g_usr1_called, align 4
+  %0 = load volatile i32, ptr @_ZL13g_usr1_called, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %return, label %if.then
 
 if.then:                                          ; preds = %entry
-  store volatile i32 0, i32* @_ZL13g_usr1_called, align 4
+  store volatile i32 0, ptr @_ZL13g_usr1_called, align 4
   br label %return
 
 return:                                           ; preds = %entry, %if.then

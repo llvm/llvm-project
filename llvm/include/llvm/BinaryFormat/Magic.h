@@ -21,12 +21,14 @@ struct file_magic {
   enum Impl {
     unknown = 0,       ///< Unrecognized file
     bitcode,           ///< Bitcode file
+    clang_ast,         ///< Clang PCH or PCM
     archive,           ///< ar style archive file
     elf,               ///< ELF Unknown type
     elf_relocatable,   ///< ELF Relocatable object file
     elf_executable,    ///< ELF Executable image
     elf_shared_object, ///< ELF dynamically linked shared lib
     elf_core,          ///< ELF core image
+    goff_object,       ///< GOFF object file
     macho_object,      ///< Mach-O Object file
     macho_executable,  ///< Mach-O Executable
     macho_fixed_virtual_memory_shared_lib,    ///< Mach-O Shared Lib, FVM
@@ -39,17 +41,24 @@ struct file_magic {
     macho_dsym_companion,                     ///< Mach-O dSYM companion file
     macho_kext_bundle,                        ///< Mach-O kext bundle file
     macho_universal_binary,                   ///< Mach-O universal binary
+    macho_file_set,                           ///< Mach-O file set binary
     minidump,                                 ///< Windows minidump file
-    coff_cl_gl_object,   ///< Microsoft cl.exe's intermediate code file
-    coff_object,         ///< COFF object file
-    coff_import_library, ///< COFF import library
-    pecoff_executable,   ///< PECOFF executable file
-    windows_resource,    ///< Windows compiled resource file (.res)
-    xcoff_object_32,     ///< 32-bit XCOFF object file
-    xcoff_object_64,     ///< 64-bit XCOFF object file
-    wasm_object,         ///< WebAssembly Object file
-    pdb,                 ///< Windows PDB debug info file
-    tapi_file,           ///< Text-based Dynamic Library Stub file
+    coff_cl_gl_object,         ///< Microsoft cl.exe's intermediate code file
+    coff_object,               ///< COFF object file
+    coff_import_library,       ///< COFF import library
+    pecoff_executable,         ///< PECOFF executable file
+    windows_resource,          ///< Windows compiled resource file (.res)
+    xcoff_object_32,           ///< 32-bit XCOFF object file
+    xcoff_object_64,           ///< 64-bit XCOFF object file
+    wasm_object,               ///< WebAssembly Object file
+    pdb,                       ///< Windows PDB debug info file
+    tapi_file,                 ///< Text-based Dynamic Library Stub file
+    cuda_fatbinary,            ///< CUDA Fatbinary object file
+    offload_binary,            ///< LLVM offload object file
+    dxcontainer_object,        ///< DirectX container file
+    offload_bundle,            ///< Clang offload bundle file
+    offload_bundle_compressed, ///< Compressed clang offload bundle file
+    spirv_object,              ///< A binary SPIR-V file
   };
 
   bool is_object() const { return V != unknown; }

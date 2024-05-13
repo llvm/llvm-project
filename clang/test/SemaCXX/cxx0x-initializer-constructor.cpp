@@ -122,12 +122,12 @@ namespace objects {
   }
 
   struct B { // expected-note 2 {{candidate constructor}}
-    B(C, int, C); // expected-note {{candidate constructor not viable: cannot convert initializer list argument to 'objects::C'}}
+    B(C, int, C); // expected-note {{candidate constructor not viable: cannot convert initializer list argument to 'C'}}
   };
 
   void nested_init() {
     B b1{{1, 1.0}, 2, {3, 4}};
-    B b2{{1, 1.0, 4}, 2, {3, 4}}; // expected-error {{no matching constructor for initialization of 'objects::B'}}
+    B b2{{1, 1.0, 4}, 2, {3, 4}}; // expected-error {{no matching constructor for initialization of 'B'}}
   }
 
   void overloaded_call() {
@@ -282,7 +282,7 @@ namespace PR12498 {
 
   static void bar(C* c)
   {
-    c->foo({ nullptr, 1 }); // expected-error{{initialization of incomplete type 'const PR12498::ArrayRef'}}
+    c->foo({ nullptr, 1 }); // expected-error{{initialization of incomplete type 'const ArrayRef'}}
   }
 }
 
@@ -310,7 +310,7 @@ namespace init_list_default {
   B b {}; // calls default constructor
 }
 
-// PR13470, <rdar://problem/11974632>
+// PR13470
 namespace PR13470 {
   struct W {
     explicit W(int); // expected-note {{here}}

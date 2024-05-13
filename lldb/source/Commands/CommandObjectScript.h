@@ -21,7 +21,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
     ~CommandOptions() override = default;
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override;
@@ -31,7 +31,7 @@ public:
   };
 
 protected:
-  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
+  void DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
 private:
   CommandOptions m_options;

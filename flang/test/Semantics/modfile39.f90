@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 ! Resolution of specification expression references to generic interfaces
 ! that resolve to private specific functions.
 
@@ -15,10 +15,10 @@ module m1
 end module
 !Expect: m1.mod
 !module m1
+!private::priv
 !interface gen
 !procedure::priv
 !end interface
-!private::priv
 !contains
 !pure function priv(n)
 !integer(4),intent(in)::n
@@ -36,11 +36,11 @@ end module
 !Expect: m2.mod
 !module m2
 !use m1,only:gen
-!use m1,only:m1$priv=>priv
-!private::m1$priv
+!use m1,only:m1$m1$priv=>priv
+!private::m1$m1$priv
 !contains
 !subroutine s(a)
-!real(4)::a(1_8:int(m1$priv(1_4),kind=8))
+!real(4)::a(1_8:int(m1$m1$priv(1_4),kind=8))
 !end
 !end
 

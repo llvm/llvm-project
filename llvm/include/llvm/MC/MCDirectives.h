@@ -31,6 +31,7 @@ enum MCSymbolAttr {
   MCSA_LGlobal,                 ///< .lglobl (XCOFF)
   MCSA_Extern,                  ///< .extern (XCOFF)
   MCSA_Hidden,                  ///< .hidden (ELF)
+  MCSA_Exported,                ///< .globl _foo, exported (XCOFF)
   MCSA_IndirectSymbol,          ///< .indirect_symbol (MachO)
   MCSA_Internal,                ///< .internal (ELF)
   MCSA_LazyReference,           ///< .lazy_reference (MachO)
@@ -44,7 +45,9 @@ enum MCSymbolAttr {
   MCSA_Weak,                    ///< .weak
   MCSA_WeakDefinition,          ///< .weak_definition (MachO)
   MCSA_WeakReference,           ///< .weak_reference (MachO)
-  MCSA_WeakDefAutoPrivate       ///< .weak_def_can_be_hidden (MachO)
+  MCSA_WeakDefAutoPrivate,      ///< .weak_def_can_be_hidden (MachO)
+  MCSA_WeakAntiDep,             ///< .weak_anti_dep (COFF)
+  MCSA_Memtag,                  ///< .memtag (ELF)
 };
 
 enum MCAssemblerFlag {

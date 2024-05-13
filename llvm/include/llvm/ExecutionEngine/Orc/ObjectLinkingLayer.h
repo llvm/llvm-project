@@ -15,7 +15,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTLINKINGLAYER_H
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -27,7 +26,6 @@
 #include <functional>
 #include <list>
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -38,10 +36,6 @@ class EHFrameRegistrar;
 class LinkGraph;
 class Symbol;
 } // namespace jitlink
-
-namespace object {
-class ObjectFile;
-} // namespace object
 
 namespace orc {
 
@@ -64,8 +58,9 @@ public:
   /// configured.
   class Plugin {
   public:
-    using JITLinkSymbolVector = std::vector<const jitlink::Symbol *>;
-    using LocalDependenciesMap = DenseMap<SymbolStringPtr, JITLinkSymbolVector>;
+    using JITLinkSymbolSet = DenseSet<jitlink::Symbol *>;
+    using SyntheticSymbolDependenciesMap =
+        DenseMap<SymbolStringPtr, JITLinkSymbolSet>;
 
     virtual ~Plugin();
     virtual void modifyPassConfig(MaterializationResponsibility &MR,
@@ -84,24 +79,28 @@ public:
       return Error::success();
     }
     virtual Error notifyFailed(MaterializationResponsibility &MR) = 0;
-    virtual Error notifyRemovingResources(ResourceKey K) = 0;
-    virtual void notifyTransferringResources(ResourceKey DstKey,
+    virtual Error notifyRemovingResources(JITDylib &JD, ResourceKey K) = 0;
+    virtual void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                              ResourceKey SrcKey) = 0;
 
     /// Return any dependencies that synthetic symbols (e.g. init symbols)
-    /// have on locally scoped jitlink::Symbols. This is used by the
-    /// ObjectLinkingLayer to update the dependencies for the synthetic
-    /// symbols.
-    virtual LocalDependenciesMap
-    getSyntheticSymbolLocalDependencies(MaterializationResponsibility &MR) {
-      return LocalDependenciesMap();
+    /// have on symbols in the LinkGraph.
+    /// This is used by the ObjectLinkingLayer to update the dependencies for
+    /// the synthetic symbols.
+    virtual SyntheticSymbolDependenciesMap
+    getSyntheticSymbolDependencies(MaterializationResponsibility &MR) {
+      return SyntheticSymbolDependenciesMap();
     }
   };
 
   using ReturnObjectBufferFunction =
       std::function<void(std::unique_ptr<MemoryBuffer>)>;
 
-  /// Construct an ObjectLinkingLayer.
+  /// Construct an ObjectLinkingLayer using the ExecutorProcessControl
+  /// instance's memory manager.
+  ObjectLinkingLayer(ExecutionSession &ES);
+
+  /// Construct an ObjectLinkingLayer using a custom memory manager.
   ObjectLinkingLayer(ExecutionSession &ES,
                      jitlink::JITLinkMemoryManager &MemMgr);
 
@@ -122,11 +121,24 @@ public:
     this->ReturnObjectBuffer = std::move(ReturnObjectBuffer);
   }
 
-  /// Add a pass-config modifier.
-  ObjectLinkingLayer &addPlugin(std::unique_ptr<Plugin> P) {
+  /// Add a plugin.
+  ObjectLinkingLayer &addPlugin(std::shared_ptr<Plugin> P) {
     std::lock_guard<std::mutex> Lock(LayerMutex);
     Plugins.push_back(std::move(P));
     return *this;
+  }
+
+  /// Remove a plugin. This remove applies only to subsequent links (links
+  /// already underway will continue to use the plugin), and does not of itself
+  /// destroy the plugin -- destruction will happen once all shared pointers
+  /// (including those held by in-progress links) are destroyed.
+  void removePlugin(Plugin &P) {
+    std::lock_guard<std::mutex> Lock(LayerMutex);
+    auto I = llvm::find_if(Plugins, [&](const std::shared_ptr<Plugin> &Elem) {
+      return Elem.get() == &P;
+    });
+    assert(I != Plugins.end() && "Plugin not present");
+    Plugins.erase(I);
   }
 
   /// Add a LinkGraph to the JITDylib targeted by the given tracker.
@@ -180,16 +192,14 @@ public:
   }
 
 private:
-  using AllocPtr = std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation>;
+  using FinalizedAlloc = jitlink::JITLinkMemoryManager::FinalizedAlloc;
 
-  void modifyPassConfig(MaterializationResponsibility &MR,
-                        jitlink::LinkGraph &G,
-                        jitlink::PassConfiguration &PassConfig);
-  void notifyLoaded(MaterializationResponsibility &MR);
-  Error notifyEmitted(MaterializationResponsibility &MR, AllocPtr Alloc);
+  Error recordFinalizedAlloc(MaterializationResponsibility &MR,
+                             FinalizedAlloc FA);
 
-  Error handleRemoveResources(ResourceKey K) override;
-  void handleTransferResources(ResourceKey DstKey, ResourceKey SrcKey) override;
+  Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
+  void handleTransferResources(JITDylib &JD, ResourceKey DstKey,
+                               ResourceKey SrcKey) override;
 
   mutable std::mutex LayerMutex;
   jitlink::JITLinkMemoryManager &MemMgr;
@@ -197,8 +207,8 @@ private:
   bool OverrideObjectFlags = false;
   bool AutoClaimObjectSymbols = false;
   ReturnObjectBufferFunction ReturnObjectBuffer;
-  DenseMap<ResourceKey, std::vector<AllocPtr>> Allocs;
-  std::vector<std::unique_ptr<Plugin>> Plugins;
+  DenseMap<ResourceKey, std::vector<FinalizedAlloc>> Allocs;
+  std::vector<std::shared_ptr<Plugin>> Plugins;
 };
 
 class EHFrameRegistrationPlugin : public ObjectLinkingLayer::Plugin {
@@ -211,22 +221,16 @@ public:
                         jitlink::PassConfiguration &PassConfig) override;
   Error notifyEmitted(MaterializationResponsibility &MR) override;
   Error notifyFailed(MaterializationResponsibility &MR) override;
-  Error notifyRemovingResources(ResourceKey K) override;
-  void notifyTransferringResources(ResourceKey DstKey,
+  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override;
+  void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                    ResourceKey SrcKey) override;
 
 private:
-
-  struct EHFrameRange {
-    JITTargetAddress Addr = 0;
-    size_t Size;
-  };
-
   std::mutex EHFramePluginMutex;
   ExecutionSession &ES;
   std::unique_ptr<jitlink::EHFrameRegistrar> Registrar;
-  DenseMap<MaterializationResponsibility *, EHFrameRange> InProcessLinks;
-  DenseMap<ResourceKey, std::vector<EHFrameRange>> EHFrameRanges;
+  DenseMap<MaterializationResponsibility *, ExecutorAddrRange> InProcessLinks;
+  DenseMap<ResourceKey, std::vector<ExecutorAddrRange>> EHFrameRanges;
 };
 
 } // end namespace orc

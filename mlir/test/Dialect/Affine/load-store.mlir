@@ -3,7 +3,7 @@
 // -----
 
 // Test with just loop IVs.
-func @test0(%arg0 : index, %arg1 : index) {
+func.func @test0(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -17,7 +17,7 @@ func @test0(%arg0 : index, %arg1 : index) {
 // -----
 
 // Test with loop IVs and constants.
-func @test1(%arg0 : index, %arg1 : index) {
+func.func @test1(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -34,7 +34,7 @@ func @test1(%arg0 : index, %arg1 : index) {
 
 // Test with loop IVs and function args without 'symbol' keyword (should
 // be parsed as dim identifiers).
-func @test2(%arg0 : index, %arg1 : index) {
+func.func @test2(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -51,7 +51,7 @@ func @test2(%arg0 : index, %arg1 : index) {
 
 // Test with loop IVs and function args with 'symbol' keyword (should
 // be parsed as symbol identifiers).
-func @test3(%arg0 : index, %arg1 : index) {
+func.func @test3(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -69,7 +69,7 @@ func @test3(%arg0 : index, %arg1 : index) {
 // -----
 
 // Test with loop IVs, symbols and constants in nested affine expressions.
-func @test4(%arg0 : index, %arg1 : index) {
+func.func @test4(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -87,7 +87,7 @@ func @test4(%arg0 : index, %arg1 : index) {
 // -----
 
 // Test with swizzled loop IVs.
-func @test5(%arg0 : index, %arg1 : index) {
+func.func @test5(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<10x10x10xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -107,7 +107,7 @@ func @test5(%arg0 : index, %arg1 : index) {
 // Test with swizzled loop IVs, duplicate args, and function args used as dims.
 // Dim identifiers are assigned in parse order:
 // d0 = %i2, d1 = %arg0, d2 = %i0, d3 = %i1, d4 = %arg1
-func @test6(%arg0 : index, %arg1 : index) {
+func.func @test6(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<10x10x10xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -130,7 +130,7 @@ func @test6(%arg0 : index, %arg1 : index) {
 // Dim and symbol identifiers are assigned in parse order:
 // d0 = %i2, d1 = %i0, d2 = %i1
 // s0 = %arg0, s1 = %arg1
-func @test6(%arg0 : index, %arg1 : index) {
+func.func @test6(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<10x10x10xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -156,7 +156,7 @@ func @test6(%arg0 : index, %arg1 : index) {
 // CHECK: [[MAP0:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 
 // Test with operands without special SSA name.
-func @test7() {
+func.func @test7() {
   %0 = memref.alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     %1 = affine.apply affine_map<(d1) -> (d1 + 1)>(%i0)
@@ -171,7 +171,7 @@ func @test7() {
 // -----
 
 // Test with zero-dimensional operands.
-func @zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
+func.func @zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
   %0 = affine.load %arg0[] : memref<i32>
   affine.store %0, %arg1[] : memref<i32>
   // CHECK: affine.load %{{.*}}[] : memref<i32>
@@ -182,7 +182,7 @@ func @zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
 // -----
 
 // Test with loop IVs and constants.
-func @test_prefetch(%arg0 : index, %arg1 : index) {
+func.func @test_prefetch(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -199,7 +199,7 @@ func @test_prefetch(%arg0 : index, %arg1 : index) {
 // -----
 
 // Test with just loop IVs.
-func @vector_load_vector_store_iv() {
+func.func @vector_load_vector_store_iv() {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 16 {
     affine.for %i1 = 0 to 16 step 8 {
@@ -218,7 +218,7 @@ func @vector_load_vector_store_iv() {
 // -----
 
 // Test with loop IVs and constants.
-func @vector_load_vector_store_iv_constant() {
+func.func @vector_load_vector_store_iv_constant() {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 16 step 4 {
@@ -236,7 +236,7 @@ func @vector_load_vector_store_iv_constant() {
 
 // -----
 
-func @vector_load_vector_store_2d() {
+func.func @vector_load_vector_store_2d() {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 16 step 2{
     affine.for %i1 = 0 to 16 step 8 {

@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: clang-8
-// UNSUPPORTED: gcc-8, gcc-9
-
 // <memory>
 
 // template <class Alloc>
@@ -23,6 +20,7 @@
 #include <new>
 #include <type_traits>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 #include "incomplete_type_helper.h"

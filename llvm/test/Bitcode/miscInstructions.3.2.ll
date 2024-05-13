@@ -14,21 +14,21 @@ entry:
 }
 
 ; CHECK-LABEL: define void @landingpadInstr1
-; CHECK-SAME: personality i32 (...)* @__gxx_personality_v0
+; CHECK-SAME: personality ptr @__gxx_personality_v0
 define void @landingpadInstr1(i1 %cond1, <2 x i1> %cond2, <2 x i8> %x1, <2 x i8> %x2){
 entry:
-; CHECK: %res = landingpad { i8*, i32 }
+; CHECK: %res = landingpad { ptr, i32 }
   %res = landingpad { i8*, i32 } personality i32 (...)* @__gxx_personality_v0 
-; CHECK: catch i8** @_ZTIi
+; CHECK: catch ptr @_ZTIi
   catch i8** @_ZTIi
   ret void
 }
 
 ; CHECK-LABEL: define void @landingpadInstr2
-; CHECK-SAME: personality i32 (...)* @__gxx_personality_v0
+; CHECK-SAME: personality ptr @__gxx_personality_v0
 define void @landingpadInstr2(i1 %cond1, <2 x i1> %cond2, <2 x i8> %x1, <2 x i8> %x2){
 entry:
-; CHECK: %res = landingpad { i8*, i32 }
+; CHECK: %res = landingpad { ptr, i32 }
   %res = landingpad { i8*, i32 } personality i32 (...)* @__gxx_personality_v0
 ; CHECK: cleanup
   cleanup
@@ -36,14 +36,14 @@ entry:
 }
 
 ; CHECK-LABEL: define void @landingpadInstr3
-; CHECK-SAME: personality i32 (...)* @__gxx_personality_v0
+; CHECK-SAME: personality ptr @__gxx_personality_v0
 define void @landingpadInstr3(i1 %cond1, <2 x i1> %cond2, <2 x i8> %x1, <2 x i8> %x2){
 entry:
-; CHECK: %res = landingpad { i8*, i32 }
+; CHECK: %res = landingpad { ptr, i32 }
   %res = landingpad { i8*, i32 } personality i32 (...)* @__gxx_personality_v0
-; CHECK: catch i8** @_ZTIi
+; CHECK: catch ptr @_ZTIi
   catch i8** @_ZTIi
-; CHECK: filter [1 x i8**] [i8** @_ZTId]
+; CHECK: filter [1 x ptr] [ptr @_ZTId]
   filter [1 x i8**] [i8** @_ZTId]
   ret void
 }
@@ -102,7 +102,7 @@ entry:
 ; CHECK-NEXT: %res10 = icmp sle i32 %x1, %x2
   %res10 = icmp sle i32 %x1, %x2
   
-; CHECK-NEXT: %res11 = icmp eq i32* %ptr1, %ptr2
+; CHECK-NEXT: %res11 = icmp eq ptr %ptr1, %ptr2
   %res11 = icmp eq i32* %ptr1, %ptr2
   
 ; CHECK-NEXT: %res12 = icmp eq <2 x i32> %vec1, %vec2
@@ -179,7 +179,7 @@ entry:
 ; CHECK-NEXT: %res2 = tail call i32 @test(i32 %x)
   %res2 = tail call i32 @test(i32 %x)
   
-; CHECK-NEXT: %res3 = call i32 (i8*, ...) @printf(i8* %msg, i32 12, i8 42)
+; CHECK-NEXT: %res3 = call i32 (ptr, ...) @printf(ptr %msg, i32 12, i8 42)
   %res3 = call i32 (i8*, ...) @printf(i8* %msg, i32 12, i8 42)
   
   ret void

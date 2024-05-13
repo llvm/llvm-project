@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -74,15 +75,15 @@ protected:
 TEST_F(MemoryBufferTest, get) {
   // Default name and null-terminator flag
   OwningBuffer MB1(MemoryBuffer::getMemBuffer(data));
-  EXPECT_TRUE(nullptr != MB1.get());
+  EXPECT_NE(nullptr, MB1.get());
 
   // RequiresNullTerminator = false
   OwningBuffer MB2(MemoryBuffer::getMemBuffer(data, "one", false));
-  EXPECT_TRUE(nullptr != MB2.get());
+  EXPECT_NE(nullptr, MB2.get());
 
   // RequiresNullTerminator = true
   OwningBuffer MB3(MemoryBuffer::getMemBuffer(data, "two", true));
-  EXPECT_TRUE(nullptr != MB3.get());
+  EXPECT_NE(nullptr, MB3.get());
 
   // verify all 3 buffers point to the same address
   EXPECT_EQ(MB1->getBufferStart(), MB2->getBufferStart());
@@ -152,14 +153,18 @@ TEST_F(MemoryBufferTest, NullTerminator4K) {
 TEST_F(MemoryBufferTest, copy) {
   // copy with no name
   OwningBuffer MBC1(MemoryBuffer::getMemBufferCopy(data));
-  EXPECT_TRUE(nullptr != MBC1.get());
+  EXPECT_NE(nullptr, MBC1.get());
 
   // copy with a name
   OwningBuffer MBC2(MemoryBuffer::getMemBufferCopy(data, "copy"));
-  EXPECT_TRUE(nullptr != MBC2.get());
+  EXPECT_NE(nullptr, MBC2.get());
 
   // verify the two copies do not point to the same place
   EXPECT_NE(MBC1->getBufferStart(), MBC2->getBufferStart());
+
+  // check that copies from defaulted stringrefs don't trigger UB.
+  OwningBuffer MBC3(MemoryBuffer::getMemBufferCopy(StringRef{}));
+  EXPECT_NE(nullptr, MBC3.get());
 }
 
 #if LLVM_ENABLE_THREADS
@@ -197,27 +202,48 @@ TEST_F(MemoryBufferTest, createFromPipe) {
 TEST_F(MemoryBufferTest, make_new) {
   // 0-sized buffer
   OwningBuffer Zero(WritableMemoryBuffer::getNewUninitMemBuffer(0));
-  EXPECT_TRUE(nullptr != Zero.get());
+  EXPECT_NE(nullptr, Zero.get());
 
   // uninitialized buffer with no name
   OwningBuffer One(WritableMemoryBuffer::getNewUninitMemBuffer(321));
-  EXPECT_TRUE(nullptr != One.get());
+  EXPECT_NE(nullptr, One.get());
 
   // uninitialized buffer with name
   OwningBuffer Two(WritableMemoryBuffer::getNewUninitMemBuffer(123, "bla"));
-  EXPECT_TRUE(nullptr != Two.get());
+  EXPECT_NE(nullptr, Two.get());
 
   // 0-initialized buffer with no name
   OwningBuffer Three(WritableMemoryBuffer::getNewMemBuffer(321, data));
-  EXPECT_TRUE(nullptr != Three.get());
+  EXPECT_NE(nullptr, Three.get());
   for (size_t i = 0; i < 321; ++i)
     EXPECT_EQ(0, Three->getBufferStart()[0]);
 
   // 0-initialized buffer with name
   OwningBuffer Four(WritableMemoryBuffer::getNewMemBuffer(123, "zeros"));
-  EXPECT_TRUE(nullptr != Four.get());
+  EXPECT_NE(nullptr, Four.get());
   for (size_t i = 0; i < 123; ++i)
     EXPECT_EQ(0, Four->getBufferStart()[0]);
+
+  // uninitialized buffer with rollover size
+  OwningBuffer Five(
+      WritableMemoryBuffer::getNewUninitMemBuffer(SIZE_MAX, "huge"));
+  EXPECT_EQ(nullptr, Five.get());
+}
+
+TEST_F(MemoryBufferTest, getNewAligned) {
+  auto CheckAlignment = [](size_t AlignmentValue) {
+    Align Alignment(AlignmentValue);
+    OwningBuffer AlignedBuffer =
+        WritableMemoryBuffer::getNewUninitMemBuffer(0, "", Alignment);
+    EXPECT_TRUE(isAddrAligned(Alignment, AlignedBuffer->getBufferStart()));
+  };
+
+  // Test allocation with different alignments.
+  CheckAlignment(16);
+  CheckAlignment(32);
+  CheckAlignment(64);
+  CheckAlignment(128);
+  CheckAlignment(256);
 }
 
 void MemoryBufferTest::testGetOpenFileSlice(bool Reopen) {
@@ -291,13 +317,13 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_EQ(0x4000UL, MB.get()->getBufferSize());
  
   StringRef BufData = MB.get()->getBuffer();
-  EXPECT_TRUE(BufData.substr(0x0000,8).equals("12345678"));
-  EXPECT_TRUE(BufData.substr(0x0FF8,8).equals("12345678"));
-  EXPECT_TRUE(BufData.substr(0x1000,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData.substr(0x2FF8,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData.substr(0x3000,8).equals("ABCDEFGH"));
-  EXPECT_TRUE(BufData.substr(0x3FF8,8).equals("ABCDEFGH"));
-   
+  EXPECT_TRUE(BufData.substr(0x0000, 8) == "12345678");
+  EXPECT_TRUE(BufData.substr(0x0FF8, 8) == "12345678");
+  EXPECT_TRUE(BufData.substr(0x1000, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData.substr(0x2FF8, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData.substr(0x3000, 8) == "ABCDEFGH");
+  EXPECT_TRUE(BufData.substr(0x3FF8, 8) == "ABCDEFGH");
+
   // Try non-page aligned.
   ErrorOr<OwningBuffer> MB2 = MemoryBuffer::getFileSlice(TestPath.str(),
                                                          0x3000, 0x0800);
@@ -306,10 +332,10 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_EQ(0x3000UL, MB2.get()->getBufferSize());
   
   StringRef BufData2 = MB2.get()->getBuffer();
-  EXPECT_TRUE(BufData2.substr(0x0000,8).equals("12345678"));
-  EXPECT_TRUE(BufData2.substr(0x17F8,8).equals("12345678"));
-  EXPECT_TRUE(BufData2.substr(0x1800,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData2.substr(0x2FF8,8).equals("abcdefgh"));
+  EXPECT_TRUE(BufData2.substr(0x0000, 8) == "12345678");
+  EXPECT_TRUE(BufData2.substr(0x17F8, 8) == "12345678");
+  EXPECT_TRUE(BufData2.substr(0x1800, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData2.substr(0x2FF8, 8) == "abcdefgh");
 }
 
 TEST_F(MemoryBufferTest, writableSlice) {
@@ -406,6 +432,29 @@ TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
   OwningBuffer MB = std::move(*MBOrError);
   EXPECT_EQ(MB->getBufferKind(), MemoryBuffer::MemoryBuffer_MMap);
   EXPECT_EQ(MB->getBufferSize(), std::size_t(FileWrites * 8));
-  EXPECT_TRUE(MB->getBuffer().startswith("01234567"));
+  EXPECT_TRUE(MB->getBuffer().starts_with("01234567"));
 }
+
+// Test that SmallVector without a null terminator gets one.
+TEST(SmallVectorMemoryBufferTest, WithoutNullTerminatorRequiresNullTerminator) {
+  SmallString<0> Data("some data");
+
+  SmallVectorMemoryBuffer MB(std::move(Data),
+                             /*RequiresNullTerminator=*/true);
+  EXPECT_EQ(MB.getBufferSize(), 9u);
+  EXPECT_EQ(MB.getBufferEnd()[0], '\0');
 }
+
+// Test that SmallVector with a null terminator keeps it.
+TEST(SmallVectorMemoryBufferTest, WithNullTerminatorRequiresNullTerminator) {
+  SmallString<0> Data("some data");
+  Data.push_back('\0');
+  Data.pop_back();
+
+  SmallVectorMemoryBuffer MB(std::move(Data),
+                             /*RequiresNullTerminator=*/true);
+  EXPECT_EQ(MB.getBufferSize(), 9u);
+  EXPECT_EQ(MB.getBufferEnd()[0], '\0');
+}
+
+} // namespace

@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This test fails because Clang no longer enables -fdelayed-template-parsing
+// by default on Windows with C++20 (#69431).
+// XFAIL: msvc && (clang-18 || clang-19)
+
 // UNSUPPORTED: c++03, c++11
 
 #include <cassert>
@@ -38,7 +42,7 @@ struct ParamTypeHelper {
   using ResultT = typename Dist::result_type;
   static_assert(std::is_same<ResultT, typename ParamT::distribution_type::result_type>::value, "");
 
-  static ParamT Create(const uint8_t* data, std::size_t size, bool &OK) {
+  static ParamT Create(const std::uint8_t* data, std::size_t size, bool &OK) {
     constexpr bool select_vector_result = std::is_constructible<ParamT, ResultT*, ResultT*, ResultT*>::value;
     constexpr bool select_vector_double = std::is_constructible<ParamT, double*, double*>::value;
     constexpr int selector = select_vector_result ? 0 : (select_vector_double ? 1 : 2);

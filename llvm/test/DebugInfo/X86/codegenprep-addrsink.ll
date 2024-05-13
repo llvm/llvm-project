@@ -1,4 +1,5 @@
 ; RUN: llc -start-before=codegenprepare -stop-after=codegenprepare -mtriple=x86_64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -start-before=codegenprepare -stop-after=codegenprepare -mtriple=x86_64-unknown-unknown %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 ;
 ; CGP duplicates address calculation into each basic block that contains loads
 ; or stores, so that they can be folded into instruction memory operands for
@@ -10,14 +11,13 @@
 ; would either make it use-before-def or shift when the variable appears), and
 ; that the dbg.value after the memory instruction does get updated.
 
-define dso_local i8 @foo(i32 *%p, i32 %cond) !dbg !7 {
+define dso_local i8 @foo(ptr %p, i32 %cond) !dbg !7 {
 entry:
 ; There should be no dbg.values in this block.
 ; CHECK-LABEL: entry:
 ; CHECK-NOT:   dbg.value
-  %casted = bitcast i32 *%p to i8*
-  %arith = getelementptr i8, i8 *%casted, i32 3
-  %load1 = load i8, i8 *%arith
+  %arith = getelementptr i8, ptr %p, i32 3
+  %load1 = load i8, ptr %arith
   %cmpresult = icmp eq i32 %cond, 0
   br i1 %cmpresult, label %next, label %ret
 
@@ -25,17 +25,19 @@ next:
 ; Address calcs should be duplicated into this block. One dbg.value should be
 ; updated, and the other should not.
 ; CHECK-LABEL: next:
-; CHECK:       dbg.value(metadata i8* %arith, metadata ![[DIVAR:[0-9]+]],
+; CHECK:       dbg.value(metadata ptr %arith, metadata ![[DIVAR:[0-9]+]],
 ; CHECK-SAME:    metadata !DIExpression()
-; CHECK-NEXT:  %[[CASTVAR:[0-9a-zA-Z]+]] = bitcast i32* %p to i8*
-; CHECK-NEXT:  %[[GEPVAR:[0-9a-zA-Z]+]] = getelementptr i8, i8* %[[CASTVAR]],
+; CHECK-NEXT:  %[[GEPVAR:[0-9a-zA-Z]+]] = getelementptr i8, ptr %p,
 ; CHECK-SAME:                             i64 3
-; CHECK-NEXT:  %loaded = load i8, i8* %[[GEPVAR]]
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i8* %[[GEPVAR]],
+; CHECK-NEXT:  %loaded = load i8, ptr %[[GEPVAR]]
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata ptr %[[GEPVAR]],
 ; CHECK-SAME:                            metadata ![[DIVAR]],
-  call void @llvm.dbg.value(metadata i8 *%arith, metadata !12, metadata !DIExpression()), !dbg !14
-  %loaded = load i8, i8 *%arith
-  call void @llvm.dbg.value(metadata i8 *%arith, metadata !12, metadata !DIExpression()), !dbg !14
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata !DIArgList(ptr %[[GEPVAR]],
+; CHECK-SAME:                            ptr %[[GEPVAR]]), metadata ![[DIVAR]],
+  call void @llvm.dbg.value(metadata ptr %arith, metadata !12, metadata !DIExpression()), !dbg !14
+  %loaded = load i8, ptr %arith
+  call void @llvm.dbg.value(metadata ptr %arith, metadata !12, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %arith, ptr %arith), metadata !12, metadata !DIExpression()), !dbg !14
   ret i8 %loaded
 
 ret:

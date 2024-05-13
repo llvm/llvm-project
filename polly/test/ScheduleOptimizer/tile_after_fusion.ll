@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-ast -polly-opt-fusion=max -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-isl-arg=--no-schedule-serialize-sccs -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;
 ;    void tf(int C[256][256][256], int A0[256][256][256], int A1[256][256][256]) {
@@ -32,7 +32,7 @@
 source_filename = "tile_after_fusion.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @tf([256 x [256 x i32]]* %C, [256 x [256 x i32]]* %A0, [256 x [256 x i32]]* %A1) {
+define void @tf(ptr %C, ptr %A0, ptr %A1) {
 entry:
   br label %for.cond
 
@@ -58,12 +58,12 @@ for.cond4:                                        ; preds = %for.inc, %for.body3
   br i1 %exitcond9, label %for.body6, label %for.end
 
 for.body6:                                        ; preds = %for.cond4
-  %arrayidx10 = getelementptr inbounds [256 x [256 x i32]], [256 x [256 x i32]]* %A0, i64 %indvars.iv13, i64 %indvars.iv10, i64 %indvars.iv7
-  %tmp = load i32, i32* %arrayidx10, align 4
-  %arrayidx16 = getelementptr inbounds [256 x [256 x i32]], [256 x [256 x i32]]* %C, i64 %indvars.iv13, i64 %indvars.iv10, i64 %indvars.iv7
-  %tmp16 = load i32, i32* %arrayidx16, align 4
+  %arrayidx10 = getelementptr inbounds [256 x [256 x i32]], ptr %A0, i64 %indvars.iv13, i64 %indvars.iv10, i64 %indvars.iv7
+  %tmp = load i32, ptr %arrayidx10, align 4
+  %arrayidx16 = getelementptr inbounds [256 x [256 x i32]], ptr %C, i64 %indvars.iv13, i64 %indvars.iv10, i64 %indvars.iv7
+  %tmp16 = load i32, ptr %arrayidx16, align 4
   %add = add nsw i32 %tmp16, %tmp
-  store i32 %add, i32* %arrayidx16, align 4
+  store i32 %add, ptr %arrayidx16, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body6
@@ -109,12 +109,12 @@ for.cond32:                                       ; preds = %for.inc48, %for.bod
   br i1 %exitcond, label %for.body34, label %for.end50
 
 for.body34:                                       ; preds = %for.cond32
-  %arrayidx40 = getelementptr inbounds [256 x [256 x i32]], [256 x [256 x i32]]* %A1, i64 %indvars.iv4, i64 %indvars.iv1, i64 %indvars.iv
-  %tmp17 = load i32, i32* %arrayidx40, align 4
-  %arrayidx46 = getelementptr inbounds [256 x [256 x i32]], [256 x [256 x i32]]* %C, i64 %indvars.iv4, i64 %indvars.iv1, i64 %indvars.iv
-  %tmp18 = load i32, i32* %arrayidx46, align 4
+  %arrayidx40 = getelementptr inbounds [256 x [256 x i32]], ptr %A1, i64 %indvars.iv4, i64 %indvars.iv1, i64 %indvars.iv
+  %tmp17 = load i32, ptr %arrayidx40, align 4
+  %arrayidx46 = getelementptr inbounds [256 x [256 x i32]], ptr %C, i64 %indvars.iv4, i64 %indvars.iv1, i64 %indvars.iv
+  %tmp18 = load i32, ptr %arrayidx46, align 4
   %add47 = add nsw i32 %tmp18, %tmp17
-  store i32 %add47, i32* %arrayidx46, align 4
+  store i32 %add47, ptr %arrayidx46, align 4
   br label %for.inc48
 
 for.inc48:                                        ; preds = %for.body34

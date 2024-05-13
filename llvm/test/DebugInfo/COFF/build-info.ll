@@ -5,7 +5,7 @@
 ; CHECK-NEXT:          0x{{.*}}: `D:\src\scopes\clang`
 ; CHECK-NEXT:          <no type>: ``
 ; CHECK-NEXT:          0x{{.*}}: `D:\src\scopes\foo.cpp`
-; CHECK-NEXT:          <no type>: ``
+; CHECK-NEXT:          0x{{.*}}: ``
 ; CHECK-NEXT:          <no type>: ``
 
 ; CHECK: {{.*}} | S_BUILDINFO [size = 8] BuildId = `[[INFO_IDX]]`

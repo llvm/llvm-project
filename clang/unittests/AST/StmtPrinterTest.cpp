@@ -31,25 +31,45 @@ using namespace tooling;
 
 namespace {
 
-enum class StdVer { CXX98, CXX11, CXX14, CXX17, CXX2a };
+enum class StdVer { CXX98, CXX11, CXX14, CXX17, CXX20 };
 
 DeclarationMatcher FunctionBodyMatcher(StringRef ContainingFunction) {
   return functionDecl(hasName(ContainingFunction),
                       has(compoundStmt(has(stmt().bind("id")))));
 }
 
+static void PrintStmt(raw_ostream &Out, const ASTContext *Context,
+                      const Stmt *S, PrintingPolicyAdjuster PolicyAdjuster) {
+  assert(S != nullptr && "Expected non-null Stmt");
+  PrintingPolicy Policy = Context->getPrintingPolicy();
+  if (PolicyAdjuster)
+    PolicyAdjuster(Policy);
+  S->printPretty(Out, /*Helper*/ nullptr, Policy);
+}
+
+template <typename Matcher>
+::testing::AssertionResult
+PrintedStmtMatches(StringRef Code, const std::vector<std::string> &Args,
+                   const Matcher &NodeMatch, StringRef ExpectedPrinted,
+                   PrintingPolicyAdjuster PolicyAdjuster = nullptr) {
+  return PrintedNodeMatches<Stmt>(Code, Args, NodeMatch, ExpectedPrinted, "",
+                                  PrintStmt, PolicyAdjuster);
+}
+
 template <typename T>
 ::testing::AssertionResult
 PrintedStmtCXXMatches(StdVer Standard, StringRef Code, const T &NodeMatch,
                       StringRef ExpectedPrinted,
-                      PolicyAdjusterType PolicyAdjuster = None) {
+                      PrintingPolicyAdjuster PolicyAdjuster = nullptr) {
   const char *StdOpt;
   switch (Standard) {
   case StdVer::CXX98: StdOpt = "-std=c++98"; break;
   case StdVer::CXX11: StdOpt = "-std=c++11"; break;
   case StdVer::CXX14: StdOpt = "-std=c++14"; break;
   case StdVer::CXX17: StdOpt = "-std=c++17"; break;
-  case StdVer::CXX2a: StdOpt = "-std=c++2a"; break;
+  case StdVer::CXX20:
+    StdOpt = "-std=c++20";
+    break;
   }
 
   std::vector<std::string> Args = {
@@ -64,7 +84,7 @@ template <typename T>
 ::testing::AssertionResult
 PrintedStmtMSMatches(StringRef Code, const T &NodeMatch,
                      StringRef ExpectedPrinted,
-                     PolicyAdjusterType PolicyAdjuster = None) {
+                     PrintingPolicyAdjuster PolicyAdjuster = nullptr) {
   std::vector<std::string> Args = {
     "-std=c++98",
     "-target", "i686-pc-win32",
@@ -79,7 +99,7 @@ template <typename T>
 ::testing::AssertionResult
 PrintedStmtObjCMatches(StringRef Code, const T &NodeMatch,
                        StringRef ExpectedPrinted,
-                       PolicyAdjusterType PolicyAdjuster = None) {
+                       PrintingPolicyAdjuster PolicyAdjuster = nullptr) {
   std::vector<std::string> Args = {
     "-ObjC",
     "-fobjc-runtime=macosx-10.12.0",
@@ -126,6 +146,35 @@ TEST(StmtPrinter, TestFloatingPointLiteral) {
     FunctionBodyMatcher("A"),
     "1.F , -1.F , 1. , -1. , 1.L , -1.L"));
     // Should be: with semicolon
+}
+
+TEST(StmtPrinter, TestStringLiteralOperatorTemplate_Pack) {
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11,
+                                    R"cpp(
+    template <char...> constexpr double operator""_c() { return 42; }
+    void A() {
+      constexpr auto waldo = 42_c;
+    }
+)cpp",
+                                    FunctionBodyMatcher("A"),
+                                    "constexpr auto waldo = 42_c;\n"));
+}
+
+TEST(StmtPrinter, TestStringLiteralOperatorTemplate_Class) {
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX20,
+      R"cpp(
+    struct C {
+      template <unsigned N> constexpr C(const char (&)[N]) : n(N) {}
+      unsigned n;
+    };
+    template <C c> constexpr auto operator""_c() { return c.n; }
+    void A() {
+      constexpr auto waldo = "abc"_c;
+    }
+)cpp",
+      FunctionBodyMatcher("A"),
+      "constexpr auto waldo = operator\"\"_c<C{4}>();\n"));
 }
 
 TEST(StmtPrinter, TestCXXConversionDeclImplicit) {
@@ -183,15 +232,17 @@ TEST(StmtPrinter, TestCXXLamda) {
     "[](auto a, int b, auto c, int, auto) {\n"
     "}"));
 
-  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX2a,
-    "void A() {"
-    "  auto l = []<typename T1, class T2, int I,"
-    "              template<class, typename> class T3>"
-    "           (int a, auto, int, auto d) { };"
-    "}",
-    lambdaExpr(anything()).bind("id"),
-    "[]<typename T1, class T2, int I, template <class, typename> class T3>(int a, auto, int, auto d) {\n"
-    "}"));
+  ASSERT_TRUE(
+      PrintedStmtCXXMatches(StdVer::CXX20,
+                            "void A() {"
+                            "  auto l = []<typename T1, class T2, int I,"
+                            "              template<class, typename> class T3>"
+                            "           (int a, auto, int, auto d) { };"
+                            "}",
+                            lambdaExpr(anything()).bind("id"),
+                            "[]<typename T1, class T2, int I, template <class, "
+                            "typename> class T3>(int a, auto, int, auto d) {\n"
+                            "}"));
 }
 
 TEST(StmtPrinter, TestNoImplicitBases) {
@@ -202,10 +253,10 @@ class A {
 };
 )";
   // No implicit 'this'.
-  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11,
-      CPPSource, memberExpr(anything()).bind("id"), "field",
-      PolicyAdjusterType(
-          [](PrintingPolicy &PP) { PP.SuppressImplicitBase = true; })));
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX11, CPPSource, memberExpr(anything()).bind("id"), "field",
+
+      [](PrintingPolicy &PP) { PP.SuppressImplicitBase = true; }));
   // Print implicit 'this'.
   ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11,
       CPPSource, memberExpr(anything()).bind("id"), "this->field"));
@@ -222,11 +273,10 @@ class A {
 @end
       )";
   // No implicit 'self'.
-  ASSERT_TRUE(PrintedStmtObjCMatches(ObjCSource, returnStmt().bind("id"),
-                                     "return ivar;\n",
-                                     PolicyAdjusterType([](PrintingPolicy &PP) {
-                                       PP.SuppressImplicitBase = true;
-                                     })));
+  ASSERT_TRUE(PrintedStmtObjCMatches(
+      ObjCSource, returnStmt().bind("id"), "return ivar;\n",
+
+      [](PrintingPolicy &PP) { PP.SuppressImplicitBase = true; }));
   // Print implicit 'self'.
   ASSERT_TRUE(PrintedStmtObjCMatches(ObjCSource, returnStmt().bind("id"),
                                      "return self->ivar;\n"));
@@ -243,5 +293,25 @@ TEST(StmtPrinter, TerseOutputWithLambdas) {
   // body not printed when TerseOutput is on.
   ASSERT_TRUE(PrintedStmtCXXMatches(
       StdVer::CXX11, CPPSource, lambdaExpr(anything()).bind("id"), "[] {}",
-      PolicyAdjusterType([](PrintingPolicy &PP) { PP.TerseOutput = true; })));
+
+      [](PrintingPolicy &PP) { PP.TerseOutput = true; }));
+}
+
+TEST(StmtPrinter, ParamsUglified) {
+  llvm::StringLiteral Code = R"cpp(
+    template <typename _T, int _I, template <typename> class _C>
+    auto foo(int __j) {
+      return typename _C<_T>::_F(_I, __j);
+    }
+  )cpp";
+  auto Clean = [](PrintingPolicy &Policy) {
+    Policy.CleanUglifiedParameters = true;
+  };
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX14, Code,
+                                    returnStmt().bind("id"),
+                                    "return typename _C<_T>::_F(_I, __j);\n"));
+  ASSERT_TRUE(
+      PrintedStmtCXXMatches(StdVer::CXX14, Code, returnStmt().bind("id"),
+                            "return typename C<T>::_F(I, j);\n", Clean));
 }

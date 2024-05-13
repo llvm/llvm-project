@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -std=c++17 %s -verify -fcxx-exceptions
-// RUN: not %clang_cc1 -std=c++17 %s -emit-llvm-only -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++17 %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx17,pre2c -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++2b %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx2b,pre2c,post2b -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++2c %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx2c,post2b -fcxx-exceptions
+// RUN: not %clang_cc1 -std=c++17 %s -triple x86_64-unknown-linux-gnu -emit-llvm-only -fcxx-exceptions
 
 struct S { int a, b, c; };
 
@@ -30,7 +32,7 @@ namespace ForRangeDecl {
 namespace OtherDecl {
   // A parameter-declaration is not a simple-declaration.
   // This parses as an array declaration.
-  void f(auto [a, b, c]); // expected-error {{'auto' not allowed in function prototype}} expected-error {{'a'}}
+  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error {{'a'}}
 
   void g() {
     // A condition is allowed as a Clang extension.
@@ -57,7 +59,7 @@ namespace OtherDecl {
 namespace GoodSpecifiers {
   void f() {
     int n[1];
-    const volatile auto &[a] = n;
+    const volatile auto &[a] = n; // post2b-warning {{volatile qualifier in structured binding declaration is deprecated}}
   }
 }
 
@@ -67,9 +69,9 @@ namespace BadSpecifiers {
   struct S { int n; } s;
   void f() {
     // storage-class-specifiers
-    static auto &[a] = n; // expected-warning {{declared 'static' is a C++20 extension}}
-    thread_local auto &[b] = n; // expected-warning {{declared 'thread_local' is a C++20 extension}}
-    extern auto &[c] = n; // expected-error {{cannot be declared 'extern'}} expected-error {{cannot have an initializer}}
+    static auto &[a] = n; // cxx17-warning {{declared 'static' is a C++20 extension}}
+    thread_local auto &[b] = n; // cxx17-warning {{declared 'thread_local' is a C++20 extension}}
+    extern auto &[c] = n; // expected-error {{cannot be declared 'extern'}} expected-error {{declaration of block scope identifier with linkage cannot have an initializer}}
     struct S {
       mutable auto &[d] = n; // expected-error {{not permitted in this context}}
 
@@ -85,16 +87,19 @@ namespace BadSpecifiers {
   }
 
   static constexpr inline thread_local auto &[j1] = n; // expected-error {{cannot be declared with 'constexpr inline' specifiers}}
-  static thread_local auto &[j2] = n; // expected-warning {{declared with 'static thread_local' specifiers is a C++20 extension}}
+  static thread_local auto &[j2] = n; // cxx17-warning {{declared with 'static thread_local' specifiers is a C++20 extension}}
 
   inline auto &[k] = n; // expected-error {{cannot be declared 'inline'}}
 
   const int K = 5;
+  auto ([c]) = s; // expected-error {{decomposition declaration cannot be declared with parentheses}}
   void g() {
     // defining-type-specifiers other than cv-qualifiers and 'auto'
-    S [a] = s; // expected-error {{cannot be declared with type 'BadSpecifiers::S'}}
+    S [a] = s; // expected-error {{cannot be declared with type 'S'}}
     decltype(auto) [b] = s; // expected-error {{cannot be declared with type 'decltype(auto)'}}
-    auto ([c]) = s; // expected-error {{cannot be declared with parentheses}}
+    auto ([c2]) = s; // cxx17-error {{decomposition declaration cannot be declared with parenthese}} \
+                     // post2b-error {{use of undeclared identifier 'c2'}} \
+                     // post2b-error {{expected body of lambda expression}} \
 
     // FIXME: This error is not very good.
     auto [d]() = s; // expected-error {{expected ';'}} expected-error {{expected expression}}
@@ -115,9 +120,6 @@ namespace BadSpecifiers {
     [[]] auto [ok_3] = s;
     alignas(S) auto [ok_4] = s;
 
-    // ... but not after the identifier or declarator.
-    // FIXME: These errors are not very good.
-    auto [bad_attr_1 [[]]] = s; // expected-error {{attribute list cannot appear here}} expected-error 2{{}}
     auto [bad_attr_2] [[]] = s; // expected-error {{expected ';'}} expected-error {{}}
   }
 }
@@ -151,4 +153,51 @@ namespace Init {
     S [goodish3] = { 4 }; // expected-error {{cannot be declared with type 'S'}}
     S [goodish4] { 4 }; // expected-error {{cannot be declared with type 'S'}}
   }
+}
+
+
+namespace attributes {
+
+struct S{
+    int a;
+    int b = 0;
+};
+
+void err() {
+    auto [[]] = S{0}; // expected-error {{expected unqualified-id}}
+    auto [ alignas(42) a, foo ] = S{0}; // expected-error {{an attribute list cannot appear here}}
+    auto [ c, [[]] d ] = S{0}; // expected-error {{an attribute list cannot appear here}}
+    auto [ e, alignas(42) f ] = S{0}; // expected-error {{an attribute list cannot appear here}}
+}
+
+void ok() {
+    auto [ a alignas(42) [[]], b alignas(42) [[]]] = S{0}; // expected-error 2{{'alignas' attribute only applies to variables, data members and tag types}} \
+                                                           // pre2c-warning  2{{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
+    auto [ c [[]] alignas(42), d [[]] alignas(42) [[]]] = S{0}; // expected-error 2{{'alignas' attribute only applies to variables, data members and tag types}} \
+                                                                // pre2c-warning  2{{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
+}
+
+
+auto [G1 [[deprecated]], G2 [[deprecated]]] = S{42}; // #deprecated-here
+// pre2c-warning@-1 2{{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
+
+int test() {
+  return G1 + G2; // expected-warning {{'G1' is deprecated}} expected-note@#deprecated-here {{here}} \
+                  // expected-warning {{'G2' is deprecated}} expected-note@#deprecated-here {{here}}
+}
+
+void invalid_attributes() {
+  // pre2c-warning@+1 {{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
+  auto [a alignas(42) // expected-error {{'alignas' attribute only applies to variables, data members and tag types}}
+      [[assume(true), // expected-error {{'assume' attribute cannot be applied to a declaration}}
+        carries_dependency, // expected-error {{'carries_dependency' attribute only applies to parameters, Objective-C methods, and functions}}
+        fallthrough,  // expected-error {{'fallthrough' attribute cannot be applied to a declaration}}
+        likely, // expected-error {{'likely' attribute cannot be applied to a declaration}}
+        unlikely, // expected-error {{'unlikely' attribute cannot be applied to a declaration}}
+        nodiscard,  // expected-warning {{'nodiscard' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, function pointers, and typedefs}}
+        noreturn,  // expected-error {{'noreturn' attribute only applies to functions}}
+        no_unique_address]], // expected-error {{'no_unique_address' attribute only applies to non-bit-field non-static data members}}
+    b] = S{0};
+}
+
 }

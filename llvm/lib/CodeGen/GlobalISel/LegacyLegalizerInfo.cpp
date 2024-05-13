@@ -64,7 +64,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, LegacyLegalizeAction Action) {
   return OS;
 }
 
-LegacyLegalizerInfo::LegacyLegalizerInfo() : TablesInitialized(false) {
+LegacyLegalizerInfo::LegacyLegalizerInfo() {
   // Set defaults.
   // FIXME: these two (G_ANYEXT and G_TRUNC?) can be legalized to the
   // fundamental load/store Jakob proposed. Once loads & stores are supported.
@@ -76,6 +76,9 @@ LegacyLegalizerInfo::LegacyLegalizerInfo() : TablesInitialized(false) {
 
   setScalarAction(TargetOpcode::G_INTRINSIC, 0, {{1, Legal}});
   setScalarAction(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS, 0, {{1, Legal}});
+  setScalarAction(TargetOpcode::G_INTRINSIC_CONVERGENT, 0, {{1, Legal}});
+  setScalarAction(TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS, 0,
+                  {{1, Legal}});
 
   setLegalizeScalarToDifferentSizeStrategy(
       TargetOpcode::G_IMPLICIT_DEF, 0, narrowToSmallerAndUnsupportedIfTooSmall);
@@ -264,7 +267,7 @@ LegacyLegalizerInfo::findAction(const SizeAndActionsVec &Vec, const uint32_t Siz
     // Special case for scalarization:
     if (Vec == SizeAndActionsVec({{1, FewerElements}}))
       return {1, FewerElements};
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NarrowScalar: {
     // The following needs to be a loop, as for now, we do allow needing to
     // go over "Unsupported" bit sizes before finding a legalizable bit size.
@@ -342,8 +345,8 @@ LegacyLegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
   LLT IntermediateType;
   auto ElementSizeAndAction =
       findAction(ElemSizeVec, Aspect.Type.getScalarSizeInBits());
-  IntermediateType =
-      LLT::vector(Aspect.Type.getNumElements(), ElementSizeAndAction.first);
+  IntermediateType = LLT::fixed_vector(Aspect.Type.getNumElements(),
+                                       ElementSizeAndAction.first);
   if (ElementSizeAndAction.second != Legal)
     return {ElementSizeAndAction.second, IntermediateType};
 
@@ -356,8 +359,8 @@ LegacyLegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
   auto NumElementsAndAction =
       findAction(NumElementsVec, IntermediateType.getNumElements());
   return {NumElementsAndAction.second,
-          LLT::vector(NumElementsAndAction.first,
-                      IntermediateType.getScalarSizeInBits())};
+          LLT::fixed_vector(NumElementsAndAction.first,
+                            IntermediateType.getScalarSizeInBits())};
 }
 
 unsigned LegacyLegalizerInfo::getOpcodeIdxForOpcode(unsigned Opcode) const {

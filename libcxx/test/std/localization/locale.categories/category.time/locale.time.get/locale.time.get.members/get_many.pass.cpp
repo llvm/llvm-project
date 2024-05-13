@@ -44,7 +44,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, fmt, fmt+sizeof(fmt)-1);
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_year == 109);
         assert(t.tm_mon == 4);
         assert(t.tm_mday == 9);
@@ -58,7 +58,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, fmt, fmt+sizeof(fmt)-1);
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_year == 109);
         assert(t.tm_mon == 4);
         assert(t.tm_mday == 9);

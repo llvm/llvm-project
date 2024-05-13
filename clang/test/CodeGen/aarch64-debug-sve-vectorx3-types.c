@@ -40,14 +40,14 @@ void test_locals(void) {
 
   // CHECK-DAG: name: "__clang_svint64x3_t",{{.*}}, baseType: ![[CT64:[0-9]+]]
   // CHECK-DAG: ![[CT64]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTY64:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS1x3_64:[0-9]+]])
-  // CHECK-DAG: ![[ELTTY64]] = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
+  // CHECK-DAG: ![[ELTTY64]] = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
   // CHECK-DAG: ![[ELTS1x3_64]] = !{![[REALELTS1x3_64:[0-9]+]]}
   // CHECK-DAG: ![[REALELTS1x3_64]] = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 3, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
   __clang_svint64x3_t s64;
 
   // CHECK-DAG: name: "__clang_svuint64x3_t",{{.*}}, baseType: ![[CT64:[0-9]+]]
   // CHECK-DAG: ![[CT64]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTY64:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS1x3_64]])
-  // CHECK-DAG: ![[ELTTY64]] = !DIBasicType(name: "long unsigned int", size: 64, encoding: DW_ATE_unsigned)
+  // CHECK-DAG: ![[ELTTY64]] = !DIBasicType(name: "unsigned long", size: 64, encoding: DW_ATE_unsigned)
   __clang_svuint64x3_t u64;
 
   // CHECK:     name: "__clang_svfloat16x3_t",{{.*}}, baseType: ![[CT16:[0-9]+]]

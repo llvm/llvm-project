@@ -42,12 +42,17 @@ template <typename B, typename S> struct Range {
     size = 0;
   }
 
-  // Set the start value for the range, and keep the same size
   BaseType GetRangeBase() const { return base; }
 
+  /// Set the start value for the range, and keep the same size
   void SetRangeBase(BaseType b) { base = b; }
 
   void Slide(BaseType slide) { base += slide; }
+
+  void ShrinkFront(S s) {
+    base += s;
+    size -= std::min(s, size);
+  }
 
   bool Union(const Range &rhs) {
     if (DoesAdjoinOrIntersect(rhs)) {
@@ -57,6 +62,17 @@ template <typename B, typename S> struct Range {
       return true;
     }
     return false;
+  }
+
+  Range Intersect(const Range &rhs) const {
+    const BaseType lhs_base = this->GetRangeBase();
+    const BaseType rhs_base = rhs.GetRangeBase();
+    const BaseType lhs_end = this->GetRangeEnd();
+    const BaseType rhs_end = rhs.GetRangeEnd();
+    Range range;
+    range.SetRangeBase(std::max(lhs_base, rhs_base));
+    range.SetRangeEnd(std::min(lhs_end, rhs_end));
+    return range;
   }
 
   BaseType GetRangeEnd() const { return base + size; }
@@ -99,12 +115,7 @@ template <typename B, typename S> struct Range {
 
   // Returns true if the two ranges intersect
   bool DoesIntersect(const Range &rhs) const {
-    const BaseType lhs_base = this->GetRangeBase();
-    const BaseType rhs_base = rhs.GetRangeBase();
-    const BaseType lhs_end = this->GetRangeEnd();
-    const BaseType rhs_end = rhs.GetRangeEnd();
-    bool result = (lhs_base < rhs_end) && (lhs_end > rhs_base);
-    return result;
+    return Intersect(rhs).IsValid();
   }
 
   bool operator<(const Range &rhs) const {
@@ -132,6 +143,38 @@ public:
   RangeVector() = default;
 
   ~RangeVector() = default;
+
+  static RangeVector GetOverlaps(const RangeVector &vec1,
+                                 const RangeVector &vec2) {
+#ifdef ASSERT_RANGEMAP_ARE_SORTED
+    assert(vec1.IsSorted() && vec2.IsSorted());
+#endif
+    RangeVector result;
+    auto pos1 = vec1.begin();
+    auto end1 = vec1.end();
+    auto pos2 = vec2.begin();
+    auto end2 = vec2.end();
+    while (pos1 != end1 && pos2 != end2) {
+      Entry entry = pos1->Intersect(*pos2);
+      if (entry.IsValid())
+        result.Append(entry);
+      if (pos1->GetRangeEnd() < pos2->GetRangeEnd())
+        ++pos1;
+      else
+        ++pos2;
+    }
+    return result;
+  }
+
+  bool operator==(const RangeVector &rhs) const {
+    if (GetSize() != rhs.GetSize())
+      return false;
+    for (size_t i = 0; i < GetSize(); ++i) {
+      if (GetEntryRef(i) != rhs.GetEntryRef(i))
+        return false;
+    }
+    return true;
+  }
 
   void Append(const Entry &entry) { m_entries.push_back(entry); }
 
@@ -201,7 +244,7 @@ public:
     if (first_intersect == m_entries.end())
       return;
 
-    // We we can combine at least one entry, then we make a new collection and
+    // We can combine at least one entry, then we make a new collection and
     // populate it accordingly, and then swap it into place.
     auto pos = std::next(first_intersect);
     Collection minimal_ranges(m_entries.begin(), pos);
@@ -360,7 +403,6 @@ protected:
           m_entries.erase(next);
       }
     }
-    return;
   }
 
   Collection m_entries;
@@ -408,6 +450,13 @@ public:
 
   void Append(const Entry &entry) { m_entries.emplace_back(entry); }
 
+  bool Erase(uint32_t start, uint32_t end) {
+    if (start >= end || end > m_entries.size())
+      return false;
+    m_entries.erase(begin() + start, begin() + end);
+    return true;
+  }
+
   void Sort() {
     if (m_entries.size() > 1)
       std::stable_sort(m_entries.begin(), m_entries.end(),
@@ -452,7 +501,7 @@ public:
       }
     }
 
-    // We we can combine at least one entry, then we make a new collection and
+    // We can combine at least one entry, then we make a new collection and
     // populate it accordingly, and then swap it into place.
     if (can_combine) {
       Collection minimal_ranges;
@@ -569,11 +618,10 @@ public:
     if (!m_entries.empty()) {
       typename Collection::const_iterator begin = m_entries.begin();
       typename Collection::const_iterator end = m_entries.end();
-      typename Collection::const_iterator pos =
-          std::lower_bound(m_entries.begin(), end, addr,
-                           [](const Entry &lhs, B rhs_base) -> bool {
-                             return lhs.GetRangeEnd() <= rhs_base;
-                           });
+      typename Collection::const_iterator pos = llvm::lower_bound(
+          m_entries, addr, [](const Entry &lhs, B rhs_base) -> bool {
+            return lhs.GetRangeEnd() <= rhs_base;
+          });
 
       while (pos != begin && pos[-1].Contains(addr))
         --pos;
@@ -584,11 +632,26 @@ public:
     return nullptr;
   }
 
+  uint32_t FindEntryIndexThatContainsOrFollows(B addr) const {
+#ifdef ASSERT_RANGEMAP_ARE_SORTED
+    assert(IsSorted());
+#endif
+    const AugmentedEntry *entry = static_cast<const AugmentedEntry *>(
+        FindEntryThatContainsOrFollows(addr));
+    if (entry)
+      return std::distance(m_entries.begin(), entry);
+    return UINT32_MAX;
+  }
+
   Entry *Back() { return (m_entries.empty() ? nullptr : &m_entries.back()); }
 
   const Entry *Back() const {
     return (m_entries.empty() ? nullptr : &m_entries.back());
   }
+
+  using const_iterator = typename Collection::const_iterator;
+  const_iterator begin() const { return m_entries.begin(); }
+  const_iterator end() const { return m_entries.end(); }
 
 protected:
   Collection m_entries;
@@ -730,7 +793,7 @@ public:
       typename Collection::iterator begin = m_entries.begin();
       typename Collection::iterator end = m_entries.end();
       typename Collection::iterator pos =
-          std::lower_bound(begin, end, entry, BaseLessThan);
+          llvm::lower_bound(m_entries, entry, BaseLessThan);
 
       while (pos != begin && pos[-1].addr == addr)
         --pos;

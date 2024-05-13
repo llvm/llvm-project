@@ -6,10 +6,10 @@
 // UNSUPPORTED: i386-linux
 
 // Do not intercept __tls_get_addr
-// UNSUPPORTED: lsan, ubsan, android
+// UNSUPPORTED: hwasan, lsan, ubsan, android
 
 // FIXME: Investigate
-// UNSUPPORTED: powerpc64
+// UNSUPPORTED: target=powerpc64{{.*}}
 
 #include <string.h>
 

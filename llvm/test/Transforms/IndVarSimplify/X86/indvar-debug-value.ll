@@ -1,4 +1,4 @@
-; RUN: opt %s -indvars -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='loop(indvars),verify' -S -o - | FileCheck %s
 
 ; Hand-reduced from this example:
 ;
@@ -13,7 +13,7 @@
 ; }
 
 ; clang++ -g -O -mllvm -disable-llvm-optzns -gno-column-info
-; opt  -mem2reg -loop-rotate -scalar-evolution
+; opt -passes=mem2reg,loop-rotate -scalar-evolution
 
 ; CHECK: @main
 ; CHECK: llvm.dbg.value(metadata i32 1, metadata [[METADATA_IDX1:![0-9]+]]
@@ -28,7 +28,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @.str = private unnamed_addr constant [20 x i8] c"\0A Argument %d:  %s\0A\00", align 1
 
-define dso_local i32 @main(i32 %argc, i8** %argv) !dbg !7 {
+define dso_local i32 @main(i32 %argc, ptr %argv) !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 1, metadata !17, metadata !DIExpression()), !dbg !19
   %cmp1 = icmp slt i32 1, %argc, !dbg !19
@@ -47,9 +47,9 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %ArgIndex.02 = phi i32 [ 1, %for.body.lr.ph ], [ %add, %for.inc ]
   call void @llvm.dbg.value(metadata i32 %ArgIndex.02, metadata !17, metadata !DIExpression()), !dbg !19
   %idxprom = sext i32 %ArgIndex.02 to i64, !dbg !19
-  %arrayidx = getelementptr inbounds i8*, i8** %argv, i64 %idxprom, !dbg !19
-  %0 = load i8*, i8** %arrayidx, align 8, !dbg !19
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([20 x i8], [20 x i8]* @.str, i64 0, i64 0), i32 %ArgIndex.02, i8* %0), !dbg !19
+  %arrayidx = getelementptr inbounds ptr, ptr %argv, i64 %idxprom, !dbg !19
+  %0 = load ptr, ptr %arrayidx, align 8, !dbg !19
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 %ArgIndex.02, ptr %0), !dbg !19
   br label %for.inc, !dbg !19
 
 for.inc:                                          ; preds = %for.body
@@ -62,7 +62,7 @@ for.end:                                          ; preds = %for.cond.cleanup
   ret i32 0, !dbg !19
 }
 
-declare dso_local i32 @printf(i8*, ...)
+declare dso_local i32 @printf(ptr, ...)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

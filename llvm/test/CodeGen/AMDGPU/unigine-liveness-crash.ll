@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 ;
 ; This test used to crash with the following assertion:
 ; llc: include/llvm/ADT/IntervalMap.h:632: unsigned int llvm::IntervalMapImpl::LeafNode<llvm::SlotIndex, llvm::LiveInterval *, 8, llvm::IntervalMapInfo<llvm::SlotIndex> >::insertFrom(unsigned int &, unsigned int, KeyT, KeyT, ValT) [KeyT = llvm::SlotIndex, ValT = llvm::LiveInterval *, N = 8, Traits = llvm::IntervalMapInfo<llvm::SlotIndex>]: Assertion `(i == Size || Traits::stopLess(b, start(i))) && "Overlapping insert"' failed.
@@ -9,7 +9,7 @@
 ;
 ; Check for a valid output.
 ; CHECK: image_sample_c
-define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([17 x <16 x i8>] addrspace(4)* inreg dereferenceable(18446744073709551615) %arg, [16 x <16 x i8>] addrspace(4)* inreg dereferenceable(18446744073709551615) %arg1, [32 x <8 x i32>] addrspace(4)* inreg dereferenceable(18446744073709551615) %arg2, [16 x <8 x i32>] addrspace(4)* inreg dereferenceable(18446744073709551615) %arg3, [16 x <4 x i32>] addrspace(4)* inreg dereferenceable(18446744073709551615) %arg4, float inreg %arg5, i32 inreg %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <3 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, <2 x i32> %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, i32 %arg20, float %arg21, i32 %arg22) #0 {
+define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main(ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg1, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg2, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg3, ptr addrspace(4) inreg dereferenceable(18446744073709551615) %arg4, float inreg %arg5, i32 inreg %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <3 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, <2 x i32> %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, i32 %arg20, float %arg21, i32 %arg22) #0 {
 main_body:
   %i.i = extractelement <2 x i32> %arg8, i32 0
   %j.i = extractelement <2 x i32> %arg8, i32 1

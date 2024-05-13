@@ -1,5 +1,17 @@
 include "llvm/Option/OptParser.td"
 
+multiclass B<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
+multiclass Eq<string name, string help> {
+  def NAME : Separate<["--"], name>;
+  def NAME #_eq : Joined<["--"], name #"=">,
+                  Alias<!cast<Separate>(NAME)>,
+                  HelpText<help>;
+}
+
 def help : Flag<["--"], "help">,
   HelpText<"Display available options (--help-hidden for more)">;
 
@@ -16,7 +28,8 @@ def adjust_vma_EQ : Joined<["--"], "adjust-vma=">,
   HelpText<"Increase the displayed address by the specified offset">;
 
 def all_headers : Flag<["--"], "all-headers">,
-  HelpText<"Display all available header information">;
+  HelpText<"Display all available header information, "
+           "relocation entries and the symbol table">;
 def : Flag<["-"], "x">, Alias<all_headers>, HelpText<"Alias for --all-headers">;
 
 def arch_name_EQ : Joined<["--"], "arch-name=">,
@@ -25,24 +38,38 @@ def arch_name_EQ : Joined<["--"], "arch-name=">,
 def archive_headers : Flag<["--"], "archive-headers">,
   HelpText<"Display archive header information">;
 
+defm build_id :
+  Eq<"build-id", "Build ID to look up. Once found, added as an input file">,
+  MetaVarName<"<hex>">;
+
 def : Flag<["-"], "a">, Alias<archive_headers>,
   HelpText<"Alias for --archive-headers">;
 
 def demangle : Flag<["--"], "demangle">, HelpText<"Demangle symbol names">;
 def : Flag<["-"], "C">, Alias<demangle>, HelpText<"Alias for --demangle">;
 
+defm debug_file_directory :
+  Eq<"debug-file-directory", "Path to directory where to look for debug files">,
+  MetaVarName<"<dir>">;
+
+defm debuginfod : B<"debuginfod", "Use debuginfod to find debug files", "Don't use debuginfod to find debug files">;
+
 def disassemble : Flag<["--"], "disassemble">,
-  HelpText<"Display assembler mnemonics for the machine instructions">;
+  HelpText<"Disassemble all executable sections found in the input files">;
 def : Flag<["-"], "d">, Alias<disassemble>, HelpText<"Alias for --disassemble">;
 
 def disassemble_all : Flag<["--"], "disassemble-all">,
-  HelpText<"Display assembler mnemonics for the machine instructions">;
+  HelpText<"Disassemble all sections found in the input files">;
 def : Flag<["-"], "D">, Alias<disassemble_all>,
   HelpText<"Alias for --disassemble-all">;
 
 def symbol_description : Flag<["--"], "symbol-description">,
   HelpText<"Add symbol description for disassembly. This "
-           "option is for XCOFF files only.">;
+           "option is for XCOFF files only">;
+
+def traceback_table : Flag<["--"], "traceback-table">,
+  HelpText<"Decode traceback table in disassembly. Implies --disassemble. "
+           "This option is for XCOFF files only">;
 
 def disassemble_symbols_EQ : Joined<["--"], "disassemble-symbols=">,
   HelpText<"List of symbols to disassemble. "
@@ -60,16 +87,26 @@ def disassembler_options_EQ : Joined<["--"], "disassembler-options=">,
 def : JoinedOrSeparate<["-"], "M">, Alias<disassembler_options_EQ>,
   HelpText<"Alias for --disassembler-options=">;
 
+def disassembler_color_EQ : Joined<["--"], "disassembler-color=">,
+  MetaVarName<"mode">,
+  HelpText<"Enable or disable disassembler color output. "
+           "Valid options are \"on\", \"off\" and \"terminal\" (default)">;
+
 def dynamic_reloc : Flag<["--"], "dynamic-reloc">,
   HelpText<"Display the dynamic relocation entries in the file">;
 def : Flag<["-"], "R">, Alias<dynamic_reloc>,
   HelpText<"Alias for --dynamic-reloc">;
 
 def dwarf_EQ : Joined<["--"], "dwarf=">,
-  HelpText<"Dump of dwarf debug sections">, Values<"frames">;
+  HelpText<"Dump the specified DWARF debug sections. The "
+           "only supported value is 'frames'">,
+  Values<"frames">;
 
 def fault_map_section : Flag<["--"], "fault-map-section">,
-  HelpText<"Display contents of faultmap section">;
+  HelpText<"Display the content of the fault map section">;
+
+def offloading : Flag<["--"], "offloading">,
+  HelpText<"Display the content of the offloading section">;
 
 def file_headers : Flag<["--"], "file-headers">,
   HelpText<"Display the contents of the overall file header">;
@@ -82,9 +119,10 @@ def : Flag<["-"], "s">, Alias<full_contents>,
   HelpText<"Alias for --full-contents">;
 
 def line_numbers : Flag<["--"], "line-numbers">,
-  HelpText<"Display source line numbers with "
-            "disassembly. Implies disassemble object">;
-def : Flag<["-"], "l">, Alias<line_numbers>,
+  HelpText<"When disassembling, display source line numbers. "
+           "Implies --disassemble">;
+def : Flag<["-"], "l">,
+  Alias<line_numbers>,
   HelpText<"Alias for --line-numbers">;
 
 def macho : Flag<["--"], "macho">,
@@ -99,12 +137,17 @@ def mattr_EQ : Joined<["--"], "mattr=">,
   MetaVarName<"a1,+a2,-a3,...">,
   HelpText<"Target specific attributes (--mattr=help for details)">;
 
+def mllvm : Separate<["-"], "mllvm">, HelpText<"Specify an argument to forward to LLVM's CommandLine library">, MetaVarName<"<arg>">;
+def : Joined<["-"], "mllvm=">, Alias<mllvm>;
+
 def no_show_raw_insn : Flag<["--"], "no-show-raw-insn">,
   HelpText<"When disassembling instructions, "
            "do not print the instruction bytes.">;
 
 def no_leading_addr : Flag<["--"], "no-leading-addr">,
-  HelpText<"Print no leading address">;
+  HelpText<"When disassembling, do not print leading addresses for instructions or inline relocations">;
+def : Flag<["--"], "no-addresses">, Alias<no_leading_addr>,
+  HelpText<"Alias for --no-leading-addr">;
 
 def raw_clang_ast : Flag<["--"], "raw-clang-ast">,
   HelpText<"Dump the raw binary contents of the clang AST section">;
@@ -114,10 +157,10 @@ def reloc : Flag<["--"], "reloc">,
 def : Flag<["-"], "r">, Alias<reloc>, HelpText<"Alias for --reloc">;
 
 def print_imm_hex : Flag<["--"], "print-imm-hex">,
-  HelpText<"Use hex format for immediate values">;
+  HelpText<"Use hex format for immediate values (default)">;
 
 def no_print_imm_hex : Flag<["--"], "no-print-imm-hex">,
-  HelpText<"Do not use hex format for immediate values (default)">;
+  HelpText<"Do not use hex format for immediate values">;
 def : Flag<["--"], "print-imm-hex=false">, Alias<no_print_imm_hex>;
 
 def private_headers : Flag<["--"], "private-headers">,
@@ -139,19 +182,26 @@ def : Flag<["--"], "headers">, Alias<section_headers>,
 def : Flag<["-"], "h">, Alias<section_headers>,
   HelpText<"Alias for --section-headers">;
 
+def show_all_symbols : Flag<["--"], "show-all-symbols">,
+  HelpText<"Show all symbols during disassembly, even if multiple "
+           "symbols are defined at the same location">;
+
 def show_lma : Flag<["--"], "show-lma">,
   HelpText<"Display LMA column when dumping ELF section headers">;
 
 def source : Flag<["--"], "source">,
-  HelpText<"Display source inlined with disassembly. Implies disassemble object">;
+  HelpText<"When disassembling, display source interleaved with the "
+           "disassembly. Implies --disassemble">;
 def : Flag<["-"], "S">, Alias<source>, HelpText<"Alias for --source">;
 
 def start_address_EQ : Joined<["--"], "start-address=">,
   MetaVarName<"address">,
-  HelpText<"Disassemble beginning at address">;
+  HelpText<"Set the start address for disassembling, "
+           "printing relocations and printing symbols">;
 def stop_address_EQ : Joined<["--"], "stop-address=">,
   MetaVarName<"address">,
-  HelpText<"Stop disassembly at address">;
+  HelpText<"Set the stop address for disassembling, "
+           "printing relocations and printing symbols">;
 
 def syms : Flag<["--"], "syms">,
   HelpText<"Display the symbol table">;
@@ -159,6 +209,10 @@ def : Flag<["-"], "t">, Alias<syms>, HelpText<"Alias for --syms">;
 
 def symbolize_operands : Flag<["--"], "symbolize-operands">,
   HelpText<"Symbolize instruction operands when disassembling">;
+
+def pretty_pgo_analysis_map : Flag<["--"], "pretty-pgo-analysis-map">,
+                              HelpText<"Display PGO analysis values with "
+                                       "formatting rather than raw numbers">;
 
 def dynamic_syms : Flag<["--"], "dynamic-syms">,
   HelpText<"Display the contents of the dynamic symbol table">;
@@ -180,19 +234,19 @@ def wide : Flag<["--"], "wide">,
   HelpText<"Ignored for compatibility with GNU objdump">;
 def : Flag<["-"], "w">, Alias<wide>;
 
-def prefix : Separate<["--"], "prefix">,
-  HelpText<"Add prefix to absolute paths">;
-
-def prefix_strip : Separate<["--"], "prefix-strip">,
-  HelpText<"Strip out initial directories from absolute "
-           "paths. No effect without --prefix">;
+defm prefix : Eq<"prefix", "Add prefix to absolute paths">,
+              MetaVarName<"prefix">;
+defm prefix_strip
+    : Eq<"prefix-strip", "Strip out initial directories from absolute "
+                         "paths. No effect without --prefix">,
+      MetaVarName<"prefix">;
 
 def debug_vars_EQ : Joined<["--"], "debug-vars=">,
-  Values<"unicode,ascii">;
-def : Flag<["--"], "debug-vars">,
   HelpText<"Print the locations (in registers or memory) of "
-           "source-level variables alongside disassembly">,
-  Alias<debug_vars_EQ>, AliasArgs<["unicode"]>;
+           "source-level variables alongside disassembly. "
+           "Supported formats: ascii, unicode (default)">,
+  Values<"unicode,ascii">;
+def : Flag<["--"], "debug-vars">, Alias<debug_vars_EQ>, AliasArgs<["unicode"]>;
 
 def debug_vars_indent_EQ : Joined<["--"], "debug-vars-indent=">,
   HelpText<"Distance to indent the source-level variable display, "
@@ -267,10 +321,14 @@ def data_in_code : Flag<["--"], "data-in-code">,
   HelpText<"Print the data in code table for Mach-O objects (requires --macho)">,
   Group<grp_mach_o>;
 
-def function_starts : Flag<["--"], "function-starts">,
-  HelpText<"Print the function starts table for "
-           "Mach-O objects (requires --macho)">,
+def function_starts_EQ : Joined<["--"], "function-starts=">,
+  HelpText<"Print the function starts table for Mach-O objects. "
+           "Options: addrs (default), names, both (requires --macho)">,
+  Values<"addrs,names,both">,
   Group<grp_mach_o>;
+
+def : Flag<["--"], "function-starts">, Alias<function_starts_EQ>,
+  AliasArgs<["addrs"]>, Group<grp_mach_o>;
 
 def link_opt_hints : Flag<["--"], "link-opt-hints">,
   HelpText<"Print the linker optimization hints for "
@@ -280,6 +338,16 @@ def link_opt_hints : Flag<["--"], "link-opt-hints">,
 def info_plist : Flag<["--"], "info-plist">,
   HelpText<"Print the info plist section as strings for "
            "Mach-O objects (requires --macho)">,
+  Group<grp_mach_o>;
+
+def chained_fixups : Flag<["--"], "chained-fixups">,
+  HelpText<"Print chained fixup information (requires --macho)">,
+  Group<grp_mach_o>;
+
+def dyld_info : Flag<["--"], "dyld-info">,
+  HelpText<"Print bind and rebase information used by dyld to resolve "
+           "external references in a final linked binary "
+           "(requires --macho)">,
   Group<grp_mach_o>;
 
 def dylibs_used : Flag<["--"], "dylibs-used">,

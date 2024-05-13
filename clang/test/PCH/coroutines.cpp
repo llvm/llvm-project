@@ -1,14 +1,14 @@
 // Test this without pch.
-// RUN: %clang_cc1 -include %s -verify -std=c++1z -fcoroutines-ts %s
+// RUN: %clang_cc1 -include %s -verify -std=c++20 %s
 
 // Test with pch.
-// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts  -emit-pch -o %t %s
-// RUN: %clang_cc1 -include-pch %t -verify -std=c++1z -fcoroutines-ts %s
+// RUN: %clang_cc1 -std=c++20  -emit-pch -o %t %s
+// RUN: %clang_cc1 -include-pch %t -verify -std=c++20 %s
 
 #ifndef HEADER
 #define HEADER
 
-namespace std::experimental {
+namespace std {
 template <typename... T> struct coroutine_traits;
 
 template <class Promise = void> struct coroutine_handle {
@@ -21,15 +21,15 @@ template <> struct coroutine_handle<void> {
   template <class PromiseType>
   coroutine_handle(coroutine_handle<PromiseType>) noexcept;
 };
-}
+} // namespace std
 
 struct suspend_always {
   bool await_ready() noexcept;
-  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
   void await_resume() noexcept;
 };
 
-template <typename... Args> struct std::experimental::coroutine_traits<void, Args...> {
+template <typename... Args> struct std::coroutine_traits<void, Args...> {
   struct promise_type {
     void get_return_object() noexcept;
     suspend_always initial_suspend() noexcept;
@@ -42,7 +42,7 @@ template <typename... Args> struct std::experimental::coroutine_traits<void, Arg
   };
 };
 
-template <typename... Args> struct std::experimental::coroutine_traits<int, Args...> {
+template <typename... Args> struct std::coroutine_traits<int, Args...> {
   struct promise_type {
     int get_return_object() noexcept;
     suspend_always initial_suspend() noexcept;

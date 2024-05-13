@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! 15.4.3.4.5 Restrictions on generic declarations
 ! Specific procedures of generic interfaces must be distinguishable.
 
@@ -25,22 +25,22 @@ contains
 end
 
 module m2
-  !ERROR: Generic 'g' may not have specific procedures 's1' and 's2' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm2s1' and 'm2s2' as their interfaces are not distinguishable
   interface g
-    subroutine s1(x)
+    subroutine m2s1(x)
     end subroutine
-    subroutine s2(x)
+    subroutine m2s2(x)
       real x
     end subroutine
   end interface
 end
 
 module m3
-  !ERROR: Generic 'g' may not have specific procedures 'f1' and 'f2' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm3f1' and 'm3f2' as their interfaces are not distinguishable
   interface g
-    integer function f1()
+    integer function m3f1()
     end function
-    real function f2()
+    real function m3f2()
     end function
   end interface
 end
@@ -51,11 +51,11 @@ module m4
   type, extends(t1) :: t2
   end type
   interface g
-    subroutine s1(x)
+    subroutine m4s1(x)
       import :: t1
       type(t1) :: x
     end
-    subroutine s2(x)
+    subroutine m4s2(x)
       import :: t2
       type(t2) :: x
     end
@@ -65,13 +65,13 @@ end
 ! These are all different ranks so they are distinguishable
 module m5
   interface g
-    subroutine s1(x)
+    subroutine m5s1(x)
       real x
     end subroutine
-    subroutine s2(x)
+    subroutine m5s2(x)
       real x(:)
     end subroutine
-    subroutine s3(x)
+    subroutine m5s3(x)
       real x(:,:)
     end subroutine
   end interface
@@ -79,58 +79,57 @@ end
 
 module m6
   use m5
-  !ERROR: Generic 'g' may not have specific procedures 's1' and 's4' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm5s1' and 'm6s4' as their interfaces are not distinguishable
   interface g
-    subroutine s4(x)
+    subroutine m6s4(x)
     end subroutine
   end interface
 end
 
 module m7
   use m5
-  !ERROR: Generic 'g' may not have specific procedures 's1' and 's5' as their interfaces are not distinguishable
-  !ERROR: Generic 'g' may not have specific procedures 's2' and 's5' as their interfaces are not distinguishable
-  !ERROR: Generic 'g' may not have specific procedures 's3' and 's5' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm5s1' and 'm7s5' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm5s2' and 'm7s5' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm5s3' and 'm7s5' as their interfaces are not distinguishable
   interface g
-    subroutine s5(x)
+    subroutine m7s5(x)
       real x(..)
     end subroutine
   end interface
 end
-    
 
 ! Two procedures that differ only by attributes are not distinguishable
 module m8
-  !ERROR: Generic 'g' may not have specific procedures 's1' and 's2' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm8s1' and 'm8s2' as their interfaces are not distinguishable
   interface g
-    pure subroutine s1(x)
+    pure subroutine m8s1(x)
       real, intent(in) :: x
     end subroutine
-    subroutine s2(x)
+    subroutine m8s2(x)
       real, intent(in) :: x
     end subroutine
   end interface
 end
 
 module m9
-  !ERROR: Generic 'g' may not have specific procedures 's1' and 's2' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm9s1' and 'm9s2' as their interfaces are not distinguishable
   interface g
-    subroutine s1(x)
+    subroutine m9s1(x)
       real :: x(10)
     end subroutine
-    subroutine s2(x)
+    subroutine m9s2(x)
       real :: x(100)
     end subroutine
   end interface
 end
 
 module m10
-  !ERROR: Generic 'g' may not have specific procedures 's1' and 's2' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm10s1' and 'm10s2' as their interfaces are not distinguishable
   interface g
-    subroutine s1(x)
+    subroutine m10s1(x)
       real :: x(10)
     end subroutine
-    subroutine s2(x)
+    subroutine m10s2(x)
       real :: x(..)
     end subroutine
   end interface
@@ -138,19 +137,19 @@ end
 
 program m11
   interface g1
-    subroutine s1(x)
+    subroutine m11s1(x)
       real, pointer, intent(out) :: x
     end subroutine
-    subroutine s2(x)
+    subroutine m11s2(x)
       real, allocatable :: x
     end subroutine
   end interface
-  !ERROR: Generic 'g2' may not have specific procedures 's3' and 's4' as their interfaces are not distinguishable
+  !ERROR: Generic 'g2' may not have specific procedures 'm11s3' and 'm11s4' as their interfaces are not distinguishable
   interface g2
-    subroutine s3(x)
+    subroutine m11s3(x)
       real, pointer, intent(in) :: x
     end subroutine
-    subroutine s4(x)
+    subroutine m11s4(x)
       real, allocatable :: x
     end subroutine
   end interface
@@ -459,23 +458,67 @@ end
 
 module m20
   interface operator(.not.)
-    real function f(x)
+    real function m20f(x)
       character(*),intent(in) :: x
     end function
   end interface
   interface operator(+)
-    procedure f
+    procedure m20f
   end interface
 end module
 
-subroutine s1()
+subroutine subr1()
   use m20
   interface operator(.not.)
-    !ERROR: Procedure 'f' from module 'm20' is already specified in generic 'OPERATOR(.NOT.)'
-    procedure f
+    !ERROR: Procedure 'm20f' from module 'm20' is already specified in generic 'OPERATOR(.NOT.)'
+    procedure m20f
   end interface
   interface operator(+)
-    !ERROR: Procedure 'f' from module 'm20' is already specified in generic 'OPERATOR(+)'
-    procedure f
+    !ERROR: Procedure 'm20f' from module 'm20' is already specified in generic 'OPERATOR(+)'
+    procedure m20f
   end interface
-end subroutine s1
+end subroutine subr1
+
+! Extensions for distinguishable allocatable arguments; these should not
+! elicit errors from f18
+module m21
+  type :: t
+  end type
+  interface int1
+    procedure s1a, s1b ! only one is polymorphic
+  end interface
+  interface int2
+    procedure s2a, s2b ! only one is unlimited polymorphic
+  end interface
+ contains
+  subroutine s1a(x)
+    type(t), allocatable :: x
+  end subroutine
+  subroutine s1b(x)
+    class(t), allocatable :: x
+  end subroutine
+  subroutine s2a(x)
+    class(t), allocatable :: x
+  end subroutine
+  subroutine s2b(x)
+    class(*), allocatable :: x
+  end subroutine
+end module
+
+! Example reduced from pFUnit
+module m22
+  !PORTABILITY: Generic 'generic' should not have specific procedures 'sub1' and 'sub2' as their interfaces are not distinguishable by the rules in the standard
+  interface generic
+    procedure sub1, sub2
+  end interface
+ contains
+  subroutine sub1(b, c)
+    class(*) b
+    integer, optional :: c
+  end
+  subroutine sub2(a, b, c)
+    real a
+    class(*) b
+    integer, optional :: c
+  end
+end

@@ -60,7 +60,7 @@ void EditedSource::finishedCommit() {
     MacroArgUse ArgUse;
     std::tie(ExpLoc, ArgUse) = ExpArg;
     auto &ArgUses = ExpansionToArgMap[ExpLoc];
-    if (llvm::find(ArgUses, ArgUse) == ArgUses.end())
+    if (!llvm::is_contained(ArgUses, ArgUse))
       ArgUses.push_back(ArgUse);
   }
   CurrCommitMacroArgExps.clear();
@@ -84,11 +84,11 @@ bool EditedSource::canInsertInOffset(SourceLocation OrigLoc, FileOffset Offs) {
     deconstructMacroArgLoc(OrigLoc, ExpLoc, ArgUse);
     auto I = ExpansionToArgMap.find(ExpLoc);
     if (I != ExpansionToArgMap.end() &&
-        find_if(I->second, [&](const MacroArgUse &U) {
+        llvm::any_of(I->second, [&](const MacroArgUse &U) {
           return ArgUse.Identifier == U.Identifier &&
                  std::tie(ArgUse.ImmediateExpansionLoc, ArgUse.UseLoc) !=
                      std::tie(U.ImmediateExpansionLoc, U.UseLoc);
-        }) != I->second.end()) {
+        })) {
       // Trying to write in a macro argument input that has already been
       // written by a previous commit for another expansion of the same macro
       // argument name. For example:
@@ -314,8 +314,8 @@ bool EditedSource::commit(const Commit &commit) {
 static bool canBeJoined(char left, char right, const LangOptions &LangOpts) {
   // FIXME: Should use TokenConcatenation to make sure we don't allow stuff like
   // making two '<' adjacent.
-  return !(Lexer::isIdentifierBodyChar(left, LangOpts) &&
-           Lexer::isIdentifierBodyChar(right, LangOpts));
+  return !(Lexer::isAsciiIdentifierContinueChar(left, LangOpts) &&
+           Lexer::isAsciiIdentifierContinueChar(right, LangOpts));
 }
 
 /// Returns true if it is ok to eliminate the trailing whitespace between

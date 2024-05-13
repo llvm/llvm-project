@@ -1,9 +1,7 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected          -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected          -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx98_14 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx98_14 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
-// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify=expected,cxx98_14 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
-// RUN: %clang_cc1            -fsyntax-only -verify=expected,cxx98_14 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected                -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected                -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx98_11,cxx11 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify=expected,cxx98_11,cxx98 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
 
 class X {
 public:
@@ -122,11 +120,13 @@ void f(Yb& a) {
   char ch = a;  // OK. calls Yb::operator char();
 }
 
-// Test conversion + copy construction.
+// Test conversion + copy construction. This is a pure C++98 test.
+// However we may extend implicit moves into C++98, we must make sure the
+// result here is not changed.
 class AutoPtrRef { };
 
 class AutoPtr {
-  AutoPtr(AutoPtr &); // cxx98_14-note{{declared private here}}
+  AutoPtr(AutoPtr &); // cxx98-note {{declared private here}}
 
 public:
   AutoPtr();
@@ -142,7 +142,7 @@ AutoPtr test_auto_ptr(bool Cond) {
 
   AutoPtr p;
   if (Cond)
-    return p; // cxx98_14-error{{calling a private constructor}}
+    return p; // cxx98-error {{calling a private constructor}}
 
   return AutoPtr();
 }
@@ -152,17 +152,14 @@ struct A1 {
   ~A1();
 
 private:
-  A1(const A1&); // cxx98_14-note 2 {{declared private here}}
+  A1(const A1 &); // cxx98_11-note 2 {{declared private here}}
 };
 
 A1 f() {
   // FIXME: redundant diagnostics!
-  return "Hello"; // cxx98_14-error {{calling a private constructor}}
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{an accessible copy constructor}}
-#else
-  // cxx98_14-warning@-4 {{copying parameter of type 'A1' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
-#endif
+  return "Hello"; // cxx98_11-error {{calling a private constructor}}
+  // cxx98-warning@-1 {{an accessible copy constructor}}
+  // cxx11-warning@-2 {{copying parameter of type 'A1' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
 }
 
 namespace source_locations {
@@ -192,7 +189,7 @@ namespace source_locations {
   template<typename T>
   struct E2 {
     operator T
-    * // expected-error{{pointer to a reference}}
+    * // expected-error{{'operator type-parameter-0-0 *' declared as a pointer to a reference of type 'int &'}}
     () const;
   };
 
@@ -238,7 +235,7 @@ namespace smart_ptr {
   Y make_Y();
 
   X f() {
-    X x = make_Y(); // expected-error{{no viable conversion from 'smart_ptr::Y' to 'smart_ptr::X'}}
+    X x = make_Y(); // expected-error{{no viable conversion from 'Y' to 'X'}}
     X x2(make_Y());
     return X(Y());
   }
@@ -351,7 +348,7 @@ namespace rdar8018274 {
   };
 
   void test2(UeberDerived ud) {
-    int i = ud; // expected-error{{ambiguous conversion from derived class 'rdar8018274::UeberDerived' to base class 'rdar8018274::Base'}}
+    int i = ud; // expected-error{{ambiguous conversion from derived class 'UeberDerived' to base class 'rdar8018274::Base'}}
   }
 
   struct Base2 {
@@ -455,9 +452,9 @@ namespace PR18234 {
   struct A {
     operator enum E { e } (); // expected-error {{'PR18234::A::E' cannot be defined in a type specifier}}
     operator struct S { int n; } (); // expected-error {{'PR18234::A::S' cannot be defined in a type specifier}}
-    // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'struct A' to 'const PR18234::A::S &' for 1st argument}}
+    // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'struct A' to 'const S &' for 1st argument}}
 #if __cplusplus >= 201103L
-  // expected-note@-3 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'struct A' to 'PR18234::A::S &&' for 1st argument}}
+  // expected-note@-3 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'struct A' to 'S &&' for 1st argument}}
 #endif
   } a;
   A::S s = a; // expected-error {{no viable conversion from 'struct A' to 'A::S'}}
@@ -475,3 +472,25 @@ struct S {
   operator const int() const;
 };
 }
+
+#if __cplusplus >= 201103L
+namespace dependent_conversion_function_id_lookup {
+namespace gh77583 {
+struct A1 {
+  operator int();
+};
+template<class T> struct C {
+  template <typename U> using Lookup = decltype(T{}.operator U());
+};
+C<A1> v{};
+}
+template<typename T> struct A2 {
+  operator T();
+};
+template<typename T> struct B : A2<T> {
+  template<typename U> using Lookup = decltype(&B::operator U);
+};
+using Result = B<int>::Lookup<int>;
+using Result = int (A2<int>::*)();
+}
+#endif

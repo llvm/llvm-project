@@ -24,7 +24,7 @@ using namespace ento;
 namespace {
 class FixedAddressChecker
   : public Checker< check::PreStmt<BinaryOperator> > {
-  mutable std::unique_ptr<BuiltinBug> BT;
+  const BugType BT{this, "Use fixed address"};
 
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
@@ -49,14 +49,11 @@ void FixedAddressChecker::checkPreStmt(const BinaryOperator *B,
     return;
 
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    if (!BT)
-      BT.reset(
-          new BuiltinBug(this, "Use fixed address",
-                         "Using a fixed address is not portable because that "
-                         "address will probably not be valid in all "
-                         "environments or platforms."));
-    auto R =
-        std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+    // FIXME: improve grammar in the following strings:
+    constexpr llvm::StringLiteral Msg =
+        "Using a fixed address is not portable because that address will "
+        "probably not be valid in all environments or platforms.";
+    auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
     R->addRange(B->getRHS()->getSourceRange());
     C.emitReport(std::move(R));
   }

@@ -6,7 +6,7 @@
 ; RUN:   -check-prefix=CHECK-P8
 
 ; Function Attrs: norecurse nounwind
-define dso_local void @qpAdd(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpAdd(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpAdd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -21,28 +21,30 @@ define dso_local void @qpAdd(fp128* nocapture readonly %a, fp128* nocapture %res
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    vmr v3, v2
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %add = fadd fp128 %0, %0
-  store fp128 %add, fp128* %res, align 16
+  store fp128 %add, ptr %res, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define dso_local void @qpSub(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpSub(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpSub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -57,28 +59,30 @@ define dso_local void @qpSub(fp128* nocapture readonly %a, fp128* nocapture %res
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    vmr v3, v2
 ; CHECK-P8-NEXT:    bl __subkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %sub = fsub fp128 %0, %0
-  store fp128 %sub, fp128* %res, align 16
+  store fp128 %sub, ptr %res, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define dso_local void @qpMul(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpMul(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpMul:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -93,28 +97,30 @@ define dso_local void @qpMul(fp128* nocapture readonly %a, fp128* nocapture %res
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    vmr v3, v2
 ; CHECK-P8-NEXT:    bl __mulkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %mul = fmul fp128 %0, %0
-  store fp128 %mul, fp128* %res, align 16
+  store fp128 %mul, ptr %res, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define dso_local void @qpDiv(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpDiv(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpDiv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -129,54 +135,53 @@ define dso_local void @qpDiv(fp128* nocapture readonly %a, fp128* nocapture %res
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    vmr v3, v2
 ; CHECK-P8-NEXT:    bl __divkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %div = fdiv fp128 %0, %0
-  store fp128 %div, fp128* %res, align 16
+  store fp128 %div, ptr %res, align 16
   ret void
 }
 
-define dso_local void @testLdNSt(i8* nocapture readonly %PtrC, fp128* nocapture %PtrF) {
+define dso_local void @testLdNSt(ptr nocapture readonly %PtrC, ptr nocapture %PtrF) {
 ; CHECK-LABEL: testLdNSt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi r3, r3, 4
-; CHECK-NEXT:    addi r4, r4, 8
-; CHECK-NEXT:    lxvx vs0, 0, r3
-; CHECK-NEXT:    stxvx vs0, 0, r4
+; CHECK-NEXT:    li r5, 4
+; CHECK-NEXT:    lxvx vs0, r3, r5
+; CHECK-NEXT:    li r3, 8
+; CHECK-NEXT:    stxvx vs0, r4, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: testLdNSt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addi r3, r3, 4
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    addi r3, r4, 8
-; CHECK-P8-NEXT:    stvx v2, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %PtrC, i64 4
-  %0 = bitcast i8* %add.ptr to fp128*
-  %1 = load fp128, fp128* %0, align 16
-  %2 = bitcast fp128* %PtrF to i8*
-  %add.ptr1 = getelementptr inbounds i8, i8* %2, i64 8
-  %3 = bitcast i8* %add.ptr1 to fp128*
-  store fp128 %1, fp128* %3, align 16
+  %add.ptr = getelementptr inbounds i8, ptr %PtrC, i64 4
+  %0 = load fp128, ptr %add.ptr, align 16
+  %add.ptr1 = getelementptr inbounds i8, ptr %PtrF, i64 8
+  store fp128 %0, ptr %add.ptr1, align 16
   ret void
 }
 
-define dso_local void @qpSqrt(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpSqrt(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpSqrt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -191,28 +196,30 @@ define dso_local void @qpSqrt(fp128* nocapture readonly %a, fp128* nocapture %re
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl sqrtf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.sqrt.f128(fp128 %0)
-  store fp128 %1, fp128* %res, align 16
+  store fp128 %1, ptr %res, align 16
   ret void
 
 }
 declare fp128 @llvm.sqrt.f128(fp128 %Val)
 
-define dso_local void @qpCpsgn(fp128* nocapture readonly %a, fp128* nocapture readonly %b,
+define dso_local void @qpCpsgn(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; CHECK-LABEL: qpCpsgn:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -223,31 +230,31 @@ define dso_local void @qpCpsgn(fp128* nocapture readonly %a, fp128* nocapture re
 ;
 ; CHECK-P8-LABEL: qpCpsgn:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    lvx v3, 0, r4
-; CHECK-P8-NEXT:    addi r3, r1, -16
-; CHECK-P8-NEXT:    addi r4, r1, -32
-; CHECK-P8-NEXT:    stvx v3, 0, r3
-; CHECK-P8-NEXT:    stvx v2, 0, r4
-; CHECK-P8-NEXT:    lbz r3, -1(r1)
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    addi r4, r1, -16
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    addi r3, r1, -32
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    lbz r4, -1(r1)
 ; CHECK-P8-NEXT:    lbz r6, -17(r1)
-; CHECK-P8-NEXT:    rlwimi r6, r3, 0, 0, 24
+; CHECK-P8-NEXT:    rlwimi r6, r4, 0, 0, 24
 ; CHECK-P8-NEXT:    stb r6, -17(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r4
-; CHECK-P8-NEXT:    stvx v2, 0, r5
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r5
 ; CHECK-P8-NEXT:    blr
-                     fp128* nocapture %res) {
+                     ptr nocapture %res) {
 entry:
-  %0 = load fp128, fp128* %a, align 16
-  %1 = load fp128, fp128* %b, align 16
+  %0 = load fp128, ptr %a, align 16
+  %1 = load fp128, ptr %b, align 16
   %2 = tail call fp128 @llvm.copysign.f128(fp128 %0, fp128 %1)
-  store fp128 %2, fp128* %res, align 16
+  store fp128 %2, ptr %res, align 16
   ret void
 
 }
 declare fp128 @llvm.copysign.f128(fp128 %Mag, fp128 %Sgn)
 
-define dso_local void @qpAbs(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpAbs(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpAbs:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -257,25 +264,25 @@ define dso_local void @qpAbs(fp128* nocapture readonly %a, fp128* nocapture %res
 ;
 ; CHECK-P8-LABEL: qpAbs:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    addi r3, r1, -16
-; CHECK-P8-NEXT:    stvx v2, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    lbz r5, -1(r1)
 ; CHECK-P8-NEXT:    clrlwi r5, r5, 25
 ; CHECK-P8-NEXT:    stb r5, -1(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    stvx v2, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r4
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.fabs.f128(fp128 %0)
-  store fp128 %1, fp128* %res, align 16
+  store fp128 %1, ptr %res, align 16
   ret void
 
 }
 declare fp128 @llvm.fabs.f128(fp128 %Val)
 
-define dso_local void @qpNAbs(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpNAbs(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpNAbs:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -285,31 +292,31 @@ define dso_local void @qpNAbs(fp128* nocapture readonly %a, fp128* nocapture %re
 ;
 ; CHECK-P8-LABEL: qpNAbs:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    addi r3, r1, -32
-; CHECK-P8-NEXT:    stvx v2, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    lbz r5, -17(r1)
 ; CHECK-P8-NEXT:    clrlwi r5, r5, 25
 ; CHECK-P8-NEXT:    stb r5, -17(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    addi r3, r1, -16
-; CHECK-P8-NEXT:    stvx v2, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    lbz r5, -1(r1)
 ; CHECK-P8-NEXT:    xori r5, r5, 128
 ; CHECK-P8-NEXT:    stb r5, -1(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    stvx v2, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r4
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.fabs.f128(fp128 %0)
   %neg = fsub fp128 0xL00000000000000008000000000000000, %1
-  store fp128 %neg, fp128* %res, align 16
+  store fp128 %neg, ptr %res, align 16
   ret void
 
 }
 
-define dso_local void @qpNeg(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpNeg(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpNeg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -319,29 +326,29 @@ define dso_local void @qpNeg(fp128* nocapture readonly %a, fp128* nocapture %res
 ;
 ; CHECK-P8-LABEL: qpNeg:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    addi r3, r1, -16
-; CHECK-P8-NEXT:    stvx v2, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    lbz r5, -1(r1)
 ; CHECK-P8-NEXT:    xori r5, r5, 128
 ; CHECK-P8-NEXT:    stb r5, -1(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    stvx v2, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r4
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %sub = fsub fp128 0xL00000000000000008000000000000000, %0
-  store fp128 %sub, fp128* %res, align 16
+  store fp128 %sub, ptr %res, align 16
   ret void
 
 }
 
-define fp128 @qp_sin(fp128* nocapture readonly %a) {
+define fp128 @qp_sin(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qp_sin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -355,11 +362,12 @@ define fp128 @qp_sin(fp128* nocapture readonly %a) {
 ; CHECK-P8-LABEL: qp_sin:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl sinf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -367,18 +375,18 @@ define fp128 @qp_sin(fp128* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.sin.f128(fp128 %0)
   ret fp128 %1
 }
 declare fp128 @llvm.sin.f128(fp128 %Val)
 
-define fp128 @qp_cos(fp128* nocapture readonly %a) {
+define fp128 @qp_cos(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qp_cos:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -392,11 +400,12 @@ define fp128 @qp_cos(fp128* nocapture readonly %a) {
 ; CHECK-P8-LABEL: qp_cos:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl cosf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -404,18 +413,72 @@ define fp128 @qp_cos(fp128* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.cos.f128(fp128 %0)
   ret fp128 %1
 }
 declare fp128 @llvm.cos.f128(fp128 %Val)
 
-define fp128 @qp_log(fp128* nocapture readonly %a) {
+define fp128 @qp_sincos(ptr nocapture readonly %a) nounwind {
+; CHECK-LABEL: qp_sincos:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -64(r1)
+; CHECK-NEXT:    std r0, 80(r1)
+; CHECK-NEXT:    addi r5, r1, 48
+; CHECK-NEXT:    addi r6, r1, 32
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    bl sincosf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    lxv v2, 48(r1)
+; CHECK-NEXT:    lxv v3, 32(r1)
+; CHECK-NEXT:    xsmulqp v2, v3, v2
+; CHECK-NEXT:    addi r1, r1, 64
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: qp_sincos:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    stdu r1, -96(r1)
+; CHECK-P8-NEXT:    std r0, 112(r1)
+; CHECK-P8-NEXT:    addi r30, r1, 48
+; CHECK-P8-NEXT:    addi r29, r1, 32
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    mr r5, r30
+; CHECK-P8-NEXT:    mr r6, r29
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    bl sincosf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r29
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r30
+; CHECK-P8-NEXT:    xxswapd v3, vs0
+; CHECK-P8-NEXT:    bl __mulkf3
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 96
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+entry:
+  %0 = load fp128, ptr %a, align 16
+  %1 = tail call fp128 @llvm.cos.f128(fp128 %0)
+  %2 = tail call fp128 @llvm.sin.f128(fp128 %0)
+  %3 = fmul fp128 %1, %2
+  ret fp128 %3
+}
+
+define fp128 @qp_log(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qp_log:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -429,11 +492,12 @@ define fp128 @qp_log(fp128* nocapture readonly %a) {
 ; CHECK-P8-LABEL: qp_log:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl logf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -441,18 +505,18 @@ define fp128 @qp_log(fp128* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.log.f128(fp128 %0)
   ret fp128 %1
 }
 declare fp128     @llvm.log.f128(fp128 %Val)
 
-define fp128 @qp_log10(fp128* nocapture readonly %a) {
+define fp128 @qp_log10(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qp_log10:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -466,11 +530,12 @@ define fp128 @qp_log10(fp128* nocapture readonly %a) {
 ; CHECK-P8-LABEL: qp_log10:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl log10f128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -478,18 +543,18 @@ define fp128 @qp_log10(fp128* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.log10.f128(fp128 %0)
   ret fp128 %1
 }
 declare fp128     @llvm.log10.f128(fp128 %Val)
 
-define fp128 @qp_log2(fp128* nocapture readonly %a) {
+define fp128 @qp_log2(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qp_log2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -503,11 +568,12 @@ define fp128 @qp_log2(fp128* nocapture readonly %a) {
 ; CHECK-P8-LABEL: qp_log2:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl log2f128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -515,18 +581,18 @@ define fp128 @qp_log2(fp128* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.log2.f128(fp128 %0)
   ret fp128 %1
 }
 declare fp128     @llvm.log2.f128(fp128 %Val)
 
-define fp128 @qp_minnum(fp128* nocapture readonly %a,
+define fp128 @qp_minnum(ptr nocapture readonly %a,
 ; CHECK-LABEL: qp_minnum:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -541,33 +607,35 @@ define fp128 @qp_minnum(fp128* nocapture readonly %a,
 ; CHECK-P8-LABEL: qp_minnum:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    lvx v3, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl fminf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                        fp128* nocapture readonly %b) {
+                        ptr nocapture readonly %b) {
 entry:
-  %0 = load fp128, fp128* %a, align 16
-  %1 = load fp128, fp128* %b, align 16
+  %0 = load fp128, ptr %a, align 16
+  %1 = load fp128, ptr %b, align 16
   %2 = tail call fp128 @llvm.minnum.f128(fp128 %0, fp128 %1)
   ret fp128 %2
 }
 declare fp128     @llvm.minnum.f128(fp128 %Val0, fp128 %Val1)
 
-define fp128 @qp_maxnum(fp128* nocapture readonly %a,
+define fp128 @qp_maxnum(ptr nocapture readonly %a,
 ; CHECK-LABEL: qp_maxnum:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -582,33 +650,35 @@ define fp128 @qp_maxnum(fp128* nocapture readonly %a,
 ; CHECK-P8-LABEL: qp_maxnum:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    lvx v3, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl fmaxf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                        fp128* nocapture readonly %b) {
+                        ptr nocapture readonly %b) {
 entry:
-  %0 = load fp128, fp128* %a, align 16
-  %1 = load fp128, fp128* %b, align 16
+  %0 = load fp128, ptr %a, align 16
+  %1 = load fp128, ptr %b, align 16
   %2 = tail call fp128 @llvm.maxnum.f128(fp128 %0, fp128 %1)
   ret fp128 %2
 }
 declare fp128     @llvm.maxnum.f128(fp128 %Val0, fp128 %Val1)
 
-define fp128 @qp_pow(fp128* nocapture readonly %a,
+define fp128 @qp_pow(ptr nocapture readonly %a,
 ; CHECK-LABEL: qp_pow:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -623,33 +693,35 @@ define fp128 @qp_pow(fp128* nocapture readonly %a,
 ; CHECK-P8-LABEL: qp_pow:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    lvx v3, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl powf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                     fp128* nocapture readonly %b) {
+                     ptr nocapture readonly %b) {
 entry:
-  %0 = load fp128, fp128* %a, align 16
-  %1 = load fp128, fp128* %b, align 16
+  %0 = load fp128, ptr %a, align 16
+  %1 = load fp128, ptr %b, align 16
   %2 = tail call fp128 @llvm.pow.f128(fp128 %0, fp128 %1)
   ret fp128 %2
 }
 declare fp128 @llvm.pow.f128(fp128 %Val, fp128 %Power)
 
-define fp128 @qp_exp(fp128* nocapture readonly %a) {
+define fp128 @qp_exp(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qp_exp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -663,11 +735,12 @@ define fp128 @qp_exp(fp128* nocapture readonly %a) {
 ; CHECK-P8-LABEL: qp_exp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl expf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -675,18 +748,18 @@ define fp128 @qp_exp(fp128* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.exp.f128(fp128 %0)
   ret fp128 %1
 }
 declare fp128     @llvm.exp.f128(fp128 %Val)
 
-define fp128 @qp_exp2(fp128* nocapture readonly %a) {
+define fp128 @qp_exp2(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qp_exp2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -700,11 +773,12 @@ define fp128 @qp_exp2(fp128* nocapture readonly %a) {
 ; CHECK-P8-LABEL: qp_exp2:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl exp2f128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -712,13 +786,13 @@ define fp128 @qp_exp2(fp128* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.exp2.f128(fp128 %0)
   ret fp128 %1
 }
 declare fp128     @llvm.exp2.f128(fp128 %Val)
 
-define dso_local void @qp_powi(fp128* nocapture readonly %a, i32* nocapture readonly %b,
+define dso_local void @qp_powi(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; CHECK-LABEL: qp_powi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
@@ -726,10 +800,10 @@ define dso_local void @qp_powi(fp128* nocapture readonly %a, i32* nocapture read
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mr r30, r5
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    lwz r5, 0(r4)
 ; CHECK-NEXT:    bl __powikf2
 ; CHECK-NEXT:    nop
@@ -747,29 +821,30 @@ define dso_local void @qp_powi(fp128* nocapture readonly %a, i32* nocapture read
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    lwz r3, 0(r4)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r5
-; CHECK-P8-NEXT:    mr r5, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    lwz r5, 0(r4)
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl __powikf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                     fp128* nocapture %res) {
+                     ptr nocapture %res) {
 entry:
-  %0 = load fp128, fp128* %a, align 16
-  %1 = load i32, i32* %b, align 8
-  %2 = tail call fp128 @llvm.powi.f128(fp128 %0, i32 %1)
-  store fp128 %2, fp128* %res, align 16
+  %0 = load fp128, ptr %a, align 16
+  %1 = load i32, ptr %b, align 8
+  %2 = tail call fp128 @llvm.powi.f128.i32(fp128 %0, i32 %1)
+  store fp128 %2, ptr %res, align 16
   ret void
 }
-declare fp128 @llvm.powi.f128(fp128 %Val, i32 %power)
+declare fp128 @llvm.powi.f128.i32(fp128 %Val, i32 %power)
 
 @a = common dso_local global fp128 0xL00000000000000000000000000000000, align 16
 @b = common dso_local global fp128 0xL00000000000000000000000000000000, align 16
@@ -778,16 +853,16 @@ define fp128 @qp_frem() #0 {
 ; CHECK-LABEL: qp_frem:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis r3, r2, a@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    bl fmodf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -798,16 +873,18 @@ define fp128 @qp_frem() #0 {
 ; CHECK-P8-LABEL: qp_frem:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a@toc@ha
-; CHECK-P8-NEXT:    addis r4, r2, b@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, a@toc@l
-; CHECK-P8-NEXT:    addi r4, r4, b@toc@l
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    lvx v3, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    addis r3, r2, b@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, b@toc@l
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl fmodf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -815,13 +892,13 @@ define fp128 @qp_frem() #0 {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a, align 16
-  %1 = load fp128, fp128* @b, align 16
+  %0 = load fp128, ptr @a, align 16
+  %1 = load fp128, ptr @b, align 16
   %rem = frem fp128 %0, %1
   ret fp128 %rem
 }
 
-define dso_local void @qpCeil(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpCeil(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpCeil:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -836,27 +913,29 @@ define dso_local void @qpCeil(fp128* nocapture readonly %a, fp128* nocapture %re
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl ceilf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.ceil.f128(fp128 %0)
-  store fp128 %1, fp128* %res, align 16
+  store fp128 %1, ptr %res, align 16
   ret void
 }
 declare fp128 @llvm.ceil.f128(fp128 %Val)
 
-define dso_local void @qpFloor(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpFloor(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpFloor:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -871,27 +950,29 @@ define dso_local void @qpFloor(fp128* nocapture readonly %a, fp128* nocapture %r
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl floorf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.floor.f128(fp128 %0)
-  store fp128 %1, fp128* %res, align 16
+  store fp128 %1, ptr %res, align 16
   ret void
 }
 declare fp128 @llvm.floor.f128(fp128 %Val)
 
-define dso_local void @qpTrunc(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpTrunc(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpTrunc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -906,27 +987,29 @@ define dso_local void @qpTrunc(fp128* nocapture readonly %a, fp128* nocapture %r
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl truncf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.trunc.f128(fp128 %0)
-  store fp128 %1, fp128* %res, align 16
+  store fp128 %1, ptr %res, align 16
   ret void
 }
 declare fp128 @llvm.trunc.f128(fp128 %Val)
 
-define dso_local void @qpRound(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpRound(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpRound:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -941,27 +1024,29 @@ define dso_local void @qpRound(fp128* nocapture readonly %a, fp128* nocapture %r
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl roundf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.round.f128(fp128 %0)
-  store fp128 %1, fp128* %res, align 16
+  store fp128 %1, ptr %res, align 16
   ret void
 }
 declare fp128 @llvm.round.f128(fp128 %Val)
 
-define dso_local void @qpLRound(fp128* nocapture readonly %a, i32* nocapture %res) {
+define dso_local void @qpLRound(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpLRound:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
@@ -969,10 +1054,10 @@ define dso_local void @qpLRound(fp128* nocapture readonly %a, i32* nocapture %re
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    bl lroundf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    stw r3, 0(r30)
@@ -989,10 +1074,11 @@ define dso_local void @qpLRound(fp128* nocapture readonly %a, i32* nocapture %re
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl lroundf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stw r3, 0(r30)
@@ -1002,14 +1088,14 @@ define dso_local void @qpLRound(fp128* nocapture readonly %a, i32* nocapture %re
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call i32 @llvm.lround.f128(fp128 %0)
-  store i32 %1, i32* %res, align 16
+  store i32 %1, ptr %res, align 16
   ret void
 }
 declare i32 @llvm.lround.f128(fp128 %Val)
 
-define dso_local void @qpLLRound(fp128* nocapture readonly %a, i64* nocapture %res) {
+define dso_local void @qpLLRound(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpLLRound:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
@@ -1017,10 +1103,10 @@ define dso_local void @qpLLRound(fp128* nocapture readonly %a, i64* nocapture %r
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    bl llroundf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    std r3, 0(r30)
@@ -1037,10 +1123,11 @@ define dso_local void @qpLLRound(fp128* nocapture readonly %a, i64* nocapture %r
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl llroundf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
@@ -1050,14 +1137,14 @@ define dso_local void @qpLLRound(fp128* nocapture readonly %a, i64* nocapture %r
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call i64 @llvm.llround.f128(fp128 %0)
-  store i64 %1, i64* %res, align 16
+  store i64 %1, ptr %res, align 16
   ret void
 }
 declare i64 @llvm.llround.f128(fp128 %Val)
 
-define dso_local void @qpRint(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpRint(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpRint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -1072,27 +1159,29 @@ define dso_local void @qpRint(fp128* nocapture readonly %a, fp128* nocapture %re
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl rintf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.rint.f128(fp128 %0)
-  store fp128 %1, fp128* %res, align 16
+  store fp128 %1, ptr %res, align 16
   ret void
 }
 declare fp128 @llvm.rint.f128(fp128 %Val)
 
-define dso_local void @qpLRint(fp128* nocapture readonly %a, i32* nocapture %res) {
+define dso_local void @qpLRint(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpLRint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
@@ -1100,10 +1189,10 @@ define dso_local void @qpLRint(fp128* nocapture readonly %a, i32* nocapture %res
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    stw r3, 0(r30)
@@ -1120,10 +1209,11 @@ define dso_local void @qpLRint(fp128* nocapture readonly %a, i32* nocapture %res
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl lrintf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stw r3, 0(r30)
@@ -1133,14 +1223,14 @@ define dso_local void @qpLRint(fp128* nocapture readonly %a, i32* nocapture %res
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call i32 @llvm.lrint.f128(fp128 %0)
-  store i32 %1, i32* %res, align 16
+  store i32 %1, ptr %res, align 16
   ret void
 }
 declare i32 @llvm.lrint.f128(fp128 %Val)
 
-define dso_local void @qpLLRint(fp128* nocapture readonly %a, i64* nocapture %res) {
+define dso_local void @qpLLRint(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpLLRint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
@@ -1148,10 +1238,10 @@ define dso_local void @qpLLRint(fp128* nocapture readonly %a, i64* nocapture %re
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    bl llrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    std r3, 0(r30)
@@ -1168,10 +1258,11 @@ define dso_local void @qpLLRint(fp128* nocapture readonly %a, i64* nocapture %re
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl llrintf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
@@ -1181,14 +1272,14 @@ define dso_local void @qpLLRint(fp128* nocapture readonly %a, i64* nocapture %re
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call i64 @llvm.llrint.f128(fp128 %0)
-  store i64 %1, i64* %res, align 16
+  store i64 %1, ptr %res, align 16
   ret void
 }
 declare i64 @llvm.llrint.f128(fp128 %Val)
 
-define dso_local void @qpNearByInt(fp128* nocapture readonly %a, fp128* nocapture %res) {
+define dso_local void @qpNearByInt(ptr nocapture readonly %a, ptr nocapture %res) {
 ; CHECK-LABEL: qpNearByInt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -1203,27 +1294,29 @@ define dso_local void @qpNearByInt(fp128* nocapture readonly %a, fp128* nocaptur
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl nearbyintf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = tail call fp128 @llvm.nearbyint.f128(fp128 %0)
-  store fp128 %1, fp128* %res, align 16
+  store fp128 %1, ptr %res, align 16
   ret void
 }
 declare fp128 @llvm.nearbyint.f128(fp128 %Val)
 
-define dso_local void @qpFMA(fp128* %a, fp128* %b, fp128* %c, fp128* %res) {
+define dso_local void @qpFMA(ptr %a, ptr %b, ptr %c, ptr %res) {
 ; CHECK-LABEL: qpFMA:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -1240,26 +1333,85 @@ define dso_local void @qpFMA(fp128* %a, fp128* %b, fp128* %c, fp128* %res) {
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
-; CHECK-P8-NEXT:    lvx v3, 0, r4
-; CHECK-P8-NEXT:    lvx v4, 0, r5
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r6
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    xxswapd v3, vs0
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r5
+; CHECK-P8-NEXT:    xxswapd v4, vs0
 ; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
-  %1 = load fp128, fp128* %b, align 16
-  %2 = load fp128, fp128* %c, align 16
+  %0 = load fp128, ptr %a, align 16
+  %1 = load fp128, ptr %b, align 16
+  %2 = load fp128, ptr %c, align 16
   %3 = tail call fp128 @llvm.fma.f128(fp128 %0, fp128 %1, fp128 %2)
-  store fp128 %3, fp128* %res, align 16
+  store fp128 %3, ptr %res, align 16
   ret void
 }
 declare fp128 @llvm.fma.f128(fp128, fp128, fp128)
+
+define dso_local fp128 @qpFREXP(ptr %a, ptr %b) {
+; CHECK-LABEL: qpFREXP:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r30, -16
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    stdu r1, -64(r1)
+; CHECK-NEXT:    std r0, 80(r1)
+; CHECK-NEXT:    addi r5, r1, 44
+; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    bl frexpf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    lwz r3, 44(r1)
+; CHECK-NEXT:    stw r3, 0(r30)
+; CHECK-NEXT:    addi r1, r1, 64
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: qpFREXP:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
+; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    stdu r1, -64(r1)
+; CHECK-P8-NEXT:    std r0, 80(r1)
+; CHECK-P8-NEXT:    addi r5, r1, 44
+; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    bl frexpf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    lwz r3, 44(r1)
+; CHECK-P8-NEXT:    stw r3, 0(r30)
+; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+entry:
+  %0 = load fp128, ptr %a, align 16
+  %1 = tail call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %0)
+  %2 = extractvalue { fp128, i32 } %1, 1
+  store i32 %2, ptr %b, align 4
+  %3 = extractvalue { fp128, i32 } %1, 0
+  ret fp128 %3
+}
+declare { fp128, i32 } @llvm.frexp.f128.i32(fp128)

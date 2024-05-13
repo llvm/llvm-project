@@ -79,6 +79,9 @@ struct LoopAttributes {
   /// Value for llvm.loop.pipeline.iicount metadata.
   unsigned PipelineInitiationInterval;
 
+  /// Value for 'llvm.loop.align' metadata.
+  unsigned CodeAlign;
+
   /// Value for whether the loop is required to make progress.
   bool MustProgress;
 };
@@ -106,6 +109,10 @@ public:
   /// Create the loop's metadata. Must be called after its nested loops have
   /// been processed.
   void finish();
+
+  /// Returns the first outer loop containing this loop if any, nullptr
+  /// otherwise.
+  const LoopInfo *getParent() const { return Parent; }
 
 private:
   /// Loop ID metadata.
@@ -282,15 +289,19 @@ public:
     StagedAttrs.PipelineInitiationInterval = C;
   }
 
+  /// Set value of code align for the next loop pushed.
+  void setCodeAlign(unsigned C) { StagedAttrs.CodeAlign = C; }
+
   /// Set no progress for the next loop pushed.
   void setMustProgress(bool P) { StagedAttrs.MustProgress = P; }
 
-private:
   /// Returns true if there is LoopInfo on the stack.
   bool hasInfo() const { return !Active.empty(); }
   /// Return the LoopInfo for the current loop. HasInfo should be called
   /// first to ensure LoopInfo is present.
   const LoopInfo &getInfo() const { return *Active.back(); }
+
+private:
   /// The set of attributes that will be applied to the next pushed loop.
   LoopAttributes StagedAttrs;
   /// Stack of active loops.

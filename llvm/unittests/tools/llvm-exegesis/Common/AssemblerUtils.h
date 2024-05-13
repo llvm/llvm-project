@@ -17,9 +17,10 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -77,10 +78,17 @@ private:
                      FillFunction Fill) {
     SmallString<256> Buffer;
     raw_svector_ostream AsmStream(Buffer);
+    BenchmarkKey Key;
+    Key.RegisterInitialValues = RegisterInitialValues;
     EXPECT_FALSE(assembleToStream(*ET, createTargetMachine(), /*LiveIns=*/{},
-                                  RegisterInitialValues, Fill, AsmStream));
-    return ExecutableFunction(createTargetMachine(),
-                              getObjectFromBuffer(AsmStream.str()));
+                                  Fill, AsmStream, Key, false));
+    Expected<ExecutableFunction> ExecFunc = ExecutableFunction::create(
+        createTargetMachine(), getObjectFromBuffer(AsmStream.str()));
+
+    // We can't use ASSERT_THAT_EXPECTED here as it doesn't work inside of
+    // non-void functions.
+    EXPECT_TRUE(detail::TakeExpected(ExecFunc).Success());
+    return std::move(*ExecFunc);
   }
 
   const std::string TT;

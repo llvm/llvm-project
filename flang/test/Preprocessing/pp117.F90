@@ -1,5 +1,5 @@
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
-! CHECK: if(777 .eq. 777) then
+! CHECK: if (777 .eq. 777) then
 ! KWM rescan
       integer, parameter :: KWM = 666, KWM2 = 667
 #define KWM2 777

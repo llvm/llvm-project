@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree-normalize-phi=true -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-optree-normalize-phi=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Contains a self-referencing PHINode that would require a
 ; transitive closure to handle.
@@ -10,7 +10,7 @@
 ;   A[j] = phi;
 ; }
 ;
-define void @func(i32 %n, i32 %m, double* noalias nonnull %A) {
+define void @func(i32 %n, i32 %m, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -30,8 +30,8 @@ for:
     br i1 %i.cmp, label %for.inner, label %for.exit
 
   for.exit:
-    %A_idx = getelementptr inbounds double, double* %A, i32 %j
-    store double %phi, double* %A_idx
+    %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+    store double %phi, ptr %A_idx
     br label %inc
 
 inc:

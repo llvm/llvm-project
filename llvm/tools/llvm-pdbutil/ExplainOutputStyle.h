@@ -9,10 +9,9 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_EXPLAINOUTPUTSTYLE_H
 #define LLVM_TOOLS_LLVMPDBDUMP_EXPLAINOUTPUTSTYLE_H
 
-#include "LinePrinter.h"
 #include "OutputStyle.h"
 
-#include <string>
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 
 namespace llvm {
 
@@ -42,7 +41,7 @@ private:
   bool isPdbFpmBlock() const;
   bool isPdbBlockMapBlock() const;
   bool isPdbStreamDirectoryBlock() const;
-  Optional<uint32_t> getPdbBlockStreamIndex() const;
+  std::optional<uint32_t> getPdbBlockStreamIndex() const;
 
   void explainPdbSuperBlockOffset();
   void explainPdbFpmBlockOffset();

@@ -6,13 +6,13 @@ __attribute__((objc_root_class))
 @end
 
 @implementation Root
-// CHECK-LABEL: define internal i8* @"\01-[Root something]"(
+// CHECK-LABEL: define internal ptr @"\01-[Root something]"(
 - (id)something {
   // CHECK: %{{[^ ]*}} = call {{.*}} @"\01-[Root method]"
   return [self method];
 }
 
-// CHECK-LABEL: define hidden i8* @"\01-[Root method]"(
+// CHECK-LABEL: define hidden ptr @"\01-[Root method]"(
 - (id)method {
   return self;
 }

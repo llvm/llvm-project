@@ -1,7 +1,7 @@
-; RUN: opt < %s -globaldce
+; RUN: opt < %s -passes=globaldce
 ;
 
-@X = global void ()* @func              ; <void ()**> [#uses=0]
+@X = global ptr @func              ; <ptr> [#uses=0]
 
 ; Not dead, can be reachable via X
 define internal void @func() {

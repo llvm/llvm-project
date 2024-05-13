@@ -3,12 +3,22 @@
 # RUN: llvm-mc %s -o %t.o -triple x86_64-pc-linux -filetype=obj
 # RUN: not ld.lld %tabs %t.o -o /dev/null -shared 2>&1 | FileCheck %s
 
+# RUN: rm -f %t.a && llvm-ar rc %t.a %t.o
+# RUN: not ld.lld -shared %t.a %tabs -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK2
+
 ## Check we are able to report file and location from debug information
 ## when reporting such kind of errors.
-# CHECK: error: test.s:3:(.text+0x1): relocation R_X86_64_32 out of range: 68719476736 is not in [0, 4294967295]
+# CHECK:      error: {{.*}}.o:(.text+0x1): relocation R_X86_64_32 out of range: 68719476736 is not in [0, 4294967295]; references 'big'
+# CHECK-NEXT: >>> referenced by test.s:3
+# CHECK-NEXT: >>> defined in {{.*}}abs
+
+# CHECK2:      error: {{.*}}.a({{.*}}.o):(.text+0x1): relocation R_X86_64_32 out of range: 68719476736 is not in [0, 4294967295]; references 'big'
+# CHECK2-NEXT: >>> referenced by test.s:3
+# CHECK2-NEXT: >>> defined in {{.*}}abs
 
 .section .text,"ax",@progbits
-foo:
+.globl _start
+_start:
 .file 1 "test.s"
 .loc 1 3
  movl $big, %edx

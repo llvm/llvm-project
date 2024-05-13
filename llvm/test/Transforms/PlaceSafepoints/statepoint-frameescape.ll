@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -place-safepoints -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -S -passes=place-safepoints | FileCheck %s
 
 declare void @llvm.localescape(...)
 
@@ -11,7 +11,7 @@ entry:
 ; CHECK-NEXT: localescape
 ; CHECK-NEXT: call void @do_safepoint
   %ptr = alloca i32
-  call void (...) @llvm.localescape(i32* %ptr)
+  call void (...) @llvm.localescape(ptr %ptr)
   ret void
 }
 

@@ -294,7 +294,7 @@ void test13(long double v) {
 }
 
 void test14(long l) {
-  // Fine because of the boolean whitelist.
+  // Fine because of the boolean allowlist.
   char c;
   c = (l == 4);
   c = ((l <= 4) && (l >= 0));
@@ -313,7 +313,7 @@ void test16(void) {
 }
 
 // PR 5938
-void test17() {
+void test17(void) {
   union {
     unsigned long long a : 8;
     unsigned long long b : 32;
@@ -327,7 +327,7 @@ void test17() {
 }
 
 // PR 5939
-void test18() {
+void test18(void) {
   union {
     unsigned long long a : 1;
     unsigned long long b;
@@ -348,13 +348,12 @@ unsigned char test19(unsigned long u64) {
   return x1 + x2 + x3;
 }
 
-// <rdar://problem/7631400>
 void test_7631400(void) {
   // This should show up despite the caret being inside a macro substitution
   char s = LONG_MAX; // expected-warning {{implicit conversion from 'long' to 'char' changes value}}
 }
 
-// <rdar://problem/7676608>: assertion for compound operators with non-integral RHS
+// assertion for compound operators with non-integral RHS
 void f7676608(int);
 void test_7676608(void) {
   float q = 0.7f;
@@ -362,7 +361,6 @@ void test_7676608(void) {
   f7676608(c *= q); // expected-warning {{conversion}}
 }
 
-// <rdar://problem/7904686>
 void test_7904686(void) {
   const int i = -1;
   unsigned u1 = i; // expected-warning {{implicit conversion changes signedness}}  
@@ -372,8 +370,7 @@ void test_7904686(void) {
   u2 = -1; // expected-warning {{implicit conversion changes signedness}}  
 }
 
-// <rdar://problem/8232669>: don't warn about conversions required by
-// contexts in system headers
+// don't warn about conversions required by contexts in system headers
 void test_8232669(void) {
   unsigned bitset[20];
   SETBIT(bitset, 0);
@@ -385,7 +382,6 @@ void test_8232669(void) {
   USER_SETBIT(bitset, 0); // expected-warning 2 {{implicit conversion changes signedness}}
 }
 
-// <rdar://problem/8559831>
 enum E8559831a { E8559831a_val };
 enum E8559831b { E8559831b_val };
 typedef enum { E8559831c_val } E8559831c;
@@ -418,7 +414,6 @@ void test26(int si, long sl) {
   si = sl / si; // expected-warning {{implicit conversion loses integer precision: 'long' to 'int'}}
 }
 
-// rdar://16502418
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 typedef __attribute__ ((ext_vector_type(16),__aligned__(32))) uint16_t ushort16;

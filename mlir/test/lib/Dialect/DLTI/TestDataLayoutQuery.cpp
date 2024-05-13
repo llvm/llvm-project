@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
+#include "TestOps.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Pass/Pass.h"
@@ -19,41 +20,68 @@ namespace {
 /// attributes containing the results of data layout queries for operation
 /// result types.
 struct TestDataLayoutQuery
-    : public PassWrapper<TestDataLayoutQuery, FunctionPass> {
-  void runOnFunction() override {
-    FuncOp func = getFunction();
+    : public PassWrapper<TestDataLayoutQuery, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDataLayoutQuery)
+
+  StringRef getArgument() const final { return "test-data-layout-query"; }
+  StringRef getDescription() const final { return "Test data layout queries"; }
+  void runOnOperation() override {
+    func::FuncOp func = getOperation();
     Builder builder(func.getContext());
-    DenseMap<Operation *, DataLayout> layouts;
+    const DataLayoutAnalysis &layouts = getAnalysis<DataLayoutAnalysis>();
 
     func.walk([&](test::DataLayoutQueryOp op) {
       // Skip the ops with already processed in a deeper call.
-      if (op->getAttr("size"))
+      if (op->getDiscardableAttr("size"))
         return;
 
-      auto scope = op->getParentOfType<test::OpWithDataLayoutOp>();
-      if (!layouts.count(scope)) {
-        layouts.try_emplace(
-            scope, scope ? cast<DataLayoutOpInterface>(scope.getOperation())
-                         : nullptr);
-      }
-      auto module = op->getParentOfType<ModuleOp>();
-      if (!layouts.count(module))
-        layouts.try_emplace(module, module);
+      const DataLayout &layout = layouts.getAbove(op);
+      llvm::TypeSize size = layout.getTypeSize(op.getType());
+      llvm::TypeSize bitsize = layout.getTypeSizeInBits(op.getType());
+      uint64_t alignment = layout.getTypeABIAlignment(op.getType());
+      uint64_t preferred = layout.getTypePreferredAlignment(op.getType());
+      uint64_t index = layout.getTypeIndexBitwidth(op.getType()).value_or(0);
+      Attribute endianness = layout.getEndianness();
+      Attribute allocaMemorySpace = layout.getAllocaMemorySpace();
+      Attribute programMemorySpace = layout.getProgramMemorySpace();
+      Attribute globalMemorySpace = layout.getGlobalMemorySpace();
+      uint64_t stackAlignment = layout.getStackAlignment();
 
-      Operation *closest = (scope && module && module->isProperAncestor(scope))
-                               ? scope.getOperation()
-                               : module.getOperation();
+      auto convertTypeSizeToAttr = [&](llvm::TypeSize typeSize) -> Attribute {
+        if (!typeSize.isScalable())
+          return builder.getIndexAttr(typeSize);
 
-      const DataLayout &layout = layouts.find(closest)->getSecond();
-      unsigned size = layout.getTypeSize(op.getType());
-      unsigned bitsize = layout.getTypeSizeInBits(op.getType());
-      unsigned alignment = layout.getTypeABIAlignment(op.getType());
-      unsigned preferred = layout.getTypePreferredAlignment(op.getType());
+        return builder.getDictionaryAttr({
+            builder.getNamedAttr("scalable", builder.getUnitAttr()),
+            builder.getNamedAttr(
+                "minimal_size",
+                builder.getIndexAttr(typeSize.getKnownMinValue())),
+        });
+      };
+
       op->setAttrs(
-          {builder.getNamedAttr("size", builder.getIndexAttr(size)),
-           builder.getNamedAttr("bitsize", builder.getIndexAttr(bitsize)),
+          {builder.getNamedAttr("size", convertTypeSizeToAttr(size)),
+           builder.getNamedAttr("bitsize", convertTypeSizeToAttr(bitsize)),
            builder.getNamedAttr("alignment", builder.getIndexAttr(alignment)),
-           builder.getNamedAttr("preferred", builder.getIndexAttr(preferred))});
+           builder.getNamedAttr("preferred", builder.getIndexAttr(preferred)),
+           builder.getNamedAttr("index", builder.getIndexAttr(index)),
+           builder.getNamedAttr("endianness", endianness == Attribute()
+                                                  ? builder.getStringAttr("")
+                                                  : endianness),
+           builder.getNamedAttr("alloca_memory_space",
+                                allocaMemorySpace == Attribute()
+                                    ? builder.getUI32IntegerAttr(0)
+                                    : allocaMemorySpace),
+           builder.getNamedAttr("program_memory_space",
+                                programMemorySpace == Attribute()
+                                    ? builder.getUI32IntegerAttr(0)
+                                    : programMemorySpace),
+           builder.getNamedAttr("global_memory_space",
+                                globalMemorySpace == Attribute()
+                                    ? builder.getUI32IntegerAttr(0)
+                                    : globalMemorySpace),
+           builder.getNamedAttr("stack_alignment",
+                                builder.getIndexAttr(stackAlignment))});
     });
   }
 };
@@ -61,9 +89,6 @@ struct TestDataLayoutQuery
 
 namespace mlir {
 namespace test {
-void registerTestDataLayoutQuery() {
-  PassRegistration<TestDataLayoutQuery>("test-data-layout-query",
-                                        "Test data layout queries");
-}
+void registerTestDataLayoutQuery() { PassRegistration<TestDataLayoutQuery>(); }
 } // namespace test
 } // namespace mlir

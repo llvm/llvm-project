@@ -1,5 +1,5 @@
 ; Check that we don't crash on corner cases.
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=1 -unroll-max-percent-threshold-boost=200 -o /dev/null
+; RUN: opt < %s -S -passes=loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=1 -unroll-max-percent-threshold-boost=200 -o /dev/null
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=1 -unroll-max-percent-threshold-boost=200 -o /dev/null
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -12,7 +12,7 @@ entry:
 for.body:
   %phi = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %idx = zext i32 undef to i64
-  %add.ptr = getelementptr inbounds i64, i64* null, i64 %idx
+  %add.ptr = getelementptr inbounds i64, ptr null, i64 %idx
   %inc = add nuw nsw i64 %phi, 1
   %cmp = icmp ult i64 %inc, 999
   br i1 %cmp, label %for.body, label %for.exit
@@ -27,7 +27,7 @@ entry:
 
 for.body:
   %phi = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  %x = getelementptr i32, <4 x i32*> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %x = getelementptr i32, <4 x ptr> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %inc = add nuw nsw i64 %phi, 1
   %cmp = icmp ult i64 %inc, 999
   br i1 %cmp, label %for.body, label %for.exit
@@ -42,8 +42,8 @@ entry:
 
 for.body:                                         ; preds = %for.inc, %entry
   %iv.0 = phi i64 [ 0, %entry ], [ %iv.1, %for.inc ]
-  %arrayidx1 = getelementptr inbounds [10 x i32], [10 x i32]* @known_constant, i64 0, i64 %iv.0
-  %x1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [10 x i32], ptr @known_constant, i64 0, i64 %iv.0
+  %x1 = load i32, ptr %arrayidx1, align 4
   %cmp = icmp eq i32 %x1, undef
   br i1 %cmp, label %if.then, label %for.inc
 
@@ -65,8 +65,8 @@ entry:
 
 for.body:
   %iv.0 = phi i64 [ 0, %entry ], [ %iv.1, %for.inc ]
-  %arrayidx1 = getelementptr inbounds [10 x i32], [10 x i32]* @known_constant, i64 0, i64 %iv.0
-  %x1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [10 x i32], ptr @known_constant, i64 0, i64 %iv.0
+  %x1 = load i32, ptr %arrayidx1, align 4
   switch i32 %x1, label %l1 [
   ]
 
@@ -90,9 +90,8 @@ entry:
 for.body:
   %phi = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %vec_phi = phi <4 x i32> [ <i32 0, i32 0, i32 0, i32 0>, %entry ], [ %r, %for.body ]
-  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* @known_constant, i64 0, i64 %phi
-  %bc = bitcast i32* %arrayidx to <4 x i32>*
-  %x = load <4 x i32>, < 4 x i32>* %bc, align 4
+  %arrayidx = getelementptr inbounds [10 x i32], ptr @known_constant, i64 0, i64 %phi
+  %x = load <4 x i32>, < 4 x i32>* %arrayidx, align 4
   %r = add <4 x i32> %x, %vec_phi
   %inc = add nuw nsw i64 %phi, 1
   %cmp = icmp ult i64 %inc, 999
@@ -110,8 +109,7 @@ for.body:
   br i1 true, label %for.inc, label %if.then
 
 if.then:
-  %arraydecay = getelementptr inbounds [1 x i32], [1 x i32]* null, i64 0, i64 0
-  %x = ptrtoint i32* %arraydecay to i64
+  %x = ptrtoint ptr null to i64
   br label %for.inc
 
 for.inc:
@@ -130,8 +128,7 @@ for.body.lr.ph:
 
 for.body:
   %iv = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %offset = getelementptr inbounds float, float* null, i32 3
-  %bc = bitcast float* %offset to i64*
+  %offset = getelementptr inbounds float, ptr null, i32 3
   %inc = add nuw nsw i32 %iv, 1
   br i1 false, label %for.body, label %exit
 
@@ -147,14 +144,14 @@ entry:
 
 for.body:
   %iv = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
-  %m = phi i32* [ @i, %entry ], [ %m, %for.inc ]
+  %m = phi ptr [ @i, %entry ], [ %m, %for.inc ]
   br i1 undef, label %if.else, label %if.then
 
 if.then:
   unreachable
 
 if.else:
-  %cmp = icmp ult i32* %m, null
+  %cmp = icmp ult ptr %m, null
   br i1 %cmp, label %cond.false, label %for.inc
 
 cond.false:
@@ -178,8 +175,8 @@ for.body:
   br i1 undef, label %for.body2, label %for.inc
 
 for.body2:
-  %idx = getelementptr inbounds [10 x i32], [10 x i32]* @known_constant, i64 0, i64 %iv
-  %x = load i32, i32* %idx, align 1
+  %idx = getelementptr inbounds [10 x i32], ptr @known_constant, i64 0, i64 %iv
+  %x = load i32, ptr %idx, align 1
   br label %for.inc
 
 for.inc:
@@ -198,8 +195,8 @@ for.header:
   br label %for.body
 
 for.body:
-  %d = phi i32* [ null, %for.header ]
-  %cmp = icmp eq i32* %d, null
+  %d = phi ptr [ null, %for.header ]
+  %cmp = icmp eq ptr %d, null
   br i1 undef, label %for.end, label %for.header
 
 for.end:
@@ -212,9 +209,8 @@ entry:
 
 for.body:
   %iv.0 = phi i64 [ 0, %entry ], [ %iv.1, %for.body ]
-  %arrayidx1 = getelementptr inbounds [10 x i32], [10 x i32]* @known_constant, i64 0, i64 %iv.0
-  %bc = bitcast i32* %arrayidx1 to i64*
-  %x1 = load i64, i64* %bc, align 4
+  %arrayidx1 = getelementptr inbounds [10 x i32], ptr @known_constant, i64 0, i64 %iv.0
+  %x1 = load i64, ptr %arrayidx1, align 4
   %x2 = add i64 10, %x1
   %iv.1 = add nuw nsw i64 %iv.0, 1
   %exitcond = icmp eq i64 %iv.1, 10

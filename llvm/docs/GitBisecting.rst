@@ -63,7 +63,7 @@ directory that makes clang crash at trunk, but it worked fine at revision
 
 To make sure your run script works, it's a good idea to run ``./run.sh`` by
 hand and tweak the script until it works, then run ``git bisect good`` or
-``git bisect bad`` manually once based on the result of the script 
+``git bisect bad`` manually once based on the result of the script
 (check ``echo $?`` after your script ran), and only then run ``git bisect run
 ./run.sh``. Don't forget to mark your run script as executable -- ``git bisect
 run`` doesn't check for that, it just assumes the run script failed each time.
@@ -85,7 +85,7 @@ Here's how LLVM's history currently looks:
      A-o-o-......-o-D-o-o-HEAD
                    /
        B-o-...-o-C-
- 
+
 ``A`` is the first commit in LLVM ever, ``97724f18c79c``.
 
 ``B`` is the first commit in MLIR, ``aed0d21a62db``.

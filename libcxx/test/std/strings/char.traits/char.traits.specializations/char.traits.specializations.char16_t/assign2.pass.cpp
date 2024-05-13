@@ -19,27 +19,23 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER > 14
-constexpr bool test_constexpr()
-{
-    char16_t c = u'1';
-    std::char_traits<char16_t>::assign(c, u'a');
-    return c == u'a';
+constexpr bool test_constexpr() {
+  char16_t c = u'1';
+  std::char_traits<char16_t>::assign(c, u'a');
+  return c == u'a';
 }
 #endif
 
-int main(int, char**)
-{
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+int main(int, char**) {
 #if TEST_STD_VER >= 11
-    char16_t c = u'\0';
-    std::char_traits<char16_t>::assign(c, u'a');
-    assert(c == u'a');
+  char16_t c = u'\0';
+  std::char_traits<char16_t>::assign(c, u'a');
+  assert(c == u'a');
 #endif
 
 #if TEST_STD_VER > 14
-    static_assert(test_constexpr(), "" );
+  static_assert(test_constexpr(), "");
 #endif
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

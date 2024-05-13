@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK: global.arr:
 ; CHECK: .zero 1024
@@ -19,9 +19,9 @@
 @global.arr = unnamed_addr addrspace(1) global [256 x i32] undef, align 4
 @constant.arr = external unnamed_addr addrspace(4) global [256 x i32], align 4
 
-@gv_flatptr_from_global = unnamed_addr addrspace(4) global i32 addrspace(0)* getelementptr ([256 x i32], [256 x i32] addrspace(0)* addrspacecast ([256 x i32] addrspace(1)* @global.arr to [256 x i32] addrspace(0)*), i64 0, i64 8), align 4
+@gv_flatptr_from_global = unnamed_addr addrspace(4) global ptr addrspace(0) getelementptr ([256 x i32], ptr addrspace(0) addrspacecast (ptr addrspace(1) @global.arr to ptr addrspace(0)), i64 0, i64 8), align 4
 
 
-@gv_global_ptr = unnamed_addr addrspace(4) global i32 addrspace(1)* getelementptr ([256 x i32], [256 x i32] addrspace(1)* @global.arr, i64 0, i64 8), align 4
+@gv_global_ptr = unnamed_addr addrspace(4) global ptr addrspace(1) getelementptr ([256 x i32], ptr addrspace(1) @global.arr, i64 0, i64 8), align 4
 
-@gv_flatptr_from_constant = unnamed_addr addrspace(4) global i32 addrspace(0)* getelementptr ([256 x i32], [256 x i32] addrspace(0)* addrspacecast ([256 x i32] addrspace(4)* @constant.arr to [256 x i32] addrspace(0)*), i64 0, i64 8), align 4
+@gv_flatptr_from_constant = unnamed_addr addrspace(4) global ptr addrspace(0) getelementptr ([256 x i32], ptr addrspace(0) addrspacecast (ptr addrspace(4) @constant.arr to ptr addrspace(0)), i64 0, i64 8), align 4

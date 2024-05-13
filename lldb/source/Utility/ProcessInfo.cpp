@@ -9,26 +9,27 @@
 #include "lldb/Utility/ProcessInfo.h"
 
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ReproducerProvider.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "llvm/ADT/SmallString.h"
 
 #include <climits>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::repro;
 
 ProcessInfo::ProcessInfo()
-    : m_executable(), m_arguments(), m_environment(), m_uid(UINT32_MAX),
-      m_gid(UINT32_MAX), m_arch(), m_pid(LLDB_INVALID_PROCESS_ID) {}
+    : m_executable(), m_arguments(), m_environment(), m_arch(), m_listener_sp(),
+      m_hijack_listener_sp(), m_shadow_listener_sp() {}
 
 ProcessInfo::ProcessInfo(const char *name, const ArchSpec &arch,
                          lldb::pid_t pid)
-    : m_executable(name), m_arguments(), m_environment(), m_uid(UINT32_MAX),
-      m_gid(UINT32_MAX), m_arch(arch), m_pid(pid) {}
+    : m_executable(name), m_arguments(), m_environment(), m_arch(arch),
+      m_pid(pid), m_listener_sp(), m_hijack_listener_sp(),
+      m_shadow_listener_sp() {}
 
 void ProcessInfo::Clear() {
   m_executable.Clear();
@@ -38,6 +39,7 @@ void ProcessInfo::Clear() {
   m_gid = UINT32_MAX;
   m_arch.Clear();
   m_pid = LLDB_INVALID_PROCESS_ID;
+  m_scripted_metadata_sp.reset();
 }
 
 const char *ProcessInfo::GetName() const {
@@ -111,6 +113,10 @@ void ProcessInfo::SetArguments(const Args &args, bool first_arg_is_executable) {
   }
 }
 
+bool ProcessInfo::IsScriptedProcess() const {
+  return m_scripted_metadata_sp && *m_scripted_metadata_sp;
+}
+
 void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {
   if (m_pid != LLDB_INVALID_PROCESS_ID)
     s.Printf("    pid = %" PRIu64 "\n", m_pid);
@@ -145,19 +151,19 @@ void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {
 
   if (UserIDIsValid()) {
     s.Format("    uid = {0,-5} ({1})\n", GetUserID(),
-             resolver.GetUserName(GetUserID()).getValueOr(""));
+             resolver.GetUserName(GetUserID()).value_or(""));
   }
   if (GroupIDIsValid()) {
     s.Format("    gid = {0,-5} ({1})\n", GetGroupID(),
-             resolver.GetGroupName(GetGroupID()).getValueOr(""));
+             resolver.GetGroupName(GetGroupID()).value_or(""));
   }
   if (EffectiveUserIDIsValid()) {
     s.Format("   euid = {0,-5} ({1})\n", GetEffectiveUserID(),
-             resolver.GetUserName(GetEffectiveUserID()).getValueOr(""));
+             resolver.GetUserName(GetEffectiveUserID()).value_or(""));
   }
   if (EffectiveGroupIDIsValid()) {
     s.Format("   egid = {0,-5} ({1})\n", GetEffectiveGroupID(),
-             resolver.GetGroupName(GetEffectiveGroupID()).getValueOr(""));
+             resolver.GetGroupName(GetEffectiveGroupID()).value_or(""));
   }
 }
 
@@ -195,7 +201,7 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
 
     auto print = [&](bool (ProcessInstanceInfo::*isValid)() const,
                      uint32_t (ProcessInstanceInfo::*getID)() const,
-                     llvm::Optional<llvm::StringRef> (UserIDResolver::*getName)(
+                     std::optional<llvm::StringRef> (UserIDResolver::*getName)(
                          UserIDResolver::id_t id)) {
       const char *format = "{0,-10} ";
       if (!(this->*isValid)()) {
@@ -332,46 +338,4 @@ void ProcessInstanceInfoMatch::Clear() {
   m_match_info.Clear();
   m_name_match_type = NameMatch::Ignore;
   m_match_all_users = false;
-}
-
-void llvm::yaml::MappingTraits<ProcessInstanceInfo>::mapping(
-    IO &io, ProcessInstanceInfo &Info) {
-  io.mapRequired("executable", Info.m_executable);
-  io.mapRequired("arg0", Info.m_arg0);
-  io.mapRequired("args", Info.m_arguments);
-  io.mapRequired("arch", Info.m_arch);
-  io.mapRequired("uid", Info.m_uid);
-  io.mapRequired("gid", Info.m_gid);
-  io.mapRequired("pid", Info.m_pid);
-  io.mapRequired("effective-uid", Info.m_euid);
-  io.mapRequired("effective-gid", Info.m_egid);
-  io.mapRequired("parent-pid", Info.m_parent_pid);
-}
-
-
-llvm::Optional<ProcessInstanceInfoList>
-repro::GetReplayProcessInstanceInfoList() {
-  static std::unique_ptr<repro::MultiLoader<repro::ProcessInfoProvider>>
-      loader = repro::MultiLoader<repro::ProcessInfoProvider>::Create(
-          repro::Reproducer::Instance().GetLoader());
-
-  if (!loader)
-    return {};
-
-  llvm::Optional<std::string> nextfile = loader->GetNextFile();
-  if (!nextfile)
-    return {};
-
-  auto error_or_file = llvm::MemoryBuffer::getFile(*nextfile);
-  if (std::error_code err = error_or_file.getError())
-    return {};
-
-  ProcessInstanceInfoList infos;
-  llvm::yaml::Input yin((*error_or_file)->getBuffer());
-  yin >> infos;
-
-  if (auto err = yin.error())
-    return {};
-
-  return infos;
 }

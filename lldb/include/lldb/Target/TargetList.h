@@ -14,6 +14,7 @@
 
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Broadcaster.h"
+#include "lldb/Utility/Iterable.h"
 
 namespace lldb_private {
 
@@ -24,7 +25,7 @@ private:
   /// Constructor
   ///
   /// The constructor for the target list is private. Clients can
-  /// get ahold of of the one and only target list through the
+  /// get ahold of the one and only target list through the
   /// lldb_private::Debugger::GetSharedInstance().GetTargetList().
   ///
   /// \see static TargetList& lldb_private::Debugger::GetTargetList().
@@ -36,11 +37,16 @@ public:
 
   // These two functions fill out the Broadcaster interface:
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
+
+  typedef std::vector<lldb::TargetSP> collection;
+  typedef LockingAdaptedIterable<collection, lldb::TargetSP, vector_adapter,
+                                 std::recursive_mutex>
+      TargetIterable;
 
   /// Create a new Target.
   ///
@@ -109,7 +115,7 @@ public:
   ///     in \a target_sp which can then be properly released.
   bool DeleteTarget(lldb::TargetSP &target_sp);
 
-  int GetNumTargets() const;
+  size_t GetNumTargets() const;
 
   lldb::TargetSP GetTargetAtIndex(uint32_t index) const;
 
@@ -178,15 +184,23 @@ public:
   void SetSelectedTarget(const lldb::TargetSP &target);
 
   lldb::TargetSP GetSelectedTarget();
+  
+  ///  Returns whether any module, including ones in the process of being
+  ///  added, contains this module.  I don't want to give direct access to
+  ///  these not yet added target, but for interruption purposes, we might
+  ///  need to ask whether this target contains this module. 
+  bool AnyTargetContainsModule(Module &module);
 
-protected:
-  typedef std::vector<lldb::TargetSP> collection;
-  // Member variables.
+  TargetIterable Targets() {
+    return TargetIterable(m_target_list, m_target_list_mutex);
+  }
+
+private:
   collection m_target_list;
+  std::unordered_set<lldb::TargetSP> m_in_process_target_list;
   mutable std::recursive_mutex m_target_list_mutex;
   uint32_t m_selected_target_idx;
 
-private:
   static Status CreateTargetInternal(
       Debugger &debugger, llvm::StringRef user_exe_path,
       llvm::StringRef triple_str, LoadDependentFiles load_dependent_files,
@@ -199,6 +213,12 @@ private:
                                      lldb::PlatformSP &platform_sp,
                                      lldb::TargetSP &target_sp);
 
+  void RegisterInProcessTarget(lldb::TargetSP target_sp);
+  
+  void UnregisterInProcessTarget(lldb::TargetSP target_sp);
+  
+  bool IsTargetInProcess(lldb::TargetSP target_sp);
+  
   void AddTargetInternal(lldb::TargetSP target_sp, bool do_select);
 
   void SetSelectedTargetInternal(uint32_t index);

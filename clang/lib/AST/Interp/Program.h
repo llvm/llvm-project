@@ -29,26 +29,44 @@ namespace clang {
 class RecordDecl;
 class Expr;
 class FunctionDecl;
-class Stmt;
 class StringLiteral;
 class VarDecl;
 
 namespace interp {
 class Context;
-class State;
-class Record;
-class Scope;
 
 /// The program contains and links the bytecode for all functions.
-class Program {
+class Program final {
 public:
   Program(Context &Ctx) : Ctx(Ctx) {}
+
+  ~Program() {
+    // Manually destroy all the blocks. They are almost all harmless,
+    // but primitive arrays might have an InitMap* heap allocated and
+    // that needs to be freed.
+    for (Global *G : Globals)
+      G->block()->invokeDtor();
+
+    // Records might actually allocate memory themselves, but they
+    // are allocated using a BumpPtrAllocator. Call their desctructors
+    // here manually so they are properly freeing their resources.
+    for (auto RecordPair : Records) {
+      if (Record *R = RecordPair.second)
+        R->~Record();
+    }
+  }
+
+  /// Marshals a native pointer to an ID for embedding in bytecode.
+  unsigned getOrCreateNativePointer(const void *Ptr);
+
+  /// Returns the value of a marshalled native pointer.
+  const void *getNativePointer(unsigned Idx);
 
   /// Emits a string literal among global data.
   unsigned createGlobalString(const StringLiteral *S);
 
   /// Returns a pointer to a global.
-  Pointer getPtrGlobal(unsigned Idx);
+  Pointer getPtrGlobal(unsigned Idx) const;
 
   /// Returns the value of a global.
   Block *getGlobal(unsigned Idx) {
@@ -57,23 +75,25 @@ public:
   }
 
   /// Finds a global's index.
-  llvm::Optional<unsigned> getGlobal(const ValueDecl *VD);
+  std::optional<unsigned> getGlobal(const ValueDecl *VD);
 
   /// Returns or creates a global an creates an index to it.
-  llvm::Optional<unsigned> getOrCreateGlobal(const ValueDecl *VD);
+  std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,
+                                            const Expr *Init = nullptr);
 
-  /// Returns or creates a dummy value for parameters.
-  llvm::Optional<unsigned> getOrCreateDummy(const ParmVarDecl *PD);
+  /// Returns or creates a dummy value for unknown declarations.
+  std::optional<unsigned> getOrCreateDummy(const ValueDecl *VD);
 
   /// Creates a global and returns its index.
-  llvm::Optional<unsigned> createGlobal(const ValueDecl *VD);
+  std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *Init);
 
   /// Creates a global from a lifetime-extended temporary.
-  llvm::Optional<unsigned> createGlobal(const Expr *E);
+  std::optional<unsigned> createGlobal(const Expr *E);
 
   /// Creates a new function from a code range.
   template <typename... Ts>
   Function *createFunction(const FunctionDecl *Def, Ts &&... Args) {
+    Def = Def->getCanonicalDecl();
     auto *Func = new Function(*this, Def, std::forward<Ts>(Args)...);
     Funcs.insert({Def, std::unique_ptr<Function>(Func)});
     return Func;
@@ -89,31 +109,30 @@ public:
   /// Returns a function.
   Function *getFunction(const FunctionDecl *F);
 
-  /// Returns a pointer to a function if it exists and can be compiled.
-  /// If a function couldn't be compiled, an error is returned.
-  /// If a function was not yet defined, a null pointer is returned.
-  llvm::Expected<Function *> getOrCreateFunction(const FunctionDecl *F);
-
   /// Returns a record or creates one if it does not exist.
   Record *getOrCreateRecord(const RecordDecl *RD);
 
   /// Creates a descriptor for a primitive type.
   Descriptor *createDescriptor(const DeclTy &D, PrimType Type,
-                               bool IsConst = false,
-                               bool IsTemporary = false,
+                               Descriptor::MetadataSize MDSize = std::nullopt,
+                               bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false) {
-    return allocateDescriptor(D, Type, IsConst, IsTemporary, IsMutable);
+    return allocateDescriptor(D, Type, MDSize, IsConst, IsTemporary, IsMutable);
   }
 
   /// Creates a descriptor for a composite type.
   Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
+                               Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
-                               bool IsMutable = false);
+                               bool IsMutable = false,
+                               const Expr *Init = nullptr);
 
   /// Context to manage declaration lifetimes.
   class DeclScope {
   public:
-    DeclScope(Program &P, const VarDecl *VD) : P(P) { P.startDeclaration(VD); }
+    DeclScope(Program &P, const ValueDecl *VD) : P(P) {
+      P.startDeclaration(VD);
+    }
     ~DeclScope() { P.endDeclaration(); }
 
   private:
@@ -121,17 +140,18 @@ public:
   };
 
   /// Returns the current declaration ID.
-  llvm::Optional<unsigned> getCurrentDecl() const {
+  std::optional<unsigned> getCurrentDecl() const {
     if (CurrentDeclaration == NoDeclaration)
-      return llvm::Optional<unsigned>{};
+      return std::optional<unsigned>{};
     return LastDeclaration;
   }
 
 private:
   friend class DeclScope;
 
-  llvm::Optional<unsigned> createGlobal(const DeclTy &D, QualType Ty,
-                                        bool IsStatic, bool IsExtern);
+  std::optional<unsigned> createGlobal(const DeclTy &D, QualType Ty,
+                                       bool IsStatic, bool IsExtern,
+                                       const Expr *Init = nullptr);
 
   /// Reference to the VM context.
   Context &Ctx;
@@ -142,6 +162,11 @@ private:
 
   /// Function relocation locations.
   llvm::DenseMap<const FunctionDecl *, std::vector<unsigned>> Relocs;
+
+  /// Native pointers referenced by bytecode.
+  std::vector<const void *> NativePointers;
+  /// Cached native pointer indices.
+  llvm::DenseMap<const void *, unsigned> NativePointerIndices;
 
   /// Custom allocator for global storage.
   using PoolAllocTy = llvm::BumpPtrAllocatorImpl<llvm::MallocAllocator>;
@@ -161,9 +186,10 @@ private:
     }
 
     /// Return a pointer to the data.
-    char *data() { return B.data(); }
+    std::byte *data() { return B.data(); }
     /// Return a pointer to the block.
     Block *block() { return &B; }
+    const Block *block() const { return &B; }
 
   private:
     /// Required metadata - does not actually track pointers.
@@ -182,7 +208,7 @@ private:
   llvm::DenseMap<const RecordDecl *, Record *> Records;
 
   /// Dummy parameter to generate pointers from.
-  llvm::DenseMap<const ParmVarDecl *, unsigned> DummyParams;
+  llvm::DenseMap<const ValueDecl *, unsigned> DummyVariables;
 
   /// Creates a new descriptor.
   template <typename... Ts>
@@ -198,7 +224,7 @@ private:
   unsigned CurrentDeclaration = NoDeclaration;
 
   /// Starts evaluating a declaration.
-  void startDeclaration(const VarDecl *Decl) {
+  void startDeclaration(const ValueDecl *Decl) {
     LastDeclaration += 1;
     CurrentDeclaration = LastDeclaration;
   }

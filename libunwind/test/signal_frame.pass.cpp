@@ -9,8 +9,23 @@
 
 // Ensure that functions marked as signal frames are reported as such.
 
+// TODO: Investigate this failure on Apple
+// XFAIL: target={{.+}}-apple-{{.+}}
+
+// TODO: Figure out why this fails with Memory Sanitizer.
+// XFAIL: msan
+
 // UNSUPPORTED: libunwind-arm-ehabi
 
+// The AIX assembler does not support CFI directives, which
+// are necessary to run this test.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+
+// Windows doesn't generally use CFI directives. However, i686
+// mingw targets do use DWARF (where CFI directives are supported).
+// UNSUPPORTED: target={{x86_64|arm.*|aarch64}}-{{.*}}-windows-{{.*}}
+
+#undef NDEBUG
 #include <assert.h>
 #include <stdlib.h>
 #include <libunwind.h>

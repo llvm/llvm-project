@@ -1,18 +1,14 @@
 ; REQUIRES: asserts
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S -stats 2>&1 | FileCheck %s
+; RUN: opt -mtriple=armv8m.main-none-none-eabi -mattr=+dsp < %s -arm-parallel-dsp -S -stats 2>&1 | FileCheck %s
 ;
 ; A more complicated chain: 4 mul operations, so we expect 2 smlad calls.
 ;
 ; CHECK:  %mac1{{\.}}054 = phi i32 [ [[V17:%[0-9]+]], %for.body ], [ 0, %for.body.preheader ]
-; CHECK:  [[V10:%[0-9]+]] = bitcast i16* %arrayidx to i32*
-; CHECK:  [[V11:%[0-9]+]] = load i32, i32* [[V10]], align 2
-; CHECK:  [[V15:%[0-9]+]] = bitcast i16* %arrayidx4 to i32*
-; CHECK:  [[V16:%[0-9]+]] = load i32, i32* [[V15]], align 2
-; CHECK:  [[V8:%[0-9]+]] = bitcast i16* %arrayidx8 to i32*
-; CHECK:  [[V9:%[0-9]+]] = load i32, i32* [[V8]], align 2
+; CHECK:  [[V11:%[0-9]+]] = load i32, ptr %arrayidx, align 2
+; CHECK:  [[V16:%[0-9]+]] = load i32, ptr %arrayidx4, align 2
+; CHECK:  [[V9:%[0-9]+]] = load i32, ptr %arrayidx8, align 2
 ; CHECK:  [[ACC:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V9]], i32 [[V11]], i32 %mac1{{\.}}054)
-; CHECK:  [[V13:%[0-9]+]] = bitcast i16* %arrayidx17 to i32*
-; CHECK:  [[V14:%[0-9]+]] = load i32, i32* [[V13]], align 2
+; CHECK:  [[V14:%[0-9]+]] = load i32, ptr %arrayidx17, align 2
 ; CHECK:  [[V12:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V14]], i32 [[V16]], i32 [[ACC]])
 ;
 ; And we don't want to see a 3rd smlad:
@@ -20,7 +16,7 @@
 ;
 ; CHECK:  2 arm-parallel-dsp - Number of smlad instructions generated
 ;
-define dso_local i32 @test(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define dso_local i32 @test(i32 %arg, ptr nocapture readnone %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 entry:
   %cmp52 = icmp sgt i32 %arg, 0
   br i1 %cmp52, label %for.body.preheader, label %for.cond.cleanup
@@ -35,34 +31,34 @@ for.body.preheader:
 for.body:
   %mac1.054 = phi i32 [ %add28, %for.body ], [ 0, %for.body.preheader ]
   %i.053 = phi i32 [ %add29, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.053
-  %0 = load i16, i16* %arrayidx, align 2
-  %add1 = or i32 %i.053, 1
-  %arrayidx2 = getelementptr inbounds i16, i16* %arg3, i32 %add1
-  %1 = load i16, i16* %arrayidx2, align 2
-  %add3 = or i32 %i.053, 2
-  %arrayidx4 = getelementptr inbounds i16, i16* %arg3, i32 %add3
-  %2 = load i16, i16* %arrayidx4, align 2
-  %add5 = or i32 %i.053, 3
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg3, i32 %add5
-  %3 = load i16, i16* %arrayidx6, align 2
-  %arrayidx8 = getelementptr inbounds i16, i16* %arg2, i32 %i.053
-  %4 = load i16, i16* %arrayidx8, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.053
+  %0 = load i16, ptr %arrayidx, align 2
+  %add1 = or disjoint i32 %i.053, 1
+  %arrayidx2 = getelementptr inbounds i16, ptr %arg3, i32 %add1
+  %1 = load i16, ptr %arrayidx2, align 2
+  %add3 = or disjoint i32 %i.053, 2
+  %arrayidx4 = getelementptr inbounds i16, ptr %arg3, i32 %add3
+  %2 = load i16, ptr %arrayidx4, align 2
+  %add5 = or disjoint i32 %i.053, 3
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg3, i32 %add5
+  %3 = load i16, ptr %arrayidx6, align 2
+  %arrayidx8 = getelementptr inbounds i16, ptr %arg2, i32 %i.053
+  %4 = load i16, ptr %arrayidx8, align 2
   %conv = sext i16 %4 to i32
   %conv9 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv9
-  %arrayidx11 = getelementptr inbounds i16, i16* %arg2, i32 %add1
-  %5 = load i16, i16* %arrayidx11, align 2
+  %arrayidx11 = getelementptr inbounds i16, ptr %arg2, i32 %add1
+  %5 = load i16, ptr %arrayidx11, align 2
   %conv12 = sext i16 %5 to i32
   %conv13 = sext i16 %1 to i32
   %mul14 = mul nsw i32 %conv12, %conv13
-  %arrayidx17 = getelementptr inbounds i16, i16* %arg2, i32 %add3
-  %6 = load i16, i16* %arrayidx17, align 2
+  %arrayidx17 = getelementptr inbounds i16, ptr %arg2, i32 %add3
+  %6 = load i16, ptr %arrayidx17, align 2
   %conv18 = sext i16 %6 to i32
   %conv19 = sext i16 %2 to i32
   %mul20 = mul nsw i32 %conv18, %conv19
-  %arrayidx23 = getelementptr inbounds i16, i16* %arg2, i32 %add5
-  %7 = load i16, i16* %arrayidx23, align 2
+  %arrayidx23 = getelementptr inbounds i16, ptr %arg2, i32 %add5
+  %7 = load i16, ptr %arrayidx23, align 2
   %conv24 = sext i16 %7 to i32
   %conv25 = sext i16 %3 to i32
   %mul26 = mul nsw i32 %conv24, %conv25

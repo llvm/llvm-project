@@ -10,24 +10,9 @@
 
 // UNSUPPORTED: sanitizer-new-delete, c++03, c++11, c++14
 
-// None of the current GCC compilers support this.
-// UNSUPPORTED: gcc-5, gcc-6
-
-// Aligned allocation was not provided before macosx10.14 and as a result we
-// get availability errors when the deployment target is older than macosx10.14.
-// However, support for that was broken prior to Clang 8 and AppleClang 11.
-// UNSUPPORTED: apple-clang-9, apple-clang-10
-// UNSUPPORTED: clang-5, clang-6, clang-7
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
-
-// On Windows libc++ doesn't provide its own definitions for new/delete
-// but instead depends on the ones in VCRuntime. However VCRuntime does not
-// yet provide aligned new/delete definitions so this test fails to compile/link.
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// Libc++ when built for z/OS doesn't contain the aligned allocation functions,
+// nor does the dynamic library shipped with z/OS.
+// XFAIL: target={{.+}}-zos{{.*}}
 
 #include <new>
 #include <cstddef>
@@ -48,22 +33,29 @@ void reset() {
     aligned_delete_called = 0;
 }
 
-void operator delete(void* p) TEST_NOEXCEPT
+alignas(OverAligned) char DummyData[OverAligned * 4];
+
+void* operator new (std::size_t s, std::align_val_t)
+{
+    assert(s <= sizeof(DummyData));
+    return DummyData;
+}
+
+void operator delete(void* p) noexcept
 {
     ++unsized_delete_called;
     std::free(p);
 }
 
-void operator delete(void* p, const std::nothrow_t&) TEST_NOEXCEPT
+void operator delete(void* p, const std::nothrow_t&) noexcept
 {
     ++unsized_delete_nothrow_called;
     std::free(p);
 }
 
-void operator delete(void* p, std::align_val_t) TEST_NOEXCEPT
+void operator delete(void*, std::align_val_t) noexcept
 {
     ++aligned_delete_called;
-    std::free(p);
 }
 
 struct alignas(OverAligned) A {};

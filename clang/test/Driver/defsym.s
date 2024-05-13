@@ -1,3 +1,5 @@
+// XFAIL: target={{.*}}-aix{{.*}}
+
 // RUN: %clang -### -c -integrated-as %s \
 // RUN: -Wa,-defsym,abc=5 -Wa,-defsym,xyz=0xa \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-DEFSYM1
@@ -24,7 +26,7 @@
 // RUN: not %clang -c -integrated-as -o /dev/null %s \
 // RUN: -Wa,-defsym,abc=1a2b3c \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-DEFSYM-ERR3
-// CHECK-DEFSYM-ERR3: error: Value is not an integer: 1a2b3c
+// CHECK-DEFSYM-ERR3: error: value is not an integer: 1a2b3c
 
 // RUN: not %clang -c -integrated-as -o /dev/null %s \
 // RUN: -Wa,-defsym \

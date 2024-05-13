@@ -1,16 +1,16 @@
-; RUN: opt < %s -deadargelim -S | not grep DEADARG
+; RUN: opt < %s -passes=deadargelim -S | not grep DEADARG
 
 ; test - an obviously dead argument
-define internal i32 @test(i32 %v, i32 %DEADARG1, i32* %p) {
-        store i32 %v, i32* %p
+define internal i32 @test(i32 %v, i32 %DEADARG1, ptr %p) {
+        store i32 %v, ptr %p
         ret i32 %v
 }
 
 ; hardertest - an argument which is only used by a call of a function with a 
 ; dead argument.
 define internal i32 @hardertest(i32 %DEADARG2) {
-        %p = alloca i32         ; <i32*> [#uses=1]
-        %V = call i32 @test( i32 5, i32 %DEADARG2, i32* %p )            ; <i32> [#uses=1]
+        %p = alloca i32         ; <ptr> [#uses=1]
+        %V = call i32 @test( i32 5, i32 %DEADARG2, ptr %p )            ; <i32> [#uses=1]
         ret i32 %V
 }
 

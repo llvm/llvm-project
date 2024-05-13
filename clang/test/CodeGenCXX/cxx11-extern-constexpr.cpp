@@ -7,7 +7,7 @@ struct A {
   static const int Foo = 123;
 };
 // X86: @_ZN1A3FooE ={{.*}} constant i32 123, align 4
-// AMD: @_ZN1A3FooE ={{.*}} addrspace(4) constant i32 123, align 4
+// AMD: @_ZN1A3FooE ={{.*}} addrspace(1) constant i32 123, align 4
 const int *p = &A::Foo; // emit available_externally
 const int A::Foo;       // convert to full definition
 
@@ -37,7 +37,7 @@ struct Foo {
   // CXX11X86: @_ZN3Foo21ConstexprStaticMemberE = available_externally constant i32 42,
   // CXX17X86: @_ZN3Foo21ConstexprStaticMemberE = linkonce_odr constant i32 42,
   // CXX11AMD: @_ZN3Foo21ConstexprStaticMemberE = available_externally addrspace(4) constant i32 42,
-  // CXX17AMD: @_ZN3Foo21ConstexprStaticMemberE = linkonce_odr addrspace(4) constant i32 42,
+  // CXX17AMD: @_ZN3Foo21ConstexprStaticMemberE = linkonce_odr addrspace(4) constant i32 42, comdat, align 4
   static constexpr int ConstexprStaticMember = 42;
   // X86: @_ZN3Foo17ConstStaticMemberE = available_externally constant i32 43,
   // AMD: @_ZN3Foo17ConstStaticMemberE = available_externally addrspace(4) constant i32 43,

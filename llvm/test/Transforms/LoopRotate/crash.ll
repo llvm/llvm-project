@@ -1,5 +1,4 @@
-; RUN: opt -loop-rotate -disable-output -verify-dom-info -verify-loop-info < %s
-; RUN: opt -loop-rotate -disable-output -verify-dom-info -verify-loop-info -enable-mssa-loop-dependency=true -verify-memoryssa < %s
+; RUN: opt -passes=loop-rotate -disable-output -verify-dom-info -verify-loop-info -verify-memoryssa < %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
@@ -43,7 +42,7 @@ bb127:          ; preds = %bb139
 bb139:          ; preds = %bb127, %entry
         br i1 false, label %bb127, label %bb142
 bb142:          ; preds = %bb139
-        %r91.0.lcssa = phi %struct.relation* [ null, %bb139 ]           ; <%struct.relation*> [#uses=0]
+        %r91.0.lcssa = phi ptr [ null, %bb139 ]           ; <ptr> [#uses=0]
         ret void
 }
 
@@ -98,19 +97,19 @@ bb835:		; preds = %bb830
 }
 
 	%struct.NSArray = type { %struct.NSObject }
-	%struct.NSObject = type { %struct.objc_class* }
+	%struct.NSObject = type { ptr }
 	%struct.NSRange = type { i64, i64 }
-	%struct._message_ref_t = type { %struct.NSObject* (%struct.NSObject*, %struct._message_ref_t*, ...)*, %struct.objc_selector* }
+	%struct._message_ref_t = type { ptr, ptr }
 	%struct.objc_class = type opaque
 	%struct.objc_selector = type opaque
-@"\01L_OBJC_MESSAGE_REF_26" = external global %struct._message_ref_t		; <%struct._message_ref_t*> [#uses=1]
+@"\01L_OBJC_MESSAGE_REF_26" = external global %struct._message_ref_t		; <ptr> [#uses=1]
 
-define %struct.NSArray* @test5(%struct.NSArray* %self, %struct._message_ref_t* %_cmd) {
+define ptr @test5(ptr %self, ptr %_cmd) {
 entry:
 	br label %bb116
 
 bb116:		; preds = %bb131, %entry
-	%tmp123 = call %struct.NSRange null( %struct.NSObject* null, %struct._message_ref_t* @"\01L_OBJC_MESSAGE_REF_26", %struct.NSArray* null )		; <%struct.NSRange> [#uses=1]
+	%tmp123 = call %struct.NSRange null( ptr null, ptr @"\01L_OBJC_MESSAGE_REF_26", ptr null )		; <%struct.NSRange> [#uses=1]
 	br i1 false, label %bb141, label %bb131
 
 bb131:		; preds = %bb116
@@ -118,15 +117,15 @@ bb131:		; preds = %bb116
 	br label %bb116
 
 bb141:		; preds = %bb116
-	ret %struct.NSArray* null
+	ret ptr null
 }
 
-define void @test6(i8* %msg) {
+define void @test6(ptr %msg) {
 entry:
 	br label %bb15
 bb6:		; preds = %bb15
 	%gep.upgrd.1 = zext i32 %offset.1 to i64		; <i64> [#uses=1]
-	%tmp11 = getelementptr i8, i8* %msg, i64 %gep.upgrd.1		; <i8*> [#uses=0]
+	%tmp11 = getelementptr i8, ptr %msg, i64 %gep.upgrd.1		; <ptr> [#uses=0]
 	br label %bb15
 bb15:		; preds = %bb6, %entry
 	%offset.1 = add i32 0, 1		; <i32> [#uses=2]
@@ -141,9 +140,9 @@ bb17:		; preds = %bb15
 
 
 ; PR9523 - Non-canonical loop.
-define void @test7(i8* %P) nounwind {
+define void @test7(ptr %P) nounwind {
 entry:
-  indirectbr i8* %P, [label %"3", label %"5"]
+  indirectbr ptr %P, [label %"3", label %"5"]
 
 "3":                                              ; preds = %"4", %entry
   br i1 undef, label %"5", label %"4"
@@ -156,7 +155,7 @@ entry:
 }
 
 ; PR21968
-define void @test8(i1 %C, i8* %P) #0 {
+define void @test8(i1 %C, ptr %P) #0 {
 entry:
   br label %for.cond
 
@@ -164,7 +163,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %C, label %l_bad, label %for.body
 
 for.body:                                         ; preds = %for.cond
-  indirectbr i8* %P, [label %for.inc, label %l_bad]
+  indirectbr ptr %P, [label %for.inc, label %l_bad]
 
 for.inc:                                          ; preds = %for.body
   br label %for.cond

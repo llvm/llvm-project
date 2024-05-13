@@ -30,12 +30,12 @@ define <4 x i32> @combine_vec_sub_self(<4 x i32> %a) {
 define <4 x i32> @combine_vec_sub_constant(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sub_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psubd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sub_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsubd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> %x, <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %1
@@ -104,14 +104,14 @@ define <4 x i32> @combine_vec_sub_add1(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @combine_vec_sub_constant_add(<4 x i32> %a) {
 ; SSE-LABEL: combine_vec_sub_constant_add:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
+; SSE-NEXT:    pmovsxbd {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
 ; SSE-NEXT:    psubd %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sub_constant_add:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = add <4 x i32> %a, <i32 0, i32 1, i32 2, i32 3>
@@ -245,14 +245,14 @@ define i32 @combine_sub_xor_consts(i32 %x) {
 define <4 x i32> @combine_vec_sub_xor_consts(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sub_xor_consts:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sub_xor_consts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %xor = xor <4 x i32> %x, <i32 28, i32 29, i32 -1, i32 -31>
   %sub = sub <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %xor
@@ -274,4 +274,181 @@ define <4 x i32> @combine_vec_neg_xor_consts(<4 x i32> %x) {
   %xor = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %sub = sub <4 x i32> zeroinitializer, %xor
   ret <4 x i32> %sub
+}
+
+; With AVX, this could use broadcast (an extra load) and
+; load-folded 'add', but currently we favor the virtually
+; free pcmpeq instruction.
+
+define void @PR52032_oneuse_constant(ptr %p) {
+; SSE-LABEL: PR52032_oneuse_constant:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqu (%rdi), %xmm0
+; SSE-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    psubd %xmm2, %xmm1
+; SSE-NEXT:    psubd %xmm2, %xmm0
+; SSE-NEXT:    movdqu %xmm0, (%rdi)
+; SSE-NEXT:    movdqu %xmm1, 16(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032_oneuse_constant:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vmovdqu %ymm0, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %i3 = load <8 x i32>, ptr %p, align 4
+  %i4 = add nsw <8 x i32> %i3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  store <8 x i32> %i4, ptr %p, align 4
+  ret void
+}
+
+; With AVX, we don't transform 'add' to 'sub' because that prevents load folding.
+; With SSE, we do it because we can't load fold the other op without overwriting the constant op.
+
+define void @PR52032(ptr %p) {
+; SSE-LABEL: PR52032:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movdqu (%rdi), %xmm1
+; SSE-NEXT:    movdqu 16(%rdi), %xmm2
+; SSE-NEXT:    movdqu 32(%rdi), %xmm3
+; SSE-NEXT:    movdqu 48(%rdi), %xmm4
+; SSE-NEXT:    psubd %xmm0, %xmm2
+; SSE-NEXT:    psubd %xmm0, %xmm1
+; SSE-NEXT:    movdqu %xmm1, (%rdi)
+; SSE-NEXT:    movdqu %xmm2, 16(%rdi)
+; SSE-NEXT:    psubd %xmm0, %xmm4
+; SSE-NEXT:    psubd %xmm0, %xmm3
+; SSE-NEXT:    movdqu %xmm3, 32(%rdi)
+; SSE-NEXT:    movdqu %xmm4, 48(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [1,1,1,1,1,1,1,1]
+; AVX-NEXT:    vpaddd (%rdi), %ymm0, %ymm1
+; AVX-NEXT:    vmovdqu %ymm1, (%rdi)
+; AVX-NEXT:    vpaddd 32(%rdi), %ymm0, %ymm0
+; AVX-NEXT:    vmovdqu %ymm0, 32(%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %i3 = load <8 x i32>, ptr %p, align 4
+  %i4 = add nsw <8 x i32> %i3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  store <8 x i32> %i4, ptr %p, align 4
+  %p2 = getelementptr inbounds <8 x i32>, ptr %p, i64 1
+  %i8 = load <8 x i32>, ptr %p2, align 4
+  %i9 = add nsw <8 x i32> %i8, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  store <8 x i32> %i9, ptr %p2, align 4
+  ret void
+}
+
+; Same as above, but 128-bit ops:
+; With AVX, we don't transform 'add' to 'sub' because that prevents load folding.
+; With SSE, we do it because we can't load fold the other op without overwriting the constant op.
+
+define void @PR52032_2(ptr %p) {
+; SSE-LABEL: PR52032_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movdqu (%rdi), %xmm1
+; SSE-NEXT:    movdqu 16(%rdi), %xmm2
+; SSE-NEXT:    psubd %xmm0, %xmm1
+; SSE-NEXT:    movdqu %xmm1, (%rdi)
+; SSE-NEXT:    psubd %xmm0, %xmm2
+; SSE-NEXT:    movdqu %xmm2, 16(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [1,1,1,1]
+; AVX-NEXT:    vpaddd (%rdi), %xmm0, %xmm1
+; AVX-NEXT:    vmovdqu %xmm1, (%rdi)
+; AVX-NEXT:    vpaddd 16(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
+; AVX-NEXT:    retq
+  %i3 = load <4 x i32>, ptr %p, align 4
+  %i4 = add nsw <4 x i32> %i3, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i4, ptr %p, align 4
+  %p2 = getelementptr inbounds <4 x i32>, ptr %p, i64 1
+  %i8 = load <4 x i32>, ptr %p2, align 4
+  %i9 = add nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i9, ptr %p2, align 4
+  ret void
+}
+
+; If we are starting with a 'sub', it is always better to do the transform.
+
+define void @PR52032_3(ptr %p) {
+; SSE-LABEL: PR52032_3:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movdqu (%rdi), %xmm1
+; SSE-NEXT:    movdqu 16(%rdi), %xmm2
+; SSE-NEXT:    paddd %xmm0, %xmm1
+; SSE-NEXT:    movdqu %xmm1, (%rdi)
+; SSE-NEXT:    paddd %xmm0, %xmm2
+; SSE-NEXT:    movdqu %xmm2, 16(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032_3:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpaddd (%rdi), %xmm0, %xmm1
+; AVX-NEXT:    vmovdqu %xmm1, (%rdi)
+; AVX-NEXT:    vpaddd 16(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
+; AVX-NEXT:    retq
+  %i3 = load <4 x i32>, ptr %p, align 4
+  %i4 = sub nsw <4 x i32> %i3, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i4, ptr %p, align 4
+  %p2 = getelementptr inbounds <4 x i32>, ptr %p, i64 1
+  %i8 = load <4 x i32>, ptr %p2, align 4
+  %i9 = sub nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i9, ptr %p2, align 4
+  ret void
+}
+
+; If there's no chance of profitable load folding (because of extra uses), we convert 'add' to 'sub'.
+
+define void @PR52032_4(ptr %p, ptr %q) {
+; SSE-LABEL: PR52032_4:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqu (%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    movdqu %xmm0, (%rdi)
+; SSE-NEXT:    movdqu 16(%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    movdqu %xmm0, 16(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032_4:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu %xmm0, (%rdi)
+; AVX-NEXT:    vmovdqu 16(%rdi), %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
+; AVX-NEXT:    retq
+  %i3 = load <4 x i32>, ptr %p, align 4
+  store <4 x i32> %i3, ptr %q
+  %i4 = add nsw <4 x i32> %i3, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i4, ptr %p, align 4
+  %p2 = getelementptr inbounds <4 x i32>, ptr %p, i64 1
+  %q2 = getelementptr inbounds <4 x i32>, ptr %q, i64 1
+  %i8 = load <4 x i32>, ptr %p2, align 4
+  store <4 x i32> %i8, ptr %q2
+  %i9 = add nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i9, ptr %p2, align 4
+  ret void
 }

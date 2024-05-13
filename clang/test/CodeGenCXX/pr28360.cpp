@@ -11,6 +11,6 @@ void Bar(const MpTy &);
 void Baz() { Bar(&A::Foo); }
 
 // CHECK-LABEL: define dso_local void @"?Baz@@YAXXZ"(
-// CHECK:  %[[ref_tmp:.*]] = alloca i8*, align 4
-// CHECK: store i8* bitcast (void (%struct.A*)* @"?Foo@A@@QAEXXZ" to i8*), i8** %[[ref_tmp]], align 4
-// CHECK: call void @"?Bar@@YAXABQ8A@@AEXXZ@Z"(i8** nonnull align 4 dereferenceable(4) %[[ref_tmp]])
+// CHECK:  %[[ref_tmp:.*]] = alloca ptr, align 4
+// CHECK: store ptr @"?Foo@A@@QAEXXZ", ptr %[[ref_tmp]], align 4
+// CHECK: call void @"?Bar@@YAXABQ8A@@AEXXZ@Z"(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp]])

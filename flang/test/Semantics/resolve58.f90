@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s1(x, y)
   !ERROR: Array pointer 'x' must have deferred shape or assumed rank
   real, pointer :: x(1:)  ! C832
@@ -69,12 +69,12 @@ subroutine s6()
 
   !ERROR: Implied-shape array 'local1' must be a named constant or a dummy argument
   real, dimension (*) :: local1
-  !ERROR: INTENT attributes may apply only to a dummy argument
+  !ERROR: Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute
   real, intent(in) :: local2
-  !ERROR: INTENT attributes may apply only to a dummy argument
+  !ERROR: Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute
   procedure(), intent(in) :: p1
-  !ERROR: OPTIONAL attribute may apply only to a dummy argument
+  !ERROR: Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute
   real, optional :: local3
-  !ERROR: OPTIONAL attribute may apply only to a dummy argument
+  !ERROR: Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute
   procedure(), optional :: p2
 end subroutine

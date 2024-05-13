@@ -19,6 +19,7 @@
 // Effects: aborts if a * b overflows
 
 #define fixint_t ti_int
+#define fixuint_t tu_int
 #include "int_mulv_impl.inc"
 
 COMPILER_RT_ABI ti_int __mulvti3(ti_int a, ti_int b) { return __mulvXi3(a, b); }

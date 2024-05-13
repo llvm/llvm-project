@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMPowerPCDisassembler
 
   LINK_COMPONENTS
   MCDisassembler
+  MC
   PowerPCInfo
   Support
 

@@ -87,7 +87,7 @@ When using lld-link, the -flto option need only be added to the compile step:
 
 As mentioned earlier, by default the linkers will launch the ThinLTO backend
 threads in parallel, passing the resulting native object files back to the
-linker for the final native link.  As such, the usage model the same as
+linker for the final native link.  As such, the usage model is the same as
 non-LTO.
 
 With gold, if you see an error during the link of the form:
@@ -118,7 +118,7 @@ be reduced to ``N`` via:
   ``-Wl,-plugin-opt,jobs=N``
 - ld64:
   ``-Wl,-mllvm,-threads=N``
-- lld:
+- ld.lld, ld64.lld:
   ``-Wl,--thinlto-jobs=N``
 - lld-link:
   ``/opt:lldltojobs=N``
@@ -141,9 +141,10 @@ which currently must be enabled through a linker option.
 
 - gold (as of LLVM 4.0):
   ``-Wl,-plugin-opt,cache-dir=/path/to/cache``
-- ld64 (support in clang 3.9 and Xcode 8):
+- ld64 (supported since clang 3.9 and Xcode 8) and Mach-O ld64.lld (as of LLVM
+  15.0):
   ``-Wl,-cache_path_lto,/path/to/cache``
-- ELF lld (as of LLVM 5.0):
+- ELF ld.lld (as of LLVM 5.0):
   ``-Wl,--thinlto-cache-dir=/path/to/cache``
 - COFF lld-link (as of LLVM 6.0):
   ``/lldltocache:/path/to/cache``
@@ -152,14 +153,14 @@ Cache Pruning
 -------------
 
 To help keep the size of the cache under control, ThinLTO supports cache
-pruning. Cache pruning is supported with gold, ld64 and ELF and COFF lld, but
-currently only gold, ELF and COFF lld allow you to control the policy with a
-policy string. The cache policy must be specified with a linker option.
+pruning. Cache pruning is supported with gold, ld64, and lld, but currently only
+gold and lld allow you to control the policy with a policy string. The cache
+policy must be specified with a linker option.
 
 - gold (as of LLVM 6.0):
   ``-Wl,-plugin-opt,cache-policy=POLICY``
-- ELF lld (as of LLVM 5.0):
-  ``-Wl,--thinlto-cache-policy,POLICY``
+- ELF ld.lld (as of LLVM 5.0), Mach-O ld64.lld (as of LLVM 15.0):
+  ``-Wl,--thinlto-cache-policy=POLICY``
 - COFF lld-link (as of LLVM 6.0):
   ``/lldltocachepolicy:POLICY``
 

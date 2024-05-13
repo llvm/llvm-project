@@ -18,15 +18,34 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 using namespace clang;
+
+namespace {
+
+// MacroInfo is expected to take 40 bytes on platforms with an 8 byte pointer
+// and 4 byte SourceLocation.
+template <int> class MacroInfoSizeChecker {
+public:
+  [[maybe_unused]] constexpr static bool AsExpected = true;
+};
+template <> class MacroInfoSizeChecker<8> {
+public:
+  [[maybe_unused]] constexpr static bool AsExpected =
+      sizeof(MacroInfo) == (32 + sizeof(SourceLocation) * 2);
+};
+
+static_assert(MacroInfoSizeChecker<sizeof(void *)>::AsExpected,
+              "Unexpected size of MacroInfo");
+
+} // end namespace
 
 MacroInfo::MacroInfo(SourceLocation DefLoc)
     : Location(DefLoc), IsDefinitionLengthCached(false), IsFunctionLike(false),
@@ -39,6 +58,7 @@ unsigned MacroInfo::getDefinitionLengthSlow(const SourceManager &SM) const {
   assert(!IsDefinitionLengthCached);
   IsDefinitionLengthCached = true;
 
+  ArrayRef<Token> ReplacementTokens = tokens();
   if (ReplacementTokens.empty())
     return (DefinitionLength = 0);
 
@@ -76,7 +96,7 @@ bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
   bool Lexically = !Syntactically;
 
   // Check # tokens in replacement, number of args, and various flags all match.
-  if (ReplacementTokens.size() != Other.ReplacementTokens.size() ||
+  if (getNumTokens() != Other.getNumTokens() ||
       getNumParams() != Other.getNumParams() ||
       isFunctionLike() != Other.isFunctionLike() ||
       isC99Varargs() != Other.isC99Varargs() ||
@@ -92,13 +112,13 @@ bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
   }
 
   // Check all the tokens.
-  for (unsigned i = 0, e = ReplacementTokens.size(); i != e; ++i) {
+  for (unsigned i = 0; i != NumReplacementTokens; ++i) {
     const Token &A = ReplacementTokens[i];
     const Token &B = Other.ReplacementTokens[i];
     if (A.getKind() != B.getKind())
       return false;
 
-    // If this isn't the first first token, check that the whitespace and
+    // If this isn't the first token, check that the whitespace and
     // start-of-line characteristics match.
     if (i != 0 &&
         (A.isAtStartOfLine() != B.isAtStartOfLine() ||
@@ -157,7 +177,7 @@ LLVM_DUMP_METHOD void MacroInfo::dump() const {
   }
 
   bool First = true;
-  for (const Token &Tok : ReplacementTokens) {
+  for (const Token &Tok : tokens()) {
     // Leading space is semantically meaningful in a macro definition,
     // so preserve it in the dump output.
     if (First || Tok.hasLeadingSpace())
@@ -178,11 +198,10 @@ LLVM_DUMP_METHOD void MacroInfo::dump() const {
 MacroDirective::DefInfo MacroDirective::getDefinition() {
   MacroDirective *MD = this;
   SourceLocation UndefLoc;
-  Optional<bool> isPublic;
+  std::optional<bool> isPublic;
   for (; MD; MD = MD->getPrevious()) {
     if (DefMacroDirective *DefMD = dyn_cast<DefMacroDirective>(MD))
-      return DefInfo(DefMD, UndefLoc,
-                     !isPublic.hasValue() || isPublic.getValue());
+      return DefInfo(DefMD, UndefLoc, !isPublic || *isPublic);
 
     if (UndefMacroDirective *UndefMD = dyn_cast<UndefMacroDirective>(MD)) {
       UndefLoc = UndefMD->getLocation();
@@ -190,12 +209,11 @@ MacroDirective::DefInfo MacroDirective::getDefinition() {
     }
 
     VisibilityMacroDirective *VisMD = cast<VisibilityMacroDirective>(MD);
-    if (!isPublic.hasValue())
+    if (!isPublic)
       isPublic = VisMD->isPublic();
   }
 
-  return DefInfo(nullptr, UndefLoc,
-                 !isPublic.hasValue() || isPublic.getValue());
+  return DefInfo(nullptr, UndefLoc, !isPublic || *isPublic);
 }
 
 const MacroDirective::DefInfo
@@ -239,7 +257,7 @@ LLVM_DUMP_METHOD void MacroDirective::dump() const {
 }
 
 ModuleMacro *ModuleMacro::create(Preprocessor &PP, Module *OwningModule,
-                                 IdentifierInfo *II, MacroInfo *Macro,
+                                 const IdentifierInfo *II, MacroInfo *Macro,
                                  ArrayRef<ModuleMacro *> Overrides) {
   void *Mem = PP.getPreprocessorAllocator().Allocate(
       sizeof(ModuleMacro) + sizeof(ModuleMacro *) * Overrides.size(),

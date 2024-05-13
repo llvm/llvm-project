@@ -1,5 +1,9 @@
 ; RUN: llc < %s | FileCheck %s
 
+; NVPTX fails to LowerFormalArguments for arg size > i128
+; the arg byte size must be one of the {16, 8, 4, 2}
+; XFAIL: target=nvptx{{.*}}
+
 ; CHECK-LABEL: test_ult
 define i1 @test_ult(i256 %a) nounwind {
   %1 = icmp ult i256 %a, -6432394258550908438

@@ -23,7 +23,7 @@ union __attribute__((packed)) UnionArguable {
 
 typedef struct Arguable ArguableT;
 
-struct Arguable *get_arguable();
+struct Arguable *get_arguable(void);
 
 void to_void(void *);
 void to_intptr(intptr_t);
@@ -136,7 +136,7 @@ struct S4 {
 };
 
 int *g4(struct S4 *s4) {
-  return &s4->inner.i; // expected-warning {{packed member 'i' of class or structure 'S4::(anonymous)'}}
+  return &s4->inner.i; // expected-warning {{packed member 'i' of class or structure 'S4::struct (unnamed at}}
 }
 
 struct S5 {
@@ -148,7 +148,7 @@ struct S5 {
 };
 
 int *g5(struct S5 *s5) {
-  return &s5->inner.i; // expected-warning {{packed member 'i' of class or structure 'S5::(anonymous)'}}
+  return &s5->inner.i; // expected-warning {{packed member 'i' of class or structure 'S5::struct (unnamed at}}
 }
 
 struct __attribute__((packed, aligned(2))) AlignedTo2 {
@@ -200,7 +200,7 @@ struct S6 {
 };
 
 int *anonymousInnerUnion(struct S6 *s) {
-  return &s->x; // expected-warning {{packed member 'x' of class or structure 'S6::(anonymous)'}}
+  return &s->x; // expected-warning {{packed member 'x' of class or structure 'S6::union (anonymous at}}
 }
 
 struct S6a {
@@ -211,8 +211,8 @@ struct S6a {
     int d;
 } __attribute__((packed, aligned(16))) s6;
 
-void g8()
-{ 
+void g8(void)
+{
     f1(&s6.a); // no-warning
     f1(&s6.c); // no-warning
     f1(&s6.d); // expected-warning {{packed member 'd' of class or structure 'S6a'}}
@@ -222,7 +222,7 @@ struct __attribute__((packed, aligned(1))) MisalignedContainee { double d; };
 struct __attribute__((aligned(8))) AlignedContainer { struct MisalignedContainee b; };
 
 struct AlignedContainer *p;
-double* g9() {
+double* g9(void) {
   return &p->b.d; // no-warning
 }
 
@@ -273,7 +273,7 @@ struct S9 {
 
 typedef struct S9 __attribute__((__aligned__(16))) aligned_S9;
 
-void g10() {
+void g10(void) {
   struct S9 x;
   struct S9 __attribute__((__aligned__(8))) y;
   aligned_S9 z;

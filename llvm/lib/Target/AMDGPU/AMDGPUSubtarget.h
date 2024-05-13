@@ -14,9 +14,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
@@ -38,29 +38,37 @@ public:
     SEA_ISLANDS = 6,
     VOLCANIC_ISLANDS = 7,
     GFX9 = 8,
-    GFX10 = 9
+    GFX10 = 9,
+    GFX11 = 10,
+    GFX12 = 11,
   };
 
 private:
   Triple TargetTriple;
 
 protected:
-  bool GCN3Encoding;
-  bool Has16BitInsts;
-  bool HasMadMixInsts;
-  bool HasMadMacF32Insts;
-  bool HasDsSrc2Insts;
-  bool HasSDWA;
-  bool HasVOP3PInsts;
-  bool HasMulI24;
-  bool HasMulU24;
-  bool HasInv2PiInlineImm;
-  bool HasFminFmaxLegacy;
-  bool EnablePromoteAlloca;
-  bool HasTrigReducedRange;
-  unsigned MaxWavesPerEU;
-  unsigned LocalMemorySize;
-  char WavefrontSizeLog2;
+  bool GCN3Encoding = false;
+  bool Has16BitInsts = false;
+  bool HasTrue16BitInsts = false;
+  bool EnableRealTrue16Insts = false;
+  bool HasMadMixInsts = false;
+  bool HasMadMacF32Insts = false;
+  bool HasDsSrc2Insts = false;
+  bool HasSDWA = false;
+  bool HasVOP3PInsts = false;
+  bool HasMulI24 = true;
+  bool HasMulU24 = true;
+  bool HasSMulHi = false;
+  bool HasInv2PiInlineImm = false;
+  bool HasFminFmaxLegacy = true;
+  bool EnablePromoteAlloca = false;
+  bool HasTrigReducedRange = false;
+  bool FastFMAF32 = false;
+  unsigned EUsPerCU = 4;
+  unsigned MaxWavesPerEU = 10;
+  unsigned LocalMemorySize = 0;
+  unsigned AddressableLocalMemorySize = 0;
+  char WavefrontSizeLog2 = 0;
 
 public:
   AMDGPUSubtarget(const Triple &TT);
@@ -90,7 +98,21 @@ public:
   /// be converted to integer, violate subtarget's specifications, or are not
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
-  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
+  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const {
+    // Default/requested minimum/maximum flat work group sizes.
+    std::pair<unsigned, unsigned> FlatWorkGroupSizes = getFlatWorkGroupSizes(F);
+    return getWavesPerEU(F, FlatWorkGroupSizes);
+  }
+
+  /// Overload which uses the specified values for the flat work group sizes,
+  /// rather than querying the function itself. \p FlatWorkGroupSizes Should
+  /// correspond to the function's value for getFlatWorkGroupSizes.
+  std::pair<unsigned, unsigned>
+  getWavesPerEU(const Function &F,
+                std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
+  std::pair<unsigned, unsigned> getEffectiveWavesPerEU(
+      std::pair<unsigned, unsigned> WavesPerEU,
+      std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
 
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
@@ -133,6 +155,17 @@ public:
     return Has16BitInsts;
   }
 
+  /// Return true if the subtarget supports True16 instructions.
+  bool hasTrue16BitInsts() const { return HasTrue16BitInsts; }
+
+  /// Return true if real (non-fake) variants of True16 instructions using
+  /// 16-bit registers should be code-generated. Fake True16 instructions are
+  /// identical to non-fake ones except that they take 32-bit registers as
+  /// operands and always use their low halves.
+  // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
+  // supported and the support for fake True16 instructions is removed.
+  bool useRealTrue16Insts() const;
+
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
   }
@@ -161,6 +194,10 @@ public:
     return HasMulU24;
   }
 
+  bool hasSMulHi() const {
+    return HasSMulHi;
+  }
+
   bool hasInv2PiInlineImm() const {
     return HasInv2PiInlineImm;
   }
@@ -171,6 +208,10 @@ public:
 
   bool hasTrigReducedRange() const {
     return HasTrigReducedRange;
+  }
+
+  bool hasFastFMAF32() const {
+    return FastFMAF32;
   }
 
   bool isPromoteAllocaEnabled() const {
@@ -189,14 +230,35 @@ public:
     return LocalMemorySize;
   }
 
+  unsigned getAddressableLocalMemorySize() const {
+    return AddressableLocalMemorySize;
+  }
+
+  /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the
+  /// "CU" is the unit onto which workgroups are mapped. This takes WGP mode vs.
+  /// CU mode into account.
+  unsigned getEUsPerCU() const { return EUsPerCU; }
+
   Align getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? Align(8) : Align(4);
   }
 
   /// Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
-  unsigned getExplicitKernelArgOffset(const Function &F) const {
-    return isAmdHsaOrMesa(F) ? 0 : 36;
+  unsigned getExplicitKernelArgOffset() const {
+    switch (TargetTriple.getOS()) {
+    case Triple::AMDHSA:
+    case Triple::AMDPAL:
+    case Triple::Mesa3D:
+      return 0;
+    case Triple::UnknownOS:
+    default:
+      // For legacy reasons unknown/other is treated as a different version of
+      // mesa.
+      return 36;
+    }
+
+    llvm_unreachable("invalid triple OS");
   }
 
   /// \returns Maximum number of work groups per compute unit supported by the
@@ -226,6 +288,12 @@ public:
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
 
+  /// Return the number of work groups for the function.
+  SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) const;
+
+  /// Return true if only a single workitem can be active in a wave.
+  bool isSingleLaneExecution(const Function &Kernel) const;
+
   /// Creates value range metadata on an workitemid.* intrinsic call or load.
   bool makeLIDRangeMetadata(Instruction *I) const;
 
@@ -235,11 +303,11 @@ public:
   uint64_t getExplicitKernArgSize(const Function &F, Align &MaxAlign) const;
   unsigned getKernArgSegmentSize(const Function &F, Align &MaxAlign) const;
 
-  /// \returns Corresponsing DWARF register number mapping flavour for the
+  /// \returns Corresponding DWARF register number mapping flavour for the
   /// \p WavefrontSize.
   AMDGPUDwarfFlavour getAMDGPUDwarfFlavour() const;
 
-  virtual ~AMDGPUSubtarget() {}
+  virtual ~AMDGPUSubtarget() = default;
 };
 
 } // end namespace llvm

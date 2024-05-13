@@ -45,7 +45,7 @@ public:
   std::string ABI;
 
   /// The EABI version to use
-  llvm::EABI EABIVersion;
+  llvm::EABI EABIVersion = llvm::EABI::Default;
 
   /// If given, the version string of the linker in use.
   std::string LinkerVersion;
@@ -78,11 +78,32 @@ public:
   /// \brief If enabled, allow AMDGPU unsafe floating point atomics.
   bool AllowAMDGPUUnsafeFPAtomics = false;
 
+  /// \brief Code object version for AMDGPU.
+  llvm::CodeObjectVersionKind CodeObjectVersion =
+      llvm::CodeObjectVersionKind::COV_None;
+
+  /// \brief Enumeration values for AMDGPU printf lowering scheme
+  enum class AMDGPUPrintfKind {
+    /// printf lowering scheme involving hostcalls, currently used by HIP
+    /// programs by default
+    Hostcall = 0,
+
+    /// printf lowering scheme involving implicit printf buffers,
+    Buffered = 1,
+  };
+
+  /// \brief AMDGPU Printf lowering scheme
+  AMDGPUPrintfKind AMDGPUPrintfKindVal = AMDGPUPrintfKind::Hostcall;
+
   // The code model to be used as specified by the user. Corresponds to
   // CodeModel::Model enum defined in include/llvm/Support/CodeGen.h, plus
   // "default" for the case when the user has not explicitly specified a
   // code model.
   std::string CodeModel;
+
+  // The large data threshold used for certain code models on certain
+  // architectures.
+  uint64_t LargeDataThreshold;
 
   /// The version of the SDK which was used during the compilation.
   /// The option is used for two different purposes:
@@ -91,8 +112,21 @@ public:
   /// * CUDA compilation uses it to control parts of CUDA compilation
   ///   in clang that depend on specific version of the CUDA SDK.
   llvm::VersionTuple SDKVersion;
+
+  /// The name of the darwin target- ariant triple to compile for.
+  std::string DarwinTargetVariantTriple;
+
+  /// The version of the darwin target variant SDK which was used during the
+  /// compilation.
+  llvm::VersionTuple DarwinTargetVariantSDKVersion;
+
+  /// The validator version for dxil.
+  std::string DxilValidatorVersion;
+
+  /// The entry point name for HLSL shader being compiled as specified by -E.
+  std::string HLSLEntry;
 };
 
-}  // end namespace clang
+} // end namespace clang
 
 #endif

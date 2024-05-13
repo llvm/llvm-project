@@ -16,7 +16,7 @@ define fastcc double @tailcall() {
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fld1
 ; CHECK-NEXT:    fstpt {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = <1.0E+0,1.0E+0,u,u>
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,1.0E+0,u,u]
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    jmp _tailcallee ## TAILCALL
 entry:

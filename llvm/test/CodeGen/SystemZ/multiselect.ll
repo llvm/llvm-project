@@ -3,7 +3,7 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck %s
 
-define void @test0(i32 signext %positive, double %base, double %offset, double* %rmin, double* %rmax) {
+define void @test0(i32 signext %positive, double %base, double %offset, ptr %rmin, ptr %rmax) {
 entry:
 ; CHECK-LABEL: test0
 ; CHECK: cijlh %r2, 0,
@@ -15,8 +15,8 @@ entry:
   %add = fadd double %base, %offset
   %min = select i1 %tobool, double %add, double %base
   %max = select i1 %tobool, double %base, double %add
-  store double %min, double* %rmin, align 8
-  store double %max, double* %rmax, align 8
+  store double %min, ptr %rmin, align 8
+  store double %max, ptr %rmax, align 8
   ret void
 }
 

@@ -1,4 +1,5 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Make sure to update the debug value after dead code elimination.
 ; CHECK: %call = call signext i8 @b(i32 6), !dbg !39
@@ -17,14 +18,14 @@ entry:
 
 define i32 @main() local_unnamed_addr #0 !dbg !26 {
 entry:
-  %0 = load i8, i8* @e, align 1, !dbg !31, !tbaa !32
+  %0 = load i8, ptr @e, align 1, !dbg !31, !tbaa !32
   %conv = sext i8 %0 to i32, !dbg !31
-  store i32 %conv, i32* @c, align 4, !dbg !35, !tbaa !36
+  store i32 %conv, ptr @c, align 4, !dbg !35, !tbaa !36
   call void @llvm.dbg.value(metadata i32 -1372423381, metadata !30, metadata !DIExpression()), !dbg !38
   %call = call signext i8 @b(i32 6), !dbg !39
   %conv1 = sext i8 %call to i32, !dbg !39
   call void @llvm.dbg.value(metadata i32 %conv1, metadata !30, metadata !DIExpression()), !dbg !38
-  %1 = load i32, i32* @d, align 4, !dbg !40, !tbaa !36
+  %1 = load i32, ptr @d, align 4, !dbg !40, !tbaa !36
   %call2 = call i32 (...) @optimize_me_not(), !dbg !41
   ret i32 0, !dbg !42
 }

@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++14 -fcoroutines-ts -fcxx-exceptions -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -verify -fblocks -Wall -Wextra -Wno-error=unreachable-code
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fcxx-exceptions -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -verify -fblocks -Wall -Wextra -Wno-error=unreachable-code
 // expected-no-diagnostics
 
 #include "Inputs/std-coroutine.h"
 
-using std::experimental::suspend_always;
-using std::experimental::suspend_never;
+using std::suspend_always;
+using std::suspend_never;
 
 struct awaitable {
   bool await_ready();
-  void await_suspend(std::experimental::coroutine_handle<>); // FIXME: coroutine_handle
+  void await_suspend(std::coroutine_handle<>); // FIXME: coroutine_handle
   void await_resume();
 } a;
 
@@ -33,7 +33,7 @@ struct VoidTagReturnValue {
 };
 
 template <typename T1>
-struct std::experimental::coroutine_traits<void, T1> { using promise_type = promise_void_return_value; };
+struct std::coroutine_traits<void, T1> { using promise_type = promise_void_return_value; };
 
 VoidTagReturnValue test() {
   object x = {};

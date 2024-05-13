@@ -215,3 +215,27 @@ namespace PR48606 {
   }
   static_assert(h());
 }
+
+namespace GH62462 {
+
+class string {
+public:
+  char *mem;
+  constexpr string() {
+    this->mem = new char(1);
+  }
+  constexpr ~string() {
+    delete this->mem;
+  }
+  constexpr unsigned size() const { return 4; }
+};
+
+
+template <unsigned N>
+void test() {};
+
+void f() {
+    test<string().size()>();
+}
+
+}

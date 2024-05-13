@@ -18,20 +18,23 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -41,6 +44,7 @@ class AAResults;
 class AllocaInst;
 class AtomicCmpXchgInst;
 class AtomicRMWInst;
+class AssumptionCache;
 class BasicBlock;
 class BranchInst;
 class CallInst;
@@ -102,19 +106,53 @@ class SelectionDAGBuilder {
 
   /// Helper type for DanglingDebugInfoMap.
   class DanglingDebugInfo {
-    const DbgValueInst* DI = nullptr;
-    DebugLoc dl;
     unsigned SDNodeOrder = 0;
 
   public:
+    DILocalVariable *Variable;
+    DIExpression *Expression;
+    DebugLoc dl;
     DanglingDebugInfo() = default;
-    DanglingDebugInfo(const DbgValueInst *di, DebugLoc DL, unsigned SDNO)
-        : DI(di), dl(std::move(DL)), SDNodeOrder(SDNO) {}
+    DanglingDebugInfo(DILocalVariable *Var, DIExpression *Expr, DebugLoc DL,
+                      unsigned SDNO)
+        : SDNodeOrder(SDNO), Variable(Var), Expression(Expr),
+          dl(std::move(DL)) {}
 
-    const DbgValueInst* getDI() { return DI; }
-    DebugLoc getdl() { return dl; }
-    unsigned getSDNodeOrder() { return SDNodeOrder; }
+    DILocalVariable *getVariable() const { return Variable; }
+    DIExpression *getExpression() const { return Expression; }
+    DebugLoc getDebugLoc() const { return dl; }
+    unsigned getSDNodeOrder() const { return SDNodeOrder; }
+
+    /// Helper for printing DanglingDebugInfo. This hoop-jumping is to
+    /// store a Value pointer, so that we can print a whole DDI as one object.
+    /// Call SelectionDAGBuilder::printDDI instead of using directly.
+    struct Print {
+      Print(const Value *V, const DanglingDebugInfo &DDI) : V(V), DDI(DDI) {}
+      const Value *V;
+      const DanglingDebugInfo &DDI;
+      friend raw_ostream &operator<<(raw_ostream &OS,
+                                     const DanglingDebugInfo::Print &P) {
+        OS << "DDI(var=" << *P.DDI.getVariable();
+        if (P.V)
+          OS << ", val=" << *P.V;
+        else
+          OS << ", val=nullptr";
+
+        OS << ", expr=" << *P.DDI.getExpression()
+           << ", order=" << P.DDI.getSDNodeOrder()
+           << ", loc=" << P.DDI.getDebugLoc() << ")";
+        return OS;
+      }
+    };
   };
+
+  /// Returns an object that defines `raw_ostream &operator<<` for printing.
+  /// Usage example:
+  ////    errs() << printDDI(MyDanglingInfo) << " is dangling\n";
+  DanglingDebugInfo::Print printDDI(const Value *V,
+                                    const DanglingDebugInfo &DDI) {
+    return DanglingDebugInfo::Print(V, DDI);
+  }
 
   /// Helper type for DanglingDebugInfoMap.
   typedef std::vector<DanglingDebugInfo> DanglingDebugInfoVector;
@@ -122,6 +160,10 @@ class SelectionDAGBuilder {
   /// Keeps track of dbg_values for which we have not yet seen the referent.
   /// We defer handling these until we do see it.
   MapVector<const Value*, DanglingDebugInfoVector> DanglingDebugInfoMap;
+
+  /// Cache the module flag for whether we should use debug-info assignment
+  /// tracking.
+  bool AssignmentTrackingEnabled = false;
 
 public:
   /// Loads are not emitted to the program immediately.  We bunch them up and
@@ -158,12 +200,6 @@ private:
   /// create.
   unsigned SDNodeOrder;
 
-  /// Determine the rank by weight of CC in [First,Last]. If CC has more weight
-  /// than each cluster in the range, its rank is 0.
-  unsigned caseClusterRank(const SwitchCG::CaseCluster &CC,
-                           SwitchCG::CaseClusterIt First,
-                           SwitchCG::CaseClusterIt Last);
-
   /// Emit comparison and split W into two subtrees.
   void splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
                      const SwitchCG::SwitchWorkListItem &W, Value *Cond,
@@ -180,204 +216,6 @@ private:
                           SwitchCG::CaseClusterVector &Clusters,
                           BranchProbability &PeeledCaseProb);
 
-  /// A class which encapsulates all of the information needed to generate a
-  /// stack protector check and signals to isel via its state being initialized
-  /// that a stack protector needs to be generated.
-  ///
-  /// *NOTE* The following is a high level documentation of SelectionDAG Stack
-  /// Protector Generation. The reason that it is placed here is for a lack of
-  /// other good places to stick it.
-  ///
-  /// High Level Overview of SelectionDAG Stack Protector Generation:
-  ///
-  /// Previously, generation of stack protectors was done exclusively in the
-  /// pre-SelectionDAG Codegen LLVM IR Pass "Stack Protector". This necessitated
-  /// splitting basic blocks at the IR level to create the success/failure basic
-  /// blocks in the tail of the basic block in question. As a result of this,
-  /// calls that would have qualified for the sibling call optimization were no
-  /// longer eligible for optimization since said calls were no longer right in
-  /// the "tail position" (i.e. the immediate predecessor of a ReturnInst
-  /// instruction).
-  ///
-  /// Then it was noticed that since the sibling call optimization causes the
-  /// callee to reuse the caller's stack, if we could delay the generation of
-  /// the stack protector check until later in CodeGen after the sibling call
-  /// decision was made, we get both the tail call optimization and the stack
-  /// protector check!
-  ///
-  /// A few goals in solving this problem were:
-  ///
-  ///   1. Preserve the architecture independence of stack protector generation.
-  ///
-  ///   2. Preserve the normal IR level stack protector check for platforms like
-  ///      OpenBSD for which we support platform-specific stack protector
-  ///      generation.
-  ///
-  /// The main problem that guided the present solution is that one can not
-  /// solve this problem in an architecture independent manner at the IR level
-  /// only. This is because:
-  ///
-  ///   1. The decision on whether or not to perform a sibling call on certain
-  ///      platforms (for instance i386) requires lower level information
-  ///      related to available registers that can not be known at the IR level.
-  ///
-  ///   2. Even if the previous point were not true, the decision on whether to
-  ///      perform a tail call is done in LowerCallTo in SelectionDAG which
-  ///      occurs after the Stack Protector Pass. As a result, one would need to
-  ///      put the relevant callinst into the stack protector check success
-  ///      basic block (where the return inst is placed) and then move it back
-  ///      later at SelectionDAG/MI time before the stack protector check if the
-  ///      tail call optimization failed. The MI level option was nixed
-  ///      immediately since it would require platform-specific pattern
-  ///      matching. The SelectionDAG level option was nixed because
-  ///      SelectionDAG only processes one IR level basic block at a time
-  ///      implying one could not create a DAG Combine to move the callinst.
-  ///
-  /// To get around this problem a few things were realized:
-  ///
-  ///   1. While one can not handle multiple IR level basic blocks at the
-  ///      SelectionDAG Level, one can generate multiple machine basic blocks
-  ///      for one IR level basic block. This is how we handle bit tests and
-  ///      switches.
-  ///
-  ///   2. At the MI level, tail calls are represented via a special return
-  ///      MIInst called "tcreturn". Thus if we know the basic block in which we
-  ///      wish to insert the stack protector check, we get the correct behavior
-  ///      by always inserting the stack protector check right before the return
-  ///      statement. This is a "magical transformation" since no matter where
-  ///      the stack protector check intrinsic is, we always insert the stack
-  ///      protector check code at the end of the BB.
-  ///
-  /// Given the aforementioned constraints, the following solution was devised:
-  ///
-  ///   1. On platforms that do not support SelectionDAG stack protector check
-  ///      generation, allow for the normal IR level stack protector check
-  ///      generation to continue.
-  ///
-  ///   2. On platforms that do support SelectionDAG stack protector check
-  ///      generation:
-  ///
-  ///     a. Use the IR level stack protector pass to decide if a stack
-  ///        protector is required/which BB we insert the stack protector check
-  ///        in by reusing the logic already therein. If we wish to generate a
-  ///        stack protector check in a basic block, we place a special IR
-  ///        intrinsic called llvm.stackprotectorcheck right before the BB's
-  ///        returninst or if there is a callinst that could potentially be
-  ///        sibling call optimized, before the call inst.
-  ///
-  ///     b. Then when a BB with said intrinsic is processed, we codegen the BB
-  ///        normally via SelectBasicBlock. In said process, when we visit the
-  ///        stack protector check, we do not actually emit anything into the
-  ///        BB. Instead, we just initialize the stack protector descriptor
-  ///        class (which involves stashing information/creating the success
-  ///        mbbb and the failure mbb if we have not created one for this
-  ///        function yet) and export the guard variable that we are going to
-  ///        compare.
-  ///
-  ///     c. After we finish selecting the basic block, in FinishBasicBlock if
-  ///        the StackProtectorDescriptor attached to the SelectionDAGBuilder is
-  ///        initialized, we produce the validation code with one of these
-  ///        techniques:
-  ///          1) with a call to a guard check function
-  ///          2) with inlined instrumentation
-  ///
-  ///        1) We insert a call to the check function before the terminator.
-  ///
-  ///        2) We first find a splice point in the parent basic block
-  ///        before the terminator and then splice the terminator of said basic
-  ///        block into the success basic block. Then we code-gen a new tail for
-  ///        the parent basic block consisting of the two loads, the comparison,
-  ///        and finally two branches to the success/failure basic blocks. We
-  ///        conclude by code-gening the failure basic block if we have not
-  ///        code-gened it already (all stack protector checks we generate in
-  ///        the same function, use the same failure basic block).
-  class StackProtectorDescriptor {
-  public:
-    StackProtectorDescriptor() = default;
-
-    /// Returns true if all fields of the stack protector descriptor are
-    /// initialized implying that we should/are ready to emit a stack protector.
-    bool shouldEmitStackProtector() const {
-      return ParentMBB && SuccessMBB && FailureMBB;
-    }
-
-    bool shouldEmitFunctionBasedCheckStackProtector() const {
-      return ParentMBB && !SuccessMBB && !FailureMBB;
-    }
-
-    /// Initialize the stack protector descriptor structure for a new basic
-    /// block.
-    void initialize(const BasicBlock *BB, MachineBasicBlock *MBB,
-                    bool FunctionBasedInstrumentation) {
-      // Make sure we are not initialized yet.
-      assert(!shouldEmitStackProtector() && "Stack Protector Descriptor is "
-             "already initialized!");
-      ParentMBB = MBB;
-      if (!FunctionBasedInstrumentation) {
-        SuccessMBB = AddSuccessorMBB(BB, MBB, /* IsLikely */ true);
-        FailureMBB = AddSuccessorMBB(BB, MBB, /* IsLikely */ false, FailureMBB);
-      }
-    }
-
-    /// Reset state that changes when we handle different basic blocks.
-    ///
-    /// This currently includes:
-    ///
-    /// 1. The specific basic block we are generating a
-    /// stack protector for (ParentMBB).
-    ///
-    /// 2. The successor machine basic block that will contain the tail of
-    /// parent mbb after we create the stack protector check (SuccessMBB). This
-    /// BB is visited only on stack protector check success.
-    void resetPerBBState() {
-      ParentMBB = nullptr;
-      SuccessMBB = nullptr;
-    }
-
-    /// Reset state that only changes when we switch functions.
-    ///
-    /// This currently includes:
-    ///
-    /// 1. FailureMBB since we reuse the failure code path for all stack
-    /// protector checks created in an individual function.
-    ///
-    /// 2.The guard variable since the guard variable we are checking against is
-    /// always the same.
-    void resetPerFunctionState() {
-      FailureMBB = nullptr;
-    }
-
-    MachineBasicBlock *getParentMBB() { return ParentMBB; }
-    MachineBasicBlock *getSuccessMBB() { return SuccessMBB; }
-    MachineBasicBlock *getFailureMBB() { return FailureMBB; }
-
-  private:
-    /// The basic block for which we are generating the stack protector.
-    ///
-    /// As a result of stack protector generation, we will splice the
-    /// terminators of this basic block into the successor mbb SuccessMBB and
-    /// replace it with a compare/branch to the successor mbbs
-    /// SuccessMBB/FailureMBB depending on whether or not the stack protector
-    /// was violated.
-    MachineBasicBlock *ParentMBB = nullptr;
-
-    /// A basic block visited on stack protector check success that contains the
-    /// terminators of ParentMBB.
-    MachineBasicBlock *SuccessMBB = nullptr;
-
-    /// This basic block visited on stack protector check failure that will
-    /// contain a call to __stack_chk_fail().
-    MachineBasicBlock *FailureMBB = nullptr;
-
-    /// Add a successor machine basic block to ParentMBB. If the successor mbb
-    /// has not been created yet (i.e. if SuccMBB = 0), then the machine basic
-    /// block will be created. Assign a large weight if IsLikely is true.
-    MachineBasicBlock *AddSuccessorMBB(const BasicBlock *BB,
-                                       MachineBasicBlock *ParentMBB,
-                                       bool IsLikely,
-                                       MachineBasicBlock *SuccMBB = nullptr);
-  };
-
 private:
   const TargetMachine &TM;
 
@@ -387,23 +225,23 @@ public:
   static const unsigned LowestSDNodeOrder = 1;
 
   SelectionDAG &DAG;
-  const DataLayout *DL = nullptr;
   AAResults *AA = nullptr;
-  const TargetLibraryInfo *LibInfo;
+  AssumptionCache *AC = nullptr;
+  const TargetLibraryInfo *LibInfo = nullptr;
 
   class SDAGSwitchLowering : public SwitchCG::SwitchLowering {
   public:
     SDAGSwitchLowering(SelectionDAGBuilder *sdb, FunctionLoweringInfo &funcinfo)
         : SwitchCG::SwitchLowering(funcinfo), SDB(sdb) {}
 
-    virtual void addSuccessorWithProb(
+    void addSuccessorWithProb(
         MachineBasicBlock *Src, MachineBasicBlock *Dst,
         BranchProbability Prob = BranchProbability::getUnknown()) override {
       SDB->addSuccessorWithProb(Src, Dst, Prob);
     }
 
   private:
-    SelectionDAGBuilder *SDB;
+    SelectionDAGBuilder *SDB = nullptr;
   };
 
   // Data related to deferred switch lowerings. Used to construct additional
@@ -425,7 +263,7 @@ public:
   SwiftErrorValueTracking &SwiftError;
 
   /// Garbage collection metadata for the function.
-  GCFunctionInfo *GFI;
+  GCFunctionInfo *GFI = nullptr;
 
   /// Map a landing pad to the call site indexes.
   DenseMap<MachineBasicBlock *, SmallVector<unsigned, 4>> LPadToCallSiteMap;
@@ -434,15 +272,15 @@ public:
   /// a tail call. In this case, no subsequent DAG nodes should be created.
   bool HasTailCall = false;
 
-  LLVMContext *Context;
+  LLVMContext *Context = nullptr;
 
   SelectionDAGBuilder(SelectionDAG &dag, FunctionLoweringInfo &funcinfo,
-                      SwiftErrorValueTracking &swifterror, CodeGenOpt::Level ol)
+                      SwiftErrorValueTracking &swifterror, CodeGenOptLevel ol)
       : SDNodeOrder(LowestSDNodeOrder), TM(dag.getTarget()), DAG(dag),
-        SL(std::make_unique<SDAGSwitchLowering>(this, funcinfo)), FuncInfo(funcinfo),
-        SwiftError(swifterror) {}
+        SL(std::make_unique<SDAGSwitchLowering>(this, funcinfo)),
+        FuncInfo(funcinfo), SwiftError(swifterror) {}
 
-  void init(GCFunctionInfo *gfi, AAResults *AA,
+  void init(GCFunctionInfo *gfi, AAResults *AA, AssumptionCache *AC,
             const TargetLibraryInfo *li);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
@@ -482,9 +320,11 @@ public:
     return CurInst ? CurInst->getDebugLoc() : DebugLoc();
   }
 
-  void CopyValueToVirtualRegister(const Value *V, unsigned Reg);
+  void CopyValueToVirtualRegister(const Value *V, unsigned Reg,
+                                  ISD::NodeType ExtendType = ISD::ANY_EXTEND);
 
   void visit(const Instruction &I);
+  void visitDbgInfo(const Instruction &I);
 
   void visit(unsigned Opcode, const User &I);
 
@@ -493,8 +333,9 @@ public:
   SDValue getCopyFromRegs(const Value *V, Type *Ty);
 
   /// Register a dbg_value which relies on a Value which we have not yet seen.
-  void addDanglingDebugInfo(const DbgValueInst *DI, DebugLoc DL,
-                            unsigned Order);
+  void addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
+                            DILocalVariable *Var, DIExpression *Expr,
+                            bool IsVariadic, DebugLoc DL, unsigned Order);
 
   /// If we have dangling debug info that describes \p Variable, or an
   /// overlapping part of variable considering the \p Expr, then this method
@@ -509,13 +350,20 @@ public:
   /// For the given dangling debuginfo record, perform last-ditch efforts to
   /// resolve the debuginfo to something that is represented in this DAG. If
   /// this cannot be done, produce an Undef debug value record.
-  void salvageUnresolvedDbgValue(DanglingDebugInfo &DDI);
+  void salvageUnresolvedDbgValue(const Value *V, DanglingDebugInfo &DDI);
 
   /// For a given list of Values, attempt to create and record a SDDbgValue in
   /// the SelectionDAG.
   bool handleDebugValue(ArrayRef<const Value *> Values, DILocalVariable *Var,
-                        DIExpression *Expr, DebugLoc CurDL, DebugLoc InstDL,
-                        unsigned Order, bool IsVariadic);
+                        DIExpression *Expr, DebugLoc DbgLoc, unsigned Order,
+                        bool IsVariadic);
+
+  /// Create a record for a kill location debug intrinsic.
+  void handleKillDebugValue(DILocalVariable *Var, DIExpression *Expr,
+                            DebugLoc DbgLoc, unsigned Order);
+
+  void handleDebugDeclare(Value *Address, DILocalVariable *Variable,
+                          DIExpression *Expression, DebugLoc DL);
 
   /// Evict any dangling debug information, attempting to salvage it first.
   void resolveOrClearDbgInfo();
@@ -536,6 +384,11 @@ public:
     assert(!N.getNode() && "Already set a value for this node!");
     N = NewN;
   }
+
+  bool shouldKeepJumpConditionsTogether(
+      const FunctionLoweringInfo &FuncInfo, const BranchInst &I,
+      Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
+      TargetLoweringBase::CondMergingParams Params) const;
 
   void FindMergedConditions(const Value *Cond, MachineBasicBlock *TBB,
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
@@ -563,7 +416,8 @@ public:
   void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
                                 const CallBase *Call, unsigned ArgIdx,
                                 unsigned NumArgs, SDValue Callee,
-                                Type *ReturnTy, bool IsPatchPoint);
+                                Type *ReturnTy, AttributeSet RetAttrs,
+                                bool IsPatchPoint);
 
   std::pair<SDValue, SDValue>
   lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
@@ -595,7 +449,7 @@ public:
     ArrayRef<const Use> GCTransitionArgs;
 
     /// The ID that the resulting STATEPOINT instruction has to report.
-    unsigned ID = -1;
+    uint64_t ID = -1;
 
     /// Information regarding the underlying call instruction.
     TargetLowering::CallLoweringInfo CLI;
@@ -679,6 +533,7 @@ private:
   // These all get lowered before this pass.
   void visitInvoke(const InvokeInst &I);
   void visitCallBr(const CallBrInst &I);
+  void visitCallBrLandingPad(const CallInst &I);
   void visitResume(const ResumeInst &I);
 
   void visitUnary(const User &I, unsigned Opcode);
@@ -725,8 +580,8 @@ private:
   void visitInsertElement(const User &I);
   void visitShuffleVector(const User &I);
 
-  void visitExtractValue(const User &I);
-  void visitInsertValue(const User &I);
+  void visitExtractValue(const ExtractValueInst &I);
+  void visitInsertValue(const InsertValueInst &I);
   void visitLandingPad(const LandingPadInst &LP);
 
   void visitGetElementPtr(const User &I);
@@ -761,9 +616,27 @@ private:
 
   void visitInlineAsm(const CallBase &Call,
                       const BasicBlock *EHPadBB = nullptr);
+
+  bool visitEntryValueDbgValue(ArrayRef<const Value *> Values,
+                               DILocalVariable *Variable, DIExpression *Expr,
+                               DebugLoc DbgLoc);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
+  void visitConvergenceControl(const CallInst &I, unsigned Intrinsic);
+  void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
+                   const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPStore(const VPIntrinsic &VPIntrin,
+                    const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPGather(const VPIntrinsic &VPIntrin, EVT VT,
+                     const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPScatter(const VPIntrinsic &VPIntrin,
+                      const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPStridedLoad(const VPIntrinsic &VPIntrin, EVT VT,
+                          const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPStridedStore(const VPIntrinsic &VPIntrin,
+                           const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPCmp(const VPCmpIntrinsic &VPIntrin);
   void visitVectorPredicationIntrinsic(const VPIntrinsic &VPIntrin);
 
   void visitVAStart(const CallInst &I);
@@ -780,6 +653,8 @@ private:
   void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
   void visitVectorReverse(const CallInst &I);
   void visitVectorSplice(const CallInst &I);
+  void visitVectorInterleave(const CallInst &I);
+  void visitVectorDeinterleave(const CallInst &I);
   void visitStepVector(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {
@@ -796,12 +671,21 @@ private:
 
   void emitInlineAsmError(const CallBase &Call, const Twine &Message);
 
+  /// An enum that states to emit func argument dbg value the kind of intrinsic
+  /// it originally had. This controls the internal behavior of
+  /// EmitFuncArgumentDbgValue.
+  enum class FuncArgumentDbgValueKind {
+    Value,   // This was originally a llvm.dbg.value.
+    Declare, // This was originally a llvm.dbg.declare.
+  };
+
   /// If V is an function argument then create corresponding DBG_VALUE machine
   /// instruction for it now. At the end of instruction selection, they will be
   /// inserted to the entry BB.
   bool EmitFuncArgumentDbgValue(const Value *V, DILocalVariable *Variable,
                                 DIExpression *Expr, DILocation *DL,
-                                bool IsDbgDeclare, const SDValue &N);
+                                FuncArgumentDbgValueKind Kind,
+                                const SDValue &N);
 
   /// Return the next block after MBB, or nullptr if there is none.
   MachineBasicBlock *NextBlock(MachineBasicBlock *MBB);
@@ -858,18 +742,16 @@ struct RegsForValue {
 
   /// Records if this value needs to be treated in an ABI dependant manner,
   /// different to normal type legalization.
-  Optional<CallingConv::ID> CallConv;
+  std::optional<CallingConv::ID> CallConv;
 
   RegsForValue() = default;
   RegsForValue(const SmallVector<unsigned, 4> &regs, MVT regvt, EVT valuevt,
-               Optional<CallingConv::ID> CC = None);
+               std::optional<CallingConv::ID> CC = std::nullopt);
   RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
                const DataLayout &DL, unsigned Reg, Type *Ty,
-               Optional<CallingConv::ID> CC);
+               std::optional<CallingConv::ID> CC);
 
-  bool isABIMangled() const {
-    return CallConv.hasValue();
-  }
+  bool isABIMangled() const { return CallConv.has_value(); }
 
   /// Add the specified values to this one.
   void append(const RegsForValue &RHS) {
@@ -884,7 +766,7 @@ struct RegsForValue {
   /// updates them for the output Chain/Flag. If the Flag pointer is NULL, no
   /// flag is used.
   SDValue getCopyFromRegs(SelectionDAG &DAG, FunctionLoweringInfo &FuncInfo,
-                          const SDLoc &dl, SDValue &Chain, SDValue *Flag,
+                          const SDLoc &dl, SDValue &Chain, SDValue *Glue,
                           const Value *V = nullptr) const;
 
   /// Emit a series of CopyToReg nodes that copies the specified value into the
@@ -893,13 +775,13 @@ struct RegsForValue {
   /// flag is used. If V is not nullptr, then it is used in printing better
   /// diagnostic messages on error.
   void getCopyToRegs(SDValue Val, SelectionDAG &DAG, const SDLoc &dl,
-                     SDValue &Chain, SDValue *Flag, const Value *V = nullptr,
+                     SDValue &Chain, SDValue *Glue, const Value *V = nullptr,
                      ISD::NodeType PreferredExtendType = ISD::ANY_EXTEND) const;
 
   /// Add this value to the specified inlineasm node operand list. This adds the
   /// code marker, matching input operand index (if applicable), and includes
   /// the number of values added into it.
-  void AddInlineAsmOperands(unsigned Code, bool HasMatching,
+  void AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
                             unsigned MatchingIdx, const SDLoc &dl,
                             SelectionDAG &DAG, std::vector<SDValue> &Ops) const;
 

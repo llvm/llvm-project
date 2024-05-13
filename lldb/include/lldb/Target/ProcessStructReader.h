@@ -14,10 +14,11 @@
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Status.h"
+
+#include "llvm/ADT/StringMap.h"
 
 #include <initializer_list>
 #include <map>
@@ -32,14 +33,15 @@ protected:
     size_t size;
   };
 
-  std::map<ConstString, FieldImpl> m_fields;
+  llvm::StringMap<FieldImpl> m_fields;
   DataExtractor m_data;
   lldb::ByteOrder m_byte_order;
   size_t m_addr_byte_size;
 
 public:
   ProcessStructReader(Process *process, lldb::addr_t base_addr,
-                      CompilerType struct_type) {
+                      CompilerType struct_type)
+      : m_byte_order(lldb::eByteOrderInvalid), m_addr_byte_size(0) {
     if (!process)
       return;
     if (base_addr == 0 || base_addr == LLDB_INVALID_ADDRESS)
@@ -61,15 +63,14 @@ public:
       // no support for things larger than a uint64_t (yet)
       if (!size || *size > 8)
         return;
-      ConstString const_name = ConstString(name.c_str());
       size_t byte_index = static_cast<size_t>(bit_offset / 8);
-      m_fields[const_name] =
-          FieldImpl{field_type, byte_index, static_cast<size_t>(*size)};
+      m_fields.insert({name, FieldImpl{field_type, byte_index,
+                                       static_cast<size_t>(*size)}});
     }
     auto total_size = struct_type.GetByteSize(nullptr);
     if (!total_size)
       return;
-    lldb::DataBufferSP buffer_sp(new DataBufferHeap(*total_size, 0));
+    lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(*total_size, 0));
     Status error;
     process->ReadMemoryFromInferior(base_addr, buffer_sp->GetBytes(),
                                     *total_size, error);
@@ -79,7 +80,7 @@ public:
   }
 
   template <typename RetType>
-  RetType GetField(ConstString name, RetType fail_value = RetType()) {
+  RetType GetField(llvm::StringRef name, RetType fail_value = RetType()) {
     auto iter = m_fields.find(name), end = m_fields.end();
     if (iter == end)
       return fail_value;
@@ -90,13 +91,6 @@ public:
     if (offset + size > m_data.GetByteSize())
       return fail_value;
     return (RetType)(m_data.GetMaxU64(&offset, size));
-  }
-
-  size_t GetOffsetOf(ConstString name, size_t fail_value = SIZE_MAX) {
-    auto iter = m_fields.find(name), end = m_fields.end();
-    if (iter == end)
-      return fail_value;
-    return iter->second.offset;
   }
 };
 }

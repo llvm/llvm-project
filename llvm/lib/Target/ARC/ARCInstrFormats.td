@@ -327,6 +327,54 @@ class F32_DOP_RU6<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
   let Inst{5-0} = A;
 }
 
+// 1-register, unsigned 6-bit, immediate Dual Operand instruction with
+// condition code.
+// |26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0|
+// |B[2-0]  | 1| 1|            subop| F|B[5-3]  |U6           |1|cc       |
+class F32_DOP_CC_RU6<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
+                     string asmstr, list<dag> pattern> :
+  InstARC<4, outs, ins, asmstr, pattern> {
+
+  bits<5> cc;
+  bits<6> U6;
+  bits<6> B;
+
+  let Inst{31-27} = major;
+  let Inst{26-24} = B{2-0};
+  let Inst{23-22} = 0b11;
+  let Inst{21-16} = subop;
+  let Inst{15} = F;
+  let Inst{14-12} = B{5-3};
+  let Inst{11-6} = U6;
+  let Inst{5} = 1;
+  let Inst{4-0} = cc;
+
+  let DecoderMethod = "DecodeCCRU6Instruction";
+}
+
+// 2-register, unsigned 6-bit immediate Dual Operand instruction with
+// condition code. This instruction uses B as the first 2 operands
+// (i.e, add.cc B, B, u6).
+// |26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0|
+// |B[2-0]  | 1| 1|            subop| F|B[5-3]  |U6           |1|cc       |
+class F32_DOP_CC_RRU6<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
+                      string asmstr, list<dag> pattern> :
+  InstARC<4, outs, ins, asmstr, pattern> {
+  bits<5> cc;
+  bits<6> U6;
+  bits<6> B;
+
+  let Inst{31-27} = major;
+  let Inst{26-24} = B{2-0};
+  let Inst{23-22} = 0b11;
+  let Inst{21-16} = subop;
+  let Inst{15} = F;
+  let Inst{14-12} = B{5-3};
+  let Inst{11-6} = U6;
+  let Inst{5} = 1;
+  let Inst{4-0} = cc;
+}
+
 // 2-register, signed 12-bit immediate Dual Operand instruction.
 // This instruction uses B as the first 2 operands (i.e., add B, B, -128).
 // |26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0|
@@ -345,6 +393,50 @@ class F32_DOP_RS12<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
   let Inst{14-12} = B{5-3};
   let Inst{11-6} = S12{5-0};
   let Inst{5-0} = S12{11-6};
+}
+
+// 1-register, signed 12-bit immediate Dual Operand instruction.
+// This instruction uses B as the first operand (i.e., lr B, [%count0]).
+// |26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0|
+// |B[2-0]  | 1| 0|            subop| F|B[5-3]  |S12[5-0]     |S12[11-6]  |
+class F32_SOP_RS12<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
+                   string asmstr, list<dag> pattern> :
+  InstARC<4, outs, ins, asmstr, pattern> {
+  bits<6> B;
+  bits<12> S12;
+
+  let Inst{31-27} = major;
+  let Inst{26-24} = B{2-0};
+  let Inst{23-22} = 0b10;
+  let Inst{21-16} = subop;
+  let Inst{15} = F;
+  let Inst{14-12} = B{5-3};
+  let Inst{11-6} = S12{5-0};
+  let Inst{5-0} = S12{11-6};
+
+  let DecoderMethod = "DecodeSOPwithRS12";
+}
+
+// 1-register, unsigned 6-bit immediate Dual Operand instruction.
+// This instruction uses B as the first operand.
+// |26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0|
+// |B[2-0]  | 0| 1|            subop| F|B[5-3]  |U6           |0|0|0|0|0|0|
+class F32_SOP_RU6<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
+                  string asmstr, list<dag> pattern> :
+  InstARC<4, outs, ins, asmstr, pattern> {
+  bits<6> B;
+  bits<6> U6;
+
+  let Inst{31-27} = major;
+  let Inst{26-24} = B{2-0};
+  let Inst{23-22} = 0b01;
+  let Inst{21-16} = subop;
+  let Inst{15} = F;
+  let Inst{14-12} = B{5-3};
+  let Inst{11-6} = U6;
+  let Inst{5-0} = 0;
+
+  let DecoderMethod = "DecodeSOPwithRU6";
 }
 
 // 2-register, 32-bit immediate (LImm) Dual Operand instruction.
@@ -872,12 +964,6 @@ class F16_OP_U7<bit i, string asmstr> :
 }
 
 // Special types for different instruction operands.
-def cmovpred : Operand<i32>, PredicateOp,
-               ComplexPattern<i32, 2, "SelectCMOVPred"> {
-  let MIOperandInfo = (ops i32imm, i32imm);
-  let PrintMethod = "printPredicateOperand";
-}
-
 def ccond : Operand<i32> {
   let MIOperandInfo = (ops i32imm);
   let PrintMethod = "printPredicateOperand";

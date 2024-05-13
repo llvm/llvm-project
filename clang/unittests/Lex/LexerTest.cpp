@@ -18,13 +18,19 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
+#include <string>
 #include <vector>
 
 namespace {
@@ -65,16 +71,10 @@ protected:
 
   std::vector<Token> Lex(StringRef Source) {
     TrivialModuleLoader ModLoader;
-    auto PP = CreatePP(Source, ModLoader);
+    PP = CreatePP(Source, ModLoader);
 
     std::vector<Token> toks;
-    while (1) {
-      Token tok;
-      PP->Lex(tok);
-      if (tok.is(tok::eof))
-        break;
-      toks.push_back(tok);
-    }
+    PP->LexTokensUntilEOF(&toks);
 
     return toks;
   }
@@ -109,6 +109,7 @@ protected:
   LangOptions LangOpts;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
+  std::unique_ptr<Preprocessor> PP;
 };
 
 TEST_F(LexerTest, GetSourceTextExpandsToMaximumInMacroArgument) {
@@ -264,12 +265,14 @@ TEST_F(LexerTest, GetSourceTextExpandsRecursively) {
 
 TEST_F(LexerTest, LexAPI) {
   std::vector<tok::TokenKind> ExpectedTokens;
+  // Line 1 (after the #defines)
   ExpectedTokens.push_back(tok::l_square);
   ExpectedTokens.push_back(tok::identifier);
   ExpectedTokens.push_back(tok::r_square);
   ExpectedTokens.push_back(tok::l_square);
   ExpectedTokens.push_back(tok::identifier);
   ExpectedTokens.push_back(tok::r_square);
+  // Line 2
   ExpectedTokens.push_back(tok::identifier);
   ExpectedTokens.push_back(tok::identifier);
   ExpectedTokens.push_back(tok::identifier);
@@ -355,6 +358,65 @@ TEST_F(LexerTest, LexAPI) {
   EXPECT_EQ("INN", Lexer::getImmediateMacroName(idLoc2, SourceMgr, LangOpts));
   EXPECT_EQ("NOF2", Lexer::getImmediateMacroName(idLoc3, SourceMgr, LangOpts));
   EXPECT_EQ("N", Lexer::getImmediateMacroName(idLoc4, SourceMgr, LangOpts));
+}
+
+TEST_F(LexerTest, HandlesSplitTokens) {
+  std::vector<tok::TokenKind> ExpectedTokens;
+  // Line 1 (after the #defines)
+  ExpectedTokens.push_back(tok::identifier);
+  ExpectedTokens.push_back(tok::less);
+  ExpectedTokens.push_back(tok::identifier);
+  ExpectedTokens.push_back(tok::less);
+  ExpectedTokens.push_back(tok::greatergreater);
+  // Line 2
+  ExpectedTokens.push_back(tok::identifier);
+  ExpectedTokens.push_back(tok::less);
+  ExpectedTokens.push_back(tok::identifier);
+  ExpectedTokens.push_back(tok::less);
+  ExpectedTokens.push_back(tok::greatergreater);
+
+  std::vector<Token> toks = CheckLex("#define TY ty\n"
+                                     "#define RANGLE ty<ty<>>\n"
+                                     "TY<ty<>>\n"
+                                     "RANGLE",
+                                     ExpectedTokens);
+
+  SourceLocation outerTyLoc = toks[0].getLocation();
+  SourceLocation innerTyLoc = toks[2].getLocation();
+  SourceLocation gtgtLoc = toks[4].getLocation();
+  // Split the token to simulate the action of the parser and force creation of
+  // an `ExpansionTokenRange`.
+  SourceLocation rangleLoc = PP->SplitToken(gtgtLoc, 1);
+
+  // Verify that it only captures the first greater-then and not the second one.
+  CharSourceRange range = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(innerTyLoc, rangleLoc), SourceMgr,
+      LangOpts);
+  EXPECT_TRUE(range.isCharRange());
+  EXPECT_EQ(range.getAsRange(),
+            SourceRange(innerTyLoc, gtgtLoc.getLocWithOffset(1)));
+
+  // Verify case where range begins in a macro expansion.
+  range = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(outerTyLoc, rangleLoc), SourceMgr,
+      LangOpts);
+  EXPECT_TRUE(range.isCharRange());
+  EXPECT_EQ(range.getAsRange(),
+            SourceRange(SourceMgr.getExpansionLoc(outerTyLoc),
+                        gtgtLoc.getLocWithOffset(1)));
+
+  SourceLocation macroInnerTyLoc = toks[7].getLocation();
+  SourceLocation macroGtgtLoc = toks[9].getLocation();
+  // Split the token to simulate the action of the parser and force creation of
+  // an `ExpansionTokenRange`.
+  SourceLocation macroRAngleLoc = PP->SplitToken(macroGtgtLoc, 1);
+
+  // Verify that it fails (because it only captures the first greater-then and
+  // not the second one, so it doesn't span the entire macro expansion).
+  range = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(macroInnerTyLoc, macroRAngleLoc),
+      SourceMgr, LangOpts);
+  EXPECT_TRUE(range.isInvalid());
 }
 
 TEST_F(LexerTest, DontMergeMacroArgsFromDifferentMacroFiles) {
@@ -547,7 +609,7 @@ TEST_F(LexerTest, FindNextToken) {
       SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
   while (true) {
     auto T = Lexer::findNextToken(Loc, SourceMgr, LangOpts);
-    ASSERT_TRUE(T.hasValue());
+    ASSERT_TRUE(T);
     if (T->is(tok::eof))
       break;
     GeneratedByNextToken.push_back(getSourceText(*T, *T));
@@ -560,13 +622,65 @@ TEST_F(LexerTest, FindNextToken) {
 TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
   TrivialModuleLoader ModLoader;
   auto PP = CreatePP("", ModLoader);
-  while (1) {
-    Token tok;
-    PP->Lex(tok);
-    if (tok.is(tok::eof))
-      break;
-  }
+  PP->LexTokensUntilEOF();
   EXPECT_EQ(SourceMgr.getNumCreatedFIDsForFileID(PP->getPredefinesFileID()),
             1U);
 }
+
+TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
+  const llvm::StringLiteral Source = R"cpp(
+  // First line comment.
+  //* Second line comment which is ambigious.
+  ; // Have a non-comment token to make sure something is lexed.
+  )cpp";
+  LangOpts.LineComment = false;
+  auto Toks = Lex(Source);
+  auto &SM = PP->getSourceManager();
+  auto SrcBuffer = SM.getBufferData(SM.getMainFileID());
+  Lexer L(SM.getLocForStartOfFile(SM.getMainFileID()), PP->getLangOpts(),
+          SrcBuffer.data(), SrcBuffer.data(),
+          SrcBuffer.data() + SrcBuffer.size());
+
+  auto ToksView = llvm::ArrayRef(Toks);
+  clang::Token T;
+  EXPECT_FALSE(ToksView.empty());
+  while (!L.LexFromRawLexer(T)) {
+    ASSERT_TRUE(!ToksView.empty());
+    EXPECT_EQ(T.getKind(), ToksView.front().getKind());
+    ToksView = ToksView.drop_front();
+  }
+  EXPECT_TRUE(ToksView.empty());
+}
+
+TEST(LexerPreambleTest, PreambleBounds) {
+  std::vector<std::string> Cases = {
+      R"cc([[
+        #include <foo>
+        ]]int bar;
+      )cc",
+      R"cc([[
+        #include <foo>
+      ]])cc",
+      R"cc([[
+        // leading comment
+        #include <foo>
+        ]]// trailing comment
+        int bar;
+      )cc",
+      R"cc([[
+        module;
+        #include <foo>
+        ]]module bar;
+        int x;
+      )cc",
+  };
+  for (const auto& Case : Cases) {
+    llvm::Annotations A(Case);
+    clang::LangOptions LangOpts;
+    LangOpts.CPlusPlusModules = true;
+    auto Bounds = Lexer::ComputePreamble(A.code(), LangOpts);
+    EXPECT_EQ(Bounds.Size, A.range().End) << Case;
+  }
+}
+
 } // anonymous namespace

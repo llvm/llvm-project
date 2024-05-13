@@ -31,6 +31,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-dwarfdump
   llvm-nm
   llvm-objdump
+  llvm-pdbutil
   llvm-ranlib
   llvm-readobj
   llvm-size

@@ -1,0 +1,6 @@
+## Test extract xcoff object file from AIX big archive.
+# UNSUPPORTED: target={{.*}}-zos{{.*}}
+# RUN: rm -rf %t && mkdir -p %t/extracted/ && cd %t/extracted/
+# RUN: llvm-ar x %p/Inputs/aix-big-archive.a
+# RUN: echo "content_of_evenlen" > evenlen_1
+# RUN: cmp evenlen evenlen_1

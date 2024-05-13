@@ -1,8 +1,9 @@
-; RUN: opt -annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
+; RUN: opt -passes=annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
 ; RUN: cat %t.opt.yaml | FileCheck -check-prefix=YAML %s
 
 ; Emit a remark that reports a store.
-define void @store(i32* %dst) {
+define void @store(ptr %dst) {
 ; CHECK:      Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes.
 ; YAML-LABEL: --- !Missed
@@ -22,12 +23,12 @@ define void @store(i32* %dst) {
 ; YAML-NEXT:   - StoreAtomic:       'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT: ...
-  store i32 0, i32* %dst, !annotation !0, !dbg !DILocation(scope: !4)
+  store i32 0, ptr %dst, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
 ; Emit a remark that reports a volatile store.
-define void @volatile_store(i32* %dst) {
+define void @volatile_store(ptr %dst) {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes. Volatile: true.
 ; YAML-LABEL: --- !Missed
@@ -47,12 +48,12 @@ define void @volatile_store(i32* %dst) {
 ; YAML-NEXT:   - StoreAtomic:       'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT: ...
-  store volatile i32 0, i32* %dst, !annotation !0, !dbg !DILocation(scope: !4)
+  store volatile i32 0, ptr %dst, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
 ; Emit a remark that reports an atomic store.
-define void @atomic_store(i32* %dst) {
+define void @atomic_store(ptr %dst) {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes. Atomic: true.
 ; YAML-LABEL: --- !Missed
@@ -72,7 +73,7 @@ define void @atomic_store(i32* %dst) {
 ; YAML-NEXT:   - StoreVolatile:       'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT: ...
-  store atomic i32 0, i32* %dst unordered, align 4, !annotation !0, !dbg !DILocation(scope: !4)
+  store atomic i32 0, ptr %dst unordered, align 4, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
@@ -105,7 +106,7 @@ define void @store_alloca() {
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT: ...
   %dst = alloca i32
-  store i32 0, i32* %dst, !annotation !0, !dbg !DILocation(scope: !4)
+  store i32 0, ptr %dst, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
@@ -115,8 +116,7 @@ define void @store_alloca_gep() {
 ; CHECK-NEXT: Store size: 4 bytes.
 ; CHECK-NEXT: Variables: dst (4 bytes).
   %dst = alloca i32
-  %gep = getelementptr i32, i32* %dst, i32 0
-  store i32 0, i32* %gep, !annotation !0, !dbg !DILocation(scope: !4)
+  store i32 0, ptr %dst, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
@@ -126,10 +126,9 @@ define void @store_alloca_gep_inttoptr() {
 ; CHECK-NEXT: Store size: 4 bytes.
 ; CHECK-NEXT: Variables: dst (4 bytes).
   %dst = alloca i32
-  %gep = getelementptr i32, i32* %dst, i32 0
-  %p2i = ptrtoint i32* %gep to i64
-  %i2p = inttoptr i64 %p2i to i32*
-  store i32 0, i32* %i2p, !annotation !0, !dbg !DILocation(scope: !4)
+  %p2i = ptrtoint ptr %dst to i64
+  %i2p = inttoptr i64 %p2i to ptr
+  store i32 0, ptr %i2p, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
@@ -139,8 +138,7 @@ define void @store_alloca_gep_array() {
 ; CHECK-NEXT: Store size: 4 bytes.
 ; CHECK-NEXT: Variables: dst (8 bytes).
   %dst = alloca [2 x i32]
-  %gep = getelementptr [2 x i32], [2 x i32]* %dst, i64 0, i64 0
-  store i32 0, i32* %gep, !annotation !0, !dbg !DILocation(scope: !4)
+  store i32 0, ptr %dst, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
@@ -150,8 +148,7 @@ define void @store_alloca_bitcast() {
 ; CHECK-NEXT: Store size: 4 bytes.
 ; CHECK-NEXT: Variables: dst (4 bytes).
   %dst = alloca [2 x i16]
-  %bc = bitcast [2 x i16]* %dst to i32*
-  store i32 0, i32* %bc, !annotation !0, !dbg !DILocation(scope: !4)
+  store i32 0, ptr %dst, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
@@ -162,8 +159,8 @@ define void @store_alloca_di() {
 ; CHECK-NEXT: Store size: 4 bytes.
 ; CHECK-NEXT: Variables: destination (4 bytes).
   %dst = alloca i32
-  store i32 0, i32* %dst, !annotation !0, !dbg !DILocation(scope: !4)
-  call void @llvm.dbg.declare(metadata i32* %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
+  store i32 0, ptr %dst, !annotation !0, !dbg !DILocation(scope: !4)
+  call void @llvm.dbg.declare(metadata ptr %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
   ret void
 }
 
@@ -174,9 +171,9 @@ define void @store_alloca_di_multiple() {
 ; CHECK-NEXT: Store size: 4 bytes.
 ; CHECK-NEXT: Variables: destination2 (4 bytes), destination (4 bytes).
   %dst = alloca i32
-  store i32 0, i32* %dst, !annotation !0, !dbg !DILocation(scope: !4)
-  call void @llvm.dbg.declare(metadata i32* %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
-  call void @llvm.dbg.declare(metadata i32* %dst, metadata !7, metadata !DIExpression()), !dbg !DILocation(scope: !4)
+  store i32 0, ptr %dst, !annotation !0, !dbg !DILocation(scope: !4)
+  call void @llvm.dbg.declare(metadata ptr %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
+  call void @llvm.dbg.declare(metadata ptr %dst, metadata !7, metadata !DIExpression()), !dbg !DILocation(scope: !4)
   ret void
 }
 
@@ -196,8 +193,8 @@ l0:
 l1:
   br label %l2
 l2:
-  %phidst = phi i32* [ %dst, %l0 ], [ %dst2, %l1 ]
-  store i32 0, i32* %phidst, !annotation !0, !dbg !DILocation(scope: !4)
+  %phidst = phi ptr [ %dst, %l0 ], [ %dst2, %l1 ]
+  store i32 0, ptr %phidst, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
@@ -210,8 +207,8 @@ define void @store_alloca_phi_di_multiple() {
 entry:
   %dst = alloca i32
   %dst2 = alloca i32
-  call void @llvm.dbg.declare(metadata i32* %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
-  call void @llvm.dbg.declare(metadata i32* %dst, metadata !7, metadata !DIExpression()), !dbg !DILocation(scope: !4)
+  call void @llvm.dbg.declare(metadata ptr %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
+  call void @llvm.dbg.declare(metadata ptr %dst, metadata !7, metadata !DIExpression()), !dbg !DILocation(scope: !4)
   %cmp = icmp eq i32 undef, undef
   br i1 %cmp, label %l0, label %l1
 l0:
@@ -219,8 +216,8 @@ l0:
 l1:
   br label %l2
 l2:
-  %phidst = phi i32* [ %dst, %l0 ], [ %dst2, %l1 ]
-  store i32 0, i32* %phidst, !annotation !0, !dbg !DILocation(scope: !4)
+  %phidst = phi ptr [ %dst, %l0 ], [ %dst2, %l1 ]
+  store i32 0, ptr %phidst, !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 

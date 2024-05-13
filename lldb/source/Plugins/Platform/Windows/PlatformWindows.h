@@ -25,16 +25,18 @@ public:
   static lldb::PlatformSP CreateInstance(bool force,
                                          const lldb_private::ArchSpec *arch);
 
-  static lldb_private::ConstString GetPluginNameStatic(bool is_host);
+  static llvm::StringRef GetPluginNameStatic(bool is_host) {
+    return is_host ? Platform::GetHostPlatformName() : "remote-windows";
+  }
 
-  static const char *GetPluginDescriptionStatic(bool is_host);
+  static llvm::StringRef GetPluginDescriptionStatic(bool is_host);
 
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic(IsHost());
+  }
 
   // lldb_private::Platform functions
-  const char *GetDescription() override {
+  llvm::StringRef GetDescription() override {
     return GetPluginDescriptionStatic(IsHost());
   }
 
@@ -42,9 +44,18 @@ public:
 
   lldb_private::Status DisconnectRemote() override;
 
+  uint32_t DoLoadImage(lldb_private::Process *process,
+                       const lldb_private::FileSpec &remote_file,
+                       const std::vector<std::string> *paths,
+                       lldb_private::Status &error,
+                       lldb_private::FileSpec *loaded_path) override;
+
+  lldb_private::Status UnloadImage(lldb_private::Process *process,
+                                   uint32_t image_token) override;
+
   lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
                                lldb_private::Debugger &debugger,
-                               lldb_private::Target *target,
+                               lldb_private::Target &target,
                                lldb_private::Status &error) override;
 
   lldb::ProcessSP Attach(lldb_private::ProcessAttachInfo &attach_info,
@@ -52,8 +63,10 @@ public:
                          lldb_private::Target *target,
                          lldb_private::Status &error) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                       lldb_private::ArchSpec &arch) override;
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override {
+    return m_supported_architectures;
+  }
 
   void GetStatus(lldb_private::Stream &strm) override;
 
@@ -63,6 +76,20 @@ public:
   void CalculateTrapHandlerSymbolNames() override {}
 
   ConstString GetFullNameForDylib(ConstString basename) override;
+
+  size_t GetSoftwareBreakpointTrapOpcode(Target &target,
+                                         BreakpointSite *bp_site) override;
+
+  std::vector<ArchSpec> m_supported_architectures;
+
+private:
+  std::unique_ptr<lldb_private::UtilityFunction>
+  MakeLoadImageUtilityFunction(lldb_private::ExecutionContext &context,
+                               lldb_private::Status &status);
+
+  lldb_private::Status EvaluateLoaderExpression(lldb_private::Process *process,
+                                                const char *expression,
+                                                lldb::ValueObjectSP &value);
 };
 
 } // namespace lldb_private

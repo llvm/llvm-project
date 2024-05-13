@@ -22,4 +22,4 @@ SYMS-NEXT: - {{.*}}lld-link
 SYMS-NEXT: - pdb
 SYMS-NEXT: - {{.*}}pdb-linker-module{{.*}}pdb
 SYMS-NEXT: - cmd
-SYMS-NEXT: - /debug /pdb:{{.*}}pdb-linker-module{{.*}}pdb /nodefaultlib "/entry:1 ""hello"" 2" "/manifestuac:level='asInvoker' uiAccess='false'" {{.*}}pdb-diff.obj
+SYMS-NEXT: - /debug /pdb:{{.*}}pdb-linker-module{{.*}}pdb /nodefaultlib "/entry:1 ""hello"" 2" "/manifestuac:level='asInvoker' uiAccess='false'" /force

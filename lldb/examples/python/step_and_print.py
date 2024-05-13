@@ -1,6 +1,7 @@
 """ Does a step-over then prints the local variables or only the ones passed in """
 import lldb
 
+
 class StepAndPrint:
     def __init__(self, debugger, unused):
         return
@@ -13,12 +14,15 @@ class StepAndPrint:
 
         debugger.HandleCommand("thread step-over")
         print("---------- Values: -------------------\n")
-        debugger.HandleCommand("frame variable %s"%(command))
+        debugger.HandleCommand("frame variable %s" % (command))
 
         debugger.SetAsync(old_async)
 
     def get_short_help(self):
-        return "Does a step-over then runs frame variable passing the command args to it\n"
+        return (
+            "Does a step-over then runs frame variable passing the command args to it\n"
+        )
+
 
 def __lldb_init_module(debugger, unused):
-    debugger.HandleCommand("command script add -c step_and_print.StepAndPrint sap")
+    debugger.HandleCommand("command script add -o -c step_and_print.StepAndPrint sap")

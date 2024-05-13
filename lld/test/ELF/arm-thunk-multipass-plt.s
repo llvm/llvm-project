@@ -1,9 +1,16 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv5-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2 --shared
-// RUN: llvm-objdump --no-show-raw-insn --start-address=7340044 --stop-address=7340048 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s
-// RUN: llvm-objdump --no-show-raw-insn --start-address=8388620 --stop-address=8388624 --triple=thumbv5-none-linux-gnueabi -d %t2 | FileCheck %s --check-prefix=CHECK-CALL
-// RUN: llvm-objdump --no-show-raw-insn --start-address=13631520 --stop-address=13631584 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s --check-prefix=CHECK-PLT
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0x70000c --stop-address=0x700010 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0x80000c --stop-address=0x800010 -d %t2 | FileCheck %s --check-prefix=CHECK-CALL
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0xd00020 --stop-address=0xd00060 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s --check-prefix=CHECK-PLT
+
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv5eb-none-linux-gnueabi %s -o %t
+// RUN: ld.lld %t -o %t2 --shared
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0x70000c --stop-address=0x700010 --triple=armv5eb-none-linux-gnueabi -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0x80000c --stop-address=0x800010 -d %t2 | FileCheck %s --check-prefix=CHECK-CALL
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0xd00020 --stop-address=0xd00060 --triple=armv5eb-none-linux-gnueabi -d %t2 | FileCheck %s --check-prefix=CHECK-PLT
+
 /// When we create a thunk to a PLT entry the relocation is redirected to the
 /// Thunk, changing its expression to a non-PLT equivalent. If the thunk
 /// becomes unusable we need to restore the relocation expression to the PLT
@@ -41,9 +48,9 @@ needsplt:
 
         .section .text.07, "ax", %progbits
         .space (1024 * 1024)
-/// 0x70000c + 8 + 0x60002c = 0xd00040 = preemptible@plt
-// CHECK:      0070000c <__ARMV5PILongThunk_preemptible>:
-// CHECK-NEXT:   70000c: b       #6291500
+/// 0xd00040 = preemptible@plt
+// CHECK:      0070000c <__ARMv4PILongBXThunk_preemptible>:
+// CHECK-NEXT:   70000c: b       0xd00040
 
         .section .text.08, "ax", %progbits
         .space (1024 * 1024) - 4
@@ -52,8 +59,7 @@ needsplt:
         .balign 2
         bl preemptible
         bl preemptible2
-/// 0x80000c + 4 - 100004 = 0x70000c = __ARMv5PILongThunk_preemptible
-// CHECK-CALL: 80000c: blx     #-1048580
+// CHECK-CALL: 80000c: blx     0x70000c <__ARMv4PILongBXThunk_preemptible>
         .balign 2
         .globl preemptible
         .type preemptible, %function
@@ -71,25 +77,20 @@ preemptible2:
 
 // CHECK-PLT: Disassembly of section .plt:
 // CHECK-PLT-EMPTY:
-// CHECK-PLT-NEXT: 00d00020 <$a>:
+// CHECK-PLT-NEXT: 00d00020 <.plt>:
 // CHECK-PLT-NEXT:   d00020: str     lr, [sp, #-4]!
 // CHECK-PLT-NEXT:           add     lr, pc, #0, #12
 // CHECK-PLT-NEXT:           add     lr, lr, #32, #20
 // CHECK-PLT-NEXT:           ldr     pc, [lr, #148]!
-// CHECK-PLT:      00d00030 <$d>:
 // CHECK-PLT-NEXT:   d00030: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d00034: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d00038: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d0003c: d4 d4 d4 d4      .word   0xd4d4d4d4
-// CHECK-PLT:      00d00040 <$a>:
 // CHECK-PLT-NEXT:   d00040: add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00044: add     r12, r12, #32, #20
 // CHECK-PLT-NEXT:   d00048: ldr     pc, [r12, #124]!
-// CHECK-PLT:      00d0004c <$d>:
 // CHECK-PLT-NEXT:   d0004c: d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECK-PLT:      00d00050 <$a>:
 // CHECK-PLT-NEXT:   d00050: add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00054: add     r12, r12, #32, #20
 // CHECK-PLT-NEXT:   d00058: ldr     pc, [r12, #112]!
-// CHECK-PLT:      00d0005c <$d>:
 // CHECK-PLT-NEXT:   d0005c: d4 d4 d4 d4     .word   0xd4d4d4d4

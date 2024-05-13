@@ -14,12 +14,15 @@
 #include "AArch64.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "aarch64-post-select-optimize"
 
@@ -42,6 +45,9 @@ public:
 
 private:
   bool optimizeNZCVDefs(MachineBasicBlock &MBB);
+  bool doPeepholeOpts(MachineBasicBlock &MBB);
+  /// Look for cross regclass copies that can be trivially eliminated.
+  bool foldSimpleCrossClassCopies(MachineInstr &MI);
 };
 } // end anonymous namespace
 
@@ -67,14 +73,98 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
     return AArch64::SUBWrr;
   case AArch64::SUBSXrs:
     return AArch64::SUBXrs;
+  case AArch64::SUBSWrs:
+    return AArch64::SUBWrs;
   case AArch64::SUBSXri:
     return AArch64::SUBXri;
   case AArch64::SUBSWri:
     return AArch64::SUBWri;
+  case AArch64::ADDSXrr:
+    return AArch64::ADDXrr;
+  case AArch64::ADDSWrr:
+    return AArch64::ADDWrr;
+  case AArch64::ADDSXrs:
+    return AArch64::ADDXrs;
+  case AArch64::ADDSWrs:
+    return AArch64::ADDWrs;
+  case AArch64::ADDSXri:
+    return AArch64::ADDXri;
+  case AArch64::ADDSWri:
+    return AArch64::ADDWri;
+  case AArch64::SBCSXr:
+    return AArch64::SBCXr;
+  case AArch64::SBCSWr:
+    return AArch64::SBCWr;
+  case AArch64::ADCSXr:
+    return AArch64::ADCXr;
+  case AArch64::ADCSWr:
+    return AArch64::ADCWr;
   }
 }
 
+bool AArch64PostSelectOptimize::doPeepholeOpts(MachineBasicBlock &MBB) {
+  bool Changed = false;
+  for (auto &MI : make_early_inc_range(make_range(MBB.begin(), MBB.end()))) {
+    Changed |= foldSimpleCrossClassCopies(MI);
+  }
+  return Changed;
+}
+
+bool AArch64PostSelectOptimize::foldSimpleCrossClassCopies(MachineInstr &MI) {
+  auto *MF = MI.getMF();
+  auto &MRI = MF->getRegInfo();
+
+  if (!MI.isCopy())
+    return false;
+
+  if (MI.getOperand(1).getSubReg())
+    return false; // Don't deal with subreg copies
+
+  Register Src = MI.getOperand(1).getReg();
+  Register Dst = MI.getOperand(0).getReg();
+
+  if (Src.isPhysical() || Dst.isPhysical())
+    return false;
+
+  const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
+  const TargetRegisterClass *DstRC = MRI.getRegClass(Dst);
+
+  if (SrcRC == DstRC)
+    return false;
+
+
+  if (SrcRC->hasSubClass(DstRC)) {
+    // This is the case where the source class is a superclass of the dest, so
+    // if the copy is the only user of the source, we can just constrain the
+    // source reg to the dest class.
+
+    if (!MRI.hasOneNonDBGUse(Src))
+      return false; // Only constrain single uses of the source.
+
+    // Constrain to dst reg class as long as it's not a weird class that only
+    // has a few registers.
+    if (!MRI.constrainRegClass(Src, DstRC, /* MinNumRegs */ 25))
+      return false;
+  } else if (DstRC->hasSubClass(SrcRC)) {
+    // This is the inverse case, where the destination class is a superclass of
+    // the source. Here, if the copy is the only user, we can just constrain
+    // the user of the copy to use the smaller class of the source.
+  } else {
+    return false;
+  }
+
+  MRI.replaceRegWith(Dst, Src);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
+  // If we find a dead NZCV implicit-def, we
+  // - try to convert the operation to a non-flag-setting equivalent
+  // - or mark the def as dead to aid later peephole optimizations.
+
+  // Use cases:
+  // 1)
   // Consider the following code:
   //  FCMPSrr %0, %1, implicit-def $nzcv
   //  %sel1:gpr32 = CSELWr %_, %_, 12, implicit $nzcv
@@ -91,8 +181,11 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
   // in between the two FCMPs. In this case, the SUBS defines NZCV
   // but it doesn't have any users, being overwritten by the second FCMP.
   //
-  // Our solution here is to try to convert flag setting operations between
-  // a interval of identical FCMPs, so that CSE will be able to eliminate one.
+  // 2)
+  // The instruction selector always emits the flag-setting variant of ADC/SBC
+  // while selecting G_UADDE/G_SADDE/G_USUBE/G_SSUBE. If the carry-out of these
+  // instructions is never used, we can switch to the non-flag-setting variant.
+
   bool Changed = false;
   auto &MF = *MBB.getParent();
   auto &Subtarget = MF.getSubtarget();
@@ -101,55 +194,24 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
   auto RBI = Subtarget.getRegBankInfo();
   auto &MRI = MF.getRegInfo();
 
-  // The first step is to find the first and last FCMPs. If we have found
-  // at least two, then set the limit of the bottom-up walk to the first FCMP
-  // found since we're only interested in dealing with instructions between
-  // them.
-  MachineInstr *FirstCmp = nullptr, *LastCmp = nullptr;
-  for (auto &MI : instructionsWithoutDebug(MBB.begin(), MBB.end())) {
-    if (MI.getOpcode() == AArch64::FCMPSrr ||
-        MI.getOpcode() == AArch64::FCMPDrr) {
-      if (!FirstCmp)
-        FirstCmp = &MI;
-      else
-        LastCmp = &MI;
-    }
-  }
-
-  // In addition to converting flag-setting ops in fcmp ranges into non-flag
-  // setting ops, across the whole basic block we also detect when nzcv
-  // implicit-defs are dead, and mark them as dead. Peephole optimizations need
-  // this information later.
-
   LiveRegUnits LRU(*MBB.getParent()->getSubtarget().getRegisterInfo());
   LRU.addLiveOuts(MBB);
-  bool NZCVDead = LRU.available(AArch64::NZCV);
-  bool InsideCmpRange = false;
+
   for (auto &II : instructionsWithoutDebug(MBB.rbegin(), MBB.rend())) {
-    LRU.stepBackward(II);
-
-    if (LastCmp) { // There's a range present in this block.
-      // If we're inside an fcmp range, look for begin instruction.
-      if (InsideCmpRange && &II == FirstCmp)
-        InsideCmpRange = false;
-      else if (&II == LastCmp)
-        InsideCmpRange = true;
-    }
-
-    // Did this instruction define NZCV?
-    bool NZCVDeadAtCurrInstr = LRU.available(AArch64::NZCV);
-    if (NZCVDead && NZCVDeadAtCurrInstr && II.definesRegister(AArch64::NZCV)) {
-      // If we have a def and NZCV is dead, then we may convert this op.
+    bool NZCVDead = LRU.available(AArch64::NZCV);
+    if (NZCVDead && II.definesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+      // The instruction defines NZCV, but NZCV is dead.
       unsigned NewOpc = getNonFlagSettingVariant(II.getOpcode());
-      int DeadNZCVIdx = II.findRegisterDefOperandIdx(AArch64::NZCV);
+      int DeadNZCVIdx =
+          II.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr);
       if (DeadNZCVIdx != -1) {
-        // If we're inside an fcmp range, then convert flag setting ops.
-        if (InsideCmpRange && NewOpc) {
+        if (NewOpc) {
+          // If there is an equivalent non-flag-setting op, we convert.
           LLVM_DEBUG(dbgs() << "Post-select optimizer: converting flag-setting "
-                               "op in fcmp range: "
+                               "op: "
                             << II);
           II.setDesc(TII->get(NewOpc));
-          II.RemoveOperand(DeadNZCVIdx);
+          II.removeOperand(DeadNZCVIdx);
           // Changing the opcode can result in differing regclass requirements,
           // e.g. SUBSWri uses gpr32 for the dest, whereas SUBWri uses gpr32sp.
           // Constrain the regclasses, possibly introducing a copy.
@@ -163,8 +225,7 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
         }
       }
     }
-
-    NZCVDead = NZCVDeadAtCurrInstr;
+    LRU.stepBackward(II);
   }
   return Changed;
 }
@@ -178,8 +239,10 @@ bool AArch64PostSelectOptimize::runOnMachineFunction(MachineFunction &MF) {
          "Expected a selected MF");
 
   bool Changed = false;
-  for (auto &BB : MF)
+  for (auto &BB : MF) {
     Changed |= optimizeNZCVDefs(BB);
+    Changed |= doPeepholeOpts(BB);
+  }
   return Changed;
 }
 

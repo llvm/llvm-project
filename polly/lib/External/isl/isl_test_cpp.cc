@@ -12,8 +12,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <map>
+
 #include <isl/options.h>
-#include <isl/cpp.h>
+#include <isl/typed_cpp.h>
 
 static void die_impl(const char *file, int line, const char *message)
 {
@@ -112,6 +114,38 @@ static void test_foreach(isl::ctx ctx)
 		caught = true;
 	}
 	assert(caught);
+}
+
+/* Test the functionality of "foreach_scc" functions.
+ *
+ * In particular, test it on a list of elements that can be completely sorted
+ * but where two of the elements ("a" and "b") are incomparable.
+ */
+static void test_foreach_scc(isl::ctx ctx)
+{
+	isl::multi_pw_aff id;
+	isl::id_list list(ctx, 3);
+	isl::id_list sorted(ctx, 3);
+	std::map<std::string, isl::map> data = {
+		{ "a", isl::map(ctx, "{ [0] -> [1] }") },
+		{ "b", isl::map(ctx, "{ [1] -> [0] }") },
+		{ "c", isl::map(ctx, "{ [i = 0:1] -> [i] }") },
+	};
+
+	for (const auto &kvp: data)
+		list = list.add(kvp.first);
+	id = data.at("a").space().domain().identity_multi_pw_aff_on_domain();
+	list.foreach_scc([&data, &id] (isl::id a, isl::id b) {
+		auto map = data.at(b.name()).apply_domain(data.at(a.name()));
+		return !map.lex_ge_at(id).is_empty();
+	}, [&sorted] (isl::id_list scc) {
+		assert(scc.size() == 1);
+		sorted = sorted.concat(scc);
+	});
+	assert(sorted.size() == 3);
+	assert(sorted.at(0).name() == "b");
+	assert(sorted.at(1).name() == "c");
+	assert(sorted.at(2).name() == "a");
 }
 
 /* Test the functionality of "every" functions.
@@ -284,6 +318,27 @@ static void test_ast_build(isl::ctx ctx)
 	assert(count_ast_fail == 2);
 }
 
+/* Basic test of the templated interface.
+ *
+ * Intersecting the domain of an access relation
+ * with statement instances should be allowed,
+ * while intersecting the range with statement instances
+ * should result in a compile-time error.
+ */
+static void test_typed(isl::ctx ctx)
+{
+	struct ST {};
+	struct AR {};
+	isl::typed::map<ST, AR> access(ctx, "{ S[i, j] -> A[i] }");
+	isl::typed::set<ST> instances(ctx, "{ S[i, j] : 0 <= i, j < 10 }");
+
+#ifndef COMPILE_ERROR
+	access.intersect_domain(instances);
+#else
+	access.intersect_range(instances);
+#endif
+}
+
 /* Test the (unchecked) isl C++ interface
  *
  * This includes:
@@ -292,11 +347,13 @@ static void test_ast_build(isl::ctx ctx)
  *  - Different parameter types
  *  - Different return types
  *  - Foreach functions
+ *  - Foreach SCC function
  *  - Exceptions
  *  - Spaces
  *  - Schedule trees
  *  - AST generation
  *  - AST expression generation
+ *  - Templated interface
  */
 int main()
 {
@@ -309,12 +366,14 @@ int main()
 	test_parameters(ctx);
 	test_return(ctx);
 	test_foreach(ctx);
+	test_foreach_scc(ctx);
 	test_every(ctx);
 	test_exception(ctx);
 	test_space(ctx);
 	test_schedule_tree(ctx);
 	test_ast_build(ctx);
 	test_ast_build_expr(ctx);
+	test_typed(ctx);
 
 	isl_ctx_free(ctx);
 

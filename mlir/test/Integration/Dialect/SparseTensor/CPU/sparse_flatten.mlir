@@ -1,24 +1,47 @@
-// RUN: mlir-opt %s \
-// RUN:   --sparsification --sparse-tensor-conversion \
-// RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
-// RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
-// RUN:   --std-bufferize --finalizing-bufferize  \
-// RUN:   --convert-vector-to-llvm --convert-std-to-llvm | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/test.tns" \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
+//
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
 
-!Filename = type !llvm.ptr<i8>
+// REDEFINE: %{env} = TENSOR0="%mlir_src_dir/test/Integration/data/test.tns"
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | env %{env} %{run_sve} | FileCheck %s %}
+
+!Filename = !llvm.ptr
 
 #SparseTensor = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed", "compressed", "compressed",
-                   "compressed", "compressed", "compressed", "compressed" ],
-  // Note that any dimOrdering permutation should give the same results
+  // Note that any dimToLvl permutation should give the same results
   // since, even though it impacts the sparse storage scheme layout,
   // it should not change the semantics.
-  dimOrdering = affine_map<(i,j,k,l,m,n,o,p) -> (p,o,j,k,i,l,m,n)>
+  map = (d0, d1, d2, d3,
+         d4, d5, d6, d7) -> (d7 : compressed, d6 : compressed,
+                             d1 : compressed, d2 : compressed,
+                             d0 : compressed, d3 : compressed,
+                             d4 : compressed, d5 : compressed)
 }>
 
 #trait_flatten = {
@@ -40,42 +63,38 @@ module {
   //
   // A kernel that flattens a rank 8 tensor into a dense matrix.
   //
-  func @kernel_flatten(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>,
-                       %argx: tensor<7x3xf64>) -> tensor<7x3xf64> {
+  func.func @kernel_flatten(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>,
+                            %argx: tensor<7x3xf64>)
+                                -> tensor<7x3xf64> {
     %0 = linalg.generic #trait_flatten
       ins(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>)
       outs(%argx: tensor<7x3xf64>) {
       ^bb(%a: f64, %x: f64):
-        %0 = addf %x, %a : f64
+        %0 = arith.addf %x, %a : f64
         linalg.yield %0 : f64
     } -> tensor<7x3xf64>
     return %0 : tensor<7x3xf64>
   }
 
-  func private @getTensorFilename(index) -> (!Filename)
+  func.func private @getTensorFilename(index) -> (!Filename)
+  func.func private @printMemrefF64(%ptr : tensor<*xf64>)
 
   //
   // Main driver that reads tensor from file and calls the sparse kernel.
   //
-  func @entry() {
-    %d0 = constant 0.0 : f64
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %c3 = constant 3 : index
-    %c7 = constant 7 : index
+  func.func @main() {
+    %d0 = arith.constant 0.0 : f64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c3 = arith.constant 3 : index
+    %c7 = arith.constant 7 : index
 
     // Setup matrix memory that is initialized to zero.
-    %xdata = memref.alloc() : memref<7x3xf64>
-    scf.for %i = %c0 to %c7 step %c1 {
-      scf.for %j = %c0 to %c3 step %c1 {
-        memref.store %d0, %xdata[%i, %j] : memref<7x3xf64>
-      }
-    }
-    %x = memref.tensor_load %xdata : memref<7x3xf64>
+    %x = arith.constant dense<0.000000e+00> : tensor<7x3xf64>
 
     // Read the sparse tensor from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %a = sparse_tensor.new %fileName : !llvm.ptr<i8> to tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>
+    %a = sparse_tensor.new %fileName : !Filename to tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>
 
     // Call the kernel.
     %0 = call @kernel_flatten(%a, %x)
@@ -83,22 +102,20 @@ module {
 
     // Print the result for verification.
     //
-    // CHECK: ( 6.25, 0, 0 )
-    // CHECK: ( 4.224, 6.21, 0 )
-    // CHECK: ( 0, 0, 15.455 )
-    // CHECK: ( 0, 0, 0 )
-    // CHECK: ( 0, 0, 0 )
-    // CHECK: ( 0, 0, 0 )
-    // CHECK: ( 7, 0, 0 )
+    // CHECK:      {{\[}}[6.25,   0,   0],
+    // CHECK-NEXT: [4.224,   6.21,   0],
+    // CHECK-NEXT: [0,   0,   15.455],
+    // CHECK-NEXT: [0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0],
+    // CHECK-NEXT: [7,   0,   0]]
     //
-    %r = memref.buffer_cast %0 : memref<7x3xf64>
-    scf.for %i = %c0 to %c7 step %c1 {
-      %v = vector.transfer_read %r[%i, %c0], %d0: memref<7x3xf64>, vector<3xf64>
-      vector.print %v : vector<3xf64>
-    }
+    %1 = tensor.cast %0 : tensor<7x3xf64> to tensor<*xf64>
+    call @printMemrefF64(%1) : (tensor<*xf64>) -> ()
 
     // Release the resources.
-    memref.dealloc %xdata : memref<7x3xf64>
+    bufferization.dealloc_tensor %a : tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>
+    bufferization.dealloc_tensor %0 : tensor<7x3xf64>
 
     return
   }

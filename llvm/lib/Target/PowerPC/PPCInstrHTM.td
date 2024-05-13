@@ -29,62 +29,62 @@ let Predicates = [HasHTM] in {
 
 let Defs = [CR0] in {
 def TBEGIN : XForm_htm0 <31, 654,
-                         (outs), (ins u1imm:$R), "tbegin. $R", IIC_SprMTSPR, []>;
+                         (outs), (ins u1imm:$R), "tbegin. $R", IIC_SprMTSPR>;
 
 def TEND : XForm_htm1 <31, 686,
-                       (outs), (ins u1imm:$A), "tend. $A", IIC_SprMTSPR, []>;
+                       (outs), (ins u1imm:$A), "tend. $A", IIC_SprMTSPR>;
 
 def TABORT : XForm_base_r3xo <31, 910,
-                              (outs), (ins gprc:$A), "tabort. $A", IIC_SprMTSPR,
+                              (outs), (ins gprc:$RA), "tabort. $RA", IIC_SprMTSPR,
                               []>, isRecordForm {
   let RST = 0;
-  let B = 0;
+  let RB = 0;
 }
 
 def TABORTWC : XForm_base_r3xo <31, 782,
-                                (outs), (ins u5imm:$RTS, gprc:$A, gprc:$B),
-                                "tabortwc. $RTS, $A, $B", IIC_SprMTSPR, []>,
+                                (outs), (ins u5imm:$RST, gprc:$RA, gprc:$RB),
+                                "tabortwc. $RST, $RA, $RB", IIC_SprMTSPR, []>,
                                 isRecordForm;
 
 def TABORTWCI : XForm_base_r3xo <31, 846,
-                                 (outs), (ins u5imm:$RTS, gprc:$A, u5imm:$B),
-                                 "tabortwci. $RTS, $A, $B", IIC_SprMTSPR, []>,
+                                 (outs), (ins u5imm:$RST, gprc:$RA, u5imm:$RB),
+                                 "tabortwci. $RST, $RA, $RB", IIC_SprMTSPR, []>,
                                  isRecordForm;
 
 def TABORTDC : XForm_base_r3xo <31, 814,
-                                (outs), (ins u5imm:$RTS, gprc:$A, gprc:$B),
-                                "tabortdc. $RTS, $A, $B", IIC_SprMTSPR, []>,
+                                (outs), (ins u5imm:$RST, gprc:$RA, gprc:$RB),
+                                "tabortdc. $RST, $RA, $RB", IIC_SprMTSPR, []>,
                                 isRecordForm;
 
 def TABORTDCI : XForm_base_r3xo <31, 878,
-                                 (outs), (ins u5imm:$RTS, gprc:$A, u5imm:$B),
-                                 "tabortdci. $RTS, $A, $B", IIC_SprMTSPR, []>,
+                                 (outs), (ins u5imm:$RST, gprc:$RA, u5imm:$RB),
+                                 "tabortdci. $RST, $RA, $RB", IIC_SprMTSPR, []>,
                                  isRecordForm;
 
 def TSR : XForm_htm2 <31, 750,
-                      (outs), (ins u1imm:$L), "tsr. $L", IIC_SprMTSPR, []>,
+                      (outs), (ins u1imm:$L), "tsr. $L", IIC_SprMTSPR>,
                       isRecordForm;
 
 def TRECLAIM : XForm_base_r3xo <31, 942,
-                                (outs), (ins gprc:$A), "treclaim. $A",
+                                (outs), (ins gprc:$RA), "treclaim. $RA",
                                 IIC_SprMTSPR, []>,
                                 isRecordForm {
   let RST = 0;
-  let B = 0;
+  let RB = 0;
 }
 
 def TRECHKPT : XForm_base_r3xo <31, 1006,
                                 (outs), (ins), "trechkpt.", IIC_SprMTSPR, []>,
                                 isRecordForm {
   let RST = 0;
-  let A = 0;
-  let B = 0;
+  let RA = 0;
+  let RB = 0;
 }
 
 }
 
 def TCHECK : XForm_htm3 <31, 718,
-                        (outs crrc:$BF), (ins), "tcheck $BF", IIC_SprMTSPR, []>;
+                        (outs crrc:$BF), (ins), "tcheck $BF", IIC_SprMTSPR>;
 // Builtins
 
 // All HTM instructions, with the exception of tcheck, set CR0 with the

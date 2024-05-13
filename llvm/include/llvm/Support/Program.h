@@ -14,16 +14,16 @@
 #define LLVM_SUPPORT_PROGRAM_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include <chrono>
+#include <optional>
 #include <system_error>
 
 namespace llvm {
+class BitVector;
 namespace sys {
 
   /// This is the OS-specific separator for PATH like environment variables:
@@ -107,16 +107,17 @@ namespace sys {
       ArrayRef<StringRef> Args, ///< An array of strings that are passed to the
       ///< program.  The first element should be the name of the program.
       ///< The array should **not** be terminated by an empty StringRef.
-      Optional<ArrayRef<StringRef>> Env = None, ///< An optional vector of
+      std::optional<ArrayRef<StringRef>> Env =
+          std::nullopt, ///< An optional vector of
       ///< strings to use for the program's environment. If not provided, the
       ///< current program's environment will be used.  If specified, the
       ///< vector should **not** be terminated by an empty StringRef.
-      ArrayRef<Optional<StringRef>> Redirects = {}, ///<
+      ArrayRef<std::optional<StringRef>> Redirects = {}, ///<
       ///< An array of optional paths. Should have a size of zero or three.
       ///< If the array is empty, no redirections are performed.
       ///< Otherwise, the inferior process's stdin(0), stdout(1), and stderr(2)
       ///< will be redirected to the corresponding paths, if the optional path
-      ///< is present (not \c llvm::None).
+      ///< is present (not \c std::nullopt).
       ///< When an empty path is passed in, the corresponding file descriptor
       ///< will be disconnected (ie, /dev/null'd) in a portable way.
       unsigned SecondsToWait = 0, ///< If non-zero, this specifies the amount
@@ -133,25 +134,28 @@ namespace sys {
       ///< string is non-empty upon return an error occurred while invoking the
       ///< program.
       bool *ExecutionFailed = nullptr,
-      Optional<ProcessStatistics> *ProcStat = nullptr, ///< If non-zero,
+      std::optional<ProcessStatistics> *ProcStat = nullptr, ///< If non-zero,
       /// provides a pointer to a structure in which process execution
       /// statistics will be stored.
       BitVector *AffinityMask = nullptr ///< CPUs or processors the new
                                         /// program shall run on.
   );
 
-  /// Similar to ExecuteAndWait, but returns immediately.
-  /// @returns The \see ProcessInfo of the newly launched process.
+  /// Similar to \ref ExecuteAndWait, but returns immediately.
+  /// \returns The \ref ProcessInfo of the newly launched process.
   /// \note On Microsoft Windows systems, users will need to either call
-  /// \see Wait until the process finished execution or win32 CloseHandle() API
-  /// on ProcessInfo.ProcessHandle to avoid memory leaks.
-  ProcessInfo ExecuteNoWait(StringRef Program, ArrayRef<StringRef> Args,
-                            Optional<ArrayRef<StringRef>> Env,
-                            ArrayRef<Optional<StringRef>> Redirects = {},
-                            unsigned MemoryLimit = 0,
-                            std::string *ErrMsg = nullptr,
-                            bool *ExecutionFailed = nullptr,
-                            BitVector *AffinityMask = nullptr);
+  /// \ref Wait until the process has finished executing or win32's CloseHandle
+  /// API on ProcessInfo.ProcessHandle to avoid memory leaks.
+  ProcessInfo ExecuteNoWait(
+      StringRef Program, ArrayRef<StringRef> Args,
+      std::optional<ArrayRef<StringRef>> Env,
+      ArrayRef<std::optional<StringRef>> Redirects = {},
+      unsigned MemoryLimit = 0, std::string *ErrMsg = nullptr,
+      bool *ExecutionFailed = nullptr, BitVector *AffinityMask = nullptr,
+      /// If true the executed program detatches from the controlling
+      /// terminal. I/O streams such as llvm::outs, llvm::errs, and stdin will
+      /// be closed until redirected to another output location
+      bool DetachProcess = false);
 
   /// Return true if the given arguments fit within system-specific
   /// argument length limits.
@@ -204,21 +208,27 @@ namespace sys {
   /// \li 0 if the child process has not changed state.
   /// \note Users of this function should always check the ReturnCode member of
   /// the \see ProcessInfo returned from this function.
-  ProcessInfo Wait(
-      const ProcessInfo &PI,  ///< The child process that should be waited on.
-      unsigned SecondsToWait, ///< If non-zero, this specifies the amount of
-      ///< time to wait for the child process to exit. If the time expires, the
-      ///< child is killed and this function returns. If zero, this function
-      ///< will perform a non-blocking wait on the child process.
-      bool WaitUntilTerminates, ///< If true, ignores \p SecondsToWait and waits
-      ///< until child has terminated.
-      std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
-      ///< string instance in which error messages will be returned. If the
-      ///< string is non-empty upon return an error occurred while invoking the
-      ///< program.
-      Optional<ProcessStatistics> *ProcStat = nullptr ///< If non-zero, provides
-      /// a pointer to a structure in which process execution statistics will be
-      /// stored.
+  ProcessInfo
+  Wait(const ProcessInfo &PI, ///< The child process that should be waited on.
+       std::optional<unsigned> SecondsToWait, ///< If std::nullopt, waits until
+       ///< child has terminated.
+       ///< If a value, this specifies the amount of time to wait for the child
+       ///< process. If the time expires, and \p Polling is false, the child is
+       ///< killed and this < function returns. If the time expires and \p
+       ///< Polling is true, the child is resumed.
+       ///<
+       ///< If zero, this function will perform a non-blocking
+       ///< wait on the child process.
+       std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
+       ///< string instance in which error messages will be returned. If the
+       ///< string is non-empty upon return an error occurred while invoking the
+       ///< program.
+       std::optional<ProcessStatistics> *ProcStat =
+           nullptr, ///< If non-zero, provides
+       /// a pointer to a structure in which process execution statistics will
+       /// be stored.
+
+       bool Polling = false ///< If true, do not kill the process on timeout.
   );
 
   /// Print a command argument, and optionally quote it.

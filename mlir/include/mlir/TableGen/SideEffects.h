@@ -35,6 +35,12 @@ public:
   // Return the name of the resource class.
   StringRef getResource() const;
 
+  // Return the stage of the effect happen.
+  int64_t getStage() const;
+
+  // Return if this side effect act on every single value of resource.
+  bool getEffectOnfullRegion() const;
+
   static bool classof(const Operator::VariableDecorator *var);
 };
 
@@ -52,7 +58,7 @@ public:
   static bool classof(const Trait *t);
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_SIDEEFFECTS_H_

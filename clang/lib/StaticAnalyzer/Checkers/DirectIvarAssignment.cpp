@@ -1,4 +1,4 @@
-//=- DirectIvarAssignment.cpp - Check rules on ObjC properties -*- C++ ----*-==//
+//===- DirectIvarAssignment.cpp - Check rules on ObjC properties -*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,8 +44,8 @@ static bool DefaultMethodFilter(const ObjCMethodDecl *M) {
          M->getMethodFamily() == OMF_dealloc ||
          M->getMethodFamily() == OMF_copy ||
          M->getMethodFamily() == OMF_mutableCopy ||
-         M->getSelector().getNameForSlot(0).find("init") != StringRef::npos ||
-         M->getSelector().getNameForSlot(0).find("Init") != StringRef::npos;
+         M->getSelector().getNameForSlot(0).contains("init") ||
+         M->getSelector().getNameForSlot(0).contains("Init");
 }
 
 class DirectIvarAssignment :

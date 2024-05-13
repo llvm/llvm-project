@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -Wno-uninitialized -std=c++11 -fsyntax-only -verify
+// RUN: %clang_cc1 %s -Wno-uninitialized -std=c++17 -fsyntax-only -verify
 
 struct A {
   constexpr A() : a(b + 1), b(a + 1) {} // expected-note 5{{outside its lifetime}}
@@ -46,3 +46,17 @@ static_assert(e2.a[0].a == 1, "");
 static_assert(e2.a[0].b == 2, "");
 static_assert(e2.a[1].a == 1, "");
 static_assert(e2.a[1].b == 2, "");
+
+namespace InvalidDeclInsideConstExpr {
+template <int a> struct i; // expected-note {{template is declared here}}
+template <> struct i<0> {};
+
+template <int x> constexpr auto c() {
+  // i<x> is valid, but it might be incomplete. g would be invalid in that case.
+  i<x> g; // expected-error {{implicit instantiation of undefined template 'InvalidDeclInsideConstExpr::i<1>'}}
+  return 0;
+}
+
+auto y = c<1>(); // expected-note {{in instantiation of function template specialization 'InvalidDeclInsideConstExpr::c<1>' requested here}}
+auto x = c<0>(); // this is valid.
+}

@@ -15,7 +15,7 @@ import lldb.formatters.Logger
 
 
 def make_string(F, L):
-    strval = ''
+    strval = ""
     G = F.GetData().uint8
     for X in range(L):
         V = G[X]
@@ -23,6 +23,7 @@ def make_string(F, L):
             break
         strval = strval + chr(V % 256)
     return '"' + strval + '"'
+
 
 # if we ever care about big-endian, these two functions might need to change
 
@@ -32,7 +33,8 @@ def is_short_string(value):
 
 
 def extract_short_size(value):
-    return ((value >> 1) % 256)
+    return (value >> 1) % 256
+
 
 # some of the members of libc++ std::string are anonymous or have internal names that convey
 # no external significance - we access them by index since this saves a name lookup that would add
@@ -67,13 +69,12 @@ def stdstring_SummaryProvider(valobj, dict):
         error = lldb.SBError()
         strval = data.GetString(error, 0)
         if error.Fail():
-            return '<error:' + error.GetCString() + '>'
+            return "<error:" + error.GetCString() + ">"
         else:
             return '"' + strval + '"'
 
 
 class stdvector_SynthProvider:
-
     def __init__(self, valobj, dict):
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
@@ -97,7 +98,7 @@ class stdvector_SynthProvider:
             if start_val >= finish_val:
                 return 0
 
-            num_children = (finish_val - start_val)
+            num_children = finish_val - start_val
             if (num_children % self.data_size) != 0:
                 return 0
             else:
@@ -109,7 +110,7 @@ class stdvector_SynthProvider:
     def get_child_index(self, name):
         logger = lldb.formatters.Logger.Logger()
         try:
-            return int(name.lstrip('[').rstrip(']'))
+            return int(name.lstrip("[").rstrip("]"))
         except:
             return -1
 
@@ -123,20 +124,22 @@ class stdvector_SynthProvider:
         try:
             offset = index * self.data_size
             return self.start.CreateChildAtOffset(
-                '[' + str(index) + ']', offset, self.data_type)
+                "[" + str(index) + "]", offset, self.data_type
+            )
         except:
             return None
 
     def update(self):
         logger = lldb.formatters.Logger.Logger()
         try:
-            self.start = self.valobj.GetChildMemberWithName('__begin_')
-            self.finish = self.valobj.GetChildMemberWithName('__end_')
+            self.start = self.valobj.GetChildMemberWithName("__begin_")
+            self.finish = self.valobj.GetChildMemberWithName("__end_")
             # the purpose of this field is unclear, but it is the only field whose type is clearly T* for a vector<T>
             # if this ends up not being correct, we can use the APIs to get at
             # template arguments
             data_type_finder = self.valobj.GetChildMemberWithName(
-                '__end_cap_').GetChildMemberWithName('__first_')
+                "__end_cap_"
+            ).GetChildMemberWithName("__first_")
             self.data_type = data_type_finder.GetType().GetPointeeType()
             self.data_size = self.data_type.GetByteSize()
         except:
@@ -145,28 +148,28 @@ class stdvector_SynthProvider:
     def has_children(self):
         return True
 
+
 # Just an example: the actual summary is produced by a summary string:
 # size=${svar%#}
 
 
 def stdvector_SummaryProvider(valobj, dict):
     prov = stdvector_SynthProvider(valobj, None)
-    return 'size=' + str(prov.num_children())
+    return "size=" + str(prov.num_children())
 
 
 class stdlist_entry:
-
     def __init__(self, entry):
         logger = lldb.formatters.Logger.Logger()
         self.entry = entry
 
     def _next_impl(self):
         logger = lldb.formatters.Logger.Logger()
-        return stdlist_entry(self.entry.GetChildMemberWithName('__next_'))
+        return stdlist_entry(self.entry.GetChildMemberWithName("__next_"))
 
     def _prev_impl(self):
         logger = lldb.formatters.Logger.Logger()
-        return stdlist_entry(self.entry.GetChildMemberWithName('__prev_'))
+        return stdlist_entry(self.entry.GetChildMemberWithName("__prev_"))
 
     def _value_impl(self):
         logger = lldb.formatters.Logger.Logger()
@@ -187,7 +190,6 @@ class stdlist_entry:
 
 
 class stdlist_iterator:
-
     def increment_node(self, node):
         logger = lldb.formatters.Logger.Logger()
         if node.is_null:
@@ -206,7 +208,7 @@ class stdlist_iterator:
     def next(self):
         logger = lldb.formatters.Logger.Logger()
         node = self.increment_node(self.node)
-        if node is not None and node.sbvalue.IsValid() and not(node.is_null):
+        if node is not None and node.sbvalue.IsValid() and not (node.is_null):
             self.node = node
             return self.value()
         else:
@@ -227,7 +229,6 @@ class stdlist_iterator:
 
 
 class stdlist_SynthProvider:
-
     def __init__(self, valobj, dict):
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
@@ -235,7 +236,7 @@ class stdlist_SynthProvider:
 
     def next_node(self, node):
         logger = lldb.formatters.Logger.Logger()
-        return node.GetChildMemberWithName('__next_')
+        return node.GetChildMemberWithName("__next_")
 
     def value(self, node):
         logger = lldb.formatters.Logger.Logger()
@@ -293,14 +294,14 @@ class stdlist_SynthProvider:
                 current = current.next
                 if size > _list_capping_size:
                     return _list_capping_size
-            return (size - 1)
+            return size - 1
         except:
             return 0
 
     def get_child_index(self, name):
         logger = lldb.formatters.Logger.Logger()
         try:
-            return int(name.lstrip('[').rstrip(']'))
+            return int(name.lstrip("[").rstrip("]"))
         except:
             return -1
 
@@ -317,10 +318,11 @@ class stdlist_SynthProvider:
             # we do not return __value_ because then all our children would be named __value_
             # we need to make a copy of __value__ with the right name -
             # unfortunate
-            obj = current.GetChildMemberWithName('__value_')
+            obj = current.GetChildMemberWithName("__value_")
             obj_data = obj.GetData()
             return self.valobj.CreateValueFromData(
-                '[' + str(index) + ']', obj_data, self.data_type)
+                "[" + str(index) + "]", obj_data, self.data_type
+            )
         except:
             return None
 
@@ -339,10 +341,10 @@ class stdlist_SynthProvider:
         logger = lldb.formatters.Logger.Logger()
         self.count = None
         try:
-            impl = self.valobj.GetChildMemberWithName('__end_')
+            impl = self.valobj.GetChildMemberWithName("__end_")
             self.node_address = self.valobj.AddressOf().GetValueAsUnsigned(0)
-            self.head = impl.GetChildMemberWithName('__next_')
-            self.tail = impl.GetChildMemberWithName('__prev_')
+            self.head = impl.GetChildMemberWithName("__next_")
+            self.tail = impl.GetChildMemberWithName("__prev_")
             self.data_type = self.extract_type()
             self.data_size = self.data_type.GetByteSize()
         except:
@@ -356,28 +358,25 @@ class stdlist_SynthProvider:
 # size=${svar%#}
 def stdlist_SummaryProvider(valobj, dict):
     prov = stdlist_SynthProvider(valobj, None)
-    return 'size=' + str(prov.num_children())
+    return "size=" + str(prov.num_children())
+
 
 # a tree node - this class makes the syntax in the actual iterator nicer
 # to read and maintain
 
 
 class stdmap_iterator_node:
-
     def _left_impl(self):
         logger = lldb.formatters.Logger.Logger()
-        return stdmap_iterator_node(
-            self.node.GetChildMemberWithName("__left_"))
+        return stdmap_iterator_node(self.node.GetChildMemberWithName("__left_"))
 
     def _right_impl(self):
         logger = lldb.formatters.Logger.Logger()
-        return stdmap_iterator_node(
-            self.node.GetChildMemberWithName("__right_"))
+        return stdmap_iterator_node(self.node.GetChildMemberWithName("__right_"))
 
     def _parent_impl(self):
         logger = lldb.formatters.Logger.Logger()
-        return stdmap_iterator_node(
-            self.node.GetChildMemberWithName("__parent_"))
+        return stdmap_iterator_node(self.node.GetChildMemberWithName("__parent_"))
 
     def _value_impl(self):
         logger = lldb.formatters.Logger.Logger()
@@ -402,17 +401,17 @@ class stdmap_iterator_node:
     is_null = property(_null_impl, None)
     sbvalue = property(_sbvalue_impl, None)
 
+
 # a Python implementation of the tree iterator used by libc++
 
 
 class stdmap_iterator:
-
     def tree_min(self, x):
         logger = lldb.formatters.Logger.Logger()
         steps = 0
         if x.is_null:
             return None
-        while (not x.left.is_null):
+        while not x.left.is_null:
             x = x.left
             steps += 1
             if steps > self.max_count:
@@ -424,7 +423,7 @@ class stdmap_iterator:
         logger = lldb.formatters.Logger.Logger()
         if x.is_null:
             return None
-        while (not x.right.is_null):
+        while not x.right.is_null:
             x = x.right
         return x
 
@@ -441,7 +440,7 @@ class stdmap_iterator:
         if not node.right.is_null:
             return self.tree_min(node.right)
         steps = 0
-        while (not self.tree_is_left_child(node)):
+        while not self.tree_is_left_child(node):
             steps += 1
             if steps > self.max_count:
                 logger >> "Returning None - we overflowed"
@@ -462,7 +461,7 @@ class stdmap_iterator:
     def next(self):
         logger = lldb.formatters.Logger.Logger()
         node = self.increment_node(self.node)
-        if node is not None and node.sbvalue.IsValid() and not(node.is_null):
+        if node is not None and node.sbvalue.IsValid() and not (node.is_null):
             self.node = node
             return self.value()
         else:
@@ -484,7 +483,6 @@ class stdmap_iterator:
 
 
 class stdmap_SynthProvider:
-
     def __init__(self, valobj, dict):
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
@@ -499,8 +497,8 @@ class stdmap_SynthProvider:
             # if this gets set to True, then we will merrily return None for
             # any child from that moment on
             self.garbage = False
-            self.tree = self.valobj.GetChildMemberWithName('__tree_')
-            self.root_node = self.tree.GetChildMemberWithName('__begin_node_')
+            self.tree = self.valobj.GetChildMemberWithName("__tree_")
+            self.root_node = self.tree.GetChildMemberWithName("__begin_node_")
             # this data is either lazily-calculated, or cannot be inferred at this moment
             # we still need to mark it as None, meaning "please set me ASAP"
             self.data_type = None
@@ -521,8 +519,12 @@ class stdmap_SynthProvider:
     def num_children_impl(self):
         logger = lldb.formatters.Logger.Logger()
         try:
-            return self.valobj.GetChildMemberWithName('__tree_').GetChildMemberWithName(
-                '__pair3_').GetChildMemberWithName('__first_').GetValueAsUnsigned()
+            return (
+                self.valobj.GetChildMemberWithName("__tree_")
+                .GetChildMemberWithName("__pair3_")
+                .GetChildMemberWithName("__first_")
+                .GetValueAsUnsigned()
+            )
         except:
             return 0
 
@@ -535,10 +537,10 @@ class stdmap_SynthProvider:
             if self.num_children() == 0:
                 return False
             deref = self.root_node.Dereference()
-            if not(deref.IsValid()):
+            if not (deref.IsValid()):
                 return False
-            value = deref.GetChildMemberWithName('__value_')
-            if not(value.IsValid()):
+            value = deref.GetChildMemberWithName("__value_")
+            if not (value.IsValid()):
                 return False
             self.data_type = value.GetType()
             self.data_size = self.data_type.GetByteSize()
@@ -554,15 +556,15 @@ class stdmap_SynthProvider:
             fields_count = node_type.GetNumberOfFields()
             for i in range(fields_count):
                 field = node_type.GetFieldAtIndex(i)
-                if field.GetName() == '__value_':
+                if field.GetName() == "__value_":
                     self.skip_size = field.GetOffsetInBytes()
                     break
-        return (self.skip_size is not None)
+        return self.skip_size is not None
 
     def get_child_index(self, name):
         logger = lldb.formatters.Logger.Logger()
         try:
-            return int(name.lstrip('[').rstrip(']'))
+            return int(name.lstrip("[").rstrip("]"))
         except:
             return -1
 
@@ -577,48 +579,59 @@ class stdmap_SynthProvider:
             logger >> "Returning None since this tree is garbage"
             return None
         try:
-            iterator = stdmap_iterator(
-                self.root_node, max_count=self.num_children())
+            iterator = stdmap_iterator(self.root_node, max_count=self.num_children())
             # the debug info for libc++ std::map is such that __begin_node_ has a very nice and useful type
             # out of which we can grab the information we need - every other node has a less informative
             # type which omits all value information and only contains housekeeping information for the RB tree
             # hence, we need to know if we are at a node != 0, so that we can
             # still get at the data
-            need_to_skip = (index > 0)
+            need_to_skip = index > 0
             current = iterator.advance(index)
             if current is None:
                 logger >> "Tree is garbage - returning None"
                 self.garbage = True
                 return None
             if self.get_data_type():
-                if not(need_to_skip):
+                if not (need_to_skip):
                     current = current.Dereference()
-                    obj = current.GetChildMemberWithName('__value_')
+                    obj = current.GetChildMemberWithName("__value_")
                     obj_data = obj.GetData()
                     # make sure we have a valid offset for the next items
                     self.get_value_offset(current)
                     # we do not return __value_ because then we would end up with a child named
                     # __value_ instead of [0]
                     return self.valobj.CreateValueFromData(
-                        '[' + str(index) + ']', obj_data, self.data_type)
+                        "[" + str(index) + "]", obj_data, self.data_type
+                    )
                 else:
                     # FIXME we need to have accessed item 0 before accessing
                     # any other item!
                     if self.skip_size is None:
-                        logger >> "You asked for item > 0 before asking for item == 0, I will fetch 0 now then retry"
+                        (
+                            logger
+                            >> "You asked for item > 0 before asking for item == 0, I will fetch 0 now then retry"
+                        )
                         if self.get_child_at_index(0):
                             return self.get_child_at_index(index)
                         else:
-                            logger >> "item == 0 could not be found. sorry, nothing can be done here."
+                            (
+                                logger
+                                >> "item == 0 could not be found. sorry, nothing can be done here."
+                            )
                             return None
                     return current.CreateChildAtOffset(
-                        '[' + str(index) + ']', self.skip_size, self.data_type)
+                        "[" + str(index) + "]", self.skip_size, self.data_type
+                    )
             else:
-                logger >> "Unable to infer data-type - returning None (should mark tree as garbage here?)"
+                (
+                    logger
+                    >> "Unable to infer data-type - returning None (should mark tree as garbage here?)"
+                )
                 return None
         except Exception as err:
             logger >> "Hit an exception: " + str(err)
             return None
+
 
 # Just an example: the actual summary is produced by a summary string:
 # size=${svar%#}
@@ -626,11 +639,10 @@ class stdmap_SynthProvider:
 
 def stdmap_SummaryProvider(valobj, dict):
     prov = stdmap_SynthProvider(valobj, None)
-    return 'size=' + str(prov.num_children())
+    return "size=" + str(prov.num_children())
 
 
 class stddeque_SynthProvider:
-
     def __init__(self, valobj, d):
         logger = lldb.formatters.Logger.Logger()
         logger.write("init")
@@ -643,13 +655,18 @@ class stddeque_SynthProvider:
             self.block_size = -1
             self.element_size = -1
         logger.write(
-            "block_size=%d, element_size=%d" %
-            (self.block_size, self.element_size))
+            "block_size=%d, element_size=%d" % (self.block_size, self.element_size)
+        )
 
     def find_block_size(self):
         # in order to use the deque we must have the block size, or else
         # it's impossible to know what memory addresses are valid
-        self.element_type = self.valobj.GetType().GetTemplateArgumentType(0)
+        obj_type = self.valobj.GetType()
+        if obj_type.IsReferenceType():
+            obj_type = obj_type.GetDereferencedType()
+        elif obj_type.IsPointerType():
+            obj_type = obj_type.GetPointeeType()
+        self.element_type = obj_type.GetTemplateArgumentType(0)
         self.element_size = self.element_type.GetByteSize()
         # The code says this, but there must be a better way:
         # template <class _Tp, class _Allocator>
@@ -657,16 +674,15 @@ class stddeque_SynthProvider:
         #    static const difference_type __block_size = sizeof(value_type) < 256 ? 4096 / sizeof(value_type) : 16;
         # }
         if self.element_size < 256:
-            self.block_size = 4096 / self.element_size
+            self.block_size = 4096 // self.element_size
         else:
             self.block_size = 16
 
     def num_children(self):
-        global _deque_capping_size
         logger = lldb.formatters.Logger.Logger()
         if self.count is None:
             return 0
-        return min(self.count, _deque_capping_size)
+        return self.count
 
     def has_children(self):
         return True
@@ -674,7 +690,7 @@ class stddeque_SynthProvider:
     def get_child_index(self, name):
         logger = lldb.formatters.Logger.Logger()
         try:
-            return int(name.lstrip('[').rstrip(']'))
+            return int(name.lstrip("[").rstrip("]"))
         except:
             return -1
 
@@ -687,9 +703,11 @@ class stddeque_SynthProvider:
             return None
         try:
             i, j = divmod(self.start + index, self.block_size)
+
             return self.first.CreateValueFromExpression(
-                '[' + str(index) + ']', '*(*(%s + %d) + %d)' %
-                (self.first.get_expr_path(), i, j))
+                "[" + str(index) + "]",
+                "*(*(%s + %d) + %d)" % (self.map_begin.get_expr_path(), i, j),
+            )
         except:
             return None
 
@@ -717,28 +735,28 @@ class stddeque_SynthProvider:
             # one, and the 'size' element gives the number of elements
             # in the deque.
             count = self._get_value_of_compressed_pair(
-                    self.valobj.GetChildMemberWithName('__size_'))
+                self.valobj.GetChildMemberWithName("__size_")
+            )
             # give up now if we cant access memory reliably
             if self.block_size < 0:
                 logger.write("block_size < 0")
                 return
-            map_ = self.valobj.GetChildMemberWithName('__map_')
-            start = self.valobj.GetChildMemberWithName(
-                '__start_').GetValueAsUnsigned(0)
-            first = map_.GetChildMemberWithName('__first_')
+            map_ = self.valobj.GetChildMemberWithName("__map_")
+            start = self.valobj.GetChildMemberWithName("__start_").GetValueAsUnsigned(0)
+            first = map_.GetChildMemberWithName("__first_")
             map_first = first.GetValueAsUnsigned(0)
-            map_begin = map_.GetChildMemberWithName(
-                '__begin_').GetValueAsUnsigned(0)
-            map_end = map_.GetChildMemberWithName(
-                '__end_').GetValueAsUnsigned(0)
+            self.map_begin = map_.GetChildMemberWithName("__begin_")
+            map_begin = self.map_begin.GetValueAsUnsigned(0)
+            map_end = map_.GetChildMemberWithName("__end_").GetValueAsUnsigned(0)
             map_endcap = self._get_value_of_compressed_pair(
-                    map_.GetChildMemberWithName( '__end_cap_'))
+                map_.GetChildMemberWithName("__end_cap_")
+            )
+
             # check consistency
             if not map_first <= map_begin <= map_end <= map_endcap:
                 logger.write("map pointers are not monotonic")
                 return
-            total_rows, junk = divmod(
-                map_endcap - map_first, self.pointer_size)
+            total_rows, junk = divmod(map_endcap - map_first, self.pointer_size)
             if junk:
                 logger.write("endcap-first doesnt align correctly")
                 return
@@ -750,21 +768,10 @@ class stddeque_SynthProvider:
             if junk:
                 logger.write("begin-first doesnt align correctly")
                 return
-            if not start_row * \
-                    self.block_size <= start < (start_row + 1) * self.block_size:
-                logger.write("0th element must be in the 'begin' row")
-                return
-            end_row = start_row + active_rows
-            if not count:
-                if active_rows:
-                    logger.write("empty deque but begin!=end")
-                    return
-            elif not (end_row - 1) * self.block_size <= start + count < end_row * self.block_size:
-                logger.write("nth element must be before the 'end' row")
-                return
+
             logger.write(
-                "update success: count=%r, start=%r, first=%r" %
-                (count, start, first))
+                "update success: count=%r, start=%r, first=%r" % (count, start, first)
+            )
             # if consistent, save all we really need:
             self.count = count
             self.start = start
@@ -774,15 +781,15 @@ class stddeque_SynthProvider:
             self.start = None
             self.map_first = None
             self.map_begin = None
+        return False
 
 
 class stdsharedptr_SynthProvider:
-
     def __init__(self, valobj, d):
         logger = lldb.formatters.Logger.Logger()
         logger.write("init")
         self.valobj = valobj
-        #self.element_ptr_type = self.valobj.GetType().GetTemplateArgumentType(0).GetPointerType()
+        # self.element_ptr_type = self.valobj.GetType().GetTemplateArgumentType(0).GetPointerType()
         self.ptr = None
         self.cntrl = None
         process = valobj.GetProcess()
@@ -812,31 +819,49 @@ class stdsharedptr_SynthProvider:
             if self.cntrl is None:
                 count = 0
             else:
-                count = 1 + \
-                    self.cntrl.GetChildMemberWithName('__shared_owners_').GetValueAsSigned()
+                count = (
+                    1
+                    + self.cntrl.GetChildMemberWithName(
+                        "__shared_owners_"
+                    ).GetValueAsSigned()
+                )
             return self.valobj.CreateValueFromData(
-                "count", lldb.SBData.CreateDataFromUInt64Array(
-                    self.endianness, self.pointer_size, [count]), self.count_type)
+                "count",
+                lldb.SBData.CreateDataFromUInt64Array(
+                    self.endianness, self.pointer_size, [count]
+                ),
+                self.count_type,
+            )
         if index == 2:
             if self.cntrl is None:
                 count = 0
             else:
-                count = 1 + \
-                    self.cntrl.GetChildMemberWithName('__shared_weak_owners_').GetValueAsSigned()
+                count = (
+                    1
+                    + self.cntrl.GetChildMemberWithName(
+                        "__shared_weak_owners_"
+                    ).GetValueAsSigned()
+                )
             return self.valobj.CreateValueFromData(
-                "weak_count", lldb.SBData.CreateDataFromUInt64Array(
-                    self.endianness, self.pointer_size, [count]), self.count_type)
+                "weak_count",
+                lldb.SBData.CreateDataFromUInt64Array(
+                    self.endianness, self.pointer_size, [count]
+                ),
+                self.count_type,
+            )
         return None
 
     def update(self):
         logger = lldb.formatters.Logger.Logger()
         self.ptr = self.valobj.GetChildMemberWithName(
-            '__ptr_')  # .Cast(self.element_ptr_type)
-        cntrl = self.valobj.GetChildMemberWithName('__cntrl_')
+            "__ptr_"
+        )  # .Cast(self.element_ptr_type)
+        cntrl = self.valobj.GetChildMemberWithName("__cntrl_")
         if cntrl.GetValueAsUnsigned(0):
             self.cntrl = cntrl.Dereference()
         else:
             self.cntrl = None
+
 
 # we can use two different categories for old and new formatters - type names are different enough that we should make no confusion
 # talking with libc++ developer: "std::__1::class_name is set in stone
@@ -846,31 +871,42 @@ class stdsharedptr_SynthProvider:
 
 def __lldb_init_module(debugger, dict):
     debugger.HandleCommand(
-        'type summary add -F libcxx.stdstring_SummaryProvider "std::__1::string" -w libcxx')
+        'type summary add -F libcxx.stdstring_SummaryProvider "std::__1::string" -w libcxx'
+    )
     debugger.HandleCommand(
-        'type summary add -F libcxx.stdstring_SummaryProvider "std::__1::basic_string<char, class std::__1::char_traits<char>, class std::__1::allocator<char> >" -w libcxx')
+        'type summary add -F libcxx.stdstring_SummaryProvider "std::__1::basic_string<char, class std::__1::char_traits<char>, class std::__1::allocator<char> >" -w libcxx'
+    )
     debugger.HandleCommand(
-        'type synthetic add -l libcxx.stdvector_SynthProvider -x "^(std::__1::)vector<.+>$" -w libcxx')
+        'type synthetic add -l libcxx.stdvector_SynthProvider -x "^(std::__1::)vector<.+>$" -w libcxx'
+    )
     debugger.HandleCommand(
-        'type summary add -F libcxx.stdvector_SummaryProvider -e -x "^(std::__1::)vector<.+>$" -w libcxx')
+        'type summary add -F libcxx.stdvector_SummaryProvider -e -x "^(std::__1::)vector<.+>$" -w libcxx'
+    )
     debugger.HandleCommand(
-        'type synthetic add -l libcxx.stdlist_SynthProvider -x "^(std::__1::)list<.+>$" -w libcxx')
+        'type synthetic add -l libcxx.stdlist_SynthProvider -x "^(std::__1::)list<.+>$" -w libcxx'
+    )
     debugger.HandleCommand(
-        'type summary add -F libcxx.stdlist_SummaryProvider -e -x "^(std::__1::)list<.+>$" -w libcxx')
+        'type summary add -F libcxx.stdlist_SummaryProvider -e -x "^(std::__1::)list<.+>$" -w libcxx'
+    )
     debugger.HandleCommand(
-        'type synthetic add -l libcxx.stdmap_SynthProvider -x "^(std::__1::)map<.+> >$" -w libcxx')
+        'type synthetic add -l libcxx.stdmap_SynthProvider -x "^(std::__1::)map<.+> >$" -w libcxx'
+    )
     debugger.HandleCommand(
-        'type summary add -F libcxx.stdmap_SummaryProvider -e -x "^(std::__1::)map<.+> >$" -w libcxx')
+        'type summary add -F libcxx.stdmap_SummaryProvider -e -x "^(std::__1::)map<.+> >$" -w libcxx'
+    )
     debugger.HandleCommand("type category enable libcxx")
     debugger.HandleCommand(
-        'type synthetic add -l libcxx.stddeque_SynthProvider -x "^(std::__1::)deque<.+>$" -w libcxx')
+        'type synthetic add -l libcxx.stddeque_SynthProvider -x "^(std::__1::)deque<.+>$" -w libcxx'
+    )
     debugger.HandleCommand(
-        'type synthetic add -l libcxx.stdsharedptr_SynthProvider -x "^(std::__1::)shared_ptr<.+>$" -w libcxx')
+        'type synthetic add -l libcxx.stdsharedptr_SynthProvider -x "^(std::__1::)shared_ptr<.+>$" -w libcxx'
+    )
     # turns out the structs look the same, so weak_ptr can be handled the same!
     debugger.HandleCommand(
-        'type synthetic add -l libcxx.stdsharedptr_SynthProvider -x "^(std::__1::)weak_ptr<.+>$" -w libcxx')
+        'type synthetic add -l libcxx.stdsharedptr_SynthProvider -x "^(std::__1::)weak_ptr<.+>$" -w libcxx'
+    )
+
 
 _map_capping_size = 255
 _list_capping_size = 255
 _list_uses_loop_detector = True
-_deque_capping_size = 255

@@ -1,9 +1,9 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -loop-unroll < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -passes=loop-unroll < %s | FileCheck %s
 
 ; Test that max iterations count to analyze (specific for the target)
 ; is enough to make the inner loop completely unrolled
 ; CHECK-LABEL: foo
-define void @foo(float addrspace(5)* %ptrB, float addrspace(5)* %ptrC, i32 %A, i32 %A2, float %M) {
+define void @foo(ptr addrspace(5) %ptrB, ptr addrspace(5) %ptrC, i32 %A, i32 %A2, float %M) {
 bb:
   br label %bb2
 
@@ -35,21 +35,21 @@ for.body:                                       ; preds = %bb4, %for.body
   %phi = phi i32 [ 0, %bb4 ], [ %inc, %for.body ]
   %mul = shl nuw nsw i32 %phi, 6
   %add = add i32 %A, %mul
-  %arrayidx = getelementptr inbounds float, float addrspace(5)* %ptrC, i32 %add
-  %ld1 = load float, float addrspace(5)* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr addrspace(5) %ptrC, i32 %add
+  %ld1 = load float, ptr addrspace(5) %arrayidx, align 4
   %mul2 = shl nuw nsw i32 %phi, 3
   %add2 = add i32 %A2, %mul2
-  %arrayidx2 = getelementptr inbounds float, float addrspace(5)* %ptrB, i32 %add2
-  %ld2 = load float, float addrspace(5)* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr addrspace(5) %ptrB, i32 %add2
+  %ld2 = load float, ptr addrspace(5) %arrayidx2, align 4
   %mul3 = fmul contract float %M, %ld2
   %add3 = fadd contract float %ld1, %mul3
-  store float %add3, float addrspace(5)* %arrayidx, align 4
+  store float %add3, ptr addrspace(5) %arrayidx, align 4
   %add1 = add nuw nsw i32 %add, 2048
-  %arrayidx3 = getelementptr inbounds float, float addrspace(5)* %ptrC, i32 %add1
-  %ld3 = load float, float addrspace(5)* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr addrspace(5) %ptrC, i32 %add1
+  %ld3 = load float, ptr addrspace(5) %arrayidx3, align 4
   %mul4 = fmul contract float %ld2, %M
   %add4 = fadd contract float %ld3, %mul4
-  store float %add4, float addrspace(5)* %arrayidx3, align 4
+  store float %add4, ptr addrspace(5) %arrayidx3, align 4
   %inc = add nuw nsw i32 %phi, 1
   %cmpi = icmp ult i32 %phi, 31
   br i1 %cmpi, label %for.body, label %bb10

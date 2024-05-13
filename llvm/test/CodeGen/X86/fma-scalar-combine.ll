@@ -547,14 +547,27 @@ entry:
 define float @fma_const_fmul(float %x) {
 ; CHECK-LABEL: fma_const_fmul:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x59,0x0d,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; CHECK-NEXT:    vfmadd132ss {{.*}}(%rip), %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0x99,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 5, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x59,0x0d,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    vfmadd132ss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0x99,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    # xmm0 = (xmm0 * mem) + xmm1
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %mul1 = fmul contract float %x, 10.0
   %mul2 = fmul contract float %x, 11.0
   %add1 = fadd contract float %mul1, %mul2
   ret float %add1
+}
+
+; Fold (fmul (fadd x, 1.0), y) -> (fma x, y, y) without FP specific command-line
+; options.
+define float @combine_fmul_distributive(float %x, float %y) {
+; CHECK-LABEL: combine_fmul_distributive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd231ss %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0xb9,0xc0]
+; CHECK-NEXT:    # xmm0 = (xmm1 * xmm0) + xmm0
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %fadd = fadd ninf float %y, 1.0
+  %fmul = fmul contract float %fadd, %x
+  ret float %fmul
 }

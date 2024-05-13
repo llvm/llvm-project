@@ -16,6 +16,7 @@
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include <optional>
 
 namespace clang {
 namespace ento {
@@ -84,6 +85,8 @@ public:
     return Eng.getContext();
   }
 
+  const ASTContext &getASTContext() const { return Eng.getContext(); }
+
   const LangOptions &getLangOpts() const {
     return Eng.getContext().getLangOpts();
   }
@@ -137,7 +140,7 @@ public:
   /// example, for finding variables that the given symbol was assigned to.
   static const MemRegion *getLocationRegionIfPostStore(const ExplodedNode *N) {
     ProgramPoint L = N->getLocation();
-    if (Optional<PostStore> PSL = L.getAs<PostStore>())
+    if (std::optional<PostStore> PSL = L.getAs<PostStore>())
       return reinterpret_cast<const MemRegion*>(PSL->getLocationValue());
     return nullptr;
   }
@@ -210,6 +213,22 @@ public:
   }
 
   /// Generate a transition to a node that will be used to report
+  /// an error. This node will be a sink. That is, it will stop exploration of
+  /// the given path.
+  ///
+  /// @param State The state of the generated node.
+  /// @param Pred The transition will be generated from the specified Pred node
+  ///             to the newly generated node.
+  /// @param Tag The tag to uniquely identify the creation site. If null,
+  ///        the default tag for the checker will be used.
+  ExplodedNode *generateErrorNode(ProgramStateRef State,
+                                  ExplodedNode *Pred,
+                                  const ProgramPointTag *Tag = nullptr) {
+    return generateSink(State, Pred,
+                       (Tag ? Tag : Location.getTag()));
+  }
+
+  /// Generate a transition to a node that will be used to report
   /// an error. This node will not be a sink. That is, exploration will
   /// continue along this path.
   ///
@@ -254,8 +273,9 @@ public:
   /// @param IsPrunable Whether the note is prunable. It allows BugReporter
   ///        to omit the note from the report if it would make the displayed
   ///        bug path significantly shorter.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const NoteTag *getNoteTag(NoteTag::Callback &&Cb, bool IsPrunable = false) {
-    return Eng.getNoteTags().makeNoteTag(std::move(Cb), IsPrunable);
+    return Eng.getDataTags().make<NoteTag>(std::move(Cb), IsPrunable);
   }
 
   /// A shorthand version of getNoteTag that doesn't require you to accept
@@ -296,8 +316,8 @@ public:
   ///        bug path significantly shorter.
   const NoteTag *getNoteTag(StringRef Note, bool IsPrunable = false) {
     return getNoteTag(
-        [Note](BugReporterContext &,
-               PathSensitiveBugReport &) { return std::string(Note); },
+        [Note = std::string(Note)](BugReporterContext &,
+               PathSensitiveBugReport &) { return Note; },
         IsPrunable);
   }
 
@@ -346,18 +366,30 @@ public:
     return getCalleeName(FunDecl);
   }
 
-  /// Returns true if the callee is an externally-visible function in the
-  /// top-level namespace, such as \c malloc.
+  /// Returns true if the given function is an externally-visible function in
+  /// the top-level namespace, such as \c malloc.
   ///
   /// If a name is provided, the function must additionally match the given
   /// name.
   ///
-  /// Note that this deliberately excludes C++ library functions in the \c std
-  /// namespace, but will include C library functions accessed through the
-  /// \c std namespace. This also does not check if the function is declared
-  /// as 'extern "C"', or if it uses C++ name mangling.
+  /// Note that this also accepts functions from the \c std namespace (because
+  /// headers like <cstdlib> declare them there) and does not check if the
+  /// function is declared as 'extern "C"' or if it uses C++ name mangling.
   static bool isCLibraryFunction(const FunctionDecl *FD,
                                  StringRef Name = StringRef());
+
+  /// In builds that use source hardening (-D_FORTIFY_SOURCE), many standard
+  /// functions are implemented as macros that expand to calls of hardened
+  /// functions that take additional arguments compared to the "usual"
+  /// variant and perform additional input validation. For example, a `memcpy`
+  /// call may expand to `__memcpy_chk()` or `__builtin___memcpy_chk()`.
+  ///
+  /// This method returns true if `FD` declares a fortified variant of the
+  /// standard library function `Name`.
+  ///
+  /// NOTE: This method relies on heuristics; extend it if you need to handle a
+  /// hardened variant that's not yet covered by it.
+  static bool isHardenedVariantOf(const FunctionDecl *FD, StringRef Name);
 
   /// Depending on wither the location corresponds to a macro, return
   /// either the macro name or the token spelling.

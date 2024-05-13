@@ -14,6 +14,7 @@
 #include "SerialSnippetGenerator.h"
 #include "TestBase.h"
 #include "X86InstrInfo.h"
+#include "llvm/ADT/SetOperations.h"
 
 #include <unordered_set>
 
@@ -28,24 +29,18 @@ using testing::AnyOf;
 using testing::ElementsAre;
 using testing::Gt;
 using testing::HasSubstr;
+using testing::IsEmpty;
 using testing::Not;
 using testing::SizeIs;
-using testing::UnorderedElementsAre;
 
 MATCHER(IsInvalid, "") { return !arg.isValid(); }
 MATCHER(IsReg, "") { return arg.isReg(); }
 
+template <typename SnippetGeneratorT>
 class X86SnippetGeneratorTest : public X86TestBase {
 protected:
-  X86SnippetGeneratorTest() : InstrInfo(State.getInstrInfo()) {}
-
-  const MCInstrInfo &InstrInfo;
-};
-
-template <typename SnippetGeneratorT>
-class SnippetGeneratorTest : public X86SnippetGeneratorTest {
-protected:
-  SnippetGeneratorTest() : Generator(State, SnippetGenerator::Options()) {}
+  X86SnippetGeneratorTest() : Generator(State, SnippetGenerator::Options()),
+	                      InstrInfo(State.getInstrInfo()) {}
 
   std::vector<CodeTemplate> checkAndGetCodeTemplates(unsigned Opcode) {
     randomGenerator().seed(0); // Initialize seed.
@@ -57,14 +52,15 @@ protected:
   }
 
   SnippetGeneratorT Generator;
+  const MCInstrInfo &InstrInfo;
 };
 
-using SerialSnippetGeneratorTest = SnippetGeneratorTest<SerialSnippetGenerator>;
+using X86SerialSnippetGeneratorTest = X86SnippetGeneratorTest<SerialSnippetGenerator>;
 
-using ParallelSnippetGeneratorTest =
-    SnippetGeneratorTest<ParallelSnippetGenerator>;
+using X86ParallelSnippetGeneratorTest =
+    X86SnippetGeneratorTest<ParallelSnippetGenerator>;
 
-TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
+TEST_F(X86SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
   // - ADC16i16
   // - Op0 Explicit Use Immediate
   // - Op1 Implicit Def Reg(AX)
@@ -75,10 +71,10 @@ TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
   // - hasAliasingImplicitRegisters (execution is always serial)
   // - hasAliasingRegisters
   const unsigned Opcode = X86::ADC16i16;
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[0], X86::AX);
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[1], X86::EFLAGS);
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitUses()[0], X86::AX);
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitUses()[1], X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_defs()[0], X86::AX);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_defs()[1], X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_uses()[0], X86::AX);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_uses()[1], X86::EFLAGS);
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];
@@ -90,7 +86,7 @@ TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
   EXPECT_THAT(IT.getVariableValues()[0], IsInvalid()) << "Immediate is not set";
 }
 
-TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
+TEST_F(X86SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   // - ADD16ri
   // - Op0 Explicit Def RegClass(GR16)
   // - Op1 Explicit Use RegClass(GR16) TiedToOp0
@@ -101,7 +97,7 @@ TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   // - hasTiedRegisters (execution is always serial)
   // - hasAliasingRegisters
   const unsigned Opcode = X86::ADD16ri;
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[0], X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_defs()[0], X86::EFLAGS);
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];
@@ -114,7 +110,7 @@ TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   EXPECT_THAT(IT.getVariableValues()[1], IsInvalid()) << "Operand 2 is not set";
 }
 
-TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
+TEST_F(X86SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
   // - VXORPSrr
   // - Op0 Explicit Def RegClass(VR128)
   // - Op1 Explicit Use RegClass(VR128)
@@ -138,7 +134,7 @@ TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
       << "Op0 is either set to Op1 or to Op2";
 }
 
-TEST_F(SerialSnippetGeneratorTest,
+TEST_F(X86SerialSnippetGeneratorTest,
        ImplicitSelfDependencyThroughExplicitRegsForbidAll) {
   // - VXORPSrr
   // - Op0 Explicit Def RegClass(VR128)
@@ -159,7 +155,40 @@ TEST_F(SerialSnippetGeneratorTest,
   consumeError(std::move(Error));
 }
 
-TEST_F(SerialSnippetGeneratorTest, DependencyThroughOtherOpcode) {
+TEST_F(X86SerialSnippetGeneratorTest,
+       ImplicitSelfDependencyThroughExplicitRegsForbidAlmostAll) {
+  // - VXORPSrr
+  // - Op0 Explicit Def RegClass(VR128)
+  // - Op1 Explicit Use RegClass(VR128)
+  // - Op2 Explicit Use RegClass(VR128)
+  // - Var0 [Op0]
+  // - Var1 [Op1]
+  // - Var2 [Op2]
+  // - hasAliasingRegisters
+  const unsigned Opcode = X86::VXORPSrr;
+  randomGenerator().seed(0); // Initialize seed.
+  const Instruction &Instr = State.getIC().getInstr(Opcode);
+  auto ForbiddenRegisters = State.getRATC().emptyRegisters();
+  ForbiddenRegisters.flip();
+  ForbiddenRegisters.reset(X86::XMM0);
+  auto Error = Generator.generateCodeTemplates(&Instr, ForbiddenRegisters);
+  EXPECT_FALSE((bool)Error.takeError());
+  auto CodeTemplates = std::move(Error.get());
+  ASSERT_THAT(CodeTemplates, SizeIs(Gt(0U))) << "Templates are available";
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Execution, ExecutionMode::SERIAL_VIA_EXPLICIT_REGS);
+    ASSERT_THAT(CT.Instructions, SizeIs(1));
+    const InstructionTemplate &IT = CT.Instructions[0];
+    EXPECT_THAT(IT.getOpcode(), Opcode);
+    ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
+    for (const auto &Var : IT.getVariableValues()) {
+      if (Var.isReg())
+        EXPECT_FALSE(ForbiddenRegisters[Var.getReg()]);
+    }
+  }
+}
+
+TEST_F(X86SerialSnippetGeneratorTest, DependencyThroughOtherOpcode) {
   // - CMP64rr
   // - Op0 Explicit Use RegClass(GR64)
   // - Op1 Explicit Use RegClass(GR64)
@@ -183,7 +212,7 @@ TEST_F(SerialSnippetGeneratorTest, DependencyThroughOtherOpcode) {
   }
 }
 
-TEST_F(SerialSnippetGeneratorTest, LAHF) {
+TEST_F(X86SerialSnippetGeneratorTest, LAHF) {
   // - LAHF
   // - Op0 Implicit Def Reg(AH)
   // - Op1 Implicit Use Reg(EFLAGS)
@@ -199,7 +228,7 @@ TEST_F(SerialSnippetGeneratorTest, LAHF) {
   }
 }
 
-TEST_F(SerialSnippetGeneratorTest, VCVTUSI642SDZrrb_Int) {
+TEST_F(X86SerialSnippetGeneratorTest, VCVTUSI642SDZrrb_Int) {
   // - VCVTUSI642SDZrrb_Int
   // - Op0 Explicit Def RegClass(VR128X)
   // - Op1 Explicit Use RegClass(VR128X)
@@ -218,27 +247,7 @@ TEST_F(SerialSnippetGeneratorTest, VCVTUSI642SDZrrb_Int) {
   ASSERT_TRUE(BC.Key.Instructions[0].getOperand(3).isImm());
 }
 
-TEST_F(ParallelSnippetGeneratorTest, ParallelInstruction) {
-  // - BNDCL32rr
-  // - Op0 Explicit Use RegClass(BNDR)
-  // - Op1 Explicit Use RegClass(GR32)
-  // - Var0 [Op0]
-  // - Var1 [Op1]
-  const unsigned Opcode = X86::BNDCL32rr;
-  const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
-  ASSERT_THAT(CodeTemplates, SizeIs(1));
-  const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("parallel"));
-  EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
-  ASSERT_THAT(CT.Instructions, SizeIs(1));
-  const InstructionTemplate &IT = CT.Instructions[0];
-  EXPECT_THAT(IT.getOpcode(), Opcode);
-  ASSERT_THAT(IT.getVariableValues(), SizeIs(2));
-  EXPECT_THAT(IT.getVariableValues()[0], IsInvalid());
-  EXPECT_THAT(IT.getVariableValues()[1], IsInvalid());
-}
-
-TEST_F(ParallelSnippetGeneratorTest, SerialInstruction) {
+TEST_F(X86ParallelSnippetGeneratorTest, SerialInstruction) {
   // - CDQ
   // - Op0 Implicit Def Reg(EAX)
   // - Op1 Implicit Def Reg(EDX)
@@ -257,7 +266,7 @@ TEST_F(ParallelSnippetGeneratorTest, SerialInstruction) {
   ASSERT_THAT(IT.getVariableValues(), SizeIs(0));
 }
 
-TEST_F(ParallelSnippetGeneratorTest, StaticRenaming) {
+TEST_F(X86ParallelSnippetGeneratorTest, ReadAfterWrite_CMOV32rr) {
   // CMOV32rr has tied variables, we enumerate the possible values to execute
   // as many in parallel as possible.
 
@@ -273,22 +282,72 @@ TEST_F(ParallelSnippetGeneratorTest, StaticRenaming) {
   // - hasAliasingRegisters
   const unsigned Opcode = X86::CMOV32rr;
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
-  ASSERT_THAT(CodeTemplates, SizeIs(1));
-  const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("static renaming"));
-  EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
-  constexpr const unsigned kInstructionCount = 15;
-  ASSERT_THAT(CT.Instructions, SizeIs(kInstructionCount));
-  std::unordered_set<unsigned> AllDefRegisters;
-  for (const auto &IT : CT.Instructions) {
-    ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
-    AllDefRegisters.insert(IT.getVariableValues()[0].getReg());
+  ASSERT_THAT(CodeTemplates, SizeIs(2));
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Info, HasSubstr("avoiding Read-After-Write issue"));
+    EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
+    ASSERT_GT(CT.Instructions.size(), 1U);
+    std::unordered_set<unsigned> AllDefRegisters;
+    std::unordered_set<unsigned> AllUseRegisters;
+    for (const auto &IT : CT.Instructions) {
+      ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
+      AllDefRegisters.insert(IT.getVariableValues()[0].getReg());
+      AllUseRegisters.insert(IT.getVariableValues()[1].getReg());
+    }
+    EXPECT_THAT(AllDefRegisters, SizeIs(CT.Instructions.size()))
+        << "Each instruction writes to a different register";
+    EXPECT_THAT(AllUseRegisters, Not(IsEmpty()))
+        << "In total, some other registers are used";
+    auto AllDefAndUseRegs = AllUseRegisters;
+    llvm::set_intersect(AllDefAndUseRegs, AllDefRegisters); // A := A ^ B
+    EXPECT_THAT(AllDefAndUseRegs, IsEmpty())
+        << "No instruction uses any register defined by any of the "
+           "instructions";
   }
-  EXPECT_THAT(AllDefRegisters, SizeIs(kInstructionCount))
-      << "Each instruction writes to a different register";
 }
 
-TEST_F(ParallelSnippetGeneratorTest, NoTiedVariables) {
+TEST_F(X86ParallelSnippetGeneratorTest, ReadAfterWrite_VFMADD132PDr) {
+  // VFMADD132PDr has tied variables, we enumerate the possible values
+  // to execute as many in parallel as possible.
+
+  // - VFMADD132PDr
+  // - Op0 Explicit Def RegClass(XMM)
+  // - Op1 Explicit Use RegClass(XMM) TiedToOp0
+  // - Op2 Explicit Use RegClass(XMM)
+  // - Op3 Explicit Use RegClass(XMM)
+  // - Var0 [Op0,Op1]
+  // - Var1 [Op2]
+  // - Var2 [Op3]
+  // - hasTiedRegisters (execution is always serial)
+  // - hasAliasingRegisters
+  const unsigned Opcode = X86::VFMADD132PDr;
+  const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
+  ASSERT_THAT(CodeTemplates, SizeIs(3));
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Info, HasSubstr("avoiding Read-After-Write issue"));
+    EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
+    ASSERT_GT(CT.Instructions.size(), 1U);
+    std::unordered_set<unsigned> AllDefRegisters;
+    std::unordered_set<unsigned> AllUseRegisters;
+    for (const auto &IT : CT.Instructions) {
+      ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
+      AllDefRegisters.insert(IT.getVariableValues()[0].getReg());
+      AllUseRegisters.insert(IT.getVariableValues()[1].getReg());
+      AllUseRegisters.insert(IT.getVariableValues()[2].getReg());
+    }
+    EXPECT_THAT(AllDefRegisters, SizeIs(CT.Instructions.size()))
+        << "Each instruction writes to a different register";
+    EXPECT_THAT(AllUseRegisters, Not(IsEmpty()))
+        << "In total, some other registers are used";
+    auto AllDefAndUseRegs = AllUseRegisters;
+    llvm::set_intersect(AllDefAndUseRegs, AllDefRegisters); // A := A ^ B
+    EXPECT_THAT(AllDefAndUseRegs, IsEmpty())
+        << "No instruction uses any register defined by any of the "
+           "instructions";
+  }
+}
+
+TEST_F(X86ParallelSnippetGeneratorTest, NoTiedVariables) {
   // CMOV_GR32 has no tied variables, we make sure def and use are different
   // from each other.
 
@@ -305,24 +364,25 @@ TEST_F(ParallelSnippetGeneratorTest, NoTiedVariables) {
   // - hasAliasingRegisters
   const unsigned Opcode = X86::CMOV_GR32;
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
-  ASSERT_THAT(CodeTemplates, SizeIs(1));
-  const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
-  EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
-  ASSERT_THAT(CT.Instructions, SizeIs(1));
-  const InstructionTemplate &IT = CT.Instructions[0];
-  EXPECT_THAT(IT.getOpcode(), Opcode);
-  ASSERT_THAT(IT.getVariableValues(), SizeIs(4));
-  EXPECT_THAT(IT.getVariableValues()[0].getReg(),
-              Not(IT.getVariableValues()[1].getReg()))
-      << "Def is different from first Use";
-  EXPECT_THAT(IT.getVariableValues()[0].getReg(),
-              Not(IT.getVariableValues()[2].getReg()))
-      << "Def is different from second Use";
-  EXPECT_THAT(IT.getVariableValues()[3], IsInvalid());
+  ASSERT_THAT(CodeTemplates, SizeIs(2));
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
+    EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
+    ASSERT_THAT(CT.Instructions, SizeIs(1));
+    const InstructionTemplate &IT = CT.Instructions[0];
+    EXPECT_THAT(IT.getOpcode(), Opcode);
+    ASSERT_THAT(IT.getVariableValues(), SizeIs(4));
+    EXPECT_THAT(IT.getVariableValues()[0].getReg(),
+                Not(IT.getVariableValues()[1].getReg()))
+        << "Def is different from first Use";
+    EXPECT_THAT(IT.getVariableValues()[0].getReg(),
+                Not(IT.getVariableValues()[2].getReg()))
+        << "Def is different from second Use";
+    EXPECT_THAT(IT.getVariableValues()[3], IsInvalid());
+  }
 }
 
-TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
+TEST_F(X86ParallelSnippetGeneratorTest, MemoryUse) {
   // Mov32rm reads from memory.
   // - MOV32rm
   // - Op0 Explicit Def RegClass(GR32)
@@ -342,21 +402,22 @@ TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
   const unsigned Opcode = X86::MOV32rm;
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
-  const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
-  EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
-  ASSERT_THAT(CT.Instructions,
-              SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));
-  const InstructionTemplate &IT = CT.Instructions[0];
-  EXPECT_THAT(IT.getOpcode(), Opcode);
-  ASSERT_THAT(IT.getVariableValues(), SizeIs(6));
-  EXPECT_EQ(IT.getVariableValues()[2].getImm(), 1);
-  EXPECT_EQ(IT.getVariableValues()[3].getReg(), 0u);
-  EXPECT_EQ(IT.getVariableValues()[4].getImm(), 0);
-  EXPECT_EQ(IT.getVariableValues()[5].getReg(), 0u);
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
+    EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
+    ASSERT_THAT(CT.Instructions,
+                SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));
+    const InstructionTemplate &IT = CT.Instructions[0];
+    EXPECT_THAT(IT.getOpcode(), Opcode);
+    ASSERT_THAT(IT.getVariableValues(), SizeIs(6));
+    EXPECT_EQ(IT.getVariableValues()[2].getImm(), 1);
+    EXPECT_EQ(IT.getVariableValues()[3].getReg(), 0u);
+    EXPECT_EQ(IT.getVariableValues()[4].getImm(), 0);
+    EXPECT_EQ(IT.getVariableValues()[5].getReg(), 0u);
+  }
 }
 
-TEST_F(ParallelSnippetGeneratorTest, MOV16ms) {
+TEST_F(X86ParallelSnippetGeneratorTest, MOV16ms) {
   const unsigned Opcode = X86::MOV16ms;
   const Instruction &Instr = State.getIC().getInstr(Opcode);
   std::vector<BenchmarkCode> Benchmarks;
@@ -367,9 +428,32 @@ TEST_F(ParallelSnippetGeneratorTest, MOV16ms) {
               testing::HasSubstr("no available registers"));
 }
 
-class FakeSnippetGenerator : public SnippetGenerator {
+TEST_F(X86ParallelSnippetGeneratorTest,
+       AvoidSerializingThroughImplicitRegisters) {
+  // MULX32rr implicitly uses EDX. We should not select that register to avoid
+  // serialization.
+  const unsigned Opcode = X86::MULX32rr;
+  randomGenerator().seed(0); // Initialize seed.
+  const Instruction &Instr = State.getIC().getInstr(Opcode);
+  // Forbid all registers but RDX/EDX/DX/DH/DL. The only option would be to
+  // choose that register, but that would serialize the instruction, so we
+  // should be returning an error.
+  auto AllRegisters = State.getRATC().emptyRegisters();
+  AllRegisters.flip();
+  AllRegisters.reset(X86::RDX);
+  AllRegisters.reset(X86::EDX);
+  AllRegisters.reset(X86::DX);
+  AllRegisters.reset(X86::DH);
+  AllRegisters.reset(X86::DL);
+  auto Err = Generator.generateCodeTemplates(&Instr, AllRegisters);
+  EXPECT_FALSE((bool)Err);
+  EXPECT_THAT(toString(Err.takeError()),
+              testing::HasSubstr("Failed to produce any snippet"));
+}
+
+class X86FakeSnippetGenerator : public SnippetGenerator {
 public:
-  FakeSnippetGenerator(const LLVMState &State, const Options &Opts)
+  X86FakeSnippetGenerator(const LLVMState &State, const Options &Opts)
       : SnippetGenerator(State, Opts) {}
 
   const Instruction &getInstr(unsigned Opcode) {
@@ -387,7 +471,7 @@ private:
   }
 };
 
-using FakeSnippetGeneratorTest = SnippetGeneratorTest<FakeSnippetGenerator>;
+using X86FakeSnippetGeneratorTest = X86SnippetGeneratorTest<X86FakeSnippetGenerator>;
 
 testing::Matcher<const RegisterValue &> IsRegisterValue(unsigned Reg,
                                                         APInt Value) {
@@ -395,7 +479,7 @@ testing::Matcher<const RegisterValue &> IsRegisterValue(unsigned Reg,
                         testing::Field(&RegisterValue::Value, Value));
 }
 
-TEST_F(FakeSnippetGeneratorTest, MemoryUse_Movsb) {
+TEST_F(X86FakeSnippetGeneratorTest, MemoryUse_Movsb) {
   // MOVSB writes to scratch memory register.
   // - MOVSB
   // - Op0 Explicit Use Memory RegClass(GR8)
@@ -421,7 +505,7 @@ TEST_F(FakeSnippetGeneratorTest, MemoryUse_Movsb) {
   consumeError(std::move(Error));
 }
 
-TEST_F(FakeSnippetGeneratorTest, ComputeRegisterInitialValuesAdd16ri) {
+TEST_F(X86FakeSnippetGeneratorTest, ComputeRegisterInitialValuesAdd16ri) {
   // ADD16ri:
   // explicit def 0       : reg RegClass=GR16
   // explicit use 1       : reg RegClass=GR16 | TIED_TO:0
@@ -435,7 +519,7 @@ TEST_F(FakeSnippetGeneratorTest, ComputeRegisterInitialValuesAdd16ri) {
   EXPECT_THAT(RIV, ElementsAre(IsRegisterValue(X86::AX, APInt())));
 }
 
-TEST_F(FakeSnippetGeneratorTest, ComputeRegisterInitialValuesAdd64rr) {
+TEST_F(X86FakeSnippetGeneratorTest, ComputeRegisterInitialValuesAdd64rr) {
   // ADD64rr:
   //  mov64ri rax, 42
   //  add64rr rax, rax, rbx

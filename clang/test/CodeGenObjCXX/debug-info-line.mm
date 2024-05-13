@@ -16,7 +16,7 @@ void f1() {
   }();
 }
 
-// CHECK-LABEL: define internal {{.*}}i8* @"\01-[TNSObject init]"
+// CHECK-LABEL: define internal {{.*}}ptr @"\01-[TNSObject init]"
 @implementation TNSObject
 - (id)init
 {

@@ -36,13 +36,14 @@ public:
     ElidedDestructorKind,
     ElidableConstructorKind,
     ArgumentKind,
-    STATEMENT_WITH_INDEX_KIND_BEGIN=ArgumentKind,
-    STATEMENT_WITH_INDEX_KIND_END=ArgumentKind,
+    LambdaCaptureKind,
+    STATEMENT_WITH_INDEX_KIND_BEGIN = ArgumentKind,
+    STATEMENT_WITH_INDEX_KIND_END = LambdaCaptureKind,
     STATEMENT_KIND_BEGIN = VariableKind,
-    STATEMENT_KIND_END = ArgumentKind,
+    STATEMENT_KIND_END = LambdaCaptureKind,
     InitializerKind,
-    INITIALIZER_KIND_BEGIN=InitializerKind,
-    INITIALIZER_KIND_END=InitializerKind
+    INITIALIZER_KIND_BEGIN = InitializerKind,
+    INITIALIZER_KIND_END = InitializerKind
   };
 
   LLVM_DUMP_METHOD static StringRef getKindAsString(ItemKind K) {
@@ -55,6 +56,8 @@ public:
       case ElidedDestructorKind:    return "elide destructor";
       case ElidableConstructorKind: return "elide constructor";
       case ArgumentKind:            return "construct into argument";
+      case LambdaCaptureKind:
+        return "construct into lambda captured variable";
       case InitializerKind:         return "construct into member variable";
     };
     llvm_unreachable("Unknown ItemKind");
@@ -72,7 +75,7 @@ private:
 
   bool hasIndex() const {
     return Kind >= STATEMENT_WITH_INDEX_KIND_BEGIN &&
-           Kind >= STATEMENT_WITH_INDEX_KIND_END;
+           Kind <= STATEMENT_WITH_INDEX_KIND_END;
   }
 
   bool hasInitializer() const {
@@ -120,11 +123,15 @@ public:
   ConstructionContextItem(const Expr *E, unsigned Index)
       : Data(E), Kind(ArgumentKind), Index(Index) {
     assert(isa<CallExpr>(E) || isa<CXXConstructExpr>(E) ||
-           isa<CXXInheritedCtorInitExpr>(E) || isa<ObjCMessageExpr>(E));
+           isa<CXXDeleteExpr>(E) || isa<CXXInheritedCtorInitExpr>(E) ||
+           isa<ObjCMessageExpr>(E));
   }
 
   ConstructionContextItem(const CXXCtorInitializer *Init)
       : Data(Init), Kind(InitializerKind), Index(0) {}
+
+  ConstructionContextItem(const LambdaExpr *LE, unsigned Index)
+      : Data(LE), Kind(LambdaCaptureKind), Index(Index) {}
 
   ItemKind getKind() const { return Kind; }
 
@@ -253,7 +260,8 @@ public:
     CXX17ElidedCopyReturnedValueKind,
     RETURNED_VALUE_BEGIN = SimpleReturnedValueKind,
     RETURNED_VALUE_END = CXX17ElidedCopyReturnedValueKind,
-    ArgumentKind
+    ArgumentKind,
+    LambdaCaptureKind
   };
 
 protected:
@@ -297,6 +305,11 @@ public:
                    const ConstructionContextLayer *TopLayer);
 
   Kind getKind() const { return K; }
+
+  virtual const ArrayInitLoopExpr *getArrayInitLoop() const { return nullptr; }
+
+  // Only declared to silence -Wnon-virtual-dtor warnings.
+  virtual ~ConstructionContext() = default;
 };
 
 /// An abstract base class for local variable constructors.
@@ -312,6 +325,12 @@ protected:
 
 public:
   const DeclStmt *getDeclStmt() const { return DS; }
+
+  const ArrayInitLoopExpr *getArrayInitLoop() const override {
+    const auto *Var = cast<VarDecl>(DS->getSingleDecl());
+
+    return dyn_cast<ArrayInitLoopExpr>(Var->getInit());
+  }
 
   static bool classof(const ConstructionContext *CC) {
     return CC->getKind() >= VARIABLE_BEGIN &&
@@ -379,6 +398,10 @@ protected:
 
 public:
   const CXXCtorInitializer *getCXXCtorInitializer() const { return I; }
+
+  const ArrayInitLoopExpr *getArrayInitLoop() const override {
+    return dyn_cast<ArrayInitLoopExpr>(I->getInit());
+  }
 
   static bool classof(const ConstructionContext *CC) {
     return CC->getKind() >= INITIALIZER_BEGIN &&
@@ -519,7 +542,7 @@ public:
 /// of being immediately copied by an elidable copy/move constructor.
 /// For example, T t = T(123); includes a temporary T(123) that is immediately
 /// copied to variable t. In such cases the elidable copy can (but not
-/// necessarily should) be omitted ("elided") accodring to the rules of the
+/// necessarily should) be omitted ("elided") according to the rules of the
 /// language; the constructor would then construct variable t directly.
 /// This construction context contains information of the elidable constructor
 /// and its respective construction context.
@@ -655,6 +678,42 @@ public:
 
   static bool classof(const ConstructionContext *CC) {
     return CC->getKind() == ArgumentKind;
+  }
+};
+
+class LambdaCaptureConstructionContext : public ConstructionContext {
+  // The lambda of which the initializer we capture.
+  const LambdaExpr *LE;
+
+  // Index of the captured element in the captured list.
+  unsigned Index;
+
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit LambdaCaptureConstructionContext(const LambdaExpr *LE,
+                                            unsigned Index)
+      : ConstructionContext(LambdaCaptureKind), LE(LE), Index(Index) {}
+
+public:
+  const LambdaExpr *getLambdaExpr() const { return LE; }
+  unsigned getIndex() const { return Index; }
+
+  const Expr *getInitializer() const {
+    return *(LE->capture_init_begin() + Index);
+  }
+
+  const FieldDecl *getFieldDecl() const {
+    auto It = LE->getLambdaClass()->field_begin();
+    std::advance(It, Index);
+    return *It;
+  }
+
+  const ArrayInitLoopExpr *getArrayInitLoop() const override {
+    return dyn_cast_or_null<ArrayInitLoopExpr>(getInitializer());
+  }
+
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == LambdaCaptureKind;
   }
 };
 

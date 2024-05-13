@@ -1,0 +1,35 @@
+# Check that llvm-lib doesn't list the members of an archive which contains the
+# special member /<ECSYMBOLS>/.
+# UNSUPPORTED: system-zos
+# REQUIRES: aarch64-registered-target
+
+# RUN: yaml2obj %s -o %t.lib
+# RUN: llvm-lib /list %t.lib | FileCheck --check-prefix=NOEC --allow-empty %s
+# NOEC-NOT: ECSYMBOLS
+
+--- !Arch
+Members:
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/<ECSYMBOLS>/'
+    Size:            '0'
+...
+
+# Check that llvm-lib produces /<ECSYMBOLS>/ members for ARM64EC libraries.
+# RUN: rm -rf %t && mkdir -p %t && cd %t
+# RUN: llvm-mc -triple=arm64ec-pc-windows-msvc -filetype=obj -o arm64ec-foo.o %S/Inputs/a.s
+# RUN: llvm-mc -triple=aarch64-pc-windows-msvc -filetype=obj -o arm64-foo.o %S/Inputs/a.s
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o x64-foo.o %S/Inputs/b.s
+# RUN: llvm-lib -machine:arm64ec -out:foo.lib arm64-foo.o arm64ec-foo.o x64-foo.o
+# RUN: grep -q '/<ECSYMBOLS>/' foo.lib
+
+# RUN: llvm-nm --print-armap foo.lib | FileCheck %s
+# CHECK: Archive map
+# CHECK-NEXT: a in arm64-foo.o
+# CHECK-EMPTY:
+# CHECK-NEXT: Archive EC map
+# CHECK-NEXT: a in arm64ec-foo.o
+# CHECK-NEXT: b in x64-foo.o
+# CHECK-EMPTY:

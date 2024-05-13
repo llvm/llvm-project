@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
-// rdar://8769853
 
 @interface B
 - (void) depInA;
@@ -43,13 +42,12 @@ void test(C *c) {
 
 }
 
-// rdar://10268422
 __attribute ((deprecated)) // expected-note {{'DEPRECATED' has been explicitly marked deprecated here}}
 @interface DEPRECATED 
 +(id)new;
 @end
 
-void foo() {
+void foo(void) {
   [DEPRECATED new]; // expected-warning {{'DEPRECATED' is deprecated}}
 }
 

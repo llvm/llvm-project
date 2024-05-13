@@ -10,16 +10,14 @@
 
 #include "NativeRegisterContextLinux_s390x.h"
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
-
-#include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
-
-#include <linux/uio.h>
 #include <sys/ptrace.h>
+#include <sys/uio.h>
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -96,6 +94,11 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   return std::make_unique<NativeRegisterContextLinux_s390x>(target_arch,
                                                              native_thread);
+}
+
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
+  return HostInfo::GetArchitecture();
 }
 
 // NativeRegisterContextLinux_s390x members.
@@ -328,7 +331,7 @@ Status NativeRegisterContextLinux_s390x::WriteRegister(
 }
 
 Status NativeRegisterContextLinux_s390x::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));

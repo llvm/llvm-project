@@ -20,6 +20,7 @@ static_library("ELF") {
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ "." ]
   sources = [
@@ -30,6 +31,7 @@ static_library("ELF") {
     "Arch/ARM.cpp",
     "Arch/AVR.cpp",
     "Arch/Hexagon.cpp",
+    "Arch/LoongArch.cpp",
     "Arch/MSP430.cpp",
     "Arch/Mips.cpp",
     "Arch/MipsArchTree.cpp",
@@ -37,6 +39,7 @@ static_library("ELF") {
     "Arch/PPC64.cpp",
     "Arch/RISCV.cpp",
     "Arch/SPARCV9.cpp",
+    "Arch/SystemZ.cpp",
     "Arch/X86.cpp",
     "Arch/X86_64.cpp",
     "CallGraphSort.cpp",

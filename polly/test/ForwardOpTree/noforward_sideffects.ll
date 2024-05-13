@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly  -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly  -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Do not forward instructions with side-effects (here: function call).
 ;
@@ -10,9 +10,9 @@
 ;   A[0] = val;
 ; }
 ;
-declare double @f(double* %A) #1
+declare double @f(ptr %A) #1
 
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -22,11 +22,11 @@ for:
   br i1 %j.cmp, label %bodyA, label %exit
 
     bodyA:
-      %val = call double (double*) @f(double* %A)
+      %val = call double (ptr) @f(ptr %A)
       br label %bodyB
 
     bodyB:
-      store double %val, double* %A
+      store double %val, ptr %A
       br label %inc
 
 inc:

@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -O0 -fsanitize-address-use-after-scope %s -o %t
+// RUN: %clangxx_asan -O0 %s -o %t
 
 // RUN: not %run %t 'A' 2>&1 | FileCheck %s
 // RUN: not %run %t 'B' 2>&1 | FileCheck %s

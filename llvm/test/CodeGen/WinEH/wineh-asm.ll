@@ -1,8 +1,9 @@
-; RUN: opt -winehprepare < %s
+; RUN: opt -win-eh-prepare < %s
+; RUN: opt -passes=win-eh-prepare < %s
 
 target triple = "x86_64-pc-windows-msvc"
 
-define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1() personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @f(i32 1)
      to label %exit unwind label %cleanup

@@ -152,14 +152,13 @@ entry:
 define <2 x i64> @shr2_nosplat(<2 x i64> %A) nounwind {
 ; CHECK-LABEL: shr2_nosplat:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-NEXT:    psrlq $8, %xmm2
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlq $1, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3]
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
-; CHECK-NEXT:    xorps %xmm2, %xmm1
-; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    psrlq $8, %xmm1
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    psrlq $1, %xmm2
+; CHECK-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[0],xmm2[1]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
+; CHECK-NEXT:    xorpd %xmm1, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %B = lshr <2 x i64> %A,  < i64 8, i64 1>

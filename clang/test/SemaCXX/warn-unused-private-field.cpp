@@ -1,5 +1,26 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-private-field -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -Wunused-private-field -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++17 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-private-field -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++20 %s
+
+#if __cplusplus >= 202002L
+
+class EqDefaultCompare {
+  int used;
+
+public:
+  EqDefaultCompare(int x) : used(x) {}
+  bool operator==(const EqDefaultCompare &) const = default;
+};
+
+class SpaceShipDefaultCompare {
+  int used;
+
+public:
+  SpaceShipDefaultCompare(int x) : used(x) {}
+  int operator<=>(const SpaceShipDefaultCompare &) const = default;
+};
+
+#endif
 
 class NotFullyDefined {
  public:
@@ -263,3 +284,14 @@ public:
 private:
   int n; // expected-warning{{private field 'n' is not used}}
 };
+
+namespace pr61334 {
+class [[maybe_unused]] MaybeUnusedClass {};
+enum [[maybe_unused]] MaybeUnusedEnum {};
+typedef int MaybeUnusedTypedef [[maybe_unused]];
+class C {
+  MaybeUnusedClass c; // no-warning
+  MaybeUnusedEnum e; // no-warning
+  MaybeUnusedTypedef t; // no-warning
+};
+}

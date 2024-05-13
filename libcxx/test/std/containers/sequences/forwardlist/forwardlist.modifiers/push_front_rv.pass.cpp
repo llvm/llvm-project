@@ -27,11 +27,11 @@ int main(int, char**)
         C c;
         c.push_front(1);
         assert(c.front() == 1);
-        assert(distance(c.begin(), c.end()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 1);
         c.push_front(3);
         assert(c.front() == 3);
-        assert(*next(c.begin()) == 1);
-        assert(distance(c.begin(), c.end()) == 2);
+        assert(*std::next(c.begin()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 2);
     }
     {
         typedef MoveOnly T;
@@ -39,11 +39,11 @@ int main(int, char**)
         C c;
         c.push_front(1);
         assert(c.front() == 1);
-        assert(distance(c.begin(), c.end()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 1);
         c.push_front(3);
         assert(c.front() == 3);
-        assert(*next(c.begin()) == 1);
-        assert(distance(c.begin(), c.end()) == 2);
+        assert(*std::next(c.begin()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 2);
     }
 
   return 0;

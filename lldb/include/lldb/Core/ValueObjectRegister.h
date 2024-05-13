@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace lldb_private {
 class DataExtractor;
@@ -36,7 +37,7 @@ public:
                                     lldb::RegisterContextSP &reg_ctx_sp,
                                     uint32_t set_idx);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override {
     return lldb::eValueTypeRegisterSet;
@@ -46,15 +47,15 @@ public:
 
   ConstString GetQualifiedTypeName() override;
 
-  size_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
-                                             bool can_create) override;
+  lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
+                                             bool can_create = true) override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  size_t GetIndexOfChildWithName(llvm::StringRef name) override;
 
 protected:
   bool UpdateValue() override;
@@ -84,9 +85,9 @@ public:
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     lldb::RegisterContextSP &reg_ctx_sp,
-                                    uint32_t reg_num);
+                                    const RegisterInfo *reg_info);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override {
     return lldb::eValueTypeRegister;
@@ -94,7 +95,7 @@ public:
 
   ConstString GetTypeName() override;
 
-  size_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   bool SetValueFromCString(const char *value_str, Status &error) override;
 
@@ -119,15 +120,16 @@ protected:
   CompilerType m_compiler_type;
 
 private:
-  void ConstructObject(uint32_t reg_num);
+  void ConstructObject(const RegisterInfo *reg_info);
 
   friend class ValueObjectRegisterSet;
 
   ValueObjectRegister(ValueObject &parent, lldb::RegisterContextSP &reg_ctx_sp,
-                      uint32_t reg_num);
+                      const RegisterInfo *reg_info);
   ValueObjectRegister(ExecutionContextScope *exe_scope,
                       ValueObjectManager &manager,
-                      lldb::RegisterContextSP &reg_ctx_sp, uint32_t reg_num);
+                      lldb::RegisterContextSP &reg_ctx_sp,
+                      const RegisterInfo *reg_info);
 
   // For ValueObject only
   ValueObjectRegister(const ValueObjectRegister &) = delete;

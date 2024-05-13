@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
-; RUN: opt %loadPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
 ;
 ; Do not remove the scalar value write of %i.trunc in inner.for.
 ; It is used by body.
@@ -9,7 +9,7 @@
 ; Note that -polly-simplify rightfully removes %inner.cond. It should
 ; not have been added to the instruction list in the first place.
 ;
-define void @func(i32 %n, i32* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -38,7 +38,7 @@ for:
       br i1 %inner.cond, label %body, label %inner.for
 
     body:
-      store i32 %i.trunc, i32* %A
+      store i32 %i.trunc, ptr %A
       br label %inc
 
 

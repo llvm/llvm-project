@@ -12,7 +12,7 @@ void xf();
 // CHECK: define {{(dso_local )?}}void @g({{.*}} !type [[TINT:![0-9]+]] !type [[TINT_GENERALIZED:![0-9]+]]
 void g(int b) {
   void (*fp)() = b ? f : xf;
-  // ITANIUM: call i1 @llvm.type.test(i8* {{.*}}, metadata !"_ZTSFvE")
+  // ITANIUM: call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSFvE")
   fp();
 }
 

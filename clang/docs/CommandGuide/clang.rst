@@ -75,7 +75,7 @@ Stage Selection Options
 
 .. option:: -fsyntax-only
 
- Run the preprocessor, parser and type checking stages.
+ Run the preprocessor, parser and semantic analysis stages.
 
 .. option:: -S
 
@@ -185,15 +185,31 @@ Language Selection and Mode Options
 
    ISO C++ 2017 with amendments and GNU extensions
 
-  | ``c++2a``
+  | ``c++20``
 
-   Working draft for ISO C++ 2020
+   ISO C++ 2020 with amendments
 
-  | ``gnu++2a``
+  | ``gnu++20``
 
-   Working draft for ISO C++ 2020 with GNU extensions
+   ISO C++ 2020 with amendments and GNU extensions
 
- The default C++ language standard is ``gnu++14``.
+  | ``c++23``
+
+   ISO C++ 2023 with amendments
+
+  | ``gnu++23``
+
+   ISO C++ 2023 with amendments and GNU extensions
+
+  | ``c++2c``
+
+   Working draft for C++2c
+
+  | ``gnu++2c``
+
+   Working draft for C++2c with GNU extensions
+
+ The default C++ language standard is ``gnu++17``.
 
  Supported values for the OpenCL language are:
 
@@ -252,8 +268,24 @@ Language Selection and Mode Options
 
 .. option:: -fno-builtin
 
- Disable special handling and optimizations of builtin functions like
- :c:func:`strlen` and :c:func:`malloc`.
+ Disable special handling and optimizations of well-known library functions,
+ like :c:func:`strlen` and :c:func:`malloc`.
+
+.. option:: -fno-builtin-<function>
+
+ Disable special handling and optimizations for the specific library function.
+ For example, ``-fno-builtin-strlen`` removes any special handling for the
+ :c:func:`strlen` library function.
+
+.. option:: -fno-builtin-std-<function>
+
+ Disable special handling and optimizations for the specific C++ standard
+ library function in namespace ``std``. For example,
+ ``-fno-builtin-std-move_if_noexcept`` removes any special handling for the
+ :cpp:func:`std::move_if_noexcept` library function.
+
+ For C standard library functions that the C++ standard library also provides
+ in namespace ``std``, use :option:`-fno-builtin-\<function\>` instead.
 
 .. option:: -fmath-errno
 
@@ -269,7 +301,8 @@ Language Selection and Mode Options
 
 .. option:: -fmsc-version=
 
- Set _MSC_VER. Defaults to 1300 on Windows. Not set otherwise.
+ Set ``_MSC_VER``. When on Windows, this defaults to either the same value as
+ the currently installed version of cl.exe, or ``1933``. Not set otherwise.
 
 .. option:: -fborland-extensions
 
@@ -323,7 +356,11 @@ number of cross compilers, or may only support a native target.
 
 .. option:: -arch <architecture>
 
-  Specify the architecture to build for.
+  Specify the architecture to build for (Mac OS X specific).
+
+.. option:: -target <architecture>
+
+  Specify the architecture to build for (all platforms).
 
 .. option:: -mmacosx-version-min=<version>
 
@@ -342,6 +379,10 @@ number of cross compilers, or may only support a native target.
   target is specified, the system default target will be used.
 
 .. option:: -mcpu=?, -mtune=?
+
+  Acts as an alias for :option:`--print-supported-cpus`.
+
+.. option:: -mcpu=help, -mtune=help
 
   Acts as an alias for :option:`--print-supported-cpus`.
 
@@ -441,8 +482,10 @@ Code Generation Options
 
 .. option:: -fexceptions
 
-  Enable generation of unwind information. This allows exceptions to be thrown
-  through Clang compiled stack frames.  This is on by default in x86-64.
+  Allow exceptions to be thrown through Clang compiled stack frames (on many
+  targets, this will enable unwind information for functions that might have
+  an exception thrown through them). For most targets, this is enabled by
+  default for C++.
 
 .. option:: -ftrapv
 
@@ -564,6 +607,16 @@ Driver Options
   directory (:option:`-save-stats`/"-save-stats=cwd") or the directory
   of the output file ("-save-state=obj").
 
+  You can also use environment variables to control the statistics reporting.
+  Setting ``CC_PRINT_INTERNAL_STAT`` to ``1`` enables the feature, the report
+  goes to stdout in JSON format.
+
+  Setting ``CC_PRINT_INTERNAL_STAT_FILE`` to a file path makes it report
+  statistics to the given file in the JSON format.
+
+  Note that ``-save-stats`` take precedence over ``CC_PRINT_INTERNAL_STAT``
+  and ``CC_PRINT_INTERNAL_STAT_FILE``.
+
 .. option:: -integrated-as, -no-integrated-as
 
   Used to enable and disable, respectively, the use of the integrated
@@ -631,6 +684,21 @@ Preprocessor Options
 
   Do not search clang's builtin directory for include files.
 
+.. option:: -fkeep-system-includes
+
+  Usable only with :option:`-E`. Do not copy the preprocessed content of
+  "system" headers to the output; instead, preserve the #include directive.
+  This can greatly reduce the volume of text produced by :option:`-E` which
+  can be helpful when trying to produce a "small" reproduceable test case.
+
+  This option does not guarantee reproduceability, however. If the including
+  source defines preprocessor symbols that influence the behavior of system
+  headers (for example, ``_XOPEN_SOURCE``) the operation of :option:`-E` will
+  remove that definition and thus can change the semantics of the included
+  header. Also, using a different version of the system headers (especially a
+  different version of the STL) may result in different behavior. Always verify
+  the preprocessed file by compiling it separately.
+
 
 ENVIRONMENT
 -----------
@@ -662,7 +730,7 @@ ENVIRONMENT
 BUGS
 ----
 
-To report bugs, please visit <https://bugs.llvm.org/>.  Most bug reports should
+To report bugs, please visit <https://github.com/llvm/llvm-project/issues/>.  Most bug reports should
 include preprocessed source files (use the :option:`-E` option) and the full
 output of the compiler, along with information to reproduce.
 

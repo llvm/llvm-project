@@ -14,7 +14,7 @@ declare i32 @bar(i64)
 define i1 @plus_one() nounwind {
 ; CHECK32-LABEL: plus_one:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movb M, %al
+; CHECK32-NEXT:    movzbl M, %eax
 ; CHECK32-NEXT:    incl L
 ; CHECK32-NEXT:    jne .LBB0_2
 ; CHECK32-NEXT:  # %bb.1: # %entry
@@ -29,8 +29,8 @@ define i1 @plus_one() nounwind {
 ;
 ; CHECK64-LABEL: plus_one:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    incl {{.*}}(%rip)
+; CHECK64-NEXT:    movzbl M(%rip), %eax
+; CHECK64-NEXT:    incl L(%rip)
 ; CHECK64-NEXT:    jne .LBB0_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
@@ -42,10 +42,10 @@ define i1 @plus_one() nounwind {
 ; CHECK64-NEXT:    movb $1, %al
 ; CHECK64-NEXT:    retq
 entry:
-  %loaded_L = load i32, i32* @L
+  %loaded_L = load i32, ptr @L
   %val = add nsw i32 %loaded_L, 1 ; N.B. will emit inc.
-  store i32 %val, i32* @L
-  %loaded_M = load i8, i8* @M
+  store i32 %val, ptr @L
+  %loaded_M = load i8, ptr @M
   %masked = and i8 %loaded_M, 8
   %M_is_true = icmp ne i8 %masked, 0
   %L_is_false = icmp eq i32 %val, 0
@@ -62,7 +62,7 @@ exit2:
 define i1 @plus_forty_two() nounwind {
 ; CHECK32-LABEL: plus_forty_two:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movb M, %al
+; CHECK32-NEXT:    movzbl M, %eax
 ; CHECK32-NEXT:    addl $42, L
 ; CHECK32-NEXT:    jne .LBB1_2
 ; CHECK32-NEXT:  # %bb.1: # %entry
@@ -77,8 +77,8 @@ define i1 @plus_forty_two() nounwind {
 ;
 ; CHECK64-LABEL: plus_forty_two:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    addl $42, {{.*}}(%rip)
+; CHECK64-NEXT:    movzbl M(%rip), %eax
+; CHECK64-NEXT:    addl $42, L(%rip)
 ; CHECK64-NEXT:    jne .LBB1_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
@@ -90,10 +90,10 @@ define i1 @plus_forty_two() nounwind {
 ; CHECK64-NEXT:    movb $1, %al
 ; CHECK64-NEXT:    retq
 entry:
-  %loaded_L = load i32, i32* @L
+  %loaded_L = load i32, ptr @L
   %val = add nsw i32 %loaded_L, 42 ; N.B. won't emit inc.
-  store i32 %val, i32* @L
-  %loaded_M = load i8, i8* @M
+  store i32 %val, ptr @L
+  %loaded_M = load i8, ptr @M
   %masked = and i8 %loaded_M, 8
   %M_is_true = icmp ne i8 %masked, 0
   %L_is_false = icmp eq i32 %val, 0
@@ -110,7 +110,7 @@ exit2:
 define i1 @minus_one() nounwind {
 ; CHECK32-LABEL: minus_one:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movb M, %al
+; CHECK32-NEXT:    movzbl M, %eax
 ; CHECK32-NEXT:    decl L
 ; CHECK32-NEXT:    jne .LBB2_2
 ; CHECK32-NEXT:  # %bb.1: # %entry
@@ -125,8 +125,8 @@ define i1 @minus_one() nounwind {
 ;
 ; CHECK64-LABEL: minus_one:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    decl {{.*}}(%rip)
+; CHECK64-NEXT:    movzbl M(%rip), %eax
+; CHECK64-NEXT:    decl L(%rip)
 ; CHECK64-NEXT:    jne .LBB2_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
@@ -138,10 +138,10 @@ define i1 @minus_one() nounwind {
 ; CHECK64-NEXT:    movb $1, %al
 ; CHECK64-NEXT:    retq
 entry:
-  %loaded_L = load i32, i32* @L
+  %loaded_L = load i32, ptr @L
   %val = add nsw i32 %loaded_L, -1 ; N.B. will emit dec.
-  store i32 %val, i32* @L
-  %loaded_M = load i8, i8* @M
+  store i32 %val, ptr @L
+  %loaded_M = load i8, ptr @M
   %masked = and i8 %loaded_M, 8
   %M_is_true = icmp ne i8 %masked, 0
   %L_is_false = icmp eq i32 %val, 0
@@ -158,7 +158,7 @@ exit2:
 define i1 @minus_forty_two() nounwind {
 ; CHECK32-LABEL: minus_forty_two:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movb M, %al
+; CHECK32-NEXT:    movzbl M, %eax
 ; CHECK32-NEXT:    addl $-42, L
 ; CHECK32-NEXT:    jne .LBB3_2
 ; CHECK32-NEXT:  # %bb.1: # %entry
@@ -173,8 +173,8 @@ define i1 @minus_forty_two() nounwind {
 ;
 ; CHECK64-LABEL: minus_forty_two:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    addl $-42, {{.*}}(%rip)
+; CHECK64-NEXT:    movzbl M(%rip), %eax
+; CHECK64-NEXT:    addl $-42, L(%rip)
 ; CHECK64-NEXT:    jne .LBB3_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
@@ -186,10 +186,10 @@ define i1 @minus_forty_two() nounwind {
 ; CHECK64-NEXT:    movb $1, %al
 ; CHECK64-NEXT:    retq
 entry:
-  %loaded_L = load i32, i32* @L
+  %loaded_L = load i32, ptr @L
   %val = add nsw i32 %loaded_L, -42 ; N.B. won't emit dec.
-  store i32 %val, i32* @L
-  %loaded_M = load i8, i8* @M
+  store i32 %val, ptr @L
+  %loaded_M = load i8, ptr @M
   %masked = and i8 %loaded_M, 8
   %M_is_true = icmp ne i8 %masked, 0
   %L_is_false = icmp eq i32 %val, 0
@@ -203,7 +203,7 @@ exit2:
   ret i1 false
 }
 
-define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
+define i64 @test_intervening_call(ptr %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK32-LABEL: test_intervening_call:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    pushl %ebx
@@ -219,7 +219,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK32-NEXT:    subl $8, %esp
 ; CHECK32-NEXT:    pushl %edx
 ; CHECK32-NEXT:    pushl %eax
-; CHECK32-NEXT:    calll bar
+; CHECK32-NEXT:    calll bar@PLT
 ; CHECK32-NEXT:    addl $16, %esp
 ; CHECK32-NEXT:    testb %bl, %bl
 ; CHECK32-NEXT:    jne .LBB4_3
@@ -242,7 +242,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK64-NEXT:    lock cmpxchgq %rdx, (%rdi)
 ; CHECK64-NEXT:    setne %bl
 ; CHECK64-NEXT:    movq %rax, %rdi
-; CHECK64-NEXT:    callq bar
+; CHECK64-NEXT:    callq bar@PLT
 ; CHECK64-NEXT:    testb %bl, %bl
 ; CHECK64-NEXT:    jne .LBB4_2
 ; CHECK64-NEXT:  # %bb.1: # %t
@@ -255,7 +255,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK64-NEXT:    retq
 entry:
   ; cmpxchg sets EFLAGS, call clobbers it, then br uses EFLAGS.
-  %cx = cmpxchg i64* %foo, i64 %bar, i64 %baz seq_cst seq_cst
+  %cx = cmpxchg ptr %foo, i64 %bar, i64 %baz seq_cst seq_cst
   %v = extractvalue { i64, i1 } %cx, 0
   %p = extractvalue { i64, i1 } %cx, 1
   call i32 @bar(i64 %v)
@@ -268,7 +268,7 @@ f:
   ret i64 0
 }
 
-define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i64 %bar1, i64 %baz1) nounwind {
+define i64 @test_two_live_flags(ptr %foo0, i64 %bar0, i64 %baz0, ptr %foo1, i64 %bar1, i64 %baz1) nounwind {
 ; CHECK32-LABEL: test_two_live_flags:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    pushl %ebp
@@ -276,33 +276,31 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK32-NEXT:    pushl %edi
 ; CHECK32-NEXT:    pushl %esi
 ; CHECK32-NEXT:    pushl %eax
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)
-; CHECK32-NEXT:    setne {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; CHECK32-NEXT:    sete {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    movl %edi, %edx
-; CHECK32-NEXT:    movl %ebp, %ecx
+; CHECK32-NEXT:    movl %ebp, %edx
+; CHECK32-NEXT:    movl %edi, %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)
 ; CHECK32-NEXT:    sete %al
-; CHECK32-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; CHECK32-NEXT:    jne .LBB5_4
-; CHECK32-NEXT:  # %bb.1: # %entry
-; CHECK32-NEXT:    testb %al, %al
-; CHECK32-NEXT:    je .LBB5_4
-; CHECK32-NEXT:  # %bb.2: # %t
+; CHECK32-NEXT:    andb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload
+; CHECK32-NEXT:    cmpb $1, %al
+; CHECK32-NEXT:    jne .LBB5_3
+; CHECK32-NEXT:  # %bb.1: # %t
 ; CHECK32-NEXT:    movl $42, %eax
-; CHECK32-NEXT:    jmp .LBB5_3
-; CHECK32-NEXT:  .LBB5_4: # %f
+; CHECK32-NEXT:    jmp .LBB5_2
+; CHECK32-NEXT:  .LBB5_3: # %f
 ; CHECK32-NEXT:    xorl %eax, %eax
-; CHECK32-NEXT:  .LBB5_3: # %t
+; CHECK32-NEXT:  .LBB5_2: # %t
 ; CHECK32-NEXT:    xorl %edx, %edx
 ; CHECK32-NEXT:    addl $4, %esp
 ; CHECK32-NEXT:    popl %esi
@@ -315,25 +313,23 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movq %rsi, %rax
 ; CHECK64-NEXT:    lock cmpxchgq %rdx, (%rdi)
-; CHECK64-NEXT:    setne %dl
+; CHECK64-NEXT:    sete %dl
 ; CHECK64-NEXT:    movq %r8, %rax
 ; CHECK64-NEXT:    lock cmpxchgq %r9, (%rcx)
 ; CHECK64-NEXT:    sete %al
-; CHECK64-NEXT:    testb %dl, %dl
-; CHECK64-NEXT:    jne .LBB5_3
-; CHECK64-NEXT:  # %bb.1: # %entry
-; CHECK64-NEXT:    testb %al, %al
-; CHECK64-NEXT:    je .LBB5_3
-; CHECK64-NEXT:  # %bb.2: # %t
+; CHECK64-NEXT:    andb %dl, %al
+; CHECK64-NEXT:    cmpb $1, %al
+; CHECK64-NEXT:    jne .LBB5_2
+; CHECK64-NEXT:  # %bb.1: # %t
 ; CHECK64-NEXT:    movl $42, %eax
 ; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB5_3: # %f
+; CHECK64-NEXT:  .LBB5_2: # %f
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 entry:
-  %cx0 = cmpxchg i64* %foo0, i64 %bar0, i64 %baz0 seq_cst seq_cst
+  %cx0 = cmpxchg ptr %foo0, i64 %bar0, i64 %baz0 seq_cst seq_cst
   %p0 = extractvalue { i64, i1 } %cx0, 1
-  %cx1 = cmpxchg i64* %foo1, i64 %bar1, i64 %baz1 seq_cst seq_cst
+  %cx1 = cmpxchg ptr %foo1, i64 %bar1, i64 %baz1 seq_cst seq_cst
   %p1 = extractvalue { i64, i1 } %cx1, 1
   %flag = and i1 %p0, %p1
   br i1 %flag, label %t, label %f
@@ -345,7 +341,7 @@ f:
   ret i64 0
 }
 
-define i1 @asm_clobbering_flags(i32* %mem) nounwind {
+define i1 @asm_clobbering_flags(ptr %mem) nounwind {
 ; CHECK32-LABEL: asm_clobbering_flags:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -369,9 +365,9 @@ define i1 @asm_clobbering_flags(i32* %mem) nounwind {
 ; CHECK64-NEXT:    movl %ecx, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  %val = load i32, i32* %mem, align 4
+  %val = load i32, ptr %mem, align 4
   %cmp = icmp sgt i32 %val, 0
   %res = tail call i32 asm "bsfl $1,$0", "=r,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i32 %val)
-  store i32 %res, i32* %mem, align 4
+  store i32 %res, ptr %mem, align 4
   ret i1 %cmp
 }

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine -polly-dce -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine -polly-dce -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;    void f(int *A) {
 ;      for (int i = 0; i < 1024; i++)
@@ -20,7 +20,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
 declare i32 @bar(i32) #1
 
-define void @f(i32* %A) {
+define void @f(ptr %A) {
 entry:
   br label %for.cond
 
@@ -31,8 +31,8 @@ for.cond:
 
 S1:
   %nonaff = call i32 @bar(i32 %i.0)
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %nonaff
-  store i32 %i.0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %nonaff
+  store i32 %i.0, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:
@@ -48,8 +48,8 @@ for.cond.2:
   br i1 %exitcond.2, label %S2, label %for.end
 
 S2:
-  %arrayidx.2 = getelementptr inbounds i32, i32* %A, i32 %i.2
-  store i32 %i.2, i32* %arrayidx.2, align 4
+  %arrayidx.2 = getelementptr inbounds i32, ptr %A, i32 %i.2
+  store i32 %i.2, ptr %arrayidx.2, align 4
   br label %for.inc.2
 
 for.inc.2:

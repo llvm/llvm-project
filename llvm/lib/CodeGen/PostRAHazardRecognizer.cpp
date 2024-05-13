@@ -28,14 +28,11 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Pass.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "post-RA-hazard-rec"
@@ -72,10 +69,11 @@ bool PostRAHazardRecognizer::runOnMachineFunction(MachineFunction &Fn) {
       TII->CreateTargetPostRAHazardRecognizer(Fn));
 
   // Return if the target has not implemented a hazard recognizer.
-  if (!HazardRec.get())
+  if (!HazardRec)
     return false;
 
   // Loop over all of the basic blocks
+  bool Changed = false;
   for (auto &MBB : Fn) {
     // We do not call HazardRec->reset() here to make sure we are handling noop
     // hazards at the start of basic blocks.
@@ -85,6 +83,8 @@ bool PostRAHazardRecognizer::runOnMachineFunction(MachineFunction &Fn) {
       HazardRec->EmitNoops(NumPreNoops);
       TII->insertNoops(MBB, MachineBasicBlock::iterator(MI), NumPreNoops);
       NumNoops += NumPreNoops;
+      if (NumPreNoops)
+        Changed = true;
 
       HazardRec->EmitInstruction(&MI);
       if (HazardRec->atIssueLimit()) {
@@ -92,5 +92,5 @@ bool PostRAHazardRecognizer::runOnMachineFunction(MachineFunction &Fn) {
       }
     }
   }
-  return true;
+  return Changed;
 }

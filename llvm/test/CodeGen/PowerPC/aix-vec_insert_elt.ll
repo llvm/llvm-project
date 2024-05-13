@@ -69,7 +69,8 @@ define <8 x i16> @testHalf(<8 x i16> %a, i64 %b, i64 %idx) {
 ;
 ; CHECK-32-P10-LABEL: testHalf:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    vinshlx 2, 6, 4
+; CHECK-32-P10-NEXT:    slwi 3, 6, 1
+; CHECK-32-P10-NEXT:    vinshlx 2, 3, 4
 ; CHECK-32-P10-NEXT:    blr
 entry:
   %conv = trunc i64 %b to i16
@@ -106,7 +107,8 @@ define <4 x i32> @testWord(<4 x i32> %a, i64 %b, i64 %idx) {
 ;
 ; CHECK-32-P10-LABEL: testWord:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    vinswlx 2, 6, 4
+; CHECK-32-P10-NEXT:    slwi 3, 6, 2
+; CHECK-32-P10-NEXT:    vinswlx 2, 3, 4
 ; CHECK-32-P10-NEXT:    blr
 entry:
   %conv = trunc i64 %b to i32
@@ -186,8 +188,10 @@ define <2 x i64> @testDoubleword(<2 x i64> %a, i64 %b, i64 %idx) {
 ; CHECK-32-P10-LABEL: testDoubleword:
 ; CHECK-32-P10:       # %bb.0: # %entry
 ; CHECK-32-P10-NEXT:    add 5, 6, 6
-; CHECK-32-P10-NEXT:    vinswlx 2, 5, 3
+; CHECK-32-P10-NEXT:    slwi 6, 5, 2
+; CHECK-32-P10-NEXT:    vinswlx 2, 6, 3
 ; CHECK-32-P10-NEXT:    addi 3, 5, 1
+; CHECK-32-P10-NEXT:    slwi 3, 3, 2
 ; CHECK-32-P10-NEXT:    vinswlx 2, 3, 4
 ; CHECK-32-P10-NEXT:    blr
 entry:
@@ -262,8 +266,8 @@ entry:
 define <4 x float> @testFloat1(<4 x float> %a, float %b, i32 zeroext %idx1) {
 ; CHECK-64-LABEL: testFloat1:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-DAG:     rlwinm 3, 4, 2, 28, 29
-; CHECK-64-DAG:     addi 4, 1, -16
+; CHECK-64-NEXT:    rlwinm 3, 4, 2, 28, 29
+; CHECK-64-NEXT:    addi 4, 1, -16
 ; CHECK-64-NEXT:    stxv 34, -16(1)
 ; CHECK-64-NEXT:    stfsx 1, 4, 3
 ; CHECK-64-NEXT:    lxv 34, -16(1)
@@ -280,66 +284,62 @@ define <4 x float> @testFloat1(<4 x float> %a, float %b, i32 zeroext %idx1) {
 ;
 ; CHECK-64-P10-LABEL: testFloat1:
 ; CHECK-64-P10:       # %bb.0: # %entry
-; CHECK-64-P10-NEXT:    xscvdpspn 0, 1
-; CHECK-64-P10-NEXT:    extsw 4, 4
-; CHECK-64-P10-NEXT:    slwi 4, 4, 2
-; CHECK-64-P10-NEXT:    mffprwz 3, 0
-; CHECK-64-P10-NEXT:    vinswlx 2, 4, 3
+; CHECK-64-P10-NEXT:    xscvdpspn 35, 1
+; CHECK-64-P10-NEXT:    slwi 3, 4, 2
+; CHECK-64-P10-NEXT:    vinswvlx 2, 3, 3
 ; CHECK-64-P10-NEXT:    blr
 ;
 ; CHECK-32-P10-LABEL: testFloat1:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    xscvdpspn 0, 1
-; CHECK-32-P10-NEXT:    mffprwz 3, 0
-; CHECK-32-P10-NEXT:    vinswlx 2, 4, 3
+; CHECK-32-P10-NEXT:    xscvdpspn 35, 1
+; CHECK-32-P10-NEXT:    slwi 3, 4, 2
+; CHECK-32-P10-NEXT:    vinswvlx 2, 3, 3
 ; CHECK-32-P10-NEXT:    blr
 entry:
   %vecins = insertelement <4 x float> %a, float %b, i32 %idx1
   ret <4 x float> %vecins
 }
 
-define <4 x float> @testFloat2(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 zeroext %idx2) {
+define <4 x float> @testFloat2(<4 x float> %a, ptr %b, i32 zeroext %idx1, i32 zeroext %idx2) {
 ; CHECK-64-LABEL: testFloat2:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lwz 6, 0(3)
-; CHECK-64-DAG:     rlwinm 4, 4, 2, 28, 29
-; CHECK-64-DAG:     addi 7, 1, -32
-; CHECK-64-NEXT:    stxv 34, -32(1)
+; CHECK-64-NEXT:    addi 7, 1, -16
+; CHECK-64-NEXT:    rlwinm 4, 4, 2, 28, 29
+; CHECK-64-NEXT:    stxv 34, -16(1)
+; CHECK-64-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-64-NEXT:    stwx 6, 7, 4
-; CHECK-64-NEXT:    rlwinm 4, 5, 2, 28, 29
-; CHECK-64-NEXT:    addi 5, 1, -16
-; CHECK-64-NEXT:    lxv 0, -32(1)
+; CHECK-64-NEXT:    addi 4, 1, -32
+; CHECK-64-NEXT:    lxv 0, -16(1)
 ; CHECK-64-NEXT:    lwz 3, 1(3)
-; CHECK-64-NEXT:    stxv 0, -16(1)
-; CHECK-64-NEXT:    stwx 3, 5, 4
-; CHECK-64-NEXT:    lxv 34, -16(1)
+; CHECK-64-NEXT:    stxv 0, -32(1)
+; CHECK-64-NEXT:    stwx 3, 4, 5
+; CHECK-64-NEXT:    lxv 34, -32(1)
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testFloat2:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 6, 0(3)
-; CHECK-32-NEXT:    addi 7, 1, -32
+; CHECK-32-NEXT:    addi 7, 1, -16
 ; CHECK-32-NEXT:    rlwinm 4, 4, 2, 28, 29
-; CHECK-32-NEXT:    stxv 34, -32(1)
+; CHECK-32-NEXT:    stxv 34, -16(1)
 ; CHECK-32-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-32-NEXT:    stwx 6, 7, 4
-; CHECK-32-NEXT:    addi 4, 1, -16
-; CHECK-32-NEXT:    lxv 0, -32(1)
+; CHECK-32-NEXT:    addi 4, 1, -48
+; CHECK-32-NEXT:    lxv 0, -16(1)
 ; CHECK-32-NEXT:    lwz 3, 1(3)
-; CHECK-32-NEXT:    stxv 0, -16(1)
+; CHECK-32-NEXT:    stxv 0, -48(1)
 ; CHECK-32-NEXT:    stwx 3, 4, 5
-; CHECK-32-NEXT:    lxv 34, -16(1)
+; CHECK-32-NEXT:    lxv 34, -48(1)
 ; CHECK-32-NEXT:    blr
 ;
 ; CHECK-64-P10-LABEL: testFloat2:
 ; CHECK-64-P10:       # %bb.0: # %entry
 ; CHECK-64-P10-NEXT:    lwz 6, 0(3)
-; CHECK-64-P10-NEXT:    extsw 4, 4
 ; CHECK-64-P10-NEXT:    lwz 3, 1(3)
 ; CHECK-64-P10-NEXT:    slwi 4, 4, 2
 ; CHECK-64-P10-NEXT:    vinswlx 2, 4, 6
-; CHECK-64-P10-NEXT:    extsw 4, 5
-; CHECK-64-P10-NEXT:    slwi 4, 4, 2
+; CHECK-64-P10-NEXT:    slwi 4, 5, 2
 ; CHECK-64-P10-NEXT:    vinswlx 2, 4, 3
 ; CHECK-64-P10-NEXT:    blr
 ;
@@ -347,88 +347,85 @@ define <4 x float> @testFloat2(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 ze
 ; CHECK-32-P10:       # %bb.0: # %entry
 ; CHECK-32-P10-NEXT:    lwz 6, 0(3)
 ; CHECK-32-P10-NEXT:    lwz 3, 1(3)
+; CHECK-32-P10-NEXT:    slwi 4, 4, 2
 ; CHECK-32-P10-NEXT:    vinswlx 2, 4, 6
-; CHECK-32-P10-NEXT:    vinswlx 2, 5, 3
+; CHECK-32-P10-NEXT:    slwi 4, 5, 2
+; CHECK-32-P10-NEXT:    vinswlx 2, 4, 3
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %0 = bitcast i8* %b to float*
-  %add.ptr1 = getelementptr inbounds i8, i8* %b, i64 1
-  %1 = bitcast i8* %add.ptr1 to float*
-  %2 = load float, float* %0, align 4
-  %vecins = insertelement <4 x float> %a, float %2, i32 %idx1
-  %3 = load float, float* %1, align 4
-  %vecins2 = insertelement <4 x float> %vecins, float %3, i32 %idx2
+  %add.ptr1 = getelementptr inbounds i8, ptr %b, i64 1
+  %0 = load float, ptr %b, align 4
+  %vecins = insertelement <4 x float> %a, float %0, i32 %idx1
+  %1 = load float, ptr %add.ptr1, align 4
+  %vecins2 = insertelement <4 x float> %vecins, float %1, i32 %idx2
   ret <4 x float> %vecins2
 }
 
-define <4 x float> @testFloat3(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 zeroext %idx2) {
+define <4 x float> @testFloat3(<4 x float> %a, ptr %b, i32 zeroext %idx1, i32 zeroext %idx2) {
 ; CHECK-64-LABEL: testFloat3:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lis 6, 1
-; CHECK-64-DAG:         rlwinm 4, 4, 2, 28, 29
-; CHECK-64-DAG:    addi 7, 1, -32
+; CHECK-64-NEXT:    addi 7, 1, -16
+; CHECK-64-NEXT:    rlwinm 4, 4, 2, 28, 29
+; CHECK-64-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-64-NEXT:    lwzx 6, 3, 6
-; CHECK-64-NEXT:    stxv 34, -32(1)
+; CHECK-64-NEXT:    stxv 34, -16(1)
 ; CHECK-64-NEXT:    stwx 6, 7, 4
 ; CHECK-64-NEXT:    li 4, 1
-; CHECK-64-NEXT:    lxv 0, -32(1)
+; CHECK-64-NEXT:    lxv 0, -16(1)
 ; CHECK-64-NEXT:    rldic 4, 4, 36, 27
 ; CHECK-64-NEXT:    lwzx 3, 3, 4
-; CHECK-64-NEXT:    rlwinm 4, 5, 2, 28, 29
-; CHECK-64-NEXT:    addi 5, 1, -16
-; CHECK-64-NEXT:    stxv 0, -16(1)
-; CHECK-64-NEXT:    stwx 3, 5, 4
-; CHECK-64-NEXT:    lxv 34, -16(1)
+; CHECK-64-NEXT:    addi 4, 1, -32
+; CHECK-64-NEXT:    stxv 0, -32(1)
+; CHECK-64-NEXT:    stwx 3, 4, 5
+; CHECK-64-NEXT:    lxv 34, -32(1)
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testFloat3:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lis 6, 1
-; CHECK-32-NEXT:    addi 7, 1, -32
+; CHECK-32-NEXT:    addi 7, 1, -16
 ; CHECK-32-NEXT:    rlwinm 4, 4, 2, 28, 29
 ; CHECK-32-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-32-NEXT:    lwzx 6, 3, 6
-; CHECK-32-NEXT:    stxv 34, -32(1)
+; CHECK-32-NEXT:    stxv 34, -16(1)
 ; CHECK-32-NEXT:    stwx 6, 7, 4
-; CHECK-32-NEXT:    addi 4, 1, -16
-; CHECK-32-NEXT:    lxv 0, -32(1)
+; CHECK-32-NEXT:    addi 4, 1, -48
+; CHECK-32-NEXT:    lxv 0, -16(1)
 ; CHECK-32-NEXT:    lwz 3, 0(3)
-; CHECK-32-NEXT:    stxv 0, -16(1)
+; CHECK-32-NEXT:    stxv 0, -48(1)
 ; CHECK-32-NEXT:    stwx 3, 4, 5
-; CHECK-32-NEXT:    lxv 34, -16(1)
+; CHECK-32-NEXT:    lxv 34, -48(1)
 ; CHECK-32-NEXT:    blr
 ;
 ; CHECK-64-P10-LABEL: testFloat3:
 ; CHECK-64-P10:       # %bb.0: # %entry
 ; CHECK-64-P10-NEXT:    plwz 6, 65536(3), 0
-; CHECK-64-P10-NEXT:    extsw 4, 4
 ; CHECK-64-P10-NEXT:    slwi 4, 4, 2
 ; CHECK-64-P10-NEXT:    vinswlx 2, 4, 6
 ; CHECK-64-P10-NEXT:    li 4, 1
 ; CHECK-64-P10-NEXT:    rldic 4, 4, 36, 27
 ; CHECK-64-P10-NEXT:    lwzx 3, 3, 4
-; CHECK-64-P10-NEXT:    extsw 4, 5
-; CHECK-64-P10-NEXT:    slwi 4, 4, 2
+; CHECK-64-P10-NEXT:    slwi 4, 5, 2
 ; CHECK-64-P10-NEXT:    vinswlx 2, 4, 3
 ; CHECK-64-P10-NEXT:    blr
 ;
 ; CHECK-32-P10-LABEL: testFloat3:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    lis 6, 1
-; CHECK-32-P10-NEXT:    lwzx 6, 3, 6
+; CHECK-32-P10-NEXT:    plwz 6, 65536(3), 0
 ; CHECK-32-P10-NEXT:    lwz 3, 0(3)
+; CHECK-32-P10-NEXT:    slwi 4, 4, 2
 ; CHECK-32-P10-NEXT:    vinswlx 2, 4, 6
-; CHECK-32-P10-NEXT:    vinswlx 2, 5, 3
+; CHECK-32-P10-NEXT:    slwi 4, 5, 2
+; CHECK-32-P10-NEXT:    vinswlx 2, 4, 3
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %b, i64 65536
-  %0 = bitcast i8* %add.ptr to float*
-  %add.ptr1 = getelementptr inbounds i8, i8* %b, i64 68719476736
-  %1 = bitcast i8* %add.ptr1 to float*
-  %2 = load float, float* %0, align 4
-  %vecins = insertelement <4 x float> %a, float %2, i32 %idx1
-  %3 = load float, float* %1, align 4
-  %vecins2 = insertelement <4 x float> %vecins, float %3, i32 %idx2
+  %add.ptr = getelementptr inbounds i8, ptr %b, i64 65536
+  %add.ptr1 = getelementptr inbounds i8, ptr %b, i64 68719476736
+  %0 = load float, ptr %add.ptr, align 4
+  %vecins = insertelement <4 x float> %a, float %0, i32 %idx1
+  %1 = load float, ptr %add.ptr1, align 4
+  %vecins2 = insertelement <4 x float> %vecins, float %1, i32 %idx2
   ret <4 x float> %vecins2
 }
 
@@ -468,24 +465,24 @@ entry:
   ret <4 x float> %vecins1
 }
 
-define <4 x float> @testFloatImm2(<4 x float> %a, i32* %b) {
+define <4 x float> @testFloatImm2(<4 x float> %a, ptr %b) {
 ; CHECK-64-LABEL: testFloatImm2:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    lfs 0, 0(3)
-; CHECK-64-NEXT:    xscvdpspn 0, 0
+; CHECK-64-NEXT:    lwz 4, 0(3)
+; CHECK-64-NEXT:    lwz 3, 4(3)
+; CHECK-64-NEXT:    mtfprwz 0, 4
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 0
-; CHECK-64-NEXT:    lfs 0, 4(3)
-; CHECK-64-NEXT:    xscvdpspn 0, 0
+; CHECK-64-NEXT:    mtfprwz 0, 3
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testFloatImm2:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lfs 0, 0(3)
-; CHECK-32-NEXT:    xscvdpspn 0, 0
+; CHECK-32-NEXT:    lwz 4, 0(3)
+; CHECK-32-NEXT:    lwz 3, 4(3)
+; CHECK-32-NEXT:    mtfprwz 0, 4
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 0
-; CHECK-32-NEXT:    lfs 0, 4(3)
-; CHECK-32-NEXT:    xscvdpspn 0, 0
+; CHECK-32-NEXT:    mtfprwz 0, 3
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-32-NEXT:    blr
 ;
@@ -505,38 +502,36 @@ define <4 x float> @testFloatImm2(<4 x float> %a, i32* %b) {
 ; CHECK-32-P10-NEXT:    vinsw 2, 3, 8
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %0 = bitcast i32* %b to float*
-  %add.ptr1 = getelementptr inbounds i32, i32* %b, i64 1
-  %1 = bitcast i32* %add.ptr1 to float*
-  %2 = load float, float* %0, align 4
-  %vecins = insertelement <4 x float> %a, float %2, i32 0
-  %3 = load float, float* %1, align 4
-  %vecins2 = insertelement <4 x float> %vecins, float %3, i32 2
+  %add.ptr1 = getelementptr inbounds i32, ptr %b, i64 1
+  %0 = load float, ptr %b, align 4
+  %vecins = insertelement <4 x float> %a, float %0, i32 0
+  %1 = load float, ptr %add.ptr1, align 4
+  %vecins2 = insertelement <4 x float> %vecins, float %1, i32 2
   ret <4 x float> %vecins2
 }
 
-define <4 x float> @testFloatImm3(<4 x float> %a, i32* %b) {
+define <4 x float> @testFloatImm3(<4 x float> %a, ptr %b) {
 ; CHECK-64-LABEL: testFloatImm3:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lis 4, 4
-; CHECK-64-NEXT:    lfsx 0, 3, 4
+; CHECK-64-NEXT:    lwzx 4, 3, 4
+; CHECK-64-NEXT:    mtfprwz 0, 4
 ; CHECK-64-NEXT:    li 4, 1
 ; CHECK-64-NEXT:    rldic 4, 4, 38, 25
-; CHECK-64-NEXT:    xscvdpspn 0, 0
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 0
-; CHECK-64-NEXT:    lfsx 0, 3, 4
-; CHECK-64-NEXT:    xscvdpspn 0, 0
+; CHECK-64-NEXT:    lwzx 3, 3, 4
+; CHECK-64-NEXT:    mtfprwz 0, 3
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testFloatImm3:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lis 4, 4
-; CHECK-32-NEXT:    lfsx 0, 3, 4
-; CHECK-32-NEXT:    xscvdpspn 0, 0
+; CHECK-32-NEXT:    lwzx 4, 3, 4
+; CHECK-32-NEXT:    lwz 3, 0(3)
+; CHECK-32-NEXT:    mtfprwz 0, 4
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 0
-; CHECK-32-NEXT:    lfs 0, 0(3)
-; CHECK-32-NEXT:    xscvdpspn 0, 0
+; CHECK-32-NEXT:    mtfprwz 0, 3
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-32-NEXT:    blr
 ;
@@ -552,21 +547,18 @@ define <4 x float> @testFloatImm3(<4 x float> %a, i32* %b) {
 ;
 ; CHECK-32-P10-LABEL: testFloatImm3:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    lis 4, 4
-; CHECK-32-P10-NEXT:    lwzx 4, 3, 4
+; CHECK-32-P10-NEXT:    plwz 4, 262144(3), 0
 ; CHECK-32-P10-NEXT:    lwz 3, 0(3)
 ; CHECK-32-P10-NEXT:    vinsw 2, 4, 0
 ; CHECK-32-P10-NEXT:    vinsw 2, 3, 8
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i32, i32* %b, i64 65536
-  %0 = bitcast i32* %add.ptr to float*
-  %add.ptr1 = getelementptr inbounds i32, i32* %b, i64 68719476736
-  %1 = bitcast i32* %add.ptr1 to float*
-  %2 = load float, float* %0, align 4
-  %vecins = insertelement <4 x float> %a, float %2, i32 0
-  %3 = load float, float* %1, align 4
-  %vecins2 = insertelement <4 x float> %vecins, float %3, i32 2
+  %add.ptr = getelementptr inbounds i32, ptr %b, i64 65536
+  %add.ptr1 = getelementptr inbounds i32, ptr %b, i64 68719476736
+  %0 = load float, ptr %add.ptr, align 4
+  %vecins = insertelement <4 x float> %a, float %0, i32 0
+  %1 = load float, ptr %add.ptr1, align 4
+  %vecins2 = insertelement <4 x float> %vecins, float %1, i32 2
   ret <4 x float> %vecins2
 }
 
@@ -575,7 +567,7 @@ entry:
 define <2 x double> @testDouble1(<2 x double> %a, double %b, i32 zeroext %idx1) {
 ; CHECK-64-LABEL: testDouble1:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64:         rlwinm 3, 4, 3, 28, 28
+; CHECK-64-NEXT:    rlwinm 3, 4, 3, 28, 28
 ; CHECK-64-NEXT:    addi 4, 1, -16
 ; CHECK-64-NEXT:    stxv 34, -16(1)
 ; CHECK-64-NEXT:    stfdx 1, 4, 3
@@ -593,7 +585,6 @@ define <2 x double> @testDouble1(<2 x double> %a, double %b, i32 zeroext %idx1) 
 ;
 ; CHECK-64-P10-LABEL: testDouble1:
 ; CHECK-64-P10:       # %bb.0: # %entry
-; CHECK-64-P10-NEXT:    extsw 4, 4
 ; CHECK-64-P10-NEXT:    mffprd 3, 1
 ; CHECK-64-P10-NEXT:    rlwinm 4, 4, 3, 0, 28
 ; CHECK-64-P10-NEXT:    vinsdlx 2, 4, 3
@@ -601,8 +592,8 @@ define <2 x double> @testDouble1(<2 x double> %a, double %b, i32 zeroext %idx1) 
 ;
 ; CHECK-32-P10-LABEL: testDouble1:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-DAG:     addi 4, 1, -16
-; CHECK-32-P10-DAG:     rlwinm 3, 5, 3, 28, 28
+; CHECK-32-P10-NEXT:    addi 4, 1, -16
+; CHECK-32-P10-NEXT:    rlwinm 3, 5, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stxv 34, -16(1)
 ; CHECK-32-P10-NEXT:    stfdx 1, 4, 3
 ; CHECK-32-P10-NEXT:    lxv 34, -16(1)
@@ -612,21 +603,21 @@ entry:
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDouble2(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32 zeroext %idx2) {
+define <2 x double> @testDouble2(<2 x double> %a, ptr %b, i32 zeroext %idx1, i32 zeroext %idx2) {
 ; CHECK-64-LABEL: testDouble2:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 6, 0(3)
-; CHECK-64-DAG:         rlwinm 4, 4, 3, 28, 28
-; CHECK-64-DAG:    addi 7, 1, -32
+; CHECK-64-NEXT:    addi 7, 1, -32
+; CHECK-64-NEXT:    rlwinm 4, 4, 3, 28, 28
 ; CHECK-64-NEXT:    stxv 34, -32(1)
+; CHECK-64-NEXT:    rlwinm 5, 5, 3, 28, 28
 ; CHECK-64-NEXT:    stdx 6, 7, 4
 ; CHECK-64-NEXT:    li 4, 1
 ; CHECK-64-NEXT:    lxv 0, -32(1)
 ; CHECK-64-NEXT:    ldx 3, 3, 4
-; CHECK-64-NEXT:    rlwinm 4, 5, 3, 28, 28
-; CHECK-64-NEXT:    addi 5, 1, -16
+; CHECK-64-NEXT:    addi 4, 1, -16
 ; CHECK-64-NEXT:    stxv 0, -16(1)
-; CHECK-64-NEXT:    stdx 3, 5, 4
+; CHECK-64-NEXT:    stdx 3, 4, 5
 ; CHECK-64-NEXT:    lxv 34, -16(1)
 ; CHECK-64-NEXT:    blr
 ;
@@ -649,47 +640,44 @@ define <2 x double> @testDouble2(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32
 ; CHECK-64-P10-LABEL: testDouble2:
 ; CHECK-64-P10:       # %bb.0: # %entry
 ; CHECK-64-P10-NEXT:    ld 6, 0(3)
-; CHECK-64-P10-NEXT:    extsw 4, 4
 ; CHECK-64-P10-NEXT:    pld 3, 1(3), 0
 ; CHECK-64-P10-NEXT:    rlwinm 4, 4, 3, 0, 28
 ; CHECK-64-P10-NEXT:    vinsdlx 2, 4, 6
-; CHECK-64-P10-NEXT:    extsw 4, 5
-; CHECK-64-P10-NEXT:    rlwinm 4, 4, 3, 0, 28
+; CHECK-64-P10-NEXT:    rlwinm 4, 5, 3, 0, 28
 ; CHECK-64-P10-NEXT:    vinsdlx 2, 4, 3
 ; CHECK-64-P10-NEXT:    blr
 ;
 ; CHECK-32-P10-LABEL: testDouble2:
 ; CHECK-32-P10:       # %bb.0: # %entry
 ; CHECK-32-P10-NEXT:    lfd 0, 0(3)
-; CHECK-32-P10-DAG:     addi 6, 1, -32
-; CHECK-32-P10-DAG:     rlwinm 4, 4, 3, 28, 28
+; CHECK-32-P10-NEXT:    addi 6, 1, -32
+; CHECK-32-P10-NEXT:    rlwinm 4, 4, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stxv 34, -32(1)
 ; CHECK-32-P10-NEXT:    rlwinm 5, 5, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stfdx 0, 6, 4
 ; CHECK-32-P10-NEXT:    lxv 0, -32(1)
-; CHECK-32-P10-NEXT:    lfd 1, 1(3)
+; CHECK-32-P10-NEXT:    plfd 1, 1(3), 0
 ; CHECK-32-P10-NEXT:    addi 3, 1, -16
 ; CHECK-32-P10-NEXT:    stxv 0, -16(1)
 ; CHECK-32-P10-NEXT:    stfdx 1, 3, 5
 ; CHECK-32-P10-NEXT:    lxv 34, -16(1)
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %0 = bitcast i8* %b to double*
-  %add.ptr1 = getelementptr inbounds i8, i8* %b, i64 1
-  %1 = bitcast i8* %add.ptr1 to double*
-  %2 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %2, i32 %idx1
-  %3 = load double, double* %1, align 8
-  %vecins2 = insertelement <2 x double> %vecins, double %3, i32 %idx2
+  %add.ptr1 = getelementptr inbounds i8, ptr %b, i64 1
+  %0 = load double, ptr %b, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 %idx1
+  %1 = load double, ptr %add.ptr1, align 8
+  %vecins2 = insertelement <2 x double> %vecins, double %1, i32 %idx2
   ret <2 x double> %vecins2
 }
 
-define <2 x double> @testDouble3(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32 zeroext %idx2) {
+define <2 x double> @testDouble3(<2 x double> %a, ptr %b, i32 zeroext %idx1, i32 zeroext %idx2) {
 ; CHECK-64-LABEL: testDouble3:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lis 6, 1
-; CHECK-64-DAG:     rlwinm 4, 4, 3, 28, 28
-; CHECK-64-DAG:     addi 7, 1, -32
+; CHECK-64-NEXT:    addi 7, 1, -32
+; CHECK-64-NEXT:    rlwinm 4, 4, 3, 28, 28
+; CHECK-64-NEXT:    rlwinm 5, 5, 3, 28, 28
 ; CHECK-64-NEXT:    ldx 6, 3, 6
 ; CHECK-64-NEXT:    stxv 34, -32(1)
 ; CHECK-64-NEXT:    stdx 6, 7, 4
@@ -697,10 +685,9 @@ define <2 x double> @testDouble3(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32
 ; CHECK-64-NEXT:    lxv 0, -32(1)
 ; CHECK-64-NEXT:    rldic 4, 4, 36, 27
 ; CHECK-64-NEXT:    ldx 3, 3, 4
-; CHECK-64-NEXT:    rlwinm 4, 5, 3, 28, 28
-; CHECK-64-NEXT:    addi 5, 1, -16
+; CHECK-64-NEXT:    addi 4, 1, -16
 ; CHECK-64-NEXT:    stxv 0, -16(1)
-; CHECK-64-NEXT:    stdx 3, 5, 4
+; CHECK-64-NEXT:    stdx 3, 4, 5
 ; CHECK-64-NEXT:    lxv 34, -16(1)
 ; CHECK-64-NEXT:    blr
 ;
@@ -724,25 +711,22 @@ define <2 x double> @testDouble3(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32
 ; CHECK-64-P10-LABEL: testDouble3:
 ; CHECK-64-P10:       # %bb.0: # %entry
 ; CHECK-64-P10-NEXT:    pld 6, 65536(3), 0
-; CHECK-64-P10-NEXT:    extsw 4, 4
 ; CHECK-64-P10-NEXT:    rlwinm 4, 4, 3, 0, 28
 ; CHECK-64-P10-NEXT:    vinsdlx 2, 4, 6
 ; CHECK-64-P10-NEXT:    li 4, 1
 ; CHECK-64-P10-NEXT:    rldic 4, 4, 36, 27
 ; CHECK-64-P10-NEXT:    ldx 3, 3, 4
-; CHECK-64-P10-NEXT:    extsw 4, 5
-; CHECK-64-P10-NEXT:    rlwinm 4, 4, 3, 0, 28
+; CHECK-64-P10-NEXT:    rlwinm 4, 5, 3, 0, 28
 ; CHECK-64-P10-NEXT:    vinsdlx 2, 4, 3
 ; CHECK-64-P10-NEXT:    blr
 ;
 ; CHECK-32-P10-LABEL: testDouble3:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    lis 6, 1
-; CHECK-32-P10-NEXT:    rlwinm 4, 4, 3, 28, 28
-; CHECK-32-P10-NEXT:    rlwinm 5, 5, 3, 28, 28
-; CHECK-32-P10-NEXT:    lfdx 0, 3, 6
+; CHECK-32-P10-NEXT:    plfd 0, 65536(3), 0
 ; CHECK-32-P10-NEXT:    addi 6, 1, -32
+; CHECK-32-P10-NEXT:    rlwinm 4, 4, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stxv 34, -32(1)
+; CHECK-32-P10-NEXT:    rlwinm 5, 5, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stfdx 0, 6, 4
 ; CHECK-32-P10-NEXT:    lxv 0, -32(1)
 ; CHECK-32-P10-NEXT:    lfd 1, 0(3)
@@ -752,14 +736,12 @@ define <2 x double> @testDouble3(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32
 ; CHECK-32-P10-NEXT:    lxv 34, -16(1)
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %b, i64 65536
-  %0 = bitcast i8* %add.ptr to double*
-  %add.ptr1 = getelementptr inbounds i8, i8* %b, i64 68719476736
-  %1 = bitcast i8* %add.ptr1 to double*
-  %2 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %2, i32 %idx1
-  %3 = load double, double* %1, align 8
-  %vecins2 = insertelement <2 x double> %vecins, double %3, i32 %idx2
+  %add.ptr = getelementptr inbounds i8, ptr %b, i64 65536
+  %add.ptr1 = getelementptr inbounds i8, ptr %b, i64 68719476736
+  %0 = load double, ptr %add.ptr, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 %idx1
+  %1 = load double, ptr %add.ptr1, align 8
+  %vecins2 = insertelement <2 x double> %vecins, double %1, i32 %idx2
   ret <2 x double> %vecins2
 }
 
@@ -794,7 +776,7 @@ entry:
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDoubleImm2(<2 x double> %a, i32* %b) {
+define <2 x double> @testDoubleImm2(<2 x double> %a, ptr %b) {
 ; CHECK-64-LABEL: testDoubleImm2:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lfd 0, 0(3)
@@ -819,13 +801,12 @@ define <2 x double> @testDoubleImm2(<2 x double> %a, i32* %b) {
 ; CHECK-32-P10-NEXT:    xxpermdi 34, 0, 34, 1
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %0 = bitcast i32* %b to double*
-  %1 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %1, i32 0
+  %0 = load double, ptr %b, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 0
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDoubleImm3(<2 x double> %a, i32* %b) {
+define <2 x double> @testDoubleImm3(<2 x double> %a, ptr %b) {
 ; CHECK-64-LABEL: testDoubleImm3:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lfd 0, 4(3)
@@ -850,14 +831,13 @@ define <2 x double> @testDoubleImm3(<2 x double> %a, i32* %b) {
 ; CHECK-32-P10-NEXT:    xxpermdi 34, 0, 34, 1
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i32, i32* %b, i64 1
-  %0 = bitcast i32* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %1, i32 0
+  %add.ptr = getelementptr inbounds i32, ptr %b, i64 1
+  %0 = load double, ptr %add.ptr, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 0
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDoubleImm4(<2 x double> %a, i32* %b) {
+define <2 x double> @testDoubleImm4(<2 x double> %a, ptr %b) {
 ; CHECK-64-LABEL: testDoubleImm4:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lis 4, 4
@@ -874,26 +854,23 @@ define <2 x double> @testDoubleImm4(<2 x double> %a, i32* %b) {
 ;
 ; CHECK-64-P10-LABEL: testDoubleImm4:
 ; CHECK-64-P10:       # %bb.0: # %entry
-; CHECK-64-P10-NEXT:    lis 4, 4
-; CHECK-64-P10-NEXT:    lfdx 0, 3, 4
+; CHECK-64-P10-NEXT:    plfd 0, 262144(3), 0
 ; CHECK-64-P10-NEXT:    xxpermdi 34, 0, 34, 1
 ; CHECK-64-P10-NEXT:    blr
 ;
 ; CHECK-32-P10-LABEL: testDoubleImm4:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    lis 4, 4
-; CHECK-32-P10-NEXT:    lfdx 0, 3, 4
+; CHECK-32-P10-NEXT:    plfd 0, 262144(3), 0
 ; CHECK-32-P10-NEXT:    xxpermdi 34, 0, 34, 1
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i32, i32* %b, i64 65536
-  %0 = bitcast i32* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %1, i32 0
+  %add.ptr = getelementptr inbounds i32, ptr %b, i64 65536
+  %0 = load double, ptr %add.ptr, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 0
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDoubleImm5(<2 x double> %a, i32* %b) {
+define <2 x double> @testDoubleImm5(<2 x double> %a, ptr %b) {
 ; CHECK-64-LABEL: testDoubleImm5:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    li 4, 1
@@ -922,10 +899,9 @@ define <2 x double> @testDoubleImm5(<2 x double> %a, i32* %b) {
 ; CHECK-32-P10-NEXT:    xxpermdi 34, 0, 34, 1
 ; CHECK-32-P10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i32, i32* %b, i64 68719476736
-  %0 = bitcast i32* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %1, i32 0
+  %add.ptr = getelementptr inbounds i32, ptr %b, i64 68719476736
+  %0 = load double, ptr %add.ptr, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 0
   ret <2 x double> %vecins
 }
 

@@ -1,34 +1,34 @@
-; RUN: opt -S -instcombine < %s | FileCheck -enable-var-scope %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck -enable-var-scope %s
 
 ; Check that instcombine preserves !prof metadata when removing function
 ; prototype casts.
 
 declare i32 @__gxx_personality_v0(...)
-declare void @__cxa_call_unexpected(i8*)
-declare void @foo(i16* %a)
+declare void @__cxa_call_unexpected(ptr)
+declare void @foo(ptr %a)
 
 ; CHECK-LABEL: @test_call()
-; CHECK: call void @foo(i16* null), !prof ![[$PROF:[0-9]+]]
+; CHECK: call void @foo(ptr null), !prof ![[$PROF:[0-9]+]]
 define void @test_call() {
-  call void bitcast (void (i16*)* @foo to void (i8*)*) (i8* null), !prof !0
+  call void @foo (ptr null), !prof !0
   ret void
 }
 
 ; CHECK-LABEL: @test_invoke()
-; CHECK: invoke void @foo(i16* null)
+; CHECK: invoke void @foo(ptr null)
 ; CHECK-NEXT: to label %done unwind label %lpad, !prof ![[$PROF]]
-define void @test_invoke() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-  invoke void bitcast (void (i16*)* @foo to void (i8*)*) (i8* null)
+define void @test_invoke() personality ptr @__gxx_personality_v0 {
+  invoke void @foo (ptr null)
           to label %done unwind label %lpad, !prof !0
 
 done:
   ret void
 
 lpad:
-  %lp = landingpad { i8*, i32 }
-          filter [0 x i8*] zeroinitializer
-  %ehptr = extractvalue { i8*, i32 } %lp, 0
-  tail call void @__cxa_call_unexpected(i8* %ehptr) noreturn nounwind
+  %lp = landingpad { ptr, i32 }
+          filter [0 x ptr] zeroinitializer
+  %ehptr = extractvalue { ptr, i32 } %lp, 0
+  tail call void @__cxa_call_unexpected(ptr %ehptr) noreturn nounwind
   unreachable
 }
 

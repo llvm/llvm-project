@@ -37,11 +37,11 @@ def XABORT_DEF : I<0, Pseudo, (outs), (ins), "# XABORT DEF", []>;
 }
 
 def XEND : I<0x01, MRM_D5, (outs), (ins),
-             "xend", [(int_x86_xend)]>, PS, Requires<[HasRTM]>;
+             "xend", [(int_x86_xend)]>, TB, Requires<[HasRTM]>;
 
 let Defs = [EFLAGS] in
 def XTEST : I<0x01, MRM_D6, (outs), (ins),
-              "xtest", [(set EFLAGS, (X86xtest))]>, PS, Requires<[HasRTM]>;
+              "xtest", [(set EFLAGS, (X86xtest))]>, TB, Requires<[HasRTM]>;
 
 def XABORT : Ii8<0xc6, MRM_F8, (outs), (ins i8imm:$imm),
                  "xabort\t$imm",
@@ -51,6 +51,8 @@ def XABORT : Ii8<0xc6, MRM_F8, (outs), (ins i8imm:$imm),
 // HLE prefixes
 let SchedRW = [WriteSystem] in {
 
+// XACQUIRE and XRELEASE reuse REPNE and REP respectively.
+// For now, just prefer the REP versions.
 let isAsmParserOnly = 1 in {
 def XACQUIRE_PREFIX : I<0xF2, PrefixByte, (outs), (ins), "xacquire", []>;
 def XRELEASE_PREFIX : I<0xF3, PrefixByte, (outs), (ins), "xrelease", []>;

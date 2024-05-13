@@ -1,4 +1,4 @@
-; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck %s
+; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck %s
 
 ; This test checks to make sure that the CodeExtractor
 ;  properly sets the entry count for the function that is

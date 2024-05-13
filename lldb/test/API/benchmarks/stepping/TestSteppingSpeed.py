@@ -1,7 +1,5 @@
 """Test lldb's stepping speed."""
 
-from __future__ import print_function
-
 import sys
 import lldb
 from lldbsuite.test import configuration
@@ -13,13 +11,10 @@ from lldbsuite.test import lldbutil
 
 
 class SteppingSpeedBench(BenchBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         BenchBase.setUp(self)
         self.exe = lldbtest_config.lldbExec
-        self.break_spec = '-n main'
+        self.break_spec = "-n main"
         self.count = 50
 
         self.trace("self.exe=%s" % self.exe)
@@ -27,9 +22,7 @@ class SteppingSpeedBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @add_test_categories(["pexpect"])
     def test_run_lldb_steppings(self):
         """Test lldb steppings on a large executable."""
         print()
@@ -38,14 +31,15 @@ class SteppingSpeedBench(BenchBase):
 
     def run_lldb_steppings(self, exe, break_spec, count):
         import pexpect
+
         # Set self.child_prompt, which is "(lldb) ".
-        self.child_prompt = '(lldb) '
+        self.child_prompt = "(lldb) "
         prompt = self.child_prompt
 
         # So that the child gets torn down after the test.
         self.child = pexpect.spawn(
-            '%s %s %s' %
-            (lldbtest_config.lldbExec, self.lldbOption, exe))
+            "%s %s %s" % (lldbtest_config.lldbExec, self.lldbOption, exe)
+        )
         child = self.child
 
         # Turn on logging for what the child sends back.
@@ -53,9 +47,9 @@ class SteppingSpeedBench(BenchBase):
             child.logfile_read = sys.stdout
 
         child.expect_exact(prompt)
-        child.sendline('breakpoint set %s' % break_spec)
+        child.sendline("breakpoint set %s" % break_spec)
         child.expect_exact(prompt)
-        child.sendline('run')
+        child.sendline("run")
         child.expect_exact(prompt)
 
         # Reset the stopwatch now.
@@ -63,10 +57,10 @@ class SteppingSpeedBench(BenchBase):
         for i in range(count):
             with self.stopwatch:
                 # Disassemble the function.
-                child.sendline('next')  # Aka 'thread step-over'.
+                child.sendline("next")  # Aka 'thread step-over'.
                 child.expect_exact(prompt)
 
-        child.sendline('quit')
+        child.sendline("quit")
         try:
             self.child.expect(pexpect.EOF)
         except:

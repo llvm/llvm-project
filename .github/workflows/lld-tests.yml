@@ -1,0 +1,38 @@
+name: LLD Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'lld/**'
+      - '.github/workflows/lld-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
+      - '!llvm/**'
+  pull_request:
+    branches:
+      - 'release/**'
+    paths:
+      - 'lld/**'
+      - '.github/workflows/lld-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
+      - '!llvm/**'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  check_lld:
+    if: github.repository_owner == 'llvm'
+    name: Test lld
+    uses: ./.github/workflows/llvm-project-tests.yml
+    with:
+      build_target: check-lld
+      projects: lld

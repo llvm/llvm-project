@@ -9,10 +9,10 @@ target triple = "powerpc-unknown-freebsd"
 define void @foo() nounwind {
 entry:
 ; CHECK: crxor 6, 6, 6
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 1)
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 1)
 ; CHECK: creqv 6, 6, 6
-  %call1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i32 0, i32 0), double 1.100000e+00)
+  %call1 = call i32 (ptr, ...) @printf(ptr @.str1, double 1.100000e+00)
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

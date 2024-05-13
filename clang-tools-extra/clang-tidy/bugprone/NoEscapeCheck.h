@@ -11,16 +11,14 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Block arguments in `dispatch_async()` and `dispatch_after()` are guaranteed
 /// to escape. If those blocks capture any pointers with the `noescape`
 /// attribute, then we warn the user of their error.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-no-escape.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/no-escape.html
 class NoEscapeCheck : public ClangTidyCheck {
 public:
   NoEscapeCheck(StringRef Name, ClangTidyContext *Context)
@@ -32,8 +30,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOESCAPECHECK_H

@@ -26,13 +26,13 @@
 #define LLVM_LIB_TRANSFORMS_OBJCARC_PROVENANCEANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include <utility>
 
 namespace llvm {
 
 class AAResults;
-class DataLayout;
 class PHINode;
 class SelectInst;
 class Value;
@@ -56,7 +56,8 @@ class ProvenanceAnalysis {
 
   CachedResultsTy CachedResults;
 
-  DenseMap<const Value *, WeakTrackingVH> UnderlyingObjCPtrCache;
+  DenseMap<const Value *, std::pair<WeakVH, WeakTrackingVH>>
+      UnderlyingObjCPtrCache;
 
   bool relatedCheck(const Value *A, const Value *B);
   bool relatedSelect(const SelectInst *A, const Value *B);

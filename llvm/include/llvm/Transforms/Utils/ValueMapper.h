@@ -15,22 +15,26 @@
 #define LLVM_TRANSFORMS_UTILS_VALUEMAPPER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 
 namespace llvm {
 
 class Constant;
+class DIBuilder;
+class DbgRecord;
 class Function;
-class GlobalIndirectSymbol;
 class GlobalVariable;
 class Instruction;
 class MDNode;
 class Metadata;
+class Module;
 class Type;
 class Value;
 
 using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
+using DbgRecordIterator = simple_ilist<DbgRecord>::iterator;
 
 /// This is a class that can be implemented by clients to remap types when
 /// cloning constants and instructions.
@@ -91,7 +95,7 @@ enum RemapFlags {
 
   /// Instruct the remapper to reuse and mutate distinct metadata (remapping
   /// them in place) instead of cloning remapped copies. This flag has no
-  /// effect when when RF_NoModuleLevelChanges, since that implies an identity
+  /// effect when RF_NoModuleLevelChanges, since that implies an identity
   /// mapping.
   RF_ReuseAndMutateDistinctMDs = 4,
 
@@ -113,8 +117,9 @@ inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
 /// There are a number of top-level entry points:
 /// - \a mapValue() (and \a mapConstant());
 /// - \a mapMetadata() (and \a mapMDNode());
-/// - \a remapInstruction(); and
-/// - \a remapFunction().
+/// - \a remapInstruction();
+/// - \a remapFunction(); and
+/// - \a remapGlobalObjectMetadata().
 ///
 /// The \a ValueMaterializer can be used as a callback, but cannot invoke any
 /// of these top-level functions recursively.  Instead, callbacks should use
@@ -122,7 +127,8 @@ inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
 /// instance:
 /// - \a scheduleMapGlobalInitializer()
 /// - \a scheduleMapAppendingVariable()
-/// - \a scheduleMapGlobalIndirectSymbol()
+/// - \a scheduleMapGlobalAlias()
+/// - \a scheduleMapGlobalIFunc()
 /// - \a scheduleRemapFunction()
 ///
 /// Sometimes a callback needs a different mapping context.  Such a context can
@@ -174,7 +180,10 @@ public:
   Constant *mapConstant(const Constant &C);
 
   void remapInstruction(Instruction &I);
+  void remapDbgRecord(Module *M, DbgRecord &V);
+  void remapDbgRecordRange(Module *M, iterator_range<DbgRecordIterator> Range);
   void remapFunction(Function &F);
+  void remapGlobalObjectMetadata(GlobalObject &GO);
 
   void scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
                                     unsigned MappingContextID = 0);
@@ -182,9 +191,10 @@ public:
                                     bool IsOldCtorDtor,
                                     ArrayRef<Constant *> NewMembers,
                                     unsigned MappingContextID = 0);
-  void scheduleMapGlobalIndirectSymbol(GlobalIndirectSymbol &GIS,
-                                       Constant &Target,
-                                       unsigned MappingContextID = 0);
+  void scheduleMapGlobalAlias(GlobalAlias &GA, Constant &Aliasee,
+                              unsigned MappingContextID = 0);
+  void scheduleMapGlobalIFunc(GlobalIFunc &GI, Constant &Resolver,
+                              unsigned MappingContextID = 0);
   void scheduleRemapFunction(Function &F, unsigned MappingContextID = 0);
 };
 
@@ -255,6 +265,27 @@ inline void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
                              ValueMapTypeRemapper *TypeMapper = nullptr,
                              ValueMaterializer *Materializer = nullptr) {
   ValueMapper(VM, Flags, TypeMapper, Materializer).remapInstruction(*I);
+}
+
+/// Remap the Values used in the DbgRecord \a DR using the value map \a
+/// VM.
+inline void RemapDbgRecord(Module *M, DbgRecord *DR, ValueToValueMapTy &VM,
+                           RemapFlags Flags = RF_None,
+                           ValueMapTypeRemapper *TypeMapper = nullptr,
+                           ValueMaterializer *Materializer = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer).remapDbgRecord(M, *DR);
+}
+
+/// Remap the Values used in the DbgRecords \a Range using the value map \a
+/// VM.
+inline void RemapDbgRecordRange(Module *M,
+                                iterator_range<DbgRecordIterator> Range,
+                                ValueToValueMapTy &VM,
+                                RemapFlags Flags = RF_None,
+                                ValueMapTypeRemapper *TypeMapper = nullptr,
+                                ValueMaterializer *Materializer = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer)
+      .remapDbgRecordRange(M, Range);
 }
 
 /// Remap the operands, metadata, arguments, and instructions of a function.

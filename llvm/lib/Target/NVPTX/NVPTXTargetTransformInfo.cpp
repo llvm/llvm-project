@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "NVPTXtti"
@@ -96,7 +97,7 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) {
       // Instructions that read threadIdx are obviously divergent.
       if (readsThreadIndex(II) || readsLaneId(II))
         return true;
-      // Handle the NVPTX atomic instrinsics that cannot be represented as an
+      // Handle the NVPTX atomic intrinsics that cannot be represented as an
       // atomic IR instruction.
       if (isNVVMAtomic(II))
         return true;
@@ -139,17 +140,21 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
   // represents how to replace an NVVM intrinsic with target-generic LLVM IR.
   struct SimplifyAction {
     // Invariant: At most one of these Optionals has a value.
-    Optional<Intrinsic::ID> IID;
-    Optional<Instruction::CastOps> CastOp;
-    Optional<Instruction::BinaryOps> BinaryOp;
-    Optional<SpecialCase> Special;
+    std::optional<Intrinsic::ID> IID;
+    std::optional<Instruction::CastOps> CastOp;
+    std::optional<Instruction::BinaryOps> BinaryOp;
+    std::optional<SpecialCase> Special;
 
     FtzRequirementTy FtzRequirement = FTZ_Any;
+    // Denormal handling is guarded by different attributes depending on the
+    // type (denormal-fp-math vs denormal-fp-math-f32), take note of halfs.
+    bool IsHalfTy = false;
 
     SimplifyAction() = default;
 
-    SimplifyAction(Intrinsic::ID IID, FtzRequirementTy FtzReq)
-        : IID(IID), FtzRequirement(FtzReq) {}
+    SimplifyAction(Intrinsic::ID IID, FtzRequirementTy FtzReq,
+                   bool IsHalfTy = false)
+        : IID(IID), FtzRequirement(FtzReq), IsHalfTy(IsHalfTy) {}
 
     // Cast operations don't have anything to do with FTZ, so we skip that
     // argument.
@@ -175,10 +180,6 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
       return {Intrinsic::ceil, FTZ_MustBeOn};
     case Intrinsic::nvvm_fabs_d:
       return {Intrinsic::fabs, FTZ_Any};
-    case Intrinsic::nvvm_fabs_f:
-      return {Intrinsic::fabs, FTZ_MustBeOff};
-    case Intrinsic::nvvm_fabs_ftz_f:
-      return {Intrinsic::fabs, FTZ_MustBeOn};
     case Intrinsic::nvvm_floor_d:
       return {Intrinsic::floor, FTZ_Any};
     case Intrinsic::nvvm_floor_f:
@@ -191,24 +192,74 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
       return {Intrinsic::fma, FTZ_MustBeOff};
     case Intrinsic::nvvm_fma_rn_ftz_f:
       return {Intrinsic::fma, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fma_rn_f16:
+      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma_rn_ftz_f16:
+      return {Intrinsic::fma, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fma_rn_f16x2:
+      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma_rn_ftz_f16x2:
+      return {Intrinsic::fma, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fma_rn_bf16:
+      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma_rn_ftz_bf16:
+      return {Intrinsic::fma, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fma_rn_bf16x2:
+      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma_rn_ftz_bf16x2:
+      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_d:
       return {Intrinsic::maxnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
       return {Intrinsic::maxnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmax_ftz_f:
       return {Intrinsic::maxnum, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmax_nan_f:
+      return {Intrinsic::maximum, FTZ_MustBeOff};
+    case Intrinsic::nvvm_fmax_ftz_nan_f:
+      return {Intrinsic::maximum, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmax_f16:
+      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmax_ftz_f16:
+      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmax_f16x2:
+      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmax_ftz_f16x2:
+      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmax_nan_f16:
+      return {Intrinsic::maximum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmax_ftz_nan_f16:
+      return {Intrinsic::maximum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmax_nan_f16x2:
+      return {Intrinsic::maximum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmax_ftz_nan_f16x2:
+      return {Intrinsic::maximum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_d:
       return {Intrinsic::minnum, FTZ_Any};
     case Intrinsic::nvvm_fmin_f:
       return {Intrinsic::minnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmin_ftz_f:
       return {Intrinsic::minnum, FTZ_MustBeOn};
-    case Intrinsic::nvvm_round_d:
-      return {Intrinsic::round, FTZ_Any};
-    case Intrinsic::nvvm_round_f:
-      return {Intrinsic::round, FTZ_MustBeOff};
-    case Intrinsic::nvvm_round_ftz_f:
-      return {Intrinsic::round, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmin_nan_f:
+      return {Intrinsic::minimum, FTZ_MustBeOff};
+    case Intrinsic::nvvm_fmin_ftz_nan_f:
+      return {Intrinsic::minimum, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmin_f16:
+      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmin_ftz_f16:
+      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmin_f16x2:
+      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmin_ftz_f16x2:
+      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmin_nan_f16:
+      return {Intrinsic::minimum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmin_ftz_nan_f16:
+      return {Intrinsic::minimum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmin_nan_f16x2:
+      return {Intrinsic::minimum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmin_ftz_nan_f16x2:
+      return {Intrinsic::minimum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_sqrt_rn_d:
       return {Intrinsic::sqrt, FTZ_Any};
     case Intrinsic::nvvm_sqrt_f:
@@ -217,10 +268,6 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
       // the ftz-ness of the surrounding code.  sqrt_rn_f and sqrt_rn_ftz_f are
       // the versions with explicit ftz-ness.
       return {Intrinsic::sqrt, FTZ_Any};
-    case Intrinsic::nvvm_sqrt_rn_f:
-      return {Intrinsic::sqrt, FTZ_MustBeOff};
-    case Intrinsic::nvvm_sqrt_rn_ftz_f:
-      return {Intrinsic::sqrt, FTZ_MustBeOn};
     case Intrinsic::nvvm_trunc_d:
       return {Intrinsic::trunc, FTZ_Any};
     case Intrinsic::nvvm_trunc_f:
@@ -255,24 +302,8 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
       return {Instruction::UIToFP};
 
     // NVVM intrinsics that map to LLVM binary ops.
-    case Intrinsic::nvvm_add_rn_d:
-      return {Instruction::FAdd, FTZ_Any};
-    case Intrinsic::nvvm_add_rn_f:
-      return {Instruction::FAdd, FTZ_MustBeOff};
-    case Intrinsic::nvvm_add_rn_ftz_f:
-      return {Instruction::FAdd, FTZ_MustBeOn};
-    case Intrinsic::nvvm_mul_rn_d:
-      return {Instruction::FMul, FTZ_Any};
-    case Intrinsic::nvvm_mul_rn_f:
-      return {Instruction::FMul, FTZ_MustBeOff};
-    case Intrinsic::nvvm_mul_rn_ftz_f:
-      return {Instruction::FMul, FTZ_MustBeOn};
     case Intrinsic::nvvm_div_rn_d:
       return {Instruction::FDiv, FTZ_Any};
-    case Intrinsic::nvvm_div_rn_f:
-      return {Instruction::FDiv, FTZ_MustBeOff};
-    case Intrinsic::nvvm_div_rn_ftz_f:
-      return {Instruction::FDiv, FTZ_MustBeOn};
 
     // The remainder of cases are NVVM intrinsics that map to LLVM idioms, but
     // need special handling.
@@ -281,10 +312,6 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     // as well.
     case Intrinsic::nvvm_rcp_rn_d:
       return {SPC_Reciprocal, FTZ_Any};
-    case Intrinsic::nvvm_rcp_rn_f:
-      return {SPC_Reciprocal, FTZ_MustBeOff};
-    case Intrinsic::nvvm_rcp_rn_ftz_f:
-      return {SPC_Reciprocal, FTZ_MustBeOn};
 
       // We do not currently simplify intrinsics that give an approximate
       // answer. These include:
@@ -316,11 +343,10 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
   // intrinsic, we don't have to look up any module metadata, as
   // FtzRequirementTy will be FTZ_Any.)
   if (Action.FtzRequirement != FTZ_Any) {
-    StringRef Attr = II->getFunction()
-                         ->getFnAttribute("denormal-fp-math-f32")
-                         .getValueAsString();
-    DenormalMode Mode = parseDenormalFPAttribute(Attr);
-    bool FtzEnabled = Mode.Output != DenormalMode::IEEE;
+    // FIXME: Broken for f64
+    DenormalMode Mode = II->getFunction()->getDenormalMode(
+        Action.IsHalfTy ? APFloat::IEEEhalf() : APFloat::IEEEsingle());
+    bool FtzEnabled = Mode.Output == DenormalMode::PreserveSign;
 
     if (FtzEnabled != (Action.FtzRequirement == FTZ_MustBeOn))
       return nullptr;
@@ -328,7 +354,7 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
 
   // Simplify to target-generic intrinsic.
   if (Action.IID) {
-    SmallVector<Value *, 4> Args(II->arg_operands());
+    SmallVector<Value *, 4> Args(II->args());
     // All the target-generic intrinsics currently of interest to us have one
     // type argument, equal to that of the nvvm intrinsic's argument.
     Type *Tys[] = {II->getArgOperand(0)->getType()};
@@ -360,30 +386,28 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
 }
 
-Optional<Instruction *>
+std::optional<Instruction *>
 NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (Instruction *I = simplifyNvvmIntrinsic(&II, IC)) {
     return I;
   }
-  return None;
+  return std::nullopt;
 }
 
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
-    TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
+    ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   switch (ISD) {
   default:
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                         Opd2Info,
-                                         Opd1PropInfo, Opd2PropInfo);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                         Op2Info);
   case ISD::ADD:
   case ISD::MUL:
   case ISD::XOR:
@@ -395,15 +419,15 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     if (LT.second.SimpleTy == MVT::i64)
       return 2 * LT.first;
     // Delegate other cases to the basic TTI.
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                         Opd2Info,
-                                         Opd1PropInfo, Opd2PropInfo);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                         Op2Info);
   }
 }
 
 void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                           TTI::UnrollingPreferences &UP) {
-  BaseT::getUnrollingPreferences(L, SE, UP);
+                                           TTI::UnrollingPreferences &UP,
+                                           OptimizationRemarkEmitter *ORE) {
+  BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
   // Enable partial unrolling and runtime unrolling, but reduce the
   // threshold.  This partially unrolls small loops which are often

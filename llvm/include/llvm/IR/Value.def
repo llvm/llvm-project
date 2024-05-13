@@ -80,6 +80,7 @@ HANDLE_GLOBAL_VALUE(GlobalVariable)
 HANDLE_CONSTANT(BlockAddress)
 HANDLE_CONSTANT(ConstantExpr)
 HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(DSOLocalEquivalent)
+HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(NoCFIValue)
 
 // ConstantAggregate.
 HANDLE_CONSTANT(ConstantArray)
@@ -94,6 +95,7 @@ HANDLE_CONSTANT(ConstantDataArray)
 HANDLE_CONSTANT(ConstantDataVector)
 HANDLE_CONSTANT(ConstantInt)
 HANDLE_CONSTANT(ConstantFP)
+HANDLE_CONSTANT(ConstantTargetNone)
 HANDLE_CONSTANT(ConstantPointerNull)
 HANDLE_CONSTANT(ConstantTokenNone)
 

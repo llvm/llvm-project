@@ -6,7 +6,7 @@
 # CHECK-NOT: liveins: $eflags
 
 --- |
-  define void @fun(i16 %arg, i64 %arg1, i8 %arg2, i8* %arg3, i32 %arg4) { ret void}
+  define void @fun(i16 %arg, i64 %arg1, i8 %arg2, ptr %arg3, i32 %arg4) { ret void}
 ...
 ---
 name:            fun
@@ -46,11 +46,11 @@ fixedStack:
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    %4:gr32 = MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.3)
-    %3:gr32 = MOV32rm %fixed-stack.4, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.4)
-    %7:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.0)
-    %6:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.1)
-    %5:gr8 = MOV8rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load 1 from %fixed-stack.2, align 4)
+    %4:gr32 = MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.3)
+    %3:gr32 = MOV32rm %fixed-stack.4, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.4)
+    %7:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
+    %6:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1)
+    %5:gr8 = MOV8rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s8) from %fixed-stack.2, align 4)
     %9:gr32 = IMPLICIT_DEF
     %11:gr32 = IMPLICIT_DEF
   
@@ -77,7 +77,7 @@ body:             |
     liveins: $eflags
   
     %18:gr8 = PHI %5, %bb.2, %17, %bb.1
-    MOV8mr %6, 1, $noreg, 0, $noreg, killed %18 :: (volatile store 1 into %ir.arg3)
+    MOV8mr %6, 1, $noreg, 0, $noreg, killed %18 :: (volatile store (s8) into %ir.arg3)
     JCC_1 %bb.5, 12, implicit $eflags
   
   bb.4:

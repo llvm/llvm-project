@@ -145,6 +145,8 @@ bool MachTask::ExceptionPortIsValid() const {
 //----------------------------------------------------------------------
 void MachTask::Clear() {
   // Do any cleanup needed for this task
+  if (m_exception_thread)
+    ShutDownExcecptionThread();
   m_task = TASK_NULL;
   m_exception_thread = 0;
   m_exception_port = MACH_PORT_NULL;
@@ -602,7 +604,9 @@ bool MachTask::IsValid(task_t task) {
   return false;
 }
 
-bool MachTask::StartExceptionThread(bool unmask_signals, DNBError &err) {
+bool MachTask::StartExceptionThread(
+        const RNBContext::IgnoredExceptions &ignored_exceptions, 
+        DNBError &err) {
   DNBLogThreadedIf(LOG_EXCEPTIONS, "MachTask::%s ( )", __FUNCTION__);
 
   task_t task = TaskPortForProcessID(err);
@@ -631,10 +635,9 @@ bool MachTask::StartExceptionThread(bool unmask_signals, DNBError &err) {
       return false;
     }
 
-    if (unmask_signals) {
-      m_exc_port_info.mask = m_exc_port_info.mask &
-                             ~(EXC_MASK_BAD_ACCESS | EXC_MASK_BAD_INSTRUCTION |
-                               EXC_MASK_ARITHMETIC);
+    if (!ignored_exceptions.empty()) {
+      for (exception_mask_t mask : ignored_exceptions)
+        m_exc_port_info.mask = m_exc_port_info.mask & ~mask;
     }
 
     // Set the ability to get all exceptions on this port
@@ -669,7 +672,7 @@ kern_return_t MachTask::ShutDownExcecptionThread() {
 
   err = RestoreExceptionPortInfo();
 
-  // NULL our our exception port and let our exception thread exit
+  // NULL our exception port and let our exception thread exit
   mach_port_t exception_port = m_exception_port;
   m_exception_port = 0;
 
@@ -996,6 +999,13 @@ nub_bool_t MachTask::DeallocateMemory(nub_addr_t addr) {
     }
   }
   return false;
+}
+
+//----------------------------------------------------------------------
+// MachTask::ClearAllocations
+//----------------------------------------------------------------------
+void MachTask::ClearAllocations() {
+  m_allocations.clear();
 }
 
 void MachTask::TaskPortChanged(task_t task)

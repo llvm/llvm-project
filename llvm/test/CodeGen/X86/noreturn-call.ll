@@ -8,11 +8,11 @@ entry:
   br i1 %tobool, label %if.end, label %if.then
 
 if.end:
-  call void @g(i8* %0)
+  call void @g(ptr %0)
   ret void
 
 if.then:
-  call void @crash(i8* %0)
+  call void @crash(ptr %0)
   unreachable
 ; CHECK: calll _crash
 ; There is no need to adjust the stack after the call, since
@@ -29,11 +29,11 @@ entry:
   br i1 %tobool, label %if.end, label %if.then
 
 if.end:
-  call void @g(i8* %0)
+  call void @g(ptr %0)
   ret void
 
 if.then:
-  call void @crash2(i8* %0)
+  call void @crash2(ptr %0)
   unreachable
 ; CHECK: calll _crash2
 ; Even though _crash2 is not marked noreturn, it is in practice because
@@ -43,9 +43,9 @@ if.then:
 ; CHECK-NOT: pop
 }
 
-declare void @crash(i8*) noreturn
-declare void @crash2(i8*)
-declare void @g(i8*)
+declare void @crash(ptr) noreturn
+declare void @crash2(ptr)
+declare void @g(ptr)
 
 %struct.ByVal = type { [10 x i32] }
 
@@ -72,12 +72,12 @@ if.then3:                                         ; preds = %if.end
   unreachable
 
 if.end4:                                          ; preds = %if.end
-  call void @getbyval(%struct.ByVal* nonnull sret(%struct.ByVal) %agg.tmp)
-  call void @make_push_unprofitable(%struct.ByVal* nonnull byval(%struct.ByVal) align 4 %agg.tmp)
-  call void @getbyval(%struct.ByVal* nonnull sret(%struct.ByVal) %agg.tmp5)
-  call void @make_push_unprofitable(%struct.ByVal* nonnull byval(%struct.ByVal) align 4 %agg.tmp5)
-  call void @getbyval(%struct.ByVal* nonnull sret(%struct.ByVal) %agg.tmp6)
-  call void @make_push_unprofitable(%struct.ByVal* nonnull byval(%struct.ByVal) align 4 %agg.tmp6)
+  call void @getbyval(ptr nonnull sret(%struct.ByVal) %agg.tmp)
+  call void @make_push_unprofitable(ptr nonnull byval(%struct.ByVal) align 4 %agg.tmp)
+  call void @getbyval(ptr nonnull sret(%struct.ByVal) %agg.tmp5)
+  call void @make_push_unprofitable(ptr nonnull byval(%struct.ByVal) align 4 %agg.tmp5)
+  call void @getbyval(ptr nonnull sret(%struct.ByVal) %agg.tmp6)
+  call void @make_push_unprofitable(ptr nonnull byval(%struct.ByVal) align 4 %agg.tmp6)
   ret i32 0
 }
 
@@ -99,6 +99,6 @@ declare dso_local i32 @cond()
 
 declare dso_local x86_stdcallcc void @stdcall_abort(i32, i32) noreturn
 
-declare dso_local void @make_push_unprofitable(%struct.ByVal* byval(%struct.ByVal) align 4)
+declare dso_local void @make_push_unprofitable(ptr byval(%struct.ByVal) align 4)
 
-declare dso_local void @getbyval(%struct.ByVal* sret(%struct.ByVal))
+declare dso_local void @getbyval(ptr sret(%struct.ByVal))

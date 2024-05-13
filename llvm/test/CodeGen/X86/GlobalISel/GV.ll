@@ -7,7 +7,7 @@
 @g_int = dso_local global i32 0, align 4
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32* @test_global_ptrv() #3 {
+define dso_local ptr @test_global_ptrv() #3 {
 ; X64-LABEL: test_global_ptrv:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    leaq g_int, %rax
@@ -26,9 +26,10 @@ define dso_local i32* @test_global_ptrv() #3 {
 ; X32ABI-LABEL: test_global_ptrv:
 ; X32ABI:       # %bb.0: # %entry
 ; X32ABI-NEXT:    leal g_int, %eax
+; X32ABI-NEXT:    movl %eax, %eax
 ; X32ABI-NEXT:    retq
 entry:
-  ret i32* @g_int
+  ret ptr @g_int
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
@@ -57,7 +58,7 @@ define dso_local i32 @test_global_valv() #3 {
 ; X32ABI-NEXT:    movl (%eax), %eax
 ; X32ABI-NEXT:    retq
 entry:
-  %0 = load i32, i32* @g_int, align 4
+  %0 = load i32, ptr @g_int, align 4
   ret i32 %0
 }
 

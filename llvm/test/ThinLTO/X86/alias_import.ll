@@ -7,36 +7,36 @@
 ; Alias can't point to "available_externally", so they are implemented by
 ; importing the alias as an available_externally definition copied from the
 ; aliasee's body.
-; PROMOTE-DAG: @globalfuncAlias = alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-DAG: @globalfuncWeakAlias = weak alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-DAG: @globalfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-DAG: @globalfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-DAG: @globalfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-DAG: @internalfuncAlias = alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-DAG: @internalfuncWeakAlias = weak alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-DAG: @internalfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-DAG: @internalfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-DAG: @internalfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-DAG: @linkoncefuncAlias = alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-DAG: @linkoncefuncWeakAlias = weak alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-DAG: @linkoncefuncLinkonceAlias = weak alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-DAG: @linkoncefuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-DAG: @linkoncefuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-DAG: @weakfuncAlias = alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-DAG: @weakfuncWeakAlias = weak alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-DAG: @weakfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-DAG: @weakfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-DAG: @weakfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-DAG: @weakODRfuncAlias = alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-DAG: @weakODRfuncWeakAlias = weak alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-DAG: @weakODRfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-DAG: @weakODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-DAG: @weakODRfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-DAG: @linkonceODRfuncAlias = alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; PROMOTE-DAG: @linkonceODRfuncWeakAlias = weak alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; PROMOTE-DAG: @linkonceODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; PROMOTE-DAG: @linkonceODRfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; PROMOTE-DAG: @linkonceODRfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
+; PROMOTE-DAG: @globalfuncAlias = alias void (...), ptr @globalfunc
+; PROMOTE-DAG: @globalfuncWeakAlias = weak alias void (...), ptr @globalfunc
+; PROMOTE-DAG: @globalfuncLinkonceAlias = weak alias void (...), ptr @globalfunc
+; PROMOTE-DAG: @globalfuncWeakODRAlias = weak_odr alias void (...), ptr @globalfunc
+; PROMOTE-DAG: @globalfuncLinkonceODRAlias = weak_odr alias void (...), ptr @globalfunc
+; PROMOTE-DAG: @internalfuncAlias = alias void (...), ptr @internalfunc
+; PROMOTE-DAG: @internalfuncWeakAlias = weak alias void (...), ptr @internalfunc
+; PROMOTE-DAG: @internalfuncLinkonceAlias = weak alias void (...), ptr @internalfunc
+; PROMOTE-DAG: @internalfuncWeakODRAlias = weak_odr alias void (...), ptr @internalfunc
+; PROMOTE-DAG: @internalfuncLinkonceODRAlias = weak_odr alias void (...), ptr @internalfunc
+; PROMOTE-DAG: @linkoncefuncAlias = alias void (...), ptr @linkoncefunc
+; PROMOTE-DAG: @linkoncefuncWeakAlias = weak alias void (...), ptr @linkoncefunc
+; PROMOTE-DAG: @linkoncefuncLinkonceAlias = weak alias void (...), ptr @linkoncefunc
+; PROMOTE-DAG: @linkoncefuncWeakODRAlias = weak_odr alias void (...), ptr @linkoncefunc
+; PROMOTE-DAG: @linkoncefuncLinkonceODRAlias = weak_odr alias void (...), ptr @linkoncefunc
+; PROMOTE-DAG: @weakfuncAlias = alias void (...), ptr @weakfunc
+; PROMOTE-DAG: @weakfuncWeakAlias = weak alias void (...), ptr @weakfunc
+; PROMOTE-DAG: @weakfuncLinkonceAlias = weak alias void (...), ptr @weakfunc
+; PROMOTE-DAG: @weakfuncWeakODRAlias = weak_odr alias void (...), ptr @weakfunc
+; PROMOTE-DAG: @weakfuncLinkonceODRAlias = weak_odr alias void (...), ptr @weakfunc
+; PROMOTE-DAG: @weakODRfuncAlias = alias void (...), ptr @weakODRfunc
+; PROMOTE-DAG: @weakODRfuncWeakAlias = weak alias void (...), ptr @weakODRfunc
+; PROMOTE-DAG: @weakODRfuncLinkonceAlias = weak alias void (...), ptr @weakODRfunc
+; PROMOTE-DAG: @weakODRfuncWeakODRAlias = weak_odr alias void (...), ptr @weakODRfunc
+; PROMOTE-DAG: @weakODRfuncLinkonceODRAlias = weak_odr alias void (...), ptr @weakODRfunc
+; PROMOTE-DAG: @linkonceODRfuncAlias = alias void (...), ptr @linkonceODRfunc
+; PROMOTE-DAG: @linkonceODRfuncWeakAlias = weak alias void (...), ptr @linkonceODRfunc
+; PROMOTE-DAG: @linkonceODRfuncWeakODRAlias = weak_odr alias void (...), ptr @linkonceODRfunc
+; PROMOTE-DAG: @linkonceODRfuncLinkonceAlias = weak alias void (...), ptr @linkonceODRfunc
+; PROMOTE-DAG: @linkonceODRfuncLinkonceODRAlias = weak_odr alias void (...), ptr @linkonceODRfunc
 
 ; PROMOTE-DAG: define hidden void @globalfunc()
 ; PROMOTE-DAG: define internal void @internalfunc()

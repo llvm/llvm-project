@@ -7,7 +7,7 @@ struct S {
 
   // Note, this is not permitted: conversion-declarator cannot have a trailing return type.
   // FIXME: don't issue the second diagnostic for this.
-  operator auto(*)()->int(); // expected-error{{'auto' not allowed in conversion function type}} expected-error {{C++ requires a type specifier}}
+  operator auto(*)()->int(); // expected-error{{'auto' not allowed in conversion function type}} expected-error {{a type specifier is required}}
 };
 
 typedef auto Fun(int a) -> decltype(a + a);

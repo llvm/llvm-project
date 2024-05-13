@@ -7,9 +7,9 @@
 # RUN: ld.lld -T %t/lds %t-callees.o %t-callernotoc.o %t-callertoc.o -o %t-r12setup
 # RUN: ld.lld -T %t/ldsswap %t-callees.o %t-callernotoc.o %t-callertoc.o -o %t-r2save
 
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t-r12setup | \
+# RUN: llvm-objdump -d --no-show-raw-insn %t-r12setup | \
 # RUN:   FileCheck %s --check-prefix=NOSWAP
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t-r2save | \
+# RUN: llvm-objdump -d --no-show-raw-insn %t-r2save | \
 # RUN:   FileCheck %s --check-prefix=SWAP
 
 ## This test checks that it is possible to mix TOC and NOTOC functions and have
@@ -29,7 +29,7 @@
 # NOSWAP-NEXT:    blr
 # NOSWAP-LABEL: 10030010 <__gep_setup_callee_toc>:
 # NOSWAP:         bctr
-# NOSWAP-LABEL: 10030030 <__long_branch_pcrel_callee_notoc>:
+# NOSWAP-LABEL: 10030030 <__gep_setup_callee_notoc>:
 # NOSWAP:         bctr
 # NOSWAP-LABEL: 10040000 <caller_toc>:
 # NOSWAP:         bl 0x10040020
@@ -68,7 +68,7 @@
 # SWAP-NEXT:    blr
 # SWAP-LABEL: 10040010 <__gep_setup_callee_toc>:
 # SWAP:         bctr
-# SWAP-LABEL: 10040030 <__long_branch_pcrel_callee_notoc>:
+# SWAP-LABEL: 10040030 <__gep_setup_callee_notoc>:
 # SWAP:         bctr
 
 #--- lds

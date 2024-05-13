@@ -53,7 +53,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --dynamic-table %t.mips \
 # RUN:  | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=GNU-MIPS
 
-#      LLVM-MIPS:DynamicSection [ (47 entries)
+#      LLVM-MIPS:DynamicSection [ (48 entries)
 # LLVM-MIPS-NEXT:  Tag                Type                       Name/Value
 # LLVM-MIPS-NEXT:  0x0000000000000004 HASH                       0x1000
 # LLVM-MIPS-NEXT:  0x0000000070000001 MIPS_RLD_VERSION           305419896
@@ -101,10 +101,11 @@ ProgramHeaders:
 # LLVM-MIPS-NEXT:  0x0000000070000032 MIPS_PLTGOT                0x1000
 # LLVM-MIPS-NEXT:  0x0000000070000034 MIPS_RWPLT                 0x1000
 # LLVM-MIPS-NEXT:  0x0000000070000035 MIPS_RLD_MAP_REL           0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000036 MIPS_XHASH                 0x2000
 # LLVM-MIPS-NEXT:  0x0000000000000000 NULL                       0x0
 # LLVM-MIPS-NEXT:]
 
-#      GNU-MIPS:Dynamic section at offset {{.*}} contains 47 entries:
+#      GNU-MIPS:Dynamic section at offset {{.*}} contains 48 entries:
 # GNU-MIPS-NEXT:  Tag                Type                         Name/Value
 # GNU-MIPS-NEXT:  0x0000000000000004 (HASH)                       0x1000
 # GNU-MIPS-NEXT:  0x0000000070000001 (MIPS_RLD_VERSION)           305419896
@@ -152,6 +153,7 @@ ProgramHeaders:
 # GNU-MIPS-NEXT:  0x0000000070000032 (MIPS_PLTGOT)                0x1000
 # GNU-MIPS-NEXT:  0x0000000070000034 (MIPS_RWPLT)                 0x1000
 # GNU-MIPS-NEXT:  0x0000000070000035 (MIPS_RLD_MAP_REL)           0x1000
+# GNU-MIPS-NEXT:  0x0000000070000036 (MIPS_XHASH)                 0x2000
 # GNU-MIPS-NEXT:  0x0000000000000000 (NULL)                       0x0
 
 --- !ELF
@@ -256,6 +258,8 @@ Sections:
         Value: 0x1000
       - Tag:   DT_MIPS_RLD_MAP_REL
         Value: 0x1000
+      - Tag:   DT_MIPS_XHASH
+        Value: 0x2000
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
@@ -351,20 +355,26 @@ ProgramHeaders:
 # RUN: llvm-readobj --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=LLVM-AARCH64
 # RUN: llvm-readelf --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=GNU-AARCH64
 
-# LLVM-AARCH64:     DynamicSection [ (4 entries)
+# LLVM-AARCH64:     DynamicSection [ (7 entries)
 # LLVM-AARCH64-NEXT:  Tag                Type                Name/Value
-# LLVM-AARCH64-NEXT:  0x0000000070000001 AARCH64_BTI_PLT     1
-# LLVM-AARCH64-NEXT:  0x0000000070000003 AARCH64_PAC_PLT     2
-# LLVM-AARCH64-NEXT:  0x0000000070000005 AARCH64_VARIANT_PCS 3
-# LLVM-AARCH64-NEXT:  0x0000000000000000 NULL                0x0
+# LLVM-AARCH64-NEXT:  0x0000000070000001 AARCH64_BTI_PLT      1
+# LLVM-AARCH64-NEXT:  0x0000000070000003 AARCH64_PAC_PLT      2
+# LLVM-AARCH64-NEXT:  0x0000000070000005 AARCH64_VARIANT_PCS  3
+# LLVM-AARCH64-NEXT:  0x0000000070000012 AARCH64_AUTH_RELR    0x4
+# LLVM-AARCH64-NEXT:  0x0000000070000011 AARCH64_AUTH_RELRSZ  5
+# LLVM-AARCH64-NEXT:  0x0000000070000013 AARCH64_AUTH_RELRENT 6
+# LLVM-AARCH64-NEXT:  0x0000000000000000 NULL                 0x0
 # LLVM-AARCH64-NEXT:]
 
-# GNU-AARCH64:      Dynamic section at offset {{.*}} contains 4 entries:
+# GNU-AARCH64:      Dynamic section at offset {{.*}} contains 7 entries:
 # GNU-AARCH64-NEXT:  Tag                Type                  Name/Value
-# GNU-AARCH64-NEXT:  0x0000000070000001 (AARCH64_BTI_PLT)     1
-# GNU-AARCH64-NEXT:  0x0000000070000003 (AARCH64_PAC_PLT)     2
-# GNU-AARCH64-NEXT:  0x0000000070000005 (AARCH64_VARIANT_PCS) 3
-# GNU-AARCH64-NEXT:  0x0000000000000000 (NULL)                0x0
+# GNU-AARCH64-NEXT:  0x0000000070000001 (AARCH64_BTI_PLT)      1
+# GNU-AARCH64-NEXT:  0x0000000070000003 (AARCH64_PAC_PLT)      2
+# GNU-AARCH64-NEXT:  0x0000000070000005 (AARCH64_VARIANT_PCS)  3
+# GNU-AARCH64-NEXT:  0x0000000070000012 (AARCH64_AUTH_RELR)    0x4
+# GNU-AARCH64-NEXT:  0x0000000070000011 (AARCH64_AUTH_RELRSZ)  5
+# GNU-AARCH64-NEXT:  0x0000000070000013 (AARCH64_AUTH_RELRENT) 6
+# GNU-AARCH64-NEXT:  0x0000000000000000 (NULL)                 0x0
 
 --- !ELF
 FileHeader:
@@ -382,6 +392,50 @@ Sections:
         Value: 2
       - Tag:   DT_AARCH64_VARIANT_PCS
         Value: 3
+      - Tag:   DT_AARCH64_AUTH_RELR
+        Value: 4
+      - Tag:   DT_AARCH64_AUTH_RELRSZ
+        Value: 5
+      - Tag:   DT_AARCH64_AUTH_RELRENT
+        Value: 6
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 6: Test that RISC-V machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=6 %s -o %t.rv
+# RUN: llvm-readobj --dynamic-table %t.rv | FileCheck %s --check-prefix=LLVM-RISCV
+# RUN: llvm-readelf --dynamic-table %t.rv | FileCheck %s --check-prefix=GNU-RISCV
+
+# LLVM-RISCV:      DynamicSection [ (2 entries)
+# LLVM-RISCV-NEXT:   Tag                Type                Name/Value
+# LLVM-RISCV-NEXT:   0x0000000070000001 RISCV_VARIANT_CC    0x1
+# LLVM-RISCV-NEXT:   0x0000000000000000 NULL                0x0
+# LLVM-RISCV-NEXT: ]
+
+# GNU-RISCV:       Dynamic section at offset {{.*}} contains 2 entries:
+# GNU-RISCV-NEXT:   Tag                Type                 Name/Value
+# GNU-RISCV-NEXT:   0x0000000070000001 (RISCV_VARIANT_CC)   0x1
+# GNU-RISCV-NEXT:   0x0000000000000000 (NULL)               0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_RISCV
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RISCV_VARIANT_CC
+        Value: 1
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:

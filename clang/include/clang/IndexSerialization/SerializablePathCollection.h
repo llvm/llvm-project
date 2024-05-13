@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_INDEX_SerializablePathCollection_H
-#define LLVM_CLANG_INDEX_SerializablePathCollection_H
+#ifndef LLVM_CLANG_INDEXSERIALIZATION_SERIALIZABLEPATHCOLLECTION_H
+#define LLVM_CLANG_INDEXSERIALIZATION_SERIALIZABLEPATHCOLLECTION_H
 
 #include "clang/Basic/FileManager.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -111,7 +110,7 @@ public:
 
   /// Stores path to \p FE if it hasn't been stored yet.
   /// \returns index to array exposed by getPathsBuffer().
-  size_t tryStoreFilePath(const clang::FileEntry &FE);
+  size_t tryStoreFilePath(FileEntryRef FE);
 
 private:
   /// Stores \p Path if it is non-empty.
@@ -126,4 +125,4 @@ private:
 } // namespace index
 } // namespace clang
 
-#endif // LLVM_CLANG_INDEX_SerializablePathCollection_H
+#endif // LLVM_CLANG_INDEXSERIALIZATION_SERIALIZABLEPATHCOLLECTION_H

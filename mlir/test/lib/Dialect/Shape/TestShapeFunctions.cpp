@@ -8,6 +8,7 @@
 
 #include <queue>
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -19,15 +20,21 @@ namespace {
 /// This is a pass that reports shape functions associated with ops.
 struct ReportShapeFnPass
     : public PassWrapper<ReportShapeFnPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReportShapeFnPass)
+
   void runOnOperation() override;
+  StringRef getArgument() const final { return "test-shape-function-report"; }
+  StringRef getDescription() const final {
+    return "Test pass to report associated shape functions";
+  }
 };
-} // end anonymous namespace
+} // namespace
 
 void ReportShapeFnPass::runOnOperation() {
   auto module = getOperation();
 
   // Report the shape function available to refine the op.
-  auto shapeFnId = Identifier::get("shape.function", &getContext());
+  auto shapeFnId = StringAttr::get(&getContext(), "shape.function");
   auto remarkShapeFn = [&](shape::FunctionLibraryOp shapeFnLib, Operation *op) {
     if (op->hasTrait<OpTrait::IsTerminator>())
       return true;
@@ -40,7 +47,8 @@ void ReportShapeFnPass::runOnOperation() {
       return true;
     }
     if (auto symbol = op->getAttrOfType<SymbolRefAttr>(shapeFnId)) {
-      auto fn = cast<FuncOp>(SymbolTable::lookupSymbolIn(module, symbol));
+      auto fn =
+          cast<shape::FuncOp>(SymbolTable::lookupSymbolIn(module, symbol));
       op->emitRemark() << "associated shape function: " << fn.getName();
       return true;
     }
@@ -49,13 +57,13 @@ void ReportShapeFnPass::runOnOperation() {
 
   // Lookup shape function library.
   SmallVector<shape::FunctionLibraryOp, 4> libraries;
-  auto attr = module->getAttr("shape.lib");
+  auto attr = module->getDiscardableAttr("shape.lib");
   if (attr) {
     auto lookup = [&](Attribute attr) {
       return cast<shape::FunctionLibraryOp>(
-          SymbolTable::lookupSymbolIn(module, attr.cast<SymbolRefAttr>()));
+          SymbolTable::lookupSymbolIn(module, cast<SymbolRefAttr>(attr)));
     };
-    if (auto arrayAttr = attr.dyn_cast<ArrayAttr>()) {
+    if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
       libraries.reserve(arrayAttr.size());
       for (auto attr : arrayAttr)
         libraries.push_back(lookup(attr));
@@ -65,7 +73,7 @@ void ReportShapeFnPass::runOnOperation() {
     }
   }
 
-  module.getBodyRegion().walk([&](FuncOp func) {
+  module.getBodyRegion().walk([&](func::FuncOp func) {
     // Skip ops in the shape function library.
     if (isa<shape::FunctionLibraryOp>(func->getParentOp()))
       return;
@@ -82,8 +90,6 @@ void ReportShapeFnPass::runOnOperation() {
 
 namespace mlir {
 void registerShapeFunctionTestPasses() {
-  PassRegistration<ReportShapeFnPass>(
-      "test-shape-function-report",
-      "Test pass to report associated shape functions");
+  PassRegistration<ReportShapeFnPass>();
 }
 } // namespace mlir

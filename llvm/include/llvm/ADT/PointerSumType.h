@@ -272,11 +272,12 @@ struct DenseMapInfo<PointerSumType<TagT, MemberTs...>> {
   using SomePointerInfo = DenseMapInfo<SomePointerT>;
 
   static inline SumType getEmptyKey() {
-    return SumType::create<SomeTag>(SomePointerInfo::getEmptyKey());
+    return SumType::template create<SomeTag>(SomePointerInfo::getEmptyKey());
   }
 
   static inline SumType getTombstoneKey() {
-    return SumType::create<SomeTag>(SomePointerInfo::getTombstoneKey());
+    return SumType::template create<SomeTag>(
+        SomePointerInfo::getTombstoneKey());
   }
 
   static unsigned getHashValue(const SumType &Arg) {

@@ -1,6 +1,6 @@
 ; This test is based on one of benchmarks from SPEC2006. It exposes a bug with
 ; incorrect updating of the dom-tree.
-; RUN: opt < %s  -loop-vectorize -verify-dom-info
+; RUN: opt < %s -passes=loop-vectorize -verify-dom-info
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @PL_utf8skip = external constant [0 x i8]
@@ -45,21 +45,21 @@ thread-pre-split.preheader:                       ; preds = %9
 
 .thread-pre-split.loopexit_crit_edge:             ; preds = %19
   %scevgep.sum = xor i64 %umax, -1
-  %scevgep45 = getelementptr i8, i8* %d.020, i64 %scevgep.sum
+  %scevgep45 = getelementptr i8, ptr %d.020, i64 %scevgep.sum
   br label %thread-pre-split.loopexit
 
 thread-pre-split.loopexit:                        ; preds = %11, %.thread-pre-split.loopexit_crit_edge
-  %d.1.lcssa = phi i8* [ %scevgep45, %.thread-pre-split.loopexit_crit_edge ], [ %d.020, %11 ]
+  %d.1.lcssa = phi ptr [ %scevgep45, %.thread-pre-split.loopexit_crit_edge ], [ %d.020, %11 ]
   br i1 false, label %thread-pre-split._crit_edge, label %.lr.ph21
 
 .lr.ph21:                                         ; preds = %26, %thread-pre-split.loopexit, %thread-pre-split.preheader
-  %d.020 = phi i8* [ undef, %26 ], [ %d.1.lcssa, %thread-pre-split.loopexit ], [ undef, %thread-pre-split.preheader ]
+  %d.020 = phi ptr [ undef, %26 ], [ %d.1.lcssa, %thread-pre-split.loopexit ], [ undef, %thread-pre-split.preheader ]
   %10 = phi i64 [ %28, %26 ], [ undef, %thread-pre-split.loopexit ], [ undef, %thread-pre-split.preheader ]
   br i1 undef, label %11, label %22
 
 ; <label>:11                                      ; preds = %.lr.ph21
-  %12 = getelementptr inbounds [0 x i8], [0 x i8]* @PL_utf8skip, i64 0, i64 undef
-  %13 = load i8, i8* %12, align 1
+  %12 = getelementptr inbounds [0 x i8], ptr @PL_utf8skip, i64 0, i64 undef
+  %13 = load i8, ptr %12, align 1
   %14 = zext i8 %13 to i64
   %15 = icmp ugt i64 %14, %10
   %. = select i1 %15, i64 %10, i64 %14
@@ -91,7 +91,7 @@ thread-pre-split.loopexit:                        ; preds = %11, %.thread-pre-sp
   br label %26
 
 ; <label>:26                                      ; preds = %25, %24, %23, %22
-  %27 = load i64, i64* %len, align 8
+  %27 = load i64, ptr %len, align 8
   %28 = add i64 %27, -1
   br i1 undef, label %thread-pre-split._crit_edge, label %.lr.ph21
 

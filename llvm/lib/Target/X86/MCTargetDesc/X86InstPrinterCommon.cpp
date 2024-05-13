@@ -18,35 +18,63 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
-#include <cstdint>
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
 void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
+  unsigned Opc = MI->getOpcode();
+  bool IsCMPCCXADD = X86::isCMPCCXADD(Opc);
+  bool IsCCMPOrCTEST = X86::isCCMPCC(Opc) || X86::isCTESTCC(Opc);
+
+  // clang-format off
   switch (Imm) {
   default: llvm_unreachable("Invalid condcode argument!");
   case    0: O << "o";  break;
   case    1: O << "no"; break;
   case    2: O << "b";  break;
-  case    3: O << "ae"; break;
-  case    4: O << "e";  break;
-  case    5: O << "ne"; break;
+  case    3: O << (IsCMPCCXADD ? "nb" : "ae"); break;
+  case    4: O << (IsCMPCCXADD ?  "z" :  "e"); break;
+  case    5: O << (IsCMPCCXADD ? "nz" : "ne"); break;
   case    6: O << "be"; break;
-  case    7: O << "a";  break;
+  case    7: O << (IsCMPCCXADD ? "nbe" : "a"); break;
   case    8: O << "s";  break;
   case    9: O << "ns"; break;
-  case  0xa: O << "p";  break;
-  case  0xb: O << "np"; break;
+  case  0xa: O << (IsCCMPOrCTEST ? "t" : "p");  break;
+  case  0xb: O << (IsCCMPOrCTEST ? "f" : "np"); break;
   case  0xc: O << "l";  break;
-  case  0xd: O << "ge"; break;
+  case  0xd: O << (IsCMPCCXADD ? "nl" : "ge"); break;
   case  0xe: O << "le"; break;
-  case  0xf: O << "g";  break;
+  case  0xf: O << (IsCMPCCXADD ? "nle" : "g"); break;
   }
+  // clang-format on
+}
+
+void X86InstPrinterCommon::printCondFlags(const MCInst *MI, unsigned Op,
+                                          raw_ostream &O) {
+  // +----+----+----+----+
+  // | OF | SF | ZF | CF |
+  // +----+----+----+----+
+  int64_t Imm = MI->getOperand(Op).getImm();
+  assert(Imm >= 0 && Imm < 16 && "Invalid condition flags");
+  O << "{dfv=";
+  std::string Flags;
+  if (Imm & 0x8)
+    Flags += "of,";
+  if (Imm & 0x4)
+    Flags += "sf,";
+  if (Imm & 0x2)
+    Flags += "zf,";
+  if (Imm & 0x1)
+    Flags += "cf,";
+  StringRef SimplifiedFlags = StringRef(Flags).rtrim(",");
+  O << SimplifiedFlags << "}";
 }
 
 void X86InstPrinterCommon::printSSEAVXCC(const MCInst *MI, unsigned Op,
@@ -244,25 +272,43 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPPSZrrib:    case X86::VCMPPSZrribk:
     OS << "ps\t";
     break;
-  case X86::CMPSDrm:        case X86::CMPSDrr:
-  case X86::CMPSDrm_Int:    case X86::CMPSDrr_Int:
-  case X86::VCMPSDrm:       case X86::VCMPSDrr:
-  case X86::VCMPSDrm_Int:   case X86::VCMPSDrr_Int:
-  case X86::VCMPSDZrm:      case X86::VCMPSDZrr:
-  case X86::VCMPSDZrm_Int:  case X86::VCMPSDZrr_Int:
-  case X86::VCMPSDZrm_Intk: case X86::VCMPSDZrr_Intk:
-  case X86::VCMPSDZrrb_Int: case X86::VCMPSDZrrb_Intk:
+  case X86::CMPSDrmi:        case X86::CMPSDrri:
+  case X86::CMPSDrmi_Int:    case X86::CMPSDrri_Int:
+  case X86::VCMPSDrmi:       case X86::VCMPSDrri:
+  case X86::VCMPSDrmi_Int:   case X86::VCMPSDrri_Int:
+  case X86::VCMPSDZrmi:      case X86::VCMPSDZrri:
+  case X86::VCMPSDZrmi_Int:  case X86::VCMPSDZrri_Int:
+  case X86::VCMPSDZrmi_Intk: case X86::VCMPSDZrri_Intk:
+  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrrib_Intk:
     OS << "sd\t";
     break;
-  case X86::CMPSSrm:        case X86::CMPSSrr:
-  case X86::CMPSSrm_Int:    case X86::CMPSSrr_Int:
-  case X86::VCMPSSrm:       case X86::VCMPSSrr:
-  case X86::VCMPSSrm_Int:   case X86::VCMPSSrr_Int:
-  case X86::VCMPSSZrm:      case X86::VCMPSSZrr:
-  case X86::VCMPSSZrm_Int:  case X86::VCMPSSZrr_Int:
-  case X86::VCMPSSZrm_Intk: case X86::VCMPSSZrr_Intk:
-  case X86::VCMPSSZrrb_Int: case X86::VCMPSSZrrb_Intk:
+  case X86::CMPSSrmi:        case X86::CMPSSrri:
+  case X86::CMPSSrmi_Int:    case X86::CMPSSrri_Int:
+  case X86::VCMPSSrmi:       case X86::VCMPSSrri:
+  case X86::VCMPSSrmi_Int:   case X86::VCMPSSrri_Int:
+  case X86::VCMPSSZrmi:      case X86::VCMPSSZrri:
+  case X86::VCMPSSZrmi_Int:  case X86::VCMPSSZrri_Int:
+  case X86::VCMPSSZrmi_Intk: case X86::VCMPSSZrri_Intk:
+  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrrib_Intk:
     OS << "ss\t";
+    break;
+  case X86::VCMPPHZ128rmi:  case X86::VCMPPHZ128rri:
+  case X86::VCMPPHZ256rmi:  case X86::VCMPPHZ256rri:
+  case X86::VCMPPHZrmi:     case X86::VCMPPHZrri:
+  case X86::VCMPPHZ128rmik: case X86::VCMPPHZ128rrik:
+  case X86::VCMPPHZ256rmik: case X86::VCMPPHZ256rrik:
+  case X86::VCMPPHZrmik:    case X86::VCMPPHZrrik:
+  case X86::VCMPPHZ128rmbi: case X86::VCMPPHZ128rmbik:
+  case X86::VCMPPHZ256rmbi: case X86::VCMPPHZ256rmbik:
+  case X86::VCMPPHZrmbi:    case X86::VCMPPHZrmbik:
+  case X86::VCMPPHZrrib:    case X86::VCMPPHZrribk:
+    OS << "ph\t";
+    break;
+  case X86::VCMPSHZrmi:      case X86::VCMPSHZrri:
+  case X86::VCMPSHZrmi_Int:  case X86::VCMPSHZrri_Int:
+  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrrib_Intk:
+  case X86::VCMPSHZrmi_Intk: case X86::VCMPSHZrri_Intk:
+    OS << "sh\t";
     break;
   }
 }
@@ -305,9 +351,9 @@ void X86InstPrinterCommon::printPCRelImm(const MCInst *MI, uint64_t Address,
       uint64_t Target = Address + Op.getImm();
       if (MAI.getCodePointerSize() == 4)
         Target &= 0xffffffff;
-      O << formatHex(Target);
+      markup(O, Markup::Target) << formatHex(Target);
     } else
-      O << formatImm(Op.getImm());
+      markup(O, Markup::Immediate) << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "unknown pcrel immediate operand");
     // If a symbolic branch target was added as a constant expression then print
@@ -315,7 +361,7 @@ void X86InstPrinterCommon::printPCRelImm(const MCInst *MI, uint64_t Address,
     const MCConstantExpr *BranchTarget = dyn_cast<MCConstantExpr>(Op.getExpr());
     int64_t Address;
     if (BranchTarget && BranchTarget->evaluateAsAbsolute(Address)) {
-      O << formatHex((uint64_t)Address);
+      markup(O, Markup::Immediate) << formatHex((uint64_t)Address);
     } else {
       // Otherwise, just print the expression.
       Op.getExpr()->print(O, &MAI);
@@ -331,7 +377,8 @@ void X86InstPrinterCommon::printOptionalSegReg(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O) {
+void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O,
+                                          const MCSubtargetInfo &STI) {
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
   unsigned Flags = MI->getFlags();
@@ -347,20 +394,39 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O) {
   else if (Flags & X86::IP_HAS_REPEAT)
     O << "\trep\t";
 
+  if (TSFlags & X86II::EVEX_NF && !X86::isCFCMOVCC(MI->getOpcode()))
+    O << "\t{nf}";
+
   // These all require a pseudo prefix
-  if ((Flags & X86::IP_USE_VEX) || (TSFlags & X86II::ExplicitVEXPrefix))
+  if ((Flags & X86::IP_USE_VEX) ||
+      (TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitVEXPrefix)
     O << "\t{vex}";
   else if (Flags & X86::IP_USE_VEX2)
     O << "\t{vex2}";
   else if (Flags & X86::IP_USE_VEX3)
     O << "\t{vex3}";
-  else if (Flags & X86::IP_USE_EVEX)
+  else if ((Flags & X86::IP_USE_EVEX) ||
+           (TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitEVEXPrefix)
     O << "\t{evex}";
 
   if (Flags & X86::IP_USE_DISP8)
     O << "\t{disp8}";
   else if (Flags & X86::IP_USE_DISP32)
     O << "\t{disp32}";
+
+  // Determine where the memory operand starts, if present
+  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  if (MemoryOperand != -1)
+    MemoryOperand += X86II::getOperandBias(Desc);
+
+  // Address-Size override prefix
+  if (Flags & X86::IP_HAS_AD_SIZE &&
+      !X86_MC::needsAddressSizeOverride(*MI, STI, MemoryOperand, TSFlags)) {
+    if (STI.hasFeature(X86::Is16Bit) || STI.hasFeature(X86::Is64Bit))
+      O << "\taddr32\t";
+    else if (STI.hasFeature(X86::Is32Bit))
+      O << "\taddr16\t";
+  }
 }
 
 void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,

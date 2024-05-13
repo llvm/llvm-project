@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=asm %s -o - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -mtriple=x86_64-apple-darwin -filetype=asm %s -o - | FileCheck %s
 ; Ensure that we generate an indirect location for the variable length array a.
 ; CHECK: ##DEBUG_VALUE: vla:a <- [DW_OP_deref] [{{\$r[a-z]+}}+0]
 ; CHECK: DW_OP_breg{{[0-9]}}
@@ -24,26 +25,25 @@ target triple = "x86_64-apple-macosx10.8.0"
 define i32 @vla(i32 %n) nounwind ssp uwtable !dbg !4 {
 entry:
   %n.addr = alloca i32, align 4
-  %saved_stack = alloca i8*
+  %saved_stack = alloca ptr
   %cleanup.dest.slot = alloca i32
-  store i32 %n, i32* %n.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %n.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* %n.addr, align 4, !dbg !17
+  store i32 %n, ptr %n.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %n.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  %0 = load i32, ptr %n.addr, align 4, !dbg !17
   %1 = zext i32 %0 to i64, !dbg !17
-  %2 = call i8* @llvm.stacksave(), !dbg !17
-  store i8* %2, i8** %saved_stack, !dbg !17
+  %2 = call ptr @llvm.stacksave(), !dbg !17
+  store ptr %2, ptr %saved_stack, !dbg !17
   %vla = alloca i32, i64 %1, align 16, !dbg !17
-  call void @llvm.dbg.declare(metadata i32* %vla, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !17
-  %arrayidx = getelementptr inbounds i32, i32* %vla, i64 0, !dbg !22
-  store i32 42, i32* %arrayidx, align 4, !dbg !22
-  %3 = load i32, i32* %n.addr, align 4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %vla, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !17
+  store i32 42, ptr %vla, align 4, !dbg !22
+  %3 = load i32, ptr %n.addr, align 4, !dbg !23
   %sub = sub nsw i32 %3, 1, !dbg !23
   %idxprom = sext i32 %sub to i64, !dbg !23
-  %arrayidx1 = getelementptr inbounds i32, i32* %vla, i64 %idxprom, !dbg !23
-  %4 = load i32, i32* %arrayidx1, align 4, !dbg !23
-  store i32 1, i32* %cleanup.dest.slot
-  %5 = load i8*, i8** %saved_stack, !dbg !24
-  call void @llvm.stackrestore(i8* %5), !dbg !24
+  %arrayidx1 = getelementptr inbounds i32, ptr %vla, i64 %idxprom, !dbg !23
+  %4 = load i32, ptr %arrayidx1, align 4, !dbg !23
+  store i32 1, ptr %cleanup.dest.slot
+  %5 = load ptr, ptr %saved_stack, !dbg !24
+  call void @llvm.stackrestore(ptr %5), !dbg !24
   ret i32 %4, !dbg !23
 }
 
@@ -51,23 +51,23 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 ; Function Attrs: nounwind
-declare i8* @llvm.stacksave() nounwind
+declare ptr @llvm.stacksave() nounwind
 
 ; Function Attrs: nounwind
-declare void @llvm.stackrestore(i8*) nounwind
+declare void @llvm.stackrestore(ptr) nounwind
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @main(i32 %argc, i8** %argv) nounwind ssp uwtable !dbg !9 {
+define i32 @main(i32 %argc, ptr %argv) nounwind ssp uwtable !dbg !9 {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
-  store i32 0, i32* %retval
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !25, metadata !DIExpression()), !dbg !26
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !27, metadata !DIExpression()), !dbg !26
-  %0 = load i32, i32* %argc.addr, align 4, !dbg !28
+  %argv.addr = alloca ptr, align 8
+  store i32 0, ptr %retval
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !25, metadata !DIExpression()), !dbg !26
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !27, metadata !DIExpression()), !dbg !26
+  %0 = load i32, ptr %argc.addr, align 4, !dbg !28
   %call = call i32 @vla(i32 %0), !dbg !28
   ret i32 %call, !dbg !28
 }

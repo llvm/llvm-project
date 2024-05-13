@@ -34,14 +34,16 @@ ConstString CompilerDeclContext::GetScopeQualifiedName() const {
   return ConstString();
 }
 
-bool CompilerDeclContext::IsClassMethod(lldb::LanguageType *language_ptr,
-                                        bool *is_instance_method_ptr,
-                                        ConstString *language_object_name_ptr) {
+bool CompilerDeclContext::IsClassMethod() {
   if (IsValid())
-    return m_type_system->DeclContextIsClassMethod(
-        m_opaque_decl_ctx, language_ptr, is_instance_method_ptr,
-        language_object_name_ptr);
+    return m_type_system->DeclContextIsClassMethod(m_opaque_decl_ctx);
   return false;
+}
+
+lldb::LanguageType CompilerDeclContext::GetLanguage() {
+  if (IsValid())
+    return m_type_system->DeclContextGetLanguage(m_opaque_decl_ctx);
+  return {};
 }
 
 bool CompilerDeclContext::IsContainedInLookup(CompilerDeclContext other) const {
@@ -55,6 +57,13 @@ bool CompilerDeclContext::IsContainedInLookup(CompilerDeclContext other) const {
 
   return m_type_system->DeclContextIsContainedInLookup(m_opaque_decl_ctx,
                                                        other.m_opaque_decl_ctx);
+}
+
+std::vector<lldb_private::CompilerContext>
+CompilerDeclContext::GetCompilerContext() const {
+  if (IsValid())
+    return m_type_system->DeclContextGetCompilerContext(m_opaque_decl_ctx);
+  return {};
 }
 
 bool lldb_private::operator==(const lldb_private::CompilerDeclContext &lhs,

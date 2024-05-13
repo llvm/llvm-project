@@ -11,28 +11,28 @@ declare i1 @llvm.amdgcn.class.f16(half %a, i32 %b)
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16(
-    i32 addrspace(1)* %r,
-    half addrspace(1)* %a,
-    i32 addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load i32, i32 addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load i32, ptr addrspace(1) %b
   %r.val = call i1 @llvm.amdgcn.class.f16(half %a.val, i32 %b.val)
   %r.val.sext = sext i1 %r.val to i32
-  store i32 %r.val.sext, i32 addrspace(1)* %r
+  store i32 %r.val.sext, ptr addrspace(1) %r
   ret void
 }
 
 ; GCN-LABEL: {{^}}class_f16_fabs:
-; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: s_load_dword s[[SB_I32:[0-9]+]]
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: v_mov_b32_e32 [[V_B_I32:v[0-9]+]], s[[SB_I32]]
 ; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], |s[[SA_F16]]|, [[V_B_I32]]
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_fabs(
-  i32 addrspace(1)* %r,
+  ptr addrspace(1) %r,
   [8 x i32],
   half %a.val,
   [8 x i32],
@@ -41,20 +41,20 @@ entry:
   %a.val.fabs = call half @llvm.fabs.f16(half %a.val)
   %r.val = call i1 @llvm.amdgcn.class.f16(half %a.val.fabs, i32 %b.val)
   %r.val.sext = sext i1 %r.val to i32
-  store i32 %r.val.sext, i32 addrspace(1)* %r
+  store i32 %r.val.sext, ptr addrspace(1) %r
   ret void
 }
 
 ; GCN-LABEL: {{^}}class_f16_fneg:
-; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: s_load_dword s[[SB_I32:[0-9]+]]
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: v_mov_b32_e32 [[V_B_I32:v[0-9]+]], s[[SB_I32]]
 ; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -s[[SA_F16]], [[V_B_I32]]
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_fneg(
-  i32 addrspace(1)* %r,
+  ptr addrspace(1) %r,
   [8 x i32],
   half %a.val,
   [8 x i32],
@@ -63,20 +63,20 @@ entry:
   %a.val.fneg = fsub half -0.0, %a.val
   %r.val = call i1 @llvm.amdgcn.class.f16(half %a.val.fneg, i32 %b.val)
   %r.val.sext = sext i1 %r.val to i32
-  store i32 %r.val.sext, i32 addrspace(1)* %r
+  store i32 %r.val.sext, ptr addrspace(1) %r
   ret void
 }
 
 ; GCN-LABEL: {{^}}class_f16_fabs_fneg:
-; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: s_load_dword s[[SB_I32:[0-9]+]]
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: v_mov_b32_e32 [[V_B_I32:v[0-9]+]], s[[SB_I32]]
 ; VI: v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -|s[[SA_F16]]|, [[V_B_I32]]
 ; VI: v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_fabs_fneg(
-  i32 addrspace(1)* %r,
+  ptr addrspace(1) %r,
   [8 x i32],
   half %a.val,
   [8 x i32],
@@ -86,7 +86,7 @@ entry:
   %a.val.fabs.fneg = fsub half -0.0, %a.val.fabs
   %r.val = call i1 @llvm.amdgcn.class.f16(half %a.val.fabs.fneg, i32 %b.val)
   %r.val.sext = sext i1 %r.val to i32
-  store i32 %r.val.sext, i32 addrspace(1)* %r
+  store i32 %r.val.sext, ptr addrspace(1) %r
   ret void
 }
 
@@ -97,12 +97,12 @@ entry:
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_1(
-  i32 addrspace(1)* %r,
+  ptr addrspace(1) %r,
   half %a.val) {
 entry:
   %r.val = call i1 @llvm.amdgcn.class.f16(half %a.val, i32 1)
   %r.val.sext = sext i1 %r.val to i32
-  store i32 %r.val.sext, i32 addrspace(1)* %r
+  store i32 %r.val.sext, ptr addrspace(1) %r
   ret void
 }
 
@@ -113,12 +113,12 @@ entry:
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_64(
-  i32 addrspace(1)* %r,
+  ptr addrspace(1) %r,
   half %a.val) {
 entry:
   %r.val = call i1 @llvm.amdgcn.class.f16(half %a.val, i32 64)
   %r.val.sext = sext i1 %r.val to i32
-  store i32 %r.val.sext, i32 addrspace(1)* %r
+  store i32 %r.val.sext, ptr addrspace(1) %r
   ret void
 }
 
@@ -130,12 +130,12 @@ entry:
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_full_mask(
-  i32 addrspace(1)* %r,
+  ptr addrspace(1) %r,
   half %a.val) {
 entry:
   %r.val = call i1 @llvm.amdgcn.class.f16(half %a.val, i32 1023)
   %r.val.sext = sext i1 %r.val to i32
-  store i32 %r.val.sext, i32 addrspace(1)* %r
+  store i32 %r.val.sext, ptr addrspace(1) %r
   ret void
 }
 
@@ -147,11 +147,11 @@ entry:
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_nine_bit_mask(
-  i32 addrspace(1)* %r,
+  ptr addrspace(1) %r,
   half %a.val) {
 entry:
   %r.val = call i1 @llvm.amdgcn.class.f16(half %a.val, i32 511)
   %r.val.sext = sext i1 %r.val to i32
-  store i32 %r.val.sext, i32 addrspace(1)* %r
+  store i32 %r.val.sext, ptr addrspace(1) %r
   ret void
 }

@@ -6,24 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// UNSUPPORTED: !libc++ && c++11
-// UNSUPPORTED: !libc++ && c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
-// The roundtrip test uses to_chars, which requires functions in the dylib
-// that were introduced in Mac OS 10.15.
-//
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.14
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=12712420
 
 // <charconv>
 
-// from_chars_result from_chars(const char* first, const char* last,
-//                              Integral& value, int base = 10)
+// constexpr from_chars_result from_chars(const char* first, const char* last,
+//                                        Integral& value, int base = 10)
 
 #include <charconv>
 #include "test_macros.h"
@@ -34,7 +24,7 @@ struct test_basics : roundtrip_test_base<T>
 {
     using roundtrip_test_base<T>::test;
 
-    void operator()()
+    TEST_CONSTEXPR_CXX23 void operator()()
     {
         test(0);
         test(42);
@@ -64,7 +54,7 @@ struct test_signed : roundtrip_test_base<T>
 {
     using roundtrip_test_base<T>::test;
 
-    void operator()()
+    TEST_CONSTEXPR_CXX23 void operator()()
     {
         test(-1);
         test(-12);
@@ -85,10 +75,19 @@ struct test_signed : roundtrip_test_base<T>
     }
 };
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX23 bool test()
 {
     run<test_basics>(integrals);
     run<test_signed>(all_signed);
+
+    return true;
+}
+
+int main(int, char**) {
+    test();
+#if TEST_STD_VER > 20
+    static_assert(test());
+#endif
 
     return 0;
 }

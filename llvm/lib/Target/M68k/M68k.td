@@ -1,4 +1,4 @@
-//===-- M68k.td - Motorola 680x0 target definitions ------*- tablegen -*-===//
+//===-- M68k.td - Motorola 680x0 target definitions --------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,10 +37,19 @@ def FeatureISA30
                      "Is M68030 ISA supported",
                      [ FeatureISA20 ]>;
 
+def FeatureISA881
+  : SubtargetFeature<"isa-68881", "FPUKind", "M881",
+                     "Is M68881 (FPU) ISA supported">;
+
+def FeatureISA882
+  : SubtargetFeature<"isa-68882", "FPUKind", "M882",
+                     "Is M68882 (FPU) ISA supported",
+                     [ FeatureISA881 ]>;
+
 def FeatureISA40
   : SubtargetFeature<"isa-68040", "SubtargetKind", "M40",
                      "Is M68040 ISA supported",
-                     [ FeatureISA30 ]>;
+                     [ FeatureISA30, FeatureISA882 ]>;
 
 def FeatureISA60
   : SubtargetFeature<"isa-68060", "SubtargetKind", "M60",
@@ -78,6 +87,7 @@ def : Proc<"M68060",  [ FeatureISA60 ]>;
 //===----------------------------------------------------------------------===//
 
 include "M68kRegisterInfo.td"
+include "GISel/M68kRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Descriptions

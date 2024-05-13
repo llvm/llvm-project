@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/InitializePasses.h"
-#include "llvm/PassRegistry.h"
 
 using namespace llvm;
 
 void llvm::initializeGlobalISel(PassRegistry &Registry) {
   initializeIRTranslatorPass(Registry);
   initializeLegalizerPass(Registry);
+  initializeLoadStoreOptPass(Registry);
   initializeLocalizerPass(Registry);
   initializeRegBankSelectPass(Registry);
   initializeInstructionSelectPass(Registry);

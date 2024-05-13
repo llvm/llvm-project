@@ -49,6 +49,13 @@ module CodeGenFileType : sig
   | ObjectFile
 end
 
+module GlobalISelAbortMode : sig
+  type t =
+  | Enable
+  | Disable
+  | DisableWithDiag
+end
+
 (** {6 Exceptions} *)
 
 exception Error of string
@@ -200,13 +207,25 @@ module TargetMachine : sig
       [llvm::TargetMachine::getFeatureString]. *)
   val features : t -> string
 
-  (** Adds the target-specific analysis passes to the pass manager.
-      See [llvm::TargetMachine::addAnalysisPasses]. *)
-  val add_analysis_passes : [< Llvm.PassManager.any ] Llvm.PassManager.t -> t -> unit
-
   (** Sets the assembly verbosity of this target machine.
       See [llvm::TargetMachine::setAsmVerbosity]. *)
   val set_verbose_asm : bool -> t -> unit
+
+  (** Enable fast-path instruction selection.
+      See [llvm::TargetMachine::setFastISel]. *)
+  val set_fast_isel : bool -> t -> unit
+
+  (** Enable global instruction selection.
+      See [llvm::TargetMachine::setGlobalISel]. *)
+  val set_global_isel : bool -> t -> unit
+
+  (** Set abort behaviour when global instruction selection fails to lower/select an instruction.
+      See [llvm::TargetMachine::setGlobalISelAbort]. *)
+  val set_global_isel_abort : ?mode:GlobalISelAbortMode.t -> t -> unit
+
+  (** Enable the MachineOutliner pass.
+      See [llvm::TargetMachine::setMachineOutliner]. *)
+  val set_machine_outliner : bool -> t -> unit
 
   (** Emits assembly or object data for the given module to the given
       file or raise [Error]. *)

@@ -4,8 +4,11 @@ add_lldb_unittest(UtilityTests
   OptionsWithRawTest.cpp
   ArchSpecTest.cpp
   BroadcasterTest.cpp
+  ChecksumTest.cpp
   ConstStringTest.cpp
   CompletionRequestTest.cpp
+  DataBufferTest.cpp
+  DataEncoderTest.cpp
   DataExtractorTest.cpp
   EnvironmentTest.cpp
   EventTest.cpp
@@ -21,8 +24,6 @@ add_lldb_unittest(UtilityTests
   RangeTest.cpp
   RegisterValueTest.cpp
   RegularExpressionTest.cpp
-  ReproducerInstrumentationTest.cpp
-  ReproducerTest.cpp
   ScalarTest.cpp
   SharedClusterTest.cpp
   StateTest.cpp
@@ -38,6 +39,7 @@ add_lldb_unittest(UtilityTests
   TildeExpressionResolverTest.cpp
   TimeoutTest.cpp
   TimerTest.cpp
+  TraceGDBRemotePacketsTest.cpp
   UriParserTest.cpp
   UserIDResolverTest.cpp
   UUIDTest.cpp
@@ -51,8 +53,13 @@ add_lldb_unittest(UtilityTests
       LLVMTestingSupport
   LINK_COMPONENTS
     Support
+    TargetParser
   )
 
-add_unittest_inputs(UtilityTests
+set(test_inputs
   StructuredData-basic.json
+  StructuredData-nested.json
+  StructuredData-full.json
   )
+
+add_unittest_inputs(UtilityTests "${test_inputs}")

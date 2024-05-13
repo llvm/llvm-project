@@ -1,4 +1,3 @@
-; RUN: opt -enable-new-pm=0 -enable-mssa-loop-dependency -verify-memoryssa  -loop-rotate -S %s | FileCheck %s
 ; RUN: opt -verify-memoryssa -passes='loop-mssa(loop-rotate)' -S %s | FileCheck %s
 ; REQUIRES: asserts
 
@@ -34,7 +33,7 @@ while.body82:                                     ; preds = %if.end61
   br i1 undef, label %return.loopexit, label %if.else99
 
 if.else99:                                        ; preds = %while.body82
-  store i32 0, i32* inttoptr (i64 44 to i32*), align 4
+  store i32 0, ptr inttoptr (i64 44 to ptr), align 4
   br label %while.cond80.while.cond.loopexit_crit_edge
 
 return.loopexit:                                  ; preds = %while.body82

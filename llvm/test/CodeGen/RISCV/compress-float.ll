@@ -5,44 +5,78 @@
 ;
 ; RUN: cat %s > %t.tgtattr
 ; RUN: echo 'attributes #0 = { nounwind }' >> %t.tgtattr
-; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+c,+f,+d -filetype=obj \
+; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+c,+f -filetype=obj \
 ; RUN:   -disable-block-placement < %t.tgtattr \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f,+d -M no-aliases - \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f -M no-aliases - \
 ; RUN:   | FileCheck -check-prefix=RV32IFDC %s
 ;
 ; RUN: cat %s > %t.fnattr
-; RUN: echo 'attributes #0 = { nounwind "target-features"="+c,+f,+d" }' >> %t.fnattr
-; RUN: llc -mtriple=riscv32 -target-abi ilp32d -filetype=obj \
+; RUN: echo 'attributes #0 = { nounwind "target-features"="+c,+f" }' >> %t.fnattr
+; RUN: llc -mtriple=riscv32 -target-abi ilp32f -filetype=obj \
 ; RUN:   -disable-block-placement < %t.fnattr \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f,+d -M no-aliases - \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f -M no-aliases - \
 ; RUN:   | FileCheck -check-prefix=RV32IFDC %s
 ;
 ; RUN: cat %s > %t.mixedattr
-; RUN: echo 'attributes #0 = { nounwind "target-features"="+f,+d" }' >> %t.mixedattr
-; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+c -filetype=obj \
+; RUN: echo 'attributes #0 = { nounwind "target-features"="+f" }' >> %t.mixedattr
+; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+c -filetype=obj \
 ; RUN:   -disable-block-placement < %t.mixedattr \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f,+d -M no-aliases - \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f -M no-aliases - \
+; RUN:   | FileCheck -check-prefix=RV32IFDC %s
+;
+; RUN: cat %s > %t.tgtattr
+; RUN: echo 'attributes #0 = { nounwind }' >> %t.tgtattr
+; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+zcf,+f -filetype=obj \
+; RUN:   -disable-block-placement < %t.tgtattr \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zcf,+f -M no-aliases - \
+; RUN:   | FileCheck -check-prefix=RV32IFDC %s
+;
+; RUN: cat %s > %t.fnattr
+; RUN: echo 'attributes #0 = { nounwind "target-features"="+zcf,+f" }' >> %t.fnattr
+; RUN: llc -mtriple=riscv32 -target-abi ilp32f -filetype=obj \
+; RUN:   -disable-block-placement < %t.fnattr \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zcf,+f -M no-aliases - \
+; RUN:   | FileCheck -check-prefix=RV32IFDC %s
+;
+; RUN: cat %s > %t.mixedattr
+; RUN: echo 'attributes #0 = { nounwind "target-features"="+f" }' >> %t.mixedattr
+; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+zcf -filetype=obj \
+; RUN:   -disable-block-placement < %t.mixedattr \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zcf,+f -M no-aliases - \
+; RUN:   | FileCheck -check-prefix=RV32IFDC %s
+;
+; RUN: cat %s > %t.tgtattr
+; RUN: echo 'attributes #0 = { nounwind }' >> %t.tgtattr
+; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+zce,+f -filetype=obj \
+; RUN:   -disable-block-placement < %t.tgtattr \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zce,+f -M no-aliases - \
+; RUN:   | FileCheck -check-prefix=RV32IFDC %s
+;
+; RUN: cat %s > %t.fnattr
+; RUN: echo 'attributes #0 = { nounwind "target-features"="+zce,+f" }' >> %t.fnattr
+; RUN: llc -mtriple=riscv32 -target-abi ilp32f -filetype=obj \
+; RUN:   -disable-block-placement < %t.fnattr \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zce,+f -M no-aliases - \
+; RUN:   | FileCheck -check-prefix=RV32IFDC %s
+;
+; RUN: cat %s > %t.mixedattr
+; RUN: echo 'attributes #0 = { nounwind "target-features"="+f" }' >> %t.mixedattr
+; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+zce -filetype=obj \
+; RUN:   -disable-block-placement < %t.mixedattr \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zce,+f -M no-aliases - \
 ; RUN:   | FileCheck -check-prefix=RV32IFDC %s
 
-; This acts as a sanity check for the codegen instruction compression path,
-; verifying that the assembled file contains compressed instructions when
+; This acts as a basic correctness check for the codegen instruction compression
+; path, verifying that the assembled file contains compressed instructions when
 ; expected. Handling of the compressed ISA is implemented so the same
 ; transformation patterns should be used whether compressing an input .s file or
-; compressing codegen output. This file contains sanity checks using
+; compressing codegen output. This file contains basic functionality tests using
 ; instructions which also require one of the floating point extensions.
 
-define float @float_load(float *%a) #0 {
+define float @float_load(ptr %a) #0 {
 ; RV32IFDC-LABEL: <float_load>:
-; RV32IFDC:         c.flw fa0, 0(a0)
+; RV32IFDC:         c.flw fa0, 0x0(a0)
 ; RV32IFDC-NEXT:    c.jr ra
-  %1 = load volatile float, float* %a
+  %1 = load volatile float, ptr %a
   ret float %1
-}
-
-define double @double_load(double *%a) #0 {
-; RV32IFDC-LABEL: <double_load>:
-; RV32IFDC:         c.fld fa0, 0(a0)
-; RV32IFDC-NEXT:    c.jr ra
-  %1 = load volatile double, double* %a
-  ret double %1
 }

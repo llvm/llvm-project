@@ -11,7 +11,7 @@ __extension__ typedef struct
 
 
 /* Decl/expr __extension__ marker. */
-void bar() {
+void bar(void) {
   __extension__ int i;
   int j;
   __extension__ (j = 10LL);

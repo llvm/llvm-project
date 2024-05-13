@@ -1,11 +1,13 @@
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sve < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
-// RUN:        | llvm-objdump -d --mattr=+sve - | FileCheck %s --check-prefix=CHECK-INST
+// RUN:        | llvm-objdump --no-print-imm-hex -d --mattr=+sve - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
-// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN:   | llvm-objdump --no-print-imm-hex -d --mattr=-sve - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 
 // ---------------------------------------------------------------------------//
@@ -14,26 +16,26 @@
 uqincd  x0
 // CHECK-INST: uqincd  x0
 // CHECK-ENCODING: [0xe0,0xf7,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f7e0 <unknown>
 
 uqincd  x0, all
 // CHECK-INST: uqincd  x0
 // CHECK-ENCODING: [0xe0,0xf7,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f7e0 <unknown>
 
 uqincd  x0, all, mul #1
 // CHECK-INST: uqincd  x0
 // CHECK-ENCODING: [0xe0,0xf7,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f7e0 <unknown>
 
 uqincd  x0, all, mul #16
 // CHECK-INST: uqincd  x0, all, mul #16
 // CHECK-ENCODING: [0xe0,0xf7,0xff,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 ff 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04fff7e0 <unknown>
 
 
 // ---------------------------------------------------------------------------//
@@ -43,38 +45,38 @@ uqincd  x0, all, mul #16
 uqincd  w0
 // CHECK-INST: uqincd  w0
 // CHECK-ENCODING: [0xe0,0xf7,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0f7e0 <unknown>
 
 uqincd  w0, all
 // CHECK-INST: uqincd  w0
 // CHECK-ENCODING: [0xe0,0xf7,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0f7e0 <unknown>
 
 uqincd  w0, all, mul #1
 // CHECK-INST: uqincd  w0
 // CHECK-ENCODING: [0xe0,0xf7,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0f7e0 <unknown>
 
 uqincd  w0, all, mul #16
 // CHECK-INST: uqincd  w0, all, mul #16
 // CHECK-ENCODING: [0xe0,0xf7,0xef,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 ef 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04eff7e0 <unknown>
 
 uqincd  w0, pow2
 // CHECK-INST: uqincd  w0, pow2
 // CHECK-ENCODING: [0x00,0xf4,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f4 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0f400 <unknown>
 
 uqincd  w0, pow2, mul #16
 // CHECK-INST: uqincd  w0, pow2, mul #16
 // CHECK-ENCODING: [0x00,0xf4,0xef,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f4 ef 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04eff400 <unknown>
 
 
 // ---------------------------------------------------------------------------//
@@ -83,38 +85,38 @@ uqincd  w0, pow2, mul #16
 uqincd  z0.d
 // CHECK-INST: uqincd  z0.d
 // CHECK-ENCODING: [0xe0,0xc7,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 c7 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0c7e0 <unknown>
 
 uqincd  z0.d, all
 // CHECK-INST: uqincd  z0.d
 // CHECK-ENCODING: [0xe0,0xc7,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 c7 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0c7e0 <unknown>
 
 uqincd  z0.d, all, mul #1
 // CHECK-INST: uqincd  z0.d
 // CHECK-ENCODING: [0xe0,0xc7,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 c7 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0c7e0 <unknown>
 
 uqincd  z0.d, all, mul #16
 // CHECK-INST: uqincd  z0.d, all, mul #16
 // CHECK-ENCODING: [0xe0,0xc7,0xef,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 c7 ef 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04efc7e0 <unknown>
 
 uqincd  z0.d, pow2
 // CHECK-INST: uqincd  z0.d, pow2
 // CHECK-ENCODING: [0x00,0xc4,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 c4 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0c400 <unknown>
 
 uqincd  z0.d, pow2, mul #16
 // CHECK-INST: uqincd  z0.d, pow2, mul #16
 // CHECK-ENCODING: [0x00,0xc4,0xef,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 c4 ef 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04efc400 <unknown>
 
 
 // ---------------------------------------------------------------------------//
@@ -124,176 +126,176 @@ uqincd  z0.d, pow2, mul #16
 uqincd  x0, pow2
 // CHECK-INST: uqincd  x0, pow2
 // CHECK-ENCODING: [0x00,0xf4,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f4 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f400 <unknown>
 
 uqincd  x0, vl1
 // CHECK-INST: uqincd  x0, vl1
 // CHECK-ENCODING: [0x20,0xf4,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 f4 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f420 <unknown>
 
 uqincd  x0, vl2
 // CHECK-INST: uqincd  x0, vl2
 // CHECK-ENCODING: [0x40,0xf4,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 40 f4 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f440 <unknown>
 
 uqincd  x0, vl3
 // CHECK-INST: uqincd  x0, vl3
 // CHECK-ENCODING: [0x60,0xf4,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 60 f4 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f460 <unknown>
 
 uqincd  x0, vl4
 // CHECK-INST: uqincd  x0, vl4
 // CHECK-ENCODING: [0x80,0xf4,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 80 f4 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f480 <unknown>
 
 uqincd  x0, vl5
 // CHECK-INST: uqincd  x0, vl5
 // CHECK-ENCODING: [0xa0,0xf4,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: a0 f4 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f4a0 <unknown>
 
 uqincd  x0, vl6
 // CHECK-INST: uqincd  x0, vl6
 // CHECK-ENCODING: [0xc0,0xf4,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: c0 f4 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f4c0 <unknown>
 
 uqincd  x0, vl7
 // CHECK-INST: uqincd  x0, vl7
 // CHECK-ENCODING: [0xe0,0xf4,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f4 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f4e0 <unknown>
 
 uqincd  x0, vl8
 // CHECK-INST: uqincd  x0, vl8
 // CHECK-ENCODING: [0x00,0xf5,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f5 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f500 <unknown>
 
 uqincd  x0, vl16
 // CHECK-INST: uqincd  x0, vl16
 // CHECK-ENCODING: [0x20,0xf5,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 f5 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f520 <unknown>
 
 uqincd  x0, vl32
 // CHECK-INST: uqincd  x0, vl32
 // CHECK-ENCODING: [0x40,0xf5,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 40 f5 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f540 <unknown>
 
 uqincd  x0, vl64
 // CHECK-INST: uqincd  x0, vl64
 // CHECK-ENCODING: [0x60,0xf5,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 60 f5 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f560 <unknown>
 
 uqincd  x0, vl128
 // CHECK-INST: uqincd  x0, vl128
 // CHECK-ENCODING: [0x80,0xf5,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 80 f5 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f580 <unknown>
 
 uqincd  x0, vl256
 // CHECK-INST: uqincd  x0, vl256
 // CHECK-ENCODING: [0xa0,0xf5,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: a0 f5 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f5a0 <unknown>
 
 uqincd  x0, #14
 // CHECK-INST: uqincd  x0, #14
 // CHECK-ENCODING: [0xc0,0xf5,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: c0 f5 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f5c0 <unknown>
 
 uqincd  x0, #15
 // CHECK-INST: uqincd  x0, #15
 // CHECK-ENCODING: [0xe0,0xf5,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f5 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f5e0 <unknown>
 
 uqincd  x0, #16
 // CHECK-INST: uqincd  x0, #16
 // CHECK-ENCODING: [0x00,0xf6,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f6 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f600 <unknown>
 
 uqincd  x0, #17
 // CHECK-INST: uqincd  x0, #17
 // CHECK-ENCODING: [0x20,0xf6,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 f6 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f620 <unknown>
 
 uqincd  x0, #18
 // CHECK-INST: uqincd  x0, #18
 // CHECK-ENCODING: [0x40,0xf6,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 40 f6 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f640 <unknown>
 
 uqincd  x0, #19
 // CHECK-INST: uqincd  x0, #19
 // CHECK-ENCODING: [0x60,0xf6,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 60 f6 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f660 <unknown>
 
 uqincd  x0, #20
 // CHECK-INST: uqincd  x0, #20
 // CHECK-ENCODING: [0x80,0xf6,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 80 f6 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f680 <unknown>
 
 uqincd  x0, #21
 // CHECK-INST: uqincd  x0, #21
 // CHECK-ENCODING: [0xa0,0xf6,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: a0 f6 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f6a0 <unknown>
 
 uqincd  x0, #22
 // CHECK-INST: uqincd  x0, #22
 // CHECK-ENCODING: [0xc0,0xf6,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: c0 f6 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f6c0 <unknown>
 
 uqincd  x0, #23
 // CHECK-INST: uqincd  x0, #23
 // CHECK-ENCODING: [0xe0,0xf6,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f6 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f6e0 <unknown>
 
 uqincd  x0, #24
 // CHECK-INST: uqincd  x0, #24
 // CHECK-ENCODING: [0x00,0xf7,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f7 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f700 <unknown>
 
 uqincd  x0, #25
 // CHECK-INST: uqincd  x0, #25
 // CHECK-ENCODING: [0x20,0xf7,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 f7 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f720 <unknown>
 
 uqincd  x0, #26
 // CHECK-INST: uqincd  x0, #26
 // CHECK-ENCODING: [0x40,0xf7,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 40 f7 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f740 <unknown>
 
 uqincd  x0, #27
 // CHECK-INST: uqincd  x0, #27
 // CHECK-ENCODING: [0x60,0xf7,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 60 f7 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f760 <unknown>
 
 uqincd  x0, #28
 // CHECK-INST: uqincd  x0, #28
 // CHECK-ENCODING: [0x80,0xf7,0xf0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 80 f7 f0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04f0f780 <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -302,35 +304,35 @@ uqincd  x0, #28
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 uqincd  z0.d
 // CHECK-INST: uqincd	z0.d
 // CHECK-ENCODING: [0xe0,0xc7,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 c7 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0c7e0 <unknown>
 
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 uqincd  z0.d, pow2, mul #16
 // CHECK-INST: uqincd	z0.d, pow2, mul #16
 // CHECK-ENCODING: [0x00,0xc4,0xef,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 c4 ef 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04efc400 <unknown>
 
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 uqincd  z0.d, pow2
 // CHECK-INST: uqincd	z0.d, pow2
 // CHECK-ENCODING: [0x00,0xc4,0xe0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 c4 e0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04e0c400 <unknown>

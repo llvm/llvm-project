@@ -1,0 +1,43 @@
+// RUN: mlir-pdll-lsp-server -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"pdll","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.pdll",
+  "languageId":"pdll",
+  "version":1,
+  "text":"Pattern TestPat => erase op<test.op>;"
+}}}
+// -----
+{"jsonrpc":"2.0","id":1,"method":"pdll/viewOutput","params":{
+  "uri":"test:///foo.pdll",
+  "kind":"ast"
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "output": "-Module{{.*}}PatternDecl{{.*}}Name<TestPat>{{.*}}\n"
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":2,"method":"pdll/viewOutput","params":{
+  "uri":"test:///foo.pdll",
+  "kind":"mlir"
+}}
+//      CHECK:  "id": 2
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "output": "module {\n  pdl.pattern @TestPat {{.*}}\n"
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":3,"method":"pdll/viewOutput","params":{
+  "uri":"test:///foo.pdll",
+  "kind":"cpp"
+}}
+//      CHECK:  "id": 3
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "output": "{{.*}}struct TestPat : ::mlir::PDLPatternModule{{.*}}\n"
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

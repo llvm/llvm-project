@@ -1,14 +1,12 @@
-// RUN: %clang_dfsan -mllvm -dfsan-fast-16-labels=true %s -o %t && %run %t
+// RUN: %clang_dfsan %s -o %t && %run %t
 //
-// RUN: %clang_dfsan -gmlt -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -gmlt -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out
 //
-// RUN: %clang_dfsan -gmlt -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true -mllvm -dfsan-instrument-with-call-threshold=0 %s -o %t && \
+// RUN: %clang_dfsan -gmlt -mllvm -dfsan-track-origins=1 -mllvm -dfsan-instrument-with-call-threshold=0 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out
-//
-// REQUIRES: x86_64-target-arch
 
 #include <sanitizer/dfsan_interface.h>
 
@@ -44,10 +42,10 @@ int main(void) {
 
 // CHECK: Taint value 0x8 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK: #0 {{.*}} in dfs$ThreadFn {{.*}}pthread.c:[[@LINE-21]]
+// CHECK: #0 {{.*}} in ThreadFn.dfsan {{.*}}pthread.c:[[@LINE-21]]
 
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK: #0 {{.*}} in dfs$ThreadFn {{.*}}pthread.c:[[@LINE-26]]
+// CHECK: #0 {{.*}} in ThreadFn.dfsan {{.*}}pthread.c:[[@LINE-26]]
 
 // CHECK: Origin value: {{.*}}, Taint value was created at
 // CHECK: #0 {{.*}} in main {{.*}}pthread.c:[[@LINE-20]]

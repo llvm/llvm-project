@@ -19,13 +19,13 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
@@ -38,19 +38,18 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBBreakpointCallbackBaton::SBBreakpointCallbackBaton(SBBreakpointHitCallback 
-                                                         callback,
-                                                     void *baton)
-      : TypedBaton(std::make_unique<CallbackData>()) {
-    getItem()->callback = callback;
-    getItem()->callback_baton = baton;
-  }
+SBBreakpointCallbackBaton::SBBreakpointCallbackBaton(
+    SBBreakpointHitCallback callback, void *baton)
+    : TypedBaton(std::make_unique<CallbackData>()) {
+  LLDB_INSTRUMENT_VA(this, callback, baton);
+  getItem()->callback = callback;
+  getItem()->callback_baton = baton;
+}
 
- bool SBBreakpointCallbackBaton::PrivateBreakpointHitCallback(void *baton,
-                                                  StoppointCallbackContext *ctx,
-                                                  lldb::user_id_t break_id,
-                                                  lldb::user_id_t break_loc_id)
-{
+bool SBBreakpointCallbackBaton::PrivateBreakpointHitCallback(
+    void *baton, StoppointCallbackContext *ctx, lldb::user_id_t break_id,
+    lldb::user_id_t break_loc_id) {
+  LLDB_INSTRUMENT_VA(baton, ctx, break_id, break_loc_id);
   ExecutionContext exe_ctx(ctx->exe_ctx_ref);
   BreakpointSP bp_sp(
       exe_ctx.GetTargetRef().GetBreakpointList().FindBreakpointByID(break_id));

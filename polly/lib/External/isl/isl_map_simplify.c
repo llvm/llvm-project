@@ -1198,7 +1198,7 @@ static isl_bool better_div_constraint(__isl_keep isl_basic_map *bmap,
  * a "better" expression for a div for which we already have an expression.
  * "sum" is the sum of the constant terms of the constraints.
  * If this sum is strictly smaller than the coefficient of one
- * of the divs, then this pair can be used define the div.
+ * of the divs, then this pair can be used to define the div.
  * To avoid the introduction of circular definitions of divs, we
  * do not use the pair if the resulting expression would refer to
  * any other undefined divs or if any known div is defined in

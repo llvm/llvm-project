@@ -12,49 +12,31 @@
 #define LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 
 #include "CoroInstr.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/Transforms/Coroutines.h"
 
 namespace llvm {
 
 class CallGraph;
-class CallGraphSCC;
-class PassRegistry;
-
-void initializeCoroEarlyLegacyPass(PassRegistry &);
-void initializeCoroSplitLegacyPass(PassRegistry &);
-void initializeCoroElideLegacyPass(PassRegistry &);
-void initializeCoroCleanupLegacyPass(PassRegistry &);
-
-// CoroEarly pass marks every function that has coro.begin with a string
-// attribute "coroutine.presplit"="0". CoroSplit pass processes the coroutine
-// twice. First, it lets it go through complete IPO optimization pipeline as a
-// single function. It forces restart of the pipeline by inserting an indirect
-// call to an empty function "coro.devirt.trigger" which is devirtualized by
-// CoroElide pass that triggers a restart of the pipeline by CGPassManager.
-// When CoroSplit pass sees the same coroutine the second time, it splits it up,
-// adds coroutine subfunctions to the SCC to be processed by IPO pipeline.
-// Async lowering similarily triggers a restart of the pipeline after it has
-// split the coroutine.
-#define CORO_PRESPLIT_ATTR "coroutine.presplit"
-#define UNPREPARED_FOR_SPLIT "0"
-#define PREPARED_FOR_SPLIT "1"
-#define ASYNC_RESTART_AFTER_SPLIT "2"
-
-#define CORO_DEVIRT_TRIGGER_FN "coro.devirt.trigger"
 
 namespace coro {
 
+bool declaresAnyIntrinsic(const Module &M);
 bool declaresIntrinsics(const Module &M,
                         const std::initializer_list<StringRef>);
 void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
-void updateCallGraph(Function &Caller, ArrayRef<Function *> Funcs,
-                     CallGraph &CG, CallGraphSCC &SCC);
-/// Recover a dbg.declare prepared by the frontend and emit an alloca
-/// holding a pointer to the coroutine frame.
+
+/// Attempts to rewrite the location operand of debug intrinsics in terms of
+/// the coroutine frame pointer, folding pointer offsets into the DIExpression
+/// of the intrinsic.
+/// If the frame pointer is an Argument, store it into an alloca if
+/// OptimizeFrame is false.
 void salvageDebugInfo(
-    SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
-    DbgVariableIntrinsic *DVI, bool ReuseFrameSlot);
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
+    DbgVariableIntrinsic &DVI, bool OptimizeFrame, bool IsEntryPoint);
+void salvageDebugInfo(
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
+    DbgVariableRecord &DVR, bool OptimizeFrame, bool UseEntryValue);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
@@ -99,8 +81,10 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   CoroBeginInst *CoroBegin;
   SmallVector<AnyCoroEndInst *, 4> CoroEnds;
   SmallVector<CoroSizeInst *, 2> CoroSizes;
+  SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
   SmallVector<CallInst*, 2> SwiftErrorOps;
+  SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
@@ -122,11 +106,11 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   StructType *FrameTy;
   Align FrameAlign;
   uint64_t FrameSize;
-  Instruction *FramePtr;
+  Value *FramePtr;
   BasicBlock *AllocaSpillBlock;
 
   /// This would only be true if optimization are enabled.
-  bool ReuseFrameSlot;
+  bool OptimizeFrame;
 
   struct SwitchLoweringStorage {
     SwitchInst *ResumeSwitch;
@@ -136,6 +120,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     unsigned IndexAlign;
     unsigned IndexOffset;
     bool HasFinalSuspend;
+    bool HasUnwindCoroEnd;
   };
 
   struct RetconLoweringStorage {
@@ -147,7 +132,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   };
 
   struct AsyncLoweringStorage {
-    FunctionType *AsyncFuncTy;
     Value *Context;
     CallingConv::ID AsyncCC;
     unsigned ContextArgNo;
@@ -204,10 +188,10 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
 
   FunctionType *getResumeFunctionType() const {
     switch (ABI) {
-    case coro::ABI::Switch: {
-      auto *FnPtrTy = getSwitchResumePointerType();
-      return cast<FunctionType>(FnPtrTy->getPointerElementType());
-    }
+    case coro::ABI::Switch:
+      return FunctionType::get(Type::getVoidTy(FrameTy->getContext()),
+                               PointerType::getUnqual(FrameTy->getContext()),
+                               /*IsVarArg=*/false);
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getFunctionType();
@@ -261,6 +245,15 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     return nullptr;
   }
 
+  BasicBlock::iterator getInsertPtAfterFramePtr() const {
+    if (auto *I = dyn_cast<Instruction>(FramePtr)) {
+      BasicBlock::iterator It = std::next(I->getIterator());
+      It.setHeadBit(true); // Copy pre-RemoveDIs behaviour.
+      return It;
+    }
+    return cast<Argument>(FramePtr)->getParent()->getEntryBlock().begin();
+  }
+
   /// Allocate memory according to the rules of the active lowering.
   ///
   /// \param CG - if non-null, will be updated for the new call
@@ -272,15 +265,19 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   void emitDealloc(IRBuilder<> &Builder, Value *Ptr, CallGraph *CG) const;
 
   Shape() = default;
-  explicit Shape(Function &F, bool ReuseFrameSlot = false)
-      : ReuseFrameSlot(ReuseFrameSlot) {
+  explicit Shape(Function &F, bool OptimizeFrame = false)
+      : OptimizeFrame(OptimizeFrame) {
     buildFrom(F);
   }
   void buildFrom(Function &F);
 };
 
-void buildCoroutineFrame(Function &F, Shape &Shape);
+bool defaultMaterializable(Instruction &V);
+void buildCoroutineFrame(
+    Function &F, Shape &Shape, TargetTransformInfo &TTI,
+    const std::function<bool(Instruction &)> &MaterializableCallback);
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
+                             TargetTransformInfo &TTI,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);
 } // End namespace coro.
 } // End namespace llvm

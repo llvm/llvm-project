@@ -8,7 +8,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s32
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: $vgpr0 = COPY [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
     %0:_(s32) = G_CONSTANT i32 5
     $vgpr0 = COPY %0
 ...
@@ -19,7 +19,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s64
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-    ; CHECK: $vgpr0_vgpr1 = COPY [[C]](s64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[C]](s64)
     %0:_(s64) = G_CONSTANT i64 5
     $vgpr0_vgpr1 = COPY %0
 
@@ -32,11 +32,10 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s96
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -4780896129847249538
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -547834910
-    ; CHECK: [[DEF:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(s96) = G_INSERT [[DEF]], [[C]](s64), 0
-    ; CHECK: [[INSERT1:%[0-9]+]]:_(s96) = G_INSERT [[INSERT]], [[C1]](s32), 64
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[INSERT1]](s96)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -547834910
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[C1]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[MV]](s96)
     %0:_(s96) = G_CONSTANT i96  -10105770365747857631829412482
     $vgpr0_vgpr1_vgpr2 = COPY %0
 
@@ -49,7 +48,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s1
     ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK: S_ENDPGM 0, implicit [[C]](s1)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[C]](s1)
     %1:_(s1) = G_CONSTANT i1 0
     S_ENDPGM 0, implicit %1
 ...
@@ -61,8 +60,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s7
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
     %0:_(s7) = G_CONSTANT i7 5
     %1:_(s32) = G_ANYEXT %0
     $vgpr0 = COPY %1
@@ -75,8 +73,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s8
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
     %0:_(s8) = G_CONSTANT i8 5
     %1:_(s32) = G_ANYEXT %0
     $vgpr0 = COPY %1
@@ -89,7 +86,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s16
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: $vgpr0 = COPY [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
     %0:_(s16) = G_CONSTANT i16 5
     %1:_(s32) = G_ANYEXT %0
     $vgpr0 = COPY %1
@@ -102,9 +99,9 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s128
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[C]](s64), [[C1]](s64)
-    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[C]](s64), [[C1]](s64)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     %0:_(s128) = G_CONSTANT i128 5
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %0
 ...
@@ -116,7 +113,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_p0
     ; CHECK: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-    ; CHECK: $vgpr0_vgpr1 = COPY [[C]](p0)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[C]](p0)
     %0:_(p0) = G_CONSTANT i64 0
     $vgpr0_vgpr1 = COPY %0
 ...
@@ -128,7 +125,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_p1
     ; CHECK: [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-    ; CHECK: $vgpr0_vgpr1 = COPY [[C]](p1)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[C]](p1)
     %0:_(p1) = G_CONSTANT i64 0
     $vgpr0_vgpr1 = COPY %0
 ...
@@ -140,7 +137,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_p2
     ; CHECK: [[C:%[0-9]+]]:_(p2) = G_CONSTANT i32 0
-    ; CHECK: $vgpr0 = COPY [[C]](p2)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](p2)
     %0:_(p2) = G_CONSTANT i32 0
     $vgpr0 = COPY %0
 ...
@@ -152,7 +149,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_p3
     ; CHECK: [[C:%[0-9]+]]:_(p2) = G_CONSTANT i32 0
-    ; CHECK: $vgpr0 = COPY [[C]](p2)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](p2)
     %0:_(p2) = G_CONSTANT i32 0
     $vgpr0 = COPY %0
 ...
@@ -164,7 +161,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_p4
     ; CHECK: [[C:%[0-9]+]]:_(p4) = G_CONSTANT i64 0
-    ; CHECK: $vgpr0_vgpr1 = COPY [[C]](p4)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[C]](p4)
     %0:_(p4) = G_CONSTANT i64 0
     $vgpr0_vgpr1 = COPY %0
 ...
@@ -176,7 +173,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_p5
     ; CHECK: [[C:%[0-9]+]]:_(p5) = G_CONSTANT i32 0
-    ; CHECK: $vgpr0 = COPY [[C]](p5)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](p5)
     %0:_(p5) = G_CONSTANT i32 0
     $vgpr0 = COPY %0
 ...
@@ -188,7 +185,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_p999
     ; CHECK: [[C:%[0-9]+]]:_(p999) = G_CONSTANT i64 0
-    ; CHECK: $vgpr0_vgpr1 = COPY [[C]](p999)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[C]](p999)
     %0:_(p999) = G_CONSTANT i64 0
     $vgpr0_vgpr1 = COPY %0
 ...

@@ -1,11 +1,11 @@
-; RUN: opt -S -inline -inline-threshold=100 -inline-cold-callsite-threshold=100 < %s | FileCheck %s
+; RUN: opt -S -passes=inline -inline-threshold=100 -inline-cold-callsite-threshold=100 < %s | FileCheck %s
 ; RUN: opt -S -passes='cgscc(inline)' -inline-threshold=100 -inline-cold-callsite-threshold=100 < %s | FileCheck %s
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
 declare void @g(i32)
 
-define void @f() personality i32 (...)* @__CxxFrameHandler3 {
+define void @f() personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @g(i32 0)
           to label %invoke.cont unwind label %cs.bb
@@ -17,7 +17,7 @@ cs.bb:
   %cs = catchswitch within none [label %cp.bb] unwind label %cleanup.bb
 
 cp.bb:
-  %cpouter1 = catchpad within %cs [i8* null, i32 0, i8* null]
+  %cpouter1 = catchpad within %cs [ptr null, i32 0, ptr null]
   call void @dtor() #1 [ "funclet"(token %cpouter1) ]
   catchret from %cpouter1 to label %invoke.cont
 
@@ -30,7 +30,7 @@ cleanup.bb:
 declare i32 @__CxxFrameHandler3(...)
 
 ; Function Attrs: nounwind
-define internal void @dtor() #1 personality i32 (...)* @__CxxFrameHandler3 {
+define internal void @dtor() #1 personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @g(i32 2)
           to label %invoke.cont unwind label %ehcleanup1

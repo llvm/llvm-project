@@ -1,4 +1,4 @@
-//===---------------------- backtrace_test.cpp ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
+
+// VE only supports SjLj and doesn't provide _Unwind_Backtrace.
+// UNSUPPORTED: target={{ve-.*}}
 
 #include <assert.h>
 #include <stddef.h>

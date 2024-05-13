@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
-; RUN: llc < %s -march=xcore -frame-pointer=all | FileCheck %s -check-prefix=CHECKFP
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore -frame-pointer=all | FileCheck %s -check-prefix=CHECKFP
 
 ; When using SP for small frames, we don't need any scratch registers (SR).
 ; When using SP for large frames, we may need two scratch registers.
@@ -173,14 +173,13 @@ entry:
 ; CHECK-NEXT: ldaw sp, sp[65535]
 ; CHECK-NEXT: ldaw sp, sp[65535]
 ; CHECK-NEXT: retsp 3399
-declare void @f5(i32*)
+declare void @f5(ptr)
 define i32 @f6(i32 %i) {
 entry:
   %0 = alloca [200000 x i32]
-  %1 = getelementptr inbounds [200000 x i32], [200000 x i32]* %0, i32 0, i32 0
-  call void @f5(i32* %1)
-  %2 = getelementptr inbounds [200000 x i32], [200000 x i32]* %0, i32 0, i32 199999
-  call void @f5(i32* %2)
+  call void @f5(ptr %0)
+  %1 = getelementptr inbounds [200000 x i32], ptr %0, i32 0, i32 199999
+  call void @f5(ptr %1)
   ret i32 %i
 }
 
@@ -190,7 +189,7 @@ entry:
 ; CHECKFP-NEXT: stw r10, sp[1]
 ; CHECKFP-NEXT: ldaw r10, sp[0]
 ; CHECKFP-NEXT: mkmsk [[REG:r[0-9]+]], 8
-; CHECKFP-NEXT: ldaw r0, r10{{\[}}[[REG]]{{\]}}
+; CHECKFP-NEXT: ldaw r0, r10[[[REG]]]
 ; CHECKFP-NEXT: extsp 1
 ; CHECKFP-NEXT: bl f5
 ; CHECKFP-NEXT: ldaw sp, sp[1]
@@ -207,8 +206,8 @@ entry:
 define void @f8() nounwind {
 entry:
   %0 = alloca [256 x i32]
-  %1 = getelementptr inbounds [256 x i32], [256 x i32]* %0, i32 0, i32 253
-  call void @f5(i32* %1)
+  %1 = getelementptr inbounds [256 x i32], ptr %0, i32 0, i32 253
+  call void @f5(ptr %1)
   ret void
 }
 
@@ -218,7 +217,7 @@ entry:
 ; CHECKFP-NEXT: stw r10, sp[1]
 ; CHECKFP-NEXT: ldaw r10, sp[0]
 ; CHECKFP-NEXT: ldc [[REG:r[0-9]+]], 32767
-; CHECKFP-NEXT: ldaw r0, r10{{\[}}[[REG]]{{\]}}
+; CHECKFP-NEXT: ldaw r0, r10[[[REG]]]
 ; CHECKFP-NEXT: extsp 1
 ; CHECKFP-NEXT: bl f5
 ; CHECKFP-NEXT: ldaw sp, sp[1]
@@ -235,7 +234,7 @@ entry:
 define void @f9() nounwind {
 entry:
   %0 = alloca [32768 x i32]
-  %1 = getelementptr inbounds [32768 x i32], [32768 x i32]* %0, i32 0, i32 32765
-  call void @f5(i32* %1)
+  %1 = getelementptr inbounds [32768 x i32], ptr %0, i32 0, i32 32765
+  call void @f5(ptr %1)
   ret void
 }

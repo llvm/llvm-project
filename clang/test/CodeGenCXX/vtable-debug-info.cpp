@@ -1,6 +1,5 @@
 // RUN: %clang -emit-llvm -S -g %s -o /dev/null
-// Radar 8730409
-// XFAIL: windows-msvc
+// XFAIL: target={{.*-windows-msvc}}
 
 // FIXME: This test crashes on *-pc-win32
 // for lack of debugging support on -integrated-as (MCCOFF).

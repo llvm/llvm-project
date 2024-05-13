@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; crc32 with 64-bit destination zeros high 32-bit.
 ; rdar://9467055

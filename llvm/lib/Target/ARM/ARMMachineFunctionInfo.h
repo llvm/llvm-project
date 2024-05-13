@@ -15,12 +15,19 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <utility>
 
 namespace llvm {
+
+namespace yaml {
+struct ARMFunctionInfo;
+} // end namespace yaml
+
+class ARMSubtarget;
 
 /// ARMFunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private ARM-specific information for each MachineFunction.
@@ -35,13 +42,6 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// to determine if function is compiled under Thumb mode, for that use
   /// 'isThumb'.
   bool hasThumb2 = false;
-
-  /// StByValParamsPadding - For parameter that is split between
-  /// GPRs and memory; while recovering GPRs part, when
-  /// StackAlignment > 4, and GPRs-part-size mod StackAlignment != 0,
-  /// we need to insert gap before parameter start address. It allows to
-  /// "attach" GPR-part to the part that was passed via stack.
-  unsigned StByValParamsPadding = 0;
 
   /// ArgsRegSaveSize - Size of the register save area for vararg functions or
   /// those making guaranteed tail calls that need more stack argument space
@@ -86,6 +86,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// GPRCS1Size, GPRCS2Size, DPRCSSize - Sizes of callee saved register spills
   /// areas.
   unsigned FPCXTSaveSize = 0;
+  unsigned FRSaveSize = 0;
   unsigned GPRCS1Size = 0;
   unsigned GPRCS2Size = 0;
   unsigned DPRCSAlignGapSize = 0;
@@ -142,10 +143,26 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// con/destructors).
   bool PreservesR0 = false;
 
+  /// True if the function should sign its return address.
+  bool SignReturnAddress = false;
+
+  /// True if the fucntion should sign its return address, even if LR is not
+  /// saved.
+  bool SignReturnAddressAll = false;
+
+  /// True if BTI instructions should be placed at potential indirect jump
+  /// destinations.
+  bool BranchTargetEnforcement = false;
+
 public:
   ARMFunctionInfo() = default;
 
-  explicit ARMFunctionInfo(MachineFunction &MF);
+  explicit ARMFunctionInfo(const Function &F, const ARMSubtarget *STI);
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
 
   bool isThumbFunction() const { return isThumb; }
   bool isThumb1OnlyFunction() const { return isThumb && !hasThumb2; }
@@ -153,9 +170,6 @@ public:
 
   bool isCmseNSEntryFunction() const { return IsCmseNSEntry; }
   bool isCmseNSCallFunction() const { return IsCmseNSCall; }
-
-  unsigned getStoredByValParamsPadding() const { return StByValParamsPadding; }
-  void setStoredByValParamsPadding(unsigned p) { StByValParamsPadding = p; }
 
   unsigned getArgRegsSaveSize() const { return ArgRegsSaveSize; }
   void setArgRegsSaveSize(unsigned s) { ArgRegsSaveSize = s; }
@@ -187,12 +201,14 @@ public:
   void setDPRCalleeSavedAreaOffset(unsigned o)  { DPRCSOffset = o; }
 
   unsigned getFPCXTSaveAreaSize() const       { return FPCXTSaveSize; }
+  unsigned getFrameRecordSavedAreaSize() const { return FRSaveSize; }
   unsigned getGPRCalleeSavedArea1Size() const { return GPRCS1Size; }
   unsigned getGPRCalleeSavedArea2Size() const { return GPRCS2Size; }
   unsigned getDPRCalleeSavedGapSize() const   { return DPRCSAlignGapSize; }
   unsigned getDPRCalleeSavedAreaSize()  const { return DPRCSSize; }
 
   void setFPCXTSaveAreaSize(unsigned s)       { FPCXTSaveSize = s; }
+  void setFrameRecordSavedAreaSize(unsigned s) { FRSaveSize = s; }
   void setGPRCalleeSavedArea1Size(unsigned s) { GPRCS1Size = s; }
   void setGPRCalleeSavedArea2Size(unsigned s) { GPRCS2Size = s; }
   void setDPRCalleeSavedGapSize(unsigned s)   { DPRCSAlignGapSize = s; }
@@ -268,7 +284,42 @@ public:
 
   void setPreservesR0() { PreservesR0 = true; }
   bool getPreservesR0() const { return PreservesR0; }
+
+  bool shouldSignReturnAddress() const {
+    return shouldSignReturnAddress(LRSpilled);
+  }
+
+  bool shouldSignReturnAddress(bool SpillsLR) const {
+    if (!SignReturnAddress)
+      return false;
+    if (SignReturnAddressAll)
+      return true;
+    return SpillsLR;
+  }
+
+  bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
+
+  void initializeBaseYamlFields(const yaml::ARMFunctionInfo &YamlMFI);
 };
+
+namespace yaml {
+struct ARMFunctionInfo final : public yaml::MachineFunctionInfo {
+  bool LRSpilled;
+
+  ARMFunctionInfo() = default;
+  ARMFunctionInfo(const llvm::ARMFunctionInfo &MFI);
+
+  void mappingImpl(yaml::IO &YamlIO) override;
+  ~ARMFunctionInfo() = default;
+};
+
+template <> struct MappingTraits<ARMFunctionInfo> {
+  static void mapping(IO &YamlIO, ARMFunctionInfo &MFI) {
+    YamlIO.mapOptional("isLRSpilled", MFI.LRSpilled);
+  }
+};
+
+} // end namespace yaml
 
 } // end namespace llvm
 

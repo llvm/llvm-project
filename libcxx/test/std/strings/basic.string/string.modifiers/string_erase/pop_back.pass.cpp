@@ -8,39 +8,47 @@
 
 // <string>
 
-// void pop_back();
+// void pop_back(); // constexpr since C++20
 
 #include <string>
 #include <cassert>
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S>
-void
-test(S s, S expected)
-{
-    s.pop_back();
-    LIBCPP_ASSERT(s.__invariants());
-    assert(s[s.size()] == typename S::value_type());
-    assert(s == expected);
+TEST_CONSTEXPR_CXX20 void test(S s, S expected) {
+  s.pop_back();
+  LIBCPP_ASSERT(s.__invariants());
+  assert(s[s.size()] == typename S::value_type());
+  assert(s == expected);
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
-int main(int, char**)
-{
-    {
-    typedef std::string S;
-    test(S("abcde"), S("abcd"));
-    test(S("abcdefghij"), S("abcdefghi"));
-    test(S("abcdefghijklmnopqrst"), S("abcdefghijklmnopqrs"));
-    }
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test(S("abcde"), S("abcd"));
+  test(S("abcdefghij"), S("abcdefghi"));
+  test(S("abcdefghijklmnopqrst"), S("abcdefghijklmnopqrs"));
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijklmnopqrst"),
+       S("abcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijklmnopqrs"));
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S("abcde"), S("abcd"));
-    test(S("abcdefghij"), S("abcdefghi"));
-    test(S("abcdefghijklmnopqrst"), S("abcdefghijklmnopqrs"));
-    }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
 #endif
 
   return 0;

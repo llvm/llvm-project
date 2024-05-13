@@ -20,8 +20,8 @@ __attribute__((noinline)) void func1(int &sink) {
   ++global;
   //% prefix = "FUNC1-GNU" if "GNU" in self.name else "FUNC1-V5"
   //% self.filecheck("image lookup -v -a $pc", "main.cpp", "-check-prefix="+prefix)
-  // FUNC1-GNU: name = "sink", type = "int &", location = DW_OP_GNU_entry_value
-  // FUNC1-V5: name = "sink", type = "int &", location = DW_OP_entry_value
+  // FUNC1-GNU: name = "sink", type = "int &", valid ranges = {{.*}}, location = {{.*}} DW_OP_GNU_entry_value
+  // FUNC1-V5: name = "sink", type = "int &", valid ranges = {{.*}}, location = {{.*}} DW_OP_entry_value
 }
 
 __attribute__((noinline)) void func2(int &sink, int x) {

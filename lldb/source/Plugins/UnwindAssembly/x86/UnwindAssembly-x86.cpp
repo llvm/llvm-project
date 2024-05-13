@@ -239,14 +239,6 @@ UnwindAssembly *UnwindAssembly_x86::CreateInstance(const ArchSpec &arch) {
   return nullptr;
 }
 
-// PluginInterface protocol in UnwindAssemblyParser_x86
-
-ConstString UnwindAssembly_x86::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t UnwindAssembly_x86::GetPluginVersion() { return 1; }
-
 void UnwindAssembly_x86::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);
@@ -256,11 +248,6 @@ void UnwindAssembly_x86::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString UnwindAssembly_x86::GetPluginNameStatic() {
-  static ConstString g_name("x86");
-  return g_name;
-}
-
-const char *UnwindAssembly_x86::GetPluginDescriptionStatic() {
+llvm::StringRef UnwindAssembly_x86::GetPluginDescriptionStatic() {
   return "i386 and x86_64 assembly language profiler plugin.";
 }

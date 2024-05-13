@@ -18,9 +18,9 @@ where Clang is used are:
 - Static analysis.
 - Documentation/cross-reference generation.
 
-If you know of (or wrote!) a tool or project using Clang, please send an
-email to Clang's `development discussion mailing list
-<https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ to have it added.
+If you know of (or wrote!) a tool or project using Clang, please post on
+`the Discourse forums (Clang Frontend category)
+<https://discourse.llvm.org/c/clang/6>`_ to have it added.
 (or if you are already a Clang contributor, feel free to directly commit
 additions). Since the primary purpose of this page is to provide examples
 that can help developers, generally they must have code available.
@@ -33,7 +33,7 @@ List of projects and tools
    a persistent in-memory database of references, symbolnames, completions
    etc."
 
-`<https://rprichard.github.com/sourceweb/>`_
+`<https://rprichard.github.io/CxxCodeBrowser/>`_
    "A C/C++ source code indexer and navigator"
 
 `<https://github.com/etaoins/qconnectlint>`_

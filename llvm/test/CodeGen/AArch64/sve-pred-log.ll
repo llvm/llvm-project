@@ -32,6 +32,14 @@ define <vscale x 2 x i1> @vselect_2(<vscale x 2 x i1> %Pg, <vscale x 2 x i1> %Pn
   ret <vscale x 2 x i1> %res;
 }
 
+define <vscale x 1 x i1> @vselect_1(<vscale x 1 x i1> %Pg, <vscale x 1 x i1> %Pn, <vscale x 1 x i1> %Pd) {
+; CHECK-LABEL: vselect_1:
+; CHECK: sel p0.b, p0, p1.b, p2.b
+; CHECK-NEXT: ret
+  %res = select <vscale x 1 x i1> %Pg, <vscale x 1 x i1> %Pn, <vscale x 1 x i1> %Pd
+  ret <vscale x 1 x i1> %res;
+}
+
 define <vscale x 16 x i1> @and_16(<vscale x 16 x i1> %Pg, <vscale x 16 x i1> %Pn, <vscale x 16 x i1> %Pd) {
 ; CHECK-LABEL: and_16:
 ; CHECK: and p0.b, p0/z, p1.b, p2.b

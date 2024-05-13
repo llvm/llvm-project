@@ -1,10 +1,10 @@
 // REQUIRES: crash-recovery, shell
-// UNSUPPORTED: ms-sdk, ps4
+// UNSUPPORTED: ms-sdk, target={{.*-(ps4|ps5)}}
 
 // FIXME: Canonicalizing paths to remove relative traversal components
 // currenty fails a unittest on windows and is disable by default.
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
-// XFAIL: windows-gnu
+// XFAIL: target={{.*-windows-gnu}}
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t
@@ -46,8 +46,8 @@
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
-// CHECKYAML-NEXT:     'name': "module.map",
-// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Inputs/crash-recovery/usr/include/module.map"
+// CHECKYAML-NEXT:     'name': "module.modulemap",
+// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Inputs/crash-recovery/usr/include/module.modulemap"
 // CHECKYAML-NEXT:   },
 
 // Replace the paths in the YAML files with relative ".." traversals

@@ -30,19 +30,53 @@ fun:dfsan_flush=uninstrumented
 fun:dfsan_flush=discard
 fun:dfsan_print_origin_trace=uninstrumented
 fun:dfsan_print_origin_trace=discard
+fun:dfsan_print_origin_id_trace=uninstrumented
+fun:dfsan_print_origin_id_trace=discard
 fun:dfsan_sprint_origin_trace=uninstrumented
 fun:dfsan_sprint_origin_trace=discard
+fun:dfsan_sprint_origin_id_trace=uninstrumented
+fun:dfsan_sprint_origin_id_trace=discard
+fun:dfsan_sprint_stack_trace=uninstrumented
+fun:dfsan_sprint_stack_trace=discard
 fun:dfsan_get_origin=uninstrumented
 fun:dfsan_get_origin=custom
+fun:dfsan_read_origin_of_first_taint=uninstrumented
+fun:dfsan_read_origin_of_first_taint=discard
 fun:dfsan_get_init_origin=uninstrumented
 fun:dfsan_get_init_origin=discard
-
+fun:dfsan_get_track_origins=uninstrumented
+fun:dfsan_get_track_origins=discard
+fun:dfsan_set_conditional_callback=uninstrumented
+fun:dfsan_set_conditional_callback=discard
+fun:dfsan_get_labels_in_signal_conditional=uninstrumented
+fun:dfsan_get_labels_in_signal_conditional=discard
+fun:dfsan_set_reaches_function_callback=uninstrumented
+fun:dfsan_set_reaches_function_callback=discard
+fun:dfsan_get_labels_in_signal_reaches_function=uninstrumented
+fun:dfsan_get_labels_in_signal_reaches_function=discard
+fun:dfsan_reaches_function_callback=uninstrumented
+fun:dfsan_reaches_function_callback=discard
 
 ###############################################################################
 # glibc
 ###############################################################################
+# Functions of memory allocators
+fun:__libc_memalign=discard
+fun:aligned_alloc=discard
+fun:calloc=discard
+fun:cfree=discard
+fun:mallinfo=discard
 fun:malloc=discard
 fun:free=discard
+fun:malloc_stats=discard
+fun:malloc_usable_size=discard
+fun:mallopt=discard
+fun:memalign=discard
+fun:posix_memalign=discard
+fun:pvalloc=discard
+fun:realloc=discard
+fun:reallocarray=discard
+fun:valloc=discard
 
 # Functions that return a value that depends on the input, but the output might
 # not be necessarily data-dependent on the input.
@@ -54,6 +88,7 @@ fun:isalnum=functional
 fun:ispunct=functional
 fun:isspace=functional
 fun:tolower=functional
+fun:_tolower=functional
 fun:toupper=functional
 
 # Functions that return a value that is data-dependent on the input.
@@ -157,7 +192,6 @@ fun:open=discard
 fun:openat=discard
 fun:pipe=discard
 fun:posix_fadvise=discard
-fun:posix_memalign=discard
 fun:prctl=discard
 fun:printf=discard
 fun:pthread_sigmask=discard
@@ -189,11 +223,11 @@ fun:symlink=discard
 fun:syscall=discard
 fun:unlink=discard
 fun:uselocale=discard
+fun:vfprintf=discard
 
 # Functions that produce output does not depend on the input (need to zero the
 # shadow manually).
 fun:_dl_get_tls_static_info=custom
-fun:calloc=custom
 fun:clock_gettime=custom
 fun:dlopen=custom
 fun:epoll_wait=custom
@@ -201,6 +235,7 @@ fun:fgets=custom
 fun:fstat=custom
 fun:getcwd=custom
 fun:get_current_dir_name=custom
+fun:getentropy=custom
 fun:gethostname=custom
 fun:getpeername=custom
 fun:getrlimit=custom
@@ -234,6 +269,12 @@ fun:strtoll=custom
 fun:strtoul=custom
 fun:strtoull=custom
 fun:strcat=custom
+fun:strncat=custom
+fun:__isoc23_strtod=custom
+fun:__isoc23_strtol=custom
+fun:__isoc23_strtoll=custom
+fun:__isoc23_strtoul=custom
+fun:__isoc23_strtoull=custom
 
 # Functions that produce an output that is computed from the input, but is not
 # necessarily data dependent.
@@ -244,14 +285,16 @@ fun:strcasecmp=custom
 fun:strchr=custom
 fun:strcmp=custom
 fun:strlen=custom
+fun:strnlen=custom
 fun:strncasecmp=custom
 fun:strncmp=custom
 fun:strpbrk=custom
 fun:strrchr=custom
 fun:strstr=custom
+fun:strsep=custom
 
 # Functions which take action based on global state, such as running a callback
-# set by a sepperate function.
+# set by a separate function.
 fun:write=custom
 
 # Functions that take a callback (wrap the callback manually).
@@ -269,6 +312,11 @@ fun:gettimeofday=custom
 # sprintf-like
 fun:sprintf=custom
 fun:snprintf=custom
+
+# scanf-like
+fun:sscanf=custom
+fun:__isoc99_sscanf=custom
+fun:__isoc23_sscanf=custom
 
 # TODO: custom
 fun:asprintf=discard
@@ -400,6 +448,40 @@ fun:__sanitizer_cov_trace_pc*=uninstrumented
 fun:__sanitizer_cov_trace_pc*=discard
 fun:__sanitizer_cov_pcs_init=uninstrumented
 fun:__sanitizer_cov_pcs_init=discard
+
+fun:__sanitizer_get_current_allocated_bytes=uninstrumented
+fun:__sanitizer_get_current_allocated_bytes=discard
+fun:__sanitizer_get_heap_size=uninstrumented
+fun:__sanitizer_get_heap_size=discard
+fun:__sanitizer_get_free_bytes=uninstrumented
+fun:__sanitizer_get_free_bytes=discard
+fun:__sanitizer_get_unmapped_bytes=uninstrumented
+fun:__sanitizer_get_unmapped_bytes=discard
+fun:__sanitizer_get_estimated_allocated_size=uninstrumented
+fun:__sanitizer_get_estimated_allocated_size=discard
+fun:__sanitizer_get_ownership=uninstrumented
+fun:__sanitizer_get_ownership=discard
+fun:__sanitizer_get_allocated_begin=uninstrumented
+fun:__sanitizer_get_allocated_begin=discard
+fun:__sanitizer_get_allocated_size=uninstrumented
+fun:__sanitizer_get_allocated_size=discard
+fun:__sanitizer_get_allocated_size_fast=uninstrumented
+fun:__sanitizer_get_allocated_size_fast=discard
+fun:__sanitizer_print_stack_trace=uninstrumented
+fun:__sanitizer_print_stack_trace=discard
+
+fun:TcmallocSlab_Internal_PushBatch_FixedShift=uninstrumented
+fun:TcmallocSlab_Internal_PushBatch_FixedShift=discard
+fun:TcmallocSlab_Internal_PushBatch_FixedShift_VCPU=uninstrumented
+fun:TcmallocSlab_Internal_PushBatch_FixedShift_VCPU=discard
+fun:TcmallocSlab_Internal_PerCpuCmpxchg64=uninstrumented
+fun:TcmallocSlab_Internal_PerCpuCmpxchg64=discard
+fun:TcmallocSlab_Internal_PerCpuCmpxchg64_VCPU=uninstrumented
+fun:TcmallocSlab_Internal_PerCpuCmpxchg64_VCPU=discard
+fun:TcmallocSlab_Internal_PopBatch_FixedShift=uninstrumented
+fun:TcmallocSlab_Internal_PopBatch_FixedShift=discard
+fun:TcmallocSlab_Internal_PopBatch_FixedShift_VCPU=uninstrumented
+fun:TcmallocSlab_Internal_PopBatch_FixedShift_VCPU=discard
 
 # Ignores the dfsan wrappers.
 fun:__dfsw_*=uninstrumented

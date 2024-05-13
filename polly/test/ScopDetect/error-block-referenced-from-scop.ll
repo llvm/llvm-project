@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze < %s \
-; RUN:     | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; CHECK-NOT: Valid Region for Scop:
 
@@ -15,7 +14,7 @@ bb1:                                              ; preds = %bb
   br i1 undef, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = load i32, i32* undef, align 8, !tbaa !1
+  %tmp = load i32, ptr undef, align 8, !tbaa !1
   %tmp3 = tail call i32 @widget() #2
   br i1 false, label %bb4, label %bb5
 

@@ -3,8 +3,8 @@
 // CHECK: @[[C:__profc_foo]] = private global [3 x i64] zeroinitializer
 
 // CHECK-LABEL: @foo()
-// CHECK: store {{.*}} @[[C]], i64 0, i64 0
-void foo() {
+// CHECK: store {{.*}} @[[C]]
+void foo(void) {
   // CHECK: store {{.*}} @[[C]], i64 0, i64 2
   switch (0) {
   default:

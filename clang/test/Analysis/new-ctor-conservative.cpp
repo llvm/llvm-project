@@ -14,9 +14,12 @@ void checkConstructorInlining() {
   clang_analyzer_eval(s->x == 1); // expected-warning{{TRUE}}
 }
 
-void checkNewPOD() {
+void checkNewPODunit() {
   int *i = new int;
-  clang_analyzer_eval(*i == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(*i == 0); // expected-warning{{The left operand of '==' is a garbage value [core.UndefinedBinaryOperatorResult]}}
+}
+
+void checkNewPOD() {
   int *j = new int();
   clang_analyzer_eval(*j == 0); // expected-warning{{TRUE}}
   int *k = new int(5);
@@ -25,9 +28,14 @@ void checkNewPOD() {
 
 void checkNewArray() {
   S *s = new S[10];
-  // FIXME: Should be true once we inline array constructors.
+
+  // FIXME: Handle big array construction
   clang_analyzer_eval(s[0].x == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(s[1].x == 1); // expected-warning{{UNKNOWN}}
+
+  s = new S[4];
+  clang_analyzer_eval(s[0].x == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(s[1].x == 1); // expected-warning{{TRUE}}
 }
 
 struct NullS {

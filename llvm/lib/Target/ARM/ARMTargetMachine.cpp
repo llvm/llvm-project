@@ -11,18 +11,18 @@
 
 #include "ARMTargetMachine.h"
 #include "ARM.h"
+#include "ARMMachineFunctionInfo.h"
 #include "ARMMacroFusion.h"
 #include "ARMSubtarget.h"
 #include "ARMTargetObjectFile.h"
 #include "ARMTargetTransformInfo.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "TargetInfo/ARMTargetInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/ExecutionDomainFix.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -30,27 +30,31 @@
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetParser.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -92,6 +96,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
   initializeARMParallelDSPPass(Registry);
+  initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
   initializeARMExecutionDomainFixPass(Registry);
   initializeARMExpandPseudoPass(Registry);
@@ -104,6 +109,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVEGatherScatterLoweringPass(Registry);
   initializeARMSLSHardeningPass(Registry);
   initializeMVELaneInterleavingPass(Registry);
+  initializeARMFixCortexA57AES1742098Pass(Registry);
+  initializeARMDAGToDAGISelPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -124,9 +131,9 @@ computeTargetABI(const Triple &TT, StringRef CPU,
 
   if (ABIName == "aapcs16")
     return ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-  else if (ABIName.startswith("aapcs"))
+  else if (ABIName.starts_with("aapcs"))
     return ARMBaseTargetMachine::ARM_ABI_AAPCS;
-  else if (ABIName.startswith("apcs"))
+  else if (ABIName.starts_with("apcs"))
     return ARMBaseTargetMachine::ARM_ABI_APCS;
 
   llvm_unreachable("Unhandled/unknown ABI Name!");
@@ -191,8 +198,8 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
+                                           std::optional<Reloc::Model> RM) {
+  if (!RM)
     // Default relocation model on Darwin is PIC.
     return TT.isOSBinFormatMachO() ? Reloc::PIC_ : Reloc::Static;
 
@@ -212,9 +219,9 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
 ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
-                                           CodeGenOpt::Level OL, bool isLittle)
+                                           std::optional<Reloc::Model> RM,
+                                           std::optional<CodeModel::Model> CM,
+                                           CodeGenOptLevel OL, bool isLittle)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
                         CPU, FS, Options, getEffectiveRelocModel(TT, RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
@@ -236,7 +243,8 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
     if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
          TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
          TargetTriple.getEnvironment() == Triple::MuslEABI ||
-         TargetTriple.getEnvironment() == Triple::MuslEABIHF) &&
+         TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
+         TargetTriple.getEnvironment() == Triple::OpenHOS) &&
         !(TargetTriple.isOSWindows() || TargetTriple.isOSDarwin()))
       this->Options.EABIVersion = EABI::GNU;
     else
@@ -259,6 +267,13 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 }
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
+
+MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return ARMFunctionInfo::create<ARMFunctionInfo>(
+      Allocator, F, static_cast<const ARMSubtarget *>(STI));
+}
 
 const ARMSubtarget *
 ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
@@ -305,24 +320,24 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 TargetTransformInfo
-ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) {
+ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(ARMTTIImpl(this, F));
 }
 
 ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool JIT)
+                                       std::optional<Reloc::Model> RM,
+                                       std::optional<CodeModel::Model> CM,
+                                       CodeGenOptLevel OL, bool JIT)
     : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 
 ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool JIT)
+                                       std::optional<Reloc::Model> RM,
+                                       std::optional<CodeModel::Model> CM,
+                                       CodeGenOptLevel OL, bool JIT)
     : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
 namespace {
@@ -403,12 +418,12 @@ void ARMPassConfig::addIRPasses() {
   if (TM->Options.ThreadModel == ThreadModel::Single)
     addPass(createLowerAtomicPass());
   else
-    addPass(createAtomicExpandPass());
+    addPass(createAtomicExpandLegacyPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
   // ldrex/strex loops to simplify this, but it needs tidying up.
-  if (TM->getOptLevel() != CodeGenOpt::None && EnableAtomicTidy)
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableAtomicTidy)
     addPass(createCFGSimplificationPass(
         SimplifyCFGOptions().hoistCommonInsts(true).sinkCommonInsts(true),
         [this](const Function &F) {
@@ -422,26 +437,33 @@ void ARMPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   // Run the parallel DSP pass.
-  if (getOptLevel() == CodeGenOpt::Aggressive) 
+  if (getOptLevel() == CodeGenOptLevel::Aggressive)
     addPass(createARMParallelDSPPass());
 
+  // Match complex arithmetic patterns
+  if (TM->getOptLevel() >= CodeGenOptLevel::Default)
+    addPass(createComplexDeinterleavingPass(TM));
+
   // Match interleaved memory accesses to ldN/stN intrinsics.
-  if (TM->getOptLevel() != CodeGenOpt::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createInterleavedAccessPass());
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
     addPass(createCFGuardCheckPass());
+
+  if (TM->Options.JMCInstrument)
+    addPass(createJMCInstrumenterPass());
 }
 
 void ARMPassConfig::addCodeGenPrepare() {
-  if (getOptLevel() != CodeGenOpt::None)
-    addPass(createTypePromotionPass());
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createTypePromotionLegacyPass());
   TargetPassConfig::addCodeGenPrepare();
 }
 
 bool ARMPassConfig::addPreISel() {
-  if ((TM->getOptLevel() != CodeGenOpt::None &&
+  if ((TM->getOptLevel() != CodeGenOptLevel::None &&
        EnableGlobalMerge == cl::BOU_UNSET) ||
       EnableGlobalMerge == cl::BOU_TRUE) {
     // FIXME: This is using the thumb1 only constant value for
@@ -449,8 +471,9 @@ bool ARMPassConfig::addPreISel() {
     // to look into using the old value for non-thumb1 code of
     // 4095 based on the TargetMachine, but this starts to become
     // tricky when doing code gen per function.
-    bool OnlyOptimizeForSize = (TM->getOptLevel() < CodeGenOpt::Aggressive) &&
-                               (EnableGlobalMerge == cl::BOU_UNSET);
+    bool OnlyOptimizeForSize =
+        (TM->getOptLevel() < CodeGenOptLevel::Aggressive) &&
+        (EnableGlobalMerge == cl::BOU_UNSET);
     // Merging of extern globals is enabled by default on non-Mach-O as we
     // expect it to be generally either beneficial or harmless. On Mach-O it
     // is disabled as we emit the .subsections_via_symbols directive which
@@ -460,8 +483,8 @@ bool ARMPassConfig::addPreISel() {
                                   MergeExternalByDefault));
   }
 
-  if (TM->getOptLevel() != CodeGenOpt::None) {
-    addPass(createHardwareLoopsPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createHardwareLoopsLegacyPass());
     addPass(createMVETailPredicationPass());
     // FIXME: IR passes can delete address-taken basic blocks, deleting
     // corresponding blockaddresses. ARMConstantPoolConstant holds references to
@@ -502,7 +525,10 @@ bool ARMPassConfig::addGlobalInstructionSelect() {
 }
 
 void ARMPassConfig::addPreRegAlloc() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    if (getOptLevel() == CodeGenOptLevel::Aggressive)
+      addPass(&MachinePipelinerID);
+
     addPass(createMVETPAndVPTOptimisationsPass());
 
     addPass(createMLxExpansionPass());
@@ -516,7 +542,7 @@ void ARMPassConfig::addPreRegAlloc() {
 }
 
 void ARMPassConfig::addPreSched2() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableARMLoadStoreOpt)
       addPass(createARMLoadStoreOptimizationPass());
 
@@ -528,7 +554,7 @@ void ARMPassConfig::addPreSched2() {
   // proper scheduling.
   addPass(createARMExpandPseudoPass());
 
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     // When optimising for size, always run the Thumb2SizeReduction pass before
     // IfConversion. Otherwise, check whether IT blocks are restricted
     // (e.g. in v8, IfConversion depends on Thumb instruction widths)
@@ -541,16 +567,16 @@ void ARMPassConfig::addPreSched2() {
       return !MF.getSubtarget<ARMSubtarget>().isThumb1Only();
     }));
   }
-  addPass(createMVEVPTBlockPass());
   addPass(createThumb2ITBlockPass());
 
   // Add both scheduling passes to give the subtarget an opportunity to pick
   // between them.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&PostMachineSchedulerID);
     addPass(&PostRASchedulerID);
   }
 
+  addPass(createMVEVPTBlockPass());
   addPass(createARMIndirectThunks());
   addPass(createARMSLSHardeningPass());
 }
@@ -564,14 +590,27 @@ void ARMPassConfig::addPreEmitPass() {
   }));
 
   // Don't optimize barriers or block placement at -O0.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createARMBlockPlacementPass());
     addPass(createARMOptimizeBarriersPass());
   }
 }
 
 void ARMPassConfig::addPreEmitPass2() {
+  // Inserts fixup instructions before unsafe AES operations. Instructions may
+  // be inserted at the start of blocks and at within blocks so this pass has to
+  // come before those below.
+  addPass(createARMFixCortexA57AES1742098Pass());
+  // Inserts BTIs at the start of functions and indirectly-called basic blocks,
+  // so passes cannot add to the start of basic blocks once this has run.
+  addPass(createARMBranchTargetsPass());
+  // Inserts Constant Islands. Block sizes cannot be increased after this point,
+  // as this may push the branch ranges and load offsets of accessing constant
+  // pools out of range..
   addPass(createARMConstantIslandPass());
+  // Finalises Low-Overhead Loops. This replaces pseudo instructions with real
+  // instructions, but the pseudos all have conservative sizes so that block
+  // sizes will only be decreased by this pass.
   addPass(createARMLowOverheadLoopsPass());
 
   if (TM->getTargetTriple().isOSWindows()) {
@@ -580,4 +619,24 @@ void ARMPassConfig::addPreEmitPass2() {
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardCatchretPass());
   }
+}
+
+yaml::MachineFunctionInfo *
+ARMBaseTargetMachine::createDefaultFuncInfoYAML() const {
+  return new yaml::ARMFunctionInfo();
+}
+
+yaml::MachineFunctionInfo *
+ARMBaseTargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
+  const auto *MFI = MF.getInfo<ARMFunctionInfo>();
+  return new yaml::ARMFunctionInfo(*MFI);
+}
+
+bool ARMBaseTargetMachine::parseMachineFunctionInfo(
+    const yaml::MachineFunctionInfo &MFI, PerFunctionMIParsingState &PFS,
+    SMDiagnostic &Error, SMRange &SourceRange) const {
+  const auto &YamlMFI = static_cast<const yaml::ARMFunctionInfo &>(MFI);
+  MachineFunction &MF = PFS.MF;
+  MF.getInfo<ARMFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
+  return false;
 }

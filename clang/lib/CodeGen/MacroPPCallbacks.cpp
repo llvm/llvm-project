@@ -120,7 +120,7 @@ void MacroPPCallbacks::FileEntered(SourceLocation Loc) {
     if (PP.getSourceManager().isWrittenInCommandLineFile(Loc))
       return;
     updateStatusToNextScope();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CommandLineIncludeScope:
     EnteredCommandLineIncludeFiles++;
     break;
@@ -167,9 +167,9 @@ void MacroPPCallbacks::FileChanged(SourceLocation Loc, FileChangeReason Reason,
 
 void MacroPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, const FileEntry *File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
 
   // Record the line location of the current included file.
   LastHashLoc = HashLoc;

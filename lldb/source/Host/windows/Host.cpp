@@ -30,12 +30,12 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
-bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
+static bool GetTripleForProcess(const FileSpec &executable,
+                                llvm::Triple &triple) {
   // Open the PE File as a binary file, and parse just enough information to
   // determine the machine type.
   auto imageBinaryP = FileSystem::Instance().Open(
-      executable, File::eOpenOptionRead, lldb::eFilePermissionsUserRead);
+      executable, File::eOpenOptionReadOnly, lldb::eFilePermissionsUserRead);
   if (!imageBinaryP)
     return llvm::errorToBool(imageBinaryP.takeError());
   File &imageBinary = *imageBinaryP.get();
@@ -66,7 +66,8 @@ bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
   return true;
 }
 
-bool GetExecutableForProcess(const AutoHandle &handle, std::string &path) {
+static bool GetExecutableForProcess(const AutoHandle &handle,
+                                    std::string &path) {
   // Get the process image path.  MAX_PATH isn't long enough, paths can
   // actually be up to 32KB.
   std::vector<wchar_t> buffer(PATH_MAX);
@@ -76,8 +77,8 @@ bool GetExecutableForProcess(const AutoHandle &handle, std::string &path) {
   return llvm::convertWideToUTF8(buffer.data(), path);
 }
 
-void GetProcessExecutableAndTriple(const AutoHandle &handle,
-                                   ProcessInstanceInfo &process) {
+static void GetProcessExecutableAndTriple(const AutoHandle &handle,
+                                          ProcessInstanceInfo &process) {
   // We may not have permissions to read the path from the process.  So start
   // off by setting the executable file to whatever Toolhelp32 gives us, and
   // then try to enhance this with more detailed information, but fail
@@ -95,7 +96,6 @@ void GetProcessExecutableAndTriple(const AutoHandle &handle,
   process.SetArchitecture(ArchSpec(triple));
 
   // TODO(zturner): Add the ability to get the process user name.
-}
 }
 
 lldb::thread_t Host::GetCurrentThread() {
@@ -195,8 +195,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
 }
 
 llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
-    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
-    bool monitor_signals) {
+    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid) {
   return HostThread();
 }
 
@@ -246,7 +245,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     }
 
     auto dict_sp = data_sp->GetAsDictionary();
-    if (!data_sp) {
+    if (!dict_sp) {
       error.SetErrorString("invalid JSON");
       return error;
     }

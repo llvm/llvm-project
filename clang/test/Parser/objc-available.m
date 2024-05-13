@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunguarded-availability -Wno-unsupported-availability-guard -triple x86_64-apple-macosx10.10.0 -verify %s
 
-void f() {
+void f(void) {
 
   if (@available(macos 10.12, *)) {}
   else if (@available(macos 10.11, *)) {}
@@ -21,7 +21,7 @@ void f() {
   (void)@available; // expected-error{{expected '('}}
 }
 
-void prettyPlatformNames() {
+void prettyPlatformNames(void) {
   (void)@available(iOS 8, tvOS 10, watchOS 3, macOS 10.11, *);
   (void)__builtin_available(iOSApplicationExtension 8, tvOSApplicationExtension 10,
                    watchOSApplicationExtension 3, macOSApplicationExtension 10.11, *);

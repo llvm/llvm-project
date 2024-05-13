@@ -19,8 +19,7 @@ typedef __attribute__(( ext_vector_type(3) ))  double __double3;
 double varargs_vec_2c(int fixed, ...) {
 // ANDROID: varargs_vec_2c
 // ANDROID: [[VAR:%.*]] = alloca <2 x i8>, align 2
-// ANDROID: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// ANDROID: bitcast i8* [[AP_CUR]] to <2 x i8>*
+// ANDROID: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -31,15 +30,14 @@ double varargs_vec_2c(int fixed, ...) {
 }
 
 double test_2c(__char2 *in) {
-// ANDROID: call double (i32, ...) @varargs_vec_2c(i32 3, i16 {{%.*}})
+// ANDROID: call double (i32, ...) @varargs_vec_2c(i32 noundef 3, i16 noundef {{%.*}})
   return varargs_vec_2c(3, *in);
 }
 
 double varargs_vec_3c(int fixed, ...) {
 // CHECK: varargs_vec_3c
 // CHECK: alloca <3 x i8>, align 4
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: bitcast i8* [[AP_CUR]] to <3 x i8>*
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -51,15 +49,14 @@ double varargs_vec_3c(int fixed, ...) {
 
 double test_3c(__char3 *in) {
 // CHECK: test_3c
-// CHECK: call double (i32, ...) @varargs_vec_3c(i32 3, i32 {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_3c(i32 noundef 3, i32 {{%.*}})
   return varargs_vec_3c(3, *in);
 }
 
 double varargs_vec_4c(int fixed, ...) {
 // CHECK: varargs_vec_4c
 // CHECK: alloca <4 x i8>, align 4
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: bitcast i8* [[AP_CUR]] to <4 x i8>*
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -71,15 +68,14 @@ double varargs_vec_4c(int fixed, ...) {
 
 double test_4c(__char4 *in) {
 // CHECK: test_4c
-// CHECK: call double (i32, ...) @varargs_vec_4c(i32 4, i32 {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_4c(i32 noundef 4, i32 noundef {{%.*}})
   return varargs_vec_4c(4, *in);
 }
 
 double varargs_vec_5c(int fixed, ...) {
 // CHECK: varargs_vec_5c
 // CHECK: alloca <5 x i8>, align 8
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: bitcast i8* [[AP_CUR]] to <5 x i8>*
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -91,17 +87,17 @@ double varargs_vec_5c(int fixed, ...) {
 
 double test_5c(__char5 *in) {
 // CHECK: test_5c
-// CHECK: call double (i32, ...) @varargs_vec_5c(i32 5, <2 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_5c(i32 noundef 5, <2 x i32> {{%.*}})
   return varargs_vec_5c(5, *in);
 }
 
 double varargs_vec_9c(int fixed, ...) {
 // CHECK: varargs_vec_9c
 // CHECK: alloca <9 x i8>, align 16
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to i8*
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_ALIGN]], i64 16
-// CHECK: bitcast i8* [[AP_ALIGN]] to <9 x i8>*
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -113,15 +109,14 @@ double varargs_vec_9c(int fixed, ...) {
 
 double test_9c(__char9 *in) {
 // CHECK: test_9c
-// CHECK: call double (i32, ...) @varargs_vec_9c(i32 9, <4 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_9c(i32 noundef 9, <4 x i32> {{%.*}})
   return varargs_vec_9c(9, *in);
 }
 
 double varargs_vec_19c(int fixed, ...) {
 // CHECK: varargs_vec_19c
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: [[VAR:%.*]] = bitcast i8* [[AP_CUR]] to <19 x i8>**
-// CHECK: [[VAR2:%.*]] = load <19 x i8>*, <19 x i8>** [[VAR]]
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
+// CHECK: [[VAR2:%.*]] = load ptr, ptr [[AP_CUR]]
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -133,15 +128,14 @@ double varargs_vec_19c(int fixed, ...) {
 
 double test_19c(__char19 *in) {
 // CHECK: test_19c
-// CHECK: call double (i32, ...) @varargs_vec_19c(i32 19, <19 x i8>* {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr noundef {{%.*}})
   return varargs_vec_19c(19, *in);
 }
 
 double varargs_vec_3s(int fixed, ...) {
 // CHECK: varargs_vec_3s
 // CHECK: alloca <3 x i16>, align 8
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: bitcast i8* [[AP_CUR]] to <3 x i16>*
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -153,17 +147,17 @@ double varargs_vec_3s(int fixed, ...) {
 
 double test_3s(__short3 *in) {
 // CHECK: test_3s
-// CHECK: call double (i32, ...) @varargs_vec_3s(i32 3, <2 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_3s(i32 noundef 3, <2 x i32> {{%.*}})
   return varargs_vec_3s(3, *in);
 }
 
 double varargs_vec_5s(int fixed, ...) {
 // CHECK: varargs_vec_5s
 // CHECK: alloca <5 x i16>, align 16
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to i8*
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_ALIGN]], i64 16
-// CHECK: bitcast i8* [[AP_ALIGN]] to <5 x i16>*
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -175,17 +169,17 @@ double varargs_vec_5s(int fixed, ...) {
 
 double test_5s(__short5 *in) {
 // CHECK: test_5s
-// CHECK: call double (i32, ...) @varargs_vec_5s(i32 5, <4 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_5s(i32 noundef 5, <4 x i32> {{%.*}})
   return varargs_vec_5s(5, *in);
 }
 
 double varargs_vec_3i(int fixed, ...) {
 // CHECK: varargs_vec_3i
 // CHECK: alloca <3 x i32>, align 16
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to i8*
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_ALIGN]], i64 16
-// CHECK: bitcast i8* [[AP_ALIGN]] to <3 x i32>*
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -197,16 +191,15 @@ double varargs_vec_3i(int fixed, ...) {
 
 double test_3i(__int3 *in) {
 // CHECK: test_3i
-// CHECK: call double (i32, ...) @varargs_vec_3i(i32 3, <4 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_3i(i32 noundef 3, <4 x i32> {{%.*}})
   return varargs_vec_3i(3, *in);
 }
 
 double varargs_vec_5i(int fixed, ...) {
 // CHECK: varargs_vec_5i
 // CHECK: alloca <5 x i32>, align 16
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: [[VAR:%.*]] = bitcast i8* [[AP_CUR]] to <5 x i32>**
-// CHECK: [[VAR2:%.*]] = load <5 x i32>*, <5 x i32>** [[VAR]]
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
+// CHECK: [[VAR2:%.*]] = load ptr, ptr [[AP_CUR]]
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -218,16 +211,15 @@ double varargs_vec_5i(int fixed, ...) {
 
 double test_5i(__int5 *in) {
 // CHECK: test_5i
-// CHECK: call double (i32, ...) @varargs_vec_5i(i32 5, <5 x i32>* {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_5i(i32 noundef 5, ptr noundef {{%.*}})
   return varargs_vec_5i(5, *in);
 }
 
 double varargs_vec_3d(int fixed, ...) {
 // CHECK: varargs_vec_3d
 // CHECK: alloca <3 x double>, align 16
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: [[VAR:%.*]] = bitcast i8* [[AP_CUR]] to <3 x double>**
-// CHECK: [[VAR2:%.*]] = load <3 x double>*, <3 x double>** [[VAR]]
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
+// CHECK: [[VAR2:%.*]] = load ptr, ptr [[AP_CUR]]
   va_list ap;
   double sum = fixed;
   va_start(ap, fixed);
@@ -239,7 +231,7 @@ double varargs_vec_3d(int fixed, ...) {
 
 double test_3d(__double3 *in) {
 // CHECK: test_3d
-// CHECK: call double (i32, ...) @varargs_vec_3d(i32 3, <3 x double>* {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_3d(i32 noundef 3, ptr noundef {{%.*}})
   return varargs_vec_3d(3, *in);
 }
 
@@ -249,49 +241,47 @@ double varargs_vec(int fixed, ...) {
   double sum = fixed;
   va_start(ap, fixed);
   __char3 c3 = va_arg(ap, __char3);
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: bitcast i8* [[AP_CUR]] to <3 x i8>*
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   sum = sum + c3.x + c3.y;
   __char5 c5 = va_arg(ap, __char5);
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: bitcast i8* [[AP_CUR]] to <5 x i8>*
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   sum = sum + c5.x + c5.y;
   __char9 c9 = va_arg(ap, __char9);
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to i8*
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_ALIGN]], i64 16
-// CHECK: bitcast i8* [[AP_ALIGN]] to <9 x i8>*
+
+
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   sum = sum + c9.x + c9.y;
   __char19 c19 = va_arg(ap, __char19);
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: [[VAR:%.*]] = bitcast i8* [[AP_CUR]] to <19 x i8>**
-// CHECK: [[VAR2:%.*]] = load <19 x i8>*, <19 x i8>** [[VAR]]
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
+// CHECK: [[VAR2:%.*]] = load ptr, ptr [[AP_CUR]]
   sum = sum + c19.x + c19.y;
   __short3 s3 = va_arg(ap, __short3);
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: bitcast i8* [[AP_CUR]] to <3 x i16>*
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   sum = sum + s3.x + s3.y;
   __short5 s5 = va_arg(ap, __short5);
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to i8*
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_ALIGN]], i64 16
-// CHECK: bitcast i8* [[AP_ALIGN]] to <5 x i16>*
+
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   sum = sum + s5.x + s5.y;
   __int3 i3 = va_arg(ap, __int3);
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to i8*
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_ALIGN]], i64 16
-// CHECK: bitcast i8* [[AP_ALIGN]] to <3 x i32>*
+
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   sum = sum + i3.x + i3.y;
   __int5 i5 = va_arg(ap, __int5);
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: [[VAR:%.*]] = bitcast i8* [[AP_CUR]] to <5 x i32>**
-// CHECK: [[VAR2:%.*]] = load <5 x i32>*, <5 x i32>** [[VAR]]
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
+// CHECK: [[VAR2:%.*]] = load ptr, ptr [[AP_CUR]]
   sum = sum + i5.x + i5.y;
   __double3 d3 = va_arg(ap, __double3);
-// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
-// CHECK: [[VAR:%.*]] = bitcast i8* [[AP_CUR]] to <3 x double>**
-// CHECK: [[VAR2:%.*]] = load <3 x double>*, <3 x double>** [[VAR]]
+// CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
+// CHECK: [[VAR2:%.*]] = load ptr, ptr [[AP_CUR]]
   sum = sum + d3.x + d3.y;
   va_end(ap);
   return sum;
@@ -301,15 +291,14 @@ double test(__char3 *c3, __char5 *c5, __char9 *c9, __char19 *c19,
             __short3 *s3, __short5 *s5, __int3 *i3, __int5 *i5,
             __double3 *d3) {
   double ret = varargs_vec(3, *c3, *c5, *c9, *c19, *s3, *s5, *i3, *i5, *d3);
-// CHECK: call double (i32, ...) @varargs_vec(i32 3, i32 {{%.*}}, <2 x i32> {{%.*}}, <4 x i32> {{%.*}}, <19 x i8>* {{%.*}}, <2 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <5 x i32>* {{%.*}}, <3 x double>* {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec(i32 noundef 3, i32 {{%.*}}, <2 x i32> {{%.*}}, <4 x i32> {{%.*}}, ptr noundef {{%.*}}, <2 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, ptr noundef {{%.*}}, ptr noundef {{%.*}})
   return ret;
 }
 
 __attribute__((noinline)) double args_vec_3c(int fixed, __char3 c3) {
 // CHECK: args_vec_3c
 // CHECK: [[C3:%.*]] = alloca <3 x i8>, align 4
-// CHECK: [[TMP:%.*]] = bitcast <3 x i8>* [[C3]] to i32*
-// CHECK: store i32 {{%.*}}, i32* [[TMP]]
+// CHECK: store i32 {{%.*}}, ptr [[C3]]
   double sum = fixed;
   sum = sum + c3.x + c3.y;
   return sum;
@@ -317,15 +306,14 @@ __attribute__((noinline)) double args_vec_3c(int fixed, __char3 c3) {
 
 double fixed_3c(__char3 *in) {
 // CHECK: fixed_3c
-// CHECK: call double @args_vec_3c(i32 3, i32 {{%.*}})
+// CHECK: call double @args_vec_3c(i32 noundef 3, i32 {{%.*}})
   return args_vec_3c(3, *in);
 }
 
 __attribute__((noinline)) double args_vec_5c(int fixed, __char5 c5) {
 // CHECK: args_vec_5c
 // CHECK: [[C5:%.*]] = alloca <5 x i8>, align 8
-// CHECK: [[TMP:%.*]] = bitcast <5 x i8>* [[C5]] to <2 x i32>*
-// CHECK: store <2 x i32> {{%.*}}, <2 x i32>* [[TMP]], align 8
+// CHECK: store <2 x i32> {{%.*}}, ptr [[C5]], align 8
   double sum = fixed;
   sum = sum + c5.x + c5.y;
   return sum;
@@ -333,15 +321,14 @@ __attribute__((noinline)) double args_vec_5c(int fixed, __char5 c5) {
 
 double fixed_5c(__char5 *in) {
 // CHECK: fixed_5c
-// CHECK: call double @args_vec_5c(i32 5, <2 x i32> {{%.*}})
+// CHECK: call double @args_vec_5c(i32 noundef 5, <2 x i32> {{%.*}})
   return args_vec_5c(5, *in);
 }
 
 __attribute__((noinline)) double args_vec_9c(int fixed, __char9 c9) {
 // CHECK: args_vec_9c
 // CHECK: [[C9:%.*]] = alloca <9 x i8>, align 16
-// CHECK: [[TMP:%.*]] = bitcast <9 x i8>* [[C9]] to <4 x i32>*
-// CHECK: store <4 x i32> {{%.*}}, <4 x i32>* [[TMP]], align 16
+// CHECK: store <4 x i32> {{%.*}}, ptr [[C9]], align 16
   double sum = fixed;
   sum = sum + c9.x + c9.y;
   return sum;
@@ -349,13 +336,13 @@ __attribute__((noinline)) double args_vec_9c(int fixed, __char9 c9) {
 
 double fixed_9c(__char9 *in) {
 // CHECK: fixed_9c
-// CHECK: call double @args_vec_9c(i32 9, <4 x i32> {{%.*}})
+// CHECK: call double @args_vec_9c(i32 noundef 9, <4 x i32> {{%.*}})
   return args_vec_9c(9, *in);
 }
 
 __attribute__((noinline)) double args_vec_19c(int fixed, __char19 c19) {
 // CHECK: args_vec_19c
-// CHECK: [[C19:%.*]] = load <19 x i8>, <19 x i8>* {{.*}}, align 16
+// CHECK: [[C19:%.*]] = load <19 x i8>, ptr {{.*}}, align 16
   double sum = fixed;
   sum = sum + c19.x + c19.y;
   return sum;
@@ -363,15 +350,14 @@ __attribute__((noinline)) double args_vec_19c(int fixed, __char19 c19) {
 
 double fixed_19c(__char19 *in) {
 // CHECK: fixed_19c
-// CHECK: call double @args_vec_19c(i32 19, <19 x i8>* {{%.*}})
+// CHECK: call double @args_vec_19c(i32 noundef 19, ptr noundef {{%.*}})
   return args_vec_19c(19, *in);
 }
 
 __attribute__((noinline)) double args_vec_3s(int fixed, __short3 c3) {
 // CHECK: args_vec_3s
 // CHECK: [[C3:%.*]] = alloca <3 x i16>, align 8
-// CHECK: [[TMP:%.*]] = bitcast <3 x i16>* [[C3]] to <2 x i32>*
-// CHECK: store <2 x i32> {{%.*}}, <2 x i32>* [[TMP]], align 8
+// CHECK: store <2 x i32> {{%.*}}, ptr [[C3]], align 8
   double sum = fixed;
   sum = sum + c3.x + c3.y;
   return sum;
@@ -379,15 +365,14 @@ __attribute__((noinline)) double args_vec_3s(int fixed, __short3 c3) {
 
 double fixed_3s(__short3 *in) {
 // CHECK: fixed_3s
-// CHECK: call double @args_vec_3s(i32 3, <2 x i32> {{%.*}})
+// CHECK: call double @args_vec_3s(i32 noundef 3, <2 x i32> {{%.*}})
   return args_vec_3s(3, *in);
 }
 
 __attribute__((noinline)) double args_vec_5s(int fixed, __short5 c5) {
 // CHECK: args_vec_5s
 // CHECK: [[C5:%.*]] = alloca <5 x i16>, align 16
-// CHECK: [[TMP:%.*]] = bitcast <5 x i16>* [[C5]] to <4 x i32>*
-// CHECK: store <4 x i32> {{%.*}}, <4 x i32>* [[TMP]], align 16
+// CHECK: store <4 x i32> {{%.*}}, ptr [[C5]], align 16
   double sum = fixed;
   sum = sum + c5.x + c5.y;
   return sum;
@@ -395,15 +380,14 @@ __attribute__((noinline)) double args_vec_5s(int fixed, __short5 c5) {
 
 double fixed_5s(__short5 *in) {
 // CHECK: fixed_5s
-// CHECK: call double @args_vec_5s(i32 5, <4 x i32> {{%.*}})
+// CHECK: call double @args_vec_5s(i32 noundef 5, <4 x i32> {{%.*}})
   return args_vec_5s(5, *in);
 }
 
 __attribute__((noinline)) double args_vec_3i(int fixed, __int3 c3) {
 // CHECK: args_vec_3i
 // CHECK: [[C3:%.*]] = alloca <3 x i32>, align 16
-// CHECK: [[TMP:%.*]] = bitcast <3 x i32>* [[C3]] to <4 x i32>*
-// CHECK: store <4 x i32> {{%.*}}, <4 x i32>* [[TMP]], align 16
+// CHECK: store <4 x i32> {{%.*}}, ptr [[C3]], align 16
   double sum = fixed;
   sum = sum + c3.x + c3.y;
   return sum;
@@ -411,13 +395,13 @@ __attribute__((noinline)) double args_vec_3i(int fixed, __int3 c3) {
 
 double fixed_3i(__int3 *in) {
 // CHECK: fixed_3i
-// CHECK: call double @args_vec_3i(i32 3, <4 x i32> {{%.*}})
+// CHECK: call double @args_vec_3i(i32 noundef 3, <4 x i32> {{%.*}})
   return args_vec_3i(3, *in);
 }
 
 __attribute__((noinline)) double args_vec_5i(int fixed, __int5 c5) {
 // CHECK: args_vec_5i
-// CHECK: [[C5:%.*]] = load <5 x i32>, <5 x i32>* {{%.*}}, align 16
+// CHECK: [[C5:%.*]] = load <5 x i32>, ptr {{%.*}}, align 16
   double sum = fixed;
   sum = sum + c5.x + c5.y;
   return sum;
@@ -425,14 +409,13 @@ __attribute__((noinline)) double args_vec_5i(int fixed, __int5 c5) {
 
 double fixed_5i(__int5 *in) {
 // CHECK: fixed_5i
-// CHECK: call double @args_vec_5i(i32 5, <5 x i32>* {{%.*}})
+// CHECK: call double @args_vec_5i(i32 noundef 5, ptr noundef {{%.*}})
   return args_vec_5i(5, *in);
 }
 
 __attribute__((noinline)) double args_vec_3d(int fixed, __double3 c3) {
   // CHECK: args_vec_3d
-  // CHECK: [[CAST:%.*]] = bitcast <3 x double>* {{%.*}} to <4 x double>*
-  // CHECK: [[LOAD:%.*]] = load <4 x double>, <4 x double>* [[CAST]]
+  // CHECK: [[LOAD:%.*]] = load <4 x double>, ptr {{%.*}}
   // CHECK: shufflevector <4 x double> [[LOAD]], <4 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
   double sum = fixed;
   sum = sum + c3.x + c3.y;
@@ -441,6 +424,6 @@ __attribute__((noinline)) double args_vec_3d(int fixed, __double3 c3) {
 
 double fixed_3d(__double3 *in) {
 // CHECK: fixed_3d
-// CHECK: call double @args_vec_3d(i32 3, <3 x double>* {{%.*}})
+// CHECK: call double @args_vec_3d(i32 noundef 3, ptr noundef {{%.*}})
   return args_vec_3d(3, *in);
 }

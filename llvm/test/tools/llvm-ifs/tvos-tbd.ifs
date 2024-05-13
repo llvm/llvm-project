@@ -1,4 +1,4 @@
-# RUN: llvm-ifs --action write-bin -o - %s | FileCheck %s
+# RUN: llvm-ifs --input-format=IFS --output-tbd - %s | FileCheck %s
 
 # CHECK: --- !tapi-tbd-v3
 # CHECK-NEXT: archs:           [ arm64 ]
@@ -13,10 +13,9 @@
 # CHECK-NEXT:     symbols:         [ __Z3fooi ]
 # CHECK-NEXT: ...
 
---- !experimental-ifs-v2
-IfsVersion: 2.0
-Triple: arm64-apple-tvos
-ObjectFileFormat: TBD
+--- !ifs-v1
+IfsVersion: 3.0
+Target: arm64-apple-tvos
 Symbols:
   - { Name: __Z3fooi, Type: Func }
 ...

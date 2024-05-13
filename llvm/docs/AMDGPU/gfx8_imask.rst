@@ -5,14 +5,14 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid8_imask:
+.. _amdgpu_synid_gfx8_imask:
 
 imask
-===========================
+=====
 
 This operand is a mask which controls indexing mode for operands of subsequent instructions.
 Bits 0, 1 and 2 control indexing of *src0*, *src1* and *src2*, while bit 3 controls indexing of *dst*.
-Value 1 enables indexing and value 0 disables it.
+Value 1 enables indexing, and value 0 disables it.
 
     ===== ========================================
     Bit   Meaning
@@ -25,31 +25,31 @@ Value 1 enables indexing and value 0 disables it.
 
 This operand may be specified as one of the following:
 
-* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..15.
-* A *gpr_idx* value described below.
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range from 0 to 15.
+* A *gpr_idx* value which is described below.
 
-    ==================================== ===========================================
+    ==================================== =============================================
     Gpr_idx Value Syntax                 Description
-    ==================================== ===========================================
-    gpr_idx(*<operands>*)                Enable indexing for specified *operands*
+    ==================================== =============================================
+    gpr_idx(*<operand list>*)            Enable indexing for the specified *operands*
                                          and disable it for the rest.
-                                         *Operands* is a comma-separated list of
+                                         *Operand list* is a comma-separated list of
                                          values which may include:
 
-                                         * "SRC0" - enable *src0* indexing.
+                                         * SRC0 - enable *src0* indexing.
 
-                                         * "SRC1" - enable *src1* indexing.
+                                         * SRC1 - enable *src1* indexing.
 
-                                         * "SRC2" - enable *src2* indexing.
+                                         * SRC2 - enable *src2* indexing.
 
-                                         * "DST"  - enable *dst* indexing.
+                                         * DST  - enable *dst* indexing.
 
                                          Each of these values may be specified only
                                          once.
 
-                                         *Operands* list may be empty; this syntax
+                                         *Operand list* may be empty; this syntax
                                          disables indexing for all operands.
-    ==================================== ===========================================
+    ==================================== =============================================
 
 Examples:
 

@@ -13,6 +13,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/InitializePasses.h"
@@ -53,22 +55,22 @@ bool Localizer::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
   MachineInstr &MIUse = *MOUse.getParent();
   InsertMBB = MIUse.getParent();
   if (MIUse.isPHI())
-    InsertMBB = MIUse.getOperand(MIUse.getOperandNo(&MOUse) + 1).getMBB();
+    InsertMBB = MIUse.getOperand(MOUse.getOperandNo() + 1).getMBB();
   return InsertMBB == Def.getParent();
 }
 
-bool Localizer::isNonUniquePhiValue(MachineOperand &Op) const {
-  MachineInstr *MI = Op.getParent();
-  if (!MI->isPHI())
-    return false;
+unsigned Localizer::getNumPhiUses(MachineOperand &Op) const {
+  auto *MI = dyn_cast<GPhi>(&*Op.getParent());
+  if (!MI)
+    return 0;
 
   Register SrcReg = Op.getReg();
-  for (unsigned Idx = 1; Idx < MI->getNumOperands(); Idx += 2) {
-    auto &MO = MI->getOperand(Idx);
-    if (&MO != &Op && MO.isReg() && MO.getReg() == SrcReg)
-      return true;
+  unsigned NumUses = 0;
+  for (unsigned I = 0, NumVals = MI->getNumIncomingValues(); I < NumVals; ++I) {
+    if (MI->getIncomingValue(I) == SrcReg)
+      ++NumUses;
   }
-  return false;
+  return NumUses;
 }
 
 bool Localizer::localizeInterBlock(MachineFunction &MF,
@@ -92,14 +94,13 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
     // Check if all the users of MI are local.
     // We are going to invalidation the list of use operands, so we
     // can't use range iterator.
-    for (auto MOIt = MRI->use_begin(Reg), MOItEnd = MRI->use_end();
-         MOIt != MOItEnd;) {
-      MachineOperand &MOUse = *MOIt++;
+    for (MachineOperand &MOUse :
+         llvm::make_early_inc_range(MRI->use_operands(Reg))) {
       // Check if the use is already local.
       MachineBasicBlock *InsertMBB;
       LLVM_DEBUG(MachineInstr &MIUse = *MOUse.getParent();
                  dbgs() << "Checking use: " << MIUse
-                        << " #Opd: " << MIUse.getOperandNo(&MOUse) << '\n');
+                        << " #Opd: " << MOUse.getOperandNo() << '\n');
       if (isLocalUse(MOUse, MI, InsertMBB)) {
         // Even if we're in the same block, if the block is very large we could
         // still have many long live ranges. Try to do intra-block localization
@@ -108,11 +109,12 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
         continue;
       }
 
-      // If the use is a phi operand that's not unique, don't try to localize.
-      // If we do, we can cause unnecessary instruction bloat by duplicating
-      // into each predecessor block, when the existing one is sufficient and
-      // allows for easier optimization later.
-      if (isNonUniquePhiValue(MOUse))
+      // PHIs look like a single user but can use the same register in multiple
+      // edges, causing remat into each predecessor. Allow this to a certain
+      // extent.
+      unsigned NumPhiUses = getNumPhiUses(MOUse);
+      const unsigned PhiThreshold = 2; // FIXME: Tune this more.
+      if (NumPhiUses > PhiThreshold)
         continue;
 
       LLVM_DEBUG(dbgs() << "Fixing non-local use\n");
@@ -125,14 +127,13 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
         LocalizedInstrs.insert(LocalizedMI);
         MachineInstr &UseMI = *MOUse.getParent();
         if (MRI->hasOneUse(Reg) && !UseMI.isPHI())
-          InsertMBB->insert(InsertMBB->SkipPHIsAndLabels(UseMI), LocalizedMI);
+          InsertMBB->insert(UseMI, LocalizedMI);
         else
           InsertMBB->insert(InsertMBB->SkipPHIsAndLabels(InsertMBB->begin()),
                             LocalizedMI);
 
         // Set a new register for the definition.
-        Register NewReg = MRI->createGenericVirtualRegister(MRI->getType(Reg));
-        MRI->setRegClassOrRegBank(NewReg, MRI->getRegClassOrRegBank(Reg));
+        Register NewReg = MRI->cloneVirtualRegister(Reg);
         LocalizedMI->getOperand(0).setReg(NewReg);
         NewVRegIt =
             MBBWithLocalDef.insert(std::make_pair(MBBAndReg, NewReg)).first;
@@ -165,22 +166,37 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
       if (!UseMI.isPHI())
         Users.insert(&UseMI);
     }
-    // If all the users were PHIs then they're not going to be in our block,
-    // don't try to move this instruction.
-    if (Users.empty())
-      continue;
-
     MachineBasicBlock::iterator II(MI);
-    ++II;
-    while (II != MBB.end() && !Users.count(&*II))
+    // If all the users were PHIs then they're not going to be in our block, we
+    // may still benefit from sinking, especially since the value might be live
+    // across a call.
+    if (Users.empty()) {
+      // Make sure we don't sink in between two terminator sequences by scanning
+      // forward, not backward.
+      II = MBB.getFirstTerminatorForward();
+      LLVM_DEBUG(dbgs() << "Only phi users: moving inst to end: " << *MI);
+    } else {
       ++II;
+      while (II != MBB.end() && !Users.count(&*II))
+        ++II;
+      assert(II != MBB.end() && "Didn't find the user in the MBB");
+      LLVM_DEBUG(dbgs() << "Intra-block: moving " << *MI << " before " << *II);
+    }
 
-    LLVM_DEBUG(dbgs() << "Intra-block: moving " << *MI << " before " << *&*II
-                      << "\n");
-    assert(II != MBB.end() && "Didn't find the user in the MBB");
     MI->removeFromParent();
     MBB.insert(II, MI);
     Changed = true;
+
+    // If the instruction (constant) being localized has single user, we can
+    // propagate debug location from user.
+    if (Users.size() == 1) {
+      const auto &DefDL = MI->getDebugLoc();
+      const auto &UserDL = (*Users.begin())->getDebugLoc();
+
+      if ((!DefDL || DefDL.getLine() == 0) && UserDL && UserDL.getLine() != 0) {
+        MI->setDebugLoc(UserDL);
+      }
+    }
   }
   return Changed;
 }

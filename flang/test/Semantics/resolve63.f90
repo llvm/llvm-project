@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Invalid operand types when user-defined operator is available
 module m1
   type :: t
@@ -58,15 +58,15 @@ contains
     l = z'fe' == r !OK
     l = cVar == z'fe' !OK
     l = z'fe' == cVar !OK
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types CHARACTER(KIND=1) and INTEGER(4)
+    !ERROR: Operands of .EQ. must have comparable types; have CHARACTER(KIND=1) and INTEGER(4)
     l = charVar == z'fe'
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types INTEGER(4) and CHARACTER(KIND=1)
+    !ERROR: Operands of .EQ. must have comparable types; have INTEGER(4) and CHARACTER(KIND=1)
     l = z'fe' == charVar
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types LOGICAL(4) and INTEGER(4)
-    l = l == z'fe' !OK
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types INTEGER(4) and LOGICAL(4)
-    l = z'fe' == l !OK
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types TYPE(t) and REAL(4)
+    !ERROR: Operands of .EQ. must have comparable types; have LOGICAL(4) and INTEGER(4)
+    l = l == z'fe'
+    !ERROR: Operands of .EQ. must have comparable types; have INTEGER(4) and LOGICAL(4)
+    l = z'fe' == l
+    !ERROR: Operands of .EQ. must have comparable types; have TYPE(t) and REAL(4)
     l = x == r
 
     lVar = z'a' == b'1010' !OK
@@ -158,7 +158,7 @@ module m3
     end
   end interface
 contains
-  subroutine s1(x, y) 
+  subroutine s1(x, y)
     logical :: x
     integer :: y
     integer, pointer :: px
@@ -172,17 +172,17 @@ contains
     y = -z'1'
     !ERROR: Operands of + must be numeric; have LOGICAL(4) and untyped
     y = x + z'1'
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A NULL() pointer is not allowed as an operand here
     l = x /= null()
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A NULL() pointer is not allowed as a relational operand
     l = null(px) /= null(px)
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A NULL() pointer is not allowed as an operand here
     l = x /= null(px)
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A NULL() pointer is not allowed as an operand here
     l = px /= null()
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A NULL() pointer is not allowed as a relational operand
     l = px /= null(px)
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A NULL() pointer is not allowed as an operand here
     l = null() /= null()
   end
 end
@@ -265,9 +265,115 @@ contains
     i = x + y
     i = x + i
     i = y + i
-    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types TYPE(t2) and TYPE(t1)
+    !ERROR: Operands of + must be numeric; have CLASS(t2) and CLASS(t1)
     i = y + x
-    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types INTEGER(4) and TYPE(t1)
+    !ERROR: Operands of + must be numeric; have INTEGER(4) and CLASS(t1)
     i = i + x
   end
 end
+
+! Some cases where NULL is acceptable - ensure no false errors
+module m7
+  implicit none
+  type :: t1
+   contains
+    procedure :: s1
+    generic :: operator(/) => s1
+  end type
+  interface operator(-)
+    module procedure s2
+  end interface
+ contains
+  integer function s1(x, y)
+    class(t1), intent(in) :: x
+    class(t1), intent(in), pointer :: y
+    s1 = 1
+  end
+  integer function s2(x, y)
+    type(t1), intent(in), pointer :: x, y
+    s2 = 2
+  end
+  subroutine test
+    integer :: j
+    type(t1), pointer :: x1
+    allocate(x1)
+    ! These cases are fine.
+    j = x1 - x1
+    j = x1 - null(mold=x1)
+    j = null(mold=x1) - null(mold=x1)
+    j = null(mold=x1) - x1
+    j = x1 / x1
+    j = x1 / null(mold=x1)
+    j = null() - null(mold=x1)
+    j = null(mold=x1) - null()
+    j = null() - null()
+    !ERROR: A NULL() pointer is not allowed as an operand here
+    j = null() / null(mold=x1)
+    !ERROR: A NULL() pointer is not allowed as an operand here
+    j = null(mold=x1) / null()
+    !ERROR: A NULL() pointer is not allowed as an operand here
+    j = null() / null()
+  end
+end
+
+! 16.9.144(6)
+module m8
+  interface generic
+    procedure s1, s2
+  end interface
+ contains
+  subroutine s1(ip1, rp1)
+    integer, pointer, intent(in) :: ip1
+    real, pointer, intent(in) :: rp1
+  end subroutine
+  subroutine s2(rp2, ip2)
+    real, pointer, intent(in) :: rp2
+    integer, pointer, intent(in) :: ip2
+  end subroutine
+  subroutine test
+    integer, pointer :: ip
+    real, pointer :: rp
+    call generic(ip, rp) ! ok
+    call generic(ip, null()) ! ok
+    call generic(rp, null()) ! ok
+    call generic(null(), rp) ! ok
+    call generic(null(), ip) ! ok
+    call generic(null(mold=ip), null()) ! ok
+    call generic(null(), null(mold=ip)) ! ok
+    !ERROR: The actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call generic(null(), null())
+  end subroutine
+end
+
+module m9
+  interface generic
+    procedure s1, s2
+  end interface
+ contains
+  subroutine s1(jf)
+    procedure(integer) :: jf
+  end subroutine
+  subroutine s2(af)
+    procedure(real) :: af
+  end subroutine
+  subroutine test
+    external underspecified
+    !ERROR: The actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call generic(underspecified)
+  end subroutine
+end module
+
+! Ensure no bogus errors for assignments to CLASS(*) allocatable
+module m10
+  type :: t1
+    integer :: n
+  end type
+ contains
+  subroutine test
+    class(*), allocatable :: poly
+    poly = 1
+    poly = 3.14159
+    poly = 'Il faut imaginer Sisyphe heureux'
+    poly = t1(1)
+  end subroutine
+end module

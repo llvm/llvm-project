@@ -1,4 +1,4 @@
-//===--------------------- inherited_exception.cpp ------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,18 +26,10 @@
 
 // UNSUPPORTED: no-exceptions
 
-// FIXME: GCC doesn't allow turning off the warning for exceptions being caught
-//        by earlier handlers, which this test is exercising. We have to disable
-//        warnings altogether to remove the error.
-//        See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97675.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-error
-
-// Clang emits  warnings about exceptions of type 'Child' being caught by
-// an earlier handler of type 'Base'. Congrats clang, you've just
-// diagnosed the behavior under test.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wexceptions"
-#endif
+// Compilers emit warnings about exceptions of type 'Child' being caught by
+// an earlier handler of type 'Base'. Congrats, you've just diagnosed the
+// behavior under test.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-exceptions
 
 #include <assert.h>
 

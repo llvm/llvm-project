@@ -14,6 +14,9 @@ if(LLVM_BUILD_LLVM_DYLIB)
   if(MSVC)
     message(FATAL_ERROR "Generating libLLVM is not supported on MSVC")
   endif()
+  if(ZOS)
+    message(FATAL_ERROR "Generating libLLVM is not supported on z/OS")
+  endif()
 
   llvm_map_components_to_libnames(LIB_NAMES ${LLVM_DYLIB_COMPONENTS})
 
@@ -30,16 +33,18 @@ if(LLVM_BUILD_LLVM_DYLIB)
   if (LLVM_LINK_LLVM_DYLIB)
     set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
   endif()
-  add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
+  if (WIN32)
+    add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
+  else()
+    add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB OUTPUT_NAME LLVM ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
+    # Add symlink for backwards compatibility with old library name
+    llvm_install_library_symlink(LLVM-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX} $<TARGET_FILE_NAME:LLVM> SHARED FULL_DEST COMPONENT LLVM)
+  endif()
 
   list(REMOVE_DUPLICATES LIB_NAMES)
-  if(("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux") OR (MINGW) OR (HAIKU)
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "GNU")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "DragonFly")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")) # FIXME: It should be "GNU ld for elf"
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+    set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
+  else()
     configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
     ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
@@ -50,16 +55,20 @@ if(LLVM_BUILD_LLVM_DYLIB)
       # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
       set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
     endif()
-    # Optimize function calls for default visibility definitions to avoid PLT and
-    # reduce dynamic relocations.
-    # Note: for -fno-pic default, the address of a function may be different from
-    # inside and outside libLLVM.so.
-    target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
-  elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
-    set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
+    if (NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
+      # Optimize function calls for default visibility definitions to avoid PLT and
+      # reduce dynamic relocations.
+      # Note: for -fno-pic default, the address of a function may be different from
+      # inside and outside libLLVM.so.
+      target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
+    endif()
   endif()
 
   target_link_libraries(LLVM PRIVATE ${LIB_NAMES})
+
+  if(LLVM_ENABLE_THREADS AND NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
+    target_link_libraries(LLVM PUBLIC atomic)
+  endif()
 
   if (APPLE)
     set_property(TARGET LLVM APPEND_STRING PROPERTY
@@ -84,9 +93,9 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND NOT MSVC)
   # To get the export list for a single llvm library:
   # nm ${LIB_PATH} | awk "/T _LLVM/ { print $3 }" | sort -u | sed -e "s/^_//g" > ${LIB_PATH}.exports
 
-  set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_BINARY_DIR}/libllvm-c.exports)
+  set(LLVM_EXPORTED_SYMBOL_FILE ${LLVM_BINARY_DIR}/libllvm-c.exports)
 
-  set(LIB_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+  set(LIB_DIR ${LLVM_LIBRARY_DIR})
   set(LIB_NAME ${LIB_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}LLVM)
   set(LIB_PATH ${LIB_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
   set(LIB_EXPORTS_PATH ${LIB_NAME}.exports)
@@ -122,7 +131,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   list(REMOVE_DUPLICATES LIB_NAMES)
 
   # The python script needs to know whether symbols are prefixed with underscores or not.
-  if(LLVM_HOST_TRIPLE STREQUAL "i686-pc-win32")
+  if(LLVM_HOST_TRIPLE MATCHES "i?86-.*win.*")
     set(GEN_UNDERSCORE "--underscore")
   else()
     set(GEN_UNDERSCORE "")
@@ -130,11 +139,11 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
 
   # Set this name here, not used in multi conf loop,
   # but add script will pick the right one.
-  set(LIBSFILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.args)
+  set(LIBSFILE ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.args)
 
   # Get the full name to the libs so the python script understands them.
   foreach(lib ${LIB_NAMES})
-    list(APPEND FULL_LIB_NAMES ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/${lib}.lib)
+    list(APPEND FULL_LIB_NAMES ${LLVM_LIBRARY_DIR}/${lib}.lib)
   endforeach()
 
   # Need to separate lib names with newlines.
@@ -148,7 +157,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
       # Write out the full lib names into file to be read by the python script.
       # One libsfile per build, the add_custom_command should expand
       # ${CMAKE_CFG_INTDIR} correctly and select the right one.
-      file(WRITE ${CMAKE_BINARY_DIR}/${BUILD_MODE}/libllvm-c.args "${PER_CONF_CONTENT}")
+      file(WRITE ${LLVM_BINARY_DIR}/${BUILD_MODE}/libllvm-c.args "${PER_CONF_CONTENT}")
     endforeach()
   else()
     # Write out the full lib names into file to be read by the python script.
@@ -158,22 +167,11 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   # Generate the exports file dynamically.
   set(GEN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/gen-msvc-exports.py)
 
-  set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
-  if(NOT LLVM_NM)
-    if(CMAKE_CROSSCOMPILING)
-      build_native_tool(llvm-nm llvm_nm)
-      set(llvm_nm_target "${llvm_nm}")
-    else()
-      set(llvm_nm $<TARGET_FILE:llvm-nm>)
-      set(llvm_nm_target llvm-nm)
-    endif()
-  else()
-    set(llvm_nm ${LLVM_NM})
-    set(llvm_nm_target "")
-  endif()
+  set(LLVM_EXPORTED_SYMBOL_FILE ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
+  get_host_tool_path(llvm-nm LLVM_NM llvm_nm_exe llvm_nm_target)
 
   add_custom_command(OUTPUT ${LLVM_EXPORTED_SYMBOL_FILE}
-    COMMAND "${Python3_EXECUTABLE}" ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm "${llvm_nm}" -o ${LLVM_EXPORTED_SYMBOL_FILE}
+    COMMAND "${Python3_EXECUTABLE}" ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm "${llvm_nm_exe}" -o ${LLVM_EXPORTED_SYMBOL_FILE}
     DEPENDS ${LIB_NAMES} ${llvm_nm_target}
     COMMENT "Generating export list for LLVM-C"
     VERBATIM )

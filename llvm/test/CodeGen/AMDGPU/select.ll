@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 
 ; Normally icmp + select is optimized to select_cc, when this happens the
@@ -14,9 +14,9 @@
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XY
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XYZW
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XYZW
-define amdgpu_kernel void @select (i32 addrspace(1)* %i32out, float addrspace(1)* %f32out,
-                     <2 x i32> addrspace(1)* %v2i32out, <2 x float> addrspace(1)* %v2f32out,
-                     <4 x i32> addrspace(1)* %v4i32out, <4 x float> addrspace(1)* %v4f32out,
+define amdgpu_kernel void @select (ptr addrspace(1) %i32out, ptr addrspace(1) %f32out,
+                     ptr addrspace(1) %v2i32out, ptr addrspace(1) %v2f32out,
+                     ptr addrspace(1) %v4i32out, ptr addrspace(1) %v4f32out,
                      i32 %cond) {
 entry:
   br label %for
@@ -37,11 +37,11 @@ for:
   br i1 %0, label %body, label %done
 
 done:
-  store i32 %1, i32 addrspace(1)* %i32out
-  store float %2, float addrspace(1)* %f32out
-  store <2 x i32> %3, <2 x i32> addrspace(1)* %v2i32out
-  store <2 x float> %4, <2 x float> addrspace(1)* %v2f32out
-  store <4 x i32> %5, <4 x i32> addrspace(1)* %v4i32out
-  store <4 x float> %6, <4 x float> addrspace(1)* %v4f32out
+  store i32 %1, ptr addrspace(1) %i32out
+  store float %2, ptr addrspace(1) %f32out
+  store <2 x i32> %3, ptr addrspace(1) %v2i32out
+  store <2 x float> %4, ptr addrspace(1) %v2f32out
+  store <4 x i32> %5, ptr addrspace(1) %v4i32out
+  store <4 x float> %6, ptr addrspace(1) %v4f32out
   ret void
 }

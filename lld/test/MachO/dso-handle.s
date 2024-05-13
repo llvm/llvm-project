@@ -3,13 +3,13 @@
 
 # RUN: %lld -lSystem %t.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
-# CHECK:      leaq {{.*}} # 100000000
-# CHECK-NEXT: leaq {{.*}} # 100000000
+# CHECK:      leaq {{.*}} ## 0x100000000
+# CHECK-NEXT: leaq {{.*}} ## 0x100000000
 
 # RUN: %lld -dylib %t.o -o %t.dylib
 # RUN: llvm-objdump -d --no-show-raw-insn --rebase --section-headers %t.dylib | FileCheck %s --check-prefix=DYLIB-CHECK
-# DYLIB-CHECK:      leaq {{.*}} # 0
-# DYLIB-CHECK-NEXT: leaq {{.*}} # 0
+# DYLIB-CHECK:      leaq {{.*}} ## 0x0
+# DYLIB-CHECK-NEXT: leaq {{.*}} ## 0x0
 
 # DYLIB-LABEL: Sections:
 # DYLIB:       __data        00000008 [[#%x,DATA:]] DATA

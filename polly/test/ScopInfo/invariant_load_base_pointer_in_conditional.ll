@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Invariant Accesses:
 ; CHECK-NEXT: ReadAccess := [Reduction Type: NONE] [Scalar: 0]
@@ -15,7 +15,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %BP, i32* %A, i32 %N) {
+define void @f(ptr %BP, ptr %A, i32 %N) {
 bb:
   %tmp = sext i32 %N to i64
   br label %bb1
@@ -30,14 +30,14 @@ bb3:                                              ; preds = %bb1
   br i1 %tmp4, label %bb5, label %bb8
 
 bb5:                                              ; preds = %bb3
-  %tmp9a = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %inv = load i32, i32 *%BP
-  store i32 %inv, i32* %tmp9a, align 4
+  %tmp9a = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %inv = load i32, ptr %BP
+  store i32 %inv, ptr %tmp9a, align 4
   br label %bb10
 
 bb8:                                              ; preds = %bb3
-  %tmp9b = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 0, i32* %tmp9b, align 4
+  %tmp9b = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 0, ptr %tmp9b, align 4
   br label %bb10
 
 bb10:                                             ; preds = %bb8, %bb5

@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTIC_RESOLVER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTIC_RESOLVER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTICRESOLVER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTICRESOLVER_H
 
 #include "clang/AST/Decl.h"
-#include "llvm/ADT/STLExtras.h"
 #include <vector>
 
 namespace clang {
 
 class ASTContext;
 class CallExpr;
+class CXXBasePath;
 class CXXDependentScopeMemberExpr;
 class DeclarationName;
 class DependentScopeDeclRefExpr;
@@ -70,31 +70,13 @@ public:
   const Type *
   resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS) const;
 
-private:
-  ASTContext &Ctx;
-
-  // Given a tag-decl type and a member name, heuristically resolve the
-  // name to one or more declarations.
-  // The current heuristic is simply to look up the name in the primary
-  // template. This is a heuristic because the template could potentially
-  // have specializations that declare different members.
-  // Multiple declarations could be returned if the name is overloaded
-  // (e.g. an overloaded method in the primary template).
-  // This heuristic will give the desired answer in many cases, e.g.
-  // for a call to vector<T>::size().
-  std::vector<const NamedDecl *> resolveDependentMember(
-      const Type *T, DeclarationName Name,
-      llvm::function_ref<bool(const NamedDecl *ND)> Filter) const;
-
-  // Try to heuristically resolve the type of a possibly-dependent expression
-  // `E`.
-  const Type *resolveExprToType(const Expr *E) const;
-  std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E) const;
-
   // Given the type T of a dependent expression that appears of the LHS of a
   // "->", heuristically find a corresponding pointee type in whose scope we
   // could look up the name appearing on the RHS.
   const Type *getPointeeType(const Type *T) const;
+
+private:
+  ASTContext &Ctx;
 };
 
 } // namespace clangd

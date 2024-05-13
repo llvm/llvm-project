@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -14,6 +13,11 @@
 // charT translate_nocase(charT c) const;
 
 // REQUIRES: locale.en_US.UTF-8
+// XFAIL: win32-broken-utf8-wchar-ctype
+
+// Prior to Android O (API 26), in the "en_US.UTF-8" locale, towlower(L'\xDA')
+// returned 0xDA instead of 0xFA.
+// XFAIL: LIBCXX-ANDROID-FIXME && android-device-api={{21|22|23|24|25}}
 
 #include <regex>
 #include <cassert>
@@ -41,6 +45,7 @@ int main(int, char**)
         assert(t.translate_nocase('a') == 'a');
         assert(t.translate_nocase('1') == '1');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::regex_traits<wchar_t> t;
         assert(t.translate_nocase(L' ') == L' ');
@@ -61,6 +66,7 @@ int main(int, char**)
         assert(t.translate_nocase(L'\xDA') == L'\xFA');
         assert(t.translate_nocase(L'\xFA') == L'\xFA');
     }
+#endif
 
   return 0;
 }

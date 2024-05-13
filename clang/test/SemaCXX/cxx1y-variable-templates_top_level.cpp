@@ -8,10 +8,10 @@
   #define CONST constexpr
 #endif
 
-template<typename T> 
+template<typename T>
 T pi = T(3.1415926535897932385); // expected-note 2{{declared here}}
 
-template<typename T> 
+template<typename T>
 CONST T cpi = T(3.1415926535897932385); // expected-note {{template is declared here}}
 
 template<typename T> extern CONST T vc;
@@ -33,7 +33,7 @@ namespace use_in_top_level_funcs {
     int ipi = pi; // expected-error {{use of variable template 'pi' requires template arguments}}
     int icpi = cpi; // expected-error {{use of variable template 'cpi' requires template arguments}}
   }
-  
+
   template<typename T>
   T circular_area(T r) {
     return pi<T> * r * r;
@@ -79,13 +79,13 @@ namespace odr_tmpl {
 
     template<typename T> T v; // expected-note {{previous definition is here}}
     template<typename T> int v; // expected-error {{redefinition of 'v'}}
-    
+
     template<typename T> extern int v1; // expected-note {{previous template declaration is here}}
     template<int I> int v1;      // expected-error {{template parameter has a different kind in template redeclaration}}
   }
   namespace pvt_use {
     template<typename T> T v;
-    v = 10;  // expected-error {{C++ requires a type specifier for all declarations}}
+    v = 10;  // expected-error {{a type specifier is required for all declarations}}
   }
 
   namespace pvt_diff_params {
@@ -121,36 +121,36 @@ namespace odr_tmpl {
     template<typename T> extern auto v4;   // expected-error {{declaration of variable 'v4' with deduced type 'auto' requires an initializer}}
   }
 #endif
-  
+
 }
 
 namespace explicit_instantiation {
-  template<typename T> 
+  template<typename T>
   T pi0a = T(3.1415926535897932385);  // expected-note {{variable template 'pi0a' declared here}}
   template float pi0a<int>; // expected-error {{type 'float' of explicit instantiation of 'pi0a' does not match expected type 'int'}}
 
-  template<typename T> 
+  template<typename T>
   T pi0b = T(3.1415926535897932385);  // expected-note {{variable template 'pi0b' declared here}}
   template CONST int pi0b<int>; // expected-error {{type 'const int' of explicit instantiation of 'pi0b' does not match expected type 'int'}}
 
-  template<typename T> 
+  template<typename T>
   T pi0c = T(3.1415926535897932385);  // expected-note {{variable template 'pi0c' declared here}}
   template int pi0c<const int>;  // expected-error {{type 'int' of explicit instantiation of 'pi0c' does not match expected type 'const int'}}
 
-  template<typename T> 
+  template<typename T>
   T pi0 = T(3.1415926535897932385);
   template int pi0<int>;   // expected-note {{previous explicit instantiation is here}}
   template int pi0<int>;   // expected-error {{duplicate explicit instantiation of 'pi0<int>'}}
 
-  template<typename T> 
+  template<typename T>
   CONST T pi1a = T(3.1415926535897932385);  // expected-note {{variable template 'pi1a' declared here}}
   template int pi1a<int>; // expected-error {{type 'int' of explicit instantiation of 'pi1a' does not match expected type 'const int'}}
 
-  template<typename T> 
+  template<typename T>
   CONST T pi1b = T(3.1415926535897932385);  // expected-note {{variable template 'pi1b' declared here}}
   template int pi1b<const int>;  // expected-error {{type 'int' of explicit instantiation of 'pi1b' does not match expected type 'const const int'}}
 
-  template<typename T> 
+  template<typename T>
   CONST T pi1 = T(3.1415926535897932385);
   template CONST int pi1<int>;   // expected-note {{previous explicit instantiation is here}}
   template CONST int pi1<int>;   // expected-error {{duplicate explicit instantiation of 'pi1<int>'}}
@@ -159,7 +159,7 @@ namespace explicit_instantiation {
   namespace auto_var {
     template<typename T> auto var0 = T();
     template auto var0<int>;    // expected-error {{'auto' variable template instantiation is not allowed}}
-    
+
     template<typename T> auto var = T();
     template int var<int>;
   }
@@ -187,7 +187,7 @@ namespace explicit_specialization {
 
     template<> CONST int pi2<int,int> = 4;
 
-#ifndef PRECXX11   
+#ifndef PRECXX11
     void foo() {
       static_assert(pi2<int,int> == 4, "");
       static_assert(pi2<float,int> == 2, "");
@@ -209,15 +209,15 @@ namespace explicit_specialization {
 
     template<typename T>
     CONST int pi2<int,T> = 3; // expected-note {{partial specialization matches [with T = int]}}
-    
+
     void foo() {
       int a = pi2<int,int>;  // expected-error {{ambiguous partial specializations of 'pi2<int, int>'}}
     }
   }
-  
+
   namespace type_changes {
 
-    template<typename T> 
+    template<typename T>
     T pi0 = T(3.1415926535897932385);
 
     template<> float pi0<int> = 10;
@@ -252,15 +252,15 @@ namespace explicit_specialization {
 #endif
 
 
-    template<typename T> 
+    template<typename T>
     CONST T pi1 = T(3.1415926535897932385);
 
     template<> CONST int pi1<int> = 10;   // expected-note {{previous definition is here}}
     template<> CONST int pi1<int> = 10;   // expected-error {{redefinition of 'pi1<int>'}}
   }
-  
+
   namespace before_instantiation {
-    template<typename T> 
+    template<typename T>
     T pi0 = T(3.1415926535897932385);   // expected-note {{variable template 'pi0' declared here}}
 
     template<> int pi0<int> = 10; // expected-note 2{{previous template specialization is here}}
@@ -274,7 +274,7 @@ namespace explicit_specialization {
     template CONST int pi2<int,int>;
   }
   namespace after_instantiation {
-    template<typename T> 
+    template<typename T>
     T pi0 = T(3.1415926535897932385);
 
     template int pi0<int>;   // expected-note 2{{explicit instantiation first required here}}
@@ -304,11 +304,11 @@ namespace explicit_specialization {
     }
   }
 #endif
-  
+
   namespace extern_var {
     // TODO:
   }
-  
+
   namespace diff_type {
     // TODO:
     template<typename T> T* var = new T();
@@ -343,7 +343,7 @@ namespace arrays {
 
   float f = 10.5;
   template<> float* arr<float> = &f;
-  
+
   void bar() {
     int *iarr = arr<int>;
     iarr[0] = 1;
@@ -357,48 +357,48 @@ namespace arrays {
 #endif
 
 namespace nested {
-  
+
   namespace n0a {
-    template<typename T> 
+    template<typename T>
     T pi0a = T(3.1415926535897932385);
   }
-  
+
   using namespace n0a;
   int i0a = pi0a<int>;
-  
+
   template float pi0a<float>;
   float f0a = pi0a<float>;
-  
+
   template<> double pi0a<double> = 5.2;
   double d0a = pi0a<double>;
 
   namespace n0b {
-    template<typename T> 
+    template<typename T>
     T pi0b = T(3.1415926535897932385);
   }
-  
+
   int i0b = n0b::pi0b<int>;
-  
+
   template float n0b::pi0b<float>;
   float f0b = n0b::pi0b<float>;
-  
+
   template<> double n0b::pi0b<double> = 5.2;
   double d0b = n0b::pi0b<double>;
-  
+
   namespace n1 {
-    template<typename T> 
+    template<typename T>
     T pi1a = T(3.1415926535897932385); // expected-note {{explicitly specialized declaration is here}}
 #ifndef PRECXX11
 // expected-note@-2 {{explicit instantiation refers here}}
 #endif
 
-    template<typename T> 
+    template<typename T>
     T pi1b = T(3.1415926535897932385); // expected-note {{explicitly specialized declaration is here}}
 #ifndef PRECXX11
 // expected-note@-2 {{explicit instantiation refers here}}
 #endif
   }
-  
+
   namespace use_n1a {
     using namespace n1;
     int i1 = pi1a<int>;
@@ -408,20 +408,20 @@ namespace nested {
 // expected-error@-2 {{explicit instantiation of 'pi1a<float>' not in a namespace enclosing 'n1'}}
 #endif
     float f1 = pi1a<float>;
-    
+
     template<> double pi1a<double> = 5.2; // expected-error {{not in a namespace enclosing 'n1'}}
     double d1 = pi1a<double>;
   }
-  
+
   namespace use_n1b {
     int i1 = n1::pi1b<int>;
-    
+
     template float n1::pi1b<float>;
 #ifndef PRECXX11
 // expected-error@-2 {{explicit instantiation of 'pi1b<float>' not in a namespace enclosing 'n1'}}
 #endif
     float f1 = n1::pi1b<float>;
-    
+
     template<> double n1::pi1b<double> = 5.2;  // expected-error {{not in a namespace enclosing 'n1'}}
     double d1 = n1::pi1b<double>;
   }
@@ -432,7 +432,7 @@ namespace nested_name {
   a<int>::b c; // expected-error {{qualified name refers into a specialization of variable template 'a'}}
 
   class a<int> {}; // expected-error {{identifier followed by '<' indicates a class template specialization but 'a' refers to a variable template}}
-  enum a<int> {}; // expected-error {{expected identifier or '{'}} expected-warning {{does not declare anything}}
+  enum a<int> {}; // expected-error {{expected identifier or '{'}}
 }
 
 namespace PR18530 {
@@ -451,7 +451,7 @@ namespace PR19169 {
   template <typename T> int* f();
   template <typename T> void f();
   template<> int f<double>; // expected-error {{no variable template matches specialization; did you mean to use 'f' as function template instead?}}
-  
+
   template <typename T> void g();
   template<> int g<double>; // expected-error {{no variable template matches specialization; did you mean to use 'g' as function template instead?}}
 }

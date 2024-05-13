@@ -1,4 +1,4 @@
-//===--- TransGCAttrs.cpp - Transformations to ARC mode --------------------===//
+//===--- TransGCAttrs.cpp - Transformations to ARC mode -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,7 +46,7 @@ public:
     if (!D || D->isImplicit())
       return true;
 
-    SaveAndRestore<bool> Save(FullyMigratable, isMigratable(D));
+    SaveAndRestore Save(FullyMigratable, isMigratable(D));
 
     if (ObjCPropertyDecl *PropD = dyn_cast<ObjCPropertyDecl>(D)) {
       lookForAttribute(PropD, PropD->getTypeSourceInfo());
@@ -158,7 +158,7 @@ public:
     if (!D)
       return false;
 
-    for (auto I : D->redecls())
+    for (auto *I : D->redecls())
       if (!isInMainFile(I->getLocation()))
         return false;
 

@@ -2,6 +2,10 @@
 ; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
 ; RUN: llc -O0  -dwarf-version=5 -debugger-tune=gdb -march=x86-64 -filetype=obj < %s \
 ; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
+; RUN: llc -force-instr-ref-livedebugvalues=1 -O0  -dwarf-version=5 -debugger-tune=lldb -march=x86-64 -filetype=obj < %s \
+; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
+; RUN: llc -force-instr-ref-livedebugvalues=1 -O0  -dwarf-version=5 -debugger-tune=gdb -march=x86-64 -filetype=obj < %s \
+; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
 
 ; The call-site-params are created iff corresponding DISubprogram contains
 ; the AllCallsDescribed DIFlag.
@@ -21,39 +25,39 @@ entry:
   %y.addr = alloca i32, align 4
   %u = alloca i32, align 4
   %a = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !11, metadata !DIExpression()), !dbg !12
-  store i32 %y, i32* %y.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %y.addr, metadata !13, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.declare(metadata i32* %u, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* %x.addr, align 4, !dbg !16
-  %1 = load i32, i32* %y.addr, align 4, !dbg !16
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !11, metadata !DIExpression()), !dbg !12
+  store i32 %y, ptr %y.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %y.addr, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %u, metadata !15, metadata !DIExpression()), !dbg !16
+  %0 = load i32, ptr %x.addr, align 4, !dbg !16
+  %1 = load i32, ptr %y.addr, align 4, !dbg !16
   %add = add nsw i32 %0, %1, !dbg !16
-  store i32 %add, i32* %u, align 4, !dbg !16
-  %2 = load i32, i32* %x.addr, align 4, !dbg !17
+  store i32 %add, ptr %u, align 4, !dbg !16
+  %2 = load i32, ptr %x.addr, align 4, !dbg !17
   %cmp = icmp sgt i32 %2, 1, !dbg !17
   br i1 %cmp, label %if.then, label %if.else, !dbg !16
 
 if.then:                                          ; preds = %entry
-  %3 = load i32, i32* %u, align 4, !dbg !17
+  %3 = load i32, ptr %u, align 4, !dbg !17
   %add1 = add nsw i32 %3, 1, !dbg !17
-  store i32 %add1, i32* %u, align 4, !dbg !17
+  store i32 %add1, ptr %u, align 4, !dbg !17
   br label %if.end, !dbg !17
 
 if.else:                                          ; preds = %entry
-  %4 = load i32, i32* %u, align 4, !dbg !17
+  %4 = load i32, ptr %u, align 4, !dbg !17
   %add2 = add nsw i32 %4, 2, !dbg !17
-  store i32 %add2, i32* %u, align 4, !dbg !17
+  store i32 %add2, ptr %u, align 4, !dbg !17
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !19, metadata !DIExpression()), !dbg !16
-  store i32 7, i32* %a, align 4, !dbg !16
-  %5 = load i32, i32* %a, align 4, !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !19, metadata !DIExpression()), !dbg !16
+  store i32 7, ptr %a, align 4, !dbg !16
+  %5 = load i32, ptr %a, align 4, !dbg !16
   call void @fn2(i32 %5), !dbg !16
-  %6 = load i32, i32* %u, align 4, !dbg !16
+  %6 = load i32, ptr %u, align 4, !dbg !16
   %dec = add nsw i32 %6, -1, !dbg !16
-  store i32 %dec, i32* %u, align 4, !dbg !16
+  store i32 %dec, ptr %u, align 4, !dbg !16
   ret void, !dbg !16
 }
 

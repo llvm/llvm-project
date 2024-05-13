@@ -10,11 +10,11 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROIDREMOTEGDBSERVER_H
 
 #include <map>
+#include <optional>
 #include <utility>
 
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
 
-#include "llvm/ADT/Optional.h"
 
 #include "AdbClient.h"
 
@@ -24,7 +24,7 @@ namespace platform_android {
 class PlatformAndroidRemoteGDBServer
     : public platform_gdb_server::PlatformRemoteGDBServer {
 public:
-  PlatformAndroidRemoteGDBServer();
+  PlatformAndroidRemoteGDBServer() = default;
 
   ~PlatformAndroidRemoteGDBServer() override;
 
@@ -41,7 +41,7 @@ public:
 protected:
   std::string m_device_id;
   std::map<lldb::pid_t, uint16_t> m_port_forwards;
-  llvm::Optional<AdbClient::UnixSocketNamespace> m_socket_namespace;
+  std::optional<AdbClient::UnixSocketNamespace> m_socket_namespace;
 
   bool LaunchGDBServer(lldb::pid_t &pid, std::string &connect_url) override;
 
@@ -49,7 +49,8 @@ protected:
 
   void DeleteForwardPort(lldb::pid_t pid);
 
-  Status MakeConnectURL(const lldb::pid_t pid, const uint16_t remote_port,
+  Status MakeConnectURL(const lldb::pid_t pid, const uint16_t local_port,
+                        const uint16_t remote_port,
                         llvm::StringRef remote_socket_name,
                         std::string &connect_url);
 

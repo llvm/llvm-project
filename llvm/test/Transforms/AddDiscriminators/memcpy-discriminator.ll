@@ -1,4 +1,4 @@
-; RUN: opt < %s -add-discriminators -sroa -S | FileCheck %s
+; RUN: opt < %s -passes='add-discriminators,sroa' -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -67,14 +67,12 @@ cond.true:
 ; CHECK-DAG: ![[SCOPE]] = !DILexicalBlockFile({{.*}}, discriminator: 2)
 ; CHECK-DAG: ![[BR_LOC]] = !DILocation(line: 16, column: 16, scope: ![[SCOPE]])
 
-  %0 = bitcast { i64, i32 }* %g_b.coerce to i8*, !dbg !8
-  %1 = bitcast %struct.B* @g_b to i8*, !dbg !8
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 12, i1 false), !dbg !8
-  %2 = getelementptr inbounds { i64, i32 }, { i64, i32 }* %g_b.coerce, i32 0, i32 0, !dbg !8
-  %3 = load i64, i64* %2, align 4, !dbg !8
-  %4 = getelementptr inbounds { i64, i32 }, { i64, i32 }* %g_b.coerce, i32 0, i32 1, !dbg !8
-  %5 = load i32, i32* %4, align 4, !dbg !8
-  %call = call i32 @bar(i64 %3, i32 %5, i32 33), !dbg !8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %g_b.coerce, ptr align 4 @g_b, i64 12, i1 false), !dbg !8
+  %p1 = getelementptr inbounds { i64, i32 }, ptr %g_b.coerce, i32 0, i32 0, !dbg !8
+  %v1 = load i64, ptr %p1, align 4, !dbg !8
+  %p2 = getelementptr inbounds { i64, i32 }, ptr %g_b.coerce, i32 0, i32 1, !dbg !8
+  %v2 = load i32, ptr %p2, align 4, !dbg !8
+  %call = call i32 @bar(i64 %v1, i32 %v2, i32 33), !dbg !8
   br label %cond.end, !dbg !7
 
 cond.end:                                         ; preds = %entry, %cond.true
@@ -84,7 +82,7 @@ cond.end:                                         ; preds = %entry, %cond.true
 
 declare i32 @bar(i64, i32, i32)
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 
 attributes #0 = { noinline nounwind uwtable }
 attributes #1 = { argmemonly nounwind }

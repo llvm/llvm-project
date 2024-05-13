@@ -12,6 +12,7 @@
 #include "gtest/gtest.h"
 
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -23,6 +24,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -31,7 +33,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -94,7 +95,7 @@ public:
 
 TEST_F(BasicX86FileAnalysisTest, BasicDisassemblyTraversalTest) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x90,                   // 0: nop
@@ -204,7 +205,7 @@ TEST_F(BasicX86FileAnalysisTest, BasicDisassemblyTraversalTest) {
 
 TEST_F(BasicX86FileAnalysisTest, PrevAndNextFromBadInst) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x90, // 0: nop
@@ -227,7 +228,7 @@ TEST_F(BasicX86FileAnalysisTest, PrevAndNextFromBadInst) {
 
 TEST_F(BasicX86FileAnalysisTest, CFITrapTest) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x90,                   // 0: nop
@@ -262,7 +263,7 @@ TEST_F(BasicX86FileAnalysisTest, CFITrapTest) {
 
 TEST_F(BasicX86FileAnalysisTest, FallThroughTest) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x90,                         // 0: nop
@@ -302,7 +303,7 @@ TEST_F(BasicX86FileAnalysisTest, FallThroughTest) {
 
 TEST_F(BasicX86FileAnalysisTest, DefiniteNextInstructionTest) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x90,                         // 0: nop
@@ -392,7 +393,7 @@ TEST_F(BasicX86FileAnalysisTest, DefiniteNextInstructionTest) {
 
 TEST_F(BasicX86FileAnalysisTest, ControlFlowXRefsTest) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x90,                         // 0: nop
@@ -497,7 +498,7 @@ TEST_F(BasicX86FileAnalysisTest, ControlFlowXRefsTest) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionInvalidTargets) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x90,       // 0: nop
@@ -522,7 +523,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionInvalidTargets) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionBasicFallthroughToUd2) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x02, // 0: jne 4 [+2]
@@ -538,7 +539,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionBasicFallthroughToUd2) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionBasicJumpToUd2) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x02, // 0: jne 4 [+2]
@@ -554,7 +555,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionBasicJumpToUd2) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualPathUd2) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x03, // 0: jne 5 [+3]
@@ -573,7 +574,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualPathUd2) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualPathSingleUd2) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x05, // 0: jne 7 [+5]
@@ -591,7 +592,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualPathSingleUd2) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualFailLimitUpwards) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x06, // 0: jne 8 [+6]
@@ -617,7 +618,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualFailLimitUpwards) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualFailLimitDownwards) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x02, // 0: jne 4 [+2]
@@ -642,7 +643,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualFailLimitDownwards) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionGoodAndBadPaths) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0xeb, 0x02, // 0: jmp 4 [+2]
@@ -659,7 +660,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionGoodAndBadPaths) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionWithUnconditionalJumpInFallthrough) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x04, // 0: jne 6 [+4]
@@ -676,7 +677,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionWithUnconditionalJumpInFallthrough
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionComplexExample) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   // See unittests/GraphBuilder.cpp::BuildFlowGraphComplexExample for this
   // graph.
   Analysis.parseSectionContents(
@@ -706,6 +707,8 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionComplexExample) {
 }
 
 TEST_F(BasicX86FileAnalysisTest, UndefSearchLengthOneTest) {
+  if (!SuccessfullyInitialised)
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x77, 0x0d,                   // 0x688118: ja 0x688127 [+12]
@@ -725,6 +728,8 @@ TEST_F(BasicX86FileAnalysisTest, UndefSearchLengthOneTest) {
 }
 
 TEST_F(BasicX86FileAnalysisTest, UndefSearchLengthOneTestFarAway) {
+  if (!SuccessfullyInitialised)
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x74, 0x73,                         // 0x7759eb: je 0x775a60
@@ -765,7 +770,7 @@ TEST_F(BasicX86FileAnalysisTest, UndefSearchLengthOneTestFarAway) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberSinglePathExplicit) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x02,                         // 0: jne 4 [+2]
@@ -782,7 +787,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberSinglePathExplicit) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberSinglePathExplicit2) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x02,             // 0: jne 4 [+2]
@@ -799,7 +804,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberSinglePathExplicit2) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberSinglePathImplicit) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x02,                   // 0: jne 4 [+2]
@@ -816,7 +821,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberSinglePathImplicit) {
 
 TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberDualPathImplicit) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x75, 0x04, // 0: jne 6 [+4]
@@ -835,7 +840,7 @@ TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberDualPathImplicit) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64BasicUnprotected) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x00, 0x01, 0x3f, 0xd6, // 0: blr x8
@@ -849,7 +854,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64BasicUnprotected) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64BasicProtected) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
@@ -865,7 +870,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64BasicProtected) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberBasic) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
@@ -882,7 +887,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberBasic) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberOneLoad) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
@@ -899,7 +904,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberOneLoad) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberLoadAddGood) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
@@ -917,7 +922,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberLoadAddGood) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberLoadAddBad) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
@@ -935,7 +940,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberLoadAddBad) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberLoadAddBad2) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
@@ -953,7 +958,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberLoadAddBad2) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberTwoLoads) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
@@ -971,7 +976,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberTwoLoads) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberUnrelatedSecondLoad) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
@@ -989,7 +994,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberUnrelatedSecondLoad) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberUnrelatedLoads) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
@@ -1007,7 +1012,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberUnrelatedLoads) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64GoodAndBadPaths) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0x03, 0x00, 0x00, 0x14, // 0: b 12
@@ -1024,7 +1029,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64GoodAndBadPaths) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64TwoPaths) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0xc9, 0x00, 0x00, 0x54, // 0: b.ls 24
@@ -1044,7 +1049,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64TwoPaths) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64TwoPathsBadLoad1) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0xe9, 0x00, 0x00, 0x54, // 0: b.ls 28
@@ -1065,7 +1070,7 @@ TEST_F(BasicAArch64FileAnalysisTest, AArch64TwoPathsBadLoad1) {
 
 TEST_F(BasicAArch64FileAnalysisTest, AArch64TwoPathsBadLoad2) {
   if (!SuccessfullyInitialised)
-    return;
+    GTEST_SKIP();
   Analysis.parseSectionContents(
       {
           0xe9, 0x00, 0x00, 0x54, // 0: b.ls 28

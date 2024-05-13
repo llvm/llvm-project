@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/frexp.h"
+#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/ManipulationFunctions.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, frexp, (double x, int *exp)) {
   return fputil::frexp(x, *exp);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

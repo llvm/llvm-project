@@ -49,7 +49,7 @@ typedef struct _GPR {
 #reg, alt, sizeof(((GPR *)nullptr)->reg), GPR_OFFSET(reg), eEncodingUint,  \
         eFormatHex,                                                            \
         {kind1, kind2, kind3, kind4, lldb_##reg##_x86_64 }, nullptr, nullptr,  \
-         nullptr, 0                                                            \
+        nullptr,                                                               \
   }
 
 typedef struct _FPReg {
@@ -80,7 +80,7 @@ typedef struct _FPReg {
         eEncodingUint, eFormatVectorOfUInt64,                                  \
         {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,      \
          LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                           \
-         nullptr, nullptr, nullptr, 0                                          \
+         nullptr, nullptr, nullptr,                                            \
   }
 
 // clang-format off
@@ -89,22 +89,22 @@ static RegisterInfo g_register_infos_x86_64[] = {
 //  ===========================  ==================    ================      =========================   ====================
     DEFINE_GPR(rax,    nullptr,  dwarf_rax_x86_64,     dwarf_rax_x86_64,     LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(rbx,    nullptr,  dwarf_rbx_x86_64,     dwarf_rbx_x86_64,     LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(rcx,    "arg4",   dwarf_rcx_x86_64,     dwarf_rcx_x86_64,     LLDB_REGNUM_GENERIC_ARG4,   LLDB_INVALID_REGNUM),
-    DEFINE_GPR(rdx,    "arg3",   dwarf_rdx_x86_64,     dwarf_rdx_x86_64,     LLDB_REGNUM_GENERIC_ARG3,   LLDB_INVALID_REGNUM),
-    DEFINE_GPR(rdi,    "arg1",   dwarf_rdi_x86_64,     dwarf_rdi_x86_64,     LLDB_REGNUM_GENERIC_ARG1,   LLDB_INVALID_REGNUM),
-    DEFINE_GPR(rsi,    "arg2",   dwarf_rsi_x86_64,     dwarf_rsi_x86_64,     LLDB_REGNUM_GENERIC_ARG2,   LLDB_INVALID_REGNUM),
-    DEFINE_GPR(rbp,    "fp",     dwarf_rbp_x86_64,     dwarf_rbp_x86_64,     LLDB_REGNUM_GENERIC_FP,     LLDB_INVALID_REGNUM),
-    DEFINE_GPR(rsp,    "sp",     dwarf_rsp_x86_64,     dwarf_rsp_x86_64,     LLDB_REGNUM_GENERIC_SP,     LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r8,     "arg5",   dwarf_r8_x86_64,      dwarf_r8_x86_64,      LLDB_REGNUM_GENERIC_ARG5,   LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r9,     "arg6",   dwarf_r9_x86_64,      dwarf_r9_x86_64,      LLDB_REGNUM_GENERIC_ARG6,   LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rcx,    nullptr,  dwarf_rcx_x86_64,     dwarf_rcx_x86_64,     LLDB_REGNUM_GENERIC_ARG4,   LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rdx,    nullptr,  dwarf_rdx_x86_64,     dwarf_rdx_x86_64,     LLDB_REGNUM_GENERIC_ARG3,   LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rdi,    nullptr,  dwarf_rdi_x86_64,     dwarf_rdi_x86_64,     LLDB_REGNUM_GENERIC_ARG1,   LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rsi,    nullptr,  dwarf_rsi_x86_64,     dwarf_rsi_x86_64,     LLDB_REGNUM_GENERIC_ARG2,   LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rbp,    nullptr,  dwarf_rbp_x86_64,     dwarf_rbp_x86_64,     LLDB_REGNUM_GENERIC_FP,     LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rsp,    nullptr,  dwarf_rsp_x86_64,     dwarf_rsp_x86_64,     LLDB_REGNUM_GENERIC_SP,     LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r8,     nullptr,  dwarf_r8_x86_64,      dwarf_r8_x86_64,      LLDB_REGNUM_GENERIC_ARG5,   LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r9,     nullptr,  dwarf_r9_x86_64,      dwarf_r9_x86_64,      LLDB_REGNUM_GENERIC_ARG6,   LLDB_INVALID_REGNUM),
     DEFINE_GPR(r10,    nullptr,  dwarf_r10_x86_64,     dwarf_r10_x86_64,     LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(r11,    nullptr,  dwarf_r11_x86_64,     dwarf_r11_x86_64,     LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(r12,    nullptr,  dwarf_r12_x86_64,     dwarf_r12_x86_64,     LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(r13,    nullptr,  dwarf_r13_x86_64,     dwarf_r13_x86_64,     LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(r14,    nullptr,  dwarf_r14_x86_64,     dwarf_r14_x86_64,     LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(r15,    nullptr,  dwarf_r15_x86_64,     dwarf_r15_x86_64,     LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(rip,    "pc",     dwarf_rip_x86_64,     dwarf_rip_x86_64,     LLDB_REGNUM_GENERIC_PC,     LLDB_INVALID_REGNUM),
-    DEFINE_GPR(rflags, "flags",  dwarf_rflags_x86_64,  dwarf_rflags_x86_64,  LLDB_REGNUM_GENERIC_FLAGS,  LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rip,    nullptr,  dwarf_rip_x86_64,     dwarf_rip_x86_64,     LLDB_REGNUM_GENERIC_PC,     LLDB_INVALID_REGNUM),
+    DEFINE_GPR(rflags, nullptr,  dwarf_rflags_x86_64,  dwarf_rflags_x86_64,  LLDB_REGNUM_GENERIC_FLAGS,  LLDB_INVALID_REGNUM),
     DEFINE_GPR(cs,     nullptr,  dwarf_cs_x86_64,      dwarf_cs_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(fs,     nullptr,  dwarf_fs_x86_64,      dwarf_fs_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(gs,     nullptr,  dwarf_gs_x86_64,      dwarf_gs_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
@@ -142,11 +142,11 @@ const RegisterInfo *RegisterContextWindows_x86_64::GetRegisterInfo() const {
 }
 
 uint32_t RegisterContextWindows_x86_64::GetRegisterCount() const {
-  return llvm::array_lengthof(g_register_infos_x86_64);
+  return std::size(g_register_infos_x86_64);
 }
 
 uint32_t RegisterContextWindows_x86_64::GetUserRegisterCount() const {
-  return llvm::array_lengthof(g_register_infos_x86_64);
+  return std::size(g_register_infos_x86_64);
 }
 
 size_t RegisterContextWindows_x86_64::GetGPRSize() const { return sizeof(GPR); }

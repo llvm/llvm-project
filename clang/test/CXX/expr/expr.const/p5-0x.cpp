@@ -15,7 +15,7 @@ private:
 template<int> struct X { };
 constexpr A a = 42;
 X<a> x;     // ok, unique conversion to int
-int ary[a]; // expected-error {{ambiguous conversion from type 'const std_example::A' to an integral or unscoped enumeration type}}
+int ary[a]; // expected-error {{ambiguous conversion from type 'const A' to an integral or unscoped enumeration type}}
 
 }
 

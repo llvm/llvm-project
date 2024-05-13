@@ -120,7 +120,7 @@ public:
   Loop *getLoop() const { return L; }
 
   /// Traverse the loop blocks and store the DFS result.
-  void perform(LoopInfo *LI);
+  void perform(const LoopInfo *LI);
 
   /// Return true if postorder numbers are assigned to all loop blocks.
   bool isComplete() const { return PostBlocks.size() == L->getNumBlocks(); }
@@ -177,7 +177,7 @@ public:
   LoopBlocksRPO(Loop *Container) : DFS(Container) {}
 
   /// Traverse the loop blocks and store the DFS result.
-  void perform(LoopInfo *LI) {
+  void perform(const LoopInfo *LI) {
     DFS.perform(LI);
   }
 
@@ -192,7 +192,7 @@ template<> class po_iterator_storage<LoopBlocksTraversal, true> {
 public:
   po_iterator_storage(LoopBlocksTraversal &lbs) : LBT(lbs) {}
   // These functions are defined below.
-  bool insertEdge(Optional<BasicBlock *> From, BasicBlock *To);
+  bool insertEdge(std::optional<BasicBlock *> From, BasicBlock *To);
   void finishPostorder(BasicBlock *BB);
 };
 
@@ -204,10 +204,10 @@ public:
 
 private:
   LoopBlocksDFS &DFS;
-  LoopInfo *LI;
+  const LoopInfo *LI;
 
 public:
-  LoopBlocksTraversal(LoopBlocksDFS &Storage, LoopInfo *LInfo) :
+  LoopBlocksTraversal(LoopBlocksDFS &Storage, const LoopInfo *LInfo) :
     DFS(Storage), LI(LInfo) {}
 
   /// Postorder traversal over the graph. This only needs to be done once.
@@ -245,7 +245,7 @@ public:
 };
 
 inline bool po_iterator_storage<LoopBlocksTraversal, true>::insertEdge(
-    Optional<BasicBlock *> From, BasicBlock *To) {
+    std::optional<BasicBlock *> From, BasicBlock *To) {
   return LBT.visitPreorder(To);
 }
 

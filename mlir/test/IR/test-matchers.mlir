@@ -1,13 +1,13 @@
-// RUN: mlir-opt %s -mlir-disable-threading=true -test-matchers -o /dev/null 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline="builtin.module(func.func(test-matchers))" -o /dev/null 2>&1 | FileCheck %s
 
-func @test1(%a: f32, %b: f32, %c: f32) {
-  %0 = addf %a, %b: f32
-  %1 = addf %a, %c: f32
-  %2 = addf %c, %b: f32
-  %3 = mulf %a, %2: f32
-  %4 = mulf %3, %1: f32
-  %5 = mulf %4, %4: f32
-  %6 = mulf %5, %5: f32
+func.func @test1(%a: f32, %b: f32, %c: f32) {
+  %0 = arith.addf %a, %b: f32
+  %1 = arith.addf %a, %c: f32
+  %2 = arith.addf %c, %b: f32
+  %3 = arith.mulf %a, %2: f32
+  %4 = arith.mulf %3, %1: f32
+  %5 = arith.mulf %4, %4: f32
+  %6 = arith.mulf %5, %5: f32
   return
 }
 
@@ -31,13 +31,24 @@ func @test1(%a: f32, %b: f32, %c: f32) {
 //       CHECK:   Pattern mul(mul(a, *), add(a, c)) matched 1 times
 //       CHECK:   Pattern mul(mul(a, *), add(c, b)) matched 0 times
 
-func @test2(%a: f32) -> f32 {
-  %0 = constant 1.0: f32
-  %1 = addf %a, %0: f32
-  %2 = mulf %a, %1: f32
+func.func @test2(%a: f32) -> f32 {
+  %0 = arith.constant 1.0: f32
+  %1 = arith.addf %a, %0: f32
+  %2 = arith.mulf %a, %1: f32
   return %2: f32
 }
 
 // CHECK-LABEL: test2
 //       CHECK:   Pattern add(add(a, constant), a) matched and bound constant to: 1.000000e+00
 //       CHECK:   Pattern add(add(a, constant), a) matched
+
+func.func @test3(%a: f32) -> f32 {
+  %0 = "test.name"() {value = 1.0 : f32} : () -> f32
+  %1 = arith.addf %a, %0: f32
+  %2 = arith.mulf %a, %1 fastmath<fast>: f32
+  return %2: f32
+}
+
+// CHECK-LABEL: test3
+//       CHECK:   Pattern mul(*, add(*, m_Op("test.name"))) matched
+//       CHECK:   Pattern m_Attr("fastmath") matched and bound value to: fast

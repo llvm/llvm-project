@@ -1,14 +1,14 @@
-; RUN: opt -verify-loop-info -irce -irce-print-range-checks -irce-print-changed-loops %s -S 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -passes=irce -irce-print-range-checks -irce-print-changed-loops %s -S 2>&1 | FileCheck %s
 ; RUN: opt -verify-loop-info -passes='require<branch-prob>,irce' -irce-print-range-checks -irce-print-changed-loops %s -S 2>&1 | FileCheck %s
 
 ; Make sure that we can pick up both range checks.
-define void @test_01(i32 *%arr, i32* %a_len_ptr, i32* %size_ptr) {
+define void @test_01(ptr %arr, ptr %a_len_ptr, ptr %size_ptr) {
 
 ; CHECK-LABEL: @test_01(
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
-  %size = load i32, i32* %size_ptr
+  %len = load i32, ptr %a_len_ptr, !range !0
+  %size = load i32, ptr %size_ptr
   %first_iter_check = icmp sle i32 %size, 0
   br i1 %first_iter_check, label %exit, label %loop
 
@@ -23,8 +23,8 @@ loop:
 
 backedge:
   %iv.next = add i32 %iv, 1
-  %arr_el_ptr = getelementptr i32, i32* %arr, i32 %iv
-  %el = load i32, i32* %arr_el_ptr
+  %arr_el_ptr = getelementptr i32, ptr %arr, i32 %iv
+  %el = load i32, ptr %arr_el_ptr
   %loopcond = icmp ne i32 %iv, %size
   br i1 %loopcond, label %loop, label %exit
 
@@ -36,13 +36,13 @@ out_of_bounds:
 }
 
 ; Same as test_01, unsigned predicates.
-define void @test_02(i32 *%arr, i32* %a_len_ptr, i32* %size_ptr) {
+define void @test_02(ptr %arr, ptr %a_len_ptr, ptr %size_ptr) {
 
 ; CHECK-LABEL: @test_02(
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
-  %size = load i32, i32* %size_ptr
+  %len = load i32, ptr %a_len_ptr, !range !0
+  %size = load i32, ptr %size_ptr
   %first_iter_check = icmp sle i32 %size, 0
   br i1 %first_iter_check, label %exit, label %loop
 
@@ -57,8 +57,8 @@ loop:
 
 backedge:
   %iv.next = add i32 %iv, 1
-  %arr_el_ptr = getelementptr i32, i32* %arr, i32 %iv
-  %el = load i32, i32* %arr_el_ptr
+  %arr_el_ptr = getelementptr i32, ptr %arr, i32 %iv
+  %el = load i32, ptr %arr_el_ptr
   %loopcond = icmp ne i32 %iv, %size
   br i1 %loopcond, label %loop, label %exit
 
@@ -69,13 +69,13 @@ out_of_bounds:
   ret void
 }
 
-define void @test_03(i32 *%arr, i32* %a_len_ptr, i32* %size_ptr) {
+define void @test_03(ptr %arr, ptr %a_len_ptr, ptr %size_ptr) {
 
 ; CHECK-LABEL: @test_03(
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
-  %size = load i32, i32* %size_ptr
+  %len = load i32, ptr %a_len_ptr, !range !0
+  %size = load i32, ptr %size_ptr
   %first_iter_check = icmp eq i32 %size, 0
   br i1 %first_iter_check, label %exit, label %loop
 
@@ -90,8 +90,8 @@ loop:
 
 backedge:
   %iv.next = add i32 %iv, 1
-  %arr_el_ptr = getelementptr i32, i32* %arr, i32 %iv
-  %el = load i32, i32* %arr_el_ptr
+  %arr_el_ptr = getelementptr i32, ptr %arr, i32 %iv
+  %el = load i32, ptr %arr_el_ptr
   %loopcond = icmp ne i32 %iv, %len
   br i1 %loopcond, label %loop, label %exit
 
@@ -102,13 +102,13 @@ out_of_bounds:
   ret void
 }
 
-define void @test_04(i32 *%arr, i32* %a_len_ptr, i32* %size_ptr) {
+define void @test_04(ptr %arr, ptr %a_len_ptr, ptr %size_ptr) {
 
 ; CHECK-LABEL: @test_04(
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
-  %size = load i32, i32* %size_ptr
+  %len = load i32, ptr %a_len_ptr, !range !0
+  %size = load i32, ptr %size_ptr
   %first_iter_check = icmp eq i32 %size, 0
   br i1 %first_iter_check, label %exit, label %loop
 
@@ -123,8 +123,8 @@ loop:
 
 backedge:
   %iv.next = add i32 %iv, 1
-  %arr_el_ptr = getelementptr i32, i32* %arr, i32 %iv
-  %el = load i32, i32* %arr_el_ptr
+  %arr_el_ptr = getelementptr i32, ptr %arr, i32 %iv
+  %el = load i32, ptr %arr_el_ptr
   %loopcond = icmp ne i32 %iv, %len
   br i1 %loopcond, label %loop, label %exit
 

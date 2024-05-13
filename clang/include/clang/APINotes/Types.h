@@ -10,10 +10,15 @@
 #define LLVM_CLANG_APINOTES_TYPES_H
 
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <climits>
+#include <optional>
 #include <vector>
+
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace clang {
 namespace api_notes {
@@ -50,16 +55,20 @@ public:
   std::string UnavailableMsg;
 
   /// Whether this entity is marked unavailable.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Unavailable : 1;
 
   /// Whether this entity is marked unavailable in Swift.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UnavailableInSwift : 1;
 
 private:
   /// Whether SwiftPrivate was specified.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftPrivateSpecified : 1;
 
   /// Whether this entity is considered "private" to a Swift overlay.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftPrivate : 1;
 
 public:
@@ -70,14 +79,14 @@ public:
       : Unavailable(0), UnavailableInSwift(0), SwiftPrivateSpecified(0),
         SwiftPrivate(0) {}
 
-  llvm::Optional<bool> isSwiftPrivate() const {
-    return SwiftPrivateSpecified ? llvm::Optional<bool>(SwiftPrivate)
-                                 : llvm::None;
+  std::optional<bool> isSwiftPrivate() const {
+    return SwiftPrivateSpecified ? std::optional<bool>(SwiftPrivate)
+                                 : std::nullopt;
   }
 
-  void setSwiftPrivate(llvm::Optional<bool> Private) {
-    SwiftPrivateSpecified = Private.hasValue();
-    SwiftPrivate = Private.hasValue() ? *Private : 0;
+  void setSwiftPrivate(std::optional<bool> Private) {
+    SwiftPrivateSpecified = Private.has_value();
+    SwiftPrivate = Private.value_or(0);
   }
 
   friend bool operator==(const CommonEntityInfo &, const CommonEntityInfo &);
@@ -127,39 +136,33 @@ class CommonTypeInfo : public CommonEntityInfo {
   /// The Swift type to which a given type is bridged.
   ///
   /// Reflects the swift_bridge attribute.
-  llvm::Optional<std::string> SwiftBridge;
+  std::optional<std::string> SwiftBridge;
 
   /// The NS error domain for this type.
-  llvm::Optional<std::string> NSErrorDomain;
+  std::optional<std::string> NSErrorDomain;
 
 public:
-  CommonTypeInfo() : CommonEntityInfo() {}
+  CommonTypeInfo() {}
 
-  const llvm::Optional<std::string> &getSwiftBridge() const {
+  const std::optional<std::string> &getSwiftBridge() const {
     return SwiftBridge;
   }
 
-  void setSwiftBridge(const llvm::Optional<std::string> &SwiftType) {
+  void setSwiftBridge(std::optional<std::string> SwiftType) {
     SwiftBridge = SwiftType;
   }
 
-  void setSwiftBridge(const llvm::Optional<llvm::StringRef> &SwiftType) {
-    SwiftBridge = SwiftType
-                      ? llvm::Optional<std::string>(std::string(*SwiftType))
-                      : llvm::None;
-  }
-
-  const llvm::Optional<std::string> &getNSErrorDomain() const {
+  const std::optional<std::string> &getNSErrorDomain() const {
     return NSErrorDomain;
   }
 
-  void setNSErrorDomain(const llvm::Optional<std::string> &Domain) {
+  void setNSErrorDomain(const std::optional<std::string> &Domain) {
     NSErrorDomain = Domain;
   }
 
-  void setNSErrorDomain(const llvm::Optional<llvm::StringRef> &Domain) {
-    NSErrorDomain =
-        Domain ? llvm::Optional<std::string>(std::string(*Domain)) : llvm::None;
+  void setNSErrorDomain(const std::optional<llvm::StringRef> &Domain) {
+    NSErrorDomain = Domain ? std::optional<std::string>(std::string(*Domain))
+                           : std::nullopt;
   }
 
   friend bool operator==(const CommonTypeInfo &, const CommonTypeInfo &);
@@ -192,36 +195,43 @@ inline bool operator!=(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
 /// Describes API notes data for an Objective-C class or protocol.
 class ObjCContextInfo : public CommonTypeInfo {
   /// Whether this class has a default nullability.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasDefaultNullability : 1;
 
   /// The default nullability.
+  LLVM_PREFERRED_TYPE(NullabilityKind)
   unsigned DefaultNullability : 2;
 
   /// Whether this class has designated initializers recorded.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasDesignatedInits : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsNonGenericSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsNonGeneric : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftObjCMembersSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftObjCMembers : 1;
 
 public:
   ObjCContextInfo()
-      : CommonTypeInfo(), HasDefaultNullability(0), DefaultNullability(0),
-        HasDesignatedInits(0), SwiftImportAsNonGenericSpecified(false),
-        SwiftImportAsNonGeneric(false), SwiftObjCMembersSpecified(false),
-        SwiftObjCMembers(false) {}
+      : HasDefaultNullability(0), DefaultNullability(0), HasDesignatedInits(0),
+        SwiftImportAsNonGenericSpecified(false), SwiftImportAsNonGeneric(false),
+        SwiftObjCMembersSpecified(false), SwiftObjCMembers(false) {}
 
   /// Determine the default nullability for properties and methods of this
   /// class.
   ///
-  /// eturns the default nullability, if implied, or None if there is no
-  llvm::Optional<NullabilityKind> getDefaultNullability() const {
+  /// Returns the default nullability, if implied, or std::nullopt if there is
+  /// none.
+  std::optional<NullabilityKind> getDefaultNullability() const {
     return HasDefaultNullability
-               ? llvm::Optional<NullabilityKind>(
+               ? std::optional<NullabilityKind>(
                      static_cast<NullabilityKind>(DefaultNullability))
-               : llvm::None;
+               : std::nullopt;
   }
 
   /// Set the default nullability for properties and methods of this class.
@@ -233,23 +243,23 @@ public:
   bool hasDesignatedInits() const { return HasDesignatedInits; }
   void setHasDesignatedInits(bool Value) { HasDesignatedInits = Value; }
 
-  llvm::Optional<bool> getSwiftImportAsNonGeneric() const {
+  std::optional<bool> getSwiftImportAsNonGeneric() const {
     return SwiftImportAsNonGenericSpecified
-               ? llvm::Optional<bool>(SwiftImportAsNonGeneric)
-               : llvm::None;
+               ? std::optional<bool>(SwiftImportAsNonGeneric)
+               : std::nullopt;
   }
-  void setSwiftImportAsNonGeneric(llvm::Optional<bool> Value) {
-    SwiftImportAsNonGenericSpecified = Value.hasValue();
-    SwiftImportAsNonGeneric = Value.hasValue() ? *Value : false;
+  void setSwiftImportAsNonGeneric(std::optional<bool> Value) {
+    SwiftImportAsNonGenericSpecified = Value.has_value();
+    SwiftImportAsNonGeneric = Value.value_or(false);
   }
 
-  llvm::Optional<bool> getSwiftObjCMembers() const {
-    return SwiftObjCMembersSpecified ? llvm::Optional<bool>(SwiftObjCMembers)
-                                     : llvm::None;
+  std::optional<bool> getSwiftObjCMembers() const {
+    return SwiftObjCMembersSpecified ? std::optional<bool>(SwiftObjCMembers)
+                                     : std::nullopt;
   }
-  void setSwiftObjCMembers(llvm::Optional<bool> Value) {
-    SwiftObjCMembersSpecified = Value.hasValue();
-    SwiftObjCMembers = Value.hasValue() ? *Value : false;
+  void setSwiftObjCMembers(std::optional<bool> Value) {
+    SwiftObjCMembersSpecified = Value.has_value();
+    SwiftObjCMembers = Value.value_or(false);
   }
 
   /// Strip off any information within the class information structure that is
@@ -299,22 +309,24 @@ inline bool operator!=(const ObjCContextInfo &LHS, const ObjCContextInfo &RHS) {
 /// API notes for a variable/property.
 class VariableInfo : public CommonEntityInfo {
   /// Whether this property has been audited for nullability.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NullabilityAudited : 1;
 
   /// The kind of nullability for this property. Only valid if the nullability
   /// has been audited.
+  LLVM_PREFERRED_TYPE(NullabilityKind)
   unsigned Nullable : 2;
 
   /// The C type of the variable, as a string.
   std::string Type;
 
 public:
-  VariableInfo() : CommonEntityInfo(), NullabilityAudited(false), Nullable(0) {}
+  VariableInfo() : NullabilityAudited(false), Nullable(0) {}
 
-  llvm::Optional<NullabilityKind> getNullability() const {
-    return NullabilityAudited ? llvm::Optional<NullabilityKind>(
+  std::optional<NullabilityKind> getNullability() const {
+    return NullabilityAudited ? std::optional<NullabilityKind>(
                                     static_cast<NullabilityKind>(Nullable))
-                              : llvm::None;
+                              : std::nullopt;
   }
 
   void setNullabilityAudited(NullabilityKind kind) {
@@ -353,22 +365,23 @@ inline bool operator!=(const VariableInfo &LHS, const VariableInfo &RHS) {
 
 /// Describes API notes data for an Objective-C property.
 class ObjCPropertyInfo : public VariableInfo {
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsAccessorsSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsAccessors : 1;
 
 public:
   ObjCPropertyInfo()
-      : VariableInfo(), SwiftImportAsAccessorsSpecified(false),
-        SwiftImportAsAccessors(false) {}
+      : SwiftImportAsAccessorsSpecified(false), SwiftImportAsAccessors(false) {}
 
-  llvm::Optional<bool> getSwiftImportAsAccessors() const {
+  std::optional<bool> getSwiftImportAsAccessors() const {
     return SwiftImportAsAccessorsSpecified
-               ? llvm::Optional<bool>(SwiftImportAsAccessors)
-               : llvm::None;
+               ? std::optional<bool>(SwiftImportAsAccessors)
+               : std::nullopt;
   }
-  void setSwiftImportAsAccessors(llvm::Optional<bool> Value) {
-    SwiftImportAsAccessorsSpecified = Value.hasValue();
-    SwiftImportAsAccessors = Value.hasValue() ? *Value : false;
+  void setSwiftImportAsAccessors(std::optional<bool> Value) {
+    SwiftImportAsAccessorsSpecified = Value.has_value();
+    SwiftImportAsAccessors = Value.value_or(false);
   }
 
   friend bool operator==(const ObjCPropertyInfo &, const ObjCPropertyInfo &);
@@ -411,9 +424,11 @@ inline bool operator!=(const ObjCPropertyInfo &LHS,
 /// Describes a function or method parameter.
 class ParamInfo : public VariableInfo {
   /// Whether noescape was specified.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoEscapeSpecified : 1;
 
   /// Whether the this parameter has the 'noescape' attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoEscape : 1;
 
   /// A biased RetainCountConventionKind, where 0 means "unspecified".
@@ -423,28 +438,26 @@ class ParamInfo : public VariableInfo {
 
 public:
   ParamInfo()
-      : VariableInfo(), NoEscapeSpecified(false), NoEscape(false),
-        RawRetainCountConvention() {}
+      : NoEscapeSpecified(false), NoEscape(false), RawRetainCountConvention() {}
 
-  llvm::Optional<bool> isNoEscape() const {
+  std::optional<bool> isNoEscape() const {
     if (!NoEscapeSpecified)
-      return llvm::None;
+      return std::nullopt;
     return NoEscape;
   }
-  void setNoEscape(llvm::Optional<bool> Value) {
-    NoEscapeSpecified = Value.hasValue();
-    NoEscape = Value.hasValue() ? *Value : false;
+  void setNoEscape(std::optional<bool> Value) {
+    NoEscapeSpecified = Value.has_value();
+    NoEscape = Value.value_or(false);
   }
 
-  llvm::Optional<RetainCountConventionKind> getRetainCountConvention() const {
+  std::optional<RetainCountConventionKind> getRetainCountConvention() const {
     if (!RawRetainCountConvention)
-      return llvm::None;
+      return std::nullopt;
     return static_cast<RetainCountConventionKind>(RawRetainCountConvention - 1);
   }
   void
-  setRetainCountConvention(llvm::Optional<RetainCountConventionKind> Value) {
-    RawRetainCountConvention =
-        Value.hasValue() ? static_cast<unsigned>(Value.getValue()) + 1 : 0;
+  setRetainCountConvention(std::optional<RetainCountConventionKind> Value) {
+    RawRetainCountConvention = Value ? static_cast<unsigned>(*Value) + 1 : 0;
     assert(getRetainCountConvention() == Value && "bitfield too small");
   }
 
@@ -481,7 +494,7 @@ inline bool operator!=(const ParamInfo &LHS, const ParamInfo &RHS) {
 /// API notes for a function or method.
 class FunctionInfo : public CommonEntityInfo {
 private:
-  static constexpr const unsigned NullabilityKindMask = 0x3;
+  static constexpr const uint64_t NullabilityKindMask = 0x3;
   static constexpr const unsigned NullabilityKindSize = 2;
 
   static constexpr const unsigned ReturnInfoIndex = 0;
@@ -492,6 +505,7 @@ public:
   // unknown nullability.
 
   /// Whether the signature has been audited with respect to nullability.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NullabilityAudited : 1;
 
   /// Number of types whose nullability is encoded with the NullabilityPayload.
@@ -514,7 +528,7 @@ public:
   std::vector<ParamInfo> Params;
 
   FunctionInfo()
-      : CommonEntityInfo(), NullabilityAudited(false), NumAdjustedNullable(0),
+      : NullabilityAudited(false), NumAdjustedNullable(0),
         RawRetainCountConvention() {}
 
   static unsigned getMaxNullabilityIndex() {
@@ -555,15 +569,14 @@ public:
 
   NullabilityKind getReturnTypeInfo() const { return getTypeInfo(0); }
 
-  llvm::Optional<RetainCountConventionKind> getRetainCountConvention() const {
+  std::optional<RetainCountConventionKind> getRetainCountConvention() const {
     if (!RawRetainCountConvention)
-      return llvm::None;
+      return std::nullopt;
     return static_cast<RetainCountConventionKind>(RawRetainCountConvention - 1);
   }
   void
-  setRetainCountConvention(llvm::Optional<RetainCountConventionKind> Value) {
-    RawRetainCountConvention =
-        Value.hasValue() ? static_cast<unsigned>(Value.getValue()) + 1 : 0;
+  setRetainCountConvention(std::optional<RetainCountConventionKind> Value) {
+    RawRetainCountConvention = Value ? static_cast<unsigned>(*Value) + 1 : 0;
     assert(getRetainCountConvention() == Value && "bitfield too small");
   }
 
@@ -602,13 +615,14 @@ inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
 class ObjCMethodInfo : public FunctionInfo {
 public:
   /// Whether this is a designated initializer of its class.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DesignatedInit : 1;
 
   /// Whether this is a required initializer.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned RequiredInit : 1;
 
-  ObjCMethodInfo()
-      : FunctionInfo(), DesignatedInit(false), RequiredInit(false) {}
+  ObjCMethodInfo() : DesignatedInit(false), RequiredInit(false) {}
 
   friend bool operator==(const ObjCMethodInfo &, const ObjCMethodInfo &);
 
@@ -639,49 +653,81 @@ inline bool operator!=(const ObjCMethodInfo &LHS, const ObjCMethodInfo &RHS) {
 /// Describes API notes data for a global variable.
 class GlobalVariableInfo : public VariableInfo {
 public:
-  GlobalVariableInfo() : VariableInfo() {}
+  GlobalVariableInfo() {}
 };
 
 /// Describes API notes data for a global function.
 class GlobalFunctionInfo : public FunctionInfo {
 public:
-  GlobalFunctionInfo() : FunctionInfo() {}
+  GlobalFunctionInfo() {}
 };
 
 /// Describes API notes data for an enumerator.
 class EnumConstantInfo : public CommonEntityInfo {
 public:
-  EnumConstantInfo() : CommonEntityInfo() {}
+  EnumConstantInfo() {}
 };
 
 /// Describes API notes data for a tag.
 class TagInfo : public CommonTypeInfo {
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasFlagEnum : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFlagEnum : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftCopyableSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftCopyable : 1;
+
 public:
-  llvm::Optional<EnumExtensibilityKind> EnumExtensibility;
+  std::optional<std::string> SwiftImportAs;
+  std::optional<std::string> SwiftRetainOp;
+  std::optional<std::string> SwiftReleaseOp;
 
-  TagInfo() : CommonTypeInfo(), HasFlagEnum(0), IsFlagEnum(0) {}
+  std::optional<EnumExtensibilityKind> EnumExtensibility;
 
-  llvm::Optional<bool> isFlagEnum() const {
+  TagInfo()
+      : HasFlagEnum(0), IsFlagEnum(0), SwiftCopyableSpecified(false),
+        SwiftCopyable(false) {}
+
+  std::optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
       return IsFlagEnum;
-    return llvm::None;
+    return std::nullopt;
   }
-  void setFlagEnum(llvm::Optional<bool> Value) {
-    HasFlagEnum = Value.hasValue();
-    IsFlagEnum = Value.hasValue() ? *Value : false;
+  void setFlagEnum(std::optional<bool> Value) {
+    HasFlagEnum = Value.has_value();
+    IsFlagEnum = Value.value_or(false);
+  }
+
+  std::optional<bool> isSwiftCopyable() const {
+    return SwiftCopyableSpecified ? std::optional<bool>(SwiftCopyable)
+                                  : std::nullopt;
+  }
+  void setSwiftCopyable(std::optional<bool> Value) {
+    SwiftCopyableSpecified = Value.has_value();
+    SwiftCopyable = Value.value_or(false);
   }
 
   TagInfo &operator|=(const TagInfo &RHS) {
     static_cast<CommonTypeInfo &>(*this) |= RHS;
 
-    if (!HasFlagEnum && HasFlagEnum)
+    if (!SwiftImportAs)
+      SwiftImportAs = RHS.SwiftImportAs;
+    if (!SwiftRetainOp)
+      SwiftRetainOp = RHS.SwiftRetainOp;
+    if (!SwiftReleaseOp)
+      SwiftReleaseOp = RHS.SwiftReleaseOp;
+
+    if (!HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
 
-    if (!EnumExtensibility.hasValue())
+    if (!EnumExtensibility)
       EnumExtensibility = RHS.EnumExtensibility;
+
+    if (!SwiftCopyableSpecified)
+      setSwiftCopyable(RHS.isSwiftCopyable());
 
     return *this;
   }
@@ -693,7 +739,11 @@ public:
 
 inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
   return static_cast<const CommonTypeInfo &>(LHS) == RHS &&
+         LHS.SwiftImportAs == RHS.SwiftImportAs &&
+         LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
+         LHS.SwiftReleaseOp == RHS.SwiftReleaseOp &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
+         LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
          LHS.EnumExtensibility == RHS.EnumExtensibility;
 }
 
@@ -704,13 +754,13 @@ inline bool operator!=(const TagInfo &LHS, const TagInfo &RHS) {
 /// Describes API notes data for a typedef.
 class TypedefInfo : public CommonTypeInfo {
 public:
-  llvm::Optional<SwiftNewTypeKind> SwiftWrapper;
+  std::optional<SwiftNewTypeKind> SwiftWrapper;
 
-  TypedefInfo() : CommonTypeInfo() {}
+  TypedefInfo() {}
 
   TypedefInfo &operator|=(const TypedefInfo &RHS) {
     static_cast<CommonTypeInfo &>(*this) |= RHS;
-    if (!SwiftWrapper.hasValue())
+    if (!SwiftWrapper)
       SwiftWrapper = RHS.SwiftWrapper;
     return *this;
   }
@@ -728,6 +778,42 @@ inline bool operator==(const TypedefInfo &LHS, const TypedefInfo &RHS) {
 inline bool operator!=(const TypedefInfo &LHS, const TypedefInfo &RHS) {
   return !(LHS == RHS);
 }
+
+/// The file extension used for the source representation of API notes.
+static const constexpr char SOURCE_APINOTES_EXTENSION[] = "apinotes";
+
+/// Opaque context ID used to refer to an Objective-C class or protocol or a C++
+/// namespace.
+class ContextID {
+public:
+  unsigned Value;
+
+  explicit ContextID(unsigned value) : Value(value) {}
+};
+
+enum class ContextKind : uint8_t {
+  ObjCClass = 0,
+  ObjCProtocol = 1,
+  Namespace = 2,
+};
+
+struct Context {
+  ContextID id;
+  ContextKind kind;
+
+  Context(ContextID id, ContextKind kind) : id(id), kind(kind) {}
+};
+
+/// A temporary reference to an Objective-C selector, suitable for
+/// referencing selector data on the stack.
+///
+/// Instances of this struct do not store references to any of the
+/// data they contain; it is up to the user to ensure that the data
+/// referenced by the identifier list persists.
+struct ObjCSelectorRef {
+  unsigned NumArgs;
+  llvm::ArrayRef<llvm::StringRef> Identifiers;
+};
 } // namespace api_notes
 } // namespace clang
 

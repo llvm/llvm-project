@@ -7,7 +7,7 @@
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-define void @test_statepoint(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define void @test_statepoint(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK: 1: callq
 ; CHECK-NEXT: 6: callq
 ; CHECK-NEXT: b: callq
@@ -27,10 +27,10 @@ entry:
   call void @foo()
   call void @foo()
   call void @foo()
-  call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0)
+  call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
 
 declare void @foo()
 declare zeroext i1 @return_i1()
-declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)

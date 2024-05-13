@@ -11,7 +11,7 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Stream.h"
@@ -40,8 +40,8 @@ public:
                           ScriptInterpreterLua &script_interpreter,
                           ActiveIOHandler active_io_handler = eIOHandlerNone)
       : IOHandlerEditline(debugger, IOHandler::Type::LuaInterpreter, "lua",
-                          ">>> ", "..> ", true, debugger.GetUseColor(), 0,
-                          *this, nullptr),
+                          llvm::StringRef(">>> "), llvm::StringRef("..> "),
+                          true, debugger.GetUseColor(), 0, *this),
         m_script_interpreter(script_interpreter),
         m_active_io_handler(active_io_handler) {
     llvm::cantFail(m_script_interpreter.GetLua().ChangeIO(
@@ -58,7 +58,13 @@ public:
     const char *instructions = nullptr;
     switch (m_active_io_handler) {
     case eIOHandlerNone:
+      break;
     case eIOHandlerWatchpoint:
+      instructions = "Enter your Lua command(s). Type 'quit' to end.\n"
+                     "The commands are compiled as the body of the following "
+                     "Lua function\n"
+                     "function (frame, wp) end\n";
+      SetPrompt(llvm::StringRef("..> "));
       break;
     case eIOHandlerBreakpoint:
       instructions = "Enter your Lua command(s). Type 'quit' to end.\n"
@@ -78,7 +84,8 @@ public:
                                 StringList &lines) override {
     size_t last = lines.GetSize() - 1;
     if (IsQuitCommand(lines.GetStringAtIndex(last))) {
-      if (m_active_io_handler == eIOHandlerBreakpoint)
+      if (m_active_io_handler == eIOHandlerBreakpoint ||
+          m_active_io_handler == eIOHandlerWatchpoint)
         lines.DeleteStringAtIndex(last);
       return true;
     }
@@ -90,27 +97,34 @@ public:
       // Lua always errors out to incomplete code with '<eof>'
       return error_str.find("<eof>") == std::string::npos;
     }
-    // The breakpoint handler only exits with a explicit 'quit'
-    return m_active_io_handler != eIOHandlerBreakpoint;
+    // The breakpoint and watchpoint handler only exits with a explicit 'quit'
+    return m_active_io_handler != eIOHandlerBreakpoint &&
+           m_active_io_handler != eIOHandlerWatchpoint;
   }
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
     switch (m_active_io_handler) {
     case eIOHandlerBreakpoint: {
-      auto *bp_options_vec = static_cast<std::vector<BreakpointOptions *> *>(
-          io_handler.GetUserData());
-      for (auto *bp_options : *bp_options_vec) {
+      auto *bp_options_vec =
+          static_cast<std::vector<std::reference_wrapper<BreakpointOptions>> *>(
+              io_handler.GetUserData());
+      for (BreakpointOptions &bp_options : *bp_options_vec) {
         Status error = m_script_interpreter.SetBreakpointCommandCallback(
-            bp_options, data.c_str());
+            bp_options, data.c_str(), /*is_callback=*/false);
         if (error.Fail())
           *io_handler.GetErrorStreamFileSP() << error.AsCString() << '\n';
       }
       io_handler.SetIsDone(true);
     } break;
-    case eIOHandlerWatchpoint:
+    case eIOHandlerWatchpoint: {
+      auto *wp_options =
+          static_cast<WatchpointOptions *>(io_handler.GetUserData());
+      m_script_interpreter.SetWatchpointCommandCallback(wp_options,
+                                                        data.c_str(),
+                                                        /*is_callback=*/false);
       io_handler.SetIsDone(true);
-      break;
+    } break;
     case eIOHandlerNone:
       if (IsQuitCommand(data)) {
         io_handler.SetIsDone(true);
@@ -133,7 +147,13 @@ ScriptInterpreterLua::ScriptInterpreterLua(Debugger &debugger)
     : ScriptInterpreter(debugger, eScriptLanguageLua),
       m_lua(std::make_unique<Lua>()) {}
 
-ScriptInterpreterLua::~ScriptInterpreterLua() {}
+ScriptInterpreterLua::~ScriptInterpreterLua() = default;
+
+StructuredData::DictionarySP ScriptInterpreterLua::GetInterpreterInfo() {
+  auto info = std::make_shared<StructuredData::Dictionary>();
+  info->AddStringItem("language", "lua");
+  return info;
+}
 
 bool ScriptInterpreterLua::ExecuteOneLine(llvm::StringRef command,
                                           CommandReturnObject *result,
@@ -194,10 +214,10 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
 }
 
 bool ScriptInterpreterLua::LoadScriptingModule(
-    const char *filename, bool init_session, lldb_private::Status &error,
-    StructuredData::ObjectSP *module_sp, FileSpec extra_search_dir) {
+    const char *filename, const LoadScriptOptions &options,
+    lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
+    FileSpec extra_search_dir) {
 
-  FileSystem::Instance().Collect(filename);
   if (llvm::Error e = m_lua->LoadModule(filename)) {
     error.SetErrorStringWithFormatv("lua failed to import '{0}': {1}\n",
                                     filename, llvm::toString(std::move(e)));
@@ -275,8 +295,35 @@ bool ScriptInterpreterLua::BreakpointCallbackFunction(
   return *BoolOrErr;
 }
 
+bool ScriptInterpreterLua::WatchpointCallbackFunction(
+    void *baton, StoppointCallbackContext *context, user_id_t watch_id) {
+  assert(context);
+
+  ExecutionContext exe_ctx(context->exe_ctx_ref);
+  Target *target = exe_ctx.GetTargetPtr();
+  if (target == nullptr)
+    return true;
+
+  StackFrameSP stop_frame_sp(exe_ctx.GetFrameSP());
+  WatchpointSP wp_sp = target->GetWatchpointList().FindByID(watch_id);
+
+  Debugger &debugger = target->GetDebugger();
+  ScriptInterpreterLua *lua_interpreter = static_cast<ScriptInterpreterLua *>(
+      debugger.GetScriptInterpreter(true, eScriptLanguageLua));
+  Lua &lua = lua_interpreter->GetLua();
+
+  llvm::Expected<bool> BoolOrErr =
+      lua.CallWatchpointCallback(baton, stop_frame_sp, wp_sp);
+  if (llvm::Error E = BoolOrErr.takeError()) {
+    debugger.GetErrorStream() << toString(std::move(E));
+    return true;
+  }
+
+  return *BoolOrErr;
+}
+
 void ScriptInterpreterLua::CollectDataForBreakpointCommandCallback(
-    std::vector<BreakpointOptions *> &bp_options_vec,
+    std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
     CommandReturnObject &result) {
   IOHandlerSP io_handler_sp(
       new IOHandlerLuaInterpreter(m_debugger, *this, eIOHandlerBreakpoint));
@@ -284,8 +331,16 @@ void ScriptInterpreterLua::CollectDataForBreakpointCommandCallback(
   m_debugger.RunIOHandlerAsync(io_handler_sp);
 }
 
+void ScriptInterpreterLua::CollectDataForWatchpointCommandCallback(
+    WatchpointOptions *wp_options, CommandReturnObject &result) {
+  IOHandlerSP io_handler_sp(
+      new IOHandlerLuaInterpreter(m_debugger, *this, eIOHandlerWatchpoint));
+  io_handler_sp->SetUserData(wp_options);
+  m_debugger.RunIOHandlerAsync(io_handler_sp);
+}
+
 Status ScriptInterpreterLua::SetBreakpointCommandCallbackFunction(
-    BreakpointOptions *bp_options, const char *function_name,
+    BreakpointOptions &bp_options, const char *function_name,
     StructuredData::ObjectSP extra_args_sp) {
   const char *fmt_str = "return {0}(frame, bp_loc, ...)";
   std::string oneliner = llvm::formatv(fmt_str, function_name).str();
@@ -294,12 +349,13 @@ Status ScriptInterpreterLua::SetBreakpointCommandCallbackFunction(
 }
 
 Status ScriptInterpreterLua::SetBreakpointCommandCallback(
-    BreakpointOptions *bp_options, const char *command_body_text) {
+    BreakpointOptions &bp_options, const char *command_body_text,
+    bool is_callback) {
   return RegisterBreakpointCallback(bp_options, command_body_text, {});
 }
 
 Status ScriptInterpreterLua::RegisterBreakpointCallback(
-    BreakpointOptions *bp_options, const char *command_body_text,
+    BreakpointOptions &bp_options, const char *command_body_text,
     StructuredData::ObjectSP extra_args_sp) {
   Status error;
   auto data_up = std::make_unique<CommandDataLua>(extra_args_sp);
@@ -308,7 +364,28 @@ Status ScriptInterpreterLua::RegisterBreakpointCallback(
     return error;
   auto baton_sp =
       std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
-  bp_options->SetCallback(ScriptInterpreterLua::BreakpointCallbackFunction,
+  bp_options.SetCallback(ScriptInterpreterLua::BreakpointCallbackFunction,
+                         baton_sp);
+  return error;
+}
+
+void ScriptInterpreterLua::SetWatchpointCommandCallback(
+    WatchpointOptions *wp_options, const char *command_body_text,
+    bool is_callback) {
+  RegisterWatchpointCallback(wp_options, command_body_text, {});
+}
+
+Status ScriptInterpreterLua::RegisterWatchpointCallback(
+    WatchpointOptions *wp_options, const char *command_body_text,
+    StructuredData::ObjectSP extra_args_sp) {
+  Status error;
+  auto data_up = std::make_unique<WatchpointOptions::CommandData>();
+  error = m_lua->RegisterWatchpointCallback(data_up.get(), command_body_text);
+  if (error.Fail())
+    return error;
+  auto baton_sp =
+      std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
+  wp_options->SetCallback(ScriptInterpreterLua::WatchpointCallbackFunction,
                           baton_sp);
   return error;
 }
@@ -318,19 +395,8 @@ ScriptInterpreterLua::CreateInstance(Debugger &debugger) {
   return std::make_shared<ScriptInterpreterLua>(debugger);
 }
 
-lldb_private::ConstString ScriptInterpreterLua::GetPluginNameStatic() {
-  static ConstString g_name("script-lua");
-  return g_name;
-}
-
-const char *ScriptInterpreterLua::GetPluginDescriptionStatic() {
+llvm::StringRef ScriptInterpreterLua::GetPluginDescriptionStatic() {
   return "Lua script interpreter";
 }
-
-lldb_private::ConstString ScriptInterpreterLua::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ScriptInterpreterLua::GetPluginVersion() { return 1; }
 
 Lua &ScriptInterpreterLua::GetLua() { return *m_lua; }

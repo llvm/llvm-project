@@ -46,13 +46,15 @@ add_lldb_tool(lldb-server
     SystemInitializerLLGS.cpp
 
     LINK_LIBS
-      lldbBase
       lldbHost
       lldbInitialization
+      lldbVersion
       ${LLDB_PLUGINS}
       lldbPluginInstructionARM
+      lldbPluginInstructionLoongArch
       lldbPluginInstructionMIPS
       lldbPluginInstructionMIPS64
+      lldbPluginInstructionRISCV
       ${LLDB_SYSTEM_LIBS}
 
     LINK_COMPONENTS

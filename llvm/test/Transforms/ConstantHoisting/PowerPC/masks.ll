@@ -1,4 +1,4 @@
-; RUN: opt -S -consthoist < %s | FileCheck %s
+; RUN: opt -S -passes=consthoist < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -19,7 +19,7 @@ if.then152:
 if.end167:
 ; CHECK: and i32 {{.*}}, 32768
   %shl161 = shl nuw nsw i32 %conv121, 15
-  %0 = load i8, i8* undef, align 1
+  %0 = load i8, ptr undef, align 1
   %conv169 = zext i8 %0 to i32
   %shl170 = shl nuw nsw i32 %conv169, 7
   %shl161.masked = and i32 %shl161, 32768
@@ -49,7 +49,7 @@ if.then152:
 if.end167:
 ; CHECK: add i32 {{.*}}, -32758
   %shl161 = shl nuw nsw i32 %conv121, 15
-  %0 = load i8, i8* undef, align 1
+  %0 = load i8, ptr undef, align 1
   %conv169 = zext i8 %0 to i32
   %shl170 = shl nuw nsw i32 %conv169, 7
   %shl161.masked = and i32 %shl161, 32773

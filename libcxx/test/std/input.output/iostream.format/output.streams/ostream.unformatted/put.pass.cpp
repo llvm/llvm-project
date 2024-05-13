@@ -53,6 +53,21 @@ protected:
 int main(int, char**)
 {
     {
+        std::ostream os((std::streambuf*)0);
+        char c = 'a';
+        os.put(c);
+        assert(os.bad());
+    }
+    {
+        testbuf<char> sb;
+        std::ostream os(&sb);
+        char c = 'a';
+        os.put(c);
+        assert(sb.str() == "a");
+        assert(os.good());
+    }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    {
         std::wostream os((std::wstreambuf*)0);
         wchar_t c = L'a';
         os.put(c);
@@ -66,14 +81,7 @@ int main(int, char**)
         assert(sb.str() == L"a");
         assert(os.good());
     }
-    {
-        testbuf<char> sb;
-        std::ostream os(&sb);
-        char c = 'a';
-        os.put(c);
-        assert(sb.str() == "a");
-        assert(os.good());
-    }
+#endif
 
   return 0;
 }

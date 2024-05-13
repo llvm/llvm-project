@@ -13,13 +13,11 @@
 #include "EHStreamer.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -162,9 +160,7 @@ bool EHStreamer::callToNoUnwindFunction(const MachineInstr *MI) {
   bool MarkedNoUnwind = false;
   bool SawFunc = false;
 
-  for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = MI->getOperand(I);
-
+  for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isGlobal()) continue;
 
     const Function *F = dyn_cast<Function>(MO.getGlobal());
@@ -198,6 +194,12 @@ void EHStreamer::computePadMap(
     const LandingPadInfo *LandingPad = LandingPads[i];
     for (unsigned j = 0, E = LandingPad->BeginLabels.size(); j != E; ++j) {
       MCSymbol *BeginLabel = LandingPad->BeginLabels[j];
+      MCSymbol *EndLabel = LandingPad->BeginLabels[j];
+      // If we have deleted the code for a given invoke after registering it in
+      // the LandingPad label list, the associated symbols will not have been
+      // emitted. In that case, ignore this callsite entry.
+      if (!BeginLabel->isDefined() || !EndLabel->isDefined())
+        continue;
       assert(!PadMap.count(BeginLabel) && "Duplicate landing pad labels!");
       PadRange P = { i, j };
       PadMap[BeginLabel] = P;
@@ -386,8 +388,14 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   SmallVector<const LandingPadInfo *, 64> LandingPads;
   LandingPads.reserve(PadInfos.size());
 
-  for (unsigned i = 0, N = PadInfos.size(); i != N; ++i)
-    LandingPads.push_back(&PadInfos[i]);
+  for (const LandingPadInfo &LPI : PadInfos) {
+    // If a landing-pad has an associated label, but the label wasn't ever
+    // emitted, then skip it.  (This can occur if the landingpad's MBB was
+    // deleted).
+    if (LPI.LandingPadLabel && !LPI.LandingPadLabel->isDefined())
+      continue;
+    LandingPads.push_back(&LPI);
+  }
 
   // Order landing pads lexicographically by type id.
   llvm::sort(LandingPads, [](const LandingPadInfo *L, const LandingPadInfo *R) {
@@ -401,7 +409,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   computeActionsTable(LandingPads, Actions, FirstActions);
 
   // Compute the call-site table and call-site ranges. Normally, there is only
-  // one call-site-range which covers the whole funciton. With
+  // one call-site-range which covers the whole function. With
   // -basic-block-sections, there is one call-site-range per basic block
   // section.
   SmallVector<CallSiteEntry, 64> CallSites;
@@ -460,7 +468,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   // Sometimes we want not to emit the data into separate section (e.g. ARM
   // EHABI). In this case LSDASection will be NULL.
   if (LSDASection)
-    Asm->OutStreamer->SwitchSection(LSDASection);
+    Asm->OutStreamer->switchSection(LSDASection);
   Asm->emitAlignment(Align(4));
 
   // Emit the LSDA.
@@ -666,9 +674,10 @@ MCSymbol *EHStreamer::emitExceptionTable() {
       Asm->OutStreamer->emitLabel(CSRange.ExceptionLabel);
 
       // Emit the LSDA header.
-      // If only one call-site range exists, LPStart is omitted as it is the
-      // same as the function entry.
-      if (CallSiteRanges.size() == 1) {
+      // LPStart is omitted if either we have a single call-site range (in which
+      // case the function entry is treated as @LPStart) or if this function has
+      // no landing pads (in which case @LPStart is undefined).
+      if (CallSiteRanges.size() == 1 || LandingPadRange == nullptr) {
         Asm->emitEncodingByte(dwarf::DW_EH_PE_omit, "@LPStart");
       } else if (!Asm->isPositionIndependent()) {
         // For more than one call-site ranges, LPStart must be explicitly
@@ -808,12 +817,11 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
   // Emit the Catch TypeInfos.
   if (VerboseAsm && !TypeInfos.empty()) {
     Asm->OutStreamer->AddComment(">> Catch TypeInfos <<");
-    Asm->OutStreamer->AddBlankLine();
+    Asm->OutStreamer->addBlankLine();
     Entry = TypeInfos.size();
   }
 
-  for (const GlobalValue *GV : make_range(TypeInfos.rbegin(),
-                                          TypeInfos.rend())) {
+  for (const GlobalValue *GV : llvm::reverse(TypeInfos)) {
     if (VerboseAsm)
       Asm->OutStreamer->AddComment("TypeInfo " + Twine(Entry--));
     Asm->emitTTypeReference(GV, TTypeEncoding);
@@ -824,7 +832,7 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
   // Emit the Exception Specifications.
   if (VerboseAsm && !FilterIds.empty()) {
     Asm->OutStreamer->AddComment(">> Filter TypeInfos <<");
-    Asm->OutStreamer->AddBlankLine();
+    Asm->OutStreamer->addBlankLine();
     Entry = 0;
   }
   for (std::vector<unsigned>::const_iterator

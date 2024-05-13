@@ -32,8 +32,6 @@
 ; CHECK:      DW_TAG_lexical_block
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:        DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:        DW_TAG_imported_module
 
 ;; Abstract "bar" function
 ; CHECK:    [[Offset_bar]]: DW_TAG_subprogram
@@ -60,33 +58,30 @@
 ; CHECK:        DW_TAG_lexical_block
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:          DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:          DW_TAG_imported_module
-
 
 ; Function Attrs: alwaysinline nounwind
 define i32 @_Z3barv() #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %y, metadata !18, metadata !19), !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %y, metadata !18, metadata !19), !dbg !20
   br label %while.cond, !dbg !21
 
 while.cond:                                       ; preds = %entry
-  %0 = load i32, i32* %y, align 4, !dbg !22
+  %0 = load i32, ptr %y, align 4, !dbg !22
   %cmp = icmp slt i32 %0, 0, !dbg !22
   br i1 %cmp, label %while.body, label %while.end, !dbg !22
 
 while.body:                                       ; preds = %while.cond
-  store i32 2, i32* %retval, align 4, !dbg !24
+  store i32 2, ptr %retval, align 4, !dbg !24
   br label %return, !dbg !24
 
 while.end:                                        ; preds = %while.cond
-  store i32 0, i32* %retval, align 4, !dbg !26
+  store i32 0, ptr %retval, align 4, !dbg !26
   br label %return, !dbg !26
 
 return:                                           ; preds = %while.end, %while.body
-  %1 = load i32, i32* %retval, align 4, !dbg !27
+  %1 = load i32, ptr %retval, align 4, !dbg !27
   ret i32 %1, !dbg !27
 }
 
@@ -98,21 +93,21 @@ define i32 @_Z3foov() #2 !dbg !8 {
 entry:
   %retval.i = alloca i32, align 4
   %y.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %y.i, metadata !18, metadata !19), !dbg !29
-  %0 = load i32, i32* %y.i, align 4, !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %y.i, metadata !18, metadata !19), !dbg !29
+  %0 = load i32, ptr %y.i, align 4, !dbg !31
   %cmp.i = icmp slt i32 %0, 0, !dbg !31
   br i1 %cmp.i, label %while.body.i, label %while.end.i, !dbg !31
 
 while.body.i:                                     ; preds = %entry
-  store i32 2, i32* %retval.i, align 4, !dbg !32
+  store i32 2, ptr %retval.i, align 4, !dbg !32
   br label %_Z3barv.exit, !dbg !32
 
 while.end.i:                                      ; preds = %entry
-  store i32 0, i32* %retval.i, align 4, !dbg !33
+  store i32 0, ptr %retval.i, align 4, !dbg !33
   br label %_Z3barv.exit, !dbg !33
 
 _Z3barv.exit:                                     ; preds = %while.end.i, %while.body.i
-  %1 = load i32, i32* %retval.i, align 4, !dbg !34
+  %1 = load i32, ptr %retval.i, align 4, !dbg !34
   ret i32 %1, !dbg !35
 }
 
@@ -124,10 +119,10 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!15, !16}
 !llvm.ident = !{!17}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 264349)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, imports: !10)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 264349)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2)
 !1 = !DIFile(filename: "test.cpp", directory: "/")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !1, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !1, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !10)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

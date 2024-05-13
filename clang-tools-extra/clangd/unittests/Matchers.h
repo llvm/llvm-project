@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_MATCHERS_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_MATCHERS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_MATCHERS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_MATCHERS_H
 #include "Protocol.h"
 #include "gmock/gmock.h"
 
@@ -173,7 +173,7 @@ private:
     virtual bool
     MatchAndExplain(Optional optional,
                     ::testing::MatchResultListener *listener) const {
-      if (!optional.hasValue())
+      if (!optional)
         return false;
 
       *listener << "which has a value ";

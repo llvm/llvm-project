@@ -1,9 +1,9 @@
-; RUN: opt < %s -gvn | llvm-dis
+; RUN: opt < %s -passes=gvn | llvm-dis
 
 	%struct.PerlInterpreter = type { i8 }
-@PL_sv_count = external global i32		; <i32*> [#uses=2]
+@PL_sv_count = external global i32		; <ptr> [#uses=2]
 
-define void @perl_destruct(%struct.PerlInterpreter* %sv_interp) {
+define void @perl_destruct(ptr %sv_interp) {
 entry:
 	br i1 false, label %cond_next25, label %cond_true16
 
@@ -71,11 +71,11 @@ cond_true23.i:		; preds = %Perl_safefree.exit68
 	ret void
 
 cond_next150:		; preds = %Perl_safefree.exit68
-	%tmp16092 = load i32, i32* @PL_sv_count, align 4		; <i32> [#uses=0]
+	%tmp16092 = load i32, ptr @PL_sv_count, align 4		; <i32> [#uses=0]
 	br label %cond_next165
 
 bb157:		; preds = %cond_next165
-	%tmp158 = load i32, i32* @PL_sv_count, align 4		; <i32> [#uses=0]
+	%tmp158 = load i32, ptr @PL_sv_count, align 4		; <i32> [#uses=0]
 	br label %cond_next165
 
 cond_next165:		; preds = %bb157, %cond_next150

@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.SuperDealloc,debug.ExprInspection -analyzer-output=text -verify %s
 
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
 #define nil ((id)0)
 
@@ -18,7 +18,6 @@ typedef unsigned long NSUInteger;
 typedef struct objc_selector *SEL;
 
 //===------------------------------------------------------------------------===
-//  <rdar://problem/6953275>
 //  Check that 'self' is not referenced after calling '[super dealloc]'.
 
 @interface SuperDeallocThenReleaseIvarClass : NSObject {

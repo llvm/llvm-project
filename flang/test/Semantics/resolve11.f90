@@ -1,10 +1,10 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
   public i
   integer, private :: j
   !ERROR: The accessibility of 'i' has already been specified as PUBLIC
   private i
-  !The accessibility of 'j' has already been specified as PRIVATE
+  !WARNING: The accessibility of 'j' has already been specified as PRIVATE
   private j
 end
 
@@ -48,4 +48,41 @@ module m3
   public :: operator(>)
   !ERROR: The accessibility of 'OPERATOR(.GT.)' has already been specified as PUBLIC
   private :: operator(.gt.)
+end
+
+module m4
+  private
+  type, public :: foo
+  end type
+  interface foo
+    procedure fun
+  end interface
+ contains
+  function fun
+  end
+end
+
+subroutine s4
+  !ERROR: 'fun' is PRIVATE in 'm4'
+  use m4, only: foo, fun
+  type(foo) x ! ok
+  print *, foo() ! ok
+end
+
+module m5
+  public
+  type, private :: foo
+  end type
+  interface foo
+    procedure fun
+  end interface
+ contains
+  function fun
+  end
+end
+
+subroutine s5
+  !ERROR: 'foo' is PRIVATE in 'm5'
+  use m5, only: foo, fun
+  print *, fun() ! ok
 end

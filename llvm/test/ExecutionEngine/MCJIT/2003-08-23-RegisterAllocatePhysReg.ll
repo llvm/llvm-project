@@ -7,7 +7,7 @@
 
 define i32 @main(i32 %A) {
         ; ESP gets used again...
-	%Ap2 = alloca i32, i32 %A		; <i32*> [#uses=11]
+	%Ap2 = alloca i32, i32 %A		; <ptr> [#uses=11]
 	; Produce lots of overlapping live ranges
         %B = add i32 %A, 1		; <i32> [#uses=1]
 	%C = add i32 %A, 2		; <i32> [#uses=1]
@@ -20,16 +20,16 @@ define i32 @main(i32 %A) {
 	%J = add i32 %A, 9		; <i32> [#uses=1]
 	%K = add i32 %A, 10		; <i32> [#uses=1]
         ; Uses of all of the values
-	store i32 %A, i32* %Ap2
-	store i32 %B, i32* %Ap2
-	store i32 %C, i32* %Ap2
-	store i32 %D, i32* %Ap2
-	store i32 %E, i32* %Ap2
-	store i32 %F, i32* %Ap2
-	store i32 %G, i32* %Ap2
-	store i32 %H, i32* %Ap2
-	store i32 %I, i32* %Ap2
-	store i32 %J, i32* %Ap2
-	store i32 %K, i32* %Ap2
+	store i32 %A, ptr %Ap2
+	store i32 %B, ptr %Ap2
+	store i32 %C, ptr %Ap2
+	store i32 %D, ptr %Ap2
+	store i32 %E, ptr %Ap2
+	store i32 %F, ptr %Ap2
+	store i32 %G, ptr %Ap2
+	store i32 %H, ptr %Ap2
+	store i32 %I, ptr %Ap2
+	store i32 %J, ptr %Ap2
+	store i32 %K, ptr %Ap2
 	ret i32 0
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -disable-output
+; RUN: opt < %s -passes=inline -disable-output
 
 define i32 @reload() {
 reloadentry:
@@ -11,9 +11,9 @@ A:              ; preds = %reloadentry
 
 define internal void @callee() {
 entry:
-        %X = alloca i8, i32 0           ; <i8*> [#uses=0]
+        %X = alloca i8, i32 0           ; <ptr> [#uses=0]
         %Y = bitcast i32 0 to i32               ; <i32> [#uses=1]
-        %Z = alloca i8, i32 %Y          ; <i8*> [#uses=0]
+        %Z = alloca i8, i32 %Y          ; <ptr> [#uses=0]
         ret void
 }
 

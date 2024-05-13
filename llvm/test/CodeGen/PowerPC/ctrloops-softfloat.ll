@@ -34,13 +34,13 @@ target triple = "powerpc-buildroot-linux-gnu"
 @x = common global double 0.000000e+00, align 8
 
 define void @foo1() #0 {
-  store double 1.100000e+00, double* @y, align 8
-  store double 1.100000e+00, double* @x, align 8
+  store double 1.100000e+00, ptr @y, align 8
+  store double 1.100000e+00, ptr @x, align 8
   br label %2
 
 ; <label>:1                                       ; preds = %2
   %.lcssa = phi double [ %4, %2 ]
-  store double %.lcssa, double* @y, align 8
+  store double %.lcssa, ptr @y, align 8
   ret void
 
 ; <label>:2                                       ; preds = %2, %0
@@ -57,13 +57,13 @@ define void @foo1() #0 {
 }
 
 define void @foo2() #0 {
-  store double 1.100000e+00, double* @y, align 8
-  store double 1.100000e+00, double* @x, align 8
+  store double 1.100000e+00, ptr @y, align 8
+  store double 1.100000e+00, ptr @x, align 8
   br label %2
 
 ; <label>:1                                       ; preds = %2
   %.lcssa = phi double [ %4, %2 ]
-  store double %.lcssa, double* @y, align 8
+  store double %.lcssa, ptr @y, align 8
   ret void
 
 ; <label>:2                                       ; preds = %2, %0
@@ -80,13 +80,13 @@ define void @foo2() #0 {
 }
 
 define void @foo3() #0 {
-  store double 1.100000e+00, double* @y, align 8
-  store double 1.100000e+00, double* @x, align 8
+  store double 1.100000e+00, ptr @y, align 8
+  store double 1.100000e+00, ptr @x, align 8
   br label %2
 
 ; <label>:1                                       ; preds = %2
   %.lcssa = phi double [ %4, %2 ]
-  store double %.lcssa, double* @y, align 8
+  store double %.lcssa, ptr @y, align 8
   ret void
 
 ; <label>:2                                       ; preds = %2, %0
@@ -103,13 +103,13 @@ define void @foo3() #0 {
 }
 
 define void @foo4() #0 {
-  store double 1.100000e+00, double* @y, align 8
-  store double 1.100000e+00, double* @x, align 8
+  store double 1.100000e+00, ptr @y, align 8
+  store double 1.100000e+00, ptr @x, align 8
   br label %2
 
 ; <label>:1                                       ; preds = %2
   %.lcssa = phi double [ %4, %2 ]
-  store double %.lcssa, double* @y, align 8
+  store double %.lcssa, ptr @y, align 8
   ret void
 
 ; <label>:2                                       ; preds = %2, %0

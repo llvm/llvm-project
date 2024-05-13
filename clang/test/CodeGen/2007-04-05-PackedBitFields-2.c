@@ -11,6 +11,6 @@ struct pck F {
 }; 
 struct F f1;
 
-void foo() {
+void foo(void) {
 	f1.l = 5;
 }

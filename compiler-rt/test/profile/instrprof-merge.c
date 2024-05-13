@@ -3,7 +3,7 @@
 // RUN: llvm-profdata show --all-functions --counts %t.profraw  | FileCheck %s
 
 // FIXME: llvm-profdata exits with "Malformed instrumentation profile data"
-// XFAIL: msvc
+// XFAIL: target={{.*windows.*}}
 
 #include <stdint.h>
 #include <stdio.h>
@@ -14,7 +14,7 @@ int __llvm_profile_runtime = 0;
 uint64_t __llvm_profile_get_size_for_buffer(void);
 int __llvm_profile_write_buffer(char *);
 void __llvm_profile_reset_counters(void);
-void __llvm_profile_merge_from_buffer(const char *, uint64_t);
+int __llvm_profile_merge_from_buffer(const char *, uint64_t);
 
 int dumpBuffer(const char *FileN, const char *Buffer, uint64_t Size) {
   FILE *File = fopen(FileN, "w");

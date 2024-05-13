@@ -25,15 +25,14 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-LABEL: test_srem_even:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movw r2, #43691
 ; CHECK-NEXT:    sbfx r1, r0, #0, #4
-; CHECK-NEXT:    movt r2, #10922
-; CHECK-NEXT:    lsls r0, r0, #28
-; CHECK-NEXT:    smmul r1, r1, r2
-; CHECK-NEXT:    add.w r1, r1, r1, lsr #31
 ; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
-; CHECK-NEXT:    mvn.w r1, r1, lsl #1
-; CHECK-NEXT:    add.w r0, r1, r0, asr #28
+; CHECK-NEXT:    ubfx r2, r1, #7, #1
+; CHECK-NEXT:    add.w r1, r2, r1, lsr #4
+; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
+; CHECK-NEXT:    sub.w r0, r0, r1, lsl #1
+; CHECK-NEXT:    and r0, r0, #15
+; CHECK-NEXT:    subs r0, #1
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsrs r0, r0, #5
 ; CHECK-NEXT:    bx lr
@@ -68,39 +67,39 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    and r0, r3, #1
-; CHECK-NEXT:    mov r4, r1
+; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    rsbs r1, r0, #0
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    movs r2, #9
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    bl __aeabi_ldivmod
-; CHECK-NEXT:    and r0, r4, #1
-; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    and r0, r5, #1
+; CHECK-NEXT:    mov r7, r2
 ; CHECK-NEXT:    rsbs r1, r0, #0
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    movs r2, #9
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    bl __aeabi_ldivmod
 ; CHECK-NEXT:    ldr r1, [sp, #44]
 ; CHECK-NEXT:    vmov.32 d8[0], r2
 ; CHECK-NEXT:    ldr r0, [sp, #40]
-; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    mov r5, r3
 ; CHECK-NEXT:    and r1, r1, #1
 ; CHECK-NEXT:    mvn r2, #8
 ; CHECK-NEXT:    rsbs r1, r1, #0
 ; CHECK-NEXT:    mov.w r3, #-1
-; CHECK-NEXT:    vmov.32 d9[0], r6
+; CHECK-NEXT:    vmov.32 d9[0], r7
 ; CHECK-NEXT:    bl __aeabi_ldivmod
 ; CHECK-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NEXT:    adr r0, .LCPI3_0
-; CHECK-NEXT:    vmov.32 d9[1], r7
+; CHECK-NEXT:    vmov.32 d9[1], r4
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; CHECK-NEXT:    adr r0, .LCPI3_1
 ; CHECK-NEXT:    vmov.32 d16[1], r3
-; CHECK-NEXT:    vmov.32 d8[1], r4
+; CHECK-NEXT:    vmov.32 d8[1], r5
 ; CHECK-NEXT:    vand q8, q8, q9
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0:128]
 ; CHECK-NEXT:    adr r0, .LCPI3_2
@@ -137,7 +136,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:  .LCPI3_2:
 ; CHECK-NEXT:    .long 3 @ 0x3
 ; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .zero 4
+; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 0 @ 0x0
   %srem = srem <3 x i33> %X, <i33 9, i33 9, i33 -9>
   %cmp = icmp ne <3 x i33> %srem, <i33 3, i33 -3, i33 3>

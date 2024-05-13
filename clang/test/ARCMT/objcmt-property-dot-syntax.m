@@ -5,12 +5,10 @@
 
 @class NSString;
 
-// rdar://19140267
 @protocol NSObject
 @property (readonly, copy) NSString *description;
 @end
 
-// rdar://18498572
 @interface NSObject <NSObject> @end
 
 @interface P : NSObject
@@ -23,7 +21,7 @@
 - (P*) MethodReturnsPObj;
 @end
 
-P* fun();
+P* fun(void);
 
 @implementation P
 - (int) Meth : (P*)array {
@@ -47,7 +45,6 @@ P* fun();
 - (NSString *)description { return [super description]; }
 @end
 
-// rdar://19140267
 @interface Sub : P
 @end
 
@@ -78,7 +75,6 @@ id testRdar19038838(Rdar19038838 *obj) {
   return [obj newItem];
 }
 
-// rdar://19381786
 @interface rdar19381786 : NSObject
 {
   rdar19381786* obj;
@@ -99,7 +95,6 @@ id testRdar19038838(Rdar19038838 *obj) {
 }
 @end
 
-// rdar://19140114
 int NSOnState;
 int ArrNSOnState[4];
 @interface rdar19140114 : NSObject

@@ -1,0 +1,23 @@
+# RUN: llc -o - %s -mtriple=aarch64-- -mattr=+fuse-addsub-2reg-const1 -run-pass postmisched | FileCheck %s --check-prefixes=CHECK,FUSION
+# RUN: llc -o - %s -mtriple=aarch64-- -mattr=-fuse-addsub-2reg-const1 -run-pass postmisched | FileCheck %s --check-prefixes=CHECK,NOFUSION
+---
+# CHECK-LABEL: name: addsub2reg
+# CHECK: $w8 = ADDWrr killed renamable $w0, killed renamable $w1
+# FUSION: renamable $w0 = ADDWri killed renamable $w8, 1, 0
+# CHECK: $w9 = SUBWrr killed renamable $w2, killed renamable $w3
+# NOFUSION: renamable $w0 = ADDWri killed renamable $w8, 1, 0
+# CHECK: renamable $w1 = SUBWri killed renamable $w9, 1, 0
+name: addsub2reg
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $w3
+
+    $w8 = ADDWrr killed renamable $w0, killed renamable $w1
+    $w9 = SUBWrr killed renamable $w2, killed renamable $w3
+    renamable $w0 = ADDWri killed renamable $w8, 1, 0
+    renamable $w1 = SUBWri killed renamable $w9, 1, 0
+
+    $w0 = ORRWrs killed renamable $w0, killed renamable $w1, 0
+    RET undef $lr, implicit $w0
+...

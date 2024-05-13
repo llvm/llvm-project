@@ -9,6 +9,7 @@
 #include "EmulateInstructionMIPS.h"
 
 #include <cstdlib>
+#include <optional>
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Opcode.h"
@@ -29,7 +30,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -137,7 +138,7 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
     break;
   }
 
-  std::string features = "";
+  std::string features;
   uint32_t arch_flags = arch.GetFlags();
   if (arch_flags & ArchSpec::eMIPSAse_msa)
     features += "+msa,";
@@ -193,17 +194,7 @@ void EmulateInstructionMIPS::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString EmulateInstructionMIPS::GetPluginNameStatic() {
-  ConstString g_plugin_name("lldb.emulate-instruction.mips32");
-  return g_plugin_name;
-}
-
-lldb_private::ConstString EmulateInstructionMIPS::GetPluginName() {
-  static ConstString g_plugin_name("EmulateInstructionMIPS");
-  return g_plugin_name;
-}
-
-const char *EmulateInstructionMIPS::GetPluginDescriptionStatic() {
+llvm::StringRef EmulateInstructionMIPS::GetPluginDescriptionStatic() {
   return "Emulate instructions for the MIPS32 architecture.";
 }
 
@@ -595,9 +586,9 @@ const char *EmulateInstructionMIPS::GetRegisterName(unsigned reg_num,
   return nullptr;
 }
 
-bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
-                                             uint32_t reg_num,
-                                             RegisterInfo &reg_info) {
+std::optional<RegisterInfo>
+EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
+                                        uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
     switch (reg_num) {
     case LLDB_REGNUM_GENERIC_PC:
@@ -621,11 +612,12 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
       reg_num = dwarf_sr_mips;
       break;
     default:
-      return false;
+      return {};
     }
   }
 
   if (reg_kind == eRegisterKindDWARF) {
+    RegisterInfo reg_info;
     ::memset(&reg_info, 0, sizeof(RegisterInfo));
     ::memset(reg_info.kinds, LLDB_INVALID_REGNUM, sizeof(reg_info.kinds));
 
@@ -646,7 +638,7 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
       reg_info.format = eFormatVectorOfUInt8;
       reg_info.encoding = eEncodingVector;
     } else {
-      return false;
+      return {};
     }
 
     reg_info.name = GetRegisterName(reg_num, false);
@@ -672,13 +664,13 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
     default:
       break;
     }
-    return true;
+    return reg_info;
   }
-  return false;
+  return {};
 }
 
 EmulateInstructionMIPS::MipsOpcode *
-EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
+EmulateInstructionMIPS::GetOpcodeForInstruction(llvm::StringRef name) {
   static EmulateInstructionMIPS::MipsOpcode g_opcodes[] = {
       // Prologue/Epilogue instructions
       {"ADDiu", &EmulateInstructionMIPS::Emulate_ADDiu,
@@ -964,13 +956,10 @@ EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
       {"JALRS_MM", &EmulateInstructionMIPS::Emulate_JALRS, "JALRS rt, rs"},
   };
 
-  static const size_t k_num_mips_opcodes = llvm::array_lengthof(g_opcodes);
-
-  for (size_t i = 0; i < k_num_mips_opcodes; ++i) {
-    if (!strcasecmp(g_opcodes[i].op_name, op_name))
-      return &g_opcodes[i];
+  for (MipsOpcode &opcode : g_opcodes) {
+    if (name.equals_insensitive(opcode.op_name))
+      return &opcode;
   }
-
   return nullptr;
 }
 
@@ -1209,10 +1198,10 @@ bool EmulateInstructionMIPS::Emulate_ADDiu(llvm::MCInst &insn) {
     /* Check if this is daddiu sp, sp, imm16 */
     if (dst == dwarf_sp_mips) {
       uint64_t result = src_opd_val + imm;
-      RegisterInfo reg_info_sp;
-
-      if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-        context.SetRegisterPlusOffset(reg_info_sp, imm);
+      std::optional<RegisterInfo> reg_info_sp =
+          GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+      if (reg_info_sp)
+        context.SetRegisterPlusOffset(*reg_info_sp, imm);
 
       /* We are allocating bytes on stack */
       context.type = eContextAdjustStackPointer;
@@ -1241,13 +1230,12 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
   int32_t address;
   Context bad_vaddr_context;
 
-  RegisterInfo reg_info_base;
-
   src = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  std::optional<RegisterInfo> reg_info_base =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base);
+  if (!reg_info_base)
     return false;
 
   /* read base register */
@@ -1266,29 +1254,28 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
 
   /* We look for sp based non-volatile register stores */
   if (nonvolatile_reg_p(src)) {
-
-    RegisterInfo reg_info_src;
-
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src,
-                         reg_info_src))
+    std::optional<RegisterInfo> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    if (!reg_info_src)
       return false;
 
     Context context;
-    RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
-    context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
+    context.SetRegisterToRegisterPlusOffset(*reg_info_src, *reg_info_base, 0);
 
-    uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
+    RegisterValue::BytesContainer buffer(reg_info_src->byte_size);
     Status error;
 
-    if (!ReadRegister(&reg_info_base, data_src))
+    std::optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
+    if (!data_src)
       return false;
 
-    if (data_src.GetAsMemoryData(&reg_info_src, buffer, reg_info_src.byte_size,
-                                 eByteOrderLittle, error) == 0)
+    if (data_src->GetAsMemoryData(*reg_info_src, buffer.data(),
+                                  reg_info_src->byte_size, eByteOrderLittle,
+                                  error) == 0)
       return false;
 
-    if (!WriteMemory(context, address, buffer, reg_info_src.byte_size))
+    if (!WriteMemory(context, address, buffer.data(), reg_info_src->byte_size))
       return false;
 
     return true;
@@ -1307,9 +1294,7 @@ bool EmulateInstructionMIPS::Emulate_LW(llvm::MCInst &insn) {
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
   imm = insn.getOperand(2).getImm();
 
-  RegisterInfo reg_info_base;
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  if (GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
     return false;
 
   /* read base register */
@@ -1328,17 +1313,16 @@ bool EmulateInstructionMIPS::Emulate_LW(llvm::MCInst &insn) {
 
   if (nonvolatile_reg_p(src)) {
     RegisterValue data_src;
-    RegisterInfo reg_info_src;
-
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src,
-                         reg_info_src))
+    std::optional<RegisterInfo> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    if (!reg_info_src)
       return false;
 
     Context context;
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(address);
 
-    return WriteRegister(context, &reg_info_src, data_src);
+    return WriteRegister(context, *reg_info_src, data_src);
   }
 
   return false;
@@ -1352,7 +1336,7 @@ bool EmulateInstructionMIPS::Emulate_SUBU_ADDU(llvm::MCInst &insn) {
   bool success = false;
   uint64_t result;
   uint8_t src, dst, rt;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
 
   dst = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   src = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
@@ -1373,15 +1357,16 @@ bool EmulateInstructionMIPS::Emulate_SUBU_ADDU(llvm::MCInst &insn) {
     if (!success)
       return false;
 
-    if (!strcasecmp(op_name, "SUBU"))
+    if (op_name.equals_insensitive("SUBU"))
       result = src_opd_val - rt_opd_val;
     else
       result = src_opd_val + rt_opd_val;
 
     Context context;
-    RegisterInfo reg_info_sp;
-    if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-      context.SetRegisterPlusOffset(reg_info_sp, rt_opd_val);
+    std::optional<RegisterInfo> reg_info_sp =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+    if (reg_info_sp)
+      context.SetRegisterPlusOffset(*reg_info_sp, rt_opd_val);
 
     /* We are allocating bytes on stack */
     context.type = eContextAdjustStackPointer;
@@ -1406,7 +1391,7 @@ bool EmulateInstructionMIPS::Emulate_SUBU_ADDU(llvm::MCInst &insn) {
 
     Context context;
 
-    if (!strcasecmp(op_name, "SUBU"))
+    if (op_name.equals_insensitive("SUBU"))
       result = src_opd_val - rt_opd_val;
     else
       result = src_opd_val + rt_opd_val;
@@ -1454,9 +1439,10 @@ bool EmulateInstructionMIPS::Emulate_ADDIUSP(llvm::MCInst &insn) {
   result = src_opd_val + imm9;
 
   Context context;
-  RegisterInfo reg_info_sp;
-  if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-    context.SetRegisterPlusOffset(reg_info_sp, imm9);
+  std::optional<RegisterInfo> reg_info_sp =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+  if (reg_info_sp)
+    context.SetRegisterPlusOffset(*reg_info_sp, imm9);
 
   // We are adjusting the stack.
   context.type = eContextAdjustStackPointer;
@@ -1485,9 +1471,10 @@ bool EmulateInstructionMIPS::Emulate_ADDIUS5(llvm::MCInst &insn) {
     result = src_opd_val + imm4;
 
     Context context;
-    RegisterInfo reg_info_sp;
-    if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-      context.SetRegisterPlusOffset(reg_info_sp, imm4);
+    std::optional<RegisterInfo> reg_info_sp =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+    if (reg_info_sp)
+      context.SetRegisterPlusOffset(*reg_info_sp, imm4);
 
     // We are adjusting the stack.
     context.type = eContextAdjustStackPointer;
@@ -1508,10 +1495,9 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
   src = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  RegisterInfo reg_info_base;
-
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  std::optional<RegisterInfo> reg_info_base =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base);
+  if (!reg_info_base)
     return false;
 
   // read base register
@@ -1534,21 +1520,22 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
   if (base == dwarf_sp_mips && nonvolatile_reg_p(src)) {
     RegisterInfo reg_info_src = {};
     Context context;
-    RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
-    context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
+    context.SetRegisterToRegisterPlusOffset(reg_info_src, *reg_info_base, 0);
 
-    uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
+    RegisterValue::BytesContainer buffer(reg_info_src.byte_size);
     Status error;
 
-    if (!ReadRegister(&reg_info_base, data_src))
+    std::optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
+    if (!data_src)
       return false;
 
-    if (data_src.GetAsMemoryData(&reg_info_src, buffer, reg_info_src.byte_size,
-                                 eByteOrderLittle, error) == 0)
+    if (data_src->GetAsMemoryData(reg_info_src, buffer.data(),
+                                  reg_info_src.byte_size, eByteOrderLittle,
+                                  error) == 0)
       return false;
 
-    if (!WriteMemory(context, address, buffer, reg_info_src.byte_size))
+    if (!WriteMemory(context, address, buffer.data(), reg_info_src.byte_size))
       return false;
 
     return true;
@@ -1581,11 +1568,9 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
   // offset is always the last operand.
   uint32_t offset = insn.getOperand(num_operands - 1).getImm();
 
-  RegisterInfo reg_info_base;
-  RegisterInfo reg_info_src;
-
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  std::optional<RegisterInfo> reg_info_base =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base);
+  if (!reg_info_base)
     return false;
 
   // read SP
@@ -1612,30 +1597,33 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
     if (!nonvolatile_reg_p(src))
       return false;
 
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src,
-                         reg_info_src))
+    std::optional<RegisterInfo> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    if (!reg_info_src)
       return false;
 
     Context context;
-    RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
-    context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
+    context.SetRegisterToRegisterPlusOffset(*reg_info_src, *reg_info_base, 0);
 
-    uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
+    RegisterValue::BytesContainer buffer(reg_info_src->byte_size);
     Status error;
 
-    if (!ReadRegister(&reg_info_base, data_src))
+    std::optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
+    if (!data_src)
       return false;
 
-    if (data_src.GetAsMemoryData(&reg_info_src, buffer, reg_info_src.byte_size,
-                                 eByteOrderLittle, error) == 0)
+    if (data_src->GetAsMemoryData(*reg_info_src, buffer.data(),
+                                  reg_info_src->byte_size, eByteOrderLittle,
+                                  error) == 0)
       return false;
 
-    if (!WriteMemory(context, base_address, buffer, reg_info_src.byte_size))
+    if (!WriteMemory(context, base_address, buffer.data(),
+                     reg_info_src->byte_size))
       return false;
 
     // Stack address for next register
-    base_address = base_address + reg_info_src.byte_size;
+    base_address = base_address + reg_info_src->byte_size;
   }
   return true;
 }
@@ -1647,9 +1635,7 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
   uint32_t imm5 = insn.getOperand(2).getImm();
   Context bad_vaddr_context;
 
-  RegisterInfo reg_info_base;
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
     return false;
 
   // read base register
@@ -1669,17 +1655,16 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
 
   if (base == dwarf_sp_mips && nonvolatile_reg_p(src)) {
     RegisterValue data_src;
-    RegisterInfo reg_info_src;
-
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src,
-                         reg_info_src))
+    std::optional<RegisterInfo> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    if (!reg_info_src)
       return false;
 
     Context context;
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(base_address);
 
-    return WriteRegister(context, &reg_info_src, data_src);
+    return WriteRegister(context, *reg_info_src, data_src);
   }
 
   return false;
@@ -1716,7 +1701,6 @@ bool EmulateInstructionMIPS::Emulate_LWM16_32(llvm::MCInst &insn) {
   base_address = base_address + imm;
 
   RegisterValue data_dst;
-  RegisterInfo reg_info_dst;
 
   // Total no of registers to be re-stored are num_operands-2.
   for (uint32_t i = 0; i < num_operands - 2; i++) {
@@ -1733,15 +1717,16 @@ bool EmulateInstructionMIPS::Emulate_LWM16_32(llvm::MCInst &insn) {
     if (!nonvolatile_reg_p(dst))
       return false;
 
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + dst,
-                         reg_info_dst))
+    std::optional<RegisterInfo> reg_info_dst =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + dst);
+    if (!reg_info_dst)
       return false;
 
     Context context;
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(base_address + (i * 4));
 
-    if (!WriteRegister(context, &reg_info_dst, data_dst))
+    if (!WriteRegister(context, *reg_info_dst, data_dst))
       return false;
   }
 
@@ -1778,9 +1763,10 @@ bool EmulateInstructionMIPS::Emulate_JRADDIUSP(llvm::MCInst &insn) {
                              ra_val))
     return false;
 
-  RegisterInfo reg_info_sp;
-  if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-    context.SetRegisterPlusOffset(reg_info_sp, imm5);
+  std::optional<RegisterInfo> reg_info_sp =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+  if (reg_info_sp)
+    context.SetRegisterPlusOffset(*reg_info_sp, imm5);
 
   // We are adjusting stack
   context.type = eContextAdjustStackPointer;
@@ -1804,7 +1790,7 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops(llvm::MCInst &insn) {
   bool success = false;
   uint32_t rs, rt;
   int32_t offset, pc, target = 0, rs_val, rt_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   rt = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
@@ -1824,12 +1810,13 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BEQ") || !strcasecmp(op_name, "BEQL")) {
+  if (op_name.equals_insensitive("BEQ") || op_name.equals_insensitive("BEQL")) {
     if (rs_val == rt_val)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BNE") || !strcasecmp(op_name, "BNEL")) {
+  } else if (op_name.equals_insensitive("BNE") ||
+             op_name.equals_insensitive("BNEL")) {
     if (rs_val != rt_val)
       target = pc + offset;
     else
@@ -1853,7 +1840,7 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops_C(llvm::MCInst &insn) {
   bool success = false;
   uint32_t rs, rt;
   int32_t offset, pc, target = 0, rs_val, rt_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
   uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
@@ -1874,42 +1861,42 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops_C(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BEQC")) {
+  if (op_name.equals_insensitive("BEQC")) {
     if (rs_val == rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BNEC")) {
+  } else if (op_name.equals_insensitive("BNEC")) {
     if (rs_val != rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BLTC")) {
+  } else if (op_name.equals_insensitive("BLTC")) {
     if (rs_val < rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGEC")) {
+  } else if (op_name.equals_insensitive("BGEC")) {
     if (rs_val >= rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BLTUC")) {
+  } else if (op_name.equals_insensitive("BLTUC")) {
     if (rs_val < rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGEUC")) {
+  } else if (op_name.equals_insensitive("BGEUC")) {
     if ((uint32_t)rs_val >= (uint32_t)rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BOVC")) {
+  } else if (op_name.equals_insensitive("BOVC")) {
     if (IsAdd64bitOverflow(rs_val, rt_val))
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BNVC")) {
+  } else if (op_name.equals_insensitive("BNVC")) {
     if (!IsAdd64bitOverflow(rs_val, rt_val))
       target = pc + offset;
     else
@@ -1933,7 +1920,7 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link_C(llvm::MCInst &insn) {
   uint32_t rs;
   int32_t offset, pc, target = 0;
   int32_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -1947,32 +1934,32 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link_C(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BLEZALC")) {
+  if (op_name.equals_insensitive("BLEZALC")) {
     if (rs_val <= 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGEZALC")) {
+  } else if (op_name.equals_insensitive("BGEZALC")) {
     if (rs_val >= 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BLTZALC")) {
+  } else if (op_name.equals_insensitive("BLTZALC")) {
     if (rs_val < 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGTZALC")) {
+  } else if (op_name.equals_insensitive("BGTZALC")) {
     if (rs_val > 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BEQZALC")) {
+  } else if (op_name.equals_insensitive("BEQZALC")) {
     if (rs_val == 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BNEZALC")) {
+  } else if (op_name.equals_insensitive("BNEZALC")) {
     if (rs_val != 0)
       target = pc + offset;
     else
@@ -2002,7 +1989,7 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link(llvm::MCInst &insn) {
   uint32_t rs;
   int32_t offset, pc, target = 0;
   int32_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -2016,13 +2003,14 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BLTZAL") || !strcasecmp(op_name, "BLTZALL")) {
+  if (op_name.equals_insensitive("BLTZAL") ||
+      op_name.equals_insensitive("BLTZALL")) {
     if ((int32_t)rs_val < 0)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BGEZAL") ||
-             !strcasecmp(op_name, "BGEZALL")) {
+  } else if (op_name.equals_insensitive("BGEZAL") ||
+             op_name.equals_insensitive("BGEZALL")) {
     if ((int32_t)rs_val >= 0)
       target = pc + offset;
     else
@@ -2052,7 +2040,7 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops(llvm::MCInst &insn) {
   uint32_t rs;
   int32_t offset, pc, target = 0;
   int32_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -2066,22 +2054,26 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BLTZL") || !strcasecmp(op_name, "BLTZ")) {
+  if (op_name.equals_insensitive("BLTZL") ||
+      op_name.equals_insensitive("BLTZ")) {
     if (rs_val < 0)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BGEZL") || !strcasecmp(op_name, "BGEZ")) {
+  } else if (op_name.equals_insensitive("BGEZL") ||
+             op_name.equals_insensitive("BGEZ")) {
     if (rs_val >= 0)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BGTZL") || !strcasecmp(op_name, "BGTZ")) {
+  } else if (op_name.equals_insensitive("BGTZL") ||
+             op_name.equals_insensitive("BGTZ")) {
     if (rs_val > 0)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BLEZL") || !strcasecmp(op_name, "BLEZ")) {
+  } else if (op_name.equals_insensitive("BLEZL") ||
+             op_name.equals_insensitive("BLEZ")) {
     if (rs_val <= 0)
       target = pc + offset;
     else
@@ -2105,7 +2097,7 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops_C(llvm::MCInst &insn) {
   uint32_t rs;
   int32_t offset, pc, target = 0;
   int32_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
   uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
@@ -2120,32 +2112,32 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops_C(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BLTZC")) {
+  if (op_name.equals_insensitive("BLTZC")) {
     if (rs_val < 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BLEZC")) {
+  } else if (op_name.equals_insensitive("BLEZC")) {
     if (rs_val <= 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGEZC")) {
+  } else if (op_name.equals_insensitive("BGEZC")) {
     if (rs_val >= 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGTZC")) {
+  } else if (op_name.equals_insensitive("BGTZC")) {
     if (rs_val > 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BEQZC")) {
+  } else if (op_name.equals_insensitive("BEQZC")) {
     if (rs_val == 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BNEZC")) {
+  } else if (op_name.equals_insensitive("BNEZC")) {
     if (rs_val != 0)
       target = pc + offset;
     else
@@ -2191,7 +2183,7 @@ bool EmulateInstructionMIPS::Emulate_Branch_MM(llvm::MCInst &insn) {
   bool success = false;
   int32_t target = 0;
   uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
   bool update_ra = false;
   uint32_t ra_offset = 0;
 
@@ -2225,33 +2217,33 @@ bool EmulateInstructionMIPS::Emulate_Branch_MM(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BEQZ16_MM")) {
+  if (op_name.equals_insensitive("BEQZ16_MM")) {
     if (rs_val == 0)
       target = pc + offset;
     else
       target = pc + current_inst_size +
                m_next_inst_size; // Skip delay slot instruction.
-  } else if (!strcasecmp(op_name, "BNEZ16_MM")) {
+  } else if (op_name.equals_insensitive("BNEZ16_MM")) {
     if (rs_val != 0)
       target = pc + offset;
     else
       target = pc + current_inst_size +
                m_next_inst_size; // Skip delay slot instruction.
-  } else if (!strcasecmp(op_name, "BEQZC_MM")) {
+  } else if (op_name.equals_insensitive("BEQZC_MM")) {
     if (rs_val == 0)
       target = pc + 4 + offset;
     else
       target =
           pc +
           4; // 32 bit instruction and does not have delay slot instruction.
-  } else if (!strcasecmp(op_name, "BNEZC_MM")) {
+  } else if (op_name.equals_insensitive("BNEZC_MM")) {
     if (rs_val != 0)
       target = pc + 4 + offset;
     else
       target =
           pc +
           4; // 32 bit instruction and does not have delay slot instruction.
-  } else if (!strcasecmp(op_name, "BGEZALS_MM")) {
+  } else if (op_name.equals_insensitive("BGEZALS_MM")) {
     if (rs_val >= 0)
       target = pc + offset;
     else
@@ -2259,7 +2251,7 @@ bool EmulateInstructionMIPS::Emulate_Branch_MM(llvm::MCInst &insn) {
 
     update_ra = true;
     ra_offset = 6;
-  } else if (!strcasecmp(op_name, "BLTZALS_MM")) {
+  } else if (op_name.equals_insensitive("BLTZALS_MM")) {
     if (rs_val >= 0)
       target = pc + offset;
     else
@@ -2291,7 +2283,7 @@ bool EmulateInstructionMIPS::Emulate_Branch_MM(llvm::MCInst &insn) {
 bool EmulateInstructionMIPS::Emulate_JALRx16_MM(llvm::MCInst &insn) {
   bool success = false;
   uint32_t ra_offset = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
 
   uint32_t rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
 
@@ -2305,9 +2297,9 @@ bool EmulateInstructionMIPS::Emulate_JALRx16_MM(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "JALR16_MM"))
+  if (op_name.equals_insensitive("JALR16_MM"))
     ra_offset = 6; // 2-byte instruction with 4-byte delay slot.
-  else if (!strcasecmp(op_name, "JALRS16_MM"))
+  else if (op_name.equals_insensitive("JALRS16_MM"))
     ra_offset = 4; // 2-byte instruction with 2-byte delay slot.
 
   Context context;
@@ -2330,7 +2322,7 @@ bool EmulateInstructionMIPS::Emulate_JALRx16_MM(llvm::MCInst &insn) {
 bool EmulateInstructionMIPS::Emulate_JALx(llvm::MCInst &insn) {
   bool success = false;
   uint32_t offset = 0, target = 0, pc = 0, ra_offset = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
 
   /*
    * JALS target
@@ -2349,11 +2341,11 @@ bool EmulateInstructionMIPS::Emulate_JALx(llvm::MCInst &insn) {
     return false;
 
   // These are PC-region branches and not PC-relative.
-  if (!strcasecmp(op_name, "JALS_MM")) {
+  if (op_name.equals_insensitive("JALS_MM")) {
     // target address is in the “current” 128 MB-aligned region
     target = (pc & 0xF8000000UL) | offset;
     ra_offset = 6;
-  } else if (!strcasecmp(op_name, "JALX_MM")) {
+  } else if (op_name.equals_insensitive("JALX_MM")) {
     // target address is in the “current” 256 MB-aligned region
     target = (pc & 0xF0000000UL) | offset;
     ra_offset = 8;
@@ -2678,7 +2670,7 @@ bool EmulateInstructionMIPS::Emulate_FP_branch(llvm::MCInst &insn) {
   bool success = false;
   uint32_t cc, fcsr;
   int32_t pc, offset, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
 
   cc = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -2694,12 +2686,14 @@ bool EmulateInstructionMIPS::Emulate_FP_branch(llvm::MCInst &insn) {
   /* fcsr[23], fcsr[25-31] are vaild condition bits */
   fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
 
-  if (!strcasecmp(op_name, "BC1F") || !strcasecmp(op_name, "BC1FL")) {
+  if (op_name.equals_insensitive("BC1F") ||
+      op_name.equals_insensitive("BC1FL")) {
     if ((fcsr & (1 << cc)) == 0)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BC1T") || !strcasecmp(op_name, "BC1TL")) {
+  } else if (op_name.equals_insensitive("BC1T") ||
+             op_name.equals_insensitive("BC1TL")) {
     if ((fcsr & (1 << cc)) != 0)
       target = pc + offset;
     else
@@ -2794,7 +2788,7 @@ bool EmulateInstructionMIPS::Emulate_3D_branch(llvm::MCInst &insn) {
   bool success = false;
   uint32_t cc, fcsr;
   int32_t pc, offset, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name = m_insn_info->getName(insn.getOpcode());
 
   cc = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -2811,25 +2805,25 @@ bool EmulateInstructionMIPS::Emulate_3D_branch(llvm::MCInst &insn) {
   /* fcsr[23], fcsr[25-31] are vaild condition bits */
   fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
 
-  if (!strcasecmp(op_name, "BC1ANY2F")) {
+  if (op_name.equals_insensitive("BC1ANY2F")) {
     /* if any one bit is 0 */
     if (((fcsr >> cc) & 3) != 3)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BC1ANY2T")) {
+  } else if (op_name.equals_insensitive("BC1ANY2T")) {
     /* if any one bit is 1 */
     if (((fcsr >> cc) & 3) != 0)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BC1ANY4F")) {
+  } else if (op_name.equals_insensitive("BC1ANY4F")) {
     /* if any one bit is 0 */
     if (((fcsr >> cc) & 0xf) != 0xf)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BC1ANY4T")) {
+  } else if (op_name.equals_insensitive("BC1ANY4T")) {
     /* if any one bit is 1 */
     if (((fcsr >> cc) & 0xf) != 0)
       target = pc + offset;
@@ -2946,9 +2940,9 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_V(llvm::MCInst &insn,
                                                   bool bnz) {
   bool success = false;
   int32_t target = 0;
-  llvm::APInt wr_val = llvm::APInt::getNullValue(128);
+  llvm::APInt wr_val = llvm::APInt::getZero(128);
   llvm::APInt fail_value = llvm::APInt::getMaxValue(128);
-  llvm::APInt zero_value = llvm::APInt::getNullValue(128);
+  llvm::APInt zero_value = llvm::APInt::getZero(128);
   RegisterValue reg_value;
 
   uint32_t wt = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
@@ -2988,9 +2982,7 @@ bool EmulateInstructionMIPS::Emulate_LDST_Imm(llvm::MCInst &insn) {
       m_reg_info->getEncodingValue(insn.getOperand(num_operands - 2).getReg());
   imm = insn.getOperand(num_operands - 1).getImm();
 
-  RegisterInfo reg_info_base;
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
     return false;
 
   /* read base register */
@@ -3022,13 +3014,10 @@ bool EmulateInstructionMIPS::Emulate_LDST_Reg(llvm::MCInst &insn) {
   index =
       m_reg_info->getEncodingValue(insn.getOperand(num_operands - 1).getReg());
 
-  RegisterInfo reg_info_base, reg_info_index;
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
     return false;
 
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + index,
-                       reg_info_index))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + index))
     return false;
 
   /* read base register */

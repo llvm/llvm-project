@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C750 Each bound in the explicit-shape-spec shall be a specification
 ! expression in which there are no references to specification functions or
 ! the intrinsic functions ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF, PRESENT,
@@ -16,11 +16,11 @@ impure function impureFunc()
   impureFunc = 3
 end function impureFunc
 
-pure function pureFunc()
-  integer :: pureFunc
+pure function iPureFunc()
+  integer :: iPureFunc
 
-  pureFunc = 3
-end function pureFunc
+  iPureFunc = 3
+end function iPureFunc
 
 module m
   real, allocatable :: mVar
@@ -49,11 +49,10 @@ subroutine s(iArg, allocArg, pointerArg, arrayArg, ioArg, optionalArg)
   ! statement functions referenced below
   iVolatileStmtFunc() = 3 * volatileVar
   iImpureStmtFunc() = 3 * impureFunc()
-  iPureStmtFunc() = 3 * pureFunc()
+  iPureStmtFunc() = 3 * iPureFunc()
 
   ! This is OK
   real, dimension(merge(1, 2, allocated(mVar))) :: rVar
-
 
   integer :: var = 3
     !ERROR: Invalid specification expression: reference to impure function 'ivolatilestmtfunc'

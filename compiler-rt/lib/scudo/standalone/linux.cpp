@@ -11,14 +11,17 @@
 #if SCUDO_LINUX
 
 #include "common.h"
+#include "internal_defs.h"
 #include "linux.h"
 #include "mutex.h"
+#include "report_linux.h"
 #include "string_utils.h"
 
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/futex.h>
 #include <sched.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -41,6 +44,7 @@ uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
 
 void NORETURN die() { abort(); }
 
+// TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
           UNUSED MapPlatformData *Data) {
   int MmapFlags = MAP_PRIVATE | MAP_ANONYMOUS;
@@ -58,15 +62,12 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
   if (Flags & MAP_MEMTAG)
     MmapProt |= PROT_MTE;
 #endif
-  if (Addr) {
-    // Currently no scenario for a noaccess mapping with a fixed address.
-    DCHECK_EQ(Flags & MAP_NOACCESS, 0);
+  if (Addr)
     MmapFlags |= MAP_FIXED;
-  }
   void *P = mmap(Addr, Size, MmapProt, MmapFlags, -1, 0);
   if (P == MAP_FAILED) {
     if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
-      dieOnMapUnmapError(errno == ENOMEM ? Size : 0);
+      reportMapError(errno == ENOMEM ? Size : 0);
     return nullptr;
   }
 #if SCUDO_ANDROID
@@ -76,19 +77,22 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
   return P;
 }
 
+// TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void unmap(void *Addr, uptr Size, UNUSED uptr Flags,
            UNUSED MapPlatformData *Data) {
   if (munmap(Addr, Size) != 0)
-    dieOnMapUnmapError();
+    reportUnmapError(reinterpret_cast<uptr>(Addr), Size);
 }
 
+// TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
                          UNUSED MapPlatformData *Data) {
   int Prot = (Flags & MAP_NOACCESS) ? PROT_NONE : (PROT_READ | PROT_WRITE);
   if (mprotect(reinterpret_cast<void *>(Addr), Size, Prot) != 0)
-    dieOnMapUnmapError();
+    reportProtectError(Addr, Size, Prot);
 }
 
+// TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
                       UNUSED MapPlatformData *Data) {
   void *Addr = reinterpret_cast<void *>(BaseAddress + Offset);
@@ -105,12 +109,14 @@ enum State : u32 { Unlocked = 0, Locked = 1, Sleeping = 2 };
 }
 
 bool HybridMutex::tryLock() {
-  return atomic_compare_exchange(&M, Unlocked, Locked) == Unlocked;
+  return atomic_compare_exchange_strong(&M, Unlocked, Locked,
+                                        memory_order_acquire) == Unlocked;
 }
 
 // The following is based on https://akkadia.org/drepper/futex.pdf.
 void HybridMutex::lockSlow() {
-  u32 V = atomic_compare_exchange(&M, Unlocked, Locked);
+  u32 V = atomic_compare_exchange_strong(&M, Unlocked, Locked,
+                                         memory_order_acquire);
   if (V == Unlocked)
     return;
   if (V != Sleeping)
@@ -130,11 +136,26 @@ void HybridMutex::unlock() {
   }
 }
 
+void HybridMutex::assertHeldImpl() {
+  CHECK(atomic_load(&M, memory_order_acquire) != Unlocked);
+}
+
 u64 getMonotonicTime() {
   timespec TS;
   clock_gettime(CLOCK_MONOTONIC, &TS);
   return static_cast<u64>(TS.tv_sec) * (1000ULL * 1000 * 1000) +
          static_cast<u64>(TS.tv_nsec);
+}
+
+u64 getMonotonicTimeFast() {
+#if defined(CLOCK_MONOTONIC_COARSE)
+  timespec TS;
+  clock_gettime(CLOCK_MONOTONIC_COARSE, &TS);
+  return static_cast<u64>(TS.tv_sec) * (1000ULL * 1000 * 1000) +
+         static_cast<u64>(TS.tv_nsec);
+#else
+  return getMonotonicTime();
+#endif
 }
 
 u32 getNumberOfCPUs() {

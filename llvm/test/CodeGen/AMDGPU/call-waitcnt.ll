@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Load argument depends on waitcnt which should be skipped.
-define amdgpu_kernel void @call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_memory_arg_load(ptr addrspace(3) %ptr, i32) #0 {
 ; GCN-LABEL: call_memory_arg_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
@@ -13,19 +13,19 @@ define amdgpu_kernel void @call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    ds_read_b32 v0, v0
+; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+12
-; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_endpgm
-  %vgpr = load volatile i32, i32 addrspace(3)* %ptr
+  %vgpr = load volatile i32, ptr addrspace(3) %ptr
   call void @func(i32 %vgpr)
   ret void
 }
 
 ; Memory waitcnt with no register dependence on the call
-define amdgpu_kernel void @call_memory_no_dep(i32 addrspace(1)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_memory_no_dep(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: call_memory_no_dep:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
@@ -37,19 +37,19 @@ define amdgpu_kernel void @call_memory_no_dep(i32 addrspace(1)* %ptr, i32) #0 {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_store_dword v0, v0, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
 ; GCN-NEXT:    s_add_u32 s6, s6, func@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s7, s7, func@rel32@hi+12
-; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GCN-NEXT:    s_endpgm
-  store i32 0, i32 addrspace(1)* %ptr
+  store i32 0, ptr addrspace(1) %ptr
   call void @func(i32 0)
   ret void
 }
 
 ; Should not wait after the call before memory
-define amdgpu_kernel void @call_no_wait_after_call(i32 addrspace(1)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_no_wait_after_call(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: call_no_wait_after_call:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
@@ -58,20 +58,20 @@ define amdgpu_kernel void @call_no_wait_after_call(i32 addrspace(1)* %ptr, i32) 
 ; GCN-NEXT:    s_add_u32 s0, s0, s9
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+12
-; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    v_mov_b32_e32 v40, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    global_store_dword v40, v40, s[34:35]
 ; GCN-NEXT:    s_endpgm
   call void @func(i32 0)
-  store i32 0, i32 addrspace(1)* %ptr
+  store i32 0, ptr addrspace(1) %ptr
   ret void
 }
 
-define amdgpu_kernel void @call_no_wait_after_call_return_val(i32 addrspace(1)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_no_wait_after_call_return_val(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: call_no_wait_after_call_return_val:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
@@ -80,21 +80,21 @@ define amdgpu_kernel void @call_no_wait_after_call_return_val(i32 addrspace(1)* 
 ; GCN-NEXT:    s_add_u32 s0, s0, s9
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func.return@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, func.return@rel32@hi+12
-; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    v_mov_b32_e32 v40, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    global_store_dword v40, v0, s[34:35]
 ; GCN-NEXT:    s_endpgm
   %rv = call i32 @func.return(i32 0)
-  store i32 %rv, i32 addrspace(1)* %ptr
+  store i32 %rv, ptr addrspace(1) %ptr
   ret void
 }
 
 ; Need to wait for the address dependency
-define amdgpu_kernel void @call_got_load(i32 addrspace(1)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_got_load(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: call_got_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
@@ -115,7 +115,7 @@ define amdgpu_kernel void @call_got_load(i32 addrspace(1)* %ptr, i32) #0 {
 }
 
 ; Need to wait for the address dependency
-define void @tailcall_got_load(i32 addrspace(1)* %ptr, i32) #0 {
+define void @tailcall_got_load(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: tailcall_got_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -131,7 +131,7 @@ define void @tailcall_got_load(i32 addrspace(1)* %ptr, i32) #0 {
 }
 
 ; No need to wait for the load.
-define void @tail_call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 {
+define void @tail_call_memory_arg_load(ptr addrspace(3) %ptr, i32) #0 {
 ; GCN-LABEL: tail_call_memory_arg_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -140,7 +140,7 @@ define void @tail_call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 {
 ; GCN-NEXT:    s_add_u32 s4, s4, func@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-  %vgpr = load volatile i32, i32 addrspace(3)* %ptr
+  %vgpr = load volatile i32, ptr addrspace(3) %ptr
   tail call void @func(i32 %vgpr)
   ret void
 }
@@ -149,4 +149,7 @@ declare hidden void @func(i32) #0
 declare hidden i32 @func.return(i32) #0
 declare void @got.func(i32) #0
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

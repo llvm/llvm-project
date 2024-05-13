@@ -8,8 +8,7 @@ define i32 @compress_test(i32 %a) {
 ; CHECK-LABEL: <compress_test>:
 ; CHECK:    c.add a0, a1
 ; CHECK-NEXT:    c.jr ra
-  %1 = load i32, i32* @ext
+  %1 = load i32, ptr @ext
   %2 = tail call i32 asm "add $0, $1, $2", "=r,r,r"(i32 %a, i32 %1)
   ret i32 %2
 }
-

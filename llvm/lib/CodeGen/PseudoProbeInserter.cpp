@@ -18,11 +18,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCPseudoProbe.h"
-#include "llvm/Target/TargetMachine.h"
-#include <unordered_set>
 
 #define DEBUG_TYPE "pseudo-probe-inserter"
 
@@ -44,7 +42,14 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  bool doInitialization(Module &M) override {
+    ShouldRun = M.getNamedMetadata(PseudoProbeDescMetadataName);
+    return false;
+  }
+
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (!ShouldRun)
+      return false;
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     bool Changed = false;
     for (MachineBasicBlock &MBB : MF) {
@@ -102,62 +107,32 @@ public:
         // Probes not surrounded by any real instructions in the same block are
         // called dangling probes. Since there's no good way to pick up a sample
         // collection point for dangling probes at compile time, they are being
-        // tagged so that the profile correlation tool will not report any
+        // removed so that the profile correlation tool will not report any
         // samples collected for them and it's up to the counts inference tool
         // to get them a reasonable count.
+        SmallVector<MachineInstr *, 4> ToBeRemoved;
         for (MachineInstr &MI : MBB) {
           if (MI.isPseudoProbe())
-            MI.addPseudoProbeAttribute(PseudoProbeAttributes::Dangling);
+            ToBeRemoved.push_back(&MI);
         }
+
+        for (auto *MI : ToBeRemoved)
+          MI->eraseFromParent();
+
+        Changed |= !ToBeRemoved.empty();
       }
     }
 
-    // Remove redundant dangling probes. Same dangling probes are redundant
-    // since they all have the same semantic that is to rely on the counts
-    // inference too to get reasonable count for the same original block.
-    // Therefore, there's no need to keep multiple copies of them.
-    auto Hash = [](const MachineInstr *MI) {
-      return std::hash<uint64_t>()(MI->getOperand(0).getImm()) ^
-             std::hash<uint64_t>()(MI->getOperand(1).getImm());
-    };
-
-    auto IsEqual = [](const MachineInstr *Left, const MachineInstr *Right) {
-      return Left->getOperand(0).getImm() == Right->getOperand(0).getImm() &&
-             Left->getOperand(1).getImm() == Right->getOperand(1).getImm() &&
-             Left->getOperand(3).getImm() == Right->getOperand(3).getImm() &&
-             Left->getDebugLoc() == Right->getDebugLoc();
-    };
-
-    SmallVector<MachineInstr *, 4> ToBeRemoved;
-    std::unordered_set<MachineInstr *, decltype(Hash), decltype(IsEqual)>
-        DanglingProbes(0, Hash, IsEqual);
-
-    for (MachineBasicBlock &MBB : MF) {
-      for (MachineInstr &MI : MBB) {
-        if (MI.isPseudoProbe()) {
-          if ((uint32_t)MI.getPseudoProbeAttribute() &
-              (uint32_t)PseudoProbeAttributes::Dangling)
-            if (!DanglingProbes.insert(&MI).second)
-              ToBeRemoved.push_back(&MI);
-        }
-      }
-    }
-
-    for (auto *MI : ToBeRemoved)
-      MI->eraseFromParent();
-
-    Changed |= !ToBeRemoved.empty();
     return Changed;
   }
 
 private:
   uint64_t getFuncGUID(Module *M, DILocation *DL) {
-    auto *SP = DL->getScope()->getSubprogram();
-    auto Name = SP->getLinkageName();
-    if (Name.empty())
-      Name = SP->getName();
+    auto Name = DL->getSubprogramLinkageName();
     return Function::getGUID(Name);
   }
+
+  bool ShouldRun = false;
 };
 } // namespace
 

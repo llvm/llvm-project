@@ -34,7 +34,7 @@ int main(int, char**)
     {
         typedef test_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -50,13 +50,13 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             A(10)
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
+            test_hash<int>(2),
             test_equal_to<int>(3),
             A(4)
            );
@@ -67,7 +67,7 @@ int main(int, char**)
         CheckConsecutiveValues<C::const_iterator>(c.find(2), c.end(), 2, 2);
         CheckConsecutiveValues<C::const_iterator>(c.find(3), c.end(), 3, 1);
         CheckConsecutiveValues<C::const_iterator>(c.find(4), c.end(), 4, 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A(4));
         assert(!c.empty());
@@ -79,7 +79,7 @@ int main(int, char**)
     {
         typedef test_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -95,13 +95,13 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             A(10)
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
+            test_hash<int>(2),
             test_equal_to<int>(3),
             A(10)
            );
@@ -113,7 +113,7 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A(10));
         assert(!c.empty());
@@ -126,7 +126,7 @@ int main(int, char**)
     {
         typedef other_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -142,13 +142,13 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             A(10)
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
+            test_hash<int>(2),
             test_equal_to<int>(3),
             A(4)
            );
@@ -160,7 +160,7 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A(10));
         assert(!c.empty());
@@ -173,7 +173,7 @@ int main(int, char**)
     {
         typedef test_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -189,13 +189,13 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             A()
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
+            test_hash<int>(2),
             test_equal_to<int>(3),
             A()
            );
@@ -207,7 +207,7 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A());
         assert(!c.empty());
@@ -220,7 +220,7 @@ int main(int, char**)
     {
         typedef min_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -236,13 +236,13 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             A()
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
+            test_hash<int>(2),
             test_equal_to<int>(3),
             A()
            );
@@ -254,7 +254,7 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A());
         assert(!c.empty());

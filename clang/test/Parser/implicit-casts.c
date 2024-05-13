@@ -3,7 +3,7 @@ _Complex double X;
 void test1(int c) {
   X = 5;
 }
-void test2() {
+void test2(void) {
   int i;
   double d = i;
   double _Complex a = 5;
@@ -12,9 +12,9 @@ void test2() {
   a = 5;
   d = i;
 }
-int test3() {
+int test3(void) {
   int a[2];
-  a[0] = test3; // expected-warning{{incompatible pointer to integer conversion assigning to 'int' from 'int ()'}}
+  a[0] = test3; // expected-error{{incompatible pointer to integer conversion assigning to 'int' from 'int (void)'}}
   return 0;
 }
 short x; void test4(char c) { x += c; }

@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03
+
+// ALLOW_RETRIES: 3
 
 // <future>
 
@@ -20,17 +22,18 @@
 //     async(launch policy, F&& f, Args&&... args);
 
 
-#include <future>
 #include <atomic>
-#include <memory>
 #include <cassert>
+#include <chrono>
+#include <future>
+#include <memory>
 
 #include "test_macros.h"
 
 typedef std::chrono::high_resolution_clock Clock;
 typedef std::chrono::milliseconds ms;
 
-std::atomic_bool invoked = ATOMIC_VAR_INIT(false);
+std::atomic_bool invoked{false};
 
 int f0()
 {
@@ -75,31 +78,31 @@ void f5(int j)
     TEST_THROW(j);
 }
 
-template <class Ret, class CheckLamdba, class ...Args>
-void test(CheckLamdba&& getAndCheckFn, bool IsDeferred, Args&&... args) {
-    // Reset global state.
-    invoked = false;
+template <class Ret, class CheckLambda, class... Args>
+void test(CheckLambda&& getAndCheckFn, bool IsDeferred, Args&&... args) {
+  // Reset global state.
+  invoked = false;
 
-    // Create the future and wait
-    std::future<Ret> f = std::async(std::forward<Args>(args)...);
-    std::this_thread::sleep_for(ms(300));
+  // Create the future and wait
+  std::future<Ret> f = std::async(std::forward<Args>(args)...);
+  std::this_thread::sleep_for(ms(300));
 
-    // Check that deferred async's have not invoked the function.
-    assert(invoked == !IsDeferred);
+  // Check that deferred async's have not invoked the function.
+  assert(invoked == !IsDeferred);
 
-    // Time the call to f.get() and check that the returned value matches
-    // what is expected.
-    Clock::time_point t0 = Clock::now();
-    assert(getAndCheckFn(f));
-    Clock::time_point t1 = Clock::now();
+  // Time the call to f.get() and check that the returned value matches
+  // what is expected.
+  Clock::time_point t0 = Clock::now();
+  assert(getAndCheckFn(f));
+  Clock::time_point t1 = Clock::now();
 
-    // If the async is deferred it should take more than 100ms, otherwise
-    // it should take less than 100ms.
-    if (IsDeferred) {
-        assert(t1-t0 > ms(100));
-    } else {
-        assert(t1-t0 < ms(100));
-    }
+  // If the async is deferred it should take more than 100ms, otherwise
+  // it should take less than 100ms.
+  if (IsDeferred) {
+    assert(t1 - t0 > ms(100));
+  } else {
+    assert(t1 - t0 < ms(100));
+  }
 }
 
 int main(int, char**)

@@ -12,7 +12,7 @@
 # CHECK-NOT: successors
 # CHECK: JCC_1 %bb.1, 4, implicit undef $eflags
 # CHECK: bb.3:
-# CHECK: RETQ undef $eax
+# CHECK: RET64 undef $eax
 name: func0
 body: |
   bb.0:
@@ -28,7 +28,7 @@ body: |
     JCC_1 %bb.4, 4, implicit undef $eflags   ; condjump+fallthrough to same block
 
   bb.4:
-    RETQ undef $eax
+    RET64 undef $eax
 ...
 ---
 # Some cases that need explicit successors:
@@ -56,6 +56,6 @@ body: |
 
   bb.3:
     ; CHECK: bb.3:
-    ; CHECK: RETQ undef $eax
-    RETQ undef $eax
+    ; CHECK: RET64 undef $eax
+    RET64 undef $eax
 ...

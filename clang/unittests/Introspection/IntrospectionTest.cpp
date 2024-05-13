@@ -134,7 +134,7 @@ TEST(Introspection, SourceLocations_Formatter) {
 
 TEST(Introspection, SourceLocations_Stmt) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCode("void foo() {} void bar() { foo(); }", "foo.cpp",
                               std::make_shared<PCHContainerOperations>());
   auto &Ctx = AST->getASTContext();
@@ -169,7 +169,7 @@ TEST(Introspection, SourceLocations_Stmt) {
 
 TEST(Introspection, SourceLocations_Decl) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 namespace ns1 {
@@ -305,7 +305,7 @@ STRING_LOCATION_STDPAIR(MethodDecl, getTypeSpecStartLoc())
 
   // clang-format off
   EXPECT_EQ(
-            llvm::makeArrayRef(ExpectedRanges),
+            llvm::ArrayRef(ExpectedRanges),
       (ArrayRef<std::pair<std::string, SourceRange>>{
 STRING_LOCATION_STDPAIR(MethodDecl, getExceptionSpecSourceRange()),
 STRING_LOCATION_STDPAIR(MethodDecl, getNameInfo().getSourceRange()),
@@ -354,7 +354,7 @@ STRING_LOCATION_STDPAIR(MethodDecl, getTypeSourceInfo()->getTypeLoc().getSourceR
 
 TEST(Introspection, SourceLocations_NNS) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 namespace ns
@@ -384,7 +384,7 @@ void ns::A::foo() {}
   llvm::sort(ExpectedLocations);
 
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
           STRING_LOCATION_STDPAIR(NNS, getBeginLoc()),
           STRING_LOCATION_STDPAIR(NNS, getEndLoc()),
@@ -414,7 +414,7 @@ void ns::A::foo() {}
 
 TEST(Introspection, SourceLocations_TA_Type) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<typename T>
@@ -472,7 +472,7 @@ STRING_LOCATION_PAIR(
 
 TEST(Introspection, SourceLocations_TA_Decl) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<void(*Ty)()>
@@ -509,7 +509,7 @@ void test() {
 
 TEST(Introspection, SourceLocations_TA_Nullptr) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<void(*Ty)()>
@@ -546,7 +546,7 @@ void test() {
 
 TEST(Introspection, SourceLocations_TA_Integral) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<int>
@@ -582,7 +582,7 @@ void test() {
 
 TEST(Introspection, SourceLocations_TA_Template) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<typename T> class A;
@@ -621,7 +621,7 @@ void bar()
 
 TEST(Introspection, SourceLocations_TA_TemplateExpansion) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
 template<template<typename> class ...> class B { };
@@ -660,7 +660,7 @@ template<template<typename> class ...> class B { };
 
 TEST(Introspection, SourceLocations_TA_Expression) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<int, int = 0> class testExpr;
@@ -693,7 +693,7 @@ template<int I> class testExpr<I> { };
 
 TEST(Introspection, SourceLocations_TA_Pack) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
 template<typename... T> class A {};
@@ -748,7 +748,7 @@ STRING_LOCATION_PAIR(
 
 TEST(Introspection, SourceLocations_CXXCtorInitializer_base) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 struct A {
@@ -780,13 +780,23 @@ struct B : A {
   EXPECT_THAT(
       ExpectedLocations,
       UnorderedElementsAre(
-STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
 STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getBeginLoc()),
 STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getEndLoc()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
 STRING_LOCATION_PAIR(CtorInit, getLParenLoc()),
 STRING_LOCATION_PAIR(CtorInit, getRParenLoc()),
 STRING_LOCATION_PAIR(CtorInit, getSourceLocation()),
-STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getEndLoc()),
 STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getBeginLoc()),
 STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getEndLoc())
  ));
@@ -798,17 +808,23 @@ STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getEndLoc())
   EXPECT_THAT(
       ExpectedRanges,
       UnorderedElementsAre(
-  STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getLocalSourceRange()),
-  STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getSourceRange()),
-  STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange()),
-  STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getSourceRange()),
-  STRING_LOCATION_PAIR(CtorInit, getSourceRange())));
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getSourceRange())));
   // clang-format on
 }
 
 TEST(Introspection, SourceLocations_CXXCtorInitializer_member) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 struct A {
@@ -849,7 +865,7 @@ struct A {
 
 TEST(Introspection, SourceLocations_CXXCtorInitializer_ctor) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 struct C {
@@ -882,31 +898,36 @@ struct C {
 STRING_LOCATION_PAIR(CtorInit, getLParenLoc()),
 STRING_LOCATION_PAIR(CtorInit, getRParenLoc()),
 STRING_LOCATION_PAIR(CtorInit, getSourceLocation()),
-STRING_LOCATION_PAIR(CtorInit,
-                     getTypeSourceInfo()->getTypeLoc().getBeginLoc()),
-STRING_LOCATION_PAIR(CtorInit,
-                     getTypeSourceInfo()->getTypeLoc().getEndLoc()),
-STRING_LOCATION_PAIR(CtorInit,
-  getTypeSourceInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc())
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc())
   ));
   // clang-format on
 
   auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
 
+  // clang-format off
   EXPECT_THAT(
       ExpectedRanges,
       UnorderedElementsAre(
-          STRING_LOCATION_PAIR(CtorInit, getSourceRange()),
-          STRING_LOCATION_PAIR(
-              CtorInit,
-              getTypeSourceInfo()->getTypeLoc().getLocalSourceRange()),
-          STRING_LOCATION_PAIR(
-              CtorInit, getTypeSourceInfo()->getTypeLoc().getSourceRange())));
+STRING_LOCATION_PAIR(CtorInit, getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getSourceRange())
+  ));
+  // clang-format on
 }
 
 TEST(Introspection, SourceLocations_CXXCtorInitializer_pack) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
 template<typename... T>
@@ -941,45 +962,64 @@ struct D : Templ<T...> {
 
   // clang-format off
   EXPECT_EQ(
-     llvm::makeArrayRef(ExpectedLocations),
+     llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
-STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
-STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc()),
-STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::TemplateSpecializationTypeLoc>().getTemplateNameLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getTemplateNameLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getBeginLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getEndLoc()),
 STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getBeginLoc()),
 STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getEndLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getTemplateNameLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getBeginLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getEndLoc()),
 STRING_LOCATION_STDPAIR(CtorInit, getEllipsisLoc()),
 STRING_LOCATION_STDPAIR(CtorInit, getLParenLoc()),
 STRING_LOCATION_STDPAIR(CtorInit, getMemberLocation()),
 STRING_LOCATION_STDPAIR(CtorInit, getRParenLoc()),
 STRING_LOCATION_STDPAIR(CtorInit, getSourceLocation()),
-STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
-STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc()),
-STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getTemplateNameLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getTemplateNameLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getBeginLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getEndLoc()),
 STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getBeginLoc()),
-STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getEndLoc())
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getEndLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getTemplateNameLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getBeginLoc()),
+STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getEndLoc())
   }));
   // clang-format on
 
   auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
 
+  // clang-format off
   EXPECT_THAT(
       ExpectedRanges,
       UnorderedElementsAre(
-          STRING_LOCATION_PAIR(CtorInit,
-                               getBaseClassLoc().getLocalSourceRange()),
-          STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getSourceRange()),
-          STRING_LOCATION_PAIR(CtorInit, getSourceRange()),
-          STRING_LOCATION_PAIR(
-              CtorInit,
-              getTypeSourceInfo()->getTypeLoc().getLocalSourceRange()),
-          STRING_LOCATION_PAIR(
-              CtorInit, getTypeSourceInfo()->getTypeLoc().getSourceRange())));
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getBaseClassLoc().getNextTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(CtorInit, getSourceRange())
+  ));
+  // clang-format on
 }
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_plain) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class A {};
@@ -991,7 +1031,7 @@ class B : A {};
 
   auto BoundNodes = ast_matchers::match(
       decl(hasDescendant(cxxRecordDecl(hasDirectBase(
-          cxxBaseSpecifier(hasType(asString("class A"))).bind("base"))))),
+          cxxBaseSpecifier(hasType(asString("A"))).bind("base"))))),
       TU, Ctx);
 
   EXPECT_EQ(BoundNodes.size(), 1u);
@@ -1007,11 +1047,16 @@ class B : A {};
   EXPECT_THAT(ExpectedLocations,
               UnorderedElementsAre(
 STRING_LOCATION_PAIR(Base, getBaseTypeLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getBeginLoc()),
 STRING_LOCATION_PAIR(Base, getBeginLoc()),
-STRING_LOCATION_PAIR(Base, getEndLoc()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getEndLoc()),
 STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getEndLoc()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getBeginLoc())
+STRING_LOCATION_PAIR(Base, getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc())
   ));
   // clang-format on
 
@@ -1019,16 +1064,19 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getBeginLoc())
 
   // clang-format off
   EXPECT_THAT(ExpectedRanges, UnorderedElementsAre(
-STRING_LOCATION_PAIR(Base, getSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getSourceRange()),
 STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getSourceRange()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange())
+STRING_LOCATION_PAIR(Base, getSourceRange())
     ));
   // clang-format on
 }
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_accessspec) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class A {};
@@ -1040,7 +1088,7 @@ class B : public A {};
 
   auto BoundNodes = ast_matchers::match(
       decl(hasDescendant(cxxRecordDecl(hasDirectBase(
-          cxxBaseSpecifier(hasType(asString("class A"))).bind("base"))))),
+          cxxBaseSpecifier(hasType(asString("A"))).bind("base"))))),
       TU, Ctx);
 
   EXPECT_EQ(BoundNodes.size(), 1u);
@@ -1055,12 +1103,17 @@ class B : public A {};
   // clang-format off
   EXPECT_THAT(ExpectedLocations,
               UnorderedElementsAre(
-STRING_LOCATION_PAIR(Base, getBaseTypeLoc()),
 STRING_LOCATION_PAIR(Base, getBeginLoc()),
-STRING_LOCATION_PAIR(Base, getEndLoc()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(Base, getBaseTypeLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getEndLoc()),
 STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getEndLoc()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getBeginLoc())
+STRING_LOCATION_PAIR(Base, getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc())
   ));
   // clang-format on
 
@@ -1069,7 +1122,10 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getBeginLoc())
   // clang-format off
   EXPECT_THAT(ExpectedRanges, UnorderedElementsAre(
 STRING_LOCATION_PAIR(Base, getSourceRange()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getSourceRange()),
 STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getSourceRange())
   ));
   // clang-format on
@@ -1077,7 +1133,7 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getSourceRange())
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_virtual) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class A {};
@@ -1090,7 +1146,7 @@ class C : virtual B, A {};
 
   auto BoundNodes = ast_matchers::match(
       decl(hasDescendant(cxxRecordDecl(hasDirectBase(
-          cxxBaseSpecifier(hasType(asString("class A"))).bind("base"))))),
+          cxxBaseSpecifier(hasType(asString("A"))).bind("base"))))),
       TU, Ctx);
 
   EXPECT_EQ(BoundNodes.size(), 1u);
@@ -1106,11 +1162,16 @@ class C : virtual B, A {};
   EXPECT_THAT(ExpectedLocations,
               UnorderedElementsAre(
 STRING_LOCATION_PAIR(Base, getBaseTypeLoc()),
-STRING_LOCATION_PAIR(Base, getBeginLoc()),
-STRING_LOCATION_PAIR(Base, getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getBeginLoc()),
 STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getBeginLoc()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getEndLoc())
+STRING_LOCATION_PAIR(Base, getBeginLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(Base, getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc())
   ));
   // clang-format on
 
@@ -1118,16 +1179,19 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getEndLoc())
 
   // clang-format off
   EXPECT_THAT(ExpectedRanges, UnorderedElementsAre(
-STRING_LOCATION_PAIR(Base, getSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getSourceRange()),
 STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getSourceRange()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange())
+STRING_LOCATION_PAIR(Base, getSourceRange())
   ));
   // clang-format on
 }
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_template_base) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<typename T, typename U>
@@ -1156,13 +1220,20 @@ class B : A<int, bool> {};
   EXPECT_THAT(ExpectedLocations,
               UnorderedElementsAre(
 STRING_LOCATION_PAIR(Base, getBaseTypeLoc()),
-STRING_LOCATION_PAIR(Base, getBeginLoc()),
-STRING_LOCATION_PAIR(Base, getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getBeginLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getBeginLoc()),
 STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getBeginLoc()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getTemplateNameLoc()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
+STRING_LOCATION_PAIR(Base, getBeginLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getTemplateNameLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getTemplateNameLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getEndLoc()),
 STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getEndLoc()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc())
+STRING_LOCATION_PAIR(Base, getEndLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc())
   ));
   // clang-format on
 
@@ -1170,16 +1241,19 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::Templa
 
   // clang-format off
   EXPECT_THAT(ExpectedRanges, UnorderedElementsAre(
-STRING_LOCATION_PAIR(Base, getSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getLocalSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getSourceRange()),
+STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getNextTypeLoc().getSourceRange()),
 STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getSourceRange()),
-STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange())
+STRING_LOCATION_PAIR(Base, getSourceRange())
   ));
   // clang-format on
 }
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_pack) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
 template<typename... T>
@@ -1231,7 +1305,7 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange
 
 TEST(Introspection, SourceLocations_FunctionProtoTypeLoc) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 int foo();
@@ -1255,7 +1329,7 @@ int foo();
 
   // clang-format off
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
           (ArrayRef<std::pair<std::string, SourceLocation>>{
 STRING_LOCATION_STDPAIR(TL, getAs<clang::FunctionTypeLoc>().getLParenLoc()),
 STRING_LOCATION_STDPAIR(TL, getAs<clang::FunctionTypeLoc>().getLocalRangeBegin()),
@@ -1293,7 +1367,7 @@ STRING_LOCATION_PAIR(TL, getSourceRange())
 
 TEST(Introspection, SourceLocations_PointerTypeLoc) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 int* i;
@@ -1319,7 +1393,7 @@ int* i;
 
   // clang-format off
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
 STRING_LOCATION_STDPAIR(TL, getAs<clang::PointerTypeLoc>().getPointeeLoc().getAs<clang::BuiltinTypeLoc>().getBuiltinLoc()),
 STRING_LOCATION_STDPAIR(TL, getAs<clang::PointerTypeLoc>().getPointeeLoc().getAs<clang::BuiltinTypeLoc>().getNameLoc()),
@@ -1356,7 +1430,7 @@ STRING_LOCATION_PAIR(TL, getSourceRange())
 // This test doesn't work on windows due to use of the typeof extension.
 TEST(Introspection, SourceLocations_TypeOfTypeLoc) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 typeof (static_cast<void *>(0)) i;
@@ -1402,7 +1476,7 @@ typeof (static_cast<void *>(0)) i;
 
 TEST(Introspection, SourceLocations_DeclarationNameInfo_Dtor) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class Foo
@@ -1431,7 +1505,7 @@ class Foo
 
   // clang-format off
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
           STRING_LOCATION_STDPAIR((&NI), getBeginLoc()),
           STRING_LOCATION_STDPAIR((&NI), getEndLoc()),
@@ -1458,7 +1532,7 @@ getNamedTypeInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
 
 TEST(Introspection, SourceLocations_DeclarationNameInfo_CRef) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
 
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
@@ -1497,20 +1571,19 @@ void foo()
   llvm::sort(ExpectedLocations);
 
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
-    STRING_LOCATION_STDPAIR(Member, getBeginLoc()),
-    STRING_LOCATION_STDPAIR(Member, getEndLoc()),
-    STRING_LOCATION_STDPAIR(Member, getExprLoc()),
-    STRING_LOCATION_STDPAIR(Member, getLAngleLoc()),
-    STRING_LOCATION_STDPAIR(Member, getMemberLoc()),
-    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getBeginLoc()),
-    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getEndLoc()),
-    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getLoc()),
-    STRING_LOCATION_STDPAIR(Member, getOperatorLoc()),
-    STRING_LOCATION_STDPAIR(Member, getRAngleLoc()),
-    STRING_LOCATION_STDPAIR(Member, getTemplateKeywordLoc())
-        }));
+          STRING_LOCATION_STDPAIR(Member, getBeginLoc()),
+          STRING_LOCATION_STDPAIR(Member, getEndLoc()),
+          STRING_LOCATION_STDPAIR(Member, getExprLoc()),
+          STRING_LOCATION_STDPAIR(Member, getLAngleLoc()),
+          STRING_LOCATION_STDPAIR(Member, getMemberLoc()),
+          STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getBeginLoc()),
+          STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getEndLoc()),
+          STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getLoc()),
+          STRING_LOCATION_STDPAIR(Member, getOperatorLoc()),
+          STRING_LOCATION_STDPAIR(Member, getRAngleLoc()),
+          STRING_LOCATION_STDPAIR(Member, getTemplateKeywordLoc())}));
 
   auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
 
@@ -1524,7 +1597,7 @@ void foo()
 
 TEST(Introspection, SourceLocations_DeclarationNameInfo_ConvOp) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class Foo
@@ -1550,7 +1623,7 @@ class Foo
 
   llvm::sort(ExpectedLocations);
 
-  EXPECT_EQ(llvm::makeArrayRef(ExpectedLocations),
+  EXPECT_EQ(llvm::ArrayRef(ExpectedLocations),
             (ArrayRef<std::pair<std::string, SourceLocation>>{
                 STRING_LOCATION_STDPAIR((&NI), getBeginLoc()),
                 STRING_LOCATION_STDPAIR((&NI), getEndLoc()),
@@ -1566,7 +1639,7 @@ class Foo
 
 TEST(Introspection, SourceLocations_DeclarationNameInfo_LitOp) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 long double operator"" _identity ( long double val )
@@ -1592,7 +1665,7 @@ long double operator"" _identity ( long double val )
 
   llvm::sort(ExpectedLocations);
 
-  EXPECT_EQ(llvm::makeArrayRef(ExpectedLocations),
+  EXPECT_EQ(llvm::ArrayRef(ExpectedLocations),
             (ArrayRef<std::pair<std::string, SourceLocation>>{
                 STRING_LOCATION_STDPAIR((&NI), getBeginLoc()),
                 STRING_LOCATION_STDPAIR((&NI), getCXXLiteralOperatorNameLoc()),

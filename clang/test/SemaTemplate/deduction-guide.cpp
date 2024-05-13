@@ -23,7 +23,7 @@ using AT = A<int[3], int, int, short>;
 // CHECK: | |-ParmVarDecl {{.*}} 'X<Ps...>'
 // CHECK: | `-ParmVarDecl {{.*}} 'Ts (*)[Ns]...' pack
 // CHECK: `-CXXDeductionGuideDecl
-// CHECK:   |-TemplateArgument type 'int [3]'
+// CHECK:   |-TemplateArgument type 'int[3]'
 // CHECK:   |-TemplateArgument pack
 // CHECK:   | |-TemplateArgument type 'int'
 // CHECK:   | |-TemplateArgument type 'int'
@@ -34,23 +34,24 @@ using AT = A<int[3], int, int, short>;
 // CHECK:   | `-TemplateArgument integral 4
 // CHECK:   |-TemplateArgument pack
 // CHECK:   | |-TemplateArgument decl
-// CHECK:   | | `-Var {{.*}} 'arr1' 'int [3]'
+// CHECK:   | | `-Var {{.*}} 'arr1' 'int[3]'
 // CHECK:   | `-TemplateArgument decl
-// CHECK:   |   `-Var {{.*}} 'arr2' 'int [3]'
-// CHECK:   |-ParmVarDecl {{.*}} 'X<&arr1, &arr2>':'X<&arr1, &arr2>'
+// CHECK:   |   `-Var {{.*}} 'arr2' 'int[3]'
+// CHECK:   |-ParmVarDecl {{.*}} 'X<&arr1, &arr2>'
 // CHECK:   |-ParmVarDecl {{.*}} 'int (*)[3]'
 // CHECK:   |-ParmVarDecl {{.*}} 'int (*)[3]'
 // CHECK:   `-ParmVarDecl {{.*}} 'short (*)[4]'
 // CHECK: FunctionProtoType {{.*}} 'auto (X<Ps...>, Ts (*)[Ns]...) -> A<T, Ts...>' dependent trailing_return
 // CHECK: |-InjectedClassNameType {{.*}} 'A<T, Ts...>' dependent
-// CHECK: |-TemplateSpecializationType {{.*}} 'X<Ps...>' dependent X
-// CHECK: | `-TemplateArgument expr
-// CHECK: |   `-PackExpansionExpr {{.*}} 'T *'
-// CHECK: |     `-DeclRefExpr {{.*}} 'T *' NonTypeTemplateParm {{.*}} 'Ps' 'T *'
+// CHECK: |-ElaboratedType {{.*}} 'X<Ps...>' sugar dependent
+// CHECK: | `-TemplateSpecializationType {{.*}} 'X<Ps...>' dependent X
+// CHECK: |   `-TemplateArgument expr
+// CHECK: |     `-PackExpansionExpr {{.*}} 'T *'
+// CHECK: |       `-DeclRefExpr {{.*}} 'T *' NonTypeTemplateParm {{.*}} 'Ps' 'T *'
 // CHECK: `-PackExpansionType {{.*}} 'Ts (*)[Ns]...' dependent
 // CHECK:   `-PointerType {{.*}} 'Ts (*)[Ns]' dependent contains_unexpanded_pack
-// CHECK:     `-ParenType {{.*}} 'Ts [Ns]' sugar dependent contains_unexpanded_pack
-// CHECK:       `-DependentSizedArrayType {{.*}} 'Ts [Ns]' dependent contains_unexpanded_pack
+// CHECK:     `-ParenType {{.*}} 'Ts[Ns]' sugar dependent contains_unexpanded_pack
+// CHECK:       `-DependentSizedArrayType {{.*}} 'Ts[Ns]' dependent contains_unexpanded_pack
 // CHECK:         |-TemplateTypeParmType {{.*}} 'Ts' dependent contains_unexpanded_pack depth 0 index 1 pack
 // CHECK:         | `-TemplateTypeParm {{.*}} 'Ts'
 // CHECK:         `-DeclRefExpr {{.*}} 'Ts' NonTypeTemplateParm {{.*}} 'Ns' 'Ts...'
@@ -73,9 +74,9 @@ using BT = B<char, 'x'>;
 // CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (X<nullptr, 'x'>) -> B<char, 'x'>'
 // CHECK:   |-TemplateArgument type 'char'
 // CHECK:   |-TemplateArgument integral 120
-// CHECK:   |-TemplateArgument type 'nullptr_t'
+// CHECK:   |-TemplateArgument type 'std::nullptr_t'
 // CHECK:   |-TemplateArgument nullptr
-// CHECK:   `-ParmVarDecl {{.*}} 'X<nullptr, 'x'>':'X<nullptr, 'x'>'
+// CHECK:   `-ParmVarDecl {{.*}} 'X<nullptr, 'x'>'
 // CHECK: FunctionProtoType {{.*}} 'auto (X<W, V>) -> B<T, V>' dependent trailing_return
 // CHECK: |-InjectedClassNameType {{.*}} 'B<T, V>' dependent
 // CHECK: `-TemplateSpecializationType {{.*}} 'X<W, V>' dependent X
@@ -110,15 +111,16 @@ using CT = C<int>;
 // CHECK:  |-TemplateArgument template B
 // CHECK:  |-TemplateArgument type 'int'
 // CHECK:  |-TemplateArgument integral 0
-// CHECK:  |-ParmVarDecl {{.*}} 'int':'int'
-// CHECK:  |-ParmVarDecl {{.*}} 'Y<B>':'Y<B>'
-// CHECK:  `-ParmVarDecl {{.*}} 'int':'int'
+// CHECK:  |-ParmVarDecl {{.*}} 'int'
+// CHECK:  |-ParmVarDecl {{.*}} 'Y<B>'
+// CHECK:  `-ParmVarDecl {{.*}} 'int'
 // CHECK: FunctionProtoType {{.*}} 'auto (A, Y<>, type-parameter-0-2) -> C<A>' dependent trailing_return cdecl
 // CHECK: |-InjectedClassNameType {{.*}} 'C<A>' dependent
 // CHECK: |-TemplateTypeParmType {{.*}} 'A' dependent depth 0 index 0
 // CHECK: | `-TemplateTypeParm {{.*}} 'A'
-// CHECK: |-TemplateSpecializationType {{.*}} 'Y<>' dependent Y
-// CHECK: | `-TemplateArgument template 
+// CHECK: |-ElaboratedType {{.*}} 'Y<>' sugar dependent
+// CHECK: | `-TemplateSpecializationType {{.*}} 'Y<>' dependent Y
+// CHECK: |   `-TemplateArgument template
 // CHECK: `-TemplateTypeParmType {{.*}} 'type-parameter-0-2' dependent depth 0 index 2
 
 template<typename ...T> struct D { // expected-note {{candidate}}
@@ -154,9 +156,8 @@ using DT = D<int, int>;
 // CHECK:               |-BuiltinType {{.*}} 'int'
 // CHECK:               |-TemplateTypeParmType {{.*}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
 // CHECK:               | `-TemplateTypeParm {{.*}} 'T'
-// CHECK:               `-SubstTemplateTypeParmPackType {{.*}} 'U' dependent contains_unexpanded_pack
-// CHECK:                 |-TemplateTypeParmType {{.*}} 'U' dependent contains_unexpanded_pack depth 1 index 0 pack
-// CHECK:                 | `-TemplateTypeParm {{.*}} 'U'
+// CHECK:               `-SubstTemplateTypeParmPackType {{.*}} 'U' dependent contains_unexpanded_pack typename depth 1 index 0 ... U
+// CHECK:                 |-TypeAliasTemplate {{.*}} 'B'
 // CHECK:                 `-TemplateArgument pack
 // CHECK:                   |-TemplateArgument type 'type-parameter-0-1'
 // CHECK-NOT: Subst
@@ -206,3 +207,91 @@ using ET = E<1, 3>;
 // CHECK:                 `-TemplateArgument expr
 // CHECK-NOT: Subst
 // CHECK:                   `-DeclRefExpr {{.*}} 'int' NonTypeTemplateParm [[M2]] 'M2' 'int'
+
+template <char = 'x'> struct F;
+
+template <char> struct F {
+  template <typename U>
+  requires(false) F(U);
+  template <typename U>
+  requires(true) F(U);
+};
+
+F s(0);
+
+// CHECK-LABEL: Dumping <deduction guide for F>:
+// CHECK: FunctionTemplateDecl
+// CHECK: |-NonTypeTemplateParmDecl {{.*}} 'char' depth 0 index 0
+// CHECK:   `-TemplateArgument expr
+// CHECK: |   |-inherited from NonTypeTemplateParm {{.*}} '' 'char'
+// CHECK: |   `-CharacterLiteral {{.*}} 'char' 120
+// CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 1 U
+// CHECK: |-ParenExpr {{.*}} 'bool'
+// CHECK: | `-CXXBoolLiteralExpr {{.*}} 'bool' false
+// CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (type-parameter-0-1) -> F<>'
+// CHECK: | `-ParmVarDecl {{.*}} 'type-parameter-0-1'
+// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (int) -> F<>'
+// CHECK:   |-TemplateArgument integral 120
+// CHECK:   |-TemplateArgument type 'int'
+// CHECK:   | `-BuiltinType {{.*}} 'int'
+// CHECK:   `-ParmVarDecl {{.*}} 'int'
+// CHECK: FunctionProtoType {{.*}} 'auto (type-parameter-0-1) -> F<>' dependent trailing_return cdecl
+// CHECK: |-InjectedClassNameType {{.*}} 'F<>' dependent
+// CHECK: | `-CXXRecord {{.*}} 'F'
+// CHECK: `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent depth 0 index 1
+
+template<typename T>
+struct G { T t; };
+
+G g = {1};
+// CHECK-LABEL: Dumping <deduction guide for G>:
+// CHECK: FunctionTemplateDecl
+// CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for G> 'auto (T) -> G<T>' aggregate
+// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for G> 'auto (int) -> G<int>' implicit_instantiation aggregate
+
+template<typename X>
+using AG = G<X>;
+AG ag = {1};
+// Verify that the aggregate deduction guide for alias templates is built.
+// CHECK-LABEL: Dumping <deduction guide for AG>
+// CHECK: FunctionTemplateDecl
+// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (type-parameter-0-0) -> G<type-parameter-0-0>'
+// CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (int) -> G<int>' implicit_instantiation
+// CHECK:   |-TemplateArgument type 'int'
+// CHECK:   | `-BuiltinType {{.*}} 'int'
+// CHECK:   `-ParmVarDecl {{.*}} 'int'
+
+template <typename X = int>
+using BG = G<int>;
+BG bg(1.0);
+// CHECK-LABEL: Dumping <deduction guide for BG>
+// CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for BG>
+// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (int) -> G<int>' aggregate
+
+template <typename D>
+requires (sizeof(D) == 4)
+struct Foo {
+  Foo(D);
+};
+
+template <typename U>
+using AFoo = Foo<G<U>>;
+// Verify that the require-clause from the Foo deduction guide is transformed.
+// The D occurrence should be rewritten to G<type-parameter-0-0>.
+//
+// CHECK-LABEL: Dumping <deduction guide for AFoo>
+// CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for AFoo>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 U
+// CHECK-NEXT: |-ParenExpr {{.*}} 'bool'
+// CHECK-NEXT: | `-BinaryOperator {{.*}} 'bool' '=='
+// CHECK-NEXT: |   |-UnaryExprOrTypeTraitExpr {{.*}} 'G<type-parameter-0-0>'
+// CHECK-NEXT: |   `-ImplicitCastExpr {{.*}}
+// CHECK-NEXT: |     `-IntegerLiteral {{.*}}
+// CHECK-NEXT: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (G<type-parameter-0-0>) -> Foo<G<type-parameter-0-0>>'
+// CHECK-NEXT: | `-ParmVarDecl {{.*}} 'G<type-parameter-0-0>'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for AFoo> 'auto (G<int>) -> Foo<G<int>>' implicit_instantiation
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.*}} 'int'
+// CHECK-NEXT:   `-ParmVarDecl {{.*}} 'G<int>'
+
+AFoo aa(G<int>{});

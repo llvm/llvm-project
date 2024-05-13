@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
+// UNSUPPORTED: c++03
 
 // <mutex>
 
@@ -15,8 +16,9 @@
 // template <class Rep, class Period>
 //   bool try_lock_for(const chrono::duration<Rep, Period>& rel_time);
 
-#include <mutex>
 #include <cassert>
+#include <mutex>
+#include <system_error>
 
 #include "test_macros.h"
 

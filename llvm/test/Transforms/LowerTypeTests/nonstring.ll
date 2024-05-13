@@ -1,4 +1,4 @@
-; RUN: opt -S -lowertypetests < %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests %s | FileCheck %s
 
 ; Tests that non-string metadata nodes may be used as bitset identifiers.
 
@@ -15,18 +15,18 @@ target datalayout = "e-p:32:32"
 !2 = distinct !{}
 !3 = distinct !{}
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
 ; CHECK-LABEL: @foo
-define i1 @foo(i8* %p) {
-  ; CHECK: icmp eq i32 {{.*}}, ptrtoint ({ i32 }* @[[ANAME]] to i32)
-  %x = call i1 @llvm.type.test(i8* %p, metadata !2)
+define i1 @foo(ptr %p) {
+  ; CHECK: icmp eq i32 {{.*}}, ptrtoint (ptr @[[ANAME]] to i32)
+  %x = call i1 @llvm.type.test(ptr %p, metadata !2)
   ret i1 %x
 }
 
 ; CHECK-LABEL: @bar
-define i1 @bar(i8* %p) {
-  ; CHECK: icmp eq i32 {{.*}}, ptrtoint ({ [2 x i32] }* @[[BNAME]] to i32)
-  %x = call i1 @llvm.type.test(i8* %p, metadata !3)
+define i1 @bar(ptr %p) {
+  ; CHECK: icmp eq i32 {{.*}}, ptrtoint (ptr @[[BNAME]] to i32)
+  %x = call i1 @llvm.type.test(ptr %p, metadata !3)
   ret i1 %x
 }

@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -9,12 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_variant_access is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9 && !no-exceptions
-
 // <variant>
 
 // template <class ...Types> class variant;
@@ -24,6 +17,7 @@
 #include <cassert>
 #include <type_traits>
 #include <variant>
+#include <string>
 
 #include "test_macros.h"
 #include "variant_test_helpers.h"
@@ -42,7 +36,7 @@ struct DefaultCtorThrows {
 };
 #endif
 
-void test_default_ctor_sfinae() {
+constexpr void test_default_ctor_sfinae() {
   {
     using V = std::variant<std::monostate, int>;
     static_assert(std::is_default_constructible<V>::value, "");
@@ -51,15 +45,9 @@ void test_default_ctor_sfinae() {
     using V = std::variant<NonDefaultConstructible, int>;
     static_assert(!std::is_default_constructible<V>::value, "");
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int &, int>;
-    static_assert(!std::is_default_constructible<V>::value, "");
-  }
-#endif
 }
 
-void test_default_ctor_noexcept() {
+constexpr void test_default_ctor_noexcept() {
   {
     using V = std::variant<int>;
     static_assert(std::is_nothrow_default_constructible<V>::value, "");
@@ -76,7 +64,7 @@ void test_default_ctor_throws() {
   try {
     V v;
     assert(false);
-  } catch (const int &ex) {
+  } catch (const int& ex) {
     assert(ex == 42);
   } catch (...) {
     assert(false);
@@ -84,7 +72,7 @@ void test_default_ctor_throws() {
 #endif
 }
 
-void test_default_ctor_basic() {
+constexpr void test_default_ctor_basic() {
   {
     std::variant<int> v;
     assert(v.index() == 0);
@@ -120,11 +108,24 @@ void test_default_ctor_basic() {
   }
 }
 
-int main(int, char**) {
+constexpr void issue_86686() {
+#if TEST_STD_VER >= 20
+  static_assert(std::variant<std::string>{}.index() == 0);
+#endif
+}
+
+constexpr bool test() {
   test_default_ctor_basic();
   test_default_ctor_sfinae();
   test_default_ctor_noexcept();
-  test_default_ctor_throws();
+  issue_86686();
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  test_default_ctor_throws();
+  static_assert(test());
   return 0;
 }

@@ -5,6 +5,7 @@
 
 ; Darwin always uses the same model.
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck -check-prefix=DARWIN %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -code-model=large | FileCheck -check-prefix=DARWIN %s
 
 @external_gd = external thread_local global i32
 @internal_gd = internal thread_local global i32 42
@@ -22,9 +23,9 @@
 
 ; ----- no model specified -----
 
-define i32* @f1() {
+define ptr @f1() {
 entry:
-  ret i32* @external_gd
+  ret ptr @external_gd
 
   ; Non-PIC code can use initial-exec, PIC code has to use general dynamic.
   ; X64-LABEL:     f1:
@@ -39,9 +40,9 @@ entry:
   ; DARWIN:  _external_gd@TLVP
 }
 
-define i32* @f2() {
+define ptr @f2() {
 entry:
-  ret i32* @internal_gd
+  ret ptr @internal_gd
 
   ; Non-PIC code can use local exec, PIC code can use local dynamic.
   ; X64-LABEL:     f2:
@@ -59,9 +60,9 @@ entry:
 
 ; ----- localdynamic specified -----
 
-define i32* @f3() {
+define ptr @f3() {
 entry:
-  ret i32* @external_ld
+  ret ptr @external_ld
 
   ; Non-PIC code can use initial exec, PIC code use local dynamic as specified.
   ; X64-LABEL:     f3:
@@ -76,9 +77,9 @@ entry:
   ; DARWIN:  _external_ld@TLVP
 }
 
-define i32* @f4() {
+define ptr @f4() {
 entry:
-  ret i32* @internal_ld
+  ret ptr @internal_ld
 
   ; Non-PIC code can use local exec, PIC code can use local dynamic.
   ; X64-LABEL:     f4:
@@ -96,9 +97,9 @@ entry:
 
 ; ----- initialexec specified -----
 
-define i32* @f5() {
+define ptr @f5() {
 entry:
-  ret i32* @external_ie
+  ret ptr @external_ie
 
   ; Non-PIC and PIC code will use initial exec as specified.
   ; X64-LABEL:     f5:
@@ -113,9 +114,9 @@ entry:
   ; DARWIN:  _external_ie@TLVP
 }
 
-define i32* @f6() {
+define ptr @f6() {
 entry:
-  ret i32* @internal_ie
+  ret ptr @internal_ie
 
   ; Non-PIC code can use local exec, PIC code use initial exec as specified.
   ; X64-LABEL:     f6:
@@ -132,7 +133,7 @@ entry:
 
 define i32 @PR22083() {
 entry:
-  ret i32 ptrtoint (i32* @external_ie to i32)
+  ret i32 ptrtoint (ptr @external_ie to i32)
   ; X64-LABEL:     PR22083:
   ; X64:     movq    external_ie@GOTTPOFF(%rip), %rax
   ; X64_PIC-LABEL: PR22083:
@@ -141,9 +142,9 @@ entry:
 
 ; ----- localexec specified -----
 
-define i32* @f7() {
+define ptr @f7() {
 entry:
-  ret i32* @external_le
+  ret ptr @external_le
 
   ; Non-PIC and PIC code will use local exec as specified.
   ; X64-LABEL:     f7:
@@ -158,9 +159,9 @@ entry:
   ; DARWIN:  _external_le@TLVP
 }
 
-define i32* @f8() {
+define ptr @f8() {
 entry:
-  ret i32* @internal_le
+  ret ptr @internal_le
 
   ; Non-PIC and PIC code will use local exec as specified.
   ; X64-LABEL:     f8:

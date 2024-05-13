@@ -1,17 +1,17 @@
-; RUN: opt -S -loop-vectorize < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize < %s | FileCheck %s
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
-define void @test1() #0 personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1() #0 personality ptr @__CxxFrameHandler3 {
 entry:
-  invoke void @_CxxThrowException(i8* null, i8* null)
+  invoke void @_CxxThrowException(ptr null, ptr null)
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null, i32 64, i8* null]
+  %1 = catchpad within %0 [ptr null, i32 64, ptr null]
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.body
@@ -32,10 +32,10 @@ unreachable:                                      ; preds = %entry
 }
 
 ; CHECK-LABEL: define void @test1(
-; CHECK: %[[cpad:.*]] = catchpad within {{.*}} [i8* null, i32 64, i8* null]
+; CHECK: %[[cpad:.*]] = catchpad within {{.*}} [ptr null, i32 64, ptr null]
 ; CHECK: call <16 x double> @llvm.floor.v16f64(<16 x double> {{.*}}) [ "funclet"(token %[[cpad]]) ]
 
-declare x86_stdcallcc void @_CxxThrowException(i8*, i8*)
+declare x86_stdcallcc void @_CxxThrowException(ptr, ptr)
 
 declare i32 @__CxxFrameHandler3(...)
 

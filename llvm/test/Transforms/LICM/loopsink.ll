@@ -1,7 +1,5 @@
-; RUN: opt -S -loop-sink < %s | FileCheck %s
-; RUN: opt -S -verify-memoryssa -enable-mssa-in-legacy-loop-sink -loop-sink < %s | FileCheck %s
-; RUN: opt -S -aa-pipeline=basic-aa -passes=loop-sink < %s | FileCheck %s
-; RUN: opt -S -verify-memoryssa -enable-mssa-in-loop-sink -aa-pipeline=basic-aa -passes=loop-sink < %s | FileCheck %s
+; RUN: opt -S -verify-memoryssa -passes=loop-sink < %s | FileCheck %s
+; RUN: opt -S -verify-memoryssa -aa-pipeline=basic-aa -passes=loop-sink < %s | FileCheck %s
 
 @g = global i32 0, align 4
 
@@ -21,15 +19,15 @@
 ; Sink load to b2
 ; CHECK: t1
 ; CHECK: .b2:
-; CHECK: load i32, i32* @g
+; CHECK: load i32, ptr @g
 ; CHECK: .b3:
-; CHECK-NOT:  load i32, i32* @g
+; CHECK-NOT:  load i32, ptr @g
 define i32 @t1(i32, i32) #0 !prof !0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %.exit, label %.preheader
 
 .preheader:
-  %invariant = load i32, i32* @g
+  %invariant = load i32, ptr @g
   br label %.b1
 
 .b1:
@@ -84,19 +82,19 @@ define i32 @t1(i32, i32) #0 !prof !0 {
 ; Sink load to b3 and b6
 ; CHECK: t2
 ; CHECK: .preheader:
-; CHECK-NOT: load i32, i32* @g
+; CHECK-NOT: load i32, ptr @g
 ; CHECK: .b3:
-; CHECK: load i32, i32* @g
+; CHECK: load i32, ptr @g
 ; CHECK: .b4:
 ; CHECK: .b6:
-; CHECK: load i32, i32* @g
+; CHECK: load i32, ptr @g
 ; CHECK: .b7:
 define i32 @t2(i32, i32) #0 !prof !0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %.exit, label %.preheader
 
 .preheader:
-  %invariant = load i32, i32* @g
+  %invariant = load i32, ptr @g
   br label %.b1
 
 .b1:
@@ -150,15 +148,15 @@ define i32 @t2(i32, i32) #0 !prof !0 {
 ; Do not sink load from preheader.
 ; CHECK: t3
 ; CHECK: .preheader:
-; CHECK: load i32, i32* @g
+; CHECK: load i32, ptr @g
 ; CHECK: .b1:
-; CHECK-NOT: load i32, i32* @g
+; CHECK-NOT: load i32, ptr @g
 define i32 @t3(i32, i32) #0 !prof !0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %.exit, label %.preheader
 
 .preheader:
-  %invariant = load i32, i32* @g
+  %invariant = load i32, ptr @g
   br label %.b1
 
 .b1:
@@ -197,23 +195,27 @@ define i32 @t3(i32, i32) #0 !prof !0 {
   ret i32 10
 }
 
-; For single-BB loop with <=1 avg trip count, sink load to b1
+; For single-BB loop with <=1 avg trip count, sink load to body
 ; CHECK: t4
-; CHECK: .preheader:
-; CHECK-NOT: load i32, i32* @g
-; CHECK: .b1:
-; CHECK: load i32, i32* @g
+; CHECK: .header:
+; CHECK-NOT: load i32, ptr @g
+; CHECK: .body:
+; CHECK: load i32, ptr @g
 ; CHECK: .exit:
 define i32 @t4(i32, i32) #0 !prof !0 {
-.preheader:
-  %invariant = load i32, i32* @g
-  br label %.b1
+.entry:
+  %invariant = load i32, ptr @g
+  br label %.header
 
-.b1:
-  %iv = phi i32 [ %t1, %.b1 ], [ 0, %.preheader ]
+.header:
+  %iv = phi i32 [ %t1, %.body ], [ 0, %.entry ]
+  %c0 = icmp sgt i32 %iv, %0
+  br i1 %c0, label %.body, label %.exit, !prof !1
+
+.body:
   %t1 = add nsw i32 %invariant, %iv
   %c1 = icmp sgt i32 %iv, %0
-  br i1 %c1, label %.b1, label %.exit, !prof !1
+  br label %.header
 
 .exit:
   ret i32 10
@@ -235,15 +237,15 @@ define i32 @t4(i32, i32) #0 !prof !0 {
 ; There is alias store in loop, do not sink load
 ; CHECK: t5
 ; CHECK: .preheader:
-; CHECK: load i32, i32* @g
+; CHECK: load i32, ptr @g
 ; CHECK: .b1:
-; CHECK-NOT: load i32, i32* @g
-define i32 @t5(i32, i32*) #0 !prof !0 {
+; CHECK-NOT: load i32, ptr @g
+define i32 @t5(i32, ptr) #0 !prof !0 {
   %3 = icmp eq i32 %0, 0
   br i1 %3, label %.exit, label %.preheader
 
 .preheader:
-  %invariant = load i32, i32* @g
+  %invariant = load i32, ptr @g
   br label %.b1
 
 .b1:
@@ -298,16 +300,16 @@ define i32 @t5(i32, i32*) #0 !prof !0 {
 ; Regardless of aliasing store in loop this load from constant memory can be sunk.
 ; CHECK: t5_const_memory
 ; CHECK: .preheader:
-; CHECK-NOT: load i32, i32* @g_const
+; CHECK-NOT: load i32, ptr @g_const
 ; CHECK: .b2:
-; CHECK: load i32, i32* @g_const
+; CHECK: load i32, ptr @g_const
 ; CHECK: br i1 %c2, label %.b3, label %.b4
-define i32 @t5_const_memory(i32, i32*) #0 !prof !0 {
+define i32 @t5_const_memory(i32, ptr) #0 !prof !0 {
   %3 = icmp eq i32 %0, 0
   br i1 %3, label %.exit, label %.preheader
 
 .preheader:
-  %invariant = load i32, i32* @g_const
+  %invariant = load i32, ptr @g_const
   br label %.b1
 
 .b1:
@@ -357,15 +359,15 @@ define i32 @t5_const_memory(i32, i32*) #0 !prof !0 {
 ; Do not sink unordered atomic load to b2
 ; CHECK: t6
 ; CHECK: .preheader:
-; CHECK:  load atomic i32, i32* @g unordered, align 4
+; CHECK:  load atomic i32, ptr @g unordered, align 4
 ; CHECK: .b2:
-; CHECK-NOT: load atomic i32, i32* @g unordered, align 4
+; CHECK-NOT: load atomic i32, ptr @g unordered, align 4
 define i32 @t6(i32, i32) #0 !prof !0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %.exit, label %.preheader
 
 .preheader:
-  %invariant = load atomic i32, i32* @g unordered, align 4
+  %invariant = load atomic i32, ptr @g unordered, align 4
   br label %.b1
 
 .b1:
@@ -405,15 +407,15 @@ define i32 @t6(i32, i32) #0 !prof !0 {
 ; load from constant.
 ; CHECK: t7
 ; CHECK: .preheader:
-; CHECK-NOT:  load atomic i32, i32* @g_const unordered, align 4
+; CHECK-NOT:  load atomic i32, ptr @g_const unordered, align 4
 ; CHECK: .b2:
-; CHECK: load atomic i32, i32* @g_const unordered, align 4
+; CHECK: load atomic i32, ptr @g_const unordered, align 4
 define i32 @t7(i32, i32) #0 !prof !0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %.exit, label %.preheader
 
 .preheader:
-  %invariant = load atomic i32, i32* @g_const unordered, align 4
+  %invariant = load atomic i32, ptr @g_const unordered, align 4
   br label %.b1
 
 .b1:

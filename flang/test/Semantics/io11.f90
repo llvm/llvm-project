@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 ! Tests for defined input/output.  See 12.6.4.8 and 15.4.3.2, and C777
 module m1
@@ -80,10 +80,10 @@ module m4
 contains
   !ERROR: Dummy argument 0 of 'formattedreadproc' must be a data object
   !ERROR: Cannot use an alternate return as the passed-object dummy argument
-  subroutine formattedReadProc(*, unit, iotype, vlist, iostat, iomsg) 
+  subroutine formattedReadProc(*, unit, iotype, vlist, iostat, iomsg)
     !ERROR: Dummy argument 'unit' must be a data object
     !ERROR: A dummy procedure without the POINTER attribute may not have an INTENT attribute
-    procedure(sin), intent(in) :: unit
+    procedure(real), intent(in) :: unit
     character(len=*), intent(in) :: iotype
     integer, intent(in) :: vlist(:)
     integer, intent(out) :: iostat
@@ -331,12 +331,12 @@ contains
   subroutine formattedReadProc(dtv, unit, iotype, vlist, iostat, iomsg)
     class(t), intent(inout) :: dtv
     integer, intent(in) :: unit
-    !ERROR: Dummy argument 'iotype' of a defined input/output procedure must be assumed-length CHARACTER
+    !ERROR: Dummy argument 'iotype' of a defined input/output procedure must be assumed-length CHARACTER of default kind
     character(len=5), intent(in) :: iotype ! Error, must be assumed length
     integer, intent(in) :: vlist(:)
     integer, intent(out) :: iostat
-    character(len=*), intent(inout) :: iomsg
-
+    !ERROR: Dummy argument 'iomsg' of a defined input/output procedure must be assumed-length CHARACTER of default kind
+    character(len=5), intent(inout) :: iomsg
     iostat = 343
     stop 'fail'
   end subroutine
@@ -391,7 +391,7 @@ contains
 end module
 
 module m18
-  ! Test the same defined input/output procedure specified as a type-bound 
+  ! Test the same defined input/output procedure specified as a type-bound
   ! procedure and as a generic
   type t
     integer c
@@ -434,16 +434,14 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
-  !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'read(unformatted)'
   subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
     class(t),intent(inout) :: dtv
     integer,intent(in) :: unit
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
 
@@ -469,7 +467,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
   subroutine unformattedWriteProc(dtv,unit,iostat,iomsg)
     class(t),intent(in) :: dtv
@@ -477,7 +474,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     write(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
 
@@ -502,21 +498,19 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
-  !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'read(unformatted)'
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(4)),intent(inout) :: dtv
     integer,intent(in) :: unit
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
 
 module m22
-  ! Test read and write defined input/output procedures specified as a 
+  ! Test read and write defined input/output procedures specified as a
   ! type-bound procedure and as a generic for the same derived type with a
   ! KIND type parameter where they have different values
   type t(typeParam)
@@ -536,7 +530,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(3)),intent(inout) :: dtv
@@ -544,16 +537,15 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
 
 module m23
   type t(typeParam)
-  ! Test read and write defined input/output procedures specified as a 
+  ! Test read and write defined input/output procedures specified as a
   ! type-bound procedure and as a generic for the same derived type with a
-  ! LEN type parameter where they have different values
-    integer, len :: typeParam = 4
+  ! KIND type parameter where they have different values
+    integer, kind :: typeParam = 4
     integer c
   contains
     procedure :: unformattedReadProc
@@ -564,12 +556,11 @@ module m23
   end interface
 contains
   subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
-    class(t(*)),intent(inout) :: dtv
+    class(t(2)),intent(inout) :: dtv
     integer,intent(in) :: unit
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(3)),intent(inout) :: dtv
@@ -577,14 +568,45 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
+  end subroutine
+end module
+
+module m23a
+  type t(typeParam)
+  ! Test read and write defined input/output procedures specified as a
+  ! type-bound procedure and as a generic for the same derived type with a
+  ! KIND type parameter where they have the same value
+    integer, kind :: typeParam = 4
+    integer c
+  contains
+    procedure :: unformattedReadProc
+    generic :: read(unformatted) => unformattedReadProc
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc1
+  end interface
+contains
+  subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end subroutine
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'read(unformatted)'
+  subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
+    class(t(4)),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
   end subroutine
 end module
 
 module m24
   ! Test read and write defined input/output procedures specified as a 
   ! type-bound procedure and as a generic for the same derived type with a
-  ! LEN type parameter where they have the same value
+  ! LEN type parameter where they are both assumed
   type t(typeParam)
     integer, len :: typeParam = 4
     integer c
@@ -602,15 +624,68 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
-  !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'read(unformatted)'
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(*)),intent(inout) :: dtv
     integer,intent(in) :: unit
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
+
+module m25a
+  ! Test against false error when two defined I/O procedures exist
+  ! for the same type but are not both visible in the same scope.
+  type t
+    integer c
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc1
+  end interface
+ contains
+  subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end subroutine
+end module
+subroutine m25b
+  use m25a, only: t
+  interface read(unformatted)
+    procedure unformattedReadProc2
+  end interface
+ contains
+  subroutine unformattedReadProc2(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end subroutine
+end subroutine
+
+module m26a
+  type t
+    integer n
+  end type
+ contains
+  subroutine unformattedRead(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    !ERROR: Dummy argument 'iomsg' of a defined input/output procedure must be assumed-length CHARACTER of default kind
+    character(kind=4,len=*),intent(inout) :: iomsg
+    !ERROR: Must have default kind(1) of CHARACTER type, but is CHARACTER(KIND=4,LEN=*)
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%n
+  end subroutine
+end
+module m26b
+  use m26a
+  interface read(unformatted)
+    procedure unformattedRead
+  end interface
+end

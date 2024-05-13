@@ -42,9 +42,6 @@ private:
   // Vectorization plan that we are working on.
   VPlan &Plan;
 
-  // Output Top Region.
-  VPRegionBlock *TopRegion = nullptr;
-
   // Builder of the VPlan instruction-level representation.
   VPBuilder VPIRBuilder;
 
@@ -59,8 +56,12 @@ private:
   // Hold phi node's that need to be fixed once the plain CFG has been built.
   SmallVector<PHINode *, 8> PhisToFix;
 
+  /// Maps loops in the original IR to their corresponding region.
+  DenseMap<Loop *, VPRegionBlock *> Loop2Region;
+
   // Utility functions.
   void setVPBBPredsFromBB(VPBasicBlock *VPBB, BasicBlock *BB);
+  void setRegionPredsFromBB(VPRegionBlock *VPBB, BasicBlock *BB);
   void fixPhiNodes();
   VPBasicBlock *getOrCreateVPBB(BasicBlock *BB);
 #ifndef NDEBUG
@@ -73,20 +74,49 @@ public:
   PlainCFGBuilder(Loop *Lp, LoopInfo *LI, VPlan &P)
       : TheLoop(Lp), LI(LI), Plan(P) {}
 
-  // Build the plain CFG and return its Top Region.
-  VPRegionBlock *buildPlainCFG();
+  /// Build plain CFG for TheLoop  and connects it to Plan's entry.
+  void buildPlainCFG();
 };
 } // anonymous namespace
 
 // Set predecessors of \p VPBB in the same order as they are in \p BB. \p VPBB
 // must have no predecessors.
 void PlainCFGBuilder::setVPBBPredsFromBB(VPBasicBlock *VPBB, BasicBlock *BB) {
-  SmallVector<VPBlockBase *, 8> VPBBPreds;
+  auto GetLatchOfExit = [this](BasicBlock *BB) -> BasicBlock * {
+    auto *SinglePred = BB->getSinglePredecessor();
+    Loop *LoopForBB = LI->getLoopFor(BB);
+    if (!SinglePred || LI->getLoopFor(SinglePred) == LoopForBB)
+      return nullptr;
+    // The input IR must be in loop-simplify form, ensuring a single predecessor
+    // for exit blocks.
+    assert(SinglePred == LI->getLoopFor(SinglePred)->getLoopLatch() &&
+           "SinglePred must be the only loop latch");
+    return SinglePred;
+  };
+  if (auto *LatchBB = GetLatchOfExit(BB)) {
+    auto *PredRegion = getOrCreateVPBB(LatchBB)->getParent();
+    assert(VPBB == cast<VPBasicBlock>(PredRegion->getSingleSuccessor()) &&
+           "successor must already be set for PredRegion; it must have VPBB "
+           "as single successor");
+    VPBB->setPredecessors({PredRegion});
+    return;
+  }
   // Collect VPBB predecessors.
+  SmallVector<VPBlockBase *, 2> VPBBPreds;
   for (BasicBlock *Pred : predecessors(BB))
     VPBBPreds.push_back(getOrCreateVPBB(Pred));
-
   VPBB->setPredecessors(VPBBPreds);
+}
+
+static bool isHeaderBB(BasicBlock *BB, Loop *L) {
+  return L && BB == L->getHeader();
+}
+
+void PlainCFGBuilder::setRegionPredsFromBB(VPRegionBlock *Region,
+                                           BasicBlock *BB) {
+  // BB is a loop header block. Connect the region to the loop preheader.
+  Loop *LoopOfBB = LI->getLoopFor(BB);
+  Region->setPredecessors({getOrCreateVPBB(LoopOfBB->getLoopPredecessor())});
 }
 
 // Add operands to VPInstructions representing phi nodes from the input IR.
@@ -100,25 +130,85 @@ void PlainCFGBuilder::fixPhiNodes() {
     assert(VPPhi->getNumOperands() == 0 &&
            "Expected VPInstruction with no operands.");
 
+    Loop *L = LI->getLoopFor(Phi->getParent());
+    if (isHeaderBB(Phi->getParent(), L)) {
+      // For header phis, make sure the incoming value from the loop
+      // predecessor is the first operand of the recipe.
+      assert(Phi->getNumOperands() == 2);
+      BasicBlock *LoopPred = L->getLoopPredecessor();
+      VPPhi->addIncoming(
+          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopPred)),
+          BB2VPBB[LoopPred]);
+      BasicBlock *LoopLatch = L->getLoopLatch();
+      VPPhi->addIncoming(
+          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopLatch)),
+          BB2VPBB[LoopLatch]);
+      continue;
+    }
+
     for (unsigned I = 0; I != Phi->getNumOperands(); ++I)
       VPPhi->addIncoming(getOrCreateVPOperand(Phi->getIncomingValue(I)),
                          BB2VPBB[Phi->getIncomingBlock(I)]);
   }
 }
 
-// Create a new empty VPBasicBlock for an incoming BasicBlock or retrieve an
-// existing one if it was already created.
+static bool isHeaderVPBB(VPBasicBlock *VPBB) {
+  return VPBB->getParent() && VPBB->getParent()->getEntry() == VPBB;
+}
+
+/// Return true of \p L loop is contained within \p OuterLoop.
+static bool doesContainLoop(const Loop *L, const Loop *OuterLoop) {
+  if (L->getLoopDepth() < OuterLoop->getLoopDepth())
+    return false;
+  const Loop *P = L;
+  while (P) {
+    if (P == OuterLoop)
+      return true;
+    P = P->getParentLoop();
+  }
+  return false;
+}
+
+// Create a new empty VPBasicBlock for an incoming BasicBlock in the region
+// corresponding to the containing loop  or retrieve an existing one if it was
+// already created. If no region exists yet for the loop containing \p BB, a new
+// one is created.
 VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
-  auto BlockIt = BB2VPBB.find(BB);
-  if (BlockIt != BB2VPBB.end())
+  if (auto *VPBB = BB2VPBB.lookup(BB)) {
     // Retrieve existing VPBB.
-    return BlockIt->second;
+    return VPBB;
+  }
 
   // Create new VPBB.
-  LLVM_DEBUG(dbgs() << "Creating VPBasicBlock for " << BB->getName() << "\n");
-  VPBasicBlock *VPBB = new VPBasicBlock(BB->getName());
+  StringRef Name = isHeaderBB(BB, TheLoop) ? "vector.body" : BB->getName();
+  LLVM_DEBUG(dbgs() << "Creating VPBasicBlock for " << Name << "\n");
+  VPBasicBlock *VPBB = new VPBasicBlock(Name);
   BB2VPBB[BB] = VPBB;
-  VPBB->setParent(TopRegion);
+
+  // Get or create a region for the loop containing BB.
+  Loop *LoopOfBB = LI->getLoopFor(BB);
+  if (!LoopOfBB || !doesContainLoop(LoopOfBB, TheLoop))
+    return VPBB;
+
+  auto *RegionOfVPBB = Loop2Region.lookup(LoopOfBB);
+  if (!isHeaderBB(BB, LoopOfBB)) {
+    assert(RegionOfVPBB &&
+           "Region should have been created by visiting header earlier");
+    VPBB->setParent(RegionOfVPBB);
+    return VPBB;
+  }
+
+  assert(!RegionOfVPBB &&
+         "First visit of a header basic block expects to register its region.");
+  // Handle a header - take care of its Region.
+  if (LoopOfBB == TheLoop) {
+    RegionOfVPBB = Plan.getVectorLoopRegion();
+  } else {
+    RegionOfVPBB = new VPRegionBlock(Name.str(), false /*isReplicator*/);
+    RegionOfVPBB->setParent(Loop2Region[LoopOfBB->getParentLoop()]);
+  }
+  RegionOfVPBB->setEntry(VPBB);
+  Loop2Region[LoopOfBB] = RegionOfVPBB;
   return VPBB;
 }
 
@@ -182,8 +272,7 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 
   // A and B: Create VPValue and add it to the pool of external definitions and
   // to the Value->VPValue map.
-  VPValue *NewVPVal = new VPValue(IRVal);
-  Plan.addExternalDef(NewVPVal);
+  VPValue *NewVPVal = Plan.getOrAddLiveIn(IRVal);
   IRDef2VPValue[IRVal] = NewVPVal;
   return NewVPVal;
 }
@@ -194,7 +283,7 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
   VPIRBuilder.setInsertPoint(VPBB);
-  for (Instruction &InstRef : *BB) {
+  for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
     Instruction *Inst = &InstRef;
 
     // There shouldn't be any VPValue for Inst at this point. Otherwise, we
@@ -203,10 +292,12 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
            "Instruction shouldn't have been visited.");
 
     if (auto *Br = dyn_cast<BranchInst>(Inst)) {
-      // Branch instruction is not explicitly represented in VPlan but we need
-      // to represent its condition bit when it's conditional.
-      if (Br->isConditional())
-        getOrCreateVPOperand(Br->getCondition());
+      // Conditional branch instruction are represented using BranchOnCond
+      // recipes.
+      if (Br->isConditional()) {
+        VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
+        VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst);
+      }
 
       // Skip the rest of the Instruction processing for Branch instructions.
       continue;
@@ -227,7 +318,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       for (Value *Op : Inst->operands())
         VPOperands.push_back(getOrCreateVPOperand(Op));
 
-      // Build VPInstruction for any arbitraty Instruction without specific
+      // Build VPInstruction for any arbitrary Instruction without specific
       // representation in VPlan.
       NewVPV = cast<VPInstruction>(
           VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
@@ -238,11 +329,27 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 }
 
 // Main interface to build the plain CFG.
-VPRegionBlock *PlainCFGBuilder::buildPlainCFG() {
-  // 1. Create the Top Region. It will be the parent of all VPBBs.
-  TopRegion = new VPRegionBlock("TopRegion", false /*isReplicator*/);
+void PlainCFGBuilder::buildPlainCFG() {
+  // 0. Reuse the top-level region, vector-preheader and exit VPBBs from the
+  // skeleton. These were created directly rather than via getOrCreateVPBB(),
+  // revisit them now to update BB2VPBB. Note that header/entry and
+  // latch/exiting VPBB's of top-level region have yet to be created.
+  VPRegionBlock *TheRegion = Plan.getVectorLoopRegion();
+  BasicBlock *ThePreheaderBB = TheLoop->getLoopPreheader();
+  assert((ThePreheaderBB->getTerminator()->getNumSuccessors() == 1) &&
+         "Unexpected loop preheader");
+  auto *VectorPreheaderVPBB =
+      cast<VPBasicBlock>(TheRegion->getSinglePredecessor());
+  // ThePreheaderBB conceptually corresponds to both Plan.getPreheader() (which
+  // wraps the original preheader BB) and Plan.getEntry() (which represents the
+  // new vector preheader); here we're interested in setting BB2VPBB to the
+  // latter.
+  BB2VPBB[ThePreheaderBB] = VectorPreheaderVPBB;
+  BasicBlock *LoopExitBB = TheLoop->getUniqueExitBlock();
+  assert(LoopExitBB && "Loops with multiple exits are not supported.");
+  BB2VPBB[LoopExitBB] = cast<VPBasicBlock>(TheRegion->getSingleSuccessor());
 
-  // 2. Scan the body of the loop in a topological order to visit each basic
+  // 1. Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks. Create a VPBB for
   // each BB and link it to its successor and predecessor VPBBs. Note that
   // predecessors must be set in the same order as they are in the incomming IR.
@@ -251,21 +358,11 @@ VPRegionBlock *PlainCFGBuilder::buildPlainCFG() {
 
   // Loop PH needs to be explicitly visited since it's not taken into account by
   // LoopBlocksDFS.
-  BasicBlock *PreheaderBB = TheLoop->getLoopPreheader();
-  assert((PreheaderBB->getTerminator()->getNumSuccessors() == 1) &&
-         "Unexpected loop preheader");
-  VPBasicBlock *PreheaderVPBB = getOrCreateVPBB(PreheaderBB);
-  for (auto &I : *PreheaderBB) {
+  for (auto &I : *ThePreheaderBB) {
     if (I.getType()->isVoidTy())
       continue;
-    VPValue *VPV = new VPValue(&I);
-    Plan.addExternalDef(VPV);
-    IRDef2VPValue[&I] = VPV;
+    IRDef2VPValue[&I] = Plan.getOrAddLiveIn(&I);
   }
-  // Create empty VPBB for Loop H so that we can link PH->H.
-  VPBlockBase *HeaderVPBB = getOrCreateVPBB(TheLoop->getHeader());
-  // Preheader's predecessors will be set during the loop RPO traversal below.
-  PreheaderVPBB->setOneSuccessor(HeaderVPBB);
 
   LoopBlocksRPO RPO(TheLoop);
   RPO.perform(LI);
@@ -274,89 +371,73 @@ VPRegionBlock *PlainCFGBuilder::buildPlainCFG() {
     // Create or retrieve the VPBasicBlock for this BB and create its
     // VPInstructions.
     VPBasicBlock *VPBB = getOrCreateVPBB(BB);
+    VPRegionBlock *Region = VPBB->getParent();
     createVPInstructionsForVPBB(VPBB, BB);
+    Loop *LoopForBB = LI->getLoopFor(BB);
+    // Set VPBB predecessors in the same order as they are in the incoming BB.
+    if (!isHeaderBB(BB, LoopForBB)) {
+      setVPBBPredsFromBB(VPBB, BB);
+    } else {
+      // BB is a loop header, set the predecessor for the region, except for the
+      // top region, whose predecessor was set when creating VPlan's skeleton.
+      assert(isHeaderVPBB(VPBB) && "isHeaderBB and isHeaderVPBB disagree");
+      if (TheRegion != Region)
+        setRegionPredsFromBB(Region, BB);
+    }
 
     // Set VPBB successors. We create empty VPBBs for successors if they don't
     // exist already. Recipes will be created when the successor is visited
     // during the RPO traversal.
-    Instruction *TI = BB->getTerminator();
-    assert(TI && "Terminator expected.");
-    unsigned NumSuccs = TI->getNumSuccessors();
-
+    auto *BI = cast<BranchInst>(BB->getTerminator());
+    unsigned NumSuccs = succ_size(BB);
     if (NumSuccs == 1) {
-      VPBasicBlock *SuccVPBB = getOrCreateVPBB(TI->getSuccessor(0));
-      assert(SuccVPBB && "VPBB Successor not found.");
-      VPBB->setOneSuccessor(SuccVPBB);
-    } else if (NumSuccs == 2) {
-      VPBasicBlock *SuccVPBB0 = getOrCreateVPBB(TI->getSuccessor(0));
-      assert(SuccVPBB0 && "Successor 0 not found.");
-      VPBasicBlock *SuccVPBB1 = getOrCreateVPBB(TI->getSuccessor(1));
-      assert(SuccVPBB1 && "Successor 1 not found.");
-
-      // Get VPBB's condition bit.
-      assert(isa<BranchInst>(TI) && "Unsupported terminator!");
-      auto *Br = cast<BranchInst>(TI);
-      Value *BrCond = Br->getCondition();
-      // Look up the branch condition to get the corresponding VPValue
-      // representing the condition bit in VPlan (which may be in another VPBB).
-      assert(IRDef2VPValue.count(BrCond) &&
-             "Missing condition bit in IRDef2VPValue!");
-      VPValue *VPCondBit = IRDef2VPValue[BrCond];
-
-      // Link successors using condition bit.
-      VPBB->setTwoSuccessors(SuccVPBB0, SuccVPBB1, VPCondBit);
-    } else
-      llvm_unreachable("Number of successors not supported.");
-
-    // Set VPBB predecessors in the same order as they are in the incoming BB.
-    setVPBBPredsFromBB(VPBB, BB);
+      auto *Successor = getOrCreateVPBB(BB->getSingleSuccessor());
+      VPBB->setOneSuccessor(isHeaderVPBB(Successor)
+                                ? Successor->getParent()
+                                : static_cast<VPBlockBase *>(Successor));
+      continue;
+    }
+    assert(BI->isConditional() && NumSuccs == 2 && BI->isConditional() &&
+           "block must have conditional branch with 2 successors");
+    // Look up the branch condition to get the corresponding VPValue
+    // representing the condition bit in VPlan (which may be in another VPBB).
+    assert(IRDef2VPValue.contains(BI->getCondition()) &&
+           "Missing condition bit in IRDef2VPValue!");
+    VPBasicBlock *Successor0 = getOrCreateVPBB(BI->getSuccessor(0));
+    VPBasicBlock *Successor1 = getOrCreateVPBB(BI->getSuccessor(1));
+    if (!LoopForBB || BB != LoopForBB->getLoopLatch()) {
+      VPBB->setTwoSuccessors(Successor0, Successor1);
+      continue;
+    }
+    // For a latch we need to set the successor of the region rather than that
+    // of VPBB and it should be set to the exit, i.e., non-header successor,
+    // except for the top region, whose successor was set when creating VPlan's
+    // skeleton.
+    if (TheRegion != Region)
+      Region->setOneSuccessor(isHeaderVPBB(Successor0) ? Successor1
+                                                       : Successor0);
+    Region->setExiting(VPBB);
   }
 
-  // 3. Process outermost loop exit. We created an empty VPBB for the loop
-  // single exit BB during the RPO traversal of the loop body but Instructions
-  // weren't visited because it's not part of the the loop.
-  BasicBlock *LoopExitBB = TheLoop->getUniqueExitBlock();
-  assert(LoopExitBB && "Loops with multiple exits are not supported.");
-  VPBasicBlock *LoopExitVPBB = BB2VPBB[LoopExitBB];
-  createVPInstructionsForVPBB(LoopExitVPBB, LoopExitBB);
-  // Loop exit was already set as successor of the loop exiting BB.
-  // We only set its predecessor VPBB now.
-  setVPBBPredsFromBB(LoopExitVPBB, LoopExitBB);
-
-  // 4. The whole CFG has been built at this point so all the input Values must
+  // 2. The whole CFG has been built at this point so all the input Values must
   // have a VPlan couterpart. Fix VPlan phi nodes by adding their corresponding
   // VPlan operands.
   fixPhiNodes();
-
-  // 5. Final Top Region setup. Set outermost loop pre-header and single exit as
-  // Top Region entry and exit.
-  TopRegion->setEntry(PreheaderVPBB);
-  TopRegion->setExit(LoopExitVPBB);
-  return TopRegion;
 }
 
-VPRegionBlock *VPlanHCFGBuilder::buildPlainCFG() {
+void VPlanHCFGBuilder::buildPlainCFG() {
   PlainCFGBuilder PCFGBuilder(TheLoop, LI, Plan);
-  return PCFGBuilder.buildPlainCFG();
+  PCFGBuilder.buildPlainCFG();
 }
 
 // Public interface to build a H-CFG.
 void VPlanHCFGBuilder::buildHierarchicalCFG() {
-  // Build Top Region enclosing the plain CFG and set it as VPlan entry.
-  VPRegionBlock *TopRegion = buildPlainCFG();
-  Plan.setEntry(TopRegion);
+  // Build Top Region enclosing the plain CFG.
+  buildPlainCFG();
   LLVM_DEBUG(Plan.setName("HCFGBuilder: Plain CFG\n"); dbgs() << Plan);
 
-  Verifier.verifyHierarchicalCFG(TopRegion);
-
   // Compute plain CFG dom tree for VPLInfo.
-  VPDomTree.recalculate(*TopRegion);
+  VPDomTree.recalculate(Plan);
   LLVM_DEBUG(dbgs() << "Dominator Tree after building the plain CFG.\n";
              VPDomTree.print(dbgs()));
-
-  // Compute VPLInfo and keep it in Plan.
-  VPLoopInfo &VPLInfo = Plan.getVPLoopInfo();
-  VPLInfo.analyze(VPDomTree);
-  LLVM_DEBUG(dbgs() << "VPLoop Info After buildPlainCFG:\n";
-             VPLInfo.print(dbgs()));
 }

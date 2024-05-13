@@ -1,18 +1,18 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts  | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func @entry() {
-  %i = constant 2147483647: i32
-  %l = constant 9223372036854775807 : i64
+func.func @entry() {
+  %i = arith.constant 2147483647: i32
+  %l = arith.constant 9223372036854775807 : i64
 
-  %f0 = constant 0.0: f32
-  %f1 = constant 1.0: f32
-  %f2 = constant 2.0: f32
-  %f3 = constant 3.0: f32
-  %f4 = constant 4.0: f32
-  %f5 = constant 5.0: f32
+  %f0 = arith.constant 0.0: f32
+  %f1 = arith.constant 1.0: f32
+  %f2 = arith.constant 2.0: f32
+  %f3 = arith.constant 3.0: f32
+  %f4 = arith.constant 4.0: f32
+  %f5 = arith.constant 5.0: f32
 
   // Test simple broadcasts.
   %vi = vector.broadcast %i : i32 to vector<2xi32>
@@ -43,7 +43,7 @@ func @entry() {
   %x = vector.broadcast %f5 : f32 to vector<1xf32>
   %y = vector.broadcast %x  : vector<1xf32> to vector<8xf32>
   vector.print %y : vector<8xf32>
-  // CHECK : ( 5, 5, 5, 5, 5, 5, 5, 5 )
+  // CHECK: ( 5, 5, 5, 5, 5, 5, 5, 5 )
 
   // Test "stretch" in leading dimension.
   %s = vector.broadcast %v3 : vector<4xf32> to vector<1x4xf32>

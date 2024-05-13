@@ -14,16 +14,59 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
+
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
 using namespace llvm;
 
 namespace {
 
-class AMDGPULowerKernelArguments : public FunctionPass{
+class PreloadKernelArgInfo {
+private:
+  Function &F;
+  const GCNSubtarget &ST;
+  unsigned NumFreeUserSGPRs;
+
+public:
+  SmallVector<llvm::Metadata *, 8> KernelArgMetadata;
+
+  PreloadKernelArgInfo(Function &F, const GCNSubtarget &ST) : F(F), ST(ST) {
+    setInitialFreeUserSGPRsCount();
+  }
+
+  // Returns the maximum number of user SGPRs that we have available to preload
+  // arguments.
+  void setInitialFreeUserSGPRsCount() {
+    const unsigned MaxUserSGPRs = ST.getMaxNumUserSGPRs();
+    GCNUserSGPRUsageInfo UserSGPRInfo(F, ST);
+
+    NumFreeUserSGPRs = MaxUserSGPRs - UserSGPRInfo.getNumUsedUserSGPRs();
+  }
+
+  bool tryAllocPreloadSGPRs(unsigned AllocSize, uint64_t ArgOffset,
+                            uint64_t LastExplicitArgOffset) {
+    //  Check if this argument may be loaded into the same register as the
+    //  previous argument.
+    if (!isAligned(Align(4), ArgOffset) && AllocSize < 4)
+      return true;
+
+    // Pad SGPRs for kernarg alignment.
+    unsigned Padding = ArgOffset - LastExplicitArgOffset;
+    unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
+    unsigned NumPreloadSGPRs = alignTo(AllocSize, 4) / 4;
+    if (NumPreloadSGPRs + PaddingSGPRs > NumFreeUserSGPRs)
+      return false;
+
+    NumFreeUserSGPRs -= (NumPreloadSGPRs + PaddingSGPRs);
+    return true;
+  }
+};
+
+class AMDGPULowerKernelArguments : public FunctionPass {
 public:
   static char ID;
 
@@ -54,25 +97,22 @@ static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
   return InsPt;
 }
 
-bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
+static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   CallingConv::ID CC = F.getCallingConv();
   if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
     return false;
 
-  auto &TPC = getAnalysis<TargetPassConfig>();
-
-  const TargetMachine &TM = TPC.getTM<TargetMachine>();
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   LLVMContext &Ctx = F.getParent()->getContext();
   const DataLayout &DL = F.getParent()->getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&*getInsertPt(EntryBlock));
+  IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
-  const uint64_t BaseOffset = ST.getExplicitKernelArgOffset(F);
+  const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
 
   Align MaxAlign;
-  // FIXME: Alignment is broken broken with explicit arg offset.;
+  // FIXME: Alignment is broken with explicit arg offset.;
   const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F, MaxAlign);
   if (TotalKernArgSize == 0)
     return false;
@@ -81,25 +121,36 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
                               nullptr, F.getName() + ".kernarg.segment");
 
-  KernArgSegment->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
-  KernArgSegment->addAttribute(AttributeList::ReturnIndex,
-    Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
+  KernArgSegment->addRetAttr(Attribute::NonNull);
+  KernArgSegment->addRetAttr(
+      Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
-  unsigned AS = KernArgSegment->getType()->getPointerAddressSpace();
   uint64_t ExplicitArgOffset = 0;
+  // Preloaded kernel arguments must be sequential.
+  bool InPreloadSequence = true;
+  PreloadKernelArgInfo PreloadInfo(F, ST);
 
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    MaybeAlign ABITypeAlign = IsByRef ? Arg.getParamAlign() : None;
-    if (!ABITypeAlign)
-      ABITypeAlign = DL.getABITypeAlign(ArgTy);
+    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : std::nullopt;
+    Align ABITypeAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
 
     uint64_t Size = DL.getTypeSizeInBits(ArgTy);
     uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
 
     uint64_t EltOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + BaseOffset;
+    uint64_t LastExplicitArgOffset = ExplicitArgOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
+
+    // Try to preload this argument into user SGPRs.
+    if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
+        !Arg.getType()->isAggregateType())
+      if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
+                                           LastExplicitArgOffset))
+        continue;
+
+    InPreloadSequence = false;
 
     if (Arg.use_empty())
       continue;
@@ -111,8 +162,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
           Builder.getInt8Ty(), KernArgSegment, EltOffset,
           Arg.getName() + ".byval.kernarg.offset");
 
-      Value *CastOffsetPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          ArgOffsetPtr, Arg.getType());
+      Value *CastOffsetPtr =
+          Builder.CreateAddrSpaceCast(ArgOffsetPtr, Arg.getType());
       Arg.replaceAllUsesWith(CastOffsetPtr);
       continue;
     }
@@ -150,6 +201,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       // Since we don't have sub-dword scalar loads, avoid doing an extload by
       // loading earlier than the argument address, and extracting the relevant
       // bits.
+      // TODO: Update this for GFX12 which does have scalar sub-dword loads.
       //
       // Additionally widen any sub-dword load to i32 even if suitably aligned,
       // so that CSE between different argument loads works easily.
@@ -170,8 +222,6 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       AdjustedArgTy = V4Ty;
     }
 
-    ArgPtr = Builder.CreateBitCast(ArgPtr, AdjustedArgTy->getPointerTo(AS),
-                                   ArgPtr->getName() + ".cast");
     LoadInst *Load =
         Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign);
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
@@ -200,13 +250,11 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
                                                           DerefOrNullBytes))));
       }
 
-      unsigned ParamAlign = Arg.getParamAlignment();
-      if (ParamAlign != 0) {
+      if (MaybeAlign ParamAlign = Arg.getParamAlign()) {
         Load->setMetadata(
-          LLVMContext::MD_align,
-          MDNode::get(Ctx,
-                      MDB.createConstant(ConstantInt::get(Builder.getInt64Ty(),
-                                                          ParamAlign))));
+            LLVMContext::MD_align,
+            MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                 Builder.getInt64Ty(), ParamAlign->value()))));
       }
     }
 
@@ -231,11 +279,16 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     }
   }
 
-  KernArgSegment->addAttribute(
-      AttributeList::ReturnIndex,
+  KernArgSegment->addRetAttr(
       Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
 
   return true;
+}
+
+bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
+  auto &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  return lowerKernelArguments(F, TM);
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerKernelArguments, DEBUG_TYPE,
@@ -247,4 +300,17 @@ char AMDGPULowerKernelArguments::ID = 0;
 
 FunctionPass *llvm::createAMDGPULowerKernelArgumentsPass() {
   return new AMDGPULowerKernelArguments();
+}
+
+PreservedAnalyses
+AMDGPULowerKernelArgumentsPass::run(Function &F, FunctionAnalysisManager &AM) {
+  bool Changed = lowerKernelArguments(F, TM);
+  if (Changed) {
+    // TODO: Preserves a lot more.
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+
+  return PreservedAnalyses::all();
 }

@@ -40,7 +40,7 @@ enum __attribute__((enum_extensibility())) EnumTooFewArgs { // expected-error{{'
 struct __attribute__((enum_extensibility(open))) S { // expected-warning{{'enum_extensibility' attribute only applies to enums}}{
 };
 
-void test() {
+void test(void) {
   enum Enum t0 = 100; // expected-warning{{integer constant not in range of enumerated type}}
   t0 = 1;
 

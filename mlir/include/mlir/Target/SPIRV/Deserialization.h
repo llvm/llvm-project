@@ -29,7 +29,7 @@ class ModuleOp;
 OwningOpRef<spirv::ModuleOp> deserialize(ArrayRef<uint32_t> binary,
                                          MLIRContext *context);
 
-} // end namespace spirv
-} // end namespace mlir
+} // namespace spirv
+} // namespace mlir
 
 #endif // MLIR_TARGET_SPIRV_DESERIALIZATION_H

@@ -1,4 +1,10 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOF16
+; RUN: llc < %s -mcpu=sm_80 | FileCheck %s --check-prefixes=CHECK,CHECK-F16
+; RUN: llc < %s -mcpu=sm_80 --nvptx-no-f16-math | FileCheck %s --check-prefixes=CHECK,CHECK-NOF16
+; RUN: %if ptxas %{ llc < %s | %ptxas-verify %}
+; RUN: %if ptxas-11.0 %{ llc < %s -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-11.0 %{ llc < %s -mcpu=sm_80 --nvptx-no-f16-math | %ptxas-verify -arch=sm_80 %}
+
 target triple = "nvptx64-nvidia-cuda"
 
 ; Checks that llvm intrinsics for math functions are correctly lowered to PTX.
@@ -13,14 +19,20 @@ declare float @llvm.nearbyint.f32(float) #0
 declare double @llvm.nearbyint.f64(double) #0
 declare float @llvm.rint.f32(float) #0
 declare double @llvm.rint.f64(double) #0
+declare float @llvm.roundeven.f32(float) #0
+declare double @llvm.roundeven.f64(double) #0
 declare float @llvm.trunc.f32(float) #0
 declare double @llvm.trunc.f64(double) #0
 declare float @llvm.fabs.f32(float) #0
 declare double @llvm.fabs.f64(double) #0
+declare half @llvm.minnum.f16(half, half) #0
 declare float @llvm.minnum.f32(float, float) #0
 declare double @llvm.minnum.f64(double, double) #0
+declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #0
+declare half @llvm.maxnum.f16(half, half) #0
 declare float @llvm.maxnum.f32(float, float) #0
 declare double @llvm.maxnum.f64(double, double) #0
+declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #0
 declare float @llvm.fma.f32(float, float, float) #0
 declare double @llvm.fma.f64(double, double, double) #0
 
@@ -145,6 +157,29 @@ define double @rint_double(double %a) {
   ret double %b
 }
 
+; ---- roundeven ----
+
+; CHECK-LABEL: roundeven_float
+define float @roundeven_float(float %a) {
+  ; CHECK: cvt.rni.f32.f32
+  %b = call float @llvm.roundeven.f32(float %a)
+  ret float %b
+}
+
+; CHECK-LABEL: roundeven_float_ftz
+define float @roundeven_float_ftz(float %a) #1 {
+  ; CHECK: cvt.rni.ftz.f32.f32
+  %b = call float @llvm.roundeven.f32(float %a)
+  ret float %b
+}
+
+; CHECK-LABEL: roundeven_double
+define double @roundeven_double(double %a) {
+  ; CHECK: cvt.rni.f64.f64
+  %b = call double @llvm.roundeven.f64(double %a)
+  ret double %b
+}
+
 ; ---- trunc ----
 
 ; CHECK-LABEL: trunc_float
@@ -193,6 +228,14 @@ define double @abs_double(double %a) {
 
 ; ---- min ----
 
+; CHECK-LABEL: min_half
+define half @min_half(half %a, half %b) {
+  ; CHECK-NOF16: min.f32
+  ; CHECK-F16: min.f16
+  %x = call half @llvm.minnum.f16(half %a, half %b)
+  ret half %x
+}
+
 ; CHECK-LABEL: min_float
 define float @min_float(float %a, float %b) {
   ; CHECK: min.f32
@@ -228,7 +271,24 @@ define double @min_double(double %a, double %b) {
   ret double %x
 }
 
+; CHECK-LABEL: min_v2half
+define <2 x half> @min_v2half(<2 x half> %a, <2 x half> %b) {
+  ; CHECK-NOF16: min.f32
+  ; CHECK-NOF16: min.f32
+  ; CHECK-F16: min.f16x2
+  %x = call <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
+  ret <2 x half> %x
+}
+
 ; ---- max ----
+
+; CHECK-LABEL: max_half
+define half @max_half(half %a, half %b) {
+  ; CHECK-NOF16: max.f32
+  ; CHECK-F16: max.f16
+  %x = call half @llvm.maxnum.f16(half %a, half %b)
+  ret half %x
+}
 
 ; CHECK-LABEL: max_imm1
 define float @max_imm1(float %a) {
@@ -263,6 +323,15 @@ define double @max_double(double %a, double %b) {
   ; CHECK: max.f64
   %x = call double @llvm.maxnum.f64(double %a, double %b)
   ret double %x
+}
+
+; CHECK-LABEL: max_v2half
+define <2 x half> @max_v2half(<2 x half> %a, <2 x half> %b) {
+  ; CHECK-NOF16: max.f32
+  ; CHECK-NOF16: max.f32
+  ; CHECK-F16: max.f16x2
+  %x = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
+  ret <2 x half> %x
 }
 
 ; ---- fma ----

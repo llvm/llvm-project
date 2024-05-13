@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-overapproximate-writes=true -polly-delicm-compute-known=true -polly-delicm -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-partial-writes=true -polly-delicm-compute-known=true -polly-delicm -analyze < %s | FileCheck -check-prefix=PARTIAL %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-overapproximate-writes=true -polly-delicm-compute-known=true -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-partial-writes=true -polly-delicm-compute-known=true -polly-print-delicm -disable-output < %s | FileCheck -check-prefix=PARTIAL %s
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
@@ -11,7 +11,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -36,8 +36,8 @@ outer.for:
 
         body:
           %add = fadd double %phi, 4.2
-          %A_idx = getelementptr inbounds double, double* %A, i32 %j
-          store double %add, double* %A_idx
+          %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+          store double %add, ptr %A_idx
           br label %reduction.inc
 
 

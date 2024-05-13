@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -mcpu=mvp -filetype=obj %s -o - | obj2yaml | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 
@@ -9,14 +9,14 @@ declare void @func1()
 declare void @func2()
 declare void @func3()
 
-@llvm.global_ctors = appending global [2 x { i32, void ()*, i8* }] [
-  { i32, void ()*, i8* } { i32 65535, void ()* @func0, i8* null },
-  { i32, void ()*, i8* } { i32 42,    void ()* @func1, i8* null }
+@llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [
+  { i32, ptr, ptr } { i32 65535, ptr @func0, ptr null },
+  { i32, ptr, ptr } { i32 42,    ptr @func1, ptr null }
 ]
 
-@llvm.global_dtors = appending global [2 x { i32, void ()*, i8* }] [
-  { i32, void ()*, i8* } { i32 65535, void ()* @func2, i8* null },
-  { i32, void ()*, i8* } { i32 42,    void ()* @func3, i8* null }
+@llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [
+  { i32, ptr, ptr } { i32 65535, ptr @func2, ptr null },
+  { i32, ptr, ptr } { i32 42,    ptr @func3, ptr null }
 ]
 
 ; CHECK:        - Type:            IMPORT
@@ -80,29 +80,29 @@ declare void @func3()
 ; CHECK-NEXT:         Offset:          0x1D
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           6
-; CHECK-NEXT:         Offset:          0x2C
+; CHECK-NEXT:         Offset:          0x2B
 ; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; CHECK-NEXT:         Index:           5
-; CHECK-NEXT:         Offset:          0x37
+; CHECK-NEXT:         Offset:          0x36
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; CHECK-NEXT:         Index:           3
-; CHECK-NEXT:         Offset:          0x3F
+; CHECK-NEXT:         Offset:          0x3E
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           4
-; CHECK-NEXT:         Offset:          0x45
+; CHECK-NEXT:         Offset:          0x44
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1080808080000B
 ; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            02404181808080004100418080808000108180808000450D0000000B0B
+; CHECK-NEXT:         Body:            02404181808080004100418080808000108180808000450D00000B0B
 ; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1082808080000B
 ; CHECK-NEXT:       - Index:           8
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            02404182808080004100418080808000108180808000450D0000000B0B
+; CHECK-NEXT:         Body:            02404182808080004100418080808000108180808000450D00000B0B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6

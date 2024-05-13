@@ -63,7 +63,7 @@ Timer::Timer(Timer::Category &category, const char *format, ...)
   TimerStack &stack = GetTimerStackForCurrentThread();
 
   stack.push_back(this);
-  if (g_quiet && stack.size() <= g_display_depth) {
+  if (!g_quiet && stack.size() <= g_display_depth) {
     std::lock_guard<std::mutex> lock(GetFileMutex());
 
     // Indent
@@ -89,7 +89,7 @@ Timer::~Timer() {
   Signposts->endInterval(this, m_category.GetName());
 
   TimerStack &stack = GetTimerStackForCurrentThread();
-  if (g_quiet && stack.size() <= g_display_depth) {
+  if (!g_quiet && stack.size() <= g_display_depth) {
     std::lock_guard<std::mutex> lock(GetFileMutex());
     ::fprintf(stdout, "%*s%.9f sec (%.9f sec)\n",
               int(stack.size() - 1) * TIMER_INDENT_AMOUNT, "",
@@ -135,7 +135,7 @@ void Timer::ResetCategoryTimes() {
   }
 }
 
-void Timer::DumpCategoryTimes(Stream *s) {
+void Timer::DumpCategoryTimes(Stream &s) {
   std::vector<Stats> sorted;
   for (Category *i = g_categories; i; i = i->m_next) {
     uint64_t nanos = i->m_nanos.load(std::memory_order_acquire);
@@ -150,12 +150,12 @@ void Timer::DumpCategoryTimes(Stream *s) {
     return; // Later code will break without any elements.
 
   // Sort by time
-  llvm::sort(sorted.begin(), sorted.end(), CategoryMapIteratorSortCriterion);
+  llvm::sort(sorted, CategoryMapIteratorSortCriterion);
 
   for (const auto &stats : sorted)
-    s->Printf("%.9f sec (total: %.3fs; child: %.3fs; count: %" PRIu64
-              ") for %s\n",
-              stats.nanos / 1000000000., stats.nanos_total / 1000000000.,
-              (stats.nanos_total - stats.nanos) / 1000000000., stats.count,
-              stats.name);
+    s.Printf("%.9f sec (total: %.3fs; child: %.3fs; count: %" PRIu64
+             ") for %s\n",
+             stats.nanos / 1000000000., stats.nanos_total / 1000000000.,
+             (stats.nanos_total - stats.nanos) / 1000000000., stats.count,
+             stats.name);
 }

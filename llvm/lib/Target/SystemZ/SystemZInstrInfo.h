@@ -74,6 +74,17 @@ enum {
   MO_INDNTPOFF = (2 << 0)
 };
 
+// z/OS XPLink specific: classifies the types of
+// accesses to the ADA (Associated Data Area).
+// These enums contains values that overlap with the above MO_ enums,
+// but that's fine since the above enums are used with ELF,
+// while these values are used with z/OS.
+enum {
+  MO_ADA_DATA_SYMBOL_ADDR = 1,
+  MO_ADA_INDIRECT_FUNC_DESC,
+  MO_ADA_DIRECT_FUNC_DESC,
+};
+
 // Classifies a branch.
 enum BranchType {
   // An instruction that branches on the current value of CC.
@@ -217,9 +228,9 @@ public:
   explicit SystemZInstrInfo(SystemZSubtarget &STI);
 
   // Override TargetInstrInfo.
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
   bool isStackSlotCopy(const MachineInstr &MI, int &DestFrameIndex,
                        int &SrcFrameIndex) const override;
@@ -234,7 +245,8 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                      Register &SrcReg2, int &Mask, int &Value) const override;
+                      Register &SrcReg2, int64_t &Mask,
+                      int64_t &Value) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
                        Register, Register, Register, int &, int &,
                        int &) const override;
@@ -242,8 +254,13 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  MachineInstr *optimizeLoadInstr(MachineInstr &MI,
+                                  const MachineRegisterInfo *MRI,
+                                  Register &FoldAsLoadDefReg,
+                                  MachineInstr *&DefMI) const override;
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
+
   bool isPredicable(const MachineInstr &MI) const override;
   bool isProfitableToIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,
                            unsigned ExtraPredCycles,
@@ -261,18 +278,24 @@ public:
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                    bool KillSrc) const override;
   void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI,
-                           Register SrcReg, bool isKill, int FrameIndex,
+                           MachineBasicBlock::iterator MBBI, Register SrcReg,
+                           bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override;
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI,
-                            Register DestReg, int FrameIdx,
-                            const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override;
-  MachineInstr *convertToThreeAddress(MachineFunction::iterator &MFI,
-                                      MachineInstr &MI,
-                                      LiveVariables *LV) const override;
+                            MachineBasicBlock::iterator MBBI, Register DestReg,
+                            int FrameIdx, const TargetRegisterClass *RC,
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
+  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+                                      LiveIntervals *LIS) const override;
+
+  bool useMachineCombiner() const override { return true; }
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
+  std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
+
   MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                         ArrayRef<unsigned> Ops,
@@ -308,8 +331,13 @@ public:
   // and the caller wants to perform that instruction's operation on an
   // address that has displacement Offset.  Return the opcode of a suitable
   // instruction (which might be Opcode itself) or 0 if no such instruction
-  // exists.
-  unsigned getOpcodeForOffset(unsigned Opcode, int64_t Offset) const;
+  // exists.  MI may be passed in order to allow examination of physical
+  // register operands (i.e. if a VR32/64 reg ended up as an FP or Vector reg).
+  unsigned getOpcodeForOffset(unsigned Opcode, int64_t Offset,
+                              const MachineInstr *MI = nullptr) const;
+
+  // Return true if Opcode has a mapping in 12 <-> 20 bit displacements.
+  bool hasDisplacementPairInsn(unsigned Opcode) const;
 
   // If Opcode is a load instruction that has a LOAD AND TEST form,
   // return the opcode for the testing form, otherwise return 0.
@@ -355,6 +383,9 @@ public:
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
+
+  bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
+                               int64_t &ImmVal) const override;
 };
 
 } // end namespace llvm

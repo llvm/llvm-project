@@ -7,7 +7,6 @@
 EXPORT:      Export Table:
 EXPORT:      DLL name: dll.test.tmp.dll
 EXPORT:      Ordinal      RVA  Name
-EXPORT-NEXT:       0        0
 EXPORT-NEXT:       1   0x1008  exportfn1
 EXPORT-NEXT:       2   0x1010  exportfn2
 EXPORT-NEXT:       3   0x1010  exportfn3
@@ -22,7 +21,6 @@ EXPORT-NEXT:       4   0x1010  mangled
 EXPORT2:      Export Table:
 EXPORT2:      DLL name: dll.test.tmp5.dll
 EXPORT2:      Ordinal      RVA  Name
-EXPORT2-NEXT:       0        0
 EXPORT2-NEXT:       1   0x1010  exportfn3
 EXPORT2-NEXT:       2   0x101c  mangled2
 
@@ -33,7 +31,6 @@ EXPORT2-NEXT:       2   0x101c  mangled2
 EXPORT-LTO:      Export Table:
 EXPORT-LTO:      DLL name: dll.test.tmp.lto.dll
 EXPORT-LTO:      Ordinal      RVA  Name
-EXPORT-LTO-NEXT:       0        0
 EXPORT-LTO-NEXT:       1   0x1010  exportfn1
 EXPORT-LTO-NEXT:       2   0x1020  exportfn2
 EXPORT-LTO-NEXT:       3   0x1030  exportfn3

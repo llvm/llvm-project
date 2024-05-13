@@ -10,17 +10,16 @@ define i64 @test() {
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[ITER1_SROA_5_0:%.*]] = phi i64 [ 100000, [[START:%.*]] ], [ [[SPEC_SELECT:%.*]], [[BB3_I_I:%.*]] ]
-; CHECK-NEXT:    [[ITER1_SROA_9_0:%.*]] = phi i2 [ -2, [[START]] ], [ [[TMP3:%.*]], [[BB3_I_I]] ]
+; CHECK-NEXT:    [[ITER1_SROA_9_0:%.*]] = phi i8 [ 2, [[START]] ], [ [[TMP3:%.*]], [[BB3_I_I]] ]
 ; CHECK-NEXT:    [[COUNT_1:%.*]] = phi i64 [ 0, [[START]] ], [ [[TMP4:%.*]], [[BB3_I_I]] ]
-; CHECK-NEXT:    switch i2 [[ITER1_SROA_9_0]], label [[BB12:%.*]] [
-; CHECK-NEXT:    i2 -2, label [[BB3_I_I]]
-; CHECK-NEXT:    i2 0, label [[BB3_I_I]]
+; CHECK-NEXT:    switch i8 [[ITER1_SROA_9_0]], label [[BB12:%.*]] [
+; CHECK-NEXT:    i8 2, label [[BB3_I_I]]
+; CHECK-NEXT:    i8 0, label [[BB3_I_I]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb3.i.i:
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[ITER1_SROA_5_0]], 0
-; CHECK-NEXT:    [[TMP3]] = zext i1 [[TMP2]] to i2
-; CHECK-NEXT:    [[_5_0_I_I_I_I:%.*]] = add i64 [[ITER1_SROA_5_0]], -1
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[TMP2]], i64 0, i64 [[_5_0_I_I_I_I]]
+; CHECK-NEXT:    [[TMP3]] = zext i1 [[TMP2]] to i8
+; CHECK-NEXT:    [[SPEC_SELECT]] = tail call i64 @llvm.usub.sat.i64(i64 [[ITER1_SROA_5_0]], i64 1)
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[COUNT_1]], [[ITER1_SROA_5_0]]
 ; CHECK-NEXT:    br label [[BB10]]
 ; CHECK:       bb12:

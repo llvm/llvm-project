@@ -9,22 +9,19 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAMBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAMBUILDER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 
-#include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
-#include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 namespace llvm {
 class WritableBinaryStreamRef;
 
 namespace msf {
 class MSFBuilder;
+struct MSFLayout;
 }
 namespace pdb {
-class PDBFile;
 class NamedStreamMap;
 
 class InfoStreamBuilder {
@@ -48,7 +45,7 @@ public:
   bool hashPDBContentsToGUID() const { return HashPDBContentsToGUID; }
   uint32_t getAge() const { return Age; }
   codeview::GUID getGuid() const { return Guid; }
-  Optional<uint32_t> getSignature() const { return Signature; }
+  std::optional<uint32_t> getSignature() const { return Signature; }
 
   uint32_t finalize();
 
@@ -63,14 +60,14 @@ private:
   std::vector<PdbRaw_FeatureSig> Features;
   PdbRaw_ImplVer Ver;
   uint32_t Age;
-  Optional<uint32_t> Signature;
+  std::optional<uint32_t> Signature;
   codeview::GUID Guid;
 
   bool HashPDBContentsToGUID = false;
 
   NamedStreamMap &NamedStreams;
 };
-}
+} // namespace pdb
 }
 
 #endif

@@ -212,8 +212,6 @@ struct Class {};
 struct ClassB : Class {};
 struct Class2 {};
 using FnTy = void(int);
-using FnTy2 = long(int);
-using FnTy3 = void(int) noexcept;
 using MemFnTy = void (Class::*)() const;
 using MemDataTy = long(Class::*);
 
@@ -230,11 +228,6 @@ void test_nullptr(int *x, FnTy *fp, MemFnTy memp, MemDataTy memdp) {
 void test_memptr(MemFnTy mf, MemDataTy md) {
   (void)(mf <=> mf); // expected-error {{invalid operands}} expected-warning {{self-comparison}}
   (void)(md <=> md); // expected-error {{invalid operands}} expected-warning {{self-comparison}}
-}
-
-void test_compatible_pointer(FnTy *f1, FnTy2 *f2, FnTy3 *f3) {
-  (void)(f1 <=> f2); // expected-error {{distinct pointer types}}
-  (void)(f1 <=> f3); // expected-error {{invalid operands}}
 }
 
 // Test that variable narrowing is deferred for value dependent expressions
@@ -358,7 +351,7 @@ void test_array_conv() {
   int arr[5];
   int *ap = arr + 2;
   int arr2[3];
-  (void)(arr <=> arr); // expected-error {{invalid operands to binary expression ('int [5]' and 'int [5]')}}
+  (void)(arr <=> arr); // expected-error {{invalid operands to binary expression ('int[5]' and 'int[5]')}}
   (void)(+arr <=> arr);
 }
 
@@ -431,4 +424,81 @@ namespace PR44992 {
   extern "C++" struct s {
     friend auto operator<=>(s const &, s const &) = default;
   };
+}
+
+namespace PR52537 {
+  template<typename T> struct X {};
+  template<typename T> bool operator==(const X<T> &, int) { return T::error; } // expected-error 2{{no members}}
+  template<typename T> int operator<=>(const X<T> &, int) { return T::error; } // expected-error 2{{no members}}
+
+  const X<int[1]> x1;
+  template<typename T> bool f1() { return x1 != 0; } // expected-note {{instantiation of}}
+  void g1() { f1<int>(); } // expected-note {{instantiation of}}
+
+  const X<int[2]> x2;
+  template<typename T> bool f2() { return 0 == x2; } // expected-note {{instantiation of}}
+  void g2() { f2<int>(); } // expected-note {{instantiation of}}
+
+  const X<int[3]> x3;
+  template<typename T> bool f3() { return x3 < 0; } // expected-note {{instantiation of}}
+  void g3() { f3<int>(); } // expected-note {{instantiation of}}
+
+  const X<int[4]> x4;
+  template<typename T> bool f4() { return 0 >= x4; } // expected-note {{instantiation of}}
+  void g4() { f4<int>(); } // expected-note {{instantiation of}}
+
+  template<typename T> struct Y {};
+  template<typename T> struct Z { Z(int) { T::error; } using nondeduced = Z; }; // expected-error 2{{no members}}
+  template<typename T> Z<T> operator<=>(const Y<T>&, int);
+  template<typename T> bool operator<(const Z<T>&, const typename Z<T>::nondeduced&);
+  template<typename T> bool operator<(const typename Z<T>::nondeduced&, const Z<T>&);
+
+  const Y<int[5]> y5;
+  template<typename T> bool f5() { return y5 < 0; } // expected-note {{instantiation of}}
+  void g5() { f5<int>(); } // expected-note {{instantiation of}}
+
+  const Y<int[6]> y6;
+  template<typename T> bool f6() { return 0 < y6; } // expected-note {{instantiation of}}
+  void g6() { f6<int>(); } // expected-note {{instantiation of}}
+}
+
+
+namespace GH64923 {
+using nullptr_t = decltype(nullptr);
+struct MyTask{};
+constexpr MyTask DoAnotherThing() {
+    return {};
+}
+
+constexpr nullptr_t operator++(MyTask &&T); // expected-note 2{{declared here}}
+void DoSomething() {
+  if constexpr (++DoAnotherThing() != nullptr) {} // expected-error {{constexpr if condition is not a constant expression}} \
+                                                  // expected-note  {{undefined function 'operator++' cannot be used in a constant expression}}
+
+  if constexpr (nullptr == ++DoAnotherThing()) {} // expected-error {{constexpr if condition is not a constant expression}} \
+                                                  // expected-note  {{undefined function 'operator++' cannot be used in a constant expression}}
+}
+}
+
+namespace GH64162 {
+struct S {
+    const std::strong_ordering& operator<=>(const S&) const = default;
+};
+bool test(S s) {
+    return s < s; // We expect this not to crash anymore
+}
+
+// Following example never crashed but worth adding in because it is related
+struct A {};
+bool operator<(A, int);
+
+struct B {
+    operator A();
+};
+
+struct C {
+    B operator<=>(C);
+};
+
+bool f(C c) { return c < c; }
 }

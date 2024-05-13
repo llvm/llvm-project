@@ -1,15 +1,15 @@
-; RUN: llc < %s -march=amdgcn -mcpu=tahiti -debug
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -debug
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti -debug
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -debug
 ; REQUIRES: asserts
 
 ; Check that SelectionDAGDumper does not crash on int_SI_if.
-define amdgpu_kernel void @add64_in_branch(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %a, i64 %b, i64 %c) {
+define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %a, i64 %b, i64 %c) {
 entry:
   %0 = icmp eq i64 %a, 0
   br i1 %0, label %if, label %else
 
 if:
-  %1 = load i64, i64 addrspace(1)* %in
+  %1 = load i64, ptr addrspace(1) %in
   br label %endif
 
 else:
@@ -18,7 +18,7 @@ else:
 
 endif:
   %3 = phi i64 [%1, %if], [%2, %else]
-  store i64 %3, i64 addrspace(1)* %out
+  store i64 %3, ptr addrspace(1) %out
   ret void
 }
 

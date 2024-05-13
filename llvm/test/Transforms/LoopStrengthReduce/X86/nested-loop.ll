@@ -8,7 +8,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8* %maxarray) {
+define void @foo(i32 %size, i32 %nsteps, i32 %hsize, ptr %lined, ptr %maxarray) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP215:%.*]] = icmp sgt i32 [[SIZE:%.*]], 1
@@ -23,17 +23,17 @@ define void @foo(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8* %maxarray)
 ; CHECK:       for.body2.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY2:%.*]]
 ; CHECK:       for.body2:
-; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i8* [ [[SCEVGEP:%.*]], [[FOR_BODY2]] ], [ [[MAXARRAY:%.*]], [[FOR_BODY2_PREHEADER]] ]
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[FOR_BODY2]] ], [ [[MAXARRAY:%.*]], [[FOR_BODY2_PREHEADER]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY2]] ], [ [[TMP0]], [[FOR_BODY2_PREHEADER]] ]
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, i8* [[LSR_IV3]], i64 1
-; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[SCEVGEP6]], align 1
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, i8* [[LSR_IV3]], i64 [[TMP0]]
-; CHECK-NEXT:    [[V2:%.*]] = load i8, i8* [[SCEVGEP5]], align 1
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[LSR_IV3]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = load i8, ptr [[SCEVGEP6]], align 1
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[LSR_IV3]], i64 [[TMP0]]
+; CHECK-NEXT:    [[V2:%.*]] = load i8, ptr [[SCEVGEP5]], align 1
 ; CHECK-NEXT:    [[TMPV:%.*]] = xor i8 [[V1]], [[V2]]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, i8* [[LSR_IV3]], i64 [[LSR_IV1]]
-; CHECK-NEXT:    store i8 [[TMPV]], i8* [[SCEVGEP4]], align 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, i8* [[LSR_IV3]], i64 1
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[LSR_IV3]], i64 [[LSR_IV1]]
+; CHECK-NEXT:    store i8 [[TMPV]], ptr [[SCEVGEP4]], align 1
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV3]], i64 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY2]], label [[FOR_INC_LOOPEXIT:%.*]]
 ; CHECK:       for.inc.loopexit:
@@ -66,15 +66,15 @@ for.body2.preheader:                              ; preds = %for.body
 
 for.body2:                                        ; preds = %for.body2.preheader, %for.body2
   %indvars.iv = phi i64 [ 1, %for.body2.preheader ], [ %indvars.iv.next, %for.body2 ]
-  %arrayidx1 = getelementptr inbounds i8, i8* %maxarray, i64 %indvars.iv
-  %v1 = load i8, i8* %arrayidx1, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %maxarray, i64 %indvars.iv
+  %v1 = load i8, ptr %arrayidx1, align 1
   %idx2 = add nsw i64 %indvars.iv, %sub2
-  %arrayidx2 = getelementptr inbounds i8, i8* %maxarray, i64 %idx2
-  %v2 = load i8, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %maxarray, i64 %idx2
+  %v2 = load i8, ptr %arrayidx2, align 1
   %tmpv = xor i8 %v1, %v2
   %t4 = add nsw i64 %t2, %indvars.iv
-  %add.ptr = getelementptr inbounds i8, i8* %maxarray, i64 %t4
-  store i8 %tmpv, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %maxarray, i64 %t4
+  store i8 %tmpv, ptr %add.ptr, align 1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %wide.trip.count = zext i32 %size to i64
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count

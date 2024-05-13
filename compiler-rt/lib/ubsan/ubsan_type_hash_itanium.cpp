@@ -17,6 +17,7 @@
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_ptrauth.h"
+#include <stdint.h>
 
 // The following are intended to be binary compatible with the definitions
 // given in the Itanium ABI. We make no attempt to be ODR-compatible with
@@ -25,9 +26,20 @@
 namespace std {
   class type_info {
   public:
+    typedef const char *__type_name_t;
     virtual ~type_info();
 
     const char *__type_name;
+
+    __type_name_t name() const {
+#if defined(__APPLE__) && defined(__LP64__) && !defined(__x86_64__)
+      uintptr_t __non_unique_rtti_bit =
+          (1ULL << ((__CHAR_BIT__ * sizeof(__type_name_t)) - 1));
+      return (__type_name_t)((uintptr_t)__type_name & ~__non_unique_rtti_bit);
+#else
+      return __type_name;
+#endif
+    }
   };
 }
 
@@ -117,7 +129,7 @@ static __ubsan::HashValue *getTypeCacheHashTableBucket(__ubsan::HashValue V) {
 static bool isDerivedFromAtOffset(const abi::__class_type_info *Derived,
                                   const abi::__class_type_info *Base,
                                   sptr Offset) {
-  if (Derived->__type_name == Base->__type_name ||
+  if (Derived->name() == Base->name() ||
       __ubsan::checkTypeInfoEquality(Derived, Base))
     return Offset == 0;
 
@@ -254,17 +266,16 @@ __ubsan::getDynamicTypeInfoFromVtable(void *VtablePtr) {
   const abi::__class_type_info *ObjectType = findBaseAtOffset(
     static_cast<const abi::__class_type_info*>(Vtable->TypeInfo),
     -Vtable->Offset);
-  return DynamicTypeInfo(Vtable->TypeInfo->__type_name, -Vtable->Offset,
-                         ObjectType ? ObjectType->__type_name : "<unknown>");
+  return DynamicTypeInfo(Vtable->TypeInfo->name(), -Vtable->Offset,
+                         ObjectType ? ObjectType->name() : "<unknown>");
 }
 
 bool __ubsan::checkTypeInfoEquality(const void *TypeInfo1,
                                     const void *TypeInfo2) {
   auto TI1 = static_cast<const std::type_info *>(TypeInfo1);
   auto TI2 = static_cast<const std::type_info *>(TypeInfo2);
-  return SANITIZER_NON_UNIQUE_TYPEINFO && TI1->__type_name[0] != '*' &&
-         TI2->__type_name[0] != '*' &&
-         !internal_strcmp(TI1->__type_name, TI2->__type_name);
+  return SANITIZER_NON_UNIQUE_TYPEINFO && TI1->name()[0] != '*' &&
+         TI2->name()[0] != '*' && !internal_strcmp(TI1->name(), TI2->name());
 }
 
 #endif  // CAN_SANITIZE_UB && !SANITIZER_WINDOWS

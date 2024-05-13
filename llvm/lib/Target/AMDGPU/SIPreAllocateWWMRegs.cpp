@@ -18,12 +18,19 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-allocate-wwm-regs"
+
+static cl::opt<bool>
+    EnablePreallocateSGPRSpillVGPRs("amdgpu-prealloc-sgpr-spill-vgprs",
+                                    cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -53,11 +60,9 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervals>();
-    AU.addPreserved<LiveIntervals>();
     AU.addRequired<VirtRegMap>();
     AU.addRequired<LiveRegMatrix>();
-    AU.addPreserved<SlotIndexes>();
-    AU.setPreservesCFG();
+    AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -85,9 +90,6 @@ FunctionPass *llvm::createSIPreAllocateWWMRegsPass() {
 }
 
 bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
-  if (!MO.isReg())
-    return false;
-
   Register Reg = MO.getReg();
   if (Reg.isPhysical())
     return false;
@@ -101,7 +103,7 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
   LiveInterval &LI = LIS->getInterval(Reg);
 
   for (MCRegister PhysReg : RegClassInfo.getOrder(MRI->getRegClass(Reg))) {
-    if (!MRI->isPhysRegUsed(PhysReg) &&
+    if (!MRI->isPhysRegUsed(PhysReg, /*SkipRegMaskTest=*/true) &&
         Matrix->checkInterference(LI, PhysReg) == LiveRegMatrix::IK_Free) {
       Matrix->assign(LI, PhysReg);
       assert(PhysReg != 0);
@@ -111,7 +113,6 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
   }
 
   llvm_unreachable("physreg not found for WWM expression");
-  return false;
 }
 
 void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
@@ -142,7 +143,6 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
   }
 
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   for (unsigned Reg : RegsToRewrite) {
     LIS->removeInterval(Reg);
@@ -150,24 +150,13 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
     const Register PhysReg = VRM->getPhys(Reg);
     assert(PhysReg != 0);
 
-    // Check if PhysReg is already reserved
-    if (!MFI->WWMReservedRegs.count(PhysReg)) {
-      Optional<int> FI;
-      if (!MFI->isEntryFunction()) {
-        // Create a stack object for a possible spill in the function prologue.
-        // Note: Non-CSR VGPR also need this as we may overwrite inactive lanes.
-        const TargetRegisterClass *RC = TRI->getPhysRegClass(PhysReg);
-        FI = FrameInfo.CreateSpillStackObject(TRI->getSpillSize(*RC),
-                                              TRI->getSpillAlign(*RC));
-      }
-      MFI->reserveWWMRegister(PhysReg, FI);
-    }
+    MFI->reserveWWMRegister(PhysReg);
   }
 
   RegsToRewrite.clear();
 
   // Update the set of reserved registers to include WWM ones.
-  MRI->freezeReservedRegs(MF);
+  MRI->freezeReservedRegs();
 }
 
 #ifndef NDEBUG
@@ -176,15 +165,19 @@ SIPreAllocateWWMRegs::printWWMInfo(const MachineInstr &MI) {
 
   unsigned Opc = MI.getOpcode();
 
-  if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::ENTER_STRICT_WQM) {
+  if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::ENTER_STRICT_WQM ||
+      Opc == AMDGPU::ENTER_PSEUDO_WM) {
     dbgs() << "Entering ";
   } else {
-    assert(Opc == AMDGPU::EXIT_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WQM);
+    assert(Opc == AMDGPU::EXIT_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WQM ||
+           Opc == AMDGPU::EXIT_PSEUDO_WM);
     dbgs() << "Exiting ";
   }
 
   if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WWM) {
     dbgs() << "Strict WWM ";
+  } else if (Opc == AMDGPU::ENTER_PSEUDO_WM || Opc == AMDGPU::EXIT_PSEUDO_WM) {
+    dbgs() << "Pseudo WWM/WQM ";
   } else {
     assert(Opc == AMDGPU::ENTER_STRICT_WQM || Opc == AMDGPU::EXIT_STRICT_WQM);
     dbgs() << "Strict WQM ";
@@ -210,6 +203,10 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
 
   RegClassInfo.runOnMachineFunction(MF);
 
+  bool PreallocateSGPRSpillVGPRs =
+      EnablePreallocateSGPRSpillVGPRs ||
+      MF.getFunction().hasFnAttribute("amdgpu-prealloc-sgpr-spill-vgprs");
+
   bool RegsAssigned = false;
 
   // We use a reverse post-order traversal of the control-flow graph to
@@ -226,15 +223,23 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64)
         RegsAssigned |= processDef(MI.getOperand(0));
 
+      if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR) {
+        if (!PreallocateSGPRSpillVGPRs)
+          continue;
+        RegsAssigned |= processDef(MI.getOperand(0));
+      }
+
       if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM ||
-          MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM) {
+          MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM ||
+          MI.getOpcode() == AMDGPU::ENTER_PSEUDO_WM) {
         LLVM_DEBUG(printWWMInfo(MI));
         InWWM = true;
         continue;
       }
 
       if (MI.getOpcode() == AMDGPU::EXIT_STRICT_WWM ||
-          MI.getOpcode() == AMDGPU::EXIT_STRICT_WQM) {
+          MI.getOpcode() == AMDGPU::EXIT_STRICT_WQM ||
+          MI.getOpcode() == AMDGPU::EXIT_PSEUDO_WM) {
         LLVM_DEBUG(printWWMInfo(MI));
         InWWM = false;
       }

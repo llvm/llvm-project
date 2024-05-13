@@ -47,10 +47,16 @@ private:
   /// ArgList.
   unsigned Index;
 
-  /// Was this argument used to effect compilation?
+  /// Was this argument used to affect compilation?
   ///
-  /// This is used for generating "argument unused" diagnostics.
+  /// This is used to generate an "argument unused" warning (without
+  /// clang::driver::options::TargetSpecific) or "unsupported option" error
+  /// (with TargetSpecific).
   mutable unsigned Claimed : 1;
+
+  /// Used by an unclaimed option with the TargetSpecific flag. If set, report
+  /// an "argument unused" warning instead of an "unsupported option" error.
+  unsigned IgnoredTargetSpecific : 1;
 
   /// Does this argument own its values?
   mutable unsigned OwnsValues : 1;
@@ -93,6 +99,7 @@ public:
   const Arg &getBaseArg() const {
     return BaseArg ? *BaseArg : *this;
   }
+  Arg &getBaseArg() { return BaseArg ? const_cast<Arg &>(*BaseArg) : *this; }
   void setBaseArg(const Arg *BaseArg) { this->BaseArg = BaseArg; }
 
   /// Args are converted to their unaliased form.  For args that originally
@@ -104,9 +111,14 @@ public:
   void setOwnsValues(bool Value) const { OwnsValues = Value; }
 
   bool isClaimed() const { return getBaseArg().Claimed; }
-
-  /// Set the Arg claimed bit.
   void claim() const { getBaseArg().Claimed = true; }
+
+  bool isIgnoredTargetSpecific() const {
+    return getBaseArg().IgnoredTargetSpecific;
+  }
+  void ignoreTargetSpecific() {
+    getBaseArg().IgnoredTargetSpecific = true;
+  }
 
   unsigned getNumValues() const { return Values.size(); }
 
@@ -118,10 +130,7 @@ public:
   const SmallVectorImpl<const char *> &getValues() const { return Values; }
 
   bool containsValue(StringRef Value) const {
-    for (unsigned i = 0, e = getNumValues(); i != e; ++i)
-      if (Values[i] == Value)
-        return true;
-    return false;
+    return llvm::is_contained(Values, Value);
   }
 
   /// Append the argument onto the given array as strings.

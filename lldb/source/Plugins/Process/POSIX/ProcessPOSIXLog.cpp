@@ -13,16 +13,20 @@
 using namespace lldb_private;
 
 static constexpr Log::Category g_categories[] = {
-  {{"break"}, {"log breakpoints"}, POSIX_LOG_BREAKPOINTS},
-  {{"memory"}, {"log memory reads and writes"}, POSIX_LOG_MEMORY},
-  {{"process"}, {"log process events and activities"}, POSIX_LOG_PROCESS},
-  {{"ptrace"}, {"log all calls to ptrace"}, POSIX_LOG_PTRACE},
-  {{"registers"}, {"log register read/writes"}, POSIX_LOG_REGISTERS},
-  {{"thread"}, {"log thread events and activities"}, POSIX_LOG_THREAD},
-  {{"watch"}, {"log watchpoint related activities"}, POSIX_LOG_WATCHPOINTS},
+    {{"break"}, {"log breakpoints"}, POSIXLog::Breakpoints},
+    {{"memory"}, {"log memory reads and writes"}, POSIXLog::Memory},
+    {{"process"}, {"log process events and activities"}, POSIXLog::Process},
+    {{"ptrace"}, {"log all calls to ptrace"}, POSIXLog::Ptrace},
+    {{"registers"}, {"log register read/writes"}, POSIXLog::Registers},
+    {{"thread"}, {"log thread events and activities"}, POSIXLog::Thread},
+    {{"watch"}, {"log watchpoint related activities"}, POSIXLog::Watchpoints},
 };
 
-Log::Channel ProcessPOSIXLog::g_channel(g_categories, POSIX_LOG_DEFAULT);
+static Log::Channel g_channel(g_categories, POSIXLog::Process);
+
+template <> Log::Channel &lldb_private::LogChannelFor<POSIXLog>() {
+  return g_channel;
+}
 
 void ProcessPOSIXLog::Initialize() {
   static llvm::once_flag g_once_flag;

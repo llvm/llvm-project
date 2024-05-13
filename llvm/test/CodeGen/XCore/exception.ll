@@ -2,14 +2,14 @@
 
 declare void @g()
 declare i32 @__gxx_personality_v0(...)
-declare i32 @llvm.eh.typeid.for(i8*) nounwind readnone
-declare i8* @__cxa_begin_catch(i8*)
+declare i32 @llvm.eh.typeid.for(ptr) nounwind readnone
+declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
-declare i8* @__cxa_allocate_exception(i32)
-declare void @__cxa_throw(i8*, i8*, i8*)
+declare ptr @__cxa_allocate_exception(i32)
+declare void @__cxa_throw(ptr, ptr, ptr)
 
-@_ZTIi = external constant i8*
-@_ZTId = external constant i8*
+@_ZTIi = external constant ptr
+@_ZTId = external constant ptr
 
 ; CHECK-LABEL: fn_typeid:
 ; CHECK: .cfi_startproc
@@ -18,7 +18,7 @@ declare void @__cxa_throw(i8*, i8*, i8*)
 ; CHECK: .cfi_endproc
 define i32 @fn_typeid() {
 entry:
-  %0 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) nounwind
+  %0 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) nounwind
   ret i32 %0
 }
 
@@ -34,8 +34,8 @@ entry:
 ; CHECK: bl __cxa_throw
 define void @fn_throw() {
 entry:
-  %0 = call i8* @__cxa_allocate_exception(i32 4) nounwind
-  call void @__cxa_throw(i8* %0, i8* bitcast (i8** @_ZTIi to i8*), i8* null) noreturn
+  %0 = call ptr @__cxa_allocate_exception(i32 4) nounwind
+  call void @__cxa_throw(ptr %0, ptr @_ZTIi, ptr null) noreturn
   unreachable
 }
 
@@ -47,7 +47,7 @@ entry:
 ; CHECK: entsp 4
 ; CHECK: .cfi_def_cfa_offset 16
 ; CHECK: .cfi_offset 15, 0
-define void @fn_catch() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @fn_catch() personality ptr @__gxx_personality_v0 {
 entry:
 
 ; N.B. we alloc no variables, hence force compiler to spill
@@ -77,15 +77,14 @@ cont:
 ; CHECK: ldw r6, r0[0]
 ; CHECK: bl __cxa_end_catch
 lpad:
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
-          catch i8* bitcast (i8** @_ZTIi to i8*)
-          catch i8* bitcast (i8** @_ZTId to i8*)
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = extractvalue { i8*, i32 } %0, 1
-  %3 = call i8* @__cxa_begin_catch(i8* %1) nounwind
-  %4 = bitcast i8* %3 to i32*
-  %5 = load i32, i32* %4
+          catch ptr @_ZTIi
+          catch ptr @_ZTId
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = extractvalue { ptr, i32 } %0, 1
+  %3 = call ptr @__cxa_begin_catch(ptr %1) nounwind
+  %4 = load i32, ptr %3
   call void @__cxa_end_catch() nounwind
 
 ; CHECK: eq r0, r6, r5
@@ -94,10 +93,10 @@ lpad:
 ; CHECK: bl _Unwind_Resume
 ; CHECK: [[END:.L[a-zA-Z0-9_]+]]
 ; CHECK: .cfi_endproc
-  %6 = icmp eq i32 %5, %2
-  br i1 %6, label %Resume, label %Exit
+  %5 = icmp eq i32 %4, %2
+  br i1 %5, label %Resume, label %Exit
 Resume:
-  resume { i8*, i32 } %0
+  resume { ptr, i32 } %0
 Exit:
   ret void
 }

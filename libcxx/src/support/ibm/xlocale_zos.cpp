@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__assert>
 #include <__support/ibm/xlocale.h>
 #include <sstream>
 #include <vector>
@@ -31,14 +32,14 @@ locale_t newlocale(int category_mask, const char* locale, locale_t base) {
       }
     }
   }
-  
+
   // Create new locale.
   locale_t newloc = new locale_struct();
 
   if (base) {
     if (category_mask != LC_ALL_MASK) {
       // Copy base when it will not be overwritten.
-      memcpy(newloc, base, sizeof (locale_struct));
+      memcpy(newloc, base, sizeof(locale_struct));
       newloc->category_mask = category_mask | base->category_mask;
     }
     delete base;
@@ -64,9 +65,7 @@ locale_t newlocale(int category_mask, const char* locale, locale_t base) {
   return (locale_t)newloc;
 }
 
-void freelocale(locale_t locobj) {
-  delete locobj;
-}
+void freelocale(locale_t locobj) { delete locobj; }
 
 locale_t uselocale(locale_t newloc) {
   // Maintain current locale name(s).
@@ -74,19 +73,13 @@ locale_t uselocale(locale_t newloc) {
 
   if (newloc) {
     // Set locales and check for errors.
-    bool is_error = 
-      (newloc->category_mask & LC_COLLATE_MASK && 
-        setlocale(LC_COLLATE, newloc->lc_collate.c_str()) == NULL) ||
-      (newloc->category_mask & LC_CTYPE_MASK && 
-        setlocale(LC_CTYPE, newloc->lc_ctype.c_str()) == NULL) ||
-      (newloc->category_mask & LC_MONETARY_MASK && 
-        setlocale(LC_MONETARY, newloc->lc_monetary.c_str()) == NULL) ||
-      (newloc->category_mask & LC_NUMERIC_MASK && 
-        setlocale(LC_NUMERIC, newloc->lc_numeric.c_str()) == NULL) ||
-      (newloc->category_mask & LC_TIME_MASK && 
-        setlocale(LC_TIME, newloc->lc_time.c_str()) == NULL) ||
-      (newloc->category_mask & LC_MESSAGES_MASK && 
-        setlocale(LC_MESSAGES, newloc->lc_messages.c_str()) == NULL);
+    bool is_error =
+        (newloc->category_mask & LC_COLLATE_MASK && setlocale(LC_COLLATE, newloc->lc_collate.c_str()) == NULL) ||
+        (newloc->category_mask & LC_CTYPE_MASK && setlocale(LC_CTYPE, newloc->lc_ctype.c_str()) == NULL) ||
+        (newloc->category_mask & LC_MONETARY_MASK && setlocale(LC_MONETARY, newloc->lc_monetary.c_str()) == NULL) ||
+        (newloc->category_mask & LC_NUMERIC_MASK && setlocale(LC_NUMERIC, newloc->lc_numeric.c_str()) == NULL) ||
+        (newloc->category_mask & LC_TIME_MASK && setlocale(LC_TIME, newloc->lc_time.c_str()) == NULL) ||
+        (newloc->category_mask & LC_MESSAGES_MASK && setlocale(LC_MESSAGES, newloc->lc_messages.c_str()) == NULL);
 
     if (is_error) {
       setlocale(LC_ALL, current_loc_name.c_str());
@@ -107,24 +100,24 @@ locale_t uselocale(locale_t newloc) {
     std::string s;
 
     while (std::getline(ss, s, delimiter)) {
-        tokenized.push_back(s);
+      tokenized.push_back(s);
     }
 
-    _LIBCPP_ASSERT(tokenized.size() >= _NCAT, "locale-name list is too short");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(tokenized.size() >= _NCAT, "locale-name list is too short");
 
-    previous_loc->lc_collate = tokenized[LC_COLLATE];
-    previous_loc->lc_ctype = tokenized[LC_CTYPE];
+    previous_loc->lc_collate  = tokenized[LC_COLLATE];
+    previous_loc->lc_ctype    = tokenized[LC_CTYPE];
     previous_loc->lc_monetary = tokenized[LC_MONETARY];
-    previous_loc->lc_numeric = tokenized[LC_NUMERIC];
-    previous_loc->lc_time = tokenized[LC_TIME];
+    previous_loc->lc_numeric  = tokenized[LC_NUMERIC];
+    previous_loc->lc_time     = tokenized[LC_TIME];
     // Skip LC_TOD.
     previous_loc->lc_messages = tokenized[LC_MESSAGES];
   } else {
-    previous_loc->lc_collate = current_loc_name;
-    previous_loc->lc_ctype = current_loc_name;
+    previous_loc->lc_collate  = current_loc_name;
+    previous_loc->lc_ctype    = current_loc_name;
     previous_loc->lc_monetary = current_loc_name;
-    previous_loc->lc_numeric = current_loc_name;
-    previous_loc->lc_time = current_loc_name;
+    previous_loc->lc_numeric  = current_loc_name;
+    previous_loc->lc_time     = current_loc_name;
     previous_loc->lc_messages = current_loc_name;
   }
 

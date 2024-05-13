@@ -20,7 +20,7 @@
 ; IMPORT-NEXT:  @g = internal global i32 42, align 4 #0
 ; IMPORT:  attributes #0 = { "thinlto-internalize" }
 
-; CODEGEN:      define dso_local i32 @main
+; CODEGEN:      define dso_local noundef i32 @main
 ; CODEGEN-NEXT:    ret i32 42
 
 ; PRESERVED:      @g.alias = external global i32
@@ -33,10 +33,10 @@ target triple = "x86_64-unknown-linux-gnu"
 @g = external global i32
 
 define i32 @main() {
-  %v = load i32, i32* @g
+  %v = load i32, ptr @g
   ret i32 %v
 }
 
-define i32* @ret_ptr() {
-  ret i32* @g.alias
+define ptr @ret_ptr() {
+  ret ptr @g.alias
 }

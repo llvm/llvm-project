@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
@@ -34,11 +35,9 @@ class ASTContext;
 template <typename> class CanQual;
 class DeclarationName;
 class DeclarationNameTable;
-class MultiKeywordSelector;
 struct PrintingPolicy;
 class TemplateDecl;
 class TypeSourceInfo;
-class UsingDirectiveDecl;
 
 using CanQualType = CanQual<Type>;
 
@@ -119,14 +118,14 @@ class alignas(IdentifierInfoAlignment) CXXLiteralOperatorIdName
   friend class clang::DeclarationName;
   friend class clang::DeclarationNameTable;
 
-  IdentifierInfo *ID;
+  const IdentifierInfo *ID;
 
   /// Extra information associated with this operator name that
   /// can be used by the front end. All bits are really needed
   /// so it is not possible to stash something in the low order bits.
   void *FETokenInfo;
 
-  CXXLiteralOperatorIdName(IdentifierInfo *II)
+  CXXLiteralOperatorIdName(const IdentifierInfo *II)
       : DeclarationNameExtra(CXXLiteralOperatorName), ID(II),
         FETokenInfo(nullptr) {}
 
@@ -194,6 +193,13 @@ class DeclarationName {
                 "The various classes that DeclarationName::Ptr can point to"
                 " must be at least aligned to 8 bytes!");
 
+  static_assert(
+      std::is_same<std::underlying_type_t<StoredNameKind>,
+                   std::underlying_type_t<
+                       detail::DeclarationNameExtra::ExtraKind>>::value,
+      "The various enums used to compute values for NameKind should "
+      "all have the same underlying type");
+
 public:
   /// The kind of the name stored in this DeclarationName.
   /// The first 7 enumeration values are stored inline and correspond
@@ -207,15 +213,18 @@ public:
     CXXDestructorName = StoredCXXDestructorName,
     CXXConversionFunctionName = StoredCXXConversionFunctionName,
     CXXOperatorName = StoredCXXOperatorName,
-    CXXDeductionGuideName = UncommonNameKindOffset +
-                            detail::DeclarationNameExtra::CXXDeductionGuideName,
-    CXXLiteralOperatorName =
-        UncommonNameKindOffset +
-        detail::DeclarationNameExtra::CXXLiteralOperatorName,
-    CXXUsingDirective = UncommonNameKindOffset +
-                        detail::DeclarationNameExtra::CXXUsingDirective,
-    ObjCMultiArgSelector = UncommonNameKindOffset +
-                           detail::DeclarationNameExtra::ObjCMultiArgSelector
+    CXXDeductionGuideName = llvm::addEnumValues(
+        UncommonNameKindOffset,
+        detail::DeclarationNameExtra::CXXDeductionGuideName),
+    CXXLiteralOperatorName = llvm::addEnumValues(
+        UncommonNameKindOffset,
+        detail::DeclarationNameExtra::CXXLiteralOperatorName),
+    CXXUsingDirective =
+        llvm::addEnumValues(UncommonNameKindOffset,
+                            detail::DeclarationNameExtra::CXXUsingDirective),
+    ObjCMultiArgSelector =
+        llvm::addEnumValues(UncommonNameKindOffset,
+                            detail::DeclarationNameExtra::ObjCMultiArgSelector),
   };
 
 private:
@@ -353,7 +362,8 @@ public:
   }
 
   /// Construct a declaration name from an Objective-C selector.
-  DeclarationName(Selector Sel) : Ptr(Sel.InfoPtr) {}
+  DeclarationName(Selector Sel)
+      : Ptr(reinterpret_cast<uintptr_t>(Sel.InfoPtr.getOpaqueValue())) {}
 
   /// Returns the name for all C++ using-directives.
   static DeclarationName getUsingDirectiveName() {
@@ -469,7 +479,7 @@ public:
 
   /// If this name is the name of a literal operator,
   /// retrieve the identifier associated with it.
-  IdentifierInfo *getCXXLiteralIdentifier() const {
+  const IdentifierInfo *getCXXLiteralIdentifier() const {
     if (getNameKind() == CXXLiteralOperatorName) {
       assert(getPtr() && "getCXXLiteralIdentifier on a null DeclarationName!");
       return castAsCXXLiteralOperatorIdName()->ID;
@@ -641,7 +651,7 @@ public:
   }
 
   /// Get the name of the literal operator function with II as the identifier.
-  DeclarationName getCXXLiteralOperatorName(IdentifierInfo *II);
+  DeclarationName getCXXLiteralOperatorName(const IdentifierInfo *II);
 };
 
 /// DeclarationNameLoc - Additional source/type location info
@@ -660,13 +670,13 @@ class DeclarationNameLoc {
 
   // The location (if any) of the operator keyword is stored elsewhere.
   struct CXXOpName {
-    unsigned BeginOpNameLoc;
-    unsigned EndOpNameLoc;
+    SourceLocation::UIntTy BeginOpNameLoc;
+    SourceLocation::UIntTy EndOpNameLoc;
   };
 
   // The location (if any) of the operator keyword is stored elsewhere.
   struct CXXLitOpName {
-    unsigned OpNameLoc;
+    SourceLocation::UIntTy OpNameLoc;
   };
 
   // struct {} CXXUsingDirective;
@@ -754,7 +764,7 @@ public:
 };
 
 /// DeclarationNameInfo - A collector data type for bundling together
-/// a DeclarationName and the correspnding source/type location info.
+/// a DeclarationName and the corresponding source/type location info.
 struct DeclarationNameInfo {
 private:
   /// Name - The declaration name, also encoding name kind.
@@ -932,7 +942,7 @@ class AssumedTemplateStorage : public UncommonTemplateNameStorage {
   friend class ASTContext;
 
   AssumedTemplateStorage(DeclarationName Name)
-      : UncommonTemplateNameStorage(Assumed, 0), Name(Name) {}
+      : UncommonTemplateNameStorage(Assumed, 0, 0), Name(Name) {}
   DeclarationName Name;
 
 public:

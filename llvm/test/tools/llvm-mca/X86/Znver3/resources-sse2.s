@@ -58,8 +58,8 @@ cvtsd2ss    (%rax), %xmm2
 
 cvtsi2sd    %ecx, %xmm2
 cvtsi2sd    %rcx, %xmm2
-cvtsi2sd    (%rax), %xmm2
-cvtsi2sd    (%rax), %xmm2
+cvtsi2sdl   (%rax), %xmm2
+cvtsi2sdq   (%rax), %xmm2
 
 cvtss2sd    %xmm0, %xmm2
 cvtss2sd    (%rax), %xmm2
@@ -447,7 +447,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  2      4     1.00                        cvtsi2sd	%ecx, %xmm2
 # CHECK-NEXT:  2      4     1.00                        cvtsi2sd	%rcx, %xmm2
 # CHECK-NEXT:  1      10    1.00    *                   cvtsi2sdl	(%rax), %xmm2
-# CHECK-NEXT:  1      10    1.00    *                   cvtsi2sdl	(%rax), %xmm2
+# CHECK-NEXT:  1      10    1.00    *                   cvtsi2sdq	(%rax), %xmm2
 # CHECK-NEXT:  1      3     0.50                        cvtss2sd	%xmm0, %xmm2
 # CHECK-NEXT:  1      10    0.50    *                   cvtss2sd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     0.50                        cvttpd2dq	%xmm0, %xmm2
@@ -684,12 +684,12 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU
@@ -746,7 +746,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     cvtsi2sd	%ecx, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     cvtsi2sd	%rcx, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     cvtsi2sdl	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     cvtsi2sdl	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     cvtsi2sdq	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     cvtss2sd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     cvtss2sd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     cvttpd2dq	%xmm0, %xmm2

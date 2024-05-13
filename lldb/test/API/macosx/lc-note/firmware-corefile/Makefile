@@ -6,6 +6,6 @@ all: a.out create-empty-corefile
 
 create-empty-corefile:
 	"$(MAKE)" -f "$(MAKEFILE_RULES)" EXE=create-empty-corefile \
-		C_SOURCES=create-empty-corefile.c
+	    CXX=$(CC) CXX_SOURCES=create-empty-corefile.cpp
 
 include Makefile.rules

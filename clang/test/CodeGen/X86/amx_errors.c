@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +amx-tile -target-feature +amx-int8 -target-feature +amx-bf16 -emit-llvm -fsyntax-only -verify
+// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +amx-tile   \
+// RUN: -target-feature +amx-int8 -target-feature +amx-bf16 -target-feature +amx-fp16 -fsyntax-only -verify
 
 #include <immintrin.h>
 
@@ -14,4 +15,7 @@ void test_amx(void *data) {
   _tile_dpbsud(7, 1, 7); // expected-error {{tile arguments must refer to different tiles}}
   _tile_dpbsud(4, 3, 3); // expected-error {{tile arguments must refer to different tiles}}
   _tile_dpbf16ps(4, 3, 3); // expected-error {{tile arguments must refer to different tiles}}
+  _tile_dpfp16ps(1, 1, 3); // expected-error {{tile arguments must refer to different tiles}}
+  _tile_dpfp16ps(1, 2, 1); // expected-error {{tile arguments must refer to different tiles}}
+  _tile_dpfp16ps(1, 2, 2); // expected-error {{tile arguments must refer to different tiles}}
 }

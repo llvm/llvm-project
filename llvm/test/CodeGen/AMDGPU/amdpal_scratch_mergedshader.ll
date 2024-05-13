@@ -5,7 +5,7 @@
 ; than s0.
 
 ; GCN-LABEL: {{^}}_amdgpu_hs_main:
-; GCN: s_getpc_b64 s{{\[}}[[GITPTR:[0-9]+]]:
+; GCN: s_getpc_b64 s[[[GITPTR:[0-9]+]]:
 ; PREGFX9: s_mov_b32 s[[GITPTR]], s0
 ; GFX9: s_mov_b32 s[[GITPTR]], s8
 
@@ -23,12 +23,12 @@ define amdgpu_hs void @_amdgpu_hs_main(i32 inreg %arg, i32 inreg %arg1, i32 inre
   br label %.endls
 
 .endls:                                           ; preds = %.beginls, %.entry
-  %.fca.2.gep120.i = getelementptr inbounds [3 x <4 x float>], [3 x <4 x float>] addrspace(5)* %__llpc_global_proxy_7.i, i64 0, i64 2
-  store volatile <4 x float> <float 9.000000e+00, float 1.000000e+01, float 1.100000e+01, float 1.200000e+01>, <4 x float> addrspace(5)* %.fca.2.gep120.i, align 16
+  %.fca.2.gep120.i = getelementptr inbounds [3 x <4 x float>], ptr addrspace(5) %__llpc_global_proxy_7.i, i64 0, i64 2
+  store volatile <4 x float> <float 9.000000e+00, float 1.000000e+01, float 1.100000e+01, float 1.200000e+01>, ptr addrspace(5) %.fca.2.gep120.i, align 16
   br label %bb
 
 bb:                                               ; preds = %bb, %.endls
-  %lsr.iv182 = phi [3 x <4 x float>] addrspace(5)* [ undef, %bb ], [ %__llpc_global_proxy_7.i, %.endls ]
-  %scevgep183 = getelementptr [3 x <4 x float>], [3 x <4 x float>] addrspace(5)* %lsr.iv182, i32 0, i32 1
+  %lsr.iv182 = phi ptr addrspace(5) [ undef, %bb ], [ %__llpc_global_proxy_7.i, %.endls ]
+  %scevgep183 = getelementptr [3 x <4 x float>], ptr addrspace(5) %lsr.iv182, i32 0, i32 1
   br label %bb
 }

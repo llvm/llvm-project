@@ -11,7 +11,7 @@
 ; implemented.
 
 @var = global i64 0
-@local_addr = global i64* null
+@local_addr = global ptr null
 
 declare void @foo()
 
@@ -23,14 +23,18 @@ define void @trivial_func() nounwind {
   ret void
 }
 
-define void @trivial_fp_func() {
+define void @trivial_fp_func() uwtable {
 ; CHECK-LABEL: trivial_fp_func:
 ; CHECK: str x30, [sp, #-16]!
 ; CHECK-NOT: mov x29, sp
 
 ; CHECK-WITHFP-ARM64-LABEL: trivial_fp_func:
 ; CHECK-WITHFP-ARM64: stp x29, x30, [sp, #-16]!
+; CHECK-WITHFP-ARM64-NEXT: .cfi_def_cfa_offset 16
 ; CHECK-WITHFP-ARM64-NEXT: mov x29, sp
+; CHECK-WITHFP-ARM64-NEXT: .cfi_def_cfa w29, 16
+; CHECK-WITHFP-ARM64-NEXT: .cfi_offset w30, -8
+; CHECK-WITHFP-ARM64-NEXT: .cfi_offset w29, -16
 
 ; Dont't really care, but it would be a Bad Thing if this came after the epilogue.
 ; CHECK-WITHFP-ARM64: bl foo
@@ -39,9 +43,15 @@ define void @trivial_fp_func() {
   ret void
 
 ; CHECK: ldr x30, [sp], #16
+; CHECK-NEXT: .cfi_def_cfa_offset 0
+; CHECK-NEXT: .cfi_restore w30
 ; CHECK-NEXT: ret
 
-; CHECK-WITHFP-ARM64: ldp x29, x30, [sp], #16
+; CHECK-WITHFP-ARM64:      .cfi_def_cfa wsp, 16
+; CHECK-WITHFP-ARM64-NEXT: ldp x29, x30, [sp], #16
+; CHECK-WITHFP-ARM64-NEXT: .cfi_def_cfa_offset 0
+; CHECK-WITHFP-ARM64-NEXT: .cfi_restore w30
+; CHECK-WITHFP-ARM64-NEXT: .cfi_restore w29
 ; CHECK-WITHFP-ARM64-NEXT: ret
 }
 
@@ -50,11 +60,11 @@ define void @stack_local() {
 ; CHECK-LABEL: stack_local:
 ; CHECK: sub sp, sp, #16
 
-  %val = load i64, i64* @var
-  store i64 %val, i64* %local_var
+  %val = load i64, ptr @var
+  store i64 %val, ptr %local_var
 ; CHECK-DAG: str {{x[0-9]+}}, [sp, #{{[0-9]+}}]
 
-  store i64* %local_var, i64** @local_addr
+  store ptr %local_var, ptr @local_addr
 ; CHECK-DAG: add {{x[0-9]+}}, sp, #{{[0-9]+}}
 
   ret void

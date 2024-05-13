@@ -5,60 +5,58 @@
 ; sunken address is not reused if the same address computation occurs
 ; after the select. Previously, this caused a ICE.
 
-%struct.az = type { i32, %struct.bt* }
+%struct.az = type { i32, ptr }
 %struct.bt = type { i32 }
 %struct.f = type { %struct.ax, %union.anon }
-%struct.ax = type { %struct.az* }
+%struct.ax = type { ptr }
 %union.anon = type { %struct.bd }
 %struct.bd = type { i64 }
 %struct.bg = type { i32, i32 }
 %struct.ap = type { i32, i32 }
 
 @ch = common global %struct.f zeroinitializer, align 8
-@j = common global %struct.az* null, align 8
+@j = common global ptr null, align 8
 @ck = common global i32 0, align 4
 @h = common global i32 0, align 4
 @.str = private unnamed_addr constant [1 x i8] zeroinitializer, align 1
 
 define internal void @probestart() {
 entry:
-  %0 = load %struct.az*, %struct.az** @j, align 8
-  %bw = getelementptr inbounds %struct.az, %struct.az* %0, i64 0, i32 1
-  %1 = load i32, i32* @h, align 4
-  %cond = icmp eq i32 %1, 0
+  %load0 = load ptr, ptr @j, align 8
+  %bw = getelementptr inbounds %struct.az, ptr %load0, i64 0, i32 1
+  %load1 = load i32, ptr @h, align 4
+  %cond = icmp eq i32 %load1, 0
   br i1 %cond, label %sw.bb, label %cl
 
 sw.bb:                                            ; preds = %entry
-  %call = tail call inreg { i64, i64 } @ba(i32* bitcast (%struct.f* @ch to i32*))
+  %call = tail call inreg { i64, i64 } @ba(ptr @ch)
   br label %cl
 
 cl:                                               ; preds = %sw.bb, %entry
-  %2 = load %struct.bt*, %struct.bt** %bw, align 8
-  %tobool = icmp eq %struct.bt* %2, null
-  %3 = load i32, i32* @ck, align 4
-  %.sink5 = select i1 %tobool, i32* getelementptr (%struct.bg, %struct.bg* bitcast (%union.anon* getelementptr inbounds (%struct.f, %struct.f* @ch, i64 0, i32 1) to %struct.bg*), i64 0, i32 1), i32* getelementptr (%struct.ap, %struct.ap* bitcast (%union.anon* getelementptr inbounds (%struct.f, %struct.f* @ch, i64 0, i32 1) to %struct.ap*), i64 0, i32 1)
-  store i32 %3, i32* %.sink5, align 4
-  store i32 1, i32* bitcast (i64* getelementptr inbounds (%struct.f, %struct.f* @ch, i64 0, i32 1, i32 0, i32 0) to i32*), align 8
-  %4 = load %struct.bt*, %struct.bt** %bw, align 8
-  tail call void (i8*, ...) @a(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0), %struct.bt* %4)
+  %load2 = load ptr, ptr %bw, align 8
+  %tobool = icmp eq ptr %load2, null
+  %load3 = load i32, ptr @ck, align 4
+  %.sink5 = select i1 %tobool, ptr getelementptr (%struct.bg, ptr getelementptr inbounds (%struct.f, ptr @ch, i64 0, i32 1), i64 0, i32 1), ptr getelementptr (%struct.ap, ptr getelementptr inbounds (%struct.f, ptr @ch, i64 0, i32 1), i64 0, i32 1)
+  store i32 %load3, ptr %.sink5, align 4
+  store i32 1, ptr getelementptr inbounds (%struct.f, ptr @ch, i64 0, i32 1, i32 0, i32 0), align 8
+  %load4 = load ptr, ptr %bw, align 8
+  tail call void (ptr, ...) @a(ptr @.str, ptr %load4)
   ret void
 }
 
 ; CHECK-LABEL: @probestart()
 ; CHECK-LABEL: entry:
-; CHECK: %[[I0:[0-9]+]] = load %struct.az*, %struct.az** @j
+; CHECK: %[[I0:[a-z0-9]+]] = load ptr, ptr @j
 ; CHECK-LABEL: cl:
 
-; CHECK-NOT: %{{[0-9]+}}  = load %struct.bt*, %struct.bt** %bw
+; CHECK-NOT: %{{[a-z0-9]+}}  = load ptr, ptr %bw
 ; CHECK-NOT: %{{[.a-z0-9]}} = select
-; CHECK-NOT: %{{[0-9]+}}  = load %struct.bt*, %struct.bt** %bw
+; CHECK-NOT: %{{[a-z0-9]+}}  = load ptr, ptr %bw
 
-; CHECK: %[[I1:[0-9]+]] = bitcast %struct.az* %[[I0]] to i8*
-; CHECK-NEXT: %sunkaddr = getelementptr inbounds i8, i8* %[[I1]], i64 8
-; CHECK-NEXT: %[[I2:[0-9]+]] = bitcast i8* %sunkaddr to %struct.bt**
-; CHECK-NEXT: %{{[0-9]+}} = load %struct.bt*, %struct.bt** %[[I2]]
-; CHECK-NEXT: tail call void (i8*, ...) @a
+; CHECK: %sunkaddr = getelementptr inbounds i8, ptr %[[I0]], i64 8
+; CHECK-NEXT: %{{[a-z0-9]+}} = load ptr, ptr %sunkaddr
+; CHECK-NEXT: tail call void (ptr, ...) @a
 
-declare inreg { i64, i64 } @ba(i32*)
+declare inreg { i64, i64 } @ba(ptr)
 
-declare void @a(i8*, ...)
+declare void @a(ptr, ...)

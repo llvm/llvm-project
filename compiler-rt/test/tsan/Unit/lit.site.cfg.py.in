@@ -12,9 +12,10 @@ config.name = 'ThreadSanitizer-Unit'
 config.test_exec_root = "@COMPILER_RT_BINARY_DIR@/lib/tsan/tests"
 config.test_source_root = config.test_exec_root
 
-if config.host_os == 'Darwin':
-  config.parallelism_group = config.darwin_sanitizer_parallelism_group_func
+if not config.parallelism_group:
+  config.parallelism_group = 'shadow-memory'
 
+if config.host_os == 'Darwin':
   # On Darwin, we default to ignore_noninstrumented_modules=1, which also
   # suppresses some races the tests are supposed to find.  See tsan/lit.cfg.py.
   if 'TSAN_OPTIONS' in config.environment:

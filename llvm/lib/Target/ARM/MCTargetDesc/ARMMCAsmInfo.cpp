@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCAsmInfo.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -89,9 +89,10 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
   PrivateGlobalPrefix = "$M";
   PrivateLabelPrefix = "$M";
-  CommentString = ";";
+  CommentString = "@";
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
@@ -110,7 +111,8 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   PrivateLabelPrefix = ".L";
 
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
+  ExceptionsType = ExceptionHandling::WinEH;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
   UseParensForSymbolVariant = true;
 
   DwarfRegNumForCFI = false;

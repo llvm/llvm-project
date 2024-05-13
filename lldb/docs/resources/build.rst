@@ -1,9 +1,6 @@
 Building
 ========
 
-.. contents::
-   :local:
-
 Getting the Sources
 -------------------
 
@@ -34,7 +31,12 @@ If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
 * `Python <http://www.python.org/>`_
-* `SWIG <http://swig.org/>`_ 3 or later.
+* `SWIG <http://swig.org/>`_ 4 or later.
+
+If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building
+the test programs. On other platforms ``make`` is used.
+
+.. _Optional Dependencies:
 
 Optional Dependencies
 *********************
@@ -70,57 +72,72 @@ commands below.
 
 ::
 
-  > yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
-  > sudo apt-get install build-essential subversion swig python3-dev libedit-dev libncurses5-dev
-  > pkg install swig python
-  > pkgin install swig python36 cmake ninja-build
-  > brew install swig cmake ninja
+  $ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
+  $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev libxml2-dev
+  $ pkg install swig python libxml2
+  $ pkgin install swig python36 cmake ninja-build
+  $ brew install swig cmake ninja
 
-Note that there's an `incompatibility
-<https://github.com/swig/swig/issues/1321>`_ between Python version 3.7 and later
-and swig versions older than 4.0.0 which makes builds of LLDB using debug
-versions of python unusable. This primarily affects Windows, as debug builds of
-LLDB must use debug python as well.
+.. note::
+   There is an `incompatibility
+   <https://github.com/swig/swig/issues/1321>`_ between Python version 3.7 and later
+   and swig versions older than 4.0.0 which makes builds of LLDB using debug
+   versions of python unusable. This primarily affects Windows, as debug builds of
+   LLDB must use debug python as well.
+
+.. note::
+  Installing multiple versions of Curses, particularly when only one is built with
+  wide character support, can cause lldb to be linked with an incorrect set of
+  libraries. If your system already has Curses, we recommend you use that version.
+  If you do install another one, use a tool like ``ldd`` to ensure only one version
+  of Curses is being used in the final ``lldb`` executable.
 
 Windows
 *******
 
-* Visual Studio 2017.
+* Visual Studio 2019.
 * The latest Windows SDK.
 * The Active Template Library (ATL).
 * `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
 * `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
   the x64 variant if that's what you're targetting and (2) install the debug
-  library if you want to build a debug lldb.
+  library if you want to build a debug lldb. The standalone installer is the
+  easiest way to get the debug library.
 * `Python Tools for Visual Studio
-  <https://github.com/Microsoft/PTVS/releases>`_. If you plan to debug test
-  failures or even write new tests at all, PTVS is an indispensable debugging
+  <https://github.com/Microsoft/PTVS/>`_. If you plan to debug test failures
+  or even write new tests at all, PTVS is an indispensable debugging
   extension to VS that enables full editing and debugging support for Python
   (including mixed native/managed debugging).
+* `SWIG for Windows <http://www.swig.org/download.html>`_
 
 The steps outlined here describes how to set up your system and install the
 required dependencies such that they can be found when needed during the build
 process. They only need to be performed once.
 
-#. Install Visual Studio with the Windows SDK and ATL components.
+#. Install Visual Studio with the "Desktop Development with C++" workload and
+   the "Python Development" workload.
 #. Install GnuWin32, making sure ``<GnuWin32 install dir>\bin`` is added to
    your PATH environment variable. Verify that utilities like ``dirname`` and
    ``make`` are available from your terminal.
 #. Install SWIG for Windows, making sure ``<SWIG install dir>`` is added to
    your PATH environment variable. Verify that ``swig`` is available from your
    terminal.
+#. Install Python 3 from the standalone installer and include the debug libraries
+   in the install, making sure the Python install path is added to your PATH
+   environment variable.
 #. Register the Debug Interface Access DLLs with the Registry from a privileged
    terminal.
 
 ::
 
-> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\DIA SDK\bin\msdia140.dll"
-> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\DIA SDK\bin\amd64\msdia140.dll"
+> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\DIA SDK\bin\msdia140.dll"
+> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\DIA SDK\bin\amd64\msdia140.dll"
 
 Any command prompt from which you build LLDB should have a valid Visual Studio
-environment setup. This means you should run ``vcvarsall.bat`` or open an
-appropriate Visual Studio Command Prompt corresponding to the version you wish
-to use.
+environment setup. This means you should open an appropriate `Developer Command
+Prompt for VS <https://docs.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2019>`_
+corresponding to the version you wish to use or run ``vcvarsall.bat`` or
+``VsDevCmd.bat``.
 
 macOS
 *****
@@ -139,7 +156,7 @@ source-tree with git:
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project.git
+  $ git clone https://github.com/llvm/llvm-project.git
 
 CMake is a cross-platform build-generator tool. CMake does not build the
 project, it generates the files needed by your build tool. The recommended
@@ -155,18 +172,25 @@ to the ``llvm`` directory in the source-tree:
 
 ::
 
-  > cmake -G Ninja -DLLVM_ENABLE_PROJECTS="clang;lldb" [<cmake options>] path/to/llvm-project/llvm
+  $ cmake -G Ninja -DLLVM_ENABLE_PROJECTS="clang;lldb" [<cmake options>] path/to/llvm-project/llvm
 
 We used the ``LLVM_ENABLE_PROJECTS`` option here to tell the build-system which
 subprojects to build in addition to LLVM (for more options see
 :ref:`CommonCMakeOptions` and :ref:`CMakeCaches`). Parts of the LLDB test suite
 require ``lld``. Add it to the list in order to run all tests. Once CMake is done,
-run ninja to perform the actual build. We pass ``lldb`` here as the target, so
-it only builds what is necessary to run the lldb driver:
+run ninja to perform the actual build.
 
 ::
 
-  > ninja lldb
+  $ ninja lldb lldb-server
+
+If you only want lldb, or are on a platform where lldb-server is not supported,
+you can pass just ``lldb``. Ninja will only build what is necessary to run the
+lldb driver:
+
+::
+
+  $ ninja lldb
 
 Standalone builds
 *****************
@@ -185,10 +209,10 @@ Clang. Then we build the ``ALL`` target with ninja:
 
 ::
 
-  > cmake -B /path/to/llvm-build -G Ninja \
+  $ cmake -B /path/to/llvm-build -G Ninja \
           -DLLVM_ENABLE_PROJECTS=clang \
           [<more cmake options>] /path/to/llvm-project/llvm
-  > ninja
+  $ ninja
 
 Now run CMake a second time with ``-B`` pointing to a new directory for the
 main build-tree and the positional argument pointing to the ``lldb`` directory
@@ -199,10 +223,13 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
 
 ::
 
-  > cmake -B /path/to/lldb-build -G Ninja \
+  $ cmake -B /path/to/lldb-build -G Ninja \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
-  > ninja lldb
+  $ ninja lldb lldb-server
+
+If you do not require or cannot build ``lldb-server`` on your platform, simply
+remove it from the Ninja command.
 
 .. note::
 
@@ -225,7 +252,7 @@ ninja:
 
 ::
 
-  > cmake -G Ninja \
+  $ cmake -G Ninja \
       -DLLDB_EXPORT_ALL_SYMBOLS=1 \
       -DCMAKE_BUILD_TYPE=Debug
       <path to root of llvm source tree>
@@ -237,7 +264,7 @@ suite.
 
 ::
 
-  > cmake -G Ninja \
+  $ cmake -G Ninja \
       -DLLDB_TEST_COMPILER=<path to C compiler> \
       <path to root of llvm source tree>
 
@@ -261,12 +288,12 @@ are commonly used on Windows.
   crash, rather than having to reproduce a failure or use a crash dump.
 * ``PYTHON_HOME`` (Required): Path to the folder where the Python distribution
   is installed. For example, ``C:\Python35``.
-* ``LLDB_RELOCATABLE_PYTHON`` (Default=0): When this is 0, LLDB will bind
+* ``LLDB_EMBED_PYTHON_HOME`` (Default=1 on Windows): When this is 1, LLDB will bind
   statically to the location specified in the ``PYTHON_HOME`` CMake variable,
   ignoring any value of ``PYTHONHOME`` set in the environment. This is most
   useful for developers who simply want to run LLDB after they build it. If you
   wish to move a build of LLDB to a different machine where Python will be in a
-  different location, setting ``LLDB_RELOCATABLE_PYTHON`` to 1 will cause
+  different location, setting ``LLDB_EMBED_PYTHON_HOME`` to 0 will cause
   Python to use its default mechanism for finding the python installation at
   runtime (looking for installed Pythons, or using the ``PYTHONHOME``
   environment variable if it is specified).
@@ -275,7 +302,7 @@ Sample command line:
 
 ::
 
-  > cmake -G Ninja^
+  $ cmake -G Ninja^
       -DLLDB_TEST_DEBUG_TEST_CRASHES=1^
       -DPYTHON_HOME=C:\Python35^
       -DLLDB_TEST_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe^
@@ -292,7 +319,7 @@ project in another directory.
 
 ::
 
-  > cmake -G "Visual Studio 15 2017 Win64" -Thost=x64 <cmake variables> <path to root of llvm source tree>
+  $ cmake -G "Visual Studio 16 2019" -A x64 -T host=x64 <cmake variables> <path to root of llvm source tree>
 
 Then you can open the .sln file in Visual Studio, set lldb as the startup
 project, and use F5 to run it. You need only edit the project settings to set
@@ -303,8 +330,8 @@ ninja tree.
 macOS
 ^^^^^
 
-On macOS the LLDB test suite requires libc++. Either add ``libcxx`` to
-``LLVM_ENABLE_PROJECTS`` or disable the test suite with
+On macOS the LLDB test suite requires libc++. Either add
+``LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"`` or disable the test suite with
 ``LLDB_INCLUDE_TESTS=OFF``. Further useful options:
 
 * ``LLDB_BUILD_FRAMEWORK:BOOL``: Builds the LLDB.framework.
@@ -338,14 +365,15 @@ LLVM <https://llvm.org/docs/BuildingADistribution.html>`_):
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project
+  $ git clone https://github.com/llvm/llvm-project
 
-  > cmake -B /path/to/lldb-build -G Ninja \
+  $ cmake -B /path/to/lldb-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-macOS.cmake \
-          -DLLVM_ENABLE_PROJECTS="clang;libcxx;lldb" \
+          -DLLVM_ENABLE_PROJECTS="clang;lldb" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           llvm-project/llvm
 
-  > DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
+  $ DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
 
 .. _CMakeGeneratedXcodeProject:
 
@@ -353,20 +381,21 @@ Build LLDB standalone for development with Xcode:
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project
+  $ git clone https://github.com/llvm/llvm-project
 
-  > cmake -B /path/to/llvm-build -G Ninja \
+  $ cmake -B /path/to/llvm-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-base.cmake \
-          -DLLVM_ENABLE_PROJECTS="clang;libcxx" \
+          -DLLVM_ENABLE_PROJECTS="clang" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           llvm-project/llvm
-  > ninja -C /path/to/llvm-build
+  $ ninja -C /path/to/llvm-build
 
-  > cmake -B /path/to/lldb-build \
+  $ cmake -B /path/to/lldb-build \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-Xcode.cmake \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           llvm-project/lldb
-  > open lldb.xcodeproj
-  > cmake --build /path/to/lldb-build --target check-lldb
+  $ open lldb.xcodeproj
+  $ cmake --build /path/to/lldb-build --target check-lldb
 
 .. note::
 
@@ -381,36 +410,45 @@ Building the Documentation
 If you wish to build the optional (reference) documentation, additional
 dependencies are required:
 
-* Sphinx (for the website)
+* Sphinx (for the website and the Python API reference)
 * Graphviz (for the 'dot' tool)
 * doxygen (if you wish to build the C++ API reference)
-* epydoc (if you wish to build the Python API reference)
+* SWIG (for generating Python bindings)
 
-To install the prerequisites for building the documentation (on Debian/Ubuntu)
+To install the system prerequisites for building the documentation (on Debian/Ubuntu)
 do:
 
 ::
 
-  > sudo apt-get install doxygen graphviz python3-sphinx
-  > sudo pip install epydoc
+  $ sudo apt-get install doxygen graphviz swig
+
+To install Sphinx and its dependencies, use the ``requirements.txt`` available within LLVM
+to ensure you get a working configuration:
+
+::
+
+  $ pip3 install -r /path/to/llvm-project/llvm/docs/requirements.txt
 
 To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build the desired target(s).
 
 ::
 
-  > ninja docs-lldb-html
-  > ninja docs-lldb-man
-  > ninja lldb-cpp-doc
-  > ninja lldb-python-doc
+  $ ninja docs-lldb-html
+  $ ninja docs-lldb-man
+  $ ninja lldb-cpp-doc
 
 Cross-compiling LLDB
 --------------------
 
+The advice presented here may not be complete or represent the best practices
+of CMake at this time. Please refer to `CMake's documentation <https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html>`_
+if you have any doubts or want more in depth information.
+
 In order to debug remote targets running different architectures than your
-host, you will need to compile LLDB (or at least the server component) for the
-target. While the easiest solution is to just compile it locally on the target,
-this is often not feasible, and in these cases you will need to cross-compile
-LLDB on your host.
+host, you will need to compile LLDB (or at least the server component
+``lldb-server``) for the target. While the easiest solution is to compile it
+locally on the target, this is often not feasible, and in these cases you will
+need to cross-compile LLDB on your host.
 
 Cross-compilation is often a daunting task and has a lot of quirks which depend
 on the exact host and target architectures, so it is not possible to give a
@@ -441,56 +479,120 @@ further by passing the appropriate cmake options, such as:
   -DLLDB_ENABLE_CURSES=0
   -DLLVM_ENABLE_TERMINFO=0
 
+(see :ref:`Optional Dependencies` for more)
+
 In this case you, will often not need anything other than the standard C and
 C++ libraries.
 
-Once all of the dependencies are in place, it's just a matter of configuring
-the build system with the locations and arguments of all the necessary tools.
-The most important cmake options here are:
+If you find that CMake is finding a version of an optional dependency that
+for whatever reason doesn't work, consider simply disabling it if you don't
+know that you need it.
 
-* ``CMAKE_CROSSCOMPILING`` : Set to 1 to enable cross-compilation.
-* ``CMAKE_LIBRARY_ARCHITECTURE`` : Affects the cmake search path when looking
-  for libraries. You may need to set this to your architecture triple if you do
-  not specify all your include and library paths explicitly.
+Once all of the dependencies are in place, you need to configure the build
+system with the locations and arguments of all the necessary tools.
+
+There are 2 ways to do this depending on your starting point and requirements.
+
+1. If you are starting from scratch and only need the resulting cross compiled
+binaries, you can have LLVM build the native tools for you.
+
+2. If you need a host build too, or already have one, you can tell CMake where
+that is and it will use those native tools instead.
+
+If you are going to run ``lldb`` and ``lldb-server`` only on the target machine,
+choose option 1. If you are going to run ``lldb`` on the host machine and
+connect to ``lldb-server`` on the target, choose option 2.
+
+Either way, the most important cmake options when cross-compiling are:
+
+* ``CMAKE_SYSTEM_NAME`` and ``CMAKE_SYSTEM_PROCESSOR``: This tells CMake what
+  the build target is and from this it will infer that you are cross compiling.
 * ``CMAKE_C_COMPILER``, ``CMAKE_CXX_COMPILER`` : C and C++ compilers for the
-  target architecture
+  target architecture.
 * ``CMAKE_C_FLAGS``, ``CMAKE_CXX_FLAGS`` : The flags for the C and C++ target
-  compilers. You may need to specify the exact target cpu and abi besides the
+  compilers. You may need to specify the exact target cpu and ABI besides the
   include paths for the target headers.
 * ``CMAKE_EXE_LINKER_FLAGS`` : The flags to be passed to the linker. Usually
-  just a list of library search paths referencing the target libraries.
-* ``LLVM_TABLEGEN``, ``CLANG_TABLEGEN`` : Paths to llvm-tblgen and clang-tblgen
-  for the host architecture. If you already have built clang for the host, you
-  can point these variables to the executables in your build directory. If not,
-  you will need to build the llvm-tblgen and clang-tblgen host targets at
-  least.
+  this is a list of library search paths referencing the target libraries.
 * ``LLVM_HOST_TRIPLE`` : The triple of the system that lldb (or lldb-server)
   will run on. Not setting this (or setting it incorrectly) can cause a lot of
   issues with remote debugging as a lot of the choices lldb makes depend on the
   triple reported by the remote platform.
+* ``LLVM_NATIVE_TOOL_DIR`` (only when using an existing host build): Is a
+  path to the llvm tools compiled for the host. Any tool that must be run on the
+  host during a cross build will be configured from this path, so you do not
+  need to set them all individually. If you are doing a host build only for the
+  purpose of a cross build, you will need it to include at least
+  ``llvm-tblgen``, ``clang-tblgen`` and ``lldb-tblgen``. Be aware that
+  the list may grow over time.
+* ``CMAKE_LIBRARY_ARCHITECTURE`` : Affects the cmake search path when looking
+  for libraries. You may need to set this to your architecture triple if you do
+  not specify all your include and library paths explicitly.
+
+To find the possible values of the ``CMAKE_*`` options, please refer to the
+CMake documentation.
 
 You can of course also specify the usual cmake options like
 ``CMAKE_BUILD_TYPE``, etc.
+
+For testing, you may want to set one of:
+
+* ``LLDB_TEST_COMPILER`` : The compiler used to build programs used
+  in the test suite. If you are also building clang, this will be used
+  but if you want to test remotely from the host, you should choose the
+  cross compiler you are using for the cross build.
+* ``LLDB_INCLUDE_TESTS=0`` : To disable the tests completely.
 
 Example 1: Cross-compiling for linux arm64 on Ubuntu host
 *********************************************************
 
 Ubuntu already provides the packages necessary to cross-compile LLDB for arm64.
 It is sufficient to install packages ``gcc-aarch64-linux-gnu``,
-``g++-aarch64-linux-gnu``, ``binutils-aarch64-linux-gnu``. Then it is possible
-to prepare the cmake build with the following parameters:
+``g++-aarch64-linux-gnu``, ``binutils-aarch64-linux-gnu``.
+
+Configure as follows:
 
 ::
 
-  -DCMAKE_CROSSCOMPILING=1 \
-  -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-  -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-  -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-gnu \
-  -DLLVM_TABLEGEN=<path-to-host>/bin/llvm-tblgen \
-  -DCLANG_TABLEGEN=<path-to-host>/bin/clang-tblgen \
-  -DLLDB_ENABLE_PYTHON=0 \
-  -DLLDB_ENABLE_LIBEDIT=0 \
-  -DLLDB_ENABLE_CURSES=0
+  cmake <path-to-monorepo>/llvm-project/llvm -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
+    -DCMAKE_SYSTEM_NAME=Linux \
+    -DCMAKE_SYSTEM_PROCESSOR=AArch64 \
+    -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+    -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+    -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-gnu \
+    -DLLDB_ENABLE_PYTHON=0 \
+    -DLLDB_ENABLE_LIBEDIT=0 \
+    -DLLDB_ENABLE_CURSES=0
+
+During this build native tools will be built automatically when they are needed.
+The contents of ``<build dir>/bin`` will be target binaries as you'd expect.
+AArch64 binaries in this case.
+
+Example 2: Cross-compiling for linux arm64 on Ubuntu host using an existing host build
+**************************************************************************************
+
+This build requires an existing host build that includes the required native
+tools. Install the compiler as in example 1 then run CMake as follows:
+
+::
+
+  cmake <path-to-monorepo>/llvm-project/llvm -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
+    -DCMAKE_SYSTEM_NAME=Linux \
+    -DCMAKE_SYSTEM_PROCESSOR=AArch64 \
+    -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+    -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+    -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-gnu \
+    -DLLVM_NATIVE_TOOL_DIR=<path-to-host>/bin/ \
+    -DLLDB_ENABLE_PYTHON=0 \
+    -DLLDB_ENABLE_LIBEDIT=0 \
+    -DLLDB_ENABLE_CURSES=0
+
+The only difference from example 1 is the addition of
+``DLLVM_NATIVE_TOOL_DIR`` pointing to your existing host build.
 
 An alternative (and recommended) way to compile LLDB is with clang.
 Unfortunately, clang is not able to find all the include paths necessary for a
@@ -513,7 +615,7 @@ qemu and chroot to simulate the target environment. Then you can install the
 necessary packages in this environment (python-dev, libedit-dev, etc.) and
 point your compiler to use them using the correct -I and -L arguments.
 
-Example 2: Cross-compiling for Android on Linux
+Example 3: Cross-compiling for Android on Linux
 ***********************************************
 
 In the case of Android, the toolchain and all required headers and libraries
@@ -558,7 +660,7 @@ the -P flag:
 
 ::
 
-  > export PYTHONPATH=`$llvm/build/Debug+Asserts/bin/lldb -P`
+  $ export PYTHONPATH=`$llvm/build/Debug+Asserts/bin/lldb -P`
 
 If you used a different build directory or made a release build, you may need
 to adjust the above to suit your needs. To test that the lldb Python module is
@@ -566,7 +668,7 @@ built correctly and is available to the default Python interpreter, run:
 
 ::
 
-  > python -c 'import lldb'
+  $ python -c 'import lldb'
 
 
 Make sure you're using the Python interpreter that matches the Python library

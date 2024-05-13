@@ -145,6 +145,8 @@ public:
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string> &args) override {
+    if (!args.empty() && args[0] == "help")
+      llvm::errs() << "Help for the CallSuperAttr plugin goes here\n";
     return true;
   }
 
@@ -167,7 +169,7 @@ struct CallSuperAttrInfo : public ParsedAttrInfo {
     const auto *TheMethod = dyn_cast_or_null<CXXMethodDecl>(D);
     if (!TheMethod || !TheMethod->isVirtual()) {
       S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-          << Attr << "virtual functions";
+          << Attr << Attr.isRegularKeywordAttribute() << "virtual functions";
       return false;
     }
     MarkedMethods.insert(TheMethod);

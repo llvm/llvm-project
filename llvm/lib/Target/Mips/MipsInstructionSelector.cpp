@@ -15,7 +15,7 @@
 #include "MipsMachineFunction.h"
 #include "MipsRegisterBankInfo.h"
 #include "MipsTargetMachine.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/IR/IntrinsicsMips.h"
@@ -80,8 +80,8 @@ private:
 MipsInstructionSelector::MipsInstructionSelector(
     const MipsTargetMachine &TM, const MipsSubtarget &STI,
     const MipsRegisterBankInfo &RBI)
-    : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
+      RBI(RBI),
 
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "MipsGenGlobalISel.inc"
@@ -105,7 +105,7 @@ bool MipsInstructionSelector::isRegInFprb(Register Reg,
 bool MipsInstructionSelector::selectCopy(MachineInstr &I,
                                          MachineRegisterInfo &MRI) const {
   Register DstReg = I.getOperand(0).getReg();
-  if (Register::isPhysicalRegister(DstReg))
+  if (DstReg.isPhysical())
     return true;
 
   const TargetRegisterClass *RC = getRegClassForTypeOnBank(DstReg, MRI);
@@ -145,14 +145,14 @@ bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
                                                   MachineIRBuilder &B) const {
   assert(Imm.getBitWidth() == 32 && "Unsupported immediate size.");
   // Ori zero extends immediate. Used for values with zeros in high 16 bits.
-  if (Imm.getHiBits(16).isNullValue()) {
+  if (Imm.getHiBits(16).isZero()) {
     MachineInstr *Inst =
         B.buildInstr(Mips::ORi, {DestReg}, {Register(Mips::ZERO)})
             .addImm(Imm.getLoBits(16).getLimitedValue());
     return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
   }
   // Lui places immediate in high 16 bits and sets low 16 bits to zero.
-  if (Imm.getLoBits(16).isNullValue()) {
+  if (Imm.getLoBits(16).isZero()) {
     MachineInstr *Inst = B.buildInstr(Mips::LUi, {DestReg}, {})
                              .addImm(Imm.getHiBits(16).getLimitedValue());
     return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
@@ -184,7 +184,8 @@ MipsInstructionSelector::selectLoadStoreOpCode(MachineInstr &I,
   const Register ValueReg = I.getOperand(0).getReg();
   const LLT Ty = MRI.getType(ValueReg);
   const unsigned TySize = Ty.getSizeInBits();
-  const unsigned MemSizeInBytes = (*I.memoperands_begin())->getSize();
+  const unsigned MemSizeInBytes =
+      (*I.memoperands_begin())->getSize().getValue();
   unsigned Opc = I.getOpcode();
   const bool isStore = Opc == TargetOpcode::G_STORE;
 
@@ -357,13 +358,6 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
              .addImm(0);
     break;
   }
-  case G_BRCOND: {
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::BNE))
-             .add(I.getOperand(0))
-             .addUse(Mips::ZERO)
-             .add(I.getOperand(1));
-    break;
-  }
   case G_BRJT: {
     unsigned EntrySize =
         MF.getJumpTableInfo()->getEntrySize(MF.getDataLayout());
@@ -427,7 +421,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     const Register DestReg = I.getOperand(0).getReg();
 
     const TargetRegisterClass *DefRC = nullptr;
-    if (Register::isPhysicalRegister(DestReg))
+    if (DestReg.isPhysical())
       DefRC = TRI.getRegClass(DestReg);
     else
       DefRC = getRegClassForTypeOnBank(DestReg, MRI);
@@ -462,7 +456,8 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     }
 
     // Unaligned memory access
-    if (MMO->getAlign() < MMO->getSize() &&
+    if ((!MMO->getSize().hasValue() ||
+         MMO->getAlign() < MMO->getSize().getValue()) &&
         !STI.systemSupportsUnalignedAccess()) {
       if (MMO->getSize() != 4 || !isRegInGprb(I.getOperand(0).getReg(), MRI))
         return false;

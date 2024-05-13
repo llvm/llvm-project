@@ -1,13 +1,13 @@
-; RUN: not --crash llc -march=hexagon < %s 2>&1 | FileCheck %s
+; RUN: llc -march=hexagon < %s 2>&1 | FileCheck %s
 
 ; Check that the misaligned load is diagnosed.
-; CHECK: LLVM ERROR: Misaligned constant address: 0x00012345 has alignment 1, but the memory access requires 4, at misaligned-const-load.c:2:10
+; CHECK: remark: Misaligned constant address: 0x00012345 has alignment 1, but the memory access requires 4, at misaligned-const-load.c:2:10. The instruction has been replaced with a trap.
 
 target triple = "hexagon"
 
 define i32 @bad_load() #0 !dbg !10 {
 entry:
-  %0 = load i32, i32* inttoptr (i32 74565 to i32*), align 4, !dbg !13, !tbaa !14
+  %0 = load i32, ptr inttoptr (i32 74565 to ptr), align 4, !dbg !13, !tbaa !14
   ret i32 %0, !dbg !18
 }
 

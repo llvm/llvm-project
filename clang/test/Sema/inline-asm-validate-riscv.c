@@ -21,3 +21,19 @@ void K(int k) {
   asm volatile ("" :: "K"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'K'}}
   asm volatile ("" :: "K"(AboveMax)); // expected-error{{value '32' out of range for constraint 'K'}}
 }
+
+void test_s(int i) {
+  asm("" :: "s"(test_s(0))); // expected-error{{invalid type 'void' in asm input for constraint 's'}}
+  /// Codegen error
+  asm("" :: "s"(i));
+
+  asm("" :: "S"(test_s(0))); // expected-error{{invalid type 'void' in asm input for constraint 'S'}}
+}
+
+void test_clobber_conflict(void) {
+  register long x10 asm("x10");
+  asm volatile("" :: "r"(x10) : "x10"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile("" :: "r"(x10) : "a0"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile("" : "=r"(x10) :: "x10"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile("" : "=r"(x10) :: "a0"); // expected-error {{conflicts with asm clobber list}}
+}

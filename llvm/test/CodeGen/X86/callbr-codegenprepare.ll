@@ -1,4 +1,4 @@
-;; RUN: opt -S -codegenprepare < %s | FileCheck %s
+;; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' < %s | FileCheck %s
 
 ;; Ensure that codegenprepare (via InstSimplify) doesn't eliminate the
 ;; phi here (which would cause a module verification error).
@@ -12,7 +12,7 @@ declare void @foo(i32)
 
 define dso_local i32 @futex_lock_pi_atomic() local_unnamed_addr {
 entry:
-  %0 = callbr i32 asm "", "=r,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@futex_lock_pi_atomic, %b.exit))
+  %0 = callbr i32 asm "", "=r,!i,~{dirflag},~{fpsr},~{flags}"()
           to label %asm.fallthrough.i [label %b.exit]
 
 asm.fallthrough.i:

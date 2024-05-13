@@ -165,7 +165,21 @@ public:
   //      my_map.Append (UniqueCStringMap::Entry(GetName(...), GetValue(...)));
   // }
   // my_map.Sort();
-  void Sort() { llvm::sort(m_map.begin(), m_map.end(), Compare()); }
+  void Sort() {
+    Sort([](const T &, const T &) { return false; });
+  }
+
+  /// Sort contents of this map using the provided comparator to break ties for
+  /// entries with the same string value.
+  template <typename TCompare> void Sort(TCompare tc) {
+    Compare c;
+    llvm::sort(m_map, [&](const Entry &lhs, const Entry &rhs) -> bool {
+      int result = c.ThreeWay(lhs.cstring, rhs.cstring);
+      if (result == 0)
+        return tc(lhs.value, rhs.value);
+      return result < 0;
+    });
+  }
 
   // Since we are using a vector to contain our items it will always double its
   // memory consumption as things are added to the vector, so if you intend to
@@ -205,13 +219,24 @@ protected:
       return operator()(lhs, rhs.cstring);
     }
 
+    bool operator()(ConstString lhs, ConstString rhs) {
+      return ThreeWay(lhs, rhs) < 0;
+    }
+
     // This is only for uniqueness, not lexicographical ordering, so we can
     // just compare pointers. *However*, comparing pointers from different
     // allocations is UB, so we need compare their integral values instead.
-    bool operator()(ConstString lhs, ConstString rhs) {
-      return uintptr_t(lhs.GetCString()) < uintptr_t(rhs.GetCString());
+    int ThreeWay(ConstString lhs, ConstString rhs) {
+      auto lhsint = uintptr_t(lhs.GetCString());
+      auto rhsint = uintptr_t(rhs.GetCString());
+      if (lhsint < rhsint)
+        return -1;
+      if (lhsint > rhsint)
+        return 1;
+      return 0;
     }
   };
+
   collection m_map;
 };
 

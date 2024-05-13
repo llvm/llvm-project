@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ;    struct {
@@ -23,21 +23,21 @@
 ; CODEGEN:    %S.b.preload.s2a = alloca float
 ; CODEGEN:    %S.a.preload.s2a = alloca i32
 ;
-; CODEGEN:    %.load = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @S, i32 0, i32 0)
-; CODEGEN:    store i32 %.load, i32* %S.a.preload.s2a
-; CODEGEN:    %.load1 = load float, float* bitcast (i32* getelementptr (i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @S, i32 0, i32 0), i64 1) to float*)
-; CODEGEN:    store float %.load1, float* %S.b.preload.s2a
+; CODEGEN:    %S.load = load i32, ptr @S
+; CODEGEN:    store i32 %S.load, ptr %S.a.preload.s2a
+; CODEGEN:    %.load = load float, ptr getelementptr (i32, ptr @S, i64 1)
+; CODEGEN:    store float %.load, ptr %S.b.preload.s2a
 ;
 ; CODEGEN:  polly.stmt.for.body:
-; CODEGEN:    %p_conv = sitofp i32 %.load to float
-; CODEGEN:    %p_add = fadd float %p_conv, %.load1
+; CODEGEN:    %p_conv = sitofp i32 %S.load to float
+; CODEGEN:    %p_add = fadd float %p_conv, %.load
 ; CODEGEN:    %p_conv1 = fptosi float %p_add to i32
 
 %struct.anon = type { i32, float }
 
 @S = common global %struct.anon zeroinitializer, align 4
 
-define void @f(i32* %A) {
+define void @f(ptr %A) {
 entry:
   br label %for.cond
 
@@ -47,13 +47,13 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %S.a = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @S, i64 0, i32 0), align 4
+  %S.a = load i32, ptr @S, align 4
   %conv = sitofp i32 %S.a to float
-  %S.b = load float, float* getelementptr inbounds (%struct.anon, %struct.anon* @S, i64 0, i32 1), align 4
+  %S.b = load float, ptr getelementptr inbounds (%struct.anon, ptr @S, i64 0, i32 1), align 4
   %add = fadd float %conv, %S.b
   %conv1 = fptosi float %add to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %conv1, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %conv1, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

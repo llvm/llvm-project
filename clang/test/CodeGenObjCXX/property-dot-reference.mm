@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fexceptions -o - %s | FileCheck %s
-// rdar://8409336
 
 struct TFENode {
 void GetURL() const;
@@ -11,13 +10,12 @@ void GetURL() const;
 
 @implementation TNodeIconAndNameCell     
 - (const TFENode&) node {
-// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.TFENode* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
-// CHECK-NEXT: call void @_ZNK7TFENode6GetURLEv(%struct.TFENode* {{[^,]*}} %{{.*}})
+// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @objc_msgSend
+// CHECK-NEXT: call void @_ZNK7TFENode6GetURLEv(ptr {{[^,]*}} %{{.*}})
 	self.node.GetURL();
 }	// expected-warning {{non-void function does not return a value}}
 @end
 
-// rdar://8437240
 struct X {
   int x;
 };
@@ -27,12 +25,12 @@ void f0(const X &parent);
 - (const X&) target;
 @end
 void f1(A *a) {
-// CHECK: [[PRP:%.*]] = call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.X* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
-// CHECK-NEXT:call void @_Z2f0RK1X(%struct.X* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[PRP]])
+// CHECK: [[PRP:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @objc_msgSend
+// CHECK-NEXT:call void @_Z2f0RK1X(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[PRP]])
   f0(a.target);
 
-// CHECK: [[MSG:%.*]] = call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.X* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
-// CHECK-NEXT:call void @_Z2f0RK1X(%struct.X* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[MSG]])
+// CHECK: [[MSG:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @objc_msgSend
+// CHECK-NEXT:call void @_Z2f0RK1X(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[MSG]])
   f0([a target]);
 }
 
@@ -51,12 +49,12 @@ void test2() {
     void(obj.myGetter);
 }
 // CHECK-LABEL: define{{.*}} void @_Z5test2v()
-// CHECK: call i32 bitcast
-// CHECK: call double bitcast
-// CHECK: call i32 bitcast
-// CHECK: call double bitcast
-// CHECK: call i32 bitcast
-// CHECK: call double bitcast
+// CHECK: call noundef i32
+// CHECK: call noundef double
+// CHECK: call noundef i32
+// CHECK: call noundef double
+// CHECK: call noundef i32
+// CHECK: call noundef double
 
 // PR8751
 int test3(Test2 *obj) { return obj.myProperty; }

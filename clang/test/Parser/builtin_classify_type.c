@@ -2,7 +2,7 @@
 
 struct foo { int a; };
 
-int main() {
+int main(void) {
   int a;
   float b;
   double d;

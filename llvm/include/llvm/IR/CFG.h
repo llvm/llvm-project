@@ -22,16 +22,15 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
 
 namespace llvm {
 
-class BasicBlock;
 class Instruction;
 class Use;
 
@@ -48,7 +47,7 @@ public:
   using pointer = Ptr *;
   using reference = Ptr *;
 
-private:
+protected:
   using Self = PredIterator<Ptr, USE_iterator>;
   USE_iterator It;
 

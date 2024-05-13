@@ -10,9 +10,12 @@
 #include "DWARFUnit.h"
 #include "DWARFDebugInfo.h"
 
+using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
+
 DWARFAttributes::DWARFAttributes() : m_infos() {}
 
-DWARFAttributes::~DWARFAttributes() {}
+DWARFAttributes::~DWARFAttributes() = default;
 
 uint32_t DWARFAttributes::FindAttributeIndex(dw_attr_t attr) const {
   collection::const_iterator end = m_infos.end();

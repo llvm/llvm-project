@@ -1,17 +1,17 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts| \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
 // NOTE: This is similar to test-create-mask.mlir, but with a different length,
 //       because the v4i1 vector specifically exposed bugs in the LLVM backend.
 
-func @entry() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c5 = constant 5 : index
+func.func @entry() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
 
   //
   // 1-D.

@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=amdgcn | FileCheck %s -check-prefix=SI -check-prefix=FUNC
-; RUN: llc < %s -march=amdgcn -mcpu=tonga | FileCheck %s -check-prefix=SI -check-prefix=FUNC
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s -check-prefix=EG -check-prefix=FUNC
+; RUN: llc < %s -mtriple=amdgcn | FileCheck %s -check-prefix=SI -check-prefix=FUNC
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck %s -check-prefix=SI -check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s -check-prefix=EG -check-prefix=FUNC
 
 ;FUNC-LABEL: test
 ;EG: MULADD_IEEE *
@@ -11,9 +11,9 @@
 ;SI: v_cos_f32
 ;SI-NOT: v_cos_f32
 
-define amdgpu_kernel void @test(float addrspace(1)* %out, float %x) #1 {
+define amdgpu_kernel void @test(ptr addrspace(1) %out, float %x) #1 {
    %cos = call float @llvm.cos.f32(float %x)
-   store float %cos, float addrspace(1)* %out
+   store float %cos, ptr addrspace(1) %out
    ret void
 }
 
@@ -29,9 +29,9 @@ define amdgpu_kernel void @test(float addrspace(1)* %out, float %x) #1 {
 ;SI: v_cos_f32
 ;SI-NOT: v_cos_f32
 
-define amdgpu_kernel void @testv(<4 x float> addrspace(1)* %out, <4 x float> inreg %vx) #1 {
+define amdgpu_kernel void @testv(ptr addrspace(1) %out, <4 x float> inreg %vx) #1 {
    %cos = call <4 x float> @llvm.cos.v4f32(<4 x float> %vx)
-   store <4 x float> %cos, <4 x float> addrspace(1)* %out
+   store <4 x float> %cos, ptr addrspace(1) %out
    ret void
 }
 

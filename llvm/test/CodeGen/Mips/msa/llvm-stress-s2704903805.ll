@@ -6,15 +6,15 @@
 ; This test originally failed for MSA after dereferencing a null this pointer.
 ; It should at least successfully build.
 
-define void @autogen_SD2704903805(i8*, i32*, i64*, i32, i64, i8) {
+define void @autogen_SD2704903805(ptr, ptr, ptr, i32, i64, i8) {
 BB:
   %A4 = alloca i32
   %A3 = alloca i32
   %A2 = alloca i8
   %A1 = alloca i32
   %A = alloca i8
-  %L = load i8, i8* %0
-  store i8 %5, i8* %0
+  %L = load i8, ptr %0
+  store i8 %5, ptr %0
   %E = extractelement <2 x i16> zeroinitializer, i32 0
   %Shuff = shufflevector <1 x i8> <i8 -1>, <1 x i8> <i8 -1>, <1 x i32> undef
   %I = insertelement <1 x i8> <i8 -1>, i8 85, i32 0
@@ -25,8 +25,8 @@ BB:
   br label %CF83
 
 CF83:                                             ; preds = %BB
-  %L5 = load i8, i8* %0
-  store i8 85, i8* %0
+  %L5 = load i8, ptr %0
+  store i8 85, ptr %0
   %E6 = extractelement <1 x i8> <i8 -1>, i32 0
   %Shuff7 = shufflevector <2 x i16> zeroinitializer, <2 x i16> zeroinitializer, <2 x i32> <i32 1, i32 3>
   %I8 = insertelement <4 x i16> zeroinitializer, i16 %E, i32 3
@@ -37,8 +37,8 @@ CF83:                                             ; preds = %BB
   br label %CF
 
 CF:                                               ; preds = %CF, %CF81, %CF83
-  %L13 = load i8, i8* %0
-  store i8 0, i8* %0
+  %L13 = load i8, ptr %0
+  store i8 0, ptr %0
   %E14 = extractelement <2 x i64> zeroinitializer, i32 0
   %Shuff15 = shufflevector <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, <4 x i32> <i32 3, i32 5, i32 7, i32 undef>
   %I16 = insertelement <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, i64 81222, i32 1
@@ -52,24 +52,23 @@ CF80:                                             ; preds = %CF80, %CF
   br i1 %Cmp19, label %CF80, label %CF81
 
 CF81:                                             ; preds = %CF80
-  %L20 = load i8, i8* %0
-  store i8 85, i8* %0
+  %L20 = load i8, ptr %0
+  store i8 85, ptr %0
   %E21 = extractelement <1 x i8> <i8 -1>, i32 0
   %Shuff22 = shufflevector <1 x i8> <i8 -1>, <1 x i8> %Shuff, <1 x i32> zeroinitializer
   %I23 = insertelement <1 x i8> <i8 -1>, i8 %L5, i32 0
   %FC24 = fptoui <4 x float> %FC to <4 x i16>
   %Sl25 = select i1 %Cmp, <2 x i32> zeroinitializer, <2 x i32> <i32 -1, i32 -1>
   %Cmp26 = icmp ult <4 x i64> %I16, %Shuff15
-  %L27 = load i8, i8* %0
-  store i8 %L, i8* %0
+  %L27 = load i8, ptr %0
+  store i8 %L, ptr %0
   %E28 = extractelement <1 x i8> <i8 -1>, i32 0
   %Shuff29 = shufflevector <8 x i16> zeroinitializer, <8 x i16> zeroinitializer, <8 x i32> <i32 11, i32 undef, i32 15, i32 1, i32 3, i32 5, i32 undef, i32 9>
   %I30 = insertelement <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, i64 %E14, i32 1
   %B31 = mul i8 %E28, 85
-  %PC = bitcast i32* %A3 to i32*
   %Sl32 = select i1 %Cmp12, float %FC10, float 0x4712BFE680000000
-  %L33 = load i32, i32* %PC
-  store i32 %L33, i32* %PC
+  %L33 = load i32, ptr %A3
+  store i32 %L33, ptr %A3
   %E34 = extractelement <2 x i16> zeroinitializer, i32 1
   %Shuff35 = shufflevector <1 x i8> %Shuff, <1 x i8> <i8 -1>, <1 x i32> zeroinitializer
   %I36 = insertelement <1 x i8> <i8 -1>, i8 %L13, i32 0
@@ -79,8 +78,8 @@ CF81:                                             ; preds = %CF80
   br i1 %Cmp39, label %CF, label %CF77
 
 CF77:                                             ; preds = %CF77, %CF81
-  %L40 = load i32, i32* %PC
-  store i32 %3, i32* %PC
+  %L40 = load i32, ptr %A3
+  store i32 %3, ptr %A3
   %E41 = extractelement <2 x i32> zeroinitializer, i32 0
   %Shuff42 = shufflevector <2 x i32> <i32 -1, i32 -1>, <2 x i32> zeroinitializer, <2 x i32> <i32 1, i32 3>
   %I43 = insertelement <1 x i8> <i8 -1>, i8 0, i32 0
@@ -88,8 +87,8 @@ CF77:                                             ; preds = %CF77, %CF81
   %Se = sext i32 %3 to i64
   %Sl45 = select i1 true, <1 x i8> %Shuff, <1 x i8> %I43
   %Cmp46 = icmp sge <1 x i8> %I36, %Shuff
-  %L47 = load i32, i32* %PC
-  store i32 %L33, i32* %PC
+  %L47 = load i32, ptr %A3
+  store i32 %L33, ptr %A3
   %E48 = extractelement <2 x i16> zeroinitializer, i32 0
   %Shuff49 = shufflevector <1 x i8> <i8 -1>, <1 x i8> <i8 -1>, <1 x i32> <i32 1>
   %I50 = insertelement <2 x i32> %Sl25, i32 47963, i32 1
@@ -100,8 +99,8 @@ CF77:                                             ; preds = %CF77, %CF81
   br i1 %Cmp54, label %CF77, label %CF78
 
 CF78:                                             ; preds = %CF78, %CF77
-  %L55 = load i32, i32* %PC
-  store i32 %L33, i32* %PC
+  %L55 = load i32, ptr %A3
+  store i32 %L33, ptr %A3
   %E56 = extractelement <8 x i16> %Shuff29, i32 4
   %Shuff57 = shufflevector <1 x i8> <i8 -1>, <1 x i8> <i8 -1>, <1 x i32> <i32 1>
   %I58 = insertelement <1 x i8> %B51, i8 %Sl53, i32 0
@@ -111,8 +110,8 @@ CF78:                                             ; preds = %CF78, %CF77
   br i1 %Cmp60, label %CF78, label %CF79
 
 CF79:                                             ; preds = %CF79, %CF78
-  %L61 = load i32, i32* %PC
-  store i32 %L33, i32* %A3
+  %L61 = load i32, ptr %A3
+  store i32 %L33, ptr %A3
   %E62 = extractelement <4 x i64> %Shuff15, i32 1
   %Shuff63 = shufflevector <8 x i16> %Shuff29, <8 x i16> %Shuff29, <8 x i32> <i32 undef, i32 10, i32 12, i32 undef, i32 undef, i32 undef, i32 4, i32 6>
   %I64 = insertelement <2 x i64> zeroinitializer, i64 %Se, i32 0
@@ -123,8 +122,8 @@ CF79:                                             ; preds = %CF79, %CF78
   br i1 %Cmp68, label %CF79, label %CF82
 
 CF82:                                             ; preds = %CF79
-  %L69 = load i32, i32* %PC
-  store i32 %L33, i32* %PC
+  %L69 = load i32, ptr %A3
+  store i32 %L33, ptr %A3
   %E70 = extractelement <8 x i16> zeroinitializer, i32 3
   %Shuff71 = shufflevector <4 x i64> %Shuff15, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, <4 x i32> <i32 6, i32 undef, i32 2, i32 4>
   %I72 = insertelement <1 x i8> <i8 -1>, i8 %L, i32 0
@@ -132,10 +131,10 @@ CF82:                                             ; preds = %CF79
   %ZE74 = zext <4 x i1> %Cmp26 to <4 x i32>
   %Sl75 = select i1 %Cmp, i32 463279, i32 %L61
   %Cmp76 = icmp sgt <1 x i8> %Shuff49, %Shuff22
-  store i8 %B31, i8* %0
-  store i8 85, i8* %0
-  store i32 %L33, i32* %PC
-  store i8 %B65, i8* %0
-  store i8 %L5, i8* %0
+  store i8 %B31, ptr %0
+  store i8 85, ptr %0
+  store i32 %L33, ptr %A3
+  store i8 %B65, ptr %0
+  store i8 %L5, ptr %0
   ret void
 }

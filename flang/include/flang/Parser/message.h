@@ -29,47 +29,82 @@
 
 namespace Fortran::parser {
 
-// Use "..."_err_en_US and "..."_en_US literals to define the static
-// text and fatality of a message.
+// Use "..."_err_en_US, "..."_warn_en_US, "..."_port_en_US, "..."_because_en_US,
+// "..."_todo_en_US, and "..."_en_US string literals to define the static text
+// and severity of a message or attachment.
+enum class Severity {
+  Error, // fatal error that prevents code and module file generation
+  Warning, // likely problem
+  Portability, // nonstandard or obsolete features
+  Because, // for AttachTo(), explanatory attachment to support another message
+  Context, // (internal): attachment from SetContext()
+  Todo, // a feature that's not yet implemented, a fatal error
+  None // everything else, common for attachments with source locations
+};
+
 class MessageFixedText {
 public:
+  constexpr MessageFixedText() {}
   constexpr MessageFixedText(
-      const char str[], std::size_t n, bool isFatal = false)
-      : text_{str, n}, isFatal_{isFatal} {}
+      const char str[], std::size_t n, Severity severity = Severity::None)
+      : text_{str, n}, severity_{severity} {}
   constexpr MessageFixedText(const MessageFixedText &) = default;
   constexpr MessageFixedText(MessageFixedText &&) = default;
   constexpr MessageFixedText &operator=(const MessageFixedText &) = default;
   constexpr MessageFixedText &operator=(MessageFixedText &&) = default;
 
   CharBlock text() const { return text_; }
-  bool isFatal() const { return isFatal_; }
+  bool empty() const { return text_.empty(); }
+  Severity severity() const { return severity_; }
+  MessageFixedText &set_severity(Severity severity) {
+    severity_ = severity;
+    return *this;
+  }
+  bool IsFatal() const {
+    return severity_ == Severity::Error || severity_ == Severity::Todo;
+  }
 
 private:
   CharBlock text_;
-  bool isFatal_{false};
+  Severity severity_{Severity::None};
 };
 
 inline namespace literals {
-constexpr MessageFixedText operator""_en_US(const char str[], std::size_t n) {
-  return MessageFixedText{str, n, false /* not fatal */};
-}
-
 constexpr MessageFixedText operator""_err_en_US(
     const char str[], std::size_t n) {
-  return MessageFixedText{str, n, true /* fatal */};
+  return MessageFixedText{str, n, Severity::Error};
+}
+constexpr MessageFixedText operator""_warn_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::Warning};
+}
+constexpr MessageFixedText operator""_port_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::Portability};
+}
+constexpr MessageFixedText operator""_because_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::Because};
+}
+constexpr MessageFixedText operator""_todo_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::Todo};
+}
+constexpr MessageFixedText operator""_en_US(const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::None};
 }
 } // namespace literals
 
 // The construction of a MessageFormattedText uses a MessageFixedText
 // as a vsnprintf() formatting string that is applied to the
-// following arguments.  CharBlock and std::string argument
-// values are also supported; they are automatically converted into
-// char pointers that are suitable for '%s' formatting.
+// following arguments.  CharBlock, std::string, and std::string_view
+// argument values are also supported; they are automatically converted
+// into char pointers that are suitable for '%s' formatting.
 class MessageFormattedText {
 public:
   template <typename... A>
   MessageFormattedText(const MessageFixedText &text, A &&...x)
-      : isFatal_{text.isFatal()} {
+      : severity_{text.severity()} {
     Format(&text, Convert(std::forward<A>(x))...);
   }
   MessageFormattedText(const MessageFormattedText &) = default;
@@ -77,17 +112,26 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  bool isFatal() const { return isFatal_; }
+  bool IsFatal() const {
+    return severity_ == Severity::Error || severity_ == Severity::Todo;
+  }
+  Severity severity() const { return severity_; }
+  MessageFormattedText &set_severity(Severity severity) {
+    severity_ = severity;
+    return *this;
+  }
   std::string MoveString() { return std::move(string_); }
+  bool operator==(const MessageFormattedText &that) const {
+    return severity_ == that.severity_ && string_ == that.string_;
+  }
+  bool operator!=(const MessageFormattedText &that) const {
+    return !(*this == that);
+  }
 
 private:
   void Format(const MessageFixedText *, ...);
 
   template <typename A> A Convert(const A &x) {
-    static_assert(!std::is_class_v<std::decay_t<A>>);
-    return x;
-  }
-  template <typename A> A Convert(A &x) {
     static_assert(!std::is_class_v<std::decay_t<A>>);
     return x;
   }
@@ -98,13 +142,14 @@ private:
   const char *Convert(const char *s) { return s; }
   const char *Convert(char *s) { return s; }
   const char *Convert(const std::string &);
-  const char *Convert(std::string &);
   const char *Convert(std::string &&);
+  const char *Convert(const std::string_view &);
+  const char *Convert(std::string_view &&);
   const char *Convert(CharBlock);
   std::intmax_t Convert(std::int64_t x) { return x; }
   std::uintmax_t Convert(std::uint64_t x) { return x; }
 
-  bool isFatal_{false};
+  Severity severity_;
   std::string string_;
   std::forward_list<std::string> conversions_; // preserves created strings
 };
@@ -171,7 +216,6 @@ public:
       : location_{r}, text_{MessageFormattedText{
                           t, std::forward<A>(x), std::forward<As>(xs)...}} {}
 
-  bool attachmentIsContext() const { return attachmentIsContext_; }
   Reference attachment() const { return attachment_; }
 
   void SetContext(Message *c) {
@@ -186,6 +230,8 @@ public:
 
   bool SortBefore(const Message &that) const;
   bool IsFatal() const;
+  Severity severity() const;
+  Message &set_severity(Severity);
   std::string ToString() const;
   std::optional<ProvenanceRange> GetProvenanceRange(
       const AllCookedSources &) const;
@@ -239,7 +285,7 @@ public:
   void ResolveProvenances(const AllCookedSources &);
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
       bool echoSourceLines = true) const;
-  void AttachTo(Message &);
+  void AttachTo(Message &, std::optional<Severity> = std::nullopt);
   bool AnyFatalError() const;
 
 private:
@@ -296,8 +342,24 @@ public:
     }
   }
 
+  template <typename... A>
+  Message *Say(std::optional<CharBlock> at, A &&...args) {
+    return Say(at.value_or(at_), std::forward<A>(args)...);
+  }
+
   template <typename... A> Message *Say(A &&...args) {
     return Say(at_, std::forward<A>(args)...);
+  }
+
+  Message *Say(Message &&msg) {
+    if (messages_ != nullptr) {
+      if (contextMessage_) {
+        msg.SetContext(contextMessage_.get());
+      }
+      return &messages_->Say(std::move(msg));
+    } else {
+      return nullptr;
+    }
   }
 
 private:

@@ -28,6 +28,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LinkAllPasses.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -38,12 +40,14 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdio>
 
 #ifdef CLANG_HAVE_RLIMITS
@@ -57,7 +61,7 @@ using namespace llvm::opt;
 // Main driver
 //===----------------------------------------------------------------------===//
 
-static void LLVMErrorHandler(void *UserData, const std::string &Message,
+static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
   DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine*>(UserData);
 
@@ -74,64 +78,6 @@ static void LLVMErrorHandler(void *UserData, const std::string &Message,
 }
 
 #ifdef CLANG_HAVE_RLIMITS
-#if defined(__linux__) && defined(__PIE__)
-static size_t getCurrentStackAllocation() {
-  // If we can't compute the current stack usage, allow for 512K of command
-  // line arguments and environment.
-  size_t Usage = 512 * 1024;
-  if (FILE *StatFile = fopen("/proc/self/stat", "r")) {
-    // We assume that the stack extends from its current address to the end of
-    // the environment space. In reality, there is another string literal (the
-    // program name) after the environment, but this is close enough (we only
-    // need to be within 100K or so).
-    unsigned long StackPtr, EnvEnd;
-    // Disable silly GCC -Wformat warning that complains about length
-    // modifiers on ignored format specifiers. We want to retain these
-    // for documentation purposes even though they have no effect.
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat"
-#endif
-    if (fscanf(StatFile,
-               "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*lu %*lu %*lu %*lu %*lu "
-               "%*lu %*ld %*ld %*ld %*ld %*ld %*ld %*llu %*lu %*ld %*lu %*lu "
-               "%*lu %*lu %lu %*lu %*lu %*lu %*lu %*lu %*llu %*lu %*lu %*d %*d "
-               "%*u %*u %*llu %*lu %*ld %*lu %*lu %*lu %*lu %*lu %*lu %lu %*d",
-               &StackPtr, &EnvEnd) == 2) {
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-      Usage = StackPtr < EnvEnd ? EnvEnd - StackPtr : StackPtr - EnvEnd;
-    }
-    fclose(StatFile);
-  }
-  return Usage;
-}
-
-#include <alloca.h>
-
-LLVM_ATTRIBUTE_NOINLINE
-static void ensureStackAddressSpace() {
-  // Linux kernels prior to 4.1 will sometimes locate the heap of a PIE binary
-  // relatively close to the stack (they are only guaranteed to be 128MiB
-  // apart). This results in crashes if we happen to heap-allocate more than
-  // 128MiB before we reach our stack high-water mark.
-  //
-  // To avoid these crashes, ensure that we have sufficient virtual memory
-  // pages allocated before we start running.
-  size_t Curr = getCurrentStackAllocation();
-  const int kTargetStack = DesiredStackSize - 256 * 1024;
-  if (Curr < kTargetStack) {
-    volatile char *volatile Alloc =
-        static_cast<volatile char *>(alloca(kTargetStack - Curr));
-    Alloc[0] = 0;
-    Alloc[kTargetStack - Curr - 1] = 0;
-  }
-}
-#else
-static void ensureStackAddressSpace() {}
-#endif
-
 /// Attempt to ensure that we have at least 8MiB of usable stack space.
 static void ensureSufficientStack() {
   struct rlimit rlim;
@@ -155,10 +101,6 @@ static void ensureSufficientStack() {
         rlim.rlim_cur != DesiredStackSize)
       return;
   }
-
-  // We should now have a stack of size at least DesiredStackSize. Ensure
-  // that we can actually use that much, if necessary.
-  ensureStackAddressSpace();
 }
 #else
 static void ensureSufficientStack() {}
@@ -177,7 +119,45 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options, None));
+      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options,
+                                     std::nullopt));
+  return 0;
+}
+
+static int PrintSupportedExtensions(std::string TargetStr) {
+  std::string Error;
+  const llvm::Target *TheTarget =
+      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
+  if (!TheTarget) {
+    llvm::errs() << Error;
+    return 1;
+  }
+
+  llvm::TargetOptions Options;
+  std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
+      TheTarget->createTargetMachine(TargetStr, "", "", Options, std::nullopt));
+  const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
+  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
+    MCInfo->getAllProcessorFeatures();
+
+  llvm::StringMap<llvm::StringRef> DescMap;
+  for (const llvm::SubtargetFeatureKV &feature : Features)
+    DescMap.insert({feature.Key, feature.Desc});
+
+  if (MachineTriple.isRISCV())
+    llvm::riscvExtensionsHelp(DescMap);
+  else if (MachineTriple.isAArch64())
+    llvm::AArch64::PrintSupportedExtensions(DescMap);
+  else if (MachineTriple.isARM())
+    llvm::ARM::PrintSupportedExtensions(DescMap);
+  else {
+    // The option was already checked in Driver::HandleImmediateArgs,
+    // so we do not expect to get here if we are not a supported architecture.
+    assert(0 && "Unhandled triple for --print-supported-extensions option.");
+    return 1;
+  }
+
   return 0;
 }
 
@@ -212,13 +192,17 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
 
-  if (Clang->getFrontendOpts().TimeTrace) {
+  if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0);
   }
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
     return PrintSupportedCPUs(Clang->getTargetOpts().Triple);
+
+  // --print-supported-extensions takes priority over the actual compilation.
+  if (Clang->getFrontendOpts().PrintSupportedExtensions)
+    return PrintSupportedExtensions(Clang->getTargetOpts().Triple);
 
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
@@ -237,8 +221,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
-  if (!Success)
+  if (!Success) {
+    Clang->getDiagnosticClient().finish();
     return 1;
+  }
 
   // Execute the frontend actions.
   {
@@ -252,14 +238,24 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
-    SmallString<128> Path(Clang->getFrontendOpts().OutputFile);
-    llvm::sys::path::replace_extension(Path, "json");
+    // It is possible that the compiler instance doesn't own a file manager here
+    // if we're compiling a module unit. Since the file manager are owned by AST
+    // when we're compiling a module unit. So the file manager may be invalid
+    // here.
+    //
+    // It should be fine to create file manager here since the file system
+    // options are stored in the compiler invocation and we can recreate the VFS
+    // from the compiler invocation.
+    if (!Clang->hasFileManager())
+      Clang->createFileManager(createVFSFromCompilerInvocation(
+          Clang->getInvocation(), Clang->getDiagnostics()));
+
     if (auto profilerOutput = Clang->createOutputFile(
-            Path.str(), /*Binary=*/false, /*RemoveFileOnSignal=*/false,
+            Clang->getFrontendOpts().TimeTracePath, /*Binary=*/false,
+            /*RemoveFileOnSignal=*/false,
             /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);
-      // FIXME(ibiryukov): make profilerOutput flush in destructor instead.
-      profilerOutput->flush();
+      profilerOutput.reset();
       llvm::timeTraceProfilerCleanup();
       Clang->clearOutputFiles(false);
     }

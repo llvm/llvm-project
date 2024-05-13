@@ -254,7 +254,7 @@ The Loop Vectorizer can vectorize loops that count backwards.
 
 .. code-block:: c++
 
-  int foo(int *A, int n) {
+  void foo(int *A, int n) {
     for (int i = n; i > 0; --i)
       A[i] +=1;
   }
@@ -262,12 +262,12 @@ The Loop Vectorizer can vectorize loops that count backwards.
 Scatter / Gather
 ^^^^^^^^^^^^^^^^
 
-The Loop Vectorizer can vectorize code that becomes a sequence of scalar instructions 
+The Loop Vectorizer can vectorize code that becomes a sequence of scalar instructions
 that scatter/gathers memory.
 
 .. code-block:: c++
 
-  int foo(int * A, int * B, int n) {
+  void foo(int * A, int * B, int n) {
     for (intptr_t i = 0; i < n; ++i)
         A[i] += B[i * 4];
   }
@@ -284,7 +284,7 @@ vectorization is profitable.
 
 .. code-block:: c++
 
-  int foo(int *A, char *B, int n) {
+  void foo(int *A, char *B, int n) {
     for (int i = 0; i < n; ++i)
       A[i] += 4 * B[i];
   }
@@ -303,7 +303,7 @@ ignored (as other compilers do) are still being left un-vectorized.
 
   struct { int A[100], K, B[100]; } Foo;
 
-  int foo() {
+  void foo() {
     for (int i = 0; i < 100; ++i)
       Foo.A[i] = Foo.B[i] + 100;
   }
@@ -328,9 +328,9 @@ See the table below for a list of these functions.
 |     |     | fmuladd |
 +-----+-----+---------+
 
-Note that the optimizer may not be able to vectorize math library functions 
-that correspond to these intrinsics if the library calls access external state 
-such as "errno". To allow better optimization of C/C++ math library functions, 
+Note that the optimizer may not be able to vectorize math library functions
+that correspond to these intrinsics if the library calls access external state
+such as "errno". To allow better optimization of C/C++ math library functions,
 use "-fno-math-errno".
 
 The loop vectorizer knows about special instructions on the target and will
@@ -349,8 +349,8 @@ Partial unrolling during vectorization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Modern processors feature multiple execution units, and only programs that contain a
-high degree of parallelism can fully utilize the entire width of the machine. 
-The Loop Vectorizer increases the instruction level parallelism (ILP) by 
+high degree of parallelism can fully utilize the entire width of the machine.
+The Loop Vectorizer increases the instruction level parallelism (ILP) by
 performing partial-unrolling of loops.
 
 In the example below the entire array is accumulated into the variable 'sum'.
@@ -368,7 +368,7 @@ to be used simultaneously.
   }
 
 The Loop Vectorizer uses a cost model to decide when it is profitable to unroll loops.
-The decision to unroll the loop depends on the register pressure and the generated code size. 
+The decision to unroll the loop depends on the register pressure and the generated code size.
 
 Epilogue Vectorization
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -412,9 +412,9 @@ Ongoing Development Directions
 .. toctree::
    :hidden:
 
-   Proposals/VectorizationPlan
+   VectorizationPlan
 
-:doc:`Proposals/VectorizationPlan`
+:doc:`VectorizationPlan`
    Modeling the process and upgrading the infrastructure of LLVM's Loop Vectorizer.
 
 .. _slp-vectorizer:

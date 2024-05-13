@@ -346,7 +346,7 @@ fyl2xp1
 # CHECK-NEXT:  1      3     1.00                  U     fucomi	%st(3), %st
 # CHECK-NEXT:  1      3     1.00                  U     fucompi	%st(3), %st
 # CHECK-NEXT:  100    100   25.00                 U     wait
-# CHECK-NEXT:  100    100   25.00                 U     fxam
+# CHECK-NEXT:  2      1     1.00                  U     fxam
 # CHECK-NEXT:  1      1     1.00                  U     fxch	%st(1)
 # CHECK-NEXT:  1      1     1.00                  U     fxch	%st(3)
 # CHECK-NEXT:  100    100   25.00   *      *      U     fxrstor	(%eax)
@@ -364,12 +364,12 @@ fyl2xp1
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU
@@ -382,7 +382,7 @@ fyl2xp1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT: 10.67  10.67  10.67  886.50 886.50 886.50 886.50  -     137.00 203.00 119.00 119.00 13.50  13.50   -     24.00  24.00  24.00  15.33  15.33  15.33  13.00  13.00
+# CHECK-NEXT: 10.67  10.67  10.67  861.50 861.50 861.50 861.50  -     137.00 204.00 120.00 119.00 13.50  13.50   -     24.00  24.00  24.00  15.33  15.33  15.33  13.00  13.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -526,7 +526,7 @@ fyl2xp1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     fucomi	%st(3), %st
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     fucompi	%st(3), %st
 # CHECK-NEXT:  -      -      -     25.00  25.00  25.00  25.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     wait
-# CHECK-NEXT:  -      -      -     25.00  25.00  25.00  25.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fxam
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     fxam
 # CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fxch	%st(1)
 # CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fxch	%st(3)
 # CHECK-NEXT:  -      -      -     25.00  25.00  25.00  25.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fxrstor	(%eax)

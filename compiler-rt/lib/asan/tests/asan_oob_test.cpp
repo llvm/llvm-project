@@ -30,7 +30,7 @@ NOINLINE void oob_test(int size, int off) {
 
 static std::string GetLeftOOBMessage(int off) {
   char str[100];
-  sprintf(str, "is located.*%d byte.*to the left", off);
+  sprintf(str, "is located.*%d byte.*before", off);
   return str;
 }
 
@@ -38,12 +38,12 @@ static std::string GetRightOOBMessage(int off) {
   char str[100];
 #if !defined(_WIN32)
   // FIXME: Fix PR42868 and remove SEGV match.
-  sprintf(str, "is located.*%d byte.*to the right|SEGV", off);
+  sprintf(str, "is located.*%d byte.*after|SEGV", off);
 #else
   // `|` doesn't work in googletest's regexes on Windows,
   // see googletest/docs/advanced.md#regular-expression-syntax
   // But it's not needed on Windows anyways.
-  sprintf(str, "is located.*%d byte.*to the right", off);
+  sprintf(str, "is located.*%d byte.*after", off);
 #endif
   return str;
 }

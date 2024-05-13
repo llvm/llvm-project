@@ -8,38 +8,58 @@
 
 #include "EvalEmitter.h"
 #include "Context.h"
+#include "IntegralAP.h"
 #include "Interp.h"
 #include "Opcode.h"
-#include "Program.h"
 #include "clang/AST/DeclCXX.h"
 
 using namespace clang;
 using namespace clang::interp;
 
-using APSInt = llvm::APSInt;
-template <typename T> using Expected = llvm::Expected<T>;
-
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk, APValue &Result)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), Result(Result) {
+                         InterpStack &Stk)
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {
   // Create a dummy frame for the interpreter which does not have locals.
-  S.Current = new InterpFrame(S, nullptr, nullptr, CodePtr(), Pointer());
+  S.Current =
+      new InterpFrame(S, /*Func=*/nullptr, /*Caller=*/nullptr, CodePtr(), 0);
 }
 
-llvm::Expected<bool> EvalEmitter::interpretExpr(const Expr *E) {
-  if (this->visitExpr(E))
-    return true;
-  if (BailLocation)
-    return llvm::make_error<ByteCodeGenError>(*BailLocation);
-  return false;
+EvalEmitter::~EvalEmitter() {
+  for (auto &[K, V] : Locals) {
+    Block *B = reinterpret_cast<Block *>(V.get());
+    if (B->isInitialized())
+      B->invokeDtor();
+  }
 }
 
-llvm::Expected<bool> EvalEmitter::interpretDecl(const VarDecl *VD) {
-  if (this->visitDecl(VD))
-    return true;
-  if (BailLocation)
-    return llvm::make_error<ByteCodeGenError>(*BailLocation);
-  return false;
+EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
+                                            bool ConvertResultToRValue) {
+  S.setEvalLocation(E->getExprLoc());
+  this->ConvertResultToRValue = ConvertResultToRValue;
+  EvalResult.setSource(E);
+
+  if (!this->visitExpr(E)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
+    EvalResult.setInvalid();
+  }
+
+  return std::move(this->EvalResult);
+}
+
+EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
+                                            bool CheckFullyInitialized) {
+  this->CheckFullyInitialized = CheckFullyInitialized;
+  this->ConvertResultToRValue =
+      VD->getAnyInitializer() &&
+      (VD->getAnyInitializer()->getType()->isAnyComplexType() ||
+       VD->getAnyInitializer()->getType()->isVectorType());
+  EvalResult.setSource(VD);
+
+  if (!this->visitDecl(VD) && EvalResult.empty())
+    EvalResult.setInvalid();
+
+  return std::move(this->EvalResult);
 }
 
 void EvalEmitter::emitLabel(LabelTy Label) {
@@ -54,16 +74,20 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   auto *B = new (Memory.get()) Block(D, /*isStatic=*/false);
   B->invokeCtor();
 
+  // Initialize local variable inline descriptor.
+  InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  Desc.Desc = D;
+  Desc.Offset = sizeof(InlineDescriptor);
+  Desc.IsActive = true;
+  Desc.IsBase = false;
+  Desc.IsFieldMutable = false;
+  Desc.IsConst = false;
+  Desc.IsInitialized = false;
+
   // Register the local.
   unsigned Off = Locals.size();
   Locals.insert({Off, std::move(Memory)});
   return {Off, D};
-}
-
-bool EvalEmitter::bail(const SourceLocation &Loc) {
-  if (!BailLocation)
-    BailLocation = Loc;
-  return false;
 }
 
 bool EvalEmitter::jumpTrue(const LabelTy &Label) {
@@ -99,107 +123,68 @@ template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
   if (!isActive())
     return true;
   using T = typename PrimConv<OpType>::T;
-  return ReturnValue<T>(S.Stk.pop<T>(), Result);
+  EvalResult.setValue(S.Stk.pop<T>().toAPValue());
+  return true;
 }
 
-bool EvalEmitter::emitRetVoid(const SourceInfo &Info) { return true; }
+template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
+  if (!isActive())
+    return true;
+
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  // Implicitly convert lvalue to rvalue, if requested.
+  if (ConvertResultToRValue) {
+    if (std::optional<APValue> V = Ptr.toRValue(Ctx)) {
+      EvalResult.setValue(*V);
+    } else {
+      return false;
+    }
+  } else {
+    if (CheckFullyInitialized) {
+      if (!EvalResult.checkFullyInitialized(S, Ptr))
+        return false;
+
+      std::optional<APValue> RValueResult = Ptr.toRValue(Ctx);
+      if (!RValueResult)
+        return false;
+      EvalResult.setValue(*RValueResult);
+    } else {
+      EvalResult.setValue(Ptr.toAPValue());
+    }
+  }
+
+  return true;
+}
+template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
+  if (!isActive())
+    return true;
+  // Function pointers cannot be converted to rvalues.
+  EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
+  return true;
+}
+
+bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
+  EvalResult.setValid();
+  return true;
+}
 
 bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
-  // Method to recursively traverse composites.
-  std::function<bool(QualType, const Pointer &, APValue &)> Composite;
-  Composite = [this, &Composite](QualType Ty, const Pointer &Ptr, APValue &R) {
-    if (auto *AT = Ty->getAs<AtomicType>())
-      Ty = AT->getValueType();
-
-    if (auto *RT = Ty->getAs<RecordType>()) {
-      auto *Record = Ptr.getRecord();
-      assert(Record && "Missing record descriptor");
-
-      bool Ok = true;
-      if (RT->getDecl()->isUnion()) {
-        const FieldDecl *ActiveField = nullptr;
-        APValue Value;
-        for (auto &F : Record->fields()) {
-          const Pointer &FP = Ptr.atField(F.Offset);
-          QualType FieldTy = F.Decl->getType();
-          if (FP.isActive()) {
-            if (llvm::Optional<PrimType> T = Ctx.classify(FieldTy)) {
-              TYPE_SWITCH(*T, Ok &= ReturnValue<T>(FP.deref<T>(), Value));
-            } else {
-              Ok &= Composite(FieldTy, FP, Value);
-            }
-            break;
-          }
-        }
-        R = APValue(ActiveField, Value);
-      } else {
-        unsigned NF = Record->getNumFields();
-        unsigned NB = Record->getNumBases();
-        unsigned NV = Ptr.isBaseClass() ? 0 : Record->getNumVirtualBases();
-
-        R = APValue(APValue::UninitStruct(), NB, NF);
-
-        for (unsigned I = 0; I < NF; ++I) {
-          const Record::Field *FD = Record->getField(I);
-          QualType FieldTy = FD->Decl->getType();
-          const Pointer &FP = Ptr.atField(FD->Offset);
-          APValue &Value = R.getStructField(I);
-
-          if (llvm::Optional<PrimType> T = Ctx.classify(FieldTy)) {
-            TYPE_SWITCH(*T, Ok &= ReturnValue<T>(FP.deref<T>(), Value));
-          } else {
-            Ok &= Composite(FieldTy, FP, Value);
-          }
-        }
-
-        for (unsigned I = 0; I < NB; ++I) {
-          const Record::Base *BD = Record->getBase(I);
-          QualType BaseTy = Ctx.getASTContext().getRecordType(BD->Decl);
-          const Pointer &BP = Ptr.atField(BD->Offset);
-          Ok &= Composite(BaseTy, BP, R.getStructBase(I));
-        }
-
-        for (unsigned I = 0; I < NV; ++I) {
-          const Record::Base *VD = Record->getVirtualBase(I);
-          QualType VirtBaseTy = Ctx.getASTContext().getRecordType(VD->Decl);
-          const Pointer &VP = Ptr.atField(VD->Offset);
-          Ok &= Composite(VirtBaseTy, VP, R.getStructBase(NB + I));
-        }
-      }
-      return Ok;
-    }
-    if (auto *AT = Ty->getAsArrayTypeUnsafe()) {
-      const size_t NumElems = Ptr.getNumElems();
-      QualType ElemTy = AT->getElementType();
-      R = APValue(APValue::UninitArray{}, NumElems, NumElems);
-
-      bool Ok = true;
-      for (unsigned I = 0; I < NumElems; ++I) {
-        APValue &Slot = R.getArrayInitializedElt(I);
-        const Pointer &EP = Ptr.atIndex(I);
-        if (llvm::Optional<PrimType> T = Ctx.classify(ElemTy)) {
-          TYPE_SWITCH(*T, Ok &= ReturnValue<T>(EP.deref<T>(), Slot));
-        } else {
-          Ok &= Composite(ElemTy, EP.narrow(), Slot);
-        }
-      }
-      return Ok;
-    }
-    llvm_unreachable("invalid value to return");
-  };
-
-  // Return the composite type.
   const auto &Ptr = S.Stk.pop<Pointer>();
-  return Composite(Ptr.getType(), Ptr, Result);
+  if (std::optional<APValue> APV = Ptr.toRValue(S.getCtx())) {
+    EvalResult.setValue(*APV);
+    return true;
+  }
+
+  EvalResult.setInvalid();
+  return false;
 }
 
 bool EvalEmitter::emitGetPtrLocal(uint32_t I, const SourceInfo &Info) {
   if (!isActive())
     return true;
 
-  auto It = Locals.find(I);
-  assert(It != Locals.end() && "Missing local variable");
-  S.Stk.push<Pointer>(reinterpret_cast<Block *>(It->second.get()));
+  Block *B = getLocal(I);
+  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
   return true;
 }
 
@@ -210,10 +195,8 @@ bool EvalEmitter::emitGetLocal(uint32_t I, const SourceInfo &Info) {
 
   using T = typename PrimConv<OpType>::T;
 
-  auto It = Locals.find(I);
-  assert(It != Locals.end() && "Missing local variable");
-  auto *B = reinterpret_cast<Block *>(It->second.get());
-  S.Stk.push<T>(*reinterpret_cast<T *>(B + 1));
+  Block *B = getLocal(I);
+  S.Stk.push<T>(*reinterpret_cast<T *>(B->data()));
   return true;
 }
 
@@ -224,10 +207,11 @@ bool EvalEmitter::emitSetLocal(uint32_t I, const SourceInfo &Info) {
 
   using T = typename PrimConv<OpType>::T;
 
-  auto It = Locals.find(I);
-  assert(It != Locals.end() && "Missing local variable");
-  auto *B = reinterpret_cast<Block *>(It->second.get());
-  *reinterpret_cast<T *>(B + 1) = S.Stk.pop<T>();
+  Block *B = getLocal(I);
+  *reinterpret_cast<T *>(B->data()) = S.Stk.pop<T>();
+  InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  Desc.IsInitialized = true;
+
   return true;
 }
 
@@ -236,9 +220,8 @@ bool EvalEmitter::emitDestroy(uint32_t I, const SourceInfo &Info) {
     return true;
 
   for (auto &Local : Descriptors[I]) {
-    auto It = Locals.find(Local.Offset);
-    assert(It != Locals.end() && "Missing local variable");
-    S.deallocate(reinterpret_cast<Block *>(It->second.get()));
+    Block *B = getLocal(Local.Offset);
+    S.deallocate(B);
   }
 
   return true;

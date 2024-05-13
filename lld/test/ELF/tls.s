@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 // RUN: ld.lld %t -o %tout
 // RUN: llvm-readobj -S -l --symbols %tout | FileCheck %s
-// RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DIS
+// RUN: llvm-objdump --no-print-imm-hex -d %tout | FileCheck %s --check-prefix=DIS
 
 /// Reject local-exec TLS relocations for -shared, regardless of the preemptibility.
 // RUN: not ld.lld -shared %t -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
@@ -121,14 +121,12 @@ d:
 // CHECK-NEXT:     EntrySize:
 // CHECK-NEXT:   }
 
-// Check that the TLS NOBITS sections weren't added to the R/W PT_LOAD's size.
-
 // CHECK:      ProgramHeaders [
 // CHECK:          Type: PT_LOAD
 // CHECK:          Type: PT_LOAD
 // CHECK:          Type: PT_LOAD
 // CHECK:          FileSize: 8
-// CHECK-NEXT:     MemSize: 8
+// CHECK-NEXT:     MemSize: [[#]]
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:       PF_R
 // CHECK-NEXT:       PF_W

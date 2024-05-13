@@ -1,13 +1,13 @@
-; RUN: opt -S -partial-inliner -pass-remarks=partial-inlining  -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=partial-inliner -pass-remarks=partial-inlining  -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -S -passes=partial-inliner  -pass-remarks=partial-inlining -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -S -partial-inliner -pass-remarks=partial-inlining  -disable-output -max-partial-inlining=1 < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=partial-inliner -pass-remarks=partial-inlining  -disable-output -max-partial-inlining=1 < %s 2>&1 | FileCheck %s
 ; RUN: opt -S -passes=partial-inliner  -pass-remarks=partial-inlining -disable-output -max-partial-inlining=1 < %s 2>&1 | FileCheck %s
 
-; RUN: opt -S -partial-inliner -pass-remarks=partial-inlining  -disable-partial-inlining < %s 2>&1 | FileCheck --check-prefix=LIMIT %s
+; RUN: opt -S -passes=partial-inliner -pass-remarks=partial-inlining  -disable-partial-inlining < %s 2>&1 | FileCheck --check-prefix=LIMIT %s
 ; RUN: opt -S -passes=partial-inliner  -pass-remarks=partial-inlining  --disable-partial-inlining < %s 2>&1 | FileCheck  --check-prefix=LIMIT %s
-; RUN: opt -S -partial-inliner -pass-remarks=partial-inlining   -max-partial-inlining=0 < %s 2>&1 | FileCheck --check-prefix=LIMIT  %s
+; RUN: opt -S -passes=partial-inliner -pass-remarks=partial-inlining   -max-partial-inlining=0 < %s 2>&1 | FileCheck --check-prefix=LIMIT  %s
 ; RUN: opt -S -passes=partial-inliner  -pass-remarks=partial-inlining  -max-partial-inlining=0 < %s 2>&1 | FileCheck --check-prefix=LIMIT  %s
-; RUN: opt -S -partial-inliner -pass-remarks=partial-inlining   -inline-threshold=0 < %s 2>&1 | FileCheck --check-prefix=LIMIT  %s
+; RUN: opt -S -passes=partial-inliner -pass-remarks=partial-inlining   -inline-threshold=0 < %s 2>&1 | FileCheck --check-prefix=LIMIT  %s
 ; RUN: opt -S -passes=partial-inliner  -pass-remarks=partial-inlining  -inline-threshold=0 < %s 2>&1 | FileCheck --check-prefix=LIMIT  %s
 
 define i32 @bar(i32 %arg) local_unnamed_addr #0 !dbg !5 {

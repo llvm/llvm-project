@@ -1,15 +1,31 @@
 // RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fopenmp-version=45 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -fopenmp-version=51 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp-simd -fopenmp-version=51 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp-simd -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,cxx23 -fopenmp -fopenmp-simd -x c++ -std=c++23 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
 #pragma omp target update to(x)
   argc = x; // expected-warning {{variable 'x' is uninitialized when used here}}
+}
+
+static int y;
+#pragma omp declare target(y)
+
+void yyy() {
+#pragma omp target update to(y) // expected-error {{the host cannot update a declare target variable that is not externally visible.}}
+}
+
+int __attribute__((visibility("hidden"))) z;
+#pragma omp declare target(z)
+
+void zzz() {
+#pragma omp target update from(z) // expected-error {{the host cannot update a declare target variable that is not externally visible.}}
 }
 
 void foo() {
@@ -185,3 +201,67 @@ int main(int argc, char **argv) {
 
   return tmain(argc, argv);
 }
+
+template<typename _Tp, int _Nm> struct array {
+  _Tp & operator[](int __n) noexcept;
+};
+
+#pragma omp declare target
+extern array<double, 4> arr;
+#pragma omp end declare target
+
+void copy_host_to_device()
+{
+  #pragma omp target update from(arr)  // expected-no-error
+  arr[0] = 0;
+}
+
+struct FOO; // expected-note {{forward declaration of 'FOO'}}
+extern FOO a;
+template <typename T, int I>
+struct bar {
+  void func() {
+    #pragma omp target map(to: a) // expected-error {{incomplete type 'FOO' where a complete type is required}}
+    foo();
+  }
+};
+
+#if defined(__cplusplus) && __cplusplus >= 202101L
+
+namespace cxx23 {
+
+struct S {
+  int operator[](auto...);
+};
+
+void f() {
+
+  int test[10];
+
+#pragma omp target update to(test[1])
+
+#pragma omp target update to(test[1, 2]) // cxx23-error {{type 'int[10]' does not provide a subscript operator}} \
+                                         // cxx23-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+#pragma omp target update to(test [1:1:1])
+
+#pragma omp target update to(test [1, 2:1:1]) // cxx23-error {{expected ']'}} // expected-note {{'['}} \
+                                            // cxx23-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+#pragma omp target update to(test [1, 2:]) // cxx23-error {{expected ']'}} // expected-note {{'['}} \
+                                            // cxx23-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+#pragma omp target update to(test[1, 2 ::]) // cxx23-error {{expected ']'}} // expected-note {{'['}} \
+                                            // cxx23-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+#pragma omp target update to(test[]) // cxx23-error {{type 'int[10]' does not provide a subscript operator}} \
+                                            // cxx23-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+  S s;
+  (void)s[0];
+  (void)s[];
+  (void)s[1, 2];
+}
+
+}
+
+#endif

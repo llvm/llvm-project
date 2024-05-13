@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 // <functional>
 
 // class function<R(ArgTypes...)>
 
 // function& operator=(function &&);
-
-// This test runs in C++03, but we have deprecated using std::function in C++03.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <functional>
 #include <cassert>
@@ -25,6 +24,9 @@ struct A
   static std::function<void()> global;
   static bool cancel;
 
+  A() = default;
+  A(const A&) = default;
+  A& operator=(const A&) = default;
   ~A() {
     DoNotOptimize(cancel);
     if (cancel)

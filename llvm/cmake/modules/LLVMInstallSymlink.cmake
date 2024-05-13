@@ -2,19 +2,25 @@
 # DESTDIR environment variable may be unset at configuration time.
 # See PR8397.
 
-function(install_symlink name target outdir)
+# Set to an arbitrary directory to silence GNUInstallDirs warnings
+# regarding being unable to determine libdir.
+set(CMAKE_INSTALL_LIBDIR "lib")
+include(GNUInstallDirs)
+
+function(install_symlink name target outdir link_or_copy)
+  # link_or_copy is the "command" to pass to cmake -E.
+  # It should be either "create_symlink" or "copy".
+
   set(DESTDIR $ENV{DESTDIR})
-  set(bindir "${DESTDIR}${CMAKE_INSTALL_PREFIX}/${outdir}/")
+  if(NOT IS_ABSOLUTE "${outdir}")
+    set(outdir "${CMAKE_INSTALL_PREFIX}/${outdir}")
+  endif()
+  set(outdir "${DESTDIR}${outdir}")
 
   message(STATUS "Creating ${name}")
 
   execute_process(
-    COMMAND "${CMAKE_COMMAND}" -E create_symlink "${target}" "${name}"
-    WORKING_DIRECTORY "${bindir}" ERROR_VARIABLE has_err)
-  if(CMAKE_HOST_WIN32 AND has_err)
-    execute_process(
-      COMMAND "${CMAKE_COMMAND}" -E copy "${target}" "${name}"
-      WORKING_DIRECTORY "${bindir}")
-  endif()
+    COMMAND "${CMAKE_COMMAND}" -E ${link_or_copy} "${target}" "${name}"
+    WORKING_DIRECTORY "${outdir}")
 
 endfunction()

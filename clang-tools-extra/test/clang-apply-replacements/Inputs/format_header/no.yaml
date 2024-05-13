@@ -1,0 +1,14 @@
+---
+MainSourceFile:  no.cpp
+Diagnostics:
+  - DiagnosticName:  test-header-format
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/no.cpp
+      FileOffset: 36
+      Replacements:
+        - FilePath:        $(path)/no.cpp
+          Offset:          36
+          Length:          17
+          ReplacementText: ""
+...

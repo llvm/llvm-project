@@ -1,12 +1,11 @@
-; RUN: opt < %s -skip-partial-inlining-cost-analysis -partial-inliner -S  | FileCheck %s
 ; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
 
 declare void @bar()
 declare i32 @__gxx_personality_v0(...)
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
 
-define internal void @callee(i1 %cond) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define internal void @callee(i1 %cond) personality ptr @__gxx_personality_v0 {
 entry:
   br i1 %cond, label %if.then, label %if.end
 
@@ -18,14 +17,14 @@ invoke.cont:
   br label %try.cont
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = extractvalue { i8*, i32 } %0, 1
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = extractvalue { ptr, i32 } %0, 1
   br label %catch
 
 catch:
-  %3 = call i8* @__cxa_begin_catch(i8* %1)
+  %3 = call ptr @__cxa_begin_catch(ptr %1)
   call void @__cxa_end_catch()
   br label %try.cont
 
@@ -47,6 +46,6 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: define {{.*}} @callee.1.{{.*}}() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; CHECK-LABEL: define {{.*}} @callee.1.{{.*}}() personality ptr @__gxx_personality_v0
 ; CHECK: invoke void @bar()
 ; CHECK: landingpad

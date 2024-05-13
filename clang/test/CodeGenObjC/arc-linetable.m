@@ -34,7 +34,7 @@
 
 // CHECK: define {{.*}}testCleanupVoid
 // CHECK: icmp ne {{.*}}!dbg ![[SKIP1:[0-9]+]]
-// CHECK: store i32 0, i32* {{.*}}, !dbg ![[RET8:[0-9]+]]
+// CHECK: store i32 0, ptr {{.*}}, !dbg ![[RET8:[0-9]+]]
 // CHECK: @llvm.objc.storeStrong{{.*}}, !dbg ![[RET8]]
 // CHECK: ret {{.*}} !dbg ![[RET8]]
 

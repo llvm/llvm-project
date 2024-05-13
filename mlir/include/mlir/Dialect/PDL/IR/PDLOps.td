@@ -14,19 +14,16 @@
 #define MLIR_DIALECT_PDL_IR_PDLOPS
 
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // PDL Ops
 //===----------------------------------------------------------------------===//
 
-class PDL_Op<string mnemonic, list<OpTrait> traits = []>
-    : Op<PDL_Dialect, mnemonic, traits> {
-  let printer = [{ ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let verifier = [{ return ::verify(*this); }];
-}
+class PDL_Op<string mnemonic, list<Trait> traits = []>
+    : Op<PDL_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // pdl::ApplyNativeConstraintOp
@@ -38,33 +35,26 @@ def PDL_ApplyNativeConstraintOp
   let description = [{
     `pdl.apply_native_constraint` operations apply a native C++ constraint, that
     has been registered externally with the consumer of PDL, to a given set of
-    entities. The constraint is permitted to accept any number of constant
-    valued parameters.
+    entities and optionally return a number of values.
 
     Example:
 
     ```mlir
-    // Apply `myConstraint` to the entities defined by `input`, `attr`, and
-    // `op`. `42`, `"abc"`, and `i32` are constant parameters passed to the
-    // constraint.
-    pdl.apply_native_constraint "myConstraint"[42, "abc", i32](%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation)
+    // Apply `myConstraint` to the entities defined by `input`, `attr`, and `op`.
+    pdl.apply_native_constraint "myConstraint"(%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation)
+    // Apply constraint `with_result` to `root`. This constraint returns an attribute.
+    %attr = pdl.apply_native_constraint "with_result"(%root : !pdl.operation) : !pdl.attribute
     ```
   }];
 
-  let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_AnyType>:$args,
-                       OptionalAttr<ArrayAttr>:$constParams);
+  let arguments = (ins StrAttr:$name, 
+                       Variadic<PDL_AnyType>:$args, 
+                       DefaultValuedAttr<BoolAttr, "false">:$isNegated);
+  let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name ($constParams^)? `(` $args `:` type($args) `)` attr-dict
+    $name `(` $args `:` type($args) `)` (`:`  type($results)^ )? attr-dict
   }];
-
-  let builders = [
-    OpBuilder<(ins "StringRef":$name, CArg<"ValueRange", "{}">:$args,
-                   CArg<"ArrayRef<Attribute>", "{}">:$params), [{
-      build($_builder, $_state, $_builder.getStringAttr(name), args,
-            params.empty() ? ArrayAttr() : $_builder.getArrayAttr(params));
-    }]>,
-  ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -78,29 +68,21 @@ def PDL_ApplyNativeRewriteOp
     `pdl.apply_native_rewrite` operations apply a native C++ function, that has
     been registered externally with the consumer of PDL, to perform a rewrite
     and optionally return a number of values. The native function may accept any
-    number of arguments and constant attribute parameters. This operation is
-    used within a pdl.rewrite region to enable the interleaving of native
-    rewrite methods with other pdl constructs.
+    number of arguments. This operation is used within a pdl.rewrite region to enable
+    the interleaving of native rewrite methods with other pdl constructs.
 
     Example:
 
     ```mlir
     // Apply a native rewrite method that returns an attribute.
-    %ret = pdl.apply_native_rewrite "myNativeFunc"[42, "gt"](%arg0, %arg1) : !pdl.attribute
+    %ret = pdl.apply_native_rewrite "myNativeFunc"(%arg0, %attr1) : !pdl.attribute
     ```
 
     ```c++
     // The native rewrite as defined in C++:
-    static void myNativeFunc(ArrayRef<PDLValue> args, ArrayAttr constantParams,
-                             PatternRewriter &rewriter,
-                             PDLResultList &results) {
-      Value arg0 = args[0].cast<Value>();
-      Value arg1 = args[1].cast<Value>();
-      IntegerAttr param0 = constantParams[0].cast<IntegerAttr>();
-      StringAttr param1 = constantParams[1].cast<StringAttr>();
-
-      // Just push back the first param attribute.
-      results.push_back(param0);
+    static Attribute myNativeFunc(PatternRewriter &rewriter, Value arg0, Attribute arg1) {
+      // Just return the second arg.
+      return arg1;
     }
 
     void registerNativeRewrite(PDLPatternModule &pdlModule) {
@@ -109,14 +91,12 @@ def PDL_ApplyNativeRewriteOp
     ```
   }];
 
-  let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_AnyType>:$args,
-                       OptionalAttr<ArrayAttr>:$constParams);
+  let arguments = (ins StrAttr:$name, Variadic<PDL_AnyType>:$args);
   let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($results)
-    attr-dict
+    $name (`(` $args^ `:` type($args) `)`)? (`:` type($results)^)? attr-dict
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -145,14 +125,14 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
     %attr = pdl.attribute : %type
 
     // Define an attribute with a constant value:
-    %attr = pdl.attribute "hello"
+    %attr = pdl.attribute = "hello"
     ```
   }];
 
-  let arguments = (ins Optional<PDL_Type>:$type,
+  let arguments = (ins Optional<PDL_Type>:$valueType,
                        OptionalAttr<AnyAttr>:$value);
   let results = (outs PDL_Attribute:$attr);
-  let assemblyFormat = "attr-dict (`:` $type^)? ($value^)?";
+  let assemblyFormat = "(`:` $valueType^)? (`=` $value^)? attr-dict-with-keyword";
 
   let builders = [
     OpBuilder<(ins CArg<"Value", "Value()">:$type), [{
@@ -163,6 +143,7 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
       build($_builder, $_state, $_builder.getType<AttributeType>(), Value(), attr);
     }]>,
   ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -182,16 +163,16 @@ def PDL_EraseOp : PDL_Op<"erase", [HasParent<"pdl::RewriteOp">]> {
     pdl.erase %root
     ```
   }];
-  let arguments = (ins PDL_Operation:$operation);
-  let assemblyFormat = "$operation attr-dict";
-  let verifier = ?;
+  let arguments = (ins PDL_Operation:$opValue);
+  let assemblyFormat = "$opValue attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
 // pdl::OperandOp
 //===----------------------------------------------------------------------===//
 
-def PDL_OperandOp : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
+def PDL_OperandOp
+    : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
   let summary = "Define an external input operand in a pattern";
   let description = [{
     `pdl.operand` operations capture external operand edges into an operation
@@ -213,22 +194,24 @@ def PDL_OperandOp : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
     ```
   }];
 
-  let arguments = (ins Optional<PDL_Type>:$type);
-  let results = (outs PDL_Value:$val);
-  let assemblyFormat = "(`:` $type^)? attr-dict";
+  let arguments = (ins Optional<PDL_Type>:$valueType);
+  let results = (outs PDL_Value:$value);
+  let assemblyFormat = "(`:` $valueType^)? attr-dict";
 
   let builders = [
     OpBuilder<(ins), [{
       build($_builder, $_state, $_builder.getType<ValueType>(), Value());
     }]>,
   ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // pdl::OperandsOp
 //===----------------------------------------------------------------------===//
 
-def PDL_OperandsOp : PDL_Op<"operands", [HasParent<"pdl::PatternOp">]> {
+def PDL_OperandsOp
+    : PDL_Op<"operands", [HasParent<"pdl::PatternOp">]> {
   let summary = "Define a range of input operands in a pattern";
   let description = [{
     `pdl.operands` operations capture external operand range edges into an
@@ -250,9 +233,9 @@ def PDL_OperandsOp : PDL_Op<"operands", [HasParent<"pdl::PatternOp">]> {
     ```
   }];
 
-  let arguments = (ins Optional<PDL_RangeOf<PDL_Type>>:$type);
-  let results = (outs PDL_RangeOf<PDL_Value>:$val);
-  let assemblyFormat = "(`:` $type^)? attr-dict";
+  let arguments = (ins Optional<PDL_RangeOf<PDL_Type>>:$valueType);
+  let results = (outs PDL_RangeOf<PDL_Value>:$value);
+  let assemblyFormat = "(`:` $valueType^)? attr-dict";
 
   let builders = [
     OpBuilder<(ins), [{
@@ -260,14 +243,14 @@ def PDL_OperandsOp : PDL_Op<"operands", [HasParent<"pdl::PatternOp">]> {
             Value());
     }]>,
   ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // pdl::OperationOp
 //===----------------------------------------------------------------------===//
 
-def PDL_OperationOp
-    : PDL_Op<"operation", [AttrSizedOperandSegments, NoSideEffect]> {
+def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
   let summary = "Define an operation within a pattern";
   let description = [{
     `pdl.operation` operations define operation nodes within a pattern. Within
@@ -312,7 +295,7 @@ def PDL_OperationOp
 
     ```mlir
     // Define an instance with single range of operands.
-    %op = pdl.operation "std.return"(%allArgs : !pdl.range<value>)
+    %op = pdl.operation "func.return"(%allArgs : !pdl.range<value>)
     ```
 
     2) A variadic number of either !pdl.value or !pdl.range<value>:
@@ -342,7 +325,7 @@ def PDL_OperationOp
     ```mlir
     // Define an instance with single range of types.
     %allResultTypes = pdl.types
-    %op = pdl.operation "unrealized_conversion_cast" -> (%allResultTypes : !pdl.types)
+    %op = pdl.operation "builtin.unrealized_conversion_cast" -> (%allResultTypes : !pdl.types)
     ```
 
     2) A variadic number of either !pdl.type or !pdl.range<type>:
@@ -365,25 +348,25 @@ def PDL_OperationOp
     ```
   }];
 
-  let arguments = (ins OptionalAttr<StrAttr>:$name,
-                       Variadic<PDL_InstOrRangeOf<PDL_Value>>:$operands,
-                       Variadic<PDL_Attribute>:$attributes,
-                       StrArrayAttr:$attributeNames,
-                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$types);
+  let arguments = (ins OptionalAttr<StrAttr>:$opName,
+                       Variadic<PDL_InstOrRangeOf<PDL_Value>>:$operandValues,
+                       Variadic<PDL_Attribute>:$attributeValues,
+                       StrArrayAttr:$attributeValueNames,
+                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$typeValues);
   let results = (outs PDL_Operation:$op);
   let assemblyFormat = [{
-    ($name^)? (`(` $operands^ `:` type($operands) `)`)?
-    custom<OperationOpAttributes>($attributes, $attributeNames)
-    (`->` `(` $types^ `:` type($types) `)`)? attr-dict
+    ($opName^)? (`(` $operandValues^ `:` type($operandValues) `)`)?
+    custom<OperationOpAttributes>($attributeValues, $attributeValueNames)
+    (`->` `(` $typeValues^ `:` type($typeValues) `)`)? attr-dict
   }];
 
   let builders = [
-    OpBuilder<(ins CArg<"Optional<StringRef>", "llvm::None">:$name,
-      CArg<"ValueRange", "llvm::None">:$operandValues,
-      CArg<"ArrayRef<StringRef>", "llvm::None">:$attrNames,
-      CArg<"ValueRange", "llvm::None">:$attrValues,
-      CArg<"ValueRange", "llvm::None">:$resultTypes), [{
-      auto nameAttr = name ? StringAttr() : $_builder.getStringAttr(*name);
+    OpBuilder<(ins CArg<"std::optional<StringRef>", "std::nullopt">:$name,
+      CArg<"ValueRange", "std::nullopt">:$operandValues,
+      CArg<"ArrayRef<StringRef>", "std::nullopt">:$attrNames,
+      CArg<"ValueRange", "std::nullopt">:$attrValues,
+      CArg<"ValueRange", "std::nullopt">:$resultTypes), [{
+      auto nameAttr = name ? $_builder.getStringAttr(*name) : StringAttr();
       build($_builder, $_state, $_builder.getType<OperationType>(), nameAttr,
             operandValues, attrValues, $_builder.getStrArrayAttr(attrNames),
             resultTypes);
@@ -393,14 +376,24 @@ def PDL_OperationOp
     /// Returns true if the operation type referenced supports result type
     /// inference.
     bool hasTypeInference();
+
+    /// Returns true if the operation type referenced might support result type
+    /// inference, i.e. it supports type reference or is currently not
+    /// registered in the context. Returns false if the root operation name
+    /// has not been set.
+    bool mightHaveTypeInference();
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // pdl::PatternOp
 //===----------------------------------------------------------------------===//
 
-def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
+def PDL_PatternOp : PDL_Op<"pattern", [
+    IsolatedFromAbove, SingleBlock, Symbol,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getDefaultDialect"]>
+  ]> {
   let summary = "Define a rewrite pattern";
   let description = [{
     `pdl.pattern` operations provide a transformable representation for a
@@ -425,19 +418,16 @@ def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
     ```
   }];
 
-  let arguments = (ins OptionalAttr<StrAttr>:$rootKind,
-                       Confined<I16Attr, [IntNonNegative]>:$benefit,
+  let arguments = (ins ConfinedAttr<I16Attr, [IntNonNegative]>:$benefit,
                        OptionalAttr<SymbolNameAttr>:$sym_name);
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = [{
-    ($sym_name^)? `:` `benefit` `(` $benefit `)`
-    (`,` `root` `(` $rootKind^ `)`)? attr-dict-with-keyword $body
+    ($sym_name^)? `:` `benefit` `(` $benefit `)` attr-dict-with-keyword $bodyRegion
   }];
 
   let builders = [
-    OpBuilder<(ins CArg<"Optional<StringRef>", "llvm::None">:$rootKind,
-      CArg<"Optional<uint16_t>", "1">:$benefit,
-      CArg<"Optional<StringRef>", "llvm::None">:$name)>,
+    OpBuilder<(ins CArg<"std::optional<uint16_t>", "1">:$benefit,
+                   CArg<"std::optional<StringRef>", "std::nullopt">:$name)>,
   ];
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
@@ -449,11 +439,50 @@ def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
 
     /// Returns the rewrite operation of this pattern.
     RewriteOp getRewriter();
-
-    /// Return the root operation kind that this pattern matches, or None if
-    /// there isn't a specific root.
-    Optional<StringRef> getRootKind();
   }];
+  let hasRegionVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::RangeOp
+//===----------------------------------------------------------------------===//
+
+def PDL_RangeOp : PDL_Op<"range", [Pure, HasParent<"pdl::RewriteOp">]> {
+  let summary = "Construct a range of pdl entities";
+  let description = [{
+    `pdl.range` operations construct a range from a given set of PDL entities,
+    which all share the same underlying element type. For example, a
+    `!pdl.range<value>` may be constructed from a list of `!pdl.value`
+    or `!pdl.range<value>` entities.
+
+    Example:
+
+    ```mlir
+    // Construct a range of values.
+    %valueRange = pdl.range %inputValue, %inputRange : !pdl.value, !pdl.range<value>
+
+    // Construct a range of types.
+    %typeRange = pdl.range %inputType, %inputRange : !pdl.type, !pdl.range<type>
+
+    // Construct an empty range of types.
+    %valueRange = pdl.range : !pdl.range<type>
+    ```
+
+    TODO: Range construction is currently limited to rewrites, but it could
+    be extended to constraints under certain circustances; i.e., if we can
+    determine how to extract the underlying elements. If we can't, e.g. if
+    there are multiple sub ranges used for construction, we won't be able
+    to determine their sizes during constraint time.
+  }];
+
+  let arguments = (ins Variadic<PDL_AnyType>:$arguments);
+  let results = (outs PDL_RangeOf<AnyTypeOf<[PDL_Type, PDL_Value]>>:$result);
+  let assemblyFormat = [{
+    ($arguments^ `:` type($arguments))?
+    custom<RangeType>(ref(type($arguments)), type($result))
+    attr-dict
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -487,20 +516,21 @@ def PDL_ReplaceOp : PDL_Op<"replace", [
     pdl.replace %root with %otherOp
     ```
   }];
-  let arguments = (ins PDL_Operation:$operation,
+  let arguments = (ins PDL_Operation:$opValue,
                        Optional<PDL_Operation>:$replOperation,
                        Variadic<PDL_InstOrRangeOf<PDL_Value>>:$replValues);
   let assemblyFormat = [{
-    $operation `with` (`(` $replValues^ `:` type($replValues) `)`)?
+    $opValue `with` (`(` $replValues^ `:` type($replValues) `)`)?
     ($replOperation^)? attr-dict
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // pdl::ResultOp
 //===----------------------------------------------------------------------===//
 
-def PDL_ResultOp : PDL_Op<"result"> {
+def PDL_ResultOp : PDL_Op<"result", [Pure]> {
   let summary = "Extract a result from an operation";
   let description = [{
     `pdl.result` operations extract result edges from an operation node within
@@ -526,14 +556,13 @@ def PDL_ResultOp : PDL_Op<"result"> {
   let arguments = (ins PDL_Operation:$parent, I32Attr:$index);
   let results = (outs PDL_Value:$val);
   let assemblyFormat = "$index `of` $parent attr-dict";
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
 // pdl::ResultsOp
 //===----------------------------------------------------------------------===//
 
-def PDL_ResultsOp : PDL_Op<"results"> {
+def PDL_ResultsOp : PDL_Op<"results", [Pure]> {
   let summary = "Extract a result group from an operation";
   let description = [{
     `pdl.results` operations extract a result group from an operation within a
@@ -569,6 +598,7 @@ def PDL_ResultsOp : PDL_Op<"results"> {
     ($index^)? `of` $parent custom<ResultsValueType>(ref($index), type($val))
     attr-dict
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -576,20 +606,26 @@ def PDL_ResultsOp : PDL_Op<"results"> {
 //===----------------------------------------------------------------------===//
 
 def PDL_RewriteOp : PDL_Op<"rewrite", [
-     Terminator, HasParent<"pdl::PatternOp">,
-     SingleBlockImplicitTerminator<"pdl::RewriteEndOp">
+     Terminator, HasParent<"pdl::PatternOp">, NoTerminator, NoRegionArguments,
+     SingleBlock, AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getDefaultDialect"]>
   ]> {
   let summary = "Specify the rewrite of a matched pattern";
   let description = [{
     `pdl.rewrite` operations terminate the region of a `pdl.pattern` and specify
-    the main rewrite of a `pdl.pattern`, on the specified root operation. The
-    rewrite is specified either via a string name (`name`) to an external
+    the main rewrite of a `pdl.pattern`, on the optional root operation. The
+    rewrite is specified either via a string name (`name`) to a native
     rewrite function, or via the region body. The rewrite region, if specified,
-    must contain a single block and terminate via the `pdl.rewrite_end`
-    operation. If the rewrite is external, it also takes a set of constant
-    parameters and a set of additional positional values defined within the
-    matcher as arguments. If the rewrite is external, the root operation is
-    passed to the native function as the first argument.
+    must contain a single block. If the rewrite is external it functions
+    similarly to `pdl.apply_native_rewrite`, and takes a set of additional
+    positional values defined within the matcher as arguments. If the rewrite is
+    external, the root operation is passed to the native function as the leading
+    arguments. The root operation, if provided, specifies the starting point in
+    the pattern for the subgraph isomorphism search. Pattern matching will proceed
+    from this node downward (towards the defining operation) or upward
+    (towards the users) until all the operations in the pattern have been matched.
+    If the root is omitted, the pdl_interp lowering will automatically select
+    the best root of the pdl.rewrite among all the operations in the pattern.
 
     Example:
 
@@ -597,35 +633,32 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
     // Specify an external rewrite function:
     pdl.rewrite %root with "myExternalRewriter"(%value : !pdl.value)
 
-    // Specify the rewrite inline using PDL:
+    // Specify a rewrite inline using PDL with the given root:
     pdl.rewrite %root {
       %op = pdl.operation "foo.op"(%arg0, %arg1)
       pdl.replace %root with %op
     }
+
+    // Specify a rewrite inline using PDL, automatically selecting root:
+    pdl.rewrite {
+      %op1 = pdl.operation "foo.op"(%arg0, %arg1)
+      %op2 = pdl.operation "bar.op"(%arg0, %arg1)
+      pdl.replace %root1 with %op1
+      pdl.replace %root2 with %op2
+    }
     ```
   }];
 
-  let arguments = (ins PDL_Operation:$root,
+  let arguments = (ins Optional<PDL_Operation>:$root,
                        OptionalAttr<StrAttr>:$name,
-                       Variadic<PDL_AnyType>:$externalArgs,
-                       OptionalAttr<ArrayAttr>:$externalConstParams);
-  let regions = (region AnyRegion:$body);
+                       Variadic<PDL_AnyType>:$externalArgs);
+  let regions = (region AnyRegion:$bodyRegion);
   let assemblyFormat = [{
-    $root (`with` $name^ ($externalConstParams^)?
-                         (`(` $externalArgs^ `:` type($externalArgs) `)`)?)?
-          ($body^)?
+    ($root^)? (`with` $name^ (`(` $externalArgs^ `:` type($externalArgs) `)`)?)?
+              ($bodyRegion^)?
     attr-dict-with-keyword
   }];
-}
-
-def PDL_RewriteEndOp : PDL_Op<"rewrite_end", [Terminator,
-                                              HasParent<"pdl::RewriteOp">]> {
-  let summary = "Implicit terminator of a `pdl.rewrite` region";
-  let description = [{
-    `pdl.rewrite_end` operations terminate the region of a `pdl.rewrite`.
-  }];
-  let assemblyFormat = "attr-dict";
-  let verifier = ?;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -651,9 +684,10 @@ def PDL_TypeOp : PDL_Op<"type"> {
     ```
   }];
 
-  let arguments = (ins OptionalAttr<TypeAttr>:$type);
+  let arguments = (ins OptionalAttr<TypeAttr>:$constantType);
   let results = (outs PDL_Type:$result);
-  let assemblyFormat = "attr-dict (`:` $type^)?";
+  let assemblyFormat = "attr-dict (`:` $constantType^)?";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -679,9 +713,10 @@ def PDL_TypesOp : PDL_Op<"types"> {
     ```
   }];
 
-  let arguments = (ins OptionalAttr<TypeArrayAttr>:$types);
+  let arguments = (ins OptionalAttr<TypeArrayAttr>:$constantTypes);
   let results = (outs PDL_RangeOf<PDL_Type>:$result);
-  let assemblyFormat = "attr-dict (`:` $types^)?";
+  let assemblyFormat = "attr-dict (`:` $constantTypes^)?";
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLOPS

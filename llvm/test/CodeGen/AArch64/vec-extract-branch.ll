@@ -14,7 +14,7 @@ define i32 @vec_extract_branch(<2 x double> %x, i32 %y)  {
 ; CHECK-NEXT:    mov w8, #42
 ; CHECK-NEXT:    sdiv w0, w8, w0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_2: // %false
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    mov w0, #88
 ; CHECK-NEXT:    ret
   %t1 = fcmp ogt <2 x double> %x, zeroinitializer

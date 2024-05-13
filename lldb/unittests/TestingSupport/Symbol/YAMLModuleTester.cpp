@@ -13,8 +13,9 @@
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
-YAMLModuleTester::YAMLModuleTester(llvm::StringRef yaml_data) {
+YAMLModuleTester::YAMLModuleTester(llvm::StringRef yaml_data, size_t cu_index) {
   llvm::Expected<TestFile> File = TestFile::fromYaml(yaml_data);
   EXPECT_THAT_EXPECTED(File, llvm::Succeeded());
   m_file = std::move(*File);
@@ -22,5 +23,5 @@ YAMLModuleTester::YAMLModuleTester(llvm::StringRef yaml_data) {
   m_module_sp = std::make_shared<Module>(m_file->moduleSpec());
   auto &symfile = *llvm::cast<SymbolFileDWARF>(m_module_sp->GetSymbolFile());
 
-  m_dwarf_unit = symfile.DebugInfo().GetUnitAtIndex(0);
+  m_dwarf_unit = symfile.DebugInfo().GetUnitAtIndex(cu_index);
 }

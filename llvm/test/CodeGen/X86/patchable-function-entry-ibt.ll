@@ -61,8 +61,8 @@ define void @f2_1() "patchable-function-entry"="1" "patchable-function-prefix"="
 ;; -fpatchable-function-entry=1 -fcf-protection=branch
 ;; For M=0, don't create .Lpatch0 if the initial instruction is not ENDBR,
 ;; even if other basic blocks may have ENDBR.
-@buf = internal global [5 x i8*] zeroinitializer
-declare i32 @llvm.eh.sjlj.setjmp(i8*)
+@buf = internal global [5 x ptr] zeroinitializer
+declare i32 @llvm.eh.sjlj.setjmp(ptr)
 
 define internal void @f1i() "patchable-function-entry"="1" {
 ; CHECK-LABEL: f1i:
@@ -79,10 +79,29 @@ define internal void @f1i() "patchable-function-entry"="1" {
 ; 64-NEXT:    .p2align 3
 ; 64-NEXT:    .quad .Lfunc_begin3
 entry:
-  tail call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([5 x i8*]* @buf to i8*))
+  tail call i32 @llvm.eh.sjlj.setjmp(ptr @buf)
+  ret void
+}
+
+;; Test the interaction with -fsanitize=function.
+; CHECK:      .type sanitize_function,@function
+; CHECK-NEXT: .Ltmp{{.*}}:
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   .long   3238382334
+; CHECK-NEXT:   .long   42
+; CHECK-NEXT: sanitize_function:
+; CHECK-NEXT: .Lfunc_begin{{.*}}:
+; CHECK-NEXT:   .cfi_startproc
+; CHECK-NEXT:   # %bb.0:
+; 32-NEXT:      endbr32
+; 64-NEXT:      endbr64
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   ret
+define void @sanitize_function(ptr noundef %x) "patchable-function-prefix"="1" "patchable-function-entry"="1" !func_sanitize !1 {
   ret void
 }
 
 !llvm.module.flags = !{!0}
 
-!0 = !{i32 4, !"cf-protection-branch", i32 1}
+!0 = !{i32 8, !"cf-protection-branch", i32 1}
+!1 = !{i32 3238382334, i32 42}

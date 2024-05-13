@@ -66,7 +66,7 @@ define i64 @Y(i64 %A) {
 ; when the other ops have other uses (and it might not be safe
 ; either due to unconstrained instruction count growth).
 
-define dso_local i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
+define dso_local i32 @bswap_multiuse(i32 %x, i32 %y, ptr %p1, ptr %p2) nounwind {
 ; CHECK-LABEL: bswap_multiuse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
@@ -93,8 +93,8 @@ define dso_local i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwin
 ; CHECK64-NEXT:    retq
   %xt = call i32 @llvm.bswap.i32(i32 %x)
   %yt = call i32 @llvm.bswap.i32(i32 %y)
-  store i32 %xt, i32* %p1
-  store i32 %yt, i32* %p2
+  store i32 %xt, ptr %p1
+  store i32 %yt, ptr %p2
   %r = or i32 %xt, %yt
   ret i32 %r
 }
@@ -165,13 +165,13 @@ define i64 @not_bswap() {
 ;
 ; CHECK64-LABEL: not_bswap:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movzwl {{.*}}(%rip), %eax
-; CHECK64-NEXT:    movq %rax, %rcx
-; CHECK64-NEXT:    shrq $8, %rcx
-; CHECK64-NEXT:    shlq $8, %rax
-; CHECK64-NEXT:    orq %rcx, %rax
+; CHECK64-NEXT:    movzwl var16(%rip), %eax
+; CHECK64-NEXT:    movl %eax, %ecx
+; CHECK64-NEXT:    shrl $8, %ecx
+; CHECK64-NEXT:    shll $8, %eax
+; CHECK64-NEXT:    orl %ecx, %eax
 ; CHECK64-NEXT:    retq
-  %init = load i16, i16* @var16
+  %init = load i16, ptr @var16
   %big = zext i16 %init to i64
 
   %hishifted = lshr i64 %big, 8
@@ -196,10 +196,10 @@ define i64 @not_useful_bswap() {
 ;
 ; CHECK64-LABEL: not_useful_bswap:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movzbl {{.*}}(%rip), %eax
-; CHECK64-NEXT:    shlq $8, %rax
+; CHECK64-NEXT:    movzbl var8(%rip), %eax
+; CHECK64-NEXT:    shll $8, %eax
 ; CHECK64-NEXT:    retq
-  %init = load i8, i8* @var8
+  %init = load i8, ptr @var8
   %big = zext i8 %init to i64
 
   %hishifted = lshr i64 %big, 8
@@ -224,11 +224,11 @@ define i64 @finally_useful_bswap() {
 ;
 ; CHECK64-LABEL: finally_useful_bswap:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movzwl {{.*}}(%rip), %eax
-; CHECK64-NEXT:    bswapq %rax
-; CHECK64-NEXT:    shrq $48, %rax
+; CHECK64-NEXT:    movzwl var16(%rip), %eax
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    shrl $16, %eax
 ; CHECK64-NEXT:    retq
-  %init = load i16, i16* @var16
+  %init = load i16, ptr @var16
   %big = zext i16 %init to i64
 
   %hishifted = lshr i64 %big, 8
@@ -277,14 +277,10 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK-NEXT:    bswapl %ebp
 ; CHECK-NEXT:    shrdl $16, %ebp, %ebx
 ; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    bswapl %ecx
-; CHECK-NEXT:    shrdl $16, %ecx, %ebp
-; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    shrdl $16, %eax, %ecx
-; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    shrdl $16, %eax, %ebp
+; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    bswapl %ecx
 ; CHECK-NEXT:    shrdl $16, %ecx, %eax
@@ -293,10 +289,14 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    shrdl $16, %eax, %ecx
 ; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    bswapl %ebp
-; CHECK-NEXT:    shrdl $16, %ebp, %eax
-; CHECK-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; CHECK-NEXT:    shrdl $16, %ebp, %ecx
+; CHECK-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    bswapl %ebx
 ; CHECK-NEXT:    shrdl $16, %ebx, %ebp
@@ -355,13 +355,13 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK64-NEXT:    movq %rdi, %rax
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK64-NEXT:    bswapq %r10
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK64-NEXT:    bswapq %rdi
-; CHECK64-NEXT:    shrdq $48, %rdi, %r10
+; CHECK64-NEXT:    bswapq %r10
+; CHECK64-NEXT:    shrdq $48, %r10, %rdi
 ; CHECK64-NEXT:    bswapq %r11
-; CHECK64-NEXT:    shrdq $48, %r11, %rdi
+; CHECK64-NEXT:    shrdq $48, %r11, %r10
 ; CHECK64-NEXT:    bswapq %rbx
 ; CHECK64-NEXT:    shrdq $48, %rbx, %r11
 ; CHECK64-NEXT:    bswapq %r9
@@ -381,8 +381,8 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK64-NEXT:    movq %r9, 32(%rax)
 ; CHECK64-NEXT:    movq %rbx, 24(%rax)
 ; CHECK64-NEXT:    movq %r11, 16(%rax)
-; CHECK64-NEXT:    movq %rdi, 8(%rax)
-; CHECK64-NEXT:    movq %r10, (%rax)
+; CHECK64-NEXT:    movq %r10, 8(%rax)
+; CHECK64-NEXT:    movq %rdi, (%rax)
 ; CHECK64-NEXT:    movw %si, 64(%rax)
 ; CHECK64-NEXT:    popq %rbx
 ; CHECK64-NEXT:    retq
@@ -390,3 +390,30 @@ define i528 @large_promotion(i528 %A) nounwind {
   ret i528 %Z
 }
 declare i528 @llvm.bswap.i528(i528)
+
+define i32 @pr55484(i32 %0) {
+; CHECK-LABEL: pr55484:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $8, %ecx
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    cwtl
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: pr55484:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    shrl $8, %eax
+; CHECK64-NEXT:    shll $8, %edi
+; CHECK64-NEXT:    orl %eax, %edi
+; CHECK64-NEXT:    movswl %di, %eax
+; CHECK64-NEXT:    retq
+  %2 = lshr i32 %0, 8
+  %3 = shl i32 %0, 8
+  %4 = or i32 %2, %3
+  %5 = trunc i32 %4 to i16
+  %6 = sext i16 %5 to i32
+  ret i32 %6
+}

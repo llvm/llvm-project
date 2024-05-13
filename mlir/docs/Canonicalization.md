@@ -15,17 +15,32 @@ reuse it across many different IRs that it represents. This document describes
 the general approach, global canonicalizations performed, and provides sections
 to capture IR-specific rules for reference.
 
+[TOC]
+
 ## General Design
 
-MLIR has a single canonicalization pass, which iteratively applies
-canonicalization transformations in a greedy way until the IR converges. These
-transformations are defined by the operations themselves, which allows each
-dialect to define its own set of operations and canonicalizations together.
+MLIR has a single canonicalization pass, which iteratively applies the
+canonicalization patterns of all loaded dialects in a greedy way.
+Canonicalization is best-effort and not guaranteed to bring the entire IR in a
+canonical form. It applies patterns until either fixpoint is reached or the
+maximum number of iterations/rewrites (as specified via pass options) is
+exhausted. This is for efficiency reasons and to ensure that faulty patterns
+cannot cause infinite looping.
+
+Canonicalization patterns are registered with the operations themselves, which
+allows each dialect to define its own set of operations and canonicalizations
+together.
 
 Some important things to think about w.r.t. canonicalization patterns:
 
+*   Pass pipelines should not rely on the canonicalizer pass for correctness.
+    They should work correctly with all instances of the canonicalization pass
+    removed.
+
 *   Repeated applications of patterns should converge. Unstable or cyclic
-    rewrites will cause infinite loops in the canonicalizer.
+    rewrites are considered a bug: they can make the canonicalizer pass less
+    predictable and less effective (i.e., some patterns may not be applied) and
+    prevent it from converging.
 
 *   It is generally better to canonicalize towards operations that have fewer
     uses of a value when the operands are duplicated, because some patterns only
@@ -67,7 +82,7 @@ infrastructure allows for expressing many different types of canonicalizations.
 These transformations may be as simple as replacing a multiplication with a
 shift, or even replacing a conditional branch with an unconditional one.
 
-In [ODS](OpDefinitions.md), an operation can set the `hasCanonicalizer` bit or
+In [ODS](DefiningDialects/Operations.md), an operation can set the `hasCanonicalizer` bit or
 the `hasCanonicalizeMethod` bit to generate a declaration for the
 `getCanonicalizationPatterns` method:
 
@@ -111,12 +126,13 @@ mechanism, and can be invoked directly anywhere with an `OpBuilder` via
 `OpBuilder::createOrFold`.
 
 `fold` has the restriction that no new operations may be created, and only the
-root operation may be replaced. It allows for updating an operation in-place, or
-returning a set of pre-existing values (or attributes) to replace the operation
-with. This ensures that the `fold` method is a truly "local" transformation, and
-can be invoked without the need for a pattern rewriter.
+root operation may be replaced (but not erased). It allows for updating an
+operation in-place, or returning a set of pre-existing values (or attributes) to
+replace the operation with. This ensures that the `fold` method is a truly
+"local" transformation, and can be invoked without the need for a pattern
+rewriter.
 
-In [ODS](OpDefinitions.md), an operation can set the `hasFolder` bit to generate
+In [ODS](DefiningDialects/Operations.md), an operation can set the `hasFolder` bit to generate
 a declaration for the `fold` method. This method takes on a different form,
 depending on the structure of the operation.
 
@@ -140,7 +156,7 @@ If the operation has a single result the following will be generated:
 ///     of the operation. The caller will remove the operation and use that
 ///     result instead.
 ///
-OpFoldResult MyOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult MyOp::fold(FoldAdaptor adaptor) {
   ...
 }
 ```
@@ -161,19 +177,20 @@ Otherwise, the following is generated:
 ///     the operation, partial folding is not supported. The caller will remove
 ///     the operation and use those results instead.
 ///
-LogicalResult MyOp::fold(ArrayRef<Attribute> operands,
+/// Note that this mechanism cannot be used to remove 0-result operations.
+LogicalResult MyOp::fold(FoldAdaptor adaptor,
                          SmallVectorImpl<OpFoldResult> &results) {
   ...
 }
 ```
 
-In the above, for each method an `ArrayRef<Attribute>` is provided that
-corresponds to the constant attribute value of each of the operands. These
+In the above, for each method a `FoldAdaptor` is provided with getters for
+each of the operands, returning the corresponding constant attribute. These
 operands are those that implement the `ConstantLike` trait. If any of the
 operands are non-constant, a null `Attribute` value is provided instead. For
 example, if MyOp provides three operands [`a`, `b`, `c`], but only `b` is
-constant then `operands` will be of the form [Attribute(), b-value,
-Attribute()].
+constant then `adaptor` will return Attribute() for `getA()` and `getC()`, 
+and b-value for `getB()`.
 
 Also above, is the use of `OpFoldResult`. This class represents the possible
 result of folding an operation result: either an SSA `Value`, or an
@@ -198,11 +215,11 @@ implement the `materializeConstant` hook. This hook takes in an `Attribute`
 value, generally returned by `fold`, and produces a "constant-like" operation
 that materializes that value.
 
-In [ODS](OpDefinitions.md), a dialect can set the `hasConstantMaterializer` bit
+In [ODS](DefiningDialects/_index.md), a dialect can set the `hasConstantMaterializer` bit
 to generate a declaration for the `materializeConstant` method.
 
 ```tablegen
-def MyDialect_Dialect : ... {
+def MyDialect : ... {
   let hasConstantMaterializer = 1;
 }
 ```

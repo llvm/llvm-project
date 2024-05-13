@@ -19,7 +19,7 @@ define i64 @hoge(i1 %c) {
 ; CHECK:       bb.peel.newph:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    br i1 [[C]], label [[BB1]], label [[BB4_LOOPEXIT:%.*]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[C]], label [[BB1]], label [[BB4_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       bb4.loopexit:
 ; CHECK-NEXT:    [[TMP5_PH:%.*]] = phi i32 [ 8, [[BB1]] ]
 ; CHECK-NEXT:    br label [[BB4]]

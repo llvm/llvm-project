@@ -1,4 +1,4 @@
-// RUN: c-index-test -test-load-source local %s -fopenmp -fopenmp-version=51 | FileCheck %s
+// RUN: c-index-test -test-load-source local %s -fopenmp=libomp | FileCheck %s
 
 void test() {
 #pragma omp tile sizes(5)

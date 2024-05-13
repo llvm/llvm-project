@@ -31,9 +31,9 @@
 #include "ProvenanceAnalysis.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Operator.h"
@@ -102,11 +102,8 @@ public:
 };
 
 class ObjCARCContractLegacyPass : public FunctionPass {
-  ObjCARCContract OCARCC;
-
 public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
 
   static char ID;
@@ -226,13 +223,6 @@ static StoreInst *findSafeStoreForStoreStrongContraction(LoadInst *Load,
     // of Inst.
     ARCInstKind Class = GetBasicARCInstKind(Inst);
 
-    // If Inst is an unrelated retain, we don't care about it.
-    //
-    // TODO: This is one area where the optimization could be made more
-    // aggressive.
-    if (IsRetain(Class))
-      continue;
-
     // If we have seen the store, but not the release...
     if (Store) {
       // We need to make sure that it is safe to move the release from its
@@ -248,8 +238,18 @@ static StoreInst *findSafeStoreForStoreStrongContraction(LoadInst *Load,
       return nullptr;
     }
 
-    // Ok, now we know we have not seen a store yet. See if Inst can write to
-    // our load location, if it can not, just ignore the instruction.
+    // Ok, now we know we have not seen a store yet.
+
+    // If Inst is a retain, we don't care about it as it doesn't prevent moving
+    // the load to the store.
+    //
+    // TODO: This is one area where the optimization could be made more
+    // aggressive.
+    if (IsRetain(Class))
+      continue;
+
+    // See if Inst can write to our load location, if it can not, just ignore
+    // the instruction.
     if (!isModSet(AA->getModRefInfo(Inst, Loc)))
       continue;
 
@@ -382,12 +382,12 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
 
   Value *Args[] = { Load->getPointerOperand(), New };
   if (Args[0]->getType() != I8XX)
-    Args[0] = new BitCastInst(Args[0], I8XX, "", Store);
+    Args[0] = new BitCastInst(Args[0], I8XX, "", Store->getIterator());
   if (Args[1]->getType() != I8X)
-    Args[1] = new BitCastInst(Args[1], I8X, "", Store);
+    Args[1] = new BitCastInst(Args[1], I8X, "", Store->getIterator());
   Function *Decl = EP.get(ARCRuntimeEntryPointKind::StoreStrong);
-  CallInst *StoreStrong =
-      objcarc::createCallInstWithColors(Decl, Args, "", Store, BlockColors);
+  CallInst *StoreStrong = objcarc::createCallInstWithColors(
+      Decl, Args, "", Store->getIterator(), BlockColors);
   StoreStrong->setDoesNotThrow();
   StoreStrong->setDebugLoc(Store->getDebugLoc());
 
@@ -428,17 +428,22 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     if (!optimizeRetainCall(F, Inst))
       return false;
     // If we succeed in our optimization, fall through.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV: {
-    // If we're compiling for a target which needs a special inline-asm
-    // marker to do the return value optimization and the retainRV/claimRV call
-    // wasn't bundled with a call, insert the marker now.
+  case ARCInstKind::UnsafeClaimRV: {
+    // Return true if this is a bundled retainRV/claimRV call, which is always
+    // redundant with the attachedcall in the bundle, and is going to be erased
+    // at the end of this pass.  This avoids undoing objc-arc-expand and
+    // replacing uses of the retainRV/claimRV call's argument with its result.
+    if (BundledInsts->contains(Inst))
+      return true;
+
+    // If this isn't a bundled call, and the target doesn't need a special
+    // inline-asm marker, we're done: return now, and undo objc-arc-expand.
     if (!RVInstMarker)
       return false;
 
-    if (BundledInsts->contains(Inst))
-      return false;
+    // The target needs a special inline-asm marker.  Insert it.
 
     BasicBlock::iterator BBI = Inst->getIterator();
     BasicBlock *InstParent = Inst->getParent();
@@ -467,7 +472,8 @@ bool ObjCARCContract::tryToPeepholeInstruction(
                          RVInstMarker->getString(),
                          /*Constraints=*/"", /*hasSideEffects=*/true);
 
-      objcarc::createCallInstWithColors(IA, None, "", Inst, BlockColors);
+      objcarc::createCallInstWithColors(IA, std::nullopt, "",
+                                        Inst->getIterator(), BlockColors);
     }
   decline_rv_optimization:
     return false;
@@ -478,7 +484,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     if (IsNullOrUndef(CI->getArgOperand(1))) {
       Value *Null = ConstantPointerNull::get(cast<PointerType>(CI->getType()));
       Changed = true;
-      new StoreInst(Null, CI->getArgOperand(0), CI);
+      new StoreInst(Null, CI->getArgOperand(0), CI->getIterator());
 
       LLVM_DEBUG(dbgs() << "OBJCARCContract: Old = " << *CI << "\n"
                         << "                 New = " << *Null << "\n");
@@ -537,7 +543,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   AA = A;
   DT = D;
   PA.setAA(A);
-  BundledRetainClaimRVs BRV(EP, true);
+  BundledRetainClaimRVs BRV(/*ContractPass=*/true);
   BundledInsts = &BRV;
 
   std::pair<bool, bool> R = BundledInsts->insertAfterInvokes(F, DT);
@@ -569,7 +575,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
 
     if (auto *CI = dyn_cast<CallInst>(Inst))
       if (objcarc::hasAttachedCallOpBundle(CI)) {
-        BundledInsts->insertRVCallWithColors(&*I, CI, BlockColors);
+        BundledInsts->insertRVCallWithColors(I->getIterator(), CI, BlockColors);
         --I;
         Changed = true;
       }
@@ -625,8 +631,8 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
 
             assert(DT->dominates(Inst, &InsertBB->back()) &&
                    "Invalid insertion point for bitcast");
-            Replacement =
-                new BitCastInst(Replacement, UseTy, "", &InsertBB->back());
+            Replacement = new BitCastInst(Replacement, UseTy, "",
+                                          InsertBB->back().getIterator());
           }
 
           // While we're here, rewrite all edges for this PHI, rather
@@ -643,8 +649,9 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
             }
         } else {
           if (Replacement->getType() != UseTy)
-            Replacement = new BitCastInst(Replacement, UseTy, "",
-                                          cast<Instruction>(U.getUser()));
+            Replacement =
+                new BitCastInst(Replacement, UseTy, "",
+                                cast<Instruction>(U.getUser())->getIterator());
           U.set(Replacement);
         }
       }
@@ -729,11 +736,9 @@ Pass *llvm::createObjCARCContractPass() {
   return new ObjCARCContractLegacyPass();
 }
 
-bool ObjCARCContractLegacyPass::doInitialization(Module &M) {
-  return OCARCC.init(M);
-}
-
 bool ObjCARCContractLegacyPass::runOnFunction(Function &F) {
+  ObjCARCContract OCARCC;
+  OCARCC.init(*F.getParent());
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   return OCARCC.run(F, AA, DT);

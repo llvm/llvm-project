@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeCompletionStrings.h"
+#include "clang-c/Index.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclObjC.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include <limits>
 #include <utility>
@@ -22,7 +23,7 @@ namespace {
 
 bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
   return Chunk.Kind == CodeCompletionString::CK_Informative &&
-         llvm::StringRef(Chunk.Text).endswith("::");
+         llvm::StringRef(Chunk.Text).ends_with("::");
 }
 
 void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
@@ -55,6 +56,26 @@ bool looksLikeDocComment(llvm::StringRef CommentText) {
   //   -----------------
   //   *****************
   return CommentText.find_first_not_of("/*-= \t\r\n") != llvm::StringRef::npos;
+}
+
+// Determine whether the completion string should be patched
+// to replace the last placeholder with $0.
+bool shouldPatchPlaceholder0(CodeCompletionResult::ResultKind ResultKind,
+                             CXCursorKind CursorKind) {
+  bool CompletingPattern = ResultKind == CodeCompletionResult::RK_Pattern;
+
+  if (!CompletingPattern)
+    return false;
+
+  // If the result kind of CodeCompletionResult(CCR) is `RK_Pattern`, it doesn't
+  // always mean we're completing a chunk of statements.  Constructors defined
+  // in base class, for example, are considered as a type of pattern, with the
+  // cursor type set to CXCursor_Constructor.
+  if (CursorKind == CXCursorKind::CXCursor_Constructor ||
+      CursorKind == CXCursorKind::CXCursor_Destructor)
+    return false;
+
+  return true;
 }
 
 } // namespace
@@ -96,17 +117,21 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
 }
 
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
-                  std::string *Snippet, std::string *RequiredQualifiers,
-                  bool CompletingPattern) {
-  // Placeholder with this index will be ${0:…} to mark final cursor position.
+                  std::string *Snippet,
+                  CodeCompletionResult::ResultKind ResultKind,
+                  CXCursorKind CursorKind, bool IncludeFunctionArguments,
+                  std::string *RequiredQualifiers) {
+  // Placeholder with this index will be $0 to mark final cursor position.
   // Usually we do not add $0, so the cursor is placed at end of completed text.
   unsigned CursorSnippetArg = std::numeric_limits<unsigned>::max();
-  if (CompletingPattern) {
-    // In patterns, it's best to place the cursor at the last placeholder, to
-    // handle cases like
-    //    namespace ${1:name} {
-    //      ${0:decls}
-    //    }
+
+  // If the snippet contains a group of statements, we replace the
+  // last placeholder with $0 to leave the cursor there, e.g.
+  //    namespace ${1:name} {
+  //      ${0:decls}
+  //    }
+  // We try to identify such cases using the ResultKind and CursorKind.
+  if (shouldPatchPlaceholder0(ResultKind, CursorKind)) {
     CursorSnippetArg =
         llvm::count_if(CCS, [](const CodeCompletionString::Chunk &C) {
           return C.Kind == CodeCompletionString::CK_Placeholder;
@@ -115,6 +140,8 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
   unsigned SnippetArg = 0;
   bool HadObjCArguments = false;
   bool HadInformativeChunks = false;
+
+  std::optional<unsigned> TruncateSnippetAt;
   for (const auto &Chunk : CCS) {
     // Informative qualifier chunks only clutter completion results, skip
     // them.
@@ -138,7 +165,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       //   Completing a method declaration itself (not a method expression) is
       //   similar except that we use the `RequiredQualifiers` to store the
       //   text before the selector, e.g. `- (void)`.
-      if (!llvm::StringRef(Chunk.Text).endswith(":")) { // Treat as C++.
+      if (!llvm::StringRef(Chunk.Text).ends_with(":")) { // Treat as C++.
         if (RequiredQualifiers)
           *RequiredQualifiers = std::move(*Signature);
         Signature->clear();
@@ -186,18 +213,22 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       *Snippet += Chunk.Text;
       break;
     case CodeCompletionString::CK_Optional:
-      assert(Chunk.Optional);      
+      assert(Chunk.Optional);
       // No need to create placeholders for default arguments in Snippet.
       appendOptionalChunk(*Chunk.Optional, Signature);
       break;
     case CodeCompletionString::CK_Placeholder:
       *Signature += Chunk.Text;
       ++SnippetArg;
-      *Snippet +=
-          "${" +
-          std::to_string(SnippetArg == CursorSnippetArg ? 0 : SnippetArg) + ':';
-      appendEscapeSnippet(Chunk.Text, Snippet);
-      *Snippet += '}';
+      if (SnippetArg == CursorSnippetArg) {
+        // We'd like to make $0 a placeholder too, but vscode does not support
+        // this (https://github.com/microsoft/vscode/issues/152837).
+        *Snippet += "$0";
+      } else {
+        *Snippet += "${" + std::to_string(SnippetArg) + ':';
+        appendEscapeSnippet(Chunk.Text, Snippet);
+        *Snippet += '}';
+      }
       break;
     case CodeCompletionString::CK_Informative:
       HadInformativeChunks = true;
@@ -216,6 +247,13 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                        "CompletionItems");
       break;
     case CodeCompletionString::CK_LeftParen:
+      // We're assuming that a LeftParen in a declaration starts a function
+      // call, and arguments following the parenthesis could be discarded if
+      // IncludeFunctionArguments is false.
+      if (!IncludeFunctionArguments &&
+          ResultKind == CodeCompletionResult::RK_Declaration)
+        TruncateSnippetAt.emplace(Snippet->size());
+      [[fallthrough]];
     case CodeCompletionString::CK_RightParen:
     case CodeCompletionString::CK_LeftBracket:
     case CodeCompletionString::CK_RightBracket:
@@ -237,6 +275,8 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       break;
     }
   }
+  if (TruncateSnippetAt)
+    *Snippet = Snippet->substr(0, *TruncateSnippetAt);
 }
 
 std::string formatDocumentation(const CodeCompletionString &CCS,

@@ -260,6 +260,8 @@ class TestImportBase
                          FromAST->getFileManager(), false);
 
     auto FoundNodes = match(SearchMatcher, FromCtx);
+    if (FoundNodes.empty())
+      return testing::AssertionFailure() << "No node was found!";
     if (FoundNodes.size() != 1)
       return testing::AssertionFailure()
              << "Multiple potential nodes were found!";
@@ -268,7 +270,7 @@ class TestImportBase
     if (!ToImport)
       return testing::AssertionFailure() << "Node type mismatch!";
 
-    // Sanity check: the node being imported should match in the same way as
+    // The node being imported should match in the same way as
     // the result node.
     internal::BindableMatcher<NodeType> WrapperMatcher(VerificationMatcher);
     EXPECT_TRUE(Verifier.match(ToImport, WrapperMatcher));
@@ -276,9 +278,10 @@ class TestImportBase
     auto Imported = importNode(FromAST.get(), ToAST.get(), Importer, ToImport);
     if (!Imported) {
       std::string ErrorText;
-      handleAllErrors(
-          Imported.takeError(),
-          [&ErrorText](const ImportError &Err) { ErrorText = Err.message(); });
+      handleAllErrors(Imported.takeError(),
+                      [&ErrorText](const ASTImportError &Err) {
+                        ErrorText = Err.message();
+                      });
       return testing::AssertionFailure()
              << "Import failed, error: \"" << ErrorText << "\"!";
     }
@@ -437,7 +440,7 @@ template <class T>
 
 template <class T>
 ::testing::AssertionResult isImportError(llvm::Expected<T> &ValOrErr,
-                                         ImportError::ErrorKind Kind) {
+                                         ASTImportError::ErrorKind Kind) {
   if (ValOrErr) {
     return ::testing::AssertionFailure() << "Expected<> is expected to contain "
                                             "error but does contain value \""
@@ -446,7 +449,7 @@ template <class T>
     std::ostringstream OS;
     bool Result = false;
     auto Err = llvm::handleErrors(
-        ValOrErr.takeError(), [&OS, &Result, Kind](clang::ImportError &IE) {
+        ValOrErr.takeError(), [&OS, &Result, Kind](clang::ASTImportError &IE) {
           if (IE.Error == Kind) {
             Result = true;
             OS << "Expected<> contains an ImportError " << IE.toString();

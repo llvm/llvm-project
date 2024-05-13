@@ -18,18 +18,18 @@ define i64 @test_lllesll(i64 %a, i64 %b)  {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesll:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sradi r5, r4, 63
-; CHECK-BE-NEXT:    rldicl r6, r3, 1, 63
+; CHECK-BE-NEXT:    rldicl r5, r3, 1, 63
+; CHECK-BE-NEXT:    sradi r6, r4, 63
 ; CHECK-BE-NEXT:    subc r3, r4, r3
-; CHECK-BE-NEXT:    adde r3, r5, r6
+; CHECK-BE-NEXT:    adde r3, r6, r5
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    sradi r5, r4, 63
-; CHECK-LE-NEXT:    rldicl r6, r3, 1, 63
+; CHECK-LE-NEXT:    rldicl r5, r3, 1, 63
+; CHECK-LE-NEXT:    sradi r6, r4, 63
 ; CHECK-LE-NEXT:    subc r3, r4, r3
-; CHECK-LE-NEXT:    adde r3, r5, r6
+; CHECK-LE-NEXT:    adde r3, r6, r5
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sle i64 %a, %b
@@ -49,19 +49,19 @@ define i64 @test_lllesll_sext(i64 %a, i64 %b)  {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesll_sext:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sradi r5, r4, 63
-; CHECK-BE-NEXT:    rldicl r6, r3, 1, 63
+; CHECK-BE-NEXT:    rldicl r5, r3, 1, 63
+; CHECK-BE-NEXT:    sradi r6, r4, 63
 ; CHECK-BE-NEXT:    subc r3, r4, r3
-; CHECK-BE-NEXT:    adde r3, r5, r6
+; CHECK-BE-NEXT:    adde r3, r6, r5
 ; CHECK-BE-NEXT:    neg r3, r3
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll_sext:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    sradi r5, r4, 63
-; CHECK-LE-NEXT:    rldicl r6, r3, 1, 63
+; CHECK-LE-NEXT:    rldicl r5, r3, 1, 63
+; CHECK-LE-NEXT:    sradi r6, r4, 63
 ; CHECK-LE-NEXT:    subc r3, r4, r3
-; CHECK-LE-NEXT:    adde r3, r5, r6
+; CHECK-LE-NEXT:    adde r3, r6, r5
 ; CHECK-LE-NEXT:    neg r3, r3
 ; CHECK-LE-NEXT:    blr
 entry:
@@ -137,27 +137,27 @@ define dso_local void @test_lllesll_store(i64 %a, i64 %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesll_store:
 ; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    rldicl r5, r3, 1, 63
 ; CHECK-BE-NEXT:    sradi r6, r4, 63
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
-; CHECK-BE-NEXT:    subc r4, r4, r3
-; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-BE-NEXT:    adde r3, r6, r3
-; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    subc r3, r4, r3
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-BE-NEXT:    adde r3, r6, r5
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll_store:
 ; CHECK-LE:       # %bb.0: # %entry
+; CHECK-LE-NEXT:    rldicl r5, r3, 1, 63
 ; CHECK-LE-NEXT:    sradi r6, r4, 63
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
-; CHECK-LE-NEXT:    subc r4, r4, r3
-; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-LE-NEXT:    adde r3, r6, r3
-; CHECK-LE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    subc r3, r4, r3
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-LE-NEXT:    adde r3, r6, r5
+; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sle i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -175,29 +175,29 @@ define dso_local void @test_lllesll_sext_store(i64 %a, i64 %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesll_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    rldicl r5, r3, 1, 63
 ; CHECK-BE-NEXT:    sradi r6, r4, 63
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
-; CHECK-BE-NEXT:    subc r4, r4, r3
-; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-BE-NEXT:    adde r3, r6, r3
+; CHECK-BE-NEXT:    subc r3, r4, r3
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-BE-NEXT:    adde r3, r6, r5
 ; CHECK-BE-NEXT:    neg r3, r3
-; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll_sext_store:
 ; CHECK-LE:       # %bb.0: # %entry
+; CHECK-LE-NEXT:    rldicl r5, r3, 1, 63
 ; CHECK-LE-NEXT:    sradi r6, r4, 63
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
-; CHECK-LE-NEXT:    subc r4, r4, r3
-; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-LE-NEXT:    adde r3, r6, r3
+; CHECK-LE-NEXT:    subc r3, r4, r3
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-LE-NEXT:    adde r3, r6, r5
 ; CHECK-LE-NEXT:    neg r3, r3
-; CHECK-LE-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sle i64 %a, %b
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -213,25 +213,25 @@ define dso_local void @test_lllesll_z_store(i64 %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesll_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addi r5, r3, -1
+; CHECK-BE-NEXT:    addi r4, r3, -1
+; CHECK-BE-NEXT:    or r3, r4, r3
 ; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-BE-NEXT:    or r3, r5, r3
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll_z_store:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    addi r5, r3, -1
+; CHECK-LE-NEXT:    addi r4, r3, -1
+; CHECK-LE-NEXT:    or r3, r4, r3
 ; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-LE-NEXT:    or r3, r5, r3
 ; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp slt i64 %a, 1
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -247,24 +247,24 @@ define dso_local void @test_lllesll_sext_z_store(i64 %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesll_sext_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addi r5, r3, -1
+; CHECK-BE-NEXT:    addi r4, r3, -1
+; CHECK-BE-NEXT:    or r3, r4, r3
 ; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-BE-NEXT:    or r3, r5, r3
 ; CHECK-BE-NEXT:    sradi r3, r3, 63
 ; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll_sext_z_store:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    addi r5, r3, -1
+; CHECK-LE-NEXT:    addi r4, r3, -1
+; CHECK-LE-NEXT:    or r3, r4, r3
 ; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-LE-NEXT:    or r3, r5, r3
 ; CHECK-LE-NEXT:    sradi r3, r3, 63
 ; CHECK-LE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp slt i64 %a, 1
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }

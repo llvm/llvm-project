@@ -91,20 +91,18 @@ void PointerToMember(S obj1, S *obj2, int S::* data, void (S::*call)(int)) {
 }
 
 void Casting(const S *s) {
-  // FIXME: The cast expressions contain "struct S" instead of "S".
-
   const_cast<S *>(s);
-  // CHECK: CXXConstCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:20> 'S *' const_cast<struct S *> <NoOp>
+  // CHECK: CXXConstCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:20> 'S *' const_cast<S *> <NoOp>
   // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:19> 'const S *' <LValueToRValue> part_of_explicit_cast
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:19> 'const S *' lvalue ParmVar 0x{{[^ ]*}} 's' 'const S *'
 
   static_cast<const T *>(s);
-  // CHECK: CXXStaticCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:27> 'const T *' static_cast<const struct T *> <BaseToDerived (S)>
+  // CHECK: CXXStaticCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:27> 'const T *' static_cast<const T *> <BaseToDerived (S)>
   // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:26> 'const S *' <LValueToRValue> part_of_explicit_cast
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:26> 'const S *' lvalue ParmVar 0x{{[^ ]*}} 's' 'const S *'
 
   dynamic_cast<const T *>(s);
-  // CHECK: CXXDynamicCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:28> 'const T *' dynamic_cast<const struct T *> <Dynamic>
+  // CHECK: CXXDynamicCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:28> 'const T *' dynamic_cast<const T *> <Dynamic>
   // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:27> 'const S *' <LValueToRValue> part_of_explicit_cast
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:27> 'const S *' lvalue ParmVar 0x{{[^ ]*}} 's' 'const S *'
 
@@ -147,7 +145,7 @@ void UnaryExpressions(int *p) {
   // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(unsigned long)'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 2
-  // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:13, col:18> 'int [2]'
+  // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:13, col:18> 'int[2]'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:14> 'int' 1
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:17> 'int' 2
 
@@ -192,14 +190,14 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
 
   // FIXME: there is no mention that this used the template keyword.
   p->template foo<int>();
-  // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:24> 'int':'int'
+  // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:24> 'int'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:22> '<bound member function type>' ->foo 0x{{[^ ]*}}
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'S *'
 
   // FIXME: there is no mention that this used the template keyword.
   a.template foo<float>();
-  // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:25> 'float':'float'
+  // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:25> 'float'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:23> '<bound member function type>' .foo 0x{{[^ ]*}}
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
 
@@ -226,6 +224,8 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   p->::S::~S();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:14> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:12> '<bound member function type>' ->~S 0x{{[^ ]*}}
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'S'
+  // CHECK-NEXT: NestedNameSpecifier Global
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'S *'
 
@@ -233,6 +233,7 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   r->template U<int>::~U();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:26> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:24> '<bound member function type>' ->~U 0x{{[^ ]*}}
+  // CHECK-NEXT: NestedNameSpecifier TypeSpecWithTemplate 'U<int>'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'U<int> *' lvalue ParmVar 0x{{[^ ]*}} 'r' 'U<int> *'
 
@@ -447,7 +448,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:16, col:18> col:3 operator() 'auto () const -> auto' inline
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'Ts...'
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:10> col:10 implicit 'int':'int'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:10> col:10 implicit 'int'
   // CHECK-NEXT: ParenListExpr 0x{{[^ ]*}} <col:4> 'NULL TYPE'
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:14> 'int' 12
@@ -466,7 +467,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:8, col:19> col:3 constexpr operator() 'auto () const' inline
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
-  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit __invoke 'auto ()' static inline
+  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit constexpr __invoke 'auto ()' static inline
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:18, col:19>
 
   []() mutable {};

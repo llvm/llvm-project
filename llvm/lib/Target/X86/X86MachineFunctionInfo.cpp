@@ -13,6 +13,13 @@
 
 using namespace llvm;
 
+MachineFunctionInfo *X86MachineFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  return DestMF.cloneInfo<X86MachineFunctionInfo>(*this);
+}
+
 void X86MachineFunctionInfo::anchor() { }
 
 void X86MachineFunctionInfo::setRestoreBasePointer(const MachineFunction *MF) {

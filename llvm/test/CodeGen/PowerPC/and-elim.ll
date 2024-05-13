@@ -1,11 +1,11 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep rlwin
 
-define void @test(i8* %P) {
-	%W = load i8, i8* %P
+define void @test(ptr %P) {
+	%W = load i8, ptr %P
 	%X = shl i8 %W, 1
 	%Y = add i8 %X, 2
 	%Z = and i8 %Y, 254        ; dead and
-	store i8 %Z, i8* %P
+	store i8 %Z, ptr %P
 	ret void
 }
 

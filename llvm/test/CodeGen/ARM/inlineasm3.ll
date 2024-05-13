@@ -10,7 +10,7 @@ entry:
 ; CHECK: vmov.32 d30[0],
 ; CHECK: vmov q8, q15
   %tmp = alloca %struct.int32x4_t, align 16
-  call void asm sideeffect "vmov.I64 q15, #0\0Avmov.32 d30[0], $1\0Avmov ${0:q}, q15\0A", "=*w,r,~{d31},~{d30}"(%struct.int32x4_t* %tmp, i32 8192) nounwind
+  call void asm sideeffect "vmov.I64 q15, #0\0Avmov.32 d30[0], $1\0Avmov ${0:q}, q15\0A", "=*w,r,~{d31},~{d30}"(ptr elementtype(%struct.int32x4_t) %tmp, i32 8192) nounwind
   ret void
 }
 
@@ -27,11 +27,11 @@ entry:
 
 ; Radar 9306086
 
-%0 = type { <8 x i8>, <16 x i8>* }
+%0 = type { <8 x i8>, ptr }
 
 define hidden void @conv4_8_E() nounwind {
 entry:
-%asmtmp31 = call %0 asm "vld1.u8  {$0}, [$1:128]!\0A", "=w,=r,1"(<16 x i8>* undef) nounwind
+%asmtmp31 = call %0 asm "vld1.u8  {$0}, [$1:128]!\0A", "=w,=r,1"(ptr undef) nounwind
 unreachable
 }
 
@@ -48,7 +48,7 @@ ret i32 0
 @k.2126 = internal unnamed_addr global float 1.000000e+00
 define i32 @t4() nounwind {
 entry:
-call void asm sideeffect "flds s15, $0 \0A", "*^Uv,~{s15}"(float* @k.2126) nounwind
+call void asm sideeffect "flds s15, $0 \0A", "*^Uv,~{s15}"(ptr elementtype(float) @k.2126) nounwind
 ret i32 0
 }
 
@@ -56,7 +56,7 @@ ret i32 0
 
 define i32 @t5() nounwind {
 entry:
-call void asm sideeffect "flds s15, $0 \0A", "*^Uvm,~{s15}"(float* @k.2126) nounwind
+call void asm sideeffect "flds s15, $0 \0A", "*^Uvm,~{s15}"(ptr elementtype(float) @k.2126) nounwind
 ret i32 0
 }
 
@@ -102,23 +102,23 @@ entry:
 
 ; Radar 9866494
 
-define void @t10(i8* %f, i32 %g) nounwind {
+define void @t10(ptr %f, i32 %g) nounwind {
 entry:
 ; CHECK: t10
 ; CHECK: str r1, [r0]
-  %f.addr = alloca i8*, align 4
-  store i8* %f, i8** %f.addr, align 4
-  call void asm "str $1, $0", "=*Q,r"(i8** %f.addr, i32 %g) nounwind
+  %f.addr = alloca ptr, align 4
+  store ptr %f, ptr %f.addr, align 4
+  call void asm "str $1, $0", "=*Q,r"(ptr elementtype(ptr) %f.addr, i32 %g) nounwind
   ret void
 }
 
 ; Radar 10551006
 
-define <4 x i32> @t11(i32* %p) nounwind {
+define <4 x i32> @t11(ptr %p) nounwind {
 entry:
 ; CHECK: t11
 ; CHECK: vld1.s32 {d16[], d17[]}, [r0]
-  %0 = tail call <4 x i32> asm "vld1.s32 {${0:e}[], ${0:f}[]}, [$1]", "=w,r"(i32* %p) nounwind
+  %0 = tail call <4 x i32> asm "vld1.s32 {${0:e}[], ${0:f}[]}, [$1]", "=w,r"(ptr %p) nounwind
   ret <4 x i32> %0
 }
 
@@ -129,6 +129,6 @@ define i32 @fn1() local_unnamed_addr nounwind {
 entry:
 ; CHECK: mov [[addr:r[0-9]+]], #5
 ; CHECK: ldrh {{.*}}[[addr]]
-  %0 = tail call i32 asm "ldrh  $0, $1", "=r,*Q"(i8* inttoptr (i32 5 to i8*)) nounwind
+  %0 = tail call i32 asm "ldrh  $0, $1", "=r,*Q"(ptr elementtype(i8) inttoptr (i32 5 to ptr)) nounwind
   ret i32 %0
 }

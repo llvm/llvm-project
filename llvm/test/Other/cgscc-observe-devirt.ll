@@ -20,10 +20,10 @@ declare void @unknown()
 ; BEFORE: define void @test1_a1() {
 ; AFTER: define void @test1_a1() {
 define void @test1_a1() {
-  %fptr = alloca void()*
-  store void()* @test1_b2, void()** %fptr
-  store void()* @test1_b1, void()** %fptr
-  %f = load void()*, void()** %fptr
+  %fptr = alloca ptr
+  store ptr @test1_b2, ptr %fptr
+  store ptr @test1_b1, ptr %fptr
+  %f = load ptr, ptr %fptr
   call void %f()
   ret void
 }
@@ -39,10 +39,10 @@ define void @test1_b1() {
 ; BEFORE: define void @test1_a2() {
 ; AFTER: define void @test1_a2() #0 {
 define void @test1_a2() {
-  %fptr = alloca void()*
-  store void()* @test1_b1, void()** %fptr
-  store void()* @test1_b2, void()** %fptr
-  %f = load void()*, void()** %fptr
+  %fptr = alloca ptr
+  store ptr @test1_b1, ptr %fptr
+  store ptr @test1_b2, ptr %fptr
+  %f = load ptr, ptr %fptr
   call void %f()
   ret void
 }
@@ -71,34 +71,34 @@ define void @test2_a() {
 
 ; CHECK: define void @test2_b1() #0 {
 define void @test2_b1() {
-  %fptr = alloca void()*
-  store void()* @test2_a, void()** %fptr
-  store void()* @readnone, void()** %fptr
-  %f = load void()*, void()** %fptr
+  %fptr = alloca ptr
+  store ptr @test2_a, ptr %fptr
+  store ptr @readnone, ptr %fptr
+  %f = load ptr, ptr %fptr
   call void %f()
   ret void
 }
 
 ; CHECK: define void @test2_b2() #0 {
 define void @test2_b2() {
-  %fptr = alloca void()*
-  store void()* @test2_a, void()** %fptr
-  store void()* @test2_b2, void()** %fptr
-  store void()* @test2_b3, void()** %fptr
-  store void()* @test2_b1, void()** %fptr
-  %f = load void()*, void()** %fptr
+  %fptr = alloca ptr
+  store ptr @test2_a, ptr %fptr
+  store ptr @test2_b2, ptr %fptr
+  store ptr @test2_b3, ptr %fptr
+  store ptr @test2_b1, ptr %fptr
+  %f = load ptr, ptr %fptr
   call void %f()
   ret void
 }
 
 ; CHECK: define void @test2_b3() #0 {
 define void @test2_b3() {
-  %fptr = alloca void()*
-  store void()* @test2_a, void()** %fptr
-  store void()* @test2_b2, void()** %fptr
-  store void()* @test2_b3, void()** %fptr
-  store void()* @test2_b1, void()** %fptr
-  %f = load void()*, void()** %fptr
+  %fptr = alloca ptr
+  store ptr @test2_a, ptr %fptr
+  store ptr @test2_b2, ptr %fptr
+  store ptr @test2_b3, ptr %fptr
+  store ptr @test2_b1, ptr %fptr
+  %f = load ptr, ptr %fptr
   call void %f()
   ret void
 }

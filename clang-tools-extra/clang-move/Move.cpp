@@ -65,7 +65,7 @@ std::string CleanPath(StringRef PathRef) {
   llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
   // FIXME: figure out why this is necessary.
   llvm::sys::path::native(Path);
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 // Make the Path absolute using the CurrentDir if the Path is not an absolute
@@ -92,7 +92,7 @@ std::string MakeAbsolutePath(const SourceManager &SM, StringRef Path) {
                  << '\n';
   // Handle symbolic link path cases.
   // We are trying to get the real file path of the symlink.
-  auto Dir = SM.getFileManager().getDirectory(
+  auto Dir = SM.getFileManager().getOptionalDirectoryRef(
       llvm::sys::path::parent_path(AbsolutePath.str()));
   if (Dir) {
     StringRef DirName = SM.getFileManager().getCanonicalName(*Dir);
@@ -115,8 +115,8 @@ AST_POLYMORPHIC_MATCHER_P(isExpansionInFile,
   auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getBeginLoc());
   if (ExpansionLoc.isInvalid())
     return false;
-  auto *FileEntry =
-      SourceManager.getFileEntryForID(SourceManager.getFileID(ExpansionLoc));
+  auto FileEntry =
+      SourceManager.getFileEntryRefForID(SourceManager.getFileID(ExpansionLoc));
   if (!FileEntry)
     return false;
   return MakeAbsolutePath(SourceManager, FileEntry->getName()) ==
@@ -131,11 +131,12 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token & /*IncludeTok*/,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          const FileEntry * /*File*/, StringRef SearchPath,
+                          OptionalFileEntryRef /*File*/, StringRef SearchPath,
                           StringRef /*RelativePath*/,
-                          const Module * /*Imported*/,
+                          const Module * /*SuggestedModule*/,
+                          bool /*ModuleImported*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
-    if (const auto *FileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc)))
+    if (auto FileEntry = SM.getFileEntryRefForID(SM.getFileID(HashLoc)))
       MoveTool->addIncludes(FileName, IsAngled, SearchPath,
                             FileEntry->getName(), FilenameRange, SM);
   }
@@ -341,7 +342,7 @@ bool isInHeaderFile(const Decl *D, llvm::StringRef OriginalRunningDirectory,
   if (ExpansionLoc.isInvalid())
     return false;
 
-  if (const auto *FE = SM.getFileEntryForID(SM.getFileID(ExpansionLoc))) {
+  if (auto FE = SM.getFileEntryRefForID(SM.getFileID(ExpansionLoc))) {
     return MakeAbsolutePath(SM, FE->getName()) ==
            MakeAbsolutePath(OriginalRunningDirectory, OldHeader);
   }
@@ -843,7 +844,7 @@ void ClangMoveTool::moveDeclsToNewFiles() {
 // Move all contents from OldFile to NewFile.
 void ClangMoveTool::moveAll(SourceManager &SM, StringRef OldFile,
                             StringRef NewFile) {
-  auto FE = SM.getFileManager().getFile(makeAbsolutePath(OldFile));
+  auto FE = SM.getFileManager().getOptionalFileRef(makeAbsolutePath(OldFile));
   if (!FE) {
     llvm::errs() << "Failed to get file: " << OldFile << "\n";
     return;
@@ -920,8 +921,7 @@ void ClangMoveTool::onEndOfTranslationUnit() {
       return false;
     }
   };
-  if (std::none_of(UnremovedDeclsInOldHeader.begin(),
-                   UnremovedDeclsInOldHeader.end(), IsSupportedKind) &&
+  if (llvm::none_of(UnremovedDeclsInOldHeader, IsSupportedKind) &&
       !Context->Spec.OldHeader.empty()) {
     auto &SM = RemovedDecls[0]->getASTContext().getSourceManager();
     moveAll(SM, Context->Spec.OldHeader, Context->Spec.NewHeader);

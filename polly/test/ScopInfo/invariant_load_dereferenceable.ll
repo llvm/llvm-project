@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-detect -polly-scops \
+; RUN: opt %loadPolly -polly-print-detect -polly-print-scops \
 ; RUN: -polly-invariant-load-hoisting=true \
-; RUN: -analyze < %s | FileCheck %s
+; RUN: -disable-output < %s | FileCheck %s
 
 ; CHECK-NOT: Function: foo_undereferanceable
 
@@ -17,7 +17,7 @@
 
 ; CHECK-NOT: Function: foo_undereferanceable
 
-define void @foo_dereferanceable(double* %A, double* %B, i64* dereferenceable(8) align 8 %sizeA_ptr,
+define void @foo_dereferanceable(ptr %A, ptr %B, ptr dereferenceable(8) align 8 %sizeA_ptr,
 		i32 %lb.i, i32 %lb.j, i32 %ub.i, i32 %ub.j) {
 entry:
 	br label %for.i
@@ -46,11 +46,11 @@ stmt:
 	%sext.i = sext i32 %indvar.i to i64
 	%sext.j = sext i32 %indvar.j to i64
 
-	%sizeA = load i64, i64* %sizeA_ptr
+	%sizeA = load i64, ptr %sizeA_ptr
 	%prodA = mul i64 %sext.j, %sizeA
 	%offsetA = add i64 %sext.i, %prodA
-	%ptrA = getelementptr double, double* %A, i64 %offsetA
-	store double 42.0, double* %ptrA
+	%ptrA = getelementptr double, ptr %A, i64 %offsetA
+	store double 42.0, ptr %ptrA
 
 	br label %for.latch.j
 
@@ -64,7 +64,7 @@ exit:
 	ret void
 }
 
-define void @foo_undereferanceable(double* %A, double* %B, i64* %sizeA_ptr) {
+define void @foo_undereferanceable(ptr %A, ptr %B, ptr %sizeA_ptr) {
 entry:
 	br label %for.i
 
@@ -92,11 +92,11 @@ stmt:
 	%sext.i = sext i32 %indvar.i to i64
 	%sext.j = sext i32 %indvar.j to i64
 
-	%sizeA = load i64, i64* %sizeA_ptr
+	%sizeA = load i64, ptr %sizeA_ptr
 	%prodA = mul i64 %sext.j, %sizeA
 	%offsetA = add i64 %sext.i, %prodA
-	%ptrA = getelementptr double, double* %A, i64 %offsetA
-	store double 42.0, double* %ptrA
+	%ptrA = getelementptr double, ptr %A, i64 %offsetA
+	store double 42.0, ptr %ptrA
 
 	br label %for.latch.j
 

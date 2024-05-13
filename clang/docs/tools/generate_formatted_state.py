@@ -9,36 +9,42 @@ from datetime import datetime
 
 
 def get_git_revision_short_hash():
-    return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']
-                                   ).decode(sys.stdout.encoding).strip()
+    """Get the get SHA in short hash form."""
+    return (
+        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+        .decode(sys.stdout.encoding)
+        .strip()
+    )
 
 
 def get_style(count, passed):
+    """Determine if this directory is good based on  the number of clean
+    files vs the number of files in total."""
     if passed == count:
         return ":good:"
-    elif passed != 0:
+    if passed != 0:
         return ":part:"
-    else:
-        return ":none:"
+    return ":none:"
 
 
-TOP_DIR = os.path.join(os.path.dirname(__file__), '../../..')
-CLANG_DIR = os.path.join(os.path.dirname(__file__), '../..')
-DOC_FILE = os.path.join(CLANG_DIR, 'docs/ClangFormattedStatus.rst')
+TOP_DIR = os.path.join(os.path.dirname(__file__), "../../..")
+CLANG_DIR = os.path.join(os.path.dirname(__file__), "../..")
+DOC_FILE = os.path.join(CLANG_DIR, "docs/ClangFormattedStatus.rst")
+CLEAN_FILE = os.path.join(CLANG_DIR, "docs/tools/clang-formatted-files.txt")
 
 rootdir = TOP_DIR
 
 skipped_dirs = [".git", "test"]
 suffixes = (".cpp", ".h")
 
-rst_prefix = """\
+RST_PREFIX = """\
 .. raw:: html
 
       <style type="text/css">
-        .none {{ background-color: #FFCC99 }}
-        .part {{ background-color: #FFFF99 }}
-        .good {{ background-color: #2CCCFF }}
         .total {{ font-weight: bold; }}
+        .none {{ background-color: #FFFF99; height: 20px; display: inline-block; width: 120px; text-align: center; border-radius: 5px; color: #000000; font-family="Verdana,Geneva,DejaVu Sans,sans-serif" }}
+        .part {{ background-color: #FFCC99; height: 20px; display: inline-block; width: 120px; text-align: center; border-radius: 5px; color: #000000; font-family="Verdana,Geneva,DejaVu Sans,sans-serif" }}
+        .good {{ background-color: #2CCCFF; height: 20px; display: inline-block; width: 120px; text-align: center; border-radius: 5px; color: #000000; font-family="Verdana,Geneva,DejaVu Sans,sans-serif" }}
       </style>
 
 .. role:: none
@@ -64,7 +70,7 @@ tree in terms of conformance to :doc:`ClangFormat` as of: {today} (`{sha} <https
      - % Complete
 """
 
-table_row = """\
+TABLE_ROW = """\
    * - {path}
      - {style}`{count}`
      - {style}`{passes}`
@@ -72,13 +78,14 @@ table_row = """\
      - {style2}`{percent}%`
 """
 
-FNULL = open(os.devnull, 'w')
+FNULL = open(os.devnull, "w")
 
-with open(DOC_FILE, 'wb') as output:
+
+with open(DOC_FILE, "wb") as output:
+    cleanfiles = open(CLEAN_FILE, "wb")
     sha = get_git_revision_short_hash()
     today = datetime.now().strftime("%B %d, %Y %H:%M:%S")
-    output.write(bytes(rst_prefix.format(today=today,
-                                         sha=sha).encode("utf-8")))
+    output.write(bytes(RST_PREFIX.format(today=today, sha=sha).encode("utf-8")))
 
     total_files_count = 0
     total_files_pass = 0
@@ -95,13 +102,14 @@ with open(DOC_FILE, 'wb') as output:
                 git_check = subprocess.Popen(
                     ["git", "ls-files", "--error-unmatch", act_sub_dir],
                     stdout=FNULL,
-                    stderr=FNULL)
+                    stderr=FNULL,
+                )
                 if git_check.wait() != 0:
                     print("Skipping directory: ", act_sub_dir)
                     subdirs.remove(subdir)
 
         path = os.path.relpath(root, TOP_DIR)
-        path = path.replace('\\', '/')
+        path = path.replace("\\", "/")
 
         file_count = 0
         file_pass = 0
@@ -119,38 +127,54 @@ with open(DOC_FILE, 'wb') as output:
             stdout, err = cmd.communicate()
 
             relpath = os.path.relpath(file_path, TOP_DIR)
-            relpath = relpath.replace('\\', '/')
-            if err.decode(sys.stdout.encoding).find(': warning:') > 0:
+            relpath = relpath.replace("\\", "/")
+            if err.decode(sys.stdout.encoding).find(": warning:") > 0:
                 print(relpath, ":", "FAIL")
                 file_fail += 1
             else:
                 print(relpath, ":", "PASS")
                 file_pass += 1
+                cleanfiles.write(bytes(relpath + "\n"))
+                cleanfiles.flush()
 
         total_files_count += file_count
         total_files_pass += file_pass
         total_files_fail += file_fail
 
         if file_count > 0:
-            percent = (int(100.0 * (float(file_pass)/float(file_count))))
+            percent = int(100.0 * (float(file_pass) / float(file_count)))
             style = get_style(file_count, file_pass)
-            output.write(bytes(table_row.format(path=path,
-                                                count=file_count,
-                                                passes=file_pass,
-                                                fails=file_fail,
-                                                percent=str(percent), style="",
-                                                style2=style).encode("utf-8")))
+            output.write(
+                bytes(
+                    TABLE_ROW.format(
+                        path=path,
+                        count=file_count,
+                        passes=file_pass,
+                        fails=file_fail,
+                        percent=str(percent),
+                        style="",
+                        style2=style,
+                    ).encode("utf-8")
+                )
+            )
             output.flush()
 
             print("----\n")
             print(path, file_count, file_pass, file_fail, percent)
             print("----\n")
 
-    total_percent = (float(total_files_pass)/float(total_files_count))
+    total_percent = float(total_files_pass) / float(total_files_count)
     percent_str = str(int(100.0 * total_percent))
-    output.write(bytes(table_row.format(path="Total",
-                                        count=total_files_count,
-                                        passes=total_files_pass,
-                                        fails=total_files_fail,
-                                        percent=percent_str, style=":total:",
-                                        style2=":total:").encode("utf-8")))
+    output.write(
+        bytes(
+            TABLE_ROW.format(
+                path="Total",
+                count=total_files_count,
+                passes=total_files_pass,
+                fails=total_files_fail,
+                percent=percent_str,
+                style=":total:",
+                style2=":total:",
+            ).encode("utf-8")
+        )
+    )

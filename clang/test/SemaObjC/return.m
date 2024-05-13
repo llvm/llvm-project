@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wmissing-noreturn -fobjc-exceptions -Wno-objc-root-class %s
 
-int test1() {
+int test1(void) {
   id a;
   @throw a;
 }
@@ -21,11 +21,10 @@ void test3(int a) {  // expected-warning {{function 'test3' could be declared wi
   }
 }
 
-// <rdar://problem/4289832> - This code always returns, we should not
-//  issue a noreturn warning.
+// This code always returns, we should not issue a noreturn warning.
 @class NSException;
 @class NSString;
-NSString *rdar_4289832() {  // no-warning
+NSString *rdar_4289832(void) {  // no-warning
     @try
     {
         return @"a";

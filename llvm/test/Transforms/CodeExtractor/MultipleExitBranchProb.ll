@@ -1,4 +1,4 @@
-; RUN: opt < %s -partial-inliner -max-num-inline-blocks=2 -skip-partial-inlining-cost-analysis -S | FileCheck %s
+; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=2 -skip-partial-inlining-cost-analysis -S | FileCheck %s
 
 ; This test checks to make sure that CodeExtractor updates
 ;  the exit branch probabilities for multiple exit blocks.
@@ -31,4 +31,4 @@ ret i32 %val
 !2 = !{!"branch_weights", i32 5, i32 5}
 !3 = !{!"branch_weights", i32 4, i32 1}
 
-; CHECK: [[COUNT1]] = !{!"branch_weights", i32 31, i32 8}
+; CHECK: [[COUNT1]] = !{!"branch_weights", i32 858993459, i32 214748365}

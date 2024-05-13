@@ -8,7 +8,7 @@ long testReturn(long a, float b) {
 }
 #endif
 
-void testAssignment() {
+void testAssignment(void) {
   float f = 222222;
   double b = 222222222222L;
 
@@ -21,7 +21,7 @@ void testAssignment() {
 #endif
 }
 
-void testExpression() {
+void testExpression(void) {
   float a = 0.0f;
 
   float b = 222222222222L + a; // expected-warning {{changes value from 222222222222 to 222222221312}}
@@ -38,7 +38,7 @@ void testExpression() {
   double f = i + e;
 }
 
-void testCNarrowing() {
+void testCNarrowing(void) {
   // Since this is a C file. C++11 narrowing is not in effect.
   // In this case, we should issue warnings.
   float a = {222222222222L}; // expected-warning {{changes value from 222222222222 to 222222221312}}

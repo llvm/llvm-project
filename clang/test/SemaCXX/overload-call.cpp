@@ -339,8 +339,8 @@ namespace PR5756 {
 // Tests the exact text used to note the candidates
 namespace test1 {
 template <class T>
-void foo(T t, unsigned N);                        // expected-note {{candidate function template not viable: no known conversion from 'const char [6]' to 'unsigned int' for 2nd argument}}
-void foo(int n, char N);                          // expected-note {{candidate function not viable: no known conversion from 'const char [6]' to 'char' for 2nd argument}}
+void foo(T t, unsigned N);                        // expected-note {{candidate function template not viable: no known conversion from 'const char[6]' to 'unsigned int' for 2nd argument}}
+void foo(int n, char N);                          // expected-note {{candidate function not viable: no known conversion from 'const char[6]' to 'char' for 2nd argument}}
 void foo(int n, const char *s, int t);            // expected-note {{candidate function not viable: requires 3 arguments, but 2 were provided}}
 void foo(int n, const char *s, int t, ...);       // expected-note {{candidate function not viable: requires at least 3 arguments, but 2 were provided}}
 void foo(int n, const char *s, int t, int u = 0); // expected-note {{candidate function not viable: requires at least 3 arguments, but 2 were provided}}
@@ -388,8 +388,8 @@ namespace IncompleteConversion {
     completeFunction(*P); // expected-error {{no matching function for call to 'completeFunction'}}
   }
   
-  void incompletePointerFunction(Incomplete *); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'IncompleteConversion::Incomplete' to 'IncompleteConversion::Incomplete *' for 1st argument; take the address of the argument with &}}
-  void incompleteReferenceFunction(Incomplete &); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'IncompleteConversion::Incomplete *' to 'IncompleteConversion::Incomplete &' for 1st argument; dereference the argument with *}}
+  void incompletePointerFunction(Incomplete *); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'Incomplete' to 'Incomplete *' for 1st argument; take the address of the argument with &}}
+  void incompleteReferenceFunction(Incomplete &); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'Incomplete *' to 'Incomplete &' for 1st argument; dereference the argument with *}}
   
   void testPointerReferenceConversion(Incomplete &reference, Incomplete *pointer) {
     incompletePointerFunction(reference); // expected-error {{no matching function for call to 'incompletePointerFunction'}}
@@ -467,7 +467,7 @@ namespace PR6078 {
   };
 
   void f() {
-    S()(0); // expected-error{{conversion from 'int' to 'PR6078::A' is ambiguous}}
+    S()(0); // expected-error{{conversion from 'int' to 'A' is ambiguous}}
   }
 }
 
@@ -527,7 +527,6 @@ namespace NontrivialSubsequence {
   }
 }
 
-// rdar://rdar8499524
 namespace rdar8499524 {
   struct W {};
   struct S {

@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_CLONEDETECTION_H
-#define LLVM_CLANG_AST_CLONEDETECTION_H
+#ifndef LLVM_CLANG_ANALYSIS_CLONEDETECTION_H
+#define LLVM_CLANG_ANALYSIS_CLONEDETECTION_H
 
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/Support/Regex.h"
@@ -208,13 +208,7 @@ public:
     // The initial assumption is that there is only one clone group and every
     // statement is a clone of the others. This clone group will then be
     // split up with the help of the constraints.
-    CloneGroup AllClones;
-    AllClones.reserve(Sequences.size());
-    for (const auto &C : Sequences) {
-      AllClones.push_back(C);
-    }
-
-    Result.push_back(AllClones);
+    Result.push_back(Sequences);
 
     constrainClones(Result, ConstraintList...);
   }
@@ -235,9 +229,7 @@ public:
   static void filterGroups(
       std::vector<CloneDetector::CloneGroup> &CloneGroups,
       llvm::function_ref<bool(const CloneDetector::CloneGroup &)> Filter) {
-    CloneGroups.erase(
-        std::remove_if(CloneGroups.begin(), CloneGroups.end(), Filter),
-        CloneGroups.end());
+    llvm::erase_if(CloneGroups, Filter);
   }
 
   /// Splits the given CloneGroups until the given Compare function returns true
@@ -268,7 +260,7 @@ public:
 ///
 /// Clones that aren't type II clones are moved into separate clone groups.
 /// In contrast to the RecursiveCloneTypeIIHashConstraint, all clones in a clone
-/// group are guaranteed to be be type II clones of each other, but it is too
+/// group are guaranteed to be type II clones of each other, but it is too
 /// slow to efficiently handle large amounts of clones.
 class RecursiveCloneTypeIIVerifyConstraint {
 public:
@@ -443,4 +435,4 @@ struct MatchingVariablePatternConstraint {
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_AST_CLONEDETECTION_H
+#endif // LLVM_CLANG_ANALYSIS_CLONEDETECTION_H

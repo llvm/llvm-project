@@ -44,6 +44,14 @@ enum ObjCKeywordKind {
   NUM_OBJC_KEYWORDS
 };
 
+/// Provides a namespace for notable identifers such as float_t and
+/// double_t.
+enum NotableIdentifierKind {
+#define NOTABLE_IDENTIFIER(X) X,
+#include "clang/Basic/TokenKinds.def"
+  NUM_NOTABLE_IDENTIFIERS
+};
+
 /// Defines the possible values of an on-off-switch (C99 6.10.6p2).
 enum OnOffSwitch {
   OOS_ON, OOS_OFF, OOS_DEFAULT
@@ -67,6 +75,9 @@ const char *getPunctuatorSpelling(TokenKind Kind) LLVM_READNONE;
 /// Determines the spelling of simple keyword and contextual keyword
 /// tokens like 'int' and 'dynamic_cast'. Returns NULL for other token kinds.
 const char *getKeywordSpelling(TokenKind Kind) LLVM_READNONE;
+
+/// Returns the spelling of preprocessor keywords, such as "else".
+const char *getPPKeywordSpelling(PPKeywordKind Kind) LLVM_READNONE;
 
 /// Return true if this is a raw identifier or an identifier kind.
 inline bool isAnyIdentifier(TokenKind K) {
@@ -95,6 +106,13 @@ bool isAnnotation(TokenKind K);
 
 /// Return true if this is an annotation token representing a pragma.
 bool isPragmaAnnotation(TokenKind K);
+
+inline constexpr bool isRegularKeywordAttribute(TokenKind K) {
+  return (false
+#define KEYWORD_ATTRIBUTE(X, ...) || (K == tok::kw_##X)
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
+  );
+}
 
 } // end namespace tok
 } // end namespace clang

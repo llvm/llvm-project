@@ -1,4 +1,4 @@
-! RUN: %flang -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E -Xflang -fno-reformat %s 2>&1 | FileCheck %s
 ! CHECK: character*1hi
 ! CHECK: dataa/1*1h /
 ! CHECK: datab/1*1h /

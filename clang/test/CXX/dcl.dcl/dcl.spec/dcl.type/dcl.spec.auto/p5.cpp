@@ -46,13 +46,18 @@ void j() {
   U<auto> v; // expected-error{{'auto' not allowed in template argument}}
 
   int n;
-  (void)dynamic_cast<auto&>(n); // expected-error{{'auto' not allowed here}}
-  (void)static_cast<auto*>(&n); // expected-error{{'auto' not allowed here}}
-  (void)reinterpret_cast<auto*>(&n); // expected-error{{'auto' not allowed here}}
-  (void)const_cast<auto>(n); // expected-error{{'auto' not allowed here}}
-  (void)*(auto*)(&n); // expected-error{{'auto' not allowed here}}
-  (void)auto(n); // expected-error{{expected expression}}
-  (void)auto{n}; // expected-error{{expected expression}}
+  (void)dynamic_cast<auto &>(n);      // expected-error{{'auto' not allowed here}}
+  (void)static_cast<auto *>(&n);      // expected-error{{'auto' not allowed here}}
+  (void)reinterpret_cast<auto *>(&n); // expected-error{{'auto' not allowed here}}
+  (void)const_cast<auto const>(n);    // expected-error{{'auto' not allowed here}}
+  (void)*(auto *)(&n);                // expected-error{{'auto' not allowed here}}
+  (void)dynamic_cast<auto>(n);        // expected-error{{'auto' not allowed here}}
+  (void)static_cast<auto>(n);         // expected-error{{'auto' not allowed here}}
+  (void)reinterpret_cast<auto>(n);    // expected-error{{'auto' not allowed here}}
+  (void)const_cast<auto>(n);          // expected-error{{'auto' not allowed here}}
+  (void)(auto)(n);                    // expected-error{{'auto' not allowed here}}
+  (void)auto(n);                      // expected-error{{'auto' not allowed here}}
+  (void)auto{n};                      // expected-error{{'auto' not allowed here}}
 }
 
 template <auto a = 10> class C { }; // expected-error{{'auto' not allowed in template parameter}}

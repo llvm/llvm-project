@@ -17,15 +17,18 @@ namespace SystemZ {
 // A struct to hold the low and high GPR registers to be saved/restored as
 // well as the offset into the register save area of the low register.
 struct GPRRegs {
-  unsigned LowGPR;
-  unsigned HighGPR;
-  unsigned GPROffset;
-  GPRRegs() : LowGPR(0), HighGPR(0), GPROffset(0) {}
+  unsigned LowGPR = 0;
+  unsigned HighGPR = 0;
+  unsigned GPROffset = 0;
+  GPRRegs() = default;
   };
 }
 
 class SystemZMachineFunctionInfo : public MachineFunctionInfo {
   virtual void anchor();
+
+  /// Size of expected parameter area for current function. (Fixed args only).
+  unsigned SizeOfFnParams;
 
   SystemZ::GPRRegs SpillGPRRegs;
   SystemZ::GPRRegs RestoreGPRRegs;
@@ -34,14 +37,25 @@ class SystemZMachineFunctionInfo : public MachineFunctionInfo {
   unsigned VarArgsFrameIndex;
   unsigned RegSaveFrameIndex;
   int FramePointerSaveIndex;
-  bool ManipulatesSP;
   unsigned NumLocalDynamics;
+  /// z/OS XPLINK ABI: incoming ADA virtual register.
+  Register VRegADA;
 
 public:
-  explicit SystemZMachineFunctionInfo(MachineFunction &MF)
-    : VarArgsFirstGPR(0), VarArgsFirstFPR(0), VarArgsFrameIndex(0),
-      RegSaveFrameIndex(0), FramePointerSaveIndex(0), ManipulatesSP(false),
-      NumLocalDynamics(0) {}
+  SystemZMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
+      : SizeOfFnParams(0), VarArgsFirstGPR(0), VarArgsFirstFPR(0),
+        VarArgsFrameIndex(0), RegSaveFrameIndex(0), FramePointerSaveIndex(0),
+        NumLocalDynamics(0) {}
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
+
+  // z/OS: Get and set the size of the expected parameter area for the
+  // current function. (ie. Size of param area in caller).
+  unsigned getSizeOfFnParams() const { return SizeOfFnParams; }
+  void setSizeOfFnParams(unsigned Size) { SizeOfFnParams = Size; }
 
   // Get and set the first and last call-saved GPR that should be saved by
   // this function and the SP offset for the STMG.  These are 0 if no GPRs
@@ -85,14 +99,14 @@ public:
   int getFramePointerSaveIndex() const { return FramePointerSaveIndex; }
   void setFramePointerSaveIndex(int Idx) { FramePointerSaveIndex = Idx; }
 
-  // Get and set whether the function directly manipulates the stack pointer,
-  // e.g. through STACKSAVE or STACKRESTORE.
-  bool getManipulatesSP() const { return ManipulatesSP; }
-  void setManipulatesSP(bool MSP) { ManipulatesSP = MSP; }
-
   // Count number of local-dynamic TLS symbols used.
   unsigned getNumLocalDynamicTLSAccesses() const { return NumLocalDynamics; }
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamics; }
+
+  // Get and set the function's incoming special XPLINK ABI defined ADA
+  // register.
+  Register getADAVirtualRegister() const { return VRegADA; }
+  void setADAVirtualRegister(Register Reg) { VRegADA = Reg; }
 };
 
 } // end namespace llvm

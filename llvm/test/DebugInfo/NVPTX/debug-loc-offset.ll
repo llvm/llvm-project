@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=nvptx64-nvidia-cuda < %s | FileCheck %s
+; RUN: %if ptxas %{ llc -mtriple=nvptx64-nvidia-cuda < %s | %ptxas-verify %}
 
 ; CHECK: .target sm_{{[0-9]+}}, debug
 
@@ -7,12 +8,12 @@
 ; CHECK: .param .b64 _ZN1A3fooEv_param_0
 ; CHECK: )
 
-%struct.A = type { i32 (...)**, i32 }
+%struct.A = type { ptr, i32 }
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) _Z3bari(
 ; CHECK: {
 ; CHECK: .loc [[CU1:[0-9]+]] 1 0
-; CHECK: Lfunc_begin0:
+; CHECK: $L__func_begin0:
 ; CHECK: .loc [[CU1]] 1 0
 
 ; CHECK: //DEBUG_VALUE: bar:b <- {{[0-9]+}}
@@ -25,9 +26,9 @@
 define i32 @_Z3bari(i32 %b) #0 !dbg !4 {
 entry:
   %b.addr = alloca i32, align 4
-  store i32 %b, i32* %b.addr, align 4
+  store i32 %b, ptr %b.addr, align 4
   call void @llvm.dbg.value(metadata i32 0, metadata !21, metadata !DIExpression()), !dbg !22
-  %0 = load i32, i32* %b.addr, align 4, !dbg !23
+  %0 = load i32, ptr %b.addr, align 4, !dbg !23
   call void @llvm.dbg.value(metadata i32 1, metadata !21, metadata !DIExpression()), !dbg !22
   %add = add nsw i32 %0, 4, !dbg !23
   ret i32 %add, !dbg !23
@@ -41,7 +42,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 ; CHECK: .visible .func _Z3baz1A(
 ; CHECK: {
 ; CHECK: .loc [[CU2:[0-9]+]] 6 0
-; CHECK: Lfunc_begin1:
+; CHECK: $L__func_begin1:
 ; CHECK: .loc [[CU2]] 6 0
 ; CHECK-NOT: //DEBUG_VALUE: baz:z
 ; CHECK: //DEBUG_VALUE: baz:z <- undef
@@ -49,33 +50,33 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 ; CHECK: ret;
 ; CHECK: }
 
-define void @_Z3baz1A(%struct.A* %a) #2 !dbg !14 {
+define void @_Z3baz1A(ptr %a) #2 !dbg !14 {
 entry:
   %z = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !24, metadata !DIExpression(DW_OP_deref)), !dbg !25
-  call void @llvm.dbg.declare(metadata i32* %z, metadata !26, metadata !DIExpression()), !dbg !27
-  store i32 2, i32* %z, align 4, !dbg !27
-  %var = getelementptr inbounds %struct.A, %struct.A* %a, i32 0, i32 1, !dbg !28
-  %0 = load i32, i32* %var, align 4, !dbg !28
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !24, metadata !DIExpression(DW_OP_deref)), !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %z, metadata !26, metadata !DIExpression()), !dbg !27
+  store i32 2, ptr %z, align 4, !dbg !27
+  %var = getelementptr inbounds %struct.A, ptr %a, i32 0, i32 1, !dbg !28
+  %0 = load i32, ptr %var, align 4, !dbg !28
   %cmp = icmp sgt i32 %0, 2, !dbg !28
   br i1 %cmp, label %if.then, label %if.end, !dbg !28
 
 if.then:                                          ; preds = %entry
-  %1 = load i32, i32* %z, align 4, !dbg !30
+  %1 = load i32, ptr %z, align 4, !dbg !30
   %inc = add nsw i32 %1, 1, !dbg !30
-  store i32 %inc, i32* %z, align 4, !dbg !30
+  store i32 %inc, ptr %z, align 4, !dbg !30
   br label %if.end, !dbg !30
 
 if.end:                                           ; preds = %if.then, %entry
-  %call = call signext i8 @_ZN1A3fooEv(%struct.A* %a), !dbg !31
+  %call = call signext i8 @_ZN1A3fooEv(ptr %a), !dbg !31
   %conv = sext i8 %call to i32, !dbg !31
   %cmp1 = icmp eq i32 %conv, 97, !dbg !31
   br i1 %cmp1, label %if.then2, label %if.end4, !dbg !31
 
 if.then2:                                         ; preds = %if.end
-  %2 = load i32, i32* %z, align 4, !dbg !33
+  %2 = load i32, ptr %z, align 4, !dbg !33
   %inc3 = add nsw i32 %2, 1, !dbg !33
-  store i32 %inc3, i32* %z, align 4, !dbg !33
+  store i32 %inc3, ptr %z, align 4, !dbg !33
   br label %if.end4, !dbg !33
 
 if.end4:                                          ; preds = %if.then2, %if.end
@@ -85,7 +86,7 @@ if.end4:                                          ; preds = %if.then2, %if.end
 ; CHECK-DAG: .file [[CU1]] "/llvm_cmake_gcc{{/|\\\\}}debug-loc-offset1.cc"
 ; CHECK-DAG: .file [[CU2]] "/llvm_cmake_gcc{{/|\\\\}}debug-loc-offset2.cc"
 
-declare signext i8 @_ZN1A3fooEv(%struct.A*) #2
+declare signext i8 @_ZN1A3fooEv(ptr) #2
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
@@ -323,15 +324,15 @@ attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b64 Lfunc_begin1                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end1                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin1                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end1                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 2                                // Abbrev [2] 0x64:0x4 DW_TAG_structure_type
 ; CHECK-NEXT: .b8 65                               // DW_AT_name
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 1                                // DW_AT_declaration
 ; CHECK-NEXT: .b8 3                                // Abbrev [3] 0x68:0x3a DW_TAG_subprogram
-; CHECK-NEXT: .b64 Lfunc_begin1                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end1                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin1                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end1                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
 ; CHECK-NEXT: .b8 95                               // DW_AT_MIPS_linkage_name
@@ -439,11 +440,11 @@ attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end0                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 6                                // Abbrev [6] 0x64:0x30 DW_TAG_subprogram
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end0                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
 ; CHECK-NEXT: .b8 95                               // DW_AT_MIPS_linkage_name

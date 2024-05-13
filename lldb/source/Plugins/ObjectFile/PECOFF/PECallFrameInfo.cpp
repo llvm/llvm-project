@@ -46,25 +46,23 @@ public:
 private:
   ObjectFilePECOFF &m_object_file;
 
-  bool m_error;
+  bool m_error = false;
 
   uint32_t m_unwind_info_rva;
   DataExtractor m_unwind_info_data;
-  const UnwindInfo *m_unwind_info;
+  const UnwindInfo *m_unwind_info = nullptr;
 
   DataExtractor m_unwind_code_data;
   offset_t m_unwind_code_offset;
-  const UnwindCode *m_unwind_code;
+  const UnwindCode *m_unwind_code = nullptr;
 
-  bool m_chained;
+  bool m_chained = false;
 };
 
 UnwindCodesIterator::UnwindCodesIterator(ObjectFilePECOFF &object_file,
                                          uint32_t unwind_info_rva)
-    : m_object_file(object_file), m_error(false),
-      m_unwind_info_rva(unwind_info_rva),
-      m_unwind_info(nullptr), m_unwind_code_offset{}, m_unwind_code(nullptr),
-      m_chained(false) {}
+    : m_object_file(object_file),
+      m_unwind_info_rva(unwind_info_rva), m_unwind_code_offset{} {}
 
 bool UnwindCodesIterator::GetNext() {
   static constexpr int UNWIND_INFO_SIZE = 4;
@@ -169,7 +167,7 @@ uint32_t EHProgramBuilder::ConvertMachineToLLDBRegister(uint8_t machine_reg) {
       lldb_r8_x86_64,  lldb_r9_x86_64,  lldb_r10_x86_64, lldb_r11_x86_64,
       lldb_r12_x86_64, lldb_r13_x86_64, lldb_r14_x86_64, lldb_r15_x86_64};
 
-  if (machine_reg >= llvm::array_lengthof(machine_to_lldb_register))
+  if (machine_reg >= std::size(machine_to_lldb_register))
     return LLDB_INVALID_REGNUM;
 
   return machine_to_lldb_register[machine_reg];
@@ -184,7 +182,7 @@ uint32_t EHProgramBuilder::ConvertXMMToLLDBRegister(uint8_t xmm_reg) {
       lldb_xmm12_x86_64, lldb_xmm13_x86_64, lldb_xmm14_x86_64,
       lldb_xmm15_x86_64};
 
-  if (xmm_reg >= llvm::array_lengthof(xmm_to_lldb_register))
+  if (xmm_reg >= std::size(xmm_to_lldb_register))
     return LLDB_INVALID_REGNUM;
 
   return xmm_to_lldb_register[xmm_reg];

@@ -1,4 +1,4 @@
-// Check that we detect malloc/delete mismatch only if the approptiate flag
+// Check that we detect malloc/delete mismatch only if the appropriate flag
 // is set.
 
 // RUN: %clangxx_asan -g %s -o %t 2>&1

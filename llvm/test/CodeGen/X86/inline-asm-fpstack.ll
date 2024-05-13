@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=i386-apple-darwin -verify-machineinstrs -no-integrated-as | FileCheck %s
 
 ; There should be no stack manipulations between the inline asm and ret.
-define x86_fp80 @test1() {
+define x86_fp80 @test1() nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## InlineAsm Start
@@ -13,7 +13,7 @@ define x86_fp80 @test1() {
   ret x86_fp80 %tmp85
 }
 
-define double @test2() {
+define double @test2() nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## InlineAsm Start
@@ -26,19 +26,21 @@ define double @test2() {
 
 ; Setting up argument in st(0) should be a single fld.
 ; Asm consumes stack, nothing should be popped.
-define void @test3(x86_fp80 %X) {
+define void @test3(x86_fp80 %X) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    frob
 ; CHECK-NEXT:    ## InlineAsm End
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   call void asm sideeffect "frob ", "{st(0)},~{st},~{dirflag},~{fpsr},~{flags}"( x86_fp80 %X)
   ret void
 }
 
-define void @test4(double %X) {
+define void @test4(double %X) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -52,11 +54,11 @@ define void @test4(double %X) {
 
 ; Same as test3/4, but using value from fadd.
 ; The fadd can be done in xmm or x87 regs - we don't test that.
-define void @test5(double %X) {
+define void @test5(double %X) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fadds LCPI4_0
+; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    frob
 ; CHECK-NEXT:    ## InlineAsm End
@@ -110,10 +112,10 @@ entry:
 ; asm kills st(0), so we shouldn't pop anything
 ; A valid alternative would be to remat the constant pool load before each
 ; inline asm.
-define void @testPR4185() {
+define void @testPR4185() nounwind {
 ; CHECK-LABEL: testPR4185:
 ; CHECK:       ## %bb.0: ## %return
-; CHECK-NEXT:    flds LCPI6_0
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistpl %st
@@ -132,10 +134,10 @@ return:
 ; Make sure it is not duped before.
 ; Second asm kills st(0), so we shouldn't pop anything
 ; A valid alternative would be to remat the constant pool load before each inline asm.
-define void @testPR4185b() {
+define void @testPR4185b() nounwind {
 ; CHECK-LABEL: testPR4185b:
 ; CHECK:       ## %bb.0: ## %return
-; CHECK-NEXT:    flds LCPI7_0
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistl %st
 ; CHECK-NEXT:    ## InlineAsm End
@@ -151,11 +153,10 @@ return:
 
 ; PR4459
 ; The return value from ceil must be duped before being consumed by asm.
-define void @testPR4459(x86_fp80 %a) {
+define void @testPR4459(x86_fp80 %a) nounwind {
 ; CHECK-LABEL: testPR4459:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpt (%esp)
 ; CHECK-NEXT:    calll _ceil
@@ -180,11 +181,10 @@ declare x86_fp80 @ceil(x86_fp80)
 ; test1 leaves a value on the stack that is needed after the asm.
 ; Load %a from stack after ceil
 ; Set up call to test.
-define void @testPR4484(x86_fp80 %a) {
+define void @testPR4484(x86_fp80 %a) nounwind {
 ; CHECK-LABEL: testPR4484:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Spill
 ; CHECK-NEXT:    calll _test1
@@ -204,14 +204,14 @@ entry:
 }
 
 ; PR4485
-define void @testPR4485(x86_fp80* %a) {
+define void @testPR4485(ptr %a) nounwind {
 ; CHECK-LABEL: testPR4485:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    fldt (%eax)
-; CHECK-NEXT:    flds LCPI10_0
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fmul %st, %st(1)
-; CHECK-NEXT:    flds LCPI10_1
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fmul %st, %st(2)
 ; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    ## InlineAsm Start
@@ -225,11 +225,11 @@ define void @testPR4485(x86_fp80* %a) {
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load x86_fp80, x86_fp80* %a, align 16
+  %0 = load x86_fp80, ptr %a, align 16
   %1 = fmul x86_fp80 %0, 0xK4006B400000000000000
   %2 = fmul x86_fp80 %1, 0xK4012F424000000000000
   tail call void asm sideeffect "fistpl $0", "{st},~{st}"(x86_fp80 %2)
-  %3 = load x86_fp80, x86_fp80* %a, align 16
+  %3 = load x86_fp80, ptr %a, align 16
   %4 = fmul x86_fp80 %3, 0xK4006B400000000000000
   %5 = fmul x86_fp80 %4, 0xK4012F424000000000000
   tail call void asm sideeffect "fistpl $0", "{st},~{st}"(x86_fp80 %5)
@@ -245,18 +245,20 @@ entry:
 ;   void fist1(long double x, int *p) {
 ;     asm volatile ("fistl %1" : : "t"(x), "m"(*p));
 ;   }
-define void @fist1(x86_fp80 %x, i32* %p) nounwind ssp {
+define void @fist1(x86_fp80 %x, ptr %p) nounwind ssp {
 ; CHECK-LABEL: fist1:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistl (%eax)
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
-  tail call void asm sideeffect "fistl $1", "{st},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, i32* %p) nounwind
+  tail call void asm sideeffect "fistl $1", "{st},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, ptr elementtype(i32) %p) nounwind
   ret void
 }
 
@@ -268,17 +270,19 @@ entry:
 ;     asm ("fistl %1" : "=&t"(y) : "0"(x), "m"(*p) : "memory");
 ;     return y;
 ;   }
-define x86_fp80 @fist2(x86_fp80 %x, i32* %p) nounwind ssp {
+define x86_fp80 @fist2(x86_fp80 %x, ptr %p) nounwind ssp {
 ; CHECK-LABEL: fist2:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistl (%eax)
 ; CHECK-NEXT:    ## InlineAsm End
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
-  %0 = tail call x86_fp80 asm "fistl $2", "=&{st},0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, i32* %p) nounwind
+  %0 = tail call x86_fp80 asm "fistl $2", "=&{st},0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, ptr elementtype(i32) %p) nounwind
   ret x86_fp80 %0
 }
 
@@ -290,6 +294,7 @@ entry:
 define void @fucomp1(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-LABEL: fucomp1:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fxch %st(1)
@@ -297,6 +302,7 @@ define void @fucomp1(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-NEXT:    fucomp %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
   tail call void asm sideeffect "fucomp $1", "{st},f,~{st},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, x86_fp80 %y) nounwind
@@ -316,6 +322,7 @@ entry:
 define void @fucomp2(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-LABEL: fucomp2:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fxch %st(1)
@@ -323,6 +330,7 @@ define void @fucomp2(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-NEXT:    fucomp %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
   tail call void asm sideeffect "fucomp $1", "{st},{st(1)},~{st},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, x86_fp80 %y) nounwind
@@ -332,12 +340,14 @@ entry:
 define void @fucomp3(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-LABEL: fucomp3:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fucompp %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
   tail call void asm sideeffect "fucompp $1", "{st},{st(1)},~{st},~{st(1)},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, x86_fp80 %y) nounwind
@@ -409,7 +419,7 @@ entry:
 define i32 @PR10602() nounwind ssp {
 ; CHECK-LABEL: PR10602:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    flds LCPI19_0
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start
@@ -439,11 +449,10 @@ entry:
 @fpu = external global %struct.fpu_t, align 16
 
 ; Function Attrs: ssp
-define void @test_live_st(i32 %a1) {
+define void @test_live_st(i32 %a1) nounwind {
 ; CHECK-LABEL: test_live_st:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    fldt (%eax)
 ; CHECK-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    jne LBB20_2
@@ -470,20 +479,20 @@ define void @test_live_st(i32 %a1) {
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load x86_fp80, x86_fp80* undef, align 16
+  %0 = load x86_fp80, ptr undef, align 16
   %cond = icmp eq i32 %a1, 1
   br i1 %cond, label %sw.bb4.i, label %_Z5tointRKe.exit
 
 sw.bb4.i:
   %1 = call x86_fp80 asm sideeffect "frndint", "={st},0,~{dirflag},~{fpsr},~{flags}"(x86_fp80 %0)
-  call void asm sideeffect "fldcw $0", "*m,~{dirflag},~{fpsr},~{flags}"(i32* undef)
+  call void asm sideeffect "fldcw $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) undef)
   br label %_Z5tointRKe.exit
 
 _Z5tointRKe.exit:
   %result.0.i = phi x86_fp80 [ %1, %sw.bb4.i ], [ %0, %entry ]
   %conv.i1814 = fptosi x86_fp80 %result.0.i to i32
   %conv626 = sitofp i32 %conv.i1814 to x86_fp80
-  store x86_fp80 %conv626, x86_fp80* getelementptr inbounds (%struct.fpu_t, %struct.fpu_t* @fpu, i32 0, i32 1)
+  store x86_fp80 %conv626, ptr getelementptr inbounds (%struct.fpu_t, ptr @fpu, i32 0, i32 1)
   br label %return
 
 return:
@@ -491,7 +500,7 @@ return:
 }
 
 ; Check that x87 stackifier is correctly rewriting FP registers to ST registers.
-define double @test_operand_rewrite() {
+define double @test_operand_rewrite() nounwind {
 ; CHECK-LABEL: test_operand_rewrite:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    ## InlineAsm Start

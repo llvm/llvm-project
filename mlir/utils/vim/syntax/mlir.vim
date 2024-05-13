@@ -14,7 +14,7 @@ syn case match
 
 " Types.
 "
-syn keyword mlirType index f16 f32 f64
+syn keyword mlirType index f16 f32 f64 bf16
 " Signless integer types.
 syn match mlirType /\<i\d\+\>/
 " Unsigned integer types.
@@ -23,7 +23,7 @@ syn match mlirType /\<ui\d\+\>/
 syn match mlirType /\<si\d\+\>/
 
 " Elemental types inside memref, tensor, or vector types.
-syn match mlirType /x\s*\zs\(f16\|f32\|f64\|i\d\+\|ui\d\+\|si\d\+\)/
+syn match mlirType /x\s*\zs\(bf16|f16\|f32\|f64\|i\d\+\|ui\d\+\|si\d\+\)/
 
 " Shaped types.
 syn match mlirType /\<memref\ze\s*<.*>/
@@ -34,7 +34,6 @@ syn match mlirType /\<vector\ze\s*<.*>/
 syn match mlirType /x\s*\zsvector/
 
 " Operations.
-" Standard dialect ops.
 " TODO: this list is not exhaustive.
 syn keyword mlirOps alloc alloca addf addi and call call_indirect cmpf cmpi
 syn keyword mlirOps constant dealloc divf dma_start dma_wait dim exp
@@ -42,6 +41,9 @@ syn keyword mlirOps getTensor index_cast load log memref_cast
 syn keyword mlirOps memref_shape_cast mulf muli negf powf prefetch rsqrt sitofp
 syn keyword mlirOps splat store select sqrt subf subi subview tanh
 syn keyword mlirOps view
+
+" Math ops.
+syn match mlirOps /\<math\.erf\>/
 
 " Affine ops.
 syn match mlirOps /\<affine\.apply\>/
@@ -53,8 +55,10 @@ syn match mlirOps /\<affine\.load\>/
 syn match mlirOps /\<affine\.parallel\>/
 syn match mlirOps /\<affine\.prefetch\>/
 syn match mlirOps /\<affine\.store\>/
-syn match mlirOps /\<loop\.for\>/
-syn match mlirOps /\<loop\.if\>/
+syn match mlirOps /\<scf\.execute_region\>/
+syn match mlirOps /\<scf\.for\>/
+syn match mlirOps /\<scf\.if\>/
+syn match mlirOps /\<scf\.yield\>/
 
 " TODO: dialect name prefixed ops (llvm or std).
 
@@ -80,12 +84,22 @@ syn match   mlirNumber /x\s*\zs-\?\d\+\ze\s*x/
 syn match   mlirFloat  /-\?\<\d\+\.\d*\(e[+-]\d\+\)\?\>/
 syn match   mlirFloat  /\<0x\x\+\>/
 syn keyword mlirBoolean true false
-syn match   mlirComment /\/\/.*$/
+" Spell checking is enabled only in comments by default.
+syn match   mlirComment /\/\/.*$/ contains=@Spell
 syn region  mlirString start=/"/ skip=/\\"/ end=/"/
 syn match   mlirLabel /[-a-zA-Z$._][-a-zA-Z$._0-9]*:/
+" Prefixed identifiers usually used for ssa values and symbols.
 syn match   mlirIdentifier /[%@][a-zA-Z$._-][a-zA-Z0-9$._-]*/
-syn match   mlirIdentifier /[%@!]\d\+\>/
-syn match mlirMapSetOutline "#.*$"
+syn match   mlirIdentifier /[%@]\d\+\>/
+" Prefixed identifiers usually used for blocks.
+syn match   mlirBlockIdentifier /\^[a-zA-Z$._-][a-zA-Z0-9$._-]*/
+syn match   mlirBlockIdentifier /\^\d\+\>/
+" Prefixed identifiers usually used for types.
+syn match   mlirTypeIdentifier /![a-zA-Z$._-][a-zA-Z0-9$._-]*/
+syn match   mlirTypeIdentifier /!\d\+\>/
+" Prefixed identifiers usually used for attribute aliases and result numbers.
+syn match   mlirAttrIdentifier /#[a-zA-Z$._-][a-zA-Z0-9$._-]*/
+syn match   mlirAttrIdentifier /#\d\+\>/
 
 " Syntax-highlight lit test commands and bug numbers.
 syn match  mlirSpecialComment /\/\/\s*RUN:.*$/
@@ -107,7 +121,6 @@ if version >= 508 || !exists("did_c_syn_inits")
 
   HiLink mlirType Type
   HiLink mlirOps Statement
-  HiLink mlirMapSetOutline PreProc
   HiLink mlirNumber Number
   HiLink mlirComment Comment
   HiLink mlirString String
@@ -118,6 +131,9 @@ if version >= 508 || !exists("did_c_syn_inits")
   HiLink mlirConstant Constant
   HiLink mlirSpecialComment SpecialComment
   HiLink mlirIdentifier Identifier
+  HiLink mlirBlockIdentifier Label
+  HiLink mlirTypeIdentifier Type
+  HiLink mlirAttrIdentifier PreProc
 
   delcommand HiLink
 endif

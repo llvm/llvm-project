@@ -8,19 +8,21 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_amdgcn_fdiv_fast
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[FABS:%[0-9]+]]:_(s32) = G_FABS [[COPY1]]
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1870659584
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 796917760
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1065353216
-    ; CHECK: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[FABS]](s32), [[C]]
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[C1]], [[C2]]
-    ; CHECK: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY1]], [[SELECT]]
-    ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FMUL]](s32)
-    ; CHECK: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[INT]]
-    ; CHECK: [[FMUL2:%[0-9]+]]:_(s32) = G_FMUL [[SELECT]], [[FMUL1]]
-    ; CHECK: $vgpr0 = COPY [[FMUL2]](s32)
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[FABS:%[0-9]+]]:_(s32) = G_FABS [[COPY1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x45F0000000000000
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[FABS]](s32), [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY1]], [[SELECT]]
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FMUL]](s32)
+    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[INT]]
+    ; CHECK-NEXT: [[FMUL2:%[0-9]+]]:_(s32) = G_FMUL [[SELECT]], [[FMUL1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMUL2]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fdiv.fast), %0, %1
@@ -34,19 +36,21 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_amdgcn_fdiv_fast_propagate_flags
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[FABS:%[0-9]+]]:_(s32) = nsz G_FABS [[COPY1]]
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1870659584
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 796917760
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1065353216
-    ; CHECK: [[FCMP:%[0-9]+]]:_(s1) = nsz G_FCMP floatpred(ogt), [[FABS]](s32), [[C]]
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = nsz G_SELECT [[FCMP]](s1), [[C1]], [[C2]]
-    ; CHECK: [[FMUL:%[0-9]+]]:_(s32) = nsz G_FMUL [[COPY1]], [[SELECT]]
-    ; CHECK: [[INT:%[0-9]+]]:_(s32) = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FMUL]](s32)
-    ; CHECK: [[FMUL1:%[0-9]+]]:_(s32) = nsz G_FMUL [[COPY]], [[INT]]
-    ; CHECK: [[FMUL2:%[0-9]+]]:_(s32) = nsz G_FMUL [[SELECT]], [[FMUL1]]
-    ; CHECK: $vgpr0 = COPY [[FMUL2]](s32)
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[FABS:%[0-9]+]]:_(s32) = nsz G_FABS [[COPY1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x45F0000000000000
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(s1) = nsz G_FCMP floatpred(ogt), [[FABS]](s32), [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = nsz G_SELECT [[FCMP]](s1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s32) = nsz G_FMUL [[COPY1]], [[SELECT]]
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FMUL]](s32)
+    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = nsz G_FMUL [[COPY]], [[INT]]
+    ; CHECK-NEXT: [[FMUL2:%[0-9]+]]:_(s32) = nsz G_FMUL [[SELECT]], [[FMUL1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMUL2]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fdiv.fast), %0, %1

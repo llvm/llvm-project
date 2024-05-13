@@ -1,20 +1,20 @@
-; RUN: opt < %s -disable-output -loop-unroll
+; RUN: opt < %s -disable-output -passes=loop-unroll
 ; PR1770
 ; PR1947
 
-	%struct.cl_engine = type { i32, i16, i32, i8**, i8**, i8*, i8*, i8*, i8*, i8*, i8*, i8* }
+	%struct.cl_engine = type { i32, i16, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
 	%struct.cl_limits = type { i32, i32, i32, i32, i16, i64 }
-	%struct.cli_ac_alt = type { i8, i8*, i16, i16, %struct.cli_ac_alt* }
-	%struct.cli_ac_node = type { i8, i8, %struct.cli_ac_patt*, %struct.cli_ac_node**, %struct.cli_ac_node* }
-	%struct.cli_ac_patt = type { i16*, i16*, i16, i16, i8, i32, i32, i8*, i8*, i32, i16, i16, i16, i16, %struct.cli_ac_alt**, i8, i16, %struct.cli_ac_patt*, %struct.cli_ac_patt* }
-	%struct.cli_bm_patt = type { i8*, i32, i8*, i8*, i8, %struct.cli_bm_patt* }
-	%struct.cli_ctx = type { i8**, i64*, %struct.cli_matcher*, %struct.cl_engine*, %struct.cl_limits*, i32, i32, i32, i32, %struct.cli_dconf* }
+	%struct.cli_ac_alt = type { i8, ptr, i16, i16, ptr }
+	%struct.cli_ac_node = type { i8, i8, ptr, ptr, ptr }
+	%struct.cli_ac_patt = type { ptr, ptr, i16, i16, i8, i32, i32, ptr, ptr, i32, i16, i16, i16, i16, ptr, i8, i16, ptr, ptr }
+	%struct.cli_bm_patt = type { ptr, i32, ptr, ptr, i8, ptr }
+	%struct.cli_ctx = type { ptr, ptr, ptr, ptr, ptr, i32, i32, i32, i32, ptr }
 	%struct.cli_dconf = type { i32, i32, i32, i32, i32, i32, i32 }
-	%struct.cli_matcher = type { i16, i8, i32*, %struct.cli_bm_patt**, i32*, i32, i8, i8, %struct.cli_ac_node*, %struct.cli_ac_node**, %struct.cli_ac_patt**, i32, i32, i32 }
+	%struct.cli_matcher = type { i16, i8, ptr, ptr, ptr, i32, i8, i8, ptr, ptr, ptr, i32, i32, i32 }
 
-declare i8* @calloc(i64, i64)
+declare ptr @calloc(i64, i64)
 
-define fastcc i32 @cli_scanpe(i32 %desc, %struct.cli_ctx* %ctx) {
+define fastcc i32 @cli_scanpe(i32 %desc, ptr %ctx) {
 entry:
 	br i1 false, label %cond_next17, label %cond_true14
 
@@ -223,7 +223,7 @@ cond_true51.i:		; preds = %bb36.i
 	ret i32 0
 
 cond_next54.i:		; preds = %bb36.i
-	%tmp10.i.i527 = call i8* @calloc( i64 0, i64 1 )		; <i8*> [#uses=1]
+	%tmp10.i.i527 = call ptr @calloc( i64 0, i64 1 )		; <ptr> [#uses=1]
 	br i1 false, label %cond_next11.i.i, label %bb132.i
 
 bb132.i:		; preds = %cond_next54.i
@@ -284,7 +284,7 @@ cond_true1008.critedge1185.i:		; preds = %cond_next569.i
 	ret i32 0
 
 cond_true1008.critedge1190.i:		; preds = %cond_true784.i
-	%tmp621.i532.lcssa610 = phi i8* [ %tmp10.i.i527, %cond_true784.i ]		; <i8*> [#uses=0]
+	%tmp621.i532.lcssa610 = phi ptr [ %tmp10.i.i527, %cond_true784.i ]		; <ptr> [#uses=0]
 	ret i32 0
 
 bb9065:		; preds = %cond_next8154

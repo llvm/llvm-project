@@ -144,7 +144,7 @@
 # CHECK-LE: mcrf 2, 3                       # encoding: [0x00,0x00,0x0c,0x4d]
             mcrf 2, 3
 
-# System call instruction
+# System call instructions
 
 # CHECK-BE: sc 1                            # encoding: [0x44,0x00,0x00,0x22]
 # CHECK-LE: sc 1                            # encoding: [0x22,0x00,0x00,0x44]
@@ -152,6 +152,13 @@
 # CHECK-BE: sc                              # encoding: [0x44,0x00,0x00,0x02]
 # CHECK-LE: sc                              # encoding: [0x02,0x00,0x00,0x44]
             sc
+
+# CHECK-BE: scv 1                            # encoding: [0x44,0x00,0x00,0x21]
+# CHECK-LE: scv 1                            # encoding: [0x21,0x00,0x00,0x44]
+            scv 1
+# CHECK-BE: scv 2                            # encoding: [0x44,0x00,0x00,0x41]
+# CHECK-LE: scv 2                            # encoding: [0x41,0x00,0x00,0x44]
+            scv 2
 
 # Branch history rolling buffer
 
@@ -238,9 +245,12 @@
 # CHECK-BE: ldux 2, 3, 4                    # encoding: [0x7c,0x43,0x20,0x6a]
 # CHECK-LE: ldux 2, 3, 4                    # encoding: [0x6a,0x20,0x43,0x7c]
             ldux 2, 3, 4
-# CHECK-BE: ldmx 2, 3, 4                    # encoding: [0x7c,0x43,0x22,0x6a]
-# CHECK-LE: ldmx 2, 3, 4                    # encoding: [0x6a,0x22,0x43,0x7c]
-            ldmx 2, 3, 4
+# CHECK-BE: lq 2, 128(4)                    # encoding: [0xe0,0x44,0x00,0x80]
+# CHECK-LE: lq 2, 128(4)                    # encoding: [0x80,0x00,0x44,0xe0]
+            lq 2, 128(4)
+# CHECK-BE: lq 28, 128(30)                  # encoding: [0xe3,0x9e,0x00,0x80]
+# CHECK-LE: lq 28, 128(30)                  # encoding: [0x80,0x00,0x9e,0xe3]
+            lq 28, 128(30)
 
 # Fixed-point store instructions
 
@@ -292,6 +302,12 @@
 # CHECK-BE: stdux 2, 3, 4                   # encoding: [0x7c,0x43,0x21,0x6a]
 # CHECK-LE: stdux 2, 3, 4                   # encoding: [0x6a,0x21,0x43,0x7c]
             stdux 2, 3, 4
+# CHECK-BE: stq 2, 128(4)                   # encoding: [0xf8,0x44,0x00,0x82]
+# CHECK-LE: stq 2, 128(4)                   # encoding: [0x82,0x00,0x44,0xf8]
+            stq 2, 128(4)
+# CHECK-BE: stq 28, 128(30)                 # encoding: [0xfb,0x9e,0x00,0x82]
+# CHECK-LE: stq 28, 128(30)                 # encoding: [0x82,0x00,0x9e,0xfb]
+            stq 28, 128(30)
 
 # Fixed-point load and store with byte reversal instructions
 
@@ -404,6 +420,9 @@
 # CHECK-BE: addeo. 2, 3, 4                  # encoding: [0x7c,0x43,0x25,0x15]
 # CHECK-LE: addeo. 2, 3, 4                  # encoding: [0x15,0x25,0x43,0x7c]
             addeo. 2, 3, 4
+# CHECK-BE: addex 2, 4, 5, 0                # encoding: [0x7c,0x44,0x29,0x54]
+# CHECK-LE: addex 2, 4, 5, 0                # encoding: [0x54,0x29,0x44,0x7c]
+            addex 2, 4, 5, 0
 # CHECK-BE: subfe 2, 3, 4                   # encoding: [0x7c,0x43,0x21,0x10]
 # CHECK-LE: subfe 2, 3, 4                   # encoding: [0x10,0x21,0x43,0x7c]
             subfe 2, 3, 4
@@ -1011,7 +1030,17 @@
             extswsli. 2, 3, 4
 
 
-# FIXME: BCD assist instructions
+# BCD assist instructions
+
+# CHECK-BE: cdtbcd 2, 7                     # encoding: [0x7c,0xe2,0x02,0x34]
+# CHECK-LE: cdtbcd 2, 7                     # encoding: [0x34,0x02,0xe2,0x7c]
+            cdtbcd 2, 7
+# CHECK-BE: cbcdtd 2, 7                     # encoding: [0x7c,0xe2,0x02,0x74]
+# CHECK-LE: cbcdtd 2, 7                     # encoding: [0x74,0x02,0xe2,0x7c]
+            cbcdtd 2, 7
+# CHECK-BE: addg6s 2, 3, 4                  # encoding: [0x7c,0x43,0x20,0x94]
+# CHECK-LE: addg6s 2, 3, 4                  # encoding: [0x94,0x20,0x43,0x7c]
+            addg6s 2, 3, 4
 
 # Move to/from system register instructions
 

@@ -5,11 +5,12 @@ add_lldb_library(lldbUtilityHelpers
 
   LINK_LIBS
     lldbUtility
-    gtest
+    llvm_gtest
 
   LINK_COMPONENTS
     Support
     ObjectYAML
   )
 
+add_subdirectory(Host)
 add_subdirectory(Symbol)

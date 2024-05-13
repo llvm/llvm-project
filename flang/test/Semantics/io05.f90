@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
   character*20 c(25), cv
   character(kind=1,len=59) msg
   character, parameter :: const_round = "c'est quoi?"
@@ -60,7 +60,8 @@
   !ERROR: If ID appears, PENDING must also appear
   inquire(file='abc', id=id)
 
-  !ERROR: ROUND variable 'const_round' must be definable
+  !ERROR: ROUND variable 'const_round' is not definable
+  !BECAUSE: '"c"' is not a variable or pointer
   inquire(file='abc', round=const_round)
 
 9 continue

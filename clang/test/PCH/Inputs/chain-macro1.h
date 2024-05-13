@@ -1,1 +1,1 @@
-#define FOOBAR void f();
+#define FOOBAR void f(void);

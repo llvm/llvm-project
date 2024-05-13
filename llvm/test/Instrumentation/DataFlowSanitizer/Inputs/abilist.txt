@@ -8,3 +8,7 @@ fun:custom*=uninstrumented
 fun:custom*=custom
 
 fun:uninstrumented*=uninstrumented
+
+fun:function_to_force_zero=force_zero_labels
+
+fun:ExternWeak=uninstrumented

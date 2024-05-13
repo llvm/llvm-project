@@ -45,7 +45,7 @@ LoadCommands:
         timestamp:              2
         current_version:        82115073
         compatibility_version:  65536
-    PayloadString:              '/usr/lib/A'
+    Content:                    '/usr/lib/A'
 
 # RUN: yaml2obj %s --docnum=2 -o %t
 

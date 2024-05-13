@@ -1,6 +1,5 @@
 ; This test checks that we don't instrument globals created by profiling passes.
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -S | FileCheck %s
-; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes=asan -S | FileCheck %s
 
 @__profc_test = private global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 @__llvm_gcov_ctr = internal global [1 x i64] zeroinitializer

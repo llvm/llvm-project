@@ -15,11 +15,11 @@ int y CF_RETURNS_NOT_RETAINED; // expected-warning{{'cf_returns_not_retained' at
 
 typedef struct __CFFoo *CFFooRef;
 
-int invalid1() CF_RETURNS_RETAINED; // expected-warning{{'cf_returns_retained' attribute only applies to functions that return a pointer}}
-void invalid2() CF_RETURNS_RETAINED; // expected-warning{{'cf_returns_retained' attribute only applies to functions that return a pointer}}
+int invalid1(void) CF_RETURNS_RETAINED; // expected-warning{{'cf_returns_retained' attribute only applies to functions that return a pointer}}
+void invalid2(void) CF_RETURNS_RETAINED; // expected-warning{{'cf_returns_retained' attribute only applies to functions that return a pointer}}
 
-CFFooRef valid1() CF_RETURNS_RETAINED;
-id valid2() CF_RETURNS_RETAINED;
+CFFooRef valid1(void) CF_RETURNS_RETAINED;
+id valid2(void) CF_RETURNS_RETAINED;
 
 @interface Test
 - (int)invalid1 CF_RETURNS_RETAINED; // expected-warning{{'cf_returns_retained' attribute only applies to methods that return a pointer}}

@@ -13,7 +13,6 @@
 #include "llvm/Object/Error.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
 using namespace object;
@@ -52,6 +51,8 @@ std::string _object_error_category::message(int EV) const {
     return "Bitcode section not found in object file";
   case object_error::invalid_symbol_index:
     return "Invalid symbol index";
+  case object_error::section_stripped:
+    return "Section has been stripped from the object file";
   }
   llvm_unreachable("An enumerator of object_error does not have a message "
                    "defined.");
@@ -73,10 +74,9 @@ void GenericBinaryError::log(raw_ostream &OS) const {
   OS << Msg;
 }
 
-static ManagedStatic<_object_error_category> error_category;
-
 const std::error_category &object::object_category() {
-  return *error_category;
+  static _object_error_category error_category;
+  return error_category;
 }
 
 llvm::Error llvm::object::isNotObjectErrorInvalidFileType(llvm::Error Err) {

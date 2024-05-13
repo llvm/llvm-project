@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
@@ -20,7 +21,7 @@ namespace {
 
 TEST(ValueMapperTest, mapMDNode) {
   LLVMContext Context;
-  auto *U = MDTuple::get(Context, None);
+  auto *U = MDTuple::get(Context, std::nullopt);
 
   // The node should be unchanged.
   ValueToValueMapTy VM;
@@ -65,7 +66,7 @@ TEST(ValueMapperTest, mapMDNodeCycle) {
 
 TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
   LLVMContext Context;
-  auto *PtrTy = Type::getInt8Ty(Context)->getPointerTo();
+  auto *PtrTy = PointerType::get(Context, 0);
   std::unique_ptr<GlobalVariable> G0 = std::make_unique<GlobalVariable>(
       PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "G0");
   std::unique_ptr<GlobalVariable> G1 = std::make_unique<GlobalVariable>(
@@ -106,7 +107,7 @@ TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
 
 TEST(ValueMapperTest, mapMDNodeUnresolved) {
   LLVMContext Context;
-  TempMDTuple T = MDTuple::getTemporary(Context, None);
+  TempMDTuple T = MDTuple::getTemporary(Context, std::nullopt);
 
   ValueToValueMapTy VM;
   EXPECT_EQ(T.get(), ValueMapper(VM, RF_NoModuleLevelChanges).mapMDNode(*T));
@@ -114,7 +115,7 @@ TEST(ValueMapperTest, mapMDNodeUnresolved) {
 
 TEST(ValueMapperTest, mapMDNodeDistinct) {
   LLVMContext Context;
-  auto *D = MDTuple::getDistinct(Context, None);
+  auto *D = MDTuple::getDistinct(Context, std::nullopt);
 
   {
     // The node should be cloned.
@@ -130,11 +131,11 @@ TEST(ValueMapperTest, mapMDNodeDistinct) {
 
 TEST(ValueMapperTest, mapMDNodeDistinctOperands) {
   LLVMContext Context;
-  Metadata *Old = MDTuple::getDistinct(Context, None);
+  Metadata *Old = MDTuple::getDistinct(Context, std::nullopt);
   auto *D = MDTuple::getDistinct(Context, Old);
   ASSERT_EQ(Old, D->getOperand(0));
 
-  Metadata *New = MDTuple::getDistinct(Context, None);
+  Metadata *New = MDTuple::getDistinct(Context, std::nullopt);
   ValueToValueMapTy VM;
   VM.MD()[Old].reset(New);
 
@@ -145,11 +146,11 @@ TEST(ValueMapperTest, mapMDNodeDistinctOperands) {
 
 TEST(ValueMapperTest, mapMDNodeSeeded) {
   LLVMContext Context;
-  auto *D = MDTuple::getDistinct(Context, None);
+  auto *D = MDTuple::getDistinct(Context, std::nullopt);
 
   // The node should be moved.
   ValueToValueMapTy VM;
-  EXPECT_EQ(None, VM.getMappedMD(D));
+  EXPECT_EQ(std::nullopt, VM.getMappedMD(D));
 
   VM.MD().insert(std::make_pair(D, TrackingMDRef(D)));
   EXPECT_EQ(D, *VM.getMappedMD(D));
@@ -158,11 +159,11 @@ TEST(ValueMapperTest, mapMDNodeSeeded) {
 
 TEST(ValueMapperTest, mapMDNodeSeededWithNull) {
   LLVMContext Context;
-  auto *D = MDTuple::getDistinct(Context, None);
+  auto *D = MDTuple::getDistinct(Context, std::nullopt);
 
   // The node should be moved.
   ValueToValueMapTy VM;
-  EXPECT_EQ(None, VM.getMappedMD(D));
+  EXPECT_EQ(std::nullopt, VM.getMappedMD(D));
 
   VM.MD().insert(std::make_pair(D, TrackingMDRef()));
   EXPECT_EQ(nullptr, *VM.getMappedMD(D));
@@ -188,7 +189,7 @@ TEST(ValueMapperTest, mapMetadataMDString) {
 
   // Make sure S1 maps to itself, but isn't memoized.
   EXPECT_EQ(S1, ValueMapper(VM).mapMetadata(*S1));
-  EXPECT_EQ(None, VM.getMappedMD(S1));
+  EXPECT_EQ(std::nullopt, VM.getMappedMD(S1));
 
   // We still expect VM.MD() to be respected.
   auto *S2 = MDString::get(C, "S2");
@@ -198,7 +199,7 @@ TEST(ValueMapperTest, mapMetadataMDString) {
 
 TEST(ValueMapperTest, mapMetadataGetMappedMD) {
   LLVMContext C;
-  auto *N0 = MDTuple::get(C, None);
+  auto *N0 = MDTuple::get(C, std::nullopt);
   auto *N1 = MDTuple::get(C, N0);
 
   // Make sure hasMD and getMappedMD work correctly.
@@ -207,15 +208,15 @@ TEST(ValueMapperTest, mapMetadataGetMappedMD) {
   EXPECT_EQ(N0, ValueMapper(VM).mapMetadata(*N0));
   EXPECT_EQ(N1, ValueMapper(VM).mapMetadata(*N1));
   EXPECT_TRUE(VM.hasMD());
-  ASSERT_NE(None, VM.getMappedMD(N0));
-  ASSERT_NE(None, VM.getMappedMD(N1));
+  ASSERT_NE(std::nullopt, VM.getMappedMD(N0));
+  ASSERT_NE(std::nullopt, VM.getMappedMD(N1));
   EXPECT_EQ(N0, *VM.getMappedMD(N0));
   EXPECT_EQ(N1, *VM.getMappedMD(N1));
 }
 
 TEST(ValueMapperTest, mapMetadataNoModuleLevelChanges) {
   LLVMContext C;
-  auto *N0 = MDTuple::get(C, None);
+  auto *N0 = MDTuple::get(C, std::nullopt);
   auto *N1 = MDTuple::get(C, N0);
 
   // Nothing should be memoized when RF_NoModuleLevelChanges.
@@ -224,8 +225,8 @@ TEST(ValueMapperTest, mapMetadataNoModuleLevelChanges) {
   EXPECT_EQ(N0, ValueMapper(VM, RF_NoModuleLevelChanges).mapMetadata(*N0));
   EXPECT_EQ(N1, ValueMapper(VM, RF_NoModuleLevelChanges).mapMetadata(*N1));
   EXPECT_FALSE(VM.hasMD());
-  EXPECT_EQ(None, VM.getMappedMD(N0));
-  EXPECT_EQ(None, VM.getMappedMD(N1));
+  EXPECT_EQ(std::nullopt, VM.getMappedMD(N0));
+  EXPECT_EQ(std::nullopt, VM.getMappedMD(N1));
 }
 
 TEST(ValueMapperTest, mapMetadataConstantAsMetadata) {
@@ -245,7 +246,7 @@ TEST(ValueMapperTest, mapMetadataConstantAsMetadata) {
     EXPECT_FALSE(VM.MD().count(CAM));
 
     // But it should respect a mapping that gets seeded.
-    auto *N = MDTuple::get(C, None);
+    auto *N = MDTuple::get(C, std::nullopt);
     VM.MD()[CAM].reset(N);
     EXPECT_EQ(N, ValueMapper(VM).mapMetadata(*CAM));
     EXPECT_EQ(N, ValueMapper(VM, RF_IgnoreMissingLocals).mapMetadata(*CAM));
@@ -302,14 +303,64 @@ TEST(ValueMapperTest, mapValueLocalAsMetadata) {
   // property.  To keep RemapInstruction from crashing we need a non-null
   // return here, but we also shouldn't reference the unmapped local.  Use
   // "metadata !{}".
-  auto *N0 = MDTuple::get(C, None);
+  auto *N0 = MDTuple::get(C, std::nullopt);
   auto *N0AV = MetadataAsValue::get(C, N0);
   ValueToValueMapTy VM;
   EXPECT_EQ(N0AV, ValueMapper(VM).mapValue(*MAV));
   EXPECT_EQ(nullptr, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
   EXPECT_FALSE(VM.count(MAV));
   EXPECT_FALSE(VM.count(&A));
-  EXPECT_EQ(None, VM.getMappedMD(LAM));
+  EXPECT_EQ(std::nullopt, VM.getMappedMD(LAM));
+
+  VM[MAV] = MAV;
+  EXPECT_EQ(MAV, ValueMapper(VM).mapValue(*MAV));
+  EXPECT_EQ(MAV, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
+  EXPECT_TRUE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+
+  VM[MAV] = &A;
+  EXPECT_EQ(&A, ValueMapper(VM).mapValue(*MAV));
+  EXPECT_EQ(&A, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
+  EXPECT_TRUE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+}
+
+TEST(ValueMapperTest, mapValueLocalInArgList) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+  Argument &A = *F->arg_begin();
+
+  auto *LAM = LocalAsMetadata::get(&A);
+  std::vector<ValueAsMetadata*> Elts;
+  Elts.push_back(LAM);
+  auto *ArgList = DIArgList::get(C, Elts);
+  auto *MAV = MetadataAsValue::get(C, ArgList);
+
+  // The principled answer to a LocalAsMetadata of an unmapped SSA value would
+  // be to return nullptr (regardless of RF_IgnoreMissingLocals).
+  //
+  // However, algorithms that use RemapInstruction assume that each instruction
+  // only references SSA values from previous instructions.  Arguments of
+  // such as "metadata i32 %x" don't currently successfully maintain that
+  // property.  To keep RemapInstruction from crashing we need a non-null
+  // return here, but we also shouldn't reference the unmapped local.  Use
+  // undef for uses in a DIArgList.
+  auto *N0 = UndefValue::get(Type::getInt8Ty(C));
+  auto *N0AM = ValueAsMetadata::get(N0);
+  std::vector<ValueAsMetadata*> N0Elts;
+  N0Elts.push_back(N0AM);
+  auto *N0ArgList = DIArgList::get(C, N0Elts);
+  auto *N0AV = MetadataAsValue::get(C, N0ArgList);
+  ValueToValueMapTy VM;
+  EXPECT_EQ(N0AV, ValueMapper(VM).mapValue(*MAV));
+  EXPECT_EQ(MAV, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
+  EXPECT_FALSE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+  EXPECT_EQ(std::nullopt, VM.getMappedMD(LAM));
+  EXPECT_EQ(std::nullopt, VM.getMappedMD(ArgList));
 
   VM[MAV] = MAV;
   EXPECT_EQ(MAV, ValueMapper(VM).mapValue(*MAV));
@@ -344,6 +395,45 @@ TEST(ValueMapperTest, mapValueLocalAsMetadataToConstant) {
   EXPECT_TRUE(isa<ConstantAsMetadata>(MDC->getMetadata()));
   EXPECT_EQ(&C, ValueMapper(VM).mapValue(A));
   EXPECT_EQ(MDC, ValueMapper(VM).mapValue(*MDA));
+}
+
+// Type remapper which remaps all types to same destination.
+class TestTypeRemapper : public ValueMapTypeRemapper {
+public:
+  TestTypeRemapper(Type *Ty) : DstTy(Ty) { }
+  Type *remapType(Type *srcTy) { return DstTy; }
+private:
+  Type *DstTy;
+};
+
+TEST(ValueMapperTest, mapValuePoisonWithTypeRemap) {
+  LLVMContext C;
+  Type *OldTy = Type::getInt8Ty(C);
+  Type *NewTy = Type::getInt32Ty(C);
+
+  TestTypeRemapper TM(NewTy);
+  ValueToValueMapTy VM;
+  ValueMapper Mapper(VM, RF_None, &TM);
+
+  // Check that poison is still poison and has not been converted to undef.
+  auto *OldPoison = PoisonValue::get(OldTy);
+  auto *NewPoison = PoisonValue::get(NewTy);
+  EXPECT_EQ(NewPoison, Mapper.mapValue(*OldPoison));
+}
+
+TEST(ValueMapperTest, mapValueConstantTargetNoneToLayoutTypeNullValue) {
+  LLVMContext C;
+  auto *OldTy = TargetExtType::get(C, "spirv.Event");
+  Type *NewTy = OldTy->getLayoutType();
+
+  TestTypeRemapper TM(NewTy);
+  ValueToValueMapTy VM;
+  ValueMapper Mapper(VM, RF_None, &TM);
+
+  // Check that ConstantTargetNone is mapped to '0' constant of its layout type.
+  auto *OldConstant = ConstantTargetNone::get(OldTy);
+  auto *NewConstant = Constant::getNullValue(NewTy);
+  EXPECT_EQ(NewConstant, Mapper.mapValue(*OldConstant));
 }
 
 } // end namespace

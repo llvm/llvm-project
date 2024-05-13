@@ -174,15 +174,15 @@ entry:
 ; Function Attrs: norecurse nounwind readonly
 define signext i32 @testComplexISEL() #0 {
 entry:
-  %0 = load i32, i32* @b, align 4, !tbaa !1
+  %0 = load i32, ptr @b, align 4, !tbaa !1
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %cleanup
 
 if.end:
-  %1 = load i32, i32* @a, align 4, !tbaa !1
+  %1 = load i32, ptr @a, align 4, !tbaa !1
   %conv = sext i32 %1 to i64
-  %2 = inttoptr i64 %conv to i32 (...)*
-  %cmp = icmp eq i32 (...)* %2, bitcast (i32 ()* @testComplexISEL to i32 (...)*)
+  %2 = inttoptr i64 %conv to ptr
+  %cmp = icmp eq ptr %2, @testComplexISEL
   %conv3 = zext i1 %cmp to i32
   br label %cleanup
 
@@ -191,12 +191,9 @@ cleanup:
   ret i32 %retval.0
 
 ; CHECK-LABEL: @testComplexISEL
-; CHECK: cmplwi r3, 0
 ; CHECK: li r3, 1
-; CHECK: beq cr0, [[TGT:.LBB[0-9_]+]]
-; CHECK: clrldi r3, r3, 32
-; CHECK: blr
-; CHECK: [[TGT]]
+; CHECK: cmplwi r4, 0
+; CHECK: bnelr cr0
 ; CHECK: xor [[XOR:r[0-9]+]]
 ; CHECK: cntlzd [[CZ:r[0-9]+]], [[XOR]]
 ; CHECK: rldicl [[SH:r[0-9]+]], [[CZ]], 58, 63

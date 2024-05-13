@@ -16,7 +16,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-pc-linux-gnu"
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @main(i32, i8** nocapture readnone) local_unnamed_addr #0 {
+define i32 @main(i32, ptr nocapture readnone) local_unnamed_addr #0 {
   %3 = tail call i32 @foo(i32 %0) #0
   ret i32 %3
 }

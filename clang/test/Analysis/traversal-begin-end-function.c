@@ -3,7 +3,7 @@
 void inline_callee(int i);
 
 // CHECK: --BEGIN FUNCTION--
-void inline_caller() {
+void inline_caller(void) {
   // CHECK: --BEGIN FUNCTION--
   // CHECK: --BEGIN FUNCTION--
   // CHECK: --BEGIN FUNCTION--

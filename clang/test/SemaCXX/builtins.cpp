@@ -4,12 +4,15 @@ typedef const struct __CFString * CFStringRef;
 #define CFSTR __builtin___CFStringMakeConstantString
 
 void f() {
+#if !defined(__MVS__) && !defined(_AIX)
+  // Builtin function __builtin___CFStringMakeConstantString is currently
+  // unsupported on z/OS and AIX.
   (void)CFStringRef(CFSTR("Hello"));
+#endif
 }
 
 void a() { __builtin_va_list x, y; ::__builtin_va_copy(x, y); }
 
-// <rdar://problem/10063539>
 template<int (*Compare)(const char *s1, const char *s2)>
 int equal(const char *s1, const char *s2) {
   return Compare(s1, s2) == 0;
@@ -36,8 +39,16 @@ namespace addressof {
   struct U { int n : 5; } u;
   int *pbf = __builtin_addressof(u.n); // expected-error {{address of bit-field requested}}
 
-  S *ptmp = __builtin_addressof(S{}); // expected-error {{taking the address of a temporary}}
+  S *ptmp = __builtin_addressof(S{}); // expected-error {{taking the address of a temporary}} expected-warning {{temporary whose address is used as value of local variable 'ptmp' will be destroyed at the end of the full-expression}}
 }
+
+namespace function_start {
+void a(void) {}
+int n;
+void *p = __builtin_function_start(n);               // expected-error {{argument must be a function}}
+static_assert(__builtin_function_start(a) == a, ""); // expected-error {{static assertion expression is not an integral constant expression}}
+// expected-note@-1 {{comparison of addresses of literals has unspecified value}}
+} // namespace function_start
 
 void no_ms_builtins() {
   __assume(1); // expected-error {{use of undeclared}}
@@ -64,6 +75,11 @@ using MemFnType = int (Dummy::*)(char);
 using ConstMemFnType = int (Dummy::*)() const;
 
 void foo() {}
+
+void test_builtin_empty_parentheses_diags() {
+  __is_trivially_copyable(); // expected-error {{expected a type}}
+  __is_trivially_copyable(1); // expected-error {{expected a type}}
+}
 
 void test_builtin_launder_diags(void *vp, const void *cvp, FnType *fnp,
                                 MemFnType mfp, ConstMemFnType cmfp, int (&Arr)[5]) {
@@ -133,7 +149,7 @@ struct IncompleteMember {
   Incomplete &i;
 };
 void test_incomplete(Incomplete *i, IncompleteMember *im) {
-  // expected-error@+1 {{incomplete type 'test_launder::Incomplete' where a complete type is required}}
+  // expected-error@+1 {{incomplete type 'Incomplete' where a complete type is required}}
   __builtin_launder(i);
   __builtin_launder(&i); // OK
   __builtin_launder(im); // OK
@@ -153,3 +169,9 @@ template<typename T> void test_builtin_complex(T v, double d) {
 template void test_builtin_complex(double, double);
 template void test_builtin_complex(float, double); // expected-note {{instantiation of}}
 template void test_builtin_complex(int, double); // expected-note {{instantiation of}}
+
+#ifdef __x86_64__
+// This previously would cause an assertion when emitting the note diagnostic.
+static void __builtin_cpu_init(); // expected-error {{static declaration of '__builtin_cpu_init' follows non-static declaration}} \
+                                     expected-note {{'__builtin_cpu_init' is a builtin with type 'void () noexcept'}}
+#endif

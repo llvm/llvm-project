@@ -1,4 +1,4 @@
-; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -verify-memoryssa -S %s | FileCheck %s
+; RUN: opt -passes=simple-loop-unswitch -enable-nontrivial-unswitch -verify-memoryssa -S %s | FileCheck %s
 ; REQUIRES: asserts
 
 target triple = "x86_64-unknown-linux-gnu"

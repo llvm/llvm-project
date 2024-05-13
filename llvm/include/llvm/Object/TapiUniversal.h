@@ -13,15 +13,17 @@
 #ifndef LLVM_OBJECT_TAPIUNIVERSAL_H
 #define LLVM_OBJECT_TAPIUNIVERSAL_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/TapiFile.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 
 namespace llvm {
 namespace object {
+
+class TapiFile;
 
 class TapiUniversal : public Binary {
 public:
@@ -100,6 +102,8 @@ public:
   iterator_range<object_iterator> objects() const {
     return make_range(begin_objects(), end_objects());
   }
+
+  const MachO::InterfaceFile &getInterfaceFile() { return *ParsedFile; }
 
   uint32_t getNumberOfObjects() const { return Libraries.size(); }
 

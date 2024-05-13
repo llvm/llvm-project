@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-matmul.h"
+#include "fold-reduction.h"
 
 namespace Fortran::evaluate {
 
@@ -15,6 +17,7 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Complex, KIND>> &&funcRef) {
   using T = Type<TypeCategory::Complex, KIND>;
+  using Part = typename T::Part;
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -26,9 +29,11 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
     if (auto callable{GetHostRuntimeWrapper<T, T>(name)}) {
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), *callable);
-    } else {
+    } else if (context.languageFeatures().ShouldWarn(
+                   common::UsageWarning::FoldingFailure)) {
       context.messages().Say(
-          "%s(complex(kind=%d)) cannot be folded on host"_en_US, name, KIND);
+          "%s(complex(kind=%d)) cannot be folded on host"_warn_en_US, name,
+          KIND);
     }
   } else if (name == "conjg") {
     return FoldElementalIntrinsic<T, T>(
@@ -39,8 +44,16 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
         // CMPLX(X [, KIND]) with complex X
         return Fold(context, ConvertToType<T>(std::move(*x)));
       } else {
+        if (args.size() >= 2 && args[1].has_value()) {
+          // Do not fold CMPLX with an Y argument that may be absent at runtime
+          // into a complex constructor so that lowering can deal with the
+          // optional aspect (there is no optional aspect with the complex
+          // constructor).
+          if (MayBePassedAsAbsentOptional(*args[1]->UnwrapExpr())) {
+            return Expr<T>{std::move(funcRef)};
+          }
+        }
         // CMPLX(X [, Y [, KIND]]) with non-complex X
-        using Part = typename T::Part;
         Expr<SomeType> re{std::move(*args[0].value().UnwrapExpr())};
         Expr<SomeType> im{args.size() >= 2 && args[1].has_value()
                 ? std::move(*args[1]->UnwrapExpr())
@@ -51,11 +64,16 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
                     ToReal<KIND>(context, std::move(im))}});
       }
     }
-  } else if (name == "merge") {
-    return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "dot_product") {
+    return FoldDotProduct<T>(context, std::move(funcRef));
+  } else if (name == "matmul") {
+    return FoldMatmul(context, std::move(funcRef));
+  } else if (name == "product") {
+    auto one{Scalar<Part>::FromInteger(value::Integer<8>{1}).value};
+    return FoldProduct<T>(context, std::move(funcRef), Scalar<T>{one});
+  } else if (name == "sum") {
+    return FoldSum<T>(context, std::move(funcRef));
   }
-  // TODO: cshift, dot_product, eoshift, matmul, pack, product,
-  // reduce, spread, sum, transfer, transpose, unpack
   return Expr<T>{std::move(funcRef)};
 }
 
@@ -73,6 +91,9 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldOperation(
   return Expr<Result>{std::move(x)};
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 FOR_EACH_COMPLEX_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeComplex>;
 } // namespace Fortran::evaluate

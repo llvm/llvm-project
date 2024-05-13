@@ -2,15 +2,15 @@
 
 @interface I1 @end
 
-// expected-warning@+1 {{'always_inline' attribute only applies to functions}}
+// expected-warning@+1 {{'always_inline' attribute only applies to functions and statements}}
 __attribute__((always_inline))
 @implementation I1 @end
 
-// expected-warning@+1 {{'always_inline' attribute only applies to functions}}
+// expected-warning@+1 {{'always_inline' attribute only applies to functions and statements}}
 __attribute__((always_inline))
 @implementation I1 (MyCat) @end
 
-// expected-warning@+1 {{'always_inline' attribute only applies to functions}}
+// expected-warning@+1 {{'always_inline' attribute only applies to functions and statements}}
 __attribute__((always_inline))
 // expected-warning@+1 {{cannot find interface declaration for 'I2'}}
 @implementation I2 @end

@@ -27,9 +27,9 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -148,11 +148,9 @@ public:
 
       bool Changed = false;
 
-      for (MachineFunction::iterator I = MF.begin(); I != MF.end();) {
-        MachineBasicBlock &B = *I++;
+      for (MachineBasicBlock &B : llvm::make_early_inc_range(MF))
         if (processBlock(B))
           Changed = true;
-      }
 
       return Changed;
     }
@@ -169,4 +167,3 @@ INITIALIZE_PASS(PPCVSXCopy, DEBUG_TYPE,
 char PPCVSXCopy::ID = 0;
 FunctionPass*
 llvm::createPPCVSXCopyPass() { return new PPCVSXCopy(); }
-

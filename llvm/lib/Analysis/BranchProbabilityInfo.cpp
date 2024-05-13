@@ -15,6 +15,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -30,6 +31,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -42,6 +44,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <map>
 #include <utility>
 
 using namespace llvm;
@@ -104,12 +107,67 @@ static const uint32_t LBH_NONTAKEN_WEIGHT = 4;
 /// All reachable probability will proportionally share the remaining part.
 static const BranchProbability UR_TAKEN_PROB = BranchProbability::getRaw(1);
 
+/// Heuristics and lookup tables for non-loop branches:
+/// Pointer Heuristics (PH)
 static const uint32_t PH_TAKEN_WEIGHT = 20;
 static const uint32_t PH_NONTAKEN_WEIGHT = 12;
+static const BranchProbability
+    PtrTakenProb(PH_TAKEN_WEIGHT, PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
+static const BranchProbability
+    PtrUntakenProb(PH_NONTAKEN_WEIGHT, PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
 
+using ProbabilityList = SmallVector<BranchProbability>;
+using ProbabilityTable = std::map<CmpInst::Predicate, ProbabilityList>;
+
+/// Pointer comparisons:
+static const ProbabilityTable PointerTable{
+    {ICmpInst::ICMP_NE, {PtrTakenProb, PtrUntakenProb}}, /// p != q -> Likely
+    {ICmpInst::ICMP_EQ, {PtrUntakenProb, PtrTakenProb}}, /// p == q -> Unlikely
+};
+
+/// Zero Heuristics (ZH)
 static const uint32_t ZH_TAKEN_WEIGHT = 20;
 static const uint32_t ZH_NONTAKEN_WEIGHT = 12;
+static const BranchProbability
+    ZeroTakenProb(ZH_TAKEN_WEIGHT, ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
+static const BranchProbability
+    ZeroUntakenProb(ZH_NONTAKEN_WEIGHT, ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
 
+/// Integer compares with 0:
+static const ProbabilityTable ICmpWithZeroTable{
+    {CmpInst::ICMP_EQ, {ZeroUntakenProb, ZeroTakenProb}},  /// X == 0 -> Unlikely
+    {CmpInst::ICMP_NE, {ZeroTakenProb, ZeroUntakenProb}},  /// X != 0 -> Likely
+    {CmpInst::ICMP_SLT, {ZeroUntakenProb, ZeroTakenProb}}, /// X < 0  -> Unlikely
+    {CmpInst::ICMP_SGT, {ZeroTakenProb, ZeroUntakenProb}}, /// X > 0  -> Likely
+};
+
+/// Integer compares with -1:
+static const ProbabilityTable ICmpWithMinusOneTable{
+    {CmpInst::ICMP_EQ, {ZeroUntakenProb, ZeroTakenProb}},  /// X == -1 -> Unlikely
+    {CmpInst::ICMP_NE, {ZeroTakenProb, ZeroUntakenProb}},  /// X != -1 -> Likely
+    // InstCombine canonicalizes X >= 0 into X > -1
+    {CmpInst::ICMP_SGT, {ZeroTakenProb, ZeroUntakenProb}}, /// X >= 0  -> Likely
+};
+
+/// Integer compares with 1:
+static const ProbabilityTable ICmpWithOneTable{
+    // InstCombine canonicalizes X <= 0 into X < 1
+    {CmpInst::ICMP_SLT, {ZeroUntakenProb, ZeroTakenProb}}, /// X <= 0 -> Unlikely
+};
+
+/// strcmp and similar functions return zero, negative, or positive, if the
+/// first string is equal, less, or greater than the second. We consider it
+/// likely that the strings are not equal, so a comparison with zero is
+/// probably false, but also a comparison with any other number is also
+/// probably false given that what exactly is returned for nonzero values is
+/// not specified. Any kind of comparison other than equality we know
+/// nothing about.
+static const ProbabilityTable ICmpWithLibCallTable{
+    {CmpInst::ICMP_EQ, {ZeroUntakenProb, ZeroTakenProb}},
+    {CmpInst::ICMP_NE, {ZeroTakenProb, ZeroUntakenProb}},
+};
+
+// Floating-Point Heuristics (FPH)
 static const uint32_t FPH_TAKEN_WEIGHT = 20;
 static const uint32_t FPH_NONTAKEN_WEIGHT = 12;
 
@@ -119,6 +177,21 @@ static const uint32_t FPH_ORD_WEIGHT = 1024 * 1024 - 1;
 /// one or two of the operands are NaN. Usually it is used to test for an
 /// exceptional case, so the result is unlikely.
 static const uint32_t FPH_UNO_WEIGHT = 1;
+
+static const BranchProbability FPOrdTakenProb(FPH_ORD_WEIGHT,
+                                              FPH_ORD_WEIGHT + FPH_UNO_WEIGHT);
+static const BranchProbability
+    FPOrdUntakenProb(FPH_UNO_WEIGHT, FPH_ORD_WEIGHT + FPH_UNO_WEIGHT);
+static const BranchProbability
+    FPTakenProb(FPH_TAKEN_WEIGHT, FPH_TAKEN_WEIGHT + FPH_NONTAKEN_WEIGHT);
+static const BranchProbability
+    FPUntakenProb(FPH_NONTAKEN_WEIGHT, FPH_TAKEN_WEIGHT + FPH_NONTAKEN_WEIGHT);
+
+/// Floating-Point compares:
+static const ProbabilityTable FCmpTable{
+    {FCmpInst::FCMP_ORD, {FPOrdTakenProb, FPOrdUntakenProb}}, /// !isnan -> Likely
+    {FCmpInst::FCMP_UNO, {FPOrdUntakenProb, FPOrdTakenProb}}, /// isnan -> Unlikely
+};
 
 /// Set of dedicated "absolute" execution weights for a block. These weights are
 /// meaningful relative to each other and their derivatives only.
@@ -190,7 +263,7 @@ void BranchProbabilityInfo::SccInfo::getSccExitBlocks(
     if (isSCCExitingBlock(BB, SccNum))
       for (const auto *Succ : successors(BB))
         if (getSCCNum(Succ) != SccNum)
-          Exits.push_back(const_cast<BasicBlock *>(BB));
+          Exits.push_back(const_cast<BasicBlock *>(Succ));
   }
 }
 
@@ -307,20 +380,15 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   const Instruction *TI = BB->getTerminator();
   assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
   if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) || isa<IndirectBrInst>(TI) ||
-        isa<InvokeInst>(TI)))
+        isa<InvokeInst>(TI) || isa<CallBrInst>(TI)))
     return false;
 
-  MDNode *WeightsNode = TI->getMetadata(LLVMContext::MD_prof);
+  MDNode *WeightsNode = getValidBranchWeightMDNode(*TI);
   if (!WeightsNode)
     return false;
 
   // Check that the number of successors is manageable.
   assert(TI->getNumSuccessors() < UINT32_MAX && "Too many successors");
-
-  // Ensure there are weights for all of the successors. Note that the first
-  // operand to the metadata node is a name, not a weight.
-  if (WeightsNode->getNumOperands() != TI->getNumSuccessors() + 1)
-    return false;
 
   // Build up the final weights that will be used in a temporary buffer.
   // Compute the sum of all weights to later decide whether they need to
@@ -329,25 +397,18 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   SmallVector<uint32_t, 2> Weights;
   SmallVector<unsigned, 2> UnreachableIdxs;
   SmallVector<unsigned, 2> ReachableIdxs;
-  Weights.reserve(TI->getNumSuccessors());
-  for (unsigned I = 1, E = WeightsNode->getNumOperands(); I != E; ++I) {
-    ConstantInt *Weight =
-        mdconst::dyn_extract<ConstantInt>(WeightsNode->getOperand(I));
-    if (!Weight)
-      return false;
-    assert(Weight->getValue().getActiveBits() <= 32 &&
-           "Too many bits for uint32_t");
-    Weights.push_back(Weight->getZExtValue());
-    WeightSum += Weights.back();
+
+  extractBranchWeights(WeightsNode, Weights);
+  for (unsigned I = 0, E = Weights.size(); I != E; ++I) {
+    WeightSum += Weights[I];
     const LoopBlock SrcLoopBB = getLoopBlock(BB);
-    const LoopBlock DstLoopBB = getLoopBlock(TI->getSuccessor(I - 1));
+    const LoopBlock DstLoopBB = getLoopBlock(TI->getSuccessor(I));
     auto EstimatedWeight = getEstimatedEdgeWeight({SrcLoopBB, DstLoopBB});
     if (EstimatedWeight &&
-        EstimatedWeight.getValue() <=
-            static_cast<uint32_t>(BlockExecWeight::UNREACHABLE))
-      UnreachableIdxs.push_back(I - 1);
+        *EstimatedWeight <= static_cast<uint32_t>(BlockExecWeight::UNREACHABLE))
+      UnreachableIdxs.push_back(I);
     else
-      ReachableIdxs.push_back(I - 1);
+      ReachableIdxs.push_back(I);
   }
   assert(Weights.size() == TI->getNumSuccessors() && "Checked above");
 
@@ -468,21 +529,10 @@ bool BranchProbabilityInfo::calcPointerHeuristics(const BasicBlock *BB) {
 
   assert(CI->getOperand(1)->getType()->isPointerTy());
 
-  BranchProbability TakenProb(PH_TAKEN_WEIGHT,
-                              PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
-  BranchProbability UntakenProb(PH_NONTAKEN_WEIGHT,
-                                PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
-
-  // p != 0   ->   isProb = true
-  // p == 0   ->   isProb = false
-  // p != q   ->   isProb = true
-  // p == q   ->   isProb = false;
-  bool isProb = CI->getPredicate() == ICmpInst::ICMP_NE;
-  if (!isProb)
-    std::swap(TakenProb, UntakenProb);
-
-  setEdgeProbability(
-      BB, SmallVector<BranchProbability, 2>({TakenProb, UntakenProb}));
+  auto Search = PointerTable.find(CI->getPredicate());
+  if (Search == PointerTable.end())
+    return false;
+  setEdgeProbability(BB, Search->second);
   return true;
 }
 
@@ -570,17 +620,18 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
       if (!CmpLHSConst || !llvm::is_contained(successors(BB), B))
         continue;
       // First collapse InstChain
+      const DataLayout &DL = BB->getModule()->getDataLayout();
       for (Instruction *I : llvm::reverse(InstChain)) {
-        CmpLHSConst = ConstantExpr::get(I->getOpcode(), CmpLHSConst,
-                                        cast<Constant>(I->getOperand(1)), true);
+        CmpLHSConst = ConstantFoldBinaryOpOperands(
+            I->getOpcode(), CmpLHSConst, cast<Constant>(I->getOperand(1)), DL);
         if (!CmpLHSConst)
           break;
       }
       if (!CmpLHSConst)
         continue;
       // Now constant-evaluate the compare
-      Constant *Result = ConstantExpr::getCompare(CI->getPredicate(),
-                                                  CmpLHSConst, CmpConst, true);
+      Constant *Result = ConstantFoldCompareInstOperands(
+          CI->getPredicate(), CmpLHSConst, CmpConst, DL);
       // If the result means we don't branch to the block then that block is
       // unlikely.
       if (Result &&
@@ -591,23 +642,23 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
   }
 }
 
-Optional<uint32_t>
+std::optional<uint32_t>
 BranchProbabilityInfo::getEstimatedBlockWeight(const BasicBlock *BB) const {
   auto WeightIt = EstimatedBlockWeight.find(BB);
   if (WeightIt == EstimatedBlockWeight.end())
-    return None;
+    return std::nullopt;
   return WeightIt->second;
 }
 
-Optional<uint32_t>
+std::optional<uint32_t>
 BranchProbabilityInfo::getEstimatedLoopWeight(const LoopData &L) const {
   auto WeightIt = EstimatedLoopWeight.find(L);
   if (WeightIt == EstimatedLoopWeight.end())
-    return None;
+    return std::nullopt;
   return WeightIt->second;
 }
 
-Optional<uint32_t>
+std::optional<uint32_t>
 BranchProbabilityInfo::getEstimatedEdgeWeight(const LoopEdge &Edge) const {
   // For edges entering a loop take weight of a loop rather than an individual
   // block in the loop.
@@ -617,18 +668,18 @@ BranchProbabilityInfo::getEstimatedEdgeWeight(const LoopEdge &Edge) const {
 }
 
 template <class IterT>
-Optional<uint32_t> BranchProbabilityInfo::getMaxEstimatedEdgeWeight(
+std::optional<uint32_t> BranchProbabilityInfo::getMaxEstimatedEdgeWeight(
     const LoopBlock &SrcLoopBB, iterator_range<IterT> Successors) const {
   SmallVector<uint32_t, 4> Weights;
-  Optional<uint32_t> MaxWeight;
+  std::optional<uint32_t> MaxWeight;
   for (const BasicBlock *DstBB : Successors) {
     const LoopBlock DstLoopBB = getLoopBlock(DstBB);
     auto Weight = getEstimatedEdgeWeight({SrcLoopBB, DstLoopBB});
 
     if (!Weight)
-      return None;
+      return std::nullopt;
 
-    if (!MaxWeight || MaxWeight.getValue() < Weight.getValue())
+    if (!MaxWeight || *MaxWeight < *Weight)
       MaxWeight = Weight;
   }
 
@@ -711,8 +762,8 @@ void BranchProbabilityInfo::propagateEstimatedBlockWeight(
   }
 }
 
-Optional<uint32_t> BranchProbabilityInfo::getInitialEstimatedBlockWeight(
-    const BasicBlock *BB) {
+std::optional<uint32_t>
+BranchProbabilityInfo::getInitialEstimatedBlockWeight(const BasicBlock *BB) {
   // Returns true if \p BB has call marked with "NoReturn" attribute.
   auto hasNoReturn = [&](const BasicBlock *BB) {
     for (const auto &I : reverse(*BB))
@@ -749,7 +800,7 @@ Optional<uint32_t> BranchProbabilityInfo::getInitialEstimatedBlockWeight(
       if (CI->hasFnAttr(Attribute::Cold))
         return static_cast<uint32_t>(BlockExecWeight::COLD);
 
-  return None;
+  return std::nullopt;
 }
 
 // Does RPO traversal over all blocks in \p F and assigns weights to
@@ -767,9 +818,8 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
     if (auto BBWeight = getInitialEstimatedBlockWeight(BB))
       // If we were able to find estimated weight for the block set it to this
       // block and propagate up the IR.
-      propagateEstimatedBlockWeight(getLoopBlock(BB), DT, PDT,
-                                    BBWeight.getValue(), BlockWorkList,
-                                    LoopWorkList);
+      propagateEstimatedBlockWeight(getLoopBlock(BB), DT, PDT, *BBWeight,
+                                    BlockWorkList, LoopWorkList);
 
   // BlockWorklist/LoopWorkList contains blocks/loops with at least one
   // successor/exit having estimated weight. Try to propagate weight to such
@@ -792,8 +842,7 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
         if (LoopWeight <= static_cast<uint32_t>(BlockExecWeight::UNREACHABLE))
           LoopWeight = static_cast<uint32_t>(BlockExecWeight::LOWEST_NON_ZERO);
 
-        EstimatedLoopWeight.insert(
-            {LoopBB.getLoopData(), LoopWeight.getValue()});
+        EstimatedLoopWeight.insert({LoopBB.getLoopData(), *LoopWeight});
         // Add all blocks entering the loop into working list.
         getLoopEnterBlocks(LoopBB, BlockWorkList);
       }
@@ -815,7 +864,7 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
       auto MaxWeight = getMaxEstimatedEdgeWeight(LoopBB, successors(BB));
 
       if (MaxWeight)
-        propagateEstimatedBlockWeight(LoopBB, DT, PDT, MaxWeight.getValue(),
+        propagateEstimatedBlockWeight(LoopBB, DT, PDT, *MaxWeight,
                                       BlockWorkList, LoopWorkList);
     }
   } while (!BlockWorkList.empty() || !LoopWorkList.empty());
@@ -841,7 +890,7 @@ bool BranchProbabilityInfo::calcEstimatedHeuristics(const BasicBlock *BB) {
   uint64_t TotalWeight = 0;
   // Go over all successors of BB and put their weights into SuccWeights.
   for (const BasicBlock *SuccBB : successors(BB)) {
-    Optional<uint32_t> Weight;
+    std::optional<uint32_t> Weight;
     const LoopBlock SuccLoopBB = getLoopBlock(SuccBB);
     const LoopEdge Edge{LoopBB, SuccLoopBB};
 
@@ -853,7 +902,7 @@ bool BranchProbabilityInfo::calcEstimatedHeuristics(const BasicBlock *BB) {
       // Scale down loop exiting weight by trip count.
       Weight = std::max(
           static_cast<uint32_t>(BlockExecWeight::LOWEST_NON_ZERO),
-          Weight.getValueOr(static_cast<uint32_t>(BlockExecWeight::DEFAULT)) /
+          Weight.value_or(static_cast<uint32_t>(BlockExecWeight::DEFAULT)) /
               TC);
     }
     bool IsUnlikelyEdge = LoopBB.getLoop() && UnlikelyBlocks.contains(SuccBB);
@@ -863,15 +912,14 @@ bool BranchProbabilityInfo::calcEstimatedHeuristics(const BasicBlock *BB) {
       // 'Unlikely' blocks have twice lower weight.
       Weight = std::max(
           static_cast<uint32_t>(BlockExecWeight::LOWEST_NON_ZERO),
-          Weight.getValueOr(static_cast<uint32_t>(BlockExecWeight::DEFAULT)) /
-              2);
+          Weight.value_or(static_cast<uint32_t>(BlockExecWeight::DEFAULT)) / 2);
     }
 
     if (Weight)
       FoundEstimatedWeight = true;
 
     auto WeightVal =
-        Weight.getValueOr(static_cast<uint32_t>(BlockExecWeight::DEFAULT));
+        Weight.value_or(static_cast<uint32_t>(BlockExecWeight::DEFAULT));
     TotalWeight += WeightVal;
     SuccWeights.push_back(WeightVal);
   }
@@ -949,86 +997,33 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
       if (Function *CalledFn = Call->getCalledFunction())
         TLI->getLibFunc(*CalledFn, Func);
 
-  bool isProb;
+  ProbabilityTable::const_iterator Search;
   if (Func == LibFunc_strcasecmp ||
       Func == LibFunc_strcmp ||
       Func == LibFunc_strncasecmp ||
       Func == LibFunc_strncmp ||
       Func == LibFunc_memcmp ||
       Func == LibFunc_bcmp) {
-    // strcmp and similar functions return zero, negative, or positive, if the
-    // first string is equal, less, or greater than the second. We consider it
-    // likely that the strings are not equal, so a comparison with zero is
-    // probably false, but also a comparison with any other number is also
-    // probably false given that what exactly is returned for nonzero values is
-    // not specified. Any kind of comparison other than equality we know
-    // nothing about.
-    switch (CI->getPredicate()) {
-    case CmpInst::ICMP_EQ:
-      isProb = false;
-      break;
-    case CmpInst::ICMP_NE:
-      isProb = true;
-      break;
-    default:
+    Search = ICmpWithLibCallTable.find(CI->getPredicate());
+    if (Search == ICmpWithLibCallTable.end())
       return false;
-    }
   } else if (CV->isZero()) {
-    switch (CI->getPredicate()) {
-    case CmpInst::ICMP_EQ:
-      // X == 0   ->  Unlikely
-      isProb = false;
-      break;
-    case CmpInst::ICMP_NE:
-      // X != 0   ->  Likely
-      isProb = true;
-      break;
-    case CmpInst::ICMP_SLT:
-      // X < 0   ->  Unlikely
-      isProb = false;
-      break;
-    case CmpInst::ICMP_SGT:
-      // X > 0   ->  Likely
-      isProb = true;
-      break;
-    default:
+    Search = ICmpWithZeroTable.find(CI->getPredicate());
+    if (Search == ICmpWithZeroTable.end())
       return false;
-    }
-  } else if (CV->isOne() && CI->getPredicate() == CmpInst::ICMP_SLT) {
-    // InstCombine canonicalizes X <= 0 into X < 1.
-    // X <= 0   ->  Unlikely
-    isProb = false;
+  } else if (CV->isOne()) {
+    Search = ICmpWithOneTable.find(CI->getPredicate());
+    if (Search == ICmpWithOneTable.end())
+      return false;
   } else if (CV->isMinusOne()) {
-    switch (CI->getPredicate()) {
-    case CmpInst::ICMP_EQ:
-      // X == -1  ->  Unlikely
-      isProb = false;
-      break;
-    case CmpInst::ICMP_NE:
-      // X != -1  ->  Likely
-      isProb = true;
-      break;
-    case CmpInst::ICMP_SGT:
-      // InstCombine canonicalizes X >= 0 into X > -1.
-      // X >= 0   ->  Likely
-      isProb = true;
-      break;
-    default:
+    Search = ICmpWithMinusOneTable.find(CI->getPredicate());
+    if (Search == ICmpWithMinusOneTable.end())
       return false;
-    }
   } else {
     return false;
   }
 
-  BranchProbability TakenProb(ZH_TAKEN_WEIGHT,
-                              ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
-  BranchProbability UntakenProb(ZH_NONTAKEN_WEIGHT,
-                                ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
-  if (!isProb)
-    std::swap(TakenProb, UntakenProb);
-
-  setEdgeProbability(
-      BB, SmallVector<BranchProbability, 2>({TakenProb, UntakenProb}));
+  setEdgeProbability(BB, Search->second);
   return true;
 }
 
@@ -1042,34 +1037,21 @@ bool BranchProbabilityInfo::calcFloatingPointHeuristics(const BasicBlock *BB) {
   if (!FCmp)
     return false;
 
-  uint32_t TakenWeight = FPH_TAKEN_WEIGHT;
-  uint32_t NontakenWeight = FPH_NONTAKEN_WEIGHT;
-  bool isProb;
+  ProbabilityList ProbList;
   if (FCmp->isEquality()) {
-    // f1 == f2 -> Unlikely
-    // f1 != f2 -> Likely
-    isProb = !FCmp->isTrueWhenEqual();
-  } else if (FCmp->getPredicate() == FCmpInst::FCMP_ORD) {
-    // !isnan -> Likely
-    isProb = true;
-    TakenWeight = FPH_ORD_WEIGHT;
-    NontakenWeight = FPH_UNO_WEIGHT;
-  } else if (FCmp->getPredicate() == FCmpInst::FCMP_UNO) {
-    // isnan -> Unlikely
-    isProb = false;
-    TakenWeight = FPH_ORD_WEIGHT;
-    NontakenWeight = FPH_UNO_WEIGHT;
+    ProbList = !FCmp->isTrueWhenEqual() ?
+      // f1 == f2 -> Unlikely
+      ProbabilityList({FPTakenProb, FPUntakenProb}) :
+      // f1 != f2 -> Likely
+      ProbabilityList({FPUntakenProb, FPTakenProb});
   } else {
-    return false;
+    auto Search = FCmpTable.find(FCmp->getPredicate());
+    if (Search == FCmpTable.end())
+      return false;
+    ProbList = Search->second;
   }
 
-  BranchProbability TakenProb(TakenWeight, TakenWeight + NontakenWeight);
-  BranchProbability UntakenProb(NontakenWeight, TakenWeight + NontakenWeight);
-  if (!isProb)
-    std::swap(TakenProb, UntakenProb);
-
-  setEdgeProbability(
-      BB, SmallVector<BranchProbability, 2>({TakenProb, UntakenProb}));
+  setEdgeProbability(BB, ProbList);
   return true;
 }
 
@@ -1103,26 +1085,6 @@ isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const {
   // Hot probability is at least 4/5 = 80%
   // FIXME: Compare against a static "hot" BranchProbability.
   return getEdgeProbability(Src, Dst) > BranchProbability(4, 5);
-}
-
-const BasicBlock *
-BranchProbabilityInfo::getHotSucc(const BasicBlock *BB) const {
-  auto MaxProb = BranchProbability::getZero();
-  const BasicBlock *MaxSucc = nullptr;
-
-  for (const auto *Succ : successors(BB)) {
-    auto Prob = getEdgeProbability(BB, Succ);
-    if (Prob > MaxProb) {
-      MaxProb = Prob;
-      MaxSucc = Succ;
-    }
-  }
-
-  // Hot probability is at least 4/5 = 80%
-  if (MaxProb > BranchProbability(4, 5))
-    return MaxSucc;
-
-  return nullptr;
 }
 
 /// Get the raw edge probability for the edge. If can't find it, return a
@@ -1191,6 +1153,7 @@ void BranchProbabilityInfo::setEdgeProbability(
   // should be within Probs.size / BranchProbability::getDenominator.
   assert(TotalNumerator <= BranchProbability::getDenominator() + Probs.size());
   assert(TotalNumerator >= BranchProbability::getDenominator() - Probs.size());
+  (void)TotalNumerator;
 }
 
 void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
@@ -1200,7 +1163,7 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
   assert(NumSuccessors == Dst->getTerminator()->getNumSuccessors());
   if (NumSuccessors == 0)
     return; // Nothing to set.
-  if (this->Probs.find(std::make_pair(Src, 0)) == this->Probs.end())
+  if (!this->Probs.contains(std::make_pair(Src, 0)))
     return; // No probability is set for edges from Src. Keep the same for Dst.
 
   Handles.insert(BasicBlockCallbackVH(Dst, this));
@@ -1212,13 +1175,24 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
   }
 }
 
+void BranchProbabilityInfo::swapSuccEdgesProbabilities(const BasicBlock *Src) {
+  assert(Src->getTerminator()->getNumSuccessors() == 2);
+  if (!Probs.contains(std::make_pair(Src, 0)))
+    return; // No probability is set for edges from Src
+  assert(Probs.contains(std::make_pair(Src, 1)));
+  std::swap(Probs[std::make_pair(Src, 0)], Probs[std::make_pair(Src, 1)]);
+}
+
 raw_ostream &
 BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
                                             const BasicBlock *Src,
                                             const BasicBlock *Dst) const {
   const BranchProbability Prob = getEdgeProbability(Src, Dst);
-  OS << "edge " << Src->getName() << " -> " << Dst->getName()
-     << " probability is " << Prob
+  OS << "edge ";
+  Src->printAsOperand(OS, false, Src->getModule());
+  OS << " -> ";
+  Dst->printAsOperand(OS, false, Dst->getModule());
+  OS << " probability is " << Prob
      << (isEdgeHot(Src, Dst) ? " [HOT edge]\n" : "\n");
 
   return OS;
@@ -1277,7 +1251,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
 
   // Walk the basic blocks in post-order so that we can build up state about
   // the successors of a block iteratively.
-  for (auto BB : post_order(&F.getEntryBlock())) {
+  for (const auto *BB : post_order(&F.getEntryBlock())) {
     LLVM_DEBUG(dbgs() << "Computing probabilities for " << BB->getName()
                       << "\n");
     // If there is no at least two successors, no sense to set probability.
@@ -1299,9 +1273,8 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
   EstimatedBlockWeight.clear();
   SccI.reset();
 
-  if (PrintBranchProb &&
-      (PrintBranchProbFuncName.empty() ||
-       F.getName().equals(PrintBranchProbFuncName))) {
+  if (PrintBranchProb && (PrintBranchProbFuncName.empty() ||
+                          F.getName() == PrintBranchProbFuncName)) {
     print(dbgs());
   }
 }
@@ -1340,19 +1313,19 @@ void BranchProbabilityInfoWrapperPass::print(raw_ostream &OS,
 AnalysisKey BranchProbabilityAnalysis::Key;
 BranchProbabilityInfo
 BranchProbabilityAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   BranchProbabilityInfo BPI;
-  BPI.calculate(F, AM.getResult<LoopAnalysis>(F),
-                &AM.getResult<TargetLibraryAnalysis>(F),
-                &AM.getResult<DominatorTreeAnalysis>(F),
-                &AM.getResult<PostDominatorTreeAnalysis>(F));
+  BPI.calculate(F, LI, &TLI, &DT, &PDT);
   return BPI;
 }
 
 PreservedAnalyses
 BranchProbabilityPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
-  OS << "Printing analysis results of BPI for function "
-     << "'" << F.getName() << "':"
-     << "\n";
+  OS << "Printing analysis 'Branch Probability Analysis' for function '"
+     << F.getName() << "':\n";
   AM.getResult<BranchProbabilityAnalysis>(F).print(OS);
   return PreservedAnalyses::all();
 }

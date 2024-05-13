@@ -1,4 +1,3 @@
-; RUN: opt -S -rewrite-statepoints-for-gc < %s | FileCheck %s
 ; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
 ;
 ; Regression test:
@@ -9,12 +8,12 @@
 ;   can remove some blocks for which isReachableFromEntry() returns true.
 ;   This resulted in stale pointers to the collected but removed
 ;   callsites. Such stale pointers caused crash when accessed.
-declare void @f(i8 addrspace(1)* %obj)
+declare void @f(ptr addrspace(1) %obj)
 
-define void @test(i8 addrspace(1)* %arg) gc "statepoint-example" {
+define void @test(ptr addrspace(1) %arg) gc "statepoint-example" {
 ; CHECK-LABEL: test(
 ; CHECK-NEXT: @f
- call void @f(i8 addrspace(1)* %arg) #1
+ call void @f(ptr addrspace(1) %arg) #1
  br i1 true, label %not_zero, label %zero
 
 not_zero:
@@ -23,11 +22,11 @@ not_zero:
 ; This block is reachable but removed by removeUnreachableBlocks()
 zero:
 ; CHECK-NOT: @f
- call void @f(i8 addrspace(1)* %arg) #1
+ call void @f(ptr addrspace(1) %arg) #1
  ret void
 
 unreach:
- call void @f(i8 addrspace(1)* %arg) #1
+ call void @f(ptr addrspace(1) %arg) #1
  ret void
 }
 

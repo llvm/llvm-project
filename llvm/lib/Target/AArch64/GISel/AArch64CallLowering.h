@@ -24,9 +24,7 @@ namespace llvm {
 
 class AArch64TargetLowering;
 class CCValAssign;
-class DataLayout;
 class MachineIRBuilder;
-class MachineRegisterInfo;
 class Type;
 
 class AArch64CallLowering: public CallLowering {
@@ -36,6 +34,10 @@ public:
   bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
                    ArrayRef<Register> VRegs, FunctionLoweringInfo &FLI,
                    Register SwiftErrorVReg) const override;
+
+  bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
+                      SmallVectorImpl<BaseArgInfo> &Outs,
+                      bool IsVarArg) const override;
 
   bool fallBackToDAGISel(const MachineFunction &MF) const override;
 
@@ -63,6 +65,10 @@ private:
 
   using MemHandler =
       std::function<void(MachineIRBuilder &, int, CCValAssign &)>;
+
+  void saveVarArgRegisters(MachineIRBuilder &MIRBuilder,
+                           CallLowering::IncomingValueHandler &Handler,
+                           CCState &CCInfo) const;
 
   bool lowerTailCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
                      SmallVectorImpl<ArgInfo> &OutArgs) const;

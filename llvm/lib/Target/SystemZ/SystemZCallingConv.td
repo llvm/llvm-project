@@ -102,9 +102,10 @@ def CC_SystemZ_ELF : CallingConv<[
   // A SwiftError is passed in callee-saved R9.
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R9D]>>>,
 
-  // Force long double values to the stack and pass i64 pointers to them.
-  CCIfType<[f128], CCPassIndirect<i64>>,
-  // Same for i128 values.  These are already split into two i64 here,
+  // Force i128 (if the type is legal) and long double values to the stack
+  // and pass i64 pointers to them.
+  CCIfType<[i128, f128], CCPassIndirect<i64>>,
+  // If i128 is not legal, such values are already split into two i64 here,
   // so we have to use a custom handler.
   CCIfType<[i64], CCCustom<"CC_SystemZ_I128Indirect">>,
 
@@ -163,11 +164,10 @@ def CSR_SystemZ_NoRegs : CalleeSavedRegs<(add)>;
 // z/OS XPLINK64 callee-saved registers
 //===----------------------------------------------------------------------===//
 def CSR_SystemZ_XPLINK64 : CalleeSavedRegs<(add (sequence "R%dD", 8, 15),
-                                                (sequence "F%dD", 8, 15))>;
+                                                (sequence "F%dD", 15, 8))>;
 
-def CSR_SystemZ_XPLINK64_Vector : CalleeSavedRegs<(add (sequence "R%dD", 8, 15),
-                                                       (sequence "F%dD", 15, 8),
-                                                       (sequence "V%d", 23, 16))>;
+def CSR_SystemZ_XPLINK64_Vector : CalleeSavedRegs<(add CSR_SystemZ_XPLINK64,
+                                                   (sequence "V%d", 23, 16))>;
 
 //===----------------------------------------------------------------------===//
 // z/OS XPLINK64 return value calling convention
@@ -222,6 +222,18 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // XPLINK64 ABI compliant code widens integral types smaller than i64
   // to i64 before placing the parameters either on the stack or in registers.
   CCIfType<[i32], CCIfExtend<CCPromoteToType<i64>>>,
+  // Promote f32 to f64 and bitcast to i64, if it needs to be passed in GPRs.
+  // Although we assign the f32 vararg to be bitcast, it will first be promoted
+  // to an f64 within convertValVTToLocVT().
+  CCIfType<[f32, f64], CCIfNotFixed<CCBitConvertToType<i64>>>,
+  // long double, can only be passed in GPR2 and GPR3, if available,
+  // hence R2Q
+  CCIfType<[f128], CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>,
+  // Non fixed vector arguments are treated in the same way as long
+  // doubles.
+  CCIfSubtarget<"hasVector()",
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+      CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>>,
 
   // A SwiftSelf is passed in callee-saved R10.
   CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[R10D]>>>,
@@ -229,51 +241,37 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // A SwiftError is passed in R0.
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R0D]>>>,
 
-  // First i128 values. These are already split into two i64 here,
-  // so we have to use a custom handler and assign into registers, if possible
-  // We need to deal with this first
+  // Force i128 values to the stack and pass i64 pointers to them.
+  CCIfType<[i128], CCPassIndirect<i64>>,
+  // If i128 is not legal, such values are already split into two i64 here,
+  // so we have to use a custom handler.
   CCIfType<[i64], CCCustom<"CC_SystemZ_I128Indirect">>,
   // The first 3 integer arguments are passed in registers R1D-R3D.
   // The rest will be passed in the user area. The address offset of the user
   // area can be found in register R4D.
-  CCIfType<[i32], CCAssignToReg<[R1L, R2L, R3L]>>,
-  CCIfType<[i64], CCAssignToReg<[R1D, R2D, R3D]>>,
+  CCIfType<[i64], CCAssignToRegAndStack<[R1D, R2D, R3D], 8, 8>>,
 
-  // The first 8 named vector arguments are passed in V24-V31.  Sub-128 vectors
+  // The first 8 named vector arguments are passed in V24-V31. Sub-128 vectors
   // are passed in the same way, but they're widened to one of these types
   // during type legalization.
   CCIfSubtarget<"hasVector()",
     CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-             CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>>,
+      CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>>,
   CCIfSubtarget<"hasVector()",
     CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-             CCIfFixed<CCAssignToReg<[V24, V25, V26, V27,
-                                      V28, V29, V30, V31]>>>>,
+              CCIfFixed<CCAssignToRegAndStack<[V24, V25, V26, V27,
+                                               V28, V29, V30, V31], 16, 8>>>>,
 
-  // The first 4 named  float and double arguments are passed in registers FPR0-FPR6.
-  // The rest will be passed in the user area.
+  // The first 4 named float and double arguments are passed in registers
+  // FPR0-FPR6. The rest will be passed in the user area.
   CCIfType<[f32, f64], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>,
-  CCIfType<[f32], CCIfFixed<CCAssignToReg<[F0S, F2S, F4S, F6S]>>>,
-  CCIfType<[f64], CCIfFixed<CCAssignToReg<[F0D, F2D, F4D, F6D]>>>,
+  CCIfType<[f32], CCIfFixed<CCAssignToRegAndStack<[F0S, F2S, F4S, F6S], 4, 8>>>,
+  CCIfType<[f64], CCIfFixed<CCAssignToRegAndStack<[F0D, F2D, F4D, F6D], 8, 8>>>,
+
   // The first 2 long double arguments are passed in register FPR0/FPR2
   // and FPR4/FPR6. The rest will be passed in the user area.
   CCIfType<[f128], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>,
-  CCIfType<[f128], CCIfFixed<CCAssignToReg<[F0Q, F4Q]>>>,
-
-  // Non fixed floats are passed in GPRs
-  // Promote f32 to f64, if it needs to be passed in GPRs.
-  CCIfType<[f32], CCIfNotFixed<CCPromoteToType<f64>>>,
-  // Assign f64 varargs to their proper GPRs.
-  CCIfType<[f64], CCIfNotFixed<CCAssignToReg<[R1D, R2D, R3D]>>>,
-  // long double, can only be passed in GPR2 and GPR3, if available,
-  // hence R2Q
-  CCIfType<[f128], CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>,
-
-  // Non fixed vector arguments are treated in the same way as long
-  // doubles.
-  CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-      CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>>,
+  CCIfType<[f128], CCIfFixed<CCAssignToRegAndStack<[F0Q, F4Q], 16, 8>>>,
 
   // Other arguments are passed in 8-byte-aligned 8-byte stack slots.
   CCIfType<[i32, i64, f32, f64], CCAssignToStack<8, 8>>,

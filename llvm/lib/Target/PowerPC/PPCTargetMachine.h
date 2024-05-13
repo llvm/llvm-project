@@ -17,6 +17,7 @@
 #include "PPCSubtarget.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 namespace llvm {
 
@@ -31,14 +32,16 @@ private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   PPCABI TargetABI;
   Endian Endianness = Endian::NOT_DETECTED;
+  mutable bool HasGlibcHWCAPAccess = false;
 
   mutable StringMap<std::unique_ptr<PPCSubtarget>> SubtargetMap;
 
 public:
   PPCTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
-                   Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                   CodeGenOpt::Level OL, bool JIT);
+                   std::optional<Reloc::Model> RM,
+                   std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                   bool JIT);
 
   ~PPCTargetMachine() override;
 
@@ -51,12 +54,19 @@ public:
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+
   bool isELFv2ABI() const { return TargetABI == PPC_ABI_ELFv2; }
+  bool hasGlibcHWCAPAccess() const { return HasGlibcHWCAPAccess; }
+  void setGlibcHWCAPAccess(bool Val = true) const { HasGlibcHWCAPAccess = Val; }
   bool isPPC64() const {
     const Triple &TT = getTargetTriple();
     return (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le);
@@ -68,6 +78,8 @@ public:
   }
 
   bool isLittleEndian() const;
+
+  int unqualifiedInlineAsmVariant() const override { return 1; }
 };
 } // end namespace llvm
 

@@ -80,6 +80,8 @@ template <typename T> void COFFDumper::dumpOptionalHeader(T OptionalHeader) {
       OptionalHeader->SizeOfHeapReserve;
   YAMLObj.OptionalHeader->Header.SizeOfHeapCommit =
       OptionalHeader->SizeOfHeapCommit;
+  YAMLObj.OptionalHeader->Header.NumberOfRvaAndSize =
+      OptionalHeader->NumberOfRvaAndSize;
   unsigned I = 0;
   for (auto &DestDD : YAMLObj.OptionalHeader->DataDirectories) {
     const object::data_directory *DD = Obj.getDataDirectory(I++);
@@ -121,7 +123,7 @@ initializeFileAndStringTable(const llvm::object::COFFObjectFile &Obj,
 
     cantFail(Obj.getSectionContents(COFFSection, sectionData));
 
-    BinaryStreamReader Reader(sectionData, support::little);
+    BinaryStreamReader Reader(sectionData, llvm::endianness::little);
     uint32_t Magic;
 
     Err(Reader.readInteger(Magic));
@@ -202,8 +204,7 @@ void COFFDumper::dumpSections(unsigned NumSections) {
        std::string Buf;
        raw_string_ostream OS(Buf);
        logAllUnhandledErrors(SymbolNameOrErr.takeError(), OS);
-       OS.flush();
-       report_fatal_error(Buf);
+       report_fatal_error(Twine(OS.str()));
       }
       if (SymbolUnique.lookup(*SymbolNameOrErr))
         Rel.SymbolName = *SymbolNameOrErr;

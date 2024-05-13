@@ -23,7 +23,6 @@
 #ifndef LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
 #define LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/GenericDomTree.h"
@@ -37,7 +36,7 @@ namespace IDFCalculatorDetail {
 /// May be specialized if, for example, one wouldn't like to return nullpointer
 /// successors.
 template <class NodeTy, bool IsPostDom> struct ChildrenGetterTy {
-  using NodeRef = typename GraphTraits<NodeTy>::NodeRef;
+  using NodeRef = typename GraphTraits<NodeTy *>::NodeRef;
   using ChildrenTy = SmallVector<NodeRef, 8>;
 
   ChildrenTy get(const NodeRef &N);
@@ -193,7 +192,7 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
               SuccNode, std::make_pair(SuccLevel, SuccNode->getDFSNumIn())));
       };
 
-      for (auto Succ : ChildrenGetter.get(BB))
+      for (auto *Succ : ChildrenGetter.get(BB))
         DoWork(Succ);
 
       for (auto DomChild : *Node) {

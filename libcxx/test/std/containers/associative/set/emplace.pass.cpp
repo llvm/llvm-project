@@ -56,12 +56,12 @@ int main(int, char**)
         assert(*m.begin() == Emplaceable());
         r = m.emplace(2, 3.5);
         assert(r.second);
-        assert(r.first == next(m.begin()));
+        assert(r.first == std::next(m.begin()));
         assert(m.size() == 2);
         assert(*r.first == Emplaceable(2, 3.5));
         r = m.emplace(2, 3.5);
         assert(!r.second);
-        assert(r.first == next(m.begin()));
+        assert(r.first == std::next(m.begin()));
         assert(m.size() == 2);
         assert(*r.first == Emplaceable(2, 3.5));
     }

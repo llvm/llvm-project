@@ -14,13 +14,32 @@
 #ifndef LLVM_CODEGEN_MIRPRINTER_H
 #define LLVM_CODEGEN_MIRPRINTER_H
 
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/raw_ostream.h"
+
 namespace llvm {
 
 class MachineBasicBlock;
 class MachineFunction;
 class Module;
-class raw_ostream;
 template <typename T> class SmallVectorImpl;
+
+class PrintMIRPreparePass : public PassInfoMixin<PrintMIRPreparePass> {
+  raw_ostream &OS;
+
+public:
+  PrintMIRPreparePass(raw_ostream &OS = errs()) : OS(OS) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+};
+
+class PrintMIRPass : public PassInfoMixin<PrintMIRPass> {
+  raw_ostream &OS;
+
+public:
+  PrintMIRPass(raw_ostream &OS = errs()) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
 /// Print LLVM IR using the MIR serialization format to the given output stream.
 void printMIR(raw_ostream &OS, const Module &M);
@@ -34,7 +53,7 @@ void printMIR(raw_ostream &OS, const MachineFunction &MF);
 /// you the correct list of successor blocks in most cases except for things
 /// like jump tables where the basic block references can't easily be found.
 /// The MIRPRinter will skip printing successors if they match the result of
-/// this funciton and the parser will use this function to construct a list if
+/// this function and the parser will use this function to construct a list if
 /// it is missing.
 void guessSuccessors(const MachineBasicBlock &MBB,
                      SmallVectorImpl<MachineBasicBlock*> &Result,

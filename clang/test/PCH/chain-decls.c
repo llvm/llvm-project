@@ -9,10 +9,10 @@
 
 // expected-no-diagnostics
 
-// CHECK: void f();
-// CHECK: void g();
+// CHECK: void f(void);
+// CHECK: void g(void);
 
-int h() {
+int h(void) {
   f();
   g();
 

@@ -14,6 +14,8 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
+;; Version: 0.1.0
+
 ;;; Commentary:
 
 ;; Major mode for editing MLIR files.
@@ -74,6 +76,26 @@
 ;;;###autoload
 (add-to-list 'auto-mode-alist (cons "\\.mlir\\'" 'mlir-mode))
 
-(provide 'mlir-mode)
+(defgroup mlir nil
+  "Major mode for editing MLIR source files."
+  :group 'languages
+  :prefix "mlir-")
 
+;; Set default value of opt-tool to use as mlir-opt.
+(defcustom mlir-opt "mlir-opt"
+  "Commandline MLIR opt tool to use."
+  :type 'string)
+
+;; Enable reading/writing .mlirbc files.
+(require 'jka-compr)
+(add-to-list 'jka-compr-compression-info-list
+  (vector "\\.mlirbc\\'"
+   "mlir-to-bytecode" mlir-opt (vector "--mlir-print-debuginfo" "--emit-bytecode" "-o" "-" "-")
+   "mlir-bytecode-to-text" mlir-opt (vector "--mlir-print-debuginfo")
+   nil nil "ML\357R"))
+(jka-compr-update)
+(auto-compression-mode t)
+(add-to-list 'auto-mode-alist (cons "\\.mlirbc\\'" 'mlir-mode))
+
+(provide 'mlir-mode)
 ;;; mlir-mode.el ends here

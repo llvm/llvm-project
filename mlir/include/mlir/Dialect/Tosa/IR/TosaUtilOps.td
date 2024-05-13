@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines codegen utility operators for the TOSA dialect. 
-// These operators are not part of the formal TOSA specification and 
-// are intended to aid code generation from TOSA. 
+// This file defines codegen utility operators for the TOSA dialect.
+// These operators are not part of the formal TOSA specification and
+// are intended to aid code generation from TOSA.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,12 +19,16 @@ include "mlir/IR/OpBase.td"
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Dialect/Tosa/IR/TosaInterfaces.td"
 
 include "mlir/Dialect/Tosa/IR/TosaTypesBase.td"
 include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 
-def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [NoSideEffect] # ElementwiseMappable.traits> {
+def Tosa_ApplyScaleOp :
+  Tosa_Op<"apply_scale",
+          [Pure, DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+          ElementwiseMappable.traits> {
   let summary = "Rescale scalar operator for Tosa tensor operators";
 
   let description = [{
@@ -37,15 +41,21 @@ def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [NoSideEffect] # ElementwiseMappab
   }];
 
   let arguments = (ins
-    Tosa_Int32Like:$value,
-    Tosa_Int32Like:$multiplier,
+    Tosa_IntLike:$value,
+    Tosa_IntLike:$multiplier,
     Tosa_Int8Like:$shift,
     BoolAttr:$double_round
   );
 
   let results = (outs
-    Tosa_Int32:$output
+    Tosa_IntLike:$output
   );
+
+  let extraClassDeclaration = [{
+    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -53,7 +63,7 @@ def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [NoSideEffect] # ElementwiseMappab
 //===----------------------------------------------------------------------===//
 def Tosa_YieldOp : Tosa_Op<"yield", [
        Terminator,
-       NoSideEffect]> {
+       Pure]> {
   let summary = "yield operator";
 
   let description = [{
@@ -65,6 +75,75 @@ def Tosa_YieldOp : Tosa_Op<"yield", [
   let arguments = (ins
     Variadic<Tosa_Tensor>:$inputs
   );
+
+  let assemblyFormat = "$inputs attr-dict `:` type($inputs)";
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable
+//===----------------------------------------------------------------------===//
+def Tosa_VariableOp : Tosa_Op<"variable", []> {
+  let summary = "Defines a variable";
+
+  let description = [{
+    Defines a new TOSA variable. This is a mutable value.
+    Modifications are expressed using read/write semantics.
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$name,
+    TypeAttr:$type,
+    OptionalAttr<AnyAttr>:$initial_value
+  );
+
+  let assemblyFormat = [{
+    $name
+    attr-dict
+    custom<TypeOrAttr>($type, $initial_value)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable.write
+//===----------------------------------------------------------------------===//
+def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
+  let summary = "write_buffer operator";
+
+  let description = [{
+    Assigns a value to pseudo-buffer resource holding a mutable tensor.
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$name,
+    AnyType:$value
+  );
+
+  let assemblyFormat = [{
+    $name attr-dict `,` $value `:` type($value)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable.read
+//===----------------------------------------------------------------------===//
+def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
+  let summary = "read_buffer operator";
+
+  let description = [{
+    Reads the value from a pseudo-buffer resource holding a mutable tensor.
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$name
+  );
+
+  let results = (outs
+    AnyType:$value
+  );
+
+  let assemblyFormat = [{
+    $name attr-dict `:` type($value)
+  }];
 }
 
 #endif // TOSA_UTIL_OPS

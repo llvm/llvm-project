@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-detect -analyze < %s \
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s \
 ; RUN: | FileCheck %s -check-prefix=DETECT
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; DETECT: Valid Region for Scop: for => return
 ;
@@ -10,7 +10,7 @@
 ; CHECK: Function: func
 ; CHECK-NEXT: Region: %for---%return
 
-define void @func(i64 %n, double* nonnull %A, double * nonnull %B, i64 %d) {
+define void @func(i64 %n, ptr nonnull %A, ptr nonnull %B, i64 %d) {
 entry:
 	  br label %for
 for:
@@ -91,10 +91,10 @@ body:
       %add5.i32.i = add nsw i64 %mul.i23.i, %mul4.i31.i
       %idxprom = add nsw i64 %add7.i, %add5.i32.i
 
-      %A_idx = getelementptr inbounds double, double* %A, i64 %idxprom
-      %val = load double, double* %A_idx
-      %B_idx = getelementptr inbounds double, double* %B, i64 %j
-      store double %val, double* %B_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i64 %idxprom
+      %val = load double, ptr %A_idx
+      %B_idx = getelementptr inbounds double, ptr %B, i64 %j
+      store double %val, ptr %B_idx
       br label %inc
 
 inc:

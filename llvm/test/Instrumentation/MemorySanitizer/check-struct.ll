@@ -1,4 +1,4 @@
-; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S -passes='module(msan-module),function(msan)' 2>&1 | \
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S -passes='module(msan)' 2>&1 | \
 ; RUN:   FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -6,10 +6,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: @main
 define { i32, i8 } @main() sanitize_memory {
-; CHECK: [[P:%.*]] = inttoptr i64 0 to { i32, i8 }*
-  %p = inttoptr i64 0 to { i32, i8 } *
-; CHECK: [[O:%.*]] = load { i32, i8 }, { i32, i8 }* [[P]]
-  %o = load { i32, i8 }, { i32, i8 } *%p
+; CHECK: [[P:%.*]] = inttoptr i64 0 to ptr
+  %p = inttoptr i64 0 to ptr
+; CHECK: [[O:%.*]] = load { i32, i8 }, ptr [[P]]
+  %o = load { i32, i8 }, ptr %p
 ; CHECK: [[FIELD0:%.+]] = extractvalue { i32, i8 } %_msld, 0
 ; CHECK: [[F0_POISONED:%.+]] = icmp ne i32 [[FIELD0]]
 ; CHECK: [[FIELD1:%.+]] = extractvalue { i32, i8 } %_msld, 1

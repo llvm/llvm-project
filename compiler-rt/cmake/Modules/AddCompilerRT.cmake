@@ -77,6 +77,16 @@ function(add_compiler_rt_object_libraries name)
       list(REMOVE_ITEM target_flags "-msse3")
     endif()
 
+    # Build the macOS sanitizers with Mac Catalyst support.
+    if (APPLE AND
+        "${COMPILER_RT_ENABLE_MACCATALYST}" AND
+        "${libname}" MATCHES ".*\.osx.*")
+      foreach(arch ${LIB_ARCHS_${libname}})
+        list(APPEND target_flags
+          "SHELL:-target ${arch}-apple-macos${DARWIN_osx_MIN_VER} -darwin-target-variant ${arch}-apple-ios13.1-macabi")
+      endforeach()
+    endif()
+
     set_target_compile_flags(${libname}
       ${extra_cflags_${libname}} ${target_flags})
     set_property(TARGET ${libname} APPEND PROPERTY
@@ -107,17 +117,6 @@ function(add_compiler_rt_component name)
   add_dependencies(compiler-rt ${name})
 endfunction()
 
-function(add_asm_sources output)
-  set(${output} ${ARGN} PARENT_SCOPE)
-  # CMake doesn't pass the correct architecture for Apple prior to CMake 3.19. https://gitlab.kitware.com/cmake/cmake/-/issues/20771
-  # MinGW didn't work correctly with assembly prior to CMake 3.17. https://gitlab.kitware.com/cmake/cmake/-/merge_requests/4287 and https://reviews.llvm.org/rGb780df052dd2b246a760d00e00f7de9ebdab9d09
-  # Workaround these two issues by compiling as C.
-  # Same workaround used in libunwind. Also update there if changed here.
-  if((APPLE AND CMAKE_VERSION VERSION_LESS 3.19) OR (MINGW AND CMAKE_VERSION VERSION_LESS 3.17))
-    set_source_files_properties(${ARGN} PROPERTIES LANGUAGE C)
-  endif()
-endfunction()
-
 macro(set_output_name output name arch)
   if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
     set(${output} ${name})
@@ -128,13 +127,16 @@ macro(set_output_name output name arch)
       if(COMPILER_RT_DEFAULT_TARGET_ONLY)
         set(triple "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
       else()
-        set(triple "${TARGET_TRIPLE}")
+        set(triple "${LLVM_TARGET_TRIPLE}")
       endif()
-      # When using arch-suffixed runtime library names, clang only looks for
-      # libraries named "arm" or "armhf", see getArchNameForCompilerRTLib in
-      # clang. Therefore, try to inspect both the arch name and the triple
-      # if it seems like we're building an armhf target.
-      if ("${arch}" MATCHES "hf$" OR "${triple}" MATCHES "hf$")
+      # Except for baremetal, when using arch-suffixed runtime library names,
+      # clang only looks for libraries named "arm" or "armhf", see
+      # getArchNameForCompilerRTLib in clang. Therefore, try to inspect both
+      # the arch name and the triple if it seems like we're building an armhf
+      # target.
+      if (COMPILER_RT_BAREMETAL_BUILD)
+        set(${output} "${name}-${arch}${COMPILER_RT_OS_SUFFIX}")
+      elseif ("${arch}" MATCHES "hf$" OR "${triple}" MATCHES "hf$")
         set(${output} "${name}-armhf${COMPILER_RT_OS_SUFFIX}")
       else()
         set(${output} "${name}-arm${COMPILER_RT_OS_SUFFIX}")
@@ -148,7 +150,7 @@ endmacro()
 # Adds static or shared runtime for a list of architectures and operating
 # systems and puts it in the proper directory in the build and install trees.
 # add_compiler_rt_runtime(<name>
-#                         {OBJECT|STATIC|SHARED}
+#                         {OBJECT|STATIC|SHARED|MODULE}
 #                         ARCHS <architectures>
 #                         OS <os list>
 #                         SOURCES <source files>
@@ -161,8 +163,9 @@ endmacro()
 #                         PARENT_TARGET <convenience parent target>
 #                         ADDITIONAL_HEADERS <header files>)
 function(add_compiler_rt_runtime name type)
-  if(NOT type MATCHES "^(OBJECT|STATIC|SHARED)$")
-    message(FATAL_ERROR "type argument must be OBJECT, STATIC or SHARED")
+  if(NOT type MATCHES "^(OBJECT|STATIC|SHARED|MODULE)$")
+    message(FATAL_ERROR
+            "type argument must be OBJECT, STATIC, SHARED or MODULE")
     return()
   endif()
   cmake_parse_arguments(LIB
@@ -187,8 +190,11 @@ function(add_compiler_rt_runtime name type)
     endif()
     if(LLVM_BUILD_INSTRUMENTED MATCHES IR AND COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
       list(APPEND NO_PGO_FLAGS "-fno-profile-generate")
-    elseif(LLVM_BUILD_INSTRUMENTED AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
+    elseif((LLVM_BUILD_INSTRUMENTED OR LLVM_BUILD_INSTRUMENTED_COVERAGE) AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
       list(APPEND NO_PGO_FLAGS "-fno-profile-instr-generate")
+      if(LLVM_BUILD_INSTRUMENTED_COVERAGE AND COMPILER_RT_HAS_FNO_COVERAGE_MAPPING_FLAG)
+        list(APPEND NO_PGO_FLAGS "-fno-coverage-mapping")
+      endif()
     endif()
   endif()
 
@@ -227,6 +233,17 @@ function(add_compiler_rt_runtime name type)
         get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir_${libname})
         get_compiler_rt_install_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} install_dir_${libname})
       endif()
+
+      # Build the macOS sanitizers with Mac Catalyst support.
+      if ("${COMPILER_RT_ENABLE_MACCATALYST}" AND
+          "${os}" MATCHES "^(osx)$")
+        foreach(arch ${LIB_ARCHS_${libname}})
+          list(APPEND extra_cflags_${libname}
+            "SHELL:-target ${arch}-apple-macos${DARWIN_osx_MIN_VER} -darwin-target-variant ${arch}-apple-ios13.1-macabi")
+          list(APPEND extra_link_flags_${libname}
+            "SHELL:-target ${arch}-apple-macos${DARWIN_osx_MIN_VER} -darwin-target-variant ${arch}-apple-ios13.1-macabi")
+        endforeach()
+      endif()
     endforeach()
   else()
     foreach(arch ${LIB_ARCHS})
@@ -253,7 +270,7 @@ function(add_compiler_rt_runtime name type)
       if(COMPILER_RT_USE_BUILTINS_LIBRARY AND NOT type STREQUAL "OBJECT" AND
          NOT name STREQUAL "clang_rt.builtins")
         get_compiler_rt_target(${arch} target)
-        find_compiler_rt_library(builtins ${target} builtins_${libname})
+        find_compiler_rt_library(builtins builtins_${libname} TARGET ${target})
         if(builtins_${libname} STREQUAL "NOTFOUND")
           message(FATAL_ERROR "Cannot find builtins library for the target architecture")
         endif()
@@ -287,6 +304,10 @@ function(add_compiler_rt_runtime name type)
       set(COMPONENT_OPTION COMPONENT ${LIB_PARENT_TARGET})
     else()
       set(COMPONENT_OPTION COMPONENT ${libname})
+    endif()
+
+    if(type STREQUAL "SHARED")
+      list(APPEND LIB_DEFS COMPILER_RT_SHARED_LIB)
     endif()
 
     if(type STREQUAL "OBJECT")
@@ -358,20 +379,43 @@ function(add_compiler_rt_runtime name type)
       target_link_libraries(${libname} PRIVATE ${builtins_${libname}})
     endif()
     if(${type} STREQUAL "SHARED")
-      if(COMMAND llvm_setup_rpath)
-        llvm_setup_rpath(${libname})
+      if(APPLE OR WIN32)
+        set_property(TARGET ${libname} PROPERTY BUILD_WITH_INSTALL_RPATH ON)
       endif()
       if(WIN32 AND NOT CYGWIN AND NOT MINGW)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
       endif()
-      if(APPLE)
-        # Ad-hoc sign the dylibs
-        add_custom_command(TARGET ${libname}
-          POST_BUILD  
-          COMMAND codesign --sign - $<TARGET_FILE:${libname}>
-          WORKING_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+        # Ad-hoc sign the dylibs when using Xcode versions older than 12.
+        # Xcode 12 shipped with ld64-609.
+        # FIXME: Remove whole conditional block once everything uses Xcode 12+.
+        set(LD_V_OUTPUT)
+        execute_process(
+          COMMAND sh -c "${CMAKE_LINKER} -v 2>&1 | head -1"
+          RESULT_VARIABLE HAD_ERROR
+          OUTPUT_VARIABLE LD_V_OUTPUT
         )
+        if (HAD_ERROR)
+          message(FATAL_ERROR "${CMAKE_LINKER} failed with status ${HAD_ERROR}")
+        endif()
+        set(NEED_EXPLICIT_ADHOC_CODESIGN 0)
+        # Apple introduced a new linker by default in Xcode 15. This linker reports itself as ld
+        # rather than ld64 and does not match this version regex. That's ok since it never needs
+        # the explicit ad-hoc code signature.
+        if ("${LD_V_OUTPUT}" MATCHES ".*ld64-([0-9.]+).*")
+          string(REGEX REPLACE ".*ld64-([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
+          if (HOST_LINK_VERSION VERSION_LESS 609)
+            set(NEED_EXPLICIT_ADHOC_CODESIGN 1)
+          endif()
+        endif()
+        if (NEED_EXPLICIT_ADHOC_CODESIGN)
+          add_custom_command(TARGET ${libname}
+            POST_BUILD
+            COMMAND codesign --sign - $<TARGET_FILE:${libname}>
+            WORKING_DIRECTORY ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
+          )
+        endif()
       endif()
     endif()
 
@@ -454,7 +498,7 @@ function(add_compiler_rt_test test_suite test_name arch)
   set(output_dir "${output_dir}/${CMAKE_CFG_INTDIR}")
   file(MAKE_DIRECTORY "${output_dir}")
   set(output_bin "${output_dir}/${test_name}")
-  if(MSVC)
+  if(WIN32)
     set(output_bin "${output_bin}.exe")
   endif()
 
@@ -489,7 +533,7 @@ function(add_compiler_rt_test test_suite test_name arch)
   endif()
   add_custom_command(
     OUTPUT "${output_bin}"
-    COMMAND ${COMPILER_RT_TEST_COMPILER} ${TEST_OBJECTS} -o "${output_bin}"
+    COMMAND ${COMPILER_RT_TEST_CXX_COMPILER} ${TEST_OBJECTS} -o "${output_bin}"
             ${TEST_LINK_FLAGS}
     DEPENDS ${TEST_DEPS}
     )
@@ -510,7 +554,7 @@ macro(add_compiler_rt_resource_file target_name file_name component)
   add_custom_target(${target_name} DEPENDS ${dst_file})
   # Install in Clang resource directory.
   install(FILES ${file_name}
-    DESTINATION ${COMPILER_RT_INSTALL_PATH}/share
+    DESTINATION ${COMPILER_RT_INSTALL_DATA_DIR}
     COMPONENT ${component})
   add_dependencies(${component} ${target_name})
 
@@ -527,7 +571,7 @@ macro(add_compiler_rt_script name)
   add_custom_target(${name} DEPENDS ${dst})
   install(FILES ${dst}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    DESTINATION ${COMPILER_RT_INSTALL_PATH}/bin)
+    DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR})
 endmacro(add_compiler_rt_script src name)
 
 # Builds custom version of libc++ and installs it in <prefix>.
@@ -558,13 +602,9 @@ macro(add_custom_libcxx name prefix)
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER})
   endif()
 
-  set(STAMP_DIR ${prefix}-stamps/)
-  set(BINARY_DIR ${prefix}-bins/)
-
   add_custom_target(${name}-clear
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${STAMP_DIR}
-    COMMENT "Clobbering ${name} build and stamp directories"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${prefix}
+    COMMENT "Clobbering ${name} build directories"
     USES_TERMINAL
     )
   set_target_properties(${name}-clear PROPERTIES FOLDER "Compiler-RT Misc")
@@ -572,10 +612,9 @@ macro(add_custom_libcxx name prefix)
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
     DEPENDS ${LIBCXX_DEPS} ${toolchain_deps}
-    COMMAND ${CMAKE_COMMAND} -E touch ${BINARY_DIR}/CMakeCache.txt
-    COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_DIR}/${name}-mkdir
+    COMMAND ${CMAKE_COMMAND} -E touch ${prefix}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
-    COMMENT "Clobbering bootstrap build and stamp directories"
+    COMMENT "Clobbering bootstrap build directories"
     )
 
   add_custom_target(${name}-clobber
@@ -583,6 +622,8 @@ macro(add_custom_libcxx name prefix)
   set_target_properties(${name}-clobber PROPERTIES FOLDER "Compiler-RT Misc")
 
   set(PASSTHROUGH_VARIABLES
+    ANDROID
+    ANDROID_NATIVE_API_LEVEL
     CMAKE_C_COMPILER_TARGET
     CMAKE_CXX_COMPILER_TARGET
     CMAKE_SHARED_LINKER_FLAGS
@@ -597,8 +638,15 @@ macro(add_custom_libcxx name prefix)
     CMAKE_OBJCOPY
     CMAKE_OBJDUMP
     CMAKE_STRIP
+    CMAKE_READELF
     CMAKE_SYSROOT
+    CMAKE_TOOLCHAIN_FILE
     LIBCXX_HAS_MUSL_LIBC
+    LIBCXX_HAS_GCC_S_LIB
+    LIBCXX_HAS_PTHREAD_LIB
+    LIBCXX_HAS_RT_LIB
+    LIBCXX_USE_COMPILER_RT
+    LIBCXXABI_HAS_PTHREAD_LIB
     PYTHON_EXECUTABLE
     Python3_EXECUTABLE
     Python2_EXECUTABLE
@@ -619,23 +667,34 @@ macro(add_custom_libcxx name prefix)
   get_property(CXX_FLAGS CACHE CMAKE_CXX_FLAGS PROPERTY VALUE)
   set(LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS} ${CXX_FLAGS}")
 
+  if(CMAKE_VERBOSE_MAKEFILE)
+    set(verbose -DCMAKE_VERBOSE_MAKEFILE=ON)
+  endif()
+
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}
-    PREFIX ${prefix}
-    SOURCE_DIR ${COMPILER_RT_SOURCE_DIR}/cmake/Modules/CustomLibcxx
-    STAMP_DIR ${STAMP_DIR}
-    BINARY_DIR ${BINARY_DIR}
+    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${name}
+    SOURCE_DIR ${LLVM_MAIN_SRC_DIR}/../runtimes
+    BINARY_DIR ${prefix}
     CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
                ${compiler_args}
+               ${verbose}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
-               -DLLVM_BINARY_DIR=${prefix}
-               -DLLVM_LIBRARY_OUTPUT_INTDIR=${prefix}/lib
-               -DCOMPILER_RT_LIBCXX_PATH=${COMPILER_RT_LIBCXX_PATH}
-               -DCOMPILER_RT_LIBCXXABI_PATH=${COMPILER_RT_LIBCXXABI_PATH}
+               -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi
+               -DLIBCXXABI_USE_LLVM_UNWINDER=OFF
+               -DLIBCXXABI_ENABLE_SHARED=OFF
+               -DLIBCXXABI_HERMETIC_STATIC_LIBRARY=ON
+               -DLIBCXXABI_INCLUDE_TESTS=OFF
+               -DLIBCXX_CXX_ABI=libcxxabi
+               -DLIBCXX_ENABLE_SHARED=OFF
+               -DLIBCXX_HERMETIC_STATIC_LIBRARY=ON
+               -DLIBCXX_INCLUDE_BENCHMARKS=OFF
+               -DLIBCXX_INCLUDE_TESTS=OFF
+               -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
                ${LIBCXX_CMAKE_ARGS}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
@@ -643,14 +702,15 @@ macro(add_custom_libcxx name prefix)
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1
+    LIST_SEPARATOR |
     EXCLUDE_FROM_ALL TRUE
     BUILD_BYPRODUCTS "${prefix}/lib/libc++.a" "${prefix}/lib/libc++abi.a"
     )
 
   if (CMAKE_GENERATOR MATCHES "Make")
-    set(run_clean "$(MAKE)" "-C" "${BINARY_DIR}" "clean")
+    set(run_clean "$(MAKE)" "-C" "${prefix}" "clean")
   else()
-    set(run_clean ${CMAKE_COMMAND} --build ${BINARY_DIR} --target clean
+    set(run_clean ${CMAKE_COMMAND} --build ${prefix} --target clean
                                    --config "$<CONFIG>")
   endif()
 
@@ -659,7 +719,7 @@ macro(add_custom_libcxx name prefix)
     COMMENT "Cleaning ${name}..."
     DEPENDEES configure
     ${force_deps}
-    WORKING_DIRECTORY ${BINARY_DIR}
+    WORKING_DIRECTORY ${prefix}
     EXCLUDE_FROM_MAIN 1
     USES_TERMINAL 1
     )
@@ -705,6 +765,7 @@ function(configure_compiler_rt_lit_site_cfg input output)
   get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
 
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_OUTPUT_DIR ${COMPILER_RT_OUTPUT_DIR})
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${output_dir})
 
   configure_lit_site_cfg(${input} ${output})

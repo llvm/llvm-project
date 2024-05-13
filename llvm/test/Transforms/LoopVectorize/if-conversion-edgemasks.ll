@@ -1,10 +1,10 @@
-; RUN: opt -S -loop-vectorize < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-@a = global i32* null, align 8
-@b = global i32* null, align 8
-@c = global i32* null, align 8
+@a = global ptr null, align 8
+@b = global ptr null, align 8
+@c = global ptr null, align 8
 
 ; Don't create an exponetial IR for the edge masks needed when if-converting
 ; this code.
@@ -19,15 +19,15 @@ entry:
   br i1 %cmp88, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:
-  %0 = load i32*, i32** @b, align 8
-  %1 = load i32*, i32** @a, align 8
-  %2 = load i32*, i32** @c, align 8
+  %0 = load ptr, ptr @b, align 8
+  %1 = load ptr, ptr @a, align 8
+  %2 = load ptr, ptr @c, align 8
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %_ZL3fn3ii.exit58 ]
-  %arrayidx = getelementptr inbounds i32, i32* %0, i64 %indvars.iv
-  %3 = load i32, i32* %arrayidx, align 4  %4 = trunc i64 %indvars.iv to i32
+  %arrayidx = getelementptr inbounds i32, ptr %0, i64 %indvars.iv
+  %3 = load i32, ptr %arrayidx, align 4  %4 = trunc i64 %indvars.iv to i32
   %and.i = and i32 %4, 1
   %tobool.i.i = icmp eq i32 %and.i, 0
   br i1 %tobool.i.i, label %if.end.i, label %if.then.i
@@ -133,9 +133,9 @@ if.then.i15.i:
 
 _ZL3fn3ii.exit:
   %p1.addr.0.i16.i = phi i32 [ %or.i14.i, %if.then.i15.i ], [ %p1.addr.3.i.i, %_Z3fn2iii.exit.i ]
-  %arrayidx2 = getelementptr inbounds i32, i32* %1, i64 %indvars.iv
-  store i32 %p1.addr.0.i16.i, i32* %arrayidx2, align 4  %arrayidx4 = getelementptr inbounds i32, i32* %0, i64 %indvars.iv
-  %10 = load i32, i32* %arrayidx4, align 4  br i1 %tobool.i.i, label %_Z3fn1ii.exit.i26, label %if.then.i.i21
+  %arrayidx2 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv
+  store i32 %p1.addr.0.i16.i, ptr %arrayidx2, align 4  %arrayidx4 = getelementptr inbounds i32, ptr %0, i64 %indvars.iv
+  %10 = load i32, ptr %arrayidx4, align 4  br i1 %tobool.i.i, label %_Z3fn1ii.exit.i26, label %if.then.i.i21
 
 if.then.i.i21:
   %and.i.i18 = lshr i32 %10, 2
@@ -231,8 +231,8 @@ if.then.i15.i56:
 
 _ZL3fn3ii.exit58:
   %p1.addr.0.i16.i57 = phi i32 [ %or.i14.i55, %if.then.i15.i56 ], [ %p1.addr.3.i.i50, %_Z3fn2iii.exit.i52 ]
-  %arrayidx7 = getelementptr inbounds i32, i32* %2, i64 %indvars.iv
-  store i32 %p1.addr.0.i16.i57, i32* %arrayidx7, align 4  %indvars.iv.next = add i64 %indvars.iv, 1
+  %arrayidx7 = getelementptr inbounds i32, ptr %2, i64 %indvars.iv
+  store i32 %p1.addr.0.i16.i57, ptr %arrayidx7, align 4  %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, %p1
   br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge

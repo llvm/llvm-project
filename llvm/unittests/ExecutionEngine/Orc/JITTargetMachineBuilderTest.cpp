@@ -26,9 +26,9 @@ TEST(ExecutionUtilsTest, JITTargetMachineBuilder) {
 
   // Test API by performing a bunch of no-ops.
   JTMB.setCPU("");
-  JTMB.setRelocationModel(None);
-  JTMB.setCodeModel(None);
-  JTMB.setCodeGenOptLevel(CodeGenOpt::None);
+  JTMB.setRelocationModel(std::nullopt);
+  JTMB.setCodeModel(std::nullopt);
+  JTMB.setCodeGenOptLevel(CodeGenOptLevel::None);
   JTMB.addFeatures(std::vector<std::string>());
   SubtargetFeatures &STF = JTMB.getFeatures();
   (void)STF;

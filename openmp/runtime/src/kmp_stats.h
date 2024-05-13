@@ -102,6 +102,7 @@ enum stats_state_e {
   macro(OMP_BARRIER, 0, arg)                                                   \
   macro(OMP_CRITICAL, 0, arg)                                                  \
   macro(OMP_SINGLE, 0, arg)                                                    \
+  macro(OMP_SECTIONS, 0, arg)                                                  \
   macro(OMP_MASTER, 0, arg)                                                    \
   macro(OMP_MASKED, 0, arg)                                                    \
   macro(OMP_TEAMS, 0, arg)                                                     \
@@ -150,6 +151,8 @@ enum stats_state_e {
   macro (OMP_critical, 0, arg)                                                 \
   macro (OMP_critical_wait, 0, arg)                                            \
   macro (OMP_single, 0, arg)                                                   \
+  macro (OMP_sections, 0, arg)                                                 \
+  macro (OMP_sections_overhead, 0, arg)                                        \
   macro (OMP_master, 0, arg)                                                   \
   macro (OMP_masked, 0, arg)                                                   \
   macro (OMP_task_immediate, 0, arg)                                           \
@@ -246,6 +249,8 @@ enum stats_state_e {
 // KMP_tree_release       -- time in __kmp_tree_barrier_release
 // KMP_hyper_gather       -- time in __kmp_hyper_barrier_gather
 // KMP_hyper_release      -- time in __kmp_hyper_barrier_release
+// KMP_dist_gather       -- time in __kmp_dist_barrier_gather
+// KMP_dist_release      -- time in __kmp_dist_barrier_release
 // clang-format off
 #define KMP_FOREACH_DEVELOPER_TIMER(macro, arg)                                \
   macro(KMP_fork_call, 0, arg)                                                 \
@@ -255,6 +260,8 @@ enum stats_state_e {
   macro(KMP_hier_release, 0, arg)                                              \
   macro(KMP_hyper_gather, 0, arg)                                              \
   macro(KMP_hyper_release, 0, arg)                                             \
+  macro(KMP_dist_gather, 0, arg)                                              \
+  macro(KMP_dist_release, 0, arg)                                             \
   macro(KMP_linear_gather, 0, arg)                                             \
   macro(KMP_linear_release, 0, arg)                                            \
   macro(KMP_tree_gather, 0, arg)                                               \

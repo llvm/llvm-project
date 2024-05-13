@@ -11,24 +11,24 @@ entry:
   %retval = alloca i32, align 4
   %n.addr = alloca i32, align 4
   %d.addr = alloca i32, align 4
-  store i32 %n, i32* %n.addr, align 4
-  store i32 %d, i32* %d.addr, align 4
-  %0 = load i32, i32* %n.addr, align 4
-  %1 = load i32, i32* %d.addr, align 4
+  store i32 %n, ptr %n.addr, align 4
+  store i32 %d, ptr %d.addr, align 4
+  %0 = load i32, ptr %n.addr, align 4
+  %1 = load i32, ptr %d.addr, align 4
   %div = sdiv i32 %0, %1
   %tobool = icmp ne i32 %div, 0
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:
-  store i32 1, i32* %retval, align 4
+  store i32 1, ptr %retval, align 4
   br label %return
 
 if.end:
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   br label %return
 
 return:
-  %2 = load i32, i32* %retval, align 4
+  %2 = load i32, ptr %retval, align 4
   ret i32 %2
 }
 
@@ -58,7 +58,7 @@ entry:
 
 if.end:
   %rem = urem i32 %l, %m
-  store i32 %rem, i32* @r, align 4
+  store i32 %rem, ptr @r, align 4
   br label %return
 
 return:
@@ -95,13 +95,13 @@ entry:
   br i1 %tobool, label %entry.if.end_crit_edge, label %if.then
 
 entry.if.end_crit_edge:
-  %.pre = load i32, i32* @c, align 4
+  %.pre = load i32, ptr @c, align 4
   br label %if.end
 
 if.then:
   %call = tail call arm_aapcs_vfpcc i32 @i()
   %rem = urem i32 %call, %u
-  store i32 %rem, i32* @c, align 4
+  store i32 %rem, ptr @c, align 4
   br label %if.end
 
 if.end:
@@ -131,9 +131,9 @@ attributes #0 = { optsize }
 ; CHECK-CFG-DAG: t__brkdiv0
 
 ; CHECK-CFG-ASM-LABEL: h:
-; CHECK-CFG-ASM: cbz r{{[0-9]}}, .LBB2_4
+; CHECK-CFG-ASM: cbz r{{[0-9]}}, .LBB2_5
 ; CHECK-CFG-ASM: bl __rt_udiv
-; CHECK-CFG-ASM-LABEL: .LBB2_4:
+; CHECK-CFG-ASM-LABEL: .LBB2_5:
 ; CHECK-CFG-ASM: __brkdiv0
 
 ; RUN: llc -O1 -mtriple thumbv7--windows-itanium -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-WIN__DBZCHK
@@ -153,24 +153,24 @@ define arm_aapcs_vfpcc i32 @j(i32 %i) {
 entry:
   %retval = alloca i32, align 4
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
   %call = call arm_aapcs_vfpcc i32 @l()
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   br label %return
 
 if.end:
   %call1 = call arm_aapcs_vfpcc i32 @k()
-  %0 = load i32, i32* %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4
   %rem = srem i32 %call1, %0
-  store i32 %rem, i32* %retval, align 4
+  store i32 %rem, ptr %retval, align 4
   br label %return
 
 return:
-  %1 = load i32, i32* %retval, align 4
+  %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
 

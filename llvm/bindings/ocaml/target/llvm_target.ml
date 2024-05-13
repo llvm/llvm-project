@@ -44,6 +44,13 @@ module CodeGenFileType = struct
   | ObjectFile
 end
 
+module GlobalISelAbortMode = struct
+  type t =
+  | Enable
+  | Disable
+  | DisableWithDiag
+end
+
 exception Error of string
 
 let () = Callback.register_exception "Llvm_target.Error" (Error "")
@@ -122,10 +129,16 @@ module TargetMachine = struct
                     = "llvm_targetmachine_features"
   external data_layout : t -> DataLayout.t
                        = "llvm_targetmachine_data_layout"
-  external add_analysis_passes : [< Llvm.PassManager.any ] Llvm.PassManager.t -> t -> unit
-                               = "llvm_targetmachine_add_analysis_passes"
   external set_verbose_asm : bool -> t -> unit
                            = "llvm_targetmachine_set_verbose_asm"
+  external set_fast_isel : bool -> t -> unit
+                           = "llvm_targetmachine_set_fast_isel"
+  external set_global_isel : bool -> t -> unit
+                           = "llvm_targetmachine_set_global_isel"
+  external set_global_isel_abort : ?mode:GlobalISelAbortMode.t -> t -> unit
+                                 = "llvm_targetmachine_set_global_isel_abort"
+  external set_machine_outliner : bool -> t -> unit
+                                = "llvm_targetmachine_set_machine_outliner"
   external emit_to_file : Llvm.llmodule -> CodeGenFileType.t -> string ->
                           t -> unit
                         = "llvm_targetmachine_emit_to_file"

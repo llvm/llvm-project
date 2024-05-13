@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -Wcstring-format-directive -verify -fsyntax-only %s
-// rdar://18182443
 
 typedef __builtin_va_list __darwin_va_list;
 typedef __builtin_va_list va_list;
@@ -70,7 +69,7 @@ extern void MyNSLog(NSString *format, ...) __attribute__((format(__NSString__, 1
 extern void MyCFStringCreateWithFormat(CFStringRef format, ...) __attribute__((format(__CFString__, 1, 2))); // expected-note {{'MyCFStringCreateWithFormat' declared here}}
 extern void XMyNSLog(int, NSString *format, ...) __attribute__((format(__NSString__, 2, 3))); // expected-note {{'XMyNSLog' declared here}}
 
-void Test2() {
+void Test2(void) {
   MyNSLog(@"%s\n", "Hello"); // expected-warning {{using %s directive in CFString which is being passed as a formatting argument to the formatting CFfunction}}
 
   MyCFStringCreateWithFormat((CFStringRef)@"%s", "Hello"); // expected-warning {{using %s directive in CFString which is being passed as a formatting argument to the formatting CFfunction}}

@@ -1,5 +1,5 @@
-void foo();
+void foo(void);
 
-void bar() {
+void bar(void) {
   foo();
 }

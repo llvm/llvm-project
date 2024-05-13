@@ -1,5 +1,4 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution
-; RUN: opt < %s -disable-output -scalar-evolution
+; RUN: opt < %s -passes='print<scalar-evolution>'
 ; PR4537
 
 ; ModuleID = 'b.bc'
@@ -8,8 +7,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @test() {
 entry:
-	%0 = load i32*, i32** undef, align 8		; <i32*> [#uses=1]
-	%1 = ptrtoint i32* %0 to i64		; <i64> [#uses=1]
+	%0 = load ptr, ptr undef, align 8		; <ptr> [#uses=1]
+	%1 = ptrtoint ptr %0 to i64		; <i64> [#uses=1]
 	%2 = sub i64 undef, %1		; <i64> [#uses=1]
 	%3 = lshr i64 %2, 3		; <i64> [#uses=1]
 	%4 = trunc i64 %3 to i32		; <i32> [#uses=2]

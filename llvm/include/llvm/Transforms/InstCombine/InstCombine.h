@@ -18,17 +18,48 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include "llvm/Pass.h"
+
+#define DEBUG_TYPE "instcombine"
+#include "llvm/Transforms/Utils/InstructionWorklist.h"
 
 namespace llvm {
 
+static constexpr unsigned InstCombineDefaultMaxIterations = 1;
+
+struct InstCombineOptions {
+  bool UseLoopInfo = false;
+  // Verify that a fix point has been reached after MaxIterations.
+  bool VerifyFixpoint = false;
+  unsigned MaxIterations = InstCombineDefaultMaxIterations;
+
+  InstCombineOptions() = default;
+
+  InstCombineOptions &setUseLoopInfo(bool Value) {
+    UseLoopInfo = Value;
+    return *this;
+  }
+
+  InstCombineOptions &setVerifyFixpoint(bool Value) {
+    VerifyFixpoint = Value;
+    return *this;
+  }
+
+  InstCombineOptions &setMaxIterations(unsigned Value) {
+    MaxIterations = Value;
+    return *this;
+  }
+};
+
 class InstCombinePass : public PassInfoMixin<InstCombinePass> {
-  InstCombineWorklist Worklist;
-  const unsigned MaxIterations;
+private:
+  InstructionWorklist Worklist;
+  InstCombineOptions Options;
 
 public:
-  explicit InstCombinePass();
-  explicit InstCombinePass(unsigned MaxIterations);
+  explicit InstCombinePass(InstCombineOptions Opts = {});
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -38,14 +69,12 @@ public:
 /// This is a basic whole-function wrapper around the instcombine utility. It
 /// will try to combine all instructions in the function.
 class InstructionCombiningPass : public FunctionPass {
-  InstCombineWorklist Worklist;
-  const unsigned MaxIterations;
+  InstructionWorklist Worklist;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
   explicit InstructionCombiningPass();
-  explicit InstructionCombiningPass(unsigned MaxIterations);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
@@ -64,7 +93,8 @@ public:
 //    %Z = add int 2, %X
 //
 FunctionPass *createInstructionCombiningPass();
-FunctionPass *createInstructionCombiningPass(unsigned MaxIterations);
 }
+
+#undef DEBUG_TYPE
 
 #endif

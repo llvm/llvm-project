@@ -1,4 +1,5 @@
-; RUN: opt %s -debugify -jump-threading -S | FileCheck %s
+; RUN: opt -S -passes=debugify,jump-threading < %s | FileCheck %s
+; RUN: opt -S -passes=debugify,jump-threading < %s --try-experimental-debuginfo-iterators | FileCheck %s
 ; Tests Bug 37966
 
 define void @test0(i32 %i) {

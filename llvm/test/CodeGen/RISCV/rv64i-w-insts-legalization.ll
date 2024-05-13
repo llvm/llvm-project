@@ -10,7 +10,7 @@ define signext i32 @addw(i32 signext %s, i32 signext %n, i32 signext %k) nounwin
 ; CHECK-NEXT:    add a2, a2, a1
 ; CHECK-NEXT:    addi a3, a0, 1
 ; CHECK-NEXT:    mul a3, a2, a3
-; CHECK-NEXT:    sub a1, a1, a0
+; CHECK-NEXT:    subw a1, a1, a0
 ; CHECK-NEXT:    addi a1, a1, -2
 ; CHECK-NEXT:    slli a1, a1, 32
 ; CHECK-NEXT:    slli a2, a2, 32
@@ -20,7 +20,7 @@ define signext i32 @addw(i32 signext %s, i32 signext %n, i32 signext %k) nounwin
 ; CHECK-NEXT:    addw a0, a0, a1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    mv a0, zero
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %cmp6 = icmp slt i32 %s, %n
@@ -55,17 +55,17 @@ define signext i32 @subw(i32 signext %s, i32 signext %n, i32 signext %k) nounwin
 ; CHECK-NEXT:    not a2, a0
 ; CHECK-NEXT:    add a3, a2, a1
 ; CHECK-NEXT:    mul a2, a3, a2
-; CHECK-NEXT:    sub a1, a1, a0
+; CHECK-NEXT:    subw a1, a1, a0
 ; CHECK-NEXT:    addi a1, a1, -2
 ; CHECK-NEXT:    slli a1, a1, 32
 ; CHECK-NEXT:    slli a3, a3, 32
 ; CHECK-NEXT:    mulhu a1, a3, a1
 ; CHECK-NEXT:    srli a1, a1, 1
-; CHECK-NEXT:    sub a0, a2, a0
+; CHECK-NEXT:    subw a0, a2, a0
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    mv a0, zero
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %cmp6 = icmp slt i32 %s, %n

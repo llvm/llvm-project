@@ -1,4 +1,4 @@
-//===-- M68kMCAsmInfo.h - M68k Asm Info --------------------*- C++ -*--===//
+//===-- M68kMCAsmInfo.h - M68k Asm Info -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,4 +28,4 @@ public:
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_MCTARGETDESC_M68KMCASMINFO_H

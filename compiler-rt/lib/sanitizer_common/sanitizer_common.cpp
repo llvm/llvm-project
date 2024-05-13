@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common.h"
+
 #include "sanitizer_allocator_interface.h"
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_flags.h"
+#include "sanitizer_interface_internal.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_placement_new.h"
 
@@ -37,21 +39,46 @@ void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
                                       const char *mmap_type, error_t err,
                                       bool raw_report) {
   static int recursion_count;
-  if (SANITIZER_RTEMS || raw_report || recursion_count) {
-    // If we are on RTEMS or raw report is requested or we went into recursion,
-    // just die.  The Report() and CHECK calls below may call mmap recursively
-    // and fail.
+  if (raw_report || recursion_count) {
+    // If raw report is requested or we went into recursion just die.  The
+    // Report() and CHECK calls below may call mmap recursively and fail.
     RawWrite("ERROR: Failed to mmap\n");
     Die();
   }
   recursion_count++;
-  Report("ERROR: %s failed to "
-         "%s 0x%zx (%zd) bytes of %s (error code: %d)\n",
-         SanitizerToolName, mmap_type, size, size, mem_type, err);
+  if (ErrorIsOOM(err)) {
+    ERROR_OOM("failed to %s 0x%zx (%zd) bytes of %s (error code: %d)\n",
+              mmap_type, size, size, mem_type, err);
+  } else {
+    Report(
+        "ERROR: %s failed to "
+        "%s 0x%zx (%zd) bytes of %s (error code: %d)\n",
+        SanitizerToolName, mmap_type, size, size, mem_type, err);
+  }
 #if !SANITIZER_GO
   DumpProcessMap();
 #endif
   UNREACHABLE("unable to mmap");
+}
+
+void NORETURN ReportMunmapFailureAndDie(void *addr, uptr size, error_t err,
+                                        bool raw_report) {
+  static int recursion_count;
+  if (raw_report || recursion_count) {
+    // If raw report is requested or we went into recursion just die.  The
+    // Report() and CHECK calls below may call munmap recursively and fail.
+    RawWrite("ERROR: Failed to munmap\n");
+    Die();
+  }
+  recursion_count++;
+  Report(
+      "ERROR: %s failed to deallocate 0x%zx (%zd) bytes at address %p (error "
+      "code: %d)\n",
+      SanitizerToolName, size, size, addr, err);
+#if !SANITIZER_GO
+  DumpProcessMap();
+#endif
+  UNREACHABLE("unable to unmmap");
 }
 
 typedef bool UptrComparisonFunction(const uptr &a, const uptr &b);
@@ -88,8 +115,9 @@ void ReportErrorSummary(const char *error_message, const char *alt_tool_name) {
   if (!common_flags()->print_summary)
     return;
   InternalScopedString buff;
-  buff.append("SUMMARY: %s: %s",
-              alt_tool_name ? alt_tool_name : SanitizerToolName, error_message);
+  buff.AppendF("SUMMARY: %s: %s",
+               alt_tool_name ? alt_tool_name : SanitizerToolName,
+               error_message);
   __sanitizer_report_error_summary(buff.data());
 }
 
@@ -139,13 +167,21 @@ void LoadedModule::set(const char *module_name, uptr base_address,
   set(module_name, base_address);
   arch_ = arch;
   internal_memcpy(uuid_, uuid, sizeof(uuid_));
+  uuid_size_ = kModuleUUIDSize;
   instrumented_ = instrumented;
+}
+
+void LoadedModule::setUuid(const char *uuid, uptr size) {
+  if (size > kModuleUUIDSize)
+    size = kModuleUUIDSize;
+  internal_memcpy(uuid_, uuid, size);
+  uuid_size_ = size;
 }
 
 void LoadedModule::clear() {
   InternalFree(full_name_);
   base_address_ = 0;
-  max_executable_address_ = 0;
+  max_address_ = 0;
   full_name_ = nullptr;
   arch_ = kModuleArchUnknown;
   internal_memset(uuid_, 0, kModuleUUIDSize);
@@ -163,8 +199,7 @@ void LoadedModule::addAddressRange(uptr beg, uptr end, bool executable,
   AddressRange *r =
       new(mem) AddressRange(beg, end, executable, writable, name);
   ranges_.push_back(r);
-  if (executable && end > max_executable_address_)
-    max_executable_address_ = end;
+  max_address_ = Max(max_address_, end);
 }
 
 bool LoadedModule::containsAddress(uptr address) const {
@@ -302,18 +337,22 @@ struct MallocFreeHook {
 
 static MallocFreeHook MFHooks[kMaxMallocFreeHooks];
 
-void RunMallocHooks(const void *ptr, uptr size) {
+void RunMallocHooks(void *ptr, uptr size) {
+  __sanitizer_malloc_hook(ptr, size);
   for (int i = 0; i < kMaxMallocFreeHooks; i++) {
     auto hook = MFHooks[i].malloc_hook;
-    if (!hook) return;
+    if (!hook)
+      break;
     hook(ptr, size);
   }
 }
 
-void RunFreeHooks(const void *ptr) {
+void RunFreeHooks(void *ptr) {
+  __sanitizer_free_hook(ptr);
   for (int i = 0; i < kMaxMallocFreeHooks; i++) {
     auto hook = MFHooks[i].free_hook;
-    if (!hook) return;
+    if (!hook)
+      break;
     hook(ptr);
   }
 }
@@ -329,6 +368,21 @@ static int InstallMallocFreeHooks(void (*malloc_hook)(const void *, uptr),
     }
   }
   return 0;
+}
+
+void internal_sleep(unsigned seconds) {
+  internal_usleep((u64)seconds * 1000 * 1000);
+}
+void SleepForSeconds(unsigned seconds) {
+  internal_usleep((u64)seconds * 1000 * 1000);
+}
+void SleepForMillis(unsigned millis) { internal_usleep((u64)millis * 1000); }
+
+void WaitForDebugger(unsigned seconds, const char *label) {
+  if (seconds) {
+    Report("Sleeping for %u second(s) %s\n", seconds, label);
+    SleepForSeconds(seconds);
+  }
 }
 
 } // namespace __sanitizer
@@ -353,4 +407,16 @@ int __sanitizer_install_malloc_and_free_hooks(void (*malloc_hook)(const void *,
                                               void (*free_hook)(const void *)) {
   return InstallMallocFreeHooks(malloc_hook, free_hook);
 }
+
+// Provide default (no-op) implementation of malloc hooks.
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_malloc_hook, void *ptr,
+                             uptr size) {
+  (void)ptr;
+  (void)size;
+}
+
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
+  (void)ptr;
+}
+
 } // extern "C"

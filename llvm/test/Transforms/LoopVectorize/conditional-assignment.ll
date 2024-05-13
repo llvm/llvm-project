@@ -1,4 +1,3 @@
-; RUN: opt < %s -enable-cond-stores-vec=false -loop-vectorize -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck %s
 ; RUN: opt < %s -enable-cond-stores-vec=false -passes=loop-vectorize -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck %s
 
 ; CHECK: remark: source.c:2:8: the cost-model indicates that vectorization is not beneficial
@@ -6,19 +5,19 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind ssp uwtable
-define void @conditional_store(i32* noalias nocapture %indices) #0 !dbg !4 {
+define void @conditional_store(ptr noalias nocapture %indices) #0 !dbg !4 {
 entry:
   br label %for.body, !dbg !10
 
 for.body:                                         ; preds = %for.inc, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
-  %arrayidx = getelementptr inbounds i32, i32* %indices, i64 %indvars.iv, !dbg !12
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !12, !tbaa !14
+  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %indvars.iv, !dbg !12
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !12, !tbaa !14
   %cmp1 = icmp eq i32 %0, 1024, !dbg !12
   br i1 %cmp1, label %if.then, label %for.inc, !dbg !12
 
 if.then:                                          ; preds = %for.body
-  store i32 0, i32* %arrayidx, align 4, !dbg !18, !tbaa !14
+  store i32 0, ptr %arrayidx, align 4, !dbg !18, !tbaa !14
   br label %for.inc, !dbg !18
 
 for.inc:                                          ; preds = %for.body, %if.then

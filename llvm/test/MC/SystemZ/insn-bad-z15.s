@@ -17,6 +17,11 @@
 
 	kdsa	%r0, %r1
 
+#CHECK: error: instruction requires: bear-enhancement
+#CHECK: lbear	0
+
+	lbear	0
+
 #CHECK: error: invalid operand
 #CHECK: ldrv	%f0, -1
 #CHECK: error: invalid operand
@@ -39,6 +44,11 @@
 	lerv	%f0, 4096
 	lerv	%f0, 0(%v1,%r2)
 
+#CHECK: error: instruction requires: bear-enhancement
+#CHECK: lpswey	0
+
+	lpswey	0
+
 #CHECK: error: invalid use of indexed addressing
 #CHECK: mvcrl	160(%r1,%r15),160(%r15)
 #CHECK: error: invalid operand
@@ -56,6 +66,11 @@
         mvcrl	0(%r1),-1(%r15)
         mvcrl	0(%r1),4096(%r15)
 
+#CHECK: error: instruction requires: nnp-assist
+#CHECK: nnpa
+
+	nnpa
+
 #CHECK: error: invalid operand
 #CHECK: popcnt	%r2, %r4, -1
 #CHECK: error: invalid operand
@@ -63,6 +78,16 @@
 
 	popcnt	%r2, %r4, -1
 	popcnt	%r2, %r4, 16
+
+#CHECK: error: instruction requires: processor-activity-instrumentation
+#CHECK: qpaci	0
+
+	qpaci	0
+
+#CHECK: error: instruction requires: reset-dat-protection
+#CHECK: rdp	%r0, %r0, %r0
+
+	rdp	%r0, %r0, %r0
 
 #CHECK: error: invalid operand
 #CHECK: selgr	%r0, %r0, %r0, -1
@@ -95,6 +120,11 @@
 
 	sortl	%r1, %r2
 	sortl	%r2, %r1
+
+#CHECK: error: instruction requires: bear-enhancement
+#CHECK: stbear	0
+
+	stbear	0
 
 #CHECK: error: invalid operand
 #CHECK: stdrv	%f0, -1
@@ -200,6 +230,11 @@
 	vcfps	%v0, %v0, -1, 0, 0
 	vcfps	%v0, %v0, 16, 0, 0
 
+#CHECK: error: instruction requires: nnp-assist
+#CHECK: vcfn	%v0, %v0, 0, 0
+
+	vcfn	%v0, %v0, 0, 0
+
 #CHECK: error: invalid operand
 #CHECK: vclfeb	%v0, %v0, 0, -1
 #CHECK: error: invalid operand
@@ -234,6 +269,31 @@
 	vclfp	%v0, %v0, -1, 0, 0
 	vclfp	%v0, %v0, 16, 0, 0
 
+#CHECK: error: instruction requires: nnp-assist
+#CHECK: vclfnl	%v0, %v0, 0, 0
+
+	vclfnl	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: nnp-assist
+#CHECK: vclfnh	%v0, %v0, 0, 0
+
+	vclfnh	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vclzdp	%v0, %v0, 0
+
+	vclzdp	%v0, %v0, 0
+
+#CHECK: error: instruction requires: nnp-assist
+#CHECK: vcnf	%v0, %v0, 0, 0
+
+	vcnf	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: nnp-assist
+#CHECK: vcrnf	%v0, %v0, %v0, 0, 0
+
+	vcrnf	%v0, %v0, %v0, 0, 0
+
 #CHECK: error: invalid operand
 #CHECK: vcsfp	%v0, %v0, 0, 0, -1
 #CHECK: error: invalid operand
@@ -253,6 +313,36 @@
 	vcsfp	%v0, %v0, 0, 16, 0
 	vcsfp	%v0, %v0, -1, 0, 0
 	vcsfp	%v0, %v0, 16, 0, 0
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vschp	%v0, %v0, %v0, 0, 0
+
+	vschp	%v0, %v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vschsp	%v0, %v0, %v0, 0
+
+	vschsp	%v0, %v0, %v0, 0
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vschdp	%v0, %v0, %v0, 0
+
+	vschdp	%v0, %v0, %v0, 0
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vschxp	%v0, %v0, %v0, 0
+
+	vschxp	%v0, %v0, %v0, 0
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vcsph	%v0, %v0, %v0, 0
+
+	vcsph	%v0, %v0, %v0, 0
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vscshp	%v0, %v0, %v0
+
+	vscshp	%v0, %v0, %v0
 
 #CHECK: error: invalid operand
 #CHECK: vcvb	%r0, %v0, 0, -1
@@ -543,6 +633,11 @@
 	vllebrzh	%v0, 4096
 	vllebrzh	%v0, 0(%v1,%r2)
 
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vpkzr	%v0, %v0, %v0, 0, 0
+
+	vpkzr	%v0, %v0, %v0, 0, 0
+
 #CHECK: error: invalid operand
 #CHECK: vsld	%v0, %v0, %v0, -1
 #CHECK: error: invalid operand
@@ -558,6 +653,11 @@
 
 	vsrd	%v0, %v0, %v0, -1
 	vsrd	%v0, %v0, %v0, 256
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vsrpr	%v0, %v0, %v0, 0, 0
+
+	vsrpr	%v0, %v0, %v0, 0, 0
 
 #CHECK: error: invalid operand
 #CHECK: vstbr	%v0, 0, -1
@@ -824,6 +924,16 @@
 	vstrszh  %v0, %v0, %v0, %v0, 16
 	vstrszh  %v0, %v0, %v0
 	vstrszh  %v0, %v0, %v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vupkzh	%v0, %v0, 0
+
+	vupkzh	%v0, %v0, 0
+
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement-2
+#CHECK: vupkzl	%v0, %v0, 0
+
+	vupkzl	%v0, %v0, 0
 
 #CHECK: error: invalid operand
 #CHECK: wcefb	%v0, %v0, 0, -1

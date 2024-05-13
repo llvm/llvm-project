@@ -9,7 +9,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=CHECKOBJ %s
-; RUN: llvm-readobj -syms %t.o | FileCheck --check-prefix=CHECKSYM %s
+; RUN: llvm-readobj -s %t.o | FileCheck --check-prefix=CHECKSYM %s
 
 %struct.Merge_cnst32 = type { i64, i32, i64, i32 }
 %struct.Merge_cnst16 = type { i64, i32 }
@@ -62,7 +62,7 @@ entry:
 ;CHECK-NEXT:         .space  1
 
 
-;CHECKOBJ:      00000000 <.text>:
+;CHECKOBJ:      00000000 <.main>:
 ;CHECKOBJ-NEXT:        0: 38 60 00 00                    li 3, 0
 ;CHECKOBJ-NEXT:        4: 4e 80 00 20                    blr
 ;CHECKOBJ-NEXT:          ...{{[[:space:]] *}}

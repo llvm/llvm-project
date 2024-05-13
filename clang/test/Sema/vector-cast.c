@@ -7,7 +7,7 @@ typedef short s2 __attribute__ ((vector_size(4)));
 
 typedef enum { Evalue = 0x10000 } E;
 
-void f()
+void f(void)
 {  
   t1 v1;
   t2 v2;
@@ -52,7 +52,7 @@ typedef float float16 __attribute__((__vector_size__(16)));
 typedef signed int vSInt32 __attribute__((__vector_size__(16)));
 typedef unsigned int vUInt32 __attribute__((__vector_size__(16)));
 
-void f4() {
+void f4(void) {
   float2 f2;
   double d, a, b, c;
   float64x2_t v = {0.0, 1.0};
@@ -67,10 +67,9 @@ void f4() {
   d = d + f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
 }
 
-// rdar://15931426
 // Don't permit a lax conversion to and from a pointer type.
 typedef short short_sizeof_pointer __attribute__((vector_size(sizeof(void*))));
-void f5() {
+void f5(void) {
   short_sizeof_pointer v;
   void *ptr;
   v = ptr; // expected-error-re {{assigning to 'short_sizeof_pointer' (vector of {{[0-9]+}} 'short' values) from incompatible type 'void *'}}

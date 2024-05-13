@@ -30,38 +30,6 @@
 #include "lockdown.h"
 #endif
 
-/* Once we have a RNBSocket object with a port # specified,
-   this function is called to wait for an incoming connection.
-   This function blocks while waiting for that connection.  */
-
-bool ResolveIPV4HostName(const char *hostname, in_addr_t &addr) {
-  if (hostname == NULL || hostname[0] == '\0' ||
-      strcmp(hostname, "localhost") == 0 ||
-      strcmp(hostname, "127.0.0.1") == 0) {
-    addr = htonl(INADDR_LOOPBACK);
-    return true;
-  } else if (strcmp(hostname, "*") == 0) {
-    addr = htonl(INADDR_ANY);
-    return true;
-  } else {
-    // See if an IP address was specified as numbers
-    int inet_pton_result = ::inet_pton(AF_INET, hostname, &addr);
-
-    if (inet_pton_result == 1)
-      return true;
-
-    struct hostent *host_entry = gethostbyname(hostname);
-    if (host_entry) {
-      std::string ip_str(
-          ::inet_ntoa(*(struct in_addr *)*host_entry->h_addr_list));
-      inet_pton_result = ::inet_pton(AF_INET, ip_str.c_str(), &addr);
-      if (inet_pton_result == 1)
-        return true;
-    }
-  }
-  return false;
-}
-
 rnb_err_t RNBSocket::Listen(const char *listen_host, uint16_t port,
                             PortBoundCallback callback,
                             const void *callback_baton) {
@@ -152,8 +120,13 @@ rnb_err_t RNBSocket::Listen(const char *listen_host, uint16_t port,
   while (!accept_connection) {
 
     struct kevent event_list[4];
-    int num_events =
-        kevent(queue_id, events.data(), events.size(), event_list, 4, NULL);
+    int num_events;
+    do {
+      errno = 0;
+      num_events =
+          kevent(queue_id, events.data(), events.size(), event_list, 4, NULL);
+    } while (num_events == -1 &&
+             (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR));
 
     if (num_events < 0) {
       err.SetError(errno, DNBError::MachKernel);
@@ -323,7 +296,12 @@ rnb_err_t RNBSocket::Read(std::string &p) {
   // DNBLogThreadedIf(LOG_RNB_COMM, "%8u RNBSocket::%s calling read()",
   // (uint32_t)m_timer.ElapsedMicroSeconds(true), __FUNCTION__);
   DNBError err;
-  ssize_t bytesread = read(m_fd, buf, sizeof(buf));
+  ssize_t bytesread;
+  do {
+    errno = 0;
+    bytesread = read(m_fd, buf, sizeof(buf));
+  } while (bytesread == -1 &&
+           (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR));
   if (bytesread <= 0)
     err.SetError(errno, DNBError::POSIX);
   else

@@ -35,53 +35,53 @@
 
 ## a@dtprel = st_value(a)-0x800 = 0xfffff808 is a link-time constant.
 # LD32-REL:      .rela.dyn {
-# LD32-REL-NEXT:   0x22B4
-# LD32-REL-NEXT:   0x22AC R_RISCV_TLS_DTPMOD32 - 0x0
+# LD32-REL-NEXT:   0x22AC
+# LD32-REL-NEXT:   0x22B0 R_RISCV_TLS_DTPMOD32 - 0x0
 # LD32-REL-NEXT: }
 # LD32-GOT:      section '.got':
-# LD32-GOT-NEXT: 0x000022a8 30220000 00000000 00f8ffff 00000000
+# LD32-GOT-NEXT: 0x000022a8 30220000 00000000 00000000 00f8ffff
 
 # LD64-REL:      .rela.dyn {
-# LD64-REL-NEXT:   0x2458
-# LD64-REL-NEXT:   0x2448 R_RISCV_TLS_DTPMOD64 - 0x0
+# LD64-REL-NEXT:   0x2448
+# LD64-REL-NEXT:   0x2450 R_RISCV_TLS_DTPMOD64 - 0x0
 # LD64-REL-NEXT: }
 # LD64-GOT:      section '.got':
 # LD64-GOT-NEXT: 0x00002440 50230000 00000000 00000000 00000000
-# LD64-GOT-NEXT: 0x00002450 00f8ffff ffffffff 00000000 00000000
+# LD64-GOT-NEXT: 0x00002450 00000000 00000000 00f8ffff ffffffff
 
-## rv32: &DTPMOD(a) - . = 0x22ac - 0x11d8 = 4096*1+212
-## rv64: &DTPMOD(a) - . = 0x2448 - 0x12f8 = 4096*1+336
-# LD32:      11d8: auipc a0, 1
-# LD32-NEXT:       addi a0, a0, 212
-# LD64:      12f8: auipc a0, 1
-# LD64-NEXT:       addi a0, a0, 336
-# LD-NEXT:         auipc ra, 0
-# LD-NEXT:         jalr 64(ra)
+## rv32: &DTPMOD(a) - . = 0x22b0 - 0x11d8 = 4096*1+216
+## rv64: &DTPMOD(a) - . = 0x2450 - 0x12f8 = 4096*1+344
+# LD32:      11d8: auipc a0, 0x1
+# LD32-NEXT:       addi a0, a0, 0xd8
+# LD64:      12f8: auipc a0, 0x1
+# LD64-NEXT:       addi a0, a0, 0x158
+# LD-NEXT:         auipc ra, 0x0
+# LD-NEXT:         jalr 0x40(ra)
 
 # NOREL: no relocations
 
 ## a is local - its DTPMOD/DTPREL slots are link-time constants.
 ## a@dtpmod = 1 (main module)
 # LE32-GOT: section '.got':
-# LE32-GOT-NEXT: 0x00012134 00000000 01000000 00f8ffff 34210100
+# LE32-GOT-NEXT: 0x00012134 00000000 34210100 01000000 00f8ffff
 
 # LE64-GOT: section '.got':
-# LE64-GOT-NEXT: 0x000121e8 00000000 00000000 01000000 00000000
-# LE64-GOT-NEXT: 0x000121f8 00f8ffff ffffffff e8210100 00000000
+# LE64-GOT-NEXT: 0x000121e8 00000000 00000000 e8210100 00000000
+# LE64-GOT-NEXT: 0x000121f8 01000000 00000000 00f8ffff ffffffff
 
-## rv32: DTPMOD(.LANCHOR0) - . = 0x12138 - 0x11114 = 4096*1+36
-## rv64: DTPMOD(.LANCHOR0) - . = 0x121f0 - 0x111c8 = 4096*1+40
-# LE32:      11114: auipc a0, 1
-# LE32-NEXT:        addi a0, a0, 36
-# LE64:      111c8: auipc a0, 1
-# LE64-NEXT:        addi a0, a0, 40
-# LE-NEXT:          auipc ra, 0
-# LE-NEXT:          jalr 24(ra)
+## rv32: DTPMOD(.LANCHOR0) - . = 0x1213c - 0x11114 = 4096*1+40
+## rv64: DTPMOD(.LANCHOR0) - . = 0x121f8 - 0x111c8 = 4096*1+48
+# LE32:      11114: auipc a0, 0x1
+# LE32-NEXT:        addi a0, a0, 0x28
+# LE64:      111c8: auipc a0, 0x1
+# LE64-NEXT:        addi a0, a0, 0x30
+# LE-NEXT:          auipc ra, 0x0
+# LE-NEXT:          jalr 0x18(ra)
 
 la.tls.gd a0, .LANCHOR0
 call __tls_get_addr@plt
-lw a4, 0(a0)
-lh a0, 4(a0)
+lw a4, 0x0(a0)
+lh a0, 0x4(a0)
 
 ## This is irrelevant to TLS. We use it to take 2 GOT slots to check DTPREL
 ## offsets are correct.

@@ -1,10 +1,10 @@
-; RUN: opt < %s -sccp -disable-output
+; RUN: opt < %s -passes=sccp -disable-output
 ; END.
 target datalayout = "E-p:32:32"
 target triple = "powerpc-unknown-linux-gnu"
-	%struct.pat_list = type { i32, %struct.pat_list* }
-@JUMP = external global i32		; <i32*> [#uses=1]
-@old_D_pat = external global [16 x i8]		; <[16 x i8]*> [#uses=0]
+	%struct.pat_list = type { i32, ptr }
+@JUMP = external global i32		; <ptr> [#uses=1]
+@old_D_pat = external global [16 x i8]		; <ptr> [#uses=0]
 
 define void @asearch1(i32 %D) {
 entry:
@@ -37,7 +37,7 @@ cond_next50:		; preds = %entry
 	%tmp52 = icmp sgt i32 %D, 0		; <i1> [#uses=1]
 	br i1 %tmp52, label %cond_true53, label %cond_next71
 cond_true53:		; preds = %cond_next50
-	%tmp54 = load i32, i32* @JUMP		; <i32> [#uses=1]
+	%tmp54 = load i32, ptr @JUMP		; <i32> [#uses=1]
 	%tmp55 = icmp eq i32 %tmp54, 1		; <i1> [#uses=1]
 	br i1 %tmp55, label %cond_true56, label %cond_next63
 cond_true56:		; preds = %cond_true53
@@ -67,9 +67,9 @@ bb217:		; preds = %cond_true260
 	ret void
 cond_next252:		; preds = %cond_next208, %entry
 	%D.0.0 = phi i32 [ 0, %entry ], [ %tmp229, %cond_next208 ]		; <i32> [#uses=1]
-	%tmp254 = getelementptr i8*, i8** null, i32 1		; <i8**> [#uses=1]
-	%tmp256 = load i8*, i8** %tmp254		; <i8*> [#uses=1]
-	%tmp258 = load i8, i8* %tmp256		; <i8> [#uses=1]
+	%tmp254 = getelementptr ptr, ptr null, i32 1		; <ptr> [#uses=1]
+	%tmp256 = load ptr, ptr %tmp254		; <ptr> [#uses=1]
+	%tmp258 = load i8, ptr %tmp256		; <i8> [#uses=1]
 	%tmp259 = icmp eq i8 %tmp258, 45		; <i1> [#uses=1]
 	br i1 %tmp259, label %cond_true260, label %bb263
 cond_true260:		; preds = %cond_next252

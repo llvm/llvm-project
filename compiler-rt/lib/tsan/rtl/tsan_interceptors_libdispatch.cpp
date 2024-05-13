@@ -19,7 +19,7 @@
 #include "BlocksRuntime/Block.h"
 #include "tsan_dispatch_defs.h"
 
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 # include <Availability.h>
 #endif
 
@@ -225,7 +225,7 @@ DISPATCH_INTERCEPT(dispatch_barrier, true)
 
 // dispatch_async_and_wait() and friends were introduced in macOS 10.14.
 // Linking of these interceptors fails when using an older SDK.
-#if !SANITIZER_MAC || defined(__MAC_10_14)
+#if !SANITIZER_APPLE || defined(__MAC_10_14)
 // macOS 10.14 is greater than our minimal deployment target.  To ensure we
 // generate a weak reference so the TSan dylib continues to work on older
 // systems, we need to forward declare the intercepted functions as "weak
@@ -558,7 +558,7 @@ TSAN_INTERCEPTOR(void, dispatch_apply_f, size_t iterations,
 }
 
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
-DECLARE_REAL_AND_INTERCEPTOR(int, munmap, void *addr, long_t sz)
+DECLARE_REAL_AND_INTERCEPTOR(int, munmap, void *addr, SIZE_T sz)
 
 TSAN_INTERCEPTOR(dispatch_data_t, dispatch_data_create, const void *buffer,
                  size_t size, dispatch_queue_t q, dispatch_block_t destructor) {

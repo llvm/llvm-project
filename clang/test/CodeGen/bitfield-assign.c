@@ -19,7 +19,7 @@ struct s0 {
   unsigned f2 : 2;
 };
 
-int g0();
+int g0(void);
 
 void f0(void) {
   struct s0 s;  

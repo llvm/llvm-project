@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -deadargelim | FileCheck %s
+; RUN: opt -S < %s -passes=deadargelim | FileCheck %s
 
 $f = comdat any
 

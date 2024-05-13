@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class DebuggerAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_debugger_api_boundary_condition(self):
@@ -32,9 +30,9 @@ class DebuggerAPITestCase(TestBase):
         self.dbg.SetPrompt(None)
         self.dbg.SetCurrentPlatform(None)
         self.dbg.SetCurrentPlatformSDKRoot(None)
-        
+
         fresh_dbg = lldb.SBDebugger()
-        self.assertEquals(len(fresh_dbg), 0)
+        self.assertEqual(len(fresh_dbg), 0)
 
     def test_debugger_delete_invalid_target(self):
         """SBDebugger.DeleteTarget() should not crash LLDB given and invalid target."""
@@ -44,7 +42,7 @@ class DebuggerAPITestCase(TestBase):
 
     def test_debugger_internal_variables(self):
         """Ensure that SBDebugger reachs the same instance of properties
-           regardless CommandInterpreter's context initialization"""
+        regardless CommandInterpreter's context initialization"""
         self.build()
         exe = self.getBuildArtifact("a.out")
 
@@ -56,8 +54,9 @@ class DebuggerAPITestCase(TestBase):
 
         def get_cache_line_size():
             value_list = lldb.SBStringList()
-            value_list = self.dbg.GetInternalVariableValue(property_name,
-                                                           self.dbg.GetInstanceName())
+            value_list = self.dbg.GetInternalVariableValue(
+                property_name, self.dbg.GetInstanceName()
+            )
 
             self.assertEqual(value_list.GetSize(), 1)
             try:
@@ -78,11 +77,10 @@ class DebuggerAPITestCase(TestBase):
 
         # This should change the value of a process's local property.
         new_cache_line_size = global_cache_line_size + 512
-        error = self.dbg.SetInternalVariable(property_name,
-                                             str(new_cache_line_size),
-                                             self.dbg.GetInstanceName())
-        self.assertTrue(error.Success(),
-                        property_name + " value was changed successfully")
+        error = self.dbg.SetInternalVariable(
+            property_name, str(new_cache_line_size), self.dbg.GetInstanceName()
+        )
+        self.assertSuccess(error, property_name + " value was changed successfully")
 
         # Check that it was set actually.
         self.assertEqual(get_cache_line_size(), new_cache_line_size)
@@ -92,3 +90,74 @@ class DebuggerAPITestCase(TestBase):
 
         # Test the local property again, is it set to new_cache_line_size?
         self.assertEqual(get_cache_line_size(), new_cache_line_size)
+
+    def test_CreateTarget_platform(self):
+        exe = self.getBuildArtifact("a.out")
+        self.yaml2obj("elf.yaml", exe)
+        error = lldb.SBError()
+        target1 = self.dbg.CreateTarget(exe, None, "remote-linux", False, error)
+        self.assertSuccess(error)
+        platform1 = target1.GetPlatform()
+        platform1.SetWorkingDirectory("/foo/bar")
+
+        # Reuse a platform if it matches the currently selected one...
+        target2 = self.dbg.CreateTarget(exe, None, "remote-linux", False, error)
+        self.assertSuccess(error)
+        platform2 = target2.GetPlatform()
+        self.assertTrue(
+            platform2.GetWorkingDirectory().endswith("bar"),
+            platform2.GetWorkingDirectory(),
+        )
+
+        # ... but create a new one if it doesn't.
+        self.dbg.SetSelectedPlatform(lldb.SBPlatform("remote-windows"))
+        target3 = self.dbg.CreateTarget(exe, None, "remote-linux", False, error)
+        self.assertSuccess(error)
+        platform3 = target3.GetPlatform()
+        self.assertIsNone(platform3.GetWorkingDirectory())
+
+    def test_CreateTarget_arch(self):
+        exe = self.getBuildArtifact("a.out")
+        if lldbplatformutil.getHostPlatform() == "linux":
+            self.yaml2obj("macho.yaml", exe)
+            arch = "x86_64-apple-macosx"
+            expected_platform = "remote-macosx"
+        else:
+            self.yaml2obj("elf.yaml", exe)
+            arch = "x86_64-pc-linux"
+            expected_platform = "remote-linux"
+
+        fbsd = lldb.SBPlatform("remote-freebsd")
+        self.dbg.SetSelectedPlatform(fbsd)
+
+        error = lldb.SBError()
+        target1 = self.dbg.CreateTarget(exe, arch, None, False, error)
+        self.assertSuccess(error)
+        platform1 = target1.GetPlatform()
+        self.assertEqual(platform1.GetName(), expected_platform)
+        platform1.SetWorkingDirectory("/foo/bar")
+
+        # Reuse a platform even if it is not currently selected.
+        self.dbg.SetSelectedPlatform(fbsd)
+        target2 = self.dbg.CreateTarget(exe, arch, None, False, error)
+        self.assertSuccess(error)
+        platform2 = target2.GetPlatform()
+        self.assertEqual(platform2.GetName(), expected_platform)
+        self.assertTrue(
+            platform2.GetWorkingDirectory().endswith("bar"),
+            platform2.GetWorkingDirectory(),
+        )
+
+    def test_SetDestroyCallback(self):
+        destroy_dbg_id = None
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal destroy_dbg_id
+            destroy_dbg_id = dbg_id
+
+        self.dbg.SetDestroyCallback(foo)
+
+        original_dbg_id = self.dbg.GetID()
+        self.dbg.Destroy(self.dbg)
+        self.assertEqual(destroy_dbg_id, original_dbg_id)

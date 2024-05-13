@@ -1,5 +1,4 @@
 ; TEST that counter updates are promoted outside the whole loop nest
-; RUN: opt < %s -pgo-instr-gen -instrprof -do-counter-promotion=true -S | FileCheck --check-prefix=PROMO  %s
 ; RUN: opt < %s --passes=pgo-instr-gen,instrprof -do-counter-promotion=true -S | FileCheck --check-prefix=PROMO  %s 
 
 @g = common local_unnamed_addr global i32 0, align 4
@@ -8,17 +7,17 @@
 ; Function Attrs: noinline norecurse nounwind uwtable
 define void @bar() local_unnamed_addr #0 {
 bb:
-  %tmp2 = load i32, i32* @g, align 4, !tbaa !2
+  %tmp2 = load i32, ptr @g, align 4, !tbaa !2
   %tmp3 = add nsw i32 %tmp2, 1
-  store i32 %tmp3, i32* @g, align 4, !tbaa !2
+  store i32 %tmp3, ptr @g, align 4, !tbaa !2
   ret void
 }
 
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @main() local_unnamed_addr #1 {
 bb:
-  store i32 0, i32* @g, align 4, !tbaa !2
-  %tmp = load i32, i32* @c, align 4, !tbaa !2
+  store i32 0, ptr @g, align 4, !tbaa !2
+  %tmp = load i32, ptr @c, align 4, !tbaa !2
   %tmp1 = icmp sgt i32 %tmp, 0
   br i1 %tmp1, label %bb2_1, label %bb84
 
@@ -72,7 +71,7 @@ bb20:                                             ; preds = %bb20, %bb14
   %tmp23 = add nuw i64 %tmp21, 1
   tail call void @bar()
   %tmp24 = add nuw nsw i32 %tmp22, 1
-  %tmp25 = load i32, i32* @c, align 4, !tbaa !2
+  %tmp25 = load i32, ptr @c, align 4, !tbaa !2
   %tmp26 = icmp slt i32 %tmp24, %tmp25
   br i1 %tmp26, label %bb20, label %bb27
 
@@ -116,7 +115,7 @@ bb57:                                             ; preds = %bb57, %bb45
   %tmp60 = add nuw i64 %tmp58, 1
   tail call void @bar()
   %tmp61 = add nuw nsw i32 %tmp59, 1
-  %tmp62 = load i32, i32* @c, align 4, !tbaa !2
+  %tmp62 = load i32, ptr @c, align 4, !tbaa !2
   %tmp63 = mul nsw i32 %tmp62, 10
   %tmp64 = icmp slt i32 %tmp61, %tmp63
   br i1 %tmp64, label %bb57, label %bb65
@@ -139,7 +138,7 @@ bb73:                                             ; preds = %bb73, %bb51
   %tmp76 = add nuw i64 %tmp74, 1
   tail call void @bar()
   %tmp77 = add nuw nsw i32 %tmp75, 1
-  %tmp78 = load i32, i32* @c, align 4, !tbaa !2
+  %tmp78 = load i32, ptr @c, align 4, !tbaa !2
   %tmp79 = mul nsw i32 %tmp78, 100
   %tmp80 = icmp slt i32 %tmp77, %tmp79
   br i1 %tmp80, label %bb73, label %bb81

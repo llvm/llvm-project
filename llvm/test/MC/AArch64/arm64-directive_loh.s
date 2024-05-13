@@ -73,25 +73,25 @@ _fct1:
 .loh 153, L1
 
 # Too much arguments.
-# CHECK-ERRORS: error: unexpected token in '.loh' directive
+# CHECK-ERRORS: error: expected newline
 # CHECK-ERRORS-NEXT: .loh AdrpAdrp L1, L2, L3
 # CHECK-ERRORS-NEXT:                     ^
 .loh AdrpAdrp L1, L2, L3
 
 # Too much arguments with alternative syntax.
-# CHECK-ERRORS: error: unexpected token in '.loh' directive
+# CHECK-ERRORS: error: expected newline
 # CHECK-ERRORS-NEXT: .loh 1 L1, L2, L3
 # CHECK-ERRORS-NEXT:              ^
 .loh 1 L1, L2, L3
 
 # Too few arguments.
-# CHECK-ERRORS: error: unexpected token in '.loh' directive
+# CHECK-ERRORS: error: expected comma
 # CHECK-ERRORS-NEXT: .loh AdrpAdrp L1
 # CHECK-ERRORS-NEXT:                 ^
 .loh AdrpAdrp L1
 
 # Too few arguments with alternative syntax.
-# CHECK-ERRORS: error: unexpected token in '.loh' directive
+# CHECK-ERRORS: error: expected comma
 # CHECK-ERRORS-NEXT: .loh 1 L1
 # CHECK-ERRORS-NEXT:          ^
 .loh 1 L1

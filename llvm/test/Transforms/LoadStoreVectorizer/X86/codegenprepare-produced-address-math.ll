@@ -1,5 +1,5 @@
-; RUN: opt -codegenprepare -load-store-vectorizer %s -S -o - | FileCheck %s
-; RUN: opt                 -load-store-vectorizer %s -S -o - | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -passes=load-store-vectorizer %s -S -o - | FileCheck %s
+; RUN: opt                 -passes=load-store-vectorizer %s -S -o - | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' %s -S -o - | FileCheck %s
 
 target triple = "x86_64--"
@@ -18,12 +18,10 @@ entry:
   %mul331 = and i32 %base, -4
   %add350.4 = add i32 4, %mul331
   %idx351.4 = zext i32 %add350.4 to i64
-  %arrayidx352.4 = getelementptr inbounds { %union, [2000 x i8] }, { %union, [2000 x i8] }* @global_pointer, i64 0, i32 0, i32 0, i32 1, i64 0, i64 0, i64 0, i64 %idx351.4
-  %tmp296.4 = bitcast float* %arrayidx352.4 to i32*
+  %arrayidx352.4 = getelementptr inbounds { %union, [2000 x i8] }, ptr @global_pointer, i64 0, i32 0, i32 0, i32 1, i64 0, i64 0, i64 0, i64 %idx351.4
   %add350.5 = add i32 5, %mul331
   %idx351.5 = zext i32 %add350.5 to i64
-  %arrayidx352.5 = getelementptr inbounds { %union, [2000 x i8] }, { %union, [2000 x i8] }* @global_pointer, i64 0, i32 0, i32 0, i32 1, i64 0, i64 0, i64 0, i64 %idx351.5
-  %tmp296.5 = bitcast float* %arrayidx352.5 to i32*
+  %arrayidx352.5 = getelementptr inbounds { %union, [2000 x i8] }, ptr @global_pointer, i64 0, i32 0, i32 0, i32 1, i64 0, i64 0, i64 0, i64 %idx351.5
   %cnd = icmp ult i32 %base, 1000
   br i1 %cnd, label %loads, label %exit
 
@@ -31,8 +29,8 @@ loads:
   ; If and only if the loads are in a different BB from the GEPs codegenprepare
   ; would try to turn the GEPs into math, which makes LoadStoreVectorizer's job
   ; harder
-  %tmp297.4 = load i32, i32* %tmp296.4, align 4, !tbaa !0
-  %tmp297.5 = load i32, i32* %tmp296.5, align 4, !tbaa !0
+  %tmp297.4 = load i32, ptr %arrayidx352.4, align 4, !tbaa !0
+  %tmp297.5 = load i32, ptr %arrayidx352.5, align 4, !tbaa !0
   br label %exit
 
 exit:
@@ -56,15 +54,13 @@ entry:
 
 loads:                                            ; preds = %entry
   %sunkaddr = mul i64 %idx351.4, 4
-  %sunkaddr1 = getelementptr inbounds i8, i8* bitcast ({ %union, [2000 x i8] }* @global_pointer to i8*), i64 %sunkaddr
-  %sunkaddr2 = getelementptr inbounds i8, i8* %sunkaddr1, i64 4096
-  %0 = bitcast i8* %sunkaddr2 to i32*
-  %tmp297.4 = load i32, i32* %0, align 4, !tbaa !0
+  %sunkaddr1 = getelementptr inbounds i8, ptr @global_pointer, i64 %sunkaddr
+  %sunkaddr2 = getelementptr inbounds i8, ptr %sunkaddr1, i64 4096
+  %tmp297.4 = load i32, ptr %sunkaddr2, align 4, !tbaa !0
   %sunkaddr3 = mul i64 %idx351.5, 4
-  %sunkaddr4 = getelementptr inbounds i8, i8* bitcast ({ %union, [2000 x i8] }* @global_pointer to i8*), i64 %sunkaddr3
-  %sunkaddr5 = getelementptr inbounds i8, i8* %sunkaddr4, i64 4096
-  %1 = bitcast i8* %sunkaddr5 to i32*
-  %tmp297.5 = load i32, i32* %1, align 4, !tbaa !0
+  %sunkaddr4 = getelementptr inbounds i8, ptr @global_pointer, i64 %sunkaddr3
+  %sunkaddr5 = getelementptr inbounds i8, ptr %sunkaddr4, i64 4096
+  %tmp297.5 = load i32, ptr %sunkaddr5, align 4, !tbaa !0
   br label %exit
 
 exit:                                             ; preds = %loads, %entry

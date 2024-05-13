@@ -1,7 +1,7 @@
-# RUN: llc -march=amdgcn -mcpu=tahiti -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,SICI
-# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,SICI
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI,GFX9
+# RUN: llc -mtriple=amdgcn -mcpu=tahiti -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,SICI
+# RUN: llc -mtriple=amdgcn -mcpu=hawaii -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,SICI
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI,GFX9
 
 --- |
   define amdgpu_kernel void @div_fmas() { ret void }
@@ -190,17 +190,17 @@ name: vmem_gt_8dw_store
 
 body: |
   bb.0:
-    BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORDX3_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX3_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX4_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_FORMAT_XYZ_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_FORMAT_XYZ_OFFSET $vgpr2_vgpr3_vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_FORMAT_XYZW_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_FORMAT_XYZW_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     BUFFER_ATOMIC_CMPSWAP_X2_OFFSET $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec

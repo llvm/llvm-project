@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
 ; CHECK: .target sm_{{[0-9]+}}, debug
 
@@ -7,21 +8,21 @@
 ; CHECK: )
 ; CHECK: {
 ; CHECK: .loc 1 1 0
-; CHECK: Lfunc_begin0:
+; CHECK: $L__func_begin0:
 ; CHECK: .loc 1 1 0
 ; CHECK: .loc 1 1 0
 ; CHECK: ret;
-; CHECK: Lfunc_end0:
+; CHECK: $L__func_end0:
 ; CHECK: }
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) a(
 ; CHECK: .param .b32 a_param_0
 ; CHECK: )
 ; CHECK: {
-; CHECK: Lfunc_begin1:
+; CHECK: $L__func_begin1:
 ; CHECK-NOT: .loc
 ; CHECK: ret;
-; CHECK: Lfunc_end1:
+; CHECK: $L__func_end1:
 ; CHECK: }
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) d(
@@ -29,10 +30,10 @@
 ; CHECK: )
 ; CHECK: {
 ; CHECK: .loc 1 3 0
-; CHECK: Lfunc_begin2:
+; CHECK: $L__func_begin2:
 ; CHECK: .loc 1 3 0
 ; CHECK: ret;
-; CHECK: Lfunc_end2:
+; CHECK: $L__func_end2:
 ; CHECK: }
 
 ; CHECK: .file 1 "{{.*}}b.c"
@@ -41,9 +42,9 @@
 define i32 @b(i32 %c) #0 !dbg !5 {
 entry:
   %c.addr = alloca i32, align 4
-  store i32 %c, i32* %c.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %c.addr, metadata !13, metadata !DIExpression()), !dbg !14
-  %0 = load i32, i32* %c.addr, align 4, !dbg !14
+  store i32 %c, ptr %c.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %c.addr, metadata !13, metadata !DIExpression()), !dbg !14
+  %0 = load i32, ptr %c.addr, align 4, !dbg !14
   %add = add nsw i32 %0, 1, !dbg !14
   ret i32 %add, !dbg !14
 }
@@ -52,8 +53,8 @@ entry:
 define i32 @a(i32 %b) #0 {
 entry:
   %b.addr = alloca i32, align 4
-  store i32 %b, i32* %b.addr, align 4
-  %0 = load i32, i32* %b.addr, align 4
+  store i32 %b, ptr %b.addr, align 4
+  %0 = load i32, ptr %b.addr, align 4
   %add = add nsw i32 %0, 1
   ret i32 %add
 }
@@ -65,9 +66,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define i32 @d(i32 %e) #0 !dbg !10 {
 entry:
   %e.addr = alloca i32, align 4
-  store i32 %e, i32* %e.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %e.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* %e.addr, align 4, !dbg !16
+  store i32 %e, ptr %e.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %e.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  %0 = load i32, ptr %e.addr, align 4, !dbg !16
   %add = add nsw i32 %0, 1, !dbg !16
   ret i32 %add, !dbg !16
 }
@@ -220,11 +221,11 @@ entry:
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 101
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end2                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end2                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 2                                // Abbrev [2] 0x65:0x27 DW_TAG_subprogram
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end0                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
 ; CHECK-NEXT: .b8 98                               // DW_AT_name
@@ -242,8 +243,8 @@ entry:
 ; CHECK-NEXT: .b32 179                             // DW_AT_type
 ; CHECK-NEXT: .b8 0                                // End Of Children Mark
 ; CHECK-NEXT: .b8 2                                // Abbrev [2] 0x8c:0x27 DW_TAG_subprogram
-; CHECK-NEXT: .b64 Lfunc_begin2                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end2                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin2                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end2                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
 ; CHECK-NEXT: .b8 100                              // DW_AT_name

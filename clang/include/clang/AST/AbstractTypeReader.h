@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_AST_ABSTRACTTYPEREADER_H
-#define CLANG_AST_ABSTRACTTYPEREADER_H
+#ifndef LLVM_CLANG_AST_ABSTRACTTYPEREADER_H
+#define LLVM_CLANG_AST_ABSTRACTTYPEREADER_H
 
-#include "clang/AST/Type.h"
 #include "clang/AST/AbstractBasicReader.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 namespace serialization {

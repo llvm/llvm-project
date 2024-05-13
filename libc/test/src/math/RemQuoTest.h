@@ -9,25 +9,33 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H
 
-#include "utils/FPUtil/BasicOperations.h"
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/TestHelpers.h"
+#include "hdr/math_macros.h"
+#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/Test.h"
-#include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T>
-class RemQuoTestTemplate : public __llvm_libc::testing::Test {
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
 
-  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
-  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
+
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);
@@ -39,13 +47,13 @@ public:
     y = T(1.0);
     x = inf;
     EXPECT_FP_EQ(nan, func(x, y, &quotient));
-    x = negInf;
+    x = neg_inf;
     EXPECT_FP_EQ(nan, func(x, y, &quotient));
 
     x = T(1.0);
     y = zero;
     EXPECT_FP_EQ(nan, func(x, y, &quotient));
-    y = negZero;
+    y = neg_zero;
     EXPECT_FP_EQ(nan, func(x, y, &quotient));
 
     y = nan;
@@ -64,9 +72,9 @@ public:
     y = T(1.0);
     EXPECT_FP_EQ(func(x, y, &quotient), zero);
 
-    x = negZero;
+    x = neg_zero;
     y = T(1.0);
-    EXPECT_FP_EQ(func(x, y, &quotient), negZero);
+    EXPECT_FP_EQ(func(x, y, &quotient), neg_zero);
 
     x = T(1.125);
     y = inf;
@@ -87,21 +95,19 @@ public:
     EXPECT_FP_EQ(func(x, -y, &q), zero);
     EXPECT_EQ(q, -1);
 
-    EXPECT_FP_EQ(func(-x, y, &q), negZero);
+    EXPECT_FP_EQ(func(-x, y, &q), neg_zero);
     EXPECT_EQ(q, -1);
 
-    EXPECT_FP_EQ(func(-x, -y, &q), negZero);
+    EXPECT_FP_EQ(func(-x, -y, &q), neg_zero);
     EXPECT_EQ(q, 1);
   }
 
   void testSubnormalRange(RemQuoFunc func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step =
-        (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
-    for (UIntType v = FPBits::minSubnormal, w = FPBits::maxSubnormal;
-         v <= FPBits::maxSubnormal && w >= FPBits::minSubnormal;
-         v += step, w -= step) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
+         v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
       result.f = func(x, y, &result.i);
@@ -110,12 +116,11 @@ public:
   }
 
   void testNormalRange(RemQuoFunc func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
-    for (UIntType v = FPBits::minNormal, w = FPBits::maxNormal;
-         v <= FPBits::maxNormal && w >= FPBits::minNormal;
-         v += step, w -= step) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
+    constexpr StorageType COUNT = 1'001;
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
+         v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
       result.f = func(x, y, &result.i);

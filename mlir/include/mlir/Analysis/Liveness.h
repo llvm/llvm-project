@@ -43,7 +43,7 @@ class Value;
 ///   auto &allInValues = liveness.getLiveIn(block);
 ///   auto &allOutValues = liveness.getLiveOut(block);
 ///   auto allOperationsInWhichValueIsLive = liveness.resolveLiveness(value);
-///   bool lastUse = liveness.isLastUse(value, operation);
+///   bool isDeafAfter = liveness.isDeadAfter(value, operation);
 class Liveness {
 public:
   using OperationListT = std::vector<Operation *>;
@@ -74,9 +74,8 @@ public:
   /// Returns a reference to a set containing live-out values (unordered).
   const ValueSetT &getLiveOut(Block *block) const;
 
-  /// Returns true if the given operation represent the last use of the
-  /// given value.
-  bool isLastUse(Value value, Operation *operation) const;
+  /// Returns true if `value` is not live after `operation`.
+  bool isDeadAfter(Value value, Operation *operation) const;
 
   /// Dumps the liveness information in a human readable format.
   void dump() const;
@@ -130,9 +129,20 @@ public:
   /// provided (must be referenced in this block).
   Operation *getEndOperation(Value value, Operation *startOperation) const;
 
+  /// Get the set of values that are currently live (if any) for the current op.
+  /// This analysis takes an expansive view of "live" in that if a value is
+  /// defined by or within the operation or is fully consumed (as in last user)
+  /// by or within the operation the value is considered "live". The values in
+  /// the list are not ordered.
+  ///
+  /// This check is quite expensive as it does not cache the results of the
+  /// computation, so the currently live values have to be recomputed for each
+  /// op.
+  ValueSetT currentlyLiveValues(Operation *op) const;
+
 private:
   /// The underlying block.
-  Block *block;
+  Block *block = nullptr;
 
   /// The set of all live in values.
   ValueSetT inValues;
@@ -143,6 +153,6 @@ private:
   friend class Liveness;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_LIVENESS_H

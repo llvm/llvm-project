@@ -1,5 +1,9 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o - \
-; RUN:   | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o -\
+; RUN:     -experimental-debug-variable-locations=false \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o -\
+; RUN:     -experimental-debug-variable-locations=true \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,INSTRREF
 ;
 ; Generated at -O1 from:
 ; typedef struct {
@@ -20,14 +24,27 @@
 ; }
 ;
 ; The debug info is attached to the ADD 4096 operation, which doesn't survive
-; instruction selection as it is folded into the load.
+; instruction selection as it is folded into the load. As a result, we should
+; refer to s4 and myVar with complex expressions.
 ;
-; CHECK:   ![[S4:.*]] = !DILocalVariable(name: "s4", 
-; CHECK:   ![[MYVAR:.*]] = !DILocalVariable(name: "myVar", 
-; CHECK:      DBG_VALUE $rax, $noreg, ![[MYVAR]],
-; CHECK-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
-; CHECK-NEXT: DBG_VALUE $rax, $noreg, ![[S4]],
-; CHECK-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+; NB: instruction referencing and DBG_VALUE modes produce debug insts in a
+; different order.
+;
+; CHECK:         ![[S4:.*]] = !DILocalVariable(name: "s4",
+; CHECK:         ![[MYVAR:.*]] = !DILocalVariable(name: "myVar",
+; CHECK:         $rax = MOV64rm
+; INSTRREF-SAME: debug-instr-number 2,
+; INSTRREF-NEXT: DBG_INSTR_REF ![[S4]],
+; DBGVALUE-NEXT: DBG_VALUE $rax, $noreg, ![[MYVAR]],
+; DBGVALUE-SAME:       !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+; INSTRREF-SAME:       !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+; INSTRREF-SAME: dbg-instr-ref(2, 0)
+
+; INSTRREF:      DBG_INSTR_REF ![[MYVAR]],
+; DBGVALUE:      DBG_VALUE $rax, $noreg, ![[S4]],
+; DBGVALUE-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+; INSTRREF-SAME:           !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+; INSTRREF-SAME: dbg-instr-ref(2, 0)
 ; CHECK-NEXT: $rdi = MOV64rm killed renamable $rax, 1, $noreg, 4096, $noreg,
 
 source_filename = "test.c"
@@ -39,19 +56,17 @@ target triple = "x86_64-apple-macosx10.13.0"
 %struct.S0 = type opaque
 
 ; Function Attrs: noinline nounwind ssp uwtable
-define void @f(%struct.S3* nocapture readonly %a3) local_unnamed_addr #0 !dbg !6 {
+define void @f(ptr nocapture readonly %a3) local_unnamed_addr #0 !dbg !6 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.S3* %a3, metadata !15, metadata !DIExpression()), !dbg !30
-  %packed = getelementptr inbounds %struct.S3, %struct.S3* %a3, i64 0, i32 0, !dbg !31
-  %0 = load i64, i64* %packed, align 8, !dbg !31
+  tail call void @llvm.dbg.value(metadata ptr %a3, metadata !15, metadata !DIExpression()), !dbg !30
+  %0 = load i64, ptr %a3, align 8, !dbg !31
   %add = add i64 %0, 4096, !dbg !37
-  %1 = inttoptr i64 %add to %struct.S4*, !dbg !38
-  tail call void @llvm.dbg.value(metadata %struct.S4* %1, metadata !16, metadata !DIExpression()), !dbg !39
-  tail call void @llvm.dbg.value(metadata %struct.S4* %1, metadata !17, metadata !DIExpression()), !dbg !40
-  %b1 = bitcast %struct.S4* %1 to %struct.S0**, !dbg !41
-  %2 = load %struct.S0*, %struct.S0** %b1, align 8, !dbg !41
-  tail call void @llvm.dbg.value(metadata %struct.S0* %2, metadata !24, metadata !DIExpression()), !dbg !45
-  %call = tail call i32 (%struct.S0*, ...) bitcast (i32 (...)* @use to i32 (%struct.S0*, ...)*)(%struct.S0* %2) #3, !dbg !46
+  %1 = inttoptr i64 %add to ptr, !dbg !38
+  tail call void @llvm.dbg.value(metadata ptr %1, metadata !16, metadata !DIExpression()), !dbg !39
+  tail call void @llvm.dbg.value(metadata ptr %1, metadata !17, metadata !DIExpression()), !dbg !40
+  %2 = load ptr, ptr %1, align 8, !dbg !41
+  tail call void @llvm.dbg.value(metadata ptr %2, metadata !24, metadata !DIExpression()), !dbg !45
+  %call = tail call i32 (ptr, ...) @use(ptr %2) #3, !dbg !46
   ret void, !dbg !47
 }
 

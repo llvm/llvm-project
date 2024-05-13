@@ -1,7 +1,6 @@
 // RUN: cp %s %t
 // RUN: %clang_cc1 -x objective-c -fixit %t
 // RUN: %clang_cc1 -x objective-c -Werror %t
-//rdar://17911746
 
 @class BridgeFormatter;
 
@@ -22,7 +21,7 @@
 }
 @end
  
-int main()
+int main(void)
 {
     X *obj = [X new];
     obj.X = 3;

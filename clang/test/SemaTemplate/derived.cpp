@@ -14,7 +14,7 @@ void test() {
 
 namespace rdar13267210 {
   template < typename T > class A {
-    BaseTy; // expected-error{{C++ requires a type specifier for all declarations}}
+    BaseTy; // expected-error{{a type specifier is required for all declarations}}
   };
 
   template < typename T, int N > class C: A < T > {};
@@ -49,6 +49,6 @@ namespace rdar14183893 {
 
   class A {
     TFP m_p;
-    void Enable() { 0, A(); } // expected-warning {{unused}}
+    void Enable() { 0, A(); } // expected-warning {{left operand of comma operator has no effect}}
   };
 }

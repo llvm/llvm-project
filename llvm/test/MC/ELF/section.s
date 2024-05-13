@@ -166,9 +166,11 @@ bar:
 .section .shf_metadata1,"ao",@progbits,.Lshf_metadata_target2_1
 .section .shf_metadata2,"ao",@progbits,.Lshf_metadata_target2_2
 .section .shf_metadata3,"ao",@progbits,.shf_metadata_target1
+.section .linkorder_group_zero,"aoG",@progbits,.shf_metadata_target1,foo
 // ASM: .section .shf_metadata1,"ao",@progbits,.Lshf_metadata_target2_1
 // ASM: .section .shf_metadata2,"ao",@progbits,.Lshf_metadata_target2_2
 // ASM: .section .shf_metadata3,"ao",@progbits,.shf_metadata_target1
+// ASM: .section .linkorder_group_zero,"aoG",@progbits,.shf_metadata_target1,foo{{$}}
 
 // CHECK:      Section {
 // CHECK:        Index: 22
@@ -213,6 +215,20 @@ bar:
 // CHECK-NEXT:   Type: SHT_PROGBITS
 // CHECK-NEXT:   Flags [
 // CHECK-NEXT:     SHF_ALLOC
+// CHECK-NEXT:     SHF_LINK_ORDER
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Address:
+// CHECK-NEXT:   Offset:
+// CHECK-NEXT:   Size:
+// CHECK-NEXT:   Link:    22
+// CHECK-NEXT:   Info:    0
+
+// CHECK:      Section {
+// CHECK:        Name: .linkorder_group_zero
+// CHECK-NEXT:   Type: SHT_PROGBITS
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_ALLOC
+// CHECK-NEXT:     SHF_GROUP
 // CHECK-NEXT:     SHF_LINK_ORDER
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   Address:
@@ -268,6 +284,16 @@ bar:
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
 
+.section .large,"l"
+// ASM: .section .large,"l"
+
+// CHECK:        Section {
+// CHECK:          Name: .large
+// CHECK-NEXT:     Type: SHT_PROGBITS
+// CHECK-NEXT:     Flags [
+// CHECK-NEXT:       SHF_X86_64_LARGE
+// CHECK-NEXT:     ]
+
 // Test SHT_LLVM_ODRTAB
 
 .section .odrtab,"e",@llvm_odrtab
@@ -318,3 +344,14 @@ bar:
 // CHECK-NEXT:   Flags [
 // CHECK-NEXT:   ]
 // CHECK: }
+
+.section .llvm.lto,"e",@llvm_lto
+// ASM: .section .llvm.lto,"e",@llvm_lto
+
+// CHECK:      Section {
+// CHECK:        Name: .llvm.lto
+// CHECK-NEXT:   Type: SHT_LLVM_LTO
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_EXCLUDE
+// CHECK-NEXT:   ]
+// CHECK:      }

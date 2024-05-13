@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -inline-threshold=20 -S | FileCheck %s
+; RUN: opt < %s -passes=inline -inline-threshold=20 -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=20 -S | FileCheck %s
 
 define internal i32 @callee1(i32 %A, i32 %B) {
@@ -36,7 +36,7 @@ define i32 @callee21(i32 %x, i32 %y) {
   ret i32 %result
 }
 
-declare i8* @getptr()
+declare ptr @getptr()
 
 define i32 @callee22(i32 %x) {
   %icmp = icmp ugt i32 %x, 42
@@ -116,7 +116,7 @@ declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
 
 define i8 @caller4(i8 %z) {
 ; Check that we can constant fold through intrinsics such as the
-; overflow-detecting arithmetic instrinsics. These are particularly important
+; overflow-detecting arithmetic intrinsics. These are particularly important
 ; as they are used heavily in standard library code and generic C++ code where
 ; the arguments are oftent constant but complete generality is required.
 ;
@@ -164,9 +164,8 @@ entry:
 }
 
 define i64 @callee5(i64 %x, i64 %y) {
-  %inttoptr = inttoptr i64 %x to i8*
-  %bitcast = bitcast i8* %inttoptr to i32*
-  %ptrtoint = ptrtoint i32* %bitcast to i64
+  %inttoptr = inttoptr i64 %x to ptr
+  %ptrtoint = ptrtoint ptr %inttoptr to i64
   %trunc = trunc i64 %ptrtoint to i32
   %zext = zext i32 %trunc to i64
   %cmp = icmp eq i64 %zext, 42
@@ -236,9 +235,8 @@ define i32 @PR13412.main() {
 
 entry:
   %i1 = alloca i64
-  store i64 0, i64* %i1
-  %arraydecay = bitcast i64* %i1 to i32*
-  %call = call i1 @PR13412.first(i32* %arraydecay, i32* %arraydecay)
+  store i64 0, ptr %i1
+  %call = call i1 @PR13412.first(ptr %i1, ptr %i1)
   br i1 %call, label %cond.end, label %cond.false
 
 cond.false:
@@ -249,27 +247,27 @@ cond.end:
   ret i32 0
 }
 
-define internal i1 @PR13412.first(i32* %a, i32* %b) {
+define internal i1 @PR13412.first(ptr %a, ptr %b) {
 entry:
-  %call = call i32* @PR13412.second(i32* %a, i32* %b)
-  %cmp = icmp eq i32* %call, %b
+  %call = call ptr @PR13412.second(ptr %a, ptr %b)
+  %cmp = icmp eq ptr %call, %b
   ret i1 %cmp
 }
 
 declare void @PR13412.fail()
 
-define internal i32* @PR13412.second(i32* %a, i32* %b) {
+define internal ptr @PR13412.second(ptr %a, ptr %b) {
 entry:
-  %sub.ptr.lhs.cast = ptrtoint i32* %b to i64
-  %sub.ptr.rhs.cast = ptrtoint i32* %a to i64
+  %sub.ptr.lhs.cast = ptrtoint ptr %b to i64
+  %sub.ptr.rhs.cast = ptrtoint ptr %a to i64
   %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
   %sub.ptr.div = ashr exact i64 %sub.ptr.sub, 2
   %cmp = icmp ugt i64 %sub.ptr.div, 1
   br i1 %cmp, label %if.then, label %if.end3
 
 if.then:
-  %0 = load i32, i32* %a
-  %1 = load i32, i32* %b
+  %0 = load i32, ptr %a
+  %1 = load i32, ptr %b
   %cmp1 = icmp eq i32 %0, %1
   br i1 %cmp1, label %return, label %if.end3
 
@@ -277,8 +275,8 @@ if.end3:
   br label %return
 
 return:
-  %retval.0 = phi i32* [ %b, %if.end3 ], [ %a, %if.then ]
-  ret i32* %retval.0
+  %retval.0 = phi ptr [ %b, %if.end3 ], [ %a, %if.then ]
+  ret ptr %retval.0
 }
 
 declare i32 @PR28802.external(i32 returned %p1)

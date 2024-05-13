@@ -1,5 +1,5 @@
-; RUN: opt -passes='loop(unswitch),verify<loops>' -S < %s | FileCheck %s
-; RUN: opt -verify-memoryssa -passes='loop-mssa(unswitch),verify<loops>' -S < %s | FileCheck %s
+; RUN: opt -passes='loop(simple-loop-unswitch),verify<loops>' -S < %s | FileCheck %s
+; RUN: opt -verify-memoryssa -passes='loop-mssa(simple-loop-unswitch),verify<loops>' -S < %s | FileCheck %s
 
 declare void @unknown()
 declare void @unknown2()
@@ -22,22 +22,22 @@ declare void @unknown2()
 ; Test that the branch on "y" is inside the loop (after the first unconditional
 ; branch).
 
-define void @may_not_execute_trivial(i1* %x) sanitize_memory {
+define void @may_not_execute_trivial(ptr %x) sanitize_memory {
 ; CHECK-LABEL: @may_not_execute_trivial(
 entry:
-  %y = load i64, i64* @y, align 8
+  %y = load i64, ptr @y, align 8
   %y.cmp = icmp eq i64 %y, 0
   br label %for.body
-; CHECK: %[[Y:.*]] = load i64, i64* @y
+; CHECK: %[[Y:.*]] = load i64, ptr @y
 ; CHECK: %[[YCMP:.*]] = icmp eq i64 %[[Y]], 0
 ; CHECK-NOT: br i1
 ; CHECK: br label %for.body
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
-  %x.load = load i1, i1* %x
+  %x.load = load i1, ptr %x
   br i1 %x.load, label %for.inc, label %if.then
-; CHECK: %[[XLOAD:.*]] = load i1, i1* %x
+; CHECK: %[[XLOAD:.*]] = load i1, ptr %x
 ; CHECK: br i1 %[[XLOAD]]
 
 if.then:
@@ -62,7 +62,7 @@ for.end:
 ; This shows that it is not enough to suppress hoisting of load instructions,
 ; the actual problem is in the speculative branching.
 
-define void @may_not_execute2_trivial(i1* %x, i1 %y) sanitize_memory {
+define void @may_not_execute2_trivial(ptr %x, i1 %y) sanitize_memory {
 ; CHECK-LABEL: @may_not_execute2_trivial(
 entry:
   br label %for.body
@@ -71,9 +71,9 @@ entry:
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
-  %x.load = load i1, i1* %x
+  %x.load = load i1, ptr %x
   br i1 %x.load, label %for.inc, label %if.then
-; CHECK: %[[XLOAD:.*]] = load i1, i1* %x
+; CHECK: %[[XLOAD:.*]] = load i1, ptr %x
 ; CHECK: br i1 %[[XLOAD]]
 
 if.then:
@@ -108,10 +108,10 @@ for.end:
 define void @must_execute_trivial() sanitize_memory {
 ; CHECK-LABEL: @must_execute_trivial(
 entry:
-  %y = load i64, i64* @y, align 8
+  %y = load i64, ptr @y, align 8
   %y.cmp = icmp eq i64 %y, 0
   br label %for.body
-; CHECK:   %[[Y:.*]] = load i64, i64* @y
+; CHECK:   %[[Y:.*]] = load i64, ptr @y
 ; CHECK:   %[[YCMP:.*]] = icmp eq i64 %[[Y]], 0
 ; CHECK:   br i1 %[[YCMP]], label %[[EXIT_SPLIT:.*]], label %[[PH:.*]]
 ;

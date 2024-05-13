@@ -18,12 +18,12 @@ NSString *CreateNSString(void);
 void bridge_transfer_from_cf(int *i) {
   // CHECK: store i32 7
   *i = 7;
-  // CHECK: call i8* @CFCreateSomething()
+  // CHECK: call ptr @CFCreateSomething()
   id obj1 = (__bridge_transfer id)CFCreateSomething();
   // CHECK-NOT: retain
   // CHECK: store i32 11
   *i = 11;
-  // CHECK: call i8* @CFCreateSomething()
+  // CHECK: call ptr @CFCreateSomething()
   // CHECK-NOT: retain
   // CHECK: store i32 13
   (void)(__bridge_transfer id)CFCreateSomething(), *i = 13;
@@ -31,7 +31,6 @@ void bridge_transfer_from_cf(int *i) {
   // CHECK: store i32 17
   *i = 17;
   // CHECK: call void @llvm.objc.release
-  // CHECK-NEXT: bitcast
   // CHECK-NEXT: call void @llvm.lifetime.end
   // CHECK-NEXT: ret void
 }
@@ -40,19 +39,17 @@ void bridge_transfer_from_cf(int *i) {
 void bridge_from_cf(int *i) {
   // CHECK: store i32 7
   *i = 7;
-  // CHECK: call i8* @CFCreateSomething()
+  // CHECK: call ptr @CFCreateSomething() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   id obj1 = (__bridge id)CFCreateSomething();
-  // CHECK: llvm.objc.retainAutoreleasedReturnValue
   // CHECK: store i32 11
   *i = 11;
-  // CHECK: call i8* @CFCreateSomething()
+  // CHECK: call ptr @CFCreateSomething()
   // CHECK-NOT: release
   // CHECK: store i32 13
   (void)(__bridge id)CFCreateSomething(), *i = 13;
   // CHECK: store i32 17
   *i = 17;
   // CHECK: call void @llvm.objc.release
-  // CHECK-NEXT: bitcast
   // CHECK-NEXT: call void @llvm.lifetime.end
   // CHECK-NEXT: ret void
 }
@@ -60,18 +57,15 @@ void bridge_from_cf(int *i) {
 // CHECK-LABEL: define{{.*}} void @bridge_retained_of_cf
 void bridge_retained_of_cf(int *i) {
   *i = 7;
-  // CHECK: call i8* @CreateSomething()
+  // CHECK: call ptr @CreateSomething() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   CFTypeRef cf1 = (__bridge_retained CFTypeRef)CreateSomething();
-  // CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
   // CHECK: store i32 11
   *i = 11;
-  // CHECK: call i8* @CreateSomething()
+  // CHECK: call ptr @CreateSomething() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   (__bridge_retained CFTypeRef)CreateSomething(), *i = 13;
-  // CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
   // CHECK: store i32 13
   // CHECK: store i32 17
   *i = 17;
-  // CHECK-NEXT: bitcast
   // CHECK-NEXT: call void @llvm.lifetime.end
   // CHECK-NEXT: ret void
 }
@@ -81,26 +75,24 @@ void bridge_of_cf(int *i) {
   // CHECK: store i32 7
   *i = 7;
   // CHECK: call void @llvm.lifetime.start
-  // CHECK-NEXT: call i8* @CreateSomething()
+  // CHECK-NEXT: call ptr @CreateSomething()
   CFTypeRef cf1 = (__bridge CFTypeRef)CreateSomething();
   // CHECK-NOT: retain
   // CHECK: store i32 11
   *i = 11;
-  // CHECK: call i8* @CreateSomething
+  // CHECK: call ptr @CreateSomething
   (__bridge CFTypeRef)CreateSomething(), *i = 13;
   // CHECK: store i32 13
   // CHECK-NOT: release
   // CHECK: store i32 17
   *i = 17;
-  // CHECK-NEXT: bitcast
   // CHECK-NEXT: call void @llvm.lifetime.end
   // CHECK-NEXT: ret void
 }
 
-// CHECK-LABEL: define{{.*}} %struct.__CFString* @bridge_of_paren_expr()
-CFStringRef bridge_of_paren_expr() {
-  // CHECK-NOT: call i8* @llvm.objc.retainAutoreleasedReturnValue(
-  // CHECK-NOT: call void @llvm.objc.release(
+// CHECK-LABEL: define{{.*}} ptr @bridge_of_paren_expr()
+CFStringRef bridge_of_paren_expr(void) {
+  // CHECK-NOT: "@llvm.objc"
   CFStringRef r = (__bridge CFStringRef)(CreateNSString());
   r = (__bridge CFStringRef)((NSString *)(CreateNSString()));
   return r;

@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
 
-; RUN: opt -module-summary %s -o %t1.bc
-; RUN: opt -module-summary %S/Inputs/thinlto_cspgo_bar_gen.ll -o %t2.bc
+; RUN: opt -passes='thinlto-pre-link<O2>' --cs-profilegen-file=alloc -cspgo-kind=cspgo-instr-gen-pipeline -module-summary %s -o %t1.bc
+; RUN: opt -passes='thinlto-pre-link<O2>' --cs-profilegen-file=alloc -cspgo-kind=cspgo-instr-gen-pipeline -module-summary %S/Inputs/thinlto_cspgo_bar_gen.ll -o %t2.bc
 ; RUN: llvm-lto2 run -lto-cspgo-profile-file=alloc -lto-cspgo-gen -save-temps -o %t %t1.bc %t2.bc \
 ; RUN:   -r=%t1.bc,foo,pl \
 ; RUN:   -r=%t1.bc,bar,l \
@@ -13,19 +13,21 @@
 ; RUN:   -r=%t2.bc,even,pl \
 ; RUN:   -r=%t2.bc,__llvm_profile_filename,x \
 ; RUN:   -r=%t2.bc,__llvm_profile_raw_version,x
-; RUN: llvm-dis %t.1.4.opt.bc -o - | FileCheck %s --check-prefix=CSGEN
+; RUN: llvm-dis %t.1.4.opt.bc -o - | FileCheck %s --check-prefixes=CSGEN,PREVAILING
+; RUN: llvm-dis %t.2.4.opt.bc -o - | FileCheck %s --check-prefixes=CSGEN,NOPREVAILING
 
+;; Prevailing __llvm_profile_raw_version is kept by LTO.
+; PREVAILING: @__llvm_profile_raw_version = hidden constant i64
+
+;; Non-prevailing __llvm_profile_raw_version is discarded by LTO. Ensure the
+;; declaration is retained.
+; NOPREVAILING: @__llvm_profile_raw_version = external hidden constant i64
 ; CSGEN: @__profc_
 ; CSGEN: @__profd_
 
 source_filename = "cspgo.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
-
-$__llvm_profile_filename = comdat any
-$__llvm_profile_raw_version = comdat any
-@__llvm_profile_filename = constant [25 x i8] c"pass2/default_%m.profraw\00", comdat
-@__llvm_profile_raw_version = constant i64 216172782113783812, comdat
 
 define dso_local void @foo() #0 !prof !29 {
 entry:

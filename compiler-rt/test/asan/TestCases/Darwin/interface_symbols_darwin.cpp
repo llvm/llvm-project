@@ -2,6 +2,10 @@
 // If you're changing this file, please also change
 // ../Linux/interface_symbols.c
 
+// This is needed to run the preprocessor to exclude symbols guarded by platform
+// RUN: %clangxx -x c++-header -o - -E %p/../../../../lib/asan/asan_interface.inc  \
+// RUN:  | sed "s/INTERFACE_FUNCTION/\nINTERFACE_FUNCTION/g" >  %t.asan_interface.inc
+
 // RUN: %clangxx_asan -dead_strip -O2 %s -o %t.exe
 //
 // note: we can not use -D on Darwin.
@@ -15,13 +19,22 @@
 // RUN:  | sed -e "s/__asan_version_mismatch_check_v[0-9]+/__asan_version_mismatch_check/" \
 // RUN:  > %t.exports
 //
-// RUN: grep -e "INTERFACE_\(WEAK_\)\?FUNCTION"                                \
-// RUN:  %p/../../../../lib/asan/asan_interface.inc                            \
-// RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                          \
-// RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \
+// note: SED differs between GNU and BSD in handling semicolon and the use of
+//       '\n' in regex patterns. For macOS we must change this GNU syntax:
+//           sed -e ':a' -e 'N' -e '$!ba'
+//       to a form that both GNU and BSD can agree upon (below).
+//
+// RUN:  sed -e ':a' -e 'N' -e '$!ba'                                             \
+// RUN:      -e 's/ //g'                                                          \
+// RUN:      -e ':b' -e 's/\n\n/\n/g' -e 'tb'                                     \
+// RUN:      -e 's/(\n/(/g'                                                       \
+// RUN:  %t.asan_interface.inc                                                    \
+// RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                             \
+// RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc       \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface_posix.inc \
-// RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc  \
-// RUN:  | grep -v "__sanitizer_weak_hook"                                     \
+// RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc     \
+// RUN:  | grep -e "INTERFACE_\(WEAK_\)\?FUNCTION"                                \
+// RUN:  | grep -v "__sanitizer_weak_hook"                                        \
 // RUN:  | sed -e "s/.*(//" -e "s/).*//" > %t.imports
 //
 // RUN: cat %t.imports | sort | uniq > %t.imports-sorted

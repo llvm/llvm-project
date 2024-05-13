@@ -311,7 +311,7 @@ body:             |
   ; CHECK-LABEL: name: OUTLINED_FUNCTION_0
   ; CHECK: bb.0:
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r7, $r6, $r5, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
-  ; CHECK:   early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
   ; CHECK:   BL @bar, implicit-def dead $lr, implicit $sp
@@ -320,13 +320,13 @@ body:             |
   ; CHECK:   $r2 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r3 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r4 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
   ; CHECK:   MOVPCLR 14 /* CC::al */, $noreg
 
   ; CHECK-LABEL: name: OUTLINED_FUNCTION_1
   ; CHECK: bb.0:
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r7, $r6, $r5, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
-  ; CHECK:   early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
   ; CHECK:   BL @bar, implicit-def dead $lr, implicit $sp
@@ -335,7 +335,7 @@ body:             |
   ; CHECK:   $r2 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r3 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r4 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
   ; CHECK:   TAILJMPd @bar, implicit $sp
 
   ; CHECK-LABEL: name: OUTLINED_FUNCTION_2
@@ -351,27 +351,27 @@ body:             |
   ; CHECK-LABEL: name: OUTLINED_FUNCTION_3
   ; CHECK: bb.0:
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
-  ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
   ; CHECK:   tBL 14 /* CC::al */, $noreg, @bar, implicit-def dead $lr, implicit $sp
   ; CHECK:   $r0 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r1 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r2 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK:   tTAILJMPdND @bar, 14 /* CC::al */, $noreg, implicit $sp
 
   ; CHECK-LABEL: name: OUTLINED_FUNCTION_4
   ; CHECK: bb.0:
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
-  ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
   ; CHECK:   tBL 14 /* CC::al */, $noreg, @bar, implicit-def dead $lr, implicit $sp
   ; CHECK:   $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r1 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r2 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
 
 

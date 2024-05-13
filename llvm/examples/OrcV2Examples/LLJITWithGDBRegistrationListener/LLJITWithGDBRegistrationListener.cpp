@@ -39,7 +39,7 @@ static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
 
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                       cl::PositionalEatsArgs);
 
 int main(int argc, char *argv[]) {
   // Initialize LLVM.
@@ -82,17 +82,6 @@ int main(int argc, char *argv[]) {
                     })
                     .create());
 
-  // Make sure that our process symbols are visible to JIT'd code.
-  {
-    MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
-    J->getMainJITDylib().addGenerator(
-        ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-            J->getDataLayout().getGlobalPrefix(),
-            [MainName = Mangle("main")](const orc::SymbolStringPtr &Name) {
-              return Name != MainName;
-            })));
-  }
-
   // Load the input modules.
   for (auto &InputFile : InputFiles) {
     auto Ctx = std::make_unique<LLVMContext>();
@@ -108,9 +97,8 @@ int main(int argc, char *argv[]) {
 
   // Look up the entry point, cast it to a C main function pointer, then use
   // runAsMain to call it.
-  auto EntrySym = ExitOnErr(J->lookup(EntryPointName));
-  auto EntryFn =
-      jitTargetAddressToFunction<int (*)(int, char *[])>(EntrySym.getAddress());
+  auto EntryAddr = ExitOnErr(J->lookup(EntryPointName));
+  auto EntryFn = EntryAddr.toPtr<int(int, char *[])>();
 
   return runAsMain(EntryFn, InputArgv, StringRef(InputFiles.front()));
 }

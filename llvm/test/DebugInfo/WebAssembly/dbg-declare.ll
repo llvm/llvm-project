@@ -4,7 +4,7 @@
 ; CHECK: DW_TAG_variable
 ; CHECK-FAST: DW_TAG_variable
 
-; Test that llvm.dbg.declare() instrinsics do not crash the backend
+; Test that llvm.dbg.declare() intrinsics do not crash the backend
 
 source_filename = "test/DebugInfo/WebAssembly/dbg-declare.ll"
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -15,16 +15,16 @@ target triple = "wasm32-unknown-unknown"
 define internal zeroext i8 @0(i32, i8 zeroext) !dbg !15 !type !20 {
   %3 = alloca i32, align 4
   %4 = alloca i8, align 1
-  store i32 %0, i32* %3, align 4
-  call void @llvm.dbg.declare(metadata i32* %3, metadata !21, metadata !22), !dbg !23
-  store i8 %1, i8* %4, align 1
-  call void @llvm.dbg.declare(metadata i8* %4, metadata !24, metadata !22), !dbg !25
-  %5 = load i8, i8* %4, align 1, !dbg !26
+  store i32 %0, ptr %3, align 4
+  call void @llvm.dbg.declare(metadata ptr %3, metadata !21, metadata !22), !dbg !23
+  store i8 %1, ptr %4, align 1
+  call void @llvm.dbg.declare(metadata ptr %4, metadata !24, metadata !22), !dbg !25
+  %5 = load i8, ptr %4, align 1, !dbg !26
   %6 = zext i8 %5 to i32, !dbg !26
-  %7 = load i32, i32* %3, align 4, !dbg !27
+  %7 = load i32, ptr %3, align 4, !dbg !27
   %8 = urem i32 %7, 15, !dbg !28
-  %9 = getelementptr inbounds [15 x i8], [15 x i8]* @key, i32 0, i32 %8, !dbg !29
-  %10 = load i8, i8* %9, align 1, !dbg !29
+  %9 = getelementptr inbounds [15 x i8], ptr @key, i32 0, i32 %8, !dbg !29
+  %10 = load i8, ptr %9, align 1, !dbg !29
   %11 = zext i8 %10 to i32, !dbg !29
   %12 = xor i32 %6, %11, !dbg !30
   %13 = trunc i32 %12 to i8, !dbg !31

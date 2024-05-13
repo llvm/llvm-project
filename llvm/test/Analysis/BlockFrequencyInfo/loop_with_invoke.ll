@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -block-freq -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Printing analysis {{.*}} for function 'loop_with_invoke':
@@ -21,7 +20,7 @@ invoke.cont:
 
 ; CHECK-NEXT: lpad: float = 0.0094467
 lpad:
-  %ll = landingpad { i8*, i32 }
+  %ll = landingpad { ptr, i32 }
           cleanup
   br label %exit
 

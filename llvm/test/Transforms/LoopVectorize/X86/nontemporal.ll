@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S | FileCheck %s
 
 ; The three test-cases below are all based on modified versions of a simple copy-loop:
 ;
@@ -26,7 +26,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64"
 
 ; CHECK-LABEL: @vectorTest(
-define void @vectorTest(i32* noalias readonly %src, i32* noalias %dst, i32 %nElts) {
+define void @vectorTest(ptr noalias readonly %src, ptr noalias %dst, i32 %nElts) {
 entry:
   %cmp8 = icmp eq i32 %nElts, 0
   br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
@@ -41,13 +41,13 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
 ; Check that we vectorized the load, and that there is no nontemporal hint.
-; CHECK: %wide.load = load <4 x i32>, <4 x i32>* %{{[0-9]+}}, align 4{{$}}
-  %arrayidx = getelementptr inbounds i32, i32* %src, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+; CHECK: %wide.load = load <4 x i32>, ptr %{{[0-9]+}}, align 4{{$}}
+  %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
 ; Check that we vectorized the store, and that there is no nontemporal hint.
-; CHECK: store <4 x i32> %wide.load, <4 x i32>* %{{[0-9]+}}, align 4{{$}}
-  %arrayidx2 = getelementptr inbounds i32, i32* %dst, i64 %indvars.iv
-  store i32 %0, i32* %arrayidx2, align 4
+; CHECK: store <4 x i32> %wide.load, ptr %{{[0-9]+}}, align 4{{$}}
+  %arrayidx2 = getelementptr inbounds i32, ptr %dst, i64 %indvars.iv
+  store i32 %0, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -56,7 +56,7 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK-LABEL: @vectorNTStoreTest(
 ; Check that the vectorized type of the store does not appear.
 ; CHECK-NOT: 4 x i32
-define void @vectorNTStoreTest(i32* noalias readonly %src, i32* noalias %dst, i32 %nElts) {
+define void @vectorNTStoreTest(ptr noalias readonly %src, ptr noalias %dst, i32 %nElts) {
 entry:
   %cmp8 = icmp eq i32 %nElts, 0
   br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
@@ -70,12 +70,12 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %src, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %dst, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %dst, i64 %indvars.iv
 ; Check that the store is not vectorized and that we don't lose the !nontemporal hint in it.
-; CHECK: store i32 %{{[0-9]+}}, i32* %arrayidx2, align 4, !nontemporal !4
-  store i32 %0, i32* %arrayidx2, align 4, !nontemporal !0
+; CHECK: store i32 %{{[0-9]+}}, ptr %arrayidx2, align 4, !nontemporal !4
+  store i32 %0, ptr %arrayidx2, align 4, !nontemporal !0
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -84,7 +84,7 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK-LABEL: @vectorNTLoadTest(
 ; Check that the vectorized type of the load does not appear.
 ; CHECK-NOT: 4 x i32
-define void @vectorNTLoadTest(i32* noalias readonly %src, i32* noalias %dst, i32 %nElts) {
+define void @vectorNTLoadTest(ptr noalias readonly %src, ptr noalias %dst, i32 %nElts) {
 entry:
   %cmp8 = icmp eq i32 %nElts, 0
   br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
@@ -98,12 +98,12 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %src, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
 ; Check that the load is not vectorized and that we don't lose the !nontemporal hint in it.
-; CHECK: load i32, i32* %arrayidx, align 4, !nontemporal !4
-  %0 = load i32, i32* %arrayidx, align 4, !nontemporal !0
-  %arrayidx2 = getelementptr inbounds i32, i32* %dst, i64 %indvars.iv
-  store i32 %0, i32* %arrayidx2, align 4
+; CHECK: load i32, ptr %arrayidx, align 4, !nontemporal !4
+  %0 = load i32, ptr %arrayidx, align 4, !nontemporal !0
+  %arrayidx2 = getelementptr inbounds i32, ptr %dst, i64 %indvars.iv
+  store i32 %0, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup, label %for.body

@@ -1,4 +1,5 @@
-; RUN: opt %s -sroa -instcombine -inline -instcombine -sroa -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='cgscc(function(sroa,instcombine),inline),function(instcombine,sroa),verify' -S -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes='cgscc(function(sroa,instcombine),inline),function(instcombine,sroa),verify' -S -o - | FileCheck %s
 ;
 ; This test checks that SROA pass processes debug info correctly if applied twice.
 ; Specifically, after SROA works first time, instcombine converts dbg.declare
@@ -50,54 +51,49 @@ entry:
   %retval = alloca i32, align 4
   %result = alloca %struct.S1, align 4
   %cleanup.dest.slot = alloca i32, align 4
-  %0 = bitcast %struct.S1* %result to i8*, !dbg !21
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #5, !dbg !21
-  call void @llvm.dbg.declare(metadata %struct.S1* %result, metadata !12, metadata !DIExpression()), !dbg !21
+  call void @llvm.lifetime.start.p0(i64 4, ptr %result) #5, !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %result, metadata !12, metadata !DIExpression()), !dbg !21
   %call = call i32 @_Z3foov(), !dbg !21
-  %coerce.dive = getelementptr inbounds %struct.S1, %struct.S1* %result, i32 0, i32 0, !dbg !21
-  store i32 %call, i32* %coerce.dive, align 4, !dbg !21
-  %call1 = call zeroext i1 @_ZN2S16IsNullEv(%struct.S1* %result), !dbg !22
+  store i32 %call, ptr %result, align 4, !dbg !21
+  %call1 = call zeroext i1 @_ZN2S16IsNullEv(ptr %result), !dbg !22
   br i1 %call1, label %if.then, label %if.end, !dbg !24
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* %retval, align 4, !dbg !25
-  store i32 1, i32* %cleanup.dest.slot, align 4
+  store i32 0, ptr %retval, align 4, !dbg !25
+  store i32 1, ptr %cleanup.dest.slot, align 4
   br label %cleanup, !dbg !25
 
 if.end:                                           ; preds = %entry
-  %p1 = getelementptr inbounds %struct.S1, %struct.S1* %result, i32 0, i32 0, !dbg !26
-  %1 = load i32, i32* %p1, align 4, !dbg !26
-  %add = add nsw i32 %1, 1, !dbg !26
-  store i32 %add, i32* %retval, align 4, !dbg !26
-  store i32 1, i32* %cleanup.dest.slot, align 4
+  %0 = load i32, ptr %result, align 4, !dbg !26
+  %add = add nsw i32 %0, 1, !dbg !26
+  store i32 %add, ptr %retval, align 4, !dbg !26
+  store i32 1, ptr %cleanup.dest.slot, align 4
   br label %cleanup, !dbg !26
 
 cleanup:                                          ; preds = %if.end, %if.then
-  %2 = bitcast %struct.S1* %result to i8*, !dbg !32
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %2) #5, !dbg !32
-  %3 = load i32, i32* %retval, align 4, !dbg !32
-  ret i32 %3, !dbg !32
+  call void @llvm.lifetime.end.p0(i64 4, ptr %result) #5, !dbg !32
+  %1 = load i32, ptr %retval, align 4, !dbg !32
+  ret i32 %1, !dbg !32
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 declare dso_local i32 @_Z3foov()
 
-define linkonce_odr dso_local zeroext i1 @_ZN2S16IsNullEv(%struct.S1* %this) #4 comdat align 2 !dbg !33 {
+define linkonce_odr dso_local zeroext i1 @_ZN2S16IsNullEv(ptr %this) #4 comdat align 2 !dbg !33 {
 entry:
-  %this.addr = alloca %struct.S1*, align 8
-  store %struct.S1* %this, %struct.S1** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.S1** %this.addr, metadata !35, metadata !DIExpression()), !dbg !39
-  %this1 = load %struct.S1*, %struct.S1** %this.addr, align 8
-  %p1 = getelementptr inbounds %struct.S1, %struct.S1* %this1, i32 0, i32 0, !dbg !40
-  %0 = load i32, i32* %p1, align 4, !dbg !40
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !35, metadata !DIExpression()), !dbg !39
+  %this1 = load ptr, ptr %this.addr, align 8
+  %0 = load i32, ptr %this1, align 4, !dbg !40
   %cmp = icmp eq i32 %0, 0, !dbg !40
   ret i1 %cmp, !dbg !40
 }
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
 ;
 ; FIXME: Change the comment once we allow different pointers
 ; The statement is "almost" reduction like but should not yield any reduction dependences
@@ -17,7 +17,7 @@
 ; }
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @f(i32* %sum) {
+define void @f(ptr %sum) {
 entry:
   br label %for.cond
 
@@ -28,11 +28,11 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %sub = sub nsw i32 99, %i.0
-  %arrayidx = getelementptr inbounds i32, i32* %sum, i32 %sub
-  %tmp = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %sum, i32 %sub
+  %tmp = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %tmp, %i.0
-  %arrayidx1 = getelementptr inbounds i32, i32* %sum, i32 %i.0
-  store i32 %add, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %sum, i32 %i.0
+  store i32 %add, ptr %arrayidx1, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
 
 ; Check for successful compilation.
 ; CHECK: sfcmp
@@ -8,15 +8,15 @@ target triple = "hexagon"
 
 @g0 = global <8 x i32> zeroinitializer, align 8
 
-define void @fred(<8 x float>* %a0, <8 x float>* %a1) #0 {
+define void @fred(ptr %a0, ptr %a1) #0 {
 b0:
-  %v0 = load <8 x float>, <8 x float>* %a1, align 8
+  %v0 = load <8 x float>, ptr %a1, align 8
   %v1 = fcmp olt <8 x float> %v0, zeroinitializer
-  %v2 = load <8 x float>, <8 x float>* %a0, align 8
+  %v2 = load <8 x float>, ptr %a0, align 8
   %v3 = fcmp olt <8 x float> %v2, zeroinitializer
   %v4 = and <8 x i1> %v1, %v3
   %v5 = zext <8 x i1> %v4 to <8 x i32>
-  store <8 x i32> %v5, <8 x i32>* @g0, align 8
+  store <8 x i32> %v5, ptr @g0, align 8
   ret void
 }
 

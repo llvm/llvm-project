@@ -1,4 +1,4 @@
-; RUN: llc %s -filetype=obj -o - 2>&1 | FileCheck %s --check-prefix=ERROR
+; RUN: llc %s -mtriple=x86_64 -filetype=obj -o - 2>&1 | FileCheck %s --check-prefix=ERROR
 ; ERROR: invalid expression
 
 !llvm.dbg.cu = !{!0}

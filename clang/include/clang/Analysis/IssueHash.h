@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_STATICANALYZER_CORE_ISSUE_HASH_H
-#define LLVM_CLANG_STATICANALYZER_CORE_ISSUE_HASH_H
+#ifndef LLVM_CLANG_ANALYSIS_ISSUEHASH_H
+#define LLVM_CLANG_ANALYSIS_ISSUEHASH_H
 
 #include "llvm/ADT/SmallString.h"
 

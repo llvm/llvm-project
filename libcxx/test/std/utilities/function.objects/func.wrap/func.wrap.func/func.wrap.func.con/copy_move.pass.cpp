@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// FIXME: In MSVC mode, even "std::function<int(int)> f(aref);" causes
+// allocations.
+// XFAIL: target=x86_64-pc-windows-msvc && stdlib=libc++ && libcpp-abi-version=1
+
+// UNSUPPORTED: c++03
 
 // <functional>
 
@@ -15,13 +19,11 @@
 // function(const function&  f);
 // function(function&& f); // noexcept in C++20
 
-// This test runs in C++03, but we have deprecated using std::function in C++03.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
-
 #include <functional>
 #include <memory>
 #include <cstdlib>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 #include "count_new.h"
@@ -62,12 +64,12 @@ int main(int, char**)
     {
     std::function<int(int)> f = A();
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(f.target<A>());
     RTTI_ASSERT(f.target<int(*)(int)>() == 0);
     std::function<int(int)> f2 = f;
     assert(A::count == 2);
-    assert(globalMemCounter.checkOutstandingNewEq(2));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(2));
     RTTI_ASSERT(f2.target<A>());
     RTTI_ASSERT(f2.target<int(*)(int)>() == 0);
     }
@@ -111,16 +113,16 @@ int main(int, char**)
     { // Test rvalue references
         std::function<int(int)> f = A();
         assert(A::count == 1);
-        assert(globalMemCounter.checkOutstandingNewEq(1));
+        assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
         RTTI_ASSERT(f.target<A>());
         RTTI_ASSERT(f.target<int(*)(int)>() == 0);
-		LIBCPP_ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
+        LIBCPP_ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
 #if TEST_STD_VER > 17
-		ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
+        ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
 #endif
         std::function<int(int)> f2 = std::move(f);
         assert(A::count == 1);
-        assert(globalMemCounter.checkOutstandingNewEq(1));
+        assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
         RTTI_ASSERT(f2.target<A>());
         RTTI_ASSERT(f2.target<int(*)(int)>() == 0);
         RTTI_ASSERT(f.target<A>() == 0);
@@ -138,9 +140,9 @@ int main(int, char**)
         assert(A::count == 1);
         RTTI_ASSERT(f.target<A>() == nullptr);
         RTTI_ASSERT(f.target<Ref>());
-		LIBCPP_ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
+        LIBCPP_ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
 #if TEST_STD_VER > 17
-		ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
+        ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
 #endif
         std::function<int(int)> f2(std::move(f));
         assert(A::count == 1);
@@ -159,9 +161,9 @@ int main(int, char**)
         std::function<int(int)> f(p);
         RTTI_ASSERT(f.target<A>() == nullptr);
         RTTI_ASSERT(f.target<Ptr>());
-		LIBCPP_ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
+        LIBCPP_ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
 #if TEST_STD_VER > 17
-		ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
+        ASSERT_NOEXCEPT(std::function<int(int)>(std::move(f)));
 #endif
         std::function<int(int)> f2(std::move(f));
         RTTI_ASSERT(f2.target<A>() == nullptr);

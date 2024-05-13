@@ -33,7 +33,7 @@ bb80:                                             ; preds = %bb71
   unreachable
 
 bb92:                                             ; preds = %bb71
-  %1 = getelementptr inbounds i8, i8* undef, i32 %.sum745
+  %1 = getelementptr inbounds i8, ptr undef, i32 %.sum745
   unreachable
 
 bb348:                                            ; preds = %bb27

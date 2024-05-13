@@ -171,7 +171,7 @@ TU1_5_version:
         .byte 2                # DWARF Unit Type
         .byte 8                # Address Size (in bytes)
         .long .debug_abbrev.dwo    # Offset Into Abbrev. Section
-        .quad 0x0011223344556677 # Type Signature
+        .quad 0xeeaaddbbaabbeedd # Type Signature
         .long TU1_5_type-TU1_5_start # Type offset
 # The type-unit DIE, which has a name.
         .byte 2                # Abbreviation code
@@ -191,7 +191,7 @@ TU2_5_version:
         .byte 2                # DWARF Unit Type
         .byte 8                # Address Size (in bytes)
         .long .debug_abbrev.dwo    # Offset Into Abbrev. Section
-        .quad 0x00aabbccddeeff99 # Type Signature
+        .quad 0x00ffeeffaaff00ff # Type Signature
         .long TU2_5_type-TU2_5_start # Type offset
 # The type-unit DIE, which has a name.
         .byte 2                # Abbreviation code

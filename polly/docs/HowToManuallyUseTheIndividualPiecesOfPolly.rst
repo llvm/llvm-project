@@ -29,7 +29,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
         Polly is only able to work with code that matches a canonical form.
         To translate the LLVM-IR into this form we use a set of
-        canonicalication passes. They are scheduled by using
+        canonicalization passes. They are scheduled by using
         '-polly-canonicalize'.
 
         .. code-block:: console
@@ -47,7 +47,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
                 $ opt -basic-aa -polly-ast -analyze matmul.preopt.ll -polly-process-unprofitable -polly-use-llvm-names
 
-        .. code-block:: guess
+        .. code-block:: text
 
                 :: isl ast :: init_array :: %for.cond1.preheader---%for.end19
 
@@ -106,7 +106,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
                 $ opt -polly-use-llvm-names -basic-aa -polly-scops -analyze matmul.preopt.ll -polly-process-unprofitable
 
-        .. code-block:: guess
+        .. code-block:: text
 
                 [...]Printing analysis 'Polly - Create polyhedral description of Scops' for region: 'for.cond1.preheader => for.end19' in function 'init_array':
                     Function: init_array
@@ -196,7 +196,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 	        $ opt -basic-aa -polly-use-llvm-names -polly-dependences -analyze matmul.preopt.ll -polly-process-unprofitable
 
-        .. code-block:: guess
+        .. code-block:: text
 
         	[...]Printing analysis 'Polly - Calculate dependences' for region: 'for.cond1.preheader => for.end19' in function 'init_array':
         		RAW dependences:
@@ -228,7 +228,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
         	$ opt -basic-aa -polly-use-llvm-names -polly-export-jscop matmul.preopt.ll -polly-process-unprofitable
 
-        .. code-block:: guess
+        .. code-block:: text
 
 	        [...]Writing JScop '%for.cond1.preheader---%for.end19' in function 'init_array' to './init_array___%for.cond1.preheader---%for.end19.jscop'.
 
@@ -240,7 +240,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 -------------------------------------------------------------------------------------
 
 	Polly can reimport jscop files, in which the schedules of the statements
-        are changed. These changed schedules are used to descripe
+        are changed. These changed schedules are used to describe
         transformations. It is possible to import different jscop files by
         providing the postfix of the jscop file that is imported.
 
@@ -389,7 +389,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged -polly-codegen -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged.ll
 
-	.. code-block:: guess
+	.. code-block:: text
 
 		Reading JScop '%for.cond1.preheader---%for.end19' in function 'init_array' from './init_array___%for.cond1.preheader---%for.end19.jscop.interchanged'.
 		File could not be read: No such file or directory
@@ -399,7 +399,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled -polly-codegen -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled.ll
 		
-	.. code-block:: guess
+	.. code-block:: text
 
 		Reading JScop '%for.cond1.preheader---%for.end19' in function 'init_array' from './init_array___%for.cond1.preheader---%for.end19.jscop.interchanged+tiled'.
 		File could not be read: No such file or directory
@@ -409,7 +409,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled+vector -polly-codegen -polly-vectorizer=polly -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled+vector.ll
 
-	.. code-block:: guess
+	.. code-block:: text
 
 		Reading JScop '%for.cond1.preheader---%for.end19' in function 'init_array' from './init_array___%for.cond1.preheader---%for.end19.jscop.interchanged+tiled+vector'.
 		File could not be read: No such file or directory
@@ -419,7 +419,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled+vector -polly-codegen -polly-vectorizer=polly -polly-parallel -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled+openmp.ll
 
-	.. code-block:: guess
+	.. code-block:: text
 
 		Reading JScop '%for.cond1.preheader---%for.end19' in function 'init_array' from './init_array___%for.cond1.preheader---%for.end19.jscop.interchanged+tiled+vector'.
 		File could not be read: No such file or directory

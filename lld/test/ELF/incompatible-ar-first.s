@@ -8,5 +8,7 @@
 // We used to crash when
 // * The first object seen by the symbol table is from an archive.
 // * -m was not used.
-// CHECK: .a({{.*}}a.o) is incompatible with {{.*}}b.o
 
+// RUN: not ld.lld --start-lib %ta.o --end-lib %tb.o -o /dev/null 2>&1 | FileCheck %s
+
+// CHECK: {{.*}}b.o is incompatible{{$}}

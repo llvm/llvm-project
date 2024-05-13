@@ -7,23 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef __has_feature
-#define __has_feature(x) 0
-#endif
-
-#if __has_feature(memory_sanitizer)
-#include <sanitizer/msan_interface.h>
-static void check_mem_is_good(void *p, size_t s) {
-  __msan_check_mem_is_initialized(p, s);
-}
-#elif __has_feature(address_sanitizer)
-#include <sanitizer/asan_interface.h>
-static void check_mem_is_good(void *p, size_t s) {
-  assert(__asan_region_is_poisoned(p, s) == 0);
-}
-#else
-static void check_mem_is_good(void *p, size_t s) {}
-#endif
+#include "sanitizer_common/sanitizer_specific.h"
 
 static void run(bool flush) {
   char *buf;

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
 
 
@@ -21,6 +21,7 @@
 // };
 
 #include <shared_mutex>
+#include <mutex>
 #include <type_traits>
 
 #include "test_macros.h"

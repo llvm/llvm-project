@@ -3,4 +3,4 @@
 
 #include "X.h"
 
-int foo();
+int foo(void);

@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Testing that two distinct (distinct by writing them in separate files, while
 ; still fulfilling C++'s ODR by having identical token sequences) functions,
@@ -27,25 +27,25 @@
 ; The DISubprogram should show up in compile unit a.
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
-; CHECK:    DW_AT_name {{.*}}"b.cpp"
+; CHECK:    DW_AT_name ("b.cpp")
 ; CHECK-NOT: DW_TAG_subprogram
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}}"a.cpp"
-; CHECK:     DW_AT_name {{.*}} "func"
+; CHECK:     DW_AT_name ("a.cpp")
+; CHECK:     DW_AT_name ("func")
 
 source_filename = "test/DebugInfo/Generic/cross-cu-linkonce-distinct.ll"
 
-@x = global i32 (i32)* @_Z4funci, align 8, !dbg !0
-@y = global i32 (i32)* @_Z4funci, align 8, !dbg !7
+@x = global ptr @_Z4funci, align 8, !dbg !0
+@y = global ptr @_Z4funci, align 8, !dbg !7
 
 ; Function Attrs: inlinehint nounwind uwtable
 define linkonce_odr i32 @_Z4funci(i32 %i) #0 !dbg !18 {
   %1 = alloca i32, align 4
-  store i32 %i, i32* %1, align 4
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !19, metadata !20), !dbg !21
-  %2 = load i32, i32* %1, align 4, !dbg !22
+  store i32 %i, ptr %1, align 4
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !19, metadata !20), !dbg !21
+  %2 = load i32, ptr %1, align 4, !dbg !22
   %3 = mul nsw i32 %2, 2, !dbg !22
   ret i32 %3, !dbg !22
 }

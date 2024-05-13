@@ -2,10 +2,20 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wbind-to-temporary-copy -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wbind-to-temporary-copy -std=c++11 %s
 
+// RUN: %clang_cc1 -fsyntax-only -verify -Wbind-to-temporary-copy %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -Wbind-to-temporary-copy -std=c++98 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -Wbind-to-temporary-copy -std=c++11 %s -fexperimental-new-constant-interpreter
+
+
 // Make sure we don't produce invalid IR.
 // RUN: %clang_cc1 -emit-llvm-only %s
 // RUN: %clang_cc1 -emit-llvm-only -std=c++98 %s
 // RUN: %clang_cc1 -emit-llvm-only -std=c++11 %s
+
+// RUN: %clang_cc1 -emit-llvm-only %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -emit-llvm-only -std=c++98 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -emit-llvm-only -std=c++11 %s -fexperimental-new-constant-interpreter
+
 
 namespace test1 {
   static void foo(); // expected-warning {{function 'test1::foo' has internal linkage but is not defined}}
@@ -72,7 +82,6 @@ namespace test4 {
   };
 }
 
-// rdar://problem/9014651
 namespace test5 {
   namespace {
     struct A {};
@@ -128,7 +137,7 @@ namespace PR9323 {
 #if __cplusplus <= 199711L // C++03 or earlier modes
     // expected-warning@-2 {{C++98 requires an accessible copy constructor}}
 #else
-    // expected-warning@-4 {{copying parameter of type 'PR9323::(anonymous namespace)::Uncopyable' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
+    // expected-warning@-4 {{copying parameter of type 'Uncopyable' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
 #endif
   };
 }

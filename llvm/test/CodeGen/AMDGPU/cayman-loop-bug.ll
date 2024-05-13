@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s
 
 ; CHECK-LABEL: {{^}}main:
 ; CHECK: LOOP_START_DX10
@@ -23,7 +23,7 @@ outer_loop_body:
 
 inner_loop:
   %cnt2 = phi i32 [0, %outer_loop_body], [%cnt2_incr, %inner_loop_body]
-  %n = load volatile i32, i32 addrspace(1)* undef
+  %n = load volatile i32, ptr addrspace(1) undef
   %cond2 = icmp slt i32 %cnt2, %n
   br i1 %cond2, label %inner_loop_body, label %outer_loop
 

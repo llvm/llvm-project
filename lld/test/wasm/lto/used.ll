@@ -5,7 +5,7 @@
 
 ; Verify that symbols references from regular objects are preserved by LTO
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare void @bar()
@@ -13,7 +13,7 @@ declare void @bar()
 @foo = external global i32
 
 define void @_start() {
-  %val = load i32, i32* @foo, align 4
+  %val = load i32, ptr @foo, align 4
   %tobool = icmp ne i32 %val, 0
   br i1 %tobool, label %callbar, label %return
 

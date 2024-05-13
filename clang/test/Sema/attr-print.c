@@ -3,18 +3,17 @@
 // CHECK: int x __attribute__((aligned(4)));
 int x __attribute__((aligned(4)));
 
-// FIXME: Print this at a valid location for a __declspec attr.
-// CHECK: int y __declspec(align(4));
+// CHECK: __declspec(align(4)) int y;
 __declspec(align(4)) int y;
 
 // CHECK: short arr[3] __attribute__((aligned));
 short arr[3] __attribute__((aligned));
 
-// CHECK: void foo() __attribute__((const));
-void foo() __attribute__((const));
+// CHECK: int foo(void) __attribute__((const));
+int foo(void) __attribute__((const));
 
-// CHECK: void bar() __attribute__((__const));
-void bar() __attribute__((__const));
+// CHECK: int bar(void) __attribute__((__const));
+int bar(void) __attribute__((__const));
 
 // CHECK: int * __ptr32 p32;
 int * __ptr32 p32;

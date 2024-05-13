@@ -14,15 +14,6 @@
 
 namespace Fortran::evaluate {
 
-std::size_t TotalElementCount(const ConstantSubscripts &shape) {
-  std::size_t size{1};
-  for (auto dim : shape) {
-    CHECK(dim >= 0);
-    size *= dim;
-  }
-  return size;
-}
-
 ConstantBounds::ConstantBounds(const ConstantSubscripts &shape)
     : shape_(shape), lbounds_(shape_.size(), 1) {}
 
@@ -34,10 +25,44 @@ ConstantBounds::~ConstantBounds() = default;
 void ConstantBounds::set_lbounds(ConstantSubscripts &&lb) {
   CHECK(lb.size() == shape_.size());
   lbounds_ = std::move(lb);
+  for (std::size_t j{0}; j < shape_.size(); ++j) {
+    if (shape_[j] == 0) {
+      lbounds_[j] = 1;
+    }
+  }
+}
+
+ConstantSubscripts ConstantBounds::ComputeUbounds(
+    std::optional<int> dim) const {
+  if (dim) {
+    CHECK(*dim < Rank());
+    return {lbounds_[*dim] + (shape_[*dim] - 1)};
+  } else {
+    ConstantSubscripts ubounds(Rank());
+    for (int i{0}; i < Rank(); ++i) {
+      ubounds[i] = lbounds_[i] + (shape_[i] - 1);
+    }
+    return ubounds;
+  }
+}
+
+void ConstantBounds::SetLowerBoundsToOne() {
+  for (auto &n : lbounds_) {
+    n = 1;
+  }
 }
 
 Constant<SubscriptInteger> ConstantBounds::SHAPE() const {
   return AsConstantShape(shape_);
+}
+
+bool ConstantBounds::HasNonDefaultLowerBound() const {
+  for (auto n : lbounds_) {
+    if (n != 1) {
+      return true;
+    }
+  }
+  return false;
 }
 
 ConstantSubscript ConstantBounds::SubscriptsToOffset(
@@ -48,11 +73,25 @@ ConstantSubscript ConstantBounds::SubscriptsToOffset(
   for (auto j : index) {
     auto lb{lbounds_[dim]};
     auto extent{shape_[dim++]};
-    CHECK(j >= lb && j < lb + extent);
+    CHECK(j >= lb && j - lb < extent);
     offset += stride * (j - lb);
     stride *= extent;
   }
   return offset;
+}
+
+std::optional<uint64_t> TotalElementCount(const ConstantSubscripts &shape) {
+  uint64_t size{1};
+  for (auto dim : shape) {
+    CHECK(dim >= 0);
+    uint64_t osize{size};
+    size = osize * dim;
+    if (size > std::numeric_limits<decltype(dim)>::max() ||
+        (dim != 0 && size / dim != osize)) {
+      return std::nullopt;
+    }
+  }
+  return static_cast<uint64_t>(GetSize(shape));
 }
 
 bool ConstantBounds::IncrementSubscripts(
@@ -64,10 +103,10 @@ bool ConstantBounds::IncrementSubscripts(
     ConstantSubscript k{dimOrder ? (*dimOrder)[j] : j};
     auto lb{lbounds_[k]};
     CHECK(indices[k] >= lb);
-    if (++indices[k] < lb + shape_[k]) {
+    if (++indices[k] - lb < shape_[k]) {
       return true;
     } else {
-      CHECK(indices[k] == lb + shape_[k]);
+      CHECK(indices[k] - lb == std::max<ConstantSubscript>(shape_[k], 1));
       indices[k] = lb;
     }
   }
@@ -84,7 +123,7 @@ std::optional<std::vector<int>> ValidateDimensionOrder(
       if (dim < 1 || dim > rank || seenDimensions.test(dim - 1)) {
         return std::nullopt;
       }
-      dimOrder[dim - 1] = j;
+      dimOrder[j] = dim - 1;
       seenDimensions.set(dim - 1);
     }
     return dimOrder;
@@ -106,7 +145,7 @@ template <typename RESULT, typename ELEMENT>
 ConstantBase<RESULT, ELEMENT>::ConstantBase(
     std::vector<Element> &&x, ConstantSubscripts &&sh, Result res)
     : ConstantBounds(std::move(sh)), result_{res}, values_(std::move(x)) {
-  CHECK(size() == TotalElementCount(shape()));
+  CHECK(TotalElementCount(shape()) && size() == *TotalElementCount(shape()));
 }
 
 template <typename RESULT, typename ELEMENT>
@@ -120,7 +159,9 @@ bool ConstantBase<RESULT, ELEMENT>::operator==(const ConstantBase &that) const {
 template <typename RESULT, typename ELEMENT>
 auto ConstantBase<RESULT, ELEMENT>::Reshape(
     const ConstantSubscripts &dims) const -> std::vector<Element> {
-  std::size_t n{TotalElementCount(dims)};
+  std::optional<uint64_t> optN{TotalElementCount(dims)};
+  CHECK_MSG(optN, "Overflow in TotalElementCount");
+  uint64_t n{*optN};
   CHECK(!empty() || n == 0);
   std::vector<Element> elements;
   auto iter{values().cbegin()};
@@ -180,7 +221,8 @@ template <int KIND>
 Constant<Type<TypeCategory::Character, KIND>>::Constant(ConstantSubscript len,
     std::vector<Scalar<Result>> &&strings, ConstantSubscripts &&sh)
     : ConstantBounds(std::move(sh)), length_{len} {
-  CHECK(strings.size() == TotalElementCount(shape()));
+  CHECK(TotalElementCount(shape()) &&
+      strings.size() == *TotalElementCount(shape()));
   values_.assign(strings.size() * length_,
       static_cast<typename Scalar<Result>::value_type>(' '));
   ConstantSubscript at{0};
@@ -207,7 +249,9 @@ bool Constant<Type<TypeCategory::Character, KIND>>::empty() const {
 template <int KIND>
 std::size_t Constant<Type<TypeCategory::Character, KIND>>::size() const {
   if (length_ == 0) {
-    return TotalElementCount(shape());
+    std::optional<uint64_t> n{TotalElementCount(shape())};
+    CHECK(n);
+    return *n;
   } else {
     return static_cast<ConstantSubscript>(values_.size()) / length_;
   }
@@ -221,9 +265,33 @@ auto Constant<Type<TypeCategory::Character, KIND>>::At(
 }
 
 template <int KIND>
+auto Constant<Type<TypeCategory::Character, KIND>>::Substring(
+    ConstantSubscript lo, ConstantSubscript hi) const
+    -> std::optional<Constant> {
+  std::vector<Element> elements;
+  ConstantSubscript n{GetSize(shape())};
+  ConstantSubscript newLength{0};
+  if (lo > hi) { // zero-length results
+    while (n-- > 0) {
+      elements.emplace_back(); // ""
+    }
+  } else if (lo < 1 || hi > length_) {
+    return std::nullopt;
+  } else {
+    newLength = hi - lo + 1;
+    for (ConstantSubscripts at{lbounds()}; n-- > 0; IncrementSubscripts(at)) {
+      elements.emplace_back(At(at).substr(lo - 1, newLength));
+    }
+  }
+  return Constant{newLength, std::move(elements), ConstantSubscripts{shape()}};
+}
+
+template <int KIND>
 auto Constant<Type<TypeCategory::Character, KIND>>::Reshape(
     ConstantSubscripts &&dims) const -> Constant<Result> {
-  std::size_t n{TotalElementCount(dims)};
+  std::optional<uint64_t> optN{TotalElementCount(dims)};
+  CHECK(optN);
+  uint64_t n{*optN};
   CHECK(!empty() || n == 0);
   std::vector<Element> elements;
   ConstantSubscript at{0},
@@ -304,6 +372,12 @@ StructureConstructor Constant<SomeDerived>::At(
   return {result().derivedTypeSpec(), values_.at(SubscriptsToOffset(index))};
 }
 
+bool Constant<SomeDerived>::operator==(
+    const Constant<SomeDerived> &that) const {
+  return result().derivedTypeSpec() == that.result().derivedTypeSpec() &&
+      shape() == that.shape() && values_ == that.values_;
+}
+
 auto Constant<SomeDerived>::Reshape(ConstantSubscripts &&dims) const
     -> Constant {
   return {result().derivedTypeSpec(), Base::Reshape(dims), std::move(dims)};
@@ -319,5 +393,8 @@ bool ComponentCompare::operator()(SymbolRef x, SymbolRef y) const {
   return semantics::SymbolSourcePositionCompare{}(x, y);
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_CONSTANT_TEMPLATES
 } // namespace Fortran::evaluate

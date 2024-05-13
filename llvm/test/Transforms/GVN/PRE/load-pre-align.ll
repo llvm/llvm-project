@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 ; RUN: opt < %s -passes="gvn<load-pre>" -S | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:64:64-v128:128:128-a0:0:32-n32"
@@ -26,9 +26,9 @@ for.cond.for.end_crit_edge:
   br label %for.end
 
 for.body:
-  %tmp3 = load i32, i32* @p, align 8
+  %tmp3 = load i32, ptr @p, align 8
   %dec = add i32 %tmp3, -1
-  store i32 %dec, i32* @p
+  store i32 %dec, ptr @p
   %cmp6 = icmp slt i32 %dec, 0
   br i1 %cmp6, label %for.body.for.end_crit_edge, label %for.inc
 
@@ -40,6 +40,6 @@ for.inc:
   br label %for.cond
 
 for.end:
-  %tmp9 = load i32, i32* @p, align 8
+  %tmp9 = load i32, ptr @p, align 8
   ret i32 %tmp9
 }

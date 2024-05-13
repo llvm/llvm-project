@@ -17,7 +17,7 @@ name:            inc
 body: |
   bb.0.entry:
     ; CHECK:      MOV32rr
-    ; CHECK-NEXT: RETQ
+    ; CHECK-NEXT: RET64
     $eax = MOV32rr $eax
-     RETQ $eax
+     RET64 $eax
 ...

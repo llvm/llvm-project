@@ -24,11 +24,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -39,15 +39,13 @@ using namespace llvm;
 static codegen::RegisterCodeGenFlags CGF;
 
 static cl::opt<char>
-OptLevel("O",
-         cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                  "(default = '-O2')"),
-         cl::Prefix,
-         cl::ZeroOrMore,
-         cl::init(' '));
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::init('2'));
 
 static cl::opt<std::string>
-TargetTriple("mtriple", cl::desc("Override target triple for module"));
+    TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
 static std::unique_ptr<TargetMachine> TM;
 static std::unique_ptr<IRMutator> Mutator;
@@ -75,7 +73,7 @@ extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(
   else
     M = parseModule(Data, Size, Context);
 
-  Mutator->mutateModule(*M, Seed, Size, MaxSize);
+  Mutator->mutateModule(*M, Seed, MaxSize); // use max bitcode size as a guide
 
   return writeModule(*M, Data, MaxSize);
 }
@@ -101,13 +99,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   TargetLibraryInfoImpl TLII(TM->getTargetTriple());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   raw_null_ostream OS;
-  TM->addPassesToEmitFile(PM, OS, nullptr, CGFT_Null);
+  TM->addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::Null);
   PM.run(*M);
 
   return 0;
 }
 
-static void handleLLVMFatalError(void *, const std::string &Message, bool) {
+static void handleLLVMFatalError(void *, const char *Message, bool) {
   // TODO: Would it be better to call into the fuzzer internals directly?
   dbgs() << "LLVM ERROR: " << Message << "\n"
          << "Aborting to trigger fuzzer exit handling.\n";
@@ -131,37 +129,18 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     exit(1);
   }
 
-  Triple TheTriple = Triple(Triple::normalize(TargetTriple));
-
-  // Get the target specific parser.
-  std::string Error;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
-  if (!TheTarget) {
-    errs() << argv[0] << ": " << Error;
-    return 1;
-  }
-
   // Set up the pipeline like llc does.
-  std::string CPUStr = codegen::getCPUStr(),
-              FeaturesStr = codegen::getFeaturesStr();
 
-  CodeGenOpt::Level OLvl = CodeGenOpt::Default;
-  switch (OptLevel) {
-  default:
+  CodeGenOptLevel OLvl;
+  if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {
+    OLvl = *Level;
+  } else {
     errs() << argv[0] << ": invalid optimization level.\n";
     return 1;
-  case ' ': break;
-  case '0': OLvl = CodeGenOpt::None; break;
-  case '1': OLvl = CodeGenOpt::Less; break;
-  case '2': OLvl = CodeGenOpt::Default; break;
-  case '3': OLvl = CodeGenOpt::Aggressive; break;
   }
-
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
-  TM.reset(TheTarget->createTargetMachine(
-      TheTriple.getTriple(), CPUStr, FeaturesStr, Options,
-      codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(), OLvl));
+  ExitOnError ExitOnErr(std::string(*argv[0]) + ": error:");
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(
+      Triple::normalize(TargetTriple), OLvl));
   assert(TM && "Could not allocate target machine!");
 
   // Make sure we print the summary and the current unit when LLVM errors out.

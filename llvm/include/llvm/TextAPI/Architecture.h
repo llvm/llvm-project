@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_ARCHITECTURE_H
-#define LLVM_TEXTAPI_MACHO_ARCHITECTURE_H
+#ifndef LLVM_TEXTAPI_ARCHITECTURE_H
+#define LLVM_TEXTAPI_ARCHITECTURE_H
 
 #include <cstdint>
 #include <utility>
@@ -54,4 +54,4 @@ raw_ostream &operator<<(raw_ostream &OS, Architecture Arch);
 } // end namespace MachO.
 } // end namespace llvm.
 
-#endif // LLVM_TEXTAPI_MACHO_ARCHITECTURE_H
+#endif // LLVM_TEXTAPI_ARCHITECTURE_H

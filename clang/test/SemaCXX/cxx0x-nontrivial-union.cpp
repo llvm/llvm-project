@@ -136,11 +136,55 @@ namespace pr16061 {
 
   template<typename T> struct Test2 {
     union {
-      struct {  // expected-note {{default constructor of 'Test2<pr16061::X>' is implicitly deleted because variant field '' has a non-trivial default constructor}}
+      struct {  // expected-note-re {{default constructor of 'Test2<pr16061::X>' is implicitly deleted because variant field 'struct (anonymous struct at{{.+}})' has a non-trivial default constructor}}
         T x;
       };
     };
   };
 
-  Test2<X> t2x;  // expected-error {{call to implicitly-deleted default constructor of 'Test2<pr16061::X>'}}
+  Test2<X> t2x;  // expected-error {{call to implicitly-deleted default constructor of 'Test2<X>'}}
 }
+
+namespace GH48416 {
+
+struct non_trivial_constructor {
+    constexpr non_trivial_constructor() : x(100) {}
+    int x;
+};
+
+
+union U1 {
+    int a;
+    non_trivial_constructor b; // expected-note {{has a non-trivial default constructor}}
+};
+
+union U2 {
+    int a{1000};
+    non_trivial_constructor b;
+};
+
+union U3 {
+    int a;
+    non_trivial_constructor b{};
+};
+
+union U4 {
+    int a{}; // expected-note {{previous initialization is here}}
+    non_trivial_constructor b{}; // expected-error {{initializing multiple members of union}}
+};
+
+U1 u1; // expected-error {{call to implicitly-deleted default constructor}}
+U2 u2;
+U3 u3;
+U4 u4;
+
+static_assert(U2().a == 1000, "");
+static_assert(U3().a == 1000, "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+// expected-note@-2 {{read of member 'a' of union with active member 'b'}}
+static_assert(U2().b.x == 100, "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+// expected-note@-2 {{read of member 'b' of union with active member 'a'}}
+static_assert(U3().b.x == 100, "");
+
+} // namespace GH48416

@@ -1,18 +1,26 @@
-// RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -include-pch %t -verify %s -ast-print | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s
-// RUN: %clang_cc1 -fopenmp-simd -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -include-pch %t -verify %s -ast-print | FileCheck %s
 
-// RUN: %clang_cc1 -DOMP51 -verify -fopenmp -fopenmp-version=51 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp -fopenmp-version=51 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -verify -fopenmp -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
 
-// RUN: %clang_cc1 -DOMP51 -verify -fopenmp-simd -fopenmp-version=51 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -fopenmp-version=51 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -fopenmp-version=51 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -verify -fopenmp-simd -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
+
+// RUN: %clang_cc1 -DOMP52 -verify -fopenmp -fopenmp-version=52 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP52 %s
+// RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP52 %s
+
+// RUN: %clang_cc1 -DOMP52 -verify -fopenmp-simd -fopenmp-version=52 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP52 %s
+// RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP52 %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -41,8 +49,8 @@ struct dat {
 #pragma omp declare mapper(struct dat d) map(to: d.d)
 // CHECK: #pragma omp declare mapper (default : struct dat d) map(to: d.d){{$}}
 
-// CHECK: int main() {
-int main() {
+// CHECK: int main(void) {
+int main(void) {
 #pragma omp declare mapper(id: struct vec v) map(v.len)
 // CHECK: #pragma omp declare mapper (id : struct vec v) map(tofrom: v.len)
   {
@@ -50,7 +58,7 @@ int main() {
 // CHECK: #pragma omp declare mapper (id : struct vec v) map(tofrom: v.len)
     struct vec vv;
     struct dat dd[10];
-#pragma omp target map(mapper(id) alloc: vv)
+#pragma omp target map(mapper(id), alloc: vv)
 // CHECK: #pragma omp target map(mapper(id),alloc: vv)
     { vv.len++; }
 #pragma omp target map(mapper(default), from: dd[0:10])
@@ -65,6 +73,10 @@ int main() {
 // OMP51: #pragma omp target update to(present, mapper(id): vv) from(present, mapper(default): dd[0:10])
 #endif
   }
+#ifdef OMP52
+#pragma omp declare mapper(id1: struct vec vvec) map(iterator(it=0:vvec.len:2), tofrom:vvec.data[it])
+// OMP52: #pragma omp declare mapper (id1 : struct vec vvec) map(iterator(int it = 0:vvec.len:2),tofrom: vvec.data[it]);
+#endif
   return 0;
 }
 // CHECK: }

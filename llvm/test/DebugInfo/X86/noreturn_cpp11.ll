@@ -30,25 +30,24 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %class.foo = type { i8 }
 
-@_ZTIi = external dso_local constant i8*
+@_ZTIi = external dso_local constant ptr
 
 ; Function Attrs: noinline noreturn optnone uwtable
 define dso_local void @_Z1fv() #0 !dbg !7 {
-  %1 = call i8* @__cxa_allocate_exception(i64 4) #3, !dbg !10
-  %2 = bitcast i8* %1 to i32*, !dbg !10
-  store i32 1, i32* %2, align 16, !dbg !10
-  call void @__cxa_throw(i8* %1, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4, !dbg !10
+  %1 = call ptr @__cxa_allocate_exception(i64 4) #3, !dbg !10
+  store i32 1, ptr %1, align 16, !dbg !10
+  call void @__cxa_throw(ptr %1, ptr @_ZTIi, ptr null) #4, !dbg !10
   unreachable, !dbg !10
 }
 
-declare dso_local i8* @__cxa_allocate_exception(i64)
+declare dso_local ptr @__cxa_allocate_exception(i64)
 
-declare dso_local void @__cxa_throw(i8*, i8*, i8*)
+declare dso_local void @__cxa_throw(ptr, ptr, ptr)
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @_Z4funcv() #1 !dbg !11 {
   %1 = alloca %class.foo, align 1
-  call void @llvm.dbg.declare(metadata %class.foo* %1, metadata !12, metadata !DIExpression()), !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !12, metadata !DIExpression()), !dbg !19
   ret void, !dbg !20
 }
 

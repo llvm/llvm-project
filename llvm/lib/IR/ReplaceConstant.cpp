@@ -12,60 +12,100 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ReplaceConstant.h"
-#include "llvm/IR/IRBuilder.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/NoFolder.h"
 
 namespace llvm {
-// Replace a constant expression by instructions with equivalent operations at
-// a specified location.
-Instruction *createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
-  IRBuilder<NoFolder> Builder(Instr);
-  unsigned OpCode = CE->getOpcode();
-  switch (OpCode) {
-  case Instruction::GetElementPtr: {
-    SmallVector<Value *, 4> CEOpVec(CE->operands());
-    ArrayRef<Value *> CEOps(CEOpVec);
-    return dyn_cast<Instruction>(
-        Builder.CreateInBoundsGEP(cast<GEPOperator>(CE)->getSourceElementType(),
-                                  CEOps[0], CEOps.slice(1)));
-  }
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Mul:
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::FDiv:
-  case Instruction::URem:
-  case Instruction::SRem:
-  case Instruction::FRem:
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-    return dyn_cast<Instruction>(
-        Builder.CreateBinOp((Instruction::BinaryOps)OpCode, CE->getOperand(0),
-                            CE->getOperand(1), CE->getName()));
-  case Instruction::Trunc:
-  case Instruction::ZExt:
-  case Instruction::SExt:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
-  case Instruction::UIToFP:
-  case Instruction::SIToFP:
-  case Instruction::FPTrunc:
-  case Instruction::FPExt:
-  case Instruction::PtrToInt:
-  case Instruction::IntToPtr:
-  case Instruction::BitCast:
-  case Instruction::AddrSpaceCast:
-    return dyn_cast<Instruction>(
-        Builder.CreateCast((Instruction::CastOps)OpCode, CE->getOperand(0),
-                           CE->getType(), CE->getName()));
-  default:
-    llvm_unreachable("Unhandled constant expression!\n");
-  }
+
+static bool isExpandableUser(User *U) {
+  return isa<ConstantExpr>(U) || isa<ConstantAggregate>(U);
 }
+
+static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
+                                                Constant *C) {
+  SmallVector<Instruction *, 4> NewInsts;
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
+    Instruction *ConstInst = CE->getAsInstruction();
+    ConstInst->insertBefore(*InsertPt->getParent(), InsertPt);
+    NewInsts.push_back(ConstInst);
+  } else if (isa<ConstantStruct>(C) || isa<ConstantArray>(C)) {
+    Value *V = PoisonValue::get(C->getType());
+    for (auto [Idx, Op] : enumerate(C->operands())) {
+      V = InsertValueInst::Create(V, Op, Idx, "", InsertPt);
+      NewInsts.push_back(cast<Instruction>(V));
+    }
+  } else if (isa<ConstantVector>(C)) {
+    Type *IdxTy = Type::getInt32Ty(C->getContext());
+    Value *V = PoisonValue::get(C->getType());
+    for (auto [Idx, Op] : enumerate(C->operands())) {
+      V = InsertElementInst::Create(V, Op, ConstantInt::get(IdxTy, Idx), "",
+                                    InsertPt);
+      NewInsts.push_back(cast<Instruction>(V));
+    }
+  } else {
+    llvm_unreachable("Not an expandable user");
+  }
+  return NewInsts;
+}
+
+bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
+  // Find all expandable direct users of Consts.
+  SmallVector<Constant *> Stack;
+  for (Constant *C : Consts)
+    for (User *U : C->users())
+      if (isExpandableUser(U))
+        Stack.push_back(cast<Constant>(U));
+
+  // Include transitive users.
+  SetVector<Constant *> ExpandableUsers;
+  while (!Stack.empty()) {
+    Constant *C = Stack.pop_back_val();
+    if (!ExpandableUsers.insert(C))
+      continue;
+
+    for (auto *Nested : C->users())
+      if (isExpandableUser(Nested))
+        Stack.push_back(cast<Constant>(Nested));
+  }
+
+  // Find all instructions that use any of the expandable users
+  SetVector<Instruction *> InstructionWorklist;
+  for (Constant *C : ExpandableUsers)
+    for (User *U : C->users())
+      if (auto *I = dyn_cast<Instruction>(U))
+        InstructionWorklist.insert(I);
+
+  // Replace those expandable operands with instructions
+  bool Changed = false;
+  while (!InstructionWorklist.empty()) {
+    Instruction *I = InstructionWorklist.pop_back_val();
+    DebugLoc Loc = I->getDebugLoc();
+    for (Use &U : I->operands()) {
+      BasicBlock::iterator BI = I->getIterator();
+      if (auto *Phi = dyn_cast<PHINode>(I)) {
+        BasicBlock *BB = Phi->getIncomingBlock(U);
+        BI = BB->getFirstInsertionPt();
+        assert(BI != BB->end() && "Unexpected empty basic block");
+      }
+
+      if (auto *C = dyn_cast<Constant>(U.get())) {
+        if (ExpandableUsers.contains(C)) {
+          Changed = true;
+          auto NewInsts = expandUser(BI, C);
+          for (auto *NI : NewInsts)
+            NI->setDebugLoc(Loc);
+          InstructionWorklist.insert(NewInsts.begin(), NewInsts.end());
+          U.set(NewInsts.back());
+        }
+      }
+    }
+  }
+
+  for (Constant *C : Consts)
+    C->removeDeadConstantUsers();
+
+  return Changed;
+}
+
 } // namespace llvm

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads, libcpp-has-thread-api-external
+// UNSUPPORTED: no-threads, libcpp-has-thread-api-external
 
 // XFAIL: windows
 
@@ -17,8 +17,10 @@
 // typedef pthread_cond_t* native_handle_type;
 // native_handle_type native_handle();
 
-#include <condition_variable>
 #include <cassert>
+#include <condition_variable>
+#include <pthread.h>
+#include <type_traits>
 
 #include "test_macros.h"
 

@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/ADT/CombinationGenerator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -22,10 +25,14 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm-c/Core.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
+
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 namespace {
@@ -89,16 +96,20 @@ TEST_F(ModuleWithFunctionTest, CallInst) {
 
   // Make sure iteration over a call's arguments works as expected.
   unsigned Idx = 0;
-  for (Value *Arg : Call->arg_operands()) {
+  for (Value *Arg : Call->args()) {
     EXPECT_EQ(FArgTypes[Idx], Arg->getType());
     EXPECT_EQ(Call->getArgOperand(Idx)->getType(), Arg->getType());
     Idx++;
   }
 
-  Call->addAttribute(llvm::AttributeList::ReturnIndex,
-                     Attribute::get(Call->getContext(), "test-str-attr"));
+  Call->addRetAttr(Attribute::get(Call->getContext(), "test-str-attr"));
   EXPECT_TRUE(Call->hasRetAttr("test-str-attr"));
   EXPECT_FALSE(Call->hasRetAttr("not-on-call"));
+
+  Call->addFnAttr(Attribute::get(Call->getContext(), "test-str-fn-attr"));
+  ASSERT_TRUE(Call->hasFnAttr("test-str-fn-attr"));
+  Call->removeFnAttr("test-str-fn-attr");
+  EXPECT_FALSE(Call->hasFnAttr("test-str-fn-attr"));
 }
 
 TEST_F(ModuleWithFunctionTest, InvokeInst) {
@@ -112,7 +123,7 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
 
   // Make sure iteration over invoke's arguments works as expected.
   unsigned Idx = 0;
-  for (Value *Arg : Invoke->arg_operands()) {
+  for (Value *Arg : Invoke->args()) {
     EXPECT_EQ(FArgTypes[Idx], Arg->getType());
     EXPECT_EQ(Invoke->getArgOperand(Idx)->getType(), Arg->getType());
     Idx++;
@@ -389,6 +400,67 @@ TEST(InstructionsTest, CastInst) {
   delete BB;
 }
 
+TEST(InstructionsTest, CastCAPI) {
+  LLVMContext C;
+
+  Type *Int8Ty = Type::getInt8Ty(C);
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *Int64Ty = Type::getInt64Ty(C);
+
+  Type *FloatTy = Type::getFloatTy(C);
+  Type *DoubleTy = Type::getDoubleTy(C);
+
+  Type *Int8PtrTy = PointerType::get(Int8Ty, 0);
+  Type *Int32PtrTy = PointerType::get(Int32Ty, 0);
+
+  const Constant *C8 = Constant::getNullValue(Int8Ty);
+  const Constant *C64 = Constant::getNullValue(Int64Ty);
+
+  EXPECT_EQ(LLVMBitCast,
+            LLVMGetCastOpcode(wrap(C64), true, wrap(Int64Ty), true));
+  EXPECT_EQ(LLVMTrunc, LLVMGetCastOpcode(wrap(C64), true, wrap(Int8Ty), true));
+  EXPECT_EQ(LLVMSExt, LLVMGetCastOpcode(wrap(C8), true, wrap(Int64Ty), true));
+  EXPECT_EQ(LLVMZExt, LLVMGetCastOpcode(wrap(C8), false, wrap(Int64Ty), true));
+
+  const Constant *CF32 = Constant::getNullValue(FloatTy);
+  const Constant *CF64 = Constant::getNullValue(DoubleTy);
+
+  EXPECT_EQ(LLVMFPToUI,
+            LLVMGetCastOpcode(wrap(CF32), true, wrap(Int8Ty), false));
+  EXPECT_EQ(LLVMFPToSI,
+            LLVMGetCastOpcode(wrap(CF32), true, wrap(Int8Ty), true));
+  EXPECT_EQ(LLVMUIToFP,
+            LLVMGetCastOpcode(wrap(C8), false, wrap(FloatTy), true));
+  EXPECT_EQ(LLVMSIToFP, LLVMGetCastOpcode(wrap(C8), true, wrap(FloatTy), true));
+  EXPECT_EQ(LLVMFPTrunc,
+            LLVMGetCastOpcode(wrap(CF64), true, wrap(FloatTy), true));
+  EXPECT_EQ(LLVMFPExt,
+            LLVMGetCastOpcode(wrap(CF32), true, wrap(DoubleTy), true));
+
+  const Constant *CPtr8 = Constant::getNullValue(Int8PtrTy);
+
+  EXPECT_EQ(LLVMPtrToInt,
+            LLVMGetCastOpcode(wrap(CPtr8), true, wrap(Int8Ty), true));
+  EXPECT_EQ(LLVMIntToPtr,
+            LLVMGetCastOpcode(wrap(C8), true, wrap(Int8PtrTy), true));
+
+  Type *V8x8Ty = FixedVectorType::get(Int8Ty, 8);
+  Type *V8x64Ty = FixedVectorType::get(Int64Ty, 8);
+  const Constant *CV8 = Constant::getNullValue(V8x8Ty);
+  const Constant *CV64 = Constant::getNullValue(V8x64Ty);
+
+  EXPECT_EQ(LLVMTrunc, LLVMGetCastOpcode(wrap(CV64), true, wrap(V8x8Ty), true));
+  EXPECT_EQ(LLVMSExt, LLVMGetCastOpcode(wrap(CV8), true, wrap(V8x64Ty), true));
+
+  Type *Int32PtrAS1Ty = PointerType::get(Int32Ty, 1);
+  Type *V2Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 2);
+  Type *V2Int32PtrTy = FixedVectorType::get(Int32PtrTy, 2);
+  const Constant *CV2ptr32 = Constant::getNullValue(V2Int32PtrTy);
+
+  EXPECT_EQ(LLVMAddrSpaceCast, LLVMGetCastOpcode(wrap(CV2ptr32), true,
+                                                 wrap(V2Int32PtrAS1Ty), true));
+}
+
 TEST(InstructionsTest, VectorGep) {
   LLVMContext C;
 
@@ -419,7 +491,7 @@ TEST(InstructionsTest, VectorGep) {
 
   BasicBlock* BB0 = BasicBlock::Create(C);
   // Test InsertAtEnd ICmpInst constructor.
-  ICmpInst *ICmp2 = new ICmpInst(*BB0, ICmpInst::ICMP_SGE, PtrVecA, PtrVecB);
+  ICmpInst *ICmp2 = new ICmpInst(BB0, ICmpInst::ICMP_SGE, PtrVecA, PtrVecB);
   EXPECT_NE(ICmp0, ICmp2); // suppress warning.
 
   GetElementPtrInst *Gep0 = GetElementPtrInst::Create(I32Ty, PtrVecA, C2xi32a);
@@ -506,6 +578,59 @@ TEST(InstructionsTest, FPMathOperator) {
   I->deleteValue();
 }
 
+TEST(InstructionTest, ConstrainedTrans) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context),
+                        {Type::getFloatTy(Context), Type::getFloatTy(Context),
+                         Type::getInt32Ty(Context)},
+                        false);
+  auto *F = Function::Create(FTy, Function::ExternalLinkage, "", M.get());
+  auto *BB = BasicBlock::Create(Context, "bb", F);
+  IRBuilder<> Builder(Context);
+  Builder.SetInsertPoint(BB);
+  auto *Arg0 = F->arg_begin();
+  auto *Arg1 = F->arg_begin() + 1;
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateFAdd(Arg0, Arg1));
+    EXPECT_EQ(Intrinsic::experimental_constrained_fadd,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(
+        Builder.CreateFPToSI(Arg0, Type::getInt32Ty(Context)));
+    EXPECT_EQ(Intrinsic::experimental_constrained_fptosi,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateIntrinsic(
+        Intrinsic::ceil, {Type::getFloatTy(Context)}, {Arg0}));
+    EXPECT_EQ(Intrinsic::experimental_constrained_ceil,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateFCmpOEQ(Arg0, Arg1));
+    EXPECT_EQ(Intrinsic::experimental_constrained_fcmp,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *Arg2 = F->arg_begin() + 2;
+    auto *I = cast<Instruction>(Builder.CreateAdd(Arg2, Arg2));
+    EXPECT_EQ(Intrinsic::not_intrinsic, getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateConstrainedFPBinOp(
+        Intrinsic::experimental_constrained_fadd, Arg0, Arg0));
+    EXPECT_EQ(Intrinsic::not_intrinsic, getConstrainedIntrinsicID(*I));
+  }
+}
 
 TEST(InstructionsTest, isEliminableCastPair) {
   LLVMContext C;
@@ -513,7 +638,7 @@ TEST(InstructionsTest, isEliminableCastPair) {
   Type* Int16Ty = Type::getInt16Ty(C);
   Type* Int32Ty = Type::getInt32Ty(C);
   Type* Int64Ty = Type::getInt64Ty(C);
-  Type* Int64PtrTy = Type::getInt64PtrTy(C);
+  Type *Int64PtrTy = PointerType::get(C, 0);
 
   // Source and destination pointers have same size -> bitcast.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
@@ -558,8 +683,8 @@ TEST(InstructionsTest, isEliminableCastPair) {
                 "-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64"
                 "-v128:128:128-a:0:64-s:64:64-f80:128:128-n8:16:32:64-S128");
 
-  Type* Int64PtrTyAS1 = Type::getInt64PtrTy(C, 1);
-  Type* Int64PtrTyAS2 = Type::getInt64PtrTy(C, 2);
+  Type *Int64PtrTyAS1 = PointerType::get(C, 1);
+  Type *Int64PtrTyAS2 = PointerType::get(C, 2);
 
   IntegerType *Int16SizePtr = DL.getIntPtrType(C, 1);
   IntegerType *Int64SizePtr = DL.getIntPtrType(C, 2);
@@ -592,7 +717,7 @@ TEST(InstructionsTest, CloneCall) {
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *ArgTys[] = {Int32Ty, Int32Ty, Int32Ty};
   FunctionType *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {
     ConstantInt::get(Int32Ty, 1),
     ConstantInt::get(Int32Ty, 2),
@@ -613,12 +738,12 @@ TEST(InstructionsTest, CloneCall) {
 
   // Test cloning an attribute.
   {
-    AttrBuilder AB;
-    AB.addAttribute(Attribute::ReadOnly);
+    AttrBuilder AB(C);
+    AB.addAttribute(Attribute::NoUnwind);
     Call->setAttributes(
         AttributeList::get(C, AttributeList::FunctionIndex, AB));
     std::unique_ptr<CallInst> Clone(cast<CallInst>(Call->clone()));
-    EXPECT_TRUE(Clone->onlyReadsMemory());
+    EXPECT_TRUE(Clone->doesNotThrow());
   }
 }
 
@@ -626,34 +751,34 @@ TEST(InstructionsTest, AlterCallBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
   std::unique_ptr<CallInst> Call(
       CallInst::Create(FnTy, Callee, Args, OldBundle, "result"));
   Call->setTailCallKind(CallInst::TailCallKind::TCK_NoTail);
-  AttrBuilder AB;
+  AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Call->setDebugLoc(DebugLoc(MDNode::get(C, None)));
+  Call->setDebugLoc(DebugLoc(MDNode::get(C, std::nullopt)));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
-  EXPECT_EQ(Call->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Call->arg_size(), Clone->arg_size());
   EXPECT_EQ(Call->getArgOperand(0), Clone->getArgOperand(0));
   EXPECT_EQ(Call->getCallingConv(), Clone->getCallingConv());
   EXPECT_EQ(Call->getTailCallKind(), Clone->getTailCallKind());
   EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
   EXPECT_EQ(Call->getDebugLoc(), Clone->getDebugLoc());
   EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
-  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+  EXPECT_TRUE(Clone->getOperandBundle("after"));
 }
 
 TEST(InstructionsTest, AlterInvokeBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
   std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
@@ -661,24 +786,24 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   std::unique_ptr<InvokeInst> Invoke(
       InvokeInst::Create(FnTy, Callee, NormalDest.get(), UnwindDest.get(), Args,
                          OldBundle, "result"));
-  AttrBuilder AB;
+  AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
       AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, None)));
+  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, std::nullopt)));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<InvokeInst> Clone(
       InvokeInst::Create(Invoke.get(), NewBundle));
   EXPECT_EQ(Invoke->getNormalDest(), Clone->getNormalDest());
   EXPECT_EQ(Invoke->getUnwindDest(), Clone->getUnwindDest());
-  EXPECT_EQ(Invoke->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Invoke->arg_size(), Clone->arg_size());
   EXPECT_EQ(Invoke->getArgOperand(0), Clone->getArgOperand(0));
   EXPECT_EQ(Invoke->getCallingConv(), Clone->getCallingConv());
   EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
   EXPECT_EQ(Invoke->getDebugLoc(), Clone->getDebugLoc());
   EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
-  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+  EXPECT_TRUE(Clone->getOperandBundle("after"));
 }
 
 TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
@@ -733,7 +858,7 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
   }
 
   {
-    Value *GEPBase = Constant::getNullValue(B.getInt8PtrTy());
+    Value *GEPBase = Constant::getNullValue(B.getPtrTy());
     auto *GI = cast<GetElementPtrInst>(
         B.CreateInBoundsGEP(B.getInt8Ty(), GEPBase, Arg0));
     ASSERT_TRUE(GI->isInBounds());
@@ -902,71 +1027,141 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   Constant *C7 = ConstantInt::get(Int32Ty, 7);
 
   Constant *Identity = ConstantVector::get({C0, CU, C2, C3, C4});
-  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(Identity));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Identity)); // identity is distinguished from select
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Identity));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(Identity)); // identity is always single source
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Identity));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Identity));
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(
+      Identity, cast<FixedVectorType>(Identity->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      Identity,
+      cast<FixedVectorType>(Identity->getType())
+          ->getNumElements())); // identity is distinguished from select
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      Identity, cast<FixedVectorType>(Identity->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      Identity, cast<FixedVectorType>(Identity->getType())
+                    ->getNumElements())); // identity is always single source
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      Identity, cast<FixedVectorType>(Identity->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      Identity, cast<FixedVectorType>(Identity->getType())->getNumElements()));
 
   Constant *Select = ConstantVector::get({CU, C1, C5});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Select));
-  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(Select));
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Select));
-  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(Select));
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Select));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Select));
-  
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+
   Constant *Reverse = ConstantVector::get({C3, C2, C1, CU});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Reverse));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Reverse));
-  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(Reverse));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(Reverse)); // reverse is always single source
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Reverse));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Reverse));
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())
+                   ->getNumElements())); // reverse is always single source
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
 
   Constant *SingleSource = ConstantVector::get({C2, C2, C0, CU});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(SingleSource));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(SingleSource));
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(SingleSource));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(SingleSource));
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(SingleSource));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
 
   Constant *ZeroEltSplat = ConstantVector::get({C0, C0, CU, C0});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(ZeroEltSplat));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(ZeroEltSplat));
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(ZeroEltSplat));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ZeroEltSplat)); // 0-splat is always single source
-  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ZeroEltSplat));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(ZeroEltSplat));
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      ZeroEltSplat, cast<FixedVectorType>(ZeroEltSplat->getType())
+                        ->getNumElements())); // 0-splat is always single source
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
 
   Constant *Transpose = ConstantVector::get({C0, C4, C2, C6});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Transpose));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Transpose));
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Transpose));
-  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(Transpose));
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Transpose));
-  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
 
   // More tests to make sure the logic is/stays correct...
-  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(ConstantVector::get({CU, C1, CU, C3})));
-  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(ConstantVector::get({C4, CU, C6, CU})));
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(
+      ConstantVector::get({CU, C1, CU, C3}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(
+      ConstantVector::get({C4, CU, C6, CU}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(ConstantVector::get({C4, C1, C6, CU})));
-  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(ConstantVector::get({CU, C1, C6, C3})));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(
+      ConstantVector::get({C4, C1, C6, CU}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(
+      ConstantVector::get({CU, C1, C6, C3}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(ConstantVector::get({C7, C6, CU, C4})));
-  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(ConstantVector::get({C3, CU, C1, CU})));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(
+      ConstantVector::get({C7, C6, CU, C4}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(
+      ConstantVector::get({C3, CU, C1, CU}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ConstantVector::get({C7, C5, CU, C7})));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ConstantVector::get({C3, C0, CU, C3})));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      ConstantVector::get({C7, C5, CU, C7}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      ConstantVector::get({C3, C0, CU, C3}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ConstantVector::get({C4, CU, CU, C4})));
-  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ConstantVector::get({CU, C0, CU, C0})));
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(
+      ConstantVector::get({C4, CU, CU, C4}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(
+      ConstantVector::get({CU, C0, CU, C0}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C5, C3, C7})));
-  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3})));
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(
+      ConstantVector::get({C1, C5, C3, C7}), 4));
+  EXPECT_TRUE(
+      ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3}), 2));
 
   // Nothing special about the values here - just re-using inputs to reduce code. 
   Constant *V0 = ConstantVector::get({C0, C1, C2, C3});
@@ -1116,11 +1311,109 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   delete Id15;
 }
 
+TEST(InstructionsTest, ShuffleMaskIsReplicationMask) {
+  for (int ReplicationFactor : seq_inclusive(1, 8)) {
+    for (int VF : seq_inclusive(1, 8)) {
+      const auto ReplicatedMask = createReplicatedMask(ReplicationFactor, VF);
+      int GuessedReplicationFactor = -1, GuessedVF = -1;
+      EXPECT_TRUE(ShuffleVectorInst::isReplicationMask(
+          ReplicatedMask, GuessedReplicationFactor, GuessedVF));
+      EXPECT_EQ(GuessedReplicationFactor, ReplicationFactor);
+      EXPECT_EQ(GuessedVF, VF);
+
+      for (int OpVF : seq_inclusive(VF, 2 * VF + 1)) {
+        LLVMContext Ctx;
+        Type *OpVFTy = FixedVectorType::get(IntegerType::getInt1Ty(Ctx), OpVF);
+        Value *Op = ConstantVector::getNullValue(OpVFTy);
+        ShuffleVectorInst *SVI = new ShuffleVectorInst(Op, Op, ReplicatedMask);
+        EXPECT_EQ(SVI->isReplicationMask(GuessedReplicationFactor, GuessedVF),
+                  OpVF == VF);
+        delete SVI;
+      }
+    }
+  }
+}
+
+TEST(InstructionsTest, ShuffleMaskIsReplicationMask_undef) {
+  for (int ReplicationFactor : seq_inclusive(1, 4)) {
+    for (int VF : seq_inclusive(1, 4)) {
+      const auto ReplicatedMask = createReplicatedMask(ReplicationFactor, VF);
+      int GuessedReplicationFactor = -1, GuessedVF = -1;
+
+      // If we change some mask elements to undef, we should still match.
+
+      SmallVector<SmallVector<bool>> ElementChoices(ReplicatedMask.size(),
+                                                    {false, true});
+
+      CombinationGenerator<bool, decltype(ElementChoices)::value_type,
+                           /*variable_smallsize=*/4>
+          G(ElementChoices);
+
+      G.generate([&](ArrayRef<bool> UndefOverrides) -> bool {
+        SmallVector<int> AdjustedMask;
+        AdjustedMask.reserve(ReplicatedMask.size());
+        for (auto I : zip(ReplicatedMask, UndefOverrides))
+          AdjustedMask.emplace_back(std::get<1>(I) ? -1 : std::get<0>(I));
+        assert(AdjustedMask.size() == ReplicatedMask.size() &&
+               "Size misprediction");
+
+        EXPECT_TRUE(ShuffleVectorInst::isReplicationMask(
+            AdjustedMask, GuessedReplicationFactor, GuessedVF));
+        // Do not check GuessedReplicationFactor and GuessedVF,
+        // with enough undef's we may deduce a different tuple.
+
+        return /*Abort=*/false;
+      });
+    }
+  }
+}
+
+TEST(InstructionsTest, ShuffleMaskIsReplicationMask_Exhaustive_Correctness) {
+  for (int ShufMaskNumElts : seq_inclusive(1, 6)) {
+    SmallVector<int> PossibleShufMaskElts;
+    PossibleShufMaskElts.reserve(ShufMaskNumElts + 2);
+    for (int PossibleShufMaskElt : seq_inclusive(-1, ShufMaskNumElts))
+      PossibleShufMaskElts.emplace_back(PossibleShufMaskElt);
+    assert(PossibleShufMaskElts.size() == ShufMaskNumElts + 2U &&
+           "Size misprediction");
+
+    SmallVector<SmallVector<int>> ElementChoices(ShufMaskNumElts,
+                                                 PossibleShufMaskElts);
+
+    CombinationGenerator<int, decltype(ElementChoices)::value_type,
+                         /*variable_smallsize=*/4>
+        G(ElementChoices);
+
+    G.generate([&](ArrayRef<int> Mask) -> bool {
+      int GuessedReplicationFactor = -1, GuessedVF = -1;
+      bool Match = ShuffleVectorInst::isReplicationMask(
+          Mask, GuessedReplicationFactor, GuessedVF);
+      if (!Match)
+        return /*Abort=*/false;
+
+      const auto ActualMask =
+          createReplicatedMask(GuessedReplicationFactor, GuessedVF);
+      EXPECT_EQ(Mask.size(), ActualMask.size());
+      for (auto I : zip(Mask, ActualMask)) {
+        int Elt = std::get<0>(I);
+        int ActualElt = std::get<0>(I);
+
+        if (Elt != -1) {
+          EXPECT_EQ(Elt, ActualElt);
+        }
+      }
+
+      return /*Abort=*/false;
+    });
+  }
+}
+
 TEST(InstructionsTest, GetSplat) {
   // Create the elements for various constant vectors.
   LLVMContext Ctx;
   Type *Int32Ty = Type::getInt32Ty(Ctx);
   Constant *CU = UndefValue::get(Int32Ty);
+  Constant *CP = PoisonValue::get(Int32Ty);
   Constant *C0 = ConstantInt::get(Int32Ty, 0);
   Constant *C1 = ConstantInt::get(Int32Ty, 1);
 
@@ -1130,34 +1423,48 @@ TEST(InstructionsTest, GetSplat) {
   Constant *Splat1Undef = ConstantVector::get({CU, CU, C1, CU});
   Constant *NotSplat = ConstantVector::get({C1, C1, C0, C1 ,C1});
   Constant *NotSplatUndef = ConstantVector::get({CU, C1, CU, CU ,C0});
+  Constant *Splat0Poison = ConstantVector::get({C0, CP, C0, CP});
+  Constant *Splat1Poison = ConstantVector::get({CP, CP, C1, CP});
+  Constant *NotSplatPoison = ConstantVector::get({CP, C1, CP, CP, C0});
 
-  // Default - undefs are not allowed.
+  // Default - undef/poison is not allowed.
   EXPECT_EQ(Splat0->getSplatValue(), C0);
   EXPECT_EQ(Splat1->getSplatValue(), C1);
   EXPECT_EQ(Splat0Undef->getSplatValue(), nullptr);
   EXPECT_EQ(Splat1Undef->getSplatValue(), nullptr);
+  EXPECT_EQ(Splat0Poison->getSplatValue(), nullptr);
+  EXPECT_EQ(Splat1Poison->getSplatValue(), nullptr);
   EXPECT_EQ(NotSplat->getSplatValue(), nullptr);
   EXPECT_EQ(NotSplatUndef->getSplatValue(), nullptr);
+  EXPECT_EQ(NotSplatPoison->getSplatValue(), nullptr);
 
-  // Disallow undefs explicitly.
+  // Disallow poison explicitly.
   EXPECT_EQ(Splat0->getSplatValue(false), C0);
   EXPECT_EQ(Splat1->getSplatValue(false), C1);
   EXPECT_EQ(Splat0Undef->getSplatValue(false), nullptr);
   EXPECT_EQ(Splat1Undef->getSplatValue(false), nullptr);
+  EXPECT_EQ(Splat0Poison->getSplatValue(false), nullptr);
+  EXPECT_EQ(Splat1Poison->getSplatValue(false), nullptr);
   EXPECT_EQ(NotSplat->getSplatValue(false), nullptr);
   EXPECT_EQ(NotSplatUndef->getSplatValue(false), nullptr);
+  EXPECT_EQ(NotSplatPoison->getSplatValue(false), nullptr);
 
-  // Allow undefs.
+  // Allow poison but not undef.
   EXPECT_EQ(Splat0->getSplatValue(true), C0);
   EXPECT_EQ(Splat1->getSplatValue(true), C1);
-  EXPECT_EQ(Splat0Undef->getSplatValue(true), C0);
-  EXPECT_EQ(Splat1Undef->getSplatValue(true), C1);
+  EXPECT_EQ(Splat0Undef->getSplatValue(true), nullptr);
+  EXPECT_EQ(Splat1Undef->getSplatValue(true), nullptr);
+  EXPECT_EQ(Splat0Poison->getSplatValue(true), C0);
+  EXPECT_EQ(Splat1Poison->getSplatValue(true), C1);
   EXPECT_EQ(NotSplat->getSplatValue(true), nullptr);
   EXPECT_EQ(NotSplatUndef->getSplatValue(true), nullptr);
+  EXPECT_EQ(NotSplatPoison->getSplatValue(true), nullptr);
 }
 
 TEST(InstructionsTest, SkipDebug) {
   LLVMContext C;
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = false;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"(
       declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -1193,6 +1500,7 @@ TEST(InstructionsTest, SkipDebug) {
 
   // After the terminator, there are no non-debug instructions.
   EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
+  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 TEST(InstructionsTest, PhiMightNotBeFPMathOperator) {
@@ -1212,50 +1520,51 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
 
   Type *ITy = Type::getInt32Ty(C);
   FunctionType *IFnTy = FunctionType::get(ITy, {});
-  Value *ICallee = Constant::getNullValue(IFnTy->getPointerTo());
+  PointerType *PtrTy = PointerType::getUnqual(C);
+  Value *ICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> ICall(CallInst::Create(IFnTy, ICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(ICall));
 
   Type *VITy = FixedVectorType::get(ITy, 2);
   FunctionType *VIFnTy = FunctionType::get(VITy, {});
-  Value *VICallee = Constant::getNullValue(VIFnTy->getPointerTo());
+  Value *VICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> VICall(CallInst::Create(VIFnTy, VICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(VICall));
 
   Type *AITy = ArrayType::get(ITy, 2);
   FunctionType *AIFnTy = FunctionType::get(AITy, {});
-  Value *AICallee = Constant::getNullValue(AIFnTy->getPointerTo());
+  Value *AICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AICall(CallInst::Create(AIFnTy, AICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(AICall));
 
   Type *FTy = Type::getFloatTy(C);
   FunctionType *FFnTy = FunctionType::get(FTy, {});
-  Value *FCallee = Constant::getNullValue(FFnTy->getPointerTo());
+  Value *FCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> FCall(CallInst::Create(FFnTy, FCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(FCall));
 
   Type *VFTy = FixedVectorType::get(FTy, 2);
   FunctionType *VFFnTy = FunctionType::get(VFTy, {});
-  Value *VFCallee = Constant::getNullValue(VFFnTy->getPointerTo());
+  Value *VFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> VFCall(CallInst::Create(VFFnTy, VFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(VFCall));
 
   Type *AFTy = ArrayType::get(FTy, 2);
   FunctionType *AFFnTy = FunctionType::get(AFTy, {});
-  Value *AFCallee = Constant::getNullValue(AFFnTy->getPointerTo());
+  Value *AFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AFCall(CallInst::Create(AFFnTy, AFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AFCall));
 
   Type *AVFTy = ArrayType::get(VFTy, 2);
   FunctionType *AVFFnTy = FunctionType::get(AVFTy, {});
-  Value *AVFCallee = Constant::getNullValue(AVFFnTy->getPointerTo());
+  Value *AVFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AVFCall(
       CallInst::Create(AVFFnTy, AVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AVFCall));
 
   Type *AAVFTy = ArrayType::get(AVFTy, 2);
   FunctionType *AAVFFnTy = FunctionType::get(AAVFTy, {});
-  Value *AAVFCallee = Constant::getNullValue(AAVFFnTy->getPointerTo());
+  Value *AAVFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AAVFCall(
       CallInst::Create(AAVFFnTy, AAVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AAVFCall));
@@ -1284,7 +1593,7 @@ TEST(InstructionsTest, CallBrInstruction) {
   std::unique_ptr<Module> M = parseIR(Context, R"(
 define void @foo() {
 entry:
-  callbr void asm sideeffect "// XXX: ${0:l}", "X"(i8* blockaddress(@foo, %branch_test.exit))
+  callbr void asm sideeffect "// XXX: ${0:l}", "!i"()
           to label %land.rhs.i [label %branch_test.exit]
 
 land.rhs.i:
@@ -1302,7 +1611,7 @@ if.end:
 }
 )");
   Function *Foo = M->getFunction("foo");
-  auto BBs = Foo->getBasicBlockList().begin();
+  auto BBs = Foo->begin();
   CallBrInst &CBI = cast<CallBrInst>(BBs->front());
   ++BBs;
   ++BBs;
@@ -1314,20 +1623,6 @@ if.end:
   EXPECT_EQ(&BranchTestExit, CBI.getIndirectDest(0));
   CBI.setIndirectDest(0, &IfThen);
   EXPECT_EQ(&IfThen, CBI.getIndirectDest(0));
-
-  // Further, test that changing the indirect destination updates the arg
-  // operand to use the block address of the new indirect destination basic
-  // block. This is a critical invariant of CallBrInst.
-  BlockAddress *IndirectBA = BlockAddress::get(CBI.getIndirectDest(0));
-  BlockAddress *ArgBA = cast<BlockAddress>(CBI.getArgOperand(0));
-  EXPECT_EQ(IndirectBA, ArgBA)
-      << "After setting the indirect destination, callbr had an indirect "
-         "destination of '"
-      << CBI.getIndirectDest(0)->getName() << "', but a argument of '"
-      << ArgBA->getBasicBlock()->getName() << "'. These should always match:\n"
-      << CBI;
-  EXPECT_EQ(IndirectBA->getBasicBlock(), &IfThen);
-  EXPECT_EQ(ArgBA->getBasicBlock(), &IfThen);
 }
 
 TEST(InstructionsTest, UnaryOperator) {
@@ -1479,6 +1774,44 @@ TEST(InstructionsTest, AllocaInst) {
   EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
   EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
+}
+
+TEST(InstructionsTest, InsertAtBegin) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a, i32 %b) {
+     entry:
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  Argument *ArgA = F->getArg(0);
+  Argument *ArgB = F->getArg(1);
+  BasicBlock *BB = &*F->begin();
+  Instruction *Ret = &*BB->begin();
+  Instruction *I = BinaryOperator::CreateAdd(ArgA, ArgB);
+  auto It = I->insertInto(BB, BB->begin());
+  EXPECT_EQ(&*It, I);
+  EXPECT_EQ(I->getNextNode(), Ret);
+}
+
+TEST(InstructionsTest, InsertAtEnd) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a, i32 %b) {
+     entry:
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  Argument *ArgA = F->getArg(0);
+  Argument *ArgB = F->getArg(1);
+  BasicBlock *BB = &*F->begin();
+  Instruction *Ret = &*BB->begin();
+  Instruction *I = BinaryOperator::CreateAdd(ArgA, ArgB);
+  auto It = I->insertInto(BB, BB->end());
+  EXPECT_EQ(&*It, I);
+  EXPECT_EQ(Ret->getNextNode(), I);
 }
 
 } // end anonymous namespace

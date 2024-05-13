@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CXLoadedDiagnostic.h"
+#include "CXFile.h"
 #include "CXString.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
@@ -44,7 +45,7 @@ public:
   
   FileSystemOptions FO;
   FileManager FakeFiles;
-  llvm::DenseMap<unsigned, const FileEntry *> Files;
+  llvm::DenseMap<unsigned, FileEntryRef> Files;
 
   /// Copy the string into our own allocator.
   const char *copyString(StringRef Blob) {
@@ -235,7 +236,7 @@ protected:
 
 public:
   DiagLoader(enum CXLoadDiag_Error *e, CXString *es)
-      : SerializedDiagnosticReader(), error(e), errorString(es) {
+      : error(e), errorString(es) {
     if (error)
       *error = CXLoadDiag_None;
     if (errorString)
@@ -275,9 +276,10 @@ DiagLoader::readLocation(const serialized_diags::Location &SDLoc,
   if (FileID == 0)
     LoadedLoc.file = nullptr;
   else {
-    LoadedLoc.file = const_cast<FileEntry *>(TopDiags->Files[FileID]);
-    if (!LoadedLoc.file)
+    auto It = TopDiags->Files.find(FileID);
+    if (It == TopDiags->Files.end())
       return reportInvalidFile("Corrupted file entry in source location");
+    LoadedLoc.file = cxfile::makeCXFile(It->second);
   }
   LoadedLoc.line = SDLoc.Line;
   LoadedLoc.column = SDLoc.Col;
@@ -342,8 +344,8 @@ std::error_code DiagLoader::visitFilenameRecord(unsigned ID, unsigned Size,
   if (Name.size() > 65536)
     return reportInvalidFile("Out-of-bounds string in filename");
   TopDiags->FileNames[ID] = TopDiags->copyString(Name);
-  TopDiags->Files[ID] =
-      TopDiags->FakeFiles.getVirtualFile(Name, Size, Timestamp);
+  TopDiags->Files.insert(
+      {ID, TopDiags->FakeFiles.getVirtualFileRef(Name, Size, Timestamp)});
   return std::error_code();
 }
 

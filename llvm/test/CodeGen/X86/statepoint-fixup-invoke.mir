@@ -7,38 +7,38 @@
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-pc-linux-gnu"
 
-  declare void @some_call(i64 addrspace(1)*)
+  declare void @some_call(ptr addrspace(1))
 
   declare i32 @personality_function()
 
-  define i64 addrspace(1)* @test_basic(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1) gc "statepoint-example" personality i32 ()* @personality_function {
+  define ptr addrspace(1) @test_basic(ptr addrspace(1) %obj, ptr addrspace(1) %obj1) gc "statepoint-example" personality ptr @personality_function {
   entry:
-    %0 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %obj, i32 0, i32 0) [ "gc-live"(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1), "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
+    %0 = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (ptr addrspace(1))) @some_call, i32 1, i32 0, ptr addrspace(1) %obj, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %obj, ptr addrspace(1) %obj1), "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
             to label %invoke_safepoint_normal_dest unwind label %exceptional_return
 
   invoke_safepoint_normal_dest:                     ; preds = %entry
-    %obj.relocated = call coldcc i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %0, i32 0, i32 0) ; (%obj, %obj)
-    %obj1.relocated = call coldcc i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %0, i32 1, i32 1) ; (%obj1, %obj1)
+    %obj.relocated = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %0, i32 0, i32 0) ; (%obj, %obj)
+    %obj1.relocated = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %0, i32 1, i32 1) ; (%obj1, %obj1)
     br label %normal_return
 
   normal_return:                                    ; preds = %invoke_safepoint_normal_dest
-    ret i64 addrspace(1)* %obj.relocated
+    ret ptr addrspace(1) %obj.relocated
 
   exceptional_return:                               ; preds = %entry
     %landing_pad = landingpad token
             cleanup
-    %obj.relocated1 = call coldcc i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %landing_pad, i32 0, i32 0) ; (%obj, %obj)
-    %obj1.relocated1 = call coldcc i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %landing_pad, i32 1, i32 1) ; (%obj1, %obj1)
-    ret i64 addrspace(1)* %obj1.relocated1
+    %obj.relocated1 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %landing_pad, i32 0, i32 0) ; (%obj, %obj)
+    %obj1.relocated1 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %landing_pad, i32 1, i32 1) ; (%obj1, %obj1)
+    ret ptr addrspace(1) %obj1.relocated1
   }
 
-  declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 immarg, i32 immarg, void (i64 addrspace(1)*)*, i32 immarg, i32 immarg, ...)
+  declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
 
   ; Function Attrs: nounwind readonly
-  declare i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token, i32 immarg, i32 immarg) #0
+  declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32 immarg, i32 immarg) #0
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { nounwind readonly }
   attributes #1 = { nounwind }
@@ -87,13 +87,13 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x7ffff800), %bb.3(0x00000800)
   ; CHECK:   liveins: $rdi, $rsi
-  ; CHECK-DAG:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rsi :: (store 8 into %stack.0)
-  ; CHECK-DAG:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdi :: (store 8 into %stack.1)
+  ; CHECK-DAG:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rsi :: (store (s64) into %stack.0)
+  ; CHECK-DAG:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.1)
   ; CHECK:   EH_LABEL <mcsymbol .Ltmp0>
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 2, -1, 2, 0, 2, 0, 2, 0, 2, 2, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store 8 on %stack.0), (load store 8 on %stack.1)
-  ; CHECK-DAG:   $r14 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
-  ; CHECK-DAG:   $rbx = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load 8 from %stack.1)
+  ; CHECK:   STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 2, -1, 2, 0, 2, 0, 2, 0, 2, 2, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store (s64) on %stack.0), (load store (s64) on %stack.1)
+  ; CHECK-DAG:   $r14 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+  ; CHECK-DAG:   $rbx = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   EH_LABEL <mcsymbol .Ltmp1>
   ; CHECK:   JMP_1 %bb.1
@@ -107,8 +107,8 @@ body:             |
   ; CHECK: bb.3.exceptional_return (landing-pad):
   ; CHECK:   liveins: $rax, $rdx, $r14
   ; CHECK:   EH_LABEL <mcsymbol .Ltmp2>
-  ; CHECK-DAG:   $r14 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
-  ; CHECK-DAG:   $rbx = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load 8 from %stack.1)
+  ; CHECK-DAG:   $r14 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+  ; CHECK-DAG:   $rbx = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
   ; CHECK:   $rax = COPY killed renamable $r14
   ; CHECK:   RET 0, $rax
   bb.0.entry:

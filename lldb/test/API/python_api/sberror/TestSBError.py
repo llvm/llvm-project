@@ -2,9 +2,8 @@
 
 from lldbsuite.test.lldbtest import *
 
-class TestSBError(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
+class TestSBError(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_generic_error(self):

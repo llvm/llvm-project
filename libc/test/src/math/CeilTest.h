@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/FPUtil/TestHelpers.h"
+#include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class CeilTest : public __llvm_libc::testing::Test {
+template <typename T>
+class CeilTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -23,10 +25,10 @@ public:
 
   void testSpecialNumbers(CeilFunc func) {
     EXPECT_FP_EQ(zero, func(zero));
-    EXPECT_FP_EQ(negZero, func(negZero));
+    EXPECT_FP_EQ(neg_zero, func(neg_zero));
 
     EXPECT_FP_EQ(inf, func(inf));
-    EXPECT_FP_EQ(negInf, func(negInf));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf));
 
     EXPECT_FP_EQ(aNaN, func(aNaN));
   }
@@ -64,10 +66,10 @@ public:
   }
 
   void testRange(CeilFunc func) {
-    constexpr UIntType count = 10000000;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
-      T x = T(FPBits(v));
+    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      T x = FPBits(v).get_val();
       if (isnan(x) || isinf(x))
         continue;
 

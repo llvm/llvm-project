@@ -1,6 +1,9 @@
 ; RUN: llc < %s -filetype=obj -o %t.o
 ; RUN: llvm-pdbutil dump -types %t.o | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj -o %t.o
+; RUN: llvm-pdbutil dump -types %t.o | FileCheck %s
+
 ; C++ source:
 ; // Note that MSVC doesn't emit anything about WrapTypedef or WrapTypedef::Inner!
 ; struct WrapTypedef {
@@ -63,11 +66,11 @@ entry:
   %v3 = alloca %"class.WrapClass::Inner", align 4
   %v4 = alloca i32, align 4
   %v5 = alloca %"union.WrapUnion::Inner", align 4
-  call void @llvm.dbg.declare(metadata i32* %v1, metadata !19, metadata !DIExpression()), !dbg !23
-  call void @llvm.dbg.declare(metadata %"struct.WrapStruct::Inner"* %v2, metadata !24, metadata !DIExpression()), !dbg !30
-  call void @llvm.dbg.declare(metadata %"class.WrapClass::Inner"* %v3, metadata !31, metadata !DIExpression()), !dbg !37
-  call void @llvm.dbg.declare(metadata i32* %v4, metadata !38, metadata !DIExpression()), !dbg !39
-  call void @llvm.dbg.declare(metadata %"union.WrapUnion::Inner"* %v5, metadata !40, metadata !DIExpression()), !dbg !48
+  call void @llvm.dbg.declare(metadata ptr %v1, metadata !19, metadata !DIExpression()), !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %v2, metadata !24, metadata !DIExpression()), !dbg !30
+  call void @llvm.dbg.declare(metadata ptr %v3, metadata !31, metadata !DIExpression()), !dbg !37
+  call void @llvm.dbg.declare(metadata ptr %v4, metadata !38, metadata !DIExpression()), !dbg !39
+  call void @llvm.dbg.declare(metadata ptr %v5, metadata !40, metadata !DIExpression()), !dbg !48
   ret void, !dbg !49
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt -o %t %s -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -thinlto-bc -verify-assumption-cache
+; RUN: opt -o %t %s -passes=instcombine,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -thinlto-bc -verify-assumption-cache
 ; RUN: llvm-dis -o - %t | FileCheck %s
 
 ; Test that the simplifycfg pass correctly updates the assumption cache
@@ -18,12 +18,12 @@ target triple = "x86_64-unknown-linux-gnu"
 %class.F = type { i8 }
 %class.B = type { i8 }
 %class.A = type { %class.C }
-%class.C = type { i32 (...)** }
+%class.C = type { ptr }
 
-define void @foo(%class.F* %this, %class.B* %out) {
+define void @foo(ptr %this, ptr %out) {
 entry:
-  %call = tail call i32 @_ZNK1F5beginEv(%class.F* %this)
-  %call2 = tail call i32 @_ZNK1F3endEv(%class.F* %this)
+  %call = tail call i32 @_ZNK1F5beginEv(ptr %this)
+  %call2 = tail call i32 @_ZNK1F3endEv(ptr %this)
   %cmp.i22 = icmp eq i32 %call, %call2
   br i1 %cmp.i22, label %while.end, label %while.body.preheader
 
@@ -32,20 +32,18 @@ while.body.preheader:
 
 while.body:
   %frame_node.sroa.0.023 = phi i32 [ %inc.i, %_ZN10unique_ptrD2Ev.exit ], [ %call, %while.body.preheader ]
-  %call8 = tail call i8* @_Znwm(i64 8)
+  %call8 = tail call ptr @_Znwm(i64 8)
   %inc.i = add nsw i32 %frame_node.sroa.0.023, 1
   %cmp = icmp eq i32 %inc.i, %call2
   br i1 %cmp, label %_ZN10unique_ptrD2Ev.exit, label %if.then
 
 if.then:
-  tail call void @_ZN1B6appendEv(%class.B* %out)
+  tail call void @_ZN1B6appendEv(ptr %out)
   br label %_ZN10unique_ptrD2Ev.exit
 
 _ZN10unique_ptrD2Ev.exit:
-  %x1 = bitcast i8* %call8 to void (%class.A*)***
-  %vtable.i.i = load void (%class.A*)**, void (%class.A*)*** %x1, align 8
-  %x2 = bitcast void (%class.A*)** %vtable.i.i to i8*
-  %x3 = tail call i1 @llvm.type.test(i8* %x2, metadata !"foo")
+  %vtable.i.i = load ptr, ptr %call8, align 8
+  %x3 = tail call i1 @llvm.type.test(ptr %vtable.i.i, metadata !"foo")
   ; CHECK: call void @llvm.assume
   ; CHECK: call void @llvm.assume
   tail call void @llvm.assume(i1 %x3) #5
@@ -58,21 +56,21 @@ while.end:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
-declare i32 @_ZNK1F5beginEv(%class.F*)
+declare i32 @_ZNK1F5beginEv(ptr)
 
-declare i32 @_ZNK1F3endEv(%class.F*)
+declare i32 @_ZNK1F3endEv(ptr)
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1)
 
-declare noalias nonnull i8* @_Znwm(i64)
+declare noalias nonnull ptr @_Znwm(i64)
 
-declare void @_ZN1B6appendEv(%class.B*)
+declare void @_ZN1B6appendEv(ptr)
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 
 declare void @llvm.assume(i1)
 

@@ -10,9 +10,6 @@ command interpreter (we refer to this for brevity as the embedded interpreter).
 Of course, in this context it has full access to the LLDB API - with some
 additional conveniences we will call out in the FAQ.
 
-.. contents::
-   :local:
-
 Documentation
 --------------
 
@@ -101,32 +98,32 @@ variables are:
 +-------------------+---------------------+-------------------------------------+-------------------------------------------------------------------------------------+
 | Variable          | Type                | Equivalent                          | Description                                                                         |
 +-------------------+---------------------+-------------------------------------+-------------------------------------------------------------------------------------+
-| `lldb.debugger`   | `lldb.SBDebugger`   | `SBTarget.GetDebugger`              | Contains the debugger object whose `script` command was invoked.                    |
+| ``lldb.debugger`` | `lldb.SBDebugger`   | `SBTarget.GetDebugger`              | Contains the debugger object whose ``script`` command was invoked.                  |
 |                   |                     |                                     | The `lldb.SBDebugger` object owns the command interpreter                           |
 |                   |                     |                                     | and all the targets in your debug session.  There will always be a                  |
 |                   |                     |                                     | Debugger in the embedded interpreter.                                               |
 +-------------------+---------------------+-------------------------------------+-------------------------------------------------------------------------------------+
-| `lldb.target`     | `lldb.SBTarget`     | `SBDebugger.GetSelectedTarget`      | Contains the currently selected target - for instance the one made with the         |
-|                   |                     |                                     | `file` or selected by the `target select <target-index>` command.                   |
+| ``lldb.target``   | `lldb.SBTarget`     | `SBDebugger.GetSelectedTarget`      | Contains the currently selected target - for instance the one made with the         |
+|                   |                     |                                     | ``file`` or selected by the ``target select <target-index>`` command.               |
 |                   |                     | `SBProcess.GetTarget`               | The `lldb.SBTarget` manages one running process, and all the executable             |
 |                   |                     |                                     | and debug files for the process.                                                    |
 +-------------------+---------------------+-------------------------------------+-------------------------------------------------------------------------------------+
-| `lldb.process`    | `lldb.SBProcess`    | `SBTarget.GetProcess`               | Contains the process of the currently selected target.                              |
+| ``lldb.process``  | `lldb.SBProcess`    | `SBTarget.GetProcess`               | Contains the process of the currently selected target.                              |
 |                   |                     |                                     | The `lldb.SBProcess` object manages the threads and allows access to                |
 |                   |                     | `SBThread.GetProcess`               | memory for the process.                                                             |
 +-------------------+---------------------+-------------------------------------+-------------------------------------------------------------------------------------+
-| `lldb.thread`     | `lldb.SBThread`     | `SBProcess.GetSelectedThread`       | Contains the currently selected thread.                                             |
+| ``lldb.thread``   | `lldb.SBThread`     | `SBProcess.GetSelectedThread`       | Contains the currently selected thread.                                             |
 |                   |                     |                                     | The `lldb.SBThread` object manages the stack frames in that thread.                 |
 |                   |                     | `SBFrame.GetThread`                 | A thread is always selected in the command interpreter when a target stops.         |
-|                   |                     |                                     | The `thread select <thread-index>` command can be used to change the                |
+|                   |                     |                                     | The ``thread select <thread-index>`` command can be used to change the              |
 |                   |                     |                                     | currently selected thread.  So as long as you have a stopped process, there will be |
 |                   |                     |                                     | some selected thread.                                                               |
 +-------------------+---------------------+-------------------------------------+-------------------------------------------------------------------------------------+
-| `lldb.frame`      | `lldb.SBFrame`      | `SBThread.GetSelectedFrame`         | Contains the currently selected stack frame.                                        |
+| ``lldb.frame``    | `lldb.SBFrame`      | `SBThread.GetSelectedFrame`         | Contains the currently selected stack frame.                                        |
 |                   |                     |                                     | The `lldb.SBFrame` object manage the stack locals and the register set for          |
 |                   |                     |                                     | that stack.                                                                         |
 |                   |                     |                                     | A stack frame is always selected in the command interpreter when a target stops.    |
-|                   |                     |                                     | The `frame select <frame-index>` command can be used to change the                  |
+|                   |                     |                                     | The ``frame select <frame-index>`` command can be used to change the                |
 |                   |                     |                                     | currently selected frame.  So as long as you have a stopped process, there will     |
 |                   |                     |                                     | be some selected frame.                                                             |
 +-------------------+---------------------+-------------------------------------+-------------------------------------------------------------------------------------+
@@ -141,7 +138,7 @@ interpreter. There is no guarantee on their value in any other situation, hence
 you should not use them when defining Python formatters, breakpoint scripts and
 commands (or any other Python extension point that LLDB provides). For the
 latter you'll be passed an `SBDebugger`, `SBTarget`, `SBProcess`, `SBThread` or
-`SBframe` instance and you can use the functions from the "Equivalent" column
+`SBFrame` instance and you can use the functions from the "Equivalent" column
 to navigate between them.
 
 As a rationale for such behavior, consider that lldb can run in a multithreaded
@@ -196,20 +193,20 @@ or:
 +-------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
 | Argument          | Type                          | Description                                                                                                                               |
 +-------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
-| `frame`           | `lldb.SBFrame`                | The current stack frame where the breakpoint got hit.                                                                                     |
+| ``frame``         | `lldb.SBFrame`                | The current stack frame where the breakpoint got hit.                                                                                     |
 |                   |                               | The object will always be valid.                                                                                                          |
-|                   |                               | This `frame` argument might *not* match the currently selected stack frame found in the `lldb` module global variable `lldb.frame`.       |
+|                   |                               | This ``frame`` argument might *not* match the currently selected stack frame found in the `lldb` module global variable ``lldb.frame``.   |
 +-------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
-| `bp_loc`          | `lldb.SBBreakpointLocation`   | The breakpoint location that just got hit. Breakpoints are represented by `lldb.SBBreakpoint`                                             |
+| ``bp_loc``        | `lldb.SBBreakpointLocation`   | The breakpoint location that just got hit. Breakpoints are represented by `lldb.SBBreakpoint`                                             |
 |                   |                               | objects. These breakpoint objects can have one or more locations. These locations                                                         |
 |                   |                               | are represented by `lldb.SBBreakpointLocation` objects.                                                                                   |
 +-------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
-| `extra_args`      | `lldb.SBStructuredData`       | `Optional` If your breakpoint callback function takes this extra parameter, then when the callback gets added to a breakpoint, its        |
+| ``extra_args``    | `lldb.SBStructuredData`       | ``Optional`` If your breakpoint callback function takes this extra parameter, then when the callback gets added to a breakpoint, its      |
 |                   |                               | contents can parametrize this use of the callback.  For instance, instead of writing a callback that stops when the caller is "Foo",      |
-|                   |                               | you could take the function name from a field in the `extra_args`, making the callback more general.  The `-k` and `-v` options           |
-|                   |                               | to `breakpoint command add` will be passed as a Dictionary in the `extra_args` parameter, or you can provide it with the SB API's.        |
+|                   |                               | you could take the function name from a field in the ``extra_args``, making the callback more general.  The ``-k`` and ``-v`` options     |
+|                   |                               | to ``breakpoint command add`` will be passed as a Dictionary in the ``extra_args`` parameter, or you can provide it with the SB API's.    |
 +-------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
-| `internal_dict`   | `dict`                        | The python session dictionary as a standard python dictionary object.                                                                     |
+| ``internal_dict`` | ``dict``                      | The python session dictionary as a standard python dictionary object.                                                                     |
 +-------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
 
 Optionally, a Python breakpoint command can return a value. Returning False
@@ -345,40 +342,40 @@ The custom Resolver is provided as a Python class with the following methods:
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
 | Name               | Arguments                             | Description                                                                                                      |
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
-| `__init__`         | `bkpt: lldb.SBBreakpoint`             | This is the constructor for the new Resolver.                                                                    |
-|                    | `extra_args: lldb.SBStructuredData`   |                                                                                                                  |
+| ``__init__``       | ``bkpt``:`lldb.SBBreakpoint`          | This is the constructor for the new Resolver.                                                                    |
+|                    | ``extra_args``:`lldb.SBStructuredData`|                                                                                                                  |
 |                    |                                       |                                                                                                                  |
-|                    |                                       | `bkpt` is the breakpoint owning this Resolver.                                                                   |
+|                    |                                       | ``bkpt`` is the breakpoint owning this Resolver.                                                                 |
 |                    |                                       |                                                                                                                  |
 |                    |                                       |                                                                                                                  |
-|                    |                                       | `extra_args` is an SBStructuredData object that the user can pass in when creating instances of this             |
+|                    |                                       | ``extra_args`` is an `SBStructuredData` object that the user can pass in when creating instances of this         |
 |                    |                                       | breakpoint.  It is not required, but is quite handy.  For instance if you were implementing a breakpoint on some |
 |                    |                                       | symbol name, you could write a generic symbol name based Resolver, and then allow the user to pass               |
 |                    |                                       | in the particular symbol in the extra_args                                                                       |
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
-| `__callback__`     | `sym_ctx: lldb.SBSymbolContext`       | This is the Resolver callback.                                                                                   |
-|                    |                                       | The `sym_ctx` argument will be filled with the current stage                                                     |
+| ``__callback__``   | ``sym_ctx``:`lldb.SBSymbolContext`    | This is the Resolver callback.                                                                                   |
+|                    |                                       | The ``sym_ctx`` argument will be filled with the current stage                                                   |
 |                    |                                       | of the search.                                                                                                   |
 |                    |                                       |                                                                                                                  |
 |                    |                                       |                                                                                                                  |
 |                    |                                       | For instance, if you asked for a search depth of lldb.eSearchDepthCompUnit, then the                             |
 |                    |                                       | target, module and compile_unit fields of the sym_ctx will be filled.  The callback should look just in the      |
-|                    |                                       | context passed in `sym_ctx` for new locations.  If the callback finds an address of interest, it                 |
-|                    |                                       | can add it to the breakpoint with the `SBBreakpoint::AddLocation` method, using the breakpoint passed            |
-|                    |                                       | in to the `__init__` method.                                                                                     |
+|                    |                                       | context passed in ``sym_ctx`` for new locations.  If the callback finds an address of interest, it               |
+|                    |                                       | can add it to the breakpoint with the `SBBreakpoint.AddLocation` method, using the breakpoint passed             |
+|                    |                                       | in to the ``__init__`` method.                                                                                   |
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
-| `__get_depth__`    | `None`                                | Specify the depth at which you wish your callback to get called.  The currently supported options are:           |
+| ``__get_depth__``  | ``None``                              | Specify the depth at which you wish your callback to get called.  The currently supported options are:           |
 |                    |                                       |                                                                                                                  |
-|                    |                                       | lldb.eSearchDepthModule                                                                                          |
-|                    |                                       | lldb.eSearchDepthCompUnit                                                                                        |
-|                    |                                       | lldb.eSearchDepthFunction                                                                                        |
+|                    |                                       | `lldb.eSearchDepthModule`                                                                                        |
+|                    |                                       | `lldb.eSearchDepthCompUnit`                                                                                      |
+|                    |                                       | `lldb.eSearchDepthFunction`                                                                                      |
 |                    |                                       |                                                                                                                  |
 |                    |                                       | For instance, if you are looking                                                                                 |
 |                    |                                       | up symbols, which are stored at the Module level, you will want to get called back module by module.             |
 |                    |                                       | So you would want to return `lldb.eSearchDepthModule`.  This method is optional.  If not provided the search     |
 |                    |                                       | will be done at Module depth.                                                                                    |
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
-| `get_short_help`   | `None`                                | This is an optional method.  If provided, the returned string will be printed at the beginning of                |
+| ``get_short_help`` | ``None``                              | This is an optional method.  If provided, the returned string will be printed at the beginning of                |
 |                    |                                       | the description for this breakpoint.                                                                             |
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
 
@@ -442,7 +439,7 @@ And for a MUCH fuller discussion of the whole state machine, see:
 https://github.com/llvm/llvm-project/blob/main/lldb/include/lldb/Target/ThreadPlan.h
 
 If you are reading those comments it is useful to know that scripted thread
-plans are set to be "MasterPlans", and not "OkayToDiscard".
+plans are set to be "ControllingPlans", and not "OkayToDiscard".
 
 To implement a scripted step, you define a python class that has the following
 methods:
@@ -450,21 +447,21 @@ methods:
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
 | Name              | Arguments                          | Description                                                                           |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
-| `__init__`        | `thread_plan: lldb.SBThreadPlan`   | This is the underlying SBThreadPlan that is pushed onto the plan stack.               |
+| ``__init__``      | ``thread_plan``:`lldb.SBThreadPlan`| This is the underlying `SBThreadPlan` that is pushed onto the plan stack.             |
 |                   |                                    | You will want to store this away in an ivar.  Also, if you are going to               |
 |                   |                                    | use one of the canned thread plans, you can queue it at this point.                   |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
-| `explains_stop`   | `event: lldb.SBEvent`              | Return True if this stop is part of your thread plans logic, false otherwise.         |
+| ``explains_stop`` | ``event``: `lldb.SBEvent`          | Return True if this stop is part of your thread plans logic, false otherwise.         |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
-| `is_stale`        | `None`                             | If your plan is no longer relevant (for instance, you were                            |
+| ``is_stale``      | ``None``                           | If your plan is no longer relevant (for instance, you were                            |
 |                   |                                    | stepping in a particular stack frame, but some other operation                        |
 |                   |                                    | pushed that frame off the stack) return True and your plan will                       |
 |                   |                                    | get popped.                                                                           |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
-| `should_step`     | `None`                             | Return True if you want lldb to instruction step one instruction,                     |
+| ``should_step``   | ``None``                           | Return ``True`` if you want lldb to instruction step one instruction,                 |
 |                   |                                    | or False to continue till the next breakpoint is hit.                                 |
 +-------------------+------------------------------------+---------------------------------------------------------------------------------------+
-| `should_stop`     | `event: lldb.SBEvent`              | If your plan wants to stop and return control to the user at this point, return True. |
+| ``should_stop``   | ``event``: `lldb.SBEvent`          | If your plan wants to stop and return control to the user at this point, return True. |
 |                   |                                    | If your plan is done at this point, call SetPlanComplete on your                      |
 |                   |                                    | thread plan instance.                                                                 |
 |                   |                                    | Also, do any work you need here to set up the next stage of stepping.                 |
@@ -494,14 +491,17 @@ which will work like all the natively defined lldb commands. This provides a
 very flexible and easy way to extend LLDB to meet your debugging requirements.
 
 To write a python function that implements a new LLDB command define the
-function to take four arguments as follows:
+function to take five arguments as follows:
 
 ::
 
-  def command_function(debugger, command, result, internal_dict):
+  def command_function(debugger, command, exe_ctx, result, internal_dict):
       # Your code goes here
 
-Optionally, you can also provide a Python docstring, and LLDB will use it when providing help for your command, as in:
+The meaning of the arguments is given in the table below.
+
+If you provide a Python docstring in your command function LLDB will use it
+when providing "long help" for your command, as in:
 
 ::
 
@@ -509,37 +509,42 @@ Optionally, you can also provide a Python docstring, and LLDB will use it when p
       """This command takes a lot of options and does many fancy things"""
       # Your code goes here
 
-Since lldb 3.5.2, LLDB Python commands can also take an SBExecutionContext as an
-argument. This is useful in cases where the command's notion of where to act is
-independent of the currently-selected entities in the debugger.
+though providing help can also be done programmatically (see below).
 
-This feature is enabled if the command-implementing function can be recognized
-as taking 5 arguments, or a variable number of arguments, and it alters the
-signature as such:
+Prior to lldb 3.5.2 (April 2015), LLDB Python command definitions didn't take the SBExecutionContext
+argument. So you may still see commands where the command definition is:
 
 ::
 
-  def command_function(debugger, command, exe_ctx, result, internal_dict):
+  def command_function(debugger, command, result, internal_dict):
       # Your code goes here
+
+Using this form is strongly discouraged because it can only operate on the "currently selected"
+target, process, thread, frame.  The command will behave as expected when run
+directly on the command line.  But if the command is used in a stop-hook, breakpoint
+callback, etc. where the response to the callback determines whether we will select
+this or that particular process/frame/thread, the global "currently selected"
+entity is not necessarily the one the callback is meant to handle.  In that case, this
+command definition form can't do the right thing.
 
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 | Argument          | Type                           | Description                                                                                                                      |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
-| `debugger`        | `lldb.SBDebugger`              | The current debugger object.                                                                                                     |
+| ``debugger``      | `lldb.SBDebugger`              | The current debugger object.                                                                                                     |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
-| `command`         | `python string`                | A python string containing all arguments for your command. If you need to chop up the arguments                                  |
-|                   |                                | try using the `shlex` module's shlex.split(command) to properly extract the                                                      |
+| ``command``       | ``python string``              | A python string containing all arguments for your command. If you need to chop up the arguments                                  |
+|                   |                                | try using the ``shlex`` module's ``shlex.split(command)`` to properly extract the                                                |
 |                   |                                | arguments.                                                                                                                       |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
-| `exe_ctx`         | `lldb.SBExecutionContext`      | An execution context object carrying around information on the inferior process' context in which the command is expected to act |
+| ``exe_ctx``       | `lldb.SBExecutionContext`      | An execution context object carrying around information on the inferior process' context in which the command is expected to act |
 |                   |                                |                                                                                                                                  |
 |                   |                                | *Optional since lldb 3.5.2, unavailable before*                                                                                  |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
-| `result`          | `lldb.SBCommandReturnObject`   | A return object which encapsulates success/failure information for the command and output text                                   |
+| ``result``        | `lldb.SBCommandReturnObject`   | A return object which encapsulates success/failure information for the command and output text                                   |
 |                   |                                | that needs to be printed as a result of the command. The plain Python "print" command also works but                             |
 |                   |                                | text won't go in the result by default (it is useful as a temporary logging facility).                                           |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
-| `internal_dict`   | `python dict object`           | The dictionary for the current embedded script session which contains all variables                                              |
+| ``internal_dict`` | ``python dict object``         | The dictionary for the current embedded script session which contains all variables                                              |
 |                   |                                | and functions.                                                                                                                   |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 
@@ -584,26 +589,33 @@ the form:
 where debugger and internal_dict are as above, that function will get run when
 the module is loaded allowing you to add whatever commands you want into the
 current debugger. Note that this function will only be run when using the LLDB
-command command script import, it will not get run if anyone imports your
-module from another module. If you want to always run code when your module is
-loaded from LLDB or when loaded via an import statement in python code you can
-test the lldb.debugger object, since you imported the module at the top of the
-python ls.py module. This test must be in code that isn't contained inside of
-any function or class, just like the standard test for __main__ like all python
-modules usually do. Sample code would look like:
+command ``command script import``, it will not get run if anyone imports your
+module from another module.
+
+The standard test for ``__main__``, like many python modules do, is useful for
+creating scripts that can be run from the command line. However, for command
+line scripts, the debugger instance must be created manually. Sample code would
+look like:
 
 ::
 
   if __name__ == '__main__':
+      # Initialize the debugger before making any API calls.
+      lldb.SBDebugger.Initialize()
       # Create a new debugger instance in your module if your module
       # can be run from the command line. When we run a script from
       # the command line, we won't have any debugger object in
       # lldb.debugger, so we can just create it if it will be needed
-      lldb.debugger = lldb.SBDebugger.Create()
-  elif lldb.debugger:
-      # Module is being run inside the LLDB interpreter
-      lldb.debugger.HandleCommand('command script add -f ls.ls ls')
-      print 'The "ls" python command has been installed and is ready for use.'
+      debugger = lldb.SBDebugger.Create()
+
+      # Next, do whatever work this module should do when run as a command.
+      # ...
+
+      # Finally, dispose of the debugger you just made.
+      lldb.SBDebugger.Destroy(debugger)
+      # Terminate the debug session
+      lldb.SBDebugger.Terminate()
+
 
 Now we can create a module called ls.py in the file ~/ls.py that will implement
 a function that can be used by LLDB's python command code:
@@ -629,13 +641,58 @@ Now we can load the module into LLDB and use it
 
 ::
 
-  % lldb
+  $ lldb
   (lldb) command script import ~/ls.py
   The "ls" python command has been installed and is ready for use.
   (lldb) ls -l /tmp/
   total 365848
   -rw-r--r--@  1 someuser  wheel         6148 Jan 19 17:27 .DS_Store
   -rw-------   1 someuser  wheel         7331 Jan 19 15:37 crash.log
+
+You can also make "container" commands to organize the commands you are adding to
+lldb.  Most of the lldb built-in commands structure themselves this way, and using
+a tree structure has the benefit of leaving the one-word command space free for user
+aliases.  It can also make it easier to find commands if you are adding more than
+a few of them.  Here's a trivial example of adding two "utility" commands into a
+"my-utilities" container:
+
+::
+
+  #!/usr/bin/env python
+
+  import lldb
+
+  def first_utility(debugger, command, result, internal_dict):
+      print("I am the first utility")
+
+  def second_utility(debugger, command, result, internal_dict):
+      print("I am the second utility")
+
+  # And the initialization code to add your commands
+  def __lldb_init_module(debugger, internal_dict):
+      debugger.HandleCommand('command container add -h "A container for my utilities" my-utilities')
+      debugger.HandleCommand('command script add -f my_utilities.first_utility -h "My first utility" my-utilities first')
+      debugger.HandleCommand('command script add -f my_utilities.second_utility -h "My second utility" my-utilities second')
+      print('The "my-utilities" python command has been installed and its subcommands are ready for use.')
+
+Then your new commands are available under the my-utilities node:
+
+::
+
+  (lldb) help my-utilities
+  A container for my utilities
+
+  Syntax: my-utilities
+
+  The following subcommands are supported:
+
+      first  -- My first utility  Expects 'raw' input (see 'help raw-input'.)
+      second -- My second utility  Expects 'raw' input (see 'help raw-input'.)
+
+  For more help on any particular subcommand, type 'help <command> <subcommand>'.
+  (lldb) my-utilities first
+  I am the first utility
+
 
 A more interesting template has been created in the source repository that can
 help you to create lldb command quickly:
@@ -673,7 +730,7 @@ that goal:
   Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.
   >>> def pofoo_funct(debugger, command, result, internal_dict):
   ...	cmd = "po [ModifyString(" + command + ") capitalizedString]"
-  ...	lldb.debugger.HandleCommand(cmd)
+  ...	debugger.HandleCommand(cmd)
   ...
   >>> ^D
   (lldb) command script add pofoo -f pofoo_funct
@@ -706,7 +763,7 @@ For sh and bash:
 
 ::
 
-  % export PYTHONPATH=`lldb -P`
+  $ export PYTHONPATH=`lldb -P`
 
 Alternately, you can append the LLDB Python directory to the sys.path list
 directly in your Python code before importing the lldb module.
@@ -808,12 +865,13 @@ functions 'read', 'write' and 'close' follows:
     def get_recognized_arguments(self, frame):
       if frame.name in ["read", "write", "close"]:
         fd = frame.EvaluateExpression("$arg1").unsigned
-        value = lldb.target.CreateValueFromExpression("fd", "(int)%d" % fd)
+        target = frame.thread.process.target
+        value = target.CreateValueFromExpression("fd", "(int)%d" % fd)
         return [value]
       return []
 
-The file containing this implementation can be imported via 'command script
-import' and then we can register this recognizer with 'frame recognizer add'.
+The file containing this implementation can be imported via ``command script import``
+and then we can register this recognizer with ``frame recognizer add``.
 It's important to restrict the recognizer to the libc library (which is
 libsystem_kernel.dylib on macOS) to avoid matching functions with the same name
 in other modules:
@@ -835,8 +893,8 @@ When the program is stopped at the beginning of the 'read' function in libc, we 
   (lldb) frame variable
   (int) fd = 3
 
-Writing Target Stop-Hooks in Python:
-------------------------------------
+Writing Target Stop-Hooks in Python
+-----------------------------------
 
 Stop hooks fire whenever the process stops just before control is returned to the
 user.  Stop hooks can either be a set of lldb command-line commands, or can
@@ -851,20 +909,20 @@ To add a Python-based stop hook, first define a class with the following methods
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
 | Name               | Arguments                             | Description                                                                                                      |
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
-| `__init__`         | `target: lldb.SBTarget`               | This is the constructor for the new stop-hook.                                                                   |
-|                    | `extra_args: lldb.SBStructuredData`   |                                                                                                                  |
+| ``__init__``       | ``target: lldb.SBTarget``             | This is the constructor for the new stop-hook.                                                                   |
+|                    | ``extra_args: lldb.SBStructuredData`` |                                                                                                                  |
 |                    |                                       |                                                                                                                  |
-|                    |                                       | `target` is the SBTarget to which the stop hook is added.                                                        |
+|                    |                                       | ``target`` is the SBTarget to which the stop hook is added.                                                      |
 |                    |                                       |                                                                                                                  |
-|                    |                                       | `extra_args` is an SBStructuredData object that the user can pass in when creating instances of this             |
+|                    |                                       | ``extra_args`` is an SBStructuredData object that the user can pass in when creating instances of this           |
 |                    |                                       | breakpoint.  It is not required, but allows for reuse of stop-hook classes.                                      |
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
-| `handle_stop`      | `exe_ctx: lldb.SBExecutionContext`    | This is the called when the target stops.                                                                        |
-|                    | `stream: lldb.SBStream`               |                                                                                                                  |
-|                    |                                       | `exe_ctx` argument will be filled with the current stop point for which the stop hook is                         |
+| ``handle_stop``    | ``exe_ctx: lldb.SBExecutionContext``  | This is the called when the target stops.                                                                        |
+|                    | ``stream: lldb.SBStream``             |                                                                                                                  |
+|                    |                                       | ``exe_ctx`` argument will be filled with the current stop point for which the stop hook is                       |
 |                    |                                       | being evaluated.                                                                                                 |
 |                    |                                       |                                                                                                                  |
-|                    |                                       | `stream` an lldb.SBStream, anything written to this stream will be written to the debugger console.              |
+|                    |                                       | ``stream`` an lldb.SBStream, anything written to this stream will be written to the debugger console.            |
 |                    |                                       |                                                                                                                  |
 |                    |                                       | The return value is a "Should Stop" vote from this thread.  If the method returns either True or no return       |
 |                    |                                       | this thread votes to stop.  If it returns False, then the thread votes to continue after all the stop-hooks      |

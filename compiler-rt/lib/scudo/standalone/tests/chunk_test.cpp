@@ -21,7 +21,7 @@ static void initChecksum(void) {
     scudo::HashAlgorithm = scudo::Checksum::HardwareCRC32;
 }
 
-TEST(ScudoChunkTest, ChunkBasic) {
+TEST(ScudoChunkDeathTest, ChunkBasic) {
   initChecksum();
   const scudo::uptr Size = 0x100U;
   scudo::Chunk::UnpackedHeader Header = {};
@@ -37,30 +37,7 @@ TEST(ScudoChunkTest, ChunkBasic) {
   free(Block);
 }
 
-TEST(ScudoChunkTest, ChunkCmpXchg) {
-  initChecksum();
-  const scudo::uptr Size = 0x100U;
-  scudo::Chunk::UnpackedHeader OldHeader = {};
-  OldHeader.OriginOrWasZeroed = scudo::Chunk::Origin::Malloc;
-  OldHeader.ClassId = 0x42U;
-  OldHeader.SizeOrUnusedBytes = Size;
-  OldHeader.State = scudo::Chunk::State::Allocated;
-  void *Block = malloc(HeaderSize + Size);
-  void *P = reinterpret_cast<void *>(reinterpret_cast<scudo::uptr>(Block) +
-                                     HeaderSize);
-  scudo::Chunk::storeHeader(Cookie, P, &OldHeader);
-  memset(P, 'A', Size);
-  scudo::Chunk::UnpackedHeader NewHeader = OldHeader;
-  NewHeader.State = scudo::Chunk::State::Quarantined;
-  scudo::Chunk::compareExchangeHeader(Cookie, P, &NewHeader, &OldHeader);
-  NewHeader = {};
-  EXPECT_TRUE(scudo::Chunk::isValid(Cookie, P, &NewHeader));
-  EXPECT_EQ(NewHeader.State, scudo::Chunk::State::Quarantined);
-  EXPECT_FALSE(scudo::Chunk::isValid(InvalidCookie, P, &NewHeader));
-  free(Block);
-}
-
-TEST(ScudoChunkTest, CorruptHeader) {
+TEST(ScudoChunkDeathTest, CorruptHeader) {
   initChecksum();
   const scudo::uptr Size = 0x100U;
   scudo::Chunk::UnpackedHeader Header = {};

@@ -1,4 +1,5 @@
-; RUN: opt -sroa -S -o - %s | FileCheck %s
+; RUN: opt -passes='sroa' -S -o - %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes='sroa' -S -o - %s | FileCheck %s
 ; Generated from clang -c  -O2 -g -target x86_64-pc-windows-msvc
 ; struct A {
 ;   int _Myval2;
@@ -18,7 +19,7 @@
 ;     return Tmp;
 ;   }
 ; } Dd;
-; void *operator new(size_t, void *);
+; ptr operator new(size_t, ptr);
 ; struct F {
 ;   F(D Err) : HasError() {
 ;     C *e = (C *)(ErrorStorage.buffer);
@@ -37,18 +38,16 @@ source_filename = "test.ll"
 define void @"\01?fn3@@YAXXZ"() local_unnamed_addr !dbg !6 {
 entry:
   %tmp = alloca %struct.F, align 8
-  %0 = bitcast %struct.F* %tmp to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %0)
-  call void @llvm.dbg.declare(metadata %struct.F* %tmp, metadata !10, metadata !DIExpression()), !dbg !14
+  call void @llvm.lifetime.start.p0(i64 16, ptr %tmp)
+  call void @llvm.dbg.declare(metadata ptr %tmp, metadata !10, metadata !DIExpression()), !dbg !14
   ; CHECK-NOT: !DIExpression(DW_OP_LLVM_fragment, 32, 96)
   ; CHECK: call void @llvm.dbg.value(metadata i32 0, metadata !10, metadata !DIExpression())
-  %_Myval2.i.i.i.i.i = bitcast %struct.F* %tmp to i32*
-  store i32 0, i32* %_Myval2.i.i.i.i.i, align 8
+  store i32 0, ptr %tmp, align 8
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1

@@ -25,11 +25,13 @@
 #include "clang/Lex/Token.h"
 #include "clang/Lex/VariadicMacroSupport.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include <cassert>
 #include <cstring>
+#include <optional>
 
 using namespace clang;
 
@@ -203,7 +205,7 @@ void TokenLexer::stringifyVAOPTContents(
       assert(CurTokenIdx != 0 &&
              "Can not have __VAOPT__ contents begin with a ##");
       Token &LHS = VAOPTTokens[CurTokenIdx - 1];
-      pasteTokens(LHS, llvm::makeArrayRef(VAOPTTokens, NumVAOptTokens),
+      pasteTokens(LHS, llvm::ArrayRef(VAOPTTokens, NumVAOptTokens),
                   CurTokenIdx);
       // Replace the token prior to the first ## in this iteration.
       ConcatenatedVAOPTResultToks.back() = LHS;
@@ -247,7 +249,7 @@ void TokenLexer::ExpandFunctionArguments() {
   // we install the newly expanded sequence as the new 'Tokens' list.
   bool MadeChange = false;
 
-  Optional<bool> CalledWithVariadicArguments;
+  std::optional<bool> CalledWithVariadicArguments;
 
   VAOptExpansionContext VCtx(PP);
 
@@ -295,7 +297,7 @@ void TokenLexer::ExpandFunctionArguments() {
       // the closing r_paren of the __VA_OPT__.
       if (!Tokens[I].is(tok::r_paren) || !VCtx.sawClosingParen()) {
         // Lazily expand __VA_ARGS__ when we see the first __VA_OPT__.
-        if (!CalledWithVariadicArguments.hasValue()) {
+        if (!CalledWithVariadicArguments) {
           CalledWithVariadicArguments =
               ActualArgs->invokedWithVariadicArgument(Macro, PP);
         }
@@ -472,11 +474,9 @@ void TokenLexer::ExpandFunctionArguments() {
 
         // If the '##' came from expanding an argument, turn it into 'unknown'
         // to avoid pasting.
-        for (Token &Tok : llvm::make_range(ResultToks.begin() + FirstResult,
-                                           ResultToks.end())) {
+        for (Token &Tok : llvm::drop_begin(ResultToks, FirstResult))
           if (Tok.is(tok::hashhash))
             Tok.setKind(tok::unknown);
-        }
 
         if(ExpandLocStart.isValid()) {
           updateLocForMacroArgTokens(CurTok.getLocation(),
@@ -500,8 +500,7 @@ void TokenLexer::ExpandFunctionArguments() {
           // the first token in a __VA_OPT__ after a ##, delete the ##.
           assert(VCtx.isInVAOpt() && "should only happen inside a __VA_OPT__");
           VCtx.hasPlaceholderAfterHashhashAtStart();
-        }
-        if (RParenAfter)
+        } else if (RParenAfter)
           VCtx.hasPlaceholderBeforeRParen();
       }
       continue;
@@ -567,7 +566,7 @@ void TokenLexer::ExpandFunctionArguments() {
       continue;
     }
 
-    if (RParenAfter)
+    if (RParenAfter && !NonEmptyPasteBefore)
       VCtx.hasPlaceholderBeforeRParen();
 
     // If this is on the RHS of a paste operator, we've already copied the
@@ -723,7 +722,7 @@ bool TokenLexer::Lex(Token &Tok) {
 }
 
 bool TokenLexer::pasteTokens(Token &Tok) {
-  return pasteTokens(Tok, llvm::makeArrayRef(Tokens, NumTokens), CurTokenIdx);
+  return pasteTokens(Tok, llvm::ArrayRef(Tokens, NumTokens), CurTokenIdx);
 }
 
 /// LHSTok is the LHS of a ## operator, and CurTokenIdx is the ##
@@ -971,7 +970,7 @@ TokenLexer::getExpansionLocForMacroDefLoc(SourceLocation loc) const {
   assert(SM.isInSLocAddrSpace(loc, MacroDefStart, MacroDefLength) &&
          "Expected loc to come from the macro definition");
 
-  unsigned relativeOffset = 0;
+  SourceLocation::UIntTy relativeOffset = 0;
   SM.isInSLocAddrSpace(loc, MacroDefStart, MacroDefLength, &relativeOffset);
   return MacroExpansionStart.getLocWithOffset(relativeOffset);
 }
@@ -986,64 +985,79 @@ TokenLexer::getExpansionLocForMacroDefLoc(SourceLocation loc) const {
 /// \arg begin_tokens will be updated to a position past all the found
 /// consecutive tokens.
 static void updateConsecutiveMacroArgTokens(SourceManager &SM,
-                                            SourceLocation InstLoc,
+                                            SourceLocation ExpandLoc,
                                             Token *&begin_tokens,
                                             Token * end_tokens) {
-  assert(begin_tokens < end_tokens);
+  assert(begin_tokens + 1 < end_tokens);
+  SourceLocation BeginLoc = begin_tokens->getLocation();
+  llvm::MutableArrayRef<Token> All(begin_tokens, end_tokens);
+  llvm::MutableArrayRef<Token> Partition;
 
-  SourceLocation FirstLoc = begin_tokens->getLocation();
-  SourceLocation CurLoc = FirstLoc;
+  auto NearLast = [&, Last = BeginLoc](SourceLocation Loc) mutable {
+    // The maximum distance between two consecutive tokens in a partition.
+    // This is an important trick to avoid using too much SourceLocation address
+    // space!
+    static constexpr SourceLocation::IntTy MaxDistance = 50;
+    auto Distance = Loc.getRawEncoding() - Last.getRawEncoding();
+    Last = Loc;
+    return Distance <= MaxDistance;
+  };
 
-  // Compare the source location offset of tokens and group together tokens that
-  // are close, even if their locations point to different FileIDs. e.g.
-  //
-  //  |bar    |  foo | cake   |  (3 tokens from 3 consecutive FileIDs)
-  //  ^                    ^
-  //  |bar       foo   cake|     (one SLocEntry chunk for all tokens)
-  //
-  // we can perform this "merge" since the token's spelling location depends
-  // on the relative offset.
-
-  Token *NextTok = begin_tokens + 1;
-  for (; NextTok < end_tokens; ++NextTok) {
-    SourceLocation NextLoc = NextTok->getLocation();
-    if (CurLoc.isFileID() != NextLoc.isFileID())
-      break; // Token from different kind of FileID.
-
-    int RelOffs;
-    if (!SM.isInSameSLocAddrSpace(CurLoc, NextLoc, &RelOffs))
-      break; // Token from different local/loaded location.
-    // Check that token is not before the previous token or more than 50
-    // "characters" away.
-    if (RelOffs < 0 || RelOffs > 50)
-      break;
-
-    if (CurLoc.isMacroID() && !SM.isWrittenInSameFile(CurLoc, NextLoc))
-      break; // Token from a different macro.
-
-    CurLoc = NextLoc;
+  // Partition the tokens by their FileID.
+  // This is a hot function, and calling getFileID can be expensive, the
+  // implementation is optimized by reducing the number of getFileID.
+  if (BeginLoc.isFileID()) {
+    // Consecutive tokens not written in macros must be from the same file.
+    // (Neither #include nor eof can occur inside a macro argument.)
+    Partition = All.take_while([&](const Token &T) {
+      return T.getLocation().isFileID() && NearLast(T.getLocation());
+    });
+  } else {
+    // Call getFileID once to calculate the bounds, and use the cheaper
+    // sourcelocation-against-bounds comparison.
+    FileID BeginFID = SM.getFileID(BeginLoc);
+    SourceLocation Limit =
+        SM.getComposedLoc(BeginFID, SM.getFileIDSize(BeginFID));
+    Partition = All.take_while([&](const Token &T) {
+      // NOTE: the Limit is included! The lexer recovery only ever inserts a
+      // single token past the end of the FileID, specifically the ) when a
+      // macro-arg containing a comma should be guarded by parentheses.
+      //
+      // It is safe to include the Limit here because SourceManager allocates
+      // FileSize + 1 for each SLocEntry.
+      //
+      // See https://github.com/llvm/llvm-project/issues/60722.
+      return T.getLocation() >= BeginLoc && T.getLocation() <= Limit
+         &&  NearLast(T.getLocation());
+    });
   }
+  assert(!Partition.empty());
 
   // For the consecutive tokens, find the length of the SLocEntry to contain
   // all of them.
-  Token &LastConsecutiveTok = *(NextTok-1);
-  int LastRelOffs = 0;
-  SM.isInSameSLocAddrSpace(FirstLoc, LastConsecutiveTok.getLocation(),
-                           &LastRelOffs);
-  unsigned FullLength = LastRelOffs + LastConsecutiveTok.getLength();
-
+  SourceLocation::UIntTy FullLength =
+      Partition.back().getEndLoc().getRawEncoding() -
+      Partition.front().getLocation().getRawEncoding();
   // Create a macro expansion SLocEntry that will "contain" all of the tokens.
   SourceLocation Expansion =
-      SM.createMacroArgExpansionLoc(FirstLoc, InstLoc,FullLength);
+      SM.createMacroArgExpansionLoc(BeginLoc, ExpandLoc, FullLength);
 
+#ifdef EXPENSIVE_CHECKS
+  assert(llvm::all_of(Partition.drop_front(),
+                      [&SM, ID = SM.getFileID(Partition.front().getLocation())](
+                          const Token &T) {
+                        return ID == SM.getFileID(T.getLocation());
+                      }) &&
+         "Must have the same FIleID!");
+#endif
   // Change the location of the tokens from the spelling location to the new
   // expanded location.
-  for (; begin_tokens < NextTok; ++begin_tokens) {
-    Token &Tok = *begin_tokens;
-    int RelOffs = 0;
-    SM.isInSameSLocAddrSpace(FirstLoc, Tok.getLocation(), &RelOffs);
-    Tok.setLocation(Expansion.getLocWithOffset(RelOffs));
+  for (Token& T : Partition) {
+    SourceLocation::IntTy RelativeOffset =
+        T.getLocation().getRawEncoding() - BeginLoc.getRawEncoding();
+    T.setLocation(Expansion.getLocWithOffset(RelativeOffset));
   }
+  begin_tokens = &Partition.back() + 1;
 }
 
 /// Creates SLocEntries and updates the locations of macro argument
@@ -1056,7 +1070,7 @@ void TokenLexer::updateLocForMacroArgTokens(SourceLocation ArgIdSpellLoc,
                                             Token *end_tokens) {
   SourceManager &SM = PP.getSourceManager();
 
-  SourceLocation InstLoc =
+  SourceLocation ExpandLoc =
       getExpansionLocForMacroDefLoc(ArgIdSpellLoc);
 
   while (begin_tokens < end_tokens) {
@@ -1064,12 +1078,12 @@ void TokenLexer::updateLocForMacroArgTokens(SourceLocation ArgIdSpellLoc,
     if (end_tokens - begin_tokens == 1) {
       Token &Tok = *begin_tokens;
       Tok.setLocation(SM.createMacroArgExpansionLoc(Tok.getLocation(),
-                                                    InstLoc,
+                                                    ExpandLoc,
                                                     Tok.getLength()));
       return;
     }
 
-    updateConsecutiveMacroArgTokens(SM, InstLoc, begin_tokens, end_tokens);
+    updateConsecutiveMacroArgTokens(SM, ExpandLoc, begin_tokens, end_tokens);
   }
 }
 

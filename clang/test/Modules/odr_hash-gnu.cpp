@@ -17,12 +17,12 @@
 // RUN: %clang_cc1 -fsyntax-only -x c++ -std=gnu++11 %t/Inputs/second.h
 
 // Build module map file
-// RUN: echo "module FirstModule {"     >> %t/Inputs/module.map
-// RUN: echo "    header \"first.h\""   >> %t/Inputs/module.map
-// RUN: echo "}"                        >> %t/Inputs/module.map
-// RUN: echo "module SecondModule {"    >> %t/Inputs/module.map
-// RUN: echo "    header \"second.h\""  >> %t/Inputs/module.map
-// RUN: echo "}"                        >> %t/Inputs/module.map
+// RUN: echo "module FirstModule {"     >> %t/Inputs/module.modulemap
+// RUN: echo "    header \"first.h\""   >> %t/Inputs/module.modulemap
+// RUN: echo "}"                        >> %t/Inputs/module.modulemap
+// RUN: echo "module SecondModule {"    >> %t/Inputs/module.modulemap
+// RUN: echo "    header \"second.h\""  >> %t/Inputs/module.modulemap
+// RUN: echo "}"                        >> %t/Inputs/module.modulemap
 
 // Run test
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -x c++ -I%t/Inputs -verify %s -std=gnu++11
@@ -65,9 +65,10 @@ Invalid1 i1;
 // expected-error@first.h:* {{'Types::TypeOfExpr::Invalid1' has different definitions in different modules; first difference is definition in module 'FirstModule' found field 'x' with type 'typeof (1 + 2)' (aka 'int')}}
 // expected-note@second.h:* {{but in 'SecondModule' found field 'x' with type 'typeof (3)' (aka 'int')}}
 Invalid2 i2;
-// expected-error@second.h:* {{'Types::TypeOfExpr::Invalid2::x' from module 'SecondModule' is not present in definition of 'Types::TypeOfExpr::Invalid2' in module 'FirstModule'}}
-// expected-note@first.h:* {{declaration of 'x' does not match}}
+
 Valid v;
+
+// FIXME: We should diagnose the different definitions of `global`.
 #endif
 }  // namespace TypeOfExpr
 
@@ -111,10 +112,11 @@ Invalid1 i1;
 // expected-note@first.h:* {{declaration of 'x' does not match}}
 Invalid2 i2;
 // expected-error@first.h:* {{'Types::TypeOf::Invalid2' has different definitions in different modules; first difference is definition in module 'FirstModule' found field 'x' with type 'typeof(int)' (aka 'int')}}
-// expected-note@second.h:* {{but in 'SecondModule' found field 'x' with type 'typeof(Types::TypeOf::I)' (aka 'int')}}
+// expected-note@second.h:* {{but in 'SecondModule' found field 'x' with type 'typeof(I)' (aka 'int')}}
 Invalid3 i3;
-// expected-error@second.h:* {{'Types::TypeOf::Invalid3::x' from module 'SecondModule' is not present in definition of 'Types::TypeOf::Invalid3' in module 'FirstModule'}}
-// expected-note@first.h:* {{declaration of 'x' does not match}}
+
+// FIXME: We should reject the `Invalid3` due to the inconsistent definition of `T`.
+
 Valid v;
 #endif
 }  // namespace TypeOf

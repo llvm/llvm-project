@@ -32,6 +32,8 @@ struct AddressInfo {
   char *module;
   uptr module_offset;
   ModuleArch module_arch;
+  u8 uuid[kModuleUUIDSize];
+  uptr uuid_size;
 
   static const uptr kUnknown = ~(uptr)0;
   char *function;
@@ -45,6 +47,8 @@ struct AddressInfo {
   // Deletes all strings and resets all fields.
   void Clear();
   void FillModuleInfo(const char *mod_name, uptr mod_offset, ModuleArch arch);
+  void FillModuleInfo(const LoadedModule &mod);
+  uptr module_base() const { return address - module_offset; }
 };
 
 // Linked list of symbolized frames (each frame is described by AddressInfo).
@@ -58,6 +62,26 @@ struct SymbolizedStack {
 
  private:
   SymbolizedStack();
+};
+
+class SymbolizedStackHolder {
+  SymbolizedStack *Stack;
+
+  void clear() {
+    if (Stack)
+      Stack->ClearAll();
+  }
+
+ public:
+  explicit SymbolizedStackHolder(SymbolizedStack *Stack = nullptr)
+      : Stack(Stack) {}
+  ~SymbolizedStackHolder() { clear(); }
+  void reset(SymbolizedStack *S = nullptr) {
+    if (Stack != S)
+      clear();
+    Stack = S;
+  }
+  const SymbolizedStack *get() const { return Stack; }
 };
 
 // For now, DataInfo is used to describe global variable.
@@ -132,7 +156,7 @@ class Symbolizer final {
 
   // Release internal caches (if any).
   void Flush();
-  // Attempts to demangle the provided C++ mangled name.
+  // Attempts to demangle the provided C++ mangled name. Never returns nullptr.
   const char *Demangle(const char *name);
 
   // Allow user to install hooks that would be called before/after Symbolizer
@@ -150,6 +174,8 @@ class Symbolizer final {
 
   void InvalidateModuleList();
 
+  const ListOfModules &GetRefreshedListOfModules();
+
  private:
   // GetModuleNameAndOffsetForPC has to return a string to the caller.
   // Since the corresponding module might get unloaded later, we should create
@@ -158,7 +184,7 @@ class Symbolizer final {
   // its method should be protected by |mu_|.
   class ModuleNameOwner {
    public:
-    explicit ModuleNameOwner(BlockingMutex *synchronized_by)
+    explicit ModuleNameOwner(Mutex *synchronized_by)
         : last_match_(nullptr), mu_(synchronized_by) {
       storage_.reserve(kInitialCapacity);
     }
@@ -169,7 +195,7 @@ class Symbolizer final {
     InternalMmapVector<const char*> storage_;
     const char *last_match_;
 
-    BlockingMutex *mu_;
+    Mutex *mu_;
   } module_names_;
 
   /// Platform-specific function for creating a Symbolizer object.
@@ -183,7 +209,7 @@ class Symbolizer final {
   // If stale, need to reload the modules before looking up addresses.
   bool modules_fresh_;
 
-  // Platform-specific default demangler, must not return nullptr.
+  // Platform-specific default demangler, returns nullptr on failure.
   const char *PlatformDemangle(const char *name);
 
   static Symbolizer *symbolizer_;
@@ -192,7 +218,7 @@ class Symbolizer final {
   // Mutex locked from public methods of |Symbolizer|, so that the internals
   // (including individual symbolizer tools and platform-specific methods) are
   // always synchronized.
-  BlockingMutex mu_;
+  Mutex mu_;
 
   IntrusiveList<SymbolizerTool> tools_;
 
@@ -208,10 +234,8 @@ class Symbolizer final {
     ~SymbolizerScope();
    private:
     const Symbolizer *sym_;
+    int errno_;  // Backup errno in case symbolizer change the value.
   };
-
-  // Calls `LateInitialize()` on all items in `tools_`.
-  void LateInitializeTools();
 };
 
 #ifdef SANITIZER_WINDOWS

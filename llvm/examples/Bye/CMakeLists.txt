@@ -6,7 +6,7 @@ endif()
 # but expects them to exist in the process loading the plugin. This doesn't
 # work with DLLs on Windows (where a shared library can't have undefined
 # references), so just skip this example on Windows.
-if (NOT WIN32)
+if (NOT WIN32 AND NOT CYGWIN)
   add_llvm_pass_plugin(Bye
     Bye.cpp
     DEPENDS
@@ -14,6 +14,6 @@ if (NOT WIN32)
     BUILDTREE_ONLY
    )
 
-  install(TARGETS ${name} RUNTIME DESTINATION examples)
+  install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
   set_target_properties(${name} PROPERTIES FOLDER "Examples")
 endif()

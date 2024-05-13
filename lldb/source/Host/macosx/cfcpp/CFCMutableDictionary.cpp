@@ -13,8 +13,8 @@ CFCMutableDictionary::CFCMutableDictionary(CFMutableDictionaryRef s)
     : CFCReleaser<CFMutableDictionaryRef>(s) {}
 
 // CFCMutableDictionary copy constructor
-CFCMutableDictionary::CFCMutableDictionary(const CFCMutableDictionary &rhs)
-    : CFCReleaser<CFMutableDictionaryRef>(rhs) {}
+CFCMutableDictionary::CFCMutableDictionary(const CFCMutableDictionary &rhs) =
+    default;
 
 // CFCMutableDictionary copy constructor
 const CFCMutableDictionary &CFCMutableDictionary::
@@ -25,7 +25,7 @@ operator=(const CFCMutableDictionary &rhs) {
 }
 
 // Destructor
-CFCMutableDictionary::~CFCMutableDictionary() {}
+CFCMutableDictionary::~CFCMutableDictionary() = default;
 
 CFIndex CFCMutableDictionary::GetCount() const {
   CFMutableDictionaryRef dict = get();

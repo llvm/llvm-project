@@ -867,14 +867,12 @@ __mmask8 test_mm_movepi32_mask(__m128i __A) {
   // CHECK-LABEL: @test_mm_movepi32_mask
   // CHECK: [[CMP:%.*]] = icmp slt <4 x i32> %{{.*}}, zeroinitializer
   // CHECK: [[SHUF:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: bitcast <8 x i1> [[SHUF]] to i8
   return _mm_movepi32_mask(__A); 
 }
 
 __mmask8 test_mm256_movepi32_mask(__m256i __A) {
   // CHECK-LABEL: @test_mm256_movepi32_mask
   // CHECK: [[CMP:%.*]] = icmp slt <8 x i32> %{{.*}}, zeroinitializer
-  // CHECK: bitcast <8 x i1> [[CMP]] to i8
   return _mm256_movepi32_mask(__A); 
 }
 
@@ -913,7 +911,6 @@ __mmask8 test_mm_movepi64_mask(__m128i __A) {
   // CHECK-LABEL: @test_mm_movepi64_mask
   // CHECK: [[CMP:%.*]] = icmp slt <2 x i64> %{{.*}}, zeroinitializer
   // CHECK: [[SHUF:%.*]] = shufflevector <2 x i1> [[CMP]], <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
-  // CHECK: bitcast <8 x i1> [[SHUF]] to i8
   return _mm_movepi64_mask(__A); 
 }
 
@@ -921,7 +918,6 @@ __mmask8 test_mm256_movepi64_mask(__m256i __A) {
   // CHECK-LABEL: @test_mm256_movepi64_mask
   // CHECK: [[CMP:%.*]] = icmp slt <4 x i64> %{{.*}}, zeroinitializer
   // CHECK: [[SHUF:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: bitcast <8 x i1> [[SHUF]] to i8
   return _mm256_movepi64_mask(__A); 
 }
 

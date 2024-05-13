@@ -1,4 +1,5 @@
-; RUN: llc < %s -mtriple=arm-pc-windows-msvc | FileCheck %s
+; RUN: llc < %s -mtriple=arm-pc-windows-msvc | FileCheck %s -check-prefixes=CHECK,MSVC
+; RUN: llc < %s -mtriple=arm-w64-windows-gnu | FileCheck %s -check-prefixes=CHECK,MINGW
 ; Control Flow Guard is currently only available on Windows
 
 ; Test that Control Flow Guard checks are correctly added when required.
@@ -10,9 +11,9 @@ declare i32 @target_func()
 ; Test that Control Flow Guard checks are not added on calls with the "guard_nocf" attribute.
 define i32 @func_guard_nocf() #0 {
 entry:
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  %0 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %0 = load ptr, ptr %func_ptr, align 8
   %1 = call arm_aapcs_vfpcc i32 %0() #1
   ret i32 %1
 
@@ -29,9 +30,9 @@ attributes #1 = { "guard_nocf" }
 ; Test that Control Flow Guard checks are added even at -O0.
 define i32 @func_optnone_cf() #2 {
 entry:
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  %0 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %0 = load ptr, ptr %func_ptr, align 8
   %1 = call i32 %0()
   ret i32 %1
 
@@ -54,9 +55,9 @@ attributes #2 = { noinline optnone "target-cpu"="cortex-a9" "target-features"="+
 ; Test that Control Flow Guard checks are correctly added in optimized code (common case).
 define i32 @func_cf() #0 {
 entry:
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  %0 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %0 = load ptr, ptr %func_ptr, align 8
   %1 = call i32 %0()
   ret i32 %1
 
@@ -74,20 +75,20 @@ entry:
 
 
 ; Test that Control Flow Guard checks are correctly added on invoke instructions.
-define i32 @func_cf_invoke() #0 personality i8* bitcast (void ()* @h to i8*) {
+define i32 @func_cf_invoke() #0 personality ptr @h {
 entry:
   %0 = alloca i32, align 4
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  %1 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %1 = load ptr, ptr %func_ptr, align 8
   %2 = invoke i32 %1()
           to label %invoke.cont unwind label %lpad
 invoke.cont:                                      ; preds = %entry
   ret i32 %2
 
 lpad:                                             ; preds = %entry
-  %tmp = landingpad { i8*, i32 }
-          catch i8* null
+  %tmp = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 -1
 
   ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
@@ -99,10 +100,11 @@ lpad:                                             ; preds = %entry
 	; CHECK:       movt r4, :upper16:target_func
 	; CHECK:       mov r0, r4
 	; CHECK:       blx r1
-  ; CHECK-NEXT:  $Mtmp0:
+  ; MSVC-NEXT:   $Mtmp0:
+  ; MINGW-NEXT:  .Ltmp0:
 	; CHECK-NEXT:  blx r4
-  ; CHECK:       ; %invoke.cont
-  ; CHECK:       ; %lpad
+  ; CHECK:       @ %common.ret
+  ; CHECK:       @ %lpad
 }
 
 declare void @h()
@@ -115,23 +117,23 @@ declare void @h()
 define i32 @func_cf_setjmp() #0 {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
-  store i32 -1, i32* %2, align 4
-  %3 = call i8* @llvm.frameaddress(i32 0)
-  %4 = call i32 @_setjmp(i8* bitcast ([16 x %struct._SETJMP_FLOAT128]* @buf1 to i8*), i8* %3) #3
+  store i32 0, ptr %1, align 4
+  store i32 -1, ptr %2, align 4
+  %3 = call ptr @llvm.frameaddress(i32 0)
+  %4 = call i32 @_setjmp(ptr @buf1, ptr %3) #3
 
   ; CHECK-LABEL: func_cf_setjmp
   ; CHECK:       bl _setjmp
   ; CHECK-NEXT:  $cfgsj_func_cf_setjmp0:
 
-  %5 = call i8* @llvm.frameaddress(i32 0)
-  %6 = call i32 @_setjmp(i8* bitcast ([16 x %struct._SETJMP_FLOAT128]* @buf1 to i8*), i8* %5) #3
+  %5 = call ptr @llvm.frameaddress(i32 0)
+  %6 = call i32 @_setjmp(ptr @buf1, ptr %5) #3
 
   ; CHECK:       bl _setjmp
   ; CHECK-NEXT:  $cfgsj_func_cf_setjmp1:
 
-  store i32 1, i32* %2, align 4
-  %7 = load i32, i32* %2, align 4
+  store i32 1, ptr %2, align 4
+  %7 = load i32, ptr %2, align 4
   ret i32 %7
 
   ; CHECK:       .section .gljmp$y,"dr"
@@ -139,10 +141,10 @@ define i32 @func_cf_setjmp() #0 {
   ; CHECK-NEXT:  .symidx $cfgsj_func_cf_setjmp1
 }
 
-declare i8* @llvm.frameaddress(i32)
+declare ptr @llvm.frameaddress(i32)
 
 ; Function Attrs: returns_twice
-declare dso_local i32 @_setjmp(i8*, i8*) #3
+declare dso_local i32 @_setjmp(ptr, ptr) #3
 
 attributes #3 = { returns_twice }
 

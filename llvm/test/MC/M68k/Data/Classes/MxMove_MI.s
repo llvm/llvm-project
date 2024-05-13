@@ -32,4 +32,3 @@ move.l	#0, (%a1)
 ; CHECK:      move.l  #0, (%a1)
 ; CHECK-SAME: encoding: [0x22,0xbc,0x00,0x00,0x00,0x00]
 move.l	#0, (%a1)
-

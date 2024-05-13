@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-disable-multiplicative-reductions < %s | FileCheck %s
+; RUN: opt -basic-aa %loadPolly -polly-stmt-granularity=bb -polly-print-scops -polly-disable-multiplicative-reductions -disable-output < %s | FileCheck %s
 ;
 ; CHECK: ReadAccess :=       [Reduction Type: +
 ; CHECK:     { Stmt_for_body[i0] -> MemRef_sum[0] };
@@ -10,7 +10,7 @@
 ; CHECK:     { Stmt_for_body[i0] -> MemRef_prod[0] };
 ;
 ; int sum, prod;
-; 
+;
 ; void f() {
 ;   int i;
 ;   for (int i = 0; i < 100; i++) {
@@ -34,13 +34,13 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %mul = mul nsw i32 %i1.0, 3
-  %tmp = load i32, i32* @sum, align 4
+  %tmp = load i32, ptr @sum, align 4
   %add = add nsw i32 %tmp, %mul
-  store i32 %add, i32* @sum, align 4
+  store i32 %add, ptr @sum, align 4
   %add2 = add nsw i32 %i1.0, 3
-  %tmp1 = load i32, i32* @prod, align 4
+  %tmp1 = load i32, ptr @prod, align 4
   %mul3 = mul nsw i32 %tmp1, %add2
-  store i32 %mul3, i32* @prod, align 4
+  store i32 %mul3, ptr @prod, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

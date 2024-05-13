@@ -18,8 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <deque>
@@ -27,6 +25,7 @@
 
 namespace llvm {
 
+class CallBase;
 class DataLayout;
 class Function;
 class TargetLibraryInfo;
@@ -36,6 +35,49 @@ class TargetLibraryInfo;
 /// be iterated over after the evaluation is complete.  Once an evaluation call
 /// fails, the evaluation object should not be reused.
 class Evaluator {
+  struct MutableAggregate;
+
+  /// The evaluator represents values either as a Constant*, or as a
+  /// MutableAggregate, which allows changing individual aggregate elements
+  /// without creating a new interned Constant.
+  class MutableValue {
+    PointerUnion<Constant *, MutableAggregate *> Val;
+    void clear();
+    bool makeMutable();
+
+  public:
+    MutableValue(Constant *C) { Val = C; }
+    MutableValue(const MutableValue &) = delete;
+    MutableValue(MutableValue &&Other) {
+      Val = Other.Val;
+      Other.Val = nullptr;
+    }
+    ~MutableValue() { clear(); }
+
+    Type *getType() const {
+      if (auto *C = dyn_cast_if_present<Constant *>(Val))
+        return C->getType();
+      return cast<MutableAggregate *>(Val)->Ty;
+    }
+
+    Constant *toConstant() const {
+      if (auto *C = dyn_cast_if_present<Constant *>(Val))
+        return C;
+      return cast<MutableAggregate *>(Val)->toConstant();
+    }
+
+    Constant *read(Type *Ty, APInt Offset, const DataLayout &DL) const;
+    bool write(Constant *V, APInt Offset, const DataLayout &DL);
+  };
+
+  struct MutableAggregate {
+    Type *Ty;
+    SmallVector<MutableValue> Elements;
+
+    MutableAggregate(Type *Ty) : Ty(Ty) {}
+    Constant *toConstant() const;
+  };
+
 public:
   Evaluator(const DataLayout &DL, const TargetLibraryInfo *TLI)
       : DL(DL), TLI(TLI) {
@@ -57,8 +99,11 @@ public:
   bool EvaluateFunction(Function *F, Constant *&RetVal,
                         const SmallVectorImpl<Constant*> &ActualArgs);
 
-  const DenseMap<Constant *, Constant *> &getMutatedMemory() const {
-    return MutatedMemory;
+  DenseMap<GlobalVariable *, Constant *> getMutatedInitializers() const {
+    DenseMap<GlobalVariable *, Constant *> Result;
+    for (const auto &Pair : MutatedMemory)
+      Result[Pair.first] = Pair.second.toConstant();
+    return Result;
   }
 
   const SmallPtrSetImpl<GlobalVariable *> &getInvariants() const {
@@ -81,7 +126,7 @@ private:
   }
 
   /// Casts call result to a type of bitcast call expression
-  Constant *castCallResultIfNeeded(Value *CallExpr, Constant *RV);
+  Constant *castCallResultIfNeeded(Type *ReturnType, Constant *RV);
 
   /// Given call site return callee and list of its formal arguments
   Function *getCalleeWithFormalArgs(CallBase &CB,
@@ -93,6 +138,8 @@ private:
                        SmallVectorImpl<Constant *> &Formals);
 
   Constant *ComputeLoadResult(Constant *P, Type *Ty);
+  Constant *ComputeLoadResult(GlobalVariable *GV, Type *Ty,
+                              const APInt &Offset);
 
   /// As we compute SSA register values, we store their contents here. The back
   /// of the deque contains the current function and the stack contains the
@@ -106,7 +153,7 @@ private:
   /// For each store we execute, we update this map.  Loads check this to get
   /// the most up-to-date value.  If evaluation is successful, this state is
   /// committed to the process.
-  DenseMap<Constant*, Constant*> MutatedMemory;
+  DenseMap<GlobalVariable *, MutableValue> MutatedMemory;
 
   /// To 'execute' an alloca, we create a temporary global variable to represent
   /// its body.  This vector is needed so we can delete the temporary globals

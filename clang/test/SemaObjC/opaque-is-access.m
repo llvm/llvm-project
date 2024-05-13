@@ -1,6 +1,5 @@
 // RUN: %clang -target x86_64-apple-darwin -arch arm64 -mios-version-min=7 -fsyntax-only %s -Xclang -verify
 // RUN: %clang -target x86_64-apple-darwin -arch x86_64 -mios-simulator-version-min=7 -fsyntax-only %s -Xclang -verify
-// rdar://10709102
 
 typedef struct objc_object {
   struct objc_class *isa;
@@ -14,7 +13,7 @@ typedef struct objc_object {
 +self;
 @end
 
-static void func() {
+static void func(void) {
 
   id x;
 

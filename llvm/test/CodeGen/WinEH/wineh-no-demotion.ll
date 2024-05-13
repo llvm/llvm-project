@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -winehprepare -disable-demotion -disable-cleanups < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -win-eh-prepare -disable-demotion -disable-cleanups < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare -disable-demotion -disable-cleanups < %s | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
 
@@ -11,7 +12,7 @@ declare i32 @g()
 declare void @h(i32)
 
 ; CHECK-LABEL: @test1(
-define void @test1(i1 %bool) personality i32 (...)* @__C_specific_handler {
+define void @test1(i1 %bool) personality ptr @__C_specific_handler {
 entry:
   invoke void @f()
           to label %invoke.cont unwind label %left
@@ -54,7 +55,7 @@ exit:
 }
 
 ; CHECK-LABEL: @test2(
-define void @test2(i1 %bool) personality i32 (...)* @__C_specific_handler {
+define void @test2(i1 %bool) personality ptr @__C_specific_handler {
 entry:
   invoke void @f()
           to label %shared.cont unwind label %left
@@ -92,7 +93,7 @@ exit:
 }
 
 ; CHECK-LABEL: @test4(
-define void @test4(i1 %x) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test4(i1 %x) personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @f()
           to label %invoke.cont1 unwind label %left

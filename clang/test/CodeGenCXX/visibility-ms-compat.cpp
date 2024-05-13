@@ -1,11 +1,9 @@
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility hidden -ftype-visibility default -emit-llvm -o %t
+// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility=hidden -ftype-visibility=default -emit-llvm -o %t
 // RUN: FileCheck %s < %t
 // RUN: FileCheck -check-prefix=CHECK-GLOBAL %s < %t
 
 // The two visibility options above are how we translate
 // -fvisibility-ms-compat in the driver.
-
-// rdar://13079314
 
 #define HIDDEN __attribute__((visibility("hidden")))
 #define PROTECTED __attribute__((visibility("protected")))

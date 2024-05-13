@@ -12,17 +12,19 @@
 #include "MachOStructs.h"
 #include "Target.h"
 
+#include "lld/Common/DWARF.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 
-#include <map>
 #include <vector>
 
 namespace llvm {
@@ -39,8 +41,10 @@ namespace lld {
 namespace macho {
 
 struct PlatformInfo;
-class InputSection;
+class ConcatInputSection;
 class Symbol;
+class Defined;
+class AliasSymbol;
 struct Reloc;
 enum class RefState : uint8_t;
 
@@ -51,11 +55,52 @@ extern std::unique_ptr<llvm::TarWriter> tar;
 // If .subsections_via_symbols is set, each InputSection will be split along
 // symbol boundaries. The field offset represents the offset of the subsection
 // from the start of the original pre-split InputSection.
-struct SubsectionEntry {
-  uint64_t offset;
-  InputSection *isec;
+struct Subsection {
+  uint64_t offset = 0;
+  InputSection *isec = nullptr;
 };
-using SubsectionMap = std::vector<SubsectionEntry>;
+
+using Subsections = std::vector<Subsection>;
+class InputFile;
+
+class Section {
+public:
+  InputFile *file;
+  StringRef segname;
+  StringRef name;
+  uint32_t flags;
+  uint64_t addr;
+  Subsections subsections;
+
+  Section(InputFile *file, StringRef segname, StringRef name, uint32_t flags,
+          uint64_t addr)
+      : file(file), segname(segname), name(name), flags(flags), addr(addr) {}
+  // Ensure pointers to Sections are never invalidated.
+  Section(const Section &) = delete;
+  Section &operator=(const Section &) = delete;
+  Section(Section &&) = delete;
+  Section &operator=(Section &&) = delete;
+
+private:
+  // Whether we have already split this section into individual subsections.
+  // For sections that cannot be split (e.g. literal sections), this is always
+  // false.
+  bool doneSplitting = false;
+  friend class ObjFile;
+};
+
+// Represents a call graph profile edge.
+struct CallGraphEntry {
+  // The index of the caller in the symbol table.
+  uint32_t fromIndex;
+  // The index of the callee in the symbol table.
+  uint32_t toIndex;
+  // Number of calls from callee to caller in the profile.
+  uint64_t count;
+
+  CallGraphEntry(uint32_t fromIndex, uint32_t toIndex, uint64_t count)
+      : fromIndex(fromIndex), toIndex(toIndex), count(count) {}
+};
 
 class InputFile {
 public:
@@ -70,23 +115,33 @@ public:
   virtual ~InputFile() = default;
   Kind kind() const { return fileKind; }
   StringRef getName() const { return name; }
+  static void resetIdCount() { idCount = 0; }
 
   MemoryBufferRef mb;
 
   std::vector<Symbol *> symbols;
-  std::vector<SubsectionMap> subsections;
-  // Provides an easy way to sort InputFiles deterministically.
-  const int id;
+  std::vector<Section *> sections;
+  ArrayRef<uint8_t> objCImageInfo;
 
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.
   std::string archiveName;
 
+  // Provides an easy way to sort InputFiles deterministically.
+  const int id;
+
+  // True if this is a lazy ObjFile or BitcodeFile.
+  bool lazy = false;
+
 protected:
-  InputFile(Kind kind, MemoryBufferRef mb)
-      : mb(mb), id(idCount++), fileKind(kind), name(mb.getBufferIdentifier()) {}
+  InputFile(Kind kind, MemoryBufferRef mb, bool lazy = false)
+      : mb(mb), id(idCount++), lazy(lazy), fileKind(kind),
+        name(mb.getBufferIdentifier()) {}
 
   InputFile(Kind, const llvm::MachO::InterfaceFile &);
+
+  // If true, this input's arch is compatible with target.
+  bool compatArch = true;
 
 private:
   const Kind fileKind;
@@ -95,48 +150,71 @@ private:
   static int idCount;
 };
 
+struct FDE {
+  uint32_t funcLength;
+  Symbol *personality;
+  InputSection *lsda;
+};
+
 // .o file
-class ObjFile : public InputFile {
+class ObjFile final : public InputFile {
 public:
-  ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName);
+  ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
+          bool lazy = false, bool forceHidden = false, bool compatArch = true,
+          bool builtFromBitcode = false);
+  ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
+  ArrayRef<uint8_t> getOptimizationHints() const;
+  template <class LP> void parse();
+  template <class LP>
+  void parseLinkerOptions(llvm::SmallVectorImpl<StringRef> &LinkerOptions);
+
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
+  std::string sourceFile() const;
+  // Parses line table information for diagnostics. compileUnit should be used
+  // for other purposes.
+  lld::DWARFCache *getDwarf();
+
   llvm::DWARFUnit *compileUnit = nullptr;
+  std::unique_ptr<lld::DWARFCache> dwarfCache;
+  Section *addrSigSection = nullptr;
   const uint32_t modTime;
-  std::vector<InputSection *> debugSections;
+  bool forceHidden;
+  bool builtFromBitcode;
+  std::vector<ConcatInputSection *> debugSections;
+  std::vector<CallGraphEntry> callGraph;
+  llvm::DenseMap<ConcatInputSection *, FDE> fdes;
+  std::vector<AliasSymbol *> aliases;
 
 private:
-  template <class LP> void parse();
-  template <class Section> void parseSections(ArrayRef<Section>);
+  llvm::once_flag initDwarf;
+  template <class LP> void parseLazy();
+  template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>
   void parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
                     ArrayRef<typename LP::nlist> nList, const char *strtab,
                     bool subsectionsViaSymbols);
   template <class NList>
-  Symbol *parseNonSectionSymbol(const NList &sym, StringRef name);
-  template <class Section>
-  void parseRelocations(ArrayRef<Section> sectionHeaders, const Section &,
-                        SubsectionMap &);
+  Symbol *parseNonSectionSymbol(const NList &sym, const char *strtab);
+  template <class SectionHeader>
+  void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
+                        const SectionHeader &, Section &);
   void parseDebugInfo();
+  void splitEhFrames(ArrayRef<uint8_t> dataArr, Section &ehFrameSection);
+  void registerCompactUnwind(Section &compactUnwindSection);
+  void registerEhFrames(Section &ehFrameSection);
 };
 
 // command-line -sectcreate file
-class OpaqueFile : public InputFile {
+class OpaqueFile final : public InputFile {
 public:
   OpaqueFile(MemoryBufferRef mb, StringRef segName, StringRef sectName);
   static bool classof(const InputFile *f) { return f->kind() == OpaqueKind; }
 };
 
-// .dylib file
-class DylibFile : public InputFile {
+// .dylib or .tbd file
+class DylibFile final : public InputFile {
 public:
-  explicit DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
-                     bool isBundleLoader = false);
-
-  explicit DylibFile(const llvm::MachO::InterfaceFile &interface,
-                     DylibFile *umbrella = nullptr,
-                     bool isBundleLoader = false);
-
   // Mach-O dylibs can re-export other dylibs as sub-libraries, meaning that the
   // symbols in those sub-libraries will be available under the umbrella
   // library's namespace. Those sub-libraries can also have their own
@@ -144,62 +222,110 @@ public:
   // the root dylib to ensure symbols in the child library are correctly bound
   // to the root. On the other hand, if a dylib is being directly loaded
   // (through an -lfoo flag), then `umbrella` should be a nullptr.
+  explicit DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
+                     bool isBundleLoader, bool explicitlyLinked);
+  explicit DylibFile(const llvm::MachO::InterfaceFile &interface,
+                     DylibFile *umbrella, bool isBundleLoader,
+                     bool explicitlyLinked);
+  explicit DylibFile(DylibFile *umbrella);
+
   void parseLoadCommands(MemoryBufferRef mb);
   void parseReexports(const llvm::MachO::InterfaceFile &interface);
+  bool isReferenced() const { return numReferencedSymbols > 0; }
+  bool isExplicitlyLinked() const;
+  void setExplicitlyLinked() { explicitlyLinked = true; }
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
-  StringRef dylibName;
+  StringRef installName;
   DylibFile *exportingFile = nullptr;
   DylibFile *umbrella;
+  SmallVector<StringRef, 2> rpaths;
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
+  unsigned numReferencedSymbols = 0;
   RefState refState;
   bool reexport = false;
   bool forceNeeded = false;
   bool forceWeakImport = false;
   bool deadStrippable = false;
-  bool explicitlyLinked = false;
 
-  unsigned numReferencedSymbols = 0;
+private:
+  bool explicitlyLinked = false; // Access via isExplicitlyLinked().
 
-  bool isReferenced() const {
-    return numReferencedSymbols > 0;
-  }
-
+public:
   // An executable can be used as a bundle loader that will load the output
   // file being linked, and that contains symbols referenced, but not
   // implemented in the bundle. When used like this, it is very similar
-  // to a Dylib, so we re-used the same class to represent it.
+  // to a dylib, so we've used the same class to represent it.
   bool isBundleLoader;
+
+  // Synthetic Dylib objects created by $ld$previous symbols in this dylib.
+  // Usually empty. These synthetic dylibs won't have synthetic dylibs
+  // themselves.
+  SmallVector<DylibFile *, 2> extraDylibs;
+
+private:
+  DylibFile *getSyntheticDylib(StringRef installName, uint32_t currentVersion,
+                               uint32_t compatVersion);
+
+  bool handleLDSymbol(StringRef originalName);
+  void handleLDPreviousSymbol(StringRef name, StringRef originalName);
+  void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
+  void handleLDHideSymbol(StringRef name, StringRef originalName);
+  void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
+  void parseExportedSymbols(uint32_t offset, uint32_t size);
+  void loadReexport(StringRef path, DylibFile *umbrella,
+                    const llvm::MachO::InterfaceFile *currentTopLevelTapi);
+
+  llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
 
 // .a file
-class ArchiveFile : public InputFile {
+class ArchiveFile final : public InputFile {
 public:
-  explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file);
+  explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file,
+                       bool forceHidden);
+  void addLazySymbols();
+  void fetch(const llvm::object::Archive::Symbol &);
+  // LLD normally doesn't use Error for error-handling, but the underlying
+  // Archive library does, so this is the cleanest way to wrap it.
+  Error fetch(const llvm::object::Archive::Child &, StringRef reason);
+  const llvm::object::Archive &getArchive() const { return *file; };
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
-  void fetch(const llvm::object::Archive::Symbol &sym);
 
 private:
   std::unique_ptr<llvm::object::Archive> file;
   // Keep track of children fetched from the archive by tracking
   // which address offsets have been fetched already.
   llvm::DenseSet<uint64_t> seen;
+  // Load all symbols with hidden visibility (-load_hidden).
+  bool forceHidden;
 };
 
-class BitcodeFile : public InputFile {
+class BitcodeFile final : public InputFile {
 public:
-  explicit BitcodeFile(MemoryBufferRef mb);
+  explicit BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
+                       uint64_t offsetInArchive, bool lazy = false,
+                       bool forceHidden = false, bool compatArch = true);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
+  void parse();
 
   std::unique_ptr<llvm::lto::InputFile> obj;
+  bool forceHidden;
+
+private:
+  void parseLazy();
 };
 
 extern llvm::SetVector<InputFile *> inputFiles;
+extern llvm::DenseMap<llvm::CachedHashStringRef, MemoryBufferRef> cachedReads;
+extern llvm::SmallVector<StringRef> unprocessedLCLinkerOptions;
 
-llvm::Optional<MemoryBufferRef> readFile(StringRef path);
+std::optional<MemoryBufferRef> readFile(StringRef path);
+
+void extract(InputFile &file, StringRef reason);
 
 namespace detail {
 
@@ -239,9 +365,11 @@ std::vector<const CommandType *> findCommands(const void *anyHdr,
   return detail::findCommands<CommandType>(anyHdr, 0, types...);
 }
 
+std::string replaceThinLTOSuffix(StringRef path);
 } // namespace macho
 
 std::string toString(const macho::InputFile *file);
+std::string toString(const macho::Section &);
 } // namespace lld
 
 #endif

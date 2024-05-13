@@ -11,7 +11,7 @@ extern int x;
 
 #warning parsed this
 // expected-warning@-1 {{parsed this}}
-int foo() {
+int foo(void) {
   return x;
 }
 

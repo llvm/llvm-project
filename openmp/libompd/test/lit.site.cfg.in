@@ -1,0 +1,21 @@
+@AUTO_GEN_COMMENT@
+
+config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
+config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@
+config.test_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
+config.test_not = "@OPENMP_NOT_EXECUTABLE@"
+config.test_openmp_flags = "@OPENMP_TEST_OPENMP_FLAGS@"
+config.test_extra_flags = "@OPENMP_TEST_FLAGS@"
+config.ompd_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
+config.ompd_test_src = "@CMAKE_CURRENT_SOURCE_DIR@"
+config.library_dir = "@LIBOMP_LIBRARY_DIR@"
+config.ompd_library_dir = "@CMAKE_CURRENT_BINARY_DIR@/../src/"
+config.omp_header_directory = "@LIBOMP_BINARY_DIR@/src"
+config.operating_system = "@CMAKE_SYSTEM_NAME@"
+
+config.ompt_plugin = "@OMPT_PLUGIN@"
+config.ompt_include_dir = "@LIBOMP_INCLUDE_DIR@"
+config.ompd_module = "@CMAKE_CURRENT_BINARY_DIR@/../gdb-plugin/python-module/ompd/"
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

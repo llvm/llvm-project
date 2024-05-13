@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFObject.h"
+#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
+#include "llvm/Support/Errc.h"
 
 using namespace llvm;
 
@@ -52,7 +54,7 @@ uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint64_t *Off,
     return getUnsigned(Off, Size, Err);
 
   ErrorAsOutParameter ErrAsOut(Err);
-  Optional<RelocAddrEntry> E = Obj->find(*Section, *Off);
+  std::optional<RelocAddrEntry> E = Obj->find(*Section, *Off);
   uint64_t LocData = getUnsigned(Off, Size, Err);
   if (!E || (Err && *Err))
     return LocData;
@@ -66,11 +68,11 @@ uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint64_t *Off,
   return R;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
                                       uint64_t PCRelOffset) const {
   if (Encoding == dwarf::DW_EH_PE_omit)
-    return None;
+    return std::nullopt;
 
   uint64_t Result = 0;
   uint64_t OldOffset = *Offset;
@@ -84,7 +86,7 @@ DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
       Result = getUnsigned(Offset, getAddressSize());
       break;
     default:
-      return None;
+      return std::nullopt;
     }
     break;
   case dwarf::DW_EH_PE_uleb128:
@@ -112,7 +114,7 @@ DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
     Result = getRelocatedValue(8, Offset);
     break;
   default:
-    return None;
+    return std::nullopt;
   }
   // Then add relative offset, if required
   switch (Encoding & 0x70) {
@@ -128,7 +130,7 @@ DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
   case dwarf::DW_EH_PE_aligned:
   default:
     *Offset = OldOffset;
-    return None;
+    return std::nullopt;
   }
 
   return Result;

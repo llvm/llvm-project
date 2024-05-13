@@ -48,7 +48,7 @@ namespace AddrOfMember {
   typedef int (A::*P);
   template<typename T> struct S : T {
     void f() {
-      P(&T::X) // expected-error {{cannot cast from type 'int *' to member pointer type 'AddrOfMember::P'}}
+      P(&T::X) // expected-error {{cannot cast from type 'int *' to member pointer type 'P'}}
           == &A::X;
     }
   };

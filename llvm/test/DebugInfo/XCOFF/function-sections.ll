@@ -37,9 +37,10 @@ entry:
 !13 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 6, type: !9, scopeLine: 7, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !14 = !DILocation(line: 8, column: 3, scope: !13)
 
-; CHECK:               .csect .text[PR],2
-; CHECK-NEXT:          .file   "1.c"
-; CHECK-NEXT:          .csect .foo[PR],2
+; CHECK:               .file   "1.c"
+; CHECK-NEXT:          .csect ..text..[PR],5
+; CHECK-NEXT:          .rename ..text..[PR],""
+; CHECK-NEXT:          .csect .foo[PR],5
 ; CHECK-NEXT:          .globl  foo[DS]                         # -- Begin function foo
 ; CHECK-NEXT:          .globl  .foo[PR]
 ; CHECK-NEXT:          .align  2
@@ -47,14 +48,13 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, .foo[PR]                     # @foo
 ; CHECK-NEXT:          .vbyte  4, TOC[TC0]
 ; CHECK-NEXT:          .vbyte  4, 0
-; CHECK-NEXT:          .csect .foo[PR],2
+; CHECK-NEXT:          .csect .foo[PR],5
 ; CHECK-NEXT:  L..func_begin0:
 ; CHECK-NEXT:  # %bb.0:                                # %entry
 ; CHECK-NEXT:  L..tmp0:
-; CHECK-NEXT:  L..tmp1:
 ; CHECK-NEXT:          li 3, 0
 ; CHECK-NEXT:          blr
-; CHECK-NEXT:  L..tmp2:
+; CHECK-NEXT:  L..tmp1:
 ; CHECK-NEXT:  L..foo0:
 ; CHECK-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; CHECK-NEXT:          .byte   0x00                            # Version = 0
@@ -66,8 +66,8 @@ entry:
 ; CHECK-NEXT:                                          # -IsFloatingPointOperationLogOrAbortEnabled
 ; CHECK-NEXT:          .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; CHECK-NEXT:                                          # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
-; CHECK-NEXT:          .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; CHECK-NEXT:          .byte   0x00                            # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 0
+; CHECK-NEXT:          .byte   0x00                            # -IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+; CHECK-NEXT:          .byte   0x00                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
 ; CHECK-NEXT:          .byte   0x00                            # NumberOfFixedParms = 0
 ; CHECK-NEXT:          .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; CHECK-NEXT:          .vbyte  4, L..foo0-.foo[PR]             # Function size
@@ -75,7 +75,7 @@ entry:
 ; CHECK-NEXT:          .byte   "foo"                           # Function Name
 ; CHECK-NEXT:  L..func_end0:
 ; CHECK-NEXT:                                          # -- End function
-; CHECK-NEXT:          .csect .bar[PR],2
+; CHECK-NEXT:          .csect .bar[PR],5
 ; CHECK-NEXT:          .globl  bar[DS]                         # -- Begin function bar
 ; CHECK-NEXT:          .globl  .bar[PR]
 ; CHECK-NEXT:          .align  2
@@ -83,14 +83,13 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, .bar[PR]                     # @bar
 ; CHECK-NEXT:          .vbyte  4, TOC[TC0]
 ; CHECK-NEXT:          .vbyte  4, 0
-; CHECK-NEXT:          .csect .bar[PR],2
+; CHECK-NEXT:          .csect .bar[PR],5
 ; CHECK-NEXT:  L..func_begin1:
 ; CHECK-NEXT:  # %bb.0:                                # %entry
-; CHECK-NEXT:  L..tmp3:
-; CHECK-NEXT:  L..tmp4:
+; CHECK-NEXT:  L..tmp2:
 ; CHECK-NEXT:          li 3, 1
 ; CHECK-NEXT:          blr
-; CHECK-NEXT:  L..tmp5:
+; CHECK-NEXT:  L..tmp3:
 ; CHECK-NEXT:  L..bar0:
 ; CHECK-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; CHECK-NEXT:          .byte   0x00                            # Version = 0
@@ -102,8 +101,8 @@ entry:
 ; CHECK-NEXT:                                          # -IsFloatingPointOperationLogOrAbortEnabled
 ; CHECK-NEXT:          .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; CHECK-NEXT:                                          # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
-; CHECK-NEXT:          .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; CHECK-NEXT:          .byte   0x00                            # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 0
+; CHECK-NEXT:          .byte   0x00                            # -IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+; CHECK-NEXT:          .byte   0x00                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
 ; CHECK-NEXT:          .byte   0x00                            # NumberOfFixedParms = 0
 ; CHECK-NEXT:          .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; CHECK-NEXT:          .vbyte  4, L..bar0-.bar[PR]             # Function size
@@ -268,47 +267,33 @@ entry:
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:  L..prologue_end0:
+; CHECK-NEXT:          .byte   5
+; CHECK-NEXT:          .byte   3
+; CHECK-NEXT:          .byte   10
 ; CHECK-NEXT:          .byte   0                               # Set address to L..tmp0
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   2
 ; CHECK-NEXT:          .vbyte  4, L..tmp0
-; CHECK-NEXT:          .byte   19                              # Start sequence
+; CHECK-NEXT:          .byte   20                              # Start sequence
+; CHECK-NEXT:          .byte   0                               # Set address to L..func_end0
 ; CHECK-NEXT:          .byte   5
-; CHECK-NEXT:          .byte   3
-; CHECK-NEXT:          .byte   10
-; CHECK-NEXT:          .byte   0                               # Set address to L..tmp1
-; CHECK-NEXT:          .byte   5
-; CHECK-NEXT:          .byte   2
-; CHECK-NEXT:          .vbyte  4, L..tmp1
-; CHECK-NEXT:          .byte   3                               # Advance line 1
-; CHECK-NEXT:          .byte   1
-; CHECK-NEXT:          .byte   1
-; CHECK-NEXT:          .byte   0                               # Set address to L..sec_end0
-; CHECK-NEXT:          .byte   5
-; CHECK-NEXT:          .byte   2
-; CHECK-NEXT:          .vbyte  4, L..sec_end0
+; CHECK-NEXT:          .byte   2 
+; CHECK-NEXT:          .vbyte  4, L..func_end0
 ; CHECK-NEXT:          .byte   0                               # End sequence
 ; CHECK-NEXT:          .byte   1
 ; CHECK-NEXT:          .byte   1
-; CHECK-NEXT:          .byte   0                               # Set address to L..tmp3
-; CHECK-NEXT:          .byte   5
-; CHECK-NEXT:          .byte   2
-; CHECK-NEXT:          .vbyte  4, L..tmp3
-; CHECK-NEXT:          .byte   24                              # Start sequence
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   3
 ; CHECK-NEXT:          .byte   10
-; CHECK-NEXT:          .byte   0                               # Set address to L..tmp4
+; CHECK-NEXT:          .byte   0                               # Set address to L..tmp2
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   2
-; CHECK-NEXT:          .vbyte  4, L..tmp4
-; CHECK-NEXT:          .byte   3                               # Advance line 1
-; CHECK-NEXT:          .byte   1
-; CHECK-NEXT:          .byte   1
-; CHECK-NEXT:          .byte   0                               # Set address to L..sec_end0
+; CHECK-NEXT:          .vbyte  4, L..tmp2
+; CHECK-NEXT:          .byte   25                              # Start sequence
+; CHECK-NEXT:          .byte   0                               # Set address to L..func_end1
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   2
-; CHECK-NEXT:          .vbyte  4, L..sec_end0
+; CHECK-NEXT:          .vbyte  4, L..func_end1
 ; CHECK-NEXT:          .byte   0                               # End sequence
 ; CHECK-NEXT:          .byte   1
 ; CHECK-NEXT:          .byte   1

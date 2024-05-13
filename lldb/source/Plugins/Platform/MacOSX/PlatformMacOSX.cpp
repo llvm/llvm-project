@@ -15,8 +15,10 @@
 #include "PlatformRemoteAppleBridge.h"
 #include "PlatformRemoteAppleTV.h"
 #include "PlatformRemoteAppleWatch.h"
+#include "PlatformRemoteAppleXR.h"
 #endif
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -52,6 +54,7 @@ void PlatformMacOSX::Initialize() {
   PlatformRemoteAppleTV::Initialize();
   PlatformRemoteAppleWatch::Initialize();
   PlatformRemoteAppleBridge::Initialize();
+  PlatformRemoteAppleXR::Initialize();
 #endif
 
   if (g_initialize_count++ == 0) {
@@ -74,6 +77,7 @@ void PlatformMacOSX::Terminate() {
   }
 
 #if defined(__APPLE__)
+  PlatformRemoteAppleXR::Terminate();
   PlatformRemoteAppleBridge::Terminate();
   PlatformRemoteAppleWatch::Terminate();
   PlatformRemoteAppleTV::Terminate();
@@ -85,12 +89,7 @@ void PlatformMacOSX::Terminate() {
   PlatformDarwin::Terminate();
 }
 
-lldb_private::ConstString PlatformMacOSX::GetPluginNameStatic() {
-  static ConstString g_host_name(Platform::GetHostPlatformName());
-  return g_host_name;
-}
-
-const char *PlatformMacOSX::GetDescriptionStatic() {
+llvm::StringRef PlatformMacOSX::GetDescriptionStatic() {
   return "Local Mac OS X user platform plug-in.";
 }
 
@@ -101,7 +100,7 @@ PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch) {
 }
 
 /// Default Constructor
-PlatformMacOSX::PlatformMacOSX() : PlatformDarwin(true) {}
+PlatformMacOSX::PlatformMacOSX() : PlatformDarwinDevice(true) {}
 
 ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   ModuleSP exe_module_sp(target.GetExecutableModule());
@@ -122,14 +121,21 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
     sdk_path.Printf("%s/Developer/Platforms/MacOSX.platform/Developer/"
                     "SDKs/MacOSX%u.%u.sdk",
                     fspec.GetPath().c_str(), version.getMajor(),
-                    version.getMinor().getValue());
+                    *version.getMinor());
     if (FileSystem::Instance().Exists(fspec))
       return ConstString(sdk_path.GetString());
   }
 
   // Use the default SDK as a fallback.
-  FileSpec fspec(
-      HostInfo::GetXcodeSDKPath(lldb_private::XcodeSDK::GetAnyMacOS()));
+  auto sdk_path_or_err =
+      HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK::GetAnyMacOS()});
+  if (!sdk_path_or_err) {
+    Debugger::ReportError("Error while searching for Xcode SDK: " +
+                          toString(sdk_path_or_err.takeError()));
+    return {};
+  }
+
+  FileSpec fspec(*sdk_path_or_err);
   if (fspec) {
     if (FileSystem::Instance().Exists(fspec))
       return ConstString(fspec.GetPath());
@@ -138,39 +144,39 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   return {};
 }
 
-bool PlatformMacOSX::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                     ArchSpec &arch) {
+std::vector<ArchSpec>
+PlatformMacOSX::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
+  std::vector<ArchSpec> result;
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-  // macOS for ARM64 support both native and translated x86_64 processes
-  if (!m_num_arm_arches || idx < m_num_arm_arches) {
-    bool res = ARMGetSupportedArchitectureAtIndex(idx, arch);
-    if (res)
-      return true;
-    if (!m_num_arm_arches)
-      m_num_arm_arches = idx;
-  }
+  // When cmdline lldb is run on iOS, watchOS, etc, it is still
+  // using "PlatformMacOSX".
+  llvm::Triple::OSType host_os = GetHostOSType();
+  ARMGetSupportedArchitectures(result, host_os);
 
-  // We can't use x86GetSupportedArchitectureAtIndex() because it uses
-  // the system architecture for some of its return values and also
-  // has a 32bits variant.
-  if (idx == m_num_arm_arches) {
-    arch.SetTriple("x86_64-apple-macosx");
-    return true;
-  } else if (idx == m_num_arm_arches + 1) {
-    arch.SetTriple("x86_64-apple-ios-macabi");
-    return true;
-  } else if (idx == m_num_arm_arches + 2) {
-    arch.SetTriple("arm64-apple-ios");
-    return true;
-  } else if (idx == m_num_arm_arches + 3) {
-    arch.SetTriple("arm64e-apple-ios");
-    return true;
-  }
+  if (host_os == llvm::Triple::MacOSX) {
+    // We can't use x86GetSupportedArchitectures() because it uses
+    // the system architecture for some of its return values and also
+    // has a 32bits variant.
+    result.push_back(ArchSpec("x86_64-apple-macosx"));
+    result.push_back(ArchSpec("x86_64-apple-ios-macabi"));
+    result.push_back(ArchSpec("arm64-apple-ios-macabi"));
+    result.push_back(ArchSpec("arm64e-apple-ios-macabi"));
 
-  return false;
+    // On Apple Silicon, the host platform is compatible with iOS triples to
+    // support unmodified "iPhone and iPad Apps on Apple Silicon Macs". Because
+    // the binaries are identical, we must rely on the host architecture to
+    // tell them apart and mark the host platform as compatible or not.
+    if (!process_host_arch ||
+        process_host_arch.GetTriple().getOS() == llvm::Triple::MacOSX) {
+      result.push_back(ArchSpec("arm64-apple-ios"));
+      result.push_back(ArchSpec("arm64e-apple-ios"));
+    }
+  }
 #else
-  return x86GetSupportedArchitectureAtIndex(idx, arch);
+  x86GetSupportedArchitectures(result);
+  result.push_back(ArchSpec("x86_64-apple-ios-macabi"));
 #endif
+  return result;
 }
 
 lldb_private::Status PlatformMacOSX::GetSharedModule(
@@ -216,3 +222,9 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
   }
   return error;
 }
+
+llvm::StringRef PlatformMacOSX::GetDeviceSupportDirectoryName() {
+  return "macOS DeviceSupport";
+}
+
+llvm::StringRef PlatformMacOSX::GetPlatformName() { return "MacOSX.platform"; }

@@ -2,9 +2,6 @@
 Test the lldb disassemble command on each call frame when stopped on C's ctor.
 """
 
-from __future__ import print_function
-
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -13,22 +10,22 @@ from lldbsuite.test import lldbutil
 
 
 class IterateFrameAndDisassembleTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_and_run_command(self):
         """Disassemble each call frame when stopped on C's constructor."""
         self.build()
         self.breakOnCtor()
 
         raw_output = self.res.GetOutput()
-        frameRE = re.compile(r"""
+        frameRE = re.compile(
+            r"""
                               ^\s\sframe        # heading for the frame info,
                               .*                # wildcard, and
                               0x[0-9a-f]{16}    # the frame pc, and
                               \sa.out`(.+)      # module`function, and
                               \s\+\s            # the rest ' + ....'
-                              """, re.VERBOSE)
+                              """,
+            re.VERBOSE,
+        )
         for line in raw_output.split(os.linesep):
             match = frameRE.search(line)
             if match:
@@ -37,7 +34,7 @@ class IterateFrameAndDisassembleTestCase(TestBase):
                 self.trace("function:", function)
                 self.runCmd("disassemble -n '%s'" % function)
 
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     def test_and_python_api(self):
         """Disassemble each call frame when stopped on C's constructor."""
         self.build()
@@ -47,33 +44,25 @@ class IterateFrameAndDisassembleTestCase(TestBase):
         # disassemble it.
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
-        depth = thread.GetNumFrames()
-        for i in range(depth - 1):
-            frame = thread.GetFrameAtIndex(i)
-            function = frame.GetFunction()
-            # Print the function header.
-            if self.TraceOn():
-                print()
-                print(function)
-            if function:
-                # Get all instructions for this function and print them out.
-                insts = function.GetInstructions(target)
-                for inst in insts:
-                    # We could simply do 'print inst' to print out the disassembly.
-                    # But we want to print to stdout only if self.TraceOn() is
-                    # True.
-                    disasm = str(inst)
-                    if self.TraceOn():
-                        print(disasm)
+        if self.TraceOn():
+            for frame in thread.frames:
+                function = frame.GetFunction()
+                if function:
+                    # Print the function header.
+                    print()
+                    print(function)
+                    # Get all instructions for this function and print them out.
+                    insts = function.GetInstructions(target)
+                    for inst in insts:
+                        print(inst)
 
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break for main.cpp.
-        self.line = line_number('main.cpp', '// Set break point at this line.')
+        self.line = line_number("main.cpp", "// Set break point at this line.")
 
     def breakOnCtor(self):
         """Setup/run the program so it stops on C's constructor."""
@@ -82,14 +71,17 @@ class IterateFrameAndDisassembleTestCase(TestBase):
 
         # Break on the ctor function of class C.
         bpno = lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=-1)
+            self, "main.cpp", self.line, num_expected_locations=-1
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint %d.' % (bpno)])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint %d." % (bpno)],
+        )
 
         # This test was failing because we fail to put the C:: in front of constructore.
         # We should maybe make another testcase to cover that specifically, but we shouldn't

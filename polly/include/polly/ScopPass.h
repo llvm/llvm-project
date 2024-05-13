@@ -124,7 +124,7 @@ extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Scop,
 namespace polly {
 
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-class OwningInnerAnalysisManagerProxy
+class OwningInnerAnalysisManagerProxy final
     : public InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT> {
 public:
   OwningInnerAnalysisManagerProxy()
@@ -162,7 +162,7 @@ class ScopPass : public RegionPass {
   Scop *S;
 
 protected:
-  explicit ScopPass(char &ID) : RegionPass(ID), S(0) {}
+  explicit ScopPass(char &ID) : RegionPass(ID), S(nullptr) {}
 
   /// runOnScop - This method must be overloaded to perform the
   /// desired Polyhedral transformation or analysis.
@@ -175,7 +175,7 @@ protected:
   /// getAnalysisUsage - Subclasses that override getAnalysisUsage
   /// must call this.
   ///
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
   bool runOnRegion(Region *R, RGPassManager &RGM) override;
@@ -191,7 +191,7 @@ struct ScopStandardAnalysisResults {
   TargetTransformInfo &TTI;
 };
 
-class SPMUpdater {
+class SPMUpdater final {
 public:
   SPMUpdater(SmallPriorityWorklist<Region *, 4> &Worklist,
              ScopAnalysisManager &SAM)
@@ -212,13 +212,12 @@ private:
   bool InvalidateCurrentScop;
   SmallPriorityWorklist<Region *, 4> &Worklist;
   ScopAnalysisManager &SAM;
-  template <typename ScopPassT> friend class FunctionToScopPassAdaptor;
+  template <typename ScopPassT> friend struct FunctionToScopPassAdaptor;
 };
 
 template <typename ScopPassT>
-class FunctionToScopPassAdaptor
-    : public PassInfoMixin<FunctionToScopPassAdaptor<ScopPassT>> {
-public:
+struct FunctionToScopPassAdaptor final
+    : PassInfoMixin<FunctionToScopPassAdaptor<ScopPassT>> {
   explicit FunctionToScopPassAdaptor(ScopPassT Pass) : Pass(std::move(Pass)) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
@@ -255,7 +254,7 @@ public:
 
     while (!Worklist.empty()) {
       Region *R = Worklist.pop_back_val();
-      if (!SD.isMaxRegionInScop(*R, /*Verifying=*/false))
+      if (!SD.isMaxRegionInScop(*R, /*Verify=*/false))
         continue;
       Scop *scop = SI.getScop(R);
       if (!scop)

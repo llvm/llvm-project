@@ -3431,6 +3431,12 @@
 # CHECK-BE: mfrtcl 2                        # encoding: [0x7c,0x45,0x02,0xa6]
 # CHECK-LE: mfrtcl 2                        # encoding: [0xa6,0x02,0x45,0x7c]
             mfrtcl 2
+# CHECK-BE: mtudscr 2                       # encoding: [0x7c,0x43,0x03,0xa6]
+# CHECK-LE: mtudscr 2                       # encoding: [0xa6,0x03,0x43,0x7c]
+            mtudscr 2
+# CHECK-BE: mfudscr 2                       # encoding: [0x7c,0x43,0x02,0xa6]
+# CHECK-LE: mfudscr 2                       # encoding: [0xa6,0x02,0x43,0x7c]
+            mfudscr 2
 # CHECK-BE: mtdscr 2                        # encoding: [0x7c,0x51,0x03,0xa6]
 # CHECK-LE: mtdscr 2                        # encoding: [0xa6,0x03,0x51,0x7c]
             mtdscr 2

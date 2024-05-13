@@ -20,7 +20,7 @@ define float @div1_arcp(float %x, float %y, float %z) {
 define float @div2_arcp_all(float %x, float %y, float %z) {
 ; CHECK-LABEL: div2_arcp_all:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm3 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    divss %xmm2, %xmm3
 ; CHECK-NEXT:    mulss %xmm3, %xmm0
 ; CHECK-NEXT:    mulss %xmm1, %xmm0
@@ -67,7 +67,7 @@ define float @div2_arcp_partial2(float %x, float %y, float %z) {
 define float @div2_arcp_partial3(float %x, float %y, float %z) {
 ; CHECK-LABEL: div2_arcp_partial3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm3 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    divss %xmm2, %xmm3
 ; CHECK-NEXT:    mulss %xmm3, %xmm0
 ; CHECK-NEXT:    mulss %xmm1, %xmm0
@@ -85,7 +85,7 @@ define float @div2_arcp_partial3(float %x, float %y, float %z) {
 define double @div3_arcp(double %x, double %y, double %z) {
 ; CHECK-LABEL: div3_arcp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    divsd %xmm1, %xmm2
 ; CHECK-NEXT:    mulsd %xmm2, %xmm0
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
@@ -102,10 +102,10 @@ define float @div_select_constant_fold(i1 zeroext %arg) {
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jne .LBB6_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB6_1:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [2.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    retq
   %tmp = select i1 %arg, float 5.000000e+00, float 6.000000e+00
   %B2 = fdiv nnan float %tmp, 2.000000e+00
@@ -115,7 +115,7 @@ define float @div_select_constant_fold(i1 zeroext %arg) {
 define float @div_select_constant_fold_zero(i1 zeroext %arg) {
 ; CHECK-LABEL: div_select_constant_fold_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [+Inf,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    retq
   %tmp = select i1 %arg, float 5.000000e+00, float 6.000000e+00
   %B2 = fdiv float %tmp, 0.000000e+00
@@ -131,7 +131,7 @@ define void @PR24141() {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB8_1: # %while.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    callq g
+; CHECK-NEXT:    callq g@PLT
 ; CHECK-NEXT:    divsd %xmm1, %xmm0
 ; CHECK-NEXT:    jmp .LBB8_1
 entry:

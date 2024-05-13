@@ -2,6 +2,6 @@
 ; RUN: verify-uselistorder %s
 ; PR3372
 
-@X = global i32* @0
+@X = global ptr @0
 @0 = global i32 4
 

@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -triple x86_64-unknown-unknown -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -triple x86_64-unknown-unknown -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -triple x86_64-unknown-unknown -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -triple x86_64-unknown-unknown -verify=expected,omp51 %s -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -triple x86_64-unknown-unknown -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -triple x86_64-unknown-unknown -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -triple x86_64-unknown-unknown -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -triple x86_64-unknown-unknown -verify=expected,omp51 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -17,7 +19,7 @@ void xxx(int argc) {
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp for'}}
 #pragma omp for foo
 
-void test_no_clause() {
+void test_no_clause(void) {
   int i;
 #pragma omp for
   for (i = 0; i < 16; ++i)
@@ -28,7 +30,7 @@ void test_no_clause() {
   ++i;
 }
 
-void test_branch_protected_scope() {
+void test_branch_protected_scope(void) {
   int i = 0;
 L1:
   ++i;
@@ -56,7 +58,7 @@ L1:
     goto L1;
 }
 
-void test_invalid_clause() {
+void test_invalid_clause(void) {
   int i;
 #pragma omp parallel
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp for' are ignored}}
@@ -79,7 +81,7 @@ void test_invalid_clause() {
     ;
 }
 
-void test_non_identifiers() {
+void test_non_identifiers(void) {
   int i, x;
 
 #pragma omp parallel
@@ -106,9 +108,9 @@ void test_non_identifiers() {
     ;
 }
 
-extern int foo();
+extern int foo(void);
 
-void test_collapse() {
+void test_collapse(void) {
   int i;
 #pragma omp parallel
 // expected-error@+1 {{expected '('}}
@@ -226,7 +228,7 @@ void test_collapse() {
         i += j;
 }
 
-void test_private() {
+void test_private(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected expression}}
@@ -277,7 +279,7 @@ void test_private() {
   }
 }
 
-void test_lastprivate() {
+void test_lastprivate(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
@@ -328,7 +330,7 @@ void test_lastprivate() {
     ;
 }
 
-void test_firstprivate() {
+void test_firstprivate(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
@@ -379,7 +381,7 @@ void test_firstprivate() {
     ;
 }
 
-void test_loop_messages() {
+void test_loop_messages(void) {
   float a[100], b[100], c[100];
 #pragma omp parallel
 // expected-error@+2 {{variable must be of integer or pointer type}}
@@ -402,16 +404,34 @@ void test_loop_messages() {
 #pragma omp for order // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} expected-error {{expected '(' after 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp for order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp for order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}} omp51-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp for order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp for order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}} omp51-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp for order(concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp for ordered order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} omp50-error {{'order' clause with 'concurrent' modifier cannot be specified if an 'ordered' clause is specified}} omp50-note {{'ordered' clause}}
+#pragma omp for order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for ordered order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} omp50-error {{'order' clause with 'concurrent' modifier cannot be specified if an 'ordered' clause is specified}} omp50-note {{'ordered' clause}} omp51-error {{'order' clause with 'concurrent' modifier cannot be specified if an 'ordered' clause is specified}} omp51-note {{'ordered' clause}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for order(unconstrained:) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}} omp51-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for order(reproducible:concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for order(reproducible:concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for order(unconstrained:concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp for order(concurrent) order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp for'}} omp51-error {{directive '#pragma omp for' cannot contain more than one 'order' clause}}
   for (int i = 0; i < 10; ++i)
     ;
 }

@@ -1,6 +1,6 @@
 ; RUN: llc %s -o - -print-after=machine-cse -mtriple=x86_64-- 2>&1 | FileCheck %s --match-full-lines
 
-; CHECK: %5:gr32 = SUB32ri8 %0:gr32(tied-def 0), 1, implicit-def $eflags, debug-location !24; a.c:3:13
+; CHECK: %5:gr32 = SUB32ri %0:gr32(tied-def 0), 1, implicit-def $eflags, debug-location !24; a.c:3:13
 ; CHECK-NEXT: %10:gr32 = MOVSX32rr8 %4:gr8
 ; CHECK-NEXT: JCC_1 %bb.2, 15, implicit $eflags, debug-location !25; a.c:3:18
 
@@ -12,7 +12,7 @@ target triple = "x86_64-apple-macosx10.15.0"
 ; Function Attrs: norecurse nounwind readonly ssp uwtable
 define dso_local i32 @b(i8 signext %0) local_unnamed_addr #0 !dbg !12 {
   call void @llvm.dbg.value(metadata i8 %0, metadata !17, metadata !DIExpression()), !dbg !18
-  %2 = load i32, i32* @a, align 4, !dbg !19, !tbaa !20
+  %2 = load i32, ptr @a, align 4, !dbg !19, !tbaa !20
   %3 = icmp sgt i32 %2, 1, !dbg !24
   br i1 %3, label %8, label %4, !dbg !25
 

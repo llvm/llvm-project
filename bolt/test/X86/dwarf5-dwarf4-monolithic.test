@@ -1,0 +1,331 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-dwarf4-monolithic-main.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-dwarf4-monolithic-helper0.s -o %t0.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-dwarf4-monolithic-helper1.s -o %t1.o
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-dwarf4-monolithic-helper2.s -o %t2.o
+# RUN: %clang %cflags -dwarf-5 %tmain.o %t0.o %t1.o %t2.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt --always-convert-to-ranges %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.exe > %t_line.txt
+# RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
+# RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.bolt >> %t_line.txt
+# RUN: FileCheck --check-prefix=CHECK-LINE %s --input-file %t_line.txt
+
+
+# Check BOLT handles monolithic mix of DWARF4 and DWARF5.
+
+# main.cpp
+# PRECHECK: version = 0x0005
+# PRECHECK: DW_TAG_compile_unit [1] *
+# PRECHECK-NEXT: DW_AT_producer [DW_FORM_strx1]  (indexed (00000000)
+# PRECHECK-NEXT: DW_AT_language
+# PRECHECK-NEXT: DW_AT_name
+# PRECHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
+# PRECHECK-NEXT: DW_AT_stmt_list [DW_FORM_sec_offset]  (0x00000000)
+# PRECHECK-NEXT: DW_AT_comp_dir
+# PRECHECK-NEXT: DW_AT_low_pc
+# PRECHECK: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1)
+# PRECHECK-NEXT: [0x
+# PRECHECK-NEXT: [0x
+# PRECHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000008)
+# PRECHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
+# PRECHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x0000000c)
+# PRECHECK: DW_TAG_subprogram [2] * (0x0000000c)
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000000)
+# PRECHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]
+# PRECHECK: DW_TAG_subprogram [8]
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)
+# PRECHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]
+# PRECHECK: DW_TAG_formal_parameter [9]
+# PRECHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0) loclist = 0x00000018
+# PRECHECK: DW_TAG_formal_parameter [9]
+# PRECHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x1) loclist = 0x00000028
+# PRECHECK: DW_TAG_variable
+# PRECHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x2) loclist = 0x00000038
+# PRECHECK: DW_TAG_inlined_subroutine [12]
+# PRECHECK-NEXT: DW_AT_abstract_origin
+# PRECHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000014
+
+# helper0.cpp
+# PRECHECK: version = 0x0004
+# PRECHECK: DW_TAG_compile_unit
+# PRECHECK-NEXT: DW_AT_producer
+# PRECHECK-NEXT: DW_AT_language
+# PRECHECK-NEXT: DW_AT_name
+# PRECHECK-NEXT: DW_AT_stmt_list
+# PRECHECK-NEXT: DW_AT_comp_dir
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]
+# PRECHECK-NEXT: DW_AT_high_pc
+# PRECHECK: DW_TAG_subprogram [7]
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]
+# PRECHECK-NEXT: DW_AT_high_pc
+# PRECHECK: DW_TAG_variable [9]
+# PRECHECK-NEXT: DW_AT_location [DW_FORM_sec_offset] (0x00000000:
+# PRECHECK: DW_TAG_inlined_subroutine [10]
+# PRECHECK-NEXT: DW_AT_abstract_origin
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]
+# PRECHECK-NEXT: DW_AT_high_pc
+
+# helper1.cpp
+# PRECHECK: version = 0x0005
+# PRECHECK: DW_TAG_compile_unit [1] *
+# PRECHECK-NEXT: DW_AT_producer
+# PRECHECK-NEXT: DW_AT_language
+# PRECHECK-NEXT: DW_AT_name
+# PRECHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000058)
+# PRECHECK-NEXT: DW_AT_stmt_list
+# PRECHECK-NEXT: DW_AT_comp_dir
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)
+# PRECHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]
+# PRECHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000038)
+# PRECHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x00000051)
+# PRECHECK: DW_TAG_variable [2]
+# PRECHECK-NEXT: DW_AT_name
+# PRECHECK-NEXT: DW_AT_type
+# PRECHECK-NEXT: DW_AT_external
+# PRECHECK-NEXT: DW_AT_decl_file
+# PRECHECK-NEXT: DW_AT_decl_line
+# PRECHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x0)
+# PRECHECK: DW_TAG_subprogram [7]
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)
+# PRECHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]
+# PRECHECK: DW_TAG_variable [9]
+# PRECHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
+# PRECHECK: DW_TAG_inlined_subroutine [10]
+# PRECHECK-NEXT: DW_AT_abstract_origin
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)
+# PRECHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]
+
+# helper2.cpp
+# PRECHECK: version = 0x0004
+# PRECHECK: DW_TAG_compile_unit [1] *
+# PRECHECK-NEXT: DW_AT_producer
+# PRECHECK-NEXT: DW_AT_language
+# PRECHECK-NEXT: DW_AT_name
+# PRECHECK-NEXT: DW_AT_stmt_list
+# PRECHECK-NEXT: DW_AT_comp_dir
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]
+# PRECHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]
+# PRECHECK: DW_TAG_subprogram [7]
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]
+# PRECHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]
+# PRECHECK: DW_TAG_variable [9]
+# PRECHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
+# PRECHECK: DW_TAG_inlined_subroutine [10]
+# PRECHECK-NEXT: DW_AT_abstract_origin
+# PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]
+# PRECHECK-NEXT: DW_AT_high_pc
+
+# Checking debug line.
+
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 5
+# CHECK-LINE: include_directories[  0] =  .debug_line_str[0x[[#%.8x,TEST_DEBUG_LINE:]]] = "/test"
+# CHECK-LINE-NEXT: file_names[  0]:
+# CHECK-LINE-NEXT: name:  .debug_line_str[0x[[#%.8x,MAIN_DEBUG_LINE:]]] = "main.cpp"
+# CHECK-LINE-NEXT: dir_index: 0
+# CHECK-LINE-NEXT: md5_checksum: e3a18fae8565a087d09d6076b542cdab
+
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 4
+# CHECK-LINE: include_directories[  1] = "/test"
+# CHECK-LINE-NEXT: file_names[  1]:
+# CHECK-LINE-NEXT: name: "helper0.cpp"
+# CHECK-LINE-NEXT: dir_index: 1
+# CHECK-LINE-NEXT: mod_time:
+# CHECK-LINE-NEXT: length:
+
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 5
+# CHECK-LINE: include_directories[  0] =  .debug_line_str[0x[[#TEST_DEBUG_LINE]]] = "/test"
+# CHECK-LINE-NEXT: file_names[  0]:
+# CHECK-LINE-NEXT: name:  .debug_line_str[0x[[#%.8x,HELPER_DEBUG_LINE:]]] = "helper1.cpp"
+# CHECK-LINE-NEXT: dir_index: 0
+# CHECK-LINE-NEXT: md5_checksum: e6dbd773fdf80bfea332cdf8284cddce
+
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 4
+# CHECK-LINE: include_directories[  1] = "/test"
+# CHECK-LINE-NEXT: file_names[  1]:
+# CHECK-LINE-NEXT: name: "helper2.cpp"
+# CHECK-LINE-NEXT: dir_index: 1
+# CHECK-LINE-NEXT: mod_time:
+# CHECK-LINE-NEXT: length:
+
+
+# POST BOLT.
+
+# POSTCHECK: Addrs: [
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR:]]
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR1:]]
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR2:]]
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR3:]]
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR4:]]
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR5:]]
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR6:]]
+
+# POSTCHECK: Addrs: [
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDRB:]]
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDRB1:]]
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDRB2:]]
+
+
+# main.cpp
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_compile_unit [1] *
+# POSTCHECK-NEXT: DW_AT_producer [DW_FORM_strx1]  (indexed (00000000)
+# POSTCHECK-NEXT: DW_AT_language
+# POSTCHECK-NEXT: DW_AT_name
+# POSTCHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
+# POSTCHECK-NEXT: DW_AT_stmt_list [DW_FORM_sec_offset]  (0x00000000)
+# POSTCHECK-NEXT: DW_AT_comp_dir
+# POSTCHECK-NEXT: DW_AT_low_pc
+# POSTCHECK: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0)
+# POSTCHECK-NEXT: [0x[[#ADDR]], 0x[[#ADDR + 0x7]]
+# POSTCHECK-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 0x51]]
+# POSTCHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000008)
+# POSTCHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
+# POSTCHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x0000000c)
+# POSTCHECK: DW_TAG_subprogram [2]
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist
+# POSTCHECK-NEXT: [0x[[#ADDR]], 0x[[#ADDR + 0x7]]
+# POSTCHECK: DW_TAG_subprogram [8]
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x2) rangelist = 0x00000029
+# POSTCHECK-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 0x51]]
+# POSTCHECK: DW_TAG_formal_parameter [9]
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0) loclist = 0x00000018
+# POSTCHECK-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 0x22]]
+# POSTCHECK-NEXT: [0x[[#ADDR1 + 0x22]], 0x[[#ADDR1 + 0x51]]
+# POSTCHECK: DW_TAG_formal_parameter [9]
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x1) loclist = 0x00000028
+# POSTCHECK-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 0x27]]
+# POSTCHECK-NEXT: [0x[[#ADDR1 + 0x27]], 0x[[#ADDR1 + 0x51]]
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x2) loclist = 0x00000038
+# POSTCHECK-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2 + 0x6]]
+# POSTCHECK-NEXT: [0x[[#ADDR2 + 0x6]], 0x[[#ADDR2 + 0x46]]
+# POSTCHECK: DW_TAG_inlined_subroutine [12]
+# POSTCHECK-NEXT: DW_AT_abstract_origin
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x3) rangelist =  0x0000002d
+# POSTCHECK-NEXT: [0x[[#ADDR3]], 0x[[#ADDR3 + 0x4]]
+# POSTCHECK-NEXT: [0x[[#ADDR3 + 0x10]], 0x[[#ADDR3 + 0x16]]
+
+# helper0.cpp
+# POSTCHECK: version = 0x0004
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK-NEXT: DW_AT_producer
+# POSTCHECK-NEXT: DW_AT_language
+# POSTCHECK-NEXT: DW_AT_name
+# POSTCHECK-NEXT: DW_AT_stmt_list
+# POSTCHECK-NEXT: DW_AT_comp_dir
+# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x
+# POSTCHECK: DW_TAG_subprogram [22]
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x
+# POSTCHECK: DW_TAG_variable [24]
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x
+# POSTCHECK-NEXT: [0x
+# POSTCHECK: DW_TAG_inlined_subroutine [25]
+# POSTCHECK-NEXT: DW_AT_abstract_origin
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x
+
+# helper1.cpp
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_compile_unit [26] *
+# POSTCHECK-NEXT: DW_AT_producer
+# POSTCHECK-NEXT: DW_AT_language
+# POSTCHECK-NEXT: DW_AT_name
+# POSTCHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000058)
+# POSTCHECK-NEXT: DW_AT_stmt_list
+# POSTCHECK-NEXT: DW_AT_comp_dir
+# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0)
+# POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x4]]
+# POSTCHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]
+# POSTCHECK: DW_TAG_variable [27]
+# POSTCHECK-NEXT: DW_AT_name
+# POSTCHECK-NEXT: DW_AT_type
+# POSTCHECK-NEXT: DW_AT_external
+# POSTCHECK-NEXT: DW_AT_decl_file
+# POSTCHECK-NEXT: DW_AT_decl_line
+# POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x2)
+# POSTCHECK: DW_TAG_subprogram [29]
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1)
+# POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x4]]
+# POSTCHECK: DW_TAG_variable [10]
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
+# POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x3]]
+# POSTCHECK-NEXT: [0x[[#ADDRB + 0x3]], 0x[[#ADDRB + 0x4]]
+# POSTCHECK: DW_TAG_inlined_subroutine
+# POSTCHECK-NEXT: DW_AT_abstract_origin
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x2) rangelist
+# POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x3]]
+
+# helper2.cpp
+# POSTCHECK: version = 0x0004
+# POSTCHECK: DW_TAG_compile_unit [17] *
+# POSTCHECK-NEXT: DW_AT_producer
+# POSTCHECK-NEXT: DW_AT_language
+# POSTCHECK-NEXT: DW_AT_name
+# POSTCHECK-NEXT: DW_AT_stmt_list
+# POSTCHECK-NEXT: DW_AT_comp_dir
+# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x
+# POSTCHECK: DW_TAG_subprogram [22]
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x
+# POSTCHECK: DW_TAG_variable [24]
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x
+# POSTCHECK-NEXT: [0x
+# POSTCHECK: DW_TAG_inlined_subroutine [25]
+# POSTCHECK-NEXT: DW_AT_abstract_origin
+# POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x
+
+
+# Checking debug line.
+
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 5
+# CHECK-LINE: include_directories[  0] =  .debug_line_str[0x[[#TEST_DEBUG_LINE]]] = "/test"
+# CHECK-LINE-NEXT: file_names[  0]:
+# CHECK-LINE-NEXT: name:  .debug_line_str[0x[[#MAIN_DEBUG_LINE]]] = "main.cpp"
+# CHECK-LINE-NEXT: dir_index: 0
+# CHECK-LINE-NEXT: md5_checksum: e3a18fae8565a087d09d6076b542cdab
+
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 4
+# CHECK-LINE: include_directories[  1] = "/test"
+# CHECK-LINE-NEXT: file_names[  1]:
+# CHECK-LINE-NEXT: name: "helper0.cpp"
+# CHECK-LINE-NEXT: dir_index: 1
+# CHECK-LINE-NEXT: mod_time:
+# CHECK-LINE-NEXT: length:
+
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 5
+# CHECK-LINE: include_directories[  0] =  .debug_line_str[0x[[#TEST_DEBUG_LINE]]] = "/test"
+# CHECK-LINE-NEXT: file_names[  0]:
+# CHECK-LINE-NEXT: name:  .debug_line_str[0x[[#HELPER_DEBUG_LINE]]] = "helper1.cpp"
+# CHECK-LINE-NEXT: dir_index: 0
+# CHECK-LINE-NEXT: md5_checksum: e6dbd773fdf80bfea332cdf8284cddce
+
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 4
+# CHECK-LINE: include_directories[  1] = "/test"
+# CHECK-LINE-NEXT: file_names[  1]:
+# CHECK-LINE-NEXT: name: "helper2.cpp"
+# CHECK-LINE-NEXT: dir_index: 1
+# CHECK-LINE-NEXT: mod_time:
+# CHECK-LINE-NEXT: length:

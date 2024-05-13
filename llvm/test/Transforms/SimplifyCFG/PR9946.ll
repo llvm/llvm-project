@@ -1,10 +1,12 @@
-; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output < %s
+; RUN: opt -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output < %s
 
 @foo = external constant i32
 
 define i32 @f() {
 entry:
-  br i1 icmp eq (i64 and (i64 ptrtoint (i32* @foo to i64), i64 15), i64 0), label %if.end, label %if.then
+  %and = and i64 ptrtoint (ptr @foo to i64), 15
+  %cmp = icmp eq i64 %and, 0
+  br i1 %cmp, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
   br label %return

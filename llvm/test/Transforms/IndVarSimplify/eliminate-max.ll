@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -indvars | FileCheck %s
+; RUN: opt < %s -S -passes=indvars | FileCheck %s
 ; PR4914.ll
 
 ; Indvars should be able to do range analysis and eliminate icmps.
@@ -7,7 +7,7 @@
 ; cannot eliminate, because it requires analyzing more than just the
 ; range of the induction variable.
 
-@0 = private constant [4 x i8] c"%d\0A\00", align 1 ; <[4 x i8]*> [#uses=1]
+@0 = private constant [4 x i8] c"%d\0A\00", align 1 ; <ptr> [#uses=1]
 
 define i32 @main() nounwind {
 ; CHECK-LABEL: @main(
@@ -50,8 +50,8 @@ bb14:                                             ; preds = %bb11, %bb7
   br i1 %t20, label %bb1, label %bb21
 
 bb21:                                             ; preds = %bb14
-  %t22 = call i32 (i8*, ...) @printf(i8* noalias getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 %t18) nounwind
+  %t22 = call i32 (ptr, ...) @printf(ptr noalias @0, i32 %t18) nounwind
   ret i32 0
 }
 
-declare i32 @printf(i8* noalias nocapture, ...) nounwind
+declare i32 @printf(ptr noalias nocapture, ...) nounwind

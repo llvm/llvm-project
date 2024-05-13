@@ -39,14 +39,14 @@ define dso_local void @test_iltui_store(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_iltui_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ult i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @glob, align 4
+  store i32 %conv, ptr @glob, align 4
   ret void
 }
 
@@ -55,13 +55,13 @@ define dso_local void @test_iltui_sext_store(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_iltui_sext_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    sradi r3, r3, 63
-; CHECK-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ult i32 %a, %b
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob, align 4
+  store i32 %sub, ptr @glob, align 4
   ret void
 }

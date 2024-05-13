@@ -115,7 +115,7 @@ protected:
   /// When extracting data from a packet, this index will march along as things
   /// get extracted. If set to UINT64_MAX the end of the packet data was
   /// reached when decoding information.
-  uint64_t m_index;
+  uint64_t m_index = 0;
 };
 
 #endif // LLDB_UTILITY_STRINGEXTRACTOR_H

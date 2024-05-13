@@ -1,12 +1,12 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=+vsx | FileCheck %s
-; RUN: opt < %s -cost-model -analyze -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -mattr=+vsx | FileCheck --check-prefix=CHECK-P9 %s
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=+vsx | FileCheck %s
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -mattr=+vsx | FileCheck --check-prefix=CHECK-P9 %s
 
-define void @testi16(i16 %arg1, i16 %arg2, i16* %arg3) {
+define void @testi16(i16 %arg1, i16 %arg2, ptr %arg3) {
 
   %s1 = add i16 %arg1, %arg2
   %s2 = zext i16 %arg1 to i32
-  %s3 = load i16, i16* %arg3
-  store i16 %arg2, i16* %arg3
+  %s3 = load i16, ptr %arg3
+  store i16 %arg2, ptr %arg3
   %c = icmp eq i16 %arg1, %arg2
 
   ret void
@@ -40,10 +40,10 @@ define void @test4xi16(<4 x i16> %arg1, <4 x i16> %arg2) {
   ; CHECK-P9: cost of 2 {{.*}} icmp
 }
 
-define void @test4xi32(<4 x i32> %arg1, <4 x i32> %arg2, <4 x i32>* %arg3) {
+define void @test4xi32(<4 x i32> %arg1, <4 x i32> %arg2, ptr %arg3) {
 
-  %v1 = load <4 x i32>, <4 x i32>* %arg3
-  store <4 x i32> %arg2, <4 x i32>* %arg3
+  %v1 = load <4 x i32>, ptr %arg3
+  store <4 x i32> %arg2, ptr %arg3
 
   ret void
   ; CHECK: cost of 1 {{.*}} load

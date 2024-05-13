@@ -1,8 +1,8 @@
 ; RUN: lli -jit-kind=orc-lazy %s
 ;
-; Basic sanity check: A module with a single no-op main function runs.
+; Basic correctness check: A module with a single no-op main function runs.
 
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) {
 entry:
   ret i32 0
 }

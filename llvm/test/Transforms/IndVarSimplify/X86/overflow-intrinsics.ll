@@ -1,9 +1,9 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @f_sadd(i8* %a) {
+define void @f_sadd(ptr %a) {
 ; CHECK-LABEL: @f_sadd(
 entry:
   br label %for.body
@@ -14,8 +14,8 @@ for.cond.cleanup:                                 ; preds = %cont
 for.body:                                         ; preds = %entry, %cont
   %i.04 = phi i32 [ 0, %entry ], [ %2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %i.04, i32 1)
   %1 = extractvalue { i32, i1 } %0, 1
 ; CHECK: for.body:
@@ -33,7 +33,7 @@ cont:                                             ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
-define void @f_uadd(i8* %a) {
+define void @f_uadd(ptr %a) {
 ; CHECK-LABEL: @f_uadd(
 entry:
   br label %for.body
@@ -44,8 +44,8 @@ for.cond.cleanup:                                 ; preds = %cont
 for.body:                                         ; preds = %entry, %cont
   %i.04 = phi i32 [ 0, %entry ], [ %2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %0 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %i.04, i32 1)
   %1 = extractvalue { i32, i1 } %0, 1
 ; CHECK: for.body:
@@ -63,7 +63,7 @@ cont:                                             ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
-define void @f_ssub(i8* nocapture %a) {
+define void @f_ssub(ptr nocapture %a) {
 ; CHECK-LABEL: @f_ssub(
 entry:
   br label %for.body
@@ -74,8 +74,8 @@ for.cond.cleanup:                                 ; preds = %cont
 for.body:                                         ; preds = %entry, %cont
   %i.04 = phi i32 [ 15, %entry ], [ %2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %0 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %i.04, i32 1)
   %1 = extractvalue { i32, i1 } %0, 1
 ; CHECK: for.body:
@@ -93,7 +93,7 @@ cont:                                             ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
-define void @f_usub(i8* nocapture %a) {
+define void @f_usub(ptr nocapture %a) {
 ; CHECK-LABEL: @f_usub(
 entry:
   br label %for.body
@@ -104,8 +104,8 @@ for.cond.cleanup:                                 ; preds = %cont
 for.body:                                         ; preds = %entry, %cont
   %i.04 = phi i32 [ 15, %entry ], [ %2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %0 = tail call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %i.04, i32 1)
   %1 = extractvalue { i32, i1 } %0, 1
 

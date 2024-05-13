@@ -69,6 +69,8 @@ int main(int, char**)
         assert(x == 3.25);
     }
     std::remove(temp2.c_str());
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wofstream fs1(temp1.c_str());
         std::wofstream fs2(temp2.c_str());
@@ -96,6 +98,7 @@ int main(int, char**)
         assert(x == 3.25);
     }
     std::remove(temp2.c_str());
+#endif
 
   return 0;
 }

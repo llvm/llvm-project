@@ -78,7 +78,7 @@ define <4 x i32> @test3(<4 x i32> %a) {
 ;
 ; AVX2-LABEL: test3:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %lshr = lshr <4 x i32> %a, <i32 3, i32 2, i32 2, i32 2>
   ret <4 x i32> %lshr
@@ -102,7 +102,7 @@ define <4 x i32> @test4(<4 x i32> %a) {
 ;
 ; AVX2-LABEL: test4:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %lshr = lshr <4 x i32> %a, <i32 3, i32 3, i32 2, i32 2>
   ret <4 x i32> %lshr
@@ -178,7 +178,7 @@ define <4 x i32> @test7(<4 x i32> %a) {
 ;
 ; AVX2-LABEL: test7:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %lshr = ashr <4 x i32> %a, <i32 3, i32 2, i32 2, i32 2>
   ret <4 x i32> %lshr
@@ -202,7 +202,7 @@ define <4 x i32> @test8(<4 x i32> %a) {
 ;
 ; AVX2-LABEL: test8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %lshr = ashr <4 x i32> %a, <i32 3, i32 3, i32 2, i32 2>
   ret <4 x i32> %lshr
@@ -230,7 +230,7 @@ define <8 x i16> @test9(<8 x i16> %a) {
   ret <8 x i16> %lshr
 }
 
-define <8 x i32> @test10(<8 x i32>* %a) {
+define <8 x i32> @test10(ptr %a) {
 ; SSE-LABEL: test10:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -248,7 +248,7 @@ define <8 x i32> @test10(<8 x i32>* %a) {
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vpsrad $1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
-  %ld = load <8 x i32>, <8 x i32>* %a, align 32
+  %ld = load <8 x i32>, ptr %a, align 32
   %ashr = ashr <8 x i32> %ld, <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i32> %ashr
 }
@@ -258,8 +258,8 @@ define <8 x i32> @test10(<8 x i32>* %a) {
 define <16 x i16> @test11(<16 x i16> %a) {
 ; SSE-LABEL: test11:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmullw {{.*}}(%rip), %xmm0
-; SSE-NEXT:    pmullw {{.*}}(%rip), %xmm1
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test11:
@@ -276,7 +276,7 @@ define <16 x i16> @test11(<16 x i16> %a) {
 ;
 ; AVX2-LABEL: test11:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %lshr = shl <16 x i16> %a, <i16 1, i16 3, i16 1, i16 1, i16 1, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 1, i16 1, i16 1, i16 3, i16 1>
   ret <16 x i16> %lshr

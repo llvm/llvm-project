@@ -20,8 +20,8 @@ define i32 @f32_bzhi(i32 %x, i32 %y) local_unnamed_addr {
 ; CHECK32-NEXT:    retl
 entry:
   %idxprom = sext i32 %y to i64
-  %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @fill_table32, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @fill_table32, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %and = and i32 %0, %x
   ret i32 %and
 }
@@ -39,8 +39,8 @@ define i32 @f32_bzhi_partial(i32 %x, i32 %y) local_unnamed_addr {
 ; CHECK32-NEXT:    retl
 entry:
   %idxprom = sext i32 %y to i64
-  %arrayidx = getelementptr inbounds [17 x i32], [17 x i32]* @fill_table32_partial, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [17 x i32], ptr @fill_table32_partial, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %and = and i32 %0, %x
   ret i32 %and
 }
@@ -60,8 +60,8 @@ define i64 @f64_bzhi(i64 %x, i64 %y) local_unnamed_addr {
 ; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    retl
 entry:
-  %arrayidx = getelementptr inbounds [64 x i64], [64 x i64]* @fill_table64, i64 0, i64 %y
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds [64 x i64], ptr @fill_table64, i64 0, i64 %y
+  %0 = load i64, ptr %arrayidx, align 8
   %and = and i64 %0, %x
   ret i64 %and
 }
@@ -81,8 +81,8 @@ define i64 @f64_bzhi_partial(i64 %x, i64 %y) local_unnamed_addr {
 ; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    retl
 entry:
-  %arrayidx = getelementptr inbounds [51 x i64], [51 x i64]* @fill_table64_partial, i64 0, i64 %y
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds [51 x i64], ptr @fill_table64_partial, i64 0, i64 %y
+  %0 = load i64, ptr %arrayidx, align 8
   %and = and i64 %0, %x
   ret i64 %and
 }

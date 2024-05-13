@@ -10,8 +10,8 @@ public:
   void f1() __attribute__((internal_linkage));
   void f2() __attribute__((internal_linkage)) {}
   static void f3() __attribute__((internal_linkage)) {}
-  void f4(); // expected-note{{previous definition is here}}
-  static int zz; // expected-note{{previous definition is here}}
+  void f4(); // expected-note{{previous declaration is here}}
+  static int zz; // expected-note{{previous declaration is here}}
   A() __attribute__((internal_linkage)) {}
   ~A() __attribute__((internal_linkage)) {}
   A& operator=(const A&) __attribute__((internal_linkage)) { return *this; }
@@ -20,9 +20,9 @@ public:
   };
 };
 
-__attribute__((internal_linkage)) void A::f4() {} // expected-error{{'internal_linkage' attribute does not appear on the first declaration of 'f4'}}
+__attribute__((internal_linkage)) void A::f4() {} // expected-error{{'internal_linkage' attribute does not appear on the first declaration}}
 
-__attribute__((internal_linkage)) int A::zz; // expected-error{{'internal_linkage' attribute does not appear on the first declaration of 'zz'}}
+__attribute__((internal_linkage)) int A::zz; // expected-error{{'internal_linkage' attribute does not appear on the first declaration}}
 
 namespace Z __attribute__((internal_linkage)) { // expected-warning{{'internal_linkage' attribute only applies to}}
 }

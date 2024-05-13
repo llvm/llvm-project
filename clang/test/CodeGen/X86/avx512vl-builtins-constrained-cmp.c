@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -fexperimental-new-pass-manager -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 

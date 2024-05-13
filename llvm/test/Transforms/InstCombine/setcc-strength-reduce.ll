@@ -2,7 +2,7 @@
 ; working.  Basically this boils down to converting setlt,gt,le,ge instructions
 ; into equivalent setne,eq instructions.
 ;
-; RUN: opt < %s -instcombine -S | \
+; RUN: opt < %s -passes=instcombine -S | \
 ; RUN:    grep -v "icmp eq" | grep -v "icmp ne" | not grep icmp
 ; END.
 

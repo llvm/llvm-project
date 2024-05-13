@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Ensure we do not move instructions from region statements in case the
 ; instruction to move loads from an array which is also written to from
@@ -17,7 +17,7 @@
 ;     A[0] = val;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -27,16 +27,16 @@ for:
   br i1 %j.cmp, label %bodyA, label %exit
 
     bodyA:
-      %val = load double, double* %A
+      %val = load double, ptr %A
       %cond = fcmp oeq double 21.0, 21.0
       br i1 %cond, label %bodyA_true, label %bodyB
 
     bodyA_true:
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       br label %bodyB
 
     bodyB:
-      store double %val, double* %A
+      store double %val, ptr %A
       br label %bodyB_exit
 
     bodyB_exit:

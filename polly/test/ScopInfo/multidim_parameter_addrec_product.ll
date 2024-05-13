@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void foo(float *A, long *p) {
 ;      for (long i = 0; i < 100; i++)
@@ -20,7 +19,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(float* %A, i64* %p) {
+define void @foo(ptr %A, ptr %p) {
 bb:
   br label %bb2
 
@@ -40,13 +39,13 @@ bb4:                                              ; preds = %bb13, %bb3
 bb5:                                              ; preds = %bb4
   %tmp = add nuw nsw i64 %i.0, %j.0
   %tmp6 = sitofp i64 %tmp to float
-  %pval = load i64, i64* %p, align 8
+  %pval = load i64, ptr %p, align 8
   %tmp8 = mul nsw i64 %i.0, %pval
   %tmp9 = add nsw i64 %tmp8, %j.0
-  %tmp10 = getelementptr inbounds float, float* %A, i64 %tmp9
-  %tmp11 = load float, float* %tmp10, align 4
+  %tmp10 = getelementptr inbounds float, ptr %A, i64 %tmp9
+  %tmp11 = load float, ptr %tmp10, align 4
   %tmp12 = fadd float %tmp11, %tmp6
-  store float %tmp12, float* %tmp10, align 4
+  store float %tmp12, ptr %tmp10, align 4
   br label %bb13
 
 bb13:                                             ; preds = %bb5

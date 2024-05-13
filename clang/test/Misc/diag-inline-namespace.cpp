@@ -48,3 +48,14 @@ namespace N {
   T<struct A::B::C::i> t4; // expected-error {{implicit instantiation of undefined template 'N::T<N::A::i>'}}
   T<struct A::B::C::j> t5; // expected-error {{implicit instantiation of undefined template 'N::T<N::B::C::j>'}}
 }
+
+namespace dont_crash {
+// A malformed lookup involving inline namespaces in a linkage specification
+// would previous cause an assertion due to the way diagnostics are emitted.
+extern "C++" inline namespace {
+namespace a {
+  a : b // expected-error {{unexpected ':' in nested name specifier; did you mean '::'?}} \
+        // expected-error {{no type named 'b' in namespace 'dont_crash::a'}}
+} // expected-error {{expected unqualified-id}}
+} // inline namespace
+} // dont_crash

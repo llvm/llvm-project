@@ -13,14 +13,25 @@
 #ifndef MLIR_DIALECT_OPENMP_OPENMPDIALECT_H_
 #define MLIR_DIALECT_OPENMP_OPENMPDIALECT_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/OpenMP/OpenMPOpsTypes.h.inc"
+
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.h.inc"
-#include "mlir/Dialect/OpenMP/OpenMPOpsEnums.h.inc"
+
+#include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
+
+#include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.h.inc"
+
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.h.inc"

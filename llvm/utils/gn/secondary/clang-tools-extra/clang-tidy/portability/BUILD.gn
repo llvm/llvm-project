@@ -10,10 +10,12 @@ static_library("portability") {
     "//clang/lib/Lex",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "PortabilityTidyModule.cpp",
     "RestrictSystemIncludesCheck.cpp",
     "SIMDIntrinsicsCheck.cpp",
+    "StdAllocatorConstCheck.cpp",
   ]
 }

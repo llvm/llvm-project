@@ -14,8 +14,33 @@
 #ifndef POLLY_ISLTOOLS_H
 #define POLLY_ISLTOOLS_H
 
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/iterator.h"
 #include "isl/isl-noexceptions.h"
+#include <algorithm>
+#include <cassert>
+
+/// In debug builds assert that the @p Size is valid, in non-debug builds
+/// disable the mandatory state checking but do not enforce the error checking.
+inline void islAssert(const isl::size &Size) {
+#ifdef NDEBUG
+  // Calling is_error() marks that the error status has been checked which
+  // disables the error-status-not-checked errors that would otherwise occur
+  // when using the value.
+  (void)Size.is_error();
+#else
+  // Assert on error in debug builds.
+  assert(!Size.is_error());
+#endif
+}
+
+/// Check that @p Size is valid (only on debug builds) and cast it to unsigned.
+/// Cast the @p Size to unsigned. If the @p Size is not valid (Size.is_error()
+/// == true) then an assert and an abort are triggered.
+inline unsigned unsignedFromIslSize(const isl::size &Size) {
+  islAssert(Size);
+  return static_cast<unsigned>(Size);
+}
 
 namespace isl {
 inline namespace noexceptions {
@@ -24,15 +49,15 @@ template <typename ListT>
 using list_element_type = decltype(std::declval<ListT>().get_at(0));
 
 template <typename ListT>
-struct isl_iterator
+class isl_iterator
     : public llvm::iterator_facade_base<isl_iterator<ListT>,
                                         std::forward_iterator_tag,
                                         list_element_type<ListT>> {
-
+public:
   using ElementT = list_element_type<ListT>;
 
   explicit isl_iterator(const ListT &List)
-      : List(&List), Position(std::max(List.size(), 0)) {}
+      : List(&List), Position(std::max(List.size().release(), 0)) {}
   isl_iterator(const ListT &List, int Position)
       : List(&List), Position(Position) {}
 
@@ -160,13 +185,26 @@ isl::set singleton(isl::union_set USet, isl::space ExpectedSpace);
 /// The implementation currently returns the maximum number of dimensions it
 /// encounters, if different, and 0 if none is encountered. However, most other
 /// code will most likely fail if one of these happen.
-isl_size getNumScatterDims(const isl::union_map &Schedule);
+unsigned getNumScatterDims(const isl::union_map &Schedule);
 
 /// Return the scatter space of a @p Schedule.
 ///
 /// This is basically the range space of the schedule map, but harder to
 /// determine because it is an isl_union_map.
 isl::space getScatterSpace(const isl::union_map &Schedule);
+
+/// Construct an identity map for the given domain values.
+///
+/// @param USet           { Space[] }
+///                       The returned map's domain and range.
+/// @param RestrictDomain If true, the returned map only maps elements contained
+///                       in @p Set and no other. If false, it returns an
+///                       overapproximation with the identity maps of any space
+///                       in @p Set, not just the elements in it.
+///
+/// @return { Space[] -> Space[] }
+///         A map that maps each value of @p Set to itself.
+isl::map makeIdentityMap(const isl::set &Set, bool RestrictDomain);
 
 /// Construct an identity map for the given domain values.
 ///
@@ -484,6 +522,18 @@ isl::set subtractParams(isl::set Set, isl::set Params);
 /// can also be a piecewise constant and it would return the minimum/maximum
 /// value. Otherwise, return NaN.
 isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min);
+
+/// If the relation @p PwAff lies on a hyperplane where the given
+/// dimension @p Pos with the type @p Dim has a fixed value, then
+/// return that value. Otherwise return NaN.
+isl::val getConstant(isl::map Map, isl::dim Dim, int Pos);
+
+/// Check that @p End is valid and return an iterator from @p Begin to @p End
+///
+/// Use case example:
+///   for (unsigned i : rangeIslSize(0, Map.domain_tuple_dim()))
+///     // do stuff
+llvm::iota_range<unsigned> rangeIslSize(unsigned Begin, isl::size End);
 
 /// Dump a description of the argument to llvm::errs().
 ///

@@ -9,8 +9,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class NoSuchArchTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test(self):
@@ -20,8 +18,10 @@ class NoSuchArchTestCase(TestBase):
         # Check that passing an invalid arch via the command-line fails but
         # doesn't crash
         self.expect(
-            "target create --arch nothingtoseehere %s" %
-            (exe), error=True, substrs=["error: invalid triple 'nothingtoseehere'"])
+            "target create --arch nothingtoseehere %s" % (exe),
+            error=True,
+            substrs=["error: invalid triple 'nothingtoseehere'"],
+        )
 
         # Check that passing an invalid arch via the SB API fails but doesn't
         # crash

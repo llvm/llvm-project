@@ -58,6 +58,24 @@ define i8 @sltiu(i8 %a) nounwind {
   ret i8 %2
 }
 
+; Make sure we avoid an AND, if the input of an unsigned compare is known
+; to be sign extended. This can occur due to InstCombine canonicalizing
+; x s>= 0 && x s< 10 to x u< 10.
+define i8 @sltiu_signext(i8 signext %a) nounwind {
+; RV32I-LABEL: sltiu_signext:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltiu a0, a0, 10
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sltiu_signext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltiu a0, a0, 10
+; RV64I-NEXT:    ret
+  %1 = icmp ult i8 %a, 10
+  %2 = zext i1 %1 to i8
+  ret i8 %2
+}
+
 define i8 @xori(i8 %a) nounwind {
 ; RV32I-LABEL: xori:
 ; RV32I:       # %bb.0:
@@ -117,14 +135,14 @@ define i8 @slli(i8 %a) nounwind {
 define i8 @srli(i8 %a) nounwind {
 ; RV32I-LABEL: srli:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 192
-; RV32I-NEXT:    srli a0, a0, 6
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srli a0, a0, 30
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: srli:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 192
-; RV64I-NEXT:    srli a0, a0, 6
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 62
 ; RV64I-NEXT:    ret
   %1 = lshr i8 %a, 6
   ret i8 %1
@@ -187,6 +205,47 @@ define i8 @sll(i8 %a, i8 %b) nounwind {
 ; RV64I-NEXT:    ret
   %1 = shl i8 %a, %b
   ret i8 %1
+}
+
+; Test the pattern we get from C integer promotion.
+define void @sll_ext(i8 %a, i32 signext %b, ptr %p) nounwind {
+; RV32I-LABEL: sll_ext:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sll a0, a0, a1
+; RV32I-NEXT:    sb a0, 0(a2)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sll_ext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sllw a0, a0, a1
+; RV64I-NEXT:    sb a0, 0(a2)
+; RV64I-NEXT:    ret
+  %1 = zext i8 %a to i32
+  %2 = shl i32 %1, %b
+  %3 = trunc i32 %2 to i8
+  store i8 %3, ptr %p
+  ret void
+}
+
+; Test the pattern we get from C integer promotion. This time with poison
+; generating flags.
+define void @sll_ext_drop_poison(i8 %a, i32 signext %b, ptr %p) nounwind {
+; RV32I-LABEL: sll_ext_drop_poison:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sll a0, a0, a1
+; RV32I-NEXT:    sb a0, 0(a2)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sll_ext_drop_poison:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sllw a0, a0, a1
+; RV64I-NEXT:    sb a0, 0(a2)
+; RV64I-NEXT:    ret
+  %1 = zext i8 %a to i32
+  %2 = shl nuw nsw i32 %1, %b
+  %3 = trunc i32 %2 to i8
+  store i8 %3, ptr %p
+  ret void
 }
 
 define i8 @slt(i8 %a, i8 %b) nounwind {

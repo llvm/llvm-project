@@ -1,7 +1,7 @@
-# RUN: llc -march=amdgcn -run-pass simple-register-coalescing -o - %s | FileCheck --check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -run-pass register-coalescer -o - %s | FileCheck --check-prefix=GCN %s
 #
 # See bug http://llvm.org/PR33524 for details of the problem being checked here
-# This test will provoke a subrange join (see annotations below) during simple register coalescing
+# This test will provoke a subrange join (see annotations below) during register coalescing
 # Without a fix for PR33524 this causes an unreachable in SubRange Join
 #
 # GCN-DAG: undef %[[REG0:[0-9]+]].sub0:sgpr_64 = COPY $sgpr5

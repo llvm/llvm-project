@@ -205,16 +205,14 @@ bool HexagonGenPredicate::isConvertibleToPredForm(const MachineInstr *MI) {
 }
 
 void HexagonGenPredicate::collectPredicateGPR(MachineFunction &MF) {
-  for (MachineFunction::iterator A = MF.begin(), Z = MF.end(); A != Z; ++A) {
-    MachineBasicBlock &B = *A;
-    for (MachineBasicBlock::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-      MachineInstr *MI = &*I;
-      unsigned Opc = MI->getOpcode();
+  for (MachineBasicBlock &B : MF) {
+    for (MachineInstr &MI : B) {
+      unsigned Opc = MI.getOpcode();
       switch (Opc) {
         case Hexagon::C2_tfrpr:
         case TargetOpcode::COPY:
-          if (isPredReg(MI->getOperand(1).getReg())) {
-            RegisterSubReg RD = MI->getOperand(0);
+          if (isPredReg(MI.getOperand(1).getReg())) {
+            RegisterSubReg RD = MI.getOperand(0);
             if (RD.R.isVirtual())
               PredGPRs.insert(RD);
           }
@@ -337,7 +335,7 @@ bool HexagonGenPredicate::isScalarPred(RegisterSubReg PredReg) {
         if (MRI->getRegClass(PR.R) != PredRC)
           return false;
         // If it is a copy between two predicate registers, fall through.
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       }
       case Hexagon::C2_and:
       case Hexagon::C2_andn:
@@ -411,7 +409,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
     NumOps = 2;
   }
 
-  // Some sanity: check that def is in operand #0.
+  // Check that def is in operand #0.
   MachineOperand &Op0 = MI->getOperand(0);
   assert(Op0.isDef());
   RegisterSubReg OutR(Op0);
@@ -488,8 +486,8 @@ bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
     }
   }
 
-  for (VectOfInst::iterator I = Erase.begin(), E = Erase.end(); I != E; ++I)
-    (*I)->eraseFromParent();
+  for (MachineInstr *MI : Erase)
+    MI->eraseFromParent();
 
   return Changed;
 }
@@ -507,19 +505,16 @@ bool HexagonGenPredicate::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   collectPredicateGPR(MF);
-  for (SetOfReg::iterator I = PredGPRs.begin(), E = PredGPRs.end(); I != E; ++I)
-    processPredicateGPR(*I);
+  for (const RegisterSubReg &R : PredGPRs)
+    processPredicateGPR(R);
 
   bool Again;
   do {
     Again = false;
     VectOfInst Processed, Copy;
 
-    using iterator = VectOfInst::iterator;
-
     Copy = PUsers;
-    for (iterator I = Copy.begin(), E = Copy.end(); I != E; ++I) {
-      MachineInstr *MI = *I;
+    for (MachineInstr *MI : Copy) {
       bool Done = convertToPredForm(MI);
       if (Done) {
         Processed.insert(MI);

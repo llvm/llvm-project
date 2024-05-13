@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | FileCheck %s
+; RUN: opt < %s -passes=sccp -S | FileCheck %s
 
 define i1 @float.1(i1 %cmp) {
 ; CHECK-LABEL: define i1 @float.1(i1 %cmp) {

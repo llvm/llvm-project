@@ -8,17 +8,17 @@
 -(X *)init;
 @end
 
-void f() {
+void f(void) {
   [[X alloc] init];
-  // OPTIMIZED: call i8* @objc_alloc_init(
-  // NOT_OPTIMIZED: call i8* @objc_alloc(
+  // OPTIMIZED: call ptr @objc_alloc_init(
+  // NOT_OPTIMIZED: call ptr @objc_alloc(
 
   @try {
     [[X alloc] init];
   } @catch (X *x) {
   }
-  // OPTIMIZED: invoke i8* @objc_alloc_init(
-  // NOT_OPTIMIZED: invoke i8* @objc_alloc(
+  // OPTIMIZED: invoke ptr @objc_alloc_init(
+  // NOT_OPTIMIZED: invoke ptr @objc_alloc(
 }
 
 @interface Y : X
@@ -33,23 +33,22 @@ void f() {
 }
 +(void)meth {
   [[self alloc] init];
-  // OPTIMIZED: call i8* @objc_alloc_init(
-  // NOT_OPTIMIZED: call i8* @objc_alloc(
+  // OPTIMIZED: call ptr @objc_alloc_init(
+  // NOT_OPTIMIZED: call ptr @objc_alloc(
 }
 + (void)meth2 {
   [[[self class] alloc] init];
-  // OPTIMIZED: call i8* @objc_alloc_init(
-  // NOT_OPTIMIZED: call i8* @objc_alloc(
+  // OPTIMIZED: call ptr @objc_alloc_init(
+  // NOT_OPTIMIZED: call ptr @objc_alloc(
 }
 -(void)instanceMeth {
-  // EITHER-NOT: call i8* @objc_alloc
+  // EITHER-NOT: call ptr @objc_alloc
   // EITHER: call {{.*}} @objc_msgSend
   // EITHER: call {{.*}} @objc_msgSend
   [[(id)self alloc] init];
 }
 @end
 
-// rdar://48247290
 @interface Base
 -(instancetype)init;
 @end

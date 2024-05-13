@@ -3,7 +3,7 @@ import("//llvm/utils/gn/build/write_vcsrevision.gni")
 config("write_vcsrevision_config") {
   # To pick up the generated inc file.
   include_dirs = [ target_gen_dir ]
-  visibility = [ ":write_vcsrevision" ]
+  visibility = [ ":write_vcsversion" ]
 }
 
 write_vcsrevision("write_vcsversion") {
@@ -29,10 +29,13 @@ static_library("Common") {
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "Args.cpp",
+    "CommonLinkerContext.cpp",
     "DWARF.cpp",
+    "DriverDispatcher.cpp",
     "ErrorHandler.cpp",
     "Filesystem.cpp",
     "Memory.cpp",

@@ -4,48 +4,94 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--"
 
-define i32 @cse_gep([4 x i32]* %ptr, i32 %idx) {
+define i32 @cse_gep(ptr %ptr, i32 %idx) {
   ; O0-LABEL: name: cse_gep
   ; O0: bb.1 (%ir-block.0):
-  ; O0:   liveins: $w1, $x0
-  ; O0:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; O0:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; O0:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
-  ; O0:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; O0:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
-  ; O0:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
-  ; O0:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; O0:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load 4 from %ir.gep1)
-  ; O0:   [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
-  ; O0:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL1]](s64)
-  ; O0:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; O0:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C1]](s64)
-  ; O0:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load 4 from %ir.gep2)
-  ; O0:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD1]], [[LOAD1]]
-  ; O0:   $w0 = COPY [[ADD]](s32)
-  ; O0:   RET_ReallyLR implicit $w0
+  ; O0-NEXT:   liveins: $w1, $x0
+  ; O0-NEXT: {{  $}}
+  ; O0-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; O0-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+  ; O0-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
+  ; O0-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; O0-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
+  ; O0-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
+  ; O0-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+  ; O0-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir.gep1)
+  ; O0-NEXT:   [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
+  ; O0-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL1]](s64)
+  ; O0-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; O0-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[PTR_ADD1]], [[C1]](s64)
+  ; O0-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32) from %ir.gep2)
+  ; O0-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[LOAD1]]
+  ; O0-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; O0-NEXT:   RET_ReallyLR implicit $w0
+  ;
   ; O3-LABEL: name: cse_gep
   ; O3: bb.1 (%ir-block.0):
-  ; O3:   liveins: $w1, $x0
-  ; O3:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; O3:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; O3:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
-  ; O3:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; O3:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
-  ; O3:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
-  ; O3:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; O3:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load 4 from %ir.gep1)
-  ; O3:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; O3:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s64)
-  ; O3:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load 4 from %ir.gep2)
-  ; O3:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD1]], [[LOAD1]]
-  ; O3:   $w0 = COPY [[ADD]](s32)
-  ; O3:   RET_ReallyLR implicit $w0
+  ; O3-NEXT:   liveins: $w1, $x0
+  ; O3-NEXT: {{  $}}
+  ; O3-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; O3-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+  ; O3-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
+  ; O3-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; O3-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
+  ; O3-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
+  ; O3-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+  ; O3-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir.gep1)
+  ; O3-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; O3-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[PTR_ADD]], [[C1]](s64)
+  ; O3-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir.gep2)
+  ; O3-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[LOAD1]]
+  ; O3-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; O3-NEXT:   RET_ReallyLR implicit $w0
   %sidx = sext i32 %idx to i64
-  %gep1 = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i64 %sidx, i64 0
-  %v1 = load i32, i32* %gep1
-  %gep2 = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i64 %sidx, i64 1
-  %v2 = load i32, i32* %gep2
-  %res = add i32 %v2, %v2
+  %gep1 = getelementptr inbounds [4 x i32], ptr %ptr, i64 %sidx, i64 0
+  %v1 = load i32, ptr %gep1
+  %gep2 = getelementptr inbounds [4 x i32], ptr %ptr, i64 %sidx, i64 1
+  %v2 = load i32, ptr %gep2
+  %res = add i32 %v1, %v2
   ret i32 %res
+}
+
+; OSS Fuzz https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=65052
+define void @ossfuzz65052() {
+  ; O0-LABEL: name: ossfuzz65052
+  ; O0: bb.1 (%ir-block.0):
+  ; O0-NEXT:   successors: %bb.2(0x80000000)
+  ; O0-NEXT: {{  $}}
+  ; O0-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; O0-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 -170141183460469231731687303715884105728
+  ; O0-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[C]](s128)
+  ; O0-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; O0-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[TRUNC]], [[C1]]
+  ; O0-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[MUL]](s64)
+  ; O0-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+  ; O0-NEXT:   G_BR %bb.2
+  ; O0-NEXT: {{  $}}
+  ; O0-NEXT: bb.2.BB:
+  ; O0-NEXT:   successors: %bb.2(0x80000000)
+  ; O0-NEXT: {{  $}}
+  ; O0-NEXT:   G_BR %bb.2
+  ;
+  ; O3-LABEL: name: ossfuzz65052
+  ; O3: bb.1 (%ir-block.0):
+  ; O3-NEXT:   successors: %bb.2(0x80000000)
+  ; O3-NEXT: {{  $}}
+  ; O3-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; O3-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 -170141183460469231731687303715884105728
+  ; O3-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[C]](s128)
+  ; O3-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; O3-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[TRUNC]], [[C1]]
+  ; O3-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[MUL]](s64)
+  ; O3-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+  ; O3-NEXT: {{  $}}
+  ; O3-NEXT: bb.2.BB:
+  ; O3-NEXT:   successors: %bb.2(0x80000000)
+  ; O3-NEXT: {{  $}}
+  ; O3-NEXT:   G_BR %bb.2
+  %G15 = getelementptr i128, ptr poison, i128 -170141183460469231731687303715884105728
+  br label %BB
+
+BB:                                               ; preds = %BB, %0
+  br label %BB
 }

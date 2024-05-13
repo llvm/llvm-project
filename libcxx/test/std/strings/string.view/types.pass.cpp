@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
+
 // <string_view>
 
 // Test nested types and default template args:
@@ -37,45 +39,41 @@
 #include "test_macros.h"
 
 template <class Traits>
-void
-test()
-{
-    typedef std::basic_string_view<typename Traits::char_type, Traits> S;
+void test() {
+  typedef std::basic_string_view<typename Traits::char_type, Traits> S;
 
-    static_assert((std::is_same<typename S::traits_type,     Traits>::value), "");
-    static_assert((std::is_same<typename S::value_type,      typename Traits::char_type>::value), "");
-    static_assert((std::is_same<typename S::size_type,       std::size_t>::value), "");
-    static_assert((std::is_same<typename S::difference_type, ptrdiff_t>::value), "");
-    static_assert((std::is_same<typename S::reference,             typename S::value_type&>::value), "");
-    static_assert((std::is_same<typename S::const_reference, const typename S::value_type&>::value), "");
-    static_assert((std::is_same<typename S::pointer,               typename S::value_type*>::value), "");
-    static_assert((std::is_same<typename S::const_pointer,   const typename S::value_type*>::value), "");
-    static_assert((std::is_same<
-        typename std::iterator_traits<typename S::iterator>::iterator_category,
-        std::random_access_iterator_tag>::value), "");
-    static_assert((std::is_same<
-        typename std::iterator_traits<typename S::const_iterator>::iterator_category,
-        std::random_access_iterator_tag>::value), "");
-    static_assert((std::is_same<
-        typename S::reverse_iterator,
-        std::reverse_iterator<typename S::iterator> >::value), "");
-    static_assert((std::is_same<
-        typename S::const_reverse_iterator,
-        std::reverse_iterator<typename S::const_iterator> >::value), "");
-    static_assert(S::npos == -1, "");
-    static_assert((std::is_same<typename S::iterator,         typename S::const_iterator>::value), "");
-    static_assert((std::is_same<typename S::reverse_iterator, typename S::const_reverse_iterator>::value), "");
+  static_assert((std::is_same<typename S::traits_type, Traits>::value), "");
+  static_assert((std::is_same<typename S::value_type, typename Traits::char_type>::value), "");
+  static_assert((std::is_same<typename S::size_type, std::size_t>::value), "");
+  static_assert((std::is_same<typename S::difference_type, std::ptrdiff_t>::value), "");
+  static_assert((std::is_same<typename S::reference, typename S::value_type&>::value), "");
+  static_assert((std::is_same<typename S::const_reference, const typename S::value_type&>::value), "");
+  static_assert((std::is_same<typename S::pointer, typename S::value_type*>::value), "");
+  static_assert((std::is_same<typename S::const_pointer, const typename S::value_type*>::value), "");
+  static_assert((std::is_same< typename std::iterator_traits<typename S::iterator>::iterator_category,
+                               std::random_access_iterator_tag>::value),
+                "");
+  static_assert((std::is_same< typename std::iterator_traits<typename S::const_iterator>::iterator_category,
+                               std::random_access_iterator_tag>::value),
+                "");
+  static_assert((std::is_same< typename S::reverse_iterator, std::reverse_iterator<typename S::iterator> >::value), "");
+  static_assert(
+      (std::is_same< typename S::const_reverse_iterator, std::reverse_iterator<typename S::const_iterator> >::value),
+      "");
+  static_assert(S::npos == -1, "");
+  static_assert((std::is_same<typename S::iterator, typename S::const_iterator>::value), "");
+  static_assert((std::is_same<typename S::reverse_iterator, typename S::const_reverse_iterator>::value), "");
 }
 
-int main(int, char**)
-{
-    test<std::char_traits<char> >();
-    test<std::char_traits<wchar_t> >();
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
-    test<std::char_traits<char8_t> >();
+int main(int, char**) {
+  test<std::char_traits<char> >();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test<std::char_traits<wchar_t> >();
 #endif
-    static_assert((std::is_same<std::basic_string_view<char>::traits_type,
-                                std::char_traits<char> >::value), "");
+#ifndef TEST_HAS_NO_CHAR8_T
+  test<std::char_traits<char8_t> >();
+#endif
+  static_assert((std::is_same<std::basic_string_view<char>::traits_type, std::char_traits<char> >::value), "");
 
   return 0;
 }

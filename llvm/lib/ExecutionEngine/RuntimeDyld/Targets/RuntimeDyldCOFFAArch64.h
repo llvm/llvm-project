@@ -15,6 +15,7 @@
 #define LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_TARGETS_RUNTIMEDYLDCOFFAARCH64_H
 
 #include "../RuntimeDyldCOFF.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Endian.h"
@@ -26,7 +27,7 @@ using namespace llvm::support::endian;
 namespace llvm {
 
 // This relocation type is used for handling long branch instruction
-// throught the Stub.
+// through the Stub.
 enum InternalRelocationType : unsigned {
   INTERNAL_REL_ARM64_LONG_BRANCH26 = 0x111,
 };
@@ -92,7 +93,7 @@ public:
       : RuntimeDyldCOFF(MM, Resolver, 8, COFF::IMAGE_REL_ARM64_ADDR64),
         ImageBase(0) {}
 
-  unsigned getStubAlignment() override { return 8; }
+  Align getStubAlignment() override { return Align(8); }
 
   unsigned getMaxStubSize() const override { return 20; }
 
@@ -173,7 +174,7 @@ public:
     unsigned TargetSectionID = -1;
     uint64_t TargetOffset = -1;
 
-    if (TargetName.startswith(getImportSymbolPrefix())) {
+    if (TargetName.starts_with(getImportSymbolPrefix())) {
       TargetSectionID = SectionID;
       TargetOffset = getDLLImportOffset(SectionID, Stubs, TargetName);
       TargetName = StringRef();

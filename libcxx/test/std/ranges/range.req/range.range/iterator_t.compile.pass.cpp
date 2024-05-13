@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // template<class T>
 // using iterator_t = decltype(ranges::begin(declval<T&>()));
@@ -19,14 +17,14 @@
 
 #include "test_range.h"
 
-namespace stdr = std::ranges;
 
-static_assert(std::same_as<stdr::iterator_t<test_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
-static_assert(std::same_as<stdr::iterator_t<test_range<cpp17_input_iterator> const>, cpp17_input_iterator<int const*> >);
 
-static_assert(std::same_as<stdr::iterator_t<test_non_const_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
+static_assert(std::same_as<std::ranges::iterator_t<test_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
+static_assert(std::same_as<std::ranges::iterator_t<test_range<cpp17_input_iterator> const>, cpp17_input_iterator<int const*> >);
 
-static_assert(std::same_as<stdr::iterator_t<test_common_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
-static_assert(std::same_as<stdr::iterator_t<test_common_range<cpp17_input_iterator> const>, cpp17_input_iterator<int const*> >);
+static_assert(std::same_as<std::ranges::iterator_t<test_non_const_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
 
-static_assert(std::same_as<stdr::iterator_t<test_non_const_common_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
+static_assert(std::same_as<std::ranges::iterator_t<test_common_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
+static_assert(std::same_as<std::ranges::iterator_t<test_common_range<cpp17_input_iterator> const>, cpp17_input_iterator<int const*> >);
+
+static_assert(std::same_as<std::ranges::iterator_t<test_non_const_common_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);

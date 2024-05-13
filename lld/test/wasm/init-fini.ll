@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -o %t.o %s
-; RUN: llc -filetype=obj %S/Inputs/global-ctor-dtor.ll -o %t.global-ctor-dtor.o
+; RUN: llc -mcpu=mvp -filetype=obj -o %t.o %s
+; RUN: llc -mcpu=mvp -filetype=obj %S/Inputs/global-ctor-dtor.ll -o %t.global-ctor-dtor.o
 
 target triple = "wasm32-unknown-unknown"
 
@@ -26,10 +26,7 @@ entry:
 declare hidden void @externCtor()
 declare hidden void @externDtor()
 declare hidden void @__wasm_call_ctors()
-
-define i32 @__cxa_atexit(i32 %func, i32 %arg, i32 %dso_handle) {
-  ret i32 0
-}
+declare i32 @__cxa_atexit(i32 %func, i32 %arg, i32 %dso_handle)
 
 define hidden void @_start() {
 entry:
@@ -37,18 +34,18 @@ entry:
   ret void
 }
 
-@llvm.global_ctors = appending global [4 x { i32, void ()*, i8* }] [
-  { i32, void ()*, i8* } { i32 1001, void ()* @func1, i8* null },
-  { i32, void ()*, i8* } { i32 101, void ()* @func1, i8* null },
-  { i32, void ()*, i8* } { i32 101, void ()* @func2, i8* null },
-  { i32, void ()*, i8* } { i32 4000, void ()* @externCtor, i8* null }
+@llvm.global_ctors = appending global [4 x { i32, ptr, ptr }] [
+  { i32, ptr, ptr } { i32 1001, ptr @func1, ptr null },
+  { i32, ptr, ptr } { i32 101, ptr @func1, ptr null },
+  { i32, ptr, ptr } { i32 101, ptr @func2, ptr null },
+  { i32, ptr, ptr } { i32 4000, ptr @externCtor, ptr null }
 ]
 
-@llvm.global_dtors = appending global [4 x { i32, void ()*, i8* }] [
-  { i32, void ()*, i8* } { i32 1001, void ()* @func3, i8* null },
-  { i32, void ()*, i8* } { i32 101, void ()* @func3, i8* null },
-  { i32, void ()*, i8* } { i32 101, void ()* @func4, i8* null },
-  { i32, void ()*, i8* } { i32 4000, void ()* @externDtor, i8* null }
+@llvm.global_dtors = appending global [4 x { i32, ptr, ptr }] [
+  { i32, ptr, ptr } { i32 1001, ptr @func3, ptr null },
+  { i32, ptr, ptr } { i32 101, ptr @func3, ptr null },
+  { i32, ptr, ptr } { i32 101, ptr @func4, ptr null },
+  { i32, ptr, ptr } { i32 4000, ptr @externDtor, ptr null }
 ]
 
 ; RUN: wasm-ld --allow-undefined %t.o %t.global-ctor-dtor.o -o %t.wasm
@@ -57,13 +54,17 @@ entry:
 ; CHECK:        - Type:            IMPORT
 ; CHECK-NEXT:     Imports:
 ; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           externDtor
+; CHECK-NEXT:         Field:           __cxa_atexit
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        0
 ; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           externDtor
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         SigIndex:        1
+; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           externCtor
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         SigIndex:        0
+; CHECK-NEXT:         SigIndex:        1
 ; CHECK:        - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:
@@ -72,31 +73,31 @@ entry:
 ; CHECK-NEXT:         Functions:       [ 9, 11, 13, 17, 19, 21 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:
-; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            10031004100A100F1012100F10141003100C100F10161001100E0B
+; CHECK-NEXT:         Body:            10041005100A100F1012100F10141004100C100F10161002100E0B
 ; CHECK:            - Index:           22
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            02404186808080004100418088808000108780808000450D0000000B0B
+; CHECK-NEXT:         Body:            02404186808080004100418088808000108080808000450D00000B0B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            externDtor
-; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Name:            externCtor
-; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Name:            __wasm_call_ctors
-; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Name:            func1
-; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Name:            func2
-; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Name:            func3
-; CHECK-NEXT:       - Index:           6
-; CHECK-NEXT:         Name:            func4
-; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Name:            __cxa_atexit
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Name:            externDtor
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Name:            externCtor
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Name:            __wasm_call_ctors
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Name:            func1
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Name:            func2
+; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Name:            func3
+; CHECK-NEXT:       - Index:           7
+; CHECK-NEXT:         Name:            func4
 ; CHECK-NEXT:       - Index:           8
 ; CHECK-NEXT:         Name:            _start
 ; CHECK-NEXT:       - Index:           9

@@ -23,16 +23,19 @@ define <8 x i32> @test_large_vec_vaarg(i32 %n, ...) {
 ; LE-NEXT:    ld 3, -8(1)
 ; LE-NEXT:    addi 3, 3, 15
 ; LE-NEXT:    rldicr 3, 3, 0, 59
-; LE-NEXT:    addi 4, 3, 31
-; LE-NEXT:    addi 5, 3, 16
-; LE-NEXT:    rldicr 4, 4, 0, 59
-; LE-NEXT:    std 5, -8(1)
-; LE-NEXT:    addi 5, 4, 16
-; LE-NEXT:    lvx 2, 0, 3
-; LE-NEXT:    std 5, -8(1)
-; LE-NEXT:    lvx 3, 0, 4
+; LE-NEXT:    addi 4, 3, 16
+; LE-NEXT:    std 4, -8(1)
+; LE-NEXT:    lxvd2x 0, 0, 3
+; LE-NEXT:    ld 3, -8(1)
+; LE-NEXT:    addi 3, 3, 15
+; LE-NEXT:    rldicr 3, 3, 0, 59
+; LE-NEXT:    addi 4, 3, 16
+; LE-NEXT:    std 4, -8(1)
+; LE-NEXT:    xxswapd 34, 0
+; LE-NEXT:    lxvd2x 0, 0, 3
+; LE-NEXT:    xxswapd 35, 0
 ; LE-NEXT:    blr
-  %args = alloca i8*, align 4
-  %x = va_arg i8** %args, <8 x i32>
+  %args = alloca ptr, align 4
+  %x = va_arg ptr %args, <8 x i32>
   ret <8 x i32> %x
 }

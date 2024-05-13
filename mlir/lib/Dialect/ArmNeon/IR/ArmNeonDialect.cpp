@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
 
 using namespace mlir;
+
+#include "mlir/Dialect/ArmNeon/ArmNeonDialect.cpp.inc"
 
 void arm_neon::ArmNeonDialect::initialize() {
   addOperations<

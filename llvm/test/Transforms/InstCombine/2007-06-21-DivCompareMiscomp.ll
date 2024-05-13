@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "ret i1 true"
+; RUN: opt < %s -passes=instcombine -S | grep "ret i1 true"
 ; rdar://5278853
 
 define i1 @test(i32 %tmp468) {

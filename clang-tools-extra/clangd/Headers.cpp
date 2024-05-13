@@ -7,36 +7,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "Headers.h"
-#include "Compiler.h"
 #include "Preamble.h"
 #include "SourceCode.h"
-#include "support/Logger.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendActions.h"
+#include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/Inclusions/HeaderAnalysis.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
+#include <cstring>
+#include <optional>
+#include <string>
 
 namespace clang {
 namespace clangd {
-namespace {
 
-class RecordHeaders : public PPCallbacks {
+class IncludeStructure::RecordHeaders : public PPCallbacks {
 public:
-  RecordHeaders(const SourceManager &SM, IncludeStructure *Out)
-      : SM(SM), Out(Out) {}
+  RecordHeaders(const CompilerInstance &CI, IncludeStructure *Out)
+      : SM(CI.getSourceManager()),
+        Out(Out) {}
 
   // Record existing #includes - both written and resolved paths. Only #includes
   // in the main file are collected.
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
                           CharSourceRange /*FilenameRange*/,
-                          const FileEntry *File, llvm::StringRef /*SearchPath*/,
+                          OptionalFileEntryRef File,
+                          llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
-                          const clang::Module * /*Imported*/,
+                          const clang::Module * /*SuggestedModule*/,
+                          bool /*ModuleImported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
     auto MainFID = SM.getMainFileID();
     // If an include is part of the preamble patch, translate #line directives.
@@ -50,25 +56,41 @@ public:
       auto &Inc = Out->MainFileIncludes.back();
       Inc.Written =
           (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str();
-      Inc.Resolved = std::string(File ? File->tryGetRealPathName() : "");
+      Inc.Resolved = std::string(
+          File ? getCanonicalPath(*File, SM.getFileManager()).value_or("")
+               : "");
       Inc.HashOffset = SM.getFileOffset(HashLoc);
       Inc.HashLine =
           SM.getLineNumber(SM.getFileID(HashLoc), Inc.HashOffset) - 1;
       Inc.FileKind = FileKind;
       Inc.Directive = IncludeTok.getIdentifierInfo()->getPPKeywordID();
+      if (File) {
+        IncludeStructure::HeaderID HID = Out->getOrCreateID(*File);
+        Inc.HeaderID = static_cast<unsigned>(HID);
+        if (IsAngled)
+          if (auto StdlibHeader = tooling::stdlib::Header::named(Inc.Written)) {
+            auto &IDs = Out->StdlibHeaders[*StdlibHeader];
+            // Few physical files for one stdlib header name, linear scan is ok.
+            if (!llvm::is_contained(IDs, HID))
+              IDs.push_back(HID);
+          }
+      }
+      Out->MainFileIncludesBySpelling.try_emplace(Inc.Written)
+          .first->second.push_back(Out->MainFileIncludes.size() - 1);
     }
 
     // Record include graph (not just for main-file includes)
     if (File) {
-      auto *IncludingFileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc));
+      auto IncludingFileEntry = SM.getFileEntryRefForID(SM.getFileID(HashLoc));
       if (!IncludingFileEntry) {
-        assert(SM.getBufferName(HashLoc).startswith("<") &&
+        assert(SM.getBufferName(HashLoc).starts_with("<") &&
                "Expected #include location to be a file or <built-in>");
         // Treat as if included from the main file.
-        IncludingFileEntry = SM.getFileEntryForID(MainFID);
+        IncludingFileEntry = SM.getFileEntryRefForID(MainFID);
       }
-      Out->recordInclude(IncludingFileEntry->getName(), File->getName(),
-                         File->tryGetRealPathName());
+      auto IncludingID = Out->getOrCreateID(*IncludingFileEntry),
+           IncludedID = Out->getOrCreateID(*File);
+      Out->IncludeChildren[IncludingID].push_back(IncludedID);
     }
   }
 
@@ -77,15 +99,18 @@ public:
                    FileID PrevFID) override {
     switch (Reason) {
     case PPCallbacks::EnterFile:
+      ++Level;
       if (BuiltinFile.isInvalid() && SM.isWrittenInBuiltinFile(Loc)) {
         BuiltinFile = SM.getFileID(Loc);
         InBuiltinFile = true;
       }
       break;
-    case PPCallbacks::ExitFile:
+    case PPCallbacks::ExitFile: {
+      --Level;
       if (PrevFID == BuiltinFile)
         InBuiltinFile = false;
       break;
+    }
     case PPCallbacks::RenameFile:
     case PPCallbacks::SystemHeaderPragma:
       break;
@@ -93,6 +118,10 @@ public:
   }
 
 private:
+  // Keeps track of include depth for the current file. It's 1 for main file.
+  int Level = 0;
+  bool inMainFile() const { return Level == 1; }
+
   const SourceManager &SM;
   // Set after entering the <built-in> file.
   FileID BuiltinFile;
@@ -102,10 +131,8 @@ private:
   IncludeStructure *Out;
 };
 
-} // namespace
-
 bool isLiteralInclude(llvm::StringRef Include) {
-  return Include.startswith("<") || Include.startswith("\"");
+  return Include.starts_with("<") || Include.starts_with("\"");
 }
 
 bool HeaderFile::valid() const {
@@ -133,7 +160,7 @@ llvm::Expected<HeaderFile> toHeaderFile(llvm::StringRef Header,
   return HeaderFile{std::move(*Resolved), /*Verbatim=*/false};
 }
 
-llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym) {
+llvm::SmallVector<SymbolInclude, 1> getRankedIncludes(const Symbol &Sym) {
   auto Includes = Sym.IncludeHeaders;
   // Sort in descending order by reference count and header length.
   llvm::sort(Includes, [](const Symbol::IncludeHeaderWithReferences &LHS,
@@ -142,50 +169,74 @@ llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym) {
       return LHS.IncludeHeader.size() < RHS.IncludeHeader.size();
     return LHS.References > RHS.References;
   });
-  llvm::SmallVector<llvm::StringRef, 1> Headers;
+  llvm::SmallVector<SymbolInclude, 1> Headers;
   for (const auto &Include : Includes)
-    Headers.push_back(Include.IncludeHeader);
+    Headers.push_back({Include.IncludeHeader, Include.supportedDirectives()});
   return Headers;
 }
 
-std::unique_ptr<PPCallbacks>
-collectIncludeStructureCallback(const SourceManager &SM,
-                                IncludeStructure *Out) {
-  return std::make_unique<RecordHeaders>(SM, Out);
+void IncludeStructure::collect(const CompilerInstance &CI) {
+  auto &SM = CI.getSourceManager();
+  MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
+  auto Collector = std::make_unique<RecordHeaders>(CI, this);
+  CI.getPreprocessor().addPPCallbacks(std::move(Collector));
+
+  // If we're reusing a preamble, don't repopulate SearchPathsCanonical.
+  // The entries will be the same, but canonicalizing to find out is expensive!
+  if (SearchPathsCanonical.empty()) {
+    for (const auto &Dir :
+         CI.getPreprocessor().getHeaderSearchInfo().search_dir_range()) {
+      if (Dir.getLookupType() == DirectoryLookup::LT_NormalDir)
+        SearchPathsCanonical.emplace_back(
+            SM.getFileManager().getCanonicalName(*Dir.getDirRef()));
+    }
+  }
 }
 
-void IncludeStructure::recordInclude(llvm::StringRef IncludingName,
-                                     llvm::StringRef IncludedName,
-                                     llvm::StringRef IncludedRealName) {
-  auto Child = fileIndex(IncludedName);
-  if (!IncludedRealName.empty() && RealPathNames[Child].empty())
-    RealPathNames[Child] = std::string(IncludedRealName);
-  auto Parent = fileIndex(IncludingName);
-  IncludeChildren[Parent].push_back(Child);
+std::optional<IncludeStructure::HeaderID>
+IncludeStructure::getID(const FileEntry *Entry) const {
+  // HeaderID of the main file is always 0;
+  if (Entry == MainFileEntry) {
+    return static_cast<IncludeStructure::HeaderID>(0u);
+  }
+  auto It = UIDToIndex.find(Entry->getUniqueID());
+  if (It == UIDToIndex.end())
+    return std::nullopt;
+  return It->second;
 }
 
-unsigned IncludeStructure::fileIndex(llvm::StringRef Name) {
-  auto R = NameToIndex.try_emplace(Name, RealPathNames.size());
+IncludeStructure::HeaderID IncludeStructure::getOrCreateID(FileEntryRef Entry) {
+  // Main file's FileEntry was not known at IncludeStructure creation time.
+  if (&Entry.getFileEntry() == MainFileEntry) {
+    if (RealPathNames.front().empty())
+      RealPathNames.front() = MainFileEntry->tryGetRealPathName().str();
+    return MainFileID;
+  }
+  auto R = UIDToIndex.try_emplace(
+      Entry.getUniqueID(),
+      static_cast<IncludeStructure::HeaderID>(RealPathNames.size()));
   if (R.second)
     RealPathNames.emplace_back();
-  return R.first->getValue();
+  IncludeStructure::HeaderID Result = R.first->getSecond();
+  std::string &RealPathName = RealPathNames[static_cast<unsigned>(Result)];
+  if (RealPathName.empty())
+    RealPathName = Entry.getFileEntry().tryGetRealPathName().str();
+  return Result;
 }
 
-llvm::StringMap<unsigned>
-IncludeStructure::includeDepth(llvm::StringRef Root) const {
+llvm::DenseMap<IncludeStructure::HeaderID, unsigned>
+IncludeStructure::includeDepth(HeaderID Root) const {
   // Include depth 0 is the main file only.
-  llvm::StringMap<unsigned> Result;
+  llvm::DenseMap<HeaderID, unsigned> Result;
+  assert(static_cast<unsigned>(Root) < RealPathNames.size());
   Result[Root] = 0;
-  std::vector<unsigned> CurrentLevel;
-  llvm::DenseSet<unsigned> Seen;
-  auto It = NameToIndex.find(Root);
-  if (It != NameToIndex.end()) {
-    CurrentLevel.push_back(It->second);
-    Seen.insert(It->second);
-  }
+  std::vector<IncludeStructure::HeaderID> CurrentLevel;
+  CurrentLevel.push_back(Root);
+  llvm::DenseSet<IncludeStructure::HeaderID> Seen;
+  Seen.insert(Root);
 
   // Each round of BFS traversal finds the next depth level.
-  std::vector<unsigned> PreviousLevel;
+  std::vector<IncludeStructure::HeaderID> PreviousLevel;
   for (unsigned Level = 1; !CurrentLevel.empty(); ++Level) {
     PreviousLevel.clear();
     PreviousLevel.swap(CurrentLevel);
@@ -193,15 +244,20 @@ IncludeStructure::includeDepth(llvm::StringRef Root) const {
       for (const auto &Child : IncludeChildren.lookup(Parent)) {
         if (Seen.insert(Child).second) {
           CurrentLevel.push_back(Child);
-          const auto &Name = RealPathNames[Child];
-          // Can't include files if we don't have their real path.
-          if (!Name.empty())
-            Result[Name] = Level;
+          Result[Child] = Level;
         }
       }
     }
   }
   return Result;
+}
+
+llvm::SmallVector<const Inclusion *>
+IncludeStructure::mainFileIncludesWithSpelling(llvm::StringRef Spelling) const {
+  llvm::SmallVector<const Inclusion *> Includes;
+  for (auto Idx : MainFileIncludesBySpelling.lookup(Spelling))
+    Includes.push_back(&MainFileIncludes[Idx]);
+  return Includes;
 }
 
 void IncludeInserter::addExisting(const Inclusion &Inc) {
@@ -220,22 +276,22 @@ bool IncludeInserter::shouldInsertInclude(
   if (FileName == DeclaringHeader || FileName == InsertedHeader.File)
     return false;
   auto Included = [&](llvm::StringRef Header) {
-    return IncludedHeaders.find(Header) != IncludedHeaders.end();
+    return IncludedHeaders.contains(Header);
   };
   return !Included(DeclaringHeader) && !Included(InsertedHeader.File);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
                                       llvm::StringRef IncludingFile) const {
   assert(InsertedHeader.valid());
   if (InsertedHeader.Verbatim)
     return InsertedHeader.File;
-  bool IsSystem = false;
+  bool IsAngled = false;
   std::string Suggested;
   if (HeaderSearchInfo) {
     Suggested = HeaderSearchInfo->suggestPathToFileForDiagnostics(
-        InsertedHeader.File, BuildDir, IncludingFile, &IsSystem);
+        InsertedHeader.File, BuildDir, IncludingFile, &IsAngled);
   } else {
     // Calculate include relative to including file only.
     StringRef IncludingDir = llvm::sys::path::parent_path(IncludingFile);
@@ -247,19 +303,21 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   }
   // FIXME: should we allow (some limited number of) "../header.h"?
   if (llvm::sys::path::is_absolute(Suggested))
-    return None;
-  if (IsSystem)
+    return std::nullopt;
+  if (IsAngled)
     Suggested = "<" + Suggested + ">";
   else
     Suggested = "\"" + Suggested + "\"";
   return Suggested;
 }
 
-llvm::Optional<TextEdit>
-IncludeInserter::insert(llvm::StringRef VerbatimHeader) const {
-  llvm::Optional<TextEdit> Edit = None;
-  if (auto Insertion = Inserter.insert(VerbatimHeader.trim("\"<>"),
-                                       VerbatimHeader.startswith("<")))
+std::optional<TextEdit>
+IncludeInserter::insert(llvm::StringRef VerbatimHeader,
+                        tooling::IncludeDirective Directive) const {
+  std::optional<TextEdit> Edit;
+  if (auto Insertion =
+          Inserter.insert(VerbatimHeader.trim("\"<>"),
+                          VerbatimHeader.starts_with("<"), Directive))
     Edit = replacementToEdit(Code, *Insertion);
   return Edit;
 }
@@ -276,5 +334,6 @@ bool operator==(const Inclusion &LHS, const Inclusion &RHS) {
          std::tie(RHS.Directive, RHS.FileKind, RHS.HashOffset, RHS.HashLine,
                   RHS.Resolved, RHS.Written);
 }
+
 } // namespace clangd
 } // namespace clang

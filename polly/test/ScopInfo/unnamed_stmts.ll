@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; This test case verifies that we generate numbered statement names in case
 ; no LLVM-IR names are used in the test case. We also verify, that we
@@ -48,7 +48,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @vec3(i64 %n, float*, float*) #0 {
+define void @vec3(i64 %n, ptr, ptr) #0 {
   br label %.split
 
 .split:                                           ; preds = %0
@@ -77,15 +77,15 @@ define void @vec3(i64 %n, float*, float*) #0 {
 ; <label>:4:                                      ; preds = %.lr.ph8, %4
   %j.07 = phi i64 [ 0, %.lr.ph8 ], [ %14, %4 ]
   %5 = mul nsw i64 %i.010, %n
-  %6 = getelementptr inbounds float, float* %1, i64 %5
-  %7 = getelementptr inbounds float, float* %6, i64 %j.07
-  %8 = load float, float* %7, align 4
+  %6 = getelementptr inbounds float, ptr %1, i64 %5
+  %7 = getelementptr inbounds float, ptr %6, i64 %j.07
+  %8 = load float, ptr %7, align 4
   %9 = mul nsw i64 %i.010, %n
-  %10 = getelementptr inbounds float, float* %0, i64 %9
-  %11 = getelementptr inbounds float, float* %10, i64 %j.07
-  %12 = load float, float* %11, align 4
+  %10 = getelementptr inbounds float, ptr %0, i64 %9
+  %11 = getelementptr inbounds float, ptr %10, i64 %j.07
+  %12 = load float, ptr %11, align 4
   %13 = fadd float %8, %12
-  store float %13, float* %11, align 4
+  store float %13, ptr %11, align 4
   %14 = add nuw nsw i64 %j.07, 1
   %exitcond13 = icmp ne i64 %14, %n
   br i1 %exitcond13, label %4, label %._crit_edge9
@@ -109,19 +109,19 @@ define void @vec3(i64 %n, float*, float*) #0 {
 ; <label>:18:                                     ; preds = %.lr.ph, %18
   %j2.03 = phi i64 [ 0, %.lr.ph ], [ %28, %"2" ]
   %19 = mul nsw i64 %i1.04, %n
-  %20 = getelementptr inbounds float, float* %0, i64 %19
-  %21 = getelementptr inbounds float, float* %20, i64 %j2.03
-  %22 = load float, float* %21, align 4
+  %20 = getelementptr inbounds float, ptr %0, i64 %19
+  %21 = getelementptr inbounds float, ptr %20, i64 %j2.03
+  %22 = load float, ptr %21, align 4
   %23 = mul nsw i64 %i1.04, %n
-  %24 = getelementptr inbounds float, float* %1, i64 %23
-  %25 = getelementptr inbounds float, float* %24, i64 %j2.03
-  %26 = load float, float* %25, align 4
+  %24 = getelementptr inbounds float, ptr %1, i64 %23
+  %25 = getelementptr inbounds float, ptr %24, i64 %j2.03
+  %26 = load float, ptr %25, align 4
   %27 = fadd float %22, %26
-  store float %27, float* %25, align 4
+  store float %27, ptr %25, align 4
   br label %"2"
 
 "2":
-  store float 42.0, float* %25
+  store float 42.0, ptr %25
   %28 = add nuw nsw i64 %j2.03, 1
   %exitcond = icmp ne i64 %28, %n
   br i1 %exitcond, label %18, label %._crit_edge

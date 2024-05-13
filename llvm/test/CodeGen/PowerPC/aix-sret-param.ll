@@ -17,20 +17,20 @@
 
 define void @test1() {
 entry:
-  %s = alloca %struct.S, align 4
-  call void @foo(%struct.S* sret(%struct.S) %s)
+  %s = alloca %struct.S, align 8
+  call void @foo(ptr sret(%struct.S) %s)
   ret void
 }
 
 define void @test2() {
 entry:
   %t = alloca %struct.T, align 8
-  call void @bar(%struct.T* sret(%struct.T) %t)
+  call void @bar(ptr sret(%struct.T) %t)
   ret void
 }
 
-declare void @foo(%struct.S* sret(%struct.S))
-declare void @bar(%struct.T* sret(%struct.T))
+declare void @foo(ptr sret(%struct.S))
+declare void @bar(ptr sret(%struct.T))
 
 ; MIR:      name:            test1
 ; MIR:      stack:
@@ -53,12 +53,14 @@ declare void @bar(%struct.T* sret(%struct.T))
 
 ; ASM32:       stwu 1, -64(1)
 ; ASM32-NEXT:  addi 3, 1, 56
+; ASM32-NEXT:  stw 0, 72(1)
 ; ASM32-NEXT:  bl .foo[PR]
 ; ASM32-NEXT:  nop
 ; ASM32-NEXT:  addi 1, 1, 64
 
 ; ASM64:       stdu 1, -128(1)
 ; ASM64-NEXT:  addi 3, 1, 120
+; ASM64-NEXT:  std 0, 144(1)
 ; ASM64-NEXT:  bl .foo[PR]
 ; ASM64-NEXT:  nop
 ; ASM64-NEXT:  addi 1, 1, 128
@@ -86,6 +88,7 @@ declare void @bar(%struct.T* sret(%struct.T))
 
 ; ASM32:        stwu 1, -80(1)
 ; ASM32-NEXT:   addi 3, 1, 56
+; ASM32-NEXT:   stw 0, 88(1)
 ; ASM32-NEXT:   bl .bar[PR]
 ; ASM32-NEXT:   nop
 ; ASM32-NEXT:   addi 1, 1, 80
@@ -93,6 +96,7 @@ declare void @bar(%struct.T* sret(%struct.T))
 
 ; ASM64:        stdu 1, -144(1)
 ; ASM64-NEXT:   addi 3, 1, 120
+; ASM64-NEXT:   std 0, 160(1)
 ; ASM64-NEXT:   bl .bar[PR]
 ; ASM64-NEXT:   nop
 ; ASM64-NEXT:   addi 1, 1, 144

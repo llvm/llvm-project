@@ -13,6 +13,6 @@
 // Make sure that substitutions are performed inside additional compiler flags.
 
 // ADDITIONAL_COMPILE_FLAGS: -I %t.1
-// ADDITIONAL_COMPILE_FLAGS: -isystem %t.2 , -isysroot %t.3
+// ADDITIONAL_COMPILE_FLAGS: -isystem %t.2 -isysroot %t.3
 // RUN: echo "-I %t.1 -isystem %t.2 -isysroot %t.3" | sed "s/\\\/\\\\\\\/g" > %t.escaped.grep
 // RUN: echo "%{compile_flags}" | grep -e -f %t.escaped.grep

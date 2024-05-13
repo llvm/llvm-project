@@ -1,7 +1,5 @@
 ; RUN: not llc -filetype=obj 2>&1 -o /dev/null < %s | FileCheck %s
 
-; ModuleID = '/scratch/llvm/master/tools/clang/test/Misc/inline-asm-diags.c'
-source_filename = "/scratch/llvm/master/tools/clang/test/Misc/inline-asm-diags.c"
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7-arm-none-eabi"
 
@@ -20,6 +18,8 @@ entry:
 ; CHECK: note: !srcloc = 181
   call void asm sideeffect " .word -foo", ""() #1, !srcloc !5
 ; CHECK: note: !srcloc = 257
+  call void asm sideeffect " .word -stoat", ""() #1, !srcloc !6
+; CHECK: note: !srcloc = 534
   ret void
 }
 
@@ -33,5 +33,11 @@ attributes #1 = { nounwind }
 !1 = !{i32 1, !"min_enum_size", i32 4}
 !2 = !{!"clang version 5.0.0 "}
 !3 = !{i32 107}
+
+; These !srcloc metadata nodes are intentionally not all the same type: D105491
+; changed the creation of !srcloc to generate i64 instead of the previous i32.
+; So one thing we're testing here is that both types are acceptable on input,
+; i.e. IR generated both before and after the change can be consumed.
 !4 = !{i32 181}
 !5 = !{i32 257}
+!6 = !{i64 534}

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Pointer assignment constraints 10.2.2.2
 
 module m1
@@ -15,11 +15,11 @@ contains
   subroutine s0
     !ERROR: 'p1' may not have both the POINTER and TARGET attributes
     real, pointer :: p1, p3
+    !ERROR: 'p2' may not have both the POINTER and ALLOCATABLE attributes
     allocatable :: p2
     !ERROR: 'sin' may not have both the POINTER and INTRINSIC attributes
     real, intrinsic, pointer :: sin
     target :: p1
-    !ERROR: 'p2' may not have both the POINTER and ALLOCATABLE attributes
     pointer :: p2
     !ERROR: 'a' may not have the POINTER attribute because it is a coarray
     real, pointer :: a(:)[*]
@@ -95,10 +95,12 @@ contains
       real :: b
     end type
     type(tp) :: y
-    !ERROR: 'p' is not a pointer
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: 'p' is not a pointer
     p => x
     y%a => x
-    !ERROR: 'b' is not a pointer
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: 'b' is not a pointer
     y%b => x
   end
 

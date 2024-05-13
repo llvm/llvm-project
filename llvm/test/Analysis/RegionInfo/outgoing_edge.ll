@@ -1,5 +1,4 @@
 ; REQUIRES: asserts
-; RUN: opt -regions -analyze -enable-new-pm=0 < %s | FileCheck %s
 ; RUN: opt < %s -passes='print<regions>' 2>&1 | FileCheck %s
 
 ; While working on improvements to the region info analysis, this test

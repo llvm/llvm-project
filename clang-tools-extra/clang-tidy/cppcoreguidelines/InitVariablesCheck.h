@@ -13,14 +13,12 @@
 #include "../utils/IncludeInserter.h"
 #include "../utils/OptionsUtils.h"
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 /// Find uninitialized local variables.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-init-variables.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/init-variables.html
 class InitVariablesCheck : public ClangTidyCheck {
 public:
   InitVariablesCheck(StringRef Name, ClangTidyContext *Context);
@@ -32,11 +30,9 @@ public:
 
 private:
   utils::IncludeInserter IncludeInserter;
-  const std::string MathHeader;
+  const StringRef MathHeader;
 };
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_INITVARIABLESCHECK_H

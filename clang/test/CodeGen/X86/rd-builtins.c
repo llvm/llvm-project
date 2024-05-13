@@ -9,7 +9,7 @@ unsigned long long test_rdpmc(int a) {
 // CHECK: call i64 @llvm.x86.rdpmc
 }
 
-int test_rdtsc() {
+int test_rdtsc(void) {
   return _rdtsc();
 // CHECK: @test_rdtsc
 // CHECK: call i64 @llvm.x86.rdtsc
@@ -19,7 +19,7 @@ unsigned long long test_rdtscp(unsigned int *a) {
 // CHECK: @test_rdtscp
 // CHECK: [[RDTSCP:%.*]] = call { i64, i32 } @llvm.x86.rdtscp
 // CHECK: [[TSC_AUX:%.*]] = extractvalue { i64, i32 } [[RDTSCP]], 1
-// CHECK: store i32 [[TSC_AUX]], i32* %{{.*}}
+// CHECK: store i32 [[TSC_AUX]], ptr %{{.*}}
 // CHECK: [[TSC:%.*]] = extractvalue { i64, i32 } [[RDTSCP]], 0
   return __rdtscp(a);
 }

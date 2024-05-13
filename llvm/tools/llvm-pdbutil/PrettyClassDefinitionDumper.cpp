@@ -8,13 +8,14 @@
 
 #include "PrettyClassDefinitionDumper.h"
 
-#include "LinePrinter.h"
 #include "PrettyClassLayoutGraphicalDumper.h"
 #include "llvm-pdbutil.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBaseClass.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
 
@@ -65,7 +66,7 @@ void ClassDefinitionDumper::prettyPrintClassIntro(const ClassLayout &Layout) {
   if (BaseCount > 0) {
     Printer.Indent();
     char NextSeparator = ':';
-    for (auto BC : Layout.bases()) {
+    for (auto *BC : Layout.bases()) {
       const auto &Base = BC->getBase();
       if (Base.isIndirectVirtualBaseClass())
         continue;

@@ -29,6 +29,25 @@ define i32 @_Z3hooii(i32 %b, i32 %a) nounwind ssp minsize {
 
 declare i32 @_Z3gooi(i32);
 
+; CHECK-LABEL: _foo:
+; CHECK:        sub sp, sp, #16
+; CHECK:        bl  _goo
+; CHECK:        add sp, sp, #16
+
+define i32 @foo(i32 %c) nounwind minsize {
+entry:
+  %buffer = alloca [1 x i32], align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %buffer)
+  %call = call i32 @goo(ptr nonnull %buffer)
+  %sub = sub nsw i32 %c, %call
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %buffer)
+
+  ret i32 %sub
+}
+
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare i32 @goo(ptr)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; CHECK-LABEL: _OUTLINED_FUNCTION_PROLOG_x30x29x19x20x21x22:
 ; CHECK:      stp     x22, x21, [sp, #-32]!
@@ -53,3 +72,8 @@ declare i32 @_Z3gooi(i32);
 ; CHECK-LINUX-NEXT: ldp     x22, x21, [sp, #16]
 ; CHECK-LINUX-NEXT: ldp     x29, x30, [sp], #48
 ; CHECK-LINUX-NEXT: ret     x16
+
+; nothing to check - hit assert if not bailing out for swiftasync
+define void @swift_async(ptr swiftasync %ctx) minsize "frame-pointer"="all" {
+  ret void
+}

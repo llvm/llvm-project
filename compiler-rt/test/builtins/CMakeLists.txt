@@ -13,6 +13,11 @@ configure_lit_site_cfg(
 
 include(builtin-config-ix)
 
+if (COMPILER_RT_BUILD_CRT)
+  list(APPEND BUILTINS_TEST_DEPS crt)
+endif()
+pythonize_bool(COMPILER_RT_BUILD_CRT)
+
 # Indicate if this is an MSVC environment.
 pythonize_bool(MSVC)
 
@@ -39,14 +44,32 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
-  if (${arch} STREQUAL "riscv32")
+  if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ${arch} STREQUAL "riscv32")
     list(APPEND BUILTINS_TEST_TARGET_CFLAGS -fforce-enable-int128)
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
-  if (${arch} MATCHES "arm|aarch64|arm64" AND COMPILER_RT_HAS_FLOAT16)
-    list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_HAS_FLOAT16)
-    string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
+  if(APPLE)
+    # TODO: Support the new ABI on Apple platforms.
+    if (${arch} MATCHES "arm|armhf|aarch64|arm64" AND COMPILER_RT_HAS_${arch}_FLOAT16)
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_HAS_FLOAT16)
+      string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
+    endif()
+  else()
+    if (${arch} MATCHES "arm|armhf|aarch64|arm64|i?86|x86_64|AMD64|riscv32|riscv64" AND COMPILER_RT_HAS_${arch}_FLOAT16)
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_HAS_FLOAT16)
+      string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
+    endif()
+  endif()
+
+  if(COMPILER_RT_ENABLE_CET)
+    if(NOT arch MATCHES "i?86|x86_64|AMD64")
+      message(SEND_ERROR "${arch} does not support CET")
+    endif()
+    if(COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS -fcf-protection=full)
+      string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
+    endif()
   endif()
 
   # Compute builtins available in library and add them as lit features.

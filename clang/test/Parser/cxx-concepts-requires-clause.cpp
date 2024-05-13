@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -x c++ %s -verify
-// RUN: %clang_cc1 -std=c++2b -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++20 -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++23 -x c++ %s -verify
 
 // Test parsing of the optional requires-clause in a template-declaration.
 
@@ -12,6 +12,7 @@ struct A {
   struct AA;
   enum E : int;
   static int x;
+  static constexpr int z = 16;
 
   template <typename> requires true
   void Mfoo();
@@ -24,6 +25,8 @@ struct A {
 
   template <typename TT> requires true
   using MQ = M<TT>;
+
+  constexpr int bazz() requires (z == 16);
 };
 
 template <typename T> requires (!0)
@@ -55,6 +58,9 @@ int x = 0;
 
 template <typename T> requires true
 using Q = A<T>;
+
+template<typename T> requires (!0)
+constexpr int A<T>::bazz() requires (z == 16) { return z; }
 
 struct C {
   template <typename> requires true
@@ -139,8 +145,10 @@ template<typename T>
 void bar() requires (sizeof(T)) == 0;
 // expected-error@-1{{parentheses are required around this expression in a requires clause}}
 
+template<typename T>
 void bar(int x, int y) requires (x, y, true);
 
+template<typename T>
 struct B {
   int x;
   void foo(int y) requires (x, this, this->x, y, true);
@@ -158,5 +166,32 @@ auto lambda3 = []<auto> requires(sizeof(char) == 1){};
 
 auto lambda4 = [] requires(sizeof(char) == 1){}; // expected-error {{expected body of lambda expression}}
 #if __cplusplus <= 202002L
-// expected-warning@-2{{lambda without a parameter clause is a C++2b extension}}
+// expected-warning@-2{{lambda without a parameter clause is a C++23 extension}}
 #endif
+
+namespace GH78524 {
+
+template <typename T> T Foo;
+
+template <typename T> auto C(Foo<T>);
+
+template <typename T> struct D {
+  decltype(T()(C<T>)) Type;
+};
+
+template <typename T, typename U> D<T> G(T, U) { return {}; }
+
+struct E {};
+
+void F() {
+  G([]<typename T>
+//     ~~~~~~~~~~ T: Depth: 0, Index: 0
+      requires requires { [](auto...) {}; }(T)
+//                           ~~~~ auto: Depth: 1, Index: 0
+    { return T(); },
+    E{});
+}
+
+int a = []<int=0> requires requires { [](auto){}; } { return 0; }();
+
+} // namespace GH78524

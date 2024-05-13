@@ -2,7 +2,7 @@
 
 struct bar;
 
-void foo()
+void foo(void)
 {
   unsigned int frame, focus;
   (struct bar *) focus == (focus ? ((struct bar *) frame) : 0);

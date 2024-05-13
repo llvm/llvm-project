@@ -60,14 +60,15 @@ private:
 // corresponding to an element in array element order.
 class DesignatorFolder {
 public:
-  explicit DesignatorFolder(FoldingContext &c) : context_{c} {}
+  explicit DesignatorFolder(FoldingContext &c, bool getLastComponent = false)
+      : context_{c}, getLastComponent_{getLastComponent} {}
 
   bool isEmpty() const { return isEmpty_; }
   bool isOutOfRange() const { return isOutOfRange_; }
 
   template <typename T>
   std::optional<OffsetSymbol> FoldDesignator(const Expr<T> &expr) {
-    return std::visit(
+    return common::visit(
         [&](const auto &x) { return FoldDesignator(x, elementNumber_++); },
         expr.u);
   }
@@ -98,26 +99,26 @@ private:
   template <typename T>
   std::optional<OffsetSymbol> FoldDesignator(
       const Expr<T> &expr, ConstantSubscript which) {
-    return std::visit(
+    return common::visit(
         [&](const auto &x) { return FoldDesignator(x, which); }, expr.u);
   }
 
   template <typename A>
-  std::optional<OffsetSymbol> FoldDesignator(const A &x, ConstantSubscript) {
+  std::optional<OffsetSymbol> FoldDesignator(const A &, ConstantSubscript) {
     return std::nullopt;
   }
 
   template <typename T>
   std::optional<OffsetSymbol> FoldDesignator(
       const Designator<T> &designator, ConstantSubscript which) {
-    return std::visit(
+    return common::visit(
         [&](const auto &x) { return FoldDesignator(x, which); }, designator.u);
   }
   template <int KIND>
   std::optional<OffsetSymbol> FoldDesignator(
       const Designator<Type<TypeCategory::Character, KIND>> &designator,
       ConstantSubscript which) {
-    return std::visit(
+    return common::visit(
         common::visitors{
             [&](const Substring &ss) {
               if (const auto *dataRef{ss.GetParentIf<DataRef>()}) {
@@ -157,6 +158,7 @@ private:
   }
 
   FoldingContext &context_;
+  bool getLastComponent_{false};
   ConstantSubscript elementNumber_{0}; // zero-based
   bool isEmpty_{false};
   bool isOutOfRange_{false};

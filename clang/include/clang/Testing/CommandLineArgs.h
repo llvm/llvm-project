@@ -28,13 +28,21 @@ enum TestLanguage {
   Lang_CXX14,
   Lang_CXX17,
   Lang_CXX20,
+  Lang_CXX23,
   Lang_OpenCL,
+  Lang_OBJC,
   Lang_OBJCXX
 };
 
 std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang);
+std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang);
 
 StringRef getFilenameForTesting(TestLanguage Lang);
+
+/// Find a target name such that looking for it in TargetRegistry by that name
+/// returns the same target. We expect that there is at least one target
+/// configured with this property.
+std::string getAnyTargetForTesting();
 
 } // end namespace clang
 

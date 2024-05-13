@@ -53,6 +53,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }
@@ -64,6 +65,7 @@ liveins:
   - { reg: '$esi', virtual-reg: '%2' }
 frameInfo:
   maxAlignment:    1
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |
@@ -77,10 +79,7 @@ body:             |
     DBG_VALUE $edi, $noreg, !11, !DIExpression(), debug-location !12
     DBG_VALUE $esi, $noreg, !13, !DIExpression(), debug-location !12
     %2:gr32 = COPY killed $esi
-    DBG_VALUE %2, $noreg, !13, !DIExpression(), debug-location !12
     %1:gr32 = COPY killed $edi
-    DBG_VALUE %1, $noreg, !11, !DIExpression(), debug-location !12
-    DBG_VALUE 0, $noreg, !14, !DIExpression(), debug-location !12
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     %3:gr32 = MOV32r0 implicit-def dead $eflags
     $edi = COPY killed %3, debug-location !15
@@ -107,7 +106,6 @@ body:             |
     JMP_1 %bb.1, debug-location !17
 
   bb.1:
-    DBG_VALUE %2, $noreg, !14, !DIExpression(), debug-location !12
     %30:gr32 = MOV32ri 0
     %31:gr32 = MOV32ri 1
     %32:gr32 = MOV32ri 2
@@ -143,10 +141,10 @@ body:             |
     %63:gr32 = PHI %23, %bb.0, %43, %bb.1, debug-location !18
     %64:gr32 = PHI %24, %bb.0, %44, %bb.1, debug-location !18
 
-    DBG_INSTR_REF 1, 0, !14, !DIExpression(), debug-location !12
-    ; CHECK:      DBG_PHI %stack.1, 1
+    DBG_INSTR_REF !14, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
+    ; CHECK:      DBG_PHI %stack.1, 1, 32
     ; CHECK:      renamable $eax = MOV32rm %stack.1,
-    ; CHECK:      DBG_INSTR_REF 1, 0
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
     $eax = COPY killed %0, debug-location !19
     RET 0, killed $eax, debug-location !19
 

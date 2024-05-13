@@ -1,8 +1,7 @@
-; RUN: opt -S -simple-loop-unswitch < %s | FileCheck %s
-; RUN: opt -S -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -passes=simple-loop-unswitch -verify-memoryssa < %s | FileCheck %s
 target triple = "x86_64-pc-win32"
 
-define void @f(i32 %doit, i1 %x, i1 %y) personality i32 (...)* @__CxxFrameHandler3 {
+define void @f(i32 %doit, i1 %x, i1 %y) personality ptr @__CxxFrameHandler3 {
 entry:
   %tobool = icmp eq i32 %doit, 0
   br label %for.cond

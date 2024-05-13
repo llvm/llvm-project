@@ -12,7 +12,7 @@
 # RELOCATABLE: cannot mix split-stack and non-split-stack in a relocatable link
 
 # RUN: not ld.lld --defsym __morestack=0x100 --defsym _start=0x300 %t1.o %t2.o %t3.o -o /dev/null 2>&1 | FileCheck %s -check-prefix=ERROR
-# ERROR: Mixing split-stack objects requires a definition of __morestack_non_split
+# ERROR: mixing split-stack objects requires a definition of __morestack_non_split
 
 	.text
 

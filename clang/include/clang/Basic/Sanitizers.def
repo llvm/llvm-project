@@ -56,7 +56,10 @@ SANITIZER("hwaddress", HWAddress)
 SANITIZER("kernel-hwaddress", KernelHWAddress)
 
 // A variant of AddressSanitizer using AArch64 MTE extension.
-SANITIZER("memtag", MemTag)
+SANITIZER("memtag-stack", MemtagStack)
+SANITIZER("memtag-heap", MemtagHeap)
+SANITIZER("memtag-globals", MemtagGlobals)
+SANITIZER_GROUP("memtag", MemTag, MemtagStack | MemtagHeap | MemtagGlobals)
 
 // MemorySanitizer
 SANITIZER("memory", Memory)
@@ -124,6 +127,9 @@ SANITIZER_GROUP("cfi", CFI,
                 CFIDerivedCast | CFIICall | CFIMFCall | CFIUnrelatedCast |
                     CFINVCall | CFIVCall)
 
+// Kernel Control Flow Integrity
+SANITIZER("kcfi", KCFI)
+
 // Safe Stack
 SANITIZER("safe-stack", SafeStack)
 
@@ -157,23 +163,23 @@ SANITIZER_GROUP("implicit-integer-arithmetic-value-change",
                 ImplicitIntegerArithmeticValueChange,
                 ImplicitIntegerSignChange | ImplicitSignedIntegerTruncation)
 
-SANITIZER("objc-cast", ObjCCast)
-
-// FIXME:
-//SANITIZER_GROUP("implicit-integer-conversion", ImplicitIntegerConversion,
-//                ImplicitIntegerArithmeticValueChange |
-//                    ImplicitUnsignedIntegerTruncation)
-//SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
-//                ImplicitIntegerConversion)
-
-SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
+SANITIZER_GROUP("implicit-integer-conversion", ImplicitIntegerConversion,
                 ImplicitIntegerArithmeticValueChange |
                     ImplicitUnsignedIntegerTruncation)
 
+// Implicit bitfield sanitizers
+SANITIZER("implicit-bitfield-conversion", ImplicitBitfieldConversion)
+
+SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
+                ImplicitIntegerConversion |
+                    ImplicitBitfieldConversion)
+
 SANITIZER_GROUP("integer", Integer,
-                ImplicitConversion | IntegerDivideByZero | Shift |
+                ImplicitIntegerConversion | IntegerDivideByZero | Shift |
                     SignedIntegerOverflow | UnsignedIntegerOverflow |
                     UnsignedShiftBase)
+
+SANITIZER("objc-cast", ObjCCast)
 
 SANITIZER("local-bounds", LocalBounds)
 SANITIZER_GROUP("bounds", Bounds, ArrayBounds | LocalBounds)

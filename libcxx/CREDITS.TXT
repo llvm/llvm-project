@@ -12,6 +12,13 @@ N: Saleem Abdulrasool
 E: compnerd@compnerd.org
 D: Minor patches and Linux fixes.
 
+N: Ulf Adams
+D: Invented the Ryu and Ryu Printf algorithms used in floating-point to_chars, and wrote the initial code.
+
+N: Muiez Ahmed
+E: muiez@ibm.com
+D: z/OS port.
+
 N: Dan Albert
 E: danalbert@google.com
 D: Android support and test runner improvements.
@@ -24,9 +31,8 @@ N: Holger Arnold
 E: holgerar@gmail.com
 D: Minor fix.
 
-N: Ruben Van Boxem
-E: vanboxem dot ruben at gmail dot com
-D: Initial Windows patches.
+N: Jorg Brown
+D: Ported floating-point to_chars from MSVC to libc++.
 
 N: David Chisnall
 E: theraven at theravensnest dot org
@@ -40,6 +46,10 @@ D: C++14 support, patches and bug fixes.
 N: Jonathan B Coe
 E: jbcoe@me.com
 D: Implementation of propagate_const.
+
+N: Matthew Dempsky
+E: matthew@dempsky.org
+D: Minor patches and bug fixes.
 
 N: Christopher Di Bella
 E: cjdb@google.com
@@ -57,10 +67,6 @@ D: LFTS support, patches and bug fixes.
 N: Bill Fisher
 E: william.w.fisher@gmail.com
 D: Regex bug fixes.
-
-N: Matthew Dempsky
-E: matthew@dempsky.org
-D: Minor patches and bug fixes.
 
 N: Google Inc.
 D: Copyright owner and contributor of the CityHash algorithm
@@ -80,6 +86,19 @@ D: Minor patches and bug fixes.
 N: Argyrios Kyrtzidis
 E: kyrtzidis@apple.com
 D: Bug fixes.
+
+N: Stephan T. Lavavej
+E: stl@microsoft.com
+E: stl@nuwen.net
+D: Implemented floating-point to_chars.
+
+N: Damien Lebrun-Grandie
+E: dalg24@gmail.com
+E: lebrungrandt@ornl.gov
+D: Implementation of mdspan.
+
+N: Microsoft Corporation
+D: Contributed floating-point to_chars.
 
 N: Bruce Mitchener, Jr.
 E: bruce.mitchener@gmail.com
@@ -113,6 +132,10 @@ N: Jon Roelofs
 E: jroelofS@jroelofs.com
 D: Remote testing, Newlib port, baremetal/single-threaded support.
 
+N: Kent Ross
+E: k@mad.cash
+D: Patches for operator<=> support
+
 N: Jonathan Sauer
 D: Minor patches, mostly related to constexpr
 
@@ -131,6 +154,14 @@ N: Stephan Tolksdorf
 E: st@quanttec.com
 D: Minor <atomic> fix
 
+N: Christian Trott
+E: crtrott@sandia.gov
+D: Implementation of mdspan.
+
+N: Ruben Van Boxem
+E: vanboxem dot ruben at gmail dot com
+D: Initial Windows patches.
+
 N: Michael van der Westhuizen
 E: r1mikey at gmail dot com
 
@@ -141,6 +172,11 @@ N: Klaas de Vries
 E: klaas at klaasgaaf dot nl
 D: Minor bug fix.
 
+N: Mark de Wever
+E: koraq at xs4all dot nl
+D: Format library support.
+D: Finalized the porting of MSVC's to_chars to libc++.
+
 N: Zhang Xiongpang
 E: zhangxiongpang@gmail.com
 D: Minor patches and bug fixes.
@@ -149,11 +185,11 @@ N: Xing Xue
 E: xingxue@ca.ibm.com
 D: AIX port
 
-N: Zhihao Yuan
-E: lichray@gmail.com
-D: Standard compatibility fixes.
-
 N: Jeffrey Yasskin
 E: jyasskin@gmail.com
 E: jyasskin@google.com
 D: Linux fixes.
+
+N: Zhihao Yuan
+E: lichray@gmail.com
+D: Standard compatibility fixes.

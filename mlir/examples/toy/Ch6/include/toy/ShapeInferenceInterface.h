@@ -22,7 +22,7 @@ namespace toy {
 /// Include the auto-generated declarations.
 #include "toy/ShapeInferenceOpInterfaces.h.inc"
 
-} // end namespace toy
-} // end namespace mlir
+} // namespace toy
+} // namespace mlir
 
 #endif // MLIR_TUTORIAL_TOY_SHAPEINFERENCEINTERFACE_H_

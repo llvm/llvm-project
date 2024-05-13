@@ -9,12 +9,51 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_SIMPLELOOPUNSWITCH_H
 #define LLVM_TRANSFORMS_SCALAR_SIMPLELOOPUNSWITCH_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
+
+class LPMUpdater;
+class Loop;
+class StringRef;
+class raw_ostream;
+
+struct ShouldRunExtraSimpleLoopUnswitch
+    : public AnalysisInfoMixin<ShouldRunExtraSimpleLoopUnswitch> {
+  static AnalysisKey Key;
+  struct Result {
+    bool invalidate(Loop &L, const PreservedAnalyses &PA,
+                    LoopAnalysisManager::Invalidator &) {
+      // Check whether the analysis has been explicitly invalidated. Otherwise,
+      // it remains preserved.
+      auto PAC = PA.getChecker<ShouldRunExtraSimpleLoopUnswitch>();
+      return !PAC.preservedWhenStateless();
+    }
+  };
+
+  Result run(Loop &L, LoopAnalysisManager &AM,
+             LoopStandardAnalysisResults &AR) {
+    return Result();
+  }
+
+  static bool isRequired() { return true; }
+};
+
+struct ExtraSimpleLoopUnswitchPassManager : public LoopPassManager {
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                        LoopStandardAnalysisResults &AR, LPMUpdater &U) {
+    auto PA = PreservedAnalyses::all();
+    if (AM.getCachedResult<ShouldRunExtraSimpleLoopUnswitch>(L))
+      PA.intersect(LoopPassManager::run(L, AM, AR, U));
+    PA.abandon<ShouldRunExtraSimpleLoopUnswitch>();
+    return PA;
+  }
+
+  static bool isRequired() { return true; }
+};
 
 /// This pass transforms loops that contain branches or switches on loop-
 /// invariant conditions to have multiple loops. For example, it turns the left
@@ -61,18 +100,18 @@ namespace llvm {
 /// not currently implement that in any mode.
 class SimpleLoopUnswitchPass : public PassInfoMixin<SimpleLoopUnswitchPass> {
   bool NonTrivial;
+  bool Trivial;
 
 public:
-  SimpleLoopUnswitchPass(bool NonTrivial = false) : NonTrivial(NonTrivial) {}
+  SimpleLoopUnswitchPass(bool NonTrivial = false, bool Trivial = true)
+      : NonTrivial(NonTrivial), Trivial(Trivial) {}
 
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
-};
 
-/// Create the legacy pass object for the simple loop unswitcher.
-///
-/// See the documentaion for `SimpleLoopUnswitchPass` for details.
-Pass *createSimpleLoopUnswitchLegacyPass(bool NonTrivial = false);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+};
 
 } // end namespace llvm
 

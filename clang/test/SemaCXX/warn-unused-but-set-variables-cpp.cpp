@@ -6,6 +6,8 @@ struct S {
 
 struct __attribute__((warn_unused)) SWarnUnused {
   int j;
+  void operator +=(int);
+  void operator ++();
 };
 
 int f0() {
@@ -47,4 +49,31 @@ void f2() {
   const int y = 1;
   char a[x];
   char b[y];
+}
+
+void f3(int n) {
+  // Don't warn for overloaded compound assignment operators.
+  SWarnUnused swu;
+  swu += n;
+}
+
+template<typename T> void f4(T n) {
+  // Don't warn for (potentially) overloaded compound assignment operators in
+  // template code.
+  SWarnUnused swu;
+  swu += n;
+}
+
+template <typename T> void f5() {
+  // Don't warn for overloaded pre/post operators in template code.
+  SWarnUnused swu;
+  ++swu;
+}
+
+void f6() {
+  if (int x = 123) {} // expected-warning{{variable 'x' set but not used}}
+
+  while (int x = 123) {} // expected-warning{{variable 'x' set but not used}}
+
+  for (; int x = 123;) {} // expected-warning{{variable 'x' set but not used}}
 }

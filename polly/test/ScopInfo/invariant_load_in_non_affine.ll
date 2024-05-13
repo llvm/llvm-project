@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze \
+; RUN: opt %loadPolly -polly-print-detect -disable-output \
 ; RUN:   -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; CHECK-NOT: Valid Region for Scop
@@ -12,7 +12,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(float* %A, float* %B, i64* %p) {
+define void @foo(ptr %A, ptr %B, ptr %p) {
 bb:
   br label %bb2
 
@@ -30,21 +30,21 @@ bb4:                                              ; preds = %bb18, %bb3
   br i1 %exitcond, label %bb5, label %bb20
 
 bb5:                                              ; preds = %bb4
-  %tmp = getelementptr inbounds float, float* %B, i64 %i.0
-  %tmp6 = load float, float* %tmp, align 4
+  %tmp = getelementptr inbounds float, ptr %B, i64 %i.0
+  %tmp6 = load float, ptr %tmp, align 4
   %tmp7 = fcmp une float %tmp6, 0.000000e+00
   br i1 %tmp7, label %bb8, label %bb17
 
 bb8:                                              ; preds = %bb5
   %tmp9 = mul nuw nsw i64 %i.0, %j.0
   %tmp10 = sitofp i64 %tmp9 to float
-  %tmp11 = load i64, i64* %p, align 8
+  %tmp11 = load i64, ptr %p, align 8
   %tmp12 = mul nsw i64 %i.0, %tmp11
   %tmp13 = add nsw i64 %tmp12, %j.0
-  %tmp14 = getelementptr inbounds float, float* %A, i64 %tmp13
-  %tmp15 = load float, float* %tmp14, align 4
+  %tmp14 = getelementptr inbounds float, ptr %A, i64 %tmp13
+  %tmp15 = load float, ptr %tmp14, align 4
   %tmp16 = fadd float %tmp15, %tmp10
-  store float %tmp16, float* %tmp14, align 4
+  store float %tmp16, ptr %tmp14, align 4
   br label %bb17
 
 bb17:                                             ; preds = %bb8, %bb5

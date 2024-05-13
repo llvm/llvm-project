@@ -40,6 +40,7 @@ int main(int, char**)
         assert(is.getloc().name() == "C");
         assert(is.gcount() == 0);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::basic_istream<wchar_t> is(&sb);
@@ -53,6 +54,7 @@ int main(int, char**)
         assert(is.getloc().name() == "C");
         assert(is.gcount() == 0);
     }
+#endif
 
   return 0;
 }

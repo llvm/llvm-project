@@ -127,19 +127,19 @@ Mips16TargetLowering::Mips16TargetLowering(const MipsTargetMachine &TM,
   if (!Subtarget.useSoftFloat())
     setMips16HardFloatLibCalls();
 
-  setOperationAction(ISD::ATOMIC_FENCE,       MVT::Other, Expand);
-  setOperationAction(ISD::ATOMIC_CMP_SWAP,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_SWAP,        MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_ADD,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_SUB,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_AND,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_OR,     MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_XOR,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_NAND,   MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_MIN,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_MAX,    MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_UMIN,   MVT::i32,   Expand);
-  setOperationAction(ISD::ATOMIC_LOAD_UMAX,   MVT::i32,   Expand);
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, LibCall);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, LibCall);
 
   setOperationAction(ISD::ROTR, MVT::i32,  Expand);
   setOperationAction(ISD::ROTR, MVT::i64,  Expand);
@@ -156,7 +156,7 @@ llvm::createMips16TargetLowering(const MipsTargetMachine &TM,
 }
 
 bool Mips16TargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned, Align, MachineMemOperand::Flags, bool *Fast) const {
+    EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
   return false;
 }
 
@@ -246,7 +246,7 @@ bool Mips16TargetLowering::isEligibleForTailCallOptimization(
 }
 
 void Mips16TargetLowering::setMips16HardFloatLibCalls() {
-  for (unsigned I = 0; I != array_lengthof(HardFloatLibCalls); ++I) {
+  for (unsigned I = 0; I != std::size(HardFloatLibCalls); ++I) {
     assert((I == 0 || HardFloatLibCalls[I - 1] < HardFloatLibCalls[I]) &&
            "Array not sorted!");
     if (HardFloatLibCalls[I].Libcall != RTLIB::UNKNOWN_LIBCALL)
@@ -451,7 +451,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
           // So for now we always save S2. The optimization will be done
           // in a follow-on patch.
           //
-          if (1 || (Signature->RetSig != Mips16HardFloatInfo::NoFPRet))
+          if (true || (Signature->RetSig != Mips16HardFloatInfo::NoFPRet))
             FuncInfo->setSaveS2();
         }
         // one more look at list of intrinsics

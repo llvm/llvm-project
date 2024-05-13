@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This tool verifies Control Flow Integrity (CFI) instrumentation by static
-// binary anaylsis. See the design document in /docs/CFIVerify.rst for more
+// binary analysis. See the design document in /docs/CFIVerify.rst for more
 // information.
 //
 // This tool is currently incomplete. It currently only does disassembly for
@@ -20,6 +20,7 @@
 #include "lib/GraphBuilder.h"
 
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -32,21 +33,24 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::cfi_verify;
 
+static cl::OptionCategory CFIVerifyCategory("CFI Verify Options");
+
 cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
-                                   cl::Required);
-cl::opt<std::string> BlacklistFilename(cl::Positional,
-                                       cl::desc("[blacklist file]"),
-                                       cl::init("-"));
+                                   cl::Required, cl::cat(CFIVerifyCategory));
+cl::opt<std::string> IgnorelistFilename(cl::Positional,
+                                        cl::desc("[ignorelist file]"),
+                                        cl::init("-"),
+                                        cl::cat(CFIVerifyCategory));
 cl::opt<bool> PrintGraphs(
     "print-graphs",
     cl::desc("Print graphs around indirect CF instructions in DOT format."),
-    cl::init(false));
+    cl::init(false), cl::cat(CFIVerifyCategory));
 cl::opt<unsigned> PrintBlameContext(
     "blame-context",
     cl::desc("Print the blame context (if possible) for BAD instructions. This "
              "specifies the number of lines of context to include, where zero "
              "disables this feature."),
-    cl::init(0));
+    cl::init(0), cl::cat(CFIVerifyCategory));
 cl::opt<unsigned> PrintBlameContextAll(
     "blame-context-all",
     cl::desc("Prints the blame context (if possible) for ALL instructions. "
@@ -54,9 +58,9 @@ cl::opt<unsigned> PrintBlameContextAll(
              "instructions (see --blame-context). If --blame-context is "
              "unspecified, it prints this number of contextual lines for BAD "
              "instructions as well."),
-    cl::init(0));
+    cl::init(0), cl::cat(CFIVerifyCategory));
 cl::opt<bool> Summarize("summarize", cl::desc("Print the summary only."),
-                        cl::init(false));
+                        cl::init(false), cl::cat(CFIVerifyCategory));
 
 ExitOnError ExitOnErr;
 
@@ -100,7 +104,7 @@ static void printInstructionInformation(const FileAnalysis &Analysis,
 static void printInstructionStatus(unsigned BlameLine, bool CFIProtected,
                                    const DILineInfo &LineInfo) {
   if (BlameLine) {
-    outs() << "Blacklist Match: " << BlacklistFilename << ":" << BlameLine
+    outs() << "Ignorelist Match: " << IgnorelistFilename << ":" << BlameLine
            << "\n";
     if (CFIProtected)
       outs() << "====> Unexpected Protected\n";
@@ -237,14 +241,15 @@ printIndirectCFInstructions(FileAnalysis &Analysis,
   if (!SpecialCaseList)
     return;
 
-  outs() << "\nBlacklist Results:\n";
+  outs() << "\nIgnorelist Results:\n";
   for (const auto &KV : BlameCounter) {
-    outs() << "  " << BlacklistFilename << ":" << KV.first << " affects "
+    outs() << "  " << IgnorelistFilename << ":" << KV.first << " affects "
            << KV.second << " indirect CF instructions.\n";
   }
 }
 
 int main(int argc, char **argv) {
+  cl::HideUnrelatedOptions({&CFIVerifyCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(
       argc, argv,
       "Identifies whether Control Flow Integrity protects all indirect control "
@@ -261,12 +266,12 @@ int main(int argc, char **argv) {
     PrintBlameContext.setValue(PrintBlameContextAll);
 
   std::unique_ptr<SpecialCaseList> SpecialCaseList;
-  if (BlacklistFilename != "-") {
+  if (IgnorelistFilename != "-") {
     std::string Error;
-    SpecialCaseList = SpecialCaseList::create({BlacklistFilename},
+    SpecialCaseList = SpecialCaseList::create({IgnorelistFilename},
                                               *vfs::getRealFileSystem(), Error);
     if (!SpecialCaseList) {
-      errs() << "Failed to get blacklist: " << Error << "\n";
+      errs() << "Failed to get ignorelist: " << Error << "\n";
       exit(EXIT_FAILURE);
     }
   }

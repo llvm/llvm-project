@@ -27,7 +27,7 @@ float f;
 // CHECK: shufflevector {{.*}} <i32 1, i32 1, i32 1, i32 1>
 // CHECK: insertelement
 // CHECK: shufflevector {{.*}} <i32 1, i32 0>
-void test2() {
+void test2(void) {
     vec2 = vec4.xy;  // shorten
     f = vec2.x;      // extract elt
     vec4 = vec4.yyyy;  // splat
@@ -113,8 +113,8 @@ void test6(float4 *ap, float4 *bp, float c) {
   a *= c;
   a /= c;
 
-  // Vector comparisons can sometimes crash the x86 backend: rdar://6326239,
-  // reject them until the implementation is stable.
+  // Vector comparisons can sometimes crash the x86 backend, reject them until
+  // the implementation is stable.
 #if 0
   int4 cmp;
   cmp = a < b;
@@ -228,14 +228,14 @@ int test10(int4 V) {
 
 // CHECK: @test11
 // CHECK: extractelement <4 x i32>
-int4 test11a();
-int test11() {
+int4 test11a(void);
+int test11(void) {
   return test11a().x;
 }
 
 // CHECK: @test12
 // CHECK: shufflevector {{.*}} <i32 2, i32 1, i32 0>
-// CHECK: shufflevector {{.*}} <i32 0, i32 1, i32 2, i32 undef>
+// CHECK: shufflevector {{.*}} <i32 0, i32 1, i32 2, i32 poison>
 // CHECK: shufflevector {{.*}} <i32 4, i32 5, i32 6, i32 3>
 int4 test12(int4 V) {
   V.xyz = V.zyx;
@@ -307,7 +307,7 @@ typedef __attribute__(( ext_vector_type(16) )) float float16;
 float16 vec16, vec16_2;
 
 // CHECK: @test_rgba
-void test_rgba() {
+void test_rgba(void) {
   // CHECK: fadd <4 x float>
   vec4_2 = vec4.abgr + vec4;
 
@@ -328,7 +328,7 @@ void test_rgba() {
   // CHECK: extractelement {{.*}} 0
   f = vec4_2.rg.r;
   // CHECK: shufflevector {{.*}} <i32 2, i32 1, i32 0>
-  // CHECK: shufflevector {{.*}} <i32 0, i32 1, i32 2, i32 undef>
+  // CHECK: shufflevector {{.*}} <i32 0, i32 1, i32 2, i32 poison>
   // CHECK: shufflevector {{.*}} <i32 4, i32 5, i32 6, i32 3>
   vec4.rgb = vec4.bgr;
 

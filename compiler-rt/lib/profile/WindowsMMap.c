@@ -113,7 +113,18 @@ int msync(void *addr, size_t length, int flags)
 }
 
 COMPILER_RT_VISIBILITY
-int lock(HANDLE handle, DWORD lockType, BOOL blocking) {
+int madvise(void *addr, size_t length, int advice)
+{
+  if (advice != MADV_DONTNEED)
+    return -1; /* Not supported. */
+
+  if (!VirtualUnlock(addr, length))
+    return -1;
+
+  return 0;
+}
+
+static int lock(HANDLE handle, DWORD lockType, BOOL blocking) {
   DWORD flags = lockType;
   if (!blocking)
     flags |= LOCKFILE_FAIL_IMMEDIATELY;

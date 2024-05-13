@@ -13,7 +13,6 @@
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -21,12 +20,11 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/MisExpect.h"
+
+#include <cmath>
 
 using namespace llvm;
 
@@ -64,7 +62,7 @@ getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
     // __builtin_expect_with_probability
     assert(CI->getNumOperands() >= 3 &&
            "expect with probability must have 3 arguments");
-    ConstantFP *Confidence = dyn_cast<ConstantFP>(CI->getArgOperand(2));
+    auto *Confidence = cast<ConstantFP>(CI->getArgOperand(2));
     double TrueProb = Confidence->getValueAPF().convertToDouble();
     assert((TrueProb >= 0.0 && TrueProb <= 1.0) &&
            "probability value must be in the range [0.0, 1.0]");
@@ -101,11 +99,10 @@ static bool handleSwitchExpect(SwitchInst &SI) {
   uint64_t Index = (Case == *SI.case_default()) ? 0 : Case.getCaseIndex() + 1;
   Weights[Index] = LikelyBranchWeightVal;
 
+  misexpect::checkExpectAnnotations(SI, Weights, /*IsFrontend=*/true);
+
   SI.setCondition(ArgValue);
-
-  SI.setMetadata(LLVMContext::MD_prof,
-                 MDBuilder(CI->getContext()).createBranchWeights(Weights));
-
+  setBranchWeights(SI, Weights);
   return true;
 }
 
@@ -122,6 +119,17 @@ static void handlePhiDef(CallInst *Expect) {
   if (!ExpectedValue)
     return;
   const APInt &ExpectedPhiValue = ExpectedValue->getValue();
+  bool ExpectedValueIsLikely = true;
+  Function *Fn = Expect->getCalledFunction();
+  // If the function is expect_with_probability, then we need to take the
+  // probability into consideration. For example, in
+  // expect.with.probability.i64(i64 %a, i64 1, double 0.0), the
+  // "ExpectedValue" 1 is unlikely. This affects probability propagation later.
+  if (Fn->getIntrinsicID() == Intrinsic::expect_with_probability) {
+    auto *Confidence = cast<ConstantFP>(Expect->getArgOperand(2));
+    double TrueProb = Confidence->getValueAPF().convertToDouble();
+    ExpectedValueIsLikely = (TrueProb > 0.5);
+  }
 
   // Walk up in backward a list of instructions that
   // have 'copy' semantics by 'stripping' the copies
@@ -163,7 +171,7 @@ static void handlePhiDef(CallInst *Expect) {
   // Executes the recorded operations on input 'Value'.
   auto ApplyOperations = [&](const APInt &Value) {
     APInt Result = Value;
-    for (auto Op : llvm::reverse(Operations)) {
+    for (auto *Op : llvm::reverse(Operations)) {
       switch (Op->getOpcode()) {
       case Instruction::Xor:
         Result ^= cast<ConstantInt>(Op->getOperand(1))->getValue();
@@ -210,9 +218,12 @@ static void handlePhiDef(CallInst *Expect) {
       continue;
 
     // Not an interesting case when IsUnlikely is false -- we can not infer
-    // anything useful when the operand value matches the expected phi
-    // output.
-    if (ExpectedPhiValue == ApplyOperations(CI->getValue()))
+    // anything useful when:
+    // (1) We expect some phi output and the operand value matches it, or
+    // (2) We don't expect some phi output (i.e. the "ExpectedValue" has low
+    //     probability) and the operand value doesn't match that.
+    const APInt &CurrentPhiValue = ApplyOperations(CI->getValue());
+    if (ExpectedValueIsLikely == (ExpectedPhiValue == CurrentPhiValue))
       continue;
 
     BranchInst *BI = GetDomConditional(i);
@@ -245,6 +256,8 @@ static void handlePhiDef(CallInst *Expect) {
     uint32_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
     std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) = getBranchWeight(
         Expect->getCalledFunction()->getIntrinsicID(), Expect, 2);
+    if (!ExpectedValueIsLikely)
+      std::swap(LikelyBranchWeightVal, UnlikelyBranchWeightVal);
 
     if (IsOpndComingFromSuccessor(BI->getSuccessor(1)))
       BI->setMetadata(LLVMContext::MD_prof,
@@ -315,19 +328,24 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
   std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) =
       getBranchWeight(Fn->getIntrinsicID(), CI, 2);
 
+  SmallVector<uint32_t, 4> ExpectedWeights;
   if ((ExpectedValue->getZExtValue() == ValueComparedTo) ==
       (Predicate == CmpInst::ICMP_EQ)) {
     Node =
         MDB.createBranchWeights(LikelyBranchWeightVal, UnlikelyBranchWeightVal);
+    ExpectedWeights = {LikelyBranchWeightVal, UnlikelyBranchWeightVal};
   } else {
     Node =
         MDB.createBranchWeights(UnlikelyBranchWeightVal, LikelyBranchWeightVal);
+    ExpectedWeights = {UnlikelyBranchWeightVal, LikelyBranchWeightVal};
   }
 
   if (CmpI)
     CmpI->setOperand(0, ArgValue);
   else
     BSI.setCondition(ArgValue);
+
+  misexpect::checkFrontendInstrumentation(BSI, ExpectedWeights);
 
   BSI.setMetadata(LLVMContext::MD_prof, Node);
 
@@ -357,11 +375,10 @@ static bool lowerExpectIntrinsic(Function &F) {
     // Remove llvm.expect intrinsics. Iterate backwards in order
     // to process select instructions before the intrinsic gets
     // removed.
-    for (auto BI = BB.rbegin(), BE = BB.rend(); BI != BE;) {
-      Instruction *Inst = &*BI++;
-      CallInst *CI = dyn_cast<CallInst>(Inst);
+    for (Instruction &Inst : llvm::make_early_inc_range(llvm::reverse(BB))) {
+      CallInst *CI = dyn_cast<CallInst>(&Inst);
       if (!CI) {
-        if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
+        if (SelectInst *SI = dyn_cast<SelectInst>(&Inst)) {
           if (handleBrSelExpect(*SI))
             ExpectIntrinsicsHandled++;
         }
@@ -392,30 +409,4 @@ PreservedAnalyses LowerExpectIntrinsicPass::run(Function &F,
     return PreservedAnalyses::none();
 
   return PreservedAnalyses::all();
-}
-
-namespace {
-/// Legacy pass for lowering expect intrinsics out of the IR.
-///
-/// When this pass is run over a function it uses expect intrinsics which feed
-/// branches and switches to provide branch weight metadata for those
-/// terminators. It then removes the expect intrinsics from the IR so the rest
-/// of the optimizer can ignore them.
-class LowerExpectIntrinsic : public FunctionPass {
-public:
-  static char ID;
-  LowerExpectIntrinsic() : FunctionPass(ID) {
-    initializeLowerExpectIntrinsicPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override { return lowerExpectIntrinsic(F); }
-};
-}
-
-char LowerExpectIntrinsic::ID = 0;
-INITIALIZE_PASS(LowerExpectIntrinsic, "lower-expect",
-                "Lower 'expect' Intrinsics", false, false)
-
-FunctionPass *llvm::createLowerExpectIntrinsicPass() {
-  return new LowerExpectIntrinsic();
 }

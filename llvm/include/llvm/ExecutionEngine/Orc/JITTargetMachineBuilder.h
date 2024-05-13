@@ -13,14 +13,14 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_JITTARGETMACHINEBUILDER_H
 #define LLVM_EXECUTIONENGINE_ORC_JITTARGETMACHINEBUILDER_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -38,18 +38,16 @@ class JITTargetMachineBuilder {
 public:
   /// Create a JITTargetMachineBuilder based on the given triple.
   ///
-  /// Note: TargetOptions is default-constructed, then EmulatedTLS and
-  /// ExplicitEmulatedTLS are set to true. If EmulatedTLS is not
-  /// required, these values should be reset before calling
-  /// createTargetMachine.
+  /// Note: TargetOptions is default-constructed, then EmulatedTLS is set to
+  /// true. If EmulatedTLS is not required, these values should be reset before
+  /// calling createTargetMachine.
   JITTargetMachineBuilder(Triple TT);
 
   /// Create a JITTargetMachineBuilder for the host system.
   ///
-  /// Note: TargetOptions is default-constructed, then EmulatedTLS and
-  /// ExplicitEmulatedTLS are set to true. If EmulatedTLS is not
-  /// required, these values should be reset before calling
-  /// createTargetMachine.
+  /// Note: TargetOptions is default-constructed, then EmulatedTLS is set to
+  /// true. If EmulatedTLS is not required, these values should be reset before
+  /// calling createTargetMachine.
   static Expected<JITTargetMachineBuilder> detectHost();
 
   /// Create a TargetMachine.
@@ -83,25 +81,25 @@ public:
   const std::string &getCPU() const { return CPU; }
 
   /// Set the relocation model.
-  JITTargetMachineBuilder &setRelocationModel(Optional<Reloc::Model> RM) {
+  JITTargetMachineBuilder &setRelocationModel(std::optional<Reloc::Model> RM) {
     this->RM = std::move(RM);
     return *this;
   }
 
   /// Get the relocation model.
-  const Optional<Reloc::Model> &getRelocationModel() const { return RM; }
+  const std::optional<Reloc::Model> &getRelocationModel() const { return RM; }
 
   /// Set the code model.
-  JITTargetMachineBuilder &setCodeModel(Optional<CodeModel::Model> CM) {
+  JITTargetMachineBuilder &setCodeModel(std::optional<CodeModel::Model> CM) {
     this->CM = std::move(CM);
     return *this;
   }
 
   /// Get the code model.
-  const Optional<CodeModel::Model> &getCodeModel() const { return CM; }
+  const std::optional<CodeModel::Model> &getCodeModel() const { return CM; }
 
   /// Set the LLVM CodeGen optimization level.
-  JITTargetMachineBuilder &setCodeGenOptLevel(CodeGenOpt::Level OptLevel) {
+  JITTargetMachineBuilder &setCodeGenOptLevel(CodeGenOptLevel OptLevel) {
     this->OptLevel = OptLevel;
     return *this;
   }
@@ -125,9 +123,9 @@ public:
   /// Set TargetOptions.
   ///
   /// Note: This operation will overwrite any previously configured options,
-  /// including EmulatedTLS and ExplicitEmulatedTLS which
-  /// the JITTargetMachineBuilder sets by default. Clients are responsible
-  /// for re-enabling these overwritten options.
+  /// including EmulatedTLS and UseInitArray which the JITTargetMachineBuilder
+  /// sets by default. Clients are responsible for re-enabling these overwritten
+  /// options.
   JITTargetMachineBuilder &setOptions(TargetOptions Options) {
     this->Options = std::move(Options);
     return *this;
@@ -150,9 +148,9 @@ private:
   std::string CPU;
   SubtargetFeatures Features;
   TargetOptions Options;
-  Optional<Reloc::Model> RM;
-  Optional<CodeModel::Model> CM;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
+  std::optional<Reloc::Model> RM;
+  std::optional<CodeModel::Model> CM;
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
 };
 
 #ifndef NDEBUG

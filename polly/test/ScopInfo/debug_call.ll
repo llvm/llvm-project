@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -polly-debug-func=dbg_printf -polly-scops -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-debug-func=dbg_printf -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Check that the call to dbg_printf is accepted as a debug-function.
 ;
-declare void @dbg_printf(i8*, ...)
+declare void @dbg_printf(ptr, ...)
 
 define void @func(i32 %n) {
 entry:
@@ -14,7 +14,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      call void (i8*, ...) @dbg_printf(i8* null, i32 %j)
+      call void (ptr, ...) @dbg_printf(ptr null, i32 %j)
       br label %inc
 
 inc:

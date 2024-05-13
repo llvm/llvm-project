@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops \
-; RUN:                -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void pos(float *A, long n) {
 ;      for (long i = 0; i < 100; i++)
@@ -31,14 +30,14 @@
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> [i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) }; 
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) };
 ; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @pos(float* %A, i64 %n) {
+define void @pos(ptr %A, i64 %n) {
 bb:
   br label %bb1
 
@@ -49,10 +48,10 @@ bb1:                                              ; preds = %bb6, %bb
 
 bb2:                                              ; preds = %bb1
   %tmp = srem i64 %n, 42
-  %tmp3 = getelementptr inbounds float, float* %A, i64 %tmp
-  %tmp4 = load float, float* %tmp3, align 4
+  %tmp3 = getelementptr inbounds float, ptr %A, i64 %tmp
+  %tmp4 = load float, ptr %tmp3, align 4
   %tmp5 = fadd float %tmp4, 1.000000e+00
-  store float %tmp5, float* %tmp3, align 4
+  store float %tmp5, ptr %tmp3, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb2
@@ -63,7 +62,7 @@ bb8:                                              ; preds = %bb1
   ret void
 }
 
-define void @neg(float* %A, i64 %n) {
+define void @neg(ptr %A, i64 %n) {
 bb:
   br label %bb1
 
@@ -74,10 +73,10 @@ bb1:                                              ; preds = %bb6, %bb
 
 bb2:                                              ; preds = %bb1
   %tmp = srem i64 %n, -42
-  %tmp3 = getelementptr inbounds float, float* %A, i64 %tmp
-  %tmp4 = load float, float* %tmp3, align 4
+  %tmp3 = getelementptr inbounds float, ptr %A, i64 %tmp
+  %tmp4 = load float, ptr %tmp3, align 4
   %tmp5 = fadd float %tmp4, 1.000000e+00
-  store float %tmp5, float* %tmp3, align 4
+  store float %tmp5, ptr %tmp3, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb2

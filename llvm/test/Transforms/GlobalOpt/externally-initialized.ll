@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -globalopt | FileCheck %s
+; RUN: opt < %s -S -passes=globalopt | FileCheck %s
 
 ; This global is externally_initialized, which may modify the value between
 ; it's static initializer and any code in this module being run, so the only
@@ -16,22 +16,22 @@
 define void @foo() {
 ; CHECK-LABEL: foo
 entry:
-; CHECK: store i32 42, i32* @a
-  store i32 42, i32* @a
+; CHECK: store i32 42, ptr @a
+  store i32 42, ptr @a
   ret void
 }
 define i32 @bar() {
 ; CHECK-LABEL: bar
 entry:
-; CHECK: %val = load i32, i32* @a
-  %val = load i32, i32* @a
+; CHECK: %val = load i32, ptr @a
+  %val = load i32, ptr @a
   ret i32 %val
 }
 
 define i32 @baz() {
 ; CHECK-LABEL: baz
 entry:
-; CHECK: %val = load i32, i32* @b
-  %val = load i32, i32* @b
+; CHECK: %val = load i32, ptr @b
+  %val = load i32, ptr @b
   ret i32 %val
 }

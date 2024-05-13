@@ -192,13 +192,18 @@ This gives the ``DiagnosticConsumer`` information about what the argument means
 without requiring it to use a specific presentation (consider this MVC for
 Clang :).
 
+It is really easy to add format specifiers to the Clang diagnostics system, but
+they should be discussed before they are added.  If you are creating a lot of
+repetitive diagnostics and/or have an idea for a useful formatter, please bring
+it up on the cfe-dev mailing list.
+
 Here are the different diagnostic argument formats currently supported by
 Clang:
 
 **"s" format**
 
 Example:
-  ``"requires %1 parameter%s1"``
+  ``"requires %0 parameter%s0"``
 Class:
   Integers
 Description:
@@ -206,12 +211,15 @@ Description:
   diagnostics.  When the integer is 1, it prints as nothing.  When the integer
   is not 1, it prints as "``s``".  This allows some simple grammatical forms to
   be to be handled correctly, and eliminates the need to use gross things like
-  ``"requires %1 parameter(s)"``.
+  ``"requires %1 parameter(s)"``. Note, this only handles adding a simple
+  "``s``" character, it will not handle situations where pluralization is more
+  complicated such as turning ``fancy`` into ``fancies`` or ``mouse`` into
+  ``mice``. You can use the "plural" format specifier to handle such situations.
 
 **"select" format**
 
 Example:
-  ``"must be a %select{unary|binary|unary or binary}2 operator"``
+  ``"must be a %select{unary|binary|unary or binary}0 operator"``
 Class:
   Integers
 Description:
@@ -219,7 +227,7 @@ Description:
   into one common one, without requiring the difference to be specified as an
   English string argument.  Instead of specifying the string, the diagnostic
   gets an integer argument and the format string selects the numbered option.
-  In this case, the "``%2``" value must be an integer in the range [0..2].  If
+  In this case, the "``%0``" value must be an integer in the range [0..2].  If
   it is 0, it prints "unary", if it is 1 it prints "binary" if it is 2, it
   prints "unary or binary".  This allows other language translations to
   substitute reasonable words (or entire phrases) based on the semantics of the
@@ -229,11 +237,11 @@ Description:
 **"plural" format**
 
 Example:
-  ``"you have %1 %plural{1:mouse|:mice}1 connected to your computer"``
+  ``"you have %0 %plural{1:mouse|:mice}0 connected to your computer"``
 Class:
   Integers
 Description:
-  This is a formatter for complex plural forms.  It is designed to handle even
+  This is a formatter for complex plural forms. It is designed to handle even
   the requirements of languages with very complex plural forms, as many Baltic
   languages have.  The argument consists of a series of expression/form pairs,
   separated by ":", where the first form whose expression evaluates to true is
@@ -245,10 +253,10 @@ Description:
   numeric condition can take one of three forms.
 
   * number: A simple decimal number matches if the argument is the same as the
-    number.  Example: ``"%plural{1:mouse|:mice}4"``
+    number.  Example: ``"%plural{1:mouse|:mice}0"``
   * range: A range in square brackets matches if the argument is within the
     range.  Then range is inclusive on both ends.  Example:
-    ``"%plural{0:none|1:one|[2,5]:some|:many}2"``
+    ``"%plural{0:none|1:one|[2,5]:some|:many}0"``
   * modulo: A modulo operator is followed by a number, and equals sign and
     either a number or a range.  The tests are the same as for plain numbers
     and ranges, but the argument is taken modulo the number first.  Example:
@@ -313,11 +321,6 @@ Description:
   braces before the pipe is printed, with the formatted text replacing the $.
   If tree printing is on, the text after the pipe is printed and a type tree is
   printed after the diagnostic message.
-
-It is really easy to add format specifiers to the Clang diagnostics system, but
-they should be discussed before they are added.  If you are creating a lot of
-repetitive diagnostics and/or have an idea for a useful formatter, please bring
-it up on the cfe-dev mailing list.
 
 **"sub" format**
 
@@ -474,9 +477,8 @@ mode.  Instead of formatting and printing out the diagnostics, this
 implementation just captures and remembers the diagnostics as they fly by.
 Then ``-verify`` compares the list of produced diagnostics to the list of
 expected ones.  If they disagree, it prints out its own output.  Full
-documentation for the ``-verify`` mode can be found in the Clang API
-documentation for `VerifyDiagnosticConsumer
-</doxygen/classclang_1_1VerifyDiagnosticConsumer.html#details>`_.
+documentation for the ``-verify`` mode can be found at
+:ref:`verifying-diagnostics`.
 
 There are many other possible implementations of this interface, and this is
 why we prefer diagnostics to pass down rich structured information in
@@ -537,7 +539,7 @@ token.  This concept maps directly to the "spelling location" for the token.
 ``SourceRange`` and ``CharSourceRange``
 ---------------------------------------
 
-.. mostly taken from https://lists.llvm.org/pipermail/cfe-dev/2010-August/010595.html
+.. mostly taken from https://discourse.llvm.org/t/code-ranges-of-tokens-ast-elements/16893/2
 
 Clang represents most source ranges by [first, last], where "first" and "last"
 each point to the beginning of their respective tokens.  For example consider
@@ -660,9 +662,11 @@ Then, specify additional attributes via mix-ins:
 * ``HelpText`` holds the text that will be printed besides the option name when
   the user requests help (e.g. via ``clang --help``).
 * ``Group`` specifies the "category" of options this option belongs to. This is
-  used by various tools to filter certain options of interest.
-* ``Flags`` may contain a number of "tags" associated with the option. This
-  enables more granular filtering than the ``Group`` attribute.
+  used by various tools to categorize and sometimes filter options.
+* ``Flags`` may contain "tags" associated with the option. These may affect how
+  the option is rendered, or if it's hidden in some contexts.
+* ``Visibility`` should be used to specify the drivers in which a particular
+  option would be available. This attribute will impact tool --help
 * ``Alias`` denotes that the option is an alias of another option. This may be
   combined with ``AliasArgs`` that holds the implied value.
 
@@ -671,12 +675,14 @@ Then, specify additional attributes via mix-ins:
     // Options.td
 
     def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
-  +   Group<f_Group>, Flags<[CC1Option]>,
+  +   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   +   HelpText<"Load pass plugin from a dynamic shared object file.">;
 
-New options are recognized by the Clang driver unless marked with the
-``NoDriverOption`` flag. On the other hand, options intended for the ``-cc1``
-frontend must be explicitly marked with the ``CC1Option`` flag.
+New options are recognized by the ``clang`` driver mode if ``Visibility`` is
+not specified or contains ``ClangOption``. Options intended for ``clang -cc1``
+must be explicitly marked with the ``CC1Option`` flag. Flags that specify
+``CC1Option`` but not ``ClangOption`` will only be accessible via ``-cc1``.
+This is similar for other driver modes, such as ``clang-cl`` or ``flang``.
 
 Next, parse (or manufacture) the command line arguments in the Clang driver and
 use them to construct the ``-cc1`` job:
@@ -685,7 +691,7 @@ use them to construct the ``-cc1`` job:
 
     void Clang::ConstructJob(const ArgList &Args /*...*/) const {
       ArgStringList CmdArgs;
-      // ... 
+      // ...
 
   +   for (const Arg *A : Args.filtered(OPT_fpass_plugin_EQ)) {
   +     CmdArgs.push_back(Args.MakeArgString(Twine("-fpass-plugin=") + A->getValue()));
@@ -871,7 +877,8 @@ present on command line.
 
 .. code-block:: text
 
-  def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Flags<[CC1Option]>,
+  def fignore_exceptions : Flag<["-"], "fignore-exceptions">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoFlag<LangOpts<"IgnoreExceptions">>;
 
 **Negative Flag**
@@ -881,7 +888,8 @@ present on command line.
 
 .. code-block:: text
 
-  def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Flags<[CC1Option]>,
+  def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
 
 **Negative and Positive Flag**
@@ -895,9 +903,9 @@ line.
 
   defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
     CodeGenOpts<"LegacyPassManager">, DefaultFalse,
-    PosFlag<SetTrue, [], "Use the legacy pass manager in LLVM">,
-    NegFlag<SetFalse, [], "Use the new pass manager in LLVM">,
-    BothFlags<[CC1Option]>>;
+    PosFlag<SetTrue, [], [], "Use the legacy pass manager in LLVM">,
+    NegFlag<SetFalse, [], [], "Use the new pass manager in LLVM">,
+    BothFlags<[], [ClangOption, CC1Option]>>;
 
 With most such pair of flags, the ``-cc1`` frontend accepts only the flag that
 changes the default key path value. The Clang driver is responsible for
@@ -909,10 +917,11 @@ full names of both flags. The positive flag would then be named
 ``flegacy-pass-manager`` and the negative ``fno-legacy-pass-manager``.
 ``BoolOption`` also implies the ``-`` prefix for both flags. It's also possible
 to use ``BoolFOption`` that implies the ``"f"`` prefix and ``Group<f_Group>``.
-The ``PosFlag`` and ``NegFlag`` classes hold the associated boolean value, an
-array of elements passed to the ``Flag`` class and the help text. The optional
-``BothFlags`` class holds an array of ``Flag`` elements that are common for both
-the positive and negative flag and their common help text suffix.
+The ``PosFlag`` and ``NegFlag`` classes hold the associated boolean value,
+arrays of elements passed to the ``Flag`` and ``Visibility`` classes and the
+help text. The optional ``BothFlags`` class holds arrays of ``Flag`` and
+``Visibility`` elements that are common for both the positive and negative flag
+and their common help text suffix.
 
 **String**
 
@@ -921,7 +930,8 @@ the option appears on the command line, the argument value is simply copied.
 
 .. code-block:: text
 
-  def isysroot : JoinedOrSeparate<["-"], "isysroot">, Flags<[CC1Option]>,
+  def isysroot : JoinedOrSeparate<["-"], "isysroot">,
+    Visibility<[ClangOption, CC1Option, FlangOption]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
 
 **List of Strings**
@@ -932,7 +942,8 @@ vector.
 
 .. code-block:: text
 
-  def frewrite_map_file : Separate<["-"], "frewrite-map-file">, Flags<[CC1Option]>,
+  def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoStringVector<CodeGenOpts<"RewriteMapFiles">>;
 
 **Integer**
@@ -943,7 +954,8 @@ and the result is assigned to the key path on success.
 
 .. code-block:: text
 
-  def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Flags<[CC1Option]>,
+  def mstack_probe_size : Joined<["-"], "mstack-probe-size=">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoInt<CodeGenOpts<"StackProbeSize">, "4096">;
 
 **Enumeration**
@@ -960,7 +972,8 @@ comma-separated string values and elements of the array within
 
 .. code-block:: text
 
-  def mthread_model : Separate<["-"], "mthread-model">, Flags<[CC1Option]>,
+  def mthread_model : Separate<["-"], "mthread-model">,
+    Visibility<[ClangOption, CC1Option]>,
     Values<"posix,single">, NormalizedValues<["POSIX", "Single"]>,
     NormalizedValuesScope<"LangOptions::ThreadModelKind">,
     MarshallingInfoEnum<LangOpts<"ThreadModel">, "POSIX">;
@@ -980,7 +993,8 @@ Finally, the command line is parsed according to the primary annotation.
 
 .. code-block:: text
 
-  def fms_extensions : Flag<["-"], "fms-extensions">, Flags<[CC1Option]>,
+  def fms_extensions : Flag<["-"], "fms-extensions">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoFlag<LangOpts<"MicrosoftExt">>,
     ImpliedByAnyOf<[fms_compatibility.KeyPath], "true">;
 
@@ -991,7 +1005,8 @@ true.
 
 .. code-block:: text
 
-  def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Flags<[CC1Option]>,
+  def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoFlag<LangOpts<"OpenMPIRBuilder">>,
     ShouldParseIf<fopenmp.KeyPath>;
 
@@ -2795,12 +2810,12 @@ and then the semantic handling of the attribute.
 Parsing of the attribute is determined by the various syntactic forms attributes
 can take, such as GNU, C++11, and Microsoft style attributes, as well as other
 information provided by the table definition of the attribute. Ultimately, the
-parsed representation of an attribute object is an ``ParsedAttr`` object.
+parsed representation of an attribute object is a ``ParsedAttr`` object.
 These parsed attributes chain together as a list of parsed attributes attached
 to a declarator or declaration specifier. The parsing of attributes is handled
-automatically by Clang, except for attributes spelled as keywords. When
-implementing a keyword attribute, the parsing of the keyword and creation of the
-``ParsedAttr`` object must be done manually.
+automatically by Clang, except for attributes spelled as so-called “custom”
+keywords. When implementing a custom keyword attribute, the parsing of the
+keyword and creation of the ``ParsedAttr`` object must be done manually.
 
 Eventually, ``Sema::ProcessDeclAttributeList()`` is called with a ``Decl`` and
 a ``ParsedAttr``, at which point the parsed attribute can be transformed
@@ -2830,7 +2845,7 @@ semantic) type, or one of its derivatives. Most attributes will derive from the
 later redeclarations of the ``Decl`` it is associated with.
 ``InheritableParamAttr`` is similar to ``InheritableAttr``, except that the
 attribute is written on a parameter instead of a declaration. If the attribute
-applies to statements, it should inherit from ``StmtAttr`. If the attribute is
+applies to statements, it should inherit from ``StmtAttr``. If the attribute is
 intended to apply to a type instead of a declaration, such an attribute should
 derive from ``TypeAttr``, and will generally not be given an AST representation.
 (Note that this document does not cover the creation of type attributes.) An
@@ -2853,37 +2868,64 @@ may have a keyword spelling, as well as a C++11 spelling and a GNU spelling. An
 empty spelling list is also permissible and may be useful for attributes which
 are created implicitly. The following spellings are accepted:
 
-  ============  ================================================================
-  Spelling      Description
-  ============  ================================================================
-  ``GNU``       Spelled with a GNU-style ``__attribute__((attr))`` syntax and
-                placement.
-  ``CXX11``     Spelled with a C++-style ``[[attr]]`` syntax with an optional
-                vendor-specific namespace.
-  ``C2x``       Spelled with a C-style ``[[attr]]`` syntax with an optional
-                vendor-specific namespace.
-  ``Declspec``  Spelled with a Microsoft-style ``__declspec(attr)`` syntax.
-  ``Keyword``   The attribute is spelled as a keyword, and required custom
-                parsing.
-  ``GCC``       Specifies two or three spellings: the first is a GNU-style
-                spelling, the second is a C++-style spelling with the ``gnu``
-                namespace, and the third is an optional C-style spelling with
-                the ``gnu`` namespace. Attributes should only specify this
-                spelling for attributes supported by GCC.
-  ``Clang``     Specifies two or three spellings: the first is a GNU-style
-                spelling, the second is a C++-style spelling with the ``clang``
-                namespace, and the third is an optional C-style spelling with
-                the ``clang`` namespace. By default, a C-style spelling is
-                provided.
-  ``Pragma``    The attribute is spelled as a ``#pragma``, and requires custom
-                processing within the preprocessor. If the attribute is meant to
-                be used by Clang, it should set the namespace to ``"clang"``.
-                Note that this spelling is not used for declaration attributes.
-  ============  ================================================================
+  ==================  =========================================================
+  Spelling            Description
+  ==================  =========================================================
+  ``GNU``             Spelled with a GNU-style ``__attribute__((attr))``
+                      syntax and placement.
+  ``CXX11``           Spelled with a C++-style ``[[attr]]`` syntax with an
+                      optional vendor-specific namespace.
+  ``C23``             Spelled with a C-style ``[[attr]]`` syntax with an
+                      optional vendor-specific namespace.
+  ``Declspec``        Spelled with a Microsoft-style ``__declspec(attr)``
+                      syntax.
+  ``CustomKeyword``   The attribute is spelled as a keyword, and requires
+                      custom parsing.
+  ``RegularKeyword``  The attribute is spelled as a keyword. It can be
+                      used in exactly the places that the standard
+                      ``[[attr]]`` syntax can be used, and appertains to
+                      exactly the same thing that a standard attribute
+                      would appertain to. Lexing and parsing of the keyword
+                      are handled automatically.
+  ``GCC``             Specifies two or three spellings: the first is a
+                      GNU-style spelling, the second is a C++-style spelling
+                      with the ``gnu`` namespace, and the third is an optional
+                      C-style spelling with the ``gnu`` namespace. Attributes
+                      should only specify this spelling for attributes
+                      supported by GCC.
+  ``Clang``           Specifies two or three spellings: the first is a
+                      GNU-style spelling, the second is a C++-style spelling
+                      with the ``clang`` namespace, and the third is an
+                      optional C-style spelling with the ``clang`` namespace.
+                      By default, a C-style spelling is provided.
+  ``Pragma``          The attribute is spelled as a ``#pragma``, and requires
+                      custom processing within the preprocessor. If the
+                      attribute is meant to be used by Clang, it should
+                      set the namespace to ``"clang"``. Note that this
+                      spelling is not used for declaration attributes.
+  ==================  =========================================================
+
+The C++ standard specifies that “any [non-standard attribute] that is not
+recognized by the implementation is ignored” (``[dcl.attr.grammar]``).
+The rule for C is similar. This makes ``CXX11`` and ``C23`` spellings
+unsuitable for attributes that affect the type system, that change the
+binary interface of the code, or that have other similar semantic meaning.
+
+``RegularKeyword`` provides an alternative way of spelling such attributes.
+It reuses the production rules for standard attributes, but it applies them
+to plain keywords rather than to ``[[…]]`` sequences. Compilers that don't
+recognize the keyword are likely to report an error of some kind.
+
+For example, the ``ArmStreaming`` function type attribute affects
+both the type system and the binary interface of the function.
+It cannot therefore be spelled ``[[arm::streaming]]``, since compilers
+that don't understand ``arm::streaming`` would ignore it and miscompile
+the code. ``ArmStreaming`` is instead spelled ``__arm_streaming``, but it
+can appear wherever a hypothetical ``[[arm::streaming]]`` could appear.
 
 Subjects
 ~~~~~~~~
-Attributes appertain to one or more subjects. If the attribute attempts to 
+Attributes appertain to one or more subjects. If the attribute attempts to
 attach to a subject that is not in the subject list, a diagnostic is issued
 automatically. Whether the diagnostic is a warning or an error depends on how
 the attribute's ``SubjectList`` is defined, but the default behavior is to warn.
@@ -2914,13 +2956,13 @@ Documentation
 All attributes must have some form of documentation associated with them.
 Documentation is table generated on the public web server by a server-side
 process that runs daily. Generally, the documentation for an attribute is a
-stand-alone definition in `include/clang/Basic/AttrDocs.td 
+stand-alone definition in `include/clang/Basic/AttrDocs.td
 <https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Basic/AttrDocs.td>`_
 that is named after the attribute being documented.
 
 If the attribute is not for public consumption, or is an implicitly-created
 attribute that has no visible spelling, the documentation list can specify the
-``Undocumented`` object. Otherwise, the attribute should have its documentation
+``InternalOnly`` object. Otherwise, the attribute should have its documentation
 added to AttrDocs.td.
 
 Documentation derives from the ``Documentation`` tablegen type. All derived
@@ -2932,7 +2974,7 @@ There are four predefined documentation categories: ``DocCatFunction`` for
 attributes that appertain to function-like subjects, ``DocCatVariable`` for
 attributes that appertain to variable-like subjects, ``DocCatType`` for type
 attributes, and ``DocCatStmt`` for statement attributes. A custom documentation
-category should be used for groups of attributes with similar functionality. 
+category should be used for groups of attributes with similar functionality.
 Custom categories are good for providing overview information for the attributes
 grouped under it. For instance, the consumed annotation attributes define a
 custom category, ``DocCatConsumed``, that explains what consumed annotations are
@@ -3266,3 +3308,237 @@ are similar.
      as syntax highlighting, cross-referencing, and so on.  The
      ``c-index-test`` helper program can be used to test these features.
 
+Testing
+-------
+All functional changes to Clang should come with test coverage demonstrating
+the change in behavior.
+
+.. _verifying-diagnostics:
+
+Verifying Diagnostics
+^^^^^^^^^^^^^^^^^^^^^
+Clang ``-cc1`` supports the ``-verify`` command line option as a way to
+validate diagnostic behavior. This option will use special comments within the
+test file to verify that expected diagnostics appear in the correct source
+locations. If all of the expected diagnostics match the actual output of Clang,
+then the invocation will return normally. If there are discrepancies between
+the expected and actual output, Clang will emit detailed information about
+which expected diagnostics were not seen or which unexpected diagnostics were
+seen, etc. A complete example is:
+
+.. code-block: c++
+
+  // RUN: %clang_cc1 -verify %s
+  int A = B; // expected-error {{use of undeclared identifier 'B'}}
+
+If the test is run and the expected error is emitted on the expected line, the
+diagnostic verifier will pass. However, if the expected error does not appear
+or appears in a different location than expected, or if additional diagnostics
+appear, the diagnostic verifier will fail and emit information as to why.
+
+The ``-verify`` command optionally accepts a comma-delimited list of one or
+more verification prefixes that can be used to craft those special comments.
+Each prefix must start with a letter and contain only alphanumeric characters,
+hyphens, and underscores. ``-verify`` by itself is equivalent to
+``-verify=expected``, meaning that special comments will start with
+``expected``. Using different prefixes makes it easier to have separate
+``RUN:`` lines in the same test file which result in differing diagnostic
+behavior. For example:
+
+.. code-block:: c++
+
+  // RUN: %clang_cc1 -verify=foo,bar %s
+
+  int A = B; // foo-error {{use of undeclared identifier 'B'}}
+  int C = D; // bar-error {{use of undeclared identifier 'D'}}
+  int E = F; // expected-error {{use of undeclared identifier 'F'}}
+
+The verifier will recognize ``foo-error`` and ``bar-error`` as special comments
+but will not recognize ``expected-error`` as one because the ``-verify`` line
+does not contain that as a prefix. Thus, this test would fail verification
+because an unexpected diagnostic would appear on the declaration of ``E``.
+
+Multiple occurrences accumulate prefixes.  For example,
+``-verify -verify=foo,bar -verify=baz`` is equivalent to
+``-verify=expected,foo,bar,baz``.
+
+Specifying Diagnostics
+^^^^^^^^^^^^^^^^^^^^^^
+Indicating that a line expects an error or a warning is easy. Put a comment
+on the line that has the diagnostic, use
+``expected-{error,warning,remark,note}`` to tag if it's an expected error,
+warning, remark, or note (respectively), and place the expected text between
+``{{`` and ``}}`` markers. The full text doesn't have to be included, only
+enough to ensure that the correct diagnostic was emitted. (Note: full text
+should be included in test cases unless there is a compelling reason to use
+truncated text instead.)
+
+For a full description of the matching behavior, including more complex
+matching scenarios, see :ref:`matching <DiagnosticMatching>` below.
+
+Here's an example of the most commonly used way to specify expected
+diagnostics:
+
+.. code-block:: c++
+
+  int A = B; // expected-error {{use of undeclared identifier 'B'}}
+
+You can place as many diagnostics on one line as you wish. To make the code
+more readable, you can use slash-newline to separate out the diagnostics.
+
+Alternatively, it is possible to specify the line on which the diagnostic
+should appear by appending ``@<line>`` to ``expected-<type>``, for example:
+
+.. code-block:: c++
+
+  #warning some text
+  // expected-warning@10 {{some text}}
+
+The line number may be absolute (as above), or relative to the current line by
+prefixing the number with either ``+`` or ``-``.
+
+If the diagnostic is generated in a separate file, for example in a shared
+header file, it may be beneficial to be able to declare the file in which the
+diagnostic will appear, rather than placing the ``expected-*`` directive in the
+actual file itself. This can be done using the following syntax:
+
+.. code-block:: c++
+
+  // expected-error@path/include.h:15 {{error message}}
+
+The path can be absolute or relative and the same search paths will be used as
+for ``#include`` directives. The line number in an external file may be
+substituted with ``*`` meaning that any line number will match (useful where
+the included file is, for example, a system header where the actual line number
+may change and is not critical).
+
+As an alternative to specifying a fixed line number, the location of a
+diagnostic can instead be indicated by a marker of the form ``#<marker>``.
+Markers are specified by including them in a comment, and then referenced by
+appending the marker to the diagnostic with ``@#<marker>``, as with:
+
+.. code-block:: c++
+
+  #warning some text  // #1
+  // ... other code ...
+  // expected-warning@#1 {{some text}}
+
+The name of a marker used in a directive must be unique within the compilation.
+
+The simple syntax above allows each specification to match exactly one
+diagnostic. You can use the extended syntax to customize this. The extended
+syntax is ``expected-<type> <n> {{diag text}}``, where ``<type>`` is one of
+``error``, ``warning``, ``remark``, or ``note``, and ``<n>`` is a positive
+integer. This allows the diagnostic to appear as many times as specified. For
+example:
+
+.. code-block:: c++
+
+  void f(); // expected-note 2 {{previous declaration is here}}
+
+Where the diagnostic is expected to occur a minimum number of times, this can
+be specified by appending a ``+`` to the number. For example:
+
+.. code-block:: c++
+
+  void f(); // expected-note 0+ {{previous declaration is here}}
+  void g(); // expected-note 1+ {{previous declaration is here}}
+
+In the first example, the diagnostic becomes optional, i.e. it will be
+swallowed if it occurs, but will not generate an error if it does not occur. In
+the second example, the diagnostic must occur at least once. As a short-hand,
+"one or more" can be specified simply by ``+``. For example:
+
+.. code-block:: c++
+
+  void g(); // expected-note + {{previous declaration is here}}
+
+A range can also be specified by ``<n>-<m>``. For example:
+
+.. code-block:: c++
+
+  void f(); // expected-note 0-1 {{previous declaration is here}}
+
+In this example, the diagnostic may appear only once, if at all.
+
+.. _DiagnosticMatching:
+
+Matching Modes
+~~~~~~~~~~~~~~
+
+The default matching mode is simple string, which looks for the expected text
+that appears between the first `{{` and `}}` pair of the comment. The string is
+interpreted just as-is, with one exception: the sequence `\n` is converted to a
+single newline character. This mode matches the emitted diagnostic when the
+text appears as a substring at any position of the emitted message.
+
+To enable matching against desired strings that contain `}}` or `{{`, the
+string-mode parser accepts opening delimiters of more than two curly braces,
+like `{{{`. It then looks for a closing delimiter of equal "width" (i.e `}}}`).
+For example:
+
+.. code-block:: c++
+
+  // expected-note {{{evaluates to '{{2, 3, 4}} == {0, 3, 4}'}}}
+
+The intent is to allow the delimeter to be wider than the longest `{` or `}`
+brace sequence in the content, so that if your expected text contains `{{{`
+(three braces) it may be delimited with `{{{{` (four braces), and so on.
+
+Regex matching mode may be selected by appending ``-re`` to the diagnostic type
+and including regexes wrapped in double curly braces (`{{` and `}}`) in the
+directive, such as:
+
+.. code-block:: text
+
+  expected-error-re {{format specifies type 'wchar_t **' (aka '{{.+}}')}}
+
+Examples matching error: "variable has incomplete type 'struct s'"
+
+.. code-block:: c++
+
+  // expected-error {{variable has incomplete type 'struct s'}}
+  // expected-error {{variable has incomplete type}}
+  // expected-error {{{variable has incomplete type}}}
+  // expected-error {{{{variable has incomplete type}}}}
+
+  // expected-error-re {{variable has type 'struct {{.}}'}}
+  // expected-error-re {{variable has type 'struct {{.*}}'}}
+  // expected-error-re {{variable has type 'struct {{(.*)}}'}}
+  // expected-error-re {{variable has type 'struct{{[[:space:]](.*)}}'}}
+
+Feature Test Macros
+===================
+Clang implements several ways to test whether a feature is supported or not.
+Some of these feature tests are standardized, like ``__has_cpp_attribute`` or
+``__cpp_lambdas``, while others are Clang extensions, like ``__has_builtin``.
+The common theme among all the various feature tests is that they are a utility
+to tell users that we think a particular feature is complete. However,
+completeness is a difficult property to define because features may still have
+lingering bugs, may only work on some targets, etc. We use the following
+criteria when deciding whether to expose a feature test macro (or particular
+result value for the feature test):
+
+  * Are there known issues where we reject valid code that should be accepted?
+  * Are there known issues where we accept invalid code that should be rejected?
+  * Are there known crashes, failed assertions, or miscompilations?
+  * Are there known issues on a particular relevant target?
+
+If the answer to any of these is "yes", the feature test macro should either
+not be defined or there should be very strong rationale for why the issues
+should not prevent defining it. Note, it is acceptable to define the feature
+test macro on a per-target basis if needed.
+
+When in doubt, being conservative is better than being aggressive. If we don't
+claim support for the feature but it does useful things, users can still use it
+and provide us with useful feedback on what is missing. But if we claim support
+for a feature that has significant bugs, we've eliminated most of the utility
+of having a feature testing macro at all because users are then forced to test
+what compiler version is in use to get a more accurate answer.
+
+The status reported by the feature test macro should always be reflected in the
+language support page for the corresponding feature (`C++
+<https://clang.llvm.org/cxx_status.html>`_, `C
+<https://clang.llvm.org/c_status.html>`_) if applicable. This page can give
+more nuanced information to the user as well, such as claiming partial support
+for a feature and specifying details as to what remains to be done.

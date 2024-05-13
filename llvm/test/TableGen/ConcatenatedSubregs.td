@@ -23,7 +23,7 @@ def sub0 : SubRegIndex<32>;
 def sub1 : SubRegIndex<32, 32>;
 def sub2 : SubRegIndex<32, 64>;
 
-def ssub0 : SubRegIndex<16>;
+def ssub0 : SubRegIndex<-1>;
 def ssub1 : SubRegIndex<16, 16>;
 def ssub2 : ComposedSubRegIndex<sub1, ssub0>;
 def ssub3 : ComposedSubRegIndex<sub1, ssub1>;
@@ -57,6 +57,7 @@ def D5 : MyReg<"d5", [S10, S11]>;
 def D6 : MyReg<"d6", [S12, S13]>;
 def D7 : MyReg<"d7", [S14, S15]>;
 }
+
 def DRegs : MyClass<32, [i32], (sequence "D%u", 0, 7)>;
 
 def Dtup2regs : RegisterTuples<[sub0, sub1],
@@ -88,14 +89,21 @@ def TestTarget : Target;
 // CHECK: Regs: D0 D1 D2 D3 D4 D5 D6 D7 S1_S2 S3_S4 S5_S6 S7_S8 S9_S10 S11_S12 S13_S14
 // CHECK-LABEL: RegisterClass DRegs:
 
+// CHECK-LABEL: SubRegIndex ssub1:
+// CHECK:        Offset: { Default:16 }
+// CHECK:        Size: { Default:16 }
 // CHECK-LABEL: SubRegIndex sub0:
 // CHECK-LABEL: SubRegIndex sub1:
 // CHECK-LABEL: SubRegIndex sub2:
 // Check inferred indexes:
-// CHECK: SubRegIndex ssub1_ssub2:
-// CHECK: SubRegIndex ssub3_ssub4:
-// CHECK: SubRegIndex ssub0_ssub1_ssub2_ssub3:
-// CHECK: SubRegIndex ssub1_ssub2_ssub3_ssub4:
+// CHECK-LABEL: SubRegIndex ssub1_ssub2:
+// CHECK:         Offset: { Default:16 }
+// CHECK:         Size: { Default:65535 }
+// CHECK-LABEL: SubRegIndex ssub3_ssub4:
+// CHECK-LABEL: SubRegIndex ssub0_ssub1_ssub2_ssub3:
+// CHECK:         Offset: { Default:65535 }
+// CHECK:         Size: { Default:65535 }
+// CHECK-LABEL: SubRegIndex ssub1_ssub2_ssub3_ssub4:
 
 // Check that all subregs are generated on some examples
 // CHECK-LABEL: Register D0:

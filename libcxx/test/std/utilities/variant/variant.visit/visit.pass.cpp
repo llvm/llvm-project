@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -9,12 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_variant_access is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9 && !no-exceptions
-
 // <variant>
 // template <class Visitor, class... Variants>
 // constexpr see below visit(Visitor&& vis, Variants&&... vars);
@@ -22,6 +15,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -124,36 +118,6 @@ void test_argument_forwarding() {
     std::visit(obj, std::move(cv));
     assert(Fn::check_call<const int &&>(Val));
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  { // single argument - lvalue reference
-    using V = std::variant<int &>;
-    int x = 42;
-    V v(x);
-    const V &cv = v;
-    std::visit(obj, v);
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, cv);
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, std::move(v));
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, std::move(cv));
-    assert(Fn::check_call<int &>(Val));
-  }
-  { // single argument - rvalue reference
-    using V = std::variant<int &&>;
-    int x = 42;
-    V v(std::move(x));
-    const V &cv = v;
-    std::visit(obj, v);
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, cv);
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, std::move(v));
-    assert(Fn::check_call<int &&>(Val));
-    std::visit(obj, std::move(cv));
-    assert(Fn::check_call<int &&>(Val));
-  }
-#endif
   { // multi argument - multi variant
     using V = std::variant<int, std::string, long>;
     V v1(42), v2("hello"), v3(43l);
@@ -351,7 +315,7 @@ void test_caller_accepts_nonconst() {
 struct MyVariant : std::variant<short, long, float> {};
 
 namespace std {
-template <size_t Index>
+template <std::size_t Index>
 void get(const MyVariant&) {
   assert(false);
 }
@@ -384,7 +348,7 @@ void test_derived_from_variant() {
   // Check that visit unambiguously picks the variant, even if the other base has __impl member.
   struct ImplVariantBase {
     struct Callable {
-      bool operator()();
+      bool operator()() const { assert(false); return false; }
     };
 
     Callable __impl;

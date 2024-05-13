@@ -1,66 +1,66 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -o - < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -o - < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Radar 7833483
 ; Do not emit a separate out-of-line definition DIE for the function-local 'foo'
 ; function (member of the function local 'A' type)
 ; CHECK: DW_TAG_class_type
 ; CHECK: DW_TAG_class_type
-; CHECK-NEXT: DW_AT_name {{.*}} "A"
+; CHECK-NEXT: DW_AT_name ("A")
 ; Check that the subprogram inside the class definition has low_pc, only
 ; attached to the definition.
 ; CHECK: [[FOO_INL:0x........]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_low_pc
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}} "foo"
+; CHECK: DW_AT_name ("foo")
 ; And just double check that there's no out of line definition that references
 ; this subprogram.
-; CHECK-NOT: DW_AT_specification {{.*}} {[[FOO_INL]]}
+; CHECK-NOT: DW_AT_specification ([[FOO_INL]]
 
 %class.A = type { i8 }
 %class.B = type { i8 }
 
 define i32 @main() ssp !dbg !2 {
 entry:
-  %retval = alloca i32, align 4                   ; <i32*> [#uses=3]
-  %b = alloca %class.A, align 1                   ; <%class.A*> [#uses=1]
-  store i32 0, i32* %retval
-  call void @llvm.dbg.declare(metadata %class.A* %b, metadata !0, metadata !DIExpression()), !dbg !14
-  %call = call i32 @_ZN1B2fnEv(%class.A* %b), !dbg !15 ; <i32> [#uses=1]
-  store i32 %call, i32* %retval, !dbg !15
-  %0 = load i32, i32* %retval, !dbg !16                ; <i32> [#uses=1]
+  %retval = alloca i32, align 4                   ; <ptr> [#uses=3]
+  %b = alloca %class.A, align 1                   ; <ptr> [#uses=1]
+  store i32 0, ptr %retval
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !0, metadata !DIExpression()), !dbg !14
+  %call = call i32 @_ZN1B2fnEv(ptr %b), !dbg !15 ; <i32> [#uses=1]
+  store i32 %call, ptr %retval, !dbg !15
+  %0 = load i32, ptr %retval, !dbg !16                ; <i32> [#uses=1]
   ret i32 %0, !dbg !16
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-define linkonce_odr i32 @_ZN1B2fnEv(%class.A* %this) ssp align 2 !dbg !10 {
+define linkonce_odr i32 @_ZN1B2fnEv(ptr %this) ssp align 2 !dbg !10 {
 entry:
-  %retval = alloca i32, align 4                   ; <i32*> [#uses=2]
-  %this.addr = alloca %class.A*, align 8          ; <%class.A**> [#uses=2]
-  %a = alloca %class.A, align 1                   ; <%class.A*> [#uses=1]
-  %i = alloca i32, align 4                        ; <i32*> [#uses=2]
-  store %class.A* %this, %class.A** %this.addr
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !17, metadata !DIExpression(DW_OP_deref)), !dbg !18
-  %this1 = load %class.A*, %class.A** %this.addr             ; <%class.A*> [#uses=0]
-  call void @llvm.dbg.declare(metadata %class.A* %a, metadata !19, metadata !DIExpression()), !dbg !27
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !28, metadata !DIExpression()), !dbg !29
-  %call = call i32 @_ZZN1B2fnEvEN1A3fooEv(%class.A* %a), !dbg !30 ; <i32> [#uses=1]
-  store i32 %call, i32* %i, !dbg !30
-  %tmp = load i32, i32* %i, !dbg !31                   ; <i32> [#uses=1]
-  store i32 %tmp, i32* %retval, !dbg !31
-  %0 = load i32, i32* %retval, !dbg !32                ; <i32> [#uses=1]
+  %retval = alloca i32, align 4                   ; <ptr> [#uses=2]
+  %this.addr = alloca ptr, align 8          ; <ptr> [#uses=2]
+  %a = alloca %class.A, align 1                   ; <ptr> [#uses=1]
+  %i = alloca i32, align 4                        ; <ptr> [#uses=2]
+  store ptr %this, ptr %this.addr
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !17, metadata !DIExpression(DW_OP_deref)), !dbg !18
+  %this1 = load ptr, ptr %this.addr             ; <ptr> [#uses=0]
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !19, metadata !DIExpression()), !dbg !27
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !28, metadata !DIExpression()), !dbg !29
+  %call = call i32 @_ZZN1B2fnEvEN1A3fooEv(ptr %a), !dbg !30 ; <i32> [#uses=1]
+  store i32 %call, ptr %i, !dbg !30
+  %tmp = load i32, ptr %i, !dbg !31                   ; <i32> [#uses=1]
+  store i32 %tmp, ptr %retval, !dbg !31
+  %0 = load i32, ptr %retval, !dbg !32                ; <i32> [#uses=1]
   ret i32 %0, !dbg !32
 }
 
-define internal i32 @_ZZN1B2fnEvEN1A3fooEv(%class.A* %this) ssp align 2 !dbg !23 {
+define internal i32 @_ZZN1B2fnEvEN1A3fooEv(ptr %this) ssp align 2 !dbg !23 {
 entry:
-  %retval = alloca i32, align 4                   ; <i32*> [#uses=2]
-  %this.addr = alloca %class.A*, align 8          ; <%class.A**> [#uses=2]
-  store %class.A* %this, %class.A** %this.addr
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !33, metadata !DIExpression(DW_OP_deref)), !dbg !34
-  %this1 = load %class.A*, %class.A** %this.addr             ; <%class.A*> [#uses=0]
-  store i32 42, i32* %retval, !dbg !35
-  %0 = load i32, i32* %retval, !dbg !35                ; <i32> [#uses=1]
+  %retval = alloca i32, align 4                   ; <ptr> [#uses=2]
+  %this.addr = alloca ptr, align 8          ; <ptr> [#uses=2]
+  store ptr %this, ptr %this.addr
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !33, metadata !DIExpression(DW_OP_deref)), !dbg !34
+  %this1 = load ptr, ptr %this.addr             ; <ptr> [#uses=0]
+  store i32 42, ptr %retval, !dbg !35
+  %0 = load i32, ptr %retval, !dbg !35                ; <i32> [#uses=1]
   ret i32 %0, !dbg !35
 }
 

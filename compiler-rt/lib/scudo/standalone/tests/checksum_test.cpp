@@ -12,16 +12,16 @@
 
 #include <string.h>
 
-scudo::u16 computeSoftwareChecksum(scudo::u32 Seed, scudo::uptr *Array,
-                                   scudo::uptr ArraySize) {
+static scudo::u16 computeSoftwareChecksum(scudo::u32 Seed, scudo::uptr *Array,
+                                          scudo::uptr ArraySize) {
   scudo::u16 Checksum = static_cast<scudo::u16>(Seed & 0xffff);
   for (scudo::uptr I = 0; I < ArraySize; I++)
     Checksum = scudo::computeBSDChecksum(Checksum, Array[I]);
   return Checksum;
 }
 
-scudo::u16 computeHardwareChecksum(scudo::u32 Seed, scudo::uptr *Array,
-                                   scudo::uptr ArraySize) {
+static scudo::u16 computeHardwareChecksum(scudo::u32 Seed, scudo::uptr *Array,
+                                          scudo::uptr ArraySize) {
   scudo::u32 Crc = Seed;
   for (scudo::uptr I = 0; I < ArraySize; I++)
     Crc = scudo::computeHardwareCRC32(Crc, Array[I]);
@@ -32,7 +32,7 @@ typedef scudo::u16 (*ComputeChecksum)(scudo::u32, scudo::uptr *, scudo::uptr);
 
 // This verifies that flipping bits in the data being checksummed produces a
 // different checksum. We do not use random data to avoid flakyness.
-template <ComputeChecksum F> void verifyChecksumFunctionBitFlip() {
+template <ComputeChecksum F> static void verifyChecksumFunctionBitFlip() {
   scudo::uptr Array[sizeof(scudo::u64) / sizeof(scudo::uptr)];
   const scudo::uptr ArraySize = ARRAY_SIZE(Array);
   memset(Array, 0xaa, sizeof(Array));

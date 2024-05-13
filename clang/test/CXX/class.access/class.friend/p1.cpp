@@ -221,13 +221,21 @@ namespace test6 {
 #if __cplusplus >= 201103L
       constexpr
 #endif
-      A::A();
+      A::A()
+#if __cplusplus >= 201703L
+      noexcept
+#endif
+      ;
     friend A::~A();
     friend
 #if __cplusplus >= 201402L
       constexpr
 #endif
-      A &A::operator=(const A&);
+      A &A::operator=(const A&)
+#if __cplusplus >= 201703L
+      noexcept
+#endif
+      ;
   };
 }
 
@@ -246,7 +254,11 @@ namespace test7 {
 #if __cplusplus >= 201103L
       constexpr
 #endif
-      X<int>::X(const X&);
+      X<int>::X(const X&)
+#if __cplusplus >= 201703L
+      noexcept
+#endif
+      ;
 
   private:
     A(); // expected-note 2 {{declared private here}}
@@ -272,7 +284,7 @@ namespace test7 {
 // Return types, parameters and default arguments to friend functions.
 namespace test8 {
   class A {
-    typedef int I; // expected-note 4 {{declared private here}}
+    typedef int I;        // expected-note 6 {{declared private here}}
     static const I x = 0; // expected-note {{implicitly declared private here}}
     friend I f(I i);
     template<typename T> friend I g(I i);
@@ -289,7 +301,16 @@ namespace test8 {
   template<typename T> A::I g2(A::I i) { // expected-error 2 {{is a private member of}}
     T t;
   }
-  template A::I g2<A::I>(A::I i);
+  template <> A::I g2<char>(A::I i) { return 0; } // OK
+  template A::I g2<A::I>(A::I i);                 // OK
+  template <> A::I g2<char>(A::I i);              // OK
+  template <> A::I g2<A::I *>(A::I i);            // OK
+  template A::I g2<unsigned>(A::I i);             // OK
+  template int g2<A::I **>(int i);                // OK
+  template A::I g2<A::I ***>(A::I i);             // OK
+
+  template <typename T> A::I g3(A::I i) { return 0; } // expected-error 2 {{is a private member of}}
+  template <> int g3<A::I>(int i);                    // OK
 }
 
 // PR6885

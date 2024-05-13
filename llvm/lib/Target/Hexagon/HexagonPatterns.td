@@ -10,7 +10,7 @@
 //     (0) Definitions
 //     (1) Immediates
 //     (2) Type casts
-//     (3) Extend/truncate
+//     (3) Extend/truncate/saturate
 //     (4) Logical
 //     (5) Compare
 //     (6) Select
@@ -87,18 +87,6 @@ def V8I8:   PatLeaf<(v8i8    DoubleRegs:$R)>;
 def V4I16:  PatLeaf<(v4i16   DoubleRegs:$R)>;
 def V2I32:  PatLeaf<(v2i32   DoubleRegs:$R)>;
 
-def HQ8:    PatLeaf<(VecQ8   HvxQR:$R)>;
-def HQ16:   PatLeaf<(VecQ16  HvxQR:$R)>;
-def HQ32:   PatLeaf<(VecQ32  HvxQR:$R)>;
-
-def HVI8:   PatLeaf<(VecI8   HvxVR:$R)>;
-def HVI16:  PatLeaf<(VecI16  HvxVR:$R)>;
-def HVI32:  PatLeaf<(VecI32  HvxVR:$R)>;
-
-def HWI8:   PatLeaf<(VecPI8  HvxWR:$R)>;
-def HWI16:  PatLeaf<(VecPI16 HvxWR:$R)>;
-def HWI32:  PatLeaf<(VecPI32 HvxWR:$R)>;
-
 def SDTVecLeaf:
   SDTypeProfile<1, 0, [SDTCisVec<0>]>;
 def SDTVecVecIntOp:
@@ -109,6 +97,12 @@ def HexagonPTRUE:      SDNode<"HexagonISD::PTRUE",      SDTVecLeaf>;
 def HexagonPFALSE:     SDNode<"HexagonISD::PFALSE",     SDTVecLeaf>;
 def HexagonVALIGN:     SDNode<"HexagonISD::VALIGN",     SDTVecVecIntOp>;
 def HexagonVALIGNADDR: SDNode<"HexagonISD::VALIGNADDR", SDTIntUnaryOp>;
+def HexagonMULHUS:     SDNode<"HexagonISD::MULHUS",     SDTIntBinOp>;
+
+def SDTSaturate:
+  SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>, SDTCisVT<2, OtherVT>]>;
+def HexagonSSAT: SDNode<"HexagonISD::SSAT", SDTSaturate>;
+def HexagonUSAT: SDNode<"HexagonISD::USAT", SDTSaturate>;
 
 def ptrue:  PatFrag<(ops), (HexagonPTRUE)>;
 def pfalse: PatFrag<(ops), (HexagonPFALSE)>;
@@ -118,10 +112,13 @@ def valign: PatFrag<(ops node:$Vt, node:$Vs, node:$Ru),
                     (HexagonVALIGN node:$Vt, node:$Vs, node:$Ru)>;
 def valignaddr: PatFrag<(ops node:$Addr), (HexagonVALIGNADDR node:$Addr)>;
 
+def ssat: PatFrag<(ops node:$V, node:$Ty), (HexagonSSAT node:$V, node:$Ty)>;
+def usat: PatFrag<(ops node:$V, node:$Ty), (HexagonUSAT node:$V, node:$Ty)>;
+
 // Pattern fragments to extract the low and high subregisters from a
 // 64-bit value.
-def LoReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_lo)>;
-def HiReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_hi)>;
+def LoReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG $Rs, isub_lo)>;
+def HiReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG $Rs, isub_hi)>;
 
 def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
   return isOrEquivalentToAdd(N);
@@ -269,6 +266,9 @@ def anyimm3: PatLeaf<(i32 AnyImm3:$Addr)>;
 
 def f32ImmPred : PatLeaf<(f32 fpimm:$F)>;
 def f64ImmPred : PatLeaf<(f64 fpimm:$F)>;
+def f32zero: PatLeaf<(f32 fpimm:$F), [{
+  return N->isExactlyValue(APFloat::getZero(APFloat::IEEEsingle(), false));
+}]>;
 
 // This complex pattern is really only to detect various forms of
 // sign-extension i32->i64. The selected value will be of type i64
@@ -378,6 +378,12 @@ def Umin: pf2<umin>;  def Umax: pf2<umax>;
 
 def Rol: pf2<rotl>;
 
+def Fptosi: pf1<fp_to_sint>;
+def Fptoui: pf1<fp_to_uint>;
+def Sitofp: pf1<sint_to_fp>;
+def Uitofp: pf1<uint_to_fp>;
+
+
 // --(1) Immediate -------------------------------------------------------
 //
 
@@ -480,7 +486,7 @@ defm: NopCast_pat<v2i32,  v8i8, DoubleRegs>;
 defm: NopCast_pat<v4i16,  v8i8, DoubleRegs>;
 
 
-// --(3) Extend/truncate -------------------------------------------------
+// --(3) Extend/truncate/saturate ----------------------------------------
 //
 
 def: Pat<(sext_inreg I32:$Rs, i8),  (A2_sxtb I32:$Rs)>;
@@ -519,11 +525,11 @@ def Vsplatpi: OutPatFrag<(ops node:$V),
                          (Combinew (A2_tfrsi $V), (A2_tfrsi $V))>;
 
 def: Pat<(v2i16 (azext V2I1:$Pu)),
-         (A2_andir (LoReg (C2_mask V2I1:$Pu)), (i32 0x00010001))>;
+         (A2_andir (S2_vtrunehb (C2_mask V2I1:$Pu)), (i32 0x00010001))>;
 def: Pat<(v2i32 (azext V2I1:$Pu)),
          (A2_andp (C2_mask V2I1:$Pu), (A2_combineii (i32 1), (i32 1)))>;
 def: Pat<(v4i8 (azext V4I1:$Pu)),
-         (A2_andir (LoReg (C2_mask V4I1:$Pu)), (i32 0x01010101))>;
+         (A2_andir (S2_vtrunehb (C2_mask V4I1:$Pu)), (i32 0x01010101))>;
 def: Pat<(v4i16 (azext V4I1:$Pu)),
          (A2_andp (C2_mask V4I1:$Pu), (Vsplatpi (i32 0x00010001)))>;
 def: Pat<(v8i8 (azext V8I1:$Pu)),
@@ -555,6 +561,36 @@ def: Pat<(v4i8 (trunc V4I16:$Rs)),
 
 def: Pat<(v2i16 (trunc V2I32:$Rs)),
          (A2_combine_ll (HiReg $Rs), (LoReg $Rs))>;
+
+// Truncate to vNi1
+def: Pat<(v2i1 (trunc V2I32:$Rs)),
+         (A4_vcmpweqi (A2_andp V2I32:$Rs, (A2_combineii (i32 1), (i32 1))),
+                      (i32 1))>;
+def: Pat<(v4i1 (trunc V4I16:$Rs)),
+         (A4_vcmpheqi (Combinew (A2_andir (HiReg $Rs), (i32 0x00010001)),
+                                (A2_andir (LoReg $Rs), (i32 0x00010001))),
+                      (i32 1))>;
+def: Pat<(v8i1 (trunc V8I8:$Rs)),
+         (A4_vcmpbeqi (Combinew (A2_andir (HiReg $Rs), (i32 0x01010101)),
+                                (A2_andir (LoReg $Rs), (i32 0x01010101))),
+                      (i32 1))>;
+
+
+// Saturation:
+// Note: saturation assumes the same signed-ness for the input and the
+// output.
+def: Pat<(i32 (ssat I32:$Rs, i8)),  (A2_satb  I32:$Rs)>;
+def: Pat<(i32 (ssat I32:$Rs, i16)), (A2_sath  I32:$Rs)>;
+def: Pat<(i32 (ssat I64:$Rs, i32)), (A2_sat   I64:$Rs)>;
+def: Pat<(i32 (usat I32:$Rs, i8)),  (A2_satub I32:$Rs)>;
+def: Pat<(i32 (usat I32:$Rs, i16)), (A2_satuh I32:$Rs)>;
+def: Pat<(i32 (usat I64:$Rs, i32)),
+         (C2_mux (C2_cmpeqi (HiReg $Rs), (i32 0)), (LoReg $Rs), (i32 -1))>;
+
+def: Pat<(v4i8  (ssat V4I16:$Rs, v4i8)),  (S2_vsathb  V4I16:$Rs)>;
+def: Pat<(v2i16 (ssat V2I32:$Rs, v2i16)), (S2_vsatwh  V2I32:$Rs)>;
+def: Pat<(v4i8  (usat V4I16:$Rs, v4i8)),  (S2_vsathub V4I16:$Rs)>;
+def: Pat<(v2i16 (usat V2I32:$Rs, v2i16)), (S2_vsatwuh V2I32:$Rs)>;
 
 
 // --(4) Logical ---------------------------------------------------------
@@ -809,8 +845,31 @@ def: Pat<(i32 (zext (i1 (setne I32:$Rs, anyimm:$s8)))),
 
 def: Pat<(i1 (seteq I1:$Ps, (i1 -1))), (I1:$Ps)>;
 def: Pat<(i1 (setne I1:$Ps, (i1 -1))), (C2_not I1:$Ps)>;
-def: Pat<(i1 (seteq I1:$Ps, I1:$Pt)),  (C2_xor I1:$Ps, (C2_not I1:$Pt))>;
+def: Pat<(i1 (seteq I1:$Ps, I1:$Pt)),  (C2_not (C2_xor I1:$Ps, I1:$Pt))>;
 def: Pat<(i1 (setne I1:$Ps, I1:$Pt)),  (C2_xor I1:$Ps, I1:$Pt)>;
+
+multiclass BoolE_pat<PatFrag OpPred, ValueType ResTy> {
+  def: Pat<(ResTy (seteq OpPred:$Ps, OpPred:$Pt)), (C2_not (C2_xor $Ps, $Pt))>;
+  def: Pat<(ResTy (setne OpPred:$Ps, OpPred:$Pt)), (C2_xor $Ps, $Pt)>;
+}
+
+defm: BoolE_pat<I1,   i1>;
+defm: BoolE_pat<V2I1, v2i1>;
+defm: BoolE_pat<V4I1, v4i1>;
+defm: BoolE_pat<V8I1, v8i1>;
+
+multiclass BoolL_pat<PatFrag OpPred, ValueType ResTy> {
+  // Signed "true" == -1
+  def: Pat<(ResTy (setlt  OpPred:$Ps, OpPred:$Pt)), (C2_andn $Ps, $Pt)>;
+  def: Pat<(ResTy (setle  OpPred:$Ps, OpPred:$Pt)), (C2_orn  $Ps, $Pt)>;
+  def: Pat<(ResTy (setult OpPred:$Ps, OpPred:$Pt)), (C2_andn $Pt, $Ps)>;
+  def: Pat<(ResTy (setule OpPred:$Ps, OpPred:$Pt)), (C2_orn  $Pt, $Ps)>;
+}
+
+defm: BoolL_pat<I1,   i1>;
+defm: BoolL_pat<V2I1, v2i1>;
+defm: BoolL_pat<V4I1, v4i1>;
+defm: BoolL_pat<V8I1, v8i1>;
 
 // Floating-point comparisons with checks for ordered/unordered status.
 
@@ -853,6 +912,10 @@ def: OpmR_RR_pat<Outn<F2_dfcmpuo>, seto,   i1, F64>;
 
 def: Pat<(select I1:$Pu, I32:$Rs, I32:$Rt),
          (C2_mux I1:$Pu, I32:$Rs, I32:$Rt)>;
+def: Pat<(select I1:$Pu, v4i8:$Rs, v4i8:$Rt),
+         (C2_mux I1:$Pu, v4i8:$Rs, v4i8:$Rt)>;
+def: Pat<(select I1:$Pu, v2i16:$Rs, v2i16:$Rt),
+         (C2_mux I1:$Pu, v2i16:$Rs, v2i16:$Rt)>;
 def: Pat<(select I1:$Pu, anyimm:$s8, I32:$Rs),
          (C2_muxri I1:$Pu, imm:$s8, I32:$Rs)>;
 def: Pat<(select I1:$Pu, I32:$Rs, anyimm:$s8),
@@ -872,6 +935,10 @@ def: Pat<(select (not I1:$Pu), I32:$Rs, anyimm:$s8),
 // Map from a 64-bit select to an emulated 64-bit mux.
 // Hexagon does not support 64-bit MUXes; so emulate with combines.
 def: Pat<(select I1:$Pu, I64:$Rs, I64:$Rt),
+         (Combinew (C2_mux I1:$Pu, (HiReg $Rs), (HiReg $Rt)),
+                   (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
+
+def: Pat<(select I1:$Pu, v2i32:$Rs, v2i32:$Rt),
          (Combinew (C2_mux I1:$Pu, (HiReg $Rs), (HiReg $Rt)),
                    (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
 
@@ -911,10 +978,22 @@ def: Pat<(vselect (pnot V2I1:$Pu), V2I32:$Rs, V2I32:$Rt),
 
 
 // From LegalizeDAG.cpp: (Pu ? Pv : Pw) <=> (Pu & Pv) | (!Pu & Pw).
-def: Pat<(select I1:$Pu, I1:$Pv, I1:$Pw),
-         (C2_or (C2_and  I1:$Pu, I1:$Pv),
-                (C2_andn I1:$Pw, I1:$Pu))>;
+def: Pat<(select I1:$Pu, I1:$Ps, I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
 
+def: Pat<(vselect V2I1:$Pu, V2I1:$Ps, V2I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
+def: Pat<(vselect V4I1:$Pu, V4I1:$Ps, V4I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
+def: Pat<(vselect V8I1:$Pu, V8I1:$Ps, V8I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
+
+def: Pat<(select I1:$Pu, V2I1:$Ps, V2I1:$Pt),
+         (C2_tfrrp (C2_mux $Pu, (C2_tfrpr $Ps), (C2_tfrpr $Pt)))>;
+def: Pat<(select I1:$Pu, V4I1:$Ps, V4I1:$Pt),
+         (C2_tfrrp (C2_mux $Pu, (C2_tfrpr $Ps), (C2_tfrpr $Pt)))>;
+def: Pat<(select I1:$Pu, V8I1:$Ps, V8I1:$Pt),
+         (C2_tfrrp (C2_mux $Pu, (C2_tfrpr $Ps), (C2_tfrpr $Pt)))>;
 
 def IsPosHalf : PatLeaf<(i32 IntRegs:$a), [{
   return isPositiveHalfWord(N);
@@ -1036,6 +1115,30 @@ def: Pat<(v8i8 (splat_vector I32:$Rs)), (S6_vsplatrbp I32:$Rs)>,
 def: Pat<(v8i8 (splat_vector I32:$Rs)),
          (Combinew (S2_vsplatrb I32:$Rs), (S2_vsplatrb I32:$Rs))>;
 
+let AddedComplexity = 10 in {
+  def: Pat<(sext_inreg (HexagonEXTRACTU I32:$Rs,  8, u5_0ImmPred:$U5),  i8),
+           (S4_extract  I32:$Rs,  8, imm:$U5)>;
+  def: Pat<(sext_inreg (HexagonEXTRACTU I32:$Rs, 16, u5_0ImmPred:$U5), i16),
+           (S4_extract  I32:$Rs, 16, imm:$U5)>;
+  def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs,  8, u6_0ImmPred:$U6),  i8),
+           (S4_extractp I64:$Rs,  8, imm:$U6)>;
+  def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs, 16, u6_0ImmPred:$U6), i16),
+           (S4_extractp I64:$Rs, 16, imm:$U6)>;
+  def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs, 32, u6_0ImmPred:$U6), i32),
+           (S4_extractp I64:$Rs, 32, imm:$U6)>;
+}
+
+def: Pat<(sext_inreg (HexagonEXTRACTU I32:$Rs,  8, I32:$Off),  i8),
+         (S4_extract_rp  I32:$Rs, (Combinew (ToI32 8), I32:$Off))>;
+def: Pat<(sext_inreg (HexagonEXTRACTU I32:$Rs, 16, I32:$Off), i16),
+         (S4_extract_rp  I32:$Rs, (Combinew (ToI32 16), I32:$Off))>;
+def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs,  8, I32:$Off),  i8),
+         (S4_extractp_rp I64:$Rs, (Combinew (ToI32 8), I32:$Off))>;
+def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs, 16, I32:$Off), i16),
+         (S4_extractp_rp I64:$Rs, (Combinew (ToI32 16), I32:$Off))>;
+def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs, 32, I32:$Off), i32),
+         (S4_extractp_rp I64:$Rs, (Combinew (ToI32 32), I32:$Off))>;
+
 
 // --(8) Shift/permute ---------------------------------------------------
 //
@@ -1068,6 +1171,12 @@ let AddedComplexity = 75 in {
 def: Pat<(bswap I32:$Rs),  (A2_swiz I32:$Rs)>;
 def: Pat<(bswap I64:$Rss), (Combinew (A2_swiz (LoReg $Rss)),
                                      (A2_swiz (HiReg $Rss)))>;
+
+def: Pat<(bswap V2I16:$Rs), (A2_combine_lh (A2_swiz $Rs), (A2_swiz $Rs))>;
+def: Pat<(bswap V2I32:$Rs), (Combinew (A2_swiz (HiReg $Rs)),
+                                      (A2_swiz (LoReg $Rs)))>;
+def: Pat<(bswap V4I16:$Rs), (A2_orp (S2_lsr_i_vh $Rs, 8),
+                                    (S2_asl_i_vh $Rs, 8))>;
 
 def: Pat<(shl s6_0ImmPred:$s6, I32:$Rt),  (S4_lsli imm:$s6, I32:$Rt)>;
 def: Pat<(shl I32:$Rs, (i32 16)),         (A2_aslh I32:$Rs)>;
@@ -1321,6 +1430,10 @@ def HexagonVASL: SDNode<"HexagonISD::VASL", SDTHexagonVShift>;
 def HexagonVASR: SDNode<"HexagonISD::VASR", SDTHexagonVShift>;
 def HexagonVLSR: SDNode<"HexagonISD::VLSR", SDTHexagonVShift>;
 
+// Funnel shifts with the shift amount module element bit width.
+def HexagonMFSHL: SDNode<"HexagonISD::MFSHL", SDTIntShiftDOp>;
+def HexagonMFSHR: SDNode<"HexagonISD::MFSHR", SDTIntShiftDOp>;
+
 def: OpR_RI_pat<S2_asl_i_vw, pf2<HexagonVASL>, v2i32, V2I32, u5_0ImmPred>;
 def: OpR_RI_pat<S2_asl_i_vh, pf2<HexagonVASL>, v4i16, V4I16, u4_0ImmPred>;
 def: OpR_RI_pat<S2_asr_i_vw, pf2<HexagonVASR>, v2i32, V2I32, u5_0ImmPred>;
@@ -1496,47 +1609,63 @@ def: Pat<(v2i32 (mulhu V2I32:$Rss, V2I32:$Rtt)),
          (Combinew (M2_mpyu_up (HiReg $Rss), (HiReg $Rtt)),
                    (M2_mpyu_up (LoReg $Rss), (LoReg $Rtt)))>;
 
-def: Pat<(v2i32 (mulhs V2I32:$Rs, V2I32:$Rt)),
-         (Combinew (M2_mpy_up (HiReg $Rs), (HiReg $Rt)),
-                   (M2_mpy_up (LoReg $Rt), (LoReg $Rt)))>;
+def: Pat<(v2i32 (mulhs V2I32:$Rss, V2I32:$Rtt)),
+         (Combinew (M2_mpy_up (HiReg $Rss), (HiReg $Rtt)),
+                   (M2_mpy_up (LoReg $Rss), (LoReg $Rtt)))>;
 
-def Mulhub:
+def Mulhub4:
+  OutPatFrag<(ops node:$Rs, node:$Rt), (S2_vtrunohb (M5_vmpybuu $Rs, $Rt))>;
+def Mulhub8:
   OutPatFrag<(ops node:$Rss, node:$Rtt),
-             (Combinew (S2_vtrunohb (M5_vmpybuu (HiReg $Rss), (HiReg $Rtt))),
-                       (S2_vtrunohb (M5_vmpybuu (LoReg $Rss), (LoReg $Rtt))))>;
+             (Combinew (Mulhub4 (HiReg $Rss), (HiReg $Rtt)),
+                       (Mulhub4 (LoReg $Rss), (LoReg $Rtt)))>;
 
-// Equivalent of byte-wise arithmetic shift right by 7 in v8i8.
-def Asr7:
-  OutPatFrag<(ops node:$Rss), (C2_mask (C2_not (A4_vcmpbgti $Rss, 0)))>;
+// (mux (x >= 0), 0, y)
+def Negbytes8:
+  OutPatFrag<(ops node:$Rss, node:$Rtt),
+             (C2_vmux (A4_vcmpbgti $Rss, -1), (A2_tfrpi 0), $Rtt)>;
 
-def: Pat<(v8i8 (mulhu V8I8:$Rss, V8I8:$Rtt)),
-         (Mulhub $Rss, $Rtt)>;
+def: Pat<(v4i8 (mulhu  V4I8:$Rs,  V4I8:$Rt)), (Mulhub4  $Rs,  $Rt)>;
+def: Pat<(v8i8 (mulhu V8I8:$Rss, V8I8:$Rtt)), (Mulhub8 $Rss, $Rtt)>;
 
-def: Pat<(v8i8 (mulhs V8I8:$Rss, V8I8:$Rtt)),
-         (A2_vsubub
-           (Mulhub $Rss, $Rtt),
-           (A2_vaddub (A2_andp V8I8:$Rss, (Asr7 $Rtt)),
-                      (A2_andp V8I8:$Rtt, (Asr7 $Rss))))>;
+// (Mulhs x, y) = (Mulhu x, y) - (x < 0 ? y : 0) - (y < 0 ? x : 0)
+def Mulhsb8:
+  OutPatFrag<(ops node:$Rss, node:$Rtt),
+             (A2_vsubub (Mulhub8 $Rss, $Rtt),
+                        (A2_vaddub (Negbytes8 $Rss, $Rtt),
+                                   (Negbytes8 $Rtt, $Rss)))>;
 
-def Mpysh:
+def: Pat<(v4i8 (mulhs V4I8:$Rs, V4I8:$Rt)),
+         (LoReg (Mulhsb8 (v8i8 (ToAext64 $Rs)), (v8i8 (ToAext64 $Rt))))>;
+def: Pat<(v8i8 (mulhs V8I8:$Rss, V8I8:$Rtt)), (Mulhsb8 $Rss, $Rtt)>;
+
+// v2i16 *s v2i16 -> v2i32
+def Muli16:
   OutPatFrag<(ops node:$Rs, node:$Rt), (M2_vmpy2s_s0 $Rs, $Rt)>;
-def Mpyshh:
-  OutPatFrag<(ops node:$Rss, node:$Rtt), (Mpysh (HiReg $Rss), (HiReg $Rtt))>;
-def Mpyshl:
-  OutPatFrag<(ops node:$Rss, node:$Rtt), (Mpysh (LoReg $Rss), (LoReg $Rtt))>;
 
-def Mulhsh:
+def Mulhsh2:
+  OutPatFrag<(ops node:$Rs, node:$Rt),
+             (A2_combine_hh (HiReg (Muli16 $Rs, $Rt)),
+                            (LoReg (Muli16 $Rs, $Rt)))>;
+def Mulhsh4:
   OutPatFrag<(ops node:$Rss, node:$Rtt),
-             (Combinew (A2_combine_hh (HiReg (Mpyshh $Rss, $Rtt)),
-                                      (LoReg (Mpyshh $Rss, $Rtt))),
-                       (A2_combine_hh (HiReg (Mpyshl $Rss, $Rtt)),
-                                      (LoReg (Mpyshl $Rss, $Rtt))))>;
+             (Combinew (Mulhsh2 (HiReg $Rss), (HiReg $Rtt)),
+                       (Mulhsh2 (LoReg $Rss), (LoReg $Rtt)))>;
 
-def: Pat<(v4i16 (mulhs V4I16:$Rss, V4I16:$Rtt)), (Mulhsh $Rss, $Rtt)>;
+def: Pat<(v2i16 (mulhs  V2I16:$Rs,  V2I16:$Rt)), (Mulhsh2  $Rs,  $Rt)>;
+def: Pat<(v4i16 (mulhs V4I16:$Rss, V4I16:$Rtt)), (Mulhsh4 $Rss, $Rtt)>;
+
+def: Pat<(v2i16 (mulhu V2I16:$Rs, V2I16:$Rt)),
+  (A2_svaddh
+     (Mulhsh2 $Rs, $Rt),
+     (A2_svaddh (LoReg (A2_andp (Combinew $Rt, $Rs),
+                                (S2_asr_i_vh (Combinew $Rs, $Rt), 15))),
+                (HiReg (A2_andp (Combinew $Rt, $Rs),
+                                (S2_asr_i_vh (Combinew $Rs, $Rt), 15)))))>;
 
 def: Pat<(v4i16 (mulhu V4I16:$Rss, V4I16:$Rtt)),
          (A2_vaddh
-           (Mulhsh $Rss, $Rtt),
+           (Mulhsh4 $Rss, $Rtt),
            (A2_vaddh (A2_andp V4I16:$Rss, (S2_asr_i_vh $Rtt, 15)),
                      (A2_andp V4I16:$Rtt, (S2_asr_i_vh $Rss, 15))))>;
 
@@ -1733,7 +1862,7 @@ def: Pat<(sub V4I8:$Rs, V4I8:$Rt),
 // half-words, and saturates the result to a 32-bit value, except the
 // saturation never happens (it can only occur with scaling).
 def: Pat<(v2i16 (mul V2I16:$Rs, V2I16:$Rt)),
-         (LoReg (S2_vtrunewh (A2_combineii 0, 0),
+         (LoReg (S2_vtrunewh (IMPLICIT_DEF),
                              (M2_vmpy2s_s0 V2I16:$Rs, V2I16:$Rt)))>;
 def: Pat<(v4i16 (mul V4I16:$Rs, V4I16:$Rt)),
          (S2_vtrunewh (M2_vmpy2s_s0 (HiReg $Rs), (HiReg $Rt)),
@@ -1779,6 +1908,20 @@ def: Pat<(i32 (ctpop I32:$Rs)),   (S5_popcountp (A4_combineir 0, I32:$Rs))>;
 
 def: Pat<(bitreverse I32:$Rs),    (S2_brev I32:$Rs)>;
 def: Pat<(bitreverse I64:$Rss),   (S2_brevp I64:$Rss)>;
+
+def: Pat<(bitreverse V4I8:$Rs),   (A2_swiz (S2_brev $Rs))>;
+def: Pat<(bitreverse V8I8:$Rs),   (Combinew (A2_swiz (LoReg (S2_brevp $Rs))),
+                                            (A2_swiz (HiReg (S2_brevp $Rs))))>;
+def: Pat<(bitreverse V2I16:$Rs),  (A2_combine_lh (S2_brev $Rs),
+                                                 (S2_brev $Rs))>;
+def: Pat<(bitreverse V4I16:$Rs),
+         (Combinew (A2_combine_lh (LoReg (S2_brevp $Rs)),
+                                  (LoReg (S2_brevp $Rs))),
+                   (A2_combine_lh (HiReg (S2_brevp $Rs)),
+                                  (HiReg (S2_brevp $Rs))))>;
+def: Pat<(bitreverse V2I32:$Rs),
+         (Combinew (i32 (LoReg (S2_brevp $Rs))),
+                   (i32 (HiReg (S2_brevp $Rs))))>;
 
 let AddedComplexity = 20 in { // Complexity greater than and/or/xor
   def: Pat<(and I32:$Rs, IsNPow2_32:$V),
@@ -1948,6 +2091,9 @@ def: Pat<(HexagonAtPcrel I32:$addr),
 // --(12) Load -----------------------------------------------------------
 //
 
+def L1toI32:  OutPatFrag<(ops node:$Rs), (A2_subri 0, (i32 $Rs))>;
+def L1toI64:  OutPatFrag<(ops node:$Rs), (ToSext64 (L1toI32 $Rs))>;
+
 def extloadv2i8: PatFrag<(ops node:$ptr), (extload node:$ptr), [{
   return cast<LoadSDNode>(N)->getMemoryVT() == MVT::v2i8;
 }]>;
@@ -2080,7 +2226,7 @@ let AddedComplexity = 20 in {
   defm: Loadxi_pat<sextloadi8,      i32,   anyimm0, L2_loadrb_io>;
   defm: Loadxi_pat<sextloadi16,     i32,   anyimm1, L2_loadrh_io>;
   defm: Loadxi_pat<sextloadv2i8,    v2i16, anyimm1, L2_loadbsw2_io>;
-  defm: Loadxi_pat<sextloadv4i8,    v4i16, anyimm2, L2_loadbzw4_io>;
+  defm: Loadxi_pat<sextloadv4i8,    v4i16, anyimm2, L2_loadbsw4_io>;
   defm: Loadxi_pat<zextloadi1,      i32,   anyimm0, L2_loadrub_io>;
   defm: Loadxi_pat<zextloadi8,      i32,   anyimm0, L2_loadrub_io>;
   defm: Loadxi_pat<zextloadi16,     i32,   anyimm1, L2_loadruh_io>;
@@ -2104,11 +2250,17 @@ let AddedComplexity = 20 in {
 }
 
 let AddedComplexity = 30 in {
+  // Loads of i1 are loading a byte, and the byte should be either 0 or 1.
+  // It doesn't matter if it's sign- or zero-extended, so use zero-extension
+  // everywhere.
+  defm: Loadxim_pat<sextloadi1,   i32, L1toI32,  anyimm0, L2_loadrub_io>;
   defm: Loadxim_pat<extloadi1,    i64, ToAext64, anyimm0, L2_loadrub_io>;
+  defm: Loadxim_pat<sextloadi1,   i64, L1toI64,  anyimm0, L2_loadrub_io>;
+  defm: Loadxim_pat<zextloadi1,   i64, ToZext64, anyimm0, L2_loadrub_io>;
+
   defm: Loadxim_pat<extloadi8,    i64, ToAext64, anyimm0, L2_loadrub_io>;
   defm: Loadxim_pat<extloadi16,   i64, ToAext64, anyimm1, L2_loadruh_io>;
   defm: Loadxim_pat<extloadi32,   i64, ToAext64, anyimm2, L2_loadri_io>;
-  defm: Loadxim_pat<zextloadi1,   i64, ToZext64, anyimm0, L2_loadrub_io>;
   defm: Loadxim_pat<zextloadi8,   i64, ToZext64, anyimm0, L2_loadrub_io>;
   defm: Loadxim_pat<zextloadi16,  i64, ToZext64, anyimm1, L2_loadruh_io>;
   defm: Loadxim_pat<zextloadi32,  i64, ToZext64, anyimm2, L2_loadri_io>;
@@ -2118,6 +2270,7 @@ let AddedComplexity = 30 in {
 }
 
 let AddedComplexity  = 60 in {
+  def: Loadxu_pat<extloadi1,    i32,   anyimm0, L4_loadrub_ur>;
   def: Loadxu_pat<extloadi8,    i32,   anyimm0, L4_loadrub_ur>;
   def: Loadxu_pat<extloadi16,   i32,   anyimm1, L4_loadruh_ur>;
   def: Loadxu_pat<extloadv2i8,  v2i16, anyimm1, L4_loadbzw2_ur>;
@@ -2125,7 +2278,8 @@ let AddedComplexity  = 60 in {
   def: Loadxu_pat<sextloadi8,   i32,   anyimm0, L4_loadrb_ur>;
   def: Loadxu_pat<sextloadi16,  i32,   anyimm1, L4_loadrh_ur>;
   def: Loadxu_pat<sextloadv2i8, v2i16, anyimm1, L4_loadbsw2_ur>;
-  def: Loadxu_pat<sextloadv4i8, v4i16, anyimm2, L4_loadbzw4_ur>;
+  def: Loadxu_pat<sextloadv4i8, v4i16, anyimm2, L4_loadbsw4_ur>;
+  def: Loadxu_pat<zextloadi1,   i32,   anyimm0, L4_loadrub_ur>;
   def: Loadxu_pat<zextloadi8,   i32,   anyimm0, L4_loadrub_ur>;
   def: Loadxu_pat<zextloadi16,  i32,   anyimm1, L4_loadruh_ur>;
   def: Loadxu_pat<zextloadv2i8, v2i16, anyimm1, L4_loadbzw2_ur>;
@@ -2140,6 +2294,11 @@ let AddedComplexity  = 60 in {
   def: Loadxu_pat<load,         f32,   anyimm2, L4_loadri_ur>;
   def: Loadxu_pat<load,         f64,   anyimm3, L4_loadrd_ur>;
 
+  def: Loadxum_pat<sextloadi1,  i32, anyimm0, L1toI32,  L4_loadrub_ur>;
+  def: Loadxum_pat<extloadi1,   i64, anyimm0, ToAext64, L4_loadrub_ur>;
+  def: Loadxum_pat<sextloadi1,  i64, anyimm0, L1toI64,  L4_loadrub_ur>;
+  def: Loadxum_pat<zextloadi1,  i64, anyimm0, ToZext64, L4_loadrub_ur>;
+
   def: Loadxum_pat<sextloadi8,  i64, anyimm0, ToSext64, L4_loadrb_ur>;
   def: Loadxum_pat<zextloadi8,  i64, anyimm0, ToZext64, L4_loadrub_ur>;
   def: Loadxum_pat<extloadi8,   i64, anyimm0, ToAext64, L4_loadrub_ur>;
@@ -2152,7 +2311,9 @@ let AddedComplexity  = 60 in {
 }
 
 let AddedComplexity = 40 in {
+  def: Loadxr_shl_pat<extloadi1,     i32,   L4_loadrub_rr>;
   def: Loadxr_shl_pat<extloadi8,     i32,   L4_loadrub_rr>;
+  def: Loadxr_shl_pat<zextloadi1,    i32,   L4_loadrub_rr>;
   def: Loadxr_shl_pat<zextloadi8,    i32,   L4_loadrub_rr>;
   def: Loadxr_shl_pat<sextloadi8,    i32,   L4_loadrb_rr>;
   def: Loadxr_shl_pat<extloadi16,    i32,   L4_loadruh_rr>;
@@ -2170,8 +2331,10 @@ let AddedComplexity = 40 in {
 }
 
 let AddedComplexity = 20 in {
+  def: Loadxr_add_pat<extloadi1,     i32,   L4_loadrub_rr>;
   def: Loadxr_add_pat<extloadi8,     i32,   L4_loadrub_rr>;
   def: Loadxr_add_pat<zextloadi8,    i32,   L4_loadrub_rr>;
+  def: Loadxr_add_pat<zextloadi1,    i32,   L4_loadrub_rr>;
   def: Loadxr_add_pat<sextloadi8,    i32,   L4_loadrb_rr>;
   def: Loadxr_add_pat<extloadi16,    i32,   L4_loadruh_rr>;
   def: Loadxr_add_pat<zextloadi16,   i32,   L4_loadruh_rr>;
@@ -2188,6 +2351,11 @@ let AddedComplexity = 20 in {
 }
 
 let AddedComplexity = 40 in {
+  def: Loadxrm_shl_pat<sextloadi1,   i32, L1toI32,  L4_loadrub_rr>;
+  def: Loadxrm_shl_pat<extloadi1,    i64, ToAext64, L4_loadrub_rr>;
+  def: Loadxrm_shl_pat<sextloadi1,   i64, L1toI64,  L4_loadrub_rr>;
+  def: Loadxrm_shl_pat<zextloadi1,   i64, ToZext64, L4_loadrub_rr>;
+
   def: Loadxrm_shl_pat<extloadi8,    i64, ToAext64, L4_loadrub_rr>;
   def: Loadxrm_shl_pat<zextloadi8,   i64, ToZext64, L4_loadrub_rr>;
   def: Loadxrm_shl_pat<sextloadi8,   i64, ToSext64, L4_loadrb_rr>;
@@ -2199,7 +2367,12 @@ let AddedComplexity = 40 in {
   def: Loadxrm_shl_pat<sextloadi32,  i64, ToSext64, L4_loadri_rr>;
 }
 
-let AddedComplexity = 20 in {
+let AddedComplexity = 30 in {
+  def: Loadxrm_add_pat<sextloadi1,   i32, L1toI32,  L4_loadrub_rr>;
+  def: Loadxrm_add_pat<extloadi1,    i64, ToAext64, L4_loadrub_rr>;
+  def: Loadxrm_add_pat<sextloadi1,   i64, L1toI64,  L4_loadrub_rr>;
+  def: Loadxrm_add_pat<zextloadi1,   i64, ToZext64, L4_loadrub_rr>;
+
   def: Loadxrm_add_pat<extloadi8,    i64, ToAext64, L4_loadrub_rr>;
   def: Loadxrm_add_pat<zextloadi8,   i64, ToZext64, L4_loadrub_rr>;
   def: Loadxrm_add_pat<sextloadi8,   i64, ToSext64, L4_loadrb_rr>;
@@ -2214,12 +2387,13 @@ let AddedComplexity = 20 in {
 // Absolute address
 
 let AddedComplexity  = 60 in {
+  def: Loada_pat<extloadi1,       i32,   anyimm0, PS_loadrubabs>;
   def: Loada_pat<zextloadi1,      i32,   anyimm0, PS_loadrubabs>;
-  def: Loada_pat<sextloadi8,      i32,   anyimm0, PS_loadrbabs>;
   def: Loada_pat<extloadi8,       i32,   anyimm0, PS_loadrubabs>;
+  def: Loada_pat<sextloadi8,      i32,   anyimm0, PS_loadrbabs>;
   def: Loada_pat<zextloadi8,      i32,   anyimm0, PS_loadrubabs>;
-  def: Loada_pat<sextloadi16,     i32,   anyimm1, PS_loadrhabs>;
   def: Loada_pat<extloadi16,      i32,   anyimm1, PS_loadruhabs>;
+  def: Loada_pat<sextloadi16,     i32,   anyimm1, PS_loadrhabs>;
   def: Loada_pat<zextloadi16,     i32,   anyimm1, PS_loadruhabs>;
   def: Loada_pat<load,            i32,   anyimm2, PS_loadriabs>;
   def: Loada_pat<load,            v2i16, anyimm2, PS_loadriabs>;
@@ -2238,6 +2412,12 @@ let AddedComplexity  = 60 in {
 }
 
 let AddedComplexity  = 30 in {
+  def: Loadam_pat<load,           i1,  anyimm0, I32toI1,  PS_loadrubabs>;
+  def: Loadam_pat<sextloadi1,     i32, anyimm0, L1toI32,  PS_loadrubabs>;
+  def: Loadam_pat<extloadi1,      i64, anyimm0, ToZext64, PS_loadrubabs>;
+  def: Loadam_pat<sextloadi1,     i64, anyimm0, L1toI64,  PS_loadrubabs>;
+  def: Loadam_pat<zextloadi1,     i64, anyimm0, ToZext64, PS_loadrubabs>;
+
   def: Loadam_pat<extloadi8,      i64, anyimm0, ToAext64, PS_loadrubabs>;
   def: Loadam_pat<sextloadi8,     i64, anyimm0, ToSext64, PS_loadrbabs>;
   def: Loadam_pat<zextloadi8,     i64, anyimm0, ToZext64, PS_loadrubabs>;
@@ -2247,9 +2427,6 @@ let AddedComplexity  = 30 in {
   def: Loadam_pat<extloadi32,     i64, anyimm2, ToAext64, PS_loadriabs>;
   def: Loadam_pat<sextloadi32,    i64, anyimm2, ToSext64, PS_loadriabs>;
   def: Loadam_pat<zextloadi32,    i64, anyimm2, ToZext64, PS_loadriabs>;
-
-  def: Loadam_pat<load,           i1,  anyimm0, I32toI1,  PS_loadrubabs>;
-  def: Loadam_pat<zextloadi1,     i64, anyimm0, ToZext64, PS_loadrubabs>;
 }
 
 // GP-relative address
@@ -2280,6 +2457,11 @@ let AddedComplexity  = 100 in {
 }
 
 let AddedComplexity  = 70 in {
+  def: Loadam_pat<sextloadi1,     i32, addrgp,  L1toI32,  L2_loadrubgp>;
+  def: Loadam_pat<extloadi1,      i64, addrgp,  ToAext64, L2_loadrubgp>;
+  def: Loadam_pat<sextloadi1,     i64, addrgp,  L1toI64,  L2_loadrubgp>;
+  def: Loadam_pat<zextloadi1,     i64, addrgp,  ToZext64, L2_loadrubgp>;
+
   def: Loadam_pat<extloadi8,      i64, addrgp,  ToAext64, L2_loadrubgp>;
   def: Loadam_pat<sextloadi8,     i64, addrgp,  ToSext64, L2_loadrbgp>;
   def: Loadam_pat<zextloadi8,     i64, addrgp,  ToZext64, L2_loadrubgp>;
@@ -2291,16 +2473,7 @@ let AddedComplexity  = 70 in {
   def: Loadam_pat<zextloadi32,    i64, addrgp,  ToZext64, L2_loadrigp>;
 
   def: Loadam_pat<load,           i1,  addrgp,  I32toI1,  L2_loadrubgp>;
-  def: Loadam_pat<zextloadi1,     i64, addrgp,  ToZext64, L2_loadrubgp>;
 }
-
-
-// Sign-extending loads of i1 need to replicate the lowest bit throughout
-// the 32-bit value. Since the loaded value can only be 0 or 1, 0-v should
-// do the trick.
-let AddedComplexity = 20 in
-def: Pat<(i32 (sextloadi1 I32:$Rs)),
-         (A2_subri 0, (L2_loadrub_io IntRegs:$Rs, 0))>;
 
 // Patterns for loads of i1:
 def: Pat<(i1 (load AddrFI:$fi)),
@@ -2419,19 +2592,6 @@ class Stoream_pat<PatFrag Store, PatFrag Value, PatFrag Addr, PatFrag ValueMod,
                   InstHexagon MI>
   : Pat<(Store Value:$val, Addr:$addr),
         (MI Addr:$addr, (ValueMod Value:$val))>;
-
-// Regular stores in the DAG have two operands: value and address.
-// Atomic stores also have two, but they are reversed: address, value.
-// To use atomic stores with the patterns, they need to have their operands
-// swapped. This relies on the knowledge that the F.Fragment uses names
-// "ptr" and "val".
-class AtomSt<PatFrag F>
-  : PatFrag<(ops node:$val, node:$ptr), !head(F.Fragments), F.PredicateCode,
-            F.OperandTransform> {
-  let IsAtomic = F.IsAtomic;
-  let MemoryVT = F.MemoryVT;
-}
-
 
 def IMM_BYTE : SDNodeXForm<imm, [{
   // -1 can be represented as 255, etc.
@@ -2553,15 +2713,15 @@ let AddedComplexity = 120 in {
   def: Storea_pat<store,                    V2I32, addrgp, S2_storerdgp>;
   def: Storea_pat<store,                      F32, addrgp, S2_storerigp>;
   def: Storea_pat<store,                      F64, addrgp, S2_storerdgp>;
-  def: Storea_pat<AtomSt<atomic_store_8>,     I32, addrgp, S2_storerbgp>;
-  def: Storea_pat<AtomSt<atomic_store_16>,    I32, addrgp, S2_storerhgp>;
-  def: Storea_pat<AtomSt<atomic_store_32>,    I32, addrgp, S2_storerigp>;
-  def: Storea_pat<AtomSt<atomic_store_32>,   V4I8, addrgp, S2_storerigp>;
-  def: Storea_pat<AtomSt<atomic_store_32>,  V2I16, addrgp, S2_storerigp>;
-  def: Storea_pat<AtomSt<atomic_store_64>,    I64, addrgp, S2_storerdgp>;
-  def: Storea_pat<AtomSt<atomic_store_64>,   V8I8, addrgp, S2_storerdgp>;
-  def: Storea_pat<AtomSt<atomic_store_64>,  V4I16, addrgp, S2_storerdgp>;
-  def: Storea_pat<AtomSt<atomic_store_64>,  V2I32, addrgp, S2_storerdgp>;
+  def: Storea_pat<atomic_store_8,             I32, addrgp, S2_storerbgp>;
+  def: Storea_pat<atomic_store_16,            I32, addrgp, S2_storerhgp>;
+  def: Storea_pat<atomic_store_32,            I32, addrgp, S2_storerigp>;
+  def: Storea_pat<atomic_store_32,           V4I8, addrgp, S2_storerigp>;
+  def: Storea_pat<atomic_store_32,          V2I16, addrgp, S2_storerigp>;
+  def: Storea_pat<atomic_store_64,            I64, addrgp, S2_storerdgp>;
+  def: Storea_pat<atomic_store_64,           V8I8, addrgp, S2_storerdgp>;
+  def: Storea_pat<atomic_store_64,          V4I16, addrgp, S2_storerdgp>;
+  def: Storea_pat<atomic_store_64,          V2I32, addrgp, S2_storerdgp>;
 
   def: Stoream_pat<truncstorei8,  I64, addrgp, LoReg,    S2_storerbgp>;
   def: Stoream_pat<truncstorei16, I64, addrgp, LoReg,    S2_storerhgp>;
@@ -2582,15 +2742,15 @@ let AddedComplexity = 110 in {
   def: Storea_pat<store,                    V2I32, anyimm3, PS_storerdabs>;
   def: Storea_pat<store,                      F32, anyimm2, PS_storeriabs>;
   def: Storea_pat<store,                      F64, anyimm3, PS_storerdabs>;
-  def: Storea_pat<AtomSt<atomic_store_8>,     I32, anyimm0, PS_storerbabs>;
-  def: Storea_pat<AtomSt<atomic_store_16>,    I32, anyimm1, PS_storerhabs>;
-  def: Storea_pat<AtomSt<atomic_store_32>,    I32, anyimm2, PS_storeriabs>;
-  def: Storea_pat<AtomSt<atomic_store_32>,   V4I8, anyimm2, PS_storeriabs>;
-  def: Storea_pat<AtomSt<atomic_store_32>,  V2I16, anyimm2, PS_storeriabs>;
-  def: Storea_pat<AtomSt<atomic_store_64>,    I64, anyimm3, PS_storerdabs>;
-  def: Storea_pat<AtomSt<atomic_store_64>,   V8I8, anyimm3, PS_storerdabs>;
-  def: Storea_pat<AtomSt<atomic_store_64>,  V4I16, anyimm3, PS_storerdabs>;
-  def: Storea_pat<AtomSt<atomic_store_64>,  V2I32, anyimm3, PS_storerdabs>;
+  def: Storea_pat<atomic_store_8,             I32, anyimm0, PS_storerbabs>;
+  def: Storea_pat<atomic_store_16,            I32, anyimm1, PS_storerhabs>;
+  def: Storea_pat<atomic_store_32,            I32, anyimm2, PS_storeriabs>;
+  def: Storea_pat<atomic_store_32,           V4I8, anyimm2, PS_storeriabs>;
+  def: Storea_pat<atomic_store_32,          V2I16, anyimm2, PS_storeriabs>;
+  def: Storea_pat<atomic_store_64,            I64, anyimm3, PS_storerdabs>;
+  def: Storea_pat<atomic_store_64,           V8I8, anyimm3, PS_storerdabs>;
+  def: Storea_pat<atomic_store_64,          V4I16, anyimm3, PS_storerdabs>;
+  def: Storea_pat<atomic_store_64,          V2I32, anyimm3, PS_storerdabs>;
 
   def: Stoream_pat<truncstorei8,  I64, anyimm0, LoReg,    PS_storerbabs>;
   def: Stoream_pat<truncstorei16, I64, anyimm1, LoReg,    PS_storerhabs>;
@@ -2631,7 +2791,7 @@ let AddedComplexity = 90 in {
   def: Storexr_shl_pat<store,           F64, S4_storerd_rr>;
 
   def: Pat<(store I1:$Pu, (add (shl I32:$Rs, u2_0ImmPred:$u2), I32:$Rt)),
-           (S4_storerb_ur IntRegs:$Rt, IntRegs:$Rs, imm:$u2, (I1toI32 I1:$Pu))>;
+           (S4_storerb_rr IntRegs:$Rt, IntRegs:$Rs, imm:$u2, (I1toI32 I1:$Pu))>;
 }
 
 class SS_<PatFrag F> : SmallStackStore<F>;
@@ -2745,15 +2905,15 @@ let AddedComplexity = 40 in {
   defm: Storexim_pat<truncstorei32, I64, anyimm2, LoReg,   S2_storeri_io>;
   defm: Storexim_pat<store,         I1,  anyimm0, I1toI32, S2_storerb_io>;
 
-  defm: Storexi_pat<AtomSt<atomic_store_8>,     I32, anyimm0, S2_storerb_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_16>,    I32, anyimm1, S2_storerh_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_32>,    I32, anyimm2, S2_storeri_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_32>,   V4I8, anyimm2, S2_storeri_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_32>,  V2I16, anyimm2, S2_storeri_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_64>,    I64, anyimm3, S2_storerd_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_64>,   V8I8, anyimm3, S2_storerd_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_64>,  V4I16, anyimm3, S2_storerd_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_64>,  V2I32, anyimm3, S2_storerd_io>;
+  defm: Storexi_pat<atomic_store_8,     I32, anyimm0, S2_storerb_io>;
+  defm: Storexi_pat<atomic_store_16,    I32, anyimm1, S2_storerh_io>;
+  defm: Storexi_pat<atomic_store_32,    I32, anyimm2, S2_storeri_io>;
+  defm: Storexi_pat<atomic_store_32,   V4I8, anyimm2, S2_storeri_io>;
+  defm: Storexi_pat<atomic_store_32,  V2I16, anyimm2, S2_storeri_io>;
+  defm: Storexi_pat<atomic_store_64,    I64, anyimm3, S2_storerd_io>;
+  defm: Storexi_pat<atomic_store_64,   V8I8, anyimm3, S2_storerd_io>;
+  defm: Storexi_pat<atomic_store_64,  V4I16, anyimm3, S2_storerd_io>;
+  defm: Storexi_pat<atomic_store_64,  V2I32, anyimm3, S2_storerd_io>;
 }
 
 // Reg+Reg
@@ -2804,15 +2964,15 @@ let AddedComplexity = 10 in {
   def: Storexim_base_pat<truncstorei32, I64, LoReg,   S2_storeri_io>;
   def: Storexim_base_pat<store,         I1,  I1toI32, S2_storerb_io>;
 
-  def: Storexi_base_pat<AtomSt<atomic_store_8>,     I32, S2_storerb_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_16>,    I32, S2_storerh_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_32>,    I32, S2_storeri_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_32>,   V4I8, S2_storeri_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_32>,  V2I16, S2_storeri_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_64>,    I64, S2_storerd_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_64>,   V8I8, S2_storerd_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_64>,  V4I16, S2_storerd_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_64>,  V2I32, S2_storerd_io>;
+  def: Storexi_base_pat<atomic_store_8,     I32, S2_storerb_io>;
+  def: Storexi_base_pat<atomic_store_16,    I32, S2_storerh_io>;
+  def: Storexi_base_pat<atomic_store_32,    I32, S2_storeri_io>;
+  def: Storexi_base_pat<atomic_store_32,   V4I8, S2_storeri_io>;
+  def: Storexi_base_pat<atomic_store_32,  V2I16, S2_storeri_io>;
+  def: Storexi_base_pat<atomic_store_64,    I64, S2_storerd_io>;
+  def: Storexi_base_pat<atomic_store_64,   V8I8, S2_storerd_io>;
+  def: Storexi_base_pat<atomic_store_64,  V4I16, S2_storerd_io>;
+  def: Storexi_base_pat<atomic_store_64,  V2I32, S2_storerd_io>;
 }
 
 
@@ -3139,11 +3299,11 @@ def: Pat<(callv3nr I32:$dst),               (PS_callr_nr I32:$dst)>;
 def: Pat<(callv3nr tglobaladdr:$dst),       (PS_call_nr tglobaladdr:$dst)>;
 def: Pat<(callv3nr texternalsym:$dst),      (PS_call_nr texternalsym:$dst)>;
 
-def retflag : SDNode<"HexagonISD::RET_FLAG", SDTNone,
+def retglue : SDNode<"HexagonISD::RET_GLUE", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def eh_return: SDNode<"HexagonISD::EH_RETURN", SDTNone, [SDNPHasChain]>;
 
-def: Pat<(retflag),   (PS_jmpret (i32 R31))>;
+def: Pat<(retglue),   (PS_jmpret (i32 R31))>;
 def: Pat<(eh_return), (EH_RETURN_JMPR (i32 R31))>;
 
 
@@ -3246,3 +3406,9 @@ let AddedComplexity = 100 in {
   def: Pat<(i1 (seteq (int_hexagon_S4_stored_locked I32:$Rs, I64:$Rt), 0)),
            (C2_not (S4_stored_locked I32:$Rs, I64:$Rt))>;
 }
+
+def: Pat<(int_hexagon_instrprof_custom (HexagonAtPcrel tglobaladdr:$addr), u32_0ImmPred:$I),
+         (PS_call_instrprof_custom tglobaladdr:$addr, imm:$I)>;
+
+def: Pat<(int_hexagon_instrprof_custom (HexagonCONST32 tglobaladdr:$addr), u32_0ImmPred:$I),
+         (PS_call_instrprof_custom tglobaladdr:$addr, imm:$I)>;

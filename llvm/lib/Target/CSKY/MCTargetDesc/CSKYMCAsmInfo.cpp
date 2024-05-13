@@ -22,4 +22,9 @@ CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   CommentString = "#";
+
+  // Uses '.section' before '.bss' directive
+  UsesELFSectionDirectiveForBSS = true;
+
+  ExceptionsType = ExceptionHandling::DwarfCFI;
 }

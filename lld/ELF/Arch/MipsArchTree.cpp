@@ -16,7 +16,6 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Support/MipsABIFlags.h"
 
 using namespace llvm;
@@ -296,7 +295,7 @@ static uint32_t getArchFlags(ArrayRef<FileFlags> files) {
 
 template <class ELFT> uint32_t elf::calcMipsEFlags() {
   std::vector<FileFlags> v;
-  for (InputFile *f : objectFiles)
+  for (InputFile *f : ctx.objectFiles)
     v.push_back({f, cast<ObjFile<ELFT>>(f)->getObj().getHeader().e_flags});
   if (v.empty()) {
     // If we don't have any input files, we'll have to rely on the information

@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnueabi < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnueabi -cgp-verify-bfi-updates=true < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64 -cgp-verify-bfi-updates=true < %s | FileCheck %s
 
 ; CHECK-LABEL: test1
 ; CHECK: tbz {{w[0-9]}}, #3, {{.LBB0_3}}
@@ -31,16 +31,16 @@ if.end3:                                          ; preds = %if.then2, %entry
 ; CHECK-NOT: and x{{[0-9]+}}, x[[REG1]], #0x08
 ; CHECK-NOT: cbz x{{[0-9]+}}, .LBB1_3
 
-define void @test2(i64 %A, i64* readonly %B) #0 {
+define void @test2(i64 %A, ptr readonly %B) #0 {
 entry:
-  %tobool = icmp eq i64* %B, null
+  %tobool = icmp eq ptr %B, null
   %and = and i64 %A, 8
   %tobool1 = icmp eq i64 %and, 0
   %or.cond = or i1 %tobool, %tobool1
   br i1 %or.cond, label %if.end3, label %if.then2
 
 if.then2:                                         ; preds = %entry
-  %0 = load i64, i64* %B, align 4
+  %0 = load i64, ptr %B, align 4
   tail call void @foo(i64 %A, i64 %0)
   br label %if.end3
 

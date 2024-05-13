@@ -15,6 +15,13 @@ using namespace llvm;
 
 void XCoreFunctionInfo::anchor() { }
 
+MachineFunctionInfo *XCoreFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  return DestMF.cloneInfo<XCoreFunctionInfo>(*this);
+}
+
 bool XCoreFunctionInfo::isLargeFrame(const MachineFunction &MF) const {
   if (CachedEStackSize == -1) {
     CachedEStackSize = MF.getFrameInfo().estimateStackSize(MF);

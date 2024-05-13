@@ -86,7 +86,7 @@ template <typename... CheckTypes>
 std::string
 runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
                const Twine &Filename = "input.cc",
-               ArrayRef<std::string> ExtraArgs = None,
+               ArrayRef<std::string> ExtraArgs = std::nullopt,
                const ClangTidyOptions &ExtraOptions = ClangTidyOptions(),
                std::map<StringRef, StringRef> PathsToContent =
                    std::map<StringRef, StringRef>()) {
@@ -110,7 +110,7 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
     Args.push_back("-fobjc-arc");
   }
   if (extension == ".cc" || extension == ".cpp" || extension == ".mm") {
-    Args.push_back("-std=c++11");
+    Args.push_back("-std=c++20");
   }
   Args.push_back("-Iinclude");
   Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
@@ -141,7 +141,7 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
     for (const auto &Error : DiagConsumer.take()) {
       ErrorText += Error.Message.Message + "\n";
     }
-    llvm::report_fatal_error(ErrorText);
+    llvm::report_fatal_error(llvm::Twine(ErrorText));
   }
 
   tooling::Replacements Fixes;

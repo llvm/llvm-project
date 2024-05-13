@@ -6,7 +6,9 @@
 ; actual output is massive at the moment as llvm.bitreverse is not yet legal.
 
 declare i32 @llvm.bitreverse.i32(i32) readnone
+declare i64 @llvm.bitreverse.i64(i64) readnone
 declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) readnone
+declare i32 @llvm.bswap.i32(i32) readnone
 
 ; fold (bitreverse undef) -> undef
 define i32 @test_undef() nounwind {
@@ -37,6 +39,82 @@ define i32 @test_bitreverse_bitreverse(i32 %a0) nounwind {
   ret i32 %c
 }
 
+; fold (bitreverse(srl (bitreverse c), x)) -> (shl c, x)
+define i32 @test_bitreverse_srli_bitreverse(i32 %a0) nounwind {
+; X86-LABEL: test_bitreverse_srli_bitreverse:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $7, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bitreverse_srli_bitreverse:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $7, %eax
+; X64-NEXT:    retq
+  %b = call i32 @llvm.bitreverse.i32(i32 %a0)
+  %c = lshr i32 %b, 7
+  %d = call i32 @llvm.bitreverse.i32(i32 %c)
+  ret i32 %d
+}
+
+define i64 @test_bitreverse_srli_bitreverse_i64(i64 %a) nounwind {
+; X86-LABEL: test_bitreverse_srli_bitreverse_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl %edx, %edx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bitreverse_srli_bitreverse_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shlq $33, %rax
+; X64-NEXT:    retq
+    %1 = call i64 @llvm.bitreverse.i64(i64 %a)
+    %2 = lshr i64 %1, 33
+    %3 = call i64 @llvm.bitreverse.i64(i64 %2)
+    ret i64 %3
+}
+
+; fold (bitreverse(shl (bitreverse c), x)) -> (srl c, x)
+define i32 @test_bitreverse_shli_bitreverse(i32 %a0) nounwind {
+; X86-LABEL: test_bitreverse_shli_bitreverse:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl $7, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bitreverse_shli_bitreverse:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl $7, %eax
+; X64-NEXT:    retq
+  %b = call i32 @llvm.bitreverse.i32(i32 %a0)
+  %c = shl i32 %b, 7
+  %d = call i32 @llvm.bitreverse.i32(i32 %c)
+  ret i32 %d
+}
+
+define i64 @test_bitreverse_shli_bitreverse_i64(i64 %a) nounwind {
+; X86-LABEL: test_bitreverse_shli_bitreverse_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bitreverse_shli_bitreverse_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $33, %rax
+; X64-NEXT:    retq
+    %1 = call i64 @llvm.bitreverse.i64(i64 %a)
+    %2 = shl i64 %1, 33
+    %3 = call i64 @llvm.bitreverse.i64(i64 %2)
+    ret i64 %3
+}
+
 define <4 x i32> @test_demandedbits_bitreverse(<4 x i32> %a0) nounwind {
 ; X86-LABEL: test_demandedbits_bitreverse:
 ; X86:       # %bb.0:
@@ -50,30 +128,33 @@ define <4 x i32> @test_demandedbits_bitreverse(<4 x i32> %a0) nounwind {
 ; X86-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
 ; X86-NEXT:    packuswb %xmm2, %xmm0
 ; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psllw $4, %xmm1
-; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-NEXT:    psrlw $4, %xmm0
-; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    psrlw $4, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-NEXT:    pand %xmm2, %xmm1
+; X86-NEXT:    pand %xmm2, %xmm0
+; X86-NEXT:    psllw $4, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
-; X86-NEXT:    pand %xmm0, %xmm1
-; X86-NEXT:    psllw $2, %xmm1
-; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    psrlw $2, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlw $2, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; X86-NEXT:    pand %xmm2, %xmm1
+; X86-NEXT:    pand %xmm2, %xmm0
+; X86-NEXT:    psllw $2, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; X86-NEXT:    pand %xmm0, %xmm1
-; X86-NEXT:    paddb %xmm1, %xmm1
-; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    psrlw $1, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlw $1, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; X86-NEXT:    pand %xmm2, %xmm1
+; X86-NEXT:    pand %xmm2, %xmm0
+; X86-NEXT:    paddb %xmm0, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_demandedbits_bitreverse:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
 ; X64-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
@@ -82,7 +163,7 @@ define <4 x i32> @test_demandedbits_bitreverse(<4 x i32> %a0) nounwind {
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; X64-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %b = or <4 x i32> %a0, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
   %c = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %b)

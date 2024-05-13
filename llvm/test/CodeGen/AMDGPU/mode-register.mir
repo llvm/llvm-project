@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-mode-register  %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass si-mode-register  %s -o - | FileCheck %s
 
 ---
 # check that the mode is changed to rtz from default rtn for interp f16
@@ -278,7 +278,7 @@ body: |
 # check that mode is propagated back to start of loop and through a block that
 # neither sets or uses the mode.
 # CHECK-LABEL: name: loop_indirect
-# CHECK_NOT: S_SETREG_IMM32_B32
+# CHECK-NOT: S_SETREG_IMM32_B32
 # CHECK-LABEL: bb.3:
 # CHECK: S_SETREG_IMM32_B32 3, 2177
 # CHECK: V_INTERP_P1LL_F16

@@ -11,17 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Matchers.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LogicalResult.h"
 #include "toy/Dialect.h"
-#include <numeric>
 using namespace mlir;
 using namespace toy;
 
 namespace {
 /// Include the patterns defined in the Declarative Rewrite framework.
 #include "ToyCombine.inc"
-} // end anonymous namespace
+} // namespace
 
 /// This is an example of a c++ rewrite pattern for the TransposeOp. It
 /// optimizes the following scenario: transpose(transpose(x)) -> x

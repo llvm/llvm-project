@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s --check-prefix=AFFINE
-; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine -analyze < %s | FileCheck %s --check-prefix=NONAFFINE
+; RUN: opt %loadPolly                        -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=AFFINE
+; RUN: opt %loadPolly -polly-allow-nonaffine -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=NONAFFINE
 
 ; The SCoP contains a loop with multiple exit blocks (BBs after leaving
 ; the loop). The current implementation of deriving their domain derives
@@ -12,7 +12,7 @@
 ; %arrayidx101 that depends on that exit value cannot be affine.
 ; Derived from test-suite/MultiSource/Benchmarks/BitBench/uuencode/uuencode.c
 
-define void @encode_line(i8* nocapture readonly %input, i32 %octets, i64 %p, i32 %n) {
+define void @encode_line(ptr nocapture readonly %input, i32 %octets, i64 %p, i32 %n) {
 entry:
   br label %outer.for
 
@@ -34,8 +34,8 @@ if.else:
 
 if.then84:
   %0 = add nsw i64 %indvars.iv, 1
-  %arrayidx101 = getelementptr inbounds i8, i8* %input, i64 %0
-  store i8 42, i8* %arrayidx101, align 1
+  %arrayidx101 = getelementptr inbounds i8, ptr %input, i64 %0
+  store i8 42, ptr %arrayidx101, align 1
   br label %for.end
 
 for.inc:

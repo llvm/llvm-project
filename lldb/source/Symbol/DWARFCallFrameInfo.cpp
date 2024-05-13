@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/dwarf.h"
@@ -16,13 +17,16 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
-#include <list>
 #include <cstring>
+#include <list>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
 
 // GetDwarfEHPtr
 //
@@ -164,7 +168,7 @@ bool DWARFCallFrameInfo::GetUnwindPlan(const AddressRange &range,
       module_sp->GetObjectFile() != &m_objfile)
     return false;
 
-  if (llvm::Optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range))
+  if (std::optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range))
     return FDEToUnwindPlan(entry->data, addr, unwind_plan);
   return false;
 }
@@ -191,10 +195,10 @@ bool DWARFCallFrameInfo::GetAddressRange(Address addr, AddressRange &range) {
   return true;
 }
 
-llvm::Optional<DWARFCallFrameInfo::FDEEntryMap::Entry>
+std::optional<DWARFCallFrameInfo::FDEEntryMap::Entry>
 DWARFCallFrameInfo::GetFirstFDEEntryInRange(const AddressRange &range) {
   if (!m_section_sp || m_section_sp->IsEncrypted())
-    return llvm::None;
+    return std::nullopt;
 
   GetFDEIndex();
 
@@ -205,7 +209,7 @@ DWARFCallFrameInfo::GetFirstFDEEntryInRange(const AddressRange &range) {
                  FDEEntryMap::Range(start_file_addr, range.GetByteSize())))
     return *fde;
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 void DWARFCallFrameInfo::GetFunctionAddressAndSizeVector(
@@ -266,9 +270,9 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     cie_sp->ptr_encoding = DW_EH_PE_absptr; // default
     cie_sp->version = m_cfi_data.GetU8(&offset);
     if (cie_sp->version > CFI_VERSION4) {
-      Host::SystemLog(Host::eSystemLogError,
-                      "CIE parse error: CFI version %d is not supported\n",
-                      cie_sp->version);
+      Debugger::ReportError(
+          llvm::formatv("CIE parse error: CFI version {0} is not supported",
+                        cie_sp->version));
       return nullptr;
     }
 
@@ -285,10 +289,10 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
 
     if (i == CFI_AUG_MAX_SIZE &&
         cie_sp->augmentation[CFI_AUG_MAX_SIZE - 1] != '\0') {
-      Host::SystemLog(Host::eSystemLogError,
-                      "CIE parse error: CIE augmentation string was too large "
-                      "for the fixed sized buffer of %d bytes.\n",
-                      CFI_AUG_MAX_SIZE);
+      Debugger::ReportError(llvm::formatv(
+          "CIE parse error: CIE augmentation string was too large "
+          "for the fixed sized buffer of {0} bytes.",
+          CFI_AUG_MAX_SIZE));
       return nullptr;
     }
 
@@ -396,7 +400,7 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
 
 void DWARFCallFrameInfo::GetCFIData() {
   if (!m_cfi_data_initialized) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+    Log *log = GetLog(LLDBLog::Unwind);
     if (log)
       m_objfile.GetModule()->LogMessage(log, "Reading EH frame info");
     m_objfile.ReadSectionData(m_section_sp.get(), m_cfi_data);
@@ -449,10 +453,9 @@ void DWARFCallFrameInfo::GetFDEIndex() {
     }
 
     if (next_entry > m_cfi_data.GetByteSize() + 1) {
-      Host::SystemLog(Host::eSystemLogError, "error: Invalid fde/cie next "
-                                             "entry offset of 0x%x found in "
-                                             "cie/fde at 0x%x\n",
-                      next_entry, current_entry);
+      Debugger::ReportError(llvm::formatv("Invalid fde/cie next entry offset "
+                                          "of {0:x} found in cie/fde at {1:x}",
+                                          next_entry, current_entry));
       // Don't trust anything in this eh_frame section if we find blatantly
       // invalid data.
       m_fde_index.Clear();
@@ -482,10 +485,9 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       cie_offset = cie_id;
 
     if (cie_offset > m_cfi_data.GetByteSize()) {
-      Host::SystemLog(Host::eSystemLogError,
-                      "error: Invalid cie offset of 0x%x "
-                      "found in cie/fde at 0x%x\n",
-                      cie_offset, current_entry);
+      Debugger::ReportError(llvm::formatv("Invalid cie offset of {0:x} "
+                                          "found in cie/fde at {1:x}",
+                                          cie_offset, current_entry));
       // Don't trust anything in this eh_frame section if we find blatantly
       // invalid data.
       m_fde_index.Clear();
@@ -511,10 +513,9 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       FDEEntryMap::Entry fde(addr, length, current_entry);
       m_fde_index.Append(fde);
     } else {
-      Host::SystemLog(Host::eSystemLogError, "error: unable to find CIE at "
-                                             "0x%8.8x for cie_id = 0x%8.8x for "
-                                             "entry at 0x%8.8x.\n",
-                      cie_offset, cie_id, current_entry);
+      Debugger::ReportError(llvm::formatv(
+          "unable to find CIE at {0:x} for cie_id = {1:x} for entry at {2:x}.",
+          cie_offset, cie_id, current_entry));
     }
     offset = next_entry;
   }
@@ -525,7 +526,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
 bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
                                          Address startaddr,
                                          UnwindPlan &unwind_plan) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND);
+  Log *log = GetLog(LLDBLog::Unwind);
   lldb::offset_t offset = dwarf_offset;
   lldb::offset_t current_entry = offset;
 
@@ -673,6 +674,11 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
               unwind_plan.GetRowAtIndex(0)->GetRegisterInfo(reg_num,
                                                             reg_location))
             row->SetRegisterInfo(reg_num, reg_location);
+          else {
+            // If the register was not set in the first row, remove the
+            // register info to keep the unmodified value from the caller.
+            row->RemoveRegisterInfo(reg_num);
+          }
           break;
         }
         }
@@ -772,12 +778,12 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // useful for compilers that move epilogue code into the body of a
           // function.)
           if (stack.empty()) {
-            LLDB_LOGF(log,
-                      "DWARFCallFrameInfo::%s(dwarf_offset: %" PRIx32
-                      ", startaddr: %" PRIx64
-                      " encountered DW_CFA_restore_state but state stack "
-                      "is empty. Corrupt unwind info?",
-                      __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
+            LLDB_LOG(log,
+                     "DWARFCallFrameInfo::{0}(dwarf_offset: "
+                     "{1:x16}, startaddr: [{2:x16}] encountered "
+                     "DW_CFA_restore_state but state stack "
+                     "is empty. Corrupt unwind info?",
+                     __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
             break;
           }
           lldb::addr_t offset = row->GetOffset();

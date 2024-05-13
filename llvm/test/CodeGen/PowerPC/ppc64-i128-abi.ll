@@ -5,7 +5,13 @@
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-BE
 
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-BE
+
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
 ; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
 
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
@@ -13,6 +19,9 @@
 ; RUN:   --implicit-check-not xxswapd
 
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-BE-NOVSX
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
 ; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-BE-NOVSX
 
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
@@ -23,9 +32,15 @@
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-P9 --implicit-check-not xxswapd
 
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s -check-prefix=CHECK-P9
+
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX \
 ; RUN:   --implicit-check-not xxswapd
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -mcpu=pwr9 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
 
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -mattr=-power9-vector -mattr=-direct-move < %s | \
@@ -63,7 +78,7 @@ define <1 x i128> @v1i128_increment_by_one(<1 x i128> %a) nounwind {
 ; FIXME: li [[R1:r[0-9]+]], 1
 ; FIXME: li [[R2:r[0-9]+]], 0
 ; FIXME: mtvsrdd [[V1:v[0-9]+]], [[R2]], [[R1]]
-; CHECK-P9: lxvx [[V1:v[0-9]+]]
+; CHECK-P9: lxv [[V1:v[0-9]+]]
 ; CHECK-P9: vadduqm v2, v2, [[V1]]
 ; CHECK-P9: blr
 
@@ -197,49 +212,52 @@ define i128 @i128_increment_by_val(i128 %a, i128 %b) nounwind {
 ; callee. See comments for individual functions above for details on registers
 ; used for parameters.
 define <1 x i128> @call_v1i128_increment_by_one() nounwind {
-       %tmp = load <1 x i128>, <1 x i128>* @x, align 16
+       %tmp = load <1 x i128>, ptr @x, align 16
        %ret = call <1 x i128> @v1i128_increment_by_one(<1 x i128> %tmp)
        ret <1 x i128> %ret
 
 ; CHECK-LE-LABEL: @call_v1i128_increment_by_one
-; CHECK-LE: lvx 2, {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: lxvd2x [[VAL:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: xxswapd 34, [[VAL]]
 ; CHECK-LE: bl v1i128_increment_by_one
 ; CHECK-LE: blr
 
 ; CHECK-P9-LABEL: @call_v1i128_increment_by_one
 ; CHECK-P9: lxv
-; CHECK-P9: bl v1i128_increment_by_one
+; CHECK-P9: bl {{.?}}v1i128_increment_by_one
 ; CHECK-P9: blr
 
 ; CHECK-BE-LABEL: @call_v1i128_increment_by_one
 ; CHECK-BE: lxvw4x 34, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-BE-NOT: xxswapd 34, {{[0-9]+}}
-; CHECK-BE: bl v1i128_increment_by_one
+; CHECK-BE: bl {{.?}}v1i128_increment_by_one
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @call_v1i128_increment_by_one
 ; CHECK-NOVSX: lvx 2, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-NOVSX-NOT: xxswapd {{[0-9]+}}, {{[0-9]+}}
-; CHECK-NOVSX: bl v1i128_increment_by_one
+; CHECK-NOVSX: bl {{.?}}v1i128_increment_by_one
 ; CHECK-NOVSX: blr
 }
 
 define <1 x i128> @call_v1i128_increment_by_val() nounwind {
-       %tmp = load <1 x i128>, <1 x i128>* @x, align 16
-       %tmp2 = load <1 x i128>, <1 x i128>* @y, align 16
+       %tmp = load <1 x i128>, ptr @x, align 16
+       %tmp2 = load <1 x i128>, ptr @y, align 16
        %ret = call <1 x i128> @v1i128_increment_by_val(<1 x i128> %tmp, <1 x i128> %tmp2)
        ret <1 x i128> %ret
 
 ; CHECK-LE-LABEL: @call_v1i128_increment_by_val
-; CHECK-LE: lvx 2, {{[0-9]+}}, {{[0-9]+}}
-; CHECK-LE: lvx 3, {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: lxvd2x [[VAL1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE-DAG: lxvd2x [[VAL2:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE-DAG: xxswapd 34, [[VAL1]]
+; CHECK-LE: xxswapd 35, [[VAL2]]
 ; CHECK-LE: bl v1i128_increment_by_val
 ; CHECK-LE: blr
 
 ; CHECK-P9-LABEL: @call_v1i128_increment_by_val
-; CHECK-P9-DAG: lxvx v2
-; CHECK-P9-DAG: lxvx v3
-; CHECK-P9: bl v1i128_increment_by_val
+; CHECK-P9-DAG: lxv v2
+; CHECK-P9-DAG: lxv v3
+; CHECK-P9: bl {{.?}}v1i128_increment_by_val
 ; CHECK-P9: blr
 
 ; CHECK-BE-LABEL: @call_v1i128_increment_by_val
@@ -248,7 +266,7 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
 ; CHECK-BE-DAG: lxvw4x 35, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-BE-NOT: xxswapd 34, {{[0-9]+}}
 ; CHECK-BE-NOT: xxswapd 35, {{[0-9]+}}
-; CHECK-BE: bl v1i128_increment_by_val
+; CHECK-BE: bl {{.?}}v1i128_increment_by_val
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @call_v1i128_increment_by_val
@@ -256,13 +274,13 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
 ; CHECK-NOVSX-DAG: lvx 3, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-NOVSX-NOT: xxswapd 34, {{[0-9]+}}
 ; CHECK-NOVSX-NOT: xxswapd 35, {{[0-9]+}}
-; CHECK-NOVSX: bl v1i128_increment_by_val
+; CHECK-NOVSX: bl {{.?}}v1i128_increment_by_val
 ; CHECK-NOVSX: blr
 
 }
 
 define i128 @call_i128_increment_by_one() nounwind {
-       %tmp = load i128, i128* @a, align 16
+       %tmp = load i128, ptr @a, align 16
        %ret = call i128 @i128_increment_by_one(i128 %tmp)
        ret i128 %ret
 ;       %ret4 = call i128 @i128_increment_by_val(i128 %tmp2, i128 %tmp2)
@@ -275,19 +293,19 @@ define i128 @call_i128_increment_by_one() nounwind {
 ; CHECK-BE-LABEL: @call_i128_increment_by_one
 ; CHECK-BE-DAG: ld 3, 0([[BASEREG:[0-9]+]])
 ; CHECK-BE-DAG: ld 4, 8([[BASEREG]])
-; CHECK-BE: bl i128_increment_by_one
+; CHECK-BE: bl {{.?}}i128_increment_by_one
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @call_i128_increment_by_one
 ; CHECK-NOVSX-DAG: ld 3, 0([[BASEREG:[0-9]+]])
 ; CHECK-NOVSX-DAG: ld 4, 8([[BASEREG]])
-; CHECK-NOVSX: bl i128_increment_by_one
+; CHECK-NOVSX: bl {{.?}}i128_increment_by_one
 ; CHECK-NOVSX: blr
 }
 
 define i128 @call_i128_increment_by_val() nounwind {
-       %tmp = load i128, i128* @a, align 16
-       %tmp2 = load i128, i128* @b, align 16
+       %tmp = load i128, ptr @a, align 16
+       %tmp2 = load i128, ptr @b, align 16
        %ret = call i128 @i128_increment_by_val(i128 %tmp, i128 %tmp2)
        ret i128 %ret
 ; CHECK-LE-LABEL: @call_i128_increment_by_val
@@ -303,7 +321,7 @@ define i128 @call_i128_increment_by_val() nounwind {
 ; CHECK-BE-DAG: ld 4, 8([[P1BASEREG]])
 ; CHECK-BE-DAG: ld 5, 0([[P2BASEREG:[0-9]+]])
 ; CHECK-BE-DAG: ld 6, 8([[P2BASEREG]])
-; CHECK-BE: bl i128_increment_by_val
+; CHECK-BE: bl {{.?}}i128_increment_by_val
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @call_i128_increment_by_val
@@ -311,8 +329,83 @@ define i128 @call_i128_increment_by_val() nounwind {
 ; CHECK-NOVSX-DAG: ld 4, 8([[P1BASEREG]])
 ; CHECK-NOVSX-DAG: ld 5, 0([[P2BASEREG:[0-9]+]])
 ; CHECK-NOVSX-DAG: ld 6, 8([[P2BASEREG]])
-; CHECK-NOVSX: bl i128_increment_by_val
+; CHECK-NOVSX: bl {{.?}}i128_increment_by_val
 ; CHECK-NOVSX: blr
 }
 
+define i128 @callee_i128_split(i32 %i, i128 %i1280, i32 %i4, i32 %i5,
+                               i32 %i6, i32 %i7, i128 %i1281, i32 %i8, i128 %i1282){
+entry:
+  %tmp =  add i128 %i1280, %i1281
+  %tmp1 =  add i128 %tmp, %i1282
 
+  ret i128 %tmp1
+}
+; CHECK-LE-LABEL: @callee_i128_split
+; CHECK-LE-DAG: ld [[TMPREG:[0-9]+]], [[OFFSET:[0-9]+]](1)
+; CHECK-LE-DAG: addc [[TMPREG2:[0-9]+]], 4, 10
+; CHECK-LE-DAG: adde [[TMPREG3:[0-9]+]], 5, [[TMPREG]]
+
+; CHECK-LE-DAG: ld [[TMPREG4:[0-9]+]], [[OFFSET2:[0-9]+]](1)
+; CHECK-LE-DAG: ld [[TMPREG5:[0-9]+]], [[OFFSET3:[0-9]+]](1)
+; CHECK-LE-DAG: addc 3, [[TMPREG2]], [[TMPREG4]]
+; CHECK-LE-DAG: adde 4, [[TMPREG3]], [[TMPREG5]]
+
+; CHECK-BE-LABEL: @callee_i128_split
+; CHECK-BE-DAG: ld [[TMPREG:[0-9]+]], [[OFFSET:[0-9]+]](1)
+; CHECK-BE-DAG: addc [[TMPREG3:[0-9]+]], 5, [[TMPREG]]
+; CHECK-BE-DAG: adde [[TMPREG2:[0-9]+]], 4, 10
+
+; CHECK-BE-DAG: ld [[TMPREG4:[0-9]+]], [[OFFSET2:[0-9]+]](1)
+; CHECK-BE-DAG: ld [[TMPREG5:[0-9]+]], [[OFFSET3:[0-9]+]](1)
+; CHECK-BE-DAG: addc 4, [[TMPREG3]], [[TMPREG4]]
+; CHECK-BE-DAG: adde 3, [[TMPREG2]], [[TMPREG5]]
+
+define i128 @i128_split() {
+entry:
+  %0 = load i128, ptr @a, align 16
+  %1 = load i128, ptr @b, align 16
+  %call = tail call i128 @callee_i128_split(i32 1, i128 %0, i32 4, i32 5,
+                                           i32 6, i32 7, i128 %1, i32 8, i128 9)
+  ret i128 %call
+}
+
+; CHECK-LE-LABEL: @i128_split
+; CHECK-LE-DAG: li 3, 1
+; CHECK-LE-DAG: ld 4, 0([[P2BASEREG:[0-9]+]])
+; CHECK-LE-DAG: ld 5, 8([[P2BASEREG]])
+; CHECK-LE-DAG: li 6, 4
+; CHECK-LE-DAG: li 7, 5
+; CHECK-LE-DAG: li 8, 6
+; CHECK-LE-DAG: li 9, 7
+; CHECK-LE-DAG: ld 10, 0([[P7BASEREG:[0-9]+]])
+; CHECK-LE-DAG: ld [[TMPREG:[0-9]+]], 8([[P7BASEREG]])
+; CHECK-LE-DAG: std [[TMPREG]], [[OFFSET:[0-9]+]](1)
+; CHECK-LE: bl callee_i128_split
+
+
+; CHECK-BE-LABEL: @i128_split
+; CHECK-BE-DAG: li 3, 1
+; CHECK-BE-DAG: ld 4, 0([[P2BASEREG:[0-9]+]])
+; CHECK-BE-DAG: ld 5, 8([[P2BASEREG]])
+; CHECK-BE-DAG: li 6, 4
+; CHECK-BE-DAG: li 7, 5
+; CHECK-BE-DAG: li 8, 6
+; CHECK-BE-DAG: li 9, 7
+; CHECK-BE-DAG: ld 10, 0([[P7BASEREG:[0-9]+]])
+; CHECK-BE-DAG: ld [[TMPREG:[0-9]+]], 8([[P7BASEREG]])
+; CHECK-BE-DAG: std [[TMPREG]], [[OFFSET:[0-9]+]](1)
+; CHECK-BE: bl {{.?}}callee_i128_split
+
+; CHECK-NOVSX-LABEL: @i128_split
+; CHECK-NOVSX-DAG: li 3, 1
+; CHECK-NOVSX-DAG: ld 4, 0([[P2BASEREG:[0-9]+]])
+; CHECK-NOVSX-DAG: ld 5, 8([[P2BASEREG]])
+; CHECK-NOVSX-DAG: li 6, 4
+; CHECK-NOVSX-DAG: li 7, 5
+; CHECK-NOVSX-DAG: li 8, 6
+; CHECK-NOVSX-DAG: li 9, 7
+; CHECK-NOVSX-DAG: ld 10, 0([[P7BASEREG:[0-9]+]])
+; CHECK-NOVSX-DAG: ld [[TMPREG:[0-9]+]], 8([[P7BASEREG]])
+; CHECK-NOVSX-DAG: std [[TMPREG]], [[OFFSET:[0-9]+]](1)
+; CHECK-NOVSX: bl {{.?}}callee_i128_split

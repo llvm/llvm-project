@@ -15,7 +15,7 @@
 ; CHECK: remark: <unknown>:0:0: X86 DAG->DAG Instruction Selection: Function:
 ; CHECK-SAME: main: MI Instruction count changed from 0
 ; CHECK-SAME: to [[INIT:[1-9][0-9]*]]; Delta: [[INIT]]
-; CHECK-NEXT: remark: <unknown>:0:0: Simple Register Coalescing: Function: main:
+; CHECK-NEXT: remark: <unknown>:0:0: Register Coalescer: Function: main:
 ; CHECK-SAME: MI Instruction count changed from [[INIT]] to
 ; CHECK-SAME: [[FINAL:[1-9][0-9]*]];
 ; CHECK-SAME: Delta: [[DELTA:-?[1-9][0-9]*]]
@@ -39,7 +39,7 @@
 ; CHECK-NEXT: Name:            FunctionMISizeChange
 ; CHECK-NEXT: Function:        main
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - Pass:            Simple Register Coalescing
+; CHECK-NEXT:   - Pass:            Register Coalescer
 ; CHECK-NEXT:   - String:          ': Function: '
 ; CHECK-NEXT:   - Function:        main
 ; CHECK-NEXT:   - String:          ': '
@@ -52,7 +52,7 @@
 define i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   ret i32 0
 }
 

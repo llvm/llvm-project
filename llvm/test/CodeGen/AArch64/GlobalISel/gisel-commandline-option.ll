@@ -52,22 +52,26 @@
 ; RUN:   -debug-pass=Structure %s -o /dev/null 2>&1 -verify-machineinstrs=0 \
 ; RUN:   | FileCheck %s --check-prefix DISABLED
 
+; ENABLED: Safe Stack instrumentation pass
+
+; ENABLED-O1: Basic Alias Analysis (stateless AA impl)
+; ENABLED-O1-NEXT: Function Alias Analysis Results
 ; ENABLED:       IRTranslator
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
 ; ENABLED-O1-NEXT:  Analysis containing CSE Info
 ; ENABLED-O1-NEXT:  PreLegalizerCombiner
+; ENABLED-O1-NEXT:  Localizer
 ; VERIFY-O0-NEXT:  AArch64O0PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
-; VERIFY-O0-NEXT:  Analysis containing CSE Info
-; ENABLED-NEXT:  Legalizer
+; ENABLED-O1-NEXT: LoadStoreOpt
+; ENABLED-O1-NEXT:  Analysis containing CSE Info
+; ENABLED:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED:  RegBankSelect
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT:  Localizer
-; VERIFY-O0-NEXT:   Verify generated machine code
-; ENABLED-O1-NEXT: Analysis for ComputingKnownBits
+; ENABLED-NEXT: Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT: Lazy Branch Probability Analysis
 ; ENABLED-O1-NEXT: Lazy Block Frequency Analysis
 ; ENABLED-NEXT:  InstructionSelect

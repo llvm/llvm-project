@@ -15,6 +15,7 @@
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Designator.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/STLExtras.h"
@@ -34,7 +35,7 @@ bool Parser::MayBeDesignationStart() {
     return true;
 
   case tok::l_square: {  // designator: array-designator
-    if (!PP.getLangOpts().CPlusPlus11)
+    if (!PP.getLangOpts().CPlusPlus)
       return true;
 
     // C++11 lambda expressions and C99 designators can be ambiguous all the
@@ -181,7 +182,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
                                       NewSyntax);
 
     Designation D;
-    D.AddDesignator(Designator::getField(FieldName, SourceLocation(), NameLoc));
+    D.AddDesignator(Designator::CreateFieldDesignator(
+        FieldName, SourceLocation(), NameLoc));
     PreferredType.enterDesignatedInitializer(
         Tok.getLocation(), DesignatorCompletion.PreferredBaseType, D);
     return Actions.ActOnDesignatedInitializer(D, ColonLoc, true,
@@ -210,8 +212,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
         return ExprError();
       }
 
-      Desig.AddDesignator(Designator::getField(Tok.getIdentifierInfo(), DotLoc,
-                                               Tok.getLocation()));
+      Desig.AddDesignator(Designator::CreateFieldDesignator(
+          Tok.getIdentifierInfo(), DotLoc, Tok.getLocation()));
       ConsumeToken(); // Eat the identifier.
       continue;
     }
@@ -360,7 +362,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
 
     // If this is a normal array designator, remember it.
     if (Tok.isNot(tok::ellipsis)) {
-      Desig.AddDesignator(Designator::getArray(Idx.get(), StartLoc));
+      Desig.AddDesignator(Designator::CreateArrayDesignator(Idx.get(),
+                                                            StartLoc));
     } else {
       // Handle the gnu array range extension.
       Diag(Tok, diag::ext_gnu_array_range);
@@ -371,9 +374,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
         SkipUntil(tok::r_square, StopAtSemi);
         return RHS;
       }
-      Desig.AddDesignator(Designator::getArrayRange(Idx.get(),
-                                                    RHS.get(),
-                                                    StartLoc, EllipsisLoc));
+      Desig.AddDesignator(Designator::CreateArrayRangeDesignator(
+          Idx.get(), RHS.get(), StartLoc, EllipsisLoc));
     }
 
     T.consumeClose();
@@ -429,7 +431,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
 ///       initializer: [C99 6.7.8]
 ///         '{' initializer-list '}'
 ///         '{' initializer-list ',' '}'
-/// [GNU]   '{' '}'
+/// [C23]   '{' '}'
 ///
 ///       initializer-list:
 ///         designation[opt] initializer ...[opt]
@@ -447,11 +449,14 @@ ExprResult Parser::ParseBraceInitializer() {
   ExprVector InitExprs;
 
   if (Tok.is(tok::r_brace)) {
-    // Empty initializers are a C++ feature and a GNU extension to C.
-    if (!getLangOpts().CPlusPlus)
-      Diag(LBraceLoc, diag::ext_gnu_empty_initializer);
+    // Empty initializers are a C++ feature and a GNU extension to C before C23.
+    if (!getLangOpts().CPlusPlus) {
+      Diag(LBraceLoc, getLangOpts().C23
+                          ? diag::warn_c23_compat_empty_initializer
+                          : diag::ext_c_empty_initializer);
+    }
     // Match the '}'.
-    return Actions.ActOnInitList(LBraceLoc, None, ConsumeBrace());
+    return Actions.ActOnInitList(LBraceLoc, std::nullopt, ConsumeBrace());
   }
 
   // Enter an appropriate expression evaluation context for an initializer list.
@@ -459,12 +464,22 @@ ExprResult Parser::ParseBraceInitializer() {
       Actions, EnterExpressionEvaluationContext::InitList);
 
   bool InitExprsOk = true;
-  DesignatorCompletionInfo DesignatorCompletion{
-      InitExprs,
-      PreferredType.get(T.getOpenLocation()),
+  QualType LikelyType = PreferredType.get(T.getOpenLocation());
+  DesignatorCompletionInfo DesignatorCompletion{InitExprs, LikelyType};
+  bool CalledSignatureHelp = false;
+  auto RunSignatureHelp = [&] {
+    QualType PreferredType;
+    if (!LikelyType.isNull())
+      PreferredType = Actions.ProduceConstructorSignatureHelp(
+          LikelyType->getCanonicalTypeInternal(), T.getOpenLocation(),
+          InitExprs, T.getOpenLocation(), /*Braced=*/true);
+    CalledSignatureHelp = true;
+    return PreferredType;
   };
 
-  while (1) {
+  while (true) {
+    PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
+
     // Handle Microsoft __if_exists/if_not_exists if necessary.
     if (getLangOpts().MicrosoftExt && (Tok.is(tok::kw___if_exists) ||
         Tok.is(tok::kw___if_not_exists))) {
@@ -555,7 +570,7 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
       << Result.IsIfExists;
     // Fall through to skip.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case IEB_Skip:
     Braces.skipToEnd();

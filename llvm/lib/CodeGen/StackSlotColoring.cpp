@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -26,9 +27,9 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -59,10 +60,10 @@ STATISTIC(NumDead,       "Number of trivially dead stack accesses eliminated");
 namespace {
 
   class StackSlotColoring : public MachineFunctionPass {
-    LiveStacks* LS;
-    MachineFrameInfo *MFI;
-    const TargetInstrInfo  *TII;
-    const MachineBlockFrequencyInfo *MBFI;
+    LiveStacks *LS = nullptr;
+    MachineFrameInfo *MFI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
+    const MachineBlockFrequencyInfo *MBFI = nullptr;
 
     // SSIntervals - Spill slot intervals.
     std::vector<LiveInterval*> SSIntervals;
@@ -76,7 +77,7 @@ namespace {
     // OrigAlignments - Alignments of stack objects before coloring.
     SmallVector<Align, 16> OrigAlignments;
 
-    // OrigSizes - Sizess of stack objects before coloring.
+    // OrigSizes - Sizes of stack objects before coloring.
     SmallVector<unsigned, 16> OrigSizes;
 
     // AllColors - If index is set, it's a spill slot, i.e. color.
@@ -91,8 +92,50 @@ namespace {
     // UsedColors - "Colors" that have been assigned. This is per stack ID
     SmallVector<BitVector, 2> UsedColors;
 
+    // Join all intervals sharing one color into a single LiveIntervalUnion to
+    // speedup range overlap test.
+    class ColorAssignmentInfo {
+      // Single liverange (used to avoid creation of LiveIntervalUnion).
+      LiveInterval *SingleLI = nullptr;
+      // LiveIntervalUnion to perform overlap test.
+      LiveIntervalUnion *LIU = nullptr;
+      // LiveIntervalUnion has a parameter in its constructor so doing this
+      // dirty magic.
+      uint8_t LIUPad[sizeof(LiveIntervalUnion)];
+
+    public:
+      ~ColorAssignmentInfo() {
+        if (LIU)
+          LIU->~LiveIntervalUnion(); // Dirty magic again.
+      }
+
+      // Return true if LiveInterval overlaps with any
+      // intervals that have already been assigned to this color.
+      bool overlaps(LiveInterval *LI) const {
+        if (LIU)
+          return LiveIntervalUnion::Query(*LI, *LIU).checkInterference();
+        return SingleLI ? SingleLI->overlaps(*LI) : false;
+      }
+
+      // Add new LiveInterval to this color.
+      void add(LiveInterval *LI, LiveIntervalUnion::Allocator &Alloc) {
+        assert(!overlaps(LI));
+        if (LIU) {
+          LIU->unify(*LI, *LI);
+        } else if (SingleLI) {
+          LIU = new (LIUPad) LiveIntervalUnion(Alloc);
+          LIU->unify(*SingleLI, *SingleLI);
+          LIU->unify(*LI, *LI);
+          SingleLI = nullptr;
+        } else
+          SingleLI = LI;
+      }
+    };
+
+    LiveIntervalUnion::Allocator LIUAlloc;
+
     // Assignments - Color to intervals mapping.
-    SmallVector<SmallVector<LiveInterval*,4>, 16> Assignments;
+    SmallVector<ColorAssignmentInfo, 16> Assignments;
 
   public:
     static char ID; // Pass identification
@@ -117,7 +160,6 @@ namespace {
   private:
     void InitializeSlots();
     void ScanForSpillSlotRefs(MachineFunction &MF);
-    bool OverlapWithAssignments(LiveInterval *li, int Color) const;
     int ColorSlot(LiveInterval *li);
     bool ColorSlots(MachineFunction &MF);
     void RewriteInstruction(MachineInstr &MI, SmallVectorImpl<int> &SlotMapping,
@@ -159,8 +201,7 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
   // FIXME: Need the equivalent of MachineRegisterInfo for frameindex operands.
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-        MachineOperand &MO = MI.getOperand(i);
+      for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isFI())
           continue;
         int FI = MO.getIndex();
@@ -169,7 +210,7 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
         if (!LS->hasInterval(FI))
           continue;
         LiveInterval &li = LS->getInterval(FI);
-        if (!MI.isDebugValue())
+        if (!MI.isDebugInstr())
           li.incrementWeight(
               LiveIntervals::getSpillWeight(false, true, MBFI, MI));
       }
@@ -249,19 +290,6 @@ void StackSlotColoring::InitializeSlots() {
     NextColors[I] = AllColors[I].find_first();
 }
 
-/// OverlapWithAssignments - Return true if LiveInterval overlaps with any
-/// LiveIntervals that have already been assigned to the specified color.
-bool
-StackSlotColoring::OverlapWithAssignments(LiveInterval *li, int Color) const {
-  const SmallVectorImpl<LiveInterval *> &OtherLIs = Assignments[Color];
-  for (unsigned i = 0, e = OtherLIs.size(); i != e; ++i) {
-    LiveInterval *OtherLI = OtherLIs[i];
-    if (OtherLI->overlaps(*li))
-      return true;
-  }
-  return false;
-}
-
 /// ColorSlot - Assign a "color" (stack slot) to the specified stack slot.
 int StackSlotColoring::ColorSlot(LiveInterval *li) {
   int Color = -1;
@@ -274,7 +302,7 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
     // Check if it's possible to reuse any of the used colors.
     Color = UsedColors[StackID].find_first();
     while (Color != -1) {
-      if (!OverlapWithAssignments(li, Color)) {
+      if (!Assignments[Color].overlaps(li)) {
         Share = true;
         ++NumEliminated;
         break;
@@ -300,7 +328,7 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   assert(MFI->getStackID(Color) == MFI->getStackID(FI));
 
   // Record the assignment.
-  Assignments[Color].push_back(li);
+  Assignments[Color].add(li, LIUAlloc);
   LLVM_DEBUG(dbgs() << "Assigning fi#" << FI << " to fi#" << Color << "\n");
 
   // Change size and alignment of the allocated slot. If there are multiple
@@ -326,8 +354,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "Color spill slot intervals:\n");
   bool Changed = false;
-  for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i) {
-    LiveInterval *li = SSIntervals[i];
+  for (LiveInterval *li : SSIntervals) {
     int SS = Register::stackSlot2Index(li->reg());
     int NewSS = ColorSlot(li);
     assert(NewSS >= 0 && "Stack coloring failed?");
@@ -339,8 +366,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   }
 
   LLVM_DEBUG(dbgs() << "\nSpill slots after coloring:\n");
-  for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i) {
-    LiveInterval *li = SSIntervals[i];
+  for (LiveInterval *li : SSIntervals) {
     int SS = Register::stackSlot2Index(li->reg());
     li->setWeight(SlotWeights[SS]);
   }
@@ -348,8 +374,8 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   llvm::stable_sort(SSIntervals, IntervalSorter());
 
 #ifndef NDEBUG
-  for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i)
-    LLVM_DEBUG(SSIntervals[i]->dump());
+  for (LiveInterval *li : SSIntervals)
+    LLVM_DEBUG(li->dump());
   LLVM_DEBUG(dbgs() << '\n');
 #endif
 
@@ -394,8 +420,7 @@ void StackSlotColoring::RewriteInstruction(MachineInstr &MI,
                                            SmallVectorImpl<int> &SlotMapping,
                                            MachineFunction &MF) {
   // Update the operands.
-  for (unsigned i = 0, ee = MI.getNumOperands(); i != ee; ++i) {
-    MachineOperand &MO = MI.getOperand(i);
+  for (MachineOperand &MO : MI.operands()) {
     if (!MO.isFI())
       continue;
     int OldFI = MO.getIndex();
@@ -455,13 +480,14 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize)))
       continue;
     if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1 ||
-        LoadSize != StoreSize)
+        LoadSize != StoreSize || !MFI->isSpillSlotObjectIndex(FirstSS))
       continue;
 
     ++NumDead;
     changed = true;
 
-    if (NextMI->findRegisterUseOperandIdx(LoadReg, true, nullptr) != -1) {
+    if (NextMI->findRegisterUseOperandIdx(LoadReg, /*TRI=*/nullptr, true) !=
+        -1) {
       ++NumDead;
       toErase.push_back(&*ProbableLoadMI);
     }
@@ -499,8 +525,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
 
   // If there are calls to setjmp or sigsetjmp, don't perform stack slot
   // coloring. The stack could be modified before the longjmp is executed,
-  // resulting in the wrong value being used afterwards. (See
-  // <rdar://problem/8007500>.)
+  // resulting in the wrong value being used afterwards.
   if (MF.exposesReturnsTwice())
     return false;
 
@@ -520,8 +545,6 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   OrigSizes.clear();
   AllColors.clear();
   UsedColors.clear();
-  for (unsigned i = 0, e = Assignments.size(); i != e; ++i)
-    Assignments[i].clear();
   Assignments.clear();
 
   return Changed;

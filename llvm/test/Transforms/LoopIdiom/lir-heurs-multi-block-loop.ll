@@ -1,11 +1,11 @@
-;  RUN: opt -basic-aa -loop-idiom -use-lir-code-size-heurs=true < %s -S | FileCheck %s
+;  RUN: opt -passes=loop-idiom -use-lir-code-size-heurs=true < %s -S | FileCheck %s
 
 ; When compiling for codesize we avoid idiom recognition for a
 ; multi-block loop unless it is one of
 ; - a loop_memset idiom, or
 ; - a memset/memcpy idiom in a nested loop.
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 @APPLES = common global i32 0, align 4
 @ORANGES = common global i32 0, align 4
 
@@ -16,7 +16,7 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 ; CHECK: call void @llvm.memset
 ; CHECK: for.body:
 ;
-define i32 @LoopMemset([2048 x i8]* noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
+define i32 @LoopMemset(ptr noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
 entry:
   %cmp12 = icmp sgt i32 %SIZE, 0
   br i1 %cmp12, label %for.body.preheader, label %for.end
@@ -27,23 +27,23 @@ for.body.preheader:                               ; preds = %entry
 for.body:                                         ; preds = %for.body.preheader, %for.inc
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %BASKET.013 = phi i32 [ %BASKET.1, %for.inc ], [ 0, %for.body.preheader ]
-  %arraydecay = getelementptr inbounds [2048 x i8], [2048 x i8]* %DST, i64 %indvars.iv, i64 0
-  tail call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 -1, i64 2048, i1 false)
+  %arraydecay = getelementptr inbounds [2048 x i8], ptr %DST, i64 %indvars.iv, i64 0
+  tail call void @llvm.memset.p0.i64(ptr %arraydecay, i8 -1, i64 2048, i1 false)
   %0 = trunc i64 %indvars.iv to i32
   %rem11 = and i32 %0, 1
   %cmp1 = icmp eq i32 %rem11, 0
-  %1 = load i32, i32* @ORANGES, align 4
-  %2 = load i32, i32* @APPLES, align 4
+  %1 = load i32, ptr @ORANGES, align 4
+  %2 = load i32, ptr @APPLES, align 4
   br i1 %cmp1, label %if.then, label %if.else
 
 if.else:                                          ; preds = %for.body
   %dec3 = add nsw i32 %2, -1
-  store i32 %dec3, i32* @APPLES, align 4
+  store i32 %dec3, ptr @APPLES, align 4
   br label %for.inc
 
 if.then:                                          ; preds = %for.body
   %dec = add nsw i32 %1, -1
-  store i32 %dec, i32* @ORANGES, align 4
+  store i32 %dec, ptr @ORANGES, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.then, %if.else
@@ -71,7 +71,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: call void @llvm.memset
 ; CHECK: for.cond1.preheader:
 ;
-define i32 @NestedMemset_LoopMemset([2046 x i8]* noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
+define i32 @NestedMemset_LoopMemset(ptr noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
 entry:
   %cmp25 = icmp sgt i32 %SIZE, 0
   br i1 %cmp25, label %for.cond1.preheader.preheader, label %for.end11
@@ -90,20 +90,20 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
 for.body3:                                        ; preds = %for.cond1.preheader, %for.inc
   %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.inc ]
   %BASKET.123 = phi i32 [ %BASKET.026, %for.cond1.preheader ], [ %BASKET.2, %for.inc ]
-  %arrayidx5 = getelementptr inbounds [2046 x i8], [2046 x i8]* %DST, i64 %idxprom4, i64 %indvars.iv
-  store i8 -1, i8* %arrayidx5, align 1
-  %0 = load i32, i32* @APPLES, align 4
-  %1 = load i32, i32* @ORANGES, align 4
+  %arrayidx5 = getelementptr inbounds [2046 x i8], ptr %DST, i64 %idxprom4, i64 %indvars.iv
+  store i8 -1, ptr %arrayidx5, align 1
+  %0 = load i32, ptr @APPLES, align 4
+  %1 = load i32, ptr @ORANGES, align 4
   br i1 %cmp6, label %if.then, label %if.else
 
 if.else:                                          ; preds = %for.body3
   %dec8 = add nsw i32 %0, -1
-  store i32 %dec8, i32* @APPLES, align 4
+  store i32 %dec8, ptr @APPLES, align 4
   br label %for.inc
 
 if.then:                                          ; preds = %for.body3
   %dec = add nsw i32 %1, -1
-  store i32 %dec, i32* @ORANGES, align 4
+  store i32 %dec, ptr @ORANGES, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.then, %if.else
@@ -130,10 +130,10 @@ for.end11:                                        ; preds = %for.end11.loopexit,
 
 ; LIR avoided: memset idiom in multi-block top-level loop.
 ; ========================================================
-; CHECK-LABEL: @Non_NestedMemset 
+; CHECK-LABEL: @Non_NestedMemset
 ; CHECK-NOT: call void @llvm.memset
 ;
-define i32 @Non_NestedMemset(i8* noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
+define i32 @Non_NestedMemset(ptr noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
 entry:
   %cmp12 = icmp sgt i32 %SIZE, 0
   br i1 %cmp12, label %for.body.preheader, label %for.end
@@ -144,23 +144,23 @@ for.body.preheader:                               ; preds = %entry
 for.body:                                         ; preds = %for.body.preheader, %for.inc
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %BASKET.013 = phi i32 [ %BASKET.1, %for.inc ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i8, i8* %DST, i64 %indvars.iv
-  store i8 -1, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %DST, i64 %indvars.iv
+  store i8 -1, ptr %arrayidx, align 1
   %0 = trunc i64 %indvars.iv to i32
   %rem11 = and i32 %0, 1
   %cmp1 = icmp eq i32 %rem11, 0
-  %1 = load i32, i32* @ORANGES, align 4
-  %2 = load i32, i32* @APPLES, align 4
+  %1 = load i32, ptr @ORANGES, align 4
+  %2 = load i32, ptr @APPLES, align 4
   br i1 %cmp1, label %if.then, label %if.else
 
 if.else:                                          ; preds = %for.body
   %dec3 = add nsw i32 %2, -1
-  store i32 %dec3, i32* @APPLES, align 4
+  store i32 %dec3, ptr @APPLES, align 4
   br label %for.inc
 
 if.then:                                          ; preds = %for.body
   %dec = add nsw i32 %1, -1
-  store i32 %dec, i32* @ORANGES, align 4
+  store i32 %dec, ptr @ORANGES, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.then, %if.else

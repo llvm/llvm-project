@@ -10,9 +10,7 @@
 
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
-#include "llvm/DebugInfo/PDB/PDBSymbol.h"
-
-#include <utility>
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 using namespace llvm;
 using namespace llvm::pdb;

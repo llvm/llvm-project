@@ -1,10 +1,10 @@
 ; RUN: llc < %s -tail-dup-placement-threshold=4 | FileCheck %s
 
 ; Based on test case from PR43695:
-; __declspec(allocator) void *alloc(unsigned int size);
+; __declspec(allocator) ptr alloc(unsigned int size);
 ; void f2();
 ; void f1(unsigned int *size_ptr) {
-;     void *hg = alloc(size_ptr ? *size_ptr : 1UL);
+;     ptr hg = alloc(size_ptr ? *size_ptr : 1UL);
 ;     f2();
 ; }
 
@@ -15,20 +15,20 @@ source_filename = "t.cpp"
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.22.27905"
 
-define dso_local void @taildupit(i32* readonly %size_ptr) !dbg !8 {
+define dso_local void @taildupit(ptr readonly %size_ptr) !dbg !8 {
 entry:
-  call void @llvm.dbg.value(metadata i32* %size_ptr, metadata !14, metadata !DIExpression()), !dbg !17
-  %tobool = icmp eq i32* %size_ptr, null, !dbg !18
+  call void @llvm.dbg.value(metadata ptr %size_ptr, metadata !14, metadata !DIExpression()), !dbg !17
+  %tobool = icmp eq ptr %size_ptr, null, !dbg !18
   br i1 %tobool, label %cond.end, label %cond.true, !dbg !18
 
 cond.true:                                        ; preds = %entry
-  %0 = load i32, i32* %size_ptr, align 4, !dbg !18, !tbaa !19
+  %0 = load i32, ptr %size_ptr, align 4, !dbg !18, !tbaa !19
   br label %cond.end, !dbg !18
 
 cond.end:                                         ; preds = %entry, %cond.true
   %cond = phi i32 [ %0, %cond.true ], [ 1, %entry ], !dbg !18
-  %call = tail call i8* @alloc(i32 %cond), !dbg !18, !heapallocsite !2
-  call void @llvm.dbg.value(metadata i8* %call, metadata !15, metadata !DIExpression()), !dbg !17
+  %call = tail call ptr @alloc(i32 %cond), !dbg !18, !heapallocsite !2
+  call void @llvm.dbg.value(metadata ptr %call, metadata !15, metadata !DIExpression()), !dbg !17
   tail call void @f2(), !dbg !23
   ret void, !dbg !24
 }
@@ -55,7 +55,7 @@ cond.end:                                         ; preds = %entry, %cond.true
 ; CHECK-NEXT:  .short [[L3]]-[[L2]]
 ; CHECK-NEXT:  .long 3
 
-declare dso_local i8* @alloc(i32)
+declare dso_local ptr @alloc(i32)
 
 declare dso_local void @f2()
 

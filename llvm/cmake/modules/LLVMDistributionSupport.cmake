@@ -41,11 +41,17 @@ function(llvm_distribution_build_target_map)
 
   foreach(distribution ${LLVM_DISTRIBUTIONS})
     foreach(target ${LLVM_${distribution}_DISTRIBUTION_COMPONENTS})
-      # We don't allow a target to be in multiple distributions, because we
-      # wouldn't know which export set to place it in.
-      get_property(current_distribution GLOBAL PROPERTY LLVM_DISTRIBUTION_FOR_${target})
-      if(current_distribution AND NOT current_distribution STREQUAL distribution)
-        message(SEND_ERROR "Target ${target} cannot be in multiple distributions ${distribution} and ${current_distribution}")
+      # By default, we allow a target to be in multiple distributions, and use
+      # the last one to determine its export set. We disallow this in strict
+      # mode, emitting a single error at the end for readability.
+      if(LLVM_STRICT_DISTRIBUTIONS)
+        get_property(current_distribution GLOBAL PROPERTY LLVM_DISTRIBUTION_FOR_${target})
+        if(current_distribution AND NOT current_distribution STREQUAL distribution)
+          set_property(GLOBAL APPEND_STRING PROPERTY LLVM_DISTRIBUTION_ERRORS
+            "Target ${target} cannot be in multiple distributions \
+             ${distribution} and ${current_distribution}\n"
+            )
+        endif()
       endif()
       set_property(GLOBAL PROPERTY LLVM_DISTRIBUTION_FOR_${target} ${distribution})
     endforeach()
@@ -78,13 +84,18 @@ function(get_llvm_distribution target in_distribution_var distribution_var)
   get_property(distribution GLOBAL PROPERTY LLVM_DISTRIBUTION_FOR_${target})
   if(ARG_UMBRELLA)
     get_property(umbrella_distribution GLOBAL PROPERTY LLVM_DISTRIBUTION_FOR_${ARG_UMBRELLA})
-    if(distribution AND umbrella_distribution AND NOT distribution STREQUAL umbrella_distribution)
-      message(SEND_ERROR "Target ${target} has different distribution ${distribution} from its"
-                         " umbrella target ${ARG_UMBRELLA} distribution ${umbrella_distribution}")
-    elseif(NOT distribution)
+    if(LLVM_STRICT_DISTRIBUTIONS AND distribution AND umbrella_distribution AND
+        NOT distribution STREQUAL umbrella_distribution)
+      set_property(GLOBAL APPEND_STRING PROPERTY LLVM_DISTRIBUTION_ERRORS
+        "Target ${target} has different distribution ${distribution} from its \
+         umbrella target's (${ARG_UMBRELLA}) distribution ${umbrella_distribution}\n"
+        )
+    endif()
+    if(NOT distribution)
       set(distribution ${umbrella_distribution})
     endif()
   endif()
+
   if(distribution)
     set(${in_distribution_var} YES PARENT_SCOPE)
     if(distribution STREQUAL "<DEFAULT>")
@@ -212,6 +223,18 @@ endfunction()
 # where ${distribution} is the distribution name in lowercase, or "distribution"
 # for the default distribution.
 function(llvm_distribution_add_targets)
+  # This function is called towards the end of LLVM's CMakeLists.txt, so all
+  # errors will have been seen by now.
+  if(LLVM_STRICT_DISTRIBUTIONS)
+    get_property(errors GLOBAL PROPERTY LLVM_DISTRIBUTION_ERRORS)
+    if(errors)
+      string(PREPEND errors
+        "Strict distribution errors (turn off LLVM_STRICT_DISTRIBUTIONS to bypass):\n"
+        )
+      message(FATAL_ERROR "${errors}")
+    endif()
+  endif()
+
   set(distributions "${LLVM_DISTRIBUTIONS}")
   if(NOT distributions)
     # CMake seemingly doesn't distinguish between an empty list and a list
@@ -220,6 +243,8 @@ function(llvm_distribution_add_targets)
     # loop.
     set(distributions "<DEFAULT>")
   endif()
+
+  get_property(LLVM_DRIVER_TOOL_SYMLINKS GLOBAL PROPERTY LLVM_DRIVER_TOOL_SYMLINKS)
 
   foreach(distribution ${distributions})
     if(distribution STREQUAL "<DEFAULT>")
@@ -237,20 +262,24 @@ function(llvm_distribution_add_targets)
     add_custom_target(install-${distribution_target}-stripped)
 
     foreach(target ${distribution_components})
+      # Note that some distribution components may not have an actual target, but only an install-FOO target.
+      # This happens for example if a target is an INTERFACE target.
       if(TARGET ${target})
         add_dependencies(${distribution_target} ${target})
-      else()
-        message(SEND_ERROR "Specified distribution component '${target}' doesn't have a target")
       endif()
 
       if(TARGET install-${target})
         add_dependencies(install-${distribution_target} install-${target})
+      elseif(TARGET install-llvm-driver AND ${target} IN_LIST LLVM_DRIVER_TOOL_SYMLINKS)
+        add_dependencies(install-${distribution_target} install-llvm-driver)
       else()
         message(SEND_ERROR "Specified distribution component '${target}' doesn't have an install target")
       endif()
 
       if(TARGET install-${target}-stripped)
         add_dependencies(install-${distribution_target}-stripped install-${target}-stripped)
+      elseif(TARGET install-llvm-driver-stripped AND ${target} IN_LIST LLVM_DRIVER_TOOL_SYMLINKS)
+        add_dependencies(install-${distribution_target}-stripped install-llvm-driver-stripped)
       else()
         message(SEND_ERROR
                 "Specified distribution component '${target}' doesn't have an install-stripped target."

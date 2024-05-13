@@ -8,31 +8,34 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/BinaryFormat/Magic.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleList.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/ISectionContribVisitor.h"
-#include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
+#include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumInjectedSources.h"
-#include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 #include "llvm/DebugInfo/PDB/Native/NativeExeSymbol.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
-#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
+#include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
@@ -44,6 +47,12 @@
 using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::pdb;
+
+namespace llvm {
+namespace codeview {
+union DebugInfo;
+}
+} // namespace llvm
 
 static DbiStream *getDbiStreamPtr(PDBFile &File) {
   Expected<DbiStream &> DbiS = File.getPDBDbiStream();
@@ -65,7 +74,7 @@ Error NativeSession::createFromPdb(std::unique_ptr<MemoryBuffer> Buffer,
                                    std::unique_ptr<IPDBSession> &Session) {
   StringRef Path = Buffer->getBufferIdentifier();
   auto Stream = std::make_unique<MemoryBufferByteStream>(
-      std::move(Buffer), llvm::support::little);
+      std::move(Buffer), llvm::endianness::little);
 
   auto Allocator = std::make_unique<BumpPtrAllocator>();
   auto File = std::make_unique<PDBFile>(Path, std::move(Stream), *Allocator);
@@ -95,8 +104,8 @@ loadPdbFile(StringRef PdbPath, std::unique_ptr<BumpPtrAllocator> &Allocator) {
   if (EC || Magic != file_magic::pdb)
     return make_error<RawError>(EC);
 
-  auto Stream = std::make_unique<MemoryBufferByteStream>(std::move(Buffer),
-                                                         llvm::support::little);
+  auto Stream = std::make_unique<MemoryBufferByteStream>(
+      std::move(Buffer), llvm::endianness::little);
 
   auto File = std::make_unique<PDBFile>(PdbPath, std::move(Stream), *Allocator);
   if (auto EC = File->parseFileHeaders())
@@ -167,7 +176,7 @@ NativeSession::searchForPdb(const PdbSearchOptions &Opts) {
   if (!PathOrErr)
     return PathOrErr.takeError();
   StringRef PathFromExe = PathOrErr.get();
-  sys::path::Style Style = PathFromExe.startswith("/")
+  sys::path::Style Style = PathFromExe.starts_with("/")
                                ? sys::path::Style::posix
                                : sys::path::Style::windows;
   StringRef PdbName = sys::path::filename(PathFromExe, Style);

@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/BitVector.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/TableGenBackend.h"
-#include "llvm/Support/JSON.h"
 
 #define DEBUG_TYPE "json-emitter"
 
@@ -60,7 +60,7 @@ json::Value JSONEmitter::translateInit(const Init &I) {
     return Str->getValue();
   } else if (auto *List = dyn_cast<ListInit>(&I)) {
     json::Array array;
-    for (auto val : *List)
+    for (auto *val : *List)
       array.push_back(translateInit(*val));
     return std::move(array);
   }
@@ -129,13 +129,13 @@ void JSONEmitter::run(raw_ostream &OS) {
   // construct the array for each one.
   std::map<std::string, json::Array> instance_lists;
   for (const auto &C : Records.getClasses()) {
-    auto &Name = C.second->getNameInitAsString();
+    const auto Name = C.second->getNameInitAsString();
     (void)instance_lists[Name];
   }
 
   // Main iteration over the defs.
   for (const auto &D : Records.getDefs()) {
-    auto &Name = D.second->getNameInitAsString();
+    const auto Name = D.second->getNameInitAsString();
     auto &Def = *D.second;
 
     json::Object obj;
@@ -159,6 +159,11 @@ void JSONEmitter::run(raw_ostream &OS) {
 
     obj["!name"] = Name;
     obj["!anonymous"] = Def.isAnonymous();
+
+    json::Array locs;
+    for (const SMLoc Loc : Def.getLoc())
+      locs.push_back(SrcMgr.getFormattedLocationNoOffset(Loc));
+    obj["!locs"] = std::move(locs);
 
     root[Name] = std::move(obj);
 

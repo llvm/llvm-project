@@ -106,19 +106,19 @@ Most (but not all) of the features of the LFTS were accepted into C++17.
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
 | 8.2.2   | ``weak_ptr`` enhancements                             | Not yet            | Never added                              |                         |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.5     | ``memory_resource``                                   | Not yet            |                                          |                         |
+| 8.5     | ``memory_resource``                                   | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.6     | ``polymorphic_allocator``                             | Not yet            |                                          |                         |
+| 8.6     | ``polymorphic_allocator``                             | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
 | 8.7     | ``resource_adaptor``                                  |                    | n/a                                      | Not part of C++17       |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.8     | Access to program-wide ``memory_resource`` objects    | Not yet            |                                          |                         |
+| 8.8     | Access to program-wide ``memory_resource`` objects    | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.9     | Pool resource classes                                 | Not yet            |                                          |                         |
+| 8.9     | Pool resource classes                                 | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.10    | ``monotonic_buffer_resource``                         | Not yet            |                                          |                         |
+| 8.10    | ``monotonic_buffer_resource``                         | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.11    | Alias templates using polymorphic memory resources    | Not yet            |                                          |                         |
+| 8.11    | Alias templates using polymorphic memory resources    | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
 | 8.12    | Non-owning pointers                                   |                    | n/a                                      | Not part of C++17       |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
@@ -143,7 +143,8 @@ Most (but not all) of the features of the LFTS were accepted into C++17.
 `FileSystem TS <https://wg21.link/N4100>`__
 -------------------------------------------
 The FileSystem TS was accepted (in totality) for C++17.
-The FileSystem TS implementation was shipped in namespace ``std`` in LLVM 7.0, and will be removed in LLVM 11.0 (due to the lack of deprecation warnings before LLVM 9.0).
+The FileSystem TS implementation was shipped in namespace ``std`` in LLVM 7.0, and was
+removed in LLVM 11.0 (due to the lack of deprecation warnings before LLVM 9.0).
 
 Parallelism TS `V1 <https://wg21.link/N4507>`__ and `V2 <https://wg21.link/N4706>`__
 ------------------------------------------------------------------------------------
@@ -152,8 +153,10 @@ We have not yet shipped an implementation of the Parallelism TS.
 
 `Coroutines TS <https://wg21.link/N4680>`__
 -------------------------------------------
-The Coroutines TS is not yet part of a shipping standard.
-We are shipping (as of v5.0) an implementation of the Coroutines TS in namespace ``std::experimental``.
+The Coroutines TS was accepted for C++20.
+An implementation of the Coroutines TS was shipped in LLVM 5.0 in namespace ``std::experimental``,
+and C++20 Coroutines shipped in LLVM 14.0. The implementation of the Coroutines TS in ``std::experimental``
+has been removed in LLVM 17.0.
 
 `Networking TS <https://wg21.link/N4656>`__
 -------------------------------------------
@@ -162,13 +165,15 @@ We have not yet shipped an implementation of the Networking TS.
 
 `Ranges TS <https://wg21.link/N4685>`__
 ---------------------------------------
-The Ranges TS is not yet part of a shipping standard.
-We have not yet shipped an implementation of the Ranges TS.
+The Ranges TS was accepted for C++20.
+We will not ship an implementation of the Ranges TS, however we are actively working on
+the implementation of C++20 Ranges.
 
 `Concepts TS <https://wg21.link/N4641>`__
 -----------------------------------------
-The Concepts TS is not yet part of a shipping standard, but it has been adopted into the C++20 working draft.
-We have not yet shipped an implementation of the Concepts TS.
+The Concepts TS was accepted for C++20.
+We will not ship an implementation of the Concepts TS, however we are shipping an
+implementation of C++20 Concepts.
 
 `Concurrency TS <https://wg21.link/P0159>`__
 --------------------------------------------

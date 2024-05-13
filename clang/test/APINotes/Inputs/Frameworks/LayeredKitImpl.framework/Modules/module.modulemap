@@ -1,0 +1,5 @@
+framework module LayeredKitImpl {
+  umbrella header "LayeredKitImpl.h"
+  export *
+  module * { export * }
+}

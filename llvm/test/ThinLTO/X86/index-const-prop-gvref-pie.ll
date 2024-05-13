@@ -6,19 +6,19 @@
 ; RUN: llvm-dis %t3.2.3.import.bc -o - | FileCheck %s --check-prefix=DEST
 
 ;; For PIE, keep dso_local for declarations to enable direct access.
-; DEST:      @b = external dso_local global i32*
+; DEST:      @b = external dso_local global ptr
 ; DEST-NEXT: @a = available_externally dso_local global i32 42, align 4
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @a = external global i32
-@b = external global i32*
+@b = external global ptr
 
 define i32 @main() {
-  %p = load i32*, i32** @b, align 8
-  store i32 33, i32* %p, align 4
-  %v = load i32, i32* @a, align 4
+  %p = load ptr, ptr @b, align 8
+  store i32 33, ptr %p, align 4
+  %v = load i32, ptr @a, align 4
   ret i32 %v
 }
 

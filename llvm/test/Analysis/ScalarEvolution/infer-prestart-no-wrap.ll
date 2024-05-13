@@ -1,7 +1,6 @@
-; ; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s
 ; ; RUN: opt -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
-define void @infer.sext.0(i1* %c, i32 %start, i32* %buf) {
+define void @infer.sext.0(ptr %c, i32 %start, ptr %buf) {
 ; CHECK-LABEL: Classifying expressions for: @infer.sext.0
  entry:
   br label %loop
@@ -14,8 +13,8 @@ define void @infer.sext.0(i1* %c, i32 %start, i32* %buf) {
 ; CHECK: %idx.inc.sext = sext i32 %idx.inc to i64
 ; CHECK-NEXT: -->  {(1 + (sext i32 %start to i64))<nsw>,+,1}<nsw><%loop>
 
-  %buf.gep = getelementptr inbounds i32, i32* %buf, i32 %idx.inc
-  %val = load i32, i32* %buf.gep
+  %buf.gep = getelementptr inbounds i32, ptr %buf, i32 %idx.inc
+  %val = load i32, ptr %buf.gep
 
   %condition = icmp eq i32 %counter, 1
   %counter.inc = add i32 %counter, 1
@@ -25,7 +24,7 @@ define void @infer.sext.0(i1* %c, i32 %start, i32* %buf) {
   ret void
 }
 
-define void @infer.zext.0(i1* %c, i32 %start, i32* %buf) {
+define void @infer.zext.0(ptr %c, i32 %start, ptr %buf) {
 ; CHECK-LABEL: Classifying expressions for: @infer.zext.0
  entry:
   br label %loop
@@ -38,8 +37,8 @@ define void @infer.zext.0(i1* %c, i32 %start, i32* %buf) {
 ; CHECK: %idx.inc.sext = zext i32 %idx.inc to i64
 ; CHECK-NEXT: -->  {(1 + (zext i32 %start to i64))<nuw><nsw>,+,1}<nuw><%loop>
 
-  %buf.gep = getelementptr inbounds i32, i32* %buf, i32 %idx.inc
-  %val = load i32, i32* %buf.gep
+  %buf.gep = getelementptr inbounds i32, ptr %buf, i32 %idx.inc
+  %val = load i32, ptr %buf.gep
 
   %condition = icmp eq i32 %counter, 1
   %counter.inc = add i32 %counter, 1
@@ -49,7 +48,7 @@ define void @infer.zext.0(i1* %c, i32 %start, i32* %buf) {
   ret void
 }
 
-define void @infer.sext.1(i32 %start, i1* %c) {
+define void @infer.sext.1(i32 %start, ptr %c) {
 ; CHECK-LABEL: Classifying expressions for: @infer.sext.1
  entry:
   %start.mul = mul i32 %start, 4
@@ -62,14 +61,14 @@ define void @infer.sext.1(i32 %start, i1* %c) {
 ; CHECK: %idx.sext = sext i32 %idx to i64
 ; CHECK-NEXT:  -->  {(2 + (sext i32 (4 * %start) to i64))<nuw><nsw>,+,2}<nsw><%loop>
   %idx.inc = add nsw i32 %idx, 2
-  %condition = load i1, i1* %c
+  %condition = load i1, ptr %c
   br i1 %condition, label %exit, label %loop
 
  exit:
   ret void
 }
 
-define void @infer.sext.2(i1* %c, i8 %start) {
+define void @infer.sext.2(ptr %c, i8 %start) {
 ; CHECK-LABEL: Classifying expressions for: @infer.sext.2
  entry:
   %start.inc = add i8 %start, 1
@@ -82,14 +81,14 @@ define void @infer.sext.2(i1* %c, i8 %start) {
 ; CHECK: %idx.sext = sext i8 %idx to i16
 ; CHECK-NEXT: -->  {(1 + (sext i8 %start to i16))<nsw>,+,1}<nsw><%loop>
   %idx.inc = add nsw i8 %idx, 1
-  %condition = load volatile i1, i1* %c
+  %condition = load volatile i1, ptr %c
   br i1 %condition, label %exit, label %loop
 
  exit:
   ret void
 }
 
-define void @infer.zext.1(i1* %c, i8 %start) {
+define void @infer.zext.1(ptr %c, i8 %start) {
 ; CHECK-LABEL: Classifying expressions for: @infer.zext.1
  entry:
   %start.inc = add i8 %start, 1
@@ -102,7 +101,7 @@ define void @infer.zext.1(i1* %c, i8 %start) {
 ; CHECK: %idx.zext = zext i8 %idx to i16
 ; CHECK-NEXT: -->  {(1 + (zext i8 %start to i16))<nuw><nsw>,+,1}<nuw><%loop>
   %idx.inc = add nuw i8 %idx, 1
-  %condition = load volatile i1, i1* %c
+  %condition = load volatile i1, ptr %c
   br i1 %condition, label %exit, label %loop
 
  exit:

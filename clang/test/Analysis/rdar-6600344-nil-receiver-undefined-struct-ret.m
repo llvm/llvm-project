@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
 
 typedef struct Foo { int x; } Bar;
@@ -13,12 +13,12 @@ typedef struct Foo { int x; } Bar;
 }
 @end
 
-void createFoo() {
+void createFoo(void) {
   MyClass *obj = 0;  
   Bar f = [obj foo]; // no-warning
 }
 
-void createFoo2() {
+void createFoo2(void) {
   MyClass *obj = 0;  
   [obj foo]; // no-warning
   Bar f = [obj foo]; // no-warning

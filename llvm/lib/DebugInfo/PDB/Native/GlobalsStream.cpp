@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 
 #include "llvm/DebugInfo/CodeView/RecordName.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/Hash.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
@@ -141,14 +142,12 @@ readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
     return joinErrors(std::move(EC),
                       make_error<RawError>(raw_error_code::corrupt_file,
                                            "Could not read a bitmap."));
-  uint32_t NumBuckets1 = 0;
   uint32_t CompressedBucketIdx = 0;
   for (uint32_t I = 0; I <= IPHR_HASH; ++I) {
     uint8_t WordIdx = I / 32;
     uint8_t BitIdx = I % 32;
     bool IsSet = HashBitmap[WordIdx] & (1U << BitIdx);
     if (IsSet) {
-      ++NumBuckets1;
       BucketMap[I] = CompressedBucketIdx++;
     } else {
       BucketMap[I] = -1;
@@ -157,7 +156,7 @@ readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
 
   uint32_t NumBuckets = 0;
   for (uint32_t B : HashBitmap)
-    NumBuckets += countPopulation(B);
+    NumBuckets += llvm::popcount(B);
 
   // Hash buckets follow.
   if (auto EC = Reader.readArray(HashBuckets, NumBuckets))

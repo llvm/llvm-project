@@ -10,6 +10,8 @@
 
 // typedef sub_match<wstring::const_iterator>   wssub_match;
 
+// XFAIL: no-wide-characters
+
 #include <regex>
 #include <type_traits>
 #include "test_macros.h"

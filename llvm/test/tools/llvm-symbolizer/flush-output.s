@@ -14,4 +14,4 @@ foo:
 # RUN:   | FileCheck %s
 
 # CHECK: flush-output.s:10
-# CHECK: bad
+# CHECK: ??:0

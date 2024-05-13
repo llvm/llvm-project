@@ -17,4 +17,7 @@ $ clang -arch arm64 main.arm64.o -o main.arm64 -g
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/call_pc/main.arm64 -o %t.dSYM
 RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_pc
 
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/call_pc/main.arm64 -o %t.dSYM
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_pc
+
 CHECK: DW_AT_call_pc (0x0000000100007f94)

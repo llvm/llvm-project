@@ -18,7 +18,7 @@
   ; out of a loop the debug information is not retained.
   ;
   ; CHECK-LABEL:  bb.0.entry:
-  ; CHECK:        MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @x, $noreg :: (load 8 from got)
+  ; CHECK:        MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @x, $noreg :: (load (s64) from got)
   ; CHECK-LABEL:  bb.1.while.body:
   ;
   ; ModuleID = 'tx.ll'
@@ -28,18 +28,18 @@
   @x = common local_unnamed_addr global i32 0, align 4, !dbg !0
 
   ; Function Attrs: noreturn nounwind uwtable
-  define void @Process(i32* nocapture readonly %p) local_unnamed_addr  !dbg !9 {
+  define void @Process(ptr nocapture readonly %p) local_unnamed_addr  !dbg !9 {
   entry:
-    tail call void @llvm.dbg.value(metadata i32* %p, i64 0, metadata !16, metadata !17), !dbg !18
+    tail call void @llvm.dbg.value(metadata ptr %p, i64 0, metadata !16, metadata !17), !dbg !18
     br label %while.body, !dbg !19
 
   while.body:                                       ; preds = %while.body, %entry
-    %p.addr.0 = phi i32* [ %p, %entry ], [ %incdec.ptr, %while.body ]
-    tail call void @llvm.dbg.value(metadata i32* %p.addr.0, i64 0, metadata !16, metadata !17), !dbg !18
-    %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.0, i64 1, !dbg !20
-    tail call void @llvm.dbg.value(metadata i32* %incdec.ptr, i64 0, metadata !16, metadata !17), !dbg !18
-    %0 = load i32, i32* %p.addr.0, align 4, !dbg !21, !tbaa !22
-    store i32 %0, i32* @x, align 4, !dbg !26, !tbaa !22
+    %p.addr.0 = phi ptr [ %p, %entry ], [ %incdec.ptr, %while.body ]
+    tail call void @llvm.dbg.value(metadata ptr %p.addr.0, i64 0, metadata !16, metadata !17), !dbg !18
+    %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.0, i64 1, !dbg !20
+    tail call void @llvm.dbg.value(metadata ptr %incdec.ptr, i64 0, metadata !16, metadata !17), !dbg !18
+    %0 = load i32, ptr %p.addr.0, align 4, !dbg !21, !tbaa !22
+    store i32 %0, ptr @x, align 4, !dbg !26, !tbaa !22
     br label %while.body, !dbg !27, !llvm.loop !29
   }
 
@@ -107,9 +107,9 @@ body:             |
     DBG_VALUE %0, _, !16, !17, debug-location !18
     %1 = ADD64ri8 %0, 4, implicit-def dead $eflags, debug-location !20
     DBG_VALUE %1, _, !16, !17, debug-location !18
-    %3 = MOV32rm %0, 1, _, 0, _, debug-location !21 :: (load 4 from %ir.p.addr.0, !tbaa !22)
-    %4 = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @x, _, debug-location !26 :: (load 8 from got)
-    MOV32mr killed %4, 1, _, 0, _, killed %3, debug-location !26 :: (store 4 into @x, !tbaa !22)
+    %3 = MOV32rm %0, 1, _, 0, _, debug-location !21 :: (load (s32) from %ir.p.addr.0, !tbaa !22)
+    %4 = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @x, _, debug-location !26 :: (load (s64) from got)
+    MOV32mr killed %4, 1, _, 0, _, killed %3, debug-location !26 :: (store (s32) into @x, !tbaa !22)
     JMP_1 %bb.1.while.body, debug-location !27
 
 ...

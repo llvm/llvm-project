@@ -11,8 +11,8 @@
 # NOADJUST-NEXT:  3 .rela.debug_str 00000018 0000000000000000
 # NOADJUST-NEXT:  4 .data           00000004 0000000000000000 DATA
 # NOADJUST-NEXT:  5 .rela.data      00000018 0000000000000000
-# NOADJUST-NEXT:  6 .symtab         00000060 0000000000000000
-# NOADJUST-NEXT:  7 .strtab         00000010 0000000000000000
+# NOADJUST-NEXT:  6 .symtab         {{.*}}   0000000000000000
+# NOADJUST-NEXT:  7 .strtab         {{.*}}   0000000000000000
 # NOADJUST-NEXT:  8 .shstrtab       0000003c 0000000000000000
 
 # ADJUST:        Sections:
@@ -23,14 +23,23 @@
 # ADJUST-NEXT:    3 .rela.debug_str 00000018 0000000000000000
 # ADJUST-NEXT:    4 .data           00000004 0000000000123000 DATA
 # ADJUST-NEXT:    5 .rela.data      00000018 0000000000000000
-# ADJUST-NEXT:    6 .symtab         00000060 0000000000000000
-# ADJUST-NEXT:    7 .strtab         00000010 0000000000000000
+# ADJUST-NEXT:    6 .symtab         {{.*}}   0000000000000000
+# ADJUST-NEXT:    7 .strtab         {{.*}}   0000000000000000
 # ADJUST-NEXT:    8 .shstrtab       0000003c 0000000000000000
 
-# COMMON:      SYMBOL TABLE:
-# COMMON-NEXT:  0000000000000001  l F .text 0000000000000000 func
-# COMMON-NEXT:  0000000000000000  l   .text 0000000000000000 sym
-# COMMON-NEXT:  0000000000000000  l d .text 0000000000000000 .text
+# NOADJUST:      SYMBOL TABLE:
+# NOADJUST-NEXT:  0000000000000001  l F .text      0000000000000000 func
+# NOADJUST-NEXT:  0000000000000000  l   .text      0000000000000000 sym
+# NOADJUST-NEXT:  0000000000000000  l d .text      0000000000000000 .text
+# NOADJUST-NEXT:  0000000000003333  l   *ABS*      0000000000000000 abs
+# NOADJUST-NEXT:  0000000000000000  l   .debug_str 0000000000000000 debug_str_sym
+
+# ADJUST:        SYMBOL TABLE:
+# ADJUST-NEXT:    0000000000123001  l F .text      0000000000000000 func
+# ADJUST-NEXT:    0000000000123000  l   .text      0000000000000000 sym
+# ADJUST-NEXT:    0000000000123000  l d .text      0000000000000000 .text
+# ADJUST-NEXT:    0000000000003333  l   *ABS*      0000000000000000 abs
+# ADJUST-NEXT:    0000000000000000  l   .debug_str 0000000000000000 debug_str_sym
 
 # NOADJUST:      0000000000000000 <sym>:
 # NOADJUST-NEXT:   0: {{.*}}  nop
@@ -42,12 +51,12 @@
 # ADJUST:        0000000000123001 <func>:
 # ADJUST-NEXT:     123001: {{.*}} retq
 
-# NOADJUST:      0000000000000000 <.debug_str>:
+# NOADJUST:      0000000000000000 <debug_str_sym>:
 # NOADJUST-NEXT:   0: {{.*}}  %al, (%rax)
 # NOADJUST-NEXT:      0000000000000001:  R_X86_64_32  .text
 # NOADJUST-NEXT:   2: {{.*}}  addb    %al, (%rax)
 
-# ADJUST:        0000000000000000 <.debug_str>:
+# ADJUST:        0000000000000000 <debug_str_sym>:
 # ADJUST-NEXT:     0: {{.*}}  %al, (%rax)
 # ADJUST-NEXT:        0000000000123001:  R_X86_64_32  .text
 # ADJUST-NEXT:     2: {{.*}}  addb    %al, (%rax)
@@ -120,3 +129,8 @@ Symbols:
   - Name:            .text
     Type:            STT_SECTION
     Section:         .text
+  - Name:            abs
+    Index:           SHN_ABS
+    Value:           0x3333
+  - Name:            debug_str_sym
+    Section:         .debug_str

@@ -1,3 +1,4 @@
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
@@ -27,7 +28,7 @@ foreach(target, symlinks) {
 
 # //:clang depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
-  deps = []
+  deps = [ ":clang" ]
   foreach(target, symlinks) {
     deps += [ ":${target[0]}" ]
   }
@@ -46,7 +47,7 @@ if (host_os == "mac") {
   }
 }
 
-executable("clang") {
+driver_executable("clang") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/include/clang/Config",
@@ -56,8 +57,9 @@ executable("clang") {
     "//clang/lib/Frontend",
     "//clang/lib/FrontendTool",
     "//clang/lib/Headers",
+    "//clang/tools/clang-linker-wrapper",
     "//clang/tools/clang-offload-bundler",
-    "//clang/tools/clang-offload-wrapper",
+    "//clang/tools/clang-offload-packager",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
@@ -67,6 +69,7 @@ executable("clang") {
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/InstCombine",
     "//llvm/lib/Transforms/Instrumentation",
@@ -75,6 +78,7 @@ executable("clang") {
     "//llvm/lib/Transforms/Utils",
     "//llvm/lib/Transforms/Vectorize",
   ]
+  assert_no_deps = [ "//llvm/lib/Debuginfod" ]
   if (host_os == "mac") {
     deps += [ ":write_info_plist" ]
     plist = get_target_outputs(":write_info_plist")

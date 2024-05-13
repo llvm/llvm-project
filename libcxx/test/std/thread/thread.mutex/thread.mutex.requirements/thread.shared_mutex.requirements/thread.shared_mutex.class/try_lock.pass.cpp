@@ -6,15 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14
 
 // ALLOW_RETRIES: 2
-
-// shared_mutex was introduced in macosx10.12
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.11
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.10
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.9
 
 // <shared_mutex>
 
@@ -22,10 +17,11 @@
 
 // bool try_lock();
 
+#include <cassert>
+#include <chrono>
+#include <cstdlib>
 #include <shared_mutex>
 #include <thread>
-#include <cstdlib>
-#include <cassert>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

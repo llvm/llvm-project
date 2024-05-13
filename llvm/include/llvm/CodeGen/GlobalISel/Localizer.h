@@ -22,11 +22,14 @@
 #define LLVM_CODEGEN_GLOBALISEL_LOCALIZER_H
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
 // Forward declarations.
+class AnalysisUsage;
+class MachineBasicBlock;
+class MachineInstr;
+class MachineOperand;
 class MachineRegisterInfo;
 class TargetTransformInfo;
 
@@ -48,9 +51,9 @@ private:
 
   /// MRI contains all the register class/bank information that this
   /// pass uses and updates.
-  MachineRegisterInfo *MRI;
+  MachineRegisterInfo *MRI = nullptr;
   /// TTI used for getting remat costs for instructions.
-  TargetTransformInfo *TTI;
+  TargetTransformInfo *TTI = nullptr;
 
   /// Check if \p MOUse is used in the same basic block as \p Def.
   /// If the use is in the same block, we say it is local.
@@ -64,10 +67,9 @@ private:
 
   typedef SmallSetVector<MachineInstr *, 32> LocalizedSetVecT;
 
-  /// If \p Op is a phi operand and not unique in that phi, that is,
-  /// there are other operands in the phi with the same register,
-  /// return true.
-  bool isNonUniquePhiValue(MachineOperand &Op) const;
+  /// If \p Op is a reg operand of a PHI, return the number of total
+  /// operands in the PHI that are the same as \p Op, including itself.
+  unsigned getNumPhiUses(MachineOperand &Op) const;
 
   /// Do inter-block localization from the entry block.
   bool localizeInterBlock(MachineFunction &MF,

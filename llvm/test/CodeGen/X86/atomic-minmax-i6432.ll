@@ -58,9 +58,8 @@ define i64 @atomic_max_i64() nounwind {
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
-; PIC-NEXT:    ## -- End function
 entry:
-  %max = atomicrmw max i64* @sc64, i64 5 acquire
+  %max = atomicrmw max ptr @sc64, i64 5 acquire
   ret i64 %max
 }
 
@@ -112,9 +111,8 @@ define i64 @atomic_min_i64() nounwind {
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
-; PIC-NEXT:    ## -- End function
 entry:
-  %min = atomicrmw min i64* @sc64, i64 6 acquire
+  %min = atomicrmw min ptr @sc64, i64 6 acquire
   ret i64 %min
 }
 
@@ -172,9 +170,8 @@ define i64 @atomic_umax_i64() nounwind {
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
-; PIC-NEXT:    ## -- End function
 entry:
-  %umax = atomicrmw umax i64* @sc64, i64 7 acquire
+  %umax = atomicrmw umax ptr @sc64, i64 7 acquire
   ret i64 %umax
 }
 
@@ -226,15 +223,14 @@ define i64 @atomic_umin_i64() nounwind {
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
-; PIC-NEXT:    ## -- End function
 entry:
-  %umin = atomicrmw umin i64* @sc64, i64 8 acquire
+  %umin = atomicrmw umin ptr @sc64, i64 8 acquire
   ret i64 %umin
 }
 
 @id = internal global i64 0, align 8
 
-define void @tf_bug(i8* %ptr) nounwind {
+define void @tf_bug(ptr %ptr) nounwind {
 ; LINUX-LABEL: tf_bug:
 ; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
@@ -289,12 +285,9 @@ define void @tf_bug(i8* %ptr) nounwind {
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
-; PIC-NEXT:    ## -- End function
-; PIC-NEXT:  .zerofill __DATA,__bss,_id,8,3 ## @id
 entry:
-  %tmp1 = atomicrmw add i64* @id, i64 1 seq_cst
+  %tmp1 = atomicrmw add ptr @id, i64 1 seq_cst
   %tmp2 = add i64 %tmp1, 1
-  %tmp3 = bitcast i8* %ptr to i64*
-  store i64 %tmp2, i64* %tmp3, align 4
+  store i64 %tmp2, ptr %ptr, align 4
   ret void
 }

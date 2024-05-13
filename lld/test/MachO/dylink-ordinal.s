@@ -10,8 +10,8 @@
 # CHECK: callq 0x[[#%x,FOO_OFF:]]
 # CHECK-NEXT: callq 0x[[#%x,BAR_OFF:]]
 
-# CHECK: [[#%x,BAR_OFF]]: jmpq {{.*}} # [[#%x,BAR_BIND:]]
-# CHECK: [[#%x,FOO_OFF]]: jmpq {{.*}} # [[#%x,FOO_BIND:]]
+# CHECK: [[#%x,BAR_OFF]]: jmpq {{.*}} ## 0x[[#%x,BAR_BIND:]]
+# CHECK: [[#%x,FOO_OFF]]: jmpq {{.*}} ## 0x[[#%x,FOO_BIND:]]
 
 # CHECK-LABEL: Lazy bind table:
 # CHECK-DAG: __DATA __la_symbol_ptr 0x[[#%x,FOO_BIND]] Foo _foo
@@ -39,6 +39,7 @@ current-version:  0001.001.1
 exports:
   - targets:      [ x86_64-macos ]
     symbols:      [ _foo ]
+...
 
 #--- libBar.tbd
 --- !tapi-tbd
@@ -54,6 +55,7 @@ current-version:  0001.001.1
 exports:
   - targets:      [ x86_64-macos ]
     symbols:      [ _bar ]
+...
 
 #--- main.s
 .section __TEXT,__text

@@ -16,9 +16,9 @@ entry:
 define i32 @foo(i32 signext %value) !dbg !12 {
 entry:
   %value.addr = alloca i32, align 4
-  store i32 %value, i32* %value.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %value.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* %value.addr, align 4, !dbg !17
+  store i32 %value, ptr %value.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %value.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  %0 = load i32, ptr %value.addr, align 4, !dbg !17
   ret i32 %0, !dbg !18
 }
 
@@ -30,14 +30,14 @@ define i32 @bar() !dbg !19 {
 entry:
   %result = alloca i32, align 4
   %v = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %result, metadata !20, metadata !DIExpression()), !dbg !21
-  call void @llvm.dbg.declare(metadata i32* %v, metadata !22, metadata !DIExpression()), !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %result, metadata !20, metadata !DIExpression()), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %v, metadata !22, metadata !DIExpression()), !dbg !23
   %call = call i32 @init(), !dbg !24
-  store i32 %call, i32* %v, align 4, !dbg !23
-  %0 = load i32, i32* %v, align 4, !dbg !25
+  store i32 %call, ptr %v, align 4, !dbg !23
+  %0 = load i32, ptr %v, align 4, !dbg !25
   %call1 = call i32 @foo(i32 signext %0), !dbg !26
-  store i32 %call1, i32* %result, align 4, !dbg !27
-  %1 = load i32, i32* %result, align 4, !dbg !28
+  store i32 %call1, ptr %result, align 4, !dbg !27
+  %1 = load i32, ptr %result, align 4, !dbg !28
   ret i32 %1, !dbg !29
 }
 

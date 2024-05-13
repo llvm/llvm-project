@@ -24,28 +24,29 @@ using namespace llvm;
 // Static Analyzer Checkers Tables generation
 //===----------------------------------------------------------------------===//
 
-static std::string getPackageFullName(const Record *R);
+static std::string getPackageFullName(const Record *R, StringRef Sep = ".");
 
-static std::string getParentPackageFullName(const Record *R) {
+static std::string getParentPackageFullName(const Record *R,
+                                            StringRef Sep = ".") {
   std::string name;
   if (DefInit *DI = dyn_cast<DefInit>(R->getValueInit("ParentPackage")))
-    name = getPackageFullName(DI->getDef());
+    name = getPackageFullName(DI->getDef(), Sep);
   return name;
 }
 
-static std::string getPackageFullName(const Record *R) {
-  std::string name = getParentPackageFullName(R);
+static std::string getPackageFullName(const Record *R, StringRef Sep) {
+  std::string name = getParentPackageFullName(R, Sep);
   if (!name.empty())
-    name += ".";
+    name += Sep;
   assert(!R->getValueAsString("PackageName").empty());
   name += R->getValueAsString("PackageName");
   return name;
 }
 
-static std::string getCheckerFullName(const Record *R) {
-  std::string name = getParentPackageFullName(R);
+static std::string getCheckerFullName(const Record *R, StringRef Sep = ".") {
+  std::string name = getParentPackageFullName(R, Sep);
   if (!name.empty())
-    name += ".";
+    name += Sep;
   assert(!R->getValueAsString("CheckerName").empty());
   name += R->getValueAsString("CheckerName");
   return name;
@@ -74,20 +75,18 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B, const Record &R) 
 }
 
 static std::string getCheckerDocs(const Record &R) {
-  StringRef LandingPage;
-  if (BitsInit *BI = R.getValueAsBitsInit("Documentation")) {
-    uint64_t V = getValueFromBitsInit(BI, R);
-    if (V == 1)
-      LandingPage = "available_checks.html";
-    else if (V == 2)
-      LandingPage = "alpha_checks.html";
-  }
-  
-  if (LandingPage.empty())
+  const BitsInit *BI = R.getValueAsBitsInit("Documentation");
+  if (!BI)
+    PrintFatalError(R.getLoc(), "missing Documentation<...> member for " +
+                                    getCheckerFullName(&R));
+
+  // Ignore 'Documentation<NotDocumented>' checkers.
+  if (getValueFromBitsInit(BI, R) == 0)
     return "";
 
-  return (llvm::Twine("https://clang-analyzer.llvm.org/") + LandingPage + "#" +
-          getCheckerFullName(&R))
+  std::string CheckerFullName = StringRef(getCheckerFullName(&R, "-")).lower();
+  return (llvm::Twine("https://clang.llvm.org/docs/analyzer/checkers.html#") +
+          CheckerFullName)
       .str();
 }
 
@@ -220,7 +219,7 @@ void clang::EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
   //   - DESCRIPTION
   //   - DEFAULT: The default value for this option.
   //
-  // The full option can be specified in the command like like this:
+  // The full option can be specified in the command like this:
   //   -analyzer-config PACKAGENAME:OPTIONNAME=VALUE
   OS << "\n"
         "#ifdef GET_PACKAGE_OPTIONS\n";
@@ -320,7 +319,7 @@ void clang::EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
   //   - DESCRIPTION
   //   - DEFAULT: The default value for this option.
   //
-  // The full option can be specified in the command like like this:
+  // The full option can be specified in the command like this:
   //   -analyzer-config CHECKERNAME:OPTIONNAME=VALUE
   OS << "\n"
         "#ifdef GET_CHECKER_OPTIONS\n";

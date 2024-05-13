@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Interfaces.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -43,21 +45,21 @@ bool InterfaceMethod::isStatic() const {
 }
 
 // Return the body for this method if it has one.
-llvm::Optional<StringRef> InterfaceMethod::getBody() const {
+std::optional<StringRef> InterfaceMethod::getBody() const {
   auto value = def->getValueAsString("body");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the default implementation for this method if it has one.
-llvm::Optional<StringRef> InterfaceMethod::getDefaultImplementation() const {
+std::optional<StringRef> InterfaceMethod::getDefaultImplementation() const {
   auto value = def->getValueAsString("defaultBody");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the description of this method if it has one.
-llvm::Optional<StringRef> InterfaceMethod::getDescription() const {
+std::optional<StringRef> InterfaceMethod::getDescription() const {
   auto value = def->getValueAsString("description");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 ArrayRef<InterfaceMethod::Argument> InterfaceMethod::getArguments() const {
@@ -74,14 +76,44 @@ Interface::Interface(const llvm::Record *def) : def(def) {
   assert(def->isSubClassOf("Interface") &&
          "must be subclass of TableGen 'Interface' class");
 
+  // Initialize the interface methods.
   auto *listInit = dyn_cast<llvm::ListInit>(def->getValueInit("methods"));
   for (llvm::Init *init : listInit->getValues())
     methods.emplace_back(cast<llvm::DefInit>(init)->getDef());
+
+  // Initialize the interface base classes.
+  auto *basesInit =
+      dyn_cast<llvm::ListInit>(def->getValueInit("baseInterfaces"));
+  // Chained inheritance will produce duplicates in the base interface set.
+  StringSet<> basesAdded;
+  llvm::unique_function<void(Interface)> addBaseInterfaceFn =
+      [&](const Interface &baseInterface) {
+        // Inherit any base interfaces.
+        for (const auto &baseBaseInterface : baseInterface.getBaseInterfaces())
+          addBaseInterfaceFn(baseBaseInterface);
+
+        // Add the base interface.
+        if (basesAdded.contains(baseInterface.getName()))
+          return;
+        baseInterfaces.push_back(std::make_unique<Interface>(baseInterface));
+        basesAdded.insert(baseInterface.getName());
+      };
+  for (llvm::Init *init : basesInit->getValues())
+    addBaseInterfaceFn(Interface(cast<llvm::DefInit>(init)->getDef()));
 }
 
 // Return the name of this interface.
 StringRef Interface::getName() const {
-  return def->getValueAsString("cppClassName");
+  return def->getValueAsString("cppInterfaceName");
+}
+
+// Returns this interface's name prefixed with namespaces.
+std::string Interface::getFullyQualifiedName() const {
+  StringRef cppNamespace = getCppNamespace();
+  StringRef name = getName();
+  if (cppNamespace.empty())
+    return name.str();
+  return (cppNamespace + "::" + name).str();
 }
 
 // Return the C++ namespace of this interface.
@@ -93,30 +125,45 @@ StringRef Interface::getCppNamespace() const {
 ArrayRef<InterfaceMethod> Interface::getMethods() const { return methods; }
 
 // Return the description of this method if it has one.
-llvm::Optional<StringRef> Interface::getDescription() const {
+std::optional<StringRef> Interface::getDescription() const {
   auto value = def->getValueAsString("description");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the interfaces extra class declaration code.
-llvm::Optional<StringRef> Interface::getExtraClassDeclaration() const {
+std::optional<StringRef> Interface::getExtraClassDeclaration() const {
   auto value = def->getValueAsString("extraClassDeclaration");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the traits extra class declaration code.
-llvm::Optional<StringRef> Interface::getExtraTraitClassDeclaration() const {
+std::optional<StringRef> Interface::getExtraTraitClassDeclaration() const {
   auto value = def->getValueAsString("extraTraitClassDeclaration");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
+}
+
+// Return the shared extra class declaration code.
+std::optional<StringRef> Interface::getExtraSharedClassDeclaration() const {
+  auto value = def->getValueAsString("extraSharedClassDeclaration");
+  return value.empty() ? std::optional<StringRef>() : value;
+}
+
+std::optional<StringRef> Interface::getExtraClassOf() const {
+  auto value = def->getValueAsString("extraClassOf");
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the body for this method if it has one.
-llvm::Optional<StringRef> Interface::getVerify() const {
+std::optional<StringRef> Interface::getVerify() const {
   // Only OpInterface supports the verify method.
   if (!isa<OpInterface>(this))
-    return llvm::None;
+    return std::nullopt;
   auto value = def->getValueAsString("verify");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
+}
+
+bool Interface::verifyWithRegions() const {
+  return def->getValueAsBit("verifyWithRegions");
 }
 
 //===----------------------------------------------------------------------===//

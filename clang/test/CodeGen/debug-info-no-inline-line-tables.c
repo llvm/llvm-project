@@ -5,10 +5,10 @@
 // RUN: %clang -S -emit-llvm -o - %s | FileCheck %s -check-prefix=NO-FLAG
 
 int x;
-__attribute((always_inline)) void f() {
+__attribute((always_inline)) void f(void) {
   x += 1;
 }
-int main() {
+int main(void) {
   f();
   x += 2;
   return x;
@@ -17,7 +17,7 @@ int main() {
 // Check that clang emits the location of the call site and not the inlined
 // function in the debug info.
 // CHECK: define dso_local i32 @main()
-// CHECK: %{{.+}} = load i32, i32* @x, align 4, !dbg [[DbgLoc:![0-9]+]]
+// CHECK: %{{.+}} = load i32, ptr @x, align 4, !dbg [[DbgLoc:![0-9]+]]
 
 // Check that the no-inline-line-tables attribute is added.
 // CHECK: attributes #0 = {{.*}}"no-inline-line-tables"{{.*}}

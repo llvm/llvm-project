@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64--none-eabi -filetype obj < %s -o - | llvm-objdump -d - | FileCheck %s
+// RUN: llvm-mc -triple aarch64 -filetype obj < %s -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 onepart_before = 12345
 twopart_before = -12345678

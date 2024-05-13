@@ -11,14 +11,14 @@ define void @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %L.entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
-; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC1@toc@l(4)
+; CHECK-NEXT:    addis 5, 2, .LC1@toc@ha
+; CHECK-NEXT:    ld 4, .LC0@toc@l(3)
+; CHECK-NEXT:    ld 3, .LC1@toc@l(5)
 ; CHECK-NEXT:    addi 3, 3, 124
 ; CHECK-NEXT:    bl testFunc
 ; CHECK-NEXT:    nop
@@ -27,68 +27,64 @@ define void @main() {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 L.entry:
-  tail call void @testFunc(i64* bitcast (i8* getelementptr inbounds (%struct.STATICS1, %struct.STATICS1* @.STATICS1, i64 0, i32 0, i64 124) to i64*), i64* bitcast (i32* @.C302_MAIN_ to i64*))
+  tail call void @testFunc(ptr getelementptr inbounds (%struct.STATICS1, ptr @.STATICS1, i64 0, i32 0, i64 124), ptr @.C302_MAIN_)
   ret void
 }
 
 ; Function Attrs: noinline norecurse nounwind readonly
-define signext i32 @ifunc_(i64* nocapture readonly %i) {
+define signext i32 @ifunc_(ptr nocapture readonly %i) {
 ; CHECK-LABEL: ifunc_:
 ; CHECK:       # %bb.0: # %L.entry
 ; CHECK-NEXT:    lwa 3, 0(3)
 ; CHECK-NEXT:    blr
 L.entry:
-  %0 = bitcast i64* %i to i32*
-  %1 = load i32, i32* %0, align 4
-  ret i32 %1
+  %0 = load i32, ptr %i, align 4
+  ret i32 %0
 }
 
 ; Function Attrs: noinline norecurse nounwind
-define void @testFunc(i64* nocapture %r, i64* nocapture readonly %k) {
+define void @testFunc(ptr nocapture %r, ptr nocapture readonly %k) {
 ; CHECK-LABEL: testFunc:
 ; CHECK:       # %bb.0: # %L.entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
-; CHECK-NEXT:    stdu 1, -32(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl .L2$pb
-; CHECK-NEXT:  .L2$pb:
-; CHECK-NEXT:    lwz 4, 0(4)
-; CHECK-NEXT:    mflr 5
-; CHECK-NEXT:    addi 4, 4, -1
-; CHECK-NEXT:    cmplwi 4, 5
-; CHECK-NEXT:    bgt 0, .LBB2_6
-; CHECK-NEXT:  # %bb.1: # %L.entry
-; CHECK-NEXT:    addis 6, 2, .LC2@toc@ha
-; CHECK-NEXT:    rldic 4, 4, 2, 30
-; CHECK-NEXT:    ld 6, .LC2@toc@l(6)
-; CHECK-NEXT:    lwax 4, 4, 6
-; CHECK-NEXT:    add 4, 4, 5
-; CHECK-NEXT:    mtctr 4
+; CHECK-NEXT:    lwz 5, 0(4)
 ; CHECK-NEXT:    li 4, -3
-; CHECK-NEXT:    bctr
+; CHECK-NEXT:    cmpwi 5, 4
+; CHECK-NEXT:    bge 0, .LBB2_6
+; CHECK-NEXT:  # %bb.1: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 1
+; CHECK-NEXT:    beq 0, .LBB2_11
+; CHECK-NEXT:  # %bb.2: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 2
+; CHECK-NEXT:    beq 0, .LBB2_5
+; CHECK-NEXT:  # %bb.3: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 3
+; CHECK-NEXT:    beq 0, .LBB2_11
+; CHECK-NEXT:  # %bb.4: # %L.LB3_307
+; CHECK-NEXT:    blr
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB2_2: # %infloop11
+; CHECK-NEXT:  .LBB2_5: # %infloop11
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    b .LBB2_2
+; CHECK-NEXT:    b .LBB2_5
+; CHECK-NEXT:  .LBB2_6: # %L.entry
+; CHECK-NEXT:    beq 0, .LBB2_10
+; CHECK-NEXT:  # %bb.7: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 5
+; CHECK-NEXT:    beq 0, .LBB2_11
+; CHECK-NEXT:  # %bb.8: # %L.entry
+; CHECK-NEXT:    cmplwi 5, 6
+; CHECK-NEXT:    bnelr 0
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB2_3: # %infloop
+; CHECK-NEXT:  .LBB2_9: # %infloop
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    b .LBB2_3
-; CHECK-NEXT:  .LBB2_4: # %L.LB3_321.split
+; CHECK-NEXT:    b .LBB2_9
+; CHECK-NEXT:  .LBB2_10: # %L.LB3_321.split
 ; CHECK-NEXT:    li 4, 5
-; CHECK-NEXT:  .LBB2_5: # %L.LB3_307.sink.split
+; CHECK-NEXT:  .LBB2_11: # %L.LB3_307.sink.split
 ; CHECK-NEXT:    stw 4, 0(3)
-; CHECK-NEXT:  .LBB2_6: # %L.LB3_307
-; CHECK-NEXT:    addi 1, 1, 32
-; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 L.entry:
-  %0 = bitcast i64* %k to i32*
-  %1 = load i32, i32* %0, align 4
-  switch i32 %1, label %L.LB3_307 [
+  %0 = load i32, ptr %k, align 4
+  switch i32 %0, label %L.LB3_307 [
     i32 1, label %L.LB3_307.sink.split
     i32 3, label %L.LB3_307.sink.split
     i32 4, label %L.LB3_321.split
@@ -108,8 +104,7 @@ L.LB3_321.split:                                  ; preds = %L.entry
 
 L.LB3_307.sink.split:                             ; preds = %L.LB3_321.split, %L.entry, %L.entry, %L.entry
   %.sink = phi i32 [ 5, %L.LB3_321.split ], [ -3, %L.entry ], [ -3, %L.entry ], [ -3, %L.entry ]
-  %2 = bitcast i64* %r to i32*
-  store i32 %.sink, i32* %2, align 4
+  store i32 %.sink, ptr %r, align 4
   br label %L.LB3_307
 
 L.LB3_307:                                        ; preds = %L.LB3_307.sink.split, %L.entry

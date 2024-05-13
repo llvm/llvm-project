@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -57,15 +58,14 @@ Context &getContext() {
 void verifyEncoding(MCDwarfLineTableParams Params, int LineDelta, int AddrDelta,
                     ArrayRef<uint8_t> ExpectedEncoding) {
   SmallString<16> Buffer;
-  raw_svector_ostream EncodingOS(Buffer);
-  MCDwarfLineAddr::Encode(getContext(), Params, LineDelta, AddrDelta,
-                          EncodingOS);
+  MCDwarfLineAddr::encode(getContext(), Params, LineDelta, AddrDelta,
+                          Buffer);
   EXPECT_EQ(ExpectedEncoding, arrayRefFromStringRef(Buffer));
 }
 
 TEST(DwarfLineTables, TestDefaultParams) {
   if (!getContext())
-    return;
+    GTEST_SKIP();
 
   MCDwarfLineTableParams Params;
 
@@ -115,7 +115,7 @@ TEST(DwarfLineTables, TestDefaultParams) {
 
 TEST(DwarfLineTables, TestCustomParams) {
   if (!getContext())
-    return;
+    GTEST_SKIP();
 
   // Some tests against the example values given in the standard.
   MCDwarfLineTableParams Params;
@@ -169,7 +169,7 @@ TEST(DwarfLineTables, TestCustomParams) {
 
 TEST(DwarfLineTables, TestCustomParams2) {
   if (!getContext())
-    return;
+    GTEST_SKIP();
 
   // Corner case param values.
   MCDwarfLineTableParams Params;

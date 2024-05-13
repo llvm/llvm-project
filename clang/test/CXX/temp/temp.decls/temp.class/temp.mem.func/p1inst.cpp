@@ -8,7 +8,7 @@ struct X0 {
 
 template<typename T, typename U>
 void X0<T, U>::f(T *t, const U &u) {
-  *t = u; // expected-warning{{indirection on operand of type 'void *'}} expected-error{{not assignable}}
+  *t = u; // expected-error{{indirection not permitted on operand of type 'void *'}} expected-error{{not assignable}}
 }
 
 void test_f(X0<float, int> xfi, X0<void, int> xvi, float *fp, void *vp, int i) {

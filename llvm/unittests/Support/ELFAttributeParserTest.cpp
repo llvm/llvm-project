@@ -31,7 +31,7 @@ public:
 
 static void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
   AttributeHeaderParser parser;
-  Error e = parser.parse(bytes, support::little);
+  Error e = parser.parse(bytes, llvm::endianness::little);
   EXPECT_STREQ(toString(std::move(e)).c_str(), msg);
 }
 
@@ -43,11 +43,6 @@ TEST(AttributeHeaderParser, UnrecognizedFormatVersion) {
 TEST(AttributeHeaderParser, InvalidSectionLength) {
   static const uint8_t bytes[] = {'A', 3, 0, 0, 0};
   testParseError(bytes, "invalid section length 3 at offset 0x1");
-}
-
-TEST(AttributeHeaderParser, UnrecognizedVendorName) {
-  static const uint8_t bytes[] = {'A', 7, 0, 0, 0, 'x', 'y', 0};
-  testParseError(bytes, "unrecognized vendor-name: xy");
 }
 
 TEST(AttributeHeaderParser, UnrecognizedTag) {

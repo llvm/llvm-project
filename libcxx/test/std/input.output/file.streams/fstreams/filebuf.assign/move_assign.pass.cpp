@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // <fstream>
 
 // template <class charT, class traits = char_traits<charT> >
@@ -32,12 +30,14 @@ int main(int, char**)
         f.pubseekoff(1, std::ios_base::beg);
         assert(f.sgetc() == '2');
         std::filebuf f2;
-        f2 = move(f);
+        f2 = std::move(f);
         assert(!f.is_open());
         assert(f2.is_open());
         assert(f2.sgetc() == '2');
     }
     std::remove(temp.c_str());
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wfilebuf f;
         assert(f.open(temp.c_str(), std::ios_base::out | std::ios_base::in
@@ -47,12 +47,13 @@ int main(int, char**)
         f.pubseekoff(1, std::ios_base::beg);
         assert(f.sgetc() == L'2');
         std::wfilebuf f2;
-        f2 = move(f);
+        f2 = std::move(f);
         assert(!f.is_open());
         assert(f2.is_open());
         assert(f2.sgetc() == L'2');
     }
     std::remove(temp.c_str());
+#endif
 
   return 0;
 }

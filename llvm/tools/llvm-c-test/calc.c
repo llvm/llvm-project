@@ -74,8 +74,9 @@ static LLVMValueRef build_from_tokens(char **tokens, int ntokens,
         return NULL;
       }
 
-      off = LLVMBuildGEP(builder, param, &stack[depth - 1], 1, "");
-      stack[depth - 1] = LLVMBuildLoad(builder, off, "");
+      LLVMTypeRef ty = LLVMInt64Type();
+      off = LLVMBuildGEP2(builder, ty, param, &stack[depth - 1], 1, "");
+      stack[depth - 1] = LLVMBuildLoad2(builder, ty, off, "");
 
       break;
     }

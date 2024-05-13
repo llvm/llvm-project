@@ -17,14 +17,13 @@ target triple = "x86_64-apple-macosx10.14.0"
 %struct.r = type opaque
 
 @o = local_unnamed_addr global i32 0, align 4, !dbg !0
-@p = local_unnamed_addr global %struct.e* null, align 8, !dbg !42
+@p = local_unnamed_addr global ptr null, align 8, !dbg !42
 
 ; Function Attrs: optsize ssp uwtable
-define void @_ZN2aa2aq2arEv(%"class.aa::aq"* %this) local_unnamed_addr #0 align 2 !dbg !50 {
+define void @_ZN2aa2aq2arEv(ptr %this) local_unnamed_addr #0 align 2 !dbg !50 {
 entry:
-  call void @llvm.dbg.value(metadata %"class.aa::aq"* %this, metadata !71, metadata !DIExpression()), !dbg !75
-  %0 = bitcast %"class.aa::aq"* %this to %"class.aa::ah"*, !dbg !76
-  tail call void @_ZN2aa2ah2aiEiib(%"class.aa::ah"* %0, i32 undef, i32 undef, i1 zeroext true) #5, !dbg !76
+  call void @llvm.dbg.value(metadata ptr %this, metadata !71, metadata !DIExpression()), !dbg !75
+  tail call void @_ZN2aa2ah2aiEiib(ptr %this, i32 undef, i32 undef, i1 zeroext true) #5, !dbg !76
   ret void, !dbg !77
 }
 
@@ -32,113 +31,111 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: optsize ssp uwtable
-define linkonce_odr void @_ZN2aa2ah2aiEiib(%"class.aa::ah"* %this, i32 %aj, i32 %0, i1 zeroext %1) local_unnamed_addr #0 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !78 {
+define linkonce_odr void @_ZN2aa2ah2aiEiib(ptr %this, i32 %aj, i32 %0, i1 zeroext %1) local_unnamed_addr #0 align 2 personality ptr @__gxx_personality_v0 !dbg !78 {
 entry:
   %ao = alloca %"class.aa::y", align 1
   %ap = alloca %"class.aa::y.0", align 1
-  call void @llvm.dbg.value(metadata %"class.aa::ah"* %this, metadata !80, metadata !DIExpression()), !dbg !126
+  call void @llvm.dbg.value(metadata ptr %this, metadata !80, metadata !DIExpression()), !dbg !126
   call void @llvm.dbg.value(metadata i32 %aj, metadata !82, metadata !DIExpression()), !dbg !126
   call void @llvm.dbg.value(metadata i32 %0, metadata !83, metadata !DIExpression()), !dbg !126
   call void @llvm.dbg.value(metadata i1 %1, metadata !84, metadata !DIExpression()), !dbg !126
   call void @llvm.dbg.value(metadata i32 %aj, metadata !85, metadata !DIExpression()), !dbg !126
-  %2 = getelementptr inbounds %"class.aa::y", %"class.aa::y"* %ao, i64 0, i32 0, !dbg !127
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %2) #6, !dbg !127
-  call void @llvm.dbg.declare(metadata %"class.aa::y"* %ao, metadata !91, metadata !DIExpression()), !dbg !128
-  %call = tail call %struct.j* @_Z1mPvS_lPFvS_PKvlE(i8* undef, i8* undef, i64 0, void (i8*, i8*, i64)* nonnull @_ZN2aa12_GLOBAL__N_12agEPvPKvl) #5, !dbg !129
-  call void @_ZN2aa1yIP1jNS_2ac1zI1eEEEC1ES2_(%"class.aa::y"* nonnull %ao, %struct.j* %call) #5, !dbg !128
-  %3 = getelementptr inbounds %"class.aa::y.0", %"class.aa::y.0"* %ap, i64 0, i32 0, !dbg !130
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %3) #6, !dbg !130
-  call void @llvm.dbg.declare(metadata %"class.aa::y.0"* %ap, metadata !110, metadata !DIExpression()), !dbg !131
-  %4 = load %struct.e*, %struct.e** @p, align 8, !dbg !132, !tbaa !133
-  %call3 = invoke %struct.h* @_Z1qP1e(%struct.e* %4) #5
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %ao) #6, !dbg !127
+  call void @llvm.dbg.declare(metadata ptr %ao, metadata !91, metadata !DIExpression()), !dbg !128
+  %call = tail call ptr @_Z1mPvS_lPFvS_PKvlE(ptr undef, ptr undef, i64 0, ptr nonnull @_ZN2aa12_GLOBAL__N_12agEPvPKvl) #5, !dbg !129
+  call void @_ZN2aa1yIP1jNS_2ac1zI1eEEEC1ES2_(ptr nonnull %ao, ptr %call) #5, !dbg !128
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %ap) #6, !dbg !130
+  call void @llvm.dbg.declare(metadata ptr %ap, metadata !110, metadata !DIExpression()), !dbg !131
+  %2 = load ptr, ptr @p, align 8, !dbg !132, !tbaa !133
+  %call3 = invoke ptr @_Z1qP1e(ptr %2) #5
           to label %invoke.cont unwind label %lpad, !dbg !137
 
 invoke.cont:                                      ; preds = %entry
-  invoke void @_ZN2aa1yIP1hNS_2ac1zI1eEEEC1ES2_(%"class.aa::y.0"* nonnull %ap, %struct.h* %call3) #5
+  invoke void @_ZN2aa1yIP1hNS_2ac1zI1eEEEC1ES2_(ptr nonnull %ap, ptr %call3) #5
           to label %invoke.cont4 unwind label %lpad, !dbg !131
 
 invoke.cont4:                                     ; preds = %invoke.cont
   %conv = sext i32 %aj to i64, !dbg !138
   %mul = shl nsw i32 %aj, 2, !dbg !139
   %conv6 = sext i32 %mul to i64, !dbg !140
-  %call9 = invoke %struct.h* @_ZN2aa1yIP1hNS_2ac1zI1eEEE2abEv(%"class.aa::y.0"* nonnull %ap) #5
+  %call9 = invoke ptr @_ZN2aa1yIP1hNS_2ac1zI1eEEE2abEv(ptr nonnull %ap) #5
           to label %invoke.cont8 unwind label %lpad7, !dbg !141
 
 invoke.cont8:                                     ; preds = %invoke.cont4
-  %call11 = invoke %struct.j* @_ZN2aa1yIP1jNS_2ac1zI1eEEE2abEv(%"class.aa::y"* nonnull %ao) #5
+  %call11 = invoke ptr @_ZN2aa1yIP1jNS_2ac1zI1eEEE2abEv(ptr nonnull %ao) #5
           to label %invoke.cont10 unwind label %lpad7, !dbg !142
 
 invoke.cont10:                                    ; preds = %invoke.cont8
-  %5 = load i32, i32* @o, align 4, !dbg !143, !tbaa !144
-  %call13 = invoke %struct.r* @_Z1vlllllP1hiP1jPdb1n(i64 %conv, i64 0, i64 8, i64 2, i64 %conv6, %struct.h* %call9, i32 0, %struct.j* %call11, double* null, i1 zeroext false, i32 %5) #5
+  %3 = load i32, ptr @o, align 4, !dbg !143, !tbaa !144
+  %call13 = invoke ptr @_Z1vlllllP1hiP1jPdb1n(i64 %conv, i64 0, i64 8, i64 2, i64 %conv6, ptr %call9, i32 0, ptr %call11, ptr null, i1 zeroext false, i32 %3) #5
           to label %invoke.cont12 unwind label %lpad7, !dbg !146
 
 invoke.cont12:                                    ; preds = %invoke.cont10
   unreachable, !dbg !146
 
 lpad:                                             ; preds = %invoke.cont, %entry
-  %6 = landingpad { i8*, i32 }
+  %4 = landingpad { ptr, i32 }
           cleanup, !dbg !147
-  %7 = extractvalue { i8*, i32 } %6, 0, !dbg !147
-  %8 = extractvalue { i8*, i32 } %6, 1, !dbg !147
+  %5 = extractvalue { ptr, i32 } %4, 0, !dbg !147
+  %6 = extractvalue { ptr, i32 } %4, 1, !dbg !147
   br label %ehcleanup, !dbg !147
 
 lpad7:                                            ; preds = %invoke.cont10, %invoke.cont8, %invoke.cont4
-  %9 = landingpad { i8*, i32 }
+  %7 = landingpad { ptr, i32 }
           cleanup, !dbg !147
-  %10 = extractvalue { i8*, i32 } %9, 0, !dbg !147
-  %11 = extractvalue { i8*, i32 } %9, 1, !dbg !147
-  call void @_ZN2aa1yIP1hNS_2ac1zI1eEEED1Ev(%"class.aa::y.0"* nonnull %ap) #7, !dbg !147
+  %8 = extractvalue { ptr, i32 } %7, 0, !dbg !147
+  %9 = extractvalue { ptr, i32 } %7, 1, !dbg !147
+  call void @_ZN2aa1yIP1hNS_2ac1zI1eEEED1Ev(ptr nonnull %ap) #7, !dbg !147
   br label %ehcleanup, !dbg !147
 
 ehcleanup:                                        ; preds = %lpad7, %lpad
-  %exn.slot.0 = phi i8* [ %10, %lpad7 ], [ %7, %lpad ], !dbg !147
-  %ehselector.slot.0 = phi i32 [ %11, %lpad7 ], [ %8, %lpad ], !dbg !147
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %3) #6, !dbg !147
-  call void @_ZN2aa1yIP1jNS_2ac1zI1eEEED1Ev(%"class.aa::y"* nonnull %ao) #7, !dbg !147
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %2) #6, !dbg !147
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn.slot.0, 0, !dbg !147
-  %lpad.val19 = insertvalue { i8*, i32 } %lpad.val, i32 %ehselector.slot.0, 1, !dbg !147
-  resume { i8*, i32 } %lpad.val19, !dbg !147
+  %exn.slot.0 = phi ptr [ %8, %lpad7 ], [ %5, %lpad ], !dbg !147
+  %ehselector.slot.0 = phi i32 [ %9, %lpad7 ], [ %6, %lpad ], !dbg !147
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %ap) #6, !dbg !147
+  call void @_ZN2aa1yIP1jNS_2ac1zI1eEEED1Ev(ptr nonnull %ao) #7, !dbg !147
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %ao) #6, !dbg !147
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn.slot.0, 0, !dbg !147
+  %lpad.val19 = insertvalue { ptr, i32 } %lpad.val, i32 %ehselector.slot.0, 1, !dbg !147
+  resume { ptr, i32 } %lpad.val19, !dbg !147
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: optsize
-declare !dbg !11 %struct.j* @_Z1mPvS_lPFvS_PKvlE(i8*, i8*, i64, void (i8*, i8*, i64)*) local_unnamed_addr #3
+declare !dbg !11 ptr @_Z1mPvS_lPFvS_PKvlE(ptr, ptr, i64, ptr) local_unnamed_addr #3
 
 ; Function Attrs: optsize
-declare void @_ZN2aa12_GLOBAL__N_12agEPvPKvl(i8*, i8*, i64) #3
+declare void @_ZN2aa12_GLOBAL__N_12agEPvPKvl(ptr, ptr, i64) #3
 
 ; Function Attrs: optsize
-declare void @_ZN2aa1yIP1jNS_2ac1zI1eEEEC1ES2_(%"class.aa::y"*, %struct.j*) unnamed_addr #3
+declare void @_ZN2aa1yIP1jNS_2ac1zI1eEEEC1ES2_(ptr, ptr) unnamed_addr #3
 
 ; Function Attrs: optsize
-declare !dbg !24 %struct.h* @_Z1qP1e(%struct.e*) local_unnamed_addr #3
+declare !dbg !24 ptr @_Z1qP1e(ptr) local_unnamed_addr #3
 
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: optsize
-declare void @_ZN2aa1yIP1hNS_2ac1zI1eEEEC1ES2_(%"class.aa::y.0"*, %struct.h*) unnamed_addr #3
+declare void @_ZN2aa1yIP1hNS_2ac1zI1eEEEC1ES2_(ptr, ptr) unnamed_addr #3
 
 ; Function Attrs: optsize
-declare !dbg !31 %struct.r* @_Z1vlllllP1hiP1jPdb1n(i64, i64, i64, i64, i64, %struct.h*, i32, %struct.j*, double*, i1 zeroext, i32) local_unnamed_addr #3
+declare !dbg !31 ptr @_Z1vlllllP1hiP1jPdb1n(i64, i64, i64, i64, i64, ptr, i32, ptr, ptr, i1 zeroext, i32) local_unnamed_addr #3
 
 ; Function Attrs: optsize
-declare %struct.h* @_ZN2aa1yIP1hNS_2ac1zI1eEEE2abEv(%"class.aa::y.0"*) local_unnamed_addr #3
+declare ptr @_ZN2aa1yIP1hNS_2ac1zI1eEEE2abEv(ptr) local_unnamed_addr #3
 
 ; Function Attrs: optsize
-declare %struct.j* @_ZN2aa1yIP1jNS_2ac1zI1eEEE2abEv(%"class.aa::y"*) local_unnamed_addr #3
+declare ptr @_ZN2aa1yIP1jNS_2ac1zI1eEEE2abEv(ptr) local_unnamed_addr #3
 
 ; Function Attrs: nounwind optsize
-declare void @_ZN2aa1yIP1hNS_2ac1zI1eEEED1Ev(%"class.aa::y.0"*) unnamed_addr #4
+declare void @_ZN2aa1yIP1hNS_2ac1zI1eEEED1Ev(ptr) unnamed_addr #4
 
 ; Function Attrs: nounwind optsize
-declare void @_ZN2aa1yIP1jNS_2ac1zI1eEEED1Ev(%"class.aa::y"*) unnamed_addr #4
+declare void @_ZN2aa1yIP1jNS_2ac1zI1eEEED1Ev(ptr) unnamed_addr #4
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
@@ -159,7 +156,7 @@ attributes #7 = { nounwind optsize }
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "o", scope: !2, file: !6, line: 11, type: !40, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !3, producer: "clang version 11.0.0 (git@github.com:llvm/llvm-project.git 0fecdcd1628999a1900d9cf84cd33dacf1319fa6)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !10, globals: !41, nameTableKind: None, sysroot: "/")
-!3 = !DIFile(filename: "/Users/vsk/tmp/x.cc", directory: "/Users/vsk/src/llvm-backup-master")
+!3 = !DIFile(filename: "/Users/vsk/tmp/x.cc", directory: "/Users/vsk/src/llvm-backup-main")
 !4 = !{!5}
 !5 = !DICompositeType(tag: DW_TAG_enumeration_type, file: !6, line: 16, baseType: !7, size: 32, elements: !8)
 !6 = !DIFile(filename: "tmp/x.cc", directory: "/Users/vsk")

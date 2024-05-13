@@ -1,10 +1,10 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -print-after=si-annotate-control-flow %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -print-after=si-annotate-control-flow %s -o /dev/null 2>&1 | FileCheck %s
 
 target datalayout = "n32"
 
 ; CHECK-LABEL: @switch_unreachable_default
 
-define amdgpu_kernel void @switch_unreachable_default(i32 addrspace(1)* %out, i8 addrspace(1)* %in0, i8 addrspace(1)* %in1) #0 {
+define amdgpu_kernel void @switch_unreachable_default(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 centry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   switch i32 %tid, label %sw.default [
@@ -22,8 +22,7 @@ sw.default:
   unreachable
 
 sw.epilog:
-  %ptr = phi i8 addrspace(1)* [%in0, %sw.bb0], [%in1, %sw.bb1]
-  %gep_in = getelementptr inbounds i8, i8 addrspace(1)* %ptr, i64 0
+  %ptr = phi ptr addrspace(1) [%in0, %sw.bb0], [%in1, %sw.bb1]
   br label %sw.while
 
 ; The loop below is necessary to preserve the effect of the
@@ -45,18 +44,18 @@ sw.epilog:
 ; CHECK: br i1 [[LOOP]]
 
 sw.while:
-  %p = phi i8 addrspace(1)* [ %gep_in, %sw.epilog ], [ %incdec.ptr, %sw.while ]
+  %p = phi ptr addrspace(1) [ %ptr, %sw.epilog ], [ %incdec.ptr, %sw.while ]
   %count = phi i32 [ 0, %sw.epilog ], [ %count.inc, %sw.while ]
-  %char = load i8, i8 addrspace(1)* %p, align 1
+  %char = load i8, ptr addrspace(1) %p, align 1
   %tobool = icmp eq i8 %char, 0
-  %incdec.ptr = getelementptr inbounds i8, i8 addrspace(1)* %p, i64 1
+  %incdec.ptr = getelementptr inbounds i8, ptr addrspace(1) %p, i64 1
   %count.inc = add i32 %count, 1
   br i1 %tobool, label %sw.exit, label %sw.while
 
 sw.exit:
   %tid64 = zext i32 %tid to i64
-  %gep_out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid64
-  store i32 %count, i32 addrspace(1)* %gep_out, align 4
+  %gep_out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid64
+  store i32 %count, ptr addrspace(1) %gep_out, align 4
   ret void
 }
 

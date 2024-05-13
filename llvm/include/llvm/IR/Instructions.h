@@ -17,41 +17,39 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitfields.h"
-#include "llvm/ADT/None.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/OperandTraits.h"
-#include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 
 namespace llvm {
 
+class APFloat;
 class APInt;
+class BasicBlock;
 class ConstantInt;
 class DataLayout;
-class LLVMContext;
+class StringRef;
+class Type;
+class Value;
+class UnreachableInst;
 
 //===----------------------------------------------------------------------===//
 //                                AllocaInst Class
@@ -76,15 +74,21 @@ protected:
 
 public:
   explicit AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
+                      const Twine &Name, BasicBlock::iterator InsertBefore);
+  explicit AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                       const Twine &Name, Instruction *InsertBefore);
   AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
              const Twine &Name, BasicBlock *InsertAtEnd);
 
   AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
+             BasicBlock::iterator InsertBefore);
+  AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
              Instruction *InsertBefore);
   AllocaInst(Type *Ty, unsigned AddrSpace,
              const Twine &Name, BasicBlock *InsertAtEnd);
 
+  AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, Align Align,
+             const Twine &Name, BasicBlock::iterator);
   AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, Align Align,
              const Twine &Name = "", Instruction *InsertBefore = nullptr);
   AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, Align Align,
@@ -104,9 +108,18 @@ public:
     return cast<PointerType>(Instruction::getType());
   }
 
-  /// Get allocation size in bits. Returns None if size can't be determined,
-  /// e.g. in case of a VLA.
-  Optional<TypeSize> getAllocationSizeInBits(const DataLayout &DL) const;
+  /// Return the address space for the allocation.
+  unsigned getAddressSpace() const {
+    return getType()->getAddressSpace();
+  }
+
+  /// Get allocation size in bytes. Returns std::nullopt if size can't be
+  /// determined, e.g. in case of a VLA.
+  std::optional<TypeSize> getAllocationSize(const DataLayout &DL) const;
+
+  /// Get allocation size in bits. Returns std::nullopt if size can't be
+  /// determined, e.g. in case of a VLA.
+  std::optional<TypeSize> getAllocationSizeInBits(const DataLayout &DL) const;
 
   /// Return the type that is being allocated by the instruction.
   Type *getAllocatedType() const { return AllocatedType; }
@@ -123,9 +136,6 @@ public:
   void setAlignment(Align Align) {
     setSubclassData<AlignmentField>(Log2(Align));
   }
-
-  // FIXME: Remove this one transition to Align is over.
-  unsigned getAlignment() const { return getAlign().value(); }
 
   /// Return true if this alloca is in the entry block of the function and is a
   /// constant size. If so, the code generator will fold it into the
@@ -189,16 +199,25 @@ protected:
 
 public:
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
+           BasicBlock::iterator InsertBefore);
+  LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
            Instruction *InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, BasicBlock *InsertAtEnd);
+  LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
+           BasicBlock::iterator InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            Instruction *InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            BasicBlock *InsertAtEnd);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
+           Align Align, BasicBlock::iterator InsertBefore);
+  LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            Align Align, Instruction *InsertBefore = nullptr);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            Align Align, BasicBlock *InsertAtEnd);
+  LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
+           Align Align, AtomicOrdering Order, SyncScope::ID SSID,
+           BasicBlock::iterator InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            Align Align, AtomicOrdering Order,
            SyncScope::ID SSID = SyncScope::System,
@@ -212,11 +231,6 @@ public:
 
   /// Specify whether this is a volatile load or not.
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
-
-  /// Return the alignment of the access that is being performed.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getAlign() instead.
-  unsigned getAlignment() const { return getAlign().value(); }
 
   /// Return the alignment of the access that is being performed.
   Align getAlign() const {
@@ -319,22 +333,29 @@ protected:
 public:
   StoreInst(Value *Val, Value *Ptr, Instruction *InsertBefore);
   StoreInst(Value *Val, Value *Ptr, BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, BasicBlock::iterator InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Instruction *InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
+            BasicBlock::iterator InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             Instruction *InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             BasicBlock *InsertAtEnd);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
+            BasicBlock::iterator InsertBefore);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
             Instruction *InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             AtomicOrdering Order, SyncScope::ID SSID, BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
+            AtomicOrdering Order, SyncScope::ID SSID,
+            BasicBlock::iterator InsertBefore);
 
   // allocate space for exactly two operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 2);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Return true if this is a store to a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }
@@ -344,11 +365,6 @@ public:
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  /// Return the alignment of the access that is being performed
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getAlign() instead.
-  unsigned getAlignment() const { return getAlign().value(); }
 
   Align getAlign() const {
     return Align(1ULL << (getSubclassData<AlignmentField>()));
@@ -455,6 +471,8 @@ protected:
 public:
   // Ordering may only be Acquire, Release, AcquireRelease, or
   // SequentiallyConsistent.
+  FenceInst(LLVMContext &C, AtomicOrdering Ordering, SyncScope::ID SSID,
+            BasicBlock::iterator InsertBefore);
   FenceInst(LLVMContext &C, AtomicOrdering Ordering,
             SyncScope::ID SSID = SyncScope::System,
             Instruction *InsertBefore = nullptr);
@@ -462,9 +480,8 @@ public:
             BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 0);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 0); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Returns the ordering constraint of this fence instruction.
   AtomicOrdering getOrdering() const {
@@ -539,6 +556,10 @@ public:
   AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal, Align Alignment,
                     AtomicOrdering SuccessOrdering,
                     AtomicOrdering FailureOrdering, SyncScope::ID SSID,
+                    BasicBlock::iterator InsertBefore);
+  AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal, Align Alignment,
+                    AtomicOrdering SuccessOrdering,
+                    AtomicOrdering FailureOrdering, SyncScope::ID SSID,
                     Instruction *InsertBefore = nullptr);
   AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal, Align Alignment,
                     AtomicOrdering SuccessOrdering,
@@ -546,9 +567,8 @@ public:
                     BasicBlock *InsertAtEnd);
 
   // allocate space for exactly three operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 3);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 3); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   using VolatileField = BoolBitfieldElementT<0>;
   using WeakField = BoolBitfieldElementT<VolatileField::NextBit>;
@@ -767,8 +787,24 @@ public:
     /// *p = old - v
     FSub,
 
+    /// *p = maxnum(old, v)
+    /// \p maxnum matches the behavior of \p llvm.maxnum.*.
+    FMax,
+
+    /// *p = minnum(old, v)
+    /// \p minnum matches the behavior of \p llvm.minnum.*.
+    FMin,
+
+    /// Increment one up to a maximum value.
+    /// *p = (old u>= v) ? 0 : (old + 1)
+    UIncWrap,
+
+    /// Decrement one until a minimum value or zero.
+    /// *p = ((old == 0) || (old u> v)) ? v : (old - 1)
+    UDecWrap,
+
     FIRST_BINOP = Xchg,
-    LAST_BINOP = FSub,
+    LAST_BINOP = UDecWrap,
     BAD_BINOP
   };
 
@@ -780,9 +816,12 @@ private:
 
   template <unsigned Offset>
   using BinOpBitfieldElement =
-      typename Bitfield::Element<BinOp, Offset, 4, BinOp::LAST_BINOP>;
+      typename Bitfield::Element<BinOp, Offset, 5, BinOp::LAST_BINOP>;
 
 public:
+  AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val, Align Alignment,
+                AtomicOrdering Ordering, SyncScope::ID SSID,
+                BasicBlock::iterator InsertBefore);
   AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val, Align Alignment,
                 AtomicOrdering Ordering, SyncScope::ID SSID,
                 Instruction *InsertBefore = nullptr);
@@ -791,9 +830,8 @@ public:
                 BasicBlock *InsertAtEnd);
 
   // allocate space for exactly two operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 2);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   using VolatileField = BoolBitfieldElementT<0>;
   using AtomicOrderingField =
@@ -812,6 +850,8 @@ public:
     switch (Op) {
     case AtomicRMWInst::FAdd:
     case AtomicRMWInst::FSub:
+    case AtomicRMWInst::FMax:
+    case AtomicRMWInst::FMin:
       return true;
     default:
       return false;
@@ -852,6 +892,8 @@ public:
   void setOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "atomicrmw instructions can only be atomic.");
+    assert(Ordering != AtomicOrdering::Unordered &&
+           "atomicrmw instructions cannot be unordered.");
     setSubclassData<AtomicOrderingField>(Ordering);
   }
 
@@ -935,9 +977,13 @@ class GetElementPtrInst : public Instruction {
   GetElementPtrInst(const GetElementPtrInst &GEPI);
 
   /// Constructors - Create a getelementptr instruction with a base pointer an
-  /// list of indices. The first ctor can optionally insert before an existing
-  /// instruction, the second appends the new instruction to the specified
-  /// BasicBlock.
+  /// list of indices. The first and second ctor can optionally insert before an
+  /// existing instruction, the third appends the new instruction to the
+  /// specified BasicBlock.
+  inline GetElementPtrInst(Type *PointeeType, Value *Ptr,
+                           ArrayRef<Value *> IdxList, unsigned Values,
+                           const Twine &NameStr,
+                           BasicBlock::iterator InsertBefore);
   inline GetElementPtrInst(Type *PointeeType, Value *Ptr,
                            ArrayRef<Value *> IdxList, unsigned Values,
                            const Twine &NameStr, Instruction *InsertBefore);
@@ -956,16 +1002,20 @@ protected:
 public:
   static GetElementPtrInst *Create(Type *PointeeType, Value *Ptr,
                                    ArrayRef<Value *> IdxList,
+                                   const Twine &NameStr,
+                                   BasicBlock::iterator InsertBefore) {
+    unsigned Values = 1 + unsigned(IdxList.size());
+    assert(PointeeType && "Must specify element type");
+    return new (Values) GetElementPtrInst(PointeeType, Ptr, IdxList, Values,
+                                          NameStr, InsertBefore);
+  }
+
+  static GetElementPtrInst *Create(Type *PointeeType, Value *Ptr,
+                                   ArrayRef<Value *> IdxList,
                                    const Twine &NameStr = "",
                                    Instruction *InsertBefore = nullptr) {
     unsigned Values = 1 + unsigned(IdxList.size());
-    if (!PointeeType) {
-      PointeeType =
-          cast<PointerType>(Ptr->getType()->getScalarType())->getElementType();
-    } else {
-      assert(cast<PointerType>(Ptr->getType()->getScalarType())
-                 ->isOpaqueOrPointeeTypeMatches(PointeeType));
-    }
+    assert(PointeeType && "Must specify element type");
     return new (Values) GetElementPtrInst(PointeeType, Ptr, IdxList, Values,
                                           NameStr, InsertBefore);
   }
@@ -975,24 +1025,21 @@ public:
                                    const Twine &NameStr,
                                    BasicBlock *InsertAtEnd) {
     unsigned Values = 1 + unsigned(IdxList.size());
-    if (!PointeeType) {
-      PointeeType =
-          cast<PointerType>(Ptr->getType()->getScalarType())->getElementType();
-    } else {
-      assert(cast<PointerType>(Ptr->getType()->getScalarType())
-                 ->isOpaqueOrPointeeTypeMatches(PointeeType));
-    }
+    assert(PointeeType && "Must specify element type");
     return new (Values) GetElementPtrInst(PointeeType, Ptr, IdxList, Values,
                                           NameStr, InsertAtEnd);
   }
 
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
-  static GetElementPtrInst *CreateInBounds(Value *Ptr,
+  static GetElementPtrInst *CreateInBounds(Type *PointeeType, Value *Ptr,
                                            ArrayRef<Value *> IdxList,
-                                           const Twine &NameStr = "",
-                                           Instruction *InsertBefore = nullptr){
-    return CreateInBounds(nullptr, Ptr, IdxList, NameStr, InsertBefore);
+                                           const Twine &NameStr,
+                                           BasicBlock::iterator InsertBefore) {
+    GetElementPtrInst *GEP =
+        Create(PointeeType, Ptr, IdxList, NameStr, InsertBefore);
+    GEP->setIsInBounds(true);
+    return GEP;
   }
 
   static GetElementPtrInst *
@@ -1003,13 +1050,6 @@ public:
         Create(PointeeType, Ptr, IdxList, NameStr, InsertBefore);
     GEP->setIsInBounds(true);
     return GEP;
-  }
-
-  static GetElementPtrInst *CreateInBounds(Value *Ptr,
-                                           ArrayRef<Value *> IdxList,
-                                           const Twine &NameStr,
-                                           BasicBlock *InsertAtEnd) {
-    return CreateInBounds(nullptr, Ptr, IdxList, NameStr, InsertAtEnd);
   }
 
   static GetElementPtrInst *CreateInBounds(Type *PointeeType, Value *Ptr,
@@ -1031,8 +1071,6 @@ public:
   void setResultElementType(Type *Ty) { ResultElementType = Ty; }
 
   Type *getResultElementType() const {
-    assert(cast<PointerType>(getType()->getScalarType())
-               ->isOpaqueOrPointeeTypeMatches(ResultElementType));
     return ResultElementType;
   }
 
@@ -1096,22 +1134,19 @@ public:
 
   /// Returns the pointer type returned by the GEP
   /// instruction, which may be a vector of pointers.
-  static Type *getGEPReturnType(Type *ElTy, Value *Ptr,
-                                ArrayRef<Value *> IdxList) {
-    Type *PtrTy = PointerType::get(checkGEPType(getIndexedType(ElTy, IdxList)),
-                                   Ptr->getType()->getPointerAddressSpace());
+  static Type *getGEPReturnType(Value *Ptr, ArrayRef<Value *> IdxList) {
     // Vector GEP
-    if (auto *PtrVTy = dyn_cast<VectorType>(Ptr->getType())) {
-      ElementCount EltCount = PtrVTy->getElementCount();
-      return VectorType::get(PtrTy, EltCount);
-    }
+    Type *Ty = Ptr->getType();
+    if (Ty->isVectorTy())
+      return Ty;
+
     for (Value *Index : IdxList)
       if (auto *IndexVTy = dyn_cast<VectorType>(Index->getType())) {
         ElementCount EltCount = IndexVTy->getElementCount();
-        return VectorType::get(PtrTy, EltCount);
+        return VectorType::get(Ty, EltCount);
       }
     // Scalar GEP
-    return PtrTy;
+    return Ty;
   }
 
   unsigned getNumIndices() const {  // Note: always non-negative
@@ -1149,7 +1184,7 @@ public:
   /// the base GEP pointer.
   bool accumulateConstantOffset(const DataLayout &DL, APInt &Offset) const;
   bool collectOffset(const DataLayout &DL, unsigned BitWidth,
-                     SmallDenseMap<Value *, APInt, 8> &VariableOffsets,
+                     MapVector<Value *, APInt> &VariableOffsets,
                      APInt &ConstantOffset) const;
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1168,14 +1203,24 @@ struct OperandTraits<GetElementPtrInst> :
 GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
                                      ArrayRef<Value *> IdxList, unsigned Values,
                                      const Twine &NameStr,
-                                     Instruction *InsertBefore)
-    : Instruction(getGEPReturnType(PointeeType, Ptr, IdxList), GetElementPtr,
+                                     BasicBlock::iterator InsertBefore)
+    : Instruction(getGEPReturnType(Ptr, IdxList), GetElementPtr,
                   OperandTraits<GetElementPtrInst>::op_end(this) - Values,
                   Values, InsertBefore),
       SourceElementType(PointeeType),
       ResultElementType(getIndexedType(PointeeType, IdxList)) {
-  assert(cast<PointerType>(getType()->getScalarType())
-             ->isOpaqueOrPointeeTypeMatches(ResultElementType));
+  init(Ptr, IdxList, NameStr);
+}
+
+GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
+                                     ArrayRef<Value *> IdxList, unsigned Values,
+                                     const Twine &NameStr,
+                                     Instruction *InsertBefore)
+    : Instruction(getGEPReturnType(Ptr, IdxList), GetElementPtr,
+                  OperandTraits<GetElementPtrInst>::op_end(this) - Values,
+                  Values, InsertBefore),
+      SourceElementType(PointeeType),
+      ResultElementType(getIndexedType(PointeeType, IdxList)) {
   init(Ptr, IdxList, NameStr);
 }
 
@@ -1183,13 +1228,11 @@ GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
                                      ArrayRef<Value *> IdxList, unsigned Values,
                                      const Twine &NameStr,
                                      BasicBlock *InsertAtEnd)
-    : Instruction(getGEPReturnType(PointeeType, Ptr, IdxList), GetElementPtr,
+    : Instruction(getGEPReturnType(Ptr, IdxList), GetElementPtr,
                   OperandTraits<GetElementPtrInst>::op_end(this) - Values,
                   Values, InsertAtEnd),
       SourceElementType(PointeeType),
       ResultElementType(getIndexedType(PointeeType, IdxList)) {
-  assert(cast<PointerType>(getType()->getScalarType())
-             ->isOpaqueOrPointeeTypeMatches(ResultElementType));
   init(Ptr, IdxList, NameStr);
 }
 
@@ -1225,6 +1268,21 @@ protected:
 public:
   /// Constructor with insert-before-instruction semantics.
   ICmpInst(
+    BasicBlock::iterator InsertBefore,  ///< Where to insert
+    Predicate pred,  ///< The predicate to use for the comparison
+    Value *LHS,      ///< The left-hand-side of the expression
+    Value *RHS,      ///< The right-hand-side of the expression
+    const Twine &NameStr = ""  ///< Name of the instruction
+  ) : CmpInst(makeCmpResultType(LHS->getType()),
+              Instruction::ICmp, pred, LHS, RHS, NameStr,
+              InsertBefore) {
+#ifndef NDEBUG
+  AssertOK();
+#endif
+  }
+
+  /// Constructor with insert-before-instruction semantics.
+  ICmpInst(
     Instruction *InsertBefore,  ///< Where to insert
     Predicate pred,  ///< The predicate to use for the comparison
     Value *LHS,      ///< The left-hand-side of the expression
@@ -1240,14 +1298,14 @@ public:
 
   /// Constructor with insert-at-end semantics.
   ICmpInst(
-    BasicBlock &InsertAtEnd, ///< Block to insert into.
+    BasicBlock *InsertAtEnd, ///< Block to insert into.
     Predicate pred,  ///< The predicate to use for the comparison
     Value *LHS,      ///< The left-hand-side of the expression
     Value *RHS,      ///< The right-hand-side of the expression
     const Twine &NameStr = ""  ///< Name of the instruction
   ) : CmpInst(makeCmpResultType(LHS->getType()),
               Instruction::ICmp, pred, LHS, RHS, NameStr,
-              &InsertAtEnd) {
+              InsertAtEnd) {
 #ifndef NDEBUG
   AssertOK();
 #endif
@@ -1342,6 +1400,10 @@ public:
     return P == ICMP_SLE || P == ICMP_ULE;
   }
 
+  /// Returns the sequence of all ICmp predicates.
+  ///
+  static auto predicates() { return ICmpPredicates(); }
+
   /// Exchange the two operands to this instruction in such a way that it does
   /// not modify the semantics of the instruction. The predicate value may be
   /// changed to retain the same result if the predicate is order dependent
@@ -1351,6 +1413,10 @@ public:
     setPredicate(getSwappedPredicate());
     Op<0>().swap(Op<1>());
   }
+
+  /// Return result of `LHS Pred RHS` comparison.
+  static bool compare(const APInt &LHS, const APInt &RHS,
+                      ICmpInst::Predicate Pred);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1389,6 +1455,19 @@ protected:
 public:
   /// Constructor with insert-before-instruction semantics.
   FCmpInst(
+    BasicBlock::iterator InsertBefore, ///< Where to insert
+    Predicate pred,  ///< The predicate to use for the comparison
+    Value *LHS,      ///< The left-hand-side of the expression
+    Value *RHS,      ///< The right-hand-side of the expression
+    const Twine &NameStr = ""  ///< Name of the instruction
+  ) : CmpInst(makeCmpResultType(LHS->getType()),
+              Instruction::FCmp, pred, LHS, RHS, NameStr,
+              InsertBefore) {
+    AssertOK();
+  }
+
+  /// Constructor with insert-before-instruction semantics.
+  FCmpInst(
     Instruction *InsertBefore, ///< Where to insert
     Predicate pred,  ///< The predicate to use for the comparison
     Value *LHS,      ///< The left-hand-side of the expression
@@ -1402,14 +1481,14 @@ public:
 
   /// Constructor with insert-at-end semantics.
   FCmpInst(
-    BasicBlock &InsertAtEnd, ///< Block to insert into.
+    BasicBlock *InsertAtEnd, ///< Block to insert into.
     Predicate pred,  ///< The predicate to use for the comparison
     Value *LHS,      ///< The left-hand-side of the expression
     Value *RHS,      ///< The right-hand-side of the expression
     const Twine &NameStr = ""  ///< Name of the instruction
   ) : CmpInst(makeCmpResultType(LHS->getType()),
               Instruction::FCmp, pred, LHS, RHS, NameStr,
-              &InsertAtEnd) {
+              InsertAtEnd) {
     AssertOK();
   }
 
@@ -1460,6 +1539,14 @@ public:
     Op<0>().swap(Op<1>());
   }
 
+  /// Returns the sequence of all FCmp predicates.
+  ///
+  static auto predicates() { return FCmpPredicates(); }
+
+  /// Return result of `LHS Pred RHS` comparison.
+  static bool compare(const APFloat &LHS, const APFloat &RHS,
+                      FCmpInst::Predicate Pred);
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::FCmp;
@@ -1478,6 +1565,15 @@ public:
 class CallInst : public CallBase {
   CallInst(const CallInst &CI);
 
+  /// Construct a CallInst from a range of arguments
+  inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                  ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
+                  BasicBlock::iterator InsertBefore);
+
+  inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                  const Twine &NameStr, BasicBlock::iterator InsertBefore)
+      : CallInst(Ty, Func, Args, std::nullopt, NameStr, InsertBefore) {}
+
   /// Construct a CallInst given a range of arguments.
   /// Construct a CallInst from a range of arguments
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
@@ -1486,13 +1582,16 @@ class CallInst : public CallBase {
 
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                   const Twine &NameStr, Instruction *InsertBefore)
-      : CallInst(Ty, Func, Args, None, NameStr, InsertBefore) {}
+      : CallInst(Ty, Func, Args, std::nullopt, NameStr, InsertBefore) {}
 
   /// Construct a CallInst given a range of arguments.
   /// Construct a CallInst from a range of arguments
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                   ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
                   BasicBlock *InsertAtEnd);
+
+  explicit CallInst(FunctionType *Ty, Value *F, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
 
   explicit CallInst(FunctionType *Ty, Value *F, const Twine &NameStr,
                     Instruction *InsertBefore);
@@ -1518,6 +1617,11 @@ protected:
   CallInst *cloneImpl() const;
 
 public:
+  static CallInst *Create(FunctionType *Ty, Value *F, const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    return new (ComputeNumOperands(0)) CallInst(Ty, F, NameStr, InsertBefore);
+  }
+
   static CallInst *Create(FunctionType *Ty, Value *F, const Twine &NameStr = "",
                           Instruction *InsertBefore = nullptr) {
     return new (ComputeNumOperands(0)) CallInst(Ty, F, NameStr, InsertBefore);
@@ -1525,13 +1629,32 @@ public:
 
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                           const Twine &NameStr,
-                          Instruction *InsertBefore = nullptr) {
+                          BasicBlock::iterator InsertBefore) {
     return new (ComputeNumOperands(Args.size()))
-        CallInst(Ty, Func, Args, None, NameStr, InsertBefore);
+        CallInst(Ty, Func, Args, std::nullopt, NameStr, InsertBefore);
   }
 
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
-                          ArrayRef<OperandBundleDef> Bundles = None,
+                          const Twine &NameStr,
+                          Instruction *InsertBefore = nullptr) {
+    return new (ComputeNumOperands(Args.size()))
+        CallInst(Ty, Func, Args, std::nullopt, NameStr, InsertBefore);
+  }
+
+  static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                          ArrayRef<OperandBundleDef> Bundles,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    const int NumOperands =
+        ComputeNumOperands(Args.size(), CountBundleInputs(Bundles));
+    const unsigned DescriptorBytes = Bundles.size() * sizeof(BundleOpInfo);
+
+    return new (NumOperands, DescriptorBytes)
+        CallInst(Ty, Func, Args, Bundles, NameStr, InsertBefore);
+  }
+
+  static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                          ArrayRef<OperandBundleDef> Bundles = std::nullopt,
                           const Twine &NameStr = "",
                           Instruction *InsertBefore = nullptr) {
     const int NumOperands =
@@ -1550,7 +1673,7 @@ public:
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                           const Twine &NameStr, BasicBlock *InsertAtEnd) {
     return new (ComputeNumOperands(Args.size()))
-        CallInst(Ty, Func, Args, None, NameStr, InsertAtEnd);
+        CallInst(Ty, Func, Args, std::nullopt, NameStr, InsertAtEnd);
   }
 
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
@@ -1564,6 +1687,12 @@ public:
         CallInst(Ty, Func, Args, Bundles, NameStr, InsertAtEnd);
   }
 
+  static CallInst *Create(FunctionCallee Func, const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), NameStr,
+                  InsertBefore);
+  }
+
   static CallInst *Create(FunctionCallee Func, const Twine &NameStr = "",
                           Instruction *InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), NameStr,
@@ -1571,11 +1700,26 @@ public:
   }
 
   static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
-                          ArrayRef<OperandBundleDef> Bundles = None,
+                          ArrayRef<OperandBundleDef> Bundles,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), Args, Bundles,
+                  NameStr, InsertBefore);
+  }
+
+  static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
+                          ArrayRef<OperandBundleDef> Bundles = std::nullopt,
                           const Twine &NameStr = "",
                           Instruction *InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), Args, Bundles,
                   NameStr, InsertBefore);
+  }
+
+  static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), Args, NameStr,
+                  InsertBefore);
   }
 
   static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
@@ -1611,45 +1755,9 @@ public:
   /// the operand bundles for the new instruction are set to the operand bundles
   /// in \p Bundles.
   static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
+                          BasicBlock::iterator InsertPt);
+  static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
                           Instruction *InsertPt = nullptr);
-
-  /// Generate the IR for a call to malloc:
-  /// 1. Compute the malloc call's argument as the specified type's size,
-  ///    possibly multiplied by the array size if the array size is not
-  ///    constant 1.
-  /// 2. Call malloc with that argument.
-  /// 3. Bitcast the result of the malloc call to the specified type.
-  static Instruction *CreateMalloc(Instruction *InsertBefore, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  static Instruction *CreateMalloc(BasicBlock *InsertAtEnd, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  static Instruction *CreateMalloc(Instruction *InsertBefore, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   ArrayRef<OperandBundleDef> Bundles = None,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  static Instruction *CreateMalloc(BasicBlock *InsertAtEnd, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   ArrayRef<OperandBundleDef> Bundles = None,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  /// Generate the IR for a call to the builtin free function.
-  static Instruction *CreateFree(Value *Source, Instruction *InsertBefore);
-  static Instruction *CreateFree(Value *Source, BasicBlock *InsertAtEnd);
-  static Instruction *CreateFree(Value *Source,
-                                 ArrayRef<OperandBundleDef> Bundles,
-                                 Instruction *InsertBefore);
-  static Instruction *CreateFree(Value *Source,
-                                 ArrayRef<OperandBundleDef> Bundles,
-                                 BasicBlock *InsertAtEnd);
 
   // Note that 'musttail' implies 'tail'.
   enum TailCallKind : unsigned {
@@ -1688,9 +1796,7 @@ public:
 
   /// Return true if the call can return twice
   bool canReturnTwice() const { return hasFnAttr(Attribute::ReturnsTwice); }
-  void setCanReturnTwice() {
-    addAttribute(AttributeList::FunctionIndex, Attribute::ReturnsTwice);
-  }
+  void setCanReturnTwice() { addFnAttr(Attribute::ReturnsTwice); }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1725,6 +1831,17 @@ CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
 
 CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                    ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
+                   BasicBlock::iterator InsertBefore)
+    : CallBase(Ty->getReturnType(), Instruction::Call,
+               OperandTraits<CallBase>::op_end(this) -
+                   (Args.size() + CountBundleInputs(Bundles) + 1),
+               unsigned(Args.size() + CountBundleInputs(Bundles) + 1),
+               InsertBefore) {
+  init(Ty, Func, Args, Bundles, NameStr);
+}
+
+CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
+                   ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
                    Instruction *InsertBefore)
     : CallBase(Ty->getReturnType(), Instruction::Call,
                OperandTraits<CallBase>::op_end(this) -
@@ -1741,6 +1858,14 @@ CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
 /// This class represents the LLVM 'select' instruction.
 ///
 class SelectInst : public Instruction {
+  SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
+             BasicBlock::iterator InsertBefore)
+      : Instruction(S1->getType(), Instruction::Select, &Op<0>(), 3,
+                    InsertBefore) {
+    init(C, S1, S2);
+    setName(NameStr);
+  }
+
   SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
              Instruction *InsertBefore)
     : Instruction(S1->getType(), Instruction::Select,
@@ -1771,6 +1896,16 @@ protected:
   SelectInst *cloneImpl() const;
 
 public:
+  static SelectInst *Create(Value *C, Value *S1, Value *S2,
+                            const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore,
+                            Instruction *MDFrom = nullptr) {
+    SelectInst *Sel = new (3) SelectInst(C, S1, S2, NameStr, InsertBefore);
+    if (MDFrom)
+      Sel->copyMetadata(*MDFrom);
+    return Sel;
+  }
+
   static SelectInst *Create(Value *C, Value *S1, Value *S2,
                             const Twine &NameStr = "",
                             Instruction *InsertBefore = nullptr,
@@ -1843,6 +1978,12 @@ protected:
   VAArgInst *cloneImpl() const;
 
 public:
+  VAArgInst(Value *List, Type *Ty, const Twine &NameStr,
+            BasicBlock::iterator InsertBefore)
+      : UnaryInstruction(Ty, VAArg, List, InsertBefore) {
+    setName(NameStr);
+  }
+
   VAArgInst(Value *List, Type *Ty, const Twine &NameStr = "",
              Instruction *InsertBefore = nullptr)
     : UnaryInstruction(Ty, VAArg, List, InsertBefore) {
@@ -1876,6 +2017,8 @@ public:
 /// element from a VectorType value
 ///
 class ExtractElementInst : public Instruction {
+  ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr,
+                     BasicBlock::iterator InsertBefore);
   ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr = "",
                      Instruction *InsertBefore = nullptr);
   ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr,
@@ -1888,6 +2031,12 @@ protected:
   ExtractElementInst *cloneImpl() const;
 
 public:
+  static ExtractElementInst *Create(Value *Vec, Value *Idx,
+                                    const Twine &NameStr,
+                                    BasicBlock::iterator InsertBefore) {
+    return new (2) ExtractElementInst(Vec, Idx, NameStr, InsertBefore);
+  }
+
   static ExtractElementInst *Create(Value *Vec, Value *Idx,
                                    const Twine &NameStr = "",
                                    Instruction *InsertBefore = nullptr) {
@@ -1940,6 +2089,8 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ExtractElementInst, Value)
 /// element into a VectorType value
 ///
 class InsertElementInst : public Instruction {
+  InsertElementInst(Value *Vec, Value *NewElt, Value *Idx, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
   InsertElementInst(Value *Vec, Value *NewElt, Value *Idx,
                     const Twine &NameStr = "",
                     Instruction *InsertBefore = nullptr);
@@ -1953,6 +2104,12 @@ protected:
   InsertElementInst *cloneImpl() const;
 
 public:
+  static InsertElementInst *Create(Value *Vec, Value *NewElt, Value *Idx,
+                                   const Twine &NameStr,
+                                   BasicBlock::iterator InsertBefore) {
+    return new (3) InsertElementInst(Vec, NewElt, Idx, NameStr, InsertBefore);
+  }
+
   static InsertElementInst *Create(Value *Vec, Value *NewElt, Value *Idx,
                                    const Twine &NameStr = "",
                                    Instruction *InsertBefore = nullptr) {
@@ -1999,7 +2156,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertElementInst, Value)
 //                           ShuffleVectorInst Class
 //===----------------------------------------------------------------------===//
 
-constexpr int UndefMaskElem = -1;
+constexpr int PoisonMaskElem = -1;
 
 /// This instruction constructs a fixed permutation of two
 /// input vectors.
@@ -2007,7 +2164,7 @@ constexpr int UndefMaskElem = -1;
 /// For each element of the result vector, the shuffle mask selects an element
 /// from one of the input vectors to copy to the result. Non-negative elements
 /// in the mask represent an index into the concatenated pair of input vectors.
-/// UndefMaskElem (-1) specifies that the result element is undefined.
+/// PoisonMaskElem (-1) specifies that the result element is poison.
 ///
 /// For scalable vectors, all the elements of the mask must be 0 or -1. This
 /// requirement may be relaxed in the future.
@@ -2022,18 +2179,35 @@ protected:
   ShuffleVectorInst *cloneImpl() const;
 
 public:
+  ShuffleVectorInst(Value *V1, Value *Mask, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
+  ShuffleVectorInst(Value *V1, Value *Mask, const Twine &NameStr = "",
+                    Instruction *InsertBefore = nullptr);
+  ShuffleVectorInst(Value *V1, Value *Mask, const Twine &NameStr,
+                    BasicBlock *InsertAtEnd);
+  ShuffleVectorInst(Value *V1, ArrayRef<int> Mask, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
+  ShuffleVectorInst(Value *V1, ArrayRef<int> Mask, const Twine &NameStr = "",
+                    Instruction *InsertBefore = nullptr);
+  ShuffleVectorInst(Value *V1, ArrayRef<int> Mask, const Twine &NameStr,
+                    BasicBlock *InsertAtEnd);
+  ShuffleVectorInst(Value *V1, Value *V2, Value *Mask, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefor);
   ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
                     const Twine &NameStr = "",
                     Instruction *InsertBefor = nullptr);
   ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
                     const Twine &NameStr, BasicBlock *InsertAtEnd);
+  ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
+                    const Twine &NameStr, BasicBlock::iterator InsertBefor);
   ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
                     const Twine &NameStr = "",
                     Instruction *InsertBefor = nullptr);
   ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
                     const Twine &NameStr, BasicBlock *InsertAtEnd);
 
-  void *operator new(size_t s) { return User::operator new(s, 2); }
+  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
 
   /// Swap the operands and adjust the mask to preserve the semantics
   /// of the instruction.
@@ -2056,16 +2230,16 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   /// Return the shuffle mask value of this instruction for the given element
-  /// index. Return UndefMaskElem if the element is undef.
+  /// index. Return PoisonMaskElem if the element is undef.
   int getMaskValue(unsigned Elt) const { return ShuffleMask[Elt]; }
 
   /// Convert the input shuffle mask operand to a vector of integers. Undefined
-  /// elements of the mask are returned as UndefMaskElem.
+  /// elements of the mask are returned as PoisonMaskElem.
   static void getShuffleMask(const Constant *Mask,
                              SmallVectorImpl<int> &Result);
 
   /// Return the mask for this instruction as a vector of integers. Undefined
-  /// elements of the mask are returned as UndefMaskElem.
+  /// elements of the mask are returned as PoisonMaskElem.
   void getShuffleMask(SmallVectorImpl<int> &Result) const {
     Result.assign(ShuffleMask.begin(), ShuffleMask.end());
   }
@@ -2109,13 +2283,14 @@ public:
   /// Return true if this shuffle mask chooses elements from exactly one source
   /// vector.
   /// Example: <7,5,undef,7>
-  /// This assumes that vector operands are the same length as the mask.
-  static bool isSingleSourceMask(ArrayRef<int> Mask);
-  static bool isSingleSourceMask(const Constant *Mask) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isSingleSourceMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isSingleSourceMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isSingleSourceMask(MaskAsInts);
+    return isSingleSourceMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle chooses elements from exactly one source
@@ -2123,7 +2298,8 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,0,undef,3>
   /// TODO: Optionally allow length-changing shuffles.
   bool isSingleSource() const {
-    return !changesLength() && isSingleSourceMask(ShuffleMask);
+    return !changesLength() &&
+           isSingleSourceMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask chooses elements from exactly one source
@@ -2131,12 +2307,18 @@ public:
   /// necessarily a no-op because it may change the number of elements from its
   /// input vectors or it may provide demanded bits knowledge via undef lanes.
   /// Example: <undef,undef,2,3>
-  static bool isIdentityMask(ArrayRef<int> Mask);
-  static bool isIdentityMask(const Constant *Mask) {
+  static bool isIdentityMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isIdentityMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
+
+    // Not possible to express a shuffle mask for a scalable vector for this
+    // case.
+    if (isa<ScalableVectorType>(Mask->getType()))
+      return false;
+
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isIdentityMask(MaskAsInts);
+    return isIdentityMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle chooses elements from exactly one source
@@ -2144,7 +2326,12 @@ public:
   /// from its input vectors.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <4,undef,6,undef>
   bool isIdentity() const {
-    return !changesLength() && isIdentityMask(ShuffleMask);
+    // Not possible to express a shuffle mask for a scalable vector for this
+    // case.
+    if (isa<ScalableVectorType>(getType()))
+      return false;
+
+    return !changesLength() && isIdentityMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle lengthens exactly one source vector with
@@ -2168,12 +2355,12 @@ public:
   /// In that case, the shuffle is better classified as an identity shuffle.
   /// This assumes that vector operands are the same length as the mask
   /// (a length-changing shuffle can never be equivalent to a vector select).
-  static bool isSelectMask(ArrayRef<int> Mask);
-  static bool isSelectMask(const Constant *Mask) {
+  static bool isSelectMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isSelectMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isSelectMask(MaskAsInts);
+    return isSelectMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle chooses elements from its source vectors
@@ -2185,19 +2372,20 @@ public:
   /// In that case, the shuffle is better classified as an identity shuffle.
   /// TODO: Optionally allow length-changing shuffles.
   bool isSelect() const {
-    return !changesLength() && isSelectMask(ShuffleMask);
+    return !changesLength() && isSelectMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask swaps the order of elements from exactly
   /// one source vector.
   /// Example: <7,6,undef,4>
-  /// This assumes that vector operands are the same length as the mask.
-  static bool isReverseMask(ArrayRef<int> Mask);
-  static bool isReverseMask(const Constant *Mask) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isReverseMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isReverseMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isReverseMask(MaskAsInts);
+    return isReverseMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle swaps the order of elements from exactly
@@ -2205,19 +2393,20 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,undef,1,undef>
   /// TODO: Optionally allow length-changing shuffles.
   bool isReverse() const {
-    return !changesLength() && isReverseMask(ShuffleMask);
+    return !changesLength() && isReverseMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask chooses all elements with the same value
   /// as the first element of exactly one source vector.
   /// Example: <4,undef,undef,4>
-  /// This assumes that vector operands are the same length as the mask.
-  static bool isZeroEltSplatMask(ArrayRef<int> Mask);
-  static bool isZeroEltSplatMask(const Constant *Mask) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isZeroEltSplatMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isZeroEltSplatMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isZeroEltSplatMask(MaskAsInts);
+    return isZeroEltSplatMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if all elements of this shuffle are the same value as the
@@ -2227,7 +2416,8 @@ public:
   /// TODO: Optionally allow length-changing shuffles.
   /// TODO: Optionally allow splats from other elements.
   bool isZeroEltSplat() const {
-    return !changesLength() && isZeroEltSplatMask(ShuffleMask);
+    return !changesLength() &&
+           isZeroEltSplatMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask is a transpose mask.
@@ -2262,12 +2452,12 @@ public:
   ///   ; Transposed matrix
   ///   t0 = < a, e, c, g > = shufflevector m0, m1 < 0, 4, 2, 6 >
   ///   t1 = < b, f, d, h > = shufflevector m0, m1 < 1, 5, 3, 7 >
-  static bool isTransposeMask(ArrayRef<int> Mask);
-  static bool isTransposeMask(const Constant *Mask) {
+  static bool isTransposeMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isTransposeMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isTransposeMask(MaskAsInts);
+    return isTransposeMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle transposes the elements of its inputs without
@@ -2276,7 +2466,30 @@ public:
   /// exact specification.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <0,4,2,6>
   bool isTranspose() const {
-    return !changesLength() && isTransposeMask(ShuffleMask);
+    return !changesLength() && isTransposeMask(ShuffleMask, ShuffleMask.size());
+  }
+
+  /// Return true if this shuffle mask is a splice mask, concatenating the two
+  /// inputs together and then extracts an original width vector starting from
+  /// the splice index.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isSpliceMask(ArrayRef<int> Mask, int NumSrcElts, int &Index);
+  static bool isSpliceMask(const Constant *Mask, int NumSrcElts, int &Index) {
+    assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
+    SmallVector<int, 16> MaskAsInts;
+    getShuffleMask(Mask, MaskAsInts);
+    return isSpliceMask(MaskAsInts, NumSrcElts, Index);
+  }
+
+  /// Return true if this shuffle splices two inputs without changing the length
+  /// of the vectors. This operation concatenates the two inputs together and
+  /// then extracts an original width vector starting from the splice index.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
+  bool isSplice(int &Index) const {
+    return !changesLength() &&
+           isSpliceMask(ShuffleMask, ShuffleMask.size(), Index);
   }
 
   /// Return true if this shuffle mask is an extract subvector mask.
@@ -2308,6 +2521,72 @@ public:
     return isExtractSubvectorMask(ShuffleMask, NumSrcElts, Index);
   }
 
+  /// Return true if this shuffle mask is an insert subvector mask.
+  /// A valid insert subvector mask inserts the lowest elements of a second
+  /// source operand into an in-place first source operand.
+  /// Both the sub vector width and the insertion index is returned.
+  static bool isInsertSubvectorMask(ArrayRef<int> Mask, int NumSrcElts,
+                                    int &NumSubElts, int &Index);
+  static bool isInsertSubvectorMask(const Constant *Mask, int NumSrcElts,
+                                    int &NumSubElts, int &Index) {
+    assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
+    // Not possible to express a shuffle mask for a scalable vector for this
+    // case.
+    if (isa<ScalableVectorType>(Mask->getType()))
+      return false;
+    SmallVector<int, 16> MaskAsInts;
+    getShuffleMask(Mask, MaskAsInts);
+    return isInsertSubvectorMask(MaskAsInts, NumSrcElts, NumSubElts, Index);
+  }
+
+  /// Return true if this shuffle mask is an insert subvector mask.
+  bool isInsertSubvectorMask(int &NumSubElts, int &Index) const {
+    // Not possible to express a shuffle mask for a scalable vector for this
+    // case.
+    if (isa<ScalableVectorType>(getType()))
+      return false;
+
+    int NumSrcElts =
+        cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
+    return isInsertSubvectorMask(ShuffleMask, NumSrcElts, NumSubElts, Index);
+  }
+
+  /// Return true if this shuffle mask replicates each of the \p VF elements
+  /// in a vector \p ReplicationFactor times.
+  /// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
+  ///   <0,0,0,1,1,1,2,2,2,3,3,3>
+  static bool isReplicationMask(ArrayRef<int> Mask, int &ReplicationFactor,
+                                int &VF);
+  static bool isReplicationMask(const Constant *Mask, int &ReplicationFactor,
+                                int &VF) {
+    assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
+    // Not possible to express a shuffle mask for a scalable vector for this
+    // case.
+    if (isa<ScalableVectorType>(Mask->getType()))
+      return false;
+    SmallVector<int, 16> MaskAsInts;
+    getShuffleMask(Mask, MaskAsInts);
+    return isReplicationMask(MaskAsInts, ReplicationFactor, VF);
+  }
+
+  /// Return true if this shuffle mask is a replication mask.
+  bool isReplicationMask(int &ReplicationFactor, int &VF) const;
+
+  /// Return true if this shuffle mask represents "clustered" mask of size VF,
+  /// i.e. each index between [0..VF) is used exactly once in each submask of
+  /// size VF.
+  /// For example, the mask for \p VF=4 is:
+  /// 0, 1, 2, 3, 3, 2, 0, 1 - "clustered", because each submask of size 4
+  /// (0,1,2,3 and 3,2,0,1) uses indices [0..VF) exactly one time.
+  /// 0, 1, 2, 3, 3, 3, 1, 0 - not "clustered", because
+  ///                          element 3 is used twice in the second submask
+  ///                          (3,3,1,0) and index 2 is not used at all.
+  static bool isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF);
+
+  /// Return true if this shuffle mask is a one-use-single-source("clustered")
+  /// mask.
+  bool isOneUseSingleSourceMask(int VF) const;
+
   /// Change values in a shuffle permute mask assuming the two vector operands
   /// of length InVecNumElts have swapped position.
   static void commuteShuffleMask(MutableArrayRef<int> Mask,
@@ -2320,6 +2599,62 @@ public:
              "shufflevector mask index out of range");
     }
   }
+
+  /// Return if this shuffle interleaves its two input vectors together.
+  bool isInterleave(unsigned Factor);
+
+  /// Return true if the mask interleaves one or more input vectors together.
+  ///
+  /// I.e. <0, LaneLen, ... , LaneLen*(Factor - 1), 1, LaneLen + 1, ...>
+  /// E.g. For a Factor of 2 (LaneLen=4):
+  ///   <0, 4, 1, 5, 2, 6, 3, 7>
+  /// E.g. For a Factor of 3 (LaneLen=4):
+  ///   <4, 0, 9, 5, 1, 10, 6, 2, 11, 7, 3, 12>
+  /// E.g. For a Factor of 4 (LaneLen=2):
+  ///   <0, 2, 6, 4, 1, 3, 7, 5>
+  ///
+  /// NumInputElts is the total number of elements in the input vectors.
+  ///
+  /// StartIndexes are the first indexes of each vector being interleaved,
+  /// substituting any indexes that were undef
+  /// E.g. <4, -1, 2, 5, 1, 3> (Factor=3): StartIndexes=<4, 0, 2>
+  ///
+  /// Note that this does not check if the input vectors are consecutive:
+  /// It will return true for masks such as
+  /// <0, 4, 6, 1, 5, 7> (Factor=3, LaneLen=2)
+  static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
+                               unsigned NumInputElts,
+                               SmallVectorImpl<unsigned> &StartIndexes);
+  static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
+                               unsigned NumInputElts) {
+    SmallVector<unsigned, 8> StartIndexes;
+    return isInterleaveMask(Mask, Factor, NumInputElts, StartIndexes);
+  }
+
+  /// Check if the mask is a DE-interleave mask of the given factor
+  /// \p Factor like:
+  ///     <Index, Index+Factor, ..., Index+(NumElts-1)*Factor>
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
+                                         unsigned &Index);
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor) {
+    unsigned Unused;
+    return isDeInterleaveMaskOfFactor(Mask, Factor, Unused);
+  }
+
+  /// Checks if the shuffle is a bit rotation of the first operand across
+  /// multiple subelements, e.g:
+  ///
+  /// shuffle <8 x i8> %a, <8 x i8> poison, <8 x i32> <1, 0, 3, 2, 5, 4, 7, 6>
+  ///
+  /// could be expressed as
+  ///
+  /// rotl <4 x i16> %a, 8
+  ///
+  /// If it can be expressed as a rotation, returns the number of subelements to
+  /// group by in NumSubElts and the number of bits to rotate left in RotateAmt.
+  static bool isBitRotateMask(ArrayRef<int> Mask, unsigned EltSizeInBits,
+                              unsigned MinSubElts, unsigned MaxSubElts,
+                              unsigned &NumSubElts, unsigned &RotateAmt);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -2349,9 +2684,12 @@ class ExtractValueInst : public UnaryInstruction {
   ExtractValueInst(const ExtractValueInst &EVI);
 
   /// Constructors - Create a extractvalue instruction with a base aggregate
-  /// value and a list of indices.  The first ctor can optionally insert before
-  /// an existing instruction, the second appends the new instruction to the
-  /// specified BasicBlock.
+  /// value and a list of indices. The first and second ctor can optionally
+  /// insert before an existing instruction, the third appends the new
+  /// instruction to the specified BasicBlock.
+  inline ExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore);
   inline ExtractValueInst(Value *Agg,
                           ArrayRef<unsigned> Idxs,
                           const Twine &NameStr,
@@ -2369,6 +2707,13 @@ protected:
   ExtractValueInst *cloneImpl() const;
 
 public:
+  static ExtractValueInst *Create(Value *Agg, ArrayRef<unsigned> Idxs,
+                                  const Twine &NameStr,
+                                  BasicBlock::iterator InsertBefore) {
+    return new
+      ExtractValueInst(Agg, Idxs, NameStr, InsertBefore);
+  }
+
   static ExtractValueInst *Create(Value *Agg,
                                   ArrayRef<unsigned> Idxs,
                                   const Twine &NameStr = "",
@@ -2429,6 +2774,14 @@ public:
   }
 };
 
+ExtractValueInst::ExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
+                                   const Twine &NameStr,
+                                   BasicBlock::iterator InsertBefore)
+    : UnaryInstruction(checkGEPType(getIndexedType(Agg->getType(), Idxs)),
+                       ExtractValue, Agg, InsertBefore) {
+  init(Idxs, NameStr);
+}
+
 ExtractValueInst::ExtractValueInst(Value *Agg,
                                    ArrayRef<unsigned> Idxs,
                                    const Twine &NameStr,
@@ -2460,9 +2813,12 @@ class InsertValueInst : public Instruction {
   InsertValueInst(const InsertValueInst &IVI);
 
   /// Constructors - Create a insertvalue instruction with a base aggregate
-  /// value, a value to insert, and a list of indices.  The first ctor can
-  /// optionally insert before an existing instruction, the second appends
+  /// value, a value to insert, and a list of indices. The first and second ctor
+  /// can optionally insert before an existing instruction, the third appends
   /// the new instruction to the specified BasicBlock.
+  inline InsertValueInst(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
+                         const Twine &NameStr,
+                         BasicBlock::iterator InsertBefore);
   inline InsertValueInst(Value *Agg, Value *Val,
                          ArrayRef<unsigned> Idxs,
                          const Twine &NameStr,
@@ -2471,8 +2827,10 @@ class InsertValueInst : public Instruction {
                          ArrayRef<unsigned> Idxs,
                          const Twine &NameStr, BasicBlock *InsertAtEnd);
 
-  /// Constructors - These two constructors are convenience methods because one
-  /// and two index insertvalue instructions are so common.
+  /// Constructors - These three constructors are convenience methods because
+  /// one and two index insertvalue instructions are so common.
+  InsertValueInst(Value *Agg, Value *Val, unsigned Idx, const Twine &NameStr,
+                  BasicBlock::iterator InsertBefore);
   InsertValueInst(Value *Agg, Value *Val, unsigned Idx,
                   const Twine &NameStr = "",
                   Instruction *InsertBefore = nullptr);
@@ -2490,8 +2848,13 @@ protected:
 
 public:
   // allocate space for exactly two operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 2);
+  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
+  static InsertValueInst *Create(Value *Agg, Value *Val,
+                                 ArrayRef<unsigned> Idxs, const Twine &NameStr,
+                                 BasicBlock::iterator InsertBefore) {
+    return new InsertValueInst(Agg, Val, Idxs, NameStr, InsertBefore);
   }
 
   static InsertValueInst *Create(Value *Agg, Value *Val,
@@ -2569,6 +2932,16 @@ InsertValueInst::InsertValueInst(Value *Agg,
                                  Value *Val,
                                  ArrayRef<unsigned> Idxs,
                                  const Twine &NameStr,
+                                 BasicBlock::iterator InsertBefore)
+  : Instruction(Agg->getType(), InsertValue, OperandTraits<InsertValueInst>::op_begin(this),
+                2, InsertBefore) {
+  init(Agg, Val, Idxs, NameStr);
+}
+
+InsertValueInst::InsertValueInst(Value *Agg,
+                                 Value *Val,
+                                 ArrayRef<unsigned> Idxs,
+                                 const Twine &NameStr,
                                  Instruction *InsertBefore)
   : Instruction(Agg->getType(), InsertValue,
                 OperandTraits<InsertValueInst>::op_begin(this),
@@ -2603,6 +2976,15 @@ class PHINode : public Instruction {
   unsigned ReservedSpace;
 
   PHINode(const PHINode &PN);
+
+  explicit PHINode(Type *Ty, unsigned NumReservedValues, const Twine &NameStr,
+                   BasicBlock::iterator InsertBefore)
+      : Instruction(Ty, Instruction::PHI, nullptr, 0, InsertBefore),
+        ReservedSpace(NumReservedValues) {
+    assert(!Ty->isTokenTy() && "PHI nodes cannot have token type!");
+    setName(NameStr);
+    allocHungoffUses(ReservedSpace);
+  }
 
   explicit PHINode(Type *Ty, unsigned NumReservedValues,
                    const Twine &NameStr = "",
@@ -2640,6 +3022,12 @@ public:
   /// Constructors - NumReservedValues is a hint for the number of incoming
   /// edges that this phi node will have (use 0 if you really have no idea).
   static PHINode *Create(Type *Ty, unsigned NumReservedValues,
+                         const Twine &NameStr,
+                         BasicBlock::iterator InsertBefore) {
+    return new PHINode(Ty, NumReservedValues, NameStr, InsertBefore);
+  }
+
+  static PHINode *Create(Type *Ty, unsigned NumReservedValues,
                          const Twine &NameStr = "",
                          Instruction *InsertBefore = nullptr) {
     return new PHINode(Ty, NumReservedValues, NameStr, InsertBefore);
@@ -2655,28 +3043,18 @@ public:
 
   // Block iterator interface. This provides access to the list of incoming
   // basic blocks, which parallels the list of incoming values.
+  // Please note that we are not providing non-const iterators for blocks to
+  // force all updates go through an interface function.
 
   using block_iterator = BasicBlock **;
   using const_block_iterator = BasicBlock * const *;
-
-  block_iterator block_begin() {
-    return reinterpret_cast<block_iterator>(op_begin() + ReservedSpace);
-  }
 
   const_block_iterator block_begin() const {
     return reinterpret_cast<const_block_iterator>(op_begin() + ReservedSpace);
   }
 
-  block_iterator block_end() {
-    return block_begin() + getNumOperands();
-  }
-
   const_block_iterator block_end() const {
     return block_begin() + getNumOperands();
-  }
-
-  iterator_range<block_iterator> blocks() {
-    return make_range(block_begin(), block_end());
   }
 
   iterator_range<const_block_iterator> blocks() const {
@@ -2733,8 +3111,14 @@ public:
   }
 
   void setIncomingBlock(unsigned i, BasicBlock *BB) {
-    assert(BB && "PHI node got a null basic block!");
-    block_begin()[i] = BB;
+    const_cast<block_iterator>(block_begin())[i] = BB;
+  }
+
+  /// Copies the basic blocks from \p BBRange to the incoming basic block list
+  /// of this PHINode, starting at \p ToIdx.
+  void copyIncomingBlocks(iterator_range<const_block_iterator> BBRange,
+                          uint32_t ToIdx = 0) {
+    copy(BBRange, const_cast<block_iterator>(block_begin()) + ToIdx);
   }
 
   /// Replace every incoming basic block \p Old to basic block \p New.
@@ -2771,6 +3155,11 @@ public:
     assert(Idx >= 0 && "Invalid basic block argument to remove!");
     return removeIncomingValue(Idx, DeletePHIIfEmpty);
   }
+
+  /// Remove all incoming values for which the predicate returns true.
+  /// The predicate accepts the incoming value index.
+  void removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
+                             bool DeletePHIIfEmpty = true);
 
   /// Return the first index of the specified basic
   /// block in the value list for this PHI.  Returns -1 if no instance.
@@ -2863,14 +3252,15 @@ public:
 
 private:
   explicit LandingPadInst(Type *RetTy, unsigned NumReservedValues,
+                          const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore);
+  explicit LandingPadInst(Type *RetTy, unsigned NumReservedValues,
                           const Twine &NameStr, Instruction *InsertBefore);
   explicit LandingPadInst(Type *RetTy, unsigned NumReservedValues,
                           const Twine &NameStr, BasicBlock *InsertAtEnd);
 
   // Allocate space for exactly zero operands.
-  void *operator new(size_t s) {
-    return User::operator new(s);
-  }
+  void *operator new(size_t S) { return User::operator new(S); }
 
   void growOperands(unsigned Size);
   void init(unsigned NumReservedValues, const Twine &NameStr);
@@ -2882,8 +3272,13 @@ protected:
   LandingPadInst *cloneImpl() const;
 
 public:
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
   /// Constructors - NumReservedClauses is a hint for the number of incoming
   /// clauses that this landingpad will have (use 0 if you really have no idea).
+  static LandingPadInst *Create(Type *RetTy, unsigned NumReservedClauses,
+                                const Twine &NameStr,
+                                BasicBlock::iterator InsertBefore);
   static LandingPadInst *Create(Type *RetTy, unsigned NumReservedClauses,
                                 const Twine &NameStr = "",
                                 Instruction *InsertBefore = nullptr);
@@ -2958,6 +3353,8 @@ private:
   // ReturnInst()                  - 'ret void' instruction
   // ReturnInst(    null)          - 'ret void' instruction
   // ReturnInst(Value* X)          - 'ret X'    instruction
+  // ReturnInst(null, Iterator It) - 'ret void' instruction, insert before I
+  // ReturnInst(Value* X, Iterator It) - 'ret X'    instruction, insert before I
   // ReturnInst(    null, Inst *I) - 'ret void' instruction, insert before I
   // ReturnInst(Value* X, Inst *I) - 'ret X'    instruction, insert before I
   // ReturnInst(    null, BB *B)   - 'ret void' instruction, insert @ end of B
@@ -2965,6 +3362,8 @@ private:
   //
   // NOTE: If the Value* passed is of type void then the constructor behaves as
   // if it was passed NULL.
+  explicit ReturnInst(LLVMContext &C, Value *retVal,
+                      BasicBlock::iterator InsertBefore);
   explicit ReturnInst(LLVMContext &C, Value *retVal = nullptr,
                       Instruction *InsertBefore = nullptr);
   ReturnInst(LLVMContext &C, Value *retVal, BasicBlock *InsertAtEnd);
@@ -2977,6 +3376,11 @@ protected:
   ReturnInst *cloneImpl() const;
 
 public:
+  static ReturnInst *Create(LLVMContext &C, Value *retVal,
+                            BasicBlock::iterator InsertBefore) {
+    return new (!!retVal) ReturnInst(C, retVal, InsertBefore);
+  }
+
   static ReturnInst* Create(LLVMContext &C, Value *retVal = nullptr,
                             Instruction *InsertBefore = nullptr) {
     return new(!!retVal) ReturnInst(C, retVal, InsertBefore);
@@ -3041,10 +3445,15 @@ class BranchInst : public Instruction {
   // BranchInst constructors (where {B, T, F} are blocks, and C is a condition):
   // BranchInst(BB *B)                           - 'br B'
   // BranchInst(BB* T, BB *F, Value *C)          - 'br C, T, F'
+  // BranchInst(BB* B, Iter It)                  - 'br B'        insert before I
+  // BranchInst(BB* T, BB *F, Value *C, Iter It) - 'br C, T, F', insert before I
   // BranchInst(BB* B, Inst *I)                  - 'br B'        insert before I
   // BranchInst(BB* T, BB *F, Value *C, Inst *I) - 'br C, T, F', insert before I
   // BranchInst(BB* B, BB *I)                    - 'br B'        insert at end
   // BranchInst(BB* T, BB *F, Value *C, BB *I)   - 'br C, T, F', insert at end
+  explicit BranchInst(BasicBlock *IfTrue, BasicBlock::iterator InsertBefore);
+  BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
+             BasicBlock::iterator InsertBefore);
   explicit BranchInst(BasicBlock *IfTrue, Instruction *InsertBefore = nullptr);
   BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
              Instruction *InsertBefore = nullptr);
@@ -3089,8 +3498,18 @@ public:
   };
 
   static BranchInst *Create(BasicBlock *IfTrue,
+                            BasicBlock::iterator InsertBefore) {
+    return new(1) BranchInst(IfTrue, InsertBefore);
+  }
+
+  static BranchInst *Create(BasicBlock *IfTrue,
                             Instruction *InsertBefore = nullptr) {
     return new(1) BranchInst(IfTrue, InsertBefore);
+  }
+
+  static BranchInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                            Value *Cond, BasicBlock::iterator InsertBefore) {
+    return new(3) BranchInst(IfTrue, IfFalse, Cond, InsertBefore);
   }
 
   static BranchInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
@@ -3190,6 +3609,13 @@ class SwitchInst : public Instruction {
   /// to make memory allocation more efficient. This constructor can also
   /// auto-insert before another instruction.
   SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
+             BasicBlock::iterator InsertBefore);
+
+  /// Create a new switch instruction, specifying a value to switch on and a
+  /// default destination. The number of additional cases can be specified here
+  /// to make memory allocation more efficient. This constructor can also
+  /// auto-insert before another instruction.
+  SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
              Instruction *InsertBefore);
 
   /// Create a new switch instruction, specifying a value to switch on and a
@@ -3200,9 +3626,7 @@ class SwitchInst : public Instruction {
              BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) {
-    return User::operator new(s);
-  }
+  void *operator new(size_t S) { return User::operator new(S); }
 
   void init(Value *Value, BasicBlock *Default, unsigned NumReserved);
   void growOperands();
@@ -3214,6 +3638,8 @@ protected:
   SwitchInst *cloneImpl() const;
 
 public:
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
   // -2
   static const unsigned DefaultPseudoIndex = static_cast<unsigned>(~0L-1);
 
@@ -3284,14 +3710,14 @@ public:
     CaseHandle(SwitchInst *SI, ptrdiff_t Index) : CaseHandleImpl(SI, Index) {}
 
     /// Sets the new value for current case.
-    void setValue(ConstantInt *V) {
+    void setValue(ConstantInt *V) const {
       assert((unsigned)Index < SI->getNumCases() &&
              "Index out the number of cases.");
       SI->setOperand(2 + Index*2, reinterpret_cast<Value*>(V));
     }
 
     /// Sets the new successor for current case.
-    void setSuccessor(BasicBlock *S) {
+    void setSuccessor(BasicBlock *S) const {
       SI->setSuccessor(getSuccessorIndex(), S);
     }
   };
@@ -3300,7 +3726,7 @@ public:
   class CaseIteratorImpl
       : public iterator_facade_base<CaseIteratorImpl<CaseHandleT>,
                                     std::random_access_iterator_tag,
-                                    CaseHandleT> {
+                                    const CaseHandleT> {
     using SwitchInstT = typename CaseHandleT::SwitchInstType;
 
     CaseHandleT Case;
@@ -3359,12 +3785,17 @@ public:
       assert(Case.SI == RHS.Case.SI && "Incompatible operators.");
       return Case.Index < RHS.Case.Index;
     }
-    CaseHandleT &operator*() { return Case; }
     const CaseHandleT &operator*() const { return Case; }
   };
 
   using CaseIt = CaseIteratorImpl<CaseHandle>;
   using ConstCaseIt = CaseIteratorImpl<ConstCaseHandle>;
+
+  static SwitchInst *Create(Value *Value, BasicBlock *Default,
+                            unsigned NumCases,
+                            BasicBlock::iterator InsertBefore) {
+    return new SwitchInst(Value, Default, NumCases, InsertBefore);
+  }
 
   static SwitchInst *Create(Value *Value, BasicBlock *Default,
                             unsigned NumCases,
@@ -3386,6 +3817,12 @@ public:
 
   BasicBlock *getDefaultDest() const {
     return cast<BasicBlock>(getOperand(1));
+  }
+
+  /// Returns true if the default branch must result in immediate undefined
+  /// behavior, false otherwise.
+  bool defaultDestUndefined() const {
+    return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
   }
 
   void setDefaultDest(BasicBlock *DefaultCase) {
@@ -3449,15 +3886,12 @@ public:
   /// default case iterator to indicate that it is handled by the default
   /// handler.
   CaseIt findCaseValue(const ConstantInt *C) {
-    CaseIt I = llvm::find_if(
-        cases(), [C](CaseHandle &Case) { return Case.getCaseValue() == C; });
-    if (I != case_end())
-      return I;
-
-    return case_default();
+    return CaseIt(
+        this,
+        const_cast<const SwitchInst *>(this)->findCaseValue(C)->getCaseIndex());
   }
   ConstCaseIt findCaseValue(const ConstantInt *C) const {
-    ConstCaseIt I = llvm::find_if(cases(), [C](ConstCaseHandle &Case) {
+    ConstCaseIt I = llvm::find_if(cases(), [C](const ConstCaseHandle &Case) {
       return Case.getCaseValue() == C;
     });
     if (I != case_end())
@@ -3524,18 +3958,16 @@ public:
 /// their prof branch_weights metadata.
 class SwitchInstProfUpdateWrapper {
   SwitchInst &SI;
-  Optional<SmallVector<uint32_t, 8> > Weights = None;
+  std::optional<SmallVector<uint32_t, 8>> Weights;
   bool Changed = false;
 
 protected:
-  static MDNode *getProfBranchWeightsMD(const SwitchInst &SI);
-
   MDNode *buildProfBranchWeightsMD();
 
   void init();
 
 public:
-  using CaseWeightOpt = Optional<uint32_t>;
+  using CaseWeightOpt = std::optional<uint32_t>;
   SwitchInst *operator->() { return &SI; }
   SwitchInst &operator*() { return SI; }
   operator SwitchInst *() { return &SI; }
@@ -3557,7 +3989,7 @@ public:
 
   /// Delegate the call to the underlying SwitchInst::eraseFromParent() and mark
   /// this object to not touch the underlying SwitchInst in destructor.
-  SymbolTableList<Instruction>::iterator eraseFromParent();
+  Instruction::InstListType::iterator eraseFromParent();
 
   void setSuccessorWeight(unsigned idx, CaseWeightOpt W);
   CaseWeightOpt getSuccessorWeight(unsigned idx);
@@ -3589,6 +4021,13 @@ class IndirectBrInst : public Instruction {
   /// Address to jump to.  The number of expected destinations can be specified
   /// here to make memory allocation more efficient.  This constructor can also
   /// autoinsert before another instruction.
+  IndirectBrInst(Value *Address, unsigned NumDests,
+                 BasicBlock::iterator InsertBefore);
+
+  /// Create a new indirectbr instruction, specifying an
+  /// Address to jump to.  The number of expected destinations can be specified
+  /// here to make memory allocation more efficient.  This constructor can also
+  /// autoinsert before another instruction.
   IndirectBrInst(Value *Address, unsigned NumDests, Instruction *InsertBefore);
 
   /// Create a new indirectbr instruction, specifying an
@@ -3598,9 +4037,7 @@ class IndirectBrInst : public Instruction {
   IndirectBrInst(Value *Address, unsigned NumDests, BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) {
-    return User::operator new(s);
-  }
+  void *operator new(size_t S) { return User::operator new(S); }
 
   void init(Value *Address, unsigned NumDests);
   void growOperands();
@@ -3612,6 +4049,8 @@ protected:
   IndirectBrInst *cloneImpl() const;
 
 public:
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
   /// Iterator type that casts an operand to a basic block.
   ///
   /// This only makes sense because the successors are stored as adjacent
@@ -3638,6 +4077,11 @@ public:
     const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
     const BasicBlock *operator->() const { return operator*(); }
   };
+
+  static IndirectBrInst *Create(Value *Address, unsigned NumDests,
+                                BasicBlock::iterator InsertBefore) {
+    return new IndirectBrInst(Address, NumDests, InsertBefore);
+  }
 
   static IndirectBrInst *Create(Value *Address, unsigned NumDests,
                                 Instruction *InsertBefore = nullptr) {
@@ -3727,6 +4171,12 @@ class InvokeInst : public CallBase {
   InvokeInst(const InvokeInst &BI);
 
   /// Construct an InvokeInst given a range of arguments.
+  inline InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
+                    BasicBlock *IfException, ArrayRef<Value *> Args,
+                    ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                    const Twine &NameStr, BasicBlock::iterator InsertBefore);
+
+  /// Construct an InvokeInst given a range of arguments.
   ///
   /// Construct an InvokeInst from a range of arguments
   inline InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
@@ -3760,16 +4210,40 @@ public:
   static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    int NumOperands = ComputeNumOperands(Args.size());
+    return new (NumOperands)
+        InvokeInst(Ty, Func, IfNormal, IfException, Args, std::nullopt,
+                   NumOperands, NameStr, InsertBefore);
+  }
+
+  static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
+                            BasicBlock *IfException, ArrayRef<Value *> Args,
+                            const Twine &NameStr,
                             Instruction *InsertBefore = nullptr) {
     int NumOperands = ComputeNumOperands(Args.size());
     return new (NumOperands)
-        InvokeInst(Ty, Func, IfNormal, IfException, Args, None, NumOperands,
+        InvokeInst(Ty, Func, IfNormal, IfException, Args, std::nullopt,
+                   NumOperands, NameStr, InsertBefore);
+  }
+
+  static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
+                            BasicBlock *IfException, ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles,
+                            const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    int NumOperands =
+        ComputeNumOperands(Args.size(), CountBundleInputs(Bundles));
+    unsigned DescriptorBytes = Bundles.size() * sizeof(BundleOpInfo);
+
+    return new (NumOperands, DescriptorBytes)
+        InvokeInst(Ty, Func, IfNormal, IfException, Args, Bundles, NumOperands,
                    NameStr, InsertBefore);
   }
 
   static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
-                            ArrayRef<OperandBundleDef> Bundles = None,
+                            ArrayRef<OperandBundleDef> Bundles = std::nullopt,
                             const Twine &NameStr = "",
                             Instruction *InsertBefore = nullptr) {
     int NumOperands =
@@ -3786,8 +4260,8 @@ public:
                             const Twine &NameStr, BasicBlock *InsertAtEnd) {
     int NumOperands = ComputeNumOperands(Args.size());
     return new (NumOperands)
-        InvokeInst(Ty, Func, IfNormal, IfException, Args, None, NumOperands,
-                   NameStr, InsertAtEnd);
+        InvokeInst(Ty, Func, IfNormal, IfException, Args, std::nullopt,
+                   NumOperands, NameStr, InsertAtEnd);
   }
 
   static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
@@ -3806,14 +4280,31 @@ public:
   static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             const Twine &NameStr,
-                            Instruction *InsertBefore = nullptr) {
+                            BasicBlock::iterator InsertBefore) {
     return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
-                  IfException, Args, None, NameStr, InsertBefore);
+                  IfException, Args, std::nullopt, NameStr, InsertBefore);
   }
 
   static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
-                            ArrayRef<OperandBundleDef> Bundles = None,
+                            const Twine &NameStr,
+                            Instruction *InsertBefore = nullptr) {
+    return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
+                  IfException, Args, std::nullopt, NameStr, InsertBefore);
+  }
+
+  static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
+                            BasicBlock *IfException, ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles,
+                            const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
+                  IfException, Args, Bundles, NameStr, InsertBefore);
+  }
+
+  static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
+                            BasicBlock *IfException, ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles = std::nullopt,
                             const Twine &NameStr = "",
                             Instruction *InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
@@ -3841,6 +4332,8 @@ public:
   /// The returned invoke instruction is identical to \p II in every way except
   /// that the operand bundles for the new instruction are set to the operand
   /// bundles in \p Bundles.
+  static InvokeInst *Create(InvokeInst *II, ArrayRef<OperandBundleDef> Bundles,
+                            BasicBlock::iterator InsertPt);
   static InvokeInst *Create(InvokeInst *II, ArrayRef<OperandBundleDef> Bundles,
                             Instruction *InsertPt = nullptr);
 
@@ -3877,6 +4370,9 @@ public:
 
   unsigned getNumSuccessors() const { return 2; }
 
+  /// Updates profile metadata by scaling it by \p S / \p T.
+  void updateProfWeight(uint64_t S, uint64_t T);
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return (I->getOpcode() == Instruction::Invoke);
@@ -3893,6 +4389,16 @@ private:
     Instruction::setSubclassData<Bitfield>(Value);
   }
 };
+
+InvokeInst::InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
+                       BasicBlock *IfException, ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                       const Twine &NameStr, BasicBlock::iterator InsertBefore)
+    : CallBase(Ty->getReturnType(), Instruction::Invoke,
+               OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
+               InsertBefore) {
+  init(Ty, Func, IfNormal, IfException, Args, Bundles, NameStr);
+}
 
 InvokeInst::InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                        BasicBlock *IfException, ArrayRef<Value *> Args,
@@ -3929,6 +4435,13 @@ class CallBrInst : public CallBase {
   CallBrInst(const CallBrInst &BI);
 
   /// Construct a CallBrInst given a range of arguments.
+  inline CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+                    ArrayRef<BasicBlock *> IndirectDests,
+                    ArrayRef<Value *> Args, ArrayRef<OperandBundleDef> Bundles,
+                    int NumOperands, const Twine &NameStr,
+                    BasicBlock::iterator InsertBefore);
+
+  /// Construct a CallBrInst given a range of arguments.
   ///
   /// Construct a CallBrInst from a range of arguments
   inline CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
@@ -3946,9 +4459,6 @@ class CallBrInst : public CallBase {
   void init(FunctionType *FTy, Value *Func, BasicBlock *DefaultDest,
             ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
             ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
-
-  /// Should the Indirect Destinations change, scan + update the Arg list.
-  void updateArgBlockAddresses(unsigned i, BasicBlock *B);
 
   /// Compute the number of operands to allocate.
   static int ComputeNumOperands(int NumArgs, int NumIndirectDests,
@@ -3969,20 +4479,43 @@ public:
                             BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
                             ArrayRef<Value *> Args, const Twine &NameStr,
-                            Instruction *InsertBefore = nullptr) {
+                            BasicBlock::iterator InsertBefore) {
     int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size());
     return new (NumOperands)
-        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, None,
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, std::nullopt,
                    NumOperands, NameStr, InsertBefore);
   }
 
   static CallBrInst *Create(FunctionType *Ty, Value *Func,
                             BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
-                            ArrayRef<Value *> Args,
-                            ArrayRef<OperandBundleDef> Bundles = None,
-                            const Twine &NameStr = "",
+                            ArrayRef<Value *> Args, const Twine &NameStr,
                             Instruction *InsertBefore = nullptr) {
+    int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size());
+    return new (NumOperands)
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, std::nullopt,
+                   NumOperands, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *
+  Create(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+         ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
+         ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
+         BasicBlock::iterator InsertBefore) {
+    int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size(),
+                                         CountBundleInputs(Bundles));
+    unsigned DescriptorBytes = Bundles.size() * sizeof(BundleOpInfo);
+
+    return new (NumOperands, DescriptorBytes)
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, Bundles,
+                   NumOperands, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *
+  Create(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+         ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
+         ArrayRef<OperandBundleDef> Bundles = std::nullopt,
+         const Twine &NameStr = "", Instruction *InsertBefore = nullptr) {
     int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size(),
                                          CountBundleInputs(Bundles));
     unsigned DescriptorBytes = Bundles.size() * sizeof(BundleOpInfo);
@@ -3999,7 +4532,7 @@ public:
                             BasicBlock *InsertAtEnd) {
     int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size());
     return new (NumOperands)
-        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, None,
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, std::nullopt,
                    NumOperands, NameStr, InsertAtEnd);
   }
 
@@ -4021,6 +4554,14 @@ public:
   static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
                             ArrayRef<Value *> Args, const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
+                  IndirectDests, Args, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, const Twine &NameStr,
                             Instruction *InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
                   IndirectDests, Args, NameStr, InsertBefore);
@@ -4029,7 +4570,17 @@ public:
   static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
                             ArrayRef<Value *> Args,
-                            ArrayRef<OperandBundleDef> Bundles = None,
+                            ArrayRef<OperandBundleDef> Bundles,
+                            const Twine &NameStr,
+                            BasicBlock::iterator InsertBefore) {
+    return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
+                  IndirectDests, Args, Bundles, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles = std::nullopt,
                             const Twine &NameStr = "",
                             Instruction *InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
@@ -4060,6 +4611,8 @@ public:
   /// The returned callbr instruction is identical to \p CBI in every way
   /// except that the operand bundles for the new instruction are set to the
   /// operand bundles in \p Bundles.
+  static CallBrInst *Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> Bundles,
+                            BasicBlock::iterator InsertPt);
   static CallBrInst *Create(CallBrInst *CBI,
                             ArrayRef<OperandBundleDef> Bundles,
                             Instruction *InsertPt = nullptr);
@@ -4072,14 +4625,12 @@ public:
   ///
   Value *getIndirectDestLabel(unsigned i) const {
     assert(i < getNumIndirectDests() && "Out of bounds!");
-    return getOperand(i + getNumArgOperands() + getNumTotalBundleOperands() +
-                      1);
+    return getOperand(i + arg_size() + getNumTotalBundleOperands() + 1);
   }
 
   Value *getIndirectDestLabelUse(unsigned i) const {
     assert(i < getNumIndirectDests() && "Out of bounds!");
-    return getOperandUse(i + getNumArgOperands() + getNumTotalBundleOperands() +
-                         1);
+    return getOperandUse(i + arg_size() + getNumTotalBundleOperands() + 1);
   }
 
   // Return the destination basic blocks...
@@ -4099,7 +4650,6 @@ public:
     *(&Op<-1>() - getNumIndirectDests() - 1) = reinterpret_cast<Value *>(B);
   }
   void setIndirectDest(unsigned i, BasicBlock *B) {
-    updateArgBlockAddresses(i, B);
     *(&Op<-1>() - getNumIndirectDests() + i) = reinterpret_cast<Value *>(B);
   }
 
@@ -4138,6 +4688,17 @@ CallBrInst::CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
                        ArrayRef<BasicBlock *> IndirectDests,
                        ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                       const Twine &NameStr, BasicBlock::iterator InsertBefore)
+    : CallBase(Ty->getReturnType(), Instruction::CallBr,
+               OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
+               InsertBefore) {
+  init(Ty, Func, DefaultDest, IndirectDests, Args, Bundles, NameStr);
+}
+
+CallBrInst::CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+                       ArrayRef<BasicBlock *> IndirectDests,
+                       ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> Bundles, int NumOperands,
                        const Twine &NameStr, Instruction *InsertBefore)
     : CallBase(Ty->getReturnType(), Instruction::CallBr,
                OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
@@ -4167,6 +4728,7 @@ class ResumeInst : public Instruction {
   ResumeInst(const ResumeInst &RI);
 
   explicit ResumeInst(Value *Exn, Instruction *InsertBefore=nullptr);
+  explicit ResumeInst(Value *Exn, BasicBlock::iterator InsertBefore);
   ResumeInst(Value *Exn, BasicBlock *InsertAtEnd);
 
 protected:
@@ -4176,6 +4738,10 @@ protected:
   ResumeInst *cloneImpl() const;
 
 public:
+  static ResumeInst *Create(Value *Exn, BasicBlock::iterator InsertBefore) {
+    return new (1) ResumeInst(Exn, InsertBefore);
+  }
+
   static ResumeInst *Create(Value *Exn, Instruction *InsertBefore = nullptr) {
     return new(1) ResumeInst(Exn, InsertBefore);
   }
@@ -4238,6 +4804,14 @@ class CatchSwitchInst : public Instruction {
   /// This constructor can also autoinsert before another instruction.
   CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
                   unsigned NumHandlers, const Twine &NameStr,
+                  BasicBlock::iterator InsertBefore);
+
+  /// Create a new switch instruction, specifying a
+  /// default destination.  The number of additional handlers can be specified
+  /// here to make memory allocation more efficient.
+  /// This constructor can also autoinsert before another instruction.
+  CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
+                  unsigned NumHandlers, const Twine &NameStr,
                   Instruction *InsertBefore);
 
   /// Create a new switch instruction, specifying a
@@ -4249,7 +4823,7 @@ class CatchSwitchInst : public Instruction {
                   BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) { return User::operator new(s); }
+  void *operator new(size_t S) { return User::operator new(S); }
 
   void init(Value *ParentPad, BasicBlock *UnwindDest, unsigned NumReserved);
   void growOperands(unsigned Size);
@@ -4261,6 +4835,15 @@ protected:
   CatchSwitchInst *cloneImpl() const;
 
 public:
+  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+
+  static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
+                                 unsigned NumHandlers, const Twine &NameStr,
+                                 BasicBlock::iterator InsertBefore) {
+    return new CatchSwitchInst(ParentPad, UnwindDest, NumHandlers, NameStr,
+                               InsertBefore);
+  }
+
   static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
                                  unsigned NumHandlers,
                                  const Twine &NameStr = "",
@@ -4400,6 +4983,11 @@ class CleanupPadInst : public FuncletPadInst {
 private:
   explicit CleanupPadInst(Value *ParentPad, ArrayRef<Value *> Args,
                           unsigned Values, const Twine &NameStr,
+                          BasicBlock::iterator InsertBefore)
+      : FuncletPadInst(Instruction::CleanupPad, ParentPad, Args, Values,
+                       NameStr, InsertBefore) {}
+  explicit CleanupPadInst(Value *ParentPad, ArrayRef<Value *> Args,
+                          unsigned Values, const Twine &NameStr,
                           Instruction *InsertBefore)
       : FuncletPadInst(Instruction::CleanupPad, ParentPad, Args, Values,
                        NameStr, InsertBefore) {}
@@ -4410,7 +4998,16 @@ private:
                        NameStr, InsertAtEnd) {}
 
 public:
-  static CleanupPadInst *Create(Value *ParentPad, ArrayRef<Value *> Args = None,
+  static CleanupPadInst *Create(Value *ParentPad, ArrayRef<Value *> Args,
+                                const Twine &NameStr,
+                                BasicBlock::iterator InsertBefore) {
+    unsigned Values = 1 + Args.size();
+    return new (Values)
+        CleanupPadInst(ParentPad, Args, Values, NameStr, InsertBefore);
+  }
+
+  static CleanupPadInst *Create(Value *ParentPad,
+                                ArrayRef<Value *> Args = std::nullopt,
                                 const Twine &NameStr = "",
                                 Instruction *InsertBefore = nullptr) {
     unsigned Values = 1 + Args.size();
@@ -4441,6 +5038,11 @@ class CatchPadInst : public FuncletPadInst {
 private:
   explicit CatchPadInst(Value *CatchSwitch, ArrayRef<Value *> Args,
                         unsigned Values, const Twine &NameStr,
+                        BasicBlock::iterator InsertBefore)
+      : FuncletPadInst(Instruction::CatchPad, CatchSwitch, Args, Values,
+                       NameStr, InsertBefore) {}
+  explicit CatchPadInst(Value *CatchSwitch, ArrayRef<Value *> Args,
+                        unsigned Values, const Twine &NameStr,
                         Instruction *InsertBefore)
       : FuncletPadInst(Instruction::CatchPad, CatchSwitch, Args, Values,
                        NameStr, InsertBefore) {}
@@ -4451,6 +5053,14 @@ private:
                        NameStr, InsertAtEnd) {}
 
 public:
+  static CatchPadInst *Create(Value *CatchSwitch, ArrayRef<Value *> Args,
+                              const Twine &NameStr,
+                              BasicBlock::iterator InsertBefore) {
+    unsigned Values = 1 + Args.size();
+    return new (Values)
+        CatchPadInst(CatchSwitch, Args, Values, NameStr, InsertBefore);
+  }
+
   static CatchPadInst *Create(Value *CatchSwitch, ArrayRef<Value *> Args,
                               const Twine &NameStr = "",
                               Instruction *InsertBefore = nullptr) {
@@ -4490,6 +5100,8 @@ public:
 
 class CatchReturnInst : public Instruction {
   CatchReturnInst(const CatchReturnInst &RI);
+  CatchReturnInst(Value *CatchPad, BasicBlock *BB,
+                  BasicBlock::iterator InsertBefore);
   CatchReturnInst(Value *CatchPad, BasicBlock *BB, Instruction *InsertBefore);
   CatchReturnInst(Value *CatchPad, BasicBlock *BB, BasicBlock *InsertAtEnd);
 
@@ -4502,6 +5114,13 @@ protected:
   CatchReturnInst *cloneImpl() const;
 
 public:
+  static CatchReturnInst *Create(Value *CatchPad, BasicBlock *BB,
+                                 BasicBlock::iterator InsertBefore) {
+    assert(CatchPad);
+    assert(BB);
+    return new (2) CatchReturnInst(CatchPad, BB, InsertBefore);
+  }
+
   static CatchReturnInst *Create(Value *CatchPad, BasicBlock *BB,
                                  Instruction *InsertBefore = nullptr) {
     assert(CatchPad);
@@ -4575,6 +5194,8 @@ class CleanupReturnInst : public Instruction {
 private:
   CleanupReturnInst(const CleanupReturnInst &RI);
   CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB, unsigned Values,
+                    BasicBlock::iterator InsertBefore);
+  CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB, unsigned Values,
                     Instruction *InsertBefore = nullptr);
   CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB, unsigned Values,
                     BasicBlock *InsertAtEnd);
@@ -4588,6 +5209,16 @@ protected:
   CleanupReturnInst *cloneImpl() const;
 
 public:
+  static CleanupReturnInst *Create(Value *CleanupPad, BasicBlock *UnwindBB,
+                                   BasicBlock::iterator InsertBefore) {
+    assert(CleanupPad);
+    unsigned Values = 1;
+    if (UnwindBB)
+      ++Values;
+    return new (Values)
+        CleanupReturnInst(CleanupPad, UnwindBB, Values, InsertBefore);
+  }
+
   static CleanupReturnInst *Create(Value *CleanupPad,
                                    BasicBlock *UnwindBB = nullptr,
                                    Instruction *InsertBefore = nullptr) {
@@ -4685,13 +5316,13 @@ protected:
   UnreachableInst *cloneImpl() const;
 
 public:
+  explicit UnreachableInst(LLVMContext &C, BasicBlock::iterator InsertBefore);
   explicit UnreachableInst(LLVMContext &C, Instruction *InsertBefore = nullptr);
   explicit UnreachableInst(LLVMContext &C, BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 0);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 0); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   unsigned getNumSuccessors() const { return 0; }
 
@@ -4727,6 +5358,16 @@ protected:
   TruncInst *cloneImpl() const;
 
 public:
+  enum { AnyWrap = 0, NoUnsignedWrap = (1 << 0), NoSignedWrap = (1 << 1) };
+
+  /// Constructor with insert-before-instruction semantics
+  TruncInst(
+    Value *S,                           ///< The value to be truncated
+    Type *Ty,                           ///< The (smaller) type to truncate to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   TruncInst(
     Value *S,                           ///< The value to be truncated
@@ -4750,6 +5391,39 @@ public:
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
+
+  void setHasNoUnsignedWrap(bool B) {
+    SubclassOptionalData =
+        (SubclassOptionalData & ~NoUnsignedWrap) | (B * NoUnsignedWrap);
+  }
+  void setHasNoSignedWrap(bool B) {
+    SubclassOptionalData =
+        (SubclassOptionalData & ~NoSignedWrap) | (B * NoSignedWrap);
+  }
+
+  /// Test whether this operation is known to never
+  /// undergo unsigned overflow, aka the nuw property.
+  bool hasNoUnsignedWrap() const {
+    return SubclassOptionalData & NoUnsignedWrap;
+  }
+
+  /// Test whether this operation is known to never
+  /// undergo signed overflow, aka the nsw property.
+  bool hasNoSignedWrap() const {
+    return (SubclassOptionalData & NoSignedWrap) != 0;
+  }
+
+  /// Returns the no-wrap kind of the operation.
+  unsigned getNoWrapKind() const {
+    unsigned NoWrapKind = 0;
+    if (hasNoUnsignedWrap())
+      NoWrapKind |= NoUnsignedWrap;
+
+    if (hasNoSignedWrap())
+      NoWrapKind |= NoSignedWrap;
+
+    return NoWrapKind;
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -4766,6 +5440,14 @@ protected:
   ZExtInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  ZExtInst(
+    Value *S,                           ///< The value to be zero extended
+    Type *Ty,                           ///< The type to zero extend to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   ZExtInst(
     Value *S,                           ///< The value to be zero extended
@@ -4809,6 +5491,14 @@ public:
   SExtInst(
     Value *S,                           ///< The value to be sign extended
     Type *Ty,                           ///< The type to sign extend to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  SExtInst(
+    Value *S,                           ///< The value to be sign extended
+    Type *Ty,                           ///< The type to sign extend to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -4844,6 +5534,14 @@ protected:
   FPTruncInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  FPTruncInst(
+    Value *S,                           ///< The value to be truncated
+    Type *Ty,                           ///< The type to truncate to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   FPTruncInst(
     Value *S,                           ///< The value to be truncated
@@ -4887,6 +5585,14 @@ public:
   FPExtInst(
     Value *S,                           ///< The value to be extended
     Type *Ty,                           ///< The type to extend to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  FPExtInst(
+    Value *S,                           ///< The value to be extended
+    Type *Ty,                           ///< The type to extend to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -4922,6 +5628,14 @@ protected:
   UIToFPInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  UIToFPInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   UIToFPInst(
     Value *S,                           ///< The value to be converted
@@ -4965,6 +5679,14 @@ public:
   SIToFPInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  SIToFPInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -5000,6 +5722,14 @@ protected:
   FPToUIInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  FPToUIInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   FPToUIInst(
     Value *S,                           ///< The value to be converted
@@ -5043,6 +5773,14 @@ public:
   FPToSIInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  FPToSIInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -5073,6 +5811,14 @@ class IntToPtrInst : public CastInst {
 public:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
+
+  /// Constructor with insert-before-instruction semantics
+  IntToPtrInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
 
   /// Constructor with insert-before-instruction semantics
   IntToPtrInst(
@@ -5121,6 +5867,14 @@ protected:
   PtrToIntInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  PtrToIntInst(
+    Value *S,                           ///< The value to be converted
+    Type *Ty,                           ///< The type to convert to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   PtrToIntInst(
     Value *S,                           ///< The value to be converted
@@ -5176,6 +5930,14 @@ public:
   BitCastInst(
     Value *S,                           ///< The value to be casted
     Type *Ty,                           ///< The type to casted to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
+  /// Constructor with insert-before-instruction semantics
+  BitCastInst(
+    Value *S,                           ///< The value to be casted
+    Type *Ty,                           ///< The type to casted to
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
@@ -5212,6 +5974,14 @@ protected:
   AddrSpaceCastInst *cloneImpl() const;
 
 public:
+  /// Constructor with insert-before-instruction semantics
+  AddrSpaceCastInst(
+    Value *S,                           ///< The value to be casted
+    Type *Ty,                           ///< The type to casted to
+    const Twine &NameStr,               ///< A name for the new instruction
+    BasicBlock::iterator InsertBefore   ///< Where to insert the new instruction
+  );
+
   /// Constructor with insert-before-instruction semantics
   AddrSpaceCastInst(
     Value *S,                           ///< The value to be casted
@@ -5261,6 +6031,10 @@ public:
     return getType()->getPointerAddressSpace();
   }
 };
+
+//===----------------------------------------------------------------------===//
+//                          Helper functions
+//===----------------------------------------------------------------------===//
 
 /// A helper function that returns the pointer operand of a load or store
 /// instruction. Returns nullptr if not load or store.
@@ -5317,6 +6091,24 @@ inline Type *getLoadStoreType(Value *I) {
   return cast<StoreInst>(I)->getValueOperand()->getType();
 }
 
+/// A helper function that returns an atomic operation's sync scope; returns
+/// std::nullopt if it is not an atomic operation.
+inline std::optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
+  if (!I->isAtomic())
+    return std::nullopt;
+  if (auto *AI = dyn_cast<LoadInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<StoreInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<FenceInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<AtomicRMWInst>(I))
+    return AI->getSyncScopeID();
+  llvm_unreachable("unhandled atomic operation");
+}
+
 //===----------------------------------------------------------------------===//
 //                              FreezeInst Class
 //===----------------------------------------------------------------------===//
@@ -5332,6 +6124,8 @@ protected:
   FreezeInst *cloneImpl() const;
 
 public:
+  explicit FreezeInst(Value *S, const Twine &NameStr,
+                      BasicBlock::iterator InsertBefore);
   explicit FreezeInst(Value *S,
                       const Twine &NameStr = "",
                       Instruction *InsertBefore = nullptr);

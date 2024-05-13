@@ -44,7 +44,7 @@ class FastUnwindTest : public ::testing::Test {
   uhwptr fake_bottom;
   BufferedStackTrace trace;
 
-#if defined(__riscv)
+#if defined(__loongarch__) || defined(__riscv)
   const uptr kFpOffset = 4;
   const uptr kBpOffset = 2;
 #else
@@ -208,7 +208,7 @@ TEST_F(StackPrintTest, SKIP_ON_SPARC(TruncatesContents)) {
   char tinybuf[10];
   trace.PrintTo(tinybuf, sizeof(tinybuf));
 
-  // This the the truncation case.
+  // This the truncation case.
   ASSERT_GT(actual_len, sizeof(tinybuf));
 
   // The truncated contents should be a prefix of the full contents.
@@ -269,6 +269,30 @@ TEST(SlowUnwindTest, ShortStackTrace) {
   EXPECT_EQ(1U, stack.size);
   EXPECT_EQ(pc, stack.trace[0]);
   EXPECT_EQ(bp, stack.top_frame_bp);
+}
+
+TEST(GetCurrentPc, Basic) {
+  // Test that PCs obtained via GET_CURRENT_PC()
+  // and StackTrace::GetCurrentPc() are all different
+  // and are close to the function start.
+  struct Local {
+    static NOINLINE void Test() {
+      const uptr pcs[] = {
+          (uptr)&Local::Test,
+          GET_CURRENT_PC(),
+          StackTrace::GetCurrentPc(),
+          StackTrace::GetCurrentPc(),
+      };
+      for (uptr i = 0; i < ARRAY_SIZE(pcs); i++)
+        Printf("pc%zu: 0x%zx\n", i, pcs[i]);
+      for (uptr i = 1; i < ARRAY_SIZE(pcs); i++) {
+        EXPECT_GT(pcs[i], pcs[0]);
+        EXPECT_LT(pcs[i], pcs[0] + 1000);
+        for (uptr j = 0; j < i; j++) EXPECT_NE(pcs[i], pcs[j]);
+      }
+    }
+  };
+  Local::Test();
 }
 
 // Dummy implementation. This should never be called, but is required to link

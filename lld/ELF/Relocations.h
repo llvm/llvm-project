@@ -11,11 +11,10 @@
 
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
-#include <map>
+#include "llvm/ADT/STLExtras.h"
 #include <vector>
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 class Symbol;
 class InputSection;
 class InputSectionBase;
@@ -41,10 +40,15 @@ enum RelExpr {
   R_GOTPLT,
   R_GOTPLTREL,
   R_GOTREL,
+  R_GOTPLT_GOTREL,
+  R_GOTPLT_PC,
   R_NONE,
   R_PC,
   R_PLT,
   R_PLT_PC,
+  R_PLT_GOTPLT,
+  R_PLT_GOTREL,
+  R_RELAX_HINT,
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
   R_RELAX_TLS_GD_TO_IE,
@@ -62,6 +66,7 @@ enum RelExpr {
   R_TLSDESC,
   R_TLSDESC_CALL,
   R_TLSDESC_PC,
+  R_TLSDESC_GOTPLT,
   R_TLSGD_GOT,
   R_TLSGD_GOTPLT,
   R_TLSGD_PC,
@@ -82,6 +87,7 @@ enum RelExpr {
   R_AARCH64_PAGE_PC,
   R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   R_AARCH64_TLSDESC_PAGE,
+  R_AARCH64_AUTH,
   R_ARM_PCA,
   R_ARM_SBREL,
   R_MIPS_GOTREL,
@@ -99,7 +105,17 @@ enum RelExpr {
   R_PPC64_TOCBASE,
   R_PPC64_RELAX_GOT_PC,
   R_RISCV_ADD,
+  R_RISCV_LEB128,
   R_RISCV_PC_INDIRECT,
+  // Same as R_PC but with page-aligned semantics.
+  R_LOONGARCH_PAGE_PC,
+  // Same as R_PLT_PC but with page-aligned semantics.
+  R_LOONGARCH_PLT_PAGE_PC,
+  // In addition to having page-aligned semantics, LoongArch GOT relocs are
+  // also reused for TLS, making the semantics differ from other architectures.
+  R_LOONGARCH_GOT,
+  R_LOONGARCH_GOT_PAGE_PC,
+  R_LOONGARCH_TLSGD_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -115,17 +131,18 @@ struct Relocation {
 // jump instruction opcodes at basic block boundaries and are particularly
 // useful when basic block sections are enabled.
 struct JumpInstrMod {
-  JumpModType original;
   uint64_t offset;
+  JumpModType original;
   unsigned size;
 };
 
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
-template <class ELFT> void scanRelocations(InputSectionBase &);
-
-template <class ELFT> void reportUndefinedSymbols();
+template <class ELFT> void scanRelocations();
+void reportUndefinedSymbols();
+void postScanRelocations();
+void addGotEntry(Symbol &sym);
 
 void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
@@ -137,12 +154,7 @@ class InputSectionDescription;
 class ThunkCreator {
 public:
   // Return true if Thunks have been added to OutputSections
-  bool createThunks(ArrayRef<OutputSection *> outputSections);
-
-  // The number of completed passes of createThunks this permits us
-  // to do one time initialization on Pass 0 and put a limit on the
-  // number of times it can be called to prevent infinite loops.
-  uint32_t pass = 0;
+  bool createThunks(uint32_t pass, ArrayRef<OutputSection *> outputSections);
 
 private:
   void mergeThunks(ArrayRef<OutputSection *> outputSections);
@@ -184,6 +196,11 @@ private:
   // so we need to make sure that there is only one of them.
   // The Mips LA25 Thunk is an example of an inline ThunkSection.
   llvm::DenseMap<InputSection *, ThunkSection *> thunkedSections;
+
+  // The number of completed passes of createThunks this permits us
+  // to do one time initialization on Pass 0 and put a limit on the
+  // number of times it can be called to prevent infinite loops.
+  uint32_t pass = 0;
 };
 
 // Return a int64_t to make sure we get the sign extension out of the way as
@@ -209,7 +226,11 @@ ArrayRef<RelTy> sortRels(ArrayRef<RelTy> rels, SmallVector<RelTy, 0> &storage) {
   }
   return rels;
 }
-} // namespace elf
-} // namespace lld
+
+// Returns true if Expr refers a GOT entry. Note that this function returns
+// false for TLS variables even though they need GOT, because TLS variables uses
+// GOT differently than the regular variables.
+bool needsGot(RelExpr expr);
+} // namespace lld::elf
 
 #endif

@@ -14,6 +14,7 @@
 
 #include "interception/interception.h"
 #include "msan_origin.h"
+#include "msan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 
 DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
@@ -215,6 +216,13 @@ void SetShadow(const void *ptr, uptr size, u8 value) {
       }
       if (!MmapFixedSuperNoReserve(page_beg, page_end - page_beg))
         Die();
+
+      if (__msan_get_track_origins()) {
+        // No need to set origin for zero shadow, but we can release pages.
+        uptr origin_beg = RoundUpTo(MEM_TO_ORIGIN(ptr), PageSize);
+        if (!MmapFixedSuperNoReserve(origin_beg, page_end - page_beg))
+          Die();
+      }
     }
   }
 }
@@ -241,6 +249,9 @@ void PoisonMemory(const void *dst, uptr size, StackTrace *stack) {
   SetShadow(dst, size, (u8)-1);
 
   if (__msan_get_track_origins()) {
+    MsanThread *t = GetCurrentThread();
+    if (t && t->InSignalHandler())
+      return;
     Origin o = Origin::CreateHeapOrigin(stack);
     SetOrigin(dst, size, o.raw_id());
   }

@@ -8,10 +8,10 @@ constexpr const char *test_default_arg(const char *f = __builtin_FUNCTION()) {
 }
 // CHECK: @[[EMPTY_STR:.+]] = private unnamed_addr constant [1 x i8] zeroinitializer
 
-// CHECK: @_ZN9test_func6globalE = {{(dso_local )?}}global i8* getelementptr inbounds ([1 x i8], [1 x i8]* @[[EMPTY_STR]], i32 0, i32 0)
+// CHECK: @_ZN9test_func6globalE = {{(dso_local )?}}global ptr @[[EMPTY_STR]]
 const char *global = test_default_arg();
 
-// CHECK: @_ZN9test_func10global_twoE = {{(dso_local )?}}global i8* getelementptr inbounds ([1 x i8], [1 x i8]* @[[EMPTY_STR]], i32 0, i32 0)
+// CHECK: @_ZN9test_func10global_twoE = {{(dso_local )?}}global ptr @[[EMPTY_STR]]
 const char *global_two = __builtin_FUNCTION();
 
 const char * const global_three = test_default_arg();
@@ -20,20 +20,20 @@ const char * const global_three = test_default_arg();
 // CHECK: @[[STR_TWO:.+]] = private unnamed_addr constant [14 x i8] c"test_func_two\00"
 // CHECK: @[[STR_THREE:.+]] = private unnamed_addr constant [20 x i8] c"do_default_arg_test\00"
 
-// CHECK: define {{(dso_local )?}}i8* @_ZN9test_func13test_func_oneEv()
-// CHECK: ret i8* getelementptr inbounds ([14 x i8], [14 x i8]* @[[STR_ONE]], i32 0, i32 0)
+// CHECK: define {{(dso_local )?}}noundef ptr @_ZN9test_func13test_func_oneEv()
+// CHECK: ret ptr @[[STR_ONE]]
 const char *test_func_one() {
   return __builtin_FUNCTION();
 }
 
-// CHECK: define {{(dso_local )?}}i8* @_ZN9test_func13test_func_twoEv()
-// CHECK: ret i8* getelementptr inbounds ([14 x i8], [14 x i8]* @[[STR_TWO]], i32 0, i32 0)
+// CHECK: define {{(dso_local )?}}noundef ptr @_ZN9test_func13test_func_twoEv()
+// CHECK: ret ptr @[[STR_TWO]]
 const char *test_func_two() {
   return __builtin_FUNCTION();
 }
 
 // CHECK: define {{(dso_local )?}}void @_ZN9test_func19do_default_arg_testEv()
-// CHECK: %call = call i8* @_ZN9test_func16test_default_argEPKc(i8* getelementptr inbounds ([20 x i8], [20 x i8]* @[[STR_THREE]], i32 0, i32 0))
+// CHECK: %call = call noundef ptr @_ZN9test_func16test_default_argEPKc(ptr noundef @[[STR_THREE]])
 void do_default_arg_test() {
   test_default_arg();
 }

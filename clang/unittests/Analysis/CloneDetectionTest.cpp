@@ -42,7 +42,7 @@ public:
           for (const StmtSequence &Arg : {A, B}) {
             if (const auto *D =
                     dyn_cast<const FunctionDecl>(Arg.getContainingDecl())) {
-              if (D->getName().startswith("bar"))
+              if (D->getName().starts_with("bar"))
                 return false;
             }
           }
@@ -64,7 +64,7 @@ TEST(CloneDetector, FilterFunctionsByName) {
   CloneDetectionVisitor Visitor(Detector);
   Visitor.TraverseTranslationUnitDecl(TU);
 
-  // Find clones with the usual settings, but but we want to filter out
+  // Find clones with the usual settings, but we want to filter out
   // all statements from functions which names start with "bar".
   std::vector<CloneDetector::CloneGroup> CloneGroups;
   Detector.findClones(CloneGroups, NoBarFunctionConstraint(),

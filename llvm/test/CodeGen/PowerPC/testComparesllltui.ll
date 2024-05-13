@@ -58,16 +58,16 @@ entry:
 define void @test_llltui_store(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_llltui_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-NEXT:    stw r3, 0(r5)
+; CHECK-NEXT:    stw r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ult i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @glob, align 4
+  store i32 %conv, ptr @glob, align 4
   ret void
 }
 
@@ -75,16 +75,16 @@ entry:
 define void @test_llltui_sext_store(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_llltui_sext_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    sradi r3, r3, 63
-; CHECK-NEXT:    stw r3, 0(r5)
+; CHECK-NEXT:    stw r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ult i32 %a, %b
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob, align 4
+  store i32 %sub, ptr @glob, align 4
   ret void
 }
 
@@ -98,7 +98,7 @@ define void @test_llltui_z_store(i32 zeroext %a) {
 ; CHECK-NEXT:    stw r4, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  store i32 0, i32* @glob, align 4
+  store i32 0, ptr @glob, align 4
   ret void
 }
 
@@ -112,7 +112,7 @@ define void @test_llltui_sext_z_store(i32 zeroext %a) {
 ; CHECK-NEXT:    stw r4, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  store i32 0, i32* @glob, align 4
+  store i32 0, ptr @glob, align 4
   ret void
 }
 

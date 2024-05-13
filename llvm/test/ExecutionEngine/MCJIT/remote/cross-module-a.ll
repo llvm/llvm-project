@@ -1,6 +1,7 @@
 ; RUN: %lli -jit-kind=mcjit -extra-module=%p/Inputs/cross-module-b.ll -disable-lazy-compilation=true -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
-; XFAIL: windows-gnu,windows-msvc
-; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; XFAIL: target={{.*-windows-(gnu|msvc)}}
+; REQUIRES: thread_support
+; UNSUPPORTED: target=powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 
 declare i32 @FB()

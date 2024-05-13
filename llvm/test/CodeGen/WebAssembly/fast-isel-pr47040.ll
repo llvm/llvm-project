@@ -9,14 +9,13 @@
 ; to set the Address to be relative to a register instead, triggering
 ; an assertion.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 define i32 @foo() {
   %stack_addr = alloca i32
-  %stack_i = ptrtoint i32* %stack_addr to i32
+  %stack_i = ptrtoint ptr %stack_addr to i32
   %added = add i32 %stack_i, undef
-  %added_addr = inttoptr i32 %added to i32*
-  %ret = load i32, i32* %added_addr
+  %added_addr = inttoptr i32 %added to ptr
+  %ret = load i32, ptr %added_addr
   ret i32 %ret
 }

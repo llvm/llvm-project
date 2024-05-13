@@ -16,21 +16,24 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 
 namespace llvm {
 
 /// Cost Table Entry
-struct CostTblEntry {
+template <typename CostType>
+struct CostTblEntryT {
   int ISD;
   MVT::SimpleValueType Type;
-  unsigned Cost;
+  CostType Cost;
 };
+using CostTblEntry = CostTblEntryT<unsigned>;
 
-/// Find in cost table, TypeTy must be comparable to CompareTy by ==
-inline const CostTblEntry *CostTableLookup(ArrayRef<CostTblEntry> Tbl,
-                                           int ISD, MVT Ty) {
-  auto I = find_if(Tbl, [=](const CostTblEntry &Entry) {
+/// Find in cost table.
+template <class CostType>
+inline const CostTblEntryT<CostType> *
+CostTableLookup(ArrayRef<CostTblEntryT<CostType>> Tbl, int ISD, MVT Ty) {
+  auto I = find_if(Tbl, [=](const CostTblEntryT<CostType> &Entry) {
     return ISD == Entry.ISD && Ty == Entry.Type;
   });
   if (I != Tbl.end())
@@ -40,27 +43,45 @@ inline const CostTblEntry *CostTableLookup(ArrayRef<CostTblEntry> Tbl,
   return nullptr;
 }
 
+template <size_t N, class CostType>
+inline const CostTblEntryT<CostType> *
+CostTableLookup(const CostTblEntryT<CostType> (&Table)[N], int ISD, MVT Ty) {
+  // Wrapper to fix template argument deduction failures.
+  return CostTableLookup<CostType>(Table, ISD, Ty);
+}
+
 /// Type Conversion Cost Table
-struct TypeConversionCostTblEntry {
+template <typename CostType>
+struct TypeConversionCostTblEntryT {
   int ISD;
   MVT::SimpleValueType Dst;
   MVT::SimpleValueType Src;
-  unsigned Cost;
+  CostType Cost;
 };
+using TypeConversionCostTblEntry = TypeConversionCostTblEntryT<unsigned>;
 
-/// Find in type conversion cost table, TypeTy must be comparable to CompareTy
-/// by ==
-inline const TypeConversionCostTblEntry *
-ConvertCostTableLookup(ArrayRef<TypeConversionCostTblEntry> Tbl,
+/// Find in type conversion cost table.
+template <class CostType>
+inline const TypeConversionCostTblEntryT<CostType> *
+ConvertCostTableLookup(ArrayRef<TypeConversionCostTblEntryT<CostType>> Tbl,
                        int ISD, MVT Dst, MVT Src) {
-  auto I = find_if(Tbl, [=](const TypeConversionCostTblEntry &Entry) {
-    return ISD == Entry.ISD && Src == Entry.Src && Dst == Entry.Dst;
-  });
+  auto I =
+      find_if(Tbl, [=](const TypeConversionCostTblEntryT<CostType> &Entry) {
+        return ISD == Entry.ISD && Src == Entry.Src && Dst == Entry.Dst;
+      });
   if (I != Tbl.end())
     return I;
 
   // Could not find an entry.
   return nullptr;
+}
+
+template <size_t N, class CostType>
+inline const TypeConversionCostTblEntryT<CostType> *
+ConvertCostTableLookup(const TypeConversionCostTblEntryT<CostType> (&Table)[N],
+                       int ISD, MVT Dst, MVT Src) {
+  // Wrapper to fix template argument deduction failures.
+  return ConvertCostTableLookup<CostType>(Table, ISD, Dst, Src);
 }
 
 } // namespace llvm

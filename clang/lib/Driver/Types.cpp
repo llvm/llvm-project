@@ -42,7 +42,7 @@ static constexpr TypeInfo TypeInfos[] = {
 #include "clang/Driver/Types.def"
 #undef TYPE
 };
-static const unsigned numTypes = llvm::array_lengthof(TypeInfos);
+static const unsigned numTypes = std::size(TypeInfos);
 
 static const TypeInfo &getInfo(unsigned id) {
   assert(id > 0 && id - 1 < numTypes && "Invalid Type ID.");
@@ -65,16 +65,23 @@ static bool isPreprocessedModuleType(ID Id) {
   return Id == TY_CXXModule || Id == TY_PP_CXXModule;
 }
 
+static bool isPreprocessedHeaderUnitType(ID Id) {
+  return Id == TY_CXXSHeader || Id == TY_CXXUHeader || Id == TY_CXXHUHeader ||
+         Id == TY_PP_CXXHeaderUnit;
+}
+
 types::ID types::getPrecompiledType(ID Id) {
   if (isPreprocessedModuleType(Id))
     return TY_ModuleFile;
+  if (isPreprocessedHeaderUnitType(Id))
+    return TY_HeaderUnit;
   if (onlyPrecompileType(Id))
     return TY_PCH;
   return TY_INVALID;
 }
 
-const char *types::getTypeTempSuffix(ID Id, bool CLMode) {
-  if (CLMode) {
+const char *types::getTypeTempSuffix(ID Id, bool CLStyle) {
+  if (CLStyle) {
     switch (Id) {
     case TY_Object:
     case TY_LTO_BC:
@@ -126,7 +133,7 @@ bool types::isAcceptedByClang(ID Id) {
 
   case TY_Asm:
   case TY_C: case TY_PP_C:
-  case TY_CL: case TY_CLCXX:
+  case TY_CL: case TY_PP_CL: case TY_CLCXX: case TY_PP_CLCXX:
   case TY_CUDA: case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
   case TY_HIP:
@@ -139,10 +146,70 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_CLHeader:
   case TY_ObjCHeader: case TY_PP_ObjCHeader:
   case TY_CXXHeader: case TY_PP_CXXHeader:
+  case TY_CXXSHeader:
+  case TY_CXXUHeader:
+  case TY_CXXHUHeader:
+  case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
   case TY_CXXModule: case TY_PP_CXXModule:
   case TY_AST: case TY_ModuleFile: case TY_PCH:
   case TY_LLVM_IR: case TY_LLVM_BC:
+  case TY_API_INFO:
+    return true;
+  }
+}
+
+bool types::isAcceptedByFlang(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+
+  case TY_Fortran:
+  case TY_PP_Fortran:
+    return true;
+  case TY_LLVM_IR:
+  case TY_LLVM_BC:
+    return true;
+  }
+}
+
+bool types::isDerivedFromC(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+
+  case TY_PP_C:
+  case TY_C:
+  case TY_CL:
+  case TY_PP_CL:
+  case TY_CLCXX:
+  case TY_PP_CLCXX:
+  case TY_PP_CUDA:
+  case TY_CUDA:
+  case TY_CUDA_DEVICE:
+  case TY_PP_HIP:
+  case TY_HIP:
+  case TY_HIP_DEVICE:
+  case TY_PP_ObjC:
+  case TY_PP_ObjC_Alias:
+  case TY_ObjC:
+  case TY_PP_CXX:
+  case TY_CXX:
+  case TY_PP_ObjCXX:
+  case TY_PP_ObjCXX_Alias:
+  case TY_ObjCXX:
+  case TY_RenderScript:
+  case TY_PP_CHeader:
+  case TY_CHeader:
+  case TY_CLHeader:
+  case TY_PP_ObjCHeader:
+  case TY_ObjCHeader:
+  case TY_PP_CXXHeader:
+  case TY_CXXHeader:
+  case TY_PP_ObjCXXHeader:
+  case TY_ObjCXXHeader:
+  case TY_CXXModule:
+  case TY_PP_CXXModule:
     return true;
   }
 }
@@ -170,8 +237,13 @@ bool types::isCXX(ID Id) {
   case TY_CXX: case TY_PP_CXX:
   case TY_ObjCXX: case TY_PP_ObjCXX: case TY_PP_ObjCXX_Alias:
   case TY_CXXHeader: case TY_PP_CXXHeader:
+  case TY_CXXSHeader:
+  case TY_CXXUHeader:
+  case TY_CXXHUHeader:
+  case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
   case TY_CXXModule: case TY_PP_CXXModule:
+  case TY_PP_CLCXX:
   case TY_CUDA: case TY_PP_CUDA: case TY_CUDA_DEVICE:
   case TY_HIP:
   case TY_PP_HIP:
@@ -217,15 +289,7 @@ bool types::isHIP(ID Id) {
   }
 }
 
-bool types::isFortran(ID Id) {
-  switch (Id) {
-  default:
-    return false;
-
-  case TY_Fortran: case TY_PP_Fortran:
-    return true;
-  }
-}
+bool types::isHLSL(ID Id) { return Id == TY_HLSL; }
 
 bool types::isSrcFile(ID Id) {
   return Id != TY_Object && getPreprocessedType(Id) != TY_INVALID;
@@ -233,66 +297,75 @@ bool types::isSrcFile(ID Id) {
 
 types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
   return llvm::StringSwitch<types::ID>(Ext)
-           .Case("c", TY_C)
-           .Case("C", TY_CXX)
-           .Case("F", TY_Fortran)
-           .Case("f", TY_PP_Fortran)
-           .Case("h", TY_CHeader)
-           .Case("H", TY_CXXHeader)
-           .Case("i", TY_PP_C)
-           .Case("m", TY_ObjC)
-           .Case("M", TY_ObjCXX)
-           .Case("o", TY_Object)
-           .Case("S", TY_Asm)
-           .Case("s", TY_PP_Asm)
-           .Case("bc", TY_LLVM_BC)
-           .Case("cc", TY_CXX)
-           .Case("CC", TY_CXX)
-           .Case("cl", TY_CL)
-           .Case("clcpp", TY_CLCXX)
-           .Case("cp", TY_CXX)
-           .Case("cu", TY_CUDA)
-           .Case("hh", TY_CXXHeader)
-           .Case("ii", TY_PP_CXX)
-           .Case("ll", TY_LLVM_IR)
-           .Case("mi", TY_PP_ObjC)
-           .Case("mm", TY_ObjCXX)
-           .Case("rs", TY_RenderScript)
-           .Case("adb", TY_Ada)
-           .Case("ads", TY_Ada)
-           .Case("asm", TY_PP_Asm)
-           .Case("ast", TY_AST)
-           .Case("ccm", TY_CXXModule)
-           .Case("cpp", TY_CXX)
-           .Case("CPP", TY_CXX)
-           .Case("c++", TY_CXX)
-           .Case("C++", TY_CXX)
-           .Case("cui", TY_PP_CUDA)
-           .Case("cxx", TY_CXX)
-           .Case("CXX", TY_CXX)
-           .Case("F90", TY_Fortran)
-           .Case("f90", TY_PP_Fortran)
-           .Case("F95", TY_Fortran)
-           .Case("f95", TY_PP_Fortran)
-           .Case("for", TY_PP_Fortran)
-           .Case("FOR", TY_PP_Fortran)
-           .Case("fpp", TY_Fortran)
-           .Case("FPP", TY_Fortran)
-           .Case("gch", TY_PCH)
-           .Case("hip", TY_HIP)
-           .Case("hpp", TY_CXXHeader)
-           .Case("hxx", TY_CXXHeader)
-           .Case("iim", TY_PP_CXXModule)
-           .Case("lib", TY_Object)
-           .Case("mii", TY_PP_ObjCXX)
-           .Case("obj", TY_Object)
-           .Case("ifs", TY_IFS)
-           .Case("pch", TY_PCH)
-           .Case("pcm", TY_ModuleFile)
-           .Case("c++m", TY_CXXModule)
-           .Case("cppm", TY_CXXModule)
-           .Case("cxxm", TY_CXXModule)
-           .Default(TY_INVALID);
+      .Case("c", TY_C)
+      .Case("C", TY_CXX)
+      .Case("F", TY_Fortran)
+      .Case("f", TY_PP_Fortran)
+      .Case("h", TY_CHeader)
+      .Case("H", TY_CXXHeader)
+      .Case("i", TY_PP_C)
+      .Case("m", TY_ObjC)
+      .Case("M", TY_ObjCXX)
+      .Case("o", TY_Object)
+      .Case("S", TY_Asm)
+      .Case("s", TY_PP_Asm)
+      .Case("bc", TY_LLVM_BC)
+      .Case("cc", TY_CXX)
+      .Case("CC", TY_CXX)
+      .Case("cl", TY_CL)
+      .Case("cli", TY_PP_CL)
+      .Case("clcpp", TY_CLCXX)
+      .Case("clii", TY_PP_CLCXX)
+      .Case("cp", TY_CXX)
+      .Case("cu", TY_CUDA)
+      .Case("hh", TY_CXXHeader)
+      .Case("ii", TY_PP_CXX)
+      .Case("ll", TY_LLVM_IR)
+      .Case("mi", TY_PP_ObjC)
+      .Case("mm", TY_ObjCXX)
+      .Case("rs", TY_RenderScript)
+      .Case("adb", TY_Ada)
+      .Case("ads", TY_Ada)
+      .Case("asm", TY_PP_Asm)
+      .Case("ast", TY_AST)
+      .Case("ccm", TY_CXXModule)
+      .Case("cpp", TY_CXX)
+      .Case("CPP", TY_CXX)
+      .Case("c++", TY_CXX)
+      .Case("C++", TY_CXX)
+      .Case("cui", TY_PP_CUDA)
+      .Case("cxx", TY_CXX)
+      .Case("CXX", TY_CXX)
+      .Case("F03", TY_Fortran)
+      .Case("f03", TY_PP_Fortran)
+      .Case("F08", TY_Fortran)
+      .Case("f08", TY_PP_Fortran)
+      .Case("F90", TY_Fortran)
+      .Case("f90", TY_PP_Fortran)
+      .Case("F95", TY_Fortran)
+      .Case("f95", TY_PP_Fortran)
+      .Case("for", TY_PP_Fortran)
+      .Case("FOR", TY_PP_Fortran)
+      .Case("fpp", TY_Fortran)
+      .Case("FPP", TY_Fortran)
+      .Case("gch", TY_PCH)
+      .Case("hip", TY_HIP)
+      .Case("hipi", TY_PP_HIP)
+      .Case("hpp", TY_CXXHeader)
+      .Case("hxx", TY_CXXHeader)
+      .Case("iim", TY_PP_CXXModule)
+      .Case("iih", TY_PP_CXXHeaderUnit)
+      .Case("lib", TY_Object)
+      .Case("mii", TY_PP_ObjCXX)
+      .Case("obj", TY_Object)
+      .Case("ifs", TY_IFS)
+      .Case("pch", TY_PCH)
+      .Case("pcm", TY_ModuleFile)
+      .Case("c++m", TY_CXXModule)
+      .Case("cppm", TY_CXXModule)
+      .Case("cxxm", TY_CXXModule)
+      .Case("hlsl", TY_HLSL)
+      .Default(TY_INVALID);
 }
 
 types::ID types::lookupTypeForTypeSpecifier(const char *Name) {
@@ -323,46 +396,7 @@ types::getCompilationPhases(ID Id, phases::ID LastPhase) {
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(const clang::driver::Driver &Driver,
                             llvm::opt::DerivedArgList &DAL, ID Id) {
-  phases::ID LastPhase;
-
-  // Filter to compiler mode. When the compiler is run as a preprocessor then
-  // compilation is not an option.
-  // -S runs the compiler in Assembly listing mode.
-  if (Driver.CCCIsCPP() || DAL.getLastArg(options::OPT_E) ||
-      DAL.getLastArg(options::OPT__SLASH_EP) ||
-      DAL.getLastArg(options::OPT_M, options::OPT_MM) ||
-      DAL.getLastArg(options::OPT__SLASH_P))
-    LastPhase = phases::Preprocess;
-
-  // --precompile only runs up to precompilation.
-  // This is a clang extension and is not compatible with GCC.
-  else if (DAL.getLastArg(options::OPT__precompile))
-    LastPhase = phases::Precompile;
-
-  // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
-  else if (DAL.getLastArg(options::OPT_fsyntax_only) ||
-           DAL.getLastArg(options::OPT_print_supported_cpus) ||
-           DAL.getLastArg(options::OPT_module_file_info) ||
-           DAL.getLastArg(options::OPT_verify_pch) ||
-           DAL.getLastArg(options::OPT_rewrite_objc) ||
-           DAL.getLastArg(options::OPT_rewrite_legacy_objc) ||
-           DAL.getLastArg(options::OPT__migrate) ||
-           DAL.getLastArg(options::OPT__analyze) ||
-           DAL.getLastArg(options::OPT_emit_ast))
-    LastPhase = phases::Compile;
-
-  else if (DAL.getLastArg(options::OPT_S) ||
-           DAL.getLastArg(options::OPT_emit_llvm))
-    LastPhase = phases::Backend;
-
-  else if (DAL.getLastArg(options::OPT_c))
-    LastPhase = phases::Assemble;
-
-  // Generally means, do every phase until Link.
-  else
-    LastPhase = phases::LastPhase;
-
-  return types::getCompilationPhases(Id, LastPhase);
+  return types::getCompilationPhases(Id, Driver.getFinalPhase(DAL));
 }
 
 ID types::lookupCXXTypeForCType(ID Id) {

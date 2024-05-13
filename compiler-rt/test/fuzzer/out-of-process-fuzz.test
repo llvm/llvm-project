@@ -1,0 +1,21 @@
+REQUIRES: linux, x86_64
+RUN: rm -rf %t && mkdir %t
+RUN: cd %t
+RUN: %cpp_compiler  %S/OutOfProcessFuzzTarget.cpp -o oop-fuzzer
+RUN: %no_fuzzer_cpp_compiler  -fsanitize-coverage=inline-8bit-counters %S/SimpleTest.cpp -c -o SimpleTestOOP.o
+RUN: %no_fuzzer_c_compiler  %S/../../lib/fuzzer/standalone/StandaloneFuzzTargetMain.c -c -o  StandaloneFuzzTargetMainOOP.o
+RUN: %no_fuzzer_cpp_compiler %S/SanCovDump.cpp -c -o SanCovDumpOOP.o
+RUN: %no_fuzzer_cpp_compiler SimpleTestOOP.o StandaloneFuzzTargetMainOOP.o SanCovDumpOOP.o -o oop-target
+RUN: rm -rf OOP_CORPUS
+RUN: mkdir OOP_CORPUS
+RUN: echo "Hi" > OOP_CORPUS/seed
+RUN: echo %t
+
+# Out-of-process fuzzing with this rig is slow,
+# we can not wait for the fuzzer to find the faulty input.
+# Just run for a bit and observe the corpus expansion.
+RUN: LIBFUZZER_OOP_TARGET="./oop-target > /dev/null 2>&1 " ./oop-fuzzer -max_len=3 OOP_CORPUS -runs=1000 -jobs=4
+CHECK: Running: OOP_CORPUS/
+CHECK: Running: OOP_CORPUS/
+CHECK: Running: OOP_CORPUS/
+RUN: ./oop-target OOP_CORPUS/* 2>&1 | FileCheck %s

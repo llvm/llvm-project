@@ -20,6 +20,7 @@
 //     typedef const value_type*                    pointer;
 //     typedef const value_type&                    reference;
 //     typedef forward_iterator_tag                 iterator_category;
+//     typedef input_iterator_tag                   iterator_concept; // since C++20
 
 #include <regex>
 #include <type_traits>
@@ -36,12 +37,17 @@ test()
     static_assert((std::is_same<typename I::pointer, const std::match_results<const CharT*>*>::value), "");
     static_assert((std::is_same<typename I::reference, const std::match_results<const CharT*>&>::value), "");
     static_assert((std::is_same<typename I::iterator_category, std::forward_iterator_tag>::value), "");
+#if TEST_STD_VER >= 20
+    static_assert(std::is_same_v<typename I::iterator_concept, std::input_iterator_tag>);
+#endif
 }
 
 int main(int, char**)
 {
     test<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>();
+#endif
 
   return 0;
 }

@@ -8,7 +8,7 @@ declare dllimport arm_aapcs_vfpcc i32 @external()
 declare arm_aapcs_vfpcc i32 @internal()
 
 define arm_aapcs_vfpcc i32 @get_var() {
-  %1 = load i32, i32* @var, align 4
+  %1 = load i32, ptr @var, align 4
   ret i32 %1
 }
 
@@ -20,7 +20,7 @@ define arm_aapcs_vfpcc i32 @get_var() {
 ; CHECK: bx lr
 
 define arm_aapcs_vfpcc i32 @get_ext() {
-  %1 = load i32, i32* @ext, align 4
+  %1 = load i32, ptr @ext, align 4
   ret i32 %1
 }
 
@@ -30,8 +30,8 @@ define arm_aapcs_vfpcc i32 @get_ext() {
 ; CHECK: ldr r0, [r0]
 ; CHECK: bx lr
 
-define arm_aapcs_vfpcc i32* @get_var_pointer() {
-  ret i32* @var
+define arm_aapcs_vfpcc ptr @get_var_pointer() {
+  ret ptr @var
 }
 
 ; CHECK-LABEL: get_var_pointer
@@ -57,5 +57,5 @@ define arm_aapcs_vfpcc i32 @call_internal() {
 }
 
 ; CHECK-LABEL: call_internal
-; CHECK: b internal
+; CHECK: b.w internal
 

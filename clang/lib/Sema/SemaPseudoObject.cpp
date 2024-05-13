@@ -152,8 +152,13 @@ namespace {
           assocTypes.push_back(assoc.getTypeSourceInfo());
         }
 
+        if (gse->isExprPredicate())
+          return GenericSelectionExpr::Create(
+              S.Context, gse->getGenericLoc(), gse->getControllingExpr(),
+              assocTypes, assocExprs, gse->getDefaultLoc(), gse->getRParenLoc(),
+              gse->containsUnexpandedParameterPack(), resultIndex);
         return GenericSelectionExpr::Create(
-            S.Context, gse->getGenericLoc(), gse->getControllingExpr(),
+            S.Context, gse->getGenericLoc(), gse->getControllingType(),
             assocTypes, assocExprs, gse->getDefaultLoc(), gse->getRParenLoc(),
             gse->containsUnexpandedParameterPack(), resultIndex);
       }
@@ -608,9 +613,9 @@ bool ObjCPropertyOpBuilder::findGetter() {
       // Must build the getter selector the hard way.
       ObjCMethodDecl *setter = RefExpr->getImplicitPropertySetter();
       assert(setter && "both setter and getter are null - cannot happen");
-      IdentifierInfo *setterName =
-        setter->getSelector().getIdentifierInfoForSlot(0);
-      IdentifierInfo *getterName =
+      const IdentifierInfo *setterName =
+          setter->getSelector().getIdentifierInfoForSlot(0);
+      const IdentifierInfo *getterName =
           &S.Context.Idents.get(setterName->getName().substr(3));
       GetterSelector =
         S.PP.getSelectorTable().getNullarySelector(getterName);
@@ -635,9 +640,9 @@ bool ObjCPropertyOpBuilder::findSetter(bool warn) {
       SetterSelector = setter->getSelector();
       return true;
     } else {
-      IdentifierInfo *getterName =
-        RefExpr->getImplicitPropertyGetter()->getSelector()
-          .getIdentifierInfoForSlot(0);
+      const IdentifierInfo *getterName = RefExpr->getImplicitPropertyGetter()
+                                             ->getSelector()
+                                             .getIdentifierInfoForSlot(0);
       SetterSelector =
         SelectorTable::constructSetterSelector(S.PP.getIdentifierTable(),
                                                S.PP.getSelectorTable(),
@@ -662,7 +667,8 @@ bool ObjCPropertyOpBuilder::findSetter(bool warn) {
         front = isLowercase(front) ? toUppercase(front) : toLowercase(front);
         SmallString<100> PropertyName = thisPropertyName;
         PropertyName[0] = front;
-        IdentifierInfo *AltMember = &S.PP.getIdentifierTable().get(PropertyName);
+        const IdentifierInfo *AltMember =
+            &S.PP.getIdentifierTable().get(PropertyName);
         if (ObjCPropertyDecl *prop1 = IFace->FindPropertyDeclaration(
                 AltMember, prop->getQueryKind()))
           if (prop != prop1 && (prop1->getSetterMethodDecl() == setter)) {
@@ -737,11 +743,11 @@ ExprResult ObjCPropertyOpBuilder::buildGet() {
     assert(InstanceReceiver || RefExpr->isSuperReceiver());
     msg = S.BuildInstanceMessageImplicit(InstanceReceiver, receiverType,
                                          GenericLoc, Getter->getSelector(),
-                                         Getter, None);
+                                         Getter, std::nullopt);
   } else {
     msg = S.BuildClassMessageImplicit(receiverType, RefExpr->isSuperReceiver(),
-                                      GenericLoc, Getter->getSelector(),
-                                      Getter, None);
+                                      GenericLoc, Getter->getSelector(), Getter,
+                                      std::nullopt);
   }
   return msg;
 }
@@ -835,7 +841,7 @@ ExprResult ObjCPropertyOpBuilder::buildRValueOperation(Expr *op) {
 
   // As a special case, if the method returns 'id', try to get
   // a better type from the property.
-  if (RefExpr->isExplicitProperty() && result.get()->isRValue()) {
+  if (RefExpr->isExplicitProperty() && result.get()->isPRValue()) {
     QualType receiverType = RefExpr->getReceiverType(S.Context);
     QualType propType = RefExpr->getExplicitProperty()
                           ->getUsageType(receiverType);
@@ -1121,9 +1127,8 @@ static void CheckKeyForObjCARCConversion(Sema &S, QualType ContainerT,
     return;
   // dictionary subscripting.
   // - (id)objectForKeyedSubscript:(id)key;
-  IdentifierInfo *KeyIdents[] = {
-    &S.Context.Idents.get("objectForKeyedSubscript")
-  };
+  const IdentifierInfo *KeyIdents[] = {
+      &S.Context.Idents.get("objectForKeyedSubscript")};
   Selector GetterSelector = S.Context.Selectors.getSelector(1, KeyIdents);
   ObjCMethodDecl *Getter = S.LookupMethodInObjectType(GetterSelector, ContainerT,
                                                       true /*instance*/);
@@ -1131,7 +1136,7 @@ static void CheckKeyForObjCARCConversion(Sema &S, QualType ContainerT,
     return;
   QualType T = Getter->parameters()[0]->getType();
   S.CheckObjCConversion(Key->getSourceRange(), T, Key,
-                        Sema::CCK_ImplicitConversion);
+                        CheckedConversionKind::Implicit);
 }
 
 bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
@@ -1164,16 +1169,14 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
   if (!arrayRef) {
     // dictionary subscripting.
     // - (id)objectForKeyedSubscript:(id)key;
-    IdentifierInfo *KeyIdents[] = {
-      &S.Context.Idents.get("objectForKeyedSubscript")
-    };
+    const IdentifierInfo *KeyIdents[] = {
+        &S.Context.Idents.get("objectForKeyedSubscript")};
     AtIndexGetterSelector = S.Context.Selectors.getSelector(1, KeyIdents);
   }
   else {
     // - (id)objectAtIndexedSubscript:(size_t)index;
-    IdentifierInfo *KeyIdents[] = {
-      &S.Context.Idents.get("objectAtIndexedSubscript")
-    };
+    const IdentifierInfo *KeyIdents[] = {
+        &S.Context.Idents.get("objectAtIndexedSubscript")};
 
     AtIndexGetterSelector = S.Context.Selectors.getSelector(1, KeyIdents);
   }
@@ -1190,7 +1193,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
         /*isPropertyAccessor=*/false,
         /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-        ObjCMethodDecl::Required, false);
+        ObjCImplementationControl::Required, false);
     ParmVarDecl *Argument = ParmVarDecl::Create(S.Context, AtIndexGetter,
                                                 SourceLocation(), SourceLocation(),
                                                 arrayRef ? &S.Context.Idents.get("index")
@@ -1200,7 +1203,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
                                                 /*TInfo=*/nullptr,
                                                 SC_None,
                                                 nullptr);
-    AtIndexGetter->setMethodParams(S.Context, Argument, None);
+    AtIndexGetter->setMethodParams(S.Context, Argument, std::nullopt);
   }
 
   if (!AtIndexGetter) {
@@ -1269,18 +1272,16 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
   if (!arrayRef) {
     // dictionary subscripting.
     // - (void)setObject:(id)object forKeyedSubscript:(id)key;
-    IdentifierInfo *KeyIdents[] = {
-      &S.Context.Idents.get("setObject"),
-      &S.Context.Idents.get("forKeyedSubscript")
-    };
+    const IdentifierInfo *KeyIdents[] = {
+        &S.Context.Idents.get("setObject"),
+        &S.Context.Idents.get("forKeyedSubscript")};
     AtIndexSetterSelector = S.Context.Selectors.getSelector(2, KeyIdents);
   }
   else {
     // - (void)setObject:(id)object atIndexedSubscript:(NSInteger)index;
-    IdentifierInfo *KeyIdents[] = {
-      &S.Context.Idents.get("setObject"),
-      &S.Context.Idents.get("atIndexedSubscript")
-    };
+    const IdentifierInfo *KeyIdents[] = {
+        &S.Context.Idents.get("setObject"),
+        &S.Context.Idents.get("atIndexedSubscript")};
     AtIndexSetterSelector = S.Context.Selectors.getSelector(2, KeyIdents);
   }
   AtIndexSetter = S.LookupMethodInObjectType(AtIndexSetterSelector, ResultType,
@@ -1296,7 +1297,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
         /*isPropertyAccessor=*/false,
         /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-        ObjCMethodDecl::Required, false);
+        ObjCImplementationControl::Required, false);
     SmallVector<ParmVarDecl *, 2> Params;
     ParmVarDecl *object = ParmVarDecl::Create(S.Context, AtIndexSetter,
                                                 SourceLocation(), SourceLocation(),
@@ -1316,7 +1317,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
                                                 SC_None,
                                                 nullptr);
     Params.push_back(key);
-    AtIndexSetter->setMethodParams(S.Context, Params, None);
+    AtIndexSetter->setMethodParams(S.Context, Params, std::nullopt);
   }
 
   if (!AtIndexSetter) {
@@ -1446,7 +1447,8 @@ MSPropertyOpBuilder::getBaseMSProperty(MSPropertySubscriptExpr *E) {
 
 Expr *MSPropertyOpBuilder::rebuildAndCaptureObject(Expr *syntacticBase) {
   InstanceBase = capture(RefExpr->getBaseExpr());
-  llvm::for_each(CallArgs, [this](Expr *&Arg) { Arg = capture(Arg); });
+  for (Expr *&Arg : CallArgs)
+    Arg = capture(Arg);
   syntacticBase = Rebuilder(S, [=](Expr *, unsigned Idx) -> Expr * {
                     switch (Idx) {
                     case 0:
@@ -1468,7 +1470,7 @@ ExprResult MSPropertyOpBuilder::buildGet() {
   }
 
   UnqualifiedId GetterName;
-  IdentifierInfo *II = RefExpr->getPropertyDecl()->getGetterId();
+  const IdentifierInfo *II = RefExpr->getPropertyDecl()->getGetterId();
   GetterName.setIdentifier(II, RefExpr->getMemberLoc());
   CXXScopeSpec SS;
   SS.Adopt(RefExpr->getQualifierLoc());
@@ -1497,7 +1499,7 @@ ExprResult MSPropertyOpBuilder::buildSet(Expr *op, SourceLocation sl,
   }
 
   UnqualifiedId SetterName;
-  IdentifierInfo *II = RefExpr->getPropertyDecl()->getSetterId();
+  const IdentifierInfo *II = RefExpr->getPropertyDecl()->getSetterId();
   SetterName.setIdentifier(II, RefExpr->getMemberLoc());
   CXXScopeSpec SS;
   SS.Adopt(RefExpr->getQualifierLoc());
@@ -1554,7 +1556,7 @@ ExprResult Sema::checkPseudoObjectIncDec(Scope *Sc, SourceLocation opcLoc,
   // Do nothing if the operand is dependent.
   if (op->isTypeDependent())
     return UnaryOperator::Create(Context, op, opcode, Context.DependentTy,
-                                 VK_RValue, OK_Ordinary, opcLoc, false,
+                                 VK_PRValue, OK_Ordinary, opcLoc, false,
                                  CurFPFeatureOverrides());
 
   assert(UnaryOperator::isIncrementDecrementOp(opcode));
@@ -1585,7 +1587,7 @@ ExprResult Sema::checkPseudoObjectAssignment(Scope *S, SourceLocation opcLoc,
   // Do nothing if either argument is dependent.
   if (LHS->isTypeDependent() || RHS->isTypeDependent())
     return BinaryOperator::Create(Context, LHS, RHS, opcode,
-                                  Context.DependentTy, VK_RValue, OK_Ordinary,
+                                  Context.DependentTy, VK_PRValue, OK_Ordinary,
                                   opcLoc, CurFPFeatureOverrides());
 
   // Filter out non-overload placeholder types in the RHS.

@@ -15,10 +15,12 @@
 #define LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
 
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include <cstdint>
 
 namespace llvm {
 
+struct Align;
 class Constant;
 class DataLayout;
 class Function;
@@ -219,6 +221,14 @@ public:
     return SupportDebugThreadLocalLocation;
   }
 
+  /// Returns the register used as static base in RWPI variants.
+  virtual MCRegister getStaticBase() const { return MCRegister::NoRegister; }
+
+  /// Get the target specific RWPI relocation.
+  virtual const MCExpr *getIndirectSymViaRWPI(const MCSymbol *Sym) const {
+    return nullptr;
+  }
+
   /// Get the target specific PC relative GOT entry relocation
   virtual const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
                                                   const MCSymbol *Sym,
@@ -267,7 +277,7 @@ public:
   }
 
   /// If supported, return the function entry point symbol.
-  /// Otherwise, returns nulltpr.
+  /// Otherwise, returns nullptr.
   /// Func must be a function or an alias which has a function as base object.
   virtual MCSymbol *getFunctionEntryPointSymbol(const GlobalValue *Func,
                                                 const TargetMachine &TM) const {

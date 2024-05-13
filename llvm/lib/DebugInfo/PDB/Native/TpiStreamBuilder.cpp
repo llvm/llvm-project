@@ -9,20 +9,17 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryByteStream.h"
-#include "llvm/Support/BinaryStreamArray.h"
-#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cstdint>
 #include <numeric>
@@ -59,13 +56,13 @@ void TpiStreamBuilder::updateTypeIndexOffsets(ArrayRef<uint16_t> Sizes) {
 }
 
 void TpiStreamBuilder::addTypeRecord(ArrayRef<uint8_t> Record,
-                                     Optional<uint32_t> Hash) {
+                                     std::optional<uint32_t> Hash) {
   assert(((Record.size() & 3) == 0) &&
          "The type record's size is not a multiple of 4 bytes which will "
          "cause misalignment in the output TPI stream!");
   assert(Record.size() <= codeview::MaxRecordLength);
   uint16_t OneSize = (uint16_t)Record.size();
-  updateTypeIndexOffsets(makeArrayRef(&OneSize, 1));
+  updateTypeIndexOffsets(ArrayRef(&OneSize, 1));
 
   TypeRecBuffers.push_back(Record);
   // FIXME: Require it.
@@ -168,13 +165,14 @@ Error TpiStreamBuilder::finalizeMsfLayout() {
         reinterpret_cast<const uint8_t *>(HashBuffer.data()),
         calculateHashBufferSize());
     HashValueStream =
-        std::make_unique<BinaryByteStream>(Bytes, llvm::support::little);
+        std::make_unique<BinaryByteStream>(Bytes, llvm::endianness::little);
   }
   return Error::success();
 }
 
 Error TpiStreamBuilder::commit(const msf::MSFLayout &Layout,
                                WritableBinaryStreamRef Buffer) {
+  llvm::TimeTraceScope timeScope("Commit TPI stream");
   if (auto EC = finalize())
     return EC;
 

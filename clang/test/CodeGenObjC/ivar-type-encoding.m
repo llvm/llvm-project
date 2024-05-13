@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S -emit-llvm -fobjc-runtime=gcc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -fobjc-runtime=gcc -o - %s | FileCheck %s
 
 @protocol NSCopying
 @end
@@ -24,7 +24,7 @@
 
 @end
 
-int main() {
+int main(void) {
   TestClass *c = [TestClass new];
   return 0;
 }

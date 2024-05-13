@@ -1,14 +1,15 @@
 ; RUN: llc -O0 %s -o /dev/null
+; RUN: llc --try-experimental-debuginfo-iterators -O0 %s -o /dev/null
 
-define void @CGRectStandardize(i32* sret(i32) %agg.result, i32* byval(i32) %rect) nounwind ssp !dbg !0 {
+define void @CGRectStandardize(ptr sret(i32) %agg.result, ptr byval(i32) %rect) nounwind ssp !dbg !0 {
 entry:
-  call void @llvm.dbg.declare(metadata i32* %rect, metadata !23, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %rect, metadata !23, metadata !DIExpression()), !dbg !24
   ret void
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 
 
 !llvm.dbg.cu = !{!2}

@@ -24,10 +24,13 @@ int main(int, char**)
         std::fstream fs;
         assert(fs.rdbuf());
     }
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wfstream fs;
         assert(fs.rdbuf());
     }
+#endif
 
   return 0;
 }

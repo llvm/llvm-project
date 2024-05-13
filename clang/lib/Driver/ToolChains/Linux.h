@@ -37,14 +37,16 @@ public:
                           llvm::opt::ArgStringList &CC1Args) const override;
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
+  void AddHIPRuntimeLibArgs(const llvm::opt::ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs) const override;
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
   RuntimeLibType GetDefaultRuntimeLibType() const override;
+  unsigned GetDefaultDwarfVersion() const override;
   CXXStdlibType GetDefaultCXXStdlibType() const override;
   bool
   IsAArch64OutlineAtomicsDefault(const llvm::opt::ArgList &Args) const override;
-  bool isPIEDefault() const override;
-  bool isNoExecStackDefault() const override;
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool IsMathErrnoDefault() const override;
   SanitizerMask getSupportedSanitizers() const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
@@ -57,9 +59,7 @@ public:
 
   std::vector<std::string> ExtraOpts;
 
-  llvm::DenormalMode getDefaultDenormalModeForType(
-      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
-      const llvm::fltSemantics *FPType = nullptr) const override;
+  const char *getDefaultLinker() const override;
 
 protected:
   Tool *buildAssembler() const override;

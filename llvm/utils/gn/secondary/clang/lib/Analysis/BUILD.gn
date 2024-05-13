@@ -24,6 +24,7 @@ static_library("Analysis") {
     "Consumed.cpp",
     "Dominators.cpp",
     "ExprMutationAnalyzer.cpp",
+    "IntervalPartition.cpp",
     "IssueHash.cpp",
     "LiveVariables.cpp",
     "MacroExpansionContext.cpp",
@@ -38,5 +39,6 @@ static_library("Analysis") {
     "ThreadSafetyLogical.cpp",
     "ThreadSafetyTIL.cpp",
     "UninitializedValues.cpp",
+    "UnsafeBufferUsage.cpp",
   ]
 }

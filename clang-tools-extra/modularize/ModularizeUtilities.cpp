@@ -75,12 +75,11 @@ std::error_code ModularizeUtilities::loadAllHeaderListsAndDependencies() {
   for (auto I = InputFilePaths.begin(), E = InputFilePaths.end(); I != E; ++I) {
     llvm::StringRef InputPath = *I;
     // If it's a module map.
-    if (InputPath.endswith(".modulemap")) {
+    if (InputPath.ends_with(".modulemap")) {
       // Load the module map.
       if (std::error_code EC = loadModuleMap(InputPath))
         return EC;
-    }
-    else {
+    } else {
       // Else we assume it's a header list and load it.
       if (std::error_code EC = loadSingleHeaderListsAndDependencies(InputPath)) {
         errs() << "modularize: error: Unable to get header list '" << InputPath
@@ -103,10 +102,10 @@ std::error_code ModularizeUtilities::loadAllHeaderListsAndDependencies() {
 
 // Do coverage checks.
 // For each loaded module map, do header coverage check.
-// Starting from the directory of the module.map file,
+// Starting from the directory of the module.modulemap file,
 // Find all header files, optionally looking only at files
 // covered by the include path options, and compare against
-// the headers referenced by the module.map file.
+// the headers referenced by the module.modulemap file.
 // Display warnings for unaccounted-for header files.
 // Returns 0 if there were no errors or warnings, 1 if there
 // were warnings, 2 if any other problem, such as a bad
@@ -196,7 +195,7 @@ std::error_code ModularizeUtilities::loadSingleHeaderListsAndDependencies(
     // Get canonical form.
     HeaderFileName = getCanonicalPath(HeaderFileName);
     // Save the resulting header file path and dependencies.
-    HeaderFileNames.push_back(std::string(HeaderFileName.str()));
+    HeaderFileNames.push_back(std::string(HeaderFileName));
     Dependencies[HeaderFileName.str()] = Dependents;
   }
   return std::error_code();
@@ -249,7 +248,7 @@ std::error_code ModularizeUtilities::loadProblemHeaderList(
     // Get canonical form.
     HeaderFileName = getCanonicalPath(HeaderFileName);
     // Save the resulting header file path.
-    ProblemFileNames.push_back(std::string(HeaderFileName.str()));
+    ProblemFileNames.push_back(std::string(HeaderFileName));
   }
   return std::error_code();
 }
@@ -258,34 +257,33 @@ std::error_code ModularizeUtilities::loadProblemHeaderList(
 std::error_code ModularizeUtilities::loadModuleMap(
     llvm::StringRef InputPath) {
   // Get file entry for module.modulemap file.
-  auto ModuleMapEntryOrErr =
-    SourceMgr->getFileManager().getFile(InputPath);
+  auto ModuleMapEntryOrErr = SourceMgr->getFileManager().getFileRef(InputPath);
 
   // return error if not found.
   if (!ModuleMapEntryOrErr) {
     llvm::errs() << "error: File \"" << InputPath << "\" not found.\n";
-    return ModuleMapEntryOrErr.getError();
+    return errorToErrorCode(ModuleMapEntryOrErr.takeError());
   }
-  const FileEntry *ModuleMapEntry = *ModuleMapEntryOrErr;
+  FileEntryRef ModuleMapEntry = *ModuleMapEntryOrErr;
 
   // Because the module map parser uses a ForwardingDiagnosticConsumer,
   // which doesn't forward the BeginSourceFile call, we do it explicitly here.
   DC.BeginSourceFile(*LangOpts, nullptr);
 
   // Figure out the home directory for the module map file.
-  const DirectoryEntry *Dir = ModuleMapEntry->getDir();
-  StringRef DirName(Dir->getName());
+  DirectoryEntryRef Dir = ModuleMapEntry.getDir();
+  StringRef DirName(Dir.getName());
   if (llvm::sys::path::filename(DirName) == "Modules") {
     DirName = llvm::sys::path::parent_path(DirName);
-    if (DirName.endswith(".framework")) {
-      if (auto DirEntry = FileMgr->getDirectory(DirName))
-        Dir = *DirEntry;
-      else
-        Dir = nullptr;
+    if (DirName.ends_with(".framework")) {
+      auto FrameworkDirOrErr = FileMgr->getDirectoryRef(DirName);
+      if (!FrameworkDirOrErr) {
+        // This can happen if there's a race between the above check and the
+        // removal of the directory.
+        return errorToErrorCode(FrameworkDirOrErr.takeError());
+      }
+      Dir = *FrameworkDirOrErr;
     }
-    // FIXME: This assert can fail if there's a race between the above check
-    // and the removal of the directory.
-    assert(Dir && "parent must exist");
   }
 
   std::unique_ptr<ModuleMap> ModMap;
@@ -323,12 +321,13 @@ std::error_code ModularizeUtilities::loadModuleMap(
 // Walks the modules and collects referenced headers into
 // HeaderFileNames.
 bool ModularizeUtilities::collectModuleMapHeaders(clang::ModuleMap *ModMap) {
-  for (ModuleMap::module_iterator I = ModMap->module_begin(),
-    E = ModMap->module_end();
-    I != E; ++I) {
-    if (!collectModuleHeaders(*I->second))
+  SmallVector<std::pair<StringRef, const clang::Module *>, 0> Vec;
+  for (auto &M : ModMap->modules())
+    Vec.emplace_back(M.first(), M.second);
+  llvm::sort(Vec, llvm::less_first());
+  for (auto &I : Vec)
+    if (!collectModuleHeaders(*I.second))
       return false;
-  }
   return true;
 }
 
@@ -346,22 +345,23 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   DependentsVector UmbrellaDependents;
 
   // Recursively do submodules.
-  for (auto MI = Mod.submodule_begin(), MIEnd = Mod.submodule_end();
-       MI != MIEnd; ++MI)
-    collectModuleHeaders(**MI);
+  for (auto *Submodule : Mod.submodules())
+    collectModuleHeaders(*Submodule);
 
-  if (const FileEntry *UmbrellaHeader = Mod.getUmbrellaHeader().Entry) {
-    std::string HeaderPath = getCanonicalPath(UmbrellaHeader->getName());
+  if (std::optional<clang::Module::Header> UmbrellaHeader =
+          Mod.getUmbrellaHeaderAsWritten()) {
+    std::string HeaderPath = getCanonicalPath(UmbrellaHeader->Entry.getName());
     // Collect umbrella header.
     HeaderFileNames.push_back(HeaderPath);
 
     // FUTURE: When needed, umbrella header header collection goes here.
-  }
-  else if (const DirectoryEntry *UmbrellaDir = Mod.getUmbrellaDir().Entry) {
+  } else if (std::optional<clang::Module::DirectoryName> UmbrellaDir =
+                 Mod.getUmbrellaDirAsWritten()) {
     // If there normal headers, assume these are umbrellas and skip collection.
     if (Mod.Headers->size() == 0) {
       // Collect headers in umbrella directory.
-      if (!collectUmbrellaHeaders(UmbrellaDir->getName(), UmbrellaDependents))
+      if (!collectUmbrellaHeaders(UmbrellaDir->Entry.getName(),
+                                  UmbrellaDependents))
         return false;
     }
   }
@@ -378,7 +378,7 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
     // Collect normal header.
     const clang::Module::Header &Header(
       Mod.Headers[clang::Module::HK_Normal][Index]);
-    std::string HeaderPath = getCanonicalPath(Header.Entry->getName());
+    std::string HeaderPath = getCanonicalPath(Header.Entry.getName());
     HeaderFileNames.push_back(HeaderPath);
   }
 
@@ -443,7 +443,7 @@ static std::string replaceDotDot(StringRef Path) {
       llvm::sys::path::append(Buffer, *B);
     ++B;
   }
-  if (Path.endswith("/") || Path.endswith("\\"))
+  if (Path.ends_with("/") || Path.ends_with("\\"))
     Buffer.append(1, Path.back());
   return Buffer.c_str();
 }
@@ -456,7 +456,7 @@ std::string ModularizeUtilities::getCanonicalPath(StringRef FilePath) {
   std::string Tmp(replaceDotDot(FilePath));
   std::replace(Tmp.begin(), Tmp.end(), '\\', '/');
   StringRef Tmp2(Tmp);
-  if (Tmp2.startswith("./"))
+  if (Tmp2.starts_with("./"))
     Tmp = std::string(Tmp2.substr(2));
   return Tmp;
 }
@@ -470,9 +470,9 @@ bool ModularizeUtilities::isHeader(StringRef FileName) {
   StringRef Extension = llvm::sys::path::extension(FileName);
   if (Extension.size() == 0)
     return true;
-  if (Extension.equals_lower(".h"))
+  if (Extension.equals_insensitive(".h"))
     return true;
-  if (Extension.equals_lower(".inc"))
+  if (Extension.equals_insensitive(".inc"))
     return true;
   return false;
 }
@@ -487,7 +487,7 @@ std::string ModularizeUtilities::getDirectoryFromPath(StringRef Path) {
   sys::path::remove_filename(Directory);
   if (Directory.size() == 0)
     return ".";
-  return std::string(Directory.str());
+  return std::string(Directory);
 }
 
 // Add unique problem file.

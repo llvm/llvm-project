@@ -37,7 +37,7 @@ void *sel_registerName(const char *);
 - (void)methodOnSubclass2;
 @end
 
-// Sanity check: the basic initialization pattern.
+// Check the basic initialization pattern.
 void test_instancetype_alloc_init_simple() {
   Root *r1 = [[Root alloc] init];
   Subclass1 *sc1 = [[Subclass1 alloc] init];

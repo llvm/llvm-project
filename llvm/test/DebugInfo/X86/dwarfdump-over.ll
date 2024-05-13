@@ -12,13 +12,13 @@
 ; CHECK:  DW_AT_upper_bound     (DW_OP_push_object_address, DW_OP_over, DW_OP_constu 0x30, DW_OP_mul, DW_OP_plus_uconst 0x78, DW_OP_plus, DW_OP_deref)
 ; CHECK:  DW_AT_byte_stride     (DW_OP_push_object_address, DW_OP_over, DW_OP_constu 0x30, DW_OP_mul, DW_OP_plus_uconst 0x70, DW_OP_plus, DW_OP_deref, DW_OP_lit4, DW_OP_mul)
 ; CHECK: DW_TAG_subrange_type
-; CHECK   DW_AT_lower_bound	(DW_OP_push_object_address, DW_OP_plus_uconst 0x80, DW_OP_deref)
-; CHECK   DW_AT_upper_bound	(DW_OP_push_object_address, DW_OP_plus_uconst 0xa8, DW_OP_deref)
-; CHECK   DW_AT_byte_stride	(DW_OP_push_object_address, DW_OP_plus_uconst 0xa0, DW_OP_deref, DW_OP_lit4, DW_OP_mul)
+; CHECK:  DW_AT_lower_bound	(DW_OP_push_object_address, DW_OP_plus_uconst 0x80, DW_OP_deref)
+; CHECK:  DW_AT_upper_bound	(DW_OP_push_object_address, DW_OP_plus_uconst 0xa8, DW_OP_deref)
+; CHECK:  DW_AT_byte_stride	(DW_OP_push_object_address, DW_OP_plus_uconst 0xa0, DW_OP_deref, DW_OP_lit4, DW_OP_mul)
 ; CHECK: DW_TAG_subrange_type
-; CHECK   DW_AT_lower_bound	(DW_OP_push_object_address, DW_OP_plus_uconst 0xb0, DW_OP_deref)
-; CHECK   DW_AT_upper_bound	(DW_OP_push_object_address, DW_OP_plus_uconst 0xd8, DW_OP_deref)
-; CHECK   DW_AT_byte_stride	(DW_OP_push_object_address, DW_OP_plus_uconst 0xd0, DW_OP_deref, DW_OP_lit4, DW_OP_mul)
+; CHECK:  DW_AT_lower_bound	(DW_OP_push_object_address, DW_OP_plus_uconst 0xb0, DW_OP_deref)
+; CHECK:  DW_AT_upper_bound	(DW_OP_push_object_address, DW_OP_plus_uconst 0xd8, DW_OP_deref)
+; CHECK:  DW_AT_byte_stride	(DW_OP_push_object_address, DW_OP_plus_uconst 0xd0, DW_OP_deref, DW_OP_lit4, DW_OP_mul)
 
 ; Test case is hand written with the help of below Fortran source program.
 ; Generated IR is meaning less and goal of it is just to check the
@@ -39,12 +39,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @MAIN_() !dbg !5 {
 L.entry:
-  %.Z0655_362 = alloca i32*, align 8
+  %.Z0655_362 = alloca ptr, align 8
   %"arr$sd1_379" = alloca [28 x i64], align 8
-  call void @llvm.dbg.declare(metadata i32** %.Z0655_362, metadata !8, metadata !DIExpression()), !dbg !11
-  call void @llvm.dbg.declare(metadata i32** %.Z0655_362, metadata !12, metadata !DIExpression()), !dbg !11
-  call void @llvm.dbg.declare(metadata [28 x i64]* %"arr$sd1_379", metadata !14, metadata !DIExpression()), !dbg !11
-  call void @llvm.dbg.declare(metadata [28 x i64]* %"arr$sd1_379", metadata !19, metadata !DIExpression()), !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %.Z0655_362, metadata !8, metadata !DIExpression()), !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %.Z0655_362, metadata !12, metadata !DIExpression()), !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %"arr$sd1_379", metadata !14, metadata !DIExpression()), !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %"arr$sd1_379", metadata !19, metadata !DIExpression()), !dbg !11
   ret void, !dbg !25
 }
 

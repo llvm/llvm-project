@@ -48,20 +48,27 @@ extern uptr kHighShadowEnd;
 extern uptr kHighMemStart;
 extern uptr kHighMemEnd;
 
-extern uptr kAliasRegionStart;
-
+inline uptr GetShadowOffset() {
+  return SANITIZER_FUCHSIA ? 0 : __hwasan_shadow_memory_dynamic_address;
+}
 inline uptr MemToShadow(uptr untagged_addr) {
-  return (untagged_addr >> kShadowScale) +
-         __hwasan_shadow_memory_dynamic_address;
+  return (untagged_addr >> kShadowScale) + GetShadowOffset();
 }
 inline uptr ShadowToMem(uptr shadow_addr) {
-  return (shadow_addr - __hwasan_shadow_memory_dynamic_address) << kShadowScale;
+  return (shadow_addr - GetShadowOffset()) << kShadowScale;
 }
 inline uptr MemToShadowSize(uptr size) {
   return size >> kShadowScale;
 }
 
 bool MemIsApp(uptr p);
+
+inline bool MemIsShadow(uptr p) {
+  return (kLowShadowStart <= p && p <= kLowShadowEnd) ||
+         (kHighShadowStart <= p && p <= kHighShadowEnd);
+}
+
+uptr GetAliasRegionStart();
 
 }  // namespace __hwasan
 

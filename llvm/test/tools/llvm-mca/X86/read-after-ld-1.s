@@ -3,12 +3,14 @@
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=haswell -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,HASWELL
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=broadwell -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,BDWELL
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,BARCELONA
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,BDVER2
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,BTVER2
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,ZNVER1
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,ZNVER2
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver3 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,ZNVER3
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver4 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,ZNVER4
 
 vdivps  %xmm0, %xmm1, %xmm1
 vaddps  (%rax), %xmm1, %xmm1
@@ -37,14 +39,17 @@ vaddps  (%rax), %xmm1, %xmm1
 # SKYLAKE-NEXT:   Total Cycles:      18
 # SKYLAKE-NEXT:   Total uOps:        3
 
-# ZNVER1-NEXT:    Total Cycles:      20
+# ZNVER1-NEXT:    Total Cycles:      15
 # ZNVER1-NEXT:    Total uOps:        2
 
-# ZNVER2-NEXT:    Total Cycles:      21
+# ZNVER2-NEXT:    Total Cycles:      16
 # ZNVER2-NEXT:    Total uOps:        2
 
 # ZNVER3-NEXT:    Total Cycles:      17
 # ZNVER3-NEXT:    Total uOps:        2
+
+# ZNVER4-NEXT:    Total Cycles:      17
+# ZNVER4-NEXT:    Total uOps:        2
 
 # BARCELONA:      Dispatch Width:    4
 # BARCELONA-NEXT: uOps Per Cycle:    0.15
@@ -82,19 +87,24 @@ vaddps  (%rax), %xmm1, %xmm1
 # SKYLAKE-NEXT:   Block RThroughput: 3.0
 
 # ZNVER1:         Dispatch Width:    4
-# ZNVER1-NEXT:    uOps Per Cycle:    0.10
-# ZNVER1-NEXT:    IPC:               0.10
-# ZNVER1-NEXT:    Block RThroughput: 1.0
+# ZNVER1-NEXT:    uOps Per Cycle:    0.13
+# ZNVER1-NEXT:    IPC:               0.13
+# ZNVER1-NEXT:    Block RThroughput: 3.0
 
 # ZNVER2:         Dispatch Width:    4
-# ZNVER2-NEXT:    uOps Per Cycle:    0.10
-# ZNVER2-NEXT:    IPC:               0.10
-# ZNVER2-NEXT:    Block RThroughput: 1.0
+# ZNVER2-NEXT:    uOps Per Cycle:    0.13
+# ZNVER2-NEXT:    IPC:               0.13
+# ZNVER2-NEXT:    Block RThroughput: 5.0
 
 # ZNVER3:         Dispatch Width:    6
 # ZNVER3-NEXT:    uOps Per Cycle:    0.12
 # ZNVER3-NEXT:    IPC:               0.12
 # ZNVER3-NEXT:    Block RThroughput: 3.0
+
+# ZNVER4:         Dispatch Width:    6
+# ZNVER4-NEXT:    uOps Per Cycle:    0.12
+# ZNVER4-NEXT:    IPC:               0.12
+# ZNVER4-NEXT:    Block RThroughput: 3.0
 
 # ALL:            Timeline view:
 
@@ -119,14 +129,17 @@ vaddps  (%rax), %xmm1, %xmm1
 # SKYLAKE-NEXT:                       01234567
 # SKYLAKE-NEXT:   Index     0123456789
 
-# ZNVER1-NEXT:                        0123456789
+# ZNVER1-NEXT:                        01234
 # ZNVER1-NEXT:    Index     0123456789
 
-# ZNVER2-NEXT:                        0123456789
-# ZNVER2-NEXT:    Index     0123456789          0
+# ZNVER2-NEXT:                        012345
+# ZNVER2-NEXT:    Index     0123456789
 
 # ZNVER3-NEXT:                        0123456
 # ZNVER3-NEXT:    Index     0123456789
+
+# ZNVER4-NEXT:                        0123456
+# ZNVER4-NEXT:    Index     0123456789
 
 # BARCELONA:      [0,0]     DeeeeeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
 # BARCELONA-NEXT: [0,1]     D========eeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
@@ -149,14 +162,17 @@ vaddps  (%rax), %xmm1, %xmm1
 # SKYLAKE:        [0,0]     DeeeeeeeeeeeER . .   vdivps	%xmm0, %xmm1, %xmm1
 # SKYLAKE-NEXT:   [0,1]     D=====eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
-# ZNVER1:         [0,0]     DeeeeeeeeeeeeeeeER .   vdivps	%xmm0, %xmm1, %xmm1
-# ZNVER1-NEXT:    [0,1]     D=======eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# ZNVER1:         [0,0]     DeeeeeeeeeeER .   vdivps	%xmm0, %xmm1, %xmm1
+# ZNVER1-NEXT:    [0,1]     D==eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
-# ZNVER2:         [0,0]     DeeeeeeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
-# ZNVER2-NEXT:    [0,1]     D========eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# ZNVER2:         [0,0]     DeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
+# ZNVER2-NEXT:    [0,1]     D===eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # ZNVER3:         [0,0]     DeeeeeeeeeeeER ..   vdivps	%xmm0, %xmm1, %xmm1
 # ZNVER3-NEXT:    [0,1]     D====eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+
+# ZNVER4:         [0,0]     DeeeeeeeeeeeER ..   vdivps	%xmm0, %xmm1, %xmm1
+# ZNVER4-NEXT:    [0,1]     D====eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions
@@ -188,11 +204,14 @@ vaddps  (%rax), %xmm1, %xmm1
 # SKYLAKE-NEXT:   1.     1     6.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
 # SKYLAKE-NEXT:          1     3.5    0.5    0.0       <total>
 
-# ZNVER1-NEXT:    1.     1     8.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
-# ZNVER1-NEXT:           1     4.5    0.5    0.0       <total>
+# ZNVER1-NEXT:    1.     1     3.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# ZNVER1-NEXT:           1     2.0    0.5    0.0       <total>
 
-# ZNVER2-NEXT:    1.     1     9.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
-# ZNVER2-NEXT:           1     5.0    0.5    0.0       <total>
+# ZNVER2-NEXT:    1.     1     4.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# ZNVER2-NEXT:           1     2.5    0.5    0.0       <total>
 
 # ZNVER3-NEXT:    1.     1     5.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
 # ZNVER3-NEXT:           1     3.0    0.5    0.0       <total>
+
+# ZNVER4-NEXT:    1.     1     5.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# ZNVER4-NEXT:           1     3.0    0.5    0.0       <total>

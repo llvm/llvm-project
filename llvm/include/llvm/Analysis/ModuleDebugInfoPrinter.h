@@ -11,9 +11,9 @@
 
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+class raw_ostream;
 
 class ModuleDebugInfoPrinterPass
     : public PassInfoMixin<ModuleDebugInfoPrinterPass> {
@@ -23,6 +23,7 @@ class ModuleDebugInfoPrinterPass
 public:
   explicit ModuleDebugInfoPrinterPass(raw_ostream &OS);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 } // end namespace llvm
 

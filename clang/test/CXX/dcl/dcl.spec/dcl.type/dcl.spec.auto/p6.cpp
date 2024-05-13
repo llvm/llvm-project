@@ -76,3 +76,21 @@ namespace PR48593 {
   template<class> concept d = true;
   d<,> auto e = 0; // expected-error{{expected expression}}
 }
+
+namespace PR48617 {
+  template <typename...> concept C = true;
+  template <typename...> class A {};
+
+  template <typename... Ts> C<Ts...> auto e(A<Ts...>) { return 0; }
+  // expected-note@-1 {{could not match 'C auto (A<>)' against 'auto (A<>)'}}
+  // expected-note@-2 {{could not match 'C<int> auto (A<int>)' against 'auto (A<int>)'}}
+  template auto e<>(A<>); // expected-error {{does not refer to a function template}}
+  template auto e<int>(A<int>); // expected-error {{does not refer to a function template}}
+
+  template <typename... Ts> C<Ts...> auto d(A<Ts...>) { return 0; }
+  template C<> auto d<>(A<>);
+  template C<int> auto d<int>(A<int>);
+
+  template <typename... Ts> A<Ts...> c(Ts...);
+  int f = e(c(1, 2));
+}

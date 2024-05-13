@@ -11,7 +11,6 @@
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "Thumb2InstrInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -107,6 +106,12 @@ static bool StepOverPredicatedInstrs(MachineBasicBlock::instr_iterator &Iter,
   NumInstrsSteppedOver = 0;
 
   while (Iter != EndIter) {
+    if (Iter->isDebugInstr()) {
+      // Skip debug instructions
+      ++Iter;
+      continue;
+    }
+
     NextPred = getVPTInstrPredicate(*Iter, PredReg);
     assert(NextPred != ARMVCC::Else &&
            "VPT block pass does not expect Else preds");
@@ -126,7 +131,8 @@ static bool StepOverPredicatedInstrs(MachineBasicBlock::instr_iterator &Iter,
 static bool IsVPRDefinedOrKilledByBlock(MachineBasicBlock::iterator Iter,
                                         MachineBasicBlock::iterator End) {
   for (; Iter != End; ++Iter)
-    if (Iter->definesRegister(ARM::VPR) || Iter->killsRegister(ARM::VPR))
+    if (Iter->definesRegister(ARM::VPR, /*TRI=*/nullptr) ||
+        Iter->killsRegister(ARM::VPR, /*TRI=*/nullptr))
       return true;
   return false;
 }
@@ -170,6 +176,8 @@ CreateVPTBlock(MachineBasicBlock::instr_iterator &Iter,
   LLVM_DEBUG(for (MachineBasicBlock::instr_iterator AddedInstIter =
                       std::next(BlockBeg);
                   AddedInstIter != Iter; ++AddedInstIter) {
+    if (AddedInstIter->isDebugInstr())
+      continue;
     dbgs() << "  adding: ";
     AddedInstIter->dump();
   });
@@ -197,7 +205,7 @@ CreateVPTBlock(MachineBasicBlock::instr_iterator &Iter,
     if (!IsVPRDefinedOrKilledByBlock(Iter, VPNOTBlockEndIter))
       break;
 
-    LLVM_DEBUG(dbgs() << "  removing VPNOT: "; Iter->dump(););
+    LLVM_DEBUG(dbgs() << "  removing VPNOT: "; Iter->dump());
 
     // Record the new size of the block
     BlockSize += ElseInstCnt;
@@ -211,6 +219,9 @@ CreateVPTBlock(MachineBasicBlock::instr_iterator &Iter,
     // Note that we are using "Iter" to iterate over the block so we can update
     // it at the same time.
     for (; Iter != VPNOTBlockEndIter; ++Iter) {
+      if (Iter->isDebugInstr())
+        continue;
+
       // Find the register in which the predicate is
       int OpIdx = findFirstVPTPredOperandIdx(*Iter);
       assert(OpIdx != -1);
@@ -301,8 +312,7 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
 }
 
 bool MVEVPTBlock::runOnMachineFunction(MachineFunction &Fn) {
-  const ARMSubtarget &STI =
-      static_cast<const ARMSubtarget &>(Fn.getSubtarget());
+  const ARMSubtarget &STI = Fn.getSubtarget<ARMSubtarget>();
 
   if (!STI.isThumb2() || !STI.hasMVEIntegerOps())
     return false;

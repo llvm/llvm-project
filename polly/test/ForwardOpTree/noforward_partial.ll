@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Not the entire operand tree can be forwarded,
 ; some scalar dependencies would remain.
@@ -13,7 +13,7 @@
 ;
 declare double @f(...) #1
 
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -28,7 +28,7 @@ for:
       br label %bodyB
 
     bodyB:
-      store double %val, double* %A
+      store double %val, ptr %A
       br label %inc
 
 inc:

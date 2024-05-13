@@ -1,5 +1,5 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=fused+jcc --mc-relax-all %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
-# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=fused+jcc --x86-pad-max-prefix-size=5 --mc-relax-all %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=fused+jcc --mc-relax-all %s | llvm-objdump --no-print-imm-hex -d --no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=fused+jcc --x86-pad-max-prefix-size=5 --mc-relax-all %s | llvm-objdump --no-print-imm-hex -d --no-show-raw-insn - | FileCheck %s
 
   # Check instructions can be aligned correctly along with option --mc-relax-all
 

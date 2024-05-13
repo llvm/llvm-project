@@ -1,13 +1,12 @@
-# RUN: llvm-ifs -action write-ifs -o - %s %S/func.ifs %S/object.ifs %S/weak.ifs | \
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s %S/func.ifs %S/object.ifs %S/weak.ifs | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
-# RUN: llvm-ifs -action write-bin -o - %s %S/func.ifs %S/object.ifs %S/weak.ifs | \
+# RUN: llvm-ifs --input-format=IFS --output-elf - %s %S/func.ifs %S/object.ifs %S/weak.ifs | \
 # RUN: llvm-readelf --all - | FileCheck %s --check-prefixes=CHECK-ELF
 
-# CHECK-IFS: --- !experimental-ifs-v2
-# CHECK-IFS-NEXT: IfsVersion: 2.0
-# CHECK-IFS-NEXT: Triple:          x86_64-unknown-linux-gnu
-# CHECK-IFS-NEXT: ObjectFileFormat: ELF
+# CHECK-IFS: --- !ifs-v1
+# CHECK-IFS-NEXT: IfsVersion: 3.0
+# CHECK-IFS-NEXT: Target:          x86_64-unknown-linux-gnu
 # CHECK-IFS-NEXT: Symbols:
 # CHECK-IFS-DAG:   - { Name: e,              Type: Object, Size: 8 }
 # CHECK-IFS-DAG:   - { Name: a,              Type: Func }
@@ -24,10 +23,9 @@
 # CHECK-ELF: OBJECT  GLOBAL DEFAULT  1 e
 # CHECK-ELF: OBJECT  GLOBAL DEFAULT  1 f
 
---- !experimental-ifs-v2
-IfsVersion: 2.0
-Triple:          x86_64-unknown-linux-gnu
-ObjectFileFormat: ELF
+--- !ifs-v1
+IfsVersion: 3.0
+Target:          x86_64-unknown-linux-gnu
 Symbols:
   - { Name: e, Type: Object, Size: 8 }
   - { Name: f, Type: Object, Size: 2 }

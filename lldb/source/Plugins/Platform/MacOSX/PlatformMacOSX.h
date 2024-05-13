@@ -9,63 +9,72 @@
 #ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
 
-#include "PlatformDarwin.h"
+#include "PlatformDarwinDevice.h"
+#include "lldb/Target/Platform.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/XcodeSDK.h"
+#include "lldb/lldb-forward.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
-class PlatformMacOSX : public PlatformDarwin {
+#include <vector>
+
+namespace lldb_private {
+class ArchSpec;
+class FileSpec;
+class FileSpecList;
+class ModuleSpec;
+class Process;
+class Target;
+
+class PlatformMacOSX : public PlatformDarwinDevice {
 public:
   PlatformMacOSX();
 
-  // Class functions
-  static lldb::PlatformSP CreateInstance(bool force,
-                                         const lldb_private::ArchSpec *arch);
+  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
   static void Initialize();
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
-
-  static const char *GetDescriptionStatic();
-
-  // lldb_private::PluginInterface functions
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() {
+    return Platform::GetHostPlatformName();
   }
 
-  uint32_t GetPluginVersion() override { return 1; }
+  static llvm::StringRef GetDescriptionStatic();
 
-  lldb_private::Status
-  GetSharedModule(const lldb_private::ModuleSpec &module_spec,
-                  lldb_private::Process *process, lldb::ModuleSP &module_sp,
-                  const lldb_private::FileSpecList *module_search_paths_ptr,
-                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr) override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  const char *GetDescription() override { return GetDescriptionStatic(); }
+  Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
+                         lldb::ModuleSP &module_sp,
+                         const FileSpecList *module_search_paths_ptr,
+                         llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                         bool *did_create_ptr) override;
 
-  lldb_private::Status
-  GetFile(const lldb_private::FileSpec &source,
-          const lldb_private::FileSpec &destination) override {
+  llvm::StringRef GetDescription() override { return GetDescriptionStatic(); }
+
+  Status GetFile(const FileSpec &source, const FileSpec &destination) override {
     return PlatformDarwin::GetFile(source, destination);
   }
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                       lldb_private::ArchSpec &arch) override;
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
-  lldb_private::ConstString
-  GetSDKDirectory(lldb_private::Target &target) override;
+  ConstString GetSDKDirectory(Target &target) override;
 
   void
-  AddClangModuleCompilationOptions(lldb_private::Target *target,
+  AddClangModuleCompilationOptions(Target *target,
                                    std::vector<std::string> &options) override {
     return PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
-        target, options, lldb_private::XcodeSDK::Type::MacOSX);
+        target, options, XcodeSDK::Type::MacOSX);
   }
 
-private:
-#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-  uint32_t m_num_arm_arches = 0;
-#endif
+protected:
+  llvm::StringRef GetDeviceSupportDirectoryName() override;
+  llvm::StringRef GetPlatformName() override;
 };
+
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H

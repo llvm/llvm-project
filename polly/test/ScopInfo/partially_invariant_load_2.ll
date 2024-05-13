@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 ;
 ; Check that we do not try to preload *I and assume p != 42.
 ;
@@ -25,7 +25,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32* %I, i32 %N, i32 %p, i32 %q) {
+define void @f(ptr %A, ptr %I, i32 %N, i32 %p, i32 %q) {
 entry:
   %tmp = sext i32 %N to i64
   br label %for.cond
@@ -40,26 +40,26 @@ for.body:                                         ; preds = %for.cond
   br i1 %cmp1, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %for.body
-  store i32 0, i32* %I, align 4
-  %tmp1 = load i32, i32* %I, align 4
+  store i32 0, ptr %I, align 4
+  %tmp1 = load i32, ptr %I, align 4
   %cmp2 = icmp eq i32 %tmp1, %q
   br i1 %cmp2, label %if.then3, label %if.end
 
 if.then3:                                         ; preds = %if.then
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp2 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp2 = load i32, ptr %arrayidx, align 4
   %mul = shl nsw i32 %tmp2, 1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then3, %if.then
   br label %if.end4
 
 if.end4:                                          ; preds = %if.end, %for.body
-  %arrayidx6 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp3 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp3 = load i32, ptr %arrayidx6, align 4
   %inc = add nsw i32 %tmp3, 1
-  store i32 %inc, i32* %arrayidx6, align 4
+  store i32 %inc, ptr %arrayidx6, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.end4

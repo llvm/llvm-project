@@ -9,7 +9,7 @@
 #include "ABISysV_ppc64.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Utility/PPC64LE_DWARF_Registers.h"
@@ -28,6 +28,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
@@ -43,6 +44,7 @@
 #define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
 #include "Plugins/Process/Utility/RegisterInfos_ppc64le.h"
 #undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -52,10 +54,10 @@ LLDB_PLUGIN_DEFINE(ABISysV_ppc64)
 const lldb_private::RegisterInfo *
 ABISysV_ppc64::GetRegisterInfoArray(uint32_t &count) {
   if (GetByteOrder() == lldb::eByteOrderLittle) {
-    count = llvm::array_lengthof(g_register_infos_ppc64le);
+    count = std::size(g_register_infos_ppc64le);
     return g_register_infos_ppc64le;
   } else {
-    count = llvm::array_lengthof(g_register_infos_ppc64);
+    count = std::size(g_register_infos_ppc64);
     return g_register_infos_ppc64;
   }
 }
@@ -80,7 +82,7 @@ ABISysV_ppc64::CreateInstance(lldb::ProcessSP process_sp,
 bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                        addr_t func_addr, addr_t return_addr,
                                        llvm::ArrayRef<addr_t> args) const {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     StreamString s;
@@ -270,7 +272,7 @@ bool ABISysV_ppc64::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    llvm::Optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
     if (!bit_size)
       return false;
     bool is_signed;
@@ -340,7 +342,7 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       error.SetErrorString(
           "We don't support returning complex values at present");
     else {
-      llvm::Optional<uint64_t> bit_width =
+      std::optional<uint64_t> bit_width =
           compiler_type.GetBitSize(frame_sp.get());
       if (!bit_width) {
         error.SetErrorString("can't get size of type");
@@ -462,7 +464,7 @@ class ReturnValueExtractor {
 
       Status error;
       uint32_t rc = reg_val.GetAsMemoryData(
-          reg_info, &raw_data, sizeof(raw_data), m_byte_order, error);
+          *reg_info, &raw_data, sizeof(raw_data), m_byte_order, error);
       if (rc != sizeof(raw_data)) {
         LLDB_LOG(m_log, LOG_PREFIX "GetAsMemoryData() failed");
         return false;
@@ -478,8 +480,7 @@ class ReturnValueExtractor {
     Type m_type;
     RegisterContext *m_reg_ctx;
     ByteOrder m_byte_order;
-    Log *m_log =
-        lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    Log *m_log = GetLog(LLDBLog::Expressions);
   };
 
   Register GetGPR(uint32_t index) const {
@@ -555,7 +556,7 @@ private:
   int32_t m_src_offs = 0;
   int32_t m_dst_offs = 0;
   bool m_packed = false;
-  Log *m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  Log *m_log = GetLog(LLDBLog::Expressions);
   RegisterContext *m_reg_ctx;
   ProcessSP m_process_sp;
   ByteOrder m_byte_order;
@@ -567,7 +568,7 @@ private:
   ReturnValueExtractor(Thread &thread, CompilerType &type,
                        RegisterContext *reg_ctx, ProcessSP process_sp)
       : m_thread(thread), m_type(type),
-        m_byte_size(m_type.GetByteSize(&thread).getValueOr(0)),
+        m_byte_size(m_type.GetByteSize(&thread).value_or(0)),
         m_data_up(new DataBufferHeap(m_byte_size, 0)), m_reg_ctx(reg_ctx),
         m_process_sp(process_sp), m_byte_order(process_sp->GetByteOrder()),
         m_addr_size(
@@ -643,7 +644,7 @@ private:
     DataExtractor de(&raw_data, sizeof(raw_data), m_byte_order, m_addr_size);
 
     offset_t offset = 0;
-    llvm::Optional<uint64_t> byte_size = type.GetByteSize(m_process_sp.get());
+    std::optional<uint64_t> byte_size = type.GetByteSize(m_process_sp.get());
     if (!byte_size)
       return {};
     switch (*byte_size) {
@@ -727,7 +728,7 @@ private:
         LLDB_LOG(m_log, LOG_PREFIX "Failed to read vector register contents");
         return ValueObjectSP();
       }
-      if (!vr_val[i].GetAsMemoryData(vr[i], vr_data->GetBytes() + i * vr_size,
+      if (!vr_val[i].GetAsMemoryData(*vr[i], vr_data->GetBytes() + i * vr_size,
                                      vr_size, m_byte_order, error)) {
         LLDB_LOG(m_log, LOG_PREFIX "Failed to extract vector register bytes");
         return ValueObjectSP();
@@ -767,7 +768,12 @@ private:
 
     // get number of children
     const bool omit_empty_base_classes = true;
-    uint32_t n = m_type.GetNumChildren(omit_empty_base_classes, nullptr);
+    auto n_or_err = m_type.GetNumChildren(omit_empty_base_classes, nullptr);
+    if (!n_or_err) {
+      LLDB_LOG_ERROR(m_log, n_or_err.takeError(), LOG_PREFIX "{0}");
+      return {};
+    }
+    uint32_t n = *n_or_err;
     if (!n) {
       LLDB_LOG(m_log, LOG_PREFIX "No children found in struct");
       return {};
@@ -777,7 +783,7 @@ private:
     CompilerType elem_type;
     if (m_type.IsHomogeneousAggregate(&elem_type)) {
       uint32_t type_flags = elem_type.GetTypeInfo();
-      llvm::Optional<uint64_t> elem_size =
+      std::optional<uint64_t> elem_size =
           elem_type.GetByteSize(m_process_sp.get());
       if (!elem_size)
         return {};
@@ -809,8 +815,7 @@ private:
     // case 3: get from GPRs
 
     // first, check if this is a packed struct or not
-    TypeSystemClang *ast =
-        llvm::dyn_cast<TypeSystemClang>(m_type.GetTypeSystem());
+    auto ast = m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
     if (ast) {
       clang::RecordDecl *record_decl = TypeSystemClang::GetAsRecordDecl(m_type);
 
@@ -934,7 +939,7 @@ ABISysV_ppc64::GetReturnValueObjectSimple(Thread &thread,
 
   auto exp_extractor = ReturnValueExtractor::Create(thread, type);
   if (!exp_extractor) {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    Log *log = GetLog(LLDBLog::Expressions);
     LLDB_LOG_ERROR(log, exp_extractor.takeError(),
                    "Extracting return value failed: {0}");
     return ValueObjectSP();
@@ -1074,16 +1079,3 @@ void ABISysV_ppc64::Initialize() {
 void ABISysV_ppc64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABISysV_ppc64::GetPluginNameStatic() {
-  static ConstString g_name("sysv-ppc64");
-  return g_name;
-}
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_ppc64::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ABISysV_ppc64::GetPluginVersion() { return 1; }

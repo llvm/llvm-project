@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // template<class T>
 // concept incrementable;
@@ -20,12 +18,12 @@
 // clang-format off
 template<std::weakly_incrementable I>
 requires std::regular<I>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return false;
 }
 
 template<std::incrementable>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return true;
 }
 // clang-format on

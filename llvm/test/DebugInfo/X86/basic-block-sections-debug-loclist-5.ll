@@ -1,13 +1,14 @@
-; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=none -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
-; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=all -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s --check-prefix=CHECK --check-prefix=SECTIONS
-; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=none -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
-; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=all -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s --check-prefix=CHECK --check-prefix=SECTIONS
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=none -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=all -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump - | FileCheck %s --check-prefix=CHECK --check-prefix=SECTIONS
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=none -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=all -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump - | FileCheck %s --check-prefix=CHECK --check-prefix=SECTIONS
 
 ; CHECK:      DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location
 ; CHECK-NEXT: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_consts +7, DW_OP_stack_value
 ; SECTIONS-NEXT: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_consts +7, DW_OP_stack_value
 ; SECTIONS-NEXT: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_consts +7, DW_OP_stack_value
+; CHECK-NEXT: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_reg0 RAX)
 ; CHECK-NEXT: DW_AT_name	("i")
 
 ; In the test below, i's constant value of 7 is only valid partially as
@@ -39,7 +40,7 @@ define dso_local void @_Z4testv() local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 7, metadata !11, metadata !DIExpression()), !dbg !13
   tail call void @_Z2f1v(), !dbg !14
-  %0 = load i8, i8* @b, align 1, !dbg !15, !tbaa !17, !range !21
+  %0 = load i8, ptr @b, align 1, !dbg !15, !tbaa !17, !range !21
   %tobool.not = icmp eq i8 %0, 0, !dbg !15
   br i1 %tobool.not, label %if.end, label %if.then, !dbg !22
 

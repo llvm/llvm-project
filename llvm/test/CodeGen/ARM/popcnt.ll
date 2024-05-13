@@ -2,19 +2,19 @@
 ; RUN: llc -mtriple=arm-eabi -mattr=+neon %s -o - | FileCheck %s
 ; Implement ctpop with vcnt
 
-define <8 x i8> @vcnt8(<8 x i8>* %A) nounwind {
+define <8 x i8> @vcnt8(ptr %A) nounwind {
 ; CHECK-LABEL: vcnt8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcnt.8 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = call <8 x i8> @llvm.ctpop.v8i8(<8 x i8> %tmp1)
 	ret <8 x i8> %tmp2
 }
 
-define <16 x i8> @vcntQ8(<16 x i8>* %A) nounwind {
+define <16 x i8> @vcntQ8(ptr %A) nounwind {
 ; CHECK-LABEL: vcntQ8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -22,12 +22,12 @@ define <16 x i8> @vcntQ8(<16 x i8>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
+	%tmp1 = load <16 x i8>, ptr %A
 	%tmp2 = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %tmp1)
 	ret <16 x i8> %tmp2
 }
 
-define <4 x i16> @vcnt16(<4 x i16>* %A) nounwind {
+define <4 x i16> @vcnt16(ptr %A) nounwind {
 ; CHECK-LABEL: vcnt16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -35,12 +35,12 @@ define <4 x i16> @vcnt16(<4 x i16>* %A) nounwind {
 ; CHECK-NEXT:    vpaddl.u8 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
+	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = call <4 x i16> @llvm.ctpop.v4i16(<4 x i16> %tmp1)
 	ret <4 x i16> %tmp2
 }
 
-define <8 x i16> @vcntQ16(<8 x i16>* %A) nounwind {
+define <8 x i16> @vcntQ16(ptr %A) nounwind {
 ; CHECK-LABEL: vcntQ16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -49,12 +49,12 @@ define <8 x i16> @vcntQ16(<8 x i16>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %tmp1)
 	ret <8 x i16> %tmp2
 }
 
-define <2 x i32> @vcnt32(<2 x i32>* %A) nounwind {
+define <2 x i32> @vcnt32(ptr %A) nounwind {
 ; CHECK-LABEL: vcnt32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -63,12 +63,12 @@ define <2 x i32> @vcnt32(<2 x i32>* %A) nounwind {
 ; CHECK-NEXT:    vpaddl.u16 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
+	%tmp1 = load <2 x i32>, ptr %A
 	%tmp2 = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %tmp1)
 	ret <2 x i32> %tmp2
 }
 
-define <4 x i32> @vcntQ32(<4 x i32>* %A) nounwind {
+define <4 x i32> @vcntQ32(ptr %A) nounwind {
 ; CHECK-LABEL: vcntQ32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -78,12 +78,12 @@ define <4 x i32> @vcntQ32(<4 x i32>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
+	%tmp1 = load <4 x i32>, ptr %A
 	%tmp2 = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %tmp1)
 	ret <4 x i32> %tmp2
 }
 
-define <1 x i64> @vcnt64(<1 x i64>* %A) nounwind {
+define <1 x i64> @vcnt64(ptr %A) nounwind {
 ; CHECK-LABEL: vcnt64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -93,12 +93,12 @@ define <1 x i64> @vcnt64(<1 x i64>* %A) nounwind {
 ; CHECK-NEXT:    vpaddl.u32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <1 x i64>, <1 x i64>* %A
+	%tmp1 = load <1 x i64>, ptr %A
 	%tmp2 = call <1 x i64> @llvm.ctpop.v1i64(<1 x i64> %tmp1)
 	ret <1 x i64> %tmp2
 }
 
-define <2 x i64> @vcntQ64(<2 x i64>* %A) nounwind {
+define <2 x i64> @vcntQ64(ptr %A) nounwind {
 ; CHECK-LABEL: vcntQ64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -109,7 +109,7 @@ define <2 x i64> @vcntQ64(<2 x i64>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i64>, <2 x i64>* %A
+	%tmp1 = load <2 x i64>, ptr %A
 	%tmp2 = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %tmp1)
 	ret <2 x i64> %tmp2
 }
@@ -123,43 +123,43 @@ declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>) nounwind readnone
 declare <1 x i64> @llvm.ctpop.v1i64(<1 x i64>) nounwind readnone
 declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>) nounwind readnone
 
-define <8 x i8> @vclz8(<8 x i8>* %A) nounwind {
+define <8 x i8> @vclz8(ptr %A) nounwind {
 ; CHECK-LABEL: vclz8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vclz.i8 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = call <8 x i8> @llvm.ctlz.v8i8(<8 x i8> %tmp1, i1 0)
 	ret <8 x i8> %tmp2
 }
 
-define <4 x i16> @vclz16(<4 x i16>* %A) nounwind {
+define <4 x i16> @vclz16(ptr %A) nounwind {
 ; CHECK-LABEL: vclz16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vclz.i16 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
+	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = call <4 x i16> @llvm.ctlz.v4i16(<4 x i16> %tmp1, i1 0)
 	ret <4 x i16> %tmp2
 }
 
-define <2 x i32> @vclz32(<2 x i32>* %A) nounwind {
+define <2 x i32> @vclz32(ptr %A) nounwind {
 ; CHECK-LABEL: vclz32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vclz.i32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
+	%tmp1 = load <2 x i32>, ptr %A
 	%tmp2 = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %tmp1, i1 0)
 	ret <2 x i32> %tmp2
 }
 
-define <16 x i8> @vclzQ8(<16 x i8>* %A) nounwind {
+define <16 x i8> @vclzQ8(ptr %A) nounwind {
 ; CHECK-LABEL: vclzQ8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -167,12 +167,12 @@ define <16 x i8> @vclzQ8(<16 x i8>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
+	%tmp1 = load <16 x i8>, ptr %A
 	%tmp2 = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %tmp1, i1 0)
 	ret <16 x i8> %tmp2
 }
 
-define <8 x i16> @vclzQ16(<8 x i16>* %A) nounwind {
+define <8 x i16> @vclzQ16(ptr %A) nounwind {
 ; CHECK-LABEL: vclzQ16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -180,12 +180,12 @@ define <8 x i16> @vclzQ16(<8 x i16>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %tmp1, i1 0)
 	ret <8 x i16> %tmp2
 }
 
-define <4 x i32> @vclzQ32(<4 x i32>* %A) nounwind {
+define <4 x i32> @vclzQ32(ptr %A) nounwind {
 ; CHECK-LABEL: vclzQ32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -193,7 +193,7 @@ define <4 x i32> @vclzQ32(<4 x i32>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
+	%tmp1 = load <4 x i32>, ptr %A
 	%tmp2 = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %tmp1, i1 0)
 	ret <4 x i32> %tmp2
 }
@@ -206,43 +206,43 @@ declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8>, i1) nounwind readnone
 declare <8 x i16> @llvm.ctlz.v8i16(<8 x i16>, i1) nounwind readnone
 declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1) nounwind readnone
 
-define <8 x i8> @vclss8(<8 x i8>* %A) nounwind {
+define <8 x i8> @vclss8(ptr %A) nounwind {
 ; CHECK-LABEL: vclss8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcls.s8 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = call <8 x i8> @llvm.arm.neon.vcls.v8i8(<8 x i8> %tmp1)
 	ret <8 x i8> %tmp2
 }
 
-define <4 x i16> @vclss16(<4 x i16>* %A) nounwind {
+define <4 x i16> @vclss16(ptr %A) nounwind {
 ; CHECK-LABEL: vclss16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcls.s16 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
+	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = call <4 x i16> @llvm.arm.neon.vcls.v4i16(<4 x i16> %tmp1)
 	ret <4 x i16> %tmp2
 }
 
-define <2 x i32> @vclss32(<2 x i32>* %A) nounwind {
+define <2 x i32> @vclss32(ptr %A) nounwind {
 ; CHECK-LABEL: vclss32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcls.s32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
+	%tmp1 = load <2 x i32>, ptr %A
 	%tmp2 = call <2 x i32> @llvm.arm.neon.vcls.v2i32(<2 x i32> %tmp1)
 	ret <2 x i32> %tmp2
 }
 
-define <16 x i8> @vclsQs8(<16 x i8>* %A) nounwind {
+define <16 x i8> @vclsQs8(ptr %A) nounwind {
 ; CHECK-LABEL: vclsQs8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -250,12 +250,12 @@ define <16 x i8> @vclsQs8(<16 x i8>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
+	%tmp1 = load <16 x i8>, ptr %A
 	%tmp2 = call <16 x i8> @llvm.arm.neon.vcls.v16i8(<16 x i8> %tmp1)
 	ret <16 x i8> %tmp2
 }
 
-define <8 x i16> @vclsQs16(<8 x i16>* %A) nounwind {
+define <8 x i16> @vclsQs16(ptr %A) nounwind {
 ; CHECK-LABEL: vclsQs16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -263,12 +263,12 @@ define <8 x i16> @vclsQs16(<8 x i16>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = call <8 x i16> @llvm.arm.neon.vcls.v8i16(<8 x i16> %tmp1)
 	ret <8 x i16> %tmp2
 }
 
-define <4 x i32> @vclsQs32(<4 x i32>* %A) nounwind {
+define <4 x i32> @vclsQs32(ptr %A) nounwind {
 ; CHECK-LABEL: vclsQs32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -276,9 +276,124 @@ define <4 x i32> @vclsQs32(<4 x i32>* %A) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
+	%tmp1 = load <4 x i32>, ptr %A
 	%tmp2 = call <4 x i32> @llvm.arm.neon.vcls.v4i32(<4 x i32> %tmp1)
 	ret <4 x i32> %tmp2
+}
+
+define i32 @ctpop8(i8 %x) nounwind readnone {
+; CHECK-LABEL: ctpop8:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov r1, #85
+; CHECK-NEXT:    and r1, r1, r0, lsr #1
+; CHECK-NEXT:    sub r0, r0, r1
+; CHECK-NEXT:    mov r1, #51
+; CHECK-NEXT:    and r1, r1, r0, lsr #2
+; CHECK-NEXT:    and r0, r0, #51
+; CHECK-NEXT:    add r0, r0, r1
+; CHECK-NEXT:    add r0, r0, r0, lsr #4
+; CHECK-NEXT:    and r0, r0, #15
+; CHECK-NEXT:    mov pc, lr
+  %count = tail call i8 @llvm.ctpop.i8(i8 %x)
+  %conv = zext i8 %count to i32
+  ret i32 %conv
+}
+
+define i32 @ctpop16(i16 %x) nounwind readnone {
+; CHECK-LABEL: ctpop16:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov r1, #85
+; CHECK-NEXT:    orr r1, r1, #21760
+; CHECK-NEXT:    and r1, r1, r0, lsr #1
+; CHECK-NEXT:    sub r0, r0, r1
+; CHECK-NEXT:    mov r1, #51
+; CHECK-NEXT:    orr r1, r1, #13056
+; CHECK-NEXT:    and r2, r0, r1
+; CHECK-NEXT:    and r0, r1, r0, lsr #2
+; CHECK-NEXT:    add r0, r2, r0
+; CHECK-NEXT:    add r0, r0, r0, lsr #4
+; CHECK-NEXT:    and r1, r0, #3840
+; CHECK-NEXT:    and r0, r0, #15
+; CHECK-NEXT:    add r0, r0, r1, lsr #8
+; CHECK-NEXT:    mov pc, lr
+  %count = tail call i16 @llvm.ctpop.i16(i16 %x)
+  %conv = zext i16 %count to i32
+  ret i32 %conv
+}
+
+define i32 @ctpop32(i32 %x) nounwind readnone {
+; CHECK-LABEL: ctpop32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    ldr r1, .LCPI22_0
+; CHECK-NEXT:    ldr r2, .LCPI22_3
+; CHECK-NEXT:    and r1, r1, r0, lsr #1
+; CHECK-NEXT:    ldr r12, .LCPI22_1
+; CHECK-NEXT:    sub r0, r0, r1
+; CHECK-NEXT:    ldr r3, .LCPI22_2
+; CHECK-NEXT:    and r1, r0, r2
+; CHECK-NEXT:    and r0, r2, r0, lsr #2
+; CHECK-NEXT:    add r0, r1, r0
+; CHECK-NEXT:    add r0, r0, r0, lsr #4
+; CHECK-NEXT:    and r0, r0, r12
+; CHECK-NEXT:    mul r1, r0, r3
+; CHECK-NEXT:    lsr r0, r1, #24
+; CHECK-NEXT:    mov pc, lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI22_0:
+; CHECK-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-NEXT:  .LCPI22_1:
+; CHECK-NEXT:    .long 252645135 @ 0xf0f0f0f
+; CHECK-NEXT:  .LCPI22_2:
+; CHECK-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-NEXT:  .LCPI22_3:
+; CHECK-NEXT:    .long 858993459 @ 0x33333333
+  %count = tail call i32 @llvm.ctpop.i32(i32 %x)
+  ret i32 %count
+}
+
+define i32 @ctpop64(i64 %x) nounwind readnone {
+; CHECK-LABEL: ctpop64:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    ldr r2, .LCPI23_0
+; CHECK-NEXT:    ldr r3, .LCPI23_3
+; CHECK-NEXT:    and r4, r2, r0, lsr #1
+; CHECK-NEXT:    and r2, r2, r1, lsr #1
+; CHECK-NEXT:    sub r0, r0, r4
+; CHECK-NEXT:    sub r1, r1, r2
+; CHECK-NEXT:    and r4, r0, r3
+; CHECK-NEXT:    and r2, r1, r3
+; CHECK-NEXT:    and r0, r3, r0, lsr #2
+; CHECK-NEXT:    and r1, r3, r1, lsr #2
+; CHECK-NEXT:    add r0, r4, r0
+; CHECK-NEXT:    ldr lr, .LCPI23_1
+; CHECK-NEXT:    add r1, r2, r1
+; CHECK-NEXT:    ldr r12, .LCPI23_2
+; CHECK-NEXT:    add r0, r0, r0, lsr #4
+; CHECK-NEXT:    and r0, r0, lr
+; CHECK-NEXT:    add r1, r1, r1, lsr #4
+; CHECK-NEXT:    mul r2, r0, r12
+; CHECK-NEXT:    and r0, r1, lr
+; CHECK-NEXT:    mul r1, r0, r12
+; CHECK-NEXT:    lsr r0, r2, #24
+; CHECK-NEXT:    add r0, r0, r1, lsr #24
+; CHECK-NEXT:    pop {r4, lr}
+; CHECK-NEXT:    mov pc, lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI23_0:
+; CHECK-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-NEXT:  .LCPI23_1:
+; CHECK-NEXT:    .long 252645135 @ 0xf0f0f0f
+; CHECK-NEXT:  .LCPI23_2:
+; CHECK-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-NEXT:  .LCPI23_3:
+; CHECK-NEXT:    .long 858993459 @ 0x33333333
+  %count = tail call i64 @llvm.ctpop.i64(i64 %x)
+  %conv = trunc i64 %count to i32
+  ret i32 %conv
 }
 
 define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
@@ -286,14 +401,12 @@ define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    subs r2, r0, #1
 ; CHECK-NEXT:    sbc r3, r1, #0
-; CHECK-NEXT:    and r2, r0, r2
-; CHECK-NEXT:    and r3, r1, r3
-; CHECK-NEXT:    orr r2, r2, r3
-; CHECK-NEXT:    rsbs r3, r2, #0
-; CHECK-NEXT:    adc r2, r2, r3
-; CHECK-NEXT:    orrs r0, r0, r1
-; CHECK-NEXT:    movne r0, #1
-; CHECK-NEXT:    and r0, r0, r2
+; CHECK-NEXT:    eor r12, r1, r3
+; CHECK-NEXT:    eor r1, r0, r2
+; CHECK-NEXT:    subs r1, r2, r1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    sbcs r1, r3, r12
+; CHECK-NEXT:    movlo r0, #1
 ; CHECK-NEXT:    mov pc, lr
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)
   %cmp = icmp eq i64 %count, 1
@@ -301,6 +414,9 @@ define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
   ret i32 %conv
 }
 
+declare i8 @llvm.ctpop.i8(i8) nounwind readnone
+declare i16 @llvm.ctpop.i16(i16) nounwind readnone
+declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 declare i64 @llvm.ctpop.i64(i64) nounwind readnone
 
 declare <8 x i8>  @llvm.arm.neon.vcls.v8i8(<8 x i8>) nounwind readnone

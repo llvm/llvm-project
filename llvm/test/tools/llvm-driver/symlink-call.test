@@ -1,0 +1,23 @@
+## Don't make symlinks on Windows.
+# UNSUPPORTED: system-windows
+# REQUIRES: llvm-driver
+
+# RUN: rm -rf %t
+# RUN: mkdir %t
+# RUN: ln -s %llvm %t/llvm-cxxfilt
+# RUN: %t/llvm-cxxfilt --help | FileCheck %s
+# RUN: ln -s %llvm %t/llvm-cxxfilt-15
+# RUN: %t/llvm-cxxfilt-15 --help | FileCheck %s
+# RUN: ln -s %llvm %t/cxxfilt
+# RUN: %t/cxxfilt --help | FileCheck %s
+# RUN: ln -s %llvm %t/cxxfilt-15
+# RUN: %t/cxxfilt-15 --help | FileCheck %s
+# RUN: ln -s %llvm %t/cxxfilt-15.exe
+# RUN: %t/cxxfilt-15.exe --help | FileCheck %s
+
+# RUN: ln -s %llvm %t/llvm-15
+# RUN: %t/llvm-15 cxxfilt --help | FileCheck %s
+# RUN: ln -s %llvm %t/llvm-15.exe
+# RUN: %t/llvm-15.exe cxxfilt --help | FileCheck %s
+
+# CHECK: OVERVIEW: LLVM symbol undecoration tool

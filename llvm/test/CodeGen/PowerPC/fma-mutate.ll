@@ -12,24 +12,25 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-NEXT:    xstsqrtdp 0, 1
 ; CHECK-NEXT:    bc 12, 2, .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    vspltisw 2, -3
 ; CHECK-NEXT:    xsrsqrtedp 0, 1
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    lfs 3, .LCPI0_0@toc@l(3)
-; CHECK-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
-; CHECK-NEXT:    lfs 4, .LCPI0_1@toc@l(3)
+; CHECK-NEXT:    xvcvsxwdp 3, 34
 ; CHECK-NEXT:    xsmuldp 2, 1, 0
-; CHECK-NEXT:    xsmaddmdp 2, 0, 3
-; CHECK-NEXT:    xsmuldp 0, 0, 4
+; CHECK-NEXT:    fmr 4, 3
+; CHECK-NEXT:    xsmaddadp 4, 2, 0
+; CHECK-NEXT:    lfs 2, .LCPI0_0@toc@l(3)
 ; CHECK-NEXT:    xsmuldp 0, 0, 2
+; CHECK-NEXT:    xsmuldp 0, 0, 4
 ; CHECK-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-NEXT:    xsmaddadp 3, 1, 0
-; CHECK-NEXT:    xsmuldp 0, 1, 4
+; CHECK-NEXT:    xsmuldp 0, 1, 2
 ; CHECK-NEXT:    xsmuldp 1, 0, 3
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    xssqrtdp 1, 1
 ; CHECK-NEXT:    blr
-  %r = call reassoc afn ninf double @llvm.sqrt.f64(double %a)
+  %r = call contract reassoc afn ninf double @llvm.sqrt.f64(double %a)
   ret double %r
 }
 

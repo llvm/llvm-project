@@ -76,7 +76,7 @@ public:
 
   /// Get the size of RSA, return address, and frame pointer as described
   /// in VEFrameLowering.cpp.
-  unsigned getRsaSize(void) const { return 176; };
+  unsigned getRsaSize() const { return 176; };
 
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 };

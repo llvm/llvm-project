@@ -27,7 +27,7 @@
 int main(int, char**)
 {
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef test_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -55,7 +55,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef test_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -105,7 +105,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef test_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -149,7 +149,7 @@ int main(int, char**)
         assert(it1 == c2.begin()); // Iterators are not invalidated
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef test_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -215,7 +215,7 @@ int main(int, char**)
     }
 
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef other_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -243,7 +243,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef other_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -291,7 +291,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef other_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -333,7 +333,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef other_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -395,7 +395,7 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 11
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef min_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -423,7 +423,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef min_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -471,7 +471,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef min_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;
@@ -513,7 +513,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef min_allocator<int> Alloc;
         typedef std::unordered_multiset<int, Hash, Compare, Alloc> C;

@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -disable-output < %s
+; RUN: opt -passes=loop-unroll -disable-output < %s
 ; PR11361
 
 ; This tests for an iterator invalidation issue.

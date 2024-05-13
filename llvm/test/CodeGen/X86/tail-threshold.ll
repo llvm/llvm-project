@@ -16,11 +16,11 @@ define void @foo(i32 %xxx) nounwind {
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    jmpq *.LJTI0_0(,%rax,8)
 ; CHECK-NEXT:  .LBB0_3: # %bb3
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_4: # %bb4
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   switch i32 %xxx, label %bb4 [

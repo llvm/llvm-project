@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp5,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp5,omp51 %s -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp5,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp5,omp51 %s -Wuninitialized
 
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp target teams distribute simd'}}
 #pragma omp target teams distribute simd
@@ -10,7 +12,7 @@
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp target teams distribute simd'}}
 #pragma omp target teams distribute simd foo
 
-void test_no_clause() {
+void test_no_clause(void) {
   int i;
 #pragma omp target teams distribute simd
   for (i = 0; i < 16; ++i)
@@ -21,7 +23,7 @@ void test_no_clause() {
   ++i;
 }
 
-void test_branch_protected_scope() {
+void test_branch_protected_scope(void) {
   int i = 0;
 L1:
   ++i;
@@ -48,7 +50,7 @@ L1:
     goto L1;
 }
 
-void test_invalid_clause() {
+void test_invalid_clause(void) {
   int i;
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp target teams distribute simd' are ignored}}
 #pragma omp target teams distribute simd foo bar
@@ -56,7 +58,7 @@ void test_invalid_clause() {
     ;
 }
 
-void test_non_identifiers() {
+void test_non_identifiers(void) {
   int i, x;
 
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp target teams distribute simd' are ignored}}
@@ -75,9 +77,9 @@ void test_non_identifiers() {
     ;
 }
 
-extern int foo();
+extern int foo(void);
 
-void test_collapse() {
+void test_collapse(void) {
   int i;
 // expected-error@+1 {{expected '('}}
 #pragma omp target teams distribute simd collapse
@@ -174,7 +176,7 @@ void test_collapse() {
         i += j;
 }
 
-void test_private() {
+void test_private(void) {
   int i;
 // expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
@@ -216,7 +218,7 @@ void test_private() {
   }
 }
 
-void test_lastprivate() {
+void test_lastprivate(void) {
   int i;
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 {{expected expression}}
@@ -258,7 +260,7 @@ void test_lastprivate() {
     ;
 }
 
-void test_firstprivate() {
+void test_firstprivate(void) {
   int i;
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 {{expected expression}}
@@ -307,7 +309,7 @@ void test_firstprivate() {
     ;
 }
 
-void test_loop_messages() {
+void test_loop_messages(void) {
   float a[100], b[100], c[100];
 // expected-error@+2 {{variable must be of integer or pointer type}}
 #pragma omp target teams distribute simd
@@ -321,7 +323,7 @@ void test_loop_messages() {
   }
 }
 
-void test_nontemporal() {
+void test_nontemporal(void) {
   int i;
 // omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp target teams distribute simd'}} expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
 #pragma omp target teams distribute simd nontemporal(
@@ -343,7 +345,7 @@ void test_nontemporal() {
 #pragma omp target teams distribute simd nontemporal(int)
   for (i = 0; i < 16; ++i)
     ;
-// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp target teams distribute simd'}} omp50-error@+1 {{expected variable name}}
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp target teams distribute simd'}} omp5-error@+1 {{expected variable name}}
 #pragma omp target teams distribute simd nontemporal(0)
   for (i = 0; i < 16; ++i)
     ;
@@ -373,8 +375,8 @@ void test_nontemporal() {
   for (i = 0; i < 16; ++i)
     ;
 
-// omp50-note@+2 {{defined as nontemporal}}
-// omp45-error@+1 2 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp target teams distribute simd'}} omp50-error@+1 {{a variable cannot appear in more than one nontemporal clause}}
+// omp5-note@+2 {{defined as nontemporal}}
+// omp45-error@+1 2 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp target teams distribute simd'}} omp5-error@+1 {{a variable cannot appear in more than one nontemporal clause}}
 #pragma omp target teams distribute simd nontemporal(x) nontemporal(x)
   for (i = 0; i < 16; ++i)
     ;
@@ -406,16 +408,31 @@ void test_nontemporal() {
 #pragma omp target teams distribute simd order // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} expected-error {{expected '(' after 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp target teams distribute simd order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp target teams distribute simd order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp5-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp target teams distribute simd order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp target teams distribute simd order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp5-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp target teams distribute simd order(concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp target teams distribute simd order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute simd order(unconstrained:) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} omp5-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute simd order(reproducible:concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute simd order(reproducible:concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute simd order(unconstrained:concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute simd order(concurrent) order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute simd'}} omp51-error {{directive '#pragma omp target teams distribute simd' cannot contain more than one 'order' clause}}
   for (int i = 0; i < 10; ++i)
     ;
 }

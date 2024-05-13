@@ -9,17 +9,21 @@
 #include "SystemZMCTargetDesc.h"
 #include "SystemZInstPrinter.h"
 #include "SystemZMCAsmInfo.h"
+#include "SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "SystemZGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -149,7 +153,10 @@ unsigned SystemZMC::getFirstReg(unsigned Reg) {
 static MCAsmInfo *createSystemZMCAsmInfo(const MCRegisterInfo &MRI,
                                          const Triple &TT,
                                          const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new SystemZMCAsmInfo(TT);
+  if (TT.isOSzOS())
+    return new SystemZMCAsmInfoGOFF(TT);
+
+  MCAsmInfo *MAI = new SystemZMCAsmInfoELF(TT);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
       nullptr, MRI.getDwarfRegNum(SystemZ::R15D, true),
       SystemZMC::ELFCFAOffsetFromInitialSP);
@@ -182,6 +189,58 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
   return new SystemZInstPrinter(MAI, MII, MRI);
 }
 
+void SystemZTargetStreamer::emitConstantPools() {
+  // Emit EXRL target instructions.
+  if (EXRLTargets2Sym.empty())
+    return;
+  // Switch to the .text section.
+  const MCObjectFileInfo &OFI = *Streamer.getContext().getObjectFileInfo();
+  Streamer.switchSection(OFI.getTextSection());
+  for (auto &I : EXRLTargets2Sym) {
+    Streamer.emitLabel(I.second);
+    const MCInstSTIPair &MCI_STI = I.first;
+    Streamer.emitInstruction(MCI_STI.first, *MCI_STI.second);
+  }
+  EXRLTargets2Sym.clear();
+}
+
+namespace {
+class SystemZTargetAsmStreamer : public SystemZTargetStreamer {
+  formatted_raw_ostream &OS;
+
+public:
+  SystemZTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS)
+      : SystemZTargetStreamer(S), OS(OS) {}
+  void emitMachine(StringRef CPU) override {
+    OS << "\t.machine " << CPU << "\n";
+  }
+};
+
+class SystemZTargetELFStreamer : public SystemZTargetStreamer {
+public:
+  SystemZTargetELFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+  void emitMachine(StringRef CPU) override {}
+};
+} // end namespace
+
+static MCTargetStreamer *
+createAsmTargetStreamer(MCStreamer &S,
+                        formatted_raw_ostream &OS,
+                        MCInstPrinter *InstPrint,
+                        bool isVerboseAsm) {
+  return new SystemZTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *
+createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  return new SystemZTargetELFStreamer(S);
+}
+
+static MCTargetStreamer *
+createNullTargetStreamer(MCStreamer &S) {
+  return new SystemZTargetStreamer(S);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
@@ -210,4 +269,16 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
   // Register the MCInstPrinter.
   TargetRegistry::RegisterMCInstPrinter(getTheSystemZTarget(),
                                         createSystemZMCInstPrinter);
+
+  // Register the asm streamer.
+  TargetRegistry::RegisterAsmTargetStreamer(getTheSystemZTarget(),
+                                            createAsmTargetStreamer);
+
+  // Register the obj streamer
+  TargetRegistry::RegisterObjectTargetStreamer(getTheSystemZTarget(),
+                                               createObjectTargetStreamer);
+
+  // Register the null streamer
+  TargetRegistry::RegisterNullTargetStreamer(getTheSystemZTarget(),
+                                             createNullTargetStreamer);
 }

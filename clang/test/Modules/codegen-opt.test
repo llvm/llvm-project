@@ -22,7 +22,7 @@ FOO: define{{.*}} void @_Z7foo_extv()
 FOO-NOT: {{define|declare}}
 FOO: define weak_odr void @_Z3foov() #{{[0-9]+}} comdat
 FOO-NOT: {{define|declare}}
-FOO: declare void @_Z2f1Ri(i32*
+FOO: declare void @_Z2f1Ri(ptr
 FOO-NOT: {{define|declare}}
 
 Internal functions are not modularly code generated - they are
@@ -49,7 +49,7 @@ BAR: declare void @_Z3foov()
 Include all the available_externally definitions required for bar (foo -> f2)
 BAR-OPT: define available_externally void @_Z3foov()
 BAR-CMN-NOT: {{define|declare}}
-BAR-OPT: declare void @_Z2f1Ri(i32*
+BAR-OPT: declare void @_Z2f1Ri(ptr
 BAR-OPT-NOT: {{define|declare}}
 BAR-OPT: define internal void @_ZL2f2v()
 BAR-OPT-NOT: {{define|declare}}
@@ -65,7 +65,7 @@ USE-OPT: define available_externally void @_Z3barv()
 USE-CMN-NOT: {{define|declare}}
 USE-OPT: define available_externally void @_Z3foov()
 USE-OPT-NOT: {{define|declare}}
-USE-OPT: declare void @_Z2f1Ri(i32*
+USE-OPT: declare void @_Z2f1Ri(ptr
 USE-OPT-NOT: {{define|declare}}
 USE-OPT: define internal void @_ZL2f2v()
 USE-OPT-NOT: {{define|declare}}

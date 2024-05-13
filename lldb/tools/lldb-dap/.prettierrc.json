@@ -1,0 +1,7 @@
+{
+  "trailingComma": "all",
+  "tabWidth": 2,
+  "semi": true,
+  "singleQuote": false,
+  "plugins": ["prettier-plugin-curly"]
+}

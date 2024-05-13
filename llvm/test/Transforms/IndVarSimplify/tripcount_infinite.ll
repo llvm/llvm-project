@@ -1,7 +1,7 @@
 ; These tests have an infinite trip count.  We obviously shouldn't remove the
 ; loops!  :)
 ;
-; RUN: opt < %s -indvars -adce -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes='loop(indvars),adce,simplifycfg' -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ;; test for (i = 1; i != 100; i += 2)
 define i32 @infinite_linear() {

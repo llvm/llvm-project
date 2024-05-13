@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-sse2,-sse | FileCheck %s --check-prefix=X64
 
-define void @fadd_2f64_mem(<2 x double>* %p0, <2 x double>* %p1, <2 x double>* %p2) nounwind {
+define void @fadd_2f64_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: fadd_2f64_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -27,14 +27,14 @@ define void @fadd_2f64_mem(<2 x double>* %p0, <2 x double>* %p1, <2 x double>* %
 ; X64-NEXT:    fstpl 8(%rdx)
 ; X64-NEXT:    fstpl (%rdx)
 ; X64-NEXT:    retq
-  %1 = load <2 x double>, <2 x double>* %p0
-  %2 = load <2 x double>, <2 x double>* %p1
+  %1 = load <2 x double>, ptr %p0
+  %2 = load <2 x double>, ptr %p1
   %3 = fadd <2 x double> %1, %2
-  store <2 x double> %3, <2 x double>* %p2
+  store <2 x double> %3, ptr %p2
   ret void
 }
 
-define void @fadd_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2) nounwind {
+define void @fadd_4f32_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: fadd_4f32_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -77,14 +77,14 @@ define void @fadd_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2)
 ; X64-NEXT:    fstps 4(%rdx)
 ; X64-NEXT:    fstps (%rdx)
 ; X64-NEXT:    retq
-  %1 = load <4 x float>, <4 x float>* %p0
-  %2 = load <4 x float>, <4 x float>* %p1
+  %1 = load <4 x float>, ptr %p0
+  %2 = load <4 x float>, ptr %p1
   %3 = fadd <4 x float> %1, %2
-  store <4 x float> %3, <4 x float>* %p2
+  store <4 x float> %3, ptr %p2
   ret void
 }
 
-define void @fdiv_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2) nounwind {
+define void @fdiv_4f32_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: fdiv_4f32_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -127,14 +127,14 @@ define void @fdiv_4f32_mem(<4 x float>* %p0, <4 x float>* %p1, <4 x float>* %p2)
 ; X64-NEXT:    fstps 4(%rdx)
 ; X64-NEXT:    fstps (%rdx)
 ; X64-NEXT:    retq
-  %1 = load <4 x float>, <4 x float>* %p0
-  %2 = load <4 x float>, <4 x float>* %p1
+  %1 = load <4 x float>, ptr %p0
+  %2 = load <4 x float>, ptr %p1
   %3 = fdiv <4 x float> %1, %2
-  store <4 x float> %3, <4 x float>* %p2
+  store <4 x float> %3, ptr %p2
   ret void
 }
 
-define void @sitofp_4i64_4f32_mem(<4 x i64>* %p0, <4 x float>* %p1) nounwind {
+define void @sitofp_4i64_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X32-LABEL: sitofp_4i64_4f32_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
@@ -144,20 +144,20 @@ define void @sitofp_4i64_4f32_mem(<4 x i64>* %p0, <4 x float>* %p1) nounwind {
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    andl $-8, %esp
 ; X32-NEXT:    subl $48, %esp
-; X32-NEXT:    movl 8(%ebp), %eax
-; X32-NEXT:    movl 24(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl 28(%eax), %ecx
-; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X32-NEXT:    movl 16(%eax), %esi
-; X32-NEXT:    movl 20(%eax), %edi
-; X32-NEXT:    movl 8(%eax), %ebx
-; X32-NEXT:    movl 12(%eax), %edx
-; X32-NEXT:    movl (%eax), %ecx
-; X32-NEXT:    movl 4(%eax), %eax
+; X32-NEXT:    movl 8(%ebp), %edx
+; X32-NEXT:    movl 24(%edx), %eax
+; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-NEXT:    movl 28(%edx), %eax
+; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X32-NEXT:    movl 16(%edx), %esi
+; X32-NEXT:    movl 20(%edx), %edi
+; X32-NEXT:    movl 8(%edx), %ebx
+; X32-NEXT:    movl 12(%edx), %ecx
+; X32-NEXT:    movl (%edx), %eax
+; X32-NEXT:    movl 4(%edx), %edx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
@@ -200,13 +200,13 @@ define void @sitofp_4i64_4f32_mem(<4 x i64>* %p0, <4 x float>* %p1) nounwind {
 ; X64-NEXT:    fstps 4(%rsi)
 ; X64-NEXT:    fstps (%rsi)
 ; X64-NEXT:    retq
-  %1 = load <4 x i64>, <4 x i64>* %p0
+  %1 = load <4 x i64>, ptr %p0
   %2 = sitofp <4 x i64> %1 to <4 x float>
-  store <4 x float> %2, <4 x float>* %p1
+  store <4 x float> %2, ptr %p1
   ret void
 }
 
-define void @sitofp_4i32_4f32_mem(<4 x i32>* %p0, <4 x float>* %p1) nounwind {
+define void @sitofp_4i32_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X32-LABEL: sitofp_4i32_4f32_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %edi
@@ -254,13 +254,13 @@ define void @sitofp_4i32_4f32_mem(<4 x i32>* %p0, <4 x float>* %p1) nounwind {
 ; X64-NEXT:    fstps 4(%rsi)
 ; X64-NEXT:    fstps (%rsi)
 ; X64-NEXT:    retq
-  %1 = load <4 x i32>, <4 x i32>* %p0
+  %1 = load <4 x i32>, ptr %p0
   %2 = sitofp <4 x i32> %1 to <4 x float>
-  store <4 x float> %2, <4 x float>* %p1
+  store <4 x float> %2, ptr %p1
   ret void
 }
 
-define void @add_2i64_mem(<2 x i64>* %p0, <2 x i64>* %p1, <2 x i64>* %p2) nounwind {
+define void @add_2i64_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: add_2i64_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
@@ -295,14 +295,14 @@ define void @add_2i64_mem(<2 x i64>* %p0, <2 x i64>* %p1, <2 x i64>* %p2) nounwi
 ; X64-NEXT:    movq %rcx, 8(%rdx)
 ; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    retq
-  %1 = load <2 x i64>, <2 x i64>* %p0
-  %2 = load <2 x i64>, <2 x i64>* %p1
+  %1 = load <2 x i64>, ptr %p0
+  %2 = load <2 x i64>, ptr %p1
   %3 = add <2 x i64> %1, %2
-  store <2 x i64> %3, <2 x i64>* %p2
+  store <2 x i64> %3, ptr %p2
   ret void
 }
 
-define void @add_4i32_mem(<4 x i32>* %p0, <4 x i32>* %p1, <4 x i32>* %p2) nounwind {
+define void @add_4i32_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: add_4i32_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
@@ -343,9 +343,9 @@ define void @add_4i32_mem(<4 x i32>* %p0, <4 x i32>* %p1, <4 x i32>* %p2) nounwi
 ; X64-NEXT:    movl %edi, 4(%rdx)
 ; X64-NEXT:    movl %r8d, (%rdx)
 ; X64-NEXT:    retq
-  %1 = load <4 x i32>, <4 x i32>* %p0
-  %2 = load <4 x i32>, <4 x i32>* %p1
+  %1 = load <4 x i32>, ptr %p0
+  %2 = load <4 x i32>, ptr %p1
   %3 = add <4 x i32> %1, %2
-  store <4 x i32> %3, <4 x i32>* %p2
+  store <4 x i32> %3, ptr %p2
   ret void
 }

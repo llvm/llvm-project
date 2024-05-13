@@ -1,9 +1,9 @@
-; RUN: opt < %s -licm -simple-loop-unswitch -disable-output 
+; RUN: opt < %s -passes=licm,simple-loop-unswitch -disable-output
 ; PR 1589
 
       	%struct.QBasicAtomic = type { i32 }
 
-define void @_ZNK5QDate9addMonthsEi(%struct.QBasicAtomic* sret(%struct.QBasicAtomic)  %agg.result, %struct.QBasicAtomic* %this, i32 %nmonths) {
+define void @_ZNK5QDate9addMonthsEi(ptr sret(%struct.QBasicAtomic)  %agg.result, ptr %this, i32 %nmonths) {
 entry:
 	br label %cond_true90
 
@@ -17,7 +17,7 @@ bb53:		; preds = %bb45
 	br i1 false, label %bb93, label %cond_true90
 
 bb58:		; preds = %bb45
-	store i32 0, i32* null, align 4
+	store i32 0, ptr null, align 4
 	br i1 false, label %cond_true90, label %bb93
 
 cond_true90:		; preds = %bb58, %bb53, %bb16, %entry

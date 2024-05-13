@@ -19,7 +19,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -151,7 +150,7 @@ public:
     } while (!V.empty() && V.back() == T());
   }
 
-  LLVM_NODISCARD T pop_back_val() {
+  [[nodiscard]] T pop_back_val() {
     T Ret = back();
     pop_back();
     return Ret;

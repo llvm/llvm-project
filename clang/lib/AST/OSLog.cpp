@@ -8,6 +8,7 @@
 #include "clang/AST/FormatString.h"
 #include "clang/Basic/Builtins.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include <optional>
 
 using namespace clang;
 
@@ -20,11 +21,11 @@ class OSLogFormatStringHandler
 private:
   struct ArgData {
     const Expr *E = nullptr;
-    Optional<OSLogBufferItem::Kind> Kind;
-    Optional<unsigned> Size;
-    Optional<const Expr *> Count;
-    Optional<const Expr *> Precision;
-    Optional<const Expr *> FieldWidth;
+    std::optional<OSLogBufferItem::Kind> Kind;
+    std::optional<unsigned> Size;
+    std::optional<const Expr *> Count;
+    std::optional<const Expr *> Precision;
+    std::optional<const Expr *> FieldWidth;
     unsigned char Flags = 0;
     StringRef MaskType;
   };
@@ -56,8 +57,8 @@ public:
   }
 
   bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
-                             const char *StartSpecifier,
-                             unsigned SpecifierLen) override {
+                             const char *StartSpecifier, unsigned SpecifierLen,
+                             const TargetInfo &) override {
     if (!FS.consumesDataArgument() &&
         FS.getConversionSpecifier().getKind() !=
             clang::analyze_format_string::ConversionSpecifier::PrintErrno)
@@ -201,7 +202,7 @@ bool clang::analyze_os_log::computeOSLogBufferLayout(
   }
 
   const StringLiteral *Lit = cast<StringLiteral>(StringArg->IgnoreParenCasts());
-  assert(Lit && (Lit->isAscii() || Lit->isUTF8()));
+  assert(Lit && (Lit->isOrdinary() || Lit->isUTF8()));
   StringRef Data = Lit->getString();
   OSLogFormatStringHandler H(VarArgs);
   ParsePrintfString(H, Data.begin(), Data.end(), Ctx.getLangOpts(),

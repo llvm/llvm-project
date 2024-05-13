@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -ast-dump %s | FileCheck --match-full-lines -implicit-check-not=openmp_structured_block %s
 
-void test_one() {
+void test_one(void) {
 #pragma omp ordered
   ;
 }
@@ -19,8 +19,8 @@ void test_three(int x) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: |-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-ordered.c:3:1, line:6:1> line:3:6 test_one 'void ()'
-// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:17, line:6:1>
+// CHECK: |-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-ordered.c:3:1, line:6:1> line:3:6 test_one 'void (void)'
+// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:21, line:6:1>
 // CHECK-NEXT: |   `-OMPOrderedDirective {{.*}} <line:4:1, col:20>
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:5:3>
 // CHECK-NEXT: |       `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
@@ -43,7 +43,7 @@ void test_three(int x) {
 // CHECK-NEXT: |       | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
 // CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | `-NullStmt {{.*}} <line:11:5>
@@ -70,7 +70,7 @@ void test_three(int x) {
 // CHECK-NEXT:         | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
 // CHECK-NEXT:         | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT:         | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT:         | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | `-CompoundStmt {{.*}} <col:31, line:18:3>

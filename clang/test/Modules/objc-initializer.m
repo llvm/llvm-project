@@ -1,7 +1,8 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs/objc-initializer %s -emit-llvm -o - -fobjc-arc | FileCheck %s
 // RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs/objc-initializer %s -emit-llvm -o - -fobjc-arc -DIMPORT_TOP | FileCheck %s
-// CHECK: kSimDeviceIOGetInterface = internal constant {{.*}} bitcast
+// CHECK: kSimDeviceIOGetInterface = internal constant ptr
 
 #ifdef IMPORT_TOP
 @import X;
@@ -10,6 +11,6 @@
 #endif
 
 void test2(const NSString*);
-void test() {
+void test(void) {
   test2(kSimDeviceIOGetInterface);
 }

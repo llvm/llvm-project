@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
-; RUN: llc -march=bpfeb -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
+; RUN: llc -mtriple=bpfel -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
+; RUN: llc -mtriple=bpfeb -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
 
 ; source code:
 ;   int g __attribute__((section("ids"))) = 4;
@@ -15,8 +15,8 @@
 
 ; Function Attrs: norecurse nounwind
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !14 {
-  %1 = load i32, i32* @g, align 4, !dbg !17, !tbaa !18
-  %2 = load volatile i32, i32* @s, align 4, !dbg !22, !tbaa !18
+  %1 = load i32, ptr @g, align 4, !dbg !17, !tbaa !18
+  %2 = load volatile i32, ptr @s, align 4, !dbg !22, !tbaa !18
   %3 = add nsw i32 %2, %1, !dbg !23
   ret i32 %3, !dbg !24
 }

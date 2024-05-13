@@ -30,6 +30,7 @@
 #define KMP_SSCANF sscanf_s
 #define KMP_STRCPY_S strcpy_s
 #define KMP_STRNCPY_S strncpy_s
+#define KMP_STRNCAT_S strncat_s
 
 // Use this only when buffer size is unknown
 #define KMP_MEMCPY(dst, src, cnt) memcpy_s(dst, cnt, src, cnt)
@@ -55,12 +56,17 @@ template <typename T> struct kmp_get_rmax_t<T, true> {
 
 // For now, these macros use the existing API.
 
+#if KMP_OS_NETBSD
+#define KMP_ALLOCA __builtin_alloca
+#else
 #define KMP_ALLOCA alloca
+#endif
 #define KMP_MEMCPY_S(dst, bsz, src, cnt) memcpy(dst, src, cnt)
 #define KMP_SNPRINTF snprintf
 #define KMP_SSCANF sscanf
 #define KMP_STRCPY_S(dst, bsz, src) strcpy(dst, src)
 #define KMP_STRNCPY_S(dst, bsz, src, cnt) strncpy(dst, src, cnt)
+#define KMP_STRNCAT_S(dst, bsz, src, cnt) strncat(dst, src, cnt)
 #define KMP_VSNPRINTF vsnprintf
 #define KMP_STRNCPY strncpy
 #define KMP_STRLEN strlen

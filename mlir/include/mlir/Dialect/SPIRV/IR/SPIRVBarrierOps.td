@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
+def SPIRV_ControlBarrierOp : SPIRV_Op<"ControlBarrier", []> {
   let summary = [{
     Wait for other invocations of this module to reach the current point of
     execution.
@@ -51,35 +51,20 @@ def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
     OpControlBarrier will be visible to any other invocation after return
     from that OpControlBarrier.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
-
-    memory-semantics ::= `"None"` | `"Acquire"` | "Release"` | ...
-
-    control-barrier-op ::= `spv.ControlBarrier` scope, scope, memory-semantics
-    ```
-
     #### Example:
 
     ```mlir
-    spv.ControlBarrier "Workgroup", "Device", "Acquire|UniformMemory"
-
+    spirv.ControlBarrier "Workgroup", "Device", "Acquire|UniformMemory"
     ```
   }];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_ScopeAttr:$memory_scope,
-    SPV_MemorySemanticsAttr:$memory_semantics
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$memory_semantics
   );
 
   let results = (outs);
-
-  let verifier = [{ return verifyMemorySemantics(*this); }];
-
-  let autogenSerialization = 0;
 
   let assemblyFormat = [{
     $execution_scope `,` $memory_scope `,` $memory_semantics attr-dict
@@ -88,7 +73,7 @@ def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
 
 // -----
 
-def SPV_MemoryBarrierOp : SPV_Op<"MemoryBarrier", []> {
+def SPIRV_MemoryBarrierOp : SPIRV_Op<"MemoryBarrier", []> {
   let summary = "Control the order that memory accesses are observed.";
 
   let description = [{
@@ -106,34 +91,19 @@ def SPV_MemoryBarrierOp : SPV_Op<"MemoryBarrier", []> {
     To execute both a memory barrier and a control barrier, see
     OpControlBarrier.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
-
-    memory-semantics ::= `"None"` | `"Acquire"` | `"Release"` | ...
-
-    memory-barrier-op ::= `spv.MemoryBarrier` scope, memory-semantics
-    ```
-
     #### Example:
 
     ```mlir
-    spv.MemoryBarrier "Device", "Acquire|UniformMemory"
-
+    spirv.MemoryBarrier "Device", "Acquire|UniformMemory"
     ```
   }];
 
   let arguments = (ins
-    SPV_ScopeAttr:$memory_scope,
-    SPV_MemorySemanticsAttr:$memory_semantics
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$memory_semantics
   );
 
   let results = (outs);
-
-  let verifier = [{ return verifyMemorySemantics(*this); }];
-
-  let autogenSerialization = 0;
 
   let assemblyFormat = "$memory_scope `,` $memory_semantics attr-dict";
 }

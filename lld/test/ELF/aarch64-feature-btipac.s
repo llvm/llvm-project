@@ -11,7 +11,7 @@
 
 # RUN: ld.lld %t1.o %t3btipac.o --shared --soname=t.so -o %t.so
 # RUN: llvm-readelf -n %t.so | FileCheck --check-prefix BTIPACPROP %s
-# RUN: llvm-objdump -d --mattr=+v8.5a --no-show-raw-insn %t.so | FileCheck --check-prefix BTIPACSO %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.5a --no-show-raw-insn %t.so | FileCheck --check-prefix BTIPACSO %s
 # RUN: llvm-readelf --dynamic-table %t.so | FileCheck --check-prefix BTIPACDYN %s
 
 # BTIPACSO: Disassembly of section .text:
@@ -25,15 +25,15 @@
 # BTIPACSO-NEXT:    10360:              bti     c
 # BTIPACSO-NEXT:                        stp     x16, x30, [sp, #-16]!
 # BTIPACSO-NEXT:                        adrp    x16, 0x30000
-# BTIPACSO-NEXT:                        ldr     x17, [x16, #1136]
-# BTIPACSO-NEXT:                        add     x16, x16, #1136
+# BTIPACSO-NEXT:                        ldr     x17, [x16, #1144]
+# BTIPACSO-NEXT:                        add     x16, x16, #1144
 # BTIPACSO-NEXT:                        br      x17
 # BTIPACSO-NEXT:                        nop
 # BTIPACSO-NEXT:                        nop
 # BTIPACSO: 0000000000010380 <func3@plt>:
 # BTIPACSO-NEXT:    10380:              adrp    x16, 0x30000
-# BTIPACSO-NEXT:                        ldr     x17, [x16, #1144]
-# BTIPACSO-NEXT:                        add     x16, x16, #1144
+# BTIPACSO-NEXT:                        ldr     x17, [x16, #1152]
+# BTIPACSO-NEXT:                        add     x16, x16, #1152
 # BTIPACSO-NEXT:                        br      x17
 
 # BTIPACPROP:    Properties:    aarch64 feature: BTI, PAC
@@ -47,7 +47,7 @@
 
 # RUN: ld.lld %t.o %t3btipac.o %t.so -o %t.exe
 # RUN: llvm-readelf -n %t.exe | FileCheck --check-prefix=BTIPACPROP %s
-# RUN: llvm-objdump -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX %s
 # RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix BTIPACDYNEX %s
 
 # BTIPACEX: Disassembly of section .text:
@@ -68,11 +68,12 @@
 # BTIPACEX-NEXT:                        nop
 # BTIPACEX-NEXT:                        nop
 # BTIPACEX: 00000000002103a0 <func2@plt>:
-# BTIPACEX-NEXT:   2103a0:              bti     c
-# BTIPACEX-NEXT:                        adrp    x16, 0x230000
+# BTIPACEX-NEXT:   2103a0:              adrp    x16, 0x230000
 # BTIPACEX-NEXT:                        ldr     x17, [x16, #1200]
 # BTIPACEX-NEXT:                        add     x16, x16, #1200
 # BTIPACEX-NEXT:                        br      x17
+# BTIPACEX-NEXT:                        nop
+# BTIPACEX-NEXT:                        nop
 
 # BTIPACDYNEX:   0x0000000070000001 (AARCH64_BTI_PLT)
 # BTIPACDYNEX-NOT:   0x0000000070000003 (AARCH64_PAC_PLT)
@@ -80,7 +81,7 @@
 ## Check that combinations of BTI+PAC with 0 properties results in standard PLT
 
 # RUN: ld.lld %t.o %t3.o %t.so -o %t.exe
-# RUN: llvm-objdump -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix EX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix EX %s
 # RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix=NODYN %s
 
 # EX: Disassembly of section .text:
@@ -121,7 +122,7 @@
 # FORCE-WARN: aarch64-feature-btipac.s.tmp3.o: -z force-bti: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property
 
 # RUN: llvm-readelf -n %t.exe | FileCheck --check-prefix=BTIPACPROP %s
-# RUN: llvm-objdump -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX2 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX2 %s
 # RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix BTIPACDYN2 %s
 .section ".note.gnu.property", "a"
 .long 4
@@ -162,12 +163,12 @@ func1:
 # BTIPACEX2-NEXT:                        nop
 # BTIPACEX2-NEXT:                        nop
 # BTIPACEX2: 00000000002103a0 <func2@plt>:
-# BTIPACEX2-NEXT:   2103a0:              bti     c
-# BTIPACEX2-NEXT:                        adrp    x16, 0x230000
+# BTIPACEX2-NEXT:   2103a0:              adrp    x16, 0x230000
 # BTIPACEX2-NEXT:                        ldr     x17, [x16, #1216]
 # BTIPACEX2-NEXT:                        add     x16, x16, #1216
 # BTIPACEX2-NEXT:                        autia1716
 # BTIPACEX2-NEXT:                        br      x17
+# BTIPACEX2-NEXT:                        nop
 
 # BTIPACDYN2:        0x0000000070000001 (AARCH64_BTI_PLT)
 # BTIPACDYN2-NEXT:   0x0000000070000003 (AARCH64_PAC_PLT)

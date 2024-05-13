@@ -16,7 +16,7 @@ void extractStatementNoSemiObjCFor(NSArray *array) {
 // CHECK-NEXT: }{{$}}
 // CHECK-NEXT: }{{[[:space:]].*}}
 
-void extractStatementNoSemiSync() {
+void extractStatementNoSemiSync(void) {
   id lock;
   /*range bstmt=->+2:4*/@synchronized(lock) {
     int x = 0;
@@ -29,7 +29,7 @@ void extractStatementNoSemiSync() {
 // CHECK-NEXT: }{{$}}
 // CHECK-NEXT: }{{[[:space:]].*}}
 
-void extractStatementNoSemiAutorel() {
+void extractStatementNoSemiAutorel(void) {
   /*range cstmt=->+2:4*/@autoreleasepool {
     int x = 0;
   }
@@ -41,7 +41,7 @@ void extractStatementNoSemiAutorel() {
 // CHECK-NEXT: }{{$}}
 // CHECK-NEXT: }{{[[:space:]].*}}
 
-void extractStatementNoSemiTryFinalllllly() {
+void extractStatementNoSemiTryFinalllllly(void) {
   /*range dstmt=->+3:4*/@try {
     int x = 0;
   } @finally {

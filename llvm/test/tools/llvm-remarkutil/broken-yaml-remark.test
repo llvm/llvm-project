@@ -1,0 +1,6 @@
+RUN: not llvm-remarkutil yaml2bitstream %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
+RUN: not llvm-remarkutil instruction-count --parser=yaml %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
+RUN: not llvm-remarkutil annotation-count --parser=yaml --annotation-type=remark %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
+RUN: not llvm-remarkutil count --parser=yaml %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
+
+CHECK: error: Type, Pass, Name or Function missing

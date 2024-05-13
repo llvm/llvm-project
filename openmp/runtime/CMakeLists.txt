@@ -30,10 +30,11 @@ if(${OPENMP_STANDALONE_BUILD})
   # If adding a new architecture, take a look at cmake/LibompGetArchitecture.cmake
   libomp_get_architecture(LIBOMP_DETECTED_ARCH)
   set(LIBOMP_ARCH ${LIBOMP_DETECTED_ARCH} CACHE STRING
-    "The architecture to build for (x86_64/i386/arm/ppc64/ppc64le/aarch64/mic/mips/mips64/riscv64).")
+    "The architecture to build for (x86_64/i386/arm/ppc/ppc64/ppc64le/aarch64/aarch64_32/mic/mips/mips64/riscv64/loongarch64/ve/s390x/wasm32).")
   # Should assertions be enabled?  They are on by default.
   set(LIBOMP_ENABLE_ASSERTIONS TRUE CACHE BOOL
     "enable assertions?")
+  string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 else() # Part of LLVM build
   # Determine the native architecture from LLVM.
   string(TOLOWER "${LLVM_TARGET_ARCH}" LIBOMP_NATIVE_ARCH)
@@ -50,8 +51,12 @@ else() # Part of LLVM build
     set(LIBOMP_ARCH x86_64)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc64le")
     set(LIBOMP_ARCH ppc64le)
-  elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc")
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc64")
     set(LIBOMP_ARCH ppc64)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc")
+    set(LIBOMP_ARCH ppc)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "aarch64_32")
+    set(LIBOMP_ARCH aarch64_32)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "aarch64")
     set(LIBOMP_ARCH aarch64)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "arm64")
@@ -60,6 +65,14 @@ else() # Part of LLVM build
     set(LIBOMP_ARCH arm)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "riscv64")
     set(LIBOMP_ARCH riscv64)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "loongarch64")
+    set(LIBOMP_ARCH loongarch64)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "ve")
+    set(LIBOMP_ARCH ve)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "s390x")
+    set(LIBOMP_ARCH s390x)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "wasm")
+    set(LIBOMP_ARCH wasm32)
   else()
     # last ditch effort
     libomp_get_architecture(LIBOMP_ARCH)
@@ -80,7 +93,7 @@ if(LIBOMP_ARCH STREQUAL "aarch64")
   endif()
 endif()
 
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc64 ppc64le aarch64 aarch64_a64fx mic mips mips64 riscv64)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x wasm32)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
@@ -119,8 +132,17 @@ set(LIBOMP_ASMFLAGS "" CACHE STRING
   "Appended user specified assembler flags.")
 set(LIBOMP_LDFLAGS "" CACHE STRING
   "Appended user specified linker flags.")
-set(LIBOMP_LIBFLAGS "" CACHE STRING
-  "Appended user specified linked libs flags. (e.g., -lm)")
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  set(LIBOMP_LIBFLAGS "-lperfstat" CACHE STRING
+    "Appended user specified linked libs flags. (e.g., -lm)")
+  if("${LIBOMP_ARCH}" STREQUAL "ppc")
+    # PPC (32-bit) on AIX needs libatomic for __atomic_load_8, etc.
+    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
+  endif()
+else()
+  set(LIBOMP_LIBFLAGS "" CACHE STRING
+    "Appended user specified linked libs flags. (e.g., -lm)")
+endif()
 set(LIBOMP_FFLAGS "" CACHE STRING
   "Appended user specified Fortran compiler flags.  These are only used if LIBOMP_FORTRAN_MODULES==TRUE.")
 
@@ -150,6 +172,7 @@ set(IA32 FALSE)
 set(INTEL64 FALSE)
 set(ARM FALSE)
 set(AARCH64 FALSE)
+set(AARCH64_32 FALSE)
 set(AARCH64_A64FX FALSE)
 set(PPC64BE FALSE)
 set(PPC64LE FALSE)
@@ -158,12 +181,19 @@ set(MIC FALSE)
 set(MIPS64 FALSE)
 set(MIPS FALSE)
 set(RISCV64 FALSE)
+set(LOONGARCH64 FALSE)
+set(VE FALSE)
+set(S390X FALSE)
+set(WASM FALSE)
+set(PPC FALSE)
 if("${LIBOMP_ARCH}" STREQUAL "i386" OR "${LIBOMP_ARCH}" STREQUAL "32")    # IA-32 architecture
   set(IA32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "x86_64" OR "${LIBOMP_ARCH}" STREQUAL "32e") # Intel(R) 64 architecture
   set(INTEL64 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "arm") # ARM architecture
   set(ARM TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "ppc") # PPC32 architecture
+  set(PPC TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "ppc64") # PPC64BE architecture
   set(PPC64BE TRUE)
   set(PPC64 TRUE)
@@ -172,6 +202,8 @@ elseif("${LIBOMP_ARCH}" STREQUAL "ppc64le") # PPC64LE architecture
   set(PPC64 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "aarch64") # AARCH64 architecture
   set(AARCH64 TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "aarch64_32") # AARCH64_32 architecture
+  set(AARCH64_32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "aarch64_a64fx") # AARCH64_A64FX architecture
   set(AARCH64_A64FX TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "mic") # Intel(R) Many Integrated Core Architecture
@@ -180,8 +212,16 @@ elseif("${LIBOMP_ARCH}" STREQUAL "mips") # MIPS architecture
     set(MIPS TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "mips64") # MIPS64 architecture
     set(MIPS64 TRUE)
-  elseif("${LIBOMP_ARCH}" STREQUAL "riscv64") # RISCV64 architecture
+elseif("${LIBOMP_ARCH}" STREQUAL "riscv64") # RISCV64 architecture
     set(RISCV64 TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "loongarch64") # LoongArch64 architecture
+    set(LOONGARCH64 TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "ve") # VE architecture
+    set(VE TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "s390x") # S390x (Z) architecture
+    set(S390X TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly architecture
+    set(WASM TRUE)
 endif()
 
 # Set some flags based on build_type
@@ -189,14 +229,13 @@ set(RELEASE_BUILD FALSE)
 set(DEBUG_BUILD FALSE)
 set(RELWITHDEBINFO_BUILD FALSE)
 set(MINSIZEREL_BUILD FALSE)
-string(TOLOWER "${CMAKE_BUILD_TYPE}" libomp_build_type_lowercase)
-if("${libomp_build_type_lowercase}" STREQUAL "release")
+if("${uppercase_CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
   set(RELEASE_BUILD TRUE)
-elseif("${libomp_build_type_lowercase}" STREQUAL "debug")
+elseif("${uppercase_CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
   set(DEBUG_BUILD TRUE)
-elseif("${libomp_build_type_lowercase}" STREQUAL "relwithdebinfo")
+elseif("${uppercase_CMAKE_BUILD_TYPE}" STREQUAL "RELWITHDEBINFO")
   set(RELWITHDEBINFO_BUILD TRUE)
-elseif("${libomp_build_type_lowercase}" STREQUAL "minsizerel")
+elseif("${uppercase_CMAKE_BUILD_TYPE}" STREQUAL "MINSIZEREL")
   set(MINSIZEREL_BUILD TRUE)
 endif()
 
@@ -291,6 +330,11 @@ endif()
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
   "Shared library instead of static library?")
 
+if(WASM)
+  libomp_warning_say("The WebAssembly build currently only supports static libraries; forcing LIBOMP_ENABLE_SHARED to false")
+  set(LIBOMP_ENABLE_SHARED FALSE)
+endif()
+
 if(WIN32 AND NOT LIBOMP_ENABLE_SHARED)
   libomp_error_say("Static libraries requested but not available on Windows")
 endif()
@@ -322,12 +366,24 @@ if(LIBOMP_OMPT_SUPPORT AND (NOT LIBOMP_HAVE_OMPT_SUPPORT))
   libomp_error_say("OpenMP Tools Interface requested but not available in this implementation")
 endif()
 
-# TSAN-support
-set(LIBOMP_TSAN_SUPPORT FALSE CACHE BOOL
-  "TSAN-support?")
-if(LIBOMP_TSAN_SUPPORT AND (NOT LIBOMP_HAVE_TSAN_SUPPORT))
-  libomp_error_say("TSAN functionality requested but not available")
+# OMPD-support
+# Enable if OMPT SUPPORT is ON
+set(OMPD_DEFAULT FALSE)
+if (LIBOMP_HAVE_OMPT_SUPPORT AND ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux"))
+  set(OMPD_DEFAULT TRUE)
 endif()
+
+set(LIBOMP_OMPD_SUPPORT ${OMPD_DEFAULT} CACHE BOOL
+  "OMPD-support?")
+
+if(LIBOMP_OMPD_SUPPORT AND ((NOT LIBOMP_OMPT_SUPPORT) OR (NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")))
+  libomp_warning_say("OpenMP Debug Interface(OMPD) requested but not available in this implementation")
+  set(LIBOMP_OMPD_SUPPORT FALSE)
+endif()
+
+# OMPX Taskgraph support
+# Whether to build with OMPX Taskgraph (e.g. task record & replay)
+set(LIBOMP_OMPX_TASKGRAPH FALSE CACHE BOOL "OMPX-taskgraph (task record & replay)?")
 
 # Error check hwloc support after config-ix has run
 if(LIBOMP_USE_HWLOC AND (NOT LIBOMP_HAVE_HWLOC))
@@ -347,6 +403,11 @@ if(${STUBS_LIBRARY})
   set(LIBOMP_DEFAULT_LIB_NAME ${LIBOMP_DEFAULT_LIB_NAME}stubs)
 endif()
 set(LIBOMP_LIB_NAME ${LIBOMP_DEFAULT_LIB_NAME} CACHE STRING "Base OMP library name")
+if (OPENMP_MSVC_NAME_SCHEME)
+  # MSVC_TOOLS_VERSION corresponds to the version of the VC++ toolset.
+  set(MSVC_TOOLS_VERSION 140)
+  set(LIBOMP_LIB_NAME ${LIBOMP_LIB_NAME}${MSVC_TOOLS_VERSION}.${LIBOMP_ARCH})
+endif()
 
 if(${LIBOMP_ENABLE_SHARED})
   set(LIBOMP_LIBRARY_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
@@ -389,10 +450,11 @@ if(${OPENMP_STANDALONE_BUILD})
   if(${LIBOMP_OMPT_SUPPORT})
     libomp_say("Use OMPT-optional  -- ${LIBOMP_OMPT_OPTIONAL}")
   endif()
+  libomp_say("Use OMPD-support     -- ${LIBOMP_OMPD_SUPPORT}")
   libomp_say("Use Adaptive locks   -- ${LIBOMP_USE_ADAPTIVE_LOCKS}")
   libomp_say("Use quad precision   -- ${LIBOMP_USE_QUAD_PRECISION}")
-  libomp_say("Use TSAN-support     -- ${LIBOMP_TSAN_SUPPORT}")
   libomp_say("Use Hwloc library    -- ${LIBOMP_USE_HWLOC}")
+  libomp_say("Use OMPX-taskgraph   -- ${LIBOMP_OMPX_TASKGRAPH}")
 endif()
 
 add_subdirectory(src)
@@ -401,3 +463,7 @@ add_subdirectory(test)
 # make these variables available for tools:
 set(LIBOMP_LIBRARY_DIR ${LIBOMP_LIBRARY_DIR} PARENT_SCOPE)
 set(LIBOMP_INCLUDE_DIR ${LIBOMP_INCLUDE_DIR} PARENT_SCOPE)
+set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
+# make these variables available for tools/libompd:
+set(LIBOMP_SRC_DIR ${LIBOMP_SRC_DIR} PARENT_SCOPE)
+set(LIBOMP_OMPD_SUPPORT ${LIBOMP_OMPD_SUPPORT} PARENT_SCOPE)

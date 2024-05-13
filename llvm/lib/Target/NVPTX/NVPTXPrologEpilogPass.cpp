@@ -36,6 +36,8 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  StringRef getPassName() const override { return "NVPTX Prolog Epilog Pass"; }
+
 private:
   void calculateFrameObjectOffsets(MachineFunction &Fn);
 };
@@ -74,7 +76,6 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
           auto Offset =
               TFI.getFrameIndexReference(MF, Op.getIndex(), Reg);
           Op.ChangeToRegister(Reg, /*isDef=*/false);
-          Op.setIsDebug();
           const DIExpression *DIExpr = MI.getDebugExpression();
           if (MI.isNonListDebugValue()) {
             DIExpr = TRI.prependOffsetExpression(MI.getDebugExpression(), DIExpression::ApplyOffset, Offset);

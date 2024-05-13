@@ -16,7 +16,7 @@ define i64 @f1(i64 %a, i64 %b) {
 }
 
 ; But we may fall back to RISBG if we can use the condition code.
-define i64 @f2(i64 %a, i64 %b, i32* %c) {
+define i64 @f2(i64 %a, i64 %b, ptr %c) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    risbg %r2, %r3, 60, 62, 0
@@ -29,7 +29,7 @@ define i64 @f2(i64 %a, i64 %b, i32* %c) {
   %or = or i64 %anda, %andb
   %cmp = icmp sgt i64 %or, 0
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* %c, align 4
+  store i32 %conv, ptr %c, align 4
   ret i64 %or
 }
 

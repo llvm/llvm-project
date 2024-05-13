@@ -7,17 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class T>
 // concept uniform_random_bit_generator = // see below
 
 #include <random>
 
+#include "test_macros.h"
+
 static_assert(std::uniform_random_bit_generator<
               std::linear_congruential_engine<unsigned int, 0U, 1U, 2U> >);
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
 static_assert(std::uniform_random_bit_generator<
               std::subtract_with_carry_engine<__uint128_t, 1U, 2U, 3U> >);
 #endif
@@ -139,5 +140,3 @@ struct Works {
   static constexpr unsigned char max() { return 1; }
 };
 static_assert(std::uniform_random_bit_generator<Works>);
-
-int main(int, char**) { return 0; }

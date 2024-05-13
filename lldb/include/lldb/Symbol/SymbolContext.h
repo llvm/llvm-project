@@ -17,6 +17,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/Iterable.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -145,13 +146,20 @@ public:
   ///     is dumped if this flag is \b true, otherwise the line info
   ///     of the actual inlined function is dumped.
   ///
+  /// \param[in] pattern
+  ///     An optional regex pattern to match against the stop context
+  ///     description. If specified, parts of the description matching this
+  ///     pattern may be highlighted or processed differently. If this parameter
+  ///     is an empty string or not provided, no highlighting is applied.
+  ///
   /// \return
   ///     \b true if some text was dumped, \b false otherwise.
-  bool DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
-                       const Address &so_addr, bool show_fullpaths,
-                       bool show_module, bool show_inlined_frames,
-                       bool show_function_arguments,
-                       bool show_function_name) const;
+  bool DumpStopContext(
+      Stream *s, ExecutionContextScope *exe_scope, const Address &so_addr,
+      bool show_fullpaths, bool show_module, bool show_inlined_frames,
+      bool show_function_arguments, bool show_function_name,
+      bool show_function_display_name = false,
+      std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   /// Get the address range contained within a symbol context.
   ///
@@ -217,8 +225,9 @@ public:
   ///     The symbol that was found, or \b nullptr if none was found.
   const Symbol *FindBestGlobalDataSymbol(ConstString name, Status &error);
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level,
-                      Target *target) const;
+  void GetDescription(
+      Stream *s, lldb::DescriptionLevel level, Target *target,
+      std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   uint32_t GetResolvedMask() const;
 
@@ -245,26 +254,13 @@ public:
   ///     represented by this symbol context object, nullptr otherwise.
   Block *GetFunctionBlock();
 
-  /// If this symbol context represents a function that is a method, return
-  /// true and provide information about the method.
+  /// Determines the name of the instance variable for the this decl context.
   ///
-  /// \param[out] language
-  ///     If \b true is returned, the language for the method.
-  ///
-  /// \param[out] is_instance_method
-  ///     If \b true is returned, \b true if this is a instance method,
-  ///     \b false if this is a static/class function.
-  ///
-  /// \param[out] language_object_name
-  ///     If \b true is returned, the name of the artificial variable
-  ///     for the language ("this" for C++, "self" for ObjC).
+  /// For C++ the name is "this", for Objective-C the name is "self".
   ///
   /// \return
-  ///     \b True if this symbol context represents a function that
-  ///     is a method of a class, \b false otherwise.
-  bool GetFunctionMethodInfo(lldb::LanguageType &language,
-                             bool &is_instance_method,
-                             ConstString &language_object_name);
+  ///     Returns a StringRef for the name of the instance variable.
+  llvm::StringRef GetInstanceVariableName();
 
   /// Sorts the types in TypeMap according to SymbolContext to TypeList
   ///
@@ -316,12 +312,13 @@ public:
   // Member variables
   lldb::TargetSP target_sp; ///< The Target for a given query
   lldb::ModuleSP module_sp; ///< The Module for a given query
-  CompileUnit *comp_unit;   ///< The CompileUnit for a given query
-  Function *function;       ///< The Function for a given query
-  Block *block;             ///< The Block for a given query
+  CompileUnit *comp_unit = nullptr; ///< The CompileUnit for a given query
+  Function *function = nullptr;     ///< The Function for a given query
+  Block *block = nullptr;           ///< The Block for a given query
   LineEntry line_entry;     ///< The LineEntry for a given query
-  Symbol *symbol;           ///< The Symbol for a given query
-  Variable *variable;       ///< The global variable matching the given query
+  Symbol *symbol = nullptr; ///< The Symbol for a given query
+  Variable *variable =
+      nullptr; ///< The global variable matching the given query
 };
 
 class SymbolContextSpecifier {
@@ -463,11 +460,15 @@ public:
 protected:
   typedef std::vector<SymbolContext>
       collection; ///< The collection type for the list.
+  typedef collection::const_iterator const_iterator;
 
   // Member variables.
   collection m_symbol_contexts; ///< The list of symbol contexts.
 
 public:
+  const_iterator begin() const { return m_symbol_contexts.begin(); }
+  const_iterator end() const { return m_symbol_contexts.end(); }
+
   typedef AdaptedIterable<collection, SymbolContext, vector_adapter>
       SymbolContextIterable;
   SymbolContextIterable SymbolContexts() {

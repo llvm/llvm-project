@@ -28,14 +28,41 @@
 namespace __sanitizer {
 
 #if !SANITIZER_GO
+
+static bool FrameIsInternal(const SymbolizedStack *frame) {
+  if (!frame)
+    return true;
+  const char *file = frame->info.file;
+  const char *module = frame->info.module;
+  // On Gentoo, the path is g++-*, so there's *not* a missing /.
+  if (file && (internal_strstr(file, "/compiler-rt/lib/") ||
+               internal_strstr(file, "/include/c++/") ||
+               internal_strstr(file, "/include/g++")))
+    return true;
+  if (file && internal_strstr(file, "\\compiler-rt\\lib\\"))
+    return true;
+  if (module && (internal_strstr(module, "libclang_rt.")))
+    return true;
+  if (module && (internal_strstr(module, "clang_rt.")))
+    return true;
+  return false;
+}
+
+const SymbolizedStack *SkipInternalFrames(const SymbolizedStack *frames) {
+  for (const SymbolizedStack *f = frames; f; f = f->next)
+    if (!FrameIsInternal(f))
+      return f;
+  return nullptr;
+}
+
 void ReportErrorSummary(const char *error_type, const AddressInfo &info,
                         const char *alt_tool_name) {
   if (!common_flags()->print_summary) return;
   InternalScopedString buff;
-  buff.append("%s ", error_type);
-  RenderFrame(&buff, "%L %F", 0, info.address, &info,
-              common_flags()->symbolize_vs_style,
-              common_flags()->strip_path_prefix);
+  buff.AppendF("%s ", error_type);
+  StackTracePrinter::GetOrInit()->RenderFrame(
+      &buff, "%L %F", 0, info.address, &info,
+      common_flags()->symbolize_vs_style, common_flags()->strip_path_prefix);
   ReportErrorSummary(buff.data(), alt_tool_name);
 }
 #endif
@@ -75,23 +102,46 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
 #if !SANITIZER_GO
   if (!common_flags()->print_summary)
     return;
-  if (stack->size == 0) {
-    ReportErrorSummary(error_type);
-    return;
+
+  // Find first non-internal stack frame.
+  for (uptr i = 0; i < stack->size; ++i) {
+    uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[i]);
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    if (const SymbolizedStack *frame = symbolized_stack.get()) {
+      if (const SymbolizedStack *summary_frame = SkipInternalFrames(frame)) {
+        ReportErrorSummary(error_type, summary_frame->info, alt_tool_name);
+        return;
+      }
+    }
   }
-  // Currently, we include the first stack frame into the report summary.
-  // Maybe sometimes we need to choose another frame (e.g. skip memcpy/etc).
-  uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
-  SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc);
-  ReportErrorSummary(error_type, frame->info, alt_tool_name);
-  frame->ClearAll();
+
+  // Fallback to the top one.
+  if (stack->size) {
+    uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    if (const SymbolizedStack *frame = symbolized_stack.get()) {
+      ReportErrorSummary(error_type, frame->info, alt_tool_name);
+      return;
+    }
+  }
+
+  // Fallback to a summary without location.
+  ReportErrorSummary(error_type);
 #endif
 }
 
-void ReportMmapWriteExec(int prot) {
+void ReportMmapWriteExec(int prot, int flags) {
 #if SANITIZER_POSIX && (!SANITIZER_GO && !SANITIZER_ANDROID)
-  if ((prot & (PROT_WRITE | PROT_EXEC)) != (PROT_WRITE | PROT_EXEC))
+  int pflags = (PROT_WRITE | PROT_EXEC);
+  if ((prot & pflags) != pflags)
     return;
+
+#  if SANITIZER_APPLE && defined(MAP_JIT)
+  if ((flags & MAP_JIT) == MAP_JIT)
+    return;
+#  endif
 
   ScopedErrorReportLock l;
   SanitizerCommonDecorator d;
@@ -101,8 +151,7 @@ void ReportMmapWriteExec(int prot) {
   stack->Reset();
   uptr top = 0;
   uptr bottom = 0;
-  GET_CALLER_PC_BP_SP;
-  (void)sp;
+  GET_CALLER_PC_BP;
   bool fast = common_flags()->fast_unwind_on_fatal;
   if (StackTrace::WillUseFastUnwind(fast)) {
     GetThreadStackTopAndBottom(false, &top, &bottom);
@@ -120,7 +169,7 @@ void ReportMmapWriteExec(int prot) {
 #endif
 }
 
-#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS && !SANITIZER_GO
+#if !SANITIZER_FUCHSIA && !SANITIZER_GO
 void StartReportDeadlySignal() {
   // Write the first message using fd=2, just in case.
   // It may actually fail to write in case stderr is closed.
@@ -143,22 +192,22 @@ static void MaybeReportNonExecRegion(uptr pc) {
 static void PrintMemoryByte(InternalScopedString *str, const char *before,
                             u8 byte) {
   SanitizerCommonDecorator d;
-  str->append("%s%s%x%x%s ", before, d.MemoryByte(), byte >> 4, byte & 15,
-              d.Default());
+  str->AppendF("%s%s%x%x%s ", before, d.MemoryByte(), byte >> 4, byte & 15,
+               d.Default());
 }
 
 static void MaybeDumpInstructionBytes(uptr pc) {
   if (!common_flags()->dump_instruction_bytes || (pc < GetPageSizeCached()))
     return;
   InternalScopedString str;
-  str.append("First 16 instruction bytes at pc: ");
+  str.AppendF("First 16 instruction bytes at pc: ");
   if (IsAccessibleMemoryRange(pc, 16)) {
     for (int i = 0; i < 16; ++i) {
       PrintMemoryByte(&str, "", ((u8 *)pc)[i]);
     }
-    str.append("\n");
+    str.AppendF("\n");
   } else {
-    str.append("unaccessible\n");
+    str.AppendF("unaccessible\n");
   }
   Report("%s", str.data());
 }
@@ -205,9 +254,9 @@ static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
     Report("Hint: pc points to the zero page.\n");
   if (sig.is_memory_access) {
     const char *access_type =
-        sig.write_flag == SignalContext::WRITE
+        sig.write_flag == SignalContext::Write
             ? "WRITE"
-            : (sig.write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
+            : (sig.write_flag == SignalContext::Read ? "READ" : "UNKNOWN");
     Report("The signal is caused by a %s memory access.\n", access_type);
     if (!sig.is_true_faulting_addr)
       Report("Hint: this fault was caused by a dereference of a high value "
@@ -250,17 +299,17 @@ void HandleDeadlySignal(void *siginfo, void *context, u32 tid,
 
 #endif  // !SANITIZER_FUCHSIA && !SANITIZER_GO
 
-static atomic_uintptr_t reporting_thread = {0};
-static StaticSpinMutex CommonSanitizerReportMutex;
+atomic_uintptr_t ScopedErrorReportLock::reporting_thread_ = {0};
+StaticSpinMutex ScopedErrorReportLock::mutex_;
 
-ScopedErrorReportLock::ScopedErrorReportLock() {
+void ScopedErrorReportLock::Lock() {
   uptr current = GetThreadSelf();
   for (;;) {
     uptr expected = 0;
-    if (atomic_compare_exchange_strong(&reporting_thread, &expected, current,
+    if (atomic_compare_exchange_strong(&reporting_thread_, &expected, current,
                                        memory_order_relaxed)) {
       // We've claimed reporting_thread so proceed.
-      CommonSanitizerReportMutex.Lock();
+      mutex_.Lock();
       return;
     }
 
@@ -282,13 +331,11 @@ ScopedErrorReportLock::ScopedErrorReportLock() {
   }
 }
 
-ScopedErrorReportLock::~ScopedErrorReportLock() {
-  CommonSanitizerReportMutex.Unlock();
-  atomic_store_relaxed(&reporting_thread, 0);
+void ScopedErrorReportLock::Unlock() {
+  mutex_.Unlock();
+  atomic_store_relaxed(&reporting_thread_, 0);
 }
 
-void ScopedErrorReportLock::CheckLocked() {
-  CommonSanitizerReportMutex.CheckLocked();
-}
+void ScopedErrorReportLock::CheckLocked() { mutex_.CheckLocked(); }
 
 }  // namespace __sanitizer

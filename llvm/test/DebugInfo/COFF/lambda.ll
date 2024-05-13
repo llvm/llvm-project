@@ -1,6 +1,9 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=i686-windows | llvm-readobj - --codeview | FileCheck %s
 ;
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | llvm-mc -filetype=obj --triple=i686-windows | llvm-readobj - --codeview | FileCheck %s
+;
 ; Verify lambda routines are emitted properly in CodeView.
 ;
 ; The original source code:
@@ -60,25 +63,24 @@ target triple = "i686-pc-windows-msvc19.0.24210"
 %class.anon = type { i32 }
 
 ; Function Attrs: noinline norecurse optnone
-define dso_local i32 @main(i32 %argc, i8** %argv, i8** %arge) #0 !dbg !8 {
+define dso_local i32 @main(i32 %argc, ptr %argv, ptr %arge) #0 !dbg !8 {
 entry:
   %retval = alloca i32, align 4
-  %arge.addr = alloca i8**, align 4
-  %argv.addr = alloca i8**, align 4
+  %arge.addr = alloca ptr, align 4
+  %argv.addr = alloca ptr, align 4
   %argc.addr = alloca i32, align 4
   %Lambda = alloca %class.anon, align 4
-  store i32 0, i32* %retval, align 4
-  store i8** %arge, i8*** %arge.addr, align 4
-  call void @llvm.dbg.declare(metadata i8*** %arge.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  store i8** %argv, i8*** %argv.addr, align 4
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !17, metadata !DIExpression()), !dbg !16
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !18, metadata !DIExpression()), !dbg !16
-  call void @llvm.dbg.declare(metadata %class.anon* %Lambda, metadata !19, metadata !DIExpression()), !dbg !28
-  %0 = getelementptr inbounds %class.anon, %class.anon* %Lambda, i32 0, i32 0, !dbg !28
-  %1 = load i32, i32* %argc.addr, align 4, !dbg !28
-  store i32 %1, i32* %0, align 4, !dbg !28
-  %call = call x86_thiscallcc i32 @"??R<lambda_0>@?0??main@@9@QBE@H@Z"(%class.anon* %Lambda, i32 0), !dbg !29
+  store i32 0, ptr %retval, align 4
+  store ptr %arge, ptr %arge.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %arge.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  store ptr %argv, ptr %argv.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !17, metadata !DIExpression()), !dbg !16
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !18, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %Lambda, metadata !19, metadata !DIExpression()), !dbg !28
+  %0 = load i32, ptr %argc.addr, align 4, !dbg !28
+  store i32 %0, ptr %Lambda, align 4, !dbg !28
+  %call = call x86_thiscallcc i32 @"??R<lambda_0>@?0??main@@9@QBE@H@Z"(ptr %Lambda, i32 0), !dbg !29
   ret i32 %call, !dbg !29
 }
 
@@ -86,20 +88,19 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone
-define internal x86_thiscallcc i32 @"??R<lambda_0>@?0??main@@9@QBE@H@Z"(%class.anon* %this, i32 %count) #2 align 2 !dbg !30 {
+define internal x86_thiscallcc i32 @"??R<lambda_0>@?0??main@@9@QBE@H@Z"(ptr %this, i32 %count) #2 align 2 !dbg !30 {
 entry:
   %count.addr = alloca i32, align 4
-  %this.addr = alloca %class.anon*, align 4
-  store i32 %count, i32* %count.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %count.addr, metadata !31, metadata !DIExpression()), !dbg !32
-  store %class.anon* %this, %class.anon** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.anon** %this.addr, metadata !33, metadata !DIExpression()), !dbg !35
-  %this1 = load %class.anon*, %class.anon** %this.addr, align 4
-  %0 = getelementptr inbounds %class.anon, %class.anon* %this1, i32 0, i32 0, !dbg !32
-  %1 = load i32, i32* %0, align 4, !dbg !32
-  %2 = load i32, i32* %count.addr, align 4, !dbg !32
-  %cmp = icmp eq i32 %1, %2, !dbg !32
-  %3 = zext i1 %cmp to i64, !dbg !32
+  %this.addr = alloca ptr, align 4
+  store i32 %count, ptr %count.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %count.addr, metadata !31, metadata !DIExpression()), !dbg !32
+  store ptr %this, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !33, metadata !DIExpression()), !dbg !35
+  %this1 = load ptr, ptr %this.addr, align 4
+  %0 = load i32, ptr %this1, align 4, !dbg !32
+  %1 = load i32, ptr %count.addr, align 4, !dbg !32
+  %cmp = icmp eq i32 %0, %1, !dbg !32
+  %2 = zext i1 %cmp to i64, !dbg !32
   %cond = select i1 %cmp, i32 1, i32 0, !dbg !32
   ret i32 %cond, !dbg !32
 }

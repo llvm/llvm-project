@@ -14,14 +14,15 @@
 #define LLVM_MC_MCSUBTARGETINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include <algorithm>
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -229,23 +230,58 @@ public:
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
 
-  virtual unsigned getHwMode() const { return 0; }
+  /// Return processor descriptions.
+  ArrayRef<SubtargetSubTypeKV> getAllProcessorDescriptions() const {
+    return ProcDesc;
+  }
+
+  /// Return processor features.
+  ArrayRef<SubtargetFeatureKV> getAllProcessorFeatures() const {
+    return ProcFeatures;
+  }
+
+  /// HwMode IDs are stored and accessed in a bit set format, enabling
+  /// users to efficiently retrieve specific IDs, such as the RegInfo
+  /// HwMode ID, from the set as required. Using this approach, various
+  /// types of HwMode IDs can be added to a subtarget to manage different
+  /// attributes within that subtarget, significantly enhancing the
+  /// scalability and usability of HwMode. Moreover, to ensure compatibility,
+  /// this method also supports controlling multiple attributes with a single
+  /// HwMode ID, just as was done previously.
+  enum HwModeType {
+    HwMode_Default,   // Return the smallest HwMode ID of current subtarget.
+    HwMode_ValueType, // Return the HwMode ID that controls the ValueType.
+    HwMode_RegInfo,   // Return the HwMode ID that controls the RegSizeInfo and
+                      // SubRegRange.
+    HwMode_EncodingInfo // Return the HwMode ID that controls the EncodingInfo.
+  };
+
+  /// Return a bit set containing all HwMode IDs of the current subtarget.
+  virtual unsigned getHwModeSet() const { return 0; }
+
+  /// HwMode ID corresponding to the 'type' parameter is retrieved from the
+  /// HwMode bit set of the current subtarget. It’s important to note that if
+  /// the current subtarget possesses two HwMode IDs and both control a single
+  /// attribute (such as RegInfo), this interface will result in an error.
+  virtual unsigned getHwMode(enum HwModeType type = HwMode_Default) const {
+    return 0;
+  }
 
   /// Return the cache size in bytes for the given level of cache.
   /// Level is zero-based, so a value of zero means the first level of
   /// cache.
   ///
-  virtual Optional<unsigned> getCacheSize(unsigned Level) const;
+  virtual std::optional<unsigned> getCacheSize(unsigned Level) const;
 
   /// Return the cache associatvity for the given level of cache.
   /// Level is zero-based, so a value of zero means the first level of
   /// cache.
   ///
-  virtual Optional<unsigned> getCacheAssociativity(unsigned Level) const;
+  virtual std::optional<unsigned> getCacheAssociativity(unsigned Level) const;
 
   /// Return the target cache line size in bytes at a given level.
   ///
-  virtual Optional<unsigned> getCacheLineSize(unsigned Level) const;
+  virtual std::optional<unsigned> getCacheLineSize(unsigned Level) const;
 
   /// Return the target cache line size in bytes.  By default, return
   /// the line size for the bottom-most level of cache.  This provides
@@ -254,7 +290,7 @@ public:
   /// cache model.
   ///
   virtual unsigned getCacheLineSize() const {
-    Optional<unsigned> Size = getCacheLineSize(0);
+    std::optional<unsigned> Size = getCacheLineSize(0);
     if (Size)
       return *Size;
 
@@ -281,6 +317,9 @@ public:
                                         unsigned NumStridedMemAccesses,
                                         unsigned NumPrefetches,
                                         bool HasCall) const;
+
+  /// \return if target want to issue a prefetch in address space \p AS.
+  virtual bool shouldPrefetchAddressSpace(unsigned AS) const;
 };
 
 } // end namespace llvm

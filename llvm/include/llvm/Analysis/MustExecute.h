@@ -25,10 +25,9 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -42,6 +41,7 @@ class Instruction;
 class Loop;
 class LoopInfo;
 class PostDominatorTree;
+class raw_ostream;
 
 /// Captures loop safety information.
 /// It keep information for loop blocks may throw exception or otherwise
@@ -281,9 +281,7 @@ struct MustBeExecutedIterator {
 
   using ExplorerTy = MustBeExecutedContextExplorer;
 
-  MustBeExecutedIterator(const MustBeExecutedIterator &Other)
-      : Visited(Other.Visited), Explorer(Other.Explorer),
-        CurInst(Other.CurInst), Head(Other.Head), Tail(Other.Tail) {}
+  MustBeExecutedIterator(const MustBeExecutedIterator &Other) = default;
 
   MustBeExecutedIterator(MustBeExecutedIterator &&Other)
       : Visited(std::move(Other.Visited)), Explorer(Other.Explorer),
@@ -299,7 +297,7 @@ struct MustBeExecutedIterator {
     return *this;
   }
 
-  ~MustBeExecutedIterator() {}
+  ~MustBeExecutedIterator() = default;
 
   /// Pre- and post-increment operators.
   ///{
@@ -530,10 +528,10 @@ private:
   ///}
 
   /// Map to cache isGuaranteedToTransferExecutionToSuccessor results.
-  DenseMap<const BasicBlock *, Optional<bool>> BlockTransferMap;
+  DenseMap<const BasicBlock *, std::optional<bool>> BlockTransferMap;
 
   /// Map to cache containsIrreducibleCFG results.
-  DenseMap<const Function*, Optional<bool>> IrreducibleControlMap;
+  DenseMap<const Function *, std::optional<bool>> IrreducibleControlMap;
 
   /// Map from instructions to associated must be executed iterators.
   DenseMap<const Instruction *, std::unique_ptr<MustBeExecutedIterator>>
@@ -549,6 +547,7 @@ class MustExecutePrinterPass : public PassInfoMixin<MustExecutePrinterPass> {
 public:
   MustExecutePrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 class MustBeExecutedContextPrinterPass
@@ -558,6 +557,7 @@ class MustBeExecutedContextPrinterPass
 public:
   MustBeExecutedContextPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

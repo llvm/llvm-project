@@ -26,7 +26,7 @@ typedef struct NestedNonnullMember {
   int *_Nonnull Value;
 } NestedNonnullMember;
 
-NestedNonnullMember *foo();
+NestedNonnullMember *foo(void);
 
 void f1(NestedNonnullMember *Root) {
   NestedNonnullMember *Grandson = Root->Child->Child;
@@ -38,7 +38,6 @@ void f1(NestedNonnullMember *Root) {
 
 // Check that we correctly process situations when non-pointer parameters
 // get nonnul attributes.
-// Original problem: rdar://problem/63150074
 typedef struct {
   long a;
 } B;

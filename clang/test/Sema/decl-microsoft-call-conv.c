@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-pc-win32 -verify %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -Wno-strict-prototypes -verify %s
 
 // It's important that this is a .c file.
 

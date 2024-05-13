@@ -12,6 +12,7 @@
 
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <map>
@@ -32,8 +33,8 @@ FindFirstNonCommonLetter(const std::vector<const
     // Check to see if letter i is the same across the set.
     char Letter = Matches[0]->first[i];
 
-    for (unsigned str = 0, e = Matches.size(); str != e; ++str)
-      if (Matches[str]->first[i] != Letter)
+    for (const StringMatcher::StringPair *Match : Matches)
+      if (Match->first[i] != Letter)
         return i;
   }
 
@@ -75,9 +76,8 @@ bool StringMatcher::EmitStringMatcherForChar(
   // Bucket the matches by the character we are comparing.
   std::map<char, std::vector<const StringPair*>> MatchesByLetter;
 
-  for (unsigned i = 0, e = Matches.size(); i != e; ++i)
-    MatchesByLetter[Matches[i]->first[CharNo]].push_back(Matches[i]);
-
+  for (const StringPair *Match : Matches)
+    MatchesByLetter[Match->first[CharNo]].push_back(Match);
 
   // If we have exactly one bucket to match, see how many characters are common
   // across the whole set and match all of them at once.
@@ -135,8 +135,8 @@ void StringMatcher::Emit(unsigned Indent, bool IgnoreDuplicates) const {
   // First level categorization: group strings by length.
   std::map<unsigned, std::vector<const StringPair*>> MatchesByLength;
 
-  for (unsigned i = 0, e = Matches.size(); i != e; ++i)
-    MatchesByLength[Matches[i].first.size()].push_back(&Matches[i]);
+  for (const StringPair &Match : Matches)
+    MatchesByLength[Match.first.size()].push_back(&Match);
 
   // Output a switch statement on length and categorize the elements within each
   // bin.

@@ -38,5 +38,5 @@ body: |
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp
     $eax = LEA64_32r killed $rbx, 1, $rbx, 0, _
     $rbx = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 ...

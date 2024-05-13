@@ -42,7 +42,7 @@ JITSymbolFlags llvm::JITSymbolFlags::fromGlobalValue(const GlobalValue &GV) {
     const auto &DL = M->getDataLayout();
     StringRef LPGP = DL.getLinkerPrivateGlobalPrefix();
     if (!LPGP.empty() && GV.getName().front() == '\01' &&
-        GV.getName().substr(1).startswith(LPGP))
+        GV.getName().substr(1).starts_with(LPGP))
       Flags &= ~JITSymbolFlags::Exported;
   }
 
@@ -84,7 +84,7 @@ llvm::JITSymbolFlags::fromObjectSymbol(const object::SymbolRef &Symbol) {
   if (!SymbolType)
     return SymbolType.takeError();
 
-  if (*SymbolType & object::SymbolRef::ST_Function)
+  if (*SymbolType == object::SymbolRef::ST_Function)
     Flags |= JITSymbolFlags::Callable;
 
   return Flags;

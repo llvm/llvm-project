@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -analyze -pass-remarks-missed=polly-delicm < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -pass-remarks-missed=polly-delicm -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
@@ -10,7 +10,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -45,9 +45,9 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double 0.0, double* %A_idx
-      store double %phi, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double 0.0, ptr %A_idx
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -16,7 +14,7 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
-using namespace llvm::msf;
+// using namespace llvm::msf;
 using namespace llvm::pdb;
 
 InfoStream::InfoStream(std::unique_ptr<BinaryStream> Stream)
@@ -65,7 +63,7 @@ Error InfoStream::reload() {
     case uint32_t(PdbRaw_FeatureSig::VC110):
       // No other flags for VC110 PDB.
       Stop = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case uint32_t(PdbRaw_FeatureSig::VC140):
       Features |= PdbFeatureContainsIdStream;
       break;

@@ -8,66 +8,118 @@ This document describes the available MLIR passes and their contracts.
 
 [include "GeneralPasses.md"]
 
+## Bufferization Passes
+
+[include "BufferizationPasses.md"]
+
 ## Conversion Passes
 
 [include "ConversionPasses.md"]
 
-## `async` Dialect Passes
+## 'acc' Dialect Passes
 
-[include "AsyncPasses.md"]
+[include "OpenACCPasses.md"]
 
-## `affine` Dialect Passes
+## 'affine' Dialect Passes
 
 [include "AffinePasses.md"]
 
-## `gpu` Dialect Passes
+## 'amdgpu' Dialect Passes
+
+[include "AMDGPUPasses.md"]
+
+## 'arith' Dialect Passes
+
+[include "ArithPasses.md"]
+
+## 'arm\_sme' Dialect Passes
+
+[include "ArmSMEPasses.md"]
+
+## 'arm\_sve' Dialect Passes
+
+[include "ArmSVEPasses.md"]
+
+## 'async' Dialect Passes
+
+[include "AsyncPasses.md"]
+
+## 'emitc' Dialect Passes
+
+[include "EmitCPasses.md"]
+
+## 'func' Dialect Passes
+
+[include "FuncPasses.md"]
+
+## 'gpu' Dialect Passes
 
 [include "GPUPasses.md"]
 
-## `linalg` Dialect Passes
+## 'linalg' Dialect Passes
 
 [include "LinalgPasses.md"]
 
-## `llvm` Dialect Passes
+## 'llvm' Dialect Passes
 
 [include "LLVMPasses.md"]
 
-## `memref` Dialect Passes
+## 'math' Dialect Passes
+
+[include "MathPasses.md"]
+
+## 'memref' Dialect Passes
 
 [include "MemRefPasses.md"]
 
-## `quant` Dialect Passes
+## 'mesh' Dialect Passes
 
-[include "QuantPasses.md"]
+[include "MeshPasses.md"]
+
+## 'ml\_program' Dialect Passes
+
+[include "MLProgramPasses.md"]
+
+## 'nvgpu' Dialect Passes
+
+[include "NVGPUPasses.md"]
 
 ## Reducer Passes
 
 [include "ReducerPasses.md"]
 
-## `scf` Dialect Passes
+## 'scf' Dialect Passes
 
 [include "SCFPasses.md"]
 
-## `shape` Dialect Passes
+## 'shape' Dialect Passes
 
 [include "ShapePasses.md"]
 
-## `sparse_tensor` Dialect Passes
+## 'sparse_tensor' Dialect Passes
 
 [include "SparseTensorPasses.md"]
 
-## `spv` Dialect Passes
+## 'spv' Dialect Passes
 
 [include "SPIRVPasses.md"]
 
-## `standard` Dialect Passes
-
-[include "StandardPasses.md"]
-
-## `tensor` Dialect Passes
+## 'tensor' Dialect Passes
 
 [include "TensorPasses.md"]
+
+## 'transform' Dialect Passes
+
+[include "TransformPasses.md"]
+
+## 'vector' Dialect Passes
+
+[include "VectorPasses.md"]
 
 ## TOSA Dialect Passes
 
 [include "TosaPasses.md"]
+
+## XeGPU Dialect Passes
+
+[include "XeGPUPasses.md"]

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only
+// RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-strict-prototypes
 
 void f1(void) __attribute__((ownership_takes("foo"))); // expected-error {{'ownership_takes' attribute requires parameter 1 to be an identifier}}
 void *f2(void) __attribute__((ownership_returns(foo, 1, 2)));  // expected-error {{'ownership_returns' attribute takes no more than 1 argument}}

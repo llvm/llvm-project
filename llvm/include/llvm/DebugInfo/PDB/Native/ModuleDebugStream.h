@@ -10,10 +10,8 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_MODULEDEBUGSTREAM_H
 
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Error.h"
@@ -21,9 +19,14 @@
 #include <memory>
 
 namespace llvm {
+class BinaryStreamReader;
+namespace codeview {
+class DebugChecksumsSubsectionRef;
+}
+namespace msf {
+class MappedBlockStream;
+}
 namespace pdb {
-
-class DbiModuleDescriptor;
 
 class ModuleDebugStreamRef {
   using DebugSubsectionIterator = codeview::DebugSubsectionArray::Iterator;

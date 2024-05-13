@@ -13,10 +13,10 @@
 #define LLVM_CODEGEN_GLOBALISEL_CSEMIRBUILDER_H
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
 
 namespace llvm {
 
+class GISelInstProfileBuilder;
 /// Defines a builder that does CSE of MachineInstructions using GISelCSEInfo.
 /// Eg usage.
 ///
@@ -70,7 +70,7 @@ class CSEMIRBuilder : public MachineIRBuilder {
   void profileMBBOpcode(GISelInstProfileBuilder &B, unsigned Opc) const;
 
   void profileEverything(unsigned Opc, ArrayRef<DstOp> DstOps,
-                         ArrayRef<SrcOp> SrcOps, Optional<unsigned> Flags,
+                         ArrayRef<SrcOp> SrcOps, std::optional<unsigned> Flags,
                          GISelInstProfileBuilder &B) const;
 
   // Takes a MachineInstrBuilder and inserts it into the CSEMap using the
@@ -91,9 +91,9 @@ public:
   // Pull in base class constructors.
   using MachineIRBuilder::MachineIRBuilder;
   // Unhide buildInstr
-  MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
-                                 ArrayRef<SrcOp> SrcOps,
-                                 Optional<unsigned> Flag = None) override;
+  MachineInstrBuilder
+  buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps, ArrayRef<SrcOp> SrcOps,
+             std::optional<unsigned> Flag = std::nullopt) override;
   // Bring in the other overload from the base class.
   using MachineIRBuilder::buildConstant;
 

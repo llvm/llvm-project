@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsanitize=nullability-return -emit-llvm %s -o - -triple x86_64-apple-macosx10.10.0 -Wno-objc-root-class | FileCheck %s
 
-// CHECK-LABEL: define internal i8* @"\01-[I init]"
+// CHECK-LABEL: define internal ptr @"\01-[I init]"
 // CHECK: unreachable
 // CHECK-NEXT: }
 

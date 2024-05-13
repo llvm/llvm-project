@@ -10,7 +10,6 @@
 #define LLVM_MC_MCASSEMBLER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -18,20 +17,34 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/VersionTuple.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 namespace llvm {
 
+class MCBoundaryAlignFragment;
+class MCCVDefRangeFragment;
+class MCCVInlineLineTableFragment;
+class MCDwarfCallFrameFragment;
+class MCDwarfLineAddrFragment;
+class MCEncodedFragment;
+class MCFixup;
+class MCLEBFragment;
+class MCPseudoProbeAddrFragment;
+class MCRelaxableFragment;
+class MCSymbolRefExpr;
+class raw_ostream;
 class MCAsmBackend;
 class MCAsmLayout;
 class MCContext;
@@ -120,6 +133,8 @@ private:
 
   /// List of declared file names
   std::vector<std::pair<std::string, size_t>> FileNames;
+  // Optional compiler version.
+  std::string CompilerVersion;
 
   MCDwarfLineTableParams LTParams;
 
@@ -153,6 +168,7 @@ private:
   MCLOHContainer LOHContainer;
 
   VersionInfoType VersionInfo;
+  VersionInfoType DarwinTargetVariantVersionInfo;
 
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
@@ -171,7 +187,8 @@ private:
   /// relocation.
   bool evaluateFixup(const MCAsmLayout &Layout, const MCFixup &Fixup,
                      const MCFragment *DF, MCValue &Target,
-                     uint64_t &Value, bool &WasForced) const;
+                     const MCSubtargetInfo *STI, uint64_t &Value,
+                     bool &WasForced) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
@@ -207,8 +224,10 @@ private:
   /// finishLayout - Finalize a layout, including fragment lowering.
   void finishLayout(MCAsmLayout &Layout);
 
-  std::tuple<MCValue, uint64_t, bool>
-  handleFixup(const MCAsmLayout &Layout, MCFragment &F, const MCFixup &Fixup);
+  std::tuple<MCValue, uint64_t, bool> handleFixup(const MCAsmLayout &Layout,
+                                                  MCFragment &F,
+                                                  const MCFixup &Fixup,
+                                                  const MCSubtargetInfo *STI);
 
 public:
   struct Symver {
@@ -283,6 +302,21 @@ public:
     VersionInfo.Minor = Minor;
     VersionInfo.Update = Update;
     VersionInfo.SDKVersion = SDKVersion;
+  }
+
+  const VersionInfoType &getDarwinTargetVariantVersionInfo() const {
+    return DarwinTargetVariantVersionInfo;
+  }
+  void setDarwinTargetVariantBuildVersion(MachO::PlatformType Platform,
+                                          unsigned Major, unsigned Minor,
+                                          unsigned Update,
+                                          VersionTuple SDKVersion) {
+    DarwinTargetVariantVersionInfo.EmitBuildVersion = true;
+    DarwinTargetVariantVersionInfo.TypeOrPlatform.Platform = Platform;
+    DarwinTargetVariantVersionInfo.Major = Major;
+    DarwinTargetVariantVersionInfo.Minor = Minor;
+    DarwinTargetVariantVersionInfo.Update = Update;
+    DarwinTargetVariantVersionInfo.SDKVersion = SDKVersion;
   }
 
   /// Reuse an assembler instance
@@ -444,8 +478,7 @@ public:
   /// @{
 
   bool registerSection(MCSection &Section);
-
-  void registerSymbol(const MCSymbol &Symbol, bool *Created = nullptr);
+  bool registerSymbol(const MCSymbol &Symbol);
 
   MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
     return FileNames;
@@ -454,6 +487,12 @@ public:
   void addFileName(StringRef FileName) {
     FileNames.emplace_back(std::string(FileName), Symbols.size());
   }
+
+  void setCompilerVersion(std::string CompilerVers) {
+    if (CompilerVersion.empty())
+      CompilerVersion = std::move(CompilerVers);
+  }
+  StringRef getCompilerVersion() { return CompilerVersion; }
 
   /// Write the necessary bundle padding to \p OS.
   /// Expects a fragment \p F containing instructions and its size \p FSize.

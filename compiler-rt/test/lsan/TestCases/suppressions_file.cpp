@@ -1,18 +1,20 @@
-// RUN: LSAN_BASE="use_registers=0:use_stacks=0"
 // RUN: %clangxx_lsan %s -o %t
 
 // RUN: rm -f %t.supp
 // RUN: touch %t.supp
 // RUN: %push_to_device %t.supp %device_rundir/%t.supp
-// RUN: %env_lsan_opts="$LSAN_BASE:suppressions='%device_rundir/%t.supp'" not %run %t 2>&1 | FileCheck %s --check-prefix=NOSUPP
+// RUN: %env_lsan_opts="use_registers=0:use_stacks=0:suppressions='%device_rundir/%t.supp'" not %run %t 2>&1 | FileCheck %s --check-prefix=NOSUPP
 
 // RUN: echo "leak:*LSanTestLeakingFunc*" > %t.supp
 // RUN: %push_to_device  %t.supp %device_rundir/%t.supp
-// RUN: %env_lsan_opts="$LSAN_BASE:suppressions='%device_rundir/%t.supp'" not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts="use_registers=0:use_stacks=0:suppressions='%device_rundir/%t.supp'" not %run %t 2>&1 | FileCheck %s
 //
 // RUN: echo "leak:%t" > %t.supp
 // RUN: %push_to_device  %t.supp %device_rundir/%t.supp
-// RUN: %env_lsan_opts="$LSAN_BASE:suppressions='%device_rundir/%t.supp':symbolize=false" %run %t
+// RUN: %env_lsan_opts="use_registers=0:use_stacks=0:suppressions='%device_rundir/%t.supp':symbolize=false" %run %t
+
+// FIXME: Investigate.
+// XFAIL: internal_symbolizer && lsan-standalone && i386-linux
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +39,6 @@ int main() {
 }
 // CHECK: Suppressions used:
 // CHECK: 1 666 *LSanTestLeakingFunc*
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
+// CHECK: SUMMARY: {{.*}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
 
-// NOSUPP: SUMMARY: {{(Leak|Address)}}Sanitizer: 2780 byte(s) leaked in 3 allocation(s).
+// NOSUPP: SUMMARY: {{.*}}Sanitizer: 2780 byte(s) leaked in 3 allocation(s).

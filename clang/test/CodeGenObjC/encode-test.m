@@ -83,7 +83,7 @@ struct S { int iS; };
 @end
 typedef Object MyObj;
 
-int main()
+int main(void)
 {
 	const char *en = @encode(Derived);
 	const char *eb = @encode(B1);
@@ -162,7 +162,6 @@ struct f
 // CHECK: @g10 ={{.*}} constant [14 x i8] c"{f=i[4{?=}]i}\00"
 const char g10[] = @encode(struct f);
 
-// rdar://9622422
 // CHECK: @g11 ={{.*}} constant [2 x i8] c"v\00"
 const char g11[] = @encode(void);
 
@@ -170,7 +169,6 @@ const char g11[] = @encode(void);
 // CHECK: @g12 ={{.*}} constant [3 x i8] c"Ai\00"
 const char g12[] = @encode(_Atomic(int));
 
-// rdar://15824769
 id test_id = 0;
 Class test_class = 0;
 const char g13[] = @encode(__typeof__(*test_class));
@@ -187,8 +185,8 @@ size_t strlen(const char *s);
 // CHECK-LABEL: @test_strlen(
 // CHECK: %[[i:.*]] = alloca i32
 // CHECK: %[[call:.*]] = call i32 @strlen
-// CHECK: store i32 %[[call]], i32* %[[i]]
-void test_strlen() {
+// CHECK: store i32 %[[call]], ptr %[[i]]
+void test_strlen(void) {
   const char array[] = @encode(int);
   int i = strlen(array);
 }

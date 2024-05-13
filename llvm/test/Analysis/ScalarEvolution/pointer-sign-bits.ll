@@ -1,10 +1,9 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution
-; RUN: opt < %s -disable-output -scalar-evolution
+; RUN: opt < %s -passes='print<scalar-evolution>'
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32"
-  %JavaObject = type { [0 x i32 (...)*]*, i8* }
+  %JavaObject = type { ptr, ptr }
 
-define void @JnJVM_antlr_CSharpCodeGenerator_genBitSet__Lantlr_collections_impl_BitSet_2I(%JavaObject*, %JavaObject*, i32) {
+define void @JnJVM_antlr_CSharpCodeGenerator_genBitSet__Lantlr_collections_impl_BitSet_2I(ptr, ptr, i32) {
 start:
   br i1 undef, label %"stack overflow", label %"no stack overflow"
 
@@ -181,7 +180,7 @@ verifyNullExit80:               ; preds = %"verifyNullCont78.GOTO or IF*4_crit_e
   ret void
 
 verifyNullCont81:               ; preds = %"verifyNullCont78.GOTO or IF*4_crit_edge"
-  %4 = ptrtoint i8* undef to i32                ; <i32> [#uses=2]
+  %4 = ptrtoint ptr undef to i32                ; <i32> [#uses=2]
   %5 = icmp slt i32 0, %4               ; <i1> [#uses=1]
   br i1 %5, label %verifyNullCont84, label %verifyNullCont172
 

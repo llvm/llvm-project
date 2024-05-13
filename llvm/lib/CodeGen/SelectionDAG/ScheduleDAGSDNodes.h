@@ -18,8 +18,8 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MachineValueType.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -45,8 +45,8 @@ class InstrItineraryData;
   ///
   class ScheduleDAGSDNodes : public ScheduleDAG {
   public:
-    MachineBasicBlock *BB;
-    SelectionDAG *DAG;                    // DAG of the current basic block
+    MachineBasicBlock *BB = nullptr;
+    SelectionDAG *DAG = nullptr; // DAG of the current basic block
     const InstrItineraryData *InstrItins;
 
     /// The schedule. Null SUnit*'s represent noop instructions.
@@ -138,8 +138,8 @@ class InstrItineraryData;
     class RegDefIter {
       const ScheduleDAGSDNodes *SchedDAG;
       const SDNode *Node;
-      unsigned DefIdx;
-      unsigned NodeNumDefs;
+      unsigned DefIdx = 0;
+      unsigned NodeNumDefs = 0;
       MVT ValueType;
 
     public:

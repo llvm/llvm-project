@@ -48,8 +48,7 @@ define fp128 @test_v1f128(<1 x fp128> %a) nounwind {
 define float @test_v3f32(<3 x float> %a) nounwind {
 ; CHECK-LABEL: test_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    movi v1.2s, #128, lsl #24
 ; CHECK-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    faddp s0, v0.2s
@@ -65,12 +64,12 @@ define float @test_v5f32(<5 x float> %a) nounwind {
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    movi v5.4s, #128, lsl #24
-; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-NEXT:    // kill: def $s4 killed $s4 def $q4
 ; CHECK-NEXT:    // kill: def $s3 killed $s3 def $q3
-; CHECK-NEXT:    mov v0.s[3], v3.s[0]
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    mov v5.s[0], v4.s[0]
+; CHECK-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-NEXT:    fadd v0.4s, v0.4s, v5.4s
 ; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    faddp s0, v0.2s

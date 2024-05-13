@@ -5,15 +5,14 @@
 %struct.Foo = type { i32, i32, i32, i16, i8 }
 @foo = global %struct.Foo { i32 1, i32 2, i32 3, i16 4, i8 5 }, align 4
 
-define i32 @callee(%struct.Foo* byval(%struct.Foo) %f) nounwind {
+define i32 @callee(ptr byval(%struct.Foo) %f) nounwind {
 ; RV32I-LABEL: callee:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lw a0, 0(a0)
 ; RV32I-NEXT:    ret
 entry:
-  %0 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 0
-  %1 = load i32, i32* %0, align 4
-  ret i32 %1
+  %0 = load i32, ptr %f, align 4
+  ret i32 %0
 }
 
 
@@ -38,6 +37,6 @@ define void @caller() nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 entry:
-  %call = call i32 @callee(%struct.Foo* byval(%struct.Foo) @foo)
+  %call = call i32 @callee(ptr byval(%struct.Foo) @foo)
   ret void
 }

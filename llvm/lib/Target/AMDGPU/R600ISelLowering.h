@@ -15,10 +15,10 @@
 #define LLVM_LIB_TARGET_AMDGPU_R600ISELLOWERING_H
 
 #include "AMDGPUISelLowering.h"
+#include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
 
-class R600InstrInfo;
 class R600Subtarget;
 
 class R600TargetLowering final : public AMDGPUTargetLowering {
@@ -47,12 +47,21 @@ public:
                          EVT VT) const override;
 
   bool canMergeStoresTo(unsigned AS, EVT MemVT,
-                        const SelectionDAG &DAG) const override;
+                        const MachineFunction &MF) const override;
 
   bool allowsMisalignedMemoryAccesses(
       EVT VT, unsigned AS, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-      bool *IsFast = nullptr) const override;
+      unsigned *IsFast = nullptr) const override;
+
+  bool canCombineTruncStore(EVT ValVT, EVT MemVT,
+                            bool LegalOperations) const override {
+    // R600 has "custom" lowering for truncating stores despite not supporting
+    // those instructions. If we allow that custom lowering in the DAG combiner
+    // then all truncates are merged into truncating stores, giving worse code
+    // generation. This hook prevents the DAG combiner performing that combine.
+    return isTruncStoreLegal(ValVT, MemVT);
+  }
 
 private:
   unsigned Gen;
@@ -65,8 +74,8 @@ private:
 
   void lowerImplicitParameter(MachineInstr *MI, MachineBasicBlock &BB,
       MachineRegisterInfo & MRI, unsigned dword_offset) const;
-  SDValue OptimizeSwizzle(SDValue BuildVector, SDValue Swz[], SelectionDAG &DAG,
-                          const SDLoc &DL) const;
+  SDValue OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
+                          SelectionDAG &DAG, const SDLoc &DL) const;
   SDValue vectorToVerticalVector(SelectionDAG &DAG, SDValue Vector) const;
 
   SDValue lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
@@ -83,6 +92,7 @@ private:
 
   SDValue lowerPrivateExtLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTrig(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftParts(SDValue Op, SelectionDAG &DAG) const;
@@ -104,6 +114,9 @@ private:
                           SelectionDAG &DAG) const;
 
   SDNode *PostISelFolding(MachineSDNode *N, SelectionDAG &DAG) const override;
+
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
 };
 
 } // End namespace llvm;

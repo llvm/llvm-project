@@ -12,50 +12,48 @@ concept AtLeast2 = sizeof(T) >= 2;
 template<typename T>
 concept AtMost8 = sizeof(T) <= 8;
 
-int foo() requires AtLeast2<long> && AtMost8<long> {
+template<typename T>
+struct S {
+static int foo() requires AtLeast2<long> && AtMost8<long> {
   return 0;
 }
 
-double foo() requires AtLeast2<char> {
+static double foo() requires AtLeast2<char> {
   return 0.0;
 }
 
-char bar() requires AtLeast2<char> { // expected-note {{possible target for call}}
+static char bar() requires AtLeast2<char> {
   return 1.0;
 }
 
-short bar() requires AtLeast2<long> && AtMost8<long> {
-// expected-note@-1{{possible target for call}}
-// expected-note@-2{{candidate function}}
+static short bar() requires AtLeast2<long> && AtMost8<long> {
   return 0.0;
 }
 
-int bar() requires AtMost8<long> && AtLeast2<long> {
-// expected-note@-1{{possible target for call}}
-// expected-note@-2{{candidate function}}
+static int bar() requires AtMost8<long> && AtLeast2<long> {
   return 0.0;
 }
 
-char baz() requires AtLeast2<char> {
+static char baz() requires AtLeast2<char> {
   return 1.0;
 }
 
-short baz() requires AtLeast2<long> && AtMost8<long> {
+static short baz() requires AtLeast2<long> && AtMost8<long> {
   return 0.0;
 }
 
-int baz() requires AtMost8<long> && AtLeast2<long> {
+static int baz() requires AtMost8<long> && AtLeast2<long> {
   return 0.0;
 }
 
-long baz() requires AtMost8<long> && AtLeast2<long> && AtLeast2<short> {
+static long baz() requires AtMost8<long> && AtLeast2<long> && AtLeast2<short> {
   return 3.0;
 }
+};
 
 void a() {
-  static_assert(is_same_v<decltype(&foo), int(*)()>);
-  static_assert(is_same_v<decltype(&bar), long(*)()>);
-  // expected-error@-1{{reference to overloaded function could not be resolved; did you mean to call it with no arguments?}}
-  // expected-error@-2{{call to 'bar' is ambiguous}}
-  static_assert(is_same_v<decltype(&baz), long(*)()>);
+  static_assert(is_same_v<decltype(&S<int>::foo), int(*)()>);
+  static_assert(is_same_v<decltype(&S<int>::bar), long(*)()>);
+  // expected-error@-1{{reference to overloaded function could not be resolved; did you mean to call it?}}
+  static_assert(is_same_v<decltype(&S<int>::baz), long(*)()>);
 }

@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -wasm-keep-registers | FileCheck --check-prefix=CHECK --check-prefix=FINI --check-prefix=NULL %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; Test that @llvm.global_dtors is properly lowered into @llvm.global_ctors,
@@ -27,29 +26,31 @@ declare void @after_the_null()
 @associatedc3 = global i8 84
 
 @llvm.global_ctors = appending global
-[1 x { i32, void ()*, i8* }]
+[1 x { i32, ptr, ptr }]
 [
-  { i32, void ()*, i8* } { i32 200, void ()* @orig_ctor, i8* null }
+  { i32, ptr, ptr } { i32 200, ptr @orig_ctor, ptr null }
 ]
 
 @llvm.global_dtors = appending global
-[14 x { i32, void ()*, i8* }]
+[14 x { i32, ptr, ptr }]
 [
-  { i32, void ()*, i8* } { i32 0, void ()* @orig_dtor0, i8* null },
-  { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1a, i8* null },
-  { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1b, i8* null },
-  { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1c0, i8* @associatedc0 },
-  { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1c1a, i8* @associatedc1 },
-  { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1c1b, i8* @associatedc1 },
-  { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1c2a, i8* @associatedc2 },
-  { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1c2b, i8* @associatedc2 },
-  { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1c3, i8* @associatedc3 },
-  { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1d, i8* null },
-  { i32, void ()*, i8* } { i32 65535, void ()* @orig_dtor65535c0, i8* @associatedc0 },
-  { i32, void ()*, i8* } { i32 65535, void ()* @orig_dtor65535, i8* null },
-  { i32, void ()*, i8* } { i32 65535, void ()* null, i8* null },
-  { i32, void ()*, i8* } { i32 65535, void ()* @after_the_null, i8* null }
+  { i32, ptr, ptr } { i32 0, ptr @orig_dtor0, ptr null },
+  { i32, ptr, ptr } { i32 1, ptr @orig_dtor1a, ptr null },
+  { i32, ptr, ptr } { i32 1, ptr @orig_dtor1b, ptr null },
+  { i32, ptr, ptr } { i32 1, ptr @orig_dtor1c0, ptr @associatedc0 },
+  { i32, ptr, ptr } { i32 1, ptr @orig_dtor1c1a, ptr @associatedc1 },
+  { i32, ptr, ptr } { i32 1, ptr @orig_dtor1c1b, ptr @associatedc1 },
+  { i32, ptr, ptr } { i32 1, ptr @orig_dtor1c2a, ptr @associatedc2 },
+  { i32, ptr, ptr } { i32 1, ptr @orig_dtor1c2b, ptr @associatedc2 },
+  { i32, ptr, ptr } { i32 1, ptr @orig_dtor1c3, ptr @associatedc3 },
+  { i32, ptr, ptr } { i32 1, ptr @orig_dtor1d, ptr null },
+  { i32, ptr, ptr } { i32 65535, ptr @orig_dtor65535c0, ptr @associatedc0 },
+  { i32, ptr, ptr } { i32 65535, ptr @orig_dtor65535, ptr null },
+  { i32, ptr, ptr } { i32 65535, ptr null, ptr null },
+  { i32, ptr, ptr } { i32 65535, ptr @after_the_null, ptr null }
 ]
+
+; CHECK-LABEL: .functype __cxa_atexit (i32, i32, i32) -> (i32){{$}}
 
 ; CHECK-LABEL: .Lcall_dtors.0:
 ; CHECK-NEXT: .functype .Lcall_dtors.0 (i32) -> (){{$}}
@@ -185,8 +186,6 @@ declare void @after_the_null()
 ;      CHECK: .int32  .Lregister_call_dtors$1{{$}}
 
 ; CHECK-LABEL: .weak __dso_handle
-
-; CHECK-LABEL: .functype __cxa_atexit (i32, i32, i32) -> (i32){{$}}
 
 ; We shouldn't make use of a .fini_array section.
 

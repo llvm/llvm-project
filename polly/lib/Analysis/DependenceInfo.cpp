@@ -39,23 +39,24 @@
 using namespace polly;
 using namespace llvm;
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-dependence"
 
 static cl::opt<int> OptComputeOut(
     "polly-dependences-computeout",
     cl::desc("Bound the dependence analysis by a maximal amount of "
              "computational steps (0 means no bound)"),
-    cl::Hidden, cl::init(500000), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(500000), cl::cat(PollyCategory));
 
-static cl::opt<bool> LegalityCheckDisabled(
-    "disable-polly-legality", cl::desc("Disable polly legality check"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+static cl::opt<bool>
+    LegalityCheckDisabled("disable-polly-legality",
+                          cl::desc("Disable polly legality check"), cl::Hidden,
+                          cl::cat(PollyCategory));
 
 static cl::opt<bool>
     UseReductions("polly-dependences-use-reductions",
                   cl::desc("Exploit reductions in dependence analysis"),
-                  cl::Hidden, cl::init(true), cl::ZeroOrMore,
-                  cl::cat(PollyCategory));
+                  cl::Hidden, cl::init(true), cl::cat(PollyCategory));
 
 enum AnalysisType { VALUE_BASED_ANALYSIS, MEMORY_BASED_ANALYSIS };
 
@@ -66,8 +67,7 @@ static cl::opt<enum AnalysisType> OptAnalysisType(
                           "Exact dependences without transitive dependences"),
                clEnumValN(MEMORY_BASED_ANALYSIS, "memory-based",
                           "Overapproximation of dependences")),
-    cl::Hidden, cl::init(VALUE_BASED_ANALYSIS), cl::ZeroOrMore,
-    cl::cat(PollyCategory));
+    cl::Hidden, cl::init(VALUE_BASED_ANALYSIS), cl::cat(PollyCategory));
 
 static cl::opt<Dependences::AnalysisLevel> OptAnalysisLevel(
     "polly-dependences-analysis-level",
@@ -80,8 +80,7 @@ static cl::opt<Dependences::AnalysisLevel> OptAnalysisLevel(
                clEnumValN(Dependences::AL_Access, "access-wise",
                           "Memory reference level analysis that distinguish"
                           " access instructions in the same statement")),
-    cl::Hidden, cl::init(Dependences::AL_Statement), cl::ZeroOrMore,
-    cl::cat(PollyCategory));
+    cl::Hidden, cl::init(Dependences::AL_Statement), cl::cat(PollyCategory));
 
 //===----------------------------------------------------------------------===//
 
@@ -190,9 +189,9 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
 
 /// Fix all dimension of @p Zero to 0 and add it to @p user
 static void fixSetToZero(isl::set Zero, isl::union_set *User) {
-  for (auto i : seq<isl_size>(0, Zero.dim(isl::dim::set)))
+  for (auto i : rangeIslSize(0, Zero.tuple_dim()))
     Zero = Zero.fix_si(isl::dim::set, i, 0);
-  *User = User->add_set(Zero);
+  *User = User->unite(Zero);
 }
 
 /// Compute the privatization dependences for a given dependency @p Map
@@ -302,10 +301,10 @@ static __isl_give isl_union_flow *buildFlow(__isl_keep isl_union_map *Snk,
     AI = isl_union_access_info_set_kill(AI, isl_union_map_copy(Kill));
   AI = isl_union_access_info_set_schedule(AI, isl_schedule_copy(Schedule));
   auto Flow = isl_union_access_info_compute_flow(AI);
-  LLVM_DEBUG(if (!Flow) dbgs()
-                 << "last error: "
-                 << isl_ctx_last_error(isl_schedule_get_ctx(Schedule))
-                 << '\n';);
+  POLLY_DEBUG(if (!Flow) dbgs()
+                  << "last error: "
+                  << isl_ctx_last_error(isl_schedule_get_ctx(Schedule))
+                  << '\n';);
   return Flow;
 }
 
@@ -314,18 +313,18 @@ void Dependences::calculateDependences(Scop &S) {
   isl_schedule *Schedule;
   isl_union_set *TaggedStmtDomain;
 
-  LLVM_DEBUG(dbgs() << "Scop: \n" << S << "\n");
+  POLLY_DEBUG(dbgs() << "Scop: \n" << S << "\n");
 
   collectInfo(S, Read, MustWrite, MayWrite, ReductionTagMap, TaggedStmtDomain,
               Level);
 
   bool HasReductions = !isl_union_map_is_empty(ReductionTagMap);
 
-  LLVM_DEBUG(dbgs() << "Read: " << Read << '\n';
-             dbgs() << "MustWrite: " << MustWrite << '\n';
-             dbgs() << "MayWrite: " << MayWrite << '\n';
-             dbgs() << "ReductionTagMap: " << ReductionTagMap << '\n';
-             dbgs() << "TaggedStmtDomain: " << TaggedStmtDomain << '\n';);
+  POLLY_DEBUG(dbgs() << "Read: " << Read << '\n';
+              dbgs() << "MustWrite: " << MustWrite << '\n';
+              dbgs() << "MayWrite: " << MayWrite << '\n';
+              dbgs() << "ReductionTagMap: " << ReductionTagMap << '\n';
+              dbgs() << "TaggedStmtDomain: " << TaggedStmtDomain << '\n';);
 
   Schedule = S.getScheduleTree().release();
 
@@ -362,10 +361,10 @@ void Dependences::calculateDependences(Scop &S) {
     Schedule = isl_schedule_pullback_union_pw_multi_aff(Schedule, Tags);
   }
 
-  LLVM_DEBUG(dbgs() << "Read: " << Read << "\n";
-             dbgs() << "MustWrite: " << MustWrite << "\n";
-             dbgs() << "MayWrite: " << MayWrite << "\n";
-             dbgs() << "Schedule: " << Schedule << "\n");
+  POLLY_DEBUG(dbgs() << "Read: " << Read << "\n";
+              dbgs() << "MustWrite: " << MustWrite << "\n";
+              dbgs() << "MayWrite: " << MayWrite << "\n";
+              dbgs() << "Schedule: " << Schedule << "\n");
 
   isl_union_map *StrictWAW = nullptr;
   {
@@ -506,7 +505,7 @@ void Dependences::calculateDependences(Scop &S) {
       isl_union_map_copy(WAW), isl_union_set_copy(TaggedStmtDomain));
   STMT_WAR =
       isl_union_map_intersect_domain(isl_union_map_copy(WAR), TaggedStmtDomain);
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     dbgs() << "Wrapped Dependences:\n";
     dump();
     dbgs() << "\n";
@@ -555,7 +554,7 @@ void Dependences::calculateDependences(Scop &S) {
   } else
     TC_RED = isl_union_map_empty(isl_union_map_get_space(RED));
 
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     dbgs() << "Final Wrapped Dependences:\n";
     dump();
     dbgs() << "\n";
@@ -605,7 +604,7 @@ void Dependences::calculateDependences(Scop &S) {
   RED = isl_union_map_zip(RED);
   TC_RED = isl_union_map_zip(TC_RED);
 
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     dbgs() << "Zipped Dependences:\n";
     dump();
     dbgs() << "\n";
@@ -617,7 +616,7 @@ void Dependences::calculateDependences(Scop &S) {
   RED = isl_union_set_unwrap(isl_union_map_domain(RED));
   TC_RED = isl_union_set_unwrap(isl_union_map_domain(TC_RED));
 
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     dbgs() << "Unwrapped Dependences:\n";
     dump();
     dbgs() << "\n";
@@ -633,7 +632,20 @@ void Dependences::calculateDependences(Scop &S) {
   RED = isl_union_map_coalesce(RED);
   TC_RED = isl_union_map_coalesce(TC_RED);
 
-  LLVM_DEBUG(dump());
+  POLLY_DEBUG(dump());
+}
+
+bool Dependences::isValidSchedule(Scop &S, isl::schedule NewSched) const {
+  // TODO: Also check permutable/coincident flags as well.
+
+  StatementToIslMapTy NewSchedules;
+  for (auto NewMap : NewSched.get_map().get_map_list()) {
+    auto Stmt = reinterpret_cast<ScopStmt *>(
+        NewMap.get_tuple_id(isl::dim::in).get_user());
+    NewSchedules[Stmt] = NewMap;
+  }
+
+  return isValidSchedule(S, NewSchedules);
 }
 
 bool Dependences::isValidSchedule(
@@ -642,8 +654,7 @@ bool Dependences::isValidSchedule(
     return true;
 
   isl::union_map Dependences = getDependences(TYPE_RAW | TYPE_WAW | TYPE_WAR);
-  isl::space Space = S.getParamSpace();
-  isl::union_map Schedule = isl::union_map::empty(Space);
+  isl::union_map Schedule = isl::union_map::empty(S.getIslCtx());
 
   isl::space ScheduleSpace;
 
@@ -658,23 +669,29 @@ bool Dependences::isValidSchedule(
     assert(!StmtScat.is_null() &&
            "Schedules that contain extension nodes require special handling.");
 
-    if (!ScheduleSpace)
+    if (ScheduleSpace.is_null())
       ScheduleSpace = StmtScat.get_space().range();
 
-    Schedule = Schedule.add_map(StmtScat);
+    Schedule = Schedule.unite(StmtScat);
   }
 
   Dependences = Dependences.apply_domain(Schedule);
   Dependences = Dependences.apply_range(Schedule);
 
   isl::set Zero = isl::set::universe(ScheduleSpace);
-  for (auto i : seq<isl_size>(0, Zero.dim(isl::dim::set)))
+  for (auto i : rangeIslSize(0, Zero.tuple_dim()))
     Zero = Zero.fix_si(isl::dim::set, i, 0);
 
   isl::union_set UDeltas = Dependences.deltas();
   isl::set Deltas = singleton(UDeltas, ScheduleSpace);
 
-  isl::map NonPositive = Deltas.lex_le_set(Zero);
+  isl::space Space = Deltas.get_space();
+  isl::map NonPositive = isl::map::universe(Space.map_from_set());
+  NonPositive =
+      NonPositive.lex_le_at(isl::multi_pw_aff::identity_on_domain(Space));
+  NonPositive = NonPositive.intersect_domain(Deltas);
+  NonPositive = NonPositive.intersect_range(Zero);
+
   return NonPositive.is_empty();
 }
 
@@ -691,8 +708,9 @@ bool Dependences::isValidSchedule(
 // dimension, then the loop is parallel. The distance is zero in the current
 // dimension if it is a subset of a map with equal values for the current
 // dimension.
-bool Dependences::isParallel(isl_union_map *Schedule, isl_union_map *Deps,
-                             isl_pw_aff **MinDistancePtr) const {
+bool Dependences::isParallel(__isl_keep isl_union_map *Schedule,
+                             __isl_take isl_union_map *Deps,
+                             __isl_give isl_pw_aff **MinDistancePtr) const {
   isl_set *Deltas, *Distance;
   isl_map *ScheduleDeps;
   unsigned Dimension;
@@ -778,7 +796,7 @@ void Dependences::releaseMemory() {
 isl::union_map Dependences::getDependences(int Kinds) const {
   assert(hasValidDependences() && "No valid dependences available");
   isl::space Space = isl::manage_copy(RAW).get_space();
-  isl::union_map Deps = Deps.empty(Space);
+  isl::union_map Deps = Deps.empty(Space.ctx());
 
   if (Kinds & TYPE_RAW)
     Deps = Deps.unite(isl::manage_copy(RAW));
@@ -809,7 +827,8 @@ Dependences::getReductionDependences(MemoryAccess *MA) const {
   return isl_map_copy(ReductionDependences.lookup(MA));
 }
 
-void Dependences::setReductionDependences(MemoryAccess *MA, isl_map *D) {
+void Dependences::setReductionDependences(MemoryAccess *MA,
+                                          __isl_take isl_map *D) {
   assert(ReductionDependences.count(MA) == 0 &&
          "Reduction dependences set twice!");
   ReductionDependences[MA] = D;
@@ -828,6 +847,11 @@ const Dependences &DependenceAnalysis::Result::recomputeDependences(
   D[Level].reset(new Dependences(S.getSharedIslCtx(), Level));
   D[Level]->calculateDependences(S);
   return *D[Level];
+}
+
+void DependenceAnalysis::Result::abandonDependences() {
+  for (std::unique_ptr<Dependences> &Deps : D)
+    Deps.release();
 }
 
 DependenceAnalysis::Result
@@ -872,6 +896,11 @@ DependenceInfo::recomputeDependences(Dependences::AnalysisLevel Level) {
   return *D[Level];
 }
 
+void DependenceInfo::abandonDependences() {
+  for (std::unique_ptr<Dependences> &Deps : D)
+    Deps.release();
+}
+
 bool DependenceInfo::runOnScop(Scop &ScopVar) {
   S = &ScopVar;
   return false;
@@ -907,6 +936,55 @@ INITIALIZE_PASS_END(DependenceInfo, "polly-dependences",
                     "Polly - Calculate dependences", false, false)
 
 //===----------------------------------------------------------------------===//
+
+namespace {
+/// Print result from DependenceAnalysis.
+class DependenceInfoPrinterLegacyPass final : public ScopPass {
+public:
+  static char ID;
+
+  DependenceInfoPrinterLegacyPass() : DependenceInfoPrinterLegacyPass(outs()) {}
+
+  explicit DependenceInfoPrinterLegacyPass(llvm::raw_ostream &OS)
+      : ScopPass(ID), OS(OS) {}
+
+  bool runOnScop(Scop &S) override {
+    DependenceInfo &P = getAnalysis<DependenceInfo>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for "
+       << "region: '" << S.getRegion().getNameStr() << "' in function '"
+       << S.getFunction().getName() << "':\n";
+    P.printScop(OS, S);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+    AU.addRequired<DependenceInfo>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char DependenceInfoPrinterLegacyPass::ID = 0;
+} // namespace
+
+Pass *polly::createDependenceInfoPrinterLegacyPass(raw_ostream &OS) {
+  return new DependenceInfoPrinterLegacyPass(OS);
+}
+
+INITIALIZE_PASS_BEGIN(DependenceInfoPrinterLegacyPass,
+                      "polly-print-dependences", "Polly - Print dependences",
+                      false, false);
+INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
+INITIALIZE_PASS_END(DependenceInfoPrinterLegacyPass, "polly-print-dependences",
+                    "Polly - Print dependences", false, false)
+
+//===----------------------------------------------------------------------===//
+
 const Dependences &
 DependenceInfoWrapperPass::getDependences(Scop *S,
                                           Dependences::AnalysisLevel Level) {
@@ -963,3 +1041,53 @@ INITIALIZE_PASS_END(
     DependenceInfoWrapperPass, "polly-function-dependences",
     "Polly - Calculate dependences for all the SCoPs of a function", false,
     false)
+
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Print result from DependenceInfoWrapperPass.
+class DependenceInfoPrinterLegacyFunctionPass final : public FunctionPass {
+public:
+  static char ID;
+
+  DependenceInfoPrinterLegacyFunctionPass()
+      : DependenceInfoPrinterLegacyFunctionPass(outs()) {}
+
+  explicit DependenceInfoPrinterLegacyFunctionPass(llvm::raw_ostream &OS)
+      : FunctionPass(ID), OS(OS) {}
+
+  bool runOnFunction(Function &F) override {
+    DependenceInfoWrapperPass &P = getAnalysis<DependenceInfoWrapperPass>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for function '"
+       << F.getName() << "':\n";
+    P.print(OS);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    FunctionPass::getAnalysisUsage(AU);
+    AU.addRequired<DependenceInfoWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char DependenceInfoPrinterLegacyFunctionPass::ID = 0;
+} // namespace
+
+Pass *polly::createDependenceInfoPrinterLegacyFunctionPass(raw_ostream &OS) {
+  return new DependenceInfoPrinterLegacyFunctionPass(OS);
+}
+
+INITIALIZE_PASS_BEGIN(
+    DependenceInfoPrinterLegacyFunctionPass, "polly-print-function-dependences",
+    "Polly - Print dependences for all the SCoPs of a function", false, false);
+INITIALIZE_PASS_DEPENDENCY(DependenceInfoWrapperPass);
+INITIALIZE_PASS_END(DependenceInfoPrinterLegacyFunctionPass,
+                    "polly-print-function-dependences",
+                    "Polly - Print dependences for all the SCoPs of a function",
+                    false, false)

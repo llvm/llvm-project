@@ -19,6 +19,7 @@
 #include <set>
 #include <cassert>
 #include <cstddef>
+#include <iterator>
 
 #include "test_macros.h"
 #include "../../test_compare.h"
@@ -30,7 +31,7 @@
 int main(int, char**)
 {
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef test_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -58,7 +59,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef test_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -106,7 +107,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef test_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -142,7 +143,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(1)->second) != s.end());
             s.erase(s.find(c2.find(1)->second));
-            assert(s.find(next(c2.find(1))->second) != s.end());
+            assert(s.find(std::next(c2.find(1))->second) != s.end());
         }
         {
             std::set<std::string> s;
@@ -150,7 +151,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(2)->second) != s.end());
             s.erase(s.find(c2.find(2)->second));
-            assert(s.find(next(c2.find(2))->second) != s.end());
+            assert(s.find(std::next(c2.find(2))->second) != s.end());
         }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
@@ -162,7 +163,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef test_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -217,7 +218,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(1)->second) != s.end());
             s.erase(s.find(c2.find(1)->second));
-            assert(s.find(next(c2.find(1))->second) != s.end());
+            assert(s.find(std::next(c2.find(1))->second) != s.end());
         }
         {
             std::set<std::string> s;
@@ -225,7 +226,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(2)->second) != s.end());
             s.erase(s.find(c2.find(2)->second));
-            assert(s.find(next(c2.find(2))->second) != s.end());
+            assert(s.find(std::next(c2.find(2))->second) != s.end());
         }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
@@ -238,7 +239,7 @@ int main(int, char**)
     }
 
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef other_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -266,7 +267,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef other_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -314,7 +315,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef other_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -350,7 +351,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(1)->second) != s.end());
             s.erase(s.find(c2.find(1)->second));
-            assert(s.find(next(c2.find(1))->second) != s.end());
+            assert(s.find(std::next(c2.find(1))->second) != s.end());
         }
         {
             std::set<std::string> s;
@@ -358,7 +359,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(2)->second) != s.end());
             s.erase(s.find(c2.find(2)->second));
-            assert(s.find(next(c2.find(2))->second) != s.end());
+            assert(s.find(std::next(c2.find(2))->second) != s.end());
         }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
@@ -370,7 +371,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef other_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -425,7 +426,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(1)->second) != s.end());
             s.erase(s.find(c2.find(1)->second));
-            assert(s.find(next(c2.find(1))->second) != s.end());
+            assert(s.find(std::next(c2.find(1))->second) != s.end());
         }
         {
             std::set<std::string> s;
@@ -433,7 +434,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(2)->second) != s.end());
             s.erase(s.find(c2.find(2)->second));
-            assert(s.find(next(c2.find(2))->second) != s.end());
+            assert(s.find(std::next(c2.find(2))->second) != s.end());
         }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
@@ -446,7 +447,7 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 11
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef min_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -474,7 +475,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef min_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -522,7 +523,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef min_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -558,7 +559,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(1)->second) != s.end());
             s.erase(s.find(c2.find(1)->second));
-            assert(s.find(next(c2.find(1))->second) != s.end());
+            assert(s.find(std::next(c2.find(1))->second) != s.end());
         }
         {
             std::set<std::string> s;
@@ -566,7 +567,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(2)->second) != s.end());
             s.erase(s.find(c2.find(2)->second));
-            assert(s.find(next(c2.find(2))->second) != s.end());
+            assert(s.find(std::next(c2.find(2))->second) != s.end());
         }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
@@ -578,7 +579,7 @@ int main(int, char**)
         assert(c2.max_load_factor() == 1);
     }
     {
-        typedef test_hash<std::hash<int> > Hash;
+        typedef test_hash<int> Hash;
         typedef test_equal_to<int> Compare;
         typedef min_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
@@ -633,7 +634,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(1)->second) != s.end());
             s.erase(s.find(c2.find(1)->second));
-            assert(s.find(next(c2.find(1))->second) != s.end());
+            assert(s.find(std::next(c2.find(1))->second) != s.end());
         }
         {
             std::set<std::string> s;
@@ -641,7 +642,7 @@ int main(int, char**)
             s.insert("four");
             assert(s.find(c2.find(2)->second) != s.end());
             s.erase(s.find(c2.find(2)->second));
-            assert(s.find(next(c2.find(2))->second) != s.end());
+            assert(s.find(std::next(c2.find(2))->second) != s.end());
         }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");

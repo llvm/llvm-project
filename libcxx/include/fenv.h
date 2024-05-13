@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===---------------------------- math.h ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,6 @@
 
 #ifndef _LIBCPP_FENV_H
 #define _LIBCPP_FENV_H
-
 
 /*
     fenv.h synopsis
@@ -53,61 +52,60 @@ int feupdateenv(const fenv_t* envp);
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
-#include_next <fenv.h>
+#if __has_include_next(<fenv.h>)
+#  include_next <fenv.h>
+#endif
 
 #ifdef __cplusplus
 
 extern "C++" {
 
-#ifdef feclearexcept
-#undef feclearexcept
-#endif
+#  ifdef feclearexcept
+#    undef feclearexcept
+#  endif
 
-#ifdef fegetexceptflag
-#undef fegetexceptflag
-#endif
+#  ifdef fegetexceptflag
+#    undef fegetexceptflag
+#  endif
 
+#  ifdef feraiseexcept
+#    undef feraiseexcept
+#  endif
 
-#ifdef feraiseexcept
-#undef feraiseexcept
-#endif
+#  ifdef fesetexceptflag
+#    undef fesetexceptflag
+#  endif
 
-#ifdef fesetexceptflag
-#undef fesetexceptflag
-#endif
+#  ifdef fetestexcept
+#    undef fetestexcept
+#  endif
 
+#  ifdef fegetround
+#    undef fegetround
+#  endif
 
-#ifdef fetestexcept
-#undef fetestexcept
-#endif
+#  ifdef fesetround
+#    undef fesetround
+#  endif
 
-#ifdef fegetround
-#undef fegetround
-#endif
+#  ifdef fegetenv
+#    undef fegetenv
+#  endif
 
-#ifdef fesetround
-#undef fesetround
-#endif
+#  ifdef feholdexcept
+#    undef feholdexcept
+#  endif
 
-#ifdef fegetenv
-#undef fegetenv
-#endif
+#  ifdef fesetenv
+#    undef fesetenv
+#  endif
 
-#ifdef feholdexcept
-#undef feholdexcept
-#endif
-
-
-#ifdef fesetenv
-#undef fesetenv
-#endif
-
-#ifdef feupdateenv
-#undef feupdateenv
-#endif
+#  ifdef feupdateenv
+#    undef feupdateenv
+#  endif
 
 } // extern "C++"
 

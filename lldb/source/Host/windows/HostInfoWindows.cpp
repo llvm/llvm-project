@@ -11,6 +11,7 @@
 #include <objbase.h>
 
 #include <mutex>
+#include <optional>
 
 #include "lldb/Host/windows/HostInfoWindows.h"
 #include "lldb/Host/windows/PosixApi.h"
@@ -28,11 +29,11 @@ using namespace lldb_private;
 namespace {
 class WindowsUserIDResolver : public UserIDResolver {
 protected:
-  llvm::Optional<std::string> DoGetUserName(id_t uid) override {
-    return llvm::None;
+  std::optional<std::string> DoGetUserName(id_t uid) override {
+    return std::nullopt;
   }
-  llvm::Optional<std::string> DoGetGroupName(id_t gid) override {
-    return llvm::None;
+  std::optional<std::string> DoGetGroupName(id_t gid) override {
+    return std::nullopt;
   }
 };
 } // namespace
@@ -74,19 +75,16 @@ llvm::VersionTuple HostInfoWindows::GetOSVersion() {
                             info.wServicePackMajor);
 }
 
-bool HostInfoWindows::GetOSBuildString(std::string &s) {
-  s.clear();
+std::optional<std::string> HostInfoWindows::GetOSBuildString() {
   llvm::VersionTuple version = GetOSVersion();
   if (version.empty())
-    return false;
+    return std::nullopt;
 
-  llvm::raw_string_ostream stream(s);
-  stream << "Windows NT " << version.getAsString();
-  return true;
+  return "Windows NT " + version.getAsString();
 }
 
-bool HostInfoWindows::GetOSKernelDescription(std::string &s) {
-  return GetOSBuildString(s);
+std::optional<std::string> HostInfoWindows::GetOSKernelDescription() {
+  return GetOSBuildString();
 }
 
 bool HostInfoWindows::GetHostname(std::string &s) {

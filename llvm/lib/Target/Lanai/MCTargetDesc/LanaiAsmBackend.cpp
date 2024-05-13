@@ -46,7 +46,7 @@ class LanaiAsmBackend : public MCAsmBackend {
 
 public:
   LanaiAsmBackend(const Target &T, Triple::OSType OST)
-      : MCAsmBackend(support::big), OSType(OST) {}
+      : MCAsmBackend(llvm::endianness::big), OSType(OST) {}
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -69,10 +69,12 @@ public:
     return Lanai::NumTargetFixupKinds;
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 };
 
-bool LanaiAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool LanaiAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                   const MCSubtargetInfo *STI) const {
   if ((Count % 4) != 0)
     return false;
 

@@ -16,7 +16,7 @@
 // explicit subtract_with_carry_engine(result_type s);                        // C++20
 
 // Serializing/deserializing the state of the RNG requires iostreams
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
 
 #include <random>
 #include <sstream>
@@ -76,8 +76,8 @@ int main(int, char**)
     static_assert(test_convertible<std::ranlux48_base>(), "");
     test_implicit_ctor<std::ranlux24_base>();
     test_implicit_ctor<std::ranlux48_base>();
-    static_assert(!test_convertible<std::ranlux24_base, uint_fast32_t>(), "");
-    static_assert(!test_convertible<std::ranlux48_base, uint_fast64_t>(), "");
+    static_assert(!test_convertible<std::ranlux24_base, std::uint_fast32_t>(), "");
+    static_assert(!test_convertible<std::ranlux48_base, std::uint_fast64_t>(), "");
 #endif
 
   return 0;

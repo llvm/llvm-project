@@ -5,10 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestWithLimitDebugInfo(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
-    @skipIf(debug_info=no_match(["dwarf"]))
+    @add_test_categories(["dwarf", "dwo"])
     def test_limit_debug_info(self):
         self.build()
 
@@ -24,23 +21,18 @@ class TestWithLimitDebugInfo(TestBase):
         self.assertTrue(target.IsValid(), VALID_TARGET)
 
         # Break on main function
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "break here", src_file_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex("break here", src_file_spec)
         self.assertTrue(
-            breakpoint.IsValid() and breakpoint.GetNumLocations() >= 1,
-            VALID_BREAKPOINT)
+            breakpoint.IsValid() and breakpoint.GetNumLocations() >= 1, VALID_BREAKPOINT
+        )
 
         # Launch the process
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
 
         # Get the thread of the process
-        self.assertEqual(
-            process.GetState(), lldb.eStateStopped,
-            PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         thread.StepInto()
 
         # Get frame for current thread
@@ -49,9 +41,5 @@ class TestWithLimitDebugInfo(TestBase):
         self.expect_expr("1", result_type="int", result_value="1")
 
         v2 = frame.EvaluateExpression("this")
-        self.assertTrue(
-            v2.IsValid(),
-            "'expr this' results in a valid SBValue object")
-        self.assertTrue(
-            v2.GetError().Success(),
-            "'expr this' succeeds without an error.")
+        self.assertTrue(v2.IsValid(), "'expr this' results in a valid SBValue object")
+        self.assertSuccess(v2.GetError(), "'expr this' succeeds without an error.")

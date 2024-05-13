@@ -1,13 +1,12 @@
 ; RUN: opt %loadPolly -polly-process-unprofitable=false \
 ; RUN:                -polly-detect-profitability-min-per-loop-insts=40 \
-; RUN: -polly-detect -analyze < %s | FileCheck %s -check-prefix=PROFITABLE
+; RUN: -polly-print-detect -disable-output < %s | FileCheck %s -check-prefix=PROFITABLE
 
 ; RUN: opt %loadPolly -polly-process-unprofitable=true \
-; RUN: -polly-detect -analyze < %s | FileCheck %s -check-prefix=PROFITABLE
+; RUN: -polly-print-detect -disable-output < %s | FileCheck %s -check-prefix=PROFITABLE
 
 ; RUN: opt %loadPolly -polly-process-unprofitable=false \
-; RUN: \
-; RUN: -polly-detect -analyze < %s | FileCheck %s -check-prefix=UNPROFITABLE
+; RUN: -polly-print-detect -disable-output < %s | FileCheck %s -check-prefix=UNPROFITABLE
 
 ; UNPROFITABLE-NOT: Valid Region for Scop:
 ; PROFITABLE: Valid Region for Scop:
@@ -19,15 +18,15 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(float* %A, float* %B, i64 %N) {
+define void @foo(ptr %A, ptr %B, i64 %N) {
 entry:
   br label %header
 
 header:
   %i.0 = phi i64 [ 0, %entry ], [ %tmp10, %header ]
   %tmp5 = sitofp i64 %i.0 to float
-  %tmp6 = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp7 = load float, float* %tmp6, align 4
+  %tmp6 = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp7 = load float, ptr %tmp6, align 4
   %tmp8 = fadd float %tmp7, %tmp5
   %val0 = fadd float %tmp7, 1.0
   %val1 = fadd float %val0, 1.0
@@ -73,7 +72,7 @@ header:
   %val41 = fadd float %val40, 1.0
   %val42 = fadd float %val41, 1.0
   %val43 = fadd float %val42, 1.0
-  store float %val34, float* %tmp6, align 4
+  store float %val34, ptr %tmp6, align 4
   %exitcond = icmp ne i64 %i.0, 100
   %tmp10 = add nsw i64 %i.0, 1
   br i1 %exitcond, label %header, label %exit

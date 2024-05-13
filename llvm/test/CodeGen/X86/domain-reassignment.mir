@@ -6,7 +6,7 @@
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-unknown"
 
-  define void @test_fcmp_storefloat(i1 %cond, float* %fptr, float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) #0 {
+  define void @test_fcmp_storefloat(i1 %cond, ptr %fptr, float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) #0 {
   entry:
     br i1 %cond, label %if, label %else
 
@@ -21,7 +21,7 @@
   exit:                                             ; preds = %else, %if
     %val = phi i1 [ %cmp1, %if ], [ %cmp2, %else ]
     %selected = select i1 %val, float %f1, float %f2
-    store float %selected, float* %fptr
+    store float %selected, ptr %fptr
     ret void
   }
 
@@ -44,6 +44,12 @@
     ret void
   }
   define void @test_64bitext() #0 {
+    ret void
+  }
+  ; Note that this function need to be compiled with -global-isel
+  ; to obtain testable MIR
+  define void @test_unused(i64 %0) #0 {
+    %unused = lshr i64 %0, 7
     ret void
   }
 ...
@@ -127,14 +133,14 @@ body:             |
   ; CHECK:   JMP_1 %bb.1
   ; CHECK: bb.1.if:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[VCMPSSZrr:%[0-9]+]]:vk1 = VCMPSSZrr [[COPY3]], [[COPY2]], 0
-  ; CHECK:   [[COPY9:%[0-9]+]]:vk32 = COPY [[VCMPSSZrr]]
+  ; CHECK:   [[VCMPSSZrri:%[0-9]+]]:vk1 = VCMPSSZrri [[COPY3]], [[COPY2]], 0
+  ; CHECK:   [[COPY9:%[0-9]+]]:vk32 = COPY [[VCMPSSZrri]]
   ; CHECK:   [[COPY10:%[0-9]+]]:vk8 = COPY [[COPY9]]
   ; CHECK:   JMP_1 %bb.3
   ; CHECK: bb.2.else:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[VCMPSSZrr1:%[0-9]+]]:vk1 = VCMPSSZrr [[COPY1]], [[COPY]], 0
-  ; CHECK:   [[COPY11:%[0-9]+]]:vk32 = COPY [[VCMPSSZrr1]]
+  ; CHECK:   [[VCMPSSZrri1:%[0-9]+]]:vk1 = VCMPSSZrri [[COPY1]], [[COPY]], 0
+  ; CHECK:   [[COPY11:%[0-9]+]]:vk32 = COPY [[VCMPSSZrri1]]
   ; CHECK:   [[COPY12:%[0-9]+]]:vk8 = COPY [[COPY11]]
   ; CHECK: bb.3.exit:
   ; CHECK:   [[PHI:%[0-9]+]]:vk8 = PHI [[COPY12]], %bb.2, [[COPY10]], %bb.1
@@ -145,7 +151,7 @@ body:             |
   ; CHECK:   [[DEF1:%[0-9]+]]:vr128 = IMPLICIT_DEF
   ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:vr128 = VMOVSSZrrk [[COPY15]], killed [[COPY14]], killed [[DEF1]], [[COPY5]]
   ; CHECK:   [[COPY16:%[0-9]+]]:fr32x = COPY [[VMOVSSZrrk]]
-  ; CHECK:   VMOVSSZmr [[COPY6]], 1, $noreg, 0, $noreg, killed [[COPY16]] :: (store 4 into %ir.fptr)
+  ; CHECK:   VMOVSSZmr [[COPY6]], 1, $noreg, 0, $noreg, killed [[COPY16]] :: (store (s32) into %ir.fptr)
   ; CHECK:   RET 0
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -167,7 +173,7 @@ body:             |
   bb.1.if:
     successors: %bb.3(0x80000000)
 
-    %14 = VCMPSSZrr %7, %8, 0, implicit $mxcsr
+    %14 = VCMPSSZrri %7, %8, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 
@@ -177,7 +183,7 @@ body:             |
 
   bb.2.else:
     successors: %bb.3(0x80000000)
-    %12 = VCMPSSZrr %9, %10, 0, implicit $mxcsr
+    %12 = VCMPSSZrri %9, %10, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 
@@ -190,13 +196,13 @@ body:             |
 
     %2 = PHI %1, %bb.2, %0, %bb.1
     %17 = IMPLICIT_DEF
-    %16 = INSERT_SUBREG %17, %2, 1
+    %16 = INSERT_SUBREG %17, %2, %subreg.sub_8bit_hi
     %18 = COPY %16
     %19 = COPY %6
     %21 = IMPLICIT_DEF
     %20 = VMOVSSZrrk %19, killed %18, killed %21, %5
     %22 = COPY %20
-    VMOVSSZmr %4, 1, $noreg, 0, $noreg, killed %22 :: (store 4 into %ir.fptr)
+    VMOVSSZmr %4, 1, $noreg, 0, $noreg, killed %22 :: (store (s32) into %ir.fptr)
     RET 0
 
 ...
@@ -305,7 +311,7 @@ body:             |
     %18 = ADD8rr %17, %14, implicit-def dead $eflags
 
     %8 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %8, %18, 1
+    %9 = INSERT_SUBREG %8, %18, %subreg.sub_8bit_hi
     %10 = COPY %9
     %11 = VMOVAPDZrrk %2, killed %10, %1
     VMOVAPDZmr %0, 1, $noreg, 0, $noreg, killed %11
@@ -423,7 +429,7 @@ body:             |
     %17 = XOR16rr %16, %12, implicit-def dead $eflags
 
     %8 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %8, %17, 3
+    %9 = INSERT_SUBREG %8, %17, %subreg.sub_16bit
     %10 = COPY %9
     %11 = VMOVAPSZrrk %2, killed %10, %1
     VMOVAPSZmr %0, 1, $noreg, 0, $noreg, killed %11
@@ -857,6 +863,67 @@ body:             |
     %3 = COPY %7
     %4 = VMOVDQU8Zrrk %2, killed %3, %1
     VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, killed %4
+    RET 0
+
+...
+---
+name:            test_unused
+alignment:       16
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: true
+selected:        true
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+# Note that this test is supposed to have registers without classes
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+liveins:
+  - { reg: '$rdi', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.1):
+    liveins: $rdi
+
     RET 0
 
 ...

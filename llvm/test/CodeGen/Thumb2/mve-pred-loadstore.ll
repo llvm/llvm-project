@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-LE
 ; RUN: llc -mtriple=thumbebv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-BE
 
-define arm_aapcs_vfpcc <4 x i32> @load_v4i1(<4 x i1> *%src, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_v4i1(ptr %src, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_v4i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    ldrb r0, [r0]
@@ -43,12 +43,12 @@ define arm_aapcs_vfpcc <4 x i32> @load_v4i1(<4 x i1> *%src, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %c = load <4 x i1>, <4 x i1>* %src
+  %c = load <4 x i1>, ptr %src
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s
 }
 
-define arm_aapcs_vfpcc <8 x i16> @load_v8i1(<8 x i1> *%src, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x i16> @load_v8i1(ptr %src, <8 x i16> %a) {
 ; CHECK-LE-LABEL: load_v8i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    ldrb r0, [r0]
@@ -110,12 +110,12 @@ define arm_aapcs_vfpcc <8 x i16> @load_v8i1(<8 x i1> *%src, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vrev64.16 q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %c = load <8 x i1>, <8 x i1>* %src
+  %c = load <8 x i1>, ptr %src
   %s = select <8 x i1> %c, <8 x i16> %a, <8 x i16> zeroinitializer
   ret <8 x i16> %s
 }
 
-define arm_aapcs_vfpcc <16 x i8> @load_v16i1(<16 x i1> *%src, <16 x i8> %a) {
+define arm_aapcs_vfpcc <16 x i8> @load_v16i1(ptr %src, <16 x i8> %a) {
 ; CHECK-LE-LABEL: load_v16i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    ldrh r0, [r0]
@@ -137,44 +137,53 @@ define arm_aapcs_vfpcc <16 x i8> @load_v16i1(<16 x i1> *%src, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    vrev64.8 q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %c = load <16 x i1>, <16 x i1>* %src
+  %c = load <16 x i1>, ptr %src
   %s = select <16 x i1> %c, <16 x i8> %a, <16 x i8> zeroinitializer
   ret <16 x i8> %s
 }
 
-define arm_aapcs_vfpcc <2 x i64> @load_v2i1(<2 x i1> *%src, <2 x i64> %a) {
+define arm_aapcs_vfpcc <2 x i64> @load_v2i1(ptr %src, <2 x i64> %a) {
 ; CHECK-LE-LABEL: load_v2i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    ldrb r0, [r0]
-; CHECK-LE-NEXT:    ubfx r1, r0, #1, #1
-; CHECK-LE-NEXT:    and r0, r0, #1
-; CHECK-LE-NEXT:    rsbs r1, r1, #0
-; CHECK-LE-NEXT:    rsbs r0, r0, #0
-; CHECK-LE-NEXT:    vmov q1[2], q1[0], r0, r1
-; CHECK-LE-NEXT:    vmov q1[3], q1[1], r0, r1
-; CHECK-LE-NEXT:    vand q0, q0, q1
+; CHECK-LE-NEXT:    vmov.i8 q1, #0x0
+; CHECK-LE-NEXT:    vmov.i8 q2, #0xff
+; CHECK-LE-NEXT:    vmsr p0, r0
+; CHECK-LE-NEXT:    vpsel q1, q2, q1
+; CHECK-LE-NEXT:    vmov.u8 r0, q1[1]
+; CHECK-LE-NEXT:    vmov.u8 r1, q1[0]
+; CHECK-LE-NEXT:    vmov q1[2], q1[0], r1, r0
+; CHECK-LE-NEXT:    vmov q1[3], q1[1], r1, r0
+; CHECK-LE-NEXT:    vcmp.i32 ne, q1, zr
+; CHECK-LE-NEXT:    vmov.i32 q1, #0x0
+; CHECK-LE-NEXT:    vpsel q0, q0, q1
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: load_v2i1:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    ldrb r0, [r0]
-; CHECK-BE-NEXT:    and r1, r0, #1
-; CHECK-BE-NEXT:    ubfx r0, r0, #1, #1
-; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    rsbs r0, r0, #0
-; CHECK-BE-NEXT:    vmov q1[2], q1[0], r0, r1
-; CHECK-BE-NEXT:    vmov q1[3], q1[1], r0, r1
-; CHECK-BE-NEXT:    vrev64.32 q2, q1
-; CHECK-BE-NEXT:    vand q0, q0, q2
+; CHECK-BE-NEXT:    vmov.i8 q1, #0x0
+; CHECK-BE-NEXT:    vmov.i8 q2, #0xff
+; CHECK-BE-NEXT:    rbit r0, r0
+; CHECK-BE-NEXT:    lsrs r0, r0, #30
+; CHECK-BE-NEXT:    vmsr p0, r0
+; CHECK-BE-NEXT:    vpsel q1, q2, q1
+; CHECK-BE-NEXT:    vmov.u8 r0, q1[1]
+; CHECK-BE-NEXT:    vmov.u8 r1, q1[0]
+; CHECK-BE-NEXT:    vmov q1[2], q1[0], r1, r0
+; CHECK-BE-NEXT:    vmov q1[3], q1[1], r1, r0
+; CHECK-BE-NEXT:    vcmp.i32 ne, q1, zr
+; CHECK-BE-NEXT:    vmov.i32 q1, #0x0
+; CHECK-BE-NEXT:    vpsel q0, q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %c = load <2 x i1>, <2 x i1>* %src
+  %c = load <2 x i1>, ptr %src
   %s = select <2 x i1> %c, <2 x i64> %a, <2 x i64> zeroinitializer
   ret <2 x i64> %s
 }
 
 
-define arm_aapcs_vfpcc void @store_v4i1(<4 x i1> *%dst, <4 x i32> %a) {
+define arm_aapcs_vfpcc void @store_v4i1(ptr %dst, <4 x i32> %a) {
 ; CHECK-LE-LABEL: store_v4i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vcmp.i32 eq, q0, zr
@@ -217,11 +226,11 @@ define arm_aapcs_vfpcc void @store_v4i1(<4 x i1> *%dst, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp eq <4 x i32> %a, zeroinitializer
-  store <4 x i1> %c, <4 x i1>* %dst
+  store <4 x i1> %c, ptr %dst
   ret void
 }
 
-define arm_aapcs_vfpcc void @store_v8i1(<8 x i1> *%dst, <8 x i16> %a) {
+define arm_aapcs_vfpcc void @store_v8i1(ptr %dst, <8 x i16> %a) {
 ; CHECK-LE-LABEL: store_v8i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vcmp.i16 eq, q0, zr
@@ -288,11 +297,11 @@ define arm_aapcs_vfpcc void @store_v8i1(<8 x i1> *%dst, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp eq <8 x i16> %a, zeroinitializer
-  store <8 x i1> %c, <8 x i1>* %dst
+  store <8 x i1> %c, ptr %dst
   ret void
 }
 
-define arm_aapcs_vfpcc void @store_v16i1(<16 x i1> *%dst, <16 x i8> %a) {
+define arm_aapcs_vfpcc void @store_v16i1(ptr %dst, <16 x i8> %a) {
 ; CHECK-LE-LABEL: store_v16i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vcmp.i8 eq, q0, zr
@@ -311,25 +320,23 @@ define arm_aapcs_vfpcc void @store_v16i1(<16 x i1> *%dst, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp eq <16 x i8> %a, zeroinitializer
-  store <16 x i1> %c, <16 x i1>* %dst
+  store <16 x i1> %c, ptr %dst
   ret void
 }
 
-define arm_aapcs_vfpcc void @store_v2i1(<2 x i1> *%dst, <2 x i64> %a) {
+define arm_aapcs_vfpcc void @store_v2i1(ptr %dst, <2 x i64> %a) {
 ; CHECK-LE-LABEL: store_v2i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmov r1, r2, d0
 ; CHECK-LE-NEXT:    orrs r1, r2
-; CHECK-LE-NEXT:    vmov r2, r3, d1
-; CHECK-LE-NEXT:    cset r1, eq
-; CHECK-LE-NEXT:    orrs r2, r3
-; CHECK-LE-NEXT:    cset r2, eq
-; CHECK-LE-NEXT:    cmp r2, #0
-; CHECK-LE-NEXT:    it ne
-; CHECK-LE-NEXT:    mvnne r2, #1
+; CHECK-LE-NEXT:    mov.w r2, #0
+; CHECK-LE-NEXT:    csetm r1, eq
 ; CHECK-LE-NEXT:    bfi r2, r1, #0, #1
-; CHECK-LE-NEXT:    and r1, r2, #3
-; CHECK-LE-NEXT:    strb r1, [r0]
+; CHECK-LE-NEXT:    vmov r1, r3, d1
+; CHECK-LE-NEXT:    orrs r1, r3
+; CHECK-LE-NEXT:    csetm r1, eq
+; CHECK-LE-NEXT:    bfi r2, r1, #1, #1
+; CHECK-LE-NEXT:    strb r2, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: store_v2i1:
@@ -337,24 +344,22 @@ define arm_aapcs_vfpcc void @store_v2i1(<2 x i1> *%dst, <2 x i64> %a) {
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
 ; CHECK-BE-NEXT:    vmov r1, r2, d3
 ; CHECK-BE-NEXT:    orrs r1, r2
-; CHECK-BE-NEXT:    vmov r2, r3, d2
-; CHECK-BE-NEXT:    cset r1, eq
-; CHECK-BE-NEXT:    orrs r2, r3
-; CHECK-BE-NEXT:    cset r2, eq
-; CHECK-BE-NEXT:    cmp r2, #0
-; CHECK-BE-NEXT:    it ne
-; CHECK-BE-NEXT:    mvnne r2, #1
+; CHECK-BE-NEXT:    mov.w r2, #0
+; CHECK-BE-NEXT:    csetm r1, eq
 ; CHECK-BE-NEXT:    bfi r2, r1, #0, #1
-; CHECK-BE-NEXT:    and r1, r2, #3
-; CHECK-BE-NEXT:    strb r1, [r0]
+; CHECK-BE-NEXT:    vmov r1, r3, d2
+; CHECK-BE-NEXT:    orrs r1, r3
+; CHECK-BE-NEXT:    csetm r1, eq
+; CHECK-BE-NEXT:    bfi r2, r1, #1, #1
+; CHECK-BE-NEXT:    strb r2, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp eq <2 x i64> %a, zeroinitializer
-  store <2 x i1> %c, <2 x i1>* %dst
+  store <2 x i1> %c, ptr %dst
   ret void
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_predcastzext(i16* %i, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_predcastzext(ptr %i, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_predcastzext:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldrh r0, [r0]
@@ -372,14 +377,14 @@ define arm_aapcs_vfpcc <4 x i32> @load_predcastzext(i16* %i, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %l = load i16, i16* %i, align 4
+  %l = load i16, ptr %i, align 4
   %lz = zext i16 %l to i32
   %c = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %lz)
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_bc4(i32* %i, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_bc4(ptr %i, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_bc4:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vldr p0, [r0]
@@ -395,13 +400,13 @@ define arm_aapcs_vfpcc <4 x i32> @load_bc4(i32* %i, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %l = load i32, i32* %i, align 4
+  %l = load i32, ptr %i, align 4
   %c = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %l)
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s
 }
 
-define arm_aapcs_vfpcc <8 x i16> @load_predcast8(i32* %i, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x i16> @load_predcast8(ptr %i, <8 x i16> %a) {
 ; CHECK-LE-LABEL: load_predcast8:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vldr p0, [r0]
@@ -418,13 +423,13 @@ define arm_aapcs_vfpcc <8 x i16> @load_predcast8(i32* %i, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.16 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %l = load i32, i32* %i, align 4
+  %l = load i32, ptr %i, align 4
   %c = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %l)
   %s = select <8 x i1> %c, <8 x i16> %a, <8 x i16> zeroinitializer
   ret <8 x i16> %s
 }
 
-define arm_aapcs_vfpcc <16 x i8> @load_predcast16(i32* %i, <16 x i8> %a) {
+define arm_aapcs_vfpcc <16 x i8> @load_predcast16(ptr %i, <16 x i8> %a) {
 ; CHECK-LE-LABEL: load_predcast16:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vldr p0, [r0]
@@ -441,13 +446,13 @@ define arm_aapcs_vfpcc <16 x i8> @load_predcast16(i32* %i, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.8 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %l = load i32, i32* %i, align 4
+  %l = load i32, ptr %i, align 4
   %c = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %l)
   %s = select <16 x i1> %c, <16 x i8> %a, <16 x i8> zeroinitializer
   ret <16 x i8> %s
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_bc4_align2(i32* %i, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_bc4_align2(ptr %i, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_bc4_align2:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldr r0, [r0]
@@ -465,13 +470,13 @@ define arm_aapcs_vfpcc <4 x i32> @load_bc4_align2(i32* %i, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %l = load i32, i32* %i, align 2
+  %l = load i32, ptr %i, align 2
   %c = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %l)
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_bc4_offset(i16* %i, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_bc4_offset(ptr %i, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_bc4_offset:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    adds r0, #6
@@ -489,15 +494,14 @@ define arm_aapcs_vfpcc <4 x i32> @load_bc4_offset(i16* %i, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %g = getelementptr inbounds i16, i16* %i, i32 3
-  %gb = bitcast i16* %g to i32*
-  %l = load i32, i32* %gb, align 4
+  %g = getelementptr inbounds i16, ptr %i, i32 3
+  %l = load i32, ptr %g, align 4
   %c = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %l)
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_bc4_range4(i32* %i, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_bc4_range4(ptr %i, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_bc4_range4:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vldr p0, [r0, #4]
@@ -513,14 +517,14 @@ define arm_aapcs_vfpcc <4 x i32> @load_bc4_range4(i32* %i, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %g = getelementptr inbounds i32, i32* %i, i32 1
-  %l = load i32, i32* %g, align 4
+  %g = getelementptr inbounds i32, ptr %i, i32 1
+  %l = load i32, ptr %g, align 4
   %c = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %l)
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_bc4_range(i32* %i, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_bc4_range(ptr %i, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_bc4_range:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vldr p0, [r0, #508]
@@ -536,14 +540,14 @@ define arm_aapcs_vfpcc <4 x i32> @load_bc4_range(i32* %i, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %g = getelementptr inbounds i32, i32* %i, i32 127
-  %l = load i32, i32* %g, align 4
+  %g = getelementptr inbounds i32, ptr %i, i32 127
+  %l = load i32, ptr %g, align 4
   %c = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %l)
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_bc4_range2(i32* %i, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_bc4_range2(ptr %i, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_bc4_range2:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vldr p0, [r0, #-508]
@@ -559,14 +563,14 @@ define arm_aapcs_vfpcc <4 x i32> @load_bc4_range2(i32* %i, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %g = getelementptr inbounds i32, i32* %i, i32 -127
-  %l = load i32, i32* %g, align 4
+  %g = getelementptr inbounds i32, ptr %i, i32 -127
+  %l = load i32, ptr %g, align 4
   %c = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %l)
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_bc4_range3(i32* %i, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_bc4_range3(ptr %i, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_bc4_range3:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    add.w r0, r0, #512
@@ -584,14 +588,14 @@ define arm_aapcs_vfpcc <4 x i32> @load_bc4_range3(i32* %i, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %g = getelementptr inbounds i32, i32* %i, i32 128
-  %l = load i32, i32* %g, align 4
+  %g = getelementptr inbounds i32, ptr %i, i32 128
+  %l = load i32, ptr %g, align 4
   %c = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %l)
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_bc4_range5(i32* %i, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @load_bc4_range5(ptr %i, <4 x i32> %a) {
 ; CHECK-LE-LABEL: load_bc4_range5:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    sub.w r0, r0, #512
@@ -609,8 +613,8 @@ define arm_aapcs_vfpcc <4 x i32> @load_bc4_range5(i32* %i, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
-  %g = getelementptr inbounds i32, i32* %i, i32 -128
-  %l = load i32, i32* %g, align 4
+  %g = getelementptr inbounds i32, ptr %i, i32 -128
+  %l = load i32, ptr %g, align 4
   %c = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %l)
   %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %s

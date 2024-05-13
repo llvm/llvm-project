@@ -25,7 +25,7 @@ struct union_crash
     };
 };
 
-int test() {
+int test(void) {
   int a[10];
   int b[10] = a; // expected-error {{array initializer must be an initializer list}}
   int +; // expected-error {{expected identifier or '('}}
@@ -38,9 +38,9 @@ int test() {
 struct cdiff_cmd {
           const char *name;
           unsigned short argc;
-          int (*handler)();
+          int (*handler)(void);
 };
-int cdiff_cmd_open();
+int cdiff_cmd_open(void);
 struct cdiff_cmd commands[] = {
         {"OPEN", 1, &cdiff_cmd_open }
 };
@@ -66,10 +66,8 @@ int pbool(void) {
 }
 
 
-// rdar://5870981
 union { float f; unsigned u; } u = { 1.0f };
 
-// rdar://6156694
 int f3(int x) { return x; }
 typedef void (*vfunc)(void);
 void *bar = (vfunc) f3;
@@ -94,7 +92,6 @@ struct s1 s2 = { // expected-error {{variable has incomplete type 'struct s1'}} 
 // PR3382
 char t[] = ("Hello");
 
-// <rdar://problem/6094855>
 typedef struct { } empty;
 
 typedef struct {
@@ -104,7 +101,6 @@ typedef struct {
 
 st st1 = { .i2 = 1 };
 
-// <rdar://problem/6096826>
 struct {
   int a;
   int z[2];
@@ -148,19 +144,62 @@ const double pr5447 = (0.05 < -1.0) ? -1.0 : 0.0499878;
 // behaviour of accepting bar and zed but not foo. GCC's behaviour was
 // changed in 2007 (rev 122551), so we should be able to change too one
 // day.
-int PR4386_bar();
-int PR4386_foo() __attribute((weak));
-int PR4386_zed();
+int PR4386_bar(void);
+int PR4386_foo(void) __attribute((weak));
+int PR4386_zed(void);
 
 int PR4386_a = ((void *) PR4386_bar) != 0;
 int PR4386_b = ((void *) PR4386_foo) != 0; // expected-error{{initializer element is not a compile-time constant}}
 int PR4386_c = ((void *) PR4386_zed) != 0;
-int PR4386_zed() __attribute((weak));
+int PR4386_zed(void) __attribute((weak));
 
-// <rdar://problem/10185490> (derived from SPEC vortex benchmark)
+// (derived from SPEC vortex benchmark)
 typedef char strty[10];
 struct vortexstruct { strty s; };
 struct vortexstruct vortexvar = { "asdf" };
 
 typedef struct { uintptr_t x : 2; } StructWithBitfield;
 StructWithBitfield bitfieldvar = { (uintptr_t)&bitfieldvar }; // expected-error {{initializer element is not a compile-time constant}}
+
+// PR45157
+struct PR4517_foo {
+  int x;
+};
+struct PR4517_bar {
+  struct PR4517_foo foo;
+};
+const struct PR4517_foo my_foo = {.x = 42};
+struct PR4517_bar my_bar = {
+    .foo = my_foo, // no-warning
+};
+struct PR4517_bar my_bar2 = (struct PR4517_bar){
+    .foo = my_foo, // no-warning
+};
+struct PR4517_bar my_bar3 = {
+    my_foo, // no-warning
+};
+struct PR4517_bar my_bar4 = (struct PR4517_bar){
+    my_foo // no-warning
+};
+extern const struct PR4517_foo my_foo2;
+struct PR4517_bar my_bar5 = {
+  .foo = my_foo2, // expected-error {{initializer element is not a compile-time constant}}
+};
+const struct PR4517_foo my_foo3 = {.x = my_foo.x};
+int PR4517_a[2] = {0, 1};
+const int PR4517_ca[2] = {0, 1};
+int PR4517_idx = 0;
+const int PR4517_idxc = 1;
+int PR4517_x1 = PR4517_a[PR4517_idx]; // expected-error {{initializer element is not a compile-time constant}}
+int PR4517_x2 = PR4517_a[PR4517_idxc]; // expected-error {{initializer element is not a compile-time constant}}
+int PR4517_x3 = PR4517_a[0]; // expected-error {{initializer element is not a compile-time constant}}
+int PR4517_y1 = PR4517_ca[PR4517_idx]; // expected-error {{initializer element is not a compile-time constant}}
+int PR4517_y2 = PR4517_ca[PR4517_idxc]; // no-warning
+int PR4517_y3 = PR4517_ca[0]; // no-warning
+union PR4517_u {
+    int x;
+    float y;
+};
+const union PR4517_u u1 = {4.0f};
+const union PR4517_u u2 = u1; // no-warning
+const union PR4517_u u3 = {u1.y}; // expected-error {{initializer element is not a compile-time constant}}

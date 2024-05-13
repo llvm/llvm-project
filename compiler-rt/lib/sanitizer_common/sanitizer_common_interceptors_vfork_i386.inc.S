@@ -6,6 +6,7 @@
 .globl ASM_WRAPPER_NAME(vfork)
 ASM_TYPE_FUNCTION(ASM_WRAPPER_NAME(vfork))
 ASM_WRAPPER_NAME(vfork):
+        _CET_ENDBR
         // Store return address in the spill area and tear down the stack frame.
         sub     $12, %esp
         call    COMMON_INTERCEPTOR_SPILL_AREA
@@ -57,7 +58,7 @@ ASM_WRAPPER_NAME(vfork):
         ret
 ASM_SIZE(vfork)
 
-.weak vfork
-.set vfork, ASM_WRAPPER_NAME(vfork)
+ASM_INTERCEPTOR_TRAMPOLINE(vfork)
+ASM_TRAMPOLINE_ALIAS(vfork, vfork)
 
 #endif

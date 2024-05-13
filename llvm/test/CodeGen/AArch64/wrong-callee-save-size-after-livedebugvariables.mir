@@ -1,7 +1,7 @@
 # RUN: llc -start-before=prologepilog -filetype=obj -o %t %s
 # RUN: llvm-dwarfdump --name=obj1 %t | FileCheck %s --check-prefix=CHECKDWARF1
 # RUN: llvm-dwarfdump --name=obj2 %t | FileCheck %s --check-prefix=CHECKDWARF2
-# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=CHECKASM
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s --check-prefix=CHECKASM
 #
 # Test that the location for obj1 and obj2 in the debug information is
 # the same as the location used by load instructions.
@@ -25,7 +25,7 @@
     ret i8 undef, !dbg !24
   }
 
-  declare dso_local i8 @bar(i8, i8, i8*) #0
+  declare dso_local i8 @bar(i8, i8, ptr) #0
 
   attributes #0 = { noinline nounwind optnone "frame-pointer"="all" }
 
@@ -64,6 +64,7 @@
 name:            foo
 tracksRegLiveness: true
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 fixedStack:      []
 stack:
@@ -82,8 +83,8 @@ stack:
 body:             |
   bb.1.entry:
     renamable $x2 = ADDXri %stack.2.obj3, 0, 0
-    renamable $w0 = LDRBBui %stack.0.obj1, 0, debug-location !20 :: (load 1 from %ir.obj1)
-    renamable $w1 = LDRBBui %stack.1.obj2, 0, debug-location !21 :: (load 1 from %ir.obj2)
+    renamable $w0 = LDRBBui %stack.0.obj1, 0, debug-location !20 :: (load (s8) from %ir.obj1)
+    renamable $w1 = LDRBBui %stack.1.obj2, 0, debug-location !21 :: (load (s8) from %ir.obj2)
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp, debug-location !23
     BL @bar, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $x2, implicit-def $w0, debug-location !23
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp, debug-location !23

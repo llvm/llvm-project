@@ -2,7 +2,7 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify %s -Wuninitialized
 
-void foo();
+void foo(void);
 
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp parallel sections'}}
 #pragma omp parallel sections
@@ -10,7 +10,7 @@ void foo();
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp parallel sections'}}
 #pragma omp parallel sections foo
 
-void test_no_clause() {
+void test_no_clause(void) {
   int i;
 #pragma omp parallel sections
   {
@@ -29,7 +29,7 @@ void test_no_clause() {
 
 }
 
-void test_branch_protected_scope() {
+void test_branch_protected_scope(void) {
   int i = 0;
 L1:
   ++i;
@@ -68,7 +68,7 @@ L1:
   goto L3; // expected-error {{use of undeclared label 'L3'}}
 }
 
-void test_invalid_clause() {
+void test_invalid_clause(void) {
   int i;
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp parallel sections' are ignored}}
 #pragma omp parallel sections foo bar
@@ -80,7 +80,7 @@ void test_invalid_clause() {
   }
 }
 
-void test_non_identifiers() {
+void test_non_identifiers(void) {
   int i, x;
 
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp parallel sections' are ignored}}
@@ -108,7 +108,7 @@ void test_non_identifiers() {
   }
 }
 
-void test_private() {
+void test_private(void) {
   int i;
 // expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
@@ -158,7 +158,7 @@ void test_private() {
   }
 }
 
-void test_lastprivate() {
+void test_lastprivate(void) {
   int i;
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 {{expected expression}}
@@ -209,7 +209,7 @@ void test_lastprivate() {
   }
 }
 
-void test_firstprivate() {
+void test_firstprivate(void) {
   int i;
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 {{expected expression}}

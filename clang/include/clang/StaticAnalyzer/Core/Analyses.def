@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ANALYSIS_STORE
-#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN)
-#endif
-
-ANALYSIS_STORE(RegionStore, "region", "Use region-based analyzer store",
-               CreateRegionStoreManager)
-
 #ifndef ANALYSIS_CONSTRAINTS
 #define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN)
 #endif
@@ -94,7 +87,6 @@ ANALYSIS_INLINING_MODE(
     NoRedundancy, "noredundancy",
     "Do not analyze a function which has been previously inlined")
 
-#undef ANALYSIS_STORE
 #undef ANALYSIS_CONSTRAINTS
 #undef ANALYSIS_DIAGNOSTICS
 #undef ANALYSIS_PURGE

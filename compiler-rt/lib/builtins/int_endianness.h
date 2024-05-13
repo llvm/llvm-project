@@ -41,7 +41,7 @@
 #error "unknown endianness"
 #endif // !_LITTLE_ENDIAN
 
-#endif // Solaris and AuroraUX.
+#endif // Solaris
 
 // ..
 

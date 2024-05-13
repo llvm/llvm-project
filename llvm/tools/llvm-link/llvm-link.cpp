@@ -41,20 +41,25 @@
 #include <utility>
 using namespace llvm;
 
+static cl::OptionCategory LinkCategory("Link Options");
+
 static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
-                                            cl::desc("<input bitcode files>"));
+                                            cl::desc("<input bitcode files>"),
+                                            cl::cat(LinkCategory));
 
 static cl::list<std::string> OverridingInputs(
-    "override", cl::ZeroOrMore, cl::value_desc("filename"),
+    "override", cl::value_desc("filename"),
     cl::desc(
-        "input bitcode file which can override previously defined symbol(s)"));
+        "input bitcode file which can override previously defined symbol(s)"),
+    cl::cat(LinkCategory));
 
 // Option to simulate function importing for testing. This enables using
 // llvm-link to simulate ThinLTO backend processes.
 static cl::list<std::string> Imports(
-    "import", cl::ZeroOrMore, cl::value_desc("function:filename"),
+    "import", cl::value_desc("function:filename"),
     cl::desc("Pair of function name and filename, where function should be "
-             "imported from bitcode in filename"));
+             "imported from bitcode in filename"),
+    cl::cat(LinkCategory));
 
 // Option to support testing of function importing. The module summary
 // must be specified in the case were we request imports via the -import
@@ -63,53 +68,78 @@ static cl::list<std::string> Imports(
 // consistent promotion and renaming of locals.
 static cl::opt<std::string>
     SummaryIndex("summary-index", cl::desc("Module summary index filename"),
-                 cl::init(""), cl::value_desc("filename"));
+                 cl::init(""), cl::value_desc("filename"),
+                 cl::cat(LinkCategory));
 
-static cl::opt<std::string> OutputFilename("o",
-                                           cl::desc("Override output filename"),
-                                           cl::init("-"),
-                                           cl::value_desc("filename"));
+static cl::opt<std::string>
+    OutputFilename("o", cl::desc("Override output filename"), cl::init("-"),
+                   cl::value_desc("filename"), cl::cat(LinkCategory));
 
 static cl::opt<bool> Internalize("internalize",
-                                 cl::desc("Internalize linked symbols"));
+                                 cl::desc("Internalize linked symbols"),
+                                 cl::cat(LinkCategory));
 
 static cl::opt<bool>
     DisableDITypeMap("disable-debug-info-type-map",
-                     cl::desc("Don't use a uniquing type map for debug info"));
+                     cl::desc("Don't use a uniquing type map for debug info"),
+                     cl::cat(LinkCategory));
 
 static cl::opt<bool> OnlyNeeded("only-needed",
-                                cl::desc("Link only needed symbols"));
+                                cl::desc("Link only needed symbols"),
+                                cl::cat(LinkCategory));
 
-static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"));
+static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"),
+                           cl::cat(LinkCategory));
 
 static cl::opt<bool> DisableLazyLoad("disable-lazy-loading",
-                                     cl::desc("Disable lazy module loading"));
+                                     cl::desc("Disable lazy module loading"),
+                                     cl::cat(LinkCategory));
 
-static cl::opt<bool>
-    OutputAssembly("S", cl::desc("Write output as LLVM assembly"), cl::Hidden);
+static cl::opt<bool> OutputAssembly("S",
+                                    cl::desc("Write output as LLVM assembly"),
+                                    cl::Hidden, cl::cat(LinkCategory));
 
 static cl::opt<bool> Verbose("v",
-                             cl::desc("Print information about actions taken"));
+                             cl::desc("Print information about actions taken"),
+                             cl::cat(LinkCategory));
 
 static cl::opt<bool> DumpAsm("d", cl::desc("Print assembly as linked"),
-                             cl::Hidden);
+                             cl::Hidden, cl::cat(LinkCategory));
 
 static cl::opt<bool> SuppressWarnings("suppress-warnings",
                                       cl::desc("Suppress all linking warnings"),
-                                      cl::init(false));
+                                      cl::init(false), cl::cat(LinkCategory));
 
 static cl::opt<bool> PreserveBitcodeUseListOrder(
     "preserve-bc-uselistorder",
     cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden);
+    cl::init(true), cl::Hidden, cl::cat(LinkCategory));
 
 static cl::opt<bool> PreserveAssemblyUseListOrder(
     "preserve-ll-uselistorder",
     cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden);
+    cl::init(false), cl::Hidden, cl::cat(LinkCategory));
 
 static cl::opt<bool> NoVerify("disable-verify",
-                              cl::desc("Do not run the verifier"), cl::Hidden);
+                              cl::desc("Do not run the verifier"), cl::Hidden,
+                              cl::cat(LinkCategory));
+
+static cl::opt<bool> IgnoreNonBitcode(
+    "ignore-non-bitcode",
+    cl::desc("Do not report an error for non-bitcode files in archives"),
+    cl::Hidden);
+
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
+
+extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 static ExitOnError ExitOnErr;
 
@@ -151,11 +181,16 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
   if (Verbose)
     errs() << "Reading library archive file '" << ArchiveName
            << "' to memory\n";
-  Error Err = Error::success();
-  object::Archive Archive(*Buffer, Err);
-  ExitOnErr(std::move(Err));
+  Expected<std::unique_ptr<object::Archive>> ArchiveOrError =
+      object::Archive::create(Buffer->getMemBufferRef());
+  if (!ArchiveOrError)
+    ExitOnErr(ArchiveOrError.takeError());
+
+  std::unique_ptr<object::Archive> Archive = std::move(ArchiveOrError.get());
+
   Linker L(*Result);
-  for (const object::Archive::Child &C : Archive.children(Err)) {
+  Error Err = Error::success();
+  for (const object::Archive::Child &C : Archive->children(Err)) {
     Expected<StringRef> Ename = C.getName();
     if (Error E = Ename.takeError()) {
       errs() << Argv0 << ": ";
@@ -181,6 +216,8 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
                        MemBuf.get().getBufferStart()),
                    reinterpret_cast<const unsigned char *>(
                        MemBuf.get().getBufferEnd()))) {
+      if (IgnoreNonBitcode)
+        continue;
       errs() << Argv0 << ": ";
       WithColor::error() << "  member of archive is not a bitcode file: '"
                          << ChildName << "'\n";
@@ -298,6 +335,11 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
   };
 
   ModuleLazyLoaderCache ModuleLoaderCache(ModuleLoader);
+  // Owns the filename strings used to key into the ImportList. Normally this is
+  // constructed from the index and the strings are owned by the index, however,
+  // since we are synthesizing this data structure from options we need a cache
+  // to own those strings.
+  StringSet<> FileNameStringCache;
   for (const auto &Import : Imports) {
     // Identify the requested function and its bitcode source file.
     size_t Idx = Import.find(':');
@@ -335,7 +377,8 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     if (Verbose)
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
-    auto &Entry = ImportList[FileName];
+    auto &Entry =
+        ImportList[FileNameStringCache.insert(FileName).first->getKey()];
     Entry.insert(F->getGUID());
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
@@ -355,8 +398,16 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
   // Similar to some flags, internalization doesn't apply to the first file.
   bool InternalizeLinkedSymbols = false;
   for (const auto &File : Files) {
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(File);
+
+    // When we encounter a missing file, make sure we expose its name.
+    if (auto EC = BufferOrErr.getError())
+      if (EC == std::errc::no_such_file_or_directory)
+        ExitOnErr(createStringError(EC, "No such file or directory: '%s'",
+                                    File.c_str()));
+
     std::unique_ptr<MemoryBuffer> Buffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(File)));
+        ExitOnErr(errorOrToExpected(std::move(BufferOrErr)));
 
     std::unique_ptr<Module> M =
         identify_magic(Buffer->getBuffer()) == file_magic::archive
@@ -431,10 +482,21 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
+  cl::HideUnrelatedOptions({&LinkCategory, &getColorCategory()});
+  cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
+
+  // Load bitcode into the new debug info format by default.
+  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
+    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
+
+  // Since llvm-link collects multiple IR modules together, for simplicity's
+  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single
+  // debug info format.
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
+
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLinkDiagnosticHandler>(),
                                true);
-  cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
 
   if (!DisableDITypeMap)
     Context.enableDebugTypeODRUniquing();
@@ -479,10 +541,18 @@ int main(int argc, char **argv) {
 
   if (Verbose)
     errs() << "Writing bitcode...\n";
+  auto SetFormat = [&](bool NewFormat) {
+    Composite->setIsNewDbgInfoFormat(NewFormat);
+    if (NewFormat)
+      Composite->removeDebugIntrinsicDeclarations();
+  };
   if (OutputAssembly) {
+    SetFormat(WriteNewDbgInfoFormat);
     Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
-  } else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
+  } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
+    SetFormat(UseNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode);
     WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
+  }
 
   // Declare success.
   Out.keep();

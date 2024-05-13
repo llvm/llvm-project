@@ -40,10 +40,10 @@
 # CHECK-GNU-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+3)
 
 # CHECK-DWARF5: DW_TAG_call_site
-# CHECK-DWARF5:   DW_AT_call_origin ([[getValue_SP:.*]])
-
+# CHECK-DWARF5:   DW_AT_call_origin ([[getValue_SP:.*]] "getVal")
+#
 # CHECK-DWARF5: DW_TAG_call_site
-# CHECK-DWARF5:   DW_AT_call_origin ([[foo_SP:.*]])
+# CHECK-DWARF5:   DW_AT_call_origin ([[foo_SP:.*]] "foo")
 # CHECK-DWARF5:   DW_AT_call_return_pc {{.*}}
 # CHECK-DWARF5-EMPTY:
 # CHECK-DWARF5:         DW_TAG_call_site_parameter
@@ -83,20 +83,20 @@
     call void @llvm.dbg.value(metadata i32 %arg1, metadata !15, metadata !DIExpression()), !dbg !19
     call void @llvm.dbg.value(metadata i32 %arg2, metadata !16, metadata !DIExpression()), !dbg !20
     call void @llvm.dbg.value(metadata i32 %arg3, metadata !17, metadata !DIExpression()), !dbg !21
-    %0 = bitcast i32* %local1 to i8*, !dbg !22
+    %0 = bitcast ptr %local1 to ptr, !dbg !22
     %call = tail call i32 (...) @getVal(), !dbg !23
     call void @llvm.dbg.value(metadata i32 %call, metadata !18, metadata !DIExpression()), !dbg !24
-    store i32 %call, i32* %local1, align 4, !dbg !24
+    store i32 %call, ptr %local1, align 4, !dbg !24
     %add = add nsw i32 %arg3, 3, !dbg !24
     %add1 = add nsw i32 %arg2, %arg1, !dbg !24
-    call void @llvm.dbg.value(metadata i32* %local1, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !24
-    call void @foo(i32* nonnull %local1, i32 %arg2, i32 10, i32 15, i32 %add, i32 %add1), !dbg !24
+    call void @llvm.dbg.value(metadata ptr %local1, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !24
+    call void @foo(ptr nonnull %local1, i32 %arg2, i32 10, i32 15, i32 %add, i32 %add1), !dbg !24
     ret void, !dbg !24
   }
   
   declare !dbg !4 dso_local i32 @getVal(...) local_unnamed_addr
   
-  declare !dbg !5 dso_local void @foo(i32*, i32, i32, i32, i32, i32) local_unnamed_addr
+  declare !dbg !5 dso_local void @foo(ptr, i32, i32, i32, i32, i32) local_unnamed_addr
   
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -105,10 +105,9 @@
   !llvm.module.flags = !{!6, !7, !8}
   !llvm.ident = !{!9}
   
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 9.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 9.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
   !1 = !DIFile(filename: "test.c", directory: "/dir")
   !2 = !{}
-  !3 = !{!4, !5}
   !4 = !DISubprogram(name: "getVal", scope: !1, file: !1, line: 2, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !5 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !6 = !{i32 2, !"Dwarf Version", i32 4}
@@ -174,7 +173,7 @@ body:             |
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !23
     CALL64pcrel32 @getVal, csr_64, implicit $rsp, implicit $ssp, implicit $al, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !23
     DBG_VALUE $eax, $noreg, !18, !DIExpression(), debug-location !24
-    MOV32mr $rsp, 1, $noreg, 12, $noreg, killed renamable $eax, debug-location !24 :: (store 4 into %ir.local1)
+    MOV32mr $rsp, 1, $noreg, 12, $noreg, killed renamable $eax, debug-location !24 :: (store (s32) into %ir.local1)
     renamable $r8d = LEA64_32r killed renamable $r14, 1, $noreg, 3, $noreg, debug-location !24
     renamable $r9d = LEA64_32r killed renamable $r15, 1, renamable $rbx, 0, $noreg, debug-location !24
     DBG_VALUE $rsp, $noreg, !18, !DIExpression(DW_OP_plus_uconst, 12, DW_OP_deref), debug-location !24
@@ -191,6 +190,6 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 16, debug-location !24
     $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !24
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !24
-    RETQ debug-location !24
+    RET64 debug-location !24
 
 ...

@@ -1,15 +1,15 @@
 ; ModuleID = 'bar.cpp'
 
-%struct.Base = type { i32, %struct.Base* }
+%struct.Base = type { i32, ptr }
 
 ; Function Attrs: nounwind ssp uwtable
 define void @_Z1gi(i32 %a) #0 !dbg !12 {
 entry:
   %a.addr = alloca i32, align 4
   %t = alloca %struct.Base, align 8
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !20, metadata !DIExpression()), !dbg !21
-  call void @llvm.dbg.declare(metadata %struct.Base* %t, metadata !22, metadata !DIExpression()), !dbg !23
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !20, metadata !DIExpression()), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !22, metadata !DIExpression()), !dbg !23
   ret void, !dbg !24
 }
 
@@ -20,7 +20,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define i32 @main() #2 !dbg !16 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   call void @_Z1fi(i32 0), !dbg !25
   call void @_Z1gi(i32 1), !dbg !26
   ret i32 0, !dbg !27
@@ -54,7 +54,7 @@ attributes #3 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp
 !16 = distinct !DISubprogram(name: "main", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !13, type: !17, retainedNodes: !2)
 !17 = !DISubroutineType(types: !18)
 !18 = !{!8}
-!19 = !{i32 2, !"Dwarf Version", i32 2}
+!19 = !{i32 2, !"Dwarf Version", i32 3}
 !20 = !DILocalVariable(name: "a", line: 4, arg: 1, scope: !12, file: !13, type: !8)
 !21 = !DILocation(line: 4, scope: !12)
 !22 = !DILocalVariable(name: "t", line: 5, scope: !12, file: !13, type: !4)

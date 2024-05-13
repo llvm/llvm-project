@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=i686-unknown-unknown -S -inline | FileCheck %s
+; RUN: opt < %s -mtriple=i686-unknown-unknown -S -passes=inline | FileCheck %s
 
 define i32 @func_target_cpu_nocona() #0 {
   ret i32 0

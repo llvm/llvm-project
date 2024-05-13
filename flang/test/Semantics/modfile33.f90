@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %flang_fc1 -flogical-abbreviations -fxor-operator
+! RUN: %python %S/test_modfile.py %s %flang_fc1 -flogical-abbreviations -fxor-operator
 
 ! Resolution of user-defined operators in expressions.
 ! Test by using generic function in a specification expression that needs
@@ -63,11 +63,6 @@ end
 !  sequence
 !  logical(4) :: x
 ! end type
-! interface operator(+)
-!  procedure :: add_ll
-!  procedure :: add_li
-!  procedure :: add_tt
-! end interface
 ! interface
 !  pure function add_ll(x, y)
 !   logical(4), intent(in) :: x
@@ -90,10 +85,6 @@ end
 !   integer(8) :: add_tt
 !  end
 ! end interface
-! interface operator(/)
-!  procedure :: div_tz
-!  procedure :: div_ct
-! end interface
 ! interface
 !  pure function div_tz(x, y)
 !   import :: t
@@ -109,6 +100,15 @@ end
 !   type(t), intent(in) :: y
 !   integer(8) :: div_ct
 !  end
+! end interface
+! interface operator(+)
+!  procedure :: add_ll
+!  procedure :: add_li
+!  procedure :: add_tt
+! end interface
+! interface operator(/)
+!  procedure :: div_tz
+!  procedure :: div_ct
 ! end interface
 !contains
 ! subroutine s1(x, y, z)
@@ -199,11 +199,6 @@ end
 !  sequence
 !  logical(4) :: x
 ! end type
-! interface operator( .and.)
-!  procedure :: and_ti
-!  procedure :: and_li
-!  procedure :: and_tt
-! end interface
 ! interface
 !  pure function and_ti(x, y)
 !   import :: t
@@ -227,10 +222,6 @@ end
 !   integer(8) :: and_tt
 !  end
 ! end interface
-! interface operator(.x.)
-!  procedure :: neqv_tt
-!  procedure :: neqv_rr
-! end interface
 ! interface
 !  pure function neqv_tt(x, y)
 !   import :: t
@@ -245,6 +236,15 @@ end
 !   real(4), intent(in) :: y
 !   integer(8) :: neqv_rr
 !  end
+! end interface
+! interface operator( .and.)
+!  procedure :: and_ti
+!  procedure :: and_li
+!  procedure :: and_tt
+! end interface
+! interface operator(.x.)
+!  procedure :: neqv_tt
+!  procedure :: neqv_rr
 ! end interface
 !contains
 ! subroutine s1(x, y, z)
@@ -323,11 +323,6 @@ end
 !  sequence
 !  logical(4) :: x
 ! end type
-! interface operator(<>)
-!  procedure :: ne_it
-!  procedure :: ne_tt
-!  procedure :: ne_ci
-! end interface
 ! interface
 !  pure function ne_it(x, y)
 !   import :: t
@@ -350,6 +345,11 @@ end
 !   integer(4), intent(in) :: y
 !   integer(8) :: ne_ci
 !  end
+! end interface
+! interface operator(<>)
+!  procedure :: ne_it
+!  procedure :: ne_tt
+!  procedure :: ne_ci
 ! end interface
 !contains
 ! subroutine s1(x, y, z)
@@ -403,10 +403,6 @@ end
 !  sequence
 !  logical(4) :: x
 ! end type
-! interface operator(//)
-!  procedure :: concat_12
-!  procedure :: concat_int_real
-! end interface
 ! interface
 !  pure function concat_12(x, y)
 !   character(*, 1), intent(in) :: x
@@ -420,6 +416,10 @@ end
 !   real(4), intent(in) :: y
 !   integer(8) :: concat_int_real
 !  end
+! end interface
+! interface operator(//)
+!  procedure :: concat_12
+!  procedure :: concat_int_real
 ! end interface
 !contains
 ! subroutine s1(x, y, z)
@@ -480,17 +480,11 @@ end
 !module m5
 ! type :: t
 ! end type
-! interface operator(+)
-!  procedure :: plus_l
-! end interface
 ! interface
 !  pure function plus_l(x)
 !   logical(4), intent(in) :: x
 !   integer(8) :: plus_l
 !  end
-! end interface
-! interface operator(-)
-!  procedure :: minus_t
 ! end interface
 ! interface
 !  pure function minus_t(x)
@@ -498,10 +492,6 @@ end
 !   type(t), intent(in) :: x
 !   integer(8) :: minus_t
 !  end
-! end interface
-! interface operator( .not.)
-!  procedure :: not_t
-!  procedure :: not_real
 ! end interface
 ! interface
 !  pure function not_t(x)
@@ -515,6 +505,16 @@ end
 !   real(4), intent(in) :: x
 !   integer(8) :: not_real
 !  end
+! end interface
+! interface operator(+)
+!  procedure :: plus_l
+! end interface
+! interface operator(-)
+!  procedure :: minus_t
+! end interface
+! interface operator( .not.)
+!  procedure :: not_t
+!  procedure :: not_real
 ! end interface
 !contains
 ! subroutine s1(x, y)
@@ -556,9 +556,6 @@ end
 
 !Expect: m6.mod
 !module m6
-! interface operator(+)
-!  procedure :: add
-! end interface
 ! interface
 !  pure function add(x, y)
 !   real(4), intent(in) :: x(:, :)
@@ -566,13 +563,16 @@ end
 !   integer(8) :: add
 !  end
 ! end interface
+! interface operator(+)
+!  procedure :: add
+! end interface
 !contains
 ! subroutine s1(n, x, y, z, a, b)
 !  integer(8) :: n
 !  real(4) :: x
 !  real(4) :: y(1_8:4_8, 1_8:n)
 !  real(4) :: z(1_8:2_8, 1_8:2_8, 1_8:2_8)
-!  real(4) :: a(1_8:int(int(4_8*(n-1_8+1_8),kind=4),kind=8))
+!  real(4) :: a(1_8:int(int(4_8*size(y,dim=2,kind=8),kind=4),kind=8))
 !  real(4) :: b(1_8:add(y, z))
 ! end
 !end
@@ -610,10 +610,6 @@ end
 !  integer(4), kind :: k
 !  real(int(int(k,kind=4),kind=8))::a
 ! end type
-! interface operator(+)
-!  procedure :: f1
-!  procedure :: f2
-! end interface
 ! interface
 !  pure function f1(x, y)
 !   import :: t
@@ -629,6 +625,10 @@ end
 !   type(t(k=8_4)), intent(in) :: y
 !   integer(8) :: f2
 !  end
+! end interface
+! interface operator(+)
+!  procedure :: f1
+!  procedure :: f2
 ! end interface
 !contains
 ! subroutine s1(x, y, z)

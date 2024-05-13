@@ -16,14 +16,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
-#include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -124,16 +122,23 @@ public:
   }
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
-      : Probs(std::move(Arg.Probs)), LastF(Arg.LastF),
-        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {}
+      : Handles(std::move(Arg.Handles)), Probs(std::move(Arg.Probs)),
+        LastF(Arg.LastF),
+        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {
+    for (auto &Handle : Handles)
+      Handle.setBPI(this);
+  }
 
   BranchProbabilityInfo(const BranchProbabilityInfo &) = delete;
   BranchProbabilityInfo &operator=(const BranchProbabilityInfo &) = delete;
 
   BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
     releaseMemory();
+    Handles = std::move(RHS.Handles);
     Probs = std::move(RHS.Probs);
     EstimatedBlockWeight = std::move(RHS.EstimatedBlockWeight);
+    for (auto &Handle : Handles)
+      Handle.setBPI(this);
     return *this;
   }
 
@@ -168,12 +173,6 @@ public:
   /// as having a relative probability >= 80%.
   bool isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const;
 
-  /// Retrieve the hot successor of a block if one exists.
-  ///
-  /// Given a basic block, look through its successors and if one exists for
-  /// which \see isEdgeHot would return true, return that successor block.
-  const BasicBlock *getHotSucc(const BasicBlock *BB) const;
-
   /// Print an edge's probability.
   ///
   /// Retrieves an edge's probability similarly to \see getEdgeProbability, but
@@ -196,6 +195,9 @@ public:
   /// This allows to keep probabilities unset for the destination if they were
   /// unset for source.
   void copyEdgeProbabilities(BasicBlock *Src, BasicBlock *Dst);
+
+  /// Swap outgoing edges probabilities for \p Src with branch terminator
+  void swapSuccEdgesProbabilities(const BasicBlock *Src);
 
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
@@ -284,6 +286,8 @@ private:
     }
 
   public:
+    void setBPI(BranchProbabilityInfo *BPI) { this->BPI = BPI; }
+
     BasicBlockCallbackVH(const Value *V, BranchProbabilityInfo *BPI = nullptr)
         : CallbackVH(const_cast<Value *>(V)), BPI(BPI) {}
   };
@@ -365,23 +369,24 @@ private:
   void getLoopExitBlocks(const LoopBlock &LB,
                          SmallVectorImpl<BasicBlock *> &Exits) const;
 
-  /// Returns estimated weight for \p BB. None if \p BB has no estimated weight.
-  Optional<uint32_t> getEstimatedBlockWeight(const BasicBlock *BB) const;
+  /// Returns estimated weight for \p BB. std::nullopt if \p BB has no estimated
+  /// weight.
+  std::optional<uint32_t> getEstimatedBlockWeight(const BasicBlock *BB) const;
 
   /// Returns estimated weight to enter \p L. In other words it is weight of
-  /// loop's header block not scaled by trip count. Returns None if \p L has no
-  /// no estimated weight.
-  Optional<uint32_t> getEstimatedLoopWeight(const LoopData &L) const;
+  /// loop's header block not scaled by trip count. Returns std::nullopt if \p L
+  /// has no no estimated weight.
+  std::optional<uint32_t> getEstimatedLoopWeight(const LoopData &L) const;
 
-  /// Return estimated weight for \p Edge. Returns None if estimated weight is
-  /// unknown.
-  Optional<uint32_t> getEstimatedEdgeWeight(const LoopEdge &Edge) const;
+  /// Return estimated weight for \p Edge. Returns std::nullopt if estimated
+  /// weight is unknown.
+  std::optional<uint32_t> getEstimatedEdgeWeight(const LoopEdge &Edge) const;
 
   /// Iterates over all edges leading from \p SrcBB to \p Successors and
   /// returns maximum of all estimated weights. If at least one edge has unknown
-  /// estimated weight None is returned.
+  /// estimated weight std::nullopt is returned.
   template <class IterT>
-  Optional<uint32_t>
+  std::optional<uint32_t>
   getMaxEstimatedEdgeWeight(const LoopBlock &SrcBB,
                             iterator_range<IterT> Successors) const;
 
@@ -401,7 +406,7 @@ private:
                                      SmallVectorImpl<LoopBlock> &LoopWorkList);
 
   /// Returns block's weight encoded in the IR.
-  Optional<uint32_t> getInitialEstimatedBlockWeight(const BasicBlock *BB);
+  std::optional<uint32_t> getInitialEstimatedBlockWeight(const BasicBlock *BB);
 
   // Computes estimated weights for all blocks in \p F.
   void computeEestimateBlockWeight(const Function &F, DominatorTree *DT,
@@ -440,6 +445,8 @@ public:
   explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BranchProbabilityInfo.

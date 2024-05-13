@@ -22,7 +22,7 @@ class RegisterInfoInterface {
 public:
   RegisterInfoInterface(const lldb_private::ArchSpec &target_arch)
       : m_target_arch(target_arch) {}
-  virtual ~RegisterInfoInterface() {}
+  virtual ~RegisterInfoInterface() = default;
 
   virtual size_t GetGPRSize() const = 0;
 
@@ -41,29 +41,9 @@ public:
     return m_target_arch;
   }
 
-  virtual const lldb_private::RegisterInfo *
-  GetDynamicRegisterInfo(const char *reg_name) const {
-    const std::vector<lldb_private::RegisterInfo> *d_register_infos =
-        GetDynamicRegisterInfoP();
-    if (d_register_infos != nullptr) {
-      std::vector<lldb_private::RegisterInfo>::const_iterator pos =
-          d_register_infos->begin();
-      for (; pos < d_register_infos->end(); pos++) {
-        if (::strcmp(reg_name, pos->name) == 0)
-          return (d_register_infos->data() + (pos - d_register_infos->begin()));
-      }
-    }
-    return nullptr;
-  }
-
-  virtual const std::vector<lldb_private::RegisterInfo> *
-  GetDynamicRegisterInfoP() const {
-    return nullptr;
-  }
-
-  // FIXME make private.
+private:
   lldb_private::ArchSpec m_target_arch;
 };
-}
+} // namespace lldb_private
 
 #endif

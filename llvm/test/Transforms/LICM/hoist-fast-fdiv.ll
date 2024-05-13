@@ -1,5 +1,4 @@
-; RUN: opt -licm -S < %s | FileCheck %s
-; RUN: opt -licm -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes=licm -verify-memoryssa -S < %s | FileCheck %s
 
 ; Function Attrs: noinline norecurse nounwind readnone ssp uwtable
 define zeroext i1 @invariant_denom(double %v) #0 {
@@ -33,7 +32,7 @@ end:                                      ; preds = %loop
   ret i1 %v16
 }
 
-define void @invariant_fdiv(float* %out, float %arg) {
+define void @invariant_fdiv(ptr %out, float %arg) {
 ; CHECK-LABEL: @invariant_fdiv(
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: %div = fdiv fast float 4.000000e+00, %arg
@@ -50,8 +49,8 @@ loop:                                              ; preds = %loop, %entry
 ; CHECK-NOT: fmul
   %div = fdiv fast float 4.000000e+00, %arg
   %mul = fmul fast float %div, 0x41F0000000000000
-  %gep = getelementptr inbounds float, float* %out, i32 %ind
-  store float %mul, float* %gep, align 4
+  %gep = getelementptr inbounds float, ptr %out, i32 %ind
+  store float %mul, ptr %gep, align 4
   %inc = add nuw nsw i32 %ind, 1
   %cond = icmp eq i32 %inc, 1024
   br i1 %cond, label %exit, label %loop

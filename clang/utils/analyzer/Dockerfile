@@ -13,16 +13,17 @@ RUN apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ bionic main'
 
 # test system dependencies
 RUN apt-get update && apt-get install -y \
-    git=1:2.17.1-1ubuntu0.7 \
-    gettext=0.19.8.1-6ubuntu0.3 \
+    git=1:2.17.1* \
+    gettext=0.19.8.1* \
     python3=3.6.7-1~18.04 \
-    python3-pip=9.0.1-2.3~ubuntu1.18.04.1 \
-    cmake=3.17.3-0kitware1 \
+    python3-pip=9.0.1-2.3* \
+    cmake=3.20.5* \
+    cmake-data=3.20.5* \
     ninja-build=1.8.2-1
 
 # box2d dependencies
 RUN apt-get install -y \
-    libx11-dev=2:1.6.4-3ubuntu0.2 \
+    libx11-dev=2:1.6.4-3* \
     libxrandr-dev=2:1.5.1-1 \
     libxinerama-dev=2:1.1.3-1 \
     libxcursor-dev=1:1.1.15-1 \
@@ -30,27 +31,30 @@ RUN apt-get install -y \
 
 # symengine dependencies
 RUN apt-get install -y \
-    libgmp10=2:6.1.2+dfsg-2 \
-    libgmp-dev=2:6.1.2+dfsg-2
+    libgmp10=2:6.1.2+dfsg-2ubuntu0.1 \
+    libgmp-dev=2:6.1.2+dfsg-2ubuntu0.1
 
 # simbody dependencies
 RUN apt-get install -y \
-    liblapack-dev=3.7.1-4ubuntu1
+    liblapack-dev=3.7.1-4*
 
 # drogon dependencies
 RUN apt-get install -y \
-    libjsonrpccpp-dev=0.7.0-1build2 \
-    uuid-dev=2.31.1-0.4ubuntu3.6
+    libjsonrpccpp-dev=0.7.0-1* \
+    uuid-dev=2.31.1-0.4*
 
 # tmux dependencies
 RUN apt-get install -y \
     autotools-dev=20180224.1 \
-    automake=1:1.15.1-3ubuntu2 \
-    libncurses5-dev=6.1-1ubuntu1.18.04 \
-    libevent-dev=2.1.8-stable-4build1 \
-    pkg-config=0.29.1-0ubuntu2 \
+    automake=1:1.15.1-3* \
+    libncurses5-dev=6.1-1* \
+    libevent-dev=2.1.8* \
+    pkg-config=0.29.1-0* \
     flex=2.6.4-6 \
-    bison=2:3.0.4.dfsg-1build1
+    bison=2:3.0.4.*
+
+RUN apt-get install -y \
+    libjpeg-dev
 
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 

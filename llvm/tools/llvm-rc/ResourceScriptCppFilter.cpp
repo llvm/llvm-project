@@ -67,7 +67,7 @@ bool Filter::parseLine(StringRef Line) {
   // false since the preprocessing directives should be filtered out.
 
   Line.consume_front("line");
-  if (!Line.startswith(" "))
+  if (!Line.starts_with(" "))
     return false; // Not a line directive (pragma etc).
 
   // #line 123 "path/file.h"
@@ -91,7 +91,7 @@ bool Filter::parseLine(StringRef Line) {
 
   StringRef Ext = Line.rsplit('.').second;
 
-  if (Ext.equals_lower("h") || Ext.equals_lower("c")) {
+  if (Ext.equals_insensitive("h") || Ext.equals_insensitive("c")) {
     Outputting = false;
   } else {
     Outputting = true;

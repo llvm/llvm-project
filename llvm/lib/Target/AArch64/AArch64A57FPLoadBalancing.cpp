@@ -30,7 +30,6 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -515,7 +514,7 @@ int AArch64A57FPLoadBalancing::scavengeRegister(Chain *G, Color C,
   } while (I != ChainBegin);
 
   // Make sure we allocate in-order, to get the cheapest registers first.
-  unsigned RegClassID = ChainBegin->getDesc().OpInfo[0].RegClass;
+  unsigned RegClassID = ChainBegin->getDesc().operands()[0].RegClass;
   auto Ord = RCI.getOrder(TRI->getRegClass(RegClassID));
   for (auto Reg : Ord) {
     if (!Units.available(Reg))

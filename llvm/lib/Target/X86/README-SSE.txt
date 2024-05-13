@@ -681,37 +681,6 @@ _t:
 	movaps	%xmm0, 0
 
 //===---------------------------------------------------------------------===//
-rdar://5907648
-
-This function:
-
-float foo(unsigned char x) {
-  return x;
-}
-
-compiles to (x86-32):
-
-define float @foo(i8 zeroext  %x) nounwind  {
-	%tmp12 = uitofp i8 %x to float		; <float> [#uses=1]
-	ret float %tmp12
-}
-
-compiles to:
-
-_foo:
-	subl	$4, %esp
-	movzbl	8(%esp), %eax
-	cvtsi2ss	%eax, %xmm0
-	movss	%xmm0, (%esp)
-	flds	(%esp)
-	addl	$4, %esp
-	ret
-
-We should be able to use:
-  cvtsi2ss 8($esp), %xmm0
-since we know the stack slot is already zext'd.
-
-//===---------------------------------------------------------------------===//
 
 Consider using movlps instead of movsd to implement (scalar_to_vector (loadf64))
 when code size is critical. movlps is slower than movsd on core2 but it's one

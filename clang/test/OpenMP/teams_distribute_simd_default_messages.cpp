@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized -fopenmp-version=51
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized -fopenmp-version=51
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 void foo();
 
@@ -14,10 +14,10 @@ int main(int argc, char **argv) {
   #pragma omp teams distribute simd default // expected-error {{expected '(' after 'default'}}
   for (int i=0; i<200; i++) foo();
   #pragma omp target
-#pragma omp teams distribute simd default( // expected-error {{expected 'none', 'shared' or 'firstprivate' in OpenMP clause 'default'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp teams distribute simd default( // expected-error {{expected 'none', 'shared', 'private' or 'firstprivate' in OpenMP clause 'default'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i=0; i<200; i++) foo();
   #pragma omp target
-#pragma omp teams distribute simd default() // expected-error {{expected 'none', 'shared' or 'firstprivate' in OpenMP clause 'default'}}
+#pragma omp teams distribute simd default() // expected-error {{expected 'none', 'shared', 'private' or 'firstprivate' in OpenMP clause 'default'}}
   for (int i=0; i<200; i++) foo();
   #pragma omp target
   #pragma omp teams distribute simd default (none // expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   #pragma omp teams distribute simd default (shared), default(shared) // expected-error {{directive '#pragma omp teams distribute simd' cannot contain more than one 'default' clause}}
   for (int i=0; i<200; i++) foo();
   #pragma omp target
-#pragma omp teams distribute simd default(x) // expected-error {{expected 'none', 'shared' or 'firstprivate' in OpenMP clause 'default'}}
+#pragma omp teams distribute simd default(x) // expected-error {{expected 'none', 'shared', 'private' or 'firstprivate' in OpenMP clause 'default'}}
   for (int i=0; i<200; i++) foo();
 
   #pragma omp target
@@ -40,6 +40,16 @@ int main(int argc, char **argv) {
 
 #pragma omp target
 #pragma omp teams distribute simd default(firstprivate) // expected-note {{explicit data sharing attribute requested here}}
+  for (int i = 0; i < 200; i++)
+    ++y; // expected-error {{variable 'y' must have explicitly specified data sharing attributes}}
+
+#pragma omp target
+#pragma omp teams distribute simd default(private) // expected-note {{explicit data sharing attribute requested here}}
+  for (int i = 0; i < 200; i++)
+    ++x; // expected-error {{variable 'x' must have explicitly specified data sharing attributes}}
+
+#pragma omp target
+#pragma omp teams distribute simd default(private) // expected-note {{explicit data sharing attribute requested here}}
   for (int i = 0; i < 200; i++)
     ++y; // expected-error {{variable 'y' must have explicitly specified data sharing attributes}}
 

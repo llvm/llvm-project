@@ -1,21 +1,21 @@
-; RUN: llc < %s -march=mips -relocation-model=static | \
+; RUN: llc < %s -mtriple=mips -relocation-model=static | \
 ; RUN: FileCheck %s -check-prefix=STATIC-O32 
-; RUN: llc < %s -march=mips -relocation-model=pic | \
+; RUN: llc < %s -mtriple=mips -relocation-model=pic | \
 ; RUN: FileCheck %s -check-prefix=PIC-O32 
-; RUN: llc < %s -march=mips64 -relocation-model=pic -mcpu=mips4 | \
+; RUN: llc < %s -mtriple=mips64 -relocation-model=pic -mcpu=mips4 | \
 ; RUN:     FileCheck %s -check-prefix=PIC-N64
-; RUN: llc < %s -march=mips64 -relocation-model=static -mcpu=mips4 | \
+; RUN: llc < %s -mtriple=mips64 -relocation-model=static -mcpu=mips4 | \
 ; RUN:     FileCheck %s -check-prefix=STATIC-N64
-; RUN: llc < %s -march=mips64 -relocation-model=pic -mcpu=mips64 | \
+; RUN: llc < %s -mtriple=mips64 -relocation-model=pic -mcpu=mips64 | \
 ; RUN:     FileCheck %s -check-prefix=PIC-N64
-; RUN: llc < %s -march=mips64 -relocation-model=static -mcpu=mips64 | \
+; RUN: llc < %s -mtriple=mips64 -relocation-model=static -mcpu=mips64 | \
 ; RUN:     FileCheck %s -check-prefix=STATIC-N64
 
 define i32 @main() nounwind readnone {
 entry:
-  %x = alloca i32, align 4                        ; <i32*> [#uses=2]
-  store volatile i32 2, i32* %x, align 4
-  %0 = load volatile i32, i32* %x, align 4             ; <i32> [#uses=1]
+  %x = alloca i32, align 4                        ; <ptr> [#uses=2]
+  store volatile i32 2, ptr %x, align 4
+  %0 = load volatile i32, ptr %x, align 4             ; <i32> [#uses=1]
 ; STATIC-O32: sll $[[R0:[0-9]+]], ${{[0-9]+}}, 2
 ; STATIC-O32: lui $[[R1:[0-9]+]], %hi($JTI0_0)
 ; STATIC-O32: addu $[[R2:[0-9]+]], $[[R0]], $[[R1]]

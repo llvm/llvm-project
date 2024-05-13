@@ -1,9 +1,24 @@
+; If a function has linkage "available_externally", make sure that a dllimport
+; attribute is not dropped. The library definition (with a dllexport attribute)
+; might be in a shared library, rather than merged into this module. Since we
+; can't guaranty the definition is available locally, the dllimport attribute
+; may be used by later passes and should be preserved.
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t0.bc %s
 ; RUN: llvm-lto2 run -r %t0.bc,__imp_f,l \
 ; RUN:               -r %t0.bc,g,p \
 ; RUN:               -r %t0.bc,g,l \
 ; RUN:               -r %t0.bc,e,l \
 ; RUN:               -r %t0.bc,main,x \
+; RUN:               -save-temps -o %t1 %t0.bc
+; RUN: llvm-dis %t1.1.3.import.bc -o - | FileCheck %s
+
+; RUN: opt --unified-lto -thinlto-split-lto-unit -thinlto-bc -o %t0.bc %s
+; RUN: llvm-lto2 run -r %t0.bc,__imp_f,l \
+; RUN:               -r %t0.bc,g,p \
+; RUN:               -r %t0.bc,g,l \
+; RUN:               -r %t0.bc,e,l \
+; RUN:               -r %t0.bc,main,x \
+; RUN:               --unified-lto=thin \
 ; RUN:               -save-temps -o %t1 %t0.bc
 ; RUN: llvm-dis %t1.1.3.import.bc -o - | FileCheck %s
 source_filename = "test.cpp"
@@ -13,7 +28,7 @@ target triple = "x86_64-unknown-linux-gnu"
 $g = comdat any
 @g = global i8 42, comdat, !type !0
 
-; CHECK: define available_externally dllimport i8* @f()
+; CHECK: define available_externally dllimport ptr @f()
 define available_externally dllimport i8* @f() {
   ret i8* @g
 }

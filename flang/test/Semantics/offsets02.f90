@@ -8,11 +8,17 @@ subroutine s1
     real(8) :: a
     real(4) :: b
   end type
-  !CHECK: x1 size=12 offset=0:
-  !CHECK: y1 size=12 offset=16:
+  type t2
+    type(t1) c
+    real(4) d
+  end type
+  !CHECK: x1 size=16 offset=0:
+  !CHECK: y1 size=16 offset=16:
   type(t1) :: x1, y1
   !CHECK: z1 size=160 offset=32:
   type(t1) :: z1(10)
+  !CHECK: z2 size=24 offset=192
+  type(t2) z2
 end
 
 ! Like t1 but t2 does not need to be aligned on 64-bit boundary
@@ -52,3 +58,13 @@ subroutine s3
   !CHECK: d3 size=24 offset=40:
   type(t(4, 20)) :: x4
 end
+
+subroutine s4
+  type t(k)
+    integer, kind :: k
+    character(len=k) :: c
+  end type
+  type(t(7)) :: x4
+  !CHECK: DerivedType scope: size=7 alignment=1 instantiation of t(k=7_4)
+  !CHECK: c size=7 offset=0: ObjectEntity type: CHARACTER(7_4,1)
+end subroutine

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu \
-// RUN:            -target-feature +altivec -fsyntax-only -ast-dump \
-// RUN:            -xc++ < %s 2>&1 \
+// RUN:            -target-feature +altivec -ast-dump \
+// RUN:            -xc++ < %s \
 // RUN:   | FileCheck %s
 
 // Ensures that casts to AltiVec type with a dependent expression operand does
@@ -34,5 +34,5 @@ void g(void) {
 
 //      CHECK: |       `-CStyleCastExpr {{.*}} '__vector int' <VectorSplat>
 // CHECK-NEXT: |         `-ImplicitCastExpr {{.*}} 'int' <FloatingToIntegral>
-// CHECK-NEXT: |           `-ImplicitCastExpr {{.*}}:'double' <LValueToRValue>
+// CHECK-NEXT: |           `-ImplicitCastExpr {{.*}}'double' <LValueToRValue>
 }

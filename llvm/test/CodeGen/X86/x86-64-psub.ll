@@ -14,9 +14,9 @@ define i64 @test_psubb() {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    callq getFirstParam
+; CHECK-NEXT:    callq getFirstParam@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    callq getSecondParam
+; CHECK-NEXT:    callq getSecondParam@PLT
 ; CHECK-NEXT:    movq %rbx, %mm0
 ; CHECK-NEXT:    movq %rax, %mm1
 ; CHECK-NEXT:    psubb %mm1, %mm0
@@ -48,9 +48,9 @@ define i64 @test_psubw() {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    callq getFirstParam
+; CHECK-NEXT:    callq getFirstParam@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    callq getSecondParam
+; CHECK-NEXT:    callq getSecondParam@PLT
 ; CHECK-NEXT:    movq %rbx, %mm0
 ; CHECK-NEXT:    movq %rax, %mm1
 ; CHECK-NEXT:    psubw %mm1, %mm0
@@ -82,9 +82,9 @@ define i64 @test_psubd() {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    callq getFirstParam
+; CHECK-NEXT:    callq getFirstParam@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    callq getSecondParam
+; CHECK-NEXT:    callq getSecondParam@PLT
 ; CHECK-NEXT:    movq %rbx, %mm0
 ; CHECK-NEXT:    movq %rax, %mm1
 ; CHECK-NEXT:    psubd %mm1, %mm0
@@ -116,9 +116,9 @@ define i64 @test_psubsb() {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    callq getFirstParam
+; CHECK-NEXT:    callq getFirstParam@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    callq getSecondParam
+; CHECK-NEXT:    callq getSecondParam@PLT
 ; CHECK-NEXT:    movq %rbx, %mm0
 ; CHECK-NEXT:    movq %rax, %mm1
 ; CHECK-NEXT:    psubsb %mm1, %mm0
@@ -150,9 +150,9 @@ define i64 @test_psubswv() {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    callq getFirstParam
+; CHECK-NEXT:    callq getFirstParam@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    callq getSecondParam
+; CHECK-NEXT:    callq getSecondParam@PLT
 ; CHECK-NEXT:    movq %rbx, %mm0
 ; CHECK-NEXT:    movq %rax, %mm1
 ; CHECK-NEXT:    psubsw %mm1, %mm0
@@ -184,9 +184,9 @@ define i64 @test_psubusbv() {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    callq getFirstParam
+; CHECK-NEXT:    callq getFirstParam@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    callq getSecondParam
+; CHECK-NEXT:    callq getSecondParam@PLT
 ; CHECK-NEXT:    movq %rbx, %mm0
 ; CHECK-NEXT:    movq %rax, %mm1
 ; CHECK-NEXT:    psubusb %mm1, %mm0
@@ -218,9 +218,9 @@ define i64 @test_psubuswv() {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    callq getFirstParam
+; CHECK-NEXT:    callq getFirstParam@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    callq getSecondParam
+; CHECK-NEXT:    callq getSecondParam@PLT
 ; CHECK-NEXT:    movq %rbx, %mm0
 ; CHECK-NEXT:    movq %rax, %mm1
 ; CHECK-NEXT:    psubusw %mm1, %mm0

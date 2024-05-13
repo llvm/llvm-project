@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMRISCVDesc
   RISCVMCAsmInfo.cpp
   RISCVMCCodeEmitter.cpp
   RISCVMCExpr.cpp
+  RISCVMCObjectFileInfo.cpp
   RISCVMCTargetDesc.cpp
   RISCVMatInt.cpp
   RISCVTargetStreamer.cpp
@@ -15,6 +16,7 @@ add_llvm_component_library(LLVMRISCVDesc
   MC
   RISCVInfo
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   RISCV

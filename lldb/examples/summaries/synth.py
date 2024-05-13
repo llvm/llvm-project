@@ -2,7 +2,6 @@ import lldb
 
 
 class PythonObjectSyntheticChildProvider(object):
-
     def __init__(self, value, internal_dict):
         self.value = value
         self.values = self.make_children()
@@ -33,20 +32,17 @@ class PythonObjectSyntheticChildProvider(object):
     def gen_child(self, name, value):
         data = None
         type = None
-        import six
-        if isinstance(value, six.integer_types):
-            data = lldb.SBData.CreateDataFromUInt64Array(
-                self.bo, self.ps, [value])
+        if isinstance(value, int):
+            data = lldb.SBData.CreateDataFromUInt64Array(self.bo, self.ps, [value])
             type = self.value.target.GetBasicType(lldb.eBasicTypeLong)
         elif isinstance(value, float):
-            data = lldb.SBData.CreateDataFromDoubleArray(
-                self.bo, self.ps, [value])
+            data = lldb.SBData.CreateDataFromDoubleArray(self.bo, self.ps, [value])
             type = self.value.target.GetBasicType(lldb.eBasicTypeDouble)
         elif isinstance(value, str):
             data = lldb.SBData.CreateDataFromCString(self.bo, self.ps, value)
-            type = self.value.target.GetBasicType(
-                lldb.eBasicTypeChar).GetArrayType(
-                len(value))
+            type = self.value.target.GetBasicType(lldb.eBasicTypeChar).GetArrayType(
+                len(value)
+            )
         if (data is not None) and (type is not None):
             return self.value.CreateValueFromData(name, data, type)
         return None

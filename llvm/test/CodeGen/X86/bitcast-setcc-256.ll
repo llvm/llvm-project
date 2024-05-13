@@ -206,21 +206,20 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm3
 ; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm5
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm3
-; SSE2-SSSE3-NEXT:    por %xmm1, %xmm3
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm5
 ; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm2
 ; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm1
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm2
-; SSE2-SSSE3-NEXT:    por %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    movmskps %xmm2, %eax
+; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm4
+; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm6
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,2],xmm5[0,2]
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; SSE2-SSSE3-NEXT:    andps %xmm6, %xmm0
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm5[1,3]
+; SSE2-SSSE3-NEXT:    orps %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    movmskps %xmm4, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
@@ -269,7 +268,7 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b) {
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
 ; SSE2-SSSE3-NEXT:    movmskps %xmm2, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -302,7 +301,7 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b) {
   ret i4 %res
 }
 
-define void @bitcast_32i8_store(i32* %p, <32 x i8> %a0) {
+define void @bitcast_32i8_store(ptr %p, <32 x i8> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_32i8_store:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
@@ -352,11 +351,11 @@ define void @bitcast_32i8_store(i32* %p, <32 x i8> %a0) {
 ; AVX512BW-NEXT:    retq
   %a1 = icmp slt <32 x i8> %a0, zeroinitializer
   %a2 = bitcast <32 x i1> %a1 to i32
-  store i32 %a2, i32* %p
+  store i32 %a2, ptr %p
   ret void
 }
 
-define void @bitcast_16i16_store(i16* %p, <16 x i16> %a0) {
+define void @bitcast_16i16_store(ptr %p, <16 x i16> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_16i16_store:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    packsswb %xmm1, %xmm0
@@ -400,11 +399,11 @@ define void @bitcast_16i16_store(i16* %p, <16 x i16> %a0) {
 ; AVX512BW-NEXT:    retq
   %a1 = icmp slt <16 x i16> %a0, zeroinitializer
   %a2 = bitcast <16 x i1> %a1 to i16
-  store i16 %a2, i16* %p
+  store i16 %a2, ptr %p
   ret void
 }
 
-define void @bitcast_8i32_store(i8* %p, <8 x i32> %a0) {
+define void @bitcast_8i32_store(ptr %p, <8 x i32> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_8i32_store:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
@@ -428,14 +427,14 @@ define void @bitcast_8i32_store(i8* %p, <8 x i32> %a0) {
 ; AVX512-NEXT:    retq
   %a1 = icmp slt <8 x i32> %a0, zeroinitializer
   %a2 = bitcast <8 x i1> %a1 to i8
-  store i8 %a2, i8* %p
+  store i8 %a2, ptr %p
   ret void
 }
 
-define void @bitcast_4i64_store(i4* %p, <4 x i64> %a0) {
+define void @bitcast_4i64_store(ptr %p, <4 x i64> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_4i64_store:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    movb %al, (%rdi)
 ; SSE2-SSSE3-NEXT:    retq
@@ -466,6 +465,6 @@ define void @bitcast_4i64_store(i4* %p, <4 x i64> %a0) {
 ; AVX512BW-NEXT:    retq
   %a1 = icmp slt <4 x i64> %a0, zeroinitializer
   %a2 = bitcast <4 x i1> %a1 to i4
-  store i4 %a2, i4* %p
+  store i4 %a2, ptr %p
   ret void
 }

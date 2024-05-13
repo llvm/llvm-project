@@ -21,11 +21,10 @@ typedef struct objc_object {
 -(id)foo;
 @end
 
-static void func() {
+static void func(void) {
  
   id x;
 
-  // rdar://8290002
   [(*x).isa self]; // expected-warning {{direct access to Objective-C's isa is deprecated in favor of object_getClass()}}
   [x->isa self]; // expected-warning {{direct access to Objective-C's isa is deprecated in favor of object_getClass()}}
   
@@ -41,7 +40,6 @@ static void func() {
                     expected-warning{{receiver type 'struct objc_class *' is not 'id' or interface pointer, consider casting it to 'id'}}
 }
 
-// rdar://11702488
 // If an ivar is (1) the first ivar in a root class and (2) named `isa`,
 // then it should get the same warnings that id->isa gets.
 

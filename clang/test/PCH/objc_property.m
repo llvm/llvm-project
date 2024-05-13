@@ -7,7 +7,7 @@
 
 // expected-no-diagnostics
 
-void func() {
+void func(void) {
  TestProperties *xx = [TestProperties alloc];
  xx.value = 5;
 }

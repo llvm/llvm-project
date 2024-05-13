@@ -53,8 +53,7 @@ public:
 
 class MockServer : public GDBRemoteCommunicationServer {
 public:
-  MockServer()
-      : GDBRemoteCommunicationServer("mock-server", "mock-server.listener") {
+  MockServer() : GDBRemoteCommunicationServer() {
     m_send_acks = false;
     m_send_error_strings = true;
   }
@@ -65,8 +64,7 @@ public:
 
   PacketResult GetPacket(StringExtractorGDBRemote &response) {
     const bool sync_on_timeout = false;
-    return WaitForPacketNoLock(response, std::chrono::seconds(1),
-                               sync_on_timeout);
+    return ReadPacket(response, std::chrono::seconds(1), sync_on_timeout);
   }
 
   using GDBRemoteCommunicationServer::SendErrorResponse;

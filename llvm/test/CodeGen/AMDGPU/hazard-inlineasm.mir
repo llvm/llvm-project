@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=gfx900 -march=amdgcn -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck %s
+# RUN: llc -mcpu=gfx900 -mtriple=amdgcn -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck %s
 
 # If an INLINEASM statement is preceded by a vmem store of more than 8 bytes *and*
 # the INLINEASM defs the vregs holding the data-to-be-stored by that preceding store,
@@ -6,7 +6,7 @@
 
 ...
 
-# GCN-LABEL: name: hazard-inlineasm
+# CHECK-LABEL: name: hazard-inlineasm
 # CHECK: FLAT_STORE_DWORDX4
 # CHECK-NEXT: S_NOP 0
 # CHECK-NEXT: INLINEASM

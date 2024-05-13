@@ -77,20 +77,19 @@ target triple = "i686-pc-windows-msvc19.0.24215"
 
 %struct.A = type { i8 }
 
-@"\01?p@@3PAUA@@A" = global %struct.A* null, align 4, !dbg !0
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_t.cpp, i8* null }]
+@"\01?p@@3PAUA@@A" = global ptr null, align 4, !dbg !0
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_t.cpp, ptr null }]
 
 ; Function Attrs: noinline
 define internal void @"\01??__Ep@@YAXXZ"() #0 !dbg !25 {
 entry:
-  %call = call i8* @"\01??2@YAPAXI@Z"(i32 1) #2, !dbg !26
-  %0 = bitcast i8* %call to %struct.A*, !dbg !26
-  store %struct.A* %0, %struct.A** @"\01?p@@3PAUA@@A", align 4, !dbg !26
+  %call = call ptr @"\01??2@YAPAXI@Z"(i32 1) #2, !dbg !26
+  store ptr %call, ptr @"\01?p@@3PAUA@@A", align 4, !dbg !26
   ret void, !dbg !27
 }
 
 ; Function Attrs: nobuiltin
-declare noalias i8* @"\01??2@YAPAXI@Z"(i32) #1
+declare noalias ptr @"\01??2@YAPAXI@Z"(i32) #1
 
 ; Function Attrs: noinline
 define internal void @_GLOBAL__sub_I_t.cpp() #0 !dbg !28 {

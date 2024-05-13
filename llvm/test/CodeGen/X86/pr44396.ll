@@ -21,7 +21,7 @@ define double @c() nounwind {
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    shrl $31, %edx
 ; CHECK-NEXT:    fildll (%esp)
-; CHECK-NEXT:    fadds LCPI0_0(,%edx,4)
+; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%edx,4)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldz
@@ -33,9 +33,9 @@ define double @c() nounwind {
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   %conv = sext i32 %0 to i64
-  %1 = load i64, i64* @a, align 8
+  %1 = load i64, ptr @a, align 8
   %cmp = icmp ult i64 %1, %conv
   %sub = sub i64 %1, %conv
   %conv3 = uitofp i64 %sub to double

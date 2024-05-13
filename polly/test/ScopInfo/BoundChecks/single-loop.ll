@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s --check-prefix=AST
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
 ;
 ; This only works after the post-dominator tree has been fixed.
 ;
@@ -38,7 +38,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(i64 %n, float* %A) #0 {
+define void @foo(i64 %n, ptr %A) #0 {
 entry:
   br label %for.cond
 
@@ -64,10 +64,10 @@ if.then.3:                                        ; preds = %if.end
 
 if.end.4:                                         ; preds = %if.end
   %conv = sitofp i64 %i.0 to float
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp = load float, ptr %arrayidx, align 4
   %add = fadd float %tmp, %conv
-  store float %add, float* %arrayidx, align 4
+  store float %add, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.end.4

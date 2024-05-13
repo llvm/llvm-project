@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines
 ; Derived from test-suite/MultiSource/Applications/sgefa/blas.c
 ;
 ; The exit value of %i.0320 in land.rhs is not computable.

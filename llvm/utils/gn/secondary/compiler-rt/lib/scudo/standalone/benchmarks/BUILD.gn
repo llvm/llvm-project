@@ -1,8 +1,0 @@
-executable("ScudoBenchmarks") {
-  configs += [ "//llvm/utils/gn/build:crt_code" ]
-  sources = [ "malloc_benchmark.cpp" ]
-  deps = [
-    "//compiler-rt/lib/scudo/standalone:sources",
-    "//llvm/utils/benchmark",
-  ]
-}

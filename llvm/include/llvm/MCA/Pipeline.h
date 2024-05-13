@@ -51,10 +51,17 @@ class Pipeline {
   Pipeline(const Pipeline &P) = delete;
   Pipeline &operator=(const Pipeline &P) = delete;
 
+  enum class State {
+    Created, // Pipeline was just created. The default state.
+    Started, // Pipeline has started running.
+    Paused   // Pipeline is paused.
+  };
+  State CurrentState = State::Created;
+
   /// An ordered list of stages that define this instruction pipeline.
   SmallVector<std::unique_ptr<Stage>, 8> Stages;
   std::set<HWEventListener *> Listeners;
-  unsigned Cycles;
+  unsigned Cycles = 0;
 
   Error runCycle();
   bool hasWorkToProcess();
@@ -62,13 +69,16 @@ class Pipeline {
   void notifyCycleEnd();
 
 public:
-  Pipeline() : Cycles(0) {}
+  Pipeline() = default;
   void appendStage(std::unique_ptr<Stage> S);
 
   /// Returns the total number of simulated cycles.
   Expected<unsigned> run();
 
   void addEventListener(HWEventListener *Listener);
+
+  /// Returns whether the pipeline is currently paused.
+  bool isPaused() const { return CurrentState == State::Paused; }
 };
 } // namespace mca
 } // namespace llvm

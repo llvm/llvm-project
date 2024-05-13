@@ -3,7 +3,7 @@ struct foo {
   int a;
 };
 
-int main() {
+int main(void) {
   struct foo xxx;
   int i;
 

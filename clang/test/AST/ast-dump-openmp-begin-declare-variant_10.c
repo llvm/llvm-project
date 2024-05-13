@@ -37,7 +37,7 @@ static CONST __attribute__((nothrow, always_inline)) __inline__ int also_before4
 #pragma omp end declare variant
 
 
-int main() {
+int main(void) {
   // Should return 0.
   return also_before1() + also_before2() + also_before3() + also_before4();
 }
@@ -92,7 +92,7 @@ int main() {
 // C-NEXT: | |-NoThrowAttr [[ADDR_43:0x[a-z0-9]*]] <line:34:29>
 // C-NEXT: | `-AlwaysInlineAttr [[ADDR_44:0x[a-z0-9]*]] <col:38> always_inline
 // C-NEXT: `-FunctionDecl [[ADDR_45:0x[a-z0-9]*]] <line:40:1, line:43:1> line:40:5 main 'int ({{.*}})'
-// C-NEXT:   `-CompoundStmt [[ADDR_46:0x[a-z0-9]*]] <col:12, line:43:1>
+// C-NEXT:   `-CompoundStmt [[ADDR_46:0x[a-z0-9]*]] <col:16, line:43:1>
 // C-NEXT:     `-ReturnStmt [[ADDR_47:0x[a-z0-9]*]] <line:42:3, col:74>
 // C-NEXT:       `-BinaryOperator [[ADDR_48:0x[a-z0-9]*]] <col:10, col:74> 'int' '+'
 // C-NEXT:         |-BinaryOperator [[ADDR_49:0x[a-z0-9]*]] <col:10, col:57> 'int' '+'
@@ -168,7 +168,7 @@ int main() {
 // CXX-NEXT: | |   `-IntegerLiteral [[ADDR_39:0x[a-z0-9]*]] <col:10> 'int' 0
 // CXX-NEXT: | `-AlwaysInlineAttr [[ADDR_40:0x[a-z0-9]*]] <line:34:38> always_inline
 // CXX-NEXT: `-FunctionDecl [[ADDR_41:0x[a-z0-9]*]] <line:40:1, line:43:1> line:40:5 main 'int ({{.*}})'
-// CXX-NEXT:   `-CompoundStmt [[ADDR_42:0x[a-z0-9]*]] <col:12, line:43:1>
+// CXX-NEXT:   `-CompoundStmt [[ADDR_42:0x[a-z0-9]*]] <col:16, line:43:1>
 // CXX-NEXT:     `-ReturnStmt [[ADDR_43:0x[a-z0-9]*]] <line:42:3, col:74>
 // CXX-NEXT:       `-BinaryOperator [[ADDR_44:0x[a-z0-9]*]] <col:10, col:74> 'int' '+'
 // CXX-NEXT:         |-BinaryOperator [[ADDR_45:0x[a-z0-9]*]] <col:10, col:57> 'int' '+'

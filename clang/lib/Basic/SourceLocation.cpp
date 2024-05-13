@@ -42,16 +42,16 @@ void PrettyStackTraceLoc::print(raw_ostream &OS) const {
 // SourceLocation
 //===----------------------------------------------------------------------===//
 
-static_assert(std::is_trivially_destructible<SourceLocation>::value,
+static_assert(std::is_trivially_destructible_v<SourceLocation>,
               "SourceLocation must be trivially destructible because it is "
               "used in unions");
 
-static_assert(std::is_trivially_destructible<SourceRange>::value,
+static_assert(std::is_trivially_destructible_v<SourceRange>,
               "SourceRange must be trivially destructible because it is "
               "used in unions");
 
 unsigned SourceLocation::getHashValue() const {
-  return llvm::DenseMapInfo<unsigned>::getHashValue(ID);
+  return llvm::DenseMapInfo<UIntTy>::getHashValue(ID);
 }
 
 void llvm::FoldingSetTrait<SourceLocation>::Profile(
@@ -90,7 +90,7 @@ SourceLocation::printToString(const SourceManager &SM) const {
   std::string S;
   llvm::raw_string_ostream OS(S);
   print(OS, SM);
-  return OS.str();
+  return S;
 }
 
 LLVM_DUMP_METHOD void SourceLocation::dump(const SourceManager &SM) const {
@@ -149,7 +149,7 @@ SourceRange::printToString(const SourceManager &SM) const {
   std::string S;
   llvm::raw_string_ostream OS(S);
   print(OS, SM);
-  return OS.str();
+  return S;
 }
 
 //===----------------------------------------------------------------------===//
@@ -164,6 +164,10 @@ FileID FullSourceLoc::getFileID() const {
 FullSourceLoc FullSourceLoc::getExpansionLoc() const {
   assert(isValid());
   return FullSourceLoc(SrcMgr->getExpansionLoc(*this), *SrcMgr);
+}
+
+std::pair<FileID, unsigned> FullSourceLoc::getDecomposedExpansionLoc() const {
+  return SrcMgr->getDecomposedExpansionLoc(*this);
 }
 
 FullSourceLoc FullSourceLoc::getSpellingLoc() const {
@@ -221,6 +225,11 @@ unsigned FullSourceLoc::getColumnNumber(bool *Invalid) const {
 const FileEntry *FullSourceLoc::getFileEntry() const {
   assert(isValid());
   return SrcMgr->getFileEntryForID(getFileID());
+}
+
+OptionalFileEntryRef FullSourceLoc::getFileEntryRef() const {
+  assert(isValid());
+  return SrcMgr->getFileEntryRefForID(getFileID());
 }
 
 unsigned FullSourceLoc::getExpansionLineNumber(bool *Invalid) const {

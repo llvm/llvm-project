@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_EXTRACT_EXTRACT_H
-#define LLVM_CLANG_TOOLING_REFACTOR_EXTRACT_EXTRACT_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_EXTRACT_EXTRACT_H
+#define LLVM_CLANG_TOOLING_REFACTORING_EXTRACT_EXTRACT_H
 
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRules.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -22,16 +23,17 @@ public:
   /// Initiates the extract function refactoring operation.
   ///
   /// \param Code     The selected set of statements.
-  /// \param DeclName The name name of the extract function. If None,
+  /// \param DeclName The name of the extract function. If None,
   ///                 "extracted" is used.
-  static Expected<ExtractFunction> initiate(RefactoringRuleContext &Context,
-                                            CodeRangeASTSelection Code,
-                                            Optional<std::string> DeclName);
+  static Expected<ExtractFunction>
+  initiate(RefactoringRuleContext &Context, CodeRangeASTSelection Code,
+           std::optional<std::string> DeclName);
 
   static const RefactoringDescriptor &describe();
 
 private:
-  ExtractFunction(CodeRangeASTSelection Code, Optional<std::string> DeclName)
+  ExtractFunction(CodeRangeASTSelection Code,
+                  std::optional<std::string> DeclName)
       : Code(std::move(Code)),
         DeclName(DeclName ? std::move(*DeclName) : "extracted") {}
 
@@ -49,4 +51,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_EXTRACT_EXTRACT_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_EXTRACT_EXTRACT_H

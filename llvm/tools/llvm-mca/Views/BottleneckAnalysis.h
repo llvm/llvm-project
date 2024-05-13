@@ -33,9 +33,9 @@
 /// In particular, this occurs when there is a delta between the number of uOps
 /// dispatched and the number of uOps issued to the underlying pipelines.
 ///
-/// The bottleneck analysis view is also responsible for identifying and printing
-/// the most "critical" sequence of dependent instructions according to the
-/// simulated run.
+/// The bottleneck analysis view is also responsible for identifying and
+/// printing the most "critical" sequence of dependent instructions according to
+/// the simulated run.
 ///
 /// Below is the critical sequence computed for the dot-product example on
 /// btver2:
@@ -62,13 +62,14 @@
 /// and edges of the graph represent data dependencies or processor resource
 /// interferences.
 ///
-/// Edges are dynamically 'discovered' by observing instruction state transitions
-/// and backend pressure increase events. Edges are internally ranked based on
-/// their "criticality". A dependency is considered to be critical if it takes a
-/// long time to execute, and if it contributes to backend pressure increases.
-/// Criticality is internally measured in terms of cycles; it is computed for
-/// every edge in the graph as a function of the edge latency and the number of
-/// backend pressure increase cycles contributed by that edge.
+/// Edges are dynamically 'discovered' by observing instruction state
+/// transitions and backend pressure increase events. Edges are internally
+/// ranked based on their "criticality". A dependency is considered to be
+/// critical if it takes a long time to execute, and if it contributes to
+/// backend pressure increases. Criticality is internally measured in terms of
+/// cycles; it is computed for every edge in the graph as a function of the edge
+/// latency and the number of backend pressure increase cycles contributed by
+/// that edge.
 ///
 /// At the end of simulation, costs are propagated to nodes through the edges of
 /// the graph, and the most expensive path connecting the root-set (a
@@ -145,19 +146,19 @@ public:
                         SmallVectorImpl<User> &Users) const;
 
   unsigned getRegisterPressureCycles(unsigned IID) const {
-    assert(IPI.find(IID) != IPI.end() && "Instruction is not tracked!");
+    assert(IPI.contains(IID) && "Instruction is not tracked!");
     const InstructionPressureInfo &Info = IPI.find(IID)->second;
     return Info.RegisterPressureCycles;
   }
 
   unsigned getMemoryPressureCycles(unsigned IID) const {
-    assert(IPI.find(IID) != IPI.end() && "Instruction is not tracked!");
+    assert(IPI.contains(IID) && "Instruction is not tracked!");
     const InstructionPressureInfo &Info = IPI.find(IID)->second;
     return Info.MemoryPressureCycles;
   }
 
   unsigned getResourcePressureCycles(unsigned IID) const {
-    assert(IPI.find(IID) != IPI.end() && "Instruction is not tracked!");
+    assert(IPI.contains(IID) && "Instruction is not tracked!");
     const InstructionPressureInfo &Info = IPI.find(IID)->second;
     return Info.ResourcePressureCycles;
   }
@@ -217,8 +218,8 @@ struct DependencyEdge {
 // Loop carried dependencies are carefully expanded by the bottleneck analysis
 // to guarantee that the graph stays acyclic. To this end, extra nodes are
 // pre-allocated at construction time to describe instructions from "past and
-// future" iterations. The graph is kept acyclic mainly because it simplifies the
-// complexity of the algorithm that computes the critical sequence.
+// future" iterations. The graph is kept acyclic mainly because it simplifies
+// the complexity of the algorithm that computes the critical sequence.
 class DependencyGraph {
   struct DGNode {
     unsigned NumPredecessors;
@@ -239,7 +240,8 @@ class DependencyGraph {
 
   void pruneEdges(unsigned Iterations);
   void initializeRootSet(SmallVectorImpl<unsigned> &RootSet) const;
-  void propagateThroughEdges(SmallVectorImpl<unsigned> &RootSet, unsigned Iterations);
+  void propagateThroughEdges(SmallVectorImpl<unsigned> &RootSet,
+                             unsigned Iterations);
 
 #ifndef NDEBUG
   void dumpDependencyEdge(raw_ostream &OS, const DependencyEdge &DE,
@@ -333,7 +335,7 @@ public:
 
   void printView(raw_ostream &OS) const override;
   StringRef getNameAsString() const override { return "BottleneckAnalysis"; }
-  json::Value toJSON() const override { return "not implemented"; }
+  bool isSerializable() const override { return false; }
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS, MCInstPrinter &MCIP) const { DG.dump(OS, MCIP); }

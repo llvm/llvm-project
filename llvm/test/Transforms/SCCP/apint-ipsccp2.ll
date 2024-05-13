@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -S | grep -v "ret i101 0" | \
+; RUN: opt < %s -passes=ipsccp -S | grep -v "ret i101 0" | \
 ; RUN:    grep -v "ret i101 undef" | not grep ret
 
 

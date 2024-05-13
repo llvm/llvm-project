@@ -1,10 +1,9 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-C %s
-// RUN: %clang_cc1 -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-C %s
 // RUN: %clang_cc1 -x c++ -std=c++11 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-CPP0X %s
 
 #include <stddef.h>
 
-int main() {
+int main(void) {
   // CHECK-C: store i8 97
   // CHECK-CPP0X: store i8 97
   char a = 'a';
@@ -32,11 +31,6 @@ int main() {
   // CHECK-C: store i32 97
   // CHECK-CPP0X: store i32 97
   wchar_t wa = L'a';
-
-  // Should pick second character.
-  // CHECK-C: store i32 98
-  // CHECK-CPP0X: store i32 98
-  wchar_t wb = L'ab';
 
 #if __cplusplus >= 201103L
   // CHECK-CPP0X: store i16 97
@@ -83,8 +77,4 @@ int main() {
   char32_t Ud = U'\U0010F00B';
 #endif
 
-  // Should pick second character.
-  // CHECK-C: store i32 1110027
-  // CHECK-CPP0X: store i32 1110027
-  wchar_t we = L'\u1234\U0010F00B';
 }

@@ -32,19 +32,19 @@ entry:
   br label %__here
 
 __here:
-  store i64 ptrtoint (i8* blockaddress(@foo, %__here) to i64), i64* %tmp
+  store i64 ptrtoint (ptr blockaddress(@foo, %__here) to i64), ptr %tmp
   ret void
 }
 
-; 32SMALL-MIR: renamable $r[[REG1:[0-9]+]] = LWZtoc blockaddress(@foo, %ir-block.__here), $r2 :: (load 4 from got)
+; 32SMALL-MIR: renamable $r[[REG1:[0-9]+]] = LWZtoc blockaddress(@foo, %ir-block.__here), $r2 :: (load (s32) from got)
 
 ; 32LARGE-MIR: renamable $r[[REG1:[0-9]+]] = ADDIStocHA $r2, blockaddress(@foo, %ir-block.__here)
-; 32LARGE-MIR: renamable $r[[REG2:[0-9]+]] = LWZtocL blockaddress(@foo, %ir-block.__here), killed renamable $r[[REG1]], implicit $r2 :: (load 4 from got)
+; 32LARGE-MIR: renamable $r[[REG2:[0-9]+]] = LWZtocL blockaddress(@foo, %ir-block.__here), killed renamable $r[[REG1]], implicit $r2 :: (load (s32) from got)
 
-; 64SMALL-MIR: renamable $x[[REG1:[0-9]+]] = LDtocBA blockaddress(@foo, %ir-block.__here), $x2 :: (load 8 from got)
+; 64SMALL-MIR: renamable $x[[REG1:[0-9]+]] = LDtocBA blockaddress(@foo, %ir-block.__here), $x2 :: (load (s64) from got)
 
 ; 64LARGE-MIR: renamable $x[[REG1:[0-9]+]] = ADDIStocHA8 $x2, blockaddress(@foo, %ir-block.__here)
-; 64LARGE-MIR: renamable $x[[REG2:[0-9]+]] = LDtocL blockaddress(@foo, %ir-block.__here), killed renamable $x[[REG1]], implicit $x2 :: (load 8 from got)
+; 64LARGE-MIR: renamable $x[[REG2:[0-9]+]] = LDtocL blockaddress(@foo, %ir-block.__here), killed renamable $x[[REG1]], implicit $x2 :: (load (s64) from got)
 
 ; 32SMALL-ASM-LABEL: foo
 ; 32SMALL-ASM: .foo:

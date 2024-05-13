@@ -1,4 +1,0 @@
-run
-reproducer status
-reproducer dump -p cwd
-reproducer generate

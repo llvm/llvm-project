@@ -15,18 +15,17 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -58,11 +57,15 @@ public:
     virtual ~Delegate() = default;
 
     virtual void MRI_NoteNewVirtualRegister(Register Reg) = 0;
+    virtual void MRI_NoteCloneVirtualRegister(Register NewReg,
+                                              Register SrcReg) {
+      MRI_NoteNewVirtualRegister(NewReg);
+    }
   };
 
 private:
   MachineFunction *MF;
-  Delegate *TheDelegate = nullptr;
+  SmallPtrSet<Delegate *, 1> TheDelegates;
 
   /// True if subregister liveness is tracked.
   const bool TracksSubRegLiveness;
@@ -84,7 +87,7 @@ private:
 
   /// The flag is true upon \p UpdatedCSRs initialization
   /// and false otherwise.
-  bool IsUpdatedCSRsInitialized;
+  bool IsUpdatedCSRsInitialized = false;
 
   /// Contains the updated callee saved register list.
   /// As opposed to the static list defined in register info,
@@ -98,8 +101,9 @@ private:
   /// first member of the pair being non-zero. If the hinted register is
   /// virtual, it means the allocator should prefer the physical register
   /// allocated to it if any.
-  IndexedMap<std::pair<Register, SmallVector<Register, 4>>,
-             VirtReg2IndexFunctor> RegAllocHints;
+  IndexedMap<std::pair<unsigned, SmallVector<Register, 4>>,
+             VirtReg2IndexFunctor>
+      RegAllocHints;
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
@@ -156,19 +160,28 @@ public:
 
   void resetDelegate(Delegate *delegate) {
     // Ensure another delegate does not take over unless the current
-    // delegate first unattaches itself. If we ever need to multicast
-    // notifications, we will need to change to using a list.
-    assert(TheDelegate == delegate &&
-           "Only the current delegate can perform reset!");
-    TheDelegate = nullptr;
+    // delegate first unattaches itself.
+    assert(TheDelegates.count(delegate) &&
+           "Only an existing delegate can perform reset!");
+    TheDelegates.erase(delegate);
   }
 
-  void setDelegate(Delegate *delegate) {
-    assert(delegate && !TheDelegate &&
-           "Attempted to set delegate to null, or to change it without "
+  void addDelegate(Delegate *delegate) {
+    assert(delegate && !TheDelegates.count(delegate) &&
+           "Attempted to add null delegate, or to change it without "
            "first resetting it!");
 
-    TheDelegate = delegate;
+    TheDelegates.insert(delegate);
+  }
+
+  void noteNewVirtualRegister(Register Reg) {
+    for (auto *TheDelegate : TheDelegates)
+      TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  }
+
+  void noteCloneVirtualRegister(Register NewReg, Register SrcReg) {
+    for (auto *TheDelegate : TheDelegates)
+      TheDelegate->MRI_NoteCloneVirtualRegister(NewReg, SrcReg);
   }
 
   //===--------------------------------------------------------------------===//
@@ -216,7 +229,8 @@ public:
   }
   bool shouldTrackSubRegLiveness(Register VReg) const {
     assert(VReg.isVirtual() && "Must pass a VReg");
-    return shouldTrackSubRegLiveness(*getRegClass(VReg));
+    const TargetRegisterClass *RC = getRegClassOrNull(VReg);
+    return LLVM_LIKELY(RC) ? shouldTrackSubRegLiveness(*RC) : false;
   }
   bool subRegLivenessEnabled() const {
     return TracksSubRegLiveness;
@@ -430,7 +444,7 @@ public:
   }
 
   void insertVRegByName(StringRef Name, Register Reg) {
-    assert((Name.empty() || VRegNames.find(Name) == VRegNames.end()) &&
+    assert((Name.empty() || !VRegNames.contains(Name)) &&
            "Named VRegs Must be Unique.");
     if (!Name.empty()) {
       VRegNames.insert(Name);
@@ -576,6 +590,11 @@ public:
   /// multiple uses.
   bool hasOneNonDBGUser(Register RegNo) const;
 
+
+  /// hasAtMostUses - Return true if the given register has at most \p MaxUsers
+  /// non-debug user instructions.
+  bool hasAtMostUserInstrs(Register Reg, unsigned MaxUsers) const;
+
   /// replaceRegWith - Replace all instances of FromReg with ToReg in the
   /// machine function.  This is like llvm-level X->replaceAllUsesWith(Y),
   /// except that it also changes any definitions of the register as well.
@@ -632,9 +651,9 @@ public:
   /// This shouldn't be used directly unless \p Reg has a register class.
   /// \see getRegClassOrNull when this might happen.
   const TargetRegisterClass *getRegClass(Register Reg) const {
-    assert(VRegInfo[Reg.id()].first.is<const TargetRegisterClass *>() &&
+    assert(isa<const TargetRegisterClass *>(VRegInfo[Reg.id()].first) &&
            "Register class not set, wrong accessor");
-    return VRegInfo[Reg.id()].first.get<const TargetRegisterClass *>();
+    return cast<const TargetRegisterClass *>(VRegInfo[Reg.id()].first);
   }
 
   /// Return the register class of \p Reg, or null if Reg has not been assigned
@@ -650,7 +669,7 @@ public:
   /// the select pass, using getRegClass is safe.
   const TargetRegisterClass *getRegClassOrNull(Register Reg) const {
     const RegClassOrRegBank &Val = VRegInfo[Reg].first;
-    return Val.dyn_cast<const TargetRegisterClass *>();
+    return dyn_cast_if_present<const TargetRegisterClass *>(Val);
   }
 
   /// Return the register bank of \p Reg, or null if Reg has not been assigned
@@ -659,7 +678,7 @@ public:
   /// RegisterBankInfo::getRegBankFromRegClass.
   const RegisterBank *getRegBankOrNull(Register Reg) const {
     const RegClassOrRegBank &Val = VRegInfo[Reg].first;
-    return Val.dyn_cast<const RegisterBank *>();
+    return dyn_cast_if_present<const RegisterBank *>(Val);
   }
 
   /// Return the register bank or register class of \p Reg.
@@ -723,6 +742,24 @@ public:
   Register createVirtualRegister(const TargetRegisterClass *RegClass,
                                  StringRef Name = "");
 
+  /// All attributes(register class or bank and low-level type) a virtual
+  /// register can have.
+  struct VRegAttrs {
+    RegClassOrRegBank RCOrRB;
+    LLT Ty;
+  };
+
+  /// Returns register class or bank and low level type of \p Reg. Always safe
+  /// to use. Special values are returned when \p Reg does not have some of the
+  /// attributes.
+  VRegAttrs getVRegAttrs(Register Reg) {
+    return {getRegClassOrRegBank(Reg), getType(Reg)};
+  }
+
+  /// Create and return a new virtual register in the function with the
+  /// specified register attributes(register class or bank and low level type).
+  Register createVirtualRegister(VRegAttrs RegAttr, StringRef Name = "");
+
   /// Create and return a new virtual register in the function with the same
   /// attributes as the given register.
   Register cloneVirtualRegister(Register VReg, StringRef Name = "");
@@ -730,7 +767,7 @@ public:
   /// Get the low-level type of \p Reg or LLT{} if Reg is not a generic
   /// (target independent) virtual register.
   LLT getType(Register Reg) const {
-    if (Register::isVirtualRegister(Reg) && VRegToType.inBounds(Reg))
+    if (Reg.isVirtual() && VRegToType.inBounds(Reg))
       return VRegToType[Reg];
     return LLT{};
   }
@@ -772,7 +809,7 @@ public:
   /// addRegAllocationHint - Add a register allocation hint to the hints
   /// vector for VReg.
   void addRegAllocationHint(Register VReg, Register PrefReg) {
-    assert(Register::isVirtualRegister(VReg));
+    assert(VReg.isVirtual());
     RegAllocHints[VReg].second.push_back(PrefReg);
   }
 
@@ -791,27 +828,25 @@ public:
   /// getRegAllocationHint - Return the register allocation hint for the
   /// specified virtual register. If there are many hints, this returns the
   /// one with the greatest weight.
-  std::pair<Register, Register>
-  getRegAllocationHint(Register VReg) const {
+  std::pair<unsigned, Register> getRegAllocationHint(Register VReg) const {
     assert(VReg.isVirtual());
     Register BestHint = (RegAllocHints[VReg.id()].second.size() ?
                          RegAllocHints[VReg.id()].second[0] : Register());
-    return std::pair<Register, Register>(RegAllocHints[VReg.id()].first,
-                                         BestHint);
+    return {RegAllocHints[VReg.id()].first, BestHint};
   }
 
   /// getSimpleHint - same as getRegAllocationHint except it will only return
   /// a target independent hint.
   Register getSimpleHint(Register VReg) const {
     assert(VReg.isVirtual());
-    std::pair<Register, Register> Hint = getRegAllocationHint(VReg);
+    std::pair<unsigned, Register> Hint = getRegAllocationHint(VReg);
     return Hint.first ? Register() : Hint.second;
   }
 
   /// getRegAllocationHints - Return a reference to the vector of all
   /// register allocation hints for VReg.
-  const std::pair<Register, SmallVector<Register, 4>>
-  &getRegAllocationHints(Register VReg) const {
+  const std::pair<unsigned, SmallVector<Register, 4>> &
+  getRegAllocationHints(Register VReg) const {
     assert(VReg.isVirtual());
     return RegAllocHints[VReg];
   }
@@ -821,29 +856,31 @@ public:
   /// deleted during LiveDebugVariables analysis.
   void markUsesInDebugValueAsUndef(Register Reg) const;
 
-  /// updateDbgUsersToReg - Update a collection of DBG_VALUE instructions
+  /// updateDbgUsersToReg - Update a collection of debug instructions
   /// to refer to the designated register.
   void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
                            ArrayRef<MachineInstr *> Users) const {
-    SmallSet<MCRegister, 4> OldRegUnits;
-    for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo()); RUI.isValid();
-         ++RUI)
-      OldRegUnits.insert(*RUI);
+    // If this operand is a register, check whether it overlaps with OldReg.
+    // If it does, replace with NewReg.
+    auto UpdateOp = [this, &NewReg, &OldReg](MachineOperand &Op) {
+      if (Op.isReg() &&
+          getTargetRegisterInfo()->regsOverlap(Op.getReg(), OldReg))
+        Op.setReg(NewReg);
+    };
+
+    // Iterate through (possibly several) operands to DBG_VALUEs and update
+    // each. For DBG_PHIs, only one operand will be present.
     for (MachineInstr *MI : Users) {
-      assert(MI->isDebugValue());
-      for (auto &Op : MI->debug_operands()) {
-        if (Op.isReg()) {
-          for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo());
-               RUI.isValid(); ++RUI) {
-            if (OldRegUnits.contains(*RUI)) {
-              Op.setReg(NewReg);
-              break;
-            }
-          }
-        }
+      if (MI->isDebugValue()) {
+        for (auto &Op : MI->debug_operands())
+          UpdateOp(Op);
+        assert(MI->hasDebugOperandForReg(NewReg) &&
+               "Expected debug value to have some overlap with OldReg");
+      } else if (MI->isDebugPHI()) {
+        UpdateOp(MI->getOperand(0));
+      } else {
+        llvm_unreachable("Non-DBG_VALUE, Non-DBG_PHI debug instr updated");
       }
-      assert(MI->hasDebugOperandForReg(NewReg) &&
-             "Expected debug value to have some overlap with OldReg");
     }
   }
 
@@ -857,9 +894,9 @@ public:
 
   /// Return true if the specified register is modified or read in this
   /// function. This checks that no machine operands exist for the register or
-  /// any of its aliases. The register is also considered used when it is set
-  /// in the UsedPhysRegMask.
-  bool isPhysRegUsed(MCRegister PhysReg) const;
+  /// any of its aliases. If SkipRegMaskTest is false, the register is
+  /// considered used when it is set in the UsedPhysRegMask.
+  bool isPhysRegUsed(MCRegister PhysReg, bool SkipRegMaskTest = false) const;
 
   /// addPhysRegsUsedFromRegMask - Mark any registers not in RegMask as used.
   /// This corresponds to the bit mask attached to register mask operands.
@@ -883,7 +920,19 @@ public:
 
   /// freezeReservedRegs - Called by the register allocator to freeze the set
   /// of reserved registers before allocation begins.
-  void freezeReservedRegs(const MachineFunction&);
+  void freezeReservedRegs();
+
+  /// reserveReg -- Mark a register as reserved so checks like isAllocatable 
+  /// will not suggest using it. This should not be used during the middle
+  /// of a function walk, or when liveness info is available.
+  void reserveReg(MCRegister PhysReg, const TargetRegisterInfo *TRI) {
+    assert(reservedRegsFrozen() &&
+           "Reserved registers haven't been frozen yet. ");
+    MCRegAliasIterator R(PhysReg, TRI, true);
+
+    for (; R.isValid(); ++R)
+      ReservedRegs.set(*R);
+  }
 
   /// reservedRegsFrozen - Returns true after freezeReservedRegs() was called
   /// to ensure the set of reserved registers stays constant.
@@ -964,7 +1013,7 @@ public:
   MCRegister getLiveInPhysReg(Register VReg) const;
 
   /// getLiveInVirtReg - If PReg is a live-in physical register, return the
-  /// corresponding live-in physical register.
+  /// corresponding live-in virtual register.
   Register getLiveInVirtReg(MCRegister PReg) const;
 
   /// EmitLiveInCopies - Emit copies to initialize livein virtual registers

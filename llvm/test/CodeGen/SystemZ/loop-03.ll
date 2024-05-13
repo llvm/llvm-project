@@ -5,28 +5,28 @@
 ;
 ; RUN: llc -switch-peel-threshold=101 < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
-%0 = type { %0*, %0*, %0*, i32, %1*, i64, i64, i64, i64, i64, i64, %2, %5, %7 }
-%1 = type { i32, i32, i32 (%1*, i64, i32)*, i32 (%1*, i64, i64, i32, i8**)*, i32 (%1*, i64, i64, i64, i32)*, i32 (%1*)*, void (i8*)*, i8*, i8* }
-%2 = type { i64, i64, %3** }
-%3 = type { %4*, i64 }
-%4 = type { i64, i8* }
-%5 = type { i64, i64, %6** }
-%6 = type { i64, %4*, i32, i64, i8* }
-%7 = type { i64, i64, %8** }
-%8 = type { i64, i64*, i64*, %4*, i64, i32*, %5, i32, i64, i64 }
+%0 = type { ptr, ptr, ptr, i32, ptr, i64, i64, i64, i64, i64, i64, %2, %5, %7 }
+%1 = type { i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+%2 = type { i64, i64, ptr }
+%3 = type { ptr, i64 }
+%4 = type { i64, ptr }
+%5 = type { i64, i64, ptr }
+%6 = type { i64, ptr, i32, i64, ptr }
+%7 = type { i64, i64, ptr }
+%8 = type { i64, ptr, ptr, ptr, i64, ptr, %5, i32, i64, i64 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1)
 
-define void @fun0(%0*) {
+define void @fun0(ptr) {
 ; CHECK-LABEL: .LBB0_4
-; CHECK: =>  This Inner Loop Header: Depth=2
+; CHECK: =>  This Inner Loop Header
 ; CHECK-NOT: 16-byte Folded Spill
 ; CHECK-NOT: 16-byte Folded Reload
 
-  %2 = load i64, i64* undef, align 8
+  %2 = load i64, ptr undef, align 8
   %3 = udiv i64 128, %2
   %4 = mul i64 %3, %2
-  %5 = load i64, i64* undef, align 8
+  %5 = load i64, ptr undef, align 8
   switch i32 undef, label %36 [
     i32 1, label %6
     i32 2, label %7
@@ -55,13 +55,13 @@ define void @fun0(%0*) {
   unreachable
 
 ; <label>:12:                                     ; preds = %7, %6
-  %13 = getelementptr inbounds %0, %0* %0, i64 0, i32 5
+  %13 = getelementptr inbounds %0, ptr %0, i64 0, i32 5
   br label %14
 
 ; <label>:14:                                     ; preds = %31, %12
   %15 = phi i64 [ undef, %31 ], [ %5, %12 ]
   %16 = phi i64 [ %35, %31 ], [ undef, %12 ]
-  %17 = load i64, i64* %13, align 8
+  %17 = load i64, ptr %13, align 8
   %18 = icmp ult i64 %15, %17
   %19 = select i1 %18, i64 %15, i64 %17
   %20 = udiv i64 %19, %4
@@ -72,9 +72,9 @@ define void @fun0(%0*) {
 
 ; <label>:24:                                     ; preds = %24, %14
   %25 = phi i64 [ %23, %14 ], [ %27, %24 ]
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* nonnull undef, i64 %4, i1 false)
-  %26 = getelementptr inbounds i8, i8* null, i64 %4
-  store i8* %26, i8** undef, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr undef, ptr nonnull undef, i64 %4, i1 false)
+  %26 = getelementptr inbounds i8, ptr null, i64 %4
+  store ptr %26, ptr undef, align 8
   %27 = add i64 %25, -4
   %28 = icmp eq i64 %27, 0
   br i1 %28, label %31, label %24
@@ -83,11 +83,11 @@ define void @fun0(%0*) {
   br i1 undef, label %31, label %30
 
 ; <label>:30:                                     ; preds = %29
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %26, i8* nonnull undef, i64 %4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %26, ptr nonnull undef, i64 %4, i1 false)
   br label %31
 
 ; <label>:31:                                     ; preds = %30, %29
-  %32 = call signext i32 undef(%1* undef, i64 %16, i32 signext 8)
+  %32 = call signext i32 undef(ptr undef, i64 %16, i32 signext 8)
   %33 = icmp eq i64 undef, 0
   %34 = select i1 %33, i64 0, i64 %19
   %35 = add i64 %34, %16
@@ -99,7 +99,7 @@ define void @fun0(%0*) {
 
 declare fp128 @llvm.pow.f128(fp128, fp128)
 
-define void @fun1(fp128*) {
+define void @fun1(ptr) {
 ; CHECK-LABEL: .LBB1_2
 ; CHECK: =>This Inner Loop Header: Depth=1
 ; CHECK-NOT: 16-byte Folded Spill
@@ -121,6 +121,6 @@ define void @fun1(fp128*) {
   %10 = fadd fp128 0xL00000000000000000000000000000000, %9
   %11 = fadd fp128 0xL00000000000000000000000000000000, %10
   %12 = tail call fp128 @llvm.pow.f128(fp128 %11, fp128 0xL00000000000000000000000000000000) #2
-  store fp128 %12, fp128* %0, align 8
+  store fp128 %12, ptr %0, align 8
   ret void
 }

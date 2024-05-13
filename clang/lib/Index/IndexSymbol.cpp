@@ -36,7 +36,7 @@ static bool isUnitTest(const ObjCMethodDecl *D) {
     return false;
   if (!D->getReturnType()->isVoidType())
     return false;
-  if (!D->getSelector().getNameForSlot(0).startswith("test"))
+  if (!D->getSelector().getNameForSlot(0).starts_with("test"))
     return false;
   return isUnitTestCase(D->getClassInterface());
 }
@@ -66,16 +66,17 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
     switch (ND->getFormalLinkage()) {
-      case NoLinkage:
-      case InternalLinkage:
-        return true;
-      case VisibleNoLinkage:
-      case UniqueExternalLinkage:
-      case ModuleInternalLinkage:
-        llvm_unreachable("Not a sema linkage");
-      case ModuleLinkage:
-      case ExternalLinkage:
-        return false;
+    case Linkage::Invalid:
+      llvm_unreachable("Linkage hasn't been computed!");
+    case Linkage::None:
+    case Linkage::Internal:
+      return true;
+    case Linkage::VisibleNone:
+    case Linkage::UniqueExternal:
+      llvm_unreachable("Not a sema linkage");
+    case Linkage::Module:
+    case Linkage::External:
+      return false;
     }
   }
 
@@ -106,19 +107,19 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
-    case TTK_Struct:
+    case TagTypeKind::Struct:
       Info.Kind = SymbolKind::Struct; break;
-    case TTK_Union:
+    case TagTypeKind::Union:
       Info.Kind = SymbolKind::Union; break;
-    case TTK_Class:
+    case TagTypeKind::Class:
       Info.Kind = SymbolKind::Class;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    case TTK_Interface:
+    case TagTypeKind::Interface:
       Info.Kind = SymbolKind::Protocol;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    case TTK_Enum:
+    case TagTypeKind::Enum:
       Info.Kind = SymbolKind::Enum; break;
     }
 
@@ -329,6 +330,11 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::Using;
       Info.Lang = SymbolLanguage::CXX;
       break;
+    case Decl::UsingEnum:
+      Info.Kind = SymbolKind::Using;
+      Info.Lang = SymbolLanguage::CXX;
+      Info.SubKind = SymbolSubKind::UsingEnum;
+      break;
     case Decl::Binding:
       Info.Kind = SymbolKind::Variable;
       Info.Lang = SymbolLanguage::CXX;
@@ -342,7 +348,6 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       }
       break;
     case Decl::ClassTemplatePartialSpecialization:
-    case Decl::ClassScopeFunctionSpecialization:
     case Decl::ClassTemplateSpecialization:
     case Decl::CXXRecord:
     case Decl::Enum:
@@ -365,6 +370,9 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       break;
     case Decl::NonTypeTemplateParm:
       Info.Kind = SymbolKind::NonTypeTemplateParm;
+      break;
+    case Decl::Concept:
+      Info.Kind = SymbolKind::Concept;
       break;
     // Other decls get the 'unknown' kind.
     default:
@@ -529,6 +537,8 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::TemplateTypeParm: return "template-type-param";
   case SymbolKind::TemplateTemplateParm: return "template-template-param";
   case SymbolKind::NonTypeTemplateParm: return "non-type-template-param";
+  case SymbolKind::Concept:
+    return "concept";
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -542,6 +552,7 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::AccessorSetter: return "acc-set";
   case SymbolSubKind::UsingTypename: return "using-typename";
   case SymbolSubKind::UsingValue: return "using-value";
+  case SymbolSubKind::UsingEnum: return "using-enum";
   }
   llvm_unreachable("invalid symbol subkind");
 }

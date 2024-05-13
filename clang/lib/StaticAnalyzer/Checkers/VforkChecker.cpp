@@ -9,7 +9,7 @@
 //  This file defines vfork checker which checks for dangerous uses of vfork.
 //  Vforked process shares memory (including stack) with parent so it's
 //  range of actions is significantly limited: can't write variables,
-//  can't call functions not in whitelist, etc. For more details, see
+//  can't call functions not in the allowed list, etc. For more details, see
 //  http://man7.org/linux/man-pages/man2/vfork.2.html
 //
 //  This checker checks for prohibited constructs in vforked process.
@@ -35,6 +35,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/AST/ParentMap.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -43,20 +44,21 @@ namespace {
 
 class VforkChecker : public Checker<check::PreCall, check::PostCall,
                                     check::Bind, check::PreStmt<ReturnStmt>> {
-  mutable std::unique_ptr<BuiltinBug> BT;
-  mutable llvm::SmallSet<const IdentifierInfo *, 10> VforkWhitelist;
-  mutable const IdentifierInfo *II_vfork;
+  const BugType BT{this, "Dangerous construct in a vforked process"};
+  mutable llvm::SmallSet<const IdentifierInfo *, 10> VforkAllowlist;
+  mutable const IdentifierInfo *II_vfork = nullptr;
 
   static bool isChildProcess(const ProgramStateRef State);
 
   bool isVforkCall(const Decl *D, CheckerContext &C) const;
-  bool isCallWhitelisted(const IdentifierInfo *II, CheckerContext &C) const;
+  bool isCallExplicitelyAllowed(const IdentifierInfo *II,
+                                CheckerContext &C) const;
 
   void reportBug(const char *What, CheckerContext &C,
                  const char *Details = nullptr) const;
 
 public:
-  VforkChecker() : II_vfork(nullptr) {}
+  VforkChecker() = default;
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
@@ -93,9 +95,9 @@ bool VforkChecker::isVforkCall(const Decl *D, CheckerContext &C) const {
 }
 
 // Returns true iff ok to call function after successful vfork.
-bool VforkChecker::isCallWhitelisted(const IdentifierInfo *II,
-                                 CheckerContext &C) const {
-  if (VforkWhitelist.empty()) {
+bool VforkChecker::isCallExplicitelyAllowed(const IdentifierInfo *II,
+                                            CheckerContext &C) const {
+  if (VforkAllowlist.empty()) {
     // According to manpage.
     const char *ids[] = {
       "_Exit",
@@ -112,19 +114,15 @@ bool VforkChecker::isCallWhitelisted(const IdentifierInfo *II,
 
     ASTContext &AC = C.getASTContext();
     for (const char **id = ids; *id; ++id)
-      VforkWhitelist.insert(&AC.Idents.get(*id));
+      VforkAllowlist.insert(&AC.Idents.get(*id));
   }
 
-  return VforkWhitelist.count(II);
+  return VforkAllowlist.count(II);
 }
 
 void VforkChecker::reportBug(const char *What, CheckerContext &C,
                              const char *Details) const {
   if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
-    if (!BT)
-      BT.reset(new BuiltinBug(this,
-                              "Dangerous construct in a vforked process"));
-
     SmallString<256> buf;
     llvm::raw_svector_ostream os(buf);
 
@@ -133,7 +131,7 @@ void VforkChecker::reportBug(const char *What, CheckerContext &C,
     if (Details)
       os << "; " << Details;
 
-    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
     // TODO: mark vfork call in BugReportVisitor
     C.emitReport(std::move(Report));
   }
@@ -153,8 +151,8 @@ void VforkChecker::checkPostCall(const CallEvent &Call,
 
   // Get return value of vfork.
   SVal VforkRetVal = Call.getReturnValue();
-  Optional<DefinedOrUnknownSVal> DVal =
-    VforkRetVal.getAs<DefinedOrUnknownSVal>();
+  std::optional<DefinedOrUnknownSVal> DVal =
+      VforkRetVal.getAs<DefinedOrUnknownSVal>();
   if (!DVal)
     return;
 
@@ -179,12 +177,13 @@ void VforkChecker::checkPostCall(const CallEvent &Call,
   C.addTransition(ChildState);
 }
 
-// Prohibit calls to non-whitelist functions in child process.
+// Prohibit calls to functions in child process which are not explicitly
+// allowed.
 void VforkChecker::checkPreCall(const CallEvent &Call,
                                 CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  if (isChildProcess(State)
-      && !isCallWhitelisted(Call.getCalleeIdentifier(), C))
+  if (isChildProcess(State) &&
+      !isCallExplicitelyAllowed(Call.getCalleeIdentifier(), C))
     reportBug("This function call", C);
 }
 

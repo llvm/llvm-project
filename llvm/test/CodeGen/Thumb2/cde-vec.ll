@@ -116,11 +116,12 @@ entry:
 declare <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32)
 declare <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32)
 declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32)
+declare <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32)
 declare <8 x i16> @llvm.arm.cde.vcx1q.predicated.v8i16.v8i1(i32 immarg, <8 x i16>, i32 immarg, <8 x i1>)
 declare <16 x i8> @llvm.arm.cde.vcx1qa.predicated.v16i8.v16i1(i32 immarg, <16 x i8>, i32 immarg, <16 x i1>)
 declare <4 x i32> @llvm.arm.cde.vcx2q.predicated.v4i32.v4i1(i32 immarg, <4 x i32>, <16 x i8>, i32 immarg, <4 x i1>)
 declare <4 x float> @llvm.arm.cde.vcx2qa.predicated.v4f32.v4i1(i32 immarg, <4 x float>, <16 x i8>, i32 immarg, <4 x i1>)
-declare <2 x i64> @llvm.arm.cde.vcx3q.predicated.v2i64.v4i1(i32 immarg, <2 x i64>, <16 x i8>, <16 x i8>, i32 immarg, <4 x i1>)
+declare <2 x i64> @llvm.arm.cde.vcx3q.predicated.v2i64.v2i1(i32 immarg, <2 x i64>, <16 x i8>, <16 x i8>, i32 immarg, <2 x i1>)
 declare <4 x float> @llvm.arm.cde.vcx3qa.predicated.v4f32.v4i1(i32 immarg, <4 x float>, <16 x i8>, <16 x i8>, i32 immarg, <4 x i1>)
 
 define arm_aapcs_vfpcc <8 x i16> @test_vcx1q_m(<8 x i16> %inactive, i16 zeroext %p) {
@@ -191,8 +192,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vcx3q_m(<2 x i64> %inactive, <4 x float> 
 entry:
   %0 = bitcast <4 x float> %n to <16 x i8>
   %1 = zext i16 %p to i32
-  %2 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
-  %3 = call <2 x i64> @llvm.arm.cde.vcx3q.predicated.v2i64.v4i1(i32 0, <2 x i64> %inactive, <16 x i8> %0, <16 x i8> %m, i32 11, <4 x i1> %2)
+  %2 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %1)
+  %3 = call <2 x i64> @llvm.arm.cde.vcx3q.predicated.v2i64.v2i1(i32 0, <2 x i64> %inactive, <16 x i8> %0, <16 x i8> %m, i32 11, <2 x i1> %2)
   ret <2 x i64> %3
 }
 

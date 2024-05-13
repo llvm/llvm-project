@@ -1,4 +1,4 @@
-; RUN: opt -tbaa -basic-aa -gvn -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=tbaa,basic-aa -passes=gvn -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64"
 
@@ -7,18 +7,18 @@ target datalayout = "e-p:64:64:64"
 
 ; CHECK: @yes
 ; CHECK: if.then:
-; CHECK-NEXT: store i32 0, i32* %q
+; CHECK-NEXT: store i32 0, ptr %q
 ; CHECK-NEXT: ret void
 
-define void @yes(i1 %c, i32* %p, i32* %p1, i32* %q) nounwind {
+define void @yes(i1 %c, ptr %p, ptr %p1, ptr %q) nounwind {
 entry:
-  store i32 0, i32* %p, !tbaa !1
-  store i32 1, i32* %p1, !tbaa !2
+  store i32 0, ptr %p, !tbaa !1
+  store i32 1, ptr %p1, !tbaa !2
   br i1 %c, label %if.else, label %if.then
 
 if.then:
-  %t = load i32, i32* %p, !tbaa !1
-  store i32 %t, i32* %q
+  %t = load i32, ptr %p, !tbaa !1
+  store i32 %t, ptr %q
   ret void
 
 if.else:
@@ -32,27 +32,27 @@ if.else:
 
 ; CHECK: @watch_out_for_type_change
 ; CHECK: if.then:
-; CHECK:   %t = load i32, i32* %p
-; CHECK:   store i32 %t, i32* %q
+; CHECK:   %t = load i32, ptr %p
+; CHECK:   store i32 %t, ptr %q
 ; CHECK:   ret void
 ; CHECK: if.else:
-; CHECK:   %u = load i32, i32* %p
-; CHECK:   store i32 %u, i32* %q
+; CHECK:   %u = load i32, ptr %p
+; CHECK:   store i32 %u, ptr %q
 
-define void @watch_out_for_type_change(i1 %c, i32* %p, i32* %p1, i32* %q) nounwind {
+define void @watch_out_for_type_change(i1 %c, ptr %p, ptr %p1, ptr %q) nounwind {
 entry:
-  store i32 0, i32* %p, !tbaa !1
-  store i32 1, i32* %p1, !tbaa !2
+  store i32 0, ptr %p, !tbaa !1
+  store i32 1, ptr %p1, !tbaa !2
   br i1 %c, label %if.else, label %if.then
 
 if.then:
-  %t = load i32, i32* %p, !tbaa !3
-  store i32 %t, i32* %q
+  %t = load i32, ptr %p, !tbaa !3
+  store i32 %t, ptr %q
   ret void
 
 if.else:
-  %u = load i32, i32* %p, !tbaa !4
-  store i32 %u, i32* %q
+  %u = load i32, ptr %p, !tbaa !4
+  store i32 %u, ptr %q
   ret void
 }
 
@@ -61,26 +61,26 @@ if.else:
 
 ; CHECK: @watch_out_for_another_type_change
 ; CHECK: if.then:
-; CHECK:   store i32 0, i32* %q
+; CHECK:   store i32 0, ptr %q
 ; CHECK:   ret void
 ; CHECK: if.else:
-; CHECK:   %u = load i32, i32* %p
-; CHECK:   store i32 %u, i32* %q
+; CHECK:   %u = load i32, ptr %p
+; CHECK:   store i32 %u, ptr %q
 
-define void @watch_out_for_another_type_change(i1 %c, i32* %p, i32* %p1, i32* %q) nounwind {
+define void @watch_out_for_another_type_change(i1 %c, ptr %p, ptr %p1, ptr %q) nounwind {
 entry:
-  store i32 0, i32* %p, !tbaa !1
-  store i32 1, i32* %p1, !tbaa !2
+  store i32 0, ptr %p, !tbaa !1
+  store i32 1, ptr %p1, !tbaa !2
   br i1 %c, label %if.else, label %if.then
 
 if.then:
-  %t = load i32, i32* %p, !tbaa !4
-  store i32 %t, i32* %q
+  %t = load i32, ptr %p, !tbaa !4
+  store i32 %t, ptr %q
   ret void
 
 if.else:
-  %u = load i32, i32* %p, !tbaa !3
-  store i32 %u, i32* %q
+  %u = load i32, ptr %p, !tbaa !3
+  store i32 %u, ptr %q
   ret void
 }
 

@@ -3,6 +3,6 @@
 
 void foo() {}
 
-void bar() {
+void bar(void) {
   foo(1, 2, 3);  /* Too many arguments passed */
 }

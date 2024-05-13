@@ -17,6 +17,7 @@
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/HostInfo.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -25,16 +26,16 @@ namespace lldb_private {
 class YAMLModuleTester {
 protected:
   SubsystemRAII<FileSystem, HostInfo, TypeSystemClang, ObjectFileELF,
-                SymbolFileDWARF>
+                plugin::dwarf::SymbolFileDWARF>
       subsystems;
-  llvm::Optional<TestFile> m_file;
+  std::optional<TestFile> m_file;
   lldb::ModuleSP m_module_sp;
-  DWARFUnit *m_dwarf_unit;
+  plugin::dwarf::DWARFUnit *m_dwarf_unit;
 
 public:
   /// Parse the debug info sections from the YAML description.
-  YAMLModuleTester(llvm::StringRef yaml_data);
-  DWARFUnit *GetDwarfUnit() const { return m_dwarf_unit; }
+  YAMLModuleTester(llvm::StringRef yaml_data, size_t cu_index = 0);
+  plugin::dwarf::DWARFUnit *GetDwarfUnit() const { return m_dwarf_unit; }
   lldb::ModuleSP GetModule() const { return m_module_sp; }
 };
 

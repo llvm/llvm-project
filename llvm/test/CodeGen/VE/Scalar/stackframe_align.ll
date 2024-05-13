@@ -9,7 +9,7 @@
 ;; Allocated buffer places from 9 to 15 bytes in 16 bytes local vars area.
 
 ; Function Attrs: nounwind
-define i8* @test_frame7(i8* %0) {
+define ptr @test_frame7(ptr %0) {
 ; CHECK-LABEL: test_frame7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -55,17 +55,16 @@ define i8* @test_frame7(i8* %0) {
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
   %2 = alloca [7 x i8], align 1
-  %3 = getelementptr inbounds [7 x i8], [7 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ;; Allocated buffer is aligned by 8, so it places from 8 to 14 bytes in 16
 ;; bytes local vars area.
 
 ; Function Attrs: nounwind
-define i8* @test_frame7_align8(i8* %0) {
+define ptr @test_frame7_align8(ptr %0) {
 ; CHECK-LABEL: test_frame7_align8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -111,17 +110,16 @@ define i8* @test_frame7_align8(i8* %0) {
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
   %2 = alloca [7 x i8], align 8
-  %3 = getelementptr inbounds [7 x i8], [7 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ;; Allocated buffer is aligned by 16, so it places from 0 to 15 bytes in 16
 ;; bytes local vars area.
 
 ; Function Attrs: nounwind
-define i8* @test_frame16_align16(i8* %0) {
+define ptr @test_frame16_align16(ptr %0) {
 ; CHECK-LABEL: test_frame16_align16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -167,10 +165,9 @@ define i8* @test_frame16_align16(i8* %0) {
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
   %2 = alloca [16 x i8], align 16
-  %3 = getelementptr inbounds [16 x i8], [16 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ;; Allocated buffer is aligned by 32, so it places from 0 to 15 bytes in 48
@@ -178,7 +175,7 @@ define i8* @test_frame16_align16(i8* %0) {
 ;; 207 bytes in 224 + alpha allocated local vars area.
 
 ; Function Attrs: nounwind
-define i8* @test_frame16_align32(i8* %0) {
+define ptr @test_frame16_align32(ptr %0) {
 ; CHECK-LABEL: test_frame16_align32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -231,10 +228,9 @@ define i8* @test_frame16_align32(i8* %0) {
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
   %2 = alloca [16 x i8], align 32
-  %3 = getelementptr inbounds [16 x i8], [16 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ;; Allocated buffer is aligned by 32, so it places from 0 to 31 bytes in 48
@@ -242,7 +238,7 @@ define i8* @test_frame16_align32(i8* %0) {
 ;; to 223 in 224 + alpha bytes local vars area..
 
 ; Function Attrs: nounwind
-define i8* @test_frame32_align32(i8* %0) {
+define ptr @test_frame32_align32(ptr %0) {
 ; CHECK-LABEL: test_frame32_align32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -295,10 +291,9 @@ define i8* @test_frame32_align32(i8* %0) {
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
   %2 = alloca [32 x i8], align 32
-  %3 = getelementptr inbounds [32 x i8], [32 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ;; Dynamically allocated buffer is aligned by 16, so it places from 0 to 31
@@ -310,7 +305,7 @@ define i8* @test_frame32_align32(i8* %0) {
 ;; FIXME: (size+15)/16*16 is not enough.
 
 ; Function Attrs: nounwind
-define i8* @test_frame_dynalign16(i8* %0, i64 %1) {
+define ptr @test_frame_dynalign16(ptr %0, i64 %1) {
 ; CHECK-LABEL: test_frame_dynalign16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -375,9 +370,9 @@ define i8* @test_frame_dynalign16(i8* %0, i64 %1) {
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
   %3 = alloca i8, i64 %1, align 16
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %4 = load i8, ptr %0, align 1
+  store i8 %4, ptr %3, align 1
+  ret ptr %3
 }
 
 ;; This test allocates static buffer with 16 bytes align and dynamic buffer
@@ -391,7 +386,7 @@ define i8* @test_frame_dynalign16(i8* %0, i64 %1) {
 ;; address between 240 and 271 from SP.
 
 ; Function Attrs: nounwind
-define i8* @test_frame16_align16_dynalign32(i8* %0, i64 %n) {
+define ptr @test_frame16_align16_dynalign32(ptr %0, i64 %n) {
 ; CHECK-LABEL: test_frame16_align16_dynalign32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -472,12 +467,11 @@ define i8* @test_frame16_align16_dynalign32(i8* %0, i64 %n) {
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
   %2 = alloca [16 x i8], align 16
-  %3 = getelementptr inbounds [16 x i8], [16 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  %5 = alloca i8, i64 %n, align 32
-  %6 = load i8, i8* %3, align 1
-  store i8 %6, i8* %5, align 1
-  ret i8* %5
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  %4 = alloca i8, i64 %n, align 32
+  %5 = load i8, ptr %2, align 1
+  store i8 %5, ptr %4, align 1
+  ret ptr %4
 }
 

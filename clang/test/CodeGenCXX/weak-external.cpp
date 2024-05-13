@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple %itanium_abi_triple %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple %itanium_abi_triple %s -emit-llvm -o - | FileCheck %s
 // PR4262
 
 // CHECK-NOT: _ZNSs12_S_constructIPKcEEPcT_S3_RKSaIcESt20forward_iterator_tag
@@ -75,4 +75,28 @@ namespace not_weak_on_first {
   extern const FuncT table[] = {
       func,
   };
+}
+
+namespace constant_eval {
+  [[gnu::weak]] extern int a;
+  // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
+  // CHECK:     [[ZEXT:%.*]] = zext i1 icmp ne (ptr @_ZN13constant_eval1aE, ptr null) to i8
+  // CHECK:     store i8 [[ZEXT]], ptr @_ZN13constant_eval6has_a1E,
+  bool has_a1 = &a;
+  // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
+  // CHECK:     [[ZEXT:%.*]] = zext i1 icmp ne (ptr @_ZN13constant_eval1aE, ptr null) to i8
+  // CHECK:     store i8 [[ZEXT]], ptr @_ZN13constant_eval6has_a2E,
+  bool has_a2 = &a != nullptr;
+
+  struct X {
+    [[gnu::weak]] void f();
+  };
+  // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
+  // CHECK:     [[ZEXT:%.*]] = zext i1 icmp ne (i{{32|64}} ptrtoint (ptr @_ZN13constant_eval1X1fEv to i{{32|64}}), i{{32|64}} 0) to i8
+  // CHECK:     store i8 [[ZEXT]], ptr @_ZN13constant_eval6has_f1E,
+  bool has_f1 = &X::f;
+  // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
+  // CHECK:     [[ZEXT:%.*]] = zext i1 icmp ne (i{{32|64}} ptrtoint (ptr @_ZN13constant_eval1X1fEv to i{{32|64}}), i{{32|64}} 0) to i8
+  // CHECK:     store i8 [[ZEXT]], ptr @_ZN13constant_eval6has_f2E,
+  bool has_f2 = &X::f != nullptr;
 }

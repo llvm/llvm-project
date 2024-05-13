@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -verify -pedantic %s
 
 char *funk(int format);
 enum Test {A=-1};
@@ -19,13 +19,13 @@ int bar(int i) // expected-note {{previous definition is here}}
 {
   return 0;
 }
-int bar() // expected-error {{redefinition of 'bar'}} 
+int bar() // expected-error {{conflicting types for 'bar'}}
 {
   return 0;
 }
 
-int foobar(int); // note {{previous declaration is here}}
-int foobar() // error {{conflicting types for 'foobar'}}
+int foobar(int); // expected-note {{previous declaration is here}}
+int foobar() // expected-error {{conflicting types for 'foobar'}}
 {
   return 0;
 }

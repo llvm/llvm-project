@@ -1,4 +1,4 @@
-; RUN: opt -inline < %s -S -o - -inline-threshold=100 | FileCheck %s
+; RUN: opt -passes=inline < %s -S -o - -inline-threshold=100 | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' < %s -S -o - -inline-threshold=100 | FileCheck %s
 
 target datalayout = "p:32:32"
@@ -7,11 +7,11 @@ target datalayout = "p:32:32"
 
 declare void @f()
 declare i32 @__gxx_personality_v0(...)
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
 declare void @_ZSt9terminatev()
 
-define void @inner1() personality i32 (...)* @__gxx_personality_v0 {
+define void @inner1() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @f() to label %cont1 unwind label %terminate.lpad
 
@@ -28,8 +28,8 @@ cont4:
   ret void
 
 terminate.lpad:
-  landingpad {i8*, i32}
-            catch i8* null
+  landingpad {ptr, i32}
+            catch ptr null
   call void @_ZSt9terminatev() noreturn nounwind
   unreachable
 }

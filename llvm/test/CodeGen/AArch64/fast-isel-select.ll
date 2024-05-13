@@ -68,7 +68,7 @@ define double @select_f64(i1 zeroext %c, double %a, double %b) {
 ; Now test the folding of all compares.
 define float @select_fcmp_false(float %x, float %a, float %b) {
 ; CHECK-LABEL: select_fcmp_false
-; CHECK:       mov.16b {{v[0-9]+}}, v2
+; CHECK:       fmov {{s[0-9]+}}, s2
   %1 = fcmp ogt float %x, %x
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -196,7 +196,7 @@ define float @select_fcmp_une(float %x, float %y, float %a, float %b) {
 
 define float @select_fcmp_true(float %x, float %a, float %b) {
 ; CHECK-LABEL: select_fcmp_true
-; CHECK:       mov.16b {{v[0-9]+}}, v1
+; CHECK:       fmov {{s[0-9]+}}, s1
   %1 = fcmp ueq float %x, %x
   %2 = select i1 %1, float %a, float %b
   ret float %2

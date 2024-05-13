@@ -1,6 +1,9 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
+
 ; C++ source to regenerate:
 ; struct A {
 ;   int NoRefQual();
@@ -29,11 +32,11 @@ target triple = "x86_64-pc-windows-msvc19.15.26732"
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @"?foo@@YAXXZ"() #0 !dbg !10 {
 entry:
-  %GenericPtr = alloca %struct.A*, align 8
+  %GenericPtr = alloca ptr, align 8
   %a = alloca %struct.A, align 1
-  call void @llvm.dbg.declare(metadata %struct.A** %GenericPtr, metadata !13, metadata !DIExpression()), !dbg !28
-  store %struct.A* null, %struct.A** %GenericPtr, align 8, !dbg !28
-  call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !29, metadata !DIExpression()), !dbg !30
+  call void @llvm.dbg.declare(metadata ptr %GenericPtr, metadata !13, metadata !DIExpression()), !dbg !28
+  store ptr null, ptr %GenericPtr, align 8, !dbg !28
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !29, metadata !DIExpression()), !dbg !30
   ret void, !dbg !31
 }
 

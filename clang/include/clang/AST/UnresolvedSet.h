@@ -114,14 +114,22 @@ public:
     I.I->set(New, AS);
   }
 
-  void erase(unsigned I) { decls()[I] = decls().pop_back_val(); }
+  void erase(unsigned I) {
+    auto val = decls().pop_back_val();
+    if (I < size())
+      decls()[I] = val;
+  }
 
-  void erase(iterator I) { *I.I = decls().pop_back_val(); }
+  void erase(iterator I) {
+    auto val = decls().pop_back_val();
+    if (I != end())
+      *I.I = val;
+  }
 
   void setAccess(iterator I, AccessSpecifier AS) { I.I->setAccess(AS); }
 
   void clear() { decls().clear(); }
-  void set_size(unsigned N) { decls().set_size(N); }
+  void truncate(unsigned N) { decls().truncate(N); }
 
   bool empty() const { return decls().empty(); }
   unsigned size() const { return decls().size(); }

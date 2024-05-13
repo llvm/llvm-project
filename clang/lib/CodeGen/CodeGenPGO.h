@@ -16,9 +16,11 @@
 #include "CGBuilder.h"
 #include "CodeGenModule.h"
 #include "CodeGenTypes.h"
+#include "MCDCState.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include <array>
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace CodeGen {
@@ -36,6 +38,7 @@ private:
   std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionCounterMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, uint64_t>> StmtCountMap;
   std::unique_ptr<llvm::InstrProfRecord> ProfRecord;
+  std::unique_ptr<MCDC::State> RegionMCDCState;
   std::vector<uint64_t> RegionCounts;
   uint64_t CurrentRegionCount;
 
@@ -59,12 +62,12 @@ public:
 
   /// Check if an execution count is known for a given statement. If so, return
   /// true and put the value in Count; else return false.
-  Optional<uint64_t> getStmtCount(const Stmt *S) const {
+  std::optional<uint64_t> getStmtCount(const Stmt *S) const {
     if (!StmtCountMap)
-      return None;
+      return std::nullopt;
     auto I = StmtCountMap->find(S);
     if (I == StmtCountMap->end())
-      return None;
+      return std::nullopt;
     return I->second;
   }
 
@@ -91,6 +94,8 @@ public:
   // Set a module flag indicating if value profiling is enabled.
   void setValueProfilingFlag(llvm::Module &M);
 
+  void setProfileVersion(llvm::Module &M);
+
 private:
   void setFuncName(llvm::Function *Fn);
   void setFuncName(StringRef Name, llvm::GlobalValue::LinkageTypes Linkage);
@@ -102,10 +107,20 @@ private:
                         bool IsInMainFile);
   bool skipRegionMappingForDecl(const Decl *D);
   void emitCounterRegionMapping(const Decl *D);
+  bool canEmitMCDCCoverage(const CGBuilderTy &Builder);
 
 public:
-  void emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
-                            llvm::Value *StepV);
+  void emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                 llvm::Value *StepV);
+  void emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
+                                      Address MCDCCondBitmapAddr,
+                                      CodeGenFunction &CGF);
+  void emitMCDCParameters(CGBuilderTy &Builder);
+  void emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
+                               Address MCDCCondBitmapAddr);
+  void emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
+                                Address MCDCCondBitmapAddr, llvm::Value *Val,
+                                CodeGenFunction &CGF);
 
   /// Return the region count for the counter at the given index.
   uint64_t getRegionCount(const Stmt *S) {
@@ -113,7 +128,12 @@ public:
       return 0;
     if (!haveRegionCounts())
       return 0;
-    return RegionCounts[(*RegionCounterMap)[S]];
+    // With profiles from a differing version of clang we can have mismatched
+    // decl counts. Don't crash in such a case.
+    auto Index = (*RegionCounterMap)[S];
+    if (Index >= RegionCounts.size())
+      return 0;
+    return RegionCounts[Index];
   }
 };
 

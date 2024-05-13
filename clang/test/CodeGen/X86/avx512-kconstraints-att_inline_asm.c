@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -O0 -ffreestanding -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -emit-llvm -o - -Wall -Werror |opt -instnamer -S |FileCheck %s
+// RUN: %clang_cc1 %s -O0 -ffreestanding -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -emit-llvm -o - -Wall -Werror | FileCheck %s
 // This test checks validity of att\gcc style inline assmebly for avx512 k and Yk constraints.
 // Also checks mask register allows flexible type (size <= 64 bit)
 
@@ -41,7 +41,7 @@ __m512i mask_Yk_i64(long long msk, __m512i x, __m512i y){
 }
 
 char k_wise_op_i8(char msk_src1,char msk_src2){
-//CHECK: i8 asm "kandb\09$2, $1, $0", "=k,k,k,~{dirflag},~{fpsr},~{flags}"(i8 %{{.*}}, i8 %{{.*}})
+//CHECK: <8 x i1> asm "kandb\09$2, $1, $0", "=k,k,k,~{dirflag},~{fpsr},~{flags}"(<8 x i1> %{{.*}}, <8 x i1> %{{.*}})
   char msk_dst;
   asm ("kandb\t%2, %1, %0"
        : "=k" (msk_dst)
@@ -50,7 +50,7 @@ char k_wise_op_i8(char msk_src1,char msk_src2){
 }
 
 short k_wise_op_i16(short msk_src1, short msk_src2){
-//CHECK: i16 asm "kandw\09$2, $1, $0", "=k,k,k,~{dirflag},~{fpsr},~{flags}"(i16 %{{.*}}, i16 %{{.*}})
+//CHECK: <16 x i1> asm "kandw\09$2, $1, $0", "=k,k,k,~{dirflag},~{fpsr},~{flags}"(<16 x i1> %{{.*}}, <16 x i1> %{{.*}})
   short msk_dst;
   asm ("kandw\t%2, %1, %0"
        : "=k" (msk_dst)
@@ -59,7 +59,7 @@ short k_wise_op_i16(short msk_src1, short msk_src2){
 }
 
 int k_wise_op_i32(int msk_src1, int msk_src2){
-//CHECK: i32 asm "kandd\09$2, $1, $0", "=k,k,k,~{dirflag},~{fpsr},~{flags}"(i32 %{{.*}}, i32 %{{.*}})
+//CHECK: <32 x i1> asm "kandd\09$2, $1, $0", "=k,k,k,~{dirflag},~{fpsr},~{flags}"(<32 x i1> %{{.*}}, <32 x i1> %{{.*}})
   int msk_dst;
   asm ("kandd\t%2, %1, %0"
        : "=k" (msk_dst)
@@ -68,7 +68,7 @@ int k_wise_op_i32(int msk_src1, int msk_src2){
 }
 
 long long k_wise_op_i64(long long msk_src1, long long msk_src2){
-//CHECK: i64 asm "kandq\09$2, $1, $0", "=k,k,k,~{dirflag},~{fpsr},~{flags}"(i64 %{{.*}}, i64 %{{.*}})
+//CHECK: <64 x i1> asm "kandq\09$2, $1, $0", "=k,k,k,~{dirflag},~{fpsr},~{flags}"(<64 x i1> %{{.*}}, <64 x i1> %{{.*}})
   long long msk_dst;
   asm ("kandq\t%2, %1, %0"
        : "=k" (msk_dst)

@@ -3,10 +3,10 @@
 
 --- |
 
-  define i32* @inttoptr_p0_s32(i32 %val) {
+  define ptr @inttoptr_p0_s32(i32 %val) {
   entry:
-    %0 = inttoptr i32 %val to i32*
-    ret i32* %0
+    %0 = inttoptr i32 %val to ptr
+    ret ptr %0
   }
 
 ...
@@ -26,12 +26,12 @@ body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: inttoptr_p0_s32
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 16)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s32) from %fixed-stack.0, align 16)
     ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[LOAD]](s32)
     ; CHECK: $eax = COPY [[INTTOPTR]](p0)
     ; CHECK: RET 0, implicit $eax
     %1:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0:_(s32) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 16)
+    %0:_(s32) = G_LOAD %1(p0) :: (invariant load (s32) from %fixed-stack.0, align 16)
     %2:_(p0) = G_INTTOPTR %0(s32)
     $eax = COPY %2(p0)
     RET 0, implicit $eax

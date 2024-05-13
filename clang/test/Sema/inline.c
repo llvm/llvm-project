@@ -7,26 +7,26 @@
 
 // Check the use of static variables in non-static inline functions.
 static int staticVar; // expected-note + {{'staticVar' declared here}}
-static int staticFunction(); // expected-note + {{'staticFunction' declared here}}
+static int staticFunction(void); // expected-note + {{'staticFunction' declared here}}
 static struct { int x; } staticStruct; // expected-note + {{'staticStruct' declared here}}
 
-inline int useStatic () { // expected-note 3 {{use 'static' to give inline function 'useStatic' internal linkage}}
+inline int useStatic (void) { // expected-note 3 {{use 'static' to give inline function 'useStatic' internal linkage}}
   staticFunction(); // expected-warning{{static function 'staticFunction' is used in an inline function with external linkage}}
   (void)staticStruct.x; // expected-warning{{static variable 'staticStruct' is used in an inline function with external linkage}}
   return staticVar; // expected-warning{{static variable 'staticVar' is used in an inline function with external linkage}}
 }
 
-extern inline int useStaticFromExtern () { // no suggestions
+extern inline int useStaticFromExtern (void) { // no suggestions
   staticFunction(); // expected-warning{{static function 'staticFunction' is used in an inline function with external linkage}}
   return staticVar; // expected-warning{{static variable 'staticVar' is used in an inline function with external linkage}}
 }
 
-static inline int useStaticFromStatic () {
+static inline int useStaticFromStatic (void) {
   staticFunction(); // no-warning
   return staticVar; // no-warning
 }
 
-extern inline int useStaticInlineFromExtern () {
+extern inline int useStaticInlineFromExtern (void) {
   // Heuristic: if the function we're using is also inline, don't warn.
   // This can still be wrong (in this case, we end up inlining calls to
   // staticFunction and staticVar) but this got very noisy even using
@@ -34,9 +34,9 @@ extern inline int useStaticInlineFromExtern () {
   return useStaticFromStatic(); // no-warning
 }
 
-static int constFunction() __attribute__((const));
+static int constFunction(void) __attribute__((const));
 
-inline int useConst () {
+inline int useConst (void) {
   return constFunction(); // no-warning
 }
 
@@ -56,7 +56,7 @@ int d(inline int a); // expected-error{{'inline' can only appear on functions}}
 // Check that the warnings from the "header file" aren't on by default in
 // the main source file.
 
-inline int useStaticMainFile () {
+inline int useStaticMainFile (void) {
   staticFunction(); // no-warning
   return staticVar; // no-warning
 }
@@ -66,32 +66,32 @@ inline int useStaticMainFile () {
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Wstatic-in-inline"
 
-inline int useStaticAgain () { // expected-note 2 {{use 'static' to give inline function 'useStaticAgain' internal linkage}}
+inline int useStaticAgain (void) { // expected-note 2 {{use 'static' to give inline function 'useStaticAgain' internal linkage}}
   staticFunction(); // expected-warning{{static function 'staticFunction' is used in an inline function with external linkage}}
   return staticVar; // expected-warning{{static variable 'staticVar' is used in an inline function with external linkage}}
 }
 
 #pragma clang diagnostic pop
 
-inline void defineStaticVar() { // expected-note {{use 'static' to give inline function 'defineStaticVar' internal linkage}}
+inline void defineStaticVar(void) { // expected-note {{use 'static' to give inline function 'defineStaticVar' internal linkage}}
   static const int x = 0; // ok
   static int y = 0; // expected-warning {{non-constant static local variable in inline function may be different in different files}}
 }
 
-extern inline void defineStaticVarInExtern() {
+extern inline void defineStaticVarInExtern(void) {
   static const int x = 0; // ok
   static int y = 0; // ok
 }
 
 // Check behavior of line markers.
 # 1 "XXX.h" 1
-inline int useStaticMainFileInLineMarker() { // expected-note 2 {{use 'static' to give inline function 'useStaticMainFileInLineMarker' internal linkage}}
+inline int useStaticMainFileInLineMarker(void) { // expected-note 2 {{use 'static' to give inline function 'useStaticMainFileInLineMarker' internal linkage}}
   staticFunction(); // expected-warning{{static function 'staticFunction' is used in an inline function with external linkage}}
   return staticVar; // expected-warning{{static variable 'staticVar' is used in an inline function with external linkage}}
 }
 # 100 "inline.c" 2
 
-inline int useStaticMainFileAfterLineMarker() {
+inline int useStaticMainFileAfterLineMarker(void) {
   staticFunction(); // no-warning
   return staticVar; // no-warning
 }

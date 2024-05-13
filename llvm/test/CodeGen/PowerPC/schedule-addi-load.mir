@@ -7,17 +7,17 @@
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
   
-  define i64 @foo(i8* %p, i8* %q) {
+  define i64 @foo(ptr %p, ptr %q) {
   entry:
     br label %while.cond6.i
   
   while.cond6.i:                                    
     %n.0 = phi i64 [ 0, %entry ], [ %n.1, %while.cond6.i ]
     %conv = and i64 %n.0, 4294967295
-    %arrayidx = getelementptr inbounds i8, i8* %p, i64 %conv
-    %0 = load i8, i8* %arrayidx, align 1
-    %arrayidx4 = getelementptr inbounds i8, i8* %q, i64 %conv
-    %1 = load i8, i8* %arrayidx4, align 1
+    %arrayidx = getelementptr inbounds i8, ptr %p, i64 %conv
+    %0 = load i8, ptr %arrayidx, align 1
+    %arrayidx4 = getelementptr inbounds i8, ptr %q, i64 %conv
+    %1 = load i8, ptr %arrayidx4, align 1
     %cmp = icmp eq i8 %0, %1
     %n.1 = add i64 %conv, 1
     br i1 %cmp, label %while.cond6.i, label %while.end
@@ -88,8 +88,8 @@ body:             |
   
     %0:g8rc = COPY %9
     %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
-    %6:gprc = LBZX %2, %5 :: (load 1 from %ir.arrayidx)
-    %7:gprc = LBZX %3, %5 :: (load 1 from %ir.arrayidx4)
+    %6:gprc = LBZX %2, %5 :: (load (s8) from %ir.arrayidx)
+    %7:gprc = LBZX %3, %5 :: (load (s8) from %ir.arrayidx4)
     %9:g8rc = ADDI8 %5, 1
     %8:crrc = CMPLW %6, %7
     BCC 76, %8, %bb.1
@@ -97,23 +97,23 @@ body:             |
     ; CHECK-LABEL: foo
     ; CHECK: %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
     ; CHECK-NEXT: %9:g8rc = ADDI8 %5, 1
-    ; CHECK-NEXT: %6:gprc = LBZX %2, %5 :: (load 1 from %ir.arrayidx) 
-    ; CHECK-NEXT: %7:gprc = LBZX %3, %5 :: (load 1 from %ir.arrayidx4) 
+    ; CHECK-NEXT: %6:gprc = LBZX %2, %5 :: (load (s8) from %ir.arrayidx) 
+    ; CHECK-NEXT: %7:gprc = LBZX %3, %5 :: (load (s8) from %ir.arrayidx4) 
     ; CHECK-NEXT: %8:crrc = CMPLW %6, %7 
     ; CHECK-NEXT: BCC 76, %8
     ; CHECK-DISABLE-LABEL: foo
     ; CHECK-DISABLE: %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
-    ; CHECK-DISABLE-NEXT: %6:gprc = LBZX %2, %5 :: (load 1 from %ir.arrayidx) 
-    ; CHECK-DISABLE-NEXT: %7:gprc = LBZX %3, %5 :: (load 1 from %ir.arrayidx4) 
+    ; CHECK-DISABLE-NEXT: %6:gprc = LBZX %2, %5 :: (load (s8) from %ir.arrayidx) 
+    ; CHECK-DISABLE-NEXT: %7:gprc = LBZX %3, %5 :: (load (s8) from %ir.arrayidx4) 
     ; CHECK-DISABLE-NEXT: %9:g8rc = ADDI8 %5, 1
     ; CHECK-DISABLE-NEXT: %8:crrc = CMPLW %6, %7 
     ; CHECK-DISABLE-NEXT: BCC 76, %8
     ; CHECK-P8-LABEL: foo
     ; CHECK-P8: %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
-    ; CHECK-P8-NEXT: %6:gprc = LBZX %2, %5 :: (load 1 from %ir.arrayidx)
-    ; CHECK-P8-NEXT: %7:gprc = LBZX %3, %5 :: (load 1 from %ir.arrayidx4)
-    ; CHECK-P8-NEXT: %8:crrc = CMPLW %6, %7
+    ; CHECK-P8-NEXT: %6:gprc = LBZX %2, %5 :: (load (s8) from %ir.arrayidx)
+    ; CHECK-P8-NEXT: %7:gprc = LBZX %3, %5 :: (load (s8) from %ir.arrayidx4)
     ; CHECK-P8-NEXT: %9:g8rc = ADDI8 %5, 1
+    ; CHECK-P8-NEXT: %8:crrc = CMPLW %6, %7
     ; CHECK-P8-NEXT: BCC 76, %8
   
   bb.2.while.end:

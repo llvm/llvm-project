@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMMCA
   CodeEmitter.cpp
   Context.cpp
+  CustomBehaviour.cpp
   HWEventListener.cpp
   HardwareUnits/HardwareUnit.cpp
   HardwareUnits/LSUnit.cpp
@@ -8,6 +9,7 @@ add_llvm_component_library(LLVMMCA
   HardwareUnits/ResourceManager.cpp
   HardwareUnits/RetireControlUnit.cpp
   HardwareUnits/Scheduler.cpp
+  IncrementalSourceMgr.cpp
   InstrBuilder.cpp
   Instruction.cpp
   Pipeline.cpp
@@ -20,6 +22,7 @@ add_llvm_component_library(LLVMMCA
   Stages/RetireStage.cpp
   Stages/Stage.cpp
   Support.cpp
+  View.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/MCA

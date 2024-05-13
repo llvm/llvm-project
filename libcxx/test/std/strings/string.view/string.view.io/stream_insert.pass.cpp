@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
 
-// <string>
+// <string_view>
 
 // template<class charT, class traits, class Allocator>
 //   basic_ostream<charT, traits>&
@@ -21,43 +22,41 @@
 
 #include "test_macros.h"
 
-using std::string_view;
-using std::wstring_view;
-
-int main(int, char**)
-{
-    {
-        std::ostringstream out;
-        string_view sv("some text");
-        out << sv;
-        assert(out.good());
-        assert(sv == out.str());
-    }
-    {
-        std::ostringstream out;
-        std::string s("some text");
-        string_view sv(s);
-        out.width(12);
-        out << sv;
-        assert(out.good());
-        assert("   " + s == out.str());
-    }
-    {
-        std::wostringstream out;
-        wstring_view sv(L"some text");
-        out << sv;
-        assert(out.good());
-        assert(sv == out.str());
-    }
-    {
-        std::wostringstream out;
-        std::wstring s(L"some text");
-        wstring_view sv(s);
-        out.width(12);
-        out << sv;
-        assert(out.good());
-        assert(L"   " + s == out.str());
-    }
+int main(int, char**) {
+  {
+    std::ostringstream out;
+    std::string_view sv("some text");
+    out << sv;
+    assert(out.good());
+    assert(sv == out.str());
+  }
+  {
+    std::ostringstream out;
+    std::string s("some text");
+    std::string_view sv(s);
+    out.width(12);
+    out << sv;
+    assert(out.good());
+    assert("   " + s == out.str());
+  }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  {
+    std::wostringstream out;
+    std::wstring_view sv(L"some text");
+    out << sv;
+    assert(out.good());
+    assert(sv == out.str());
+  }
+  {
+    std::wostringstream out;
+    std::wstring s(L"some text");
+    std::wstring_view sv(s);
+    out.width(12);
+    out << sv;
+    assert(out.good());
+    assert(L"   " + s == out.str());
+  }
+#endif
 
   return 0;
 }

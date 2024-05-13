@@ -6,12 +6,11 @@
 - (int)two;
 @end
 
-int main ()
+int main (void)
 {
   return Test.one.two;
 }
 
-// rdar://16650575
 __attribute__((objc_root_class))
 @interface RootClass { 
   Class isa; 
@@ -24,7 +23,7 @@ __attribute__((objc_root_class))
 @end
 
 @interface Subclass : RootClass @end
-void Test1() { 
+void Test1(void) { 
     // now okay
     (void)RootClass.property;
     (void)Subclass.property;

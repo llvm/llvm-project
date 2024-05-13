@@ -102,6 +102,7 @@ raw:
 	.unwind_raw 8, 0xa1
 	.unwind_raw 12, 0xa9
 	.unwind_raw 0, 0xb0
+	.unwind_raw 4, 0xb4
 	.unwind_raw 4, 0xb1, 0x01
 	.unwind_raw 0xa04, 0xb2, 0x80, 0x04
 	.unwind_raw 24, 0xb3, 0x12
@@ -129,12 +130,10 @@ spare:
 	.unwind_raw 0, 0xa0
 	.unwind_raw 0, 0xa8
 	.unwind_raw 0, 0xb0
-	.unwind_raw 0, 0xb1, 0x00
 	.unwind_raw 4, 0xb1, 0x01
 	.unwind_raw 0, 0xb1, 0x10
 	.unwind_raw 0x204, 0xb2, 0x00
 	.unwind_raw 16, 0xb3, 0x00
-	.unwind_raw 0, 0xb4
 	.unwind_raw 16, 0xb8
 	.unwind_raw 4, 0xc0
 	.unwind_raw 4, 0xc6, 0x00
@@ -277,6 +276,7 @@ spare:
 @ SYM:           0xB3 0x12 ; pop {d1, d2, d3}
 @ SYM:           0xB2 0x80 0x04 ; vsp = vsp + 2564
 @ SYM:           0xB1 0x01 ; pop {r0}
+@ SYM:           0xB4      ; pop ra_auth_code
 @ SYM:           0xB0      ; finish
 @ SYM:           0xA9      ; pop {r4, r5, lr}
 @ SYM:           0xA1      ; pop {r4, r5}
@@ -306,12 +306,10 @@ spare:
 @ SYM:           0xC6 0x00 ; pop {wR0}
 @ SYM:           0xC0      ; pop {wR10}
 @ SYM:           0xB8      ; pop {d8}
-@ SYM:           0xB4      ; spare
 @ SYM:           0xB3 0x00 ; pop {d0}
 @ SYM:           0xB2 0x00 ; vsp = vsp + 516
 @ SYM:           0xB1 0x10 ; spare
 @ SYM:           0xB1 0x01 ; pop {r0}
-@ SYM:           0xB1 0x00 ; spare
 @ SYM:           0xB0      ; finish
 @ SYM:           0xA8      ; pop {r4, lr}
 @ SYM:           0xA0      ; pop {r4}

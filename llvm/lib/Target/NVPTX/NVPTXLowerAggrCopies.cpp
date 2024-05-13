@@ -66,10 +66,9 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   // Collect all aggregate loads and mem* calls.
-  for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE; ++BI) {
-    for (BasicBlock::iterator II = BI->begin(), IE = BI->end(); II != IE;
-         ++II) {
-      if (LoadInst *LI = dyn_cast<LoadInst>(II)) {
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
         if (!LI->hasOneUse())
           continue;
 
@@ -81,7 +80,7 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
             continue;
           AggrLoads.push_back(LI);
         }
-      } else if (MemIntrinsic *IntrCall = dyn_cast<MemIntrinsic>(II)) {
+      } else if (MemIntrinsic *IntrCall = dyn_cast<MemIntrinsic>(&I)) {
         // Convert intrinsic calls with variable size or with constant size
         // larger than the MaxAggrCopySize threshold.
         if (ConstantInt *LenCI = dyn_cast<ConstantInt>(IntrCall->getLength())) {
@@ -116,7 +115,8 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
                               /* SrcAlign */ LI->getAlign(),
                               /* DestAlign */ SI->getAlign(),
                               /* SrcIsVolatile */ LI->isVolatile(),
-                              /* DstIsVolatile */ SI->isVolatile(), TTI);
+                              /* DstIsVolatile */ SI->isVolatile(),
+                              /* CanOverlap */ true, TTI);
 
     SI->eraseFromParent();
     LI->eraseFromParent();
@@ -127,7 +127,7 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
     if (MemCpyInst *Memcpy = dyn_cast<MemCpyInst>(MemCall)) {
       expandMemCpyAsLoop(Memcpy, TTI);
     } else if (MemMoveInst *Memmove = dyn_cast<MemMoveInst>(MemCall)) {
-      expandMemMoveAsLoop(Memmove);
+      expandMemMoveAsLoop(Memmove, TTI);
     } else if (MemSetInst *Memset = dyn_cast<MemSetInst>(MemCall)) {
       expandMemSetAsLoop(Memset);
     }

@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -35,37 +36,53 @@
 #include <system_error>
 using namespace llvm;
 
-static cl::list<std::string> InputFilenames(cl::Positional, cl::ZeroOrMore,
-                                            cl::desc("[input bitcode]..."));
+static cl::OptionCategory DisCategory("Disassembler Options");
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Override output filename"),
-               cl::value_desc("filename"));
+static cl::list<std::string> InputFilenames(cl::Positional,
+                                            cl::desc("[input bitcode]..."),
+                                            cl::cat(DisCategory));
 
-static cl::opt<bool>
-Force("f", cl::desc("Enable binary output on terminals"));
+static cl::opt<std::string> OutputFilename("o",
+                                           cl::desc("Override output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::cat(DisCategory));
 
-static cl::opt<bool>
-DontPrint("disable-output", cl::desc("Don't output the .ll file"), cl::Hidden);
+static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"),
+                           cl::cat(DisCategory));
+
+static cl::opt<bool> DontPrint("disable-output",
+                               cl::desc("Don't output the .ll file"),
+                               cl::Hidden, cl::cat(DisCategory));
 
 static cl::opt<bool>
     SetImporting("set-importing",
                  cl::desc("Set lazy loading to pretend to import a module"),
-                 cl::Hidden);
+                 cl::Hidden, cl::cat(DisCategory));
 
 static cl::opt<bool>
     ShowAnnotations("show-annotations",
-                    cl::desc("Add informational comments to the .ll file"));
+                    cl::desc("Add informational comments to the .ll file"),
+                    cl::cat(DisCategory));
 
 static cl::opt<bool> PreserveAssemblyUseListOrder(
     "preserve-ll-uselistorder",
     cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden);
+    cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
 static cl::opt<bool>
     MaterializeMetadata("materialize-metadata",
                         cl::desc("Load module without materializing metadata, "
-                                 "then materialize only the metadata"));
+                                 "then materialize only the metadata"),
+                        cl::cat(DisCategory));
+
+static cl::opt<bool> PrintThinLTOIndexOnly(
+    "print-thinlto-index-only",
+    cl::desc("Only read thinlto index and print the index as LLVM assembly."),
+    cl::init(false), cl::Hidden, cl::cat(DisCategory));
+
+extern cl::opt<bool> WriteNewDbgInfoFormat;
+
+extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 namespace {
 
@@ -151,10 +168,16 @@ int main(int argc, char **argv) {
 
   ExitOnErr.setBanner(std::string(argv[0]) + ": error: ");
 
+  cl::HideUnrelatedOptions({&DisCategory, &getColorCategory()});
+  cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
+
+  // Load bitcode into the new debug info format by default.
+  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
+    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
+
   LLVMContext Context;
   Context.setDiagnosticHandler(
       std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
-  cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
 
   if (InputFilenames.size() < 1) {
     InputFilenames.push_back("-");
@@ -165,8 +188,13 @@ int main(int argc, char **argv) {
   }
 
   for (std::string InputFilename : InputFilenames) {
-    std::unique_ptr<MemoryBuffer> MB = ExitOnErr(
-        errorOrToExpected(MemoryBuffer::getFileOrSTDIN(InputFilename)));
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+        MemoryBuffer::getFileOrSTDIN(InputFilename);
+    if (std::error_code EC = BufferOrErr.getError()) {
+      WithColor::error() << InputFilename << ": " << EC.message() << '\n';
+      return 1;
+    }
+    std::unique_ptr<MemoryBuffer> MB = std::move(BufferOrErr.get());
 
     BitcodeFileContents IF = ExitOnErr(llvm::getBitcodeFileContents(*MB));
 
@@ -177,12 +205,17 @@ int main(int argc, char **argv) {
 
     for (size_t I = 0; I < N; ++I) {
       BitcodeModule MB = IF.Mods[I];
-      std::unique_ptr<Module> M = ExitOnErr(
-          MB.getLazyModule(Context, MaterializeMetadata, SetImporting));
-      if (MaterializeMetadata)
-        ExitOnErr(M->materializeMetadata());
-      else
-        ExitOnErr(M->materializeAll());
+
+      std::unique_ptr<Module> M;
+
+      if (!PrintThinLTOIndexOnly) {
+        M = ExitOnErr(
+            MB.getLazyModule(Context, MaterializeMetadata, SetImporting));
+        if (MaterializeMetadata)
+          ExitOnErr(M->materializeMetadata());
+        else
+          ExitOnErr(M->materializeAll());
+      }
 
       BitcodeLTOInfo LTOInfo = ExitOnErr(MB.getLTOInfo());
       std::unique_ptr<ModuleSummaryIndex> Index;
@@ -200,7 +233,7 @@ int main(int argc, char **argv) {
           FinalFilename = "-";
         } else {
           StringRef IFN = InputFilename;
-          FinalFilename = (IFN.endswith(".bc") ? IFN.drop_back(3) : IFN).str();
+          FinalFilename = (IFN.ends_with(".bc") ? IFN.drop_back(3) : IFN).str();
           if (N > 1)
             FinalFilename += std::string(".") + std::to_string(I);
           FinalFilename += ".ll";
@@ -224,7 +257,12 @@ int main(int argc, char **argv) {
 
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
-        M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
+        if (M) {
+          M->setIsNewDbgInfoFormat(WriteNewDbgInfoFormat);
+          if (WriteNewDbgInfoFormat)
+            M->removeDebugIntrinsicDeclarations();
+          M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
+        }
         if (Index)
           Index->print(Out->os());
       }

@@ -10,14 +10,14 @@
 # RUN:         %S/Inputs/mips-micro.s -o %t1eb.o
 # RUN: llvm-mc -filetype=obj -triple=mips -mcpu=mips32r6 %s -o %t2eb.o
 # RUN: ld.lld -o %teb.exe -script %t.script %t1eb.o %t2eb.o
-# RUN: llvm-objdump -d -t --mattr=micromips --no-show-raw-insn %teb.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d -t --mattr=micromips --no-show-raw-insn %teb.exe \
 # RUN:   | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel -mcpu=mips32r6 \
 # RUN:         %S/Inputs/mips-micro.s -o %t1el.o
 # RUN: llvm-mc -filetype=obj -triple=mipsel -mcpu=mips32r6 %s -o %t2el.o
 # RUN: ld.lld -o %tel.exe -script %t.script %t1el.o %t2el.o
-# RUN: llvm-objdump -d -t --mattr=micromips --no-show-raw-insn %tel.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d -t --mattr=micromips --no-show-raw-insn %tel.exe \
 # RUN:   | FileCheck %s
 
 # CHECK: 00020100 g F     .text  00000000 0x80 foo
@@ -25,8 +25,8 @@
 
 # CHECK:      <__start>:
 # CHECK-NEXT:    20110:  lapc   $2, -12
-# CHECK-NEXT:            beqzc  $3, -36
-# CHECK-NEXT:            balc   -24 <foo>
+# CHECK-NEXT:            beqzc  $3, 0x200f0
+# CHECK-NEXT:            balc   {{.*}} <foo>
 
   .text
   .set micromips

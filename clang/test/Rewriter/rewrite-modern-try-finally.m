@@ -6,11 +6,11 @@ typedef struct objc_object {
     Class isa;
 } *id;
 
-void FINALLY();
-void TRY();
-void INNER_FINALLY();
-void INNER_TRY();
-void CHECK();
+void FINALLY(void);
+void TRY(void);
+void INNER_FINALLY(void);
+void INNER_TRY(void);
+void CHECK(void);
 
 @interface Foo
 @end

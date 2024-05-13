@@ -177,7 +177,7 @@ enum {
                                  {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
                                   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
                                   LLDB_INVALID_REGNUM },                       \
-                                  nullptr, nullptr, nullptr, 0
+                                  nullptr, nullptr, nullptr,
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterContextDarwin_arm::GPR) +                                    \
    sizeof(RegisterContextDarwin_arm::FPU) +                                    \
@@ -201,7 +201,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r1",
      nullptr,
      4,
@@ -212,7 +212,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r2",
      nullptr,
      4,
@@ -223,7 +223,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r3",
      nullptr,
      4,
@@ -234,7 +234,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r4",
      nullptr,
      4,
@@ -245,7 +245,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r5",
      nullptr,
      4,
@@ -256,7 +256,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r6",
      nullptr,
      4,
@@ -267,7 +267,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r7",
      nullptr,
      4,
@@ -279,7 +279,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r8",
      nullptr,
      4,
@@ -290,7 +290,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r9",
      nullptr,
      4,
@@ -301,7 +301,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r10",
      nullptr,
      4,
@@ -313,7 +313,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r11",
      nullptr,
      4,
@@ -325,7 +325,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"r12",
      nullptr,
      4,
@@ -337,7 +337,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"sp",
      "r13",
      4,
@@ -349,7 +349,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"lr",
      "r14",
      4,
@@ -361,7 +361,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"pc",
      "r15",
      4,
@@ -373,7 +373,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"cpsr",
      "psr",
      4,
@@ -385,7 +385,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
 
     {"s0",
      nullptr,
@@ -398,7 +398,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s1",
      nullptr,
      4,
@@ -410,7 +410,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s2",
      nullptr,
      4,
@@ -422,7 +422,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s3",
      nullptr,
      4,
@@ -434,7 +434,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s4",
      nullptr,
      4,
@@ -446,7 +446,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s5",
      nullptr,
      4,
@@ -458,7 +458,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s6",
      nullptr,
      4,
@@ -470,7 +470,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s7",
      nullptr,
      4,
@@ -482,7 +482,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s8",
      nullptr,
      4,
@@ -494,7 +494,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s9",
      nullptr,
      4,
@@ -506,7 +506,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s10",
      nullptr,
      4,
@@ -518,7 +518,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s11",
      nullptr,
      4,
@@ -530,7 +530,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s12",
      nullptr,
      4,
@@ -542,7 +542,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s13",
      nullptr,
      4,
@@ -554,7 +554,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s14",
      nullptr,
      4,
@@ -566,7 +566,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s15",
      nullptr,
      4,
@@ -578,7 +578,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s16",
      nullptr,
      4,
@@ -590,7 +590,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s17",
      nullptr,
      4,
@@ -602,7 +602,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s18",
      nullptr,
      4,
@@ -614,7 +614,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s19",
      nullptr,
      4,
@@ -626,7 +626,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s20",
      nullptr,
      4,
@@ -638,7 +638,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s21",
      nullptr,
      4,
@@ -650,7 +650,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s22",
      nullptr,
      4,
@@ -662,7 +662,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s23",
      nullptr,
      4,
@@ -674,7 +674,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s24",
      nullptr,
      4,
@@ -686,7 +686,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s25",
      nullptr,
      4,
@@ -698,7 +698,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s26",
      nullptr,
      4,
@@ -710,7 +710,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s27",
      nullptr,
      4,
@@ -722,7 +722,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s28",
      nullptr,
      4,
@@ -734,7 +734,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s29",
      nullptr,
      4,
@@ -746,7 +746,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s30",
      nullptr,
      4,
@@ -758,7 +758,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"s31",
      nullptr,
      4,
@@ -770,7 +770,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"fpscr",
      nullptr,
      4,
@@ -782,7 +782,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
 
     {"exception",
      nullptr,
@@ -795,7 +795,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"fsr",
      nullptr,
      4,
@@ -807,7 +807,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"far",
      nullptr,
      4,
@@ -819,7 +819,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
 
     {DEFINE_DBG(bvr, 0)},
     {DEFINE_DBG(bvr, 1)},
@@ -909,7 +909,7 @@ static uint32_t g_exc_regnums[] = {
     exc_exception, exc_fsr, exc_far,
 };
 
-static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
+static size_t k_num_register_infos = std::size(g_register_infos);
 
 RegisterContextDarwin_arm::RegisterContextDarwin_arm(
     Thread &thread, uint32_t concrete_frame_idx)
@@ -922,7 +922,7 @@ RegisterContextDarwin_arm::RegisterContextDarwin_arm(
   }
 }
 
-RegisterContextDarwin_arm::~RegisterContextDarwin_arm() {}
+RegisterContextDarwin_arm::~RegisterContextDarwin_arm() = default;
 
 void RegisterContextDarwin_arm::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();
@@ -950,9 +950,9 @@ const RegisterInfo *RegisterContextDarwin_arm::GetRegisterInfos() {
 }
 
 // Number of registers in each register set
-const size_t k_num_gpr_registers = llvm::array_lengthof(g_gpr_regnums);
-const size_t k_num_fpu_registers = llvm::array_lengthof(g_fpu_regnums);
-const size_t k_num_exc_registers = llvm::array_lengthof(g_exc_regnums);
+const size_t k_num_gpr_registers = std::size(g_gpr_regnums);
+const size_t k_num_fpu_registers = std::size(g_fpu_regnums);
+const size_t k_num_exc_registers = std::size(g_exc_regnums);
 
 // Register set definitions. The first definitions at register set index of
 // zero is for all registers, followed by other registers sets. The register
@@ -964,7 +964,7 @@ static const RegisterSet g_reg_sets[] = {
     {"Floating Point Registers", "fpu", k_num_fpu_registers, g_fpu_regnums},
     {"Exception State Registers", "exc", k_num_exc_registers, g_exc_regnums}};
 
-const size_t k_num_regsets = llvm::array_lengthof(g_reg_sets);
+const size_t k_num_regsets = std::size(g_reg_sets);
 
 size_t RegisterContextDarwin_arm::GetRegisterSetCount() {
   return k_num_regsets;
@@ -1289,7 +1289,7 @@ bool RegisterContextDarwin_arm::WriteRegister(const RegisterInfo *reg_info,
 }
 
 bool RegisterContextDarwin_arm::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   data_sp = std::make_shared<DataBufferHeap>(REG_CONTEXT_SIZE, 0);
   if (data_sp && ReadGPR(false) == KERN_SUCCESS &&
       ReadFPU(false) == KERN_SUCCESS && ReadEXC(false) == KERN_SUCCESS) {
@@ -1544,7 +1544,7 @@ uint32_t RegisterContextDarwin_arm::SetHardwareBreakpoint(lldb::addr_t addr,
 
         // We have a thumb breakpoint
         // We have an ARM breakpoint
-        dbg.bcr[i] = BCR_M_IMVA_MATCH | // Stop on address mismatch
+        dbg.bcr[i] = BCR_M_IMVA_MATCH | // Stop on address match
                      byte_addr_select | // Set the correct byte address select
                                         // so we only trigger on the correct
                                         // opcode
@@ -1563,7 +1563,7 @@ uint32_t RegisterContextDarwin_arm::SetHardwareBreakpoint(lldb::addr_t addr,
       } else if (size == 4) {
         // We have an ARM breakpoint
         dbg.bcr[i] =
-            BCR_M_IMVA_MATCH | // Stop on address mismatch
+            BCR_M_IMVA_MATCH | // Stop on address match
             BAS_IMVA_ALL | // Stop on any of the four bytes following the IMVA
             S_USER |       // Which modes should this breakpoint stop in?
             BCR_ENABLE;    // Enable this hardware breakpoint

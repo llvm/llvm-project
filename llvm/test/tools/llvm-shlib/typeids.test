@@ -1,0 +1,14 @@
+# REQUIRES: x86_64-linux, llvm-dylib
+
+# Make sure there's no llvm::Any::TypeId symbol local to the shared library.  As
+# the adress of llvm::Any::TypeId::Id is used as a global unique identifier for
+# each type, having another visibility defeats the original purpose.
+#
+# This happens when llvm::Any::TypeId is parametrized by a type with hidden
+# visibility.
+
+# RUN: llvm-nm -C %llvmdylib | FileCheck %s
+# RUN: llvm-nm -C %llvmdylib | FileCheck %s --check-prefix=SAFETY-CHECK
+
+# CHECK-NOT: {{[^uvV]}} llvm::Any::TypeId
+# SAFETY-CHECK: {{[uvV]}} llvm::Any::TypeId

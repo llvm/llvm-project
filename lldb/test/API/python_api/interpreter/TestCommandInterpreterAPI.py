@@ -1,8 +1,5 @@
 """Test the SBCommandInterpreter APIs."""
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -10,15 +7,13 @@ from lldbsuite.test import lldbutil
 
 
 class CommandInterpreterAPICase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break on inside main.cpp.
-        self.line = line_number('main.c', 'Hello world.')
+        self.line = line_number("main.c", "Hello world.")
 
     def test_with_process_launch_api(self):
         """Test the SBCommandInterpreter APIs."""
@@ -65,10 +60,13 @@ class CommandInterpreterAPICase(TestBase):
         self.assertTrue(process)
 
         import lldbsuite.test.lldbutil as lldbutil
+
         if process.GetState() != lldb.eStateStopped:
-            self.fail("Process should be in the 'stopped' state, "
-                      "instead the actual state is: '%s'" %
-                      lldbutil.state_type_to_str(process.GetState()))
+            self.fail(
+                "Process should be in the 'stopped' state, "
+                "instead the actual state is: '%s'"
+                % lldbutil.state_type_to_str(process.GetState())
+            )
 
         if self.TraceOn():
             lldbutil.print_stacktraces(process)
@@ -84,6 +82,6 @@ class CommandInterpreterAPICase(TestBase):
         ci.HandleCommand("settings set use-color false", res)
         self.assertTrue(res.Succeeded())
         self.assertIsNotNone(res.GetOutput())
-        self.assertEquals(res.GetOutput(), "")
+        self.assertEqual(res.GetOutput(), "")
         self.assertIsNotNone(res.GetError())
-        self.assertEquals(res.GetError(), "")
+        self.assertEqual(res.GetError(), "")

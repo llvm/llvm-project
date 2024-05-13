@@ -81,8 +81,8 @@ public:
   /// There is a DWARF encoding that uses a PC-relative adjustment.
   /// For these values, \p AbsPosOffset is used to fix them, which should
   /// reflect the absolute address of this pointer.
-  Optional<uint64_t> getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
-                                       uint64_t AbsPosOffset = 0) const;
+  std::optional<uint64_t> getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
+                                            uint64_t AbsPosOffset = 0) const;
 };
 
 } // end namespace llvm

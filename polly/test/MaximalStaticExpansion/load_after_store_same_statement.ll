@@ -1,5 +1,7 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -pass-remarks-analysis="polly-mse" -analyze < %s 2>&1| FileCheck %s --check-prefix=MSE
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-mse>)" -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -polly-print-scops -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1| FileCheck %s --check-prefix=MSE
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-mse>)" -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
 ;
 ; Verify that the expansion of an array with load after store in a same statement is not done.
 ;
@@ -31,7 +33,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @mse(double* %A, double* %B, double* %C, double* %D) {
+define void @mse(ptr %A, ptr %B, ptr %C, ptr %D) {
 entry:
   br label %entry.split
 
@@ -46,14 +48,12 @@ for.body4:                                        ; preds = %for.body, %for.body
   %indvars.iv = phi i64 [ 0, %for.body ], [ %indvars.iv.next, %for.body4 ]
   %0 = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %0 to double
-  %arrayidx = getelementptr inbounds double, double* %B, i64 %indvars.iv
-  store double %conv, double* %arrayidx, align 8
-  %arrayidx6 = getelementptr inbounds double, double* %B, i64 %indvars.iv
-  %1 = bitcast double* %arrayidx6 to i64*
-  %2 = load i64, i64* %1, align 8
-  %arrayidx8 = getelementptr inbounds double, double* %C, i64 %indvars.iv
-  %3 = bitcast double* %arrayidx8 to i64*
-  store i64 %2, i64* %3, align 8
+  %arrayidx = getelementptr inbounds double, ptr %B, i64 %indvars.iv
+  store double %conv, ptr %arrayidx, align 8
+  %arrayidx6 = getelementptr inbounds double, ptr %B, i64 %indvars.iv
+  %1 = load i64, ptr %arrayidx6, align 8
+  %arrayidx8 = getelementptr inbounds double, ptr %C, i64 %indvars.iv
+  store i64 %1, ptr %arrayidx8, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.body4, label %for.inc9

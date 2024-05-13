@@ -12,38 +12,38 @@
 # CHECK-LABEL: image lookup -v -n F1
 # CHECK: CompileUnit: id = {0x00000001}, file = "1.c", language = "unknown"
 # CHECK: Function: {{.*}}, name = "F1", range = [0x0000000000000001-0x0000000000000002)
-# CHECK: Variable: {{.*}}, name = "x", type = "int", location = DW_OP_reg1 RDX
+# CHECK: Variable: {{.*}}, name = "x", type = "int", valid ranges = <block>, location = [0x0000000000000001, 0x0000000000000002) -> DW_OP_reg1 RDX
 
 # SYMBOLS:      Compile units:
-# SYMBOLS-NEXT: CompileUnit{0x00000000}, language = "unknown", file = '0.c'
+# SYMBOLS-NEXT: CompileUnit{0x00000000}, language = "<not loaded>", file = '0.c'
 # SYMBOLS-NEXT:   Variable{{.*}}, name = "A", {{.*}}, location = DW_OP_GNU_addr_index 0x0
 # SYMBOLS-NEXT:   Function{{.*}}, demangled = F0
 # SYMBOLS-NEXT:   Block{{.*}}, ranges = [0x00000000-0x00000001)
-# SYMBOLS-NEXT:     Variable{{.*}}, name = "x", {{.*}}, location = 
-# SYMBOLS-NEXT:       DW_LLE_startx_length   (0x0000000000000001, 0x0000000000000001): DW_OP_reg0 RAX
+# SYMBOLS-NEXT:     Variable{{.*}}, name = "x", {{.*}}, location =
+# SYMBOLS-NEXT:       [0x0000000000000000, 0x0000000000000001): DW_OP_reg0 RAX
 # SYMBOLS-EMPTY:
-# SYMBOLS-NEXT: CompileUnit{0x00000001}, language = "unknown", file = '1.c'
+# SYMBOLS-NEXT: CompileUnit{0x00000001}, language = "<not loaded>", file = '1.c'
 # SYMBOLS-NEXT:   Variable{{.*}}, name = "A", {{.*}}, location = DW_OP_GNU_addr_index 0x2
 # SYMBOLS-NEXT:   Function{{.*}}, demangled = F1
 # SYMBOLS-NEXT:   Block{{.*}}, ranges = [0x00000001-0x00000002)
-# SYMBOLS-NEXT:     Variable{{.*}}, name = "x", {{.*}}, location = 
-# SYMBOLS-NEXT:       DW_LLE_startx_length   (0x0000000000000003, 0x0000000000000001): DW_OP_reg1 RDX
+# SYMBOLS-NEXT:     Variable{{.*}}, name = "x", {{.*}}, location =
+# SYMBOLS-NEXT:       [0x0000000000000001, 0x0000000000000002): DW_OP_reg1 RDX
 # SYMBOLS-EMPTY:
-# SYMBOLS-NEXT: CompileUnit{0x00000002}, language = "unknown", file = '2.c'
+# SYMBOLS-NEXT: CompileUnit{0x00000002}, language = "<not loaded>", file = '2.c'
 # SYMBOLS-NEXT:   Variable{{.*}}, name = "A", {{.*}}, location = DW_OP_GNU_addr_index 0x4
 # SYMBOLS-NEXT:   Function{{.*}}, demangled = F2
 # SYMBOLS-NEXT:   Block{{.*}}, ranges = [0x00000002-0x00000003)
-# SYMBOLS-NEXT:     Variable{{.*}}, name = "x", {{.*}}, location = 
-# SYMBOLS-NEXT:       DW_LLE_startx_length   (0x0000000000000005, 0x0000000000000001): DW_OP_reg2 RCX
+# SYMBOLS-NEXT:     Variable{{.*}}, name = "x", {{.*}}, location =
+# SYMBOLS-NEXT:       [0x0000000000000002, 0x0000000000000003): DW_OP_reg2 RCX
 # SYMBOLS-EMPTY:
-# SYMBOLS-NEXT: CompileUnit{0x00000003}, language = "unknown", file = '3.c'
+# SYMBOLS-NEXT: CompileUnit{0x00000003}, language = "<not loaded>", file = '3.c'
 # SYMBOLS-NEXT:   Variable{{.*}}, name = "A", {{.*}}, location = DW_OP_GNU_addr_index 0x6
 # SYMBOLS-NEXT:   Function{{.*}}, demangled = F3
 # SYMBOLS-NEXT:   Block{{.*}}, ranges = [0x00000003-0x00000004)
-# SYMBOLS-NEXT:     Variable{{.*}}, name = "x", {{.*}}, location = 
-# SYMBOLS-NEXT:       DW_LLE_startx_length   (0x0000000000000007, 0x0000000000000001): DW_OP_reg3 RBX
+# SYMBOLS-NEXT:     Variable{{.*}}, name = "x", {{.*}}, location =
+# SYMBOLS-NEXT:       [0x0000000000000003, 0x0000000000000004): DW_OP_reg3 RBX
 # SYMBOLS-EMPTY:
-# SYMBOLS-NEXT: CompileUnit{0x00000004}, language = "unknown", file = ''
+# SYMBOLS-NEXT: CompileUnit{0x00000004}, language = "<not loaded>", file = ''
 # SYMBOLS-EMPTY:
 
         .section        .debug_abbrev,"",@progbits
@@ -116,7 +116,7 @@ F\I:
 .Lloc\I:
         .byte   3                       # DW_LLE_startx_length
         .uleb128 \I*2+1
-        .long   1                
+        .long   1
         .short 1                      # Expression size
         .byte   80+\I                   # super-register DW_OP_reg0+\I
         .byte   0                       # DW_LLE_end_of_list

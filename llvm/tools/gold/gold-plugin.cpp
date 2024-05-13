@@ -19,20 +19,20 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CachePruning.h"
+#include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include <list>
 #include <map>
 #include <plugin-api.h>
@@ -121,7 +121,7 @@ static ld_plugin_set_extra_library_path set_extra_library_path = nullptr;
 static ld_plugin_get_view get_view = nullptr;
 static bool IsExecutable = false;
 static bool SplitSections = true;
-static Optional<Reloc::Model> RelocationModel = None;
+static std::optional<Reloc::Model> RelocationModel;
 static std::string output_name = "";
 static std::list<claimed_file> Modules;
 static DenseMap<int, void *> FDToLeaderHandle;
@@ -200,8 +200,6 @@ namespace options {
   static std::vector<const char *> extra;
   // Sample profile file path
   static std::string sample_profile;
-  // New pass manager
-  static bool new_pass_manager = LLVM_ENABLE_NEW_PASS_MANAGER;
   // Debug new pass manager
   static bool debug_pass_manager = false;
   // Directory to store the .dwo files.
@@ -215,7 +213,7 @@ namespace options {
   static std::string RemarksFilename;
   static std::string RemarksPasses;
   static bool RemarksWithHotness = false;
-  static Optional<uint64_t> RemarksHotnessThreshold = 0;
+  static std::optional<uint64_t> RemarksHotnessThreshold = 0;
   static std::string RemarksFormat;
 
   // Context sensitive PGO options.
@@ -287,9 +285,7 @@ namespace options {
     } else if (opt.consume_front("cs-profile-path=")) {
       cs_profile_path = std::string(opt);
     } else if (opt == "new-pass-manager") {
-      new_pass_manager = true;
-    } else if (opt == "legacy-pass-manager") {
-      new_pass_manager = false;
+      // We always use the new pass manager.
     } else if (opt == "debug-pass-manager") {
       debug_pass_manager = true;
     } else if (opt == "whole-program-visibility") {
@@ -438,8 +434,10 @@ ld_plugin_status onload(ld_plugin_tv *tv) {
       // FIXME: When binutils 2.31 (containing gold 1.16) is the minimum
       // required version, this should be changed to:
       // get_wrap_symbols = tv->tv_u.tv_get_wrap_symbols;
-      get_wrap_symbols =
-          (ld_plugin_get_wrap_symbols)tv->tv_u.tv_message;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+      get_wrap_symbols = (ld_plugin_get_wrap_symbols)tv->tv_u.tv_message;
+#pragma GCC diagnostic pop
       break;
     default:
       break;
@@ -623,8 +621,10 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
     sym.comdat_key = nullptr;
     int CI = Sym.getComdatIndex();
     if (CI != -1) {
-      StringRef C = Obj->getComdatTable()[CI];
-      sym.comdat_key = strdup(C.str().c_str());
+      // Not setting comdat_key for nodeduplicate ensuress we don't deduplicate.
+      std::pair<StringRef, Comdat::SelectionKind> C = Obj->getComdatTable()[CI];
+      if (C.second != Comdat::NoDeduplicate)
+        sym.comdat_key = strdup(C.first.str().c_str());
     }
 
     sym.resolution = LDPR_UNKNOWN;
@@ -710,8 +710,8 @@ static std::string getThinLTOObjectFileName(StringRef Path, StringRef OldSuffix,
 // Returns true if S is valid as a C language identifier.
 static bool isValidCIdentifier(StringRef S) {
   return !S.empty() && (isAlpha(S[0]) || S[0] == '_') &&
-         std::all_of(S.begin() + 1, S.end(),
-                     [](char C) { return C == '_' || isAlnum(C); });
+         llvm::all_of(llvm::drop_begin(S),
+                      [](char C) { return C == '_' || isAlnum(C); });
 }
 
 static bool isUndefined(ld_plugin_symbol &Sym) {
@@ -834,20 +834,6 @@ static int getOutputFileName(StringRef InFilename, bool TempOutFile,
   return FD;
 }
 
-static CodeGenOpt::Level getCGOptLevel() {
-  switch (options::OptLevel) {
-  case 0:
-    return CodeGenOpt::None;
-  case 1:
-    return CodeGenOpt::Less;
-  case 2:
-    return CodeGenOpt::Default;
-  case 3:
-    return CodeGenOpt::Aggressive;
-  }
-  llvm_unreachable("Invalid optimization level");
-}
-
 /// Parse the thinlto_prefix_replace option into the \p OldPrefix and
 /// \p NewPrefix strings, if it was specified.
 static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
@@ -873,7 +859,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
 
   // Disable the new X86 relax relocations since gold might not support them.
   // FIXME: Check the gold version or add a new option to enable them.
-  Conf.Options.RelaxELFRelocations = false;
+  Conf.Options.MCOptions.X86RelaxRelocations = false;
 
   // Toggle function/data sections.
   if (!codegen::getExplicitFunctionSections())
@@ -884,7 +870,10 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.MAttrs = codegen::getMAttrs();
   Conf.RelocModel = RelocationModel;
   Conf.CodeModel = codegen::getExplicitCodeModel();
-  Conf.CGOptLevel = getCGOptLevel();
+  std::optional<CodeGenOptLevel> CGOptLevelOrNone =
+      CodeGenOpt::getLevel(options::OptLevel);
+  assert(CGOptLevelOrNone && "Invalid optimization level");
+  Conf.CGOptLevel = *CGOptLevelOrNone;
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;
   Conf.PTO.LoopVectorization = options::OptLevel > 1;
@@ -894,9 +883,12 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   if (options::thinlto_index_only) {
     std::string OldPrefix, NewPrefix;
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
-    Backend = createWriteIndexesThinBackend(OldPrefix, NewPrefix,
-                                            options::thinlto_emit_imports_files,
-                                            LinkedObjectsFile, OnIndexWrite);
+    Backend = createWriteIndexesThinBackend(
+        OldPrefix, NewPrefix,
+        // TODO: Add support for optional native object path in
+        // thinlto_prefix_replace option to match lld.
+        /*NativeObjectPrefix=*/"", options::thinlto_emit_imports_files,
+        LinkedObjectsFile, OnIndexWrite);
   } else {
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(options::Parallelism));
@@ -934,7 +926,8 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
                             /* UseInputModulePath */ true));
     break;
   case options::OT_ASM_ONLY:
-    Conf.CGFileType = CGFT_AssemblyFile;
+    Conf.CGFileType = CodeGenFileType::AssemblyFile;
+    Conf.Options.MCOptions.AsmVerbose = true;
     break;
   }
 
@@ -954,8 +947,6 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.RemarksHotnessThreshold = options::RemarksHotnessThreshold;
   Conf.RemarksFormat = options::RemarksFormat;
 
-  // Use new pass manager if set in driver
-  Conf.UseNewPM = options::new_pass_manager;
   // Debug new pass manager if requested
   Conf.DebugPassManager = options::debug_pass_manager;
 
@@ -993,7 +984,7 @@ static void writeEmptyDistributedBuildOutputs(const std::string &ModulePath,
     if (SkipModule) {
       ModuleSummaryIndex Index(/*HaveGVs*/ false);
       Index.setSkipModuleByDistributedBackend();
-      WriteIndexToFile(Index, OS, nullptr);
+      writeIndexToFile(Index, OS, nullptr);
     }
   }
   if (options::thinlto_emit_imports_files) {
@@ -1080,21 +1071,23 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
   std::vector<std::pair<SmallString<128>, bool>> Files(MaxTasks);
 
   auto AddStream =
-      [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
+      [&](size_t Task,
+          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
     Files[Task].second = !SaveTemps;
     int FD = getOutputFileName(Filename, /* TempOutFile */ !SaveTemps,
                                Files[Task].first, Task);
-    return std::make_unique<lto::NativeObjectStream>(
+    return std::make_unique<CachedFileStream>(
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
 
-  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
-    *AddStream(Task)->OS << MB->getBuffer();
+  auto AddBuffer = [&](size_t Task, const Twine &moduleName,
+                       std::unique_ptr<MemoryBuffer> MB) {
+    *AddStream(Task, moduleName)->OS << MB->getBuffer();
   };
 
-  NativeObjectCache Cache;
+  FileCache Cache;
   if (!options::cache_dir.empty())
-    Cache = check(localCache(options::cache_dir, AddBuffer));
+    Cache = check(localCache("ThinLTO", "Thin", options::cache_dir, AddBuffer));
 
   check(Lto->run(AddStream, Cache));
 

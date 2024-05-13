@@ -28,7 +28,7 @@ int main() {
 }
 
 // CHECK: WARNING: ThreadSanitizer: heap-use-after-free
-// CHECK:   Write of size 8 at {{.*}} by main thread:
+// CHECK:   Write of size {{.*}} at {{.*}} by main thread:
 // CHECK:     #0 bar
 // CHECK:     #1 main
 // CHECK:   Previous write of size 8 at {{.*}} by main thread:

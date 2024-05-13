@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
@@ -70,39 +71,39 @@ static inline uint16_t ReadSwapInt16(const unsigned char *ptr,
                                      offset_t offset) {
   uint16_t value;
   memcpy(&value, ptr + offset, 2);
-  return llvm::ByteSwap_16(value);
+  return llvm::byteswap<uint16_t>(value);
 }
 
 static inline uint32_t ReadSwapInt32(const unsigned char *ptr,
                                      offset_t offset) {
   uint32_t value;
   memcpy(&value, ptr + offset, 4);
-  return llvm::ByteSwap_32(value);
+  return llvm::byteswap<uint32_t>(value);
 }
 
 static inline uint64_t ReadSwapInt64(const unsigned char *ptr,
                                      offset_t offset) {
   uint64_t value;
   memcpy(&value, ptr + offset, 8);
-  return llvm::ByteSwap_64(value);
+  return llvm::byteswap<uint64_t>(value);
 }
 
 static inline uint16_t ReadSwapInt16(const void *ptr) {
   uint16_t value;
   memcpy(&value, ptr, 2);
-  return llvm::ByteSwap_16(value);
+  return llvm::byteswap<uint16_t>(value);
 }
 
 static inline uint32_t ReadSwapInt32(const void *ptr) {
   uint32_t value;
   memcpy(&value, ptr, 4);
-  return llvm::ByteSwap_32(value);
+  return llvm::byteswap<uint32_t>(value);
 }
 
 static inline uint64_t ReadSwapInt64(const void *ptr) {
   uint64_t value;
   memcpy(&value, ptr, 8);
-  return llvm::ByteSwap_64(value);
+  return llvm::byteswap<uint64_t>(value);
 }
 
 static inline uint64_t ReadMaxInt64(const uint8_t *data, size_t byte_size,
@@ -120,9 +121,8 @@ static inline uint64_t ReadMaxInt64(const uint8_t *data, size_t byte_size,
 }
 
 DataExtractor::DataExtractor()
-    : m_start(nullptr), m_end(nullptr),
-      m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
-      m_data_sp(), m_target_byte_size(1) {}
+    : m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
+      m_data_sp() {}
 
 // This constructor allows us to use data that is owned by someone else. The
 // data must stay around as long as this object is valid.
@@ -143,8 +143,7 @@ DataExtractor::DataExtractor(const void *data, offset_t length,
 DataExtractor::DataExtractor(const DataBufferSP &data_sp, ByteOrder endian,
                              uint32_t addr_size,
                              uint32_t target_byte_size /*=1*/)
-    : m_start(nullptr), m_end(nullptr), m_byte_order(endian),
-      m_addr_size(addr_size), m_data_sp(),
+    : m_byte_order(endian), m_addr_size(addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
   assert(addr_size >= 1 && addr_size <= 8);
   SetData(data_sp);
@@ -157,9 +156,8 @@ DataExtractor::DataExtractor(const DataBufferSP &data_sp, ByteOrder endian,
 // "data".
 DataExtractor::DataExtractor(const DataExtractor &data, offset_t offset,
                              offset_t length, uint32_t target_byte_size /*=1*/)
-    : m_start(nullptr), m_end(nullptr), m_byte_order(data.m_byte_order),
-      m_addr_size(data.m_addr_size), m_data_sp(),
-      m_target_byte_size(target_byte_size) {
+    : m_byte_order(data.m_byte_order), m_addr_size(data.m_addr_size),
+      m_data_sp(), m_target_byte_size(target_byte_size) {
   assert(m_addr_size >= 1 && m_addr_size <= 8);
   if (data.ValidOffset(offset)) {
     offset_t bytes_available = data.GetByteSize() - offset;
@@ -1045,5 +1043,5 @@ void DataExtractor::Checksum(llvm::SmallVectorImpl<uint8_t> &dest,
   md5.final(result);
 
   dest.clear();
-  dest.append(result.Bytes.begin(), result.Bytes.end());
+  dest.append(result.begin(), result.end());
 }

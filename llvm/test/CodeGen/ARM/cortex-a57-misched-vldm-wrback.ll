@@ -23,17 +23,17 @@
 ; CHECK-SAME:  Latency=0
 ; CHECK-NEXT:  Data
 ; CHECK-SAME:  Latency=0
-define dso_local i32 @bar(i32* %iptr) minsize optsize {
-  %1 = load double, double* @a, align 8
-  %2 = load double, double* @b, align 8
-  %3 = load double, double* @c, align 8
+define dso_local i32 @bar(ptr %iptr) minsize optsize {
+  %1 = load double, ptr @a, align 8
+  %2 = load double, ptr @b, align 8
+  %3 = load double, ptr @c, align 8
 
-  %ptr_after = getelementptr double, double* @a, i32 3
+  %ptr_after = getelementptr double, ptr @a, i32 3
 
-  %ptr_new_ival = ptrtoint double* %ptr_after to i32
-  %ptr_new = inttoptr i32 %ptr_new_ival to i32*
+  %ptr_new_ival = ptrtoint ptr %ptr_after to i32
+  %ptr_new = inttoptr i32 %ptr_new_ival to ptr
 
-  store i32 %ptr_new_ival, i32* %iptr, align 8
+  store i32 %ptr_new_ival, ptr %iptr, align 8
   
   %v1 = fptoui double %1 to i32
 

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass none -o - %s | FileCheck %s
 # This test verifies that the MIR parser can parse target index operands.
 
 --- |
@@ -7,19 +7,19 @@
 
   @float_gv = internal unnamed_addr addrspace(4) constant [5 x float] [float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00], align 4
 
-  define amdgpu_kernel void @float(float addrspace(1)* %out, i32 %index) #0 {
+  define amdgpu_kernel void @float(ptr addrspace(1) %out, i32 %index) #0 {
   entry:
-    %0 = getelementptr inbounds [5 x float], [5 x float] addrspace(4)* @float_gv, i32 0, i32 %index
-    %1 = load float, float addrspace(4)* %0
-    store float %1, float addrspace(1)* %out
+    %0 = getelementptr inbounds [5 x float], ptr addrspace(4) @float_gv, i32 0, i32 %index
+    %1 = load float, ptr addrspace(4) %0
+    store float %1, ptr addrspace(1) %out
     ret void
   }
 
-  define amdgpu_kernel void @float2(float addrspace(1)* %out, i32 %index) #0 {
+  define amdgpu_kernel void @float2(ptr addrspace(1) %out, i32 %index) #0 {
   entry:
-    %0 = getelementptr inbounds [5 x float], [5 x float] addrspace(4)* @float_gv, i32 0, i32 %index
-    %1 = load float, float addrspace(4)* %0
-    store float %1, float addrspace(1)* %out
+    %0 = getelementptr inbounds [5 x float], ptr addrspace(4) @float_gv, i32 0, i32 %index
+    %1 = load float, ptr addrspace(4) %0
+    store float %1, ptr addrspace(1) %out
     ret void
   }
   attributes #0 = { nounwind }
@@ -52,7 +52,7 @@ body: |
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -82,6 +82,6 @@ body: |
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...

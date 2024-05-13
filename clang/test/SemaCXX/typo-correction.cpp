@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions -fcxx-exceptions %s
-// RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions -fcxx-exceptions -std=c++20 %s
+// RUN: %clang_cc1 -fspell-checking-limit=0 -verify -Wno-c++11-extensions -fcxx-exceptions %s
+// RUN: %clang_cc1 -fspell-checking-limit=0 -verify -Wno-c++11-extensions -fcxx-exceptions -std=c++20 %s
 
 namespace PR21817{
 int a(-rsing[2]); // expected-error {{undeclared identifier 'rsing'; did you mean 'using'?}}
@@ -494,7 +494,7 @@ template <typename T> struct Wrappable {
 // instead of incorrectly suggesting dropping "PR18213::WrapperInfo::".
 template <>
 PR18213::WrapperInfo ::PR18213::Wrappable<int>::kWrapperInfo = { 0 };  // expected-error {{no member named 'PR18213' in 'PR18213::WrapperInfo'; did you mean simply 'PR18213'?}} \
-                                                                       // expected-error {{C++ requires a type specifier for all declarations}}
+                                                                       // expected-error {{a type specifier is required for all declarations}}
 }
 
 namespace PR18651 {
@@ -753,7 +753,38 @@ namespace PR46487 {
   // because it doesn't make the expression valid.
   // expected-error@+2 {{did you mean 'g_var_bool'}}
   // expected-error@+1 {{assigning to 'bool' from incompatible type 'void'}}
-  enum : decltype((g_var_long = throw))::a {
+  enum : typename decltype((g_var_long = throw))::a {
     b = g_volatile_uchar // expected-error {{did you mean 'g_volatile_char'}}
   };
 }
+
+namespace PR47272
+{
+
+namespace Views {
+int Take(); // expected-note{{'Views::Take' declared here}}
+}
+
+namespace [[deprecated("use Views instead")]] View {
+using Views::Take;
+}
+
+namespace [[deprecated]] A { // expected-note{{'A' has been explicitly marked deprecated here}}
+int pr47272;
+}
+
+namespace B {
+using A::pr47272;  // expected-note{{'B::pr47272' declared here}} expected-warning{{'A' is deprecated}}
+}
+
+namespace [[deprecated]] C {
+using A::pr47272;
+}
+
+void function() {
+  int x = ::Take(); // expected-error{{no member named 'Take' in the global namespace; did you mean 'Views::Take'?}}
+  int y = ::pr47272; // expected-error{{no member named 'pr47272' in the global namespace; did you mean 'B::pr47272'?}}
+}
+}
+
+

@@ -20,9 +20,9 @@
 #include "Quality.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "index/FileIndex.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/Type.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
@@ -54,13 +54,6 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   auto AST = Header.build();
 
   SymbolQualitySignals Quality;
-  Quality.merge(findSymbol(Symbols, "_X"));
-  EXPECT_FALSE(Quality.Deprecated);
-  EXPECT_FALSE(Quality.ImplementationDetail);
-  EXPECT_TRUE(Quality.ReservedName);
-  EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
-  EXPECT_EQ(Quality.Category, SymbolQualitySignals::Variable);
-
   Quality.merge(findSymbol(Symbols, "X_Y_Decl"));
   EXPECT_TRUE(Quality.ImplementationDetail);
 
@@ -83,6 +76,16 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   Quality = {};
   Quality.merge(CodeCompletionResult("if"));
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Keyword);
+
+  // Testing ReservedName in main file, we don't index those symbols in headers.
+  auto MainAST = TestTU::withCode("int _X;").build();
+  SymbolSlab MainSymbols = std::get<0>(indexMainDecls(MainAST));
+
+  Quality = {};
+  Quality.merge(findSymbol(MainSymbols, "_X"));
+  EXPECT_FALSE(Quality.Deprecated);
+  EXPECT_FALSE(Quality.ImplementationDetail);
+  EXPECT_TRUE(Quality.ReservedName);
 }
 
 TEST(QualityTests, SymbolRelevanceSignalExtraction) {
@@ -136,7 +139,7 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
       << "Current file and header";
 
-  auto constructShadowDeclCompletionResult = [&](const std::string DeclName) {
+  auto ConstructShadowDeclCompletionResult = [&](const std::string DeclName) {
     auto *Shadow =
         *dyn_cast<UsingDecl>(&findDecl(AST, [&](const NamedDecl &ND) {
            if (const UsingDecl *Using = dyn_cast<UsingDecl>(&ND))
@@ -151,10 +154,10 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   };
 
   Relevance = {};
-  Relevance.merge(constructShadowDeclCompletionResult("Bar"));
+  Relevance.merge(ConstructShadowDeclCompletionResult("Bar"));
   EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
       << "Using declaration in main file";
-  Relevance.merge(constructShadowDeclCompletionResult("FLAGS_FOO"));
+  Relevance.merge(ConstructShadowDeclCompletionResult("FLAGS_FOO"));
   EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
       << "Using declaration in main file";
 

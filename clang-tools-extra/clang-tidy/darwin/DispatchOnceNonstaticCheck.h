@@ -11,15 +11,13 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace darwin {
+namespace clang::tidy::darwin {
 
 /// Finds variables of type dispatch_once_t that do not have static or global
 /// storage duration, as required by the libdispatch documentation.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/darwin-dispatch-once-nonstatic.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/darwin/dispatch-once-nonstatic.html
 class DispatchOnceNonstaticCheck : public ClangTidyCheck {
 public:
   DispatchOnceNonstaticCheck(StringRef Name, ClangTidyContext *Context)
@@ -28,8 +26,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace darwin
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::darwin
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_DARWIN_DISPATCHONCENONSTATICCHECK_H

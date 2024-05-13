@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <functional>
 
-// make sure that we can hash enumeration values
-// Not very portable
+// Make sure that we can hash enumeration values.
 
 #include "test_macros.h"
 
@@ -24,7 +23,7 @@ enum class Colors { red, orange, yellow, green, blue, indigo, violet };
 enum class Cardinals { zero, one, two, three, five=5 };
 enum class LongColors : short { red, orange, yellow, green, blue, indigo, violet };
 enum class ShortColors : long { red, orange, yellow, green, blue, indigo, violet };
-enum class EightBitColors : uint8_t { red, orange, yellow, green, blue, indigo, violet };
+enum class EightBitColors : std::uint8_t { red, orange, yellow, green, blue, indigo, violet };
 
 enum Fruits { apple, pear, grape, mango, cantaloupe };
 
@@ -33,8 +32,10 @@ void
 test()
 {
     typedef std::hash<T> H;
-    static_assert((std::is_same<typename H::argument_type, T>::value), "" );
-    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+#if TEST_STD_VER <= 17
+    static_assert((std::is_same<typename H::argument_type, T>::value), "");
+    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
+#endif
     ASSERT_NOEXCEPT(H()(T()));
     typedef typename std::underlying_type<T>::type under_type;
 

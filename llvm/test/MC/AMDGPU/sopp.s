@@ -1,6 +1,6 @@
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefixes=GCN,SI %s
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefixes=GCN,VI %s
+// RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck --check-prefixes=GCN,SI %s
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefixes=GCN,VI %s
 
 //===----------------------------------------------------------------------===//
 // Edge Cases
@@ -21,6 +21,12 @@ s_nop 1
 
 s_endpgm
 // GCN: s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+
+s_endpgm 1
+// GCN: s_endpgm 1 ; encoding: [0x01,0x00,0x81,0xbf]
+
+s_endpgm 65535
+// GCN: s_endpgm 65535 ; encoding: [0xff,0xff,0x81,0xbf]
 
 s_branch 2
 // GCN: s_branch 2 ; encoding: [0x02,0x00,0x82,0xbf]
@@ -81,31 +87,31 @@ s_waitcnt vmcnt(9)
 // GCN: s_waitcnt vmcnt(9) ; encoding: [0x79,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt(15)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt_sat(9)
 // GCN: s_waitcnt vmcnt(9) ; encoding: [0x79,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt_sat(15)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt_sat(16)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt(2)
 // GCN: s_waitcnt expcnt(2) ; encoding: [0x2f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt(7)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt_sat(2)
 // GCN: s_waitcnt expcnt(2) ; encoding: [0x2f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt_sat(7)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt_sat(0xFFFF0000)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt lgkmcnt(3)
 // GCN: s_waitcnt lgkmcnt(3) ; encoding: [0x7f,0x03,0x8c,0xbf]
@@ -114,7 +120,7 @@ s_waitcnt lgkmcnt(9)
 // GCN: s_waitcnt lgkmcnt(9) ; encoding: [0x7f,0x09,0x8c,0xbf]
 
 s_waitcnt lgkmcnt(15)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt(0), expcnt(0)
 // GCN: s_waitcnt vmcnt(0) expcnt(0) ; encoding: [0x00,0x0f,0x8c,0xbf]
@@ -126,10 +132,10 @@ s_waitcnt lgkmcnt_sat(9)
 // GCN: s_waitcnt lgkmcnt(9) ; encoding: [0x7f,0x09,0x8c,0xbf]
 
 s_waitcnt lgkmcnt_sat(15)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt lgkmcnt_sat(16)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 x=1
 s_waitcnt lgkmcnt_sat(x+1)
@@ -237,7 +243,7 @@ s_sendmsg sendmsg(4)
 // VI: s_sendmsg sendmsg(MSG_SAVEWAVE) ; encoding: [0x04,0x00,0x90,0xbf]
 
 s_sendmsg sendmsg(MSG_SAVEWAVE)
-// NOSICI: error: invalid message id
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
 // VI: s_sendmsg sendmsg(MSG_SAVEWAVE) ; encoding: [0x04,0x00,0x90,0xbf]
 
 s_sendmsg 0x1f
@@ -366,31 +372,31 @@ s_ttracedata
 
 s_set_gpr_idx_off
 // VI: 	s_set_gpr_idx_off ; encoding: [0x00,0x00,0x9c,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_mode 0
 // VI: s_set_gpr_idx_mode gpr_idx() ; encoding: [0x00,0x00,0x9d,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_mode gpr_idx()
 // VI: s_set_gpr_idx_mode gpr_idx() ; encoding: [0x00,0x00,0x9d,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_mode 15
 // VI: s_set_gpr_idx_mode gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x0f,0x00,0x9d,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_mode gpr_idx(SRC2,SRC1,SRC0,DST)
 // VI: s_set_gpr_idx_mode gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x0f,0x00,0x9d,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_endpgm_saved
 // VI: s_endpgm_saved ; encoding: [0x00,0x00,0x9b,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_wakeup
 // VI: s_wakeup ; encoding: [0x00,0x00,0x83,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 //===----------------------------------------------------------------------===//
 // absolute expressions as branch offsets

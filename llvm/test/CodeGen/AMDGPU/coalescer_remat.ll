@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -mtriple=amdgcn-- -o - %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-- -o - %s | FileCheck %s
 
 declare float @llvm.fma.f32(float, float, float)
 
@@ -13,7 +13,7 @@ declare float @llvm.fma.f32(float, float, float)
 ; CHECK:  v_mov_b32_e32 v{{[0-9]+}}, 0
 ; It's probably OK if this is slightly higher:
 ; CHECK: ; NumVgprs: 8
-define amdgpu_kernel void @foobar(<4 x float> addrspace(1)* noalias %out, <4 x float> addrspace(1)* noalias %in, i32 %flag) {
+define amdgpu_kernel void @foobar(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, i32 %flag) {
 entry:
   %cmpflag = icmp eq i32 %flag, 1
   br i1 %cmpflag, label %loop, label %exit
@@ -27,9 +27,9 @@ loop:
 
   ; Try to get the 0 constant to get coalesced into a wide register
   %blup = insertelement <4 x float> undef, float %v0, i32 0
-  store <4 x float> %blup, <4 x float> addrspace(1)* %out
+  store <4 x float> %blup, ptr addrspace(1) %out
 
-  %load = load <4 x float>, <4 x float> addrspace(1)* %in
+  %load = load <4 x float>, ptr addrspace(1) %in
   %load.0 = extractelement <4 x float> %load, i32 0
   %load.1 = extractelement <4 x float> %load, i32 1
   %load.2 = extractelement <4 x float> %load, i32 2
@@ -52,6 +52,6 @@ exit:
   %dst.1 = insertelement <4 x float> %dst.0, float %ev1, i32 1
   %dst.2 = insertelement <4 x float> %dst.1, float %ev2, i32 2
   %dst.3 = insertelement <4 x float> %dst.2, float %ev3, i32 3
-  store <4 x float> %dst.3, <4 x float> addrspace(1)* %out
+  store <4 x float> %dst.3, ptr addrspace(1) %out
   ret void
 }

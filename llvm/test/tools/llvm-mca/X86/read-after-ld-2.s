@@ -5,6 +5,8 @@
 
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=100 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
 
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -iterations=100 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
+
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=100 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,ZNVER1
 
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=100 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,ZNVER2
@@ -28,8 +30,8 @@ cmp     %edi, %edx
 # SKYLAKE-NEXT: Total Cycles:      110
 # SKYLAKE-NEXT: Total uOps:        500
 
-# ZNVER1-NEXT:  Total Cycles:      110
-# ZNVER1-NEXT:  Total uOps:        400
+# ZNVER1-NEXT:  Total Cycles:      143
+# ZNVER1-NEXT:  Total uOps:        500
 
 # ZNVER2-NEXT:  Total Cycles:      110
 # ZNVER2-NEXT:  Total uOps:        400
@@ -50,9 +52,9 @@ cmp     %edi, %edx
 # SKYLAKE-NEXT: Block RThroughput: 0.8
 
 # ZNVER1:       Dispatch Width:    4
-# ZNVER1-NEXT:  uOps Per Cycle:    3.64
-# ZNVER1-NEXT:  IPC:               3.64
-# ZNVER1-NEXT:  Block RThroughput: 1.0
+# ZNVER1-NEXT:  uOps Per Cycle:    3.50
+# ZNVER1-NEXT:  IPC:               2.80
+# ZNVER1-NEXT:  Block RThroughput: 1.3
 
 # ZNVER2:       Dispatch Width:    4
 # ZNVER2-NEXT:  uOps Per Cycle:    3.64
@@ -71,7 +73,7 @@ cmp     %edi, %edx
 # SKYLAKE-NEXT: Index     0123456789
 
 # ZNVER1-NEXT:                      0123456789
-# ZNVER1-NEXT:  Index     0123456789
+# ZNVER1-NEXT:  Index     0123456789          012
 
 # ZNVER2-NEXT:                      0123456789
 # ZNVER2-NEXT:  Index     0123456789
@@ -199,46 +201,46 @@ cmp     %edi, %edx
 # SKYLAKE-NEXT: [9,2]     .    .   DeE-------R   addq	$32, %r8
 # SKYLAKE-NEXT: [9,3]     .    .   D=eE------R   cmpl	%edi, %edx
 
-# ZNVER1:       [0,0]     DeER .    .    .   .   addl	$1, %edx
-# ZNVER1-NEXT:  [0,1]     DeeeeeeeeER    .   .   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [0,2]     DeE-------R    .   .   addq	$32, %r8
-# ZNVER1-NEXT:  [0,3]     D=eE------R    .   .   cmpl	%edi, %edx
-# ZNVER1-NEXT:  [1,0]     .DeE------R    .   .   addl	$1, %edx
-# ZNVER1-NEXT:  [1,1]     .DeeeeeeeeER   .   .   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [1,2]     .DeE-------R   .   .   addq	$32, %r8
-# ZNVER1-NEXT:  [1,3]     .D=eE------R   .   .   cmpl	%edi, %edx
-# ZNVER1-NEXT:  [2,0]     . DeE------R   .   .   addl	$1, %edx
-# ZNVER1-NEXT:  [2,1]     . DeeeeeeeeER  .   .   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [2,2]     . DeE-------R  .   .   addq	$32, %r8
-# ZNVER1-NEXT:  [2,3]     . D=eE------R  .   .   cmpl	%edi, %edx
-# ZNVER1-NEXT:  [3,0]     .  DeE------R  .   .   addl	$1, %edx
-# ZNVER1-NEXT:  [3,1]     .  DeeeeeeeeER .   .   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [3,2]     .  DeE-------R .   .   addq	$32, %r8
-# ZNVER1-NEXT:  [3,3]     .  D=eE------R .   .   cmpl	%edi, %edx
-# ZNVER1-NEXT:  [4,0]     .   DeE------R .   .   addl	$1, %edx
-# ZNVER1-NEXT:  [4,1]     .   DeeeeeeeeER.   .   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [4,2]     .   DeE-------R.   .   addq	$32, %r8
-# ZNVER1-NEXT:  [4,3]     .   D=eE------R.   .   cmpl	%edi, %edx
-# ZNVER1-NEXT:  [5,0]     .    DeE------R.   .   addl	$1, %edx
-# ZNVER1-NEXT:  [5,1]     .    DeeeeeeeeER   .   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [5,2]     .    DeE-------R   .   addq	$32, %r8
-# ZNVER1-NEXT:  [5,3]     .    D=eE------R   .   cmpl	%edi, %edx
-# ZNVER1-NEXT:  [6,0]     .    .DeE------R   .   addl	$1, %edx
-# ZNVER1-NEXT:  [6,1]     .    .DeeeeeeeeER  .   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [6,2]     .    .DeE-------R  .   addq	$32, %r8
-# ZNVER1-NEXT:  [6,3]     .    .D=eE------R  .   cmpl	%edi, %edx
-# ZNVER1-NEXT:  [7,0]     .    . DeE------R  .   addl	$1, %edx
-# ZNVER1-NEXT:  [7,1]     .    . DeeeeeeeeER .   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [7,2]     .    . DeE-------R .   addq	$32, %r8
-# ZNVER1-NEXT:  [7,3]     .    . D=eE------R .   cmpl	%edi, %edx
-# ZNVER1-NEXT:  [8,0]     .    .  DeE------R .   addl	$1, %edx
-# ZNVER1-NEXT:  [8,1]     .    .  DeeeeeeeeER.   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [8,2]     .    .  DeE-------R.   addq	$32, %r8
-# ZNVER1-NEXT:  [8,3]     .    .  D=eE------R.   cmpl	%edi, %edx
-# ZNVER1-NEXT:  [9,0]     .    .   DeE------R.   addl	$1, %edx
-# ZNVER1-NEXT:  [9,1]     .    .   DeeeeeeeeER   vpaddd	(%r8), %ymm0, %ymm0
-# ZNVER1-NEXT:  [9,2]     .    .   DeE-------R   addq	$32, %r8
-# ZNVER1-NEXT:  [9,3]     .    .   D=eE------R   cmpl	%edi, %edx
+# ZNVER1:       [0,0]     DeER .    .    .    . .   addl	$1, %edx
+# ZNVER1-NEXT:  [0,1]     DeeeeeeeeER    .    . .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [0,2]     DeE-------R    .    . .   addq	$32, %r8
+# ZNVER1-NEXT:  [0,3]     .DeE------R    .    . .   cmpl	%edi, %edx
+# ZNVER1-NEXT:  [1,0]     .DeE------R    .    . .   addl	$1, %edx
+# ZNVER1-NEXT:  [1,1]     .DeeeeeeeeER   .    . .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [1,2]     . DeE------R   .    . .   addq	$32, %r8
+# ZNVER1-NEXT:  [1,3]     . DeE------R   .    . .   cmpl	%edi, %edx
+# ZNVER1-NEXT:  [2,0]     . DeE------R   .    . .   addl	$1, %edx
+# ZNVER1-NEXT:  [2,1]     .  DeeeeeeeeER .    . .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [2,2]     .  DeE-------R .    . .   addq	$32, %r8
+# ZNVER1-NEXT:  [2,3]     .  DeE-------R .    . .   cmpl	%edi, %edx
+# ZNVER1-NEXT:  [3,0]     .   DeE------R .    . .   addl	$1, %edx
+# ZNVER1-NEXT:  [3,1]     .   DeeeeeeeeER.    . .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [3,2]     .   DeE-------R.    . .   addq	$32, %r8
+# ZNVER1-NEXT:  [3,3]     .    DeE------R.    . .   cmpl	%edi, %edx
+# ZNVER1-NEXT:  [4,0]     .    DeE------R.    . .   addl	$1, %edx
+# ZNVER1-NEXT:  [4,1]     .    DeeeeeeeeER    . .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [4,2]     .    .DeE------R    . .   addq	$32, %r8
+# ZNVER1-NEXT:  [4,3]     .    .DeE------R    . .   cmpl	%edi, %edx
+# ZNVER1-NEXT:  [5,0]     .    .DeE------R    . .   addl	$1, %edx
+# ZNVER1-NEXT:  [5,1]     .    . DeeeeeeeeER  . .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [5,2]     .    . DeE-------R  . .   addq	$32, %r8
+# ZNVER1-NEXT:  [5,3]     .    . DeE-------R  . .   cmpl	%edi, %edx
+# ZNVER1-NEXT:  [6,0]     .    .  DeE------R  . .   addl	$1, %edx
+# ZNVER1-NEXT:  [6,1]     .    .  DeeeeeeeeER . .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [6,2]     .    .  DeE-------R . .   addq	$32, %r8
+# ZNVER1-NEXT:  [6,3]     .    .   DeE------R . .   cmpl	%edi, %edx
+# ZNVER1-NEXT:  [7,0]     .    .   DeE------R . .   addl	$1, %edx
+# ZNVER1-NEXT:  [7,1]     .    .   DeeeeeeeeER. .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [7,2]     .    .    DeE------R. .   addq	$32, %r8
+# ZNVER1-NEXT:  [7,3]     .    .    DeE------R. .   cmpl	%edi, %edx
+# ZNVER1-NEXT:  [8,0]     .    .    DeE------R. .   addl	$1, %edx
+# ZNVER1-NEXT:  [8,1]     .    .    .DeeeeeeeeER.   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [8,2]     .    .    .DeE-------R.   addq	$32, %r8
+# ZNVER1-NEXT:  [8,3]     .    .    .DeE-------R.   cmpl	%edi, %edx
+# ZNVER1-NEXT:  [9,0]     .    .    . DeE------R.   addl	$1, %edx
+# ZNVER1-NEXT:  [9,1]     .    .    . DeeeeeeeeER   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER1-NEXT:  [9,2]     .    .    . DeE-------R   addq	$32, %r8
+# ZNVER1-NEXT:  [9,3]     .    .    .  DeE------R   cmpl	%edi, %edx
 
 # ZNVER2:       [0,0]     DeER .    .    .   .   addl	$1, %edx
 # ZNVER2-NEXT:  [0,1]     DeeeeeeeeER    .   .   vpaddd	(%r8), %ymm0, %ymm0
@@ -292,7 +294,7 @@ cmp     %edi, %edx
 # BDWELL-NEXT:  0.     10    1.0    0.4    4.5       addl	$1, %edx
 # HASWELL-NEXT: 0.     10    1.0    0.4    5.4       addl	$1, %edx
 # SKYLAKE-NEXT: 0.     10    1.9    0.1    5.4       addl	$1, %edx
-# ZNVER1-NEXT:  0.     10    1.0    0.1    5.4       addl	$1, %edx
+# ZNVER1-NEXT:  0.     10    1.0    0.4    5.4       addl	$1, %edx
 # ZNVER2-NEXT:  0.     10    1.0    0.1    5.4       addl	$1, %edx
 
 # ALL-NEXT:     1.     10    1.0    0.1    0.0       vpaddd	(%r8), %ymm0, %ymm0
@@ -309,9 +311,9 @@ cmp     %edi, %edx
 # SKYLAKE-NEXT: 3.     10    2.0    0.0    6.0       cmpl	%edi, %edx
 # SKYLAKE-NEXT:        10    1.5    0.1    4.6       <total>
 
-# ZNVER1-NEXT:  2.     10    1.0    0.1    7.0       addq	$32, %r8
-# ZNVER1-NEXT:  3.     10    2.0    0.0    6.0       cmpl	%edi, %edx
-# ZNVER1-NEXT:         10    1.3    0.1    4.6       <total>
+# ZNVER1-NEXT:  2.     10    1.0    0.4    6.7       addq	$32, %r8
+# ZNVER1-NEXT:  3.     10    1.0    0.0    6.3       cmpl	%edi, %edx
+# ZNVER1-NEXT:         10    1.0    0.2    4.6       <total>
 
 # ZNVER2-NEXT:  2.     10    1.0    0.1    7.0       addq	$32, %r8
 # ZNVER2-NEXT:  3.     10    2.0    0.0    6.0       cmpl	%edi, %edx

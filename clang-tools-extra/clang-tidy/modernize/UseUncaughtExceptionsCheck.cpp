@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
   std::string MatchText = "::std::uncaught_exception";
@@ -51,7 +49,7 @@ void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
 void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation BeginLoc;
   SourceLocation EndLoc;
-  const CallExpr *C = Result.Nodes.getNodeAs<CallExpr>("init_call_expr");
+  const auto *C = Result.Nodes.getNodeAs<CallExpr>("init_call_expr");
   bool WarnOnly = false;
 
   if (C) {
@@ -97,6 +95,4 @@ void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -91,11 +92,11 @@ using namespace ento;
 namespace {
 class GTestChecker : public Checker<check::PostCall> {
 
-  mutable IdentifierInfo *AssertionResultII;
-  mutable IdentifierInfo *SuccessII;
+  mutable IdentifierInfo *AssertionResultII = nullptr;
+  mutable IdentifierInfo *SuccessII = nullptr;
 
 public:
-  GTestChecker();
+  GTestChecker() = default;
 
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 
@@ -119,8 +120,6 @@ private:
 };
 } // End anonymous namespace.
 
-GTestChecker::GTestChecker() : AssertionResultII(nullptr), SuccessII(nullptr) {}
-
 /// Model a call to an un-inlined AssertionResult(bool) or
 /// AssertionResult(bool &, ...).
 /// To do so, constrain the value of the newly-constructed instance's 'success_'
@@ -135,7 +134,7 @@ void GTestChecker::modelAssertionResultBoolConstructor(
   SVal BooleanArgVal = Call->getArgSVal(0);
   if (IsRef) {
     // The argument is a reference, so load from it to get the boolean value.
-    if (!BooleanArgVal.getAs<Loc>())
+    if (!isa<Loc>(BooleanArgVal))
       return;
     BooleanArgVal = C.getState()->getSVal(BooleanArgVal.castAs<Loc>());
   }
@@ -258,9 +257,9 @@ SVal GTestChecker::getAssertionResultSuccessFieldValue(
   if (!SuccessField)
     return UnknownVal();
 
-  Optional<Loc> FieldLoc =
+  std::optional<Loc> FieldLoc =
       State->getLValue(SuccessField, Instance).getAs<Loc>();
-  if (!FieldLoc.hasValue())
+  if (!FieldLoc)
     return UnknownVal();
 
   return State->getSVal(*FieldLoc);
@@ -270,20 +269,17 @@ SVal GTestChecker::getAssertionResultSuccessFieldValue(
 ProgramStateRef GTestChecker::assumeValuesEqual(SVal Val1, SVal Val2,
                                                 ProgramStateRef State,
                                                 CheckerContext &C) {
-  if (!Val1.getAs<DefinedOrUnknownSVal>() ||
-      !Val2.getAs<DefinedOrUnknownSVal>())
+  auto DVal1 = Val1.getAs<DefinedOrUnknownSVal>();
+  auto DVal2 = Val2.getAs<DefinedOrUnknownSVal>();
+  if (!DVal1 || !DVal2)
     return State;
 
   auto ValuesEqual =
-      C.getSValBuilder().evalEQ(State, Val1.castAs<DefinedOrUnknownSVal>(),
-                                Val2.castAs<DefinedOrUnknownSVal>());
-
-  if (!ValuesEqual.getAs<DefinedSVal>())
+      C.getSValBuilder().evalEQ(State, *DVal1, *DVal2).getAs<DefinedSVal>();
+  if (!ValuesEqual)
     return State;
 
-  State = C.getConstraintManager().assume(
-      State, ValuesEqual.castAs<DefinedSVal>(), true);
-
+  State = C.getConstraintManager().assume(State, *ValuesEqual, true);
   return State;
 }
 

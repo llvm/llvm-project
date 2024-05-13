@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 ; We shouldn't fold bitcast(insert <vscale x 1 x iX> .., iX %val, i32 0)
 ; into bitcast(iX %val) for scalable vectors.

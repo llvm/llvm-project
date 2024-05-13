@@ -4,7 +4,7 @@
 // the lowering pass. We shouldn't fail trying to create memref.load here.
 
 // CHECK-LABEL: @no_memref_op
-func @no_memref_op(%arg0: memref<f32>) {
+func.func @no_memref_op(%arg0: memref<f32>) {
   // CHECK: memref.load
   affine.load %arg0[] : memref<f32>
   return

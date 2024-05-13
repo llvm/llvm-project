@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 ; PR577
 
 define i1 @test() {

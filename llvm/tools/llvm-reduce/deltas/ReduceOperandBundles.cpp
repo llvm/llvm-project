@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/raw_ostream.h"
@@ -37,13 +36,12 @@ namespace {
 /// Given ChunksToKeep, produce a map of calls and indexes of operand bundles
 /// to be preserved for each call.
 class OperandBundleRemapper : public InstVisitor<OperandBundleRemapper> {
-  Oracle O;
+  Oracle &O;
 
 public:
   DenseMap<CallBase *, std::vector<unsigned>> CallsToRefine;
 
-  explicit OperandBundleRemapper(ArrayRef<Chunk> ChunksToKeep)
-      : O(ChunksToKeep) {}
+  explicit OperandBundleRemapper(Oracle &O) : O(O) {}
 
   /// So far only CallBase sub-classes can have operand bundles.
   /// Let's see which of the operand bundles of this call are to be kept.
@@ -56,7 +54,7 @@ public:
     OperandBundlesToKeepIndexes.reserve(Call.getNumOperandBundles());
 
     // Enumerate every operand bundle on this call.
-    for (unsigned BundleIndex : seq(0U, Call.getNumOperandBundles()))
+    for (unsigned BundleIndex : seq(Call.getNumOperandBundles()))
       if (O.shouldKeep()) // Should we keep this one?
         OperandBundlesToKeepIndexes.emplace_back(BundleIndex);
   }
@@ -96,29 +94,17 @@ static void maybeRewriteCallWithDifferentBundles(
 }
 
 /// Removes out-of-chunk operand bundles from calls.
-static void extractOperandBundesFromModule(std::vector<Chunk> ChunksToKeep,
-                                           Module *Program) {
-  OperandBundleRemapper R(ChunksToKeep);
+static void extractOperandBundesFromModule(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+  OperandBundleRemapper R(O);
   R.visit(Program);
 
   for (const auto &I : R.CallsToRefine)
     maybeRewriteCallWithDifferentBundles(I.first, I.second);
 }
 
-/// Counts the amount of operand bundles.
-static int countOperandBundes(Module *Program) {
-  OperandBundleCounter C;
-
-  // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  C.visit(Program);
-  outs() << "Number of operand bundles: " << C.OperandBundeCount << "\n";
-
-  return C.OperandBundeCount;
-}
-
 void llvm::reduceOperandBundesDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing OperandBundes...\n";
-  int OperandBundeCount = countOperandBundes(Test.getProgram());
-  runDeltaPass(Test, OperandBundeCount, extractOperandBundesFromModule);
+  runDeltaPass(Test, extractOperandBundesFromModule,
+               "Reducing Operand Bundles");
 }

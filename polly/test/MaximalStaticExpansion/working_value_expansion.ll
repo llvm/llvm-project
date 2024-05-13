@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-mse -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly "-passes=scop(print<polly-mse>)" -disable-output < %s | FileCheck %s
 ;
 ; Verify that the accesses are correctly expanded for MemoryKind::Value
 ;
@@ -32,7 +33,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @mse(double* %A, double* %B) {
+define void @mse(ptr %A, ptr %B) {
 entry:
   br label %entry.split
 
@@ -48,15 +49,15 @@ for.body:                                         ; preds = %entry.split, %for.e
 for.body5:                                        ; preds = %for.body, %for.body5
   %indvars.iv = phi i64 [ 0, %for.body ], [ %indvars.iv.next, %for.body5 ]
   %add = fadd double %conv, 3.000000e+00
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %indvars.iv
-  store double %add, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %indvars.iv
+  store double %add, ptr %arrayidx, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.body5, label %for.end
 
 for.end:                                          ; preds = %for.body5
-  %arrayidx7 = getelementptr inbounds double, double* %B, i64 %indvars.iv3
-  store double %conv, double* %arrayidx7, align 8
+  %arrayidx7 = getelementptr inbounds double, ptr %B, i64 %indvars.iv3
+  store double %conv, ptr %arrayidx7, align 8
   %indvars.iv.next4 = add nuw nsw i64 %indvars.iv3, 1
   %exitcond5 = icmp ne i64 %indvars.iv.next4, 10000
   br i1 %exitcond5, label %for.body, label %for.end10

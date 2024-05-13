@@ -30,6 +30,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -102,14 +103,24 @@ static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
   return StepRec == &ElemSize;
 }
 
-/// Compute the trip count for the given loop \p L. Return the SCEV expression
-/// for the trip count or nullptr if it cannot be computed.
-static const SCEV *computeTripCount(const Loop &L, ScalarEvolution &SE) {
+/// Compute the trip count for the given loop \p L or assume a default value if
+/// it is not a compile time constant. Return the SCEV expression for the trip
+/// count.
+static const SCEV *computeTripCount(const Loop &L, const SCEV &ElemSize,
+                                    ScalarEvolution &SE) {
   const SCEV *BackedgeTakenCount = SE.getBackedgeTakenCount(&L);
-  if (isa<SCEVCouldNotCompute>(BackedgeTakenCount) ||
-      !isa<SCEVConstant>(BackedgeTakenCount))
-    return nullptr;
-  return SE.getTripCountFromExitCount(BackedgeTakenCount);
+  const SCEV *TripCount = (!isa<SCEVCouldNotCompute>(BackedgeTakenCount) &&
+                           isa<SCEVConstant>(BackedgeTakenCount))
+                              ? SE.getTripCountFromExitCount(BackedgeTakenCount)
+                              : nullptr;
+
+  if (!TripCount) {
+    LLVM_DEBUG(dbgs() << "Trip count of loop " << L.getName()
+               << " could not be computed, using DefaultTripCount\n");
+    TripCount = SE.getConstant(ElemSize.getType(), DefaultTripCount);
+  }
+
+  return TripCount;
 }
 
 //===----------------------------------------------------------------------===//
@@ -145,9 +156,9 @@ IndexedReference::IndexedReference(Instruction &StoreOrLoadInst,
                                 << "\n");
 }
 
-Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
-                                                 unsigned CLS,
-                                                 AAResults &AA) const {
+std::optional<bool>
+IndexedReference::hasSpacialReuse(const IndexedReference &Other, unsigned CLS,
+                                  AAResults &AA) const {
   assert(IsValid && "Expecting a valid reference");
 
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
@@ -185,7 +196,7 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
                << "No spacial reuse, difference between subscript:\n\t"
                << *LastSubscript << "\n\t" << OtherLastSubscript
                << "\nis not constant.\n");
-    return None;
+    return std::nullopt;
   }
 
   bool InSameCacheLine = (Diff->getValue()->getSExtValue() < CLS);
@@ -200,11 +211,10 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
   return InSameCacheLine;
 }
 
-Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
-                                                  unsigned MaxDistance,
-                                                  const Loop &L,
-                                                  DependenceInfo &DI,
-                                                  AAResults &AA) const {
+std::optional<bool>
+IndexedReference::hasTemporalReuse(const IndexedReference &Other,
+                                   unsigned MaxDistance, const Loop &L,
+                                   DependenceInfo &DI, AAResults &AA) const {
   assert(IsValid && "Expecting a valid reference");
 
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
@@ -237,7 +247,7 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
 
     if (SCEVConst == nullptr) {
       LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: distance unknown\n");
-      return None;
+      return std::nullopt;
     }
 
     const ConstantInt &CI = *SCEVConst->getValue();
@@ -273,49 +283,84 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     return 1;
   }
 
-  const SCEV *TripCount = computeTripCount(L, SE);
-  if (!TripCount) {
-    LLVM_DEBUG(dbgs() << "Trip count of loop " << L.getName()
-                      << " could not be computed, using DefaultTripCount\n");
-    const SCEV *ElemSize = Sizes.back();
-    TripCount = SE.getConstant(ElemSize->getType(), DefaultTripCount);
-  }
+  const SCEV *TripCount = computeTripCount(L, *Sizes.back(), SE);
+  assert(TripCount && "Expecting valid TripCount");
   LLVM_DEBUG(dbgs() << "TripCount=" << *TripCount << "\n");
 
-  // If the indexed reference is 'consecutive' the cost is
-  // (TripCount*Stride)/CLS, otherwise the cost is TripCount.
-  const SCEV *RefCost = TripCount;
-
-  if (isConsecutive(L, CLS)) {
-    const SCEV *Coeff = getLastCoefficient();
-    const SCEV *ElemSize = Sizes.back();
-    const SCEV *Stride = SE.getMulExpr(Coeff, ElemSize);
-    const SCEV *CacheLineSize = SE.getConstant(Stride->getType(), CLS);
+  const SCEV *RefCost = nullptr;
+  const SCEV *Stride = nullptr;
+  if (isConsecutive(L, Stride, CLS)) {
+    // If the indexed reference is 'consecutive' the cost is
+    // (TripCount*Stride)/CLS.
+    assert(Stride != nullptr &&
+           "Stride should not be null for consecutive access!");
     Type *WiderType = SE.getWiderType(Stride->getType(), TripCount->getType());
-    if (SE.isKnownNegative(Stride))
-      Stride = SE.getNegativeSCEV(Stride);
+    const SCEV *CacheLineSize = SE.getConstant(WiderType, CLS);
     Stride = SE.getNoopOrAnyExtend(Stride, WiderType);
-    TripCount = SE.getNoopOrAnyExtend(TripCount, WiderType);
+    TripCount = SE.getNoopOrZeroExtend(TripCount, WiderType);
     const SCEV *Numerator = SE.getMulExpr(Stride, TripCount);
     RefCost = SE.getUDivExpr(Numerator, CacheLineSize);
 
     LLVM_DEBUG(dbgs().indent(4)
                << "Access is consecutive: RefCost=(TripCount*Stride)/CLS="
                << *RefCost << "\n");
-  } else
+  } else {
+    // If the indexed reference is not 'consecutive' the cost is proportional to
+    // the trip count and the depth of the dimension which the subject loop
+    // subscript is accessing. We try to estimate this by multiplying the cost
+    // by the trip counts of loops corresponding to the inner dimensions. For
+    // example, given the indexed reference 'A[i][j][k]', and assuming the
+    // i-loop is in the innermost position, the cost would be equal to the
+    // iterations of the i-loop multiplied by iterations of the j-loop.
+    RefCost = TripCount;
+
+    int Index = getSubscriptIndex(L);
+    assert(Index >= 0 && "Could not locate a valid Index");
+
+    for (unsigned I = Index + 1; I < getNumSubscripts() - 1; ++I) {
+      const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(getSubscript(I));
+      assert(AR && AR->getLoop() && "Expecting valid loop");
+      const SCEV *TripCount =
+          computeTripCount(*AR->getLoop(), *Sizes.back(), SE);
+      Type *WiderType = SE.getWiderType(RefCost->getType(), TripCount->getType());
+      RefCost = SE.getMulExpr(SE.getNoopOrZeroExtend(RefCost, WiderType),
+                              SE.getNoopOrZeroExtend(TripCount, WiderType));
+    }
+
     LLVM_DEBUG(dbgs().indent(4)
-               << "Access is not consecutive: RefCost=TripCount=" << *RefCost
-               << "\n");
+               << "Access is not consecutive: RefCost=" << *RefCost << "\n");
+  }
+  assert(RefCost && "Expecting a valid RefCost");
 
   // Attempt to fold RefCost into a constant.
   if (auto ConstantCost = dyn_cast<SCEVConstant>(RefCost))
-    return ConstantCost->getValue()->getSExtValue();
+    return ConstantCost->getValue()->getZExtValue();
 
   LLVM_DEBUG(dbgs().indent(4)
              << "RefCost is not a constant! Setting to RefCost=InvalidCost "
                 "(invalid value).\n");
 
   return CacheCost::InvalidCost;
+}
+
+bool IndexedReference::tryDelinearizeFixedSize(
+    const SCEV *AccessFn, SmallVectorImpl<const SCEV *> &Subscripts) {
+  SmallVector<int, 4> ArraySizes;
+  if (!tryDelinearizeFixedSizeImpl(&SE, &StoreOrLoadInst, AccessFn, Subscripts,
+                                   ArraySizes))
+    return false;
+
+  // Populate Sizes with scev expressions to be used in calculations later.
+  for (auto Idx : seq<unsigned>(1, Subscripts.size()))
+    Sizes.push_back(
+        SE.getConstant(Subscripts[Idx]->getType(), ArraySizes[Idx - 1]));
+
+  LLVM_DEBUG({
+    dbgs() << "Delinearized subscripts of fixed-size array\n"
+           << "GEP:" << *getLoadStorePointerOperand(&StoreOrLoadInst)
+           << "\n";
+  });
+  return true;
 }
 
 bool IndexedReference::delinearize(const LoopInfo &LI) {
@@ -339,13 +384,25 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       return false;
     }
 
+    bool IsFixedSize = false;
+    // Try to delinearize fixed-size arrays.
+    if (tryDelinearizeFixedSize(AccessFn, Subscripts)) {
+      IsFixedSize = true;
+      // The last element of Sizes is the element size.
+      Sizes.push_back(ElemSize);
+      LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
+                                  << "', AccessFn: " << *AccessFn << "\n");
+    }
+
     AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
 
-    LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
-                                << "', AccessFn: " << *AccessFn << "\n");
-
-    SE.delinearize(AccessFn, Subscripts, Sizes,
-                   SE.getElementSize(&StoreOrLoadInst));
+    // Try to delinearize parametric-size arrays.
+    if (!IsFixedSize) {
+      LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
+                                  << "', AccessFn: " << *AccessFn << "\n");
+      llvm::delinearize(SE, AccessFn, Subscripts, Sizes,
+                        SE.getElementSize(&StoreOrLoadInst));
+    }
 
     if (Subscripts.empty() || Sizes.empty() ||
         Subscripts.size() != Sizes.size()) {
@@ -402,7 +459,8 @@ bool IndexedReference::isLoopInvariant(const Loop &L) const {
   return allCoeffForLoopAreZero;
 }
 
-bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
+bool IndexedReference::isConsecutive(const Loop &L, const SCEV *&Stride,
+                                     unsigned CLS) const {
   // The indexed reference is 'consecutive' if the only coefficient that uses
   // the loop induction variable is the last one...
   const SCEV *LastSubscript = Subscripts.back();
@@ -416,18 +474,38 @@ bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
   // ...and the access stride is less than the cache line size.
   const SCEV *Coeff = getLastCoefficient();
   const SCEV *ElemSize = Sizes.back();
-  const SCEV *Stride = SE.getMulExpr(Coeff, ElemSize);
+  Type *WiderType = SE.getWiderType(Coeff->getType(), ElemSize->getType());
+  // FIXME: This assumes that all values are signed integers which may
+  // be incorrect in unusual codes and incorrectly use sext instead of zext.
+  // for (uint32_t i = 0; i < 512; ++i) {
+  //   uint8_t trunc = i;
+  //   A[trunc] = 42;
+  // }
+  // This consecutively iterates twice over A. If `trunc` is sign-extended,
+  // we would conclude that this may iterate backwards over the array.
+  // However, LoopCacheAnalysis is heuristic anyway and transformations must
+  // not result in wrong optimizations if the heuristic was incorrect.
+  Stride = SE.getMulExpr(SE.getNoopOrSignExtend(Coeff, WiderType),
+                         SE.getNoopOrSignExtend(ElemSize, WiderType));
   const SCEV *CacheLineSize = SE.getConstant(Stride->getType(), CLS);
 
   Stride = SE.isKnownNegative(Stride) ? SE.getNegativeSCEV(Stride) : Stride;
   return SE.isKnownPredicate(ICmpInst::ICMP_ULT, Stride, CacheLineSize);
 }
 
+int IndexedReference::getSubscriptIndex(const Loop &L) const {
+  for (auto Idx : seq<int>(0, getNumSubscripts())) {
+    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(getSubscript(Idx));
+    if (AR && AR->getLoop() == &L) {
+      return Idx;
+    }
+  }
+  return -1;
+}
+
 const SCEV *IndexedReference::getLastCoefficient() const {
   const SCEV *LastSubscript = getLastSubscript();
-  assert(isa<SCEVAddRecExpr>(LastSubscript) &&
-         "Expecting a SCEV add recurrence expression");
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(LastSubscript);
+  auto *AR = cast<SCEVAddRecExpr>(LastSubscript);
   return AR->getStepRecurrence(SE);
 }
 
@@ -479,10 +557,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const CacheCost &CC) {
 CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
                      ScalarEvolution &SE, TargetTransformInfo &TTI,
                      AAResults &AA, DependenceInfo &DI,
-                     Optional<unsigned> TRT)
-    : Loops(Loops), TripCounts(), LoopCosts(),
-      TRT((TRT == None) ? Optional<unsigned>(TemporalReuseThreshold) : TRT),
-      LI(LI), SE(SE), TTI(TTI), AA(AA), DI(DI) {
+                     std::optional<unsigned> TRT)
+    : Loops(Loops), TRT(TRT.value_or(TemporalReuseThreshold)), LI(LI), SE(SE),
+      TTI(TTI), AA(AA), DI(DI) {
   assert(!Loops.empty() && "Expecting a non-empty loop vector.");
 
   for (const Loop *L : Loops) {
@@ -496,7 +573,7 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
 
 std::unique_ptr<CacheCost>
 CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
-                        DependenceInfo &DI, Optional<unsigned> TRT) {
+                        DependenceInfo &DI, std::optional<unsigned> TRT) {
   if (!Root.isOutermost()) {
     LLVM_DEBUG(dbgs() << "Expecting the outermost loop in a loop nest\n");
     return nullptr;
@@ -522,10 +599,9 @@ void CacheCost::calculateCacheFootprint() {
 
   LLVM_DEBUG(dbgs() << "COMPUTING LOOP CACHE COSTS\n");
   for (const Loop *L : Loops) {
-    assert((std::find_if(LoopCosts.begin(), LoopCosts.end(),
-                         [L](const LoopCacheCostTy &LCC) {
-                           return LCC.first == L;
-                         }) == LoopCosts.end()) &&
+    assert(llvm::none_of(
+               LoopCosts,
+               [L](const LoopCacheCostTy &LCC) { return LCC.first == L; }) &&
            "Should not add duplicate element");
     CacheCostTy LoopCost = computeLoopCacheCost(*L, RefGroups);
     LoopCosts.push_back(std::make_pair(L, LoopCost));
@@ -553,7 +629,7 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
 
       bool Added = false;
       for (ReferenceGroupTy &RefGroup : RefGroups) {
-        const IndexedReference &Representative = *RefGroup.front().get();
+        const IndexedReference &Representative = *RefGroup.front();
         LLVM_DEBUG({
           dbgs() << "References:\n";
           dbgs().indent(2) << *R << "\n";
@@ -572,13 +648,13 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
        // when in actuality, depending on the array size, the first example
        // should have a cost closer to 2x the second due to the two cache
        // access per iteration from opposite ends of the array
-        Optional<bool> HasTemporalReuse =
+        std::optional<bool> HasTemporalReuse =
             R->hasTemporalReuse(Representative, *TRT, *InnerMostLoop, DI, AA);
-        Optional<bool> HasSpacialReuse =
+        std::optional<bool> HasSpacialReuse =
             R->hasSpacialReuse(Representative, CLS, AA);
 
-        if ((HasTemporalReuse.hasValue() && *HasTemporalReuse) ||
-            (HasSpacialReuse.hasValue() && *HasSpacialReuse)) {
+        if ((HasTemporalReuse && *HasTemporalReuse) ||
+            (HasSpacialReuse && *HasSpacialReuse)) {
           RefGroup.push_back(std::move(R));
           Added = true;
           break;

@@ -14,8 +14,8 @@ void __attribute__((preserve_most(1))) foo1(void *ptr) { // expected-error {{'pr
 
 void (__attribute__((preserve_most)) *pfoo1)(void *) = foo;
 
-void (__attribute__((cdecl)) *pfoo2)(void *) = foo; // expected-warning {{incompatible function pointer types initializing 'void (*)(void *) __attribute__((cdecl))' with an expression of type 'void (void *) __attribute__((preserve_most))'}}
-void (*pfoo3)(void *) = foo; // expected-warning {{incompatible function pointer types initializing 'void (*)(void *)' with an expression of type 'void (void *) __attribute__((preserve_most))'}}
+void (__attribute__((cdecl)) *pfoo2)(void *) = foo; // expected-error {{incompatible function pointer types initializing 'void (*)(void *) __attribute__((cdecl))' with an expression of type 'void (void *) __attribute__((preserve_most))'}}
+void (*pfoo3)(void *) = foo; // expected-error {{incompatible function pointer types initializing 'void (*)(void *)' with an expression of type 'void (void *) __attribute__((preserve_most))'}}
 
 typedef_fun_t typedef_fun_foo; // expected-note {{previous declaration is here}}
 void __attribute__((preserve_most)) typedef_fun_foo(int x) { } // expected-error {{function declared 'preserve_most' here was previously declared without calling convention}}
@@ -30,8 +30,8 @@ void __attribute__((preserve_all(1))) boo1(void *ptr) { // expected-error {{'pre
 
 void (__attribute__((preserve_all)) *pboo1)(void *) = boo;
 
-void (__attribute__((cdecl)) *pboo2)(void *) = boo; // expected-warning {{incompatible function pointer types initializing 'void (*)(void *) __attribute__((cdecl))' with an expression of type 'void (void *) __attribute__((preserve_all))'}}
-void (*pboo3)(void *) = boo; // expected-warning {{incompatible function pointer types initializing 'void (*)(void *)' with an expression of type 'void (void *) __attribute__((preserve_all))'}}
+void (__attribute__((cdecl)) *pboo2)(void *) = boo; // expected-error {{incompatible function pointer types initializing 'void (*)(void *) __attribute__((cdecl))' with an expression of type 'void (void *) __attribute__((preserve_all))'}}
+void (*pboo3)(void *) = boo; // expected-error {{incompatible function pointer types initializing 'void (*)(void *)' with an expression of type 'void (void *) __attribute__((preserve_all))'}}
 
 typedef_fun_t typedef_fun_boo; // expected-note {{previous declaration is here}}
 void __attribute__((preserve_all)) typedef_fun_boo(int x) { } // expected-error {{function declared 'preserve_all' here was previously declared without calling convention}}

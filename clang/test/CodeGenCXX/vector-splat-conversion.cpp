@@ -4,17 +4,16 @@ typedef __attribute__((__ext_vector_type__(8))) float vector_float8;
 
 typedef vector_float8 float8;
 
-// rdar://20000762
 // CHECK-LABEL: define{{.*}} void @_Z23MandelbrotPolyCalcSIMD8v
 void MandelbrotPolyCalcSIMD8() {
   constexpr float8 v4 = 4.0;  // value to compare against abs(z)^2, to see if bounded
   float8 vABS;
   auto vLT  = vABS < v4;
   // CHECK: store <8 x float>
-  // CHECK: [[ZERO:%.*]] = load <8 x float>, <8 x float>* [[VARBS:%.*]]
+  // CHECK: [[ZERO:%.*]] = load <8 x float>, ptr [[VARBS:%.*]]
   // CHECK: [[CMP:%.*]] = fcmp olt <8 x float> [[ZERO]]
   // CHECK: [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-  // CHECK: store <8 x i32> [[SEXT]], <8 x i32>* [[VLT:%.*]]
+  // CHECK: store <8 x i32> [[SEXT]], ptr [[VLT:%.*]]
 }
 
 typedef __attribute__((__ext_vector_type__(4))) int int4;
@@ -54,9 +53,9 @@ typedef __attribute__((vector_size(8))) int gcc_int_2;
 gcc_int_2 FloatToIntConversion(gcc_int_2 Int2, float f) {
   return Int2 + f;
   // CHECK: %[[LOAD_INT:.+]] = load <2 x i32>
-  // CHECK: %[[LOAD:.+]] = load float, float*
+  // CHECK: %[[LOAD:.+]] = load float, ptr
   // CHECK: %[[CONV:.+]] = fptosi float %[[LOAD]] to i32
-  // CHECK: %[[INSERT:.+]] = insertelement <2 x i32> poison, i32 %[[CONV]], i32 0
+  // CHECK: %[[INSERT:.+]] = insertelement <2 x i32> poison, i32 %[[CONV]], i64 0
   // CHECK: %[[SPLAT:.+]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
   // CHECK: add <2 x i32> %[[LOAD_INT]], %[[SPLAT]]
 }

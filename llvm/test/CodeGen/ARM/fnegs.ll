@@ -19,9 +19,9 @@
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a9 %s -o - \
 ; RUN:  | FileCheck %s -check-prefix=CORTEXA9
 
-define float @test1(float* %a) {
+define float @test1(ptr %a) {
 entry:
-	%0 = load float, float* %a, align 4		; <float> [#uses=2]
+	%0 = load float, ptr %a, align 4		; <float> [#uses=2]
 	%1 = fsub float -0.000000e+00, %0		; <float> [#uses=2]
 	%2 = fpext float %1 to double		; <double> [#uses=1]
 	%3 = fcmp olt double %2, 1.234000e+00		; <i1> [#uses=1]
@@ -46,10 +46,10 @@ entry:
 ; CORTEXA9-LABEL: test1:
 ; CORTEXA9: 	vneg.f32	s{{.*}}, s{{.*}}
 
-define float @test2(float* %a) {
+define float @test2(ptr %a) {
 entry:
-	%0 = load float, float* %a, align 4		; <float> [#uses=2]
-	%1 = fmul float -1.000000e+00, %0		; <float> [#uses=2]
+	%0 = load float, ptr %a, align 4		; <float> [#uses=2]
+	%1 = fneg float %0                  ; <float> [#uses=2]
 	%2 = fpext float %1 to double		; <double> [#uses=1]
 	%3 = fcmp olt double %2, 1.234000e+00		; <i1> [#uses=1]
 	%retval = select i1 %3, float %1, float %0		; <float> [#uses=1]

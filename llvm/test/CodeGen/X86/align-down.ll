@@ -81,7 +81,7 @@ define i32 @t2_commutative(i32 %ptr, i32 %alignment) nounwind {
 
 ; Extra use tests
 
-define i32 @t3_extrause0(i32 %ptr, i32 %alignment, i32* %mask_storage) nounwind {
+define i32 @t3_extrause0(i32 %ptr, i32 %alignment, ptr %mask_storage) nounwind {
 ; X86-LABEL: t3_extrause0:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -102,12 +102,12 @@ define i32 @t3_extrause0(i32 %ptr, i32 %alignment, i32* %mask_storage) nounwind 
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %mask = add i32 %alignment, -1
-  store i32 %mask, i32* %mask_storage
+  store i32 %mask, ptr %mask_storage
   %bias = and i32 %ptr, %mask
   %r = sub i32 %ptr, %bias
   ret i32 %r
 }
-define i32 @n4_extrause1(i32 %ptr, i32 %alignment, i32* %bias_storage) nounwind {
+define i32 @n4_extrause1(i32 %ptr, i32 %alignment, ptr %bias_storage) nounwind {
 ; X86-LABEL: n4_extrause1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -129,11 +129,11 @@ define i32 @n4_extrause1(i32 %ptr, i32 %alignment, i32* %bias_storage) nounwind 
 ; X64-NEXT:    retq
   %mask = add i32 %alignment, -1
   %bias = and i32 %ptr, %mask ; has extra uses, can't fold
-  store i32 %bias, i32* %bias_storage
+  store i32 %bias, ptr %bias_storage
   %r = sub i32 %ptr, %bias
   ret i32 %r
 }
-define i32 @n5_extrause2(i32 %ptr, i32 %alignment, i32* %mask_storage, i32* %bias_storage) nounwind {
+define i32 @n5_extrause2(i32 %ptr, i32 %alignment, ptr %mask_storage, ptr %bias_storage) nounwind {
 ; X86-LABEL: n5_extrause2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -159,9 +159,9 @@ define i32 @n5_extrause2(i32 %ptr, i32 %alignment, i32* %mask_storage, i32* %bia
 ; X64-NEXT:    subl %esi, %eax
 ; X64-NEXT:    retq
   %mask = add i32 %alignment, -1
-  store i32 %mask, i32* %mask_storage
+  store i32 %mask, ptr %mask_storage
   %bias = and i32 %ptr, %mask ; has extra uses, can't fold
-  store i32 %bias, i32* %bias_storage
+  store i32 %bias, ptr %bias_storage
   %r = sub i32 %ptr, %bias
   ret i32 %r
 }
@@ -231,8 +231,8 @@ define i32 @n8_not_lowbit_mask(i32 %ptr, i32 %alignment) nounwind {
 ;
 ; NOBMI-X64-LABEL: n8_not_lowbit_mask:
 ; NOBMI-X64:       # %bb.0:
-; NOBMI-X64-NEXT:    movl %esi, %eax
-; NOBMI-X64-NEXT:    incl %eax
+; NOBMI-X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; NOBMI-X64-NEXT:    leal 1(%rsi), %eax
 ; NOBMI-X64-NEXT:    notl %eax
 ; NOBMI-X64-NEXT:    andl %edi, %eax
 ; NOBMI-X64-NEXT:    retq
@@ -260,8 +260,8 @@ define i32 @n9_sub_is_not_commutative(i32 %ptr, i32 %alignment) nounwind {
 ;
 ; X64-LABEL: n9_sub_is_not_commutative:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    decl %eax
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    leal -1(%rsi), %eax
 ; X64-NEXT:    andl %edi, %eax
 ; X64-NEXT:    subl %edi, %eax
 ; X64-NEXT:    retq

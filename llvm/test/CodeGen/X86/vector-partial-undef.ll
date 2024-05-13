@@ -85,9 +85,7 @@ define <4 x i64> @and_undef_elts(<2 x i64> %x) {
 ;
 ; AVX-LABEL: and_undef_elts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,0,1,2]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %extend = shufflevector <2 x i64> %x, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %bogus_bo = and <4 x i64> %extend, <i64 undef, i64 undef, i64 42, i64 43>
@@ -107,8 +105,8 @@ define <4 x i64> @or_undef_elts(<2 x i64> %x) {
 ; AVX-LABEL: or_undef_elts:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX-NEXT:    vorps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,0,1,2]
+; AVX-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %extend = shufflevector <2 x i64> %x, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %bogus_bo = or <4 x i64> %extend, <i64 undef, i64 undef, i64 42, i64 43>
@@ -139,9 +137,9 @@ define <8 x i32> @xor_undef_elts_alt(<4 x i32> %x) {
 ; SSE-LABEL: xor_undef_elts_alt:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    movaps {{.*#+}} xmm2 = <u,u,44,12>
+; SSE-NEXT:    movaps {{.*#+}} xmm2 = [u,u,44,12]
 ; SSE-NEXT:    xorps %xmm0, %xmm2
-; SSE-NEXT:    xorps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm2[2,0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[1,0]
@@ -153,7 +151,7 @@ define <8 x i32> @xor_undef_elts_alt(<4 x i32> %x) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps {{.*#+}} ymm1 = [6,1,5,4,3,2,0,7]
 ; AVX-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq

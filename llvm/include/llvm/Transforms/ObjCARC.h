@@ -22,27 +22,9 @@ class Pass;
 
 //===----------------------------------------------------------------------===//
 //
-// ObjCARCAPElim - ObjC ARC autorelease pool elimination.
-//
-Pass *createObjCARCAPElimPass();
-
-//===----------------------------------------------------------------------===//
-//
-// ObjCARCExpand - ObjC ARC preliminary simplifications.
-//
-Pass *createObjCARCExpandPass();
-
-//===----------------------------------------------------------------------===//
-//
 // ObjCARCContract - Late ObjC ARC cleanups.
 //
 Pass *createObjCARCContractPass();
-
-//===----------------------------------------------------------------------===//
-//
-// ObjCARCOpt - ObjC ARC optimization.
-//
-Pass *createObjCARCOptPass();
 
 struct ObjCARCOptPass : public PassInfoMixin<ObjCARCOptPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -58,6 +40,10 @@ struct ObjCARCAPElimPass : public PassInfoMixin<ObjCARCAPElimPass> {
 
 struct ObjCARCExpandPass : public PassInfoMixin<ObjCARCExpandPass> {
   PreservedAnalyses run(Function &M, FunctionAnalysisManager &AM);
+};
+
+struct PAEvalPass : public PassInfoMixin<PAEvalPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // End llvm namespace

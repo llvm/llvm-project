@@ -1,5 +1,4 @@
-; RUN: opt -S -name-anon-globals < %s | FileCheck %s
-; RUN: opt -prepare-for-thinlto -O0 -module-summary -o %t.bc -enable-new-pm=0 < %s
+; RUN: opt -S -passes=name-anon-globals %s | FileCheck %s
 ; RUN: opt -passes='thinlto-pre-link<O0>,require<module-summary>' -o %t.bc < %s
 
 
@@ -14,7 +13,7 @@ define internal void @bar() {
 }
 
 ; CHECK: @anon.acbd18db4cc2f85cedef654fccc4a4d8.3 = global i8 0
-; CHECK: @anon.acbd18db4cc2f85cedef654fccc4a4d8.4 = alias i8, i8* @anon.acbd18db4cc2f85cedef654fccc4a4d8.3
+; CHECK: @anon.acbd18db4cc2f85cedef654fccc4a4d8.4 = alias i8, ptr @anon.acbd18db4cc2f85cedef654fccc4a4d8.3
 ; CHECK: define void @anon.acbd18db4cc2f85cedef654fccc4a4d8.0()
 ; CHECK: define void @anon.acbd18db4cc2f85cedef654fccc4a4d8.1()
 ; CHECK: define void @anon.acbd18db4cc2f85cedef654fccc4a4d8.2()
@@ -32,4 +31,4 @@ define void @2() {
 
 @3 = global i8 0
 
-@4 = alias i8, i8 *@3
+@4 = alias i8, ptr @3

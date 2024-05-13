@@ -1,4 +1,6 @@
 ; RUN: llc -mtriple=nvptx64-nvidia-cuda < %s | FileCheck %s
+; RUN: %if ptxas %{ llc -mtriple=nvptx64-nvidia-cuda < %s | %ptxas-verify %}
+
 ; Generated with -O1 from:
 ; int f1();
 ; void f2(int*);
@@ -29,19 +31,19 @@ entry:
   call void @llvm.dbg.value(metadata i32 3, metadata !10, metadata !DIExpression()), !dbg !15
   %call = call i32 @f3(i32 3) #3, !dbg !16
   call void @llvm.dbg.value(metadata i32 7, metadata !10, metadata !DIExpression()), !dbg !18
-  %call1 = call i32 (...) @f1() #3, !dbg !19
+  %call1 = call i32 @f1() #3, !dbg !19
   call void @llvm.dbg.value(metadata i32 %call1, metadata !10, metadata !DIExpression()), !dbg !19
-  store i32 %call1, i32* %i, align 4, !dbg !19, !tbaa !20
-  call void @llvm.dbg.value(metadata i32* %i, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !24
-  call void @f2(i32* %i) #3, !dbg !24
+  store i32 %call1, ptr %i, align 4, !dbg !19, !tbaa !20
+  call void @llvm.dbg.value(metadata ptr %i, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !24
+  call void @f2(ptr %i) #3, !dbg !24
   ret i32 0, !dbg !25
 }
 
 declare i32 @f3(i32)
 
-declare i32 @f1(...)
+declare i32 @f1()
 
-declare void @f2(i32*)
+declare void @f2(ptr)
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2
@@ -54,7 +56,7 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!11, !12}
 !llvm.ident = !{!13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2, nameTableKind: None)
 !1 = !DIFile(filename: "dbg-value-const-byref.c", directory: "")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "foo", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !6, retainedNodes: !9)

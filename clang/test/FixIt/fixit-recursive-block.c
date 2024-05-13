@@ -2,10 +2,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10  -Wuninitialized -fblocks -verify %s 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10  -Wuninitialized -fblocks -x objective-c -fobjc-arc -DARC -verify %s
 
-// rdar://10817031
-
-int main() {
-    void (^arc_fail)() = ^() {
+int main(void) {
+    void (^arc_fail)(void) = ^(void) {
 #ifdef ARC
 // expected-warning@-2 {{block pointer variable 'arc_fail' is null when captured by block}}
 #else
@@ -15,4 +13,4 @@ int main() {
        arc_fail(); // BOOM
     };
 }
-// CHECK: {8:12-8:12}:"__block "
+// CHECK: {6:12-6:12}:"__block "

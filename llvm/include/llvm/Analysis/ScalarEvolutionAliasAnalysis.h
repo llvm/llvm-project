@@ -14,24 +14,25 @@
 #define LLVM_ANALYSIS_SCALAREVOLUTIONALIASANALYSIS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 
+class Function;
+class ScalarEvolution;
+class SCEV;
+
 /// A simple alias analysis implementation that uses ScalarEvolution to answer
 /// queries.
-class SCEVAAResult : public AAResultBase<SCEVAAResult> {
+class SCEVAAResult : public AAResultBase {
   ScalarEvolution &SE;
 
 public:
-  explicit SCEVAAResult(ScalarEvolution &SE) : AAResultBase(), SE(SE) {}
+  explicit SCEVAAResult(ScalarEvolution &SE) : SE(SE) {}
   SCEVAAResult(SCEVAAResult &&Arg) : AAResultBase(std::move(Arg)), SE(Arg.SE) {}
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI);
+                    AAQueryInfo &AAQI, const Instruction *CtxI);
 
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);

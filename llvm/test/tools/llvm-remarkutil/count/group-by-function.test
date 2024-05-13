@@ -1,0 +1,7 @@
+
+RUN: llvm-remarkutil count --parser=yaml --group-by=function %p/Inputs/remark-group-by.yaml | FileCheck %s
+
+; CHECK-LABEL: Function,Count
+; CHECK: func1,3
+; CHECK: func2,2
+; CHECK: func3,1

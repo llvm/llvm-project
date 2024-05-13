@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1121 -- any procedure referenced in a concurrent header must be pure
 
 ! Also, check that the step expressions are not zero.  This is prohibited by
@@ -23,10 +23,12 @@ SUBROUTINE s1()
   INTEGER, PARAMETER :: constInt = 0
 
   ! Warn on this one for backwards compatibility
+  !WARNING: DO step expression should not be zero
   DO 10 I = 1, 10, 0
   10 CONTINUE
 
   ! Warn on this one for backwards compatibility
+  !WARNING: DO step expression should not be zero
   DO 20 I = 1, 10, 5 - 5
   20 CONTINUE
 

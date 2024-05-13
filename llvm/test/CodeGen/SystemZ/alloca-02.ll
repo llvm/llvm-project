@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-C
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-D
 
-declare i64 @bar(i8 *%a)
+declare i64 @bar(ptr %a)
 
 define i64 @f1(i64 %length, i64 %index) {
 ; CHECK-A-LABEL: f1:
@@ -37,16 +37,16 @@ define i64 @f1(i64 %length, i64 %index) {
 ; CHECK-E-DAG: lhi [[TMP:%r[0-5]]], 4
 ; CHECK-E: stcy [[TMP]], 4096({{%r3,%r2|%r2,%r3}})
   %a = alloca i8, i64 %length
-  store volatile i8 0, i8 *%a
-  %b = getelementptr i8, i8 *%a, i64 4095
-  store volatile i8 1, i8 *%b
-  %c = getelementptr i8, i8 *%a, i64 %index
-  store volatile i8 2, i8 *%c
-  %d = getelementptr i8, i8 *%c, i64 4095
-  store volatile i8 3, i8 *%d
-  %e = getelementptr i8, i8 *%d, i64 1
-  store volatile i8 4, i8 *%e
-  %count = call i64 @bar(i8 *%a)
+  store volatile i8 0, ptr %a
+  %b = getelementptr i8, ptr %a, i64 4095
+  store volatile i8 1, ptr %b
+  %c = getelementptr i8, ptr %a, i64 %index
+  store volatile i8 2, ptr %c
+  %d = getelementptr i8, ptr %c, i64 4095
+  store volatile i8 3, ptr %d
+  %e = getelementptr i8, ptr %d, i64 1
+  store volatile i8 4, ptr %e
+  %count = call i64 @bar(ptr %a)
   %res = add i64 %count, 1
   ret i64 %res
 }

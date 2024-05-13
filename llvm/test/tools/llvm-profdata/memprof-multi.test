@@ -1,0 +1,22 @@
+REQUIRES: x86_64-linux
+
+To update the inputs used below run Inputs/update_memprof_inputs.sh /path/to/updated/clang
+RUN: llvm-profdata show --memory %p/Inputs/multi.memprofraw --profiled-binary %p/Inputs/multi.memprofexe -o - | FileCheck %s
+
+We expect 2 MIB entries, 1 each for the malloc calls in the program.
+
+CHECK:  MemprofProfile:
+CHECK-NEXT:  Summary:
+CHECK-NEXT:    Version: 3
+CHECK-NEXT:    NumSegments: {{[0-9]+}}
+CHECK-NEXT:    NumMibInfo: 2
+CHECK-NEXT:    NumAllocFunctions: 1
+CHECK-NEXT:    NumStackOffsets: 2
+
+CHECK:        SymbolName: main
+CHECK-NEXT:     LineOffset: 1
+CHECK-NEXT:     Column: 21
+
+CHECK:        SymbolName: main
+CHECK-NEXT:     LineOffset: 5
+CHECK-NEXT:     Column: 15

@@ -61,11 +61,11 @@ define <8 x float> @test4(<8 x double> %x) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:    cvtpd2ps %xmm1, %xmm1
+; CHECK-NEXT:    cvtpd2ps %xmm1, %xmm3
 ; CHECK-NEXT:    cvtpd2ps %xmm0, %xmm0
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    cvtpd2ps %xmm2, %xmm1
 ; CHECK-NEXT:    cvtpd2ps {{[0-9]+}}(%esp), %xmm2
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl

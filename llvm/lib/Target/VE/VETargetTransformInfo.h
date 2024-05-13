@@ -21,6 +21,32 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 
+static llvm::Type *getVectorElementType(llvm::Type *Ty) {
+  return llvm::cast<llvm::FixedVectorType>(Ty)->getElementType();
+}
+
+static llvm::Type *getLaneType(llvm::Type *Ty) {
+  using namespace llvm;
+  if (!isa<VectorType>(Ty))
+    return Ty;
+  return getVectorElementType(Ty);
+}
+
+static bool isVectorLaneType(llvm::Type &ElemTy) {
+  // check element sizes for vregs
+  if (ElemTy.isIntegerTy()) {
+    unsigned ScaBits = ElemTy.getScalarSizeInBits();
+    return ScaBits == 1 || ScaBits == 32 || ScaBits == 64;
+  }
+  if (ElemTy.isPointerTy()) {
+    return true;
+  }
+  if (ElemTy.isFloatTy() || ElemTy.isDoubleTy()) {
+    return true;
+  }
+  return false;
+}
+
 namespace llvm {
 
 class VETTIImpl : public BasicTTIImplBase<VETTIImpl> {
@@ -34,6 +60,25 @@ class VETTIImpl : public BasicTTIImplBase<VETTIImpl> {
   const VETargetLowering *getTLI() const { return TLI; }
 
   bool enableVPU() const { return getST()->enableVPU(); }
+
+  static bool isSupportedReduction(Intrinsic::ID ReductionID) {
+#define VEC_VP_CASE(SUFFIX)                                                    \
+  case Intrinsic::vp_reduce_##SUFFIX:                                          \
+  case Intrinsic::vector_reduce_##SUFFIX:
+
+    switch (ReductionID) {
+      VEC_VP_CASE(add)
+      VEC_VP_CASE(and)
+      VEC_VP_CASE(or)
+      VEC_VP_CASE(xor)
+      VEC_VP_CASE(smax)
+      return true;
+
+    default:
+      return false;
+    }
+#undef VEC_VP_CASE
+  }
 
 public:
   explicit VETTIImpl(const VETargetMachine *TM, const Function &F)
@@ -75,6 +120,37 @@ public:
   unsigned getMinVectorRegisterBitWidth() const {
     // TODO report vregs once vector isel is stable.
     return 0;
+  }
+
+  bool shouldBuildRelLookupTables() const {
+    // NEC nld doesn't support relative lookup tables.  It shows following
+    // errors.  So, we disable it at the moment.
+    //   /opt/nec/ve/bin/nld: src/CMakeFiles/cxxabi_shared.dir/cxa_demangle.cpp
+    //   .o(.rodata+0x17b4): reloc against `.L.str.376': error 2
+    //   /opt/nec/ve/bin/nld: final link failed: Nonrepresentable section on
+    //   output
+    return false;
+  }
+
+  // Load & Store {
+  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) {
+    return isVectorLaneType(*getLaneType(DataType));
+  }
+  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) {
+    return isVectorLaneType(*getLaneType(DataType));
+  }
+  bool isLegalMaskedGather(Type *DataType, MaybeAlign Alignment) {
+    return isVectorLaneType(*getLaneType(DataType));
+  };
+  bool isLegalMaskedScatter(Type *DataType, MaybeAlign Alignment) {
+    return isVectorLaneType(*getLaneType(DataType));
+  }
+  // } Load & Store
+
+  bool shouldExpandReduction(const IntrinsicInst *II) const {
+    if (!enableVPU())
+      return true;
+    return !isSupportedReduction(II->getIntrinsicID());
   }
 };
 

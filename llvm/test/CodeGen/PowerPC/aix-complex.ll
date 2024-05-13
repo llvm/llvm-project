@@ -12,11 +12,11 @@ declare void @anchor(...)
 define dso_local { double, double } @dblCmplxRetCallee()  {
 entry:
   %retval = alloca { double, double }, align 8
-  %retval.realp = getelementptr inbounds { double, double }, { double, double }* %retval, i32 0, i32 0
-  store double 1.000000e+00, double* %retval.realp, align 8
-  %retval.imagp = getelementptr inbounds { double, double }, { double, double }* %retval, i32 0, i32 1
-  store double 0.000000e+00, double* %retval.imagp, align 8
-  %0 = load { double, double }, { double, double }* %retval, align 8
+  %retval.realp = getelementptr inbounds { double, double }, ptr %retval, i32 0, i32 0
+  store double 1.000000e+00, ptr %retval.realp, align 8
+  %retval.imagp = getelementptr inbounds { double, double }, ptr %retval, i32 0, i32 1
+  store double 0.000000e+00, ptr %retval.imagp, align 8
+  %0 = load { double, double }, ptr %retval, align 8
   ret { double, double } %0
 }
 
@@ -31,9 +31,9 @@ entry:
   %call = call { double, double } @dblCmplxRetCallee()
   %0 = extractvalue { double, double } %call, 0
   %1 = extractvalue { double, double } %call, 1
-  store double %0, double* getelementptr inbounds ({ double, double }, { double, double }* @gcd, i32 0, i32 0), align 8
-  store double %1, double* getelementptr inbounds ({ double, double }, { double, double }* @gcd, i32 0, i32 1), align 8
-  call void bitcast (void (...)* @anchor to void ()*)()
+  store double %0, ptr @gcd, align 8
+  store double %1, ptr getelementptr inbounds ({ double, double }, ptr @gcd, i32 0, i32 1), align 8
+  call void @anchor()
   ret void
 }
 
@@ -49,11 +49,11 @@ entry:
 define dso_local { float, float } @fltCmplxRetCallee()  {
 entry:
   %retval = alloca { float, float }, align 4
-  %retval.realp = getelementptr inbounds { float, float }, { float, float }* %retval, i32 0, i32 0
-  %retval.imagp = getelementptr inbounds { float, float }, { float, float }* %retval, i32 0, i32 1
-  store float 1.000000e+00, float* %retval.realp, align 4
-  store float 0.000000e+00, float* %retval.imagp, align 4
-  %0 = load { float, float }, { float, float }* %retval, align 4
+  %retval.realp = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 0
+  %retval.imagp = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 1
+  store float 1.000000e+00, ptr %retval.realp, align 4
+  store float 0.000000e+00, ptr %retval.imagp, align 4
+  %0 = load { float, float }, ptr %retval, align 4
   ret { float, float } %0
 }
 
@@ -68,9 +68,9 @@ entry:
   %call = call { float, float } @fltCmplxRetCallee()
   %0 = extractvalue { float, float } %call, 0
   %1 = extractvalue { float, float } %call, 1
-  store float %0, float* getelementptr inbounds ({ float, float }, { float, float }* @gcf, i32 0, i32 0), align 4
-  store float %1, float* getelementptr inbounds ({ float, float }, { float, float }* @gcf, i32 0, i32 1), align 4
-  call void bitcast (void (...)* @anchor to void ()*)()
+  store float %0, ptr @gcf, align 4
+  store float %1, ptr getelementptr inbounds ({ float, float }, ptr @gcf, i32 0, i32 1), align 4
+  call void @anchor()
   ret void
 }
 
@@ -86,11 +86,11 @@ entry:
 define dso_local { ppc_fp128, ppc_fp128 } @fp128CmplxRetCallee()  {
 entry:
   %retval = alloca { ppc_fp128, ppc_fp128 }, align 16
-  %retval.realp = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %retval, i32 0, i32 0
-  %retval.imagp = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %retval, i32 0, i32 1
-  store ppc_fp128 0xM7ffeffffffffffffffffffffffffffff, ppc_fp128* %retval.realp, align 16
-  store ppc_fp128 0xM3ffefffffffffffffffffffffffffffe, ppc_fp128* %retval.imagp, align 16
-  %0 = load { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %retval, align 16
+  %retval.realp = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %retval, i32 0, i32 0
+  %retval.imagp = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %retval, i32 0, i32 1
+  store ppc_fp128 0xM7ffeffffffffffffffffffffffffffff, ptr %retval.realp, align 16
+  store ppc_fp128 0xM3ffefffffffffffffffffffffffffffe, ptr %retval.imagp, align 16
+  %0 = load { ppc_fp128, ppc_fp128 }, ptr %retval, align 16
   ret { ppc_fp128, ppc_fp128 } %0
 }
 
@@ -107,9 +107,9 @@ entry:
   %call = call { ppc_fp128, ppc_fp128 } @fp128CmplxRetCallee()
   %0 = extractvalue { ppc_fp128, ppc_fp128 } %call, 0
   %1 = extractvalue { ppc_fp128, ppc_fp128 } %call, 1
-  store ppc_fp128 %0, ppc_fp128* getelementptr inbounds ({ ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* @gcfp128, i32 0, i32 0), align 16
-  store ppc_fp128 %1, ppc_fp128* getelementptr inbounds ({ ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* @gcfp128, i32 0, i32 1), align 16
-  call void bitcast (void (...)* @anchor to void ()*)()
+  store ppc_fp128 %0, ptr @gcfp128, align 16
+  store ppc_fp128 %1, ptr getelementptr inbounds ({ ppc_fp128, ppc_fp128 }, ptr @gcfp128, i32 0, i32 1), align 16
+  call void @anchor()
   ret void
 }
 

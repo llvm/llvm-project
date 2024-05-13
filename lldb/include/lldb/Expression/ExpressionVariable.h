@@ -10,6 +10,7 @@
 #define LLDB_EXPRESSION_EXPRESSIONVARIABLE_H
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/DenseMap.h"
@@ -17,22 +18,22 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-public.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 
 namespace lldb_private {
 
 class ExpressionVariable
-    : public std::enable_shared_from_this<ExpressionVariable> {
+    : public std::enable_shared_from_this<ExpressionVariable>,
+      public llvm::RTTIExtends<ExpressionVariable, llvm::RTTIRoot> {
 public:
-  // See TypeSystem.h for how to add subclasses to this.
-  enum LLVMCastKind { eKindClang, eKindSwift, eKindGo, kNumKinds };
+  /// LLVM RTTI support
+  static char ID;
 
-  LLVMCastKind getKind() const { return m_kind; }
+  ExpressionVariable();
 
-  ExpressionVariable(LLVMCastKind kind) : m_flags(0), m_kind(kind) {}
+  virtual ~ExpressionVariable() = default;
 
-  virtual ~ExpressionVariable();
-
-  llvm::Optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
+  std::optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
 
   ConstString GetName() { return m_frozen_sp->GetName(); }
 
@@ -109,7 +110,6 @@ public:
   // these should be private
   lldb::ValueObjectSP m_frozen_sp;
   lldb::ValueObjectSP m_live_sp;
-  LLVMCastKind m_kind;
 };
 
 /// \class ExpressionVariableList ExpressionVariable.h
@@ -200,14 +200,14 @@ private:
   std::vector<lldb::ExpressionVariableSP> m_variables;
 };
 
-class PersistentExpressionState : public ExpressionVariableList {
+class PersistentExpressionState
+    : public ExpressionVariableList,
+      public llvm::RTTIExtends<PersistentExpressionState, llvm::RTTIRoot> {
 public:
-  // See TypeSystem.h for how to add subclasses to this.
-  enum LLVMCastKind { eKindClang, eKindSwift, eKindGo, kNumKinds };
+  /// LLVM RTTI support
+  static char ID;
 
-  LLVMCastKind getKind() const { return m_kind; }
-
-  PersistentExpressionState(LLVMCastKind kind) : m_kind(kind) {}
+  PersistentExpressionState();
 
   virtual ~PersistentExpressionState();
 
@@ -226,7 +226,7 @@ public:
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;
 
-  virtual llvm::Optional<CompilerType>
+  virtual std::optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) = 0;
 
   virtual lldb::addr_t LookupSymbol(ConstString name);
@@ -238,8 +238,6 @@ protected:
   GetPersistentVariablePrefix(bool is_error = false) const = 0;
 
 private:
-  LLVMCastKind m_kind;
-
   typedef std::set<lldb::IRExecutionUnitSP> ExecutionUnitSet;
   ExecutionUnitSet
       m_execution_units; ///< The execution units that contain valuable symbols.

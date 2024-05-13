@@ -10,7 +10,7 @@
 
 ; On Windows, we don't handle the relocations needed for AT_return_pc properly
 ; and fail with "failed to compute relocation: IMAGE_REL_AMD64_ADDR32".
-; UNSUPPORTED: cygwin,windows-gnu,windows-msvc
+; UNSUPPORTED: target={{.*-(cygwin|windows-gnu|windows-msvc)}}
 
 ; RUN: llc -mtriple=x86_64 < %s -o - | FileCheck %s -check-prefix=ASM
 ; RUN: llc -mtriple=x86_64 -debugger-tune=lldb < %s -filetype=obj -o %t.o
@@ -26,9 +26,9 @@
 
 define void @__has_no_subprogram() {
 entry:
-  %0 = load volatile i32, i32* @sink, align 4
+  %0 = load volatile i32, ptr @sink, align 4
   %inc = add nsw i32 %0, 1
-  store volatile i32 %inc, i32* @sink, align 4
+  store volatile i32 %inc, ptr @sink, align 4
   ret void
 }
 
@@ -39,9 +39,9 @@ entry:
 ; OBJ:   DW_AT_name ("bat")
 define void @_Z3batv() !dbg !13 {
 entry:
-  %0 = load volatile i32, i32* @sink, align 4, !dbg !16, !tbaa !17
+  %0 = load volatile i32, ptr @sink, align 4, !dbg !16, !tbaa !17
   %inc = add nsw i32 %0, 1, !dbg !16
-  store volatile i32 %inc, i32* @sink, align 4, !dbg !16, !tbaa !17
+  store volatile i32 %inc, ptr @sink, align 4, !dbg !16, !tbaa !17
   ret void, !dbg !21
 }
 
@@ -52,9 +52,9 @@ entry:
 ; OBJ:   DW_AT_name ("bar")
 define void @_Z3barv() !dbg !22 {
 entry:
-  %0 = load volatile i32, i32* @sink, align 4, !dbg !23, !tbaa !17
+  %0 = load volatile i32, ptr @sink, align 4, !dbg !23, !tbaa !17
   %inc = add nsw i32 %0, 1, !dbg !23
-  store volatile i32 %inc, i32* @sink, align 4, !dbg !23, !tbaa !17
+  store volatile i32 %inc, ptr @sink, align 4, !dbg !23, !tbaa !17
   ret void, !dbg !24
 }
 
@@ -64,16 +64,16 @@ entry:
 ; OBJ:   DW_AT_call_all_calls (true)
 ; OBJ:   DW_AT_name ("foo")
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[bar_sp]])
+; OBJ:     DW_AT_call_origin ([[bar_sp]] "_Z3barv")
 ; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[bat_sp]])
+; OBJ:     DW_AT_call_origin ([[bat_sp]] "_Z3batv")
 ; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[bar_sp]])
+; OBJ:     DW_AT_call_origin ([[bar_sp]] "_Z3barv")
 ; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[bat_sp]])
+; OBJ:     DW_AT_call_origin ([[bat_sp]] "_Z3batv")
 ; OBJ:     DW_AT_call_tail_call
 ; OBJ:     DW_AT_call_pc
 define void @_Z3foov() !dbg !25 {
@@ -92,7 +92,7 @@ entry:
 ; OBJ: DW_AT_call_all_calls (true)
 ; OBJ: DW_AT_name ("main")
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_origin ([[foo_sp]])
+; OBJ:     DW_AT_call_origin ([[foo_sp]] "_Z3foov")
 ; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
 ; OBJ:     DW_AT_call_target
@@ -101,7 +101,7 @@ define i32 @main() !dbg !29 {
 entry:
   call void @_Z3foov(), !dbg !32
 
-  %indirect_target = load void ()*, void ()** undef
+  %indirect_target = load ptr, ptr undef
   call void %indirect_target()
 
   call void asm sideeffect "", "~{dirflag},~{fpsr},~{flags}"()

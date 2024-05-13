@@ -116,9 +116,17 @@ MatchVerifier<NodeType>::match(const std::string &Code,
     Args.push_back("-std=c++20");
     FileName = "input.cc";
     break;
+  case Lang_CXX23:
+    Args.push_back("-std=c++23");
+    FileName = "input.cc";
+    break;
   case Lang_OpenCL:
     Args.push_back("-cl-no-stdinc");
     FileName = "input.cl";
+    break;
+  case Lang_OBJC:
+    Args.push_back("-fobjc-nonfragile-abi");
+    FileName = "input.m";
     break;
   case Lang_OBJCXX:
     FileName = "input.mm";

@@ -7,7 +7,7 @@
 # RUN: llvm-nm --just-symbol-name %t.o | diff %t.txt -
 # RUN: llvm-nm --format=just-symbols %t.o | diff %t.txt -
 # RUN: llvm-nm --format=sysv -j %t.o | diff %t.txt -
-# RUN: llvm-nm -j --format=posix %t.o | diff %t.txt -
+# RUN: llvm-nm -j --format=posix %t.o | not diff %t.txt -
 
 # RUN: FileCheck %s --input-file=%t.txt --implicit-check-not={{.}} --check-prefix=COMMON
 

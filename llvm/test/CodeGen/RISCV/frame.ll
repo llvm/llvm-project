@@ -17,8 +17,8 @@ define i32 @test() nounwind {
 ; RV32I-FPELIM-NEXT:    sw zero, 12(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 8(sp)
 ; RV32I-FPELIM-NEXT:    addi a0, sp, 12
-; RV32I-FPELIM-NEXT:    call test1@plt
-; RV32I-FPELIM-NEXT:    mv a0, zero
+; RV32I-FPELIM-NEXT:    call test1
+; RV32I-FPELIM-NEXT:    li a0, 0
 ; RV32I-FPELIM-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 32
 ; RV32I-FPELIM-NEXT:    ret
@@ -35,20 +35,19 @@ define i32 @test() nounwind {
 ; RV32I-WITHFP-NEXT:    sw zero, -28(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -32(s0)
 ; RV32I-WITHFP-NEXT:    addi a0, s0, -28
-; RV32I-WITHFP-NEXT:    call test1@plt
-; RV32I-WITHFP-NEXT:    mv a0, zero
-; RV32I-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    call test1
+; RV32I-WITHFP-NEXT:    li a0, 0
 ; RV32I-WITHFP-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 32
 ; RV32I-WITHFP-NEXT:    ret
-  %key = alloca %struct.key_t, align 4
-  %1 = bitcast %struct.key_t* %key to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 4 %1, i8 0, i64 20, i1 false)
-  %2 = getelementptr inbounds %struct.key_t, %struct.key_t* %key, i64 0, i32 1, i64 0
-  call void @test1(i8* %2)
+  %key = alloca %struct.key_t, align 8
+  call void @llvm.memset.p0.i64(ptr align 4 %key, i8 0, i64 20, i1 false)
+  %1 = getelementptr inbounds %struct.key_t, ptr %key, i64 0, i32 1, i64 0
+  call void @test1(ptr %1)
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 
-declare void @test1(i8*)
+declare void @test1(ptr)

@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
+
+// We voluntarily use std::default_initializable on types that have redundant
+// or ignored cv-qualifiers -- don't warn about it.
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-ignored-qualifiers
 
 // template<class T>
 //     concept default_initializable = constructible_from<T> &&
@@ -196,7 +199,7 @@ void test()
     test_not_const<void(Empty::*)(const int&) noexcept(false)>();
 
     // Sequence containers
-    test_not_const<std::array<               int, 0>>();
+    test_true     <std::array<               int, 0>>();
     test_not_const<std::array<               int, 1>>();
     test_false    <std::array<const          int, 1>>();
     test_not_const<std::array<      volatile int, 1>>();
@@ -204,8 +207,6 @@ void test()
     test_true     <std::deque<               int>>();
 #ifdef _LIBCPP_VERSION
     test_true     <std::deque<const          int>>();
-    test_true     <std::deque<      volatile int>>();
-    test_true     <std::deque<const volatile int>>();
 #endif // _LIBCPP_VERSION
     test_true     <std::forward_list<int>>();
     test_true     <std::list<int>>();
@@ -227,8 +228,6 @@ void test()
     test_true     <std::stack<               int>>();
 #ifdef _LIBCPP_VERSION
     test_true     <std::stack<const          int>>();
-    test_true     <std::stack<      volatile int>>();
-    test_true     <std::stack<const volatile int>>();
 #endif // _LIBCPP_VERSION
     test_true     <std::queue<int>>();
     test_true     <std::priority_queue<int>>();
@@ -240,14 +239,18 @@ void test()
 
     // Strings
     test_true     <std::string>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test_true     <std::wstring>();
+#endif
     test_true     <std::u8string>();
     test_true     <std::u16string>();
     test_true     <std::u32string>();
 
     // String views
     test_true     <std::string_view>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test_true     <std::wstring_view>();
+#endif
     test_true     <std::u8string_view>();
     test_true     <std::u16string_view>();
     test_true     <std::u32string_view>();
@@ -257,9 +260,4 @@ void test()
     test_true     <std::shared_ptr<int>>();
     test_true     <std::weak_ptr<int>>();
 
-}
-
-// Required for MSVC internal test runner compatibility.
-int main(int, char**) {
-    return 0;
 }

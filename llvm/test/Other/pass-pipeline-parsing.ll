@@ -57,6 +57,10 @@
 ; CHECK-DEFAULT-AA-DAG: Running analysis: BasicAA
 ; CHECK-DEFAULT-AA-DAG: Running analysis: TypeBasedAA
 
+; RUN: not opt -passes='function<no-rerun>(no-op-function)' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-RERUN-BAD
+; CHECK-RERUN-BAD: cannot have a no-rerun module to function adaptor
+
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-module)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED1
@@ -149,7 +153,7 @@
 ; CHECK-ADAPTORS: Running pass: NoOpFunctionPass
 ; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-ADAPTORS: Running pass: FunctionToLoopPassAdaptor
-; CHECK-ADAPTORS: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop
+; CHECK-ADAPTORS: Running pass: NoOpLoopPass on loop
 ; CHECK-ADAPTORS: Running pass: ModuleToPostOrderCGSCCPassAdaptor
 ; CHECK-ADAPTORS: Running pass: NoOpCGSCCPass
 ; CHECK-ADAPTORS: Running pass: ModuleToPostOrderCGSCCPassAdaptor
@@ -158,11 +162,11 @@
 ; CHECK-ADAPTORS: Running pass: NoOpFunctionPass
 ; CHECK-ADAPTORS: Running pass: CGSCCToFunctionPassAdaptor
 ; CHECK-ADAPTORS: Running pass: FunctionToLoopPassAdaptor
-; CHECK-ADAPTORS: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop
+; CHECK-ADAPTORS: Running pass: NoOpLoopPass on loop
 ; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-ADAPTORS: Running pass: PassManager{{.*}}Function
 ; CHECK-ADAPTORS: Running pass: FunctionToLoopPassAdaptor
-; CHECK-ADAPTORS: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop
+; CHECK-ADAPTORS: Running pass: NoOpLoopPass on loop
 
 ; RUN: opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='module(function(no-op-function,loop(no-op-loop,no-op-loop)))' %s 2>&1 \

@@ -1,5 +1,4 @@
-; RUN: opt < %s -simple-loop-unswitch
-; RUN: opt < %s -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa
+; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa
 ; PR8622
 @g_38 = external global i32, align 4
 
@@ -8,7 +7,7 @@ entry:
   br i1 true, label %for.end12, label %bb.nph
 
 bb.nph:                                           ; preds = %entry
-  %g_38.promoted = load i32, i32* @g_38
+  %g_38.promoted = load i32, ptr @g_38
   br label %for.body
 
 for.body:                                         ; preds = %for.cond, %bb.nph
@@ -21,7 +20,7 @@ for.cond:                                         ; preds = %for.body
   br i1 true, label %for.cond.for.end12_crit_edge, label %for.body
 
 for.cond.for.end12_crit_edge:                     ; preds = %for.cond
-  store i32 %call1, i32* @g_38
+  store i32 %call1, ptr @g_38
   br label %for.end12
 
 for.end12:                                        ; preds = %for.cond.for.end12_crit_edge, %entry

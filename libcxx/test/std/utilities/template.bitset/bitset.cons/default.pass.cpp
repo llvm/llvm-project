@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test default ctor
+// default ctor
 
 #include <bitset>
 #include <cassert>
@@ -14,7 +14,7 @@
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_default_ctor()
+TEST_CONSTEXPR_CXX23 void test_default_ctor()
 {
     {
         TEST_CONSTEXPR std::bitset<N> v1;
@@ -30,18 +30,26 @@ void test_default_ctor()
 #endif
 }
 
+TEST_CONSTEXPR_CXX23 bool test() {
+  test_default_ctor<0>();
+  test_default_ctor<1>();
+  test_default_ctor<31>();
+  test_default_ctor<32>();
+  test_default_ctor<33>();
+  test_default_ctor<63>();
+  test_default_ctor<64>();
+  test_default_ctor<65>();
+  test_default_ctor<1000>();
+
+  return true;
+}
 
 int main(int, char**)
 {
-    test_default_ctor<0>();
-    test_default_ctor<1>();
-    test_default_ctor<31>();
-    test_default_ctor<32>();
-    test_default_ctor<33>();
-    test_default_ctor<63>();
-    test_default_ctor<64>();
-    test_default_ctor<65>();
-    test_default_ctor<1000>();
+  test();
+#if TEST_STD_VER > 20
+  static_assert(test());
+#endif
 
   return 0;
 }

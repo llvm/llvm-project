@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O1 -fno-experimental-new-pass-manager -triple %itanium_abi_triple -emit-llvm -o - -fvisibility hidden %s | FileCheck %s
+// RUN: %clang_cc1 -O1 -disable-llvm-passes -triple %itanium_abi_triple -emit-llvm -o - -fvisibility=hidden %s | FileCheck %s
 
 template<typename T>
 struct X {
@@ -12,7 +12,6 @@ extern template struct X<int>;
 template struct X<int>;
 extern template struct X<char>;
 
-// <rdar://problem/8109763>
 void test_X(X<int> xi, X<char> xc) {
   // CHECK-LABEL: define weak_odr hidden {{.*}}void @_ZN1XIiE1fEv
   xi.f();

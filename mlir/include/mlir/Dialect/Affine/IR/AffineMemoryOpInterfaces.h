@@ -10,15 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_AFFINE_IR_AFFINEMEMORYOPDIALECT_H_
-#define MLIR_DIALECT_AFFINE_IR_AFFINEMEMORYOPDIALECT_H_
+#ifndef MLIR_DIALECT_AFFINE_IR_AFFINEMEMORYOPINTERFACES_H
+#define MLIR_DIALECT_AFFINE_IR_AFFINEMEMORYOPINTERFACES_H
 
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 
-namespace mlir {
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h.inc"
-} // namespace mlir
 
-#endif // MLIR_DIALECT_AFFINE_IR_AFFINEMEMORYOPDIALECT_H_
+#endif // MLIR_DIALECT_AFFINE_IR_AFFINEMEMORYOPINTERFACES_H

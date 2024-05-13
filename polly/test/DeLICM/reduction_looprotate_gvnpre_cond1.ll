@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Load (but not store) of A[j] hoisted, reduction only over some iterations.
 ;
@@ -13,7 +13,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -46,8 +46,8 @@ outer.for:
 
         body_join:
           %join = phi double [%phi, %body], [%add, %body_true]
-          %A_idx = getelementptr inbounds double, double* %A, i32 %j
-          store double %join, double* %A_idx
+          %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+          store double %join, ptr %A_idx
           br label %reduction.inc
 
 

@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Use C++11's `override` and remove `virtual` where applicable.
 class UseOverrideCheck : public ClangTidyCheck {
@@ -29,13 +27,12 @@ public:
 
 private:
   const bool IgnoreDestructors;
+  const bool IgnoreTemplateInstantiations;
   const bool AllowOverrideAndFinal;
-  const std::string OverrideSpelling;
-  const std::string FinalSpelling;
+  const StringRef OverrideSpelling;
+  const StringRef FinalSpelling;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEOVERRIDECHECK_H

@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_WRITE_H
 #define LLVM_LIBC_SRC_UNISTD_WRITE_H
 
-#include "include/unistd.h"
-#include <stddef.h>
+#include <unistd.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 ssize_t write(int fd, const void *buf, size_t count);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_WRITE_H

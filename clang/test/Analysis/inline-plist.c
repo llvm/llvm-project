@@ -2,7 +2,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-config eagerly-assume=false %s -analyzer-checker=core.NullDereference,core.DivideZero -fblocks -analyzer-output=plist -analyzer-config suppress-null-return-paths=false -o %t
 // RUN: %normalize_plist <%t | diff -ub %S/Inputs/expected-plists/inline-plist.c.plist -
 
-// <rdar://problem/10967815>
 void mmm(int y) {
   if (y != 0)
     y++;
@@ -23,7 +22,7 @@ void has_bug(int *p) {
   *p = 0xDEADBEEF; // expected-warning{{Dereference of null pointer (loaded from variable 'p')}} expected-note{{Dereference of null pointer (loaded from variable 'p')}}
 }
 
-void test_has_bug() {
+void test_has_bug(void) {
   has_bug(0);
   // expected-note@-1 {{Passing null pointer value via 1st parameter 'p'}}
   // expected-note@-2 {{Calling 'has_bug'}}
@@ -55,31 +54,31 @@ void bar(int *p) {
 // Test inlining of blocks.
 // ========================================================================== //
 
-void test_block__capture_null() {
+void test_block__capture_null(void) {
   int *p = 0; // expected-note{{'p' initialized to a null pointer value}}
-  ^(){ // expected-note {{Calling anonymous block}}
+  ^(void){ // expected-note {{Calling anonymous block}}
     *p = 1; // expected-warning{{Dereference of null pointer (loaded from variable 'p')}} expected-note{{Dereference of null pointer (loaded from variable 'p')}}
   }();
 
 }
 
-void test_block_ret() {
-  int *p = ^int*(){ // expected-note {{Calling anonymous block}} expected-note{{Returning to caller}} expected-note {{'p' initialized to a null pointer value}}
+void test_block_ret(void) {
+  int *p = ^int*(void){ // expected-note {{Calling anonymous block}} expected-note{{Returning to caller}} expected-note {{'p' initialized to a null pointer value}}
     int *q = 0; // expected-note {{'q' initialized to a null pointer value}}
     return q; // expected-note {{Returning null pointer (loaded from 'q')}}
   }();
   *p = 1; // expected-warning{{Dereference of null pointer (loaded from variable 'p')}} expected-note{{Dereference of null pointer (loaded from variable 'p')}}
 }
 
-void test_block_blockvar() {
+void test_block_blockvar(void) {
   __block int *p;
-  ^(){ // expected-note{{Calling anonymous block}} expected-note{{Returning to caller}}
+  ^(void){ // expected-note{{Calling anonymous block}} expected-note{{Returning to caller}}
     p = 0; // expected-note{{Null pointer value stored to 'p'}}
   }();
   *p = 1; // expected-warning{{Dereference of null pointer (loaded from variable 'p')}} expected-note{{Dereference of null pointer (loaded from variable 'p')}}
 }
 
-void test_block_arg() {
+void test_block_arg(void) {
   int *p;
   ^(int **q){ // expected-note{{Calling anonymous block}} expected-note{{Returning to caller}}
     *q = 0; // expected-note{{Null pointer value stored to 'p'}}

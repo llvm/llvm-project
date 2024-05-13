@@ -5,12 +5,11 @@
 define i32 @test1() {
 ; CHECK-LABEL: test1:
 ; CHECK:         .word b
-; CHECK-NEXT:    .word .Ltmp0
+; CHECK-NEXT:    .word .LBB0_2
 ; CHECK: // %bb.1:
-; CHECK: .Ltmp0:
-; CHECK: .LBB0_2: // %indirect
+; CHECK: .LBB0_2: // Block address taken
 entry:
-  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "X"(i8* blockaddress(@test1, %indirect))
+  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "!i"()
           to label %cleanup [label %indirect]
 
 indirect:
@@ -24,33 +23,31 @@ cleanup:
 define void @test2() {
 ; CHECK-LABEL: test2:
 entry:
-  %0 = load i32, i32* @X, align 4
+  %0 = load i32, ptr @X, align 4
   %and = and i32 %0, 1
   %tobool = icmp eq i32 %and, 0
   br i1 %tobool, label %if.end10, label %if.then
 
 if.then:
 ; CHECK:       .word b
-; CHECK-NEXT:  .word .Ltmp2
-; CHECK:       .Ltmp2:
-; CHECK-NEXT:  .LBB1_3: // %if.end6
-  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "X"(i8* blockaddress(@test2, %if.end6))
+; CHECK-NEXT:  .word .LBB1_3
+; CHECK:       .LBB1_3: // Block address taken
+  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "!i"()
           to label %if.then4 [label %if.end6]
 
 if.then4:
-  %call5 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
+  %call5 = tail call i32 @g()
   br label %if.end6
 
 if.end6:
-  %.pre = load i32, i32* @X, align 4
+  %.pre = load i32, ptr @X, align 4
   %.pre13 = and i32 %.pre, 1
   %phitmp = icmp eq i32 %.pre13, 0
   br i1 %phitmp, label %if.end10, label %if.then9
 
 if.then9:
-; CHECK: .Ltmp4:
-; CHECK-NEXT:  .LBB1_5: // %l_yes
-  callbr void asm sideeffect "", "X"(i8* blockaddress(@test2, %l_yes))
+; CHECK: .LBB1_5: // Block address taken
+  callbr void asm sideeffect "", "!i"()
           to label %if.end10 [label %l_yes]
 
 if.end10:

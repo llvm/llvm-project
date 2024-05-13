@@ -1,7 +1,7 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1011 -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1012 -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1011 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1012 -emit-llvm -o - %s | FileCheck %s
 
 typedef unsigned int uint;
 typedef unsigned long ulong;
@@ -36,4 +36,11 @@ void test_s_memtime(global ulong* out)
 void test_groupstaticsize(global uint* out)
 {
   *out = __builtin_amdgcn_groupstaticsize();
+}
+
+// CHECK-LABEL: @test_ballot_wave32(
+// CHECK: call i32 @llvm.amdgcn.ballot.i32(i1 %{{.+}})
+void test_ballot_wave32(global uint* out, int a, int b)
+{
+  *out = __builtin_amdgcn_ballot_w32(a == b);
 }

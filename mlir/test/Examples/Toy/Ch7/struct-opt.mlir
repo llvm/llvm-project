@@ -1,6 +1,6 @@
 // RUN: toyc-ch7 %s -emit=mlir -opt 2>&1 | FileCheck %s
 
-func @main() {
+toy.func @main() {
   %0 = toy.struct_constant [
     [dense<4.000000e+00> : tensor<2x2xf64>], dense<4.000000e+00> : tensor<2x2xf64>
   ] : !toy.struct<!toy.struct<tensor<*xf64>>, tensor<*xf64>>
@@ -10,6 +10,6 @@ func @main() {
   toy.return
 }
 
-// CHECK-LABEL: func @main
+// CHECK-LABEL: toy.func @main
 // CHECK-NEXT: %[[CST:.*]] = toy.constant dense<4.0
 // CHECK-NEXT: toy.print %[[CST]]

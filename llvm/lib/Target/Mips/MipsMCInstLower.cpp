@@ -21,7 +21,6 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cassert>
 
 using namespace llvm;
 
@@ -318,8 +317,7 @@ void MipsMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 
   OutMI.setOpcode(MI->getOpcode());
 
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp = LowerOperand(MO);
 
     if (MCOp.isValid())

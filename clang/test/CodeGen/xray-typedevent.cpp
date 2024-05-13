@@ -7,7 +7,7 @@
   auto EventType = 1;
   static constexpr char kPhase[] = "instrument";
   __xray_typedevent(EventType, kPhase, 10);
-  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, i8*{{.*}}, i32 10)
+  // CHECK: call void @llvm.xray.typedevent(i64 {{.*}}, ptr{{.*}}, i64 10)
 }
 
 // CHECK-LABEL: @_Z15neverInstrumentv
@@ -15,7 +15,7 @@
   auto EventType = 2;
   static constexpr char kPhase[] = "never";
   __xray_typedevent(EventType, kPhase, 5);
-  // CHECK-NOT: call void @llvm.xray.typedevent(i16 {{.*}}, i8*{{.*}}, i32 5)
+  // CHECK-NOT: call void @llvm.xray.typedevent(i64 {{.*}}, ptr{{.*}}, i64 5)
 }
 
 // CHECK-LABEL: @_Z21conditionalInstrumenti
@@ -29,6 +29,6 @@
   else
     __xray_typedevent(UntrueEventType, kUntrue, 6);
 
-  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, i8*{{.*}}, i32 4)
-  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, i8*{{.*}}, i32 6)
+  // CHECK: call void @llvm.xray.typedevent(i64 {{.*}}, ptr{{.*}}, i64 4)
+  // CHECK: call void @llvm.xray.typedevent(i64 {{.*}}, ptr{{.*}}, i64 6)
 }

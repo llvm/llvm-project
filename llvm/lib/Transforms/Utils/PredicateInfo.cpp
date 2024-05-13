@@ -15,36 +15,23 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/CFG.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Transforms/Utils.h"
 #include <algorithm>
 #define DEBUG_TYPE "predicateinfo"
 using namespace llvm;
 using namespace PatternMatch;
 
-INITIALIZE_PASS_BEGIN(PredicateInfoPrinterLegacyPass, "print-predicateinfo",
-                      "PredicateInfo Printer", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_END(PredicateInfoPrinterLegacyPass, "print-predicateinfo",
-                    "PredicateInfo Printer", false, false)
 static cl::opt<bool> VerifyPredicateInfo(
     "verify-predicateinfo", cl::init(false), cl::Hidden,
     cl::desc("Verify PredicateInfo in legacy printer pass."));
@@ -491,10 +478,8 @@ void PredicateInfoBuilder::processSwitch(
 
   // Remember how many outgoing edges there are to every successor.
   SmallDenseMap<BasicBlock *, unsigned, 16> SwitchEdges;
-  for (unsigned i = 0, e = SI->getNumSuccessors(); i != e; ++i) {
-    BasicBlock *TargetBlock = SI->getSuccessor(i);
+  for (BasicBlock *TargetBlock : successors(BranchBB))
     ++SwitchEdges[TargetBlock];
-  }
 
   // Now propagate info for each case value
   for (auto C : SI->cases()) {
@@ -515,7 +500,7 @@ void PredicateInfoBuilder::buildPredicateInfo() {
   // Collect operands to rename from all conditional branch terminators, as well
   // as assume statements.
   SmallVector<Value *, 8> OpsToRename;
-  for (auto DTN : depth_first(DT.getRootNode())) {
+  for (auto *DTN : depth_first(DT.getRootNode())) {
     BasicBlock *BranchBB = DTN->getBlock();
     if (auto *BI = dyn_cast<BranchInst>(BranchBB->getTerminator())) {
       if (!BI->isConditional())
@@ -566,10 +551,18 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
     // to ensure we dominate all of our uses.  Always insert right before the
     // relevant instruction (terminator, assume), so that we insert in proper
     // order in the case of multiple predicateinfo in the same block.
+    // The number of named values is used to detect if a new declaration was
+    // added. If so, that declaration is tracked so that it can be removed when
+    // the analysis is done. The corner case were a new declaration results in
+    // a name clash and the old name being renamed is not considered as that
+    // represents an invalid module.
     if (isa<PredicateWithEdge>(ValInfo)) {
       IRBuilder<> B(getBranchTerminator(ValInfo));
+      auto NumDecls = F.getParent()->getNumNamedValues();
       Function *IF = Intrinsic::getDeclaration(
           F.getParent(), Intrinsic::ssa_copy, Op->getType());
+      if (NumDecls != F.getParent()->getNumNamedValues())
+        PI.CreatedDeclarations.insert(IF);
       CallInst *PIC =
           B.CreateCall(IF, Op, Op->getName() + "." + Twine(Counter++));
       PI.PredicateMap.insert({PIC, ValInfo});
@@ -581,8 +574,11 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
       // Insert the predicate directly after the assume. While it also holds
       // directly before it, assume(i1 true) is not a useful fact.
       IRBuilder<> B(PAssume->AssumeInst->getNextNode());
+      auto NumDecls = F.getParent()->getNumNamedValues();
       Function *IF = Intrinsic::getDeclaration(
           F.getParent(), Intrinsic::ssa_copy, Op->getType());
+      if (NumDecls != F.getParent()->getNumNamedValues())
+        PI.CreatedDeclarations.insert(IF);
       CallInst *PIC = B.CreateCall(IF, Op);
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
@@ -621,7 +617,7 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
     // Insert the possible copies into the def/use list.
     // They will become real copies if we find a real use for them, and never
     // created otherwise.
-    for (auto &PossibleCopy : ValueInfo.Infos) {
+    for (const auto &PossibleCopy : ValueInfo.Infos) {
       ValueDFS VD;
       // Determine where we are going to place the copy by the copy type.
       // The predicate info for branches always come first, they will get
@@ -761,7 +757,24 @@ PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
   Builder.buildPredicateInfo();
 }
 
-Optional<PredicateConstraint> PredicateBase::getConstraint() const {
+// Remove all declarations we created . The PredicateInfo consumers are
+// responsible for remove the ssa_copy calls created.
+PredicateInfo::~PredicateInfo() {
+  // Collect function pointers in set first, as SmallSet uses a SmallVector
+  // internally and we have to remove the asserting value handles first.
+  SmallPtrSet<Function *, 20> FunctionPtrs;
+  for (const auto &F : CreatedDeclarations)
+    FunctionPtrs.insert(&*F);
+  CreatedDeclarations.clear();
+
+  for (Function *F : FunctionPtrs) {
+    assert(F->user_begin() == F->user_end() &&
+           "PredicateInfo consumer did not remove all SSA copies.");
+    F->eraseFromParent();
+  }
+}
+
+std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
   switch (Type) {
   case PT_Assume:
   case PT_Branch: {
@@ -778,7 +791,7 @@ Optional<PredicateConstraint> PredicateBase::getConstraint() const {
     CmpInst *Cmp = dyn_cast<CmpInst>(Condition);
     if (!Cmp) {
       // TODO: Make this an assertion once RenamedOp is fully accurate.
-      return None;
+      return std::nullopt;
     }
 
     CmpInst::Predicate Pred;
@@ -791,7 +804,7 @@ Optional<PredicateConstraint> PredicateBase::getConstraint() const {
       OtherOp = Cmp->getOperand(0);
     } else {
       // TODO: Make this an assertion once RenamedOp is fully accurate.
-      return None;
+      return std::nullopt;
     }
 
     // Invert predicate along false edge.
@@ -803,7 +816,7 @@ Optional<PredicateConstraint> PredicateBase::getConstraint() const {
   case PT_Switch:
     if (Condition != RenamedOp) {
       // TODO: Make this an assertion once RenamedOp is fully accurate.
-      return None;
+      return std::nullopt;
     }
 
     return {{CmpInst::ICMP_EQ, cast<PredicateSwitch>(this)->CaseValue}};
@@ -813,28 +826,17 @@ Optional<PredicateConstraint> PredicateBase::getConstraint() const {
 
 void PredicateInfo::verifyPredicateInfo() const {}
 
-char PredicateInfoPrinterLegacyPass::ID = 0;
+// Replace ssa_copy calls created by PredicateInfo with their operand.
+static void replaceCreatedSSACopys(PredicateInfo &PredInfo, Function &F) {
+  for (Instruction &Inst : llvm::make_early_inc_range(instructions(F))) {
+    const auto *PI = PredInfo.getPredicateInfoFor(&Inst);
+    auto *II = dyn_cast<IntrinsicInst>(&Inst);
+    if (!PI || !II || II->getIntrinsicID() != Intrinsic::ssa_copy)
+      continue;
 
-PredicateInfoPrinterLegacyPass::PredicateInfoPrinterLegacyPass()
-    : FunctionPass(ID) {
-  initializePredicateInfoPrinterLegacyPassPass(
-      *PassRegistry::getPassRegistry());
-}
-
-void PredicateInfoPrinterLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
-}
-
-bool PredicateInfoPrinterLegacyPass::runOnFunction(Function &F) {
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC);
-  PredInfo->print(dbgs());
-  if (VerifyPredicateInfo)
-    PredInfo->verifyPredicateInfo();
-  return false;
+    Inst.replaceAllUsesWith(II->getOperand(0));
+    Inst.eraseFromParent();
+  }
 }
 
 PreservedAnalyses PredicateInfoPrinterPass::run(Function &F,
@@ -845,6 +847,7 @@ PreservedAnalyses PredicateInfoPrinterPass::run(Function &F,
   auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC);
   PredInfo->print(OS);
 
+  replaceCreatedSSACopys(*PredInfo, F);
   return PreservedAnalyses::all();
 }
 

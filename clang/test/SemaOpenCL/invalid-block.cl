@@ -1,27 +1,27 @@
 // RUN: %clang_cc1 -verify -fblocks -cl-std=CL2.0 %s
-
+// RUN: %clang_cc1 -verify -fblocks -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables  %s
 // OpenCL v2.0 s6.12.5
-void f0(int (^const bl)()); // expected-error{{declaring function parameter of type 'int (__generic ^const __private)(void)' is not allowed}}
+void f0(int (^const bl)(void)); // expected-error{{declaring function parameter of type 'int (__generic ^const __private)(void)' is not allowed}}
 // All blocks declarations must be const qualified and initialized.
-void f1() {
-  int (^bl1)(void) = ^() {
+void f1(void) {
+  int (^bl1)(void) = ^(void) {
     return 1;
   };
-  int (^const bl2)(void) = ^() {
+  int (^const bl2)(void) = ^(void) {
     return 1;
   };
   f0(bl1);
   f0(bl2);
   bl1 = bl2;          // expected-error{{invalid operands to binary expression ('int (__generic ^const __private)(void)' and 'int (__generic ^const __private)(void)')}}
-  int (^const bl3)(); // expected-error{{invalid block variable declaration - must be initialized}}
+  int (^const bl3)(void); // expected-error{{invalid block variable declaration - must be initialized}}
 }
 
 // A block with extern storage class is not allowed.
-extern int (^bl)(void) = ^() { // expected-error{{invalid block variable declaration - using 'extern' storage class is disallowed}}
+extern int (^bl)(void) = ^(void) { // expected-error{{invalid block variable declaration - using 'extern' storage class is disallowed}}
   return 1;
 };
 void f2() {
-  extern int (^bl)(void) = ^() { // expected-error{{invalid block variable declaration - using 'extern' storage class is disallowed}}
+  extern int (^bl)(void) = ^(void) { // expected-error{{invalid block variable declaration - using 'extern' storage class is disallowed}}
     return 1;
   };
 }
@@ -32,10 +32,10 @@ bl_t f3a(int);     // expected-error{{declaring function return value of type 'b
 bl_t f3b(bl_t bl);
 // expected-error@-1{{declaring function return value of type 'bl_t' (aka 'int (__generic ^const)(void)') is not allowed}}
 // expected-error@-2{{declaring function parameter of type '__private bl_t' (aka 'int (__generic ^const __private)(void)') is not allowed}}
-void f3c() {
+void f3c(void) {
   // Block with a block argument.
-  int (^const bl2)(bl_t block_arg) = ^() { // expected-error{{declaring function parameter of type '__private bl_t' (aka 'int (__generic ^const __private)(void)') is not allowed}}
-    return block_arg(); // expected-error{{implicit declaration of function 'block_arg' is invalid in OpenCL}}
+  int (^const bl2)(bl_t block_arg) = ^(void) { // expected-error{{declaring function parameter of type '__private bl_t' (aka 'int (__generic ^const __private)(void)') is not allowed}}
+    return block_arg(); // expected-error{{use of undeclared identifier 'block_arg'}}
   };
 }
 
@@ -76,7 +76,7 @@ void f6(bl2_t *bl_ptr) { // expected-error{{pointer to type 'bl2_t' (aka 'int (_
   &bl;      // expected-error {{invalid argument type '__private bl2_t' (aka 'int (__generic ^const __private)(__private int)') to unary expression}}
 }
 // A block can't reference another block
-kernel void f7() {
+kernel void f7(void) {
   bl2_t bl1 = ^(int i) {
     return 1;
   };

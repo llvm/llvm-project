@@ -10,7 +10,7 @@
 
 // template<class T>
 //   complex<T>
-//   operator+(const T& lhs, const complex<T>& rhs);
+//   operator+(const T& lhs, const complex<T>& rhs); // constexpr in C++20
 
 #include <complex>
 #include <cassert>
@@ -18,28 +18,21 @@
 #include "test_macros.h"
 
 template <class T>
-void
-test(const T& lhs, const std::complex<T>& rhs, std::complex<T> x)
-{
-    assert(lhs + rhs == x);
-}
-
-template <class T>
-void
+TEST_CONSTEXPR_CXX20
+bool
 test()
 {
     {
-    T lhs(1.5);
-    std::complex<T> rhs(3.5, 4.5);
-    std::complex<T>   x(5.0, 4.5);
-    test(lhs, rhs, x);
+    const T lhs(1.5);
+    const std::complex<T> rhs(3.5, 4.5);
+    assert(lhs + rhs == std::complex<T>(5.0, 4.5));
     }
     {
-    T lhs(1.5);
-    std::complex<T> rhs(-3.5, 4.5);
-    std::complex<T>   x(-2.0, 4.5);
-    test(lhs, rhs, x);
+    const T lhs(1.5);
+    const std::complex<T> rhs(-3.5, 4.5);
+    assert(lhs + rhs == std::complex<T>(-2.0, 4.5));
     }
+    return true;
 }
 
 int main(int, char**)
@@ -47,6 +40,12 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
+
+#if TEST_STD_VER > 17
+    static_assert(test<float>());
+    static_assert(test<double>());
+    static_assert(test<long double>());
+#endif
 
   return 0;
 }

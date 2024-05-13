@@ -1,26 +1,24 @@
-; RUN: opt -hwasan -S -o - %s | FileCheck %s
+; RUN: opt -passes=hwasan -S -o - %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-android24"
 
 define dso_local void @f() sanitize_hwaddress !dbg !14 {
-  %1 = alloca i32, align 4
-  %2 = alloca i32, align 4
-  %3 = bitcast i32* %1 to i8*, !dbg !21
-  %4 = bitcast i32* %2 to i8*, !dbg !21
+  %a1 = alloca i32, align 4
+  %a2 = alloca i32, align 4
 ; CHECK: call void @llvm.dbg.value(metadata i32 1, {{.*}}, metadata !DIExpression())
   call void @llvm.dbg.value(metadata i32 1, metadata !20, metadata !DIExpression()), !dbg !22
-  store i32 1, i32* %2, align 4, !dbg !23, !tbaa !24
-; CHECK: call void @llvm.dbg.value(metadata i32* {{.*}}, metadata !DIExpression(DW_OP_LLVM_tag_offset, 0, DW_OP_deref))
-  call void @llvm.dbg.value(metadata i32* %1, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !22
-  call void @use(i8* nonnull %3), !dbg !28
-; CHECK: call void @llvm.dbg.value(metadata i32* {{.*}}, metadata !DIExpression(DW_OP_LLVM_tag_offset, 128, DW_OP_deref))
-  call void @llvm.dbg.value(metadata i32* %2, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !22
-  call void @use(i8* nonnull %4), !dbg !29
+  store i32 1, ptr %a2, align 4, !dbg !23, !tbaa !24
+; CHECK: call void @llvm.dbg.value(metadata ptr %a1, {{.*}} metadata !DIExpression(DW_OP_LLVM_tag_offset, 0, DW_OP_deref))
+  call void @llvm.dbg.value(metadata ptr %a1, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !22
+  call void @use(ptr nonnull %a1), !dbg !28
+; CHECK: call void @llvm.dbg.value(metadata ptr %a2, {{.*}} metadata !DIExpression(DW_OP_LLVM_tag_offset, 128, DW_OP_deref))
+  call void @llvm.dbg.value(metadata ptr %a2, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !22
+  call void @use(ptr nonnull %a2), !dbg !29
   ret void, !dbg !30
 }
 
-declare !dbg !5 void @use(i8*)
+declare !dbg !5 void @use(ptr)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

@@ -12,12 +12,12 @@ struct {
   const a &d;
 } e[]{nullptr, {}};
 
-// CHECK: define internal void @__cxx_global_array_dtor(i8* %0)
+// CHECK: define internal void @__cxx_global_array_dtor(ptr noundef %0)
 // CHECK-SAME: !dbg ![[SUBPROGRAM:[0-9]+]] {
 // CHECK: arraydestroy.body
 // CHECK: %arraydestroy.elementPast =
 // CHECK-SAME: !dbg ![[LOCATION:[0-9]+]]
-// CHECK: call void @"??1<unnamed-type-e>@@QEAA@XZ"(%struct.anon* {{[^,]*}} %arraydestroy.element)
+// CHECK: call void @"??1<unnamed-type-e>@@QEAA@XZ"(ptr {{[^,]*}} %arraydestroy.element)
 // CHECK-SAME: !dbg ![[LOCATION]]
 // CHECK: ![[SUBPROGRAM]] = distinct !DISubprogram(name: "__cxx_global_array_dtor"
 // CHECK-SAME: flags: DIFlagArtificial

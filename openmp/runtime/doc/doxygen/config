@@ -1048,7 +1048,7 @@ HHC_LOCATION           =
 
 # If the GENERATE_HTMLHELP tag is set to YES, the GENERATE_CHI flag
 # controls if a separate .chi index file is generated (YES) or that
-# it should be included in the master .chm file (NO).
+# it should be included in the main .chm file (NO).
 
 GENERATE_CHI           = NO
 
@@ -1671,7 +1671,7 @@ CLASS_GRAPH            = YES
 # indirect implementation dependencies (inheritance, containment, and
 # class references variables) of the class with other documented classes.
 
-COLLABORATION_GRAPH    = YES
+COLLABORATION_GRAPH    = NO
 
 # If the GROUP_GRAPHS and HAVE_DOT tags are set to YES then doxygen
 # will generate a graph for groups, showing the direct groups dependencies
@@ -1703,14 +1703,14 @@ TEMPLATE_RELATIONS     = YES
 # file showing the direct and indirect include dependencies of the file with
 # other documented files.
 
-INCLUDE_GRAPH          = YES
+INCLUDE_GRAPH          = NO
 
 # If the ENABLE_PREPROCESSING, SEARCH_INCLUDES, INCLUDED_BY_GRAPH, and
 # HAVE_DOT tags are set to YES then doxygen will generate a graph for each
 # documented header file showing the documented files that directly or
 # indirectly include this file.
 
-INCLUDED_BY_GRAPH      = YES
+INCLUDED_BY_GRAPH      = NO
 
 # If the CALL_GRAPH and HAVE_DOT options are set to YES then
 # doxygen will generate a call dependency graph for every global function

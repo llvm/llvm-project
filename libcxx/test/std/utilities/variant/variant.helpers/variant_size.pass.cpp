@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -24,7 +23,7 @@
 
 #include "test_macros.h"
 
-template <class V, size_t E> void test() {
+template <class V, std::size_t E> void test() {
   static_assert(std::variant_size<V>::value == E, "");
   static_assert(std::variant_size<const V>::value == E, "");
   static_assert(std::variant_size<volatile V>::value == E, "");

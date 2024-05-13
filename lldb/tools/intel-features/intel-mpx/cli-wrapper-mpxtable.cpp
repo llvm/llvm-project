@@ -18,8 +18,8 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/TargetParser/Triple.h"
 
 static bool GetPtr(char *cptr, uint64_t &ptr, lldb::SBFrame &frame,
                    lldb::SBCommandReturnObject &result) {
@@ -63,13 +63,13 @@ static void PrintBTEntry(lldb::addr_t lbound, lldb::addr_t ubound,
   const lldb::addr_t one_cmpl64 = ~((lldb::addr_t)0);
   const lldb::addr_t one_cmpl32 = ~((uint32_t)0);
 
-  if ((lbound == one_cmpl64 || one_cmpl32) && ubound == 0) {
-    result.Printf("Null bounds on map: pointer value = 0x%lx\n", value);
+  if ((lbound == one_cmpl64 || lbound == one_cmpl32) && ubound == 0) {
+    result.Printf("Null bounds on map: pointer value = 0x%" PRIu64 "\n", value);
   } else {
-    result.Printf("    lbound = 0x%lx,", lbound);
-    result.Printf(" ubound = 0x%lx", ubound);
-    result.Printf(" (pointer value = 0x%lx,", value);
-    result.Printf(" metadata = 0x%lx)\n", meta);
+    result.Printf("    lbound = 0x%" PRIu64 ",", lbound);
+    result.Printf(" ubound = 0x%" PRIu64 , ubound);
+    result.Printf(" (pointer value = 0x%" PRIu64 ",", value);
+    result.Printf(" metadata = 0x%" PRIu64 ")\n", meta);
   }
 }
 

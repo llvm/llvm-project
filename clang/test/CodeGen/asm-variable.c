@@ -59,7 +59,7 @@ unsigned long long foo2(unsigned long long addr, double a0,
 // CHECK: call i64 asm "call *$1", "={rax},r,{xmm0},{xmm1},{xmm2},{xmm3},{xmm4},{xmm5},{xmm6},{xmm7},~{dirflag},~{fpsr},~{flags}
 
 int randomvar asm("randomvar");
-void foo3() {
+void foo3(void) {
   asm("vartest %0" : : "r"(randomvar));
 }
 // CHECK: call void asm sideeffect "vartest $0", "r,~{dirflag},~{fpsr},~{flags}"

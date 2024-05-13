@@ -17,7 +17,7 @@
 #   error "_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION should be defined on Apple platforms"
 #endif
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(__ARM_ARCH_7M__)
 #   if _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION != 1
 #       error "_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION should be 1 (assume RTTI is merged) on Apple platforms"
 #   endif

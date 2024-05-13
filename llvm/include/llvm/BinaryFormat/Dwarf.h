@@ -19,13 +19,12 @@
 #ifndef LLVM_BINARYFORMAT_DWARF_H
 #define LLVM_BINARYFORMAT_DWARF_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadicDetails.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <limits>
 
@@ -147,6 +146,11 @@ enum LocationAtom {
   DW_OP_LLVM_arg = 0x1005,              ///< Only used in LLVM metadata.
 };
 
+enum LlvmUserLocationAtom {
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) DW_OP_LLVM_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+};
+
 enum TypeKind : uint8_t {
 #define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR) DW_ATE_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -205,6 +209,284 @@ enum SourceLanguage {
   DW_LANG_hi_user = 0xffff
 };
 
+enum SourceLanguageName : uint16_t {
+#define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND) DW_LNAME_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+};
+
+/// Convert a DWARF 6 pair of language name and version to a DWARF 5 DW_LANG.
+/// If the version number doesn't exactly match a known version it is
+/// rounded up to the next-highest known version number.
+inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
+                                               uint32_t version) {
+  switch (name) {
+  case DW_LNAME_Ada: // YYYY
+    if (version <= 1983)
+      return DW_LANG_Ada83;
+    if (version <= 1995)
+      return DW_LANG_Ada95;
+    if (version <= 2005)
+      return DW_LANG_Ada2005;
+    if (version <= 2012)
+      return DW_LANG_Ada2012;
+    return {};
+  case DW_LNAME_BLISS:
+    return DW_LANG_BLISS;
+  case DW_LNAME_C: // YYYYMM, K&R 000000
+    if (version == 0)
+      return DW_LANG_C;
+    if (version <= 198912)
+      return DW_LANG_C89;
+    if (version <= 199901)
+      return DW_LANG_C99;
+    if (version <= 201112)
+      return DW_LANG_C11;
+    if (version <= 201710)
+      return DW_LANG_C17;
+    return {};
+  case DW_LNAME_C_plus_plus: // YYYYMM
+    if (version == 0)
+      return DW_LANG_C_plus_plus;
+    if (version <= 199711)
+      return DW_LANG_C_plus_plus;
+    if (version <= 200310)
+      return DW_LANG_C_plus_plus_03;
+    if (version <= 201103)
+      return DW_LANG_C_plus_plus_11;
+    if (version <= 201402)
+      return DW_LANG_C_plus_plus_14;
+    if (version <= 201703)
+      return DW_LANG_C_plus_plus_17;
+    if (version <= 202002)
+      return DW_LANG_C_plus_plus_20;
+    return {};
+  case DW_LNAME_Cobol: // YYYY
+    if (version <= 1974)
+      return DW_LANG_Cobol74;
+    if (version <= 1985)
+      return DW_LANG_Cobol85;
+    return {};
+  case DW_LNAME_Crystal:
+    return DW_LANG_Crystal;
+  case DW_LNAME_D:
+    return DW_LANG_D;
+  case DW_LNAME_Dylan:
+    return DW_LANG_Dylan;
+  case DW_LNAME_Fortran: // YYYY
+    if (version <= 1977)
+      return DW_LANG_Fortran77;
+    if (version <= 1990)
+      return DW_LANG_Fortran90;
+    if (version <= 1995)
+      return DW_LANG_Fortran95;
+    if (version <= 2003)
+      return DW_LANG_Fortran03;
+    if (version <= 2008)
+      return DW_LANG_Fortran08;
+    if (version <= 2018)
+      return DW_LANG_Fortran18;
+    return {};
+  case DW_LNAME_Go:
+    return DW_LANG_Go;
+  case DW_LNAME_Haskell:
+    return DW_LANG_Haskell;
+  // case DW_LNAME_HIP:
+  //   return DW_LANG_HIP;
+  case DW_LNAME_Java:
+    return DW_LANG_Java;
+  case DW_LNAME_Julia:
+    return DW_LANG_Julia;
+  case DW_LNAME_Kotlin:
+    return DW_LANG_Kotlin;
+  case DW_LNAME_Modula2:
+    return DW_LANG_Modula2;
+  case DW_LNAME_Modula3:
+    return DW_LANG_Modula3;
+  case DW_LNAME_ObjC:
+    return DW_LANG_ObjC;
+  case DW_LNAME_ObjC_plus_plus:
+    return DW_LANG_ObjC_plus_plus;
+  case DW_LNAME_OCaml:
+    return DW_LANG_OCaml;
+  case DW_LNAME_OpenCL_C:
+    return DW_LANG_OpenCL;
+  case DW_LNAME_Pascal:
+    return DW_LANG_Pascal83;
+  case DW_LNAME_PLI:
+    return DW_LANG_PLI;
+  case DW_LNAME_Python:
+    return DW_LANG_Python;
+  case DW_LNAME_RenderScript:
+    return DW_LANG_RenderScript;
+  case DW_LNAME_Rust:
+    return DW_LANG_Rust;
+  case DW_LNAME_Swift:
+    return DW_LANG_Swift;
+  case DW_LNAME_UPC:
+    return DW_LANG_UPC;
+  case DW_LNAME_Zig:
+    return DW_LANG_Zig;
+  case DW_LNAME_Assembly:
+    return DW_LANG_Assembly;
+  case DW_LNAME_C_sharp:
+    return DW_LANG_C_sharp;
+  case DW_LNAME_Mojo:
+    return DW_LANG_Mojo;
+  case DW_LNAME_GLSL:
+    return DW_LANG_GLSL;
+  case DW_LNAME_GLSL_ES:
+    return DW_LANG_GLSL_ES;
+  case DW_LNAME_HLSL:
+    return DW_LANG_HLSL;
+  case DW_LNAME_OpenCL_CPP:
+    return DW_LANG_OpenCL_CPP;
+  case DW_LNAME_CPP_for_OpenCL:
+    return {};
+  case DW_LNAME_SYCL:
+    return DW_LANG_SYCL;
+  case DW_LNAME_Ruby:
+    return DW_LANG_Ruby;
+  case DW_LNAME_Move:
+    return DW_LANG_Move;
+  case DW_LNAME_Hylo:
+    return DW_LANG_Hylo;
+  }
+  return {};
+}
+
+/// Convert a DWARF 5 DW_LANG to a DWARF 6 pair of language name and version.
+inline std::optional<std::pair<SourceLanguageName, uint32_t>>
+toDW_LNAME(SourceLanguage language) {
+  switch (language) {
+  case DW_LANG_Ada83:
+    return {{DW_LNAME_Ada, 1983}};
+  case DW_LANG_Ada95:
+    return {{DW_LNAME_Ada, 1995}};
+  case DW_LANG_Ada2005:
+    return {{DW_LNAME_Ada, 2005}};
+  case DW_LANG_Ada2012:
+    return {{DW_LNAME_Ada, 2012}};
+  case DW_LANG_BLISS:
+    return {{DW_LNAME_BLISS, 0}};
+  case DW_LANG_C:
+    return {{DW_LNAME_C, 0}};
+  case DW_LANG_C89:
+    return {{DW_LNAME_C, 198912}};
+  case DW_LANG_C99:
+    return {{DW_LNAME_C, 199901}};
+  case DW_LANG_C11:
+    return {{DW_LNAME_C, 201112}};
+  case DW_LANG_C17:
+    return {{DW_LNAME_C, 201712}};
+  case DW_LANG_C_plus_plus:
+    return {{DW_LNAME_C_plus_plus, 0}};
+  case DW_LANG_C_plus_plus_03:
+    return {{DW_LNAME_C_plus_plus, 200310}};
+  case DW_LANG_C_plus_plus_11:
+    return {{DW_LNAME_C_plus_plus, 201103}};
+  case DW_LANG_C_plus_plus_14:
+    return {{DW_LNAME_C_plus_plus, 201402}};
+  case DW_LANG_C_plus_plus_17:
+    return {{DW_LNAME_C_plus_plus, 201703}};
+  case DW_LANG_C_plus_plus_20:
+    return {{DW_LNAME_C_plus_plus, 202002}};
+  case DW_LANG_Cobol74:
+    return {{DW_LNAME_Cobol, 1974}};
+  case DW_LANG_Cobol85:
+    return {{DW_LNAME_Cobol, 1985}};
+  case DW_LANG_Crystal:
+    return {{DW_LNAME_Crystal, 0}};
+  case DW_LANG_D:
+    return {{DW_LNAME_D, 0}};
+  case DW_LANG_Dylan:
+    return {{DW_LNAME_Dylan, 0}};
+  case DW_LANG_Fortran77:
+    return {{DW_LNAME_Fortran, 1977}};
+  case DW_LANG_Fortran90:
+    return {{DW_LNAME_Fortran, 1990}};
+  case DW_LANG_Fortran95:
+    return {{DW_LNAME_Fortran, 1995}};
+  case DW_LANG_Fortran03:
+    return {{DW_LNAME_Fortran, 2003}};
+  case DW_LANG_Fortran08:
+    return {{DW_LNAME_Fortran, 2008}};
+  case DW_LANG_Fortran18:
+    return {{DW_LNAME_Fortran, 2018}};
+  case DW_LANG_Go:
+    return {{DW_LNAME_Go, 0}};
+  case DW_LANG_Haskell:
+    return {{DW_LNAME_Haskell, 0}};
+  case DW_LANG_HIP:
+    return {}; // return {{DW_LNAME_HIP, 0}};
+  case DW_LANG_Java:
+    return {{DW_LNAME_Java, 0}};
+  case DW_LANG_Julia:
+    return {{DW_LNAME_Julia, 0}};
+  case DW_LANG_Kotlin:
+    return {{DW_LNAME_Kotlin, 0}};
+  case DW_LANG_Modula2:
+    return {{DW_LNAME_Modula2, 0}};
+  case DW_LANG_Modula3:
+    return {{DW_LNAME_Modula3, 0}};
+  case DW_LANG_ObjC:
+    return {{DW_LNAME_ObjC, 0}};
+  case DW_LANG_ObjC_plus_plus:
+    return {{DW_LNAME_ObjC_plus_plus, 0}};
+  case DW_LANG_OCaml:
+    return {{DW_LNAME_OCaml, 0}};
+  case DW_LANG_OpenCL:
+    return {{DW_LNAME_OpenCL_C, 0}};
+  case DW_LANG_Pascal83:
+    return {{DW_LNAME_Pascal, 1983}};
+  case DW_LANG_PLI:
+    return {{DW_LNAME_PLI, 0}};
+  case DW_LANG_Python:
+    return {{DW_LNAME_Python, 0}};
+  case DW_LANG_RenderScript:
+  case DW_LANG_GOOGLE_RenderScript:
+    return {{DW_LNAME_RenderScript, 0}};
+  case DW_LANG_Rust:
+    return {{DW_LNAME_Rust, 0}};
+  case DW_LANG_Swift:
+    return {{DW_LNAME_Swift, 0}};
+  case DW_LANG_UPC:
+    return {{DW_LNAME_UPC, 0}};
+  case DW_LANG_Zig:
+    return {{DW_LNAME_Zig, 0}};
+  case DW_LANG_Assembly:
+  case DW_LANG_Mips_Assembler:
+    return {{DW_LNAME_Assembly, 0}};
+  case DW_LANG_C_sharp:
+    return {{DW_LNAME_C_sharp, 0}};
+  case DW_LANG_Mojo:
+    return {{DW_LNAME_Mojo, 0}};
+  case DW_LANG_GLSL:
+    return {{DW_LNAME_GLSL, 0}};
+  case DW_LANG_GLSL_ES:
+    return {{DW_LNAME_GLSL_ES, 0}};
+  case DW_LANG_HLSL:
+    return {{DW_LNAME_HLSL, 0}};
+  case DW_LANG_OpenCL_CPP:
+    return {{DW_LNAME_OpenCL_CPP, 0}};
+  case DW_LANG_SYCL:
+    return {{DW_LNAME_SYCL, 0}};
+  case DW_LANG_Ruby:
+    return {{DW_LNAME_Ruby, 0}};
+  case DW_LANG_Move:
+    return {{DW_LNAME_Move, 0}};
+  case DW_LANG_Hylo:
+    return {{DW_LNAME_Hylo, 0}};
+  case DW_LANG_BORLAND_Delphi:
+  case DW_LANG_CPP_for_OpenCL:
+  case DW_LANG_lo_user:
+  case DW_LANG_hi_user:
+    return {};
+  }
+  return {};
+}
+
+llvm::StringRef LanguageDescription(SourceLanguageName name);
+
 inline bool isCPlusPlus(SourceLanguage S) {
   bool result = false;
   // Deliberately enumerate all the language options so we get a warning when
@@ -215,6 +497,8 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_C_plus_plus_03:
   case DW_LANG_C_plus_plus_11:
   case DW_LANG_C_plus_plus_14:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
     result = true;
     break;
   case DW_LANG_C89:
@@ -255,6 +539,26 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_C17:
+  case DW_LANG_Fortran18:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
+  case DW_LANG_HIP:
+  case DW_LANG_Assembly:
+  case DW_LANG_C_sharp:
+  case DW_LANG_Mojo:
+  case DW_LANG_GLSL:
+  case DW_LANG_GLSL_ES:
+  case DW_LANG_HLSL:
+  case DW_LANG_OpenCL_CPP:
+  case DW_LANG_CPP_for_OpenCL:
+  case DW_LANG_SYCL:
+  case DW_LANG_Ruby:
+  case DW_LANG_Move:
+  case DW_LANG_Hylo:
     result = false;
     break;
   }
@@ -273,6 +577,7 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_Fortran95:
   case DW_LANG_Fortran03:
   case DW_LANG_Fortran08:
+  case DW_LANG_Fortran18:
     result = true;
     break;
   case DW_LANG_C89:
@@ -312,11 +617,111 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
+  case DW_LANG_C17:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
+  case DW_LANG_HIP:
+  case DW_LANG_Assembly:
+  case DW_LANG_C_sharp:
+  case DW_LANG_Mojo:
+  case DW_LANG_GLSL:
+  case DW_LANG_GLSL_ES:
+  case DW_LANG_HLSL:
+  case DW_LANG_OpenCL_CPP:
+  case DW_LANG_CPP_for_OpenCL:
+  case DW_LANG_SYCL:
+  case DW_LANG_Ruby:
+  case DW_LANG_Move:
+  case DW_LANG_Hylo:
     result = false;
     break;
   }
 
   return result;
+}
+
+inline bool isC(SourceLanguage S) {
+  // Deliberately enumerate all the language options so we get a warning when
+  // new language options are added (-Wswitch) that'll hopefully help keep this
+  // switch up-to-date when new C++ versions are added.
+  switch (S) {
+  case DW_LANG_C11:
+  case DW_LANG_C17:
+  case DW_LANG_C89:
+  case DW_LANG_C99:
+  case DW_LANG_C:
+  case DW_LANG_ObjC:
+    return true;
+  case DW_LANG_C_plus_plus:
+  case DW_LANG_C_plus_plus_03:
+  case DW_LANG_C_plus_plus_11:
+  case DW_LANG_C_plus_plus_14:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
+  case DW_LANG_Ada83:
+  case DW_LANG_Cobol74:
+  case DW_LANG_Cobol85:
+  case DW_LANG_Fortran77:
+  case DW_LANG_Fortran90:
+  case DW_LANG_Pascal83:
+  case DW_LANG_Modula2:
+  case DW_LANG_Java:
+  case DW_LANG_Ada95:
+  case DW_LANG_Fortran95:
+  case DW_LANG_PLI:
+  case DW_LANG_ObjC_plus_plus:
+  case DW_LANG_UPC:
+  case DW_LANG_D:
+  case DW_LANG_Python:
+  case DW_LANG_OpenCL:
+  case DW_LANG_Go:
+  case DW_LANG_Modula3:
+  case DW_LANG_Haskell:
+  case DW_LANG_OCaml:
+  case DW_LANG_Rust:
+  case DW_LANG_Swift:
+  case DW_LANG_Julia:
+  case DW_LANG_Dylan:
+  case DW_LANG_Fortran03:
+  case DW_LANG_Fortran08:
+  case DW_LANG_RenderScript:
+  case DW_LANG_BLISS:
+  case DW_LANG_Mips_Assembler:
+  case DW_LANG_GOOGLE_RenderScript:
+  case DW_LANG_BORLAND_Delphi:
+  case DW_LANG_lo_user:
+  case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_Fortran18:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
+  case DW_LANG_HIP:
+  case DW_LANG_Assembly:
+  case DW_LANG_C_sharp:
+  case DW_LANG_Mojo:
+  case DW_LANG_GLSL:
+  case DW_LANG_GLSL_ES:
+  case DW_LANG_HLSL:
+  case DW_LANG_OpenCL_CPP:
+  case DW_LANG_CPP_for_OpenCL:
+  case DW_LANG_SYCL:
+  case DW_LANG_Ruby:
+  case DW_LANG_Move:
+  case DW_LANG_Hylo:
+    return false;
+  }
+  llvm_unreachable("Unknown language kind.");
+}
+
+inline TypeKind getArrayIndexTypeEncoding(SourceLanguage S) {
+  return isFortran(S) ? DW_ATE_signed : DW_ATE_unsigned;
 }
 
 enum CaseSensitivity {
@@ -522,6 +927,15 @@ enum AcceleratorTable {
   DW_hash_function_djb = 0u
 };
 
+// Return a suggested bucket count for the DWARF v5 Accelerator Table.
+inline uint32_t getDebugNamesBucketCount(uint32_t UniqueHashCount) {
+  if (UniqueHashCount > 1024)
+    return UniqueHashCount / 4;
+  if (UniqueHashCount > 16)
+    return UniqueHashCount / 2;
+  return std::max<uint32_t>(UniqueHashCount, 1);
+}
+
 // Constants for the GNU pubnames/pubtypes extensions supporting gdb index.
 enum GDBIndexEntryKind {
   GIEK_NONE,
@@ -548,6 +962,8 @@ StringRef ChildrenString(unsigned Children);
 StringRef AttributeString(unsigned Attribute);
 StringRef FormEncodingString(unsigned Encoding);
 StringRef OperationEncodingString(unsigned Encoding);
+StringRef SubOperationEncodingString(unsigned OpEncoding,
+                                     unsigned SubOpEncoding);
 StringRef AttributeEncodingString(unsigned Encoding);
 StringRef DecimalSignString(unsigned Sign);
 StringRef EndianityString(unsigned Endian);
@@ -591,6 +1007,8 @@ StringRef RLEString(unsigned RLE);
 /// @{
 unsigned getTag(StringRef TagString);
 unsigned getOperationEncoding(StringRef OperationEncodingString);
+unsigned getSubOperationEncoding(unsigned OpEncoding,
+                                 StringRef SubOperationEncodingString);
 unsigned getVirtuality(StringRef VirtualityString);
 unsigned getLanguage(StringRef LanguageString);
 unsigned getCallingConvention(StringRef LanguageString);
@@ -629,7 +1047,7 @@ unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
 
-Optional<unsigned> LanguageLowerBound(SourceLanguage L);
+std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
 /// The size of a reference determined by the DWARF 32/64-bit format.
 inline uint8_t getDwarfOffsetByteSize(DwarfFormat Format) {
@@ -649,6 +1067,9 @@ struct FormParams {
   uint16_t Version;
   uint8_t AddrSize;
   DwarfFormat Format;
+  /// True if DWARF v2 output generally uses relocations for references
+  /// to other .debug_* sections.
+  bool DwarfUsesRelocationsAcrossSections = false;
 
   /// The definition of the size of form DW_FORM_ref_addr depends on the
   /// version. In DWARF v2 it's the size of an address; after that, it's the
@@ -682,13 +1103,14 @@ inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
 ///
 /// If the form has a fixed byte size, then an Optional with a value will be
 /// returned. If the form is always encoded using a variable length storage
-/// format (ULEB or SLEB numbers or blocks) then None will be returned.
+/// format (ULEB or SLEB numbers or blocks) then std::nullopt will be returned.
 ///
 /// \param Form DWARF form to get the fixed byte size for.
 /// \param Params DWARF parameters to help interpret forms.
-/// \returns Optional<uint8_t> value with the fixed byte size or None if
-/// \p Form doesn't have a fixed byte size.
-Optional<uint8_t> getFixedFormByteSize(dwarf::Form Form, FormParams Params);
+/// \returns std::optional<uint8_t> value with the fixed byte size or
+/// std::nullopt if \p Form doesn't have a fixed byte size.
+std::optional<uint8_t> getFixedFormByteSize(dwarf::Form Form,
+                                            FormParams Params);
 
 /// Tells whether the specified form is defined in the specified version,
 /// or is an extension if extensions are allowed.

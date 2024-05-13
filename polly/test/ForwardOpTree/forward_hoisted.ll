@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Move %val to %bodyB, so %bodyA can be removed (by -polly-simplify).
 ; This involves making the load-hoisted %val1 to be made available in %bodyB.
@@ -11,7 +11,7 @@
 ;   A[0] = val;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -21,12 +21,12 @@ for:
   br i1 %j.cmp, label %bodyA, label %exit
 
     bodyA:
-      %val1 = load double, double* %B
+      %val1 = load double, ptr %B
       %val2 = fadd double %val1, 21.0
       br label %bodyB
 
     bodyB:
-      store double %val2, double* %A
+      store double %val2, ptr %A
       br label %inc
 
 inc:
@@ -52,7 +52,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyA[i0] -> MemRef_val2[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val1 = load double, double* %B, align 8
+; CHECK-NEXT:                   %val1 = load double, ptr %B, align 8
 ; CHECK-NEXT:                   %val2 = fadd double %val1, 2.100000e+01
 ; CHECK-NEXT:                 }
 ; CHECK-NEXT:     Stmt_bodyB
@@ -60,6 +60,6 @@ return:
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   %val2 = fadd double %val1, 2.100000e+01
-; CHECK-NEXT:                   store double %val2, double* %A, align 8
+; CHECK-NEXT:                   store double %val2, ptr %A, align 8
 ; CHECK-NEXT:                 }
 ; CHECK-NEXT: }

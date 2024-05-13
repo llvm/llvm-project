@@ -11,8 +11,8 @@
 // RUN: not %clang -std=gnu++1z %s -fsyntax-only 2>&1 | FileCheck -check-prefix=GNUXX1Z %s
 // RUN: not %clang -std=c++2a %s -fsyntax-only 2>&1 | FileCheck -check-prefix=CXX2A %s
 // RUN: not %clang -std=gnu++2a %s -fsyntax-only 2>&1 | FileCheck -check-prefix=GNUXX2A %s
-// RUN: not %clang -std=c++2b %s -fsyntax-only 2>&1 | FileCheck -check-prefix=CXX2B %s
-// RUN: not %clang -std=gnu++2b %s -fsyntax-only 2>&1 | FileCheck -check-prefix=GNUXX2B %s
+// RUN: not %clang -std=c++23 %s -fsyntax-only 2>&1 | FileCheck -check-prefix=CXX2B %s
+// RUN: not %clang -std=gnu++23 %s -fsyntax-only 2>&1 | FileCheck -check-prefix=GNUXX2B %s
 
 void f(int n) {
   typeof(n)();

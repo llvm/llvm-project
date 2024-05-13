@@ -39,7 +39,7 @@ def SDT_LanaiAdjDynAlloc  : SDTypeProfile<1,  1, [SDTCisVT<0, i32>,
 def Call             : SDNode<"LanaiISD::CALL", SDT_LanaiCall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                SDNPVariadic]>;
-def RetFlag          : SDNode<"LanaiISD::RET_FLAG", SDTNone,
+def RetGlue          : SDNode<"LanaiISD::RET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def CallSeqStart     : SDNode<"ISD::CALLSEQ_START", SDT_LanaiCallSeqStart,
                               [SDNPHasChain, SDNPOutGlue]>;
@@ -269,7 +269,7 @@ def splsIdempotent : InstrMapping {
 // -------------------------------------------------- //
 // ALU instructions
 // -------------------------------------------------- //
-multiclass ALUbase<bits<3> subOp, string AsmStr, SDNode OpNode,
+multiclass ALUbase<bits<3> subOp, string AsmStr,
                    PatLeaf LoExt, PatLeaf HiExt,
                    list<dag> loPattern, list<dag> hiPattern> {
   // Register Immediate
@@ -286,7 +286,7 @@ multiclass ALUbase<bits<3> subOp, string AsmStr, SDNode OpNode,
 
 multiclass ALUarith<bits<3> subOp, string AsmStr, SDNode OpNode,
                     PatLeaf LoExt, PatLeaf HiExt> {
-  defm I_ : ALUbase<subOp, AsmStr, OpNode, LoExt, HiExt, [], []>;
+  defm I_ : ALUbase<subOp, AsmStr, LoExt, HiExt, [], []>;
 
   // Register Register
   let JJJJJ = 0 in
@@ -297,7 +297,7 @@ multiclass ALUarith<bits<3> subOp, string AsmStr, SDNode OpNode,
 
 multiclass ALUlogic<bits<3> subOp, string AsmStr, SDNode OpNode,
                     PatLeaf LoExt, PatLeaf HiExt> {
-  defm I_ : ALUbase<subOp, AsmStr, OpNode, LoExt, HiExt,
+  defm I_ : ALUbase<subOp, AsmStr, LoExt, HiExt,
                     [(set GPR:$Rd, (OpNode GPR:$Rs1, LoExt:$imm16))],
                     [(set GPR:$Rd, (OpNode GPR:$Rs1, HiExt:$imm16))]>;
 
@@ -732,7 +732,7 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
     Uses = [RCA] in {
   def RET : InstRM<0b0, (outs), (ins),
                    "ld\t-4[%fp], %pc ! return",
-                   [(RetFlag)]> {
+                   [(RetGlue)]> {
     let Rd = PC.Num;
     let Rs1 = FP.Num;
     let P = 1;

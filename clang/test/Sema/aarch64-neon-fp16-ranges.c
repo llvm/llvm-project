@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-linux-gnu -fallow-half-arguments-and-returns -target-feature +neon -target-feature +fullfp16 -ffreestanding -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fallow-half-arguments-and-returns -target-feature +fullfp16 -target-feature +neon -ffreestanding -fsyntax-only -verify %s    
+// RUN: %clang_cc1 -triple arm64-linux-gnu -target-feature +neon -target-feature +fullfp16 -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +fullfp16 -target-feature +neon -ffreestanding -fsyntax-only -verify %s
+
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_neon.h>
 #include <arm_fp16.h>

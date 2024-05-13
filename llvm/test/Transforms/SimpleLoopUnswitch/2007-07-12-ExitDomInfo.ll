@@ -1,7 +1,6 @@
-; RUN: opt < %s -simple-loop-unswitch -instcombine -disable-output
-; RUN: opt < %s -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -instcombine -disable-output
+; RUN: opt < %s -passes='loop(simple-loop-unswitch),instcombine' -verify-memoryssa -disable-output
 
-@str3 = external constant [3 x i8]		; <[3 x i8]*> [#uses=1]
+@str3 = external constant [3 x i8]		; <ptr> [#uses=1]
 
 define i32 @stringSearch_Clib(i32 %count) {
 entry:
@@ -16,9 +15,9 @@ bb36.outer:		; preds = %bb41, %bb36.preheader
 	br i1 %ttmp33, label %bb.nph, label %bb41
 
 bb.nph:		; preds = %bb36.outer
-	%ttmp8 = icmp eq i8* null, null		; <i1> [#uses=1]
-	%ttmp6 = icmp eq i8* null, null		; <i1> [#uses=1]
-	%tmp31 = call i32 @strcspn( i8* null, i8* getelementptr ([3 x i8], [3 x i8]* @str3, i64 0, i64 0) )		; <i32> [#uses=1]
+	%ttmp8 = icmp eq ptr null, null		; <i1> [#uses=1]
+	%ttmp6 = icmp eq ptr null, null		; <i1> [#uses=1]
+	%tmp31 = call i32 @strcspn( ptr null, ptr @str3 )		; <i32> [#uses=1]
 	br i1 %ttmp8, label %cond_next, label %cond_true
 
 cond_true:		; preds = %bb.nph
@@ -43,4 +42,4 @@ bb44:		; preds = %bb41, %entry
 	ret i32 %c.01.1
 }
 
-declare i32 @strcspn(i8*, i8*)
+declare i32 @strcspn(ptr, ptr)

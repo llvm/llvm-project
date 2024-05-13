@@ -11,7 +11,7 @@
 // deque()
 // deque::iterator()
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_INCOMPLETE_TYPES_IN_DEQUE
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ABI_INCOMPLETE_TYPES_IN_DEQUE
 
 #include <deque>
 #include <cassert>

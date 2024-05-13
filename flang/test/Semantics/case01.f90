@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test SELECT CASE Constraints: C1145, C1146, C1147, C1148, C1149
 program selectCaseProg
    implicit none
@@ -69,7 +69,7 @@ program selectCaseProg
 
   ! C1147
   select case (grade2)
-     !ERROR: CASE value has type 'CHARACTER(1)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=1,LEN=1_8)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
      case (:'Z')
      case default
    end select
@@ -94,19 +94,19 @@ program selectCaseProg
      case (.true. :)
      !ERROR: CASE value has type 'REAL(4)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
      case (1.0)
-     !ERROR: CASE value has type 'CHARACTER(1)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=1,LEN=3_8)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
      case ('wow')
   end select
 
   select case (ASCII_parm1)
      case (ASCII_parm2)
-     !ERROR: CASE value has type 'CHARACTER(4)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(1)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=4,LEN=1_8)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(KIND=1,LEN=1_8)'
      case (UCS32_parm)
-     !ERROR: CASE value has type 'CHARACTER(2)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(1)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=2,LEN=1_8)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(KIND=1,LEN=1_8)'
      case (UCS16_parm)
-     !ERROR: CASE value has type 'CHARACTER(4)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(1)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=4,LEN=6_8)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(KIND=1,LEN=1_8)'
      case (4_"ucs-32")
-     !ERROR: CASE value has type 'CHARACTER(2)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(1)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=2,LEN=6_8)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(KIND=1,LEN=1_8)'
      case (2_"ucs-16")
      case default
    end select
@@ -129,7 +129,8 @@ program selectCaseProg
   end select
 
   select case (grade2)
-     case (51:50) ! warning
+     !WARNING: CASE has lower bound greater than upper bound
+     case (51:50)
      case (100:)
      case (:30)
      case (40)
@@ -164,7 +165,7 @@ program selectCaseProg
 
 end program
 
-program test_overlap
+subroutine test_overlap
   integer :: i
   !OK: these cases do not overlap
   select case(i)
@@ -175,5 +176,26 @@ program test_overlap
     case(-1:)
     !ERROR: CASE (:0_4) conflicts with previous cases
     case(:0)
+  end select
+end
+
+subroutine test_overflow
+  integer :: j
+  select case(1_1)
+  case (127)
+  !WARNING: CASE value (128_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  case (128)
+  !WARNING: CASE value (129_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  !WARNING: CASE value (130_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  case (129:130)
+  !WARNING: CASE value (-130_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  !WARNING: CASE value (-129_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  case (-130:-129)
+  case (-128)
+  !ERROR: Must be a scalar value, but is a rank-1 array
+  case ([1, 2])
+  !ERROR: Must be a constant value
+  case (j)
+  case default
   end select
 end

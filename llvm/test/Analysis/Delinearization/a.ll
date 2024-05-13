@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -delinearize | FileCheck %s
 ; RUN: opt < %s -passes='print<delinearization>' -disable-output 2>&1 | FileCheck %s
 ;
 ; void foo(long n, long m, long o, int A[n][m][o]) {
@@ -11,9 +10,9 @@
 ; AddRec: {{{(28 + (4 * (-4 + (3 * %m)) * %o) + %A),+,(8 * %m * %o)}<%for.i>,+,(12 * %o)}<%for.j>,+,20}<%for.k>
 ; CHECK: Base offset: %A
 ; CHECK: ArrayDecl[UnknownSize][%m][%o] with elements of 4 bytes.
-; CHECK: ArrayRef[{3,+,2}<nw><%for.i>][{-4,+,3}<nw><%for.j>][{7,+,5}<nw><%for.k>]
+; CHECK: ArrayRef[{3,+,2}<nuw><%for.i>][{-4,+,3}<nw><%for.j>][{7,+,5}<nw><%for.k>]
 
-define void @foo(i64 %n, i64 %m, i64 %o, i32* nocapture %A) #0 {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr nocapture %A) #0 {
 entry:
   %cmp32 = icmp sgt i64 %n, 0
   br i1 %cmp32, label %for.cond1.preheader.lr.ph, label %for.end17
@@ -53,8 +52,8 @@ for.k:                                  ; preds = %for.k, %for.j
   %mul.us.us = mul nsw i64 %k.029.us.us, 5
   %arrayidx.sum.us.us = add i64 %mul.us.us, 7
   %arrayidx10.sum.us.us = add i64 %arrayidx.sum.us.us, %tmp27.us.us
-  %arrayidx11.us.us = getelementptr inbounds i32, i32* %A, i64 %arrayidx10.sum.us.us
-  store i32 1, i32* %arrayidx11.us.us, align 4
+  %arrayidx11.us.us = getelementptr inbounds i32, ptr %A, i64 %arrayidx10.sum.us.us
+  store i32 1, ptr %arrayidx11.us.us, align 4
   %inc.us.us = add nsw i64 %k.029.us.us, 1
   %exitcond = icmp eq i64 %inc.us.us, %o
   br i1 %exitcond, label %for.inc12.us.us, label %for.k

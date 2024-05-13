@@ -12,6 +12,7 @@
 
 // UNSUPPORTED: c++03
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -52,8 +53,9 @@ test(int P, C& c1)
     CI i = c1.emplace(c1.begin() + P, Emplaceable(1, 2.5));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + 1);
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     assert(*i == Emplaceable(1, 2.5));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
 }
 
 template <class C>
@@ -102,6 +104,13 @@ int main(int, char**)
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < N; ++j)
             testN<std::deque<Emplaceable, min_allocator<Emplaceable>> >(rng[i], rng[j]);
+    }
+    {
+    int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+    const int N = sizeof(rng)/sizeof(rng[0]);
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+            testN<std::deque<Emplaceable, safe_allocator<Emplaceable>> >(rng[i], rng[j]);
     }
 
   return 0;

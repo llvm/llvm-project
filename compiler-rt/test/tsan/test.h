@@ -1,3 +1,6 @@
+#ifndef __TSAN_TEST_H__
+#define __TSAN_TEST_H__
+
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,10 +17,23 @@
 #include <mach/mach_time.h>
 #endif
 
+#ifndef TSAN_VECTORIZE
+#  define TSAN_VECTORIZE __SSE4_2__
+#endif
+
+#if TSAN_VECTORIZE
+#  include <emmintrin.h>
+#  include <smmintrin.h>
+#else
+struct __m128i {
+  unsigned long long x[2];
+};
+#endif
+
 // TSan-invisible barrier.
 // Tests use it to establish necessary execution order in a way that does not
 // interfere with tsan (does not establish synchronization between threads).
-typedef unsigned long long invisible_barrier_t;
+typedef unsigned invisible_barrier_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,13 +72,14 @@ unsigned long long monotonic_clock_ns() {
 #endif
 
 //The const kPCInc must be in sync with StackTrace::GetPreviousInstructionPc
-#if defined(__powerpc64__) || defined(__arm__) || defined(__aarch64__)
-// PCs are always 4 byte aligned.
-const int kPCInc = 4;
+#if defined(__s390__) || defined(__i386__) || defined(__x86_64__)
+const int kPCInc = 1;
 #elif defined(__sparc__) || defined(__mips__)
 const int kPCInc = 8;
+#elif defined(__riscv) && __riscv_xlen == 64
+const int kPCInc = 2;
 #else
-const int kPCInc = 1;
+const int kPCInc = 4;
 #endif
 
 #ifdef __cplusplus
@@ -88,8 +105,10 @@ void AnnotateIgnoreSyncEnd(const char *f, int l);
 void AnnotateHappensBefore(const char *f, int l, void *addr);
 void AnnotateHappensAfter(const char *f, int l, void *addr);
 
-void AnnotateBenignRaceSized(const char *f, int l, void *mem, unsigned int size, const char *desc);
-void WTFAnnotateBenignRaceSized(const char *f, int l, void *mem, unsigned int size, const char *desc);
+void AnnotateBenignRaceSized(const char *f, int l, const volatile void *mem,
+                             unsigned int size, const char *desc);
+void WTFAnnotateBenignRaceSized(const char *f, int l, const volatile void *mem,
+                                unsigned int size, const char *desc);
 
 #ifdef __cplusplus
 }
@@ -119,3 +138,5 @@ void WTFAnnotateBenignRaceSized(const char *f, int l, void *mem, unsigned int si
 #else
 #define ASM_SYMBOL(symbol) #symbol
 #endif
+
+#endif // __TSAN_TEST_H__

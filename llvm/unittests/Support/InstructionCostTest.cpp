@@ -71,8 +71,24 @@ TEST_F(CostTest, Operators) {
 
   // Test value extraction
   EXPECT_EQ(*(VThree.getValue()), 3);
-  EXPECT_EQ(IThreeA.getValue(), None);
+  EXPECT_EQ(IThreeA.getValue(), std::nullopt);
 
   EXPECT_EQ(std::min(VThree, VNegTwo), -2);
   EXPECT_EQ(std::max(VThree, VSix), 6);
+
+  // Test saturation
+  auto Max = InstructionCost::getMax();
+  auto Min = InstructionCost::getMin();
+  auto MinusOne = InstructionCost(-1);
+  auto MinusTwo = InstructionCost(-2);
+  auto One = InstructionCost(1);
+  auto Two = InstructionCost(2);
+  EXPECT_EQ(Max + One, Max);
+  EXPECT_EQ(Min + MinusOne, Min);
+  EXPECT_EQ(Min - One, Min);
+  EXPECT_EQ(Max - MinusOne, Max);
+  EXPECT_EQ(Max * Two, Max);
+  EXPECT_EQ(Min * Two, Min);
+  EXPECT_EQ(Max * MinusTwo, Min);
+  EXPECT_EQ(Min * MinusTwo, Max);
 }

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8m.main %s -o - | FileCheck %s --check-prefix=CHECK-V8M
 ; RUN: llc -mtriple=armv8 %s -o - | FileCheck %s  --check-prefix=CHECK-V8A
 
-define i32* @pre_inc_ldr(i32* %base, i32 %a) {
+define ptr @pre_inc_ldr(ptr %base, i32 %a) {
 ; CHECK-V8M-LABEL: pre_inc_ldr:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    ldr r2, [r0, #4]!
@@ -16,15 +16,15 @@ define i32* @pre_inc_ldr(i32* %base, i32 %a) {
 ; CHECK-V8A-NEXT:    add r1, r2, r1
 ; CHECK-V8A-NEXT:    str r1, [r0, #4]
 ; CHECK-V8A-NEXT:    bx lr
-  %addr = getelementptr i32, i32* %base, i32 1
-  %ld = load i32, i32* %addr
-  %addr.1 = getelementptr i32, i32* %base, i32 2
+  %addr = getelementptr i32, ptr %base, i32 1
+  %ld = load i32, ptr %addr
+  %addr.1 = getelementptr i32, ptr %base, i32 2
   %res = add i32 %ld, %a
-  store i32 %res, i32* %addr.1
-  ret i32* %addr
+  store i32 %res, ptr %addr.1
+  ret ptr %addr
 }
 
-define i32* @pre_dec_ldr(i32* %base, i32 %a) {
+define ptr @pre_dec_ldr(ptr %base, i32 %a) {
 ; CHECK-V8M-LABEL: pre_dec_ldr:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    ldr r2, [r0, #-4]!
@@ -38,15 +38,15 @@ define i32* @pre_dec_ldr(i32* %base, i32 %a) {
 ; CHECK-V8A-NEXT:    add r1, r2, r1
 ; CHECK-V8A-NEXT:    str r1, [r0, #12]
 ; CHECK-V8A-NEXT:    bx lr
-  %addr = getelementptr i32, i32* %base, i32 -1
-  %ld = load i32, i32* %addr
-  %addr.1 = getelementptr i32, i32* %base, i32 2
+  %addr = getelementptr i32, ptr %base, i32 -1
+  %ld = load i32, ptr %addr
+  %addr.1 = getelementptr i32, ptr %base, i32 2
   %res = add i32 %ld, %a
-  store i32 %res, i32* %addr.1
-  ret i32* %addr
+  store i32 %res, ptr %addr.1
+  ret ptr %addr
 }
 
-define i32* @post_inc_ldr(i32* %base, i32* %addr.2, i32 %a) {
+define ptr @post_inc_ldr(ptr %base, ptr %addr.2, i32 %a) {
 ; CHECK-V8M-LABEL: post_inc_ldr:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    ldr r3, [r0], #4
@@ -60,15 +60,14 @@ define i32* @post_inc_ldr(i32* %base, i32* %addr.2, i32 %a) {
 ; CHECK-V8A-NEXT:    add r2, r3, r2
 ; CHECK-V8A-NEXT:    str r2, [r1]
 ; CHECK-V8A-NEXT:    bx lr
-  %addr = getelementptr i32, i32* %base, i32 0
-  %ld = load i32, i32* %addr
-  %addr.1 = getelementptr i32, i32* %base, i32 1
+  %ld = load i32, ptr %base
+  %addr.1 = getelementptr i32, ptr %base, i32 1
   %res = add i32 %ld, %a
-  store i32 %res, i32* %addr.2
-  ret i32* %addr.1
+  store i32 %res, ptr %addr.2
+  ret ptr %addr.1
 }
 
-define i32* @post_dec_ldr(i32* %base, i32* %addr.2, i32 %a) {
+define ptr @post_dec_ldr(ptr %base, ptr %addr.2, i32 %a) {
 ; CHECK-V8M-LABEL: post_dec_ldr:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    ldr r3, [r0], #-4
@@ -82,15 +81,14 @@ define i32* @post_dec_ldr(i32* %base, i32* %addr.2, i32 %a) {
 ; CHECK-V8A-NEXT:    add r2, r3, r2
 ; CHECK-V8A-NEXT:    str r2, [r1]
 ; CHECK-V8A-NEXT:    bx lr
-  %addr = getelementptr i32, i32* %base, i32 0
-  %ld = load i32, i32* %addr
-  %addr.1 = getelementptr i32, i32* %base, i32 -1
+  %ld = load i32, ptr %base
+  %addr.1 = getelementptr i32, ptr %base, i32 -1
   %res = add i32 %ld, %a
-  store i32 %res, i32* %addr.2
-  ret i32* %addr.1
+  store i32 %res, ptr %addr.2
+  ret ptr %addr.1
 }
 
-define i32* @pre_inc_str(i32* %base, i32 %a, i32 %b) {
+define ptr @pre_inc_str(ptr %base, i32 %a, i32 %b) {
 ; CHECK-V8M-LABEL: pre_inc_str:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    add r1, r2
@@ -102,13 +100,13 @@ define i32* @pre_inc_str(i32* %base, i32 %a, i32 %b) {
 ; CHECK-V8A-NEXT:    add r1, r1, r2
 ; CHECK-V8A-NEXT:    str r1, [r0, #4]!
 ; CHECK-V8A-NEXT:    bx lr
-  %addr.1 = getelementptr i32, i32* %base, i32 1
+  %addr.1 = getelementptr i32, ptr %base, i32 1
   %res = add i32 %a, %b
-  store i32 %res, i32* %addr.1
-  ret i32* %addr.1
+  store i32 %res, ptr %addr.1
+  ret ptr %addr.1
 }
 
-define i32* @pre_dec_str(i32* %base, i32 %a, i32 %b) {
+define ptr @pre_dec_str(ptr %base, i32 %a, i32 %b) {
 ; CHECK-V8M-LABEL: pre_dec_str:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    add r1, r2
@@ -121,12 +119,12 @@ define i32* @pre_dec_str(i32* %base, i32 %a, i32 %b) {
 ; CHECK-V8A-NEXT:    str r1, [r0, #-4]!
 ; CHECK-V8A-NEXT:    bx lr
   %res = add i32 %a, %b
-  %addr.1 = getelementptr i32, i32* %base, i32 -1
-  store i32 %res, i32* %addr.1
-  ret i32* %addr.1
+  %addr.1 = getelementptr i32, ptr %base, i32 -1
+  store i32 %res, ptr %addr.1
+  ret ptr %addr.1
 }
 
-define i32* @post_inc_str(i32* %base, i32 %a, i32 %b) {
+define ptr @post_inc_str(ptr %base, i32 %a, i32 %b) {
 ; CHECK-V8M-LABEL: post_inc_str:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    add r1, r2
@@ -138,13 +136,13 @@ define i32* @post_inc_str(i32* %base, i32 %a, i32 %b) {
 ; CHECK-V8A-NEXT:    add r1, r1, r2
 ; CHECK-V8A-NEXT:    str r1, [r0], #4
 ; CHECK-V8A-NEXT:    bx lr
-  %addr.1 = getelementptr i32, i32* %base, i32 1
+  %addr.1 = getelementptr i32, ptr %base, i32 1
   %res = add i32 %a, %b
-  store i32 %res, i32* %base
-  ret i32* %addr.1
+  store i32 %res, ptr %base
+  ret ptr %addr.1
 }
 
-define i32* @post_dec_str(i32* %base, i32 %a, i32 %b) {
+define ptr @post_dec_str(ptr %base, i32 %a, i32 %b) {
 ; CHECK-V8M-LABEL: post_dec_str:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    add r1, r2
@@ -156,14 +154,14 @@ define i32* @post_dec_str(i32* %base, i32 %a, i32 %b) {
 ; CHECK-V8A-NEXT:    add r1, r1, r2
 ; CHECK-V8A-NEXT:    str r1, [r0], #-4
 ; CHECK-V8A-NEXT:    bx lr
-  %addr.1 = getelementptr i32, i32* %base, i32 -1
+  %addr.1 = getelementptr i32, ptr %base, i32 -1
   %res = add i32 %a, %b
-  store i32 %res, i32* %base
-  ret i32* %addr.1
+  store i32 %res, ptr %base
+  ret ptr %addr.1
 }
 
 ; TODO: Generate ldrd
-define i32* @pre_inc_ldrd(i32* %base) {
+define ptr @pre_inc_ldrd(ptr %base) {
 ; CHECK-V8M-LABEL: pre_inc_ldrd:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    ldr r1, [r0, #4]!
@@ -179,18 +177,18 @@ define i32* @pre_inc_ldrd(i32* %base) {
 ; CHECK-V8A-NEXT:    add r1, r1, r2
 ; CHECK-V8A-NEXT:    str r1, [r0, #8]
 ; CHECK-V8A-NEXT:    bx lr
-  %addr = getelementptr i32, i32* %base, i32 1
-  %addr.1 = getelementptr i32, i32* %base, i32 2
-  %addr.2 = getelementptr i32, i32* %base, i32 3
-  %ld = load i32, i32* %addr
-  %ld.1 = load i32, i32* %addr.1
+  %addr = getelementptr i32, ptr %base, i32 1
+  %addr.1 = getelementptr i32, ptr %base, i32 2
+  %addr.2 = getelementptr i32, ptr %base, i32 3
+  %ld = load i32, ptr %addr
+  %ld.1 = load i32, ptr %addr.1
   %res = add i32 %ld, %ld.1
-  store i32 %res, i32* %addr.2
-  ret i32* %addr
+  store i32 %res, ptr %addr.2
+  ret ptr %addr
 }
 
 ; TODO: Generate ldrd
-define i32* @pre_dec_ldrd(i32* %base) {
+define ptr @pre_dec_ldrd(ptr %base) {
 ; CHECK-V8M-LABEL: pre_dec_ldrd:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    ldr r1, [r0, #-4]!
@@ -206,18 +204,18 @@ define i32* @pre_dec_ldrd(i32* %base) {
 ; CHECK-V8A-NEXT:    add r1, r1, r2
 ; CHECK-V8A-NEXT:    str r1, [r0, #-8]
 ; CHECK-V8A-NEXT:    bx lr
-  %addr = getelementptr i32, i32* %base, i32 -1
-  %addr.1 = getelementptr i32, i32* %base, i32 -2
-  %addr.2 = getelementptr i32, i32* %base, i32 -3
-  %ld = load i32, i32* %addr
-  %ld.1 = load i32, i32* %addr.1
+  %addr = getelementptr i32, ptr %base, i32 -1
+  %addr.1 = getelementptr i32, ptr %base, i32 -2
+  %addr.2 = getelementptr i32, ptr %base, i32 -3
+  %ld = load i32, ptr %addr
+  %ld.1 = load i32, ptr %addr.1
   %res = add i32 %ld, %ld.1
-  store i32 %res, i32* %addr.2
-  ret i32* %addr
+  store i32 %res, ptr %addr.2
+  ret ptr %addr
 }
 
 ; TODO: Generate post inc
-define i32* @post_inc_ldrd(i32* %base, i32* %addr.3) {
+define ptr @post_inc_ldrd(ptr %base, ptr %addr.3) {
 ; CHECK-V8M-LABEL: post_inc_ldrd:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    ldrd r2, r3, [r0], #8
@@ -227,21 +225,21 @@ define i32* @post_inc_ldrd(i32* %base, i32* %addr.3) {
 ;
 ; CHECK-V8A-LABEL: post_inc_ldrd:
 ; CHECK-V8A:       @ %bb.0:
-; CHECK-V8A-NEXT:    ldm r0!, {r2, r3}
+; CHECK-V8A-NEXT:    ldrd r2, r3, [r0]
+; CHECK-V8A-NEXT:    add r0, r0, #8
 ; CHECK-V8A-NEXT:    add r2, r2, r3
 ; CHECK-V8A-NEXT:    str r2, [r1]
 ; CHECK-V8A-NEXT:    bx lr
-  %addr = getelementptr i32, i32* %base, i32 0
-  %ld = load i32, i32* %addr
-  %addr.1 = getelementptr i32, i32* %base, i32 1
-  %ld.1 = load i32, i32* %addr.1
-  %addr.2 = getelementptr i32, i32* %base, i32 2
+  %ld = load i32, ptr %base
+  %addr.1 = getelementptr i32, ptr %base, i32 1
+  %ld.1 = load i32, ptr %addr.1
+  %addr.2 = getelementptr i32, ptr %base, i32 2
   %res = add i32 %ld, %ld.1
-  store i32 %res, i32* %addr.3
-  ret i32* %addr.2
+  store i32 %res, ptr %addr.3
+  ret ptr %addr.2
 }
 
-define i32* @pre_inc_str_multi(i32* %base) {
+define ptr @pre_inc_str_multi(ptr %base) {
 ; CHECK-V8M-LABEL: pre_inc_str_multi:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    ldrd r1, r2, [r0]
@@ -251,21 +249,20 @@ define i32* @pre_inc_str_multi(i32* %base) {
 ;
 ; CHECK-V8A-LABEL: pre_inc_str_multi:
 ; CHECK-V8A:       @ %bb.0:
-; CHECK-V8A-NEXT:    ldm r0, {r1, r2}
-; CHECK-V8A-NEXT:    add r1, r1, r2
+; CHECK-V8A-NEXT:    ldrd r2, r3, [r0]
+; CHECK-V8A-NEXT:    add r1, r2, r3
 ; CHECK-V8A-NEXT:    str r1, [r0, #8]!
 ; CHECK-V8A-NEXT:    bx lr
-  %addr = getelementptr i32, i32* %base, i32 0
-  %addr.1 = getelementptr i32, i32* %base, i32 1
-  %ld = load i32, i32* %addr
-  %ld.1 = load i32, i32* %addr.1
+  %addr.1 = getelementptr i32, ptr %base, i32 1
+  %ld = load i32, ptr %base
+  %ld.1 = load i32, ptr %addr.1
   %res = add i32 %ld, %ld.1
-  %addr.2 = getelementptr i32, i32* %base, i32 2
-  store i32 %res, i32* %addr.2
-  ret i32* %addr.2
+  %addr.2 = getelementptr i32, ptr %base, i32 2
+  store i32 %res, ptr %addr.2
+  ret ptr %addr.2
 }
 
-define i32* @pre_dec_str_multi(i32* %base) {
+define ptr @pre_dec_str_multi(ptr %base) {
 ; CHECK-V8M-LABEL: pre_dec_str_multi:
 ; CHECK-V8M:       @ %bb.0:
 ; CHECK-V8M-NEXT:    ldrd r1, r2, [r0]
@@ -275,21 +272,20 @@ define i32* @pre_dec_str_multi(i32* %base) {
 ;
 ; CHECK-V8A-LABEL: pre_dec_str_multi:
 ; CHECK-V8A:       @ %bb.0:
-; CHECK-V8A-NEXT:    ldm r0, {r1, r2}
-; CHECK-V8A-NEXT:    add r1, r1, r2
+; CHECK-V8A-NEXT:    ldrd r2, r3, [r0]
+; CHECK-V8A-NEXT:    add r1, r2, r3
 ; CHECK-V8A-NEXT:    str r1, [r0, #-4]!
 ; CHECK-V8A-NEXT:    bx lr
-  %addr = getelementptr i32, i32* %base, i32 0
-  %addr.1 = getelementptr i32, i32* %base, i32 1
-  %ld = load i32, i32* %addr
-  %ld.1 = load i32, i32* %addr.1
+  %addr.1 = getelementptr i32, ptr %base, i32 1
+  %ld = load i32, ptr %base
+  %ld.1 = load i32, ptr %addr.1
   %res = add i32 %ld, %ld.1
-  %addr.2 = getelementptr i32, i32* %base, i32 -1
-  store i32 %res, i32* %addr.2
-  ret i32* %addr.2
+  %addr.2 = getelementptr i32, ptr %base, i32 -1
+  store i32 %res, ptr %addr.2
+  ret ptr %addr.2
 }
 
-define i32* @illegal_pre_inc_store_1(i32* %base) {
+define ptr @illegal_pre_inc_store_1(ptr %base) {
 ; CHECK-V8M-LABEL: illegal_pre_inc_store_1:
 ; CHECK-V8M:       @ %bb.0: @ %entry
 ; CHECK-V8M-NEXT:    str r0, [r0, #8]
@@ -302,13 +298,13 @@ define i32* @illegal_pre_inc_store_1(i32* %base) {
 ; CHECK-V8A-NEXT:    add r0, r0, #8
 ; CHECK-V8A-NEXT:    bx lr
 entry:
-  %ptr.to.use = getelementptr i32, i32* %base, i32 2
-  %ptr.to.store = ptrtoint i32* %base to i32
-  store i32 %ptr.to.store, i32* %ptr.to.use, align 4
-  ret i32* %ptr.to.use
+  %ptr.to.use = getelementptr i32, ptr %base, i32 2
+  %ptr.to.store = ptrtoint ptr %base to i32
+  store i32 %ptr.to.store, ptr %ptr.to.use, align 4
+  ret ptr %ptr.to.use
 }
 
-define i32* @legal_pre_inc_store_needs_copy_1(i32* %base) {
+define ptr @legal_pre_inc_store_needs_copy_1(ptr %base) {
 ; CHECK-V8M-LABEL: legal_pre_inc_store_needs_copy_1:
 ; CHECK-V8M:       @ %bb.0: @ %entry
 ; CHECK-V8M-NEXT:    add.w r1, r0, #8
@@ -323,13 +319,13 @@ define i32* @legal_pre_inc_store_needs_copy_1(i32* %base) {
 ; CHECK-V8A-NEXT:    mov r0, r1
 ; CHECK-V8A-NEXT:    bx lr
 entry:
-  %ptr.to.use = getelementptr i32, i32* %base, i32 2
-  %ptr.to.store = ptrtoint i32* %ptr.to.use to i32
-  store i32 %ptr.to.store, i32* %ptr.to.use, align 4
-  ret i32* %ptr.to.use
+  %ptr.to.use = getelementptr i32, ptr %base, i32 2
+  %ptr.to.store = ptrtoint ptr %ptr.to.use to i32
+  store i32 %ptr.to.store, ptr %ptr.to.use, align 4
+  ret ptr %ptr.to.use
 }
 
-define i32* @legal_pre_inc_store_needs_copy_2(i32 %base) {
+define ptr @legal_pre_inc_store_needs_copy_2(i32 %base) {
 ; CHECK-V8M-LABEL: legal_pre_inc_store_needs_copy_2:
 ; CHECK-V8M:       @ %bb.0: @ %entry
 ; CHECK-V8M-NEXT:    str r0, [r0, #8]
@@ -342,8 +338,8 @@ define i32* @legal_pre_inc_store_needs_copy_2(i32 %base) {
 ; CHECK-V8A-NEXT:    add r0, r0, #8
 ; CHECK-V8A-NEXT:    bx lr
 entry:
-  %ptr = inttoptr i32 %base to i32*
-  %ptr.to.use = getelementptr i32, i32* %ptr, i32 2
-  store i32 %base, i32* %ptr.to.use, align 4
-  ret i32* %ptr.to.use
+  %ptr = inttoptr i32 %base to ptr
+  %ptr.to.use = getelementptr i32, ptr %ptr, i32 2
+  store i32 %base, ptr %ptr.to.use, align 4
+  ret ptr %ptr.to.use
 }

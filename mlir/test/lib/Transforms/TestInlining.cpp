@@ -7,31 +7,39 @@
 //===----------------------------------------------------------------------===//
 //
 // TODO: This pass is only necessary because the main inlining pass
-// has no abstracted away the call+callee relationship. When the inlining
+// has not abstracted away the call+callee relationship. When the inlining
 // interface has this support, this pass should be removed.
 //
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "TestOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace mlir;
-using namespace mlir::test;
+using namespace test;
 
 namespace {
-struct Inliner : public PassWrapper<Inliner, FunctionPass> {
-  void runOnFunction() override {
-    auto function = getFunction();
+struct Inliner : public PassWrapper<Inliner, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(Inliner)
+
+  StringRef getArgument() const final { return "test-inline"; }
+  StringRef getDescription() const final {
+    return "Test inlining region calls";
+  }
+
+  void runOnOperation() override {
+    auto function = getOperation();
 
     // Collect each of the direct function calls within the module.
-    SmallVector<CallIndirectOp, 16> callers;
-    function.walk([&](CallIndirectOp caller) { callers.push_back(caller); });
+    SmallVector<func::CallIndirectOp, 16> callers;
+    function.walk(
+        [&](func::CallIndirectOp caller) { callers.push_back(caller); });
 
     // Build the inliner interface.
     InlinerInterface interface(&getContext());
@@ -46,7 +54,7 @@ struct Inliner : public PassWrapper<Inliner, FunctionPass> {
       // Inline the functional region operation, but only clone the internal
       // region if there is more than one use.
       if (failed(inlineRegion(
-              interface, &callee.body(), caller, caller.getArgOperands(),
+              interface, &callee.getBody(), caller, caller.getArgOperands(),
               caller.getResults(), caller.getLoc(),
               /*shouldCloneInlinedRegion=*/!callee.getResult().hasOneUse())))
         continue;
@@ -59,12 +67,10 @@ struct Inliner : public PassWrapper<Inliner, FunctionPass> {
     }
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {
-void registerInliner() {
-  PassRegistration<Inliner>("test-inline", "Test inlining region calls");
-}
+void registerInliner() { PassRegistration<Inliner>(); }
 } // namespace test
 } // namespace mlir

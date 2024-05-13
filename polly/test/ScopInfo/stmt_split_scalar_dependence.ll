@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-print-instructions < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-instructions -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK:    Statements {
 ; CHECK-NEXT:  	Stmt_Stmt
@@ -12,7 +12,7 @@
 ; CHECK-NEXT:           { Stmt_Stmt[i0] -> MemRef_a[] };
 ; CHECK-NEXT:       Instructions {
 ; CHECK-NEXT:             %a = fadd double 2.100000e+01, 2.100000e+01
-; CHECK-NEXT:             store i32 %i.0, i32* %arrayidx, align 4, !polly_split_after !0
+; CHECK-NEXT:             store i32 %i.0, ptr %arrayidx, align 4, !polly_split_after !0
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:   Stmt_Stmt_b
 ; CHECK-NEXT:       Domain :=
@@ -24,12 +24,12 @@
 ; CHECK-NEXT:       ReadAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:           { Stmt_Stmt_b[i0] -> MemRef_a[] };
 ; CHECK-NEXT:       Instructions {
-; CHECK-NEXT:             store double %a, double* %B
+; CHECK-NEXT:             store double %a, ptr %B
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:   }
 ;
 ; Function Attrs: noinline nounwind uwtable
-define void @func(i32* %A, double* %B) #0 {
+define void @func(ptr %A, ptr %B) #0 {
 entry:
   br label %for.cond
 
@@ -44,9 +44,9 @@ for.body:                                         ; preds = %for.cond
 Stmt:
   %a = fadd double 21.0, 21.0
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  store i32 %i.0, i32* %arrayidx, align 4, !polly_split_after !0
-  store double %a, double* %B
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  store i32 %i.0, ptr %arrayidx, align 4, !polly_split_after !0
+  store double %a, ptr %B
   br label %for.inc
 
 for.inc:                                          ; preds = %Stmt

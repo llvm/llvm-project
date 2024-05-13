@@ -57,8 +57,12 @@ class ValueObjectConstResult;
 ///
 /// This class supports all of these use cases using simple type polymorphism,
 /// and provides necessary support methods.  Its interface is RTTI-neutral.
-class ClangExpressionVariable : public ExpressionVariable {
+class ClangExpressionVariable
+    : public llvm::RTTIExtends<ClangExpressionVariable, ExpressionVariable> {
 public:
+  // LLVM RTTI support
+  static char ID;
+
   ClangExpressionVariable(ExecutionContextScope *exe_scope,
                           lldb::ByteOrder byte_order, uint32_t addr_byte_size);
 
@@ -116,19 +120,25 @@ public:
   /// The following values should not live beyond parsing
   class ParserVars {
   public:
-    ParserVars()
-        : m_named_decl(nullptr), m_llvm_value(nullptr),
-          m_lldb_value(), m_lldb_var(), m_lldb_sym(nullptr) {}
+    ParserVars() = default;
 
-    const clang::NamedDecl
-        *m_named_decl;         ///< The Decl corresponding to this variable
-    llvm::Value *m_llvm_value; ///< The IR value corresponding to this variable;
-                               ///usually a GlobalValue
+    const clang::NamedDecl *m_named_decl =
+        nullptr; ///< The Decl corresponding to this variable
+    llvm::Value *m_llvm_value =
+        nullptr; ///< The IR value corresponding to this variable;
+                 /// usually a GlobalValue
     lldb_private::Value
         m_lldb_value;            ///< The value found in LLDB for this variable
     lldb::VariableSP m_lldb_var; ///< The original variable for this variable
-    const lldb_private::Symbol *m_lldb_sym; ///< The original symbol for this
-                                            ///variable, if it was a symbol
+    const lldb_private::Symbol *m_lldb_sym =
+        nullptr; ///< The original symbol for this
+                 /// variable, if it was a symbol
+
+    /// Callback that provides a ValueObject for the
+    /// specified frame. Used by the materializer for
+    /// re-fetching ValueObjects when materializing
+    /// ivars.
+    ValueObjectProviderTy m_lldb_valobj_provider;
   };
 
 private:
@@ -157,13 +167,13 @@ public:
 
   /// The following values are valid if the variable is used by JIT code
   struct JITVars {
-    JITVars() : m_alignment(0), m_size(0), m_offset(0) {}
+    JITVars() = default;
 
-    lldb::offset_t
-        m_alignment; ///< The required alignment of the variable, in bytes
-    size_t m_size;   ///< The space required for the variable, in bytes
-    lldb::offset_t
-        m_offset; ///< The offset of the variable in the struct, in bytes
+    lldb::offset_t m_alignment =
+        0;             ///< The required alignment of the variable, in bytes
+    size_t m_size = 0; ///< The space required for the variable, in bytes
+    lldb::offset_t m_offset =
+        0; ///< The offset of the variable in the struct, in bytes
   };
 
 private:
@@ -190,11 +200,6 @@ public:
   }
 
   TypeFromUser GetTypeFromUser();
-
-  // llvm casting support
-  static bool classof(const ExpressionVariable *ev) {
-    return ev->getKind() == ExpressionVariable::eKindClang;
-  }
 
   /// Members
   ClangExpressionVariable(const ClangExpressionVariable &) = delete;

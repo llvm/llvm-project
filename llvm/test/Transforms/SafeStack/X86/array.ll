@@ -1,40 +1,36 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -safe-stack -S -mtriple=i386-pc-contiki-unknown < %s -o - | FileCheck -check-prefix=SINGLE-THREAD %s
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 ; array [4 x i8]
 ; Requires protector.
 
-; CHECK: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global i8*
-; SINGLE-THREAD: @__safestack_unsafe_stack_ptr = external global i8*
+; CHECK: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 
-define void @foo(i8* %a) nounwind uwtable safestack {
+define void @foo(ptr %a) nounwind uwtable safestack {
 entry:
-  ; CHECK: %[[USP:.*]] = load i8*, i8** @__safestack_unsafe_stack_ptr
+  ; CHECK: %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
 
-  ; CHECK: %[[USST:.*]] = getelementptr i8, i8* %[[USP]], i32 -16
+  ; CHECK: %[[USST:.*]] = getelementptr i8, ptr %[[USP]], i32 -16
 
-  ; CHECK: store i8* %[[USST]], i8** @__safestack_unsafe_stack_ptr
+  ; CHECK: store ptr %[[USST]], ptr @__safestack_unsafe_stack_ptr
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %buf = alloca [4 x i8], align 1
 
-  ; CHECK: %[[AADDR:.*]] = alloca i8*, align 8
-  ; CHECK: store i8* {{.*}}, i8** %[[AADDR]], align 8
-  store i8* %a, i8** %a.addr, align 8
+  ; CHECK: %[[AADDR:.*]] = alloca ptr, align 8
+  ; CHECK: store ptr {{.*}}, ptr %[[AADDR]], align 8
+  store ptr %a, ptr %a.addr, align 8
 
-  ; CHECK: %[[BUFPTR:.*]] = getelementptr i8, i8* %[[USP]], i32 -4
-  ; CHECK: %[[BUFPTR2:.*]] = bitcast i8* %[[BUFPTR]] to [4 x i8]*
-  ; CHECK: %[[GEP:.*]] = getelementptr inbounds [4 x i8], [4 x i8]* %[[BUFPTR2]], i32 0, i32 0
-  %gep = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
+  ; CHECK: %[[A2:.*]] = load ptr, ptr %[[AADDR]], align 8
+  ; CHECK: %[[BUFPTR:.*]] = getelementptr i8, ptr %[[USP]], i32 -4
+  %a2 = load ptr, ptr %a.addr, align 8
 
-  ; CHECK: %[[A2:.*]] = load i8*, i8** %[[AADDR]], align 8
-  %a2 = load i8*, i8** %a.addr, align 8
+  ; CHECK: call ptr @strcpy(ptr %[[BUFPTR]], ptr %[[A2]])
+  %call = call ptr @strcpy(ptr %buf, ptr %a2)
 
-  ; CHECK: call i8* @strcpy(i8* %[[GEP]], i8* %[[A2]])
-  %call = call i8* @strcpy(i8* %gep, i8* %a2)
-
-  ; CHECK: store i8* %[[USP]], i8** @__safestack_unsafe_stack_ptr
+  ; CHECK: store ptr %[[USP]], ptr @__safestack_unsafe_stack_ptr
   ret void
 }
 
@@ -45,8 +41,8 @@ entry:
   ; CHECK-NOT: __safestack_unsafe_stack_ptr
   ; CHECK: ret i8
   %buf = alloca i8, i32 4, align 1
-  %gep = getelementptr inbounds i8, i8* %buf, i32 2
-  %x = load i8, i8* %gep, align 1
+  %gep = getelementptr inbounds i8, ptr %buf, i32 2
+  %x = load i8, ptr %gep, align 1
   ret i8 %x
 }
 
@@ -57,8 +53,8 @@ entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   ; CHECK: ret i8
   %buf = alloca i8, i32 4, align 1
-  %gep = getelementptr inbounds i8, i8* %buf, i32 5
-  %x = load i8, i8* %gep, align 1
+  %gep = getelementptr inbounds i8, ptr %buf, i32 5
+  %x = load i8, ptr %gep, align 1
   ret i8 %x
 }
 
@@ -69,8 +65,8 @@ entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   ; CHECK: ret i8
   %buf = alloca i8, i32 4, align 1
-  %gep = getelementptr inbounds i8, i8* %buf, i32 %ofs
-  %x = load i8, i8* %gep, align 1
+  %gep = getelementptr inbounds i8, ptr %buf, i32 %ofs
+  %x = load i8, ptr %gep, align 1
   ret i8 %x
 }
 
@@ -81,9 +77,9 @@ entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   ; CHECK: ret i8
   %buf = alloca i8, i32 %sz, align 1
-  %gep = getelementptr inbounds i8, i8* %buf, i32 2
-  %x = load i8, i8* %gep, align 1
+  %gep = getelementptr inbounds i8, ptr %buf, i32 2
+  %x = load i8, ptr %gep, align 1
   ret i8 %x
 }
 
-declare i8* @strcpy(i8*, i8*)
+declare ptr @strcpy(ptr, ptr)

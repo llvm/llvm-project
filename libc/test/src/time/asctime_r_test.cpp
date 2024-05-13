@@ -1,5 +1,4 @@
-//===-- Unittests for asctime_r
-//--------------------------------------------===//
+//===-- Unittests for asctime_r -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,42 +6,43 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/time/asctime_r.h"
 #include "src/time/time_utils.h"
+#include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
-#include "utils/UnitTest/Test.h"
 
-using __llvm_libc::time_utils::TimeConstants;
+using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 static inline char *call_asctime_r(struct tm *tm_data, int year, int month,
                                    int mday, int hour, int min, int sec,
                                    int wday, int yday, char *buffer) {
-  __llvm_libc::tmhelper::testing::InitializeTmData(tm_data, year, month, mday,
-                                                   hour, min, sec, wday, yday);
-  return __llvm_libc::asctime_r(tm_data, buffer);
+  LIBC_NAMESPACE::tmhelper::testing::initialize_tm_data(
+      tm_data, year, month, mday, hour, min, sec, wday, yday);
+  return LIBC_NAMESPACE::asctime_r(tm_data, buffer);
 }
 
 // asctime and asctime_r share the same code and thus didn't repeat all the
 // tests from asctime. Added couple of validation tests.
 TEST(LlvmLibcAsctimeR, Nullptr) {
   char *result;
-  result = __llvm_libc::asctime_r(nullptr, nullptr);
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  result = LIBC_NAMESPACE::asctime_r(nullptr, nullptr);
+  ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 
-  char buffer[TimeConstants::AsctimeBufferSize];
-  result = __llvm_libc::asctime_r(nullptr, buffer);
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
+  result = LIBC_NAMESPACE::asctime_r(nullptr, buffer);
+  ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 
   struct tm tm_data;
-  result = __llvm_libc::asctime_r(&tm_data, nullptr);
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  result = LIBC_NAMESPACE::asctime_r(&tm_data, nullptr);
+  ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }
 
 TEST(LlvmLibcAsctimeR, ValidDate) {
-  char buffer[TimeConstants::AsctimeBufferSize];
+  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
   struct tm tm_data;
   char *result;
   // 1970-01-01 00:00:00. Test with a valid buffer size.

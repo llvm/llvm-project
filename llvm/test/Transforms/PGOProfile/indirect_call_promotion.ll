@@ -1,7 +1,4 @@
-; RUN: opt < %s -pgo-icall-prom -S -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
 ; RUN: opt < %s -passes=pgo-icall-prom -S -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=20 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS2-REMARK
 
@@ -18,7 +15,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@foo = common global i32 ()* null, align 8
+@foo = common global ptr null, align 8
 
 define i32 @func1() {
 entry:
@@ -42,8 +39,8 @@ entry:
 
 define i32 @bar() {
 entry:
-  %tmp = load i32 ()*, i32 ()** @foo, align 8
-; ICALL-PROM:   [[CMP:%[0-9]+]] = icmp eq i32 ()* %tmp, @func4
+  %tmp = load ptr, ptr @foo, align 8
+; ICALL-PROM:   [[CMP:%[0-9]+]] = icmp eq ptr %tmp, @func4
 ; ICALL-PROM:   br i1 [[CMP]], label %if.true.direct_targ, label %if.false.orig_indirect, !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICALL-PROM: if.true.direct_targ:
 ; ICALL-PROM:   [[DIRCALL_RET:%[0-9]+]] = call i32 @func4()

@@ -26,10 +26,36 @@ namespace llvm {
 
 class Module;
 
+/// A set of parameters to control various transforms performed by IPSCCP pass.
+/// Each of the boolean parameters can be set to:
+///   true - enabling the transformation.
+///   false - disabling the transformation.
+/// Intended use is to create a default object, modify parameters with
+/// additional setters and then pass it to IPSCCP.
+struct IPSCCPOptions {
+  bool AllowFuncSpec;
+
+  IPSCCPOptions(bool AllowFuncSpec = true) : AllowFuncSpec(AllowFuncSpec) {}
+
+  /// Enables or disables Specialization of Functions.
+  IPSCCPOptions &setFuncSpec(bool FuncSpec) {
+    AllowFuncSpec = FuncSpec;
+    return *this;
+  }
+};
+
 /// Pass to perform interprocedural constant propagation.
 class IPSCCPPass : public PassInfoMixin<IPSCCPPass> {
+  IPSCCPOptions Options;
+
 public:
+  IPSCCPPass() = default;
+
+  IPSCCPPass(IPSCCPOptions Options) : Options(Options) {}
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  bool isFuncSpecEnabled() const { return Options.AllowFuncSpec; }
 };
 
 } // end namespace llvm

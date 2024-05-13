@@ -22,13 +22,14 @@
 #define MLIR_TABLEGEN_ARGUMENT_H_
 
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/PointerUnion.h"
 #include <string>
 
 namespace llvm {
 class StringRef;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -48,6 +49,8 @@ struct NamedTypeConstraint {
   bool isOptional() const;
   // Returns true if this operand/result is variadic.
   bool isVariadic() const;
+  // Returns true if this operand/result is a variadic of a variadic constraint.
+  bool isVariadicOfVariadic() const;
   // Returns true if this is a variable length type constraint. This is either
   // variadic or optional.
   bool isVariableLength() const { return isOptional() || isVariadic(); }
@@ -56,10 +59,11 @@ struct NamedTypeConstraint {
   TypeConstraint constraint;
 };
 
-// Operation argument: either attribute or operand
-using Argument = llvm::PointerUnion<NamedAttribute *, NamedTypeConstraint *>;
+// Operation argument: either attribute, property, or operand
+using Argument = llvm::PointerUnion<NamedAttribute *, NamedProperty *,
+                                    NamedTypeConstraint *>;
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_ARGUMENT_H_

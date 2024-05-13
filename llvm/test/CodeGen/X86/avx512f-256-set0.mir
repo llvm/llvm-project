@@ -14,9 +14,9 @@
 
   define void @main() #0 {
   bb0:
-    %gep1 = bitcast [4 x i64]* @tst_ to [4 x i64]*
-    %lsr.iv1 = bitcast [4 x i64]* %gep1 to <4 x i64>*
-    store <4 x i64> zeroinitializer, <4 x i64>* %lsr.iv1, align 16
+    %gep1 = bitcast ptr @tst_ to ptr
+    %lsr.iv1 = bitcast ptr %gep1 to ptr
+    store <4 x i64> zeroinitializer, ptr %lsr.iv1, align 16
     ret void
   }
 
@@ -62,10 +62,10 @@ body:             |
   bb.0.bb0:
     ; CHECK-LABEL: name: main
     ; CHECK: $zmm16 = VPXORDZrr undef $zmm16, undef $zmm16
-    ; CHECK: VMOVAPSZmr $rip, 1, $noreg, @tst_, $noreg, killed renamable $zmm16 :: (store 32 into %ir.lsr.iv1, align 64)
+    ; CHECK: VMOVAPSZmr $rip, 1, $noreg, @tst_, $noreg, killed renamable $zmm16 :: (store (s256) into %ir.lsr.iv1, align 64)
     ; CHECK: RET 0
     renamable $ymm16 = AVX512_256_SET0
-    VMOVAPSZmr $rip, 1, $noreg, @tst_, $noreg, killed renamable $zmm16 :: (store 32 into %ir.lsr.iv1, align 64)
+    VMOVAPSZmr $rip, 1, $noreg, @tst_, $noreg, killed renamable $zmm16 :: (store (s256) into %ir.lsr.iv1, align 64)
     RET 0
 
 ...

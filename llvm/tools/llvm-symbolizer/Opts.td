@@ -1,17 +1,17 @@
 include "llvm/Option/OptParser.td"
 
 multiclass B<string name, string help1, string help2> {
-  def NAME: Flag<["--", "-"], name>, HelpText<help1>;
-  def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
 }
 
 multiclass Eq<string name, string help> {
-  def NAME #_EQ : Joined<["--", "-"], name #"=">,
+  def NAME #_EQ : Joined<["--"], name #"=">,
                   HelpText<help>;
-  def : Separate<["--", "-"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
+  def : Separate<["--"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
 }
 
-class F<string name, string help>: Flag<["--", "-"], name>, HelpText<help>;
+class F<string name, string help>: Flag<["--"], name>, HelpText<help>;
 
 def grp_mach_o : OptionGroup<"kind">,
                  HelpText<"llvm-symbolizer Mach-O Specific Options">;
@@ -21,11 +21,17 @@ defm adjust_vma
     : Eq<"adjust-vma", "Add specified offset to object file addresses">,
       MetaVarName<"<offset>">;
 def basenames : Flag<["--"], "basenames">, HelpText<"Strip directory names from paths">;
+defm build_id : Eq<"build-id", "Build ID used to look up the object file">;
+defm cache_size : Eq<"cache-size", "Max size in bytes of the in-memory binary cache.">;
+def color : F<"color", "Use color when symbolizing log markup.">;
+def color_EQ : Joined<["--"], "color=">, HelpText<"Whether to use color when symbolizing log markup: always, auto, never">, Values<"always,auto,never">;
 defm debug_file_directory : Eq<"debug-file-directory", "Path to directory where to look for debug files">, MetaVarName<"<dir>">;
+defm debuginfod : B<"debuginfod", "Use debuginfod to find debug binaries", "Don't use debuginfod to find debug binaries">;
 defm default_arch
     : Eq<"default-arch", "Default architecture (for multi-arch objects)">,
       Group<grp_mach_o>;
 defm demangle : B<"demangle", "Demangle function names", "Don't demangle function names">;
+def filter_markup : Flag<["--"], "filter-markup">, HelpText<"Filter symbolizer markup from stdin.">;
 def functions : F<"functions", "Print function name for a given address">;
 def functions_EQ : Joined<["--"], "functions=">, HelpText<"Print function name for a given address">, Values<"none,short,linkage">;
 def help : F<"help", "Display this help">;
@@ -76,5 +82,3 @@ def : Flag<["--"], "inlining=false">, Alias<no_inlines>, HelpText<"Alias for --n
 // Compatibility aliases for pprof's symbolizer.
 def : Flag<["-"], "demangle=true">, Alias<demangle>, HelpText<"Alias for --demangle">;
 def : Flag<["-"], "demangle=false">, Alias<no_demangle>, HelpText<"Alias for --no-demangle">;
-// Compatibility no-op options.
-def : Flag<["--"], "use-symbol-table=true">;

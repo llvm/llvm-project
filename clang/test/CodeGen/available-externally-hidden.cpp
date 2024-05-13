@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O2 -fvisibility hidden -std=c++11 -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
+// RUN: %clang_cc1 -O2 -fvisibility=hidden -std=c++11 -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
 
 // Ensure that available_externally functions eliminated at -O2 are now
 // declarations, and are not emitted as hidden with -fvisibility=hidden,
@@ -17,7 +17,7 @@ class Sender {
   virtual ~Sender() {}
 };
 
-// CHECK: declare zeroext i1 @_ZThn16_N17SyncMessageFilter4SendEP7Message
+// CHECK: declare noundef zeroext i1 @_ZThn16_N17SyncMessageFilter4SendEP7Message
 class SyncMessageFilter : public Filter, public Sender {
  public:
   bool Send(Message* message) override;

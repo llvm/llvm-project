@@ -39,7 +39,7 @@
   target triple = "x86_64-unknown-windows-msvc19.11.0"
 
   ; Function Attrs: uwtable
-  define dso_local i32 @"?multi_throw@@YAH_N00@Z"(i1 zeroext %c1, i1 zeroext %c2, i1 zeroext %c3) local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+  define dso_local i32 @"?multi_throw@@YAH_N00@Z"(i1 zeroext %c1, i1 zeroext %c2, i1 zeroext %c3) local_unnamed_addr #0 personality ptr @__CxxFrameHandler3 {
   entry:
     br i1 %c1, label %if.then, label %if.end
 
@@ -68,7 +68,7 @@
     %0 = catchswitch within none [label %catch] unwind to caller
 
   catch:                                            ; preds = %catch.dispatch
-    %1 = catchpad within %0 [i8* null, i32 64, i8* null]
+    %1 = catchpad within %0 [ptr null, i32 64, ptr null]
     catchret from %1 to label %return
 
   return:                                           ; preds = %catch, %if.end6
@@ -149,7 +149,7 @@ body:             |
     $rbp = LEA64r $rsp, 1, $noreg, 48, $noreg
     frame-setup SEH_SetFrame 50, 48
     frame-setup SEH_EndPrologue
-    MOV64mi32 $rbp, 1, $noreg, -8, $noreg, -2 :: (store 8 into %fixed-stack.0)
+    MOV64mi32 $rbp, 1, $noreg, -8, $noreg, -2 :: (store (s64) into %fixed-stack.0)
     TEST8rr killed renamable $cl, renamable $cl, implicit-def $eflags
     JCC_1 %bb.1, 5, implicit $eflags
 
@@ -164,16 +164,16 @@ body:             |
     successors: %bb.6(0x00000001), %bb.8(0x7fffffff)
     liveins: $r8b
 
-    MOV32mi $rbp, 1, $noreg, -12, $noreg, 0 :: (store 4 into %stack.0)
+    MOV32mi $rbp, 1, $noreg, -12, $noreg, 0 :: (store (s32) into %stack.0)
     TEST8rr killed renamable $r8b, renamable $r8b, implicit-def $eflags
     JCC_1 %bb.6, 5, implicit $eflags
 
-  bb.8.return (address-taken):
-    $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg :: (load 4 from %stack.0)
+  bb.8.return (machine-block-address-taken):
+    $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg :: (load (s32) from %stack.0)
     SEH_Epilogue
     $rsp = frame-destroy ADD64ri8 $rsp, 48, implicit-def dead $eflags
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 
   bb.1.if.then:
     successors: %bb.2(0x7ffff800), %bb.7(0x00000800)
@@ -213,7 +213,7 @@ body:             |
     frame-setup SEH_StackAlloc 32
     $rbp = LEA64r $rdx, 1, $noreg, 48, $noreg
     frame-setup SEH_EndPrologue
-    MOV32mi $rbp, 1, $noreg, -12, $noreg, 1 :: (store 4 into %stack.0)
+    MOV32mi $rbp, 1, $noreg, -12, $noreg, 1 :: (store (s32) into %stack.0)
     $rax = LEA64r $rip, 0, $noreg, %bb.8, $noreg
     SEH_Epilogue
     $rsp = frame-destroy ADD64ri8 $rsp, 32, implicit-def dead $eflags

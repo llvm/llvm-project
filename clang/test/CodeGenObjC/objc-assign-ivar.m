@@ -32,7 +32,7 @@ int IvarAssigns;
 void *rhs = 0;
 #define ASSIGNTEST(expr, global) expr = rhs
 
-void testIvars() {
+void testIvars(void) {
   Foo *foo;
   ASSIGNTEST(foo->ivar, IvarAssigns);                                   // objc_assign_ivar
   ASSIGNTEST(foo->dict, IvarAssigns);                                   // objc_assign_ivar

@@ -42,7 +42,7 @@ void call_vararg_method() {
   C instance;
   instance.vararg_method("Hello");
 // Make sure that the call uses the right calling convention:
-// CHECK: call void (%class.C*, i8*, ...) @"?vararg_method@C@@QAAXPBDZZ"
+// CHECK: call void (ptr, ptr, ...) @"?vararg_method@C@@QAAXPBDZZ"
 // CHECK: ret
 
 // Make sure that the definition uses the right calling convention:
@@ -69,20 +69,20 @@ class Child: public Base { };
 
 void constructors() {
   Child c;
-// Make sure that the Base constructor call in the Child constructor uses
+// Make sure that the Base constructor call noundef in the Child constructor uses
 // the right calling convention:
-// CHECK: define linkonce_odr dso_local x86_thiscallcc %class.Child* @"??0Child@@QAE@XZ"
-// CHECK: %{{[.0-9A-Z_a-z]+}} = call x86_thiscallcc %class.Base* @"??0Base@@QAE@XZ"
+// CHECK: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??0Child@@QAE@XZ"
+// CHECK: %{{[.0-9A-Z_a-z]+}} = call x86_thiscallcc noundef ptr @"??0Base@@QAE@XZ"
 // CHECK: ret
 
-// Make sure that the Base destructor call in the Child denstructor uses
+// Make sure that the Base destructor call noundef in the Child denstructor uses
 // the right calling convention:
 // CHECK: define linkonce_odr dso_local x86_thiscallcc void @"??1Child@@QAE@XZ"
 // CHECK: call x86_thiscallcc void @"??1Base@@QAE@XZ"
 // CHECK: ret
 
 // Make sure that the Base constructor definition uses the right CC:
-// CHECK: define linkonce_odr dso_local x86_thiscallcc %class.Base* @"??0Base@@QAE@XZ"
+// CHECK: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??0Base@@QAE@XZ"
 
 // Make sure that the Base destructor definition uses the right CC:
 // CHECK: define linkonce_odr dso_local x86_thiscallcc void @"??1Base@@QAE@XZ"

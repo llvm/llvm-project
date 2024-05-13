@@ -73,7 +73,7 @@ void HexagonBlockRanges::IndexRange::merge(const IndexRange &A) {
 }
 
 void HexagonBlockRanges::RangeList::include(const RangeList &RL) {
-  for (auto &R : RL)
+  for (const auto &R : RL)
     if (!is_contained(*this, R))
       push_back(R);
 }
@@ -175,7 +175,7 @@ MachineInstr *HexagonBlockRanges::InstrIndexMap::getInstr(IndexType Idx) const {
 
 HexagonBlockRanges::IndexType HexagonBlockRanges::InstrIndexMap::getIndex(
       MachineInstr *MI) const {
-  for (auto &I : Map)
+  for (const auto &I : Map)
     if (I.second == MI)
       return I.first;
   return IndexType::None;
@@ -268,12 +268,11 @@ HexagonBlockRanges::RegisterSet HexagonBlockRanges::expandToSubRegs(
     return SRs;
   }
 
-  if (Register::isPhysicalRegister(R.Reg)) {
-    MCSubRegIterator I(R.Reg, &TRI);
-    if (!I.isValid())
+  if (R.Reg.isPhysical()) {
+    if (TRI.subregs(R.Reg).empty())
       SRs.insert({R.Reg, 0});
-    for (; I.isValid(); ++I)
-      SRs.insert({*I, 0});
+    for (MCPhysReg I : TRI.subregs(R.Reg))
+      SRs.insert({I, 0});
   } else {
     assert(R.Reg.isVirtual());
     auto &RC = *MRI.getRegClass(R.Reg);
@@ -321,7 +320,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
       if (!Op.isReg() || !Op.isUse() || Op.isUndef())
         continue;
       RegisterRef R = { Op.getReg(), Op.getSubReg() };
-      if (Register::isPhysicalRegister(R.Reg) && Reserved[R.Reg])
+      if (R.Reg.isPhysical() && Reserved[R.Reg])
         continue;
       bool IsKill = Op.isKill();
       for (auto S : expandToSubRegs(R, MRI, TRI)) {
@@ -338,7 +337,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
         continue;
       RegisterRef R = { Op.getReg(), Op.getSubReg() };
       for (auto S : expandToSubRegs(R, MRI, TRI)) {
-        if (Register::isPhysicalRegister(S.Reg) && Reserved[S.Reg])
+        if (S.Reg.isPhysical() && Reserved[S.Reg])
           continue;
         if (Op.isDead())
           Clobbers.insert(S);
@@ -355,7 +354,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
         // Skip registers that have subregisters. A register is preserved
         // iff its bit is set in the regmask, so if R1:0 was preserved, both
         // R1 and R0 would also be present.
-        if (MCSubRegIterator(PR, &TRI, false).isValid())
+        if (!TRI.subregs(PR).empty())
           continue;
         if (Reserved[PR])
           continue;
@@ -374,8 +373,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
     // Update maps for defs.
     for (RegisterRef S : Defs) {
       // Defs should already be expanded into subregs.
-      assert(!Register::isPhysicalRegister(S.Reg) ||
-             !MCSubRegIterator(S.Reg, &TRI, false).isValid());
+      assert(!S.Reg.isPhysical() || TRI.subregs(S.Reg).empty());
       if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
         closeRange(S);
       LastDef[S] = Index;
@@ -383,8 +381,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
     // Update maps for clobbers.
     for (RegisterRef S : Clobbers) {
       // Clobbers should already be expanded into subregs.
-      assert(!Register::isPhysicalRegister(S.Reg) ||
-             !MCSubRegIterator(S.Reg, &TRI, false).isValid());
+      assert(!S.Reg.isPhysical() || TRI.subregs(S.Reg).empty());
       if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
         closeRange(S);
       // Create a single-instruction range.
@@ -512,7 +509,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
 
 raw_ostream &llvm::operator<<(raw_ostream &OS,
                               const HexagonBlockRanges::RangeList &RL) {
-  for (auto &R : RL)
+  for (const auto &R : RL)
     OS << R << " ";
   return OS;
 }
@@ -528,7 +525,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
 
 raw_ostream &llvm::operator<<(raw_ostream &OS,
                               const HexagonBlockRanges::PrintRangeMap &P) {
-  for (auto &I : P.Map) {
+  for (const auto &I : P.Map) {
     const HexagonBlockRanges::RangeList &RL = I.second;
     OS << printReg(I.first.Reg, &P.TRI, I.first.Sub) << " -> " << RL << "\n";
   }

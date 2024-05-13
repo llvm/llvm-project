@@ -2,14 +2,14 @@
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
-%"class.std::__1::__tree_node.130.151" = type { %"class.std::__1::__tree_node_base.base.128.149", %"class.boost::serialization::extended_type_info.129.150"* }
-%"class.std::__1::__tree_node_base.base.128.149" = type <{ %"class.std::__1::__tree_end_node.127.148", %"class.std::__1::__tree_node_base.126.147"*, %"class.std::__1::__tree_node_base.126.147"*, i8 }>
-%"class.std::__1::__tree_end_node.127.148" = type { %"class.std::__1::__tree_node_base.126.147"* }
-%"class.std::__1::__tree_node_base.126.147" = type <{ %"class.std::__1::__tree_end_node.127.148", %"class.std::__1::__tree_node_base.126.147"*, %"class.std::__1::__tree_node_base.126.147"*, i8, [7 x i8] }>
-%"class.boost::serialization::extended_type_info.129.150" = type { i32 (...)**, i32, i8* }
+%"class.std::__1::__tree_node.130.151" = type { %"class.std::__1::__tree_node_base.base.128.149", ptr }
+%"class.std::__1::__tree_node_base.base.128.149" = type <{ %"class.std::__1::__tree_end_node.127.148", ptr, ptr, i8 }>
+%"class.std::__1::__tree_end_node.127.148" = type { ptr }
+%"class.std::__1::__tree_node_base.126.147" = type <{ %"class.std::__1::__tree_end_node.127.148", ptr, ptr, i8, [7 x i8] }>
+%"class.boost::serialization::extended_type_info.129.150" = type { ptr, i32, ptr }
 
 ; Function Attrs: noinline
-define void @_ZN5boost13serialization18extended_type_info4findEPKc() #0 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @_ZN5boost13serialization18extended_type_info4findEPKc() #0 align 2 personality ptr @__gxx_personality_v0 {
 entry:
   br i1 undef, label %cond.true, label %cond.false
 
@@ -31,8 +31,8 @@ _ZNKSt3__18multisetIPKN5boost13serialization18extended_type_infoENS2_6detail11ke
   br label %invoke.cont
 
 invoke.cont:                                      ; preds = %_ZNKSt3__18multisetIPKN5boost13serialization18extended_type_infoENS2_6detail11key_compareENS_9allocatorIS5_EEE4findERKS5_.exit
-  %1 = load %"class.std::__1::__tree_node.130.151"*, %"class.std::__1::__tree_node.130.151"** undef, align 8
-  %cmp.i = icmp eq %"class.std::__1::__tree_node.130.151"* undef, %1
+  %1 = load ptr, ptr undef, align 8
+  %cmp.i = icmp eq ptr undef, %1
   br label %invoke.cont.2
 
 invoke.cont.2:                                    ; preds = %invoke.cont
@@ -42,7 +42,7 @@ if.then:                                          ; preds = %invoke.cont.2
   br label %cleanup
 
 lpad:                                             ; preds = %cond.end
-  %2 = landingpad { i8*, i32 }
+  %2 = landingpad { ptr, i32 }
           cleanup
   br label %eh.resume
 
@@ -56,7 +56,7 @@ cleanup:                                          ; preds = %invoke.cont.4, %if.
   ret void
 
 eh.resume:                                        ; preds = %lpad
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 }
 
 declare i32 @__gxx_personality_v0(...)

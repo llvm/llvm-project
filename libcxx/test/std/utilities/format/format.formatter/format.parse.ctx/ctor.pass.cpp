@@ -6,7 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // <format>
 
@@ -15,7 +14,9 @@
 //                            size_t num_args = 0) noexcept
 
 #include <format>
+
 #include <cassert>
+#include <string_view>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -37,15 +38,13 @@ constexpr void test(const CharT* fmt) {
   static_assert(
       !std::is_move_assignable_v<std::basic_format_parse_context<CharT> >);
 
-  ASSERT_NOEXCEPT(
-      std::basic_format_parse_context{std::basic_string_view<CharT>{}});
-  ASSERT_NOEXCEPT(
-      std::basic_format_parse_context{std::basic_string_view<CharT>{}, 42});
+  ASSERT_NOEXCEPT(std::basic_format_parse_context{std::basic_string_view<CharT>{}});
+  ASSERT_NOEXCEPT(std::basic_format_parse_context{std::basic_string_view<CharT>{}, 42});
 
   {
     std::basic_format_parse_context<CharT> context(fmt);
-    assert(context.begin() == &fmt[0]);
-    assert(context.end() == &fmt[3]);
+    assert(std::to_address(context.begin()) == &fmt[0]);
+    assert(std::to_address(context.end()) == &fmt[3]);
   }
   {
     std::basic_string_view view{fmt};
@@ -57,14 +56,14 @@ constexpr void test(const CharT* fmt) {
 
 constexpr bool test() {
   test("abc");
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test(L"abc");
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#endif
+#ifndef TEST_HAS_NO_CHAR8_T
   test(u8"abc");
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
   test(u"abc");
   test(U"abc");
-#endif
 
   return true;
 }

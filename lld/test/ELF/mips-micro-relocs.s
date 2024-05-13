@@ -12,7 +12,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2eb.o
 # RUN: ld.lld -o %teb.exe -script %t.script %t1eb.o %t2eb.o
-# RUN: llvm-objdump -d -t -s --mattr=micromips --no-show-raw-insn %teb.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d -t -s --mattr=micromips --no-show-raw-insn %teb.exe \
 # RUN:   | FileCheck --check-prefixes=ASM,EB %s
 # RUN: llvm-readelf -h %teb.exe | FileCheck --check-prefix=ELF %s
 
@@ -21,7 +21,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2el.o
 # RUN: ld.lld -o %tel.exe -script %t.script %t1el.o %t2el.o
-# RUN: llvm-objdump -d -t -s --mattr=micromips --no-show-raw-insn %tel.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d -t -s --mattr=micromips --no-show-raw-insn %tel.exe \
 # RUN:   | FileCheck --check-prefixes=ASM,EL %s
 # RUN: llvm-readelf -h %tel.exe | FileCheck --check-prefix=ELF %s
 
@@ -46,11 +46,11 @@
 # ASM-NEXT:              addiu   $3, $3, 32495
 # ASM-NEXT:              lw      $3, -32744($gp)
 # ASM-NEXT:              lw      $3, -32744($3)
-# ASM-NEXT:              beqz16  $6, -32
+# ASM-NEXT:              beqz16  $6, 0x20100
 # ASM-NEXT:              sll     $3, $fp, 0
-# ASM-NEXT:              b16     -40
+# ASM-NEXT:              b16     0x200fe
 # ASM-NEXT:              nop
-# ASM-NEXT:              b       -44
+# ASM-NEXT:              b       0x20100
 
 # ELF: Entry point address: 0x20111
 

@@ -38,7 +38,7 @@ RUN:   FileCheck --check-prefix=BITCODE -DFILE1=%t.bc.1 -DFILE2=%t.bc.2 %s
 
 # Test case where switch it not recognised.
 RUN: not llvm-readobj --unknown-switch 2>&1 | FileCheck --check-prefix=UNKNOWN %s
-UNKNOWN: Unknown command line argument '--unknown-switch'
+UNKNOWN: error: unknown argument '--unknown-switch'
 
 # Test version switch.
 RUN: llvm-readobj --version | FileCheck %s --check-prefix=VERSION
@@ -54,8 +54,12 @@ HELP: OVERVIEW: LLVM Object Reader
 OBJ: llvm-readobj{{.*}} [options] <input object files>
 ELF: llvm-readelf{{.*}} [options] <input object files>
 HELP: OPTIONS:
-OBJ: -s - Alias for --section-headers
-OBJ: -t - Alias for --symbols
-ELF: -s - Alias for --symbols
-ELF: -t - Alias for --section-details
+HELP: -s   Alias for --symbols
+HELP: -t   Alias for --section-details
+HELP: OPTIONS (ELF specific):
+HELP: --dynamic-table
+HELP: OPTIONS (Mach-O specific):
+HELP: --macho-data-in-code
+HELP: OPTIONS (PE/COFF specific):
+HELP: --codeview-ghash
 HELP: @FILE

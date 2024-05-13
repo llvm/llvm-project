@@ -10,10 +10,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARY_COPY_INITIALIZATION_H
 
 #include "../ClangTidyCheck.h"
+#include "clang/AST/Decl.h"
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 // The check detects local variable declarations that are copy initialized with
 // the const reference of a function call or the const reference of a method
@@ -33,18 +32,36 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
+protected:
+  // A helper to manipulate the state common to
+  // `CopyFromMethodReturn` and `CopyFromLocalVar`.
+  struct CheckContext {
+    const VarDecl &Var;
+    const Stmt &BlockStmt;
+    const DeclStmt &VarDeclStmt;
+    clang::ASTContext &ASTCtx;
+    const bool IssueFix;
+    const bool IsVarUnused;
+    const bool IsVarOnlyUsedAsConst;
+  };
+
+  // Create diagnostics. These are virtual so that derived classes can change
+  // behaviour.
+  virtual void diagnoseCopyFromMethodReturn(const CheckContext &Ctx);
+  virtual void diagnoseCopyFromLocalVar(const CheckContext &Ctx,
+                                        const VarDecl &OldVar);
+
 private:
-  void handleCopyFromMethodReturn(const VarDecl &Var, const Stmt &BlockStmt,
-                                  bool IssueFix, const VarDecl *ObjectArg,
-                                  ASTContext &Context);
-  void handleCopyFromLocalVar(const VarDecl &NewVar, const VarDecl &OldVar,
-                              const Stmt &BlockStmt, bool IssueFix,
-                              ASTContext &Context);
-  const std::vector<std::string> AllowedTypes;
+  void handleCopyFromMethodReturn(const CheckContext &Ctx,
+                                  const VarDecl *ObjectArg);
+  void handleCopyFromLocalVar(const CheckContext &Ctx, const VarDecl &OldVar);
+
+  void maybeIssueFixes(const CheckContext &Ctx, DiagnosticBuilder &Diagnostic);
+
+  const std::vector<StringRef> AllowedTypes;
+  const std::vector<StringRef> ExcludedContainerTypes;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARY_COPY_INITIALIZATION_H

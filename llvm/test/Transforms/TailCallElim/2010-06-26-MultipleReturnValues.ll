@@ -1,4 +1,4 @@
-; RUN: opt < %s -tailcallelim -verify-dom-info -S | FileCheck %s
+; RUN: opt < %s -passes=tailcallelim -verify-dom-info -S | FileCheck %s
 ; PR7328
 ; PR7506
 define i32 @test1_constants(i32 %x) {
@@ -17,7 +17,7 @@ return:                                           ; preds = %entry
 
 ; CHECK-LABEL: define i32 @test1_constants(
 ; CHECK: tailrecurse:
-; CHECK: %ret.tr = phi i32 [ undef, %entry ], [ %current.ret.tr, %body ]
+; CHECK: %ret.tr = phi i32 [ poison, %entry ], [ %current.ret.tr, %body ]
 ; CHECK: %ret.known.tr = phi i1 [ false, %entry ], [ true, %body ]
 ; CHECK: body:
 ; CHECK-NOT: %recurse
@@ -47,7 +47,7 @@ declare i32 @test2_helper()
 
 ; CHECK-LABEL: define i32 @test2_non_constants(
 ; CHECK: tailrecurse:
-; CHECK: %ret.tr = phi i32 [ undef, %entry ], [ %current.ret.tr, %body ]
+; CHECK: %ret.tr = phi i32 [ poison, %entry ], [ %current.ret.tr, %body ]
 ; CHECK: %ret.known.tr = phi i1 [ false, %entry ], [ true, %body ]
 ; CHECK: body:
 ; CHECK-NOT: %recurse
@@ -94,7 +94,7 @@ declare i32 @test3_helper()
 
 ; CHECK-LABEL: define i32 @test3_mixed(
 ; CHECK: tailrecurse:
-; CHECK: %ret.tr = phi i32 [ undef, %entry ], [ %current.ret.tr, %case1 ], [ %current.ret.tr1, %case2 ], [ %ret.tr, %default ]
+; CHECK: %ret.tr = phi i32 [ poison, %entry ], [ %current.ret.tr, %case1 ], [ %current.ret.tr1, %case2 ], [ %ret.tr, %default ]
 ; CHECK: %ret.known.tr = phi i1 [ false, %entry ], [ true, %case1 ], [ true, %case2 ], [ %ret.known.tr, %default ]
 ; CHECK: case1:
 ; CHECK-NOT: %recurse

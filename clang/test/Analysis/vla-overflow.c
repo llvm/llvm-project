@@ -13,12 +13,12 @@ size_t check_VLA_overflow_sizeof(unsigned int x) {
   return 0;
 }
 
-void check_VLA_overflow_typedef() {
+void check_VLA_overflow_typedef(void) {
   unsigned int x = BIGINDEX;
   typedef char VLA[x][x][x][x]; // expected-warning{{Declared variable-length array (VLA) has too large size [core.VLASize]}}
 }
 
-void check_VLA_no_overflow() {
+void check_VLA_no_overflow(void) {
   unsigned int x = BIGINDEX;
   typedef char VLA[x][x][x][x - 1];
   typedef char VLA1[0xffffffffu];

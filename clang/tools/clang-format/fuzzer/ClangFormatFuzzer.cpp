@@ -19,10 +19,14 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   std::string s((const char *)data, size);
   auto Style = getGoogleStyle(clang::format::FormatStyle::LK_Cpp);
   Style.ColumnLimit = 60;
+  Style.Macros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+  Style.Macros.push_back("ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+  Style.Macros.push_back("MOCK_METHOD(r, n, a, s)=r n a s");
   auto Replaces = reformat(Style, s, clang::tooling::Range(0, s.size()));
   auto Result = applyAllReplacements(s, Replaces);
 
   // Output must be checked, as otherwise we crash.
-  if (!Result) {}
+  if (!Result) {
+  }
   return 0;
 }

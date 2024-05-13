@@ -89,29 +89,29 @@ TEST_F(PointerUnionTest, Null) {
 }
 
 TEST_F(PointerUnionTest, Is) {
-  EXPECT_FALSE(a.is<int *>());
-  EXPECT_TRUE(a.is<float *>());
-  EXPECT_TRUE(b.is<int *>());
-  EXPECT_FALSE(b.is<float *>());
-  EXPECT_TRUE(n.is<int *>());
-  EXPECT_FALSE(n.is<float *>());
-  EXPECT_TRUE(i3.is<int *>());
-  EXPECT_TRUE(f3.is<float *>());
-  EXPECT_TRUE(l3.is<long long *>());
-  EXPECT_TRUE(i4.is<int *>());
-  EXPECT_TRUE(f4.is<float *>());
-  EXPECT_TRUE(l4.is<long long *>());
-  EXPECT_TRUE(d4.is<double *>());
-  EXPECT_TRUE(i4null.is<int *>());
-  EXPECT_TRUE(f4null.is<float *>());
-  EXPECT_TRUE(l4null.is<long long *>());
-  EXPECT_TRUE(d4null.is<double *>());
+  EXPECT_FALSE(isa<int *>(a));
+  EXPECT_TRUE(isa<float *>(a));
+  EXPECT_TRUE(isa<int *>(b));
+  EXPECT_FALSE(isa<float *>(b));
+  EXPECT_TRUE(isa<int *>(n));
+  EXPECT_FALSE(isa<float *>(n));
+  EXPECT_TRUE(isa<int *>(i3));
+  EXPECT_TRUE(isa<float *>(f3));
+  EXPECT_TRUE(isa<long long *>(l3));
+  EXPECT_TRUE(isa<int *>(i4));
+  EXPECT_TRUE(isa<float *>(f4));
+  EXPECT_TRUE(isa<long long *>(l4));
+  EXPECT_TRUE(isa<double *>(d4));
+  EXPECT_TRUE(isa<int *>(i4null));
+  EXPECT_TRUE(isa<float *>(f4null));
+  EXPECT_TRUE(isa<long long *>(l4null));
+  EXPECT_TRUE(isa<double *>(d4null));
 }
 
 TEST_F(PointerUnionTest, Get) {
-  EXPECT_EQ(a.get<float *>(), &f);
-  EXPECT_EQ(b.get<int *>(), &i);
-  EXPECT_EQ(n.get<int *>(), (int *)nullptr);
+  EXPECT_EQ(cast<float *>(a), &f);
+  EXPECT_EQ(cast<int *>(b), &i);
+  EXPECT_EQ(cast<int *>(n), (int *)nullptr);
 }
 
 template<int I> struct alignas(8) Aligned {};
@@ -125,27 +125,27 @@ TEST_F(PointerUnionTest, ManyElements) {
   Aligned<7> a7;
 
   PU8 a = &a0;
-  EXPECT_TRUE(a.is<Aligned<0>*>());
-  EXPECT_FALSE(a.is<Aligned<1>*>());
-  EXPECT_FALSE(a.is<Aligned<2>*>());
-  EXPECT_FALSE(a.is<Aligned<3>*>());
-  EXPECT_FALSE(a.is<Aligned<4>*>());
-  EXPECT_FALSE(a.is<Aligned<5>*>());
-  EXPECT_FALSE(a.is<Aligned<6>*>());
-  EXPECT_FALSE(a.is<Aligned<7>*>());
-  EXPECT_EQ(a.dyn_cast<Aligned<0>*>(), &a0);
+  EXPECT_TRUE(isa<Aligned<0> *>(a));
+  EXPECT_FALSE(isa<Aligned<1> *>(a));
+  EXPECT_FALSE(isa<Aligned<2> *>(a));
+  EXPECT_FALSE(isa<Aligned<3> *>(a));
+  EXPECT_FALSE(isa<Aligned<4> *>(a));
+  EXPECT_FALSE(isa<Aligned<5> *>(a));
+  EXPECT_FALSE(isa<Aligned<6> *>(a));
+  EXPECT_FALSE(isa<Aligned<7> *>(a));
+  EXPECT_EQ(dyn_cast_if_present<Aligned<0> *>(a), &a0);
   EXPECT_EQ(*a.getAddrOfPtr1(), &a0);
 
   a = &a7;
-  EXPECT_FALSE(a.is<Aligned<0>*>());
-  EXPECT_FALSE(a.is<Aligned<1>*>());
-  EXPECT_FALSE(a.is<Aligned<2>*>());
-  EXPECT_FALSE(a.is<Aligned<3>*>());
-  EXPECT_FALSE(a.is<Aligned<4>*>());
-  EXPECT_FALSE(a.is<Aligned<5>*>());
-  EXPECT_FALSE(a.is<Aligned<6>*>());
-  EXPECT_TRUE(a.is<Aligned<7>*>());
-  EXPECT_EQ(a.dyn_cast<Aligned<7>*>(), &a7);
+  EXPECT_FALSE(isa<Aligned<0> *>(a));
+  EXPECT_FALSE(isa<Aligned<1> *>(a));
+  EXPECT_FALSE(isa<Aligned<2> *>(a));
+  EXPECT_FALSE(isa<Aligned<3> *>(a));
+  EXPECT_FALSE(isa<Aligned<4> *>(a));
+  EXPECT_FALSE(isa<Aligned<5> *>(a));
+  EXPECT_FALSE(isa<Aligned<6> *>(a));
+  EXPECT_TRUE(isa<Aligned<7> *>(a));
+  EXPECT_EQ(dyn_cast_if_present<Aligned<7> *>(a), &a7);
 
   EXPECT_TRUE(a == PU8(&a7));
   EXPECT_TRUE(a != PU8(&a0));
@@ -154,6 +154,139 @@ TEST_F(PointerUnionTest, ManyElements) {
 TEST_F(PointerUnionTest, GetAddrOfPtr1) {
   EXPECT_TRUE((void *)b.getAddrOfPtr1() == (void *)&b);
   EXPECT_TRUE((void *)n.getAddrOfPtr1() == (void *)&n);
+}
+
+TEST_F(PointerUnionTest, NewCastInfra) {
+  // test isa<>
+  EXPECT_TRUE(isa<float *>(a));
+  EXPECT_TRUE(isa<int *>(b));
+  EXPECT_TRUE(isa<int *>(c));
+  EXPECT_TRUE(isa<int *>(n));
+  EXPECT_TRUE(isa<int *>(i3));
+  EXPECT_TRUE(isa<float *>(f3));
+  EXPECT_TRUE(isa<long long *>(l3));
+  EXPECT_TRUE(isa<int *>(i4));
+  EXPECT_TRUE(isa<float *>(f4));
+  EXPECT_TRUE(isa<long long *>(l4));
+  EXPECT_TRUE(isa<double *>(d4));
+  EXPECT_TRUE(isa<int *>(i4null));
+  EXPECT_TRUE(isa<float *>(f4null));
+  EXPECT_TRUE(isa<long long *>(l4null));
+  EXPECT_TRUE(isa<double *>(d4null));
+  EXPECT_FALSE(isa<int *>(a));
+  EXPECT_FALSE(isa<float *>(b));
+  EXPECT_FALSE(isa<float *>(c));
+  EXPECT_FALSE(isa<float *>(n));
+  EXPECT_FALSE(isa<float *>(i3));
+  EXPECT_FALSE(isa<long long *>(i3));
+  EXPECT_FALSE(isa<int *>(f3));
+  EXPECT_FALSE(isa<long long *>(f3));
+  EXPECT_FALSE(isa<int *>(l3));
+  EXPECT_FALSE(isa<float *>(l3));
+  EXPECT_FALSE(isa<float *>(i4));
+  EXPECT_FALSE(isa<long long *>(i4));
+  EXPECT_FALSE(isa<double *>(i4));
+  EXPECT_FALSE(isa<int *>(f4));
+  EXPECT_FALSE(isa<long long *>(f4));
+  EXPECT_FALSE(isa<double *>(f4));
+  EXPECT_FALSE(isa<int *>(l4));
+  EXPECT_FALSE(isa<float *>(l4));
+  EXPECT_FALSE(isa<double *>(l4));
+  EXPECT_FALSE(isa<int *>(d4));
+  EXPECT_FALSE(isa<float *>(d4));
+  EXPECT_FALSE(isa<long long *>(d4));
+  EXPECT_FALSE(isa<float *>(i4null));
+  EXPECT_FALSE(isa<long long *>(i4null));
+  EXPECT_FALSE(isa<double *>(i4null));
+  EXPECT_FALSE(isa<int *>(f4null));
+  EXPECT_FALSE(isa<long long *>(f4null));
+  EXPECT_FALSE(isa<double *>(f4null));
+  EXPECT_FALSE(isa<int *>(l4null));
+  EXPECT_FALSE(isa<float *>(l4null));
+  EXPECT_FALSE(isa<double *>(l4null));
+  EXPECT_FALSE(isa<int *>(d4null));
+  EXPECT_FALSE(isa<float *>(d4null));
+  EXPECT_FALSE(isa<long long *>(d4null));
+
+  // test cast<>
+  EXPECT_EQ(cast<float *>(a), &f);
+  EXPECT_EQ(cast<int *>(b), &i);
+  EXPECT_EQ(cast<int *>(c), &i);
+  EXPECT_EQ(cast<int *>(i3), &i);
+  EXPECT_EQ(cast<float *>(f3), &f);
+  EXPECT_EQ(cast<long long *>(l3), &l);
+  EXPECT_EQ(cast<int *>(i4), &i);
+  EXPECT_EQ(cast<float *>(f4), &f);
+  EXPECT_EQ(cast<long long *>(l4), &l);
+  EXPECT_EQ(cast<double *>(d4), &d);
+
+  // test dyn_cast
+  EXPECT_EQ(dyn_cast<int *>(a), nullptr);
+  EXPECT_EQ(dyn_cast<float *>(a), &f);
+  EXPECT_EQ(dyn_cast<int *>(b), &i);
+  EXPECT_EQ(dyn_cast<float *>(b), nullptr);
+  EXPECT_EQ(dyn_cast<int *>(c), &i);
+  EXPECT_EQ(dyn_cast<float *>(c), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<int *>(n), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(n), nullptr);
+  EXPECT_EQ(dyn_cast<int *>(i3), &i);
+  EXPECT_EQ(dyn_cast<float *>(i3), nullptr);
+  EXPECT_EQ(dyn_cast<long long *>(i3), nullptr);
+  EXPECT_EQ(dyn_cast<int *>(f3), nullptr);
+  EXPECT_EQ(dyn_cast<float *>(f3), &f);
+  EXPECT_EQ(dyn_cast<long long *>(f3), nullptr);
+  EXPECT_EQ(dyn_cast<int *>(l3), nullptr);
+  EXPECT_EQ(dyn_cast<float *>(l3), nullptr);
+  EXPECT_EQ(dyn_cast<long long *>(l3), &l);
+  EXPECT_EQ(dyn_cast<int *>(i4), &i);
+  EXPECT_EQ(dyn_cast<float *>(i4), nullptr);
+  EXPECT_EQ(dyn_cast<long long *>(i4), nullptr);
+  EXPECT_EQ(dyn_cast<double *>(i4), nullptr);
+  EXPECT_EQ(dyn_cast<int *>(f4), nullptr);
+  EXPECT_EQ(dyn_cast<float *>(f4), &f);
+  EXPECT_EQ(dyn_cast<long long *>(f4), nullptr);
+  EXPECT_EQ(dyn_cast<double *>(f4), nullptr);
+  EXPECT_EQ(dyn_cast<int *>(l4), nullptr);
+  EXPECT_EQ(dyn_cast<float *>(l4), nullptr);
+  EXPECT_EQ(dyn_cast<long long *>(l4), &l);
+  EXPECT_EQ(dyn_cast<double *>(l4), nullptr);
+  EXPECT_EQ(dyn_cast<int *>(d4), nullptr);
+  EXPECT_EQ(dyn_cast<float *>(d4), nullptr);
+  EXPECT_EQ(dyn_cast<long long *>(d4), nullptr);
+  EXPECT_EQ(dyn_cast<double *>(d4), &d);
+  EXPECT_EQ(dyn_cast_if_present<int *>(i4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(i4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<long long *>(i4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<double *>(i4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<int *>(f4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(f4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<long long *>(f4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<double *>(f4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<int *>(l4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(l4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<long long *>(l4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<double *>(l4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<int *>(d4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(d4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<long long *>(d4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<double *>(d4null), nullptr);
+
+  // test for const
+  const PU4 constd4(&d);
+  EXPECT_TRUE(isa<double *>(constd4));
+  EXPECT_FALSE(isa<int *>(constd4));
+  EXPECT_EQ(cast<double *>(constd4), &d);
+  EXPECT_EQ(dyn_cast<long long *>(constd4), nullptr);
+
+  auto *result1 = cast<double *>(constd4);
+  static_assert(std::is_same_v<double *, decltype(result1)>,
+                "type mismatch for cast with PointerUnion");
+
+  PointerUnion<int *, const double *> constd2(&d);
+  auto *result2 = cast<const double *>(constd2);
+  EXPECT_EQ(result2, &d);
+  static_assert(std::is_same_v<const double *, decltype(result2)>,
+                "type mismatch for cast with PointerUnion");
 }
 
 } // end anonymous namespace

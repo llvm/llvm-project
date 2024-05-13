@@ -1,5 +1,5 @@
 // STL allocators should not have unrelated-cast tests applied
-// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-unrelated-cast -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-unrelated-cast -emit-llvm -o - %s | FileCheck %s
 
 #include <stddef.h>
 

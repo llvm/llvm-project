@@ -13,19 +13,20 @@
   iterator_types = ["parallel"]
 }
 
-func @inline_into(%arg0: memref<?xf32>) {
+func.func @inline_into(%arg0: memref<?xf32>) {
   // CHECK: linalg.generic
   call @inlined_fn(%arg0) : (memref<?xf32>) -> ()
   return
 }
 
-func @inlined_fn(%arg0: memref<?xf32>) {
+func.func @inlined_fn(%arg0: memref<?xf32>) {
   // CHECK: linalg.generic
   linalg.generic #trait
      ins(%arg0 : memref<?xf32>)
     outs(%arg0 : memref<?xf32>) {
     ^bb(%0 : f32, %1 : f32) :
-      linalg.yield %0 : f32
+      %2 = arith.addf %0, %0: f32
+      linalg.yield %2 : f32
   }
   return
 }

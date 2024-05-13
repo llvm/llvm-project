@@ -1,5 +1,5 @@
-# RUN: not --crash llc -march=amdgcn -run-pass=regbankselect  -regbankselect-fast  %s -o /dev/null 2>&1 | FileCheck %s
-# RUN: not --crash llc -march=amdgcn -run-pass=regbankselect  -regbankselect-greedy  %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn -run-pass=amdgpu-regbankselect  -regbankselect-fast  %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn -run-pass=amdgpu-regbankselect  -regbankselect-greedy  %s -o /dev/null 2>&1 | FileCheck %s
 
 # Check behavior for illegal copies.
 

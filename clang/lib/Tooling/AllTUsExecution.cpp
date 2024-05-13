@@ -115,13 +115,13 @@ llvm::Error AllTUsToolExecutor::execute(
   auto &Action = Actions.front();
 
   {
-    llvm::ThreadPool Pool(llvm::hardware_concurrency(ThreadCount));
+    llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(ThreadCount));
     for (std::string File : Files) {
       Pool.async(
           [&](std::string Path) {
             Log("[" + std::to_string(Count()) + "/" + TotalNumStr +
                 "] Processing file " + Path);
-            // Each thread gets an indepent copy of a VFS to allow different
+            // Each thread gets an independent copy of a VFS to allow different
             // concurrent working directories.
             IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
                 llvm::vfs::createPhysicalFileSystem();

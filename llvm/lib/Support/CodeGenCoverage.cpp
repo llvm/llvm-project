@@ -23,11 +23,11 @@ using namespace llvm;
 
 static sys::SmartMutex<true> OutputMutex;
 
-CodeGenCoverage::CodeGenCoverage() {}
+CodeGenCoverage::CodeGenCoverage() = default;
 
 void CodeGenCoverage::setCovered(uint64_t RuleID) {
   if (RuleCoverage.size() <= RuleID)
-    RuleCoverage.resize(RuleID + 1, 0);
+    RuleCoverage.resize(RuleID + 1, false);
   RuleCoverage[RuleID] = true;
 }
 
@@ -53,12 +53,13 @@ bool CodeGenCoverage::parse(MemoryBuffer &Buffer, StringRef BackendName) {
     if (CurPtr == Buffer.getBufferEnd())
       return false; // Data is invalid, expected rule id's to follow.
 
-    bool IsForThisBackend = BackendName.equals(LexedBackendName);
+    bool IsForThisBackend = BackendName == LexedBackendName;
     while (CurPtr != Buffer.getBufferEnd()) {
       if (std::distance(CurPtr, Buffer.getBufferEnd()) < 8)
         return false; // Data is invalid. Not enough bytes for another rule id.
 
-      uint64_t RuleID = support::endian::read64(CurPtr, support::native);
+      uint64_t RuleID =
+          support::endian::read64(CurPtr, llvm::endianness::native);
       CurPtr += 8;
 
       // ~0ull terminates the rule id list.

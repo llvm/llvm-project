@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11, apple-clang-12.0.0
 
 // <compare>
 
@@ -44,23 +43,19 @@ void test_signatures() {
   ASSERT_NOEXCEPT(Eq > 0);
   ASSERT_NOEXCEPT(0 >= Eq);
   ASSERT_NOEXCEPT(Eq >= 0);
-#ifndef TEST_HAS_NO_SPACESHIP_OPERATOR
   ASSERT_NOEXCEPT(0 <=> Eq);
   ASSERT_NOEXCEPT(Eq <=> 0);
   ASSERT_SAME_TYPE(decltype(Eq <=> 0), std::strong_ordering);
   ASSERT_SAME_TYPE(decltype(0 <=> Eq), std::strong_ordering);
-#endif
 }
 
 constexpr void test_equality() {
-#ifndef TEST_HAS_NO_SPACESHIP_OPERATOR
   auto& StrongEq = std::strong_ordering::equal;
   auto& PartialEq = std::partial_ordering::equivalent;
   assert(StrongEq == PartialEq);
 
   auto& WeakEq = std::weak_ordering::equivalent;
   assert(StrongEq == WeakEq);
-#endif
 }
 
 constexpr bool test_conversion() {
@@ -136,7 +131,6 @@ constexpr bool test_constexpr() {
     assert((0 <= V) == (TC.ExpectGreater || TC.ExpectEq));
     assert((0 >= V) == (TC.ExpectLess || TC.ExpectEq));
   }
-#ifndef TEST_HAS_NO_SPACESHIP_OPERATOR
   {
     std::strong_ordering res = (Eq <=> 0);
     ((void)res);
@@ -188,7 +182,6 @@ constexpr bool test_constexpr() {
   }
 
   test_equality();
-#endif
 
   return true;
 }

@@ -43,31 +43,31 @@ source_filename = "frame.c"
 @data = dso_local global i32 17, align 4, !dbg !0
 @sum = dso_local local_unnamed_addr global i32 0, align 4, !dbg !6
 @zero = dso_local local_unnamed_addr global i32 0, align 4, !dbg !9
-@ptr = common dso_local local_unnamed_addr global i32* null, align 8, !dbg !11
+@ptr = common dso_local local_unnamed_addr global ptr null, align 8, !dbg !11
 
 define dso_local i32 @main() local_unnamed_addr !dbg !17 {
 entry:
   %val = alloca i32, align 4
-  %0 = bitcast i32* %val to i8*, !dbg !22
-  call void @llvm.lifetime.start(i64 4, i8* %0), !dbg !22
-  %1 = load i32, i32* @data, align 4, !dbg !23, !tbaa !24
+  %0 = bitcast ptr %val to ptr, !dbg !22
+  call void @llvm.lifetime.start(i64 4, ptr %0), !dbg !22
+  %1 = load i32, ptr @data, align 4, !dbg !23, !tbaa !24
   tail call void @llvm.dbg.value(metadata i32 %1, metadata !21, metadata !28), !dbg !29
-  store i32 %1, i32* %val, align 4, !dbg !30, !tbaa !24
-  tail call void @llvm.dbg.value(metadata i32* %val, metadata !21, metadata !31), !dbg !29
-  call void @foo(i32 1, i32* nonnull %val), !dbg !32
-  call void @foo(i32 2, i32* nonnull @data), !dbg !33
-  %2 = load i32, i32* @zero, align 4, !dbg !34, !tbaa !24
-  call void @llvm.lifetime.end(i64 4, i8* %0), !dbg !35
+  store i32 %1, ptr %val, align 4, !dbg !30, !tbaa !24
+  tail call void @llvm.dbg.value(metadata ptr %val, metadata !21, metadata !31), !dbg !29
+  call void @foo(i32 1, ptr nonnull %val), !dbg !32
+  call void @foo(i32 2, ptr nonnull @data), !dbg !33
+  %2 = load i32, ptr @zero, align 4, !dbg !34, !tbaa !24
+  call void @llvm.lifetime.end(i64 4, ptr %0), !dbg !35
   ret i32 %2, !dbg !36
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start(i64, ptr nocapture) #0
 
-declare void @foo(i32, i32*) local_unnamed_addr
+declare void @foo(i32, ptr) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end(i64, ptr nocapture) #0
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

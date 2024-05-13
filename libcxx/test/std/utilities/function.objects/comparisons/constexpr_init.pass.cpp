@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11
 
-// XFAIL: gcc-7
-
 // <functional>
 
 // equal_to, not_equal_to, less, et al.

@@ -23,14 +23,14 @@ entry:
 }
 
 ; Tail call shouldn't be blocked by no-op inttoptr.
-define i8* @test_inttoptr() {
+define ptr @test_inttoptr() {
 ; CHECK-LABEL: test_inttoptr:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    jmp _testi ## TAILCALL
 entry:
   %A = tail call i64 @testi()
-  %B = inttoptr i64 %A to i8*
-  ret i8* %B
+  %B = inttoptr i64 %A to ptr
+  ret ptr %B
 }
 
 declare <4 x float> @testv()
@@ -111,7 +111,7 @@ entry:
   ret { i64, i64} %c
 }
 
-define {i8*, i64} @test_pair_extract_conv() {
+define {ptr, i64} @test_pair_extract_conv() {
 ; CHECK-LABEL: test_pair_extract_conv:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    jmp _testp ## TAILCALL
@@ -120,12 +120,12 @@ entry:
   %x = extractvalue { i64, i64} %A, 0
   %y = extractvalue { i64, i64} %A, 1
 
-  %x1 = inttoptr i64 %x to i8*
+  %x1 = inttoptr i64 %x to ptr
 
-  %b = insertvalue {i8*, i64} undef, i8* %x1, 0
-  %c = insertvalue {i8*, i64} %b, i64 %y, 1
+  %b = insertvalue {ptr, i64} undef, ptr %x1, 0
+  %c = insertvalue {ptr, i64} %b, i64 %y, 1
 
-  ret { i8*, i64} %c
+  ret { ptr, i64} %c
 }
 
 define {i64, i64} @test_pair_extract_multiple() {
@@ -186,20 +186,19 @@ entry:
 %struct.A = type { i32 }
 %struct.B = type { %struct.A, i32 }
 
-declare %struct.B* @testu()
+declare ptr @testu()
 
-define %struct.A* @test_upcast() {
+define ptr @test_upcast() {
 ; CHECK-LABEL: test_upcast:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    jmp _testu ## TAILCALL
 entry:
-  %A = tail call %struct.B* @testu()
-  %x = getelementptr inbounds %struct.B, %struct.B* %A, i32 0, i32 0
-  ret %struct.A* %x
+  %A = tail call ptr @testu()
+  ret ptr %A
 }
 
 ; PR13006
-define { i64, i64 } @crash(i8* %this) {
+define { i64, i64 } @crash(ptr %this) {
 ; CHECK-LABEL: crash:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    jmp _testp ## TAILCALL
@@ -209,25 +208,25 @@ entry:
   ret { i64, i64 } %mrv7
 }
 
-%struct.funcs = type { i32 (i8*, i32*, i32)*, i32 (i8*)*, i32 (i8*)*, i32 (i8*, i32)*, i32 }
+%struct.funcs = type { ptr, ptr, ptr, ptr, i32 }
 
 @func_table = external global [0 x %struct.funcs]
 
 ; Check that we can fold an indexed load into a tail call instruction.
-define void @fold_indexed_load(i8* %mbstr, i64 %idxprom) nounwind uwtable ssp {
+define void @fold_indexed_load(ptr %mbstr, i64 %idxprom) nounwind uwtable ssp {
 ; CHECK-LABEL: fold_indexed_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    leaq (%rsi,%rsi,4), %rax
-; CHECK-NEXT:    movq _func_table@{{.*}}(%rip), %rcx
+; CHECK-NEXT:    movq _func_table@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    jmpq *16(%rcx,%rax,8) ## TAILCALL
 entry:
-  %dsplen = getelementptr inbounds [0 x %struct.funcs], [0 x %struct.funcs]* @func_table, i64 0, i64 %idxprom, i32 2
-  %x1 = load i32 (i8*)*, i32 (i8*)** %dsplen, align 8
-  %call = tail call i32 %x1(i8* %mbstr) nounwind
+  %dsplen = getelementptr inbounds [0 x %struct.funcs], ptr @func_table, i64 0, i64 %idxprom, i32 2
+  %x1 = load ptr, ptr %dsplen, align 8
+  %call = tail call i32 %x1(ptr %mbstr) nounwind
   ret void
 }
 
-@funcs = external constant [0 x i32 (i8*, ...)*]
+@funcs = external constant [0 x ptr]
 
 ; <rdar://problem/12282281> Fold an indexed load into the tail call instruction.
 ; Calling a varargs function with 6 arguments requires 7 registers (%al is the
@@ -236,7 +235,7 @@ entry:
 ;
 ; It is not possible to fold an indexed load into TCRETURNmi64 in that case.
 ;
-; typedef int (*funcptr)(void*, ...);
+; typedef int (*funcptr)(ptr, ...);
 ; extern const funcptr funcs[];
 ; int f(int n) {
 ;   return funcs[n](0, 0, 0, 0, 0, 0);
@@ -245,7 +244,7 @@ define i32 @rdar12282281(i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: rdar12282281:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    movq _funcs@{{.*}}(%rip), %rcx
+; CHECK-NEXT:    movq _funcs@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    movq (%rcx,%rax,8), %r11
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorl %esi, %esi
@@ -257,9 +256,9 @@ define i32 @rdar12282281(i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    jmpq *%r11 ## TAILCALL
 entry:
   %idxprom = sext i32 %n to i64
-  %arrayidx = getelementptr inbounds [0 x i32 (i8*, ...)*], [0 x i32 (i8*, ...)*]* @funcs, i64 0, i64 %idxprom
-  %0 = load i32 (i8*, ...)*, i32 (i8*, ...)** %arrayidx, align 8
-  %call = tail call i32 (i8*, ...) %0(i8* null, i32 0, i32 0, i32 0, i32 0, i32 0) nounwind
+  %arrayidx = getelementptr inbounds [0 x ptr], ptr @funcs, i64 0, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
+  %call = tail call i32 (ptr, ...) %0(ptr null, i32 0, i32 0, i32 0, i32 0, i32 0) nounwind
   ret i32 %call
 }
 

@@ -12,12 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/GPU/MemoryPromotion.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/MemoryPromotion.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/Pass/Pass.h"
 
@@ -28,12 +27,18 @@ namespace {
 /// Promotes all arguments with "gpu.test_promote_workgroup" attribute. This
 /// does not check whether the promotion is legal (e.g., amount of memory used)
 /// or beneficial (e.g., makes previously uncoalesced loads coalesced).
-class TestGpuMemoryPromotionPass
+struct TestGpuMemoryPromotionPass
     : public PassWrapper<TestGpuMemoryPromotionPass,
                          OperationPass<gpu::GPUFuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestGpuMemoryPromotionPass)
+
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect,
+    registry.insert<affine::AffineDialect, memref::MemRefDialect,
                     scf::SCFDialect>();
+  }
+  StringRef getArgument() const final { return "test-gpu-memory-promotion"; }
+  StringRef getDescription() const final {
+    return "Promotes the annotated arguments of gpu.func to workgroup memory.";
   }
 
   void runOnOperation() override {
@@ -44,12 +49,10 @@ class TestGpuMemoryPromotionPass
     }
   }
 };
-} // end namespace
+} // namespace
 
 namespace mlir {
 void registerTestGpuMemoryPromotionPass() {
-  PassRegistration<TestGpuMemoryPromotionPass>(
-      "test-gpu-memory-promotion",
-      "Promotes the annotated arguments of gpu.func to workgroup memory.");
+  PassRegistration<TestGpuMemoryPromotionPass>();
 }
 } // namespace mlir

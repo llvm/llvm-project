@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! RUN: %python %S/test_symbols.py %s %flang_fc1
 ! Statement functions
 
 !DEF: /p1 MainProgram
@@ -16,12 +16,12 @@ program p1
  j = f(2)
 end program
 
-!DEF: /p2 MainProgram
-program p2
+!DEF: /p2 (Subroutine)Subprogram
+subroutine p2
  !DEF: /p2/f (Function, StmtFunction) Subprogram REAL(4)
  !DEF: /p2/f/x (Implicit) ObjectEntity REAL(4)
  !DEF: /p2/y (Implicit) ObjectEntity REAL(4)
  f(x) = y
  !REF: /p2/y
  y = 1.0
-end program
+end subroutine

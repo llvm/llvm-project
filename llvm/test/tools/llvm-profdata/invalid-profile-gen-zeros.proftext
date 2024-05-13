@@ -1,7 +1,7 @@
 # RUN: llvm-profdata merge --text -j 4 %s %s %s %s -o %t 2>&1 | FileCheck %s
 # RUN: llvm-profdata merge --binary -j 4 %s %s %s %s -o %t 2>&1 | FileCheck %s
 # IR level Instrumentation Flag
-# CHECK: Invalid profile
+# CHECK: warning: invalid profile created
 :ir
 foo
 # Func Hash:

@@ -2,7 +2,7 @@
 
 void clang_analyzer_eval(int);
 
-int string_literal_init() {
+int string_literal_init(void) {
   char a[] = "abc";
   char b[2] = "abc"; // expected-warning{{too long}}
   char c[5] = "abc";
@@ -42,7 +42,7 @@ void nested_compound_literals_float(float rad) {
 }
 
 
-void struct_as_array() {
+void struct_as_array(void) {
   struct simple { int x; int y; };
   struct simple a;
   struct simple *p = &a;
@@ -57,17 +57,17 @@ void struct_as_array() {
 }
 
 
-// PR13264 / <rdar://problem/11802440>
+// PR13264
 struct point { int x; int y; };
 struct circle { struct point o; int r; };
-struct circle get_circle() {
+struct circle get_circle(void) {
   struct circle result;
   result.r = 5;
   result.o = (struct point){0, 0};
   return result;
 }
 
-void struct_in_struct() {
+void struct_in_struct(void) {
   struct circle c;
   c = get_circle();
   // This used to think c.r was undefined because c.o is a LazyCompoundVal.
@@ -77,14 +77,14 @@ void struct_in_struct() {
 // We also test with floats because we don't model floats right now,
 // and the original bug report used a float.
 struct circle_f { struct point o; float r; };
-struct circle_f get_circle_f() {
+struct circle_f get_circle_f(void) {
   struct circle_f result;
   result.r = 5.0;
   result.o = (struct point){0, 0};
   return result;
 }
 
-float struct_in_struct_f() {
+float struct_in_struct_f(void) {
   struct circle_f c;
   c = get_circle_f();
 
@@ -92,7 +92,7 @@ float struct_in_struct_f() {
 }
 
 
-int randomInt();
+int randomInt(void);
 
 int testSymbolicInvalidation(int index) {
   int vals[10];
@@ -122,7 +122,7 @@ typedef struct {
   int x, y, z;
 } S;
 
-S makeS();
+S makeS(void);
 
 int testSymbolicInvalidationStruct(int index) {
   S vals[10];
@@ -183,7 +183,7 @@ int testConcreteInvalidationDoubleStruct(int index) {
 }
 
 
-int testNonOverlappingStructFieldsSimple() {
+int testNonOverlappingStructFieldsSimple(void) {
   S val;
 
   val.x = 1;
@@ -277,7 +277,7 @@ typedef struct {
   int length;
 } ShortStringWrapper;
 
-void testArrayStructCopy() {
+void testArrayStructCopy(void) {
   ShortString s = { "abc" };
   ShortString s2 = s;
   ShortString s3 = s2;
@@ -294,7 +294,7 @@ void testArrayStructCopy() {
   clang_analyzer_eval(s4.data[2] == 'c'); // expected-warning{{TRUE}}
 }
 
-void testArrayStructCopyNested() {
+void testArrayStructCopyNested(void) {
   ShortString s = { "abc" };
   ShortString s2 = s;
 

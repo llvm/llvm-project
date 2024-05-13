@@ -18,6 +18,6 @@ registers:
   - {id: 0, class: 'gr3200'}
 body: |
   bb.0.entry:
-    RETQ %eax
+    RET64 %eax
 ...
 

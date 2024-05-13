@@ -635,7 +635,7 @@ retain-agnostic, the conversion is treated as a ``__bridge`` cast.
 
   For loads from ``const`` global variables of :ref:`C retainable pointer type
   <arc.misc.c-retainable>`, it is reasonable to assume that global system
-  constants were initialitzed with true constants (e.g. string literals), but
+  constants were initialized with true constants (e.g. string literals), but
   user constants might have been initialized with something dynamically
   allocated, using a global initializer.
 
@@ -839,8 +839,21 @@ and non-ownership qualification.
 object lvalue.
 
 * For ``__weak`` objects, the current pointee is retained and then released at
-  the end of the current full-expression.  This must execute atomically with
-  respect to assignments and to the final release of the pointee.
+  the end of the current full-expression. In particular, messaging a ``__weak``
+  object keeps the object retained until the end of the full expression.
+
+  .. code-block:: objc
+
+    __weak MyObject *weakObj;
+
+    void foo() {
+      // weakObj is retained before the message send and released at the end of
+      // the full expression.
+      [weakObj m];
+    }
+
+  This must execute atomically with respect to assignments and to the final
+  release of the pointee.
 * For all other objects, the lvalue is loaded with primitive semantics.
 
 :arc-term:`Assignment` occurs when evaluating an assignment operator.  The
@@ -1306,7 +1319,7 @@ or between ARC and non-ARC modes) under the following conditions:
 
 - The types must be compatible ignoring ownership qualifiers according
   to the baseline, non-ARC rules (e.g. C struct compatibility or C++'s
-  ODR).  This condition implies a pairwise correspondance between
+  ODR).  This condition implies a pairwise correspondence between
   fields.
 
   Note that an Objective-C++ class with base classes, a user-provided
@@ -1351,7 +1364,7 @@ automatically by the compiler.
 .. admonition:: Rationale
 
   In earlier releases, when non-trivial ownership was only permitted
-  on fields in Objective-C++, the ABI used for such classees was the
+  on fields in Objective-C++, the ABI used for such classes was the
   ordinary ABI for non-trivial C++ classes, which passes arguments and
   returns indirectly and does not transfer responsibility for arguments.
   When support for Objective-C structs was added, it was decided to
@@ -2380,8 +2393,10 @@ the current pool, and returns an opaque "handle" to it.
 If ``value`` is null, this call has no effect.  Otherwise, it makes a best
 effort to hand off ownership of a retain count on the object to a call to
 :ref:`objc_retainAutoreleasedReturnValue
-<arc.runtime.objc_retainAutoreleasedReturnValue>` for the same object in an
-enclosing call frame.  If this is not possible, the object is autoreleased as
+<arc.runtime.objc_retainAutoreleasedReturnValue>` (or
+:ref:`objc_unsafeClaimAutoreleasedReturnValue
+<arc.runtime.objc_unsafeClaimAutoreleasedReturnValue>`) for the same object in
+an enclosing call frame.  If this is not possible, the object is autoreleased as
 above.
 
 Always returns ``value``.
@@ -2579,8 +2594,8 @@ Always returns ``value``.
 If ``value`` is null, this call has no effect.  Otherwise, it attempts to
 accept a hand off of a retain count from a call to
 :ref:`objc_autoreleaseReturnValue <arc.runtime.objc_autoreleaseReturnValue>` on
-``value`` in a recently-called function or something it calls.  If that fails,
-it performs a retain operation exactly like :ref:`objc_retain
+``value`` in a recently-called function or something it tail-calls.  If that
+fails, it performs a retain operation exactly like :ref:`objc_retain
 <arc.runtime.objc_retain>`.
 
 Always returns ``value``.
@@ -2638,4 +2653,22 @@ object.  Otherwise, ``object`` is registered as a ``__weak`` object or has its
 registration updated to point to ``value``.
 
 Returns the value of ``object`` after the call.
+
+.. _arc.runtime.objc_unsafeClaimAutoreleasedReturnValue:
+
+``id objc_unsafeClaimAutoreleasedReturnValue(id value);``
+---------------------------------------------------------
+
+*Precondition:* ``value`` is null or a pointer to a valid object.
+
+If ``value`` is null, this call has no effect.  Otherwise, it attempts to
+accept a hand off of a retain count from a call to
+:ref:`objc_autoreleaseReturnValue <arc.runtime.objc_autoreleaseReturnValue>` on
+``value`` in a recently-called function or something it tail-calls (in a manner
+similar to :ref:`objc_retainAutoreleasedReturnValue
+<arc.runtime.objc_retainAutoreleasedReturnValue>`).  If that succeeds,
+it performs a release operation exactly like :ref:`objc_release
+<arc.runtime.objc_release>`.  If the handoff fails, this call has no effect.
+
+Always returns ``value``.
 

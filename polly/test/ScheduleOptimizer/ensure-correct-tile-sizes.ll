@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -analyze -polly-process-unprofitable  -polly-remarks-minimal \
-; RUN:     -polly-opt-isl  -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadPolly -polly-process-unprofitable -polly-remarks-minimal \
+; RUN:     -polly-opt-isl -polly-pattern-matching-based-opts=true \
 ; RUN:     -polly-target-throughput-vector-fma=1 \
 ; RUN:     -polly-target-latency-vector-fma=1 \
-; RUN:     -polly-ast -polly-target-vector-register-bitwidth=4096 \
-; RUN:     -polly-target-1st-cache-level-associativity=3 < %s | FileCheck %s
+; RUN:     -polly-target-vector-register-bitwidth=4096 \
+; RUN:     -polly-target-1st-cache-level-associativity=3 -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;     /* Test that Polly does not crash due to configurations that can lead to
 ;    incorrect tile size computations.
@@ -31,7 +31,6 @@
 ; CHECK-NEXT:            for (int c3 = 0; c3 <= min(31, -32 * c1 + 2999); c3 += 1)
 ; CHECK-NEXT:              Stmt_for_body3(32 * c0 + c2, 32 * c1 + c3);
 ; CHECK-NEXT:        }
-; CHECK-NEXT:      // Inter iteration alias-free
 ; CHECK-NEXT:      // Register tiling - Tiles
 ; CHECK-NEXT:      for (int c0 = 0; c0 <= 23; c0 += 1)
 ; CHECK-NEXT:        for (int c1 = 0; c1 <= 2999; c1 += 1)
@@ -172,7 +171,7 @@
 ; CHECK-NEXT:          }
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f([3000 x i32]* %A, [3000 x i32]* %B, [3000 x i32]* %C) {
+define void @f(ptr %A, ptr %B, ptr %C) {
 entry:
   br label %for.cond
 
@@ -190,8 +189,8 @@ for.cond1:                                        ; preds = %for.inc21, %for.bod
   br i1 %exitcond3, label %for.body3, label %for.end23
 
 for.body3:                                        ; preds = %for.cond1
-  %arrayidx5 = getelementptr inbounds [3000 x i32], [3000 x i32]* %A, i64 %indvars.iv4, i64 %indvars.iv1
-  store i32 0, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds [3000 x i32], ptr %A, i64 %indvars.iv4, i64 %indvars.iv1
+  store i32 0, ptr %arrayidx5, align 4
   br label %for.cond6
 
 for.cond6:                                        ; preds = %for.inc, %for.body3
@@ -200,15 +199,15 @@ for.cond6:                                        ; preds = %for.inc, %for.body3
   br i1 %exitcond, label %for.body8, label %for.end
 
 for.body8:                                        ; preds = %for.cond6
-  %arrayidx12 = getelementptr inbounds [3000 x i32], [3000 x i32]* %B, i64 %indvars.iv4, i64 %indvars.iv
-  %tmp = load i32, i32* %arrayidx12, align 4
-  %arrayidx16 = getelementptr inbounds [3000 x i32], [3000 x i32]* %C, i64 %indvars.iv, i64 %indvars.iv1
-  %tmp7 = load i32, i32* %arrayidx16, align 4
+  %arrayidx12 = getelementptr inbounds [3000 x i32], ptr %B, i64 %indvars.iv4, i64 %indvars.iv
+  %tmp = load i32, ptr %arrayidx12, align 4
+  %arrayidx16 = getelementptr inbounds [3000 x i32], ptr %C, i64 %indvars.iv, i64 %indvars.iv1
+  %tmp7 = load i32, ptr %arrayidx16, align 4
   %mul = mul nsw i32 %tmp, %tmp7
-  %arrayidx20 = getelementptr inbounds [3000 x i32], [3000 x i32]* %A, i64 %indvars.iv4, i64 %indvars.iv1
-  %tmp8 = load i32, i32* %arrayidx20, align 4
+  %arrayidx20 = getelementptr inbounds [3000 x i32], ptr %A, i64 %indvars.iv4, i64 %indvars.iv1
+  %tmp8 = load i32, ptr %arrayidx20, align 4
   %add = add nsw i32 %tmp8, %mul
-  store i32 %add, i32* %arrayidx20, align 4
+  store i32 %add, ptr %arrayidx20, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body8

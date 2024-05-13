@@ -8,13 +8,11 @@
 
 #ifndef LLDB_CORE_MANGLED_H
 #define LLDB_CORE_MANGLED_H
-#if defined(__cplusplus)
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
-
+#include "lldb/lldb-types.h"
 #include "lldb/Utility/ConstString.h"
-
 #include "llvm/ADT/StringRef.h"
 
 #include <cstddef>
@@ -27,7 +25,7 @@ namespace lldb_private {
 ///
 /// Designed to handle mangled names. The demangled version of any names will
 /// be computed when the demangled name is accessed through the Demangled()
-/// acccessor. This class can also tokenize the demangled version of the name
+/// accessor. This class can also tokenize the demangled version of the name
 /// for powerful searches. Functions and symbols could make instances of this
 /// class for their mangled names. Uniqued string pools are used for the
 /// mangled, demangled, and token string values to allow for faster
@@ -43,7 +41,10 @@ public:
   enum ManglingScheme {
     eManglingSchemeNone = 0,
     eManglingSchemeMSVC,
-    eManglingSchemeItanium
+    eManglingSchemeItanium,
+    eManglingSchemeRustV0,
+    eManglingSchemeD,
+    eManglingSchemeSwift,
   };
 
   /// Default constructor.
@@ -62,10 +63,19 @@ public:
 
   explicit Mangled(llvm::StringRef name);
 
-  /// Convert to pointer operator.
+  bool operator==(const Mangled &rhs) const {
+    return m_mangled == rhs.m_mangled &&
+           GetDemangledName() == rhs.GetDemangledName();
+  }
+
+  bool operator!=(const Mangled &rhs) const {
+    return !(*this == rhs);
+  }
+
+  /// Convert to bool operator.
   ///
-  /// This allows code to check a Mangled object to see if it contains a valid
-  /// mangled name using code such as:
+  /// This allows code to check any Mangled objects to see if they contain
+  /// anything valid using code such as:
   ///
   /// \code
   /// Mangled mangled(...);
@@ -74,25 +84,9 @@ public:
   /// \endcode
   ///
   /// \return
-  ///     A pointer to this object if either the mangled or unmangled
-  ///     name is set, NULL otherwise.
-  operator void *() const;
-
-  /// Logical NOT operator.
-  ///
-  /// This allows code to check a Mangled object to see if it contains an
-  /// empty mangled name using code such as:
-  ///
-  /// \code
-  /// Mangled mangled(...);
-  /// if (!mangled)
-  /// { ...
-  /// \endcode
-  ///
-  /// \return
-  ///     Returns \b true if the object has an empty mangled and
-  ///     unmangled name, \b false otherwise.
-  bool operator!() const;
+  ///     Returns \b true if either the mangled or unmangled name is set,
+  ///     \b false if the object has an empty mangled and unmangled name.
+  explicit operator bool() const;
 
   /// Clear the mangled and demangled values.
   void Clear();
@@ -189,22 +183,7 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object occupies in memory.
-  ///
-  /// \see ConstString::StaticMemorySize ()
   size_t MemorySize() const;
-
-  /// Set the string value in this object.
-  ///
-  /// If \a is_mangled is \b true, then the mangled named is set to \a name,
-  /// else the demangled name is set to \a name.
-  ///
-  /// \param[in] name
-  ///     The already const version of the name for this object.
-  ///
-  /// \param[in] is_mangled
-  ///     If \b true then \a name is a mangled name, if \b false then
-  ///     \a name is demangled.
-  void SetValue(ConstString name, bool is_mangled);
 
   /// Set the string value in this object.
   ///
@@ -234,10 +213,9 @@ public:
   /// Function signature for filtering mangled names.
   using SkipMangledNameFn = bool(llvm::StringRef, ManglingScheme);
 
-  /// Trigger explicit demangling to obtain rich mangling information. This is
-  /// optimized for batch processing while populating a name index. To get the
-  /// pure demangled name string for a single entity, use GetDemangledName()
-  /// instead.
+  /// Get rich mangling information. This is optimized for batch processing
+  /// while populating a name index. To get the pure demangled name string for
+  /// a single entity, use GetDemangledName() instead.
   ///
   /// For names that match the Itanium mangling scheme, this uses LLVM's
   /// ItaniumPartialDemangler. All other names fall back to LLDB's builtin
@@ -256,8 +234,8 @@ public:
   ///
   /// \return
   ///     True on success, false otherwise.
-  bool DemangleWithRichManglingInfo(RichManglingContext &context,
-                                    SkipMangledNameFn *skip_mangled_name);
+  bool GetRichManglingInfo(RichManglingContext &context,
+                           SkipMangledNameFn *skip_mangled_name);
 
   /// Try to identify the mangling scheme used.
   /// \param[in] name
@@ -267,6 +245,35 @@ public:
   ///     eManglingSchemeNone if no known mangling scheme could be identified
   ///     for s, otherwise the enumerator for the mangling scheme detected.
   static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
+
+  /// Decode a serialized version of this object from data.
+  ///
+  /// \param data
+  ///   The decoder object that references the serialized data.
+  ///
+  /// \param offset_ptr
+  ///   A pointer that contains the offset from which the data will be decoded
+  ///   from that gets updated as data gets decoded.
+  ///
+  /// \param strtab
+  ///   All strings in cache files are put into string tables for efficiency
+  ///   and cache file size reduction. Strings are stored as uint32_t string
+  ///   table offsets in the cache data.
+  bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
+              const StringTableReader &strtab);
+
+  /// Encode this object into a data encoder object.
+  ///
+  /// This allows this object to be serialized to disk.
+  ///
+  /// \param encoder
+  ///   A data encoder object that serialized bytes will be encoded into.
+  ///
+  /// \param strtab
+  ///   All strings in cache files are put into string tables for efficiency
+  ///   and cache file size reduction. Strings are stored as uint32_t string
+  ///   table offsets in the cache data.
+  void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
 private:
   /// Mangled member variables.
@@ -279,5 +286,4 @@ Stream &operator<<(Stream &s, const Mangled &obj);
 
 } // namespace lldb_private
 
-#endif // #if defined(__cplusplus)
 #endif // LLDB_CORE_MANGLED_H

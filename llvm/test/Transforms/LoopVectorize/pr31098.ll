@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true -debug-only=loop-accesses < %s  2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true -debug-only=loop-accesses < %s  2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -60,7 +60,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %class.Complex = type { float, float }
 
-define void @Test(%class.Complex* nocapture %out, i64 %size) local_unnamed_addr {
+define void @Test(ptr nocapture %out, i64 %size) local_unnamed_addr {
 entry:
   %div = lshr i64 %size, 1
   %cmp47 = icmp eq i64 %div, 0
@@ -77,23 +77,23 @@ for.cond.cleanup:
 
 for.body:
   %offset.048 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %0 = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %offset.048, i32 0
-  %1 = load float, float* %0, align 4
-  %imaginary_.i.i = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %offset.048, i32 1
-  %2 = load float, float* %imaginary_.i.i, align 4
+  %0 = getelementptr inbounds %class.Complex, ptr %out, i64 %offset.048, i32 0
+  %1 = load float, ptr %0, align 4
+  %imaginary_.i.i = getelementptr inbounds %class.Complex, ptr %out, i64 %offset.048, i32 1
+  %2 = load float, ptr %imaginary_.i.i, align 4
   %add = add nuw i64 %offset.048, %div
-  %3 = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %add, i32 0
-  %4 = load float, float* %3, align 4
-  %imaginary_.i.i28 = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %add, i32 1
-  %5 = load float, float* %imaginary_.i.i28, align 4
+  %3 = getelementptr inbounds %class.Complex, ptr %out, i64 %add, i32 0
+  %4 = load float, ptr %3, align 4
+  %imaginary_.i.i28 = getelementptr inbounds %class.Complex, ptr %out, i64 %add, i32 1
+  %5 = load float, ptr %imaginary_.i.i28, align 4
   %add.i = fadd fast float %4, %1
   %add4.i = fadd fast float %5, %2
-  store float %add.i, float* %0, align 4
-  store float %add4.i, float* %imaginary_.i.i, align 4
+  store float %add.i, ptr %0, align 4
+  store float %add4.i, ptr %imaginary_.i.i, align 4
   %sub.i = fsub fast float %1, %4
   %sub4.i = fsub fast float %2, %5
-  store float %sub.i, float* %3, align 4
-  store float %sub4.i, float* %imaginary_.i.i28, align 4
+  store float %sub.i, ptr %3, align 4
+  store float %sub4.i, ptr %imaginary_.i.i28, align 4
   %inc = add nuw nsw i64 %offset.048, 1
   %exitcond = icmp eq i64 %inc, %div
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body

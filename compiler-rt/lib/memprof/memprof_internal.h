@@ -20,10 +20,6 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
-#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
-#error "The MemProfiler run-time should not be instrumented by MemProfiler"
-#endif
-
 // Build-time configuration options.
 
 // If set, memprof will intercept C++ exception api call(s).
@@ -61,12 +57,9 @@ void ReplaceSystemMalloc();
 
 // memprof_linux.cpp
 uptr FindDynamicShadowStart();
-void *MemprofDoesNotSupportStaticLinkage();
 
 // memprof_thread.cpp
 MemprofThread *CreateMainThread();
-
-void ReadContextStack(void *context, uptr *stack, uptr *ssize);
 
 // Wrapper for TLS/TSD.
 void TSDInit(void (*destructor)(void *tsd));
@@ -76,24 +69,8 @@ void PlatformTSDDtor(void *tsd);
 
 void *MemprofDlSymNext(const char *sym);
 
-// Add convenient macro for interface functions that may be represented as
-// weak hooks.
-#define MEMPROF_MALLOC_HOOK(ptr, size)                                         \
-  do {                                                                         \
-    if (&__sanitizer_malloc_hook)                                              \
-      __sanitizer_malloc_hook(ptr, size);                                      \
-    RunMallocHooks(ptr, size);                                                 \
-  } while (false)
-#define MEMPROF_FREE_HOOK(ptr)                                                 \
-  do {                                                                         \
-    if (&__sanitizer_free_hook)                                                \
-      __sanitizer_free_hook(ptr);                                              \
-    RunFreeHooks(ptr);                                                         \
-  } while (false)
-
 extern int memprof_inited;
 extern int memprof_timestamp_inited;
-extern int memprof_init_done;
 // Used to avoid infinite recursion in __memprof_init().
 extern bool memprof_init_is_running;
 extern void (*death_callback)(void);

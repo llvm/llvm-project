@@ -2,7 +2,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-#pragma OPENCL EXTENSION cl_no_such_extension : disable /* expected-warning {{unknown OpenCL extension 'cl_no_such_extension' - ignoring}} */
+#pragma OPENCL EXTENSION cl_no_such_extension : disable /* expected-warning {{OpenCL extension 'cl_no_such_extension' unknown or does not require pragma - ignoring}} */
 
 #pragma OPENCL EXTENSION all : disable
 #pragma OPENCL EXTENSION all : enable /* expected-warning {{expected 'disable' - ignoring}} */

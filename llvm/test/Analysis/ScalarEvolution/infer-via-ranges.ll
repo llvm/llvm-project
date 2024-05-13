@@ -1,6 +1,6 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
-define void @infer_via_ranges(i32 *%arr, i32 %n) {
+define void @infer_via_ranges(ptr %arr, i32 %n) {
 ; CHECK-LABEL: @infer_via_ranges
  entry:
   %first.itr.check = icmp sgt i32 %n, 0
@@ -17,8 +17,8 @@ define void @infer_via_ranges(i32 *%arr, i32 %n) {
 
  in.bounds:
 ; CHECK-LABEL: in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp sgt i32 %idx.dec, -1
   br i1 %next, label %loop, label %exit
 

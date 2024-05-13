@@ -7,10 +7,10 @@ void *memcpy(void *, void const *, size_t);
 void *memccpy(void *, void const *, int, size_t);
 
 // CHECK: @test1
-// CHECK: call void @llvm.memset.p0i8.i32
-// CHECK: call void @llvm.memset.p0i8.i32
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i32
-// CHECK: call void @llvm.memmove.p0i8.p0i8.i32
+// CHECK: call void @llvm.memset.p0.i32
+// CHECK: call void @llvm.memset.p0.i32
+// CHECK: call void @llvm.memcpy.p0.p0.i32
+// CHECK: call void @llvm.memmove.p0.p0.i32
 // CHECK-NOT: __builtin
 // CHECK: ret
 int test1(int argc, char **argv) {
@@ -23,10 +23,8 @@ int test1(int argc, char **argv) {
   return 0;
 }
 
-// rdar://9289468
-
 // CHECK: @test2
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i32
+// CHECK: call void @llvm.memcpy.p0.p0.i32
 char* test2(char* a, char* b) {
   return __builtin_memcpy(a, b, 4);
 }
@@ -70,7 +68,6 @@ int test7(int *p) {
   // CHECK: call void @llvm.memset{{.*}} align 1{{.*}}256, i1 false)
 }
 
-// <rdar://problem/11314941>
 // Make sure we don't over-estimate the alignment of fields of
 // packed structs.
 struct PS {
@@ -84,7 +81,7 @@ void test8(int *arg) {
 }
 
 __attribute((aligned(16))) int x[4], y[4];
-void test9() {
+void test9(void) {
   // CHECK: @test9
   // CHECK: call void @llvm.memcpy{{.*}} align 16 {{.*}} align 16 {{.*}} 16, i1 false)
   __builtin_memcpy(x, y, sizeof(y));
@@ -95,16 +92,16 @@ wchar_t src;
 
 // CHECK-LABEL: @test10
 // FIXME: Consider lowering these to llvm.memcpy / llvm.memmove.
-void test10() {
-  // CHECK: call i32* @wmemcpy(i32* @dest, i32* @src, i32 4)
+void test10(void) {
+  // CHECK: call ptr @wmemcpy(ptr noundef @dest, ptr noundef @src, i32 noundef 4)
   __builtin_wmemcpy(&dest, &src, 4);
 
-  // CHECK: call i32* @wmemmove(i32* @dest, i32* @src, i32 4)
+  // CHECK: call ptr @wmemmove(ptr noundef @dest, ptr noundef @src, i32 noundef 4)
   __builtin_wmemmove(&dest, &src, 4);
 }
 
 // CHECK-LABEL: @test11
-void test11() {
+void test11(void) {
   typedef struct { int a; } b;
   int d;
   b e;
@@ -115,13 +112,13 @@ void test11() {
 // CHECK-LABEL: @test12
 extern char dest_array[];
 extern char src_array[];
-void test12() {
+void test12(void) {
   // CHECK: call void @llvm.memcpy{{.*}}(
   memcpy(&dest_array, &dest_array, 2);
 }
 
 // CHECK-LABEL: @test13
 void test13(char *d, char *s, int c, size_t n) {
-  // CHECK: call i8* @memccpy
+  // CHECK: call ptr @memccpy
   memccpy(d, s, c, n);
 }

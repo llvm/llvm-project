@@ -1,12 +1,15 @@
 add_llvm_component_library(LLVMWebAssemblyAsmParser
   WebAssemblyAsmParser.cpp
+  WebAssemblyAsmTypeCheck.cpp
 
   LINK_COMPONENTS
+  CodeGenTypes
   MC
   MCParser
-  WebAssemblyInfo
-  WebAssemblyUtils
   Support
+  TargetParser
+  WebAssemblyDesc
+  WebAssemblyInfo
 
   ADD_TO_COMPONENT
   WebAssembly

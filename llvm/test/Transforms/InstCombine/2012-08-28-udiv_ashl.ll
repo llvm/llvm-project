@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 ; rdar://12182093
 

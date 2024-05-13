@@ -75,14 +75,13 @@ entry:
   %retval = alloca i32, align 4
   %dlg_sys_param = alloca %struct.params, align 8
   %total_active_bw = alloca float, align 4
-  %0 = bitcast %struct.params* %dlg_sys_param to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 16, i1 false)
-  store float 0.000000e+00, float* %total_active_bw, align 4
-  %1 = load i32, i32* %retval, align 4
-  ret i32 %1
+  call void @llvm.memset.p0.i64(ptr align 8 %dlg_sys_param, i8 0, i64 16, i1 false)
+  store float 0.000000e+00, ptr %total_active_bw, align 4
+  %0 = load i32, ptr %retval, align 4
+  ret i32 %0
 }
 
-define void @tryset(i8* nocapture %x) {
+define void @tryset(ptr nocapture %x) {
 ; X64SSE-LABEL: tryset:
 ; X64SSE:       # %bb.0:
 ; X64SSE-NEXT:    movq $0, 56(%rdi)
@@ -131,22 +130,15 @@ define void @tryset(i8* nocapture %x) {
 ; X86SSE2-LABEL: tryset:
 ; X86SSE2:       # %bb.0:
 ; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86SSE2-NEXT:    movl $0, 4(%eax)
-; X86SSE2-NEXT:    movl $0, (%eax)
-; X86SSE2-NEXT:    movl $0, 12(%eax)
-; X86SSE2-NEXT:    movl $0, 8(%eax)
-; X86SSE2-NEXT:    movl $0, 20(%eax)
-; X86SSE2-NEXT:    movl $0, 16(%eax)
-; X86SSE2-NEXT:    movl $0, 28(%eax)
-; X86SSE2-NEXT:    movl $0, 24(%eax)
-; X86SSE2-NEXT:    movl $0, 36(%eax)
-; X86SSE2-NEXT:    movl $0, 32(%eax)
-; X86SSE2-NEXT:    movl $0, 44(%eax)
-; X86SSE2-NEXT:    movl $0, 40(%eax)
-; X86SSE2-NEXT:    movl $0, 52(%eax)
-; X86SSE2-NEXT:    movl $0, 48(%eax)
-; X86SSE2-NEXT:    movl $0, 60(%eax)
-; X86SSE2-NEXT:    movl $0, 56(%eax)
+; X86SSE2-NEXT:    xorps %xmm0, %xmm0
+; X86SSE2-NEXT:    movsd %xmm0, 56(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 48(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 40(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 32(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 24(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 16(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 8(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, (%eax)
 ; X86SSE2-NEXT:    retl
 ;
 ; X64AVX-LABEL: tryset:
@@ -165,11 +157,11 @@ define void @tryset(i8* nocapture %x) {
 ; X86AVX-NEXT:    vmovups %ymm0, (%eax)
 ; X86AVX-NEXT:    vzeroupper
 ; X86AVX-NEXT:    retl
-  tail call void @llvm.memset.p0i8.i64(i8* align 1 %x, i8 0, i64 64, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr align 1 %x, i8 0, i64 64, i1 false)
   ret void
 }
 
-define void @trycpy(i8* nocapture %x, i8* nocapture readonly %y) {
+define void @trycpy(ptr nocapture %x, ptr nocapture readonly %y) {
 ; X64SSE-LABEL: trycpy:
 ; X64SSE:       # %bb.0:
 ; X64SSE-NEXT:    movq 24(%rsi), %rax
@@ -245,10 +237,10 @@ define void @trycpy(i8* nocapture %x, i8* nocapture readonly %y) {
 ; X86AVX-NEXT:    vmovups %ymm0, (%eax)
 ; X86AVX-NEXT:    vzeroupper
 ; X86AVX-NEXT:    retl
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %x, i8* align 1 %y, i64 32, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 %x, ptr align 1 %y, i64 32, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) argmemonly nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #2
 

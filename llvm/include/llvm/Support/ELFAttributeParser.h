@@ -10,15 +10,16 @@
 #define LLVM_SUPPORT_ELFATTRIBUTEPARSER_H
 
 #include "ELFAttributes.h"
-#include "ScopedPrinter.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 
+#include <optional>
 #include <unordered_map>
 
 namespace llvm {
 class StringRef;
+class ScopedPrinter;
 
 class ELFAttributeParser {
   StringRef vendor;
@@ -41,6 +42,10 @@ protected:
   void parseIndexList(SmallVectorImpl<uint8_t> &indexList);
   Error parseSubsection(uint32_t length);
 
+  void setAttributeString(unsigned tag, StringRef value) {
+    attributesStr.emplace(tag, value);
+  }
+
 public:
   virtual ~ELFAttributeParser() { static_cast<void>(!cursor.takeError()); }
   Error integerAttribute(unsigned tag);
@@ -52,18 +57,18 @@ public:
   ELFAttributeParser(TagNameMap tagNameMap, StringRef vendor)
       : vendor(vendor), sw(nullptr), tagToStringMap(tagNameMap) {}
 
-  Error parse(ArrayRef<uint8_t> section, support::endianness endian);
+  Error parse(ArrayRef<uint8_t> section, llvm::endianness endian);
 
-  Optional<unsigned> getAttributeValue(unsigned tag) const {
+  std::optional<unsigned> getAttributeValue(unsigned tag) const {
     auto I = attributes.find(tag);
     if (I == attributes.end())
-      return None;
+      return std::nullopt;
     return I->second;
   }
-  Optional<StringRef> getAttributeString(unsigned tag) const {
+  std::optional<StringRef> getAttributeString(unsigned tag) const {
     auto I = attributesStr.find(tag);
     if (I == attributesStr.end())
-      return None;
+      return std::nullopt;
     return I->second;
   }
 };

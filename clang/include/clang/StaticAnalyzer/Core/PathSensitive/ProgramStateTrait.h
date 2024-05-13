@@ -21,29 +21,32 @@
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/Support/Allocator.h"
 #include <cstdint>
+#include <type_traits>
 
 namespace clang {
 namespace ento {
 
-  template <typename T> struct ProgramStatePartialTrait;
+template <typename T, typename Enable = void> struct ProgramStatePartialTrait;
 
-  /// Declares a program state trait for type \p Type called \p Name, and
-  /// introduce a type named \c NameTy.
-  /// The macro should not be used inside namespaces.
-  #define REGISTER_TRAIT_WITH_PROGRAMSTATE(Name, Type) \
-    namespace { \
-      class Name {}; \
-      using Name ## Ty = Type; \
-    } \
-    namespace clang { \
-    namespace ento { \
-      template <> \
-      struct ProgramStateTrait<Name> \
-        : public ProgramStatePartialTrait<Name ## Ty> { \
-        static void *GDMIndex() { static int Index; return &Index; } \
-      }; \
-    } \
-    }
+/// Declares a program state trait for type \p Type called \p Name, and
+/// introduce a type named \c NameTy.
+/// The macro should not be used inside namespaces.
+#define REGISTER_TRAIT_WITH_PROGRAMSTATE(Name, Type)                           \
+  namespace {                                                                  \
+  class Name {};                                                               \
+  using Name##Ty = Type;                                                       \
+  }                                                                            \
+  namespace clang {                                                            \
+  namespace ento {                                                             \
+  template <>                                                                  \
+  struct ProgramStateTrait<Name> : public ProgramStatePartialTrait<Name##Ty> { \
+    static void *GDMIndex() {                                                  \
+      static int Index;                                                        \
+      return &Index;                                                           \
+    }                                                                          \
+  };                                                                           \
+  }                                                                            \
+  }
 
   /// Declares a factory for objects of type \p Type in the program state
   /// manager. The type must provide a ::Factory sub-class. Commonly used for
@@ -267,60 +270,27 @@ namespace ento {
     }
   };
 
-  // Partial specialization for bool.
-  template <> struct ProgramStatePartialTrait<bool> {
-    using data_type = bool;
-
-    static data_type MakeData(void *const *p) {
-      return p ? (data_type) (uintptr_t) *p
-               : data_type();
-    }
-
-    static void *MakeVoidPtr(data_type d) {
-      return (void *) (uintptr_t) d;
-    }
+  template <typename T> struct DefaultProgramStatePartialTraitImpl {
+    using data_type = T;
+    static T MakeData(void *const *P) { return P ? (T)(uintptr_t)*P : T{}; }
+    static void *MakeVoidPtr(T D) { return (void *)(uintptr_t)D; }
   };
 
-  // Partial specialization for unsigned.
-  template <> struct ProgramStatePartialTrait<unsigned> {
-    using data_type = unsigned;
+  // Partial specialization for integral types.
+  template <typename T>
+  struct ProgramStatePartialTrait<T,
+                                  std::enable_if_t<std::is_integral<T>::value>>
+      : DefaultProgramStatePartialTraitImpl<T> {};
 
-    static data_type MakeData(void *const *p) {
-      return p ? (data_type) (uintptr_t) *p
-               : data_type();
-    }
+  // Partial specialization for enums.
+  template <typename T>
+  struct ProgramStatePartialTrait<T, std::enable_if_t<std::is_enum<T>::value>>
+      : DefaultProgramStatePartialTraitImpl<T> {};
 
-    static void *MakeVoidPtr(data_type d) {
-      return (void *) (uintptr_t) d;
-    }
-  };
-
-  // Partial specialization for void*.
-  template <> struct ProgramStatePartialTrait<void *> {
-    using data_type = void *;
-
-    static data_type MakeData(void *const *p) {
-      return p ? *p
-               : data_type();
-    }
-
-    static void *MakeVoidPtr(data_type d) {
-      return d;
-    }
-  };
-
-  // Partial specialization for const void *.
-  template <> struct ProgramStatePartialTrait<const void *> {
-    using data_type = const void *;
-
-    static data_type MakeData(void *const *p) {
-      return p ? *p : data_type();
-    }
-
-    static void *MakeVoidPtr(data_type d) {
-      return const_cast<void *>(d);
-    }
-  };
+  // Partial specialization for pointers.
+  template <typename T>
+  struct ProgramStatePartialTrait<T *, void>
+      : DefaultProgramStatePartialTraitImpl<T *> {};
 
 } // namespace ento
 } // namespace clang

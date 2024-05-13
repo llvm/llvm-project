@@ -76,8 +76,8 @@ public:
 
   XMLNode GetChild() const;
 
-  llvm::StringRef GetAttributeValue(const char *name,
-                                    const char *fail_value = nullptr) const;
+  std::string GetAttributeValue(const char *name,
+                                const char *fail_value = nullptr) const;
 
   bool GetAttributeValueAsUnsigned(const char *name, uint64_t &value,
                                    uint64_t fail_value = 0, int base = 0) const;
@@ -107,7 +107,7 @@ public:
   void ForEachAttribute(AttributeCallback const &callback) const;
 
 protected:
-  XMLNodeImpl m_node;
+  XMLNodeImpl m_node = nullptr;
 };
 
 class XMLDocument {
@@ -138,7 +138,7 @@ public:
   static bool XMLEnabled();
 
 protected:
-  XMLDocumentImpl m_document;
+  XMLDocumentImpl m_document = nullptr;
   StreamString m_errors;
 };
 

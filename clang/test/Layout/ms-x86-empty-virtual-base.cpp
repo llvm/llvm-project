@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s --strict-whitespace
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s -check-prefix CHECK-X64 --strict-whitespace
 
 extern "C" int printf(const char *fmt, ...);
@@ -572,7 +572,7 @@ struct T : virtual B0, virtual B1, virtual C0, virtual D2, virtual B2, virtual B
 // CHECK-NEXT:   40 |   struct C0 (virtual base)
 // CHECK-NEXT:   40 |     int a
 // CHECK-NEXT:   44 |   struct D2 (virtual base)
-// CHECK-NEXT:   44 |     int [8] a
+// CHECK-NEXT:   44 |     int[8] a
 // CHECK-NEXT:   80 |   struct B2 (virtual base) (empty)
 // CHECK-NEXT:   88 |   struct B3 (virtual base) (empty)
 // CHECK-NEXT:  104 |   struct B4 (virtual base) (empty)
@@ -586,7 +586,7 @@ struct T : virtual B0, virtual B1, virtual C0, virtual D2, virtual B2, virtual B
 // CHECK-X64-NEXT:   40 |   struct C0 (virtual base)
 // CHECK-X64-NEXT:   40 |     int a
 // CHECK-X64-NEXT:   44 |   struct D2 (virtual base)
-// CHECK-X64-NEXT:   44 |     int [8] a
+// CHECK-X64-NEXT:   44 |     int[8] a
 // CHECK-X64-NEXT:   80 |   struct B2 (virtual base) (empty)
 // CHECK-X64-NEXT:   88 |   struct B3 (virtual base) (empty)
 // CHECK-X64-NEXT:  104 |   struct B4 (virtual base) (empty)

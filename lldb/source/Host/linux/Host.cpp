@@ -11,6 +11,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
+#include <optional>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -20,6 +21,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ScopedPrinter.h"
 
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
@@ -47,6 +49,29 @@ enum class ProcessState {
   TracedOrStopped,
   Zombie,
 };
+
+constexpr int task_comm_len = 16;
+
+struct StatFields {
+  ::pid_t pid = LLDB_INVALID_PROCESS_ID;
+  char comm[task_comm_len];
+  char state;
+  ::pid_t ppid = LLDB_INVALID_PROCESS_ID;
+  ::pid_t pgrp = LLDB_INVALID_PROCESS_ID;
+  ::pid_t session = LLDB_INVALID_PROCESS_ID;
+  int tty_nr;
+  int tpgid;
+  unsigned flags;
+  long unsigned minflt;
+  long unsigned cminflt;
+  long unsigned majflt;
+  long unsigned cmajflt;
+  long unsigned utime;
+  long unsigned stime;
+  long cutime;
+  long cstime;
+  // .... other things. We don't need them below
+};
 }
 
 namespace lldb_private {
@@ -56,13 +81,94 @@ class ProcessLaunchInfo;
 static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
                           ProcessState &State, ::pid_t &TracerPid,
                           ::pid_t &Tgid) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
 
-  auto BufferOrError = getProcFile(Pid, "status");
+  auto BufferOrError = getProcFile(Pid, "stat");
   if (!BufferOrError)
     return false;
 
   llvm::StringRef Rest = BufferOrError.get()->getBuffer();
+  if (Rest.empty())
+    return false;
+  StatFields stat_fields;
+  if (sscanf(Rest.data(),
+             "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld",
+             &stat_fields.pid, stat_fields.comm, &stat_fields.state,
+             &stat_fields.ppid, &stat_fields.pgrp, &stat_fields.session,
+             &stat_fields.tty_nr, &stat_fields.tpgid, &stat_fields.flags,
+             &stat_fields.minflt, &stat_fields.cminflt, &stat_fields.majflt,
+             &stat_fields.cmajflt, &stat_fields.utime, &stat_fields.stime,
+             &stat_fields.cutime, &stat_fields.cstime) < 0) {
+    return false;
+  }
+
+  auto convert = [sc_clk_ticks = sysconf(_SC_CLK_TCK)](auto time_in_ticks) {
+    ProcessInstanceInfo::timespec ts;
+    if (sc_clk_ticks <= 0) {
+      return ts;
+    }
+    ts.tv_sec = time_in_ticks / sc_clk_ticks;
+    double remainder =
+        (static_cast<double>(time_in_ticks) / sc_clk_ticks) - ts.tv_sec;
+    ts.tv_usec =
+        std::chrono::microseconds{std::lround(1e+6 * remainder)}.count();
+    return ts;
+  };
+
+  ProcessInfo.SetParentProcessID(stat_fields.ppid);
+  ProcessInfo.SetProcessGroupID(stat_fields.pgrp);
+  ProcessInfo.SetProcessSessionID(stat_fields.session);
+  ProcessInfo.SetUserTime(convert(stat_fields.utime));
+  ProcessInfo.SetSystemTime(convert(stat_fields.stime));
+  ProcessInfo.SetCumulativeUserTime(convert(stat_fields.cutime));
+  ProcessInfo.SetCumulativeSystemTime(convert(stat_fields.cstime));
+  switch (stat_fields.state) {
+  case 'R':
+    State = ProcessState::Running;
+    break;
+  case 'S':
+    State = ProcessState::Sleeping;
+    break;
+  case 'D':
+    State = ProcessState::DiskSleep;
+    break;
+  case 'Z':
+    State = ProcessState::Zombie;
+    break;
+  case 'X':
+    State = ProcessState::Dead;
+    break;
+  case 'P':
+    State = ProcessState::Parked;
+    break;
+  case 'W':
+    State = ProcessState::Paging;
+    break;
+  case 'I':
+    State = ProcessState::Idle;
+    break;
+  case 'T': // Stopped on a signal or (before Linux 2.6.33) trace stopped
+    [[fallthrough]];
+  case 't':
+    State = ProcessState::TracedOrStopped;
+    break;
+  default:
+    State = ProcessState::Unknown;
+    break;
+  }
+
+  if (State == ProcessState::Unknown) {
+    LLDB_LOG(log, "Unknown process state {0}", stat_fields.state);
+  }
+
+  BufferOrError = getProcFile(Pid, "status");
+  if (!BufferOrError)
+    return false;
+
+  Rest = BufferOrError.get()->getBuffer();
+  if (Rest.empty())
+    return false;
+
   while (!Rest.empty()) {
     llvm::StringRef Line;
     std::tie(Line, Rest) = Rest.split('\n');
@@ -87,25 +193,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
 
       ProcessInfo.SetUserID(RUid);
       ProcessInfo.SetEffectiveUserID(EUid);
-    } else if (Line.consume_front("PPid:")) {
-      ::pid_t PPid;
-      Line.ltrim().consumeInteger(10, PPid);
-      ProcessInfo.SetParentProcessID(PPid);
-    } else if (Line.consume_front("State:")) {
-      State = llvm::StringSwitch<ProcessState>(Line.ltrim().take_front(1))
-                  .Case("D", ProcessState::DiskSleep)
-                  .Case("I", ProcessState::Idle)
-                  .Case("R", ProcessState::Running)
-                  .Case("S", ProcessState::Sleeping)
-                  .CaseLower("T", ProcessState::TracedOrStopped)
-                  .Case("W", ProcessState::Paging)
-                  .Case("P", ProcessState::Parked)
-                  .Case("X", ProcessState::Dead)
-                  .Case("Z", ProcessState::Zombie)
-                  .Default(ProcessState::Unknown);
-      if (State == ProcessState::Unknown) {
-        LLDB_LOG(log, "Unknown process state {0}", Line);
-      }
     } else if (Line.consume_front("TracerPid:")) {
       Line = Line.ltrim();
       Line.consumeInteger(10, TracerPid);
@@ -126,7 +213,7 @@ static bool IsDirNumeric(const char *dname) {
 }
 
 static ArchSpec GetELFProcessCPUType(llvm::StringRef exe_path) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
 
   auto buffer_sp = FileSystem::Instance().CreateDataBuffer(exe_path, 0x20, 0);
   if (!buffer_sp)
@@ -134,7 +221,8 @@ static ArchSpec GetELFProcessCPUType(llvm::StringRef exe_path) {
 
   uint8_t exe_class =
       llvm::object::getElfArchType(
-          {buffer_sp->GetChars(), size_t(buffer_sp->GetByteSize())})
+          {reinterpret_cast<const char *>(buffer_sp->GetBytes()),
+           size_t(buffer_sp->GetByteSize())})
           .first;
 
   switch (exe_class) {
@@ -165,7 +253,7 @@ static void GetProcessArgs(::pid_t pid, ProcessInstanceInfo &process_info) {
 }
 
 static void GetExePathAndArch(::pid_t pid, ProcessInstanceInfo &process_info) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   std::string ExePath(PATH_MAX, '\0');
 
   // We can't use getProcFile here because proc/[pid]/exe is a symbolic link.
@@ -315,13 +403,13 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return Status("unimplemented");
 }
 
-llvm::Optional<lldb::pid_t> lldb_private::getPIDForTID(lldb::pid_t tid) {
+std::optional<lldb::pid_t> lldb_private::getPIDForTID(lldb::pid_t tid) {
   ::pid_t tracerpid, tgid = LLDB_INVALID_PROCESS_ID;
   ProcessInstanceInfo process_info;
   ProcessState state;
 
   if (!GetStatusInfo(tid, process_info, state, tracerpid, tgid) ||
       tgid == LLDB_INVALID_PROCESS_ID)
-    return llvm::None;
+    return std::nullopt;
   return tgid;
 }

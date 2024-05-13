@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // Test this without pch.
 // RUN: %clang_cc1 -include %S/objcxx-ivar-class.h -triple %itanium_abi_triple %s -emit-llvm -o - | FileCheck %s
 
@@ -9,7 +10,7 @@
 // CHECK: call {{.*}} @_ZN1SC1ERKS_
 
 // CHECK: [C setPosition:]
-// CHECK: = call {{.*}}%struct.S* @_ZN1SaSERKS_
+// CHECK: = call {{.*}}ptr @_ZN1SaSERKS_
 
 // CHECK: [C .cxx_destruct]
 // CHECK: [C .cxx_construct]

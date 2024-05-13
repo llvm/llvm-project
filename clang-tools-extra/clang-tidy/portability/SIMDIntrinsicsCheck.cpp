@@ -11,15 +11,13 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace portability {
+namespace clang::tidy::portability {
 
 namespace {
 
@@ -61,17 +59,17 @@ static StringRef trySuggestX86(StringRef Name) {
     return {};
 
   // [simd.alg]
-  if (Name.startswith("max_"))
+  if (Name.starts_with("max_"))
     return "$simd::max";
-  if (Name.startswith("min_"))
+  if (Name.starts_with("min_"))
     return "$simd::min";
 
   // [simd.binary]
-  if (Name.startswith("add_"))
+  if (Name.starts_with("add_"))
     return "operator+ on $simd objects";
-  if (Name.startswith("sub_"))
+  if (Name.starts_with("sub_"))
     return "operator- on $simd objects";
-  if (Name.startswith("mul_"))
+  if (Name.starts_with("mul_"))
     return "operator* on $simd objects";
 
   return {};
@@ -140,12 +138,10 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
           << SimdRegex.sub(SmallString<32>({Std, "::simd"}),
                            StdRegex.sub(Std, New));
     } else {
-      diag("'%0' is a non-portable %1 intrinsic function")
+      diag(Call->getExprLoc(), "'%0' is a non-portable %1 intrinsic function")
           << Old << llvm::Triple::getArchTypeName(Arch);
     }
   }
 }
 
-} // namespace portability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::portability

@@ -5,22 +5,22 @@
 
 // CHECK-SANITIZE-ANYRECOVER: @[[UNSIGNED_INT:.*]] = {{.*}} c"'unsigned int'\00" }
 // CHECK-SANITIZE-ANYRECOVER-NEXT: @[[SIGNED_CHAR:.*]] = {{.*}} c"'signed char'\00" }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_100_SIGNED_TRUNCATION_OR_SIGN_CHANGE:.*]] = {{.*}}, i32 100, i32 10 }, {{.*}}* @[[UNSIGNED_INT]], {{.*}}* @[[SIGNED_CHAR]], i8 4 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_200_SIGN_CHANGE:.*]] = {{.*}}, i32 200, i32 10 }, {{.*}}* @[[UNSIGNED_INT]], {{.*}}* @[[SIGNED_CHAR]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_300_SIGN_CHANGE:.*]] = {{.*}}, i32 300, i32 10 }, {{.*}}* @[[UNSIGNED_INT]], {{.*}}* @[[SIGNED_CHAR]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_400_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 400, i32 10 }, {{.*}}* @[[UNSIGNED_INT]], {{.*}}* @[[SIGNED_CHAR]], i8 2 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_100_SIGNED_TRUNCATION_OR_SIGN_CHANGE:.*]] = {{.*}}, i32 100, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 4, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_200_SIGN_CHANGE:.*]] = {{.*}}, i32 200, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_300_SIGN_CHANGE:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_400_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 2, i32 0 }
 
 //============================================================================//
 // Both sanitizers are enabled, and not disabled per-function.
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 signed char unsigned_int_to_signed_char(unsigned int src) {
   // CHECK-NEXT: [[ENTRY:.*]]:
   // CHECK-NEXT: %[[SRC_ADDR:.*]] = alloca i32
-  // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
-  // CHECK-NEXT: %[[DST:.*]] = load i32, i32* %[[SRC_ADDR]]
+  // CHECK-NEXT: store i32 %[[SRC]], ptr %[[SRC_ADDR]]
+  // CHECK-NEXT: %[[DST:.*]] = load i32, ptr %[[SRC_ADDR]]
   // CHECK-NEXT: %[[CONV:.*]] = trunc i32 %[[DST]] to i8
   // CHECK-SANITIZE-NEXT: %[[DST_NEGATIVITYCHECK:.*]] = icmp slt i8 %[[CONV]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT: %[[SIGNCHANGECHECK:.*]] = icmp eq i1 false, %[[DST_NEGATIVITYCHECK]], !nosanitize
@@ -31,8 +31,8 @@ signed char unsigned_int_to_signed_char(unsigned int src) {
   // CHECK-SANITIZE: [[HANDLER_IMPLICIT_CONVERSION]]:
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTSRC:.*]] = zext i32 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTCONV:.*]] = zext i8 %[[CONV]] to i64, !nosanitize
-  // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_100_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_100_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
+  // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(ptr @[[LINE_100_SIGNED_TRUNCATION_OR_SIGN_CHANGE]], i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
+  // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(ptr @[[LINE_100_SIGNED_TRUNCATION_OR_SIGN_CHANGE]], i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
@@ -47,13 +47,13 @@ signed char unsigned_int_to_signed_char(unsigned int src) {
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char__no_truncation_sanitizer
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 __attribute__((no_sanitize("implicit-integer-truncation"))) signed char
 unsigned_int_to_signed_char__no_truncation_sanitizer(unsigned int src) {
   // CHECK-NEXT: [[ENTRY:.*]]:
   // CHECK-NEXT: %[[SRC_ADDR:.*]] = alloca i32
-  // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
-  // CHECK-NEXT: %[[DST:.*]] = load i32, i32* %[[SRC_ADDR]]
+  // CHECK-NEXT: store i32 %[[SRC]], ptr %[[SRC_ADDR]]
+  // CHECK-NEXT: %[[DST:.*]] = load i32, ptr %[[SRC_ADDR]]
   // CHECK-NEXT: %[[CONV:.*]] = trunc i32 %[[DST]] to i8
   // CHECK-SANITIZE-NEXT: %[[DST_NEGATIVITYCHECK:.*]] = icmp slt i8 %[[CONV]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT: %[[SIGNCHANGECHECK:.*]] = icmp eq i1 false, %[[DST_NEGATIVITYCHECK]], !nosanitize
@@ -61,8 +61,8 @@ unsigned_int_to_signed_char__no_truncation_sanitizer(unsigned int src) {
   // CHECK-SANITIZE: [[HANDLER_IMPLICIT_CONVERSION]]:
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTSRC:.*]] = zext i32 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTCONV:.*]] = zext i8 %[[CONV]] to i64, !nosanitize
-  // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_200_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_200_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
+  // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(ptr @[[LINE_200_SIGN_CHANGE]], i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
+  // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(ptr @[[LINE_200_SIGN_CHANGE]], i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
@@ -77,13 +77,13 @@ unsigned_int_to_signed_char__no_truncation_sanitizer(unsigned int src) {
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char__no_signed_truncation_sanitizer
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 __attribute__((no_sanitize("implicit-signed-integer-truncation"))) signed char
 unsigned_int_to_signed_char__no_signed_truncation_sanitizer(unsigned int src) {
   // CHECK-NEXT: [[ENTRY:.*]]:
   // CHECK-NEXT: %[[SRC_ADDR:.*]] = alloca i32
-  // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
-  // CHECK-NEXT: %[[DST:.*]] = load i32, i32* %[[SRC_ADDR]]
+  // CHECK-NEXT: store i32 %[[SRC]], ptr %[[SRC_ADDR]]
+  // CHECK-NEXT: %[[DST:.*]] = load i32, ptr %[[SRC_ADDR]]
   // CHECK-NEXT: %[[CONV:.*]] = trunc i32 %[[DST]] to i8
   // CHECK-SANITIZE-NEXT: %[[DST_NEGATIVITYCHECK:.*]] = icmp slt i8 %[[CONV]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT: %[[SIGNCHANGECHECK:.*]] = icmp eq i1 false, %[[DST_NEGATIVITYCHECK]], !nosanitize
@@ -91,8 +91,8 @@ unsigned_int_to_signed_char__no_signed_truncation_sanitizer(unsigned int src) {
   // CHECK-SANITIZE: [[HANDLER_IMPLICIT_CONVERSION]]:
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTSRC:.*]] = zext i32 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTCONV:.*]] = zext i8 %[[CONV]] to i64, !nosanitize
-  // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_300_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_300_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
+  // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(ptr @[[LINE_300_SIGN_CHANGE]], i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
+  // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(ptr @[[LINE_300_SIGN_CHANGE]], i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
@@ -107,13 +107,13 @@ unsigned_int_to_signed_char__no_signed_truncation_sanitizer(unsigned int src) {
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char__no_sign_change_sanitizer
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 __attribute__((no_sanitize("implicit-integer-sign-change"))) signed char
 unsigned_int_to_signed_char__no_sign_change_sanitizer(unsigned int src) {
   // CHECK-NEXT: [[ENTRY:.*]]:
   // CHECK-NEXT: %[[SRC_ADDR:.*]] = alloca i32
-  // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
-  // CHECK-NEXT: %[[DST:.*]] = load i32, i32* %[[SRC_ADDR]]
+  // CHECK-NEXT: store i32 %[[SRC]], ptr %[[SRC_ADDR]]
+  // CHECK-NEXT: %[[DST:.*]] = load i32, ptr %[[SRC_ADDR]]
   // CHECK-NEXT: %[[CONV:.*]] = trunc i32 %[[DST]] to i8
   // CHECK-SANITIZE-NEXT: %[[ANYEXT:.*]] = sext i8 %[[CONV]] to i32, !nosanitize
   // CHECK-SANITIZE-NEXT: %[[TRUNCHECK:.*]] = icmp eq i32 %[[ANYEXT]], %[[DST]], !nosanitize
@@ -121,8 +121,8 @@ unsigned_int_to_signed_char__no_sign_change_sanitizer(unsigned int src) {
   // CHECK-SANITIZE: [[HANDLER_IMPLICIT_CONVERSION]]:
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTSRC:.*]] = zext i32 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTCONV:.*]] = zext i8 %[[CONV]] to i64, !nosanitize
-  // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
+  // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(ptr @[[LINE_400_SIGNED_TRUNCATION]], i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
+  // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(ptr @[[LINE_400_SIGNED_TRUNCATION]], i64 %[[EXTSRC]], i64 %[[EXTCONV]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
@@ -137,14 +137,14 @@ unsigned_int_to_signed_char__no_sign_change_sanitizer(unsigned int src) {
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char__no_sanitizers
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 __attribute__((no_sanitize("implicit-integer-truncation"),
                no_sanitize("implicit-integer-sign-change"))) signed char
 unsigned_int_to_signed_char__no_sanitizers(unsigned int src) {
   // CHECK-NEXT: [[ENTRY:.*]]:
   // CHECK-NEXT: %[[SRC_ADDR:.*]] = alloca i32
-  // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
-  // CHECK-NEXT: %[[DST:.*]] = load i32, i32* %[[SRC_ADDR]]
+  // CHECK-NEXT: store i32 %[[SRC]], ptr %[[SRC_ADDR]]
+  // CHECK-NEXT: %[[DST:.*]] = load i32, ptr %[[SRC_ADDR]]
   // CHECK-NEXT: %[[CONV:.*]] = trunc i32 %[[DST]] to i8
   // CHECK-NEXT: ret i8 %[[CONV]]
   // CHECK-NEXT: }

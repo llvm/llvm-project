@@ -24,14 +24,12 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Valgrind.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 // Enable this macro to debug bugpoint itself.
 //#define DEBUG_BUGPOINT 1
@@ -65,29 +63,7 @@ static cl::opt<bool>
 // PassNameParser.
 //
 static cl::list<const PassInfo *, bool, PassNameParser>
-    PassList(cl::desc("Passes available:"), cl::ZeroOrMore);
-
-static cl::opt<bool>
-    StandardLinkOpts("std-link-opts",
-                     cl::desc("Include the standard link time optimizations"));
-
-static cl::opt<bool>
-    OptLevelO1("O1", cl::desc("Optimization level 1. Identical to 'opt -O1'"));
-
-static cl::opt<bool>
-    OptLevelO2("O2", cl::desc("Optimization level 2. Identical to 'opt -O2'"));
-
-static cl::opt<bool> OptLevelOs(
-    "Os",
-    cl::desc(
-        "Like -O2 with extra optimizations for size. Similar to clang -Os"));
-
-static cl::opt<bool>
-OptLevelOz("Oz",
-           cl::desc("Like -Os but reduces code size further. Similar to clang -Oz"));
-
-static cl::opt<bool>
-    OptLevelO3("O3", cl::desc("Optimization level 3. Identical to 'opt -O3'"));
+    PassList(cl::desc("Passes available:"));
 
 static cl::opt<std::string>
     OverrideTriple("mtriple", cl::desc("Override target triple for module"));
@@ -115,26 +91,6 @@ public:
 };
 }
 
-// This routine adds optimization passes based on selected optimization level,
-// OptLevel.
-//
-// OptLevel - Optimization Level
-static void AddOptimizationPasses(legacy::FunctionPassManager &FPM,
-                                  unsigned OptLevel,
-                                  unsigned SizeLevel) {
-  PassManagerBuilder Builder;
-  Builder.OptLevel = OptLevel;
-  Builder.SizeLevel = SizeLevel;
-
-  if (OptLevel > 1)
-    Builder.Inliner = createFunctionInliningPass(OptLevel, SizeLevel, false);
-  else
-    Builder.Inliner = createAlwaysInlinerLegacyPass();
-
-  Builder.populateFunctionPassManager(FPM);
-  Builder.populateModulePassManager(FPM);
-}
-
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
@@ -148,14 +104,11 @@ int main(int argc, char **argv) {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeCore(Registry);
   initializeScalarOpts(Registry);
-  initializeObjCARCOpts(Registry);
   initializeVectorization(Registry);
   initializeIPO(Registry);
   initializeAnalysis(Registry);
   initializeTransformUtils(Registry);
   initializeInstCombine(Registry);
-  initializeAggressiveInstCombine(Registry);
-  initializeInstrumentation(Registry);
   initializeTarget(Registry);
 
   if (std::getenv("bar") == (char*) -1) {
@@ -202,23 +155,6 @@ int main(int argc, char **argv) {
     return 1;
 
   AddToDriver PM(D);
-
-  if (StandardLinkOpts) {
-    PassManagerBuilder Builder;
-    Builder.Inliner = createFunctionInliningPass();
-    Builder.populateLTOPassManager(PM);
-  }
-
-  if (OptLevelO1)
-    AddOptimizationPasses(PM, 1, 0);
-  else if (OptLevelO2)
-    AddOptimizationPasses(PM, 2, 0);
-  else if (OptLevelO3)
-    AddOptimizationPasses(PM, 3, 0);
-  else if (OptLevelOs)
-    AddOptimizationPasses(PM, 2, 1);
-  else if (OptLevelOz)
-    AddOptimizationPasses(PM, 2, 2);
 
   for (const PassInfo *PI : PassList)
     D.addPass(std::string(PI->getPassArgument()));

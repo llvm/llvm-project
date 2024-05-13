@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -fblocks -verify %s
 
-int* f1() {
+int* f1(void) {
   int x = 0;
   return &x; // expected-warning{{Address of stack memory associated with local variable 'x' returned}} expected-warning{{address of stack memory associated with local variable 'x' returned}}
 }
@@ -20,20 +20,20 @@ int* f3(int x, int *y) {
 
 void* compound_literal(int x, int y) {
   if (x)
-    return &(unsigned short){((unsigned short)0x22EF)}; // expected-warning{{Address of stack memory}}
+    return &(unsigned short){((unsigned short)0x22EF)}; // expected-warning{{Address of stack memory}} expected-warning{{address of stack memory}}
 
   int* array[] = {};
   struct s { int z; double y; int w; };
   
   if (y)
-    return &((struct s){ 2, 0.4, 5 * 8 }); // expected-warning{{Address of stack memory}}
+    return &((struct s){ 2, 0.4, 5 * 8 }); // expected-warning{{Address of stack memory}} expected-warning{{address of stack memory}}
     
   
   void* p = &((struct s){ 42, 0.4, x ? 42 : 0 });
   return p; // expected-warning{{Address of stack memory}}
 }
 
-void* alloca_test() {
+void* alloca_test(void) {
   void* p = __builtin_alloca(10);
   return p; // expected-warning{{Address of stack memory}}
 }
@@ -74,14 +74,12 @@ ComparatorBlock test_return_block_neg(void) {
   return b; // no-warning
 }
 
-// <rdar://problem/7523821>
-int *rdar_7523821_f2() {
+int *rdar_7523821_f2(void) {
   int a[3];
   return a; // expected-warning 2 {{ddress of stack memory associated with local variable 'a' returned}}
 };
 
 // Handle blocks that have no captures or are otherwise declared 'static'.
-// <rdar://problem/10348049>
 typedef int (^RDar10348049)(int value);
 RDar10348049 test_rdar10348049(void) {
   static RDar10348049 b = ^int(int x) {
@@ -93,7 +91,7 @@ RDar10348049 test_rdar10348049(void) {
 void testRegister(register const char *reg) {
     if (reg) (void)reg[0];
 }
-void callTestRegister() {
+void callTestRegister(void) {
     char buf[20];
     testRegister(buf); // no-warning
 }

@@ -6,7 +6,10 @@
 #include <stdio.h>
 #include "fp_lib.h"
 
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+// Since we are comparing the compiler-rt IEEE implementation against libc's
+// long double implementation, this test can only succeed if long double
+// is an IEEE 128-bit floating point number.
+#if defined(CRT_HAS_TF_MODE) && defined(CRT_LDBL_IEEE_F128)
 
 int test__compiler_rt_fmaxl(fp_t x, fp_t y) {
   fp_t crt_value = __compiler_rt_fmaxl(x, y);
@@ -40,10 +43,7 @@ fp_t cases[] = {
   -1.001, 1.001, -1.002, 1.002,
 };
 
-#endif
-
 int main() {
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
   const unsigned N = sizeof(cases) / sizeof(cases[0]);
   unsigned i, j;
   for (i = 0; i < N; ++i) {
@@ -51,8 +51,11 @@ int main() {
       if (test__compiler_rt_fmaxl(cases[i], cases[j])) return 1;
     }
   }
-#else
-  printf("skipped\n");
-#endif
   return 0;
 }
+#else
+int main() {
+  printf("skipped\n");
+  return 0;
+}
+#endif

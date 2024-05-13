@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdint>
 #include <iostream>
 #include <string>
 
@@ -13,11 +14,26 @@ using kmp_intptr_t = intptr_t;
 typedef struct kmp_depend_info {
   kmp_intptr_t base_addr;
   size_t len;
-  struct {
-    bool in : 1;
-    bool out : 1;
-    bool mtx : 1;
-  } flags;
+  union {
+    unsigned char flag;
+    struct {
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+      unsigned all : 1;
+      unsigned unused : 3;
+      unsigned set : 1;
+      unsigned mtx : 1;
+      unsigned out : 1;
+      unsigned in : 1;
+#else
+      unsigned in : 1;
+      unsigned out : 1;
+      unsigned mtx : 1;
+      unsigned set : 1;
+      unsigned unused : 3;
+      unsigned all : 1;
+#endif
+    } flags;
+  };
 } kmp_depend_info_t;
 
 typedef union kmp_cmplrdata {

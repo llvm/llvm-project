@@ -1,4 +1,6 @@
 ; RUN: llc < %s | FileCheck %s
+; RUN: %if ptxas %{ llc < %s | %ptxas-verify %}
+
 target triple = "nvptx64-nvidia-cuda"
 
 declare void @foo()
@@ -6,10 +8,10 @@ declare void @foo()
 ; Load a value, then call a function.  Branch, and use the loaded value only on
 ; one side of the branch.  The load shouldn't be sunk beneath the call, because
 ; the call may modify memory.
-define i32 @f(i32 %x, i32* %ptr, i1 %cond) {
+define i32 @f(i32 %x, ptr %ptr, i1 %cond) {
 Start:
   ; CHECK: ld.u32
-  %ptr_val = load i32, i32* %ptr
+  %ptr_val = load i32, ptr %ptr
   ; CHECK: call.uni
   call void @foo()
   br i1 %cond, label %L1, label %L2

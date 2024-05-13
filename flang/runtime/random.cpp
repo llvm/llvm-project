@@ -9,66 +9,26 @@
 // Implements the intrinsic subroutines RANDOM_INIT, RANDOM_NUMBER, and
 // RANDOM_SEED.
 
-#include "random.h"
-#include "cpp-type.h"
-#include "descriptor.h"
+#include "flang/Runtime/random.h"
 #include "lock.h"
+#include "random-templates.h"
+#include "terminator.h"
+#include "flang/Common/float128.h"
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Common/uint128.h"
-#include <algorithm>
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
 #include <cmath>
 #include <cstdint>
-#include <ctime>
 #include <limits>
 #include <memory>
-#include <random>
+#include <time.h>
 
-namespace Fortran::runtime {
+namespace Fortran::runtime::random {
 
-// Newer "Minimum standard", recommended by Park, Miller, and Stockmeyer in
-// 1993. Same as C++17 std::minstd_rand, but explicitly instantiated for
-// permanence.
-using Generator =
-    std::linear_congruential_engine<std::uint_fast32_t, 48271, 0, 2147483647>;
-
-using GeneratedWord = typename Generator::result_type;
-static constexpr std::uint64_t range{
-    static_cast<std::uint64_t>(Generator::max() - Generator::min() + 1)};
-static constexpr bool rangeIsPowerOfTwo{(range & (range - 1)) == 0};
-static constexpr int rangeBits{
-    64 - common::LeadingZeroBitCount(range) - !rangeIsPowerOfTwo};
-
-static Lock lock;
-static Generator generator;
-
-template <typename REAL, int PREC>
-inline void Generate(const Descriptor &harvest) {
-  static constexpr std::size_t minBits{
-      std::max<std::size_t>(PREC, 8 * sizeof(GeneratedWord))};
-  using Int = common::HostUnsignedIntType<minBits>;
-  static constexpr std::size_t words{
-      static_cast<std::size_t>(PREC + rangeBits - 1) / rangeBits};
-  std::size_t elements{harvest.Elements()};
-  SubscriptValue at[maxRank];
-  harvest.GetLowerBounds(at);
-  {
-    CriticalSection critical{lock};
-    for (std::size_t j{0}; j < elements; ++j) {
-      Int fraction{generator()};
-      if constexpr (words > 1) {
-        for (std::size_t k{1}; k < words; ++k) {
-          static constexpr auto rangeMask{(GeneratedWord{1} << rangeBits) - 1};
-          GeneratedWord word{(generator() - generator.min()) & rangeMask};
-          fraction = (fraction << rangeBits) | word;
-        }
-      }
-      fraction >>= words * rangeBits - PREC;
-      *harvest.Element<REAL>(at) =
-          std::ldexp(static_cast<REAL>(fraction), -(PREC + 1));
-      harvest.IncrementSubscripts(at);
-    }
-  }
-}
+Lock lock;
+Generator generator;
+Fortran::common::optional<GeneratedWord> nextValue;
 
 extern "C" {
 
@@ -79,7 +39,13 @@ void RTNAME(RandomInit)(bool repeatable, bool /*image_distinct*/) {
     if (repeatable) {
       generator.seed(0);
     } else {
-      generator.seed(std::time(nullptr));
+#ifdef CLOCK_REALTIME
+      timespec ts;
+      clock_gettime(CLOCK_REALTIME, &ts);
+      generator.seed(ts.tv_sec & ts.tv_nsec);
+#else
+      generator.seed(time(nullptr));
+#endif
     }
   }
 }
@@ -94,65 +60,78 @@ void RTNAME(RandomNumber)(
   // TODO: REAL (2 & 3)
   case 4:
     Generate<CppTypeFor<TypeCategory::Real, 4>, 24>(harvest);
-    break;
+    return;
   case 8:
     Generate<CppTypeFor<TypeCategory::Real, 8>, 53>(harvest);
-    break;
-#if LONG_DOUBLE == 80
+    return;
   case 10:
-    Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
-    break;
-#elif LONG_DOUBLE == 128
-  case 4:
-    Generate<CppTypeFor<TypeCategory::Real, 16>, 113>(harvest);
-    break;
+    if constexpr (HasCppTypeFor<TypeCategory::Real, 10>) {
+#if LDBL_MANT_DIG == 64
+      Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
+      return;
 #endif
-  default:
-    terminator.Crash("RANDOM_NUMBER(): unsupported REAL kind %d", kind);
+    }
+    break;
   }
+  terminator.Crash(
+      "not yet implemented: intrinsic: REAL(KIND=%d) in RANDOM_NUMBER", kind);
 }
 
 void RTNAME(RandomSeedSize)(
-    const Descriptor &size, const char *source, int line) {
+    const Descriptor *size, const char *source, int line) {
+  if (!size || !size->raw().base_addr) {
+    RTNAME(RandomSeedDefaultPut)();
+    return;
+  }
   Terminator terminator{source, line};
-  auto typeCode{size.type().GetCategoryAndKind()};
+  auto typeCode{size->type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator,
-      size.rank() == 0 && typeCode && typeCode->first == TypeCategory::Integer);
-  int kind{typeCode->second};
-  switch (kind) {
+      size->rank() == 0 && typeCode &&
+          typeCode->first == TypeCategory::Integer);
+  int sizeArg{typeCode->second};
+  switch (sizeArg) {
   case 4:
-    *size.OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = 1;
+    *size->OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = 1;
     break;
   case 8:
-    *size.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = 1;
+    *size->OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = 1;
     break;
   default:
-    terminator.Crash("RANDOM_SEED(SIZE=): bad kind %d\n", kind);
+    terminator.Crash(
+        "not yet implemented: intrinsic: RANDOM_SEED(SIZE=): size %d\n",
+        sizeArg);
   }
 }
 
 void RTNAME(RandomSeedPut)(
-    const Descriptor &put, const char *source, int line) {
+    const Descriptor *put, const char *source, int line) {
+  if (!put || !put->raw().base_addr) {
+    RTNAME(RandomSeedDefaultPut)();
+    return;
+  }
   Terminator terminator{source, line};
-  auto typeCode{put.type().GetCategoryAndKind()};
+  auto typeCode{put->type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator,
-      put.rank() == 1 && typeCode && typeCode->first == TypeCategory::Integer &&
-          put.GetDimension(0).Extent() >= 1);
-  int kind{typeCode->second};
+      put->rank() == 1 && typeCode &&
+          typeCode->first == TypeCategory::Integer &&
+          put->GetDimension(0).Extent() >= 1);
+  int putArg{typeCode->second};
   GeneratedWord seed;
-  switch (kind) {
+  switch (putArg) {
   case 4:
-    seed = *put.OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>();
+    seed = *put->OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>();
     break;
   case 8:
-    seed = *put.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>();
+    seed = *put->OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>();
     break;
   default:
-    terminator.Crash("RANDOM_SEED(PUT=): bad kind %d\n", kind);
+    terminator.Crash(
+        "not yet implemented: intrinsic: RANDOM_SEED(PUT=): put %d\n", putArg);
   }
   {
     CriticalSection critical{lock};
     generator.seed(seed);
+    nextValue = seed;
   }
 }
 
@@ -165,29 +144,54 @@ void RTNAME(RandomSeedDefaultPut)() {
 }
 
 void RTNAME(RandomSeedGet)(
-    const Descriptor &got, const char *source, int line) {
+    const Descriptor *get, const char *source, int line) {
+  if (!get || !get->raw().base_addr) {
+    RTNAME(RandomSeedDefaultPut)();
+    return;
+  }
   Terminator terminator{source, line};
-  auto typeCode{got.type().GetCategoryAndKind()};
+  auto typeCode{get->type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator,
-      got.rank() == 1 && typeCode && typeCode->first == TypeCategory::Integer &&
-          got.GetDimension(0).Extent() >= 1);
-  int kind{typeCode->second};
+      get->rank() == 1 && typeCode &&
+          typeCode->first == TypeCategory::Integer &&
+          get->GetDimension(0).Extent() >= 1);
+  int getArg{typeCode->second};
   GeneratedWord seed;
   {
     CriticalSection critical{lock};
-    seed = generator();
-    generator.seed(seed);
+    seed = GetNextValue();
+    nextValue = seed;
   }
-  switch (kind) {
+  switch (getArg) {
   case 4:
-    *got.OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = seed;
+    *get->OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = seed;
     break;
   case 8:
-    *got.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = seed;
+    *get->OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = seed;
     break;
   default:
-    terminator.Crash("RANDOM_SEED(GET=): bad kind %d\n", kind);
+    terminator.Crash(
+        "not yet implemented: intrinsic: RANDOM_SEED(GET=): get %d\n", getArg);
   }
 }
+
+void RTNAME(RandomSeed)(const Descriptor *size, const Descriptor *put,
+    const Descriptor *get, const char *source, int line) {
+  bool sizePresent = size && size->raw().base_addr;
+  bool putPresent = put && put->raw().base_addr;
+  bool getPresent = get && get->raw().base_addr;
+  if (sizePresent + putPresent + getPresent > 1)
+    Terminator{source, line}.Crash(
+        "RANDOM_SEED must have either 1 or no arguments");
+  if (sizePresent)
+    RTNAME(RandomSeedSize)(size, source, line);
+  else if (putPresent)
+    RTNAME(RandomSeedPut)(put, source, line);
+  else if (getPresent)
+    RTNAME(RandomSeedGet)(get, source, line);
+  else
+    RTNAME(RandomSeedDefaultPut)();
+}
+
 } // extern "C"
-} // namespace Fortran::runtime
+} // namespace Fortran::runtime::random

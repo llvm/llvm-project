@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-unknown-unknown -o - -verify-machineinstrs -run-pass=instruction-select %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown-unknown -o - -verify-machineinstrs -run-pass=instruction-select -global-isel-abort=1 %s | FileCheck %s
 --- |
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"
@@ -23,9 +23,9 @@
     ret i32 %res
   }
 
-  define i64* @test_phi_ptr(i64* %a, i64* %b, i1 %cond) {
+  define ptr @test_phi_ptr(ptr %a, ptr %b, i1 %cond) {
   entry:
-    ret i64* null
+    ret ptr null
   }
 
 ...
@@ -60,8 +60,7 @@ body:             |
     %3(s32) = G_CONSTANT i32 1
     %5(s32) = G_CONSTANT i32 2
     %8(s32) = G_ICMP intpred(ugt), %0(s32), %1
-    %2(s1) = G_TRUNC %8(s32)
-    G_BRCOND %2(s1), %bb.2.case1
+    G_BRCOND %8, %bb.2.case1
     G_BR %bb.3.case2
 
   bb.2.case1:
@@ -106,9 +105,8 @@ body:             |
 
     %0(p0) = COPY $x0
     %1(p0) = COPY $x1
-    %6:gpr(s32) = COPY $w2
-    %2(s1) = G_TRUNC %6
-    G_BRCOND %2(s1), %bb.1
+    %2:gpr(s32) = COPY $w2
+    G_BRCOND %2, %bb.1
     G_BR %bb.2
 
   bb.1:

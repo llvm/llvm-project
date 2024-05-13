@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeRegisterContextDBReg_x86.h"
-
-#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
@@ -19,7 +18,7 @@ using namespace lldb_private;
 static inline uint64_t GetStatusBit(uint32_t wp_index) {
   // DR6: ...BBBB
   //         3210 <- status bits for bp./wp. i; 1 if hit
-  return 1 << wp_index;
+  return 1ULL << wp_index;
 }
 
 // Returns mask/value for global enable bit of wp_index in DR7
@@ -28,14 +27,14 @@ static inline uint64_t GetEnableBit(uint32_t wp_index) {
   //         33221100 <- global/local enable for bp./wp.; 1 if enabled
   // we use global bits because NetBSD kernel does not preserve local
   // bits reliably; Linux seems fine with either
-  return 1 << (2 * wp_index + 1);
+  return 1ULL << (2 * wp_index + 1);
 }
 
 // Returns mask for both enable bits of wp_index in DR7
 static inline uint64_t GetBothEnableBitMask(uint32_t wp_index) {
   // DR7: ...GLGLGLGL
   //         33221100 <- global/local enable for bp./wp.; 1 if enabled
-  return 3 << (2 * wp_index + 1);
+  return 3ULL << (2 * wp_index + 1);
 }
 
 // Returns value for type bits of wp_index in DR7
@@ -48,7 +47,7 @@ static inline uint64_t GetWatchTypeBits(uint32_t watch_flags,
   // wp.: 3333222211110000...
   //
   // where T - type is 01 for write, 11 for r/w
-  return watch_flags << (16 + 4 * wp_index);
+  return static_cast<uint64_t>(watch_flags) << (16 + 4 * wp_index);
 }
 
 // Returns value for size bits of wp_index in DR7
@@ -64,7 +63,8 @@ static inline uint64_t GetWatchSizeBits(uint32_t size, uint32_t wp_index) {
   // 01 for 2 bytes
   // 10 for 8 bytes
   // 11 for 4 bytes
-  return (size == 8 ? 0x2 : size - 1) << (18 + 4 * wp_index);
+  return static_cast<uint64_t>(size == 8 ? 0x2 : size - 1)
+         << (18 + 4 * wp_index);
 }
 
 // Returns bitmask for all bits controlling wp_index in DR7
@@ -242,7 +242,7 @@ Status NativeRegisterContextDBReg_x86::ClearAllHardwareWatchpoints() {
 
 uint32_t NativeRegisterContextDBReg_x86::SetHardwareWatchpoint(
     lldb::addr_t addr, size_t size, uint32_t watch_flags) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
   for (uint32_t wp_index = 0; wp_index < num_hw_watchpoints; ++wp_index) {
     bool is_vacant;

@@ -431,7 +431,7 @@ bool TransformActionsImpl::canReplaceText(SourceLocation loc, StringRef text) {
   if (invalidTemp)
     return false;
 
-  return file.substr(locInfo.second).startswith(text);
+  return file.substr(locInfo.second).starts_with(text);
 }
 
 void TransformActionsImpl::commitInsert(SourceLocation loc, StringRef text) {
@@ -540,7 +540,7 @@ void TransformActionsImpl::addRemoval(CharSourceRange range) {
       return;
     case Range_Contains:
       RI->End = newRange.End;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Range_ExtendsBegin:
       newRange.End = RI->End;
       Removals.erase(RI);

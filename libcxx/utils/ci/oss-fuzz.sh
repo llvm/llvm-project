@@ -10,10 +10,11 @@ fi
 
 BUILD=cxx_build_dir
 INSTALL=cxx_install_dir
+MONOREPO_ROOT=${PWD}
 
 mkdir ${BUILD}
-cmake -S ${PWD} -B ${BUILD} \
-      -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
+cmake -S ${MONOREPO_ROOT}/runtimes -B ${BUILD} \
+      -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DCMAKE_INSTALL_PREFIX="${INSTALL}"
 cmake --build ${BUILD} --target install-cxx-headers
@@ -22,7 +23,7 @@ for test in libcxx/test/libcxx/fuzzing/*.pass.cpp; do
     exe="$(basename ${test})"
     exe="${exe%.pass.cpp}"
     ${CXX} ${CXXFLAGS} \
-        -std=c++14 \
+        -std=c++20 \
         -DLIBCPP_OSS_FUZZ \
         -D_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS \
         -nostdinc++ -cxx-isystem ${INSTALL}/include/c++/v1 \

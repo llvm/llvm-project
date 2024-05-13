@@ -8,9 +8,13 @@
 
 // <locale>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT -D_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT
+
 // wbuffer_convert<Codecvt, Elem, Tr>
 
 // streambuf *rdbuf(streambuf *bytebuf);
+
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <codecvt>

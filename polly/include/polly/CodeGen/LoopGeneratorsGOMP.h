@@ -22,7 +22,7 @@ namespace polly {
 
 /// This ParallelLoopGenerator subclass handles the generation of parallelized
 /// code, utilizing the GNU OpenMP library.
-class ParallelLoopGeneratorGOMP : public ParallelLoopGenerator {
+class ParallelLoopGeneratorGOMP final : public ParallelLoopGenerator {
 public:
   /// Create a parallel loop generator for the current function.
   ParallelLoopGeneratorGOMP(PollyIRBuilder &Builder, LoopInfo &LI,
@@ -47,7 +47,7 @@ public:
   void deployParallelExecution(Function *SubFn, Value *SubFnParam, Value *LB,
                                Value *UB, Value *Stride) override;
 
-  virtual Function *prepareSubFnDefinition(Function *F) const override;
+  Function *prepareSubFnDefinition(Function *F) const override;
 
   std::tuple<Value *, Function *> createSubFn(Value *Stride, AllocaInst *Struct,
                                               SetVector<Value *> UsedValues,

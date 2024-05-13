@@ -50,6 +50,7 @@ struct IncludeStyle {
 
   /// Dependent on the value, multiple ``#include`` blocks can be sorted
   /// as one and divided based on category.
+  /// \version 6
   IncludeBlocksStyle IncludeBlocks;
 
   /// See documentation of ``IncludeCategories``.
@@ -105,7 +106,7 @@ struct IncludeStyle {
   ///       Priority:        2
   ///       SortPriority:    2
   ///       CaseSensitive:   true
-  ///     - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
+  ///     - Regex:           '^((<|")(gtest|gmock|isl|json)/)'
   ///       Priority:        3
   ///     - Regex:           '<[[:alnum:].]+>'
   ///       Priority:        4
@@ -113,6 +114,7 @@ struct IncludeStyle {
   ///       Priority:        1
   ///       SortPriority:    0
   /// \endcode
+  /// \version 3.8
   std::vector<IncludeCategory> IncludeCategories;
 
   /// Specify a regular expression of suffixes that are allowed in the
@@ -126,6 +128,7 @@ struct IncludeStyle {
   ///
   /// For example, if configured to "(_test)?$", then a header a.h would be seen
   /// as the "main" include in both a.cc and a_test.cc.
+  /// \version 3.9
   std::string IncludeIsMainRegex;
 
   /// Specify a regular expression for files being formatted
@@ -146,7 +149,23 @@ struct IncludeStyle {
   /// also being respected in later phase). Without this option set,
   /// ``ClassImpl.hpp`` would not have the main include file put on top
   /// before any other include.
+  /// \version 10
   std::string IncludeIsMainSourceRegex;
+
+  /// Character to consider in the include directives for the main header.
+  enum MainIncludeCharDiscriminator : int8_t {
+    /// Main include uses quotes: ``#include "foo.hpp"`` (the default).
+    MICD_Quote,
+    /// Main include uses angle brackets: ``#include <foo.hpp>``.
+    MICD_AngleBracket,
+    /// Main include uses either quotes or angle brackets.
+    MICD_Any
+  };
+
+  /// When guessing whether a #include is the "main" include, only the include
+  /// directives that use the specified character are considered.
+  /// \version 19
+  MainIncludeCharDiscriminator MainIncludeChar;
 };
 
 } // namespace tooling
@@ -168,6 +187,14 @@ struct ScalarEnumerationTraits<
     clang::tooling::IncludeStyle::IncludeBlocksStyle> {
   static void
   enumeration(IO &IO, clang::tooling::IncludeStyle::IncludeBlocksStyle &Value);
+};
+
+template <>
+struct ScalarEnumerationTraits<
+    clang::tooling::IncludeStyle::MainIncludeCharDiscriminator> {
+  static void enumeration(
+      IO &IO,
+      clang::tooling::IncludeStyle::MainIncludeCharDiscriminator &Value);
 };
 
 } // namespace yaml

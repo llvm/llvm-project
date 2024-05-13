@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// 'do_bytes' throws a std::range_error unexpectedly
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// XFAIL: no-wide-characters
 
 // UNSUPPORTED: c++03
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT -D_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT
 
 // <locale>
 
@@ -30,9 +31,9 @@ int main(int, char**)
     // create a converter and perform some conversions to generate some
     // interesting state.
     Myconv myconv;
-    myconv.from_bytes("\xF1\x80\x80\x83");
+    myconv.from_bytes("\xEF\xBF\xBD");
     const auto old_converted = myconv.converted();
-    assert(myconv.converted() == 4);
+    assert(myconv.converted() == 3);
     // move construct a new converter and make sure the state is the same.
     Myconv myconv2(std::move(myconv));
     assert(myconv2.converted() == old_converted);

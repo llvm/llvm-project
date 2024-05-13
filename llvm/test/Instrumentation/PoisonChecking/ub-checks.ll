@@ -5,75 +5,75 @@
 ; a potential source of UB.  The UB source is kept simple; we focus on the
 ; UB triggering instructions here.
 
-define void @store(i8* %base, i32 %a) {
+define void @store(ptr %base, i32 %a) {
 ; CHECK-LABEL: @store(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
-; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, i8* [[BASE:%.*]], i32 [[ADD]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i32 [[ADD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
 ; CHECK-NEXT:    call void @__poison_checker_assert(i1 [[TMP3]])
-; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %add = add nsw i32 %a, 1
-  %p = getelementptr i8, i8* %base, i32 %add
-  store i8 0, i8* %p
+  %p = getelementptr i8, ptr %base, i32 %add
+  store i8 0, ptr %p
   ret void
 }
 
-define void @load(i8* %base, i32 %a) {
+define void @load(ptr %base, i32 %a) {
 ; CHECK-LABEL: @load(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
-; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, i8* [[BASE:%.*]], i32 [[ADD]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i32 [[ADD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
 ; CHECK-NEXT:    call void @__poison_checker_assert(i1 [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = load volatile i8, i8* [[P]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load volatile i8, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %add = add nsw i32 %a, 1
-  %p = getelementptr i8, i8* %base, i32 %add
-  load volatile i8, i8* %p
+  %p = getelementptr i8, ptr %base, i32 %add
+  load volatile i8, ptr %p
   ret void
 }
 
-define void @atomicrmw(i8* %base, i32 %a) {
+define void @atomicrmw(ptr %base, i32 %a) {
 ; CHECK-LABEL: @atomicrmw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
-; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, i8* [[BASE:%.*]], i32 [[ADD]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i32 [[ADD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
 ; CHECK-NEXT:    call void @__poison_checker_assert(i1 [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw add i8* [[P]], i8 1 seq_cst
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw add ptr [[P]], i8 1 seq_cst, align 1
 ; CHECK-NEXT:    ret void
 ;
   %add = add nsw i32 %a, 1
-  %p = getelementptr i8, i8* %base, i32 %add
-  atomicrmw add i8* %p, i8 1 seq_cst
+  %p = getelementptr i8, ptr %base, i32 %add
+  atomicrmw add ptr %p, i8 1 seq_cst
   ret void
 }
 
-define void @cmpxchg(i8* %base, i32 %a) {
+define void @cmpxchg(ptr %base, i32 %a) {
 ; CHECK-LABEL: @cmpxchg(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
-; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, i8* [[BASE:%.*]], i32 [[ADD]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i32 [[ADD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
 ; CHECK-NEXT:    call void @__poison_checker_assert(i1 [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg i8* [[P]], i8 1, i8 0 seq_cst seq_cst
+; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[P]], i8 1, i8 0 seq_cst seq_cst, align 1
 ; CHECK-NEXT:    ret void
 ;
   %add = add nsw i32 %a, 1
-  %p = getelementptr i8, i8* %base, i32 %add
-  cmpxchg i8* %p, i8 1, i8 0 seq_cst seq_cst
+  %p = getelementptr i8, ptr %base, i32 %add
+  cmpxchg ptr %p, i8 1, i8 0 seq_cst seq_cst
   ret void
 }
 
-define i32 @udiv(i8* %base, i32 %a) {
+define i32 @udiv(ptr %base, i32 %a) {
 ; CHECK-LABEL: @udiv(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
@@ -88,7 +88,7 @@ define i32 @udiv(i8* %base, i32 %a) {
   ret i32 %res
 }
 
-define i32 @sdiv(i8* %base, i32 %a) {
+define i32 @sdiv(ptr %base, i32 %a) {
 ; CHECK-LABEL: @sdiv(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
@@ -103,7 +103,7 @@ define i32 @sdiv(i8* %base, i32 %a) {
   ret i32 %res
 }
 
-define i32 @urem(i8* %base, i32 %a) {
+define i32 @urem(ptr %base, i32 %a) {
 ; CHECK-LABEL: @urem(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
@@ -118,7 +118,7 @@ define i32 @urem(i8* %base, i32 %a) {
   ret i32 %res
 }
 
-define i32 @srem(i8* %base, i32 %a) {
+define i32 @srem(ptr %base, i32 %a) {
 ; CHECK-LABEL: @srem(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
@@ -133,5 +133,60 @@ define i32 @srem(i8* %base, i32 %a) {
   ret i32 %res
 }
 
+define noundef i32 @select_cond_may_be_poison(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_cond_may_be_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], 1
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[ADD]] to i1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[T]], i32 [[ADD]], i32 [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; CHECK-NEXT:    call void @__poison_checker_assert(i1 [[TMP3]])
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %add = add nuw i32 %a, 1
+  %t = trunc i32 %add to i1
+  %sel = select i1 %t, i32 %add, i32 %b
+  ret i32 %sel
+}
+
+define noundef i32 @select_cond_true_third_op_may_be_poison(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_cond_true_third_op_may_be_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 true, i32 [[B:%.*]], i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %add = add nuw i32 %a, 1
+  %sel = select i1 true, i32 %b, i32 %add
+  ret i32 %sel
+}
+
+define noundef i32 @select_cond_false_second_op_may_be_poison(i1 %c, i32 %a, i32 %b) {
+; CHECK-LABEL: @select_cond_false_second_op_may_be_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, i32 [[ADD]], i32 [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %add = add nuw i32 %a, 1
+  %sel = select i1 false, i32 %add, i32 %b
+  ret i32 %sel
+}
+
+define noundef i32 @select_unknown_true_third_op_may_be_poison(i1 %c, i32 %a, i32 %b) {
+; CHECK-LABEL: @select_unknown_true_third_op_may_be_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 [[B:%.*]], i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %add = add nuw i32 %a, 1
+  %sel = select i1 %c, i32 %b, i32 %add
+  ret i32 %sel
+}
 
 

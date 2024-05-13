@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-objdump -d - | FileCheck  %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck  %s
 
 // Test that we correctly relax these instructions into versions that use
 // 16 or 32 bit immediate values.

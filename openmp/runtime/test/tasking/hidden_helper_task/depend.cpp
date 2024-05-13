@@ -1,4 +1,5 @@
 // RUN: %libomp-cxx-compile-and-run
+// RUN: %libomp-cxx-compile && env OMP_NUM_THREADS=1 %libomp-run
 
 /*
  * This test aims to check whether hidden helper task can work with regular task
@@ -65,7 +66,7 @@ int main(int argc, char *argv[]) {
 
     kmp_depend_info_t depinfo1;
     depinfo1.base_addr = reinterpret_cast<intptr_t>(&data);
-    depinfo1.flags.out = 1;
+    depinfo1.flag = 2; // OUT
     depinfo1.len = 4;
 
     __kmpc_omp_task_with_deps(nullptr, gtid, task1, 1, &depinfo1, 0, nullptr);
@@ -80,8 +81,7 @@ int main(int argc, char *argv[]) {
 
     kmp_depend_info_t depinfo2;
     depinfo2.base_addr = reinterpret_cast<intptr_t>(&data);
-    depinfo2.flags.in = 1;
-    depinfo2.flags.out = 1;
+    depinfo2.flag = 3; // INOUT
     depinfo2.len = 4;
 
     __kmpc_omp_task_with_deps(nullptr, gtid, task2, 1, &depinfo2, 0, nullptr);
@@ -96,8 +96,7 @@ int main(int argc, char *argv[]) {
 
     kmp_depend_info_t depinfo3;
     depinfo3.base_addr = reinterpret_cast<intptr_t>(&data);
-    depinfo3.flags.in = 1;
-    depinfo3.flags.out = 1;
+    depinfo3.flag = 3; // INOUT
     depinfo3.len = 4;
 
     __kmpc_omp_task_with_deps(nullptr, gtid, task3, 1, &depinfo3, 0, nullptr);
@@ -112,8 +111,7 @@ int main(int argc, char *argv[]) {
 
     kmp_depend_info_t depinfo4;
     depinfo4.base_addr = reinterpret_cast<intptr_t>(&data);
-    depinfo4.flags.in = 1;
-    depinfo4.flags.out = 1;
+    depinfo4.flag = 3; // INOUT
     depinfo4.len = 4;
 
     __kmpc_omp_task_with_deps(nullptr, gtid, task4, 1, &depinfo4, 0, nullptr);

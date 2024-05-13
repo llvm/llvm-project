@@ -63,3 +63,19 @@ entry:
   %conv8 = ashr exact i32 %sext, 16
   ret i32 %conv8
 }
+
+define i32 @pr55484(i32 %0) {
+; CHECK-LABEL: pr55484:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    lsls r1, r0, #8
+; CHECK-NEXT:    lsrs r0, r0, #8
+; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    bx lr
+  %2 = lshr i32 %0, 8
+  %3 = shl i32 %0, 8
+  %4 = or i32 %2, %3
+  %5 = trunc i32 %4 to i16
+  %6 = sext i16 %5 to i32
+  ret i32 %6
+}

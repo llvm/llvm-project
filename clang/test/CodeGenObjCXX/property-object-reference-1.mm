@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -x objective-c++ %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
-// rdar://6137845
 
 struct TCPPObject
 {
@@ -24,8 +23,7 @@ struct TCPPObject
 
 @end
 
-// CHECK: [[cppObjectaddr:%.*]] = alloca %struct.TCPPObject*, align 8
-// CHECK: store %struct.TCPPObject* [[cppObject:%.*]], %struct.TCPPObject** [[cppObjectaddr]], align 8
-// CHECK:  [[THREE:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[cppObjectaddr]], align 8
-// CHECK:  [[FOUR:%.*]] = bitcast %struct.TCPPObject* [[THREE]] to i8*
-// CHECK:  call void @objc_copyStruct(i8* [[TWO:%.*]], i8* [[FOUR]], i64 256, i1 zeroext true, i1 zeroext false)
+// CHECK: [[cppObjectaddr:%cppObject.addr]] = alloca ptr, align 8
+// CHECK: store ptr [[cppObject:%.*]], ptr [[cppObjectaddr]], align 8
+// CHECK:  [[THREE:%.*]] = load ptr, ptr [[cppObjectaddr]], align 8
+// CHECK:  call void @objc_copyStruct(ptr noundef [[TWO:%.*]], ptr noundef [[THREE]], i64 noundef 256, i1 noundef zeroext true, i1 noundef zeroext false)

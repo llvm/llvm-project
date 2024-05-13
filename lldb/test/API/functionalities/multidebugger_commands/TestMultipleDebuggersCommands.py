@@ -2,9 +2,6 @@
 Test that commands do not try and hold on to stale CommandInterpreters in a multiple debuggers scenario
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,9 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class MultipleDebuggersCommandsTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_multipledebuggers_commands(self):
         """Test that commands do not try and hold on to stale CommandInterpreters in a multiple debuggers scenario"""
@@ -26,9 +20,11 @@ class MultipleDebuggersCommandsTestCase(TestBase):
 
         retobj = lldb.SBCommandReturnObject()
         interpreter_1.HandleCommand("apropos env", retobj)
-        self.assertTrue(
-            magic_text in str(retobj),
-            "[interpreter_1]: the output does not contain the correct words")
+        self.assertIn(
+            magic_text,
+            str(retobj),
+            "[interpreter_1]: the output does not contain the correct words",
+        )
 
         if self.TraceOn():
             print(str(retobj))
@@ -42,9 +38,11 @@ class MultipleDebuggersCommandsTestCase(TestBase):
 
         retobj = lldb.SBCommandReturnObject()
         interpreter_2.HandleCommand("apropos env", retobj)
-        self.assertTrue(
-            magic_text in str(retobj),
-            "[interpreter_2]: the output does not contain the correct words")
+        self.assertIn(
+            magic_text,
+            str(retobj),
+            "[interpreter_2]: the output does not contain the correct words",
+        )
 
         if self.TraceOn():
             print(str(retobj))

@@ -267,36 +267,36 @@ vpshlw %xmm0, (%rax), %xmm3
 # CHECK-NEXT:  1      1     1.00                        vpermil2ps	$0, %ymm0, %ymm1, %ymm2, %ymm3
 # CHECK-NEXT:  2      8     1.00    *                   vpermil2ps	$0, (%rax), %ymm0, %ymm1, %ymm3
 # CHECK-NEXT:  2      8     1.00    *                   vpermil2ps	$0, %ymm0, (%rax), %ymm1, %ymm3
-# CHECK-NEXT:  3      3     1.50                        vphaddbd	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphaddbd	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphaddbq	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphaddbq	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphaddbw	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphaddbw	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphadddq	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphadddq	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphaddubd	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphaddubd	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphaddubq	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphaddubq	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphaddubw	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphaddubw	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphaddudq	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphaddudq	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphadduwd	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphadduwd	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphadduwq	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphadduwq	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphaddwd	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphaddwd	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphaddwq	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphaddwq	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphsubbw	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphsubbw	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphsubdq	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphsubdq	(%rax), %xmm3
-# CHECK-NEXT:  3      3     1.50                        vphsubwd	%xmm0, %xmm3
-# CHECK-NEXT:  4      9     1.50    *                   vphsubwd	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphaddbd	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphaddbd	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphaddbq	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphaddbq	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphaddbw	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphaddbw	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphadddq	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphadddq	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphaddubd	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphaddubd	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphaddubq	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphaddubq	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphaddubw	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphaddubw	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphaddudq	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphaddudq	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphadduwd	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphadduwd	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphadduwq	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphadduwq	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphaddwd	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphaddwd	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphaddwq	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphaddwq	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphsubbw	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphsubbw	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphsubdq	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphsubdq	(%rax), %xmm3
+# CHECK-NEXT:  1      1     0.50                        vphsubwd	%xmm0, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vphsubwd	(%rax), %xmm3
 # CHECK-NEXT:  1      5     1.00                        vpmacsdd	%xmm0, %xmm1, %xmm2, %xmm3
 # CHECK-NEXT:  2      11    1.00    *                   vpmacsdd	%xmm0, (%rax), %xmm1, %xmm3
 # CHECK-NEXT:  1      5     1.00                        vpmacsdqh	%xmm0, %xmm1, %xmm2, %xmm3
@@ -381,7 +381,7 @@ vpshlw %xmm0, (%rax), %xmm3
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     68.00  68.00   -     71.00  41.50  41.50
+# CHECK-NEXT:  -      -     68.00  38.00   -     41.00  41.50  41.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -431,36 +431,36 @@ vpshlw %xmm0, (%rax), %xmm3
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpermil2ps	$0, %ymm0, %ymm1, %ymm2, %ymm3
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpermil2ps	$0, (%rax), %ymm0, %ymm1, %ymm3
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpermil2ps	$0, %ymm0, (%rax), %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphaddbd	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphaddbd	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphaddbq	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphaddbq	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphaddbw	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphaddbw	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphadddq	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphadddq	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphaddubd	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphaddubd	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphaddubq	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphaddubq	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphaddubw	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphaddubw	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphaddudq	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphaddudq	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphadduwd	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphadduwd	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphadduwq	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphadduwq	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphaddwd	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphaddwd	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphaddwq	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphaddwq	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphsubbw	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphsubbw	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphsubdq	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphsubdq	(%rax), %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50    -      -     vphsubwd	%xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     1.50    -     1.50   0.50   0.50   vphsubwd	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphaddbd	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphaddbd	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphaddbq	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphaddbq	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphaddbw	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphaddbw	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphadddq	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphadddq	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphaddubd	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphaddubd	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphaddubq	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphaddubq	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphaddubw	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphaddubw	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphaddudq	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphaddudq	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphadduwd	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphadduwd	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphadduwq	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphadduwq	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphaddwd	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphaddwd	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphaddwq	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphaddwq	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphsubbw	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphsubbw	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphsubdq	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphsubdq	(%rax), %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vphsubwd	%xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vphsubwd	(%rax), %xmm3
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vpmacsdd	%xmm0, %xmm1, %xmm2, %xmm3
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vpmacsdd	%xmm0, (%rax), %xmm1, %xmm3
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vpmacsdqh	%xmm0, %xmm1, %xmm2, %xmm3

@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -S -polly-scops -analyze \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -S -polly-print-scops -disable-output \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-%struct.IP = type { i32****, i32***, %struct.P, %struct.S, %struct.m }
+%struct.IP = type { ptr, ptr, %struct.P, %struct.S, %struct.m }
 %struct.P = type { i32 }
 %struct.S = type { i32 }
 %struct.D = type { i32 }
@@ -32,7 +32,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:             [block_y, block_x] -> { Stmt_entry_split[] -> MemRef0[] };
 ; CHECK-NEXT: }
 
-@img = external global %struct.IP*, align 8
+@img = external global ptr, align 8
 
 ; Function Attrs: nounwind uwtable
 define void @dct_luma(i32 %block_x, i32 %block_y) #0 {
@@ -47,15 +47,13 @@ entry.split:                                      ; preds = %entry
   %rem5 = srem i32 %div, 2
   %add6 = add nsw i32 %mul4, %rem5
   %idxprom = sext i32 %add6 to i64
-  %0 = load %struct.IP*, %struct.IP** @img, align 8
-  %cofAC = getelementptr inbounds %struct.IP, %struct.IP* %0, i32 0, i32 0
-  %1 = load i32****, i32***** %cofAC, align 8
-  %arrayidx = getelementptr inbounds i32***, i32**** %1, i64 0
-  %2 = load i32***, i32**** %arrayidx, align 8
-  %arrayidx8 = getelementptr inbounds i32**, i32*** %2, i64 %idxprom
-  %3 = load i32**, i32*** %arrayidx8, align 8
-  %mb_data = getelementptr inbounds %struct.IP, %struct.IP* %0, i64 0, i32 4
-  %4 = load %struct.m, %struct.m* %mb_data, align 8
+  %0 = load ptr, ptr @img, align 8
+  %1 = load ptr, ptr %0, align 8
+  %2 = load ptr, ptr %1, align 8
+  %arrayidx8 = getelementptr inbounds ptr, ptr %2, i64 %idxprom
+  %3 = load ptr, ptr %arrayidx8, align 8
+  %mb_data = getelementptr inbounds %struct.IP, ptr %0, i64 0, i32 4
+  %4 = load %struct.m, ptr %mb_data, align 8
   br i1 false, label %land.rhs, label %land.end
 
 land.rhs:                                         ; preds = %entry.split

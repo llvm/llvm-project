@@ -15,39 +15,36 @@
 ; of CFI instructions.
 
 ; RUN: llc -fast-isel -O0 -filetype=asm < %s | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -fast-isel -O0 -filetype=asm < %s | FileCheck %s
 
 ; ModuleID = 'test1.cpp'
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-apple-ios"
 
 %struct.B = type { %struct.A }
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 
-@_ZTV1B = external unnamed_addr constant [4 x i8*]
+@_ZTV1B = external unnamed_addr constant [4 x ptr]
 
 ; Function Attrs: nounwind
-define %struct.B* @_ZN1BC2Ev(%struct.B* %this) unnamed_addr #0 align 2 !dbg !28 {
+define ptr @_ZN1BC2Ev(ptr %this) unnamed_addr #0 align 2 !dbg !28 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !30, metadata !38), !dbg !39
-  %0 = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 0, !dbg !40
-  %call = tail call %struct.A* @_ZN1AC2Ev(%struct.A* %0) #3, !dbg !40
-  %1 = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 0, i32 0, !dbg !40
-  store i32 (...)** bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTV1B, i64 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8, !dbg !40, !tbaa !41
-  ret %struct.B* %this, !dbg !40
+  tail call void @llvm.dbg.value(metadata ptr %this, metadata !30, metadata !38), !dbg !39
+  %call = tail call ptr @_ZN1AC2Ev(ptr %this) #3, !dbg !40
+  store ptr getelementptr inbounds ([4 x ptr], ptr @_ZTV1B, i64 0, i64 2), ptr %this, align 8, !dbg !40, !tbaa !41
+  ret ptr %this, !dbg !40
 }
 
-declare %struct.A* @_ZN1AC2Ev(%struct.A*)
+declare ptr @_ZN1AC2Ev(ptr)
 
 ; Function Attrs: nounwind
-define %struct.B* @_ZN1BC1Ev(%struct.B* %this) unnamed_addr #0 align 2 !dbg !32 {
+define ptr @_ZN1BC1Ev(ptr %this) unnamed_addr #0 align 2 !dbg !32 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !34, metadata !38), !dbg !44
-  tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !45, metadata !38) #3, !dbg !47
-  %0 = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 0, !dbg !48
-  %call.i = tail call %struct.A* @_ZN1AC2Ev(%struct.A* %0) #3, !dbg !48
-  %1 = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 0, i32 0, !dbg !48
-  store i32 (...)** bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTV1B, i64 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8, !dbg !48, !tbaa !41
-  ret %struct.B* %this, !dbg !46
+  tail call void @llvm.dbg.value(metadata ptr %this, metadata !34, metadata !38), !dbg !44
+  tail call void @llvm.dbg.value(metadata ptr %this, metadata !45, metadata !38) #3, !dbg !47
+  %call.i = tail call ptr @_ZN1AC2Ev(ptr %this) #3, !dbg !48
+  store ptr getelementptr inbounds ([4 x ptr], ptr @_ZTV1B, i64 0, i64 2), ptr %this, align 8, !dbg !48, !tbaa !41
+  ret ptr %this, !dbg !46
 }
 
 ; Function Attrs: nounwind readnone

@@ -1,4 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Test llvm.dbg.value for dynamic allocas moved onto the unsafe stack.
 ; In the dynamic alloca case, the dbg.value does not change with the exception
@@ -13,17 +16,17 @@ entry:
   tail call void @llvm.dbg.value(metadata i32 %n, metadata !11, metadata !14), !dbg !15
   %0 = zext i32 %n to i64, !dbg !16
 
-; CHECK:  store i8* %[[VLA:.*]], i8** @__safestack_unsafe_stack_ptr
-; CHECK:  tail call void @llvm.dbg.value(metadata i8* %[[VLA]], metadata ![[TYPE:.*]], metadata !DIExpression(DW_OP_deref))
+; CHECK:  store ptr %[[VLA:.*]], ptr @__safestack_unsafe_stack_ptr
+; CHECK:  tail call void @llvm.dbg.value(metadata ptr %[[VLA]], metadata ![[TYPE:.*]], metadata !DIExpression(DW_OP_deref))
 ; CHECK:  call void @capture({{.*}} %[[VLA]])
 
   %vla = alloca i8, i64 %0, align 16, !dbg !16
-  tail call void @llvm.dbg.value(metadata i8* %vla, metadata !12, metadata !17), !dbg !18
-  call void @capture(i8* nonnull %vla), !dbg !19
+  tail call void @llvm.dbg.value(metadata ptr %vla, metadata !12, metadata !17), !dbg !18
+  call void @capture(ptr nonnull %vla), !dbg !19
   ret void, !dbg !20
 }
 
-declare void @capture(i8*)
+declare void @capture(ptr)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

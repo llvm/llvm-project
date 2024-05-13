@@ -31,5 +31,5 @@ void host_function() {
   anonymous_ns_kernel<<<0,0>>>();
 }
 
-// CHECK: !{{[0-9]+}} = !{void ()* @global_function, !"kernel", i32 1}
-// CHECK: !{{[0-9]+}} = !{void (i32)* @_Z16templated_kernelIiEvT_, !"kernel", i32 1}
+// CHECK: !{{[0-9]+}} = !{ptr @global_function, !"kernel", i32 1}
+// CHECK: !{{[0-9]+}} = !{ptr @_Z16templated_kernelIiEvT_, !"kernel", i32 1}

@@ -1,4 +1,4 @@
-; RUN: opt -annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
+; RUN: opt -passes=annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
 ; RUN: cat %t.opt.yaml | FileCheck -check-prefix=YAML %s
 
 ; No remarks for this function, no instructions with metadata.
@@ -22,18 +22,18 @@ define void @unknown() {
 }
 
 ; Emit a remark that reports an intrinsic call to an unknown intrinsic.
-define void @unknown_intrinsic(i32* %dst) {
+define void @unknown_intrinsic(ptr %dst) {
 ; CHECK-NEXT: Initialization inserted by -ftrivial-auto-var-init.
 ; YAML-LABEL: --- !Missed
 ; YAML-NEXT: Pass:            annotation-remarks
 ; YAML-NEXT: Name:            AutoInitUnknownInstruction
 ; YAML-NEXT: DebugLoc:
 ; YAML-NEXT: Function:        unknown_intrinsic
-  call i8* @llvm.returnaddress(i32 0), !annotation !0, !dbg !DILocation(scope: !4)
+  call ptr @llvm.returnaddress(i32 0), !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
 
-declare i8* @llvm.returnaddress(i32) nounwind readnone
+declare ptr @llvm.returnaddress(i32) nounwind readnone
 
 !llvm.module.flags = !{!1}
 !0 = !{ !"auto-init" }

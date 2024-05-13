@@ -10,10 +10,11 @@
 
 #include <memory>
 #include <cassert>
-
-// #include <memory>
+#include <type_traits>
 
 #include "test_macros.h"
+
+// <memory>
 //
 // template <class Alloc>
 // struct allocator_traits

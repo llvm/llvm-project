@@ -46,7 +46,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 28
+#define LTO_API_VERSION 29
 
 /**
  * \since prior to LTO_API_VERSION=3
@@ -312,6 +312,16 @@ extern lto_bool_t lto_module_get_macho_cputype(lto_module_t mod,
                                                unsigned int *out_cputype,
                                                unsigned int *out_cpusubtype);
 
+/**
+ * This function can be used by the linker to check if a given module has
+ * any constructor or destructor functions.
+ *
+ * Returns true if the module has either the @llvm.global_ctors or the
+ * @llvm.global_dtors symbol. Otherwise returns false.
+ *
+ * \since LTO_API_VERSION=29
+ */
+extern lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod);
 /**
  * Diagnostic severity.
  *

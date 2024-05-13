@@ -1,8 +1,9 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++03 -Wno-c++11-extensions %s
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // Don't crash.
 
 struct g {
-  j; // expected-error {{C++ requires a type specifier for all declarations}}
+  j; // expected-error {{a type specifier is required for all declarations}}
 };
 
 void captures_invalid_type() {

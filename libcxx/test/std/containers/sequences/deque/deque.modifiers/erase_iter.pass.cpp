@@ -10,6 +10,7 @@
 
 // iterator erase(const_iterator p)
 
+#include "asan_testing.h"
 #include <deque>
 #include <algorithm>
 #include <iterator>
@@ -67,7 +68,7 @@ test(int P, C& c1)
     I i = c1.erase(c1.cbegin() + P);
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize - 1);
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
     int j = 0;
     for (; j < P; ++j, ++i)
@@ -119,6 +120,7 @@ int main(int, char**)
     v.erase(--v.end());
     v.erase(v.begin());
     assert(v.size() == 0);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(v));
     }
 #endif
 

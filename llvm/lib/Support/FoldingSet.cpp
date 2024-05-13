@@ -12,24 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
 #include <cstring>
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
 // FoldingSetNodeIDRef Implementation
-
-/// ComputeHash - Compute a strong hash value for this FoldingSetNodeIDRef,
-/// used to lookup the node in the FoldingSetBase.
-unsigned FoldingSetNodeIDRef::ComputeHash() const {
-  return static_cast<unsigned>(hash_combine_range(Data, Data+Size));
-}
 
 bool FoldingSetNodeIDRef::operator==(FoldingSetNodeIDRef RHS) const {
   if (Size != RHS.Size) return false;
@@ -49,41 +42,6 @@ bool FoldingSetNodeIDRef::operator<(FoldingSetNodeIDRef RHS) const {
 
 /// Add* - Add various data types to Bit data.
 ///
-void FoldingSetNodeID::AddPointer(const void *Ptr) {
-  // Note: this adds pointers to the hash using sizes and endianness that
-  // depend on the host. It doesn't matter, however, because hashing on
-  // pointer values is inherently unstable. Nothing should depend on the
-  // ordering of nodes in the folding set.
-  static_assert(sizeof(uintptr_t) <= sizeof(unsigned long long),
-                "unexpected pointer size");
-  AddInteger(reinterpret_cast<uintptr_t>(Ptr));
-}
-void FoldingSetNodeID::AddInteger(signed I) {
-  Bits.push_back(I);
-}
-void FoldingSetNodeID::AddInteger(unsigned I) {
-  Bits.push_back(I);
-}
-void FoldingSetNodeID::AddInteger(long I) {
-  AddInteger((unsigned long)I);
-}
-void FoldingSetNodeID::AddInteger(unsigned long I) {
-  if (sizeof(long) == sizeof(int))
-    AddInteger(unsigned(I));
-  else if (sizeof(long) == sizeof(long long)) {
-    AddInteger((unsigned long long)I);
-  } else {
-    llvm_unreachable("unexpected sizeof(long)");
-  }
-}
-void FoldingSetNodeID::AddInteger(long long I) {
-  AddInteger((unsigned long long)I);
-}
-void FoldingSetNodeID::AddInteger(unsigned long long I) {
-  AddInteger(unsigned(I));
-  AddInteger(unsigned(I >> 32));
-}
-
 void FoldingSetNodeID::AddString(StringRef String) {
   unsigned Size =  String.size();
 
@@ -131,8 +89,8 @@ void FoldingSetNodeID::AddString(StringRef String) {
   // Pos will have overshot size by 4 - #bytes left over.
   // No need to take endianness into account here - this is always executed.
   switch (Pos - Size) {
-  case 1: V = (V << 8) | (unsigned char)String[Size - 3]; LLVM_FALLTHROUGH;
-  case 2: V = (V << 8) | (unsigned char)String[Size - 2]; LLVM_FALLTHROUGH;
+  case 1: V = (V << 8) | (unsigned char)String[Size - 3]; [[fallthrough]];
+  case 2: V = (V << 8) | (unsigned char)String[Size - 2]; [[fallthrough]];
   case 3: V = (V << 8) | (unsigned char)String[Size - 1]; break;
   default: return; // Nothing left.
   }
@@ -143,12 +101,6 @@ void FoldingSetNodeID::AddString(StringRef String) {
 // AddNodeID - Adds the Bit data of another ID to *this.
 void FoldingSetNodeID::AddNodeID(const FoldingSetNodeID &ID) {
   Bits.append(ID.Bits.begin(), ID.Bits.end());
-}
-
-/// ComputeHash - Compute a strong hash value for this FoldingSetNodeID, used to
-/// lookup the node in the FoldingSetBase.
-unsigned FoldingSetNodeID::ComputeHash() const {
-  return FoldingSetNodeIDRef(Bits.data(), Bits.size()).ComputeHash();
 }
 
 /// operator== - Used to compare two nodes to each other.
@@ -317,7 +269,7 @@ void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
   // range of 1.0 - 2.0.
   if(EltCount < capacity())
     return;
-  GrowBucketCount(PowerOf2Floor(EltCount), Info);
+  GrowBucketCount(llvm::bit_floor(EltCount), Info);
 }
 
 /// FindNodeOrInsertPos - Look up the node specified by ID.  If it exists,

@@ -23,8 +23,11 @@ Expected<PassPlugin> PassPlugin::Load(const std::string &Filename) {
                                    inconvertibleErrorCode());
 
   PassPlugin P{Filename, Library};
+
+  // llvmGetPassPluginInfo should be resolved to the definition from the plugin
+  // we are currently loading.
   intptr_t getDetailsFn =
-      (intptr_t)Library.SearchForAddressOfSymbol("llvmGetPassPluginInfo");
+      (intptr_t)Library.getAddressOfSymbol("llvmGetPassPluginInfo");
 
   if (!getDetailsFn)
     // If the symbol isn't found, this is probably a legacy plugin, which is an

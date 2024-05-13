@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fclang-abi-compat=latest -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -93,9 +93,9 @@ namespace Casts {
   template void static_<4>(void*);
   // CHECK-LABEL: define weak_odr void @_ZN5Casts12reinterpret_ILj4EiEEvPN9enable_ifIXleT_szrcPT0_Li0EEvE4typeE
   template void reinterpret_<4, int>(void*);
-  // CHECK-LABEL: define weak_odr void @_ZN5Casts6const_IiXadL_ZNS_1iEEEEEvPN9enable_ifIXleLi0EszccPT_T0_EvE4typeE
+  // CHECK-LABEL: define weak_odr void @_ZN5Casts6const_IiTnPT_XadL_ZNS_1iEEEEEvPN9enable_ifIXleLi0EszccS2_T0_EvE4typeE
   template void const_<int, &i>(void*);
-  // CHECK-LABEL: define weak_odr void @_ZN5Casts8dynamic_INS_1SEXadL_ZNS_1sEEEEEvPN9enable_ifIXleLi0EszdcPT_T0_EvE4typeE
+  // CHECK-LABEL: define weak_odr void @_ZN5Casts8dynamic_INS_1SETnPT_XadL_ZNS_1sEEEEEvPN9enable_ifIXleLi0EszdcS3_T0_EvE4typeE
   template void dynamic_<struct S, &s>(void*);
 
   // CHECK-LABEL: define weak_odr void @_ZN5Casts1fILi6EEENS_1TIXT_EEEv
@@ -112,10 +112,10 @@ namespace test1 {
   short foo(short);
   int foo(int);
 
-  // CHECK-LABEL: define linkonce_odr signext i16 @_ZN5test11aIsEEDTcl3foocvT__EEES1_(
+  // CHECK-LABEL: define linkonce_odr noundef signext i16 @_ZN5test11aIsEEDTcl3foocvT__EEES1_(
   template <class T> auto a(T t) -> decltype(foo(T())) { return foo(t); }
 
-  // CHECK-LABEL: define linkonce_odr signext i16 @_ZN5test11bIsEEDTcp3foocvT__EEES1_(
+  // CHECK-LABEL: define linkonce_odr noundef signext i16 @_ZN5test11bIsEEDTcp3foocvT__EEES1_(
   template <class T> auto b(T t) -> decltype((foo)(T())) { return (foo)(t); }
 
   void test(short s) {
@@ -147,7 +147,7 @@ namespace test2 {
   void instantiate() {
     // CHECK: call void @_ZN5test21aIPFfvEEEvT_DTclfL0p_EE(
     a(foo, 0.0f);
-    // CHECK: call float @_ZN5test21bIPFfvEEEDTclfp_EET_(
+    // CHECK: call noundef float @_ZN5test21bIPFfvEEEDTclfp_EET_(
     (void) b(foo);
     // CHECK: call void @_ZN5test21cIPFfvEEEvT_PFvDTclfL1p_EEE(
     c(foo, bar);
@@ -165,7 +165,7 @@ namespace test2 {
     i<float(*)()>(baz);
   }
 
-  // CHECK: store float {{.*}}, float* @_ZZN5test21gIPFfvEEEvT_DTclfL0p_EEE8variable,
+  // CHECK: store float {{.*}}, ptr @_ZZN5test21gIPFfvEEEvT_DTclfL0p_EEE8variable,
 }
 
 namespace test3 {
@@ -363,7 +363,7 @@ namespace test8 {
     template <class T> auto bar() const -> decltype(foo<T>()) { return 0; }
   };
 
-  // CHECK-LABEL: define weak_odr i32 @_ZNK5test81XIiE3barIiEEDTcl3fooIT_EEEv
+  // CHECK-LABEL: define weak_odr noundef i32 @_ZNK5test81XIiE3barIiEEDTcl3fooIT_EEEv
   template int X<int>::bar<int>() const;
 }
 
@@ -388,4 +388,14 @@ namespace null {
 
   // CHECK-LABEL: define {{.*}} @_ZN4null8gnu_nullILPv0EEEvPN9enable_ifIXeqT_Ll0EEvE4typeE
   template void gnu_null<nullptr>(void *);
+}
+
+namespace type_trait {
+  template<typename T> void f(decltype(__is_trivially_copyable(T))) {}
+  // CHECK-LABEL: define {{.*}} @_ZN10type_trait1fIiEEvDTu23__is_trivially_copyableT_EE
+  template void f<int>(bool);
+
+  template<typename T> void g(decltype(__is_trivially_copyable(int) + T())) {}
+  // CHECK-LABEL: define {{.*}} @_ZN10type_trait1gIiEEvDTplu23__is_trivially_copyableiEcvT__EE
+  template void g<int>(int);
 }

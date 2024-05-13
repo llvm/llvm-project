@@ -16,14 +16,17 @@ void *f2(void *p) {
 
 int main (int argc, char const *argv[])
 {
-    pointer = (char *)malloc(10); // malloc line
+    for (int i = 0; i < 100; i++) {
+        pointer = (char *)malloc(10); // malloc line
 
-    pthread_t t1, t2;
-    pthread_create(&t1, NULL, f1, NULL);
-    pthread_create(&t2, NULL, f2, NULL);
+        pthread_t t1, t2;
+        pthread_create(&t1, NULL, f1, NULL);
+        pthread_create(&t2, NULL, f2, NULL);
 
-    pthread_join(t1, NULL);
-    pthread_join(t2, NULL);
+        pthread_join(t1, NULL);
+        pthread_join(t2, NULL);
 
+        free(pointer);
+    }
     return 0;
 }

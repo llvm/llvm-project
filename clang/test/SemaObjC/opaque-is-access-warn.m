@@ -2,7 +2,6 @@
 // RUN: %clang -target x86_64-apple-darwin -arch arm64 -mios-version-min=7 -fsyntax-only %s -Xclang -verify
 // RUN: %clang -target x86_64-apple-darwin -mios-simulator-version-min=7 -fsyntax-only -Wdeprecated-objc-isa-usage %s -Xclang -verify
 // RUN: %clang -target x86_64-apple-darwin -arch armv7k -mwatchos-version-min=2 -fsyntax-only -Wdeprecated-objc-isa-usage %s -Xclang -verify
-// rdar://10709102
 // RUN: %clang -target x86_64-apple-darwin -arch x86_64 -fsyntax-only -Wdeprecated-objc-isa-usage %s -Xclang -verify
 
 typedef struct objc_object {
@@ -17,7 +16,7 @@ typedef struct objc_object {
 +self;
 @end
 
-static void func() {
+static void func(void) {
 
   id x;
 

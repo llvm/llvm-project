@@ -1,9 +1,8 @@
 //===- MsgPackDocumentTest.cpp --------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,6 +28,17 @@ TEST(MsgPackDocument, TestReadInt) {
   ASSERT_TRUE(Ok);
   ASSERT_EQ(Doc.getRoot().getKind(), Type::Int);
   ASSERT_EQ(Doc.getRoot().getInt(), 0);
+}
+
+TEST(MsgPackDocument, TestReadBinary) {
+  Document Doc;
+  uint8_t data[] = {1, 2, 3, 4};
+  bool Ok =
+      Doc.readFromBlob(StringRef("\xC4\x4\x1\x2\x3\x4", 6), /*Multi=*/false);
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(Doc.getRoot().getKind(), Type::Binary);
+  ASSERT_EQ(Doc.getRoot().getBinary().getBuffer(),
+            StringRef(reinterpret_cast<const char *>(data), 4));
 }
 
 TEST(MsgPackDocument, TestReadMergeArray) {
@@ -188,6 +198,16 @@ TEST(MsgPackDocument, TestWriteInt) {
   std::string Buffer;
   Doc.writeToBlob(Buffer);
   ASSERT_EQ(Buffer, "\x01");
+}
+
+TEST(MsgPackDocument, TestWriteBinary) {
+  uint8_t data[] = {1, 2, 3, 4};
+  Document Doc;
+  Doc.getRoot() = MemoryBufferRef(
+      StringRef(reinterpret_cast<const char *>(data), sizeof(data)), "");
+  std::string Buffer;
+  Doc.writeToBlob(Buffer);
+  ASSERT_EQ(Buffer, "\xC4\x4\x1\x2\x3\x4");
 }
 
 TEST(MsgPackDocument, TestWriteArray) {

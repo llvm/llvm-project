@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -loop-rotate -indvars       -polly-prepare -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -basic-aa -loop-rotate -indvars -licm -polly-prepare -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -loop-rotate -indvars       -polly-prepare -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -loop-rotate -indvars -licm -polly-prepare -polly-scops -disable-output < %s | FileCheck %s
 ;
 ; XFAIL: *
 ;
@@ -14,7 +14,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64* noalias %A, i64* noalias %B, i64 %j) {
+define void @foo(ptr noalias %A, ptr noalias %B, i64 %j) {
 entry:
   br label %for.cond
 
@@ -33,12 +33,12 @@ for.cond.1:                                       ; preds = %for.inc, %for.body
 
 for.body.3:                                       ; preds = %for.cond.1
   %add = add nuw nsw i64 %i.0, %k.0
-  %arrayidx = getelementptr inbounds i64, i64* %B, i64 %add
-  %tmp = load i64, i64* %arrayidx, align 8
-  %arrayidx4 = getelementptr inbounds i64, i64* %A, i64 %j
-  %tmp2 = load i64, i64* %arrayidx4, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %B, i64 %add
+  %tmp = load i64, ptr %arrayidx, align 8
+  %arrayidx4 = getelementptr inbounds i64, ptr %A, i64 %j
+  %tmp2 = load i64, ptr %arrayidx4, align 8
   %add5 = add i64 %tmp2, %tmp
-  store i64 %add5, i64* %arrayidx4, align 8
+  store i64 %add5, ptr %arrayidx4, align 8
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body.3

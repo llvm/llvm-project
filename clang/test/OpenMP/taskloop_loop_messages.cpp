@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wuninitialized
 
 class S {
   int a;
@@ -691,7 +691,7 @@ void test_loop_break() {
 
 void test_loop_eh() {
   const int N = 100;
-  float a[N], b[N], c[N];
+  float a[N], b[N], c[N]; // expected-note {{declared here}}
 #pragma omp parallel
 #pragma omp taskloop
   for (int i = 0; i < 10; i++) {
@@ -728,6 +728,13 @@ void test_loop_eh() {
     struct S {
       void g() { throw 0; }
     };
+  }
+// expected-error@+5 {{variable length arrays are not supported in OpenMP tasking regions with 'untied' clause}}
+// expected-note@+4 {{read of non-constexpr variable 'c' is not allowed in a constant expression}}
+#pragma omp taskloop untied
+  {
+  for (int i = 0; i < 10; ++i)
+    int array[(int)c[0]];
   }
 }
 

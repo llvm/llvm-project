@@ -14,9 +14,9 @@
 ; Function Attrs: norecurse nounwind readonly
 define i32 @test() local_unnamed_addr #0 {
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   %tobool = icmp eq i32 %0, 0
-  %1 = load i32, i32* @c, align 4
+  %1 = load i32, ptr @c, align 4
   %. = select i1 %tobool, i32 0, i32 %1
 ; CHECK:  r1 = b
 ; CHECK:  r1 = *(u32 *)(r1 + 0)
@@ -30,11 +30,11 @@ attributes #0 = { norecurse nounwind readonly }
 ; Source file:
 
 ; unsigned long long
-; load_word(void *buf, unsigned long long off)
+; load_word(ptr buf, unsigned long long off)
 ; asm("llvm.bpf.load.word");
 ;
 ; int
-; foo(void *buf)
+; foo(ptr buf)
 ; {
 ;  unsigned long long sum = 0;
 ;
@@ -48,9 +48,9 @@ attributes #0 = { norecurse nounwind readonly }
 ;}
 
 ; Function Attrs: nounwind readonly
-define i32 @foo(i8*) local_unnamed_addr #0 {
-  %2 = tail call i64 @llvm.bpf.load.word(i8* %0, i64 100)
-  %3 = tail call i64 @llvm.bpf.load.word(i8* %0, i64 104)
+define i32 @foo(ptr) local_unnamed_addr #0 {
+  %2 = tail call i64 @llvm.bpf.load.word(ptr %0, i64 100)
+  %3 = tail call i64 @llvm.bpf.load.word(ptr %0, i64 104)
   %4 = add i64 %3, %2
   %5 = icmp ne i64 %4, 8589934591
 ; CHECK:  r{{[0-9]+}} = 8589934591 ll
@@ -59,7 +59,7 @@ define i32 @foo(i8*) local_unnamed_addr #0 {
 }
 
 ; Function Attrs: nounwind readonly
-declare i64 @llvm.bpf.load.word(i8*, i64) #1
+declare i64 @llvm.bpf.load.word(ptr, i64) #1
 
 ; Source file:
 ; int m, n;
@@ -76,10 +76,10 @@ declare i64 @llvm.bpf.load.word(i8*, i64) #1
 ; Function Attrs: norecurse nounwind readonly
 define i32 @test2() local_unnamed_addr #0 {
 entry:
-  %0 = load i32, i32* @m, align 4
+  %0 = load i32, ptr @m, align 4
   %cmp = icmp slt i32 %0, 6
 ; CHECK:  if r{{[0-9]+}} s{{<|>}} 6 goto
-  %1 = load i32, i32* @n, align 4
+  %1 = load i32, ptr @n, align 4
   %spec.select = select i1 %cmp, i32 %1, i32 %0
   ret i32 %spec.select
 }

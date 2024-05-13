@@ -8,7 +8,7 @@
 # with an unprimed accumulator PHI node cycle.
 
 --- |
-  define dso_local void @phiCopy(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  define dso_local void @phiCopy(i32 signext %i, <16 x i8> %vc, ptr nocapture %ptr) {
   entry:
     %0 = tail call <512 x i1> @llvm.ppc.mma.xxsetaccz()
     %tobool.not = icmp eq i32 %i, 0
@@ -20,7 +20,7 @@
 
   if.end:
     %vq.0 = phi <512 x i1> [ %1, %if.then ], [ %0, %entry ]
-    store <512 x i1> %vq.0, <512 x i1>* %ptr, align 64
+    store <512 x i1> %vq.0, ptr %ptr, align 64
     ret void
   }
 
@@ -28,7 +28,7 @@
 
   declare <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>)
 
-  define dso_local void @phiCopyUndef(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  define dso_local void @phiCopyUndef(i32 signext %i, <16 x i8> %vc, ptr nocapture %ptr) {
   entry:
     %tobool.not = icmp eq i32 %i, 0
     br i1 %tobool.not, label %if.end, label %if.then
@@ -39,11 +39,11 @@
 
   if.end:
     %vq.0 = phi <512 x i1> [ %0, %if.then ], [ undef, %entry ]
-    store <512 x i1> %vq.0, <512 x i1>* %ptr, align 64
+    store <512 x i1> %vq.0, ptr %ptr, align 64
     ret void
   }
 
-  define dso_local void @phiPhis(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  define dso_local void @phiPhis(i32 signext %i, <16 x i8> %vc, ptr nocapture %ptr) {
   entry:
     %cmp6 = icmp sgt i32 %i, 0
     br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -83,8 +83,8 @@
 
   for.cond.cleanup:
     %vq.0.lcssa = phi <512 x i1> [ undef, %entry ], [ %vq.07.unr, %for.cond.cleanup.loopexit.unr-lcssa ], [ %9, %for.body.epil ]
-    %add.ptr = getelementptr inbounds <512 x i1>, <512 x i1>* %ptr, i64 1
-    store <512 x i1> %vq.0.lcssa, <512 x i1>* %add.ptr, align 64
+    %add.ptr = getelementptr inbounds <512 x i1>, ptr %ptr, i64 1
+    store <512 x i1> %vq.0.lcssa, ptr %add.ptr, align 64
     ret void
 
   for.body:
@@ -101,7 +101,7 @@
     br i1 %19, label %for.body, label %for.cond.cleanup.loopexit.unr-lcssa
   }
 
-  define dso_local void @phiCycle(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  define dso_local void @phiCycle(i32 signext %i, <16 x i8> %vc, ptr nocapture %ptr) {
   entry:
     %cmp6 = icmp sgt i32 %i, 0
     br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -143,8 +143,8 @@
 
   for.cond.cleanup:
     %vq.0.lcssa = phi <512 x i1> [ undef, %entry ], [ %vq.07.unr, %for.cond.cleanup.loopexit.unr-lcssa ]
-    %add.ptr = getelementptr inbounds <512 x i1>, <512 x i1>* %ptr, i64 1
-    store <512 x i1> %vq.0.lcssa, <512 x i1>* %add.ptr, align 64
+    %add.ptr = getelementptr inbounds <512 x i1>, ptr %ptr, i64 1
+    store <512 x i1> %vq.0.lcssa, ptr %add.ptr, align 64
     ret void
 
   for.body:
@@ -269,14 +269,14 @@ body:             |
     %15:vsrprc = INSERT_SUBREG %16, killed %14, %subreg.sub_vsx1
     %17:vsrc = COPY %12.sub_vsx0
     %18:vsrprc = INSERT_SUBREG %15, killed %17, %subreg.sub_vsx0
-    STXVP killed %18, 32, %5 :: (store 32 into %ir.ptr + 32)
+    STXVP killed %18, 32, %5 :: (store (s256) into %ir.ptr + 32)
     %19:vsrprc = COPY %12.sub_pair1
     %20:vsrc = COPY %19.sub_vsx1
     %22:vsrprc = IMPLICIT_DEF
     %21:vsrprc = INSERT_SUBREG %22, killed %20, %subreg.sub_vsx1
     %23:vsrc = COPY %19.sub_vsx0
     %24:vsrprc = INSERT_SUBREG %21, killed %23, %subreg.sub_vsx0
-    STXVP killed %24, 0, %5 :: (store 32 into %ir.ptr, align 64)
+    STXVP killed %24, 0, %5 :: (store (s256) into %ir.ptr, align 64)
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -387,14 +387,14 @@ body:             |
     %15:vsrprc = INSERT_SUBREG %16, killed %14, %subreg.sub_vsx1
     %17:vsrc = COPY %12.sub_vsx0
     %18:vsrprc = INSERT_SUBREG %15, killed %17, %subreg.sub_vsx0
-    STXVP killed %18, 32, %4 :: (store 32 into %ir.ptr + 32)
+    STXVP killed %18, 32, %4 :: (store (s256) into %ir.ptr + 32)
     %19:vsrprc = COPY %12.sub_pair1
     %20:vsrc = COPY %19.sub_vsx1
     %22:vsrprc = IMPLICIT_DEF
     %21:vsrprc = INSERT_SUBREG %22, killed %20, %subreg.sub_vsx1
     %23:vsrc = COPY %19.sub_vsx0
     %24:vsrprc = INSERT_SUBREG %21, killed %23, %subreg.sub_vsx0
-    STXVP killed %24, 0, %4 :: (store 32 into %ir.ptr, align 64)
+    STXVP killed %24, 0, %4 :: (store (s256) into %ir.ptr, align 64)
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -579,14 +579,14 @@ body:             |
     %45:vsrprc = INSERT_SUBREG %46, killed %44, %subreg.sub_vsx1
     %47:vsrc = COPY %42.sub_vsx0
     %48:vsrprc = INSERT_SUBREG %45, killed %47, %subreg.sub_vsx0
-    STXVP killed %48, 96, %9 :: (store 32 into %ir.add.ptr + 32)
+    STXVP killed %48, 96, %9 :: (store (s256) into %ir.add.ptr + 32)
     %49:vsrprc = COPY %42.sub_pair1
     %50:vsrc = COPY %49.sub_vsx1
     %52:vsrprc = IMPLICIT_DEF
     %51:vsrprc = INSERT_SUBREG %52, killed %50, %subreg.sub_vsx1
     %53:vsrc = COPY %49.sub_vsx0
     %54:vsrprc = INSERT_SUBREG %51, killed %53, %subreg.sub_vsx0
-    STXVP killed %54, 64, %9 :: (store 32 into %ir.add.ptr, align 64)
+    STXVP killed %54, 64, %9 :: (store (s256) into %ir.add.ptr, align 64)
     BLR8 implicit $lr8, implicit $rm
 
   bb.7.for.body:
@@ -674,6 +674,7 @@ registers:
   - { id: 52, class: vsrprc, preferred-register: '' }
   - { id: 53, class: vsrc, preferred-register: '' }
   - { id: 54, class: vsrprc, preferred-register: '' }
+  - { id: 55, class: crrc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%7' }
   - { reg: '$v2', virtual-reg: '%8' }
@@ -767,22 +768,24 @@ body:             |
     %37:g8rc_and_g8rc_nox0 = RLDICL killed %35, 0, 32
     %38:g8rc = nuw nsw ADDI8 killed %37, 1
     MTCTR8loop killed %38, implicit-def dead $ctr8
+    B %bb.5
 
   bb.5.for.body.epil:
     successors: %bb.3(0x40000000), %bb.5(0x7c000000)
-    ; We check that no phi node is inserted in the block.
+    ; We check that no [u]acc phi node is inserted in the block.
     ; CHECK-LABEL: bb.{{[0-9]}}.for.body.epil:
     ; CHECK-NEXT: successors: %bb.{{[0-9]}}(0x{{[0-9a-f]+}}), %bb.{{[0-9]}}(0x{{[0-9a-f]+}})
-    ; CHECK-NEXT: {{ }}
-    ; CHECK-NEXT: %2:uaccrc = PHI
+    ; CHECK-NOT: uaccrc = PHI
+    ; CHECK-NOT: accrc = PHI
+    ; CHECK: %2:uaccrc = PHI
     ; CHECK-NEXT: %39:vsrc
     %2:uaccrc = PHI %1, %bb.4, %3, %bb.5
     %39:vsrc = COPY %8
     %41:accrc = COPY %2
     %40:accrc = XVF32GERPP %41, %39, %39
     %3:uaccrc = COPY %40
-    %15:crrc = CMPLWI %14, 7
-    BCC 12, killed %15, %bb.5
+    %55:crrc = CMPLWI %14, 7
+    BCC 12, killed %55, %bb.5
     B %bb.3
 
   bb.6.for.cond.cleanup:
@@ -794,14 +797,14 @@ body:             |
     %45:vsrprc = INSERT_SUBREG %46, killed %44, %subreg.sub_vsx1
     %47:vsrc = COPY %42.sub_vsx0
     %48:vsrprc = INSERT_SUBREG %45, killed %47, %subreg.sub_vsx0
-    STXVP killed %48, 96, %9 :: (store 32 into %ir.add.ptr + 32)
+    STXVP killed %48, 96, %9 :: (store (s256) into %ir.add.ptr + 32)
     %49:vsrprc = COPY %42.sub_pair1
     %50:vsrc = COPY %49.sub_vsx1
     %52:vsrprc = IMPLICIT_DEF
     %51:vsrprc = INSERT_SUBREG %52, killed %50, %subreg.sub_vsx1
     %53:vsrc = COPY %49.sub_vsx0
     %54:vsrprc = INSERT_SUBREG %51, killed %53, %subreg.sub_vsx0
-    STXVP killed %54, 64, %9 :: (store 32 into %ir.add.ptr, align 64)
+    STXVP killed %54, 64, %9 :: (store (s256) into %ir.add.ptr, align 64)
     BLR8 implicit $lr8, implicit $rm
 
   bb.7.for.body:

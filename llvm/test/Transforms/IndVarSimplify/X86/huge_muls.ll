@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -27,7 +27,7 @@ bci_55.postloop:                                  ; preds = %bci_90.postloop, %b
   %indvars.iv180.postloop = phi i64 [ %indvars.iv.next181.postloop, %bci_90.postloop ], [ 15, %bci_12 ]
   %local_2_16.postloop = phi i32 [ %tmp17, %bci_90.postloop ], [ 4, %bci_12 ]
   %indvars.iv.next181.postloop = add nuw nsw i64 %indvars.iv180.postloop, 1
-  %tmp6 = load i32, i32 addrspace(1)* undef, align 4
+  %tmp6 = load i32, ptr addrspace(1) undef, align 4
   %tmp7 = mul i32 %tmp6, %tmp1
   br label %not_zero65.us.postloop
 

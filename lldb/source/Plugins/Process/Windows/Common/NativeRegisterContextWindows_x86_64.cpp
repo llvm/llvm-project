@@ -48,10 +48,10 @@ static const uint32_t g_fpr_regnums_x86_64[] = {
 };
 
 static const RegisterSet g_reg_sets_x86_64[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_regnums_x86_64) - 1, g_gpr_regnums_x86_64},
-    {"Floating Point Registers", "fpr",
-     llvm::array_lengthof(g_fpr_regnums_x86_64) - 1, g_fpr_regnums_x86_64}};
+    {"General Purpose Registers", "gpr", std::size(g_gpr_regnums_x86_64) - 1,
+     g_gpr_regnums_x86_64},
+    {"Floating Point Registers", "fpr", std::size(g_fpr_regnums_x86_64) - 1,
+     g_fpr_regnums_x86_64}};
 
 enum { k_num_register_sets = 2 };
 
@@ -67,7 +67,7 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 static Status GetThreadContextHelper(lldb::thread_t thread_handle,
                                      PCONTEXT context_ptr,
                                      const DWORD control_flag) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
 
   memset(context_ptr, 0, sizeof(::CONTEXT));
@@ -83,7 +83,7 @@ static Status GetThreadContextHelper(lldb::thread_t thread_handle,
 
 static Status SetThreadContextHelper(lldb::thread_t thread_handle,
                                      PCONTEXT context_ptr) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
   // It's assumed that the thread has stopped.
   if (!::SetThreadContext(thread_handle, context_ptr)) {
@@ -579,7 +579,7 @@ Status NativeRegisterContextWindows_x86_64::WriteRegister(
 }
 
 Status NativeRegisterContextWindows_x86_64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   const size_t data_size = REG_CONTEXT_SIZE;
   data_sp = std::make_shared<DataBufferHeap>(data_size, 0);
   ::CONTEXT tls_context;

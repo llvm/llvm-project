@@ -38,8 +38,8 @@
   define dso_local i32 @_Z3funi(i32 %p) !dbg !11 {
   entry:
     call void @llvm.dbg.value(metadata i32 %p, metadata !15, metadata !DIExpression()), !dbg !16
-    store i32 %p, i32* @glob, align 4, !dbg !17
-    %0 = load i32, i32* @glob, align 4, !dbg !22
+    store i32 %p, ptr @glob, align 4, !dbg !17
+    %0 = load i32, ptr @glob, align 4, !dbg !22
     call void @llvm.dbg.value(metadata i32 %0, metadata !27, metadata !DIExpression()), !dbg !30
     call void @llvm.dbg.value(metadata i32 0, metadata !28, metadata !DIExpression()), !dbg !30
     %tobool.i = icmp ne i32 %0, 0, !dbg !31
@@ -59,7 +59,7 @@
     %r.0.i = phi i32 [ %call.i, %if.then.i ], [ %call1.i, %if.else.i ], !dbg !37
     call void @llvm.dbg.value(metadata i32 %r.0.i, metadata !28, metadata !DIExpression()), !dbg !30
     %mul.i = mul nsw i32 %r.0.i, %0, !dbg !38
-    store i32 %mul.i, i32* @glob, align 4, !dbg !39
+    store i32 %mul.i, ptr @glob, align 4, !dbg !39
     ret i32 0, !dbg !40
   }
 
@@ -125,7 +125,7 @@ body:             |
     CFI_INSTRUCTION offset $rbx, -16
     $ebx = MOV32rr $edi
     DBG_VALUE $ebx, $noreg, !15, !DIExpression(), debug-location !16
-    MOV32mr $rip, 1, $noreg, @glob, $noreg, $edi, debug-location !17 :: (store 4 into @glob)
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, $edi, debug-location !17 :: (store (s32) into @glob)
     DBG_VALUE $ebx, $noreg, !27, !DIExpression(), debug-location !30
     DBG_VALUE 0, $noreg, !28, !DIExpression(), debug-location !30
     TEST32rr $edi, $edi, implicit-def $eflags, debug-location !31
@@ -162,11 +162,11 @@ body:             |
     DBG_VALUE $eax, $noreg, !28, !DIExpression(), debug-location !30
     DBG_VALUE $eax, $noreg, !28, !DIExpression(), debug-location !30
     renamable $eax = nsw IMUL32rr killed renamable $eax, killed renamable $ebx, implicit-def dead $eflags, debug-location !38
-    MOV32mr $rip, 1, $noreg, @glob, $noreg, killed renamable $eax, debug-location !39 :: (store 4 into @glob)
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, killed renamable $eax, debug-location !39 :: (store (s32) into @glob)
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !40
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !40
     DBG_VALUE $edi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !16
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !40
-    RETQ $eax, debug-location !40
+    RET64 $eax, debug-location !40
 
 ...

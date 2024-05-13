@@ -5,10 +5,10 @@
 ; CHECK-NO-NOT: constrained Loop
 
 define i32 @multiple_access_no_preloop(
-  i32* %arr_a, i32* %a_len_ptr, i32* %arr_b, i32* %b_len_ptr, i32 %n) {
+  ptr %arr_a, ptr %a_len_ptr, ptr %arr_b, ptr %b_len_ptr, i32 %n) {
 
   entry:
-  %len.a = load i32, i32* %a_len_ptr, !range !0
+  %len.a = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit, !prof !1
 
@@ -19,8 +19,8 @@ define i32 @multiple_access_no_preloop(
   br i1 %abc.a, label %in.bounds.a, label %exit, !prof !2
 
   in.bounds.a:
-  %addr.a = getelementptr i32, i32* %arr_a, i32 %idx
-  %val = load i32, i32* %addr.a
+  %addr.a = getelementptr i32, ptr %arr_a, i32 %idx
+  %val = load i32, ptr %addr.a
   %cond = icmp ne i32 %val, 0
 ; Most probable exit from a loop.
   br i1 %cond, label %found, label %backedge, !prof !3

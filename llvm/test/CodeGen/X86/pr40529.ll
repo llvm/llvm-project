@@ -15,7 +15,7 @@ define x86_fp80 @rem_pio2l_min(x86_fp80 %z) {
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fisubl -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    flds {{.*}}(%rip)
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
 ; CHECK-NEXT:    fmul %st, %st(1)
 ; CHECK-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax

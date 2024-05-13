@@ -2,14 +2,14 @@
 // RUN: %clang_cc1 %s -std=c89 -verify -fsyntax-only
 // RUN: %clang_cc1 %s -std=c99 -verify -fsyntax-only
 
-int f() __attribute__((deprecated)); // expected-note 2 {{'f' has been explicitly marked deprecated here}}
-void g() __attribute__((deprecated));// expected-note {{'g' has been explicitly marked deprecated here}}
-void g(); 
+int f(void) __attribute__((deprecated)); // expected-note 2 {{'f' has been explicitly marked deprecated here}}
+void g(void) __attribute__((deprecated));// expected-note {{'g' has been explicitly marked deprecated here}}
+void g(void); 
 
 extern int var __attribute__((deprecated)); // expected-note 2 {{'var' has been explicitly marked deprecated here}}
 
-int a() {
-  int (*ptr)() = f; // expected-warning {{'f' is deprecated}}
+int a(void) {
+  int (*ptr)(void) = f; // expected-warning {{'f' is deprecated}}
   f(); // expected-warning {{'f' is deprecated}}
 
   // test if attributes propagate to functions
@@ -20,15 +20,15 @@ int a() {
 
 // test if attributes propagate to variables
 extern int var; 
-int w() {
+int w(void) {
   return var; // expected-warning {{'var' is deprecated}}
 }
 
-int old_fn() __attribute__ ((deprecated));// expected-note {{'old_fn' has been explicitly marked deprecated here}}
-int old_fn(); 
-int (*fn_ptr)() = old_fn; // expected-warning {{'old_fn' is deprecated}}
+int old_fn(void) __attribute__ ((deprecated));// expected-note {{'old_fn' has been explicitly marked deprecated here}}
+int old_fn(void); 
+int (*fn_ptr)(void) = old_fn; // expected-warning {{'old_fn' is deprecated}}
 
-int old_fn() {
+int old_fn(void) {
   return old_fn()+1;  // no warning, deprecated functions can use deprecated symbols.
 }
 
@@ -53,7 +53,6 @@ struct bar_dep *test3;   // expected-warning {{'bar_dep' is deprecated}}
 
 
 // These should not warn because the actually declaration itself is deprecated.
-// rdar://6756623
 foo_dep *test4 __attribute__((deprecated));
 struct bar_dep *test5 __attribute__((deprecated));
 
@@ -103,12 +102,11 @@ foo_dep test17, // expected-warning {{'foo_dep' is deprecated}}
         test18 __attribute__((deprecated)),
         test19;
 
-// rdar://problem/8518751
 enum __attribute__((deprecated)) Test20 { // expected-note 2 {{'Test20' has been explicitly marked deprecated here}}
   test20_a __attribute__((deprecated)), // expected-note {{'test20_a' has been explicitly marked deprecated here}}
   test20_b
 };
-void test20() {
+void test20(void) {
   enum Test20 f; // expected-warning {{'Test20' is deprecated}}
   f = test20_a; // expected-warning {{'test20_a' is deprecated}}
   f = test20_b; // expected-warning {{'test20_b' is deprecated}}

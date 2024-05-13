@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn--amdpal -S -instcombine <%s | FileCheck --check-prefixes=GCN %s
+; RUN: opt -mtriple=amdgcn--amdpal -S -passes=instcombine <%s | FileCheck --check-prefixes=GCN %s
 
 ; Check that sin/cos is not folded to tan on amdgcn.
 

@@ -56,10 +56,10 @@ public:
   using reference = value_type &;
 
   CoverageMappingIterator()
-      : Reader(nullptr), Record(), ReadErr(coveragemap_error::success) {}
+      : Reader(nullptr), ReadErr(coveragemap_error::success) {}
 
   CoverageMappingIterator(CoverageMappingReader *Reader)
-      : Reader(Reader), Record(), ReadErr(coveragemap_error::success) {
+      : Reader(Reader), ReadErr(coveragemap_error::success) {
     increment();
   }
 
@@ -179,10 +179,12 @@ public:
           FilenamesBegin(FilenamesBegin), FilenamesSize(FilenamesSize) {}
   };
 
+  using FuncRecordsStorage = std::unique_ptr<MemoryBuffer>;
+
 private:
   std::vector<std::string> Filenames;
   std::vector<ProfileMappingRecord> MappingRecords;
-  InstrProfSymtab ProfileNames;
+  std::unique_ptr<InstrProfSymtab> ProfileNames;
   size_t CurrentRecord = 0;
   std::vector<StringRef> FunctionsFilenames;
   std::vector<CounterExpression> Expressions;
@@ -191,10 +193,11 @@ private:
   // Used to tie the lifetimes of coverage function records to the lifetime of
   // this BinaryCoverageReader instance. Needed to support the format change in
   // D69471, which can split up function records into multiple sections on ELF.
-  std::string FuncRecords;
+  FuncRecordsStorage FuncRecords;
 
-  BinaryCoverageReader(std::string &&FuncRecords)
-      : FuncRecords(std::move(FuncRecords)) {}
+  BinaryCoverageReader(std::unique_ptr<InstrProfSymtab> Symtab,
+                       FuncRecordsStorage &&FuncRecords)
+      : ProfileNames(std::move(Symtab)), FuncRecords(std::move(FuncRecords)) {}
 
 public:
   BinaryCoverageReader(const BinaryCoverageReader &) = delete;
@@ -203,14 +206,14 @@ public:
   static Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
   create(MemoryBufferRef ObjectBuffer, StringRef Arch,
          SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
-         StringRef CompilationDir = "");
+         StringRef CompilationDir = "",
+         SmallVectorImpl<object::BuildIDRef> *BinaryIDs = nullptr);
 
   static Expected<std::unique_ptr<BinaryCoverageReader>>
-  createCoverageReaderFromBuffer(StringRef Coverage, std::string &&FuncRecords,
-                                 InstrProfSymtab &&ProfileNames,
-                                 uint8_t BytesInAddress,
-                                 support::endianness Endian,
-                                 StringRef CompilationDir = "");
+  createCoverageReaderFromBuffer(
+      StringRef Coverage, FuncRecordsStorage &&FuncRecords,
+      std::unique_ptr<InstrProfSymtab> ProfileNamesPtr, uint8_t BytesInAddress,
+      llvm::endianness Endian, StringRef CompilationDir = "");
 
   Error readNextRecord(CoverageMappingRecord &Record) override;
 };

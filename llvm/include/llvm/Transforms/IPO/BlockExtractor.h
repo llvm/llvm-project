@@ -14,11 +14,21 @@
 #ifndef LLVM_TRANSFORMS_IPO_BLOCKEXTRACTOR_H
 #define LLVM_TRANSFORMS_IPO_BLOCKEXTRACTOR_H
 
+#include <vector>
+
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class BasicBlock;
+
 struct BlockExtractorPass : PassInfoMixin<BlockExtractorPass> {
+  BlockExtractorPass(std::vector<std::vector<BasicBlock *>> &&GroupsOfBlocks,
+                     bool EraseFunctions);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  std::vector<std::vector<BasicBlock *>> GroupsOfBlocks;
+  bool EraseFunctions;
 };
 } // namespace llvm
 

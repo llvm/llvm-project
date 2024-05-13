@@ -15,13 +15,13 @@
 
 #include "DNBDefs.h"
 #include "JSONGenerator.h"
-#include "MacOSX/DarwinLog/DarwinLogEvent.h"
 #include "MacOSX/Genealogy.h"
 #include "MacOSX/ThreadInfo.h"
 #include "RNBContext.h"
 #include <Availability.h>
 #include <mach/machine.h>
 #include <mach/thread_info.h>
+#include <optional>
 #include <string>
 
 #define DNB_EXPORT __attribute__((visibility("default")))
@@ -52,10 +52,14 @@ nub_process_t DNBProcessLaunch(
 
 nub_process_t DNBProcessGetPIDByName(const char *name);
 nub_process_t DNBProcessAttach(nub_process_t pid, struct timespec *timeout,
-                               bool unmask_signals, char *err_str,
+                               const RNBContext::IgnoredExceptions 
+                                   &ignored_exceptions, 
+                               char *err_str,
                                size_t err_len);
 nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
-                                     bool unmask_signals, char *err_str,
+                                     const RNBContext::IgnoredExceptions 
+                                         &ignored_exceptions, 
+                                     char *err_str,
                                      size_t err_len);
 nub_process_t DNBProcessAttachWait(RNBContext *ctx, const char *wait_name,
                                    bool ignore_existing,
@@ -108,7 +112,6 @@ nub_bool_t
 DNBProcessSetEnableAsyncProfiling(nub_process_t pid, nub_bool_t enable,
                                   uint64_t interval_usec,
                                   DNBProfileDataScanType scan_type) DNB_EXPORT;
-DarwinLogEventVector DNBProcessGetAvailableDarwinLogEvents(nub_process_t pid);
 
 // Process status
 nub_bool_t DNBProcessIsAlive(nub_process_t pid) DNB_EXPORT;
@@ -132,12 +135,11 @@ nub_bool_t DNBProcessSharedLibrariesUpdated(nub_process_t pid) DNB_EXPORT;
 nub_size_t
 DNBProcessGetSharedLibraryInfo(nub_process_t pid, nub_bool_t only_changed,
                                DNBExecutableImageInfo **image_infos) DNB_EXPORT;
-const char *DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
-                                 const struct load_command &lc,
-                                 uint64_t load_command_address,
-                                 uint32_t &major_version,
-                                 uint32_t &minor_version,
-                                 uint32_t &patch_version);
+std::optional<std::string>
+DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
+                     const struct load_command &lc,
+                     uint64_t load_command_address, uint32_t &major_version,
+                     uint32_t &minor_version, uint32_t &patch_version);
 nub_bool_t DNBProcessSetNameToAddressCallback(nub_process_t pid,
                                               DNBCallbackNameToAddress callback,
                                               void *baton) DNB_EXPORT;
@@ -155,6 +157,7 @@ nub_size_t DNBProcessGetAvailableProfileData(nub_process_t pid, char *buf,
 nub_size_t DNBProcessGetStopCount(nub_process_t pid) DNB_EXPORT;
 uint32_t DNBProcessGetCPUType(nub_process_t pid) DNB_EXPORT;
 size_t DNBGetAllInfos(std::vector<struct kinfo_proc> &proc_infos);
+JSONGenerator::ObjectSP DNBGetDyldProcessState(nub_process_t pid);
 
 // Process executable and arguments
 const char *DNBProcessGetExecutablePath(nub_process_t pid);
@@ -207,9 +210,10 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
                           uint64_t plo_pthread_tsd_base_address_offset,
                           uint64_t plo_pthread_tsd_base_offset,
                           uint64_t plo_pthread_tsd_entry_size);
-JSONGenerator::ObjectSP DNBGetLoadedDynamicLibrariesInfos(
-    nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count);
-JSONGenerator::ObjectSP DNBGetAllLoadedLibrariesInfos(nub_process_t pid);
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+DNBGetMainBinaryCPUTypes(nub_process_t pid);
+JSONGenerator::ObjectSP
+DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands);
 JSONGenerator::ObjectSP
 DNBGetLibrariesInfoForAddresses(nub_process_t pid,
                                 std::vector<uint64_t> &macho_addresses);
@@ -243,4 +247,11 @@ std::string DNBGetMacCatalystVersionString();
 /// \return true if debugserver is running in translation
 /// (is an x86_64 process on arm64)
 bool DNBDebugserverIsTranslated();
+
+bool DNBGetAddressingBits(uint32_t &addressing_bits);
+
+nub_process_t DNBGetParentProcessID(nub_process_t child_pid);
+
+bool DNBProcessIsBeingDebugged(nub_process_t pid);
+
 #endif

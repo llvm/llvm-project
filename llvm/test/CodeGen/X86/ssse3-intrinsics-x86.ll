@@ -124,7 +124,7 @@ declare <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8>, <16 x i8>) nounwind
 
 
 ; Make sure we don't commute this operation.
-define <8 x i16> @test_x86_ssse3_pmadd_ub_sw_128_load_op0(<16 x i8>* %ptr, <16 x i8> %a1) {
+define <8 x i16> @test_x86_ssse3_pmadd_ub_sw_128_load_op0(ptr %ptr, <16 x i8> %a1) {
 ; X86-SSE-LABEL: test_x86_ssse3_pmadd_ub_sw_128_load_op0:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -165,7 +165,7 @@ define <8 x i16> @test_x86_ssse3_pmadd_ub_sw_128_load_op0(<16 x i8>* %ptr, <16 x
 ; X64-AVX512-NEXT:    vmovdqa (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x0f]
 ; X64-AVX512-NEXT:    vpmaddubsw %xmm0, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0x04,0xc0]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a0 = load <16 x i8>, <16 x i8>* %ptr
+  %a0 = load <16 x i8>, ptr %ptr
   %res = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a0, <16 x i8> %a1) ; <<8 x i16>> [#uses=1]
   ret <8 x i16> %res
 }

@@ -24,6 +24,12 @@ namespace __pstl
 {
 namespace __par_backend = __tbb_backend;
 }
+#elif defined(_PSTL_PAR_BACKEND_OPENMP)
+#    include "parallel_backend_omp.h"
+namespace __pstl
+{
+namespace __par_backend = __omp_backend;
+}
 #else
 _PSTL_PRAGMA_MESSAGE("Parallel backend was not specified");
 #endif

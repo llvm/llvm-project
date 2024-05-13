@@ -1,5 +1,4 @@
-//===-- MCTargetOptionsCommandFlags.cpp --------------------------*- C++
-//-*-===//
+//===-- MCTargetOptionsCommandFlags.cpp -----------------------*- C++ //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,23 +26,29 @@ using namespace llvm;
 
 #define MCOPT_EXP(TY, NAME)                                                    \
   MCOPT(TY, NAME)                                                              \
-  Optional<TY> llvm::mc::getExplicit##NAME() {                                 \
+  std::optional<TY> llvm::mc::getExplicit##NAME() {                            \
     if (NAME##View->getNumOccurrences()) {                                     \
       TY res = *NAME##View;                                                    \
       return res;                                                              \
     }                                                                          \
-    return None;                                                               \
+    return std::nullopt;                                                       \
   }
 
 MCOPT_EXP(bool, RelaxAll)
 MCOPT(bool, IncrementalLinkerCompatible)
+MCOPT(bool, FDPIC)
 MCOPT(int, DwarfVersion)
 MCOPT(bool, Dwarf64)
+MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
+MCOPT(bool, EmitCompactUnwindNonCanonical)
 MCOPT(bool, ShowMCInst)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
+MCOPT(bool, NoTypeCheck)
+MCOPT(bool, X86RelaxRelocations)
 MCOPT(std::string, ABIName)
+MCOPT(std::string, AsSecureLogFile)
 
 llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
 #define MCBINDOPT(NAME)                                                        \
@@ -63,6 +68,9 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
           "emit an object file which can be used with an incremental linker"));
   MCBINDOPT(IncrementalLinkerCompatible);
 
+  static cl::opt<bool> FDPIC("fdpic", cl::desc("Use the FDPIC ABI"));
+  MCBINDOPT(FDPIC);
+
   static cl::opt<int> DwarfVersion("dwarf-version", cl::desc("Dwarf version"),
                                    cl::init(0));
   MCBINDOPT(DwarfVersion);
@@ -71,6 +79,27 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       "dwarf64",
       cl::desc("Generate debugging info in the 64-bit DWARF format"));
   MCBINDOPT(Dwarf64);
+
+  static cl::opt<EmitDwarfUnwindType> EmitDwarfUnwind(
+      "emit-dwarf-unwind", cl::desc("Whether to emit DWARF EH frame entries."),
+      cl::init(EmitDwarfUnwindType::Default),
+      cl::values(clEnumValN(EmitDwarfUnwindType::Always, "always",
+                            "Always emit EH frame entries"),
+                 clEnumValN(EmitDwarfUnwindType::NoCompactUnwind,
+                            "no-compact-unwind",
+                            "Only emit EH frame entries when compact unwind is "
+                            "not available"),
+                 clEnumValN(EmitDwarfUnwindType::Default, "default",
+                            "Use target platform default")));
+  MCBINDOPT(EmitDwarfUnwind);
+
+  static cl::opt<bool> EmitCompactUnwindNonCanonical(
+      "emit-compact-unwind-non-canonical",
+      cl::desc(
+          "Whether to try to emit Compact Unwind for non canonical entries."),
+      cl::init(
+          false)); // By default, use DWARF for non-canonical personalities.
+  MCBINDOPT(EmitCompactUnwindNonCanonical);
 
   static cl::opt<bool> ShowMCInst(
       "asm-show-inst",
@@ -90,11 +119,26 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       "no-deprecated-warn", cl::desc("Suppress all deprecated warnings"));
   MCBINDOPT(NoDeprecatedWarn);
 
+  static cl::opt<bool> NoTypeCheck(
+      "no-type-check", cl::desc("Suppress type errors (Wasm)"));
+  MCBINDOPT(NoTypeCheck);
+
+  static cl::opt<bool> X86RelaxRelocations(
+      "x86-relax-relocations",
+      cl::desc(
+          "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
+      cl::init(true));
+  MCBINDOPT(X86RelaxRelocations);
+
   static cl::opt<std::string> ABIName(
       "target-abi", cl::Hidden,
       cl::desc("The name of the ABI to be targeted from the backend."),
       cl::init(""));
   MCBINDOPT(ABIName);
+
+  static cl::opt<std::string> AsSecureLogFile(
+      "as-secure-log-file", cl::desc("As secure log file name"), cl::Hidden);
+  MCBINDOPT(AsSecureLogFile);
 
 #undef MCBINDOPT
 }
@@ -103,6 +147,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   MCTargetOptions Options;
   Options.MCRelaxAll = getRelaxAll();
   Options.MCIncrementalLinkerCompatible = getIncrementalLinkerCompatible();
+  Options.FDPIC = getFDPIC();
   Options.Dwarf64 = getDwarf64();
   Options.DwarfVersion = getDwarfVersion();
   Options.ShowMCInst = getShowMCInst();
@@ -110,5 +155,11 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCFatalWarnings = getFatalWarnings();
   Options.MCNoWarn = getNoWarn();
   Options.MCNoDeprecatedWarn = getNoDeprecatedWarn();
+  Options.MCNoTypeCheck = getNoTypeCheck();
+  Options.X86RelaxRelocations = getX86RelaxRelocations();
+  Options.EmitDwarfUnwind = getEmitDwarfUnwind();
+  Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
+  Options.AsSecureLogFile = getAsSecureLogFile();
+
   return Options;
 }

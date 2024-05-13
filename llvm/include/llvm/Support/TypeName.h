@@ -33,7 +33,7 @@ inline StringRef getTypeName() {
   assert(!Name.empty() && "Unable to find the template parameter!");
   Name = Name.drop_front(Key.size());
 
-  assert(Name.endswith("]") && "Name doesn't end in the substitution key!");
+  assert(Name.ends_with("]") && "Name doesn't end in the substitution key!");
   return Name.drop_back(1);
 #elif defined(_MSC_VER)
   StringRef Name = __FUNCSIG__;
@@ -44,7 +44,7 @@ inline StringRef getTypeName() {
   Name = Name.drop_front(Key.size());
 
   for (StringRef Prefix : {"class ", "struct ", "union ", "enum "})
-    if (Name.startswith(Prefix)) {
+    if (Name.starts_with(Prefix)) {
       Name = Name.drop_front(Prefix.size());
       break;
     }
@@ -59,6 +59,6 @@ inline StringRef getTypeName() {
 #endif
 }
 
-}
+} // namespace llvm
 
 #endif

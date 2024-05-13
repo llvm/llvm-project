@@ -15,11 +15,13 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -37,12 +39,7 @@ namespace ELF = llvm::ELF;
 
 LLDB_PLUGIN_DEFINE(ProcessElfCore)
 
-ConstString ProcessElfCore::GetPluginNameStatic() {
-  static ConstString g_name("elf-core");
-  return g_name;
-}
-
-const char *ProcessElfCore::GetPluginDescriptionStatic() {
+llvm::StringRef ProcessElfCore::GetPluginDescriptionStatic() {
   return "ELF core dump plug-in.";
 }
 
@@ -56,7 +53,7 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
                                                bool can_connect) {
   lldb::ProcessSP process_sp;
   if (crash_file && !can_connect) {
-    // Read enough data for a ELF32 header or ELF64 header Note: Here we care
+    // Read enough data for an ELF32 header or ELF64 header Note: Here we care
     // about e_type field only, so it is safe to ignore possible presence of
     // the header extension.
     const size_t header_size = sizeof(llvm::ELF::Elf64_Ehdr);
@@ -69,6 +66,10 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
       DataExtractor data(data_sp, lldb::eByteOrderLittle, 4);
       lldb::offset_t data_offset = 0;
       if (elf_header.Parse(data, &data_offset)) {
+        // Check whether we're dealing with a raw FreeBSD "full memory dump"
+        // ELF vmcore that needs to be handled via FreeBSDKernel plugin instead.
+        if (elf_header.e_ident[7] == 0xFF && elf_header.e_version == 0)
+          return process_sp;
         if (elf_header.e_type == llvm::ELF::ET_CORE)
           process_sp = std::make_shared<ProcessElfCore>(target_sp, listener_sp,
                                                         *crash_file);
@@ -98,7 +99,7 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
 ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp), m_core_file(core_file) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file) {}
 
 // Destructor
 ProcessElfCore::~ProcessElfCore() {
@@ -107,13 +108,8 @@ ProcessElfCore::~ProcessElfCore() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
-
-// PluginInterface
-ConstString ProcessElfCore::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t ProcessElfCore::GetPluginVersion() { return 1; }
 
 lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
     const elf::ELFProgramHeader &header) {
@@ -135,7 +131,7 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
       m_core_aranges.Append(range_entry);
     }
   }
-  // Keep a separate map of permissions that that isn't coalesced so all ranges
+  // Keep a separate map of permissions that isn't coalesced so all ranges
   // are maintained.
   const uint32_t permissions =
       ((header.p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0u) |
@@ -146,6 +142,18 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
       VMRangeToPermissions::Entry(addr, header.p_memsz, permissions));
 
   return addr;
+}
+
+lldb::addr_t ProcessElfCore::AddAddressRangeFromMemoryTagSegment(
+    const elf::ELFProgramHeader &header) {
+  // If lldb understood multiple kinds of tag segments we would record the type
+  // of the segment here also. As long as there is only 1 type lldb looks for,
+  // there is no need.
+  FileRange file_range(header.p_offset, header.p_filesz);
+  m_core_tag_ranges.Append(
+      VMRangeToFileOffset::Entry(header.p_vaddr, header.p_memsz, file_range));
+
+  return header.p_vaddr;
 }
 
 // Process Control
@@ -174,9 +182,12 @@ Status ProcessElfCore::DoLoadCore() {
 
   bool ranges_are_sorted = true;
   lldb::addr_t vm_addr = 0;
+  lldb::addr_t tag_addr = 0;
   /// Walk through segments and Thread and Address Map information.
   /// PT_NOTE - Contains Thread and Register information
   /// PT_LOAD - Contains a contiguous range of Process Address Space
+  /// PT_AARCH64_MEMTAG_MTE - Contains AArch64 MTE memory tags for a range of
+  ///                         Process Address Space.
   for (const elf::ELFProgramHeader &H : segments) {
     DataExtractor data = core->GetSegmentData(H);
 
@@ -191,12 +202,18 @@ Status ProcessElfCore::DoLoadCore() {
       if (vm_addr > last_addr)
         ranges_are_sorted = false;
       vm_addr = last_addr;
+    } else if (H.p_type == llvm::ELF::PT_AARCH64_MEMTAG_MTE) {
+      lldb::addr_t last_addr = AddAddressRangeFromMemoryTagSegment(H);
+      if (tag_addr > last_addr)
+        ranges_are_sorted = false;
+      tag_addr = last_addr;
     }
   }
 
   if (!ranges_are_sorted) {
     m_core_aranges.Sort();
     m_core_range_infos.Sort();
+    m_core_tag_ranges.Sort();
   }
 
   // Even if the architecture is set in the target, we need to override it to
@@ -241,11 +258,11 @@ Status ProcessElfCore::DoLoadCore() {
     if (!m_nt_file_entries.empty()) {
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
-      exe_module_spec.GetFileSpec().SetFile(
-          m_nt_file_entries[0].path.GetCString(), FileSpec::Style::native);
+      exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
+                                            FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
-        exe_module_sp = GetTarget().GetOrCreateModule(exe_module_spec, 
-                                                      true /* notify */);
+        exe_module_sp =
+            GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
         if (exe_module_sp)
           GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
       }
@@ -257,7 +274,7 @@ Status ProcessElfCore::DoLoadCore() {
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic().GetCString()));
+        this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
   return m_dyld_up.get();
 }
 
@@ -286,13 +303,16 @@ bool ProcessElfCore::IsAlive() { return true; }
 // Process Memory
 size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                   Status &error) {
+  if (lldb::ABISP abi_sp = GetABI())
+    addr = abi_sp->FixAnyAddress(addr);
+
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // in core files we have it all cached our our core file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
-Status ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr,
-                                           MemoryRegionInfo &region_info) {
+Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
+                                             MemoryRegionInfo &region_info) {
   region_info.Clear();
   const VMRangeToPermissions::Entry *permission_entry =
       m_core_range_infos.FindEntryThatContainsOrFollows(load_addr);
@@ -311,6 +331,15 @@ Status ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     ? MemoryRegionInfo::eYes
                                     : MemoryRegionInfo::eNo);
       region_info.SetMapped(MemoryRegionInfo::eYes);
+
+      // A region is memory tagged if there is a memory tag segment that covers
+      // the exact same range.
+      region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+      const VMRangeToFileOffset::Entry *tag_entry =
+          m_core_tag_ranges.FindEntryStartsAt(permission_entry->GetRangeBase());
+      if (tag_entry &&
+          tag_entry->GetRangeEnd() == permission_entry->GetRangeEnd())
+        region_info.SetMemoryTagged(MemoryRegionInfo::eYes);
     } else if (load_addr < permission_entry->GetRangeBase()) {
       region_info.GetRange().SetRangeBase(load_addr);
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
@@ -318,6 +347,7 @@ Status ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr,
       region_info.SetWritable(MemoryRegionInfo::eNo);
       region_info.SetExecutable(MemoryRegionInfo::eNo);
       region_info.SetMapped(MemoryRegionInfo::eNo);
+      region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
     }
     return Status();
   }
@@ -328,6 +358,7 @@ Status ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr,
   region_info.SetWritable(MemoryRegionInfo::eNo);
   region_info.SetExecutable(MemoryRegionInfo::eNo);
   region_info.SetMapped(MemoryRegionInfo::eNo);
+  region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
   return Status();
 }
 
@@ -377,6 +408,38 @@ size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   return bytes_copied;
 }
 
+llvm::Expected<std::vector<lldb::addr_t>>
+ProcessElfCore::ReadMemoryTags(lldb::addr_t addr, size_t len) {
+  ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
+  if (core_objfile == nullptr)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No core object file.");
+
+  llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
+      GetMemoryTagManager();
+  if (!tag_manager_or_err)
+    return tag_manager_or_err.takeError();
+
+  // LLDB only supports AArch64 MTE tag segments so we do not need to worry
+  // about the segment type here. If you got here then you must have a tag
+  // manager (meaning you are debugging AArch64) and all the segments in this
+  // list will have had type PT_AARCH64_MEMTAG_MTE.
+  const VMRangeToFileOffset::Entry *tag_entry =
+      m_core_tag_ranges.FindEntryThatContains(addr);
+  // If we don't have a tag segment or the range asked for extends outside the
+  // segment.
+  if (!tag_entry || (addr + len) >= tag_entry->GetRangeEnd())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No tag segment that covers this range.");
+
+  const MemoryTagManager *tag_manager = *tag_manager_or_err;
+  return tag_manager->UnpackTagsFromCoreFileSegment(
+      [core_objfile](lldb::offset_t offset, size_t length, void *dst) {
+        return core_objfile->CopyData(offset, length, dst);
+      },
+      tag_entry->GetRangeBase(), tag_entry->data.GetRangeBase(), addr, len);
+}
+
 void ProcessElfCore::Clear() {
   m_thread_list.Clear();
 
@@ -408,7 +471,7 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   lldb::offset_t offset = 0;
   int pr_version = data.GetU32(&offset);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   if (log) {
     if (pr_version > 1)
       LLDB_LOGF(log, "FreeBSD PRSTATUS unexpected version %d", pr_version);
@@ -436,7 +499,7 @@ static void ParseFreeBSDPrPsInfo(ProcessElfCore &process,
   lldb::offset_t offset = 0;
   int pr_version = data.GetU32(&offset);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   if (log) {
     if (pr_version > 1)
       LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);
@@ -519,9 +582,8 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
 
     size_t note_start = offset;
     size_t note_size = llvm::alignTo(note.n_descsz, 4);
-    DataExtractor note_data(segment, note_start, note_size);
 
-    result.push_back({note, note_data});
+    result.push_back({note, DataExtractor(segment, note_start, note_size)});
     offset += note_size;
   }
 
@@ -612,9 +674,9 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   // To be extracted from struct netbsd_elfcore_procinfo
   // Used to sanity check of the LWPs of the process
   uint32_t nlwps = 0;
-  uint32_t signo;  // killing signal
-  uint32_t siglwp; // LWP target of killing signal
-  uint32_t pr_pid;
+  uint32_t signo = 0;  // killing signal
+  uint32_t siglwp = 0; // LWP target of killing signal
+  uint32_t pr_pid = 0;
 
   for (const auto &note : notes) {
     llvm::StringRef name = note.info.n_name;
@@ -656,6 +718,32 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
                 llvm::inconvertibleErrorCode());
           had_nt_regs = true;
         } else if (note.info.n_type == NETBSD::AARCH64::NT_FPREGS) {
+          if (!had_nt_regs || tid != thread_data.tid)
+            return llvm::make_error<llvm::StringError>(
+                "Error parsing NetBSD core(5) notes: Unexpected order "
+                "of NOTEs PT_GETFPREG before PT_GETREG",
+                llvm::inconvertibleErrorCode());
+          thread_data.notes.push_back(note);
+        }
+      } break;
+      case llvm::Triple::x86: {
+        // Assume order PT_GETREGS, PT_GETFPREGS
+        if (note.info.n_type == NETBSD::I386::NT_REGS) {
+          // If this is the next thread, push the previous one first.
+          if (had_nt_regs) {
+            m_thread_data.push_back(thread_data);
+            thread_data = ThreadData();
+            had_nt_regs = false;
+          }
+
+          thread_data.gpregset = note.data;
+          thread_data.tid = tid;
+          if (thread_data.gpregset.GetByteSize() == 0)
+            return llvm::make_error<llvm::StringError>(
+                "Could not find general purpose registers note in core file.",
+                llvm::inconvertibleErrorCode());
+          had_nt_regs = true;
+        } else if (note.info.n_type == NETBSD::I386::NT_FPREGS) {
           if (!had_nt_regs || tid != thread_data.tid)
             return llvm::make_error<llvm::StringError>(
                 "Error parsing NetBSD core(5) notes: Unexpected order "
@@ -740,11 +828,11 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 }
 
 llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
-  ThreadData thread_data;
+  ThreadData thread_data = {};
   for (const auto &note : notes) {
     // OpenBSD per-thread information is stored in notes named "OpenBSD@nnn" so
     // match on the initial part of the string.
-    if (!llvm::StringRef(note.info.n_name).startswith("OpenBSD"))
+    if (!llvm::StringRef(note.info.n_name).starts_with("OpenBSD"))
       continue;
 
     switch (note.info.n_type) {
@@ -832,6 +920,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       if (status.Fail())
         return status.ToError();
       thread_data.signo = siginfo.si_signo;
+      thread_data.code = siginfo.si_code;
       break;
     }
     case ELF::NT_FILE: {
@@ -849,7 +938,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       for (uint64_t i = 0; i < count; ++i) {
         const char *path = note.data.GetCStr(&offset);
         if (path && path[0])
-          m_nt_file_entries[i].path.SetCString(path);
+          m_nt_file_entries[i].path.assign(path);
       }
       break;
     }
@@ -871,7 +960,8 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
 /// A note segment consists of one or more NOTE entries, but their types and
 /// meaning differ depending on the OS.
 llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
-    const elf::ELFProgramHeader &segment_header, DataExtractor segment_data) {
+    const elf::ELFProgramHeader &segment_header,
+    const DataExtractor &segment_data) {
   assert(segment_header.p_type == llvm::ELF::PT_NOTE);
 
   auto notes_or_error = parseSegment(segment_data);

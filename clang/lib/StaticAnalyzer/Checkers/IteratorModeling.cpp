@@ -64,13 +64,15 @@
 // making an assumption e.g. `S1 + n == S2 + m` we store `S1 - S2 == m - n` as
 // a constraint which we later retrieve when doing an actual comparison.
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include "Iterator.h"
 
@@ -98,18 +100,17 @@ class IteratorModeling
                                  const AdvanceFn *Handler) const;
 
   void handleComparison(CheckerContext &C, const Expr *CE, SVal RetVal,
-                        const SVal &LVal, const SVal &RVal,
-                        OverloadedOperatorKind Op) const;
+                        SVal LVal, SVal RVal, OverloadedOperatorKind Op) const;
   void processComparison(CheckerContext &C, ProgramStateRef State,
-                         SymbolRef Sym1, SymbolRef Sym2, const SVal &RetVal,
+                         SymbolRef Sym1, SymbolRef Sym2, SVal RetVal,
                          OverloadedOperatorKind Op) const;
-  void handleIncrement(CheckerContext &C, const SVal &RetVal, const SVal &Iter,
+  void handleIncrement(CheckerContext &C, SVal RetVal, SVal Iter,
                        bool Postfix) const;
-  void handleDecrement(CheckerContext &C, const SVal &RetVal, const SVal &Iter,
+  void handleDecrement(CheckerContext &C, SVal RetVal, SVal Iter,
                        bool Postfix) const;
   void handleRandomIncrOrDecr(CheckerContext &C, const Expr *CE,
-                              OverloadedOperatorKind Op, const SVal &RetVal,
-                              const SVal &Iterator, const SVal &Amount) const;
+                              OverloadedOperatorKind Op, SVal RetVal,
+                              SVal Iterator, SVal Amount) const;
   void handlePtrIncrOrDecr(CheckerContext &C, const Expr *Iterator,
                            OverloadedOperatorKind OK, SVal Offset) const;
   void handleAdvance(CheckerContext &C, const Expr *CE, SVal RetVal, SVal Iter,
@@ -118,7 +119,7 @@ class IteratorModeling
                   SVal Amount) const;
   void handleNext(CheckerContext &C, const Expr *CE, SVal RetVal, SVal Iter,
                   SVal Amount) const;
-  void assignToContainer(CheckerContext &C, const Expr *CE, const SVal &RetVal,
+  void assignToContainer(CheckerContext &C, const Expr *CE, SVal RetVal,
                          const MemRegion *Cont) const;
   bool noChangeInAdvance(CheckerContext &C, SVal Iter, const Expr *CE) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
@@ -128,19 +129,20 @@ class IteratorModeling
   CallDescriptionMap<AdvanceFn> AdvanceLikeFunctions = {
       // template<class InputIt, class Distance>
       // void advance(InputIt& it, Distance n);
-      {{{"std", "advance"}, 2}, &IteratorModeling::handleAdvance},
+      {{CDM::SimpleFunc, {"std", "advance"}, 2},
+       &IteratorModeling::handleAdvance},
 
       // template<class BidirIt>
       // BidirIt prev(
       //   BidirIt it,
       //   typename std::iterator_traits<BidirIt>::difference_type n = 1);
-      {{{"std", "prev"}, 2}, &IteratorModeling::handlePrev},
+      {{CDM::SimpleFunc, {"std", "prev"}, 2}, &IteratorModeling::handlePrev},
 
       // template<class ForwardIt>
       // ForwardIt next(
       //   ForwardIt it,
       //   typename std::iterator_traits<ForwardIt>::difference_type n = 1);
-      {{{"std", "next"}, 2}, &IteratorModeling::handleNext},
+      {{CDM::SimpleFunc, {"std", "next"}, 2}, &IteratorModeling::handleNext},
   };
 
 public:
@@ -150,8 +152,6 @@ public:
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
   void checkPostStmt(const UnaryOperator *UO, CheckerContext &C) const;
   void checkPostStmt(const BinaryOperator *BO, CheckerContext &C) const;
-  void checkPostStmt(const CXXConstructExpr *CCE, CheckerContext &C) const;
-  void checkPostStmt(const DeclStmt *DS, CheckerContext &C) const;
   void checkPostStmt(const MaterializeTemporaryExpr *MTE,
                      CheckerContext &C) const;
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const;
@@ -160,7 +160,7 @@ public:
 
 bool isSimpleComparisonOperator(OverloadedOperatorKind OK);
 bool isSimpleComparisonOperator(BinaryOperatorKind OK);
-ProgramStateRef removeIteratorPosition(ProgramStateRef State, const SVal &Val);
+ProgramStateRef removeIteratorPosition(ProgramStateRef State, SVal Val);
 ProgramStateRef relateSymbols(ProgramStateRef State, SymbolRef Sym1,
                               SymbolRef Sym2, bool Equal);
 bool isBoundThroughLazyCompoundVal(const Environment &Env,
@@ -283,7 +283,7 @@ void IteratorModeling::checkPostStmt(const BinaryOperator *BO,
     // The non-iterator side must have an integral or enumeration type.
     if (!AmountExpr->getType()->isIntegralOrEnumerationType())
       return;
-    const SVal &AmountVal = IsIterOnLHS ? RVal : LVal;
+    SVal AmountVal = IsIterOnLHS ? RVal : LVal;
     handlePtrIncrOrDecr(C, IterExpr, BinaryOperator::getOverloadedOperator(OK),
                         AmountVal);
   }
@@ -304,21 +304,18 @@ void IteratorModeling::checkLiveSymbols(ProgramStateRef State,
                                         SymbolReaper &SR) const {
   // Keep symbolic expressions of iterator positions alive
   auto RegionMap = State->get<IteratorRegionMap>();
-  for (const auto &Reg : RegionMap) {
-    const auto Offset = Reg.second.getOffset();
-    for (auto i = Offset->symbol_begin(); i != Offset->symbol_end(); ++i)
-      if (isa<SymbolData>(*i))
-        SR.markLive(*i);
+  for (const IteratorPosition &Pos : llvm::make_second_range(RegionMap)) {
+    for (SymbolRef Sym : Pos.getOffset()->symbols())
+      if (isa<SymbolData>(Sym))
+        SR.markLive(Sym);
   }
 
   auto SymbolMap = State->get<IteratorSymbolMap>();
-  for (const auto &Sym : SymbolMap) {
-    const auto Offset = Sym.second.getOffset();
-    for (auto i = Offset->symbol_begin(); i != Offset->symbol_end(); ++i)
-      if (isa<SymbolData>(*i))
-        SR.markLive(*i);
+  for (const IteratorPosition &Pos : llvm::make_second_range(SymbolMap)) {
+    for (SymbolRef Sym : Pos.getOffset()->symbols())
+      if (isa<SymbolData>(Sym))
+        SR.markLive(Sym);
   }
-
 }
 
 void IteratorModeling::checkDeadSymbols(SymbolReaper &SR,
@@ -391,8 +388,8 @@ IteratorModeling::handleOverloadedOperator(CheckerContext &C,
           const bool IsIterFirst = FirstType->isStructureOrClassType();
           const SVal FirstArg = Call.getArgSVal(0);
           const SVal SecondArg = Call.getArgSVal(1);
-          const SVal &Iterator = IsIterFirst ? FirstArg : SecondArg;
-          const SVal &Amount = IsIterFirst ? SecondArg : FirstArg;
+          SVal Iterator = IsIterFirst ? FirstArg : SecondArg;
+          SVal Amount = IsIterFirst ? SecondArg : FirstArg;
 
           handleRandomIncrOrDecr(C, OrigExpr, Op, Call.getReturnValue(),
                                  Iterator, Amount);
@@ -447,14 +444,13 @@ IteratorModeling::handleAdvanceLikeFunction(CheckerContext &C,
 }
 
 void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
-                                       SVal RetVal, const SVal &LVal,
-                                       const SVal &RVal,
-                                       OverloadedOperatorKind Op) const {
+                                        SVal RetVal, SVal LVal, SVal RVal,
+                                        OverloadedOperatorKind Op) const {
   // Record the operands and the operator of the comparison for the next
   // evalAssume, if the result is a symbolic expression. If it is a concrete
   // value (only one branch is possible), then transfer the state between
   // the operands according to the operator and the result
-   auto State = C.getState();
+  auto State = C.getState();
   const auto *LPos = getIteratorPosition(State, LVal);
   const auto *RPos = getIteratorPosition(State, RVal);
   const MemRegion *Cont = nullptr;
@@ -507,7 +503,7 @@ void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
 
 void IteratorModeling::processComparison(CheckerContext &C,
                                          ProgramStateRef State, SymbolRef Sym1,
-                                         SymbolRef Sym2, const SVal &RetVal,
+                                         SymbolRef Sym2, SVal RetVal,
                                          OverloadedOperatorKind Op) const {
   if (const auto TruthVal = RetVal.getAs<nonloc::ConcreteInt>()) {
     if ((State = relateSymbols(State, Sym1, Sym2,
@@ -535,8 +531,8 @@ void IteratorModeling::processComparison(CheckerContext &C,
   }
 }
 
-void IteratorModeling::handleIncrement(CheckerContext &C, const SVal &RetVal,
-                                       const SVal &Iter, bool Postfix) const {
+void IteratorModeling::handleIncrement(CheckerContext &C, SVal RetVal,
+                                       SVal Iter, bool Postfix) const {
   // Increment the symbolic expressions which represents the position of the
   // iterator
   auto State = C.getState();
@@ -561,8 +557,8 @@ void IteratorModeling::handleIncrement(CheckerContext &C, const SVal &RetVal,
   C.addTransition(State);
 }
 
-void IteratorModeling::handleDecrement(CheckerContext &C, const SVal &RetVal,
-                                       const SVal &Iter, bool Postfix) const {
+void IteratorModeling::handleDecrement(CheckerContext &C, SVal RetVal,
+                                       SVal Iter, bool Postfix) const {
   // Decrement the symbolic expressions which represents the position of the
   // iterator
   auto State = C.getState();
@@ -589,9 +585,8 @@ void IteratorModeling::handleDecrement(CheckerContext &C, const SVal &RetVal,
 
 void IteratorModeling::handleRandomIncrOrDecr(CheckerContext &C, const Expr *CE,
                                               OverloadedOperatorKind Op,
-                                              const SVal &RetVal,
-                                              const SVal &Iterator,
-                                              const SVal &Amount) const {
+                                              SVal RetVal, SVal Iterator,
+                                              SVal Amount) const {
   // Increment or decrement the symbolic expressions which represents the
   // position of the iterator
   auto State = C.getState();
@@ -630,7 +625,7 @@ void IteratorModeling::handlePtrIncrOrDecr(CheckerContext &C,
                                            const Expr *Iterator,
                                            OverloadedOperatorKind OK,
                                            SVal Offset) const {
-  if (!Offset.getAs<DefinedSVal>())
+  if (!isa<DefinedSVal>(Offset))
     return;
 
   QualType PtrType = Iterator->getType();
@@ -687,7 +682,7 @@ void IteratorModeling::handleNext(CheckerContext &C, const Expr *CE,
 }
 
 void IteratorModeling::assignToContainer(CheckerContext &C, const Expr *CE,
-                                         const SVal &RetVal,
+                                         SVal RetVal,
                                          const MemRegion *Cont) const {
   Cont = Cont->getMostDerivedObjectRegion();
 
@@ -775,7 +770,7 @@ bool isSimpleComparisonOperator(BinaryOperatorKind OK) {
   return OK == BO_EQ || OK == BO_NE;
 }
 
-ProgramStateRef removeIteratorPosition(ProgramStateRef State, const SVal &Val) {
+ProgramStateRef removeIteratorPosition(ProgramStateRef State, SVal Val) {
   if (auto Reg = Val.getAsRegion()) {
     Reg = Reg->getMostDerivedObjectRegion();
     return State->remove<IteratorRegionMap>(Reg);
@@ -800,8 +795,8 @@ ProgramStateRef relateSymbols(ProgramStateRef State, SymbolRef Sym1,
     SVB.evalBinOp(State, BO_EQ, nonloc::SymbolVal(Sym1),
                   nonloc::SymbolVal(Sym2), SVB.getConditionType());
 
-  assert(comparison.getAs<DefinedSVal>() &&
-    "Symbol comparison must be a `DefinedSVal`");
+  assert(isa<DefinedSVal>(comparison) &&
+         "Symbol comparison must be a `DefinedSVal`");
 
   auto NewState = State->assume(comparison.castAs<DefinedSVal>(), Equal);
   if (!NewState)

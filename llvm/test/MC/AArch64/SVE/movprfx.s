@@ -1,11 +1,13 @@
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sve < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
 // RUN:        | llvm-objdump -d --mattr=+sve - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
-// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN:   | llvm-objdump -d --mattr=-sve - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 // This test file is mostly empty because most 'movprfx' tests are embedded
 // with other instructions that are destructive and can be prefixed
@@ -38,8 +40,8 @@
 movprfx z0, z1
 // CHECK-INST: movprfx  z0, z1
 // CHECK-ENCODING: [0x20,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 bc 20 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 0420bc20 <unknown>
 
 hlt #1
 // CHECK-INST: hlt      #0x1
@@ -48,8 +50,8 @@ hlt #1
 movprfx z0.d, p0/z, z1.d
 // CHECK-INST: movprfx  z0.d, p0/z, z1.d
 // CHECK-ENCODING: [0x20,0x20,0xd0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 20 d0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04d02020 <unknown>
 
 hlt #1
 // CHECK-INST: hlt      #0x1
@@ -58,8 +60,8 @@ hlt #1
 movprfx z0, z1
 // CHECK-INST: movprfx  z0, z1
 // CHECK-ENCODING: [0x20,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 bc 20 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 0420bc20 <unknown>
 
 brk #1
 // CHECK-INST: brk      #0x1
@@ -68,8 +70,8 @@ brk #1
 movprfx z0.d, p0/z, z1.d
 // CHECK-INST: movprfx  z0.d, p0/z, z1.d
 // CHECK-ENCODING: [0x20,0x20,0xd0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 20 d0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04d02020 <unknown>
 
 brk #1
 // CHECK-INST: brk      #0x1
@@ -81,17 +83,17 @@ brk #1
 movprfx z0, z1
 // CHECK-INST: movprfx  z0, z1
 // CHECK-ENCODING: [0x20,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 bc 20 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 0420bc20 <unknown>
 
 add z0.d, p0/m, z0.d, z1.d
 // CHECK-INST: add      z0.d, p0/m, z0.d, z1.d
 // CHECK-ENCODING: [0x20,0x00,0xc0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 00 c0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04c00020 <unknown>
 
 add z0.d, p0/m, z0.d, z1.d
 // CHECK-INST: add      z0.d, p0/m, z0.d, z1.d
 // CHECK-ENCODING: [0x20,0x00,0xc0,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 20 00 c0 04 <unknown>
+// CHECK-ERROR: instruction requires: sve or sme
+// CHECK-UNKNOWN: 04c00020 <unknown>

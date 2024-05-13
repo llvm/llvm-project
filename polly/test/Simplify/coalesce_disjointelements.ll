@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-simplify -analyze < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ; Combine four partial stores into two.
 ; The stores write to the same array, but never the same element.
@@ -10,7 +10,7 @@
 ;   A[1] = 42.0;
 ; }
 ;
-define void @coalesce_disjointelements(i32 %n, double* noalias nonnull %A) {
+define void @coalesce_disjointelements(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -20,12 +20,11 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      %A_0 = getelementptr inbounds double, double* %A, i32 0
-      %A_1 = getelementptr inbounds double, double* %A, i32 1
-      store double 21.0, double* %A_0
-      store double 42.0, double* %A_1
-      store double 21.0, double* %A_0
-      store double 42.0, double* %A_1
+      %A_1 = getelementptr inbounds double, ptr %A, i32 1
+      store double 21.0, ptr %A
+      store double 42.0, ptr %A_1
+      store double 21.0, ptr %A
+      store double 42.0, ptr %A_1
       br label %inc
 
 inc:

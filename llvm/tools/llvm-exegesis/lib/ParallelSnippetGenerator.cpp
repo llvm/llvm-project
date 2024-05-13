@@ -79,13 +79,12 @@
 namespace llvm {
 namespace exegesis {
 
-static SmallVector<const Variable *, 8>
-getVariablesWithTiedOperands(const Instruction &Instr) {
+static bool hasVariablesWithTiedOperands(const Instruction &Instr) {
   SmallVector<const Variable *, 8> Result;
   for (const auto &Var : Instr.Variables)
     if (Var.hasTiedOperands())
-      Result.push_back(&Var);
-  return Result;
+      return true;
+  return false;
 }
 
 ParallelSnippetGenerator::~ParallelSnippetGenerator() = default;
@@ -114,43 +113,181 @@ void ParallelSnippetGenerator::instantiateMemoryOperands(
          "not enough scratch space");
 }
 
-static std::vector<InstructionTemplate> generateSnippetUsingStaticRenaming(
-    const LLVMState &State, const InstructionTemplate &IT,
-    const ArrayRef<const Variable *> TiedVariables,
-    const BitVector &ForbiddenRegisters) {
-  std::vector<InstructionTemplate> Instructions;
-  // Assign registers to variables in a round-robin manner. This is simple but
-  // ensures that the most register-constrained variable does not get starved.
-  std::vector<BitVector> PossibleRegsForVar;
-  for (const Variable *Var : TiedVariables) {
-    assert(Var);
-    const Operand &Op = IT.getInstr().getPrimaryOperand(*Var);
-    assert(Op.isReg());
-    BitVector PossibleRegs = Op.getRegisterAliasing().sourceBits();
-    remove(PossibleRegs, ForbiddenRegisters);
-    PossibleRegsForVar.push_back(std::move(PossibleRegs));
+enum class RegRandomizationStrategy : uint8_t {
+  PickRandomRegs,
+  SingleStaticRegPerOperand,
+  SingleStaticReg,
+
+  FIRST = PickRandomRegs,
+  LAST = SingleStaticReg,
+};
+
+} // namespace exegesis
+
+template <> struct enum_iteration_traits<exegesis::RegRandomizationStrategy> {
+  static constexpr bool is_iterable = true;
+};
+
+namespace exegesis {
+
+const char *getDescription(RegRandomizationStrategy S) {
+  switch (S) {
+  case RegRandomizationStrategy::PickRandomRegs:
+    return "randomizing registers";
+  case RegRandomizationStrategy::SingleStaticRegPerOperand:
+    return "one unique register for each position";
+  case RegRandomizationStrategy::SingleStaticReg:
+    return "reusing the same register for all positions";
   }
-  SmallVector<int, 2> Iterators(TiedVariables.size(), 0);
-  while (true) {
-    InstructionTemplate TmpIT = IT;
-    // Find a possible register for each variable in turn, marking the
-    // register as taken.
-    for (size_t VarId = 0; VarId < TiedVariables.size(); ++VarId) {
-      const int NextPossibleReg =
-          PossibleRegsForVar[VarId].find_next(Iterators[VarId]);
-      if (NextPossibleReg <= 0) {
-        return Instructions;
-      }
-      TmpIT.getValueFor(*TiedVariables[VarId]) =
-          MCOperand::createReg(NextPossibleReg);
-      // Bump iterator.
-      Iterators[VarId] = NextPossibleReg;
-      // Prevent other variables from using the register.
-      for (BitVector &OtherPossibleRegs : PossibleRegsForVar) {
-        OtherPossibleRegs.reset(NextPossibleReg);
+  llvm_unreachable("Unknown UseRegRandomizationStrategy enum");
+}
+
+static std::variant<std::nullopt_t, MCOperand, Register>
+generateSingleRegisterForInstrAvoidingDefUseOverlap(
+    const LLVMState &State, const BitVector &ForbiddenRegisters,
+    const BitVector &ImplicitUseAliases, const BitVector &ImplicitDefAliases,
+    const BitVector &Uses, const BitVector &Defs, const InstructionTemplate &IT,
+    const Operand &Op, const ArrayRef<InstructionTemplate> Instructions,
+    RegRandomizationStrategy S) {
+  const Instruction &Instr = IT.getInstr();
+  assert(Op.isReg() && Op.isExplicit() && !Op.isMemory() &&
+         !IT.getValueFor(Op).isValid());
+  assert((!Op.isUse() || !Op.isTied()) &&
+         "Not expecting to see a tied use reg");
+
+  if (Op.isUse()) {
+    switch (S) {
+    case RegRandomizationStrategy::PickRandomRegs:
+      break;
+    case RegRandomizationStrategy::SingleStaticReg:
+    case RegRandomizationStrategy::SingleStaticRegPerOperand: {
+      if (!Instructions.empty())
+        return Instructions.front().getValueFor(Op);
+      if (S != RegRandomizationStrategy::SingleStaticReg)
+        break;
+      BitVector PossibleRegisters = Op.getRegisterAliasing().sourceBits();
+      const BitVector UseAliases = getAliasedBits(State.getRegInfo(), Uses);
+      if (std::optional<int> CommonBit =
+              getFirstCommonBit(PossibleRegisters, UseAliases))
+        return *CommonBit;
+      break;
+    }
+    }
+  }
+
+  BitVector PossibleRegisters = Op.getRegisterAliasing().sourceBits();
+  remove(PossibleRegisters, ForbiddenRegisters);
+
+  if (Op.isDef()) {
+    remove(PossibleRegisters, ImplicitUseAliases);
+    const BitVector UseAliases = getAliasedBits(State.getRegInfo(), Uses);
+    remove(PossibleRegisters, UseAliases);
+  }
+
+  if (Op.isUse()) {
+    remove(PossibleRegisters, ImplicitDefAliases);
+    // NOTE: in general, using same reg for multiple Use's is fine.
+    if (S == RegRandomizationStrategy::SingleStaticRegPerOperand) {
+      const BitVector UseAliases = getAliasedBits(State.getRegInfo(), Uses);
+      remove(PossibleRegisters, UseAliases);
+    }
+  }
+
+  bool IsDefWithTiedUse =
+      Instr.Variables[Op.getVariableIndex()].hasTiedOperands();
+  if (Op.isUse() || IsDefWithTiedUse) {
+    // Now, important bit: if we have used some register for def,
+    // then we can not use that same register for *any* use,
+    // be it either an untied use, or an use tied to a def.
+    // But def-ing same regs is fine, as long as there are no uses!
+    const BitVector DefsAliases = getAliasedBits(State.getRegInfo(), Defs);
+    remove(PossibleRegisters, DefsAliases);
+  }
+
+  if (!PossibleRegisters.any())
+    return std::nullopt;
+
+  return randomBit(PossibleRegisters);
+}
+
+static std::optional<InstructionTemplate>
+generateSingleSnippetForInstrAvoidingDefUseOverlap(
+    const LLVMState &State, const BitVector &ForbiddenRegisters,
+    const BitVector &ImplicitUseAliases, const BitVector &ImplicitDefAliases,
+    BitVector &Uses, BitVector &Defs, InstructionTemplate IT,
+    const ArrayRef<InstructionTemplate> Instructions,
+    RegRandomizationStrategy S) {
+  const Instruction &Instr = IT.getInstr();
+  for (const Operand &Op : Instr.Operands) {
+    if (!Op.isReg() || !Op.isExplicit() || Op.isMemory() ||
+        IT.getValueFor(Op).isValid())
+      continue;
+    assert((!Op.isUse() || !Op.isTied()) && "Will not get tied uses.");
+
+    std::variant<std::nullopt_t, MCOperand, Register> R =
+        generateSingleRegisterForInstrAvoidingDefUseOverlap(
+            State, ForbiddenRegisters, ImplicitUseAliases, ImplicitDefAliases,
+            Uses, Defs, IT, Op, Instructions, S);
+
+    if (std::holds_alternative<std::nullopt_t>(R))
+      return {};
+
+    MCOperand MCOp;
+    if (std::holds_alternative<MCOperand>(R))
+      MCOp = std::get<MCOperand>(R);
+    else {
+      Register RandomReg = std::get<Register>(R);
+      if (Op.isDef())
+        Defs.set(RandomReg);
+      if (Op.isUse())
+        Uses.set(RandomReg);
+      MCOp = MCOperand::createReg(RandomReg);
+    }
+    IT.getValueFor(Op) = MCOp;
+  }
+  return IT;
+}
+
+static std::vector<InstructionTemplate>
+generateSnippetForInstrAvoidingDefUseOverlap(
+    const LLVMState &State, const InstructionTemplate &IT,
+    RegRandomizationStrategy S, const BitVector &ForbiddenRegisters) {
+  // We don't want to accidentally serialize the instruction,
+  // so we must be sure that we don't pick a def that is an implicit use,
+  // or a use that is an implicit def, so record implicit regs now.
+  BitVector ImplicitUses(State.getRegInfo().getNumRegs());
+  BitVector ImplicitDefs(State.getRegInfo().getNumRegs());
+  for (const auto &Op : IT.getInstr().Operands) {
+    if (Op.isReg() && Op.isImplicit() && !Op.isMemory()) {
+      assert(Op.isImplicitReg() && "Not an implicit register operand?");
+      if (Op.isUse())
+        ImplicitUses.set(Op.getImplicitReg());
+      else {
+        assert(Op.isDef() && "Not a use and not a def?");
+        ImplicitDefs.set(Op.getImplicitReg());
       }
     }
-    Instructions.push_back(std::move(TmpIT));
+  }
+  const BitVector ImplicitUseAliases =
+      getAliasedBits(State.getRegInfo(), ImplicitUses);
+  const BitVector ImplicitDefAliases =
+      getAliasedBits(State.getRegInfo(), ImplicitDefs);
+
+  BitVector Defs(State.getRegInfo().getNumRegs());
+  BitVector Uses(State.getRegInfo().getNumRegs());
+  std::vector<InstructionTemplate> Instructions;
+
+  while (true) {
+    std::optional<InstructionTemplate> TmpIT =
+        generateSingleSnippetForInstrAvoidingDefUseOverlap(
+            State, ForbiddenRegisters, ImplicitUseAliases, ImplicitDefAliases,
+            Uses, Defs, IT, Instructions, S);
+    if (!TmpIT)
+      return Instructions;
+    Instructions.push_back(std::move(*TmpIT));
+    if (!hasVariablesWithTiedOperands(IT.getInstr()))
+      return Instructions;
+    assert(Instructions.size() <= 128 && "Stuck in endless loop?");
   }
 }
 
@@ -164,7 +301,7 @@ ParallelSnippetGenerator::generateCodeTemplates(
           ? State.getExegesisTarget().getScratchMemoryRegister(
                 State.getTargetMachine().getTargetTriple())
           : 0;
-  const AliasingConfigurations SelfAliasing(Instr, Instr);
+  const AliasingConfigurations SelfAliasing(Instr, Instr, ForbiddenRegisters);
   if (SelfAliasing.empty()) {
     CT.Info = "instruction is parallel, repeating a random one.";
     CT.Instructions.push_back(std::move(Variant));
@@ -177,44 +314,41 @@ ParallelSnippetGenerator::generateCodeTemplates(
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
     return getSingleton(std::move(CT));
   }
-  const auto TiedVariables = getVariablesWithTiedOperands(Instr);
-  if (!TiedVariables.empty()) {
-    CT.Info = "instruction has tied variables, using static renaming.";
-    CT.Instructions = generateSnippetUsingStaticRenaming(
-        State, Variant, TiedVariables, ForbiddenRegisters);
-    instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
-    return getSingleton(std::move(CT));
+  std::vector<CodeTemplate> Result;
+  bool HasTiedOperands = hasVariablesWithTiedOperands(Instr);
+  // If there are no tied operands, then we don't want to "saturate backedge",
+  // and the template we will produce will have only a single instruction.
+  unsigned NumUntiedUseRegs = count_if(Instr.Operands, [](const Operand &Op) {
+    return Op.isReg() && Op.isExplicit() && !Op.isMemory() && Op.isUse() &&
+           !Op.isTied();
+  });
+  SmallVector<RegRandomizationStrategy, 3> Strategies;
+  if (HasTiedOperands || NumUntiedUseRegs >= 3)
+    Strategies.push_back(RegRandomizationStrategy::PickRandomRegs);
+  if (NumUntiedUseRegs >= 2)
+    Strategies.push_back(RegRandomizationStrategy::SingleStaticRegPerOperand);
+  Strategies.push_back(RegRandomizationStrategy::SingleStaticReg);
+  for (RegRandomizationStrategy S : Strategies) {
+    CodeTemplate CurrCT = CT.clone();
+    CurrCT.Info =
+        Twine("instruction has ")
+            .concat(HasTiedOperands ? "" : "no ")
+            .concat("tied variables, avoiding "
+                    "Read-After-Write issue, picking random def and use "
+                    "registers not aliasing each other, for uses, ")
+            .concat(getDescription(S))
+            .str();
+    CurrCT.Instructions = generateSnippetForInstrAvoidingDefUseOverlap(
+        State, Variant, S, ForbiddenRegisters);
+    if (CurrCT.Instructions.empty())
+      return make_error<StringError>(
+          Twine("Failed to produce any snippet via: ").concat(CurrCT.Info),
+          inconvertibleErrorCode());
+    instantiateMemoryOperands(CurrCT.ScratchSpacePointerInReg,
+                              CurrCT.Instructions);
+    Result.push_back(std::move(CurrCT));
   }
-  // No tied variables, we pick random values for defs.
-  BitVector Defs(State.getRegInfo().getNumRegs());
-  for (const auto &Op : Instr.Operands) {
-    if (Op.isReg() && Op.isExplicit() && Op.isDef() && !Op.isMemory()) {
-      auto PossibleRegisters = Op.getRegisterAliasing().sourceBits();
-      // Do not use forbidden registers.
-      remove(PossibleRegisters, ForbiddenRegisters);
-      assert(PossibleRegisters.any() && "No register left to choose from");
-      const auto RandomReg = randomBit(PossibleRegisters);
-      Defs.set(RandomReg);
-      Variant.getValueFor(Op) = MCOperand::createReg(RandomReg);
-    }
-  }
-  // And pick random use values that are not reserved and don't alias with defs.
-  const auto DefAliases = getAliasedBits(State.getRegInfo(), Defs);
-  for (const auto &Op : Instr.Operands) {
-    if (Op.isReg() && Op.isExplicit() && Op.isUse() && !Op.isMemory()) {
-      auto PossibleRegisters = Op.getRegisterAliasing().sourceBits();
-      remove(PossibleRegisters, ForbiddenRegisters);
-      remove(PossibleRegisters, DefAliases);
-      assert(PossibleRegisters.any() && "No register left to choose from");
-      const auto RandomReg = randomBit(PossibleRegisters);
-      Variant.getValueFor(Op) = MCOperand::createReg(RandomReg);
-    }
-  }
-  CT.Info =
-      "instruction has no tied variables picking Uses different from defs";
-  CT.Instructions.push_back(std::move(Variant));
-  instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
-  return getSingleton(std::move(CT));
+  return Result;
 }
 
 constexpr const size_t ParallelSnippetGenerator::kMinNumDifferentAddresses;

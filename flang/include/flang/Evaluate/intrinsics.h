@@ -23,6 +23,10 @@ namespace llvm {
 class raw_ostream;
 }
 
+namespace Fortran::semantics {
+class Scope;
+}
+
 namespace Fortran::evaluate {
 
 class FoldingContext;
@@ -74,6 +78,9 @@ public:
   static IntrinsicProcTable Configure(
       const common::IntrinsicTypeDefaultKinds &);
 
+  // Make *this aware of the __Fortran_builtins module to expose TEAM_TYPE &c.
+  void SupplyBuiltins(const semantics::Scope &) const;
+
   // Check whether a name should be allowed to appear on an INTRINSIC
   // statement.
   bool IsIntrinsic(const std::string &) const;
@@ -92,6 +99,9 @@ public:
   // On success, the actual arguments are transferred to the result
   // in dummy argument order; on failure, the actual arguments remain
   // untouched.
+  // For MIN and MAX, only a1 and a2 actual arguments are transferred in dummy
+  // order on success and the other arguments are transferred afterwards
+  // without being sorted.
   std::optional<SpecificCall> Probe(
       const CallCharacteristics &, ActualArguments &, FoldingContext &) const;
 

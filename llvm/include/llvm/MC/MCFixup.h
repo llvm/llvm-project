@@ -24,7 +24,7 @@ enum MCFixupKind {
   FK_Data_2,      ///< A two-byte fixup.
   FK_Data_4,      ///< A four-byte fixup.
   FK_Data_8,      ///< A eight-byte fixup.
-  FK_Data_6b,     ///< A six-bits fixup.
+  FK_Data_leb128, ///< A leb128 fixup.
   FK_PCRel_1,     ///< A one-byte pc relative fixup.
   FK_PCRel_2,     ///< A two-byte pc relative fixup.
   FK_PCRel_4,     ///< A four-byte pc relative fixup.
@@ -41,16 +41,6 @@ enum MCFixupKind {
   FK_SecRel_2,    ///< A two-byte section relative fixup.
   FK_SecRel_4,    ///< A four-byte section relative fixup.
   FK_SecRel_8,    ///< A eight-byte section relative fixup.
-  FK_Data_Add_1,  ///< A one-byte add fixup.
-  FK_Data_Add_2,  ///< A two-byte add fixup.
-  FK_Data_Add_4,  ///< A four-byte add fixup.
-  FK_Data_Add_8,  ///< A eight-byte add fixup.
-  FK_Data_Add_6b, ///< A six-bits add fixup.
-  FK_Data_Sub_1,  ///< A one-byte sub fixup.
-  FK_Data_Sub_2,  ///< A two-byte sub fixup.
-  FK_Data_Sub_4,  ///< A four-byte sub fixup.
-  FK_Data_Sub_8,  ///< A eight-byte sub fixup.
-  FK_Data_Sub_6b, ///< A six-bits sub fixup.
 
   FirstTargetFixupKind = 128,
 
@@ -105,28 +95,6 @@ public:
     return FI;
   }
 
-  /// Return a fixup corresponding to the add half of a add/sub fixup pair for
-  /// the given Fixup.
-  static MCFixup createAddFor(const MCFixup &Fixup) {
-    MCFixup FI;
-    FI.Value = Fixup.getValue();
-    FI.Offset = Fixup.getOffset();
-    FI.Kind = getAddKindForKind(Fixup.getKind());
-    FI.Loc = Fixup.getLoc();
-    return FI;
-  }
-
-  /// Return a fixup corresponding to the sub half of a add/sub fixup pair for
-  /// the given Fixup.
-  static MCFixup createSubFor(const MCFixup &Fixup) {
-    MCFixup FI;
-    FI.Value = Fixup.getValue();
-    FI.Offset = Fixup.getOffset();
-    FI.Kind = getSubKindForKind(Fixup.getKind());
-    FI.Loc = Fixup.getLoc();
-    return FI;
-  }
-
   MCFixupKind getKind() const { return Kind; }
 
   unsigned getTargetKind() const { return Kind; }
@@ -149,52 +117,6 @@ public:
       return IsPCRel ? FK_PCRel_4 : FK_Data_4;
     case 8:
       return IsPCRel ? FK_PCRel_8 : FK_Data_8;
-    }
-  }
-
-  /// Return the generic fixup kind for a value with the given size in bits.
-  /// It is an error to pass an unsupported size.
-  static MCFixupKind getKindForSizeInBits(unsigned Size, bool IsPCRel) {
-    switch (Size) {
-    default:
-      llvm_unreachable("Invalid generic fixup size!");
-    case 6:
-      assert(!IsPCRel && "Invalid pc-relative fixup size!");
-      return FK_Data_6b;
-    case 8:
-      return IsPCRel ? FK_PCRel_1 : FK_Data_1;
-    case 16:
-      return IsPCRel ? FK_PCRel_2 : FK_Data_2;
-    case 32:
-      return IsPCRel ? FK_PCRel_4 : FK_Data_4;
-    case 64:
-      return IsPCRel ? FK_PCRel_8 : FK_Data_8;
-    }
-  }
-
-  /// Return the generic fixup kind for an addition with a given size. It
-  /// is an error to pass an unsupported size.
-  static MCFixupKind getAddKindForKind(MCFixupKind Kind) {
-    switch (Kind) {
-    default: llvm_unreachable("Unknown type to convert!");
-    case FK_Data_1: return FK_Data_Add_1;
-    case FK_Data_2: return FK_Data_Add_2;
-    case FK_Data_4: return FK_Data_Add_4;
-    case FK_Data_8: return FK_Data_Add_8;
-    case FK_Data_6b: return FK_Data_Add_6b;
-    }
-  }
-
-  /// Return the generic fixup kind for an subtraction with a given size. It
-  /// is an error to pass an unsupported size.
-  static MCFixupKind getSubKindForKind(MCFixupKind Kind) {
-    switch (Kind) {
-    default: llvm_unreachable("Unknown type to convert!");
-    case FK_Data_1: return FK_Data_Sub_1;
-    case FK_Data_2: return FK_Data_Sub_2;
-    case FK_Data_4: return FK_Data_Sub_4;
-    case FK_Data_8: return FK_Data_Sub_8;
-    case FK_Data_6b: return FK_Data_Sub_6b;
     }
   }
 

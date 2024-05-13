@@ -1,13 +1,13 @@
-; RUN: opt -inline %s -S | FileCheck %s
+; RUN: opt -passes=inline %s -S | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv7m-arm-none-eabi"
 
 ; CHECK-LABEL: define void @matcpy
-define void @matcpy(i8* %dest, i8* %source, i32 %num) #0 {
+define void @matcpy(ptr %dest, ptr %source, i32 %num) #0 {
 entry:
-  %0 = ptrtoint i8* %dest to i32
-  %1 = ptrtoint i8* %source to i32
+  %0 = ptrtoint ptr %dest to i32
+  %1 = ptrtoint ptr %source to i32
   %2 = xor i32 %0, %1
   %3 = and i32 %2, 3
   %cmp = icmp eq i32 %3, 0
@@ -29,30 +29,30 @@ if.then4:                                         ; preds = %if.then
 
 if.then8:                                         ; preds = %if.then4
 ; CHECK: call fastcc void @memcpy
-  call fastcc void @memcpy(i8* %dest, i8* %source, i32 %and2) #0
-  %add.ptr = getelementptr inbounds i8, i8* %dest, i32 %and2
-  %add.ptr9 = getelementptr inbounds i8, i8* %source, i32 %and2
+  call fastcc void @memcpy(ptr %dest, ptr %source, i32 %and2) #0
+  %add.ptr = getelementptr inbounds i8, ptr %dest, i32 %and2
+  %add.ptr9 = getelementptr inbounds i8, ptr %source, i32 %and2
   br label %if.end
 
 if.end:                                           ; preds = %if.then4, %if.then8
-  %p_dest.0 = phi i8* [ %add.ptr, %if.then8 ], [ %dest, %if.then4 ]
-  %p_source.0 = phi i8* [ %add.ptr9, %if.then8 ], [ %source, %if.then4 ]
+  %p_dest.0 = phi ptr [ %add.ptr, %if.then8 ], [ %dest, %if.then4 ]
+  %p_source.0 = phi ptr [ %add.ptr9, %if.then8 ], [ %source, %if.then4 ]
   %tobool14 = icmp eq i32 %sub7, 0
   br i1 %tobool14, label %if.end22, label %if.then15
 
 if.then15:                                        ; preds = %if.end
-  %add.ptr13 = getelementptr inbounds i8, i8* %p_source.0, i32 %shr
-  %add.ptr11 = getelementptr inbounds i8, i8* %p_dest.0, i32 %shr
+  %add.ptr13 = getelementptr inbounds i8, ptr %p_source.0, i32 %shr
+  %add.ptr11 = getelementptr inbounds i8, ptr %p_dest.0, i32 %shr
 ; CHECK: call fastcc void @memcpy
-  call fastcc void @memcpy(i8* %add.ptr11, i8* %add.ptr13, i32 %sub7) #0
+  call fastcc void @memcpy(ptr %add.ptr11, ptr %add.ptr13, i32 %sub7) #0
   br label %if.end22
 
 if.else:                                          ; preds = %if.then
-  call fastcc void @memcpy(i8* %dest, i8* %source, i32 %num) #0
+  call fastcc void @memcpy(ptr %dest, ptr %source, i32 %num) #0
   br label %if.end22
 
 if.else20:                                        ; preds = %entry
-  call fastcc void @memcpy(i8* %dest, i8* %source, i32 %num) #0
+  call fastcc void @memcpy(ptr %dest, ptr %source, i32 %num) #0
   br label %if.end22
 
 if.end22:                                         ; preds = %if.then15, %if.end, %if.else, %if.else20
@@ -60,22 +60,22 @@ if.end22:                                         ; preds = %if.then15, %if.end,
 }
 
 ; CHECK-LABEL: define internal void @memcpy
-define internal void @memcpy(i8* nocapture %dest, i8* nocapture readonly %source, i32 %num) #0 {
+define internal void @memcpy(ptr nocapture %dest, ptr nocapture readonly %source, i32 %num) #0 {
 entry:
   br label %while.cond
 
 while.cond:                                       ; preds = %while.body, %entry
   %num.addr.0 = phi i32 [ %num, %entry ], [ %dec, %while.body ]
-  %p_dest.0 = phi i8* [ %dest, %entry ], [ %incdec.ptr1, %while.body ]
-  %p_source.0 = phi i8* [ %source, %entry ], [ %incdec.ptr, %while.body ]
+  %p_dest.0 = phi ptr [ %dest, %entry ], [ %incdec.ptr1, %while.body ]
+  %p_source.0 = phi ptr [ %source, %entry ], [ %incdec.ptr, %while.body ]
   %cmp = icmp eq i32 %num.addr.0, 0
   br i1 %cmp, label %while.end, label %while.body
 
 while.body:                                       ; preds = %while.cond
-  %incdec.ptr = getelementptr inbounds i8, i8* %p_source.0, i32 1
-  %0 = load i8, i8* %p_source.0, align 1
-  %incdec.ptr1 = getelementptr inbounds i8, i8* %p_dest.0, i32 1
-  store i8 %0, i8* %p_dest.0, align 1
+  %incdec.ptr = getelementptr inbounds i8, ptr %p_source.0, i32 1
+  %0 = load i8, ptr %p_source.0, align 1
+  %incdec.ptr1 = getelementptr inbounds i8, ptr %p_dest.0, i32 1
+  store i8 %0, ptr %p_dest.0, align 1
   %dec = add i32 %num.addr.0, -1
   br label %while.cond
 

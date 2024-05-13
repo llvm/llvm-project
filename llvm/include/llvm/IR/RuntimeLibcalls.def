@@ -182,6 +182,11 @@ HANDLE_LIBCALL(EXP2_FINITE_F64, "__exp2_finite")
 HANDLE_LIBCALL(EXP2_FINITE_F80, "__exp2l_finite")
 HANDLE_LIBCALL(EXP2_FINITE_F128, "__exp2l_finite")
 HANDLE_LIBCALL(EXP2_FINITE_PPCF128, "__exp2l_finite")
+HANDLE_LIBCALL(EXP10_F32, "exp10f")
+HANDLE_LIBCALL(EXP10_F64, "exp10")
+HANDLE_LIBCALL(EXP10_F80, "exp10l")
+HANDLE_LIBCALL(EXP10_F128, "exp10l")
+HANDLE_LIBCALL(EXP10_PPCF128, "exp10l")
 HANDLE_LIBCALL(SIN_F32, "sinf")
 HANDLE_LIBCALL(SIN_F64, "sin")
 HANDLE_LIBCALL(SIN_F80, "sinl")
@@ -279,14 +284,34 @@ HANDLE_LIBCALL(LLRINT_F64, "llrint")
 HANDLE_LIBCALL(LLRINT_F80, "llrintl")
 HANDLE_LIBCALL(LLRINT_F128, "llrintl")
 HANDLE_LIBCALL(LLRINT_PPCF128, "llrintl")
+HANDLE_LIBCALL(LDEXP_F32, "ldexpf")
+HANDLE_LIBCALL(LDEXP_F64, "ldexp")
+HANDLE_LIBCALL(LDEXP_F80, "ldexpl")
+HANDLE_LIBCALL(LDEXP_F128, "ldexpl")
+HANDLE_LIBCALL(LDEXP_PPCF128, "ldexpl")
+HANDLE_LIBCALL(FREXP_F32, "frexpf")
+HANDLE_LIBCALL(FREXP_F64, "frexp")
+HANDLE_LIBCALL(FREXP_F80, "frexpl")
+HANDLE_LIBCALL(FREXP_F128, "frexpl")
+HANDLE_LIBCALL(FREXP_PPCF128, "frexpl")
+
+// Floating point environment
+HANDLE_LIBCALL(FEGETENV, "fegetenv")
+HANDLE_LIBCALL(FESETENV, "fesetenv")
+
+// Floating point control modes
+HANDLE_LIBCALL(FEGETMODE, "fegetmode")
+HANDLE_LIBCALL(FESETMODE, "fesetmode")
 
 // Conversion
+HANDLE_LIBCALL(FPEXT_BF16_F32, "__extendbfsf2")
 HANDLE_LIBCALL(FPEXT_F32_PPCF128, "__gcc_stoq")
 HANDLE_LIBCALL(FPEXT_F64_PPCF128, "__gcc_dtoq")
 HANDLE_LIBCALL(FPEXT_F80_F128, "__extendxftf2")
 HANDLE_LIBCALL(FPEXT_F64_F128, "__extenddftf2")
 HANDLE_LIBCALL(FPEXT_F32_F128, "__extendsftf2")
 HANDLE_LIBCALL(FPEXT_F16_F128, "__extendhftf2")
+HANDLE_LIBCALL(FPEXT_F16_F80, "__extendhfxf2")
 HANDLE_LIBCALL(FPEXT_F32_F64, "__extendsfdf2")
 HANDLE_LIBCALL(FPEXT_F16_F64, "__extendhfdf2")
 HANDLE_LIBCALL(FPEXT_F16_F32, "__gnu_h2f_ieee")
@@ -295,6 +320,8 @@ HANDLE_LIBCALL(FPROUND_F64_F16, "__truncdfhf2")
 HANDLE_LIBCALL(FPROUND_F80_F16, "__truncxfhf2")
 HANDLE_LIBCALL(FPROUND_F128_F16, "__trunctfhf2")
 HANDLE_LIBCALL(FPROUND_PPCF128_F16, "__trunctfhf2")
+HANDLE_LIBCALL(FPROUND_F32_BF16, "__truncsfbf2")
+HANDLE_LIBCALL(FPROUND_F64_BF16, "__truncdfbf2")
 HANDLE_LIBCALL(FPROUND_F64_F32, "__truncdfsf2")
 HANDLE_LIBCALL(FPROUND_F80_F32, "__truncxfsf2")
 HANDLE_LIBCALL(FPROUND_F128_F32, "__trunctfsf2")
@@ -375,6 +402,8 @@ HANDLE_LIBCALL(UINTTOFP_I128_F64, "__floatuntidf")
 HANDLE_LIBCALL(UINTTOFP_I128_F80, "__floatuntixf")
 HANDLE_LIBCALL(UINTTOFP_I128_F128, "__floatuntitf")
 HANDLE_LIBCALL(UINTTOFP_I128_PPCF128, "__floatuntitf")
+HANDLE_LIBCALL(CONVERT_F128_PPCF128, "__extendkftf2")
+HANDLE_LIBCALL(CONVERT_PPCF128_F128, "__trunctfkf2")
 
 // Comparison
 HANDLE_LIBCALL(OEQ_F32, "__eqsf2")
@@ -410,6 +439,8 @@ HANDLE_LIBCALL(UO_PPCF128, "__gcc_qunord")
 HANDLE_LIBCALL(MEMCPY, "memcpy")
 HANDLE_LIBCALL(MEMMOVE, "memmove")
 HANDLE_LIBCALL(MEMSET, "memset")
+// DSEPass can emit calloc if it finds a pair of malloc/memset
+HANDLE_LIBCALL(CALLOC, "calloc")
 HANDLE_LIBCALL(BZERO, nullptr)
 
 // Element-wise unordered-atomic memory of different sizes
@@ -431,6 +462,7 @@ HANDLE_LIBCALL(MEMSET_ELEMENT_UNORDERED_ATOMIC_16, "__llvm_memset_element_unorde
 
 // Exception handling
 HANDLE_LIBCALL(UNWIND_RESUME, "_Unwind_Resume")
+HANDLE_LIBCALL(CXA_END_CLEANUP, "__cxa_end_cleanup")
 
 // Note: there are two sets of atomics libcalls; see
 // <https://llvm.org/docs/Atomics.html> for more info on the

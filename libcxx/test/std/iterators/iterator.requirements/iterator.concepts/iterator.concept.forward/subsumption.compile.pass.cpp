@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // std::forward_iterator;
 
@@ -18,12 +16,12 @@
 
 // clang-format off
 template<std::input_iterator>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return false;
 }
 
 template<std::forward_iterator>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return true;
 }
 // clang-format on

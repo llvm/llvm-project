@@ -3,16 +3,12 @@ Test that breakpoints set on a bad address say they are bad.
 """
 
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
 class BadAddressBreakpointTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_bad_address_breakpoints(self):
@@ -22,21 +18,30 @@ class BadAddressBreakpointTestCase(TestBase):
 
     def address_breakpoints(self):
         """Test that breakpoints set on a bad address say they are bad."""
-        target, process, thread, bkpt = \
-            lldbutil.run_to_source_breakpoint(self,
-                                              "Set a breakpoint here",
-                                              lldb.SBFileSpec("main.c"))
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.c")
+        )
 
-        # Now see if we can read from 0.  If I can't do that, I don't
-        # have a good way to know what an illegal address is...
-        error = lldb.SBError()
+        # illegal_address will hold (optionally) an address that, if
+        # used as a breakpoint, will generate an unresolved breakpoint.
+        illegal_address = None
 
-        ptr = process.ReadPointerFromMemory(0x0, error)
+        # Walk through all the memory regions in the process and
+        # find an address that is invalid.
+        regions = process.GetMemoryRegions()
+        for region_idx in range(regions.GetSize()):
+            region = lldb.SBMemoryRegionInfo()
+            regions.GetMemoryRegionAtIndex(region_idx, region)
+            if illegal_address == None or region.GetRegionEnd() > illegal_address:
+                illegal_address = region.GetRegionEnd()
 
-        if not error.Success():
-            bkpt = target.BreakpointCreateByAddress(0x0)
+        if illegal_address is not None:
+            # Now, set a breakpoint at the address we know is illegal.
+            bkpt = target.BreakpointCreateByAddress(illegal_address)
+            # Verify that breakpoint is not resolved.
             for bp_loc in bkpt:
-                self.assertEquals(bp_loc.IsResolved(), False)
+                self.assertFalse(bp_loc.IsResolved())
         else:
             self.fail(
-                "Could not find an illegal address at which to set a bad breakpoint.")
+                "Could not find an illegal address at which to set a bad breakpoint."
+            )

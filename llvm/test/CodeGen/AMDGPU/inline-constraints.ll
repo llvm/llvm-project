@@ -1,8 +1,8 @@
-; RUN: not llc < %s -march=amdgcn -mcpu=bonaire -verify-machineinstrs | FileCheck --check-prefix=GCN %s
-; RUN: not llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN --check-prefix=VI %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs | FileCheck --check-prefix=GCN %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN --check-prefix=VI %s
 
-; RUN: not llc < %s -march=amdgcn -mcpu=bonaire -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN --check-prefix=NOSI %s
-; RUN: not llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN --check-prefix=NOSI %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN %s
 
 ; GCN-LABEL: {{^}}inline_reg_constraints:
 ; GCN: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
@@ -17,19 +17,19 @@
 ; GCN: s_load_dwordx4 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
 ; GCN: s_load_dwordx8 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
 
-define amdgpu_kernel void @inline_reg_constraints(i32 addrspace(1)* %ptr) {
+define amdgpu_kernel void @inline_reg_constraints(ptr addrspace(1) %ptr) {
 entry:
-  %v32 = tail call i32 asm sideeffect "flat_load_dword   $0, $1", "=v,v"(i32 addrspace(1)* %ptr)
-  %v2_32 = tail call <2 x i32> asm sideeffect "flat_load_dwordx2 $0, $1", "=v,v"(i32 addrspace(1)* %ptr)
-  %v64 =   tail call i64 asm sideeffect "flat_load_dwordx2 $0, $1", "=v,v"(i32 addrspace(1)* %ptr)
-  %v4_32 = tail call <4 x i32> asm sideeffect "flat_load_dwordx4 $0, $1", "=v,v"(i32 addrspace(1)* %ptr)
-  %v128 =  tail call i128 asm sideeffect "flat_load_dwordx4 $0, $1", "=v,v"(i32 addrspace(1)* %ptr)
-  %s32 =   tail call i32 asm sideeffect "s_load_dword $0, $1", "=s,s"(i32 addrspace(1)* %ptr)
-  %s32_2 = tail call <2 x i32> asm sideeffect "s_load_dwordx2 $0, $1", "=s,s"(i32 addrspace(1)* %ptr)
-  %s64 =   tail call i64 asm sideeffect "s_load_dwordx2 $0, $1", "=s,s"(i32 addrspace(1)* %ptr)
-  %s4_32 =  tail call <4 x i32> asm sideeffect "s_load_dwordx4 $0, $1", "=s,s"(i32 addrspace(1)* %ptr)
-  %s128 =  tail call i128 asm sideeffect "s_load_dwordx4 $0, $1", "=s,s"(i32 addrspace(1)* %ptr)
-  %s256 =  tail call <8 x i32> asm sideeffect "s_load_dwordx8 $0, $1", "=s,s"(i32 addrspace(1)* %ptr)
+  %v32 = tail call i32 asm sideeffect "flat_load_dword   $0, $1", "=v,v"(ptr addrspace(1) %ptr)
+  %v2_32 = tail call <2 x i32> asm sideeffect "flat_load_dwordx2 $0, $1", "=v,v"(ptr addrspace(1) %ptr)
+  %v64 =   tail call i64 asm sideeffect "flat_load_dwordx2 $0, $1", "=v,v"(ptr addrspace(1) %ptr)
+  %v4_32 = tail call <4 x i32> asm sideeffect "flat_load_dwordx4 $0, $1", "=v,v"(ptr addrspace(1) %ptr)
+  %v128 =  tail call i128 asm sideeffect "flat_load_dwordx4 $0, $1", "=v,v"(ptr addrspace(1) %ptr)
+  %s32 =   tail call i32 asm sideeffect "s_load_dword $0, $1", "=s,s"(ptr addrspace(1) %ptr)
+  %s32_2 = tail call <2 x i32> asm sideeffect "s_load_dwordx2 $0, $1", "=s,s"(ptr addrspace(1) %ptr)
+  %s64 =   tail call i64 asm sideeffect "s_load_dwordx2 $0, $1", "=s,s"(ptr addrspace(1) %ptr)
+  %s4_32 =  tail call <4 x i32> asm sideeffect "s_load_dwordx4 $0, $1", "=s,s"(ptr addrspace(1) %ptr)
+  %s128 =  tail call i128 asm sideeffect "s_load_dwordx4 $0, $1", "=s,s"(ptr addrspace(1) %ptr)
+  %s256 =  tail call <8 x i32> asm sideeffect "s_load_dwordx8 $0, $1", "=s,s"(ptr addrspace(1) %ptr)
   ret void
 }
 
@@ -59,20 +59,17 @@ define amdgpu_kernel void @inline_sreg_constraint_imm_f32() {
   ret void
 }
 
-; FIXME: Should be able to use s_mov_b64
 ; GCN-LABEL: {{^}}inline_sreg_constraint_imm_i64:
-; GCN-DAG: s_mov_b32 s[[REG_LO:[0-9]+]], -4{{$}}
-; GCN-DAG: s_mov_b32 s[[REG_HI:[0-9]+]], -1{{$}}
-; GCN: ; use s{{\[}}[[REG_LO]]:[[REG_HI]]{{\]}}
+; GCN: s_mov_b64 [[REG:s\[[0-9:]+\]]], -4{{$}}
+; GCN: ; use [[REG]]
 define amdgpu_kernel void @inline_sreg_constraint_imm_i64() {
   tail call void asm sideeffect "; use $0", "s"(i64 -4)
   ret void
 }
 
 ; GCN-LABEL: {{^}}inline_sreg_constraint_imm_f64:
-; GCN-DAG: s_mov_b32 s[[REG_LO:[0-9]+]], 0{{$}}
-; GCN-DAG: s_mov_b32 s[[REG_HI:[0-9]+]], 0x3ff00000{{$}}
-; GCN: ; use s{{\[}}[[REG_LO]]:[[REG_HI]]{{\]}}
+; GCN: s_mov_b64 [[REG:s\[[0-9:]+\]]], 1.0{{$}}
+; GCN: ; use [[REG]]
 define amdgpu_kernel void @inline_sreg_constraint_imm_f64() {
   tail call void asm sideeffect "; use $0", "s"(double 1.0)
   ret void
@@ -100,7 +97,6 @@ define i32 @inline_A_constraint_H1() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H2:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3c00
 define i32 @inline_A_constraint_H2() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(i16 bitcast (half 1.0 to i16))
   ret i32 %v0
@@ -108,7 +104,6 @@ define i32 @inline_A_constraint_H2() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H3:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xbc00
 define i32 @inline_A_constraint_H3() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(i16 bitcast (half -1.0 to i16))
   ret i32 %v0
@@ -116,7 +111,6 @@ define i32 @inline_A_constraint_H3() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H4:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3118
 define i32 @inline_A_constraint_H4() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(half 0xH3118)
   ret i32 %v0
@@ -124,7 +118,6 @@ define i32 @inline_A_constraint_H4() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H5:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3118
 define i32 @inline_A_constraint_H5() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(i16 bitcast (half 0xH3118 to i16))
   ret i32 %v0
@@ -132,7 +125,6 @@ define i32 @inline_A_constraint_H5() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H6:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xb800
 define i32 @inline_A_constraint_H6() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(half -0.5)
   ret i32 %v0
@@ -296,7 +288,6 @@ define i32 @inline_A_constraint_V0() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_V1:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xb800
 define i32 @inline_A_constraint_V1() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x half> <half -0.5, half -0.5>)
   ret i32 %v0
@@ -973,7 +964,6 @@ define i32 @inline_DA_constraint_H1() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H2:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3c00
 define i32 @inline_DA_constraint_H2() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(i16 bitcast (half 1.0 to i16))
   ret i32 %v0
@@ -981,7 +971,6 @@ define i32 @inline_DA_constraint_H2() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H3:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xbc00
 define i32 @inline_DA_constraint_H3() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(i16 bitcast (half -1.0 to i16))
   ret i32 %v0
@@ -989,7 +978,6 @@ define i32 @inline_DA_constraint_H3() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H4:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3118
 define i32 @inline_DA_constraint_H4() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(half 0xH3118)
   ret i32 %v0
@@ -997,7 +985,6 @@ define i32 @inline_DA_constraint_H4() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H5:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3118
 define i32 @inline_DA_constraint_H5() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(i16 bitcast (half 0xH3118 to i16))
   ret i32 %v0
@@ -1005,7 +992,6 @@ define i32 @inline_DA_constraint_H5() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H6:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xb800
 define i32 @inline_DA_constraint_H6() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(half -0.5)
   ret i32 %v0
@@ -1167,7 +1153,6 @@ define i32 @inline_DA_constraint_V0() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_V1:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xb800
 define i32 @inline_DA_constraint_V1() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(<2 x half> <half -0.5, half -0.5>)
   ret i32 %v0

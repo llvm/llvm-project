@@ -1,9 +1,9 @@
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}checkTwoBlocksWithUniformBranch
 ; GCN: BB0_2
 ; GCN: v_add
-define amdgpu_kernel void @checkTwoBlocksWithUniformBranch(i32 addrspace(1)* nocapture %out, i32 %width, float %xPos, float %yPos, float %xStep, float %yStep, i32 %maxIter) {
+define amdgpu_kernel void @checkTwoBlocksWithUniformBranch(ptr addrspace(1) nocapture %out, i32 %width, float %xPos, float %yPos, float %xStep, float %yStep, i32 %maxIter) {
 entry:
   %conv = call i32 @llvm.amdgcn.workitem.id.x() #1
   %rem = urem i32 %conv, %width
@@ -45,8 +45,8 @@ for.end.loopexit:                                 ; preds = %for.body
 for.end:                                          ; preds = %for.end.loopexit, %entry
   %iter.0.lcssa = phi i32 [ 0, %entry ], [ %inc, %for.end.loopexit ]
   %idxprom = ashr exact i32 %conv, 32
-  %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %idxprom
-  store i32 %iter.0.lcssa, i32 addrspace(1)* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %out, i32 %idxprom
+  store i32 %iter.0.lcssa, ptr addrspace(1) %arrayidx, align 4
   ret void
 }
 

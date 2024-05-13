@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,8 +6,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-int main(int, char**)
-{
-
-  return 0;
-}
+int main(int, char**) { return 0; }

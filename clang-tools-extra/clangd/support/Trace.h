@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H
 
 #include "support/Context.h"
 #include "llvm/ADT/StringRef.h"
@@ -143,8 +143,8 @@ bool enabled();
 class Span {
 public:
   Span(llvm::Twine Name);
-  /// Records span's duration in seconds to \p LatencyMetric with \p Name as the
-  /// label.
+  /// Records span's duration in milliseconds to \p LatencyMetric with \p Name
+  /// as the label.
   Span(llvm::Twine Name, const Metric &LatencyMetric);
   ~Span();
 

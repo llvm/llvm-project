@@ -50,7 +50,8 @@ set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
 set(XRAY_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
   ${CMAKE_THREAD_LIBS_INIT}
-  )
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
+  ${COMPILER_RT_CXX_LINK_LIBS})
 
 if (NOT APPLE)
   # Needed by LLVMSupport.
@@ -58,19 +59,26 @@ if (NOT APPLE)
     LLVM_ENABLE_TERMINFO
     -l${COMPILER_RT_TERMINFO_LIB} XRAY_UNITTEST_LINK_FLAGS)
 
-  if (COMPILER_RT_STANDALONE_BUILD)
-    append_list_if(COMPILER_RT_HAS_LLVMXRAY ${LLVM_XRAY_LDFLAGS} XRAY_UNITTEST_LINK_FLAGS)
-    append_list_if(COMPILER_RT_HAS_LLVMXRAY ${LLVM_XRAY_LIBLIST} XRAY_UNITTEST_LINK_FLAGS)
-    append_list_if(COMPILER_RT_HAS_LLVMTESTINGSUPPORT
-      ${LLVM_TESTINGSUPPORT_LDFLAGS} XRAY_UNITTEST_LINK_FLAGS)
-    append_list_if(COMPILER_RT_HAS_LLVMTESTINGSUPPORT
-      ${LLVM_TESTINGSUPPORT_LIBLIST} XRAY_UNITTEST_LINK_FLAGS)
-  else()
-    # We add the library directories one at a time in our CFLAGS.
-    foreach (DIR ${LLVM_LIBRARY_DIR})
-      list(APPEND XRAY_UNITTEST_LINK_FLAGS -L${DIR})
-    endforeach()
+  # We add the library directories one at a time in our CFLAGS.
+  foreach (DIR ${LLVM_LIBRARY_DIR})
+    list(APPEND XRAY_UNITTEST_LINK_FLAGS -L${DIR})
+  endforeach()
 
+  if (COMPILER_RT_STANDALONE_BUILD)
+    if (COMPILER_RT_HAS_LLVMXRAY OR COMPILER_RT_HAS_LLVMTESTINGSUPPORT)
+      if (LLVM_LINK_LLVM_DYLIB)
+        list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVM)
+      endif()
+    else()
+      if (COMPILER_RT_HAS_LLVMXRAY)
+        list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMXRay)
+      endif()
+      if (COMPILER_RT_HAS_TESTINGSUPPORT)
+        list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMTestingSupport)
+      endif()
+      list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMSupport -lLLVMDemangle)
+    endif()
+  else()
     # We also add the actual libraries to link as dependencies.
     list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMXRay -lLLVMSupport -lLLVMDemangle -lLLVMTestingSupport)
   endif()
@@ -81,10 +89,6 @@ if (NOT APPLE)
   append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBEXECINFO -lexecinfo XRAY_UNITTEST_LINK_FLAGS)
 endif()
-
-foreach(lib ${SANITIZER_TEST_CXX_LIBRARIES})
-  list(APPEND XRAY_UNITTEST_LINK_FLAGS -l${lib})
-endforeach()
 
 macro(add_xray_unittest testname)
   cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
@@ -105,7 +109,7 @@ macro(add_xray_unittest testname)
         ${XRAY_HEADERS} ${XRAY_ALL_SOURCE_FILES_ABS_PATHS}
         "test_helpers.h"
         RUNTIME "${XRAY_RUNTIME_LIBS}"
-        DEPS gtest xray llvm-xray LLVMXRay LLVMTestingSupport
+        DEPS xray llvm-xray LLVMXRay LLVMTestingSupport
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
         LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS}
         )

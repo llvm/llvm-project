@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -fblocks
-// rdar://10734265
 
 @class NSObject;
 typedef void (^block1_t)(int arg);
@@ -11,7 +10,7 @@ void fn(block4_t arg); // expected-note {{passing argument to parameter 'arg' he
 
 void another_fn(block2_t arg);
 
-int main() {
+int main(void) {
     block1_t b1;
     block2_t b2;
     block3_t b3;

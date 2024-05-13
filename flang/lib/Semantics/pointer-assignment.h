@@ -18,28 +18,28 @@ namespace Fortran::evaluate::characteristics {
 struct DummyDataObject;
 }
 
-namespace Fortran::evaluate {
-class FoldingContext;
-}
-
 namespace Fortran::semantics {
 
+class SemanticsContext;
 class Symbol;
 
 bool CheckPointerAssignment(
-    evaluate::FoldingContext &, const evaluate::Assignment &);
-bool CheckPointerAssignment(evaluate::FoldingContext &, const SomeExpr &lhs,
-    const SomeExpr &rhs, bool isBoundsRemapping = false);
-bool CheckPointerAssignment(
-    evaluate::FoldingContext &, const Symbol &lhs, const SomeExpr &rhs);
-bool CheckPointerAssignment(evaluate::FoldingContext &,
-    parser::CharBlock source, const std::string &description,
-    const evaluate::characteristics::DummyDataObject &, const SomeExpr &rhs);
+    SemanticsContext &, const evaluate::Assignment &, const Scope &);
+bool CheckPointerAssignment(SemanticsContext &, const SomeExpr &lhs,
+    const SomeExpr &rhs, const Scope &, bool isBoundsRemapping,
+    bool isAssumedRank);
+bool CheckPointerAssignment(SemanticsContext &, parser::CharBlock source,
+    const std::string &description,
+    const evaluate::characteristics::DummyDataObject &, const SomeExpr &rhs,
+    const Scope &, bool isAssumedRank);
+
+bool CheckStructConstructorPointerComponent(
+    SemanticsContext &, const Symbol &lhs, const SomeExpr &rhs, const Scope &);
 
 // Checks whether an expression is a valid static initializer for a
 // particular pointer designator.
-bool CheckInitialTarget(
-    evaluate::FoldingContext &, const SomeExpr &pointer, const SomeExpr &init);
+bool CheckInitialDataPointerTarget(SemanticsContext &, const SomeExpr &pointer,
+    const SomeExpr &init, const Scope &);
 
 } // namespace Fortran::semantics
 

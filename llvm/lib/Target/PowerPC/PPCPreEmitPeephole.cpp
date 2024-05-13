@@ -14,13 +14,13 @@
 #include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "PPCSubtarget.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -37,6 +37,8 @@ STATISTIC(NumberOfSelfCopies,
           "Number of self copy instructions eliminated");
 STATISTIC(NumFrameOffFoldInPreEmit,
           "Number of folding frame offset by using r+r in pre-emit peephole");
+STATISTIC(NumCmpsInPreEmit,
+          "Number of compares eliminated in pre-emit peephole");
 
 static cl::opt<bool>
 EnablePCRelLinkerOpt("ppc-pcrel-linker-opt", cl::Hidden, cl::init(true),
@@ -45,6 +47,10 @@ EnablePCRelLinkerOpt("ppc-pcrel-linker-opt", cl::Hidden, cl::init(true),
 static cl::opt<bool>
 RunPreEmitPeephole("ppc-late-peephole", cl::Hidden, cl::init(true),
                    cl::desc("Run pre-emit peephole optimizations."));
+
+static cl::opt<uint64_t>
+DSCRValue("ppc-set-dscr", cl::Hidden,
+          cl::desc("Set the Data Stream Control Register."));
 
 namespace {
 
@@ -152,7 +158,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
              ++AfterBBI) {
           // Track the operand that kill Reg. We would unset the kill flag of
           // the operand if there is a following redundant load immediate.
-          int KillIdx = AfterBBI->findRegisterUseOperandIdx(Reg, true, TRI);
+          int KillIdx = AfterBBI->findRegisterUseOperandIdx(Reg, TRI, true);
 
           // We can't just clear implicit kills, so if we encounter one, stop
           // looking further.
@@ -198,7 +204,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
               DeadOrKillToUnset->setIsKill(false);
           }
           DeadOrKillToUnset =
-              AfterBBI->findRegisterDefOperand(Reg, true, true, TRI);
+              AfterBBI->findRegisterDefOperand(Reg, TRI, true, true);
           if (DeadOrKillToUnset)
             LLVM_DEBUG(dbgs()
                        << " Dead flag of " << *DeadOrKillToUnset << " from "
@@ -233,7 +239,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
         return false;
 
       // Finally return true only if the GOT flag is present.
-      return (SymbolOp.getTargetFlags() & PPCII::MO_GOT_FLAG);
+      return PPCInstrInfo::hasGOTFlag(SymbolOp.getTargetFlags());
     }
 
     bool addLinkerOpt(MachineBasicBlock &MBB, const TargetRegisterInfo *TRI) {
@@ -286,7 +292,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
               !BBI->modifiesRegister(Pair.DefReg, TRI))
             continue;
 
-          // The use needs to be used in the address compuation and not
+          // The use needs to be used in the address computation and not
           // as the register being stored for a store.
           const MachineOperand *UseOp =
               hasPCRelativeForm(*BBI) ? &BBI->getOperand(2) : nullptr;
@@ -407,6 +413,38 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
+      // If the user wants to set the DSCR using command-line options,
+      // load in the specified value at the start of main.
+      if (DSCRValue.getNumOccurrences() > 0 && MF.getName() == "main" &&
+          MF.getFunction().hasExternalLinkage()) {
+        DSCRValue = (uint32_t)(DSCRValue & 0x01FFFFFF); // 25-bit DSCR mask
+        RegScavenger RS;
+        MachineBasicBlock &MBB = MF.front();
+        // Find an unused GPR according to register liveness
+        RS.enterBasicBlock(MBB);
+        unsigned InDSCR = RS.FindUnusedReg(&PPC::GPRCRegClass);
+        if (InDSCR) {
+          const PPCInstrInfo *TII =
+              MF.getSubtarget<PPCSubtarget>().getInstrInfo();
+          DebugLoc dl;
+          MachineBasicBlock::iterator IP = MBB.begin(); // Insert Point
+          // Copy the 32-bit DSCRValue integer into the GPR InDSCR using LIS and
+          // ORI, then move to DSCR. If the requested DSCR value is contained
+          // in a 16-bit signed number, we can emit a single `LI`, but the
+          // impact of saving one instruction in one function does not warrant
+          // any additional complexity in the logic here.
+          BuildMI(MBB, IP, dl, TII->get(PPC::LIS), InDSCR)
+              .addImm(DSCRValue >> 16);
+          BuildMI(MBB, IP, dl, TII->get(PPC::ORI), InDSCR)
+              .addReg(InDSCR)
+              .addImm(DSCRValue & 0xFFFF);
+          BuildMI(MBB, IP, dl, TII->get(PPC::MTUDSCR))
+              .addReg(InDSCR, RegState::Kill);
+        } else
+          errs() << "Warning: Ran out of registers - Unable to set DSCR as "
+                    "requested";
+      }
+
       if (skipFunction(MF.getFunction()) || !RunPreEmitPeephole) {
         // Remove UNENCODED_NOP even when this pass is disabled.
         // This needs to be done unconditionally so we don't emit zeros
@@ -456,7 +494,8 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
             }
           }
           MachineInstr *DefMIToErase = nullptr;
-          if (TII->convertToImmediateForm(MI, &DefMIToErase)) {
+          SmallSet<Register, 4> UpdatedRegs;
+          if (TII->convertToImmediateForm(MI, UpdatedRegs, &DefMIToErase)) {
             Changed = true;
             NumRRConvertedInPreEmit++;
             LLVM_DEBUG(dbgs() << "Converted instruction to imm form: ");
@@ -470,6 +509,13 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
             NumFrameOffFoldInPreEmit++;
             LLVM_DEBUG(dbgs() << "Frame offset folding by using index form: ");
             LLVM_DEBUG(MI.dump());
+          }
+          if (TII->optimizeCmpPostRA(MI)) {
+            Changed = true;
+            NumCmpsInPreEmit++;
+            LLVM_DEBUG(dbgs() << "Optimize compare by using record form: ");
+            LLVM_DEBUG(MI.dump());
+            InstrsToErase.push_back(&MI);
           }
         }
 

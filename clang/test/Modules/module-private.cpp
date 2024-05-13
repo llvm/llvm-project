@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -std=c++17 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -fmodule-name=module_private_left -emit-module %S/Inputs/module.map
-// RUN: %clang_cc1 -std=c++17 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -fmodule-name=module_private_right -emit-module %S/Inputs/module.map
+// RUN: %clang_cc1 -std=c++17 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -fmodule-name=module_private_left -emit-module %S/Inputs/module.modulemap
+// RUN: %clang_cc1 -std=c++17 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -fmodule-name=module_private_right -emit-module %S/Inputs/module.modulemap
 // RUN: %clang_cc1 -std=c++17 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -I %S/Inputs %s -verify
 // FIXME: When we have a syntax for modules in C++, use that.
 
@@ -21,8 +21,8 @@ int test_broken() {
   vector<int> vec; // expected-error{{no template named 'vector'}}
 
   VisibleStruct vs;
-  vs.field = 0; // expected-error{{no member named 'field' in 'VisibleStruct'}}
-  vs.setField(1); // expected-error{{no member named 'setField' in 'VisibleStruct'}}
+  vs.field = 0;
+  vs.setField(1);
 
   return hidden_var; // expected-error{{use of undeclared identifier 'hidden_var'}}
 }

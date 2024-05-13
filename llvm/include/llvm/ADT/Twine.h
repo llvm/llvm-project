@@ -15,6 +15,7 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace llvm {
 
@@ -36,7 +37,7 @@ namespace llvm {
   /// A Twine is not intended for use directly and should not be stored, its
   /// implementation relies on the ability to store pointers to temporary stack
   /// objects which may be deallocated at the end of a statement. Twines should
-  /// only be used accepted as const references in arguments, when an API wishes
+  /// only be used as const references in arguments, when an API wishes
   /// to accept possibly-concatenated strings.
   ///
   /// Twines support a special 'null' value, which always concatenates to form
@@ -96,11 +97,14 @@ namespace llvm {
       /// A pointer to an std::string instance.
       StdStringKind,
 
-      /// A pointer to a StringRef instance.
-      StringRefKind,
+      /// A Pointer and Length representation. Used for std::string_view,
+      /// StringRef, and SmallString.  Can't use a StringRef here
+      /// because they are not trivally constructible.
+      PtrAndLengthKind,
 
-      /// A pointer to a SmallString instance.
-      SmallStringKind,
+      /// A pointer and length representation that's also null-terminated.
+      /// Guaranteed to be constructed from a compile-time string literal.
+      StringLiteralKind,
 
       /// A pointer to a formatv_object_base instance.
       FormatvObjectKind,
@@ -138,8 +142,10 @@ namespace llvm {
       const Twine *twine;
       const char *cString;
       const std::string *stdString;
-      const StringRef *stringRef;
-      const SmallVectorImpl<char> *smallString;
+      struct {
+        const char *ptr;
+        size_t length;
+      } ptrAndLength;
       const formatv_object_base *formatvObject;
       char character;
       unsigned int decUI;
@@ -283,16 +289,37 @@ namespace llvm {
       assert(isValid() && "Invalid twine!");
     }
 
+    /// Construct from an std::string_view by converting it to a pointer and
+    /// length.  This handles string_views on a pure API basis, and avoids
+    /// storing one (or a pointer to one) inside a Twine, which avoids problems
+    /// when mixing code compiled under various C++ standards.
+    /*implicit*/ Twine(const std::string_view &Str)
+        : LHSKind(PtrAndLengthKind) {
+      LHS.ptrAndLength.ptr = Str.data();
+      LHS.ptrAndLength.length = Str.length();
+      assert(isValid() && "Invalid twine!");
+    }
+
     /// Construct from a StringRef.
-    /*implicit*/ Twine(const StringRef &Str) : LHSKind(StringRefKind) {
-      LHS.stringRef = &Str;
+    /*implicit*/ Twine(const StringRef &Str) : LHSKind(PtrAndLengthKind) {
+      LHS.ptrAndLength.ptr = Str.data();
+      LHS.ptrAndLength.length = Str.size();
+      assert(isValid() && "Invalid twine!");
+    }
+
+    /// Construct from a StringLiteral.
+    /*implicit*/ Twine(const StringLiteral &Str)
+        : LHSKind(StringLiteralKind) {
+      LHS.ptrAndLength.ptr = Str.data();
+      LHS.ptrAndLength.length = Str.size();
       assert(isValid() && "Invalid twine!");
     }
 
     /// Construct from a SmallString.
     /*implicit*/ Twine(const SmallVectorImpl<char> &Str)
-        : LHSKind(SmallStringKind) {
-      LHS.smallString = &Str;
+        : LHSKind(PtrAndLengthKind) {
+      LHS.ptrAndLength.ptr = Str.data();
+      LHS.ptrAndLength.length = Str.size();
       assert(isValid() && "Invalid twine!");
     }
 
@@ -355,16 +382,18 @@ namespace llvm {
 
     /// Construct as the concatenation of a C string and a StringRef.
     /*implicit*/ Twine(const char *LHS, const StringRef &RHS)
-        : LHSKind(CStringKind), RHSKind(StringRefKind) {
+        : LHSKind(CStringKind), RHSKind(PtrAndLengthKind) {
       this->LHS.cString = LHS;
-      this->RHS.stringRef = &RHS;
+      this->RHS.ptrAndLength.ptr = RHS.data();
+      this->RHS.ptrAndLength.length = RHS.size();
       assert(isValid() && "Invalid twine!");
     }
 
     /// Construct as the concatenation of a StringRef and a C string.
     /*implicit*/ Twine(const StringRef &LHS, const char *RHS)
-        : LHSKind(StringRefKind), RHSKind(CStringKind) {
-      this->LHS.stringRef = &LHS;
+        : LHSKind(PtrAndLengthKind), RHSKind(CStringKind) {
+      this->LHS.ptrAndLength.ptr = LHS.data();
+      this->LHS.ptrAndLength.length = LHS.size();
       this->RHS.cString = RHS;
       assert(isValid() && "Invalid twine!");
     }
@@ -401,6 +430,11 @@ namespace llvm {
       return isNullary();
     }
 
+    /// Check if this twine is guaranteed to refer to single string literal.
+    bool isSingleStringLiteral() const {
+      return isUnary() && getLHSKind() == StringLiteralKind;
+    }
+
     /// Return true if this twine can be dynamically accessed as a single
     /// StringRef value with getSingleStringRef().
     bool isSingleStringRef() const {
@@ -410,8 +444,8 @@ namespace llvm {
       case EmptyKind:
       case CStringKind:
       case StdStringKind:
-      case StringRefKind:
-      case SmallStringKind:
+      case PtrAndLengthKind:
+      case StringLiteralKind:
         return true;
       default:
         return false;
@@ -440,12 +474,15 @@ namespace llvm {
       assert(isSingleStringRef() &&"This cannot be had as a single stringref!");
       switch (getLHSKind()) {
       default: llvm_unreachable("Out of sync with isSingleStringRef");
-      case EmptyKind:      return StringRef();
-      case CStringKind:    return StringRef(LHS.cString);
-      case StdStringKind:  return StringRef(*LHS.stdString);
-      case StringRefKind:  return *LHS.stringRef;
-      case SmallStringKind:
-        return StringRef(LHS.smallString->data(), LHS.smallString->size());
+      case EmptyKind:
+        return StringRef();
+      case CStringKind:
+        return StringRef(LHS.cString);
+      case StdStringKind:
+        return StringRef(*LHS.stdString);
+      case PtrAndLengthKind:
+      case StringLiteralKind:
+        return StringRef(LHS.ptrAndLength.ptr, LHS.ptrAndLength.length);
       }
     }
 

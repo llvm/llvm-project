@@ -6,7 +6,7 @@ define void @f(float %wt) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl $44
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
-; CHECK-NEXT:    calll g
+; CHECK-NEXT:    calll g@PLT
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
@@ -16,7 +16,7 @@ define void @f(float %wt) {
 entry:
 	%0 = fcmp ogt float %wt, 0.000000e+00		; <i1> [#uses=1]
 	%1 = tail call i32 @g(i32 44)		; <i32> [#uses=3]
-	%2 = inttoptr i32 %1 to i8*		; <i8*> [#uses=2]
+	%2 = inttoptr i32 %1 to ptr		; <ptr> [#uses=2]
 	br i1 %0, label %bb, label %bb1
 
 bb:		; preds = %entry

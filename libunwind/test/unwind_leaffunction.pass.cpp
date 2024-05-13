@@ -8,8 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 // Ensure that leaf function can be unwund.
-// REQUIRES: linux && (target-aarch64 || target-x86_64)
+// REQUIRES: target={{(aarch64|riscv64|s390x|x86_64)-.+linux.*}}
 
+// TODO: Figure out why this fails with Memory Sanitizer.
+// XFAIL: msan
+
+#undef NDEBUG
 #include <assert.h>
 #include <dlfcn.h>
 #include <signal.h>
@@ -24,7 +28,8 @@ _Unwind_Reason_Code frame_handler(struct _Unwind_Context* ctx, void* arg) {
   (void)arg;
   Dl_info info = { 0, 0, 0, 0 };
 
-  // Unwind util the main is reached, above frames deeped on the platfrom and architecture.
+  // Unwind until the main is reached, above frames depend on the platform and
+  // architecture.
   if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(ctx)), &info) &&
       info.dli_sname && !strcmp("main", info.dli_sname)) {
     _Exit(0);
@@ -38,14 +43,22 @@ void signal_handler(int signum) {
   _Exit(-1);
 }
 
-int* faultyPointer = NULL;
-
-__attribute__((noinline)) void crashing_leaf_func(void) {
-  *faultyPointer = 0;
+__attribute__((noinline)) void crashing_leaf_func(int do_trap) {
+  // libunwind searches for the address before the return address which points
+  // to the trap instruction. We make the trap conditional and prevent inlining
+  // of the function to ensure that the compiler doesn't remove the `ret`
+  // instruction altogether.
+  //
+  // It's also important that the trap instruction isn't the first instruction
+  // in the function (which it isn't because of the branch) for other unwinders
+  // that also decrement pc.
+  if (do_trap)
+    __builtin_trap();
 }
 
 int main(int, char**) {
-  signal(SIGSEGV, signal_handler);
-  crashing_leaf_func();
+  signal(SIGTRAP, signal_handler);
+  signal(SIGILL, signal_handler);
+  crashing_leaf_func(1);
   return -2;
 }

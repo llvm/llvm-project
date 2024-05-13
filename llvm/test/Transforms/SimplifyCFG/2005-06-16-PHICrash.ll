@@ -1,8 +1,8 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ; PR584
-@g_38098584 = external global i32		; <i32*> [#uses=1]
-@g_60187400 = external global i32		; <i32*> [#uses=1]
-@g_59182229 = external global i32		; <i32*> [#uses=2]
+@g_38098584 = external global i32		; <ptr> [#uses=1]
+@g_60187400 = external global i32		; <ptr> [#uses=1]
+@g_59182229 = external global i32		; <ptr> [#uses=2]
 
 define i32 @_Z13func_26556482h(i8 %l_88173906) {
 entry:
@@ -30,7 +30,7 @@ endif.0:		; preds = %loopentry.0
 	%tmp.14 = sext i8 %tmp.1 to i32		; <i32> [#uses=1]
 	%tmp.16 = zext i8 %l_88173906 to i32		; <i32> [#uses=1]
 	%tmp.17 = icmp sgt i32 %tmp.14, %tmp.16		; <i1> [#uses=1]
-	%tmp.19 = load i32, i32* @g_59182229		; <i32> [#uses=2]
+	%tmp.19 = load i32, ptr @g_59182229		; <i32> [#uses=2]
 	br i1 %tmp.17, label %cond_true, label %cond_false
 cond_true:		; preds = %endif.0
 	%tmp.20 = icmp ne i32 %tmp.19, 1		; <i1> [#uses=1]
@@ -53,7 +53,7 @@ loopentry.1:		; preds = %endif.3, %else.2
 	%tmp.29 = icmp sgt i32 %i.1.1, 99		; <i1> [#uses=1]
 	br i1 %tmp.29, label %endif.2, label %no_exit.1
 no_exit.1:		; preds = %loopentry.1
-	%tmp.30 = load i32, i32* @g_38098584		; <i32> [#uses=1]
+	%tmp.30 = load i32, ptr @g_38098584		; <i32> [#uses=1]
 	%tmp.31 = icmp eq i32 %tmp.30, 0		; <i1> [#uses=1]
 	br i1 %tmp.31, label %else.3, label %then.3
 then.3:		; preds = %no_exit.1
@@ -65,7 +65,7 @@ then.4:		; preds = %else.3
 else.4:		; preds = %else.3
 	br i1 false, label %else.5, label %then.5
 then.5:		; preds = %else.4
-	store i32 -1004318825, i32* @g_59182229
+	store i32 -1004318825, ptr @g_59182229
 	br label %return
 else.5:		; preds = %else.4
 	br label %loopentry.3
@@ -77,7 +77,7 @@ no_exit.3:		; preds = %loopentry.3
 	%tmp.57 = icmp eq i8 %l_88173906_addr.1, 0		; <i1> [#uses=1]
 	br i1 %tmp.57, label %else.7, label %then.7
 then.7:		; preds = %no_exit.3
-	store i32 16239, i32* @g_60187400
+	store i32 16239, ptr @g_60187400
 	%inc.2 = add i32 %i.3.3, 1		; <i32> [#uses=1]
 	br label %loopentry.3
 else.7:		; preds = %no_exit.3

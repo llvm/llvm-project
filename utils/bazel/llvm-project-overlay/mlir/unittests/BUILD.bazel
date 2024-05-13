@@ -1,0 +1,423 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//mlir:tblgen.bzl", "gentbl_cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_test(
+    name = "debug_tests",
+    size = "small",
+    srcs = glob([
+        "Debug/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:Debug",
+        "//mlir:IR",
+        "//mlir:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ir_tests",
+    size = "small",
+    srcs = glob([
+        "IR/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//mlir:BytecodeReader",
+        "//mlir:CallOpInterfaces",
+        "//mlir:FunctionInterfaces",
+        "//mlir:IR",
+        "//mlir:Parser",
+        "//mlir:Support",
+        "//mlir/test:TestDialect",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "interface_tests",
+    size = "small",
+    srcs = glob([
+        "Interfaces/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:ArithDialect",
+        "//mlir:BytecodeReader",
+        "//mlir:ControlFlowInterfaces",
+        "//mlir:DLTIDialect",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:InferIntRangeInterface",
+        "//mlir:InferTypeOpInterface",
+        "//mlir:Parser",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "support_tests",
+    size = "small",
+    srcs = glob([
+        "Support/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "pass_tests",
+    size = "small",
+    srcs = glob([
+        "Pass/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:Analysis",
+        "//mlir:Debug",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:Pass",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "rewrite_tests",
+    size = "small",
+    srcs = glob([
+        "Rewrite/*.cpp",
+    ]),
+    deps = [
+        "//mlir:IR",
+        "//mlir:Rewrite",
+        "//mlir:SideEffectInterfaces",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "dialect_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//mlir:Dialect",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "memref_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/MemRef/*.cpp",
+    ]),
+    deps = [
+        "//llvm:TestingSupport",
+        "//mlir:IR",
+        "//mlir:MemRefDialect",
+        "//mlir:SideEffectInterfaces",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "scf_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/SCF/*.cpp",
+    ]),
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:Parser",
+        "//mlir:SCFDialect",
+        "//mlir:SideEffectInterfaces",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "sparse_tensor_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/SparseTensor/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:SparseTensorUtils",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "spirv_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/SPIRV/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:IR",
+        "//mlir:SPIRVBinaryUtils",
+        "//mlir:SPIRVDeserialization",
+        "//mlir:SPIRVDialect",
+        "//mlir:SPIRVSerialization",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "transform_dialect_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/Transform/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:BytecodeReader",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MlirOptLib",
+        "//mlir:Parser",
+        "//mlir:Pass",
+        "//mlir:Support",
+        "//mlir:TransformDebugExtension",
+        "//mlir:TransformDialect",
+        "//mlir:TransformDialectTransforms",
+        "//mlir/test:TestTransformDialect",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "dialect_utils_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/Utils/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:DialectUtils",
+        "//mlir:IR",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+gentbl_cc_library(
+    name = "EnumsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "TableGen/EnumsGenTest.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "TableGen/EnumsGenTest.cpp.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "TableGen/enums.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PassIncGen",
+    tbl_outs = [
+        (
+            ["-gen-pass-decls"],
+            "TableGen/PassGenTest.h.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "TableGen/passes.td",
+    deps = [
+        "//mlir:PassBaseTdFiles",
+        "//mlir:RewritePassBaseTdFiles",
+    ],
+)
+
+cc_test(
+    name = "tablegen_tests",
+    size = "small",
+    srcs = glob([
+        "TableGen/*.cpp",
+    ]) + [
+        "TableGen/EnumsGenTest.cpp.inc",
+        "TableGen/EnumsGenTest.h.inc",
+    ],
+    includes = ["TableGen/"],
+    deps = [
+        ":EnumsIncGen",
+        ":PassIncGen",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:IR",
+        "//mlir:Pass",
+        "//mlir:Support",
+        "//mlir:TableGen",
+        "//mlir/test:TestDialect",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "transforms_test",
+    size = "small",
+    srcs = glob([
+        "Transforms/*.cpp",
+    ]),
+    deps = [
+        "//mlir:AffineAnalysis",
+        "//mlir:BytecodeReader",
+        "//mlir:IR",
+        "//mlir:Parser",
+        "//mlir:Pass",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "analysis_tests",
+    size = "small",
+    srcs = glob([
+        "Analysis/*/*.cpp",
+        "Analysis/*/*.h",
+    ]),
+    deps = [
+        "//llvm:TestingSupport",
+        "//mlir:AffineAnalysis",
+        "//mlir:Analysis",
+        "//mlir:AsmParser",
+        "//mlir:IR",
+        "//mlir:Parser",
+        "//mlir:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "bytecode_tests",
+    size = "small",
+    srcs = glob([
+        "Bytecode/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//mlir:BytecodeReader",
+        "//mlir:BytecodeWriter",
+        "//mlir:IR",
+        "//mlir:Parser",
+        "//mlir:SideEffectInterfaces",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "conversion_tests",
+    size = "small",
+    srcs = glob([
+        "Conversion/*/*.cpp",
+    ]),
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:IR",
+        "//mlir:PDLToPDLInterp",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "execution_engine_tests",
+    size = "small",
+    srcs = glob([
+        "ExecutionEngine/*.cpp",
+    ]),
+    tags = [
+        # MSAN does not work with JIT.
+        "nomsan",
+    ],
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//mlir:AllPassesAndDialects",
+        "//mlir:Analysis",
+        "//mlir:ArithToLLVM",
+        "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:BytecodeReader",
+        "//mlir:ExecutionEngine",
+        "//mlir:FuncDialect",
+        "//mlir:FuncToLLVM",
+        "//mlir:IR",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:LinalgTransforms",
+        "//mlir:MemRefToLLVM",
+        "//mlir:Parser",
+        "//mlir:Pass",
+        "//mlir:ReconcileUnrealizedCasts",
+        "//mlir:ToLLVMIRTranslation",
+        "//mlir:VectorToLLVM",
+        "//mlir:VectorToSCF",
+        "//mlir:mlir_c_runner_utils",
+        "//mlir:mlir_runner_utils",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)

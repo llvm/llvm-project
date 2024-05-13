@@ -9,11 +9,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Generators.h"
+#include "Representation.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang::doc;
 
+// These define YAML traits for decoding the listed values within a vector.
 LLVM_YAML_IS_SEQUENCE_VECTOR(FieldTypeInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(MemberTypeInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Reference)
@@ -21,6 +24,9 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(Location)
 LLVM_YAML_IS_SEQUENCE_VECTOR(CommentInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(EnumInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(EnumValueInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(TemplateParamInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(TypedefInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<CommentInfo>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::SmallString<16>)
@@ -41,11 +47,11 @@ template <> struct ScalarEnumerationTraits<clang::AccessSpecifier> {
 
 template <> struct ScalarEnumerationTraits<clang::TagTypeKind> {
   static void enumeration(IO &IO, clang::TagTypeKind &Value) {
-    IO.enumCase(Value, "Struct", clang::TagTypeKind::TTK_Struct);
-    IO.enumCase(Value, "Interface", clang::TagTypeKind::TTK_Interface);
-    IO.enumCase(Value, "Union", clang::TagTypeKind::TTK_Union);
-    IO.enumCase(Value, "Class", clang::TagTypeKind::TTK_Class);
-    IO.enumCase(Value, "Enum", clang::TagTypeKind::TTK_Enum);
+    IO.enumCase(Value, "Struct", clang::TagTypeKind::Struct);
+    IO.enumCase(Value, "Interface", clang::TagTypeKind::Interface);
+    IO.enumCase(Value, "Union", clang::TagTypeKind::Union);
+    IO.enumCase(Value, "Class", clang::TagTypeKind::Class);
+    IO.enumCase(Value, "Enum", clang::TagTypeKind::Enum);
   }
 };
 
@@ -109,6 +115,7 @@ static void TypeInfoMapping(IO &IO, TypeInfo &I) {
 static void FieldTypeInfoMapping(IO &IO, FieldTypeInfo &I) {
   TypeInfoMapping(IO, I);
   IO.mapOptional("Name", I.Name, SmallString<16>());
+  IO.mapOptional("DefaultValue", I.DefaultValue, SmallString<16>());
 }
 
 static void InfoMapping(IO &IO, Info &I) {
@@ -121,21 +128,24 @@ static void InfoMapping(IO &IO, Info &I) {
 
 static void SymbolInfoMapping(IO &IO, SymbolInfo &I) {
   InfoMapping(IO, I);
-  IO.mapOptional("DefLocation", I.DefLoc, Optional<Location>());
+  IO.mapOptional("DefLocation", I.DefLoc, std::optional<Location>());
   IO.mapOptional("Location", I.Loc, llvm::SmallVector<Location, 2>());
 }
 
 static void RecordInfoMapping(IO &IO, RecordInfo &I) {
   SymbolInfoMapping(IO, I);
-  IO.mapOptional("TagType", I.TagType, clang::TagTypeKind::TTK_Struct);
+  IO.mapOptional("TagType", I.TagType);
+  IO.mapOptional("IsTypeDef", I.IsTypeDef, false);
   IO.mapOptional("Members", I.Members);
   IO.mapOptional("Bases", I.Bases);
   IO.mapOptional("Parents", I.Parents, llvm::SmallVector<Reference, 4>());
   IO.mapOptional("VirtualParents", I.VirtualParents,
                  llvm::SmallVector<Reference, 4>());
-  IO.mapOptional("ChildRecords", I.ChildRecords, std::vector<Reference>());
-  IO.mapOptional("ChildFunctions", I.ChildFunctions);
-  IO.mapOptional("ChildEnums", I.ChildEnums);
+  IO.mapOptional("ChildRecords", I.Children.Records, std::vector<Reference>());
+  IO.mapOptional("ChildFunctions", I.Children.Functions);
+  IO.mapOptional("ChildEnums", I.Children.Enums);
+  IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
+  IO.mapOptional("Template", I.Template);
 }
 
 static void CommentInfoMapping(IO &IO, CommentInfo &I) {
@@ -168,9 +178,9 @@ template <> struct MappingTraits<Reference> {
   static void mapping(IO &IO, Reference &Ref) {
     IO.mapOptional("Type", Ref.RefType, InfoType::IT_default);
     IO.mapOptional("Name", Ref.Name, SmallString<16>());
+    IO.mapOptional("QualName", Ref.QualName, SmallString<16>());
     IO.mapOptional("USR", Ref.USR, SymbolID());
     IO.mapOptional("Path", Ref.Path, SmallString<128>());
-    IO.mapOptional("IsInGlobalNamespace", Ref.IsInGlobalNamespace, false);
   }
 };
 
@@ -182,6 +192,7 @@ template <> struct MappingTraits<FieldTypeInfo> {
   static void mapping(IO &IO, FieldTypeInfo &I) {
     TypeInfoMapping(IO, I);
     IO.mapOptional("Name", I.Name, SmallString<16>());
+    IO.mapOptional("DefaultValue", I.DefaultValue, SmallString<16>());
   }
 };
 
@@ -192,17 +203,20 @@ template <> struct MappingTraits<MemberTypeInfo> {
     // the AS that shouldn't be part of the output. Even though AS_public is the
     // default in the struct, it should be displayed in the YAML output.
     IO.mapOptional("Access", I.Access, clang::AccessSpecifier::AS_none);
+    IO.mapOptional("Description", I.Description);
   }
 };
 
 template <> struct MappingTraits<NamespaceInfo> {
   static void mapping(IO &IO, NamespaceInfo &I) {
     InfoMapping(IO, I);
-    IO.mapOptional("ChildNamespaces", I.ChildNamespaces,
+    IO.mapOptional("ChildNamespaces", I.Children.Namespaces,
                    std::vector<Reference>());
-    IO.mapOptional("ChildRecords", I.ChildRecords, std::vector<Reference>());
-    IO.mapOptional("ChildFunctions", I.ChildFunctions);
-    IO.mapOptional("ChildEnums", I.ChildEnums);
+    IO.mapOptional("ChildRecords", I.Children.Records,
+                   std::vector<Reference>());
+    IO.mapOptional("ChildFunctions", I.Children.Functions);
+    IO.mapOptional("ChildEnums", I.Children.Enums);
+    IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
   }
 };
 
@@ -222,11 +236,28 @@ template <> struct MappingTraits<BaseRecordInfo> {
   }
 };
 
+template <> struct MappingTraits<EnumValueInfo> {
+  static void mapping(IO &IO, EnumValueInfo &I) {
+    IO.mapOptional("Name", I.Name);
+    IO.mapOptional("Value", I.Value);
+    IO.mapOptional("Expr", I.ValueExpr, SmallString<16>());
+  }
+};
+
 template <> struct MappingTraits<EnumInfo> {
   static void mapping(IO &IO, EnumInfo &I) {
     SymbolInfoMapping(IO, I);
     IO.mapOptional("Scoped", I.Scoped, false);
+    IO.mapOptional("BaseType", I.BaseType);
     IO.mapOptional("Members", I.Members);
+  }
+};
+
+template <> struct MappingTraits<TypedefInfo> {
+  static void mapping(IO &IO, TypedefInfo &I) {
+    SymbolInfoMapping(IO, I);
+    IO.mapOptional("Underlying", I.Underlying.Type);
+    IO.mapOptional("IsUsing", I.IsUsing, false);
   }
 };
 
@@ -241,6 +272,28 @@ template <> struct MappingTraits<FunctionInfo> {
     // the AS that shouldn't be part of the output. Even though AS_public is the
     // default in the struct, it should be displayed in the YAML output.
     IO.mapOptional("Access", I.Access, clang::AccessSpecifier::AS_none);
+    IO.mapOptional("Template", I.Template);
+  }
+};
+
+template <> struct MappingTraits<TemplateParamInfo> {
+  static void mapping(IO &IO, TemplateParamInfo &I) {
+    IO.mapOptional("Contents", I.Contents);
+  }
+};
+
+template <> struct MappingTraits<TemplateSpecializationInfo> {
+  static void mapping(IO &IO, TemplateSpecializationInfo &I) {
+    IO.mapOptional("SpecializationOf", I.SpecializationOf);
+    IO.mapOptional("Params", I.Params);
+  }
+};
+
+template <> struct MappingTraits<TemplateInfo> {
+  static void mapping(IO &IO, TemplateInfo &I) {
+    IO.mapOptional("Params", I.Params);
+    IO.mapOptional("Specialization", I.Specialization,
+                   std::optional<TemplateSpecializationInfo>());
   }
 };
 
@@ -266,11 +319,47 @@ class YAMLGenerator : public Generator {
 public:
   static const char *Format;
 
+  llvm::Error generateDocs(StringRef RootDir,
+                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                           const ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
 };
 
 const char *YAMLGenerator::Format = "yaml";
+
+llvm::Error
+YAMLGenerator::generateDocs(StringRef RootDir,
+                            llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                            const ClangDocContext &CDCtx) {
+  for (const auto &Group : Infos) {
+    doc::Info *Info = Group.getValue().get();
+
+    // Output file names according to the USR except the global namesapce.
+    // Anonymous namespaces are taken care of in serialization, so here we can
+    // safely assume an unnamed namespace is the global one.
+    llvm::SmallString<128> Path;
+    llvm::sys::path::native(RootDir, Path);
+    if (Info->IT == InfoType::IT_namespace && Info->Name.empty()) {
+      llvm::sys::path::append(Path, "index.yaml");
+    } else {
+      llvm::sys::path::append(Path, Group.getKey() + ".yaml");
+    }
+
+    std::error_code FileErr;
+    llvm::raw_fd_ostream InfoOS(Path, FileErr, llvm::sys::fs::OF_None);
+    if (FileErr) {
+      return llvm::createStringError(FileErr, "Error opening file '%s'",
+                                     Path.c_str());
+    }
+
+    if (llvm::Error Err = generateDocForInfo(Info, InfoOS, CDCtx)) {
+      return Err;
+    }
+  }
+
+  return llvm::Error::success();
+}
 
 llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                               const ClangDocContext &CDCtx) {
@@ -287,6 +376,9 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     break;
   case InfoType::IT_function:
     InfoYAML << *static_cast<clang::doc::FunctionInfo *>(I);
+    break;
+  case InfoType::IT_typedef:
+    InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
     break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

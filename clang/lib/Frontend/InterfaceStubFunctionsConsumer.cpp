@@ -33,7 +33,8 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
 
     MangledSymbol(const std::string &ParentName, uint8_t Type, uint8_t Binding,
                   std::vector<std::string> Names)
-        : ParentName(ParentName), Type(Type), Binding(Binding), Names(Names) {}
+        : ParentName(ParentName), Type(Type), Binding(Binding),
+          Names(std::move(Names)) {}
   };
   using MangledSymbols = std::map<const NamedDecl *, MangledSymbol>;
 
@@ -290,15 +291,12 @@ public:
                              const ASTContext &context, StringRef Format,
                              raw_ostream &OS) -> void {
       OS << "--- !" << Format << "\n";
-      OS << "IfsVersion: 2.0\n";
-      OS << "Triple: " << T.str() << "\n";
-      OS << "ObjectFileFormat: "
-         << "ELF"
-         << "\n"; // TODO: For now, just ELF.
+      OS << "IfsVersion: 3.0\n";
+      OS << "Target: " << T.str() << "\n";
       OS << "Symbols:\n";
       for (const auto &E : Symbols) {
         const MangledSymbol &Symbol = E.second;
-        for (auto Name : Symbol.Names) {
+        for (const auto &Name : Symbol.Names) {
           OS << "  - { Name: \""
              << (Symbol.ParentName.empty() || Instance.getLangOpts().CPlusPlus
                      ? ""
@@ -330,7 +328,7 @@ public:
       OS.flush();
     };
 
-    assert(Format == "experimental-ifs-v2" && "Unexpected IFS Format.");
+    assert(Format == "ifs-v1" && "Unexpected IFS Format.");
     writeIfsV1(Instance.getTarget().getTriple(), Symbols, context, Format, *OS);
   }
 };
@@ -339,6 +337,5 @@ public:
 std::unique_ptr<ASTConsumer>
 GenerateInterfaceStubsAction::CreateASTConsumer(CompilerInstance &CI,
                                                 StringRef InFile) {
-  return std::make_unique<InterfaceStubFunctionsConsumer>(
-      CI, InFile, "experimental-ifs-v2");
+  return std::make_unique<InterfaceStubFunctionsConsumer>(CI, InFile, "ifs-v1");
 }

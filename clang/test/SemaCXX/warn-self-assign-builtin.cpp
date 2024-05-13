@@ -65,3 +65,26 @@ void instantiate() {
   g<int>();
   g<S>();
 }
+
+struct Foo {
+  int A;
+
+  Foo(int A) : A(A) {}
+
+  void setA(int A) {
+    A = A; // expected-warning{{explicitly assigning value of variable of type 'int' to itself; did you mean to assign to member 'A'?}}
+  }
+
+  void setThroughLambda() {
+    [](int A) {
+      // To fix here we would need to insert an explicit capture 'this'
+      A = A; // expected-warning{{explicitly assigning}}
+    }(5);
+
+    [this](int A) {
+      this->A = 0;
+      // This fix would be possible by just adding this-> as above, but currently unsupported.
+      A = A; // expected-warning{{explicitly assigning}}
+    }(5);
+  }
+};

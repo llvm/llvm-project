@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine | llvm-dis
+; RUN: opt < %s -passes=instcombine | llvm-dis
 ; PR4495
 
 define i32 @test(i64 %test) {

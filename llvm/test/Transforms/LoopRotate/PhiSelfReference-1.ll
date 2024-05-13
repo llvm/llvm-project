@@ -1,5 +1,4 @@
-; RUN: opt < %s -loop-rotate -verify-dom-info -verify-loop-info -disable-output
-; RUN: opt < %s -loop-rotate -verify-dom-info -verify-loop-info -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output
+; RUN: opt < %s -passes=loop-rotate -verify-dom-info -verify-loop-info -verify-memoryssa -disable-output
 ; ModuleID = 'PhiSelfReference-1.bc'
 
 define void @snrm2(i32 %incx) {
@@ -28,8 +27,8 @@ bb243:		; preds = %bb307
 	br label %bb307
 
 bb307:		; preds = %bb243, %bb52
-	%sx_addr.2.pn = phi float* [ %sx_addr.5, %bb243 ], [ null, %bb52 ]		; <float*> [#uses=1]
-	%sx_addr.5 = getelementptr float, float* %sx_addr.2.pn, i32 %incx		; <float*> [#uses=1]
+	%sx_addr.2.pn = phi ptr [ %sx_addr.5, %bb243 ], [ null, %bb52 ]		; <ptr> [#uses=1]
+	%sx_addr.5 = getelementptr float, ptr %sx_addr.2.pn, i32 %incx		; <ptr> [#uses=1]
 	br i1 false, label %bb243, label %bb310
 
 bb310:		; preds = %bb307

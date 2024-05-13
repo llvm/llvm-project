@@ -37,7 +37,7 @@ target triple = "x86_64-pc-windows-msvc19.13.26131"
 %struct.Bits = type { i8 }
 
 @"?bits@@3UBits@@A" = dso_local global %struct.Bits zeroinitializer, align 1, !dbg !0
-@"?p_const@@3PEBEEB" = dso_local global i8* null, align 8, !dbg !6
+@"?p_const@@3PEBEEB" = dso_local global ptr null, align 8, !dbg !6
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!15, !16, !17, !18}

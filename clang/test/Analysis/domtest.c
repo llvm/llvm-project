@@ -5,7 +5,7 @@
 // RUN:   2>&1 | FileCheck %s
 
 // Test the DominatorsTree implementation with various control flows
-int test1()
+int test1(void)
 {
   int x = 6;
   int y = x/2;
@@ -65,7 +65,7 @@ int test1()
 // CHECK-NEXT: (8,7)
 // CHECK-NEXT: (9,8)
 
-int test2()
+int test2(void)
 {
   int x,y,z;
 
@@ -117,7 +117,7 @@ int test2()
 // CHECK-NEXT: (6,1)
 // CHECK-NEXT: (7,6)
 
-int test3()
+int test3(void)
 {
   int x,y,z;
 
@@ -178,7 +178,7 @@ int test3()
 // CHECK-NEXT: (7,1)
 // CHECK-NEXT: (8,7)
 
-int test4()
+int test4(void)
 {
   int y = 3;
   while(y > 0) {
@@ -257,7 +257,7 @@ int test4()
 // CHECK-NEXT: (11,10)
 // CHECK-NEXT: (12,11)
 
-int test5()
+int test5(void)
 {
   int x,y,z,a,b,c;
   x = 1;

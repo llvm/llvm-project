@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
@@ -14,6 +15,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -21,11 +23,10 @@ namespace {
 
 template<typename T> std::string printToString(const T &Value) {
   std::string res;
-  {
-    llvm::raw_string_ostream OS(res);
-    OS.SetBuffered();
-    OS << Value;
-  }
+  llvm::raw_string_ostream OS(res);
+  OS.SetBuffered();
+  OS << Value;
+  OS.flush();
   return res;
 }
 
@@ -141,7 +142,8 @@ TEST(raw_ostreamTest, TinyBuffer) {
   OS << "hello";
   OS << 1;
   OS << 'w' << 'o' << 'r' << 'l' << 'd';
-  EXPECT_EQ("hello1world", OS.str());
+  OS.flush();
+  EXPECT_EQ("hello1world", Str);
 }
 
 TEST(raw_ostreamTest, WriteEscaped) {
@@ -203,10 +205,10 @@ TEST(raw_ostreamTest, FormatDecimal) {
                           printToString(format_decimal(INT64_MIN, 21), 21));
 }
 
-static std::string formatted_bytes_str(ArrayRef<uint8_t> Bytes,
-                                       llvm::Optional<uint64_t> Offset = None,
-                                       uint32_t NumPerLine = 16,
-                                       uint8_t ByteGroupSize = 4) {
+static std::string
+formatted_bytes_str(ArrayRef<uint8_t> Bytes,
+                    std::optional<uint64_t> Offset = std::nullopt,
+                    uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes(Bytes, Offset, NumPerLine, ByteGroupSize);
@@ -214,10 +216,9 @@ static std::string formatted_bytes_str(ArrayRef<uint8_t> Bytes,
   return S;
 }
 
-static std::string format_bytes_with_ascii_str(ArrayRef<uint8_t> Bytes,
-                                               Optional<uint64_t> Offset = None,
-                                               uint32_t NumPerLine = 16,
-                                               uint8_t ByteGroupSize = 4) {
+static std::string format_bytes_with_ascii_str(
+    ArrayRef<uint8_t> Bytes, std::optional<uint64_t> Offset = std::nullopt,
+    uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes_with_ascii(Bytes, Offset, NumPerLine, ByteGroupSize);
@@ -248,47 +249,48 @@ TEST(raw_ostreamTest, FormattedHexBytes) {
             formatted_bytes_str(B.take_front(17)));
   // Test raw bytes with 1 bytes per line wrapping.
   EXPECT_EQ("61\n62\n63\n64\n65\n66",
-            formatted_bytes_str(B.take_front(6), None, 1));
+            formatted_bytes_str(B.take_front(6), std::nullopt, 1));
   // Test raw bytes with 7 bytes per line wrapping.
   EXPECT_EQ("61626364 656667\n68696a6b 6c6d6e\n6f7071",
-            formatted_bytes_str(B.take_front(17), None, 7));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 7));
   // Test raw bytes with 8 bytes per line wrapping.
   EXPECT_EQ("61626364 65666768\n696a6b6c 6d6e6f70\n71",
-            formatted_bytes_str(B.take_front(17), None, 8));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 8));
   //----------------------------------------------------------------------
   // Test hex byte output with the 1 byte groups
   //----------------------------------------------------------------------
   EXPECT_EQ("61 62 63 64 65",
-            formatted_bytes_str(B.take_front(5), None, 16, 1));
+            formatted_bytes_str(B.take_front(5), std::nullopt, 16, 1));
   // Test that 16 bytes get written to a line correctly.
   EXPECT_EQ("61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f 70",
-            formatted_bytes_str(B.take_front(16), None, 16, 1));
+            formatted_bytes_str(B.take_front(16), std::nullopt, 16, 1));
   // Test raw bytes with default 16 bytes per line wrapping.
   EXPECT_EQ("61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f 70\n71",
-            formatted_bytes_str(B.take_front(17), None, 16, 1));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 16, 1));
   // Test raw bytes with 7 bytes per line wrapping.
   EXPECT_EQ("61 62 63 64 65 66 67\n68 69 6a 6b 6c 6d 6e\n6f 70 71",
-            formatted_bytes_str(B.take_front(17), None, 7, 1));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 7, 1));
   // Test raw bytes with 8 bytes per line wrapping.
   EXPECT_EQ("61 62 63 64 65 66 67 68\n69 6a 6b 6c 6d 6e 6f 70\n71",
-            formatted_bytes_str(B.take_front(17), None, 8, 1));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 8, 1));
 
   //----------------------------------------------------------------------
   // Test hex byte output with the 2 byte groups
   //----------------------------------------------------------------------
-  EXPECT_EQ("6162 6364 65", formatted_bytes_str(B.take_front(5), None, 16, 2));
+  EXPECT_EQ("6162 6364 65",
+            formatted_bytes_str(B.take_front(5), std::nullopt, 16, 2));
   // Test that 16 bytes get written to a line correctly.
   EXPECT_EQ("6162 6364 6566 6768 696a 6b6c 6d6e 6f70",
-            formatted_bytes_str(B.take_front(16), None, 16, 2));
+            formatted_bytes_str(B.take_front(16), std::nullopt, 16, 2));
   // Test raw bytes with default 16 bytes per line wrapping.
   EXPECT_EQ("6162 6364 6566 6768 696a 6b6c 6d6e 6f70\n71",
-            formatted_bytes_str(B.take_front(17), None, 16, 2));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 16, 2));
   // Test raw bytes with 7 bytes per line wrapping.
   EXPECT_EQ("6162 6364 6566 67\n6869 6a6b 6c6d 6e\n6f70 71",
-            formatted_bytes_str(B.take_front(17), None, 7, 2));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 7, 2));
   // Test raw bytes with 8 bytes per line wrapping.
   EXPECT_EQ("6162 6364 6566 6768\n696a 6b6c 6d6e 6f70\n71",
-            formatted_bytes_str(B.take_front(17), None, 8, 2));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 8, 2));
 
   //----------------------------------------------------------------------
   // Test hex bytes with offset with the default 4 byte groups.
@@ -304,9 +306,9 @@ TEST(raw_ostreamTest, FormattedHexBytes) {
             format_bytes_with_ascii_str(B.take_front(16)));
   EXPECT_EQ("61626364 65666768  |abcdefgh|\n"
             "696a6b6c 6d6e6f70  |ijklmnop|",
-            format_bytes_with_ascii_str(B.take_front(16), None, 8));
+            format_bytes_with_ascii_str(B.take_front(16), std::nullopt, 8));
   EXPECT_EQ("61626364 65666768  |abcdefgh|\n696a6b6c           |ijkl|",
-            format_bytes_with_ascii_str(B.take_front(12), None, 8));
+            format_bytes_with_ascii_str(B.take_front(12), std::nullopt, 8));
   std::vector<uint8_t> Unprintable = {'a', '\x1e', 'b', '\x1f'};
   // Make sure the ASCII is still lined up correctly when fewer bytes than 16
   // bytes per line are available. The ASCII should still be aligned as if 16
@@ -457,6 +459,9 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
   TiedTo << "y";
   TiedStream << "0";
   EXPECT_EQ("acegostuv", TiedToBuffer);
+
+  TiedTo.flush();
+  TiedStream.flush();
 }
 
 TEST(raw_ostreamTest, reserve_stream) {
@@ -465,7 +470,7 @@ TEST(raw_ostreamTest, reserve_stream) {
   OS << "11111111111111111111";
   uint64_t CurrentPos = OS.tell();
   OS.reserveExtraSpace(1000);
-  EXPECT_TRUE(Str.capacity() >= CurrentPos + 1000);
+  EXPECT_GE(Str.capacity(), CurrentPos + 1000);
   OS << "hello";
   OS << 1;
   OS << 'w' << 'o' << 'r' << 'l' << 'd';
@@ -498,6 +503,31 @@ TEST(raw_ostreamTest, writeToOutputFile) {
                     Succeeded());
   checkFileData(Path, "HelloWorld");
 }
+
+#ifndef _WIN32
+TEST(raw_ostreamTest, filePermissions) {
+  // Set umask to be permissive of all permissions.
+  unsigned OldMask = ::umask(0);
+
+  llvm::unittest::TempDir RootTestDirectory("writToOutput", /*Unique*/ true);
+  SmallString<128> Path(RootTestDirectory.path());
+  sys::path::append(Path, "test.txt");
+
+  ASSERT_THAT_ERROR(writeToOutput(Path,
+                                  [](raw_ostream &Out) -> Error {
+                                    Out << "HelloWorld";
+                                    return Error::success();
+                                  }),
+                    Succeeded());
+
+  ErrorOr<llvm::sys::fs::perms> Perms = llvm::sys::fs::getPermissions(Path);
+  ASSERT_TRUE(Perms) << "should be able to get permissions";
+  // Verify the permission bits set by writeToOutput are read and write only.
+  EXPECT_EQ(Perms.get(), llvm::sys::fs::all_read | llvm::sys::fs::all_write);
+
+  ::umask(OldMask);
+}
+#endif
 
 TEST(raw_ostreamTest, writeToNonexistingPath) {
   StringRef FileName = "/_bad/_path";
@@ -543,4 +573,5 @@ TEST(raw_ostreamTest, writeToStdOut) {
   std::string CapturedStdOut = testing::internal::GetCapturedStdout();
   EXPECT_EQ(CapturedStdOut, "HelloWorld");
 }
-}
+
+} // namespace

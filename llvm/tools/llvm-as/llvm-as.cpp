@@ -23,11 +23,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <memory>
+#include <optional>
 using namespace llvm;
 
 cl::OptionCategory AsCat("llvm-as Options");
@@ -67,6 +67,7 @@ static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
                                          cl::value_desc("layout-string"),
                                          cl::init(""), cl::cat(AsCat));
+extern bool WriteNewDbgInfoFormatToBitcode;
 
 static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
   // Infer the output filename if needed.
@@ -75,7 +76,7 @@ static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
       OutputFilename = "-";
     } else {
       StringRef IFN = InputFilename;
-      OutputFilename = (IFN.endswith(".ll") ? IFN.drop_back(3) : IFN).str();
+      OutputFilename = (IFN.ends_with(".ll") ? IFN.drop_back(3) : IFN).str();
       OutputFilename += ".bc";
     }
   }
@@ -106,7 +107,7 @@ static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
     else
       // Otherwise, with an empty Module but non-empty Index, we write a
       // combined index.
-      WriteIndexToFile(*IndexToWrite, Out->os());
+      writeIndexToFile(*IndexToWrite, Out->os());
   }
 
   // Declare success.
@@ -115,15 +116,15 @@ static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-  LLVMContext Context;
   cl::HideUnrelatedOptions(AsCat);
   cl::ParseCommandLineOptions(argc, argv, "llvm .ll -> .bc assembler\n");
+  LLVMContext Context;
 
   // Parse the file now...
   SMDiagnostic Err;
-  auto SetDataLayout = [](StringRef) -> Optional<std::string> {
+  auto SetDataLayout = [](StringRef, StringRef) -> std::optional<std::string> {
     if (ClDataLayout.empty())
-      return None;
+      return std::nullopt;
     return ClDataLayout;
   };
   ParsedModuleAndIndex ModuleAndIndex;
@@ -139,6 +140,13 @@ int main(int argc, char **argv) {
     Err.print(argv[0], errs());
     return 1;
   }
+
+  // Convert to new debug format if requested.
+  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat &&
+                           WriteNewDbgInfoFormatToBitcode);
+  if (M->IsNewDbgInfoFormat)
+    M->removeDebugIntrinsicDeclarations();
+
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);
 
   if (!DisableVerify) {

@@ -34,33 +34,31 @@ namespace llvm
         if (!mt_only || llvm_is_multithreaded()) {
           impl.lock();
           return true;
-        } else {
-          // Single-threaded debugging code.  This would be racy in
-          // multithreaded mode, but provides not sanity checks in single
-          // threaded mode.
-          ++acquired;
-          return true;
         }
+        // Single-threaded debugging code.  This would be racy in
+        // multithreaded mode, but provides not basic checks in single
+        // threaded mode.
+        ++acquired;
+        return true;
       }
 
       bool unlock() {
         if (!mt_only || llvm_is_multithreaded()) {
           impl.unlock();
           return true;
-        } else {
-          // Single-threaded debugging code.  This would be racy in
-          // multithreaded mode, but provides not sanity checks in single
-          // threaded mode.
-          assert(acquired && "Lock not acquired before release!");
-          --acquired;
-          return true;
         }
+        // Single-threaded debugging code.  This would be racy in
+        // multithreaded mode, but provides not basic checks in single
+        // threaded mode.
+        assert(acquired && "Lock not acquired before release!");
+        --acquired;
+        return true;
       }
 
       bool try_lock() {
         if (!mt_only || llvm_is_multithreaded())
           return impl.try_lock();
-        else return true;
+        return true;
       }
     };
 

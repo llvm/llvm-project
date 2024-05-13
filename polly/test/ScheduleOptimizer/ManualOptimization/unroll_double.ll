@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -polly-opt-isl -analyze < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadPolly -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
 ;
 ; Apply two loop transformations. First partial, then full unrolling.
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -12,7 +12,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:

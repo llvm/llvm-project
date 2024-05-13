@@ -18,6 +18,7 @@
 #include <string>
 #include <set>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 #include "min_allocator.h"

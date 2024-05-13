@@ -9,11 +9,14 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVEEXESYMBOL_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVEEXESYMBOL_H
 
+#include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
-#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 namespace llvm {
 namespace pdb {
+
+class NativeSession;
 
 class DbiStream;
 

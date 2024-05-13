@@ -23,10 +23,15 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 @a = external global i32, align 4
 @b = external constant i32, align 4
+@c0 = global i32 42, align 4
+@c1 = alias i32, ptr @c0
+@d0 = constant i32 42, align 4
+@d1 = alias i32, ptr @d0
+@take_addr_func_alias1 = alias ptr (), ptr @take_addr_func_alias
 
 define i32 @read() {
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   ret i32 %0
 ; CHECK-LABEL: read:
 
@@ -76,7 +81,7 @@ entry:
 
 define void @write(i32 %v)  {
 entry:
-  store i32 %v, i32* @a, align 4
+  store i32 %v, ptr @a, align 4
   ret void
 ; CHECK-LABEL: write:
 
@@ -126,7 +131,7 @@ entry:
 
 define i32 @read_const()  {
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   ret i32 %0
 ; CHECK-LABEL: read_const:
 
@@ -194,9 +199,9 @@ entry:
 ; THUMB1_RO_PC-NEXT: .long b-([[LPC]]+4)
 }
 
-define i32* @take_addr()  {
+define ptr @take_addr()  {
 entry:
-  ret i32* @a
+  ret ptr @a
 ; CHECK-LABEL: take_addr:
 
 ; ARM_RW_ABS: movw    r[[REG:[0-9]]], :lower16:a
@@ -240,9 +245,9 @@ entry:
 ; THUMB1_RW_SB: .long   a(sbrel)
 }
 
-define i32* @take_addr_const()  {
+define ptr @take_addr_const()  {
 entry:
-  ret i32* @b
+  ret ptr @b
 ; CHECK-LABEL: take_addr_const:
 
 ; ARM_RO_ABS: movw    r[[REG:[0-9]]], :lower16:b
@@ -300,9 +305,9 @@ entry:
 ; THUMB1_RO_PC-NEXT: .long b-([[LPC]]+4)
 }
 
-define i8* @take_addr_func()  {
+define ptr @take_addr_func()  {
 entry:
-  ret i8* bitcast (i8* ()* @take_addr_func to i8*)
+  ret ptr @take_addr_func
 ; CHECK-LABEL: take_addr_func:
 
 ; ARM_RO_ABS: movw    r[[REG:[0-9]]], :lower16:take_addr_func
@@ -360,12 +365,41 @@ entry:
 ; THUMB1_RO_PC-NEXT: .long take_addr_func-([[LPC]]+4)
 }
 
-define i8* @block_addr() {
+define ptr @take_addr_alias()  {
+entry:
+  ret ptr @c1
+}
+; CHECK-LABEL: take_addr_alias:
+; ARM_RW_SB: movw    r[[REG:[0-9]]], :lower16:c1(sbrel)
+; ARM_RW_SB: movt    r[[REG]], :upper16:c1(sbrel)
+; ARM_RW_SB: add     r0, r9, r[[REG]]
+
+define ptr @take_addr_const_alias()  {
+entry:
+  ret ptr @d1
+}
+; CHECK-LABEL: take_addr_const_alias:
+; ARM_RO_PC:      movw    [[REG:r[0-9]]], :lower16:(d1-([[LPC:.LPC[0-9]+_[0-9]+]]+8))
+; ARM_RO_PC-NEXT: movt    [[REG]], :upper16:(d1-([[LPC]]+8))
+; ARM_RO_PC-NEXT: [[LPC]]:
+; ARM_RO_PC-NEXT: add     r0, pc, [[REG]]
+
+define weak ptr @take_addr_func_alias()  {
+entry:
+  ret ptr @take_addr_func_alias1
+}
+; CHECK-LABEL: take_addr_func_alias:
+; ARM_RO_PC:      movw    [[REG:r[0-9]]], :lower16:(take_addr_func_alias1-([[LPC:.LPC[0-9]+_[0-9]+]]+8))
+; ARM_RO_PC-NEXT: movt    [[REG]], :upper16:(take_addr_func_alias1-([[LPC]]+8))
+; ARM_RO_PC-NEXT: [[LPC]]:
+; ARM_RO_PC-NEXT: add     r0, pc, [[REG]]
+
+define ptr @block_addr() {
 entry:
   br label %lab1
 
 lab1:
-  ret i8* blockaddress(@block_addr, %lab1)
+  ret ptr blockaddress(@block_addr, %lab1)
 
 ; CHECK-LABEL: block_addr:
 

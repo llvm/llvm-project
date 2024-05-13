@@ -7,5 +7,5 @@ RUN:    FileCheck %s --check-prefix=CHECK-MSVC
 CHECK-CLANG: Command Line: /path/to/my/clang
 CHECK-SAME: -o
 
-CHECK-MSVC: Command Line: /path/to/my/x64/cl.exe
+CHECK-MSVC: Command Line: /path/to/my{{(\/|\\)(arm64|x64)(\/|\\)}}cl.exe
 CHECK-SAME: /Fo

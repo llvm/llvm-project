@@ -7,19 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/fenv/feholdexcept.h"
+#include "hdr/types/fenv_t.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/FEnv.h"
 
-#include <fenv.h>
-
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, feholdexcept, (fenv_t * envp)) {
-  if (fputil::getEnv(envp) != 0)
+  if (fputil::get_env(envp) != 0)
     return -1;
-  fputil::clearExcept(FE_ALL_EXCEPT);
-  fputil::disableExcept(FE_ALL_EXCEPT);
+  fputil::clear_except(FE_ALL_EXCEPT);
+  fputil::disable_except(FE_ALL_EXCEPT);
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

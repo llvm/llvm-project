@@ -73,14 +73,14 @@ decltype(auto) bindAssignmentToDecl(const char *DeclName) {
 static bool isTest(const Decl *D) {
   if (const auto* ND = dyn_cast<NamedDecl>(D)) {
     std::string DeclName = ND->getNameAsString();
-    if (StringRef(DeclName).startswith("test"))
+    if (StringRef(DeclName).starts_with("test"))
       return true;
   }
   if (const auto *OD = dyn_cast<ObjCMethodDecl>(D)) {
     if (const auto *CD = dyn_cast<ObjCContainerDecl>(OD->getParent())) {
       std::string ContainerName = CD->getNameAsString();
       StringRef CN(ContainerName);
-      if (CN.contains_lower("test") || CN.contains_lower("mock"))
+      if (CN.contains_insensitive("test") || CN.contains_insensitive("mock"))
         return true;
     }
   }

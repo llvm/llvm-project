@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -stop-after=amdgpu-isel -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel -verify-machineinstrs -o - %s | FileCheck %s
 
 ; CHECK-LABEL: vcopy_i1_undef
 ; CHECK: [[IMPDEF0:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
@@ -7,12 +7,12 @@
 ; CHECK-NOT: COPY [[IMPDEF0]]
 ; CHECK-NOT: COPY [[IMPDEF1]]
 ; CHECK: .false:
-define <2 x float> @vcopy_i1_undef(<2 x float> addrspace(1)* %p) {
+define <2 x float> @vcopy_i1_undef(ptr addrspace(1) %p, i1 %c0) {
 entry:
-  br i1 undef, label %exit, label %false
+  br i1 %c0, label %exit, label %false
 
 false:
-  %x = load <2 x float>, <2 x float> addrspace(1)* %p
+  %x = load <2 x float>, ptr addrspace(1) %p
   %cmp = fcmp one <2 x float> %x, zeroinitializer
   br label %exit
 

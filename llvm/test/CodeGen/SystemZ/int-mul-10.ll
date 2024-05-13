@@ -53,12 +53,12 @@ define i64 @f3(i64 %dummy, i64 %a, i64 %b) {
 }
 
 ; Check MG with no displacement.
-define i64 @f4(i64 %dummy, i64 %a, i64 *%src) {
+define i64 @f4(i64 %dummy, i64 %a, ptr %src) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: {{%r[234]}}
 ; CHECK: mg %r2, 0(%r4)
 ; CHECK: br %r14
-  %b = load i64, i64 *%src
+  %b = load i64, ptr %src
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -68,12 +68,12 @@ define i64 @f4(i64 %dummy, i64 %a, i64 *%src) {
 }
 
 ; Check the high end of the aligned MG range.
-define i64 @f5(i64 %dummy, i64 %a, i64 *%src) {
+define i64 @f5(i64 %dummy, i64 %a, ptr %src) {
 ; CHECK-LABEL: f5:
 ; CHECK: mg %r2, 524280(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 65535
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 65535
+  %b = load i64, ptr %ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -84,13 +84,13 @@ define i64 @f5(i64 %dummy, i64 %a, i64 *%src) {
 
 ; Check the next doubleword up, which requires separate address logic.
 ; Other sequences besides this one would be OK.
-define i64 @f6(i64 %dummy, i64 %a, i64 *%src) {
+define i64 @f6(i64 %dummy, i64 %a, ptr %src) {
 ; CHECK-LABEL: f6:
 ; CHECK: agfi %r4, 524288
 ; CHECK: mg %r2, 0(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 65536
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 65536
+  %b = load i64, ptr %ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -100,12 +100,12 @@ define i64 @f6(i64 %dummy, i64 %a, i64 *%src) {
 }
 
 ; Check the high end of the negative aligned MG range.
-define i64 @f7(i64 %dummy, i64 %a, i64 *%src) {
+define i64 @f7(i64 %dummy, i64 %a, ptr %src) {
 ; CHECK-LABEL: f7:
 ; CHECK: mg %r2, -8(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 -1
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 -1
+  %b = load i64, ptr %ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -115,12 +115,12 @@ define i64 @f7(i64 %dummy, i64 %a, i64 *%src) {
 }
 
 ; Check the low end of the MG range.
-define i64 @f8(i64 %dummy, i64 %a, i64 *%src) {
+define i64 @f8(i64 %dummy, i64 %a, ptr %src) {
 ; CHECK-LABEL: f8:
 ; CHECK: mg %r2, -524288(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 -65536
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 -65536
+  %b = load i64, ptr %ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -131,13 +131,13 @@ define i64 @f8(i64 %dummy, i64 %a, i64 *%src) {
 
 ; Check the next doubleword down, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define i64 @f9(i64 *%dest, i64 %a, i64 *%src) {
+define i64 @f9(ptr %dest, i64 %a, ptr %src) {
 ; CHECK-LABEL: f9:
 ; CHECK: agfi %r4, -524296
 ; CHECK: mg %r2, 0(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 -65537
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 -65537
+  %b = load i64, ptr %ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -147,14 +147,14 @@ define i64 @f9(i64 *%dest, i64 %a, i64 *%src) {
 }
 
 ; Check that MG allows an index.
-define i64 @f10(i64 *%dest, i64 %a, i64 %src, i64 %index) {
+define i64 @f10(ptr %dest, i64 %a, i64 %src, i64 %index) {
 ; CHECK-LABEL: f10:
 ; CHECK: mg %r2, 524287(%r5,%r4)
 ; CHECK: br %r14
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
-  %ptr = inttoptr i64 %add2 to i64 *
-  %b = load i64, i64 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %b = load i64, ptr %ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx

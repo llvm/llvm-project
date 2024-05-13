@@ -59,24 +59,20 @@ public:
   // synchronous callbacks: 1) They should NOT resume the target themselves.
   // Just return false if you want the target to restart. 2) Watchpoints with
   // synchronous callbacks can't have conditions (or rather, they can have
-  // them, but they
-  //    won't do anything.  Ditto with ignore counts, etc...  You are supposed
-  //    to control that all through the
-  //    callback.
+  // them, but they won't do anything.  Ditto with ignore counts, etc...
+  // You are supposed to control that all through the callback.
   // Asynchronous callbacks get run as part of the "ShouldStop" logic in the
   // thread plan.  The logic there is:
   //   a) If the watchpoint is thread specific and not for this thread, continue
-  //   w/o running the callback.
+  //      w/o running the callback.
   //   b) If the ignore count says we shouldn't stop, then ditto.
   //   c) If the condition says we shouldn't stop, then ditto.
   //   d) Otherwise, the callback will get run, and if it returns true we will
-  //   stop, and if false we won't.
+  //      stop, and if false we won't.
   //  The asynchronous callback can run the target itself, but at present that
-  //  should be the last action the
-  //  callback does.  We will relax this condition at some point, but it will
-  //  take a bit of plumbing to get
+  //  should be the last action the callback does.  We will relax this
+  //  condition at some point, but it will take a bit of plumbing to get
   //  that to work.
-  //
 
   /// Adds a callback to the watchpoint option set.
   ///
@@ -87,8 +83,8 @@ public:
   ///    A baton which will get passed back to the callback when it is invoked.
   ///
   /// \param[in] synchronous
-  ///    Whether this is a synchronous or asynchronous callback.  See discussion
-  ///    above.
+  ///    Whether this is a synchronous or asynchronous callback.
+  ///    See discussion above.
   void SetCallback(WatchpointHitCallback callback,
                    const lldb::BatonSP &baton_sp, bool synchronous = false);
 
@@ -102,11 +98,9 @@ public:
   ///
   /// \param[in] context
   ///    The context in which the callback is to be invoked.  This includes the
-  ///    stop event, the
-  ///    execution context of the stop (since you might hit the same watchpoint
-  ///    on multiple threads) and
-  ///    whether we are currently executing synchronous or asynchronous
-  ///    callbacks.
+  ///    stop event, the execution context of the stop (since you might hit
+  ///    the same watchpoint on multiple threads) and whether we are currently
+  ///    executing synchronous or asynchronous callbacks.
   ///
   /// \param[in] watch_id
   ///    The watchpoint ID that owns this option set.
@@ -129,23 +123,24 @@ public:
   ///     The baton.
   Baton *GetBaton();
 
-  /// Fetch  a const version of the baton from the callback.
+  /// Fetch a const version of the baton from the callback.
   ///
   /// \return
   ///     The baton.
   const Baton *GetBaton() const;
 
   /// Return the current thread spec for this option. This will return nullptr
-  /// if the no thread specifications have been set for this Option yet.
+  /// if the no thread specifications have been set for this WatchpointOptions
+  /// yet.
+  ///
   /// \return
   ///     The thread specification pointer for this option, or nullptr if none
-  ///     has
-  ///     been set yet.
+  ///     has been set yet.
   const ThreadSpec *GetThreadSpecNoCreate() const;
 
-  /// Returns a pointer to the ThreadSpec for this option, creating it. if it
-  /// hasn't been created already.   This API is used for setting the
-  /// ThreadSpec items for this option.
+  /// Returns a pointer to the ThreadSpec for this option, creating it if it
+  /// hasn't been created already. This API is used for setting the
+  /// ThreadSpec items for this WatchpointOptions.
   ThreadSpec *GetThreadSpec();
 
   void SetThreadID(lldb::tid_t thread_id);
@@ -166,13 +161,13 @@ public:
                            lldb::user_id_t watch_id);
 
   struct CommandData {
-    CommandData() : user_source(), script_source(), stop_on_error(true) {}
+    CommandData() = default;
 
     ~CommandData() = default;
 
     StringList user_source;
     std::string script_source;
-    bool stop_on_error;
+    bool stop_on_error = true;
   };
 
   class CommandBaton : public TypedBaton<CommandData> {
@@ -184,14 +179,10 @@ public:
                         unsigned indentation) const override;
   };
 
-protected:
-  // Classes that inherit from WatchpointOptions can see and modify these
-
 private:
-  // For WatchpointOptions only
   WatchpointHitCallback m_callback;  // This is the callback function pointer
   lldb::BatonSP m_callback_baton_sp; // This is the client data for the callback
-  bool m_callback_is_synchronous;
+  bool m_callback_is_synchronous = false;
   std::unique_ptr<ThreadSpec>
       m_thread_spec_up; // Thread for which this watchpoint will take
 };

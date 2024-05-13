@@ -8,6 +8,8 @@
 
 // <locale>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT -D_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT
+
 // wstring_convert<Codecvt, Elem, Wide_alloc, Byte_alloc>
 
 // wide_string from_bytes(char byte);
@@ -15,13 +17,15 @@
 // wide_string from_bytes(const byte_string& str);
 // wide_string from_bytes(const char* first, const char* last);
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <codecvt>
 #include <cassert>
 
 #include "test_macros.h"
 
-template <class CharT, size_t = sizeof(CharT)>
+template <class CharT, std::size_t = sizeof(CharT)>
 struct TestHelper;
 template <class CharT>
 struct TestHelper<CharT, 2> {

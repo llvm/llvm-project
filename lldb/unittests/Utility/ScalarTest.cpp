@@ -13,7 +13,12 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/Testing/Support/Error.h"
+
+#include <algorithm>
+#include <cmath>
 
 using namespace lldb_private;
 using llvm::APFloat;
@@ -161,6 +166,33 @@ TEST(ScalarTest, GetBytes) {
   ASSERT_EQ(0, memcmp(f, Storage, sizeof(f)));
 }
 
+TEST(ScalarTest, GetData) {
+  auto get_data = [](llvm::APSInt v) {
+    DataExtractor data;
+    Scalar(v).GetData(data);
+    return data.GetData().vec();
+  };
+
+  auto vec = [](std::initializer_list<uint8_t> l) {
+    std::vector<uint8_t> v(l.begin(), l.end());
+    if (endian::InlHostByteOrder() == lldb::eByteOrderLittle)
+      std::reverse(v.begin(), v.end());
+    return v;
+  };
+
+  EXPECT_THAT(
+      get_data(llvm::APSInt::getMaxValue(/*numBits=*/1, /*Unsigned=*/true)),
+      vec({0x01}));
+
+  EXPECT_THAT(
+      get_data(llvm::APSInt::getMaxValue(/*numBits=*/8, /*Unsigned=*/true)),
+      vec({0xff}));
+
+  EXPECT_THAT(
+      get_data(llvm::APSInt::getMaxValue(/*numBits=*/9, /*Unsigned=*/true)),
+      vec({0x01, 0xff}));
+}
+
 TEST(ScalarTest, SetValueFromData) {
   uint8_t a[] = {1, 2, 3, 4};
   Scalar s;
@@ -239,7 +271,7 @@ TEST(ScalarTest, ExtractBitfield) {
 
 template <typename T> static std::string ScalarGetValue(T value) {
   StreamString stream;
-  Scalar(value).GetValue(&stream, false);
+  Scalar(value).GetValue(stream, false);
   return std::string(stream.GetString());
 }
 
@@ -399,4 +431,62 @@ TEST(ScalarTest, TruncOrExtendTo) {
   EXPECT_EQ(S.UInt128(APInt()), APInt(24, 0x0fffffu));
   S.TruncOrExtendTo(16, false);
   EXPECT_EQ(S.UInt128(APInt()), APInt(16, 0xffffu));
+}
+
+TEST(ScalarTest, APFloatConstructor) {
+  llvm::APFloat my_single(llvm::APFloatBase::IEEEsingle(), "3.14159");
+  llvm::APFloat my_double(llvm::APFloatBase::IEEEdouble(), "3.14159");
+  Scalar S(my_single);
+  Scalar D(my_double);
+
+  EXPECT_EQ(S.GetType(), Scalar::e_float);
+  EXPECT_EQ(D.GetType(), Scalar::e_float);
+  ASSERT_TRUE(S != D);
+}
+
+TEST(ScalarTest, CreateAPFloats) {
+  llvm::APFloat ap_float(llvm::APFloatBase::IEEEsingle(), "3.14159");
+  llvm::APFloat ap_nan = llvm::APFloat::getNaN(llvm::APFloat::IEEEsingle());
+  llvm::APSInt int1("12");
+  llvm::APSInt int2("-4");
+  Scalar I1(int1);
+  Scalar I2(int2);
+  Scalar F(ap_float);
+
+  llvm::APFloat out1_float = I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloat);
+  llvm::APFloat out1_double =
+      I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeDouble);
+  llvm::APFloat out1_longdouble =
+      I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeLongDouble);
+  llvm::APFloat out1_nan =
+      I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloatComplex);
+  EXPECT_TRUE(!out1_float.isNegative());
+  EXPECT_TRUE(!out1_double.isNegative());
+  EXPECT_TRUE(out1_double.bitwiseIsEqual(out1_longdouble));
+  EXPECT_FALSE(out1_double.bitwiseIsEqual(out1_float));
+  EXPECT_TRUE(out1_nan.bitwiseIsEqual(ap_nan));
+
+  llvm::APFloat out2_float = I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloat);
+  llvm::APFloat out2_double =
+      I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeDouble);
+  llvm::APFloat out2_longdouble =
+      I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeLongDouble);
+  llvm::APFloat out2_nan =
+      I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloatComplex);
+  EXPECT_TRUE(out2_float.isNegative());
+  EXPECT_TRUE(out2_double.isNegative());
+  EXPECT_TRUE(out2_double.bitwiseIsEqual(out2_longdouble));
+  EXPECT_FALSE(out2_double.bitwiseIsEqual(out2_float));
+  EXPECT_TRUE(out2_nan.bitwiseIsEqual(ap_nan));
+
+  llvm::APFloat out3_float = F.CreateAPFloatFromAPFloat(lldb::eBasicTypeFloat);
+  llvm::APFloat out3_double =
+      F.CreateAPFloatFromAPFloat(lldb::eBasicTypeDouble);
+  llvm::APFloat out3_longdouble =
+      F.CreateAPFloatFromAPFloat(lldb::eBasicTypeLongDouble);
+  llvm::APFloat out3_nan =
+      F.CreateAPFloatFromAPFloat(lldb::eBasicTypeFloatComplex);
+  EXPECT_TRUE(out3_double.bitwiseIsEqual(out3_longdouble));
+  EXPECT_FALSE(out3_double.bitwiseIsEqual(out3_float));
+  EXPECT_TRUE(out3_nan.bitwiseIsEqual(ap_nan));
 }

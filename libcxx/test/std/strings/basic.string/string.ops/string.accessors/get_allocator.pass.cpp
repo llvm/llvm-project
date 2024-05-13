@@ -8,7 +8,7 @@
 
 // <string>
 
-// allocator_type get_allocator() const;
+// allocator_type get_allocator() const; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -18,31 +18,36 @@
 #include "min_allocator.h"
 
 template <class S>
-void
-test(const S& s, const typename S::allocator_type& a)
-{
-    assert(s.get_allocator() == a);
+TEST_CONSTEXPR_CXX20 void test(const S& s, const typename S::allocator_type& a) {
+  assert(s.get_allocator() == a);
 }
 
-int main(int, char**)
-{
-    {
-    typedef test_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(""), A());
-    test(S("abcde", A(1)), A(1));
-    test(S("abcdefghij", A(2)), A(2));
-    test(S("abcdefghijklmnopqrst", A(3)), A(3));
-    }
+template <class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string(const Alloc& a) {
+  using S = std::basic_string<char, std::char_traits<char>, Alloc>;
+  test(S(""), Alloc());
+  test(S("abcde", Alloc(a)), Alloc(a));
+  test(S("abcdefghij", Alloc(a)), Alloc(a));
+  test(S("abcdefghijklmnopqrst", Alloc(a)), Alloc(a));
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string(std::allocator<char>());
+  test_string(test_allocator<char>());
+  test_string(test_allocator<char>(1));
+  test_string(test_allocator<char>(2));
+  test_string(test_allocator<char>(3));
 #if TEST_STD_VER >= 11
-    {
-    typedef min_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(""), A());
-    test(S("abcde", A()), A());
-    test(S("abcdefghij", A()), A());
-    test(S("abcdefghijklmnopqrst", A()), A());
-    }
+  test_string(min_allocator<char>());
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
 #endif
 
   return 0;

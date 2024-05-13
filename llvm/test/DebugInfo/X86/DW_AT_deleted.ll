@@ -12,6 +12,9 @@
 ; 
 ;   deleted(deleted &&) = delete;
 ;   deleted &operator=(deleted &&) = delete;
+;
+;   void func() && = delete;
+;   static void bar() = delete;
 ; 
 ;   ~deleted() = default;
 ; };
@@ -48,6 +51,16 @@
 ; CHECK-NEXT: DW_AT_name [DW_FORM_strx1]    (indexed (00000008) string = "operator=")
 ; CHECK:  DW_AT_deleted [DW_FORM_flag_present]  (true)
 
+; CHECK: DW_TAG_subprogram [10]
+; CHECK-NEXT: DW_AT_linkage_name [DW_FORM_strx1]    (indexed (0000000b) string = "_ZNO7deleted4funcEv")
+; CHECK-NEXT: DW_AT_name [DW_FORM_strx1]    (indexed (0000000c) string = "func")
+; CHECK:  DW_AT_deleted [DW_FORM_flag_present]  (true)
+
+; CHECK: DW_TAG_subprogram [11]
+; CHECK-NEXT: DW_AT_linkage_name [DW_FORM_strx1]    (indexed (0000000d) string = "_ZN7deleted3barEv")
+; CHECK-NEXT: DW_AT_name [DW_FORM_strx1]    (indexed (0000000e) string = "bar")
+; CHECK:  DW_AT_deleted [DW_FORM_flag_present]  (true)
+
 ; ModuleID = 'debug-info-deleted.cpp'
 source_filename = "debug-info-deleted.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -58,8 +71,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @_Z3foov() #0 !dbg !7 {
   %1 = alloca %class.deleted, align 1
-  call void @llvm.dbg.declare(metadata %class.deleted* %1, metadata !10, metadata !DIExpression()), !dbg !34
-  ret void, !dbg !35
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !10, metadata !DIExpression()), !dbg !39
+  ret void, !dbg !40
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
@@ -84,7 +97,7 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 !9 = !{null}
 !10 = !DILocalVariable(name: "obj1", scope: !7, file: !1, line: 15, type: !11)
 !11 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "deleted", file: !1, line: 1, size: 8, flags: DIFlagTypePassByReference, elements: !12, identifier: "_ZTS7deleted")
-!12 = !{!13, !17, !22, !26, !30, !33}
+!12 = !{!13, !17, !22, !26, !30, !33, !34, !36}
 !13 = !DISubprogram(name: "deleted", scope: !11, file: !1, line: 3, type: !14, scopeLine: 3, flags: DIFlagPublic | DIFlagPrototyped, spFlags: 0)
 !14 = !DISubroutineType(types: !15)
 !15 = !{null, !16}
@@ -106,5 +119,10 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 !31 = !DISubroutineType(types: !32)
 !32 = !{!25, !16, !29}
 !33 = !DISubprogram(name: "~deleted", scope: !11, file: !1, line: 11, type: !14, scopeLine: 11, flags: DIFlagPublic | DIFlagPrototyped, spFlags: 0)
-!34 = !DILocation(line: 15, column: 13, scope: !7)
-!35 = !DILocation(line: 16, column: 3, scope: !7)
+!34 = !DISubprogram(name: "func", linkageName: "_ZNO7deleted4funcEv", scope: !11, file: !1, line: 13, type: !35, scopeLine: 13, flags: DIFlagPublic | DIFlagPrototyped | DIFlagRValueReference, spFlags: DISPFlagDeleted)                                                                                                                                                                                                           
+!35 = !DISubroutineType(flags: DIFlagRValueReference, types: !15)                                                                                                                                                 
+!36 = !DISubprogram(name: "bar", linkageName: "_ZN7deleted3barEv", scope: !11, file: !1, line: 15, type: !37, scopeLine: 15, flags: DIFlagPublic | DIFlagPrototyped | DIFlagStaticMember, spFlags: DISPFlagDeleted)                                                                                                                                                                                                                 
+!37 = !DISubroutineType(types: !38)
+!38 = !{null}
+!39 = !DILocation(line: 15, column: 13, scope: !7)
+!40 = !DILocation(line: 16, column: 3, scope: !7)

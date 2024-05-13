@@ -2,15 +2,15 @@
 ;
 ; Test that vperm is not used if a single unpack is enough.
 
-define <4 x i32> @fun0(<4 x i32>* %Src) nounwind {
+define <4 x i32> @fun0(ptr %Src) nounwind {
 ; CHECK-LABEL: fun0:
 ; CHECK-NOT: vperm
-  %tmp = load <4 x i32>, <4 x i32>* %Src
+  %tmp = load <4 x i32>, ptr %Src
   %tmp2 = shufflevector <4 x i32> zeroinitializer, <4 x i32> %tmp, <4 x i32> <i32 0, i32 4, i32 2, i32 5>
   ret <4 x i32> %tmp2
 }
 
-define  void @fun1(i8 %Src, <32 x i8>* %Dst) nounwind {
+define  void @fun1(i8 %Src, ptr %Dst) nounwind {
 ; CHECK-LABEL: fun1:
 ; CHECK-NOT: vperm
   %I0 = insertelement <16 x i8> undef, i8 %Src, i32 0
@@ -43,7 +43,7 @@ define  void @fun1(i8 %Src, <32 x i8>* %Dst) nounwind {
                                     i32 4, i32 20, i32 56, i32 57, i32 5, i32 21, i32 58, i32 59,
                                     i32 6, i32 22, i32 60, i32 61, i32 7, i32 62, i32 55, i32 63>
 
-  store <32 x i8> %tmp9, <32 x i8>* %Dst
+  store <32 x i8> %tmp9, ptr %Dst
   ret void
 }
 

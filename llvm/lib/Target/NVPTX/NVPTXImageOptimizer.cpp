@@ -35,6 +35,8 @@ public:
 
   bool runOnFunction(Function &F) override;
 
+  StringRef getPassName() const override { return "NVPTX Image Optimizer"; }
+
 private:
   bool replaceIsTypePSampler(Instruction &I);
   bool replaceIsTypePSurface(Instruction &I);
@@ -57,12 +59,9 @@ bool NVPTXImageOptimizer::runOnFunction(Function &F) {
   InstrToDelete.clear();
 
   // Look for call instructions in the function
-  for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE;
-       ++BI) {
-    for (BasicBlock::iterator I = (*BI).begin(), E = (*BI).end();
-         I != E; ++I) {
-      Instruction &Instr = *I;
-      if (CallInst *CI = dyn_cast<CallInst>(I)) {
+  for (BasicBlock &BB : F) {
+    for (Instruction &Instr : BB) {
+      if (CallInst *CI = dyn_cast<CallInst>(&Instr)) {
         Function *CalledF = CI->getCalledFunction();
         if (CalledF && CalledF->isIntrinsic()) {
           // This is an intrinsic function call, check if its an istypep
@@ -84,8 +83,8 @@ bool NVPTXImageOptimizer::runOnFunction(Function &F) {
   }
 
   // Delete any istypep instances we replaced in the IR
-  for (unsigned i = 0, e = InstrToDelete.size(); i != e; ++i)
-    InstrToDelete[i]->eraseFromParent();
+  for (Instruction *I : InstrToDelete)
+    I->eraseFromParent();
 
   return Changed;
 }
@@ -148,9 +147,8 @@ void NVPTXImageOptimizer::replaceWith(Instruction *From, ConstantInt *To) {
   // We implement "poor man's DCE" here to make sure any code that is no longer
   // live is actually unreachable and can be trivially eliminated by the
   // unreachable block elimination pass.
-  for (CallInst::use_iterator UI = From->use_begin(), UE = From->use_end();
-       UI != UE; ++UI) {
-    if (BranchInst *BI = dyn_cast<BranchInst>(*UI)) {
+  for (Use &U : From->uses()) {
+    if (BranchInst *BI = dyn_cast<BranchInst>(U)) {
       if (BI->isUnconditional()) continue;
       BasicBlock *Dest;
       if (To->isZero())
@@ -159,7 +157,7 @@ void NVPTXImageOptimizer::replaceWith(Instruction *From, ConstantInt *To) {
       else
         // Get true block
         Dest = BI->getSuccessor(0);
-      BranchInst::Create(Dest, BI);
+      BranchInst::Create(Dest, BI->getIterator());
       InstrToDelete.push_back(BI);
     }
   }

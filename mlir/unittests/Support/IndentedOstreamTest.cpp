@@ -98,7 +98,7 @@ TEST(FormatTest, Reindent) {
                  
                  
   )";
-  ros.reindent(desc);
+  ros.printReindented(desc);
   ros.flush();
   const auto *expected =
       R"(First line
@@ -106,5 +106,21 @@ TEST(FormatTest, Reindent) {
 
 
 )";
+  EXPECT_THAT(os.str(), StrEq(expected));
+}
+
+TEST(FormatTest, ReindentLineEndings) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  raw_indented_ostream ros(os);
+
+  // Similar string as the previous test, but with \r\n (Windows style) line
+  // breaks. Note that C++'s internal string representation uses \n, so just
+  // running the previous test as-is on Windows is not sufficient.
+  const auto *desc =
+      "\r\n\r\n\r\n         First line\r\n                 second line";
+  ros.printReindented(desc);
+  ros.flush();
+  const auto *expected = "First line\r\n        second line";
   EXPECT_THAT(os.str(), StrEq(expected));
 }

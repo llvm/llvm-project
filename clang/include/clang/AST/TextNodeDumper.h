@@ -19,10 +19,12 @@
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
 #include "clang/AST/DeclVisitor.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateArgumentVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLocVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
 namespace clang {
@@ -131,6 +133,7 @@ class TextNodeDumper
       public ConstTemplateArgumentVisitor<TextNodeDumper>,
       public ConstStmtVisitor<TextNodeDumper>,
       public TypeVisitor<TextNodeDumper>,
+      public TypeLocVisitor<TextNodeDumper>,
       public ConstDeclVisitor<TextNodeDumper> {
   raw_ostream &OS;
   const bool ShowColors;
@@ -178,15 +181,23 @@ public:
 
   void Visit(QualType T);
 
+  void Visit(TypeLoc);
+
   void Visit(const Decl *D);
 
   void Visit(const CXXCtorInitializer *Init);
 
   void Visit(const OMPClause *C);
 
+  void Visit(const OpenACCClause *C);
+
   void Visit(const BlockDecl::Capture &C);
 
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
+
+  void Visit(const ConceptReference *);
+
+  void Visit(const concepts::Requirement *R);
 
   void Visit(const APValue &Value, QualType Ty);
 
@@ -199,6 +210,9 @@ public:
   void dumpName(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCleanupObject(const ExprWithCleanups::CleanupObject &C);
+  void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
+  void dumpNestedNameSpecifier(const NestedNameSpecifier *NNS);
+  void dumpConceptReference(const ConceptReference *R);
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});
 
@@ -243,12 +257,17 @@ public:
   void VisitLabelStmt(const LabelStmt *Node);
   void VisitGotoStmt(const GotoStmt *Node);
   void VisitCaseStmt(const CaseStmt *Node);
+  void VisitReturnStmt(const ReturnStmt *Node);
+  void VisitCoawaitExpr(const CoawaitExpr *Node);
+  void VisitCoreturnStmt(const CoreturnStmt *Node);
+  void VisitCompoundStmt(const CompoundStmt *Node);
   void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);
   void VisitCastExpr(const CastExpr *Node);
   void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
   void VisitDeclRefExpr(const DeclRefExpr *Node);
+  void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *Node);
   void VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *Node);
   void VisitPredefinedExpr(const PredefinedExpr *Node);
   void VisitCharacterLiteral(const CharacterLiteral *Node);
@@ -278,6 +297,8 @@ public:
   void VisitTypeTraitExpr(const TypeTraitExpr *Node);
   void VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *Node);
   void VisitExpressionTraitExpr(const ExpressionTraitExpr *Node);
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Node);
   void VisitExprWithCleanups(const ExprWithCleanups *Node);
   void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *Node);
@@ -296,6 +317,7 @@ public:
   void VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *Node);
   void VisitOMPIteratorExpr(const OMPIteratorExpr *Node);
   void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *Node);
+  void VisitRequiresExpr(const RequiresExpr *Node);
 
   void VisitRValueReferenceType(const ReferenceType *T);
   void VisitArrayType(const ArrayType *T);
@@ -307,15 +329,23 @@ public:
   void VisitFunctionType(const FunctionType *T);
   void VisitFunctionProtoType(const FunctionProtoType *T);
   void VisitUnresolvedUsingType(const UnresolvedUsingType *T);
+  void VisitUsingType(const UsingType *T);
   void VisitTypedefType(const TypedefType *T);
   void VisitUnaryTransformType(const UnaryTransformType *T);
   void VisitTagType(const TagType *T);
   void VisitTemplateTypeParmType(const TemplateTypeParmType *T);
+  void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T);
+  void
+  VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
   void VisitAutoType(const AutoType *T);
+  void VisitDeducedTemplateSpecializationType(
+      const DeducedTemplateSpecializationType *T);
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T);
   void VisitInjectedClassNameType(const InjectedClassNameType *T);
   void VisitObjCInterfaceType(const ObjCInterfaceType *T);
   void VisitPackExpansionType(const PackExpansionType *T);
+
+  void VisitTypeLoc(TypeLoc TL);
 
   void VisitLabelDecl(const LabelDecl *D);
   void VisitTypedefDecl(const TypedefDecl *D);
@@ -324,6 +354,7 @@ public:
   void VisitEnumConstantDecl(const EnumConstantDecl *D);
   void VisitIndirectFieldDecl(const IndirectFieldDecl *D);
   void VisitFunctionDecl(const FunctionDecl *D);
+  void VisitCXXDeductionGuideDecl(const CXXDeductionGuideDecl *D);
   void VisitFieldDecl(const FieldDecl *D);
   void VisitVarDecl(const VarDecl *D);
   void VisitBindingDecl(const BindingDecl *D);
@@ -351,6 +382,7 @@ public:
   void VisitUsingDecl(const UsingDecl *D);
   void VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D);
   void VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D);
+  void VisitUsingEnumDecl(const UsingEnumDecl *D);
   void VisitUsingShadowDecl(const UsingShadowDecl *D);
   void VisitConstructorUsingShadowDecl(const ConstructorUsingShadowDecl *D);
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D);
@@ -371,6 +403,8 @@ public:
   void VisitConceptDecl(const ConceptDecl *D);
   void
   VisitLifetimeExtendedTemporaryDecl(const LifetimeExtendedTemporaryDecl *D);
+  void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
+  void VisitOpenACCConstructStmt(const OpenACCConstructStmt *S);
 };
 
 } // namespace clang

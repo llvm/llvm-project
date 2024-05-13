@@ -1,9 +1,8 @@
 // Test for threads spawned with wqthread_start
-// RUN: LSAN_BASE="report_objects=1:use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -DDISPATCH_ASYNC -o %t-async -framework Foundation
 // RUN: %clangxx_lsan %s -DDISPATCH_SYNC -o %t-sync -framework Foundation
-// RUN: %env_lsan_opts=$LSAN_BASE not %run %t-async 2>&1 | FileCheck %s
-// RUN: %env_lsan_opts=$LSAN_BASE not %run %t-sync 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0" not %run %t-async 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0" not %run %t-sync 2>&1 | FileCheck %s
 
 #include <dispatch/dispatch.h>
 #include <pthread.h>

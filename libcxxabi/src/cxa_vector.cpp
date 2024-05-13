@@ -1,4 +1,4 @@
-//===-------------------------- cxa_vector.cpp ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -416,6 +416,6 @@ __cxa_vec_delete3(void *array_address, size_t element_size, size_t padding_size,
 }
 
 
-}  // extern "C"
+} // extern "C"
 
 }  // abi

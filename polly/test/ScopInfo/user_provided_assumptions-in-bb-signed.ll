@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Context:
 ; CHECK-NEXT: [n] -> {  : -9223372036854775808 <= n <= 100 }
@@ -14,7 +14,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @0 = private unnamed_addr constant { i16, i16, [14 x i8] } { i16 -1, i16 0, [14 x i8] c"'float [100]'\00" }
 @1 = private unnamed_addr constant { i16, i16, [7 x i8] } { i16 0, i16 13, [7 x i8] c"'long'\00" }
 
-define void @foo([100 x float]* %A, i64 %n) {
+define void @foo(ptr %A, i64 %n) {
 entry:
   br label %for.cond
 
@@ -26,8 +26,8 @@ for.cond:                                         ; preds = %for.inc, %entry
 for.body:                                         ; preds = %for.cond
   %tmp = icmp slt i64 %i.0, 100
   call void @llvm.assume(i1 %tmp)
-  %arrayidx1 = getelementptr inbounds [100 x float], [100 x float]* %A, i64 42, i64 %i.0
-  store float 4.200000e+01, float* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [100 x float], ptr %A, i64 42, i64 %i.0
+  store float 4.200000e+01, ptr %arrayidx1, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

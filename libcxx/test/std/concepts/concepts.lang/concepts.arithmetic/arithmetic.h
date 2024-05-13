@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LIBCXX_TEST_CONCEPTS_LANG_CONCEPTS_ARITHMETIC_H_
 #define LIBCXX_TEST_CONCEPTS_LANG_CONCEPTS_ARITHMETIC_H_
 
@@ -12,20 +13,20 @@
 
 // This overload should never be called. It exists solely to force subsumption.
 template <std::integral I>
-[[nodiscard]] constexpr bool CheckSubsumption(I) {
+constexpr bool CheckSubsumption(I) {
   return false;
 }
 
 // clang-format off
 template <std::integral I>
 requires std::signed_integral<I> && (!std::unsigned_integral<I>)
-[[nodiscard]] constexpr bool CheckSubsumption(I) {
+constexpr bool CheckSubsumption(I) {
   return std::is_signed_v<I>;
 }
 
 template <std::integral I>
 requires std::unsigned_integral<I> && (!std::signed_integral<I>)
-[[nodiscard]] constexpr bool CheckSubsumption(I) {
+constexpr bool CheckSubsumption(I) {
   return std::is_unsigned_v<I>;
 }
 // clang-format on

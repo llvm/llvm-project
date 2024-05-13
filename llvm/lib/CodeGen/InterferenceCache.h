@@ -37,7 +37,7 @@ class LLVM_LIBRARY_VISIBILITY InterferenceCache {
     SlotIndex First;
     SlotIndex Last;
 
-    BlockInterference() {}
+    BlockInterference() = default;
   };
 
   /// Entry - A cache entry containing interference information for all aliases
@@ -54,7 +54,7 @@ class LLVM_LIBRARY_VISIBILITY InterferenceCache {
     unsigned RefCount = 0;
 
     /// MF - The current function.
-    MachineFunction *MF;
+    MachineFunction *MF = nullptr;
 
     /// Indexes - Mapping block numbers to SlotIndex ranges.
     SlotIndexes *Indexes = nullptr;
@@ -156,7 +156,8 @@ class LLVM_LIBRARY_VISIBILITY InterferenceCache {
 
 public:
   InterferenceCache() = default;
-
+  InterferenceCache &operator=(const InterferenceCache &other) = delete;
+  InterferenceCache(const InterferenceCache &other) = delete;
   ~InterferenceCache() {
     free(PhysRegEntries);
   }

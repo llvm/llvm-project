@@ -10,17 +10,17 @@ __attribute__((objc_root_class))
 @end
 
 
-// CHECK:      @.objc_protocol_list = internal global { i8*, i32, [0 x i8*] } zeroinitializer, align 4
-// CHECK:      @.objc_method_list = internal global { i32, [0 x { i8*, i8* }] } zeroinitializer, align 4
+// CHECK:      @.objc_protocol_list = internal global { ptr, i32, [0 x ptr] } zeroinitializer, align 4
+// CHECK:      @.objc_method_list = internal global { i32, [0 x { ptr, ptr }] } zeroinitializer, align 4
 // CHECK:      @.objc_protocol_name = private unnamed_addr constant [2 x i8] c"X\00", align 1
-// CHECK:      @._OBJC_PROTOCOL_X = internal global { i8*, i8*, { i8*, i32, [0 x i8*] }*, i8*, i8*, i8*, i8*, i8*, i8* } { 
-// CHECK-SAME:     i8* inttoptr (i32 3 to i8*),
-// CHECK-SAME:     i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.objc_protocol_name, i32 0, i32 0),
-// CHECK-SAME:     { i8*, i32, [0 x i8*] }* @.objc_protocol_list
-// CHECK-SAME:     { i32, [0 x { i8*, i8* }] }* @.objc_method_list
-// CHECK-SAME:     { i32, [0 x { i8*, i8* }] }* @.objc_method_list
-// CHECK-SAME:     { i32, [0 x { i8*, i8* }] }* @.objc_method_list
-// CHECK-SAME:     { i32, [0 x { i8*, i8* }] }* @.objc_method_list
-// CHECK-SAME:     i8* null
-// CHECK-SAME:     i8* null
+// CHECK:      @._OBJC_PROTOCOL_X = internal global { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr } { 
+// CHECK-SAME:     ptr inttoptr (i32 3 to ptr),
+// CHECK-SAME:     ptr @.objc_protocol_name,
+// CHECK-SAME:     ptr @.objc_protocol_list
+// CHECK-SAME:     ptr @.objc_method_list
+// CHECK-SAME:     ptr @.objc_method_list
+// CHECK-SAME:     ptr @.objc_method_list
+// CHECK-SAME:     ptr @.objc_method_list
+// CHECK-SAME:     ptr null
+// CHECK-SAME:     ptr null
 // CHECK-SAME: }, align 4

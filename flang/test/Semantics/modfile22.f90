@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 ! Test character length conversions in constructors
 
 module m

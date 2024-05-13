@@ -1,4 +1,4 @@
-; RUN: llc -O0 -filetype=asm %s -o - | FileCheck %s
+; RUN: llc -O0 -filetype=asm %s -o - -experimental-debug-variable-locations=true | FileCheck %s
 ; Test large integral function arguments passed in multiple registers.
 ; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 64 16] ${{([a-d]x)|(si)|(di)|(bp)|(r[0-9]+w)}}
 ; CHECK: DEBUG_VALUE: foo:bar <- [DW_OP_LLVM_fragment 48 16] ${{([a-d]x)|(si)|(di)|(bp)|(r[0-9]+w)}}
@@ -15,9 +15,8 @@ define void @foo(%rec789 %bar) !dbg !6 {
   %bar.2 = alloca %rec789, align 1
   call void @llvm.dbg.value(metadata %rec789 %bar, metadata !17, metadata !DIExpression()), !dbg !18
   %1 = extractvalue %rec789 %bar, 0
-  %.repack = getelementptr inbounds %rec789, %rec789* %bar.2, i16 0, i32 0, i16 0
   %.elt = extractvalue [5 x i16] %1, 0
-  store i16 %.elt, i16* %.repack, align 1
+  store i16 %.elt, ptr %bar.2, align 1
   ret void, !dbg !19
 }
 

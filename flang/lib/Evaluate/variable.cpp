@@ -69,14 +69,6 @@ Triplet &Triplet::set_stride(Expr<SubscriptInteger> &&expr) {
   return *this;
 }
 
-bool Triplet::IsStrideOne() const {
-  if (auto stride{ToInt64(stride_.value())}) {
-    return stride == 1;
-  } else {
-    return false;
-  }
-}
-
 CoarrayRef::CoarrayRef(SymbolVector &&base, std::vector<Subscript> &&ss,
     std::vector<Expr<SubscriptInteger>> &&css)
     : base_{std::move(base)}, subscript_(std::move(ss)),
@@ -145,7 +137,7 @@ std::optional<Expr<SubscriptInteger>> Substring::upper() const {
   if (upper_) {
     return upper_.value().value();
   } else {
-    return std::visit(
+    return common::visit(
         common::visitors{
             [](const DataRef &dataRef) { return dataRef.LEN(); },
             [](const StaticDataObject::Pointer &object)
@@ -163,17 +155,6 @@ Substring &Substring::set_upper(Expr<SubscriptInteger> &&expr) {
 }
 
 std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
-  if (!lower_) {
-    lower_ = AsExpr(Constant<SubscriptInteger>{1});
-  }
-  lower_.value() = evaluate::Fold(context, std::move(lower_.value().value()));
-  std::optional<ConstantSubscript> lbi{ToInt64(lower_.value().value())};
-  if (lbi && *lbi < 1) {
-    context.messages().Say(
-        "Lower bound (%jd) on substring is less than one"_en_US, *lbi);
-    *lbi = 1;
-    lower_ = AsExpr(Constant<SubscriptInteger>{1});
-  }
   if (!upper_) {
     upper_ = upper();
     if (!upper_) {
@@ -181,63 +162,78 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
     }
   }
   upper_.value() = evaluate::Fold(context, std::move(upper_.value().value()));
-  if (std::optional<ConstantSubscript> ubi{ToInt64(upper_.value().value())}) {
-    auto *literal{std::get_if<StaticDataObject::Pointer>(&parent_)};
-    std::optional<ConstantSubscript> length;
-    if (literal) {
-      length = (*literal)->data().size();
-    } else if (const Symbol * symbol{GetLastSymbol()}) {
-      if (const semantics::DeclTypeSpec * type{symbol->GetType()}) {
-        if (type->category() == semantics::DeclTypeSpec::Character) {
-          length = ToInt64(type->characterTypeSpec().length().GetExplicit());
+  std::optional<ConstantSubscript> ubi{ToInt64(upper_.value().value())};
+  if (!ubi) {
+    return std::nullopt;
+  }
+  if (!lower_) {
+    lower_ = AsExpr(Constant<SubscriptInteger>{1});
+  }
+  lower_.value() = evaluate::Fold(context, std::move(lower_.value().value()));
+  std::optional<ConstantSubscript> lbi{ToInt64(lower_.value().value())};
+  if (!lbi) {
+    return std::nullopt;
+  }
+  if (*lbi > *ubi) { // empty result; canonicalize
+    *lbi = 1;
+    *ubi = 0;
+    lower_ = AsExpr(Constant<SubscriptInteger>{*lbi});
+    upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
+  }
+  std::optional<ConstantSubscript> length;
+  std::optional<Expr<SomeCharacter>> strings; // a Constant<Character>
+  if (const auto *literal{std::get_if<StaticDataObject::Pointer>(&parent_)}) {
+    length = (*literal)->data().size();
+    if (auto str{(*literal)->AsString()}) {
+      strings =
+          Expr<SomeCharacter>(Expr<Ascii>(Constant<Ascii>{std::move(*str)}));
+    }
+  } else if (const auto *dataRef{std::get_if<DataRef>(&parent_)}) {
+    if (auto expr{AsGenericExpr(DataRef{*dataRef})}) {
+      auto folded{evaluate::Fold(context, std::move(*expr))};
+      if (IsActuallyConstant(folded)) {
+        if (const auto *value{UnwrapExpr<Expr<SomeCharacter>>(folded)}) {
+          strings = *value;
         }
       }
     }
-    if (*ubi < 1 || (lbi && *ubi < *lbi)) {
-      // Zero-length string: canonicalize
-      *lbi = 1, *ubi = 0;
-      lower_ = AsExpr(Constant<SubscriptInteger>{*lbi});
-      upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
-    } else if (length && *ubi > *length) {
-      context.messages().Say("Upper bound (%jd) on substring is greater "
-                             "than character length (%jd)"_en_US,
-          *ubi, *length);
-      *ubi = *length;
-    }
-    if (lbi && literal) {
-      auto newStaticData{StaticDataObject::Create()};
-      auto items{0}; // If the lower bound is greater, the length is 0
-      if (*ubi >= *lbi) {
-        items = *ubi - *lbi + 1;
+  }
+  std::optional<Expr<SomeCharacter>> result;
+  if (strings) {
+    result = common::visit(
+        [&](const auto &expr) -> std::optional<Expr<SomeCharacter>> {
+          using Type = typename std::decay_t<decltype(expr)>::Result;
+          if (const auto *cc{std::get_if<Constant<Type>>(&expr.u)}) {
+            if (auto substr{cc->Substring(*lbi, *ubi)}) {
+              return Expr<SomeCharacter>{Expr<Type>{*substr}};
+            }
+          }
+          return std::nullopt;
+        },
+        strings->u);
+  }
+  if (!result) { // error cases
+    if (*lbi < 1) {
+      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
+        context.messages().Say(
+            "Lower bound (%jd) on substring is less than one"_warn_en_US,
+            static_cast<std::intmax_t>(*lbi));
       }
-      auto width{(*literal)->itemBytes()};
-      auto bytes{items * width};
-      auto startByte{(*lbi - 1) * width};
-      const auto *from{&(*literal)->data()[0] + startByte};
-      for (auto j{0}; j < bytes; ++j) {
-        newStaticData->data().push_back(from[j]);
-      }
-      parent_ = newStaticData;
+      *lbi = 1;
       lower_ = AsExpr(Constant<SubscriptInteger>{1});
-      ConstantSubscript length = newStaticData->data().size();
-      upper_ = AsExpr(Constant<SubscriptInteger>{length});
-      switch (width) {
-      case 1:
-        return {
-            AsCategoryExpr(AsExpr(Constant<Type<TypeCategory::Character, 1>>{
-                *newStaticData->AsString()}))};
-      case 2:
-        return {AsCategoryExpr(Constant<Type<TypeCategory::Character, 2>>{
-            *newStaticData->AsU16String()})};
-      case 4:
-        return {AsCategoryExpr(Constant<Type<TypeCategory::Character, 4>>{
-            *newStaticData->AsU32String()})};
-      default:
-        CRASH_NO_CASE;
+    }
+    if (length && *ubi > *length) {
+      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
+        context.messages().Say(
+            "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
+            static_cast<std::intmax_t>(*ubi),
+            static_cast<std::intmax_t>(*length));
       }
+      *ubi = *length;
+      upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
     }
   }
-  return std::nullopt;
+  return result;
 }
 
 DescriptorInquiry::DescriptorInquiry(
@@ -245,7 +241,7 @@ DescriptorInquiry::DescriptorInquiry(
     : base_{base}, field_{field}, dimension_{dim} {
   const Symbol &last{base_.GetLastSymbol()};
   CHECK(IsDescriptor(last));
-  CHECK((field == Field::Len && dim == 0) ||
+  CHECK(((field == Field::Len || field == Field::Rank) && dim == 0) ||
       (field != Field::Len && dim >= 0 && dim < last.Rank()));
 }
 
@@ -264,19 +260,40 @@ static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
     if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(assoc->expr())}) {
       return chExpr->LEN();
     }
-  } else if (auto dyType{DynamicType::From(ultimate)}) {
-    if (auto len{dyType->GetCharLength()}) {
-      return len;
-    } else if (IsDescriptor(ultimate) && !ultimate.owner().IsDerivedType()) {
-      return Expr<SubscriptInteger>{DescriptorInquiry{
-          NamedEntity{ultimate}, DescriptorInquiry::Field::Len}};
+  }
+  if (auto dyType{DynamicType::From(ultimate)}) {
+    auto len{dyType->GetCharLength()};
+    if (!len && ultimate.attrs().test(semantics::Attr::PARAMETER)) {
+      // Its initializer determines the length of an implied-length named
+      // constant.
+      if (const auto *object{
+              ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
+        if (object->init()) {
+          if (auto dyType2{DynamicType::From(*object->init())}) {
+            len = dyType2->GetCharLength();
+          }
+        }
+      }
     }
+    if (len) {
+      if (auto constLen{ToInt64(*len)}) {
+        return Expr<SubscriptInteger>{std::max<std::int64_t>(*constLen, 0)};
+      } else if (ultimate.owner().IsDerivedType() ||
+          IsScopeInvariantExpr(*len)) {
+        return AsExpr(Extremum<SubscriptInteger>{
+            Ordering::Greater, Expr<SubscriptInteger>{0}, std::move(*len)});
+      }
+    }
+  }
+  if (IsDescriptor(ultimate) && !ultimate.owner().IsDerivedType()) {
+    return Expr<SubscriptInteger>{
+        DescriptorInquiry{NamedEntity{symbol}, DescriptorInquiry::Field::Len}};
   }
   return std::nullopt;
 }
 
 std::optional<Expr<SubscriptInteger>> BaseObject::LEN() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const Symbol &symbol) { return SymbolLEN(symbol); },
           [](const StaticDataObject::Pointer &object)
@@ -304,10 +321,10 @@ std::optional<Expr<SubscriptInteger>> CoarrayRef::LEN() const {
 }
 
 std::optional<Expr<SubscriptInteger>> DataRef::LEN() const {
-  return std::visit(common::visitors{
-                        [](SymbolRef symbol) { return SymbolLEN(symbol); },
-                        [](const auto &x) { return x.LEN(); },
-                    },
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return SymbolLEN(symbol); },
+                           [](const auto &x) { return x.LEN(); },
+                       },
       u);
 }
 
@@ -324,10 +341,10 @@ std::optional<Expr<SubscriptInteger>> Substring::LEN() const {
 template <typename T>
 std::optional<Expr<SubscriptInteger>> Designator<T>::LEN() const {
   if constexpr (T::category == TypeCategory::Character) {
-    return std::visit(common::visitors{
-                          [](SymbolRef symbol) { return SymbolLEN(symbol); },
-                          [](const auto &x) { return x.LEN(); },
-                      },
+    return common::visit(common::visitors{
+                             [](SymbolRef symbol) { return SymbolLEN(symbol); },
+                             [](const auto &x) { return x.LEN(); },
+                         },
         u);
   } else {
     common::die("Designator<non-char>::LEN() called");
@@ -337,7 +354,7 @@ std::optional<Expr<SubscriptInteger>> Designator<T>::LEN() const {
 
 std::optional<Expr<SubscriptInteger>> ProcedureDesignator::LEN() const {
   using T = std::optional<Expr<SubscriptInteger>>;
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](SymbolRef symbol) -> T { return SymbolLEN(symbol); },
           [](const common::CopyableIndirection<Component> &c) -> T {
@@ -362,10 +379,10 @@ std::optional<Expr<SubscriptInteger>> ProcedureDesignator::LEN() const {
 
 // Rank()
 int BaseObject::Rank() const {
-  return std::visit(common::visitors{
-                        [](SymbolRef symbol) { return symbol->Rank(); },
-                        [](const StaticDataObject::Pointer &) { return 0; },
-                    },
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return symbol->Rank(); },
+                           [](const StaticDataObject::Pointer &) { return 0; },
+                       },
       u);
 }
 
@@ -377,20 +394,20 @@ int Component::Rank() const {
 }
 
 int NamedEntity::Rank() const {
-  return std::visit(common::visitors{
-                        [](const SymbolRef s) { return s->Rank(); },
-                        [](const Component &c) { return c.Rank(); },
-                    },
+  return common::visit(common::visitors{
+                           [](const SymbolRef s) { return s->Rank(); },
+                           [](const Component &c) { return c.Rank(); },
+                       },
       u_);
 }
 
 int Subscript::Rank() const {
-  return std::visit(common::visitors{
-                        [](const IndirectSubscriptIntegerExpr &x) {
-                          return x.value().Rank();
-                        },
-                        [](const Triplet &) { return 1; },
-                    },
+  return common::visit(common::visitors{
+                           [](const IndirectSubscriptIntegerExpr &x) {
+                             return x.value().Rank();
+                           },
+                           [](const Triplet &) { return 1; },
+                       },
       u);
 }
 
@@ -421,28 +438,29 @@ int CoarrayRef::Rank() const {
 }
 
 int DataRef::Rank() const {
-  return std::visit(common::visitors{
-                        [](SymbolRef symbol) { return symbol->Rank(); },
-                        [](const auto &x) { return x.Rank(); },
-                    },
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return symbol->Rank(); },
+                           [](const auto &x) { return x.Rank(); },
+                       },
       u);
 }
 
 int Substring::Rank() const {
-  return std::visit(common::visitors{
-                        [](const DataRef &dataRef) { return dataRef.Rank(); },
-                        [](const StaticDataObject::Pointer &) { return 0; },
-                    },
+  return common::visit(
+      common::visitors{
+          [](const DataRef &dataRef) { return dataRef.Rank(); },
+          [](const StaticDataObject::Pointer &) { return 0; },
+      },
       parent_);
 }
 
 int ComplexPart::Rank() const { return complex_.Rank(); }
 
 template <typename T> int Designator<T>::Rank() const {
-  return std::visit(common::visitors{
-                        [](SymbolRef symbol) { return symbol->Rank(); },
-                        [](const auto &x) { return x.Rank(); },
-                    },
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return symbol->Rank(); },
+                           [](const auto &x) { return x.Rank(); },
+                       },
       u);
 }
 
@@ -452,38 +470,56 @@ const Symbol &Component::GetFirstSymbol() const {
 }
 
 const Symbol &NamedEntity::GetFirstSymbol() const {
-  return std::visit(common::visitors{
-                        [](SymbolRef s) -> const Symbol & { return s; },
-                        [](const Component &c) -> const Symbol & {
-                          return c.GetFirstSymbol();
-                        },
-                    },
+  return common::visit(common::visitors{
+                           [](SymbolRef s) -> const Symbol & { return s; },
+                           [](const Component &c) -> const Symbol & {
+                             return c.GetFirstSymbol();
+                           },
+                       },
       u_);
 }
 
 const Symbol &NamedEntity::GetLastSymbol() const {
-  return std::visit(common::visitors{
-                        [](SymbolRef s) -> const Symbol & { return s; },
-                        [](const Component &c) -> const Symbol & {
-                          return c.GetLastSymbol();
-                        },
-                    },
+  return common::visit(common::visitors{
+                           [](SymbolRef s) -> const Symbol & { return s; },
+                           [](const Component &c) -> const Symbol & {
+                             return c.GetLastSymbol();
+                           },
+                       },
+      u_);
+}
+
+const SymbolRef *NamedEntity::UnwrapSymbolRef() const {
+  return common::visit(
+      common::visitors{
+          [](const SymbolRef &s) { return &s; },
+          [](const Component &) -> const SymbolRef * { return nullptr; },
+      },
+      u_);
+}
+
+SymbolRef *NamedEntity::UnwrapSymbolRef() {
+  return common::visit(common::visitors{
+                           [](SymbolRef &s) { return &s; },
+                           [](Component &) -> SymbolRef * { return nullptr; },
+                       },
       u_);
 }
 
 const Component *NamedEntity::UnwrapComponent() const {
-  return std::visit(common::visitors{
-                        [](SymbolRef) -> const Component * { return nullptr; },
-                        [](const Component &c) { return &c; },
-                    },
+  return common::visit(
+      common::visitors{
+          [](SymbolRef) -> const Component * { return nullptr; },
+          [](const Component &c) { return &c; },
+      },
       u_);
 }
 
 Component *NamedEntity::UnwrapComponent() {
-  return std::visit(common::visitors{
-                        [](SymbolRef &) -> Component * { return nullptr; },
-                        [](Component &c) { return &c; },
-                    },
+  return common::visit(common::visitors{
+                           [](SymbolRef &) -> Component * { return nullptr; },
+                           [](Component &c) { return &c; },
+                       },
       u_);
 }
 
@@ -494,35 +530,35 @@ const Symbol &ArrayRef::GetFirstSymbol() const {
 const Symbol &ArrayRef::GetLastSymbol() const { return base_.GetLastSymbol(); }
 
 const Symbol &DataRef::GetFirstSymbol() const {
-  return *std::visit(common::visitors{
-                         [](SymbolRef symbol) { return &*symbol; },
-                         [](const auto &x) { return &x.GetFirstSymbol(); },
-                     },
+  return *common::visit(common::visitors{
+                            [](SymbolRef symbol) { return &*symbol; },
+                            [](const auto &x) { return &x.GetFirstSymbol(); },
+                        },
       u);
 }
 
 const Symbol &DataRef::GetLastSymbol() const {
-  return *std::visit(common::visitors{
-                         [](SymbolRef symbol) { return &*symbol; },
-                         [](const auto &x) { return &x.GetLastSymbol(); },
-                     },
+  return *common::visit(common::visitors{
+                            [](SymbolRef symbol) { return &*symbol; },
+                            [](const auto &x) { return &x.GetLastSymbol(); },
+                        },
       u);
 }
 
 BaseObject Substring::GetBaseObject() const {
-  return std::visit(common::visitors{
-                        [](const DataRef &dataRef) {
-                          return BaseObject{dataRef.GetFirstSymbol()};
-                        },
-                        [](StaticDataObject::Pointer pointer) {
-                          return BaseObject{std::move(pointer)};
-                        },
-                    },
+  return common::visit(common::visitors{
+                           [](const DataRef &dataRef) {
+                             return BaseObject{dataRef.GetFirstSymbol()};
+                           },
+                           [](StaticDataObject::Pointer pointer) {
+                             return BaseObject{std::move(pointer)};
+                           },
+                       },
       parent_);
 }
 
 const Symbol *Substring::GetLastSymbol() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const DataRef &dataRef) { return &dataRef.GetLastSymbol(); },
           [](const auto &) -> const Symbol * { return nullptr; },
@@ -531,37 +567,21 @@ const Symbol *Substring::GetLastSymbol() const {
 }
 
 template <typename T> BaseObject Designator<T>::GetBaseObject() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](SymbolRef symbol) { return BaseObject{symbol}; },
           [](const Substring &sstring) { return sstring.GetBaseObject(); },
-          [](const auto &x) {
-#if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
-            if constexpr (std::is_same_v<std::decay_t<decltype(x)>,
-                              Substring>) {
-              return x.GetBaseObject();
-            } else
-#endif
-              return BaseObject{x.GetFirstSymbol()};
-          },
+          [](const auto &x) { return BaseObject{x.GetFirstSymbol()}; },
       },
       u);
 }
 
 template <typename T> const Symbol *Designator<T>::GetLastSymbol() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](SymbolRef symbol) { return &*symbol; },
           [](const Substring &sstring) { return sstring.GetLastSymbol(); },
-          [](const auto &x) {
-#if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
-            if constexpr (std::is_same_v<std::decay_t<decltype(x)>,
-                              Substring>) {
-              return x.GetLastSymbol();
-            } else
-#endif
-              return &x.GetLastSymbol();
-          },
+          [](const auto &x) { return &x.GetLastSymbol(); },
       },
       u);
 }
@@ -570,14 +590,19 @@ template <typename T>
 std::optional<DynamicType> Designator<T>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
     return Result::GetType();
-  } else if (const Symbol * symbol{GetLastSymbol()}) {
-    return DynamicType::From(*symbol);
-  } else if constexpr (Result::category == TypeCategory::Character) {
-    if (const Substring * substring{std::get_if<Substring>(&u)}) {
-      const auto *parent{substring->GetParentIf<StaticDataObject::Pointer>()};
-      CHECK(parent);
-      return DynamicType{TypeCategory::Character, (*parent)->itemBytes()};
+  }
+  if constexpr (Result::category == TypeCategory::Character) {
+    if (std::holds_alternative<Substring>(u)) {
+      if (auto len{LEN()}) {
+        if (auto n{ToInt64(*len)}) {
+          return DynamicType{T::kind, *n};
+        }
+      }
+      return DynamicType{TypeCategory::Character, T::kind};
     }
+  }
+  if (const Symbol * symbol{GetLastSymbol()}) {
+    return DynamicType::From(*symbol);
   }
   return std::nullopt;
 }
@@ -602,16 +627,32 @@ NamedEntity CoarrayRef::GetBase() const { return AsNamedEntity(base_); }
 
 // For the purposes of comparing type parameter expressions while
 // testing the compatibility of procedure characteristics, two
-// object dummy arguments with the same name are considered equal.
+// dummy arguments with the same position are considered equal.
+static std::optional<int> GetDummyArgPosition(const Symbol &original) {
+  const Symbol &symbol(original.GetUltimate());
+  if (IsDummy(symbol)) {
+    if (const Symbol * proc{symbol.owner().symbol()}) {
+      if (const auto *subp{proc->detailsIf<semantics::SubprogramDetails>()}) {
+        int j{0};
+        for (const Symbol *arg : subp->dummyArgs()) {
+          if (arg == &symbol) {
+            return j;
+          }
+          ++j;
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 static bool AreSameSymbol(const Symbol &x, const Symbol &y) {
   if (&x == &y) {
     return true;
   }
-  if (x.name() == y.name()) {
-    if (const auto *xObject{x.detailsIf<semantics::ObjectEntityDetails>()}) {
-      if (const auto *yObject{y.detailsIf<semantics::ObjectEntityDetails>()}) {
-        return xObject->isDummy() && yObject->isDummy();
-      }
+  if (auto xPos{GetDummyArgPosition(x)}) {
+    if (auto yPos{GetDummyArgPosition(y)}) {
+      return *xPos == *yPos;
     }
   }
   return false;
@@ -680,6 +721,9 @@ bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
       dimension_ == that.dimension_;
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_VARIABLE_TEMPLATES
 } // namespace Fortran::evaluate
 

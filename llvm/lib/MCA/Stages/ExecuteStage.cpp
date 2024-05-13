@@ -165,8 +165,8 @@ static void verifyInstructionEliminated(const InstRef &IR) {
 
   // Ensure that instructions eliminated at register renaming stage are in a
   // consistent state.
-  const InstrDesc &Desc = Inst.getDesc();
-  assert(!Desc.MayLoad && !Desc.MayStore && "Cannot eliminate a memory op!");
+  assert(!Inst.getMayLoad() && !Inst.getMayStore() &&
+         "Cannot eliminate a memory op!");
 }
 #endif
 
@@ -188,7 +188,7 @@ Error ExecuteStage::execute(InstRef &IR) {
 
 #ifndef NDEBUG
   // Ensure that the HWS has not stored this instruction in its queues.
-  HWS.sanityCheck(IR);
+  HWS.instructionCheck(IR);
 #endif
 
   if (IR.getInstruction()->isEliminated())
@@ -196,7 +196,7 @@ Error ExecuteStage::execute(InstRef &IR) {
 
   // Reserve a slot in each buffered resource. Also, mark units with
   // BufferSize=0 as reserved. Resources with a buffer size of zero will only
-  // be released after MCIS is issued, and all the ResourceCycles for those
+  // be released after MCIS is issued, and all the ReleaseAtCycles for those
   // units have been consumed.
   bool IsReadyInstruction = HWS.dispatch(IR);
   const Instruction &Inst = *IR.getInstruction();
@@ -274,7 +274,7 @@ void ExecuteStage::notifyReservedOrReleasedBuffers(const InstRef &IR,
   if (!UsedBuffers)
     return;
 
-  SmallVector<unsigned, 4> BufferIDs(countPopulation(UsedBuffers), 0);
+  SmallVector<unsigned, 4> BufferIDs(llvm::popcount(UsedBuffers), 0);
   for (unsigned I = 0, E = BufferIDs.size(); I < E; ++I) {
     uint64_t CurrentBufferMask = UsedBuffers & (-UsedBuffers);
     BufferIDs[I] = HWS.getResourceID(CurrentBufferMask);

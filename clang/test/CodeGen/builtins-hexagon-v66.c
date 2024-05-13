@@ -44,7 +44,7 @@ HEXAGON_Vect512 test5(void *in, void *out) {
   v2 = *p++;
   q1 = *p++;
 
-  return __builtin_HEXAGON_V6_vaddcarrysat(v1, v2, q1);
+  return __builtin_HEXAGON_V6_vaddcarrysat(v1, v2, __builtin_HEXAGON_V6_vandvrt(q1, -1));
 }
 
 // CHECK-LABEL: @test6
@@ -89,3 +89,35 @@ HEXAGON_Vect1024 test8(void *in1, void *in2, void *out) {
 
   return __builtin_HEXAGON_V6_vasr_into(vr, v1, v2);
 }
+
+// CHECK-LABEL: @test9
+// CHECK: call { <16 x i32>, <64 x i1> } @llvm.hexagon.V6.vaddcarryo(<16 x i32> %{{[0-9]+}}, <16 x i32> %{{[0-9]+}})
+HEXAGON_Vect512 test9(void *in, void *out) {
+  HEXAGON_Vect512 v1, v2;
+  HEXAGON_Vect512 *p;
+  HEXAGON_VecPred64 q1;
+
+  p = (HEXAGON_Vect512 *)in;
+  v1 = *p++;
+  v2 = *p++;
+  q1 = *p++;
+
+  return __builtin_HEXAGON_V6_vaddcarryo(v1, v2, &q1);
+}
+
+// CHECK-LABEL: @test10
+// CHECK: call { <16 x i32>, <64 x i1> } @llvm.hexagon.V6.vsubcarryo(<16 x i32> %{{[0-9]+}}, <16 x i32> %{{[0-9]+}})
+HEXAGON_Vect512 test10(void *in, void *out) {
+  HEXAGON_Vect512 v1, v2;
+  HEXAGON_Vect512 *p;
+  HEXAGON_VecPred64 q1;
+
+  p = (HEXAGON_Vect512 *)in;
+  v1 = *p++;
+  v2 = *p++;
+  q1 = *p++;
+
+  return __builtin_HEXAGON_V6_vsubcarryo(v1, v2, &q1);
+}
+
+

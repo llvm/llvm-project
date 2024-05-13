@@ -11,9 +11,11 @@ void __attribute__((regcall)) funcB() {} // expected-error {{'regcall' calling c
 void __attribute__((ms_abi)) funcH() {} // expected-error {{'ms_abi' calling convention is not supported for this target}}
 void __attribute__((intel_ocl_bicc)) funcJ() {} // expected-error {{'intel_ocl_bicc' calling convention is not supported for this target}}
 void __attribute__((swiftcall)) funcK() {} // expected-error {{'swiftcall' calling convention is not supported for this target}}
+void __attribute__((swiftasynccall)) funcKK() {} // expected-error {{'swiftasynccall' calling convention is not supported for this target}}
 void __attribute__((pascal)) funcG() {} // expected-error {{'pascal' calling convention is not supported for this target}}
 void __attribute__((preserve_most)) funcL() {} // expected-error {{'preserve_most' calling convention is not supported for this target}}
 void __attribute__((preserve_all)) funcM() {} // expected-error {{'preserve_all' calling convention is not supported for this target}}
+void __attribute__((preserve_none)) funcN() {} // expected-error {{'preserve_none' calling convention is not supported for this target}}
 void __attribute__((stdcall)) funcD() {} // expected-error {{'stdcall' calling convention is not supported for this target}}
 void __attribute__((fastcall)) funcE() {} // expected-error {{'fastcall' calling convention is not supported for this target}}
 void __attribute__((thiscall)) funcF() {} // expected-error {{'thiscall' calling convention is not supported for this target}}
@@ -26,8 +28,10 @@ void __attribute__((regcall)) funcB() {}
 void __attribute__((ms_abi)) funcH() {}
 void __attribute__((intel_ocl_bicc)) funcJ() {}
 void __attribute__((swiftcall)) funcK() {}
+void __attribute__((swiftasynccall)) funcKK() {}
 void __attribute__((preserve_most)) funcL() {}
 void __attribute__((preserve_all)) funcM() {}
+void __attribute__((preserve_none)) funcN() {}
 
 // Same function with different calling conventions. Error with a note pointing to the last decl.
 void __attribute__((preserve_all)) funcR(); // expected-note {{previous declaration is here}}

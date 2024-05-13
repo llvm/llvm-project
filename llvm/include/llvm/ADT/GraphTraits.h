@@ -5,13 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the little GraphTraits<X> template class that should be
-// specialized by classes that want to be iteratable by generic graph iterators.
-//
-// This file also defines the marker class Inverse that is used to iterate over
-// graphs in a graph defined, inverse ordering...
-//
+///
+/// \file
+/// This file defines the little GraphTraits<X> template class that should be
+/// specialized by classes that want to be iteratable by generic graph
+/// iterators.
+///
+/// This file also defines the marker class Inverse that is used to iterate over
+/// graphs in a graph defined, inverse ordering...
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_GRAPHTRAITS_H

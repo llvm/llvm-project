@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze \
-; RUN:     -polly-process-unprofitable=false < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 
 ; CHECK: Valid Region for Scop: next => bb3
 ;
@@ -17,7 +16,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-define void @foo(float* %A, i64 %p) {
+define void @foo(ptr %A, i64 %p) {
 bb:
   br label %bb3
 
@@ -62,10 +61,10 @@ bb11:                                             ; preds = %bb10
 bb12:                                             ; preds = %bb10
   %tmp13 = sitofp i64 %j.0 to float
   %tmp14 = add nuw nsw i64 %i.0, %j.0
-  %tmp15 = getelementptr inbounds float, float* %A, i64 %tmp14
-  %tmp16 = load float, float* %tmp15, align 4
+  %tmp15 = getelementptr inbounds float, ptr %A, i64 %tmp14
+  %tmp16 = load float, ptr %tmp15, align 4
   %tmp17 = fadd float %tmp16, %tmp13
-  store float %tmp17, float* %tmp15, align 4
+  store float %tmp17, ptr %tmp15, align 4
   br label %bb18
 
 bb18:                                             ; preds = %bb12

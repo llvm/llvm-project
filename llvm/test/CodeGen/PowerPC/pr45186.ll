@@ -6,47 +6,47 @@
 @d = local_unnamed_addr global %struct.anon zeroinitializer, align 8
 
 ; Function Attrs: norecurse nounwind readonly
-define i64 @e(i8* nocapture readonly %f) local_unnamed_addr #0 {
+define i64 @e(ptr nocapture readonly %f) local_unnamed_addr #0 {
 ; CHECK-LABEL: e:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* %f, align 1
+  %0 = load i8, ptr %f, align 1
   %conv = zext i8 %0 to i64
   %shl = shl nuw i64 %conv, 56
-  %arrayidx1 = getelementptr inbounds i8, i8* %f, i64 1
-  %1 = load i8, i8* %arrayidx1, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %f, i64 1
+  %1 = load i8, ptr %arrayidx1, align 1
   %conv2 = zext i8 %1 to i64
   %shl3 = shl nuw nsw i64 %conv2, 48
   %or = or i64 %shl3, %shl
-  %arrayidx4 = getelementptr inbounds i8, i8* %f, i64 2
-  %2 = load i8, i8* %arrayidx4, align 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %f, i64 2
+  %2 = load i8, ptr %arrayidx4, align 1
   %conv5 = zext i8 %2 to i64
   %shl6 = shl nuw nsw i64 %conv5, 40
   %or7 = or i64 %or, %shl6
-  %arrayidx8 = getelementptr inbounds i8, i8* %f, i64 3
-  %3 = load i8, i8* %arrayidx8, align 1
+  %arrayidx8 = getelementptr inbounds i8, ptr %f, i64 3
+  %3 = load i8, ptr %arrayidx8, align 1
   %conv9 = zext i8 %3 to i64
   %shl10 = shl nuw nsw i64 %conv9, 32
   %or11 = or i64 %or7, %shl10
-  %arrayidx12 = getelementptr inbounds i8, i8* %f, i64 4
-  %4 = load i8, i8* %arrayidx12, align 1
+  %arrayidx12 = getelementptr inbounds i8, ptr %f, i64 4
+  %4 = load i8, ptr %arrayidx12, align 1
   %conv13 = zext i8 %4 to i64
   %shl14 = shl nuw nsw i64 %conv13, 24
   %or15 = or i64 %or11, %shl14
-  %arrayidx16 = getelementptr inbounds i8, i8* %f, i64 5
-  %5 = load i8, i8* %arrayidx16, align 1
+  %arrayidx16 = getelementptr inbounds i8, ptr %f, i64 5
+  %5 = load i8, ptr %arrayidx16, align 1
   %conv17 = zext i8 %5 to i64
   %shl18 = shl nuw nsw i64 %conv17, 16
   %or20 = or i64 %or15, %shl18
-  %arrayidx21 = getelementptr inbounds i8, i8* %f, i64 6
-  %6 = load i8, i8* %arrayidx21, align 1
+  %arrayidx21 = getelementptr inbounds i8, ptr %f, i64 6
+  %6 = load i8, ptr %arrayidx21, align 1
   %conv22 = zext i8 %6 to i64
   %shl23 = shl nuw nsw i64 %conv22, 8
   %or25 = or i64 %or20, %shl23
-  %arrayidx26 = getelementptr inbounds i8, i8* %f, i64 7
-  %7 = load i8, i8* %arrayidx26, align 1
+  %arrayidx26 = getelementptr inbounds i8, ptr %f, i64 7
+  %7 = load i8, ptr %arrayidx26, align 1
   %conv27 = zext i8 %7 to i64
   %or28 = or i64 %or25, %conv27
   ret i64 %or28
@@ -64,68 +64,68 @@ define void @g() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stxvd2x vs0, 0, r4
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds (i8, i8* bitcast (void ()* @g to i8*), i64 8), align 1
+  %0 = load i8, ptr getelementptr inbounds (i8, ptr @g, i64 8), align 1
   %conv.i = zext i8 %0 to i64
   %shl.i = shl nuw i64 %conv.i, 56
-  %1 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 9), align 1
+  %1 = load i8, ptr getelementptr (i8, ptr @g, i64 9), align 1
   %conv2.i = zext i8 %1 to i64
   %shl3.i = shl nuw nsw i64 %conv2.i, 48
   %or.i = or i64 %shl3.i, %shl.i
-  %2 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 10), align 1
+  %2 = load i8, ptr getelementptr (i8, ptr @g, i64 10), align 1
   %conv5.i = zext i8 %2 to i64
   %shl6.i = shl nuw nsw i64 %conv5.i, 40
   %or7.i = or i64 %or.i, %shl6.i
-  %3 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 11), align 1
+  %3 = load i8, ptr getelementptr (i8, ptr @g, i64 11), align 1
   %conv9.i = zext i8 %3 to i64
   %shl10.i = shl nuw nsw i64 %conv9.i, 32
   %or11.i = or i64 %or7.i, %shl10.i
-  %4 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 12), align 1
+  %4 = load i8, ptr getelementptr (i8, ptr @g, i64 12), align 1
   %conv13.i = zext i8 %4 to i64
   %shl14.i = shl nuw nsw i64 %conv13.i, 24
   %or15.i = or i64 %or11.i, %shl14.i
-  %5 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 13), align 1
+  %5 = load i8, ptr getelementptr (i8, ptr @g, i64 13), align 1
   %conv17.i = zext i8 %5 to i64
   %shl18.i = shl nuw nsw i64 %conv17.i, 16
   %or20.i = or i64 %or15.i, %shl18.i
-  %6 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 14), align 1
+  %6 = load i8, ptr getelementptr (i8, ptr @g, i64 14), align 1
   %conv22.i = zext i8 %6 to i64
   %shl23.i = shl nuw nsw i64 %conv22.i, 8
   %or25.i = or i64 %or20.i, %shl23.i
-  %7 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 15), align 1
+  %7 = load i8, ptr getelementptr (i8, ptr @g, i64 15), align 1
   %conv27.i = zext i8 %7 to i64
   %or28.i = or i64 %or25.i, %conv27.i
-  store i64 %or28.i, i64* getelementptr inbounds (%struct.anon, %struct.anon* @d, i64 0, i32 1), align 8
-  %8 = load i8, i8* bitcast (void ()* @g to i8*), align 1
+  store i64 %or28.i, ptr getelementptr inbounds (%struct.anon, ptr @d, i64 0, i32 1), align 8
+  %8 = load i8, ptr @g, align 1
   %conv.i2 = zext i8 %8 to i64
   %shl.i3 = shl nuw i64 %conv.i2, 56
-  %9 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 1), align 1
+  %9 = load i8, ptr getelementptr (i8, ptr @g, i64 1), align 1
   %conv2.i4 = zext i8 %9 to i64
   %shl3.i5 = shl nuw nsw i64 %conv2.i4, 48
   %or.i6 = or i64 %shl3.i5, %shl.i3
-  %10 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 2), align 1
+  %10 = load i8, ptr getelementptr (i8, ptr @g, i64 2), align 1
   %conv5.i7 = zext i8 %10 to i64
   %shl6.i8 = shl nuw nsw i64 %conv5.i7, 40
   %or7.i9 = or i64 %or.i6, %shl6.i8
-  %11 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 3), align 1
+  %11 = load i8, ptr getelementptr (i8, ptr @g, i64 3), align 1
   %conv9.i10 = zext i8 %11 to i64
   %shl10.i11 = shl nuw nsw i64 %conv9.i10, 32
   %or11.i12 = or i64 %or7.i9, %shl10.i11
-  %12 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 4), align 1
+  %12 = load i8, ptr getelementptr (i8, ptr @g, i64 4), align 1
   %conv13.i13 = zext i8 %12 to i64
   %shl14.i14 = shl nuw nsw i64 %conv13.i13, 24
   %or15.i15 = or i64 %or11.i12, %shl14.i14
-  %13 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 5), align 1
+  %13 = load i8, ptr getelementptr (i8, ptr @g, i64 5), align 1
   %conv17.i16 = zext i8 %13 to i64
   %shl18.i17 = shl nuw nsw i64 %conv17.i16, 16
   %or20.i18 = or i64 %or15.i15, %shl18.i17
-  %14 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 6), align 1
+  %14 = load i8, ptr getelementptr (i8, ptr @g, i64 6), align 1
   %conv22.i19 = zext i8 %14 to i64
   %shl23.i20 = shl nuw nsw i64 %conv22.i19, 8
   %or25.i21 = or i64 %or20.i18, %shl23.i20
-  %15 = load i8, i8* getelementptr (i8, i8* bitcast (void ()* @g to i8*), i64 7), align 1
+  %15 = load i8, ptr getelementptr (i8, ptr @g, i64 7), align 1
   %conv27.i22 = zext i8 %15 to i64
   %or28.i23 = or i64 %or25.i21, %conv27.i22
-  store i64 %or28.i23, i64* getelementptr inbounds (%struct.anon, %struct.anon* @d, i64 0, i32 0), align 8
+  store i64 %or28.i23, ptr @d, align 8
   ret void
 }
 

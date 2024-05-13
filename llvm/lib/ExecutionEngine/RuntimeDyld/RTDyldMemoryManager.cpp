@@ -29,7 +29,7 @@
 
 namespace llvm {
 
-RTDyldMemoryManager::~RTDyldMemoryManager() {}
+RTDyldMemoryManager::~RTDyldMemoryManager() = default;
 
 #if defined(HAVE_REGISTER_FRAME) && defined(HAVE_DEREGISTER_FRAME) &&          \
     !defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
@@ -67,7 +67,9 @@ static void __deregister_frame(void *p) {
 }
 #endif
 
-#ifdef __APPLE__
+/* libgcc and libunwind __register_frame behave differently. We use the presence
+ * of __unw_add_dynamic_fde to detect libunwind. */
+#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
 
 static const char *processFDE(const char *Entry, bool isDeregister) {
   const char *P = Entry;
@@ -93,18 +95,16 @@ void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
   // and projects/libunwind/src/UnwindLevel1-gcc-ext.c.
   const char *P = (const char *)Addr;
   const char *End = P + Size;
-  do  {
+  while (P != End)
     P = processFDE(P, false);
-  } while(P != End);
 }
 
 void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
                                                       size_t Size) {
   const char *P = (const char *)Addr;
   const char *End = P + Size;
-  do  {
+  while (P != End)
     P = processFDE(P, true);
-  } while(P != End);
 }
 
 #else
@@ -269,7 +269,7 @@ RTDyldMemoryManager::getSymbolAddressInProcess(const std::string &Name) {
 
   const char *NameStr = Name.c_str();
 
-  // DynamicLibrary::SearchForAddresOfSymbol expects an unmangled 'C' symbol
+  // DynamicLibrary::SearchForAddressOfSymbol expects an unmangled 'C' symbol
   // name so ff we're on Darwin, strip the leading '_' off.
 #ifdef __APPLE__
   if (NameStr[0] == '_')
@@ -284,7 +284,7 @@ void *RTDyldMemoryManager::getPointerToNamedFunction(const std::string &Name,
   uint64_t Addr = getSymbolAddress(Name);
 
   if (!Addr && AbortOnFailure)
-    report_fatal_error("Program used external function '" + Name +
+    report_fatal_error(Twine("Program used external function '") + Name +
                        "' which could not be resolved!");
 
   return (void*)Addr;

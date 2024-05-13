@@ -1,10 +1,10 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s \
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s \
 ; RUN:  -polly-invariant-load-hoisting \
 ; RUN:  | FileCheck %s
 
 ; Verify that we canonicalize accesses even tough one of the accesses (even
 ; the canonical base) has a partial execution context. This is correct as
-; the combined execution context still coveres both accesses.
+; the combined execution context still covers both accesses.
 
 ; CHECK:      Invariant Accesses: {
 ; CHECK-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
@@ -28,7 +28,7 @@
 ; CHECK-NEXT:       { Stmt_body2[i0] -> MemRef_baseB[0] };
 
 
-define void @foo(float** %A) {
+define void @foo(ptr %A) {
 start:
   br label %loop
 
@@ -39,14 +39,14 @@ loop:
   br i1 %icmp, label %body1, label %exit
 
 body1:
-  %baseA = load float*, float** %A
-  store float 42.0, float* %baseA
+  %baseA = load ptr, ptr %A
+  store float 42.0, ptr %baseA
   %cmp = icmp slt i64 %indvar.next, 512
   br i1 %cmp, label %body2, label %latch
 
 body2:
-  %baseB = load float*, float** %A
-  store float 42.0, float* %baseB
+  %baseB = load ptr, ptr %A
+  store float 42.0, ptr %baseB
   br label %latch
 
 latch:

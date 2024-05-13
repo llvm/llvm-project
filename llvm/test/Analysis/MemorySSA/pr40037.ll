@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -simple-loop-unswitch -enable-mssa-loop-dependency -verify-memoryssa  < %s | FileCheck %s
+; RUN: opt -S -passes=simple-loop-unswitch -verify-memoryssa  < %s | FileCheck %s
 
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"
@@ -19,7 +19,7 @@ bb7:                                              ; preds = %bb7.lr.ph, %bb7
   %tmp6 = icmp slt i8 94, 6
   br i1 %tmp6, label %bb7, label %bb3.bb9.preheader_crit_edge
 bb9:                                              ; preds = %bb21
-  store i16 %tmp27, i16* undef, align 2
+  store i16 %tmp27, ptr undef, align 2
   %tmp12 = icmp eq i16 %tmp27, 1
   br i1 %tmp12, label %bb28, label %bb13
 bb13:                                             ; preds = %bb9.preheader, %bb9

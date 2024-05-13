@@ -94,14 +94,6 @@ use, in the form of "passes".
 LLVM Optimization Passes
 ========================
 
-.. warning::
-
-   Due to the transition to the new PassManager infrastructure this tutorial
-   is based on ``llvm::legacy::FunctionPassManager`` which can be found in
-   `LegacyPassManager.h <https://llvm.org/doxygen/classllvm_1_1legacy_1_1FunctionPassManager.html>`_.
-   For the purpose of the this tutorial the above should be used until
-   the pass manager transition is complete.
-
 LLVM provides many optimization passes, which do many different sorts of
 things and have different tradeoffs. Unlike other systems, LLVM doesn't
 hold to the mistaken notion that one set of optimizations is right for
@@ -127,43 +119,79 @@ in. If we wanted to make a "static Kaleidoscope compiler", we would use
 exactly the code we have now, except that we would defer running the
 optimizer until the entire file has been parsed.
 
+In addition to the distinction between function and module passes, passes can be
+divided into transform and analysis passes. Transform passes mutate the IR, and
+analysis passes compute information that other passes can use. In order to add
+a transform pass, all analysis passes it depends upon must be registered in
+advance.
+
 In order to get per-function optimizations going, we need to set up a
 `FunctionPassManager <../../WritingAnLLVMPass.html#what-passmanager-doesr>`_ to hold
 and organize the LLVM optimizations that we want to run. Once we have
 that, we can add a set of optimizations to run. We'll need a new
 FunctionPassManager for each module that we want to optimize, so we'll
-write a function to create and initialize both the module and pass manager
-for us:
+add to a function created in the previous chapter (``InitializeModule()``):
 
 .. code-block:: c++
 
-    void InitializeModuleAndPassManager(void) {
-      // Open a new module.
-      TheModule = std::make_unique<Module>("my cool jit", TheContext);
+    void InitializeModuleAndManagers(void) {
+      // Open a new context and module.
+      TheContext = std::make_unique<LLVMContext>();
+      TheModule = std::make_unique<Module>("KaleidoscopeJIT", *TheContext);
+      TheModule->setDataLayout(TheJIT->getDataLayout());
 
-      // Create a new pass manager attached to it.
-      TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
+      // Create a new builder for the module.
+      Builder = std::make_unique<IRBuilder<>>(*TheContext);
 
+      // Create new pass and analysis managers.
+      TheFPM = std::make_unique<FunctionPassManager>();
+      TheLAM = std::make_unique<LoopAnalysisManager>();
+      TheFAM = std::make_unique<FunctionAnalysisManager>();
+      TheCGAM = std::make_unique<CGSCCAnalysisManager>();
+      TheMAM = std::make_unique<ModuleAnalysisManager>();
+      ThePIC = std::make_unique<PassInstrumentationCallbacks>();
+      TheSI = std::make_unique<StandardInstrumentations>(*TheContext,
+                                                        /*DebugLogging*/ true);
+      TheSI->registerCallbacks(*ThePIC, TheMAM.get());
+      ...
+
+After initializing the global module ``TheModule`` and the FunctionPassManager,
+we need to initialize other parts of the framework. The four AnalysisManagers
+allow us to add analysis passes that run across the four levels of the IR
+hierarchy. PassInstrumentationCallbacks and StandardInstrumentations are
+required for the pass instrumentation framework, which allows developers to
+customize what happens between passes.
+
+Once these managers are set up, we use a series of "addPass" calls to add a
+bunch of LLVM transform passes:
+
+.. code-block:: c++
+
+      // Add transform passes.
       // Do simple "peephole" optimizations and bit-twiddling optzns.
-      TheFPM->add(createInstructionCombiningPass());
+      TheFPM->addPass(InstCombinePass());
       // Reassociate expressions.
-      TheFPM->add(createReassociatePass());
+      TheFPM->addPass(ReassociatePass());
       // Eliminate Common SubExpressions.
-      TheFPM->add(createGVNPass());
+      TheFPM->addPass(GVNPass());
       // Simplify the control flow graph (deleting unreachable blocks, etc).
-      TheFPM->add(createCFGSimplificationPass());
-
-      TheFPM->doInitialization();
-    }
-
-This code initializes the global module ``TheModule``, and the function pass
-manager ``TheFPM``, which is attached to ``TheModule``. Once the pass manager is
-set up, we use a series of "add" calls to add a bunch of LLVM passes.
+      TheFPM->addPass(SimplifyCFGPass());
 
 In this case, we choose to add four optimization passes.
 The passes we choose here are a pretty standard set
 of "cleanup" optimizations that are useful for a wide variety of code. I won't
 delve into what they do but, believe me, they are a good starting place :).
+
+Next, we register the analysis passes used by the transform passes.
+
+.. code-block:: c++
+
+      // Register analysis passes used in these transform passes.
+      PassBuilder PB;
+      PB.registerModuleAnalyses(*TheMAM);
+      PB.registerFunctionAnalyses(*TheFAM);
+      PB.crossRegisterProxies(*TheLAM, *TheFAM, *TheCGAM, *TheMAM);
+    }
 
 Once the PassManager is set up, we need to make use of it. We do this by
 running it after our newly created function is constructed (in
@@ -179,7 +207,7 @@ running it after our newly created function is constructed (in
         verifyFunction(*TheFunction);
 
         // Optimize the function.
-        TheFPM->run(*TheFunction);
+        TheFPM->run(*TheFunction, *TheFAM);
 
         return TheFunction;
       }
@@ -270,9 +298,13 @@ We also need to setup the data layout for the JIT:
 .. code-block:: c++
 
     void InitializeModuleAndPassManager(void) {
-      // Open a new module.
+      // Open a new context and module.
+      TheContext = std::make_unique<LLVMContext>();
       TheModule = std::make_unique<Module>("my cool jit", TheContext);
-      TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+      TheModule->setDataLayout(TheJIT->getDataLayout());
+
+      // Create a new builder for the module.
+      Builder = std::make_unique<IRBuilder<>>(*TheContext);
 
       // Create a new pass manager attached to it.
       TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
@@ -280,53 +312,57 @@ We also need to setup the data layout for the JIT:
 
 The KaleidoscopeJIT class is a simple JIT built specifically for these
 tutorials, available inside the LLVM source code
-at llvm-src/examples/Kaleidoscope/include/KaleidoscopeJIT.h.
+at `llvm-src/examples/Kaleidoscope/include/KaleidoscopeJIT.h
+<https://github.com/llvm/llvm-project/blob/main/llvm/examples/Kaleidoscope/include/KaleidoscopeJIT.h>`_.
 In later chapters we will look at how it works and extend it with
 new features, but for now we will take it as given. Its API is very simple:
 ``addModule`` adds an LLVM IR module to the JIT, making its functions
-available for execution; ``removeModule`` removes a module, freeing any
-memory associated with the code in that module; and ``findSymbol`` allows us
-to look up pointers to the compiled code.
+available for execution (with its memory managed by a ``ResourceTracker``); and
+``lookup`` allows us to look up pointers to the compiled code.
 
 We can take this simple API and change our code that parses top-level expressions to
 look like this:
 
 .. code-block:: c++
 
+    static ExitOnError ExitOnErr;
+    ...
     static void HandleTopLevelExpression() {
       // Evaluate a top-level expression into an anonymous function.
       if (auto FnAST = ParseTopLevelExpr()) {
         if (FnAST->codegen()) {
+          // Create a ResourceTracker to track JIT'd memory allocated to our
+          // anonymous expression -- that way we can free it after executing.
+          auto RT = TheJIT->getMainJITDylib().createResourceTracker();
 
-          // JIT the module containing the anonymous expression, keeping a handle so
-          // we can free it later.
-          auto H = TheJIT->addModule(std::move(TheModule));
+          auto TSM = ThreadSafeModule(std::move(TheModule), std::move(TheContext));
+          ExitOnErr(TheJIT->addModule(std::move(TSM), RT));
           InitializeModuleAndPassManager();
 
           // Search the JIT for the __anon_expr symbol.
-          auto ExprSymbol = TheJIT->findSymbol("__anon_expr");
+          auto ExprSymbol = ExitOnErr(TheJIT->lookup("__anon_expr"));
           assert(ExprSymbol && "Function not found");
 
           // Get the symbol's address and cast it to the right type (takes no
           // arguments, returns a double) so we can call it as a native function.
-          double (*FP)() = (double (*)())(intptr_t)ExprSymbol.getAddress();
+          double (*FP)() = ExprSymbol.getAddress().toPtr<double (*)()>();
           fprintf(stderr, "Evaluated to %f\n", FP());
 
           // Delete the anonymous expression module from the JIT.
-          TheJIT->removeModule(H);
+          ExitOnErr(RT->remove());
         }
 
 If parsing and codegen succeed, the next step is to add the module containing
 the top-level expression to the JIT. We do this by calling addModule, which
-triggers code generation for all the functions in the module, and returns a
-handle that can be used to remove the module from the JIT later. Once the module
+triggers code generation for all the functions in the module, and accepts a
+``ResourceTracker`` which can be used to remove the module from the JIT later. Once the module
 has been added to the JIT it can no longer be modified, so we also open a new
 module to hold subsequent code by calling ``InitializeModuleAndPassManager()``.
 
 Once we've added the module to the JIT we need to get a pointer to the final
-generated code. We do this by calling the JIT's findSymbol method, and passing
+generated code. We do this by calling the JIT's ``lookup`` method, and passing
 the name of the top-level expression function: ``__anon_expr``. Since we just
-added this function, we assert that findSymbol returned a result.
+added this function, we assert that ``lookup`` returned a result.
 
 Next, we get the in-memory address of the ``__anon_expr`` function by calling
 ``getAddress()`` on the symbol. Recall that we compile top-level expressions
@@ -495,7 +531,8 @@ We also need to update HandleDefinition and HandleExtern:
           fprintf(stderr, "Read function definition:");
           FnIR->print(errs());
           fprintf(stderr, "\n");
-          TheJIT->addModule(std::move(TheModule));
+          ExitOnErr(TheJIT->addModule(
+              ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
           InitializeModuleAndPassManager();
         }
       } else {
@@ -521,6 +558,11 @@ We also need to update HandleDefinition and HandleExtern:
 In HandleDefinition, we add two lines to transfer the newly defined function to
 the JIT and open a new module. In HandleExtern, we just need to add one line to
 add the prototype to FunctionProtos.
+
+.. warning::
+    Duplication of symbols in separate modules is not allowed since LLVM-9. That means you can not redefine function in your Kaleidoscope as its shown below. Just skip this part.
+
+    The reason is that the newer OrcV2 JIT APIs are trying to stay very close to the static and dynamic linker rules, including rejecting duplicate symbols. Requiring symbol names to be unique allows us to support concurrent compilation for symbols using the (unique) symbol names as keys for tracking.
 
 With these changes made, let's try our REPL again (I removed the dump of the
 anonymous functions this time, you should get the idea by now :) :
@@ -618,7 +660,7 @@ if we add:
     }
 
 Note, that for Windows we need to actually export the functions because
-the dynamic symbol loader will use GetProcAddress to find the symbols.
+the dynamic symbol loader will use ``GetProcAddress`` to find the symbols.
 
 Now we can produce simple output to the console by using things like:
 "``extern putchard(x); putchard(120);``", which prints a lowercase 'x'

@@ -91,4 +91,28 @@ TEST(ThreadSafeModuleTest, ContextLockPreservesContext) {
   TSCtx = ThreadSafeContext();
 }
 
+TEST(ThreadSafeModuleTest, WithModuleDo) {
+  // Test non-const version of withModuleDo.
+  ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+  ThreadSafeModule TSM(std::make_unique<Module>("M", *TSCtx.getContext()),
+                       TSCtx);
+  TSM.withModuleDo([](Module &M) {});
+}
+
+TEST(ThreadSafeModuleTest, WithModuleDoConst) {
+  // Test const version of withModuleDo.
+  ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+  const ThreadSafeModule TSM(std::make_unique<Module>("M", *TSCtx.getContext()),
+                             TSCtx);
+  TSM.withModuleDo([](const Module &M) {});
+}
+
+TEST(ThreadSafeModuleTest, ConsumingModuleDo) {
+  // Test consumingModuleDo.
+  ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+  ThreadSafeModule TSM(std::make_unique<Module>("M", *TSCtx.getContext()),
+                       TSCtx);
+  TSM.consumingModuleDo([](std::unique_ptr<Module> M) {});
+}
+
 } // end anonymous namespace

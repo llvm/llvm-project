@@ -2,7 +2,7 @@
 ; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 ;
 ; Source:
-;   void foo(const void *);
+;   void foo(const ptr);
 ;   int test() {
 ;     const char *str = "abcd";
 ;     const struct {
@@ -24,14 +24,13 @@
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !7 {
 entry:
   %val = alloca %struct.anon, align 4
-  call void @llvm.dbg.value(metadata i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), metadata !12, metadata !DIExpression()), !dbg !25
-  %0 = bitcast %struct.anon* %val to i8*, !dbg !26
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %0) #4, !dbg !26
-  call void @llvm.dbg.declare(metadata %struct.anon* %val, metadata !16, metadata !DIExpression()), !dbg !27
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(16) %0, i8* nonnull align 4 dereferenceable(16) bitcast (%struct.anon* @__const.test.val to i8*), i64 16, i1 false), !dbg !27
-  tail call void @foo(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0)) #4, !dbg !28
-  call void @foo(i8* nonnull %0) #4, !dbg !29
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %0) #4, !dbg !30
+  call void @llvm.dbg.value(metadata ptr @.str, metadata !12, metadata !DIExpression()), !dbg !25
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %val) #4, !dbg !26
+  call void @llvm.dbg.declare(metadata ptr %val, metadata !16, metadata !DIExpression()), !dbg !27
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 dereferenceable(16) %val, ptr nonnull align 4 dereferenceable(16) @__const.test.val, i64 16, i1 false), !dbg !27
+  tail call void @foo(ptr @.str) #4, !dbg !28
+  call void @foo(ptr nonnull %val) #4, !dbg !29
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %val) #4, !dbg !30
   ret i32 0, !dbg !31
 }
 
@@ -40,18 +39,18 @@ entry:
 ; CHECK-NOT:   BTF_KIND_DATASEC
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
-declare !dbg !32 dso_local void @foo(i8*) local_unnamed_addr #3
+declare !dbg !32 dso_local void @foo(ptr) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

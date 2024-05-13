@@ -245,7 +245,7 @@ void throws_in_constructor_test()
       ThrowsOnCopy() = default;
       bool operator()() const {
         assert(false);
-#if defined(TEST_COMPILER_C1XX)
+#ifdef TEST_COMPILER_MSVC
         __assume(0);
 #else
         __builtin_unreachable();
@@ -396,7 +396,7 @@ bool call_operator_noexcept_test()
         using T = NoExceptCallable<bool>;
         T value(true);
         auto ret = std::not_fn(value);
-        LIBCPP_STATIC_ASSERT(noexcept(!_VSTD::__invoke(value)), "");
+        LIBCPP_STATIC_ASSERT(noexcept(!std::__invoke(value)), "");
 #if TEST_STD_VER > 14
         static_assert(noexcept(!std::invoke(value)), "");
 #endif

@@ -50,7 +50,7 @@ def CXXCatchStmt : StmtNode<Stmt>;
 def CXXTryStmt : StmtNode<Stmt>;
 def CXXForRangeStmt : StmtNode<Stmt>;
 
-// C++ Coroutines TS statements
+// C++ Coroutines statements
 def CoroutineBodyStmt : StmtNode<Stmt>;
 def CoreturnStmt : StmtNode<Stmt>;
 
@@ -71,7 +71,7 @@ def OffsetOfExpr : StmtNode<Expr>;
 def UnaryExprOrTypeTraitExpr : StmtNode<Expr>;
 def ArraySubscriptExpr : StmtNode<Expr>;
 def MatrixSubscriptExpr : StmtNode<Expr>;
-def OMPArraySectionExpr : StmtNode<Expr>;
+def ArraySectionExpr : StmtNode<Expr>;
 def OMPIteratorExpr : StmtNode<Expr>;
 def CallExpr : StmtNode<Expr>;
 def MemberExpr : StmtNode<Expr>;
@@ -154,14 +154,16 @@ def UnresolvedMemberExpr : StmtNode<OverloadExpr>;
 def CXXNoexceptExpr : StmtNode<Expr>;
 def PackExpansionExpr : StmtNode<Expr>;
 def SizeOfPackExpr : StmtNode<Expr>;
+def PackIndexingExpr : StmtNode<Expr>;
 def SubstNonTypeTemplateParmExpr : StmtNode<Expr>;
 def SubstNonTypeTemplateParmPackExpr : StmtNode<Expr>;
 def FunctionParmPackExpr : StmtNode<Expr>;
 def MaterializeTemporaryExpr : StmtNode<Expr>;
 def LambdaExpr : StmtNode<Expr>;
 def CXXFoldExpr : StmtNode<Expr>;
+def CXXParenListInitExpr: StmtNode<Expr>;
 
-// C++ Coroutines TS expressions
+// C++ Coroutines expressions
 def CoroutineSuspendExpr : StmtNode<Expr, 1>;
 def CoawaitExpr : StmtNode<CoroutineSuspendExpr>;
 def DependentCoawaitExpr : StmtNode<Expr>;
@@ -219,11 +221,14 @@ def AsTypeExpr : StmtNode<Expr>;
 // OpenMP Directives.
 def OMPCanonicalLoop : StmtNode<Stmt>;
 def OMPExecutableDirective : StmtNode<Stmt, 1>;
+def OMPMetaDirective : StmtNode<OMPExecutableDirective>;
 def OMPLoopBasedDirective : StmtNode<OMPExecutableDirective, 1>;
 def OMPLoopDirective : StmtNode<OMPLoopBasedDirective, 1>;
 def OMPParallelDirective : StmtNode<OMPExecutableDirective>;
 def OMPSimdDirective : StmtNode<OMPLoopDirective>;
-def OMPTileDirective : StmtNode<OMPLoopBasedDirective>;
+def OMPLoopTransformationDirective : StmtNode<OMPLoopBasedDirective, 1>;
+def OMPTileDirective : StmtNode<OMPLoopTransformationDirective>;
+def OMPUnrollDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPForDirective : StmtNode<OMPLoopDirective>;
 def OMPForSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPSectionsDirective : StmtNode<OMPExecutableDirective>;
@@ -255,12 +260,17 @@ def OMPTargetUpdateDirective : StmtNode<OMPExecutableDirective>;
 def OMPTeamsDirective : StmtNode<OMPExecutableDirective>;
 def OMPCancellationPointDirective : StmtNode<OMPExecutableDirective>;
 def OMPCancelDirective : StmtNode<OMPExecutableDirective>;
+def OMPScopeDirective : StmtNode<OMPExecutableDirective>;
 def OMPTaskLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPTaskLoopSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPMasterTaskLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPMasterTaskLoopSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPParallelMasterTaskLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPParallelMasterTaskLoopSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPMaskedTaskLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPMaskedTaskLoopSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPParallelMaskedTaskLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPParallelMaskedTaskLoopSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPDistributeDirective : StmtNode<OMPLoopDirective>;
 def OMPDistributeParallelForDirective : StmtNode<OMPLoopDirective>;
 def OMPDistributeParallelForSimdDirective : StmtNode<OMPLoopDirective>;
@@ -279,3 +289,16 @@ def OMPTargetTeamsDistributeSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPInteropDirective : StmtNode<OMPExecutableDirective>;
 def OMPDispatchDirective : StmtNode<OMPExecutableDirective>;
 def OMPMaskedDirective : StmtNode<OMPExecutableDirective>;
+def OMPParallelMaskedDirective : StmtNode<OMPExecutableDirective>;
+def OMPGenericLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPTeamsGenericLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPTargetTeamsGenericLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPTargetParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPErrorDirective : StmtNode<OMPExecutableDirective>;
+
+// OpenACC Constructs.
+def OpenACCConstructStmt : StmtNode<Stmt, /*abstract=*/1>;
+def OpenACCAssociatedStmtConstruct
+    : StmtNode<OpenACCConstructStmt, /*abstract=*/1>;
+def OpenACCComputeConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;

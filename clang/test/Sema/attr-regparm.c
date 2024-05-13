@@ -9,3 +9,9 @@ __attribute((regparm(5,3))) int x4(void); // expected-error{{'regparm' attribute
 void __attribute__((regparm(3))) x5(int);
 void x5(int); // expected-note{{previous declaration is here}}
 void __attribute__((regparm(2))) x5(int); // expected-error{{function declared with regparm(2) attribute was previously declared with the regparm(3) attribute}}
+
+[[gnu::regparm(3)]] void x6(int); // expected-note{{previous declaration is here}}
+[[gnu::regparm(2)]] void x6(int); // expected-error{{function declared with regparm(2) attribute was previously declared with the regparm(3) attribute}}
+void x6 [[gnu::regparm(3)]] (int);
+void [[gnu::regparm(3)]] x6(int); // expected-warning{{'regparm' only applies to function types; type here is 'void'}}
+void x6(int) [[gnu::regparm(3)]]; // expected-warning{{GCC does not allow the 'regparm' attribute to be written on a type}}

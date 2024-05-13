@@ -10,35 +10,35 @@
 ;	should pass through the optimizer without failure.
 ;
 ; Extra code:
-; RUN: opt < %s -instcombine
+; RUN: opt < %s -passes=instcombine
 ; END.
 
 target datalayout = "e-p:32:32"
-@silly = external constant i32          ; <i32*> [#uses=1]
+@silly = external constant i32          ; <ptr> [#uses=1]
 
-declare void @bzero(i8*, i32)
+declare void @bzero(ptr, i32)
 
-declare void @bcopy(i8*, i8*, i32)
+declare void @bcopy(ptr, ptr, i32)
 
-declare i32 @bcmp(i8*, i8*, i32)
+declare i32 @bcmp(ptr, ptr, i32)
 
-declare i32 @fputs(i8*, i8*)
+declare i32 @fputs(ptr, ptr)
 
-declare i32 @fputs_unlocked(i8*, i8*)
+declare i32 @fputs_unlocked(ptr, ptr)
 
 define i32 @function(i32 %a.1) {
 entry:
-        %a.0 = alloca i32               ; <i32*> [#uses=2]
-        %result = alloca i32            ; <i32*> [#uses=2]
-        store i32 %a.1, i32* %a.0
-        %tmp.0 = load i32, i32* %a.0         ; <i32> [#uses=1]
-        %tmp.1 = load i32, i32* @silly               ; <i32> [#uses=1]
+        %a.0 = alloca i32               ; <ptr> [#uses=2]
+        %result = alloca i32            ; <ptr> [#uses=2]
+        store i32 %a.1, ptr %a.0
+        %tmp.0 = load i32, ptr %a.0         ; <i32> [#uses=1]
+        %tmp.1 = load i32, ptr @silly               ; <i32> [#uses=1]
         %tmp.2 = add i32 %tmp.0, %tmp.1         ; <i32> [#uses=1]
-        store i32 %tmp.2, i32* %result
+        store i32 %tmp.2, ptr %result
         br label %return
 
 return:         ; preds = %entry
-        %tmp.3 = load i32, i32* %result              ; <i32> [#uses=1]
+        %tmp.3 = load i32, ptr %result              ; <i32> [#uses=1]
         ret i32 %tmp.3
 }
 

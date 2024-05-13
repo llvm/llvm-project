@@ -122,6 +122,7 @@ Marshaller::fromProtobuf(const RefsRequest *Message) {
     Req.Filter = clangd::RefKind::All;
   if (Message->limit())
     Req.Limit = Message->limit();
+  Req.WantContainer = Message->want_container();
   return Req;
 }
 
@@ -239,6 +240,7 @@ RefsRequest Marshaller::toProtobuf(const clangd::RefsRequest &From) {
   RPCRequest.set_filter(static_cast<uint32_t>(From.Filter));
   if (From.Limit)
     RPCRequest.set_limit(*From.Limit);
+  RPCRequest.set_want_container(From.WantContainer);
   return RPCRequest;
 }
 
@@ -269,7 +271,6 @@ llvm::Expected<Symbol> Marshaller::toProtobuf(const clangd::Symbol &From) {
     return Declaration.takeError();
   *Result.mutable_canonical_declaration() = *Declaration;
   Result.set_references(From.References);
-  Result.set_origin(static_cast<uint32_t>(From.Origin));
   Result.set_signature(From.Signature.str());
   Result.set_template_specialization_args(
       From.TemplateSpecializationArgs.str());
@@ -405,6 +406,7 @@ llvm::Expected<HeaderWithReferences> Marshaller::toProtobuf(
     const clangd::Symbol::IncludeHeaderWithReferences &IncludeHeader) {
   HeaderWithReferences Result;
   Result.set_references(IncludeHeader.References);
+  Result.set_supported_directives(IncludeHeader.SupportedDirectives);
   const std::string Header = IncludeHeader.IncludeHeader.str();
   if (isLiteralInclude(Header)) {
     Result.set_header(Header);
@@ -426,8 +428,12 @@ Marshaller::fromProtobuf(const HeaderWithReferences &Message) {
       return URIString.takeError();
     Header = *URIString;
   }
-  return clangd::Symbol::IncludeHeaderWithReferences{Strings.save(Header),
-                                                     Message.references()};
+  auto Directives = clangd::Symbol::IncludeDirective::Include;
+  if (Message.has_supported_directives())
+    Directives = static_cast<clangd::Symbol::IncludeDirective>(
+        Message.supported_directives());
+  return clangd::Symbol::IncludeHeaderWithReferences{
+      Strings.save(Header), Message.references(), Directives};
 }
 
 } // namespace remote

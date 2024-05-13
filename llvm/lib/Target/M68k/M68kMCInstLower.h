@@ -1,4 +1,4 @@
-//===-- M68kMCInstLower.h - Lower MachineInstr to MCInst -----*- C++ -*--===//
+//===-- M68kMCInstLower.h - Lower MachineInstr to MCInst --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,11 +44,11 @@ public:
 
   MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
 
-  Optional<MCOperand> LowerOperand(const MachineInstr *MI,
-                                   const MachineOperand &MO) const;
+  std::optional<MCOperand> LowerOperand(const MachineInstr *MI,
+                                        const MachineOperand &MO) const;
 
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68KMCINSTLOWER_H

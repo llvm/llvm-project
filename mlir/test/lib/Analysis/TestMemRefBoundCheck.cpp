@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/AffineAnalysis.h"
-#include "mlir/Analysis/AffineStructures.h"
-#include "mlir/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
+#include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
@@ -23,19 +23,26 @@
 #define DEBUG_TYPE "memref-bound-check"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 
 /// Checks for out of bound memref access subscripts..
 struct TestMemRefBoundCheck
-    : public PassWrapper<TestMemRefBoundCheck, FunctionPass> {
-  void runOnFunction() override;
+    : public PassWrapper<TestMemRefBoundCheck, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMemRefBoundCheck)
+
+  StringRef getArgument() const final { return "test-memref-bound-check"; }
+  StringRef getDescription() const final {
+    return "Check memref access bounds";
+  }
+  void runOnOperation() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
-void TestMemRefBoundCheck::runOnFunction() {
-  getFunction().walk([](Operation *opInst) {
+void TestMemRefBoundCheck::runOnOperation() {
+  getOperation()->walk([](Operation *opInst) {
     TypeSwitch<Operation *>(opInst)
         .Case<AffineReadOpInterface, AffineWriteOpInterface>(
             [](auto op) { (void)boundCheckLoadOrStoreOp(op); });
@@ -46,9 +53,6 @@ void TestMemRefBoundCheck::runOnFunction() {
 
 namespace mlir {
 namespace test {
-void registerMemRefBoundCheck() {
-  PassRegistration<TestMemRefBoundCheck>(
-      "test-memref-bound-check", "Check memref access bounds in a Function");
-}
+void registerMemRefBoundCheck() { PassRegistration<TestMemRefBoundCheck>(); }
 } // namespace test
 } // namespace mlir

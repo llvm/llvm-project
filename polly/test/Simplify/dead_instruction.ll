@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
-; RUN: opt %loadPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
 ;
 ; Remove a dead instruction
 ; (an instruction whose result is not used anywhere)
@@ -9,7 +9,7 @@
 ;   A[0] = 42.0;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -20,7 +20,7 @@ for:
 
     body:
       %val = fadd double 21.0, 21.0
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:

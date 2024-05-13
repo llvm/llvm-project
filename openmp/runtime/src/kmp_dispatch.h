@@ -74,16 +74,18 @@ template <typename T> struct dispatch_private_infoXX_template {
   T lb;
   ST st; // signed
   UT tc; // unsigned
-  T static_steal_counter; // for static_steal only; maybe better to put after ub
-  kmp_lock_t *th_steal_lock; // lock used for chunk stealing
+  kmp_lock_t *steal_lock; // lock used for chunk stealing
+
+  UT ordered_lower; // unsigned
+  UT ordered_upper; // unsigned
+
   /* parm[1-4] are used in different ways by different scheduling algorithms */
 
-  // KMP_ALIGN( 32 ) ensures ( if the KMP_ALIGN macro is turned on )
+  // KMP_ALIGN(32) ensures ( if the KMP_ALIGN macro is turned on )
   //    a) parm3 is properly aligned and
   //    b) all parm1-4 are in the same cache line.
   // Because of parm1-4 are used together, performance seems to be better
   // if they are in the same line (not measured though).
-
   struct KMP_ALIGN(32) { // compiler does not accept sizeof(T)*4
     T parm1;
     T parm2;
@@ -91,8 +93,11 @@ template <typename T> struct dispatch_private_infoXX_template {
     T parm4;
   };
 
-  UT ordered_lower; // unsigned
-  UT ordered_upper; // unsigned
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+  UT pchunks; // total number of chunks for processes with p-core
+  UT num_procs_with_pcore; // number of threads with p-core
+  T first_thread_with_ecore;
+#endif
 #if KMP_OS_WINDOWS
   T last_upper;
 #endif /* KMP_OS_WINDOWS */
@@ -134,9 +139,8 @@ template <typename T> struct KMP_ALIGN_CACHE dispatch_private_info_template {
   } u;
   enum sched_type schedule; /* scheduling algorithm */
   kmp_sched_flags_t flags; /* flags (e.g., ordered, nomerge, etc.) */
+  std::atomic<kmp_uint32> steal_flag; // static_steal only, state of a buffer
   kmp_uint32 ordered_bumped;
-  // to retain the structure size after making order
-  kmp_int32 ordered_dummy[KMP_MAX_ORDERED - 3];
   dispatch_private_info *next; /* stack of buffers for nest of serial regions */
   kmp_uint32 type_size;
 #if KMP_USE_HIER_SCHED
@@ -153,10 +157,11 @@ template <typename T> struct KMP_ALIGN_CACHE dispatch_private_info_template {
 // dispatch_shared_info{32,64}_t types
 template <typename T> struct dispatch_shared_infoXX_template {
   typedef typename traits_t<T>::unsigned_t UT;
+  typedef typename traits_t<T>::signed_t ST;
   /* chunk index under dynamic, number of idle threads under static-steal;
      iteration index otherwise */
   volatile UT iteration;
-  volatile UT num_done;
+  volatile ST num_done;
   volatile UT ordered_iteration;
   // to retain the structure size making ordered_iteration scalar
   UT ordered_dummy[KMP_MAX_ORDERED - 3];
@@ -293,10 +298,12 @@ static UT __kmp_wait(volatile UT *spinner, UT checker,
   UT check = checker;
   kmp_uint32 spins;
   kmp_uint32 (*f)(UT, UT) = pred;
+  kmp_uint64 time;
   UT r;
 
   KMP_FSYNC_SPIN_INIT(obj, CCAST(UT *, spin));
   KMP_INIT_YIELD(spins);
+  KMP_INIT_BACKOFF(time);
   // main wait spin loop
   while (!f(r = *spin, check)) {
     KMP_FSYNC_SPIN_PREPARE(obj);
@@ -306,7 +313,7 @@ static UT __kmp_wait(volatile UT *spinner, UT checker,
     /* if ( TCR_4(__kmp_global.g.g_done) && __kmp_global.g.g_abort)
         __kmp_abort_thread(); */
     // If oversubscribed, or have waited a bit then yield.
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
   }
   KMP_FSYNC_SPIN_ACQUIRED(obj);
   return r;

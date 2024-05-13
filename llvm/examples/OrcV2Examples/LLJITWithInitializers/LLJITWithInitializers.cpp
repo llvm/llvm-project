@@ -78,11 +78,13 @@ int main(int argc, char *argv[]) {
   int32_t InitializersRunFlag = 0;
   int32_t DeinitializersRunFlag = 0;
 
-  ExitOnErr(J->getMainJITDylib().define(absoluteSymbols(
-      {{J->mangleAndIntern("InitializersRunFlag"),
-        JITEvaluatedSymbol::fromPointer(&InitializersRunFlag)},
-       {J->mangleAndIntern("DeinitializersRunFlag"),
-        JITEvaluatedSymbol::fromPointer(&DeinitializersRunFlag)}})));
+  ExitOnErr(J->getMainJITDylib().define(
+      absoluteSymbols({{J->mangleAndIntern("InitializersRunFlag"),
+                        {ExecutorAddr::fromPtr(&InitializersRunFlag),
+                         JITSymbolFlags::Exported}},
+                       {J->mangleAndIntern("DeinitializersRunFlag"),
+                        {ExecutorAddr::fromPtr(&DeinitializersRunFlag),
+                         JITSymbolFlags::Exported}}})));
 
   // Run static initializers.
   ExitOnErr(J->initialize(J->getMainJITDylib()));

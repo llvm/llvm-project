@@ -1,8 +1,6 @@
 ; RUN: llvm-profdata merge %S/Inputs/irreducible.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: llvm-profdata merge %S/Inputs/irreducible_entry.proftext -o %t2.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S | FileCheck %s --check-prefix=USE
 
 ; GEN: $__llvm_profile_raw_version = comdat any
@@ -65,13 +63,13 @@ for.end:                                          ; preds = %for.cond2
 
 
 
-@targets = local_unnamed_addr global [256 x i8*] zeroinitializer, align 16
+@targets = local_unnamed_addr global [256 x ptr] zeroinitializer, align 16
 @tracing = local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: noinline norecurse nounwind uwtable
-define i32 @_Z11irreduciblePh(i8* nocapture readonly %p) {
+define i32 @_Z11irreduciblePh(ptr nocapture readonly %p) {
 entry:
-  %0 = load i32, i32* @tracing, align 4
+  %0 = load i32, ptr @tracing, align 4
   %1 = trunc i32 %0 to i8
   %tobool = icmp eq i32 %0, 0
   br label %for.cond1
@@ -127,10 +125,10 @@ exit:                                             ; preds = %sw.bb15, %sw.bb
 
 indirectgoto:                                     ; preds = %if.then18, %if.then
   %idxprom21 = zext i32 %0 to i64
-  %arrayidx22 = getelementptr inbounds [256 x i8*], [256 x i8*]* @targets, i64 0, i64 %idxprom21
-  %target = load i8*, i8** %arrayidx22, align 8
-  indirectbr i8* %target, [label %unknown_op, label %sw.bb, label %TARGET_1, label %TARGET_2]
-; USE: indirectbr i8* %target, [label %unknown_op, label %sw.bb, label %TARGET_1, label %TARGET_2], !prof !{{[0-9]+}},
+  %arrayidx22 = getelementptr inbounds [256 x ptr], ptr @targets, i64 0, i64 %idxprom21
+  %target = load ptr, ptr %arrayidx22, align 8
+  indirectbr ptr %target, [label %unknown_op, label %sw.bb, label %TARGET_1, label %TARGET_2]
+; USE: indirectbr ptr %target, [label %unknown_op, label %sw.bb, label %TARGET_1, label %TARGET_2], !prof !{{[0-9]+}},
 ; USE-SAME: !irr_loop ![[INDIRECTGOTO_IRR_LOOP:[0-9]+]]
 }
 
@@ -139,4 +137,4 @@ indirectgoto:                                     ; preds = %if.then18, %if.then
 ; USE: ![[IF_END9_IRR_LOOP]] = !{!"loop_header_weight", i64 1000}
 ; USE: ![[SW_BB6_IRR_LOOP]] = !{!"loop_header_weight", i64 501}
 ; USE: ![[SW_BB15_IRR_LOOP]] = !{!"loop_header_weight", i64 100}
-; USE: ![[INDIRECTGOTO_IRR_LOOP]] = !{!"loop_header_weight", i64 400}
+; USE: ![[INDIRECTGOTO_IRR_LOOP]] = !{!"loop_header_weight", i64 399}

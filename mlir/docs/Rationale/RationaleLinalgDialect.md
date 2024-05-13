@@ -69,7 +69,7 @@ Since the initial implementation, the design has evolved with, and partially
 driven the evolution of the core MLIR infrastructure to use
 [Regions](../LangRef.md/#regions),
 [OpInterfaces](../Interfaces.md),
-[ODS](../OpDefinitions.md) and
+[ODS](../DefiningDialects/Operations.md) and
 [Declarative Rewrite Rules](../DeclarativeRewrites.md)
 among others. The approach adopted by Linalg was extended to become
 [StructuredOps abstractions](
@@ -102,9 +102,9 @@ to the *structured control flow* dialect (named `LoopOps`).
 More components can be extracted, redesigned and generalized when new uses or
 requirements arise.
 
-Several [design questions](../Dialects/Linalg.md/#open_issues) remain open in Linalg, which does not
-claim to be a general solution to all compilation problems.
-It does aim at driving thinking and implementations of domain-specific
+Several [design questions](../Dialects/Linalg/_index.md/#open_issues) remain
+open in Linalg, which does not claim to be a general solution to all compilation
+problems. It does aim at driving thinking and implementations of domain-specific
 abstractions where programmer's intent can be captured at a very high level,
 directly in the IR.
 
@@ -384,7 +384,7 @@ Affine dialects in particular, Linalg takes the following decisions.
   multi-for loops with induction variables independent of each other (referred
   to as hyper-rectangular iteration domains in the literature) such as the
   proposed
-  [affine.parallel]((https://llvm.discourse.group/t/rfc-add-affine-parallel/350)
+  [affine.parallel](https://llvm.discourse.group/t/rfc-add-affine-parallel/350)
   are sufficient in the majority of cases.
 - **Declarative Tiling**: the *tiling* transformation is ubiquitous in HPC code
   generation. It can be seen as a decomposition of either the iteration space or
@@ -547,7 +547,7 @@ data types. We choose to take advantage of these properties for the
 reasons described above.
 In particular, the `MemRefType` represents dense non-contiguous memory regions.
 This structure should extend beyond simple dense data types and generalize to
-ragged, sparse and mixed dens/sparse tensors as well as to trees, hash tables,
+ragged, sparse and mixed dense/sparse tensors as well as to trees, hash tables,
 tables of records and maybe even graphs.
 
 For such more advanced data types, the control-flow required to traverse the
@@ -566,18 +566,18 @@ reconcile [core guiding principles](#guiding_principles) with real-world
 requirements when producing an implementation based on MLIR.
 
 ### Algorithms + Data Structures = Programs<a name="data_and_compute"></a>
+
 This is a twist on Niklaus Wirth's formulation but captures the essence of the
 design of Linalg: control-flow does not exist in a vacuum, independently of
-data.
-On the contrary, there is a very strong relationship between control-flow and
-data structures: one cannot exist without the other. This has multiple
-implications on the [semantics of Linalg Ops](../Dialects/Linalg.md/#linalg_op) and their
-transformations. In particular, this observation influences whether
-certain transformations are better done:
-- as control flow or data structure manipulation,
-- on Linalg ops attributes or on loops after some partial lowering
-occurred,
-- as extensions to the Linalg dialect in terms of new ops or attributes.
+data. On the contrary, there is a very strong relationship between control-flow
+and data structures: one cannot exist without the other. This has multiple
+implications on the
+[semantics of Linalg Ops](../Dialects/Linalg/_index.md/#linalg_ops) and their
+transformations. In particular, this observation influences whether certain
+transformations are better done: - as control flow or data structure
+manipulation, - on Linalg ops attributes or on loops after some partial lowering
+occurred, - as extensions to the Linalg dialect in terms of new ops or
+attributes.
 
 ### The Dialect Need not be Closed Under Transformations<a name="dialect_not_closed"></a>
 This is probably the most surprising and counter-intuitive
@@ -615,9 +615,8 @@ Principles](#guiding_principles)---with the following picture.
 <img width="1200" alt="MLIR Codegen Flow"
 src="https://user-images.githubusercontent.com/10148468/73613904-2f720a00-45c8-11ea-8265-1c856c02525b.png">
 
-This figure is not meant to be perfectly accurate but a rough map of
-how we view the distribution of structural information in existing
-systems, from a codegen-friendly angle. Unsurprisingly, the
-[Linalg Dialect](../Dialects/Linalg.md) and its
-future evolutions aspire to a position in the top-right of this map.
-
+This figure is not meant to be perfectly accurate but a rough map of how we view
+the distribution of structural information in existing systems, from a
+codegen-friendly angle. Unsurprisingly, the
+[Linalg Dialect](../Dialects/Linalg/_index.md) and its future evolutions aspire
+to a position in the top-right of this map.

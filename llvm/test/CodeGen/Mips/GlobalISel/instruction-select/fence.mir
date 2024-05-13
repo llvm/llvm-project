@@ -2,7 +2,7 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @atomic_load_i32(i32* %ptr) { ret void }
+  define void @atomic_load_i32(ptr %ptr) { ret void }
 
 ...
 ---
@@ -18,12 +18,12 @@ body:             |
     ; MIPS32-LABEL: name: atomic_load_i32
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (load monotonic 4 from %ir.ptr)
+    ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (load monotonic (s32) from %ir.ptr)
     ; MIPS32: SYNC 0
     ; MIPS32: $v0 = COPY [[LW]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
-    %1:gprb(s32) = G_LOAD %0(p0) :: (load monotonic 4 from %ir.ptr)
+    %1:gprb(s32) = G_LOAD %0(p0) :: (load monotonic (s32) from %ir.ptr)
     G_FENCE 4, 1
     $v0 = COPY %1(s32)
     RetRA implicit $v0

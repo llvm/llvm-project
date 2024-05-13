@@ -38,10 +38,9 @@ struct DefaultCtorBlowsUp {
 
 struct DerivedFromAllocArgT : std::allocator_arg_t {};
 
-
 // Make sure the _Up... constructor SFINAEs out when the number of initializers
-// is less that the number of elements in the tuple. Previously libc++ would
-// offer these constructers as an extension but they broke conforming code.
+// is less than the number of elements in the tuple. Previously libc++ would
+// offer these constructors as an extension but they broke conforming code.
 void test_uses_allocator_sfinae_evaluation()
 {
      using BadDefault = DefaultCtorBlowsUp<>;

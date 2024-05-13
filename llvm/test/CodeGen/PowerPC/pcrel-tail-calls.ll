@@ -12,8 +12,8 @@
 ; the past as we no longer need to restore the TOC pointer into R2 after
 ; most calls.
 
-@Func = external local_unnamed_addr global i32 (...)*, align 8
-@FuncLocal = common dso_local local_unnamed_addr global i32 (...)* null, align 8
+@Func = external local_unnamed_addr global ptr, align 8
+@FuncLocal = common dso_local local_unnamed_addr global ptr null, align 8
 
 ; No calls in this function but we assign the function pointers.
 define dso_local void @AssignFuncPtr() local_unnamed_addr {
@@ -25,8 +25,8 @@ define dso_local void @AssignFuncPtr() local_unnamed_addr {
 ; CHECK-NEXT:    pstd r4, FuncLocal@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i32 (...)* @Function, i32 (...)** @Func, align 8
-  store i32 (...)* @Function, i32 (...)** @FuncLocal, align 8
+  store ptr @Function, ptr @Func, align 8
+  store ptr @Function, ptr @FuncLocal, align 8
   ret void
 }
 
@@ -34,22 +34,20 @@ declare signext i32 @Function(...)
 
 define dso_local void @TailCallLocalFuncPtr() local_unnamed_addr {
 ; CHECK-LABEL: TailCallLocalFuncPtr:
-; CHECK:         .localentry TailCallLocalFuncPtr, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r12, FuncLocal@PCREL(0), 1
 ; CHECK-NEXT:    mtctr r12
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @FuncLocal to i32 ()**), align 8
+  %0 = load ptr, ptr @FuncLocal, align 8
   %call = tail call signext i32 %0()
   ret void
 }
 
 define dso_local void @TailCallExtrnFuncPtr() local_unnamed_addr {
 ; CHECK-LABEL: TailCallExtrnFuncPtr:
-; CHECK:         .localentry TailCallExtrnFuncPtr, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, Func@got@pcrel(0), 1
 ; CHECK-NEXT:  .Lpcrel0:
 ; CHECK-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
@@ -58,29 +56,26 @@ define dso_local void @TailCallExtrnFuncPtr() local_unnamed_addr {
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @Func to i32 ()**), align 8
+  %0 = load ptr, ptr @Func, align 8
   %call = tail call signext i32 %0()
   ret void
 }
 
-define dso_local signext i32 @TailCallParamFuncPtr(i32 (...)* nocapture %passedfunc) local_unnamed_addr {
+define dso_local signext i32 @TailCallParamFuncPtr(ptr nocapture %passedfunc) local_unnamed_addr {
 ; CHECK-LABEL: TailCallParamFuncPtr:
-; CHECK:         .localentry TailCallParamFuncPtr, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    mr r12, r3
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %callee.knr.cast = bitcast i32 (...)* %passedfunc to i32 ()*
-  %call = tail call signext i32 %callee.knr.cast()
+  %call = tail call signext i32 %passedfunc()
   ret i32 %call
 }
 
-define dso_local signext i32 @NoTailIndirectCall(i32 (...)* nocapture %passedfunc, i32 signext %a) local_unnamed_addr {
+define dso_local signext i32 @NoTailIndirectCall(ptr nocapture %passedfunc, i32 signext %a) local_unnamed_addr {
 ; CHECK-LABEL: NoTailIndirectCall:
-; CHECK:         .localentry NoTailIndirectCall, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
@@ -88,8 +83,8 @@ define dso_local signext i32 @NoTailIndirectCall(i32 (...)* nocapture %passedfun
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    mr r12, r3
+; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    mr r30, r4
 ; CHECK-NEXT:    bctrl
 ; CHECK-NEXT:    add r3, r3, r30
@@ -100,27 +95,24 @@ define dso_local signext i32 @NoTailIndirectCall(i32 (...)* nocapture %passedfun
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %callee.knr.cast = bitcast i32 (...)* %passedfunc to i32 ()*
-  %call = tail call signext i32 %callee.knr.cast()
+  %call = tail call signext i32 %passedfunc()
   %add = add nsw i32 %call, %a
   ret i32 %add
 }
 
 define dso_local signext i32 @TailCallDirect() local_unnamed_addr {
 ; CHECK-LABEL: TailCallDirect:
-; CHECK:         .localentry TailCallDirect, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    b Function@notoc
 ; CHECK-NEXT:    #TC_RETURNd8 Function@notoc 0
 entry:
-  %call = tail call signext i32 bitcast (i32 (...)* @Function to i32 ()*)()
+  %call = tail call signext i32 @Function()
   ret i32 %call
 }
 
 define dso_local signext i32 @NoTailCallDirect(i32 signext %a) local_unnamed_addr {
 ; CHECK-LABEL: NoTailCallDirect:
-; CHECK:         .localentry NoTailCallDirect, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
@@ -138,15 +130,14 @@ define dso_local signext i32 @NoTailCallDirect(i32 signext %a) local_unnamed_add
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %call = tail call signext i32 bitcast (i32 (...)* @Function to i32 ()*)()
+  %call = tail call signext i32 @Function()
   %add = add nsw i32 %call, %a
   ret i32 %add
 }
 
 define dso_local signext i32 @TailCallDirectLocal() local_unnamed_addr {
 ; CHECK-LABEL: TailCallDirectLocal:
-; CHECK:         .localentry TailCallDirectLocal, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    b LocalFunction@notoc
 ; CHECK-NEXT:    #TC_RETURNd8 LocalFunction@notoc 0
 entry:
@@ -156,8 +147,7 @@ entry:
 
 define dso_local signext i32 @NoTailCallDirectLocal(i32 signext %a) local_unnamed_addr {
 ; CHECK-LABEL: NoTailCallDirectLocal:
-; CHECK:         .localentry NoTailCallDirectLocal, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
@@ -182,22 +172,20 @@ entry:
 
 define dso_local signext i32 @TailCallAbs() local_unnamed_addr {
 ; CHECK-LABEL: TailCallAbs:
-; CHECK:         .localentry TailCallAbs, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li r3, 400
 ; CHECK-NEXT:    li r12, 400
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %call = tail call signext i32 inttoptr (i64 400 to i32 ()*)()
+  %call = tail call signext i32 inttoptr (i64 400 to ptr)()
   ret i32 %call
 }
 
 define dso_local signext i32 @NoTailCallAbs(i32 signext %a) local_unnamed_addr {
 ; CHECK-LABEL: NoTailCallAbs:
-; CHECK:         .localentry NoTailCallAbs, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
@@ -218,7 +206,7 @@ define dso_local signext i32 @NoTailCallAbs(i32 signext %a) local_unnamed_addr {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %call = tail call signext i32 inttoptr (i64 400 to i32 ()*)()
+  %call = tail call signext i32 inttoptr (i64 400 to ptr)()
   %add = add nsw i32 %call, %a
   ret i32 %add
 }
@@ -227,8 +215,7 @@ entry:
 ; This function should be tail called and not inlined.
 define internal fastcc signext i32 @LocalFunction() unnamed_addr #0 {
 ; CHECK-LABEL: LocalFunction:
-; CHECK:         .localentry LocalFunction, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    li r3, 42
 ; CHECK-NEXT:    #NO_APP

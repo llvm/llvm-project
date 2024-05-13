@@ -3,7 +3,7 @@
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-readobj -S %t | FileCheck %s
 // RUN: llvm-readobj -S --symbols %t | FileCheck -check-prefix=SYMBOLS %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t | FileCheck --check-prefix=CODE %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t | FileCheck --check-prefix=CODE %s
 
 // Test the R_ARM_GOT_PREL relocation
  .syntax unified
@@ -59,6 +59,5 @@ val:
 // CODE-NEXT:   20118:       ldr     r0, [pc, r0]
 // CODE-NEXT:   2011c:       ldr     r0, [r0]
 // CODE-NEXT:   20120:       bx      lr
-// CODE: <$d.1>:
 // 0x11124 + 0x1008 + 8 = 0x12128 = .got
 // CODE-NEXT:   20124:       08 00 01 00

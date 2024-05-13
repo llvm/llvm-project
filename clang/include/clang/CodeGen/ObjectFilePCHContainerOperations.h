@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CODEGEN_OBJECT_FILE_PCH_CONTAINER_OPERATIONS_H
-#define LLVM_CLANG_CODEGEN_OBJECT_FILE_PCH_CONTAINER_OPERATIONS_H
+#ifndef LLVM_CLANG_CODEGEN_OBJECTFILEPCHCONTAINEROPERATIONS_H
+#define LLVM_CLANG_CODEGEN_OBJECTFILEPCHCONTAINEROPERATIONS_H
 
 #include "clang/Frontend/PCHContainerOperations.h"
 
@@ -32,7 +32,7 @@ class ObjectFilePCHContainerWriter : public PCHContainerWriter {
 /// A PCHContainerReader implementation that uses LLVM to
 /// wraps Clang modules inside a COFF, ELF, or Mach-O container.
 class ObjectFilePCHContainerReader : public PCHContainerReader {
-  StringRef getFormat() const override { return "obj"; }
+  ArrayRef<StringRef> getFormats() const override;
 
   /// Returns the serialized AST inside the PCH container Buffer.
   StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const override;

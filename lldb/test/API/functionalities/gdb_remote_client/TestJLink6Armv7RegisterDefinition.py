@@ -1,11 +1,11 @@
-from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
+
 
 class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
@@ -15,11 +15,12 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
         that the J-Link only supports g/G for reading/writing
         register AND the J-Link v6.54 doesn't provide anything
         but the general purpose registers."""
-        class MyResponder(MockGDBServerResponder):
 
+        class MyResponder(MockGDBServerResponder):
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
 <!-- Copyright (C) 2008 Free Software Foundation, Inc.
 
      Copying and distribution of this file, with or without modification,
@@ -107,7 +108,9 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
     <reg name="d14" bitsize="64" regnum="79" type="ieee_double" group="float"/>
     <reg name="d15" bitsize="64" regnum="80" type="ieee_double" group="float"/>
   </feature>
-</target>""", False
+</target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -121,7 +124,11 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
             ## it doesn't send up any of the exception registers or floating point
             ## registers that the above register xml describes.
             def readRegisters(self):
-                return "00000000" + self.r1_bytes + "010000000100000001000000000000008c080020a872012000000000a0790120000000008065012041ad0008a0720120692a00089e26000800000061"
+                return (
+                    "00000000"
+                    + self.r1_bytes
+                    + "010000000100000001000000000000008c080020a872012000000000a0790120000000008065012041ad0008a0720120692a00089e26000800000061"
+                )
 
             ## the J-Link accepts a register write packet with just the GPRs
             ## defined.
@@ -130,7 +137,9 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
                 # or the 136 hex-byte general purpose register reg ctx.
                 if len(registers_hex) != 704 and len(register_hex) != 136:
                     return "E06"
-                if registers_hex.startswith("0000000044332211010000000100000001000000000000008c080020a872012000000000a0790120000000008065012041ad0008a0720120692a00089e26000800000061"):
+                if registers_hex.startswith(
+                    "0000000044332211010000000100000001000000000000008c080020a872012000000000a0790120000000008065012041ad0008a0720120692a00089e26000800000061"
+                ):
                     self.r1_bytes = "44332211"
                     return "OK"
                 else:
@@ -157,8 +166,7 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
         self.server.responder = MyResponder()
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                    lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         self.dbg.SetDefaultArchitecture("armv7em")
         target = self.dbg.CreateTargetWithFileAndArch(None, None)
@@ -175,24 +183,23 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
         self.assertEqual(r1_valobj.GetValueAsUnsigned(), 1)
 
         pc_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("pc")
-        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800269e)
+        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800269E)
 
-        xpsr_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("xpsr")
+        xpsr_valobj = (
+            process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("xpsr")
+        )
         self.assertEqual(xpsr_valobj.GetValueAsUnsigned(), 0x61000000)
 
         msp_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("msp")
         err = msp_valobj.GetError()
         self.assertTrue(err.Fail(), "lldb should not be able to fetch the msp register")
 
-        # Reproducers don't support SetData (yet) because it takes a void*.
-        if not configuration.is_reproducer():
-          val = b'\x11\x22\x33\x44'
-          error = lldb.SBError()
-          data = lldb.SBData()
-          data.SetData(error, val, lldb.eByteOrderBig, 4)
-          self.assertEqual(r1_valobj.SetData(data, error), True)
-          self.assertTrue(error.Success())
+        val = b"\x11\x22\x33\x44"
+        error = lldb.SBError()
+        data = lldb.SBData()
+        data.SetData(error, val, lldb.eByteOrderBig, 4)
+        self.assertTrue(r1_valobj.SetData(data, error))
+        self.assertSuccess(error)
 
-          r1_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("r1")
-          self.assertEqual(r1_valobj.GetValueAsUnsigned(), 0x11223344)
-
+        r1_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("r1")
+        self.assertEqual(r1_valobj.GetValueAsUnsigned(), 0x11223344)

@@ -11,8 +11,8 @@ define void @foo() {
 
 ; CHECK0: declare void @bar()
 ; CHECK0-NOT: personality
-; CHECK1: define void @bar() personality i8* bitcast (void ()* @foo to i8*)
-define void @bar() personality i8* bitcast (void ()* @foo to i8*)
+; CHECK1: define void @bar() personality ptr @foo
+define void @bar() personality ptr @foo
 {
   ret void
 }

@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_BPF_BPFCORE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 
@@ -19,23 +20,6 @@ class Module;
 
 class BPFCoreSharedInfo {
 public:
-  enum PatchableRelocKind : uint32_t {
-    FIELD_BYTE_OFFSET = 0,
-    FIELD_BYTE_SIZE,
-    FIELD_EXISTENCE,
-    FIELD_SIGNEDNESS,
-    FIELD_LSHIFT_U64,
-    FIELD_RSHIFT_U64,
-    BTF_TYPE_ID_LOCAL,
-    BTF_TYPE_ID_REMOTE,
-    TYPE_EXISTENCE,
-    TYPE_SIZE,
-    ENUM_VALUE_EXISTENCE,
-    ENUM_VALUE,
-
-    MAX_FIELD_RELOC_KIND,
-  };
-
   enum BTFTypeIdFlag : uint32_t {
     BTF_TYPE_ID_LOCAL_RELOC = 0,
     BTF_TYPE_ID_REMOTE_RELOC,
@@ -46,6 +30,7 @@ public:
   enum PreserveTypeInfo : uint32_t {
     PRESERVE_TYPE_INFO_EXISTENCE = 0,
     PRESERVE_TYPE_INFO_SIZE,
+    PRESERVE_TYPE_INFO_MATCH,
 
     MAX_PRESERVE_TYPE_INFO_FLAG,
   };
@@ -69,6 +54,9 @@ public:
   static Instruction *insertPassThrough(Module *M, BasicBlock *BB,
                                         Instruction *Input,
                                         Instruction *Before);
+  static void removeArrayAccessCall(CallInst *Call);
+  static void removeStructAccessCall(CallInst *Call);
+  static void removeUnionAccessCall(CallInst *Call);
 };
 
 } // namespace llvm

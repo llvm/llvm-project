@@ -13,16 +13,11 @@ import lldb.formatters.metrics
 import CFBag
 import lldb.formatters.Logger
 
-try:
-    basestring
-except NameError:
-    basestring = str
-
 statistics = lldb.formatters.metrics.Metrics()
-statistics.add_metric('invalid_isa')
-statistics.add_metric('invalid_pointer')
-statistics.add_metric('unknown_class')
-statistics.add_metric('code_notrun')
+statistics.add_metric("invalid_isa")
+statistics.add_metric("invalid_pointer")
+statistics.add_metric("unknown_class")
+statistics.add_metric("code_notrun")
 
 # despite the similary to synthetic children providers, these classes are not
 # trying to provide anything but the port number of an NSMachPort, so they need not
@@ -30,7 +25,6 @@ statistics.add_metric('code_notrun')
 
 
 class NSCFSet_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -38,13 +32,15 @@ class NSCFSet_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
         self.update()
 
     def update(self):
@@ -64,12 +60,12 @@ class NSCFSet_SummaryProvider:
     def count(self):
         logger = lldb.formatters.Logger.Logger()
         vcount = self.valobj.CreateChildAtOffset(
-            "count", self.offset(), self.sys_params.types_cache.NSUInteger)
+            "count", self.offset(), self.sys_params.types_cache.NSUInteger
+        )
         return vcount.GetValueAsUnsigned(0)
 
 
 class NSSetUnknown_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -91,11 +87,10 @@ class NSSetUnknown_SummaryProvider:
         num_children_vo = self.valobj.CreateValueFromExpression("count", expr)
         if num_children_vo.IsValid():
             return num_children_vo.GetValueAsUnsigned(0)
-        return '<variable is not NSSet>'
+        return "<variable is not NSSet>"
 
 
 class NSSetI_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -103,13 +98,15 @@ class NSSetI_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
         self.update()
 
     def update(self):
@@ -124,7 +121,8 @@ class NSSetI_SummaryProvider:
     def count(self):
         logger = lldb.formatters.Logger.Logger()
         num_children_vo = self.valobj.CreateChildAtOffset(
-            "count", self.offset(), self.sys_params.types_cache.NSUInteger)
+            "count", self.offset(), self.sys_params.types_cache.NSUInteger
+        )
         value = num_children_vo.GetValueAsUnsigned(0)
         if value is not None:
             # the MSB on immutable sets seems to be taken by some other data
@@ -139,7 +137,6 @@ class NSSetI_SummaryProvider:
 
 
 class NSSetM_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -147,13 +144,15 @@ class NSSetM_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
         self.update()
 
     def update(self):
@@ -168,12 +167,12 @@ class NSSetM_SummaryProvider:
     def count(self):
         logger = lldb.formatters.Logger.Logger()
         num_children_vo = self.valobj.CreateChildAtOffset(
-            "count", self.offset(), self.sys_params.types_cache.NSUInteger)
+            "count", self.offset(), self.sys_params.types_cache.NSUInteger
+        )
         return num_children_vo.GetValueAsUnsigned(0)
 
 
 class NSCountedSet_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -182,8 +181,9 @@ class NSCountedSet_SummaryProvider:
         self.valobj = valobj
         self.sys_params = params
         if not (self.sys_params.types_cache.voidptr):
-            self.sys_params.types_cache.voidptr = self.valobj.GetType(
-            ).GetBasicType(lldb.eBasicTypeVoid).GetPointerType()
+            self.sys_params.types_cache.voidptr = (
+                self.valobj.GetType().GetBasicType(lldb.eBasicTypeVoid).GetPointerType()
+            )
         self.update()
 
     def update(self):
@@ -199,41 +199,43 @@ class NSCountedSet_SummaryProvider:
     def count(self):
         logger = lldb.formatters.Logger.Logger()
         cfbag_vo = self.valobj.CreateChildAtOffset(
-            "bag_impl", self.offset(), self.sys_params.types_cache.voidptr)
-        return CFBag.CFBagRef_SummaryProvider(
-            cfbag_vo, self.sys_params).length()
+            "bag_impl", self.offset(), self.sys_params.types_cache.voidptr
+        )
+        return CFBag.CFBagRef_SummaryProvider(cfbag_vo, self.sys_params).length()
 
 
 def GetSummary_Impl(valobj):
     logger = lldb.formatters.Logger.Logger()
     global statistics
-    class_data, wrapper = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
-        valobj, statistics)
+    (
+        class_data,
+        wrapper,
+    ) = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
+        valobj, statistics
+    )
     if wrapper:
         return wrapper
 
     name_string = class_data.class_name()
     logger >> "class name is: " + str(name_string)
 
-    if name_string == '__NSCFSet':
+    if name_string == "__NSCFSet":
         wrapper = NSCFSet_SummaryProvider(valobj, class_data.sys_params)
-        statistics.metric_hit('code_notrun', valobj)
-    elif name_string == '__NSSetI':
+        statistics.metric_hit("code_notrun", valobj)
+    elif name_string == "__NSSetI":
         wrapper = NSSetI_SummaryProvider(valobj, class_data.sys_params)
-        statistics.metric_hit('code_notrun', valobj)
-    elif name_string == '__NSSetM':
+        statistics.metric_hit("code_notrun", valobj)
+    elif name_string == "__NSSetM":
         wrapper = NSSetM_SummaryProvider(valobj, class_data.sys_params)
-        statistics.metric_hit('code_notrun', valobj)
-    elif name_string == 'NSCountedSet':
+        statistics.metric_hit("code_notrun", valobj)
+    elif name_string == "NSCountedSet":
         wrapper = NSCountedSet_SummaryProvider(valobj, class_data.sys_params)
-        statistics.metric_hit('code_notrun', valobj)
+        statistics.metric_hit("code_notrun", valobj)
     else:
         wrapper = NSSetUnknown_SummaryProvider(valobj, class_data.sys_params)
         statistics.metric_hit(
-            'unknown_class',
-            valobj.GetName() +
-            " seen as " +
-            name_string)
+            "unknown_class", valobj.GetName() + " seen as " + name_string
+        )
     return wrapper
 
 
@@ -246,14 +248,13 @@ def NSSet_SummaryProvider(valobj, dict):
         except:
             summary = None
         if summary is None:
-            summary = '<variable is not NSSet>'
-        if isinstance(summary, basestring):
+            summary = "<variable is not NSSet>"
+        if isinstance(summary, str):
             return summary
         else:
-            summary = str(summary) + \
-                (' objects' if summary != 1 else ' object')
+            summary = str(summary) + (" objects" if summary != 1 else " object")
         return summary
-    return 'Summary Unavailable'
+    return "Summary Unavailable"
 
 
 def NSSet_SummaryProvider2(valobj, dict):
@@ -261,8 +262,8 @@ def NSSet_SummaryProvider2(valobj, dict):
     provider = GetSummary_Impl(valobj)
     if provider is not None:
         if isinstance(
-                provider,
-                lldb.runtime.objc.objc_runtime.SpecialSituation_Description):
+            provider, lldb.runtime.objc.objc_runtime.SpecialSituation_Description
+        ):
             return provider.message()
         try:
             summary = provider.count()
@@ -275,20 +276,19 @@ def NSSet_SummaryProvider2(valobj, dict):
         # experimentation (if counts start looking weird, then most probably
         #                  the mask needs to be changed)
         if summary is None:
-            summary = '<variable is not CFSet>'
-        if isinstance(summary, basestring):
+            summary = "<variable is not CFSet>"
+        if isinstance(summary, str):
             return summary
         else:
             if provider.sys_params.is_64_bit:
-                summary = summary & ~0x1fff000000000000
-            summary = '@"' + str(summary) + \
-                (' values"' if summary != 1 else ' value"')
+                summary = summary & ~0x1FFF000000000000
+            summary = '@"' + str(summary) + (' values"' if summary != 1 else ' value"')
         return summary
-    return 'Summary Unavailable'
+    return "Summary Unavailable"
 
 
 def __lldb_init_module(debugger, dict):
+    debugger.HandleCommand("type summary add -F NSSet.NSSet_SummaryProvider NSSet")
     debugger.HandleCommand(
-        "type summary add -F NSSet.NSSet_SummaryProvider NSSet")
-    debugger.HandleCommand(
-        "type summary add -F NSSet.NSSet_SummaryProvider2 CFSetRef CFMutableSetRef")
+        "type summary add -F NSSet.NSSet_SummaryProvider2 CFSetRef CFMutableSetRef"
+    )

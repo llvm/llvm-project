@@ -10,18 +10,18 @@ unsigned short si, sj, sk;
 
 // CHECKS-LABEL:   define{{.*}} void @testshortmul()
 // CHECKU-LABEL: define{{.*}} void @testshortmul()
-void testshortmul() {
+void testshortmul(void) {
 
-  // CHECKS:        load i16, i16* @sj
-  // CHECKS:        load i16, i16* @sk
+  // CHECKS:        load i16, ptr @sj
+  // CHECKS:        load i16, ptr @sk
   // CHECKS:        [[T1:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[T2:%.*]], i32 [[T3:%.*]])
   // CHECKS-NEXT:   [[T4:%.*]] = extractvalue { i32, i1 } [[T1]], 0
   // CHECKS-NEXT:   [[T5:%.*]] = extractvalue { i32, i1 } [[T1]], 1
   // CHECKS:        call void @__ubsan_handle_mul_overflow
   //
-  // CHECKU:      [[T1:%.*]] = load i16, i16* @sj
+  // CHECKU:      [[T1:%.*]] = load i16, ptr @sj
   // CHECKU:      [[T2:%.*]] = zext i16 [[T1]]
-  // CHECKU:      [[T3:%.*]] = load i16, i16* @sk
+  // CHECKU:      [[T3:%.*]] = load i16, ptr @sk
   // CHECKU:      [[T4:%.*]] = zext i16 [[T3]]
   // CHECKU-NOT:  llvm.smul
   // CHECKU-NOT:  llvm.umul

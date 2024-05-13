@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
 @0 = global i32 0
 ; CHECK-DAG: @0 = internal global i32 0
@@ -6,18 +6,18 @@
 @1 = private global i32 0
 ; CHECK-DAG: @1 = private global i32 0
 
-define i32* @2() {
-	ret i32* @0
+define ptr @2() {
+	ret ptr @0
 }
-; CHECK-DAG: define internal fastcc i32* @2()
+; CHECK-DAG: define internal fastcc ptr @2()
 
-define i32* @f() {
+define ptr @f() {
 entry:
-	call i32* @2()
-	ret i32* %0
+	call ptr @2()
+	ret ptr %0
 }
 
-define i32* @g() {
+define ptr @g() {
 entry:
-	ret i32* @1
+	ret ptr @1
 }

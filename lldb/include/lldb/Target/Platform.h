@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -28,6 +29,8 @@
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
+
+#include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
@@ -43,7 +46,7 @@ class PlatformProperties : public Properties {
 public:
   PlatformProperties();
 
-  static ConstString GetSettingName();
+  static llvm::StringRef GetSettingName();
 
   bool GetUseModuleCache() const;
   bool SetUseModuleCache(bool use_module_cache);
@@ -55,7 +58,6 @@ private:
   void SetDefaultModuleCacheDirectory(const FileSpec &dir_spec);
 };
 
-typedef std::shared_ptr<PlatformProperties> PlatformPropertiesSP;
 typedef llvm::SmallVector<lldb::addr_t, 6> MmapArgList;
 
 /// \class Platform Platform.h "lldb/Target/Platform.h"
@@ -74,8 +76,6 @@ public:
   /// Default Constructor
   Platform(bool is_host_platform);
 
-  /// Destructor.
-  ///
   /// The destructor is virtual since this class is designed to be inherited
   /// from by the plug-in instance.
   ~Platform() override;
@@ -84,7 +84,7 @@ public:
 
   static void Terminate();
 
-  static const PlatformPropertiesSP &GetGlobalPlatformProperties();
+  static PlatformProperties &GetGlobalPlatformProperties();
 
   /// Get the native host platform plug-in.
   ///
@@ -97,20 +97,11 @@ public:
   /// attaching to processes unless another platform is specified.
   static lldb::PlatformSP GetHostPlatform();
 
-  static lldb::PlatformSP
-  GetPlatformForArchitecture(const ArchSpec &arch, ArchSpec *platform_arch_ptr);
-
   static const char *GetHostPlatformName();
 
   static void SetHostPlatform(const lldb::PlatformSP &platform_sp);
 
-  // Find an existing platform plug-in by name
-  static lldb::PlatformSP Find(ConstString name);
-
-  static lldb::PlatformSP Create(ConstString name, Status &error);
-
-  static lldb::PlatformSP Create(const ArchSpec &arch,
-                                 ArchSpec *platform_arch_ptr, Status &error);
+  static lldb::PlatformSP Create(llvm::StringRef name);
 
   /// Augments the triple either with information from platform or the host
   /// system (if platform is null).
@@ -215,18 +206,18 @@ public:
 
   bool SetOSVersion(llvm::VersionTuple os_version);
 
-  bool GetOSBuildString(std::string &s);
+  std::optional<std::string> GetOSBuildString();
 
-  bool GetOSKernelDescription(std::string &s);
+  std::optional<std::string> GetOSKernelDescription();
 
   // Returns the name of the platform
-  ConstString GetName();
+  llvm::StringRef GetName() { return GetPluginName(); }
 
   virtual const char *GetHostname();
 
   virtual ConstString GetFullNameForDylib(ConstString basename);
 
-  virtual const char *GetDescription() = 0;
+  virtual llvm::StringRef GetDescription() = 0;
 
   /// Report the current status for this platform.
   ///
@@ -243,14 +234,12 @@ public:
   // HostInfo::GetOSVersion().
   virtual bool GetRemoteOSVersion() { return false; }
 
-  virtual bool GetRemoteOSBuildString(std::string &s) {
-    s.clear();
-    return false;
+  virtual std::optional<std::string> GetRemoteOSBuildString() {
+    return std::nullopt;
   }
 
-  virtual bool GetRemoteOSKernelDescription(std::string &s) {
-    s.clear();
-    return false;
+  virtual std::optional<std::string> GetRemoteOSKernelDescription() {
+    return std::nullopt;
   }
 
   // Remote Platform subclasses need to override this function
@@ -262,7 +251,7 @@ public:
 
   virtual bool SetRemoteWorkingDirectory(const FileSpec &working_dir);
 
-  virtual UserIDResolver &GetUserIDResolver() = 0;
+  virtual UserIDResolver &GetUserIDResolver();
 
   /// Locate a file for a platform.
   ///
@@ -299,12 +288,43 @@ public:
   // current computers global settings.
   virtual FileSpecList
   LocateExecutableScriptingResources(Target *target, Module &module,
-                                     Stream *feedback_stream);
+                                     Stream &feedback_stream);
 
+  /// \param[in] module_spec
+  ///     The ModuleSpec of a binary to find.
+  ///
+  /// \param[in] process
+  ///     A Process.
+  ///
+  /// \param[out] module_sp
+  ///     A Module that matches the ModuleSpec, if one is found.
+  ///
+  /// \param[in] module_search_paths_ptr
+  ///     Locations to possibly look for a binary that matches the ModuleSpec.
+  ///
+  /// \param[out] old_modules
+  ///     Existing Modules in the Process' Target image list which match
+  ///     the FileSpec.
+  ///
+  /// \param[out] did_create_ptr
+  ///     Optional boolean, nullptr may be passed for this argument.
+  ///     If this method is returning a *new* ModuleSP, this
+  ///     will be set to true.
+  ///     If this method is returning a ModuleSP that is already in the
+  ///     Target's image list, it will be false.
+  ///
+  /// \return
+  ///     The Status object for any errors found while searching for
+  ///     the binary.
   virtual Status GetSharedModule(
       const ModuleSpec &module_spec, Process *process,
       lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+
+  void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
+                                     lldb::ModuleSP &module_sp,
+                                     FileSpec &symbol_file_spec,
+                                     bool *did_create_ptr);
 
   virtual bool GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec);
@@ -316,18 +336,11 @@ public:
   /// Get the platform's supported architectures in the order in which they
   /// should be searched.
   ///
-  /// \param[in] idx
-  ///     A zero based architecture index
-  ///
-  /// \param[out] arch
-  ///     A copy of the architecture at index if the return value is
-  ///     \b true.
-  ///
-  /// \return
-  ///     \b true if \a arch was filled in and is valid, \b false
-  ///     otherwise.
-  virtual bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                               ArchSpec &arch) = 0;
+  /// \param[in] process_host_arch
+  ///     The process host architecture if it's known. An invalid ArchSpec
+  ///     represents that the process host architecture is unknown.
+  virtual std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) = 0;
 
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
@@ -349,7 +362,8 @@ public:
   /// Lets a platform answer if it is compatible with a given architecture and
   /// the target triple contained within.
   virtual bool IsCompatibleArchitecture(const ArchSpec &arch,
-                                        bool exact_arch_match,
+                                        const ArchSpec &process_host_arch,
+                                        ArchSpec::MatchType match,
                                         ArchSpec *compatible_arch_ptr);
 
   /// Not all platforms will support debugging a process by spawning somehow
@@ -363,11 +377,9 @@ public:
   /// platforms will want to subclass this function in order to be able to
   /// intercept STDIO and possibly launch a separate process that will debug
   /// the debuggee.
-  virtual lldb::ProcessSP
-  DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
-               Target *target, // Can be nullptr, if nullptr create a new
-                               // target, else use existing one
-               Status &error);
+  virtual lldb::ProcessSP DebugProcess(ProcessLaunchInfo &launch_info,
+                                       Debugger &debugger, Target &target,
+                                       Status &error);
 
   virtual lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
                                          llvm::StringRef plugin_name,
@@ -423,6 +435,8 @@ public:
   virtual uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &proc_infos);
 
+  ProcessInstanceInfoList GetAllProcesses();
+
   virtual bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info);
 
   // Set a breakpoint on all functions that can end up creating a thread for
@@ -469,13 +483,15 @@ public:
   // Used for column widths
   size_t GetMaxGroupIDNameLength() const { return m_max_gid_name_len; }
 
-  ConstString GetSDKRootDirectory() const { return m_sdk_sysroot; }
+  const std::string &GetSDKRootDirectory() const { return m_sdk_sysroot; }
 
-  void SetSDKRootDirectory(ConstString dir) { m_sdk_sysroot = dir; }
+  void SetSDKRootDirectory(std::string dir) { m_sdk_sysroot = std::move(dir); }
 
-  ConstString GetSDKBuild() const { return m_sdk_build; }
+  const std::string &GetSDKBuild() const { return m_sdk_build; }
 
-  void SetSDKBuild(ConstString sdk_build) { m_sdk_build = sdk_build; }
+  void SetSDKBuild(std::string sdk_build) {
+    m_sdk_build = std::move(sdk_build);
+  }
 
   // Override this to return true if your platform supports Clang modules. You
   // may also need to override AddClangModuleCompilationOptions to pass the
@@ -512,34 +528,20 @@ public:
 
   virtual lldb::user_id_t OpenFile(const FileSpec &file_spec,
                                    File::OpenOptions flags, uint32_t mode,
-                                   Status &error) {
-    return UINT64_MAX;
-  }
+                                   Status &error);
 
-  virtual bool CloseFile(lldb::user_id_t fd, Status &error) { return false; }
+  virtual bool CloseFile(lldb::user_id_t fd, Status &error);
 
-  virtual lldb::user_id_t GetFileSize(const FileSpec &file_spec) {
-    return UINT64_MAX;
-  }
+  virtual lldb::user_id_t GetFileSize(const FileSpec &file_spec);
 
   virtual void AutoCompleteDiskFileOrDirectory(CompletionRequest &request,
                                                bool only_dir) {}
 
   virtual uint64_t ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
-                            uint64_t dst_len, Status &error) {
-    error.SetErrorStringWithFormat(
-        "Platform::ReadFile() is not supported in the %s platform",
-        GetName().GetCString());
-    return -1;
-  }
+                            uint64_t dst_len, Status &error);
 
   virtual uint64_t WriteFile(lldb::user_id_t fd, uint64_t offset,
-                             const void *src, uint64_t src_len, Status &error) {
-    error.SetErrorStringWithFormat(
-        "Platform::WriteFile() is not supported in the %s platform",
-        GetName().GetCString());
-    return -1;
-  }
+                             const void *src, uint64_t src_len, Status &error);
 
   virtual Status GetFile(const FileSpec &source, const FileSpec &destination);
 
@@ -647,8 +649,8 @@ public:
 
   virtual std::string GetPlatformSpecificConnectionInformation() { return ""; }
 
-  virtual bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
-                            uint64_t &high);
+  virtual llvm::ErrorOr<llvm::MD5::MD5Result>
+  CalculateMD5(const FileSpec &file_spec);
 
   virtual uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     return 1;
@@ -725,6 +727,24 @@ public:
   /// \return
   ///     A list of symbol names.  The list may be empty.
   virtual const std::vector<ConstString> &GetTrapHandlerSymbolNames();
+
+  /// Try to get a specific unwind plan for a named trap handler.
+  /// The default is not to have specific unwind plans for trap handlers.
+  ///
+  /// \param[in] triple
+  ///     Triple of the current target.
+  ///
+  /// \param[in] name
+  ///     Name of the trap handler function.
+  ///
+  /// \return
+  ///     A specific unwind plan for that trap handler, or an empty
+  ///     shared pointer. The latter means there is no specific plan,
+  ///     unwind as normal.
+  virtual lldb::UnwindPlanSP
+  GetTrapHandlerUnwindPlan(const llvm::Triple &triple, ConstString name) {
+    return {};
+  }
 
   /// Find a support executable that may not live within in the standard
   /// locations related to LLDB.
@@ -864,7 +884,58 @@ public:
     return nullptr;
   }
 
+  /// Detect a binary in memory that will determine which Platform and
+  /// DynamicLoader should be used in this target/process, and update
+  /// the Platform/DynamicLoader.
+  /// The binary will be loaded into the Target, or will be registered with
+  /// the DynamicLoader so that it will be loaded at a later stage.  Returns
+  /// true to indicate that this is a platform binary and has been
+  /// loaded/registered, no further action should be taken by the caller.
+  ///
+  /// \param[in] process
+  ///     Process read memory from, a Process must be provided.
+  ///
+  /// \param[in] addr
+  ///     Address of a binary in memory.
+  ///
+  /// \param[in] notify
+  ///     Whether ModulesDidLoad should be called, if a binary is loaded.
+  ///     Caller may prefer to call ModulesDidLoad for multiple binaries
+  ///     that were loaded at the same time.
+  ///
+  /// \return
+  ///     Returns true if the binary was loaded in the target (or will be
+  ///     via a DynamicLoader).  Returns false if the binary was not
+  ///     loaded/registered, and the caller must load it into the target.
+  virtual bool LoadPlatformBinaryAndSetup(Process *process, lldb::addr_t addr,
+                                          bool notify) {
+    return false;
+  }
+
+  virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
+
+  virtual Args GetExtraStartupCommands();
+
+  typedef std::function<Status(const ModuleSpec &module_spec,
+                               FileSpec &module_file_spec,
+                               FileSpec &symbol_file_spec)>
+      LocateModuleCallback;
+
+  /// Set locate module callback. This allows users to implement their own
+  /// module cache system. For example, to leverage artifacts of build system,
+  /// to bypass pulling files from remote platform, or to search symbol files
+  /// from symbol servers.
+  void SetLocateModuleCallback(LocateModuleCallback callback);
+
+  LocateModuleCallback GetLocateModuleCallback() const;
+
 protected:
+  /// Create a list of ArchSpecs with the given OS and a architectures. The
+  /// vendor field is left as an "unspecified unknown".
+  static std::vector<ArchSpec>
+  CreateArchList(llvm::ArrayRef<llvm::Triple::ArchType> archs,
+                 llvm::Triple::OSType os);
+
   /// Private implementation of connecting to a process. If the stream is set
   /// we connect synchronously.
   lldb::ProcessSP DoConnectProcess(llvm::StringRef connect_url,
@@ -879,13 +950,13 @@ protected:
   // the once we call HostInfo::GetOSVersion().
   bool m_os_version_set_while_connected;
   bool m_system_arch_set_while_connected;
-  ConstString
+  std::string
       m_sdk_sysroot; // the root location of where the SDK files are all located
-  ConstString m_sdk_build;
+  std::string m_sdk_build;
   FileSpec m_working_dir; // The working directory which is used when installing
                           // modules that have no install path set
   std::string m_remote_url;
-  std::string m_name;
+  std::string m_hostname;
   llvm::VersionTuple m_os_version;
   ArchSpec
       m_system_arch; // The architecture of the kernel or the remote platform
@@ -905,6 +976,7 @@ protected:
   std::vector<ConstString> m_trap_handlers;
   bool m_calculated_trap_handlers;
   const std::unique_ptr<ModuleCache> m_module_cache;
+  LocateModuleCallback m_locate_module_callback;
 
   /// Ask the Platform subclass to fill in the list of trap handler names
   ///
@@ -920,8 +992,7 @@ protected:
   virtual void CalculateTrapHandlerSymbolNames() = 0;
 
   Status GetCachedExecutable(ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                             const FileSpecList *module_search_paths_ptr,
-                             Platform &remote_platform);
+                             const FileSpecList *module_search_paths_ptr);
 
   virtual Status DownloadModuleSlice(const FileSpec &src_file_spec,
                                      const uint64_t src_offset,
@@ -932,6 +1003,11 @@ protected:
                                     const FileSpec &dst_file_spec);
 
   virtual const char *GetCacheHostname();
+
+  virtual Status
+  ResolveRemoteExecutable(const ModuleSpec &module_spec,
+                          lldb::ModuleSP &exe_module_sp,
+                          const FileSpecList *module_search_paths_ptr);
 
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;
@@ -944,17 +1020,12 @@ private:
   bool GetCachedSharedModule(const ModuleSpec &module_spec,
                              lldb::ModuleSP &module_sp, bool *did_create_ptr);
 
-  Status LoadCachedExecutable(const ModuleSpec &module_spec,
-                              lldb::ModuleSP &module_sp,
-                              const FileSpecList *module_search_paths_ptr,
-                              Platform &remote_platform);
-
   FileSpec GetModuleCacheRoot();
 };
 
 class PlatformList {
 public:
-  PlatformList() : m_mutex(), m_platforms(), m_selected_platform_sp() {}
+  PlatformList() = default;
 
   ~PlatformList() = default;
 
@@ -1008,6 +1079,58 @@ public:
       m_selected_platform_sp = m_platforms.back();
     }
   }
+
+  lldb::PlatformSP GetOrCreate(llvm::StringRef name);
+  lldb::PlatformSP GetOrCreate(const ArchSpec &arch,
+                               const ArchSpec &process_host_arch,
+                               ArchSpec *platform_arch_ptr, Status &error);
+  lldb::PlatformSP GetOrCreate(const ArchSpec &arch,
+                               const ArchSpec &process_host_arch,
+                               ArchSpec *platform_arch_ptr);
+
+  /// Get the platform for the given list of architectures.
+  ///
+  /// The algorithm works a follows:
+  ///
+  /// 1. Returns the selected platform if it matches any of the architectures.
+  /// 2. Returns the host platform if it matches any of the architectures.
+  /// 3. Returns the platform that matches all the architectures.
+  ///
+  /// If none of the above apply, this function returns a default platform. The
+  /// candidates output argument differentiates between either no platforms
+  /// supporting the given architecture or multiple platforms supporting the
+  /// given architecture.
+  lldb::PlatformSP GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
+                               const ArchSpec &process_host_arch,
+                               std::vector<lldb::PlatformSP> &candidates);
+
+  lldb::PlatformSP Create(llvm::StringRef name);
+
+  /// Detect a binary in memory that will determine which Platform and
+  /// DynamicLoader should be used in this target/process, and update
+  /// the Platform/DynamicLoader.
+  /// The binary will be loaded into the Target, or will be registered with
+  /// the DynamicLoader so that it will be loaded at a later stage.  Returns
+  /// true to indicate that this is a platform binary and has been
+  /// loaded/registered, no further action should be taken by the caller.
+  ///
+  /// \param[in] process
+  ///     Process read memory from, a Process must be provided.
+  ///
+  /// \param[in] addr
+  ///     Address of a binary in memory.
+  ///
+  /// \param[in] notify
+  ///     Whether ModulesDidLoad should be called, if a binary is loaded.
+  ///     Caller may prefer to call ModulesDidLoad for multiple binaries
+  ///     that were loaded at the same time.
+  ///
+  /// \return
+  ///     Returns true if the binary was loaded in the target (or will be
+  ///     via a DynamicLoader).  Returns false if the binary was not
+  ///     loaded/registered, and the caller must load it into the target.
+  bool LoadPlatformBinaryAndSetup(Process *process, lldb::addr_t addr,
+                                  bool notify);
 
 protected:
   typedef std::vector<lldb::PlatformSP> collection;

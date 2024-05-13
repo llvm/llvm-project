@@ -1,4 +1,4 @@
-//===----------------------- catch_function_01.cpp ------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,7 @@
 // UNSUPPORTED: no-exceptions
 
 // 65ace9daa360 made it in the dylib in macOS 10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10}}
 
 #include <cassert>
 

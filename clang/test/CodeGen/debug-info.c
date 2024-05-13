@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unk-unk -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s
 
 // PR3023
 void convert(void) {
@@ -40,15 +41,13 @@ struct foo2 {
 
 struct foo2 foo2;
 
-
-// Radar 7325611
 // CHECK-DAG: !DIDerivedType(tag: DW_TAG_typedef, name: "barfoo"
 typedef int barfoo;
-barfoo foo() {
+barfoo foo(void) {
 }
 
 // CHECK-DAG: __uint128_t
-__uint128_t foo128 ()
+__uint128_t foo128 (void)
 {
   __uint128_t int128 = 44;
   return int128;
@@ -58,3 +57,8 @@ __uint128_t foo128 ()
 typedef unsigned long long uint64_t;
 typedef uint64_t uint64x2_t __attribute__((ext_vector_type(2)));
 uint64x2_t extvectbar[4];
+
+// CHECK-DAG: !DIBasicType(name: "long"
+// CHECK-DAG: !DIBasicType(name: "unsigned long long"
+void integral_types(long x, unsigned long long y) {
+}

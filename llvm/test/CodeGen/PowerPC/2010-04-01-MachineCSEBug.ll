@@ -4,10 +4,10 @@
 %0 = type { i32 }
 %1 = type { i64 }
 %struct.Buffer = type { [1024 x i8], i64, i64, i64 }
-%struct.InStream = type { %struct.Buffer, %0, %1, i32*, %struct.InStreamMethods* }
-%struct.InStreamMethods = type { void (%struct.InStream*, i8*, i32)*, void (%struct.InStream*, i64)*, i64 (%struct.InStream*)*, void (%struct.InStream*)* }
+%struct.InStream = type { %struct.Buffer, %0, %1, ptr, ptr }
+%struct.InStreamMethods = type { ptr, ptr, ptr, ptr }
 
-define i64 @t(%struct.InStream* %is) nounwind optsize ssp {
+define i64 @t(ptr %is) nounwind optsize ssp {
 entry:
   br i1 undef, label %is_read_byte.exit, label %bb.i
 

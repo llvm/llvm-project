@@ -1,0 +1,5 @@
+_start
+main
+_a
+_b
+_f

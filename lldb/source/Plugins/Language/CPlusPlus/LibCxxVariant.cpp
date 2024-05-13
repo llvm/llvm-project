@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibCxxVariant.h"
+#include "LibCxx.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/LLDBAssert.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -65,25 +68,50 @@ namespace {
 // 3) NPos, its value is variant_npos which means the variant has no value
 enum class LibcxxVariantIndexValidity { Valid, Invalid, NPos };
 
+uint64_t VariantNposValue(uint64_t index_byte_size) {
+  switch (index_byte_size) {
+  case 1:
+    return static_cast<uint8_t>(-1);
+  case 2:
+    return static_cast<uint16_t>(-1);
+  case 4:
+    return static_cast<uint32_t>(-1);
+  }
+  lldbassert(false && "Unknown index type size");
+  return static_cast<uint32_t>(-1); // Fallback to stable ABI type.
+}
+
 LibcxxVariantIndexValidity
 LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
-  ValueObjectSP index_sp(
-      impl_sp->GetChildMemberWithName(ConstString("__index"), true));
+  ValueObjectSP index_sp(impl_sp->GetChildMemberWithName("__index"));
 
   if (!index_sp)
     return LibcxxVariantIndexValidity::Invalid;
 
-  int64_t index_value = index_sp->GetValueAsSigned(0);
+  // In the stable ABI, the type of __index is just int.
+  // In the unstable ABI, where _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION is
+  // enabled, the type can either be unsigned char/short/int depending on
+  // how many variant types there are.
+  // We only need to do this here when comparing against npos, because npos is
+  // just `-1`, but that translates to different unsigned values depending on
+  // the byte size.
+  CompilerType index_type = index_sp->GetCompilerType();
 
-  if (index_value == -1)
+  std::optional<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
+  if (!index_type_bytes)
+    return LibcxxVariantIndexValidity::Invalid;
+
+  uint64_t npos_value = VariantNposValue(*index_type_bytes);
+  uint64_t index_value = index_sp->GetValueAsUnsigned(0);
+
+  if (index_value == npos_value)
     return LibcxxVariantIndexValidity::NPos;
 
   return LibcxxVariantIndexValidity::Valid;
 }
 
-llvm::Optional<uint64_t> LibcxxVariantIndexValue(ValueObjectSP &impl_sp) {
-  ValueObjectSP index_sp(
-      impl_sp->GetChildMemberWithName(ConstString("__index"), true));
+std::optional<uint64_t> LibcxxVariantIndexValue(ValueObjectSP &impl_sp) {
+  ValueObjectSP index_sp(impl_sp->GetChildMemberWithName("__index"));
 
   if (!index_sp)
     return {};
@@ -92,16 +120,14 @@ llvm::Optional<uint64_t> LibcxxVariantIndexValue(ValueObjectSP &impl_sp) {
 }
 
 ValueObjectSP LibcxxVariantGetNthHead(ValueObjectSP &impl_sp, uint64_t index) {
-  ValueObjectSP data_sp(
-      impl_sp->GetChildMemberWithName(ConstString("__data"), true));
+  ValueObjectSP data_sp(impl_sp->GetChildMemberWithName("__data"));
 
   if (!data_sp)
     return ValueObjectSP{};
 
   ValueObjectSP current_level = data_sp;
   for (uint64_t n = index; n != 0; --n) {
-    ValueObjectSP tail_sp(
-        current_level->GetChildMemberWithName(ConstString("__tail"), true));
+    ValueObjectSP tail_sp(current_level->GetChildMemberWithName("__tail"));
 
     if (!tail_sp)
       return ValueObjectSP{};
@@ -109,7 +135,7 @@ ValueObjectSP LibcxxVariantGetNthHead(ValueObjectSP &impl_sp, uint64_t index) {
     current_level = tail_sp;
   }
 
-  return current_level->GetChildMemberWithName(ConstString("__head"), true);
+  return current_level->GetChildMemberWithName("__head");
 }
 } // namespace
 
@@ -121,8 +147,8 @@ bool LibcxxVariantSummaryProvider(ValueObject &valobj, Stream &stream,
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP impl_sp(
-      valobj_sp->GetChildMemberWithName(ConstString("__impl"), true));
+  ValueObjectSP impl_sp = GetChildMemberWithName(
+      *valobj_sp, {ConstString("__impl_"), ConstString("__impl")});
 
   if (!impl_sp)
     return false;
@@ -178,69 +204,70 @@ public:
   }
 
   bool MightHaveChildren() override { return true; }
-  bool Update() override;
-  size_t CalculateNumChildren() override { return m_size; }
-  ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ChildCacheState Update() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return m_size; }
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
 private:
   size_t m_size = 0;
 };
 } // namespace
 
-bool VariantFrontEnd::Update() {
+lldb::ChildCacheState VariantFrontEnd::Update() {
   m_size = 0;
-  ValueObjectSP impl_sp(
-      m_backend.GetChildMemberWithName(ConstString("__impl"), true));
+  ValueObjectSP impl_sp = formatters::GetChildMemberWithName(
+      m_backend, {ConstString("__impl_"), ConstString("__impl")});
   if (!impl_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   LibcxxVariantIndexValidity validity = LibcxxVariantGetIndexValidity(impl_sp);
 
   if (validity == LibcxxVariantIndexValidity::Invalid)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   if (validity == LibcxxVariantIndexValidity::NPos)
-    return true;
+    return lldb::ChildCacheState::eReuse;
 
   m_size = 1;
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
-ValueObjectSP VariantFrontEnd::GetChildAtIndex(size_t idx) {
+ValueObjectSP VariantFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx >= m_size)
-    return ValueObjectSP();
+    return {};
 
-  ValueObjectSP impl_sp(
-      m_backend.GetChildMemberWithName(ConstString("__impl"), true));
+  ValueObjectSP impl_sp = formatters::GetChildMemberWithName(
+      m_backend, {ConstString("__impl_"), ConstString("__impl")});
+  if (!impl_sp)
+    return {};
 
   auto optional_index_value = LibcxxVariantIndexValue(impl_sp);
 
   if (!optional_index_value)
-    return ValueObjectSP();
+    return {};
 
   uint64_t index_value = *optional_index_value;
 
   ValueObjectSP nth_head = LibcxxVariantGetNthHead(impl_sp, index_value);
 
   if (!nth_head)
-    return ValueObjectSP();
+    return {};
 
   CompilerType head_type = nth_head->GetCompilerType();
 
   if (!head_type)
-    return ValueObjectSP();
+    return {};
 
   CompilerType template_type = head_type.GetTypeTemplateArgument(1);
 
   if (!template_type)
-    return ValueObjectSP();
+    return {};
 
-  ValueObjectSP head_value(
-      nth_head->GetChildMemberWithName(ConstString("__value"), true));
+  ValueObjectSP head_value(nth_head->GetChildMemberWithName("__value"));
 
   if (!head_value)
-    return ValueObjectSP();
+    return {};
 
   return head_value->Clone(ConstString("Value"));
 }

@@ -11,17 +11,14 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace objc {
+namespace clang::tidy::google::objc {
 
 /// This check finds Objective-C code that uses +new to create object instances,
 /// or overrides +new in classes. Both are forbidden by Google's Objective-C
 /// style guide.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google-avoid-nsobject-new.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/google/objc-avoid-nsobject-new.html
 class AvoidNSObjectNewCheck : public ClangTidyCheck {
 public:
   AvoidNSObjectNewCheck(StringRef Name, ClangTidyContext *Context)
@@ -33,9 +30,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace objc
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::objc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_AVOIDNSOBJECTNEWCHECK_H

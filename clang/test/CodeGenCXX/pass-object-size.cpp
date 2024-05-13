@@ -20,10 +20,10 @@ void Lambdas(char *ptr) {
   gi = L2(ptr);
 }
 
-// CHECK-DAG: define internal i64 @"_ZZN7lambdas7LambdasEPcENK3$_0clEPvU17pass_object_size0"
-// CHECK-NOT: call i64 @llvm.objectsize
-// CHECK-DAG: define internal i64 @"_ZZN7lambdas7LambdasEPcENK3$_1clEPvU17pass_object_size0"
-// CHECK-NOT: call i64 @llvm.objectsize
+// CHECK-DAG: define internal noundef i64 @"_ZZN7lambdas7LambdasEPcENK3$_0clEPvU17pass_object_size0"
+// CHECK-NOT: call noundef i64 @llvm.objectsize
+// CHECK-DAG: define internal noundef i64 @"_ZZN7lambdas7LambdasEPcENK3$_1clEPvU17pass_object_size0"
+// CHECK-NOT: call noundef i64 @llvm.objectsize
 }
 
 // This is here instead of in Sema/ because we need to check to make sure the
@@ -50,8 +50,8 @@ namespace delegate {
   };
   A::A(void *const p __attribute__((pass_object_size(0)))) {}
   // Ensure that we forward the size through a delegating constructor call.
-  // CHECK: define{{.*}} void @_ZN8delegate1AC1EPvU17pass_object_size0({{[^,]*}}, i8*{{[^,]*}}, i64{{[^,]*}})
-  // CHECK: call void @_ZN8delegate1AC2EPvU17pass_object_size0({{[^,]*}}, i8*{{[^,]*}}, i64{{[^,]*}})
+  // CHECK: define{{.*}} void @_ZN8delegate1AC1EPvU17pass_object_size0({{[^,]*}}, ptr {{.*}}, i64{{[^,]*}})
+  // CHECK: call void @_ZN8delegate1AC2EPvU17pass_object_size0({{[^,]*}}, ptr {{.*}}, i64{{[^,]*}})
 }
 
 namespace variadic {

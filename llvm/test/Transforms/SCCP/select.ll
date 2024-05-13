@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | FileCheck %s
+; RUN: opt < %s -passes=sccp -S | FileCheck %s
 
 define i32 @test1(i1 %C) {
 ; CHECK-LABEL: define i32 @test1(

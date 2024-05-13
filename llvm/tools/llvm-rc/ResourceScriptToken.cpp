@@ -274,7 +274,7 @@ Error Tokenizer::consumeToken(const Kind TokenKind) {
 }
 
 bool Tokenizer::willNowRead(StringRef FollowingChars) const {
-  return Data.drop_front(Pos).startswith(FollowingChars);
+  return Data.drop_front(Pos).starts_with(FollowingChars);
 }
 
 bool Tokenizer::canStartIdentifier() const {
@@ -288,7 +288,7 @@ bool Tokenizer::canContinueIdentifier() const {
   assert(!streamEof());
   const char CurChar = Data[Pos];
   return std::isalnum(CurChar) || CurChar == '_' || CurChar == '.' ||
-         CurChar == '/' || CurChar == '\\';
+         CurChar == '/' || CurChar == '\\' || CurChar == '-';
 }
 
 bool Tokenizer::canStartInt() const {
@@ -298,12 +298,12 @@ bool Tokenizer::canStartInt() const {
 
 bool Tokenizer::canStartBlockComment() const {
   assert(!streamEof());
-  return Data.drop_front(Pos).startswith("/*");
+  return Data.drop_front(Pos).starts_with("/*");
 }
 
 bool Tokenizer::canStartLineComment() const {
   assert(!streamEof());
-  return Data.drop_front(Pos).startswith("//");
+  return Data.drop_front(Pos).starts_with("//");
 }
 
 bool Tokenizer::canContinueInt() const {
@@ -350,9 +350,9 @@ void Tokenizer::processIdentifier(RCToken &Token) const {
   assert(Token.kind() == Kind::Identifier);
   StringRef Name = Token.value();
 
-  if (Name.equals_lower("begin"))
+  if (Name.equals_insensitive("begin"))
     Token = RCToken(Kind::BlockBegin, Name);
-  else if (Name.equals_lower("end"))
+  else if (Name.equals_insensitive("end"))
     Token = RCToken(Kind::BlockEnd, Name);
 }
 

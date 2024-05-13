@@ -5,15 +5,35 @@ float function_scope(float a) {
   return a;
 }
 
+// Ok, at namespace scope.
+namespace foo {
+#pragma float_control(push)
+#pragma float_control(pop)
+}
+
+// Ok, within a language linkage specification.
+extern "C" {
+#pragma float_control(push)
+#pragma float_control(pop)
+}
+
+// Same.
+extern "C++" {
+#pragma float_control(push)
+#pragma float_control(pop)
+}
+
 #ifdef CHECK_ERROR
+// Ok at file scope.
 #pragma float_control(push)
 #pragma float_control(pop)
 #pragma float_control(precise, on, push)
 void check_stack() {
-#pragma float_control(push)                   // expected-error {{can only appear at file scope or namespace scope}}
-#pragma float_control(pop)                    // expected-error {{can only appear at file scope or namespace scope}}
-#pragma float_control(precise, on, push)      // expected-error {{can only appear at file scope or namespace scope}}
-#pragma float_control(except, on, push)       // expected-error {{can only appear at file scope or namespace scope}}
+  // Not okay within a function declaration.
+#pragma float_control(push)                   // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
+#pragma float_control(pop)                    // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
+#pragma float_control(precise, on, push)      // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
+#pragma float_control(except, on, push)       // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
 #pragma float_control(except, on, push, junk) // expected-error {{float_control is malformed}}
   return;
 }
@@ -22,7 +42,7 @@ void check_stack() {
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fdenormal-fp-math=preserve-sign,preserve-sign -fsyntax-only %s -DDEFAULT -verify
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only %s -ffp-contract=fast -DPRECISE -verify
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only %s -ffp-contract=off -frounding-math -ffp-exception-behavior=strict -DSTRICT -verify
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -menable-no-infs -menable-no-nans -menable-unsafe-fp-math -fno-signed-zeros -mreassociate -freciprocal-math -ffp-contract=fast -ffast-math -ffinite-math-only -fsyntax-only %s -DFAST -verify
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -menable-no-infs -menable-no-nans -funsafe-math-optimizations -fno-signed-zeros -mreassociate -freciprocal-math -ffp-contract=fast -ffast-math -ffinite-math-only -fsyntax-only %s -DFAST -verify
 double a = 0.0;
 double b = 1.0;
 

@@ -6,7 +6,7 @@ int __attribute__((aligned(32))) v1;
 typedef int __attribute__((aligned(32))) int32;
 static int32 v2;
 int32 v3;
-int f0() { return v0 + v1 + v2 + v3; }
+int f0(void) { return v0 + v1 + v2 + v3; }
 // DECL:      @v0 {{.*}} align 16
 // DECL-NEXT: @v1 {{.*}} align 32
 // DECL-NEXT: @v2 {{.*}} align 16
@@ -147,7 +147,7 @@ struct s10 {
 } S10;
 // CHECK:              0 | struct s10
 // CHECK-NEXT:         0 |   unsigned int a
-// CHECK-NEXT:           | [sizeof=16, align=16]
+// CHECK-NEXT:           | [sizeof=8, align=8]
 
 struct s11 {
   char a;
@@ -158,6 +158,13 @@ struct s11 {
 // CHECK-NEXT:         0 |   char a
 // CHECK-NEXT:       8:- |   long
 // CHECK-NEXT:         8 |   char b
+// CHECK-NEXT:           | [sizeof=16, align=8]
+
+struct s12 {
+  __int128_t a;
+} S12;
+// CHECK:              0 | struct s12
+// CHECK-NEXT:         0 |   __int128_t a
 // CHECK-NEXT:           | [sizeof=16, align=8]
 
 union u0 {

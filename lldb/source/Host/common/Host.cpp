@@ -56,15 +56,13 @@
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Predicate.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -90,30 +88,57 @@ int __pthread_fchdir(int fildes);
 using namespace lldb;
 using namespace lldb_private;
 
-#if !defined(__APPLE__) && !defined(_WIN32)
-struct MonitorInfo {
-  lldb::pid_t pid; // The process ID to monitor
-  Host::MonitorChildProcessCallback
-      callback; // The callback function to call when "pid" exits or signals
-  bool monitor_signals; // If true, call the callback when "pid" gets signaled.
-};
+#if !defined(__APPLE__)
+#if !defined(_WIN32)
+#include <syslog.h>
+void Host::SystemLog(Severity severity, llvm::StringRef message) {
+  static llvm::once_flag g_openlog_once;
+  llvm::call_once(g_openlog_once, [] {
+    openlog("lldb", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
+  });
+  int level = LOG_DEBUG;
+  switch (severity) {
+  case lldb::eSeverityInfo:
+    level = LOG_INFO;
+    break;
+  case lldb::eSeverityWarning:
+    level = LOG_WARNING;
+    break;
+  case lldb::eSeverityError:
+    level = LOG_ERR;
+    break;
+  }
+  syslog(level, "%s", message.data());
+}
+#else
+void Host::SystemLog(Severity severity, llvm::StringRef message) {
+  switch (severity) {
+  case lldb::eSeverityInfo:
+  case lldb::eSeverityWarning:
+    llvm::outs() << message;
+    break;
+  case lldb::eSeverityError:
+    llvm::errs() << message;
+    break;
+  }
+}
+#endif
+#endif
 
-static thread_result_t MonitorChildProcessThreadFunction(void *arg);
+#if !defined(__APPLE__) && !defined(_WIN32)
+static thread_result_t
+MonitorChildProcessThreadFunction(::pid_t pid,
+                                  Host::MonitorChildProcessCallback callback);
 
 llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
-    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
-    bool monitor_signals) {
-  MonitorInfo *info_ptr = new MonitorInfo();
-
-  info_ptr->pid = pid;
-  info_ptr->callback = callback;
-  info_ptr->monitor_signals = monitor_signals;
-
+    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid) {
   char thread_name[256];
   ::snprintf(thread_name, sizeof(thread_name),
              "<lldb.host.wait4(pid=%" PRIu64 ")>", pid);
-  return ThreadLauncher::LaunchThread(
-      thread_name, MonitorChildProcessThreadFunction, info_ptr, 0);
+  assert(pid <= UINT32_MAX);
+  return ThreadLauncher::LaunchThread(thread_name, [pid, callback] {
+    return MonitorChildProcessThreadFunction(pid, callback);
+  });
 }
 
 #ifndef __linux__
@@ -141,11 +166,7 @@ private:
 #endif // __linux__
 
 #ifdef __linux__
-#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8))
-static __thread volatile sig_atomic_t g_usr1_called;
-#else
 static thread_local volatile sig_atomic_t g_usr1_called;
-#endif
 
 static void SigUsr1Handler(int) { g_usr1_called = 1; }
 #endif // __linux__
@@ -162,26 +183,13 @@ static bool CheckForMonitorCancellation() {
   return false;
 }
 
-static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  const char *function = __FUNCTION__;
-  LLDB_LOGF(log, "%s (arg = %p) thread starting...", function, arg);
-
-  MonitorInfo *info = (MonitorInfo *)arg;
-
-  const Host::MonitorChildProcessCallback callback = info->callback;
-  const bool monitor_signals = info->monitor_signals;
-
-  assert(info->pid <= UINT32_MAX);
-  const ::pid_t pid = monitor_signals ? -1 * getpgid(info->pid) : info->pid;
-
-  delete info;
+static thread_result_t
+MonitorChildProcessThreadFunction(::pid_t pid,
+                                  Host::MonitorChildProcessCallback callback) {
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOG(log, "pid = {0}", pid);
 
   int status = -1;
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__)
-#define __WALL 0
-#endif
-  const int options = __WALL;
 
 #ifdef __linux__
   // This signal is only used to interrupt the thread from waitpid
@@ -191,125 +199,56 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
   ::sigaction(SIGUSR1, &sigUsr1Action, nullptr);
 #endif // __linux__
 
-  while (1) {
-    log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
-    LLDB_LOGF(log, "%s ::waitpid (pid = %" PRIi32 ", &status, options = %i)...",
-              function, pid, options);
+  while (true) {
+    log = GetLog(LLDBLog::Process);
+    LLDB_LOG(log, "::waitpid({0}, &status, 0)...", pid);
 
     if (CheckForMonitorCancellation())
-      break;
+      return nullptr;
 
-    // Get signals from all children with same process group of pid
-    const ::pid_t wait_pid = ::waitpid(pid, &status, options);
+    const ::pid_t wait_pid = ::waitpid(pid, &status, 0);
+
+    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}", pid,
+             wait_pid, status);
 
     if (CheckForMonitorCancellation())
+      return nullptr;
+
+    if (wait_pid != -1)
       break;
-
-    if (wait_pid == -1) {
-      if (errno == EINTR)
-        continue;
-      else {
-        LLDB_LOG(log,
-                 "arg = {0}, thread exiting because waitpid failed ({1})...",
-                 arg, llvm::sys::StrError());
-        break;
-      }
-    } else if (wait_pid > 0) {
-      bool exited = false;
-      int signal = 0;
-      int exit_status = 0;
-      const char *status_cstr = nullptr;
-      if (WIFSTOPPED(status)) {
-        signal = WSTOPSIG(status);
-        status_cstr = "STOPPED";
-      } else if (WIFEXITED(status)) {
-        exit_status = WEXITSTATUS(status);
-        status_cstr = "EXITED";
-        exited = true;
-      } else if (WIFSIGNALED(status)) {
-        signal = WTERMSIG(status);
-        status_cstr = "SIGNALED";
-        if (wait_pid == abs(pid)) {
-          exited = true;
-          exit_status = -1;
-        }
-      } else {
-        status_cstr = "(\?\?\?)";
-      }
-
-      // Scope for pthread_cancel_disabler
-      {
-#ifndef __linux__
-        ScopedPThreadCancelDisabler pthread_cancel_disabler;
-#endif
-
-        log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
-        LLDB_LOGF(log,
-                  "%s ::waitpid (pid = %" PRIi32
-                  ", &status, options = %i) => pid = %" PRIi32
-                  ", status = 0x%8.8x (%s), signal = %i, exit_state = %i",
-                  function, pid, options, wait_pid, status, status_cstr, signal,
-                  exit_status);
-
-        if (exited || (signal != 0 && monitor_signals)) {
-          bool callback_return = false;
-          if (callback)
-            callback_return = callback(wait_pid, exited, signal, exit_status);
-
-          // If our process exited, then this thread should exit
-          if (exited && wait_pid == abs(pid)) {
-            LLDB_LOGF(log,
-                      "%s (arg = %p) thread exiting because pid received "
-                      "exit signal...",
-                      __FUNCTION__, arg);
-            break;
-          }
-          // If the callback returns true, it means this process should exit
-          if (callback_return) {
-            LLDB_LOGF(log,
-                      "%s (arg = %p) thread exiting because callback "
-                      "returned true...",
-                      __FUNCTION__, arg);
-            break;
-          }
-        }
-      }
+    if (errno != EINTR) {
+      LLDB_LOG(log, "pid = {0}, thread exiting because waitpid failed ({1})...",
+               pid, llvm::sys::StrError());
+      return nullptr;
     }
   }
 
-  log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
-  LLDB_LOGF(log, "%s (arg = %p) thread exiting...", __FUNCTION__, arg);
+  int signal = 0;
+  int exit_status = 0;
+  if (WIFEXITED(status)) {
+    exit_status = WEXITSTATUS(status);
+  } else if (WIFSIGNALED(status)) {
+    signal = WTERMSIG(status);
+    exit_status = -1;
+  } else {
+    llvm_unreachable("Unknown status");
+  }
 
+  // Scope for pthread_cancel_disabler
+  {
+#ifndef __linux__
+    ScopedPThreadCancelDisabler pthread_cancel_disabler;
+#endif
+
+    if (callback)
+      callback(pid, signal, exit_status);
+  }
+
+  LLDB_LOG(GetLog(LLDBLog::Process), "pid = {0} thread exiting...", pid);
   return nullptr;
 }
 
 #endif // #if !defined (__APPLE__) && !defined (_WIN32)
-
-#if !defined(__APPLE__)
-
-void Host::SystemLog(SystemLogType type, const char *format, va_list args) {
-  vfprintf(stderr, format, args);
-}
-
-#endif
-
-void Host::SystemLog(SystemLogType type, const char *format, ...) {
-  {
-    va_list args;
-    va_start(args, format);
-    SystemLog(type, format, args);
-    va_end(args);
-  }
-
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST));
-  if (log && log->GetVerbose()) {
-    // Log to log channel. This allows testcases to grep for log output.
-    va_list args;
-    va_start(args, format);
-    log->VAPrintf(format, args);
-    va_end(args);
-  }
-}
 
 lldb::pid_t Host::GetCurrentProcessID() { return ::getpid(); }
 
@@ -442,21 +381,18 @@ bool Host::FindProcessThreads(const lldb::pid_t pid, TidMap &tids_to_attach) {
 #endif
 
 struct ShellInfo {
-  ShellInfo()
-      : process_reaped(false), pid(LLDB_INVALID_PROCESS_ID), signo(-1),
-        status(-1) {}
+  ShellInfo() : process_reaped(false) {}
 
   lldb_private::Predicate<bool> process_reaped;
-  lldb::pid_t pid;
-  int signo;
-  int status;
+  lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+  int signo = -1;
+  int status = -1;
 };
 
-static bool
+static void
 MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
-                    bool exited, // True if the process did exit
-                    int signo,   // Zero for no signal
-                    int status)  // Exit value of process if signal is zero
+                    int signo,  // Zero for no signal
+                    int status) // Exit value of process if signal is zero
 {
   shell_info->pid = pid;
   shell_info->signo = signo;
@@ -464,7 +400,6 @@ MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
   // Let the thread running Host::RunShellCommand() know that the process
   // exited and that ShellInfo has been filled in by broadcasting to it
   shell_info->process_reaped.SetValue(true, eBroadcastAlways);
-  return true;
 }
 
 Status Host::RunShellCommand(llvm::StringRef command,
@@ -559,12 +494,9 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
     launch_info.AppendSuppressFileAction(STDERR_FILENO, false, true);
 
   std::shared_ptr<ShellInfo> shell_info_sp(new ShellInfo());
-  const bool monitor_signals = false;
   launch_info.SetMonitorProcessCallback(
       std::bind(MonitorShellCommand, shell_info_sp, std::placeholders::_1,
-                std::placeholders::_2, std::placeholders::_3,
-                std::placeholders::_4),
-      monitor_signals);
+                std::placeholders::_2, std::placeholders::_3));
 
   error = LaunchProcess(launch_info);
   const lldb::pid_t pid = launch_info.GetProcessID();
@@ -597,11 +529,13 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
             error.SetErrorStringWithFormat(
                 "shell command output is too large to fit into a std::string");
           } else {
-            auto Buffer =
-                FileSystem::Instance().CreateDataBuffer(output_file_spec);
+            WritableDataBufferSP Buffer =
+                FileSystem::Instance().CreateWritableDataBuffer(
+                    output_file_spec);
             if (error.Success())
-              command_output_ptr->assign(Buffer->GetChars(),
-                                         Buffer->GetByteSize());
+              command_output_ptr->assign(
+                  reinterpret_cast<char *>(Buffer->GetBytes()),
+                  Buffer->GetByteSize());
           }
         }
       }
@@ -641,16 +575,19 @@ void Host::Kill(lldb::pid_t pid, int signo) { ::kill(pid, signo); }
 #endif
 
 #if !defined(__APPLE__)
-bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
-                                    uint32_t line_no) {
-  return false;
+llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
+                                           const FileSpec &file_spec,
+                                           uint32_t line_no) {
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
 }
 
+bool Host::IsInteractiveGraphicSession() { return false; }
 #endif
 
 std::unique_ptr<Connection> Host::CreateDefaultConnection(llvm::StringRef url) {
 #if defined(_WIN32)
-  if (url.startswith("file://"))
+  if (url.starts_with("file://"))
     return std::unique_ptr<Connection>(new ConnectionGenericFile());
 #endif
   return std::unique_ptr<Connection>(new ConnectionFileDescriptor());
@@ -706,20 +643,13 @@ void llvm::format_provider<WaitStatus>::format(const WaitStatus &WS,
 
 uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
                              ProcessInstanceInfoList &process_infos) {
+  return FindProcessesImpl(match_info, process_infos);
+}
 
-  if (llvm::Optional<ProcessInstanceInfoList> infos =
-          repro::GetReplayProcessInstanceInfoList()) {
-    process_infos = *infos;
-    return process_infos.size();
-  }
+char SystemLogHandler::ID;
 
-  uint32_t result = FindProcessesImpl(match_info, process_infos);
+SystemLogHandler::SystemLogHandler() {}
 
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    g->GetOrCreate<repro::ProcessInfoProvider>()
-        .GetNewProcessInfoRecorder()
-        ->Record(process_infos);
-  }
-
-  return result;
+void SystemLogHandler::Emit(llvm::StringRef message) {
+  Host::SystemLog(lldb::eSeverityInfo, message);
 }

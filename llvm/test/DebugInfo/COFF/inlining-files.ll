@@ -21,6 +21,12 @@
 ; OBJ:    {{.*}}Proc{{.*}}Sym {
 ; OBJ:      DisplayName: f
 ; OBJ:    }
+; OBJ:     InlineesSym {
+; OBJ-NEXT:  Kind: S_INLINEES (0x1168)
+; OBJ-NEXT:  Inlinees [
+; OBJ-NEXT:    FuncID: file_change (0x1002)
+; OBJ-NEXT:  ]
+; OBJ-NEXT:}
 ; OBJ:    InlineSiteSym {
 ; OBJ:      PtrParent: 0x0
 ; OBJ:      PtrEnd: 0x0
@@ -50,24 +56,24 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 ; Function Attrs: norecurse nounwind uwtable
 define void @f() #0 !dbg !12 {
 entry:
-  %0 = load volatile i32, i32* @x, align 4, !dbg !15, !tbaa !16
+  %0 = load volatile i32, ptr @x, align 4, !dbg !15, !tbaa !16
   %inc = add nsw i32 %0, 1, !dbg !15
-  store volatile i32 %inc, i32* @x, align 4, !dbg !15, !tbaa !16
-  %1 = load volatile i32, i32* @x, align 4, !dbg !20, !tbaa !16
+  store volatile i32 %inc, ptr @x, align 4, !dbg !15, !tbaa !16
+  %1 = load volatile i32, ptr @x, align 4, !dbg !20, !tbaa !16
   %inc.i = add nsw i32 %1, 1, !dbg !20
-  store volatile i32 %inc.i, i32* @x, align 4, !dbg !20, !tbaa !16
-  %2 = load volatile i32, i32* @x, align 4, !dbg !23, !tbaa !16
+  store volatile i32 %inc.i, ptr @x, align 4, !dbg !20, !tbaa !16
+  %2 = load volatile i32, ptr @x, align 4, !dbg !23, !tbaa !16
   %inc1.i = add nsw i32 %2, 1, !dbg !23
-  store volatile i32 %inc1.i, i32* @x, align 4, !dbg !23, !tbaa !16
-  %3 = load volatile i32, i32* @x, align 4, !dbg !26, !tbaa !16
+  store volatile i32 %inc1.i, ptr @x, align 4, !dbg !23, !tbaa !16
+  %3 = load volatile i32, ptr @x, align 4, !dbg !26, !tbaa !16
   %inc2.i = add nsw i32 %3, 1, !dbg !26
-  store volatile i32 %inc2.i, i32* @x, align 4, !dbg !26, !tbaa !16
-  %4 = load volatile i32, i32* @x, align 4, !dbg !27, !tbaa !16
+  store volatile i32 %inc2.i, ptr @x, align 4, !dbg !26, !tbaa !16
+  %4 = load volatile i32, ptr @x, align 4, !dbg !27, !tbaa !16
   %inc3.i = add nsw i32 %4, 1, !dbg !27
-  store volatile i32 %inc3.i, i32* @x, align 4, !dbg !27, !tbaa !16
-  %5 = load volatile i32, i32* @x, align 4, !dbg !29, !tbaa !16
+  store volatile i32 %inc3.i, ptr @x, align 4, !dbg !27, !tbaa !16
+  %5 = load volatile i32, ptr @x, align 4, !dbg !29, !tbaa !16
   %inc1 = add nsw i32 %5, 1, !dbg !29
-  store volatile i32 %inc1, i32* @x, align 4, !dbg !29, !tbaa !16
+  store volatile i32 %inc1, ptr @x, align 4, !dbg !29, !tbaa !16
   ret void, !dbg !30
 }
 

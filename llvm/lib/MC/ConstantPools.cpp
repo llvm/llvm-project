@@ -28,7 +28,7 @@ void ConstantPool::emitEntries(MCStreamer &Streamer) {
     return;
   Streamer.emitDataRegion(MCDR_DataRegion);
   for (const ConstantPoolEntry &Entry : Entries) {
-    Streamer.emitCodeAlignment(Entry.Size); // align naturally
+    Streamer.emitValueToAlignment(Align(Entry.Size)); // align naturally
     Streamer.emitLabel(Entry.Label);
     Streamer.emitValue(Entry.Value, Entry.Size, Entry.Loc);
   }
@@ -39,25 +39,39 @@ void ConstantPool::emitEntries(MCStreamer &Streamer) {
 const MCExpr *ConstantPool::addEntry(const MCExpr *Value, MCContext &Context,
                                      unsigned Size, SMLoc Loc) {
   const MCConstantExpr *C = dyn_cast<MCConstantExpr>(Value);
+  const MCSymbolRefExpr *S = dyn_cast<MCSymbolRefExpr>(Value);
 
   // Check if there is existing entry for the same constant. If so, reuse it.
-  auto Itr = C ? CachedEntries.find(C->getValue()) : CachedEntries.end();
-  if (Itr != CachedEntries.end())
-    return Itr->second;
+  if (C) {
+    auto CItr = CachedConstantEntries.find(std::make_pair(C->getValue(), Size));
+    if (CItr != CachedConstantEntries.end())
+      return CItr->second;
+  }
+
+  // Check if there is existing entry for the same symbol. If so, reuse it.
+  if (S) {
+    auto SItr =
+        CachedSymbolEntries.find(std::make_pair(&(S->getSymbol()), Size));
+    if (SItr != CachedSymbolEntries.end())
+      return SItr->second;
+  }
 
   MCSymbol *CPEntryLabel = Context.createTempSymbol();
 
   Entries.push_back(ConstantPoolEntry(CPEntryLabel, Value, Size, Loc));
   const auto SymRef = MCSymbolRefExpr::create(CPEntryLabel, Context);
   if (C)
-    CachedEntries[C->getValue()] = SymRef;
+    CachedConstantEntries[std::make_pair(C->getValue(), Size)] = SymRef;
+  if (S)
+    CachedSymbolEntries[std::make_pair(&(S->getSymbol()), Size)] = SymRef;
   return SymRef;
 }
 
 bool ConstantPool::empty() { return Entries.empty(); }
 
 void ConstantPool::clearCache() {
-  CachedEntries.clear();
+  CachedConstantEntries.clear();
+  CachedSymbolEntries.clear();
 }
 
 //
@@ -79,7 +93,7 @@ AssemblerConstantPools::getOrCreateConstantPool(MCSection *Section) {
 static void emitConstantPool(MCStreamer &Streamer, MCSection *Section,
                              ConstantPool &CP) {
   if (!CP.empty()) {
-    Streamer.SwitchSection(Section);
+    Streamer.switchSection(Section);
     CP.emitEntries(Streamer);
   }
 }

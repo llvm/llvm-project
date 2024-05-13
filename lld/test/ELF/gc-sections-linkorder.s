@@ -5,6 +5,7 @@
 
 # CHECK: removing unused section {{.*}}.o:(.foo2)
 # CHECK: removing unused section {{.*}}.o:(bar2)
+# CHECK: removing unused section {{.*}}.o:(.init_array.bar2)
 # CHECK: removing unused section {{.*}}.o:(.zed2)
 
 .global _start
@@ -22,6 +23,11 @@ _start:
 .quad .foo1
 
 .section bar2,"ao",@progbits,.foo2
+.quad .zed2
+.quad .foo2
+
+## An SHT_INIT_ARRAY with the SHF_LINK_ORDER flag can be GCed.
+.section .init_array.bar2,"awo",@init_array,.foo2
 .quad .zed2
 .quad .foo2
 

@@ -8,6 +8,5 @@
 // RUN: %clang -### -pedantic -pedantic -no-pedantic -pedantic %s 2>&1 | FileCheck -check-prefix=PEDANTIC -check-prefix=DELIMITERS %s
 // RUN: %clang -### -pedantic -pedantic -no-pedantic -Wpedantic %s 2>&1 | FileCheck -check-prefix=NO_PEDANTIC -check-prefix=DELIMITERS %s
 // PEDANTIC: -pedantic
-// REQUIRES: clang-driver
 
 // DELIMITERS: {{^ *"}}

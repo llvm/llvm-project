@@ -81,11 +81,10 @@ entry:
   ret float %call
 }
 ; CHECK-LABEL: f1_1_call:
-; CHECK:       movw r1, #52429
-; CHECK:       mov  r0, #0
-; CHECK:       movt r1, #16204
-; CHECK-DAG:   str  r1, [sp]
-; CHECK-DAG:   str  r0, [sp, #4]
+; CHECK:       movw r0, #52429
+; CHECK:       mov  r1, #0
+; CHECK:       movt r0, #16204
+; CHECK-DAG:   strd r0, r1, [sp]
 ; CHECK:       bl   f1_1
 
 ; pass in memory, alignment 8
@@ -96,13 +95,12 @@ entry:
   ret float %call
 }
 ; CHECK-LABEL: f1_2_call:
-; CHECK-DAG:   mov   r0, #0
-; CHECK-DAG:   movw  r1, #26214
-; CHECK:       str   r0, [sp, #12]
+; CHECK-DAG:   movw  r0, #26214
+; CHECK-DAG:   mov   r1, #0
+; CHECK:       movt  r0, #16230
+; CHECK:       strd  r0, r1, [sp, #8]
 ; CHECK:       movw  r0, #52429
-; CHECK:       movt  r1, #16230
 ; CHECK:       movt  r0, #16204
-; CHECK-DAG:   str   r1, [sp, #8]
 ; CHECK-DAG:   str   r0, [sp]
 ; CHECK:       bl    f1_2
 
@@ -302,16 +300,16 @@ entry:
   ret double %call
 }
 ; CHECK-LABEL: g2_1_call:
-; CHECK:       movw   r0, #0
-; CHECK:       mov    r1, #0
-; CHECK:       movt   r0, #16352
-; CHECK:       str    r1, [sp]
-; CHECK:       stmib  sp, {r0, r1}
-; CHECK:       str    r1, [sp, #12]
-; CHECK:       str    r1, [sp, #16]
-; CHECK:       str    r1, [sp, #20]
-; CHECK:       str    r1, [sp, #24]
-; CHECK:       str    r1, [sp, #28]
+; CHECK:       vmov.f64 d16, #5.000000e-01
+; CHECK:       mov    r0, #0
+; CHECK:       str    r0, [sp, #8]
+; CHECK:       str    r0, [sp, #12]
+; CHECK:       str    r0, [sp, #16]
+; CHECK:       vmov.i32 d0, #0x0
+; CHECK:       str    r0, [sp, #20]
+; CHECK:       str    r0, [sp, #24]
+; CHECK:       str    r0, [sp, #28]
+; CHECK:       vstr   d16, [sp]
 ; CHECK:       bl    g2_1
 
 ; pass in memory, alignment 8

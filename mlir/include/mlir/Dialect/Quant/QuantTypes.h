@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_QUANT_QUANT_TYPES_H_
-#define MLIR_DIALECT_QUANT_QUANT_TYPES_H_
+#ifndef MLIR_DIALECT_QUANT_QUANTTYPES_H
+#define MLIR_DIALECT_QUANT_QUANTTYPES_H
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -19,9 +19,6 @@
 
 namespace mlir {
 namespace quant {
-
-class QuantizedIntegerType;
-
 namespace detail {
 
 struct QuantizedTypeStorage;
@@ -201,6 +198,8 @@ public:
   using Base::Base;
   using Base::getChecked;
 
+  static constexpr StringLiteral name = "quant.any";
+
   /// Gets an instance of the type with all parameters specified but not
   /// checked.
   static AnyQuantizedType get(unsigned flags, Type storageType,
@@ -260,6 +259,8 @@ public:
   using Base::Base;
   using Base::getChecked;
 
+  static constexpr StringLiteral name = "quant.uniform";
+
   /// Gets an instance of the type with all parameters specified but not
   /// checked.
   static UniformQuantizedType get(unsigned flags, Type storageType,
@@ -318,6 +319,8 @@ public:
   using Base::Base;
   using Base::getChecked;
 
+  static constexpr StringLiteral name = "quant.uniform_per_axis";
+
   /// Gets an instance of the type with all parameters specified but not
   /// checked.
   static UniformQuantizedPerAxisType
@@ -371,8 +374,7 @@ public:
   bool isFixedPoint() const {
     if (!isSigned())
       return false;
-    return llvm::all_of(getZeroPoints(),
-                        [](int64_t zeroPoint) { return zeroPoint != 0; });
+    return !llvm::is_contained(getZeroPoints(), 0);
   }
 };
 
@@ -386,6 +388,8 @@ class CalibratedQuantizedType
 public:
   using Base::Base;
   using Base::getChecked;
+
+  static constexpr StringLiteral name = "quant.calibrated";
 
   /// Gets an instance of the type with all parameters specified but not
   /// checked.
@@ -408,4 +412,4 @@ public:
 } // namespace quant
 } // namespace mlir
 
-#endif // MLIR_DIALECT_QUANT_QUANT_TYPES_H_
+#endif // MLIR_DIALECT_QUANT_QUANTTYPES_H

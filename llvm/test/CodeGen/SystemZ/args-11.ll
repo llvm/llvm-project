@@ -13,18 +13,18 @@ define i32 @fn2() {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -184
 ; CHECK-NEXT:    .cfi_def_cfa_offset 344
-; CHECK-NEXT:    mvhi 180(%r15), -1
+; CHECK-NEXT:    mvhi 164(%r15), -1
+; CHECK-NEXT:    mvghi 176(%r15), 0
+; CHECK-NEXT:    la %r2, 168(%r15)
 ; CHECK-NEXT:    mvghi 168(%r15), 0
-; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    mvghi 160(%r15), 0
 ; CHECK-NEXT:    brasl %r14, fn1@PLT
-; CHECK-NEXT:    l %r2, 180(%r15)
+; CHECK-NEXT:    l %r2, 164(%r15)
 ; CHECK-NEXT:    lmg %r14, %r15, 296(%r15)
 ; CHECK-NEXT:    br %r14
   %1 = alloca i32
-  store i32 -1, i32* %1
+  store i32 -1, ptr %1
   call void @fn1(i96 0)
-  %2 = load i32, i32* %1
+  %2 = load i32, ptr %1
   ret i32 %2
 }
 
@@ -37,18 +37,18 @@ define i32 @fn4() {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -192
 ; CHECK-NEXT:    .cfi_def_cfa_offset 352
-; CHECK-NEXT:    mvhi 188(%r15), -1
+; CHECK-NEXT:    mvhi 164(%r15), -1
+; CHECK-NEXT:    mvghi 184(%r15), 0
 ; CHECK-NEXT:    mvghi 176(%r15), 0
+; CHECK-NEXT:    la %r2, 168(%r15)
 ; CHECK-NEXT:    mvghi 168(%r15), 0
-; CHECK-NEXT:    la %r2, 160(%r15)
-; CHECK-NEXT:    mvghi 160(%r15), 0
 ; CHECK-NEXT:    brasl %r14, fn3@PLT
-; CHECK-NEXT:    l %r2, 188(%r15)
+; CHECK-NEXT:    l %r2, 164(%r15)
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
   %1 = alloca i32
-  store i32 -1, i32* %1
+  store i32 -1, ptr %1
   call void @fn3(i136 0)
-  %2 = load i32, i32* %1
+  %2 = load i32, ptr %1
   ret i32 %2
 }

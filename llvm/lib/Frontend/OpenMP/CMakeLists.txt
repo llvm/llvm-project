@@ -14,5 +14,11 @@ add_llvm_component_library(LLVMFrontendOpenMP
   LINK_COMPONENTS
   Core
   Support
+  TargetParser
   TransformUtils
+  Analysis
+  MC
+  Scalar
+  BitReader
+  FrontendOffloading
   )

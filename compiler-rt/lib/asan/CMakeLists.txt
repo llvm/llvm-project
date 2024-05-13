@@ -23,7 +23,6 @@ set(ASAN_SOURCES
   asan_posix.cpp
   asan_premap_shadow.cpp
   asan_report.cpp
-  asan_rtems.cpp
   asan_rtl.cpp
   asan_shadow_setup.cpp
   asan_stack.cpp
@@ -42,6 +41,16 @@ endif()
 set(ASAN_CXX_SOURCES
   asan_new_delete.cpp
   )
+
+set(ASAN_STATIC_SOURCES
+  asan_rtl_static.cpp
+  )
+
+if ("x86_64" IN_LIST ASAN_SUPPORTED_ARCH AND NOT WIN32 AND NOT APPLE)
+  list(APPEND ASAN_STATIC_SOURCES
+    asan_rtl_x86_64.S
+  )
+endif()
 
 set(ASAN_PREINIT_SOURCES
   asan_preinit.cpp
@@ -62,10 +71,7 @@ SET(ASAN_HEADERS
   asan_interface.inc
   asan_interface_internal.h
   asan_internal.h
-  asan_lock.h
-  asan_malloc_local.h
   asan_mapping.h
-  asan_mapping_myriad.h
   asan_poisoning.h
   asan_premap_shadow.h
   asan_report.h
@@ -79,9 +85,20 @@ SET(ASAN_HEADERS
 include_directories(..)
 
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+
+append_list_if(MSVC /Zl ASAN_CFLAGS)
+
 set(ASAN_COMMON_DEFINITIONS ${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
 
 append_rtti_flag(OFF ASAN_CFLAGS)
+
+# Silence warnings in system headers with MSVC.
+if(NOT CLANG_CL)
+  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" ASAN_CFLAGS)
+endif()
+
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format ASAN_CFLAGS)
 
 set(ASAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
@@ -102,7 +119,10 @@ append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec ASAN_DYNAMIC_CFLAGS)
 append_list_if(MSVC /DEBUG ASAN_DYNAMIC_LINK_FLAGS)
 
-set(ASAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
+set(ASAN_DYNAMIC_LIBS
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
+  ${SANITIZER_CXX_ABI_LIBRARIES}
+  ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt ASAN_DYNAMIC_LIBS)
@@ -131,6 +151,12 @@ if(NOT APPLE)
   add_compiler_rt_object_libraries(RTAsan_cxx
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_CXX_SOURCES}
+    ADDITIONAL_HEADERS ${ASAN_HEADERS}
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS})
+  add_compiler_rt_object_libraries(RTAsan_static
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    SOURCES ${ASAN_STATIC_SOURCES}
     ADDITIONAL_HEADERS ${ASAN_HEADERS}
     CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS})
@@ -175,6 +201,14 @@ if(APPLE)
     LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
     DEFS ${ASAN_DYNAMIC_DEFINITIONS}
     PARENT_TARGET asan)
+
+  add_compiler_rt_runtime(clang_rt.asan_static
+    STATIC
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    OBJECT_LIBS RTAsan_static
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    PARENT_TARGET asan)
 else()
   # Build separate libraries for each target.
 
@@ -184,6 +218,7 @@ else()
     RTSanitizerCommonLibc
     RTSanitizerCommonCoverage
     RTSanitizerCommonSymbolizer
+    RTSanitizerCommonSymbolizerInternal
     RTLSanCommon
     RTUbsan)
 
@@ -202,6 +237,14 @@ else()
     ARCHS ${ASAN_SUPPORTED_ARCH}
     OBJECT_LIBS RTAsan_cxx
                 RTUbsan_cxx
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    PARENT_TARGET asan)
+
+  add_compiler_rt_runtime(clang_rt.asan_static
+    STATIC
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    OBJECT_LIBS RTAsan_static
     CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS}
     PARENT_TARGET asan)
@@ -239,7 +282,8 @@ else()
       add_compiler_rt_object_libraries(AsanWeakInterception
         ${SANITIZER_COMMON_SUPPORTED_OS}
         ARCHS ${arch}
-        SOURCES asan_win_weak_interception.cpp
+        SOURCES
+          asan_win_weak_interception.cpp
         CFLAGS ${ASAN_CFLAGS} -DSANITIZER_DYNAMIC
         DEFS ${ASAN_COMMON_DEFINITIONS})
       set(ASAN_DYNAMIC_WEAK_INTERCEPTION

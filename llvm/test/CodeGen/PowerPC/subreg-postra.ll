@@ -4,9 +4,9 @@ target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind
-define void @jbd2_journal_commit_transaction(i32* %journal, i64 %inp1, i32 %inp2,
-                                             i32* %inp3, i32** %inp4,
-                                             i32** %inp5, i1 %inp6,
+define void @jbd2_journal_commit_transaction(ptr %journal, i64 %inp1, i32 %inp2,
+                                             ptr %inp3, ptr %inp4,
+                                             ptr %inp5, i1 %inp6,
                                              i1 %inp7, i1 %inp8) #0 {
 entry:
   br i1 undef, label %do.body, label %if.then5
@@ -124,9 +124,8 @@ while.body392.lr.ph:                              ; preds = %do.body378
   br label %while.body392
 
 while.body392:                                    ; preds = %wait_on_buffer.exit1319, %while.body392.lr.ph
-  %0 = load i8*, i8** undef, align 8
-  %add.ptr399 = getelementptr inbounds i8, i8* %0, i64 -72
-  %b_state.i.i1314 = bitcast i8* %add.ptr399 to i64*
+  %0 = load ptr, ptr undef, align 8
+  %add.ptr399 = getelementptr inbounds i8, ptr %0, i64 -72
   %tobool.i1316 = icmp eq i64 %inp1, 0
   br i1 %tobool.i1316, label %wait_on_buffer.exit1319, label %if.then.i1317
 
@@ -134,15 +133,15 @@ if.then.i1317:                                    ; preds = %while.body392
   unreachable
 
 wait_on_buffer.exit1319:                          ; preds = %while.body392
-  %1 = load volatile i64, i64* %b_state.i.i1314, align 8
+  %1 = load volatile i64, ptr %add.ptr399, align 8
   %conv.i.i1322 = and i64 %1, 1
   %lnot404 = icmp eq i64 %conv.i.i1322, 0
   %.err.4 = select i1 %lnot404, i32 -5, i32 %inp2
-  %2 = call i64 asm sideeffect "1:.long 0x7c0000a8 $| ((($0) & 0x1f) << 21) $| (((0) & 0x1f) << 16) $| ((($3) & 0x1f) << 11) $| (((0) & 0x1) << 0) \0Aandc $0,$0,$2\0Astdcx. $0,0,$3\0Abne- 1b\0A", "=&r,=*m,r,r,*m,~{cc},~{memory}"(i64* %b_state.i.i1314, i64 262144, i64* %b_state.i.i1314, i64* %b_state.i.i1314) #1
-  %prev.i.i.i1325 = getelementptr inbounds i8, i8* %0, i64 8
-  %3 = load i32*, i32** %inp4, align 8
-  store i32* %3, i32** %inp5, align 8
-  call void @__brelse(i32* %3) #1
+  %2 = call i64 asm sideeffect "1:.long 0x7c0000a8 $| ((($0) & 0x1f) << 21) $| (((0) & 0x1f) << 16) $| ((($3) & 0x1f) << 11) $| (((0) & 0x1) << 0) \0Aandc $0,$0,$2\0Astdcx. $0,0,$3\0Abne- 1b\0A", "=&r,=*m,r,r,*m,~{cc},~{memory}"(ptr elementtype(i64) %add.ptr399, i64 262144, ptr %add.ptr399, ptr elementtype(i64) %add.ptr399) #1
+  %prev.i.i.i1325 = getelementptr inbounds i8, ptr %0, i64 8
+  %3 = load ptr, ptr %inp4, align 8
+  store ptr %3, ptr %inp5, align 8
+  call void @__brelse(ptr %3) #1
   br i1 %inp8, label %while.end418, label %while.body392
 
 ; CHECK-LABEL: @jbd2_journal_commit_transaction
@@ -152,7 +151,7 @@ wait_on_buffer.exit1319:                          ; preds = %while.body392
 ; CHECK: stdcx.
 ; CHECK: iselgt {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
-; CHECK-NO-ISEL: ori 30, 3, 0
+; CHECK-NO-ISEL: ori 5, 3, 0
 ; CHECK-NO-ISEL: b [[SUCCESSOR:.LBB[0-9]+]]
 
 
@@ -161,16 +160,16 @@ while.end418:                                     ; preds = %wait_on_buffer.exit
   br i1 %inp7, label %if.end421, label %if.then420
 
 if.then420:                                       ; preds = %while.end418
-  call void @jbd2_journal_abort(i32* %journal, i32 signext %err.4.lcssa) #1
+  call void @jbd2_journal_abort(ptr %journal, i32 signext %err.4.lcssa) #1
   br label %if.end421
 
 if.end421:                                        ; preds = %if.then420, %while.end418
   unreachable
 }
 
-declare void @jbd2_journal_abort(i32*, i32 signext)
+declare void @jbd2_journal_abort(ptr, i32 signext)
 
-declare void @__brelse(i32*)
+declare void @__brelse(ptr)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind }

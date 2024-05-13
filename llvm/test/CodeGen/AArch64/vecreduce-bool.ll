@@ -20,7 +20,7 @@ define i32 @reduce_and_v1(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v0.b[0]
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w0, w0, w1, lt
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i8> %a0, zeroinitializer
@@ -96,9 +96,8 @@ define i32 @reduce_and_v16(<16 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_and_v32(<32 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v1.16b, v1.16b, #0
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    uminv b0, v0.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
@@ -115,7 +114,7 @@ define i32 @reduce_or_v1(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v0.b[0]
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w0, w0, w1, lt
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i8> %a0, zeroinitializer
@@ -191,9 +190,8 @@ define i32 @reduce_or_v16(<16 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_or_v32(<32 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v1.16b, v1.16b, #0
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1

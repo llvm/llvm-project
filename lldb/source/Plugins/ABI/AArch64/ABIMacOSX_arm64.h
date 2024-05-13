@@ -46,7 +46,7 @@ public:
   // in other environments there can be a large number of different functions
   // involved in async traps.
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
-    // Make sure the stack call frame addresses are are 8 byte aligned
+    // Make sure the stack call frame addresses are 8 byte aligned
     if (cfa & (8ull - 1ull))
       return false; // Not 8 byte aligned
     if (cfa == 0)
@@ -62,7 +62,8 @@ public:
     return true;
   }
 
-  lldb::addr_t FixAddress(lldb::addr_t pc, lldb::addr_t mask) override;
+  lldb::addr_t FixCodeAddress(lldb::addr_t pc) override;
+  lldb::addr_t FixDataAddress(lldb::addr_t pc) override;
 
   // Static Functions
 
@@ -74,13 +75,9 @@ public:
 
   // PluginInterface protocol
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "ABIMacOSX_arm64"; }
 
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
-  }
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   lldb_private::Status
   SetReturnValueObject(lldb::StackFrameSP &frame_sp,

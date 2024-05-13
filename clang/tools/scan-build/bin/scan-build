@@ -14,7 +14,6 @@
 use strict;
 use warnings;
 use FindBin qw($RealBin);
-use Digest::MD5;
 use File::Basename;
 use File::Find;
 use File::Copy qw(copy);
@@ -62,7 +61,6 @@ my %Options = (
   UseCC => undef,            # C compiler to use for compilation.
   UseCXX => undef,           # C++ compiler to use for compilation.
   AnalyzerTarget => undef,
-  StoreModel => undef,
   ConstraintsModel => undef,
   InternalStats => undef,
   OutputFormat => "html",
@@ -269,27 +267,6 @@ sub SetHtmlEnv {
 }
 
 ##----------------------------------------------------------------------------##
-# ComputeDigest - Compute a digest of the specified file.
-##----------------------------------------------------------------------------##
-
-sub ComputeDigest {
-  my $FName = shift;
-  DieDiag("Cannot read $FName to compute Digest.\n") if (! -r $FName);
-
-  # Use Digest::MD5.  We don't have to be cryptographically secure.  We're
-  # just looking for duplicate files that come from a non-malicious source.
-  # We use Digest::MD5 because it is a standard Perl module that should
-  # come bundled on most systems.
-  open(FILE, $FName) or DieDiag("Cannot open $FName when computing Digest.\n");
-  binmode FILE;
-  my $Result = Digest::MD5->new->addfile(*FILE)->hexdigest;
-  close(FILE);
-
-  # Return the digest.
-  return $Result;
-}
-
-##----------------------------------------------------------------------------##
 #  UpdatePrefix - Compute the common prefix of files.
 ##----------------------------------------------------------------------------##
 
@@ -374,27 +351,12 @@ sub AddStatLine {
 # Sometimes a source file is scanned more than once, and thus produces
 # multiple error reports.  We use a cache to solve this problem.
 
-my %AlreadyScanned;
-
 sub ScanFile {
 
   my $Index = shift;
   my $Dir = shift;
   my $FName = shift;
   my $Stats = shift;
-
-  # Compute a digest for the report file.  Determine if we have already
-  # scanned a file that looks just like it.
-
-  my $digest = ComputeDigest("$Dir/$FName");
-
-  if (defined $AlreadyScanned{$digest}) {
-    # Redundant file.  Remove it.
-    unlink("$Dir/$FName");
-    return;
-  }
-
-  $AlreadyScanned{$digest} = 1;
 
   # At this point the report file is not world readable.  Make it happen.
   chmod(0644, "$Dir/$FName");
@@ -760,9 +722,18 @@ ENDTEXT
 
 print OUT <<ENDTEXT;
 </table>
+
+<h2>Filter Results by File</h2>
+<input
+  type="text"
+  id="file_input"
+  onkeyup="searchFiles()"
+  placeholder="Enter a path or filename"
+  title="Enter a path or filename">
+
 <h2>Reports</h2>
 
-<table class="sortable" style="table-layout:automatic">
+<table id="reports_table" class="sortable" style="table-layout:automatic">
 <thead><tr>
   <td>Bug Group</td>
   <td class="sorttable_sorted">Bug Type<span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span></td>
@@ -1014,8 +985,7 @@ sub SetEnv {
     die "$var is undefined\n" if (!defined $var);
     $ENV{$var} = $EnvVars->{$var};
   }
-  foreach my $var ('CCC_ANALYZER_STORE_MODEL',
-                   'CCC_ANALYZER_CONSTRAINTS_MODEL',
+  foreach my $var ('CCC_ANALYZER_CONSTRAINTS_MODEL',
                    'CCC_ANALYZER_INTERNAL_STATS',
                    'CCC_ANALYZER_OUTPUT_FORMAT',
                    'CCC_CC',
@@ -1076,7 +1046,8 @@ sub RunXcodebuild {
   if ($oldBehavior == 0) {
     my $OutputDir = $EnvVars->{"OUTPUT_DIR"};
     my $CLANG = $EnvVars->{"CLANG"};
-    my $OtherFlags = $EnvVars->{"CCC_ANALYZER_ANALYSIS"};
+    my $OtherFlags = $EnvVars->{"CCC_ANALYZER_ANALYSIS"} . " "
+                   . $EnvVars->{"CCC_ANALYZER_CONFIG"};
     push @$Args,
         "RUN_CLANG_STATIC_ANALYZER=YES",
         "CLANG_ANALYZER_OUTPUT=plist-html",
@@ -1741,12 +1712,6 @@ sub ProcessArgs {
       next;
     }
 
-    if ($arg eq "-store") {
-      shift @$Args;
-      $Options{StoreModel} = shift @$Args;
-      next;
-    }
-
     if ($arg eq "-constraints") {
       shift @$Args;
       $Options{ConstraintsModel} = shift @$Args;
@@ -1995,7 +1960,6 @@ my %EnvVars = (
   'CCC_CC' => $Options{UseCC},
   'CCC_CXX' => $Options{UseCXX},
   'CCC_REPORT_FAILURES' => $Options{ReportFailures},
-  'CCC_ANALYZER_STORE_MODEL' => $Options{StoreModel},
   'CCC_ANALYZER_CONSTRAINTS_MODEL' => $Options{ConstraintsModel},
   'CCC_ANALYZER_INTERNAL_STATS' => $Options{InternalStats},
   'CCC_ANALYZER_OUTPUT_FORMAT' => $Options{OutputFormat},

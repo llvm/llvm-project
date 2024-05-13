@@ -17,11 +17,20 @@
 
 #include "test_macros.h"
 
+TEST_CONSTEXPR_CXX20 bool test()
+{
+  int i = 0;
+  std::reference_wrapper<int> r = std::ref(i);
+  assert(&r.get() == &i);
+  return true;
+}
+
 int main(int, char**)
 {
-    int i = 0;
-    std::reference_wrapper<int> r = std::ref(i);
-    assert(&r.get() == &i);
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
 
   return 0;
 }

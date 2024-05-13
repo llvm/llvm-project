@@ -48,6 +48,10 @@ def: Flag<["-"], "P">,
   HelpText<"Alias for --python-path">,
   Group<grp_scripting>;
 
+def print_script_interpreter_info: F<"print-script-interpreter-info">,
+  HelpText<"Prints out a json dictionary with information about the scripting language interpreter.">,
+  Group<grp_scripting>;
+
 def script_language: Separate<["--", "-"], "script-language">,
   MetaVarName<"<language>">,
   HelpText<"Tells the debugger to use the specified scripting language for user-defined scripts.">,
@@ -110,7 +114,7 @@ def: Flag<["-"], "b">,
   Group<grp_command>;
 
 def source_quietly: F<"source-quietly">,
-  HelpText<"Tells the debugger to execute this one-line lldb command before any file has been loaded.">,
+  HelpText<"Tells the debugger not to echo commands while sourcing files or one-line commands provided on the command line.">,
   Group<grp_command>;
 def: Flag<["-"], "Q">,
   Alias<source_quietly>,
@@ -223,24 +227,5 @@ def debug: F<"debug">,
 def: Flag<["-"], "d">,
   Alias<debug>,
   HelpText<"Alias for --debug">;
-
-def capture: F<"capture">,
-  HelpText<"Tells the debugger to capture a reproducer.">;
-def capture_path: Separate<["--", "-"], "capture-path">,
-  MetaVarName<"<filename>">,
-  HelpText<"Tells the debugger to use the given filename for the reproducer.">;
-def replay: Separate<["--", "-"], "replay">,
-  MetaVarName<"<filename>">,
-  HelpText<"Tells the debugger to replay a reproducer from <filename>.">;
-def reproducer_finalize: Separate<["--", "-"], "reproducer-finalize">,
-  MetaVarName<"<filename>">;
-def no_version_check: F<"reproducer-no-version-check">,
-  HelpText<"Disable the reproducer version check.">;
-def no_verification: F<"reproducer-no-verify">,
-  HelpText<"Disable the reproducer verification.">;
-def no_generate_on_signal: F<"reproducer-no-generate-on-signal">,
-  HelpText<"Don't generate reproducer when a signal is received.">;
-def generate_on_exit: F<"reproducer-generate-on-exit">,
-  HelpText<"Generate reproducer on exit.">;
 
 def REM : R<["--"], "">;

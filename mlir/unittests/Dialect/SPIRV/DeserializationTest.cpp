@@ -39,11 +39,11 @@ protected:
     // Register a diagnostic handler to capture the diagnostic so that we can
     // check it later.
     context.getDiagEngine().registerHandler([&](Diagnostic &diag) {
-      diagnostic.reset(new Diagnostic(std::move(diag)));
+      diagnostic = std::make_unique<Diagnostic>(std::move(diag));
     });
   }
 
-  /// Performs deserialization and returns the constructed spv.module op.
+  /// Performs deserialization and returns the constructed spirv.module op.
   OwningOpRef<spirv::ModuleOp> deserialize() {
     return spirv::deserialize(binary, &context);
   }

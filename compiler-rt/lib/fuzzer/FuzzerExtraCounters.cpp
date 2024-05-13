@@ -31,12 +31,4 @@ void ClearExtraCounters() {  // hand-written memset, don't asan-ify.
 
 }  // namespace fuzzer
 
-#else
-// TODO: implement for other platforms.
-namespace fuzzer {
-uint8_t *ExtraCountersBegin() { return nullptr; }
-uint8_t *ExtraCountersEnd() { return nullptr; }
-void ClearExtraCounters() {}
-}  // namespace fuzzer
-
 #endif

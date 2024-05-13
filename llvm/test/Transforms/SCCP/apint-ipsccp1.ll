@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -S | grep -v "ret i512 undef" | \
+; RUN: opt < %s -passes=ipsccp -S | grep -v "ret i512 undef" | \
 ; RUN:   grep "ret i8 2"
 
 define internal i512 @test(i1 %B) {

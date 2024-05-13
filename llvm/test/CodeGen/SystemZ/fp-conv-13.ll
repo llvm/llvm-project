@@ -22,14 +22,14 @@ define double @f2(i32 %i) {
 }
 
 ; Check i32->f128.
-define void @f3(i32 %i, fp128 *%dst) {
+define void @f3(i32 %i, ptr %dst) {
 ; CHECK-LABEL: f3:
 ; CHECK: cxlfbr %f0, 0, %r2, 0
 ; CHECK-DAG: std %f0, 0(%r3)
 ; CHECK-DAG: std %f2, 8(%r3)
 ; CHECK: br %r14
   %conv = uitofp i32 %i to fp128
-  store fp128 %conv, fp128 *%dst
+  store fp128 %conv, ptr %dst
   ret void
 }
 
@@ -52,13 +52,13 @@ define double @f5(i64 %i) {
 }
 
 ; Check i64->f128.
-define void @f6(i64 %i, fp128 *%dst) {
+define void @f6(i64 %i, ptr %dst) {
 ; CHECK-LABEL: f6:
 ; CHECK: cxlgbr %f0, 0, %r2, 0
 ; CHECK-DAG: std %f0, 0(%r3)
 ; CHECK-DAG: std %f2, 8(%r3)
 ; CHECK: br %r14
   %conv = uitofp i64 %i to fp128
-  store fp128 %conv, fp128 *%dst
+  store fp128 %conv, ptr %dst
   ret void
 }

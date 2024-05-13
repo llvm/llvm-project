@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
@@ -16,6 +15,10 @@ namespace {
 /// This pass illustrates the IR nesting through printing.
 struct TestPrintNestingPass
     : public PassWrapper<TestPrintNestingPass, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPrintNestingPass)
+
+  StringRef getArgument() const final { return "test-print-nesting"; }
+  StringRef getDescription() const final { return "Test various printing."; }
   // Entry point for the pass.
   void runOnOperation() override {
     Operation *op = getOperation();
@@ -35,8 +38,8 @@ struct TestPrintNestingPass
     if (!op->getAttrs().empty()) {
       printIndent() << op->getAttrs().size() << " attributes:\n";
       for (NamedAttribute attr : op->getAttrs())
-        printIndent() << " - '" << attr.first << "' : '" << attr.second
-                      << "'\n";
+        printIndent() << " - '" << attr.getName().getValue() << "' : '"
+                      << attr.getValue() << "'\n";
     }
 
     // Recurse into each of the regions attached to the operation.
@@ -86,11 +89,10 @@ struct TestPrintNestingPass
     return llvm::outs();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTestPrintNestingPass() {
-  PassRegistration<TestPrintNestingPass>("test-print-nesting",
-                                         "Test various printing.");
+  PassRegistration<TestPrintNestingPass>();
 }
 } // namespace mlir

@@ -1,23 +1,23 @@
-; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=NONSTRESS
-; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S -stress-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=STRESS
-; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S -disable-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=DISABLE
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=aarch64-apple-ios -S | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=NONSTRESS
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=aarch64-apple-ios -S -stress-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=STRESS
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=aarch64-apple-ios -S -disable-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=DISABLE
 
 ; CodeGenPrepare should move the zext into the block with the load
 ; so that SelectionDAG can select it with the load.
 ;
 ; OPTALL-LABEL: @foo
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ; OPTALL-NEXT: [[ZEXT:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
-; OPTALL: store i32 [[ZEXT]], i32* %q
+; OPTALL: store i32 [[ZEXT]], ptr %q
 ; OPTALL: ret
-define void @foo(i8* %p, i32* %q) {
+define void @foo(ptr %p, ptr %q) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %a = icmp slt i8 %t, 20
   br i1 %a, label %true, label %false
 true:
   %s = zext i8 %t to i32
-  store i32 %s, i32* %q
+  store i32 %s, ptr %q
   ret void
 false:
   ret void
@@ -26,23 +26,23 @@ false:
 ; Check that we manage to form a zextload is an operation with only one
 ; argument to explicitly extend is in the way.
 ; OPTALL-LABEL: @promoteOneArg
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ; OPT-NEXT: [[ZEXT:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; OPT-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT]], 2
 ; Make sure the operation is not promoted when the promotion pass is disabled.
 ; DISABLE: [[ADD:%[a-zA-Z_0-9-]+]] = add nuw i8 [[LD]], 2
 ; DISABLE: [[RES:%[a-zA-Z_0-9-]+]] = zext i8 [[ADD]] to i32
-; OPTALL: store i32 [[RES]], i32* %q
+; OPTALL: store i32 [[RES]], ptr %q
 ; OPTALL: ret
-define void @promoteOneArg(i8* %p, i32* %q) {
+define void @promoteOneArg(ptr %p, ptr %q) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %add = add nuw i8 %t, 2
   %a = icmp slt i8 %t, 20
   br i1 %a, label %true, label %false
 true:
   %s = zext i8 %add to i32
-  store i32 %s, i32* %q
+  store i32 %s, ptr %q
   ret void
 false:
   ret void
@@ -52,22 +52,22 @@ false:
 ; argument to explicitly extend is in the way.
 ; Version with sext.
 ; OPTALL-LABEL: @promoteOneArgSExt
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ; OPT-NEXT: [[SEXT:%[a-zA-Z_0-9-]+]] = sext i8 [[LD]] to i32
 ; OPT-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = add nsw i32 [[SEXT]], 2
 ; DISABLE: [[ADD:%[a-zA-Z_0-9-]+]] = add nsw i8 [[LD]], 2
 ; DISABLE: [[RES:%[a-zA-Z_0-9-]+]] = sext i8 [[ADD]] to i32
-; OPTALL: store i32 [[RES]], i32* %q
+; OPTALL: store i32 [[RES]], ptr %q
 ; OPTALL: ret
-define void @promoteOneArgSExt(i8* %p, i32* %q) {
+define void @promoteOneArgSExt(ptr %p, ptr %q) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %add = add nsw i8 %t, 2
   %a = icmp slt i8 %t, 20
   br i1 %a, label %true, label %false
 true:
   %s = sext i8 %add to i32
-  store i32 %s, i32* %q
+  store i32 %s, ptr %q
   ret void
 false:
   ret void
@@ -84,7 +84,7 @@ false:
 ; transformation, the regular heuristic does not apply the optimization.
 ;
 ; OPTALL-LABEL: @promoteTwoArgZext
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; STRESS-NEXT: [[ZEXTLD:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; STRESS-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i8 %b to i32
@@ -96,17 +96,17 @@ false:
 ; DISABLE: [[ADD:%[a-zA-Z_0-9-]+]] = add nuw i8 [[LD]], %b
 ; DISABLE: [[RES:%[a-zA-Z_0-9-]+]] = zext i8 [[ADD]] to i32
 ;
-; OPTALL: store i32 [[RES]], i32* %q
+; OPTALL: store i32 [[RES]], ptr %q
 ; OPTALL: ret
-define void @promoteTwoArgZext(i8* %p, i32* %q, i8 %b) {
+define void @promoteTwoArgZext(ptr %p, ptr %q, i8 %b) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %add = add nuw i8 %t, %b
   %a = icmp slt i8 %t, 20
   br i1 %a, label %true, label %false
 true:
   %s = zext i8 %add to i32
-  store i32 %s, i32* %q
+  store i32 %s, ptr %q
   ret void
 false:
   ret void
@@ -116,7 +116,7 @@ false:
 ; arguments to explicitly extend is in the way.
 ; Version with sext.
 ; OPTALL-LABEL: @promoteTwoArgSExt
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; STRESS-NEXT: [[SEXTLD:%[a-zA-Z_0-9-]+]] = sext i8 [[LD]] to i32
 ; STRESS-NEXT: [[SEXTB:%[a-zA-Z_0-9-]+]] = sext i8 %b to i32
@@ -127,17 +127,17 @@ false:
 ;
 ; DISABLE: [[ADD:%[a-zA-Z_0-9-]+]] = add nsw i8 [[LD]], %b
 ; DISABLE: [[RES:%[a-zA-Z_0-9-]+]] = sext i8 [[ADD]] to i32
-; OPTALL: store i32 [[RES]], i32* %q
+; OPTALL: store i32 [[RES]], ptr %q
 ; OPTALL: ret
-define void @promoteTwoArgSExt(i8* %p, i32* %q, i8 %b) {
+define void @promoteTwoArgSExt(ptr %p, ptr %q, i8 %b) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %add = add nsw i8 %t, %b
   %a = icmp slt i8 %t, 20
   br i1 %a, label %true, label %false
 true:
   %s = sext i8 %add to i32
-  store i32 %s, i32* %q
+  store i32 %s, ptr %q
   ret void
 false:
   ret void
@@ -146,7 +146,7 @@ false:
 ; Check that we do not a zextload if we need to introduce more than
 ; one additional extension.
 ; OPTALL-LABEL: @promoteThreeArgZext
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; STRESS-NEXT: [[ZEXTLD:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; STRESS-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i8 %b to i32
@@ -162,18 +162,18 @@ false:
 ; DISABLE: [[ADD:%[a-zA-Z_0-9-]+]] = add nuw i8
 ; DISABLE: [[RES:%[a-zA-Z_0-9-]+]] = zext i8 [[ADD]] to i32
 ;
-; OPTALL: store i32 [[RES]], i32* %q
+; OPTALL: store i32 [[RES]], ptr %q
 ; OPTALL: ret
-define void @promoteThreeArgZext(i8* %p, i32* %q, i8 %b, i8 %c) {
+define void @promoteThreeArgZext(ptr %p, ptr %q, i8 %b, i8 %c) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %tmp = add nuw i8 %t, %b
   %add = add nuw i8 %tmp, %c
   %a = icmp slt i8 %t, 20
   br i1 %a, label %true, label %false
 true:
   %s = zext i8 %add to i32
-  store i32 %s, i32* %q
+  store i32 %s, ptr %q
   ret void
 false:
   ret void
@@ -182,7 +182,7 @@ false:
 ; Check that we manage to form a zextload after promoting and merging
 ; two extensions.
 ; OPTALL-LABEL: @promoteMergeExtArgZExt
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; STRESS-NEXT: [[ZEXTLD:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; STRESS-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i16 %b to i32
@@ -196,18 +196,18 @@ false:
 ; DISABLE: [[ADD:%[a-zA-Z_0-9-]+]] = add nuw i16 [[ZEXTLD]], %b
 ; DISABLE: [[RES:%[a-zA-Z_0-9-]+]] = zext i16 [[ADD]] to i32
 ;
-; OPTALL: store i32 [[RES]], i32* %q
+; OPTALL: store i32 [[RES]], ptr %q
 ; OPTALL: ret
-define void @promoteMergeExtArgZExt(i8* %p, i32* %q, i16 %b) {
+define void @promoteMergeExtArgZExt(ptr %p, ptr %q, i16 %b) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %ext = zext i8 %t to i16
   %add = add nuw i16 %ext, %b
   %a = icmp slt i8 %t, 20
   br i1 %a, label %true, label %false
 true:
   %s = zext i16 %add to i32
-  store i32 %s, i32* %q
+  store i32 %s, ptr %q
   ret void
 false:
   ret void
@@ -217,7 +217,7 @@ false:
 ; two extensions.
 ; Version with sext.
 ; OPTALL-LABEL: @promoteMergeExtArgSExt
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; STRESS-NEXT: [[ZEXTLD:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; STRESS-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = sext i16 %b to i32
@@ -230,18 +230,18 @@ false:
 ; DISABLE: [[ZEXTLD:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i16
 ; DISABLE: [[ADD:%[a-zA-Z_0-9-]+]] = add nsw i16 [[ZEXTLD]], %b
 ; DISABLE: [[RES:%[a-zA-Z_0-9-]+]] = sext i16 [[ADD]] to i32
-; OPTALL: store i32 [[RES]], i32* %q
+; OPTALL: store i32 [[RES]], ptr %q
 ; OPTALL: ret
-define void @promoteMergeExtArgSExt(i8* %p, i32* %q, i16 %b) {
+define void @promoteMergeExtArgSExt(ptr %p, ptr %q, i16 %b) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %ext = zext i8 %t to i16
   %add = add nsw i16 %ext, %b
   %a = icmp slt i8 %t, 20
   br i1 %a, label %true, label %false
 true:
   %s = sext i16 %add to i32
-  store i32 %s, i32* %q
+  store i32 %s, ptr %q
   ret void
 false:
   ret void
@@ -277,10 +277,10 @@ false:
 ; 3 identical zext of %ld. The extensions will be CSE'ed by SDag.
 ;
 ; OPTALL-LABEL: @severalPromotions
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %addr1
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %addr1
 ; OPT-NEXT: [[ZEXTLD1_1:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; OPT-NEXT: [[ZEXTLD1_2:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
-; OPT-NEXT: [[LD2:%[a-zA-Z_0-9-]+]] = load i32, i32* %addr2
+; OPT-NEXT: [[LD2:%[a-zA-Z_0-9-]+]] = load i32, ptr %addr2
 ; OPT-NEXT: [[SEXTLD2:%[a-zA-Z_0-9-]+]] = sext i32 [[LD2]] to i64
 ; OPT-NEXT: [[ZEXTLD1_3:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; OPT-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = add nsw i64 [[SEXTLD2]], [[ZEXTLD1_3]]
@@ -298,10 +298,10 @@ false:
 ;
 ; OPTALL: call void @dummy(i64 [[RES]], i64 [[RESZA]], i64 [[RESB]])
 ; OPTALL: ret
-define void @severalPromotions(i8* %addr1, i32* %addr2, i8 %a, i32 %b) {
-  %ld = load i8, i8* %addr1
+define void @severalPromotions(ptr %addr1, ptr %addr2, i8 %a, i32 %b) {
+  %ld = load i8, ptr %addr1
   %zextld = zext i8 %ld to i32
-  %ld2 = load i32, i32* %addr2
+  %ld2 = load i32, ptr %addr2
   %add = add nsw i32 %ld2, %zextld
   %sextadd = sext i32 %add to i64
   %zexta = zext i8 %a to i32
@@ -335,51 +335,54 @@ entry:
 ; to an instruction.
 ; This used to cause a crash.
 ; OPTALL-LABEL: @promotionOfArgEndsUpInValue
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i16, i16* %addr
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i16, ptr %addr
 ;
 ; OPT-NEXT: [[SEXT:%[a-zA-Z_0-9-]+]] = sext i16 [[LD]] to i32
-; OPT-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = add nuw nsw i32 [[SEXT]], zext (i1 icmp ne (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @c, i64 0, i64 1), i32* @a) to i32)
+; OPT-NEXT: [[SEXT2:%[a-zA-Z_0-9-]+]] = zext i1 icmp ne (ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), ptr @a) to i32
+; OPT-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = add nuw nsw i32 [[SEXT]], [[SEXT2]]
 ;
-; DISABLE-NEXT: [[ADD:%[a-zA-Z_0-9-]+]] = add nuw nsw i16 [[LD]], zext (i1 icmp ne (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @c, i64 0, i64 1), i32* @a) to i16)
+; DISABLE-NEXT: [[EXT:%[a-zA-Z_0-9-]+]] = zext i1 icmp ne (ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), ptr @a) to i16
+; DISABLE-NEXT: [[ADD:%[a-zA-Z_0-9-]+]] = add nuw nsw i16 [[LD]], [[EXT]]
 ; DISABLE-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = sext i16 [[ADD]] to i32
 ;
 ; OPTALL-NEXT: ret i32 [[RES]]
-define i32 @promotionOfArgEndsUpInValue(i16* %addr) {
+define i32 @promotionOfArgEndsUpInValue(ptr %addr) {
 entry:
-  %val = load i16, i16* %addr
-  %add = add nuw nsw i16 %val, zext (i1 icmp ne (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @c, i64 0, i64 1), i32* @a) to i16)
+  %val = load i16, ptr %addr
+  %ext = zext i1 icmp ne (ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), ptr @a) to i16
+  %add = add nuw nsw i16 %val, %ext
   %conv3 = sext i16 %add to i32
   ret i32 %conv3
 }
 
 ; Check that we see that one zext can be derived from the other for free.
 ; OPTALL-LABEL: @promoteTwoArgZextWithSourceExtendedTwice
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; OPT-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; OPT-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; OPT-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b
 ; OPT-NEXT: [[RES64:%[a-zA-Z_0-9-]+]] = add nuw i64 [[ZEXT64]], 12
-; OPT-NEXT: store i32 [[RES32]], i32* %addr
-; OPT-NEXT: store i64 [[RES64]], i64* %q
+; OPT-NEXT: store i32 [[RES32]], ptr %addr
+; OPT-NEXT: store i64 [[RES64]], ptr %q
 ;
 ; DISABLE-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; DISABLE-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b
 ; DISABLE-NEXT: [[RES2_32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], 12
-; DISABLE-NEXT: store i32 [[RES32]], i32* %addr
+; DISABLE-NEXT: store i32 [[RES32]], ptr %addr
 ; DISABLE-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i32 [[RES2_32]] to i64
-; DISABLE-NEXT: store i64 [[ZEXT64]], i64* %q
+; DISABLE-NEXT: store i64 [[ZEXT64]], ptr %q
 ;
 ; OPTALL-NEXT: ret void
-define void @promoteTwoArgZextWithSourceExtendedTwice(i8* %p, i64* %q, i32 %b, i32* %addr) {
+define void @promoteTwoArgZextWithSourceExtendedTwice(ptr %p, ptr %q, i32 %b, ptr %addr) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %zextt = zext i8 %t to i32
   %add = add nuw i32 %zextt, %b
   %add2 = add nuw i32 %zextt, 12
-  store i32 %add, i32 *%addr
+  store i32 %add, ptr %addr
   %s = zext i32 %add2 to i64
-  store i64 %s, i64* %q
+  store i64 %s, ptr %q
   ret void
 }
 
@@ -388,7 +391,7 @@ entry:
 ; all the way through the load we would end up with a free zext and a
 ; non-free sext (of %b).
 ; OPTALL-LABEL: @doNotPromoteFreeSExtFromAddrMode
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; STRESS-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; STRESS-NEXT: [[SEXTB:%[a-zA-Z_0-9-]+]] = sext i32 %b to i64
@@ -403,17 +406,17 @@ entry:
 ; DISABLE-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nsw i32 [[ZEXT32]], %b
 ; DISABLE-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = sext i32 [[RES32]] to i64
 ;
-; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i32, i32* %addr, i64 [[IDX64]]
-; OPTALL-NEXT: store i32 [[RES32]], i32* [[GEP]]
+; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i32, ptr %addr, i64 [[IDX64]]
+; OPTALL-NEXT: store i32 [[RES32]], ptr [[GEP]]
 ; OPTALL-NEXT: ret void
-define void @doNotPromoteFreeSExtFromAddrMode(i8* %p, i32 %b, i32* %addr) {
+define void @doNotPromoteFreeSExtFromAddrMode(ptr %p, i32 %b, ptr %addr) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %zextt = zext i8 %t to i32
   %add = add nsw i32 %zextt, %b
   %idx64 = sext i32 %add to i64
-  %staddr = getelementptr inbounds i32, i32* %addr, i64 %idx64
-  store i32 %add, i32 *%staddr
+  %staddr = getelementptr inbounds i32, ptr %addr, i64 %idx64
+  store i32 %add, ptr %staddr
   ret void
 }
 
@@ -422,7 +425,7 @@ entry:
 ; all the way through the load we would end up with a free zext and a
 ; non-free sext (of %b).
 ; OPTALL-LABEL: @doNotPromoteFreeSExtFromAddrMode64
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; STRESS-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; STRESS-NEXT: [[SEXTB:%[a-zA-Z_0-9-]+]] = sext i32 %b to i64
@@ -436,17 +439,17 @@ entry:
 ; DISABLE-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nsw i32 [[ZEXT32]], %b
 ; DISABLE-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = sext i32 [[RES32]] to i64
 ;
-; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i64, i64* %addr, i64 [[IDX64]]
-; OPTALL-NEXT: store i64 %stuff, i64* [[GEP]]
+; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i64, ptr %addr, i64 [[IDX64]]
+; OPTALL-NEXT: store i64 %stuff, ptr [[GEP]]
 ; OPTALL-NEXT: ret void
-define void @doNotPromoteFreeSExtFromAddrMode64(i8* %p, i32 %b, i64* %addr, i64 %stuff) {
+define void @doNotPromoteFreeSExtFromAddrMode64(ptr %p, i32 %b, ptr %addr, i64 %stuff) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %zextt = zext i8 %t to i32
   %add = add nsw i32 %zextt, %b
   %idx64 = sext i32 %add to i64
-  %staddr = getelementptr inbounds i64, i64* %addr, i64 %idx64
-  store i64 %stuff, i64 *%staddr
+  %staddr = getelementptr inbounds i64, ptr %addr, i64 %idx64
+  store i64 %stuff, ptr %staddr
   ret void
 }
 
@@ -455,7 +458,7 @@ entry:
 ; all the way through the load we would end up with a free zext and a
 ; non-free sext (of %b).
 ; OPTALL-LABEL: @doNotPromoteFreeSExtFromAddrMode128
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; STRESS-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; STRESS-NEXT: [[SEXTB:%[a-zA-Z_0-9-]+]] = sext i32 %b to i64
@@ -469,17 +472,17 @@ entry:
 ; DISABLE-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nsw i32 [[ZEXT32]], %b
 ; DISABLE-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = sext i32 [[RES32]] to i64
 ;
-; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i128, i128* %addr, i64 [[IDX64]]
-; OPTALL-NEXT: store i128 %stuff, i128* [[GEP]]
+; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i128, ptr %addr, i64 [[IDX64]]
+; OPTALL-NEXT: store i128 %stuff, ptr [[GEP]]
 ; OPTALL-NEXT: ret void
-define void @doNotPromoteFreeSExtFromAddrMode128(i8* %p, i32 %b, i128* %addr, i128 %stuff) {
+define void @doNotPromoteFreeSExtFromAddrMode128(ptr %p, i32 %b, ptr %addr, i128 %stuff) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %zextt = zext i8 %t to i32
   %add = add nsw i32 %zextt, %b
   %idx64 = sext i32 %add to i64
-  %staddr = getelementptr inbounds i128, i128* %addr, i64 %idx64
-  store i128 %stuff, i128 *%staddr
+  %staddr = getelementptr inbounds i128, ptr %addr, i64 %idx64
+  store i128 %stuff, ptr %staddr
   ret void
 }
 
@@ -489,7 +492,7 @@ entry:
 ; all the way through the load we would end up with a free zext and a
 ; non-free sext (of %b).
 ; OPTALL-LABEL: @promoteSExtFromAddrMode256
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; OPT-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; OPT-NEXT: [[SEXTB:%[a-zA-Z_0-9-]+]] = sext i32 %b to i64
@@ -499,17 +502,17 @@ entry:
 ; DISABLE-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nsw i32 [[ZEXT32]], %b
 ; DISABLE-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = sext i32 [[RES32]] to i64
 ;
-; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i256, i256* %addr, i64 [[IDX64]]
-; OPTALL-NEXT: store i256 %stuff, i256* [[GEP]]
+; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i256, ptr %addr, i64 [[IDX64]]
+; OPTALL-NEXT: store i256 %stuff, ptr [[GEP]]
 ; OPTALL-NEXT: ret void
-define void @promoteSExtFromAddrMode256(i8* %p, i32 %b, i256* %addr, i256 %stuff) {
+define void @promoteSExtFromAddrMode256(ptr %p, i32 %b, ptr %addr, i256 %stuff) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %zextt = zext i8 %t to i32
   %add = add nsw i32 %zextt, %b
   %idx64 = sext i32 %add to i64
-  %staddr = getelementptr inbounds i256, i256* %addr, i64 %idx64
-  store i256 %stuff, i256 *%staddr
+  %staddr = getelementptr inbounds i256, ptr %addr, i64 %idx64
+  store i256 %stuff, ptr %staddr
   ret void
 }
 
@@ -522,34 +525,38 @@ entry:
 ; expose more opportunities.
 ; This would need to be fixed at some point.
 ; OPTALL-LABEL: @doNotPromoteFreeZExtFromAddrMode
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; This transformation should really happen only for stress mode.
-; OPT-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
-; OPT-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i32 %b to i64
-; OPT-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = add nuw i64 [[ZEXT64]], [[ZEXTB]]
-; OPT-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = trunc i64 [[IDX64]] to i32
+; STRESS-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
+; STRESS-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i32 %b to i64
+; STRESS-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = add nuw i64 [[ZEXT64]], [[ZEXTB]]
+; STRESS-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = trunc i64 [[IDX64]] to i32
+;
+; NONSTRESS-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
+; NONSTRESS-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b
+; NONSTRESS-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = zext i32 [[RES32]] to i64
 ;
 ; DISABLE-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; DISABLE-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b
 ; DISABLE-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = zext i32 [[RES32]] to i64
 ;
-; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i32, i32* %addr, i64 [[IDX64]]
-; OPTALL-NEXT: store i32 [[RES32]], i32* [[GEP]]
+; OPTALL-NEXT: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i32, ptr %addr, i64 [[IDX64]]
+; OPTALL-NEXT: store i32 [[RES32]], ptr [[GEP]]
 ; OPTALL-NEXT: ret void
-define void @doNotPromoteFreeZExtFromAddrMode(i8* %p, i32 %b, i32* %addr) {
+define void @doNotPromoteFreeZExtFromAddrMode(ptr %p, i32 %b, ptr %addr) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %zextt = zext i8 %t to i32
   %add = add nuw i32 %zextt, %b
   %idx64 = zext i32 %add to i64
-  %staddr = getelementptr inbounds i32, i32* %addr, i64 %idx64
-  store i32 %add, i32 *%staddr
+  %staddr = getelementptr inbounds i32, ptr %addr, i64 %idx64
+  store i32 %add, ptr %staddr
   ret void
 }
 
 ; OPTALL-LABEL: @doNotPromoteFreeSExtFromShift
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; STRESS-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; STRESS-NEXT: [[SEXTB:%[a-zA-Z_0-9-]+]] = sext i32 %b to i64
@@ -565,9 +572,9 @@ entry:
 ;
 ; OPTALL-NEXT: [[RES64:%[a-zA-Z_0-9-]+]] = shl i64 [[IDX64]], 12
 ; OPTALL-NEXT: ret i64 %staddr
-define i64 @doNotPromoteFreeSExtFromShift(i8* %p, i32 %b) {
+define i64 @doNotPromoteFreeSExtFromShift(ptr %p, i32 %b) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %zextt = zext i8 %t to i32
   %add = add nsw i32 %zextt, %b
   %idx64 = sext i32 %add to i64
@@ -577,12 +584,16 @@ entry:
 
 ; Same comment as doNotPromoteFreeZExtFromAddrMode.
 ; OPTALL-LABEL: @doNotPromoteFreeZExtFromShift
-; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
+; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, ptr %p
 ;
 ; This transformation should really happen only for stress mode.
-; OPT-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
-; OPT-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i32 %b to i64
-; OPT-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = add nuw i64 [[ZEXT64]], [[ZEXTB]]
+; STRESS-NEXT: [[ZEXT64:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
+; STRESS-NEXT: [[ZEXTB:%[a-zA-Z_0-9-]+]] = zext i32 %b to i64
+; STRESS-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = add nuw i64 [[ZEXT64]], [[ZEXTB]]
+;
+; NONSTRESS-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
+; NONSTRESS-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b
+; NONSTRESS-NEXT: [[IDX64:%[a-zA-Z_0-9-]+]] = zext i32 [[RES32]] to i64
 ;
 ; DISABLE-NEXT: [[ZEXT32:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i32
 ; DISABLE-NEXT: [[RES32:%[a-zA-Z_0-9-]+]] = add nuw i32 [[ZEXT32]], %b
@@ -590,9 +601,9 @@ entry:
 ;
 ; OPTALL-NEXT: [[RES64:%[a-zA-Z_0-9-]+]] = shl i64 [[IDX64]], 12
 ; OPTALL-NEXT: ret i64 %staddr
-define i64 @doNotPromoteFreeZExtFromShift(i8* %p, i32 %b) {
+define i64 @doNotPromoteFreeZExtFromShift(ptr %p, i32 %b) {
 entry:
-  %t = load i8, i8* %p
+  %t = load i8, ptr %p
   %zextt = zext i8 %t to i32
   %add = add nuw i32 %zextt, %b
   %idx64 = zext i32 %add to i64
@@ -608,9 +619,9 @@ entry:
 ; sext.
 ; This would need to be fixed at some point.
 ; OPTALL-LABEL: @doNotPromoteBecauseOfPairedLoad
-; OPTALL: [[LD0:%[a-zA-Z_0-9-]+]] = load i32, i32* %p
-; OPTALL: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i32, i32* %p, i64 1
-; OPTALL: [[LD1:%[a-zA-Z_0-9-]+]] = load i32, i32* [[GEP]]
+; OPTALL: [[LD0:%[a-zA-Z_0-9-]+]] = load i32, ptr %p
+; OPTALL: [[GEP:%[a-zA-Z_0-9-]+]] = getelementptr inbounds i32, ptr %p, i64 1
+; OPTALL: [[LD1:%[a-zA-Z_0-9-]+]] = load i32, ptr [[GEP]]
 ;
 ; This transformation should really happen only for stress mode.
 ; OPT-NEXT: [[SEXTLD1:%[a-zA-Z_0-9-]+]] = sext i32 [[LD1]] to i64
@@ -623,10 +634,10 @@ entry:
 ; OPTALL-NEXT: [[ZEXTLD0:%[a-zA-Z_0-9-]+]] = zext i32 [[LD0]] to i64
 ; OPTALL-NEXT: [[FINAL:%[a-zA-Z_0-9-]+]] = add i64 [[SEXTRES]], [[ZEXTLD0]]
 ; OPTALL-NEXT: ret i64 [[FINAL]]
-define i64 @doNotPromoteBecauseOfPairedLoad(i32* %p, i32 %cst) {
-  %ld0 = load i32, i32* %p
-  %idxLd1 = getelementptr inbounds i32, i32* %p, i64 1
-  %ld1 = load i32, i32* %idxLd1
+define i64 @doNotPromoteBecauseOfPairedLoad(ptr %p, i32 %cst) {
+  %ld0 = load i32, ptr %p
+  %idxLd1 = getelementptr inbounds i32, ptr %p, i64 1
+  %ld1 = load i32, ptr %idxLd1
   %res = add nsw i32 %ld1, %cst
   %sextres = sext i32 %res to i64
   %zextLd0 = zext i32 %ld0 to i64
@@ -634,17 +645,17 @@ define i64 @doNotPromoteBecauseOfPairedLoad(i32* %p, i32 %cst) {
   ret i64 %final
 }
 
-define i64 @promoteZextShl(i1 %c, i16* %P) {
+define i64 @promoteZextShl(i1 %c, ptr %P) {
 entry:
 ; OPTALL-LABEL: promoteZextShl
 ; OPTALL: entry:
-; OPT: %[[LD:.*]] = load i16, i16* %P
+; OPT: %[[LD:.*]] = load i16, ptr %P
 ; OPT: %[[EXT:.*]] = zext i16 %[[LD]] to i64
 ; OPT: if.then:
 ; OPT: shl nsw i64 %[[EXT]], 1
 ; DISABLE: if.then:
 ; DISABLE: %r = sext i32 %shl2 to i64
-  %ld = load i16, i16* %P
+  %ld = load i16, ptr %P
   br i1 %c, label %end, label %if.then
 if.then:
   %z = zext i16 %ld to i32

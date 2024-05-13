@@ -109,7 +109,7 @@ TEST(RegisterContextMinidump, ConvertMinidumpContext_x86_64) {
   Context.gs = 0x9091;
   Context.ss = 0x9293;
   Context.ds = 0x9495;
-  Context.ss = 0x9697;
+  Context.es = 0x9697;
   llvm::ArrayRef<uint8_t> ContextRef(reinterpret_cast<uint8_t *>(&Context),
                                      sizeof(Context));
 
@@ -152,7 +152,7 @@ static void TestARMRegInfo(const lldb_private::RegisterInfo *info) {
   // correctly when using this information.
   llvm::StringRef name(info->name);
   llvm::StringRef alt_name(info->alt_name);
-  if (name.startswith("r") || alt_name.startswith("r")) {
+  if (name.starts_with("r") || alt_name.starts_with("r")) {
     EXPECT_NE(info->kinds[lldb::eRegisterKindEHFrame], LLDB_INVALID_REGNUM);
     EXPECT_NE(info->kinds[lldb::eRegisterKindDWARF], LLDB_INVALID_REGNUM);
   }

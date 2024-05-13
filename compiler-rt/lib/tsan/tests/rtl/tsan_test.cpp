@@ -16,7 +16,7 @@
 static void foo() {}
 static void bar() {}
 
-TEST(ThreadSanitizer, FuncCall) {
+TEST_F(ThreadSanitizer, FuncCall) {
   ScopedThread t1, t2;
   MemLoc l;
   t1.Write1(l);
@@ -52,12 +52,6 @@ extern "C" const char* __tsan_default_options() {
   return "symbolize=false:abort_on_error=0";
 }
 #endif
-
-namespace __sanitizer {
-bool ReexecDisabled() {
-  return true;
-}
-}
 
 int main(int argc, char **argv) {
   argv0 = argv[0];

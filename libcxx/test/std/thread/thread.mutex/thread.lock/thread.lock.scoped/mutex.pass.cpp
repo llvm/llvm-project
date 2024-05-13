@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14
 
 // <mutex>
@@ -66,6 +66,7 @@ int main(int, char**)
     {
         using LG = std::scoped_lock<>;
         LG lg;
+        (void)lg;
     }
     {
         using LG = std::scoped_lock<TestMutex>;
@@ -130,7 +131,7 @@ int main(int, char**)
     }
 #endif
 
-#ifdef __cpp_deduction_guides
+#if TEST_STD_VER >= 17
     {
     TestMutex m1, m2, m3;
         {

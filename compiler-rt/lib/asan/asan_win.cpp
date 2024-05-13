@@ -1,4 +1,5 @@
-//===-- asan_win.cpp ------------------------------------------------------===//
+//===-- asan_win.cpp
+//------------------------------------------------------===//>
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,21 +14,20 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#  define WIN32_LEAN_AND_MEAN
+#  include <stdlib.h>
+#  include <windows.h>
 
-#include <stdlib.h>
-
-#include "asan_interceptors.h"
-#include "asan_internal.h"
-#include "asan_mapping.h"
-#include "asan_report.h"
-#include "asan_stack.h"
-#include "asan_thread.h"
-#include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_mutex.h"
-#include "sanitizer_common/sanitizer_win.h"
-#include "sanitizer_common/sanitizer_win_defs.h"
+#  include "asan_interceptors.h"
+#  include "asan_internal.h"
+#  include "asan_mapping.h"
+#  include "asan_report.h"
+#  include "asan_stack.h"
+#  include "asan_thread.h"
+#  include "sanitizer_common/sanitizer_libc.h"
+#  include "sanitizer_common/sanitizer_mutex.h"
+#  include "sanitizer_common/sanitizer_win.h"
+#  include "sanitizer_common/sanitizer_win_defs.h"
 
 using namespace __asan;
 
@@ -49,8 +49,8 @@ uptr __asan_get_shadow_memory_dynamic_address() {
 static LPTOP_LEVEL_EXCEPTION_FILTER default_seh_handler;
 static LPTOP_LEVEL_EXCEPTION_FILTER user_seh_handler;
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-long __asan_unhandled_exception_filter(EXCEPTION_POINTERS *info) {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE long __asan_unhandled_exception_filter(
+    EXCEPTION_POINTERS *info) {
   EXCEPTION_RECORD *exception_record = info->ExceptionRecord;
   CONTEXT *context = info->ContextRecord;
 
@@ -131,10 +131,22 @@ INTERCEPTOR(int, _except_handler4, void *a, void *b, void *c, void *d) {
 }
 #endif
 
+struct ThreadStartParams {
+  thread_callback_t start_routine;
+  void *arg;
+};
+
 static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   AsanThread *t = (AsanThread *)arg;
   SetCurrentThread(t);
-  return t->ThreadStart(GetTid());
+  t->ThreadStart(GetTid());
+
+  ThreadStartParams params;
+  t->GetStartData(params);
+
+  auto res = (*params.start_routine)(params.arg);
+  t->Destroy();  // POSIX calls this from TSD destructor.
+  return res;
 }
 
 INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
@@ -148,8 +160,8 @@ INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
   // one.  This is a bandaid fix for PR22025.
   bool detached = false;  // FIXME: how can we determine it on Windows?
   u32 current_tid = GetCurrentTidOrInvalid();
-  AsanThread *t =
-      AsanThread::Create(start_routine, arg, current_tid, &stack, detached);
+  ThreadStartParams params = {start_routine, arg};
+  AsanThread *t = AsanThread::Create(params, current_tid, &stack, detached);
   return REAL(CreateThread)(security, stack_size, asan_thread_start, t,
                             thr_flags, tid);
 }
@@ -159,6 +171,8 @@ INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
 namespace __asan {
 
 void InitializePlatformInterceptors() {
+  __interception::SetErrorReportCallback(Report);
+
   // The interceptors were not designed to be removable, so we have to keep this
   // module alive for the life of the process.
   HMODULE pinned;
@@ -187,14 +201,21 @@ void InitializePlatformInterceptors() {
   }
 }
 
+void InstallAtExitCheckLeaks() {}
+
+void InstallAtForkHandler() {}
+
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
   UNIMPLEMENTED();
 }
 
 void FlushUnneededASanShadowMemory(uptr p, uptr size) {
+  // Only asan on 64-bit Windows supports committing shadow memory on demand.
+#if SANITIZER_WINDOWS64
   // Since asan's mapping is compacting, the shadow chunk may be
   // not page-aligned, so we only flush the page-aligned portion.
   ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
+#endif
 }
 
 // ---------------------- TSD ---------------- {{{
@@ -245,25 +266,14 @@ void PlatformTSDDtor(void *tsd) { AsanThread::TSDDtor(tsd); }
 // }}}
 
 // ---------------------- Various stuff ---------------- {{{
-void *AsanDoesNotSupportStaticLinkage() {
-#if defined(_DEBUG)
-#error Please build the runtime with a non-debug CRT: /MD or /MT
-#endif
-  return 0;
-}
-
 uptr FindDynamicShadowStart() {
-  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), SHADOW_SCALE,
+  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), ASAN_SHADOW_SCALE,
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
 void AsanCheckDynamicRTPrereqs() {}
 
 void AsanCheckIncompatibleRT() {}
-
-void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
-  UNIMPLEMENTED();
-}
 
 void AsanOnDeadlySignal(int, void *siginfo, void *context) { UNIMPLEMENTED(); }
 

@@ -9,29 +9,35 @@
 #include "DwarfGenerator.h"
 #include "DwarfUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <string>
+
+// AIX doesn't support debug_str_offsets or debug_addr sections
+#ifdef _AIX
+#define NO_SUPPORT_DEBUG_STR_OFFSETS
+#define NO_SUPPORT_DEBUG_ADDR
+#endif
 
 using namespace llvm;
 using namespace dwarf;
@@ -42,11 +48,17 @@ namespace {
 template <uint16_t Version, class AddrType, class RefAddrType>
 void TestAllForms() {
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test that we can decode all DW_FORM values correctly.
   const AddrType AddrValue = (AddrType)0x0123456789abcdefULL;
+  const AddrType AddrxValue = (AddrType)0x4231abcd4231abcdULL;
+  const AddrType Addrx1Value = (AddrType)0x0000aaaabbbbccccULL;
+  const AddrType Addrx2Value = (AddrType)0xf00123f00456f000ULL;
+  const AddrType Addrx3Value = (AddrType)0xABABA000B111C222ULL;
+  const AddrType Addrx4Value = (AddrType)0xa1b2c3d4e5f6e5d4ULL;
+
   const uint8_t BlockData[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
   const uint32_t BlockSize = sizeof(BlockData);
   const RefAddrType RefAddr = 0x12345678;
@@ -78,8 +90,10 @@ void TestAllForms() {
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
   dwarfgen::DIE CUDie = CU.getUnitDIE();
 
-  if (Version >= 5)
+  if (Version >= 5) {
     CUDie.addStrOffsetsBaseAttribute();
+    CUDie.addAddrBaseAttribute();
+  }
 
   uint16_t Attr = DW_AT_lo_user;
 
@@ -88,6 +102,20 @@ void TestAllForms() {
   //----------------------------------------------------------------------
   const auto Attr_DW_FORM_addr = static_cast<dwarf::Attribute>(Attr++);
   CUDie.addAttribute(Attr_DW_FORM_addr, DW_FORM_addr, AddrValue);
+
+  const auto Attr_DW_FORM_addrx = static_cast<dwarf::Attribute>(Attr++);
+  const auto Attr_DW_FORM_addrx1 = static_cast<dwarf::Attribute>(Attr++);
+  const auto Attr_DW_FORM_addrx2 = static_cast<dwarf::Attribute>(Attr++);
+  const auto Attr_DW_FORM_addrx3 = static_cast<dwarf::Attribute>(Attr++);
+  const auto Attr_DW_FORM_addrx4 = static_cast<dwarf::Attribute>(Attr++);
+
+  if (Version >= 5) {
+    CUDie.addAttribute(Attr_DW_FORM_addrx, DW_FORM_addrx, AddrxValue);
+    CUDie.addAttribute(Attr_DW_FORM_addrx1, DW_FORM_addrx1, Addrx1Value);
+    CUDie.addAttribute(Attr_DW_FORM_addrx2, DW_FORM_addrx2, Addrx2Value);
+    CUDie.addAttribute(Attr_DW_FORM_addrx3, DW_FORM_addrx3, Addrx3Value);
+    CUDie.addAttribute(Attr_DW_FORM_addrx4, DW_FORM_addrx4, Addrx4Value);
+  }
 
   //----------------------------------------------------------------------
   // Test block forms
@@ -240,42 +268,64 @@ void TestAllForms() {
   //----------------------------------------------------------------------
   EXPECT_EQ(AddrValue, toAddress(DieDG.find(Attr_DW_FORM_addr), 0));
 
+  if (Version >= 5) {
+    auto ExtractedAddrxValue = toAddress(DieDG.find(Attr_DW_FORM_addrx));
+    EXPECT_TRUE(ExtractedAddrxValue.has_value());
+    EXPECT_EQ(AddrxValue, *ExtractedAddrxValue);
+
+    auto ExtractedAddrx1Value = toAddress(DieDG.find(Attr_DW_FORM_addrx1));
+    EXPECT_TRUE(ExtractedAddrx1Value.has_value());
+    EXPECT_EQ(Addrx1Value, *ExtractedAddrx1Value);
+
+    auto ExtractedAddrx2Value = toAddress(DieDG.find(Attr_DW_FORM_addrx2));
+    EXPECT_TRUE(ExtractedAddrx2Value.has_value());
+    EXPECT_EQ(Addrx2Value, *ExtractedAddrx2Value);
+
+    auto ExtractedAddrx3Value = toAddress(DieDG.find(Attr_DW_FORM_addrx3));
+    EXPECT_TRUE(ExtractedAddrx3Value.has_value());
+    EXPECT_EQ(Addrx3Value, *ExtractedAddrx3Value);
+
+    auto ExtractedAddrx4Value = toAddress(DieDG.find(Attr_DW_FORM_addrx4));
+    EXPECT_TRUE(ExtractedAddrx1Value.has_value());
+    EXPECT_EQ(Addrx4Value, *ExtractedAddrx4Value);
+  }
+
   //----------------------------------------------------------------------
   // Test block forms
   //----------------------------------------------------------------------
-  Optional<DWARFFormValue> FormValue;
+  std::optional<DWARFFormValue> FormValue;
   ArrayRef<uint8_t> ExtractedBlockData;
-  Optional<ArrayRef<uint8_t>> BlockDataOpt;
+  std::optional<ArrayRef<uint8_t>> BlockDataOpt;
 
   FormValue = DieDG.find(Attr_DW_FORM_block);
   EXPECT_TRUE((bool)FormValue);
   BlockDataOpt = FormValue->getAsBlock();
-  EXPECT_TRUE(BlockDataOpt.hasValue());
-  ExtractedBlockData = BlockDataOpt.getValue();
+  EXPECT_TRUE(BlockDataOpt.has_value());
+  ExtractedBlockData = *BlockDataOpt;
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
   FormValue = DieDG.find(Attr_DW_FORM_block1);
   EXPECT_TRUE((bool)FormValue);
   BlockDataOpt = FormValue->getAsBlock();
-  EXPECT_TRUE(BlockDataOpt.hasValue());
-  ExtractedBlockData = BlockDataOpt.getValue();
+  EXPECT_TRUE(BlockDataOpt.has_value());
+  ExtractedBlockData = *BlockDataOpt;
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
   FormValue = DieDG.find(Attr_DW_FORM_block2);
   EXPECT_TRUE((bool)FormValue);
   BlockDataOpt = FormValue->getAsBlock();
-  EXPECT_TRUE(BlockDataOpt.hasValue());
-  ExtractedBlockData = BlockDataOpt.getValue();
+  EXPECT_TRUE(BlockDataOpt.has_value());
+  ExtractedBlockData = *BlockDataOpt;
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
   FormValue = DieDG.find(Attr_DW_FORM_block4);
   EXPECT_TRUE((bool)FormValue);
   BlockDataOpt = FormValue->getAsBlock();
-  EXPECT_TRUE(BlockDataOpt.hasValue());
-  ExtractedBlockData = BlockDataOpt.getValue();
+  EXPECT_TRUE(BlockDataOpt.has_value());
+  ExtractedBlockData = *BlockDataOpt;
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
@@ -284,8 +334,8 @@ void TestAllForms() {
     FormValue = DieDG.find(Attr_DW_FORM_data16);
     EXPECT_TRUE((bool)FormValue);
     BlockDataOpt = FormValue->getAsBlock();
-    EXPECT_TRUE(BlockDataOpt.hasValue());
-    ExtractedBlockData = BlockDataOpt.getValue();
+    EXPECT_TRUE(BlockDataOpt.has_value());
+    ExtractedBlockData = *BlockDataOpt;
     EXPECT_EQ(ExtractedBlockData.size(), 16u);
     EXPECT_TRUE(memcmp(ExtractedBlockData.data(), Data16, 16) == 0);
   }
@@ -436,7 +486,11 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8AllForms) {
   TestAllForms<4, AddrType, RefAddrType>();
 }
 
+#ifdef NO_SUPPORT_DEBUG_STR_OFFSETS
+TEST(DWARFDebugInfo, DISABLED_TestDWARF32Version5Addr4AllForms) {
+#else
 TEST(DWARFDebugInfo, TestDWARF32Version5Addr4AllForms) {
+#endif
   // Test that we can decode all forms for DWARF32, version 5, with 4 byte
   // addresses.
   typedef uint32_t AddrType;
@@ -445,7 +499,11 @@ TEST(DWARFDebugInfo, TestDWARF32Version5Addr4AllForms) {
   TestAllForms<5, AddrType, RefAddrType>();
 }
 
+#ifdef NO_SUPPORT_DEBUG_STR_OFFSETS
+TEST(DWARFDebugInfo, DISABLED_TestDWARF32Version5Addr8AllForms) {
+#else
 TEST(DWARFDebugInfo, TestDWARF32Version5Addr8AllForms) {
+#endif
   // Test that we can decode all forms for DWARF32, version 5, with 8 byte
   // addresses.
   typedef uint64_t AddrType;
@@ -456,8 +514,8 @@ TEST(DWARFDebugInfo, TestDWARF32Version5Addr8AllForms) {
 
 template <uint16_t Version, class AddrType> void TestChildren() {
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test that we can decode DW_FORM_ref_addr values correctly in DWARF 2 with
   // 4 byte addresses. DW_FORM_ref_addr values should be 4 bytes when using
@@ -586,8 +644,8 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Children) {
 
 template <uint16_t Version, class AddrType> void TestReferences() {
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test that we can decode DW_FORM_refXXX values correctly in DWARF.
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
@@ -836,8 +894,8 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8References) {
 
 template <uint16_t Version, class AddrType> void TestAddresses() {
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARF APIs related to accessing the DW_AT_low_pc and
   // DW_AT_high_pc.
@@ -891,7 +949,7 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   EXPECT_TRUE(DieDG.isValid());
 
   uint64_t LowPC, HighPC, SectionIndex;
-  Optional<uint64_t> OptU64;
+  std::optional<uint64_t> OptU64;
   // Verify the that our subprogram with no PC value fails appropriately when
   // asked for any PC values.
   auto SubprogramDieNoPC = DieDG.getFirstChild();
@@ -918,7 +976,7 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   EXPECT_EQ(SubprogramDieLowPC.getTag(), DW_TAG_subprogram);
   OptU64 = toAddress(SubprogramDieLowPC.find(DW_AT_low_pc));
   EXPECT_TRUE((bool)OptU64);
-  EXPECT_EQ(OptU64.getValue(), ActualLowPC);
+  EXPECT_EQ(*OptU64, ActualLowPC);
   OptU64 = toAddress(SubprogramDieLowPC.find(DW_AT_high_pc));
   EXPECT_FALSE((bool)OptU64);
   OptU64 = toUnsigned(SubprogramDieLowPC.find(DW_AT_high_pc));
@@ -935,7 +993,7 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   EXPECT_EQ(SubprogramDieLowHighPC.getTag(), DW_TAG_subprogram);
   OptU64 = toAddress(SubprogramDieLowHighPC.find(DW_AT_low_pc));
   EXPECT_TRUE((bool)OptU64);
-  EXPECT_EQ(OptU64.getValue(), ActualLowPC);
+  EXPECT_EQ(*OptU64, ActualLowPC);
   // Get the high PC as an address. This should succeed if the high PC was
   // encoded as an address and fail if the high PC was encoded as an offset.
   OptU64 = toAddress(SubprogramDieLowHighPC.find(DW_AT_high_pc));
@@ -943,21 +1001,21 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
     EXPECT_FALSE((bool)OptU64);
   } else {
     EXPECT_TRUE((bool)OptU64);
-    EXPECT_EQ(OptU64.getValue(), ActualHighPC);
+    EXPECT_EQ(*OptU64, ActualHighPC);
   }
   // Get the high PC as an unsigned constant. This should succeed if the high PC
   // was encoded as an offset and fail if the high PC was encoded as an address.
   OptU64 = toUnsigned(SubprogramDieLowHighPC.find(DW_AT_high_pc));
   if (SupportsHighPCAsOffset) {
     EXPECT_TRUE((bool)OptU64);
-    EXPECT_EQ(OptU64.getValue(), ActualHighPCOffset);
+    EXPECT_EQ(*OptU64, ActualHighPCOffset);
   } else {
     EXPECT_FALSE((bool)OptU64);
   }
 
   OptU64 = SubprogramDieLowHighPC.getHighPC(ActualLowPC);
   EXPECT_TRUE((bool)OptU64);
-  EXPECT_EQ(OptU64.getValue(), ActualHighPC);
+  EXPECT_EQ(*OptU64, ActualHighPC);
 
   EXPECT_TRUE(SubprogramDieLowHighPC.getLowAndHighPC(LowPC, HighPC, SectionIndex));
   EXPECT_EQ(LowPC, ActualLowPC);
@@ -1006,10 +1064,14 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Addresses) {
   TestAddresses<4, AddrType>();
 }
 
+#ifdef NO_SUPPORT_DEBUG_STR_OFFSETS
+TEST(DWARFDebugInfo, DISABLED_TestStringOffsets) {
+#else
 TEST(DWARFDebugInfo, TestStringOffsets) {
+#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   const char *String1 = "Hello";
   const char *String2 = "World";
@@ -1047,6 +1109,7 @@ TEST(DWARFDebugInfo, TestStringOffsets) {
   DWARFUnit *U = DwarfContext->getUnitAtIndex(0);
   auto DieDG = U->getUnitDIE(false);
   ASSERT_TRUE(DieDG.isValid());
+  ASSERT_TRUE(U->isLittleEndian() == Triple.isLittleEndian());
 
   // Now make sure the string offsets came out properly. Attr2 should have index
   // 0 (because it was the first indexed string) even though the string itself
@@ -1055,14 +1118,14 @@ TEST(DWARFDebugInfo, TestStringOffsets) {
   ASSERT_TRUE((bool)Extracted1);
   EXPECT_STREQ(String1, *Extracted1);
 
-  Optional<DWARFFormValue> Form2 = DieDG.find(Attr2);
+  std::optional<DWARFFormValue> Form2 = DieDG.find(Attr2);
   ASSERT_TRUE((bool)Form2);
   EXPECT_EQ(0u, Form2->getRawUValue());
   auto Extracted2 = toString(Form2);
   ASSERT_TRUE((bool)Extracted2);
   EXPECT_STREQ(String2, *Extracted2);
 
-  Optional<DWARFFormValue> Form3 = DieDG.find(Attr3);
+  std::optional<DWARFFormValue> Form3 = DieDG.find(Attr3);
   ASSERT_TRUE((bool)Form3);
   EXPECT_EQ(1u, Form3->getRawUValue());
   auto Extracted3 = toString(Form3);
@@ -1070,10 +1133,15 @@ TEST(DWARFDebugInfo, TestStringOffsets) {
   EXPECT_STREQ(String1, *Extracted3);
 }
 
+#ifdef NO_SUPPORT_DEBUG_ADDR
+TEST(DWARFDebugInfo, DISABLED_TestEmptyStringOffsets) {
+#else
 TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
+#endif
+
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   const char *String1 = "Hello";
 
@@ -1101,8 +1169,8 @@ TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
 
 TEST(DWARFDebugInfo, TestRelations) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARF APIs related to accessing the DW_AT_low_pc and
   // DW_AT_high_pc.
@@ -1288,8 +1356,8 @@ TEST(DWARFDebugInfo, TestDWARFDie) {
 
 TEST(DWARFDebugInfo, TestChildIterators) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARF APIs related to iterating across the children of a DIE using
   // the DWARFDie::iterator class.
@@ -1397,8 +1465,8 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
 
 TEST(DWARFDebugInfo, TestAttributeIterators) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARF APIs related to iterating across all attribute values in a
   // a DWARFDie.
@@ -1443,7 +1511,7 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
 
   ASSERT_NE(E, I);
   EXPECT_EQ(I->Attr, DW_AT_name);
-  auto ActualCUPath = I->Value.getAsCString();
+  auto ActualCUPath = toString(I->Value);
   EXPECT_EQ(CUPath, *ActualCUPath);
 
   ASSERT_NE(E, ++I);
@@ -1459,8 +1527,8 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
 
 TEST(DWARFDebugInfo, TestFindRecurse) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   uint16_t Version = 4;
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
@@ -1525,12 +1593,12 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   // Test the dwarf::toString() helper function.
   auto StringOpt = toString(NameOpt);
   EXPECT_TRUE(StringOpt);
-  EXPECT_EQ(SpecDieName, StringOpt.getValueOr(nullptr));
+  EXPECT_EQ(SpecDieName, StringOpt.value_or(nullptr));
   // Test the dwarf::toString() helper function with a default value specified.
   EXPECT_EQ(SpecDieName, toString(NameOpt, nullptr));
 
   auto LinkageNameOpt = FuncDie.findRecursively(DW_AT_linkage_name);
-  EXPECT_EQ(SpecLinkageName, toString(LinkageNameOpt).getValueOr(nullptr));
+  EXPECT_EQ(SpecLinkageName, toString(LinkageNameOpt).value_or(nullptr));
 
   // Make sure we can't extract the name from the abstract origin die when using
   // DWARFDie::find() since it won't check the DW_AT_abstract_origin DIE.
@@ -1544,25 +1612,61 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   // Test the dwarf::toString() helper function.
   StringOpt = toString(NameOpt);
   EXPECT_TRUE(StringOpt);
-  EXPECT_EQ(AbsDieName, StringOpt.getValueOr(nullptr));
+  EXPECT_EQ(AbsDieName, StringOpt.value_or(nullptr));
+}
+
+TEST(DWARFDebugInfo, TestSelfRecursiveType) {
+  typedef uint32_t AddrType;
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
+
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, 4);
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
+  dwarfgen::Generator *DG = ExpectedDG.get().get();
+  dwarfgen::CompileUnit &CU = DG->addCompileUnit();
+  dwarfgen::DIE CUDie = CU.getUnitDIE();
+
+  // Create an invalid self-recursive typedef.
+  dwarfgen::DIE TypedefDie = CUDie.addChild(DW_TAG_typedef);
+  TypedefDie.addAttribute(DW_AT_name, DW_FORM_strp, "illegal");
+  TypedefDie.addAttribute(DW_AT_type, DW_FORM_ref_addr, TypedefDie);
+
+  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
+  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
+  EXPECT_TRUE((bool)Obj);
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
+
+  // Verify the number of compile units is correct.
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
+  EXPECT_EQ(NumCUs, 1u);
+  DWARFCompileUnit *U = cast<DWARFCompileUnit>(DwarfContext->getUnitAtIndex(0));
+  {
+    DWARFDie CUDie = U->getUnitDIE(false);
+    EXPECT_TRUE(CUDie.isValid());
+    DWARFDie TypedefDie = CUDie.getFirstChild();
+
+    // Test that getTypeSize doesn't get into an infinite loop.
+    EXPECT_EQ(TypedefDie.getTypeSize(sizeof(AddrType)), std::nullopt);
+  }
 }
 
 TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   // Test all of the dwarf::toXXX functions that take a
-  // Optional<DWARFFormValue> and extract the values from it.
+  // std::optional<DWARFFormValue> and extract the values from it.
   uint64_t InvalidU64 = 0xBADBADBADBADBADB;
   int64_t InvalidS64 = 0xBADBADBADBADBADB;
 
   // First test that we don't get valid values back when using an optional with
   // no value.
-  Optional<DWARFFormValue> FormValOpt1 = DWARFFormValue();
-  EXPECT_FALSE(toString(FormValOpt1).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt1).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt1).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt1).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt1).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt1).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt1).hasValue());
+  std::optional<DWARFFormValue> FormValOpt1 = DWARFFormValue();
+  EXPECT_FALSE(toString(FormValOpt1).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt1).has_value());
+  EXPECT_FALSE(toReference(FormValOpt1).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt1).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt1).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt1).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt1).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt1, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt1, InvalidU64));
   EXPECT_EQ(InvalidU64, toReference(FormValOpt1, InvalidU64));
@@ -1572,16 +1676,16 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
   // Test successful and unsuccessful address decoding.
   uint64_t Address = 0x100000000ULL;
-  Optional<DWARFFormValue> FormValOpt2 =
+  std::optional<DWARFFormValue> FormValOpt2 =
       DWARFFormValue::createFromUValue(DW_FORM_addr, Address);
 
-  EXPECT_FALSE(toString(FormValOpt2).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt2).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt2).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt2).hasValue());
-  EXPECT_TRUE(toAddress(FormValOpt2).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt2).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt2).hasValue());
+  EXPECT_FALSE(toString(FormValOpt2).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt2).has_value());
+  EXPECT_FALSE(toReference(FormValOpt2).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt2).has_value());
+  EXPECT_TRUE(toAddress(FormValOpt2).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt2).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt2).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt2, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt2, InvalidU64));
   EXPECT_EQ(InvalidU64, toReference(FormValOpt2, InvalidU64));
@@ -1591,16 +1695,16 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
   // Test successful and unsuccessful unsigned constant decoding.
   uint64_t UData8 = 0x1020304050607080ULL;
-  Optional<DWARFFormValue> FormValOpt3 =
+  std::optional<DWARFFormValue> FormValOpt3 =
       DWARFFormValue::createFromUValue(DW_FORM_udata, UData8);
 
-  EXPECT_FALSE(toString(FormValOpt3).hasValue());
-  EXPECT_TRUE(toUnsigned(FormValOpt3).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt3).hasValue());
-  EXPECT_TRUE(toSigned(FormValOpt3).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt3).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt3).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt3).hasValue());
+  EXPECT_FALSE(toString(FormValOpt3).has_value());
+  EXPECT_TRUE(toUnsigned(FormValOpt3).has_value());
+  EXPECT_FALSE(toReference(FormValOpt3).has_value());
+  EXPECT_TRUE(toSigned(FormValOpt3).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt3).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt3).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt3).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt3, nullptr));
   EXPECT_EQ(UData8, toUnsigned(FormValOpt3, InvalidU64));
   EXPECT_EQ(InvalidU64, toReference(FormValOpt3, InvalidU64));
@@ -1610,16 +1714,16 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
   // Test successful and unsuccessful reference decoding.
   uint32_t RefData = 0x11223344U;
-  Optional<DWARFFormValue> FormValOpt4 =
+  std::optional<DWARFFormValue> FormValOpt4 =
       DWARFFormValue::createFromUValue(DW_FORM_ref_addr, RefData);
 
-  EXPECT_FALSE(toString(FormValOpt4).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt4).hasValue());
-  EXPECT_TRUE(toReference(FormValOpt4).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt4).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt4).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt4).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt4).hasValue());
+  EXPECT_FALSE(toString(FormValOpt4).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt4).has_value());
+  EXPECT_TRUE(toReference(FormValOpt4).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt4).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt4).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt4).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt4).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt4, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt4, InvalidU64));
   EXPECT_EQ(RefData, toReference(FormValOpt4, InvalidU64));
@@ -1629,16 +1733,16 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
   // Test successful and unsuccessful signed constant decoding.
   int64_t SData8 = 0x1020304050607080ULL;
-  Optional<DWARFFormValue> FormValOpt5 =
+  std::optional<DWARFFormValue> FormValOpt5 =
       DWARFFormValue::createFromSValue(DW_FORM_udata, SData8);
 
-  EXPECT_FALSE(toString(FormValOpt5).hasValue());
-  EXPECT_TRUE(toUnsigned(FormValOpt5).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt5).hasValue());
-  EXPECT_TRUE(toSigned(FormValOpt5).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt5).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt5).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt5).hasValue());
+  EXPECT_FALSE(toString(FormValOpt5).has_value());
+  EXPECT_TRUE(toUnsigned(FormValOpt5).has_value());
+  EXPECT_FALSE(toReference(FormValOpt5).has_value());
+  EXPECT_TRUE(toSigned(FormValOpt5).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt5).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt5).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt5).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt5, nullptr));
   EXPECT_EQ((uint64_t)SData8, toUnsigned(FormValOpt5, InvalidU64));
   EXPECT_EQ(InvalidU64, toReference(FormValOpt5, InvalidU64));
@@ -1649,17 +1753,17 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   // Test successful and unsuccessful block decoding.
   uint8_t Data[] = { 2, 3, 4 };
   ArrayRef<uint8_t> Array(Data);
-  Optional<DWARFFormValue> FormValOpt6 =
+  std::optional<DWARFFormValue> FormValOpt6 =
       DWARFFormValue::createFromBlockValue(DW_FORM_block1, Array);
 
-  EXPECT_FALSE(toString(FormValOpt6).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt6).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt6).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt6).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt6).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt6).hasValue());
+  EXPECT_FALSE(toString(FormValOpt6).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt6).has_value());
+  EXPECT_FALSE(toReference(FormValOpt6).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt6).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt6).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt6).has_value());
   auto BlockOpt = toBlock(FormValOpt6);
-  EXPECT_TRUE(BlockOpt.hasValue());
+  EXPECT_TRUE(BlockOpt.has_value());
   EXPECT_EQ(*BlockOpt, Array);
   EXPECT_EQ(nullptr, toString(FormValOpt6, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt6, InvalidU64));
@@ -1673,8 +1777,8 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
 TEST(DWARFDebugInfo, TestFindAttrs) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARFDie::find() and DWARFDie::findRecursively() that take an
   // ArrayRef<dwarf::Attribute> value to make sure they work correctly.
@@ -1713,31 +1817,35 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
   auto FuncDie = FuncSpecDie.getSibling();
 
   // Make sure that passing in an empty attribute list behave correctly.
-  EXPECT_FALSE(FuncDie.find(ArrayRef<dwarf::Attribute>()).hasValue());
+  EXPECT_FALSE(FuncDie.find(ArrayRef<dwarf::Attribute>()).has_value());
 
   // Make sure that passing in a list of attribute that are not contained
   // in the DIE returns nothing.
-  EXPECT_FALSE(FuncDie.find({DW_AT_low_pc, DW_AT_entry_pc}).hasValue());
+  EXPECT_FALSE(FuncDie.find({DW_AT_low_pc, DW_AT_entry_pc}).has_value());
 
   const dwarf::Attribute Attrs[] = {DW_AT_linkage_name,
                                     DW_AT_MIPS_linkage_name};
 
   // Make sure we can't extract the linkage name attributes when using
   // DWARFDie::find() since it won't check the DW_AT_specification DIE.
-  EXPECT_FALSE(FuncDie.find(Attrs).hasValue());
+  EXPECT_FALSE(FuncDie.find(Attrs).has_value());
 
   // Make sure we can extract the name from the specification die when using
   // DWARFDie::findRecursively() since it should recurse through the
   // DW_AT_specification DIE.
   auto NameOpt = FuncDie.findRecursively(Attrs);
-  EXPECT_TRUE(NameOpt.hasValue());
+  EXPECT_TRUE(NameOpt.has_value());
   EXPECT_EQ(DieMangled, toString(NameOpt, ""));
 }
 
+#ifdef NO_SUPPORT_DEBUG_ADDR
+TEST(DWARFDebugInfo, DISABLED_TestImplicitConstAbbrevs) {
+#else
 TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
+#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   uint16_t Version = 5;
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
@@ -1781,6 +1889,13 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
 
     auto A = it->getAttrByIndex(0);
     EXPECT_EQ(A, Attr);
+
+    std::optional<uint32_t> AttrIndex = it->findAttributeIndex(A);
+    EXPECT_TRUE((bool)AttrIndex);
+    EXPECT_EQ(*AttrIndex, 0u);
+    uint64_t OffsetVal =
+        it->getAttributeOffsetFromIndex(*AttrIndex, /* offset */ 0, *U);
+    EXPECT_TRUE(it->getAttributeValueFromOffset(*AttrIndex, OffsetVal, *U));
 
     auto FormValue = it->getAttributeValue(/* offset */ 0, A, *U);
     EXPECT_TRUE((bool)FormValue);
@@ -1849,1089 +1964,6 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
   for (auto it = Val1Range.first; it != Val1Range.second; ++it)
     EXPECT_EQ(it->second, AbbrevPtrVal1);
   EXPECT_EQ(DIEs.find(Val2)->second, AbbrevPtrVal2);
-}
-
-void VerifyWarning(DWARFContext &DwarfContext, StringRef Error) {
-  SmallString<1024> Str;
-  raw_svector_ostream Strm(Str);
-  EXPECT_TRUE(DwarfContext.verify(Strm));
-  EXPECT_TRUE(Str.str().contains(Error));
-}
-
-void VerifyError(DWARFContext &DwarfContext, StringRef Error) {
-  SmallString<1024> Str;
-  raw_svector_ostream Strm(Str);
-  EXPECT_FALSE(DwarfContext.verify(Strm));
-  EXPECT_TRUE(Str.str().contains(Error));
-}
-
-void VerifySuccess(DWARFContext &DwarfContext) {
-  SmallString<1024> Str;
-  raw_svector_ostream Strm(Str);
-  EXPECT_TRUE(DwarfContext.verify(Strm));
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidCURef) {
-  // Create a single compile unit with a single function that has a DW_AT_type
-  // that is CU relative. The CU offset is not valid because it is larger than
-  // the compile unit itself.
-
-  const char *yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - main
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_type
-                Form:            DW_FORM_ref4
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000001234
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata));
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext, "error: DW_FORM_ref4 CU offset 0x00001234 is "
-                             "invalid (must be less than CU size of "
-                             "0x0000001a):");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddr) {
-  // Create a single compile unit with a single function that has an invalid
-  // DW_AT_type with an invalid .debug_info offset in its DW_FORM_ref_addr.
-  const char *yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - main
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_type
-                Form:            DW_FORM_ref_addr
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000001234
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata));
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext,
-              "error: DW_FORM_ref_addr offset beyond .debug_info bounds:");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRanges) {
-  // Create a single compile unit with a DW_AT_ranges whose section offset
-  // isn't valid.
-  const char *yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_ranges
-                Form:            DW_FORM_sec_offset
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-              - Value:           0x0000000000001000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata));
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(
-      *DwarfContext,
-      "error: DW_AT_ranges offset is beyond .debug_ranges bounds: 0x00001000");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRnglists) {
-  // Create a single compile unit with a DW_AT_ranges whose section offset
-  // isn't valid.
-  const char *yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_ranges
-                Form:            DW_FORM_sec_offset
-    debug_info:
-      - Version:         5
-        UnitType:        DW_UT_compile
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-              - Value:           0x0000000000001000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata));
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext, "error: DW_AT_ranges offset is beyond "
-                             ".debug_rnglists bounds: 0x00001000");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStmtList) {
-  // Create a single compile unit with a DW_AT_stmt_list whose section offset
-  // isn't valid.
-  const char *yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_stmt_list
-                Form:            DW_FORM_sec_offset
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-              - Value:           0x0000000000001000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata));
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(
-      *DwarfContext,
-      "error: DW_AT_stmt_list offset is beyond .debug_line bounds: 0x00001000");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStrp) {
-  // Create a single compile unit with a single function that has an invalid
-  // DW_FORM_strp for the DW_AT_name.
-  const char *yamldata = R"(
-    debug_str:
-      - ''
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000001234
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata));
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext,
-              "error: DW_FORM_strp offset beyond .debug_str bounds:");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddrBetween) {
-  // Create a single compile unit with a single function that has a DW_AT_type
-  // with a valid .debug_info offset, but the offset is between two DIEs.
-  const char *yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - main
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_type
-                Form:            DW_FORM_ref_addr
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000000011
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata));
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(
-      *DwarfContext,
-      "error: invalid DIE reference 0x00000011. Offset is in between DIEs:");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidLineSequence) {
-  // Create a single compile unit whose line table has a sequence in it where
-  // the address decreases.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_stmt_list
-                Form:            DW_FORM_sec_offset
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-              - Value:           0x0000000000000000
-    debug_line:
-      - Version:         2
-        MinInstLength:   1
-        DefaultIsStmt:   1
-        LineBase:        251
-        LineRange:       14
-        OpcodeBase:      13
-        StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-        IncludeDirs:
-          - /tmp
-        Files:
-          - Name:            main.c
-            DirIdx:          1
-            ModTime:         0
-            Length:          0
-        Opcodes:
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          9
-            SubOpcode:       DW_LNE_set_address
-            Data:            4112
-          - Opcode:          DW_LNS_advance_line
-            SData:           9
-            Data:            4112
-          - Opcode:          DW_LNS_copy
-            Data:            4112
-          - Opcode:          DW_LNS_advance_pc
-            Data:            18446744073709551600
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          1
-            SubOpcode:       DW_LNE_end_sequence
-            Data:            18446744073709551600
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext, "error: .debug_line[0x00000000] row[1] decreases "
-                             "in address from previous row:");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidLineFileIndex) {
-  // Create a single compile unit whose line table has a line table row with
-  // an invalid file index.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_stmt_list
-                Form:            DW_FORM_sec_offset
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-              - Value:           0x0000000000000000
-    debug_line:
-      - Version:         2
-        MinInstLength:   1
-        DefaultIsStmt:   1
-        LineBase:        251
-        LineRange:       14
-        OpcodeBase:      13
-        StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-        IncludeDirs:
-          - /tmp
-        Files:
-          - Name:            main.c
-            DirIdx:          1
-            ModTime:         0
-            Length:          0
-        Opcodes:
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          9
-            SubOpcode:       DW_LNE_set_address
-            Data:            4096
-          - Opcode:          DW_LNS_advance_line
-            SData:           9
-            Data:            4096
-          - Opcode:          DW_LNS_copy
-            Data:            4096
-          - Opcode:          DW_LNS_advance_pc
-            Data:            16
-          - Opcode:          DW_LNS_set_file
-            Data:            5
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          1
-            SubOpcode:       DW_LNE_end_sequence
-            Data:            5
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext, "error: .debug_line[0x00000000][1] has invalid "
-                             "file index 5 (valid values are [1,1]):");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidLineTablePorlogueDirIndex) {
-  // Create a single compile unit whose line table has a prologue with an
-  // invalid dir index.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_stmt_list
-                Form:            DW_FORM_sec_offset
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-              - Value:           0x0000000000000000
-    debug_line:
-      - Version:         2
-        MinInstLength:   1
-        DefaultIsStmt:   1
-        LineBase:        251
-        LineRange:       14
-        OpcodeBase:      13
-        StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-        IncludeDirs:
-          - /tmp
-        Files:
-          - Name:            main.c
-            DirIdx:          2
-            ModTime:         0
-            Length:          0
-        Opcodes:
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          9
-            SubOpcode:       DW_LNE_set_address
-            Data:            4096
-          - Opcode:          DW_LNS_advance_line
-            SData:           9
-            Data:            4096
-          - Opcode:          DW_LNS_copy
-            Data:            4096
-          - Opcode:          DW_LNS_advance_pc
-            Data:            16
-          - Opcode:          DW_LNS_set_file
-            Data:            1
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          1
-            SubOpcode:       DW_LNE_end_sequence
-            Data:            1
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext,
-              "error: .debug_line[0x00000000].prologue."
-              "file_names[1].dir_idx contains an invalid index: 2");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyDuplicateFileWarning) {
-  // Create a single compile unit whose line table has a prologue with an
-  // invalid dir index.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_stmt_list
-                Form:            DW_FORM_sec_offset
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-              - Value:           0x0000000000000000
-    debug_line:
-      - Version:         2
-        MinInstLength:   1
-        DefaultIsStmt:   1
-        LineBase:        251
-        LineRange:       14
-        OpcodeBase:      13
-        StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-        IncludeDirs:
-          - /tmp
-        Files:
-          - Name:            main.c
-            DirIdx:          1
-            ModTime:         0
-            Length:          0
-          - Name:            main.c
-            DirIdx:          1
-            ModTime:         0
-            Length:          0
-        Opcodes:
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          9
-            SubOpcode:       DW_LNE_set_address
-            Data:            4096
-          - Opcode:          DW_LNS_advance_line
-            SData:           9
-            Data:            4096
-          - Opcode:          DW_LNS_copy
-            Data:            4096
-          - Opcode:          DW_LNS_advance_pc
-            Data:            16
-          - Opcode:          DW_LNS_set_file
-            Data:            1
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          1
-            SubOpcode:       DW_LNE_end_sequence
-            Data:            2
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyWarning(*DwarfContext,
-                "warning: .debug_line[0x00000000].prologue.file_names[2] is "
-                "a duplicate of file_names[1]");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyCUDontShareLineTable) {
-  // Create a two compile units where both compile units share the same
-  // DW_AT_stmt_list value and verify we report the error correctly.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - /tmp/foo.c
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_stmt_list
-                Form:            DW_FORM_sec_offset
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-              - Value:           0x0000000000000000
-      - Length:          16
-        Version:         4
-        AbbrevTableID:   0
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000000000
-    debug_line:
-      - Version:         2
-        MinInstLength:   1
-        DefaultIsStmt:   1
-        LineBase:        251
-        LineRange:       14
-        OpcodeBase:      13
-        StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-        IncludeDirs:
-          - /tmp
-        Files:
-          - Name:            main.c
-            DirIdx:          1
-            ModTime:         0
-            Length:          0
-        Opcodes:
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          9
-            SubOpcode:       DW_LNE_set_address
-            Data:            4096
-          - Opcode:          DW_LNS_advance_line
-            SData:           9
-            Data:            4096
-          - Opcode:          DW_LNS_copy
-            Data:            4096
-          - Opcode:          DW_LNS_advance_pc
-            Data:            256
-          - Opcode:          DW_LNS_extended_op
-            ExtLen:          1
-            SubOpcode:       DW_LNE_end_sequence
-            Data:            256
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext,
-              "error: two compile unit DIEs, 0x0000000b and "
-              "0x0000001f, have the same DW_AT_stmt_list section "
-              "offset:");
-}
-
-TEST(DWARFDebugInfo, TestErrorReporting) {
-  Triple Triple("x86_64-pc-linux");
-  if (!isConfigurationSupported(Triple))
-      return;
-
-  auto ExpectedDG = dwarfgen::Generator::create(Triple, 4 /*DwarfVersion*/);
-  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
-  dwarfgen::Generator *DG = ExpectedDG.get().get();
-  AsmPrinter *AP = DG->getAsmPrinter();
-  MCContext *MC = DG->getMCContext();
-
-  // Emit two compressed sections with broken headers.
-  AP->OutStreamer->SwitchSection(
-      MC->getELFSection(".zdebug_foo", 0 /*Type*/, 0 /*Flags*/));
-  AP->OutStreamer->emitBytes("0");
-  AP->OutStreamer->SwitchSection(
-      MC->getELFSection(".zdebug_bar", 0 /*Type*/, 0 /*Flags*/));
-  AP->OutStreamer->emitBytes("0");
-
-  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
-  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
-  EXPECT_TRUE((bool)Obj);
-
-  // DWARFContext parses whole file and finds the two errors we expect.
-  int Errors = 0;
-  std::unique_ptr<DWARFContext> Ctx1 =
-      DWARFContext::create(**Obj, nullptr, "", [&](Error E) {
-        ++Errors;
-        consumeError(std::move(E));
-      });
-  EXPECT_TRUE(Errors == 2);
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyCURangesIncomplete) {
-  // Create a single compile unit with a single function. The compile
-  // unit has a DW_AT_ranges attribute that doesn't fully contain the
-  // address range of the function. The verification should fail due to
-  // the CU ranges not containing all of the address ranges of all of the
-  // functions.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000001500
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000002000
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext, "error: DIE address ranges are not "
-                             "contained in its parent's ranges:");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyLexicalBlockRanges) {
-  // Create a single compile unit with a single function that has a lexical
-  // block whose address range is not contained in the function address range.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - main
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-          - Code:            0x00000003
-            Tag:             DW_TAG_lexical_block
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000002000
-          - AbbrCode:        0x00000003
-            Values:
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000002001
-          - AbbrCode:        0x00000000
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext, "error: DIE address ranges are not "
-                             "contained in its parent's ranges:");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyOverlappingFunctionRanges) {
-  // Create a single compile unit with a two functions that have overlapping
-  // address ranges.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - main
-      - foo
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000002000
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x0000000000000012
-              - Value:           0x0000000000001FFF
-              - Value:           0x0000000000002000
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext, "error: DIEs have overlapping address ranges:");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyOverlappingLexicalBlockRanges) {
-  // Create a single compile unit with a one function that has two lexical
-  // blocks with overlapping address ranges.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - main
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-          - Code:            0x00000003
-            Tag:             DW_TAG_lexical_block
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000002000
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000002000
-          - AbbrCode:        0x00000003
-            Values:
-              - Value:           0x0000000000001100
-              - Value:           0x0000000000001300
-          - AbbrCode:        0x00000003
-            Values:
-              - Value:           0x00000000000012FF
-              - Value:           0x0000000000001300
-          - AbbrCode:        0x00000000
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext, "error: DIEs have overlapping address ranges:");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyInvalidDIERange) {
-  // Create a single compile unit with a single function that has an invalid
-  // address range where the high PC is smaller than the low PC.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - main
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000000900
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext, "error: Invalid address range");
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyElidedDoesntFail) {
-  // Create a single compile unit with two functions: one that has a valid range
-  // and one whose low and high PC are the same. When the low and high PC are
-  // the same, this indicates the function was dead code stripped. We want to
-  // ensure that verification succeeds.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - main
-      - elided
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_no
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000002000
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000002000
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x0000000000000012
-              - Value:           0x0000000000002000
-              - Value:           0x0000000000002000
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifySuccess(*DwarfContext);
-}
-
-TEST(DWARFDebugInfo, TestDwarfVerifyNestedFunctions) {
-  // Create a single compile unit with a nested function which is not contained
-  // in its parent. Although LLVM doesn't generate this, it is valid accoridng
-  // to the DWARF standard.
-  StringRef yamldata = R"(
-    debug_str:
-      - ''
-      - /tmp/main.c
-      - main
-      - nested
-    debug_abbrev:
-      - Table:
-          - Code:            0x00000001
-            Tag:             DW_TAG_compile_unit
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-          - Code:            0x00000002
-            Tag:             DW_TAG_subprogram
-            Children:        DW_CHILDREN_yes
-            Attributes:
-              - Attribute:       DW_AT_name
-                Form:            DW_FORM_strp
-              - Attribute:       DW_AT_low_pc
-                Form:            DW_FORM_addr
-              - Attribute:       DW_AT_high_pc
-                Form:            DW_FORM_addr
-    debug_info:
-      - Version:         4
-        AddrSize:        8
-        Entries:
-          - AbbrCode:        0x00000001
-            Values:
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000002000
-              - Value:           0x0000000000000001
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x000000000000000D
-              - Value:           0x0000000000001000
-              - Value:           0x0000000000001500
-          - AbbrCode:        0x00000002
-            Values:
-              - Value:           0x0000000000000012
-              - Value:           0x0000000000001500
-              - Value:           0x0000000000002000
-          - AbbrCode:        0x00000000
-          - AbbrCode:        0x00000000
-          - AbbrCode:        0x00000000
-  )";
-  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
-  ASSERT_TRUE((bool)ErrOrSections);
-  std::unique_ptr<DWARFContext> DwarfContext =
-      DWARFContext::create(*ErrOrSections, 8);
-  VerifySuccess(*DwarfContext);
 }
 
 TEST(DWARFDebugInfo, TestDWARFDieRangeInfoContains) {
@@ -3129,7 +2161,11 @@ TEST(DWARFDebugInfo, TestDWARF64UnitLength) {
     DWARFDataExtractor Data(Obj, Sec, /* IsLittleEndian = */ true,
                             /* AddressSize = */ 4);
     uint64_t Offset = 0;
-    EXPECT_FALSE(Header.extract(*Context, Data, &Offset, DW_SECT_INFO));
+    ASSERT_THAT_ERROR(
+        Header.extract(*Context, Data, &Offset, DW_SECT_INFO),
+        FailedWithMessage(
+            "DWARF unit from offset 0x00000000 incl. to offset  "
+            "0x1122334455667794 excl. extends past section size 0x00000018"));
     // Header.extract() returns false because there is not enough space
     // in the section for the declared length. Anyway, we can check that
     // the properties are read correctly.

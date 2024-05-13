@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Valid Region for Scop:
 ;
@@ -9,7 +9,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* %A, i32* %B, i32 %c) {
+define void @jd(ptr %A, ptr %B, i32 %c) {
 entry:
   br label %for.cond
 
@@ -21,13 +21,13 @@ for.cond:                                         ; preds = %for.inc, %entry
 for.body:                                         ; preds = %for.cond
   %sub = add nsw i32 %c, -10
   %idxprom = sext i32 %sub to i64
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %idxprom
-  %tmp = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %B, i64 5
-  %tmp1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
+  %tmp = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %B, i64 5
+  %tmp1 = load i32, ptr %arrayidx1, align 4
   %add = add nsw i32 %tmp, %tmp1
-  %arrayidx3 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %add, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %add, ptr %arrayidx3, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

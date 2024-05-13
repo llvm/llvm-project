@@ -8,7 +8,7 @@
 
 define zeroext i32 @test_load() {
 entry:
-  %0 = load i32, i32* @a
+  %0 = load i32, ptr @a
   ret i32 %0
 }
 
@@ -26,7 +26,7 @@ entry:
 @b = common global i32 0
 
 define void @test_store(i32 zeroext %0) {
-  store i32 %0, i32* @b
+  store i32 %0, ptr @b
   ret void
 }
 

@@ -16,6 +16,7 @@
 #include <cinttypes>
 #include <type_traits>
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
@@ -51,18 +52,15 @@ enum SymbolKind : uint16_t {
 
 #define CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
   inline Class operator|(Class a, Class b) {                                   \
-    return static_cast<Class>(                                                 \
-        static_cast<std::underlying_type<Class>::type>(a) |                    \
-        static_cast<std::underlying_type<Class>::type>(b));                    \
+    return static_cast<Class>(llvm::to_underlying(a) |                         \
+                              llvm::to_underlying(b));                         \
   }                                                                            \
   inline Class operator&(Class a, Class b) {                                   \
-    return static_cast<Class>(                                                 \
-        static_cast<std::underlying_type<Class>::type>(a) &                    \
-        static_cast<std::underlying_type<Class>::type>(b));                    \
+    return static_cast<Class>(llvm::to_underlying(a) &                         \
+                              llvm::to_underlying(b));                         \
   }                                                                            \
   inline Class operator~(Class a) {                                            \
-    return static_cast<Class>(                                                 \
-        ~static_cast<std::underlying_type<Class>::type>(a));                   \
+    return static_cast<Class>(~llvm::to_underlying(a));                        \
   }                                                                            \
   inline Class &operator|=(Class &a, Class b) {                                \
     a = a | b;                                                                 \
@@ -135,11 +133,16 @@ enum class CPUType : uint16_t {
   Thumb = 0xf0,
   ARMNT = 0xf4,
   ARM64 = 0xf6,
+  HybridX86ARM64 = 0xf7,
+  ARM64EC = 0xf8,
+  ARM64X = 0xf9,
+  Unknown = 0xff,
   D3D11_Shader = 0x100,
 };
 
-/// These values correspond to the CV_CFL_LANG enumeration, and are documented
-/// here: https://msdn.microsoft.com/en-us/library/bw3aekw6.aspx
+/// These values correspond to the CV_CFL_LANG enumeration in the Microsoft
+/// Debug Interface Access SDK, and are documented here:
+/// https://learn.microsoft.com/en-us/visualstudio/debugger/debug-interface-access/cv-cfl-lang
 enum SourceLanguage : uint8_t {
   C = 0x00,
   Cpp = 0x01,
@@ -158,11 +161,19 @@ enum SourceLanguage : uint8_t {
   JScript = 0x0e,
   MSIL = 0x0f,
   HLSL = 0x10,
+  ObjC = 0x11,
+  ObjCpp = 0x12,
+  Swift = 0x13,
+  AliasObj = 0x14,
+  Rust = 0x15,
+  Go = 0x16,
 
-  /// The DMD & Swift compilers emit 'D' and 'S', respectively, for the CV
-  /// source language. Microsoft does not have enumerators for them yet.
+  /// The DMD compiler emits 'D' for the CV source language. Microsoft does not
+  /// have an enumerator for it yet.
   D = 'D',
-  Swift = 'S',
+  /// The Swift compiler used to emit 'S' for the CV source language, but
+  /// current versions emit the enumerator defined above.
+  OldSwift = 'S',
 };
 
 /// These values correspond to the CV_call_e enumeration, and are documented
@@ -195,7 +206,8 @@ enum class CallingConvention : uint8_t {
   ClrCall = 0x16,     // clr call
   Inline =
       0x17, // Marker for routines always inlined and thus lacking a convention
-  NearVector = 0x18 // near left to right push with regs, callee pops stack
+  NearVector = 0x18, // near left to right push with regs, callee pops stack
+  Swift = 0x19,      // Swift call
 };
 
 enum class ClassOptions : uint16_t {
@@ -325,6 +337,9 @@ enum class DebugSubsectionKind : uint32_t {
   MergedAssemblyInput = 0xfc,
 
   CoffSymbolRVA = 0xfd,
+
+  XfgHashType = 0xff,
+  XfgHashVirtual = 0x100,
 };
 
 /// Equivalent to CV_ptrtype_e.
@@ -608,6 +623,29 @@ inline uint32_t alignOf(CodeViewContainer Container) {
     return 1;
   return 4;
 }
+
+// Corresponds to CV_armswitchtype enum.
+// This enum represents the different ways that jump tables entries can be
+// encoded to represent the target address to jump to.
+// * Pointer: The absolute address to jump to.
+// * [U]Int[8|16|32]: A value that is added to some "base" address to get the
+//    address to jump to.
+// * [U]Int[8|16]ShiftLeft: A value that is shifted left by an implementation
+//    specified amount, then added to some "base" address to get the address to
+//    jump to.
+enum class JumpTableEntrySize : uint16_t {
+  Int8 = 0,
+  UInt8 = 1,
+  Int16 = 2,
+  UInt16 = 3,
+  Int32 = 4,
+  UInt32 = 5,
+  Pointer = 6,
+  UInt8ShiftLeft = 7,
+  UInt16ShiftLeft = 8,
+  Int8ShiftLeft = 9,
+  Int16ShiftLeft = 10,
+};
 }
 }
 

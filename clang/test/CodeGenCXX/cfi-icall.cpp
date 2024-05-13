@@ -16,7 +16,7 @@ void f(S s) {
 void g() {
   struct S s;
   void (*fp)(S) = f;
-  // CHECK: call i1 @llvm.type.test(i8* {{.*}}, metadata [[VOIDS1:![0-9]+]])
+  // CHECK: call i1 @llvm.type.test(ptr {{.*}}, metadata [[VOIDS1:![0-9]+]])
   fp(s);
 }
 

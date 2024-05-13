@@ -8,11 +8,11 @@
 ; lowering hooks were defined this would trigger an assertion during live
 ; variable analysis
 
-declare void @foo(i1* %p);
-declare void @bar(i1* %p);
+declare void @foo(ptr %p);
+declare void @bar(ptr %p);
 declare dso_local i32 @__gxx_personality_v0(...)
 
-define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; RV32I-LABEL: caller:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -28,18 +28,18 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV32I-NEXT:  # %bb.1: # %bb2
 ; RV32I-NEXT:  .Ltmp0:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call bar@plt
+; RV32I-NEXT:    call bar
 ; RV32I-NEXT:  .Ltmp1:
 ; RV32I-NEXT:    j .LBB0_3
 ; RV32I-NEXT:  .LBB0_2: # %bb1
 ; RV32I-NEXT:  .Ltmp2:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .Ltmp3:
 ; RV32I-NEXT:  .LBB0_3: # %end2
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB0_4: # %lpad
@@ -48,7 +48,7 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call _Unwind_Resume@plt
+; RV32I-NEXT:    call _Unwind_Resume
 ;
 ; RV64I-LABEL: caller:
 ; RV64I:       # %bb.0: # %entry
@@ -65,18 +65,18 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV64I-NEXT:  # %bb.1: # %bb2
 ; RV64I-NEXT:  .Ltmp0:
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call bar@plt
+; RV64I-NEXT:    call bar
 ; RV64I-NEXT:  .Ltmp1:
 ; RV64I-NEXT:    j .LBB0_3
 ; RV64I-NEXT:  .LBB0_2: # %bb1
 ; RV64I-NEXT:  .Ltmp2:
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call foo@plt
+; RV64I-NEXT:    call foo
 ; RV64I-NEXT:  .Ltmp3:
 ; RV64I-NEXT:  .LBB0_3: # %end2
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB0_4: # %lpad
@@ -85,21 +85,21 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call _Unwind_Resume@plt
+; RV64I-NEXT:    call _Unwind_Resume
 entry:
-  %0 = icmp eq i1* %p, null
+  %0 = icmp eq ptr %p, null
   br i1 %0, label %bb1, label %bb2
 
 bb1:
-  invoke void @foo(i1* %p) to label %end1 unwind label %lpad
+  invoke void @foo(ptr %p) to label %end1 unwind label %lpad
 
 bb2:
-  invoke void @bar(i1* %p) to label %end2 unwind label %lpad
+  invoke void @bar(ptr %p) to label %end2 unwind label %lpad
 
 lpad:
-  %1 = landingpad { i8*, i32 } cleanup
-  call void @callee(i1* %p)
-  resume { i8*, i32 } %1
+  %1 = landingpad { ptr, i32 } cleanup
+  call void @callee(ptr %p)
+  resume { ptr, i32 } %1
 
 end1:
   ret void
@@ -108,7 +108,7 @@ end2:
   ret void
 }
 
-define internal void @callee(i1* %p) {
+define internal void @callee(ptr %p) {
 ; RV32I-LABEL: callee:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    ret

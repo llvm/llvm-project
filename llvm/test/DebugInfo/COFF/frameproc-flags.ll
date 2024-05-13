@@ -6,7 +6,7 @@
 
 ; extern "C" {
 ;
-; void *_alloca(size_t);
+; ptr_alloca(size_t);
 ; struct __declspec(align(16)) _jmp_buf_str {
 ;   unsigned __int64 Part[2];
 ; };
@@ -63,45 +63,53 @@
 ; }
 
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `use_alloca`
+; CHECK:   type = `0x1002 (use_alloca)`, debug start = 0, debug end = 0, flags = has fp | opt debuginfo
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = VFRAME, param fp reg = EBP
-; CHECK:   flags = has alloca | secure checks | opt speed
+; CHECK:   flags = has alloca | secure checks | strict secure checks | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `call_setjmp`
+; CHECK:   type = `0x1003 (call_setjmp)`, debug start = 0, debug end = 0, flags = opt debuginfo
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
 ; CHECK:   flags = has setjmp | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 56] `use_inlineasm`
+; CHECK:   type = `0x1006 (use_inlineasm)`, debug start = 0, debug end = 0, flags = opt debuginfo
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
-; CHECK:   flags = has inline asm | opt speed
+; CHECK:   flags = has inline asm | safe buffers | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 48] `cpp_eh`
+; CHECK:   type = `0x1007 (cpp_eh)`, debug start = 0, debug end = 0, flags = has fp | opt debuginfo
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = EBP, param fp reg = EBP
 ; CHECK:   flags = has eh | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `use_inline`
+; CHECK:   type = `0x100C (use_inline)`, debug start = 0, debug end = 0, flags = opt debuginfo
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
-; CHECK:   flags = opt speed
+; CHECK:   flags = safe buffers | opt speed
 ; CHECK-LABEL: S_LPROC32_ID [size = 56] `is_marked_inline`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
-; CHECK:   flags = marked inline | opt speed
+; CHECK:   flags = marked inline | safe buffers | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 44] `seh`
+; CHECK:   type = `0x100E (seh)`, debug start = 0, debug end = 0, flags = has fp | opt debuginfo
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = EBP, param fp reg = EBP
 ; CHECK:   flags = has seh | opt speed
 ; CHECK-LABEL: S_LPROC32_ID [size = 56] `?filt$0@0@seh@@`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = EBP, param fp reg = EBP
-; CHECK:   flags = opt speed
+; CHECK:   flags = safe buffers | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `use_naked`
+; CHECK:   type = `0x1010 (use_naked)`, debug start = 0, debug end = 0, flags = noinline | opt debuginfo
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
-; CHECK:   flags = has inline asm | naked | opt speed
+; CHECK:   flags = has inline asm | naked | safe buffers | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `stack_guard`
+; CHECK:   type = `0x1011 (stack_guard)`, debug start = 0, debug end = 0, flags = opt debuginfo
 ; CHECK: S_FRAMEPROC [size = 32]
-; CHECK:   local fp reg = VFRAME, param fp reg = EBP
-; CHECK:   flags = secure checks | opt speed
+; CHECK:   local fp reg = VFRAME, param fp reg = VFRAME
+; CHECK:   flags = secure checks | strict secure checks | opt speed
 
 ; ModuleID = 'frameproc-flags.cpp'
 source_filename = "frameproc-flags.cpp"
@@ -117,9 +125,8 @@ entry:
   call void @llvm.dbg.value(metadata i32 %n, metadata !29, metadata !DIExpression()), !dbg !31
   %mul = shl i32 %n, 2, !dbg !32
   %0 = alloca i8, i32 %mul, align 16, !dbg !32
-  %1 = bitcast i8* %0 to i32*, !dbg !32
-  call void @llvm.dbg.value(metadata i32* %1, metadata !30, metadata !DIExpression()), !dbg !32
-  call void @use_intptr(i32* nonnull %1), !dbg !33
+  call void @llvm.dbg.value(metadata ptr %0, metadata !30, metadata !DIExpression()), !dbg !32
+  call void @use_intptr(ptr nonnull %0), !dbg !33
   ret void, !dbg !34
 }
 
@@ -127,22 +134,22 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
 
-declare dso_local void @use_intptr(i32*) local_unnamed_addr #3
+declare dso_local void @use_intptr(ptr) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
 define dso_local void @call_setjmp(i32 %n) local_unnamed_addr #0 !dbg !35 {
 entry:
   call void @llvm.dbg.value(metadata i32 %n, metadata !37, metadata !DIExpression()), !dbg !38
-  %0 = call i32 (i8*, i32, ...) @_setjmp3(i8* bitcast ([16 x %struct._jmp_buf_str]* @g_jbuf to i8*), i32 0) #4, !dbg !39
+  %0 = call i32 (ptr, i32, ...) @_setjmp3(ptr @g_jbuf, i32 0) #4, !dbg !39
   %tobool = icmp eq i32 %0, 0, !dbg !39
   br i1 %tobool, label %if.then, label %if.end, !dbg !39
 
 if.then:                                          ; preds = %entry
-  call void @use_intptr(i32* null), !dbg !40
+  call void @use_intptr(ptr null), !dbg !40
   br label %if.end, !dbg !40
 
 if.end:                                           ; preds = %entry, %if.then
@@ -150,7 +157,7 @@ if.end:                                           ; preds = %entry, %if.then
 }
 
 ; Function Attrs: returns_twice
-declare dso_local i32 @_setjmp3(i8*, i32, ...) local_unnamed_addr #4
+declare dso_local i32 @_setjmp3(ptr, i32, ...) local_unnamed_addr #4
 
 ; Function Attrs: nounwind
 define dso_local void @use_inlineasm() local_unnamed_addr #5 !dbg !43 {
@@ -159,7 +166,7 @@ entry:
   ret void, !dbg !48
 }
 
-define dso_local void @cpp_eh() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) !dbg !49 {
+define dso_local void @cpp_eh() local_unnamed_addr #0 personality ptr @__CxxFrameHandler3 !dbg !49 {
 entry:
   invoke void @may_throw()
           to label %try.cont unwind label %catch.dispatch, !dbg !50
@@ -168,7 +175,7 @@ catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch] unwind to caller, !dbg !52
 
 catch:                                            ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null, i32 64, i8* null], !dbg !52
+  %1 = catchpad within %0 [ptr null, i32 64, ptr null], !dbg !52
   catchret from %1 to label %try.cont, !dbg !53
 
 try.cont:                                         ; preds = %entry, %catch
@@ -180,9 +187,9 @@ declare dso_local void @may_throw() local_unnamed_addr #3
 declare dso_local i32 @__CxxFrameHandler3(...)
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local nonnull i32 (i32, i32)* @use_inline() local_unnamed_addr #6 !dbg !56 {
+define dso_local nonnull ptr @use_inline() local_unnamed_addr #6 !dbg !56 {
 entry:
-  ret i32 (i32, i32)* @"?is_marked_inline@@YAHHH@Z", !dbg !62
+  ret ptr @"?is_marked_inline@@YAHHH@Z", !dbg !62
 }
 
 ; Function Attrs: inlinehint nounwind readnone
@@ -194,10 +201,10 @@ entry:
   ret i32 %add, !dbg !68
 }
 
-define dso_local void @seh() #0 personality i8* bitcast (i32 (...)* @_except_handler3 to i8*) !dbg !69 {
+define dso_local void @seh() #0 personality ptr @_except_handler3 !dbg !69 {
 entry:
   %__exception_code = alloca i32, align 4
-  call void (...) @llvm.localescape(i32* nonnull %__exception_code)
+  call void (...) @llvm.localescape(ptr nonnull %__exception_code)
   invoke void @may_throw() #12
           to label %__try.cont unwind label %catch.dispatch, !dbg !70
 
@@ -205,7 +212,7 @@ catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %__except.ret] unwind to caller, !dbg !72
 
 __except.ret:                                     ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* bitcast (i32 ()* @"?filt$0@0@seh@@" to i8*)], !dbg !72
+  %1 = catchpad within %0 [ptr @"?filt$0@0@seh@@"], !dbg !72
   catchret from %1 to label %__try.cont, !dbg !72
 
 __try.cont:                                       ; preds = %entry, %__except.ret
@@ -215,28 +222,26 @@ __try.cont:                                       ; preds = %entry, %__except.re
 ; Function Attrs: nounwind
 define internal i32 @"?filt$0@0@seh@@"() #8 !dbg !74 {
 entry:
-  %0 = tail call i8* @llvm.frameaddress(i32 1)
-  %1 = tail call i8* @llvm.eh.recoverfp(i8* bitcast (void ()* @seh to i8*), i8* %0)
-  %2 = tail call i8* @llvm.localrecover(i8* bitcast (void ()* @seh to i8*), i8* %1, i32 0)
-  %__exception_code = bitcast i8* %2 to i32*
-  %3 = getelementptr inbounds i8, i8* %0, i32 -20, !dbg !76
-  %4 = bitcast i8* %3 to { i32*, i8* }**, !dbg !76
-  %5 = load { i32*, i8* }*, { i32*, i8* }** %4, align 4, !dbg !76
-  %6 = getelementptr inbounds { i32*, i8* }, { i32*, i8* }* %5, i32 0, i32 0, !dbg !76
-  %7 = load i32*, i32** %6, align 4, !dbg !76
-  %8 = load i32, i32* %7, align 4, !dbg !76
-  store i32 %8, i32* %__exception_code, align 4, !dbg !76
+  %0 = tail call ptr @llvm.frameaddress(i32 1)
+  %1 = tail call ptr @llvm.eh.recoverfp(ptr @seh, ptr %0)
+  %2 = tail call ptr @llvm.localrecover(ptr @seh, ptr %1, i32 0)
+  %3 = getelementptr inbounds i8, ptr %0, i32 -20, !dbg !76
+  %4 = load ptr, ptr %3, align 4, !dbg !76
+  %5 = getelementptr inbounds { ptr, ptr }, ptr %4, i32 0, i32 0, !dbg !76
+  %6 = load ptr, ptr %5, align 4, !dbg !76
+  %7 = load i32, ptr %6, align 4, !dbg !76
+  store i32 %7, ptr %2, align 4, !dbg !76
   ret i32 1, !dbg !76
 }
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.frameaddress(i32) #9
+declare ptr @llvm.frameaddress(i32) #9
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.eh.recoverfp(i8*, i8*) #9
+declare ptr @llvm.eh.recoverfp(ptr, ptr) #9
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.localrecover(i8*, i8*, i32) #9
+declare ptr @llvm.localrecover(ptr, ptr, i32) #9
 
 declare dso_local i32 @_except_handler3(...)
 
@@ -253,18 +258,16 @@ entry:
 define dso_local void @stack_guard() local_unnamed_addr #0 !dbg !81 {
 entry:
   %arr = alloca [12 x i32], align 4
-  %0 = bitcast [12 x i32]* %arr to i8*, !dbg !87
-  call void @llvm.lifetime.start.p0i8(i64 48, i8* nonnull %0) #10, !dbg !87
-  call void @llvm.dbg.declare(metadata [12 x i32]* %arr, metadata !83, metadata !DIExpression()), !dbg !87
-  call void @llvm.memset.p0i8.i32(i8* nonnull align 4 %0, i8 0, i32 48, i1 false), !dbg !87
-  %arrayidx = getelementptr inbounds [12 x i32], [12 x i32]* %arr, i32 0, i32 0, !dbg !88
-  call void @use_intptr(i32* nonnull %arrayidx), !dbg !88
-  call void @llvm.lifetime.end.p0i8(i64 48, i8* nonnull %0) #10, !dbg !89
+  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %arr) #10, !dbg !87
+  call void @llvm.dbg.declare(metadata ptr %arr, metadata !83, metadata !DIExpression()), !dbg !87
+  call void @llvm.memset.p0.i32(ptr nonnull align 4 %arr, i8 0, i32 48, i1 false), !dbg !87
+  call void @use_intptr(ptr nonnull %arr), !dbg !88
+  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %arr) #10, !dbg !89
   ret void, !dbg !89
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1) #2
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1) #2
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

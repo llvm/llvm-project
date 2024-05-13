@@ -8,8 +8,6 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 #define LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 
-#include "SymbolMap.h"
-
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -26,10 +24,12 @@ namespace MachOUtils {
 
 struct ArchAndFile {
   std::string Arch;
-  std::unique_ptr<llvm::sys::fs::TempFile> File;
+  std::string Path;
+  int FD = -1;
 
   llvm::Error createTempFile();
-  llvm::StringRef path() const;
+  llvm::StringRef getPath() const;
+  int getFD() const;
 
   ArchAndFile(StringRef Arch) : Arch(std::string(Arch)) {}
   ArchAndFile(ArchAndFile &&A) = default;
@@ -37,13 +37,29 @@ struct ArchAndFile {
   ~ArchAndFile();
 };
 
+struct DwarfRelocationApplicationInfo {
+  // The position in the stream that should be patched, starting from the
+  // Dwarf's segment file address.
+  uint64_t AddressFromDwarfStart;
+  int32_t Value;
+  // If we should subtract the Dwarf segment's VM address from value before
+  // writing it.
+  bool ShouldSubtractDwarfVM;
+
+  DwarfRelocationApplicationInfo(uint64_t AddressFromDwarfVM, uint32_t Value,
+                                 bool ShouldSubtractDwarfVM)
+      : AddressFromDwarfStart(AddressFromDwarfVM), Value(Value),
+        ShouldSubtractDwarfVM(ShouldSubtractDwarfVM) {}
+};
+
 bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName, const LinkOptions &,
-                             StringRef SDKPath);
-
-bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                           const DebugMap &DM, SymbolMapTranslator &Translator,
-                           MCStreamer &MS, raw_fd_ostream &OutFile);
+                             StringRef SDKPath, bool Fat64 = false);
+bool generateDsymCompanion(
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
+    MCStreamer &MS, raw_fd_ostream &OutFile,
+    const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
+        &RelocationsToApply);
 
 std::string getArchName(StringRef Arch);
 } // namespace MachOUtils

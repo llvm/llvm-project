@@ -9,21 +9,36 @@
 #include "ReturnBracedInitListCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
-  // Skip list initialization and constructors with an initializer list.
+  auto SemanticallyDifferentContainer = allOf(
+      hasDeclaration(
+          // Container(size_type count, const T &value,
+          //           const Allocator &alloc = Allocator());
+          cxxConstructorDecl(parameterCountIs(3),
+                             hasParameter(0, hasType(qualType(hasCanonicalType(
+                                                 isInteger())))))),
+      hasType(cxxRecordDecl(hasAnyName("::std::basic_string", "::std::vector",
+                                       "::std::deque", "::std::forward_list",
+                                       "::std::list"))));
+
   auto ConstructExpr =
       cxxConstructExpr(
-          unless(anyOf(hasDeclaration(cxxConstructorDecl(isExplicit())),
-                       isListInitialization(), hasDescendant(initListExpr()))))
+          unless(anyOf(
+              // Skip explicit constructor.
+              hasDeclaration(cxxConstructorDecl(isExplicit())),
+              // Skip list initialization and constructors with an initializer
+              // list.
+              isListInitialization(), hasDescendant(initListExpr()),
+              // Skip container `vector(size_type, const T&, ...)`.
+              SemanticallyDifferentContainer)))
           .bind("ctor");
 
   Finder->addMatcher(
@@ -82,6 +97,4 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
        << FixItHint::CreateReplacement(CallParensRange.getEnd(), "}");
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

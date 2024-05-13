@@ -1,12 +1,15 @@
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -finclude-default-header
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -DNO_HEADER
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -DNO_HEADER -cl-ext=-cl_intel_subgroups
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header -cl-ext=-cl_intel_subgroups
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++2021 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header -cl-ext=-cl_khr_fp64 -DNO_FP64
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header -DNO_ATOMSCOPE
 
 // Test the -fdeclare-opencl-builtins option.  This is not a completeness
 // test, so it should not test for all builtins defined by OpenCL.  Instead
@@ -24,7 +27,7 @@
 
 // First, test that Clang gracefully handles missing types.
 #ifdef NO_HEADER
-void test_without_header() {
+void test_without_header(void) {
   barrier(0);
   // expected-note@-1 0+{{candidate function not viable}}
   // expected-error@-2 0+{{argument type 'void' is incomplete}}
@@ -46,12 +49,19 @@ typedef __UINTPTR_TYPE__ uintptr_t;
 typedef char char2 __attribute__((ext_vector_type(2)));
 typedef char char4 __attribute__((ext_vector_type(4)));
 typedef uchar uchar4 __attribute__((ext_vector_type(4)));
+typedef uchar uchar16 __attribute__((ext_vector_type(16)));
 typedef float float4 __attribute__((ext_vector_type(4)));
+typedef float float16 __attribute__((ext_vector_type(16)));
 typedef half half4 __attribute__((ext_vector_type(4)));
 typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int4 __attribute__((ext_vector_type(4)));
+typedef uint uint2 __attribute__((ext_vector_type(2)));
 typedef uint uint4 __attribute__((ext_vector_type(4)));
 typedef long long2 __attribute__((ext_vector_type(2)));
+typedef long long8 __attribute__((ext_vector_type(8)));
+typedef ulong ulong4 __attribute__((ext_vector_type(4)));
+typedef short short16 __attribute__((ext_vector_type(16)));
+typedef ushort ushort3 __attribute__((ext_vector_type(3)));
 
 typedef int clk_profiling_info;
 #define CLK_PROFILING_COMMAND_EXEC_TIME 0x1
@@ -63,11 +73,22 @@ typedef struct {int a;} ndrange_t;
 
 // Enable extensions that are enabled in opencl-c-base.h.
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#define __opencl_c_device_enqueue 1
+#define __opencl_c_generic_address_space 1
 #define cl_khr_subgroup_extended_types 1
 #define cl_khr_subgroup_ballot 1
 #define cl_khr_subgroup_non_uniform_arithmetic 1
 #define cl_khr_subgroup_clustered_reduce 1
+#define __opencl_c_read_write_images 1
+#define __opencl_subgroup_builtins 1
 #endif
+
+#if (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
+#define __opencl_c_atomic_order_seq_cst 1
+#define __opencl_c_atomic_scope_device 1
+#endif
+
+#define __opencl_c_named_address_space_builtins 1
 #endif
 
 kernel void test_pointers(volatile global void *global_p, global const int4 *a) {
@@ -85,6 +106,7 @@ kernel void test_pointers(volatile global void *global_p, global const int4 *a) 
 #if !defined(NO_HEADER) && (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 kernel void test_enum_args(volatile global atomic_int *global_p, global int *expected) {
   int desired;
+  atomic_work_item_fence(CLK_GLOBAL_MEM_FENCE, memory_order_acq_rel, memory_scope_device);
   atomic_compare_exchange_strong_explicit(global_p, expected, desired,
                                           memory_order_acq_rel,
                                           memory_order_relaxed,
@@ -122,6 +144,66 @@ void test_atomic_fetch(volatile __generic atomic_int *a_int,
 }
 #endif
 
+#if !defined(NO_HEADER) && !defined(NO_FP64) && __OPENCL_C_VERSION__ >= 200
+// Check added atomic_fetch_ functions by cl_ext_float_atomics
+// extension can be called
+void test_atomic_fetch_with_address_space(volatile __generic atomic_float *a_float,
+                                          volatile __generic atomic_double *a_double,
+                                          volatile __local atomic_float *a_float_local,
+                                          volatile __local atomic_double *a_double_local,
+                                          volatile __global atomic_float *a_float_global,
+                                          volatile __global atomic_double *a_double_global) {
+  float f1, resf1;
+  double d1, resd1;
+  resf1 = atomic_fetch_min(a_float, f1);
+  resf1 = atomic_fetch_max_explicit(a_float_local, f1, memory_order_seq_cst);
+  resf1 = atomic_fetch_add_explicit(a_float_global, f1, memory_order_seq_cst, memory_scope_work_group);
+
+  resd1 = atomic_fetch_min(a_double, d1);
+  resd1 = atomic_fetch_max_explicit(a_double_local, d1, memory_order_seq_cst);
+  resd1 = atomic_fetch_add_explicit(a_double_global, d1, memory_order_seq_cst, memory_scope_work_group);
+}
+#endif // !defined(NO_HEADER) && __OPENCL_C_VERSION__ >= 200
+
+#if !defined(NO_HEADER) && __OPENCL_C_VERSION__ == 200 && defined(__opencl_c_generic_address_space)
+
+// Test that overloads that use atomic_double are not available when the fp64
+// extension is disabled.  Test this by counting the number of notes about
+// candidate functions.
+void test_atomic_double_reporting(volatile __generic atomic_int *a) {
+  atomic_init(a, a);
+  // expected-error@-1{{no matching function for call to 'atomic_init'}}
+#if defined(NO_FP64)
+  // Expecting 5 candidates: int, uint, long, ulong, float
+  // expected-note@-4 5 {{candidate function not viable: no known conversion}}
+#else
+  // Expecting 6 candidates: int, uint, long, ulong, float, double
+  // expected-note@-7 6 {{candidate function not viable: no known conversion}}
+#endif
+}
+
+#endif
+
+#if defined(NO_ATOMSCOPE) && __OPENCL_C_VERSION__ >= 300
+// Disable the feature by undefining the feature macro.
+#undef __opencl_c_atomic_scope_device
+
+// Test that only the overload with explicit order and scope arguments is
+// available when the __opencl_c_atomic_scope_device feature is disabled.
+void test_atomics_without_scope_device(volatile __generic atomic_int *a_int) {
+  int d;
+
+  atomic_exchange(a_int, d);
+  // expected-error@-1{{use of undeclared identifier 'atomic_exchange'}}
+
+  atomic_exchange_explicit(a_int, d, memory_order_seq_cst);
+  // expected-error@-1{{no matching function for call to 'atomic_exchange_explicit'}}
+
+  atomic_exchange_explicit(a_int, d, memory_order_seq_cst, memory_scope_work_group);
+}
+
+#endif
+
 // Test old atomic overloaded with generic address space in C++ for OpenCL.
 #if __OPENCL_C_VERSION__ >= 200
 void test_legacy_atomics_cpp(__generic volatile unsigned int *a) {
@@ -133,7 +215,7 @@ void test_legacy_atomics_cpp(__generic volatile unsigned int *a) {
 }
 #endif
 
-kernel void basic_conversion() {
+kernel void basic_conversion(void) {
   float f;
   char2 c2;
   long2 l2;
@@ -142,7 +224,7 @@ kernel void basic_conversion() {
 
 #ifdef NO_FP64
   (void)convert_double_rtp(f);
-  // expected-error@-1{{implicit declaration of function 'convert_double_rtp' is invalid in OpenCL}}
+  // expected-error@-1{{use of undeclared identifier 'convert_double_rtp'}}
 #else
   double d;
   f = convert_float(d);
@@ -151,17 +233,16 @@ kernel void basic_conversion() {
   i4 = convert_int4_sat(f4);
 }
 
-kernel void basic_conversion_neg() {
+kernel void basic_conversion_neg(void) {
   int i;
   float f;
 
   f = convert_float_sat(i);
 #if !defined(__OPENCL_CPP_VERSION__)
-  // expected-error@-2{{implicit declaration of function 'convert_float_sat' is invalid in OpenCL}}
-  // expected-error@-3{{implicit conversion from 'int' to 'float' may lose precision}}
+  // expected-error@-2{{use of undeclared identifier 'convert_float_sat'}}
 #else
-  // expected-error@-5{{use of undeclared identifier 'convert_float_sat'; did you mean 'convert_float'?}}
-  // expected-note@-6{{'convert_float' declared here}}
+  // expected-error@-4{{use of undeclared identifier 'convert_float_sat'; did you mean 'convert_float'?}}
+  // expected-note@-5{{'convert_float' declared here}}
 #endif
 }
 
@@ -190,9 +271,7 @@ kernel void basic_image_readonly(read_only image2d_t image_read_only_image2d) {
   res = read_imageh(image_read_only_image2d, i2);
 #if __OPENCL_C_VERSION__ < CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
   // expected-error@-3{{no matching function for call to 'read_imagef'}}
-  // expected-note@-4 + {{candidate function not viable}}
-  // expected-error@-4{{no matching function for call to 'read_imageh'}}
-  // expected-note@-5 + {{candidate function not viable}}
+  // expected-error@-3{{no matching function for call to 'read_imageh'}}
 #endif
   res = read_imageh(image_read_only_image2d, sampler, i2);
 
@@ -222,15 +301,13 @@ kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_i
   write_imagef(image3dwo, i4, i, f4);
 #if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
   // expected-error@-2{{no matching function for call to 'write_imagef'}}
-  // expected-note@-3 + {{candidate function not viable}}
 #endif
 }
 
 kernel void basic_subgroup(global uint *out) {
   out[0] = get_sub_group_size();
 #if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
-  // expected-error@-2{{implicit declaration of function 'get_sub_group_size' is invalid in OpenCL}}
-  // expected-error@-3{{implicit conversion changes signedness}}
+  // expected-error@-2{{use of undeclared identifier 'get_sub_group_size'}}
 #endif
 
 // Only test when the base header is included, because we need the enum declarations.
@@ -245,16 +322,14 @@ kernel void extended_subgroup(global uint4 *out, global int *scalar, global char
   scalar[1] = sub_group_clustered_reduce_logical_xor(2, 4);
   *c2 = sub_group_broadcast(*c2, 2);
 #if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
-  // expected-error@-5{{implicit declaration of function 'get_sub_group_eq_mask' is invalid in OpenCL}}
-  // expected-error@-6{{implicit conversion changes signedness}}
-  // expected-error@-6{{implicit declaration of function 'sub_group_non_uniform_scan_inclusive_or' is invalid in OpenCL}}
-  // expected-error@-6{{implicit declaration of function 'sub_group_clustered_reduce_logical_xor' is invalid in OpenCL}}
-  // expected-error@-6{{implicit declaration of function 'sub_group_broadcast' is invalid in OpenCL}}
-  // expected-error@-7{{implicit conversion loses integer precision}}
+  // expected-error@-5{{use of undeclared identifier 'get_sub_group_eq_mask'}}
+  // expected-error@-5{{use of undeclared identifier 'sub_group_non_uniform_scan_inclusive_or'}}
+  // expected-error@-5{{use of undeclared identifier 'sub_group_clustered_reduce_logical_xor'}}
+  // expected-error@-5{{use of undeclared identifier 'sub_group_broadcast'}}
 #endif
 }
 
-kernel void basic_vector_data() {
+kernel void basic_vector_data(void) {
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
   generic void *generic_p;
 #endif
@@ -263,28 +338,37 @@ kernel void basic_vector_data() {
   global void *global_p;
   private void *private_p;
   size_t s;
+  ulong4 ul4;
+  short16 s16;
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+  ushort3 us3;
+  uchar16 uc16;
+#endif
+  long8 l8;
+  uint2 ui2;
+  float16 f16;
 
-  vload4(s, (const __constant ulong *) constant_p);
-  vload16(s, (const __constant short *) constant_p);
+  ul4 = vload4(s, (const __constant ulong *) constant_p);
+  s16 = vload16(s, (const __constant short *) constant_p);
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
-  vload3(s, (const __generic ushort *) generic_p);
-  vload16(s, (const __generic uchar *) generic_p);
+  us3 = vload3(s, (const __generic ushort *) generic_p);
+  uc16 = vload16(s, (const __generic uchar *) generic_p);
 #endif
 
-  vload8(s, (const __global long *) global_p);
-  vload2(s, (const __local uint *) local_p);
-  vload16(s, (const __private float *) private_p);
+  l8 = vload8(s, (const __global long *) global_p);
+  ui2 = vload2(s, (const __local uint *) local_p);
+  f16 = vload16(s, (const __private float *) private_p);
 }
 
-kernel void basic_work_item() {
+kernel void basic_work_item(void) {
   uint ui;
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 
   get_enqueued_local_size(ui);
 #if !defined(__OPENCL_CPP_VERSION__) && __OPENCL_C_VERSION__ < CL_VERSION_2_0
-// expected-error@-2{{implicit declaration of function 'get_enqueued_local_size' is invalid in OpenCL}}
+// expected-error@-2{{use of undeclared identifier 'get_enqueued_local_size'}}
 #endif
 }
 

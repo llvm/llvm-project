@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include <array>
 #include <cassert>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -38,9 +39,8 @@ class NamespaceDecl;
 /// An enumeration representing the different comparison categories
 /// types.
 ///
-/// C++2a [cmp.categories.pre] The types weak_equality, strong_equality,
-/// partial_ordering, weak_ordering, and strong_ordering are collectively
-/// termed the comparison category types.
+/// C++20 [cmp.categories.pre] The types partial_ordering, weak_ordering, and
+/// strong_ordering are collectively termed the comparison category types.
 enum class ComparisonCategoryType : unsigned char {
   PartialOrdering,
   WeakOrdering,
@@ -58,7 +58,8 @@ inline ComparisonCategoryType commonComparisonType(ComparisonCategoryType A,
 
 /// Get the comparison category that should be used when comparing values of
 /// type \c T.
-Optional<ComparisonCategoryType> getComparisonCategoryForBuiltinCmp(QualType T);
+std::optional<ComparisonCategoryType>
+getComparisonCategoryForBuiltinCmp(QualType T);
 
 /// An enumeration representing the possible results of a three-way
 /// comparison. These values map onto instances of comparison category types
@@ -77,7 +78,7 @@ class ComparisonCategoryInfo {
   friend class Sema;
 
 public:
-  ComparisonCategoryInfo(const ASTContext &Ctx, CXXRecordDecl *RD,
+  ComparisonCategoryInfo(const ASTContext &Ctx, const CXXRecordDecl *RD,
                          ComparisonCategoryType Kind)
       : Ctx(Ctx), Record(RD), Kind(Kind) {}
 
@@ -115,8 +116,7 @@ private:
 public:
   /// The declaration for the comparison category type from the
   /// standard library.
-  // FIXME: Make this const
-  CXXRecordDecl *Record = nullptr;
+  const CXXRecordDecl *Record = nullptr;
 
   /// The Kind of the comparison category type
   ComparisonCategoryType Kind;
@@ -146,7 +146,7 @@ public:
     return Kind == CCK::PartialOrdering;
   }
 
-  /// Converts the specified result kind into the the correct result kind
+  /// Converts the specified result kind into the correct result kind
   /// for this category. Specifically it lowers strong equality results to
   /// weak equivalence if needed.
   ComparisonCategoryResult makeWeakResult(ComparisonCategoryResult Res) const {

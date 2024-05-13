@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 !C1118
 
 subroutine test1
@@ -61,7 +61,7 @@ end subroutine test6
 
 subroutine test7()
   use iso_fortran_env
-  type(event_type) :: x, y
+  type(event_type) :: x[*], y[*]
   critical
     !ERROR: An image control statement is not allowed in a CRITICAL construct
     event post (x)

@@ -1,13 +1,13 @@
-; RUN: llc < %s -mcpu=cortex-a57 -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-BALFP --check-prefix CHECK-EVEN
-; RUN: llc < %s -mcpu=cortex-a57 -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-BALFP --check-prefix CHECK-ODD
-; RUN: llc < %s -mcpu=cortex-a53 -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-A53 --check-prefix CHECK-EVEN
-; RUN: llc < %s -mcpu=cortex-a53 -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-A53 --check-prefix CHECK-ODD
+; RUN: llc < %s -mcpu=cortex-a57 -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-EVEN
+; RUN: llc < %s -mcpu=cortex-a57 -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-ODD
+; RUN: llc < %s -mcpu=cortex-a53 -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-EVEN
+; RUN: llc < %s -mcpu=cortex-a53 -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-ODD
 
 ; The following tests use the balance-fp-ops feature, and should be independent of
 ; the target cpu.
 
-; RUN: llc < %s -mtriple=aarch64-linux-gnueabi -mattr=+balance-fp-ops -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-EVEN --check-prefix CHECK-BALFP
-; RUN: llc < %s -mtriple=aarch64-linux-gnueabi -mattr=+balance-fp-ops  -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-ODD --check-prefix CHECK-BALFP
+; RUN: llc < %s -mtriple=aarch64 -mattr=+balance-fp-ops -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-EVEN
+; RUN: llc < %s -mtriple=aarch64 -mattr=+balance-fp-ops  -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-ODD
 
 ; Test the AArch64A57FPLoadBalancing pass. This pass relies heavily on register allocation, so
 ; our test strategy is to:
@@ -33,17 +33,17 @@ target triple = "aarch64"
 ; CHECK: fmadd [[x]]
 ; CHECK: str [[x]]
 
-define void @f1(double* nocapture readonly %p, double* nocapture %q) #0 {
+define void @f1(ptr nocapture readonly %p, ptr nocapture %q) #0 {
 entry:
-  %0 = load double, double* %p, align 8
-  %arrayidx1 = getelementptr inbounds double, double* %p, i64 1
-  %1 = load double, double* %arrayidx1, align 8
-  %arrayidx2 = getelementptr inbounds double, double* %p, i64 2
-  %2 = load double, double* %arrayidx2, align 8
-  %arrayidx3 = getelementptr inbounds double, double* %p, i64 3
-  %3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %p, i64 4
-  %4 = load double, double* %arrayidx4, align 8
+  %0 = load double, ptr %p, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %p, i64 1
+  %1 = load double, ptr %arrayidx1, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %p, i64 2
+  %2 = load double, ptr %arrayidx2, align 8
+  %arrayidx3 = getelementptr inbounds double, ptr %p, i64 3
+  %3 = load double, ptr %arrayidx3, align 8
+  %arrayidx4 = getelementptr inbounds double, ptr %p, i64 4
+  %4 = load double, ptr %arrayidx4, align 8
   %mul = fmul fast double %0, %1
   %add = fadd fast double %mul, %4
   %mul5 = fmul fast double %1, %2
@@ -52,20 +52,20 @@ entry:
   %sub = fsub fast double %add6, %mul7
   %mul8 = fmul fast double %2, %3
   %add9 = fadd fast double %mul8, %sub
-  store double %add9, double* %q, align 8
-  %arrayidx11 = getelementptr inbounds double, double* %p, i64 5
-  %5 = load double, double* %arrayidx11, align 8
-  %arrayidx12 = getelementptr inbounds double, double* %p, i64 6
-  %6 = load double, double* %arrayidx12, align 8
-  %arrayidx13 = getelementptr inbounds double, double* %p, i64 7
-  %7 = load double, double* %arrayidx13, align 8
+  store double %add9, ptr %q, align 8
+  %arrayidx11 = getelementptr inbounds double, ptr %p, i64 5
+  %5 = load double, ptr %arrayidx11, align 8
+  %arrayidx12 = getelementptr inbounds double, ptr %p, i64 6
+  %6 = load double, ptr %arrayidx12, align 8
+  %arrayidx13 = getelementptr inbounds double, ptr %p, i64 7
+  %7 = load double, ptr %arrayidx13, align 8
   %mul15 = fmul fast double %6, %7
   %mul16 = fmul fast double %0, %5
   %add17 = fadd fast double %mul16, %mul15
   %mul18 = fmul fast double %5, %6
   %add19 = fadd fast double %mul18, %add17
-  %arrayidx20 = getelementptr inbounds double, double* %q, i64 1
-  store double %add19, double* %arrayidx20, align 8
+  %arrayidx20 = getelementptr inbounds double, ptr %q, i64 1
+  store double %add19, ptr %arrayidx20, align 8
   ret void
 }
 
@@ -81,27 +81,25 @@ entry:
 ; CHECK: fmsub [[x]]
 ; CHECK: fmadd [[y]]
 ; CHECK: fmadd [[x]]
-; CHECK-BALFP: stp [[x]], [[y]]
-; CHECK-A53-DAG: str [[x]]
-; CHECK-A53-DAG: str [[y]]
+; CHECK: stp [[x]], [[y]]
 
-define void @f2(double* nocapture readonly %p, double* nocapture %q) #0 {
+define void @f2(ptr nocapture readonly %p, ptr nocapture %q) #0 {
 entry:
-  %0 = load double, double* %p, align 8
-  %arrayidx1 = getelementptr inbounds double, double* %p, i64 1
-  %1 = load double, double* %arrayidx1, align 8
-  %arrayidx2 = getelementptr inbounds double, double* %p, i64 2
-  %2 = load double, double* %arrayidx2, align 8
-  %arrayidx3 = getelementptr inbounds double, double* %p, i64 3
-  %3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %p, i64 4
-  %4 = load double, double* %arrayidx4, align 8
-  %arrayidx5 = getelementptr inbounds double, double* %p, i64 5
-  %5 = load double, double* %arrayidx5, align 8
-  %arrayidx6 = getelementptr inbounds double, double* %p, i64 6
-  %6 = load double, double* %arrayidx6, align 8
-  %arrayidx7 = getelementptr inbounds double, double* %p, i64 7
-  %7 = load double, double* %arrayidx7, align 8
+  %0 = load double, ptr %p, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %p, i64 1
+  %1 = load double, ptr %arrayidx1, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %p, i64 2
+  %2 = load double, ptr %arrayidx2, align 8
+  %arrayidx3 = getelementptr inbounds double, ptr %p, i64 3
+  %3 = load double, ptr %arrayidx3, align 8
+  %arrayidx4 = getelementptr inbounds double, ptr %p, i64 4
+  %4 = load double, ptr %arrayidx4, align 8
+  %arrayidx5 = getelementptr inbounds double, ptr %p, i64 5
+  %5 = load double, ptr %arrayidx5, align 8
+  %arrayidx6 = getelementptr inbounds double, ptr %p, i64 6
+  %6 = load double, ptr %arrayidx6, align 8
+  %arrayidx7 = getelementptr inbounds double, ptr %p, i64 7
+  %7 = load double, ptr %arrayidx7, align 8
   %mul = fmul fast double %0, %1
   %add = fadd fast double %mul, %7
   %mul8 = fmul fast double %5, %6
@@ -115,9 +113,9 @@ entry:
   %add15 = fadd fast double %mul14, %add12
   %mul16 = fmul fast double %2, %3
   %add17 = fadd fast double %mul16, %sub
-  store double %add17, double* %q, align 8
-  %arrayidx19 = getelementptr inbounds double, double* %q, i64 1
-  store double %add15, double* %arrayidx19, align 8
+  store double %add17, ptr %q, align 8
+  %arrayidx19 = getelementptr inbounds double, ptr %q, i64 1
+  store double %add15, ptr %arrayidx19, align 8
   ret void
 }
 
@@ -131,17 +129,17 @@ entry:
 ; CHECK: fmadd [[y:d[0-9]+]], {{.*}}, [[x]]
 ; CHECK: str [[y]]
 
-define void @f3(double* nocapture readonly %p, double* nocapture %q) #0 {
+define void @f3(ptr nocapture readonly %p, ptr nocapture %q) #0 {
 entry:
-  %0 = load double, double* %p, align 8
-  %arrayidx1 = getelementptr inbounds double, double* %p, i64 1
-  %1 = load double, double* %arrayidx1, align 8
-  %arrayidx2 = getelementptr inbounds double, double* %p, i64 2
-  %2 = load double, double* %arrayidx2, align 8
-  %arrayidx3 = getelementptr inbounds double, double* %p, i64 3
-  %3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %p, i64 4
-  %4 = load double, double* %arrayidx4, align 8
+  %0 = load double, ptr %p, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %p, i64 1
+  %1 = load double, ptr %arrayidx1, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %p, i64 2
+  %2 = load double, ptr %arrayidx2, align 8
+  %arrayidx3 = getelementptr inbounds double, ptr %p, i64 3
+  %3 = load double, ptr %arrayidx3, align 8
+  %arrayidx4 = getelementptr inbounds double, ptr %p, i64 4
+  %4 = load double, ptr %arrayidx4, align 8
   %mul = fmul fast double %0, %1
   %add = fadd fast double %mul, %4
   %mul5 = fmul fast double %1, %2
@@ -154,11 +152,11 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @g to void ()*)() #2
+  tail call void @g() #2
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  store double %add9, double* %q, align 8
+  store double %add9, ptr %q, align 8
   ret void
 }
 
@@ -176,27 +174,25 @@ declare void @g(...) #1
 ; CHECK: fmsub [[x]]
 ; CHECK: fmadd [[y]]
 ; CHECK: fmadd [[x]]
-; CHECK-BALFP: stp [[x]], [[y]]
-; CHECK-A53-DAG: str [[x]]
-; CHECK-A53-DAG: str [[y]]
+; CHECK: stp [[x]], [[y]]
 
-define void @f4(float* nocapture readonly %p, float* nocapture %q) #0 {
+define void @f4(ptr nocapture readonly %p, ptr nocapture %q) #0 {
 entry:
-  %0 = load float, float* %p, align 4
-  %arrayidx1 = getelementptr inbounds float, float* %p, i64 1
-  %1 = load float, float* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %p, i64 2
-  %2 = load float, float* %arrayidx2, align 4
-  %arrayidx3 = getelementptr inbounds float, float* %p, i64 3
-  %3 = load float, float* %arrayidx3, align 4
-  %arrayidx4 = getelementptr inbounds float, float* %p, i64 4
-  %4 = load float, float* %arrayidx4, align 4
-  %arrayidx5 = getelementptr inbounds float, float* %p, i64 5
-  %5 = load float, float* %arrayidx5, align 4
-  %arrayidx6 = getelementptr inbounds float, float* %p, i64 6
-  %6 = load float, float* %arrayidx6, align 4
-  %arrayidx7 = getelementptr inbounds float, float* %p, i64 7
-  %7 = load float, float* %arrayidx7, align 4
+  %0 = load float, ptr %p, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %p, i64 1
+  %1 = load float, ptr %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %p, i64 2
+  %2 = load float, ptr %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr %p, i64 3
+  %3 = load float, ptr %arrayidx3, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %p, i64 4
+  %4 = load float, ptr %arrayidx4, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %p, i64 5
+  %5 = load float, ptr %arrayidx5, align 4
+  %arrayidx6 = getelementptr inbounds float, ptr %p, i64 6
+  %6 = load float, ptr %arrayidx6, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %p, i64 7
+  %7 = load float, ptr %arrayidx7, align 4
   %mul = fmul fast float %0, %1
   %add = fadd fast float %mul, %7
   %mul8 = fmul fast float %5, %6
@@ -210,9 +206,9 @@ entry:
   %add15 = fadd fast float %mul14, %add12
   %mul16 = fmul fast float %2, %3
   %add17 = fadd fast float %mul16, %sub
-  store float %add17, float* %q, align 4
-  %arrayidx19 = getelementptr inbounds float, float* %q, i64 1
-  store float %add15, float* %arrayidx19, align 4
+  store float %add17, ptr %q, align 4
+  %arrayidx19 = getelementptr inbounds float, ptr %q, i64 1
+  store float %add15, ptr %arrayidx19, align 4
   ret void
 }
 
@@ -226,17 +222,17 @@ entry:
 ; CHECK: fmadd [[y:s[0-9]+]], {{.*}}, [[x]]
 ; CHECK: str [[y]]
 
-define void @f5(float* nocapture readonly %p, float* nocapture %q) #0 {
+define void @f5(ptr nocapture readonly %p, ptr nocapture %q) #0 {
 entry:
-  %0 = load float, float* %p, align 4
-  %arrayidx1 = getelementptr inbounds float, float* %p, i64 1
-  %1 = load float, float* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %p, i64 2
-  %2 = load float, float* %arrayidx2, align 4
-  %arrayidx3 = getelementptr inbounds float, float* %p, i64 3
-  %3 = load float, float* %arrayidx3, align 4
-  %arrayidx4 = getelementptr inbounds float, float* %p, i64 4
-  %4 = load float, float* %arrayidx4, align 4
+  %0 = load float, ptr %p, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %p, i64 1
+  %1 = load float, ptr %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %p, i64 2
+  %2 = load float, ptr %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr %p, i64 3
+  %3 = load float, ptr %arrayidx3, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %p, i64 4
+  %4 = load float, ptr %arrayidx4, align 4
   %mul = fmul fast float %0, %1
   %add = fadd fast float %mul, %4
   %mul5 = fmul fast float %1, %2
@@ -249,11 +245,11 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @g to void ()*)() #2
+  tail call void @g() #2
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  store float %add9, float* %q, align 4
+  store float %add9, ptr %q, align 4
   ret void
 }
 
@@ -268,17 +264,17 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: bl hh
 ; CHECK: str d0
 
-define void @f6(double* nocapture readonly %p, double* nocapture %q) #0 {
+define void @f6(ptr nocapture readonly %p, ptr nocapture %q) #0 {
 entry:
-  %0 = load double, double* %p, align 8
-  %arrayidx1 = getelementptr inbounds double, double* %p, i64 1
-  %1 = load double, double* %arrayidx1, align 8
-  %arrayidx2 = getelementptr inbounds double, double* %p, i64 2
-  %2 = load double, double* %arrayidx2, align 8
-  %arrayidx3 = getelementptr inbounds double, double* %p, i64 3
-  %3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %p, i64 4
-  %4 = load double, double* %arrayidx4, align 8
+  %0 = load double, ptr %p, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %p, i64 1
+  %1 = load double, ptr %arrayidx1, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %p, i64 2
+  %2 = load double, ptr %arrayidx2, align 8
+  %arrayidx3 = getelementptr inbounds double, ptr %p, i64 3
+  %3 = load double, ptr %arrayidx3, align 8
+  %arrayidx4 = getelementptr inbounds double, ptr %p, i64 4
+  %4 = load double, ptr %arrayidx4, align 8
   %mul = fmul fast double %0, %1
   %add = fadd fast double %mul, %4
   %mul5 = fmul fast double %1, %2
@@ -288,7 +284,7 @@ entry:
   %mul8 = fmul fast double %2, %3
   %add9 = fadd fast double %mul8, %sub
   %call = tail call double @hh(double %add9) #2
-  store double %call, double* %q, align 8
+  store double %call, ptr %q, align 8
   ret void
 }
 
@@ -303,17 +299,17 @@ declare double @hh(double) #1
 ; CHECK: fmadd [[x:d[0-9]+]]
 ; CHECK: fadd d1, [[x]], [[x]]
 
-define void @f7(double* nocapture readonly %p, double* nocapture %q) #0 {
+define void @f7(ptr nocapture readonly %p, ptr nocapture %q) #0 {
 entry:
-  %0 = load double, double* %p, align 8
-  %arrayidx1 = getelementptr inbounds double, double* %p, i64 1
-  %1 = load double, double* %arrayidx1, align 8
-  %arrayidx2 = getelementptr inbounds double, double* %p, i64 2
-  %2 = load double, double* %arrayidx2, align 8
-  %arrayidx3 = getelementptr inbounds double, double* %p, i64 3
-  %3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %p, i64 4
-  %4 = load double, double* %arrayidx4, align 8
+  %0 = load double, ptr %p, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %p, i64 1
+  %1 = load double, ptr %arrayidx1, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %p, i64 2
+  %2 = load double, ptr %arrayidx2, align 8
+  %arrayidx3 = getelementptr inbounds double, ptr %p, i64 3
+  %3 = load double, ptr %arrayidx3, align 8
+  %arrayidx4 = getelementptr inbounds double, ptr %p, i64 4
+  %4 = load double, ptr %arrayidx4, align 8
   %mul = fmul fast double %0, %1
   %add = fadd fast double %mul, %4
   %mul5 = fmul fast double %1, %2

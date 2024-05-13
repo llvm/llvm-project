@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=INPUT-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t.o | FileCheck --check-prefix=INPUT-ASM %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t.o | FileCheck --check-prefix=INPUT-ASM %s
 
 # RUN: ld.lld --shared %t.o --soname=t.so -o %t.so
 # RUN: llvm-readelf -r %t.so | FileCheck --check-prefix=SO-REL %s
@@ -22,10 +22,10 @@
 # INPUT-ASM-NEXT:       blr
 
 # SO-REL: Relocation section '.rela.dyn'
-# SO-REL:   0000000000020390  0000000100000014 R_PPC64_GLOB_DAT       00000000000102d0 glob_int + 0
+# SO-REL:   00000000000203a0  0000000100000014 R_PPC64_GLOB_DAT       00000000000102d0 glob_int + 0
 
 # SO-GOT: Hex dump of section '.got':
-# SO-GOT:   0x00020388 88830200 00000000 00000000 00000000
+# SO-GOT:   0x00020398 98830200 00000000 00000000 00000000
 
 # SO-SYM: Symbol table '.symtab' contains 4 entries:
 # SO-SYM:   3: 00000000000102d0     4 NOTYPE  GLOBAL DEFAULT     6 glob_int

@@ -10,7 +10,7 @@
 /// This file implements the COFF-specific dumper for llvm-objdump.
 /// It outputs the Win64 EH data structures as plain text.
 /// The encoding of the unwind codes is described in MSDN:
-/// http://msdn.microsoft.com/en-us/library/ck9asaa9.aspx
+/// https://docs.microsoft.com/en-us/cpp/build/exception-handling-x64
 ///
 //===----------------------------------------------------------------------===//
 
@@ -31,6 +31,166 @@ using namespace llvm::objdump;
 using namespace llvm::object;
 using namespace llvm::Win64EH;
 
+namespace {
+template <typename T> struct EnumEntry {
+  T Value;
+  StringRef Name;
+};
+
+class COFFDumper : public Dumper {
+public:
+  explicit COFFDumper(const llvm::object::COFFObjectFile &O)
+      : Dumper(O), Obj(O) {
+    Is64 = !Obj.getPE32Header();
+  }
+
+  template <class PEHeader> void printPEHeader(const PEHeader &Hdr) const;
+  void printPrivateHeaders() override;
+
+private:
+  template <typename T> FormattedNumber formatAddr(T V) const {
+    return format_hex_no_prefix(V, Is64 ? 16 : 8);
+  }
+
+  uint32_t getBaseOfData(const void *Hdr) const {
+    return Is64 ? 0 : static_cast<const pe32_header *>(Hdr)->BaseOfData;
+  }
+
+  const llvm::object::COFFObjectFile &Obj;
+  bool Is64;
+};
+} // namespace
+
+std::unique_ptr<Dumper>
+objdump::createCOFFDumper(const object::COFFObjectFile &Obj) {
+  return std::make_unique<COFFDumper>(Obj);
+}
+
+constexpr EnumEntry<uint16_t> PEHeaderMagic[] = {
+    {uint16_t(COFF::PE32Header::PE32), "PE32"},
+    {uint16_t(COFF::PE32Header::PE32_PLUS), "PE32+"},
+};
+
+constexpr EnumEntry<COFF::WindowsSubsystem> PEWindowsSubsystem[] = {
+    {COFF::IMAGE_SUBSYSTEM_UNKNOWN, "unspecified"},
+    {COFF::IMAGE_SUBSYSTEM_NATIVE, "NT native"},
+    {COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI, "Windows GUI"},
+    {COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI, "Windows CUI"},
+    {COFF::IMAGE_SUBSYSTEM_POSIX_CUI, "POSIX CUI"},
+    {COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI, "Wince CUI"},
+    {COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION, "EFI application"},
+    {COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER, "EFI boot service driver"},
+    {COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER, "EFI runtime driver"},
+    {COFF::IMAGE_SUBSYSTEM_EFI_ROM, "SAL runtime driver"},
+    {COFF::IMAGE_SUBSYSTEM_XBOX, "XBOX"},
+};
+
+template <typename T, typename TEnum>
+static void printOptionalEnumName(T Value,
+                                  ArrayRef<EnumEntry<TEnum>> EnumValues) {
+  for (const EnumEntry<TEnum> &I : EnumValues)
+    if (I.Value == Value) {
+      outs() << "\t(" << I.Name << ')';
+      return;
+    }
+}
+
+template <class PEHeader>
+void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
+  auto print = [](const char *K, auto V, const char *Fmt = "%d\n") {
+    outs() << format("%-23s ", K) << format(Fmt, V);
+  };
+  auto printU16 = [&](const char *K, support::ulittle16_t V,
+                      const char *Fmt = "%d\n") { print(K, uint16_t(V), Fmt); };
+  auto printU32 = [&](const char *K, support::ulittle32_t V,
+                      const char *Fmt = "%d\n") { print(K, uint32_t(V), Fmt); };
+  auto printAddr = [=](const char *K, uint64_t V) {
+    outs() << format("%-23s ", K) << formatAddr(V) << '\n';
+  };
+
+  printU16("Magic", Hdr.Magic, "%04x");
+  printOptionalEnumName(Hdr.Magic, ArrayRef(PEHeaderMagic));
+  outs() << '\n';
+  print("MajorLinkerVersion", Hdr.MajorLinkerVersion);
+  print("MinorLinkerVersion", Hdr.MinorLinkerVersion);
+  printAddr("SizeOfCode", Hdr.SizeOfCode);
+  printAddr("SizeOfInitializedData", Hdr.SizeOfInitializedData);
+  printAddr("SizeOfUninitializedData", Hdr.SizeOfUninitializedData);
+  printAddr("AddressOfEntryPoint", Hdr.AddressOfEntryPoint);
+  printAddr("BaseOfCode", Hdr.BaseOfCode);
+  if (!Is64)
+    printAddr("BaseOfData", getBaseOfData(&Hdr));
+  printAddr("ImageBase", Hdr.ImageBase);
+  printU32("SectionAlignment", Hdr.SectionAlignment, "%08x\n");
+  printU32("FileAlignment", Hdr.FileAlignment, "%08x\n");
+  printU16("MajorOSystemVersion", Hdr.MajorOperatingSystemVersion);
+  printU16("MinorOSystemVersion", Hdr.MinorOperatingSystemVersion);
+  printU16("MajorImageVersion", Hdr.MajorImageVersion);
+  printU16("MinorImageVersion", Hdr.MinorImageVersion);
+  printU16("MajorSubsystemVersion", Hdr.MajorSubsystemVersion);
+  printU16("MinorSubsystemVersion", Hdr.MinorSubsystemVersion);
+  printU32("Win32Version", Hdr.Win32VersionValue, "%08x\n");
+  printU32("SizeOfImage", Hdr.SizeOfImage, "%08x\n");
+  printU32("SizeOfHeaders", Hdr.SizeOfHeaders, "%08x\n");
+  printU32("CheckSum", Hdr.CheckSum, "%08x\n");
+  printU16("Subsystem", Hdr.Subsystem, "%08x");
+  printOptionalEnumName(Hdr.Subsystem, ArrayRef(PEWindowsSubsystem));
+  outs() << '\n';
+
+  printU16("DllCharacteristics", Hdr.DLLCharacteristics, "%08x\n");
+#define FLAG(Name)                                                             \
+  if (Hdr.DLLCharacteristics & COFF::IMAGE_DLL_CHARACTERISTICS_##Name)         \
+    outs() << "\t\t\t\t\t" << #Name << '\n';
+  FLAG(HIGH_ENTROPY_VA);
+  FLAG(DYNAMIC_BASE);
+  FLAG(FORCE_INTEGRITY);
+  FLAG(NX_COMPAT);
+  FLAG(NO_ISOLATION);
+  FLAG(NO_SEH);
+  FLAG(NO_BIND);
+  FLAG(APPCONTAINER);
+  FLAG(WDM_DRIVER);
+  FLAG(GUARD_CF);
+  FLAG(TERMINAL_SERVER_AWARE);
+#undef FLAG
+
+  printAddr("SizeOfStackReserve", Hdr.SizeOfStackReserve);
+  printAddr("SizeOfStackCommit", Hdr.SizeOfStackCommit);
+  printAddr("SizeOfHeapReserve", Hdr.SizeOfHeapReserve);
+  printAddr("SizeOfHeapCommit", Hdr.SizeOfHeapCommit);
+  printU32("LoaderFlags", Hdr.LoaderFlags, "%08x\n");
+  printU32("NumberOfRvaAndSizes", Hdr.NumberOfRvaAndSize, "%08x\n");
+
+  static const char *DirName[COFF::NUM_DATA_DIRECTORIES + 1] = {
+      "Export Directory [.edata (or where ever we found it)]",
+      "Import Directory [parts of .idata]",
+      "Resource Directory [.rsrc]",
+      "Exception Directory [.pdata]",
+      "Security Directory",
+      "Base Relocation Directory [.reloc]",
+      "Debug Directory",
+      "Description Directory",
+      "Special Directory",
+      "Thread Storage Directory [.tls]",
+      "Load Configuration Directory",
+      "Bound Import Directory",
+      "Import Address Table Directory",
+      "Delay Import Directory",
+      "CLR Runtime Header",
+      "Reserved",
+  };
+  outs() << "\nThe Data Directory\n";
+  for (uint32_t I = 0; I != std::size(DirName); ++I) {
+    uint32_t Addr = 0, Size = 0;
+    if (const data_directory *Data = Obj.getDataDirectory(I)) {
+      Addr = Data->RelativeVirtualAddress;
+      Size = Data->Size;
+    }
+    outs() << format("Entry %x ", I) << formatAddr(Addr)
+           << format(" %08x %s\n", uint32_t(Size), DirName[I]);
+  }
+}
+
 // Returns the name of the unwind code.
 static StringRef getUnwindCodeTypeName(uint8_t Code) {
   switch(Code) {
@@ -41,6 +201,8 @@ static StringRef getUnwindCodeTypeName(uint8_t Code) {
   case UOP_SetFPReg: return "UOP_SetFPReg";
   case UOP_SaveNonVol: return "UOP_SaveNonVol";
   case UOP_SaveNonVolBig: return "UOP_SaveNonVolBig";
+  case UOP_Epilog: return "UOP_Epilog";
+  case UOP_SpareCode: return "UOP_SpareCode";
   case UOP_SaveXMM128: return "UOP_SaveXMM128";
   case UOP_SaveXMM128Big: return "UOP_SaveXMM128Big";
   case UOP_PushMachFrame: return "UOP_PushMachFrame";
@@ -81,9 +243,11 @@ static unsigned getNumUsedSlots(const UnwindCode &UnwindCode) {
     return 1;
   case UOP_SaveNonVol:
   case UOP_SaveXMM128:
+  case UOP_Epilog:
     return 2;
   case UOP_SaveNonVolBig:
   case UOP_SaveXMM128Big:
+  case UOP_SpareCode:
     return 3;
   case UOP_AllocLarge:
     return (UnwindCode.getOpInfo() == 0) ? 2 : 3;
@@ -152,7 +316,7 @@ static void printAllUnwindCodes(ArrayRef<UnwindCode> UCs) {
              << " remaining in buffer";
       return ;
     }
-    printUnwindCode(makeArrayRef(I, E));
+    printUnwindCode(ArrayRef(I, E));
     I += UsedSlots;
   }
 }
@@ -277,24 +441,12 @@ static void printTLSDirectory(const COFFObjectFile *Obj) {
   if (!PE32Header && !PE32PlusHeader)
     return;
 
-  const data_directory *DataDir = Obj->getDataDirectory(COFF::TLS_TABLE);
-  if (!DataDir)
-    reportError("missing data dir for TLS table", Obj->getFileName());
-
-  if (DataDir->RelativeVirtualAddress == 0)
-    return;
-
-  uintptr_t IntPtr = 0;
-  if (Error E =
-          Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr))
-    reportError(std::move(E), Obj->getFileName());
-
   if (PE32Header) {
-    auto *TLSDir = reinterpret_cast<const coff_tls_directory32 *>(IntPtr);
-    printTLSDirectoryT(TLSDir);
+    if (auto *TLSDir = Obj->getTLSDirectory32())
+      printTLSDirectoryT(TLSDir);
   } else {
-    auto *TLSDir = reinterpret_cast<const coff_tls_directory64 *>(IntPtr);
-    printTLSDirectoryT(TLSDir);
+    if (auto *TLSDir = Obj->getTLSDirectory64())
+      printTLSDirectoryT(TLSDir);
   }
 
   outs() << "\n";
@@ -309,19 +461,10 @@ static void printLoadConfiguration(const COFFObjectFile *Obj) {
   if (Obj->getMachine() != COFF::IMAGE_FILE_MACHINE_I386)
     return;
 
-  const data_directory *DataDir = Obj->getDataDirectory(COFF::LOAD_CONFIG_TABLE);
-  if (!DataDir)
-    reportError("no load config data dir", Obj->getFileName());
-
-  uintptr_t IntPtr = 0;
-  if (DataDir->RelativeVirtualAddress == 0)
+  auto *LoadConf = Obj->getLoadConfig32();
+  if (!LoadConf)
     return;
 
-  if (Error E =
-          Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr))
-    reportError(std::move(E), Obj->getFileName());
-
-  auto *LoadConf = reinterpret_cast<const coff_load_configuration32 *>(IntPtr);
   outs() << "Load configuration:"
          << "\n  Timestamp: " << LoadConf->TimeDateStamp
          << "\n  Major Version: " << LoadConf->MajorVersion
@@ -394,11 +537,11 @@ static void printImportTables(const COFFObjectFile *Obj) {
 // Prints export tables. The export table is a table containing the list of
 // exported symbol from the DLL.
 static void printExportTable(const COFFObjectFile *Obj) {
-  outs() << "Export Table:\n";
   export_directory_iterator I = Obj->export_directory_begin();
   export_directory_iterator E = Obj->export_directory_end();
   if (I == E)
     return;
+  outs() << "Export Table:\n";
   StringRef DllName;
   uint32_t OrdinalBase;
   if (I->getDllName(DllName))
@@ -409,11 +552,17 @@ static void printExportTable(const COFFObjectFile *Obj) {
   outs() << " Ordinal base: " << OrdinalBase << "\n";
   outs() << " Ordinal      RVA  Name\n";
   for (; I != E; I = ++I) {
-    uint32_t Ordinal;
-    if (I->getOrdinal(Ordinal))
-      return;
     uint32_t RVA;
     if (I->getExportRVA(RVA))
+      return;
+    StringRef Name;
+    if (I->getSymbolName(Name))
+      continue;
+    if (!RVA && Name.empty())
+      continue;
+
+    uint32_t Ordinal;
+    if (I->getOrdinal(Ordinal))
       return;
     bool IsForwarder;
     if (I->isForwarder(IsForwarder))
@@ -423,14 +572,11 @@ static void printExportTable(const COFFObjectFile *Obj) {
       // Export table entries can be used to re-export symbols that
       // this COFF file is imported from some DLLs. This is rare.
       // In most cases IsForwarder is false.
-      outs() << format("    % 4d         ", Ordinal);
+      outs() << format("   %5d         ", Ordinal);
     } else {
-      outs() << format("    % 4d %# 8x", Ordinal, RVA);
+      outs() << format("   %5d %# 8x", Ordinal, RVA);
     }
 
-    StringRef Name;
-    if (I->getSymbolName(Name))
-      continue;
     if (!Name.empty())
       outs() << "  " << Name;
     if (IsForwarder) {
@@ -519,7 +665,7 @@ static void printWin64EHUnwindInfo(const Win64EH::UnwindInfo *UI) {
   if (UI->NumCodes)
     outs() << "    Unwind Codes:\n";
 
-  printAllUnwindCodes(makeArrayRef(&UI->UnwindCodes[0], UI->NumCodes));
+  printAllUnwindCodes(ArrayRef(&UI->UnwindCodes[0], UI->NumCodes));
 
   outs() << "\n";
   outs().flush();
@@ -625,19 +771,54 @@ void objdump::printCOFFUnwindInfo(const COFFObjectFile *Obj) {
   }
 }
 
-void objdump::printCOFFFileHeader(const object::ObjectFile *Obj) {
-  const COFFObjectFile *file = dyn_cast<const COFFObjectFile>(Obj);
-  printTLSDirectory(file);
-  printLoadConfiguration(file);
-  printImportTables(file);
-  printExportTable(file);
+void COFFDumper::printPrivateHeaders() {
+  COFFDumper CD(Obj);
+  const uint16_t Cha = Obj.getCharacteristics();
+  outs() << "Characteristics 0x" << Twine::utohexstr(Cha) << '\n';
+#define FLAG(F, Name)                                                          \
+  if (Cha & F)                                                                 \
+    outs() << '\t' << Name << '\n';
+  FLAG(COFF::IMAGE_FILE_RELOCS_STRIPPED, "relocations stripped");
+  FLAG(COFF::IMAGE_FILE_EXECUTABLE_IMAGE, "executable");
+  FLAG(COFF::IMAGE_FILE_LINE_NUMS_STRIPPED, "line numbers stripped");
+  FLAG(COFF::IMAGE_FILE_LOCAL_SYMS_STRIPPED, "symbols stripped");
+  FLAG(COFF::IMAGE_FILE_LARGE_ADDRESS_AWARE, "large address aware");
+  FLAG(COFF::IMAGE_FILE_BYTES_REVERSED_LO, "little endian");
+  FLAG(COFF::IMAGE_FILE_32BIT_MACHINE, "32 bit words");
+  FLAG(COFF::IMAGE_FILE_DEBUG_STRIPPED, "debugging information removed");
+  FLAG(COFF::IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP,
+       "copy to swap file if on removable media");
+  FLAG(COFF::IMAGE_FILE_NET_RUN_FROM_SWAP,
+       "copy to swap file if on network media");
+  FLAG(COFF::IMAGE_FILE_SYSTEM, "system file");
+  FLAG(COFF::IMAGE_FILE_DLL, "DLL");
+  FLAG(COFF::IMAGE_FILE_UP_SYSTEM_ONLY, "run only on uniprocessor machine");
+  FLAG(COFF::IMAGE_FILE_BYTES_REVERSED_HI, "big endian");
+#undef FLAG
+
+  // TODO Support PE_IMAGE_DEBUG_TYPE_REPRO.
+  // Since ctime(3) returns a 26 character string of the form:
+  // "Sun Sep 16 01:03:52 1973\n\0"
+  // just print 24 characters.
+  const time_t Timestamp = Obj.getTimeDateStamp();
+  outs() << format("\nTime/Date               %.24s\n", ctime(&Timestamp));
+
+  if (const pe32_header *Hdr = Obj.getPE32Header())
+    CD.printPEHeader<pe32_header>(*Hdr);
+  else if (const pe32plus_header *Hdr = Obj.getPE32PlusHeader())
+    CD.printPEHeader<pe32plus_header>(*Hdr);
+
+  printTLSDirectory(&Obj);
+  printLoadConfiguration(&Obj);
+  printImportTables(&Obj);
+  printExportTable(&Obj);
 }
 
-void objdump::printCOFFSymbolTable(const object::COFFImportFile *i) {
+void objdump::printCOFFSymbolTable(const object::COFFImportFile &i) {
   unsigned Index = 0;
-  bool IsCode = i->getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
+  bool IsCode = i.getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
 
-  for (const object::BasicSymbolRef &Sym : i->symbols()) {
+  for (const object::BasicSymbolRef &Sym : i.symbols()) {
     std::string Name;
     raw_string_ostream NS(Name);
 
@@ -656,15 +837,15 @@ void objdump::printCOFFSymbolTable(const object::COFFImportFile *i) {
   }
 }
 
-void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
-  for (unsigned SI = 0, SE = coff->getNumberOfSymbols(); SI != SE; ++SI) {
-    Expected<COFFSymbolRef> Symbol = coff->getSymbol(SI);
+void objdump::printCOFFSymbolTable(const COFFObjectFile &coff) {
+  for (unsigned SI = 0, SE = coff.getNumberOfSymbols(); SI != SE; ++SI) {
+    Expected<COFFSymbolRef> Symbol = coff.getSymbol(SI);
     if (!Symbol)
-      reportError(Symbol.takeError(), coff->getFileName());
+      reportError(Symbol.takeError(), coff.getFileName());
 
-    Expected<StringRef> NameOrErr = coff->getSymbolName(*Symbol);
+    Expected<StringRef> NameOrErr = coff.getSymbolName(*Symbol);
     if (!NameOrErr)
-      reportError(NameOrErr.takeError(), coff->getFileName());
+      reportError(NameOrErr.takeError(), coff.getFileName());
     StringRef Name = *NameOrErr;
 
     outs() << "[" << format("%2d", SI) << "]"
@@ -676,10 +857,9 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
            << "(nx " << unsigned(Symbol->getNumberOfAuxSymbols()) << ") "
            << "0x" << format("%08x", unsigned(Symbol->getValue())) << " "
            << Name;
-    if (Demangle && Name.startswith("?")) {
+    if (Demangle && Name.starts_with("?")) {
       int Status = -1;
-      char *DemangledSymbol =
-          microsoftDemangle(Name.data(), nullptr, nullptr, nullptr, &Status);
+      char *DemangledSymbol = microsoftDemangle(Name, nullptr, &Status);
 
       if (Status == 0 && DemangledSymbol) {
         outs() << " (" << StringRef(DemangledSymbol) << ")";
@@ -694,8 +874,8 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
       if (Symbol->isSectionDefinition()) {
         const coff_aux_section_definition *asd;
         if (Error E =
-                coff->getAuxSymbol<coff_aux_section_definition>(SI + 1, asd))
-          reportError(std::move(E), coff->getFileName());
+                coff.getAuxSymbol<coff_aux_section_definition>(SI + 1, asd))
+          reportError(std::move(E), coff.getFileName());
 
         int32_t AuxNumber = asd->getNumber(Symbol->isBigObj());
 
@@ -710,19 +890,19 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
                          , unsigned(asd->Selection));
       } else if (Symbol->isFileRecord()) {
         const char *FileName;
-        if (Error E = coff->getAuxSymbol<char>(SI + 1, FileName))
-          reportError(std::move(E), coff->getFileName());
+        if (Error E = coff.getAuxSymbol<char>(SI + 1, FileName))
+          reportError(std::move(E), coff.getFileName());
 
         StringRef Name(FileName, Symbol->getNumberOfAuxSymbols() *
-                                     coff->getSymbolTableEntrySize());
+                                     coff.getSymbolTableEntrySize());
         outs() << "AUX " << Name.rtrim(StringRef("\0", 1))  << '\n';
 
         SI = SI + Symbol->getNumberOfAuxSymbols();
         break;
       } else if (Symbol->isWeakExternal()) {
         const coff_aux_weak_external *awe;
-        if (Error E = coff->getAuxSymbol<coff_aux_weak_external>(SI + 1, awe))
-          reportError(std::move(E), coff->getFileName());
+        if (Error E = coff.getAuxSymbol<coff_aux_weak_external>(SI + 1, awe))
+          reportError(std::move(E), coff.getFileName());
 
         outs() << "AUX " << format("indx %d srch %d\n",
                                    static_cast<uint32_t>(awe->TagIndex),

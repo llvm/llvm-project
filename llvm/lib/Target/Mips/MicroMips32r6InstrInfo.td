@@ -15,6 +15,7 @@ def brtarget21_mm : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget21MM";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def brtarget26_mm : Operand<OtherVT> {
@@ -22,6 +23,7 @@ def brtarget26_mm : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget26MM";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def brtargetr6 : Operand<OtherVT> {
@@ -29,6 +31,7 @@ def brtargetr6 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTargetMM";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def brtarget_lsl2_mm : Operand<OtherVT> {
@@ -38,6 +41,7 @@ def brtarget_lsl2_mm : Operand<OtherVT> {
   // set with DecodeDisambiguates
   let DecoderMethod = "";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 //===----------------------------------------------------------------------===//
@@ -62,8 +66,8 @@ class BEQZC16_MMR6_ENC : BEQZC_BNEZC_FM_MM16R6<0x23>;
 class BNEZC16_MMR6_ENC : BEQZC_BNEZC_FM_MM16R6<0x2b>;
 class BITSWAP_MMR6_ENC : POOL32A_BITSWAP_FM_MMR6<0b101100>;
 class BRK_MMR6_ENC : BREAK_MMR6_ENC<"break">;
-class BEQZC_MMR6_ENC : CMP_BRANCH_OFF21_FM_MMR6<"beqzc", 0b100000>;
-class BNEZC_MMR6_ENC : CMP_BRANCH_OFF21_FM_MMR6<"bnezc", 0b101000>;
+class BEQZC_MMR6_ENC : CMP_BRANCH_OFF21_FM_MMR6<0b100000>;
+class BNEZC_MMR6_ENC : CMP_BRANCH_OFF21_FM_MMR6<0b101000>;
 class BGEC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"bgec", 0b111101>,
                       DecodeDisambiguates<"POP75GroupBranchMMR6">;
 class BGEUC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"bgeuc", 0b110000>,
@@ -406,7 +410,7 @@ class BITSWAP_MMR6_DESC : BITSWAP_MMR6_DESC_BASE<"bitswap", GPR32Opnd>;
 class BRK_MMR6_DESC : BRK_FT<"break">;
 
 class CACHE_HINT_MMR6_DESC<string instr_asm, Operand MemOpnd,
-                           RegisterOperand GPROpnd, InstrItinClass Itin>
+                           InstrItinClass Itin>
       : MMR6Arch<instr_asm> {
   dag OutOperandList = (outs);
   dag InOperandList = (ins MemOpnd:$addr, uimm5:$hint);
@@ -416,10 +420,8 @@ class CACHE_HINT_MMR6_DESC<string instr_asm, Operand MemOpnd,
   InstrItinClass Itinerary = Itin;
 }
 
-class CACHE_MMR6_DESC : CACHE_HINT_MMR6_DESC<"cache", mem_mm_12, GPR32Opnd,
-                                             II_CACHE>;
-class PREF_MMR6_DESC : CACHE_HINT_MMR6_DESC<"pref", mem_mm_12, GPR32Opnd,
-                                             II_PREF>;
+class CACHE_MMR6_DESC : CACHE_HINT_MMR6_DESC<"cache", mem_mm_12, II_CACHE>;
+class PREF_MMR6_DESC : CACHE_HINT_MMR6_DESC<"pref", mem_mm_12, II_PREF>;
 
 class LB_LBU_MMR6_DESC_BASE<string instr_asm, Operand MemOpnd,
                             RegisterOperand GPROpnd, InstrItinClass Itin>
@@ -820,6 +822,7 @@ class GINV_MMR6_DESC_BASE<string opstr,
 
 class GINVI_MMR6_DESC : GINV_MMR6_DESC_BASE<"ginvi", GPR32Opnd,
                                             II_GINVI> {
+  bits<2> type = 0b00;
   dag InOperandList = (ins GPR32Opnd:$rs);
   string AsmString = "ginvi\t$rs";
 }
@@ -1197,21 +1200,21 @@ class SWM16_MMR6_DESC
   ComplexPattern Addr = addr;
 }
 
-class SB16_MMR6_DESC_BASE<string opstr, DAGOperand RTOpnd, DAGOperand RO,
-                          SDPatternOperator OpNode, InstrItinClass Itin,
-                          Operand MemOpnd>
+class SB16_MMR6_DESC_BASE<string opstr, DAGOperand RTOpnd,
+                          InstrItinClass Itin, Operand MemOpnd>
     : MicroMipsInst16<(outs), (ins RTOpnd:$rt, MemOpnd:$addr),
                       !strconcat(opstr, "\t$rt, $addr"), [], Itin, FrmI>,
       MMR6Arch<opstr> {
   let DecoderMethod = "DecodeMemMMImm4";
   let mayStore = 1;
 }
-class SB16_MMR6_DESC : SB16_MMR6_DESC_BASE<"sb16", GPRMM16OpndZero, GPRMM16Opnd,
-                                           truncstorei8, II_SB, mem_mm_4>;
-class SH16_MMR6_DESC : SB16_MMR6_DESC_BASE<"sh16", GPRMM16OpndZero, GPRMM16Opnd,
-                                           truncstorei16, II_SH, mem_mm_4_lsl1>;
-class SW16_MMR6_DESC : SB16_MMR6_DESC_BASE<"sw16", GPRMM16OpndZero, GPRMM16Opnd,
-                                           store, II_SW, mem_mm_4_lsl2>;
+
+class SB16_MMR6_DESC
+    : SB16_MMR6_DESC_BASE<"sb16", GPRMM16OpndZero, II_SB, mem_mm_4>;
+class SH16_MMR6_DESC
+    : SB16_MMR6_DESC_BASE<"sh16", GPRMM16OpndZero, II_SH, mem_mm_4_lsl1>;
+class SW16_MMR6_DESC
+    : SB16_MMR6_DESC_BASE<"sw16", GPRMM16OpndZero, II_SW, mem_mm_4_lsl2>;
 
 class SWSP_MMR6_DESC
     : MicroMipsInst16<(outs), (ins GPR32Opnd:$rt, mem_mm_sp_imm5_lsl2:$offset),

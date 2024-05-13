@@ -3,15 +3,15 @@
 # RUN:      %s -o - | FileCheck %s
 
 --- |
-  define void @f1(i32* %adr, i32 %val) { ret void }
-  define void @f2(i32* %adr, i32 %val) { ret void }
-  define void @f3(i32* %adr, i32 %val) { ret void }
-  define void @f4(i32* %adr, i32 %val) { ret void }
+  define void @f1(ptr %adr, i32 %val) { ret void }
+  define void @f2(ptr %adr, i32 %val) { ret void }
+  define void @f3(ptr %adr, i32 %val) { ret void }
+  define void @f4(ptr %adr, i32 %val) { ret void }
 
-  declare i32* @f()
+  declare ptr @f()
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
 
 ...
 ---
@@ -64,20 +64,20 @@ body:             |
 
     $sp = ADDiu $sp, -32
     CFI_INSTRUCTION def_cfa_offset 32
-    SW killed $ra, $sp, 28 :: (store 4 into %stack.0)
-    SW killed $s1, $sp, 24 :: (store 4 into %stack.1)
-    SW killed $s0, $sp, 20 :: (store 4 into %stack.2)
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
+    SW killed $s1, $sp, 24 :: (store (s32) into %stack.1)
+    SW killed $s0, $sp, 20 :: (store (s32) into %stack.2)
     CFI_INSTRUCTION offset $ra_64, -4
     CFI_INSTRUCTION offset $s1_64, -8
     CFI_INSTRUCTION offset $s0_64, -12
     $s1 = MOVE16_MM $a1
     $s0 = MOVE16_MM $a0
     JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
-    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store 4 into %ir.adr)
+    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
     $v0 = LI16_MM 0
-    $s0 = LW $sp, 20 :: (load 4 from %stack.2)
-    $s1 = LW $sp, 24 :: (load 4 from %stack.1)
-    $ra = LW $sp, 28 :: (load 4 from %stack.0)
+    $s0 = LW $sp, 20 :: (load (s32) from %stack.2)
+    $s1 = LW $sp, 24 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 28 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 32
     PseudoReturn undef $ra, implicit killed $v0
 
@@ -132,20 +132,20 @@ body:             |
 
     $sp = ADDiu $sp, -32
     CFI_INSTRUCTION def_cfa_offset 32
-    SW killed $ra, $sp, 28 :: (store 4 into %stack.0)
-    SW_MM killed $s1, $sp, 24 :: (store 4 into %stack.1)
-    SW_MM killed $s0, $sp, 20 :: (store 4 into %stack.2)
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
+    SW_MM killed $s1, $sp, 24 :: (store (s32) into %stack.1)
+    SW_MM killed $s0, $sp, 20 :: (store (s32) into %stack.2)
     CFI_INSTRUCTION offset $ra_64, -4
     CFI_INSTRUCTION offset $s1_64, -8
     CFI_INSTRUCTION offset $s0_64, -12
     $s1 = MOVE16_MM $a1
     $s0 = MOVE16_MM $a0
     JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
-    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store 4 into %ir.adr)
+    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
     $v0 = LI16_MM 0
-    $s0 = LW_MM $sp, 20 :: (load 4 from %stack.2)
-    $s1 = LW_MM $sp, 24 :: (load 4 from %stack.1)
-    $ra = LW $sp, 28 :: (load 4 from %stack.0)
+    $s0 = LW_MM $sp, 20 :: (load (s32) from %stack.2)
+    $s1 = LW_MM $sp, 24 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 28 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 32
     PseudoReturn undef $ra, implicit killed $v0
 
@@ -200,20 +200,20 @@ body:             |
 
     $sp = ADDiu $sp, -32
     CFI_INSTRUCTION def_cfa_offset 32
-    SW killed $ra, $sp, 28 :: (store 4 into %stack.0)
-    SW_MM killed $s1, $sp, 24 :: (store 4 into %stack.1)
-    SW killed $s0, $sp, 20 :: (store 4 into %stack.2)
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
+    SW_MM killed $s1, $sp, 24 :: (store (s32) into %stack.1)
+    SW killed $s0, $sp, 20 :: (store (s32) into %stack.2)
     CFI_INSTRUCTION offset $ra_64, -4
     CFI_INSTRUCTION offset $s1_64, -8
     CFI_INSTRUCTION offset $s0_64, -12
     $s1 = MOVE16_MM $a1
     $s0 = MOVE16_MM $a0
     JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
-    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store 4 into %ir.adr)
+    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
     $v0 = LI16_MM 0
-    $s0 = LW_MM $sp, 20 :: (load 4 from %stack.2)
-    $s1 = LW $sp, 24 :: (load 4 from %stack.1)
-    $ra = LW $sp, 28 :: (load 4 from %stack.0)
+    $s0 = LW_MM $sp, 20 :: (load (s32) from %stack.2)
+    $s1 = LW $sp, 24 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 28 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 32
     PseudoReturn undef $ra, implicit killed $v0
 
@@ -268,20 +268,20 @@ body:             |
 
     $sp = ADDiu $sp, -32
     CFI_INSTRUCTION def_cfa_offset 32
-    SW killed $ra, $sp, 28 :: (store 4 into %stack.0)
-    SW killed $s1, $sp, 24 :: (store 4 into %stack.1)
-    SW_MM killed $s0, $sp, 20 :: (store 4 into %stack.2)
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
+    SW killed $s1, $sp, 24 :: (store (s32) into %stack.1)
+    SW_MM killed $s0, $sp, 20 :: (store (s32) into %stack.2)
     CFI_INSTRUCTION offset $ra_64, -4
     CFI_INSTRUCTION offset $s1_64, -8
     CFI_INSTRUCTION offset $s0_64, -12
     $s1 = MOVE16_MM $a1
     $s0 = MOVE16_MM $a0
     JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
-    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store 4 into %ir.adr)
+    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
     $v0 = LI16_MM 0
-    $s0 = LW $sp, 20 :: (load 4 from %stack.2)
-    $s1 = LW_MM $sp, 24 :: (load 4 from %stack.1)
-    $ra = LW $sp, 28 :: (load 4 from %stack.0)
+    $s0 = LW $sp, 20 :: (load (s32) from %stack.2)
+    $s1 = LW_MM $sp, 24 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 28 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 32
     PseudoReturn undef $ra, implicit killed $v0
 

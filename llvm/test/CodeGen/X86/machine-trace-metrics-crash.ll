@@ -19,18 +19,18 @@ define void @PR24199(i32 %a0) {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: # %if.then
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 4-byte Reload
 ; CHECK-NEXT:    # xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    mulss %xmm0, %xmm2
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    addss %xmm2, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%rax)
@@ -42,7 +42,7 @@ define void @PR24199(i32 %a0) {
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addss %xmm0, %xmm0
 ; CHECK-NEXT:    addss %xmm1, %xmm0
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbx
@@ -59,19 +59,18 @@ if.then:
 
 if.end:
   %h = phi float [ 0.0, %if.then ], [ 4.0, %entry ]
-  call void @foo(%struct.A* nonnull undef)
-  tail call void @llvm.dbg.value(metadata %struct.A* undef, i64 0, metadata !5, metadata !4), !dbg !6
+  call void @foo(ptr nonnull undef)
+  tail call void @llvm.dbg.value(metadata ptr undef, i64 0, metadata !5, metadata !4), !dbg !6
   tail call void @llvm.dbg.value(metadata float %h, i64 0, metadata !5, metadata !4), !dbg !6
-  %n0 = load float, float* undef, align 4
+  %n0 = load float, ptr undef, align 4
   %mul = fmul fast float %n0, %h
   %add = fadd fast float %mul, 1.0
-  tail call void @llvm.dbg.value(metadata %struct.A* undef, i64 0, metadata !5, metadata !4), !dbg !6
+  tail call void @llvm.dbg.value(metadata ptr undef, i64 0, metadata !5, metadata !4), !dbg !6
   tail call void @llvm.dbg.value(metadata float %add, i64 0, metadata !5, metadata !4), !dbg !6
   %add.i = fadd fast float %add, %n0
-  store float %add.i, float* undef, align 4
-  %n1 = bitcast %struct.A* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %n1)
-  %n2 = load <2 x float>, <2 x float>* undef, align 8
+  store float %add.i, ptr undef, align 4
+  call void @llvm.lifetime.start.p0(i64 16, ptr %i)
+  %n2 = load <2 x float>, ptr undef, align 8
   %conv = uitofp i1 %tobool to float
   %bitcast = extractelement <2 x float> %n2, i32 0
   %factor = fmul fast float %bitcast, 2.0
@@ -83,8 +82,8 @@ if.end:
 %struct.A = type { float, float }
 
 declare void @bar(float)
-declare void @foo(%struct.A*)
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @foo(ptr)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

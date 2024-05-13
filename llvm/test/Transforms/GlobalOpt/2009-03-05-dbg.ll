@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -globalopt -stats -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=globalopt -stats -disable-output 2>&1 | FileCheck %s
 ; CHECK: 1 globalopt - Number of global vars shrunk to booleans
 
 source_filename = "test/Transforms/GlobalOpt/2009-03-05-dbg.ll"
@@ -15,13 +15,13 @@ entry:
   br i1 %0, label %bb, label %bb1, !dbg !13
 
 bb:                                               ; preds = %entry
-  store i32 0, i32* @Stop, align 4, !dbg !15
+  store i32 0, ptr @Stop, align 4, !dbg !15
   %1 = mul nsw i32 %i, 42, !dbg !16
   call void @llvm.dbg.value(metadata i32 %1, metadata !8, metadata !12), !dbg !16
   br label %bb2, !dbg !16
 
 bb1:                                              ; preds = %entry
-  store i32 1, i32* @Stop, align 4, !dbg !17
+  store i32 1, ptr @Stop, align 4, !dbg !17
   br label %bb2, !dbg !17
 
 bb2:                                              ; preds = %bb1, %bb
@@ -40,7 +40,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define i32 @bar() #0 {
 entry:
   %"alloca point" = bitcast i32 0 to i32
-  %0 = load i32, i32* @Stop, align 4, !dbg !19
+  %0 = load i32, ptr @Stop, align 4, !dbg !19
   %1 = icmp eq i32 %0, 1, !dbg !19
   br i1 %1, label %bb, label %bb1, !dbg !19
 

@@ -1,17 +1,17 @@
-; RUN: llc -march=bpfel -filetype=obj -o %t.el < %s
+; RUN: llc -mtriple=bpfel -filetype=obj -o %t.el < %s
 ; RUN: llvm-readelf -r %t.el | FileCheck %s
-; RUN: llc -march=bpfeb -filetype=obj -o %t.eb < %s
+; RUN: llc -mtriple=bpfeb -filetype=obj -o %t.eb < %s
 ; RUN: llvm-readelf -r %t.eb | FileCheck %s
 
 ; source code:
 ;   int g() { return 0; }
-;   struct t { void *p; } gbl = { g };
+;   struct t { ptr p; } gbl = { g };
 ; compilation flag:
 ;   clang -target bpf -O2 -emit-llvm -S test.c
 
-%struct.t = type { i8* }
+%struct.t = type { ptr }
 
-@gbl = dso_local local_unnamed_addr global %struct.t { i8* bitcast (i32 ()* @g to i8*) }, align 8
+@gbl = dso_local local_unnamed_addr global %struct.t { ptr @g }, align 8
 
 ; CHECK: '.rel.data'
 ; CHECK: 0000000000000000  0000000200000002 R_BPF_64_ABS64         0000000000000000 g

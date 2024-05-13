@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// This check gives a warning if a loop variable has a too small type which
 /// might not be able to represent all values which are part of the whole range
@@ -26,7 +24,7 @@ namespace bugprone {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-too-small-loop-variable.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/too-small-loop-variable.html
 class TooSmallLoopVariableCheck : public ClangTidyCheck {
 public:
   TooSmallLoopVariableCheck(StringRef Name, ClangTidyContext *Context);
@@ -39,8 +37,6 @@ private:
   const unsigned MagnitudeBitsUpperLimit;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_TOOSMALLLOOPVARIABLECHECK_H

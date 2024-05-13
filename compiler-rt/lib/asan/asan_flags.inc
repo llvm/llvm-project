@@ -49,9 +49,10 @@ ASAN_FLAG(
     "to find more errors.")
 ASAN_FLAG(bool, replace_intrin, true,
           "If set, uses custom wrappers for memset/memcpy/memmove intrinsics.")
-ASAN_FLAG(bool, detect_stack_use_after_return, false,
+ASAN_FLAG(bool, detect_stack_use_after_return,
+          SANITIZER_LINUX && !SANITIZER_ANDROID,
           "Enables stack-use-after-return checking at run-time.")
-ASAN_FLAG(int, min_uar_stack_size_log, 16, // We can't do smaller anyway.
+ASAN_FLAG(int, min_uar_stack_size_log, 16,  // We can't do smaller anyway.
           "Minimum fake stack size log.")
 ASAN_FLAG(int, max_uar_stack_size_log,
           20, // 1Mb per size class, i.e. ~11Mb per thread
@@ -82,13 +83,16 @@ ASAN_FLAG(
     int, sleep_after_init, 0,
     "Number of seconds to sleep after AddressSanitizer is initialized. "
     "Useful for debugging purposes (e.g. when one needs to attach gdb).")
+ASAN_FLAG(
+    int, sleep_before_init, 0,
+    "Number of seconds to sleep before AddressSanitizer starts initializing. "
+    "Useful for debugging purposes (e.g. when one needs to attach gdb).")
 ASAN_FLAG(bool, check_malloc_usable_size, true,
           "Allows the users to work around the bug in Nvidia drivers prior to "
           "295.*.")
 ASAN_FLAG(bool, unmap_shadow_on_exit, false,
           "If set, explicitly unmaps the (huge) shadow at exit.")
-ASAN_FLAG(bool, protect_shadow_gap, !SANITIZER_RTEMS,
-          "If set, mprotect the shadow gap")
+ASAN_FLAG(bool, protect_shadow_gap, true, "If set, mprotect the shadow gap")
 ASAN_FLAG(bool, print_stats, false,
           "Print various statistics after printing an error message or if "
           "atexit=1.")
@@ -118,7 +122,7 @@ ASAN_FLAG(bool, poison_array_cookie, true,
 // https://github.com/google/sanitizers/issues/309
 // TODO(glider,timurrrr): Fix known issues and enable this back.
 ASAN_FLAG(bool, alloc_dealloc_mismatch,
-          !SANITIZER_MAC && !SANITIZER_WINDOWS && !SANITIZER_ANDROID,
+          !SANITIZER_APPLE && !SANITIZER_WINDOWS && !SANITIZER_ANDROID,
           "Report errors on malloc/delete, new/free, new/delete[], etc.")
 
 ASAN_FLAG(bool, new_delete_type_mismatch, true,

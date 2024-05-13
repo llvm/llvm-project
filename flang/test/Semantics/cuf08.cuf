@@ -1,0 +1,23 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+module m
+ contains
+  !ERROR: A subroutine may not have LAUNCH_BOUNDS() or CLUSTER_DIMS() unless it has ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)
+  launch_bounds(1,2) subroutine bad1; end
+  !ERROR: A subroutine may not have LAUNCH_BOUNDS() or CLUSTER_DIMS() unless it has ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)
+  cluster_dims(1,2,3) subroutine bad2; end
+  attributes(global) launch_bounds(1,2) subroutine good1; end
+  attributes(global) launch_bounds(1,2,3) subroutine good2; end
+  !ERROR: LAUNCH_BOUNDS() may only appear once
+  attributes(global) launch_bounds(1,2) launch_bounds(3,4) subroutine bad3; end
+  !ERROR: Operands of LAUNCH_BOUNDS() must be 2 or 3 integer constants
+  attributes(global) launch_bounds(1) subroutine bad4; end
+  !ERROR: Operands of LAUNCH_BOUNDS() must be 2 or 3 integer constants
+  attributes(global) launch_bounds(1,2,3,4) subroutine bad5; end
+  attributes(global) cluster_dims(1,2,3) subroutine good3; end
+  !ERROR: CLUSTER_DIMS() may only appear once
+  attributes(global) cluster_dims(1,2,3) cluster_dims(4,5,6) subroutine bad6; end
+  !ERROR: Operands of CLUSTER_DIMS() must be three integer constants
+  attributes(global) cluster_dims(1) subroutine bad7; end
+  !ERROR: Operands of CLUSTER_DIMS() must be three integer constants
+  attributes(global) cluster_dims(1,2,3,4) subroutine bad8; end
+end module

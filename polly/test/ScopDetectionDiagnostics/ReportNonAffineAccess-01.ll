@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-detect -analyze < %s 2>&1| FileCheck %s
+; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -disable-output < %s 2>&1| FileCheck %s
 
 ; void f(int A[]) {
 ;   for(int i=0; i<42; ++i)
@@ -12,12 +12,12 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A) !dbg !4 {
+define void @f(ptr %A) !dbg !4 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  tail call void @llvm.dbg.value(metadata i32* %A, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
+  tail call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !16, metadata !DIExpression()), !dbg !18
   br label %for.body, !dbg !19
 
@@ -25,8 +25,8 @@ for.body:                                         ; preds = %entry.split, %for.b
   %0 = phi i32 [ 0, %entry.split ], [ %1, %for.body ], !dbg !20
   %mul = mul nsw i32 %0, %0, !dbg !20
   %idxprom1 = zext i32 %mul to i64, !dbg !20
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom1, !dbg !20
-  store i32 0, i32* %arrayidx, align 4, !dbg !20
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom1, !dbg !20
+  store i32 0, ptr %arrayidx, align 4, !dbg !20
   %1 = add nsw i32 %0, 1, !dbg !21
   tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !16, metadata !DIExpression()), !dbg !18
   %exitcond = icmp ne i32 %1, 42, !dbg !19

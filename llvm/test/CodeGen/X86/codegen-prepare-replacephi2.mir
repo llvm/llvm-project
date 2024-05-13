@@ -9,36 +9,34 @@
 
   define void @f1() {
   entry:
-    %arrayidx = getelementptr inbounds [2 x i16], [2 x i16]* undef, i16 0, i16 2
-    %0 = bitcast i16* %arrayidx to i32*
-    %1 = bitcast [2 x i16]* undef to i32*
+    %arrayidx = getelementptr inbounds [2 x i16], ptr undef, i16 0, i16 2
     br label %for.cond
 
   for.cond.loopexit:
     br label %for.cond
 
   for.cond:
-    %2 = phi i32* [ %0, %entry ], [ %12, %for.cond.loopexit ]
-    %3 = phi i32* [ %0, %entry ], [ %14, %for.cond.loopexit ]
+    %0 = phi ptr [ %arrayidx, %entry ], [ %10, %for.cond.loopexit ]
+    %1 = phi ptr [ %arrayidx, %entry ], [ %12, %for.cond.loopexit ]
     br label %for.body
 
   for.body:
-    %4 = phi i32* [ %3, %for.cond ], [ %14, %cleanup ]
-    %5 = phi i32* [ %2, %for.cond ], [ %13, %cleanup ]
-    %6 = phi i32* [ %2, %for.cond ], [ %12, %cleanup ]
+    %2 = phi ptr [ %1, %for.cond ], [ %12, %cleanup ]
+    %3 = phi ptr [ %0, %for.cond ], [ %11, %cleanup ]
+    %4 = phi ptr [ %0, %for.cond ], [ %10, %cleanup ]
     br i1 undef, label %for.cond2.preheader, label %if.then
 
   for.cond2.preheader:
     br label %for.cond2
 
   if.then:
-    store i32 undef, i32* %4, align 1
+    store i32 undef, ptr %2, align 1
     br label %cleanup
 
   for.cond2:
-    %7 = phi i32* [ %10, %for.inc ], [ %6, %for.cond2.preheader ]
-    %8 = phi i32* [ %11, %for.inc ], [ %5, %for.cond2.preheader ]
-    %9 = phi i32* [ %11, %for.inc ], [ %4, %for.cond2.preheader ]
+    %5 = phi ptr [ %8, %for.inc ], [ %4, %for.cond2.preheader ]
+    %6 = phi ptr [ %9, %for.inc ], [ %3, %for.cond2.preheader ]
+    %7 = phi ptr [ %9, %for.inc ], [ %2, %for.cond2.preheader ]
     br i1 undef, label %for.inc, label %if.then5
 
   if.then5:
@@ -48,21 +46,21 @@
     br label %for.inc
 
   for.inc:
-    %10 = phi i32* [ %7, %if.end ], [ %1, %for.cond2 ]
-    %11 = phi i32* [ %8, %if.end ], [ %1, %for.cond2 ]
+    %8 = phi ptr [ %5, %if.end ], [ undef, %for.cond2 ]
+    %9 = phi ptr [ %6, %if.end ], [ undef, %for.cond2 ]
     br label %for.cond2
 
   cleanup.loopexit:
     br label %cleanup
 
   cleanup:
-    %12 = phi i32* [ %6, %if.then ], [ %7, %cleanup.loopexit ]
-    %13 = phi i32* [ %5, %if.then ], [ %8, %cleanup.loopexit ]
-    %14 = phi i32* [ %4, %if.then ], [ %9, %cleanup.loopexit ]
+    %10 = phi ptr [ %4, %if.then ], [ %5, %cleanup.loopexit ]
+    %11 = phi ptr [ %3, %if.then ], [ %6, %cleanup.loopexit ]
+    %12 = phi ptr [ %2, %if.then ], [ %7, %cleanup.loopexit ]
     br i1 true, label %for.cond.loopexit, label %for.body
   }
 
 ...
 
-# Sanity check to verify that something got through.
+# A check to verify that something got through.
 # CHECK-LABEL: entry:

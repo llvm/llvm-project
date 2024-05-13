@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULES_INTERNAL_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULES_INTERNAL_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULESINTERNAL_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULESINTERNAL_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRule.h"
@@ -94,9 +94,9 @@ void visitRefactoringOptions(
 /// A type trait that returns true when the given type list has at least one
 /// type whose base is the given base type.
 template <typename Base, typename First, typename... Rest>
-struct HasBaseOf : std::conditional<HasBaseOf<Base, First>::value ||
-                                        HasBaseOf<Base, Rest...>::value,
-                                    std::true_type, std::false_type>::type {};
+struct HasBaseOf : std::conditional_t<HasBaseOf<Base, First>::value ||
+                                          HasBaseOf<Base, Rest...>::value,
+                                      std::true_type, std::false_type> {};
 
 template <typename Base, typename T>
 struct HasBaseOf<Base, T> : std::is_base_of<Base, T> {};
@@ -104,9 +104,9 @@ struct HasBaseOf<Base, T> : std::is_base_of<Base, T> {};
 /// A type trait that returns true when the given type list contains types that
 /// derive from Base.
 template <typename Base, typename First, typename... Rest>
-struct AreBaseOf : std::conditional<AreBaseOf<Base, First>::value &&
-                                        AreBaseOf<Base, Rest...>::value,
-                                    std::true_type, std::false_type>::type {};
+struct AreBaseOf : std::conditional_t<AreBaseOf<Base, First>::value &&
+                                          AreBaseOf<Base, Rest...>::value,
+                                      std::true_type, std::false_type> {};
 
 template <typename Base, typename T>
 struct AreBaseOf<Base, T> : std::is_base_of<Base, T> {};
@@ -154,4 +154,4 @@ createRefactoringActionRule(const RequirementTypes &... Requirements) {
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULES_INTERNAL_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULESINTERNAL_H

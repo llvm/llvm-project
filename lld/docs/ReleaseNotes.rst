@@ -1,19 +1,21 @@
-========================
-lld 13.0.0 Release Notes
-========================
+===========================
+lld |release| Release Notes
+===========================
 
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 13.0.0 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
+.. only:: PreRelease
+
+  .. warning::
+     These are in-progress notes for the upcoming LLVM |release| release.
+     Release notes for previous releases can be found on
+     `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
 
-This document contains the release notes for the lld linker, release 13.0.0.
+This document contains the release notes for the lld linker, release |release|.
 Here we describe the status of lld, including major improvements
 from the previous release. All lld releases may be downloaded
 from the `LLVM releases web site <https://llvm.org/releases/>`_.
@@ -24,32 +26,33 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``-Bsymbolic -Bsymbolic-functions`` has been changed to behave the same as ``-Bsymbolic-functions``. This matches GNU ld.
-  (`D102461 <https://reviews.llvm.org/D102461>`_)
-* ``-Bno-symbolic`` has been added.
-  (`D102461 <https://reviews.llvm.org/D102461>`_)
+* ``--compress-sections <section-glib>={none,zlib,zstd}[:level]`` is added to compress
+  matched output sections without the ``SHF_ALLOC`` flag.
+  (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
+  (`#90567 <https://github.com/llvm/llvm-project/pull/90567>`_)
+* The default compression level for zlib is now independent of linker
+  optimization level (``Z_BEST_SPEED``).
+* ``GNU_PROPERTY_AARCH64_FEATURE_PAUTH`` notes, ``R_AARCH64_AUTH_ABS64`` and
+  ``R_AARCH64_AUTH_RELATIVE`` relocations are now supported.
+  (`#72714 <https://github.com/llvm/llvm-project/pull/72714>`_)
+* ``--debug-names`` is added to create a merged ``.debug_names`` index
+  from input ``.debug_names`` sections. Type units are not handled yet.
+  (`#86508 <https://github.com/llvm/llvm-project/pull/86508>`_)
 
 Breaking changes
 ----------------
 
-* ``--shuffle-sections=<seed>`` has been changed to ``--shuffle-sections=<section-glob>=<seed>``.
-  Specify ``*`` as ``<section-glob>`` to get the previous behavior.
-
 COFF Improvements
 -----------------
-
-* ...
 
 MinGW Improvements
 ------------------
 
-* ...
-
 MachO Improvements
 ------------------
-
-* Item 1.
 
 WebAssembly Improvements
 ------------------------
 
+Fixes
+#####

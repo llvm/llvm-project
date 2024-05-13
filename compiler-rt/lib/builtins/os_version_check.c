@@ -86,6 +86,10 @@ typedef Boolean (*CFStringGetCStringFuncTy)(CFStringRef, char *, CFIndex,
                                             CFStringEncoding);
 typedef void (*CFReleaseFuncTy)(CFTypeRef);
 
+extern __attribute__((weak_import))
+bool _availability_version_check(uint32_t count,
+                                 dyld_build_version_t versions[]);
+
 static void _initializeAvailabilityCheck(bool LoadPlist) {
   if (AvailabilityVersionCheck && !LoadPlist) {
     // New API is supported and we're not being asked to load the plist,
@@ -94,8 +98,8 @@ static void _initializeAvailabilityCheck(bool LoadPlist) {
   }
 
   // Use the new API if it's is available.
-  AvailabilityVersionCheck = (AvailabilityVersionCheckFuncTy)dlsym(
-      RTLD_DEFAULT, "_availability_version_check");
+  if (_availability_version_check)
+    AvailabilityVersionCheck = &_availability_version_check;
 
   if (AvailabilityVersionCheck && !LoadPlist) {
     // New API is supported and we're not being asked to load the plist,
@@ -307,13 +311,13 @@ static void readSystemProperties(void) {
 }
 
 int32_t __isOSVersionAtLeast(int32_t Major, int32_t Minor, int32_t Subminor) {
-  (int32_t) Minor;
-  (int32_t) Subminor;
+  (void) Minor;
+  (void) Subminor;
   static pthread_once_t once = PTHREAD_ONCE_INIT;
   pthread_once(&once, readSystemProperties);
 
-  return SdkVersion >= Major ||
-         (IsPreRelease && Major == __ANDROID_API_FUTURE__);
+  // Allow all on pre-release. Note that we still rely on compile-time checks.
+  return SdkVersion >= Major || IsPreRelease;
 }
 
 #else

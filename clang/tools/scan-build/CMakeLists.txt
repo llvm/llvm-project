@@ -47,7 +47,7 @@ if(CLANG_INSTALL_SCANBUILD)
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/bin/${BinFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/bin/${BinFile})
     install(PROGRAMS bin/${BinFile}
-            DESTINATION bin
+            DESTINATION "${CMAKE_INSTALL_BINDIR}"
             COMPONENT scan-build)
   endforeach()
 
@@ -61,21 +61,21 @@ if(CLANG_INSTALL_SCANBUILD)
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libexec/${LibexecFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/libexec/${LibexecFile})
     install(PROGRAMS libexec/${LibexecFile}
-            DESTINATION libexec
+            DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}"
             COMPONENT scan-build)
   endforeach()
 
   foreach(ManPage ${ManPages})
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/${ManPage}
+    add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/${ManPage}"
                        COMMAND ${CMAKE_COMMAND} -E make_directory
-                         ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1
+                         "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1"
                        COMMAND ${CMAKE_COMMAND} -E copy
-                         ${CMAKE_CURRENT_SOURCE_DIR}/man/${ManPage}
-                         ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/
+                         "${CMAKE_CURRENT_SOURCE_DIR}/man/${ManPage}"
+                         "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/"
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/man/${ManPage})
-    list(APPEND Depends ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/${ManPage})
-    install(PROGRAMS man/${ManPage}
-            DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
+    list(APPEND Depends "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/${ManPage}")
+    install(FILES man/${ManPage}
+            DESTINATION "${CMAKE_INSTALL_MANDIR}/man1"
             COMPONENT scan-build)
   endforeach()
 
@@ -89,7 +89,7 @@ if(CLANG_INSTALL_SCANBUILD)
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/share/scan-build/${ShareFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/share/scan-build/${ShareFile})
     install(FILES share/scan-build/${ShareFile}
-            DESTINATION share/scan-build
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/scan-build"
             COMPONENT scan-build)
   endforeach()
 

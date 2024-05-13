@@ -1,11 +1,11 @@
-; RUN: opt -S -licm %s | FileCheck %s
+; RUN: opt -S -passes=licm %s | FileCheck %s
 ;
 ; LICM should null out debug locations when it hoists instructions out of a loop.
 ;
 ; Generated with
 ; clang -O0 -S -emit-llvm test.cpp -g -gline-tables-only -o t.ll
-; opt -S -sroa -adce -simplifycfg -reassociate -domtree -loops \
-;     -loop-simplify -lcssa -basic-aa -aa -scalar-evolution -loop-rotate t.ll > test.ll
+; opt -S -sroa -passes=adce,simplifycfg -reassociate -domtree -loops \
+;     -loop-simplify -passes=lcssa -aa -scalar-evolution -passes=loop-rotate t.ll > test.ll
 ;
 ; void bar(int *);
 ; void foo(int k, int p)
@@ -28,7 +28,7 @@ source_filename = "test.c"
 define void @foo(i32 %k, i32 %p) !dbg !7 {
 entry:
   %p.addr = alloca i32, align 4
-  store i32 %p, i32* %p.addr, align 4
+  store i32 %p, ptr %p.addr, align 4
   %cmp2 = icmp slt i32 0, %k, !dbg !9
   br i1 %cmp2, label %for.body.lr.ph, label %for.end, !dbg !9
 
@@ -37,8 +37,8 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %i.03 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %add.ptr = getelementptr inbounds i32, i32* %p.addr, i64 4, !dbg !11
-  call void @bar(i32* %add.ptr), !dbg !11
+  %add.ptr = getelementptr inbounds i32, ptr %p.addr, i64 4, !dbg !11
+  call void @bar(ptr %add.ptr), !dbg !11
   %inc = add nsw i32 %i.03, 1, !dbg !12
   %cmp = icmp slt i32 %inc, %k, !dbg !9
   br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge, !dbg !9, !llvm.loop !14
@@ -50,7 +50,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
   ret void, !dbg !16
 }
 
-declare void @bar(i32*)
+declare void @bar(ptr)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

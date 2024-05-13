@@ -15,8 +15,8 @@
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace targets {
@@ -78,16 +78,18 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+    return std::nullopt;
+  }
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override {
     return false;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

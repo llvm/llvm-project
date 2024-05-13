@@ -1,6 +1,9 @@
 ; RUN: llc %s -o %t -filetype=obj
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators %s -o %t -filetype=obj
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+
 ; Checks that we emit debug info for the block variable declare.
 ; CHECK: DW_TAG_subprogram
 ; CHECK: DW_TAG_variable
@@ -17,34 +20,30 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-darwin"
 
 %struct.__block_descriptor = type { i64, i64 }
-%struct.__block_literal_generic = type { i8*, i32, i32, i8*, %struct.__block_descriptor* }
+%struct.__block_literal_generic = type { ptr, i32, i32, ptr, ptr }
 
-@_NSConcreteStackBlock = external global i8*
+@_NSConcreteStackBlock = external global ptr
 @.str = private unnamed_addr constant [6 x i8] c"v8@?0\00", align 1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: ssp uwtable
-define internal void @__foo_block_invoke(i8* %.block_descriptor) #2 !dbg !8 {
+define internal void @__foo_block_invoke(ptr %.block_descriptor) #2 !dbg !8 {
 entry:
-  %.block_descriptor.addr = alloca i8*, align 8
-  %block.addr = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>*, align 8
-  store i8* %.block_descriptor, i8** %.block_descriptor.addr, align 8
-  %0 = load i8*, i8** %.block_descriptor.addr
-  call void @llvm.dbg.value(metadata i8* %0, metadata !47, metadata !43), !dbg !66
-  call void @llvm.dbg.declare(metadata i8* %.block_descriptor, metadata !47, metadata !43), !dbg !66
-  %block = bitcast i8* %.block_descriptor to <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>*, !dbg !67
-  store <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>* %block, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>** %block.addr, align 8
-  call void @llvm.dbg.declare(metadata <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>** %block.addr, metadata !68, metadata !69), !dbg !70
-  %block.capture.addr = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>* %block, i32 0, i32 5, !dbg !71
-  %1 = load void (...)*, void (...)** %block.capture.addr, align 8, !dbg !71
-  %block.literal = bitcast void (...)* %1 to %struct.__block_literal_generic*, !dbg !71
-  %2 = getelementptr inbounds %struct.__block_literal_generic, %struct.__block_literal_generic* %block.literal, i32 0, i32 3, !dbg !71
-  %3 = bitcast %struct.__block_literal_generic* %block.literal to i8*, !dbg !71
-  %4 = load i8*, i8** %2, !dbg !71
-  %5 = bitcast i8* %4 to void (i8*, ...)*, !dbg !71
-  call void (i8*, ...) %5(i8* %3), !dbg !71
+  %.block_descriptor.addr = alloca ptr, align 8
+  %block.addr = alloca ptr, align 8
+  store ptr %.block_descriptor, ptr %.block_descriptor.addr, align 8
+  %0 = load ptr, ptr %.block_descriptor.addr
+  call void @llvm.dbg.value(metadata ptr %0, metadata !47, metadata !43), !dbg !66
+  call void @llvm.dbg.declare(metadata ptr %.block_descriptor, metadata !47, metadata !43), !dbg !66
+  store ptr %.block_descriptor, ptr %block.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %block.addr, metadata !68, metadata !69), !dbg !70
+  %block.capture.addr = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %.block_descriptor, i32 0, i32 5, !dbg !71
+  %1 = load ptr, ptr %block.capture.addr, align 8, !dbg !71
+  %2 = getelementptr inbounds %struct.__block_literal_generic, ptr %1, i32 0, i32 3, !dbg !71
+  %3 = load ptr, ptr %2, !dbg !71
+  call void (ptr, ...) %3(ptr %1), !dbg !71
   ret void, !dbg !73
 }
 

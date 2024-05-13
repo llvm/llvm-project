@@ -1,12 +1,13 @@
-; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -filetype=obj %s -o - -experimental-debug-variable-locations=true | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; A hand-written testcase to check 64-bit constant handling in location lists.
 
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
+; CHECK-NEXT:   {{.*}}: DW_OP_lit0
 ; CHECK-NEXT:   {{.*}}: DW_OP_constu 0x4000000000000000)
-; CHECK-NEXT: DW_AT_name {{.*}}"d"
+; CHECK-NEXT: DW_AT_name {{.*}}"u"
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
 ; CHECK-NEXT:   {{.*}}: DW_OP_consts +0
@@ -14,9 +15,8 @@
 ; CHECK-NEXT: DW_AT_name {{.*}}"i"
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
-; CHECK-NEXT:   {{.*}}: DW_OP_lit0
 ; CHECK-NEXT:   {{.*}}: DW_OP_constu 0x4000000000000000)
-; CHECK-NEXT: DW_AT_name {{.*}}"u"
+; CHECK-NEXT: DW_AT_name {{.*}}"d"
 
 source_filename = "test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -27,14 +27,14 @@ define void @main() #0 !dbg !7 {
   %1 = alloca double, align 8
   %2 = alloca i64, align 8
   %3 = alloca i64, align 8
-  store double 2.000000e+00, double* %1, align 8, !dbg !21
+  store double 2.000000e+00, ptr %1, align 8, !dbg !21
   call void @llvm.dbg.value(metadata i64 0, metadata !22, metadata !15), !dbg !24
   call void @llvm.dbg.value(metadata i64 0, metadata !25, metadata !15), !dbg !27
   call void @llvm.dbg.value(metadata double 2.000000e+00, metadata !19, metadata !15), !dbg !21
-  store i64 4611686018427387904, i64* %2, align 8, !dbg !24
+  store i64 4611686018427387904, ptr %2, align 8, !dbg !24
   call void @llvm.dbg.value(metadata i64 4611686018427387904, metadata !22, metadata !15), !dbg !24
   call void @llvm.dbg.value(metadata i64 4611686018427387904, metadata !25, metadata !15), !dbg !27
-  store i64 4611686018427387904, i64* %3, align 8, !dbg !27
+  store i64 4611686018427387904, ptr %3, align 8, !dbg !27
   ret void, !dbg !28
 }
 

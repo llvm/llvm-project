@@ -12,6 +12,7 @@
 #include "ErrorHandling.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include <memory>
 #include <unordered_set>
@@ -22,21 +23,55 @@ using namespace sampleprof;
 namespace llvm {
 namespace sampleprof {
 
-class ProfileGenerator {
+using ProbeCounterMap =
+    std::unordered_map<const MCDecodedPseudoProbe *, uint64_t>;
+
+// This base class for profile generation of sample-based PGO. We reuse all
+// structures relating to function profiles and profile writers as seen in
+// /ProfileData/SampleProf.h.
+class ProfileGeneratorBase {
 
 public:
-  ProfileGenerator(){};
-  virtual ~ProfileGenerator() = default;
-  static std::unique_ptr<ProfileGenerator>
-  create(const BinarySampleCounterMap &BinarySampleCounters,
-         enum PerfScriptType SampleType);
+  ProfileGeneratorBase(ProfiledBinary *Binary) : Binary(Binary){};
+  ProfileGeneratorBase(ProfiledBinary *Binary,
+                       const ContextSampleCounterMap *Counters)
+      : Binary(Binary), SampleCounters(Counters){};
+  ProfileGeneratorBase(ProfiledBinary *Binary,
+                       const SampleProfileMap &&Profiles)
+      : Binary(Binary), ProfileMap(std::move(Profiles)){};
+
+  virtual ~ProfileGeneratorBase() = default;
+  static std::unique_ptr<ProfileGeneratorBase>
+  create(ProfiledBinary *Binary, const ContextSampleCounterMap *Counters,
+         bool profileIsCS);
+  static std::unique_ptr<ProfileGeneratorBase>
+  create(ProfiledBinary *Binary, SampleProfileMap &ProfileMap,
+         bool profileIsCS);
   virtual void generateProfile() = 0;
-  // Use SampleProfileWriter to serialize profile map
-  virtual void write(std::unique_ptr<SampleProfileWriter> Writer,
-                     StringMap<FunctionSamples> &ProfileMap);
   void write();
 
+  static uint32_t
+  getDuplicationFactor(unsigned Discriminator,
+                       bool UseFSD = ProfileGeneratorBase::UseFSDiscriminator) {
+    return UseFSD ? 1
+                  : llvm::DILocation::getDuplicationFactorFromDiscriminator(
+                        Discriminator);
+  }
+
+  static uint32_t
+  getBaseDiscriminator(unsigned Discriminator,
+                       bool UseFSD = ProfileGeneratorBase::UseFSDiscriminator) {
+    return UseFSD ? Discriminator
+                  : DILocation::getBaseDiscriminatorFromDiscriminator(
+                        Discriminator, /* IsFSDiscriminator */ false);
+  }
+
+  static bool UseFSDiscriminator;
+
 protected:
+  // Use SampleProfileWriter to serialize profile map
+  void write(std::unique_ptr<SampleProfileWriter> Writer,
+             SampleProfileMap &ProfileMap);
   /*
   For each region boundary point, mark if it is begin or end (or both) of
   the region. Boundary points are inclusive. Log the sample count as well
@@ -55,20 +90,120 @@ protected:
   void findDisjointRanges(RangeSample &DisjointRanges,
                           const RangeSample &Ranges);
 
+  // Go through each address from range to extract the top frame probe by
+  // looking up in the Address2ProbeMap
+  void extractProbesFromRange(const RangeSample &RangeCounter,
+                              ProbeCounterMap &ProbeCounter,
+                              bool FindDisjointRanges = true);
+
+  // Helper function for updating body sample for a leaf location in
+  // FunctionProfile
+  void updateBodySamplesforFunctionProfile(FunctionSamples &FunctionProfile,
+                                           const SampleContextFrame &LeafLoc,
+                                           uint64_t Count);
+
+  void updateFunctionSamples();
+
+  void updateTotalSamples();
+
+  void updateCallsiteSamples();
+
+  void filterAmbiguousProfile(SampleProfileMap &Profiles);
+
+  bool filterAmbiguousProfile(FunctionSamples &FS);
+
+  StringRef getCalleeNameForAddress(uint64_t TargetAddress);
+
+  void computeSummaryAndThreshold(SampleProfileMap &ProfileMap);
+
+  void calculateAndShowDensity(const SampleProfileMap &Profiles);
+
+  double calculateDensity(const SampleProfileMap &Profiles,
+                          uint64_t HotCntThreshold);
+
+  void showDensitySuggestion(double Density);
+
+  void collectProfiledFunctions();
+
+  bool collectFunctionsFromRawProfile(
+      std::unordered_set<const BinaryFunction *> &ProfiledFunctions);
+
+  // Collect profiled Functions for llvm sample profile input.
+  virtual bool collectFunctionsFromLLVMProfile(
+      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) = 0;
+
+  // List of function prefix to filter out.
+  static constexpr const char *FuncPrefixsToFilter[] = {"__cxx_global_var_init",
+                                                        "__tls_init"};
+
+  // Thresholds from profile summary to answer isHotCount/isColdCount queries.
+  uint64_t HotCountThreshold;
+
+  uint64_t ColdCountThreshold;
+
+  ProfiledBinary *Binary = nullptr;
+
+  std::unique_ptr<ProfileSummary> Summary;
+
   // Used by SampleProfileWriter
-  StringMap<FunctionSamples> ProfileMap;
+  SampleProfileMap ProfileMap;
+
+  const ContextSampleCounterMap *SampleCounters = nullptr;
 };
 
-class CSProfileGenerator : public ProfileGenerator {
-protected:
-  const BinarySampleCounterMap &BinarySampleCounters;
+class ProfileGenerator : public ProfileGeneratorBase {
 
 public:
-  CSProfileGenerator(const BinarySampleCounterMap &Counters)
-      : BinarySampleCounters(Counters){};
-
-public:
+  ProfileGenerator(ProfiledBinary *Binary,
+                   const ContextSampleCounterMap *Counters)
+      : ProfileGeneratorBase(Binary, Counters){};
+  ProfileGenerator(ProfiledBinary *Binary, const SampleProfileMap &&Profiles)
+      : ProfileGeneratorBase(Binary, std::move(Profiles)){};
   void generateProfile() override;
+
+private:
+  void generateLineNumBasedProfile();
+  void generateProbeBasedProfile();
+  RangeSample preprocessRangeCounter(const RangeSample &RangeCounter);
+  FunctionSamples &getTopLevelFunctionProfile(FunctionId FuncName);
+  // Helper function to get the leaf frame's FunctionProfile by traversing the
+  // inline stack and meanwhile it adds the total samples for each frame's
+  // function profile.
+  FunctionSamples &
+  getLeafProfileAndAddTotalSamples(const SampleContextFrameVector &FrameVec,
+                                   uint64_t Count);
+  void populateBodySamplesForAllFunctions(const RangeSample &RangeCounter);
+  void
+  populateBoundarySamplesForAllFunctions(const BranchSample &BranchCounters);
+  void
+  populateBodySamplesWithProbesForAllFunctions(const RangeSample &RangeCounter);
+  void populateBoundarySamplesWithProbesForAllFunctions(
+      const BranchSample &BranchCounters);
+  void postProcessProfiles();
+  void trimColdProfiles(const SampleProfileMap &Profiles,
+                        uint64_t ColdCntThreshold);
+  bool collectFunctionsFromLLVMProfile(
+      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
+};
+
+class CSProfileGenerator : public ProfileGeneratorBase {
+public:
+  CSProfileGenerator(ProfiledBinary *Binary,
+                     const ContextSampleCounterMap *Counters)
+      : ProfileGeneratorBase(Binary, Counters){};
+  CSProfileGenerator(ProfiledBinary *Binary, SampleProfileMap &Profiles)
+      : ProfileGeneratorBase(Binary), ContextTracker(Profiles, nullptr){};
+  void generateProfile() override;
+
+  // Trim the context stack at a given depth.
+  template <typename T>
+  static void trimContext(SmallVectorImpl<T> &S, int Depth = MaxContextDepth) {
+    if (Depth < 0 || static_cast<size_t>(Depth) >= S.size())
+      return;
+    std::copy(S.begin() + S.size() - static_cast<size_t>(Depth), S.end(),
+              S.begin());
+    S.resize(Depth);
+  }
 
   // Remove adjacent repeated context sequences up to a given sequence length,
   // -1 means no size limit. Note that repeated sequences are identified based
@@ -175,79 +310,86 @@ public:
     }
   }
 
-protected:
-  // Lookup or create FunctionSamples for the context
-  FunctionSamples &getFunctionProfileForContext(StringRef ContextId,
-                                                bool WasLeafInlined = false);
+private:
+  void generateLineNumBasedProfile();
+
+  FunctionSamples *getOrCreateFunctionSamples(ContextTrieNode *ContextNode,
+                                              bool WasLeafInlined = false);
+
+  // Lookup or create ContextTrieNode for the context, FunctionSamples is
+  // created inside this function.
+  ContextTrieNode *getOrCreateContextNode(const SampleContextFrames Context,
+                                          bool WasLeafInlined = false);
+
+  // For profiled only functions, on-demand compute their inline context
+  // function byte size which is used by the pre-inliner.
+  void computeSizeForProfiledFunctions();
   // Post processing for profiles before writing out, such as mermining
   // and trimming cold profiles, running preinliner on profiles.
   void postProcessProfiles();
+
+  void populateBodySamplesForFunction(FunctionSamples &FunctionProfile,
+                                      const RangeSample &RangeCounters);
+
+  void populateBoundarySamplesForFunction(ContextTrieNode *CallerNode,
+                                          const BranchSample &BranchCounters);
+
+  void populateInferredFunctionSamples(ContextTrieNode &Node);
+
+  void updateFunctionSamples();
+
+  void generateProbeBasedProfile();
+
+  // Fill in function body samples from probes
+  void populateBodySamplesWithProbes(const RangeSample &RangeCounter,
+                                     const AddrBasedCtxKey *CtxKey);
+  // Fill in boundary samples for a call probe
+  void populateBoundarySamplesWithProbes(const BranchSample &BranchCounter,
+                                         const AddrBasedCtxKey *CtxKey);
+
+  ContextTrieNode *
+  getContextNodeForLeafProbe(const AddrBasedCtxKey *CtxKey,
+                             const MCDecodedPseudoProbe *LeafProbe);
+
+  // Helper function to get FunctionSamples for the leaf probe
+  FunctionSamples &
+  getFunctionProfileForLeafProbe(const AddrBasedCtxKey *CtxKey,
+                                 const MCDecodedPseudoProbe *LeafProbe);
+
+  void convertToProfileMap(ContextTrieNode &Node,
+                           SampleContextFrameVector &Context);
+
+  void convertToProfileMap();
+
   void computeSummaryAndThreshold();
-  void write(std::unique_ptr<SampleProfileWriter> Writer,
-             StringMap<FunctionSamples> &ProfileMap) override;
 
-  // Thresholds from profile summary to answer isHotCount/isColdCount queries.
-  uint64_t HotCountThreshold;
-  uint64_t ColdCountThreshold;
+  bool collectFunctionsFromLLVMProfile(
+      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
 
-  // String table owning context strings created from profile generation.
-  std::unordered_set<std::string> ContextStrings;
+  void initializeMissingFrameInferrer();
 
-private:
-  // Helper function for updating body sample for a leaf location in
-  // FunctionProfile
-  void updateBodySamplesforFunctionProfile(FunctionSamples &FunctionProfile,
-                                           const FrameLocation &LeafLoc,
-                                           uint64_t Count);
-  void populateFunctionBodySamples(FunctionSamples &FunctionProfile,
-                                   const RangeSample &RangeCounters,
-                                   ProfiledBinary *Binary);
-  void populateFunctionBoundarySamples(StringRef ContextId,
-                                       FunctionSamples &FunctionProfile,
-                                       const BranchSample &BranchCounters,
-                                       ProfiledBinary *Binary);
-  void populateInferredFunctionSamples();
+  // Given an input `Context`, output `NewContext` with inferred missing tail
+  // call frames.
+  void inferMissingFrames(const SmallVectorImpl<uint64_t> &Context,
+                          SmallVectorImpl<uint64_t> &NewContext);
+
+  ContextTrieNode &getRootContext() { return ContextTracker.getRootContext(); };
+
+  // The container for holding the FunctionSamples used by context trie.
+  std::list<FunctionSamples> FSamplesList;
+
+  // Underlying context table serves for sample profile writer.
+  std::unordered_set<SampleContextFrameVector, SampleContextFrameHash> Contexts;
+
+  SampleContextTracker ContextTracker;
+
+  bool IsProfileValidOnTrie = true;
 
 public:
   // Deduplicate adjacent repeated context sequences up to a given sequence
   // length. -1 means no size limit.
   static int32_t MaxCompressionSize;
-};
-
-using ProbeCounterMap = std::unordered_map<const PseudoProbe *, uint64_t>;
-
-class PseudoProbeCSProfileGenerator : public CSProfileGenerator {
-
-public:
-  PseudoProbeCSProfileGenerator(const BinarySampleCounterMap &Counters)
-      : CSProfileGenerator(Counters) {}
-  void generateProfile() override;
-
-private:
-  // Go through each address from range to extract the top frame probe by
-  // looking up in the Address2ProbeMap
-  void extractProbesFromRange(const RangeSample &RangeCounter,
-                              ProbeCounterMap &ProbeCounter,
-                              ProfiledBinary *Binary);
-  // Fill in function body samples from probes
-  void
-  populateBodySamplesWithProbes(const RangeSample &RangeCounter,
-                                SmallVectorImpl<std::string> &ContextStrStack,
-                                ProfiledBinary *Binary);
-  // Fill in boundary samples for a call probe
-  void populateBoundarySamplesWithProbes(
-      const BranchSample &BranchCounter,
-      SmallVectorImpl<std::string> &ContextStrStack, ProfiledBinary *Binary);
-  // Helper function to get FunctionSamples for the leaf inlined context
-  FunctionSamples &
-  getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
-                                 const PseudoProbeFuncDesc *LeafFuncDesc,
-                                 bool WasLeafInlined);
-  // Helper function to get FunctionSamples for the leaf probe
-  FunctionSamples &
-  getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
-                                 const PseudoProbe *LeafProbe,
-                                 ProfiledBinary *Binary);
+  static int MaxContextDepth;
 };
 
 } // end namespace sampleprof

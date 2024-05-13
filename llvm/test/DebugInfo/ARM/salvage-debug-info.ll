@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S %s -o - | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S %s -o - | FileCheck %s
 ; typedef struct info {
 ;   unsigned long long size;
 ; } info_t;
@@ -24,35 +24,34 @@ target triple = "thumbv7k-apple-ios10.0.0"
 ; Function Attrs: nounwind ssp uwtable
 define void @f() local_unnamed_addr #0 !dbg !16 {
 entry:
-  %0 = load i32, i32* @p, align 4, !dbg !25
+  %0 = load i32, ptr @p, align 4, !dbg !25
   %tobool = icmp eq i32 %0, 0, !dbg !25
   br i1 %tobool, label %if.end, label %if.then, !dbg !26
 
 if.then:                                          ; preds = %entry
-  %1 = inttoptr i32 %0 to %struct.info*, !dbg !27
-  tail call void @llvm.dbg.value(metadata %struct.info* %1, metadata !22, metadata !DIExpression()), !dbg !28
+  %1 = inttoptr i32 %0 to ptr, !dbg !27
+  tail call void @llvm.dbg.value(metadata ptr %1, metadata !22, metadata !DIExpression()), !dbg !28
   ; CHECK: call void @llvm.dbg.value(metadata i32 %0, metadata !22, metadata !DIExpression())
   tail call void @llvm.dbg.value(metadata i32 0, metadata !20, metadata !DIExpression()), !dbg !29
-  %2 = load i32, i32* @n, align 4, !dbg !30
+  %2 = load i32, ptr @n, align 4, !dbg !30
   %cmp5 = icmp eq i32 %2, 0, !dbg !33
   br i1 %cmp5, label %if.end, label %for.body.preheader, !dbg !34
 
 for.body.preheader:                               ; preds = %if.then
   ; CHECK: for.body.preheader:
-  ; CHECK:   %2 = inttoptr i32 %0 to %struct.info*
+  ; CHECK:   %2 = inttoptr i32 %0 to ptr
   br label %for.body, !dbg !35
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
-  %lsr.iv = phi %struct.info* [ %1, %for.body.preheader ], [ %scevgep, %for.body ]
+  %lsr.iv = phi ptr [ %1, %for.body.preheader ], [ %scevgep, %for.body ]
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %lsr.iv7 = bitcast %struct.info* %lsr.iv to i64*
   tail call void @llvm.dbg.value(metadata i32 %i.06, metadata !20, metadata !DIExpression()), !dbg !29
-  %3 = load i64, i64* %lsr.iv7, align 8, !dbg !35
-  %call = tail call i32 bitcast (i32 (...)* @use to i32 (i64)*)(i64 %3) #3, !dbg !36
+  %3 = load i64, ptr %lsr.iv, align 8, !dbg !35
+  %call = tail call i32 @use(i64 %3) #3, !dbg !36
   %inc = add nuw i32 %i.06, 1, !dbg !37
   tail call void @llvm.dbg.value(metadata i32 %inc, metadata !20, metadata !DIExpression()), !dbg !29
-  %4 = load i32, i32* @n, align 4, !dbg !30
-  %scevgep = getelementptr %struct.info, %struct.info* %lsr.iv, i32 1, !dbg !33
+  %4 = load i32, ptr @n, align 4, !dbg !30
+  %scevgep = getelementptr %struct.info, ptr %lsr.iv, i32 1, !dbg !33
   %cmp = icmp ult i32 %inc, %4, !dbg !33
   br i1 %cmp, label %for.body, label %if.end.loopexit, !dbg !34, !llvm.loop !38
 

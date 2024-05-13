@@ -14,13 +14,13 @@
 
 // Test that we don't report divide-by-zero errors in unreachable code.
 // This test should be left as is, as it also tests CFG functionality.
-void radar9171946() {
+void radar9171946(void) {
   if (0) {
-    0 / (0 ? 1 : 0); // expected-warning {{expression result unused}}
+    0 / (0 ? 1 : 0); // no-warning
   }
 }
 
-int test_pr8876() {
+int test_pr8876(void) {
   PR8876(0); // no-warning
   PR8876_pos(0); // expected-warning{{indirection of non-volatile null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap() or qualifying pointer with 'volatile'}}
   return 0;
@@ -35,22 +35,20 @@ void pr8183(unsigned long long test)
 }
 
 // PR1966
-_Complex double test1() {
+_Complex double test1(void) {
   return __extension__ 1.0if;
 }
 
-_Complex double test2() {
+_Complex double test2(void) {
   return 1.0if;    // expected-warning {{imaginary constants are a GNU extension}}
 }
 
-// rdar://6097308
-void test3() {
+void test3(void) {
   int x;
   (__extension__ x) = 10;
 }
 
-// rdar://6162726
-void test4() {
+void test4(void) {
       static int var;
       var =+ 5;  // expected-warning {{use of unary operator that may be intended as compound assignment (+=)}}
       var =- 5;  // expected-warning {{use of unary operator that may be intended as compound assignment (-=)}}
@@ -65,14 +63,13 @@ void test4() {
       var=-FIVE;
 }
 
-// rdar://6319320
 void test5(int *X, float *P) {
   (float*)X = P;   // expected-error {{assignment to cast is illegal, lvalue casts are not supported}}
 #define FOO ((float*) X)
   FOO = P;   // expected-error {{assignment to cast is illegal, lvalue casts are not supported}}
 }
 
-void test6() {
+void test6(void) {
   int X;
   X();  // expected-error {{called object type 'int' is not a function or function pointer}}
 }
@@ -81,8 +78,6 @@ void test7(int *P, _Complex float Gamma) {
    P = (P-42) + Gamma*4;  // expected-error {{invalid operands to binary expression ('int *' and '_Complex float')}}
 }
 
-
-// rdar://6095061
 int test8(void) {
   int i;
   __builtin_choose_expr (0, 42, i) = 10;
@@ -126,14 +121,13 @@ int test12b(const char *X) {
   return sizeof(X == "foo"); // no-warning
 }
 
-// rdar://6719156
 void test13(
-            void (^P)()) { // expected-error {{blocks support disabled - compile with -fblocks}}
+            void (^P)(void)) { // expected-error {{blocks support disabled - compile with -fblocks}}
   P();
-  P = ^(){}; // expected-error {{blocks support disabled - compile with -fblocks}}
+  P = ^(void){}; // expected-error {{blocks support disabled - compile with -fblocks}}
 }
 
-void test14() {
+void test14(void) {
   typedef long long __m64 __attribute__((__vector_size__(8)));
   typedef short __v4hi __attribute__((__vector_size__(8)));
 
@@ -150,7 +144,6 @@ test15_t test15(void) {
   return (test15_t)0 + (test15_t)0;  // expected-error {{invalid operands to binary expression ('test15_t' (aka 'unsigned long *') and 'test15_t')}}
 }
 
-// rdar://7446395
 void test16(float x) { x == ((void*) 0); }  // expected-error {{invalid operands to binary expression}}
 
 // PR6004
@@ -186,7 +179,7 @@ void test18(int b) {
 
 typedef int __attribute__((address_space(256))) int_AS256;
 // PR7569
-void test19() {
+void test19(void) {
   *(int *)0 = 0;                                     // expected-warning {{indirection of non-volatile null pointer}} \
                   // expected-note {{consider using __builtin_trap}}
   *(volatile int *)0 = 0;                            // Ok.
@@ -195,7 +188,6 @@ void test19() {
                      // expected-note {{consider using __builtin_trap}}
   *(int_AS256 *)0 = 0;                               // Ok.
 
-  // rdar://9269271
   int x = *(int *)0;                                                                          // expected-warning {{indirection of non-volatile null pointer}} \
                      // expected-note {{consider using __builtin_trap}}
   int x2 = *(volatile int *)0;                                                                // Ok.
@@ -256,7 +248,7 @@ void test21(volatile struct Test21 *ptr) {
 }
 
 // Make sure we do function/array decay.
-void test22() {
+void test22(void) {
   if ("help")
     (void) 0;
 

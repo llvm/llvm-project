@@ -924,7 +924,7 @@ void __kmp_dispatch_init_hierarchy(ident_t *loc, int n,
                                    T lb, T ub,
                                    typename traits_t<T>::signed_t st) {
   int tid, gtid, num_hw_threads, num_threads_per_layer1, active;
-  int my_buffer_index;
+  unsigned int my_buffer_index;
   kmp_info_t *th;
   kmp_team_t *team;
   dispatch_private_info_template<T> *pr;

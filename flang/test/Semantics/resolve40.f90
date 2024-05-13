@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s1
   namelist /nl/x
   block
@@ -40,7 +40,6 @@ end
 
 subroutine s5
   namelist /nl/x
-  !ERROR: The type of 'x' has already been implicitly declared
   integer x
 end
 
@@ -57,8 +56,8 @@ end
 
 subroutine s7
   real x
+  !ERROR: 'x' is not a variable
   namelist /nl/ x
-  !ERROR: EXTERNAL attribute not allowed on 'x'
   external x
 end
 
@@ -88,4 +87,12 @@ subroutine s11
   !ERROR: 'nl3' is already declared in this scoping unit
   integer :: nl3
   nl2 = 1
+end
+
+subroutine s12(x)
+  real, intent(in) :: x
+  namelist /nl/x
+  !ERROR: NAMELIST input group must not contain undefinable item 'x'
+  !BECAUSE: 'x' is an INTENT(IN) dummy argument
+  read(*,nml=nl)
 end

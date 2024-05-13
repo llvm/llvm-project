@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -o /dev/null  -pass-remarks-output=%t -S
+; RUN: opt < %s -passes=gvn -o /dev/null  -pass-remarks-output=%t -S
 ; RUN: cat %t | FileCheck %s
 
 ; CHECK:      --- !Missed
@@ -42,13 +42,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; multiple users, given that one of them lies on a path between every other
 ; potentially clobbering use and the load.
 
-define dso_local void @multipleUsers(i32* %a, i32 %b) local_unnamed_addr #0 {
+define dso_local void @multipleUsers(ptr %a, i32 %b) local_unnamed_addr #0 {
 entry:
-  store i32 %b, i32* %a, align 4
+  store i32 %b, ptr %a, align 4
   tail call void @clobberingFunc() #1, !dbg !10
-  %0 = load i32, i32* %a, align 4, !dbg !11
+  %0 = load i32, ptr %a, align 4, !dbg !11
   tail call void @clobberingFunc() #1, !dbg !12
-  %1 = load i32, i32* %a, align 4, !dbg !13
+  %1 = load i32, ptr %a, align 4, !dbg !13
   %add2 = add nsw i32 %1, %0
   ret void
 }
@@ -89,11 +89,11 @@ entry:
 
 define dso_local void @multipleUsers2(i32 %b) local_unnamed_addr #0 {
 entry:
-  store i32 %b, i32* @g, align 4
+  store i32 %b, ptr @g, align 4
   tail call void @clobberingFunc() #1, !dbg !15
-  %0 = load i32, i32* @g, align 4, !dbg !16
+  %0 = load i32, ptr @g, align 4, !dbg !16
   tail call void @clobberingFunc() #1, !dbg !17
-  %1 = load i32, i32* @g, align 4, !dbg !18
+  %1 = load i32, ptr @g, align 4, !dbg !18
   %add3 = add nsw i32 %1, %0
   ret void
 }
@@ -104,7 +104,7 @@ declare dso_local void @clobberingFunc() local_unnamed_addr #0
 
 define dso_local void @globalUser(i32 %b) local_unnamed_addr #0 {
 entry:
-  store i32 %b, i32* @g, align 4
+  store i32 %b, ptr @g, align 4
   ret void
 }
 

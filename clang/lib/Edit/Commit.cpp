@@ -334,7 +334,7 @@ bool Commit::canReplaceText(SourceLocation loc, StringRef text,
     return false;
 
   Len = text.size();
-  return file.substr(Offs.getOffset()).startswith(text);
+  return file.substr(Offs.getOffset()).starts_with(text);
 }
 
 bool Commit::isAtStartOfMacroExpansion(SourceLocation loc,

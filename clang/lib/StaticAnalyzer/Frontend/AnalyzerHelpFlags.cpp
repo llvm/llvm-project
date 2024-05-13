@@ -30,18 +30,18 @@ void ento::printCheckerHelp(raw_ostream &out, CompilerInstance &CI) {
   out << "USAGE: -analyzer-checker <CHECKER or PACKAGE,...>\n\n";
 
   auto CheckerMgr = std::make_unique<CheckerManager>(
-      *CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
+      CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
       CI.getFrontendOpts().Plugins);
 
   CheckerMgr->getCheckerRegistryData().printCheckerWithDescList(
-      *CI.getAnalyzerOpts(), out);
+      CI.getAnalyzerOpts(), out);
 }
 
 void ento::printEnabledCheckerList(raw_ostream &out, CompilerInstance &CI) {
   out << "OVERVIEW: Clang Static Analyzer Enabled Checkers List\n\n";
 
   auto CheckerMgr = std::make_unique<CheckerManager>(
-      *CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
+      CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
       CI.getFrontendOpts().Plugins);
 
   CheckerMgr->getCheckerRegistryData().printEnabledCheckerList(out);
@@ -50,11 +50,11 @@ void ento::printEnabledCheckerList(raw_ostream &out, CompilerInstance &CI) {
 void ento::printCheckerConfigList(raw_ostream &out, CompilerInstance &CI) {
 
   auto CheckerMgr = std::make_unique<CheckerManager>(
-      *CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
+      CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
       CI.getFrontendOpts().Plugins);
 
   CheckerMgr->getCheckerRegistryData().printCheckerOptionList(
-      *CI.getAnalyzerOpts(), out);
+      CI.getAnalyzerOpts(), out);
 }
 
 void ento::printAnalyzerConfigList(raw_ostream &out) {
@@ -101,10 +101,7 @@ OPTIONS:
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
   };
 
-  llvm::sort(PrintableOptions, [](const OptionAndDescriptionTy &LHS,
-                                  const OptionAndDescriptionTy &RHS) {
-    return LHS.first < RHS.first;
-  });
+  llvm::sort(PrintableOptions, llvm::less_first());
 
   for (const auto &Pair : PrintableOptions) {
     AnalyzerOptions::printFormattedEntry(out, Pair, /*InitialPad*/ 2,

@@ -89,11 +89,25 @@ namespace llvm {
 }
 
 namespace llvm {
+  namespace AArch64RPRFM {
+#define GET_RPRFM_IMPL
+#include "AArch64GenSystemOperands.inc"
+  } // namespace AArch64RPRFM
+} // namespace llvm
+
+namespace llvm {
   namespace AArch64SVEPredPattern {
 #define GET_SVEPREDPAT_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
+
+namespace llvm {
+namespace AArch64SVEVecLenSpecifier {
+#define GET_SVEVECLENSPECIFIER_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64SVEVecLenSpecifier
+} // namespace llvm
 
 namespace llvm {
   namespace AArch64ExactFPImm {
@@ -104,7 +118,9 @@ namespace llvm {
 
 namespace llvm {
   namespace AArch64PState {
-#define GET_PSTATE_IMPL
+#define GET_PSTATEIMM0_15_IMPL
+#include "AArch64GenSystemOperands.inc"
+#define GET_PSTATEIMM0_1_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
@@ -166,6 +182,13 @@ std::string AArch64SysReg::genericRegisterString(uint32_t Bits) {
 namespace llvm {
   namespace AArch64TLBI {
 #define GET_TLBITable_IMPL
+#include "AArch64GenSystemOperands.inc"
+  }
+}
+
+namespace llvm {
+  namespace AArch64SVCR {
+#define GET_SVCR_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }

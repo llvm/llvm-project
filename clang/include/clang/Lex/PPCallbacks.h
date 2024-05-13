@@ -22,11 +22,11 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
-  class Token;
-  class IdentifierInfo;
-  class MacroDefinition;
-  class MacroDirective;
-  class MacroArgs;
+class Token;
+class IdentifierInfo;
+class MacroDefinition;
+class MacroDirective;
+class MacroArgs;
 
 /// This interface provides a way to observe the actions of the
 /// preprocessor as it does its thing.
@@ -43,11 +43,33 @@ public:
   /// Callback invoked whenever a source file is entered or exited.
   ///
   /// \param Loc Indicates the new location.
-  /// \param PrevFID the file that was exited if \p Reason is ExitFile.
+  /// \param PrevFID the file that was exited if \p Reason is ExitFile or the
+  /// the file before the new one entered for \p Reason EnterFile.
   virtual void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                            SrcMgr::CharacteristicKind FileType,
                            FileID PrevFID = FileID()) {
   }
+
+  enum class LexedFileChangeReason { EnterFile, ExitFile };
+
+  /// Callback invoked whenever the \p Lexer moves to a different file for
+  /// lexing. Unlike \p FileChanged line number directives and other related
+  /// pragmas do not trigger callbacks to \p LexedFileChanged.
+  ///
+  /// \param FID The \p FileID that the \p Lexer moved to.
+  ///
+  /// \param Reason Whether the \p Lexer entered a new file or exited one.
+  ///
+  /// \param FileType The \p CharacteristicKind of the file the \p Lexer moved
+  /// to.
+  ///
+  /// \param PrevFID The \p FileID the \p Lexer was using before the change.
+  ///
+  /// \param Loc The location where the \p Lexer entered a new file from or the
+  /// location that the \p Lexer moved into after exiting a file.
+  virtual void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
+                                SrcMgr::CharacteristicKind FileType,
+                                FileID PrevFID, SourceLocation Loc) {}
 
   /// Callback invoked whenever a source file is skipped as the result
   /// of header guard optimization.
@@ -61,22 +83,15 @@ public:
                            const Token &FilenameTok,
                            SrcMgr::CharacteristicKind FileType) {}
 
-  /// Callback invoked whenever an inclusion directive results in a
-  /// file-not-found error.
+  /// Callback invoked whenever the preprocessor cannot find a file for an
+  /// inclusion directive.
   ///
   /// \param FileName The name of the file being included, as written in the
   /// source code.
   ///
-  /// \param RecoveryPath If this client indicates that it can recover from
-  /// this missing file, the client should set this as an additional header
-  /// search patch.
-  ///
-  /// \returns true to indicate that the preprocessor should attempt to recover
-  /// by adding \p RecoveryPath as a header search path.
-  virtual bool FileNotFound(StringRef FileName,
-                            SmallVectorImpl<char> &RecoveryPath) {
-    return false;
-  }
+  /// \returns true to indicate that the preprocessor should skip this file
+  /// and not issue any diagnostic.
+  virtual bool FileNotFound(StringRef FileName) { return false; }
 
   /// Callback invoked whenever an inclusion directive of
   /// any kind (\c \#include, \c \#import, etc.) has been processed, regardless
@@ -112,24 +127,23 @@ public:
   /// \param RelativePath The path relative to SearchPath, at which the include
   /// file was found. This is equal to FileName except for framework includes.
   ///
-  /// \param Imported The module, whenever an inclusion directive was
-  /// automatically turned into a module import or null otherwise.
+  /// \param SuggestedModule The module suggested for this header, if any.
+  ///
+  /// \param ModuleImported Whether this include was translated into import of
+  /// \p SuggestedModule.
   ///
   /// \param FileType The characteristic kind, indicates whether a file or
   /// directory holds normal user code, system code, or system code which is
   /// implicitly 'extern "C"' in C++ mode.
   ///
   virtual void InclusionDirective(SourceLocation HashLoc,
-                                  const Token &IncludeTok,
-                                  StringRef FileName,
-                                  bool IsAngled,
-                                  CharSourceRange FilenameRange,
-                                  const FileEntry *File,
-                                  StringRef SearchPath,
-                                  StringRef RelativePath,
-                                  const Module *Imported,
-                                  SrcMgr::CharacteristicKind FileType) {
-  }
+                                  const Token &IncludeTok, StringRef FileName,
+                                  bool IsAngled, CharSourceRange FilenameRange,
+                                  OptionalFileEntryRef File,
+                                  StringRef SearchPath, StringRef RelativePath,
+                                  const Module *SuggestedModule,
+                                  bool ModuleImported,
+                                  SrcMgr::CharacteristicKind FileType) {}
 
   /// Callback invoked whenever a submodule was entered.
   ///
@@ -191,6 +205,10 @@ public:
                              StringRef Str) {
   }
 
+  /// Callback invoked when a \#pragma mark comment is read.
+  virtual void PragmaMark(SourceLocation Loc, StringRef Trivia) {
+  }
+
   /// Callback invoked when a \#pragma detect_mismatch directive is
   /// read.
   virtual void PragmaDetectMismatch(SourceLocation Loc, StringRef Name,
@@ -248,9 +266,20 @@ public:
   }
 
   /// Callback invoked when a \#pragma warning directive is read.
-  virtual void PragmaWarning(SourceLocation Loc, StringRef WarningSpec,
-                             ArrayRef<int> Ids) {
-  }
+  enum PragmaWarningSpecifier {
+    PWS_Default,
+    PWS_Disable,
+    PWS_Error,
+    PWS_Once,
+    PWS_Suppress,
+    PWS_Level1,
+    PWS_Level2,
+    PWS_Level3,
+    PWS_Level4,
+  };
+  virtual void PragmaWarning(SourceLocation Loc,
+                             PragmaWarningSpecifier WarningSpec,
+                             ArrayRef<int> Ids) {}
 
   /// Callback invoked when a \#pragma warning(push) directive is read.
   virtual void PragmaWarningPush(SourceLocation Loc, int Level) {
@@ -307,7 +336,7 @@ public:
   /// Hook called when a '__has_include' or '__has_include_next' directive is
   /// read.
   virtual void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                          Optional<FileEntryRef> File,
+                          OptionalFileEntryRef File,
                           SrcMgr::CharacteristicKind FileType);
 
   /// Hook called when a source range is skipped.
@@ -422,30 +451,40 @@ public:
     Second->FileChanged(Loc, Reason, FileType, PrevFID);
   }
 
+  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
+                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
+                        SourceLocation Loc) override {
+    First->LexedFileChanged(FID, Reason, FileType, PrevFID, Loc);
+    Second->LexedFileChanged(FID, Reason, FileType, PrevFID, Loc);
+  }
+
   void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override {
     First->FileSkipped(SkippedFile, FilenameTok, FileType);
     Second->FileSkipped(SkippedFile, FilenameTok, FileType);
   }
 
-  bool FileNotFound(StringRef FileName,
-                    SmallVectorImpl<char> &RecoveryPath) override {
-    return First->FileNotFound(FileName, RecoveryPath) ||
-           Second->FileNotFound(FileName, RecoveryPath);
+  bool FileNotFound(StringRef FileName) override {
+    bool Skip = First->FileNotFound(FileName);
+    // Make sure to invoke the second callback, no matter if the first already
+    // returned true to skip the file.
+    Skip |= Second->FileNotFound(FileName);
+    return Skip;
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     First->InclusionDirective(HashLoc, IncludeTok, FileName, IsAngled,
                               FilenameRange, File, SearchPath, RelativePath,
-                              Imported, FileType);
+                              SuggestedModule, ModuleImported, FileType);
     Second->InclusionDirective(HashLoc, IncludeTok, FileName, IsAngled,
                                FilenameRange, File, SearchPath, RelativePath,
-                               Imported, FileType);
+                               SuggestedModule, ModuleImported, FileType);
   }
 
   void EnteredSubmodule(Module *M, SourceLocation ImportLoc,
@@ -488,6 +527,11 @@ public:
     Second->PragmaComment(Loc, Kind, Str);
   }
 
+  void PragmaMark(SourceLocation Loc, StringRef Trivia) override {
+    First->PragmaMark(Loc, Trivia);
+    Second->PragmaMark(Loc, Trivia);
+  }
+
   void PragmaDetectMismatch(SourceLocation Loc, StringRef Name,
                             StringRef Value) override {
     First->PragmaDetectMismatch(Loc, Name, Value);
@@ -522,7 +566,7 @@ public:
   }
 
   void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                  Optional<FileEntryRef> File,
+                  OptionalFileEntryRef File,
                   SrcMgr::CharacteristicKind FileType) override;
 
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *Name,
@@ -531,7 +575,7 @@ public:
     Second->PragmaOpenCLExtension(NameLoc, Name, StateLoc, State);
   }
 
-  void PragmaWarning(SourceLocation Loc, StringRef WarningSpec,
+  void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier WarningSpec,
                      ArrayRef<int> Ids) override {
     First->PragmaWarning(Loc, WarningSpec, Ids);
     Second->PragmaWarning(Loc, WarningSpec, Ids);

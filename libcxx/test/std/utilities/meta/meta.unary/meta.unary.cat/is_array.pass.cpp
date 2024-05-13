@@ -73,6 +73,7 @@ typedef void (*FunctionPtr)();
 int main(int, char**)
 {
     test_is_array<char[3]>();
+    test_is_not_array<char[0]>();
     test_is_array<char[]>();
     test_is_array<Union[]>();
 

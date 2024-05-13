@@ -43,31 +43,31 @@
 void implicit_maps_float (int a){
   float f = (float)a;
 
-  // CK8-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** null)
-  // CK8-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK8-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK8-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK8-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK8-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[sz:64|32]]*
-  // CK8-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[sz]]*
-  // CK8-DAG: store i[[sz]] [[VAL:%[^,]+]], i[[sz]]* [[CBP1]]
-  // CK8-DAG: store i[[sz]] [[VAL]], i[[sz]]* [[CP1]]
-  // CK8-DAG: [[VAL]] = load i[[sz]], i[[sz]]* [[ADDR:%.+]],
-  // CK8-DAG: [[CADDR:%.+]] = bitcast i[[sz]]* [[ADDR]] to float*
-  // CK8-DAG: store float {{.+}}, float* [[CADDR]],
+// CK8-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
+// CK8-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK8-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
+// CK8-DAG: [[PGEP:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK8-DAG: store ptr [[PGEP:%.+]], ptr [[BPARG]]
+// CK8-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK8-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK8-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK8-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK8-DAG: store i[[sz:64|32]] [[VAL:%[^,]+]], ptr [[BP1]]
+// CK8-DAG: store i[[sz]] [[VAL]], ptr [[P1]]
+// CK8-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
+// CK8-DAG: store float {{.+}}, ptr [[ADDR]],
 
-  // CK8: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
-  #pragma omp target
+// CK8: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
+#pragma omp target
   {
     f += 1.0;
   }
 }
 
-// CK8: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
+// CK8: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
 // CK8: [[ADDR:%.+]] = alloca i[[sz]],
-// CK8: store i[[sz]] [[ARG]], i[[sz]]* [[ADDR]],
-// CK8: [[CADDR:%.+]] = bitcast i[[sz]]* [[ADDR]] to float*
-// CK8: {{.+}} = load float, float* [[CADDR]],
+// CK8: store i[[sz]] [[ARG]], ptr [[ADDR]],
+// CK8: {{.+}} = load float, ptr [[ADDR]],
 
 #endif // CK8
 #endif

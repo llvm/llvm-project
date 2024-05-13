@@ -26,7 +26,7 @@ namespace __asan {
 // Conservative upper limit.
 uptr PremapShadowSize() {
   uptr granularity = GetMmapGranularity();
-  return RoundUpTo(GetMaxVirtualAddress() >> SHADOW_SCALE, granularity);
+  return RoundUpTo(GetMaxVirtualAddress() >> ASAN_SHADOW_SCALE, granularity);
 }
 
 // Returns an address aligned to 8 pages, such that one page on the left and

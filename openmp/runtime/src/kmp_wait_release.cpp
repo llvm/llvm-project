@@ -33,6 +33,10 @@ template <bool C, bool S>
 void __kmp_mwait_64(int th_gtid, kmp_flag_64<C, S> *flag) {
   __kmp_mwait_template(th_gtid, flag);
 }
+template <bool C, bool S>
+void __kmp_atomic_mwait_64(int th_gtid, kmp_atomic_flag_64<C, S> *flag) {
+  __kmp_mwait_template(th_gtid, flag);
+}
 void __kmp_mwait_oncore(int th_gtid, kmp_flag_oncore *flag) {
   __kmp_mwait_template(th_gtid, flag);
 }
@@ -40,4 +44,8 @@ void __kmp_mwait_oncore(int th_gtid, kmp_flag_oncore *flag) {
 template void __kmp_mwait_32<false, false>(int, kmp_flag_32<false, false> *);
 template void __kmp_mwait_64<false, true>(int, kmp_flag_64<false, true> *);
 template void __kmp_mwait_64<true, false>(int, kmp_flag_64<true, false> *);
+template void
+__kmp_atomic_mwait_64<false, true>(int, kmp_atomic_flag_64<false, true> *);
+template void
+__kmp_atomic_mwait_64<true, false>(int, kmp_atomic_flag_64<true, false> *);
 #endif

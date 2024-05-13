@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}sample_o_1d:
 ; GCN: image_sample_o v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf{{$}}
@@ -58,7 +58,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_cl_o_2d:
-; GCN: image_sample_c_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_cl_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cl.o.2d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -90,7 +90,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_b_o_2d:
-; GCN: image_sample_c_b_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_b_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_b_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %bias, float %zcompare, float %s, float %t) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32.f32(i32 15, i32 %offset, float %bias, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -106,7 +106,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_b_cl_o_2d:
-; GCN: image_sample_b_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_b_cl_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_b_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %bias, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.o.2d.v4f32.f32.f32(i32 15, i32 %offset, float %bias, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -114,7 +114,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_b_cl_o_1d:
-; GCN: image_sample_c_b_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_b_cl_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_b_cl_o_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %bias, float %zcompare, float %s, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %bias, float %zcompare, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -122,7 +122,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_b_cl_o_2d:
-; GCN: image_sample_c_b_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_b_cl_o v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_b_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %bias, float %zcompare, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.2d.v4f32.f32.f32(i32 15, i32 %offset, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -138,7 +138,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_d_o_2d:
-; GCN: image_sample_d_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_d_o v[0:3], v[0:6], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_d_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.o.2d.v4f32.f32.f32(i32 15, i32 %offset, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -146,7 +146,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_d_o_1d:
-; GCN: image_sample_c_d_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_d_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_d_o_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -162,7 +162,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_d_cl_o_1d:
-; GCN: image_sample_d_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_d_cl_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_d_cl_o_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %dsdh, float %dsdv, float %s, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -178,7 +178,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_d_cl_o_1d:
-; GCN: image_sample_c_d_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_d_cl_o v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_d_cl_o_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -186,7 +186,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_d_cl_o_2d:
-; GCN: image_sample_c_d_cl_o v[0:3], v[0:15], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_d_cl_o v[0:3], v[0:8], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_d_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.2d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -202,7 +202,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_cd_o_2d:
-; GCN: image_sample_cd_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_cd_o v[0:3], v[0:6], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_cd_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.cd.o.2d.v4f32.f32.f32(i32 15, i32 %offset, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -210,7 +210,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_cd_o_1d:
-; GCN: image_sample_c_cd_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_cd_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_cd_o_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -226,7 +226,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_cd_cl_o_1d:
-; GCN: image_sample_cd_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_cd_cl_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_cd_cl_o_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %dsdh, float %dsdv, float %s, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -242,7 +242,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_cd_cl_o_1d:
-; GCN: image_sample_c_cd_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_cd_cl_o v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_cd_cl_o_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -250,7 +250,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_cd_cl_o_2d:
-; GCN: image_sample_c_cd_cl_o v[0:3], v[0:15], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_cd_cl_o v[0:3], v[0:8], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_cd_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.2d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -282,7 +282,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_l_o_2d:
-; GCN: image_sample_c_l_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_l_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %s, float %t, float %lod) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

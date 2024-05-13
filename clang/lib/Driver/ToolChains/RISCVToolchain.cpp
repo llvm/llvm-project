@@ -1,4 +1,4 @@
-//===--- RISCVToolchain.cpp - RISCV ToolChain Implementations ---*- C++ -*-===//
+//===--- RISCVToolchain.cpp - RISC-V ToolChain Implementations --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 #include "RISCVToolchain.h"
 #include "CommonArgs.h"
-#include "InputInfo.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -46,17 +46,17 @@ bool RISCVToolChain::hasGCCToolchain(const Driver &D,
   return llvm::sys::fs::exists(GCCDir);
 }
 
-/// RISCV Toolchain
+/// RISC-V Toolchain
 RISCVToolChain::RISCVToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
   GCCInstallation.init(Triple, Args);
   if (GCCInstallation.isValid()) {
     Multilibs = GCCInstallation.getMultilibs();
-    SelectedMultilib = GCCInstallation.getMultilib();
+    SelectedMultilibs.assign({GCCInstallation.getMultilib()});
     path_list &Paths = getFilePaths();
     // Add toolchain/multilib specific file paths.
-    addMultilibsFilePaths(D, Multilibs, SelectedMultilib,
+    addMultilibsFilePaths(D, Multilibs, SelectedMultilibs.back(),
                           GCCInstallation.getInstallPath(), Paths);
     getFilePaths().push_back(GCCInstallation.getInstallPath().str());
     ToolChain::path_list &PPaths = getProgramPaths();
@@ -86,6 +86,11 @@ RISCVToolChain::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
   return ToolChain::UNW_None;
 }
 
+ToolChain::UnwindTableLevel RISCVToolChain::getDefaultUnwindTableLevel(
+    const llvm::opt::ArgList &Args) const {
+  return UnwindTableLevel::None;
+}
+
 void RISCVToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args,
@@ -97,6 +102,12 @@ void RISCVToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
+
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> Dir(getDriver().ResourceDir);
+    llvm::sys::path::append(Dir, "include");
+    addSystemInclude(DriverArgs, CC1Args, Dir.str());
+  }
 
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
     SmallString<128> Dir(computeSysRoot());
@@ -135,7 +146,7 @@ std::string RISCVToolChain::computeSysRoot() const {
   if (!llvm::sys::fs::exists(SysRootDir))
     return std::string();
 
-  return std::string(SysRootDir.str());
+  return std::string(SysRootDir);
 }
 
 void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -150,6 +161,9 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
+  if (Args.hasArg(options::OPT_mno_relax))
+    CmdArgs.push_back("--no-relax");
+
   bool IsRV64 = ToolChain.getArch() == llvm::Triple::riscv64;
   CmdArgs.push_back("-m");
   if (IsRV64) {
@@ -157,6 +171,7 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   } else {
     CmdArgs.push_back("elf32lriscv");
   }
+  CmdArgs.push_back("-X");
 
   std::string Linker = getToolChain().GetLinkerPath();
 
@@ -183,18 +198,21 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
+
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
-  Args.AddAllArgs(CmdArgs,
-                  {options::OPT_T_Group, options::OPT_e, options::OPT_s,
-                   options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
+                            options::OPT_t, options::OPT_r});
 
   // TODO: add C++ includes and libs if compiling C++.
 
   if (!Args.hasArg(options::OPT_nostdlib) &&
       !Args.hasArg(options::OPT_nodefaultlibs)) {
-    if (ToolChain.ShouldLinkCXXStdlib(Args))
-      ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (D.CCCIsCXX()) {
+      if (ToolChain.ShouldLinkCXXStdlib(Args))
+        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
     CmdArgs.push_back("--start-group");
     CmdArgs.push_back("-lc");
     CmdArgs.push_back("-lgloss");

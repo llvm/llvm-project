@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -analyze < %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -disable-output < %s
 
 ; CHECK:      Statements {
 ; CHECK-NEXT: 	Stmt_L_4
@@ -19,33 +19,27 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-%jl_value_t = type { %jl_value_t* }
+%jl_value_t = type { ptr }
 
-define %jl_value_t* @julia_gemm_22583(%jl_value_t*, %jl_value_t** %tmp1, i32) {
+define ptr @julia_gemm_22583(ptr, ptr %tmp1, i32) {
 top:
   br label %top.split
 
 top.split:                                        ; preds = %top
-  %tmp3 = load %jl_value_t*, %jl_value_t** %tmp1, align 8
-  %tmp4 = bitcast %jl_value_t* %tmp3 to double**
-  %tmp5 = load double*, double** %tmp4, align 8
-  %tmp6 = getelementptr inbounds %jl_value_t, %jl_value_t* %tmp3, i64 3, i32 0
-  %tmp7 = bitcast %jl_value_t** %tmp6 to i64*
-  %tmp8 = load i64, i64* %tmp7, align 8
-  %tmp9 = getelementptr %jl_value_t*, %jl_value_t** %tmp1, i64 1
-  %tmp10 = load %jl_value_t*, %jl_value_t** %tmp9, align 8
-  %tmp11 = bitcast %jl_value_t* %tmp10 to double**
-  %tmp12 = load double*, double** %tmp11, align 8
-  %tmp13 = getelementptr inbounds %jl_value_t, %jl_value_t* %tmp10, i64 3, i32 0
-  %tmp14 = bitcast %jl_value_t** %tmp13 to i64*
-  %tmp15 = load i64, i64* %tmp14, align 8
-  %tmp16 = getelementptr %jl_value_t*, %jl_value_t** %tmp1, i64 2
-  %tmp17 = load %jl_value_t*, %jl_value_t** %tmp16, align 8
-  %tmp18 = bitcast %jl_value_t* %tmp17 to double**
-  %tmp19 = load double*, double** %tmp18, align 8
-  %tmp20 = getelementptr inbounds %jl_value_t, %jl_value_t* %tmp17, i64 3, i32 0
-  %tmp21 = bitcast %jl_value_t** %tmp20 to i64*
-  %tmp22 = load i64, i64* %tmp21, align 8
+  %tmp3 = load ptr, ptr %tmp1, align 8
+  %tmp5 = load ptr, ptr %tmp3, align 8
+  %tmp6 = getelementptr inbounds %jl_value_t, ptr %tmp3, i64 3, i32 0
+  %tmp8 = load i64, ptr %tmp6, align 8
+  %tmp9 = getelementptr ptr, ptr %tmp1, i64 1
+  %tmp10 = load ptr, ptr %tmp9, align 8
+  %tmp12 = load ptr, ptr %tmp10, align 8
+  %tmp13 = getelementptr inbounds %jl_value_t, ptr %tmp10, i64 3, i32 0
+  %tmp15 = load i64, ptr %tmp13, align 8
+  %tmp16 = getelementptr ptr, ptr %tmp1, i64 2
+  %tmp17 = load ptr, ptr %tmp16, align 8
+  %tmp19 = load ptr, ptr %tmp17, align 8
+  %tmp20 = getelementptr inbounds %jl_value_t, ptr %tmp17, i64 3, i32 0
+  %tmp22 = load i64, ptr %tmp20, align 8
   %tmp23 = icmp sgt i64 %tmp8, 0
   %tmp24 = select i1 %tmp23, i64 %tmp8, i64 0
   %tmp25 = add i64 %tmp24, 1
@@ -78,20 +72,20 @@ L.4:                                              ; preds = %L.4.preheader, %L.4
   %tmp31 = add i64 %"#s4.0", -1
   %tmp32 = mul i64 %tmp31, %tmp22
   %tmp33 = add i64 %tmp32, %tmp30
-  %tmp34 = getelementptr double, double* %tmp19, i64 %tmp33
-  %tmp35 = load double, double* %tmp34, align 8
+  %tmp34 = getelementptr double, ptr %tmp19, i64 %tmp33
+  %tmp35 = load double, ptr %tmp34, align 8
   %tmp36 = add i64 %"#s3.0", -1
   %tmp37 = mul i64 %tmp36, %tmp8
   %tmp38 = add i64 %tmp37, %tmp30
-  %tmp39 = getelementptr double, double* %tmp5, i64 %tmp38
-  %tmp40 = load double, double* %tmp39, align 8
+  %tmp39 = getelementptr double, ptr %tmp5, i64 %tmp38
+  %tmp40 = load double, ptr %tmp39, align 8
   %tmp41 = mul i64 %tmp36, %tmp15
   %tmp42 = add i64 %tmp41, %tmp31
-  %tmp43 = getelementptr double, double* %tmp12, i64 %tmp42
-  %tmp44 = load double, double* %tmp43, align 8
+  %tmp43 = getelementptr double, ptr %tmp12, i64 %tmp42
+  %tmp44 = load double, ptr %tmp43, align 8
   %tmp45 = fmul double %tmp40, %tmp44
   %tmp46 = fadd double %tmp35, %tmp45
-  store double %tmp46, double* %tmp34, align 8
+  store double %tmp46, ptr %tmp34, align 8
   %tmp47 = icmp eq i64 %tmp29, %tmp25
   br i1 %tmp47, label %L.7.loopexit, label %L.4
 
@@ -113,5 +107,5 @@ L.11.loopexit:                                    ; preds = %L.9
   br label %L.11
 
 L.11:                                             ; preds = %L.11.loopexit, %top.split
-  ret %jl_value_t* inttoptr (i64 140220477440016 to %jl_value_t*)
+  ret ptr inttoptr (i64 140220477440016 to ptr)
 }

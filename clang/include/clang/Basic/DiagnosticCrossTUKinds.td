@@ -12,8 +12,8 @@ def err_ctu_error_opening : Error<
   "error opening '%0': required by the CrossTU functionality">;
 
 def err_extdefmap_parsing : Error<
-  "error parsing index file: '%0' line: %1 'UniqueID filename' format "
-  "expected">;
+  "error parsing index file: '%0' line: %1 '<USR-Length>:<USR> <File-Path>' "
+  "format expected">;
 
 def err_multiple_def_index : Error<
   "multiple definitions are found for the same key in index ">;

@@ -116,6 +116,52 @@ define <8 x i16> @test_x86_sse41_mpsadbw(<16 x i8> %a0, <16 x i8> %a1) {
 }
 declare <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
+; We shouldn't commute this operation to fold the load.
+define <8 x i16> @test_x86_sse41_mpsadbw_load_op0(ptr %ptr, <16 x i8> %a1) {
+; X86-SSE-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X86-SSE:       ## %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-SSE-NEXT:    movdqa (%eax), %xmm1 ## encoding: [0x66,0x0f,0x6f,0x08]
+; X86-SSE-NEXT:    mpsadbw $7, %xmm0, %xmm1 ## encoding: [0x66,0x0f,0x3a,0x42,0xc8,0x07]
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x6f,0xc1]
+; X86-SSE-NEXT:    retl ## encoding: [0xc3]
+;
+; X86-AVX1-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X86-AVX1:       ## %bb.0:
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX1-NEXT:    vmovdqa (%eax), %xmm1 ## encoding: [0xc5,0xf9,0x6f,0x08]
+; X86-AVX1-NEXT:    vmpsadbw $7, %xmm0, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x71,0x42,0xc0,0x07]
+; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
+;
+; X86-AVX512-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX512-NEXT:    vmovdqa (%eax), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x08]
+; X86-AVX512-NEXT:    vmpsadbw $7, %xmm0, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x71,0x42,0xc0,0x07]
+; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-SSE-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X64-SSE:       ## %bb.0:
+; X64-SSE-NEXT:    movdqa (%rdi), %xmm1 ## encoding: [0x66,0x0f,0x6f,0x0f]
+; X64-SSE-NEXT:    mpsadbw $7, %xmm0, %xmm1 ## encoding: [0x66,0x0f,0x3a,0x42,0xc8,0x07]
+; X64-SSE-NEXT:    movdqa %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x6f,0xc1]
+; X64-SSE-NEXT:    retq ## encoding: [0xc3]
+;
+; X64-AVX1-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X64-AVX1:       ## %bb.0:
+; X64-AVX1-NEXT:    vmovdqa (%rdi), %xmm1 ## encoding: [0xc5,0xf9,0x6f,0x0f]
+; X64-AVX1-NEXT:    vmpsadbw $7, %xmm0, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x71,0x42,0xc0,0x07]
+; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
+;
+; X64-AVX512-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X64-AVX512:       ## %bb.0:
+; X64-AVX512-NEXT:    vmovdqa (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x0f]
+; X64-AVX512-NEXT:    vmpsadbw $7, %xmm0, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x71,0x42,0xc0,0x07]
+; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
+  %a0 = load <16 x i8>, ptr %ptr
+  %res = call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> %a0, <16 x i8> %a1, i8 7) ; <<8 x i16>> [#uses=1]
+  ret <8 x i16> %res
+}
 
 define <8 x i16> @test_x86_sse41_packusdw(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: test_x86_sse41_packusdw:
@@ -143,42 +189,42 @@ define <8 x i16> @test_x86_sse41_packusdw_fold() {
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
 ; X86-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
-; X86-SSE-NEXT:    ## fixup A - offset: 3, value: LCPI7_0, kind: FK_Data_4
+; X86-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: test_x86_sse41_packusdw_fold:
 ; X86-AVX1:       ## %bb.0:
 ; X86-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
 ; X86-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; X86-AVX1-NEXT:    ## fixup A - offset: 4, value: LCPI7_0, kind: FK_Data_4
+; X86-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X86-AVX512-LABEL: test_x86_sse41_packusdw_fold:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    vmovaps LCPI7_0, %xmm0 ## EVEX TO VEX Compression xmm0 = [0,0,0,0,65535,65535,0,0]
-; X86-AVX512-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; X86-AVX512-NEXT:    ## fixup A - offset: 4, value: LCPI7_0, kind: FK_Data_4
+; X86-AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
+; X86-AVX512-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; X86-AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: test_x86_sse41_packusdw_fold:
 ; X64-SSE:       ## %bb.0:
 ; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
 ; X64-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
-; X64-SSE-NEXT:    ## fixup A - offset: 3, value: LCPI7_0-4, kind: reloc_riprel_4byte
+; X64-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_x86_sse41_packusdw_fold:
 ; X64-AVX1:       ## %bb.0:
 ; X64-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
 ; X64-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: LCPI7_0-4, kind: reloc_riprel_4byte
+; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_x86_sse41_packusdw_fold:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vmovaps {{.*}}(%rip), %xmm0 ## EVEX TO VEX Compression xmm0 = [0,0,0,0,65535,65535,0,0]
-; X64-AVX512-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; X64-AVX512-NEXT:    ## fixup A - offset: 4, value: LCPI7_0-4, kind: reloc_riprel_4byte
+; X64-AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
+; X64-AVX512-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; X64-AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %res = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> zeroinitializer, <4 x i32> <i32 65535, i32 65536, i32 -1, i32 -131072>)
   ret <8 x i16> %res
@@ -343,7 +389,7 @@ define <2 x double> @test_x86_sse41_round_sd(<2 x double> %a0, <2 x double> %a1)
 declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
 
 
-define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, <2 x double>* %a1) {
+define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, ptr %a1) {
 ; X86-SSE-LABEL: test_x86_sse41_round_sd_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -376,7 +422,7 @@ define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, <2 x double>
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vroundsd $7, (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x0b,0x07,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a1b = load <2 x double>, <2 x double>* %a1
+  %a1b = load <2 x double>, ptr %a1
   %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1b, i32 7) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }

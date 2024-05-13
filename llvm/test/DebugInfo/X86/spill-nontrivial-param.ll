@@ -1,4 +1,7 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s -experimental-debug-variable-locations=false | FileCheck %s
+; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s -experimental-debug-variable-locations=false | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s -experimental-debug-variable-locations=true | FileCheck %s
 
 ; Make sure we insert DW_OP_deref when spilling indirect DBG_VALUE instructions.
 ; In this example, 'nt' is passed by address because it is not trivially
@@ -36,12 +39,11 @@ target triple = "x86_64--linux"
 %struct.NonTrivial = type { i32 }
 
 ; Function Attrs: nounwind uwtable
-define i32 @_Z3foo10NonTrivial(%struct.NonTrivial* nocapture readonly %nt) local_unnamed_addr #0 !dbg !7 {
+define i32 @_Z3foo10NonTrivial(ptr nocapture readonly %nt) local_unnamed_addr #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.declare(metadata %struct.NonTrivial* %nt, metadata !20, metadata !DIExpression()), !dbg !21
+  tail call void @llvm.dbg.declare(metadata ptr %nt, metadata !20, metadata !DIExpression()), !dbg !21
   tail call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"() #2, !dbg !22, !srcloc !23
-  %i = getelementptr inbounds %struct.NonTrivial, %struct.NonTrivial* %nt, i64 0, i32 0, !dbg !24
-  %0 = load i32, i32* %i, align 4, !dbg !24, !tbaa !25
+  %0 = load i32, ptr %nt, align 4, !dbg !24, !tbaa !25
   ret i32 %0, !dbg !30
 }
 

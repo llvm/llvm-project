@@ -88,7 +88,7 @@ body:             |
     $x0 = MFLR8 implicit $lr8
     STD killed $x0, 16, $x1
     $x1 = STDU $x1, -48, $x1
-    STD killed $x30, 32, $x1 :: (store 8 into %fixed-stack.0, align 16)
+    STD killed $x30, 32, $x1 :: (store (s64) into %fixed-stack.0, align 16)
     $x30 = OR8 $x3, $x3
     BL8_NOP @callee, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def $x3
     renamable $cr0 = CMPLWI renamable $r3, 0
@@ -115,7 +115,7 @@ body:             |
     liveins: $x30
   
     renamable $x3 = EXTSW_32_64 killed renamable $r30, implicit $x30
-    $x30 = LD 32, $x1 :: (load 8 from %fixed-stack.0, align 16)
+    $x30 = LD 32, $x1 :: (load (s64) from %fixed-stack.0, align 16)
     $x1 = ADDI8 $x1, 48
     $x0 = LD 16, $x1
     MTLR8 killed $x0, implicit-def $lr8

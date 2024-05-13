@@ -68,10 +68,10 @@ enum Fixups {
   /// with the upper 8 bits of a negated 16-bit value (bits 8-15).
   fixup_hi8_ldi_neg,
   /// Replaces the immediate operand of a 16-bit `Rd, K` instruction
-  /// with the upper 8 bits of a negated negated 24-bit value (bits 16-23).
+  /// with the upper 8 bits of a negated 24-bit value (bits 16-23).
   fixup_hh8_ldi_neg,
   /// Replaces the immediate operand of a 16-bit `Rd, K` instruction
-  /// with the upper 8 bits of a negated negated 32-bit value (bits 24-31).
+  /// with the upper 8 bits of a negated 32-bit value (bits 24-31).
   fixup_ms8_ldi_neg,
 
   /// Replaces the immediate operand of a 16-bit `Rd, K` instruction
@@ -141,7 +141,7 @@ namespace fixups {
 template <typename T> inline void adjustBranchTarget(T &val) { val >>= 1; }
 
 } // end of namespace fixups
-}
-} // end of namespace llvm::AVR
+} // namespace AVR
+} // namespace llvm
 
 #endif // LLVM_AVR_FIXUP_KINDS_H

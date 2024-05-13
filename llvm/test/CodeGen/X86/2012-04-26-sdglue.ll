@@ -4,7 +4,7 @@
 ; rdar://11314175: SD Scheduler, BuildSchedUnits assert:
 ;                  N->getNodeId() == -1 && "Node already inserted!
 
-define void @func(<4 x float> %a, <16 x i8> %b, <16 x i8> %c, <8 x float> %d, <8 x float> %e, <8 x float>* %f) nounwind ssp {
+define void @func(<4 x float> %a, <16 x i8> %b, <16 x i8> %c, <8 x float> %d, <8 x float> %e, ptr %f) nounwind ssp {
 ; CHECK-LABEL: func:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovdqu 0, %xmm0
@@ -14,8 +14,8 @@ define void @func(<4 x float> %a, <16 x i8> %b, <16 x i8> %c, <8 x float> %d, <8
 ; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vaddps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmulps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vaddps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vhaddps %ymm4, %ymm0, %ymm0
 ; CHECK-NEXT:    vsubps %ymm0, %ymm0, %ymm0
@@ -23,9 +23,9 @@ define void @func(<4 x float> %a, <16 x i8> %b, <16 x i8> %c, <8 x float> %d, <8
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %tmp = load <4 x float>, <4 x float>* null, align 1
-  %tmp14 = getelementptr <4 x float>, <4 x float>* null, i32 2
-  %tmp15 = load <4 x float>, <4 x float>* %tmp14, align 1
+  %tmp = load <4 x float>, ptr null, align 1
+  %tmp14 = getelementptr <4 x float>, ptr null, i32 2
+  %tmp15 = load <4 x float>, ptr %tmp14, align 1
   %tmp16 = shufflevector <4 x float> %tmp, <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
   %tmp17 = call <8 x float> @llvm.x86.avx.vinsertf128.ps.256(<8 x float> %tmp16, <4 x float> %a, i8 1)
   %tmp18 = bitcast <4 x float> %tmp to <16 x i8>
@@ -47,7 +47,7 @@ define void @func(<4 x float> %a, <16 x i8> %b, <16 x i8> %c, <8 x float> %d, <8
   %tmp34 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %tmp33, <8 x float> %e) nounwind
   %tmp35 = fsub <8 x float> %tmp34, %tmp34
   %tmp36 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> zeroinitializer, <8 x float> %tmp35) nounwind
-  store <8 x float> %tmp36, <8 x float>* %f, align 32
+  store <8 x float> %tmp36, ptr %f, align 32
   ret void
 }
 

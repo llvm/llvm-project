@@ -106,11 +106,13 @@ int __kmp_str_eqf(char const *lhs, char const *rhs);
 char *__kmp_str_format(char const *format, ...);
 void __kmp_str_free(char **str);
 int __kmp_str_match(char const *target, int len, char const *data);
+bool __kmp_str_contains(char const *target, int len, char const *data);
 int __kmp_str_match_false(char const *data);
 int __kmp_str_match_true(char const *data);
 void __kmp_str_replace(char *str, char search_for, char replace_with);
 void __kmp_str_split(char *str, char delim, char **head, char **tail);
 char *__kmp_str_token(char *str, char const *delim, char **buf);
+int __kmp_basic_str_to_int(char const *str);
 int __kmp_str_to_int(char const *str, char sentinel);
 
 void __kmp_str_to_size(char const *str, size_t *out, size_t dfactor,

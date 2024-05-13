@@ -29,10 +29,10 @@
 // RUN: %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=never -mimplicit-it=always %S/Inputs/wildcard1.c 2>&1 | FileCheck %s --check-prefix=ALWAYS
 
 /// Test invalid input.
-// RUN: %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
-// RUN: %clang -target arm-linux-gnueabi -### -Xassembler -mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=XINVALID
-// RUN: %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=always -Wa,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
-// RUN: %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=always,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
+// RUN: not %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
+// RUN: not %clang -target arm-linux-gnueabi -### -Xassembler -mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=XINVALID
+// RUN: not %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=always -Wa,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
+// RUN: not %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=always,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
 
 
 /// Check that the argument we ignore is still marked as used.
@@ -47,5 +47,5 @@
 // NEVER-NOT: "-arm-implicit-it={{.*}}"
 // ARM: "-mllvm" "-arm-implicit-it=arm"
 // THUMB: "-mllvm" "-arm-implicit-it=thumb"
-// INVALID: error: unsupported argument '-mimplicit-it=foo' to option 'Wa,'
-// XINVALID: error: unsupported argument '-mimplicit-it=foo' to option 'Xassembler'
+// INVALID: error: unsupported argument '-mimplicit-it=foo' to option '-Wa,'
+// XINVALID: error: unsupported argument '-mimplicit-it=foo' to option '-Xassembler'

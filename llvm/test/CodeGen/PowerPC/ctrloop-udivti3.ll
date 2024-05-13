@@ -17,7 +17,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add.i = or i128 %jj, undef
   %div.i = udiv i128 %add.i, %jj
   %conv3.i11 = trunc i128 %div.i to i64
-  store i64 %conv3.i11, i64* undef, align 8
+  store i64 %conv3.i11, ptr undef, align 8
   %cmp = icmp eq i64 %i.018, 0
   br i1 %cmp, label %for.end, label %for.body
 

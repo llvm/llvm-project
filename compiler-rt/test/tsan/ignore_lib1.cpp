@@ -1,7 +1,7 @@
 // RUN: rm -rf %t-dir
 // RUN: mkdir %t-dir
 
-// RUN: %clangxx_tsan -O1 %s -DLIB -fPIC -fno-sanitize=thread -shared -o %t-dir/libignore_lib1.so
+// RUN: %clangxx_tsan -O1 -fno-builtin %s -DLIB -fPIC -fno-sanitize=thread -shared -o %t-dir/libignore_lib1.so
 // RUN: %clangxx_tsan -O1 %s %link_libcxx_tsan -o %t-dir/executable
 // RUN: echo running w/o suppressions:
 // RUN: %deflake %run %t-dir/executable | FileCheck %s --check-prefix=CHECK-NOSUPP
@@ -12,7 +12,7 @@
 // in called_from_lib suppression are ignored.
 
 // REQUIRES: stable-runtime
-// UNSUPPORTED: powerpc64le
+// UNSUPPORTED: target=powerpc64le{{.*}}
 // FIXME: This test regularly fails on powerpc64 LE possibly starting with
 // r279664.  Re-enable the test once the problem(s) have been fixed.
 

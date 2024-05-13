@@ -10,11 +10,13 @@
 #include "sanitizer_platform.h"
 
 #if !SANITIZER_FUCHSIA
-#include "sancov_flags.h"
-#include "sanitizer_allocator_internal.h"
-#include "sanitizer_atomic.h"
-#include "sanitizer_common.h"
-#include "sanitizer_file.h"
+#  include "sancov_flags.h"
+#  include "sanitizer_allocator_internal.h"
+#  include "sanitizer_atomic.h"
+#  include "sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_stacktrace.h"
+#  include "sanitizer_file.h"
+#  include "sanitizer_interface_internal.h"
 
 using namespace __sanitizer;
 
@@ -72,8 +74,8 @@ static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {
     const uptr pc = pcs[i];
     if (!pc) continue;
 
-    if (!__sanitizer_get_module_and_offset_for_pc(pc, nullptr, 0, &pcs[i])) {
-      Printf("ERROR: unknown pc 0x%x (may happen if dlclose is used)\n", pc);
+    if (!GetModuleAndOffsetForPc(pc, nullptr, 0, &pcs[i])) {
+      Printf("ERROR: unknown pc 0x%zx (may happen if dlclose is used)\n", pc);
       continue;
     }
     uptr module_base = pc - pcs[i];
@@ -87,8 +89,7 @@ static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {
       last_base = module_base;
       module_start_idx = i;
       module_found = true;
-      __sanitizer_get_module_and_offset_for_pc(pc, module_name, kMaxPathLength,
-                                               &pcs[i]);
+      GetModuleAndOffsetForPc(pc, module_name, kMaxPathLength, &pcs[i]);
     }
   }
 
@@ -151,6 +152,55 @@ class TracePcGuardController {
 
 static TracePcGuardController pc_guard_controller;
 
+// A basic default implementation of callbacks for
+// -fsanitize-coverage=inline-8bit-counters,pc-table.
+// Use TOOL_OPTIONS (UBSAN_OPTIONS, etc) to dump the coverage data:
+// * cov_8bit_counters_out=PATH to dump the 8bit counters.
+// * cov_pcs_out=PATH to dump the pc table.
+//
+// Most users will still need to define their own callbacks for greater
+// flexibility.
+namespace SingletonCounterCoverage {
+
+static char *counters_beg, *counters_end;
+static const uptr *pcs_beg, *pcs_end;
+
+static void DumpCoverage() {
+  const char* file_path = common_flags()->cov_8bit_counters_out;
+  if (file_path && internal_strlen(file_path)) {
+    fd_t fd = OpenFile(file_path);
+    FileCloser file_closer(fd);
+    uptr size = counters_end - counters_beg;
+    WriteToFile(fd, counters_beg, size);
+    if (common_flags()->verbosity)
+      __sanitizer::Printf("cov_8bit_counters_out: written %zd bytes to %s\n",
+                          size, file_path);
+  }
+  file_path = common_flags()->cov_pcs_out;
+  if (file_path && internal_strlen(file_path)) {
+    fd_t fd = OpenFile(file_path);
+    FileCloser file_closer(fd);
+    uptr size = (pcs_end - pcs_beg) * sizeof(uptr);
+    WriteToFile(fd, pcs_beg, size);
+    if (common_flags()->verbosity)
+      __sanitizer::Printf("cov_pcs_out: written %zd bytes to %s\n", size,
+                          file_path);
+  }
+}
+
+static void Cov8bitCountersInit(char* beg, char* end) {
+  counters_beg = beg;
+  counters_end = end;
+  Atexit(DumpCoverage);
+}
+
+static void CovPcsInit(const uptr* beg, const uptr* end) {
+  pcs_beg = beg;
+  pcs_end = end;
+}
+
+}  // namespace SingletonCounterCoverage
+
 }  // namespace
 }  // namespace __sancov
 
@@ -173,7 +223,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(const uptr* pcs,
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard, u32* guard) {
   if (!*guard) return;
-  __sancov::pc_guard_controller.TracePcGuard(guard, GET_CALLER_PC() - 1);
+  __sancov::pc_guard_controller.TracePcGuard(
+      guard, StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()));
 }
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard_init,
@@ -191,7 +242,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump() {
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_reset() {
   __sancov::pc_guard_controller.Reset();
 }
-// Default empty implementations (weak). Users should redefine them.
+// Default implementations (weak).
+// Either empty or very simple.
+// Most users should redefine them.
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp1, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp2, void) {}
@@ -206,14 +259,37 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_gep, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_indir, void) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_8bit_counters_init, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load1, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load2, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load4, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load8, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load16, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store1, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store2, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store4, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store8, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store16, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_8bit_counters_init,
+                             char* start, char* end) {
+  __sancov::SingletonCounterCoverage::Cov8bitCountersInit(start, end);
+}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_bool_flag_init, void) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, const uptr* beg,
+                             const uptr* end) {
+  __sancov::SingletonCounterCoverage::CovPcsInit(beg, end);
+}
 }  // extern "C"
 // Weak definition for code instrumented with -fsanitize-coverage=stack-depth
 // and later linked with code containing a strong definition.
 // E.g., -fsanitize=fuzzer-no-link
+// FIXME: Update Apple deployment target so that thread_local is always
+// supported, and remove the #if.
+// FIXME: Figure out how this should work on Windows, exported thread_local
+// symbols are not supported:
+// "data with thread storage duration may not have dll interface"
+#if !SANITIZER_APPLE && !SANITIZER_WINDOWS
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-SANITIZER_TLS_INITIAL_EXEC_ATTRIBUTE uptr __sancov_lowest_stack;
+thread_local uptr __sancov_lowest_stack;
+#endif
 
 #endif  // !SANITIZER_FUCHSIA

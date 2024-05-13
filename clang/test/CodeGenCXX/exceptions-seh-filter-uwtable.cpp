@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 "-triple" "arm64-windows" "-munwind-tables" "-fms-compatibility" -emit-llvm -O1 -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 "-triple" "arm64-windows" "-funwind-tables=2" "-fms-compatibility" -emit-llvm -O1 -disable-llvm-passes %s -o - | FileCheck %s
 // NOTE: we're passing "-O1 -disable-llvm-passes" to avoid adding optnone and noinline everywhere.
 
 # 0 "" 3
@@ -34,7 +34,7 @@ g aq(h j, g k, int, int) {
 }
 
 // Check for the uwtable attribute on the filter funclet.
-// CHECK: define internal i32 @"?filt$0@0@at@@"(i8* %exception_pointers, i8* %frame_pointer) #[[MD:[0-9]+]]
+// CHECK: define internal noundef i32 @"?filt$0@0@at@@"(ptr noundef %exception_pointers, ptr noundef %frame_pointer) #[[MD:[0-9]+]]
 // CHECK: attributes #[[MD]] = { nounwind uwtable
 
 void at() {

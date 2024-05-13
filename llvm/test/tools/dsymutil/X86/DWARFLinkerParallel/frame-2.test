@@ -1,0 +1,46 @@
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: llc -filetype=obj %p/../../Inputs/frame-dw2.ll -o %t/frame-dw2.o
+# RUN: llc -filetype=obj %p/../../Inputs/frame-dw4.ll -o %t/frame-dw4.o
+# RUN: dsymutil --linker parallel -f -oso-prepend-path=%t -y %s -o - | \
+# RUN:   llvm-dwarfdump -debug-frame - | FileCheck %s
+
+# Check the handling of multiple different CIEs. To have CIEs that
+# appear to be different, use a dwarf2 version of the file along with
+# a dwarf 4 version. The CIE header version (and layout) will be different.
+---
+triple:          'i386-apple-darwin'
+objects:
+  - filename: frame-dw2.o
+    symbols:
+      - { sym: _bar, objAddr: 0x0, binAddr: 0x1000, size: 0x12 }
+      - { sym: _baz, objAddr: 0x0, binAddr: 0x2000, size: 0x12 }
+  - filename: frame-dw4.o
+    symbols:
+      - { sym: _baz, objAddr: 0x0, binAddr: 0x3000, size: 0x12 }
+  - filename: frame-dw2.o
+    symbols:
+      - { sym: _bar, objAddr: 0x0, binAddr: 0x4000, size: 0x12 }
+...
+
+# CHECK: .debug_frame contents:
+# CHECK: 00000000 {{[0-9a-f]*}} ffffffff CIE
+# CHECK-NEXT: Format: DWARF32
+# CHECK-NEXT: Version:{{.*}}1
+# CHECK-NOT: FDE
+# CHECK:  FDE cie=00000000 pc=00001000...00001
+# CHECK-NOT: FDE
+# CHECK:  FDE cie=00000000 pc=00002000...00002
+# CHECK-NOT: FDE
+# CHECK: [[CIEDW4:[0-9a-f]*]] 00000010 ffffffff CIE
+# CHECK-NEXT: Format: DWARF32
+# CHECK-NEXT: Version:{{.*}}4
+# CHECK-NOT: FDE
+# CHECK:  FDE cie=[[CIEDW4]] pc=00003000...00003
+# CHECK: [[CIEDW1_2:[0-9a-f]*]] 00000010 ffffffff CIE
+# CHECK-NEXT: Format: DWARF32
+# CHECK-NEXT: Version:{{.*}}1
+# CHECK-NOT: FDE
+# CHECK:  FDE cie=[[CIEDW1_2]] pc=00004000...00004
+# CHECK-NOT: FDE
+# CHECK: .eh_frame contents:

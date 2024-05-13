@@ -191,7 +191,7 @@ define arm_aapcs_vfpcc <8 x half> @minpredf16_c(<8 x half> %a, <8 x half> %b) {
 
 ; Loops
 
-define void @loop_absmax32(float* nocapture readonly %0, i32 %1, float* nocapture %2) {
+define void @loop_absmax32(ptr nocapture readonly %0, i32 %1, ptr nocapture %2) {
 ; CHECK-LABEL: loop_absmax32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
@@ -203,7 +203,8 @@ define void @loop_absmax32(float* nocapture readonly %0, i32 %1, float* nocaptur
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB16_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vmaxnma.f32 q0, q1
+; CHECK-NEXT:    vabs.f32 q1, q1
+; CHECK-NEXT:    vmaxnm.f32 q0, q0, q1
 ; CHECK-NEXT:    le lr, .LBB16_2
 ; CHECK-NEXT:  .LBB16_3:
 ; CHECK-NEXT:    vldr s4, .LCPI16_0
@@ -223,10 +224,10 @@ define void @loop_absmax32(float* nocapture readonly %0, i32 %1, float* nocaptur
 6:                                                ; preds = %3, %6
   %7 = phi i32 [ %16, %6 ], [ %4, %3 ]
   %8 = phi <4 x float> [ %15, %6 ], [ zeroinitializer, %3 ]
-  %9 = phi float* [ %12, %6 ], [ %0, %3 ]
-  %10 = bitcast float* %9 to <4 x float>*
-  %11 = load <4 x float>, <4 x float>* %10, align 4
-  %12 = getelementptr inbounds float, float* %9, i32 4
+  %9 = phi ptr [ %12, %6 ], [ %0, %3 ]
+  %10 = bitcast ptr %9 to ptr
+  %11 = load <4 x float>, ptr %10, align 4
+  %12 = getelementptr inbounds float, ptr %9, i32 4
   %13 = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> %11)
   %14 = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> %8)
   %15 = tail call fast <4 x float> @llvm.maxnum.v4f32(<4 x float> %14, <4 x float> %13)
@@ -237,11 +238,11 @@ define void @loop_absmax32(float* nocapture readonly %0, i32 %1, float* nocaptur
 18:                                               ; preds = %6, %3
   %19 = phi <4 x float> [ zeroinitializer, %3 ], [ %15, %6 ]
   %20 = tail call fast float @llvm.arm.mve.maxnmav.f32.v4f32(float 0.000000e+00, <4 x float> %19)
-  store float %20, float* %2, align 4
+  store float %20, ptr %2, align 4
   ret void
 }
 
-define void @loop_absmax32_c(float* nocapture readonly %0, i32 %1, float* nocapture %2) {
+define void @loop_absmax32_c(ptr nocapture readonly %0, i32 %1, ptr nocapture %2) {
 ; CHECK-LABEL: loop_absmax32_c:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
@@ -253,7 +254,8 @@ define void @loop_absmax32_c(float* nocapture readonly %0, i32 %1, float* nocapt
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB17_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vmaxnma.f32 q0, q1
+; CHECK-NEXT:    vabs.f32 q1, q1
+; CHECK-NEXT:    vmaxnm.f32 q0, q1, q0
 ; CHECK-NEXT:    le lr, .LBB17_2
 ; CHECK-NEXT:  .LBB17_3:
 ; CHECK-NEXT:    vldr s4, .LCPI17_0
@@ -273,10 +275,10 @@ define void @loop_absmax32_c(float* nocapture readonly %0, i32 %1, float* nocapt
 6:                                                ; preds = %3, %6
   %7 = phi i32 [ %16, %6 ], [ %4, %3 ]
   %8 = phi <4 x float> [ %15, %6 ], [ zeroinitializer, %3 ]
-  %9 = phi float* [ %12, %6 ], [ %0, %3 ]
-  %10 = bitcast float* %9 to <4 x float>*
-  %11 = load <4 x float>, <4 x float>* %10, align 4
-  %12 = getelementptr inbounds float, float* %9, i32 4
+  %9 = phi ptr [ %12, %6 ], [ %0, %3 ]
+  %10 = bitcast ptr %9 to ptr
+  %11 = load <4 x float>, ptr %10, align 4
+  %12 = getelementptr inbounds float, ptr %9, i32 4
   %13 = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> %11)
   %14 = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> %8)
   %15 = tail call fast <4 x float> @llvm.maxnum.v4f32(<4 x float> %13, <4 x float> %14)
@@ -287,11 +289,11 @@ define void @loop_absmax32_c(float* nocapture readonly %0, i32 %1, float* nocapt
 18:                                               ; preds = %6, %3
   %19 = phi <4 x float> [ zeroinitializer, %3 ], [ %15, %6 ]
   %20 = tail call fast float @llvm.arm.mve.maxnmav.f32.v4f32(float 0.000000e+00, <4 x float> %19)
-  store float %20, float* %2, align 4
+  store float %20, ptr %2, align 4
   ret void
 }
 
-define void @loop_absmax32_pred(float* %0, i32 %1, float* nocapture %2) {
+define void @loop_absmax32_pred(ptr %0, i32 %1, ptr nocapture %2) {
 ; CHECK-LABEL: loop_absmax32_pred:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
@@ -318,11 +320,11 @@ define void @loop_absmax32_pred(float* %0, i32 %1, float* nocapture %2) {
 4:                                                ; preds = %4, %3
   %5 = phi <4 x float> [ zeroinitializer, %3 ], [ %12, %4 ]
   %6 = phi i32 [ %1, %3 ], [ %13, %4 ]
-  %7 = phi float* [ %0, %3 ], [ %11, %4 ]
+  %7 = phi ptr [ %0, %3 ], [ %11, %4 ]
   %8 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %6)
-  %9 = bitcast float* %7 to <4 x float>*
-  %10 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %9, i32 4, <4 x i1> %8, <4 x float> zeroinitializer)
-  %11 = getelementptr inbounds float, float* %7, i32 4
+  %9 = bitcast ptr %7 to ptr
+  %10 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %9, i32 4, <4 x i1> %8, <4 x float> zeroinitializer)
+  %11 = getelementptr inbounds float, ptr %7, i32 4
   %12 = tail call fast <4 x float> @llvm.arm.mve.vmaxnma.predicated.v4f32.v4i1(<4 x float> %5, <4 x float> %10, <4 x i1> %8)
   %13 = add nsw i32 %6, -4
   %14 = icmp sgt i32 %6, 4
@@ -330,11 +332,11 @@ define void @loop_absmax32_pred(float* %0, i32 %1, float* nocapture %2) {
 
 15:                                               ; preds = %4
   %16 = tail call fast float @llvm.arm.mve.maxnmav.f32.v4f32(float 0.000000e+00, <4 x float> %12)
-  store float %16, float* %2, align 4
+  store float %16, ptr %2, align 4
   ret void
 }
 
-define void @loop_absmax32_pred_c(float* %0, i32 %1, float* nocapture %2) {
+define void @loop_absmax32_pred_c(ptr %0, i32 %1, ptr nocapture %2) {
 ; CHECK-LABEL: loop_absmax32_pred_c:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
@@ -362,11 +364,11 @@ define void @loop_absmax32_pred_c(float* %0, i32 %1, float* nocapture %2) {
 4:                                                ; preds = %4, %3
   %5 = phi <4 x float> [ zeroinitializer, %3 ], [ %12, %4 ]
   %6 = phi i32 [ %1, %3 ], [ %13, %4 ]
-  %7 = phi float* [ %0, %3 ], [ %11, %4 ]
+  %7 = phi ptr [ %0, %3 ], [ %11, %4 ]
   %8 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %6)
-  %9 = bitcast float* %7 to <4 x float>*
-  %10 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %9, i32 4, <4 x i1> %8, <4 x float> zeroinitializer)
-  %11 = getelementptr inbounds float, float* %7, i32 4
+  %9 = bitcast ptr %7 to ptr
+  %10 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %9, i32 4, <4 x i1> %8, <4 x float> zeroinitializer)
+  %11 = getelementptr inbounds float, ptr %7, i32 4
   %12 = tail call fast <4 x float> @llvm.arm.mve.vmaxnma.predicated.v4f32.v4i1(<4 x float> %10, <4 x float> %5, <4 x i1> %8)
   %13 = add nsw i32 %6, -4
   %14 = icmp sgt i32 %6, 4
@@ -374,7 +376,7 @@ define void @loop_absmax32_pred_c(float* %0, i32 %1, float* nocapture %2) {
 
 15:                                               ; preds = %4
   %16 = tail call fast float @llvm.arm.mve.maxnmav.f32.v4f32(float 0.000000e+00, <4 x float> %12)
-  store float %16, float* %2, align 4
+  store float %16, ptr %2, align 4
   ret void
 }
 
@@ -383,7 +385,7 @@ define void @loop_absmax32_pred_c(float* %0, i32 %1, float* nocapture %2) {
 
 
 
-define void @loop_absmax16(half* nocapture readonly %0, i32 %1, half* nocapture %2) {
+define void @loop_absmax16(ptr nocapture readonly %0, i32 %1, ptr nocapture %2) {
 ; CHECK-LABEL: loop_absmax16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
@@ -395,7 +397,8 @@ define void @loop_absmax16(half* nocapture readonly %0, i32 %1, half* nocapture 
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB20_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #8
-; CHECK-NEXT:    vmaxnma.f16 q0, q1
+; CHECK-NEXT:    vabs.f16 q1, q1
+; CHECK-NEXT:    vmaxnm.f16 q0, q0, q1
 ; CHECK-NEXT:    le lr, .LBB20_2
 ; CHECK-NEXT:  .LBB20_3:
 ; CHECK-NEXT:    vldr.16 s4, .LCPI20_0
@@ -415,10 +418,10 @@ define void @loop_absmax16(half* nocapture readonly %0, i32 %1, half* nocapture 
 6:                                                ; preds = %3, %6
   %7 = phi i32 [ %16, %6 ], [ %4, %3 ]
   %8 = phi <8 x half> [ %15, %6 ], [ zeroinitializer, %3 ]
-  %9 = phi half* [ %12, %6 ], [ %0, %3 ]
-  %10 = bitcast half* %9 to <8 x half>*
-  %11 = load <8 x half>, <8 x half>* %10, align 4
-  %12 = getelementptr inbounds half, half* %9, i32 4
+  %9 = phi ptr [ %12, %6 ], [ %0, %3 ]
+  %10 = bitcast ptr %9 to ptr
+  %11 = load <8 x half>, ptr %10, align 4
+  %12 = getelementptr inbounds half, ptr %9, i32 4
   %13 = tail call fast <8 x half> @llvm.fabs.v8f16(<8 x half> %11)
   %14 = tail call fast <8 x half> @llvm.fabs.v8f16(<8 x half> %8)
   %15 = tail call fast <8 x half> @llvm.maxnum.v8f16(<8 x half> %14, <8 x half> %13)
@@ -429,11 +432,11 @@ define void @loop_absmax16(half* nocapture readonly %0, i32 %1, half* nocapture 
 18:                                               ; preds = %6, %3
   %19 = phi <8 x half> [ zeroinitializer, %3 ], [ %15, %6 ]
   %20 = tail call fast half @llvm.arm.mve.maxnmav.f16.v8f16(half 0.000000e+00, <8 x half> %19)
-  store half %20, half* %2, align 4
+  store half %20, ptr %2, align 4
   ret void
 }
 
-define void @loop_absmax16_c(half* nocapture readonly %0, i32 %1, half* nocapture %2) {
+define void @loop_absmax16_c(ptr nocapture readonly %0, i32 %1, ptr nocapture %2) {
 ; CHECK-LABEL: loop_absmax16_c:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
@@ -445,7 +448,8 @@ define void @loop_absmax16_c(half* nocapture readonly %0, i32 %1, half* nocaptur
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB21_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #8
-; CHECK-NEXT:    vmaxnma.f16 q0, q1
+; CHECK-NEXT:    vabs.f16 q1, q1
+; CHECK-NEXT:    vmaxnm.f16 q0, q1, q0
 ; CHECK-NEXT:    le lr, .LBB21_2
 ; CHECK-NEXT:  .LBB21_3:
 ; CHECK-NEXT:    vldr.16 s4, .LCPI21_0
@@ -465,10 +469,10 @@ define void @loop_absmax16_c(half* nocapture readonly %0, i32 %1, half* nocaptur
 6:                                                ; preds = %3, %6
   %7 = phi i32 [ %16, %6 ], [ %4, %3 ]
   %8 = phi <8 x half> [ %15, %6 ], [ zeroinitializer, %3 ]
-  %9 = phi half* [ %12, %6 ], [ %0, %3 ]
-  %10 = bitcast half* %9 to <8 x half>*
-  %11 = load <8 x half>, <8 x half>* %10, align 4
-  %12 = getelementptr inbounds half, half* %9, i32 4
+  %9 = phi ptr [ %12, %6 ], [ %0, %3 ]
+  %10 = bitcast ptr %9 to ptr
+  %11 = load <8 x half>, ptr %10, align 4
+  %12 = getelementptr inbounds half, ptr %9, i32 4
   %13 = tail call fast <8 x half> @llvm.fabs.v8f16(<8 x half> %11)
   %14 = tail call fast <8 x half> @llvm.fabs.v8f16(<8 x half> %8)
   %15 = tail call fast <8 x half> @llvm.maxnum.v8f16(<8 x half> %13, <8 x half> %14)
@@ -479,11 +483,11 @@ define void @loop_absmax16_c(half* nocapture readonly %0, i32 %1, half* nocaptur
 18:                                               ; preds = %6, %3
   %19 = phi <8 x half> [ zeroinitializer, %3 ], [ %15, %6 ]
   %20 = tail call fast half @llvm.arm.mve.maxnmav.f16.v8f16(half 0.000000e+00, <8 x half> %19)
-  store half %20, half* %2, align 4
+  store half %20, ptr %2, align 4
   ret void
 }
 
-define void @loop_absmax16_pred(half* %0, i32 %1, half* nocapture %2) {
+define void @loop_absmax16_pred(ptr %0, i32 %1, ptr nocapture %2) {
 ; CHECK-LABEL: loop_absmax16_pred:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
@@ -510,11 +514,11 @@ define void @loop_absmax16_pred(half* %0, i32 %1, half* nocapture %2) {
 4:                                                ; preds = %4, %3
   %5 = phi <8 x half> [ zeroinitializer, %3 ], [ %12, %4 ]
   %6 = phi i32 [ %1, %3 ], [ %13, %4 ]
-  %7 = phi half* [ %0, %3 ], [ %11, %4 ]
+  %7 = phi ptr [ %0, %3 ], [ %11, %4 ]
   %8 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %6)
-  %9 = bitcast half* %7 to <8 x half>*
-  %10 = tail call fast <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %9, i32 4, <8 x i1> %8, <8 x half> zeroinitializer)
-  %11 = getelementptr inbounds half, half* %7, i32 4
+  %9 = bitcast ptr %7 to ptr
+  %10 = tail call fast <8 x half> @llvm.masked.load.v8f16.p0(ptr %9, i32 4, <8 x i1> %8, <8 x half> zeroinitializer)
+  %11 = getelementptr inbounds half, ptr %7, i32 4
   %12 = tail call fast <8 x half> @llvm.arm.mve.vmaxnma.predicated.v8f16.v8i1(<8 x half> %5, <8 x half> %10, <8 x i1> %8)
   %13 = add nsw i32 %6, -8
   %14 = icmp sgt i32 %6, 8
@@ -522,11 +526,11 @@ define void @loop_absmax16_pred(half* %0, i32 %1, half* nocapture %2) {
 
 15:                                               ; preds = %4
   %16 = tail call fast half @llvm.arm.mve.maxnmav.f16.v8f16(half 0.000000e+00, <8 x half> %12)
-  store half %16, half* %2, align 4
+  store half %16, ptr %2, align 4
   ret void
 }
 
-define void @loop_absmax16_pred_c(half* %0, i32 %1, half* nocapture %2) {
+define void @loop_absmax16_pred_c(ptr %0, i32 %1, ptr nocapture %2) {
 ; CHECK-LABEL: loop_absmax16_pred_c:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
@@ -554,11 +558,11 @@ define void @loop_absmax16_pred_c(half* %0, i32 %1, half* nocapture %2) {
 4:                                                ; preds = %4, %3
   %5 = phi <8 x half> [ zeroinitializer, %3 ], [ %12, %4 ]
   %6 = phi i32 [ %1, %3 ], [ %13, %4 ]
-  %7 = phi half* [ %0, %3 ], [ %11, %4 ]
+  %7 = phi ptr [ %0, %3 ], [ %11, %4 ]
   %8 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %6)
-  %9 = bitcast half* %7 to <8 x half>*
-  %10 = tail call fast <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %9, i32 4, <8 x i1> %8, <8 x half> zeroinitializer)
-  %11 = getelementptr inbounds half, half* %7, i32 4
+  %9 = bitcast ptr %7 to ptr
+  %10 = tail call fast <8 x half> @llvm.masked.load.v8f16.p0(ptr %9, i32 4, <8 x i1> %8, <8 x half> zeroinitializer)
+  %11 = getelementptr inbounds half, ptr %7, i32 4
   %12 = tail call fast <8 x half> @llvm.arm.mve.vmaxnma.predicated.v8f16.v8i1(<8 x half> %10, <8 x half> %5, <8 x i1> %8)
   %13 = add nsw i32 %6, -8
   %14 = icmp sgt i32 %6, 8
@@ -566,7 +570,7 @@ define void @loop_absmax16_pred_c(half* %0, i32 %1, half* nocapture %2) {
 
 15:                                               ; preds = %4
   %16 = tail call fast half @llvm.arm.mve.maxnmav.f16.v8f16(half 0.000000e+00, <8 x half> %12)
-  store half %16, half* %2, align 4
+  store half %16, ptr %2, align 4
   ret void
 }
 
@@ -575,7 +579,7 @@ define void @loop_absmax16_pred_c(half* %0, i32 %1, half* nocapture %2) {
 
 
 declare <4 x i1> @llvm.arm.mve.vctp32(i32)
-declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32 immarg, <4 x i1>, <4 x float>)
+declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32 immarg, <4 x i1>, <4 x float>)
 declare <4 x float> @llvm.arm.mve.vminnma.predicated.v4f32.v4i1(<4 x float>, <4 x float>, <4 x i1>)
 declare <4 x float> @llvm.arm.mve.vmaxnma.predicated.v4f32.v4i1(<4 x float>, <4 x float>, <4 x i1>)
 declare float @llvm.arm.mve.maxnmav.f32.v4f32(float, <4 x float>)
@@ -584,7 +588,7 @@ declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>)
 declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>)
 
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)
-declare <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>*, i32 immarg, <8 x i1>, <8 x half>)
+declare <8 x half> @llvm.masked.load.v8f16.p0(ptr, i32 immarg, <8 x i1>, <8 x half>)
 declare <8 x half> @llvm.arm.mve.vminnma.predicated.v8f16.v8i1(<8 x half>, <8 x half>, <8 x i1>)
 declare <8 x half> @llvm.arm.mve.vmaxnma.predicated.v8f16.v8i1(<8 x half>, <8 x half>, <8 x i1>)
 declare half @llvm.arm.mve.maxnmav.f16.v8f16(half, <8 x half>)

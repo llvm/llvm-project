@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion < %s | FileCheck %s
 ;
 ;    int A[1024][1024];
 ;    int B[1024][1024];
@@ -60,8 +60,8 @@ bb18:                                             ; preds = %bb16, %bb25
   %tmp21 = mul nsw i32 %tmp, %tmp20
   %tmp22 = trunc i64 %indvars.iv105 to i32
   %tmp23 = srem i32 %tmp21, %tmp22
-  %tmp24 = getelementptr inbounds [1024 x [1024 x i32]], [1024 x [1024 x i32]]* @A, i64 0, i64 %indvars.iv105, i64 %indvars.iv74
-  store i32 %tmp23, i32* %tmp24, align 4
+  %tmp24 = getelementptr inbounds [1024 x [1024 x i32]], ptr @A, i64 0, i64 %indvars.iv105, i64 %indvars.iv74
+  store i32 %tmp23, ptr %tmp24, align 4
   br label %bb25
 
 bb25:                                             ; preds = %bb18
@@ -91,8 +91,8 @@ bb35:                                             ; preds = %bb33, %bb43
   %tmp39 = mul nsw i32 %tmp36, %tmp38
   %tmp40 = trunc i64 %indvars.iv42 to i32
   %tmp41 = srem i32 %tmp39, %tmp40
-  %tmp42 = getelementptr inbounds [1024 x [1024 x i32]], [1024 x [1024 x i32]]* @B, i64 0, i64 %indvars.iv42, i64 %indvars.iv1
-  store i32 %tmp41, i32* %tmp42, align 4
+  %tmp42 = getelementptr inbounds [1024 x [1024 x i32]], ptr @B, i64 0, i64 %indvars.iv42, i64 %indvars.iv1
+  store i32 %tmp41, ptr %tmp42, align 4
   br label %bb43
 
 bb43:                                             ; preds = %bb35

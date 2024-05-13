@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDING_ACTION_H
-#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDING_ACTION_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRFINDINGACTION_H
+#define LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRFINDINGACTION_H
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -23,7 +23,6 @@
 namespace clang {
 class ASTConsumer;
 class ASTContext;
-class CompilerInstance;
 class NamedDecl;
 
 namespace tooling {
@@ -64,4 +63,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDING_ACTION_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRFINDINGACTION_H

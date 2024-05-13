@@ -112,7 +112,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/InitializePasses.h"
@@ -304,24 +303,27 @@ public:
   /// given offset. Update the offset to be relative to the field type.
   TBAAStructTypeNode getField(uint64_t &Offset) const {
     bool NewFormat = isNewFormat();
+    const ArrayRef<MDOperand> Operands = Node->operands();
+    const unsigned NumOperands = Operands.size();
+
     if (NewFormat) {
       // New-format root and scalar type nodes have no fields.
-      if (Node->getNumOperands() < 6)
+      if (NumOperands < 6)
         return TBAAStructTypeNode();
     } else {
       // Parent can be omitted for the root node.
-      if (Node->getNumOperands() < 2)
+      if (NumOperands < 2)
         return TBAAStructTypeNode();
 
       // Fast path for a scalar type node and a struct type node with a single
       // field.
-      if (Node->getNumOperands() <= 3) {
-        uint64_t Cur = Node->getNumOperands() == 2
-                           ? 0
-                           : mdconst::extract<ConstantInt>(Node->getOperand(2))
-                                 ->getZExtValue();
+      if (NumOperands <= 3) {
+        uint64_t Cur =
+            NumOperands == 2
+                ? 0
+                : mdconst::extract<ConstantInt>(Operands[2])->getZExtValue();
         Offset -= Cur;
-        MDNode *P = dyn_cast_or_null<MDNode>(Node->getOperand(1));
+        MDNode *P = dyn_cast_or_null<MDNode>(Operands[1]);
         if (!P)
           return TBAAStructTypeNode();
         return TBAAStructTypeNode(P);
@@ -333,10 +335,11 @@ public:
     unsigned FirstFieldOpNo = NewFormat ? 3 : 1;
     unsigned NumOpsPerField = NewFormat ? 3 : 2;
     unsigned TheIdx = 0;
-    for (unsigned Idx = FirstFieldOpNo; Idx < Node->getNumOperands();
+
+    for (unsigned Idx = FirstFieldOpNo; Idx < NumOperands;
          Idx += NumOpsPerField) {
-      uint64_t Cur = mdconst::extract<ConstantInt>(Node->getOperand(Idx + 1))
-                         ->getZExtValue();
+      uint64_t Cur =
+          mdconst::extract<ConstantInt>(Operands[Idx + 1])->getZExtValue();
       if (Cur > Offset) {
         assert(Idx >= FirstFieldOpNo + NumOpsPerField &&
                "TBAAStructTypeNode::getField should have an offset match!");
@@ -346,11 +349,11 @@ public:
     }
     // Move along the last field.
     if (TheIdx == 0)
-      TheIdx = Node->getNumOperands() - NumOpsPerField;
-    uint64_t Cur = mdconst::extract<ConstantInt>(Node->getOperand(TheIdx + 1))
-                       ->getZExtValue();
+      TheIdx = NumOperands - NumOpsPerField;
+    uint64_t Cur =
+        mdconst::extract<ConstantInt>(Operands[TheIdx + 1])->getZExtValue();
     Offset -= Cur;
-    MDNode *P = dyn_cast_or_null<MDNode>(Node->getOperand(TheIdx));
+    MDNode *P = dyn_cast_or_null<MDNode>(Operands[TheIdx]);
     if (!P)
       return TBAAStructTypeNode();
     return TBAAStructTypeNode(P);
@@ -370,85 +373,81 @@ static bool isStructPathTBAA(const MDNode *MD) {
 
 AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
                                      const MemoryLocation &LocB,
-                                     AAQueryInfo &AAQI) {
+                                     AAQueryInfo &AAQI, const Instruction *) {
   if (!EnableTBAA)
-    return AAResultBase::alias(LocA, LocB, AAQI);
+    return AliasResult::MayAlias;
 
-  // If accesses may alias, chain to the next AliasAnalysis.
   if (Aliases(LocA.AATags.TBAA, LocB.AATags.TBAA))
-    return AAResultBase::alias(LocA, LocB, AAQI);
+    return AliasResult::MayAlias;
 
   // Otherwise return a definitive result.
   return AliasResult::NoAlias;
 }
 
-bool TypeBasedAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
-                                               AAQueryInfo &AAQI,
-                                               bool OrLocal) {
+ModRefInfo TypeBasedAAResult::getModRefInfoMask(const MemoryLocation &Loc,
+                                                AAQueryInfo &AAQI,
+                                                bool IgnoreLocals) {
   if (!EnableTBAA)
-    return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
+    return ModRefInfo::ModRef;
 
   const MDNode *M = Loc.AATags.TBAA;
   if (!M)
-    return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
+    return ModRefInfo::ModRef;
 
   // If this is an "immutable" type, we can assume the pointer is pointing
   // to constant memory.
   if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
       (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
-    return true;
+    return ModRefInfo::NoModRef;
 
-  return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
+  return ModRefInfo::ModRef;
 }
 
-FunctionModRefBehavior
-TypeBasedAAResult::getModRefBehavior(const CallBase *Call) {
+MemoryEffects TypeBasedAAResult::getMemoryEffects(const CallBase *Call,
+                                                  AAQueryInfo &AAQI) {
   if (!EnableTBAA)
-    return AAResultBase::getModRefBehavior(Call);
+    return MemoryEffects::unknown();
 
-  FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
-
-  // If this is an "immutable" type, we can assume the call doesn't write
-  // to memory.
+  // If this is an "immutable" type, the access is not observable.
   if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
     if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
         (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
-      Min = FMRB_OnlyReadsMemory;
+      return MemoryEffects::none();
 
-  return FunctionModRefBehavior(AAResultBase::getModRefBehavior(Call) & Min);
+  return MemoryEffects::unknown();
 }
 
-FunctionModRefBehavior TypeBasedAAResult::getModRefBehavior(const Function *F) {
-  // Functions don't have metadata. Just chain to the next implementation.
-  return AAResultBase::getModRefBehavior(F);
+MemoryEffects TypeBasedAAResult::getMemoryEffects(const Function *F) {
+  // Functions don't have metadata.
+  return MemoryEffects::unknown();
 }
 
 ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call,
                                             const MemoryLocation &Loc,
                                             AAQueryInfo &AAQI) {
   if (!EnableTBAA)
-    return AAResultBase::getModRefInfo(Call, Loc, AAQI);
+    return ModRefInfo::ModRef;
 
   if (const MDNode *L = Loc.AATags.TBAA)
     if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
       if (!Aliases(L, M))
         return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(Call, Loc, AAQI);
+  return ModRefInfo::ModRef;
 }
 
 ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call1,
                                             const CallBase *Call2,
                                             AAQueryInfo &AAQI) {
   if (!EnableTBAA)
-    return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
+    return ModRefInfo::ModRef;
 
   if (const MDNode *M1 = Call1->getMetadata(LLVMContext::MD_tbaa))
     if (const MDNode *M2 = Call2->getMetadata(LLVMContext::MD_tbaa))
       if (!Aliases(M1, M2))
         return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
+  return ModRefInfo::ModRef;
 }
 
 bool MDNode::isTBAAVtableAccess() const {
@@ -490,18 +489,16 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
   SmallSetVector<const MDNode *, 4> PathA;
   TBAANode TA(A);
   while (TA.getNode()) {
-    if (PathA.count(TA.getNode()))
+    if (!PathA.insert(TA.getNode()))
       report_fatal_error("Cycle found in TBAA metadata.");
-    PathA.insert(TA.getNode());
     TA = TA.getParent();
   }
 
   SmallSetVector<const MDNode *, 4> PathB;
   TBAANode TB(B);
   while (TB.getNode()) {
-    if (PathB.count(TB.getNode()))
+    if (!PathB.insert(TB.getNode()))
       report_fatal_error("Cycle found in TBAA metadata.");
-    PathB.insert(TB.getNode());
     TB = TB.getParent();
   }
 
@@ -521,21 +518,21 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
   return Ret;
 }
 
-void Instruction::getAAMetadata(AAMDNodes &N, bool Merge) const {
-  if (Merge) {
-    N.TBAA =
-        MDNode::getMostGenericTBAA(N.TBAA, getMetadata(LLVMContext::MD_tbaa));
-    N.TBAAStruct = nullptr;
-    N.Scope = MDNode::getMostGenericAliasScope(
-        N.Scope, getMetadata(LLVMContext::MD_alias_scope));
-    N.NoAlias =
-        MDNode::intersect(N.NoAlias, getMetadata(LLVMContext::MD_noalias));
-  } else {
-    N.TBAA = getMetadata(LLVMContext::MD_tbaa);
-    N.TBAAStruct = getMetadata(LLVMContext::MD_tbaa_struct);
-    N.Scope = getMetadata(LLVMContext::MD_alias_scope);
-    N.NoAlias = getMetadata(LLVMContext::MD_noalias);
-  }
+AAMDNodes AAMDNodes::merge(const AAMDNodes &Other) const {
+  AAMDNodes Result;
+  Result.TBAA = MDNode::getMostGenericTBAA(TBAA, Other.TBAA);
+  Result.TBAAStruct = nullptr;
+  Result.Scope = MDNode::getMostGenericAliasScope(Scope, Other.Scope);
+  Result.NoAlias = MDNode::intersect(NoAlias, Other.NoAlias);
+  return Result;
+}
+
+AAMDNodes AAMDNodes::concat(const AAMDNodes &Other) const {
+  AAMDNodes Result;
+  Result.TBAA = Result.TBAAStruct = nullptr;
+  Result.Scope = MDNode::getMostGenericAliasScope(Scope, Other.Scope);
+  Result.NoAlias = MDNode::intersect(NoAlias, Other.NoAlias);
+  return Result;
 }
 
 static const MDNode *createAccessTag(const MDNode *AccessType) {
@@ -738,7 +735,7 @@ void TypeBasedAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
-MDNode *AAMDNodes::ShiftTBAA(MDNode *MD, size_t Offset) {
+MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
     return MD;
@@ -757,7 +754,7 @@ MDNode *AAMDNodes::ShiftTBAA(MDNode *MD, size_t Offset) {
   return MD;
 }
 
-MDNode *AAMDNodes::ShiftTBAAStruct(MDNode *MD, size_t Offset) {
+MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
     return MD;
@@ -785,4 +782,71 @@ MDNode *AAMDNodes::ShiftTBAAStruct(MDNode *MD, size_t Offset) {
     Sub.push_back(MD->getOperand(i + 2));
   }
   return MDNode::get(MD->getContext(), Sub);
+}
+
+MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
+  // Fast path if 0-length
+  if (Len == 0)
+    return nullptr;
+
+  // Regular TBAA is invariant of length, so we only need to consider
+  // struct-path TBAA.
+  if (!isStructPathTBAA(MD))
+    return MD;
+
+  TBAAStructTagNode Tag(MD);
+
+  // Only new format TBAA has a size
+  if (!Tag.isNewFormat())
+    return MD;
+
+  // If unknown size, drop the TBAA.
+  if (Len == -1)
+    return nullptr;
+
+  // Otherwise, create TBAA with the new Len
+  ArrayRef<MDOperand> MDOperands = MD->operands();
+  SmallVector<Metadata *, 4> NextNodes(MDOperands.begin(), MDOperands.end());
+  ConstantInt *PreviousSize = mdconst::extract<ConstantInt>(NextNodes[3]);
+
+  // Don't create a new MDNode if it is the same length.
+  if (PreviousSize->equalsInt(Len))
+    return MD;
+
+  NextNodes[3] =
+      ConstantAsMetadata::get(ConstantInt::get(PreviousSize->getType(), Len));
+  return MDNode::get(MD->getContext(), NextNodes);
+}
+
+AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
+  AAMDNodes New = *this;
+  MDNode *M = New.TBAAStruct;
+  if (M && M->getNumOperands() >= 3 && M->getOperand(0) &&
+      mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
+      mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
+      M->getOperand(1) && mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
+      mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
+          AccessSize &&
+      M->getOperand(2) && isa<MDNode>(M->getOperand(2))) {
+    New.TBAAStruct = nullptr;
+    New.TBAA = cast<MDNode>(M->getOperand(2));
+  }
+  return New;
+}
+
+AAMDNodes AAMDNodes::adjustForAccess(size_t Offset, Type *AccessTy,
+                                     const DataLayout &DL) {
+  AAMDNodes New = shift(Offset);
+  if (!DL.typeSizeEqualsStoreSize(AccessTy))
+    return New;
+  TypeSize Size = DL.getTypeStoreSize(AccessTy);
+  if (Size.isScalable())
+    return New;
+
+  return New.adjustForAccess(Size.getKnownMinValue());
+}
+
+AAMDNodes AAMDNodes::adjustForAccess(size_t Offset, unsigned AccessSize) {
+  AAMDNodes New = shift(Offset);
+  return New.adjustForAccess(AccessSize);
 }

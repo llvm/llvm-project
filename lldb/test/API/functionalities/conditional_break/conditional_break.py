@@ -2,7 +2,6 @@ import lldb
 
 
 def stop_if_called_from_a(frame, bp_loc, dict):
-
     thread = frame.GetThread()
     process = thread.GetProcess()
     target = process.GetTarget()
@@ -18,9 +17,10 @@ def stop_if_called_from_a(frame, bp_loc, dict):
 
     should_stop = True
     if thread.GetNumFrames() >= 2:
-
-        if (thread.frames[0].function.name ==
-                'c' and thread.frames[1].function.name == 'a'):
+        if (
+            thread.frames[0].function.name == "c"
+            and thread.frames[1].function.name == "a"
+        ):
             should_stop = True
         else:
             should_stop = False

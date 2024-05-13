@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -convert-vector-to-llvm="enable-x86vector" | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: func @avx512_mask_rndscale
-func @avx512_mask_rndscale(%a: vector<16xf32>, %b: vector<8xf64>, %i32: i32, %i16: i16, %i8: i8)
+func.func @avx512_mask_rndscale(%a: vector<16xf32>, %b: vector<8xf64>, %i32: i32, %i16: i16, %i8: i8)
   -> (vector<16xf32>, vector<8xf64>, vector<16xf32>, vector<8xf64>)
 {
   // CHECK: x86vector.avx512.intr.mask.rndscale.ps.512
@@ -19,7 +19,7 @@ func @avx512_mask_rndscale(%a: vector<16xf32>, %b: vector<8xf64>, %i32: i32, %i1
 }
 
 // CHECK-LABEL: func @avx512_mask_compress
-func @avx512_mask_compress(%k1: vector<16xi1>, %a1: vector<16xf32>,
+func.func @avx512_mask_compress(%k1: vector<16xi1>, %a1: vector<16xf32>,
                            %k2: vector<8xi1>, %a2: vector<8xi64>)
   -> (vector<16xf32>, vector<16xf32>, vector<8xi64>)
 {
@@ -33,7 +33,7 @@ func @avx512_mask_compress(%k1: vector<16xi1>, %a1: vector<16xf32>,
 }
 
 // CHECK-LABEL: func @avx512_vp2intersect
-func @avx512_vp2intersect(%a: vector<16xi32>, %b: vector<8xi64>)
+func.func @avx512_vp2intersect(%a: vector<16xi32>, %b: vector<8xi64>)
   -> (vector<16xi1>, vector<16xi1>, vector<8xi1>, vector<8xi1>)
 {
   // CHECK: x86vector.avx512.intr.vp2intersect.d.512
@@ -44,7 +44,7 @@ func @avx512_vp2intersect(%a: vector<16xi32>, %b: vector<8xi64>)
 }
 
 // CHECK-LABEL: func @avx_rsqrt
-func @avx_rsqrt(%a: vector<8xf32>) -> (vector<8xf32>)
+func.func @avx_rsqrt(%a: vector<8xf32>) -> (vector<8xf32>)
 {
   // CHECK: x86vector.avx.intr.rsqrt.ps.256
   %0 = x86vector.avx.rsqrt %a : vector<8xf32>
@@ -52,7 +52,7 @@ func @avx_rsqrt(%a: vector<8xf32>) -> (vector<8xf32>)
 }
 
 // CHECK-LABEL: func @avx_dot
-func @avx_dot(%a: vector<8xf32>, %b: vector<8xf32>) -> (vector<8xf32>)
+func.func @avx_dot(%a: vector<8xf32>, %b: vector<8xf32>) -> (vector<8xf32>)
 {
   // CHECK: x86vector.avx.intr.dp.ps.256
   %0 = x86vector.avx.intr.dot %a, %b : vector<8xf32>

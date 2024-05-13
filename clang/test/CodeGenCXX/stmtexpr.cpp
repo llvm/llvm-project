@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -Wno-unused-value -triple i686-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// rdar: //8540501
 extern "C" int printf(...);
 extern "C" void abort();
 
@@ -64,7 +63,6 @@ int main()
   return foo(1).i-1;
 }
 
-// rdar: // 8600553
 int a[128];
 int* foo5() {
 // CHECK-NOT: memcpy
@@ -73,7 +71,6 @@ int* foo5() {
   return (({ a; }));
 }
 
-// <rdar://problem/14074868>
 // Make sure this doesn't crash.
 int foo5(bool b) {
   int y = 0;
@@ -101,13 +98,13 @@ extern "C" int cleanup_exit_scalar(bool b) {
 // CHECK: call {{.*}} @_ZN1AC1Ei
 //    Spill after bar.
 // CHECK: %[[v:[^ ]*]] = call{{.*}} i32 @_Z3bar1Ai({{.*}})
-// CHECK-NEXT: store i32 %[[v]], i32* %[[tmp:[^, ]*]]
+// CHECK-NEXT: store i32 %[[v]], ptr %[[tmp:[^, ]*]]
 //    Do cleanup.
 // CHECK: call {{.*}} @_ZN1AD1Ev
 // CHECK: switch
 //    Reload before v assignment.
-// CHECK: %[[v:[^ ]*]] = load i32, i32* %[[tmp]]
-// CHECK-NEXT: store i32 %[[v]], i32* %v
+// CHECK: %[[v:[^ ]*]] = load i32, ptr %[[tmp]]
+// CHECK-NEXT: store i32 %[[v]], ptr %v
 
 // No need to spill when the expression result is a constant, constants don't
 // have dominance problems.
@@ -117,7 +114,7 @@ extern "C" int cleanup_exit_scalar_constant(bool b) {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @cleanup_exit_scalar_constant({{.*}})
-// CHECK: store i32 13, i32* %v
+// CHECK: store i32 13, ptr %v
 
 // Check for the same bug for lvalue expression evaluation kind.
 // FIXME: What about non-reference lvalues, like bitfield lvalues and vector
@@ -130,14 +127,14 @@ extern "C" int cleanup_exit_lvalue(bool cond) {
 // CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue({{.*}})
 // CHECK: call {{.*}} @_ZN1AC1Ei
 //    Spill after bar.
-// CHECK: %[[v:[^ ]*]] = call nonnull align 4 dereferenceable(4) i32* @_Z6getrefv({{.*}})
-// CHECK-NEXT: store i32* %[[v]], i32** %[[tmp:[^, ]*]]
+// CHECK: %[[v:[^ ]*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_Z6getrefv({{.*}})
+// CHECK-NEXT: store ptr %[[v]], ptr %[[tmp:[^, ]*]]
 //    Do cleanup.
 // CHECK: call {{.*}} @_ZN1AD1Ev
 // CHECK: switch
 //    Reload before v assignment.
-// CHECK: %[[v:[^ ]*]] = load i32*, i32** %[[tmp]]
-// CHECK-NEXT: store i32* %[[v]], i32** %r
+// CHECK: %[[v:[^ ]*]] = load ptr, ptr %[[tmp]]
+// CHECK-NEXT: store ptr %[[v]], ptr %r
 
 // Bind the reference to a byval argument. It is not an instruction or Constant,
 // so it's a bit of a corner case.
@@ -146,11 +143,11 @@ extern "C" int cleanup_exit_lvalue_byval(bool cond, ByVal arg) {
   ByVal &r = (A(1), ({ if (cond) return 0; (void)ByVal(); }), arg);
   return r.x[0];
 }
-// CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue_byval({{.*}}, %struct.ByVal* byval(%struct.ByVal) align 4 %arg)
+// CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue_byval({{.*}}, ptr noundef byval(%struct.ByVal) align 4 %arg)
 // CHECK: call {{.*}} @_ZN1AC1Ei
 // CHECK: call {{.*}} @_ZN1AD1Ev
 // CHECK: switch
-// CHECK: store %struct.ByVal* %arg, %struct.ByVal** %r
+// CHECK: store ptr %arg, ptr %r
 
 // Bind the reference to a local variable. We don't need to spill it. Binding a
 // reference to it doesn't generate any instructions.
@@ -161,12 +158,12 @@ extern "C" int cleanup_exit_lvalue_local(bool cond) {
 }
 // CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue_local({{.*}})
 // CHECK: %local = alloca i32
-// CHECK: store i32 42, i32* %local
+// CHECK: store i32 42, ptr %local
 // CHECK: call {{.*}} @_ZN1AC1Ei
-// CHECK-NOT: store i32* %local
+// CHECK-NOT: store ptr %local
 // CHECK: call {{.*}} @_ZN1AD1Ev
 // CHECK: switch
-// CHECK: store i32* %local, i32** %r, align 4
+// CHECK: store ptr %local, ptr %r, align 4
 
 // We handle ExprWithCleanups for complex evaluation type separately, and it had
 // the same bug.
@@ -180,16 +177,16 @@ extern "C" int cleanup_exit_complex(bool b) {
 // CHECK: call {{.*}} @_ZN1AC1Ei
 //    Spill after bar.
 // CHECK: call {{.*}} @_Z11bar_complex1Ai({{.*}})
-// CHECK: store float %{{.*}}, float* %[[tmp1:[^, ]*]]
-// CHECK: store float %{{.*}}, float* %[[tmp2:[^, ]*]]
+// CHECK: store float %{{.*}}, ptr %[[tmp1:[^, ]*]]
+// CHECK: store float %{{.*}}, ptr %[[tmp2:[^, ]*]]
 //    Do cleanup.
 // CHECK: call {{.*}} @_ZN1AD1Ev
 // CHECK: switch
 //    Reload before v assignment.
-// CHECK: %[[v1:[^ ]*]] = load float, float* %[[tmp1]]
-// CHECK: %[[v2:[^ ]*]] = load float, float* %[[tmp2]]
-// CHECK: store float %[[v1]], float* %v.realp
-// CHECK: store float %[[v2]], float* %v.imagp
+// CHECK: %[[v1:[^ ]*]] = load float, ptr %[[tmp1]]
+// CHECK: %[[v2:[^ ]*]] = load float, ptr %[[tmp2]]
+// CHECK: store float %[[v1]], ptr %v.realp
+// CHECK: store float %[[v2]], ptr %v.imagp
 
 extern "C" void then(int);
 
@@ -202,7 +199,7 @@ void volatile_load() {
   // CHECK-NOT: load volatile
   ({n;});
 
-  // CHECK-LABEL: @then(i32 1)
+  // CHECK-LABEL: @then(i32 noundef 1)
   then(1);
 
   // CHECK-NOT: load volatile
@@ -210,7 +207,7 @@ void volatile_load() {
   // CHECK-NOT: load volatile
   ({goto lab; lab: n;});
 
-  // CHECK-LABEL: @then(i32 2)
+  // CHECK-LABEL: @then(i32 noundef 2)
   then(2);
 
   // CHECK-NOT: load volatile
@@ -218,7 +215,7 @@ void volatile_load() {
   // CHECK-NOT: load volatile
   ({[[gsl::suppress("foo")]] n;});
 
-  // CHECK-LABEL: @then(i32 3)
+  // CHECK-LABEL: @then(i32 noundef 3)
   then(3);
 
   // CHECK-NOT: load volatile
@@ -239,7 +236,7 @@ void volatile_load_template() {
   // CHECK-NOT: load volatile
   ({n;});
 
-  // CHECK-LABEL: @then(i32 1)
+  // CHECK-LABEL: @then(i32 noundef 1)
   then(1);
 
   // CHECK-NOT: load volatile
@@ -247,7 +244,7 @@ void volatile_load_template() {
   // CHECK-NOT: load volatile
   ({goto lab; lab: n;});
 
-  // CHECK-LABEL: @then(i32 2)
+  // CHECK-LABEL: @then(i32 noundef 2)
   then(2);
 
   // CHECK-NOT: load volatile
@@ -255,7 +252,7 @@ void volatile_load_template() {
   // CHECK-NOT: load volatile
   ({[[gsl::suppress("foo")]] n;});
 
-  // CHECK-LABEL: @then(i32 3)
+  // CHECK-LABEL: @then(i32 noundef 3)
   then(3);
 
   // CHECK-NOT: load volatile

@@ -39,4 +39,16 @@ using Test = ::testing::Test;
 #define SKIP_ON_FUCHSIA(T) T
 #endif
 
+#if SCUDO_DEBUG
+#define SKIP_NO_DEBUG(T) T
+#else
+#define SKIP_NO_DEBUG(T) DISABLED_##T
+#endif
+
+#if SCUDO_FUCHSIA
+// The zxtest library provides a default main function that does the same thing
+// for Fuchsia builds.
+#define SCUDO_NO_TEST_MAIN
+#endif
+
 extern bool UseQuarantine;

@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Format.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include <cctype>
 
 using namespace mlir;
@@ -21,7 +23,12 @@ using namespace mlir::tblgen;
 // Marker to indicate an error happened when replacing a placeholder.
 const char *const kMarkerForNoSubst = "<no-subst-found>";
 
-FmtContext &FmtContext::addSubst(StringRef placeholder, Twine subst) {
+FmtContext::FmtContext(ArrayRef<std::pair<StringRef, StringRef>> subs) {
+  for (auto &sub : subs)
+    addSubst(sub.first, sub.second);
+}
+
+FmtContext &FmtContext::addSubst(StringRef placeholder, const Twine &subst) {
   customSubstMap[placeholder] = subst.str();
   return *this;
 }
@@ -31,17 +38,12 @@ FmtContext &FmtContext::withBuilder(Twine subst) {
   return *this;
 }
 
-FmtContext &FmtContext::withOp(Twine subst) {
-  builtinSubstMap[PHKind::Op] = subst.str();
-  return *this;
-}
-
 FmtContext &FmtContext::withSelf(Twine subst) {
   builtinSubstMap[PHKind::Self] = subst.str();
   return *this;
 }
 
-Optional<StringRef>
+std::optional<StringRef>
 FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   if (placeholder == FmtContext::PHKind::None ||
       placeholder == FmtContext::PHKind::Custom)
@@ -52,7 +54,7 @@ FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   return StringRef(it->second);
 }
 
-Optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
+std::optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
   auto it = customSubstMap.find(placeholder);
   if (it == customSubstMap.end())
     return {};
@@ -62,7 +64,6 @@ Optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
 FmtContext::PHKind FmtContext::getPlaceHolderKind(StringRef str) {
   return StringSwitch<FmtContext::PHKind>(str)
       .Case("_builder", FmtContext::PHKind::Builder)
-      .Case("_op", FmtContext::PHKind::Op)
       .Case("_self", FmtContext::PHKind::Self)
       .Case("", FmtContext::PHKind::None)
       .Default(FmtContext::PHKind::Custom);
@@ -97,12 +98,21 @@ FmtObjectBase::splitFmtSegment(StringRef fmt) {
   // First try to see if it's a positional placeholder, and then handle special
   // placeholders.
 
-  size_t end = fmt.find_if_not([](char c) { return std::isdigit(c); }, 1);
+  size_t end =
+      fmt.find_if_not([](char c) { return std::isdigit(c); }, /*From=*/1);
   if (end != 1) {
     // We have a positional placeholder. Parse the index.
     size_t index = 0;
     if (fmt.substr(1, end - 1).consumeInteger(0, index)) {
       llvm_unreachable("invalid replacement sequence index");
+    }
+
+    // Check if this is the part of a range specification.
+    if (fmt.substr(end, 3) == "...") {
+      // Currently only ranges without upper bound are supported.
+      return {
+          FmtReplacement{fmt.substr(0, end + 3), index, FmtReplacement::kUnset},
+          fmt.substr(end + 3)};
     }
 
     if (end == StringRef::npos) {
@@ -149,7 +159,7 @@ void FmtObjectBase::format(raw_ostream &s) const {
         // We need the context to replace special placeholders.
         s << repl.spec << kMarkerForNoSubst;
       } else {
-        Optional<StringRef> subst;
+        std::optional<StringRef> subst;
         if (repl.placeholder == FmtContext::PHKind::Custom) {
           // Skip the leading '$' sign for the custom placeholder
           subst = context->getSubstFor(repl.spec.substr(1));
@@ -161,6 +171,20 @@ void FmtObjectBase::format(raw_ostream &s) const {
         else
           s << repl.spec << kMarkerForNoSubst;
       }
+      continue;
+    }
+
+    if (repl.type == FmtReplacement::Type::PositionalRangePH) {
+      if (repl.index >= adapters.size()) {
+        s << repl.spec << kMarkerForNoSubst;
+        continue;
+      }
+      auto range = llvm::ArrayRef(adapters);
+      range = range.drop_front(repl.index);
+      if (repl.end != FmtReplacement::kUnset)
+        range = range.drop_back(adapters.size() - repl.end);
+      llvm::interleaveComma(range, s,
+                            [&](auto &x) { x->format(s, /*Options=*/""); });
       continue;
     }
 
@@ -179,7 +203,8 @@ FmtStrVecObject::FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
     : FmtObjectBase(fmt, ctx, params.size()) {
   parameters.reserve(params.size());
   for (std::string p : params)
-    parameters.push_back(llvm::detail::build_format_adapter(std::move(p)));
+    parameters.push_back(
+        llvm::support::detail::build_format_adapter(std::move(p)));
 
   adapters.reserve(parameters.size());
   for (auto &p : parameters)

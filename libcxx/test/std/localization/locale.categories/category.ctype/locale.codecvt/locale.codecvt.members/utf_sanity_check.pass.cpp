@@ -6,19 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test relies on P0482 being fixed, which isn't in
-// older Apple dylibs
-//
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.14
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
+// XFAIL: availability-char8_t_support-missing
 
 // This test runs in C++20, but we have deprecated codecvt<char(16|32), char, mbstate_t> in C++20.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT
 
 // <locale>
 

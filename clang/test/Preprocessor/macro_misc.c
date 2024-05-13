@@ -4,6 +4,7 @@
 #ifdef defined
 #elifdef defined
 #endif
+// expected-warning@-2 {{use of a '#elifdef' directive is a C23 extension}}
 
 
 

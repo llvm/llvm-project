@@ -16,17 +16,18 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 namespace find_all_symbols {
 
-llvm::Optional<SymbolInfo>
+std::optional<SymbolInfo>
 FindAllMacros::CreateMacroSymbol(const Token &MacroNameTok,
                                  const MacroInfo *info) {
   std::string FilePath =
       getIncludePath(*SM, info->getDefinitionLoc(), Collector);
   if (FilePath.empty())
-    return llvm::None;
+    return std::nullopt;
   return SymbolInfo(MacroNameTok.getIdentifierInfo()->getName(),
                     SymbolInfo::SymbolKind::Macro, FilePath, {});
 }
@@ -61,8 +62,8 @@ void FindAllMacros::Ifndef(SourceLocation Loc, const Token &MacroNameTok,
 }
 
 void FindAllMacros::EndOfMainFile() {
-  Reporter->reportSymbols(SM->getFileEntryForID(SM->getMainFileID())->getName(),
-                          FileSymbols);
+  Reporter->reportSymbols(
+      SM->getFileEntryRefForID(SM->getMainFileID())->getName(), FileSymbols);
   FileSymbols.clear();
 }
 

@@ -12,7 +12,6 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -25,6 +24,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -35,11 +35,11 @@ using namespace lldb_private;
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread, lldb::StreamSP &stream_sp)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_enabled(false), m_stream_sp(stream_sp) {}
+      m_enabled(false), m_stream_sp(stream_sp), m_thread(nullptr) {}
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_enabled(false), m_stream_sp() {}
+      m_enabled(false), m_stream_sp(), m_thread(nullptr) {}
 
 Stream *ThreadPlanTracer::GetLogStream() {
   if (m_stream_sp)
@@ -55,7 +55,7 @@ Stream *ThreadPlanTracer::GetLogStream() {
 Thread &ThreadPlanTracer::GetThread() {
   if (m_thread)
     return *m_thread;
-    
+
   ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(m_tid);
   m_thread = thread_sp.get();
   return *m_thread;
@@ -107,14 +107,13 @@ TypeFromUser ThreadPlanAssemblyTracer::GetIntPointerType() {
           target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
         LLDB_LOG_ERROR(
-            lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES),
-            std::move(err),
-            "Unable to get integer pointer type from TypeSystem");
+            GetLog(LLDBLog::Types), std::move(err),
+            "Unable to get integer pointer type from TypeSystem: {0}");
       } else {
-        m_intptr_type = TypeFromUser(
-            type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(
-                eEncodingUint,
-                target_sp->GetArchitecture().GetAddressByteSize() * 8));
+        if (auto ts = *type_system_or_err)
+          m_intptr_type = TypeFromUser(ts->GetBuiltinTypeForEncodingAndBitSize(
+              eEncodingUint,
+              target_sp->GetArchitecture().GetAddressByteSize() * 8));
       }
     }
   }
@@ -171,13 +170,14 @@ void ThreadPlanAssemblyTracer::Log() {
       if (instruction_list.GetSize()) {
         const bool show_bytes = true;
         const bool show_address = true;
+        const bool show_control_flow_kind = true;
         Instruction *instruction =
             instruction_list.GetInstructionAtIndex(0).get();
         const FormatEntity::Entry *disassemble_format =
             m_process.GetTarget().GetDebugger().GetDisassemblyFormat();
         instruction->Dump(stream, max_opcode_byte_size, show_address,
-                          show_bytes, nullptr, nullptr, nullptr,
-                          disassemble_format, 0);
+                          show_bytes, show_control_flow_kind, nullptr, nullptr,
+                          nullptr, disassemble_format, 0);
       }
     }
   }
@@ -223,7 +223,7 @@ void ThreadPlanAssemblyTracer::Log() {
           reg_value != m_register_values[reg_num]) {
         if (reg_value.GetType() != RegisterValue::eTypeInvalid) {
           stream->PutCString("\n\t");
-          DumpRegisterValue(reg_value, stream, reg_info, true, false,
+          DumpRegisterValue(reg_value, *stream, *reg_info, true, false,
                             eFormatDefault);
         }
       }

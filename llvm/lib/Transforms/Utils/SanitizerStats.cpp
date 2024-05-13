@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SanitizerStats.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -22,7 +21,7 @@
 using namespace llvm;
 
 SanitizerStatReport::SanitizerStatReport(Module *M) : M(M) {
-  StatTy = ArrayType::get(Type::getInt8PtrTy(M->getContext()), 2);
+  StatTy = ArrayType::get(PointerType::getUnqual(M->getContext()), 2);
   EmptyModuleStatsTy = makeModuleStatsTy();
 
   ModuleStatsGV = new GlobalVariable(*M, EmptyModuleStatsTy, false,
@@ -34,28 +33,28 @@ ArrayType *SanitizerStatReport::makeModuleStatsArrayTy() {
 }
 
 StructType *SanitizerStatReport::makeModuleStatsTy() {
-  return StructType::get(M->getContext(), {Type::getInt8PtrTy(M->getContext()),
-                                           Type::getInt32Ty(M->getContext()),
-                                           makeModuleStatsArrayTy()});
+  return StructType::get(M->getContext(),
+                         {PointerType::getUnqual(M->getContext()),
+                          Type::getInt32Ty(M->getContext()),
+                          makeModuleStatsArrayTy()});
 }
 
 void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
   Function *F = B.GetInsertBlock()->getParent();
   Module *M = F->getParent();
-  PointerType *Int8PtrTy = B.getInt8PtrTy();
+  PointerType *PtrTy = B.getPtrTy();
   IntegerType *IntPtrTy = B.getIntPtrTy(M->getDataLayout());
-  ArrayType *StatTy = ArrayType::get(Int8PtrTy, 2);
+  ArrayType *StatTy = ArrayType::get(PtrTy, 2);
 
   Inits.push_back(ConstantArray::get(
       StatTy,
-      {Constant::getNullValue(Int8PtrTy),
+      {Constant::getNullValue(PtrTy),
        ConstantExpr::getIntToPtr(
            ConstantInt::get(IntPtrTy, uint64_t(SK) << (IntPtrTy->getBitWidth() -
                                                        kSanitizerStatKindBits)),
-           Int8PtrTy)}));
+           PtrTy)}));
 
-  FunctionType *StatReportTy =
-      FunctionType::get(B.getVoidTy(), Int8PtrTy, false);
+  FunctionType *StatReportTy = FunctionType::get(B.getVoidTy(), PtrTy, false);
   FunctionCallee StatReport =
       M->getOrInsertFunction("__sanitizer_stat_report", StatReportTy);
 
@@ -65,7 +64,7 @@ void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
           ConstantInt::get(IntPtrTy, 0), ConstantInt::get(B.getInt32Ty(), 2),
           ConstantInt::get(IntPtrTy, Inits.size() - 1),
       });
-  B.CreateCall(StatReport, ConstantExpr::getBitCast(InitAddr, Int8PtrTy));
+  B.CreateCall(StatReport, InitAddr);
 }
 
 void SanitizerStatReport::finish() {
@@ -74,7 +73,7 @@ void SanitizerStatReport::finish() {
     return;
   }
 
-  PointerType *Int8PtrTy = Type::getInt8PtrTy(M->getContext());
+  PointerType *Int8PtrTy = PointerType::getUnqual(M->getContext());
   IntegerType *Int32Ty = Type::getInt32Ty(M->getContext());
   Type *VoidTy = Type::getVoidTy(M->getContext());
 
@@ -86,8 +85,7 @@ void SanitizerStatReport::finish() {
           {Constant::getNullValue(Int8PtrTy),
            ConstantInt::get(Int32Ty, Inits.size()),
            ConstantArray::get(makeModuleStatsArrayTy(), Inits)}));
-  ModuleStatsGV->replaceAllUsesWith(
-      ConstantExpr::getBitCast(NewModuleStatsGV, ModuleStatsGV->getType()));
+  ModuleStatsGV->replaceAllUsesWith(NewModuleStatsGV);
   ModuleStatsGV->eraseFromParent();
 
   // Create a global constructor to register NewModuleStatsGV.
@@ -100,7 +98,7 @@ void SanitizerStatReport::finish() {
   FunctionCallee StatInit =
       M->getOrInsertFunction("__sanitizer_stat_init", StatInitTy);
 
-  B.CreateCall(StatInit, ConstantExpr::getBitCast(NewModuleStatsGV, Int8PtrTy));
+  B.CreateCall(StatInit, NewModuleStatsGV);
   B.CreateRetVoid();
 
   appendToGlobalCtors(*M, F, 0);

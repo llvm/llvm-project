@@ -75,13 +75,13 @@ Status NativeThreadNetBSD::Suspend() {
 
 void NativeThreadNetBSD::SetStoppedBySignal(uint32_t signo,
                                             const siginfo_t *info) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
   LLDB_LOG(log, "tid = {0} in called with signal {1}", GetID(), signo);
 
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonSignal;
-  m_stop_info.details.signal.signo = signo;
+  m_stop_info.signo = signo;
 
   m_stop_description.clear();
   if (info) {
@@ -90,8 +90,7 @@ void NativeThreadNetBSD::SetStoppedBySignal(uint32_t signo,
     case SIGBUS:
     case SIGFPE:
     case SIGILL:
-      const auto reason = GetCrashReason(*info);
-      m_stop_description = GetCrashReasonString(reason, *info);
+      m_stop_description = GetCrashReasonString(*info);
       break;
     }
   }
@@ -100,19 +99,19 @@ void NativeThreadNetBSD::SetStoppedBySignal(uint32_t signo,
 void NativeThreadNetBSD::SetStoppedByBreakpoint() {
   SetStopped();
   m_stop_info.reason = StopReason::eStopReasonBreakpoint;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadNetBSD::SetStoppedByTrace() {
   SetStopped();
   m_stop_info.reason = StopReason::eStopReasonTrace;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadNetBSD::SetStoppedByExec() {
   SetStopped();
   m_stop_info.reason = StopReason::eStopReasonExec;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadNetBSD::SetStoppedByWatchpoint(uint32_t wp_index) {
@@ -127,7 +126,7 @@ void NativeThreadNetBSD::SetStoppedByWatchpoint(uint32_t wp_index) {
   SetStopped();
   m_stop_description = ostr.str();
   m_stop_info.reason = StopReason::eStopReasonWatchpoint;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadNetBSD::SetStoppedByFork(lldb::pid_t child_pid,
@@ -135,6 +134,7 @@ void NativeThreadNetBSD::SetStoppedByFork(lldb::pid_t child_pid,
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonFork;
+  m_stop_info.signo = SIGTRAP;
   m_stop_info.details.fork.child_pid = child_pid;
   m_stop_info.details.fork.child_tid = child_tid;
 }
@@ -144,6 +144,7 @@ void NativeThreadNetBSD::SetStoppedByVFork(lldb::pid_t child_pid,
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonVFork;
+  m_stop_info.signo = SIGTRAP;
   m_stop_info.details.fork.child_pid = child_pid;
   m_stop_info.details.fork.child_tid = child_tid;
 }
@@ -152,13 +153,14 @@ void NativeThreadNetBSD::SetStoppedByVForkDone() {
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonVForkDone;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadNetBSD::SetStoppedWithNoReason() {
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonNone;
-  m_stop_info.details.signal.signo = 0;
+  m_stop_info.signo = 0;
 }
 
 void NativeThreadNetBSD::SetStopped() {
@@ -178,7 +180,7 @@ void NativeThreadNetBSD::SetStepping() {
 }
 
 std::string NativeThreadNetBSD::GetName() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
 
 #ifdef PT_LWPSTATUS
   struct ptrace_lwpstatus info = {};
@@ -225,7 +227,7 @@ lldb::StateType NativeThreadNetBSD::GetState() { return m_state; }
 
 bool NativeThreadNetBSD::GetStopReason(ThreadStopInfo &stop_info,
                                        std::string &description) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
   description.clear();
 
   switch (m_state) {

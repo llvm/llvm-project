@@ -14,14 +14,21 @@
 #ifndef LLVM_IR_LLVMREMARKSTREAMER_H
 #define LLVM_IR_LLVMREMARKSTREAMER_H
 
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/Remarks/RemarkStreamer.h"
+#include "llvm/Remarks/Remark.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace llvm {
+
+class DiagnosticInfoOptimizationBase;
+class LLVMContext;
+class ToolOutputFile;
+namespace remarks {
+class RemarkStreamer;
+}
+
 /// Streamer for LLVM remarks which has logic for dealing with DiagnosticInfo
 /// objects.
 class LLVMRemarkStreamer {
@@ -79,7 +86,7 @@ Expected<std::unique_ptr<ToolOutputFile>>
 setupLLVMOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
                              StringRef RemarksPasses, StringRef RemarksFormat,
                              bool RemarksWithHotness,
-                             Optional<uint64_t> RemarksHotnessThreshold = 0);
+                             std::optional<uint64_t> RemarksHotnessThreshold = 0);
 
 /// Setup optimization remarks that output directly to a raw_ostream.
 /// \p OS is managed by the caller and should be open for writing as long as \p
@@ -87,7 +94,7 @@ setupLLVMOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
 Error setupLLVMOptimizationRemarks(
     LLVMContext &Context, raw_ostream &OS, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
-    Optional<uint64_t> RemarksHotnessThreshold = 0);
+    std::optional<uint64_t> RemarksHotnessThreshold = 0);
 
 } // end namespace llvm
 

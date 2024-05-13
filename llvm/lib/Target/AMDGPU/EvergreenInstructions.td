@@ -35,7 +35,7 @@ def IMMZeroBasedBitfieldMask : ImmLeaf <i32, [{
 }]>;
 
 def IMMPopCount : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(countPopulation(N->getZExtValue()), SDLoc(N),
+  return CurDAG->getTargetConstant(llvm::popcount(N->getZExtValue()), SDLoc(N),
                                    MVT::i32);
 }]>;
 
@@ -126,7 +126,6 @@ def EXP_IEEE_eg : EXP_IEEE_Common<0x81>;
 def LOG_IEEE_eg : LOG_IEEE_Common<0x83>;
 def RECIP_CLAMPED_eg : RECIP_CLAMPED_Common<0x84>;
 def RECIPSQRT_IEEE_eg : RECIPSQRT_IEEE_Common<0x89>;
-def : RsqPat<RECIPSQRT_IEEE_eg, f32>;
 def : SqrtPat<RECIPSQRT_IEEE_eg, RECIP_IEEE_eg>;
 
 def SIN_eg : SIN_Common<0x8D>;
@@ -303,21 +302,13 @@ def : EGPat<(v4i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
 
 let SubtargetPredicate = isEGorCayman in {
 
-multiclass AtomicPat<Instruction inst_ret, Instruction inst_noret,
-                     SDPatternOperator node_ret, SDPatternOperator node_noret> {
+multiclass AtomicPat<Instruction inst_noret,
+                     SDPatternOperator node_noret> {
   // FIXME: Add _RTN version. We need per WI scratch location to store the old value
   // EXTRACT_SUBREG here is dummy, we know the node has no uses
   def : EGOrCaymanPat<(i32 (node_noret i32:$ptr, i32:$data)),
             (EXTRACT_SUBREG (inst_noret
               (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), $data, sub0), $ptr), sub1)>;
-}
-multiclass AtomicIncDecPat<Instruction inst_ret, Instruction inst_noret,
-                     SDPatternOperator node_ret, SDPatternOperator node_noret, int C> {
-  // FIXME: Add _RTN version. We need per WI scratch location to store the old value
-  // EXTRACT_SUBREG here is dummy, we know the node has no uses
-  def : EGOrCaymanPat<(i32 (node_noret i32:$ptr, C)),
-            (EXTRACT_SUBREG (inst_noret
-              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), (MOV_IMM_I32 -1), sub0), $ptr), sub1)>;
 }
 
 // CMPSWAP is pattern is special
@@ -330,48 +321,26 @@ def : EGOrCaymanPat<(i32 (atomic_cmp_swap_global_noret i32:$ptr, i32:$cmp, i32:$
             $data, sub0),
           $ptr), sub1)>;
 
-defm AtomicSwapPat : AtomicPat <RAT_ATOMIC_XCHG_INT_RTN,
-                                RAT_ATOMIC_XCHG_INT_NORET,
-                                atomic_swap_global_ret_32,
+defm AtomicSwapPat : AtomicPat <RAT_ATOMIC_XCHG_INT_NORET,
                                 atomic_swap_global_noret_32>;
-defm AtomicAddPat : AtomicPat <RAT_ATOMIC_ADD_RTN, RAT_ATOMIC_ADD_NORET,
-                               atomic_load_add_global_ret_32, atomic_load_add_global_noret_32>;
-defm AtomicSubPat : AtomicPat <RAT_ATOMIC_SUB_RTN, RAT_ATOMIC_SUB_NORET,
-                               atomic_load_sub_global_ret_32, atomic_load_sub_global_noret_32>;
-defm AtomicMinPat : AtomicPat <RAT_ATOMIC_MIN_INT_RTN,
-                               RAT_ATOMIC_MIN_INT_NORET,
-                               atomic_load_min_global_ret_32, atomic_load_min_global_noret_32>;
-defm AtomicUMinPat : AtomicPat <RAT_ATOMIC_MIN_UINT_RTN,
-                                RAT_ATOMIC_MIN_UINT_NORET,
-                                atomic_load_umin_global_ret_32, atomic_load_umin_global_noret_32>;
-defm AtomicMaxPat : AtomicPat <RAT_ATOMIC_MAX_INT_RTN,
-                               RAT_ATOMIC_MAX_INT_NORET,
-                               atomic_load_max_global_ret_32, atomic_load_max_global_noret_32>;
-defm AtomicUMaxPat : AtomicPat <RAT_ATOMIC_MAX_UINT_RTN,
-                                RAT_ATOMIC_MAX_UINT_NORET,
-                                atomic_load_umax_global_ret_32, atomic_load_umax_global_noret_32>;
-defm AtomicAndPat : AtomicPat <RAT_ATOMIC_AND_RTN, RAT_ATOMIC_AND_NORET,
-                               atomic_load_and_global_ret_32, atomic_load_and_global_noret_32>;
-defm AtomicOrPat : AtomicPat <RAT_ATOMIC_OR_RTN, RAT_ATOMIC_OR_NORET,
-                              atomic_load_or_global_ret_32, atomic_load_or_global_noret_32>;
-defm AtomicXorPat : AtomicPat <RAT_ATOMIC_XOR_RTN, RAT_ATOMIC_XOR_NORET,
-                               atomic_load_xor_global_ret_32, atomic_load_xor_global_noret_32>;
-defm AtomicIncAddPat : AtomicIncDecPat <RAT_ATOMIC_INC_UINT_RTN,
-                                        RAT_ATOMIC_INC_UINT_NORET,
-                                        atomic_load_add_global_ret_32,
-                                        atomic_load_add_global_noret_32, 1>;
-defm AtomicIncSubPat : AtomicIncDecPat <RAT_ATOMIC_INC_UINT_RTN,
-                                        RAT_ATOMIC_INC_UINT_NORET,
-                                        atomic_load_sub_global_ret_32,
-                                        atomic_load_sub_global_noret_32, -1>;
-defm AtomicDecAddPat : AtomicIncDecPat <RAT_ATOMIC_DEC_UINT_RTN,
-                                        RAT_ATOMIC_DEC_UINT_NORET,
-                                        atomic_load_add_global_ret_32,
-                                        atomic_load_add_global_noret_32, -1>;
-defm AtomicDecSubPat : AtomicIncDecPat <RAT_ATOMIC_DEC_UINT_RTN,
-                                        RAT_ATOMIC_DEC_UINT_NORET,
-                                        atomic_load_sub_global_ret_32,
-                                        atomic_load_sub_global_noret_32, 1>;
+defm AtomicAddPat : AtomicPat <RAT_ATOMIC_ADD_NORET,
+                               atomic_load_add_global_noret_32>;
+defm AtomicSubPat : AtomicPat <RAT_ATOMIC_SUB_NORET,
+                               atomic_load_sub_global_noret_32>;
+defm AtomicMinPat : AtomicPat <RAT_ATOMIC_MIN_INT_NORET,
+                               atomic_load_min_global_noret_32>;
+defm AtomicUMinPat : AtomicPat <RAT_ATOMIC_MIN_UINT_NORET,
+                                atomic_load_umin_global_noret_32>;
+defm AtomicMaxPat : AtomicPat <RAT_ATOMIC_MAX_INT_NORET,
+                               atomic_load_max_global_noret_32>;
+defm AtomicUMaxPat : AtomicPat <RAT_ATOMIC_MAX_UINT_NORET,
+                                atomic_load_umax_global_noret_32>;
+defm AtomicAndPat : AtomicPat <RAT_ATOMIC_AND_NORET,
+                               atomic_load_and_global_noret_32>;
+defm AtomicOrPat : AtomicPat <RAT_ATOMIC_OR_NORET,
+                              atomic_load_or_global_noret_32>;
+defm AtomicXorPat : AtomicPat <RAT_ATOMIC_XOR_NORET,
+                               atomic_load_xor_global_noret_32>;
 
 // Should be predicated on FeatureFP64
 // def FMA_64 : R600_3OP <

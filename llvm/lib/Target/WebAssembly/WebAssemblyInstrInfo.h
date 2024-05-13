@@ -43,8 +43,7 @@ public:
 
   const WebAssemblyRegisterInfo &getRegisterInfo() const { return RI; }
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                         AAResults *AA) const override;
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
@@ -70,6 +69,9 @@ public:
   getSerializableTargetIndices() const override;
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
+  bool isExplicitTargetIndexDef(const MachineInstr &MI, int &Index,
+                                int64_t &Offset) const override;
 };
 
 } // end namespace llvm

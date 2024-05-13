@@ -17,8 +17,9 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include <unordered_map>
+#include <vector>
 
 namespace llvm {
 struct LegalityQuery;
@@ -240,16 +241,6 @@ public:
                                                        Unsupported);
   }
 
-  static SizeAndActionsVec
-  narrowToSmallerAndWidenToSmallest(const SizeAndActionsVec &v) {
-    using namespace LegacyLegalizeActions;
-    assert(v.size() > 0 &&
-           "At least one size that can be legalized towards is needed"
-           " for this SizeChangeStrategy");
-    return decreaseToSmallerTypesAndIncreaseToSmallest(v, NarrowScalar,
-                                                       WidenScalar);
-  }
-
   /// A SizeChangeStrategy for the common case where legalization for a
   /// particular vector operation consists of having more elements in the
   /// vector, to a type that is legal. Unless there is no such type and then
@@ -465,7 +456,7 @@ private:
       ScalarSizeChangeStrategies[LastOp - FirstOp + 1];
   SmallVector<SizeChangeStrategy, 1>
       VectorElementSizeChangeStrategies[LastOp - FirstOp + 1];
-  bool TablesInitialized;
+  bool TablesInitialized = false;
 
   // Data structures used by getAction:
   SmallVector<SizeAndActionsVec, 1> ScalarActions[LastOp - FirstOp + 1];
@@ -478,4 +469,4 @@ private:
 
 } // end namespace llvm
 
-#endif // define LLVM_CODEGEN_GLOBALISEL_LEGACYLEGALIZERINFO_H
+#endif // LLVM_CODEGEN_GLOBALISEL_LEGACYLEGALIZERINFO_H

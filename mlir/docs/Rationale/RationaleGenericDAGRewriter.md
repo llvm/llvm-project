@@ -102,7 +102,7 @@ GCC
 LLVM's
 [DAG Combiner](https://github.com/llvm-mirror/llvm/blob/master/lib/CodeGen/SelectionDAG/DAGCombiner.cpp),
 the Swift compiler's
-[SIL Combiner](https://github.com/apple/swift/tree/master/lib/SILOptimizer/SILCombiner),
+[SIL Combiner](https://github.com/apple/swift/tree/main/lib/SILOptimizer/SILCombiner),
 etc. These generally match one or more operations and produce zero or more
 operations as a result. The LLVM
 [Legalization](https://github.com/llvm/llvm-project/tree/main/llvm/lib/CodeGen/SelectionDAG)

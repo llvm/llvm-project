@@ -17,7 +17,7 @@ int64_t foo(int64_t v, volatile int64_t *p)
 		       : [_rl] "=&r" (rl), [_rh] "=&r" (rh)		\
 		       : [_p] "p" (p) : "memory");
 
-  // CHECK: call { i32, i32 } asm sideeffect "ldrexd$0, $1, [$2]", "=&{r1},=&{r2},r,~{memory}"(i64*
+  // CHECK: call { i32, i32 } asm sideeffect "ldrexd$0, $1, [$2]", "=&{r1},=&{r2},r,~{memory}"(ptr
 
   return r;
 }

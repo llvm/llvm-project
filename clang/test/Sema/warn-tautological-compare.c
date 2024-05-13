@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -verify  %s
-// rdar://18716393
 
 extern int a[] __attribute__((weak));
 int b[] = {8,13,21};
@@ -8,10 +7,10 @@ struct {
 } c;
 const char str[] = "text";
 
-void ignore() {
+void ignore(void) {
   if (!a) {}
 }
-void test() {
+void test(void) {
   if (!b) {} // expected-warning {{address of array 'b' will always evaluate to 'true'}}
   if (b == 0) {} // expected-warning {{comparison of array 'b' equal to a null pointer is always false}}
   if (!c.x) {} // expected-warning {{address of array 'c.x' will always evaluate to 'true'}}
@@ -21,7 +20,7 @@ void test() {
 }
 
 int array[2];
-int test1()
+int test1(void)
 {
   if (!array) { // expected-warning {{address of array 'array' will always evaluate to 'true'}}
     return array[0];
@@ -51,7 +50,7 @@ int test2(int* pointer, char ch, void * pv) {
    return 1;
 }
 
-void test3() {
+void test3(void) {
    if (array) { } // expected-warning {{address of array 'array' will always evaluate to 'true'}}
    if (array != 0) {} // expected-warning {{comparison of array 'array' not equal to a null pointer is always true}}
    if (!array) { } // expected-warning {{address of array 'array' will always evaluate to 'true'}}
@@ -77,7 +76,6 @@ void test3() {
        (!array && array[0])) {} // expected-warning {{address of array 'array' will always evaluate to 'true'}}
  }
 
-// rdar://19256338
 #define SAVE_READ(PTR) if( (PTR) && (&result) ) *result=*PTR;
 void _HTTPClientErrorHandler(int me)
 {
@@ -85,11 +83,16 @@ void _HTTPClientErrorHandler(int me)
   SAVE_READ(&me);
 }
 
-void test_conditional_operator() {
+void test_conditional_operator(void) {
   int x;
   x = b ? 1 : 0;     // expected-warning {{address of array}}
   x = c.x ? 1 : 0;   // expected-warning {{address of array}}
   x = str ? 1 : 0;   // expected-warning {{address of array}}
   x = array ? 1 : 0; // expected-warning {{address of array}}
   x = &x ? 1 : 0;    // expected-warning {{address of 'x'}}
+}
+
+void test4(void) {
+  int *a = (void *) 0;
+  int b = (&a) == ((void *) 0); // expected-warning {{comparison of address of 'a' equal to a null pointer is always false}}
 }

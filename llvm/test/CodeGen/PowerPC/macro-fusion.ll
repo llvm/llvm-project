@@ -16,6 +16,6 @@ entry:
 ; CHECK-P8: Macro fuse: SU([[SU0:[0-9]+]]) - SU([[SU1:[0-9]+]]) /  ADDIStocHA8 - LD
 ; CHECK-P8: SU([[SU0]]):   renamable $x[[REG3:[0-9]+]] = ADDIStocHA8 $x2, @m
 ; CHECK-P8: SU([[SU1]]):   renamable $x[[REG3]] = LD target-flags(ppc-toc-lo) @m, renamable $x[[REG3]]
-  %0 = load i64, i64* @m, align 8
+  %0 = load i64, ptr @m, align 8
   ret i64 %0
 }

@@ -2,16 +2,15 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
-// <rdar://problem/8124080>
 template<typename _Alloc> class allocator;
 template<class _CharT> struct char_traits;
-template<typename _CharT, typename _Traits = char_traits<_CharT>,            
+template<typename _CharT, typename _Traits = char_traits<_CharT>,
          typename _Alloc = allocator<_CharT> >
 class basic_string;
 template<typename _CharT, typename _Traits, typename _Alloc>
-const typename basic_string<_CharT, _Traits, _Alloc>::size_type   
+const typename basic_string<_CharT, _Traits, _Alloc>::size_type
 basic_string<_CharT, _Traits, _Alloc>::_Rep::_S_max_size // expected-error{{no member named '_Rep' in 'basic_string<_CharT, _Traits, _Alloc>'}}
-  = (((npos - sizeof(_Rep_base))/sizeof(_CharT)) - 1) / 4; 
+  = (((npos - sizeof(_Rep_base))/sizeof(_CharT)) - 1) / 4;
 
 // PR7118
 template<typename T>
@@ -29,7 +28,6 @@ template<typename T> struct a : T {
  };
 };
 
-// rdar://8605381
 namespace rdar8605381 {
 struct X {};
 
@@ -181,8 +179,8 @@ namespace pr16964 {
   template<typename> struct bs {
     bs();
     static int* member(); // expected-note{{possible target}}
-    member();  // expected-error{{C++ requires a type specifier for all declarations}}
-    static member();  // expected-error{{C++ requires a type specifier for all declarations}}
+    member();  // expected-error{{a type specifier is required for all declarations}}
+    static member();  // expected-error{{a type specifier is required for all declarations}}
     static int* member(int); // expected-note{{possible target}}
   };
 
@@ -237,7 +235,7 @@ namespace pr16989 {
 }
 
 namespace pr20660 {
- appendList(int[]...);     // expected-error {{C++ requires a type specifier for all declarations}}
- appendList(int[]...) { }  // expected-error {{C++ requires a type specifier for all declarations}}
+ appendList(int[]...);     // expected-error {{a type specifier is required for all declarations}}
+ appendList(int[]...) { }  // expected-error {{a type specifier is required for all declarations}}
 }
 

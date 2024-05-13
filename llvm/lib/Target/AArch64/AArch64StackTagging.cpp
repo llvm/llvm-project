@@ -1,9 +1,8 @@
 //===- AArch64StackTagging.cpp - Stack tagging in IR --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
@@ -12,11 +11,7 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -26,7 +21,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -42,19 +36,24 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include <cassert>
 #include <iterator>
+#include <memory>
 #include <utility>
 
 using namespace llvm;
@@ -62,12 +61,12 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-stack-tagging"
 
 static cl::opt<bool> ClMergeInit(
-    "stack-tagging-merge-init", cl::Hidden, cl::init(true), cl::ZeroOrMore,
+    "stack-tagging-merge-init", cl::Hidden, cl::init(true),
     cl::desc("merge stack variable initializers with tagging when possible"));
 
 static cl::opt<bool>
     ClUseStackSafety("stack-tagging-use-stack-safety", cl::Hidden,
-                     cl::init(true), cl::ZeroOrMore,
+                     cl::init(true),
                      cl::desc("Use Stack Safety analysis results"));
 
 static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
@@ -76,6 +75,12 @@ static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
 static cl::opt<unsigned>
     ClMergeInitSizeLimit("stack-tagging-merge-init-size-limit", cl::init(272),
                          cl::Hidden);
+
+static cl::opt<size_t> ClMaxLifetimes(
+    "stack-tagging-max-lifetimes-for-alloca", cl::Hidden, cl::init(3),
+    cl::ReallyHidden,
+    cl::desc("How many lifetime ends to handle for a single alloca."),
+    cl::Optional);
 
 static const Align kTagGranuleSize = Align(16);
 
@@ -238,7 +243,7 @@ public:
                       << ") zero\n");
     Value *Ptr = BasePtr;
     if (Offset)
-      Ptr = IRB.CreateConstGEP1_32(Ptr, Offset);
+      Ptr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), Ptr, Offset);
     IRB.CreateCall(SetTagZeroFn,
                    {Ptr, ConstantInt::get(IRB.getInt64Ty(), Size)});
   }
@@ -248,7 +253,7 @@ public:
                       << ") undef\n");
     Value *Ptr = BasePtr;
     if (Offset)
-      Ptr = IRB.CreateConstGEP1_32(Ptr, Offset);
+      Ptr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), Ptr, Offset);
     IRB.CreateCall(SetTagFn, {Ptr, ConstantInt::get(IRB.getInt64Ty(), Size)});
   }
 
@@ -257,7 +262,7 @@ public:
     LLVM_DEBUG(dbgs() << "    " << *A << "\n    " << *B << "\n");
     Value *Ptr = BasePtr;
     if (Offset)
-      Ptr = IRB.CreateConstGEP1_32(Ptr, Offset);
+      Ptr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), Ptr, Offset);
     IRB.CreateCall(StgpFn, {Ptr, A, B});
   }
 
@@ -282,15 +287,6 @@ public:
 };
 
 class AArch64StackTagging : public FunctionPass {
-  struct AllocaInfo {
-    AllocaInst *AI;
-    TrackingVH<Instruction> OldAI; // Track through RAUW to replace debug uses.
-    SmallVector<IntrinsicInst *, 2> LifetimeStart;
-    SmallVector<IntrinsicInst *, 2> LifetimeEnd;
-    SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
-    int Tag; // -1 for non-tagged allocations
-  };
-
   const bool MergeInit;
   const bool UseStackSafety;
 
@@ -305,9 +301,6 @@ public:
     initializeAArch64StackTaggingPass(*PassRegistry::getPassRegistry());
   }
 
-  bool isInterestingAlloca(const AllocaInst &AI);
-  void alignAndPadAlloca(AllocaInfo &Info);
-
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
   void untagAlloca(AllocaInst *AI, Instruction *InsertBefore, uint64_t Size);
@@ -315,9 +308,9 @@ public:
   Instruction *collectInitializers(Instruction *StartInst, Value *StartPtr,
                                    uint64_t Size, InitializerBuilder &IB);
 
-  Instruction *
-  insertBaseTaggedPointer(const MapVector<AllocaInst *, AllocaInfo> &Allocas,
-                          const DominatorTree *DT);
+  Instruction *insertBaseTaggedPointer(
+      const MapVector<AllocaInst *, memtag::AllocaInfo> &Allocas,
+      const DominatorTree *DT);
   bool runOnFunction(Function &F) override;
 
   StringRef getPassName() const override { return "AArch64 Stack Tagging"; }
@@ -383,8 +376,8 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
         break;
 
       // Check to see if this store is to a constant offset from the start ptr.
-      Optional<int64_t> Offset =
-          isPointerOffset(StartPtr, NextStore->getPointerOperand(), *DL);
+      std::optional<int64_t> Offset =
+          NextStore->getPointerOperand()->getPointerOffsetFrom(StartPtr, *DL);
       if (!Offset)
         break;
 
@@ -401,7 +394,8 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
         break;
 
       // Check to see if this store is to a constant offset from the start ptr.
-      Optional<int64_t> Offset = isPointerOffset(StartPtr, MSI->getDest(), *DL);
+      std::optional<int64_t> Offset =
+          MSI->getDest()->getPointerOffsetFrom(StartPtr, *DL);
       if (!Offset)
         break;
 
@@ -411,22 +405,6 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
     }
   }
   return LastInst;
-}
-
-bool AArch64StackTagging::isInterestingAlloca(const AllocaInst &AI) {
-  // FIXME: support dynamic allocas
-  bool IsInteresting =
-      AI.getAllocatedType()->isSized() && AI.isStaticAlloca() &&
-      // alloca() may be called with 0 size, ignore it.
-      AI.getAllocationSizeInBits(*DL).getValue() > 0 &&
-      // inalloca allocas are not treated as static, and we don't want
-      // dynamic alloca instrumentation for them as well.
-      !AI.isUsedWithInAlloca() &&
-      // swifterror allocas are register promoted by ISel
-      !AI.isSwiftError() &&
-      // safe allocas are not interesting
-      !(SSI && SSI->isSafe(AI));
-  return IsInteresting;
 }
 
 void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
@@ -454,20 +432,18 @@ void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
 void AArch64StackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                                       uint64_t Size) {
   IRBuilder<> IRB(InsertBefore);
-  IRB.CreateCall(SetTagFunc, {IRB.CreatePointerCast(AI, IRB.getInt8PtrTy()),
+  IRB.CreateCall(SetTagFunc, {IRB.CreatePointerCast(AI, IRB.getPtrTy()),
                               ConstantInt::get(IRB.getInt64Ty(), Size)});
 }
 
 Instruction *AArch64StackTagging::insertBaseTaggedPointer(
-    const MapVector<AllocaInst *, AllocaInfo> &Allocas,
+    const MapVector<AllocaInst *, memtag::AllocaInfo> &AllocasToInstrument,
     const DominatorTree *DT) {
   BasicBlock *PrologueBB = nullptr;
   // Try sinking IRG as deep as possible to avoid hurting shrink wrap.
-  for (auto &I : Allocas) {
-    const AllocaInfo &Info = I.second;
+  for (auto &I : AllocasToInstrument) {
+    const memtag::AllocaInfo &Info = I.second;
     AllocaInst *AI = Info.AI;
-    if (Info.Tag < 0)
-      continue;
     if (!PrologueBB) {
       PrologueBB = AI->getParent();
       continue;
@@ -485,58 +461,6 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   return Base;
 }
 
-void AArch64StackTagging::alignAndPadAlloca(AllocaInfo &Info) {
-  const Align NewAlignment =
-      max(MaybeAlign(Info.AI->getAlignment()), kTagGranuleSize);
-  Info.AI->setAlignment(NewAlignment);
-
-  uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
-  uint64_t AlignedSize = alignTo(Size, kTagGranuleSize);
-  if (Size == AlignedSize)
-    return;
-
-  // Add padding to the alloca.
-  Type *AllocatedType =
-      Info.AI->isArrayAllocation()
-          ? ArrayType::get(
-                Info.AI->getAllocatedType(),
-                cast<ConstantInt>(Info.AI->getArraySize())->getZExtValue())
-          : Info.AI->getAllocatedType();
-  Type *PaddingType =
-      ArrayType::get(Type::getInt8Ty(F->getContext()), AlignedSize - Size);
-  Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
-  auto *NewAI = new AllocaInst(
-      TypeWithPadding, Info.AI->getType()->getAddressSpace(), nullptr, "", Info.AI);
-  NewAI->takeName(Info.AI);
-  NewAI->setAlignment(Info.AI->getAlign());
-  NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
-  NewAI->setSwiftError(Info.AI->isSwiftError());
-  NewAI->copyMetadata(*Info.AI);
-
-  auto *NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
-  Info.AI->replaceAllUsesWith(NewPtr);
-  Info.AI->eraseFromParent();
-  Info.AI = NewAI;
-}
-
-// Helper function to check for post-dominance.
-static bool postDominates(const PostDominatorTree *PDT, const IntrinsicInst *A,
-                          const IntrinsicInst *B) {
-  const BasicBlock *ABB = A->getParent();
-  const BasicBlock *BBB = B->getParent();
-
-  if (ABB != BBB)
-    return PDT->dominates(ABB, BBB);
-
-  for (const Instruction &I : *ABB) {
-    if (&I == B)
-      return true;
-    if (&I == A)
-      return false;
-  }
-  llvm_unreachable("Corrupt instruction list");
-}
-
 // FIXME: check for MTE extension
 bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
@@ -549,75 +473,20 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-  MapVector<AllocaInst *, AllocaInfo> Allocas; // need stable iteration order
-  SmallVector<Instruction *, 8> RetVec;
-  SmallVector<Instruction *, 4> UnrecognizedLifetimes;
+  memtag::StackInfoBuilder SIB(SSI);
+  for (Instruction &I : instructions(F))
+    SIB.visit(I);
+  memtag::StackInfo &SInfo = SIB.get();
 
-  for (auto &BB : *F) {
-    for (BasicBlock::iterator IT = BB.begin(); IT != BB.end(); ++IT) {
-      Instruction *I = &*IT;
-      if (auto *AI = dyn_cast<AllocaInst>(I)) {
-        Allocas[AI].AI = AI;
-        Allocas[AI].OldAI = AI;
-        continue;
-      }
-
-      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(I)) {
-        for (Value *V : DVI->location_ops())
-          if (auto *AI = dyn_cast_or_null<AllocaInst>(V))
-            Allocas[AI].DbgVariableIntrinsics.push_back(DVI);
-        continue;
-      }
-
-      auto *II = dyn_cast<IntrinsicInst>(I);
-      if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-                 II->getIntrinsicID() == Intrinsic::lifetime_end)) {
-        AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
-        if (!AI) {
-          UnrecognizedLifetimes.push_back(I);
-          continue;
-        }
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-          Allocas[AI].LifetimeStart.push_back(II);
-        else
-          Allocas[AI].LifetimeEnd.push_back(II);
-      }
-
-      if (isa<ReturnInst>(I) || isa<ResumeInst>(I) || isa<CleanupReturnInst>(I))
-        RetVec.push_back(I);
-    }
-  }
-
-  if (Allocas.empty())
+  if (SInfo.AllocasToInstrument.empty())
     return false;
-
-  int NextTag = 0;
-  int NumInterestingAllocas = 0;
-  for (auto &I : Allocas) {
-    AllocaInfo &Info = I.second;
-    assert(Info.AI);
-
-    if (!isInterestingAlloca(*Info.AI)) {
-      Info.Tag = -1;
-      continue;
-    }
-
-    alignAndPadAlloca(Info);
-    NumInterestingAllocas++;
-    Info.Tag = NextTag;
-    NextTag = (NextTag + 1) % 16;
-  }
-
-  if (NumInterestingAllocas == 0)
-    return true;
 
   std::unique_ptr<DominatorTree> DeleteDT;
   DominatorTree *DT = nullptr;
   if (auto *P = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DT = &P->getDomTree();
 
-  if (DT == nullptr && (NumInterestingAllocas > 1 ||
-                        !F->hasFnAttribute(Attribute::OptimizeNone))) {
+  if (DT == nullptr) {
     DeleteDT = std::make_unique<DominatorTree>(*F);
     DT = DeleteDT.get();
   }
@@ -627,91 +496,90 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (auto *P = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>())
     PDT = &P->getPostDomTree();
 
-  if (PDT == nullptr && !F->hasFnAttribute(Attribute::OptimizeNone)) {
+  if (PDT == nullptr) {
     DeletePDT = std::make_unique<PostDominatorTree>(*F);
     PDT = DeletePDT.get();
+  }
+
+  std::unique_ptr<LoopInfo> DeleteLI;
+  LoopInfo *LI = nullptr;
+  if (auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>()) {
+    LI = &LIWP->getLoopInfo();
+  } else {
+    DeleteLI = std::make_unique<LoopInfo>(*DT);
+    LI = DeleteLI.get();
   }
 
   SetTagFunc =
       Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag);
 
-  Instruction *Base = insertBaseTaggedPointer(Allocas, DT);
+  Instruction *Base = insertBaseTaggedPointer(SInfo.AllocasToInstrument, DT);
 
-  for (auto &I : Allocas) {
-    const AllocaInfo &Info = I.second;
+  int NextTag = 0;
+  for (auto &I : SInfo.AllocasToInstrument) {
+    memtag::AllocaInfo &Info = I.second;
+    assert(Info.AI && SIB.isInterestingAlloca(*Info.AI));
+    memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
-    if (Info.Tag < 0)
-      continue;
-
+    int Tag = NextTag;
+    NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
     Function *TagP = Intrinsic::getDeclaration(
         F->getParent(), Intrinsic::aarch64_tagp, {Info.AI->getType()});
     Instruction *TagPCall =
         IRB.CreateCall(TagP, {Constant::getNullValue(Info.AI->getType()), Base,
-                              ConstantInt::get(IRB.getInt64Ty(), Info.Tag)});
+                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
-    Info.AI->replaceAllUsesWith(TagPCall);
+    // Does not replace metadata, so we don't have to handle DbgVariableRecords.
+    Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
+      return !memtag::isLifetimeIntrinsic(U.getUser());
+    });
     TagPCall->setOperand(0, Info.AI);
 
-    if (UnrecognizedLifetimes.empty() && Info.LifetimeStart.size() == 1 &&
-        Info.LifetimeEnd.size() == 1) {
+    // Calls to functions that may return twice (e.g. setjmp) confuse the
+    // postdominator analysis, and will leave us to keep memory tagged after
+    // function return. Work around this by always untagging at every return
+    // statement if return_twice functions are called.
+    bool StandardLifetime =
+        !SInfo.CallsReturnTwice &&
+        SInfo.UnrecognizedLifetimes.empty() &&
+        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
+                                   ClMaxLifetimes);
+    if (StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
-      IntrinsicInst *End = Info.LifetimeEnd[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
-      tagAlloca(AI, Start->getNextNode(), Start->getArgOperand(1), Size);
-      // We need to ensure that if we tag some object, we certainly untag it
-      // before the function exits.
-      if (PDT != nullptr && postDominates(PDT, End, Start)) {
-        untagAlloca(AI, End, Size);
-      } else {
-        SmallVector<Instruction *, 8> ReachableRetVec;
-        unsigned NumCoveredExits = 0;
-        for (auto &RI : RetVec) {
-          if (!isPotentiallyReachable(Start, RI, nullptr, DT))
-            continue;
-          ReachableRetVec.push_back(RI);
-          if (DT != nullptr && DT->dominates(End, RI))
-            ++NumCoveredExits;
-        }
-        // If there's a mix of covered and non-covered exits, just put the untag
-        // on exits, so we avoid the redundancy of untagging twice.
-        if (NumCoveredExits == ReachableRetVec.size()) {
-          untagAlloca(AI, End, Size);
-        } else {
-          for (auto &RI : ReachableRetVec)
-            untagAlloca(AI, RI, Size);
-          // We may have inserted untag outside of the lifetime interval.
-          // Remove the lifetime end call for this alloca.
+      tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
+
+      auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
+      if (!DT || !PDT ||
+          !memtag::forAllReachableExits(*DT, *PDT, *LI, Start, Info.LifetimeEnd,
+                                        SInfo.RetVec, TagEnd)) {
+        for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
-        }
       }
     } else {
-      uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
-      Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());
+      uint64_t Size = *Info.AI->getAllocationSize(*DL);
+      Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getPtrTy());
       tagAlloca(AI, &*IRB.GetInsertPoint(), Ptr, Size);
-      for (auto &RI : RetVec) {
+      for (auto *RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size);
       }
       // We may have inserted tag/untag outside of any lifetime interval.
       // Remove all lifetime intrinsics for this alloca.
-      for (auto &II : Info.LifetimeStart)
+      for (auto *II : Info.LifetimeStart)
         II->eraseFromParent();
-      for (auto &II : Info.LifetimeEnd)
+      for (auto *II : Info.LifetimeEnd)
         II->eraseFromParent();
     }
-
-    // Fixup debug intrinsics to point to the new alloca.
-    for (auto DVI : Info.DbgVariableIntrinsics)
-      DVI->replaceVariableLocationOp(Info.OldAI, Info.AI);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime
-  // instrinsics have to go.
-  for (auto &I : UnrecognizedLifetimes)
+  // intrinsics have to go.
+  for (auto *I : SInfo.UnrecognizedLifetimes)
     I->eraseFromParent();
 
   return true;

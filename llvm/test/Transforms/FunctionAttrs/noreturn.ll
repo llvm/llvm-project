@@ -40,9 +40,8 @@ end:
   ret i32 %c
 }
 
-; CHECK-NOT: Function Attrs: {{.*}}noreturn
+; CHECK: Function Attrs: {{.*}}noreturn
 ; CHECK: @caller5()
-; We currently don't handle unreachable blocks.
 define i32 @caller5() {
 entry:
   %c = call i32 @noreturn()
@@ -71,3 +70,20 @@ define void @callsite_noreturn() {
   call i32 @f() noreturn
   ret void
 }
+
+; CHECK: Function Attrs: {{.*}}noreturn
+; CHECK-NEXT: @unreachable
+define void @unreachable() {
+  unreachable
+}
+
+; CHECK-NOT: Function Attrs: {{.*}}noreturn
+; CHECK: @coro
+define void @coro() presplitcoroutine {
+  call token @llvm.coro.id.retcon.once(i32 0, i32 0, ptr null, ptr @coro, ptr null, ptr null)
+  call i1 (ptr, i1, ...) @llvm.coro.end(ptr null, i1 false)
+  unreachable
+}
+
+declare token @llvm.coro.id.retcon.once(i32 %size, i32 %align, ptr %buffer, ptr %prototype, ptr %alloc, ptr %free)
+declare i1 @llvm.coro.end(ptr, i1, ...)

@@ -33,7 +33,7 @@ RegisterContextCorePOSIX_s390x::RegisterContextCorePOSIX_s390x(
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 }
 
-RegisterContextCorePOSIX_s390x::~RegisterContextCorePOSIX_s390x() {}
+RegisterContextCorePOSIX_s390x::~RegisterContextCorePOSIX_s390x() = default;
 
 bool RegisterContextCorePOSIX_s390x::ReadGPR() { return true; }
 
@@ -77,7 +77,7 @@ bool RegisterContextCorePOSIX_s390x::ReadRegister(const RegisterInfo *reg_info,
 }
 
 bool RegisterContextCorePOSIX_s390x::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 

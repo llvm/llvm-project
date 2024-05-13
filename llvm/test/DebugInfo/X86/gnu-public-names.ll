@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s | FileCheck -check-prefix=ASM %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s | llvm-dwarfdump --debug-info --debug-gnu-pubnames --debug-gnu-pubtypes - | FileCheck %s --implicit-check-not "{{DW_TAG|NULL}}"
 ; ModuleID = 'dwarf-public-names.cpp'
 ;
 ; Generated from:
@@ -66,214 +66,173 @@
 
 ; ASM: .section        .debug_gnu_pubnames
 ; ASM: .byte   32                      # Attributes: VARIABLE, EXTERNAL
+; ASM-NEXT: .asciz  "C::static_member_variable"           # External Name
+; ASM: .byte   32                      # Attributes: VARIABLE, EXTERNAL
 ; ASM-NEXT: .asciz  "global_variable"       # External Name
+; ASM: .byte   32                      # Attributes: VARIABLE, EXTERNAL
+; ASM-NEXT: .asciz  "ns::global_namespace_variable"       # External Name
 
 ; ASM: .section        .debug_gnu_pubtypes
 ; ASM: .byte   16                      # Attributes: TYPE, EXTERNAL
 ; ASM-NEXT: .asciz  "C"                     # External Name
 
 ; CHECK: .debug_info contents:
-; CHECK: Compile Unit:
-; CHECK: DW_AT_GNU_pubnames [DW_FORM_flag_present]   (true)
+; CHECK: DW_TAG_compile_unit
+; CHECK:   DW_AT_GNU_pubnames (true)
 ; CHECK-NOT: DW_AT_GNU_pubtypes [
 
-; CHECK: [[STATIC_MEM_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK-NEXT: DW_AT_specification {{.*}} "static_member_variable"
+; CHECK:   [[STATIC_MEM_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:     DW_AT_specification {{.*}} "static_member_variable"
 
-; CHECK: [[C:0x[0-9a-f]+]]: DW_TAG_structure_type
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "C"
+; CHECK:   [[C:0x[0-9a-f]+]]: DW_TAG_structure_type
+; CHECK:     DW_AT_name ("C")
+; CHECK:     DW_TAG_member
+; CHECK:       DW_AT_name ("static_member_variable")
+; CHECK:     DW_TAG_subprogram
+; CHECK:       DW_AT_linkage_name
+; CHECK:       DW_AT_name ("member_function")
+; CHECK:       DW_TAG_formal_parameter
+; CHECK:       NULL
+; CHECK:     DW_TAG_subprogram
+; CHECK:       DW_AT_linkage_name
+; CHECK:       DW_AT_name ("static_member_function")
+; CHECK:     NULL
 
-; CHECK: DW_TAG_member
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "static_member_variable"
+; CHECK:   [[INT:0x[0-9a-f]+]]: DW_TAG_base_type
+; CHECK:     DW_AT_name ("int")
+; CHECK:   DW_TAG_pointer_type
 
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_linkage_name
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "member_function"
+; CHECK:   [[GLOB_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:     DW_AT_name ("global_variable")
 
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_linkage_name
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "static_member_function"
+; CHECK:   [[NS:0x[0-9a-f]+]]: DW_TAG_namespace
+; CHECK:     DW_AT_name ("ns")
+; CHECK:     [[GLOB_NS_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:       DW_AT_name ("global_namespace_variable")
+; CHECK-NOT:   DW_AT_specification
+; CHECK:       DW_AT_location
+; CHECK-NOT:   DW_AT_specification
+; CHECK:     [[D_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:       DW_AT_name ("d")
+; CHECK-NOT:   DW_AT_specification
+; CHECK:       DW_AT_location
+; CHECK-NOT:   DW_AT_specification
+; CHECK:     [[D:0x[0-9a-f]+]]: DW_TAG_structure_type
+; CHECK:       DW_AT_name ("D")
+; CHECK:       DW_TAG_member
+; CHECK:       NULL
+; CHECK:     [[GLOB_NS_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:       DW_AT_linkage_name
+; CHECK:       DW_AT_name ("global_namespace_function")
+; CHECK:     DW_TAG_variable
+; CHECK:     NULL
 
-; CHECK: [[INT:0x[0-9a-f]+]]: DW_TAG_base_type
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "int"
+; CHECK:   [[F3:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_name ("f3")
+; CHECK:     [[F3_Z:.*]]: DW_TAG_variable
+; CHECK:       DW_AT_name ("z")
+; CHECK:       DW_AT_location
+; CHECK:     NULL
 
-; CHECK: [[GLOB_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "global_variable"
+; CHECK:   [[ANON:.*]]: DW_TAG_namespace
+; CHECK-NOT: DW_AT_name
+; CHECK:     [[ANON_I:.*]]: DW_TAG_variable
+; CHECK:       DW_AT_name ("i")
+; CHECK:       [[ANON_INNER:.*]]:  DW_TAG_namespace
+; CHECK:         DW_AT_name ("inner")
+; CHECK:         [[ANON_INNER_B:.*]]: DW_TAG_variable
+; CHECK:           DW_AT_name ("b")
+; CHECK:         NULL
+; CHECK:     NULL
 
-; CHECK: [[NS:0x[0-9a-f]+]]: DW_TAG_namespace
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "ns"
-
-; CHECK: [[GLOB_NS_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL|DW_AT_specification}}
-; CHECK: DW_AT_name {{.*}} "global_namespace_variable"
-; CHECK-NOT: {{DW_TAG|NULL|DW_AT_specification}}
-; CHECK-NOT: DW_AT_specification
-; CHECK: DW_AT_location
-; CHECK-NOT: DW_AT_specification
-
-; CHECK: [[D_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "d"
-; CHECK-NOT: {{DW_TAG|NULL|DW_AT_specification}}
-; CHECK: DW_AT_location
-; CHECK-NOT: DW_AT_specification
-
-; CHECK: [[D:0x[0-9a-f]+]]: DW_TAG_structure_type
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "D"
-
-; CHECK: [[GLOB_NS_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_linkage_name
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "global_namespace_function"
-
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "f3"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[F3_Z:.*]]:   DW_TAG_variable
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "z"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:     DW_AT_location
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[ANON:.*]]: DW_TAG_namespace
+; CHECK:   [[OUTER:.*]]: DW_TAG_namespace
+; CHECK:     DW_AT_name ("outer")
+; CHECK:     [[OUTER_ANON:.*]]:  DW_TAG_namespace
 ; CHECK-NOT:   DW_AT_name
-; CHECK: [[ANON_I:.*]]: DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:     DW_AT_name {{.*}} "i"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[ANON_INNER:.*]]:  DW_TAG_namespace
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "inner"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[ANON_INNER_B:.*]]: DW_TAG_variable
-; CHECK-NOT: DW_TAG
-; CHECK:       DW_AT_name {{.*}} "b"
-; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:       [[OUTER_ANON_C:.*]]: DW_TAG_variable
+; CHECK:         DW_AT_name ("c")
+; CHECK:       NULL
 ; CHECK:     NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
+
+; CHECK:   DW_TAG_enumeration
+; CHECK:     [[UNNAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
+; CHECK:       DW_AT_name ("unnamed_enum_enumerator")
+; CHECK:     NULL
+
+; CHECK:   [[UNSIGNED_INT:0x[0-9a-f]+]]: DW_TAG_base_type
+; CHECK:     DW_AT_name ("unsigned int")
+
+; CHECK:   [[NAMED_ENUM:0x[0-9a-f]+]]: DW_TAG_enumeration
+; CHECK:     DW_AT_name ("named_enum")
+; CHECK:     [[NAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
+; CHECK:       DW_AT_name ("named_enum_enumerator")
+; CHECK:     NULL
+
+; CHECK:   [[NAMED_ENUM_CLASS:0x[0-9a-f]+]]: DW_TAG_enumeration
+; CHECK:     DW_AT_name ("named_enum_class")
+; CHECK:     [[NAMED_ENUM_CLASS_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
+; CHECK:       DW_AT_name ("named_enum_class_enumerator")
+; CHECK:     NULL
+
+; CHECK:   [[MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_specification {{.*}} "_ZN1C15member_functionEv"
+; CHECK:     DW_TAG_formal_parameter
+; CHECK:     NULL
+
+; CHECK:   [[STATIC_MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_specification {{.*}} "_ZN1C22static_member_functionEv"
+
+; CHECK:   [[GLOBAL_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_linkage_name
+; CHECK:     DW_AT_name ("global_function")
+
+; CHECK:   [[GLOBAL_F7:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_linkage_name
+; CHECK:     DW_AT_name ("f7")
+
+; CHECK:   DW_TAG_imported_declaration
+; CHECK:   DW_TAG_pointer_type
+; CHECK:   DW_TAG_pointer_type
 ; CHECK:   NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[OUTER:.*]]: DW_TAG_namespace
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "outer"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[OUTER_ANON:.*]]:  DW_TAG_namespace
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK-NOT:     DW_AT_name
-; CHECK: [[OUTER_ANON_C:.*]]: DW_TAG_variable
-; CHECK-NOT: DW_TAG
-; CHECK:       DW_AT_name {{.*}} "c"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:     NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:     NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: DW_TAG_enumeration
-; CHECK-NOT: {{DW_AT_name|DW_TAG|NULL}}
-; CHECK: [[UNNAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "unnamed_enum_enumerator"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[UNSIGNED_INT:0x[0-9a-f]+]]: DW_TAG_base_type
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "unsigned int"
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[NAMED_ENUM:0x[0-9a-f]+]]: DW_TAG_enumeration
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "named_enum"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[NAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "named_enum_enumerator"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[NAMED_ENUM_CLASS:0x[0-9a-f]+]]: DW_TAG_enumeration
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "named_enum_class"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[NAMED_ENUM_CLASS_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "named_enum_class_enumerator"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: DW_TAG_imported_declaration
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_specification {{.*}} "_ZN1C15member_functionEv"
-
-; CHECK: [[STATIC_MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_specification {{.*}} "_ZN1C22static_member_functionEv"
-
-; CHECK: [[GLOBAL_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_linkage_name
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "global_function"
 
 ; CHECK-LABEL: .debug_gnu_pubnames contents:
 ; CHECK-NEXT: length = {{.*}}, version = 0x0002, unit_offset = 0x00000000, unit_size = {{.*}}
 ; CHECK-NEXT: Offset     Linkage  Kind     Name
-; CHECK-NEXT:  [[GLOBAL_FUNC]] EXTERNAL FUNCTION "global_function"
+; CHECK-NEXT:  [[STATIC_MEM_VAR]] EXTERNAL VARIABLE "C::static_member_variable"
+; CHECK-NEXT:  [[GLOB_VAR]] EXTERNAL VARIABLE "global_variable"
 ; CHECK-NEXT:  [[NS]] EXTERNAL TYPE     "ns"
-; CHECK-NEXT:  [[OUTER_ANON_C]] STATIC VARIABLE "outer::(anonymous namespace)::c"
-; CHECK-NEXT:  [[ANON_I]] STATIC VARIABLE "(anonymous namespace)::i"
+; CHECK-NEXT:  [[GLOB_NS_VAR]] EXTERNAL VARIABLE "ns::global_namespace_variable"
+; CHECK-NEXT:  [[D_VAR]] EXTERNAL VARIABLE "ns::d"
 ; CHECK-NEXT:  [[GLOB_NS_FUNC]] EXTERNAL FUNCTION "ns::global_namespace_function"
+; CHECK-NEXT:  [[F3]] EXTERNAL FUNCTION "f3"
 ; GCC Doesn't put local statics in pubnames, but it seems not unreasonable and
 ; comes out naturally from LLVM's implementation, so I'm OK with it for now. If
 ; it's demonstrated that this is a major size concern or degrades debug info
 ; consumer behavior, feel free to change it.
 ; CHECK-NEXT:  [[F3_Z]] STATIC VARIABLE "f3::z"
 ; CHECK-NEXT:  [[ANON]] EXTERNAL TYPE "(anonymous namespace)"
-; CHECK-NEXT:  [[OUTER_ANON]] EXTERNAL TYPE "outer::(anonymous namespace)"
+; CHECK-NEXT:  [[ANON_I]] STATIC VARIABLE "(anonymous namespace)::i"
+; CHECK-NEXT:  [[ANON_INNER]] EXTERNAL TYPE "(anonymous namespace)::inner"
 ; CHECK-NEXT:  [[ANON_INNER_B]] STATIC VARIABLE "(anonymous namespace)::inner::b"
 ; CHECK-NEXT:  [[OUTER]] EXTERNAL TYPE "outer"
-; FIXME: GCC produces enumerators as EXTERNAL, not STATIC
+; CHECK-NEXT:  [[OUTER_ANON]] EXTERNAL TYPE "outer::(anonymous namespace)"
+; CHECK-NEXT:  [[OUTER_ANON_C]] STATIC VARIABLE "outer::(anonymous namespace)::c"
+; CHECK-NEXT:  [[UNNAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "unnamed_enum_enumerator"
+; CHECK-NEXT:  [[NAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "named_enum_enumerator"
 ; CHECK-NEXT:  [[NAMED_ENUM_CLASS_ENUMERATOR]] STATIC VARIABLE  "named_enum_class_enumerator"
 ; CHECK-NEXT:  [[MEM_FUNC]] EXTERNAL FUNCTION "C::member_function"
-; CHECK-NEXT:  [[GLOB_VAR]] EXTERNAL VARIABLE "global_variable"
-; CHECK-NEXT:  [[GLOB_NS_VAR]] EXTERNAL VARIABLE "ns::global_namespace_variable"
-; CHECK-NEXT:  [[ANON_INNER]] EXTERNAL TYPE "(anonymous namespace)::inner"
-; CHECK-NEXT:  [[D_VAR]] EXTERNAL VARIABLE "ns::d"
-; CHECK-NEXT:  [[NAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "named_enum_enumerator"
-; CHECK-NEXT:  [[STATIC_MEM_VAR]] EXTERNAL VARIABLE "C::static_member_variable"
 ; CHECK-NEXT:  [[STATIC_MEM_FUNC]] EXTERNAL FUNCTION "C::static_member_function"
-; CHECK-NEXT:  [[UNNAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "unnamed_enum_enumerator"
+; FIXME: GCC produces enumerators as EXTERNAL, not STATIC
+; CHECK-NEXT:  [[GLOBAL_FUNC]] EXTERNAL FUNCTION "global_function"
+; CHECK-NEXT:  [[GLOBAL_F7]] EXTERNAL FUNCTION "f7"
 
 ; CHECK-LABEL: debug_gnu_pubtypes contents:
 ; CHECK: Offset     Linkage  Kind     Name
 ; CHECK-NEXT:  [[C]] EXTERNAL TYPE     "C"
-; CHECK-NEXT:  [[UNSIGNED_INT]] STATIC   TYPE     "unsigned int"
-; CHECK-NEXT:  [[D]] EXTERNAL TYPE     "ns::D"
-; CHECK-NEXT:  [[NAMED_ENUM]] EXTERNAL TYPE     "named_enum"
 ; CHECK-NEXT:  [[INT]] STATIC   TYPE     "int"
+; CHECK-NEXT:  [[D]] EXTERNAL TYPE     "ns::D"
+; CHECK-NEXT:  [[UNSIGNED_INT]] STATIC   TYPE     "unsigned int"
+; CHECK-NEXT:  [[NAMED_ENUM]] EXTERNAL TYPE     "named_enum"
 ; CHECK-NEXT:  [[NAMED_ENUM_CLASS]] EXTERNAL TYPE     "named_enum_class"
 
 %struct.C = type { i8 }
@@ -289,13 +248,13 @@
 @_ZN5outer12_GLOBAL__N_11cE = internal global i32 0, align 4, !dbg !50
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @_ZN1C15member_functionEv(%struct.C* %this) #0 align 2 !dbg !61 {
+define dso_local void @_ZN1C15member_functionEv(ptr %this) #0 align 2 !dbg !61 {
 entry:
-  %this.addr = alloca %struct.C*, align 8
-  store %struct.C* %this, %struct.C** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr, metadata !62, metadata !DIExpression()), !dbg !64
-  %this1 = load %struct.C*, %struct.C** %this.addr, align 8
-  store i32 0, i32* @_ZN1C22static_member_variableE, align 4, !dbg !65
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !62, metadata !DIExpression()), !dbg !64
+  %this1 = load ptr, ptr %this.addr, align 8
+  store i32 0, ptr @_ZN1C22static_member_variableE, align 4, !dbg !65
   ret void, !dbg !66
 }
 
@@ -305,7 +264,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @_ZN1C22static_member_functionEv() #0 align 2 !dbg !67 {
 entry:
-  %0 = load i32, i32* @_ZN1C22static_member_variableE, align 4, !dbg !68
+  %0 = load i32, ptr @_ZN1C22static_member_variableE, align 4, !dbg !68
   ret i32 %0, !dbg !69
 }
 
@@ -318,26 +277,26 @@ entry:
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @_ZN2ns25global_namespace_functionEv() #0 !dbg !72 {
 entry:
-  call void @_ZN1C15member_functionEv(%struct.C* @global_variable), !dbg !75
+  call void @_ZN1C15member_functionEv(ptr @global_variable), !dbg !75
   ret void, !dbg !76
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32* @_Z2f3v() #0 !dbg !39 {
+define dso_local ptr @_Z2f3v() #0 !dbg !39 {
 entry:
-  ret i32* @_ZZ2f3vE1z, !dbg !77
+  ret ptr @_ZZ2f3vE1z, !dbg !77
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @_Z2f7v() #0 !dbg !78 {
 entry:
-  %0 = load i32, i32* @_ZN12_GLOBAL__N_11iE, align 4, !dbg !79
-  %call = call i32* @_Z2f3v(), !dbg !80
-  %1 = load i32, i32* %call, align 4, !dbg !81
+  %0 = load i32, ptr @_ZN12_GLOBAL__N_11iE, align 4, !dbg !79
+  %call = call ptr @_Z2f3v(), !dbg !80
+  %1 = load i32, ptr %call, align 4, !dbg !81
   %add = add nsw i32 %0, %1, !dbg !82
-  %2 = load i32, i32* @_ZN12_GLOBAL__N_15inner1bE, align 4, !dbg !83
+  %2 = load i32, ptr @_ZN12_GLOBAL__N_15inner1bE, align 4, !dbg !83
   %add1 = add nsw i32 %add, %2, !dbg !84
-  %3 = load i32, i32* @_ZN5outer12_GLOBAL__N_11cE, align 4, !dbg !85
+  %3 = load i32, ptr @_ZN5outer12_GLOBAL__N_11cE, align 4, !dbg !85
   %add2 = add nsw i32 %add1, %3, !dbg !86
   %add3 = add nsw i32 %add2, 0, !dbg !87
   %add4 = add nsw i32 %add3, 0, !dbg !88

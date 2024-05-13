@@ -37,7 +37,7 @@ define dso_local <2 x double> @testDoubleToDoubleFail() local_unnamed_addr {
 ; CHECK-NOPREFIX:       # %bb.0: # %entry
 ; CHECK-NOPREFIX-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-NOPREFIX-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-NOPREFIX-NEXT:    lxvx vs34, 0, r3
+; CHECK-NOPREFIX-NEXT:    lxv vs34, 0(r3)
 ; CHECK-NOPREFIX-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: testDoubleToDoubleFail:
@@ -72,7 +72,7 @@ define dso_local <2 x double> @testFloatDenormToDouble() local_unnamed_addr {
 ; CHECK-NOPREFIX:       # %bb.0: # %entry
 ; CHECK-NOPREFIX-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-NOPREFIX-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-NOPREFIX-NEXT:    lxvx vs34, 0, r3
+; CHECK-NOPREFIX-NEXT:    lxv vs34, 0(r3)
 ; CHECK-NOPREFIX-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: testFloatDenormToDouble:
@@ -107,7 +107,7 @@ define dso_local <2 x double> @testDoubleToDoubleNaNFail() local_unnamed_addr {
 ; CHECK-NOPREFIX:       # %bb.0: # %entry
 ; CHECK-NOPREFIX-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
 ; CHECK-NOPREFIX-NEXT:    addi r3, r3, .LCPI2_0@toc@l
-; CHECK-NOPREFIX-NEXT:    lxvx vs34, 0, r3
+; CHECK-NOPREFIX-NEXT:    lxv vs34, 0(r3)
 ; CHECK-NOPREFIX-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: testDoubleToDoubleNaNFail:
@@ -160,22 +160,22 @@ entry:
 define dso_local float @testFloatDenormScalar() local_unnamed_addr {
 ; CHECK-LE-LABEL: testFloatDenormScalar:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    xxsplti32dx vs1, 0, 0
-; CHECK-LE-NEXT:    xxsplti32dx vs1, 1, 7136238
+; CHECK-LE-NEXT:    xxsplti32dx vs1, 0, 940259579
+; CHECK-LE-NEXT:    xxsplti32dx vs1, 1, -2147483648
 ; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-NOPCREL-BE-LABEL: testFloatDenormScalar:
 ; CHECK-NOPCREL-BE:       # %bb.0: # %entry
-; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 0, 0
-; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 1, 7136238
+; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 0, 940259579
+; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 1, -2147483648
 ; CHECK-NOPCREL-BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NOPCREL-BE-NEXT:    blr
 ;
 ; CHECK-NOPCREL-LE-LABEL: testFloatDenormScalar:
 ; CHECK-NOPCREL-LE:       # %bb.0: # %entry
-; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 0, 0
-; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 1, 7136238
+; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 0, 940259579
+; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 1, -2147483648
 ; CHECK-NOPCREL-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NOPCREL-LE-NEXT:    blr
 ;
@@ -187,8 +187,8 @@ define dso_local float @testFloatDenormScalar() local_unnamed_addr {
 ;
 ; CHECK-BE-LABEL: testFloatDenormScalar:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsplti32dx vs1, 0, 0
-; CHECK-BE-NEXT:    xxsplti32dx vs1, 1, 7136238
+; CHECK-BE-NEXT:    xxsplti32dx vs1, 0, 940259579
+; CHECK-BE-NEXT:    xxsplti32dx vs1, 1, -2147483648
 ; CHECK-BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-BE-NEXT:    blr
 entry:

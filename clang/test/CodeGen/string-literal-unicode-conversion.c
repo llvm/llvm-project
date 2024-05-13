@@ -16,7 +16,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-void f() {
+void f(void) {
   // CHECK-C: private unnamed_addr constant [6 x i8] c"\C0\E9\EE\F5\FC\00", align 1
   // CHECK-CPP0X: private unnamed_addr constant [6 x i8] c"\C0\E9\EE\F5\FC\00", align 1
   char const *aa = "Àéîõü";

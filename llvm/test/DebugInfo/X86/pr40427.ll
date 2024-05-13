@@ -1,17 +1,24 @@
-; RUN: llc -start-after=codegenprepare -stop-before=finalize-isel -o - < %s | FileCheck %s
-; Test for correct placement of DBG_VALUE, which in PR40427 is placed before
-; the load instruction it refers to. The circumstance replicated here is where
-; two instructions in a row, trunc and add, begin with no-op Copy{To,From}Reg
-; SDNodes that produce no instructions.
-; The DBG_VALUE instruction should come immediately after the load instruction
-; because the truncate is optimised out, and the DBG_VALUE should be placed
-; in front of the first instruction that occurs after the dbg.value.
+; RUN: llc -start-after=codegenprepare -stop-before=finalize-isel -o - < %s \
+; RUN:     -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc -start-after=codegenprepare -stop-before=finalize-isel -o - < %s \
+; RUN:     -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
+;
+;; Test for correct placement of DBG_VALUE, which in PR40427 is placed before
+;; the load instruction it refers to. The circumstance replicated here is where
+;; two instructions in a row, trunc and add, begin with no-op Copy{To,From}Reg
+;; SDNodes that produce no instructions.
+;; The DBG_VALUE instruction should come immediately after the load instruction
+;; because the truncate is optimised out, and the DBG_VALUE should be placed
+;; in front of the first instruction that occurs after the dbg.value.
+;
 
 ; CHECK: ![[DBGVAR:[0-9]+]] = !DILocalVariable(name: "bees",
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define i16 @lolwat(i1 %spoons, i64 *%bees, i16 %yellow, i64 *%more) {
+define i16 @lolwat(i1 %spoons, ptr %bees, i16 %yellow, ptr %more) {
 entry:
   br i1 %spoons, label %trueb, label %falseb
 trueb:
@@ -20,12 +27,13 @@ falseb:
   br label %block
 block:
 ; CHECK:      [[PHIREG:%[0-9]+]]:gr64 = PHI %6, %bb.2, %4, %bb.1
-; CHECK-NEXT: [[LOADR:%[0-9]+]]:gr16 = MOV16rm %0
-; CHECK-NEXT: DBG_VALUE [[LOADR]], $noreg, ![[DBGVAR]]
+; CHECK-NEXT: [[LOADR:%[0-9]+]]:gr16 = MOV16rm %0,
+; INSTRREF-SAME: debug-instr-number 1
+; DBGVALUE-NEXT: DBG_VALUE [[LOADR]], $noreg, ![[DBGVAR]]
+; INSTRREF-NEXT: DBG_INSTR_REF ![[DBGVAR]], {{.+}}, dbg-instr-ref(1, 0)
 ; CHECK-NEXT: %{{[0-9]+}}:gr32 = IMPLICIT_DEF
-  %foo = phi i64 *[%bees, %trueb], [%more, %falseb]
-  %forks = bitcast i64 *%foo to i32 *
-  %ret = load i32, i32 *%forks, !dbg !6
+  %foo = phi ptr[%bees, %trueb], [%more, %falseb]
+  %ret = load i32, ptr %foo, !dbg !6
   %cast = trunc i32 %ret to i16, !dbg !6
   call void @llvm.dbg.value(metadata i16 %cast, metadata !1, metadata !DIExpression()), !dbg !6
   %orly2 = add i16 %yellow, 1

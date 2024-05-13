@@ -3,13 +3,18 @@
 # Check that setting an empty value with -f(orce) clears the value.
 # RUN: not %lldb -b -s %s 2>&1 | FileCheck %s
 
+# Make sure that "settings set -g" no longer requires a bogus filename.
+settings set -g target.skip-prologue false
+settings show target.skip-prologue
+# CHECK: target.skip-prologue (boolean) = false
+
 settings set tab-size 16
 settings show tab-size
 # CHECK: tab-size (unsigned) = 16
 
 settings set -f tab-size
 settings show tab-size
-# CHECK: tab-size (unsigned) = 4
+# CHECK: tab-size (unsigned) = 2
 
 settings set tab-size
 # CHECK: error: 'settings set' takes more arguments

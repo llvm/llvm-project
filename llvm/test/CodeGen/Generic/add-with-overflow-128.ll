@@ -1,5 +1,9 @@
 ; RUN: llc < %s
 
+; NVPTX fails to LowerFormalArguments for arg type i96
+; the arg byte size must be one of the {16, 8, 4, 2}
+; XFAIL: target=nvptx{{.*}}
+
 @ok = internal constant [4 x i8] c"%d\0A\00"
 @no = internal constant [4 x i8] c"no\0A\00"
 
@@ -14,15 +18,15 @@ entry:
   br i1 %obit, label %carry, label %normal
 
 normal:
-  %t1 = tail call i32 (i8*, ...) @printf( i8* getelementptr ([4 x i8], [4 x i8]* @ok, i32 0, i32 0), i32 %sum32 ) nounwind
+  %t1 = tail call i32 (ptr, ...) @printf( ptr @ok, i32 %sum32 ) nounwind
   ret i1 true
 
 carry:
-  %t2 = tail call i32 (i8*, ...) @printf( i8* getelementptr ([4 x i8], [4 x i8]* @no, i32 0, i32 0) ) nounwind
+  %t2 = tail call i32 (ptr, ...) @printf( ptr @no ) nounwind
   ret i1 false
 }
 
-declare i32 @printf(i8*, ...) nounwind
+declare i32 @printf(ptr, ...) nounwind
 declare {i96, i1} @llvm.sadd.with.overflow.i96(i96, i96)
 declare {i128, i1} @llvm.uadd.with.overflow.i128(i128, i128)
 

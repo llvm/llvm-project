@@ -3,6 +3,8 @@ include(CompilerRTCompile)
 set(GWP_ASAN_UNITTEST_CFLAGS
   ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
+  ${SANITIZER_TEST_CXX_CFLAGS}
+  -std=c++17
   -I${COMPILER_RT_SOURCE_DIR}/lib/
   -O2
   -g
@@ -24,7 +26,9 @@ set(GWP_ASAN_UNITTESTS
   harness.cpp
   enable_disable.cpp
   late_init.cpp
-  options.cpp)
+  options.cpp
+  recoverable.cpp
+  never_allocated.cpp)
 
 set(GWP_ASAN_UNIT_TEST_HEADERS
   ${GWP_ASAN_HEADERS}
@@ -33,7 +37,10 @@ set(GWP_ASAN_UNIT_TEST_HEADERS
 add_custom_target(GwpAsanUnitTests)
 set_target_properties(GwpAsanUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 
-set(GWP_ASAN_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS} -ldl)
+set(GWP_ASAN_UNITTEST_LINK_FLAGS
+  ${COMPILER_RT_UNITTEST_LINK_FLAGS} -ldl
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
+  ${SANITIZER_TEST_CXX_LIBRARIES})
 list(APPEND GWP_ASAN_UNITTEST_LINK_FLAGS --driver-mode=g++)
 if(NOT WIN32)
   list(APPEND GWP_ASAN_UNITTEST_LINK_FLAGS -pthread)
@@ -52,7 +59,8 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST GWP_ASAN_SUPPORTED_ARCH)
     $<TARGET_OBJECTS:RTGwpAsanOptionsParser.${arch}>
     $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
     $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>)
+    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>)
 
   add_library(${GWP_ASAN_TEST_RUNTIME} STATIC
     ${GWP_ASAN_TEST_RUNTIME_OBJECTS})
@@ -66,7 +74,7 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST GWP_ASAN_SUPPORTED_ARCH)
     GwpAsanUnitTests "GwpAsan-${arch}-Test" ${arch}
     SOURCES ${GWP_ASAN_UNITTESTS} ${COMPILER_RT_GTEST_SOURCE}
     RUNTIME ${GWP_ASAN_TEST_RUNTIME}
-    DEPS gtest ${GWP_ASAN_UNIT_TEST_HEADERS}
+    DEPS ${GWP_ASAN_UNIT_TEST_HEADERS}
     CFLAGS ${GWP_ASAN_UNITTEST_CFLAGS}
     LINK_FLAGS ${GWP_ASAN_UNITTEST_LINK_FLAGS})
   set_target_properties(GwpAsanUnitTests PROPERTIES

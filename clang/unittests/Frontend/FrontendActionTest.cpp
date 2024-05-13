@@ -18,9 +18,9 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -121,8 +121,8 @@ TEST(ASTFrontendAction, IncrementalParsing) {
 
 TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
   auto invocation = std::make_shared<CompilerInvocation>();
-  invocation->getLangOpts()->CPlusPlus = true;
-  invocation->getLangOpts()->DelayedTemplateParsing = true;
+  invocation->getLangOpts().CPlusPlus = true;
+  invocation->getLangOpts().DelayedTemplateParsing = true;
   invocation->getPreprocessorOpts().addRemappedFile(
     "test.cc", MemoryBuffer::getMemBuffer(
       "template<typename T> struct A { A(T); T data; };\n"
@@ -233,7 +233,7 @@ struct TypoDiagnosticConsumer : public DiagnosticConsumer {
 
 TEST(ASTFrontendAction, ExternalSemaSource) {
   auto Invocation = std::make_shared<CompilerInvocation>();
-  Invocation->getLangOpts()->CPlusPlus = true;
+  Invocation->getLangOpts().CPlusPlus = true;
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer("void fooo();\n"
                                             "int main() { foo(); }")
@@ -266,14 +266,13 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
 
   for (bool ShouldCache : {false, true}) {
     auto Invocation = std::make_shared<CompilerInvocation>();
-    Invocation->getLangOpts()->CacheGeneratedPCH = ShouldCache;
+    Invocation->getLangOpts().CacheGeneratedPCH = ShouldCache;
     Invocation->getPreprocessorOpts().addRemappedFile(
         "test.h",
         MemoryBuffer::getMemBuffer("int foo(void) { return 1; }\n").release());
     Invocation->getFrontendOpts().Inputs.push_back(
         FrontendInputFile("test.h", Language::C));
-    Invocation->getFrontendOpts().OutputFile =
-        std::string(StringRef(PCHFilename));
+    Invocation->getFrontendOpts().OutputFile = PCHFilename.str().str();
     Invocation->getFrontendOpts().ProgramAction = frontend::GeneratePCH;
     Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
     CompilerInstance Compiler;

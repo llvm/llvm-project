@@ -1,4 +1,4 @@
-; RUN: llc  -march=hexagon -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -relocation-model=pic < %s | FileCheck %s
 
 ; Force the use of R14 (by clobbering everything else in the inline asm).
 ; Make sure that R14 is not set before the __save call (which will clobber
@@ -10,21 +10,21 @@
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
 ; Function Attrs: nounwind optsize
-define i32 @_Z7testR14Pi(i32* nocapture %res) #0 {
+define i32 @_Z7testR14Pi(ptr nocapture %res) #0 {
 entry:
-  %0 = load i32, i32* %res, align 4
+  %0 = load i32, ptr %res, align 4
   %1 = tail call { i32, i32 } asm "r0=$2\0A\09$1=add(r0,#$3)\0A\09$0=add(r0,#$4)\0A\09", "=r,=r,r,i,i,~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27}"(i32 %0, i32 40, i32 50) #1
   %asmresult = extractvalue { i32, i32 } %1, 0
   %asmresult1 = extractvalue { i32, i32 } %1, 1
-  store i32 %asmresult, i32* %res, align 4
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %asmresult1) #2
-  %2 = load i32, i32* %res, align 4
-  %call2 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %2) #2
+  store i32 %asmresult, ptr %res, align 4
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %asmresult1) #2
+  %2 = load i32, ptr %res, align 4
+  %call2 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %2) #2
   ret i32 0
 }
 
 ; Function Attrs: nounwind optsize
-declare i32 @printf(i8*, ...) #0
+declare i32 @printf(ptr, ...) #0
 
 ; Same as above for R15.
 ; CHECK: call __save_r16_through_r27
@@ -32,16 +32,16 @@ declare i32 @printf(i8*, ...) #0
 ; CHECK: r15 =
 
 ; Function Attrs: nounwind optsize
-define i32 @_Z7testR15Pi(i32* nocapture %res) #0 {
+define i32 @_Z7testR15Pi(ptr nocapture %res) #0 {
 entry:
-  %0 = load i32, i32* %res, align 4
+  %0 = load i32, ptr %res, align 4
   %1 = tail call { i32, i32 } asm "r0=$2\0A\09$1=add(r0,#$3)\0A\09$0=add(r0,#$4)\0A\09", "=r,=r,r,i,i,~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27}"(i32 %0, i32 40, i32 50) #1
   %asmresult = extractvalue { i32, i32 } %1, 0
   %asmresult1 = extractvalue { i32, i32 } %1, 1
-  store i32 %asmresult, i32* %res, align 4
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %asmresult1) #2
-  %2 = load i32, i32* %res, align 4
-  %call2 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %2) #2
+  store i32 %asmresult, ptr %res, align 4
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %asmresult1) #2
+  %2 = load i32, ptr %res, align 4
+  %call2 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %2) #2
   ret i32 0
 }
 
@@ -51,16 +51,16 @@ entry:
 ; CHECK: r28 =
 
 ; Function Attrs: nounwind optsize
-define i32 @_Z7testR28Pi(i32* nocapture %res) #0 {
+define i32 @_Z7testR28Pi(ptr nocapture %res) #0 {
 entry:
-  %0 = load i32, i32* %res, align 4
+  %0 = load i32, ptr %res, align 4
   %1 = tail call { i32, i32 } asm "r0=$2\0A\09$1=add(r0,#$3)\0A\09$0=add(r0,#$4)\0A\09", "=r,=r,r,i,i,~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26}"(i32 %0, i32 40, i32 50) #1
   %asmresult = extractvalue { i32, i32 } %1, 0
   %asmresult1 = extractvalue { i32, i32 } %1, 1
-  store i32 %asmresult, i32* %res, align 4
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %asmresult1) #2
-  %2 = load i32, i32* %res, align 4
-  %call2 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %2) #2
+  store i32 %asmresult, ptr %res, align 4
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %asmresult1) #2
+  %2 = load i32, ptr %res, align 4
+  %call2 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %2) #2
   ret i32 0
 }
 

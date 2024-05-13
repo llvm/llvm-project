@@ -32,6 +32,12 @@ int main();
 #pragma init_seg(compiler)
 int main();
 
+struct A {
+  #pragma omp declare simd
+  template<typename T>
+  T infunc1(T a);
+};
+
 // expected-error@+1 {{single declaration is expected after 'declare simd' directive}}
 #pragma omp declare simd
 // expected-note@+1 {{declared here}}
@@ -115,11 +121,12 @@ void test() {
 #pragma omp declare simd aligned(
 // expected-error@+1 {{expected expression}}
 #pragma omp declare simd aligned()
+// expected-error@+4 {{argument of aligned clause should be array, pointer, reference to array or reference to pointer, not 'int'}}
 // expected-note@+3 {{to match this '('}}
 // expected-error@+2 {{expected ')'}}
 // expected-error@+1 {{expected expression}}
 #pragma omp declare simd aligned(a:
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 {{expected expression}} expected-error@+1 {{argument of aligned clause should be array, pointer, reference to array or reference to pointer, not 'int'}}
 #pragma omp declare simd aligned(a:)
 // expected-warning@+2 {{extra tokens at the end of '#pragma omp declare simd' are ignored}}
 // expected-error@+1 {{expected '(' after 'aligned'}}
@@ -198,6 +205,8 @@ void test() {
 // expected-error@+1 {{expected one of 'ref', val' or 'uval' modifiers}} expected-warning@+1 {{extra tokens at the end of '#pragma omp declare simd' are ignored}}
 #pragma omp declare simd linear(uref(b)) allocate(b)
 #pragma omp declare simd linear(ref(c))
+// expected-note@+2 {{'a' declared here}}
+// expected-note@+1 {{'a' declared here}}
 void bar(int a, int *b, float &c);
 
 template <class T>

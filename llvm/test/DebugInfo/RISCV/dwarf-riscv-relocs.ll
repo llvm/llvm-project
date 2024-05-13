@@ -6,14 +6,14 @@
 
 ; Check that we actually have relocations, otherwise this is kind of pointless.
 ; READOBJ-RELOCS:  Section ({{.*}}) .rela.debug_info {
-; READOBJ-RELOCS:    0x1B R_RISCV_ADD32 - 0x0
-; READOBJ-RELOCS-NEXT:    0x1B R_RISCV_SUB32 - 0x0
+; READOBJ-RELOCS:    0x1B R_RISCV_ADD32 .L0  0x0
+; READOBJ-RELOCS-NEXT:    0x1B R_RISCV_SUB32 .L0  0x0
 ; READOBJ-RELOCS:  Section ({{.*}}) .rela.debug_frame {
-; READOBJ-RELOCS:    0x20 R_RISCV_ADD32 - 0x0
-; READOBJ-RELOCS-NEXT:    0x20 R_RISCV_SUB32 - 0x0
+; READOBJ-RELOCS:    0x20 R_RISCV_ADD32 .L0  0x0
+; READOBJ-RELOCS-NEXT:    0x20 R_RISCV_SUB32 .L0  0x0
 ; READOBJ-RELOCS:  Section ({{.*}}) .rela.debug_line {
-; READOBJ-RELOCS:    0x5A R_RISCV_ADD16 - 0x0
-; READOBJ-RELOCS-NEXT:    0x5A R_RISCV_SUB16 - 0x0
+; READOBJ-RELOCS:    0x5A R_RISCV_ADD16 .L0  0x0
+; READOBJ-RELOCS-NEXT:    0x5A R_RISCV_SUB16 .L0  0x0
 
 ; Check that we can print the source, even with relocations.
 ; OBJDUMP-SOURCE: Disassembly of section .text:
@@ -36,7 +36,7 @@
 ; DWARF-DUMP: .debug_line contents:
 ; DWARF-DUMP-NEXT: debug_line[0x00000000]
 ; DWARF-DUMP-NEXT: Line table prologue:
-; DWARF-DUMP-NEXT:     total_length: 0x0000005f
+; DWARF-DUMP-NEXT:     total_length: 0x00000067
 ; DWARF-DUMP-NEXT:           format: DWARF32
 ; DWARF-DUMP-NEXT:          version: 5
 ; DWARF-DUMP-NEXT:     address_size: 4
@@ -67,11 +67,12 @@
 ; DWARF-DUMP-NEXT:    md5_checksum: 05ab89f5481bc9f2d037e7886641e919
 ; DWARF-DUMP-NEXT:          source: "int main()\n{\n    return 0;\n}\n"
 ; DWARF-DUMP-EMPTY:
-; DWARF-DUMP-NEXT: Address            Line   Column File   ISA Discriminator Flags
-; DWARF-DUMP-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-; DWARF-DUMP-NEXT: 0x0000000000000000      2      0      0   0             0  is_stmt
-; DWARF-DUMP-NEXT: 0x0000000000000014      3      5      0   0             0  is_stmt prologue_end
-; DWARF-DUMP-NEXT: 0x0000000000000028      3      5      0   0             0  is_stmt end_sequence
+; DWARF-DUMP-NEXT: Address            Line   Column File   ISA Discriminator OpIndex Flags
+; DWARF-DUMP-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+; DWARF-DUMP-NEXT: 0x0000000000000000      2      0      0   0             0       0  is_stmt
+; DWARF-DUMP-NEXT: 0x000000000000001c      3      5      0   0             0       0  is_stmt prologue_end
+; DWARF-DUMP-NEXT: 0x0000000000000028      3      5      0   0             0       0  epilogue_begin
+; DWARF-DUMP-NEXT: 0x0000000000000030      3      5      0   0             0       0  end_sequence
 
 ; ModuleID = 'dwarf-riscv-relocs.c'
 source_filename = "dwarf-riscv-relocs.c"
@@ -81,10 +82,13 @@ target triple = "riscv32"
 ; Function Attrs: noinline nounwind optnone
 define dso_local i32 @main() #0 !dbg !7 {
 entry:
+  call void @ext()
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   ret i32 0, !dbg !11
 }
+
+declare void @ext()
 
 attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+relax" "unsafe-fp-math"="false" "use-soft-float"="false" }
 

@@ -8,7 +8,6 @@
 
 #include "RegisterContextMemory.h"
 
-#include "DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -33,13 +32,13 @@ RegisterContextMemory::RegisterContextMemory(Thread &thread,
   m_reg_valid.resize(num_regs);
 
   // Make a heap based buffer that is big enough to store all registers
-  DataBufferSP reg_data_sp(
-      new DataBufferHeap(reg_infos.GetRegisterDataByteSize(), 0));
-  m_reg_data.SetData(reg_data_sp);
+  m_data =
+      std::make_shared<DataBufferHeap>(reg_infos.GetRegisterDataByteSize(), 0);
+  m_reg_data.SetData(m_data);
 }
 
 // Destructor
-RegisterContextMemory::~RegisterContextMemory() {}
+RegisterContextMemory::~RegisterContextMemory() = default;
 
 void RegisterContextMemory::InvalidateAllRegisters() {
   if (m_reg_data_addr != LLDB_INVALID_ADDRESS)
@@ -77,12 +76,12 @@ bool RegisterContextMemory::ReadRegister(const RegisterInfo *reg_info,
                                          RegisterValue &reg_value) {
   const uint32_t reg_num = reg_info->kinds[eRegisterKindLLDB];
   if (!m_reg_valid[reg_num]) {
-    if (!ReadAllRegisterValues(m_reg_data.GetSharedDataBuffer()))
+    if (!ReadAllRegisterValues(m_data))
       return false;
   }
   const bool partial_data_ok = false;
   return reg_value
-      .SetValueFromData(reg_info, m_reg_data, reg_info->byte_offset,
+      .SetValueFromData(*reg_info, m_reg_data, reg_info->byte_offset,
                         partial_data_ok)
       .Success();
 }
@@ -100,7 +99,8 @@ bool RegisterContextMemory::WriteRegister(const RegisterInfo *reg_info,
   return false;
 }
 
-bool RegisterContextMemory::ReadAllRegisterValues(DataBufferSP &data_sp) {
+bool RegisterContextMemory::ReadAllRegisterValues(
+    WritableDataBufferSP &data_sp) {
   if (m_reg_data_addr != LLDB_INVALID_ADDRESS) {
     ProcessSP process_sp(CalculateProcess());
     if (process_sp) {

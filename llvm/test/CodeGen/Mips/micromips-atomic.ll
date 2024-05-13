@@ -20,6 +20,6 @@ define i32 @AtomicLoadAdd32(i32 %incr) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw add i32* @x, i32 %incr monotonic
+  %0 = atomicrmw add ptr @x, i32 %incr monotonic
   ret i32 %0
 }

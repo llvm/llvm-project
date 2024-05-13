@@ -8,11 +8,25 @@
 
 #include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
 
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Block.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Region.h"
+#include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
+#include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -39,14 +53,14 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
                                            unsigned maxDepth,
                                            DenseSet<Value> &visited,
                                            SmallVectorImpl<Value> &output) {
-  // Given the index of a region of the branch (`predIndex`), or None to
+  // Given the index of a region of the branch (`predIndex`), or std::nullopt to
   // represent the parent operation, try to return the index into the outputs of
   // this region predecessor that correspond to the input values of `region`. If
-  // an index could not be found, None is returned instead.
+  // an index could not be found, std::nullopt is returned instead.
   auto getOperandIndexIfPred =
-      [&](Optional<unsigned> predIndex) -> Optional<unsigned> {
+      [&](RegionBranchPoint pred) -> std::optional<unsigned> {
     SmallVector<RegionSuccessor, 2> successors;
-    branch.getSuccessorRegions(predIndex, successors);
+    branch.getSuccessorRegions(pred, successors);
     for (RegionSuccessor &successor : successors) {
       if (successor.getSuccessor() != region)
         continue;
@@ -58,11 +72,11 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
       }
       unsigned firstInputIndex, lastInputIndex;
       if (region) {
-        firstInputIndex = inputs[0].cast<BlockArgument>().getArgNumber();
-        lastInputIndex = inputs.back().cast<BlockArgument>().getArgNumber();
+        firstInputIndex = cast<BlockArgument>(inputs[0]).getArgNumber();
+        lastInputIndex = cast<BlockArgument>(inputs.back()).getArgNumber();
       } else {
-        firstInputIndex = inputs[0].cast<OpResult>().getResultNumber();
-        lastInputIndex = inputs.back().cast<OpResult>().getResultNumber();
+        firstInputIndex = cast<OpResult>(inputs[0]).getResultNumber();
+        lastInputIndex = cast<OpResult>(inputs.back()).getResultNumber();
       }
       if (firstInputIndex > inputIndex || lastInputIndex < inputIndex) {
         output.push_back(inputValue);
@@ -70,29 +84,33 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
       }
       return inputIndex - firstInputIndex;
     }
-    return llvm::None;
+    return std::nullopt;
   };
 
   // Check branches from the parent operation.
-  if (region) {
-    if (Optional<unsigned> operandIndex =
-            getOperandIndexIfPred(/*predIndex=*/llvm::None)) {
-      collectUnderlyingAddressValues(
-          branch.getSuccessorEntryOperands(
-              region->getRegionNumber())[*operandIndex],
-          maxDepth, visited, output);
-    }
+  auto branchPoint = RegionBranchPoint::parent();
+  if (region)
+    branchPoint = region;
+
+  if (std::optional<unsigned> operandIndex =
+          getOperandIndexIfPred(/*predIndex=*/RegionBranchPoint::parent())) {
+    collectUnderlyingAddressValues(
+        branch.getEntrySuccessorOperands(branchPoint)[*operandIndex], maxDepth,
+        visited, output);
   }
   // Check branches from each child region.
   Operation *op = branch.getOperation();
-  for (int i = 0, e = op->getNumRegions(); i != e; ++i) {
-    if (Optional<unsigned> operandIndex = getOperandIndexIfPred(i)) {
-      for (Block &block : op->getRegion(i)) {
-        Operation *term = block.getTerminator();
-        if (term->hasTrait<OpTrait::ReturnLike>()) {
-          collectUnderlyingAddressValues(term->getOperand(*operandIndex),
-                                         maxDepth, visited, output);
-        } else if (term->getNumSuccessors()) {
+  for (Region &region : op->getRegions()) {
+    if (std::optional<unsigned> operandIndex = getOperandIndexIfPred(region)) {
+      for (Block &block : region) {
+        // Try to determine possible region-branch successor operands for the
+        // current region.
+        if (auto term = dyn_cast<RegionBranchTerminatorOpInterface>(
+                block.getTerminator())) {
+          collectUnderlyingAddressValues(
+              term.getSuccessorOperands(branchPoint)[*operandIndex], maxDepth,
+              visited, output);
+        } else if (block.getNumSuccessors()) {
           // Otherwise, if this terminator may exit the region we can't make
           // any assumptions about which values get passed.
           output.push_back(inputValue);
@@ -143,14 +161,13 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
 
       // Try to get the operand passed for this argument.
       unsigned index = it.getSuccessorIndex();
-      Optional<OperandRange> operands = branch.getSuccessorOperands(index);
-      if (!operands) {
+      Value operand = branch.getSuccessorOperands(index)[argNumber];
+      if (!operand) {
         // We can't analyze the control flow, so bail out early.
         output.push_back(arg);
         return;
       }
-      collectUnderlyingAddressValues((*operands)[argNumber], maxDepth, visited,
-                                     output);
+      collectUnderlyingAddressValues(operand, maxDepth, visited, output);
     }
     return;
   }
@@ -180,9 +197,9 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
   }
   --maxDepth;
 
-  if (BlockArgument arg = value.dyn_cast<BlockArgument>())
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
     return collectUnderlyingAddressValues(arg, maxDepth, visited, output);
-  collectUnderlyingAddressValues(value.cast<OpResult>(), maxDepth, visited,
+  collectUnderlyingAddressValues(cast<OpResult>(value), maxDepth, visited,
                                  output);
 }
 
@@ -205,14 +222,15 @@ static void collectUnderlyingAddressValues(Value value,
 /// non-null it specifies the parent operation that the allocation does not
 /// escape. If no scope is found, `allocScopeOp` is set to nullptr.
 static LogicalResult
-getAllocEffectFor(Value value, Optional<MemoryEffects::EffectInstance> &effect,
+getAllocEffectFor(Value value,
+                  std::optional<MemoryEffects::EffectInstance> &effect,
                   Operation *&allocScopeOp) {
   // Try to get a memory effect interface for the parent operation.
   Operation *op;
-  if (BlockArgument arg = value.dyn_cast<BlockArgument>())
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
     op = arg.getOwner()->getParentOp();
   else
-    op = value.cast<OpResult>().getOwner();
+    op = cast<OpResult>(value).getOwner();
   MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
   if (!interface)
     return failure();
@@ -234,16 +252,16 @@ getAllocEffectFor(Value value, Optional<MemoryEffects::EffectInstance> &effect,
   // freed on all paths within the region, or is just not captured by anything.
   // For now assume allocation scope to the function scope (we don't care if
   // pointer escape outside function).
-  allocScopeOp = op->getParentWithTrait<OpTrait::FunctionLike>();
+  allocScopeOp = op->getParentOfType<FunctionOpInterface>();
   return success();
 }
 
 /// Given the two values, return their aliasing behavior.
-static AliasResult aliasImpl(Value lhs, Value rhs) {
+AliasResult LocalAliasAnalysis::aliasImpl(Value lhs, Value rhs) {
   if (lhs == rhs)
     return AliasResult::MustAlias;
   Operation *lhsAllocScope = nullptr, *rhsAllocScope = nullptr;
-  Optional<MemoryEffects::EffectInstance> lhsAlloc, rhsAlloc;
+  std::optional<MemoryEffects::EffectInstance> lhsAlloc, rhsAlloc;
 
   // Handle the case where lhs is a constant.
   Attribute lhsAttr, rhsAttr;
@@ -298,7 +316,7 @@ static AliasResult aliasImpl(Value lhs, Value rhs) {
     if (rhsParentOp->isProperAncestor(lhsAllocScope))
       return AliasResult::NoAlias;
     if (rhsParentOp == lhsAllocScope) {
-      BlockArgument rhsArg = rhs.dyn_cast<BlockArgument>();
+      BlockArgument rhsArg = dyn_cast<BlockArgument>(rhs);
       if (rhsArg && rhs.getParentBlock()->isEntryBlock())
         return AliasResult::NoAlias;
     }
@@ -325,7 +343,7 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::MayAlias;
 
   // Check the alias results against each of the underlying values.
-  Optional<AliasResult> result;
+  std::optional<AliasResult> result;
   for (Value lhsVal : lhsValues) {
     for (Value rhsVal : rhsValues) {
       AliasResult nextResult = aliasImpl(lhsVal, rhsVal);
@@ -343,7 +361,7 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
 
 ModRefResult LocalAliasAnalysis::getModRef(Operation *op, Value location) {
   // Check to see if this operation relies on nested side effects.
-  if (op->hasTrait<OpTrait::HasRecursiveSideEffects>()) {
+  if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
     // TODO: To check recursive operations we need to check all of the nested
     // operations, which can result in a quadratic number of queries. We should
     // introduce some caching of some kind to help alleviate this, especially as

@@ -7,7 +7,7 @@
 
 ; Use the flags on the add.
 
-define i32 @test1(i32* %x, i32 %y, i32 %a, i32 %b) nounwind {
+define i32 @test1(ptr %x, i32 %y, i32 %a, i32 %b) nounwind {
 ; LNX-LABEL: test1:
 ; LNX:       # %bb.0:
 ; LNX-NEXT:    movl %edx, %eax
@@ -21,7 +21,7 @@ define i32 @test1(i32* %x, i32 %y, i32 %a, i32 %b) nounwind {
 ; WIN-NEXT:    addl (%rcx), %edx
 ; WIN-NEXT:    cmovnsl %r9d, %eax
 ; WIN-NEXT:    retq
-	%tmp2 = load i32, i32* %x, align 4		; <i32> [#uses=1]
+	%tmp2 = load i32, ptr %x, align 4		; <i32> [#uses=1]
 	%tmp4 = add i32 %tmp2, %y		; <i32> [#uses=1]
 	%tmp5 = icmp slt i32 %tmp4, 0		; <i1> [#uses=1]
 	%tmp.0 = select i1 %tmp5, i32 %a, i32 %b		; <i32> [#uses=1]
@@ -40,7 +40,7 @@ define void @test2(i32 %x) nounwind {
 ; LNX-NEXT:    jne .LBB1_2
 ; LNX-NEXT:  # %bb.1: # %true
 ; LNX-NEXT:    pushq %rax
-; LNX-NEXT:    callq foo
+; LNX-NEXT:    callq foo@PLT
 ; LNX-NEXT:    popq %rax
 ; LNX-NEXT:  .LBB1_2: # %false
 ; LNX-NEXT:    retq
@@ -74,7 +74,7 @@ define void @test3(i32 %x) nounwind {
 ; LNX-NEXT:    jne .LBB2_2
 ; LNX-NEXT:  # %bb.1: # %true
 ; LNX-NEXT:    pushq %rax
-; LNX-NEXT:    callq foo
+; LNX-NEXT:    callq foo@PLT
 ; LNX-NEXT:    popq %rax
 ; LNX-NEXT:  .LBB2_2: # %false
 ; LNX-NEXT:    retq

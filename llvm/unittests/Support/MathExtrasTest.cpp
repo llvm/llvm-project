@@ -13,58 +13,6 @@ using namespace llvm;
 
 namespace {
 
-TEST(MathExtras, countTrailingZeros) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(8u, countTrailingZeros(Z8));
-  EXPECT_EQ(16u, countTrailingZeros(Z16));
-  EXPECT_EQ(32u, countTrailingZeros(Z32));
-  EXPECT_EQ(64u, countTrailingZeros(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(1u, countTrailingZeros(NZ8));
-  EXPECT_EQ(1u, countTrailingZeros(NZ16));
-  EXPECT_EQ(1u, countTrailingZeros(NZ32));
-  EXPECT_EQ(1u, countTrailingZeros(NZ64));
-}
-
-TEST(MathExtras, countLeadingZeros) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(8u, countLeadingZeros(Z8));
-  EXPECT_EQ(16u, countLeadingZeros(Z16));
-  EXPECT_EQ(32u, countLeadingZeros(Z32));
-  EXPECT_EQ(64u, countLeadingZeros(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(2u, countLeadingZeros(NZ8));
-  EXPECT_EQ(10u, countLeadingZeros(NZ16));
-  EXPECT_EQ(26u, countLeadingZeros(NZ32));
-  EXPECT_EQ(58u, countLeadingZeros(NZ64));
-
-  EXPECT_EQ(8u, countLeadingZeros(0x00F000FFu));
-  EXPECT_EQ(8u, countLeadingZeros(0x00F12345u));
-  for (unsigned i = 0; i <= 30; ++i) {
-    EXPECT_EQ(31 - i, countLeadingZeros(1u << i));
-  }
-
-  EXPECT_EQ(8u, countLeadingZeros(0x00F1234500F12345ULL));
-  EXPECT_EQ(1u, countLeadingZeros(1ULL << 62));
-  for (unsigned i = 0; i <= 62; ++i) {
-    EXPECT_EQ(63 - i, countLeadingZeros(1ULL << i));
-  }
-}
-
 TEST(MathExtras, onesMask) {
   EXPECT_EQ(0U, maskLeadingOnes<uint8_t>(0));
   EXPECT_EQ(0U, maskTrailingOnes<uint8_t>(0));
@@ -90,49 +38,12 @@ TEST(MathExtras, onesMask) {
   EXPECT_EQ(0xFFFFFFFFFFFF0000ULL, maskLeadingOnes<uint64_t>(48U));
 }
 
-TEST(MathExtras, findFirstSet) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(0xFFULL, findFirstSet(Z8));
-  EXPECT_EQ(0xFFFFULL, findFirstSet(Z16));
-  EXPECT_EQ(0xFFFFFFFFULL, findFirstSet(Z32));
-  EXPECT_EQ(0xFFFFFFFFFFFFFFFFULL, findFirstSet(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(1u, findFirstSet(NZ8));
-  EXPECT_EQ(1u, findFirstSet(NZ16));
-  EXPECT_EQ(1u, findFirstSet(NZ32));
-  EXPECT_EQ(1u, findFirstSet(NZ64));
-}
-
-TEST(MathExtras, findLastSet) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(0xFFULL, findLastSet(Z8));
-  EXPECT_EQ(0xFFFFULL, findLastSet(Z16));
-  EXPECT_EQ(0xFFFFFFFFULL, findLastSet(Z32));
-  EXPECT_EQ(0xFFFFFFFFFFFFFFFFULL, findLastSet(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(5u, findLastSet(NZ8));
-  EXPECT_EQ(5u, findLastSet(NZ16));
-  EXPECT_EQ(5u, findLastSet(NZ32));
-  EXPECT_EQ(5u, findLastSet(NZ64));
-}
-
 TEST(MathExtras, isIntN) {
   EXPECT_TRUE(isIntN(16, 32767));
   EXPECT_FALSE(isIntN(16, 32768));
+  EXPECT_TRUE(isIntN(0, 0));
+  EXPECT_FALSE(isIntN(0, 1));
+  EXPECT_FALSE(isIntN(0, -1));
 }
 
 TEST(MathExtras, isUIntN) {
@@ -140,6 +51,8 @@ TEST(MathExtras, isUIntN) {
   EXPECT_FALSE(isUIntN(16, 65536));
   EXPECT_TRUE(isUIntN(1, 0));
   EXPECT_TRUE(isUIntN(6, 63));
+  EXPECT_TRUE(isUIntN(0, 0));
+  EXPECT_FALSE(isUIntN(0, 1));
 }
 
 TEST(MathExtras, maxIntN) {
@@ -147,6 +60,7 @@ TEST(MathExtras, maxIntN) {
   EXPECT_EQ(2147483647, maxIntN(32));
   EXPECT_EQ(std::numeric_limits<int32_t>::max(), maxIntN(32));
   EXPECT_EQ(std::numeric_limits<int64_t>::max(), maxIntN(64));
+  EXPECT_EQ(0, maxIntN(0));
 }
 
 TEST(MathExtras, minIntN) {
@@ -154,6 +68,7 @@ TEST(MathExtras, minIntN) {
   EXPECT_EQ(-64LL, minIntN(7));
   EXPECT_EQ(std::numeric_limits<int32_t>::min(), minIntN(32));
   EXPECT_EQ(std::numeric_limits<int64_t>::min(), minIntN(64));
+  EXPECT_EQ(0, minIntN(0));
 }
 
 TEST(MathExtras, maxUIntN) {
@@ -162,6 +77,7 @@ TEST(MathExtras, maxUIntN) {
   EXPECT_EQ(0xffffffffffffffffULL, maxUIntN(64));
   EXPECT_EQ(1ULL, maxUIntN(1));
   EXPECT_EQ(0x0fULL, maxUIntN(4));
+  EXPECT_EQ(0ULL, maxUIntN(0));
 }
 
 TEST(MathExtras, reverseBits) {
@@ -173,6 +89,44 @@ TEST(MathExtras, reverseBits) {
   EXPECT_EQ(0x5400ULL, reverseBits(NZ16));
   EXPECT_EQ(0x54000000ULL, reverseBits(NZ32));
   EXPECT_EQ(0x5400000000000000ULL, reverseBits(NZ64));
+}
+
+TEST(MathExtras, isShiftedMask_32) {
+  EXPECT_FALSE(isShiftedMask_32(0x01010101));
+  EXPECT_TRUE(isShiftedMask_32(0xf0000000));
+  EXPECT_TRUE(isShiftedMask_32(0xffff0000));
+  EXPECT_TRUE(isShiftedMask_32(0xff << 1));
+
+  unsigned MaskIdx, MaskLen;
+  EXPECT_FALSE(isShiftedMask_32(0x01010101, MaskIdx, MaskLen));
+  EXPECT_TRUE(isShiftedMask_32(0xf0000000, MaskIdx, MaskLen));
+  EXPECT_EQ(28, (int)MaskIdx);
+  EXPECT_EQ(4, (int)MaskLen);
+  EXPECT_TRUE(isShiftedMask_32(0xffff0000, MaskIdx, MaskLen));
+  EXPECT_EQ(16, (int)MaskIdx);
+  EXPECT_EQ(16, (int)MaskLen);
+  EXPECT_TRUE(isShiftedMask_32(0xff << 1, MaskIdx, MaskLen));
+  EXPECT_EQ(1, (int)MaskIdx);
+  EXPECT_EQ(8, (int)MaskLen);
+}
+
+TEST(MathExtras, isShiftedMask_64) {
+  EXPECT_FALSE(isShiftedMask_64(0x0101010101010101ull));
+  EXPECT_TRUE(isShiftedMask_64(0xf000000000000000ull));
+  EXPECT_TRUE(isShiftedMask_64(0xffff000000000000ull));
+  EXPECT_TRUE(isShiftedMask_64(0xffull << 55));
+
+  unsigned MaskIdx, MaskLen;
+  EXPECT_FALSE(isShiftedMask_64(0x0101010101010101ull, MaskIdx, MaskLen));
+  EXPECT_TRUE(isShiftedMask_64(0xf000000000000000ull, MaskIdx, MaskLen));
+  EXPECT_EQ(60, (int)MaskIdx);
+  EXPECT_EQ(4, (int)MaskLen);
+  EXPECT_TRUE(isShiftedMask_64(0xffff000000000000ull, MaskIdx, MaskLen));
+  EXPECT_EQ(48, (int)MaskIdx);
+  EXPECT_EQ(16, (int)MaskLen);
+  EXPECT_TRUE(isShiftedMask_64(0xffull << 55, MaskIdx, MaskLen));
+  EXPECT_EQ(55, (int)MaskIdx);
+  EXPECT_EQ(8, (int)MaskLen);
 }
 
 TEST(MathExtras, isPowerOf2_32) {
@@ -197,12 +151,6 @@ TEST(MathExtras, PowerOf2Ceil) {
   EXPECT_EQ(8U, PowerOf2Ceil(7U));
 }
 
-TEST(MathExtras, PowerOf2Floor) {
-  EXPECT_EQ(0U, PowerOf2Floor(0U));
-  EXPECT_EQ(8U, PowerOf2Floor(8U));
-  EXPECT_EQ(4U, PowerOf2Floor(7U));
-}
-
 TEST(MathExtras, CTLog2) {
   EXPECT_EQ(CTLog2<1ULL << 0>(), 0U);
   EXPECT_EQ(CTLog2<1ULL << 1>(), 1U);
@@ -220,31 +168,6 @@ TEST(MathExtras, CTLog2) {
   EXPECT_EQ(CTLog2<1ULL << 13>(), 13U);
   EXPECT_EQ(CTLog2<1ULL << 14>(), 14U);
   EXPECT_EQ(CTLog2<1ULL << 15>(), 15U);
-}
-
-TEST(MathExtras, countLeadingOnes) {
-  for (int i = 30; i >= 0; --i) {
-    // Start with all ones and unset some bit.
-    EXPECT_EQ(31u - i, countLeadingOnes(0xFFFFFFFF ^ (1 << i)));
-  }
-  for (int i = 62; i >= 0; --i) {
-    // Start with all ones and unset some bit.
-    EXPECT_EQ(63u - i, countLeadingOnes(0xFFFFFFFFFFFFFFFFULL ^ (1LL << i)));
-  }
-  for (int i = 30; i >= 0; --i) {
-    // Start with all ones and unset some bit.
-    EXPECT_EQ(31u - i, countLeadingOnes(0xFFFFFFFF ^ (1 << i)));
-  }
-}
-
-TEST(MathExtras, FloatBits) {
-  static const float kValue = 5632.34f;
-  EXPECT_FLOAT_EQ(kValue, BitsToFloat(FloatToBits(kValue)));
-}
-
-TEST(MathExtras, DoubleBits) {
-  static const double kValue = 87987234.983498;
-  EXPECT_DOUBLE_EQ(kValue, BitsToDouble(DoubleToBits(kValue)));
 }
 
 TEST(MathExtras, MinAlign) {
@@ -271,9 +194,7 @@ TEST(MathExtras, alignTo) {
   EXPECT_EQ(552u, alignTo(321, 255, 42));
 }
 
-template<typename T>
-void SaturatingAddTestHelper()
-{
+template <typename T> void SaturatingAddTestHelper() {
   const T Max = std::numeric_limits<T>::max();
   bool ResultOverflowed;
 
@@ -295,6 +216,42 @@ void SaturatingAddTestHelper()
 
   EXPECT_EQ(Max, SaturatingAdd(Max, Max));
   EXPECT_EQ(Max, SaturatingAdd(Max, Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(T(6), SaturatingAdd(T(1), T(2), T(3)));
+  EXPECT_EQ(T(6), SaturatingAdd(T(1), T(2), T(3), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(10), SaturatingAdd(T(1), T(2), T(3), T(4)));
+  EXPECT_EQ(T(10), SaturatingAdd(T(1), T(2), T(3), T(4), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(0), T(0)));
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(0), T(0), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(0), T(0), Max));
+  EXPECT_EQ(Max, SaturatingAdd(T(0), T(0), Max, &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(0), T(1)));
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(0), T(1), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(0), T(1), Max));
+  EXPECT_EQ(Max, SaturatingAdd(T(0), T(1), Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 2), T(1)));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 2), T(1), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(1), T(Max - 2)));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(1), T(Max - 2), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(Max, Max, Max));
+  EXPECT_EQ(Max, SaturatingAdd(Max, Max, Max, &ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 }
 

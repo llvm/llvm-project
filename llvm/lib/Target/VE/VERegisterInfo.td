@@ -148,12 +148,17 @@ foreach I = 0-63 in
 def VIX : VEVecReg<255, "vix", [], ["vix"]>;
 
 // Vector mask registers - 256 bits wide
-foreach I = 0-15 in
+let isConstant = true in
+def VM0 : VEMaskReg<0, "vm0", [], ["vm0"]>, DwarfRegNum<[128]>;
+foreach I = 1-15 in
   def VM#I : VEMaskReg<I, "vm"#I, [], ["vm"#I]>, DwarfRegNum<[!add(128,I)]>;
 
 // Aliases of VMs to use as a pair of two VM for packed instructions
+let isConstant = true in
+def VMP0 : VEMaskReg<0, "vm0", [], ["vm0"]>;
+
 let SubRegIndices = [sub_vm_even, sub_vm_odd], CoveredBySubRegs = 1 in
-foreach I = 0-7 in
+foreach I = 1-7 in
   def VMP#I : VEMaskReg<!shl(I,1), "vmp"#I,
                         [!cast<VEMaskReg>("VM"#!shl(I,1)),
                          !cast<VEMaskReg>("VM"#!add(!shl(I,1),1))],

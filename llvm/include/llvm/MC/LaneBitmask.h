@@ -31,6 +31,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -72,9 +73,7 @@ namespace llvm {
 
     constexpr Type getAsInteger() const { return Mask; }
 
-    unsigned getNumLanes() const {
-      return countPopulation(Mask);
-    }
+    unsigned getNumLanes() const { return llvm::popcount(Mask); }
     unsigned getHighestLane() const {
       return Log2_64(Mask);
     }

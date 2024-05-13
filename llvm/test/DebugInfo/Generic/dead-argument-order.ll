@@ -1,4 +1,5 @@
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Built from the following source with clang -O1
 ; struct S { int i; };
@@ -13,11 +14,11 @@
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name {{.*}} "function"
+; CHECK:   DW_AT_name ("function")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "s"
+; CHECK:     DW_AT_name ("s")
 ; CHECK-NOT: DW_TAG
 ; FIXME: Even though 's' is never reconstituted into a struct, the one member
 ; variable is still live and used, and so we should be able to describe 's's
@@ -28,7 +29,7 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK:     DW_AT_location
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "i"
+; CHECK:     DW_AT_name ("i")
 
 
 %struct.S = type { i32 }
@@ -36,7 +37,7 @@
 ; Function Attrs: nounwind readnone uwtable
 define i32 @_Z8function1Si(i32 %s.coerce, i32 %i) #0 !dbg !9 {
 entry:
-  tail call void @llvm.dbg.declare(metadata %struct.S* undef, metadata !14, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !14, metadata !DIExpression()), !dbg !20
   tail call void @llvm.dbg.value(metadata i32 %i, metadata !15, metadata !DIExpression()), !dbg !20
   %add = add nsw i32 %i, %s.coerce, !dbg !20
   ret i32 %add, !dbg !20
@@ -73,6 +74,6 @@ attributes #1 = { nounwind readnone }
 !16 = !{i32 2, !"Dwarf Version", i32 4}
 !17 = !{i32 2, !"Debug Info Version", i32 3}
 !18 = !{!"clang version 3.5.0 "}
-!19 = !{%struct.S* undef}
+!19 = !{ptr undef}
 !20 = !DILocation(line: 2, scope: !9)
 

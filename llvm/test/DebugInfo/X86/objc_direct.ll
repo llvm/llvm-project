@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj -o %t
+; RUN: llc < %s -mtriple=x86_64 -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; Source code to regenerate:
@@ -25,10 +25,10 @@ source_filename = "direct.m"
 
 %0 = type opaque
 
-define hidden i32 @"\01-[Root direct_method]"(%0* %self, i8* %_cmd) {
+define hidden i32 @"\01-[Root direct_method]"(ptr %self, ptr %_cmd) {
 entry:
   %retval = alloca i32, align 4
-  %0 = load i32, i32* %retval, align 4
+  %0 = load i32, ptr %retval, align 4
   ret i32 %0
 }
 

@@ -1,17 +1,18 @@
 ; RUN: llc -mtriple=x86_64-- < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-- -early-live-intervals < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--"
 
 ; Function Attrs: nounwind uwtable
-define { i64, i64 } @foo(i8* %ptr, i128* nocapture readonly %src, i128* nocapture readonly %dst) local_unnamed_addr #0 {
+define { i64, i64 } @foo(ptr %ptr, ptr nocapture readonly %src, ptr nocapture readonly %dst) local_unnamed_addr #0 {
 entry:
-  %0 = load i128, i128* %dst, align 16, !tbaa !1
+  %0 = load i128, ptr %dst, align 16, !tbaa !1
   %shr = lshr i128 %0, 64
   %conv = trunc i128 %shr to i64
   %conv1 = trunc i128 %0 to i64
-  %1 = load i128, i128* %src, align 16, !tbaa !1
-  %2 = tail call i128 asm sideeffect "lock; cmpxchg16b $1", "=A,=*m,{cx},{bx},0,*m,~{dirflag},~{fpsr},~{flags}"(i8* %ptr, i64 %conv, i64 %conv1, i128 %1, i8* %ptr) #1, !srcloc !5
+  %1 = load i128, ptr %src, align 16, !tbaa !1
+  %2 = tail call i128 asm sideeffect "lock; cmpxchg16b $1", "=A,=*m,{cx},{bx},0,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i8) %ptr, i64 %conv, i64 %conv1, i128 %1, ptr elementtype(i8) %ptr) #1, !srcloc !5
   %retval.sroa.0.0.extract.trunc = trunc i128 %2 to i64
   %retval.sroa.2.0.extract.shift = lshr i128 %2, 64
   %retval.sroa.2.0.extract.trunc = trunc i128 %retval.sroa.2.0.extract.shift to i64

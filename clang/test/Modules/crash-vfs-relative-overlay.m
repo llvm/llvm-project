@@ -1,7 +1,7 @@
 // REQUIRES: crash-recovery, shell
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
-// XFAIL: windows-gnu
+// XFAIL: target={{.*-windows-gnu}}
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t
@@ -44,9 +44,9 @@
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
-// CHECKYAML-NEXT:     'name': "module.map",
+// CHECKYAML-NEXT:     'name': "module.modulemap",
 // CHECKYAML-NOT:      'external-contents': "{{[^ ]*}}.cache
-// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Inputs/crash-recovery/usr/include/module.map"
+// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Inputs/crash-recovery/usr/include/module.modulemap"
 // CHECKYAML-NEXT:   },
 
 // Test that reading the YAML file will yield the correct path after

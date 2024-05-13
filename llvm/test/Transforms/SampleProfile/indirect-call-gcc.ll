@@ -1,14 +1,14 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/indirect-call.afdo -S | FileCheck %s
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/indirect-call.afdo | FileCheck %s
 
 ; Checks if indirect call targets are read correctly when reading from gcc
 ; format profile.
 ; It is expected to fail on certain architectures as gcc profile reader does
 ; not work.
 
-define void @test(void ()*) #0 !dbg !3 {
-  %2 = alloca void ()*
-  store void ()* %0, void ()** %2
-  %3 = load void ()*, void ()** %2
+define void @test(ptr) #0 !dbg !3 {
+  %2 = alloca ptr
+  store ptr %0, ptr %2
+  %3 = load ptr, ptr %2
   ; CHECK: call {{.*}}, !prof ![[PROF:[0-9]+]]
   call void %3(), !dbg !4
   ret void

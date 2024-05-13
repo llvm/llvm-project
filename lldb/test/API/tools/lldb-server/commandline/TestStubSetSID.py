@@ -6,10 +6,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def get_stub_sid(self, extra_stub_args=None):
         # Launch debugserver
         if extra_stub_args:
@@ -17,9 +15,7 @@ class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         server = self.launch_debug_monitor()
         self.assertIsNotNone(server)
-        self.assertTrue(
-            lldbgdbserverutils.process_is_running(
-                server.pid, True))
+        self.assertTrue(lldbgdbserverutils.process_is_running(server.pid, True))
 
         # Get the process id for the stub.
         return os.getsid(server.pid)

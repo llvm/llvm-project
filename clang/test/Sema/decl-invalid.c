@@ -5,8 +5,8 @@ typedef union <anonymous> __mbstate_t;  // expected-error {{declaration of anony
 
 
 // PR2017
-void x(); 
-int a() {
+void x(void); 
+int a(void) {
   int r[x()];  // expected-error {{size of array has non-integer type 'void'}}
 
   static y ?; // expected-error{{unknown type name 'y'}} \
@@ -20,8 +20,5 @@ struct; // expected-error {{declaration of anonymous struct must be a definition
 typedef int I;
 I; // expected-warning {{declaration does not declare anything}}
 
-
-
-// rdar://6880449
 register int test1;     // expected-error {{illegal storage class on file-scoped variable}}
 

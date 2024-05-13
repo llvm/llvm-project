@@ -10,6 +10,9 @@
 #include <string.h>
 
 #include "sanitizer/asan_interface.h"
+#if __has_feature(ptrauth_calls)
+#  include <ptrauth.h>
+#endif
 
 void test_shadow(char *p, size_t size) {
   fprintf(stderr, "p = %p\n", p);
@@ -23,7 +26,13 @@ int main(int argc, char *argv[]) {
   free(p);
   // CHECK: =-1=
 
-  test_shadow((char *)&main, 1);
+  char *mainptr;
+#if __has_feature(ptrauth_calls)
+  mainptr = (char *)ptrauth_strip((void *)&main, ptrauth_key_return_address);
+#else
+  mainptr = (char *)&main;
+#endif
+  test_shadow(mainptr, 1);
   // CHECK: =-1=
 
   test_shadow((char *)&p, 1);

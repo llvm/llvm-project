@@ -22,7 +22,7 @@ int also_after(void) {
 int test(int (*fd)(void)) {
   return fd();
 }
-int main() {
+int main(void) {
   // Should return 0.
   return test(also_after) +
          test(also_before) +
@@ -65,7 +65,7 @@ int main() {
 // CHECK-NEXT: |       `-ImplicitCastExpr [[ADDR_27:0x[a-z0-9]*]] <col:10> 'int (*)({{.*}})' <LValueToRValue>
 // CHECK-NEXT: |         `-DeclRefExpr [[ADDR_28:0x[a-z0-9]*]] <col:10> 'int (*)({{.*}})' {{.*}}ParmVar [[ADDR_23]] 'fd' 'int (*)({{.*}})'
 // CHECK-NEXT: `-FunctionDecl [[ADDR_29:0x[a-z0-9]*]] <line:25:1, line:31:1> line:25:5 main 'int ({{.*}})'
-// CHECK-NEXT:   `-CompoundStmt [[ADDR_30:0x[a-z0-9]*]] <col:12, line:31:1>
+// CHECK-NEXT:   `-CompoundStmt [[ADDR_30:0x[a-z0-9]*]] <col:16, line:31:1>
 // CHECK-NEXT:     `-ReturnStmt [[ADDR_31:0x[a-z0-9]*]] <line:27:3, line:30:27>
 // CHECK-NEXT:       `-BinaryOperator [[ADDR_32:0x[a-z0-9]*]] <line:27:10, line:30:27> 'int' '+'
 // CHECK-NEXT:         |-BinaryOperator [[ADDR_33:0x[a-z0-9]*]] <line:27:10, line:29:26> 'int' '+'

@@ -1,7 +1,7 @@
-RUN: llvm-config --link-static --system-libs 2>&1 | FileCheck %s
+RUN: llvm-config --link-static --system-libs Support 2>&1 | FileCheck %s
 REQUIRES: static-libs
-REQUIRES: system-windows
+REQUIRES: host={{.*-windows-msvc}}
 CHECK-NOT: -l
-CHECK: psapi.lib shell32.lib ole32.lib uuid.lib advapi32.lib
+CHECK: psapi.lib shell32.lib ole32.lib uuid.lib advapi32.lib ws2_32.lib
 CHECK-NOT: error
 CHECK-NOT: warning

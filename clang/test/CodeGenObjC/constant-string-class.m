@@ -4,7 +4,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fno-constant-cfstrings -fconstant-string-class Foo -emit-llvm -o %t %s
 // RUN: FileCheck --check-prefix CHECK-NONFRAGILE < %t %s
 
-// rdar: // 8564463
 // PR6056
 
 @interface Object {
@@ -25,7 +24,7 @@ id _FooClassReference[20];
 - (char *)customString { return cString ; }
 @end
 
-int main () {
+int main (void) {
   Foo *string = @"bla";
   return 0;
 }

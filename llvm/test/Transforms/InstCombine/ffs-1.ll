@@ -1,12 +1,12 @@
 ; Test that the ffs* library call simplifier works correctly.
 ;
-; RUN: opt < %s -instcombine -S                                    | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
-; RUN: opt < %s -instcombine -mtriple i386-pc-linux -S             | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=arm64-apple-ios9.0 -S        | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=arm64-apple-tvos9.0 -S       | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=thumbv7k-apple-watchos2.0 -S | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=x86_64-apple-macosx10.11 -S  | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=x86_64-freebsd-gnu -S        | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -S                                    | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
+; RUN: opt < %s -passes=instcombine -mtriple i386-pc-linux -S             | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=arm64-apple-ios9.0 -S        | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=arm64-apple-tvos9.0 -S       | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=thumbv7k-apple-watchos2.0 -S | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=x86_64-apple-macosx10.11 -S  | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=x86_64-freebsd-gnu -S        | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
 
 declare i32 @ffs(i32)
 declare i32 @ffsl(i32)
@@ -148,7 +148,7 @@ define i32 @test_simplify12() {
 
 define i32 @test_simplify13(i32 %x) {
 ; ALL-LABEL: @test_simplify13(
-; ALL-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.cttz.i32(i32 %x, i1 true), !range !0
+; ALL-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 %x, i1 true)
 ; ALL-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[CTTZ]], 1
 ; ALL-NEXT:    [[TMP2:%.*]] = icmp eq i32 %x, 0
 ; ALL-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
@@ -164,7 +164,7 @@ define i32 @test_simplify14(i32 %x) {
 ; GENERIC-NEXT:    ret i32 [[RET]]
 ;
 ; TARGET-LABEL: @test_simplify14(
-; TARGET-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.cttz.i32(i32 %x, i1 true), !range !0
+; TARGET-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 %x, i1 true)
 ; TARGET-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[CTTZ]], 1
 ; TARGET-NEXT:    [[TMP2:%.*]] = icmp eq i32 %x, 0
 ; TARGET-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
@@ -180,8 +180,8 @@ define i32 @test_simplify15(i64 %x) {
 ; GENERIC-NEXT:    ret i32 [[RET]]
 ;
 ; TARGET-LABEL: @test_simplify15(
-; TARGET-NEXT:    [[CTTZ:%.*]] = call i64 @llvm.cttz.i64(i64 %x, i1 true), !range !1
-; TARGET-NEXT:    [[TMP1:%.*]] = trunc i64 [[CTTZ]] to i32
+; TARGET-NEXT:    [[CTTZ:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 %x, i1 true)
+; TARGET-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[CTTZ]] to i32
 ; TARGET-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; TARGET-NEXT:    [[TMP3:%.*]] = icmp eq i64 %x, 0
 ; TARGET-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]

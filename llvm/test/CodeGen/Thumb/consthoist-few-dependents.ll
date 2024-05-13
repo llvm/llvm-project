@@ -1,7 +1,7 @@
-; RUN: opt -consthoist -S %s -o - | FileCheck %s --check-prefix=OPT
-; RUN: opt -consthoist -S -consthoist-min-num-to-rebase=1 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-1
-; RUN: opt -consthoist -S -consthoist-min-num-to-rebase=2 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-2
-; RUN: opt -consthoist -S -consthoist-min-num-to-rebase=3 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-3
+; RUN: opt -passes=consthoist -S %s -o - | FileCheck %s --check-prefix=OPT
+; RUN: opt -passes=consthoist -S -consthoist-min-num-to-rebase=1 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-1
+; RUN: opt -passes=consthoist -S -consthoist-min-num-to-rebase=2 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-2
+; RUN: opt -passes=consthoist -S -consthoist-min-num-to-rebase=3 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-3
 
 ; RUN: llc -consthoist-min-num-to-rebase=2 %s -o - | FileCheck %s --check-prefix=LLC
 
@@ -38,16 +38,16 @@ bb:
   ]
 
 bb1:
-  store i1 1, i1* @global, align 1
+  store i1 1, ptr @global, align 1
   unreachable
 
 bb2:
-  store i1 0, i1* @global, align 1
+  store i1 0, ptr @global, align 1
   unreachable
 
 bb3:
-  store i1 0, i1* @global.0, align 1
-  store i1 0, i1* @global, align 1
+  store i1 0, ptr @global.0, align 1
+  store i1 0, ptr @global, align 1
   unreachable
 
 bb5:
@@ -87,16 +87,16 @@ bb:
   ]
 
 bb1:                                              ; preds = %bb
-  store i8 -1, i8* @global.1, align 1
+  store i8 -1, ptr @global.1, align 1
   unreachable
 
 bb2:                                              ; preds = %bb
-  store i8 -2, i8* @global.1, align 1
+  store i8 -2, ptr @global.1, align 1
   unreachable
 
 bb3:                                              ; preds = %bb
-  store i8 -2, i8* @global.2, align 1
-  store i8 -2, i8* @global.1, align 1
+  store i8 -2, ptr @global.2, align 1
+  store i8 -2, ptr @global.1, align 1
   unreachable
 
 bb5:                                              ; preds = %bb
@@ -122,36 +122,36 @@ bb5:                                              ; preds = %bb
 ; OPT-1: bb1:
 ; OPT-1: %[[C1:const[0-9]?]] = bitcast i16 -5 to i16
 ; OPT-1-NEXT: %const_mat = add i16 %[[C1]], 1
-; OPT-1-NEXT: store i16 %const_mat, i16* @global.3, align 1
+; OPT-1-NEXT: store i16 %const_mat, ptr @global.3, align 1
 ; OPT-1: bb2:
 ; OPT-1-NEXT: %[[C2:const[0-9]?]] = bitcast i16 -5 to i16
-; OPT-1-NEXT: store i16 %[[C2]], i16* @global.3, align 1
+; OPT-1-NEXT: store i16 %[[C2]], ptr @global.3, align 1
 ; OPT-1: bb3:
 ; OPT-1-NEXT: %[[C3:const[0-9]?]] = bitcast i16 -5 to i16
-; OPT-1-NEXT: store i16 %[[C3]], i16* @global.4, align 1
-; OPT-1-NEXT: store i16 %[[C3]], i16* @global.3, align 1
+; OPT-1-NEXT: store i16 %[[C3]], ptr @global.4, align 1
+; OPT-1-NEXT: store i16 %[[C3]], ptr @global.3, align 1
 
 ; -consthoist-min-num-to-rebase=2, check that 65532 and single use of 65531
 ; in bb2 is not rebased
 ; OPT-2: bb1:
-; OPT-2-NEXT: store i16 -4, i16* @global.3, align 1
+; OPT-2-NEXT: store i16 -4, ptr @global.3, align 1
 ; OPT-2: bb2:
-; OPT-2-NEXT: store i16 -5, i16* @global.3, align 1
+; OPT-2-NEXT: store i16 -5, ptr @global.3, align 1
 ; OPT-2: bb3:
 ; OPT-2-NEXT:   %[[C4:const[0-9]?]] = bitcast i16 -5 to i16
-; OPT-2-NEXT:   store i16 %[[C4]], i16* @global.4, align 1
-; OPT-2-NEXT:   store i16 %[[C4]], i16* @global.3, align 1
+; OPT-2-NEXT:   store i16 %[[C4]], ptr @global.4, align 1
+; OPT-2-NEXT:   store i16 %[[C4]], ptr @global.3, align 1
 ; OPT-2-NOT: add
 
 ; -consthoist-min-num-to-rebase=3, check that dual uses of 65531 in bb3 are
 ; not rebase
 ; OPT-3: bb1:
-; OPT-3-NEXT: store i16 -4, i16* @global.3, align 1
+; OPT-3-NEXT: store i16 -4, ptr @global.3, align 1
 ; OPT-3: bb2:
-; OPT-3-NEXT: store i16 -5, i16* @global.3, align 1
+; OPT-3-NEXT: store i16 -5, ptr @global.3, align 1
 ; OPT-3: bb3:
-; OPT-3-NEXT:   store i16 -5, i16* @global.4, align 1
-; OPT-3-NEXT:   store i16 -5, i16* @global.3, align 1
+; OPT-3-NEXT:   store i16 -5, ptr @global.4, align 1
+; OPT-3-NEXT:   store i16 -5, ptr @global.3, align 1
 ; OPT-3-NOT: add
 ; OPT-3-NOT: bitcast
 
@@ -173,16 +173,16 @@ bb:
   ]
 
 bb1:                                              ; preds = %bb
-  store i16 65532, i16* @global.3, align 1
+  store i16 65532, ptr @global.3, align 1
   unreachable
 
 bb2:                                              ; preds = %bb
-  store i16 65531, i16* @global.3, align 1
+  store i16 65531, ptr @global.3, align 1
   unreachable
 
 bb3:                                              ; preds = %bb
-  store i16 65531, i16* @global.4, align 1
-  store i16 65531, i16* @global.3, align 1
+  store i16 65531, ptr @global.4, align 1
+  store i16 65531, ptr @global.3, align 1
   unreachable
 
 bb5:                                              ; preds = %bb

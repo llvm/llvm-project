@@ -7,10 +7,10 @@ define <4 x double> @test_x86_avx_vzeroall(<4 x double> %a, <4 x double> %b) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0x58,0xc1]
 ; AVX-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    # encoding: [0xc5,0xfd,0x11,0x44,0x24,0xc8]
+; AVX-NEXT:    # encoding: [0xc5,0xfd,0x11,0x44,0x24,0xd8]
 ; AVX-NEXT:    vzeroall # encoding: [0xc5,0xfc,0x77]
 ; AVX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX-NEXT:    # encoding: [0xc5,0xfc,0x10,0x44,0x24,0xc8]
+; AVX-NEXT:    # encoding: [0xc5,0xfc,0x10,0x44,0x24,0xd8]
 ; AVX-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx_vzeroall:
@@ -30,10 +30,10 @@ define <4 x double> @test_x86_avx_vzeroupper(<4 x double> %a, <4 x double> %b) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0x58,0xc1]
 ; AVX-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    # encoding: [0xc5,0xfd,0x11,0x44,0x24,0xc8]
+; AVX-NEXT:    # encoding: [0xc5,0xfd,0x11,0x44,0x24,0xd8]
 ; AVX-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; AVX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX-NEXT:    # encoding: [0xc5,0xfc,0x10,0x44,0x24,0xc8]
+; AVX-NEXT:    # encoding: [0xc5,0xfc,0x10,0x44,0x24,0xd8]
 ; AVX-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx_vzeroupper:

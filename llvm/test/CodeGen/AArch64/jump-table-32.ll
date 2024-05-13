@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -o - %s -mtriple=arm64_32-apple-ios7.0 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc -verify-machineinstrs -o - %s -aarch64-min-jump-table-entries=4 -mtriple=arm64_32-apple-ios7.0 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 
 define i32 @test_jumptable(i32 %in) {
 ; CHECK: test_jumptable
@@ -9,8 +9,9 @@ define i32 @test_jumptable(i32 %in) {
     i32 2, label %lbl3
     i32 4, label %lbl4
   ]
-; CHECK: adrp    [[JTPAGE:x[0-9]+]], LJTI0_0@PAGE
+
 ; CHECK: mov     w[[INDEX:[0-9]+]], w0
+; CHECK: adrp    [[JTPAGE:x[0-9]+]], LJTI0_0@PAGE
 ; CHECK: add     x[[JT:[0-9]+]], [[JTPAGE]], LJTI0_0@PAGEOFF
 ; CHECK: adr     [[BASE_BLOCK:x[0-9]+]], LBB0_2
 ; CHECK: ldrb    w[[OFFSET:[0-9]+]], [x[[JT]], x[[INDEX]]]

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}adjust_writemask_crash_0_nochain:
 ; GCN: image_get_lod v0, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} dmask:0x2
@@ -12,7 +12,7 @@ main_body:
   %tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 0
-  store volatile float %tmp4, float addrspace(1)* undef
+  store volatile float %tmp4, ptr addrspace(1) undef
   ret void
 }
 
@@ -28,7 +28,7 @@ main_body:
   %tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 1
-  store volatile float %tmp4, float addrspace(1)* undef
+  store volatile float %tmp4, ptr addrspace(1) undef
   ret void
 }
 
@@ -44,7 +44,7 @@ main_body:
   %tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 0
-  store volatile float %tmp4, float addrspace(1)* undef
+  store volatile float %tmp4, ptr addrspace(1) undef
   ret void
 }
 
@@ -60,7 +60,7 @@ main_body:
   %tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 1
-  store volatile float %tmp4, float addrspace(1)* undef
+  store volatile float %tmp4, ptr addrspace(1) undef
   ret void
 }
 
@@ -71,7 +71,7 @@ main_body:
   %tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 0
-  store volatile float %tmp4, float addrspace(1)* undef
+  store volatile float %tmp4, ptr addrspace(1) undef
   ret void
 }
 

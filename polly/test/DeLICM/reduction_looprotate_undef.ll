@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-overapproximate-writes=true -polly-delicm-compute-known=true -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-overapproximate-writes=true -polly-delicm-compute-known=true -polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ;    void func(int *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
@@ -9,7 +9,7 @@
 ;      }
 ;    }
 ;
-define void @func(i32* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -46,8 +46,8 @@ outer.for:
       br i1 %i.cmp, label %reduction.for, label %reduction.exit
 
     reduction.exit:
-      %A_idx = getelementptr inbounds i32, i32* %A, i32 %j
-      store i32 %conv, i32* %A_idx
+      %A_idx = getelementptr inbounds i32, ptr %A, i32 %j
+      store i32 %conv, ptr %A_idx
       br label %outer.inc
 
 

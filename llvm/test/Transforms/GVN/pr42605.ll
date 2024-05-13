@@ -1,4 +1,4 @@
-; RUN: opt -gvn %s -S | FileCheck %s
+; RUN: opt -passes=gvn %s -S | FileCheck %s
 ; PR42605. Check phi-translate won't translate the value number of a call
 ; to the value of another call with clobber in between.
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -8,12 +8,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str = private unnamed_addr constant [8 x i8] c"%d, %d\0A\00", align 1
 
 ; Function Attrs: nofree nounwind
-declare dso_local i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr
+declare dso_local i32 @printf(ptr nocapture readonly, ...) local_unnamed_addr
 
 ; Function Attrs: noinline norecurse nounwind readonly uwtable
 define dso_local i32 @_Z3gooi(i32 %i) local_unnamed_addr #0 {
 entry:
-  %t0 = load i32, i32* @global, align 4, !tbaa !2
+  %t0 = load i32, ptr @global, align 4, !tbaa !2
   %add = add nsw i32 %t0, %i
   ret i32 %add
 }
@@ -34,14 +34,14 @@ if.then:                                          ; preds = %entry
 ; Check pre happens after phitranslate.
 ; CHECK-LABEL: @noclobber
 ; CHECK: %add4.pre-phi = phi i32 [ %add2, %if.then ], [ %add, %entry ]
-; CHECK: printf(i8* getelementptr inbounds {{.*}}, i32 %add4.pre-phi)
+; CHECK: printf(ptr @.str, i32 %global2.0, i32 %add4.pre-phi)
 
 if.end:                                           ; preds = %if.then, %entry
   %i.0 = phi i32 [ 3, %if.then ], [ 2, %entry ]
   %global2.0 = phi i32 [ %add2, %if.then ], [ %add, %entry ]
   %call3 = tail call i32 @_Z3gooi(i32 %i.0)
   %add4 = add nsw i32 %call3, 5
-  %call5 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i64 0, i64 0), i32 %global2.0, i32 %add4)
+  %call5 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %global2.0, i32 %add4)
   ret void
 }
 
@@ -62,15 +62,15 @@ if.then:                                          ; preds = %entry
 ; CHECK-LABEL: @hasclobber
 ; CHECK: %call3 = tail call i32 @_Z3gooi(i32 %i.0)
 ; CHECK-NEXT: %add4 = add nsw i32 %call3, 5
-; CHECK-NEXT: printf(i8* getelementptr inbounds ({{.*}}, i32 %global2.0, i32 %add4)
+; CHECK-NEXT: printf(ptr @.str, i32 %global2.0, i32 %add4)
 
 if.end:                                           ; preds = %if.then, %entry
   %i.0 = phi i32 [ 3, %if.then ], [ 2, %entry ]
   %global2.0 = phi i32 [ %add2, %if.then ], [ %add, %entry ]
-  store i32 5, i32* @global, align 4, !tbaa !2
+  store i32 5, ptr @global, align 4, !tbaa !2
   %call3 = tail call i32 @_Z3gooi(i32 %i.0)
   %add4 = add nsw i32 %call3, 5
-  %call5 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i64 0, i64 0), i32 %global2.0, i32 %add4)
+  %call5 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %global2.0, i32 %add4)
   ret void
 }
 

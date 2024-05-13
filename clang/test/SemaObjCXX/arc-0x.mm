@@ -11,7 +11,7 @@ void move_it(__strong id &&from) {
 - init;
 @end
 
-// <rdar://problem/12031870>: don't warn about this
+// don't warn about this
 extern "C" A* MakeA();
 
 // Ensure that deduction works with lifetime qualifiers.
@@ -34,7 +34,6 @@ void deduction(id obj) {
   }
 }
 
-// rdar://problem/11068137
 void test1a() {
   __autoreleasing id p; // expected-note 2 {{'p' declared here}}
   (void) [&p] {};
@@ -55,8 +54,6 @@ void test1c() {
   (void) ^{ (void) v; }; // expected-error {{cannot capture __autoreleasing variable in a block}}
 }
 
-
-// <rdar://problem/11319689>
 // warn when initializing an 'auto' variable with an 'id' initializer expression
 
 void testAutoId(id obj) {
@@ -80,7 +77,6 @@ void testAutoIdTemplate(id obj) {
   autoTemplateFunction<id, 2>(obj, obj, [Array new]); // no-warning
 }
 
-// rdar://12229679
 @interface NSObject @end
 typedef __builtin_va_list va_list;
 @interface MyClass : NSObject
@@ -121,12 +117,12 @@ namespace test_union {
 
   union U1 {
     __weak id f0; // expected-note 12 {{'U1' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
-    U1() = default; // expected-warning {{explicitly defaulted default constructor is implicitly deleted}} expected-note {{explicitly defaulted function was implicitly deleted here}}
-    ~U1() = default; // expected-warning {{explicitly defaulted destructor is implicitly deleted}} expected-note {{explicitly defaulted function was implicitly deleted here}}
-    U1(const U1 &) = default; // expected-warning {{explicitly defaulted copy constructor is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}}
-    U1(U1 &&) = default; // expected-warning {{explicitly defaulted move constructor is implicitly deleted}}
-    U1 & operator=(const U1 &) = default; // expected-warning {{explicitly defaulted copy assignment operator is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}}
-    U1 & operator=(U1 &&) = default; // expected-warning {{explicitly defaulted move assignment operator is implicitly deleted}}
+    U1() = default; // expected-warning {{explicitly defaulted default constructor is implicitly deleted}} expected-note {{explicitly defaulted function was implicitly deleted here}} expected-note{{replace 'default'}}
+    ~U1() = default; // expected-warning {{explicitly defaulted destructor is implicitly deleted}} expected-note {{explicitly defaulted function was implicitly deleted here}} expected-note{{replace 'default'}}
+    U1(const U1 &) = default; // expected-warning {{explicitly defaulted copy constructor is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}} expected-note{{replace 'default'}}
+    U1(U1 &&) = default; // expected-warning {{explicitly defaulted move constructor is implicitly deleted}} expected-note{{replace 'default'}}
+    U1 & operator=(const U1 &) = default; // expected-warning {{explicitly defaulted copy assignment operator is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}} expected-note{{replace 'default'}}
+    U1 & operator=(U1 &&) = default; // expected-warning {{explicitly defaulted move assignment operator is implicitly deleted}} expected-note{{replace 'default'}}
   };
 
   id getStrong();
@@ -154,15 +150,15 @@ namespace test_union {
   // functions of the containing class.
   struct S0 {
     union {
-      id f0; // expected-note 6 {{'' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
+      id f0; // expected-note-re 6 {{{{.*}} of '(anonymous union at {{.*}})' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
       char f1;
     };
   };
 
   struct S1 {
     union {
-      union { // expected-note {{copy constructor of 'S1' is implicitly deleted because field '' has a deleted copy constructor}} expected-note {{copy assignment operator of 'S1' is implicitly deleted because field '' has a deleted copy assignment operator}} expected-note 4 {{'S1' is implicitly deleted because field '' has a deleted}}
-        id f0; // expected-note 2 {{'' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
+      union { // expected-note-re {{copy constructor of 'S1' is implicitly deleted because field 'test_union::S1::(anonymous union at {{.*}})' has a deleted copy constructor}} expected-note-re {{copy assignment operator of 'S1' is implicitly deleted because field 'test_union::S1::(anonymous union at {{.*}})' has a deleted copy assignment operator}} expected-note-re 4 {{'S1' is implicitly deleted because field 'test_union::S1::(anonymous union at {{.*}})' has a deleted}}
+        id f0; // expected-note-re 2 {{{{.*}} of '(anonymous union at {{.*}}' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
         char f1;
       };
       int f2;
@@ -172,7 +168,7 @@ namespace test_union {
   struct S2 {
     union {
       // FIXME: the note should say 'f0' is causing the special functions to be deleted.
-      struct { // expected-note 6 {{'S2' is implicitly deleted because variant field '' has a non-trivial}}
+      struct { // expected-note-re 6 {{'S2' is implicitly deleted because variant field 'test_union::S2::(anonymous struct at {{.*}})' has a non-trivial}}
         id f0;
         int f1;
       };
@@ -190,13 +186,13 @@ namespace test_union {
   S2 *x6;
 
   static union { // expected-error {{call to implicitly-deleted default constructor of}}
-    id g0; // expected-note {{default constructor of '' is implicitly deleted because variant field 'g0' is an ObjC pointer}}
+    id g0; // expected-note-re {{default constructor of '(unnamed union at {{.*}}' is implicitly deleted because variant field 'g0' is an ObjC pointer}}
   };
 
   static union { // expected-error {{call to implicitly-deleted default constructor of}}
-    union { // expected-note {{default constructor of '' is implicitly deleted because field '' has a deleted default constructor}}
-      union { // expected-note {{default constructor of '' is implicitly deleted because field '' has a deleted default constructor}}
-        __weak id g1; // expected-note {{default constructor of '' is implicitly deleted because variant field 'g1' is an ObjC pointer}}
+    union { // expected-note-re {{default constructor of '(unnamed union at {{.*}}' is implicitly deleted because field 'test_union::(anonymous union at {{.*}})' has a deleted default constructor}}
+      union { // expected-note-re {{default constructor of '(anonymous union at {{.*}}' is implicitly deleted because field 'test_union::(anonymous union at {{.*}})' has a deleted default constructor}}
+        __weak id g1; // expected-note-re {{default constructor of '(anonymous union at {{.*}}' is implicitly deleted because variant field 'g1' is an ObjC pointer}}
         int g2;
       };
       int g3;

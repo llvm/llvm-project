@@ -13,21 +13,23 @@
 #ifndef LLVM_OBJECT_SYMBOLICFILE_H
 #define LLVM_OBJECT_SYMBOLICFILE_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <cinttypes>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
 #include <memory>
-#include <system_error>
 
 namespace llvm {
+
+class LLVMContext;
+class raw_ostream;
+
 namespace object {
 
 union DataRefImpl {
@@ -155,6 +157,8 @@ public:
   virtual basic_symbol_iterator symbol_begin() const = 0;
 
   virtual basic_symbol_iterator symbol_end() const = 0;
+
+  virtual bool is64Bit() const = 0;
 
   // convenience wrappers.
   using basic_symbol_iterator_range = iterator_range<basic_symbol_iterator>;

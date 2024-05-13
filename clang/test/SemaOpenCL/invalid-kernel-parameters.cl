@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple spir-unknown-unknown
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,ocl12 %s -triple spir-unknown-unknown
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple spir-unknown-unknown -cl-std=CL2.0
 
 kernel void half_arg(half x) { } // expected-error{{declaring function parameter of type '__private half' is not allowed; did you forget * ?}}
@@ -104,6 +104,13 @@ typedef struct Foo // expected-note{{within field of type 'Foo' declared here}}
 
 kernel void pointer_in_struct_arg(Foo arg) { } // expected-error{{struct kernel parameters may not contain pointers}}
 
+typedef struct FooGlobal // ocl12-note{{within field of type 'FooGlobal' declared here}}
+{
+  global int* ptrField; // ocl12-note{{field of illegal pointer type '__global int *' declared here}}
+} FooGlobal;
+
+kernel void global_pointer_in_struct_arg(FooGlobal arg) { } // ocl12-error{{struct kernel parameters may not contain pointers}}
+
 typedef union FooUnion // expected-note{{within field of type 'FooUnion' declared here}}
 {
   int* ptrField; // expected-note-re{{field of illegal pointer type '__{{private|generic}} int *' declared here}}
@@ -207,6 +214,6 @@ kernel void array_of_ptr(struct ArrayOfPtr arr) {} // expected-error{{struct ker
 
 struct ArrayOfStruct // expected-note{{within field of type 'ArrayOfStruct' declared here}}
 {
-  struct ArrayOfPtr arr[3]; // expected-note{{within field of type 'struct ArrayOfPtr [3]' declared here}}
+  struct ArrayOfPtr arr[3]; // expected-note{{within field of type 'struct ArrayOfPtr[3]' declared here}}
 };
 kernel void array_of_struct(struct ArrayOfStruct arr) {} // expected-error{{struct kernel parameters may not contain pointers}}

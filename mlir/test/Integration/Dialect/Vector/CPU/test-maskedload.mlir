@@ -1,43 +1,43 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func @maskedload16(%base: memref<?xf32>, %mask: vector<16xi1>,
+func.func @maskedload16(%base: memref<?xf32>, %mask: vector<16xi1>,
                    %pass_thru: vector<16xf32>) -> vector<16xf32> {
-  %c0 = constant 0: index
+  %c0 = arith.constant 0: index
   %ld = vector.maskedload %base[%c0], %mask, %pass_thru
     : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %ld : vector<16xf32>
 }
 
-func @maskedload16_at8(%base: memref<?xf32>, %mask: vector<16xi1>,
+func.func @maskedload16_at8(%base: memref<?xf32>, %mask: vector<16xi1>,
                        %pass_thru: vector<16xf32>) -> vector<16xf32> {
-  %c8 = constant 8: index
+  %c8 = arith.constant 8: index
   %ld = vector.maskedload %base[%c8], %mask, %pass_thru
     : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %ld : vector<16xf32>
 }
 
-func @entry() {
+func.func @entry() {
   // Set up memory.
-  %c0 = constant 0: index
-  %c1 = constant 1: index
-  %c16 = constant 16: index
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c16 = arith.constant 16: index
   %A = memref.alloc(%c16) : memref<?xf32>
   scf.for %i = %c0 to %c16 step %c1 {
-    %i32 = index_cast %i : index to i32
-    %fi = sitofp %i32 : i32 to f32
+    %i32 = arith.index_cast %i : index to i32
+    %fi = arith.sitofp %i32 : i32 to f32
     memref.store %fi, %A[%i] : memref<?xf32>
   }
 
   // Set up pass thru vector.
-  %u = constant -7.0: f32
+  %u = arith.constant -7.0: f32
   %pass = vector.broadcast %u : f32 to vector<16xf32>
 
   // Set up masks.
-  %f = constant 0: i1
-  %t = constant 1: i1
+  %f = arith.constant 0: i1
+  %t = arith.constant 1: i1
   %none = vector.constant_mask [0] : vector<16xi1>
   %all = vector.constant_mask [16] : vector<16xi1>
   %some = vector.constant_mask [8] : vector<16xi1>
@@ -75,6 +75,7 @@ func @entry() {
   vector.print %l5 : vector<16xf32>
   // CHECK: ( 8, 9, 10, 11, 12, 13, 14, 15, -7, -7, -7, -7, -7, -7, -7, -7 )
 
+  memref.dealloc %A : memref<?xf32>
   return
 }
 

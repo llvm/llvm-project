@@ -20,7 +20,7 @@ body:             |
   ; CHECK:   B %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.9(0x80000000)
-  ; CHECK:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[DEF3]], 0 :: (load 8 from `i64* undef`)
+  ; CHECK:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[DEF3]], 0 :: (load (s64) from `ptr undef`)
   ; CHECK:   B %bb.9
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
@@ -30,7 +30,7 @@ body:             |
   ; CHECK:   B %bb.4
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.9(0x80000000)
-  ; CHECK:   [[SCVTFUXDri:%[0-9]+]]:fpr64 = SCVTFUXDri [[DEF2]]
+  ; CHECK:   [[SCVTFUXDri:%[0-9]+]]:fpr64 = SCVTFUXDri [[DEF2]], implicit $fpcr
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SCVTFUXDri]]
   ; CHECK:   [[COPY1:%[0-9]+]]:fpr64 = COPY [[SCVTFUXDri]]
   ; CHECK:   B %bb.9
@@ -71,7 +71,7 @@ body:             |
   bb.2:
     successors: %bb.8(0x80000000)
 
-    %8:gpr64 = LDRXui %9, 0 :: (load 8 from `i64* undef`)
+    %8:gpr64 = LDRXui %9, 0 :: (load (s64) from `ptr undef`)
     B %bb.8
 
   bb.3:
@@ -85,7 +85,7 @@ body:             |
   bb.4:
     successors: %bb.7(0x80000000)
 
-    %6:fpr64 = SCVTFUXDri %5
+    %6:fpr64 = SCVTFUXDri %5, implicit $fpcr
     B %bb.7
 
   bb.5:

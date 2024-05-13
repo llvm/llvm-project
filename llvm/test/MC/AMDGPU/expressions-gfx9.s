@@ -1,12 +1,12 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GFX9
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=NOGFX9 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GFX9
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=NOGFX9 --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Relocatable expressions cannot be used with SDWA modifiers.
 //===----------------------------------------------------------------------===//
 
 v_mov_b32_sdwa v1, sext(u)
-// NOGFX9: error: expected an absolute expression
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: expected an absolute expression
 
 //===----------------------------------------------------------------------===//
 // Instructions can use only one literal.
@@ -14,16 +14,16 @@ v_mov_b32_sdwa v1, sext(u)
 //===----------------------------------------------------------------------===//
 
 s_sub_u32 s0, 123, u
-// NOGFX9: error: only one literal operand is allowed
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
 s_sub_u32 s0, u, u
-// NOGFX9: error: only one literal operand is allowed
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
 s_sub_u32 s0, u, u1
-// NOGFX9: error: only one literal operand is allowed
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
 v_bfe_u32 v0, v2, v3, u
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 
 //===----------------------------------------------------------------------===//
 // Constant expressions may be used with 'sext' modifier

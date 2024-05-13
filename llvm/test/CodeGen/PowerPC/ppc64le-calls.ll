@@ -8,7 +8,7 @@ target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 ; Indirect calls requires a full stub creation
-define void @test_indirect(void ()* nocapture %fp) {
+define void @test_indirect(ptr nocapture %fp) {
 ; CHECK-LABEL: @test_indirect
   tail call void %fp()
 ; CHECK-DAG: std 2, 24(1)

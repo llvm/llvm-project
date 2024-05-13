@@ -12,7 +12,7 @@
 #define LLVM_UNITTESTS_TOOLS_LLVMEXEGESIS_MIPS_TESTBASE_H
 
 #include "LlvmState.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -24,7 +24,8 @@ void InitializeMipsExegesisTarget();
 
 class MipsTestBase : public ::testing::Test {
 protected:
-  MipsTestBase() : State("mips-unknown-linux", "mips32") {}
+  MipsTestBase()
+      : State(cantFail(LLVMState::Create("mips-unknown-linux", "mips32"))) {}
 
   static void SetUpTestCase() {
     LLVMInitializeMipsTargetInfo();

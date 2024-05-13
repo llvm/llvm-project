@@ -8,12 +8,15 @@
 // https://github.com/google/sanitizers/issues/412
 
 // MAP_32BIT flag for mmap is supported only for x86_64.
-// XFAIL: mips
-// XFAIL: aarch64
-// XFAIL: powerpc64
+// XFAIL: target=mips{{.*}}
+// XFAIL: target=aarch64{{.*}}
+// XFAIL: target=powerpc64{{.*}}
+// XFAIL: target=s390x{{.*}}
+// XFAIL: target=loongarch64{{.*}}
+// XFAIL: target=riscv64{{.*}}
 
 // MAP_32BIT doesn't exist on OS X and NetBSD.
-// UNSUPPORTED: darwin,netbsd
+// UNSUPPORTED: darwin,target={{.*netbsd.*}}
 
 void *Thread(void *ptr) {
   *(int*)ptr = 42;

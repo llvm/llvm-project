@@ -13,15 +13,20 @@
 #ifndef LLVM_REMARKS_REMARKLINKER_H
 #define LLVM_REMARKS_REMARKLINKER_H
 
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkStringTable.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 #include <set>
 
 namespace llvm {
+
+namespace object {
+class ObjectFile;
+}
+
 namespace remarks {
 
 struct RemarkLinker {
@@ -47,26 +52,40 @@ private:
   std::set<std::unique_ptr<Remark>, RemarkPtrCompare> Remarks;
 
   /// A path to append before the external file path found in remark metadata.
-  Optional<std::string> PrependPath;
+  std::optional<std::string> PrependPath;
+
+  /// If true, keep all remarks, otherwise only keep remarks with valid debug
+  /// locations.
+  bool KeepAllRemarks = true;
 
   /// Keep this remark. If it's already in the set, discard it.
   Remark &keep(std::unique_ptr<Remark> Remark);
 
+  /// Returns true if \p R should be kept. If KeepAllRemarks is false, only
+  /// return true if \p R has a valid debug location.
+  bool shouldKeepRemark(const Remark &R) {
+    return KeepAllRemarks ? true : R.Loc.has_value();
+  }
+
 public:
   /// Set a path to prepend to the external file path.
   void setExternalFilePrependPath(StringRef PrependPath);
+
+  /// Set KeepAllRemarks to \p B.
+  void setKeepAllRemarks(bool B) { KeepAllRemarks = B; }
 
   /// Link the remarks found in \p Buffer.
   /// If \p RemarkFormat is not provided, try to deduce it from the metadata in
   /// \p Buffer.
   /// \p Buffer can be either a standalone remark container or just
   /// metadata. This takes care of uniquing and merging the remarks.
-  Error link(StringRef Buffer, Optional<Format> RemarkFormat = None);
+  Error link(StringRef Buffer,
+             std::optional<Format> RemarkFormat = std::nullopt);
 
   /// Link the remarks found in \p Obj by looking for the right section and
   /// calling the method above.
   Error link(const object::ObjectFile &Obj,
-             Optional<Format> RemarkFormat = None);
+             std::optional<Format> RemarkFormat = std::nullopt);
 
   /// Serialize the linked remarks to the stream \p OS, using the format \p
   /// RemarkFormat.
@@ -90,7 +109,7 @@ public:
 /// Returns a buffer with the contents of the remarks section depending on the
 /// format of the file. If the section doesn't exist, this returns an empty
 /// optional.
-Expected<Optional<StringRef>>
+Expected<std::optional<StringRef>>
 getRemarksSectionContents(const object::ObjectFile &Obj);
 
 } // end namespace remarks

@@ -31,13 +31,15 @@ namespace IllegalSyntax {
 namespace VariableLengthArrays {
   template<typename Z> using T = int[42]; // ok
 
-  int n = 32;
-  template<typename Z> using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}}
+  int n = 32; // expected-note {{declared here}}
+  template<typename Z> using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}} \
+                                            expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                            expected-note {{read of non-const variable 'n' is not allowed in a constant expression}}
 
   const int m = 42;
   template<typename Z> using U = int[m];
-  template<typename Z> using U = int[42]; // expected-note {{previous definition}} 
-  template<typename Z> using U = int; // expected-error {{type alias template redefinition with different types ('int' vs 'int [42]')}}
+  template<typename Z> using U = int[42]; // expected-note {{previous definition}}
+  template<typename Z> using U = int; // expected-error {{type alias template redefinition with different types ('int' vs 'int[42]')}}
 }
 
 namespace RedeclFunc {
@@ -174,7 +176,7 @@ struct S {
   using T = X[J];
   using U = T<I>;
 };
-static_assert(__is_same(S<3>::U, X[2]), ""); // expected-error {{static_assert failed}}
+static_assert(__is_same(S<3>::U, X[2]), ""); // expected-error {{static assertion failed}}
 }
 
 namespace PR39623 {

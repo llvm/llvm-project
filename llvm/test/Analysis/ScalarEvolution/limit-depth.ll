@@ -1,4 +1,3 @@
-; RUN: opt -scalar-evolution-max-arith-depth=0 -scalar-evolution-max-cast-depth=0 -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s
 ; RUN: opt -scalar-evolution-max-arith-depth=0 -scalar-evolution-max-cast-depth=0 -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
 ; Check that depth set to 0 prevents getAddExpr and getMulExpr from making
@@ -60,7 +59,7 @@ define void @test_mul(i32 %a, i32 %b) {
 define void @test_sext(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
 ; CHECK-LABEL: @test_sext
 ; CHECK:        %se2 = sext i64 %iv2.inc to i128
-; CHECK-NEXT:   -->  {(1 + (sext i64 {(sext i32 (1 + %a) to i64),+,1}<nsw><%loop> to i128))<nsw>,+,1}<nsw><%loop2>
+; CHECK-NEXT:   -->  {(1 + (sext i64 {(sext i32 (1 + %a)<nsw> to i64),+,1}<nsw><%loop> to i128))<nsw>,+,1}<nsw><%loop2>
 entry:
   br label %loop
 
@@ -88,7 +87,7 @@ exit:
 define void @test_zext(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
 ; CHECK-LABEL: @test_zext
 ; CHECK:          %ze2 = zext i64 %iv2.inc to i128
-; CHECK-NEXT:     -->  {(1 + (zext i64 {7,+,1}<nuw><nsw><%loop> to i128))<nuw><nsw>,+,1}<nuw><%loop2>
+; CHECK-NEXT:     -->  {(1 + (zext i64 {7,+,1}<nuw><nsw><%loop> to i128))<nuw><nsw>,+,1}<nuw><nsw><%loop2>
 entry:
   br label %loop
 
@@ -116,7 +115,7 @@ exit:
 define void @test_trunc(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
 ; CHECK-LABEL: @test_trunc
 ; CHECK:          %trunc2 = trunc i64 %iv2.inc to i32
-; CHECK-NEXT:     -->  {(trunc i64 (1 + {7,+,1}<%loop>) to i32),+,1}<%loop2>
+; CHECK-NEXT:     -->  {(trunc i64 (1 + {7,+,1}<%loop>)<nuw><nsw> to i32),+,1}<%loop2> U: [8,53) S: [8,53)  -->  52 U: [52,53) S: [52,53)
 entry:
   br label %loop
 

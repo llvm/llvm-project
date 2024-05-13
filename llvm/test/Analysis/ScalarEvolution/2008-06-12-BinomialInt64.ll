@@ -1,8 +1,7 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution 2>/dev/null
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>/dev/null
 ; PR2433
 
-define i32 @main1(i32 %argc, i8** %argv) nounwind  {
+define i32 @main1(i32 %argc, ptr %argv) nounwind  {
 entry:
 	br i1 false, label %bb10, label %bb23
 
@@ -21,9 +20,9 @@ bb23:		; preds = %bb10, %entry
 	ret i32 0
 }
 
-define i32 @main2(i32 %argc, i8** %argv) {
+define i32 @main2(i32 %argc, ptr %argv) {
 entry:
-	%tmp8 = tail call i32 @atoi( i8* null ) nounwind readonly 		; <i32> [#uses=1]
+	%tmp8 = tail call i32 @atoi( ptr null ) nounwind readonly 		; <i32> [#uses=1]
 	br i1 false, label %bb9, label %bb21
 
 bb9:		; preds = %bb9, %entry
@@ -41,4 +40,4 @@ bb21:		; preds = %bb9, %entry
 	ret i32 0
 }
 
-declare i32 @atoi(i8*) nounwind readonly 
+declare i32 @atoi(ptr) nounwind readonly 

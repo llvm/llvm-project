@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/OptimizedStructLayout.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -345,17 +346,18 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
   // Helper function to try to find a field in the given queue that'll
   // fit starting at StartOffset but before EndOffset (if present).
   // Note that this never fails if EndOffset is not provided.
-  auto tryAddFillerFromQueue = [&](AlignmentQueue *Queue,
-                                   uint64_t StartOffset,
-                                   Optional<uint64_t> EndOffset) -> bool {
+  auto tryAddFillerFromQueue = [&](AlignmentQueue *Queue, uint64_t StartOffset,
+                                   std::optional<uint64_t> EndOffset) -> bool {
     assert(Queue->Head);
     assert(StartOffset == alignTo(LastEnd, Queue->Alignment));
+    assert(!EndOffset || StartOffset < *EndOffset);
 
     // Figure out the maximum size that a field can be, and ignore this
     // queue if there's nothing in it that small.
     auto MaxViableSize =
       (EndOffset ? *EndOffset - StartOffset : ~(uint64_t)0);
-    if (Queue->MinSize > MaxViableSize) return false;
+    if (Queue->MinSize > MaxViableSize)
+      return false;
 
     // Find the matching field.  Note that this should always find
     // something because of the MinSize check above.
@@ -371,7 +373,8 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
 
   // Helper function to find the "best" flexible-offset field according
   // to the criteria described above.
-  auto tryAddBestField = [&](Optional<uint64_t> BeforeOffset) -> bool {
+  auto tryAddBestField = [&](std::optional<uint64_t> BeforeOffset) -> bool {
+    assert(!BeforeOffset || LastEnd < *BeforeOffset);
     auto QueueB = FlexibleFieldsByAlignment.begin();
     auto QueueE = FlexibleFieldsByAlignment.end();
 
@@ -403,9 +406,12 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
         return false;
 
       // Otherwise, scan backwards to find the most-aligned queue that
-      // still has minimal leading padding after LastEnd.
+      // still has minimal leading padding after LastEnd.  If that
+      // minimal padding is already at or past the end point, we're done.
       --FirstQueueToSearch;
       Offset = alignTo(LastEnd, FirstQueueToSearch->Alignment);
+      if (BeforeOffset && Offset >= *BeforeOffset)
+        return false;
       while (FirstQueueToSearch != QueueB &&
              Offset == alignTo(LastEnd, FirstQueueToSearch[-1].Alignment))
         --FirstQueueToSearch;
@@ -415,6 +421,7 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
   // Phase 1: fill the gaps between fixed-offset fields with the best
   // flexible-offset field that fits.
   for (auto I = Fields.begin(); I != FirstFlexible; ++I) {
+    assert(LastEnd <= I->Offset);
     while (LastEnd != I->Offset) {
       if (!tryAddBestField(I->Offset))
         break;
@@ -430,7 +437,7 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
   // Phase 2: repeatedly add the best flexible-offset field until
   // they're all gone.
   while (!FlexibleFieldsByAlignment.empty()) {
-    bool Success = tryAddBestField(None);
+    bool Success = tryAddBestField(std::nullopt);
     assert(Success && "didn't find a field with no fixed limit?");
     (void) Success;
   }

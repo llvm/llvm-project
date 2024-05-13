@@ -21,13 +21,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
-namespace llvm {
-
-class MCInst;
-class MCInstrInfo;
-
-} // namespace llvm
-
 #define GET_SUBTARGETINFO_HEADER
 #include "R600GenSubtargetInfo.inc"
 
@@ -38,14 +31,14 @@ class R600Subtarget final : public R600GenSubtargetInfo,
 private:
   R600InstrInfo InstrInfo;
   R600FrameLowering FrameLowering;
-  bool FMA;
-  bool CaymanISA;
-  bool CFALUBug;
-  bool HasVertexCache;
-  bool R600ALUInst;
-  bool FP64;
-  short TexVTXClauseSize;
-  Generation Gen;
+  bool FMA = false;
+  bool CaymanISA = false;
+  bool CFALUBug = false;
+  bool HasVertexCache = false;
+  bool R600ALUInst = false;
+  bool FP64 = false;
+  short TexVTXClauseSize = 0;
+  Generation Gen = R600;
   R600TargetLowering TLInfo;
   InstrItineraryData InstrItins;
   SelectionDAGTargetInfo TSInfo;

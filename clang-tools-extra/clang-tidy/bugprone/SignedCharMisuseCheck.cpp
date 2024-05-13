@@ -14,17 +14,9 @@
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static constexpr int UnsignedASCIIUpperBound = 127;
-
-static Matcher<TypedefDecl> hasAnyListedName(const std::string &Names) {
-  const std::vector<std::string> NameList =
-      utils::options::parseStringList(Names);
-  return hasAnyName(std::vector<StringRef>(NameList.begin(), NameList.end()));
-}
 
 SignedCharMisuseCheck::SignedCharMisuseCheck(StringRef Name,
                                              ClangTidyContext *Context)
@@ -46,8 +38,8 @@ BindableMatcher<clang::Stmt> SignedCharMisuseCheck::charCastExpression(
   // We can ignore typedefs which are some kind of integer types
   // (e.g. typedef char sal_Int8). In this case, we don't need to
   // worry about the misinterpretation of char values.
-  const auto IntTypedef = qualType(
-      hasDeclaration(typedefDecl(hasAnyListedName(CharTypdefsToIgnoreList))));
+  const auto IntTypedef = qualType(hasDeclaration(typedefDecl(
+      hasAnyName(utils::options::parseStringList(CharTypdefsToIgnoreList)))));
 
   auto CharTypeExpr = expr();
   if (IsSigned) {
@@ -174,6 +166,4 @@ void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

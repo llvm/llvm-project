@@ -3,15 +3,15 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @no_debug_info_test
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.m"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.m")
+        )
 
         # Test several variables with C++ keyword names and make sure they
         # work as intended in the expression parser.
@@ -72,7 +72,6 @@ class TestCase(TestBase):
         self.expect_expr("virtual", result_type="int", result_value="1")
         self.expect_expr("xor", result_type="int", result_value="1")
         self.expect_expr("xor_eq", result_type="int", result_value="1")
-
 
         # Some keywords are not available in LLDB as their language feature
         # is enabled by default.

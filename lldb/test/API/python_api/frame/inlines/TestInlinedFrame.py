@@ -2,9 +2,6 @@
 Testlldb Python SBFrame APIs IsInlined() and GetFunctionName().
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,18 +9,17 @@ from lldbsuite.test import lldbutil
 
 
 class InlinedFrameAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to of function 'c'.
-        self.source = 'inlines.c'
+        self.source = "inlines.c"
         self.first_stop = line_number(
-            self.source, '// This should correspond to the first break stop.')
+            self.source, "// This should correspond to the first break stop."
+        )
         self.second_stop = line_number(
-            self.source, '// This should correspond to the second break stop.')
+            self.source, "// This should correspond to the second break stop."
+        )
 
     def test_stop_at_outer_inline(self):
         """Exercise SBFrame.IsInlined() and SBFrame.GetFunctionName()."""
@@ -35,25 +31,25 @@ class InlinedFrameAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now create a breakpoint on main.c by the name of 'inner_inline'.
-        breakpoint = target.BreakpointCreateByName('inner_inline', 'a.out')
+        breakpoint = target.BreakpointCreateByName("inner_inline", "a.out")
         self.trace("breakpoint:", breakpoint)
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() > 1,
-                        VALID_BREAKPOINT)
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() > 1, VALID_BREAKPOINT
+        )
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         import lldbsuite.test.lldbutil as lldbutil
+
         stack_traces1 = lldbutil.print_stacktraces(process, string_buffer=True)
         if self.TraceOn():
             print(
-                "Full stack traces when first stopped on the breakpoint 'inner_inline':")
+                "Full stack traces when first stopped on the breakpoint 'inner_inline':"
+            )
             print(stack_traces1)
 
         # The first breakpoint should correspond to an inlined call frame.
@@ -62,8 +58,7 @@ class InlinedFrameAPITestCase(TestBase):
         #
         #     outer_inline (argc);
         #
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
         frame0 = thread.GetFrameAtIndex(0)
@@ -71,23 +66,24 @@ class InlinedFrameAPITestCase(TestBase):
             filename = frame0.GetLineEntry().GetFileSpec().GetFilename()
             self.assertEqual(filename, self.source)
             self.expect(
-                stack_traces1, "First stop at %s:%d" %
-                (self.source, self.first_stop), exe=False, substrs=[
-                    '%s:%d' %
-                    (self.source, self.first_stop)])
+                stack_traces1,
+                "First stop at %s:%d" % (self.source, self.first_stop),
+                exe=False,
+                substrs=["%s:%d" % (self.source, self.first_stop)],
+            )
 
             # Expect to break again for the second time.
             process.Continue()
-            self.assertEqual(process.GetState(), lldb.eStateStopped,
-                            PROCESS_STOPPED)
-            stack_traces2 = lldbutil.print_stacktraces(
-                process, string_buffer=True)
+            self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+            stack_traces2 = lldbutil.print_stacktraces(process, string_buffer=True)
             if self.TraceOn():
                 print(
-                    "Full stack traces when stopped on the breakpoint 'inner_inline' for the second time:")
+                    "Full stack traces when stopped on the breakpoint 'inner_inline' for the second time:"
+                )
                 print(stack_traces2)
                 self.expect(
-                    stack_traces2, "Second stop at %s:%d" %
-                    (self.source, self.second_stop), exe=False, substrs=[
-                        '%s:%d' %
-                        (self.source, self.second_stop)])
+                    stack_traces2,
+                    "Second stop at %s:%d" % (self.source, self.second_stop),
+                    exe=False,
+                    substrs=["%s:%d" % (self.source, self.second_stop)],
+                )

@@ -31,15 +31,16 @@ class NativeProcessWindows : public NativeProcessProtocol,
                              public ProcessDebugger {
 
 public:
-  class Factory : public NativeProcessProtocol::Factory {
+  class Manager : public NativeProcessProtocol::Manager {
   public:
-    llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-    Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
-           MainLoop &mainloop) const override;
+    using NativeProcessProtocol::Manager::Manager;
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-    Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
-           MainLoop &mainloop) const override;
+    Launch(ProcessLaunchInfo &launch_info,
+           NativeDelegate &native_delegate) override;
+
+    llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
+    Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
   };
 
   Status Resume(const ResumeActionList &resume_actions) override;
@@ -107,6 +108,11 @@ public:
 
 protected:
   NativeThreadWindows *GetThreadByID(lldb::tid_t thread_id);
+
+  llvm::Expected<llvm::ArrayRef<uint8_t>>
+  GetSoftwareBreakpointTrapOpcode(size_t size_hint) override;
+
+  size_t GetSoftwareBreakpointPCOffset() override;
 
   bool FindSoftwareBreakpoint(lldb::addr_t addr);
 

@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -disable-llvm-passes -Os -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -disable-llvm-passes -Os -std=c99 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-passes -Os -std=c99 -o - %s | FileCheck %s
-// CHECK: define{{.*}} signext i8 @f0(i32 %x) [[NUW:#[0-9]+]]
-// CHECK: define{{.*}} zeroext i8 @f1(i32 %x) [[NUW]]
-// CHECK: define{{.*}} void @f2(i8 signext %x) [[NUW]]
-// CHECK: define{{.*}} void @f3(i8 zeroext %x) [[NUW]]
-// CHECK: define{{.*}} signext i16 @f4(i32 %x) [[NUW]]
-// CHECK: define{{.*}} zeroext i16 @f5(i32 %x) [[NUW]]
-// CHECK: define{{.*}} void @f6(i16 signext %x) [[NUW]]
-// CHECK: define{{.*}} void @f7(i16 zeroext %x) [[NUW]]
+// CHECK: define{{.*}} signext i8 @f0(i32 noundef %x) [[NUW:#[0-9]+]]
+// CHECK: define{{.*}} zeroext i8 @f1(i32 noundef %x) [[NUW]]
+// CHECK: define{{.*}} void @f2(i8 noundef signext %x) [[NUW]]
+// CHECK: define{{.*}} void @f3(i8 noundef zeroext %x) [[NUW]]
+// CHECK: define{{.*}} signext i16 @f4(i32 noundef %x) [[NUW]]
+// CHECK: define{{.*}} zeroext i16 @f5(i32 noundef %x) [[NUW]]
+// CHECK: define{{.*}} void @f6(i16 noundef signext %x) [[NUW]]
+// CHECK: define{{.*}} void @f7(i16 noundef zeroext %x) [[NUW]]
 
 signed char f0(int x) { return x; }
 
@@ -57,12 +57,12 @@ int f12(int arg) {
   return arg ? 0 : f10_t();
 }
 
-// CHECK: define{{.*}} void @f13() [[NUW_OS_RN:#[0-9]+]]
-void f13(void) __attribute__((pure)) __attribute__((const));
-void f13(void){}
+// CHECK: define{{.*}} i32 @f13() [[NUW_OS_RN:#[0-9]+]]
+int f13(void) __attribute__((const));
+int f13(void){ return 0; }
 
 
-// <rdar://problem/7102668> [irgen] clang isn't setting the optsize bit on functions
+// [irgen] clang isn't setting the optsize bit on functions
 // CHECK-LABEL: define{{.*}} void @f15
 // CHECK: [[NUW]]
 // CHECK: {
@@ -90,7 +90,7 @@ __attribute__ ((returns_twice)) void f18(void) {
 
 // CHECK-LABEL: define{{.*}} void @f19()
 // CHECK: {
-// CHECK: call i32 @setjmp(i32* null)
+// CHECK: call i32 @setjmp(ptr noundef null)
 // CHECK: [[RT_CALL]]
 // CHECK: ret void
 typedef int jmp_buf[((9 * 2) + 3 + 16)];
@@ -101,7 +101,7 @@ void f19(void) {
 
 // CHECK-LABEL: define{{.*}} void @f20()
 // CHECK: {
-// CHECK: call i32 @_setjmp(i32* null)
+// CHECK: call i32 @_setjmp(ptr noundef null)
 // CHECK: [[RT_CALL]]
 // CHECK: ret void
 int _setjmp(jmp_buf);
@@ -111,9 +111,9 @@ void f20(void) {
 
 // CHECK: attributes [[NUW]] = { nounwind optsize{{.*}} }
 // CHECK: attributes [[AI]] = { alwaysinline nounwind optsize{{.*}} }
-// CHECK: attributes [[NUW_OS_RN]] = { nounwind optsize readnone{{.*}} }
+// CHECK: attributes [[NUW_OS_RN]] = { nounwind optsize willreturn memory(none){{.*}} }
 // CHECK: attributes [[SR]] = { nounwind optsize{{.*}} "stackrealign"{{.*}} }
 // CHECK: attributes [[RT]] = { nounwind optsize returns_twice{{.*}} }
 // CHECK: attributes [[NR]] = { noreturn optsize }
-// CHECK: attributes [[NUW_RN]] = { nounwind optsize readnone willreturn }
+// CHECK: attributes [[NUW_RN]] = { nounwind optsize willreturn memory(none) }
 // CHECK: attributes [[RT_CALL]] = { optsize returns_twice }

@@ -11,6 +11,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
@@ -20,6 +21,7 @@
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
+#include "Plugins/Process/Utility/RegisterContextNetBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextNetBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextOpenBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextOpenBSD_x86_64.h"
@@ -27,6 +29,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
 #include "ProcessElfCore.h"
+#include "RegisterContextLinuxCore_x86_64.h"
 #include "RegisterContextPOSIXCore_arm.h"
 #include "RegisterContextPOSIXCore_arm64.h"
 #include "RegisterContextPOSIXCore_mips64.h"
@@ -44,7 +47,8 @@ using namespace lldb_private;
 // Construct a Thread object with given data
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
-      m_signo(td.signo), m_gpregset_data(td.gpregset), m_notes(td.notes) {}
+      m_signo(td.signo), m_code(td.code), m_gpregset_data(td.gpregset),
+      m_notes(td.notes) {}
 
 ThreadElfCore::~ThreadElfCore() { DestroyThread(); }
 
@@ -63,11 +67,12 @@ RegisterContextSP
 ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
   RegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   if (frame)
     concrete_frame_idx = frame->GetConcreteFrameIndex();
 
+  bool is_linux = false;
   if (concrete_frame_idx == 0) {
     if (m_thread_reg_ctx_sp)
       return m_thread_reg_ctx_sp;
@@ -107,6 +112,9 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       switch (arch.GetMachine()) {
       case llvm::Triple::aarch64:
         break;
+      case llvm::Triple::x86:
+        reg_interface = new RegisterContextNetBSD_i386(arch);
+        break;
       case llvm::Triple::x86_64:
         reg_interface = new RegisterContextNetBSD_x86_64(arch);
         break;
@@ -117,6 +125,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     }
 
     case llvm::Triple::Linux: {
+      is_linux = true;
       switch (arch.GetMachine()) {
       case llvm::Triple::aarch64:
         break;
@@ -200,8 +209,13 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       break;
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86_64>(
-          *this, reg_interface, m_gpregset_data, m_notes);
+      if (is_linux) {
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86_64>(
+              *this, reg_interface, m_gpregset_data, m_notes);
+      } else {
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86_64>(
+              *this, reg_interface, m_gpregset_data, m_notes);
+      }
       break;
     default:
       break;
@@ -216,11 +230,12 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
 bool ThreadElfCore::CalculateStopInfo() {
   ProcessSP process_sp(GetProcess());
-  if (process_sp) {
-    SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
-    return true;
-  }
-  return false;
+  if (!process_sp)
+    return false;
+
+  SetStopInfo(StopInfo::CreateStopReasonWithSignal(
+      *this, m_signo, /*description=*/nullptr, m_code));
+  return true;
 }
 
 // Parse PRSTATUS from NOTE entry
@@ -404,8 +419,8 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   // properly, because the struct is for the 64 bit version
   offset_t offset = 0;
   si_signo = data.GetU32(&offset);
-  si_code = data.GetU32(&offset);
   si_errno = data.GetU32(&offset);
+  si_code = data.GetU32(&offset);
 
   return error;
 }

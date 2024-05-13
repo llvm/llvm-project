@@ -47,7 +47,7 @@ void bitwise_rel(unsigned i) {
   (void)(i != 1 & i != 2 & i != 3);
 }
 
-_Bool someConditionFunc();
+_Bool someConditionFunc(void);
 
 void conditional_op(int x, int y, _Bool b, void* p) {
   (void)(x + someConditionFunc() ? 1 : 2); // expected-warning {{operator '?:' has lower precedence than '+'}} \

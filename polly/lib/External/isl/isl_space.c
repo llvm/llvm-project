@@ -390,7 +390,7 @@ static __isl_give isl_space *copy_ids(__isl_take isl_space *dst,
 	return dst;
 }
 
-__isl_take isl_space *isl_space_dup(__isl_keep isl_space *space)
+__isl_give isl_space *isl_space_dup(__isl_keep isl_space *space)
 {
 	isl_space *dup;
 	if (!space)
@@ -476,9 +476,8 @@ __isl_null isl_space *isl_space_free(__isl_take isl_space *space)
 static int name_ok(isl_ctx *ctx, const char *s)
 {
 	char *p;
-	long dummy;
 
-	dummy = strtol(s, &p, 0);
+	strtol(s, &p, 0);
 	if (p != s)
 		isl_die(ctx, isl_error_invalid, "name looks like a number",
 			return 0);
@@ -578,6 +577,24 @@ isl_bool isl_space_has_tuple_id(__isl_keep isl_space *space,
 	return isl_bool_ok(space->tuple_id[type - isl_dim_in] != NULL);
 }
 
+/* Does the domain tuple of the map space "space" have an identifier?
+ */
+isl_bool isl_space_has_domain_tuple_id(__isl_keep isl_space *space)
+{
+	if (isl_space_check_is_map(space) < 0)
+		return isl_bool_error;
+	return isl_space_has_tuple_id(space, isl_dim_in);
+}
+
+/* Does the range tuple of the map space "space" have an identifier?
+ */
+isl_bool isl_space_has_range_tuple_id(__isl_keep isl_space *space)
+{
+	if (isl_space_check_is_map(space) < 0)
+		return isl_bool_error;
+	return isl_space_has_tuple_id(space, isl_dim_out);
+}
+
 __isl_give isl_id *isl_space_get_tuple_id(__isl_keep isl_space *space,
 	enum isl_dim_type type)
 {
@@ -592,6 +609,28 @@ __isl_give isl_id *isl_space_get_tuple_id(__isl_keep isl_space *space,
 		isl_die(space->ctx, isl_error_invalid,
 			"tuple has no id", return NULL);
 	return isl_id_copy(space->tuple_id[type - isl_dim_in]);
+}
+
+/* Return the identifier of the domain tuple of the map space "space",
+ * assuming it has one.
+ */
+__isl_give isl_id *isl_space_get_domain_tuple_id(
+	__isl_keep isl_space *space)
+{
+	if (isl_space_check_is_map(space) < 0)
+		return NULL;
+	return isl_space_get_tuple_id(space, isl_dim_in);
+}
+
+/* Return the identifier of the range tuple of the map space "space",
+ * assuming it has one.
+ */
+__isl_give isl_id *isl_space_get_range_tuple_id(
+	__isl_keep isl_space *space)
+{
+	if (isl_space_check_is_map(space) < 0)
+		return NULL;
+	return isl_space_get_tuple_id(space, isl_dim_out);
 }
 
 __isl_give isl_space *isl_space_set_tuple_id(__isl_take isl_space *space,
@@ -613,6 +652,28 @@ error:
 	isl_id_free(id);
 	isl_space_free(space);
 	return NULL;
+}
+
+/* Replace the identifier of the domain tuple of the map space "space"
+ * by "id".
+ */
+__isl_give isl_space *isl_space_set_domain_tuple_id(
+	__isl_take isl_space *space, __isl_take isl_id *id)
+{
+	if (isl_space_check_is_map(space) < 0)
+		space = isl_space_free(space);
+	return isl_space_set_tuple_id(space, isl_dim_in, id);
+}
+
+/* Replace the identifier of the range tuple of the map space "space"
+ * by "id".
+ */
+__isl_give isl_space *isl_space_set_range_tuple_id(
+	__isl_take isl_space *space, __isl_take isl_id *id)
+{
+	if (isl_space_check_is_map(space) < 0)
+		space = isl_space_free(space);
+	return isl_space_set_tuple_id(space, isl_dim_out, id);
 }
 
 __isl_give isl_space *isl_space_reset_tuple_id(__isl_take isl_space *space,
@@ -1796,6 +1857,38 @@ __isl_give isl_space *isl_space_factor_range(__isl_take isl_space *space)
 	space = isl_space_domain_factor_range(space);
 	space = isl_space_range_factor_range(space);
 	return space;
+}
+
+/* Given a space of the form [A -> B] -> C, return the space A.
+ */
+__isl_give isl_space *isl_space_domain_wrapped_domain(
+	__isl_take isl_space *space)
+{
+	return isl_space_factor_domain(isl_space_domain(space));
+}
+
+/* Given a space of the form [A -> B] -> C, return the space B.
+ */
+__isl_give isl_space *isl_space_domain_wrapped_range(
+	__isl_take isl_space *space)
+{
+	return isl_space_factor_range(isl_space_domain(space));
+}
+
+/* Given a space of the form A -> [B -> C], return the space B.
+ */
+__isl_give isl_space *isl_space_range_wrapped_domain(
+	__isl_take isl_space *space)
+{
+	return isl_space_factor_domain(isl_space_range(space));
+}
+
+/* Given a space of the form A -> [B -> C], return the space C.
+ */
+__isl_give isl_space *isl_space_range_wrapped_range(
+	__isl_take isl_space *space)
+{
+	return isl_space_factor_range(isl_space_range(space));
 }
 
 __isl_give isl_space *isl_space_map_from_set(__isl_take isl_space *space)
@@ -3176,7 +3269,7 @@ __isl_give isl_space *isl_space_align_params(__isl_take isl_space *space1,
 		goto error;
 
 	exp = isl_parameter_alignment_reordering(space1, space2);
-	exp = isl_reordering_extend_space(exp, space1);
+	isl_space_free(space1);
 	isl_space_free(space2);
 	space1 = isl_reordering_get_space(exp);
 	isl_reordering_free(exp);

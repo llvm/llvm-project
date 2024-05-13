@@ -29,30 +29,30 @@
 # CHECK-NEXT: .byte     3                       #
 # CHECK-NEXT: .byte     28                      # DW_OP_minus
 --- |
-  @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global i8*
+  @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
   
   define void @f() !dbg !5 {
   entry:
-    %unsafe_stack_ptr = load i8*, i8** @__safestack_unsafe_stack_ptr
-    %unsafe_stack_static_top = getelementptr i8, i8* %unsafe_stack_ptr, i32 -400
-    store i8* %unsafe_stack_static_top, i8** @__safestack_unsafe_stack_ptr
-    %0 = getelementptr i8, i8* %unsafe_stack_ptr, i32 -400
-    %buf = bitcast i8* %0 to [100 x i32]*
-    %1 = bitcast [100 x i32]* %buf to i8*, !dbg !14
-    call void @llvm.dbg.declare(metadata i8* %unsafe_stack_ptr, metadata !9, metadata !DIExpression(DW_OP_constu, 400, DW_OP_minus)), !dbg !15
-    %arraydecay = getelementptr inbounds [100 x i32], [100 x i32]* %buf, i64 0, i64 0, !dbg !16
-    call void @Capture(i32* %arraydecay), !dbg !17
-    store i8* %unsafe_stack_ptr, i8** @__safestack_unsafe_stack_ptr, !dbg !18
+    %unsafe_stack_ptr = load ptr, ptr @__safestack_unsafe_stack_ptr
+    %unsafe_stack_static_top = getelementptr i8, ptr %unsafe_stack_ptr, i32 -400
+    store ptr %unsafe_stack_static_top, ptr @__safestack_unsafe_stack_ptr
+    %0 = getelementptr i8, ptr %unsafe_stack_ptr, i32 -400
+    %buf = bitcast ptr %0 to ptr
+    %1 = bitcast ptr %buf to ptr, !dbg !14
+    call void @llvm.dbg.declare(metadata ptr %unsafe_stack_ptr, metadata !9, metadata !DIExpression(DW_OP_constu, 400, DW_OP_minus)), !dbg !15
+    %arraydecay = getelementptr inbounds [100 x i32], ptr %buf, i64 0, i64 0, !dbg !16
+    call void @Capture(ptr %arraydecay), !dbg !17
+    store ptr %unsafe_stack_ptr, ptr @__safestack_unsafe_stack_ptr, !dbg !18
     ret void, !dbg !18
   }
   
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
   
-  declare void @Capture(i32*)
+  declare void @Capture(ptr)
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
   
   attributes #0 = { nounwind readnone speculatable }
   attributes #1 = { nounwind }
@@ -98,22 +98,22 @@ body:             |
   bb.0.entry:
     $rsp = frame-setup SUB64ri8 $rsp, 24, implicit-def dead $eflags
     CFI_INSTRUCTION def_cfa_offset 32
-    renamable $rax = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @__safestack_unsafe_stack_ptr, $noreg :: (load 8 from got)
-    renamable $rcx = MOV64rm renamable $rax, 1, $noreg, 0, $fs :: (dereferenceable load 8 from @__safestack_unsafe_stack_ptr)
+    renamable $rax = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @__safestack_unsafe_stack_ptr, $noreg :: (load (s64) from got)
+    renamable $rcx = MOV64rm renamable $rax, 1, $noreg, 0, $fs :: (dereferenceable load (s64) from @__safestack_unsafe_stack_ptr)
     DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 400, DW_OP_minus), debug-location !15
     $rdx = MOV64rr $rcx
     renamable $rdx = ADD64ri32 renamable $rdx, -400, implicit-def dead $eflags
-    MOV64mr renamable $rax, 1, $noreg, 0, $fs, renamable $rdx :: (store 8 into @__safestack_unsafe_stack_ptr)
+    MOV64mr renamable $rax, 1, $noreg, 0, $fs, renamable $rdx :: (store (s64) into @__safestack_unsafe_stack_ptr)
     $rdi = MOV64rr killed $rdx, debug-location !17
-    MOV64mr $rsp, 1, $noreg, 16, $noreg, killed $rax :: (store 8 into %stack.0)
-    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed $rcx :: (store 8 into %stack.1)
+    MOV64mr $rsp, 1, $noreg, 16, $noreg, killed $rax :: (store (s64) into %stack.0)
+    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed $rcx :: (store (s64) into %stack.1)
     DBG_VALUE $rsp, 0, !9, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_constu, 400, DW_OP_minus), debug-location !15
     CALL64pcrel32 @Capture, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp, debug-location !17
-    $rax = MOV64rm $rsp, 1, $noreg, 16, $noreg :: (load 8 from %stack.0)
-    $rcx = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load 8 from %stack.1)
-    MOV64mr killed renamable $rax, 1, $noreg, 0, $fs, killed renamable $rcx, debug-location !18 :: (store 8 into @__safestack_unsafe_stack_ptr)
+    $rax = MOV64rm $rsp, 1, $noreg, 16, $noreg :: (load (s64) from %stack.0)
+    $rcx = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load (s64) from %stack.1)
+    MOV64mr killed renamable $rax, 1, $noreg, 0, $fs, killed renamable $rcx, debug-location !18 :: (store (s64) into @__safestack_unsafe_stack_ptr)
     $rsp = frame-destroy ADD64ri8 $rsp, 24, implicit-def dead $eflags, debug-location !18
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !18
-    RETQ debug-location !18
+    RET64 debug-location !18
 
 ...

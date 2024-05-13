@@ -23,6 +23,8 @@
 #include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/XRay/Trace.h"
 
+#include <cmath>
+
 using namespace llvm;
 using namespace llvm::xray;
 
@@ -78,7 +80,7 @@ static cl::opt<SortField> AccountSortOutput(
     "sort", cl::desc("sort output by this field"), cl::value_desc("field"),
     cl::sub(Account), cl::init(SortField::FUNCID),
     cl::values(clEnumValN(SortField::FUNCID, "funcid", "function id"),
-               clEnumValN(SortField::COUNT, "count", "funciton call counts"),
+               clEnumValN(SortField::COUNT, "count", "function call counts"),
                clEnumValN(SortField::MIN, "min", "minimum function durations"),
                clEnumValN(SortField::MED, "med", "median function durations"),
                clEnumValN(SortField::PCT90, "90p", "90th percentile durations"),
@@ -201,10 +203,10 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
 
     // Look for the parent up the stack.
     auto Parent =
-        std::find_if(ThreadStack.Stack.rbegin(), ThreadStack.Stack.rend(),
-                     [&](const std::pair<const int32_t, uint64_t> &E) {
-                       return E.first == Record.FuncId;
-                     });
+        llvm::find_if(llvm::reverse(ThreadStack.Stack),
+                      [&](const std::pair<const int32_t, uint64_t> &E) {
+                        return E.first == Record.FuncId;
+                      });
     if (Parent == ThreadStack.Stack.rend())
       return false;
 

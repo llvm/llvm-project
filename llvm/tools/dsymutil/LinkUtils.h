@@ -9,26 +9,43 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 #define LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 
-#include "SymbolMap.h"
-
 #include "llvm/ADT/Twine.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 
-#include "llvm/DWARFLinker/DWARFLinker.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
+#include "llvm/DWARFLinker/Classic/DWARFLinker.h"
+#include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
 #include <string>
 
 namespace llvm {
 namespace dsymutil {
 
+enum class DsymutilAccelTableKind : uint8_t {
+  None,
+  Apple,   ///< .apple_names, .apple_namespaces, .apple_types, .apple_objc.
+  Dwarf,   ///< DWARF v5 .debug_names.
+  Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
+  Pub,     ///< .debug_pubnames, .debug_pubtypes
+};
+
+enum class DsymutilDWARFLinkerType : uint8_t {
+  Classic, /// Classic implementation of DWARFLinker.
+  Parallel /// Implementation of DWARFLinker heavily using parallel execution.
+};
+
 struct LinkOptions {
   /// Verbosity
   bool Verbose = false;
 
+  /// Quiet
+  bool Quiet = false;
+
   /// Statistics
   bool Statistics = false;
+
+  /// Verify the input DWARF.
+  bool VerifyInputDWARF = false;
 
   /// Skip emitting output
   bool NoOutput = false;
@@ -46,14 +63,21 @@ struct LinkOptions {
   /// function.
   bool KeepFunctionForStatic = false;
 
+  /// Type of DWARFLinker to use.
+  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Classic;
+
+  /// Use a 64-bit header when emitting universal binaries.
+  bool Fat64 = false;
+
   /// Number of threads.
   unsigned Threads = 1;
 
   // Output file type.
-  OutputFileType FileType = OutputFileType::Object;
+  dwarf_linker::DWARFLinkerBase::OutputFileType FileType =
+      dwarf_linker::DWARFLinkerBase::OutputFileType::Object;
 
   /// The accelerator table kind
-  AccelTableKind TheAccelTableKind;
+  DsymutilAccelTableKind TheAccelTableKind;
 
   /// -oso-prepend-path
   std::string PrependPath;
@@ -62,14 +86,17 @@ struct LinkOptions {
   std::map<std::string, std::string> ObjectPrefixMap;
 
   /// The Resources directory in the .dSYM bundle.
-  Optional<std::string> ResourceDir;
-
-  /// Symbol map translator.
-  SymbolMapTranslator Translator;
+  std::optional<std::string> ResourceDir;
 
   /// Virtual File System.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       vfs::getRealFileSystem();
+
+  /// -build-variant-suffix.
+  std::string BuildVariantSuffix;
+
+  /// Paths where to search for the .dSYM files of merged libraries.
+  std::vector<std::string> DSYMSearchPaths;
 
   /// Fields used for linking and placing remarks into the .dSYM bundle.
   /// @{
@@ -84,6 +111,9 @@ struct LinkOptions {
   /// The output format of the remarks.
   remarks::Format RemarksFormat = remarks::Format::Bitstream;
 
+  /// Whether all remarks should be kept or only remarks with valid debug
+  /// locations.
+  bool RemarksKeepAll = true;
   /// @}
 
   LinkOptions() = default;

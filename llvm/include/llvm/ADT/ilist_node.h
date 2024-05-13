@@ -5,10 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the ilist_node class template, which is a convenient
-// base class for creating classes that can be used with ilists.
-//
+///
+/// \file
+/// This file defines the ilist_node class template, which is a convenient
+/// base class for creating classes that can be used with ilists.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_ILIST_NODE_H
@@ -26,7 +27,21 @@ struct NodeAccess;
 } // end namespace ilist_detail
 
 template <class OptionsT, bool IsReverse, bool IsConst> class ilist_iterator;
+template <class OptionsT, bool IsReverse, bool IsConst>
+class ilist_iterator_w_bits;
 template <class OptionsT> class ilist_sentinel;
+
+// Selector for which iterator type to pick given the iterator-bits node option.
+template <bool use_iterator_bits, typename Opts, bool arg1, bool arg2>
+class ilist_select_iterator_type {
+public:
+  using type = ilist_iterator<Opts, arg1, arg2>;
+};
+template <typename Opts, bool arg1, bool arg2>
+class ilist_select_iterator_type<true, Opts, arg1, arg2> {
+public:
+  using type = ilist_iterator_w_bits<Opts, arg1, arg2>;
+};
 
 /// Implementation for an ilist node.
 ///
@@ -44,16 +59,29 @@ template <class OptionsT> class ilist_node_impl : OptionsT::node_base_type {
   friend typename OptionsT::list_base_type;
   friend struct ilist_detail::NodeAccess;
   friend class ilist_sentinel<OptionsT>;
+
   friend class ilist_iterator<OptionsT, false, false>;
   friend class ilist_iterator<OptionsT, false, true>;
   friend class ilist_iterator<OptionsT, true, false>;
   friend class ilist_iterator<OptionsT, true, true>;
+  friend class ilist_iterator_w_bits<OptionsT, false, false>;
+  friend class ilist_iterator_w_bits<OptionsT, false, true>;
+  friend class ilist_iterator_w_bits<OptionsT, true, false>;
+  friend class ilist_iterator_w_bits<OptionsT, true, true>;
 
 protected:
-  using self_iterator = ilist_iterator<OptionsT, false, false>;
-  using const_self_iterator = ilist_iterator<OptionsT, false, true>;
-  using reverse_self_iterator = ilist_iterator<OptionsT, true, false>;
-  using const_reverse_self_iterator = ilist_iterator<OptionsT, true, true>;
+  using self_iterator =
+      typename ilist_select_iterator_type<OptionsT::has_iterator_bits, OptionsT,
+                                          false, false>::type;
+  using const_self_iterator =
+      typename ilist_select_iterator_type<OptionsT::has_iterator_bits, OptionsT,
+                                          false, true>::type;
+  using reverse_self_iterator =
+      typename ilist_select_iterator_type<OptionsT::has_iterator_bits, OptionsT,
+                                          true, false>::type;
+  using const_reverse_self_iterator =
+      typename ilist_select_iterator_type<OptionsT::has_iterator_bits, OptionsT,
+                                          true, true>::type;
 
   ilist_node_impl() = default;
 

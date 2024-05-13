@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   FrontendOpenMP
   Support
+  TargetParser
   )
 
 # FIXME: the entry points to the interpreter should be moved out of clangAST
@@ -12,6 +13,11 @@ clang_tablegen(Opcodes.inc
   -gen-clang-opcodes
   SOURCE Interp/Opcodes.td
   TARGET Opcodes)
+
+clang_tablegen(AttrDocTable.inc -gen-clang-attr-doc-table
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../include/
+  SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/../../include/clang/Basic/Attr.td
+  TARGET ClangAttrDocTable)
 
 add_clang_library(clangAST
   APValue.cpp
@@ -24,7 +30,9 @@ add_clang_library(clangAST
   ASTImporterLookupTable.cpp
   ASTStructuralEquivalence.cpp
   ASTTypeTraits.cpp
+  AttrDocTable.cpp
   AttrImpl.cpp
+  Availability.cpp
   Comment.cpp
   CommentBriefParser.cpp
   CommentCommandTraits.cpp
@@ -58,7 +66,6 @@ add_clang_library(clangAST
   InheritViz.cpp
   Interp/ByteCodeEmitter.cpp
   Interp/ByteCodeExprGen.cpp
-  Interp/ByteCodeGenError.cpp
   Interp/ByteCodeStmtGen.cpp
   Interp/Context.cpp
   Interp/Descriptor.cpp
@@ -66,6 +73,9 @@ add_clang_library(clangAST
   Interp/EvalEmitter.cpp
   Interp/Frame.cpp
   Interp/Function.cpp
+  Interp/InterpBuiltin.cpp
+  Interp/Floating.cpp
+  Interp/EvaluationResult.cpp
   Interp/Interp.cpp
   Interp/InterpBlock.cpp
   Interp/InterpFrame.cpp
@@ -77,6 +87,7 @@ add_clang_library(clangAST
   Interp/Record.cpp
   Interp/Source.cpp
   Interp/State.cpp
+  Interp/InterpShared.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
   JSONNodeDumper.cpp
@@ -85,12 +96,15 @@ add_clang_library(clangAST
   MicrosoftMangle.cpp
   NestedNameSpecifier.cpp
   NSAPI.cpp
+  ODRDiagsEmitter.cpp
   ODRHash.cpp
+  OpenACCClause.cpp
   OpenMPClause.cpp
   OSLog.cpp
   ParentMap.cpp
   PrintfFormatString.cpp
   QualTypeNames.cpp
+  Randstruct.cpp
   RawCommentList.cpp
   RecordLayout.cpp
   RecordLayoutBuilder.cpp
@@ -100,6 +114,7 @@ add_clang_library(clangAST
   StmtCXX.cpp
   StmtIterator.cpp
   StmtObjC.cpp
+  StmtOpenACC.cpp
   StmtOpenMP.cpp
   StmtPrinter.cpp
   StmtProfile.cpp
@@ -118,6 +133,9 @@ add_clang_library(clangAST
   clangLex
 
   DEPENDS
+  ClangAttrDocTable
   Opcodes
   omp_gen
+  ClangDriverOptions
+  intrinsics_gen
   )

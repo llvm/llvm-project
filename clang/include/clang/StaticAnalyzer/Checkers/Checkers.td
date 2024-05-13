@@ -36,6 +36,7 @@ def CoreAlpha : Package<"core">, ParentPackage<Alpha>;
 // Note: OptIn is *not* intended for checkers that are too noisy to be on by
 // default. Such checkers belong in the alpha package.
 def OptIn : Package<"optin">;
+def CoreOptIn : Package<"core">, ParentPackage<OptIn>;
 
 // In the Portability package reside checkers for finding code that relies on
 // implementation-defined behavior. Such checks are wanted for cross-platform
@@ -71,8 +72,11 @@ def InsecureAPI : Package<"insecureAPI">, ParentPackage<Security>;
 def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
 def Taint : Package<"taint">, ParentPackage<SecurityAlpha>;
 
-def CERT : Package<"cert">, ParentPackage<SecurityAlpha>;
-def POS : Package<"pos">, ParentPackage<CERT>;
+def CERT : Package<"cert">, ParentPackage<Security>;
+def ENV : Package<"env">, ParentPackage<CERT>;
+
+def CERTAlpha : Package<"cert">, ParentPackage<SecurityAlpha>;
+def POSAlpha : Package<"pos">, ParentPackage<CERTAlpha>;
 
 def Unix : Package<"unix">;
 def UnixAlpha : Package<"unix">, ParentPackage<Alpha>;
@@ -124,6 +128,19 @@ def WebKitAlpha : Package<"webkit">, ParentPackage<Alpha>;
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = Core in {
+
+def BitwiseShiftChecker : Checker<"BitwiseShift">,
+  HelpText<"Finds cases where bitwise shift operation causes undefined behaviour.">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Pedantic",
+                  "If set to true, the checker reports undefined behavior even "
+                  "if it is supported by most compilers. (This flag has no "
+                  "effect in C++20 where these constructs are legal.)",
+                  "false",
+                  Released>,
+  ]>,
+  Documentation<HasDocumentation>;
 
 def CallAndMessageModeling : Checker<"CallAndMessageModeling">,
   HelpText<"Responsible for essential modeling and assumptions after a "
@@ -190,6 +207,13 @@ def CallAndMessageChecker : Checker<"CallAndMessage">,
 
 def DereferenceChecker : Checker<"NullDereference">,
   HelpText<"Check for dereferences of null pointers">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "SuppressAddressSpaces",
+                  "Suppresses warning when pointer dereferences an address space",
+                  "true",
+                  Released>
+  ]>,
   Documentation<HasDocumentation>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
@@ -235,57 +259,57 @@ let ParentPackage = CoreAlpha in {
 
 def BoolAssignmentChecker : Checker<"BoolAssignment">,
   HelpText<"Warn about assigning non-{0,1} values to Boolean variables">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def CastSizeChecker : Checker<"CastSize">,
   HelpText<"Check when casting a malloc'ed type T, whether the size is a "
            "multiple of the size of T">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def CastToStructChecker : Checker<"CastToStruct">,
   HelpText<"Check for cast from non-struct pointer to struct pointer">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def ConversionChecker : Checker<"Conversion">,
   HelpText<"Loss of sign/precision in implicit conversions">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def IdenticalExprChecker : Checker<"IdenticalExpr">,
   HelpText<"Warn about unintended use of identical expressions in operators">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def FixedAddressChecker : Checker<"FixedAddr">,
   HelpText<"Check for assignment of a fixed address to a pointer">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def PointerArithChecker : Checker<"PointerArithm">,
   HelpText<"Check for pointer arithmetic on locations other than array "
            "elements">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def PointerSubChecker : Checker<"PointerSub">,
   HelpText<"Check for pointer subtractions on two pointers pointing to "
            "different memory chunks">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def SizeofPointerChecker : Checker<"SizeofPtr">,
   HelpText<"Warn about unintended use of sizeof() on pointer expressions">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
   HelpText<"Check for division by variable that is later compared against 0. "
            "Either the comparison is useless or there is division by zero.">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def DynamicTypeChecker : Checker<"DynamicTypeChecker">,
   HelpText<"Check for cases where the dynamic and the static type of an object "
            "are unrelated.">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
   HelpText<"Check that addresses to stack memory do not escape the function">,
   Dependencies<[StackAddrEscapeBase]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def PthreadLockBase : Checker<"PthreadLockBase">,
   HelpText<"Helper registering multiple checks.">,
@@ -295,7 +319,11 @@ def PthreadLockBase : Checker<"PthreadLockBase">,
 def C11LockChecker : Checker<"C11Lock">,
   HelpText<"Simple lock -> unlock checker">,
   Dependencies<[PthreadLockBase]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
+
+def StdVariantChecker : Checker<"StdVariant">,
+  HelpText<"Check for bad type access for std::variant.">,
+  Documentation<HasDocumentation>;
 
 } // end "alpha.core"
 
@@ -347,31 +375,17 @@ def NullableReturnedFromNonnullChecker : Checker<"NullableReturnedFromNonnull">,
 
 let ParentPackage = APIModeling in {
 
-def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
-  HelpText<"Improve modeling of the C standard library functions">,
-  // Uninitialized value check is a mandatory dependency. This Checker asserts
-  // that arguments are always initialized.
-  Dependencies<[CallAndMessageModeling]>,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "DisplayLoadedSummaries",
-                  "If set to true, the checker displays the found summaries "
-                  "for the given translation unit.",
-                  "false",
-                  Released,
-                  Hide>,
-    CmdLineOption<Boolean,
-                  "ModelPOSIX",
-                  "If set to true, the checker models functions from the "
-                  "POSIX standard.",
-                  "false",
-                  InAlpha>
-  ]>,
-  Documentation<NotDocumented>,
-  Hidden;
+def ErrnoModeling : Checker<"Errno">,
+  HelpText<"Make the special value 'errno' available to other checkers.">,
+  Documentation<NotDocumented>;
 
 def TrustNonnullChecker : Checker<"TrustNonnull">,
   HelpText<"Trust that returns from framework methods annotated with _Nonnull "
+           "are not null">,
+  Documentation<NotDocumented>;
+
+def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
+  HelpText<"Trust that returns from methods annotated with returns_nonnull "
            "are not null">,
   Documentation<NotDocumented>;
 
@@ -420,7 +434,23 @@ def ReturnUndefChecker : Checker<"UndefReturn">,
   HelpText<"Check for uninitialized values being returned to the caller">,
   Documentation<HasDocumentation>;
 
+def UndefinedNewArraySizeChecker : Checker<"NewArraySize">,
+  HelpText<"Check if the size of the array in a new[] expression is undefined">,
+  Documentation<HasDocumentation>;
+
 } // end "core.uninitialized"
+
+//===----------------------------------------------------------------------===//
+// Optin checkers for core language features
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = CoreOptIn in {
+
+def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
+  HelpText<"Check integer to enumeration casts for out of range values">,
+  Documentation<HasDocumentation>;
+
+} // end "optin.core"
 
 //===----------------------------------------------------------------------===//
 // Unix API checkers.
@@ -454,17 +484,22 @@ let ParentPackage = CStringAlpha in {
 def CStringOutOfBounds : Checker<"OutOfBounds">,
   HelpText<"Check for out-of-bounds access in string functions">,
   Dependencies<[CStringModeling]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
   Dependencies<[CStringModeling]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def CStringNotNullTerm : Checker<"NotNullTerminated">,
   HelpText<"Check for arguments which are not null-terminating strings">,
   Dependencies<[CStringModeling]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
+
+def CStringUninitializedRead : Checker<"UninitializedRead">,
+  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
 
 } // end "alpha.unix.cstring"
 
@@ -485,11 +520,33 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   "allocating and deallocating functions are annotated with "
                   "ownership_holds, ownership_takes and ownership_returns.",
                   "false",
-                  InAlpha>
+                  InAlpha>,
+    CmdLineOption<Boolean,
+                  "AddNoOwnershipChangeNotes",
+                  "Add an additional note to the bug report for leak-like "
+                  "bugs. Dynamically allocated objects passed to functions "
+                  "that neither deallocated it, or have taken responsibility "
+                  "of the ownership are noted, similarly to "
+                  "NoStoreFuncVisitor.",
+                  "true",
+                  Released,
+                  Hide>
   ]>,
   Dependencies<[CStringModeling]>,
   Documentation<NotDocumented>,
   Hidden;
+
+def ErrnoChecker : Checker<"Errno">,
+  HelpText<"Check for improper use of 'errno'">,
+  Dependencies<[ErrnoModeling]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "AllowErrnoReadOutsideConditionExpressions",
+                  "Allow read of undefined value from errno outside of conditions",
+                  "true",
+                  InAlpha>,
+  ]>,
+  Documentation<HasDocumentation>;
 
 def MallocChecker: Checker<"Malloc">,
   HelpText<"Check for memory leaks, double free, and use-after-free problems. "
@@ -506,6 +563,41 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
   Dependencies<[DynamicMemoryModeling]>,
   Documentation<HasDocumentation>;
 
+// This must appear before StdCLibraryFunctionsChecker because a dependency.
+def StreamChecker : Checker<"Stream">,
+  HelpText<"Check stream handling functions">,
+  WeakDependencies<[NonNullParamChecker]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Pedantic",
+                  "If false, assume that stream operations which are often not "
+                  "checked for error do not fail.",
+                  "false",
+                  InAlpha>
+  ]>,
+  Documentation<HasDocumentation>;
+
+def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
+  HelpText<"Check for invalid arguments of C standard library functions, "
+           "and apply relations between arguments and return value">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "DisplayLoadedSummaries",
+                  "If set to true, the checker displays the found summaries "
+                  "for the given translation unit.",
+                  "false",
+                  Released,
+                  Hide>,
+    CmdLineOption<Boolean,
+                  "ModelPOSIX",
+                  "If set to true, the checker models additional functions "
+                  "from the POSIX standard.",
+                  "true",
+                  InAlpha>
+  ]>,
+  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
+  Documentation<HasDocumentation>;
+
 def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">,
   Documentation<HasDocumentation>;
@@ -516,32 +608,20 @@ let ParentPackage = UnixAlpha in {
 
 def ChrootChecker : Checker<"Chroot">,
   HelpText<"Check improper use of chroot">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
   Dependencies<[PthreadLockBase]>,
-  Documentation<HasAlphaDocumentation>;
-
-def StreamChecker : Checker<"Stream">,
-  HelpText<"Check stream handling functions">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
   HelpText<"Check for misuses of stream APIs">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
   HelpText<"Check for calls to blocking functions inside a critical section">,
-  Documentation<HasAlphaDocumentation>;
-
-def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
-  HelpText<"Check constraints of arguments of C standard library functions, "
-           "such as whether the parameter of isalpha is in the range [0, 255] "
-           "or is EOF.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
-  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
-  Documentation<NotDocumented>;
+  Documentation<HasDocumentation>;
 
 } // end "alpha.unix"
 
@@ -550,6 +630,11 @@ def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = Cplusplus in {
+
+def ArrayDeleteChecker : Checker<"ArrayDelete">,
+  HelpText<"Reports destructions of arrays of polymorphic objects that are "
+           "destructed as their base class.">,
+  Documentation<HasDocumentation>;
 
 def InnerPointerChecker : Checker<"InnerPointer">,
   HelpText<"Check for inner pointers of C++ containers used after "
@@ -591,6 +676,10 @@ def SmartPtrModeling: Checker<"SmartPtrModeling">,
                   Hide>,
   ]>,
   Hidden;
+
+def StringChecker: Checker<"StringChecker">,
+  HelpText<"Checks C++ std::string bugs">,
+  Documentation<HasDocumentation>;
 
 def MoveChecker: Checker<"Move">,
   HelpText<"Find use-after-move bugs in C++">,
@@ -672,7 +761,7 @@ def UninitializedObjectChecker: Checker<"UninitializedObject">,
                   "false",
                   InAlpha>
   ]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def VirtualCallChecker : Checker<"VirtualCall">,
   HelpText<"Check virtual function calls during construction/destruction">,
@@ -705,11 +794,7 @@ def ContainerModeling : Checker<"ContainerModeling">,
 def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
            "destructor in their base class">,
-  Documentation<HasAlphaDocumentation>;
-
-def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
-  HelpText<"Check integer to enumeration casts for out of range values">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def IteratorModeling : Checker<"IteratorModeling">,
   HelpText<"Models iterators of C++ containers">,
@@ -733,23 +818,23 @@ def STLAlgorithmModeling : Checker<"STLAlgorithmModeling">,
 def InvalidatedIteratorChecker : Checker<"InvalidatedIterator">,
   HelpText<"Check for use of invalidated iterators">,
   Dependencies<[IteratorModeling]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def IteratorRangeChecker : Checker<"IteratorRange">,
   HelpText<"Check for iterators used outside their valid ranges">,
   Dependencies<[IteratorModeling]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def MismatchedIteratorChecker : Checker<"MismatchedIterator">,
   HelpText<"Check for use of iterators of different containers where iterators "
            "of the same container are expected">,
   Dependencies<[IteratorModeling]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def SmartPtrChecker: Checker<"SmartPtr">,
   HelpText<"Find the dereference of null SmrtPtr">,
   Dependencies<[SmartPtrModeling]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 } // end: "alpha.cplusplus"
 
@@ -812,7 +897,7 @@ let ParentPackage = DeadCodeAlpha in {
 
 def UnreachableCodeChecker : Checker<"UnreachableCode">,
   HelpText<"Check unreachable code">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 } // end "alpha.deadcode"
 
@@ -832,7 +917,7 @@ def PaddingChecker : Checker<"Padding">,
                   "24",
                   Released>
   ]>,
-  Documentation<NotDocumented>;
+  Documentation<HasDocumentation>;
 
 } // end: "padding"
 
@@ -928,7 +1013,24 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
 
 } // end "security"
 
-let ParentPackage = POS in {
+let ParentPackage = ENV in {
+
+  def InvalidPtrChecker : Checker<"InvalidPtr">,
+  HelpText<"Finds usages of possibly invalidated pointers">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "InvalidatingGetEnv",
+                  "Regard getenv as an invalidating call (as per POSIX "
+                  "standard), which can lead to false positives depending on "
+                  "implementation.",
+                  "false",
+                  Released>,
+  ]>,
+  Documentation<HasDocumentation>;
+
+} // end "security.cert.env"
+
+let ParentPackage = POSAlpha in {
 
   def PutenvWithAuto : Checker<"34c">,
   HelpText<"Finds calls to the 'putenv' function which pass a pointer to "
@@ -941,19 +1043,19 @@ let ParentPackage = SecurityAlpha in {
 
 def ArrayBoundChecker : Checker<"ArrayBound">,
   HelpText<"Warn about buffer overflows (older checker)">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
   HelpText<"Warn about buffer overflows (newer checker)">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
   HelpText<"Check for an out-of-bound pointer being returned to callers">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
   HelpText<"Check for overflows in the arguments to malloc()">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def MmapWriteExecChecker : Checker<"MmapWriteExec">,
   HelpText<"Warn on mmap() calls that are both writable and executable">,
@@ -969,7 +1071,7 @@ def MmapWriteExecChecker : Checker<"MmapWriteExec">,
                   "0x01",
                   Released>
   ]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 } // end "alpha.security"
 
@@ -988,7 +1090,7 @@ def GenericTaintChecker : Checker<"TaintPropagation">,
                   "",
                   InAlpha>,
   ]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 } // end "alpha.security.taint"
 
@@ -1179,13 +1281,13 @@ def InstanceVariableInvalidation : Checker<"InstanceVariableInvalidation">,
   HelpText<"Check that the invalidatable instance variables are invalidated in "
            "the methods annotated with objc_instance_variable_invalidator">,
   Dependencies<[IvarInvalidationModeling]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def MissingInvalidationMethod : Checker<"MissingInvalidationMethod">,
   HelpText<"Check that the invalidation methods are present in classes that "
            "contain invalidatable instance variables">,
   Dependencies<[IvarInvalidationModeling]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 def DirectIvarAssignment : Checker<"DirectIvarAssignment">,
   HelpText<"Check for direct assignments to instance variables">,
@@ -1198,7 +1300,7 @@ def DirectIvarAssignment : Checker<"DirectIvarAssignment">,
                   "false",
                   InAlpha>
   ]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 } // end "alpha.osx.cocoa"
 
@@ -1264,7 +1366,7 @@ let ParentPackage = LocalizabilityAlpha in {
 def PluralMisuseChecker : Checker<"PluralMisuseChecker">,
   HelpText<"Warns against using one vs. many plural pattern in code when "
            "generating localized strings.">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 } // end "alpha.osx.cocoa.localizability"
 
@@ -1284,7 +1386,7 @@ let ParentPackage = LLVMAlpha in {
 
 def LLVMConventionsChecker : Checker<"Conventions">,
   HelpText<"Check code for LLVM codebase conventions">,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 } // end "llvm"
 
@@ -1295,7 +1397,7 @@ def CastValueChecker : Checker<"CastValue">,
   Documentation<NotDocumented>;
 
 def ReturnValueChecker : Checker<"ReturnValue">,
-  HelpText<"Model the guaranteed boolean return value of function calls">,
+  HelpText<"Model certain Error() methods that always return true by convention">,
   Documentation<NotDocumented>;
 
 } // end "apiModeling.llvm"
@@ -1526,6 +1628,12 @@ def TaintTesterChecker : Checker<"TaintTest">,
 def StreamTesterChecker : Checker<"StreamTester">,
   HelpText<"Add test functions to StreamChecker for test and debugging "
            "purposes.">,
+  WeakDependencies<[StreamChecker]>,
+  Documentation<NotDocumented>;
+
+def ErrnoTesterChecker : Checker<"ErrnoTest">,
+  HelpText<"Check modeling aspects of 'errno'.">,
+  Dependencies<[ErrnoModeling]>,
   Documentation<NotDocumented>;
 
 def ExprInspectionChecker : Checker<"ExprInspection">,
@@ -1553,7 +1661,11 @@ def DebugIteratorModeling : Checker<"DebugIteratorModeling">,
 def StdCLibraryFunctionsTesterChecker : Checker<"StdCLibraryFunctionsTester">,
   HelpText<"Add test functions to the summary map, so testing of individual "
            "summary constituents becomes possible.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
+  WeakDependencies<[StdCLibraryFunctionsChecker]>,
+  Documentation<NotDocumented>;
+
+def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
+  HelpText<"Defines an empty checker callback for all possible handlers.">,
   Documentation<NotDocumented>;
 
 } // end "debug"
@@ -1589,7 +1701,7 @@ def CloneChecker : Checker<"CloneChecker">,
                   "\"\"",
                   Released>
   ]>,
-  Documentation<HasAlphaDocumentation>;
+  Documentation<HasDocumentation>;
 
 } // end "clone"
 

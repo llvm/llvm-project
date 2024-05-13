@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
@@ -22,11 +23,13 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -36,8 +39,8 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <cstdint>
 #include <memory>
@@ -232,7 +235,7 @@ static size_t ReadCStringFromMemory(ExecutionContextScope *exe_scope,
 Address::Address(lldb::addr_t abs_addr) : m_section_wp(), m_offset(abs_addr) {}
 
 Address::Address(addr_t address, const SectionList *section_list)
-    : m_section_wp(), m_offset(LLDB_INVALID_ADDRESS) {
+    : m_section_wp() {
   ResolveAddressUsingFileSections(address, section_list);
 }
 
@@ -389,8 +392,23 @@ bool Address::SetOpcodeLoadAddress(lldb::addr_t load_addr, Target *target,
   return false;
 }
 
+bool Address::GetDescription(Stream &s, Target &target,
+                             DescriptionLevel level) const {
+  assert(level == eDescriptionLevelBrief &&
+         "Non-brief descriptions not implemented");
+  LineEntry line_entry;
+  if (CalculateSymbolContextLineEntry(line_entry)) {
+    s.Printf(" (%s:%u:%u)", line_entry.GetFile().GetFilename().GetCString(),
+             line_entry.line, line_entry.column);
+    return true;
+  }
+  return false;
+}
+
 bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
-                   DumpStyle fallback_style, uint32_t addr_size) const {
+                   DumpStyle fallback_style, uint32_t addr_size,
+                   bool all_ranges,
+                   std::optional<Stream::HighlightSettings> settings) const {
   // If the section was nullptr, only load address is going to work unless we
   // are trying to deref a pointer
   SectionSP section_sp(GetSection());
@@ -436,7 +454,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
       else
         s->Printf("%s[", "<Unknown>");
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DumpStyleFileAddress: {
     addr_t file_addr = GetFileAddress();
     if (file_addr == LLDB_INVALID_ADDRESS) {
@@ -486,7 +504,6 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
         pointer_size = target->GetArchitecture().GetAddressByteSize();
       else if (module_sp)
         pointer_size = module_sp->GetArchitecture().GetAddressByteSize();
-
       bool showed_info = false;
       if (section_sp) {
         SectionType sect_type = section_sp->GetType();
@@ -500,7 +517,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               if (symbol) {
                 const char *symbol_name = symbol->GetName().AsCString();
                 if (symbol_name) {
-                  s->PutCString(symbol_name);
+                  s->PutCStringColorHighlighted(symbol_name, settings);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
                   if (delta)
@@ -628,7 +645,8 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                     pointer_sc.symbol != nullptr) {
                   s->PutCString(": ");
                   pointer_sc.DumpStopContext(s, exe_scope, so_addr, true, false,
-                                             false, true, true);
+                                             false, true, true, false,
+                                             settings);
                 }
               }
             }
@@ -667,19 +685,22 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               // address.
               sc.DumpStopContext(s, exe_scope, *this, show_fullpaths,
                                  show_module, show_inlined_frames,
-                                 show_function_arguments, show_function_name);
+                                 show_function_arguments, show_function_name,
+                                 false, settings);
             } else {
               // We found a symbol but it was in a different section so it
               // isn't the symbol we should be showing, just show the section
               // name + offset
-              Dump(s, exe_scope, DumpStyleSectionNameOffset);
+              Dump(s, exe_scope, DumpStyleSectionNameOffset, DumpStyleInvalid,
+                   UINT32_MAX, false, settings);
             }
           }
         }
       }
     } else {
       if (fallback_style != DumpStyleInvalid)
-        return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size);
+        return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size,
+                    false, settings);
       return false;
     }
     break;
@@ -700,40 +721,56 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               sc.symbol->GetAddressRef().GetSection() != GetSection())
             sc.symbol = nullptr;
         }
-        sc.GetDescription(s, eDescriptionLevelBrief, target);
+        sc.GetDescription(s, eDescriptionLevelBrief, target, settings);
 
         if (sc.block) {
           bool can_create = true;
           bool get_parent_variables = true;
           bool stop_if_block_is_inlined_function = false;
           VariableList variable_list;
-          sc.block->AppendVariables(can_create, get_parent_variables,
-                                    stop_if_block_is_inlined_function,
-                                    [](Variable *) { return true; },
-                                    &variable_list);
-
+          addr_t file_addr = GetFileAddress();
+          sc.block->AppendVariables(
+              can_create, get_parent_variables,
+              stop_if_block_is_inlined_function,
+              [&](Variable *var) {
+                return var && var->LocationIsValidForAddress(*this);
+              },
+              &variable_list);
+          ABISP abi =
+              ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture());
           for (const VariableSP &var_sp : variable_list) {
-            if (var_sp && var_sp->LocationIsValidForAddress(*this)) {
-              s->Indent();
-              s->Printf("   Variable: id = {0x%8.8" PRIx64 "}, name = \"%s\"",
-                        var_sp->GetID(), var_sp->GetName().GetCString());
-              Type *type = var_sp->GetType();
-              if (type)
-                s->Printf(", type = \"%s\"", type->GetName().GetCString());
-              else
-                s->PutCString(", type = <unknown>");
-              s->PutCString(", location = ");
-              var_sp->DumpLocationForAddress(s, *this);
-              s->PutCString(", decl = ");
-              var_sp->GetDeclaration().DumpStopContext(s, false);
-              s->EOL();
-            }
+            s->Indent();
+            s->Printf("   Variable: id = {0x%8.8" PRIx64 "}, name = \"%s\"",
+                      var_sp->GetID(), var_sp->GetName().GetCString());
+            Type *type = var_sp->GetType();
+            if (type)
+              s->Printf(", type = \"%s\"", type->GetName().GetCString());
+            else
+              s->PutCString(", type = <unknown>");
+            s->PutCString(", valid ranges = ");
+            if (var_sp->GetScopeRange().IsEmpty())
+              s->PutCString("<block>");
+            else if (all_ranges) {
+              for (auto range : var_sp->GetScopeRange())
+                DumpAddressRange(s->AsRawOstream(), range.GetRangeBase(),
+                                 range.GetRangeEnd(), addr_size);
+            } else if (auto *range =
+                           var_sp->GetScopeRange().FindEntryThatContains(
+                               file_addr))
+              DumpAddressRange(s->AsRawOstream(), range->GetRangeBase(),
+                               range->GetRangeEnd(), addr_size);
+            s->PutCString(", location = ");
+            var_sp->DumpLocations(s, all_ranges ? LLDB_INVALID_ADDRESS : *this);
+            s->PutCString(", decl = ");
+            var_sp->GetDeclaration().DumpStopContext(s, false);
+            s->EOL();
           }
         }
       }
     } else {
       if (fallback_style != DumpStyleInvalid)
-        return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size);
+        return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size,
+                    false, settings);
       return false;
     }
     break;

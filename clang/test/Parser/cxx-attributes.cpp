@@ -1,5 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
+// GH#58229 - rejects-valid
+__attribute__((__visibility__("default"))) [[nodiscard]] int f();
+[[nodiscard]] __attribute__((__visibility__("default"))) int f();
+extern "C" __attribute__((__visibility__("default"))) [[nodiscard]]
+int g() { return 32; }
+
 class c {
   virtual void f1(const char* a, ...)
     __attribute__ (( __format__(__printf__,2,3) )) = 0;
@@ -35,10 +41,13 @@ void fn() {
   pi = &i[0];
 }
 
-[[deprecated([""])]] int WrongArgs; // expected-error {{expected variable name or 'this' in lambda capture list}}
+[[deprecated([""])]] int WrongArgs; // expected-error {{expected string literal as argument of 'deprecated' attribute}}
 [[,,,,,]] int Commas1; // ok
 [[,, maybe_unused]] int Commas2; // ok
 [[maybe_unused,,,]] int Commas3; // ok
 [[,,maybe_unused,]] int Commas4; // ok
 [[foo bar]] int NoComma; // expected-error {{expected ','}} \
                          // expected-warning {{unknown attribute 'foo' ignored}}
+// expected-error@+2 2 {{expected ']'}}
+// expected-error@+1 {{expected external declaration}}
+[[foo

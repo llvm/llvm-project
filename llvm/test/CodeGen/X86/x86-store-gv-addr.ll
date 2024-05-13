@@ -3,21 +3,21 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -relocation-model=static | FileCheck %s --check-prefix=x86_64-linux
 
 @v = external global i32, align 8
-@v_addr = external global i32*, align 8
+@v_addr = external global ptr, align 8
 
 define void @t() nounwind optsize {
 ; x86_64-darwin-LABEL: t:
 ; x86_64-darwin:       ## %bb.0:
-; x86_64-darwin-NEXT:    movq _v@{{.*}}(%rip), %rax
-; x86_64-darwin-NEXT:    movq _v_addr@{{.*}}(%rip), %rcx
+; x86_64-darwin-NEXT:    movq _v@GOTPCREL(%rip), %rax
+; x86_64-darwin-NEXT:    movq _v_addr@GOTPCREL(%rip), %rcx
 ; x86_64-darwin-NEXT:    movq %rax, (%rcx)
 ; x86_64-darwin-NEXT:    ud2
 ;
 ; x86_64-linux-LABEL: t:
 ; x86_64-linux:       # %bb.0:
-; x86_64-linux-NEXT:    movq v@{{.*}}(%rip), %rax
-; x86_64-linux-NEXT:    movq v_addr@{{.*}}(%rip), %rcx
+; x86_64-linux-NEXT:    movq v@GOTPCREL(%rip), %rax
+; x86_64-linux-NEXT:    movq v_addr@GOTPCREL(%rip), %rcx
 ; x86_64-linux-NEXT:    movq %rax, (%rcx)
-	store i32* @v, i32** @v_addr, align 8
+	store ptr @v, ptr @v_addr, align 8
 	unreachable
 }

@@ -1,5 +1,5 @@
 // RUN: mlir-cpu-runner %s -e entry -entry-point-result=void  \
-// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
 // End-to-end test of all fp reduction intrinsics (not exhaustive unit tests).
@@ -15,8 +15,7 @@ module {
     %4 = llvm.mlir.undef : vector<4xf32>
     %5 = llvm.mlir.constant(0 : index) : i64
     %6 = llvm.insertelement %0, %4[%5 : i64] : vector<4xf32>
-    %7 = llvm.shufflevector %6, %4 [0 : i32, 0 : i32, 0 : i32, 0 : i32]
-        : vector<4xf32>, vector<4xf32>
+    %7 = llvm.shufflevector %6, %4 [0, 0, 0, 0] : vector<4xf32>
     %8 = llvm.mlir.constant(1 : i64) : i64
     %9 = llvm.insertelement %1, %7[%8 : i64] : vector<4xf32>
     %10 = llvm.mlir.constant(2 : i64) : i64
@@ -24,15 +23,27 @@ module {
     %12 = llvm.mlir.constant(3 : i64) : i64
     %v = llvm.insertelement %3, %11[%12 : i64] : vector<4xf32>
 
-    %max = "llvm.intr.vector.reduce.fmax"(%v)
+    %max = llvm.intr.vector.reduce.fmax(%v)
         : (vector<4xf32>) -> f32
     llvm.call @printF32(%max) : (f32) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 4
 
-    %min = "llvm.intr.vector.reduce.fmin"(%v)
+    %min = llvm.intr.vector.reduce.fmin(%v)
         : (vector<4xf32>) -> f32
     llvm.call @printF32(%min) : (f32) -> ()
+    llvm.call @printNewline() : () -> ()
+    // CHECK: 1
+
+    %maximum = llvm.intr.vector.reduce.fmaximum(%v)
+        : (vector<4xf32>) -> f32
+    llvm.call @printF32(%maximum) : (f32) -> ()
+    llvm.call @printNewline() : () -> ()
+    // CHECK: 4
+
+    %minimum = llvm.intr.vector.reduce.fminimum(%v)
+        : (vector<4xf32>) -> f32
+    llvm.call @printF32(%minimum) : (f32) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 1
 

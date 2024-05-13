@@ -19,6 +19,12 @@
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)
 ; OBJ:   {{.*}}Proc{{.*}}Sym {
+; OBJ:   InlineesSym {
+; OBJ-NEXT:  Kind: S_INLINEES (0x1168)
+; OBJ-NEXT:  Inlinees [
+; OBJ-NEXT:    FuncID: h (0x1002)
+; OBJ-NEXT:  ]
+; OBJ-NEXT:}
 ; OBJ:   InlineSiteSym {
 ; OBJ:     Inlinee: h (0x1002)
 ; OBJ:   }
@@ -47,9 +53,9 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @main() #0 !dbg !12 {
 entry:
-  %0 = load volatile i32, i32* @"\01?x@@3HC", align 4, !dbg !15, !tbaa !24
+  %0 = load volatile i32, ptr @"\01?x@@3HC", align 4, !dbg !15, !tbaa !24
   %inc.i.i.i = add nsw i32 %0, 1, !dbg !15
-  store volatile i32 %inc.i.i.i, i32* @"\01?x@@3HC", align 4, !dbg !15, !tbaa !24
+  store volatile i32 %inc.i.i.i, ptr @"\01?x@@3HC", align 4, !dbg !15, !tbaa !24
   ret i32 0, !dbg !28
 }
 

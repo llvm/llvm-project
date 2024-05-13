@@ -1,9 +1,9 @@
-; This is a basic sanity check for constant propagation.  It tests the basic
-; arithmetic operations.
+; This is a basic correctness check for constant propagation.  It tests the
+; basic arithmetic operations.
 
 
-; RUN: opt < %s -sccp -S | not grep mul
-; RUN: opt < %s -sccp -S | not grep umod
+; RUN: opt < %s -passes=sccp -S | not grep mul
+; RUN: opt < %s -passes=sccp -S | not grep umod
 
 define i128 @test(i1 %B) {
 	br i1 %B, label %BB1, label %BB2

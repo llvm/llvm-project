@@ -18,7 +18,7 @@ RegisterContextKDP_i386::RegisterContextKDP_i386(ThreadKDP &thread,
     : RegisterContextDarwin_i386(thread, concrete_frame_idx),
       m_kdp_thread(thread) {}
 
-RegisterContextKDP_i386::~RegisterContextKDP_i386() {}
+RegisterContextKDP_i386::~RegisterContextKDP_i386() = default;
 
 int RegisterContextKDP_i386::DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) {
   ProcessSP process_sp(CalculateProcess());

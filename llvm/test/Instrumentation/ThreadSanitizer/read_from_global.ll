@@ -1,4 +1,4 @@
-; RUN: opt < %s -tsan -S | FileCheck %s
+; RUN: opt < %s -passes=tsan -S | FileCheck %s
 ; Check that tsan does not instrument reads from constant globals.
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @const_global = external constant i32
 define i32 @read_from_const_global() nounwind uwtable sanitize_thread readnone {
 entry:
-  %0 = load i32, i32* @const_global, align 4
+  %0 = load i32, ptr @const_global, align 4
   ret i32 %0
 }
 ; CHECK: define i32 @read_from_const_global
@@ -16,7 +16,7 @@ entry:
 @non_const_global = global i32 0, align 4
 define i32 @read_from_non_const_global() nounwind uwtable sanitize_thread readonly {
 entry:
-  %0 = load i32, i32* @non_const_global, align 4
+  %0 = load i32, ptr @non_const_global, align 4
   ret i32 %0
 }
 
@@ -28,8 +28,8 @@ entry:
 define i32 @read_from_const_global_array(i32 %idx) nounwind uwtable sanitize_thread readnone {
 entry:
   %idxprom = sext i32 %idx to i64
-  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* @const_global_array, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [10 x i32], ptr @const_global_array, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }
 
@@ -37,13 +37,12 @@ entry:
 ; CHECK-NOT: __tsan
 ; CHECK: ret i32
 
-%struct.Foo = type { i32 (...)** }
-define void @call_virtual_func(%struct.Foo* %f) uwtable sanitize_thread {
+%struct.Foo = type { ptr }
+define void @call_virtual_func(ptr %f) uwtable sanitize_thread {
 entry:
-  %0 = bitcast %struct.Foo* %f to void (%struct.Foo*)***
-  %vtable = load void (%struct.Foo*)**, void (%struct.Foo*)*** %0, align 8, !tbaa !2
-  %1 = load void (%struct.Foo*)*, void (%struct.Foo*)** %vtable, align 8
-  call void %1(%struct.Foo* %f)
+  %vtable = load ptr, ptr %f, align 8, !tbaa !2
+  %0 = load ptr, ptr %vtable, align 8
+  call void %0(ptr %f)
   ret void
 }
 

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -emit-llvm -o %t.ll
 // RUN: FileCheck %s -check-prefix=FUNS < %t.ll
 // RUN: FileCheck %s -check-prefix=VARS < %t.ll
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility hidden -emit-llvm -o %t.ll
+// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility=hidden -emit-llvm -o %t.ll
 // RUN: FileCheck %s -check-prefix=FUNS-HIDDEN < %t.ll
 // RUN: FileCheck %s -check-prefix=VARS-HIDDEN < %t.ll
 
@@ -11,8 +11,6 @@
 #define TYPE_HIDDEN __attribute__((type_visibility("hidden")))
 #define TYPE_PROTECTED __attribute__((type_visibility("protected")))
 #define TYPE_DEFAULT __attribute__((type_visibility("default")))
-
-// type_visibility is rdar://11880378
 
 #if !__has_attribute(type_visibility)
 #error No type_visibility attribute!

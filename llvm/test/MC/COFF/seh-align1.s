@@ -28,8 +28,8 @@
 // CHECK-NEXT:       IMAGE_SCN_MEM_READ
 // CHECK-NEXT:     ]
 // CHECK:          Relocations [
-// CHECK-NEXT:       [[BeginDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB smallFunc
-// CHECK-NEXT:       [[EndDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB smallFunc
+// CHECK-NEXT:       [[BeginDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB .text
+// CHECK-NEXT:       [[EndDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB .text
 // CHECK-NEXT:       [[UnwindDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB .xdata
 // CHECK-NEXT:     ]
 // CHECK:          SectionData (

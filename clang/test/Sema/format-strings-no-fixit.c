@@ -1,5 +1,5 @@
 // RUN: cp %s %t
-// RUN: %clang_cc1 -fsyntax-only -fixit %t
+// RUN: %clang_cc1 -fixit %t
 // RUN: %clang_cc1 -E -o - %t | FileCheck %s
 
 /* This is a test of the various code modification hints that are
@@ -10,7 +10,7 @@
 int printf(char const *, ...);
 int scanf(char const *, ...);
 
-void pr9751() {
+void pr9751(void) {
   const char kFormat1[] = "%s";
   printf(kFormat1, 5);
   printf("%s", 5);

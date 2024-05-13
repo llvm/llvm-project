@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/SMTAPI.h"
-#include <set>
 
 using namespace llvm;
 
 #if LLVM_WITH_Z3
+
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Twine.h"
+
+#include <set>
 
 #include <z3.h>
 
@@ -727,7 +729,7 @@ public:
     const Z3_sort Z3Sort = toZ3Sort(*getBitvectorSort(BitWidth)).Sort;
 
     // Slow path, when 64 bits are not enough.
-    if (LLVM_UNLIKELY(Int.getBitWidth() > 64u)) {
+    if (LLVM_UNLIKELY(!Int.isRepresentableByInt64())) {
       SmallString<40> Buffer;
       Int.toString(Buffer, 10);
       return newExprRef(Z3Expr(
@@ -868,7 +870,7 @@ public:
     return toAPFloat(Sort, Assign, Float, true);
   }
 
-  Optional<bool> check() const override {
+  std::optional<bool> check() const override {
     Z3_lbool res = Z3_solver_check(Context.Context, Solver);
     if (res == Z3_L_TRUE)
       return true;
@@ -876,7 +878,7 @@ public:
     if (res == Z3_L_FALSE)
       return false;
 
-    return Optional<bool>();
+    return std::nullopt;
   }
 
   void push() override { return Z3_solver_push(Context.Context, Solver); }

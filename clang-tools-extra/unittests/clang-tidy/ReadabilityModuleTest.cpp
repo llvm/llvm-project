@@ -1,6 +1,7 @@
 #include "ClangTidyTest.h"
 #include "readability/BracesAroundStatementsCheck.h"
 #include "readability/NamespaceCommentCheck.h"
+#include "readability/SimplifyBooleanExprCheck.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -9,6 +10,7 @@ namespace test {
 
 using readability::BracesAroundStatementsCheck;
 using readability::NamespaceCommentCheck;
+using readability::SimplifyBooleanExprCheck;
 
 TEST(NamespaceCommentCheckTest, Basic) {
   EXPECT_EQ("namespace i {\n} // namespace i",
@@ -254,7 +256,7 @@ TEST(BracesAroundStatementsCheckTest, IfElseWithShortStatements) {
                 "  else if (1 == 2) return -2;\n"
                 "  else return -3;\n"
                 "}",
-                nullptr, "input.cc", None, Options));
+                nullptr, "input.cc", std::nullopt, Options));
 
   // If the last else is an else-if, we also force it.
   EXPECT_EQ("int main() {\n"
@@ -267,7 +269,7 @@ TEST(BracesAroundStatementsCheckTest, IfElseWithShortStatements) {
                 "  if (false) return -1;\n"
                 "  else if (1 == 2) return -2;\n"
                 "}",
-                nullptr, "input.cc", None, Options));
+                nullptr, "input.cc", std::nullopt, Options));
 }
 
 TEST(BracesAroundStatementsCheckTest, For) {
@@ -482,15 +484,16 @@ TEST(BracesAroundStatementsCheckTest, Macros) {
 }
 
 #define EXPECT_NO_CHANGES_WITH_OPTS(Check, Opts, Code)                         \
-  EXPECT_EQ(Code, runCheckOnCode<Check>(Code, nullptr, "input.cc", None, Opts))
+  EXPECT_EQ(Code, runCheckOnCode<Check>(Code, nullptr, "input.cc",             \
+                                        std::nullopt, Opts))
 TEST(BracesAroundStatementsCheckTest, ImplicitCastInReturn) {
   ClangTidyOptions Opts;
   Opts.CheckOptions["test-check-0.ShortStatementLines"] = "1";
 
   StringRef Input = "const char *f() {\n"
-                              "  if (true) return \"\";\n"
-                              "  return \"abc\";\n"
-                              "}\n";
+                    "  if (true) return \"\";\n"
+                    "  return \"abc\";\n"
+                    "}\n";
   EXPECT_NO_CHANGES_WITH_OPTS(BracesAroundStatementsCheck, Opts, Input);
   EXPECT_EQ("const char *f() {\n"
             "  if (true) { return \"\";\n"
@@ -498,6 +501,16 @@ TEST(BracesAroundStatementsCheckTest, ImplicitCastInReturn) {
             "  return \"abc\";\n"
             "}\n",
             runCheckOnCode<BracesAroundStatementsCheck>(Input));
+}
+
+TEST(SimplifyBooleanExprCheckTest, CodeWithError) {
+  // Fixes PR55557
+  // Need to downgrade Wreturn-type from error as runCheckOnCode will fatal_exit
+  // if any errors occur.
+  EXPECT_EQ("void foo(bool b){ return b; }",
+            runCheckOnCode<SimplifyBooleanExprCheck>(
+                "void foo(bool b){ if (b) return true; return false; }",
+                nullptr, "input.cc", {"-Wno-error=return-type"}));
 }
 
 } // namespace test

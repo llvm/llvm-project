@@ -34,7 +34,7 @@ static cl::opt<OverflowTrackingChoice> OTMode(
                           "Track the overflow bit if requested."),
                clEnumValN(OT_ALWAYS, "always",
                           "Always track the overflow bit.")),
-    cl::Hidden, cl::init(OT_REQUEST), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(OT_REQUEST), cl::cat(PollyCategory));
 
 IslExprBuilder::IslExprBuilder(Scop &S, PollyIRBuilder &Builder,
                                IDToValueTy &IDToValue, ValueMapT &GlobalMap,
@@ -232,7 +232,7 @@ Value *IslExprBuilder::createOpNAry(__isl_take isl_ast_expr *Expr) {
 }
 
 std::pair<Value *, Type *>
-IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
+IslExprBuilder::createAccessAddress(__isl_take isl_ast_expr *Expr) {
   assert(isl_ast_expr_get_type(Expr) == isl_ast_expr_op &&
          "isl ast expression not of type isl_ast_op");
   assert(isl_ast_expr_get_op_type(Expr) == isl_ast_op_access &&
@@ -270,13 +270,6 @@ IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
 
   assert(Base->getType()->isPointerTy() && "Access base should be a pointer");
   StringRef BaseName = Base->getName();
-
-  auto PointerTy = PointerType::get(SAI->getElementType(),
-                                    Base->getType()->getPointerAddressSpace());
-  if (Base->getType() != PointerTy) {
-    Base =
-        Builder.CreateBitCast(Base, PointerTy, "polly.access.cast." + BaseName);
-  }
 
   if (isl_ast_expr_get_op_n_arg(Expr) == 1) {
     isl_ast_expr_free(Expr);
@@ -334,7 +327,8 @@ IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
     IndexOp = createMul(IndexOp, DimSize, "polly.access.mul." + BaseName);
   }
 
-  Access = Builder.CreateGEP(Base, IndexOp, "polly.access." + BaseName);
+  Access = Builder.CreateGEP(SAI->getElementType(), Base, IndexOp,
+                             "polly.access." + BaseName);
 
   if (PollyDebugPrinting)
     RuntimeDebugBuilder::createCPUPrinter(Builder, "\n");
@@ -342,7 +336,7 @@ IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
   return {Access, SAI->getElementType()};
 }
 
-Value *IslExprBuilder::createOpAccess(isl_ast_expr *Expr) {
+Value *IslExprBuilder::createOpAccess(__isl_take isl_ast_expr *Expr) {
   auto Info = createAccessAddress(Expr);
   assert(Info.first && "Could not create op access address");
   return Builder.CreateLoad(Info.second, Info.first,
@@ -525,8 +519,8 @@ Value *IslExprBuilder::createOpICmp(__isl_take isl_ast_expr *Expr) {
   isl_ast_op_type OpType = isl_ast_expr_get_op_type(Expr);
   assert(OpType >= isl_ast_op_eq && OpType <= isl_ast_op_gt &&
          "Unsupported ICmp isl ast expression");
-  assert(isl_ast_op_eq + 4 == isl_ast_op_gt &&
-         "Isl ast op type interface changed");
+  static_assert(isl_ast_op_eq + 4 == isl_ast_op_gt,
+                "Isl ast op type interface changed");
 
   CmpInst::Predicate Predicates[5][2] = {
       {CmpInst::ICMP_EQ, CmpInst::ICMP_EQ},
@@ -764,7 +758,7 @@ Value *IslExprBuilder::createInt(__isl_take isl_ast_expr *Expr) {
   else
     T = Builder.getIntNTy(BitWidth);
 
-  APValue = APValue.sextOrSelf(T->getBitWidth());
+  APValue = APValue.sext(T->getBitWidth());
   V = ConstantInt::get(T, APValue);
 
   isl_ast_expr_free(Expr);

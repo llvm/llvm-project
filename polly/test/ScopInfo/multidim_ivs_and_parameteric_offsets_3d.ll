@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s \
-; RUN:     -polly-precise-fold-accesses | FileCheck %s
+; RUN: opt %loadPolly -polly-precise-fold-accesses -polly-print-scops -disable-output < %s | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 ; void foo(long n, long m, long o, double A[n][m][o], long p, long q, long r) {
@@ -35,7 +34,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:             [o, m, n, p, q, r] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[-1 + p + i0, -1 + m + q + i1, o + r + i2] : i1 <= -q and i2 < -r; Stmt_for_k[i0, i1, i2] -> MemRef_A[p + i0, -1 + q + i1, o + r + i2] : i1 > -q and i2 < -r; Stmt_for_k[i0, i1, i2] -> MemRef_A[-1 + p + i0, m + q + i1, r + i2] : i1 < -q and i2 >= -r; Stmt_for_k[i0, i1, i2] -> MemRef_A[p + i0, q + i1, r + i2] : i1 >= -q and i2 >= -r };
 ; CHECK-NEXT: }
 
-define void @foo(i64 %n, i64 %m, i64 %o, double* %A, i64 %p, i64 %q, i64 %r) {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr %A, i64 %p, i64 %q, i64 %r) {
 entry:
   br label %for.i
 
@@ -56,8 +55,8 @@ for.k:
   %subscript2 = mul i64 %subscript1, %o
   %offset2 = add nsw i64 %k, %r
   %subscript = add i64 %subscript2, %offset2
-  %idx = getelementptr inbounds double, double* %A, i64 %subscript
-  store double 1.0, double* %idx
+  %idx = getelementptr inbounds double, ptr %A, i64 %subscript
+  store double 1.0, ptr %idx
   br label %for.k.inc
 
 for.k.inc:

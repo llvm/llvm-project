@@ -5,7 +5,7 @@
 
 declare double @foo()
 
-define double @carg({ double, double }* byval({ double, double }) %z) nounwind  {
+define double @carg(ptr byval({ double, double }) %z) nounwind  {
 ; CHECK-LABEL: carg:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    jmp _foo ## TAILCALL

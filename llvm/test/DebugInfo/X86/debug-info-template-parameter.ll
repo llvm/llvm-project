@@ -1,4 +1,5 @@
 ; RUN: llc  %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc  --try-experimental-debuginfo-iterators %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
 
 ; C++ source to regenerate:
 
@@ -30,10 +31,10 @@
 ; CHECK: DW_AT_name {{.*}} "foo<char, 3>"
 ; CHECK: DW_AT_type {{.*}} "char"
 ; CHECK-NEXT: DW_AT_name {{.*}} "T"
-; CHECK_NEXT: DW_AT_default_value {{.*}} true
+; CHECK-NEXT: DW_AT_default_value {{.*}} (true)
 ; CHECK: DW_AT_type {{.*}} "int"
 ; CHECK-NEXT: DW_AT_name {{.*}} "i"
-; CHECK_NEXT: DW_AT_default_value {{.*}} true
+; CHECK-NEXT: DW_AT_default_value {{.*}} (true)
 
 ; ModuleID = '/dir/test.cpp'
 source_filename = "test.cpp"
@@ -48,9 +49,9 @@ entry:
   %retval = alloca i32, align 4
   %f1 = alloca %class.foo, align 1
   %f2 = alloca %class.foo.0, align 1
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata %class.foo* %f1, metadata !11, metadata !DIExpression()), !dbg !16
-  call void @llvm.dbg.declare(metadata %class.foo.0* %f2, metadata !17, metadata !DIExpression()), !dbg !23
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %f1, metadata !11, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %f2, metadata !17, metadata !DIExpression()), !dbg !23
   ret i32 0, !dbg !24
 }
 ; Function Attrs: nounwind readnone speculatable willreturn

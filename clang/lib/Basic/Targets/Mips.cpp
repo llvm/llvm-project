@@ -20,11 +20,11 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info MipsTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, HEADER, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsMips.def"
 };
 
@@ -50,7 +50,7 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"octeon"}, {"octeon+"}, {"p5600"}};
 
 bool MipsTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
+  return llvm::is_contained(ValidCPUNames, Name);
 }
 
 void MipsTargetInfo::fillValidCPUList(
@@ -149,6 +149,10 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_MIPS_FPSET", Twine(32));
   else
     Builder.defineMacro("_MIPS_FPSET", Twine(16));
+  if (NoOddSpreg)
+    Builder.defineMacro("_MIPS_SPFPSET", Twine(16));
+  else
+    Builder.defineMacro("_MIPS_SPFPSET", Twine(32));
 
   if (IsMips16)
     Builder.defineMacro("__mips16", Twine(1));
@@ -182,7 +186,7 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (DisableMadd4)
     Builder.defineMacro("__mips_no_madd4", Twine(1));
 
-  Builder.defineMacro("_MIPS_SZPTR", Twine(getPointerWidth(0)));
+  Builder.defineMacro("_MIPS_SZPTR", Twine(getPointerWidth(LangAS::Default)));
   Builder.defineMacro("_MIPS_SZINT", Twine(getIntWidth()));
   Builder.defineMacro("_MIPS_SZLONG", Twine(getLongWidth()));
 
@@ -192,14 +196,14 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("_MIPS_ARCH_" + StringRef(CPU).upper());
 
-  if (StringRef(CPU).startswith("octeon"))
+  if (StringRef(CPU).starts_with("octeon"))
     Builder.defineMacro("__OCTEON__");
 
-  // These shouldn't be defined for MIPS-I but there's no need to check
-  // for that since MIPS-I isn't supported.
-  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
-  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
-  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  if (CPU != "mips1") {
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  }
 
   // 32-bit MIPS processors don't have the necessary lld/scd instructions
   // found in 64-bit processors. In the case of O32 on a 64-bit processor,
@@ -220,8 +224,8 @@ bool MipsTargetInfo::hasFeature(StringRef Feature) const {
 }
 
 ArrayRef<Builtin::Info> MipsTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::Mips::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::Mips::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
 unsigned MipsTargetInfo::getUnwindWordWidth() const {
@@ -229,7 +233,7 @@ unsigned MipsTargetInfo::getUnwindWordWidth() const {
       .Case("o32", 32)
       .Case("n32", 64)
       .Case("n64", 64)
-      .Default(getPointerWidth(0));
+      .Default(getPointerWidth(LangAS::Default));
 }
 
 bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
@@ -238,34 +242,10 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     Diags.Report(diag::err_target_unsupported_cpu_for_micromips) << CPU;
     return false;
   }
-  // FIXME: It's valid to use O32 on a 64-bit CPU but the backend can't handle
-  //        this yet. It's better to fail here than on the backend assertion.
-  if (processorSupportsGPR64() && ABI == "o32") {
-    Diags.Report(diag::err_target_unsupported_abi) << ABI << CPU;
-    return false;
-  }
 
   // 64-bit ABI's require 64-bit CPU's.
   if (!processorSupportsGPR64() && (ABI == "n32" || ABI == "n64")) {
     Diags.Report(diag::err_target_unsupported_abi) << ABI << CPU;
-    return false;
-  }
-
-  // FIXME: It's valid to use O32 on a mips64/mips64el triple but the backend
-  //        can't handle this yet. It's better to fail here than on the
-  //        backend assertion.
-  if (getTriple().isMIPS64() && ABI == "o32") {
-    Diags.Report(diag::err_target_unsupported_abi_for_triple)
-        << ABI << getTriple().str();
-    return false;
-  }
-
-  // FIXME: It's valid to use N32/N64 on a mips/mipsel triple but the backend
-  //        can't handle this yet. It's better to fail here than on the
-  //        backend assertion.
-  if (getTriple().isMIPS32() && (ABI == "n32" || ABI == "n64")) {
-    Diags.Report(diag::err_target_unsupported_abi_for_triple)
-        << ABI << getTriple().str();
     return false;
   }
 

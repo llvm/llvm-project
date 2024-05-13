@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
     ISM = ISMBuilder();
   }
   auto LCTM = ExitOnErr(createLocalLazyCallThroughManager(
-      J->getTargetTriple(), J->getExecutionSession(), 0));
+      J->getTargetTriple(), J->getExecutionSession(), ExecutorAddr()));
 
   // (4) Add modules.
   ExitOnErr(J->addIRModule(ExitOnErr(parseExampleModule(FooMod, "foo-mod"))));
@@ -152,8 +152,8 @@ int main(int argc, char *argv[]) {
   // arguments passed.
 
   // Look up the JIT'd function, cast it to a function pointer, then call it.
-  auto EntrySym = ExitOnErr(J->lookup("entry"));
-  auto *Entry = (int (*)(int))EntrySym.getAddress();
+  auto EntryAddr = ExitOnErr(J->lookup("entry"));
+  auto *Entry = EntryAddr.toPtr<int(int)>();
 
   int Result = Entry(argc);
   outs() << "---Result---\n"

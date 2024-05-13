@@ -284,8 +284,6 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::J2_jumprf:
   case Hexagon::J2_jumprtnew:
   case Hexagon::J2_jumprfnew:
-  case Hexagon::J2_jumprtnewpt:
-  case Hexagon::J2_jumprfnewpt:
   case Hexagon::PS_jmprett:
   case Hexagon::PS_jmpretf:
   case Hexagon::PS_jmprettnew:
@@ -303,8 +301,6 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::L4_return_f:
   case Hexagon::L4_return_tnew_pnt:
   case Hexagon::L4_return_fnew_pnt:
-  case Hexagon::L4_return_tnew_pt:
-  case Hexagon::L4_return_fnew_pt:
     // [if ([!]p0[.new])] dealloc_return
     SrcReg = MCI.getOperand(1).getReg();
     if (Hexagon::P0 == SrcReg) {
@@ -637,9 +633,9 @@ bool HexagonMCInstrInfo::isOrderedDuplexPair(MCInstrInfo const &MCII,
       return false;
   }
 
-  if (STI.getCPU().equals_lower("hexagonv5") ||
-      STI.getCPU().equals_lower("hexagonv55") ||
-      STI.getCPU().equals_lower("hexagonv60")) {
+  if (STI.getCPU().equals_insensitive("hexagonv5") ||
+      STI.getCPU().equals_insensitive("hexagonv55") ||
+      STI.getCPU().equals_insensitive("hexagonv60")) {
     // If a store appears, it must be in slot 0 (MIa) 1st, and then slot 1 (MIb);
     //   therefore, not duplexable if slot 1 is a store, and slot 0 is not.
     if ((MIbG == HexagonII::HSIG_S1) || (MIbG == HexagonII::HSIG_S2)) {
@@ -699,6 +695,7 @@ inline static void addOps(MCInst &subInstPtr, MCInst const &Inst,
 
 MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
   MCInst Result;
+  Result.setLoc(Inst.getLoc());
   bool Absolute;
   int64_t Value;
   switch (Inst.getOpcode()) {
@@ -830,7 +827,6 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     Result.setOpcode(Hexagon::SL2_jumpr31_f);
     break; //    none  SUBInst if (!p0) jumpr r31
   case Hexagon::J2_jumprfnew:
-  case Hexagon::J2_jumprfnewpt:
   case Hexagon::PS_jmpretfnewpt:
   case Hexagon::PS_jmpretfnew:
     Result.setOpcode(Hexagon::SL2_jumpr31_fnew);
@@ -840,7 +836,6 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     Result.setOpcode(Hexagon::SL2_jumpr31_t);
     break; //    none  SUBInst if (p0) jumpr r31
   case Hexagon::J2_jumprtnew:
-  case Hexagon::J2_jumprtnewpt:
   case Hexagon::PS_jmprettnewpt:
   case Hexagon::PS_jmprettnew:
     Result.setOpcode(Hexagon::SL2_jumpr31_tnew);

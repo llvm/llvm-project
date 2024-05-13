@@ -15,15 +15,21 @@ static_library("Interpreter") {
     "//clang/lib/Sema",
     "//clang/lib/Serialization",
     "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/ExecutionEngine/Orc/Debugging",
     "//llvm/lib/IR",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:NativeTarget",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
+    "CodeCompletion.cpp",
+    "DeviceOffload.cpp",
     "IncrementalExecutor.cpp",
     "IncrementalParser.cpp",
     "Interpreter.cpp",
+    "InterpreterUtils.cpp",
+    "Value.cpp",
   ]
 }

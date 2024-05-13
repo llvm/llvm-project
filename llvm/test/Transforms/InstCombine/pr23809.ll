@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; InstCombine should preserve the call to @llvm.assume.
 define i32 @icmp(i32 %a, i32 %b) {

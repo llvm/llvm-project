@@ -37,8 +37,8 @@ static const uint32_t g_gpr_regnums_i386[] = {
 };
 
 static const RegisterSet g_reg_sets_i386[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_regnums_i386) - 1, g_gpr_regnums_i386},
+    {"General Purpose Registers", "gpr", std::size(g_gpr_regnums_i386) - 1,
+     g_gpr_regnums_i386},
 };
 
 enum { k_num_register_sets = 1 };
@@ -55,7 +55,7 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 static Status GetThreadContextHelper(lldb::thread_t thread_handle,
                                      PCONTEXT context_ptr,
                                      const DWORD control_flag) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
 
   memset(context_ptr, 0, sizeof(::CONTEXT));
@@ -71,7 +71,7 @@ static Status GetThreadContextHelper(lldb::thread_t thread_handle,
 
 static Status SetThreadContextHelper(lldb::thread_t thread_handle,
                                      PCONTEXT context_ptr) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
 
   if (!::SetThreadContext(thread_handle, context_ptr)) {
@@ -376,7 +376,7 @@ Status NativeRegisterContextWindows_i386::WriteRegister(
 }
 
 Status NativeRegisterContextWindows_i386::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   const size_t data_size = REG_CONTEXT_SIZE;
   data_sp = std::make_shared<DataBufferHeap>(data_size, 0);
   ::CONTEXT tls_context;

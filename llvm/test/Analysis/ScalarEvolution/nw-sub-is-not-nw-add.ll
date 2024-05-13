@@ -1,14 +1,14 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; Check that SCEV does not assume sub nuw X Y == add nuw X, -Y
-define void @f(i32* %loc) {
+define void @f(ptr %loc) {
 ; CHECK-LABEL: @f
  entry:
   br label %loop
 
  loop:
   %idx = phi i32 [ 6, %entry ], [ %idx.dec, %loop ]
-  store i32 %idx, i32* %loc
+  store i32 %idx, ptr %loc
   %idx.dec = sub nuw i32 %idx, 1
   %cond = icmp uge i32 %idx.dec, 5
   br i1 %cond, label %loop, label %exit

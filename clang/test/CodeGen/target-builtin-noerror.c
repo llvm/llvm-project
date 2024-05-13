@@ -6,24 +6,24 @@
 
 // No warnings.
 extern __m256i a;
-int __attribute__((target("avx"))) bar() {
+int __attribute__((target("avx"))) bar(void) {
   return _mm256_extract_epi32(a, 3);
 }
 
-int baz() {
+int baz(void) {
   return bar();
 }
 
-int __attribute__((target("avx"))) qq_avx() {
+int __attribute__((target("avx"))) qq_avx(void) {
   return _mm256_extract_epi32(a, 3);
 }
 
-int qq_noavx() {
+int qq_noavx(void) {
   return 0;
 }
 
 extern __m256i a;
-int qq() {
+int qq(void) {
   if (__builtin_cpu_supports("avx"))
     return qq_avx();
   else
@@ -43,7 +43,7 @@ __m128 __attribute__((target("fma,fma4"))) fma_3(__m128 a, __m128 b, __m128 c) {
   return __builtin_ia32_vfmaddps(a, b, c);
 }
 
-void verifyfeaturestrings() {
+void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("cmov");
   (void)__builtin_cpu_supports("mmx");
   (void)__builtin_cpu_supports("popcnt");
@@ -82,9 +82,72 @@ void verifyfeaturestrings() {
   (void)__builtin_cpu_supports("avx512bitalg");
   (void)__builtin_cpu_supports("avx512bf16");
   (void)__builtin_cpu_supports("avx512vp2intersect");
+  (void)__builtin_cpu_supports("f16c");
+  (void)__builtin_cpu_supports("avx512fp16");
+  (void)__builtin_cpu_supports("3dnow");
+  (void)__builtin_cpu_supports("adx");
+  (void)__builtin_cpu_supports("cldemote");
+  (void)__builtin_cpu_supports("clflushopt");
+  (void)__builtin_cpu_supports("clwb");
+  (void)__builtin_cpu_supports("clzero");
+  (void)__builtin_cpu_supports("cx16");
+  (void)__builtin_cpu_supports("enqcmd");
+  (void)__builtin_cpu_supports("fsgsbase");
+  (void)__builtin_cpu_supports("lwp");
+  (void)__builtin_cpu_supports("lzcnt");
+  (void)__builtin_cpu_supports("movbe");
+  (void)__builtin_cpu_supports("movdir64b");
+  (void)__builtin_cpu_supports("movdiri");
+  (void)__builtin_cpu_supports("mwaitx");
+  (void)__builtin_cpu_supports("pconfig");
+  (void)__builtin_cpu_supports("pku");
+  (void)__builtin_cpu_supports("prefetchwt1");
+  (void)__builtin_cpu_supports("prfchw");
+  (void)__builtin_cpu_supports("ptwrite");
+  (void)__builtin_cpu_supports("rdpid");
+  (void)__builtin_cpu_supports("rdrnd");
+  (void)__builtin_cpu_supports("rdseed");
+  (void)__builtin_cpu_supports("rtm");
+  (void)__builtin_cpu_supports("serialize");
+  (void)__builtin_cpu_supports("sgx");
+  (void)__builtin_cpu_supports("sha");
+  (void)__builtin_cpu_supports("shstk");
+  (void)__builtin_cpu_supports("tbm");
+  (void)__builtin_cpu_supports("tsxldtrk");
+  (void)__builtin_cpu_supports("vaes");
+  (void)__builtin_cpu_supports("waitpkg");
+  (void)__builtin_cpu_supports("wbnoinvd");
+  (void)__builtin_cpu_supports("xsave");
+  (void)__builtin_cpu_supports("xsavec");
+  (void)__builtin_cpu_supports("xsaveopt");
+  (void)__builtin_cpu_supports("xsaves");
+  (void)__builtin_cpu_supports("amx-tile");
+  (void)__builtin_cpu_supports("amx-int8");
+  (void)__builtin_cpu_supports("amx-bf16");
+  (void)__builtin_cpu_supports("uintr");
+  (void)__builtin_cpu_supports("hreset");
+  (void)__builtin_cpu_supports("kl");
+  (void)__builtin_cpu_supports("widekl");
+  (void)__builtin_cpu_supports("avxvnni");
+  (void)__builtin_cpu_supports("avxifma");
+  (void)__builtin_cpu_supports("avxvnniint8");
+  (void)__builtin_cpu_supports("avxneconvert");
+  (void)__builtin_cpu_supports("cmpccxadd");
+  (void)__builtin_cpu_supports("amx-fp16");
+  (void)__builtin_cpu_supports("prefetchi");
+  (void)__builtin_cpu_supports("raoint");
+  (void)__builtin_cpu_supports("amx-complex");
+  (void)__builtin_cpu_supports("avxvnniint16");
+  (void)__builtin_cpu_supports("sm3");
+  (void)__builtin_cpu_supports("sha512");
+  (void)__builtin_cpu_supports("sm4");
+  (void)__builtin_cpu_supports("apxf");
+  (void)__builtin_cpu_supports("usermsr");
+  (void)__builtin_cpu_supports("avx10.1-256");
+  (void)__builtin_cpu_supports("avx10.1-512");
 }
 
-void verifycpustrings() {
+void verifycpustrings(void) {
   (void)__builtin_cpu_is("alderlake");
   (void)__builtin_cpu_is("amd");
   (void)__builtin_cpu_is("amdfam10h");
@@ -107,6 +170,15 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("corei7");
   (void)__builtin_cpu_is("goldmont");
   (void)__builtin_cpu_is("goldmont-plus");
+  (void)__builtin_cpu_is("grandridge");
+  (void)__builtin_cpu_is("graniterapids");
+  (void)__builtin_cpu_is("emeraldrapids");
+  (void)__builtin_cpu_is("graniterapids-d");
+  (void)__builtin_cpu_is("arrowlake");
+  (void)__builtin_cpu_is("arrowlake-s");
+  (void)__builtin_cpu_is("lunarlake");
+  (void)__builtin_cpu_is("clearwaterforest");
+  (void)__builtin_cpu_is("pantherlake");
   (void)__builtin_cpu_is("haswell");
   (void)__builtin_cpu_is("icelake-client");
   (void)__builtin_cpu_is("icelake-server");
@@ -115,10 +187,13 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("ivybridge");
   (void)__builtin_cpu_is("knl");
   (void)__builtin_cpu_is("knm");
+  (void)__builtin_cpu_is("meteorlake");
   (void)__builtin_cpu_is("nehalem");
+  (void)__builtin_cpu_is("raptorlake");
   (void)__builtin_cpu_is("rocketlake");
   (void)__builtin_cpu_is("sandybridge");
   (void)__builtin_cpu_is("shanghai");
+  (void)__builtin_cpu_is("sierraforest");
   (void)__builtin_cpu_is("silvermont");
   (void)__builtin_cpu_is("skylake");
   (void)__builtin_cpu_is("skylake-avx512");
@@ -126,8 +201,10 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("tigerlake");
   (void)__builtin_cpu_is("sapphirerapids");
   (void)__builtin_cpu_is("tremont");
+  (void)__builtin_cpu_is("gracemont");
   (void)__builtin_cpu_is("westmere");
   (void)__builtin_cpu_is("znver1");
   (void)__builtin_cpu_is("znver2");
   (void)__builtin_cpu_is("znver3");
+  (void)__builtin_cpu_is("znver4");
 }

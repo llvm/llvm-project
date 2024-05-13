@@ -33,15 +33,12 @@ void PDLDialect::registerTypes() {
       >();
 }
 
-static Type parsePDLType(DialectAsmParser &parser) {
+static Type parsePDLType(AsmParser &parser) {
   StringRef typeTag;
-  if (parser.parseKeyword(&typeTag))
-    return Type();
   {
     Type genType;
-    auto parseResult = generatedTypeParser(parser.getBuilder().getContext(),
-                                           parser, typeTag, genType);
-    if (parseResult.hasValue())
+    auto parseResult = generatedTypeParser(parser, &typeTag, genType);
+    if (parseResult.has_value())
       return genType;
   }
 
@@ -54,15 +51,6 @@ static Type parsePDLType(DialectAsmParser &parser) {
   return Type();
 }
 
-Type PDLDialect::parseType(DialectAsmParser &parser) const {
-  return parsePDLType(parser);
-}
-
-void PDLDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  if (failed(generatedTypePrinter(type, printer)))
-    llvm_unreachable("unknown 'pdl' type");
-}
-
 //===----------------------------------------------------------------------===//
 // PDL Types
 //===----------------------------------------------------------------------===//
@@ -71,20 +59,26 @@ bool PDLType::classof(Type type) {
   return llvm::isa<PDLDialect>(type.getDialect());
 }
 
+Type pdl::getRangeElementTypeOrSelf(Type type) {
+  if (auto rangeType = llvm::dyn_cast<RangeType>(type))
+    return rangeType.getElementType();
+  return type;
+}
+
 //===----------------------------------------------------------------------===//
 // RangeType
 //===----------------------------------------------------------------------===//
 
-Type RangeType::parse(MLIRContext *context, DialectAsmParser &parser) {
+Type RangeType::parse(AsmParser &parser) {
   if (parser.parseLess())
     return Type();
 
-  llvm::SMLoc elementLoc = parser.getCurrentLocation();
+  SMLoc elementLoc = parser.getCurrentLocation();
   Type elementType = parsePDLType(parser);
   if (!elementType || parser.parseGreater())
     return Type();
 
-  if (elementType.isa<RangeType>()) {
+  if (llvm::isa<RangeType>(elementType)) {
     parser.emitError(elementLoc)
         << "element of pdl.range cannot be another range, but got"
         << elementType;
@@ -93,15 +87,15 @@ Type RangeType::parse(MLIRContext *context, DialectAsmParser &parser) {
   return RangeType::get(elementType);
 }
 
-void RangeType::print(DialectAsmPrinter &printer) const {
-  printer << "range<";
+void RangeType::print(AsmPrinter &printer) const {
+  printer << "<";
   (void)generatedTypePrinter(getElementType(), printer);
   printer << ">";
 }
 
 LogicalResult RangeType::verify(function_ref<InFlightDiagnostic()> emitError,
                                 Type elementType) {
-  if (!elementType.isa<PDLType>() || elementType.isa<RangeType>()) {
+  if (!llvm::isa<PDLType>(elementType) || llvm::isa<RangeType>(elementType)) {
     return emitError()
            << "expected element of pdl.range to be one of [!pdl.attribute, "
               "!pdl.operation, !pdl.type, !pdl.value], but got "

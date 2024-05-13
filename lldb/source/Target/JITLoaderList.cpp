@@ -15,7 +15,7 @@ using namespace lldb_private;
 
 JITLoaderList::JITLoaderList() : m_jit_loaders_vec(), m_jit_loaders_mutex() {}
 
-JITLoaderList::~JITLoaderList() {}
+JITLoaderList::~JITLoaderList() = default;
 
 void JITLoaderList::Append(const JITLoaderSP &jit_loader_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_jit_loaders_mutex);
@@ -24,9 +24,7 @@ void JITLoaderList::Append(const JITLoaderSP &jit_loader_sp) {
 
 void JITLoaderList::Remove(const JITLoaderSP &jit_loader_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_jit_loaders_mutex);
-  m_jit_loaders_vec.erase(std::remove(m_jit_loaders_vec.begin(),
-                                      m_jit_loaders_vec.end(), jit_loader_sp),
-                          m_jit_loaders_vec.end());
+  llvm::erase(m_jit_loaders_vec, jit_loader_sp);
 }
 
 size_t JITLoaderList::GetSize() const { return m_jit_loaders_vec.size(); }

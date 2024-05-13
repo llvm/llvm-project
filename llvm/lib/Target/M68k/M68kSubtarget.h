@@ -1,4 +1,4 @@
-//===-- M68kSubtarget.h - Define Subtarget for the M68k -----*- C++ -*-===//
+//===-- M68kSubtarget.h - Define Subtarget for the M68k ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,14 +11,17 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_CPU0_M68KSUBTARGET_H
-#define LLVM_LIB_TARGET_CPU0_M68KSUBTARGET_H
+#ifndef LLVM_LIB_TARGET_M68K_M68KSUBTARGET_H
+#define LLVM_LIB_TARGET_M68K_M68KSUBTARGET_H
 
 #include "M68kFrameLowering.h"
 #include "M68kISelLowering.h"
 #include "M68kInstrInfo.h"
 
-#include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -48,7 +51,10 @@ protected:
   enum SubtargetEnum { M00, M10, M20, M30, M40, M60 };
   SubtargetEnum SubtargetKind = M00;
 
-  BitVector UserReservedRegister;
+  enum FPKindEnum { M881, M882 };
+  std::optional<FPKindEnum> FPUKind;
+
+  std::bitset<M68k::NUM_TARGET_REGS> UserReservedRegister;
 
   InstrItineraryData InstrItins;
 
@@ -85,9 +91,12 @@ public:
   bool atLeastM68040() const { return SubtargetKind >= M40; }
   bool atLeastM68060() const { return SubtargetKind >= M60; }
 
-  bool useSmallSection() const { return UseSmallSection; }
+  /// Floating point support
+  bool hasFPU() const { return FPUKind.has_value(); }
+  bool atLeastM68881() const { return hasFPU() && *FPUKind >= M881; }
+  bool atLeastM68882() const { return hasFPU() && *FPUKind >= M882; }
 
-  bool abiUsesSoftFloat() const;
+  bool useSmallSection() const { return UseSmallSection; }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
@@ -120,7 +129,8 @@ public:
   /// Classify a global function reference for the current subtarget.
   unsigned char classifyGlobalFunctionReference(const GlobalValue *GV,
                                                 const Module &M) const;
-  unsigned char classifyGlobalFunctionReference(const GlobalValue *GV) const;
+  unsigned char
+  classifyGlobalFunctionReference(const GlobalValue *GV) const override;
 
   /// Classify a blockaddress reference for the current subtarget according to
   /// how we should reference it in a non-pcrel context.
@@ -159,7 +169,20 @@ public:
   const InstrItineraryData *getInstrItineraryData() const override {
     return &InstrItins;
   }
+
+protected:
+  // GlobalISel related APIs.
+  std::unique_ptr<CallLowering> CallLoweringInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+
+public:
+  const CallLowering *getCallLowering() const override;
+  InstructionSelector *getInstructionSelector() const override;
+  const LegalizerInfo *getLegalizerInfo() const override;
+  const RegisterBankInfo *getRegBankInfo() const override;
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68KSUBTARGET_H

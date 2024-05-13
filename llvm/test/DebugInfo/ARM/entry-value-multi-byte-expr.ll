@@ -1,4 +1,5 @@
 ; RUN: llc -debug-entry-values -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -force-instr-ref-livedebugvalues=1 -debug-entry-values -filetype=asm -o - %s | FileCheck %s
 
 ; Verify that the size operands of the DW_OP_GNU_entry_value operations are
 ; correct for the multi-byte DW_OP_regx expressions.
@@ -49,7 +50,7 @@ entry:
   call void @llvm.dbg.value(metadata double %a, metadata !17, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata double %b, metadata !18, metadata !DIExpression()), !dbg !19
   %add = fadd double %a, %b, !dbg !20
-  store double %add, double* @global, align 8, !dbg !20
+  store double %add, ptr @global, align 8, !dbg !20
   tail call arm_aapcs_vfpcc void @clobber(), !dbg !21
   ret i32 1, !dbg !22
 }

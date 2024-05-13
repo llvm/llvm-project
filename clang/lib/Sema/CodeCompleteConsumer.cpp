@@ -51,6 +51,7 @@ bool CodeCompletionContext::wantConstructorResults() const {
   case CCC_ParenthesizedExpression:
   case CCC_Symbol:
   case CCC_SymbolOrNewName:
+  case CCC_TopLevelOrExpression:
     return true;
 
   case CCC_TopLevel:
@@ -82,6 +83,8 @@ bool CodeCompletionContext::wantConstructorResults() const {
   case CCC_ObjCInterfaceName:
   case CCC_ObjCCategoryName:
   case CCC_IncludedFile:
+  case CCC_Attribute:
+  case CCC_ObjCClassForwardDecl:
     return false;
   }
 
@@ -161,8 +164,14 @@ StringRef clang::getCompletionKindString(CodeCompletionContext::Kind Kind) {
     return "ObjCCategoryName";
   case CCKind::CCC_IncludedFile:
     return "IncludedFile";
+  case CCKind::CCC_Attribute:
+    return "Attribute";
   case CCKind::CCC_Recovery:
     return "Recovery";
+  case CCKind::CCC_ObjCClassForwardDecl:
+    return "ObjCClassForwardDecl";
+  case CCKind::CCC_TopLevelOrExpression:
+    return "ReplTopLevel";
   }
   llvm_unreachable("Invalid CodeCompletionContext::Kind!");
 }
@@ -332,7 +341,7 @@ std::string CodeCompletionString::getAsString() const {
       break;
     }
   }
-  return OS.str();
+  return Result;
 }
 
 const char *CodeCompletionString::getTypedText() const {
@@ -341,6 +350,15 @@ const char *CodeCompletionString::getTypedText() const {
       return C.Text;
 
   return nullptr;
+}
+
+std::string CodeCompletionString::getAllTypedText() const {
+  std::string Res;
+  for (const Chunk &C : *this)
+    if (C.Kind == CK_TypedText)
+      Res += C.Text;
+
+  return Res;
 }
 
 const char *CodeCompletionAllocator::CopyString(const Twine &String) {
@@ -384,14 +402,13 @@ StringRef CodeCompletionTUInfo::getParentName(const DeclContext *DC) {
     SmallString<128> S;
     llvm::raw_svector_ostream OS(S);
     bool First = true;
-    for (unsigned I = Contexts.size(); I != 0; --I) {
+    for (const DeclContext *CurDC : llvm::reverse(Contexts)) {
       if (First)
         First = false;
       else {
         OS << "::";
       }
 
-      const DeclContext *CurDC = Contexts[I - 1];
       if (const auto *CatImpl = dyn_cast<ObjCCategoryImplDecl>(CurDC))
         CurDC = CatImpl->getCategoryDecl();
 
@@ -504,9 +521,103 @@ CodeCompleteConsumer::OverloadCandidate::getFunctionType() const {
 
   case CK_FunctionType:
     return Type;
+  case CK_FunctionProtoTypeLoc:
+    return ProtoTypeLoc.getTypePtr();
+  case CK_Template:
+  case CK_Aggregate:
+    return nullptr;
   }
 
   llvm_unreachable("Invalid CandidateKind!");
+}
+
+const FunctionProtoTypeLoc
+CodeCompleteConsumer::OverloadCandidate::getFunctionProtoTypeLoc() const {
+  if (Kind == CK_FunctionProtoTypeLoc)
+    return ProtoTypeLoc;
+  return FunctionProtoTypeLoc();
+}
+
+unsigned CodeCompleteConsumer::OverloadCandidate::getNumParams() const {
+  if (Kind == CK_Template)
+    return Template->getTemplateParameters()->size();
+
+  if (Kind == CK_Aggregate) {
+    unsigned Count =
+        std::distance(AggregateType->field_begin(), AggregateType->field_end());
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(AggregateType))
+      Count += CRD->getNumBases();
+    return Count;
+  }
+
+  if (const auto *FT = getFunctionType())
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(FT))
+      return FPT->getNumParams();
+
+  return 0;
+}
+
+QualType
+CodeCompleteConsumer::OverloadCandidate::getParamType(unsigned N) const {
+  if (Kind == CK_Aggregate) {
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(AggregateType)) {
+      if (N < CRD->getNumBases())
+        return std::next(CRD->bases_begin(), N)->getType();
+      N -= CRD->getNumBases();
+    }
+    for (const auto *Field : AggregateType->fields())
+      if (N-- == 0)
+        return Field->getType();
+    return QualType();
+  }
+
+  if (Kind == CK_Template) {
+    TemplateParameterList *TPL = getTemplate()->getTemplateParameters();
+    if (N < TPL->size())
+      if (const auto *D = dyn_cast<NonTypeTemplateParmDecl>(TPL->getParam(N)))
+        return D->getType();
+    return QualType();
+  }
+
+  if (const auto *FT = getFunctionType())
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(FT))
+      if (N < FPT->getNumParams())
+        return FPT->getParamType(N);
+  return QualType();
+}
+
+const NamedDecl *
+CodeCompleteConsumer::OverloadCandidate::getParamDecl(unsigned N) const {
+  if (Kind == CK_Aggregate) {
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(AggregateType)) {
+      if (N < CRD->getNumBases())
+        return std::next(CRD->bases_begin(), N)->getType()->getAsTagDecl();
+      N -= CRD->getNumBases();
+    }
+    for (const auto *Field : AggregateType->fields())
+      if (N-- == 0)
+        return Field;
+    return nullptr;
+  }
+
+  if (Kind == CK_Template) {
+    TemplateParameterList *TPL = getTemplate()->getTemplateParameters();
+    if (N < TPL->size())
+      return TPL->getParam(N);
+    return nullptr;
+  }
+
+  // Note that if we only have a FunctionProtoType, we don't have param decls.
+  if (const auto *FD = getFunction()) {
+    if (N < FD->param_size())
+      return FD->getParamDecl(N);
+  } else if (Kind == CK_FunctionProtoTypeLoc) {
+    if (N < ProtoTypeLoc.getNumParams()) {
+      return ProtoTypeLoc.getParam(N);
+    }
+  }
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -519,15 +630,16 @@ bool PrintingCodeCompleteConsumer::isResultFilteredOut(
     StringRef Filter, CodeCompletionResult Result) {
   switch (Result.Kind) {
   case CodeCompletionResult::RK_Declaration:
-    return !(Result.Declaration->getIdentifier() &&
-             Result.Declaration->getIdentifier()->getName().startswith(Filter));
+    return !(
+        Result.Declaration->getIdentifier() &&
+        Result.Declaration->getIdentifier()->getName().starts_with(Filter));
   case CodeCompletionResult::RK_Keyword:
-    return !StringRef(Result.Keyword).startswith(Filter);
+    return !StringRef(Result.Keyword).starts_with(Filter);
   case CodeCompletionResult::RK_Macro:
-    return !Result.Macro->getName().startswith(Filter);
+    return !Result.Macro->getName().starts_with(Filter);
   case CodeCompletionResult::RK_Pattern:
     return !(Result.Pattern->getTypedText() &&
-             StringRef(Result.Pattern->getTypedText()).startswith(Filter));
+             StringRef(Result.Pattern->getTypedText()).starts_with(Filter));
   }
   llvm_unreachable("Unknown code completion result Kind.");
 }
@@ -538,8 +650,7 @@ void PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(
   std::stable_sort(Results, Results + NumResults);
 
   if (!Context.getPreferredType().isNull())
-    OS << "PREFERRED-TYPE: " << Context.getPreferredType().getAsString()
-       << "\n";
+    OS << "PREFERRED-TYPE: " << Context.getPreferredType() << '\n';
 
   StringRef Filter = SemaRef.getPreprocessor().getCodeCompletionFilter();
   // Print the completions.
@@ -638,12 +749,12 @@ static std::string getOverloadAsString(const CodeCompletionString &CCS) {
       break;
     }
   }
-  return OS.str();
+  return Result;
 }
 
 void PrintingCodeCompleteConsumer::ProcessOverloadCandidates(
     Sema &SemaRef, unsigned CurrentArg, OverloadCandidate *Candidates,
-    unsigned NumCandidates, SourceLocation OpenParLoc) {
+    unsigned NumCandidates, SourceLocation OpenParLoc, bool Braced) {
   OS << "OPENING_PAREN_LOC: ";
   OpenParLoc.print(OS, SemaRef.getSourceManager());
   OS << "\n";
@@ -651,7 +762,7 @@ void PrintingCodeCompleteConsumer::ProcessOverloadCandidates(
   for (unsigned I = 0; I != NumCandidates; ++I) {
     if (CodeCompletionString *CCS = Candidates[I].CreateSignatureString(
             CurrentArg, SemaRef, getAllocator(), CCTUInfo,
-            includeBriefComments())) {
+            includeBriefComments(), Braced)) {
       OS << "OVERLOAD: " << getOverloadAsString(*CCS) << "\n";
     }
   }
@@ -672,7 +783,7 @@ void CodeCompletionResult::computeCursorKindAndAvailability(bool Accessible) {
       // Do nothing: Patterns can come with cursor kinds!
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case RK_Declaration: {
     // Set the availability based on attributes.
@@ -743,7 +854,8 @@ StringRef CodeCompletionResult::getOrderedName(std::string &Saved) const {
   if (IdentifierInfo *Id = Name.getAsIdentifierInfo())
     return Id->getName();
   if (Name.isObjCZeroArgSelector())
-    if (IdentifierInfo *Id = Name.getObjCSelector().getIdentifierInfoForSlot(0))
+    if (const IdentifierInfo *Id =
+            Name.getObjCSelector().getIdentifierInfoForSlot(0))
       return Id->getName();
 
   Saved = Name.getAsString();
@@ -755,7 +867,7 @@ bool clang::operator<(const CodeCompletionResult &X,
   std::string XSaved, YSaved;
   StringRef XStr = X.getOrderedName(XSaved);
   StringRef YStr = Y.getOrderedName(YSaved);
-  int cmp = XStr.compare_lower(YStr);
+  int cmp = XStr.compare_insensitive(YStr);
   if (cmp)
     return cmp < 0;
 

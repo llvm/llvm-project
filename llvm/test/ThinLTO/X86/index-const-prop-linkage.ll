@@ -9,8 +9,8 @@
 ; - common linkage
 ; - available_externally linkage
 ; - reference from @llvm.used
-; CHECK:      @llvm.used = appending global [1 x i32*] [i32* @g2]
-; CHECK-NEXT: @g1 = external dso_local global i32, align 4
+; CHECK:      @llvm.used = appending global [1 x ptr] [ptr @g2]
+; CHECK-NEXT: @g1 = external global i32, align 4
 ; CHECK-NEXT: @g2 = available_externally global i32 42, align 4
 ; CHECK-NEXT: @g3 = available_externally global i32 42, align 4
 
@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @foo()
 @g2 = external global i32
-@llvm.used = appending global [1 x i32*] [i32* @g2]
+@llvm.used = appending global [1 x ptr] [ptr @g2]
 
 define i32 @main() {
   %v = call i32 @foo()

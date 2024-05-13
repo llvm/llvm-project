@@ -1,5 +1,5 @@
-; RUN: opt -early-cse -earlycse-debug-hash -S < %s | FileCheck %s
-; RUN: opt -basic-aa -early-cse-memssa -S < %s | FileCheck %s
+; RUN: opt -passes=early-cse -earlycse-debug-hash -S < %s | FileCheck %s
+; RUN: opt -passes='early-cse<memssa>' -S < %s | FileCheck %s
 ; Same as GVN/edge.ll, but updated to reflect EarlyCSE's less powerful
 ; implementation.  EarlyCSE currently doesn't exploit equality comparisons
 ; against constants.
@@ -49,15 +49,15 @@ bb2:
 }
 
 declare void @g(i1)
-define void @f4(i8 * %x)  {
+define void @f4(ptr %x)  {
 ; CHECK-LABEL: define void @f4(
 bb0:
-  %y = icmp eq i8* null, %x
+  %y = icmp eq ptr null, %x
   br i1 %y, label %bb2, label %bb1
 bb1:
   br label %bb2
 bb2:
-  %zed = icmp eq i8* null, %x
+  %zed = icmp eq ptr null, %x
   call void @g(i1 %zed)
 ; CHECK: call void @g(i1 %y)
   ret void

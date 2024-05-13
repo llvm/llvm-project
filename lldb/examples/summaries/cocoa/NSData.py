@@ -13,16 +13,11 @@ import lldb.runtime.objc.objc_runtime
 import lldb.formatters.metrics
 import lldb.formatters.Logger
 
-try:
-    basestring
-except NameError:
-    basestring = str
-
 statistics = lldb.formatters.metrics.Metrics()
-statistics.add_metric('invalid_isa')
-statistics.add_metric('invalid_pointer')
-statistics.add_metric('unknown_class')
-statistics.add_metric('code_notrun')
+statistics.add_metric("invalid_isa")
+statistics.add_metric("invalid_pointer")
+statistics.add_metric("unknown_class")
+statistics.add_metric("code_notrun")
 
 # despite the similary to synthetic children providers, these classes are not
 # trying to provide anything but the length for an NSData, so they need not
@@ -30,7 +25,6 @@ statistics.add_metric('code_notrun')
 
 
 class NSConcreteData_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -39,13 +33,15 @@ class NSConcreteData_SummaryProvider:
         logger >> "NSConcreteData_SummaryProvider __init__"
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
         self.update()
 
     def update(self):
@@ -63,14 +59,14 @@ class NSConcreteData_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         logger >> "NSConcreteData_SummaryProvider length"
         size = self.valobj.CreateChildAtOffset(
-            "count", self.offset(), self.sys_params.types_cache.NSUInteger)
+            "count", self.offset(), self.sys_params.types_cache.NSUInteger
+        )
         logger >> str(size)
         logger >> str(size.GetValueAsUnsigned(0))
         return size.GetValueAsUnsigned(0)
 
 
 class NSDataUnknown_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -91,40 +87,46 @@ class NSDataUnknown_SummaryProvider:
         self.valobj.GetExpressionPath(stream)
         logger >> stream.GetData()
         num_children_vo = self.valobj.CreateValueFromExpression(
-            "count", "(int)[" + stream.GetData() + " length]")
+            "count", "(int)[" + stream.GetData() + " length]"
+        )
         logger >> "still in after expression: " + str(num_children_vo)
         if num_children_vo.IsValid():
-            logger >> "wow - expr output is valid: " + \
-                str(num_children_vo.GetValueAsUnsigned())
+            logger >> "wow - expr output is valid: " + str(
+                num_children_vo.GetValueAsUnsigned()
+            )
             return num_children_vo.GetValueAsUnsigned(0)
         logger >> "invalid expr output - too bad"
-        return '<variable is not NSData>'
+        return "<variable is not NSData>"
 
 
 def GetSummary_Impl(valobj):
     global statistics
     logger = lldb.formatters.Logger.Logger()
     logger >> "NSData GetSummary_Impl"
-    class_data, wrapper = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
-        valobj, statistics)
+    (
+        class_data,
+        wrapper,
+    ) = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
+        valobj, statistics
+    )
     if wrapper:
         logger >> "got a wrapper summary - using it"
         return wrapper
 
     name_string = class_data.class_name()
     logger >> "class name: " + name_string
-    if name_string == 'NSConcreteData' or \
-       name_string == 'NSConcreteMutableData' or \
-       name_string == '__NSCFData':
+    if (
+        name_string == "NSConcreteData"
+        or name_string == "NSConcreteMutableData"
+        or name_string == "__NSCFData"
+    ):
         wrapper = NSConcreteData_SummaryProvider(valobj, class_data.sys_params)
-        statistics.metric_hit('code_notrun', valobj)
+        statistics.metric_hit("code_notrun", valobj)
     else:
         wrapper = NSDataUnknown_SummaryProvider(valobj, class_data.sys_params)
         statistics.metric_hit(
-            'unknown_class',
-            valobj.GetName() +
-            " seen as " +
-            name_string)
+            "unknown_class", valobj.GetName() + " seen as " + name_string
+        )
     return wrapper
 
 
@@ -140,16 +142,16 @@ def NSData_SummaryProvider(valobj, dict):
             summary = None
         logger >> "got a summary: it is " + str(summary)
         if summary is None:
-            summary = '<variable is not NSData>'
-        elif isinstance(summary, basestring):
+            summary = "<variable is not NSData>"
+        elif isinstance(summary, str):
             pass
         else:
             if summary == 1:
-                summary = '1 byte'
+                summary = "1 byte"
             else:
-                summary = str(summary) + ' bytes'
+                summary = str(summary) + " bytes"
         return summary
-    return 'Summary Unavailable'
+    return "Summary Unavailable"
 
 
 def NSData_SummaryProvider2(valobj, dict):
@@ -159,8 +161,8 @@ def NSData_SummaryProvider2(valobj, dict):
     logger >> "found a summary provider, it is: " + str(provider)
     if provider is not None:
         if isinstance(
-                provider,
-                lldb.runtime.objc.objc_runtime.SpecialSituation_Description):
+            provider, lldb.runtime.objc.objc_runtime.SpecialSituation_Description
+        ):
             return provider.message()
         try:
             summary = provider.length()
@@ -168,8 +170,8 @@ def NSData_SummaryProvider2(valobj, dict):
             summary = None
         logger >> "got a summary: it is " + str(summary)
         if summary is None:
-            summary = '<variable is not CFData>'
-        elif isinstance(summary, basestring):
+            summary = "<variable is not CFData>"
+        elif isinstance(summary, str):
             pass
         else:
             if summary == 1:
@@ -177,11 +179,11 @@ def NSData_SummaryProvider2(valobj, dict):
             else:
                 summary = '@"' + str(summary) + ' bytes"'
         return summary
-    return 'Summary Unavailable'
+    return "Summary Unavailable"
 
 
 def __lldb_init_module(debugger, dict):
+    debugger.HandleCommand("type summary add -F NSData.NSData_SummaryProvider NSData")
     debugger.HandleCommand(
-        "type summary add -F NSData.NSData_SummaryProvider NSData")
-    debugger.HandleCommand(
-        "type summary add -F NSData.NSData_SummaryProvider2 CFDataRef CFMutableDataRef")
+        "type summary add -F NSData.NSData_SummaryProvider2 CFDataRef CFMutableDataRef"
+    )

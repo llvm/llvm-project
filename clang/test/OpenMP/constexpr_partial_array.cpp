@@ -5,6 +5,6 @@
 char a;
 bool b() {
   static constexpr bool c[27]{1};
-  // CHECK: getelementptr inbounds [27 x i8], [27 x i8]* bitcast (<{ i8, [26 x i8] }>* [[C_VAR_VAL]] to [27 x i8]*),
+  // CHECK: getelementptr inbounds [27 x i8], ptr [[C_VAR_VAL]],
   return c[a];
 }

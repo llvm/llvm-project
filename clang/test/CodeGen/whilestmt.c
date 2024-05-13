@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -o -
 
-int bar();
-int foo() {
+int bar(void);
+int foo(void) {
   int i;
   i = 1 + 2;
   while(1) {
@@ -12,7 +12,7 @@ int foo() {
 }
 
 
-int foo1() {
+int foo1(void) {
   int i;
   i = 1 + 2;
   while(1) {
@@ -25,7 +25,7 @@ int foo1() {
 }
 
 
-int foo2() {
+int foo2(void) {
   int i;
   i = 1 + 2;
   while(1) {
@@ -38,7 +38,7 @@ int foo2() {
 }
 
 
-int foo3() {
+int foo3(void) {
   int i;
   i = 1 + 2;
   while(1) {
@@ -50,7 +50,7 @@ int foo3() {
 }
 
 
-int foo4() {
+int foo4(void) {
   int i;
   i = 1 + 2;
   while(1) {

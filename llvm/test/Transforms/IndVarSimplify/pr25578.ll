@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 declare void @use(i64 %x)
@@ -13,7 +13,7 @@ L1_header:
 
 ; CHECK: L2_header:
 ; CHECK: %[[INDVAR:.*]] = phi i64
-; CHECK: %[[TRUNC:.*]] = trunc i64 %[[INDVAR]] to i32
+; CHECK: %[[TRUNC:.*]] = trunc nuw nsw i64 %[[INDVAR]] to i32
 L2_header:
   %i = phi i32 [ 0, %L1_header ], [ %i_next, %L2_latch ]
   %i_prom = sext i32 %i to i64

@@ -1,5 +1,6 @@
-; RUN: opt %loadPolly -polly-delicm -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly "-passes=scop(print<polly-delicm>)" -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-delicm -disable-output < %s
+; RUN: opt %loadPolly -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly "-passes=scop(print<polly-delicm>)" -disable-output < %s | FileCheck %s
 ;
 ; Simple test for the existence of the DeLICM pass.
 ;
@@ -8,7 +9,7 @@
 ;   body: A[0] = 0.0;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -18,7 +19,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 0.0, double* %A
+      store double 0.0, ptr %A
       br label %inc
 
 inc:

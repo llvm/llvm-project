@@ -1,27 +1,27 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fasm-blocks -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -Wno-strict-prototypes -fasm-blocks -emit-llvm -o - | FileCheck %s
 
-void t1() {
+void t1(void) {
   int var = 10;
   __asm mov rax, offset var ; rax = address of myvar
 // CHECK: t1
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: mov rax, $0
-// CHECK-SAME: "r,~{rax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK-SAME: "r,~{rax},~{dirflag},~{fpsr},~{flags}"(ptr %{{.*}})
 }
 
-void t2() {
+void t2(void) {
   int var = 10;
   __asm mov qword ptr [eax], offset var
 // CHECK: t2
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: mov qword ptr [eax], $0
-// CHECK-SAME: "r,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK-SAME: "r,~{dirflag},~{fpsr},~{flags}"(ptr %{{.*}})
 }
 
 struct t3_type { int a, b; };
 
-int t3() {
+int t3(void) {
   struct t3_type foo;
   foo.a = 1;
   foo.b = 2;
@@ -36,10 +36,10 @@ int t3() {
 // CHECK-SAME: lea ebx, $0
 // CHECK-SAME: mov eax, [ebx]
 // CHECK-SAME: mov [ebx + $$4], ecx
-// CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(%struct.t3_type* %{{.*}})
+// CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.t3_type) %{{.*}})
 }
 
-int t4() {
+int t4(void) {
   struct t3_type foo;
   foo.a = 1;
   foo.b = 2;
@@ -56,19 +56,31 @@ int t4() {
 // CHECK-SAME: lea ebx, $0
 // CHECK-SAME: mov eax, [ebx]
 // CHECK-SAME: mov [ebx + $$4], ecx
-// CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(%struct.t3_type* %{{.*}})
+// CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.t3_type) %{{.*}})
 }
 
 void bar() {}
+static void (*fptr)();
 
-void t5() {
+void t5(void) {
   __asm {
     call bar
     jmp bar
+    call fptr
+    jmp fptr
   }
   // CHECK: t5
   // CHECK: call void asm sideeffect inteldialect
-  // CHECK-SAME: call qword ptr ${0:P}
-  // CHECK-SAME: jmp qword ptr ${1:P}
-  // CHECK-SAME: "*m,*m,~{dirflag},~{fpsr},~{flags}"(void (...)* bitcast (void ()* @bar to void (...)*), void (...)* bitcast (void ()* @bar to void (...)*))
+  // CHECK-SAME: call ${0:P}
+  // CHECK-SAME: jmp ${1:P}
+  // CHECK-SAME: call $2
+  // CHECK-SAME: jmp $3
+  // CHECK-SAME: "*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void (...)) @bar, ptr elementtype(void (...)) @bar, ptr elementtype(ptr) @fptr, ptr elementtype(ptr) @fptr)
+}
+
+void t47(void) {
+  // CHECK-LABEL: define{{.*}} void @t47
+  int arr[1000];
+  __asm movdir64b rax, zmmword ptr [arr]
+  // CHECK: call void asm sideeffect inteldialect "movdir64b rax, zmmword ptr $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype([1000 x i32]) %arr)
 }

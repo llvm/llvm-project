@@ -10,42 +10,38 @@
 
 // default_delete
 
+// convert constructor
+
 #include <memory>
 #include <cassert>
 
 #include "test_macros.h"
+#include "unique_ptr_test_helper.h"
 
-struct A
-{
-    static int count;
-    A() {++count;}
-    A(const A&) {++count;}
-    virtual ~A() {--count;}
-};
-
-int A::count = 0;
-
-struct B
-    : public A
-{
-    static int count;
-    B() {++count;}
-    B(const B& other) : A(other) {++count;}
-    virtual ~B() {--count;}
-};
-
-int B::count = 0;
-
-int main(int, char**)
-{
-    std::default_delete<B> d2;
-    std::default_delete<A> d1 = d2;
-    A* p = new B;
+TEST_CONSTEXPR_CXX23 bool test() {
+  std::default_delete<B> d2;
+  std::default_delete<A> d1 = d2;
+  A* p                      = new B;
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     assert(A::count == 1);
     assert(B::count == 1);
-    d1(p);
+  }
+
+  d1(p);
+
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     assert(A::count == 0);
     assert(B::count == 0);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
 
   return 0;
 }

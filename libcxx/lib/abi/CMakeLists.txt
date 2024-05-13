@@ -31,18 +31,23 @@ function(cxx_abi_list_identifier result triple abi_library abi_version unstable 
     list(APPEND abi_properties "noexceptions")
   endif()
   if (${new_delete_in_libcxx})
-    list(APPEND abi_properties "new_in_libcxx")
+    list(APPEND abi_properties "new")
   else()
-    list(APPEND abi_properties "no_new_in_libcxx")
+    list(APPEND abi_properties "nonew")
   endif()
 
   list(JOIN abi_properties "." tmp)
   set(${result} "${tmp}" PARENT_SCOPE)
 endfunction()
 
+if (CMAKE_CXX_COMPILER_TARGET)
+  set(triple "${CMAKE_CXX_COMPILER_TARGET}")
+else()
+  set(triple "${LLVM_DEFAULT_TARGET_TRIPLE}")
+endif()
 cxx_abi_list_identifier(abi_list_identifier
-  "${TARGET_TRIPLE}"
-  "${LIBCXX_CXX_ABI_LIBNAME}"
+  "${triple}"
+  "${LIBCXX_CXX_ABI}"
   "${LIBCXX_ABI_VERSION}"
   "${LIBCXX_ABI_UNSTABLE}"
   "${LIBCXX_ENABLE_EXCEPTIONS}"

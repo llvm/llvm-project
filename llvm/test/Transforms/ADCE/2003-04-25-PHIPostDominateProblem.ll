@@ -2,8 +2,8 @@
 ; entries for it's postdominator.  But I think this can only happen when the 
 ; PHI node is dead, so we just avoid patching up dead PHI nodes.
 
-; RUN: opt < %s -adce                    -S | FileCheck %s
-; RUN: opt < %s -adce -adce-remove-loops -S | FileCheck %s
+; RUN: opt < %s -passes=adce                    -S | FileCheck %s
+; RUN: opt < %s -passes=adce -adce-remove-loops -S | FileCheck %s
 
 target datalayout = "e-p:32:32"
 
@@ -28,7 +28,7 @@ else:           ; preds = %no_exit
 
 endif:          ; preds = %else, %then
         %k.0 = phi i32 [ %dec, %else ], [ 0, %then ]            ; <i32> [#uses=1]
-        store i32 2, i32* null
+        store i32 2, ptr null
         br label %loopentry
 
 return:         ; preds = %loopentry

@@ -18,4 +18,7 @@ static_assert(S(false), "not so fast"); // expected-error {{not so fast}}
 static_assert(T(), "");
 static_assert(U(), ""); // expected-error {{ambiguous}}
 
-static_assert(false, L"\x14hi" "!" R"x(")x"); // expected-error {{static_assert failed L"\024hi!\""}}
+static_assert(false, L"\x14hi" // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                               // expected-error {{invalid escape sequence '\x14' in an unevaluated string literal}}
+                     "!"
+                     R"x(")x");

@@ -20,10 +20,16 @@
 namespace llvm {
 
 /// Optimize scalar/vector interactions in IR using target cost models.
-struct VectorCombinePass : public PassInfoMixin<VectorCombinePass> {
+class VectorCombinePass : public PassInfoMixin<VectorCombinePass> {
+  /// If true, only perform beneficial early IR transforms. Do not introduce new
+  /// vector operations.
+  bool TryEarlyFoldsOnly;
+
 public:
+  VectorCombinePass(bool TryEarlyFoldsOnly = false)
+      : TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
+
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
-
 }
 #endif // LLVM_TRANSFORMS_VECTORIZE_VECTORCOMBINE_H

@@ -10,8 +10,8 @@
 
 ; CHECK: move.l %a1, %a0
 move.l %a1, %a0
-; CHECK: add.l %a0, %a1
-add.l %a0, %a1
+; CHECK: adda.l %a0, %a1
+adda.l %a0, %a1
 ; CHECK: addx.l %d1, %d2
 addx.l %d1, %d2
 ; CHECK: sub.w #4, %d1
@@ -32,17 +32,21 @@ seq %d0
 sgt %d0
 ; CHECK: lea (80,%a0), %a1
 lea $50(%a0), %a1
-; CHECK: lsl.l #8, %a1
-lsl.l #8, %a1
-; CHECK: lsr.l #8, %a1
-lsr.l #8, %a1
-; CHECK: asr.l #8, %a1
-asr.l #8, %a1
-; CHECK: rol.l #8, %a1
-rol.l #8, %a1
-; CHECK: ror.l #8, %a1
-ror.l #8, %a1
+; CHECK: lsl.l #8, %d1
+lsl.l #8, %d1
+; CHECK: lsr.l #8, %d1
+lsr.l #8, %d1
+; CHECK: asr.l #8, %d1
+asr.l #8, %d1
+; CHECK: rol.l #8, %d1
+rol.l #8, %d1
+; CHECK: ror.l #8, %d1
+ror.l #8, %d1
 ; CHECK: nop
 nop
 ; CHECK: rts
 rts
+; CHECK: movem.l %d0-%d6/%a0, (%sp)
+movem.l %d0-%d6/%a0, (%sp)
+; CHECK: movem.l (10,%sp), %d0-%d6/%a0
+movem.l (10,%sp), %d0-%d6/%a0

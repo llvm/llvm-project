@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s
 
 ; CHECK: {{^}}test:
 ; CHECK: BIT_ALIGN_INT T{{[0-9]}}.X
@@ -7,7 +7,7 @@
 ; CHECK: BIT_ALIGN_INT T{{[0-9]}}.Z
 ; CHECK: BIT_ALIGN_INT * T{{[0-9]}}.W
 
-define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %x_arg, i32 %y_arg, i32 %z_arg, i32 %w_arg, i32 %e) {
+define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %x_arg, i32 %y_arg, i32 %z_arg, i32 %w_arg, i32 %e) {
 entry:
   %shl = sub i32 32, %e
   %x = add i32 %x_arg, 1
@@ -29,6 +29,6 @@ entry:
   %xy = or i32 %x.2, %y.2
   %zw = or i32 %z.2, %w.2
   %xyzw = or i32 %xy, %zw
-  store i32 %xyzw, i32 addrspace(1)* %out
+  store i32 %xyzw, ptr addrspace(1) %out
   ret void
 }

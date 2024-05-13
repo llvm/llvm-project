@@ -1,8 +1,7 @@
 // Test that lsan handles tls correctly for many threads
-// RUN: LSAN_BASE="report_objects=1:use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE:"use_tls=0" not %run %t 2>&1 | FileCheck %s
-// RUN: %env_lsan_opts=$LSAN_BASE:"use_tls=1" %run %t 2>&1
+// RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0:use_tls=0" not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0:use_tls=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
 // On glibc, this requires the range returned by GetTLS to include
@@ -10,7 +9,7 @@
 // UNSUPPORTED: arm-linux, armhf-linux
 
 // TSD on NetBSD does not use TLS
-// UNSUPPORTED: netbsd
+// UNSUPPORTED: target={{.*netbsd.*}}
 
 #include <assert.h>
 #include <limits.h>
@@ -75,4 +74,4 @@ int main() {
 }
 
 // CHECK: LeakSanitizer: detected memory leaks
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:

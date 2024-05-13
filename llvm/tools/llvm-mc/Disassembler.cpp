@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -21,20 +20,19 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
 typedef std::pair<std::vector<unsigned char>, std::vector<const char *>>
     ByteArrayTy;
 
-static bool PrintInsts(const MCDisassembler &DisAsm,
-                       const ByteArrayTy &Bytes,
-                       SourceMgr &SM, raw_ostream &Out,
-                       MCStreamer &Streamer, bool InAtomicBlock,
+static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
+                       SourceMgr &SM, MCStreamer &Streamer, bool InAtomicBlock,
                        const MCSubtargetInfo &STI) {
   ArrayRef<uint8_t> Data(Bytes.first.data(), Bytes.first.size());
 
@@ -65,7 +63,7 @@ static bool PrintInsts(const MCDisassembler &DisAsm,
       SM.PrintMessage(SMLoc::getFromPointer(Bytes.second[Index]),
                       SourceMgr::DK_Warning,
                       "potentially undefined instruction encoding");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case MCDisassembler::Success:
       Streamer.emitInstruction(Inst, STI);
@@ -132,7 +130,7 @@ static bool ByteArrayFromString(ByteArrayTy &ByteArray,
 int Disassembler::disassemble(const Target &T, const std::string &Triple,
                               MCSubtargetInfo &STI, MCStreamer &Streamer,
                               MemoryBuffer &Buffer, SourceMgr &SM,
-                              MCContext &Ctx, raw_ostream &Out,
+                              MCContext &Ctx,
                               const MCTargetOptions &MCOptions) {
 
   std::unique_ptr<const MCRegisterInfo> MRI(T.createMCRegInfo(Triple));
@@ -156,7 +154,7 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
   }
 
   // Set up initial section manually here
-  Streamer.InitSections(false);
+  Streamer.initSections(false, STI);
 
   bool ErrorOccurred = false;
 
@@ -193,8 +191,8 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
     ErrorOccurred |= ByteArrayFromString(ByteArray, Str, SM);
 
     if (!ByteArray.first.empty())
-      ErrorOccurred |= PrintInsts(*DisAsm, ByteArray, SM, Out, Streamer,
-                                  InAtomicBlock, STI);
+      ErrorOccurred |=
+          PrintInsts(*DisAsm, ByteArray, SM, Streamer, InAtomicBlock, STI);
   }
 
   if (InAtomicBlock) {

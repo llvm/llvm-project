@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef SET_ALLOCATOR_REQUIREMENT_TEST_TEMPLATES_H
 #define SET_ALLOCATOR_REQUIREMENT_TEST_TEMPLATES_H
 
@@ -20,6 +21,7 @@
 
 
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 #include "count_new.h"

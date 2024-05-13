@@ -10,11 +10,7 @@
 
 // class multiset
 
-// explicit multiset(const value_compare& comp);
-// value_compare and key_compare are the same type for set/multiset
-
-// key_compare    key_comp() const;
-// value_compare value_comp() const;
+// explicit multiset(const key_compare& comp);
 
 #include <set>
 #include <cassert>

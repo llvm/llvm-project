@@ -9,7 +9,6 @@
 //  This file implements semantic analysis member access expressions.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Sema/Overload.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -18,9 +17,11 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 
 using namespace clang;
 using namespace sema;
@@ -46,7 +47,7 @@ enum IMAKind {
 
   /// The reference may be to an instance member, but it might be invalid if
   /// so, because the context is not an instance method.
-  IMA_Mixed_StaticContext,
+  IMA_Mixed_StaticOrExplicitContext,
 
   /// The reference may be to an instance member, but it is invalid if
   /// so, because the context is from an unrelated class.
@@ -61,9 +62,13 @@ enum IMAKind {
   /// The reference is a contextually-permitted abstract member reference.
   IMA_Abstract,
 
+  /// Whether the context is static is dependent on the enclosing template (i.e.
+  /// in a dependent class scope explicit specialization).
+  IMA_Dependent,
+
   /// The reference may be to an unresolved using declaration and the
   /// context is not an instance method.
-  IMA_Unresolved_StaticContext,
+  IMA_Unresolved_StaticOrExplicitContext,
 
   // The reference refers to a field which is not a member of the containing
   // class, which is allowed because we're in C++11 mode and the context is
@@ -72,7 +77,7 @@ enum IMAKind {
 
   /// All possible referrents are instance members and the current
   /// context is not an instance method.
-  IMA_Error_StaticContext,
+  IMA_Error_StaticOrExplicitContext,
 
   /// All possible referrents are instance members of an unrelated
   /// class.
@@ -91,11 +96,25 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
 
   DeclContext *DC = SemaRef.getFunctionLevelDeclContext();
 
-  bool isStaticContext = SemaRef.CXXThisTypeOverride.isNull() &&
-    (!isa<CXXMethodDecl>(DC) || cast<CXXMethodDecl>(DC)->isStatic());
+  bool couldInstantiateToStatic = false;
+  bool isStaticOrExplicitContext = SemaRef.CXXThisTypeOverride.isNull();
 
-  if (R.isUnresolvableResult())
-    return isStaticContext ? IMA_Unresolved_StaticContext : IMA_Unresolved;
+  if (auto *MD = dyn_cast<CXXMethodDecl>(DC)) {
+    if (MD->isImplicitObjectMemberFunction()) {
+      isStaticOrExplicitContext = false;
+      // A dependent class scope function template explicit specialization
+      // that is neither declared 'static' nor with an explicit object
+      // parameter could instantiate to a static or non-static member function.
+      couldInstantiateToStatic = MD->getDependentSpecializationInfo();
+    }
+  }
+
+  if (R.isUnresolvableResult()) {
+    if (couldInstantiateToStatic)
+      return IMA_Dependent;
+    return isStaticOrExplicitContext ? IMA_Unresolved_StaticOrExplicitContext
+                                     : IMA_Unresolved;
+  }
 
   // Collect all the declaring classes of instance members we find.
   bool hasNonInstance = false;
@@ -119,6 +138,9 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
   // member reference.
   if (Classes.empty())
     return IMA_Static;
+
+  if (couldInstantiateToStatic)
+    return IMA_Dependent;
 
   // C++11 [expr.prim.general]p12:
   //   An id-expression that denotes a non-static data member or non-static
@@ -144,6 +166,7 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
 
   case Sema::ExpressionEvaluationContext::DiscardedStatement:
   case Sema::ExpressionEvaluationContext::ConstantEvaluated:
+  case Sema::ExpressionEvaluationContext::ImmediateFunctionContext:
   case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
   case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
     break;
@@ -151,19 +174,22 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
 
   // If the current context is not an instance method, it can't be
   // an implicit member reference.
-  if (isStaticContext) {
+  if (isStaticOrExplicitContext) {
     if (hasNonInstance)
-      return IMA_Mixed_StaticContext;
+      return IMA_Mixed_StaticOrExplicitContext;
 
     return AbstractInstanceResult ? AbstractInstanceResult
-                                  : IMA_Error_StaticContext;
+                                  : IMA_Error_StaticOrExplicitContext;
   }
 
   CXXRecordDecl *contextClass;
-  if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(DC))
+  if (auto *MD = dyn_cast<CXXMethodDecl>(DC))
     contextClass = MD->getParent()->getCanonicalDecl();
+  else if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
+    contextClass = RD;
   else
-    contextClass = cast<CXXRecordDecl>(DC);
+    return AbstractInstanceResult ? AbstractInstanceResult
+                                  : IMA_Error_StaticOrExplicitContext;
 
   // [class.mfct.non-static]p3:
   // ...is used in the body of a non-static member function of class X,
@@ -210,14 +236,31 @@ static void diagnoseInstanceReference(Sema &SemaRef,
   CXXRecordDecl *RepClass = dyn_cast<CXXRecordDecl>(Rep->getDeclContext());
 
   bool InStaticMethod = Method && Method->isStatic();
+  bool InExplicitObjectMethod =
+      Method && Method->isExplicitObjectMemberFunction();
   bool IsField = isa<FieldDecl>(Rep) || isa<IndirectFieldDecl>(Rep);
 
+  std::string Replacement;
+  if (InExplicitObjectMethod) {
+    DeclarationName N = Method->getParamDecl(0)->getDeclName();
+    if (!N.isEmpty()) {
+      Replacement.append(N.getAsString());
+      Replacement.append(".");
+    }
+  }
   if (IsField && InStaticMethod)
     // "invalid use of member 'x' in static member function"
-    SemaRef.Diag(Loc, diag::err_invalid_member_use_in_static_method)
-        << Range << nameInfo.getName();
-  else if (ContextClass && RepClass && SS.isEmpty() && !InStaticMethod &&
-           !RepClass->Equals(ContextClass) && RepClass->Encloses(ContextClass))
+    SemaRef.Diag(Loc, diag::err_invalid_member_use_in_method)
+        << Range << nameInfo.getName() << /*static*/ 0;
+  else if (IsField && InExplicitObjectMethod) {
+    auto Diag = SemaRef.Diag(Loc, diag::err_invalid_member_use_in_method)
+                << Range << nameInfo.getName() << /*explicit*/ 1;
+    if (!Replacement.empty())
+      Diag << FixItHint::CreateInsertion(Loc, Replacement);
+  } else if (ContextClass && RepClass && SS.isEmpty() &&
+             !InExplicitObjectMethod && !InStaticMethod &&
+             !RepClass->Equals(ContextClass) &&
+             RepClass->Encloses(ContextClass))
     // Unqualified lookup in a non-static member function found a member of an
     // enclosing class.
     SemaRef.Diag(Loc, diag::err_nested_non_static_member_use)
@@ -225,39 +268,72 @@ static void diagnoseInstanceReference(Sema &SemaRef,
   else if (IsField)
     SemaRef.Diag(Loc, diag::err_invalid_non_static_member_use)
       << nameInfo.getName() << Range;
-  else
+  else if (!InExplicitObjectMethod)
     SemaRef.Diag(Loc, diag::err_member_call_without_object)
-      << Range;
+        << Range << /*static*/ 0;
+  else {
+    if (const auto *Tpl = dyn_cast<FunctionTemplateDecl>(Rep))
+      Rep = Tpl->getTemplatedDecl();
+    const auto *Callee = cast<CXXMethodDecl>(Rep);
+    auto Diag = SemaRef.Diag(Loc, diag::err_member_call_without_object)
+                << Range << Callee->isExplicitObjectMemberFunction();
+    if (!Replacement.empty())
+      Diag << FixItHint::CreateInsertion(Loc, Replacement);
+  }
+}
+
+bool Sema::isPotentialImplicitMemberAccess(const CXXScopeSpec &SS,
+                                           LookupResult &R,
+                                           bool IsAddressOfOperand) {
+  if (!getLangOpts().CPlusPlus)
+    return false;
+  else if (R.empty() || !R.begin()->isCXXClassMember())
+    return false;
+  else if (!IsAddressOfOperand)
+    return true;
+  else if (!SS.isEmpty())
+    return false;
+  else if (R.isOverloadedResult())
+    return false;
+  else if (R.isUnresolvableResult())
+    return true;
+  else
+    return isa<FieldDecl, IndirectFieldDecl, MSPropertyDecl>(R.getFoundDecl());
 }
 
 /// Builds an expression which might be an implicit member expression.
 ExprResult Sema::BuildPossibleImplicitMemberExpr(
     const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
-    const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
-    UnresolvedLookupExpr *AsULE) {
-  switch (ClassifyImplicitMemberAccess(*this, R)) {
+    const TemplateArgumentListInfo *TemplateArgs, const Scope *S) {
+  switch (IMAKind Classification = ClassifyImplicitMemberAccess(*this, R)) {
   case IMA_Instance:
-    return BuildImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs, true, S);
-
   case IMA_Mixed:
   case IMA_Mixed_Unrelated:
   case IMA_Unresolved:
-    return BuildImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs, false,
-                                   S);
-
+    return BuildImplicitMemberExpr(
+        SS, TemplateKWLoc, R, TemplateArgs,
+        /*IsKnownInstance=*/Classification == IMA_Instance, S);
   case IMA_Field_Uneval_Context:
     Diag(R.getNameLoc(), diag::warn_cxx98_compat_non_static_member_use)
       << R.getLookupNameInfo().getName();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case IMA_Static:
   case IMA_Abstract:
-  case IMA_Mixed_StaticContext:
-  case IMA_Unresolved_StaticContext:
+  case IMA_Mixed_StaticOrExplicitContext:
+  case IMA_Unresolved_StaticOrExplicitContext:
     if (TemplateArgs || TemplateKWLoc.isValid())
-      return BuildTemplateIdExpr(SS, TemplateKWLoc, R, false, TemplateArgs);
-    return AsULE ? AsULE : BuildDeclarationNameExpr(SS, R, false);
+      return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*RequiresADL=*/false,
+                                 TemplateArgs);
+    return BuildDeclarationNameExpr(SS, R, /*NeedsADL=*/false,
+                                    /*AcceptInvalidDecl=*/false);
+  case IMA_Dependent:
+    R.suppressDiagnostics();
+    return UnresolvedLookupExpr::Create(
+        Context, R.getNamingClass(), SS.getWithLocInContext(Context),
+        TemplateKWLoc, R.getLookupNameInfo(), /*RequiresADL=*/false,
+        TemplateArgs, R.begin(), R.end(), /*KnownDependent=*/true);
 
-  case IMA_Error_StaticContext:
+  case IMA_Error_StaticOrExplicitContext:
   case IMA_Error_Unrelated:
     diagnoseInstanceReference(*this, SS, R.getRepresentativeDecl(),
                               R.getLookupNameInfo());
@@ -340,7 +416,8 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
 
     // Emit a warning if an rgba selector is used earlier than OpenCL C 3.0.
     if (HasRGBA || (*compStr && IsRGBA(*compStr))) {
-      if (S.getLangOpts().OpenCL && S.getLangOpts().OpenCLVersion < 300) {
+      if (S.getLangOpts().OpenCL &&
+          S.getLangOpts().getOpenCLCompatibleVersion() < 300) {
         const char *DiagBegin = HasRGBA ? CompName->getNameStart() : compStr;
         S.Diag(OpLoc, diag::ext_opencl_ext_vector_type_rgba_selector)
             << StringRef(DiagBegin, 1) << SourceRange(CompLoc);
@@ -408,7 +485,8 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
   if (CompSize == 1)
     return vecType->getElementType();
 
-  if (HasRepeated) VK = VK_RValue;
+  if (HasRepeated)
+    VK = VK_PRValue;
 
   QualType VT = S.Context.getExtVectorType(vecType->getElementType(), CompSize);
   // Now look up the TypeDefDecl from the vector type. Without this,
@@ -501,9 +579,12 @@ Sema::ActOnDependentMemberExpr(Expr *BaseExpr, QualType BaseType,
     }
   }
 
-  assert(BaseType->isDependentType() ||
-         NameInfo.getName().isDependentName() ||
-         isDependentScopeSpecifier(SS));
+  assert(BaseType->isDependentType() || NameInfo.getName().isDependentName() ||
+         isDependentScopeSpecifier(SS) ||
+         (TemplateArgs && llvm::any_of(TemplateArgs->arguments(),
+                                       [](const TemplateArgumentLoc &Arg) {
+                                         return Arg.getArgument().isDependent();
+                                       })));
 
   // Get the type being accessed in BaseType.  If this is an arrow, the BaseExpr
   // must have pointer type, and the accessed type is the pointee.
@@ -563,10 +644,7 @@ bool Sema::CheckQualifiedMemberReference(Expr *BaseExpr,
       return false;
 
     // Note that we use the DC of the decl, not the underlying decl.
-    DeclContext *DC = (*I)->getDeclContext();
-    while (DC->isTransparentContext())
-      DC = DC->getParent();
-
+    DeclContext *DC = (*I)->getDeclContext()->getNonTransparentContext();
     if (!DC->isRecord())
       continue;
 
@@ -589,8 +667,8 @@ namespace {
 // classes, one of its base classes.
 class RecordMemberExprValidatorCCC final : public CorrectionCandidateCallback {
 public:
-  explicit RecordMemberExprValidatorCCC(const RecordType *RTy)
-      : Record(RTy->getDecl()) {
+  explicit RecordMemberExprValidatorCCC(QualType RTy)
+      : Record(RTy->getAsRecordDecl()) {
     // Don't add bare keywords to the consumer since they will always fail
     // validation by virtue of not being associated with any decls.
     WantTypeSpecifiers = false;
@@ -611,11 +689,10 @@ public:
     if (Record->containsDecl(ND))
       return true;
 
-    if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Record)) {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(Record)) {
       // Accept candidates that occur in any of the current class' base classes.
       for (const auto &BS : RD->bases()) {
-        if (const RecordType *BSTy =
-                dyn_cast_or_null<RecordType>(BS.getType().getTypePtrOrNull())) {
+        if (const auto *BSTy = BS.getType()->getAs<RecordType>()) {
           if (BSTy->getDecl()->containsDecl(ND))
             return true;
         }
@@ -636,64 +713,42 @@ private:
 }
 
 static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
-                                     Expr *BaseExpr,
-                                     const RecordType *RTy,
+                                     Expr *BaseExpr, QualType RTy,
                                      SourceLocation OpLoc, bool IsArrow,
                                      CXXScopeSpec &SS, bool HasTemplateArgs,
                                      SourceLocation TemplateKWLoc,
                                      TypoExpr *&TE) {
   SourceRange BaseRange = BaseExpr ? BaseExpr->getSourceRange() : SourceRange();
-  RecordDecl *RDecl = RTy->getDecl();
-  if (!SemaRef.isThisOutsideMemberFunctionBody(QualType(RTy, 0)) &&
-      SemaRef.RequireCompleteType(OpLoc, QualType(RTy, 0),
-                                  diag::err_typecheck_incomplete_tag,
-                                  BaseRange))
+  if (!RTy->isDependentType() &&
+      !SemaRef.isThisOutsideMemberFunctionBody(RTy) &&
+      SemaRef.RequireCompleteType(
+          OpLoc, RTy, diag::err_typecheck_incomplete_tag, BaseRange))
     return true;
 
-  if (HasTemplateArgs || TemplateKWLoc.isValid()) {
-    // LookupTemplateName doesn't expect these both to exist simultaneously.
-    QualType ObjectType = SS.isSet() ? QualType() : QualType(RTy, 0);
+  // LookupTemplateName/LookupParsedName don't expect these both to exist
+  // simultaneously.
+  QualType ObjectType = SS.isSet() ? QualType() : RTy;
+  if (HasTemplateArgs || TemplateKWLoc.isValid())
+    return SemaRef.LookupTemplateName(R,
+                                      /*S=*/nullptr, SS, ObjectType,
+                                      /*EnteringContext=*/false, TemplateKWLoc);
 
-    bool MOUS;
-    return SemaRef.LookupTemplateName(R, nullptr, SS, ObjectType, false, MOUS,
-                                      TemplateKWLoc);
-  }
+  SemaRef.LookupParsedName(R, /*S=*/nullptr, &SS, ObjectType);
 
-  DeclContext *DC = RDecl;
-  if (SS.isSet()) {
-    // If the member name was a qualified-id, look into the
-    // nested-name-specifier.
-    DC = SemaRef.computeDeclContext(SS, false);
-
-    if (SemaRef.RequireCompleteDeclContext(SS, DC)) {
-      SemaRef.Diag(SS.getRange().getEnd(), diag::err_typecheck_incomplete_tag)
-          << SS.getRange() << DC;
-      return true;
-    }
-
-    assert(DC && "Cannot handle non-computable dependent contexts in lookup");
-
-    if (!isa<TypeDecl>(DC)) {
-      SemaRef.Diag(R.getNameLoc(), diag::err_qualified_member_nonclass)
-          << DC << SS.getRange();
-      return true;
-    }
-  }
-
-  // The record definition is complete, now look up the member.
-  SemaRef.LookupQualifiedName(R, DC, SS);
-
-  if (!R.empty())
+  if (!R.empty() || R.wasNotFoundInCurrentInstantiation())
     return false;
 
   DeclarationName Typo = R.getLookupName();
   SourceLocation TypoLoc = R.getNameLoc();
+  // Recompute the lookup context.
+  DeclContext *DC = SS.isSet() ? SemaRef.computeDeclContext(SS)
+                               : SemaRef.computeDeclContext(RTy);
 
   struct QueryState {
     Sema &SemaRef;
     DeclarationNameInfo NameInfo;
     Sema::LookupNameKind LookupKind;
-    Sema::RedeclarationKind Redecl;
+    RedeclarationKind Redecl;
   };
   QueryState Q = {R.getSema(), R.getLookupNameInfo(), R.getLookupKind(),
                   R.redeclarationKind()};
@@ -711,7 +766,8 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
                                        << Typo << DC << DroppedSpecifier
                                        << SS.getRange());
         } else {
-          SemaRef.Diag(TypoLoc, diag::err_no_member) << Typo << DC << BaseRange;
+          SemaRef.Diag(TypoLoc, diag::err_no_member)
+              << Typo << DC << (SS.isSet() ? SS.getRange() : BaseRange);
         }
       },
       [=](Sema &SemaRef, TypoExpr *TE, TypoCorrection TC) mutable {
@@ -737,33 +793,25 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
                                    Decl *ObjCImpDecl, bool HasTemplateArgs,
                                    SourceLocation TemplateKWLoc);
 
-ExprResult
-Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
-                               SourceLocation OpLoc, bool IsArrow,
-                               CXXScopeSpec &SS,
-                               SourceLocation TemplateKWLoc,
-                               NamedDecl *FirstQualifierInScope,
-                               const DeclarationNameInfo &NameInfo,
-                               const TemplateArgumentListInfo *TemplateArgs,
-                               const Scope *S,
-                               ActOnMemberAccessExtraArgs *ExtraArgs) {
-  if (BaseType->isDependentType() ||
-      (SS.isSet() && isDependentScopeSpecifier(SS)))
-    return ActOnDependentMemberExpr(Base, BaseType,
-                                    IsArrow, OpLoc,
-                                    SS, TemplateKWLoc, FirstQualifierInScope,
-                                    NameInfo, TemplateArgs);
-
+ExprResult Sema::BuildMemberReferenceExpr(
+    Expr *Base, QualType BaseType, SourceLocation OpLoc, bool IsArrow,
+    CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+    NamedDecl *FirstQualifierInScope, const DeclarationNameInfo &NameInfo,
+    const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
+    ActOnMemberAccessExtraArgs *ExtraArgs) {
   LookupResult R(*this, NameInfo, LookupMemberName);
+
+  if (SS.isInvalid())
+    return ExprError();
 
   // Implicit member accesses.
   if (!Base) {
     TypoExpr *TE = nullptr;
     QualType RecordTy = BaseType;
     if (IsArrow) RecordTy = RecordTy->castAs<PointerType>()->getPointeeType();
-    if (LookupMemberExprInRecord(
-            *this, R, nullptr, RecordTy->getAs<RecordType>(), OpLoc, IsArrow,
-            SS, TemplateArgs != nullptr, TemplateKWLoc, TE))
+    if (LookupMemberExprInRecord(*this, R, nullptr, RecordTy, OpLoc, IsArrow,
+                                 SS, TemplateArgs != nullptr, TemplateKWLoc,
+                                 TE))
       return ExprError();
     if (TE)
       return TE;
@@ -891,25 +939,13 @@ BuildMSPropertyRefExpr(Sema &S, Expr *BaseExpr, bool IsArrow,
 }
 
 MemberExpr *Sema::BuildMemberExpr(
-    Expr *Base, bool IsArrow, SourceLocation OpLoc, const CXXScopeSpec *SS,
-    SourceLocation TemplateKWLoc, ValueDecl *Member, DeclAccessPair FoundDecl,
-    bool HadMultipleCandidates, const DeclarationNameInfo &MemberNameInfo,
-    QualType Ty, ExprValueKind VK, ExprObjectKind OK,
-    const TemplateArgumentListInfo *TemplateArgs) {
-  NestedNameSpecifierLoc NNS =
-      SS ? SS->getWithLocInContext(Context) : NestedNameSpecifierLoc();
-  return BuildMemberExpr(Base, IsArrow, OpLoc, NNS, TemplateKWLoc, Member,
-                         FoundDecl, HadMultipleCandidates, MemberNameInfo, Ty,
-                         VK, OK, TemplateArgs);
-}
-
-MemberExpr *Sema::BuildMemberExpr(
     Expr *Base, bool IsArrow, SourceLocation OpLoc, NestedNameSpecifierLoc NNS,
     SourceLocation TemplateKWLoc, ValueDecl *Member, DeclAccessPair FoundDecl,
     bool HadMultipleCandidates, const DeclarationNameInfo &MemberNameInfo,
     QualType Ty, ExprValueKind VK, ExprObjectKind OK,
     const TemplateArgumentListInfo *TemplateArgs) {
-  assert((!IsArrow || Base->isRValue()) && "-> base must be a pointer rvalue");
+  assert((!IsArrow || Base->isPRValue()) &&
+         "-> base must be a pointer prvalue");
   MemberExpr *E =
       MemberExpr::Create(Context, Base, IsArrow, OpLoc, NNS, TemplateKWLoc,
                          Member, FoundDecl, MemberNameInfo, TemplateArgs, Ty,
@@ -937,7 +973,7 @@ static bool IsInFnTryBlockHandler(const Scope *S) {
   // function scope. If a FnTryCatchScope is found, check whether the TryScope
   // flag is set. If it is not, it's a function-try-block handler.
   for (; S != S->getFnParent(); S = S->getParent()) {
-    if (S->getFlags() & Scope::FnTryCatchScope)
+    if (S->isFnTryCatchScope())
       return (S->getFlags() & Scope::TryScope) != Scope::TryScope;
   }
   return false;
@@ -954,6 +990,20 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                const Scope *S,
                                bool SuppressQualifierCheck,
                                ActOnMemberAccessExtraArgs *ExtraArgs) {
+  assert(!SS.isInvalid() && "nested-name-specifier cannot be invalid");
+  // If the member wasn't found in the current instantiation, or if the
+  // arrow operator was used with a dependent non-pointer object expression,
+  // build a CXXDependentScopeMemberExpr.
+  if (R.wasNotFoundInCurrentInstantiation() ||
+      (IsArrow && !BaseExprType->isPointerType() &&
+       BaseExprType->isDependentType()) ||
+      (R.getLookupName().getCXXOverloadedOperator() == OO_Equal &&
+       (SS.isSet() ? SS.getScopeRep()->isDependent()
+                   : BaseExprType->isDependentType())))
+    return ActOnDependentMemberExpr(BaseExpr, BaseExprType, IsArrow, OpLoc, SS,
+                                    TemplateKWLoc, FirstQualifierInScope,
+                                    R.getLookupNameInfo(), TemplateArgs);
+
   QualType BaseType = BaseExprType;
   if (IsArrow) {
     assert(BaseType->isPointerType());
@@ -961,15 +1011,19 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   }
   R.setBaseObjectType(BaseType);
 
+  assert((SS.isEmpty()
+              ? !BaseType->isDependentType() || computeDeclContext(BaseType)
+              : !isDependentScopeSpecifier(SS) || computeDeclContext(SS)) &&
+         "dependent lookup context that isn't the current instantiation?");
+
   // C++1z [expr.ref]p2:
   //   For the first option (dot) the first expression shall be a glvalue [...]
-  if (!IsArrow && BaseExpr && BaseExpr->isRValue()) {
+  if (!IsArrow && BaseExpr && BaseExpr->isPRValue()) {
     ExprResult Converted = TemporaryMaterializationConversion(BaseExpr);
     if (Converted.isInvalid())
       return ExprError();
     BaseExpr = Converted.get();
   }
-
 
   const DeclarationNameInfo &MemberNameInfo = R.getLookupNameInfo();
   DeclarationName MemberName = MemberNameInfo.getName();
@@ -990,40 +1044,39 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
         << isa<CXXDestructorDecl>(FD);
 
   if (R.empty()) {
-    // Rederive where we looked up.
-    DeclContext *DC = (SS.isSet()
-                       ? computeDeclContext(SS, false)
-                       : BaseType->castAs<RecordType>()->getDecl());
-
-    if (ExtraArgs) {
-      ExprResult RetryExpr;
-      if (!IsArrow && BaseExpr) {
-        SFINAETrap Trap(*this, true);
-        ParsedType ObjectType;
-        bool MayBePseudoDestructor = false;
-        RetryExpr = ActOnStartCXXMemberReference(getCurScope(), BaseExpr,
-                                                 OpLoc, tok::arrow, ObjectType,
-                                                 MayBePseudoDestructor);
-        if (RetryExpr.isUsable() && !Trap.hasErrorOccurred()) {
-          CXXScopeSpec TempSS(SS);
-          RetryExpr = ActOnMemberAccessExpr(
-              ExtraArgs->S, RetryExpr.get(), OpLoc, tok::arrow, TempSS,
-              TemplateKWLoc, ExtraArgs->Id, ExtraArgs->ObjCImpDecl);
-        }
-        if (Trap.hasErrorOccurred())
-          RetryExpr = ExprError();
+    ExprResult RetryExpr = ExprError();
+    if (ExtraArgs && !IsArrow && BaseExpr && !BaseExpr->isTypeDependent()) {
+      SFINAETrap Trap(*this, true);
+      ParsedType ObjectType;
+      bool MayBePseudoDestructor = false;
+      RetryExpr = ActOnStartCXXMemberReference(getCurScope(), BaseExpr, OpLoc,
+                                               tok::arrow, ObjectType,
+                                               MayBePseudoDestructor);
+      if (RetryExpr.isUsable() && !Trap.hasErrorOccurred()) {
+        CXXScopeSpec TempSS(SS);
+        RetryExpr = ActOnMemberAccessExpr(
+            ExtraArgs->S, RetryExpr.get(), OpLoc, tok::arrow, TempSS,
+            TemplateKWLoc, ExtraArgs->Id, ExtraArgs->ObjCImpDecl);
       }
-      if (RetryExpr.isUsable()) {
-        Diag(OpLoc, diag::err_no_member_overloaded_arrow)
-          << MemberName << DC << FixItHint::CreateReplacement(OpLoc, "->");
-        return RetryExpr;
-      }
+      if (Trap.hasErrorOccurred())
+        RetryExpr = ExprError();
     }
 
-    Diag(R.getNameLoc(), diag::err_no_member)
-      << MemberName << DC
-      << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
-    return ExprError();
+    // Rederive where we looked up.
+    DeclContext *DC =
+        (SS.isSet() ? computeDeclContext(SS) : computeDeclContext(BaseType));
+    assert(DC);
+
+    if (RetryExpr.isUsable())
+      Diag(OpLoc, diag::err_no_member_overloaded_arrow)
+          << MemberName << DC << FixItHint::CreateReplacement(OpLoc, "->");
+    else
+      Diag(R.getNameLoc(), diag::err_no_member)
+          << MemberName << DC
+          << (SS.isSet()
+                  ? SS.getRange()
+                  : (BaseExpr ? BaseExpr->getSourceRange() : SourceRange()));
+    return RetryExpr;
   }
 
   // Diagnose lookups that find only declarations from a non-base
@@ -1108,7 +1161,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                                     OpLoc);
 
   if (VarDecl *Var = dyn_cast<VarDecl>(MemberDecl)) {
-    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var,
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc,
+                           SS.getWithLocInContext(Context), TemplateKWLoc, Var,
                            FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, Var->getType().getNonReferenceType(),
                            VK_LValue, OK_Ordinary);
@@ -1118,24 +1172,25 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     ExprValueKind valueKind;
     QualType type;
     if (MemberFn->isInstance()) {
-      valueKind = VK_RValue;
+      valueKind = VK_PRValue;
       type = Context.BoundMemberTy;
     } else {
       valueKind = VK_LValue;
       type = MemberFn->getType();
     }
 
-    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc,
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc,
+                           SS.getWithLocInContext(Context), TemplateKWLoc,
                            MemberFn, FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, type, valueKind, OK_Ordinary);
   }
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
-    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Enum,
-                           FoundDecl, /*HadMultipleCandidates=*/false,
-                           MemberNameInfo, Enum->getType(), VK_RValue,
-                           OK_Ordinary);
+    return BuildMemberExpr(
+        BaseExpr, IsArrow, OpLoc, SS.getWithLocInContext(Context),
+        TemplateKWLoc, Enum, FoundDecl, /*HadMultipleCandidates=*/false,
+        MemberNameInfo, Enum->getType(), VK_PRValue, OK_Ordinary);
   }
 
   if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
@@ -1159,10 +1214,11 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (!Var->getTemplateSpecializationKind())
       Var->setTemplateSpecializationKind(TSK_ImplicitInstantiation, MemberLoc);
 
-    return BuildMemberExpr(
-        BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var, FoundDecl,
-        /*HadMultipleCandidates=*/false, MemberNameInfo,
-        Var->getType().getNonReferenceType(), VK_LValue, OK_Ordinary);
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc,
+                           SS.getWithLocInContext(Context), TemplateKWLoc, Var,
+                           FoundDecl, /*HadMultipleCandidates=*/false,
+                           MemberNameInfo, Var->getType().getNonReferenceType(),
+                           VK_LValue, OK_Ordinary, TemplateArgs);
   }
 
   // We found something that we didn't expect. Complain.
@@ -1252,7 +1308,6 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     return ExprError();
 
   QualType BaseType = BaseExpr.get()->getType();
-  assert(!BaseType->isDependentType());
 
   DeclarationName MemberName = R.getLookupName();
   SourceLocation MemberLoc = R.getNameLoc();
@@ -1264,37 +1319,54 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   if (IsArrow) {
     if (const PointerType *Ptr = BaseType->getAs<PointerType>())
       BaseType = Ptr->getPointeeType();
-    else if (const ObjCObjectPointerType *Ptr
-               = BaseType->getAs<ObjCObjectPointerType>())
+    else if (const ObjCObjectPointerType *Ptr =
+                 BaseType->getAs<ObjCObjectPointerType>())
       BaseType = Ptr->getPointeeType();
-    else if (BaseType->isRecordType()) {
-      // Recover from arrow accesses to records, e.g.:
-      //   struct MyRecord foo;
-      //   foo->bar
-      // This is actually well-formed in C++ if MyRecord has an
-      // overloaded operator->, but that should have been dealt with
-      // by now--or a diagnostic message already issued if a problem
-      // was encountered while looking for the overloaded operator->.
-      if (!S.getLangOpts().CPlusPlus) {
-        S.Diag(OpLoc, diag::err_typecheck_member_reference_suggestion)
-          << BaseType << int(IsArrow) << BaseExpr.get()->getSourceRange()
-          << FixItHint::CreateReplacement(OpLoc, ".");
+    else if (!BaseType->isDependentType()) {
+      if (BaseType->isRecordType()) {
+        // Recover from arrow accesses to records, e.g.:
+        //   struct MyRecord foo;
+        //   foo->bar
+        // This is actually well-formed in C++ if MyRecord has an
+        // overloaded operator->, but that should have been dealt with
+        // by now--or a diagnostic message already issued if a problem
+        // was encountered while looking for the overloaded operator->.
+        if (!S.getLangOpts().CPlusPlus) {
+          S.Diag(OpLoc, diag::err_typecheck_member_reference_suggestion)
+              << BaseType << int(IsArrow) << BaseExpr.get()->getSourceRange()
+              << FixItHint::CreateReplacement(OpLoc, ".");
+        }
+        IsArrow = false;
+      } else if (BaseType->isFunctionType()) {
+        goto fail;
+      } else {
+        S.Diag(MemberLoc, diag::err_typecheck_member_reference_arrow)
+            << BaseType << BaseExpr.get()->getSourceRange();
+        return ExprError();
       }
-      IsArrow = false;
-    } else if (BaseType->isFunctionType()) {
-      goto fail;
-    } else {
-      S.Diag(MemberLoc, diag::err_typecheck_member_reference_arrow)
-        << BaseType << BaseExpr.get()->getSourceRange();
-      return ExprError();
     }
   }
 
+  // If the base type is an atomic type, this access is undefined behavior per
+  // C11 6.5.2.3p5. Instead of giving a typecheck error, we'll warn the user
+  // about the UB and recover by converting the atomic lvalue into a non-atomic
+  // lvalue. Because this is inherently unsafe as an atomic operation, the
+  // warning defaults to an error.
+  if (const auto *ATy = BaseType->getAs<AtomicType>()) {
+    S.DiagRuntimeBehavior(OpLoc, nullptr,
+                          S.PDiag(diag::warn_atomic_member_access));
+    BaseType = ATy->getValueType().getUnqualifiedType();
+    BaseExpr = ImplicitCastExpr::Create(
+        S.Context, IsArrow ? S.Context.getPointerType(BaseType) : BaseType,
+        CK_AtomicToNonAtomic, BaseExpr.get(), nullptr,
+        BaseExpr.get()->getValueKind(), FPOptionsOverride());
+  }
+
   // Handle field access to simple records.
-  if (const RecordType *RTy = BaseType->getAs<RecordType>()) {
+  if (BaseType->getAsRecordDecl() || BaseType->isDependentType()) {
     TypoExpr *TE = nullptr;
-    if (LookupMemberExprInRecord(S, R, BaseExpr.get(), RTy, OpLoc, IsArrow, SS,
-                                 HasTemplateArgs, TemplateKWLoc, TE))
+    if (LookupMemberExprInRecord(S, R, BaseExpr.get(), BaseType, OpLoc, IsArrow,
+                                 SS, HasTemplateArgs, TemplateKWLoc, TE))
       return ExprError();
 
     // Returning valid-but-null is how we indicate to the caller that
@@ -1590,20 +1662,21 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
                                        false);
   }
 
+  if (BaseType->isExtVectorBoolType()) {
+    // We disallow element access for ext_vector_type bool.  There is no way to
+    // materialize a reference to a vector element as a pointer (each element is
+    // one bit in the vector).
+    S.Diag(R.getNameLoc(), diag::err_ext_vector_component_name_illegal)
+        << MemberName
+        << (BaseExpr.get() ? BaseExpr.get()->getSourceRange() : SourceRange());
+    return ExprError();
+  }
+
   // Handle 'field access' to vectors, such as 'V.xx'.
   if (BaseType->isExtVectorType()) {
     // FIXME: this expr should store IsArrow.
     IdentifierInfo *Member = MemberName.getAsIdentifierInfo();
-    ExprValueKind VK;
-    if (IsArrow)
-      VK = VK_LValue;
-    else {
-      if (PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(BaseExpr.get()))
-        VK = POE->getSyntacticForm()->getValueKind();
-      else
-        VK = BaseExpr.get()->getValueKind();
-    }
-
+    ExprValueKind VK = (IsArrow ? VK_LValue : BaseExpr.get()->getValueKind());
     QualType ret = CheckExtVectorComponent(S, BaseType, VK, OpLoc,
                                            Member, MemberLoc);
     if (ret.isNull())
@@ -1643,6 +1716,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
           << BaseType << int(IsArrow) << BaseExpr.get()->getSourceRange()
           << FixItHint::CreateReplacement(OpLoc, "->");
 
+      if (S.isSFINAEContext())
+        return ExprError();
+
       // Recurse as an -> access.
       IsArrow = true;
       return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS,
@@ -1661,6 +1737,16 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     BaseExpr = S.DefaultFunctionArrayConversion(BaseExpr.get());
     return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS,
                             ObjCImpDecl, HasTemplateArgs, TemplateKWLoc);
+  }
+
+  // HLSL supports implicit conversion of scalar types to single element vector
+  // rvalues in member expressions.
+  if (S.getLangOpts().HLSL && BaseType->isScalarType()) {
+    QualType VectorTy = S.Context.getExtVectorType(BaseType, 1);
+    BaseExpr = S.ImpCastExprToType(BaseExpr.get(), VectorTy, CK_VectorSplat,
+                                   BaseExpr.get()->getValueKind());
+    return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS, ObjCImpDecl,
+                            HasTemplateArgs, TemplateKWLoc);
   }
 
   S.Diag(OpLoc, diag::err_typecheck_member_reference_struct_union)
@@ -1703,8 +1789,10 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   DecomposeUnqualifiedId(Id, TemplateArgsBuffer,
                          NameInfo, TemplateArgs);
 
-  DeclarationName Name = NameInfo.getName();
   bool IsArrow = (OpKind == tok::arrow);
+
+  if (getLangOpts().HLSL && IsArrow)
+    return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 2);
 
   NamedDecl *FirstQualifierInScope
     = (!SS.isSet() ? nullptr : FindFirstQualifierInScope(S, SS.getScopeRep()));
@@ -1713,13 +1801,6 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   ExprResult Result = MaybeConvertParenListExprToParenExpr(S, Base);
   if (Result.isInvalid()) return ExprError();
   Base = Result.get();
-
-  if (Base->getType()->isDependentType() || Name.isDependentName() ||
-      isDependentScopeSpecifier(SS)) {
-    return ActOnDependentMemberExpr(Base, Base->getType(), IsArrow, OpLoc, SS,
-                                    TemplateKWLoc, FirstQualifierInScope,
-                                    NameInfo, TemplateArgs);
-  }
 
   ActOnMemberAccessExtraArgs ExtraArgs = {S, Id, ObjCImpDecl};
   ExprResult Res = BuildMemberReferenceExpr(
@@ -1778,9 +1859,9 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     if (BaseExpr->getObjectKind() == OK_Ordinary)
       VK = BaseExpr->getValueKind();
     else
-      VK = VK_RValue;
+      VK = VK_PRValue;
   }
-  if (VK != VK_RValue && Field->isBitField())
+  if (VK != VK_PRValue && Field->isBitField())
     OK = OK_BitField;
 
   // Figure out the type of the member; see C99 6.5.2.3p3, C++ [expr.ref]
@@ -1833,16 +1914,16 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
   if (getLangOpts().OpenMP && IsArrow &&
       !CurContext->isDependentContext() &&
       isa<CXXThisExpr>(Base.get()->IgnoreParenImpCasts())) {
-    if (auto *PrivateCopy = isOpenMPCapturedDecl(Field)) {
-      return getOpenMPCapturedExpr(PrivateCopy, VK, OK,
-                                   MemberNameInfo.getLoc());
+    if (auto *PrivateCopy = OpenMP().isOpenMPCapturedDecl(Field)) {
+      return OpenMP().getOpenMPCapturedExpr(PrivateCopy, VK, OK,
+                                            MemberNameInfo.getLoc());
     }
   }
 
-  return BuildMemberExpr(Base.get(), IsArrow, OpLoc, &SS,
-                         /*TemplateKWLoc=*/SourceLocation(), Field, FoundDecl,
-                         /*HadMultipleCandidates=*/false, MemberNameInfo,
-                         MemberType, VK, OK);
+  return BuildMemberExpr(
+      Base.get(), IsArrow, OpLoc, SS.getWithLocInContext(Context),
+      /*TemplateKWLoc=*/SourceLocation(), Field, FoundDecl,
+      /*HadMultipleCandidates=*/false, MemberNameInfo, MemberType, VK, OK);
 }
 
 /// Builds an implicit member access expression.  The current context
@@ -1872,10 +1953,9 @@ Sema::BuildImplicitMemberExpr(const CXXScopeSpec &SS,
     baseExpr = BuildCXXThisExpr(loc, ThisTy, /*IsImplicit=*/true);
   }
 
-  return BuildMemberReferenceExpr(baseExpr, ThisTy,
-                                  /*OpLoc*/ SourceLocation(),
-                                  /*IsArrow*/ true,
-                                  SS, TemplateKWLoc,
-                                  /*FirstQualifierInScope*/ nullptr,
-                                  R, TemplateArgs, S);
+  return BuildMemberReferenceExpr(
+      baseExpr, ThisTy,
+      /*OpLoc=*/SourceLocation(),
+      /*IsArrow=*/!getLangOpts().HLSL, SS, TemplateKWLoc,
+      /*FirstQualifierInScope=*/nullptr, R, TemplateArgs, S);
 }

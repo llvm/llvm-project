@@ -3,10 +3,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfRemote
     @skipIfWindows
     # glibc's dlopen doesn't support opening executables.
@@ -19,7 +17,9 @@ class TestCase(TestBase):
     def test(self):
         self.build()
         # Launch and stop before the dlopen call.
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.c")
+        )
 
         # Delete the breakpoint we no longer need.
         self.target().DeleteAllBreakpoints()
@@ -29,7 +29,8 @@ class TestCase(TestBase):
 
         # Continue so that dlopen is called.
         breakpoint = self.target().BreakpointCreateBySourceRegex(
-            "// break after dlopen", lldb.SBFileSpec("main.c"))
+            "// break after dlopen", lldb.SBFileSpec("main.c")
+        )
         self.assertNotEqual(breakpoint.GetNumResolvedLocations(), 0)
         stopped_threads = lldbutil.continue_to_breakpoint(self.process(), breakpoint)
         self.assertEqual(len(stopped_threads), 1)
@@ -39,7 +40,7 @@ class TestCase(TestBase):
 
         # Kill the process and run the program again.
         err = self.process().Kill()
-        self.assertTrue(err.Success(), str(err))
+        self.assertSuccess(err)
 
         # Test that we hit the breakpoint after dlopen.
         lldbutil.run_to_breakpoint_do_run(self, self.target(), breakpoint)

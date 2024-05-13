@@ -24,7 +24,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
+#include "R600.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
@@ -86,7 +86,7 @@ GetFunctionFromMDNode(MDNode *Node) {
   if (!F)
     return nullptr;
 
-  // Sanity checks.
+  // Validation checks.
   size_t ExpectNumArgNodeOps = F->arg_size() + 1;
   for (size_t i = 0; i < NumKernelArgMDNodes; ++i) {
     MDNode *ArgNode = dyn_cast_or_null<MDNode>(Node->getOperand(i + 1));
@@ -163,11 +163,11 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
 
       Value *Replacement = nullptr;
       StringRef Name = F->getName();
-      if (Name.startswith(GetImageResourceIDFunc)) {
+      if (Name.starts_with(GetImageResourceIDFunc)) {
         Replacement = ConstantInt::get(Int32Type, ResourceID);
-      } else if (Name.startswith(GetImageSizeFunc)) {
+      } else if (Name.starts_with(GetImageSizeFunc)) {
         Replacement = &ImageSizeArg;
-      } else if (Name.startswith(GetImageFormatFunc)) {
+      } else if (Name.starts_with(GetImageFormatFunc)) {
         Replacement = &ImageFormatArg;
       } else {
         continue;
@@ -283,7 +283,7 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
       Modified = true;
     }
     if (!Modified) {
-      return std::make_tuple(nullptr, nullptr);
+      return std::tuple(nullptr, nullptr);
     }
 
     // Create function with new signature and clone the old body into it.
@@ -307,11 +307,11 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
     // Build new MDNode.
     SmallVector<Metadata *, 6> KernelMDArgs;
     KernelMDArgs.push_back(ConstantAsMetadata::get(NewF));
-    for (unsigned i = 0; i < NumKernelArgMDNodes; ++i)
-      KernelMDArgs.push_back(MDNode::get(*Context, NewArgMDs.ArgVector[i]));
+    for (const MDVector &MDV : NewArgMDs.ArgVector)
+      KernelMDArgs.push_back(MDNode::get(*Context, MDV));
     MDNode *NewMDNode = MDNode::get(*Context, KernelMDArgs);
 
-    return std::make_tuple(NewF, NewMDNode);
+    return std::tuple(NewF, NewMDNode);
   }
 
   bool transformKernels(Module &M) {

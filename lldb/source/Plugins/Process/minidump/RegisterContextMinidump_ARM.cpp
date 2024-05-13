@@ -30,36 +30,37 @@ using namespace minidump;
 #define DEF_R(i)                                                               \
   {                                                                            \
     "r" #i, nullptr, 4, OFFSET(r) + i * 4, eEncodingUint, eFormatHex,          \
-        {ehframe_r##i, dwarf_r##i, INV, INV, reg_r##i},                          \
-        nullptr, nullptr, nullptr, 0    \
+        {ehframe_r##i, dwarf_r##i, INV, INV, reg_r##i}, nullptr, nullptr,      \
+        nullptr,                                                               \
   }
 
 #define DEF_R_ARG(i, n)                                                        \
   {                                                                            \
     "r" #i, "arg" #n, 4, OFFSET(r) + i * 4, eEncodingUint, eFormatHex,         \
-        {ehframe_r##i, dwarf_r##i, LLDB_REGNUM_GENERIC_ARG1 + i, INV, reg_r##i}, \
-        nullptr, nullptr, nullptr, 0                                           \
+        {ehframe_r##i, dwarf_r##i, LLDB_REGNUM_GENERIC_ARG1 + i, INV,          \
+         reg_r##i},                                                            \
+        nullptr, nullptr, nullptr,                                             \
   }
 
 #define DEF_D(i)                                                               \
   {                                                                            \
     "d" #i, nullptr, 8, OFFSET(d) + i * 8, eEncodingVector,                    \
         eFormatVectorOfUInt8, {dwarf_d##i, dwarf_d##i, INV, INV, reg_d##i},    \
-        nullptr, nullptr, nullptr, 0    \
+        nullptr, nullptr, nullptr,                                             \
   }
 
 #define DEF_S(i)                                                               \
   {                                                                            \
     "s" #i, nullptr, 4, OFFSET(s) + i * 4, eEncodingIEEE754, eFormatFloat,     \
-        {dwarf_s##i, dwarf_s##i, INV, INV, reg_s##i},                          \
-        nullptr, nullptr, nullptr, 0                                           \
+        {dwarf_s##i, dwarf_s##i, INV, INV, reg_s##i}, nullptr, nullptr,        \
+        nullptr,                                                               \
   }
 
 #define DEF_Q(i)                                                               \
   {                                                                            \
     "q" #i, nullptr, 16, OFFSET(q) + i * 16, eEncodingVector,                  \
         eFormatVectorOfUInt8, {dwarf_q##i, dwarf_q##i, INV, INV, reg_q##i},    \
-        nullptr, nullptr, nullptr, 0    \
+        nullptr, nullptr, nullptr,                                             \
   }
 
 // Zero based LLDB register numbers for this register context
@@ -178,7 +179,7 @@ static RegisterInfo g_reg_info_apple_fp = {
     nullptr,
     nullptr,
     nullptr,
-    0};
+};
 
 static RegisterInfo g_reg_info_fp = {
     "fp",
@@ -191,7 +192,7 @@ static RegisterInfo g_reg_info_fp = {
     nullptr,
     nullptr,
     nullptr,
-    0};
+};
 
 // Register info definitions for this register context
 static RegisterInfo g_reg_infos[] = {
@@ -218,7 +219,7 @@ static RegisterInfo g_reg_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"lr",
      "r14",
      4,
@@ -229,7 +230,7 @@ static RegisterInfo g_reg_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"pc",
      "r15",
      4,
@@ -240,7 +241,7 @@ static RegisterInfo g_reg_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"cpsr",
      "psr",
      4,
@@ -251,7 +252,7 @@ static RegisterInfo g_reg_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     {"fpscr",
      nullptr,
      8,
@@ -262,7 +263,7 @@ static RegisterInfo g_reg_infos[] = {
      nullptr,
      nullptr,
      nullptr,
-     0},
+    },
     DEF_D(0),
     DEF_D(1),
     DEF_D(2),
@@ -344,7 +345,7 @@ static RegisterInfo g_reg_infos[] = {
     DEF_Q(14),
     DEF_Q(15)};
 
-constexpr size_t k_num_reg_infos = llvm::array_lengthof(g_reg_infos);
+constexpr size_t k_num_reg_infos = std::size(g_reg_infos);
 
 // ARM general purpose registers.
 const uint32_t g_gpr_regnums[] = {
@@ -453,26 +454,26 @@ const uint32_t g_fpu_regnums[] = {
 };
 
 // Skip the last LLDB_INVALID_REGNUM in each count below by subtracting 1
-constexpr size_t k_num_gpr_regs = llvm::array_lengthof(g_gpr_regnums) - 1;
-constexpr size_t k_num_fpu_regs = llvm::array_lengthof(g_fpu_regnums) - 1;
+constexpr size_t k_num_gpr_regs = std::size(g_gpr_regnums) - 1;
+constexpr size_t k_num_fpu_regs = std::size(g_fpu_regnums) - 1;
 
 static RegisterSet g_reg_sets[] = {
     {"General Purpose Registers", "gpr", k_num_gpr_regs, g_gpr_regnums},
     {"Floating Point Registers", "fpu", k_num_fpu_regs, g_fpu_regnums},
 };
 
-constexpr size_t k_num_reg_sets = llvm::array_lengthof(g_reg_sets);
+constexpr size_t k_num_reg_sets = std::size(g_reg_sets);
 
 RegisterContextMinidump_ARM::RegisterContextMinidump_ARM(
     lldb_private::Thread &thread, const DataExtractor &data, bool apple)
     : RegisterContext(thread, 0), m_apple(apple) {
   lldb::offset_t offset = 0;
   m_regs.context_flags = data.GetU32(&offset);
-  for (unsigned i = 0; i < llvm::array_lengthof(m_regs.r); ++i)
+  for (unsigned i = 0; i < std::size(m_regs.r); ++i)
     m_regs.r[i] = data.GetU32(&offset);
   m_regs.cpsr = data.GetU32(&offset);
   m_regs.fpscr = data.GetU64(&offset);
-  for (unsigned i = 0; i < llvm::array_lengthof(m_regs.d); ++i)
+  for (unsigned i = 0; i < std::size(m_regs.d); ++i)
     m_regs.d[i] = data.GetU64(&offset);
   lldbassert(k_num_regs == k_num_reg_infos);
 }
@@ -529,7 +530,7 @@ bool RegisterContextMinidump_ARM::ReadRegister(const RegisterInfo *reg_info,
                                                RegisterValue &reg_value) {
   Status error;
   reg_value.SetFromMemoryData(
-      reg_info, (const uint8_t *)&m_regs + reg_info->byte_offset,
+      *reg_info, (const uint8_t *)&m_regs + reg_info->byte_offset,
       reg_info->byte_size, lldb::eByteOrderLittle, error);
   return error.Success();
 }

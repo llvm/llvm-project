@@ -1,0 +1,737 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefix=GFX10 %s
+
+---
+
+# The loop contains a store and a use of a value loaded outside of the loop.
+# We expect the waitcnt for the use to be hoisted on GFX9, but not on GFX10+
+# because we have the vscnt counter.
+
+# GFX9-LABEL: waitcnt_vm_loop
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# Same as before, but the loop preheader has no terminator.
+
+# GFX9-LABEL: waitcnt_vm_loop_noterm
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop_noterm
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop_noterm
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# Same as before but there is a preexisting waitcnt in the preheader.
+
+# GFX9-LABEL: waitcnt_vm_loop_noterm_wait
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+name:            waitcnt_vm_loop_noterm_wait
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_WAITCNT 3952
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# The loop contains a store, a load, and uses values loaded both inside and
+# outside the loop.
+# We do not expect the waitcnt to be hoisted out of the loop.
+
+# GFX9-LABEL: waitcnt_vm_loop_load
+# GFX9-LABEL: bb.0:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop_load
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop_load
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr7 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr7, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr7, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# The loop contains a use of a value loaded outside of the loop, and no store
+# nor load.
+# We do not expect the waitcnt to be hoisted out of the loop.
+
+# GFX9-LABEL: waitcnt_vm_loop_no_store
+# GFX9-LABEL: bb.0:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop_no_store
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop_no_store
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# The loop contains a store, no load, and doesn't use any value loaded inside
+# or outside of the loop. There is only one use of the loaded value in the
+# exit block.
+# We don't expect any s_waitcnt vmcnt in the loop body or preheader, but expect
+# one in the exit block.
+
+
+# GFX9-LABEL: waitcnt_vm_loop_no_use
+# GFX9-LABEL: bb.0:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop_no_use
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop_no_use
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+
+# The loop loads a value that is not used in the loop, and uses a value loaded
+# outside of the loop.
+# We expect the waitcnt to be hoisted of the loop to wait a single time before
+# the loop is executed and avoid waiting for the load to complete on each
+# iteration.
+
+# GFX9-LABEL: waitcnt_vm_loop2
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop2
+# GFX10-LABEL: bb.0:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop2
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
+    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# Same as before with an additional store in the loop. We still expect the
+# waitcnt instructions to be hoisted.
+
+# GFX9-LABEL: waitcnt_vm_loop2_store
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop2_store
+# GFX10-LABEL: bb.0:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop2_store
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
+    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# Same as loop2 but the value loaded inside the loop is also used in the loop.
+# We do not expect the waitcnt to be hoisted out of the loop.
+
+# GFX9-LABEL: waitcnt_vm_loop2_use_in_loop
+# GFX9-LABEL: bb.0:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop2_use_in_loop
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop2_use_in_loop
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
+    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr4 = V_ADD_U32_e32 $vgpr5, $vgpr1, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# The loop contains a use of a value loaded outside of the loop, but we already
+# waited for that load to complete. The loop also loads a value that is not used
+# in the loop. We do not expect any waitcnt in the loop.
+
+# GFX9-LABEL: waitcnt_vm_loop2_nowait
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.3:
+
+# GFX10-LABEL: waitcnt_vm_loop2_nowait
+# GFX10-LABEL: bb.0:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.3:
+name:            waitcnt_vm_loop2_nowait
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    $vgpr3 = V_ADD_U32_e32 $vgpr4, $vgpr5, implicit $exec
+    $vgpr3 = V_ADD_U32_e32 $vgpr4, $vgpr5, implicit $exec
+    $vgpr3 = V_ADD_U32_e32 $vgpr4, $vgpr5, implicit $exec
+
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.2, %bb.3
+
+    $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
+    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit killed $scc
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+
+...
+---
+
+# Similar test case but for register intervals.
+
+# GFX9-LABEL: waitcnt_vm_loop2_reginterval
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop2_reginterval
+# GFX10-LABEL: bb.0:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop2_reginterval
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr10_vgpr11, 0, 0, implicit $exec
+
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr10 = COPY $vgpr0
+
+    $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# Similar test case but for register intervals.
+
+# GFX9-LABEL: waitcnt_vm_loop2_reginterval2
+# GFX9-LABEL: bb.0:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop2_reginterval2
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop2_reginterval2
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr10_vgpr11, 0, 0, implicit $exec
+
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr10 = COPY $vgpr0
+
+    $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    $vgpr11 = COPY $vgpr7
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# The loop loads a value that is not used in the loop, but uses a value loaded
+# outside of it. We expect the s_waitcnt instruction to be hoisted.
+# A s_waitcnt vmcnt(0) is generated to flush in the preheader, but for this
+# specific test case, it would be better to use vmcnt(1) instead. This is
+# currently not implemented.
+
+# GFX9-LABEL: waitcnt_vm_zero
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 3952
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_zero
+# GFX10-LABEL: bb.0:
+# GFX10: S_WAITCNT 16240
+# GFX10-LABEL: bb.1:
+# GFX10-NOT: S_WAITCNT 16240
+# GFX10-LABEL: bb.2:
+
+name:            waitcnt_vm_zero
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr3, implicit $exec
+    $vgpr2 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+---
+
+# This test case checks that we flush the vmcnt counter only if necessary
+# (i.e. if a waitcnt is needed for the vgpr use we find in the loop)
+
+# GFX10-LABEL: waitcnt_vm_necessary
+# GFX10-LABEL: bb.0:
+# GFX10: S_WAITCNT 16240
+# GFX10: $vgpr4
+# GFX10-NOT: S_WAITCNT
+# GFX10-LABEL: bb.1:
+# GFX10-NOT: S_WAITCNT
+
+# GFX9-LABEL: waitcnt_vm_necessary
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 3952
+# GFX9: $vgpr4
+# GFX9-NOT: S_WAITCNT
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT
+
+name:            waitcnt_vm_necessary
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 killed $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr4 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+
+  bb.1:
+    successors: %bb.1(0x40000000)
+
+    $vgpr5 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_ENDPGM 0
+
+...
+---
+
+# The loop contains a global store, and uses a (global) loaded value outside of the loop.
+
+# GFX9-LABEL: waitcnt_vm_loop_global_mem
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop_global_mem
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+
+name:            waitcnt_vm_loop_global_mem
+body:             |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr4_vgpr5, $vgpr6, 0, 0, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+
+  bb.2:
+    successors: %bb.3
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+
+...
+---
+
+# Same as above case, but use scratch memory instructions instead
+
+# GFX9-LABEL: waitcnt_vm_loop_scratch_mem
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop_scratch_mem
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+
+name:            waitcnt_vm_loop_scratch_mem
+body:             |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = SCRATCH_LOAD_DWORD $vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    SCRATCH_STORE_DWORD $vgpr4, $vgpr6, 0, 0, implicit $exec, implicit $flat_scr
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+
+  bb.2:
+    successors: %bb.3
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+
+...
+---
+
+# Same as above case, but use flat memory instructions instead
+
+# GFX9-LABEL: waitcnt_vm_loop_flat_mem
+# GFX9-LABEL: bb.0:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop_flat_mem
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 11
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 11
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop_flat_mem
+body:             |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    FLAT_STORE_DWORD $vgpr4_vgpr5, $vgpr6, 0, 0, implicit $exec, implicit $flat_scr
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+
+  bb.2:
+    successors: %bb.3
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+
+...
+---
+
+# The loop contains a store, a load, and uses values loaded both inside and
+# outside the loop.
+# We do not expect the waitcnt to be hoisted out of the loop.
+
+# GFX9-LABEL: waitcnt_vm_loop_flat_load
+# GFX9-LABEL: bb.0:
+# GFX9-NOT: S_WAITCNT 39
+# GFX9-LABEL: bb.1:
+# GFX9: S_WAITCNT 39
+# GFX9-LABEL: bb.2:
+
+# GFX10-LABEL: waitcnt_vm_loop_flat_load
+# GFX10-LABEL: bb.0:
+# GFX10-NOT: S_WAITCNT 16
+# GFX10-LABEL: bb.1:
+# GFX10: S_WAITCNT 16
+# GFX10-LABEL: bb.2:
+name:            waitcnt_vm_loop_flat_load
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    GLOBAL_STORE_DWORD $vgpr4_vgpr5, $vgpr6, 0, 0, implicit $exec
+    $vgpr7 = GLOBAL_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr7, implicit $exec
+    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...

@@ -1,6 +1,6 @@
-; RUN: opt < %s -deadargelim
+; RUN: opt < %s -passes=deadargelim
 
-declare void @llvm.gcroot(i8**, i8*)
+declare void @llvm.gcroot(ptr, ptr)
 
 define void @g() {
 entry:
@@ -10,7 +10,7 @@ entry:
 
 define internal void @f(i32 %unused) gc "example" {
 entry:
-	%var = alloca i8*
-	call void @llvm.gcroot(i8** %var, i8* null)
+	%var = alloca ptr
+	call void @llvm.gcroot(ptr %var, ptr null)
 	ret void
 }

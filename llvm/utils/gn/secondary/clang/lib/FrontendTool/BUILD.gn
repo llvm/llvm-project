@@ -12,6 +12,7 @@ static_library("FrontendTool") {
     "//clang/lib/Basic",
     "//clang/lib/CodeGen",
     "//clang/lib/Driver",
+    "//clang/lib/ExtractAPI",
     "//clang/lib/Frontend",
     "//clang/lib/Frontend/Rewrite",
     "//llvm/lib/Option",

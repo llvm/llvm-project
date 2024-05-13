@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_MERGE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_MERGE_H
 
-#include "Index.h"
+#include "index/Index.h"
 
 namespace clang {
 namespace clangd {

@@ -13,14 +13,12 @@
 
 #include "llvm/ADT/SmallString.h"
 
-namespace clang {
-namespace tidy {
-namespace portability {
+namespace clang::tidy::portability {
 
 /// Find SIMD intrinsics calls and suggest std::experimental::simd alternatives.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability-simd-intrinsics.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/portability/simd-intrinsics.html
 class SIMDIntrinsicsCheck : public ClangTidyCheck {
 public:
   SIMDIntrinsicsCheck(StringRef Name, ClangTidyContext *Context);
@@ -37,8 +35,6 @@ public:
   const bool Suggest;
 };
 
-} // namespace portability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::portability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SIMD_INTRINSICS_CHECK_H

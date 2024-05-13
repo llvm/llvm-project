@@ -53,32 +53,54 @@ class MoveDeleter
     MoveDeleter();
     MoveDeleter(MoveDeleter const&);
 public:
-    MoveDeleter(MoveDeleter&&) {};
+  MoveDeleter(MoveDeleter&&) {}
 
-    explicit MoveDeleter(int) {}
+  explicit MoveDeleter(int) {}
 
-    void operator()(T *ptr) { delete ptr; }
+  void operator()(T* ptr) { delete ptr; }
 };
+
+// https://llvm.org/PR60258
+// Invalid constructor SFINAE for std::shared_ptr's array ctors
+static_assert( std::is_constructible<std::shared_ptr<int>,  int*, test_deleter<int> >::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int>,  int*, bad_deleter>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<Base>,  Derived*, test_deleter<Base> >::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<A>,  int*, test_deleter<A> >::value, "");
+
+#if TEST_STD_VER >= 17
+static_assert( std::is_constructible<std::shared_ptr<int[]>,  int*, test_deleter<int>>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int*, bad_deleter>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int(*)[], test_deleter<int>>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[5]>, int*, test_deleter<int>>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int*, bad_deleter>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int(*)[5], test_deleter<int>>::value, "");
+#endif
 
 int main(int, char**)
 {
     {
-    A* ptr = new A;
-    std::shared_ptr<A> p(ptr, test_deleter<A>(3));
-    assert(A::count == 1);
-    assert(p.use_count() == 1);
-    assert(p.get() == ptr);
-    assert(test_deleter<A>::count == 1);
-    assert(test_deleter<A>::dealloc_count == 0);
+        A* ptr = new A;
+        std::shared_ptr<A> p(ptr, test_deleter<A>(3));
+        assert(A::count == 1);
+        assert(p.use_count() == 1);
+        assert(p.get() == ptr);
+        assert(test_deleter<A>::count == 1);
+        assert(test_deleter<A>::dealloc_count == 0);
 #ifndef TEST_HAS_NO_RTTI
-    test_deleter<A>* d = std::get_deleter<test_deleter<A> >(p);
-    assert(d);
-    assert(d->state() == 3);
+        test_deleter<A>* d = std::get_deleter<test_deleter<A> >(p);
+        assert(d);
+        assert(d->state() == 3);
 #endif
     }
     assert(A::count == 0);
     assert(test_deleter<A>::count == 0);
     assert(test_deleter<A>::dealloc_count == 1);
+
+    {
+        A const* ptr = new A;
+        std::shared_ptr<A const> p(ptr, test_deleter<A const>(3));
+        assert(p.get() == ptr);
+    }
 
     {
         // Make sure we can't construct with:

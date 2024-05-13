@@ -9,6 +9,9 @@
 #ifndef ALLOCATORS_H
 #define ALLOCATORS_H
 
+#include <cstddef>
+#include <memory>
+#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -184,6 +187,69 @@ bool operator!=(const A3<T>& x, const A3<U>& y)
 {
     return !(x == y);
 }
+
+template <class T, bool POCCAValue>
+class MaybePOCCAAllocator {
+    int id_ = 0;
+    bool* copy_assigned_into_ = nullptr;
+
+    template<class, bool> friend class MaybePOCCAAllocator;
+
+public:
+    typedef std::integral_constant<bool, POCCAValue> propagate_on_container_copy_assignment;
+    typedef T value_type;
+
+    template <class U>
+    struct rebind {
+        typedef MaybePOCCAAllocator<U, POCCAValue> other;
+    };
+
+    TEST_CONSTEXPR MaybePOCCAAllocator() = default;
+    TEST_CONSTEXPR MaybePOCCAAllocator(int id, bool* copy_assigned_into)
+        : id_(id), copy_assigned_into_(copy_assigned_into) {}
+
+    template <class U>
+    TEST_CONSTEXPR MaybePOCCAAllocator(const MaybePOCCAAllocator<U, POCCAValue>& that)
+        : id_(that.id_), copy_assigned_into_(that.copy_assigned_into_) {}
+
+    MaybePOCCAAllocator(const MaybePOCCAAllocator&) = default;
+    TEST_CONSTEXPR_CXX14 MaybePOCCAAllocator& operator=(const MaybePOCCAAllocator& a)
+    {
+        id_ = a.id();
+        if (copy_assigned_into_)
+            *copy_assigned_into_ = true;
+        return *this;
+    }
+
+    TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n)
+    {
+        return std::allocator<T>().allocate(n);
+    }
+
+    TEST_CONSTEXPR_CXX20 void deallocate(T* ptr, std::size_t n)
+    {
+        std::allocator<T>().deallocate(ptr, n);
+    }
+
+    TEST_CONSTEXPR int id() const { return id_; }
+
+    template <class U>
+    TEST_CONSTEXPR friend bool operator==(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator<U, POCCAValue>& rhs)
+    {
+        return lhs.id() == rhs.id();
+    }
+
+    template <class U>
+    TEST_CONSTEXPR friend bool operator!=(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator<U, POCCAValue>& rhs)
+    {
+        return !(lhs == rhs);
+    }
+};
+
+template <class T>
+using POCCAAllocator = MaybePOCCAAllocator<T, /*POCCAValue = */true>;
+template <class T>
+using NonPOCCAAllocator = MaybePOCCAAllocator<T, /*POCCAValue = */false>;
 
 #endif // TEST_STD_VER >= 11
 

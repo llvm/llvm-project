@@ -14,8 +14,8 @@
 #ifndef LLVM_FUZZMUTATE_FUZZERCLI_H
 #define LLVM_FUZZMUTATE_FUZZERCLI_H
 
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/DataTypes.h"
+#include <stddef.h>
 
 namespace llvm {
 
@@ -48,32 +48,10 @@ using FuzzerInitFun = int (*)(int *argc, char ***argv);
 ///
 /// Useful for testing fuzz targets without linking to libFuzzer. Finds inputs
 /// in the argument list in a libFuzzer compatible way.
-int runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,
-                      FuzzerInitFun Init = [](int *, char ***) { return 0; });
+int runFuzzerOnInputs(
+    int ArgC, char *ArgV[], FuzzerTestFun TestOne,
+    FuzzerInitFun Init = [](int *, char ***) { return 0; });
 
-/// Fuzzer friendly interface for the llvm bitcode parser.
-///
-/// \param Data Bitcode we are going to parse
-/// \param Size Size of the 'Data' in bytes
-/// \return New module or nullptr in case of error
-std::unique_ptr<Module> parseModule(const uint8_t *Data, size_t Size,
-                                    LLVMContext &Context);
-
-/// Fuzzer friendly interface for the llvm bitcode printer.
-///
-/// \param M Module to print
-/// \param Dest Location to store serialized module
-/// \param MaxSize Size of the destination buffer
-/// \return Number of bytes that were written. When module size exceeds MaxSize
-///         returns 0 and leaves Dest unchanged.
-size_t writeModule(const Module &M, uint8_t *Dest, size_t MaxSize);
-
-/// Try to parse module and verify it. May output verification errors to the
-/// errs().
-/// \return New module or nullptr in case of error.
-std::unique_ptr<Module> parseAndVerify(const uint8_t *Data, size_t Size,
-                                       LLVMContext &Context);
-
-} // end llvm namespace
+} // namespace llvm
 
 #endif // LLVM_FUZZMUTATE_FUZZERCLI_H

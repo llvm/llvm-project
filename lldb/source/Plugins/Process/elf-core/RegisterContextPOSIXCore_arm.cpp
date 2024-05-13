@@ -25,7 +25,7 @@ RegisterContextCorePOSIX_arm::RegisterContextCorePOSIX_arm(
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 }
 
-RegisterContextCorePOSIX_arm::~RegisterContextCorePOSIX_arm() {}
+RegisterContextCorePOSIX_arm::~RegisterContextCorePOSIX_arm() = default;
 
 bool RegisterContextCorePOSIX_arm::ReadGPR() { return true; }
 
@@ -55,7 +55,7 @@ bool RegisterContextCorePOSIX_arm::ReadRegister(const RegisterInfo *reg_info,
 }
 
 bool RegisterContextCorePOSIX_arm::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 

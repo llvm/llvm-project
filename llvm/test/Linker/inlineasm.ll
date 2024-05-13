@@ -7,11 +7,11 @@ target triple = "i386-apple-macosx10.6.8"
 
 ; rdar://9776316 - type remapping needed for inline asm blobs.
 
-%T = type { [18 x i32], [4 x i8*] }
+%T = type { [18 x i32], [4 x ptr] }
 
-define void @f(%T* %x) nounwind ssp {
+define void @f(ptr %x) nounwind ssp {
 entry:
-call void asm sideeffect "", "=*m"(%T* %x) nounwind
+call void asm sideeffect "", "=*m"(ptr elementtype(%T) %x) nounwind
 unreachable
 }
 

@@ -187,10 +187,7 @@ public:
   /// Implements the ASTImporter interface for tracking back a declaration
   /// to its original declaration it came from.
   Decl *GetOriginalDecl(Decl *To) override {
-    auto It = ToOrigin.find(To);
-    if (It != ToOrigin.end())
-      return It->second;
-    return nullptr;
+    return ToOrigin.lookup(To);
   }
 
   /// Whenever a DeclContext is imported, ensure that ExternalASTSource's origin
@@ -425,16 +422,14 @@ void ExternalASTMerger::RemoveSources(llvm::ArrayRef<ImporterSource> Sources) {
       logs() << "(ExternalASTMerger*)" << (void *)this
              << " removing source (ASTContext*)" << (void *)&S.getASTContext()
              << "\n";
-  Importers.erase(
-      std::remove_if(Importers.begin(), Importers.end(),
-                     [&Sources](std::unique_ptr<ASTImporter> &Importer) -> bool {
-                       for (const ImporterSource &S : Sources) {
-                         if (&Importer->getFromContext() == &S.getASTContext())
-                           return true;
-                       }
-                       return false;
-                     }),
-      Importers.end());
+  llvm::erase_if(Importers,
+                 [&Sources](std::unique_ptr<ASTImporter> &Importer) -> bool {
+                   for (const ImporterSource &S : Sources) {
+                     if (&Importer->getFromContext() == &S.getASTContext())
+                       return true;
+                   }
+                   return false;
+                 });
   for (OriginMap::iterator OI = Origins.begin(), OE = Origins.end(); OI != OE; ) {
     std::pair<const DeclContext *, DCOrigin> Origin = *OI;
     bool Erase = false;
@@ -543,4 +538,3 @@ void ExternalASTMerger::FindExternalLexicalDecls(
     return false;
   });
 }
-

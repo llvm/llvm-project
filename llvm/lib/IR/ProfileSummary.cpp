@@ -12,9 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ProfileSummary.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
@@ -111,7 +110,7 @@ static ConstantAsMetadata *getValMD(MDTuple *MD, const char *Key) {
   ConstantAsMetadata *ValMD = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
   if (!KeyMD || !ValMD)
     return nullptr;
-  if (!KeyMD->getString().equals(Key))
+  if (KeyMD->getString() != Key)
     return nullptr;
   return ValMD;
 }
@@ -141,7 +140,7 @@ static bool isKeyValuePair(MDTuple *MD, const char *Key, const char *Val) {
   MDString *ValMD = dyn_cast<MDString>(MD->getOperand(1));
   if (!KeyMD || !ValMD)
     return false;
-  if (!KeyMD->getString().equals(Key) || !ValMD->getString().equals(Val))
+  if (KeyMD->getString() != Key || ValMD->getString() != Val)
     return false;
   return true;
 }
@@ -151,7 +150,7 @@ static bool getSummaryFromMD(MDTuple *MD, SummaryEntryVector &Summary) {
   if (!MD || MD->getNumOperands() != 2)
     return false;
   MDString *KeyMD = dyn_cast<MDString>(MD->getOperand(0));
-  if (!KeyMD || !KeyMD->getString().equals("DetailedSummary"))
+  if (!KeyMD || KeyMD->getString() != "DetailedSummary")
     return false;
   MDTuple *EntriesMD = dyn_cast<MDTuple>(MD->getOperand(1));
   if (!EntriesMD)
@@ -249,7 +248,7 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
                             PartialProfileRatio);
 }
 
-void ProfileSummary::printSummary(raw_ostream &OS) {
+void ProfileSummary::printSummary(raw_ostream &OS) const {
   OS << "Total functions: " << NumFunctions << "\n";
   OS << "Maximum function count: " << MaxFunctionCount << "\n";
   OS << "Maximum block count: " << MaxCount << "\n";
@@ -257,7 +256,7 @@ void ProfileSummary::printSummary(raw_ostream &OS) {
   OS << "Total count: " << TotalCount << "\n";
 }
 
-void ProfileSummary::printDetailedSummary(raw_ostream &OS) {
+void ProfileSummary::printDetailedSummary(raw_ostream &OS) const {
   OS << "Detailed summary:\n";
   for (const auto &Entry : DetailedSummary) {
     OS << Entry.NumCounts << " blocks with count >= " << Entry.MinCount

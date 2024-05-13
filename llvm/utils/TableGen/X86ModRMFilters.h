@@ -17,7 +17,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_X86MODRMFILTERS_H
 #define LLVM_UTILS_TABLEGEN_X86MODRMFILTERS_H
 
-#include "llvm/Support/DataTypes.h"
+#include <cstdint>
 
 namespace llvm {
 
@@ -27,9 +27,10 @@ namespace X86Disassembler {
 ///   ModR/M bytes.
 class ModRMFilter {
   virtual void anchor();
+
 public:
   /// Destructor    - Override as necessary.
-  virtual ~ModRMFilter() { }
+  virtual ~ModRMFilter() {}
 
   /// isDumb        - Indicates whether this filter returns the same value for
   ///                 any value of the ModR/M byte.
@@ -50,14 +51,11 @@ public:
 ///   for operands.
 class DumbFilter : public ModRMFilter {
   void anchor() override;
-public:
-  bool isDumb() const override {
-    return true;
-  }
 
-  bool accepts(uint8_t modRM) const override {
-    return true;
-  }
+public:
+  bool isDumb() const override { return true; }
+
+  bool accepts(uint8_t modRM) const override { return true; }
 };
 
 /// ModFilter - Filters based on the mod bits [bits 7-6] of the ModR/M byte.
@@ -66,6 +64,7 @@ public:
 class ModFilter : public ModRMFilter {
   void anchor() override;
   bool R;
+
 public:
   /// Constructor
   ///
@@ -73,10 +72,7 @@ public:
   ///                 otherwise.  The name r derives from the fact that the mod
   ///                 bits indicate whether the R/M bits [bits 2-0] signify a
   ///                 register or a memory operand.
-  ModFilter(bool r) :
-    ModRMFilter(),
-    R(r) {
-  }
+  ModFilter(bool r) : R(r) {}
 
   bool accepts(uint8_t modRM) const override {
     return (R == ((modRM & 0xc0) == 0xc0));
@@ -89,22 +85,19 @@ class ExtendedFilter : public ModRMFilter {
   void anchor() override;
   bool R;
   uint8_t NNN;
+
 public:
   /// Constructor
   ///
   /// \param r   True if the mod field must be set to 11; false otherwise.
   ///            The name is explained at ModFilter.
   /// \param nnn The required value of the nnn field.
-  ExtendedFilter(bool r, uint8_t nnn) :
-    ModRMFilter(),
-    R(r),
-    NNN(nnn) {
-  }
+  ExtendedFilter(bool r, uint8_t nnn) : R(r), NNN(nnn) {}
 
   bool accepts(uint8_t modRM) const override {
-    return (((R  && ((modRM & 0xc0) == 0xc0)) ||
-             (!R && ((modRM & 0xc0) != 0xc0))) &&
-            (((modRM & 0x38) >> 3) == NNN));
+    return (
+        ((R && ((modRM & 0xc0) == 0xc0)) || (!R && ((modRM & 0xc0) != 0xc0))) &&
+        (((modRM & 0x38) >> 3) == NNN));
   }
 };
 
@@ -114,21 +107,17 @@ class ExtendedRMFilter : public ModRMFilter {
   void anchor() override;
   bool R;
   uint8_t NNN;
+
 public:
   /// Constructor
   ///
   /// \param r   True if the mod field must be set to 11; false otherwise.
   ///            The name is explained at ModFilter.
   /// \param nnn The required value of the nnn field.
-  ExtendedRMFilter(bool r, uint8_t nnn) :
-    ModRMFilter(),
-    R(r),
-    NNN(nnn) {
-  }
+  ExtendedRMFilter(bool r, uint8_t nnn) : R(r), NNN(nnn) {}
 
   bool accepts(uint8_t modRM) const override {
-    return ((R && ((modRM & 0xc0) == 0xc0)) &&
-            ((modRM & 0x7) == NNN));
+    return ((R && ((modRM & 0xc0) == 0xc0)) && ((modRM & 0x7) == NNN));
   }
 };
 /// ExactFilter - The occasional extended opcode (such as VMCALL or MONITOR)
@@ -136,18 +125,14 @@ public:
 class ExactFilter : public ModRMFilter {
   void anchor() override;
   uint8_t ModRM;
+
 public:
   /// Constructor
   ///
   /// \param modRM The required value of the full ModR/M byte.
-  ExactFilter(uint8_t modRM) :
-    ModRMFilter(),
-    ModRM(modRM) {
-  }
+  ExactFilter(uint8_t modRM) : ModRM(modRM) {}
 
-  bool accepts(uint8_t modRM) const override {
-    return (ModRM == modRM);
-  }
+  bool accepts(uint8_t modRM) const override { return (ModRM == modRM); }
 };
 
 } // namespace X86Disassembler

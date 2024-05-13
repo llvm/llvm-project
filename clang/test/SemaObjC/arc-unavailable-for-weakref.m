@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-weak -verify -Wno-objc-root-class %s
-// rdar://9693477
 
 __attribute__((objc_arc_weak_reference_unavailable))
 @interface NSOptOut1072  // expected-note {{class is declared here}}
@@ -8,7 +7,7 @@ __attribute__((objc_arc_weak_reference_unavailable))
 
 @interface sub : NSOptOut1072 @end // expected-note 2 {{class is declared here}}
 
-int main() {
+int main(void) {
   __weak sub *w2; // expected-error {{class is incompatible with __weak references}}
 
   __weak NSOptOut1072 *ns1; // expected-error {{class is incompatible with __weak references}}
@@ -20,13 +19,12 @@ int main() {
                            // expected-error {{explicit ownership qualifier on cast result has no effect}}
 }
 
-// rdar://9732636
 __attribute__((objc_arc_weak_reference_unavailable))
 @interface NOWEAK
 + (id) new;
 @end
 
-NOWEAK * Test1() {
+NOWEAK * Test1(void) {
   NOWEAK * strong1 = [NOWEAK new];
   __weak id weak1;
   weak1 = strong1; // expected-error {{assignment of a weak-unavailable object to a __weak object}}
@@ -39,7 +37,7 @@ NOWEAK * Test1() {
 @protocol P @end
 @protocol P1 @end
 
-NOWEAK<P, P1> * Test2() {
+NOWEAK<P, P1> * Test2(void) {
   NOWEAK<P, P1> * strong1 = 0;
   __weak id<P> weak1;
   weak1 = strong1; // expected-error {{assignment of a weak-unavailable object to a __weak object}}
@@ -49,7 +47,6 @@ NOWEAK<P, P1> * Test2() {
                                 // expected-error {{explicit ownership qualifier on cast result has no effect}}
 }
 
-// rdar://10535245
 __attribute__((objc_arc_weak_reference_unavailable))
 @interface NSFont
 @end
@@ -64,7 +61,6 @@ __attribute__((objc_arc_weak_reference_unavailable))
 @synthesize font = _font;
 @end
 
-// rdar://13676793
 @protocol MyProtocol
 @property (weak) NSFont *font; // expected-error {{synthesizing __weak instance variable of type 'NSFont *', which does not support weak references}}
 @end

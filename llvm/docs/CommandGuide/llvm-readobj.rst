@@ -56,46 +56,59 @@ file formats.
 
  Display the address-significance table.
 
-.. option:: --color
+.. option:: --decompress, -z
 
- Use colors in the output for warnings and errors.
+  Dump decompressed section content when used with ``-x`` or ``-p``.
+  If the section(s) are not compressed, they are displayed as is.
+
+.. option:: --demangle, -C
+
+ Display demangled symbol names in the output. This option is only for ELF and
+ XCOFF file formats.
 
 .. option:: --expand-relocs
 
- When used with :option:`--relocations`, display each relocation in an expanded
+ When used with :option:`--relocs`, display each relocation in an expanded
  multi-line format.
 
-.. option:: --file-headers, -h
+.. option:: --file-header, -h
 
  Display file headers.
 
 .. option:: --headers, -e
 
- Equivalent to setting: :option:`--file-headers`, :option:`--program-headers`,
+ Equivalent to setting: :option:`--file-header`, :option:`--program-headers`,
  and :option:`--sections`.
 
 .. option:: --help
 
  Display a summary of command line options.
 
-.. option:: --help-list
-
- Display an uncategorized summary of command line options.
-
 .. option:: --hex-dump=<section[,section,...]>, -x
 
  Display the specified section(s) as hexadecimal bytes. ``section`` may be a
  section index or section name.
 
+ .. option:: --memtag
+
+ Display information about memory tagging present in the binary. This includes
+ various memtag-specific dynamic entries, decoded global descriptor sections,
+ and decoded Android-specific ELF notes.
+
 .. option:: --needed-libs
 
  Display the needed libraries.
+
+.. option:: --no-demangle
+
+ Do not demangle symbol names in the output. This option is only for ELF and
+ XCOFF file formats. The option is enabled by default.
 
 .. option:: --relocations, --relocs, -r
 
  Display the relocation entries in the file.
 
-.. option:: --sections, --section-headers, -s, -S
+.. option:: --sections, --section-headers, -S
 
  Display all sections.
 
@@ -114,6 +127,10 @@ file formats.
  When used with :option:`--sections`, display symbols for each section shown.
  This option has no effect for GNU style output.
 
+.. option:: --sort-symbols=<sort_key[,sort_key]>
+
+ Specify the keys to sort symbols before displaying symtab.
+ Valid values for sort_key are ``name`` and ``type``.
 .. option:: --stackmap
 
  Display contents of the stackmap section.
@@ -123,7 +140,11 @@ file formats.
  Display the specified section(s) as a list of strings. ``section`` may be a
  section index or section name.
 
-.. option:: --symbols, --syms, -t
+.. option:: --string-table
+
+ Display contents of the string table.
+
+.. option:: --symbols, --syms, -s
 
  Display the symbol table.
 
@@ -153,9 +174,16 @@ The following options are implemented only for the ELF file format.
  Display the contents of the basic block address map section(s), which contain the
  address of each function, along with the relative offset of each basic block.
 
-.. option:: --demangle, -C
+ When pgo analysis maps are present, all analyses are printed as their raw
+ value.
 
- Display demangled symbol names in the output.
+.. option:: --pretty-pgo-analysis-map
+
+ When pgo analysis maps are present in the basic block address map section(s),
+ analyses with special formats (i.e. BlockFrequency, BranchProbability, etc)
+ are printed using the same format as their respective analysis pass.
+
+ Requires :option:`--bb-addr-map` to have an effect.
 
 .. option:: --dependent-libraries
 
@@ -177,7 +205,7 @@ The following options are implemented only for the ELF file format.
 
  Display the callgraph profile section.
 
-.. option:: --elf-hash-histogram, --histogram, -I
+.. option:: --histogram, -I
 
  Display a bucket list histogram for dynamic symbol hash tables.
 
@@ -187,11 +215,12 @@ The following options are implemented only for the ELF file format.
 
 .. option:: --elf-output-style=<value>
 
- Format ELF information in the specified style. Valid options are ``LLVM`` and
- ``GNU``. ``LLVM`` output (the default) is an expanded and structured format,
- whilst ``GNU`` output mimics the equivalent GNU :program:`readelf` output.
+ Format ELF information in the specified style. Valid options are ``LLVM``,
+ ``GNU``, and ``JSON``. ``LLVM`` output (the default) is an expanded and
+ structured format. ``GNU`` output mimics the equivalent GNU :program:`readelf`
+ output. ``JSON`` is JSON formatted output intended for machine consumption.
 
-.. option:: --elf-section-groups, --section-groups, -g
+.. option:: --section-groups, -g
 
  Display section groups.
 
@@ -207,17 +236,24 @@ The following options are implemented only for the ELF file format.
 
  Display the hash table for dynamic symbols.
 
+.. option:: --memtag
+
+ Display information about memory tagging present in the binary. This includes
+ various dynamic entries, decoded global descriptor sections, and decoded
+ Android-specific ELF notes.
+
 .. option:: --notes, -n
 
  Display all notes.
 
+.. option:: --pretty-print
+
+ When used with :option:`--elf-output-style`, JSON output will be formatted in
+ a more readable format.
+
 .. option:: --program-headers, --segments, -l
 
  Display the program headers.
-
-.. option:: --raw-relr
-
- Do not decode relocations in RELR relocation sections when displaying them.
 
 .. option:: --section-mapping
 
@@ -314,6 +350,31 @@ The following options are implemented only for the PE/COFF file format.
 .. option:: --coff-resources
 
  Display the .rsrc section.
+
+XCOFF SPECIFIC OPTIONS
+----------------------
+
+The following options are implemented only for the XCOFF file format.
+
+.. option:: --auxiliary-header
+
+  Display XCOFF Auxiliary header.
+
+.. option:: --exception-section
+
+  Display XCOFF exception section entries.
+
+.. option:: --loader-section-header
+
+  Display XCOFF loader section header.
+
+.. option:: --loader-section-symbols
+
+  Display symbol table of loader section.
+
+.. option:: --loader-section-relocations
+
+  Display relocation entries of loader section.
 
 EXIT STATUS
 -----------

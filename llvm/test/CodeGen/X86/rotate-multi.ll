@@ -6,10 +6,9 @@ define i32 @f0(i32 %a0) #0 {
 ; CHECK-LABEL: f0:
 ; CHECK:       # %bb.0: # %b0
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    roll $7, %ecx
-; CHECK-NEXT:    roll $9, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    roll $7, %eax
+; CHECK-NEXT:    roll $9, %edi
+; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    retq
 b0:
   %v0 = shl i32 %a0, 7
@@ -27,11 +26,10 @@ define i32 @f1(i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0: # %b0
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    shll $7, %ecx
-; CHECK-NEXT:    roll $9, %eax
+; CHECK-NEXT:    shll $7, %eax
 ; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    roll $9, %edi
+; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    retq
 b0:
   %v0 = shl i32 %a0, 7
@@ -49,16 +47,15 @@ b0:
 define i32 @f2(i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shll $11, %ecx
 ; CHECK-NEXT:    shrl $21, %edi
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    shll $19, %edx
-; CHECK-NEXT:    shrl $13, %eax
-; CHECK-NEXT:    orl %edi, %eax
-; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    shll $19, %eax
 ; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    shrl $13, %esi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    retq
   %v0 = shl i32 %a0, 11
   %v1 = lshr i32 %a0, 21
@@ -79,30 +76,30 @@ define i32 @f3(i32 %a0) #0 {
 ; CHECK-NEXT:    leal (,%rdi,8), %eax
 ; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shll $5, %ecx
+; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll $7, %eax
 ; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    shll $7, %edx
+; CHECK-NEXT:    shll $13, %edx
+; CHECK-NEXT:    orl %eax, %edx
 ; CHECK-NEXT:    orl %ecx, %edx
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    shll $13, %ecx
-; CHECK-NEXT:    orl %edx, %ecx
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    shll $19, %edx
-; CHECK-NEXT:    orl %ecx, %edx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll $19, %eax
 ; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shrl $2, %ecx
-; CHECK-NEXT:    orl %edx, %ecx
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    shrl $15, %edx
-; CHECK-NEXT:    orl %ecx, %edx
+; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    movl %edi, %esi
+; CHECK-NEXT:    shrl $15, %esi
+; CHECK-NEXT:    orl %ecx, %esi
+; CHECK-NEXT:    orl %edx, %esi
 ; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shrl $23, %ecx
-; CHECK-NEXT:    orl %edx, %ecx
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    shrl $25, %edx
-; CHECK-NEXT:    orl %ecx, %edx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $25, %eax
+; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    shrl $30, %edi
-; CHECK-NEXT:    orl %edx, %edi
 ; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    retq
 b0:
   %v0 = shl i32 %a0, 3

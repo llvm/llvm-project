@@ -5,13 +5,13 @@ target triple = "powerpc-unknown-linux-gnu"
 ; Indirect calls must use R3 on powerpc (i.e., R3 must contain the address of
 ; the function being called; the mtctr is not required to use it).
 
-@p = external global void (...)*                  ; <void (...)**> [#uses=1]
+@p = external global ptr                  ; <ptr> [#uses=1]
 
 define void @foo() nounwind ssp {
 entry:
 ; CHECK: mtctr 3
 ; CHECK: bctrl
-  %0 = load void (...)*, void (...)** @p, align 4              ; <void (...)*> [#uses=1]
+  %0 = load ptr, ptr @p, align 4              ; <ptr> [#uses=1]
   call void (...) %0() nounwind
   br label %return
 

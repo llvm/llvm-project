@@ -31,13 +31,13 @@ define { i64, i64, i64, i64, i64 } @f2() {
 define { double, double, double, double } @f3() {
 ; CHECK-LABEL: f3:
 ; CHECK: larl [[TMP:%r[0-5]]], .LCPI
-; CHECK: ldeb %f0, 0([[TMP]])
+; CHECK: ld %f0, 0([[TMP]])
 ; CHECK: larl [[TMP:%r[0-5]]], .LCPI
-; CHECK: ldeb %f2, 0([[TMP]])
+; CHECK: ld %f2, 0([[TMP]])
 ; CHECK: larl [[TMP:%r[0-5]]], .LCPI
-; CHECK: ldeb %f4, 0([[TMP]])
+; CHECK: ld %f4, 0([[TMP]])
 ; CHECK: larl [[TMP:%r[0-5]]], .LCPI
-; CHECK: ldeb %f6, 0([[TMP]])
+; CHECK: ld %f6, 0([[TMP]])
 ; CHECK: br %r14
 
 ; SOFT-FLOAT-LABEL: f3:

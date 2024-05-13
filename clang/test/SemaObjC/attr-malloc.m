@@ -10,7 +10,7 @@ id bar(void) __attribute((malloc)); // no-warning
 typedef void (^bptr)(void);
 bptr baz(void) __attribute((malloc)); // no-warning
 
-__attribute((malloc)) id (*f)(); //  expected-warning {{attribute only applies to functions}}
-__attribute((malloc)) bptr (*g)(); //  expected-warning {{attribute only applies to functions}}
-__attribute((malloc)) void *(^h)(); //  expected-warning {{attribute only applies to functions}}
+__attribute((malloc)) id (*f)(void); //  expected-warning {{attribute only applies to functions}}
+__attribute((malloc)) bptr (*g)(void); //  expected-warning {{attribute only applies to functions}}
+__attribute((malloc)) void *(^h)(void); //  expected-warning {{attribute only applies to functions}}
 

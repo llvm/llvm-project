@@ -18,8 +18,8 @@
 
 using namespace llvm;
 
-static cl::opt<bool> DotOnly("dot-ddg-only", cl::init(false), cl::Hidden,
-                             cl::ZeroOrMore, cl::desc("simple ddg dot graph"));
+static cl::opt<bool> DotOnly("dot-ddg-only", cl::Hidden,
+                             cl::desc("simple ddg dot graph"));
 static cl::opt<std::string> DDGDotFilenamePrefix(
     "dot-ddg-filename-prefix", cl::init("ddg"), cl::Hidden,
     cl::desc("The prefix used for the DDG dot file names."));

@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 void UnusedAliasDeclsCheck::registerMatchers(MatchFinder *Finder) {
   // We cannot do anything about headers (yet), as the alias declarations
@@ -53,6 +51,4 @@ void UnusedAliasDeclsCheck::onEndOfTranslationUnit() {
   }
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

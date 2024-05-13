@@ -43,7 +43,7 @@ namespace types {
 
   /// getTypeTempSuffix - Return the suffix to use when creating a
   /// temp file of this type, or null if unspecified.
-  const char *getTypeTempSuffix(ID Id, bool CLMode = false);
+  const char *getTypeTempSuffix(ID Id, bool CLStyle = false);
 
   /// onlyPrecompileType - Should this type only be precompiled.
   bool onlyPrecompileType(ID Id);
@@ -66,6 +66,17 @@ namespace types {
   /// isAcceptedByClang - Can clang handle this input type.
   bool isAcceptedByClang(ID Id);
 
+  /// isAcceptedByFlang - Can flang handle this input type.
+  bool isAcceptedByFlang(ID Id);
+
+  /// isDerivedFromC - Is the input derived from C.
+  ///
+  /// That is, does the lexer follow the rules of
+  /// TokenConcatenation::AvoidConcat. If this is the case, the preprocessor may
+  /// add and remove whitespace between tokens. Used to determine whether the
+  /// input can be processed by -fminimize-whitespace.
+  bool isDerivedFromC(ID Id);
+
   /// isCXX - Is this a "C++" input (C++ and Obj-C++ sources and headers).
   bool isCXX(ID Id);
 
@@ -84,8 +95,8 @@ namespace types {
   /// isOpenCL - Is this an "OpenCL" input.
   bool isOpenCL(ID Id);
 
-  /// isFortran - Is this a Fortran input.
-  bool isFortran(ID Id);
+  /// isHLSL - Is this an HLSL input.
+  bool isHLSL(ID Id);
 
   /// isSrcFile - Is this a source file, i.e. something that still has to be
   /// preprocessed. The logic behind this is the same that decides if the first
@@ -103,7 +114,7 @@ namespace types {
   /// getCompilationPhases - Get the list of compilation phases ('Phases') to be
   /// done for type 'Id' up until including LastPhase.
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
-  getCompilationPhases(ID Id, phases::ID LastPhase = phases::LastPhase);
+  getCompilationPhases(ID Id, phases::ID LastPhase = phases::IfsMerge);
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
   getCompilationPhases(const clang::driver::Driver &Driver,
                        llvm::opt::DerivedArgList &DAL, ID Id);

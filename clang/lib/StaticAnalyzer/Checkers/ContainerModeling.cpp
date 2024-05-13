@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
@@ -71,42 +72,32 @@ public:
                                                    SVal) const;
 
   CallDescriptionMap<NoItParamFn> NoIterParamFunctions = {
-    {{0, "clear", 0},
-     &ContainerModeling::handleClear},
-    {{0, "assign", 2},
-     &ContainerModeling::handleAssign},
-    {{0, "push_back", 1},
-     &ContainerModeling::handlePushBack},
-    {{0, "emplace_back", 1},
-     &ContainerModeling::handlePushBack},
-    {{0, "pop_back", 0},
-     &ContainerModeling::handlePopBack},
-    {{0, "push_front", 1},
-     &ContainerModeling::handlePushFront},
-    {{0, "emplace_front", 1},
-     &ContainerModeling::handlePushFront},
-    {{0, "pop_front", 0},
-     &ContainerModeling::handlePopFront},
+      {{CDM::CXXMethod, {"clear"}, 0}, &ContainerModeling::handleClear},
+      {{CDM::CXXMethod, {"assign"}, 2}, &ContainerModeling::handleAssign},
+      {{CDM::CXXMethod, {"push_back"}, 1}, &ContainerModeling::handlePushBack},
+      {{CDM::CXXMethod, {"emplace_back"}, 1},
+       &ContainerModeling::handlePushBack},
+      {{CDM::CXXMethod, {"pop_back"}, 0}, &ContainerModeling::handlePopBack},
+      {{CDM::CXXMethod, {"push_front"}, 1},
+       &ContainerModeling::handlePushFront},
+      {{CDM::CXXMethod, {"emplace_front"}, 1},
+       &ContainerModeling::handlePushFront},
+      {{CDM::CXXMethod, {"pop_front"}, 0}, &ContainerModeling::handlePopFront},
   };
-                                                          
+
   CallDescriptionMap<OneItParamFn> OneIterParamFunctions = {
-    {{0, "insert", 2},
-     &ContainerModeling::handleInsert},
-    {{0, "emplace", 2},
-     &ContainerModeling::handleInsert},
-    {{0, "erase", 1},
-     &ContainerModeling::handleErase},
-    {{0, "erase_after", 1},
-     &ContainerModeling::handleEraseAfter},
+      {{CDM::CXXMethod, {"insert"}, 2}, &ContainerModeling::handleInsert},
+      {{CDM::CXXMethod, {"emplace"}, 2}, &ContainerModeling::handleInsert},
+      {{CDM::CXXMethod, {"erase"}, 1}, &ContainerModeling::handleErase},
+      {{CDM::CXXMethod, {"erase_after"}, 1},
+       &ContainerModeling::handleEraseAfter},
   };
-                                                          
+
   CallDescriptionMap<TwoItParamFn> TwoIterParamFunctions = {
-    {{0, "erase", 2},
-     &ContainerModeling::handleErase},
-    {{0, "erase_after", 2},
-     &ContainerModeling::handleEraseAfter},
+      {{CDM::CXXMethod, {"erase"}, 2}, &ContainerModeling::handleErase},
+      {{CDM::CXXMethod, {"erase_after"}, 2},
+       &ContainerModeling::handleEraseAfter},
   };
-                                                          
 };
 
 bool isBeginCall(const FunctionDecl *Func);
@@ -241,7 +232,7 @@ void ContainerModeling::checkDeadSymbols(SymbolReaper &SR,
                                          CheckerContext &C) const {
   // Cleanup
   auto State = C.getState();
-  
+
   auto ContMap = State->get<ContainerMap>();
   for (const auto &Cont : ContMap) {
     if (!SR.isLiveRegion(Cont.first)) {
@@ -763,14 +754,14 @@ bool isBeginCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_lower("begin");
+  return IdInfo->getName().ends_with_insensitive("begin");
 }
 
 bool isEndCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_lower("end");
+  return IdInfo->getName().ends_with_insensitive("end");
 }
 
 const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,
@@ -782,6 +773,10 @@ const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,
   auto Type = TI.getType();
   if (const auto *RefT = Type->getAs<ReferenceType>()) {
     Type = RefT->getPointeeType();
+  }
+
+  if (const auto *PtrT = Type->getAs<PointerType>()) {
+    Type = PtrT->getPointeeType();
   }
 
   return Type->getUnqualifiedDesugaredType()->getAsCXXRecordDecl();
@@ -1035,7 +1030,7 @@ SymbolRef rebaseSymbol(ProgramStateRef State, SValBuilder &SVB,
                        SymbolRef NewSym) {
   auto &SymMgr = SVB.getSymbolManager();
   auto Diff = SVB.evalBinOpNN(State, BO_Sub, nonloc::SymbolVal(OrigExpr),
-                              nonloc::SymbolVal(OldExpr), 
+                              nonloc::SymbolVal(OldExpr),
                               SymMgr.getType(OrigExpr));
 
   const auto DiffInt = Diff.getAs<nonloc::ConcreteInt>();

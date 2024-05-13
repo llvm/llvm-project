@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -triple i386-pc-win32 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -w -triple i386-pc-win32 -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define dso_local i64 @f1_1()
 // CHECK-LABEL: define dso_local void @f1_2(i32 %a0.0, i32 %a0.1)
@@ -72,21 +72,88 @@ void receive_vec_512(__m512 x, __m512 y, __m512 z, __m512 w, __m512 q) {
 void receive_vec_1024(__m1024 x, __m1024 y, __m1024 z, __m1024 w, __m1024 q) {
   gv1024 = x + y + z + w + q;
 }
-// CHECK-LABEL: define dso_local void @receive_vec_128(<4 x float> inreg %x, <4 x float> inreg %y, <4 x float> inreg %z, <4 x float>* %0, <4 x float>* %1)
-// CHECK-LABEL: define dso_local void @receive_vec_256(<8 x float> inreg %x, <8 x float> inreg %y, <8 x float> inreg %z, <8 x float>* %0, <8 x float>* %1)
-// CHECK-LABEL: define dso_local void @receive_vec_512(<16 x float> inreg %x, <16 x float> inreg %y, <16 x float> inreg %z, <16 x float>* %0, <16 x float>* %1)
-// CHECK-LABEL: define dso_local void @receive_vec_1024(<32 x float>* %0, <32 x float>* %1, <32 x float>* %2, <32 x float>* %3, <32 x float>* %4)
+// CHECK-LABEL: define dso_local void @receive_vec_128(<4 x float> inreg noundef %x, <4 x float> inreg noundef %y, <4 x float> inreg noundef %z, ptr noundef %0, ptr noundef %1)
+// CHECK-LABEL: define dso_local void @receive_vec_256(<8 x float> inreg noundef %x, <8 x float> inreg noundef %y, <8 x float> inreg noundef %z, ptr noundef %0, ptr noundef %1)
+// CHECK-LABEL: define dso_local void @receive_vec_512(<16 x float> inreg noundef %x, <16 x float> inreg noundef %y, <16 x float> inreg noundef %z, ptr noundef %0, ptr noundef %1)
+// CHECK-LABEL: define dso_local void @receive_vec_1024(ptr noundef %0, ptr noundef %1, ptr noundef %2, ptr noundef %3, ptr noundef %4)
 
-void pass_vec_128() {
+void pass_vec_128(void) {
   __m128 z = {0};
   receive_vec_128(z, z, z, z, z);
 }
 
 // CHECK-LABEL: define dso_local void @pass_vec_128()
-// CHECK: call void @receive_vec_128(<4 x float> inreg %{{[^,)]*}}, <4 x float> inreg %{{[^,)]*}}, <4 x float> inreg %{{[^,)]*}}, <4 x float>* %{{[^,)]*}}, <4 x float>* %{{[^,)]*}})
+// CHECK: call void @receive_vec_128(<4 x float> inreg noundef %{{[^,)]*}}, <4 x float> inreg noundef %{{[^,)]*}}, <4 x float> inreg noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
 
 
 void __fastcall fastcall_indirect_vec(__m128 x, __m128 y, __m128 z, __m128 w, int edx, __m128 q) {
   gv128 = x + y + z + w + q;
 }
-// CHECK-LABEL: define dso_local x86_fastcallcc void @"\01@fastcall_indirect_vec@84"(<4 x float> inreg %x, <4 x float> inreg %y, <4 x float> inreg %z, <4 x float>* inreg %0, i32 inreg %edx, <4 x float>* %1)
+// CHECK-LABEL: define dso_local x86_fastcallcc void @"\01@fastcall_indirect_vec@84"(<4 x float> inreg noundef %x, <4 x float> inreg noundef %y, <4 x float> inreg noundef %z, ptr inreg noundef %0, i32 inreg noundef %edx, ptr noundef %1)
+
+struct __declspec(align(1)) Align1 { unsigned long long x; };
+struct __declspec(align(4)) Align4 { unsigned long long x; };
+struct __declspec(align(8)) Align8 { unsigned long long x; };
+void receive_align1(struct Align1 o);
+void receive_align4(struct Align4 o);
+void receive_align8(struct Align8 o);
+void pass_underaligned_record() {
+  struct Align1 a1;
+  receive_align1(a1);
+  struct Align4 a4;
+  receive_align4(a4);
+  struct Align8 a8;
+  receive_align8(a8);
+}
+// CHECK-LABEL: define dso_local void @pass_underaligned_record()
+// CHECK: call void @receive_align1(i64 {{[^,)]*}})
+// CHECK: call void @receive_align4(i64 {{[^,)]*}})
+// CHECK: call void @receive_align8(ptr {{[^,)]*}})
+
+struct FieldAlign1 { unsigned long long __declspec(align(1)) x; };
+struct FieldAlign4 { unsigned long long __declspec(align(4)) x; };
+struct FieldAlign8 { unsigned long long __declspec(align(8)) x; };
+void receive_falign1(struct FieldAlign1 o);
+void receive_falign4(struct FieldAlign4 o);
+void receive_falign8(struct FieldAlign8 o);
+void pass_underaligned_record_field() {
+  struct FieldAlign1 a1;
+  receive_falign1(a1);
+  struct FieldAlign4 a4;
+  receive_falign4(a4);
+  struct FieldAlign8 a8;
+  receive_falign8(a8);
+}
+// CHECK-LABEL: define dso_local void @pass_underaligned_record_field()
+// CHECK: call void @receive_falign1(i64 {{[^,)]*}})
+// CHECK: call void @receive_falign4(i64 {{[^,)]*}})
+// CHECK: call void @receive_falign8(ptr {{[^,)]*}})
+
+struct __declspec(align(8)) BigAligned {
+  int big[5];
+};
+
+void receive_aligned_variadic(int f, ...);
+void pass_aligned_variadic() {
+  struct Align8 a8 = {42};
+  struct FieldAlign8 f8 = {42};
+  struct BigAligned big;
+  receive_aligned_variadic(1, a8, f8, big);
+}
+// MSVC doesn't pass aligned objects to variadic functions indirectly.
+// CHECK-LABEL: define dso_local void @pass_aligned_variadic()
+// CHECK: call void (i32, ...) @receive_aligned_variadic(i32 noundef 1, i64 %{{[^,]*}}, i64 %{{[^,]*}}, ptr noundef byval(%struct.BigAligned) align 4 %{{[^)]*}})
+
+
+void receive_fixed_align_variadic(struct BigAligned big, ...);
+void pass_fixed_align_variadic() {
+  struct BigAligned big;
+  receive_fixed_align_variadic(big, 42);
+}
+// MSVC emits error C2719 and C3916 when receiving and passing arguments with
+// required alignment greater than 4 to the fixed part of a variadic function
+// prototype, but it's actually easier to just implement this functionality
+// correctly in Clang than it is to be bug for bug compatible, so we pass such
+// arguments indirectly.
+// CHECK-LABEL: define dso_local void @pass_fixed_align_variadic()
+// CHECK: call void (ptr, ...) @receive_fixed_align_variadic(ptr noundef %{{[^)]*}}, i32 noundef 42)

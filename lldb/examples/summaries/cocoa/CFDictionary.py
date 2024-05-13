@@ -13,16 +13,11 @@ import lldb.runtime.objc.objc_runtime
 import lldb.formatters.metrics
 import lldb.formatters.Logger
 
-try:
-    basestring
-except NameError
-    basestring = str
-
 statistics = lldb.formatters.metrics.Metrics()
-statistics.add_metric('invalid_isa')
-statistics.add_metric('invalid_pointer')
-statistics.add_metric('unknown_class')
-statistics.add_metric('code_notrun')
+statistics.add_metric("invalid_isa")
+statistics.add_metric("invalid_pointer")
+statistics.add_metric("unknown_class")
+statistics.add_metric("code_notrun")
 
 # despite the similary to synthetic children providers, these classes are not
 # trying to provide anything but the count for an NSDictionary, so they need not
@@ -30,7 +25,6 @@ statistics.add_metric('code_notrun')
 
 
 class NSCFDictionary_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -38,13 +32,15 @@ class NSCFDictionary_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
         self.update()
 
     def update(self):
@@ -65,12 +61,12 @@ class NSCFDictionary_SummaryProvider:
     def num_children(self):
         logger = lldb.formatters.Logger.Logger()
         num_children_vo = self.valobj.CreateChildAtOffset(
-            "count", self.offset(), self.sys_params.types_cache.NSUInteger)
+            "count", self.offset(), self.sys_params.types_cache.NSUInteger
+        )
         return num_children_vo.GetValueAsUnsigned(0)
 
 
 class NSDictionaryI_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -78,13 +74,15 @@ class NSDictionaryI_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
         self.update()
 
     def update(self):
@@ -99,7 +97,8 @@ class NSDictionaryI_SummaryProvider:
     def num_children(self):
         logger = lldb.formatters.Logger.Logger()
         num_children_vo = self.valobj.CreateChildAtOffset(
-            "count", self.offset(), self.sys_params.types_cache.NSUInteger)
+            "count", self.offset(), self.sys_params.types_cache.NSUInteger
+        )
         value = num_children_vo.GetValueAsUnsigned(0)
         if value is not None:
             # the MS6bits on immutable dictionaries seem to be taken by the LSB of capacity
@@ -113,7 +112,6 @@ class NSDictionaryI_SummaryProvider:
 
 
 class NSDictionaryM_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -121,13 +119,15 @@ class NSDictionaryM_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
         self.update()
 
     def update(self):
@@ -141,7 +141,8 @@ class NSDictionaryM_SummaryProvider:
     def num_children(self):
         logger = lldb.formatters.Logger.Logger()
         num_children_vo = self.valobj.CreateChildAtOffset(
-            "count", self.offset(), self.sys_params.types_cache.NSUInteger)
+            "count", self.offset(), self.sys_params.types_cache.NSUInteger
+        )
         value = num_children_vo.GetValueAsUnsigned(0)
         if value is not None:
             # the MS6bits on immutable dictionaries seem to be taken by the LSB of capacity
@@ -155,7 +156,6 @@ class NSDictionaryM_SummaryProvider:
 
 
 class NSDictionaryUnknown_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -174,17 +174,22 @@ class NSDictionaryUnknown_SummaryProvider:
         stream = lldb.SBStream()
         self.valobj.GetExpressionPath(stream)
         num_children_vo = self.valobj.CreateValueFromExpression(
-            "count", "(int)[" + stream.GetData() + " count]")
+            "count", "(int)[" + stream.GetData() + " count]"
+        )
         if num_children_vo.IsValid():
             return num_children_vo.GetValueAsUnsigned(0)
-        return '<variable is not NSDictionary>'
+        return "<variable is not NSDictionary>"
 
 
 def GetSummary_Impl(valobj):
     logger = lldb.formatters.Logger.Logger()
     global statistics
-    class_data, wrapper = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
-        valobj, statistics)
+    (
+        class_data,
+        wrapper,
+    ) = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
+        valobj, statistics
+    )
     if wrapper:
         return wrapper
 
@@ -192,23 +197,20 @@ def GetSummary_Impl(valobj):
 
     logger >> "class name is: " + str(name_string)
 
-    if name_string == '__NSCFDictionary':
+    if name_string == "__NSCFDictionary":
         wrapper = NSCFDictionary_SummaryProvider(valobj, class_data.sys_params)
-        statistics.metric_hit('code_notrun', valobj)
-    elif name_string == '__NSDictionaryI':
+        statistics.metric_hit("code_notrun", valobj)
+    elif name_string == "__NSDictionaryI":
         wrapper = NSDictionaryI_SummaryProvider(valobj, class_data.sys_params)
-        statistics.metric_hit('code_notrun', valobj)
-    elif name_string == '__NSDictionaryM':
+        statistics.metric_hit("code_notrun", valobj)
+    elif name_string == "__NSDictionaryM":
         wrapper = NSDictionaryM_SummaryProvider(valobj, class_data.sys_params)
-        statistics.metric_hit('code_notrun', valobj)
+        statistics.metric_hit("code_notrun", valobj)
     else:
-        wrapper = NSDictionaryUnknown_SummaryProvider(
-            valobj, class_data.sys_params)
+        wrapper = NSDictionaryUnknown_SummaryProvider(valobj, class_data.sys_params)
         statistics.metric_hit(
-            'unknown_class',
-            valobj.GetName() +
-            " seen as " +
-            name_string)
+            "unknown_class", valobj.GetName() + " seen as " + name_string
+        )
     return wrapper
 
 
@@ -217,8 +219,8 @@ def CFDictionary_SummaryProvider(valobj, dict):
     provider = GetSummary_Impl(valobj)
     if provider is not None:
         if isinstance(
-                provider,
-                lldb.runtime.objc.objc_runtime.SpecialSituation_Description):
+            provider, lldb.runtime.objc.objc_runtime.SpecialSituation_Description
+        ):
             return provider.message()
         try:
             summary = provider.num_children()
@@ -226,12 +228,13 @@ def CFDictionary_SummaryProvider(valobj, dict):
             summary = None
         logger >> "got summary " + str(summary)
         if summary is None:
-            return '<variable is not NSDictionary>'
-        if isinstance(summary, basestring):
+            return "<variable is not NSDictionary>"
+        if isinstance(summary, str):
             return summary
-        return str(summary) + (" key/value pairs" if summary !=
-                               1 else " key/value pair")
-    return 'Summary Unavailable'
+        return str(summary) + (
+            " key/value pairs" if summary != 1 else " key/value pair"
+        )
+    return "Summary Unavailable"
 
 
 def CFDictionary_SummaryProvider2(valobj, dict):
@@ -239,8 +242,8 @@ def CFDictionary_SummaryProvider2(valobj, dict):
     provider = GetSummary_Impl(valobj)
     if provider is not None:
         if isinstance(
-                provider,
-                lldb.runtime.objc.objc_runtime.SpecialSituation_Description):
+            provider, lldb.runtime.objc.objc_runtime.SpecialSituation_Description
+        ):
             return provider.message()
         try:
             summary = provider.num_children()
@@ -248,21 +251,22 @@ def CFDictionary_SummaryProvider2(valobj, dict):
             summary = None
         logger >> "got summary " + str(summary)
         if summary is None:
-            summary = '<variable is not CFDictionary>'
-        if isinstance(summary, basestring):
+            summary = "<variable is not CFDictionary>"
+        if isinstance(summary, str):
             return summary
         else:
             # needed on OSX Mountain Lion
             if provider.sys_params.is_64_bit:
-                summary = summary & ~0x0f1f000000000000
-            summary = '@"' + str(summary) + \
-                (' entries"' if summary != 1 else ' entry"')
+                summary = summary & ~0x0F1F000000000000
+            summary = '@"' + str(summary) + (' entries"' if summary != 1 else ' entry"')
         return summary
-    return 'Summary Unavailable'
+    return "Summary Unavailable"
 
 
 def __lldb_init_module(debugger, dict):
     debugger.HandleCommand(
-        "type summary add -F CFDictionary.CFDictionary_SummaryProvider NSDictionary")
+        "type summary add -F CFDictionary.CFDictionary_SummaryProvider NSDictionary"
+    )
     debugger.HandleCommand(
-        "type summary add -F CFDictionary.CFDictionary_SummaryProvider2 CFDictionaryRef CFMutableDictionaryRef")
+        "type summary add -F CFDictionary.CFDictionary_SummaryProvider2 CFDictionaryRef CFMutableDictionaryRef"
+    )

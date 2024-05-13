@@ -15,9 +15,9 @@
 #ifndef FORTRAN_RUNTIME_IO_ERROR_H_
 #define FORTRAN_RUNTIME_IO_ERROR_H_
 
-#include "iostat.h"
-#include "memory.h"
 #include "terminator.h"
+#include "flang/Runtime/iostat.h"
+#include "flang/Runtime/memory.h"
 #include <cinttypes>
 
 namespace Fortran::runtime::io {
@@ -26,27 +26,42 @@ namespace Fortran::runtime::io {
 class IoErrorHandler : public Terminator {
 public:
   using Terminator::Terminator;
-  explicit IoErrorHandler(const Terminator &that) : Terminator{that} {}
-  void HasIoStat() { flags_ |= hasIoStat; }
-  void HasErrLabel() { flags_ |= hasErr; }
-  void HasEndLabel() { flags_ |= hasEnd; }
-  void HasEorLabel() { flags_ |= hasEor; }
-  void HasIoMsg() { flags_ |= hasIoMsg; }
+  explicit RT_API_ATTRS IoErrorHandler(const Terminator &that)
+      : Terminator{that} {}
+  RT_API_ATTRS void HasIoStat() { flags_ |= hasIoStat; }
+  RT_API_ATTRS void HasErrLabel() { flags_ |= hasErr; }
+  RT_API_ATTRS void HasEndLabel() { flags_ |= hasEnd; }
+  RT_API_ATTRS void HasEorLabel() { flags_ |= hasEor; }
+  RT_API_ATTRS void HasIoMsg() { flags_ |= hasIoMsg; }
 
-  bool InError() const { return ioStat_ != IostatOk; }
+  RT_API_ATTRS bool InError() const {
+    return ioStat_ != IostatOk || pendingError_ != IostatOk;
+  }
 
-  void SignalError(int iostatOrErrno, const char *msg, ...);
-  void SignalError(int iostatOrErrno);
-  template <typename... X> void SignalError(const char *msg, X &&...xs) {
+  // For I/O statements that detect fatal errors in their
+  // Begin...() API routines before it is known whether they
+  // have error handling control list items.  Such statements
+  // have an ErroneousIoStatementState with a pending error.
+  RT_API_ATTRS void SetPendingError(int iostat) { pendingError_ = iostat; }
+
+  RT_API_ATTRS void SignalError(int iostatOrErrno, const char *msg, ...);
+  RT_API_ATTRS void SignalError(int iostatOrErrno);
+  template <typename... X>
+  RT_API_ATTRS void SignalError(const char *msg, X &&...xs) {
     SignalError(IostatGenericError, msg, std::forward<X>(xs)...);
   }
 
-  void SignalErrno(); // SignalError(errno)
-  void SignalEnd(); // input only; EOF on internal write is an error
-  void SignalEor(); // non-advancing input only; EOR on write is an error
+  RT_API_ATTRS void Forward(int iostatOrErrno, const char *, std::size_t);
 
-  int GetIoStat() const { return ioStat_; }
-  bool GetIoMsg(char *, std::size_t);
+  void SignalErrno(); // SignalError(errno)
+  RT_API_ATTRS void
+  SignalEnd(); // input only; EOF on internal write is an error
+  RT_API_ATTRS void
+  SignalEor(); // non-advancing input only; EOR on write is an error
+  RT_API_ATTRS void SignalPendingError();
+
+  RT_API_ATTRS int GetIoStat() const { return ioStat_; }
+  RT_API_ATTRS bool GetIoMsg(char *, std::size_t);
 
 private:
   enum Flag : std::uint8_t {
@@ -59,6 +74,7 @@ private:
   std::uint8_t flags_{0};
   int ioStat_{IostatOk};
   OwningPtr<char> ioMsg_;
+  int pendingError_{IostatOk};
 };
 
 } // namespace Fortran::runtime::io

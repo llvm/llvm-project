@@ -8,14 +8,19 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not ld.lld %t.o %t.o -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK:      error: {{.*}}.o: STB_LOCAL symbol (2) found at index >= .symtab's sh_info (1)
-# CHECK-NEXT: error: {{.*}}.o: STB_LOCAL symbol (2) found at index >= .symtab's sh_info (1)
+# CHECK:      error: {{.*}}.o: symbol (2) has invalid binding: 0
+# CHECK-NEXT: error: {{.*}}.o: symbol (2) has invalid binding: 0
 # CHECK-NEXT: error: duplicate symbol: _start
 # CHECK-NEXT: >>> defined at {{.*}}.o:(.text+0x0)
 # CHECK-NEXT: >>> defined at {{.*}}.o:(.text+0x0)
+# CHECK-EMPTY:
+# CHECK-NEXT: error: duplicate symbol: local
+# CHECK-NEXT: >>> defined at {{.*}}.o:(.text+0x0)
+# CHECK-NEXT: >>> defined at {{.*}}.o:(.text+0x0)
+# CHECK-EMPTY:
 
 # RUN: ld.lld --noinhibit-exec %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
-# WARN: warning: {{.*}}.o: STB_LOCAL symbol (2) found at index >= .symtab's sh_info (1)
+# WARN: warning: {{.*}}.o: symbol (2) has invalid binding: 0
 
 !ELF
 FileHeader:

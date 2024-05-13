@@ -51,7 +51,7 @@ unsigned SSAUpdaterBulk::AddVariable(StringRef Name, Type *Ty) {
 void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
   assert(Var < Rewrites.size() && "Variable not found!");
   LLVM_DEBUG(dbgs() << "SSAUpdater: Var=" << Var
-                    << ": added new available value" << *V << " in "
+                    << ": added new available value " << *V << " in "
                     << BB->getName() << "\n");
   Rewrites[Var].Defines[BB] = V;
 }
@@ -63,12 +63,6 @@ void SSAUpdaterBulk::AddUse(unsigned Var, Use *U) {
   LLVM_DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added a use" << *U->get()
                     << " in " << getUserBB(U)->getName() << "\n");
   Rewrites[Var].Uses.push_back(U);
-}
-
-/// Return true if the SSAUpdater already has a value for the specified variable
-/// in the specified block.
-bool SSAUpdaterBulk::HasValueForBlock(unsigned Var, BasicBlock *BB) {
-  return (Var < Rewrites.size()) ? Rewrites[Var].Defines.count(BB) : false;
 }
 
 // Compute value at the given block BB. We either should already know it, or we

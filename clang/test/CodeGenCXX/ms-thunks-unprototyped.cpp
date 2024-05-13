@@ -31,43 +31,40 @@ struct S : B1, B2 { DoNotInstantiate<void> f() override; };
 S s;
 
 // CHECK: @"??_7S@@6BB2@@@" = linkonce_odr unnamed_addr constant
-// CHECK-SAME: void (%struct.S*, ...)* @"?f@S@@W7EAA?AU?$DoNotInstantiate@X@@XZ"
+// CHECK-SAME: ptr @"?f@S@@W7EAA?AU?$DoNotInstantiate@X@@XZ"
 
 // CHECK: @"??_7C@@6B@" = linkonce_odr unnamed_addr constant
-// CHECK-SAME: void (%struct.B*, ...)* @"?foo@B@@W7EAAXUIncomplete@@@Z"
-// CHECK-SAME: void (%struct.B*, ...)* @"?bar@B@@W7EAAXU?$DoNotInstantiate@H@@@Z"
-// CHECK-SAME: i32 (i8*, i32)* @"?baz@B@@W7EAAHU?$InstantiateLater@H@@@Z"
+// CHECK-SAME: ptr @"?foo@B@@W7EAAXUIncomplete@@@Z"
+// CHECK-SAME: ptr @"?bar@B@@W7EAAXU?$DoNotInstantiate@H@@@Z"
+// CHECK-SAME: ptr @"?baz@B@@W7EAAHU?$InstantiateLater@H@@@Z"
 
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"?f@S@@W7EAA?AU?$DoNotInstantiate@X@@XZ"(%struct.S* %this, ...)
-// CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, i8* {{.*}}, i32 -8
-// CHECK: %[[THIS_ADJ:[^ ]*]] = bitcast i8* %[[THIS_ADJ_i8]] to %struct.S*
-// CHECK: musttail call void (%struct.S*, ...) {{.*}}@"?f@S@@UEAA?AU?$DoNotInstantiate@X@@XZ"
-// CHECK-SAME: (%struct.S* %[[THIS_ADJ]], ...)
+// CHECK-LABEL: define linkonce_odr dso_local void @"?f@S@@W7EAA?AU?$DoNotInstantiate@X@@XZ"(ptr noundef %this, ...)
+// CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, ptr {{.*}}, i32 -8
+// CHECK: musttail call void (ptr, ...) {{.*}}@"?f@S@@UEAA?AU?$DoNotInstantiate@X@@XZ"
+// CHECK-SAME: (ptr noundef %[[THIS_ADJ_i8]], ...)
 // CHECK: ret void
 
 // The thunks should have a -8 adjustment.
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"?foo@B@@W7EAAXUIncomplete@@@Z"(%struct.B* %this, ...)
-// CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, i8* {{.*}}, i32 -8
-// CHECK: %[[THIS_ADJ:[^ ]*]] = bitcast i8* %[[THIS_ADJ_i8]] to %struct.B*
-// CHECK: musttail call void (%struct.B*, ...) {{.*}}@"?foo@B@@UEAAXUIncomplete@@@Z"
-// CHECK-SAME: (%struct.B* %[[THIS_ADJ]], ...)
+// CHECK-LABEL: define linkonce_odr dso_local void @"?foo@B@@W7EAAXUIncomplete@@@Z"(ptr noundef %this, ...)
+// CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, ptr {{.*}}, i32 -8
+// CHECK: musttail call void (ptr, ...) {{.*}}@"?foo@B@@UEAAXUIncomplete@@@Z"
+// CHECK-SAME: (ptr noundef %[[THIS_ADJ_i8]], ...)
 // CHECK-NEXT: ret void
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"?bar@B@@W7EAAXU?$DoNotInstantiate@H@@@Z"(%struct.B* %this, ...)
-// CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, i8* {{.*}}, i32 -8
-// CHECK: %[[THIS_ADJ:[^ ]*]] = bitcast i8* %[[THIS_ADJ_i8]] to %struct.B*
-// CHECK: musttail call void (%struct.B*, ...) {{.*}}@"?bar@B@@UEAAXU?$DoNotInstantiate@H@@@Z"
-// CHECK-SAME: (%struct.B* %[[THIS_ADJ]], ...)
+// CHECK-LABEL: define linkonce_odr dso_local void @"?bar@B@@W7EAAXU?$DoNotInstantiate@H@@@Z"(ptr noundef %this, ...)
+// CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, ptr {{.*}}, i32 -8
+// CHECK: musttail call void (ptr, ...) {{.*}}@"?bar@B@@UEAAXU?$DoNotInstantiate@H@@@Z"
+// CHECK-SAME: (ptr noundef %[[THIS_ADJ_i8]], ...)
 // CHECK-NEXT: ret void
 
 // If we complete the definition later, things work out.
 template <typename T> struct InstantiateLater { T x; };
 inline int B::baz(InstantiateLater<int> p) { return p.x; }
 
-// CHECK-LABEL: define linkonce_odr dso_local i32 @"?baz@B@@W7EAAHU?$InstantiateLater@H@@@Z"(i8* %this.coerce, i32 %p.coerce)
-// CHECK: = getelementptr i8, i8* {{.*}}, i32 -8
-// CHECK: tail call i32 @"?baz@B@@UEAAHU?$InstantiateLater@H@@@Z"(i8* {{[^,]*}}, i32 {{.*}})
+// CHECK-LABEL: define linkonce_odr dso_local noundef i32 @"?baz@B@@W7EAAHU?$InstantiateLater@H@@@Z"(ptr noundef %this, i32 %p.coerce)
+// CHECK: = getelementptr i8, ptr {{.*}}, i32 -8
+// CHECK: tail call noundef i32 @"?baz@B@@UEAAHU?$InstantiateLater@H@@@Z"(ptr {{[^,]*}}, i32 {{.*}})
 
-// CHECK-LABEL: define linkonce_odr dso_local i32 @"?baz@B@@UEAAHU?$InstantiateLater@H@@@Z"(i8* %this.coerce, i32 %p.coerce)
+// CHECK-LABEL: define linkonce_odr dso_local noundef i32 @"?baz@B@@UEAAHU?$InstantiateLater@H@@@Z"(ptr noundef %this, i32 %p.coerce)

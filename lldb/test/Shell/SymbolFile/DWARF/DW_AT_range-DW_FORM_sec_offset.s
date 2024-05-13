@@ -8,7 +8,7 @@
 # RUN:   -o exit | FileCheck %s
 
 # Failure was the block range 1..2 was not printed plus:
-# error: DW_AT_range-DW_FORM_sec_offset.s.tmp {0x0000003f}: DIE has DW_AT_ranges(0xc) attribute, but range extraction failed (missing or invalid range list table), please file a bug and attach the file at the start of this error message
+# error: DW_AT_range-DW_FORM_sec_offset.s.tmp {0x000000000000003f}: DIE has DW_AT_ranges(0xc) attribute, but range extraction failed (missing or invalid range list table), please file a bug and attach the file at the start of this error message
 
 # CHECK-LABEL: image lookup -v -s lookup_rnglists
 # CHECK:  Function: id = {0x00000029}, name = "rnglists", range = [0x0000000000000000-0x0000000000000003)
@@ -18,18 +18,20 @@
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 # RUN:   --defsym RNGLISTX=0 %s > %t-rnglistx
 # RUN: %lldb %t-rnglistx -o "image lookup -v -s lookup_rnglists" \
-# RUN:   -o exit 2>&1 | FileCheck --check-prefix=RNGLISTX %s
+# RUN:   -o exit 2>%t.error | FileCheck --check-prefix=RNGLISTX %s
+# RUN: cat %t.error | FileCheck --check-prefix=ERROR %s
 
 # RNGLISTX-LABEL: image lookup -v -s lookup_rnglists
-# RNGLISTX: error: {{.*}} {0x0000003f}: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0) attribute, but range extraction failed (DW_FORM_rnglistx cannot be used without DW_AT_rnglists_base for CU at 0x00000000), please file a bug and attach the file at the start of this error message
+# ERROR: error: {{.*}} [0x000000000000003f]: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0000000000000000) attribute, but range extraction failed (DW_FORM_rnglistx cannot be used without DW_AT_rnglists_base for CU at 0x0000000000000000), please file a bug and attach the file at the start of this error message
 
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 # RUN:   --defsym RNGLISTX=0 --defsym RNGLISTBASE=0 %s > %t-rnglistbase
 # RUN: %lldb %t-rnglistbase -o "image lookup -v -s lookup_rnglists" \
-# RUN:   -o exit 2>&1 | FileCheck --check-prefix=RNGLISTBASE %s
+# RUN:   -o exit 2>%t.error | FileCheck --check-prefix=RNGLISTBASE %s
+# RUN: cat %t.error | FileCheck --check-prefix=ERRORBASE %s
 
 # RNGLISTBASE-LABEL: image lookup -v -s lookup_rnglists
-# RNGLISTBASE: error: {{.*}}-rnglistbase {0x00000043}: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0) attribute, but range extraction failed (invalid range list table index 0; OffsetEntryCount is 0, DW_AT_rnglists_base is 12), please file a bug and attach the file at the start of this error message
+# ERRORBASE: error: {{.*}}-rnglistbase [0x0000000000000043]: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0000000000000000) attribute, but range extraction failed (invalid range list table index 0; OffsetEntryCount is 0, DW_AT_rnglists_base is 24), please file a bug and attach the file at the start of this error message
 
         .text
 rnglists:
@@ -97,7 +99,7 @@ lookup_rnglists:
         .long   .Lrnglists_end-rnglists # DW_AT_high_pc
         .long   .Laddr_table_base0      # DW_AT_addr_base
 .ifdef RNGLISTBASE
-        .long   .Ldebug_ranges0         # DW_AT_rnglists_base
+        .long   .Ldebug_ranges1         # DW_AT_rnglists_base
 .endif
         .byte   2                       # Abbrev [2] 0x2b:0x37 DW_TAG_subprogram
         .quad   rnglists                # DW_AT_low_pc
@@ -105,7 +107,7 @@ lookup_rnglists:
         .asciz  "rnglists"              # DW_AT_name
         .byte   5                       # Abbrev [5] 0x52:0xf DW_TAG_lexical_block
 .ifndef RNGLISTX
-        .long   .Ldebug_ranges0         # DW_AT_ranges DW_FORM_sec_offset
+        .long   .Ldebug_ranges1         # DW_AT_ranges DW_FORM_sec_offset
 .else
         .uleb128 0                      # DW_AT_ranges DW_FORM_rnglistx
 .endif
@@ -130,9 +132,17 @@ lookup_rnglists:
         .byte   8                       # Address size
         .byte   0                       # Segment selector size
         .long   0                       # Offset entry count
-.Ldebug_ranges0:
+.Ldebug_rnglist_table_end0:
+
+        .long   .Ldebug_rnglist_table_end1-.Ldebug_rnglist_table_start1 # Length
+.Ldebug_rnglist_table_start1:
+        .short  5                       # Version
+        .byte   8                       # Address size
+        .byte   0                       # Segment selector size
+        .long   0                       # Offset entry count
+.Ldebug_ranges1:
         .byte   4                       # DW_RLE_offset_pair
         .uleb128 .Lblock1_begin-rnglists  #   starting offset
         .uleb128 .Lblock1_end-rnglists    #   ending offset
         .byte   0                       # DW_RLE_end_of_list
-.Ldebug_rnglist_table_end0:
+.Ldebug_rnglist_table_end1:

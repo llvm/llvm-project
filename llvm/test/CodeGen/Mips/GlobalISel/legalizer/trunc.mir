@@ -16,7 +16,6 @@ body:             |
     ; MIPS32-LABEL: name: trunc
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: $v0 = COPY [[COPY]](s32)
     ; MIPS32: RetRA implicit $v0
     %1:_(s32) = COPY $a0

@@ -57,19 +57,18 @@ entry:
 define dso_local void @test_llltsll_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llltsll_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sradi r6, r3, 63
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    sradi r5, r3, 63
+; CHECK-NEXT:    rldicl r6, r4, 1, 63
 ; CHECK-NEXT:    subc r3, r3, r4
-; CHECK-NEXT:    rldicl r3, r4, 1, 63
-; CHECK-NEXT:    adde r3, r3, r6
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-NEXT:    adde r3, r6, r5
 ; CHECK-NEXT:    xori r3, r3, 1
-; CHECK-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
-; CHECK-DIAG:    subfc [[REG3:r[0-9]+]], r4, r3
 entry:
   %cmp = icmp slt i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -77,20 +76,19 @@ entry:
 define dso_local void @test_llltsll_sext_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llltsll_sext_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sradi r6, r3, 63
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    sradi r5, r3, 63
+; CHECK-NEXT:    rldicl r6, r4, 1, 63
 ; CHECK-NEXT:    subc r3, r3, r4
-; CHECK-NEXT:    rldicl r3, r4, 1, 63
-; CHECK-NEXT:    adde r3, r3, r6
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-NEXT:    adde r3, r6, r5
 ; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
-; CHECK-DIAG:    subfc [[REG3:r[0-9]+]], r4, r3
 entry:
   %cmp = icmp slt i64 %a, %b
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -98,13 +96,13 @@ entry:
 define dso_local void @test_llltsll_sext_z_store(i64 %a) {
 ; CHECK-LABEL: test_llltsll_sext_z_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    sradi r3, r3, 63
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp slt i64 %a, 0
   %sub = sext i1 %cmp to i64
-  store i64 %sub, i64* @glob, align 8
+  store i64 %sub, ptr @glob, align 8
   ret void
 }

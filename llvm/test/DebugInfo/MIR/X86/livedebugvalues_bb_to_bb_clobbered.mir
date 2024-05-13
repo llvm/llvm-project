@@ -57,5 +57,5 @@ body:             |
     successors: %bb.3
     $eax = MOV32ri 0, debug-location !17
   bb.3.bb3:
-    RETQ $eax, debug-location !17
+    RET64 $eax, debug-location !17
 ...

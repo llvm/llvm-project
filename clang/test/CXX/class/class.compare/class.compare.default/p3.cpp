@@ -1,6 +1,8 @@
 // This test is for the [class.compare.default]p3 added by P2002R0
+// Also covers modifications made by P2448R2
 
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx2a %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected %s
 
 namespace std {
   struct strong_ordering {
@@ -80,10 +82,12 @@ struct TestB {
 };
 
 struct C {
-  friend bool operator==(const C&, const C&); // expected-note {{previous}} expected-note 2{{here}}
+  friend bool operator==(const C&, const C&); // expected-note {{previous}} \
+                                              // cxx2a-note 2{{declared here}}
   friend bool operator!=(const C&, const C&) = default; // expected-note {{previous}}
 
-  friend std::strong_ordering operator<=>(const C&, const C&); // expected-note {{previous}} expected-note 2{{here}}
+  friend std::strong_ordering operator<=>(const C&, const C&); // expected-note {{previous}} \
+                                                               // cxx2a-note 2{{declared here}}
   friend bool operator<(const C&, const C&) = default; // expected-note {{previous}}
   friend bool operator<=(const C&, const C&) = default; // expected-note {{previous}}
   friend bool operator>(const C&, const C&) = default; // expected-note {{previous}}
@@ -127,23 +131,23 @@ struct TestD {
 
 struct E {
   A a;
-  C c; // expected-note 2{{non-constexpr comparison function would be used to compare member 'c'}}
+  C c; // cxx2a-note 2{{non-constexpr comparison function would be used to compare member 'c'}}
   A b;
-  friend constexpr bool operator==(const E&, const E&) = default; // expected-error {{cannot be declared constexpr because it invokes a non-constexpr comparison function}}
+  friend constexpr bool operator==(const E&, const E&) = default; // cxx2a-error {{cannot be declared constexpr}}
   friend constexpr bool operator!=(const E&, const E&) = default;
 
-  friend constexpr std::strong_ordering operator<=>(const E&, const E&) = default; // expected-error {{cannot be declared constexpr because it invokes a non-constexpr comparison function}}
+  friend constexpr std::strong_ordering operator<=>(const E&, const E&) = default; // cxx2a-error {{cannot be declared constexpr}}
   friend constexpr bool operator<(const E&, const E&) = default;
   friend constexpr bool operator<=(const E&, const E&) = default;
   friend constexpr bool operator>(const E&, const E&) = default;
   friend constexpr bool operator>=(const E&, const E&) = default;
 };
 
-struct E2 : A, C { // expected-note 2{{non-constexpr comparison function would be used to compare base class 'C'}}
-  friend constexpr bool operator==(const E2&, const E2&) = default; // expected-error {{cannot be declared constexpr because it invokes a non-constexpr comparison function}}
+struct E2 : A, C { // cxx2a-note 2{{non-constexpr comparison function would be used to compare base class 'C'}}
+  friend constexpr bool operator==(const E2&, const E2&) = default; // cxx2a-error {{cannot be declared constexpr}}
   friend constexpr bool operator!=(const E2&, const E2&) = default;
 
-  friend constexpr std::strong_ordering operator<=>(const E2&, const E2&) = default; // expected-error {{cannot be declared constexpr because it invokes a non-constexpr comparison function}}
+  friend constexpr std::strong_ordering operator<=>(const E2&, const E2&) = default; // cxx2a-error {{cannot be declared constexpr}}
   friend constexpr bool operator<(const E2&, const E2&) = default;
   friend constexpr bool operator<=(const E2&, const E2&) = default;
   friend constexpr bool operator>(const E2&, const E2&) = default;
@@ -151,36 +155,36 @@ struct E2 : A, C { // expected-note 2{{non-constexpr comparison function would b
 };
 
 struct F {
-  friend bool operator==(const F&, const F&); // expected-note {{here}}
-  friend constexpr bool operator!=(const F&, const F&) = default; // expected-error {{cannot be declared constexpr because it invokes a non-constexpr comparison function}}
+  friend bool operator==(const F&, const F&); // cxx2a-note {{declared here}}
+  friend constexpr bool operator!=(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
 
-  friend std::strong_ordering operator<=>(const F&, const F&); // expected-note 4{{here}}
-  friend constexpr bool operator<(const F&, const F&) = default; // expected-error {{cannot be declared constexpr because it invokes a non-constexpr comparison function}}
-  friend constexpr bool operator<=(const F&, const F&) = default; // expected-error {{cannot be declared constexpr because it invokes a non-constexpr comparison function}}
-  friend constexpr bool operator>(const F&, const F&) = default; // expected-error {{cannot be declared constexpr because it invokes a non-constexpr comparison function}}
-  friend constexpr bool operator>=(const F&, const F&) = default; // expected-error {{cannot be declared constexpr because it invokes a non-constexpr comparison function}}
+  friend std::strong_ordering operator<=>(const F&, const F&); // cxx2a-note 4{{non-constexpr comparison function declared here}}
+  friend constexpr bool operator<(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
+  friend constexpr bool operator<=(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
+  friend constexpr bool operator>(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
+  friend constexpr bool operator>=(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
 };
 
 // No implicit 'constexpr' if it's not the first declaration.
 // FIXME: This rule creates problems for reordering of declarations; is this
 // really the right model?
 struct G;
-bool operator==(const G&, const G&);
-bool operator!=(const G&, const G&);
-std::strong_ordering operator<=>(const G&, const G&);
-bool operator<(const G&, const G&);
-bool operator<=(const G&, const G&);
-bool operator>(const G&, const G&);
-bool operator>=(const G&, const G&);
+bool operator==(const G&, const G&); // expected-note {{previous declaration}}
+bool operator!=(const G&, const G&); // expected-note {{previous declaration}}
+std::strong_ordering operator<=>(const G&, const G&); // expected-note {{previous declaration}}
+bool operator<(const G&, const G&); // expected-note {{previous declaration}}
+bool operator<=(const G&, const G&); // expected-note {{previous declaration}}
+bool operator>(const G&, const G&); // expected-note {{previous declaration}}
+bool operator>=(const G&, const G&); // expected-note {{previous declaration}}
 struct G {
-  friend bool operator==(const G&, const G&) = default;
-  friend bool operator!=(const G&, const G&) = default;
+  friend bool operator==(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator!=(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
 
-  friend std::strong_ordering operator<=>(const G&, const G&) = default;
-  friend bool operator<(const G&, const G&) = default;
-  friend bool operator<=(const G&, const G&) = default;
-  friend bool operator>(const G&, const G&) = default;
-  friend bool operator>=(const G&, const G&) = default;
+  friend std::strong_ordering operator<=>(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator<(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator<=(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator>(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator>=(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
 };
 bool operator==(const G&, const G&);
 bool operator!=(const G&, const G&);

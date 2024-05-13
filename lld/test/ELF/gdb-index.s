@@ -14,13 +14,19 @@
 # SECTION-NOT: .debug_gnu_pubnames
 # SECTION-NOT: .debug_gnu_pubtypes
 
-# RUN: llvm-mc -compress-debug-sections=zlib-gnu -filetype=obj -triple=x86_64-pc-linux \
+# RUN: llvm-mc -compress-debug-sections=zlib -filetype=obj -triple=x86_64-pc-linux \
 # RUN:   %p/Inputs/gdb-index.s -o %t2.o
 # RUN: ld.lld --gdb-index %t1.o %t2.o -o %t
 
 # RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=DISASM
 # RUN: llvm-dwarfdump -gdb-index %t | FileCheck %s --check-prefix=DWARF
-# RUN: llvm-readelf -sections %t | FileCheck %s --check-prefix=SECTION
+# RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SECTION
+
+# RUN: %if zstd %{ llvm-mc -compress-debug-sections=zlib -filetype=obj -triple=x86_64 %p/Inputs/gdb-index.s -o %t2.o %}
+# RUN: %if zstd %{ ld.lld --gdb-index %t1.o %t2.o -o %t %}
+# RUN: %if zstd %{ llvm-objdump -d %t | FileCheck %s --check-prefix=DISASM %}
+# RUN: %if zstd %{ llvm-dwarfdump --gdb-index %t | FileCheck %s --check-prefix=DWARF %}
+# RUN: %if zstd %{ llvm-readelf -S %t | FileCheck %s --check-prefix=SECTION %}
 
 # DISASM:       Disassembly of section .text:
 # DISASM-EMPTY:

@@ -10,7 +10,7 @@ target triple = "x86_64-pc-linux-gnu"
 
 declare zeroext i1 @return_i1()
 declare zeroext i32 @return_i32()
-declare i32* @return_i32ptr()
+declare ptr @return_i32ptr()
 declare float @return_float()
 declare %struct @return_struct()
 declare void @varargf(i32, ...)
@@ -20,7 +20,7 @@ define i1 @test_i1_return() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_i1
+; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -28,7 +28,7 @@ define i1 @test_i1_return() gc "statepoint-example" {
 ; This is just checking that a i1 gets lowered normally when there's no extra
 ; state arguments to the statepoint
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0)
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   ret i1 %call1
 }
@@ -38,31 +38,31 @@ define i32 @test_i32_return() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_i32
+; CHECK-NEXT:    callq return_i32@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = tail call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* @return_i32, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i32 ()) @return_i32, i32 0, i32 0, i32 0, i32 0)
   %call1 = call zeroext i32 @llvm.experimental.gc.result.i32(token %safepoint_token)
   ret i32 %call1
 }
 
-define i32* @test_i32ptr_return() gc "statepoint-example" {
+define ptr @test_i32ptr_return() gc "statepoint-example" {
 ; CHECK-LABEL: test_i32ptr_return:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_i32ptr
+; CHECK-NEXT:    callq return_i32ptr@PLT
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = tail call token (i64, i32, i32* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p0i32f(i64 0, i32 0, i32* ()* @return_i32ptr, i32 0, i32 0, i32 0, i32 0)
-  %call1 = call i32* @llvm.experimental.gc.result.p0i32(token %safepoint_token)
-  ret i32* %call1
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(ptr ()) @return_i32ptr, i32 0, i32 0, i32 0, i32 0)
+  %call1 = call ptr @llvm.experimental.gc.result.p0(token %safepoint_token)
+  ret ptr %call1
 }
 
 define float @test_float_return() gc "statepoint-example" {
@@ -70,13 +70,13 @@ define float @test_float_return() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_float
+; CHECK-NEXT:    callq return_float@PLT
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = tail call token (i64, i32, float ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_f32f(i64 0, i32 0, float ()* @return_float, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(float ()) @return_float, i32 0, i32 0, i32 0, i32 0)
   %call1 = call float @llvm.experimental.gc.result.f32(token %safepoint_token)
   ret float %call1
 }
@@ -86,32 +86,32 @@ define %struct @test_struct_return() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_struct
+; CHECK-NEXT:    callq return_struct@PLT
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = tail call token (i64, i32, %struct ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_structf(i64 0, i32 0, %struct ()* @return_struct, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(%struct ()) @return_struct, i32 0, i32 0, i32 0, i32 0)
   %call1 = call %struct @llvm.experimental.gc.result.struct(token %safepoint_token)
   ret %struct %call1
 }
 
-define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
+define i1 @test_relocate(ptr addrspace(1) %a) gc "statepoint-example" {
 ; CHECK-LABEL: test_relocate:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq return_i1
+; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp5:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ; Check that an ununsed relocate has no code-generation impact
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
-  %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]
+  %call1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   ret i1 %call2
 }
@@ -123,14 +123,14 @@ define void @test_void_vararg() gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl $42, %edi
 ; CHECK-NEXT:    movl $43, %esi
-; CHECK-NEXT:    callq varargf
+; CHECK-NEXT:    callq varargf@PLT
 ; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-; Check a statepoint wrapping a *void* returning vararg function works
+; Check a statepoint wrapping a *ptr returning vararg function works
 entry:
-  %safepoint_token = tail call token (i64, i32, void (i32, ...)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32varargf(i64 0, i32 0, void (i32, ...)* @varargf, i32 2, i32 0, i32 42, i32 43, i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (i32, ...)) @varargf, i32 2, i32 0, i32 42, i32 43, i32 0, i32 0)
   ;; if we try to use the result from a statepoint wrapping a
   ;; non-void-returning varargf, we will experience a crash.
   ret void
@@ -148,54 +148,49 @@ define i1 @test_i1_return_patchable() gc "statepoint-example" {
 ; CHECK-NEXT:    retq
 ; A patchable variant of test_i1_return
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 3, i1 ()*null, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 3, ptr elementtype(i1 ()) null, i32 0, i32 0, i32 0, i32 0)
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   ret i1 %call1
 }
 
-declare void @consume(i32 addrspace(1)* %obj)
+declare void @consume(ptr addrspace(1) %obj)
 
-define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
+define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-example" {
 ; CHECK-LABEL: test_cross_bb:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    subq $16, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movl %esi, %ebp
-; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq return_i1
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movl %esi, %ebx
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp8:
-; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    je .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %left
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    movl %eax, %ebx
-; CHECK-NEXT:    movq (%rsp), %rdi
-; CHECK-NEXT:    callq consume
+; CHECK-NEXT:    callq consume@PLT
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    jmp .LBB8_3
 ; CHECK-NEXT:  .LBB8_2: # %right
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:  .LBB8_3: # %right
-; CHECK-NEXT:    addq $8, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]
   br i1 %external_cond, label %left, label %right
 
 left:
-  %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
+  %call1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
-  call void @consume(i32 addrspace(1)* %call1)
+  call void @consume(ptr addrspace(1) %call1)
   ret i1 %call2
 
 right:
@@ -204,9 +199,9 @@ right:
 
 %struct2 = type { i64, i64, i64 }
 
-declare void @consume_attributes(i32, i8* nest, i32, %struct2* byval(%struct2))
+declare void @consume_attributes(i32, ptr nest, i32, ptr byval(%struct2))
 
-define void @test_attributes(%struct2* byval(%struct2) %s) gc "statepoint-example" {
+define void @test_attributes(ptr byval(%struct2) %s) gc "statepoint-example" {
 ; CHECK-LABEL: test_attributes:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -225,7 +220,7 @@ define void @test_attributes(%struct2* byval(%struct2) %s) gc "statepoint-exampl
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 8
 ; CHECK-NEXT:    pushq %rcx
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 8
-; CHECK-NEXT:    callq consume_attributes
+; CHECK-NEXT:    callq consume_attributes@PLT
 ; CHECK-NEXT:  .Ltmp9:
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -32
@@ -235,27 +230,79 @@ define void @test_attributes(%struct2* byval(%struct2) %s) gc "statepoint-exampl
 entry:
 ; Check that arguments with attributes are lowered correctly.
 ; We call a function that has a nest argument and a byval argument.
-  %statepoint_token = call token (i64, i32, void (i32, i8*, i32, %struct2*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32p0i8i32p0s_struct2sf(i64 0, i32 0, void (i32, i8*, i32, %struct2*)* @consume_attributes, i32 4, i32 0, i32 42, i8* nest null, i32 17, %struct2* byval(%struct2) %s, i32 0, i32 0)
+  %statepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (i32, ptr, i32, ptr)) @consume_attributes, i32 4, i32 0, i32 42, ptr nest null, i32 17, ptr byval(%struct2) %s, i32 0, i32 0)
   ret void
 }
 
-declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
+declare signext i1 @signext_return_i1()
+
+; Check that the generated code takes the zeroext and signext return attributes
+; on the GC result into account. The attribute in the return position allows the
+; caller to assume that the callee did the extension already.
+
+define i8 @test_signext_return(ptr) gc "statepoint-example" {
+; CHECK-LABEL: test_signext_return:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq signext_return_i1@PLT
+; CHECK-NEXT:  .Ltmp10:
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @signext_return_i1, i32 0, i32 0, i32 0, i32 0)
+  %call1 = call signext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+  %ext = sext i1 %call1 to i8
+  ret i8 %ext
+}
+
+define i8 @test_zeroext_return() gc "statepoint-example" {
+; CHECK-LABEL: test_zeroext_return:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq return_i1@PLT
+; CHECK-NEXT:  .Ltmp11:
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0)
+  %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+  %ext = zext i1 %call1 to i8
+  ret i8 %ext
+}
+
+define signext i1 @test_noext_signext_return() gc "statepoint-example" {
+; CHECK-LABEL: test_noext_signext_return:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq return_i1@PLT
+; CHECK-NEXT:  .Ltmp12:
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    negb %al
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0)
+  %call1 = call i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+  ret i1 %call1
+}
+
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 declare i1 @llvm.experimental.gc.result.i1(token)
 
-declare token @llvm.experimental.gc.statepoint.p0f_i32f(i64, i32, i32 ()*, i32, i32, ...)
 declare i32 @llvm.experimental.gc.result.i32(token)
 
-declare token @llvm.experimental.gc.statepoint.p0f_p0i32f(i64, i32, i32* ()*, i32, i32, ...)
-declare i32* @llvm.experimental.gc.result.p0i32(token)
+declare ptr @llvm.experimental.gc.result.p0(token)
 
-declare token @llvm.experimental.gc.statepoint.p0f_f32f(i64, i32, float ()*, i32, i32, ...)
 declare float @llvm.experimental.gc.result.f32(token)
 
-declare token @llvm.experimental.gc.statepoint.p0f_structf(i64, i32, %struct ()*, i32, i32, ...)
 declare %struct @llvm.experimental.gc.result.struct(token)
 
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32varargf(i64, i32, void (i32, ...)*, i32, i32, ...)
 
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32p0i8i32p0s_struct2sf(i64, i32, void (i32, i8*, i32, %struct2*)*, i32, i32, ...)
 
-declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)

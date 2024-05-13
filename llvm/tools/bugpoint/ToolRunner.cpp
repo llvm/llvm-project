@@ -58,9 +58,9 @@ static int RunProgramWithTimeout(StringRef ProgramPath,
                                  unsigned NumSeconds = 0,
                                  unsigned MemoryLimit = 0,
                                  std::string *ErrMsg = nullptr) {
-  Optional<StringRef> Redirects[3] = {StdInFile, StdOutFile, StdErrFile};
-  return sys::ExecuteAndWait(ProgramPath, Args, None, Redirects, NumSeconds,
-                             MemoryLimit, ErrMsg);
+  std::optional<StringRef> Redirects[3] = {StdInFile, StdOutFile, StdErrFile};
+  return sys::ExecuteAndWait(ProgramPath, Args, std::nullopt, Redirects,
+                             NumSeconds, MemoryLimit, ErrMsg);
 }
 
 /// RunProgramRemotelyWithTimeout - This function runs the given program
@@ -73,11 +73,11 @@ static int RunProgramRemotelyWithTimeout(
     StringRef RemoteClientPath, ArrayRef<StringRef> Args, StringRef StdInFile,
     StringRef StdOutFile, StringRef StdErrFile, unsigned NumSeconds = 0,
     unsigned MemoryLimit = 0) {
-  Optional<StringRef> Redirects[3] = {StdInFile, StdOutFile, StdErrFile};
+  std::optional<StringRef> Redirects[3] = {StdInFile, StdOutFile, StdErrFile};
 
   // Run the program remotely with the remote client
-  int ReturnCode = sys::ExecuteAndWait(RemoteClientPath, Args, None, Redirects,
-                                       NumSeconds, MemoryLimit);
+  int ReturnCode = sys::ExecuteAndWait(RemoteClientPath, Args, std::nullopt,
+                                       Redirects, NumSeconds, MemoryLimit);
 
   // Has the remote client fail?
   if (255 == ReturnCode) {
@@ -192,7 +192,7 @@ Expected<int> LLI::ExecuteProgram(const std::string &Bitcode,
   outs() << "<lli>";
   outs().flush();
   LLVM_DEBUG(errs() << "\nAbout to run:\t";
-             for (unsigned i = 0, e = LLIArgs.size() - 1; i != e; ++i) errs()
+             for (unsigned i = 0, e = LLIArgs.size(); i != e; ++i) errs()
              << " " << LLIArgs[i];
              errs() << "\n";);
   return RunProgramWithTimeout(LLIPath, LLIArgs, InputFile, OutputFile,
@@ -442,7 +442,7 @@ Expected<CC::FileType> LLC::OutputCode(const std::string &Bitcode,
     errs() << "Error making unique filename: " << EC.message() << "\n";
     exit(1);
   }
-  OutputAsmFile = std::string(UniqueFile.str());
+  OutputAsmFile = std::string(UniqueFile);
   std::vector<StringRef> LLCArgs;
   LLCArgs.push_back(LLCPath);
 
@@ -460,7 +460,7 @@ Expected<CC::FileType> LLC::OutputCode(const std::string &Bitcode,
   outs() << (UseIntegratedAssembler ? "<llc-ia>" : "<llc>");
   outs().flush();
   LLVM_DEBUG(errs() << "\nAbout to run:\t";
-             for (unsigned i = 0, e = LLCArgs.size() - 1; i != e; ++i) errs()
+             for (unsigned i = 0, e = LLCArgs.size(); i != e; ++i) errs()
              << " " << LLCArgs[i];
              errs() << "\n";);
   if (RunProgramWithTimeout(LLCPath, LLCArgs, "", "", "", Timeout, MemoryLimit))
@@ -578,7 +578,7 @@ Expected<int> JIT::ExecuteProgram(const std::string &Bitcode,
   outs() << "<jit>";
   outs().flush();
   LLVM_DEBUG(errs() << "\nAbout to run:\t";
-             for (unsigned i = 0, e = JITArgs.size() - 1; i != e; ++i) errs()
+             for (unsigned i = 0, e = JITArgs.size(); i != e; ++i) errs()
              << " " << JITArgs[i];
              errs() << "\n";);
   LLVM_DEBUG(errs() << "\nSending output to " << OutputFile << "\n");
@@ -607,12 +607,12 @@ AbstractInterpreter::createJIT(const char *Argv0, std::string &Message,
 
 static bool IsARMArchitecture(std::vector<StringRef> Args) {
   for (size_t I = 0; I < Args.size(); ++I) {
-    if (!Args[I].equals_lower("-arch"))
+    if (!Args[I].equals_insensitive("-arch"))
       continue;
     ++I;
     if (I == Args.size())
       break;
-    if (Args[I].startswith_lower("arm"))
+    if (Args[I].starts_with_insensitive("arm"))
       return true;
   }
 
@@ -685,7 +685,7 @@ Expected<int> CC::ExecuteProgram(const std::string &ProgramFile,
   outs() << "<CC>";
   outs().flush();
   LLVM_DEBUG(errs() << "\nAbout to run:\t";
-             for (unsigned i = 0, e = CCArgs.size() - 1; i != e; ++i) errs()
+             for (unsigned i = 0, e = CCArgs.size(); i != e; ++i) errs()
              << " " << CCArgs[i];
              errs() << "\n";);
   if (RunProgramWithTimeout(CCPath, CCArgs, "", "", ""))
@@ -733,7 +733,7 @@ Expected<int> CC::ExecuteProgram(const std::string &ProgramFile,
   outs().flush();
   LLVM_DEBUG(
       errs() << "\nAbout to run:\t";
-      for (unsigned i = 0, e = ProgramArgs.size() - 1; i != e; ++i) errs()
+      for (unsigned i = 0, e = ProgramArgs.size(); i != e; ++i) errs()
       << " " << ProgramArgs[i];
       errs() << "\n";);
 
@@ -772,7 +772,7 @@ Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
     errs() << "Error making unique filename: " << EC.message() << "\n";
     exit(1);
   }
-  OutputFile = std::string(UniqueFilename.str());
+  OutputFile = std::string(UniqueFilename);
 
   std::vector<StringRef> CCArgs;
 
@@ -829,7 +829,7 @@ Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
   outs() << "<CC>";
   outs().flush();
   LLVM_DEBUG(errs() << "\nAbout to run:\t";
-             for (unsigned i = 0, e = CCArgs.size() - 1; i != e; ++i) errs()
+             for (unsigned i = 0, e = CCArgs.size(); i != e; ++i) errs()
              << " " << CCArgs[i];
              errs() << "\n";);
   if (RunProgramWithTimeout(CCPath, CCArgs, "", "", ""))

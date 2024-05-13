@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_RECURSIVE_SYMBOL_VISITOR_H
-#define LLVM_CLANG_TOOLING_REFACTOR_RECURSIVE_SYMBOL_VISITOR_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_RECURSIVESYMBOLVISITOR_H
+#define LLVM_CLANG_TOOLING_REFACTORING_RECURSIVESYMBOLVISITOR_H
 
 #include "clang/AST/AST.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -124,10 +124,11 @@ public:
 
   bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
     for (const DesignatedInitExpr::Designator &D : E->designators()) {
-      if (D.isFieldDesignator() && D.getField()) {
-        const FieldDecl *Decl = D.getField();
-        if (!visit(Decl, D.getFieldLoc(), D.getFieldLoc()))
-          return false;
+      if (D.isFieldDesignator()) {
+        if (const FieldDecl *Decl = D.getFieldDecl()) {
+          if (!visit(Decl, D.getFieldLoc(), D.getFieldLoc()))
+            return false;
+        }
       }
     }
     return true;
@@ -150,4 +151,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_RECURSIVE_SYMBOL_VISITOR_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_RECURSIVESYMBOLVISITOR_H

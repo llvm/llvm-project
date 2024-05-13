@@ -13,9 +13,10 @@
 #ifndef LLVM_ASMPARSER_PARSER_H
 #define LLVM_ASMPARSER_PARSER_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -28,7 +29,7 @@ struct SlotMapping;
 class SMDiagnostic;
 class Type;
 
-typedef llvm::function_ref<Optional<std::string>(StringRef)>
+typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
     DataLayoutCallbackTy;
 
 /// This function is a main interface to the LLVM Assembly Parser. It parses
@@ -85,7 +86,9 @@ struct ParsedModuleAndIndex {
 ParsedModuleAndIndex parseAssemblyFileWithIndex(
     StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+      return std::nullopt;
+    });
 
 /// Only for use in llvm-as for testing; this does not produce a valid module.
 ParsedModuleAndIndex parseAssemblyFileWithIndexNoUpgradeDebugInfo(
@@ -94,7 +97,7 @@ ParsedModuleAndIndex parseAssemblyFileWithIndexNoUpgradeDebugInfo(
 
 /// This function is a main interface to the LLVM Assembly Parser. It parses
 /// an ASCII file that (presumably) contains LLVM Assembly code for a module
-/// summary. It returns a a ModuleSummaryIndex with the corresponding features.
+/// summary. It returns a ModuleSummaryIndex with the corresponding features.
 /// Note that this does not verify that the generated Index is valid, so you
 /// should run the verifier after parsing the file to check that it is okay.
 /// Parse LLVM Assembly Index from a file
@@ -102,6 +105,17 @@ ParsedModuleAndIndex parseAssemblyFileWithIndexNoUpgradeDebugInfo(
 /// \param Err Error result info.
 std::unique_ptr<ModuleSummaryIndex>
 parseSummaryIndexAssemblyFile(StringRef Filename, SMDiagnostic &Err);
+
+/// The function is a secondary interface to the LLVM Assembly Parser. It parses
+/// an ASCII string that (presumably) contains LLVM Assembly code for a module
+/// summary. It returns a a ModuleSummaryIndex with the corresponding features.
+/// Note that this does not verify that the generated Index is valid, so you
+/// should run the verifier after parsing the file to check that it is okay.
+/// Parse LLVM Assembly from a string
+/// \param AsmString The string containing assembly
+/// \param Err Error result info.
+std::unique_ptr<ModuleSummaryIndex>
+parseSummaryIndexAssemblyString(StringRef AsmString, SMDiagnostic &Err);
 
 /// parseAssemblyFile and parseAssemblyString are wrappers around this function.
 /// Parse LLVM Assembly from a MemoryBuffer.
@@ -113,7 +127,9 @@ parseSummaryIndexAssemblyFile(StringRef Filename, SMDiagnostic &Err);
 std::unique_ptr<Module> parseAssembly(
     MemoryBufferRef F, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+      return std::nullopt;
+    });
 
 /// Parse LLVM Assembly including the summary index from a MemoryBuffer.
 ///
@@ -153,7 +169,9 @@ parseSummaryIndexAssembly(MemoryBufferRef F, SMDiagnostic &Err);
 bool parseAssemblyInto(
     MemoryBufferRef F, Module *M, ModuleSummaryIndex *Index, SMDiagnostic &Err,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+      return std::nullopt;
+    });
 
 /// Parse a type and a constant value in the given string.
 ///

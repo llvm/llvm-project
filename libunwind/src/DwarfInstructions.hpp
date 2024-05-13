@@ -1,4 +1,4 @@
-//===-------------------------- DwarfInstructions.hpp ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,16 +16,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "dwarf2.h"
-#include "Registers.hpp"
 #include "DwarfParser.hpp"
+#include "Registers.hpp"
 #include "config.h"
+#include "dwarf2.h"
+#include "libunwind_ext.h"
 
 
 namespace libunwind {
 
 
-/// DwarfInstructions maps abtract DWARF unwind instructions to a particular
+/// DwarfInstructions maps abstract DWARF unwind instructions to a particular
 /// architecture
 template <typename A, typename R>
 class DwarfInstructions {
@@ -34,7 +35,7 @@ public:
   typedef typename A::sint_t sint_t;
 
   static int stepWithDwarf(A &addressSpace, pint_t pc, pint_t fdeStart,
-                           R &registers, bool &isSignalFrame);
+                           R &registers, bool &isSignalFrame, bool stage2);
 
 private:
 
@@ -67,13 +68,24 @@ private:
       return (pint_t)((sint_t)registers.getRegister((int)prolog.cfaRegister) +
              prolog.cfaRegisterOffset);
     if (prolog.cfaExpression != 0)
-      return evaluateExpression((pint_t)prolog.cfaExpression, addressSpace, 
+      return evaluateExpression((pint_t)prolog.cfaExpression, addressSpace,
                                 registers, 0);
     assert(0 && "getCFA(): unknown location");
     __builtin_unreachable();
   }
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+  static bool getRA_SIGN_STATE(A &addressSpace, R registers, pint_t cfa,
+                               PrologInfo &prolog);
+#endif
 };
 
+template <typename R>
+auto getSparcWCookie(const R &r, int) -> decltype(r.getWCookie()) {
+  return r.getWCookie();
+}
+template <typename R> uint64_t getSparcWCookie(const R &, long) {
+  return 0;
+}
 
 template <typename A, typename R>
 typename A::pint_t DwarfInstructions<A, R>::getSavedRegister(
@@ -82,6 +94,10 @@ typename A::pint_t DwarfInstructions<A, R>::getSavedRegister(
   switch (savedReg.location) {
   case CFI_Parser<A>::kRegisterInCFA:
     return (pint_t)addressSpace.getRegister(cfa + (pint_t)savedReg.value);
+
+  case CFI_Parser<A>::kRegisterInCFADecrypt: // sparc64 specific
+    return (pint_t)(addressSpace.getP(cfa + (pint_t)savedReg.value) ^
+           getSparcWCookie(registers, 0));
 
   case CFI_Parser<A>::kRegisterAtExpression:
     return (pint_t)addressSpace.getRegister(evaluateExpression(
@@ -115,12 +131,16 @@ double DwarfInstructions<A, R>::getSavedFloatRegister(
     return addressSpace.getDouble(
         evaluateExpression((pint_t)savedReg.value, addressSpace,
                             registers, cfa));
-
+  case CFI_Parser<A>::kRegisterUndefined:
+    return 0.0;
+  case CFI_Parser<A>::kRegisterInRegister:
+#ifndef _LIBUNWIND_TARGET_ARM
+    return registers.getFloatRegister((int)savedReg.value);
+#endif
   case CFI_Parser<A>::kRegisterIsExpression:
   case CFI_Parser<A>::kRegisterUnused:
-  case CFI_Parser<A>::kRegisterUndefined:
   case CFI_Parser<A>::kRegisterOffsetFromCFA:
-  case CFI_Parser<A>::kRegisterInRegister:
+  case CFI_Parser<A>::kRegisterInCFADecrypt:
     // FIX ME
     break;
   }
@@ -145,16 +165,32 @@ v128 DwarfInstructions<A, R>::getSavedVectorRegister(
   case CFI_Parser<A>::kRegisterUndefined:
   case CFI_Parser<A>::kRegisterOffsetFromCFA:
   case CFI_Parser<A>::kRegisterInRegister:
+  case CFI_Parser<A>::kRegisterInCFADecrypt:
     // FIX ME
     break;
   }
   _LIBUNWIND_ABORT("unsupported restore location for vector register");
 }
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+template <typename A, typename R>
+bool DwarfInstructions<A, R>::getRA_SIGN_STATE(A &addressSpace, R registers,
+                                               pint_t cfa, PrologInfo &prolog) {
+  pint_t raSignState;
+  auto regloc = prolog.savedRegisters[UNW_AARCH64_RA_SIGN_STATE];
+  if (regloc.location == CFI_Parser<A>::kRegisterUnused)
+    raSignState = static_cast<pint_t>(regloc.value);
+  else
+    raSignState = getSavedRegister(addressSpace, registers, cfa, regloc);
+
+  // Only bit[0] is meaningful.
+  return raSignState & 0x01;
+}
+#endif
 
 template <typename A, typename R>
 int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
                                            pint_t fdeStart, R &registers,
-                                           bool &isSignalFrame) {
+                                           bool &isSignalFrame, bool stage2) {
   FDE_Info fdeInfo;
   CIE_Info cieInfo;
   if (CFI_Parser<A>::decodeFDE(addressSpace, fdeStart, &fdeInfo,
@@ -165,12 +201,55 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       // get pointer to cfa (architecture specific)
       pint_t cfa = getCFA(addressSpace, prolog, registers);
 
-       // restore registers that DWARF says were saved
+      (void)stage2;
+      // __unw_step_stage2 is not used for cross unwinding, so we use
+      // __aarch64__ rather than LIBUNWIND_TARGET_AARCH64 to make sure we are
+      // building for AArch64 natively.
+#if defined(__aarch64__)
+      if (stage2 && cieInfo.mteTaggedFrame) {
+        pint_t sp = registers.getSP();
+        pint_t p = sp;
+        // AArch64 doesn't require the value of SP to be 16-byte aligned at
+        // all times, only at memory accesses and public interfaces [1]. Thus,
+        // a signal could arrive at a point where SP is not aligned properly.
+        // In that case, the kernel fixes up [2] the signal frame, but we
+        // still have a misaligned SP in the previous frame. If that signal
+        // handler caused stack unwinding, we would have an unaligned SP.
+        // We do not need to fix up the CFA, as that is the SP at a "public
+        // interface".
+        // [1]:
+        // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#622the-stack
+        // [2]:
+        // https://github.com/torvalds/linux/blob/1930a6e739c4b4a654a69164dbe39e554d228915/arch/arm64/kernel/signal.c#L718
+        p &= ~0xfULL;
+        // CFA is the bottom of the current stack frame.
+        for (; p < cfa; p += 16) {
+          __asm__ __volatile__(".arch armv8.5-a\n"
+                               ".arch_extension memtag\n"
+                               "stg %[Ptr], [%[Ptr]]\n"
+                               :
+                               : [Ptr] "r"(p)
+                               : "memory");
+        }
+      }
+#endif
+      // restore registers that DWARF says were saved
       R newRegisters = registers;
+
+      // Typically, the CFA is the stack pointer at the call site in
+      // the previous frame. However, there are scenarios in which this is not
+      // true. For example, if we switched to a new stack. In that case, the
+      // value of the previous SP might be indicated by a CFI directive.
+      //
+      // We set the SP here to the CFA, allowing for it to be overridden
+      // by a CFI directive later on.
+      newRegisters.setSP(cfa);
+
       pint_t returnAddress = 0;
-      const int lastReg = R::lastDwarfRegNum();
-      assert(static_cast<int>(CFI_Parser<A>::kMaxRegisterNumber) >= lastReg &&
-             "register range too large");
+      constexpr int lastReg = R::lastDwarfRegNum();
+      static_assert(static_cast<int>(CFI_Parser<A>::kMaxRegisterNumber) >=
+                        lastReg,
+                    "register range too large");
       assert(lastReg >= (int)cieInfo.returnAddressRegister &&
              "register range does not contain return address register");
       for (int i = 0; i <= lastReg; ++i) {
@@ -195,14 +274,10 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
             return UNW_EBADREG;
         } else if (i == (int)cieInfo.returnAddressRegister) {
             // Leaf function keeps the return address in register and there is no
-            // explicit intructions how to restore it.
+            // explicit instructions how to restore it.
             returnAddress = registers.getRegister(cieInfo.returnAddressRegister);
         }
       }
-
-      // By definition, the CFA is the stack pointer at the call site, so
-      // restoring SP means setting it to CFA.
-      newRegisters.setSP(cfa);
 
       isSignalFrame = cieInfo.isSignalFrame;
 
@@ -213,7 +288,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       // restored. autia1716 is used instead of autia as autia1716 assembles
       // to a NOP on pre-v8.3a architectures.
       if ((R::getArch() == REGISTERS_ARM64) &&
-          prolog.savedRegisters[UNW_ARM64_RA_SIGN_STATE].value &&
+          getRA_SIGN_STATE(addressSpace, registers, cfa, prolog) &&
           returnAddress != 0) {
 #if !defined(_LIBUNWIND_IS_NATIVE_ONLY)
         return UNW_ECROSSRASIGNING;
@@ -233,6 +308,20 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       }
 #endif
 
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY) && defined(_LIBUNWIND_TARGET_ARM) &&    \
+    defined(__ARM_FEATURE_PAUTH)
+      if ((R::getArch() == REGISTERS_ARM) &&
+          prolog.savedRegisters[UNW_ARM_RA_AUTH_CODE].value) {
+        pint_t pac =
+            getSavedRegister(addressSpace, registers, cfa,
+                             prolog.savedRegisters[UNW_ARM_RA_AUTH_CODE]);
+        __asm__ __volatile__("autg %0, %1, %2"
+                             :
+                             : "r"(pac), "r"(returnAddress), "r"(cfa)
+                             :);
+      }
+#endif
+
 #if defined(_LIBUNWIND_TARGET_SPARC)
       if (R::getArch() == REGISTERS_SPARC) {
         // Skip call site instruction and delay slot
@@ -241,6 +330,12 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
         if ((addressSpace.get32(returnAddress) & 0xC1C00000) == 0)
           returnAddress += 4;
       }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_SPARC64)
+      // Skip call site instruction and delay slot.
+      if (R::getArch() == REGISTERS_SPARC64)
+        returnAddress += 8;
 #endif
 
 #if defined(_LIBUNWIND_TARGET_PPC64)
@@ -269,7 +364,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
 #endif
 
       // Return address is address after call site instruction, so setting IP to
-      // that does simualates a return.
+      // that does simulates a return.
       newRegisters.setIP(returnAddress);
 
       // Simulate the step by replacing the register set with the new ones.
@@ -573,7 +668,7 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
       svalue = (sint_t)*sp;
       *sp = (pint_t)(svalue >> value);
       if (log)
-        fprintf(stderr, "shift left arithmetric\n");
+        fprintf(stderr, "shift left arithmetic\n");
       break;
 
     case DW_OP_xor:

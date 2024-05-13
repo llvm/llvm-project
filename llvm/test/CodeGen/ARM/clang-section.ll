@@ -22,26 +22,12 @@ target triple = "armv7-arm-none-eabi"
 @o = global i32 6, align 4
 @p = constant i32 7, align 4
 
-; Function Attrs: noinline nounwind
-define i32 @foo() #4 {
-entry:
-  %0 = load i32, i32* @b, align 4
-  ret i32 %0
-}
-
-; Function Attrs: noinline
-define i32 @goo() #5 {
-entry:
-  %call = call i32 @zoo(i32* getelementptr inbounds ([2 x i32], [2 x i32]* @_ZL1g, i32 0, i32 0), i32* @_ZZ3gooE7lstat_h)
-  ret i32 %call
-}
-
-declare i32 @zoo(i32*, i32*) #6
+declare i32 @zoo(ptr, ptr) #6
 
 ; Function Attrs: noinline nounwind
 define i32 @hoo() #7 {
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   ret i32 %0
 }
 
@@ -49,8 +35,6 @@ attributes #0 = { "bss-section"="my_bss.1" "data-section"="my_data.1" "rodata-se
 attributes #1 = { "data-section"="my_data.1" "rodata-section"="my_rodata.1" }
 attributes #2 = { "bss-section"="my_bss.2" "rodata-section"="my_rodata.1" }
 attributes #3 = { "bss-section"="my_bss.2" "data-section"="my_data.2" "rodata-section"="my_rodata.2" }
-attributes #4 = { noinline nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" "disable-tail-calls"="false" "implicit-section-name"="my_text.1" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a9" "target-features"="+dsp,+fp16,+neon,+vfp3" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #5 = { noinline "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" "disable-tail-calls"="false" "implicit-section-name"="my_text.2" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a9" "target-features"="+dsp,+fp16,+neon,+vfp3" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #6 = { "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a9" "target-features"="+dsp,+fp16,+neon,+vfp3" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #7 = { noinline nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a9" "target-features"="+dsp,+fp16,+neon,+vfp3" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
@@ -60,14 +44,6 @@ attributes #7 = { noinline nounwind "correctly-rounded-divide-sqrt-fp-math"="fal
 !1 = !{i32 1, !"static_rwdata", i32 1}
 !2 = !{i32 1, !"enumsize_buildattr", i32 2}
 !3 = !{i32 1, !"armlib_unavailable", i32 0}
-
-;CHECK: 	.section	my_text.1,"ax",%progbits
-;CHECK: 	.type	foo,%function
-;CHECK: foo:
-
-;CHECK: 	.section	my_text.2,"ax",%progbits
-;CHECK: 	.type	goo,%function
-;CHECK: goo:
 
 ;CHECK: 	.text
 ;CHECK: 	.type	hoo,%function

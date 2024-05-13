@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_REWRITE_RULE_H_
-#define LLVM_CLANG_TOOLING_TRANSFORMER_REWRITE_RULE_H_
+#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_REWRITERULE_H
+#define LLVM_CLANG_TOOLING_TRANSFORMER_REWRITERULE_H
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -46,6 +46,7 @@ struct Edit {
   EditKind Kind = EditKind::Range;
   CharSourceRange Range;
   std::string Replacement;
+  std::string Note;
   llvm::Any Metadata;
 };
 
@@ -61,7 +62,9 @@ enum class IncludeFormat {
 /// of `EditGenerator`.
 using EditGenerator = MatchConsumer<llvm::SmallVector<Edit, 1>>;
 
-using TextGenerator = std::shared_ptr<MatchComputation<std::string>>;
+template <typename T> using Generator = std::shared_ptr<MatchComputation<T>>;
+
+using TextGenerator = Generator<std::string>;
 
 using AnyGenerator = MatchConsumer<llvm::Any>;
 
@@ -135,6 +138,10 @@ inline EditGenerator noEdits() { return editList({}); }
 /// specified range. A `noopEdit` may be preferred over `noEdits` to associate a
 /// diagnostic `Explanation` with the rule.
 EditGenerator noopEdit(RangeSelector Anchor);
+
+/// Generates a single, no-op edit with the associated note anchored at the
+/// start location of the specified range.
+ASTEdit note(RangeSelector Anchor, TextGenerator Note);
 
 /// Version of `ifBound` specialized to `ASTEdit`.
 inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit,
@@ -262,12 +269,9 @@ inline EditGenerator shrinkTo(RangeSelector outer, RangeSelector inner) {
 //
 // * Edits: a set of Edits to the source code, described with ASTEdits.
 //
-// * Explanation: explanation of the rewrite.  This will be displayed to the
-//   user, where possible; for example, in clang-tidy diagnostics.
-//
 // However, rules can also consist of (sub)rules, where the first that matches
-// is applied and the rest are ignored.  So, the above components are gathered
-// as a `Case` and a rule is a list of cases.
+// is applied and the rest are ignored.  So, the above components together form
+// a logical "case" and a rule is a sequence of cases.
 //
 // Rule cases have an additional, implicit, component: the parameters. These are
 // portions of the pattern which are left unspecified, yet bound in the pattern
@@ -275,37 +279,82 @@ inline EditGenerator shrinkTo(RangeSelector outer, RangeSelector inner) {
 //
 // The \c Transformer class can be used to apply the rewrite rule and obtain the
 // corresponding replacements.
-struct RewriteRule {
+struct RewriteRuleBase {
   struct Case {
     ast_matchers::internal::DynTypedMatcher Matcher;
     EditGenerator Edits;
-    TextGenerator Explanation;
   };
   // We expect RewriteRules will most commonly include only one case.
   SmallVector<Case, 1> Cases;
-
-  /// DEPRECATED: use `::clang::transformer::RootID` instead.
-  static const llvm::StringRef RootID;
 };
 
-/// Constructs a simple \c RewriteRule.
+/// A source-code transformation with accompanying metadata.
+///
+/// When a case of the rule matches, the \c Transformer invokes the
+/// corresponding metadata generator and provides it alongside the edits.
+template <typename MetadataT> struct RewriteRuleWith : RewriteRuleBase {
+  SmallVector<Generator<MetadataT>, 1> Metadata;
+};
+
+template <> struct RewriteRuleWith<void> : RewriteRuleBase {};
+
+using RewriteRule = RewriteRuleWith<void>;
+
+namespace detail {
+
 RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
-                     EditGenerator Edits, TextGenerator Explanation = nullptr);
+                     EditGenerator Edits);
 
-/// Constructs a \c RewriteRule from multiple `ASTEdit`s.
-inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
-                            llvm::SmallVector<ASTEdit, 1> Edits,
-                            TextGenerator Explanation = nullptr) {
-  return makeRule(std::move(M), editList(std::move(Edits)),
-                  std::move(Explanation));
+template <typename MetadataT>
+RewriteRuleWith<MetadataT> makeRule(ast_matchers::internal::DynTypedMatcher M,
+                                    EditGenerator Edits,
+                                    Generator<MetadataT> Metadata) {
+  RewriteRuleWith<MetadataT> R;
+  R.Cases = {{std::move(M), std::move(Edits)}};
+  R.Metadata = {std::move(Metadata)};
+  return R;
 }
 
-/// Overload of \c makeRule for common case of only one edit.
-inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
-                            ASTEdit Edit,
-                            TextGenerator Explanation = nullptr) {
-  return makeRule(std::move(M), edit(std::move(Edit)), std::move(Explanation));
+inline EditGenerator makeEditGenerator(EditGenerator Edits) { return Edits; }
+EditGenerator makeEditGenerator(llvm::SmallVector<ASTEdit, 1> Edits);
+EditGenerator makeEditGenerator(ASTEdit Edit);
+
+} // namespace detail
+
+/// Constructs a simple \c RewriteRule. \c Edits can be an \c EditGenerator,
+/// multiple \c ASTEdits, or a single \c ASTEdit.
+/// @{
+template <int &..., typename EditsT>
+RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
+                     EditsT &&Edits) {
+  return detail::makeRule(
+      std::move(M), detail::makeEditGenerator(std::forward<EditsT>(Edits)));
 }
+
+RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
+                     std::initializer_list<ASTEdit> Edits);
+/// @}
+
+/// Overloads of \c makeRule that also generate metadata when matching.
+/// @{
+template <typename MetadataT, int &..., typename EditsT>
+RewriteRuleWith<MetadataT> makeRule(ast_matchers::internal::DynTypedMatcher M,
+                                    EditsT &&Edits,
+                                    Generator<MetadataT> Metadata) {
+  return detail::makeRule(
+      std::move(M), detail::makeEditGenerator(std::forward<EditsT>(Edits)),
+      std::move(Metadata));
+}
+
+template <typename MetadataT>
+RewriteRuleWith<MetadataT> makeRule(ast_matchers::internal::DynTypedMatcher M,
+                                    std::initializer_list<ASTEdit> Edits,
+                                    Generator<MetadataT> Metadata) {
+  return detail::makeRule(std::move(M),
+                          detail::makeEditGenerator(std::move(Edits)),
+                          std::move(Metadata));
+}
+/// @}
 
 /// For every case in Rule, adds an include directive for the given header. The
 /// common use is assumed to be a rule with only one case. For example, to
@@ -317,7 +366,7 @@ inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
 ///   addInclude(R, "path/to/bar_header.h");
 ///   addInclude(R, "vector", IncludeFormat::Angled);
 /// \endcode
-void addInclude(RewriteRule &Rule, llvm::StringRef Header,
+void addInclude(RewriteRuleBase &Rule, llvm::StringRef Header,
                 IncludeFormat Format = IncludeFormat::Quoted);
 
 /// Applies the first rule whose pattern matches; other rules are ignored.  If
@@ -359,7 +408,45 @@ void addInclude(RewriteRule &Rule, llvm::StringRef Header,
 //                             makeRule(left_call, left_call_action),
 //                             makeRule(right_call, right_call_action)});
 // ```
-RewriteRule applyFirst(ArrayRef<RewriteRule> Rules);
+/// @{
+template <typename MetadataT>
+RewriteRuleWith<MetadataT>
+applyFirst(ArrayRef<RewriteRuleWith<MetadataT>> Rules) {
+  RewriteRuleWith<MetadataT> R;
+  for (auto &Rule : Rules) {
+    assert(Rule.Cases.size() == Rule.Metadata.size() &&
+           "mis-match in case and metadata array size");
+    R.Cases.append(Rule.Cases.begin(), Rule.Cases.end());
+    R.Metadata.append(Rule.Metadata.begin(), Rule.Metadata.end());
+  }
+  return R;
+}
+
+template <>
+RewriteRuleWith<void> applyFirst(ArrayRef<RewriteRuleWith<void>> Rules);
+
+template <typename MetadataT>
+RewriteRuleWith<MetadataT>
+applyFirst(const std::vector<RewriteRuleWith<MetadataT>> &Rules) {
+  return applyFirst(llvm::ArrayRef(Rules));
+}
+
+template <typename MetadataT>
+RewriteRuleWith<MetadataT>
+applyFirst(std::initializer_list<RewriteRuleWith<MetadataT>> Rules) {
+  return applyFirst(llvm::ArrayRef(Rules.begin(), Rules.end()));
+}
+/// @}
+
+/// Converts a \c RewriteRuleWith<T> to a \c RewriteRule by stripping off the
+/// metadata generators.
+template <int &..., typename MetadataT>
+std::enable_if_t<!std::is_same<MetadataT, void>::value, RewriteRule>
+stripMetadata(RewriteRuleWith<MetadataT> Rule) {
+  RewriteRule R;
+  R.Cases = std::move(Rule.Cases);
+  return R;
+}
 
 /// Applies `Rule` to all descendants of the node bound to `NodeId`. `Rule` can
 /// refer to nodes bound by the calling rule. `Rule` is not applied to the node
@@ -423,7 +510,8 @@ rewriteDescendants(const DynTypedNode &Node, RewriteRule Rule,
 /// Only supports Rules whose cases' matchers share the same base "kind"
 /// (`Stmt`, `Decl`, etc.)  Deprecated: use `buildMatchers` instead, which
 /// supports mixing matchers of different kinds.
-ast_matchers::internal::DynTypedMatcher buildMatcher(const RewriteRule &Rule);
+ast_matchers::internal::DynTypedMatcher
+buildMatcher(const RewriteRuleBase &Rule);
 
 /// Builds a set of matchers that cover the rule.
 ///
@@ -433,7 +521,7 @@ ast_matchers::internal::DynTypedMatcher buildMatcher(const RewriteRule &Rule);
 /// for rewriting. If any such matchers are included, will return an empty
 /// vector.
 std::vector<ast_matchers::internal::DynTypedMatcher>
-buildMatchers(const RewriteRule &Rule);
+buildMatchers(const RewriteRuleBase &Rule);
 
 /// Gets the beginning location of the source matched by a rewrite rule. If the
 /// match occurs within a macro expansion, returns the beginning of the
@@ -441,13 +529,12 @@ buildMatchers(const RewriteRule &Rule);
 SourceLocation
 getRuleMatchLoc(const ast_matchers::MatchFinder::MatchResult &Result);
 
-/// Returns the \c Case of \c Rule that was selected in the match result.
-/// Assumes a matcher built with \c buildMatcher.
-const RewriteRule::Case &
-findSelectedCase(const ast_matchers::MatchFinder::MatchResult &Result,
-                 const RewriteRule &Rule);
+/// Returns the index of the \c Case of \c Rule that was selected in the match
+/// result. Assumes a matcher built with \c buildMatcher.
+size_t findSelectedCase(const ast_matchers::MatchFinder::MatchResult &Result,
+                        const RewriteRuleBase &Rule);
 } // namespace detail
 } // namespace transformer
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_TRANSFORMER_REWRITE_RULE_H_
+#endif // LLVM_CLANG_TOOLING_TRANSFORMER_REWRITERULE_H

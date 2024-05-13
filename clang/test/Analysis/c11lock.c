@@ -52,7 +52,7 @@ void bad5(void) {
   mtx_unlock(&mtx1); // expected-warning {{This lock has already been unlocked}}
 }
 
-void bad6() {
+void bad6(void) {
   mtx_init(&mtx1, 0);
   if (mtx_trylock(&mtx1) != thrd_success)
     mtx_unlock(&mtx1); // expected-warning {{This lock has already been unlocked}}
@@ -65,7 +65,7 @@ void bad7(void) {
   mtx_unlock(&mtx2);
 }
 
-void good() {
+void good(void) {
   mtx_t mtx;
   mtx_init(&mtx, 0);
   mtx_lock(&mtx);
@@ -73,7 +73,7 @@ void good() {
   mtx_destroy(&mtx);
 }
 
-void good2() {
+void good2(void) {
   mtx_t mtx;
   mtx_init(&mtx, 0);
   if (mtx_trylock(&mtx) == thrd_success)
@@ -81,7 +81,7 @@ void good2() {
   mtx_destroy(&mtx);
 }
 
-void good3() {
+void good3(void) {
   mtx_t mtx;
   mtx_init(&mtx, 0);
   if (mtx_timedlock(&mtx, 0) == thrd_success)

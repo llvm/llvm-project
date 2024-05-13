@@ -19,16 +19,23 @@
 #ifndef LLVM_ANALYSIS_CONSTANTFOLDING_H
 #define LLVM_ANALYSIS_CONSTANTFOLDING_H
 
+#include <stdint.h>
+
 namespace llvm {
+
+namespace Intrinsic {
+using ID = unsigned;
+}
+
 class APInt;
 template <typename T> class ArrayRef;
 class CallBase;
 class Constant;
-class ConstantExpr;
 class DSOLocalEquivalent;
 class DataLayout;
 class Function;
 class GlobalValue;
+class GlobalVariable;
 class Instruction;
 class TargetLibraryInfo;
 class Type;
@@ -65,26 +72,41 @@ Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
                                    const DataLayout &DL,
                                    const TargetLibraryInfo *TLI = nullptr);
 
-/// ConstantFoldCompareInstOperands - Attempt to constant fold a compare
-/// instruction (icmp/fcmp) with the specified operands.  If it fails, it
-/// returns a constant expression of the specified operands.
-///
-Constant *
-ConstantFoldCompareInstOperands(unsigned Predicate, Constant *LHS,
-                                Constant *RHS, const DataLayout &DL,
-                                const TargetLibraryInfo *TLI = nullptr);
+/// Attempt to constant fold a compare instruction (icmp/fcmp) with the
+/// specified operands. Returns null or a constant expression of the specified
+/// operands on failure.
+/// Denormal inputs may be flushed based on the denormal handling mode.
+Constant *ConstantFoldCompareInstOperands(
+    unsigned Predicate, Constant *LHS, Constant *RHS, const DataLayout &DL,
+    const TargetLibraryInfo *TLI = nullptr, const Instruction *I = nullptr);
 
-/// Attempt to constant fold a unary operation with the specified
-/// operand. If it fails, it returns a constant expression of the specified
-/// operands.
+/// Attempt to constant fold a unary operation with the specified operand.
+/// Returns null on failure.
 Constant *ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
                                      const DataLayout &DL);
 
-/// Attempt to constant fold a binary operation with the specified
-/// operands.  If it fails, it returns a constant expression of the specified
-/// operands.
+/// Attempt to constant fold a binary operation with the specified operands.
+/// Returns null or a constant expression of the specified operands on failure.
 Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
                                        Constant *RHS, const DataLayout &DL);
+
+/// Attempt to constant fold a floating point binary operation with the
+/// specified operands, applying the denormal handling mod to the operands.
+/// Returns null or a constant expression of the specified operands on failure.
+Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
+                                     Constant *RHS, const DataLayout &DL,
+                                     const Instruction *I);
+
+/// Attempt to flush float point constant according to denormal mode set in the
+/// instruction's parent function attributes. If so, return a zero with the
+/// correct sign, otherwise return the original constant. Inputs and outputs to
+/// floating point instructions can have their mode set separately, so the
+/// direction is also needed.
+///
+/// If the calling function's "denormal-fp-math" input mode is "dynamic" for the
+/// floating-point type, returns nullptr for denormal inputs.
+Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
+                          bool IsOutput);
 
 /// Attempt to constant fold a select instruction with the specified
 /// operands. The constant result is returned if successful; if not, null is
@@ -95,6 +117,11 @@ Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
 /// Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.
 Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,
+                                  const DataLayout &DL);
+
+/// Constant fold a zext, sext or trunc, depending on IsSigned and whether the
+/// DestTy is wider or narrower than C. Returns nullptr on failure.
+Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy, bool IsSigned,
                                   const DataLayout &DL);
 
 /// ConstantFoldInsertValueInstruction - Attempt to constant fold an insertvalue
@@ -128,24 +155,32 @@ Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
 Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
                                                ArrayRef<int> Mask);
 
-/// ConstantFoldLoadFromConstPtr - Return the value that a load from C would
-/// produce if it is constant and determinable.  If this is not determinable,
-/// return null.
-Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, const DataLayout &DL);
+/// Extract value of C at the given Offset reinterpreted as Ty. If bits past
+/// the end of C are accessed, they are assumed to be poison.
+Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
+                                    const DataLayout &DL);
 
-/// ConstantFoldLoadThroughGEPConstantExpr - Given a constant and a
-/// getelementptr constantexpr, return the constant value being addressed by the
-/// constant expression, or null if something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE,
-                                                 Type *Ty,
-                                                 const DataLayout &DL);
+/// Extract value of C reinterpreted as Ty. Same as previous API with zero
+/// offset.
+Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+                                    const DataLayout &DL);
 
-/// ConstantFoldLoadThroughGEPIndices - Given a constant and getelementptr
-/// indices (with an *implied* zero pointer index that is not in the list),
-/// return the constant value being addressed by a virtual load, or null if
-/// something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPIndices(Constant *C,
-                                            ArrayRef<Constant *> Indices);
+/// Return the value that a load from C with offset Offset would produce if it
+/// is constant and determinable. If this is not determinable, return null.
+Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, APInt Offset,
+                                       const DataLayout &DL);
+
+/// Return the value that a load from C would produce if it is constant and
+/// determinable. If this is not determinable, return null.
+Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                       const DataLayout &DL);
+
+/// If C is a uniform value where all bits are the same (either all zero, all
+/// ones, all undef or all poison), return the corresponding uniform value in
+/// the new type. If the value is not uniform or the result cannot be
+/// represented, return null.
+Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
+                                           const DataLayout &DL);
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
@@ -157,6 +192,10 @@ Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                            ArrayRef<Constant *> Operands,
                            const TargetLibraryInfo *TLI = nullptr);
 
+Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
+                                      Constant *RHS, Type *Ty,
+                                      Instruction *FMFSource);
+
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to
 /// integer and vice versa if their sizes are equal.
@@ -166,6 +205,8 @@ Constant *ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
 /// Check whether the given call has no side-effects.
 /// Specifically checks for math routimes which sometimes set errno.
 bool isMathLibCallNoop(const CallBase *Call, const TargetLibraryInfo *TLI);
+
+Constant *ReadByteArrayFromGlobal(const GlobalVariable *GV, uint64_t Offset);
 }
 
 #endif

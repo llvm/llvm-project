@@ -4,14 +4,14 @@
 # RUN:   -verify-machineinstrs -o /dev/null 2>&1
 
 --- |
-  define void @VerifyTwoAddressCrash(i16 %div.0.i.i.i.i, i32 %L_num.0.i.i.i.i, i32 %tmp1.i.i206.i.i, i16* %P) {
+  define void @VerifyTwoAddressCrash(i16 %div.0.i.i.i.i, i32 %L_num.0.i.i.i.i, i32 %tmp1.i.i206.i.i, ptr %P) {
     %X = shl i16 %div.0.i.i.i.i, 1
     %tmp28.i.i.i.i = shl i32 %L_num.0.i.i.i.i, 1
     %tmp31.i.i.i.i = icmp slt i32 %tmp28.i.i.i.i, %tmp1.i.i206.i.i
     %tmp31.i.i.i.i.upgrd.1 = zext i1 %tmp31.i.i.i.i to i16
     %tmp371.i.i.i.i1 = or i16 %tmp31.i.i.i.i.upgrd.1, %X
     %div.0.be.i.i.i.i = xor i16 %tmp371.i.i.i.i1, 1
-    store i16 %div.0.be.i.i.i.i, i16* %P, align 2
+    store i16 %div.0.be.i.i.i.i, ptr %P, align 2
     ret void
   }
 
@@ -71,7 +71,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0 (%ir-block.0):
     liveins: $r3, $r4, $r5, $r6
-  
+
     %3:gprc_and_gprc_nor0 = COPY killed $r6
     %2:gprc = COPY killed $r5
     %1:gprc = COPY killed $r4
@@ -84,7 +84,7 @@ body:             |
     %9:gprc = ISEL killed %8, killed %7, killed %6
     %10:gprc = RLWIMI killed %9, killed %0, 1, 0, 30
     %11:gprc = XORI killed %10, 1
-    STH killed %11, 0, killed %3 :: (store 2 into %ir.P)
+    STH killed %11, 0, killed %3 :: (store (s16) into %ir.P)
     BLR implicit $lr, implicit $rm
 
 ...

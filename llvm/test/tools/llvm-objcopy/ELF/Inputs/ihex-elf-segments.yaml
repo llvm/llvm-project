@@ -43,10 +43,15 @@ Sections:
     AddressAlign:    0x8
   - Name:            .dummy
     Type:            SHT_PROGBITS
-    Flags:           [ ]
+    Flags:           [ SHF_ALLOC ]
     Address:         0x20FFF8
-    Size:            65536
+    Size:            3
     AddressAlign:    0x8
+  - Name:            .nonalloc
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Address:         0x300000
+    Size:            1
 ProgramHeaders:
   - Type:     PT_LOAD
     Flags:    [ PF_X, PF_R ]

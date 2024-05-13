@@ -11,14 +11,14 @@ define fastcc float @foo(float %x) unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %eax
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    divss %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    movss %xmm1, (%eax)
 ; CHECK-NEXT:    retl
 entry:
   %div = fdiv fast float 3.0, %x
-  store float %div, float* undef, align 4
+  store float %div, ptr undef, align 4
   ret float %div
 }
 

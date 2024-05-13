@@ -3,21 +3,37 @@
 // RUN: %clangxx_asan  -O2 %s -pthread -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan  -O3 %s -pthread -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t
+// RUN: %clangxx_asan  -O0 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan  -O1 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan  -O2 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan  -O3 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan  -O3 %s -pthread -o %t -fsanitize-address-use-after-return=never && %run %t
 // Regression test for a CHECK failure with small stack size and large frame.
 // RUN: %clangxx_asan  -O3 %s -pthread -o %t -DkSize=10000 -DUseThread -DkStackSize=131072 && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
+// RUN: %clangxx_asan  -O3 %s -pthread -o %t -DkSize=10000 -DUseThread -DkStackSize=131072 -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
 //
-// Test that we can find UAR in a thread other than main:
+// Test that we can find UAR in a thread other than main (UAR mode: runtime):
 // RUN: %clangxx_asan  -DUseThread -O2 %s -pthread -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
 //
 // Test the max_uar_stack_size_log/min_uar_stack_size_log flag.
+// (uses the previous)
 //
 // RUN: %env_asan_opts=detect_stack_use_after_return=1:max_uar_stack_size_log=20:verbosity=1 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-20 %s
 // RUN: %env_asan_opts=detect_stack_use_after_return=1:min_uar_stack_size_log=24:max_uar_stack_size_log=24:verbosity=1 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-24 %s
+//
+// Test that we can find UAR in a thread other than main (UAR mode: always):
+// RUN: %clangxx_asan  -DUseThread -O2 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
+//
+// Test the max_uar_stack_size_log/min_uar_stack_size_log flag.
+// (uses the previous)
+//
+// RUN: %env_asan_opts=max_uar_stack_size_log=20:verbosity=1 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-20 %s
+// RUN: %env_asan_opts=min_uar_stack_size_log=24:max_uar_stack_size_log=24:verbosity=1 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-24 %s
 
 // This test runs out of stack on AArch64.
-// UNSUPPORTED: aarch64
+// UNSUPPORTED: target=aarch64{{.*}}
 // stack size log lower than expected
-// XFAIL: freebsd,netbsd
+// XFAIL: target={{.*(freebsd|netbsd).*}}
 
 // FIXME: Fix this test for dynamic runtime on arm linux.
 // UNSUPPORTED: (arm-linux || armhf-linux) && asan-dynamic-runtime
@@ -89,7 +105,7 @@ int main(int argc, char **argv) {
       fprintf(stderr, "pthread_attr_setstacksize returned %d\n", ret);
       abort();
     }
-    
+
     size_t stacksize_check;
     ret = pthread_attr_getstacksize(&attr, &stacksize_check);
     if (ret != 0) {
@@ -100,7 +116,7 @@ int main(int argc, char **argv) {
     if (stacksize_check != desired_stack_size) {
       fprintf(stderr, "Unable to set stack size to %d, the stack size is %d.\n",
               (int)desired_stack_size, (int)stacksize_check);
-      abort(); 
+      abort();
     }
   }
   pthread_t t;

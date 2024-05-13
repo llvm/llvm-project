@@ -8,8 +8,8 @@
 
 // UNSUPPORTED: no-exceptions
 
-// This test fails due to a stack overflow
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// FIXME: This test fails in MSVC mode due to a stack overflow
+// XFAIL: msvc
 
 // <exception>
 
@@ -28,6 +28,8 @@ class A
     int data_;
 public:
     explicit A(int data) : data_(data) {}
+    A(const A&) = default;
+    A& operator=(const A&) = default;
     virtual ~A() TEST_NOEXCEPT {}
 
     friend bool operator==(const A& x, const A& y) {return x.data_ == y.data_;}

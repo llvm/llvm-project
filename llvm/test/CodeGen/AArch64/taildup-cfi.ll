@@ -18,21 +18,21 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @h = common local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: norecurse nounwind uwtable
-define void @n(i32 %o, i32* nocapture readonly %b) local_unnamed_addr #0 {
+define void @n(i32 %o, ptr nocapture readonly %b) local_unnamed_addr #0 {
 entry:
-  %0 = load i32, i32* @g, align 4, !tbaa !2
+  %0 = load i32, ptr @g, align 4, !tbaa !2
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %entry.if.end_crit_edge, label %if.then
 
 entry.if.end_crit_edge:                           ; preds = %entry
-  %.pre = load i32, i32* @f, align 4, !tbaa !2
+  %.pre = load i32, ptr @f, align 4, !tbaa !2
   br label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* @f, align 4, !tbaa !2
+  store i32 0, ptr @f, align 4, !tbaa !2
   br label %if.end
 
-; DARWIN:           Merging into block
+; DARWIN:             Merging into block
 ; LINUX:    	      Merging into block
 
 if.end:                                           ; preds = %entry.if.end_crit_edge, %if.then
@@ -41,11 +41,11 @@ if.end:                                           ; preds = %entry.if.end_crit_e
   br i1 %cmp6, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:                                   ; preds = %if.end
-  %.pre7 = load i32, i32* @a, align 4, !tbaa !2
-  %.pre8 = load i32, i32* @l, align 4, !tbaa !2
-  %.pre9 = load i32, i32* @j, align 4, !tbaa !2
-  %.pre10 = load i32, i32* @k, align 4, !tbaa !2
-  %.pre11 = load i32, i32* @i, align 4, !tbaa !2
+  %.pre7 = load i32, ptr @a, align 4, !tbaa !2
+  %.pre8 = load i32, ptr @l, align 4, !tbaa !2
+  %.pre9 = load i32, ptr @j, align 4, !tbaa !2
+  %.pre10 = load i32, ptr @k, align 4, !tbaa !2
+  %.pre11 = load i32, ptr @i, align 4, !tbaa !2
   br label %for.body
 
 for.body:                                         ; preds = %if.end5, %for.body.lr.ph
@@ -53,7 +53,7 @@ for.body:                                         ; preds = %if.end5, %for.body.
   %3 = phi i32 [ %.pre10, %for.body.lr.ph ], [ %8, %if.end5 ]
   %4 = phi i32 [ %.pre9, %for.body.lr.ph ], [ %9, %if.end5 ]
   %5 = phi i32 [ %1, %for.body.lr.ph ], [ %inc, %if.end5 ]
-  store i32 %.pre7, i32* @m, align 4, !tbaa !2
+  store i32 %.pre7, ptr @m, align 4, !tbaa !2
   %mul = mul nsw i32 %3, %4
   %cmp1 = icmp sgt i32 %.pre8, %mul
   %conv = zext i1 %cmp1 to i32
@@ -61,25 +61,25 @@ for.body:                                         ; preds = %if.end5, %for.body.
   br i1 %cmp2, label %if.then4, label %if.end5
 
 if.then4:                                         ; preds = %for.body
-  %6 = load i32, i32* @d, align 4, !tbaa !2
-  store i32 %6, i32* @k, align 4, !tbaa !2
-  store i32 %6, i32* @i, align 4, !tbaa !2
-  store i32 %6, i32* @j, align 4, !tbaa !2
+  %6 = load i32, ptr @d, align 4, !tbaa !2
+  store i32 %6, ptr @k, align 4, !tbaa !2
+  store i32 %6, ptr @i, align 4, !tbaa !2
+  store i32 %6, ptr @j, align 4, !tbaa !2
   br label %if.end5
 
 if.end5:                                          ; preds = %if.then4, %for.body
   %7 = phi i32 [ %6, %if.then4 ], [ %2, %for.body ]
   %8 = phi i32 [ %6, %if.then4 ], [ %3, %for.body ]
   %9 = phi i32 [ %6, %if.then4 ], [ %4, %for.body ]
-  %10 = load i32, i32* @c, align 4, !tbaa !2
+  %10 = load i32, ptr @c, align 4, !tbaa !2
   %idxprom = sext i32 %10 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %idxprom
-  %11 = load i32, i32* %arrayidx, align 4, !tbaa !2
-  %12 = load i32, i32* @e, align 4, !tbaa !2
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %idxprom
+  %11 = load i32, ptr %arrayidx, align 4, !tbaa !2
+  %12 = load i32, ptr @e, align 4, !tbaa !2
   %sub = sub nsw i32 %11, %12
-  store i32 %sub, i32* @h, align 4, !tbaa !2
+  store i32 %sub, ptr @h, align 4, !tbaa !2
   %inc = add nsw i32 %5, 1
-  store i32 %inc, i32* @f, align 4, !tbaa !2
+  store i32 %inc, ptr @f, align 4, !tbaa !2
   %exitcond = icmp eq i32 %inc, %o
   br i1 %exitcond, label %for.end, label %for.body
 

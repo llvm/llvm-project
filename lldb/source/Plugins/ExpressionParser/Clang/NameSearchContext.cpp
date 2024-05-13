@@ -8,6 +8,7 @@
 
 #include "NameSearchContext.h"
 #include "ClangUtil.h"
+#include "lldb/Utility/LLDBLog.h"
 
 using namespace clang;
 using namespace lldb_private;
@@ -18,8 +19,7 @@ clang::NamedDecl *NameSearchContext::AddVarDecl(const CompilerType &type) {
   if (!type.IsValid())
     return nullptr;
 
-  TypeSystemClang *lldb_ast =
-      llvm::dyn_cast<TypeSystemClang>(type.GetTypeSystem());
+  auto lldb_ast = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
   if (!lldb_ast)
     return nullptr;
 
@@ -45,8 +45,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   if (m_function_types.count(type))
     return nullptr;
 
-  TypeSystemClang *lldb_ast =
-      llvm::dyn_cast<TypeSystemClang>(type.GetTypeSystem());
+  auto lldb_ast = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
   if (!lldb_ast)
     return nullptr;
 
@@ -63,9 +62,10 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   clang::DeclContext *context = const_cast<DeclContext *>(m_decl_context);
 
   if (extern_c) {
-    context = LinkageSpecDecl::Create(
-        ast, context, SourceLocation(), SourceLocation(),
-        clang::LinkageSpecDecl::LanguageIDs::lang_c, false);
+    context = LinkageSpecDecl::Create(ast, context, SourceLocation(),
+                                      SourceLocation(),
+                                      clang::LinkageSpecLanguageIDs::C, false);
+    // FIXME: The LinkageSpecDecl here should be added to m_decl_context.
   }
 
   // Pass the identifier info for functions the decl_name is needed for
@@ -77,7 +77,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
 
   clang::FunctionDecl *func_decl = FunctionDecl::Create(
       ast, context, SourceLocation(), SourceLocation(), decl_name, qual_type,
-      nullptr, SC_Extern, isInlineSpecified, hasWrittenPrototype,
+      nullptr, SC_Extern, /*UsesFPIntrin=*/false, isInlineSpecified, hasWrittenPrototype,
       isConstexprSpecified ? ConstexprSpecKind::Constexpr
                            : ConstexprSpecKind::Unspecified);
 
@@ -105,7 +105,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
 
     func_decl->setParams(ArrayRef<ParmVarDecl *>(parm_var_decls));
   } else {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+    Log *log = GetLog(LLDBLog::Expressions);
 
     LLDB_LOG(log, "Function type wasn't a FunctionProtoType");
   }

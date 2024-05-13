@@ -1,4 +1,4 @@
-! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.8 host_data

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -fblocks %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -fblocks -Wno-strict-prototypes %s
 
 #define bool _Bool
 @protocol NSObject;
@@ -62,7 +62,6 @@ int foo9() {
 
 }
 
-// rdar 7725203
 @class NSString;
 
 extern void NSLog(NSString *format, ...) __attribute__((format(__NSString__, 1, 2)));
@@ -128,7 +127,6 @@ void testCStyleEnumInference(bool arg) {
       return value; // expected-error {{return type 'enum CStyleEnum' must match previous return type 'int'}}
   };
 
-  // rdar://13200889
   extern void check_enum(void);
   a = ^{
     return (arg ? (CSE_Value) : (check_enum(), (!arg ? CSE_Value2 : getCSE())));

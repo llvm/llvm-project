@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine
+; RUN: opt < %s -passes=instcombine
 ; PR3468
 
 define x86_fp80 @cast() {

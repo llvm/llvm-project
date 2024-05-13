@@ -8,10 +8,10 @@
 @bar = external global i32
 declare i32 @foo()
 
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) {
 entry:
   %0 = call i32() @foo()
-  %1 = load i32, i32* @bar
+  %1 = load i32, ptr @bar
   %2 = add i32 %0, %1
   ret i32 %2
 }

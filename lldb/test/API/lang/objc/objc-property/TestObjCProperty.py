@@ -3,7 +3,6 @@ Use lldb Python API to verify that expression evaluation for property references
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,20 +10,17 @@ from lldbsuite.test import lldbutil
 
 
 class ObjCPropertyTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
 
         # Find the line number to break for main.c.
-        self.source_name = 'main.m'
+        self.source_name = "main.m"
 
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     def test_objc_properties(self):
         """Test that expr uses the correct property getters and setters"""
-        if self.getArchitecture() == 'i386':
+        if self.getArchitecture() == "i386":
             self.skipTest("requires modern objc runtime")
 
         self.build()
@@ -38,21 +34,19 @@ class ObjCPropertyTestCase(TestBase):
         # Set up our breakpoints:
 
         main_bkpt = target.BreakpointCreateBySourceRegex(
-            "Set a breakpoint here.", lldb.SBFileSpec(self.source_name))
-        self.assertTrue(main_bkpt and
-                        main_bkpt.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+            "Set a breakpoint here.", lldb.SBFileSpec(self.source_name)
+        )
+        self.assertTrue(
+            main_bkpt and main_bkpt.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
-        self.assertEquals(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, main_bkpt)
-        self.assertEquals(len(threads), 1)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, main_bkpt)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
         frame = thread.GetFrameAtIndex(0)
 
@@ -68,32 +62,30 @@ class ObjCPropertyTestCase(TestBase):
         # a property that actually only has a getter & setter and no
         # @property.
         #
-        nonexistant_value = frame.EvaluateExpression(
-            "mine.nonexistantInt", False)
+        nonexistant_value = frame.EvaluateExpression("mine.nonexistantInt", False)
         nonexistant_error = nonexistant_value.GetError()
-        self.assertTrue(nonexistant_error.Success())
+        self.assertSuccess(nonexistant_error)
         nonexistant_int = nonexistant_value.GetValueAsUnsigned(123456)
-        self.assertEquals(nonexistant_int, 6)
+        self.assertEqual(nonexistant_int, 6)
 
         # Calling the getter function would up the access count, so make sure
         # that happened.
 
         new_access_count = access_count.GetValueAsUnsigned(123456)
-        self.assertEquals(new_access_count - start_access_count, 1)
+        self.assertEqual(new_access_count - start_access_count, 1)
         start_access_count = new_access_count
 
         #
         # Now call the setter, then make sure that
-        nonexistant_change = frame.EvaluateExpression(
-            "mine.nonexistantInt = 10", False)
+        nonexistant_change = frame.EvaluateExpression("mine.nonexistantInt = 10", False)
         nonexistant_error = nonexistant_change.GetError()
-        self.assertTrue(nonexistant_error.Success())
+        self.assertSuccess(nonexistant_error)
 
         # Calling the setter function would up the access count, so make sure
         # that happened.
 
         new_access_count = access_count.GetValueAsUnsigned(123456)
-        self.assertEquals(new_access_count - start_access_count, 1)
+        self.assertEqual(new_access_count - start_access_count, 1)
         start_access_count = new_access_count
 
         #
@@ -103,40 +95,43 @@ class ObjCPropertyTestCase(TestBase):
 
         backed_value = frame.EvaluateExpression("mine.backedInt", False)
         backed_error = backed_value.GetError()
-        self.assertTrue(backed_error.Success())
+        self.assertSuccess(backed_error)
         backing_value = mine.GetChildMemberWithName("_backedInt")
         self.assertTrue(backing_value.IsValid())
-        self.assertTrue(backed_value.GetValueAsUnsigned(12345)
-                        == backing_value.GetValueAsUnsigned(23456))
+        self.assertEqual(
+            backed_value.GetValueAsUnsigned(12345),
+            backing_value.GetValueAsUnsigned(23456),
+        )
 
         value_from_typedef = frame.EvaluateExpression("typedefd.backedInt", False)
-        self.assertTrue(value_from_typedef.GetError().Success())
-        self.assertEqual(value_from_typedef.GetValueAsUnsigned(12345),
-                         backing_value.GetValueAsUnsigned(23456))
+        self.assertSuccess(value_from_typedef.GetError())
+        self.assertEqual(
+            value_from_typedef.GetValueAsUnsigned(12345),
+            backing_value.GetValueAsUnsigned(23456),
+        )
 
         unbacked_value = frame.EvaluateExpression("mine.unbackedInt", False)
         unbacked_error = unbacked_value.GetError()
-        self.assertTrue(unbacked_error.Success())
+        self.assertSuccess(unbacked_error)
 
-        idWithProtocol_value = frame.EvaluateExpression(
-            "mine.idWithProtocol", False)
+        idWithProtocol_value = frame.EvaluateExpression("mine.idWithProtocol", False)
         idWithProtocol_error = idWithProtocol_value.GetError()
-        self.assertTrue(idWithProtocol_error.Success())
-        self.assertEquals(idWithProtocol_value.GetTypeName(), "id")
+        self.assertSuccess(idWithProtocol_error)
+        self.assertEqual(idWithProtocol_value.GetTypeName(), "id")
 
         # Make sure that class property getter works as expected
         value = frame.EvaluateExpression("BaseClass.classInt", False)
-        self.assertTrue(value.GetError().Success())
-        self.assertEquals(value.GetValueAsUnsigned(11111), 123)
+        self.assertSuccess(value.GetError())
+        self.assertEqual(value.GetValueAsUnsigned(11111), 123)
 
         # Make sure that class property setter works as expected
         value = frame.EvaluateExpression("BaseClass.classInt = 234", False)
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
 
         # Verify that setter above actually worked
         value = frame.EvaluateExpression("BaseClass.classInt", False)
-        self.assertTrue(value.GetError().Success())
-        self.assertEquals(value.GetValueAsUnsigned(11111), 234)
+        self.assertSuccess(value.GetError())
+        self.assertEqual(value.GetValueAsUnsigned(11111), 234)
 
         # Test that accessing two distinct class and instance properties that
         # share the same name works.

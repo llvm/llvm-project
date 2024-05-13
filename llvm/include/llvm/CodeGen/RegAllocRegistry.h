@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_REGALLOCREGISTRY_H
 #define LLVM_CODEGEN_REGALLOCREGISTRY_H
 
+#include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 
 namespace llvm {
@@ -65,7 +66,7 @@ public:
 
 /// RegisterRegAlloc's global Registry tracks allocator registration.
 template <class T>
-MachinePassRegistry<RegisterRegAlloc::FunctionPassCtor>
+MachinePassRegistry<typename RegisterRegAllocBase<T>::FunctionPassCtor>
 RegisterRegAllocBase<T>::Registry;
 
 } // end namespace llvm

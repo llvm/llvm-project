@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -ffreestanding -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple arm64-linux-gnu -target-feature +neon -ffreestanding -fsyntax-only -verify %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 void test_vext_8bit(int8x8_t small, int8x16_t big) {

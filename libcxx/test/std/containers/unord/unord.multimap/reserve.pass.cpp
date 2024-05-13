@@ -32,7 +32,7 @@ void test(const C& c)
         s.insert("four");
         assert(s.find(c.find(1)->second) != s.end());
         s.erase(s.find(c.find(1)->second));
-        assert(s.find(next(c.find(1))->second) != s.end());
+        assert(s.find(std::next(c.find(1))->second) != s.end());
     }
     {
         std::set<std::string> s;
@@ -40,22 +40,22 @@ void test(const C& c)
         s.insert("four");
         assert(s.find(c.find(2)->second) != s.end());
         s.erase(s.find(c.find(2)->second));
-        assert(s.find(next(c.find(2))->second) != s.end());
+        assert(s.find(std::next(c.find(2))->second) != s.end());
     }
     assert(c.find(3)->second == "three");
     assert(c.find(4)->second == "four");
 }
 
-void reserve_invariant(size_t n) // LWG #2156
+void reserve_invariant(std::size_t n) // LWG #2156
 {
-    for (size_t i = 0; i < n; ++i)
+    for (std::size_t i = 0; i < n; ++i)
     {
-        std::unordered_multimap<size_t, size_t> c;
+        std::unordered_multimap<std::size_t, size_t> c;
         c.reserve(n);
-        size_t buckets = c.bucket_count();
-        for (size_t j = 0; j < i; ++j)
+        std::size_t buckets = c.bucket_count();
+        for (std::size_t j = 0; j < i; ++j)
         {
-            c.insert(std::unordered_multimap<size_t, size_t>::value_type(i,i));
+            c.insert(std::unordered_multimap<std::size_t, size_t>::value_type(i,i));
             assert(buckets == c.bucket_count());
         }
     }

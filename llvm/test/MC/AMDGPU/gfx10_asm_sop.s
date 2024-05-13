@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 //===----------------------------------------------------------------------===//
 // ENC_SOP1.
@@ -9815,6 +9815,12 @@ s_nop 0xc1d1
 
 s_endpgm
 // GFX10: encoding: [0x00,0x00,0x81,0xbf]
+
+s_endpgm 1
+// GFX10: encoding: [0x01,0x00,0x81,0xbf]
+
+s_endpgm 65535
+// GFX10: encoding: [0xff,0xff,0x81,0xbf]
 
 s_branch 0x0
 // GFX10: encoding: [0x00,0x00,0x82,0xbf]

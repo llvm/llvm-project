@@ -1,0 +1,71 @@
+# RUN: llc -simplify-mir=0 -march=x86-64 -run-pass=none -o - %s | FileCheck -check-prefixes=FULL,ALL %s
+# RUN: llc -simplify-mir=1 -march=x86-64 -run-pass=none -o - %s | FileCheck -check-prefixes=SIMPLE,ALL %s
+
+# This test ensures that the MIR parser parses callee saved information in the
+# stack objects correctly.
+
+# ALL: name: func0
+# ALL: callsEHReturn:   true
+# ALL: callsUnwindInit: true
+# ALL: hasEHCatchret:   true
+# ALL: hasEHScopes:     true
+# ALL: hasEHFunclets:   true
+
+---
+name: func0
+callsEHReturn: true
+callsUnwindInit: true
+hasEHCatchret: true
+hasEHScopes: true
+hasEHFunclets: true
+body: |
+  bb.0:
+...
+
+# ALL: name: func1
+# FULL: callsEHReturn: false
+# FULL: callsUnwindInit: true
+# FULL: hasEHCatchret: false
+# FULL: hasEHScopes: true
+# FULL: hasEHFunclets: false
+
+# SIMPLE-NOT: callsEHReturn
+# SIMPLE: callsUnwindInit: true
+# SIMPLE-NOT: hasEHCatchret
+# SIMPLE: hasEHScopes: true
+# SIMPLE-NOT: hasEHFunclets
+---
+name: func1
+tracksRegLiveness: true
+callsEHReturn: false
+callsUnwindInit: true
+hasEHCatchret: false
+hasEHScopes: true
+hasEHFunclets: false
+body: |
+  bb.0:
+...
+
+# ALL: name: func2
+# FULL: callsEHReturn: true
+# FULL: callsUnwindInit: false
+# FULL: hasEHCatchret: true
+# FULL: hasEHScopes: false
+# FULL: hasEHFunclets: false
+
+# SIMPLE: callsEHReturn: true
+# SIMPLE-NOT: callsUnwindInit
+# SIMPLE: hasEHCatchret: true
+# SIMPLE-NOT hasEHScopes
+# SIMPLE-NOT: hasEHFunclets
+---
+name: func2
+tracksRegLiveness: true
+callsEHReturn: true
+callsUnwindInit: false
+hasEHCatchret: true
+hasEHScopes: false
+hasEHFunclets: false
+body: |
+  bb.0:
+...

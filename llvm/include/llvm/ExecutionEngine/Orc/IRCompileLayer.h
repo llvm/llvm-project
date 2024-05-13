@@ -18,8 +18,9 @@
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <functional>
 #include <memory>
-#include <string>
+#include <mutex>
 
 namespace llvm {
 

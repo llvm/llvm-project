@@ -1,7 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -simple-loop-unswitch -disable-output -stats -info-output-file - < %s | FileCheck --check-prefix=STATS %s
-; RUN: opt -simple-loop-unswitch -S < %s | FileCheck %s
-; RUN: opt -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes=simple-loop-unswitch -disable-output -stats -info-output-file - < %s | FileCheck --check-prefix=STATS %s
+; RUN: opt -passes=simple-loop-unswitch -verify-memoryssa -S < %s | FileCheck %s
 ; PR5373
 
 ; Loop unswitching shouldn't trivially unswitch the true case of condition %a

@@ -4,12 +4,9 @@
 
 ; The first extracted function is the region composed by the
 ; blocks if, then, and else from foo.
-; CHECK: define dso_local void @foo.if.split(i32 %arg1, i32 %arg, i32* %tmp.0.ce.out) {
+; CHECK: define dso_local void @foo.if.split(i32 %arg1, i32 %arg, ptr %tmp.0.ce.out) {
 ; CHECK: newFuncRoot:
 ; CHECK:   br label %if.split
-;
-; CHECK: end.exitStub:                                     ; preds = %end.split
-; CHECK:   ret void
 ;
 ; CHECK: then:                                             ; preds = %if.split
 ; CHECK:   %tmp12 = shl i32 %arg1, 2
@@ -30,21 +27,18 @@
 ;
 ; CHECK: end.split:                                        ; preds = %then, %else
 ; CHECK:   %tmp.0.ce = phi i32 [ %tmp13, %then ], [ %tmp25, %else ]
-; CHECK:   store i32 %tmp.0.ce, i32* %tmp.0.ce.out
+; CHECK:   store i32 %tmp.0.ce, ptr %tmp.0.ce.out
 ; CHECK:   br label %end.exitStub
+;
+; CHECK: end.exitStub:                                     ; preds = %end.split
+; CHECK:   ret void
 ; CHECK: }
 
 ; The second extracted function is the region composed by the blocks
 ; bb14 and bb20 from bar.
-; CHECK: define dso_local i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
+; CHECK: define dso_local i1 @bar.bb14(i32 %arg1, i32 %arg, ptr %tmp25.out) {
 ; CHECK: newFuncRoot:
 ; CHECK:   br label %bb14
-;
-; CHECK: bb26.exitStub:                                    ; preds = %bb14
-; CHECK:   ret i1 true
-;
-; CHECK: bb30.exitStub:                                    ; preds = %bb20
-; CHECK:   ret i1 false
 ;
 ; CHECK: bb14:                                             ; preds = %newFuncRoot
 ; CHECK:   %tmp0 = and i32 %arg1, %arg
@@ -55,8 +49,14 @@
 ; CHECK:   %tmp22 = mul nsw i32 %arg, 3
 ; CHECK:   %tmp24 = sdiv i32 %arg1, 6
 ; CHECK:   %tmp25 = add nsw i32 %tmp24, %tmp22
-; CHECK:   store i32 %tmp25, i32* %tmp25.out
+; CHECK:   store i32 %tmp25, ptr %tmp25.out
 ; CHECK:   br label %bb30.exitStub
+;
+; CHECK: bb26.exitStub:                                    ; preds = %bb14
+; CHECK:   ret i1 true
+;
+; CHECK: bb30.exitStub:                                    ; preds = %bb20
+; CHECK:   ret i1 false
 ; CHECK: }
 
 define i32 @foo(i32 %arg, i32 %arg1) {

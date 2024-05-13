@@ -8,19 +8,19 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 %struct.hoge = type { %struct.widget }
-%struct.widget = type { i32 (...)** }
+%struct.widget = type { ptr }
 
 ; M0: @global = local_unnamed_addr global
 ; M1-NOT: @global
-@global = local_unnamed_addr global %struct.hoge { %struct.widget { i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @global.1, i32 0, inrange i32 0, i32 2) to i32 (...)**) } }, align 8
+@global = local_unnamed_addr global %struct.hoge { %struct.widget { ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @global.1, i32 0, i32 0, i32 2) } }, align 8
 
 ; M0: @global.1 = external unnamed_addr constant
 ; M1: @global.1 = linkonce_odr unnamed_addr constant
-@global.1 = linkonce_odr unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @global.4 to i8*), i8* bitcast (i32 (%struct.widget*)* @quux to i8*)] }, align 8, !type !0
+@global.1 = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @global.4, ptr @quux] }, align 8, !type !0
 
 ; M0: @global.2 = external global
 ; M1-NOT: @global.2
-@global.2 = external global i8*
+@global.2 = external global ptr
 
 ; M0: @global.3 = linkonce_odr constant
 ; M1-NOT: @global.3
@@ -28,10 +28,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; M0: @global.4 = linkonce_odr constant
 ; M1: @global.4 = external constant
-@global.4 = linkonce_odr constant { i8*, i8* }{ i8* bitcast (i8** getelementptr inbounds (i8*, i8** @global.2, i64 2) to i8*), i8* getelementptr inbounds ([22 x i8], [22 x i8]* @global.3, i32 0, i32 0) }
+@global.4 = linkonce_odr constant { ptr, ptr }{ ptr getelementptr inbounds (ptr, ptr @global.2, i64 2), ptr @global.3 }
 
-@llvm.global_ctors = appending global [0 x { i32, void ()*, i8* }] zeroinitializer
+@llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
 
-declare i32 @quux(%struct.widget*) unnamed_addr
+declare i32 @quux(ptr) unnamed_addr
 
 !0 = !{i64 16, !"yyyyyyyyyyyyyyyyyyyyyyyyy"}

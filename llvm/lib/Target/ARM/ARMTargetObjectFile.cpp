@@ -16,6 +16,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
@@ -52,6 +53,24 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
     TextSection =
         Ctx.getELFSection(".text", Type, Flags, 0, "", false, 0U, nullptr);
   }
+}
+
+MCRegister ARMElfTargetObjectFile::getStaticBase() const { return ARM::R9; }
+
+const MCExpr *ARMElfTargetObjectFile::getIndirectSymViaGOTPCRel(
+    const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
+    int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
+  int64_t FinalOffset = Offset + MV.getConstant();
+  const MCExpr *Res = MCSymbolRefExpr::create(
+      Sym, MCSymbolRefExpr::VK_ARM_GOT_PREL, getContext());
+  const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
+  return MCBinaryExpr::createAdd(Res, Off, getContext());
+}
+
+const MCExpr *ARMElfTargetObjectFile::
+getIndirectSymViaRWPI(const MCSymbol *Sym) const {
+  return MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_ARM_SBREL,
+                                 getContext());
 }
 
 const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(

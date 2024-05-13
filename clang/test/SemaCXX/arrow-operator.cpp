@@ -4,11 +4,13 @@ struct T {
 };
 
 struct A {
-  T* operator->(); // expected-note{{candidate function}}
+  T* operator->();
+                   // expected-note@-1 {{member found by ambiguous name lookup}}
 };
 
 struct B {
-  T* operator->(); // expected-note{{candidate function}}
+  T* operator->();
+                   // expected-note@-1 {{member found by ambiguous name lookup}}
 };
 
 struct C : A, B {
@@ -19,12 +21,12 @@ struct D : A { };
 struct E; // expected-note {{forward declaration of 'E'}}
 
 void f(C &c, D& d, E& e) {
-  c->f(); // expected-error{{use of overloaded operator '->' is ambiguous}}
+  c->f();
+          // expected-error@-1 {{member 'operator->' found in multiple base classes of different types}}
   d->f();
   e->f(); // expected-error{{incomplete definition of type}}
 }
 
-// rdar://8875304
 namespace rdar8875304 {
 class Point {};
 class Line_Segment{ public: Line_Segment(const Point&){} };
@@ -65,3 +67,51 @@ void test() {
 }
 
 } // namespace arrow_suggest
+
+namespace no_crash_dependent_type {
+
+template <class T>
+struct A {
+  void call();
+  A *operator->();
+};
+
+template <class T>
+void foo() {
+  // The "requires an initializer" error seems unnecessary.
+  A<int> &x = blah[7]; // expected-error {{use of undeclared identifier 'blah'}} \
+                        // expected-error {{requires an initializer}}
+  // x is dependent.
+  x->call();
+}
+
+void test() {
+  foo<int>(); // expected-note {{requested here}}
+}
+
+} // namespace no_crash_dependent_type
+
+namespace clangd_issue_1073_no_crash_dependent_type {
+
+template <typename T> struct Ptr {
+  T *operator->();
+};
+
+struct Struct {
+  int len;
+};
+
+template <int>
+struct TemplateStruct {
+  Ptr<Struct> val(); // expected-note {{declared here}}
+};
+
+template <int I>
+void templateFunc(const TemplateStruct<I> &ts) {
+  Ptr<Struct> ptr = ts.val(); // expected-error {{function is not marked const}}
+  auto foo = ptr->len;
+}
+
+template void templateFunc<0>(const TemplateStruct<0> &); // expected-note {{requested here}}
+
+} // namespace clangd_issue_1073_no_crash_dependent_type

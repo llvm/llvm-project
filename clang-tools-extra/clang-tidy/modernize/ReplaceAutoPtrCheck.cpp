@@ -16,9 +16,7 @@
 using namespace clang;
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 static const char AutoPtrTokenId[] = "AutoPrTokenId";
@@ -41,7 +39,8 @@ ReplaceAutoPtrCheck::ReplaceAutoPtrCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM)) {}
+                                        utils::IncludeSorter::IS_LLVM),
+               areDiagsSelfContained()) {}
 
 void ReplaceAutoPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
@@ -149,6 +148,4 @@ void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {
                                       "unique_ptr");
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

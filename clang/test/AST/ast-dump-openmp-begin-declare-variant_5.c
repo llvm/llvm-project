@@ -19,7 +19,7 @@ int also_after(void) {
   return 2;
 }
 
-int main() {
+int main(void) {
   // Should return 0.
   return (also_after)() +
          (also_before)() +
@@ -55,7 +55,7 @@ int main() {
 // C-NEXT: | `-OMPDeclareVariantAttr [[ADDR_21:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(llvm)}
 // C-NEXT: |   `-DeclRefExpr [[ADDR_9]] <line:10:1> 'int ({{.*}})' Function [[ADDR_10]] 'also_after[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // C-NEXT: `-FunctionDecl [[ADDR_22:0x[a-z0-9]*]] <line:22:1, line:28:1> line:22:5 main 'int ({{.*}})'
-// C-NEXT:   `-CompoundStmt [[ADDR_23:0x[a-z0-9]*]] <col:12, line:28:1>
+// C-NEXT:   `-CompoundStmt [[ADDR_23:0x[a-z0-9]*]] <col:16, line:28:1>
 // C-NEXT:     `-ReturnStmt [[ADDR_24:0x[a-z0-9]*]] <line:24:3, line:27:25>
 // C-NEXT:       `-BinaryOperator [[ADDR_25:0x[a-z0-9]*]] <line:24:10, line:27:25> 'int' '+'
 // C-NEXT:         |-BinaryOperator [[ADDR_26:0x[a-z0-9]*]] <line:24:10, line:26:24> 'int' '+'
@@ -117,7 +117,7 @@ int main() {
 // CXX-NEXT: | `-OMPDeclareVariantAttr [[ADDR_21:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(llvm)}
 // CXX-NEXT: |   `-DeclRefExpr [[ADDR_9]] <line:10:1> 'int ({{.*}})' Function [[ADDR_10]] 'also_after[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // CXX-NEXT: `-FunctionDecl [[ADDR_22:0x[a-z0-9]*]] <line:22:1, line:28:1> line:22:5 main 'int ({{.*}})'
-// CXX-NEXT:   `-CompoundStmt [[ADDR_23:0x[a-z0-9]*]] <col:12, line:28:1>
+// CXX-NEXT:   `-CompoundStmt [[ADDR_23:0x[a-z0-9]*]] <col:16, line:28:1>
 // CXX-NEXT:     `-ReturnStmt [[ADDR_24:0x[a-z0-9]*]] <line:24:3, line:27:25>
 // CXX-NEXT:       `-BinaryOperator [[ADDR_25:0x[a-z0-9]*]] <line:24:10, line:27:25> 'int' '+'
 // CXX-NEXT:         |-BinaryOperator [[ADDR_26:0x[a-z0-9]*]] <line:24:10, line:26:24> 'int' '+'

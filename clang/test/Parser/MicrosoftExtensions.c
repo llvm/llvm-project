@@ -5,7 +5,7 @@ typedef int (__cdecl *tptr)(void);
 void (*__fastcall fastpfunc)(void);
 extern __declspec(dllimport) void __stdcall VarR4FromDec(void);
 __declspec(deprecated) __declspec(deprecated) char * __cdecl ltoa( long _Val, char * _DstBuf, int _Radix);
-__declspec(safebuffers) __declspec(noalias) __declspec(restrict) void * __cdecl xxx(void *_Memory); /* expected-warning{{__declspec attribute 'safebuffers' is not supported}} */
+__declspec(safebuffers) __declspec(noalias) __declspec(restrict) void * __cdecl xxx(void *_Memory);
 typedef __w64 unsigned long ULONG_PTR, *PULONG_PTR;
 
 void * __ptr64 PtrToPtr64(const void *p) {
@@ -94,11 +94,11 @@ int * __sptr * __ptr32 ppsp32;
 
 // Ignored type qualifiers after comma in declarator lists
 typedef int ignored_quals_dummy1, const volatile __ptr32 __ptr64 __w64 __unaligned __sptr __uptr ignored_quals1; // expected-warning {{qualifiers after comma in declarator list are ignored}}
-typedef void(*ignored_quals_dummy2)(), __fastcall ignored_quals2; // expected-warning {{qualifiers after comma in declarator list are ignored}}
-typedef void(*ignored_quals_dummy3)(), __stdcall ignored_quals3; // expected-warning {{qualifiers after comma in declarator list are ignored}}
-typedef void(*ignored_quals_dummy4)(), __thiscall ignored_quals4; // expected-warning {{qualifiers after comma in declarator list are ignored}}
-typedef void(*ignored_quals_dummy5)(), __cdecl ignored_quals5; // expected-warning {{qualifiers after comma in declarator list are ignored}}
-typedef void(*ignored_quals_dummy6)(), __vectorcall ignored_quals6; // expected-warning {{qualifiers after comma in declarator list are ignored}}
+typedef void(*ignored_quals_dummy2)(void), __fastcall ignored_quals2; // expected-warning {{qualifiers after comma in declarator list are ignored}}
+typedef void(*ignored_quals_dummy3)(void), __stdcall ignored_quals3; // expected-warning {{qualifiers after comma in declarator list are ignored}}
+typedef void(*ignored_quals_dummy4)(void), __thiscall ignored_quals4; // expected-warning {{qualifiers after comma in declarator list are ignored}}
+typedef void(*ignored_quals_dummy5)(void), __cdecl ignored_quals5; // expected-warning {{qualifiers after comma in declarator list are ignored}}
+typedef void(*ignored_quals_dummy6)(void), __vectorcall ignored_quals6; // expected-warning {{qualifiers after comma in declarator list are ignored}}
 
 __declspec(align(16)) struct align_before_key1 {};
 __declspec(align(16)) struct align_before_key2 {} align_before_key2_var;

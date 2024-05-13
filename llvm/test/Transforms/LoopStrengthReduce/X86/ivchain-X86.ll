@@ -13,25 +13,25 @@
 ; no expensive address computation in the preheader
 ; no complex address modes
 
-define i32 @simple(i32* %a, i32* %b, i32 %x) nounwind {
+define i32 @simple(ptr %a, ptr %b, i32 %x) nounwind {
 ; X64-LABEL: simple:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movslq %edx, %rcx
 ; X64-NEXT:    shlq $2, %rcx
 ; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    leaq (%rcx,%rcx), %rdx
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_1: # %loop
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    addl (%rdi), %eax
-; X64-NEXT:    leaq (%rdi,%rcx), %r8
 ; X64-NEXT:    addl (%rdi,%rcx), %eax
-; X64-NEXT:    leaq (%r8,%rcx), %rdx
+; X64-NEXT:    leaq (%rdi,%rcx), %r8
 ; X64-NEXT:    addl (%rcx,%r8), %eax
-; X64-NEXT:    addl (%rcx,%rdx), %eax
-; X64-NEXT:    addq %rcx, %rdx
-; X64-NEXT:    addq %rcx, %rdx
-; X64-NEXT:    movq %rdx, %rdi
-; X64-NEXT:    cmpq %rsi, %rdx
+; X64-NEXT:    addq %rcx, %r8
+; X64-NEXT:    addl (%rcx,%r8), %eax
+; X64-NEXT:    addq %rdx, %r8
+; X64-NEXT:    movq %r8, %rdi
+; X64-NEXT:    cmpq %rsi, %r8
 ; X64-NEXT:    jne .LBB0_1
 ; X64-NEXT:  # %bb.2: # %exit
 ; X64-NEXT:    retq
@@ -42,22 +42,22 @@ define i32 @simple(i32* %a, i32* %b, i32 %x) nounwind {
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    shll $2, %edx
 ; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    leal (%edx,%edx), %esi
 ; X32-NEXT:    .p2align 4, 0x90
 ; X32-NEXT:  .LBB0_1: # %loop
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
-; X32-NEXT:    addl (%esi), %eax
-; X32-NEXT:    leal (%esi,%edx), %edi
-; X32-NEXT:    addl (%esi,%edx), %eax
+; X32-NEXT:    addl (%edi), %eax
+; X32-NEXT:    addl (%edi,%edx), %eax
 ; X32-NEXT:    leal (%edi,%edx), %ebx
-; X32-NEXT:    addl (%edx,%edi), %eax
 ; X32-NEXT:    addl (%edx,%ebx), %eax
 ; X32-NEXT:    addl %edx, %ebx
-; X32-NEXT:    addl %edx, %ebx
-; X32-NEXT:    movl %ebx, %esi
+; X32-NEXT:    addl (%edx,%ebx), %eax
+; X32-NEXT:    addl %esi, %ebx
+; X32-NEXT:    movl %ebx, %edi
 ; X32-NEXT:    cmpl %ecx, %ebx
 ; X32-NEXT:    jne .LBB0_1
 ; X32-NEXT:  # %bb.2: # %exit
@@ -68,21 +68,21 @@ define i32 @simple(i32* %a, i32* %b, i32 %x) nounwind {
 entry:
   br label %loop
 loop:
-  %iv = phi i32* [ %a, %entry ], [ %iv4, %loop ]
+  %iv = phi ptr [ %a, %entry ], [ %iv4, %loop ]
   %s = phi i32 [ 0, %entry ], [ %s4, %loop ]
-  %v = load i32, i32* %iv
-  %iv1 = getelementptr inbounds i32, i32* %iv, i32 %x
-  %v1 = load i32, i32* %iv1
-  %iv2 = getelementptr inbounds i32, i32* %iv1, i32 %x
-  %v2 = load i32, i32* %iv2
-  %iv3 = getelementptr inbounds i32, i32* %iv2, i32 %x
-  %v3 = load i32, i32* %iv3
+  %v = load i32, ptr %iv
+  %iv1 = getelementptr inbounds i32, ptr %iv, i32 %x
+  %v1 = load i32, ptr %iv1
+  %iv2 = getelementptr inbounds i32, ptr %iv1, i32 %x
+  %v2 = load i32, ptr %iv2
+  %iv3 = getelementptr inbounds i32, ptr %iv2, i32 %x
+  %v3 = load i32, ptr %iv3
   %s1 = add i32 %s, %v
   %s2 = add i32 %s1, %v1
   %s3 = add i32 %s2, %v2
   %s4 = add i32 %s3, %v3
-  %iv4 = getelementptr inbounds i32, i32* %iv3, i32 %x
-  %cmp = icmp eq i32* %iv4, %b
+  %iv4 = getelementptr inbounds i32, ptr %iv3, i32 %x
+  %cmp = icmp eq ptr %iv4, %b
   br i1 %cmp, label %exit, label %loop
 exit:
   ret i32 %s4
@@ -92,7 +92,7 @@ exit:
 ;
 ; expensive address computation in the preheader
 ; complex address modes
-define i32 @user(i32* %a, i32* %b, i32 %x) nounwind {
+define i32 @user(ptr %a, ptr %b, i32 %x) nounwind {
 ; X64-LABEL: user:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movslq %edx, %rcx
@@ -110,7 +110,7 @@ define i32 @user(i32* %a, i32* %b, i32 %x) nounwind {
 ; X64-NEXT:    addl (%rdi,%r8), %eax
 ; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    addq %rdx, %rdi
-; X64-NEXT:    cmpq %rdi, %rsi
+; X64-NEXT:    cmpq %rsi, %rdi
 ; X64-NEXT:    jne .LBB1_1
 ; X64-NEXT:  # %bb.2: # %exit
 ; X64-NEXT:    retq
@@ -137,7 +137,7 @@ define i32 @user(i32* %a, i32* %b, i32 %x) nounwind {
 ; X32-NEXT:    addl (%esi,%ebx), %eax
 ; X32-NEXT:    movl %eax, (%esi)
 ; X32-NEXT:    addl %edi, %esi
-; X32-NEXT:    cmpl %esi, %edx
+; X32-NEXT:    cmpl %edx, %esi
 ; X32-NEXT:    jne .LBB1_1
 ; X32-NEXT:  # %bb.2: # %exit
 ; X32-NEXT:    popl %esi
@@ -147,22 +147,22 @@ define i32 @user(i32* %a, i32* %b, i32 %x) nounwind {
 entry:
   br label %loop
 loop:
-  %iv = phi i32* [ %a, %entry ], [ %iv4, %loop ]
+  %iv = phi ptr [ %a, %entry ], [ %iv4, %loop ]
   %s = phi i32 [ 0, %entry ], [ %s4, %loop ]
-  %v = load i32, i32* %iv
-  %iv1 = getelementptr inbounds i32, i32* %iv, i32 %x
-  %v1 = load i32, i32* %iv1
-  %iv2 = getelementptr inbounds i32, i32* %iv1, i32 %x
-  %v2 = load i32, i32* %iv2
-  %iv3 = getelementptr inbounds i32, i32* %iv2, i32 %x
-  %v3 = load i32, i32* %iv3
+  %v = load i32, ptr %iv
+  %iv1 = getelementptr inbounds i32, ptr %iv, i32 %x
+  %v1 = load i32, ptr %iv1
+  %iv2 = getelementptr inbounds i32, ptr %iv1, i32 %x
+  %v2 = load i32, ptr %iv2
+  %iv3 = getelementptr inbounds i32, ptr %iv2, i32 %x
+  %v3 = load i32, ptr %iv3
   %s1 = add i32 %s, %v
   %s2 = add i32 %s1, %v1
   %s3 = add i32 %s2, %v2
   %s4 = add i32 %s3, %v3
-  %iv4 = getelementptr inbounds i32, i32* %iv3, i32 %x
-  store i32 %s4, i32* %iv
-  %cmp = icmp eq i32* %iv4, %b
+  %iv4 = getelementptr inbounds i32, ptr %iv3, i32 %x
+  store i32 %s4, ptr %iv
+  %cmp = icmp eq ptr %iv4, %b
   br i1 %cmp, label %exit, label %loop
 exit:
   ret i32 %s4
@@ -179,46 +179,43 @@ exit:
 ;
 ; For x32, no spills in the preheader, no complex address modes, no reloads.
 
-define void @extrastride(i8* nocapture %main, i32 %main_stride, i32* nocapture %res, i32 %x, i32 %y, i32 %z) nounwind {
+define void @extrastride(ptr nocapture %main, i32 %main_stride, ptr nocapture %res, i32 %x, i32 %y, i32 %z) nounwind {
 ; X64-LABEL: extrastride:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    pushq %r14
-; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    testl %r9d, %r9d
-; X64-NEXT:    je .LBB2_3
+; X64-NEXT:    je .LBB2_4
 ; X64-NEXT:  # %bb.1: # %for.body.lr.ph
-; X64-NEXT:    leal (%rsi,%rsi), %r14d
-; X64-NEXT:    leal (%rsi,%rsi,2), %ebx
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    leal (%rsi,%rsi), %r10d
+; X64-NEXT:    leal (%rsi,%rsi,2), %r11d
 ; X64-NEXT:    addl %esi, %ecx
 ; X64-NEXT:    leal (,%rsi,4), %eax
-; X64-NEXT:    leal (%rcx,%rsi,4), %ebp
-; X64-NEXT:    movslq %eax, %r10
-; X64-NEXT:    movslq %ebx, %r11
-; X64-NEXT:    movslq %r14d, %rbx
+; X64-NEXT:    leal (%rcx,%rsi,4), %ebx
+; X64-NEXT:    cltq
+; X64-NEXT:    movslq %r11d, %rcx
+; X64-NEXT:    movslq %r10d, %r10
 ; X64-NEXT:    movslq %esi, %rsi
-; X64-NEXT:    movslq %r8d, %rcx
-; X64-NEXT:    shlq $2, %rcx
-; X64-NEXT:    movslq %ebp, %rax
+; X64-NEXT:    movslq %r8d, %r8
+; X64-NEXT:    shlq $2, %r8
+; X64-NEXT:    movslq %ebx, %r11
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB2_2: # %for.body
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movl (%rdi,%rsi), %ebp
-; X64-NEXT:    addl (%rdi), %ebp
-; X64-NEXT:    addl (%rdi,%rbx), %ebp
-; X64-NEXT:    addl (%rdi,%r11), %ebp
-; X64-NEXT:    addl (%rdi,%r10), %ebp
-; X64-NEXT:    movl %ebp, (%rdx)
-; X64-NEXT:    addq %rax, %rdi
-; X64-NEXT:    addq %rcx, %rdx
+; X64-NEXT:    movl (%rdi,%rsi), %ebx
+; X64-NEXT:    addl (%rdi), %ebx
+; X64-NEXT:    addl (%rdi,%r10), %ebx
+; X64-NEXT:    addl (%rdi,%rcx), %ebx
+; X64-NEXT:    addl (%rdi,%rax), %ebx
+; X64-NEXT:    movl %ebx, (%rdx)
+; X64-NEXT:    addq %r11, %rdi
+; X64-NEXT:    addq %r8, %rdx
 ; X64-NEXT:    decl %r9d
 ; X64-NEXT:    jne .LBB2_2
-; X64-NEXT:  .LBB2_3: # %for.end
+; X64-NEXT:  # %bb.3:
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    popq %r14
-; X64-NEXT:    popq %rbp
+; X64-NEXT:  .LBB2_4: # %for.end
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: extrastride:
@@ -274,30 +271,25 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %main.addr.011 = phi i8* [ %main, %for.body.lr.ph ], [ %add.ptr6, %for.body ]
+  %main.addr.011 = phi ptr [ %main, %for.body.lr.ph ], [ %add.ptr6, %for.body ]
   %i.010 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %res.addr.09 = phi i32* [ %res, %for.body.lr.ph ], [ %add.ptr7, %for.body ]
-  %0 = bitcast i8* %main.addr.011 to i32*
-  %1 = load i32, i32* %0, align 4
-  %add.ptr = getelementptr inbounds i8, i8* %main.addr.011, i32 %main_stride
-  %2 = bitcast i8* %add.ptr to i32*
-  %3 = load i32, i32* %2, align 4
-  %add.ptr1 = getelementptr inbounds i8, i8* %main.addr.011, i32 %add.ptr.sum
-  %4 = bitcast i8* %add.ptr1 to i32*
-  %5 = load i32, i32* %4, align 4
-  %add.ptr2 = getelementptr inbounds i8, i8* %main.addr.011, i32 %add.ptr1.sum
-  %6 = bitcast i8* %add.ptr2 to i32*
-  %7 = load i32, i32* %6, align 4
-  %add.ptr3 = getelementptr inbounds i8, i8* %main.addr.011, i32 %add.ptr4.sum
-  %8 = bitcast i8* %add.ptr3 to i32*
-  %9 = load i32, i32* %8, align 4
-  %add = add i32 %3, %1
-  %add4 = add i32 %add, %5
-  %add5 = add i32 %add4, %7
-  %add6 = add i32 %add5, %9
-  store i32 %add6, i32* %res.addr.09, align 4
-  %add.ptr6 = getelementptr inbounds i8, i8* %main.addr.011, i32 %add.ptr3.sum
-  %add.ptr7 = getelementptr inbounds i32, i32* %res.addr.09, i32 %y
+  %res.addr.09 = phi ptr [ %res, %for.body.lr.ph ], [ %add.ptr7, %for.body ]
+  %0 = load i32, ptr %main.addr.011, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %main.addr.011, i32 %main_stride
+  %1 = load i32, ptr %add.ptr, align 4
+  %add.ptr1 = getelementptr inbounds i8, ptr %main.addr.011, i32 %add.ptr.sum
+  %2 = load i32, ptr %add.ptr1, align 4
+  %add.ptr2 = getelementptr inbounds i8, ptr %main.addr.011, i32 %add.ptr1.sum
+  %3 = load i32, ptr %add.ptr2, align 4
+  %add.ptr3 = getelementptr inbounds i8, ptr %main.addr.011, i32 %add.ptr4.sum
+  %4 = load i32, ptr %add.ptr3, align 4
+  %add = add i32 %1, %0
+  %add4 = add i32 %add, %2
+  %add5 = add i32 %add4, %3
+  %add6 = add i32 %add5, %4
+  store i32 %add6, ptr %res.addr.09, align 4
+  %add.ptr6 = getelementptr inbounds i8, ptr %main.addr.011, i32 %add.ptr3.sum
+  %add.ptr7 = getelementptr inbounds i32, ptr %res.addr.09, i32 %y
   %inc = add i32 %i.010, 1
   %cmp = icmp eq i32 %inc, %z
   br i1 %cmp, label %for.end, label %for.body
@@ -313,29 +305,29 @@ for.end:                                          ; preds = %for.body, %entry
 ; where 's' can be folded into the addressing mode.
 ; Consequently, we should *not* form any chains.
 
-define void @foldedidx(i8* nocapture %a, i8* nocapture %b, i8* nocapture %c) nounwind ssp {
+define void @foldedidx(ptr nocapture %a, ptr nocapture %b, ptr nocapture %c) nounwind ssp {
 ; X64-LABEL: foldedidx:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $3, %eax
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB3_1: # %for.body
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movzbl -3(%rdi,%rax), %r8d
-; X64-NEXT:    movzbl -3(%rsi,%rax), %ecx
-; X64-NEXT:    addl %r8d, %ecx
-; X64-NEXT:    movb %cl, -3(%rdx,%rax)
-; X64-NEXT:    movzbl -2(%rdi,%rax), %r8d
-; X64-NEXT:    movzbl -2(%rsi,%rax), %ecx
-; X64-NEXT:    addl %r8d, %ecx
-; X64-NEXT:    movb %cl, -2(%rdx,%rax)
-; X64-NEXT:    movzbl -1(%rdi,%rax), %r8d
-; X64-NEXT:    movzbl -1(%rsi,%rax), %ecx
-; X64-NEXT:    addl %r8d, %ecx
-; X64-NEXT:    movb %cl, -1(%rdx,%rax)
-; X64-NEXT:    movzbl (%rdi,%rax), %r8d
-; X64-NEXT:    movzbl (%rsi,%rax), %ecx
-; X64-NEXT:    addl %r8d, %ecx
-; X64-NEXT:    movb %cl, (%rdx,%rax)
+; X64-NEXT:    movzbl -3(%rdi,%rax), %ecx
+; X64-NEXT:    movzbl -3(%rsi,%rax), %r8d
+; X64-NEXT:    addl %ecx, %r8d
+; X64-NEXT:    movb %r8b, -3(%rdx,%rax)
+; X64-NEXT:    movzbl -2(%rdi,%rax), %ecx
+; X64-NEXT:    movzbl -2(%rsi,%rax), %r8d
+; X64-NEXT:    addl %ecx, %r8d
+; X64-NEXT:    movb %r8b, -2(%rdx,%rax)
+; X64-NEXT:    movzbl -1(%rdi,%rax), %ecx
+; X64-NEXT:    movzbl -1(%rsi,%rax), %r8d
+; X64-NEXT:    addl %ecx, %r8d
+; X64-NEXT:    movb %r8b, -1(%rdx,%rax)
+; X64-NEXT:    movzbl (%rdi,%rax), %ecx
+; X64-NEXT:    movzbl (%rsi,%rax), %r8d
+; X64-NEXT:    addl %ecx, %r8d
+; X64-NEXT:    movb %r8b, (%rdx,%rax)
 ; X64-NEXT:    addq $4, %rax
 ; X64-NEXT:    cmpl $403, %eax # imm = 0x193
 ; X64-NEXT:    jne .LBB3_1
@@ -383,49 +375,49 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.07 = phi i32 [ 0, %entry ], [ %inc.3, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %a, i32 %i.07
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i32 %i.07
+  %0 = load i8, ptr %arrayidx, align 1
   %conv5 = zext i8 %0 to i32
-  %arrayidx1 = getelementptr inbounds i8, i8* %b, i32 %i.07
-  %1 = load i8, i8* %arrayidx1, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %b, i32 %i.07
+  %1 = load i8, ptr %arrayidx1, align 1
   %conv26 = zext i8 %1 to i32
   %add = add nsw i32 %conv26, %conv5
   %conv3 = trunc i32 %add to i8
-  %arrayidx4 = getelementptr inbounds i8, i8* %c, i32 %i.07
-  store i8 %conv3, i8* %arrayidx4, align 1
-  %inc1 = or i32 %i.07, 1
-  %arrayidx.1 = getelementptr inbounds i8, i8* %a, i32 %inc1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %c, i32 %i.07
+  store i8 %conv3, ptr %arrayidx4, align 1
+  %inc1 = or disjoint i32 %i.07, 1
+  %arrayidx.1 = getelementptr inbounds i8, ptr %a, i32 %inc1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %conv5.1 = zext i8 %2 to i32
-  %arrayidx1.1 = getelementptr inbounds i8, i8* %b, i32 %inc1
-  %3 = load i8, i8* %arrayidx1.1, align 1
+  %arrayidx1.1 = getelementptr inbounds i8, ptr %b, i32 %inc1
+  %3 = load i8, ptr %arrayidx1.1, align 1
   %conv26.1 = zext i8 %3 to i32
   %add.1 = add nsw i32 %conv26.1, %conv5.1
   %conv3.1 = trunc i32 %add.1 to i8
-  %arrayidx4.1 = getelementptr inbounds i8, i8* %c, i32 %inc1
-  store i8 %conv3.1, i8* %arrayidx4.1, align 1
-  %inc.12 = or i32 %i.07, 2
-  %arrayidx.2 = getelementptr inbounds i8, i8* %a, i32 %inc.12
-  %4 = load i8, i8* %arrayidx.2, align 1
+  %arrayidx4.1 = getelementptr inbounds i8, ptr %c, i32 %inc1
+  store i8 %conv3.1, ptr %arrayidx4.1, align 1
+  %inc.12 = or disjoint i32 %i.07, 2
+  %arrayidx.2 = getelementptr inbounds i8, ptr %a, i32 %inc.12
+  %4 = load i8, ptr %arrayidx.2, align 1
   %conv5.2 = zext i8 %4 to i32
-  %arrayidx1.2 = getelementptr inbounds i8, i8* %b, i32 %inc.12
-  %5 = load i8, i8* %arrayidx1.2, align 1
+  %arrayidx1.2 = getelementptr inbounds i8, ptr %b, i32 %inc.12
+  %5 = load i8, ptr %arrayidx1.2, align 1
   %conv26.2 = zext i8 %5 to i32
   %add.2 = add nsw i32 %conv26.2, %conv5.2
   %conv3.2 = trunc i32 %add.2 to i8
-  %arrayidx4.2 = getelementptr inbounds i8, i8* %c, i32 %inc.12
-  store i8 %conv3.2, i8* %arrayidx4.2, align 1
-  %inc.23 = or i32 %i.07, 3
-  %arrayidx.3 = getelementptr inbounds i8, i8* %a, i32 %inc.23
-  %6 = load i8, i8* %arrayidx.3, align 1
+  %arrayidx4.2 = getelementptr inbounds i8, ptr %c, i32 %inc.12
+  store i8 %conv3.2, ptr %arrayidx4.2, align 1
+  %inc.23 = or disjoint i32 %i.07, 3
+  %arrayidx.3 = getelementptr inbounds i8, ptr %a, i32 %inc.23
+  %6 = load i8, ptr %arrayidx.3, align 1
   %conv5.3 = zext i8 %6 to i32
-  %arrayidx1.3 = getelementptr inbounds i8, i8* %b, i32 %inc.23
-  %7 = load i8, i8* %arrayidx1.3, align 1
+  %arrayidx1.3 = getelementptr inbounds i8, ptr %b, i32 %inc.23
+  %7 = load i8, ptr %arrayidx1.3, align 1
   %conv26.3 = zext i8 %7 to i32
   %add.3 = add nsw i32 %conv26.3, %conv5.3
   %conv3.3 = trunc i32 %add.3 to i8
-  %arrayidx4.3 = getelementptr inbounds i8, i8* %c, i32 %inc.23
-  store i8 %conv3.3, i8* %arrayidx4.3, align 1
+  %arrayidx4.3 = getelementptr inbounds i8, ptr %c, i32 %inc.23
+  store i8 %conv3.3, ptr %arrayidx4.3, align 1
   %inc.3 = add nsw i32 %i.07, 4
   %exitcond.3 = icmp eq i32 %inc.3, 400
   br i1 %exitcond.3, label %for.end, label %for.body
@@ -437,7 +429,7 @@ for.end:                                          ; preds = %for.body
 ; @multioper tests instructions with multiple IV user operands. We
 ; should be able to chain them independent of each other.
 
-define void @multioper(i32* %a, i32 %n) nounwind {
+define void @multioper(ptr %a, i32 %n) nounwind {
 ; X64-LABEL: multioper:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
@@ -483,19 +475,19 @@ entry:
   br label %for.body
 
 for.body:
-  %p = phi i32* [ %p.next, %for.body ], [ %a, %entry ]
+  %p = phi ptr [ %p.next, %for.body ], [ %a, %entry ]
   %i = phi i32 [ %inc4, %for.body ], [ 0, %entry ]
-  store i32 %i, i32* %p, align 4
-  %inc1 = or i32 %i, 1
-  %add.ptr.i1 = getelementptr inbounds i32, i32* %p, i32 1
-  store i32 %inc1, i32* %add.ptr.i1, align 4
+  store i32 %i, ptr %p, align 4
+  %inc1 = or disjoint i32 %i, 1
+  %add.ptr.i1 = getelementptr inbounds i32, ptr %p, i32 1
+  store i32 %inc1, ptr %add.ptr.i1, align 4
   %inc2 = add nsw i32 %i, 2
-  %add.ptr.i2 = getelementptr inbounds i32, i32* %p, i32 2
-  store i32 %inc2, i32* %add.ptr.i2, align 4
+  %add.ptr.i2 = getelementptr inbounds i32, ptr %p, i32 2
+  store i32 %inc2, ptr %add.ptr.i2, align 4
   %inc3 = add nsw i32 %i, 3
-  %add.ptr.i3 = getelementptr inbounds i32, i32* %p, i32 3
-  store i32 %inc3, i32* %add.ptr.i3, align 4
-  %p.next = getelementptr inbounds i32, i32* %p, i32 4
+  %add.ptr.i3 = getelementptr inbounds i32, ptr %p, i32 3
+  store i32 %inc3, ptr %add.ptr.i3, align 4
+  %p.next = getelementptr inbounds i32, ptr %p, i32 4
   %inc4 = add nsw i32 %i, 4
   %cmp = icmp slt i32 %inc4, %n
   br i1 %cmp, label %for.body, label %exit
@@ -508,13 +500,13 @@ exit:
 ; LSR. Profitable chains should have more than one nonzero increment
 ; anyway.
 
-define void @testCmpZero(i8* %src, i8* %dst, i32 %srcidx, i32 %dstidx, i32 %len) nounwind ssp {
+define void @testCmpZero(ptr %src, ptr %dst, i32 %srcidx, i32 %dstidx, i32 %len) nounwind ssp {
 ; X64-LABEL: testCmpZero:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movslq %edx, %rdx
 ; X64-NEXT:    addq %rdx, %rdi
-; X64-NEXT:    movslq %ecx, %r9
-; X64-NEXT:    addq %rsi, %r9
+; X64-NEXT:    movslq %ecx, %rax
+; X64-NEXT:    addq %rsi, %rax
 ; X64-NEXT:    addl %edx, %r8d
 ; X64-NEXT:    movslq %r8d, %rcx
 ; X64-NEXT:    subq %rdx, %rcx
@@ -522,8 +514,8 @@ define void @testCmpZero(i8* %src, i8* %dst, i32 %srcidx, i32 %dstidx, i32 %len)
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB5_1: # %for.body82.us
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movzbl (%r9,%rdx,4), %eax
-; X64-NEXT:    movb %al, (%rdi,%rdx)
+; X64-NEXT:    movzbl (%rax,%rdx,4), %esi
+; X64-NEXT:    movb %sil, (%rdi,%rdx)
 ; X64-NEXT:    incq %rdx
 ; X64-NEXT:    cmpq %rdx, %rcx
 ; X64-NEXT:    jne .LBB5_1
@@ -553,22 +545,21 @@ define void @testCmpZero(i8* %src, i8* %dst, i32 %srcidx, i32 %dstidx, i32 %len)
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 entry:
-  %dest0 = getelementptr inbounds i8, i8* %src, i32 %srcidx
-  %source0 = getelementptr inbounds i8, i8* %dst, i32 %dstidx
+  %dest0 = getelementptr inbounds i8, ptr %src, i32 %srcidx
+  %source0 = getelementptr inbounds i8, ptr %dst, i32 %dstidx
   %add.ptr79.us.sum = add i32 %srcidx, %len
-  %lftr.limit = getelementptr i8, i8* %src, i32 %add.ptr79.us.sum
+  %lftr.limit = getelementptr i8, ptr %src, i32 %add.ptr79.us.sum
   br label %for.body82.us
 
 for.body82.us:
-  %dest = phi i8* [ %dest0, %entry ], [ %incdec.ptr91.us, %for.body82.us ]
-  %source = phi i8* [ %source0, %entry ], [ %add.ptr83.us, %for.body82.us ]
-  %0 = bitcast i8* %source to i32*
-  %1 = load i32, i32* %0, align 4
-  %trunc = trunc i32 %1 to i8
-  %add.ptr83.us = getelementptr inbounds i8, i8* %source, i32 4
-  %incdec.ptr91.us = getelementptr inbounds i8, i8* %dest, i32 1
-  store i8 %trunc, i8* %dest, align 1
-  %exitcond = icmp eq i8* %incdec.ptr91.us, %lftr.limit
+  %dest = phi ptr [ %dest0, %entry ], [ %incdec.ptr91.us, %for.body82.us ]
+  %source = phi ptr [ %source0, %entry ], [ %add.ptr83.us, %for.body82.us ]
+  %0 = load i32, ptr %source, align 4
+  %trunc = trunc i32 %0 to i8
+  %add.ptr83.us = getelementptr inbounds i8, ptr %source, i32 4
+  %incdec.ptr91.us = getelementptr inbounds i8, ptr %dest, i32 1
+  store i8 %trunc, ptr %dest, align 1
+  %exitcond = icmp eq ptr %incdec.ptr91.us, %lftr.limit
   br i1 %exitcond, label %return, label %for.body82.us
 
 return:

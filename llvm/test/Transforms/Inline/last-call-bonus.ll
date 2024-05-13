@@ -9,7 +9,6 @@
 ; callsites big enough, loop unrolling pass with very high threshold is used to
 ; preprocess the test.
 
-; RUN: opt < %s -loop-unroll -inline -unroll-threshold=15000 -inline-threshold=250 -S | FileCheck %s
 ; RUN: opt < %s -passes='function(require<opt-remark-emit>,loop-unroll),require<profile-summary>,cgscc(inline)' -unroll-threshold=15000 -inline-threshold=250 -S | FileCheck %s
 ; CHECK-LABEL: define internal i32 @bar()
 

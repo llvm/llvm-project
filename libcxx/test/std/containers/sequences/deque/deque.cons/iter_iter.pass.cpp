@@ -10,6 +10,7 @@
 
 // template <class InputIterator> deque(InputIterator f, InputIterator l);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -32,7 +33,8 @@ test(InputIterator f, InputIterator l)
     typedef typename C::const_iterator const_iterator;
     C d(f, l);
     assert(d.size() == static_cast<std::size_t>(std::distance(f, l)));
-    assert(static_cast<std::size_t>(distance(d.begin(), d.end())) == d.size());
+    assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i, ++f)
         assert(*i == *f);
 }
@@ -46,7 +48,8 @@ test(InputIterator f, InputIterator l)
     typedef typename C::const_iterator const_iterator;
     C d(f, l);
     assert(d.size() == static_cast<std::size_t>(std::distance(f, l)));
-    assert(static_cast<std::size_t>(distance(d.begin(), d.end())) == d.size());
+    assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i, ++f)
         assert(*i == *f);
 }

@@ -16,10 +16,10 @@ body: |
     J2_jumpf killed renamable $p0, %bb.2, implicit-def dead $pc
 
   bb.1:
-    S4_storeiri_io undef renamable $r0, 0, 32768 :: (store 4 into `i32* undef`)
+    S4_storeiri_io undef renamable $r0, 0, 32768 :: (store (s32) into `ptr undef`)
     PS_jmpret $r31, implicit-def dead $pc
 
   bb.2:
-    S4_storeiri_io undef renamable $r0, 0, 32768 :: (store 4 into `i32* undef`)
+    S4_storeiri_io undef renamable $r0, 0, 32768 :: (store (s32) into `ptr undef`)
     PS_jmpret $r31, implicit-def dead $pc
 ...

@@ -8,7 +8,7 @@ target triple = "hexagon"
 
 define dso_local void @f0() local_unnamed_addr #0 {
 b0:
-  %v0 = load i32, i32* undef, align 4
+  %v0 = load i32, ptr undef, align 4
   %v1 = select i1 undef, i32 0, i32 1073741823
   %v2 = shl i32 %v1, 0
   %v3 = sext i32 %v0 to i64
@@ -19,15 +19,14 @@ b0:
   %v8 = sext i32 %v7 to i64
   %v9 = insertelement <32 x i64> undef, i64 %v8, i32 0
   %v10 = shufflevector <32 x i64> %v9, <32 x i64> undef, <32 x i32> zeroinitializer
-  %v11 = getelementptr i32, i32* null, i32 32
-  %v12 = bitcast i32* %v11 to <32 x i32>*
-  %v13 = load <32 x i32>, <32 x i32>* %v12, align 4
+  %v11 = getelementptr i32, ptr null, i32 32
+  %v13 = load <32 x i32>, ptr %v11, align 4
   %v14 = shl <32 x i32> %v13, zeroinitializer
   %v15 = sext <32 x i32> %v14 to <32 x i64>
   %v16 = mul nsw <32 x i64> %v10, %v15
   %v17 = lshr <32 x i64> %v16, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
   %v18 = trunc <32 x i64> %v17 to <32 x i32>
-  store <32 x i32> %v18, <32 x i32>* %v12, align 4
+  store <32 x i32> %v18, ptr %v11, align 4
   ret void
 }
 

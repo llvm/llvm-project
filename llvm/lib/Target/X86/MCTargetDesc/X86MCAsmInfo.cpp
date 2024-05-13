@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86MCAsmInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
 enum AsmWriterFlavorTy {
@@ -81,7 +81,7 @@ void X86ELFMCAsmInfo::anchor() { }
 
 X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
   bool is64Bit = T.getArch() == Triple::x86_64;
-  bool isX32 = T.getEnvironment() == Triple::GNUX32;
+  bool isX32 = T.isX32();
 
   // For ELF, x86-64 pointer size depends on the ABI.
   // For x86-64 without the x32 ABI, pointer size is 8. For x86 and for x86-64
@@ -144,6 +144,7 @@ X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
   DollarIsPC = true;
   SeparatorString = "\n";
   CommentString = ";";
+  AllowAdditionalComments = false;
   AllowQuestionAtStartOfIdentifier = true;
   AllowDollarAtStartOfIdentifier = true;
   AllowAtAtStartOfIdentifier = true;
@@ -152,7 +153,8 @@ X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
 void X86MCAsmInfoGNUCOFF::anchor() { }
 
 X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
-  assert(Triple.isOSWindows() && "Windows is the only supported COFF target");
+  assert((Triple.isOSWindows() || Triple.isUEFI()) &&
+         "Windows and UEFI are the only supported COFF targets");
   if (Triple.getArch() == Triple::x86_64) {
     PrivateGlobalPrefix = ".L";
     PrivateLabelPrefix = ".L";

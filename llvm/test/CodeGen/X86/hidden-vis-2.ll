@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin9   | FileCheck %s --check-prefix=i386-darwin9
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin9 | FileCheck %s --check-prefix=x86_64-darwin9
 
-@x = weak hidden global i32 0		; <i32*> [#uses=1]
+@x = weak hidden global i32 0		; <ptr> [#uses=1]
 
 define i32 @t() nounwind readonly {
 ; i386-darwin9-LABEL: t:
@@ -12,9 +12,9 @@ define i32 @t() nounwind readonly {
 ;
 ; x86_64-darwin9-LABEL: t:
 ; x86_64-darwin9:       ## %bb.0: ## %entry
-; x86_64-darwin9-NEXT:    movl {{.*}}(%rip), %eax
+; x86_64-darwin9-NEXT:    movl _x(%rip), %eax
 ; x86_64-darwin9-NEXT:    retq
 entry:
-	%0 = load i32, i32* @x, align 4		; <i32> [#uses=1]
+	%0 = load i32, ptr @x, align 4		; <i32> [#uses=1]
 	ret i32 %0
 }

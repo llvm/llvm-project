@@ -1,3 +1,5 @@
+; FIXME: Missing DwarfAccelNamesSection on AIX
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck -implicit-check-not=DW_TAG %s
 ; RUN: %llc_dwarf -accel-tables=Apple -dwarf-linkage-names=All -O0 -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck --check-prefix=CHECK-ACCEL --check-prefix=CHECK %s
 
@@ -20,7 +22,7 @@
 ; definition in b.cpp's CU.
 
 ; CHECK: DW_TAG_compile_unit
-; CHECK:   DW_AT_name {{.*}} "a.cpp"
+; CHECK:   DW_AT_name {{.*}}"a.cpp"
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_type [DW_FORM_ref_addr] (0x00000000[[INT:[a-f0-9]+]]
 ; CHECK:     0x[[INLINED:[0-9a-f]*]]:{{.*}}DW_TAG_inlined_subroutine
@@ -31,7 +33,7 @@
 ; Check the abstract definition is in the 'b.cpp' CU and doesn't contain any
 ; concrete information (address range or variable location)
 ; CHECK: DW_TAG_compile_unit
-; CHECK:   DW_AT_name {{.*}} "b.cpp"
+; CHECK:   DW_AT_name {{.*}}"b.cpp"
 ; CHECK: 0x[[ABS_FUNC]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_AT_low_pc
 ; CHECK: 0x[[ABS_VAR]]: DW_TAG_formal_parameter
@@ -40,7 +42,7 @@
 ; CHECK-NOT: DW_AT_location
 
 ; CHECK: 0x[[INT]]: DW_TAG_base_type
-; CHECK:   DW_AT_name {{.*}} "int"
+; CHECK:   DW_AT_name {{.*}}"int"
 
 ; Check the concrete out of line definition references the abstract and
 ; provides the address range and variable location
@@ -68,16 +70,14 @@ define i32 @main() #0 !dbg !4 {
 entry:
   %x.addr.i = alloca i32, align 4
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = load i32, i32* @i, align 4, !dbg !19
-  %1 = bitcast i32* %x.addr.i to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %1)
-  store i32 %0, i32* %x.addr.i, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr.i, metadata !120, metadata !DIExpression()), !dbg !21
-  %2 = load i32, i32* %x.addr.i, align 4, !dbg !22
-  %mul.i = mul nsw i32 %2, 2, !dbg !22
-  %3 = bitcast i32* %x.addr.i to i8*, !dbg !22
-  call void @llvm.lifetime.end(i64 4, i8* %3), !dbg !22
+  store i32 0, ptr %retval
+  %0 = load i32, ptr @i, align 4, !dbg !19
+  call void @llvm.lifetime.start(i64 4, ptr %x.addr.i)
+  store i32 %0, ptr %x.addr.i, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr.i, metadata !120, metadata !DIExpression()), !dbg !21
+  %1 = load i32, ptr %x.addr.i, align 4, !dbg !22
+  %mul.i = mul nsw i32 %1, 2, !dbg !22
+  call void @llvm.lifetime.end(i64 4, ptr %x.addr.i), !dbg !22
   ret i32 %mul.i, !dbg !19
 }
 
@@ -85,9 +85,9 @@ entry:
 define i32 @_Z4funci(i32 %x) #1 !dbg !12 {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !20, metadata !DIExpression()), !dbg !23
-  %0 = load i32, i32* %x.addr, align 4, !dbg !24
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !20, metadata !DIExpression()), !dbg !23
+  %0 = load i32, ptr %x.addr, align 4, !dbg !24
   %mul = mul nsw i32 %0, 2, !dbg !24
   ret i32 %mul, !dbg !24
 }
@@ -96,10 +96,10 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #3
+declare void @llvm.lifetime.start(i64, ptr nocapture) #3
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #3
+declare void @llvm.lifetime.end(i64, ptr nocapture) #3
 
 attributes #0 = { uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { alwaysinline nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

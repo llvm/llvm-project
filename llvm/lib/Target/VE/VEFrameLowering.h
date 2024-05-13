@@ -62,7 +62,7 @@ public:
         {VE::SX25, 104}, {VE::SX26, 112}, {VE::SX27, 120}, {VE::SX28, 128},
         {VE::SX29, 136}, {VE::SX30, 144}, {VE::SX31, 152}, {VE::SX32, 160},
         {VE::SX33, 168}};
-    NumEntries = array_lengthof(Offsets);
+    NumEntries = std::size(Offsets);
     return Offsets;
   }
 

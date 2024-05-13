@@ -8,6 +8,7 @@ void dispatch_once(dispatch_once_t *predicate, dispatch_block_t block);
 typedef long dispatch_time_t;
 void dispatch_after(dispatch_time_t when, dispatch_queue_t queue, dispatch_block_t block);
 void dispatch_barrier_sync(dispatch_queue_t queue, dispatch_block_t block);
+void f(int);
 
 extern dispatch_queue_t queue;
 extern dispatch_once_t *predicate;
@@ -186,4 +187,41 @@ void test_dispatch_barrier_sync() {
     });
   }
   dispatch_barrier_sync(queue, ^{});
+}
+
+void output_block(dispatch_block_t * blk) {
+  int x = 0;
+  *blk = ^{ f(x); };
+}
+
+// Block objects themselves can never leak under ARC.
+void test_no_block_leak() {
+  __block dispatch_block_t blk;
+  int x = 0;
+  dispatch_block_t p = ^{
+    blk = ^{
+      f(x);
+    };
+  };
+  p();
+  blk();
+  output_block(&blk);
+  blk();
+}
+
+// Block objects do not leak under ARC but stack variables of
+// non-object kind indirectly referred by a block can leak.
+dispatch_block_t test_block_referencing_variable_leak() {
+  int x = 0;
+  __block int * p = &x;
+  __block int * q = &x;
+  
+  dispatch_async(queue, ^{// expected-warning {{Address of stack memory associated with local variable 'x' is captured by an asynchronously-executed block \
+[alpha.core.StackAddressAsyncEscape]}}
+      ++(*p);
+    });
+  return (dispatch_block_t) ^{// expected-warning {{Address of stack memory associated with local variable 'x' is captured by a returned block \
+[core.StackAddressEscape]}}
+    ++(*q);
+  };
 }

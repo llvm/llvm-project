@@ -22,17 +22,15 @@ namespace clang {
 namespace interp {
 
 /// Wrapper around boolean types.
-class Boolean {
+class Boolean final {
  private:
   /// Underlying boolean.
   bool V;
 
-  /// Construct a wrapper from a boolean.
-  explicit Boolean(bool V) : V(V) {}
-
  public:
   /// Zero-initializes a boolean.
   Boolean() : V(false) {}
+  explicit Boolean(bool V) : V(V) {}
 
   bool operator<(Boolean RHS) const { return V < RHS.V; }
   bool operator>(Boolean RHS) const { return V > RHS.V; }
@@ -44,11 +42,18 @@ class Boolean {
   bool operator>(unsigned RHS) const { return static_cast<unsigned>(V) > RHS; }
 
   Boolean operator-() const { return Boolean(V); }
+  Boolean operator-(const Boolean &Other) const { return Boolean(V - Other.V); }
   Boolean operator~() const { return Boolean(true); }
 
-  explicit operator unsigned() const { return V; }
+  explicit operator int8_t() const { return V; }
+  explicit operator uint8_t() const { return V; }
+  explicit operator int16_t() const { return V; }
+  explicit operator uint16_t() const { return V; }
+  explicit operator int32_t() const { return V; }
+  explicit operator uint32_t() const { return V; }
   explicit operator int64_t() const { return V; }
   explicit operator uint64_t() const { return V; }
+  explicit operator bool() const { return V; }
 
   APSInt toAPSInt() const {
     return APSInt(APInt(1, static_cast<uint64_t>(V), false), true);
@@ -60,7 +65,7 @@ class Boolean {
 
   Boolean toUnsigned() const { return *this; }
 
-  constexpr static unsigned bitWidth() { return true; }
+  constexpr static unsigned bitWidth() { return 1; }
   bool isZero() const { return !V; }
   bool isMin() const { return isZero(); }
 
@@ -80,23 +85,25 @@ class Boolean {
   Boolean truncate(unsigned TruncBits) const { return *this; }
 
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    print(OS);
+    return NameStr;
+  }
 
   static Boolean min(unsigned NumBits) { return Boolean(false); }
   static Boolean max(unsigned NumBits) { return Boolean(true); }
 
-  template <typename T>
-  static std::enable_if_t<std::is_integral<T>::value, Boolean> from(T Value) {
-    return Boolean(Value != 0);
+  template <typename T> static Boolean from(T Value) {
+    if constexpr (std::is_integral<T>::value)
+      return Boolean(Value != 0);
+    return Boolean(static_cast<decltype(Boolean::V)>(Value) != 0);
   }
 
   template <unsigned SrcBits, bool SrcSign>
   static std::enable_if_t<SrcBits != 0, Boolean>
   from(Integral<SrcBits, SrcSign> Value) {
-    return Boolean(!Value.isZero());
-  }
-
-  template <bool SrcSign>
-  static Boolean from(Integral<0, SrcSign> Value) {
     return Boolean(!Value.isZero());
   }
 
@@ -132,6 +139,16 @@ class Boolean {
 
   static bool mul(Boolean A, Boolean B, unsigned OpBits, Boolean *R) {
     *R = Boolean(A.V && B.V);
+    return false;
+  }
+
+  static bool inv(Boolean A, Boolean *R) {
+    *R = Boolean(!A.V);
+    return false;
+  }
+
+  static bool neg(Boolean A, Boolean *R) {
+    *R = Boolean(A.V);
     return false;
   }
 };

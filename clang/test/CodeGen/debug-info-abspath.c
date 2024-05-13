@@ -16,7 +16,7 @@
 // RUN: %clang_cc1 -debug-info-kind=limited -triple %itanium_abi_triple \
 // RUN:   %s -emit-llvm -o - | FileCheck %s --check-prefix=CURDIR
 
-void foo() {}
+void foo(void) {}
 
 // Since %s is an absolute path, directory should be the common
 // prefix, but the directory part should be part of the filename.

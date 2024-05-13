@@ -14,10 +14,10 @@
 #define LLVM_TRANSFORMS_UTILS_CANONICALIZEFREEZEINLOOPS_H
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class Loop;
 class LPMUpdater;
 
 /// A pass that canonicalizes freeze instructions in a loop.

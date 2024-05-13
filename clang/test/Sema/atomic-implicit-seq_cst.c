@@ -178,6 +178,14 @@ int bad_bitor_2(int i) {
   return i | atom; // expected-warning {{implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary}}
 }
 
+int bad_bitnand_1(int i) {
+  return ~(atom & i); // expected-warning {{implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary}}
+}
+
+int bad_bitnand_2(int i) {
+  return ~(i & atom); // expected-warning {{implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary}}
+}
+
 int bad_and_1(int i) {
   return atom && i; // expected-warning {{implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary}}
 }
@@ -213,7 +221,7 @@ void bad_assign_2(int *i) {
   *i = atom; // expected-warning {{implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary}}
 }
 
-void bad_assign_3() {
+void bad_assign_3(void) {
   atom = atom; // expected-warning {{implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary}}
 }
 
@@ -315,6 +323,7 @@ int good_c11_atomic_fetch_sub(int i) { return __c11_atomic_fetch_sub(&atom, i, _
 int good_c11_atomic_fetch_and(int i) { return __c11_atomic_fetch_and(&atom, i, __ATOMIC_RELAXED); }
 int good_c11_atomic_fetch_or(int i) { return __c11_atomic_fetch_or(&atom, i, __ATOMIC_RELAXED); }
 int good_c11_atomic_fetch_xor(int i) { return __c11_atomic_fetch_xor(&atom, i, __ATOMIC_RELAXED); }
+int good_c11_atomic_fetch_nand(int i) { return __c11_atomic_fetch_nand(&atom, i, __ATOMIC_RELAXED); }
 
 void good_cast_to_void(void) { (void)atom; }
 _Atomic(int) * good_address_of(void) { return &atom; }

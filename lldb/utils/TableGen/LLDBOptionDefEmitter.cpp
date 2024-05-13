@@ -31,7 +31,6 @@ struct CommandOption {
   std::string ArgType;
   bool OptionalArg = false;
   std::string Validator;
-  std::string ArgEnum;
   std::vector<StringRef> Completions;
   std::string Description;
 
@@ -64,9 +63,6 @@ struct CommandOption {
 
     if (Option->getValue("Validator"))
       Validator = std::string(Option->getValueAsString("Validator"));
-
-    if (Option->getValue("ArgEnum"))
-      ArgEnum = std::string(Option->getValueAsString("ArgEnum"));
 
     if (Option->getValue("Completions"))
       Completions = Option->getValueAsListOfStrings("Completions");
@@ -114,8 +110,8 @@ static void emitOption(const CommandOption &O, raw_ostream &OS) {
     OS << "nullptr";
   OS << ", ";
 
-  if (!O.ArgEnum.empty())
-    OS << O.ArgEnum;
+  if (!O.ArgType.empty())
+    OS << "g_argument_table[eArgType" << O.ArgType << "].enum_values";
   else
     OS << "{}";
   OS << ", ";
@@ -124,12 +120,11 @@ static void emitOption(const CommandOption &O, raw_ostream &OS) {
   if (!O.Completions.empty()) {
     std::vector<std::string> CompletionArgs;
     for (llvm::StringRef Completion : O.Completions)
-      CompletionArgs.push_back("CommandCompletions::e" + Completion.str() +
-                               "Completion");
+      CompletionArgs.push_back("e" + Completion.str() + "Completion");
 
     OS << llvm::join(CompletionArgs.begin(), CompletionArgs.end(), " | ");
   } else
-    OS << "CommandCompletions::eNoCompletion";
+    OS << "CompletionType::eNoCompletion";
 
   // Add the argument type.
   OS << ", eArgType";
@@ -176,7 +171,7 @@ static void emitOptions(std::string Command, std::vector<Record *> Records,
 }
 
 void lldb_private::EmitOptionDefs(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Options for LLDB command line commands.", OS);
+  emitSourceFileHeader("Options for LLDB command line commands.", OS, Records);
 
   std::vector<Record *> Options = Records.getAllDerivedDefinitions("Option");
   for (auto &CommandRecordPair : getRecordsByName(Options, "Command")) {

@@ -18,18 +18,22 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
+#include "llvm/PassRegistry.h"
 #include <cassert>
 #include <map>
 #include <unordered_map>
 
 namespace llvm {
 
+class AnalysisUsage;
+class MachineFunction;
+class Module;
+class raw_ostream;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 
 class LiveStacks : public MachineFunctionPass {
-  const TargetRegisterInfo *TRI;
+  const TargetRegisterInfo *TRI = nullptr;
 
   /// Special pool allocator for VNInfo's (LiveInterval val#).
   ///

@@ -3,7 +3,7 @@
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
-@_ZTV3foo = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (void ()* @__cxa_pure_virtual to i8*)]
+@_ZTV3foo = linkonce_odr unnamed_addr constant [1 x ptr] [ptr @__cxa_pure_virtual]
 declare void @__cxa_pure_virtual()
 
 ; CHECK: .section .data.rel.ro

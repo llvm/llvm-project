@@ -55,6 +55,11 @@ public:
 
   NativeProcessLinux &GetProcess();
 
+  const NativeProcessLinux &GetProcess() const;
+
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  GetSiginfo() const override;
+
 private:
   // Interface for friend classes
 
@@ -101,6 +106,11 @@ private:
   void MaybeLogStateChange(lldb::StateType new_state);
 
   void SetStopped();
+
+  /// Extend m_stop_description with logical and allocation tag values.
+  /// If there is an error along the way just add the information we were able
+  /// to get.
+  void AnnotateSyncTagCheckFault(lldb::addr_t fault_addr);
 
   // Member Variables
   lldb::StateType m_state;

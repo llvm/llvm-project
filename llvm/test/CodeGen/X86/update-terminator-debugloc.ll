@@ -26,16 +26,16 @@
 ; CHECK: SUB64rr [[VREG2]], [[VREG1]]
 ; CHECK-NEXT: JCC_1 {{.*}}, debug-location [[DLOC]]{{$}}
 ; CHECK: [[VREG3:%[^ ]+]]:gr64 = PHI [[VREG2]]
-; CHECK: [[VREG4:%[^ ]+]]:gr64 = nuw ADD64ri8 [[VREG3]], 4
-; CHECK: SUB64rr [[VREG1]], [[VREG4]]
+; CHECK: [[VREG4:%[^ ]+]]:gr64 = nuw ADD64ri32 [[VREG3]], 4
+; CHECK: SUB64rr [[VREG4]], [[VREG1]]
 ; CHECK-NEXT: JCC_1 {{.*}}, debug-location [[DLOC]]{{$}}
 ; CHECK-NEXT: JMP_1 {{.*}}, debug-location [[DLOC]]{{$}}
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @foo(i32* readonly %begin, i32* readnone %end) !dbg !4 {
+define i32 @foo(ptr readonly %begin, ptr readnone %end) !dbg !4 {
 entry:
-  %cmp6 = icmp eq i32* %begin, %end, !dbg !9
+  %cmp6 = icmp eq ptr %begin, %end, !dbg !9
   br i1 %cmp6, label %for.end, label %for.body.preheader, !dbg !12
 
 for.body.preheader:                               ; preds = %entry
@@ -43,12 +43,12 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %ret.08 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %i.07 = phi i32* [ %incdec.ptr, %for.body ], [ %begin, %for.body.preheader ]
-  %0 = load i32, i32* %i.07, align 4, !dbg !13, !tbaa !15
+  %i.07 = phi ptr [ %incdec.ptr, %for.body ], [ %begin, %for.body.preheader ]
+  %0 = load i32, ptr %i.07, align 4, !dbg !13, !tbaa !15
   %call = tail call i32 @bar(i32 %0), !dbg !19
   %add = add nsw i32 %call, %ret.08, !dbg !20
-  %incdec.ptr = getelementptr inbounds i32, i32* %i.07, i64 1, !dbg !21
-  %cmp = icmp eq i32* %incdec.ptr, %end, !dbg !9
+  %incdec.ptr = getelementptr inbounds i32, ptr %i.07, i64 1, !dbg !21
+  %cmp = icmp eq ptr %incdec.ptr, %end, !dbg !9
   br i1 %cmp, label %for.end.loopexit, label %for.body, !dbg !12, !llvm.loop !22
 
 for.end.loopexit:                                 ; preds = %for.body

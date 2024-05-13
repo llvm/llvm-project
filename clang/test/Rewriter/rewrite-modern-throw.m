@@ -9,17 +9,17 @@ typedef struct objc_object {
 void *sel_registerName(const char *);
 
 @interface Foo @end
-void TRY();
-void SPLATCH();
-void MYTRY();
-void MYCATCH();
+void TRY(void);
+void SPLATCH(void);
+void MYTRY(void);
+void MYCATCH(void);
 
-void foo() {
+void foo(void) {
   @try  { TRY(); } 
   @catch (...) { SPLATCH(); @throw; }
 }
 
-int main()
+int main(void)
 {
 
   @try  {
@@ -66,7 +66,6 @@ int main()
 }
 @end
 
-// rdar://13186010
 @class NSDictionary, NSException;
 @class NSMutableDictionary;
 

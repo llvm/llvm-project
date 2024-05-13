@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -verify=c_mode   -ast-dump %s       | FileCheck %s --check-prefix=C
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -verify=cxx_mode -ast-dump %s -x c++| FileCheck %s --check-prefix=CXX
-
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -verify=cxx_mode -ast-dump %s -x c++ %std_cxx11-14 | FileCheck %s --check-prefix=CXX
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -verify=cxx_mode,cxx17 -ast-dump %s -x c++ %std_cxx17- | FileCheck %s --check-prefix=CXX
 // c_mode-no-diagnostics
 
 #ifdef __cplusplus
@@ -16,10 +16,10 @@ CONST int also_after1(void) { // cxx_mode-note {{previous declaration is here}}
 static int also_after2(void) {
   return 0;
 }
-__attribute__((nothrow)) int also_after3(void) {
+__attribute__((nothrow)) int also_after3(void) { // cxx17-note {{previous declaration is here}}
   return 0;
 }
-static CONST __attribute__((nothrow, always_inline)) __inline__ int also_after4(void) { // cxx_mode-note {{previous declaration is here}}
+static CONST __attribute__((nothrow, always_inline)) __inline__ int also_after4(void) { // cxx_mode-note {{previous declaration is here}} cxx17-note {{previous declaration is here}}
   return 0;
 }
 #pragma omp end declare variant
@@ -30,15 +30,15 @@ int also_after1(void) { // cxx_mode-error {{non-constexpr declaration of 'also_a
 int also_after2(void) {
   return 2;
 }
-int also_after3(void) {
+int also_after3(void) { // cxx17-warning {{'also_after3' is missing exception specification '__attribute__((nothrow))'}}
   return 3;
 }
-int also_after4(void) { // cxx_mode-error {{non-constexpr declaration of 'also_after4' follows constexpr declaration}}
+int also_after4(void) { // cxx_mode-error {{non-constexpr declaration of 'also_after4' follows constexpr declaration}} cxx17-warning {{'also_after4' is missing exception specification '__attribute__((nothrow))'}}
   return 4;
 }
 
 
-int main() {
+int main(void) {
   // Should return 0.
   return also_after1() + also_after2() + also_after3() + also_after4();
 }
@@ -115,7 +115,7 @@ int main() {
 // C-NEXT: | `-OMPDeclareVariantAttr [[ADDR_62:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(llvm)}
 // C-NEXT: |   `-DeclRefExpr [[ADDR_30]] <col:1> 'int ({{.*}})' Function [[ADDR_31]] 'also_after4[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // C-NEXT: `-FunctionDecl [[ADDR_63:0x[a-z0-9]*]] <line:41:1, line:44:1> line:41:5 main 'int ({{.*}})'
-// C-NEXT:   `-CompoundStmt [[ADDR_64:0x[a-z0-9]*]] <col:12, line:44:1>
+// C-NEXT:   `-CompoundStmt [[ADDR_64:0x[a-z0-9]*]] <col:16, line:44:1>
 // C-NEXT:     `-ReturnStmt [[ADDR_65:0x[a-z0-9]*]] <line:43:3, col:70>
 // C-NEXT:       `-BinaryOperator [[ADDR_66:0x[a-z0-9]*]] <col:10, col:70> 'int' '+'
 // C-NEXT:         |-BinaryOperator [[ADDR_67:0x[a-z0-9]*]] <col:10, col:54> 'int' '+'
@@ -205,7 +205,7 @@ int main() {
 // CXX-NEXT: | `-OMPDeclareVariantAttr [[ADDR_50:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(llvm)}
 // CXX-NEXT: |   `-DeclRefExpr [[ADDR_24]] <col:1> 'int ({{.*}}) __attribute__((nothrow))' Function [[ADDR_25]] 'also_after4[implementation={vendor(llvm)}]' 'int ({{.*}}) __attribute__((nothrow))'
 // CXX-NEXT: `-FunctionDecl [[ADDR_51:0x[a-z0-9]*]] <line:41:1, line:44:1> line:41:5 main 'int ({{.*}})'
-// CXX-NEXT:   `-CompoundStmt [[ADDR_52:0x[a-z0-9]*]] <col:12, line:44:1>
+// CXX-NEXT:   `-CompoundStmt [[ADDR_52:0x[a-z0-9]*]] <col:16, line:44:1>
 // CXX-NEXT:     `-ReturnStmt [[ADDR_53:0x[a-z0-9]*]] <line:43:3, col:70>
 // CXX-NEXT:       `-BinaryOperator [[ADDR_54:0x[a-z0-9]*]] <col:10, col:70> 'int' '+'
 // CXX-NEXT:         |-BinaryOperator [[ADDR_55:0x[a-z0-9]*]] <col:10, col:54> 'int' '+'

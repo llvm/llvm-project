@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // REQUIRES: libcpp-has-thread-api-pthread
 
 // notify_all_at_thread_exit(...) requires move semantics to transfer the
@@ -14,10 +14,7 @@
 // UNSUPPORTED: c++03
 
 // PR30202 was fixed starting in macosx10.13.
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.12
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.11
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.10
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.9
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 // <condition_variable>
 

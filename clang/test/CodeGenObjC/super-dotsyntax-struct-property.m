@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10  -emit-llvm %s -o -  | FileCheck %s
-// rdar: // 8203426
-
 
 typedef double CGFloat;
 struct CGPoint {
@@ -44,4 +42,4 @@ typedef struct CGRect CGRect;
 
 @end
 // CHECK-NOT: declare void @objc_msgSendSuper2_stret
-// CHECK: declare i8* @objc_msgSendSuper2
+// CHECK: declare ptr @objc_msgSendSuper2

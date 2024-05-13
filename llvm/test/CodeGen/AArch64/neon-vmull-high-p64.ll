@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon,+aes | FileCheck %s
 
 ; This test checks that pmull2 instruction is used for vmull_high_p64 intrinsic.
 ; There are two extraction operations located in different basic blocks:
@@ -38,25 +38,24 @@
 ; }
 
 
-;CHECK_LABEL: func:
+;CHECK-LABEL: func:
 ;CHECK: pmull2
 
 %struct.SS = type { <2 x i64>, <2 x i64> }
 
 ; Function Attrs: nofree noinline nounwind
-define dso_local void @_Z4funcP2SSjPKhPo(%struct.SS* nocapture readonly %g, i32 %count, i8* nocapture readonly %buf, i128* nocapture %res) local_unnamed_addr #0 {
+define dso_local void @func(ptr nocapture readonly %g, i32 %count, ptr nocapture readonly %buf, ptr nocapture %res) local_unnamed_addr #0 {
 entry:
-  %h2 = getelementptr inbounds %struct.SS, %struct.SS* %g, i64 0, i32 1
-  %0 = load <2 x i64>, <2 x i64>* %h2, align 16
+  %h2 = getelementptr inbounds %struct.SS, ptr %g, i64 0, i32 1
+  %0 = load <2 x i64>, ptr %h2, align 16
   %cmp34 = icmp eq i32 %count, 0
   br i1 %cmp34, label %for.cond.cleanup, label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %entry
-  %1 = bitcast %struct.SS* %g to <16 x i8>*
-  %2 = load <16 x i8>, <16 x i8>* %1, align 16
-  %3 = extractelement <2 x i64> %0, i32 0
-  %4 = extractelement <2 x i64> %0, i32 1
-  %5 = zext i32 %count to i64
+  %1 = load <16 x i8>, ptr %g, align 16
+  %2 = extractelement <2 x i64> %0, i32 0
+  %3 = extractelement <2 x i64> %0, i32 1
+  %4 = zext i32 %count to i64
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -64,27 +63,24 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
-  %buf.addr.036 = phi i8* [ %buf, %for.body.lr.ph ], [ %add.ptr, %for.body ]
-  %6 = phi <16 x i8> [ %2, %for.body.lr.ph ], [ %xor.i, %for.body ]
-  %7 = bitcast i8* %buf.addr.036 to <16 x i8>*
-  %8 = load <16 x i8>, <16 x i8>* %7, align 16
-  %vrbit.i = call <16 x i8> @llvm.aarch64.neon.rbit.v16i8(<16 x i8> %8) #0
-  %xor.i = xor <16 x i8> %vrbit.i, %6
-  %9 = bitcast <16 x i8> %xor.i to <2 x i64>
-  %10 = extractelement <2 x i64> %9, i32 0
-  %vmull_p64.i = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %10, i64 %3) #0
-  %arrayidx = getelementptr inbounds i128, i128* %res, i64 %indvars.iv
-  %11 = bitcast i128* %arrayidx to <16 x i8>*
-  store <16 x i8> %vmull_p64.i, <16 x i8>* %11, align 16
-  %12 = extractelement <2 x i64> %9, i32 1
-  %vmull_p64.i.i = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %12, i64 %4) #0
-  %13 = or i64 %indvars.iv, 1
-  %arrayidx16 = getelementptr inbounds i128, i128* %res, i64 %13
-  %14 = bitcast i128* %arrayidx16 to <16 x i8>*
-  store <16 x i8> %vmull_p64.i.i, <16 x i8>* %14, align 16
+  %buf.addr.036 = phi ptr [ %buf, %for.body.lr.ph ], [ %add.ptr, %for.body ]
+  %5 = phi <16 x i8> [ %1, %for.body.lr.ph ], [ %xor.i, %for.body ]
+  %6 = load <16 x i8>, ptr %buf.addr.036, align 16
+  %vrbit.i = call <16 x i8> @llvm.aarch64.neon.rbit.v16i8(<16 x i8> %6) #0
+  %xor.i = xor <16 x i8> %vrbit.i, %5
+  %7 = bitcast <16 x i8> %xor.i to <2 x i64>
+  %8 = extractelement <2 x i64> %7, i32 0
+  %vmull_p64.i = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %8, i64 %2) #0
+  %arrayidx = getelementptr inbounds i128, ptr %res, i64 %indvars.iv
+  store <16 x i8> %vmull_p64.i, ptr %arrayidx, align 16
+  %9 = extractelement <2 x i64> %7, i32 1
+  %vmull_p64.i.i = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %9, i64 %3) #0
+  %10 = or i64 %indvars.iv, 1
+  %arrayidx16 = getelementptr inbounds i128, ptr %res, i64 %10
+  store <16 x i8> %vmull_p64.i.i, ptr %arrayidx16, align 16
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
-  %add.ptr = getelementptr inbounds i8, i8* %buf.addr.036, i64 16
-  %cmp = icmp ult i64 %indvars.iv.next, %5
+  %add.ptr = getelementptr inbounds i8, ptr %buf.addr.036, i64 16
+  %cmp = icmp ult i64 %indvars.iv.next, %4
   br i1 %cmp, label %for.body, label %for.cond.cleanup 
 }
 

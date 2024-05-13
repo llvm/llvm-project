@@ -2,12 +2,11 @@
 
 // Awkward interactions of sanitizers with blocks.
 
-// rdar://22071955
 const char *TheString = "Hello, world!";
 const char *(^getString)(void) = ^{
   return TheString;
 };
 
-// CHECK-LABEL: define internal i8* @getString_block_invoke
+// CHECK-LABEL: define internal ptr @getString_block_invoke
 
 // TODO: Actually support returns_nonnull on blocks.

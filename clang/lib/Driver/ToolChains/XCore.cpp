@@ -63,11 +63,10 @@ void tools::XCore::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                         const char *LinkingOutput) const {
   ArgStringList CmdArgs;
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   if (Args.hasArg(options::OPT_v))
@@ -102,7 +101,9 @@ Tool *XCoreToolChain::buildLinker() const {
 
 bool XCoreToolChain::isPICDefault() const { return false; }
 
-bool XCoreToolChain::isPIEDefault() const { return false; }
+bool XCoreToolChain::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return false;
+}
 
 bool XCoreToolChain::isPICDefaultForced() const { return false; }
 
@@ -128,6 +129,10 @@ void XCoreToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                            ArgStringList &CC1Args,
                                            Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
+  // Set `-fno-use-cxa-atexit` to default.
+  if (!DriverArgs.hasFlag(options::OPT_fuse_cxa_atexit,
+                          options::OPT_fno_use_cxa_atexit, false))
+    CC1Args.push_back("-fno-use-cxa-atexit");
 }
 
 void XCoreToolChain::AddClangCXXStdlibIncludeArgs(

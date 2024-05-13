@@ -14,6 +14,41 @@
 // RUN: %clang_cc1 -std=c99 -fms-extensions -fno-declspec -E %s -o - \
 // RUN:     | FileCheck --check-prefix=CHECK-MS-KEYWORDS-WITHOUT-DECLSPEC %s
 
+// RUN: %clang_cc1 -std=c99 -DC99 -fsyntax-only %s
+// RUN: %clang_cc1 -std=c2x -DC99 -DC2x -fsyntax-only %s
+
+// RUN: %clang_cc1 -fsyntax-only -std=c89 -DFutureKeyword -Wc2x-compat -Wc99-compat -verify=c89 %s
+
+#define IS_KEYWORD(NAME) _Static_assert(!__is_identifier(NAME), #NAME)
+#define NOT_KEYWORD(NAME) _Static_assert(__is_identifier(NAME), #NAME)
+
+#if defined(C99)
+#define C99_KEYWORD(NAME)  IS_KEYWORD(NAME)
+#else
+#define C99_KEYWORD(NAME)  NOT_KEYWORD(NAME)
+#endif
+
+#if defined(C2x)
+#define C2x_KEYWORD(NAME)  IS_KEYWORD(NAME)
+#else
+#define C2x_KEYWORD(NAME)  NOT_KEYWORD(NAME)
+#endif
+
+// C99 Keywords.
+C99_KEYWORD(restrict);
+C99_KEYWORD(inline);
+
+// C2x Keywords.
+C2x_KEYWORD(bool);
+C2x_KEYWORD(true);
+C2x_KEYWORD(false);
+C2x_KEYWORD(static_assert);
+C2x_KEYWORD(typeof);
+C2x_KEYWORD(typeof_unqual);
+C2x_KEYWORD(thread_local);
+C2x_KEYWORD(alignas);
+C2x_KEYWORD(alignof);
+
 void f() {
 // CHECK-NONE: int asm
 // CHECK-GNU-KEYWORDS: asm ("ret" : :)
@@ -51,4 +86,20 @@ void has_declspec();
 void no_static_assert();
 #else
 void has_static_assert();
+#endif
+
+#ifdef FutureKeyword
+
+  int restrict; // c89-warning {{'restrict' is a keyword in C99}}
+  int inline;  // c89-warning {{'inline' is a keyword in C99}}
+
+  int bool; // c89-warning {{'bool' is a keyword in C23}}
+  char true; // c89-warning {{'true' is a keyword in C23}}
+  char false; // c89-warning {{'false' is a keyword in C23}}
+  float alignof; // c89-warning {{'alignof' is a keyword in C23}}
+  int typeof; // c89-warning {{'typeof' is a keyword in C23}}
+  int typeof_unqual; // c89-warning {{'typeof_unqual' is a keyword in C23}}
+  int alignas; // c89-warning {{'alignas' is a keyword in C23}}
+  int static_assert; // c89-warning {{'static_assert' is a keyword in C23}}
+
 #endif

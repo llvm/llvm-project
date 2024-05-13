@@ -1,5 +1,6 @@
 # RUN: not llvm-mc --filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
-# REQUIRES: defaut_triple
+# REQUIRES: object-emission
+# UNSUPPORTED: target={{.*}}-zos{{.*}}
 
 fct_end:
 

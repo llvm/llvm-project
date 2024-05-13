@@ -11,29 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/MemoryPromotion.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/MemoryPromotion.h"
+
+#include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/LoopUtils.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
-
-/// Returns the textual name of a GPU dimension.
-static StringRef getDimName(unsigned dim) {
-  if (dim == 0)
-    return "x";
-  if (dim == 1)
-    return "y";
-  if (dim == 2)
-    return "z";
-
-  llvm_unreachable("dimension ID overflow");
-}
 
 /// Emits the (imperfect) loop nest performing the copy between "from" and "to"
 /// values using the bounds derived from the "from" value. Emits at least
@@ -41,12 +30,12 @@ static StringRef getDimName(unsigned dim) {
 /// single-iteration loops. Maps the innermost loops to thread dimensions, in
 /// reverse order to enable access coalescing in the innermost loop.
 static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
-  auto memRefType = from.getType().cast<MemRefType>();
+  auto memRefType = cast<MemRefType>(from.getType());
   auto rank = memRefType.getRank();
 
   SmallVector<Value, 4> lbs, ubs, steps;
-  Value zero = b.create<ConstantIndexOp>(0);
-  Value one = b.create<ConstantIndexOp>(1);
+  Value zero = b.create<arith::ConstantIndexOp>(0);
+  Value one = b.create<arith::ConstantIndexOp>(1);
 
   // Make sure we have enough loops to use all thread dimensions, these trivial
   // loops should be outermost and therefore inserted first.
@@ -62,18 +51,16 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
   ubs.reserve(lbs.size());
   steps.reserve(lbs.size());
   for (auto idx = 0; idx < rank; ++idx) {
-    ubs.push_back(
-        b.createOrFold<memref::DimOp>(from, b.create<ConstantIndexOp>(idx)));
+    ubs.push_back(b.createOrFold<memref::DimOp>(from, idx));
     steps.push_back(one);
   }
 
   // Obtain thread identifiers and block sizes, necessary to map to them.
   auto indexType = b.getIndexType();
   SmallVector<Value, 3> threadIds, blockDims;
-  for (unsigned i = 0; i < 3; ++i) {
-    auto dimName = b.getStringAttr(getDimName(i));
-    threadIds.push_back(b.create<gpu::ThreadIdOp>(indexType, dimName));
-    blockDims.push_back(b.create<gpu::BlockDimOp>(indexType, dimName));
+  for (auto dim : {gpu::Dimension::x, gpu::Dimension::y, gpu::Dimension::z}) {
+    threadIds.push_back(b.create<gpu::ThreadIdOp>(indexType, dim));
+    blockDims.push_back(b.create<gpu::BlockDimOp>(indexType, dim));
   }
 
   // Produce the loop nest with copies.
@@ -82,19 +69,19 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
       b, b.getLoc(), lbs, ubs, steps,
       [&](OpBuilder &b, Location loc, ValueRange loopIvs) {
         ivs.assign(loopIvs.begin(), loopIvs.end());
-        auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
+        auto activeIvs = llvm::ArrayRef(ivs).take_back(rank);
         Value loaded = b.create<memref::LoadOp>(loc, from, activeIvs);
         b.create<memref::StoreOp>(loc, loaded, to, activeIvs);
       });
 
   // Map the innermost loops to threads in reverse order.
-  for (auto en :
-       llvm::enumerate(llvm::reverse(llvm::makeArrayRef(ivs).take_back(
+  for (const auto &en :
+       llvm::enumerate(llvm::reverse(llvm::ArrayRef(ivs).take_back(
            GPUDialect::getNumWorkgroupDimensions())))) {
     Value v = en.value();
     auto loop = cast<scf::ForOp>(v.getParentRegion()->getParentOp());
-    mapLoopToProcessorIds(loop, {threadIds[en.index()]},
-                          {blockDims[en.index()]});
+    affine::mapLoopToProcessorIds(loop, {threadIds[en.index()]},
+                                  {blockDims[en.index()]});
   }
 }
 
@@ -133,8 +120,8 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
 /// pointed to by "from". In case a smaller block would be sufficient, the
 /// caller can create a subview of the memref and promote it instead.
 static void insertCopies(Region &region, Location loc, Value from, Value to) {
-  auto fromType = from.getType().cast<MemRefType>();
-  auto toType = to.getType().cast<MemRefType>();
+  auto fromType = cast<MemRefType>(from.getType());
+  auto toType = cast<MemRefType>(to.getType());
   (void)fromType;
   (void)toType;
   assert(fromType.getShape() == toType.getShape());
@@ -155,15 +142,16 @@ static void insertCopies(Region &region, Location loc, Value from, Value to) {
 /// copies will be inserted in the beginning and in the end of the function.
 void mlir::promoteToWorkgroupMemory(GPUFuncOp op, unsigned arg) {
   Value value = op.getArgument(arg);
-  auto type = value.getType().dyn_cast<MemRefType>();
+  auto type = dyn_cast<MemRefType>(value.getType());
   assert(type && type.hasStaticShape() && "can only promote memrefs");
 
   // Get the type of the buffer in the workgroup memory.
-  int workgroupMemoryAddressSpace = gpu::GPUDialect::getWorkgroupAddressSpace();
-  auto bufferType = MemRefType::get(type.getShape(), type.getElementType(), {},
-                                    workgroupMemoryAddressSpace);
-
-  Value attribution = op.addWorkgroupAttribution(bufferType);
+  auto workgroupMemoryAddressSpace = gpu::AddressSpaceAttr::get(
+      op->getContext(), gpu::AddressSpace::Workgroup);
+  auto bufferType = MemRefType::get(type.getShape(), type.getElementType(),
+                                    MemRefLayoutAttrInterface{},
+                                    Attribute(workgroupMemoryAddressSpace));
+  Value attribution = op.addWorkgroupAttribution(bufferType, value.getLoc());
 
   // Replace the uses first since only the original uses are currently present.
   // Then insert the copies.

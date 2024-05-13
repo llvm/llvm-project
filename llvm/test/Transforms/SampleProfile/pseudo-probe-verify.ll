@@ -4,7 +4,7 @@
 
 ; VERIFY: *** Pseudo Probe Verification After LoopFullUnrollPass ***
 ; VERIFY: Function foo:
-; VERIFY-DAG: Probe 6	previous factor 1.00	current factor 5.00
+; VERIFY-DAG: Probe 5	previous factor 1.00	current factor 5.00
 ; VERIFY-DAG: Probe 4	previous factor 1.00	current factor 5.00
 
 declare void @foo2() nounwind
@@ -12,7 +12,7 @@ declare void @foo2() nounwind
 define void @foo(i32 %x) {
 bb:
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0, i64 -1)
-  %tmp = alloca [5 x i32*], align 16
+  %tmp = alloca [5 x ptr], align 16
   br label %bb7.preheader
 
 bb3.loopexit:
@@ -27,21 +27,21 @@ bb7.preheader:
 
 bb10:
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
-; CHECK: call void @foo2(), !dbg ![[#PROBE6:]] 
+; CHECK: call void @foo2(), !dbg ![[#PROBE6:]]
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
-; CHECK: call void @foo2(), !dbg ![[#PROBE6:]] 
+; CHECK: call void @foo2(), !dbg ![[#PROBE6:]]
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
-; CHECK: call void @foo2(), !dbg ![[#PROBE6:]] 
+; CHECK: call void @foo2(), !dbg ![[#PROBE6:]]
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
-; CHECK: call void @foo2(), !dbg ![[#PROBE6:]] 
+; CHECK: call void @foo2(), !dbg ![[#PROBE6:]]
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
-; CHECK: call void @foo2(), !dbg ![[#PROBE6:]] 
+; CHECK: call void @foo2(), !dbg ![[#PROBE6:]]
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 0, i64 -1)
   %indvars.iv = phi i64 [ 0, %bb7.preheader ], [ %indvars.iv.next, %bb10 ]
   %tmp1.14 = phi i32 [ %tmp1.06, %bb7.preheader ], [ %spec.select, %bb10 ]
-  %tmp13 = getelementptr inbounds [5 x i32*], [5 x i32*]* %tmp, i64 0, i64 %indvars.iv
-  %tmp14 = load i32*, i32** %tmp13, align 8
-  %tmp15.not = icmp ne i32* %tmp14, null
+  %tmp13 = getelementptr inbounds [5 x ptr], ptr %tmp, i64 0, i64 %indvars.iv
+  %tmp14 = load ptr, ptr %tmp13, align 8
+  %tmp15.not = icmp ne ptr %tmp14, null
   %tmp18 = sext i1 %tmp15.not to i32
   %spec.select = add nsw i32 %tmp1.14, %tmp18
   call void @foo2(), !dbg !12
@@ -50,14 +50,14 @@ bb10:
   br i1 %exitcond.not, label %bb3.loopexit, label %bb10, !llvm.loop !13
 
 bb24:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 5, i32 0, i64 -1)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 6, i32 0, i64 -1)
   ret void
 }
 
 ;; A discriminator of 186646583 which is 0xb200037 in hexdecimal, stands for a direct call probe
 ;; with an index of 6 and a scale of -1%.
 ; CHECK: ![[#PROBE6]] = !DILocation(line: 2, column: 20, scope: ![[#SCOPE:]])
-; CHECK: ![[#SCOPE]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 186646583)
+; CHECK: ![[#SCOPE]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 186646575)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}

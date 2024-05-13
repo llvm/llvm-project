@@ -33,7 +33,7 @@ class ThreadPlanStack {
 
 public:
   ThreadPlanStack(const Thread &thread, bool make_empty = false);
-  ~ThreadPlanStack() {}
+  ~ThreadPlanStack() = default;
 
   using PlanStack = std::vector<lldb::ThreadPlanSP>;
 
@@ -60,7 +60,7 @@ public:
 
   void DiscardAllPlans();
 
-  void DiscardConsultingMasterPlans();
+  void DiscardConsultingControllingPlans();
 
   lldb::ThreadPlanSP GetCurrentPlan() const;
 
@@ -110,23 +110,26 @@ private:
   size_t m_completed_plan_checkpoint = 0; // Monotonically increasing token for
                                           // completed plan checkpoints.
   std::unordered_map<size_t, PlanStack> m_completed_plan_store;
+  mutable std::recursive_mutex m_stack_mutex;
 };
 
 class ThreadPlanStackMap {
 public:
   ThreadPlanStackMap(Process &process) : m_process(process) {}
-  ~ThreadPlanStackMap() {}
+  ~ThreadPlanStackMap() = default;
 
   // Prune the map using the current_threads list.
   void Update(ThreadList &current_threads, bool delete_missing,
               bool check_for_new = true);
 
   void AddThread(Thread &thread) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     lldb::tid_t tid = thread.GetID();
     m_plans_list.emplace(tid, thread);
   }
 
   bool RemoveTID(lldb::tid_t tid) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     auto result = m_plans_list.find(tid);
     if (result == m_plans_list.end())
       return false;
@@ -136,6 +139,7 @@ public:
   }
 
   ThreadPlanStack *Find(lldb::tid_t tid) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     auto result = m_plans_list.find(tid);
     if (result == m_plans_list.end())
       return nullptr;
@@ -153,7 +157,8 @@ public:
   }
 
   void Clear() {
-    for (auto plan : m_plans_list)
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
+    for (auto &plan : m_plans_list)
       plan.second.ThreadDestroyed(nullptr);
     m_plans_list.clear();
   }
@@ -171,8 +176,10 @@ public:
 
 private:
   Process &m_process;
+  mutable std::recursive_mutex m_stack_map_mutex;
   using PlansList = std::unordered_map<lldb::tid_t, ThreadPlanStack>;
   PlansList m_plans_list;
+  
 };
 
 } // namespace lldb_private

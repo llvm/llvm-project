@@ -7,40 +7,12 @@
 # CHECK-NEXT:    "capabilities": {
 # CHECK-NEXT:      "astProvider": true,
 # CHECK-NEXT:      "callHierarchyProvider": true,
+# CHECK-NEXT:      "clangdInlayHintsProvider": true,
 # CHECK-NEXT:      "codeActionProvider": true,
 # CHECK-NEXT:      "compilationDatabase": {
 # CHECK-NEXT:        "automaticReload": true
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "completionProvider": {
-# CHECK-NEXT:        "allCommitCharacters": [
-# CHECK-NEXT:          " ",
-# CHECK-NEXT:          "\t",
-# CHECK-NEXT:          "(",
-# CHECK-NEXT:          ")",
-# CHECK-NEXT:          "[",
-# CHECK-NEXT:          "]",
-# CHECK-NEXT:          "{",
-# CHECK-NEXT:          "}",
-# CHECK-NEXT:          "<",
-# CHECK-NEXT:          ">",
-# CHECK-NEXT:          ":",
-# CHECK-NEXT:          ";",
-# CHECK-NEXT:          ",",
-# CHECK-NEXT:          "+",
-# CHECK-NEXT:          "-",
-# CHECK-NEXT:          "/",
-# CHECK-NEXT:          "*",
-# CHECK-NEXT:          "%",
-# CHECK-NEXT:          "^",
-# CHECK-NEXT:          "&",
-# CHECK-NEXT:          "#",
-# CHECK-NEXT:          "?",
-# CHECK-NEXT:          ".",
-# CHECK-NEXT:          "=",
-# CHECK-NEXT:          "\"",
-# CHECK-NEXT:          "'",
-# CHECK-NEXT:          "|"
-# CHECK-NEXT:        ],
 # CHECK-NEXT:        "resolveProvider": false,
 # CHECK-NEXT:        "triggerCharacters": [
 # CHECK-NEXT:          ".",
@@ -48,7 +20,8 @@
 # CHECK-NEXT:          ">",
 # CHECK-NEXT:          ":",
 # CHECK-NEXT:          "\"",
-# CHECK-NEXT:          "/"
+# CHECK-NEXT:          "/",
+# CHECK-NEXT:          "*"
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "declarationProvider": true,
@@ -67,11 +40,15 @@
 # CHECK-NEXT:      "executeCommandProvider": {
 # CHECK-NEXT:        "commands": [
 # CHECK-NEXT:          "clangd.applyFix",
+# CHECK-NEXT:          "clangd.applyRename"
 # CHECK-NEXT:          "clangd.applyTweak"
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "foldingRangeProvider": true,
 # CHECK-NEXT:      "hoverProvider": true,
 # CHECK-NEXT:      "implementationProvider": true,
+# CHECK-NEXT:      "inactiveRegionsProvider": true,
+# CHECK-NEXT:      "inlayHintProvider": true,
 # CHECK-NEXT:      "memoryUsageProvider": true,
 # CHECK-NEXT:      "referencesProvider": true,
 # CHECK-NEXT:      "renameProvider": true,
@@ -83,13 +60,19 @@
 # CHECK-NEXT:        "legend": {
 # CHECK-NEXT:          "tokenModifiers": [
 # CHECK-NEXT:            "declaration",
+# CHECK-NEXT:            "definition",
 # CHECK-NEXT:            "deprecated",
 # CHECK-NEXT:            "deduced",
 # CHECK-NEXT:            "readonly",
 # CHECK-NEXT:            "static",
 # CHECK-NEXT:            "abstract",
+# CHECK-NEXT:            "virtual",
 # CHECK-NEXT:            "dependentName",
 # CHECK-NEXT:            "defaultLibrary",
+# CHECK-NEXT:            "usedAsMutableReference",
+# CHECK-NEXT:            "usedAsMutablePointer",
+# CHECK-NEXT:            "constructorOrDestructor",
+# CHECK-NEXT:            "userDefined",
 # CHECK-NEXT:            "functionScope",
 # CHECK-NEXT:            "classScope",
 # CHECK-NEXT:            "fileScope",
@@ -104,14 +87,21 @@
 # CHECK-NEXT:      "signatureHelpProvider": {
 # CHECK-NEXT:        "triggerCharacters": [
 # CHECK-NEXT:          "(",
+# CHECK-NEXT:          ")",
+# CHECK-NEXT:          "{",
+# CHECK-NEXT:          "}",
+# CHECK-NEXT:          "<",
+# CHECK-NEXT:          ">"
 # CHECK-NEXT:          ","
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "standardTypeHierarchyProvider": true,
 # CHECK-NEXT:      "textDocumentSync": {
 # CHECK-NEXT:        "change": 2,
 # CHECK-NEXT:        "openClose": true,
 # CHECK-NEXT:        "save": true
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "typeDefinitionProvider": true,
 # CHECK-NEXT:      "typeHierarchyProvider": true
 # CHECK-NEXT:      "workspaceSymbolProvider": true
 # CHECK-NEXT:    },

@@ -99,7 +99,7 @@ define float @f6(float %x, i32 %y) {
 define float @f7(float %x) {
 ; CHECK-LABEL: f7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [4.20389539E-45,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -113,7 +113,7 @@ define float @f7(float %x) {
 define float @f8(float %x) {
 ; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [5.60519386E-45,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -177,7 +177,7 @@ define float @xor(float %x, float %y) {
 define float @f7_or(float %x) {
 ; CHECK-LABEL: f7_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [4.20389539E-45,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -189,7 +189,7 @@ define float @f7_or(float %x) {
 define float @f7_xor(float %x) {
 ; CHECK-LABEL: f7_xor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [4.20389539E-45,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    xorps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -215,7 +215,7 @@ define double @doubles(double %x, double %y) {
 define double @f7_double(double %x) {
 ; CHECK-LABEL: f7_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.4821969375237396E-323,0.0E+0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast double %x to i64
@@ -231,7 +231,7 @@ define double @f7_double(double %x) {
 define float @movmsk(float %x) {
 ; CHECK-LABEL: movmsk:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -243,7 +243,7 @@ define float @movmsk(float %x) {
 define double @bitcast_fabs(double %x) {
 ; CHECK-LABEL: bitcast_fabs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast double %x to i64
   %and = and i64 %bc1, 9223372036854775807
@@ -254,7 +254,7 @@ define double @bitcast_fabs(double %x) {
 define float @bitcast_fneg(float %x) {
 ; CHECK-LABEL: bitcast_fneg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
   %xor = xor i32 %bc1, 2147483648
@@ -265,7 +265,7 @@ define float @bitcast_fneg(float %x) {
 define <2 x double> @bitcast_fabs_vec(<2 x double> %x) {
 ; CHECK-LABEL: bitcast_fabs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <2 x double> %x to <2 x i64>
   %and = and <2 x i64> %bc1, <i64 9223372036854775807, i64 9223372036854775807>
@@ -276,7 +276,7 @@ define <2 x double> @bitcast_fabs_vec(<2 x double> %x) {
 define <4 x float> @bitcast_fneg_vec(<4 x float> %x) {
 ; CHECK-LABEL: bitcast_fneg_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <4 x float> %x to <4 x i32>
   %xor = xor <4 x i32> %bc1, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
@@ -311,7 +311,7 @@ define float @fsub_bitcast_fneg(float %x, float %y) {
 define float @nabsf(float %a) {
 ; CHECK-LABEL: nabsf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %conv = bitcast float %a to i32
   %and = or i32 %conv, -2147483648
@@ -322,7 +322,7 @@ define float @nabsf(float %a) {
 define double @nabsd(double %a) {
 ; CHECK-LABEL: nabsd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %conv = bitcast double %a to i64
   %and = or i64 %conv, -9223372036854775808
@@ -333,7 +333,7 @@ define double @nabsd(double %a) {
 define <4 x float> @nabsv4f32(<4 x float> %a) {
 ; CHECK-LABEL: nabsv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %conv = bitcast <4 x float> %a to <4 x i32>
   %and = or <4 x i32> %conv, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
@@ -344,7 +344,7 @@ define <4 x float> @nabsv4f32(<4 x float> %a) {
 define <2 x double> @nabsv2d64(<2 x double> %a) {
 ; CHECK-LABEL: nabsv2d64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %conv = bitcast <2 x double> %a to <2 x i64>
   %and = or <2 x i64> %conv, <i64 -9223372036854775808, i64 -9223372036854775808>
@@ -403,7 +403,7 @@ define <4 x float> @fsub_bitcast_fneg_vec_undef_elts(<4 x float> %x, <4 x float>
 define <4 x float> @fadd_bitcast_fneg_vec_width(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: fadd_bitcast_fneg_vec_width:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    addps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <4 x float> %y to <2 x i64>
@@ -416,7 +416,7 @@ define <4 x float> @fadd_bitcast_fneg_vec_width(<4 x float> %x, <4 x float> %y) 
 define <4 x float> @fsub_bitcast_fneg_vec_width(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: fsub_bitcast_fneg_vec_width:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    subps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <4 x float> %y to <2 x i64>

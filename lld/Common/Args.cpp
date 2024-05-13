@@ -19,11 +19,8 @@ using namespace lld;
 
 // TODO(sbc): Remove this once CGOptLevel can be set completely based on bitcode
 // function metadata.
-CodeGenOpt::Level lld::args::getCGOptLevel(int optLevelLTO) {
-  if (optLevelLTO == 3)
-    return CodeGenOpt::Aggressive;
-  assert(optLevelLTO < 3);
-  return CodeGenOpt::Default;
+int lld::args::getCGOptLevel(int optLevelLTO) {
+  return std::clamp(optLevelLTO, 2, 3);
 }
 
 static int64_t getInteger(opt::InputArgList &args, unsigned key,
@@ -34,8 +31,8 @@ static int64_t getInteger(opt::InputArgList &args, unsigned key,
 
   int64_t v;
   StringRef s = a->getValue();
-  if (base == 16 && (s.startswith("0x") || s.startswith("0X")))
-    s = s.drop_front(2);
+  if (base == 16)
+    s.consume_front_insensitive("0x");
   if (to_integer(s, v, base))
     return v;
 
@@ -54,25 +51,25 @@ int64_t lld::args::getHex(opt::InputArgList &args, unsigned key,
   return ::getInteger(args, key, Default, 16);
 }
 
-std::vector<StringRef> lld::args::getStrings(opt::InputArgList &args, int id) {
-  std::vector<StringRef> v;
+SmallVector<StringRef, 0> lld::args::getStrings(opt::InputArgList &args,
+                                                int id) {
+  SmallVector<StringRef, 0> v;
   for (auto *arg : args.filtered(id))
     v.push_back(arg->getValue());
   return v;
 }
 
 uint64_t lld::args::getZOptionValue(opt::InputArgList &args, int id,
-                                    StringRef key, uint64_t Default) {
-  for (auto *arg : args.filtered_reverse(id)) {
+                                    StringRef key, uint64_t defaultValue) {
+  for (auto *arg : args.filtered(id)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
     if (kv.first == key) {
-      uint64_t result = Default;
-      if (!to_integer(kv.second, result))
+      if (!to_integer(kv.second, defaultValue))
         error("invalid " + key + ": " + kv.second);
-      return result;
+      arg->claim();
     }
   }
-  return Default;
+  return defaultValue;
 }
 
 std::vector<StringRef> lld::args::getLines(MemoryBufferRef mb) {
@@ -89,7 +86,7 @@ std::vector<StringRef> lld::args::getLines(MemoryBufferRef mb) {
 }
 
 StringRef lld::args::getFilenameWithoutExe(StringRef path) {
-  if (path.endswith_lower(".exe"))
+  if (path.ends_with_insensitive(".exe"))
     return sys::path::stem(path);
   return sys::path::filename(path);
 }

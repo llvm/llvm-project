@@ -12,4 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 /// General Purpose Registers
-def GPRRegBank : RegisterBank<"GPR", [G8RC]>;
+def GPRRegBank : RegisterBank<"GPR", [G8RC, G8RC_NOX0]>;
+/// Floating point Registers
+def FPRRegBank : RegisterBank<"FPR", [VSSRC]>;
+/// Vector Registers
+def VECRegBank : RegisterBank<"VEC", [VSRC]>;
+/// Condition Registers
+def CRRegBank : RegisterBank<"CR", [CRRC]>;

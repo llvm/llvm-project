@@ -58,6 +58,6 @@ typedef struct BOXABLE NSEdgeInsets NSEdgeInsets;
 
 @end
 
-NSRange getRange();
+NSRange getRange(void);
 
 #endif // NSVALUE_BOXED_EXPRESSIONS_SUPPORT_H

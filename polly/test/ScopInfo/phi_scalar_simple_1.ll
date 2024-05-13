@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; The assumed context should be empty since the <nsw> flags on the IV
 ; increments already guarantee that there is no wrap in the loop trip
@@ -77,7 +77,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @jd(i32* noalias %A, i32 %x, i32 %N) {
+define i32 @jd(ptr noalias %A, i32 %x, i32 %N) {
 entry:
   %tmp = sext i32 %N to i64
   br label %for.cond
@@ -101,8 +101,8 @@ for.body3:                                        ; preds = %for.cond1
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp1 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %x.addr.1, %tmp1
   %inc = add nsw i32 %j.0, 1
   br label %for.cond1

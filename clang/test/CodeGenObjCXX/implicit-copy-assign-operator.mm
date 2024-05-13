@@ -43,16 +43,16 @@ void test_D(D d1, D d2) {
   d1 = d2;
 }
 
-// CHECK-OBJ-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.D* @_ZN1DaSERS_
+// CHECK-OBJ-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1DaSERS_
 // CHECK-OBJ: {{call.*_ZN1AaSERS_}}
 // CHECK-OBJ: {{call.*_ZN1BaSERS_}}
 // CHECK-OBJ: {{call.*_ZN1CaSERKS_}}
-// CHECK-OBJ: {{call void @llvm.memcpy.p0i8.p0i8.i64.*i64 24}}
+// CHECK-OBJ: {{call void @llvm.memcpy.p0.p0.i64.*i64 24}}
 // CHECK-OBJ: {{call.*_ZN1BaSERS_}}
 // CHECK-OBJ: br
 // CHECK-OBJ: {{call.*_ZN1CaSERKS_}}
 // CHECK-OBJ: {{call.*@objc_memmove_collectable}}
-// CHECK-OBJ: {{call void @llvm.memcpy.p0i8.p0i8.i64.*i64 12}}
+// CHECK-OBJ: {{call void @llvm.memcpy.p0.p0.i64.*i64 12}}
 // CHECK-OBJ: call void @_ZN11CopyByValueC1ERKS_
 // CHECK-OBJ: {{call.*_ZN11CopyByValueaSES_}}
 // CHECK-OBJ: ret

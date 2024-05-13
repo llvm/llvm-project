@@ -15,8 +15,8 @@
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace targets {
@@ -40,7 +40,6 @@ class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
       resetDataLayout(("e-" + Layout).str());
   }
 
-  static const Builtin::Info BuiltinInfo[];
   std::string CPU;
   bool IsMips16;
   bool IsMicromips;
@@ -54,6 +53,7 @@ class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
   bool HasMSA;
   bool DisableMadd4;
   bool UseIndirectJumpHazard;
+  bool NoOddSpreg;
 
 protected:
   enum FPModeEnum { FPXX, FP32, FP64 } FPMode;
@@ -226,7 +226,7 @@ public:
         "$msair", "$msacsr", "$msaaccess", "$msasave", "$msamodify",
         "$msarequest", "$msamap", "$msaunmap"
     };
-    return llvm::makeArrayRef(GCCRegNames);
+    return llvm::ArrayRef(GCCRegNames);
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -237,12 +237,14 @@ public:
     case 'r': // CPU registers.
     case 'd': // Equivalent to "r" unless generating MIPS16 code.
     case 'y': // Equivalent to "r", backward compatibility only.
-    case 'f': // floating-point registers.
     case 'c': // $25 for indirect jumps
     case 'l': // lo register
     case 'x': // hilo register pair
       Info.setAllowsRegister();
       return true;
+    case 'f': // floating-point registers.
+      Info.setAllowsRegister();
+      return FloatABI != SoftFloat;
     case 'I': // Signed 16-bit constant
     case 'J': // Integer 0
     case 'K': // Unsigned 16-bit constant
@@ -279,7 +281,7 @@ public:
     return TargetInfo::convertConstraint(Constraint);
   }
 
-  const char *getClobbers() const override {
+  std::string_view getClobbers() const override {
     // In GCC, $1 is not widely used in generated code (it's used only in a few
     // specific situations), so there is no real need for users to add it to
     // the clobbers list if they want to use it in their inline assembly code.
@@ -314,6 +316,9 @@ public:
     FloatABI = HardFloat;
     DspRev = NoDSP;
     FPMode = isFP64Default() ? FP64 : FPXX;
+    NoOddSpreg = false;
+    bool OddSpregGiven = false;
+    bool StrictAlign = false;
 
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
@@ -324,6 +329,12 @@ public:
         IsMips16 = true;
       else if (Feature == "+micromips")
         IsMicromips = true;
+      else if (Feature == "+mips32r6" || Feature == "+mips64r6")
+        HasUnalignedAccess = true;
+      // We cannot be sure that the order of strict-align vs mips32r6.
+      // Thus we need an extra variable here.
+      else if (Feature == "+strict-align")
+        StrictAlign = true;
       else if (Feature == "+dsp")
         DspRev = std::max(DspRev, DSP1);
       else if (Feature == "+dspr2")
@@ -350,7 +361,20 @@ public:
         IsNoABICalls = true;
       else if (Feature == "+use-indirect-jump-hazard")
         UseIndirectJumpHazard = true;
+      else if (Feature == "+nooddspreg") {
+        NoOddSpreg = true;
+        OddSpregGiven = false;
+      } else if (Feature == "-nooddspreg") {
+        NoOddSpreg = false;
+        OddSpregGiven = true;
+      }
     }
+
+    if (FPMode == FPXX && !OddSpregGiven)
+      NoOddSpreg = true;
+
+    if (StrictAlign)
+      HasUnalignedAccess = false;
 
     setDataLayout();
 
@@ -395,8 +419,8 @@ public:
         {{"ra"}, "$31"}
     };
     if (ABI == "o32")
-      return llvm::makeArrayRef(O32RegAliases);
-    return llvm::makeArrayRef(NewABIRegAliases);
+      return llvm::ArrayRef(O32RegAliases);
+    return llvm::ArrayRef(NewABIRegAliases);
   }
 
   bool hasInt128Type() const override {
@@ -406,7 +430,11 @@ public:
   unsigned getUnwindWordWidth() const override;
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
 };
 } // namespace targets
 } // namespace clang

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -stop-after=livedebugvalues | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -stop-after=livedebugvalues -experimental-debug-variable-locations=true | FileCheck %s
 ;
 ; In the simple loop below, the location of the variable "toast" is %bar in
 ; the entry block, then set to constant zero at the end of the loop. We cannot
@@ -35,12 +35,11 @@
 ; before the loop, and its position re-stated in each block.
 ; CHECK-LABEL: name: quux
 ; CHECK:       DBG_VALUE $edi, $noreg, ![[QUUXVARNUM]]
-; CHECK:       DBG_VALUE [[QUUXLOC:[a-zA-Z0-9$_]+]], $noreg, ![[QUUXVARNUM]]
 ; CHECK-LABEL: bb.1.loop
-; CHECK:       DBG_VALUE [[QUUXLOC]], $noreg, ![[QUUXVARNUM]]
+; CHECK:       DBG_VALUE $ebx, $noreg, ![[QUUXVARNUM]]
 ; CHECK-NOT:   DBG_VALUE $noreg
 ; CHECK-LABEL: bb.2.exit
-; CHECK:       DBG_VALUE [[QUUXLOC]], $noreg, ![[QUUXVARNUM]]
+; CHECK:       DBG_VALUE $ebx, $noreg, ![[QUUXVARNUM]]
 ; CHECK-NOT:   DBG_VALUE $noreg
 
 declare dso_local i1 @booler()
@@ -58,7 +57,7 @@ loop:
   call void @llvm.dbg.value(metadata i32 0, metadata !3, metadata !DIExpression()), !dbg !6
   br i1 %retval, label %loop2, label %exit
 loop2:
-  store i32 %bar, i32 *@glob
+  store i32 %bar, ptr @glob
   br label %loop
 exit:
   ret i32 %bar

@@ -14,9 +14,10 @@
 #ifndef LLVM_CLANG_LEX_PREPROCESSORLEXER_H
 #define LLVM_CLANG_LEX_PREPROCESSORLEXER_H
 
+#include "clang/Basic/FileEntry.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MultipleIncludeOpt.h"
 #include "clang/Lex/Token.h"
-#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
@@ -156,7 +157,7 @@ public:
 
   /// getFileEntry - Return the FileEntry corresponding to this FileID.  Like
   /// getFileID(), this only works for lexers with attached preprocessors.
-  const FileEntry *getFileEntry() const;
+  OptionalFileEntryRef getFileEntry() const;
 
   /// Iterator that traverses the current stack of preprocessor
   /// conditional directives (\#if/\#ifdef/\#ifndef).

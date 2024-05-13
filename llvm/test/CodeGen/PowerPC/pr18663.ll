@@ -4,78 +4,78 @@
 %class.Point.1 = type { %class.Tensor.0 }
 %class.Tensor.0 = type { [3 x double] }
 %class.TriaObjectAccessor.57 = type { %class.TriaAccessor.56 }
-%class.TriaAccessor.56 = type { i32, i32, %class.Triangulation.55* }
-%class.Triangulation.55 = type { %class.Subscriptor, %"class.std::vector.46", %"class.std::vector", %"class.std::vector.3.8", [255 x %class.Boundary.50*], i32, %struct.TriaNumberCache.54 }
-%class.Subscriptor = type { i32 (...)**, i32, %"class.std::type_info.2"* }
-%"class.std::type_info.2" = type { i32 (...)**, i8* }
+%class.TriaAccessor.56 = type { i32, i32, ptr }
+%class.Triangulation.55 = type { %class.Subscriptor, %"class.std::vector.46", %"class.std::vector", %"class.std::vector.3.8", [255 x ptr], i32, %struct.TriaNumberCache.54 }
+%class.Subscriptor = type { ptr, i32, ptr }
+%"class.std::type_info.2" = type { ptr, ptr }
 %"class.std::vector.46" = type { %"struct.std::_Vector_base.45" }
-%"struct.std::_Vector_base.45" = type { %"struct.std::_Vector_base<TriangulationLevel<3> *, std::allocator<TriangulationLevel<3> *> >::_Vector_impl.44" }
-%"struct.std::_Vector_base<TriangulationLevel<3> *, std::allocator<TriangulationLevel<3> *> >::_Vector_impl.44" = type { %class.TriangulationLevel.43**, %class.TriangulationLevel.43**, %class.TriangulationLevel.43** }
+%"struct.std::_Vector_base.45" = type { %"struct.std::_Vector_base<TriangulationLevelptr, std::allocator<TriangulationLevelptr> >::_Vector_impl.44" }
+%"struct.std::_Vector_base<TriangulationLevelptr, std::allocator<TriangulationLevelptr> >::_Vector_impl.44" = type { ptr, ptr, ptr }
 %class.TriangulationLevel.43 = type { %class.TriangulationLevel.0.37, %"struct.TriangulationLevel<3>::HexesData.42" }
 %class.TriangulationLevel.0.37 = type { %class.TriangulationLevel.1.31, %"struct.TriangulationLevel<2>::QuadsData.36" }
 %class.TriangulationLevel.1.31 = type { %class.TriangulationLevel, %"struct.TriangulationLevel<1>::LinesData.30" }
 %class.TriangulationLevel = type { %"class.std::vector.3.8", %"class.std::vector.3.8", %"class.std::vector.7.12", %"class.std::vector.12.15" }
 %"class.std::vector.7.12" = type { %"struct.std::_Vector_base" }
 %"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<std::pair<int, int>, std::allocator<std::pair<int, int> > >::_Vector_impl.10" }
-%"struct.std::_Vector_base<std::pair<int, int>, std::allocator<std::pair<int, int> > >::_Vector_impl.10" = type { %"struct.std::pair.9"*, %"struct.std::pair.9"*, %"struct.std::pair.9"* }
+%"struct.std::_Vector_base<std::pair<int, int>, std::allocator<std::pair<int, int> > >::_Vector_impl.10" = type { ptr, ptr, ptr }
 %"struct.std::pair.9" = type opaque
 %"class.std::vector.12.15" = type { %"struct.std::_Vector_base.13.14" }
 %"struct.std::_Vector_base.13.14" = type { %"struct.std::_Vector_base<unsigned int, std::allocator<unsigned int> >::_Vector_impl.13" }
-%"struct.std::_Vector_base<unsigned int, std::allocator<unsigned int> >::_Vector_impl.13" = type { i32*, i32*, i32* }
+%"struct.std::_Vector_base<unsigned int, std::allocator<unsigned int> >::_Vector_impl.13" = type { ptr, ptr, ptr }
 %"struct.TriangulationLevel<1>::LinesData.30" = type { %"class.std::vector.17.20", %"class.std::vector.22.23", %"class.std::vector.3.8", %"class.std::vector.3.8", %"class.std::vector.27.26", %"class.std::vector.32.29" }
 %"class.std::vector.17.20" = type { %"struct.std::_Vector_base.18.19" }
 %"struct.std::_Vector_base.18.19" = type { %"struct.std::_Vector_base<Line, std::allocator<Line> >::_Vector_impl.18" }
-%"struct.std::_Vector_base<Line, std::allocator<Line> >::_Vector_impl.18" = type { %class.Line.17*, %class.Line.17*, %class.Line.17* }
+%"struct.std::_Vector_base<Line, std::allocator<Line> >::_Vector_impl.18" = type { ptr, ptr, ptr }
 %class.Line.17 = type { [2 x i32] }
 %"class.std::vector.22.23" = type { %"struct.std::_Vector_base.23.22" }
 %"struct.std::_Vector_base.23.22" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl.21" }
-%"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl.21" = type { i32*, i32*, i32* }
+%"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl.21" = type { ptr, ptr, ptr }
 %"class.std::vector.27.26" = type { %"struct.std::_Vector_base.28.25" }
 %"struct.std::_Vector_base.28.25" = type { %"struct.std::_Vector_base<unsigned char, std::allocator<unsigned char> >::_Vector_impl.24" }
-%"struct.std::_Vector_base<unsigned char, std::allocator<unsigned char> >::_Vector_impl.24" = type { i8*, i8*, i8* }
+%"struct.std::_Vector_base<unsigned char, std::allocator<unsigned char> >::_Vector_impl.24" = type { ptr, ptr, ptr }
 %"class.std::vector.32.29" = type { %"struct.std::_Vector_base.33.28" }
-%"struct.std::_Vector_base.33.28" = type { %"struct.std::_Vector_base<void *, std::allocator<void *> >::_Vector_impl.27" }
-%"struct.std::_Vector_base<void *, std::allocator<void *> >::_Vector_impl.27" = type { i8**, i8**, i8** }
+%"struct.std::_Vector_base.33.28" = type { %"struct.std::_Vector_base<ptr, std::allocator<ptr> >::_Vector_impl.27" }
+%"struct.std::_Vector_base<ptr, std::allocator<ptr> >::_Vector_impl.27" = type { ptr, ptr, ptr }
 %"struct.TriangulationLevel<2>::QuadsData.36" = type { %"class.std::vector.37.35", %"class.std::vector.22.23", %"class.std::vector.3.8", %"class.std::vector.3.8", %"class.std::vector.27.26", %"class.std::vector.32.29" }
 %"class.std::vector.37.35" = type { %"struct.std::_Vector_base.38.34" }
 %"struct.std::_Vector_base.38.34" = type { %"struct.std::_Vector_base<Quad, std::allocator<Quad> >::_Vector_impl.33" }
-%"struct.std::_Vector_base<Quad, std::allocator<Quad> >::_Vector_impl.33" = type { %class.Quad.32*, %class.Quad.32*, %class.Quad.32* }
+%"struct.std::_Vector_base<Quad, std::allocator<Quad> >::_Vector_impl.33" = type { ptr, ptr, ptr }
 %class.Quad.32 = type { [4 x i32] }
 %"struct.TriangulationLevel<3>::HexesData.42" = type { %"class.std::vector.42.41", %"class.std::vector.22.23", %"class.std::vector.3.8", %"class.std::vector.3.8", %"class.std::vector.27.26", %"class.std::vector.32.29", %"class.std::vector.3.8" }
 %"class.std::vector.42.41" = type { %"struct.std::_Vector_base.43.40" }
 %"struct.std::_Vector_base.43.40" = type { %"struct.std::_Vector_base<Hexahedron, std::allocator<Hexahedron> >::_Vector_impl.39" }
-%"struct.std::_Vector_base<Hexahedron, std::allocator<Hexahedron> >::_Vector_impl.39" = type { %class.Hexahedron.38*, %class.Hexahedron.38*, %class.Hexahedron.38* }
+%"struct.std::_Vector_base<Hexahedron, std::allocator<Hexahedron> >::_Vector_impl.39" = type { ptr, ptr, ptr }
 %class.Hexahedron.38= type { [6 x i32] }
 %"class.std::vector" = type { %"struct.std::_Vector_base.48.48" }
 %"struct.std::_Vector_base.48.48" = type { %"struct.std::_Vector_base<Point<3>, std::allocator<Point<3> > >::_Vector_impl.47" }
-%"struct.std::_Vector_base<Point<3>, std::allocator<Point<3> > >::_Vector_impl.47" = type { %class.Point.1*, %class.Point.1*, %class.Point.1* }
+%"struct.std::_Vector_base<Point<3>, std::allocator<Point<3> > >::_Vector_impl.47" = type { ptr, ptr, ptr }
 %"class.std::vector.3.8" = type { %"struct.std::_Bvector_base.7" }
 %"struct.std::_Bvector_base.7" = type { %"struct.std::_Bvector_base<std::allocator<bool> >::_Bvector_impl.6" }
-%"struct.std::_Bvector_base<std::allocator<bool> >::_Bvector_impl.6" = type { %"struct.std::_Bit_iterator.5", %"struct.std::_Bit_iterator.5", i64* }
+%"struct.std::_Bvector_base<std::allocator<bool> >::_Bvector_impl.6" = type { %"struct.std::_Bit_iterator.5", %"struct.std::_Bit_iterator.5", ptr }
 %"struct.std::_Bit_iterator.5" = type { %"struct.std::_Bit_iterator_base.base.4", [4 x i8] }
-%"struct.std::_Bit_iterator_base.base.4" = type <{ i64*, i32 }>
+%"struct.std::_Bit_iterator_base.base.4" = type <{ ptr, i32 }>
 %class.Boundary.50 = type opaque
 %struct.TriaNumberCache.54 = type { %struct.TriaNumberCache.52.52, i32, %"class.std::vector.12.15", i32, %"class.std::vector.12.15" }
 %struct.TriaNumberCache.52.52 = type { %struct.TriaNumberCache.53.51, i32, %"class.std::vector.12.15", i32, %"class.std::vector.12.15" }
 %struct.TriaNumberCache.53.51 = type { i32, %"class.std::vector.12.15", i32, %"class.std::vector.12.15" }
 
-define void @_ZNK18TriaObjectAccessorILi3ELi3EE10barycenterEv(%class.Point.1* noalias nocapture sret(%class.Point.1) %agg.result, %class.TriaObjectAccessor.57* %this) #0 align 2 {
+define void @_ZNK18TriaObjectAccessorILi3ELi3EE10barycenterEv(ptr noalias nocapture sret(%class.Point.1) %agg.result, ptr %this) #0 align 2 {
 entry:
-  %0 = load double, double* null, align 8
-  %1 = load double, double* undef, align 8
-  %call18 = tail call dereferenceable(24) %class.Point.1* @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(%class.TriaObjectAccessor.57* %this, i32 zeroext 6)
-  %2 = load double, double* undef, align 8
-  %call21 = tail call dereferenceable(24) %class.Point.1* @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(%class.TriaObjectAccessor.57* %this, i32 zeroext 7)
-  %3 = load double, double* undef, align 8
-  %call33 = tail call dereferenceable(24) %class.Point.1* @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(%class.TriaObjectAccessor.57* %this, i32 zeroext 3)
-  %4 = load double, double* null, align 8
-  %5 = load double, double* undef, align 8
-  %call45 = tail call dereferenceable(24) %class.Point.1* @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(%class.TriaObjectAccessor.57* %this, i32 zeroext 7)
-  %6 = load double, double* undef, align 8
-  %call48 = tail call dereferenceable(24) %class.Point.1* @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(%class.TriaObjectAccessor.57* %this, i32 zeroext 0)
-  %7 = load double, double* undef, align 8
-  %call66 = tail call dereferenceable(24) %class.Point.1* @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(%class.TriaObjectAccessor.57* %this, i32 zeroext 6)
-  %8 = load double, double* undef, align 8
+  %0 = load double, ptr null, align 8
+  %1 = load double, ptr undef, align 8
+  %call18 = tail call dereferenceable(24) ptr @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(ptr %this, i32 zeroext 6)
+  %2 = load double, ptr undef, align 8
+  %call21 = tail call dereferenceable(24) ptr @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(ptr %this, i32 zeroext 7)
+  %3 = load double, ptr undef, align 8
+  %call33 = tail call dereferenceable(24) ptr @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(ptr %this, i32 zeroext 3)
+  %4 = load double, ptr null, align 8
+  %5 = load double, ptr undef, align 8
+  %call45 = tail call dereferenceable(24) ptr @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(ptr %this, i32 zeroext 7)
+  %6 = load double, ptr undef, align 8
+  %call48 = tail call dereferenceable(24) ptr @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(ptr %this, i32 zeroext 0)
+  %7 = load double, ptr undef, align 8
+  %call66 = tail call dereferenceable(24) ptr @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(ptr %this, i32 zeroext 6)
+  %8 = load double, ptr undef, align 8
   %mul334 = fmul double undef, 2.000000e+00
   %mul579 = fmul double %2, %5
   %mul597 = fmul double undef, %mul579
@@ -289,10 +289,10 @@ entry:
   %add8901 = fadd double %mul8900, %add8893
   %mul9767 = fmul double 0.000000e+00, %add8901
   %mul9768 = fmul double %mul9767, 0x3FC5555555555555
-  store double %mul4917, double* undef, align 8
-  store double %mul9768, double* undef, align 8
+  store double %mul4917, ptr undef, align 8
+  store double %mul9768, ptr undef, align 8
   ret void
 }
 
-declare dereferenceable(24) %class.Point.1* @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(%class.TriaObjectAccessor.57*, i32 zeroext) #0
+declare dereferenceable(24) ptr @_ZNK18TriaObjectAccessorILi3ELi3EE6vertexEj(ptr, i32 zeroext) #0
 

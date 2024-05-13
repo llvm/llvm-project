@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("ADTTests") {
   # ADT is a headers-only library so there's no //llvm/lib/ADT to depend on.
@@ -7,6 +7,7 @@ unittest("ADTTests") {
     # Some tests include files from IR, but there's no library dependency.
     "//llvm/include/llvm/IR:public_tablegen",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
@@ -17,17 +18,21 @@ unittest("ADTTests") {
     "AnyTest.cpp",
     "ArrayRefTest.cpp",
     "BitFieldsTest.cpp",
+    "BitTest.cpp",
     "BitVectorTest.cpp",
     "BitmaskEnumTest.cpp",
     "BreadthFirstIteratorTest.cpp",
     "BumpPtrListTest.cpp",
     "CoalescingBitVectorTest.cpp",
+    "CombinationGeneratorTest.cpp",
+    "ConcurrentHashtableTest.cpp",
     "DAGDeltaAlgorithmTest.cpp",
     "DeltaAlgorithmTest.cpp",
     "DenseMapTest.cpp",
     "DenseSetTest.cpp",
     "DepthFirstIteratorTest.cpp",
     "DirectedGraphTest.cpp",
+    "EditDistanceTest.cpp",
     "EnumeratedArrayTest.cpp",
     "EquivalenceClassesTest.cpp",
     "FallibleIteratorTest.cpp",
@@ -37,6 +42,7 @@ unittest("ADTTests") {
     "FunctionRefTest.cpp",
     "HashingTest.cpp",
     "IListBaseTest.cpp",
+    "IListIteratorBitsTest.cpp",
     "IListIteratorTest.cpp",
     "IListNodeBaseTest.cpp",
     "IListNodeTest.cpp",
@@ -46,13 +52,17 @@ unittest("ADTTests") {
     "ImmutableMapTest.cpp",
     "ImmutableSetTest.cpp",
     "IntEqClassesTest.cpp",
+    "Interleave.cpp",
     "IntervalMapTest.cpp",
+    "IntervalTreeTest.cpp",
     "IntrusiveRefCntPtrTest.cpp",
     "IteratorTest.cpp",
+    "LazyAtomicPointerTest.cpp",
     "MapVectorTest.cpp",
     "MappedIteratorTest.cpp",
-    "OptionalTest.cpp",
+    "MoveOnly.cpp",
     "PackedVectorTest.cpp",
+    "PagedVectorTest.cpp",
     "PointerEmbeddedIntTest.cpp",
     "PointerIntPairTest.cpp",
     "PointerSumTypeTest.cpp",
@@ -65,6 +75,7 @@ unittest("ADTTests") {
     "STLForwardCompatTest.cpp",
     "ScopeExitTest.cpp",
     "SequenceTest.cpp",
+    "SetOperationsTest.cpp",
     "SetVectorTest.cpp",
     "SimpleIListTest.cpp",
     "SmallPtrSetTest.cpp",
@@ -81,10 +92,8 @@ unittest("ADTTests") {
     "StringSetTest.cpp",
     "StringSwitchTest.cpp",
     "TinyPtrVectorTest.cpp",
-    "TripleTest.cpp",
     "TwineTest.cpp",
     "TypeSwitchTest.cpp",
     "TypeTraitsTest.cpp",
-    "WaymarkingTest.cpp",
   ]
 }

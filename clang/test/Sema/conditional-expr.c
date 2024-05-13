@@ -1,12 +1,17 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-pointer-to-int-cast -verify -pedantic -Wsign-conversion %s
-void foo() {
+void foo(void) {
   *(0 ? (double *)0 : (void *)0) = 0;
   // FIXME: GCC doesn't consider the following two statements to be errors.
-  *(0 ? (double *)0 : (void *)(int *)0) = 0; // expected-error {{incomplete type 'void' is not assignable}}
-  *(0 ? (double *)0 : (void *)(double *)0) = 0; // expected-error {{incomplete type 'void' is not assignable}}
-  *(0 ? (double *)0 : (int *)(void *)0) = 0; // expected-error {{incomplete type 'void' is not assignable}} expected-warning {{pointer type mismatch ('double *' and 'int *')}}
+  *(0 ? (double *)0 : (void *)(int *)0) = 0; /* expected-error {{incomplete type 'void' is not assignable}}
+                                                expected-warning {{ISO C does not allow indirection on operand of type 'void *'}} */
+  *(0 ? (double *)0 : (void *)(double *)0) = 0; /* expected-error {{incomplete type 'void' is not assignable}}
+                                                   expected-warning {{ISO C does not allow indirection on operand of type 'void *'}} */
+  *(0 ? (double *)0 : (int *)(void *)0) = 0; /* expected-error {{incomplete type 'void' is not assignable}}
+                                                expected-warning {{pointer type mismatch ('double *' and 'int *')}}
+                                                expected-warning {{ISO C does not allow indirection on operand of type 'void *'}} */
   *(0 ? (double *)0 : (double *)(void *)0) = 0;
-  *((void *) 0) = 0; // expected-error {{incomplete type 'void' is not assignable}}
+  *((void *) 0) = 0; /* expected-error {{incomplete type 'void' is not assignable}}
+                        expected-warning {{ISO C does not allow indirection on operand of type 'void *'}} */
   double *dp;
   int *ip;
   void *vp;
@@ -79,9 +84,10 @@ void foo() {
   (test0 ? (test0 ? adr2 : adr2) : nonconst_int); // expected-error{{conditional operator with the second and third operands of type  ('__attribute__((address_space(2))) int *' and 'int *') which are pointers to non-overlapping address spaces}}
 }
 
-int Postgresql() {
+int Postgresql(void) {
   char x;
-  return ((((&x) != ((void *) 0)) ? (*(&x) = ((char) 1)) : (void) ((void *) 0)), (unsigned long) ((void *) 0)); // expected-warning {{C99 forbids conditional expressions with only one void side}}
+  return ((((&x) != ((void *) 0)) ? (*(&x) = ((char) 1)) : (void) ((void *) 0)), (unsigned long) ((void *) 0)); /* expected-warning {{C99 forbids conditional expressions with only one void side}}
+                                                                                                                 expected-warning {{comparison of address of 'x' not equal to a null pointer is always true}} */
 }
 
 #define nil ((void*) 0)
@@ -90,7 +96,7 @@ extern int f1(void);
 
 int f0(int a) {
   // GCC considers this a warning.
-  return a ? f1() : nil; // expected-warning {{pointer/integer type mismatch in conditional expression ('int' and 'void *')}} expected-warning {{incompatible pointer to integer conversion returning 'void *' from a function with result type 'int'}}
+  return a ? f1() : nil; // expected-warning {{pointer/integer type mismatch in conditional expression ('int' and 'void *')}} expected-error {{incompatible pointer to integer conversion returning 'void *' from a function with result type 'int'}}
 }
 
 int f2(int x) {
@@ -100,7 +106,7 @@ int f2(int x) {
 
 #define NULL (void*)0
 
-void PR9236() {
+void PR9236(void) {
   struct A {int i;} A1;
   (void)(1 ? A1 : NULL); // expected-error{{non-pointer operand type 'struct A' incompatible with NULL}}
   (void)(1 ? NULL : A1); // expected-error{{non-pointer operand type 'struct A' incompatible with NULL}}

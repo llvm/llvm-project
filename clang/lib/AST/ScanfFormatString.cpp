@@ -161,6 +161,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
     default:
       break;
     case '%': k = ConversionSpecifier::PercentArg;   break;
+    case 'b': k = ConversionSpecifier::bArg; break;
     case 'A': k = ConversionSpecifier::AArg; break;
     case 'E': k = ConversionSpecifier::EArg; break;
     case 'F': k = ConversionSpecifier::FArg; break;
@@ -267,6 +268,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
       llvm_unreachable("Unsupported LengthModifier Type");
 
     // Unsigned int.
+    case ConversionSpecifier::bArg:
     case ConversionSpecifier::oArg:
     case ConversionSpecifier::OArg:
     case ConversionSpecifier::uArg:
@@ -343,7 +345,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsShort:
           if (Ctx.getTargetInfo().getTriple().isOSMSVCRT())
             return ArgType::PtrTo(ArgType::AnyCharTy);
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         default:
           return ArgType::Invalid();
       }
@@ -360,7 +362,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsShort:
           if (Ctx.getTargetInfo().getTriple().isOSMSVCRT())
             return ArgType::PtrTo(ArgType::AnyCharTy);
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         default:
           return ArgType::Invalid();
       }
@@ -444,11 +446,9 @@ bool ScanfSpecifier::fixType(QualType QT, QualType RawQT,
 
     // If we know the target array length, we can use it as a field width.
     if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(RawQT)) {
-      if (CAT->getSizeModifier() == ArrayType::Normal)
+      if (CAT->getSizeModifier() == ArraySizeModifier::Normal)
         FieldWidth = OptionalAmount(OptionalAmount::Constant,
-                                    CAT->getSize().getZExtValue() - 1,
-                                    "", 0, false);
-
+                                    CAT->getZExtSize() - 1, "", 0, false);
     }
     return true;
   }
@@ -500,7 +500,7 @@ bool ScanfSpecifier::fixType(QualType QT, QualType RawQT,
   }
 
   // Handle size_t, ptrdiff_t, etc. that have dedicated length modifiers in C99.
-  if (isa<TypedefType>(PT) && (LangOpt.C99 || LangOpt.CPlusPlus11))
+  if (LangOpt.C99 || LangOpt.CPlusPlus11)
     namedTypeToLengthModifier(PT, LM);
 
   // If fixing the length modifier was enough, we are done.

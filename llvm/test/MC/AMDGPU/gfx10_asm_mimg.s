@@ -1,4 +1,4 @@
-; RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck --check-prefixes=GFX10 %s
+; RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck --check-prefixes=GFX10 %s
 
 image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
 ; GFX10: image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x00,0x1f,0x00,0xf0,0x00,0x00,0x00,0x00]
@@ -139,6 +139,126 @@ image_atomic_dec v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
 image_atomic_fcmpswap v[4:5], v32, s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_1D glc
 ; GFX10: image_atomic_fcmpswap v[4:5], v32, s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_1D glc ; encoding: [0x00,0x23,0x74,0xf0,0x20,0x04,0x18,0x00]
 
+image_atomic_fcmpswap v[254:255], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm
+; GFX10: [0x00,0x13,0x74,0xf0,0x02,0xfe,0x03,0x00]
+
+image_atomic_fcmpswap v[1:4], v2, s[12:19] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
+; GFX10: [0x00,0x1f,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[252:255], v2, s[12:19] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
+; GFX10: [0x00,0x1f,0x74,0xf0,0x02,0xfc,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v255, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm
+; GFX10: [0x00,0x13,0x74,0xf0,0xff,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX10: [0x00,0x13,0x74,0xf0,0x02,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v255, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX10: [0x00,0x13,0x74,0xf0,0xff,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[2:4], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm
+; GFX10: [0x10,0x13,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[253:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm
+; GFX10: [0x10,0x13,0x74,0xf0,0xfd,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[2:3], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm a16
+; GFX10: [0x10,0x13,0x74,0xf0,0x02,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[254:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm a16
+; GFX10: [0x10,0x13,0x74,0xf0,0xfe,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[2:5], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm
+; GFX10: [0x38,0x13,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[252:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm
+; GFX10: [0x38,0x13,0x74,0xf0,0xfc,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[2:3], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16
+; GFX10: [0x38,0x13,0x74,0xf0,0x02,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[254:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16
+; GFX10: [0x38,0x13,0x74,0xf0,0xfe,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[2:3], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm
+; GFX10: [0x08,0x13,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[254:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm
+; GFX10: [0x08,0x13,0x74,0xf0,0xfe,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm a16
+; GFX10: [0x08,0x13,0x74,0xf0,0x02,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v255, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm a16
+; GFX10: [0x08,0x13,0x74,0xf0,0xff,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[2:4], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_CUBE unorm
+; GFX10: [0x18,0x13,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[253:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_CUBE unorm
+; GFX10: [0x18,0x13,0x74,0xf0,0xfd,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[2:3], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_CUBE unorm a16
+; GFX10: [0x18,0x13,0x74,0xf0,0x02,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[254:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_CUBE unorm a16
+; GFX10: [0x18,0x13,0x74,0xf0,0xfe,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[2:3], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D_ARRAY unorm
+; GFX10: [0x20,0x13,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[254:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D_ARRAY unorm
+; GFX10: [0x20,0x13,0x74,0xf0,0xfe,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D_ARRAY unorm a16
+; GFX10: [0x20,0x13,0x74,0xf0,0x02,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v255, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D_ARRAY unorm a16
+; GFX10: [0x20,0x13,0x74,0xf0,0xff,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[2:4], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_ARRAY unorm
+; GFX10: [0x28,0x13,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[253:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_ARRAY unorm
+; GFX10: [0x28,0x13,0x74,0xf0,0xfd,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[2:3], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_ARRAY unorm a16
+; GFX10: [0x28,0x13,0x74,0xf0,0x02,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[254:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_ARRAY unorm a16
+; GFX10: [0x28,0x13,0x74,0xf0,0xfe,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[2:4], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA unorm
+; GFX10: [0x30,0x13,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[253:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA unorm
+; GFX10: [0x30,0x13,0x74,0xf0,0xfd,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v[2:3], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
+; GFX10: [0x30,0x13,0x74,0xf0,0x02,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v[254:255], s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
+; GFX10: [0x30,0x13,0x74,0xf0,0xfe,0x01,0x03,0x40]
+
+image_atomic_fcmpswap v[1:2], v2, s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm
+; GFX10: [0x00,0x13,0x74,0xf0,0x02,0x01,0x18,0x00]
+
+image_atomic_fcmpswap v[1:2], v2, ttmp[8:15] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm
+; GFX10: [0x00,0x13,0x74,0xf0,0x02,0x01,0x1d,0x00]
+
+image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm glc
+; GFX10: [0x00,0x33,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm slc
+; GFX10: [0x00,0x13,0x74,0xf2,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm dlc
+; GFX10: [0x80,0x13,0x74,0xf0,0x02,0x01,0x03,0x00]
+
+image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm lwe
+; GFX10: [0x00,0x13,0x76,0xf0,0x02,0x01,0x03,0x00]
+
 image_atomic_fmin v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
 ; GFX10: image_atomic_fmin v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc ; encoding: [0x00,0x21,0x78,0xf0,0x20,0x04,0x18,0x00]
 
@@ -172,14 +292,14 @@ image_sample_d v[64:66], [v32, v16, v8], s[4:11], s[100:103] dmask:0x7 dim:SQ_RS
 image_sample_d v[64:66], [v32, v16, v8, v4, v2, v1], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_2D
 ; GFX10: image_sample_d v[64:66], [v32, v16, v8, v4, v2, v1], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_2D ; encoding: [0x0c,0x07,0x88,0xf0,0x20,0x40,0x21,0x03,0x10,0x08,0x04,0x02,0x01,0x00,0x00,0x00]
 
-image_sample_d v[64:66], v[32:39], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_2D
-; GFX10: image_sample_d v[64:66], v[32:39], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_2D ; encoding: [0x08,0x07,0x88,0xf0,0x20,0x40,0x21,0x03]
+image_sample_d v[64:66], v[32:37], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_2D
+; GFX10: image_sample_d v[64:66], v[32:37], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_2D ; encoding: [0x08,0x07,0x88,0xf0,0x20,0x40,0x21,0x03]
 
 image_sample_d v[64:66], [v32, v16, v8, v4, v2, v1, v0, v20, v21], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
 ; GFX10: image_sample_d v[64:66], [v32, v16, v8, v4, v2, v1, v0, v20, v21], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D ; encoding: [0x14,0x07,0x88,0xf0,0x20,0x40,0x21,0x03,0x10,0x08,0x04,0x02,0x01,0x00,0x14,0x15]
 
-image_sample_d v[64:66], v[32:47], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-; GFX10: image_sample_d v[64:66], v[32:47], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D ; encoding: [0x10,0x07,0x88,0xf0,0x20,0x40,0x21,0x03]
+image_sample_d v[64:66], v[32:40], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
+; GFX10: image_sample_d v[64:66], v[32:40], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D ; encoding: [0x10,0x07,0x88,0xf0,0x20,0x40,0x21,0x03]
 
 image_sample_d v[64:66], [v32, v16, v8, v4, v2, v1, v5], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_CUBE
 ; GFX10: image_sample_d v[64:66], [v32, v16, v8, v4, v2, v1, v5], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_CUBE ; encoding: [0x1c,0x07,0x88,0xf0,0x20,0x40,0x21,0x03,0x10,0x08,0x04,0x02,0x01,0x05,0x00,0x00]
@@ -349,6 +469,9 @@ image_gather4_c_b_cl_o v[64:67], [v32, v0, v4, v5, v6, v7, v8], s[4:11], s[100:1
 image_gather4_c_lz_o v[64:67], [v32, v0, v4, v5, v6], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
 ; GFX10: image_gather4_c_lz_o v[64:67], [v32, v0, v4, v5, v6], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D ; encoding: [0x12,0x01,0x7c,0xf1,0x20,0x40,0x21,0x03,0x00,0x04,0x05,0x06]
 
+image_gather4h v[64:67], [v32, v33, v34], s[4:11], s[4:7] dmask:0x2 dim:SQ_RSRC_IMG_CUBE
+; GFX10: image_gather4h v[64:67], [v32, v33, v34], s[4:11], s[4:7] dmask:0x2 dim:SQ_RSRC_IMG_CUBE ; encoding: [0x1a,0x02,0x84,0xf1,0x20,0x40,0x21,0x00,0x21,0x22,0x00,0x00]
+
 image_get_lod v64, v[32:33], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX10: image_get_lod v64, v[32:33], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_2D ; encoding: [0x08,0x01,0x80,0xf1,0x20,0x40,0x21,0x03]
 
@@ -415,8 +538,8 @@ image_load v[1:3], v1, s[16:23] dmask:0x5 dim:SQ_RSRC_IMG_2D a16 tfe lwe
 image_sample_d v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10: image_sample_d v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x00,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40]
 
-image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
-; GFX10: image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40]
+image_sample_d v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10: image_sample_d v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40]
 
 image_sample_d v[0:3], [v0, v1, v2, v3, v4, v5, v6, v8], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
 ; GFX10: image_sample_d v[0:3], [v0, v1, v2, v3, v4, v5, v6, v8], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16 ; encoding: [0x14,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40,0x01,0x02,0x03,0x04,0x05,0x06,0x08,0x00]
@@ -424,8 +547,8 @@ image_sample_d v[0:3], [v0, v1, v2, v3, v4, v5, v6, v8], s[0:7], s[8:11] dmask:0
 image_sample_c_d v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10: image_sample_c_d v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x00,0x0f,0xa8,0xf0,0x00,0x00,0x40,0x40]
 
-image_sample_c_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
-; GFX10: image_sample_c_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0xa8,0xf0,0x00,0x00,0x40,0x40]
+image_sample_c_d v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10: image_sample_c_d v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0xa8,0xf0,0x00,0x00,0x40,0x40]
 
 image_sample_d_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10: image_sample_d_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x00,0x0f,0x8c,0xf0,0x00,0x00,0x40,0x40]
@@ -442,14 +565,14 @@ image_sample_c_d_cl v[0:3], [v0, v1, v2, v3, v4, v5, v7], s[0:7], s[8:11] dmask:
 image_sample_cd v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10: image_sample_cd v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x00,0x0f,0xa0,0xf1,0x00,0x00,0x40,0x40]
 
-image_sample_cd v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
-; GFX10: image_sample_cd v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0xa0,0xf1,0x00,0x00,0x40,0x40]
+image_sample_cd v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10: image_sample_cd v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0xa0,0xf1,0x00,0x00,0x40,0x40]
 
 image_sample_c_cd v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10: image_sample_c_cd v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x00,0x0f,0xa8,0xf1,0x00,0x00,0x40,0x40]
 
-image_sample_c_cd v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
-; GFX10: image_sample_c_cd v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0xa8,0xf1,0x00,0x00,0x40,0x40]
+image_sample_c_cd v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10: image_sample_c_cd v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0xa8,0xf1,0x00,0x00,0x40,0x40]
 
 image_sample_cd_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10: image_sample_cd_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x00,0x0f,0xa4,0xf1,0x00,0x00,0x40,0x40]
@@ -490,8 +613,8 @@ image_sample_d_cl_g16 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_
 image_sample_d_cl_g16 v[0:3], [v0, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10: image_sample_d_cl_g16 v[0:3], [v0, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D ; encoding: [0x0b,0x0f,0x8c,0xf0,0x00,0x00,0x40,0x00,0x02,0x04,0x05,0x06]
 
-image_sample_c_d_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX10: image_sample_c_d_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf0,0x00,0x00,0x40,0x00]
+image_sample_c_d_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10: image_sample_c_d_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf0,0x00,0x00,0x40,0x00]
 
 image_sample_c_d_cl_g16 v[0:3], [v0, v1, v3, v5, v6, v7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10: image_sample_c_d_cl_g16 v[0:3], [v0, v1, v3, v5, v6, v7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D ; encoding: [0x0d,0x0f,0xac,0xf0,0x00,0x00,0x40,0x00,0x01,0x03,0x05,0x06,0x07,0x00,0x00,0x00]
@@ -514,8 +637,8 @@ image_sample_cd_cl_g16 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG
 image_sample_cd_cl_g16 v[0:3], [v0, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10: image_sample_cd_cl_g16 v[0:3], [v0, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D ; encoding: [0x0b,0x0f,0xa4,0xf1,0x00,0x00,0x40,0x00,0x02,0x04,0x05,0x06]
 
-image_sample_c_cd_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX10: image_sample_c_cd_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf1,0x00,0x00,0x40,0x00]
+image_sample_c_cd_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10: image_sample_c_cd_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf1,0x00,0x00,0x40,0x00]
 
 image_sample_c_cd_cl_g16 v[0:3], [v0, v1, v3, v5, v6, v7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10: image_sample_c_cd_cl_g16 v[0:3], [v0, v1, v3, v5, v6, v7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D ; encoding: [0x0d,0x0f,0xac,0xf1,0x00,0x00,0x40,0x00,0x01,0x03,0x05,0x06,0x07,0x00,0x00,0x00]
@@ -525,3 +648,9 @@ image_sample_c_d_o_g16 v0, [v0, v1, v2, v4, v6, v7, v8], s[0:7], s[8:11] dmask:0
 
 image_sample_c_d_o_g16 v[0:1], [v0, v1, v2, v4, v6, v7, v8], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX10: image_sample_c_d_o_g16 v[0:1], [v0, v1, v2, v4, v6, v7, v8], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY ; encoding: [0x2d,0x06,0xe8,0xf0,0x00,0x00,0x40,0x00,0x01,0x02,0x04,0x06,0x07,0x08,0x00,0x00]
+
+
+; Test that wider than required vaddr registers are accepted by assembler for 5 VGPR forms
+
+image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10: image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40]

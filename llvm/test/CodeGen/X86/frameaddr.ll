@@ -8,7 +8,7 @@
 ; RUN: llc < %s -mtriple=x86_64-nacl                    | FileCheck %s --check-prefix=CHECK-NACL64
 ; RUN: llc < %s -mtriple=x86_64-nacl -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefix=CHECK-NACL64
 
-define i8* @test1() nounwind {
+define ptr @test1() nounwind {
 entry:
 ; CHECK-32-LABEL: test1
 ; CHECK-32:       push
@@ -38,11 +38,11 @@ entry:
 ; CHECK-NACL64:       pushq %rbp
 ; CHECK-NACL64-NEXT:  movq %rsp, %rbp
 ; CHECK-NACL64-NEXT:  movl %ebp, %eax
-  %0 = tail call i8* @llvm.frameaddress(i32 0)
-  ret i8* %0
+  %0 = tail call ptr @llvm.frameaddress(i32 0)
+  ret ptr %0
 }
 
-define i8* @test2() nounwind {
+define ptr @test2() nounwind {
 entry:
 ; CHECK-32-LABEL: test2
 ; CHECK-32:       push
@@ -76,8 +76,8 @@ entry:
 ; CHECK-NACL64-NEXT:  movq %rsp, %rbp
 ; CHECK-NACL64-NEXT:  movl (%ebp), %eax
 ; CHECK-NACL64-NEXT:  movl (%eax), %eax
-  %0 = tail call i8* @llvm.frameaddress(i32 2)
-  ret i8* %0
+  %0 = tail call ptr @llvm.frameaddress(i32 2)
+  ret ptr %0
 }
 
-declare i8* @llvm.frameaddress(i32) nounwind readnone
+declare ptr @llvm.frameaddress(i32) nounwind readnone

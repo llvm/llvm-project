@@ -1,17 +1,16 @@
-; RUN: opt -globalopt -S -o - < %s | FileCheck %s
+; RUN: opt -passes=globalopt -S -o - < %s | FileCheck %s
 ; The check here is that it doesn't crash.
 
-declare {}* @llvm.invariant.start.p0i8(i64 %size, i8* nocapture %ptr)
+declare ptr @llvm.invariant.start.p0(i64 %size, ptr nocapture %ptr)
 
 @object1 = global { i32, i32 } zeroinitializer
 ; CHECK: @object1 = global { i32, i32 } zeroinitializer
 
 define void @ctor1() {
-  %ptr = bitcast {i32, i32}* @object1 to i8*
-  call {}* @llvm.invariant.start.p0i8(i64 4, i8* %ptr)
+  call ptr @llvm.invariant.start.p0(i64 4, ptr @object1)
   ret void
 }
 
 @llvm.global_ctors = appending constant
-  [1 x { i32, void ()*, i8* }]
-  [ { i32, void ()*, i8* } { i32 65535, void ()* @ctor1, i8* null } ]
+  [1 x { i32, ptr, ptr }]
+  [ { i32, ptr, ptr } { i32 65535, ptr @ctor1, ptr null } ]

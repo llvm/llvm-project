@@ -1,5 +1,5 @@
 import("//llvm/utils/TableGen/tablegen.gni")
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 tablegen("AutomataAutomata") {
   visibility = [ ":TableGenTests" ]
@@ -19,11 +19,12 @@ unittest("TableGenTests") {
     ":AutomataTables",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
-    "//llvm/utils/TableGen/GlobalISel",
+    "//llvm/utils/TableGen/Common",
   ]
   include_dirs = [ "//llvm/utils/TableGen" ]
   sources = [
     "AutomataTest.cpp",
     "CodeExpanderTest.cpp",
+    "ParserEntryPointTest.cpp",
   ]
 }

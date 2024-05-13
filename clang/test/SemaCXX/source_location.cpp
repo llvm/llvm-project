@@ -1,4 +1,14 @@
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions -verify %s
+// RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT -fexceptions -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fms-compatibility -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fms-compatibility -verify %s
+//
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
+// RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -fms-compatibility -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify -fms-compatibility %s
 // expected-no-diagnostics
 
 #define assert(...) ((__VA_ARGS__) ? ((void)0) : throw 42)
@@ -8,38 +18,47 @@
 template <unsigned>
 struct Printer;
 
+#ifdef USE_CONSTEVAL
+#define SOURCE_LOC_EVAL_KIND consteval
+#else
+#define SOURCE_LOC_EVAL_KIND constexpr
+#endif
+
 namespace std {
-namespace experimental {
-struct source_location {
-private:
-  unsigned int __m_line = 0;
-  unsigned int __m_col = 0;
-  const char *__m_file = nullptr;
-  const char *__m_func = nullptr;
+class source_location {
+  struct __impl;
+
 public:
-  static constexpr source_location current(
-      const char *__file = __builtin_FILE(),
-      const char *__func = __builtin_FUNCTION(),
-      unsigned int __line = __builtin_LINE(),
-      unsigned int __col = __builtin_COLUMN()) noexcept {
-    source_location __loc;
-    __loc.__m_line = __line;
-    __loc.__m_col = __col;
-    __loc.__m_file = __file;
-    __loc.__m_func = __func;
-    return __loc;
+  static SOURCE_LOC_EVAL_KIND source_location
+    current(const __impl *__p = __builtin_source_location()) noexcept {
+      source_location __loc;
+      __loc.__m_impl = __p;
+      return __loc;
   }
   constexpr source_location() = default;
   constexpr source_location(source_location const &) = default;
-  constexpr unsigned int line() const noexcept { return __m_line; }
-  constexpr unsigned int column() const noexcept { return __m_col; }
-  constexpr const char *file() const noexcept { return __m_file; }
-  constexpr const char *function() const noexcept { return __m_func; }
+  constexpr unsigned int line() const noexcept { return __m_impl ? __m_impl->_M_line : 0; }
+  constexpr unsigned int column() const noexcept { return __m_impl ? __m_impl->_M_column : 0; }
+  constexpr const char *file() const noexcept { return __m_impl ? __m_impl->_M_file_name : ""; }
+  constexpr const char *function() const noexcept { return __m_impl ? __m_impl->_M_function_name : ""; }
+
+private:
+  // Note: The type name "std::source_location::__impl", and its constituent
+  // field-names are required by __builtin_source_location().
+  struct __impl {
+    const char *_M_file_name;
+    const char *_M_function_name;
+    unsigned _M_line;
+    unsigned _M_column;
+  };
+  const __impl *__m_impl = nullptr;
+
+public:
+  using public_impl_alias = __impl;
 };
-} // namespace experimental
 } // namespace std
 
-using SL = std::experimental::source_location;
+using SL = std::source_location;
 
 #include "Inputs/source-location-file.h"
 namespace SLF = source_location_file;
@@ -74,13 +93,23 @@ constexpr bool is_same<T, T> = true;
 static_assert(is_same<decltype(__builtin_LINE()), unsigned>);
 static_assert(is_same<decltype(__builtin_COLUMN()), unsigned>);
 static_assert(is_same<decltype(__builtin_FILE()), const char *>);
+static_assert(is_same<decltype(__builtin_FILE_NAME()), const char *>);
 static_assert(is_same<decltype(__builtin_FUNCTION()), const char *>);
+#ifdef MS
+static_assert(is_same<decltype(__builtin_FUNCSIG()), const char *>);
+#endif
+static_assert(is_same<decltype(__builtin_source_location()), const std::source_location::public_impl_alias *>);
 
 // test noexcept
 static_assert(noexcept(__builtin_LINE()));
 static_assert(noexcept(__builtin_COLUMN()));
 static_assert(noexcept(__builtin_FILE()));
+static_assert(noexcept(__builtin_FILE_NAME()));
 static_assert(noexcept(__builtin_FUNCTION()));
+#ifdef MS
+static_assert(noexcept(__builtin_FUNCSIG()));
+#endif
+static_assert(noexcept(__builtin_source_location()));
 
 //===----------------------------------------------------------------------===//
 //                            __builtin_LINE()
@@ -335,6 +364,54 @@ void test_aggr_class() {
 } // namespace test_file
 
 //===----------------------------------------------------------------------===//
+//                            __builtin_FILE_NAME()
+//===----------------------------------------------------------------------===//
+
+namespace test_file_name {
+constexpr const char *test_file_name_simple(
+  const char *__f = __builtin_FILE_NAME()) {
+  return __f;
+}
+void test_function() {
+#line 900
+  static_assert(is_equal(test_file_name_simple(), __FILE_NAME__));
+  static_assert(is_equal(SLF::test_function_filename(), __FILE_NAME__), "");
+  static_assert(is_equal(SLF::test_function_filename_template(42),
+                         __FILE_NAME__), "");
+
+  static_assert(is_equal(SLF::test_function_filename_indirect(),
+                         SLF::global_info_filename), "");
+  static_assert(is_equal(SLF::test_function_filename_template_indirect(42),
+                         SLF::global_info_filename), "");
+
+  static_assert(test_file_name_simple() != nullptr);
+  static_assert(is_equal(test_file_name_simple(), "source_location.cpp"));
+}
+
+void test_class() {
+#line 315
+  using SLF::TestClass;
+  constexpr TestClass Default;
+  constexpr TestClass InParam{42};
+  constexpr TestClass Template{42, 42};
+  constexpr auto *F = Default.info_file_name;
+  constexpr auto Char = F[0];
+  static_assert(is_equal(Default.info_file_name, SLF::FILE_NAME), "");
+  static_assert(is_equal(InParam.info_file_name, SLF::FILE_NAME), "");
+  static_assert(is_equal(InParam.ctor_info_file_name, __FILE_NAME__), "");
+}
+
+void test_aggr_class() {
+  using Agg = SLF::AggrClass<>;
+  constexpr Agg Default{};
+  constexpr Agg InitOne{42};
+  static_assert(is_equal(Default.init_info_file_name, __FILE_NAME__), "");
+  static_assert(is_equal(InitOne.init_info_file_name, __FILE_NAME__), "");
+}
+
+} // namespace test_file_name
+
+//===----------------------------------------------------------------------===//
 //                            __builtin_FUNCTION()
 //===----------------------------------------------------------------------===//
 
@@ -354,7 +431,7 @@ static_assert(test_function());
 
 template <class T, class U = SL>
 constexpr Pair<U, U> test_func_template(T, U u = U::current()) {
-  static_assert(is_equal(__func__, U::current().function()));
+  static_assert(is_equal(__PRETTY_FUNCTION__, U::current().function()));
   return {u, U::current()};
 }
 template <class T>
@@ -376,16 +453,130 @@ struct TestCtor {
 void ctor_tests() {
   constexpr TestCtor<> Default;
   constexpr TestCtor<> Template{42};
-  static_assert(!is_equal(Default.info.function(), __func__));
-  static_assert(is_equal(Default.info.function(), "TestCtor"));
-  static_assert(is_equal(Template.info.function(), "TestCtor"));
-  static_assert(is_equal(Template.ctor_info.function(), __func__));
+  static const char *XYZZY = Template.info.function();
+  static_assert(is_equal(Default.info.function(), "test_func::TestCtor<>::TestCtor() [T = std::source_location]"));
+  static_assert(is_equal(Default.ctor_info.function(), ""));
+  static_assert(is_equal(Template.info.function(), "test_func::TestCtor<>::TestCtor(int, U) [T = std::source_location, U = std::source_location]"));
+  static_assert(is_equal(Template.ctor_info.function(), __PRETTY_FUNCTION__));
 }
 
 constexpr SL global_sl = SL::current();
 static_assert(is_equal(global_sl.function(), ""));
 
+template <class T>
+class TestBI {
+public:
+   TestBI() {
+#ifdef MS
+     static_assert(is_equal(__FUNCTION__, "test_func::TestBI<int>::TestBI"));
+#else
+     static_assert(is_equal(__FUNCTION__, "TestBI"));
+#endif
+     static_assert(is_equal(__func__, "TestBI"));
+   }
+};
+
+template <class T>
+class TestClass {
+public:
+   TestClass() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestClass<class test_func::C>::TestClass"));
+#else
+      static_assert(is_equal(__FUNCTION__, "TestClass"));
+#endif
+      static_assert(is_equal(__func__, "TestClass"));
+   }
+};
+
+template <class T>
+class TestStruct {
+public:
+   TestStruct() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestStruct<struct test_func::S>::TestStruct"));
+#else
+      static_assert(is_equal(__FUNCTION__, "TestStruct"));
+#endif
+      static_assert(is_equal(__func__, "TestStruct"));
+   }
+};
+
+template <class T>
+class TestEnum {
+public:
+   TestEnum() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestEnum<enum test_func::E>::TestEnum"));
+#else
+      static_assert(is_equal(__FUNCTION__, "TestEnum"));
+#endif
+      static_assert(is_equal(__func__, "TestEnum"));
+   }
+};
+
+class C {};
+struct S {};
+enum E {};
+
+TestBI<int> t1;
+TestClass<test_func::C> t2;
+TestStruct<test_func::S> t3;
+TestEnum<test_func::E> t4;
+
 } // namespace test_func
+
+
+//===----------------------------------------------------------------------===//
+//                            __builtin_FUNCSIG()
+//===----------------------------------------------------------------------===//
+
+#ifdef MS
+namespace test_funcsig {
+
+constexpr const char *test_funcsig_simple(const char *f = __builtin_FUNCSIG()) {
+  return f;
+}
+constexpr const char *get_funcsig() {
+  return __FUNCSIG__;
+}
+constexpr bool test_funcsig() {
+  return is_equal(__FUNCSIG__, test_funcsig_simple()) &&
+         !is_equal(get_funcsig(), test_funcsig_simple());
+}
+static_assert(test_funcsig());
+
+template <class T>
+constexpr Pair<const char*, const char*> test_funcsig_template(T, const char* f = __builtin_FUNCSIG()) {
+  return {f, __builtin_FUNCSIG()};
+}
+template <class T>
+void func_template_tests() {
+  constexpr auto P = test_funcsig_template(42);
+  static_assert(is_equal(P.first, __FUNCSIG__), "");
+  static_assert(!is_equal(P.second, __FUNCSIG__), "");
+}
+template void func_template_tests<int>();
+
+template <class = int, class T = const char*>
+struct TestCtor {
+  T funcsig = __builtin_FUNCSIG();
+  T ctor_funcsig;
+  TestCtor() = default;
+  template <class F = const char*>
+  constexpr TestCtor(int, F f = __builtin_FUNCSIG()) : ctor_funcsig(f) {}
+};
+void ctor_tests() {
+  constexpr TestCtor<> Template{42};
+  static_assert(is_equal(Template.funcsig, "__cdecl test_funcsig::TestCtor<>::TestCtor(int, F) [T = const char *, F = const char *]"));
+  static_assert(is_equal(Template.ctor_funcsig, __FUNCSIG__));
+}
+
+constexpr const char* global_funcsig = __builtin_FUNCSIG();
+static_assert(is_equal(global_funcsig, ""));
+
+} // namespace test_funcsig
+#endif
 
 //===----------------------------------------------------------------------===//
 //                            __builtin_COLUMN()
@@ -474,6 +665,7 @@ static_assert(SL::current().line() == StartLine + 2);
 #line 44 "test_file.c"
 static_assert(is_equal("test_file.c", __FILE__));
 static_assert(is_equal("test_file.c", __builtin_FILE()));
+static_assert(is_equal("test_file.c", __builtin_FILE_NAME()));
 static_assert(is_equal("test_file.c", SL::current().file()));
 static_assert(is_equal("test_file.c", SLF::test_function().file()));
 static_assert(is_equal(SLF::FILE, SLF::test_function_indirect().file()));
@@ -521,7 +713,7 @@ constexpr bool test_in_func() {
   static_assert(is_equal(b.a.info.file(), "test_func_passed.cpp"));
   static_assert(is_equal(b.a.func, "test_in_func"));
   static_assert(is_equal(b.a.func2, "test_in_func"));
-  static_assert(is_equal(b.a.info.function(), "test_in_func"));
+  static_assert(is_equal(b.a.info.function(), "bool test_out_of_line_init::test_in_func()"));
   return true;
 }
 static_assert(test_in_func());
@@ -587,4 +779,136 @@ namespace TestConstexprContext {
     return true;
   }
   static_assert(test());
+}
+
+namespace Lambda {
+#line 8000 "TestLambda.cpp"
+constexpr int nested_lambda(int l = []{
+  return SL::current().line();
+}()) {
+  return l;
+}
+static_assert(nested_lambda() == __LINE__ - 4);
+
+constexpr int lambda_param(int l = [](int l = SL::current().line()) {
+  return l;
+}()) {
+  return l;
+}
+static_assert(lambda_param() == __LINE__);
+
+
+}
+
+constexpr int compound_literal_fun(int a =
+                  (int){ SL::current().line() }
+) { return a ;}
+static_assert(compound_literal_fun() == __LINE__);
+
+struct CompoundLiteral {
+  int a = (int){ SL::current().line() };
+};
+static_assert(CompoundLiteral{}.a == __LINE__);
+
+
+// FIXME
+// Init captures are subexpressions of the lambda expression
+// so according to the standard immediate invocations in init captures
+// should be evaluated at the call site.
+// However Clang does not yet implement this as it would introduce
+// a fair bit of complexity.
+// We intend to implement that functionality once we find real world
+// use cases that require it.
+constexpr int test_init_capture(int a =
+                [b = SL::current().line()] { return b; }()) {
+  return a;
+}
+#if defined(USE_CONSTEVAL) && !defined(NEW_INTERP)
+static_assert(test_init_capture() == __LINE__ - 4);
+#else
+static_assert(test_init_capture() == __LINE__ );
+#endif
+
+namespace check_immediate_invocations_in_templates {
+
+template <typename T = int>
+struct G {
+    T line = __builtin_LINE();
+};
+template <typename T>
+struct S {
+    int i = G<T>{}.line;
+};
+static_assert(S<int>{}.i != // intentional new line
+              S<int>{}.i);
+
+template <typename T>
+constexpr int f(int i = G<T>{}.line) {
+    return i;
+}
+
+static_assert(f<int>() != // intentional new line
+              f<int>());
+}
+
+#ifdef PAREN_INIT
+namespace GH63903 {
+struct S {
+    int _;
+    int i = SL::current().line();
+    int j = __builtin_LINE();
+};
+// Ensure parent aggregate initialization is consistent with brace
+// aggregate initialization.
+// Note: consteval functions are evaluated where they are used.
+static_assert(S(0).i == __builtin_LINE());
+static_assert(S(0).i == S{0}.i);
+static_assert(S(0).j == S{0}.j);
+static_assert(S(0).j == S{0}.i);
+}
+#endif
+
+namespace GH78128 {
+
+template<int N>
+constexpr int f() {
+  return N;
+}
+
+template<typename T>
+void foo() {
+  constexpr auto* F1 = std::source_location::current().function();
+  static_assert(__builtin_strlen(F1) == f<__builtin_strlen(F1)>());
+
+  constexpr auto* F2 = __builtin_FUNCTION();
+  static_assert(__builtin_strlen(F2) == f<__builtin_strlen(F2)>());
+
+#ifdef MS
+  constexpr auto* F3 = __builtin_FUNCSIG();
+  static_assert(__builtin_strlen(F3) == f<__builtin_strlen(F3)>());
+#endif
+}
+
+void test() {
+  foo<int>();
+}
+
+}
+
+namespace GH80630 {
+
+#define GH80630_LAMBDA \
+    []( char const* fn ) { \
+        static constexpr std::source_location loc = std::source_location::current(); \
+        return &loc; \
+    }( std::source_location::current().function() )
+
+auto f( std::source_location const* loc = GH80630_LAMBDA ) {
+    return loc;
+}
+
+auto g() {
+    return f();
+}
+
 }

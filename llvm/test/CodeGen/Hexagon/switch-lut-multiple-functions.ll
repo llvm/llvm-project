@@ -17,8 +17,8 @@ entry:
   br i1 %0, label %switch.lookup, label %return
 
 switch.lookup:                                    ; preds = %entry
-  %switch.gep = getelementptr inbounds [9 x i32], [9 x i32]* @switch.table, i32 0, i32 %x
-  %switch.load = load i32, i32* %switch.gep, align 4
+  %switch.gep = getelementptr inbounds [9 x i32], ptr @switch.table, i32 0, i32 %x
+  %switch.load = load i32, ptr %switch.gep, align 4
   ret i32 %switch.load
 
 return:                                           ; preds = %entry
@@ -31,8 +31,8 @@ entry:
   br i1 %0, label %switch.lookup, label %return
 
 switch.lookup:                                    ; preds = %entry
-  %switch.gep = getelementptr inbounds [9 x i32], [9 x i32]* @switch.table, i32 0, i32 %x
-  %switch.load = load i32, i32* %switch.gep, align 4
+  %switch.gep = getelementptr inbounds [9 x i32], ptr @switch.table, i32 0, i32 %x
+  %switch.load = load i32, ptr %switch.gep, align 4
   ret i32 %switch.load
 
 return:                                           ; preds = %entry

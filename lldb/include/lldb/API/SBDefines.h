@@ -15,12 +15,38 @@
 #include "lldb/lldb-types.h"
 #include "lldb/lldb-versioning.h"
 
+#include <cstdio> // For FILE *
+
+#ifndef LLDB_API
+#if defined(_WIN32)
+#if defined(LLDB_IN_LIBLLDB)
+#define LLDB_API __declspec(dllexport)
+#else
+#define LLDB_API __declspec(dllimport)
+#endif
+#else // defined (_WIN32)
+#define LLDB_API
+#endif
+#endif
+
+// Don't add the deprecated attribute when generating the bindings or when
+// building for anything older than C++14 which is the first version that
+// supports the attribute.
+#if defined(SWIG) || _cplusplus < 201402L
+#undef LLDB_DEPRECATED
+#undef LLDB_DEPRECATED_FIXME
+#define LLDB_DEPRECATED(MSG)
+#define LLDB_DEPRECATED_FIXME(MSG, FIX)
+#endif
+
 // Forward Declarations
 namespace lldb {
 
 class LLDB_API SBAddress;
+class LLDB_API SBAttachInfo;
 class LLDB_API SBBlock;
 class LLDB_API SBBreakpoint;
+class LLDB_API SBBreakpointList;
 class LLDB_API SBBreakpointLocation;
 class LLDB_API SBBreakpointName;
 class LLDB_API SBBreakpointNameImpl;
@@ -45,6 +71,7 @@ class LLDB_API SBExpressionOptions;
 class LLDB_API SBFile;
 class LLDB_API SBFileSpec;
 class LLDB_API SBFileSpecList;
+class LLDB_API SBFormat;
 class LLDB_API SBFrame;
 class LLDB_API SBFunction;
 class LLDB_API SBHostOS;
@@ -59,12 +86,20 @@ class LLDB_API SBMemoryRegionInfoList;
 class LLDB_API SBModule;
 class LLDB_API SBModuleSpec;
 class LLDB_API SBModuleSpecList;
+class LLDB_API SBPlatform;
+class LLDB_API SBPlatformConnectOptions;
+class LLDB_API SBPlatformShellCommand;
 class LLDB_API SBProcess;
 class LLDB_API SBProcessInfo;
+class LLDB_API SBProcessInfoList;
 class LLDB_API SBQueue;
 class LLDB_API SBQueueItem;
+class LLDB_API SBReplayOptions;
+class LLDB_API SBReproducer;
+class LLDB_API SBScriptObject;
 class LLDB_API SBSection;
 class LLDB_API SBSourceManager;
+class LLDB_API SBStatisticsOptions;
 class LLDB_API SBStream;
 class LLDB_API SBStringList;
 class LLDB_API SBStructuredData;
@@ -76,13 +111,14 @@ class LLDB_API SBThread;
 class LLDB_API SBThreadCollection;
 class LLDB_API SBThreadPlan;
 class LLDB_API SBTrace;
-class LLDB_API SBTraceOptions;
+class LLDB_API SBTraceCursor;
 class LLDB_API SBType;
 class LLDB_API SBTypeCategory;
 class LLDB_API SBTypeEnumMember;
 class LLDB_API SBTypeEnumMemberList;
 class LLDB_API SBTypeFilter;
 class LLDB_API SBTypeFormat;
+class LLDB_API SBTypeMember;
 class LLDB_API SBTypeMemberFunction;
 class LLDB_API SBTypeNameSpecifier;
 class LLDB_API SBTypeSummary;
@@ -93,11 +129,19 @@ class LLDB_API SBValue;
 class LLDB_API SBValueList;
 class LLDB_API SBVariablesOptions;
 class LLDB_API SBWatchpoint;
+class LLDB_API SBWatchpointOptions;
 class LLDB_API SBUnixSignals;
 
 typedef bool (*SBBreakpointHitCallback)(void *baton, SBProcess &process,
                                         SBThread &thread,
                                         lldb::SBBreakpointLocation &location);
+
+typedef void (*SBDebuggerDestroyCallback)(lldb::user_id_t debugger_id,
+                                          void *baton);
+
+typedef SBError (*SBPlatformLocateModuleCallback)(
+    void *baton, const SBModuleSpec &module_spec, SBFileSpec &module_file_spec,
+    SBFileSpec &symbol_file_spec);
 }
 
 #endif // LLDB_API_SBDEFINES_H

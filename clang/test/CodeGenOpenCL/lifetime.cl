@@ -9,7 +9,7 @@ __attribute__((always_inline)) void helper_no_markers() {
 }
 
 void lifetime_test() {
-// CHECK: @llvm.lifetime.start.p0i
-// AMDGCN: @llvm.lifetime.start.p5i
+// CHECK: @llvm.lifetime.start.p0
+// AMDGCN: @llvm.lifetime.start.p5
   helper_no_markers();
 }

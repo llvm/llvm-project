@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/PackedVersion.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
@@ -29,7 +28,7 @@ bool PackedVersion::parse32(StringRef Str) {
   SmallVector<StringRef, 3> Parts;
   SplitString(Str, Parts, ".");
 
-  if (Parts.size() > 3)
+  if (Parts.size() > 3 || Parts.empty())
     return false;
 
   unsigned long long Num;
@@ -64,7 +63,7 @@ std::pair<bool, bool> PackedVersion::parse64(StringRef Str) {
   SmallVector<StringRef, 5> Parts;
   SplitString(Str, Parts, ".");
 
-  if (Parts.size() > 5)
+  if (Parts.size() > 5 || Parts.empty())
     return std::make_pair(false, Truncated);
 
   unsigned long long Num;
@@ -99,6 +98,13 @@ std::pair<bool, bool> PackedVersion::parse64(StringRef Str) {
     Truncated = true;
 
   return std::make_pair(true, Truncated);
+}
+
+PackedVersion::operator std::string() const {
+  SmallString<32> Str;
+  raw_svector_ostream OS(Str);
+  print(OS);
+  return std::string(Str);
 }
 
 void PackedVersion::print(raw_ostream &OS) const {

@@ -30,12 +30,13 @@ class CloneChecker
 public:
   // Checker options.
   int MinComplexity;
-  bool ReportNormalClones;
+  bool ReportNormalClones = false;
   StringRef IgnoredFilesPattern;
 
 private:
   mutable CloneDetector Detector;
-  mutable std::unique_ptr<BugType> BT_Exact, BT_Suspicious;
+  const BugType BT_Exact{this, "Exact code clone", "Code clone"};
+  const BugType BT_Suspicious{this, "Suspicious code clone", "Code clone"};
 
 public:
   void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
@@ -107,15 +108,11 @@ static PathDiagnosticLocation makeLocation(const StmtSequence &S,
 void CloneChecker::reportClones(
     BugReporter &BR, AnalysisManager &Mgr,
     std::vector<CloneDetector::CloneGroup> &CloneGroups) const {
-
-  if (!BT_Exact)
-    BT_Exact.reset(new BugType(this, "Exact code clone", "Code clone"));
-
   for (const CloneDetector::CloneGroup &Group : CloneGroups) {
     // We group the clones by printing the first as a warning and all others
     // as a note.
     auto R = std::make_unique<BasicBugReport>(
-        *BT_Exact, "Duplicate code detected", makeLocation(Group.front(), Mgr));
+        BT_Exact, "Duplicate code detected", makeLocation(Group.front(), Mgr));
     R->addRange(Group.front().getSourceRange());
 
     for (unsigned i = 1; i < Group.size(); ++i)
@@ -154,10 +151,6 @@ void CloneChecker::reportSuspiciousClones(
     }
   }
 
-  if (!BT_Suspicious)
-    BT_Suspicious.reset(
-        new BugType(this, "Suspicious code clone", "Code clone"));
-
   ASTContext &ACtx = BR.getContext();
   SourceManager &SM = ACtx.getSourceManager();
   AnalysisDeclContext *ADC =
@@ -170,7 +163,7 @@ void CloneChecker::reportSuspiciousClones(
     // Think how to perform more accurate suggestions?
 
     auto R = std::make_unique<BasicBugReport>(
-        *BT_Suspicious,
+        BT_Suspicious,
         "Potential copy-paste error; did you really mean to use '" +
             Pair.FirstCloneInfo.Variable->getNameAsString() + "' here?",
         PathDiagnosticLocation::createBegin(Pair.FirstCloneInfo.Mention, SM,

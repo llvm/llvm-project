@@ -7,15 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
 
-Error CodeViewRecordIO::beginRecord(Optional<uint32_t> MaxLength) {
+Error CodeViewRecordIO::beginRecord(std::optional<uint32_t> MaxLength) {
   RecordLimit Limit;
   Limit.MaxLength = MaxLength;
   Limit.BeginOffset = getCurrentOffset();
@@ -65,13 +68,13 @@ uint32_t CodeViewRecordIO::maxFieldLength() const {
   // ever be at most 1 sub-record deep (in a FieldList), but this works for
   // the general case.
   uint32_t Offset = getCurrentOffset();
-  Optional<uint32_t> Min = Limits.front().bytesRemaining(Offset);
-  for (auto X : makeArrayRef(Limits).drop_front()) {
-    Optional<uint32_t> ThisMin = X.bytesRemaining(Offset);
-    if (ThisMin.hasValue())
-      Min = (Min.hasValue()) ? std::min(*Min, *ThisMin) : *ThisMin;
+  std::optional<uint32_t> Min = Limits.front().bytesRemaining(Offset);
+  for (auto X : ArrayRef(Limits).drop_front()) {
+    std::optional<uint32_t> ThisMin = X.bytesRemaining(Offset);
+    if (ThisMin)
+      Min = Min ? std::min(*Min, *ThisMin) : *ThisMin;
   }
-  assert(Min.hasValue() && "Every field must have a maximum length!");
+  assert(Min && "Every field must have a maximum length!");
 
   return *Min;
 }
@@ -188,14 +191,17 @@ Error CodeViewRecordIO::mapEncodedInteger(uint64_t &Value,
 
 Error CodeViewRecordIO::mapEncodedInteger(APSInt &Value, const Twine &Comment) {
   if (isStreaming()) {
+    // FIXME: We also need to handle big values here, but it's
+    //        not clear how we can excercise this code path yet.
     if (Value.isSigned())
       emitEncodedSignedInteger(Value.getSExtValue(), Comment);
     else
       emitEncodedUnsignedInteger(Value.getZExtValue(), Comment);
   } else if (isWriting()) {
     if (Value.isSigned())
-      return writeEncodedSignedInteger(Value.getSExtValue());
-    return writeEncodedUnsignedInteger(Value.getZExtValue());
+      return writeEncodedSignedInteger(
+          Value.isSingleWord() ? Value.getSExtValue() : INT64_MIN);
+    return writeEncodedUnsignedInteger(Value.getLimitedValue());
   } else
     return consume(*Reader, Value);
   return Error::success();
@@ -273,17 +279,27 @@ Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value,
 
 void CodeViewRecordIO::emitEncodedSignedInteger(const int64_t &Value,
                                                 const Twine &Comment) {
-  if (Value >= std::numeric_limits<int8_t>::min()) {
+  // FIXME: There are no test cases covering this function.
+  // This may be because we always consider enumerators to be unsigned.
+  // See FIXME at CodeViewDebug.cpp : CodeViewDebug::lowerTypeEnum.
+  if (Value < LF_NUMERIC && Value >= 0) {
+    emitComment(Comment);
+    Streamer->emitIntValue(Value, 2);
+    incrStreamedLen(2);
+  } else if (Value >= std::numeric_limits<int8_t>::min() &&
+             Value <= std::numeric_limits<int8_t>::max()) {
     Streamer->emitIntValue(LF_CHAR, 2);
     emitComment(Comment);
     Streamer->emitIntValue(Value, 1);
     incrStreamedLen(3);
-  } else if (Value >= std::numeric_limits<int16_t>::min()) {
+  } else if (Value >= std::numeric_limits<int16_t>::min() &&
+             Value <= std::numeric_limits<int16_t>::max()) {
     Streamer->emitIntValue(LF_SHORT, 2);
     emitComment(Comment);
     Streamer->emitIntValue(Value, 2);
     incrStreamedLen(4);
-  } else if (Value >= std::numeric_limits<int32_t>::min()) {
+  } else if (Value >= std::numeric_limits<int32_t>::min() &&
+             Value <= std::numeric_limits<int32_t>::max()) {
     Streamer->emitIntValue(LF_LONG, 2);
     emitComment(Comment);
     Streamer->emitIntValue(Value, 4);
@@ -291,8 +307,8 @@ void CodeViewRecordIO::emitEncodedSignedInteger(const int64_t &Value,
   } else {
     Streamer->emitIntValue(LF_QUADWORD, 2);
     emitComment(Comment);
-    Streamer->emitIntValue(Value, 4);
-    incrStreamedLen(6);
+    Streamer->emitIntValue(Value, 4); // FIXME: Why not 8 (size of quadword)?
+    incrStreamedLen(6);               // FIXME: Why not 10 (8 + 2)?
   }
 }
 
@@ -313,25 +329,32 @@ void CodeViewRecordIO::emitEncodedUnsignedInteger(const uint64_t &Value,
     Streamer->emitIntValue(Value, 4);
     incrStreamedLen(6);
   } else {
+    // FIXME: There are no test cases covering this block.
     Streamer->emitIntValue(LF_UQUADWORD, 2);
     emitComment(Comment);
     Streamer->emitIntValue(Value, 8);
-    incrStreamedLen(6);
+    incrStreamedLen(6); // FIXME: Why not 10 (8 + 2)?
   }
 }
 
 Error CodeViewRecordIO::writeEncodedSignedInteger(const int64_t &Value) {
-  if (Value >= std::numeric_limits<int8_t>::min()) {
+  if (Value < LF_NUMERIC && Value >= 0) {
+    if (auto EC = Writer->writeInteger<int16_t>(Value))
+      return EC;
+  } else if (Value >= std::numeric_limits<int8_t>::min() &&
+             Value <= std::numeric_limits<int8_t>::max()) {
     if (auto EC = Writer->writeInteger<uint16_t>(LF_CHAR))
       return EC;
     if (auto EC = Writer->writeInteger<int8_t>(Value))
       return EC;
-  } else if (Value >= std::numeric_limits<int16_t>::min()) {
+  } else if (Value >= std::numeric_limits<int16_t>::min() &&
+             Value <= std::numeric_limits<int16_t>::max()) {
     if (auto EC = Writer->writeInteger<uint16_t>(LF_SHORT))
       return EC;
     if (auto EC = Writer->writeInteger<int16_t>(Value))
       return EC;
-  } else if (Value >= std::numeric_limits<int32_t>::min()) {
+  } else if (Value >= std::numeric_limits<int32_t>::min() &&
+             Value <= std::numeric_limits<int32_t>::max()) {
     if (auto EC = Writer->writeInteger<uint16_t>(LF_LONG))
       return EC;
     if (auto EC = Writer->writeInteger<int32_t>(Value))

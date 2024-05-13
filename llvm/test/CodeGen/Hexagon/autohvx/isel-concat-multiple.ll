@@ -2,18 +2,18 @@
 
 ; This code generates a concat_vectors with more than 2 inputs. Make sure
 ; that this compiles successfully.
-; CHECK: vlsr
+; CHECK: lsr
 
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 
-define void @fred(i32* %a0, i32* %a1, i8* %a2) #0 {
+define void @fred(ptr %a0, ptr %a1, ptr %a2) #0 {
 b0:
-  %v1 = load i32, i32* %a0, align 4
+  %v1 = load i32, ptr %a0, align 4
   %v2 = mul nsw i32 %v1, -15137
   %v3 = add nsw i32 0, %v2
   %v4 = sub nsw i32 0, %v3
-  %v5 = load i32, i32* %a1, align 4
+  %v5 = load i32, ptr %a1, align 4
   %v6 = insertelement <2 x i32> undef, i32 %v5, i32 1
   %v7 = add nsw <2 x i32> %v6, %v6
   %v8 = extractelement <2 x i32> %v7, i32 0
@@ -26,9 +26,9 @@ b0:
   %v15 = lshr <8 x i32> %v14, <i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18>
   %v16 = and <8 x i32> %v15, %v14
   %v17 = extractelement <8 x i32> %v16, i32 5
-  %v18 = getelementptr inbounds i8, i8* null, i32 %v17
-  %v19 = load i8, i8* %v18, align 1
-  store i8 %v19, i8* %a2, align 1
+  %v18 = getelementptr inbounds i8, ptr null, i32 %v17
+  %v19 = load i8, ptr %v18, align 1
+  store i8 %v19, ptr %a2, align 1
   ret void
 }
 

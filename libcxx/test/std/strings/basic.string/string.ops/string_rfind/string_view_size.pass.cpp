@@ -8,7 +8,7 @@
 
 // <string>
 
-// size_type rfind(basic_string_view sv, size_type pos = npos) const;
+// size_type rfind(basic_string_view sv, size_type pos = npos) const; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -17,28 +17,27 @@
 #include "min_allocator.h"
 
 template <class S, class SV>
-void
-test(const S& s, SV sv, typename S::size_type pos, typename S::size_type x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.rfind(sv, pos));
-    assert(s.rfind(sv, pos) == x);
-    if (x != S::npos)
-        assert(x <= pos && x + sv.size() <= s.size());
+TEST_CONSTEXPR_CXX20 void test(const S& s, SV sv, typename S::size_type pos, typename S::size_type x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.rfind(sv, pos));
+  assert(s.rfind(sv, pos) == x);
+  if (x != S::npos)
+    assert(x <= pos && x + sv.size() <= s.size());
 }
 
 template <class S, class SV>
-void
-test(const S& s, SV sv, typename S::size_type x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.rfind(sv));
-    assert(s.rfind(sv) == x);
-    if (x != S::npos)
-        assert(0 <= x && x + sv.size() <= s.size());
+TEST_CONSTEXPR_CXX20 void test(const S& s, SV sv, typename S::size_type x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.rfind(sv));
+  assert(s.rfind(sv) == x);
+  if (x != S::npos)
+    assert(0 <= x && x + sv.size() <= s.size());
 }
 
-template <class S, class SV>
-void test0()
-{
+template <class CharT, template <class> class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  using S  = std::basic_string<CharT, std::char_traits<CharT>, Alloc<CharT> >;
+  using SV = std::basic_string_view<CharT, std::char_traits<CharT> >;
+
+  {
     test(S(""), SV(""), 0, 0);
     test(S(""), SV("abcde"), 0, S::npos);
     test(S(""), SV("abcdeabcde"), 0, S::npos);
@@ -119,11 +118,9 @@ void test0()
     test(S("abcdeabcdeabcdeabcde"), SV("abcde"), 21, 15);
     test(S("abcdeabcdeabcdeabcde"), SV("abcdeabcde"), 21, 10);
     test(S("abcdeabcdeabcdeabcde"), SV("abcdeabcdeabcdeabcde"), 21, 0);
-}
+  }
 
-template <class S, class SV>
-void test1()
-{
+  {
     test(S(""), SV(""), 0);
     test(S(""), SV("abcde"), S::npos);
     test(S(""), SV("abcdeabcde"), S::npos);
@@ -140,23 +137,22 @@ void test1()
     test(S("abcdeabcdeabcdeabcde"), SV("abcde"), 15);
     test(S("abcdeabcdeabcdeabcde"), SV("abcdeabcde"), 10);
     test(S("abcdeabcdeabcdeabcde"), SV("abcdeabcdeabcdeabcde"), 0);
+  }
 }
 
-int main(int, char**)
-{
-    {
-    typedef std::string S;
-    typedef std::string_view SV;
-    test0<S, SV>();
-    test1<S, SV>();
-    }
+TEST_CONSTEXPR_CXX20 bool tests() {
+  test_string<char, std::allocator>();
 #if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    typedef std::string_view SV;
-    test0<S, SV>();
-    test1<S, SV>();
-    }
+  test_string<char, min_allocator>();
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER > 17
+  static_assert(tests());
 #endif
 
   return 0;

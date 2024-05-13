@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s \
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s \
 ; RUN:  -polly-invariant-load-hoisting \
 ; RUN:  | FileCheck %s
 
@@ -42,7 +42,7 @@
 ; CHECK-NEXT:             { Stmt_body2[i0] -> MemRef_baseA2[0] };
 ; CHECK-NEXT: }
 
-define void @foo(float** %A, float* %B) {
+define void @foo(ptr %A, ptr %B) {
 start:
   br label %loop
 
@@ -53,17 +53,17 @@ loop:
   br i1 %icmp, label %body1, label %exit
 
 body1:
-  %baseA1 = load float*, float** %A
-  %ptr = getelementptr inbounds float, float* %baseA1, i64 %indvar
-  %v0 = load float, float* %ptr
-  %v1 = load float, float* %baseA1
-  store float %v0, float* %B
-  store float %v1, float* %B
+  %baseA1 = load ptr, ptr %A
+  %ptr = getelementptr inbounds float, ptr %baseA1, i64 %indvar
+  %v0 = load float, ptr %ptr
+  %v1 = load float, ptr %baseA1
+  store float %v0, ptr %B
+  store float %v1, ptr %B
   br label %body2
 
 body2:
-  %baseA2 = load float*, float** %A
-  store float undef, float* %baseA2
+  %baseA2 = load ptr, ptr %A
+  store float undef, ptr %baseA2
   br label %body3
 
 body3:

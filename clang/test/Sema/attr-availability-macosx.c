@@ -12,7 +12,7 @@ void f4(int) __attribute__((availability(macosx,introduced=10.1,deprecated=10.3,
 void f5(int) __attribute__((availability(ios,introduced=3.2), availability(macosx,unavailable))); // expected-note{{'f5' has been explicitly marked unavailable here}}
 void f6(int) __attribute__((availability(macOS,strict,introduced=10.6))); //expected-note{{'f6' has been explicitly marked unavailable here}}
 
-void test() {
+void test(void) {
   f0(0);
   f1(0);
   f2(0); // expected-warning{{'f2' is deprecated: first deprecated in macOS 10.5}}
@@ -32,8 +32,6 @@ void uses_not_introduced_struct(struct not_yet_introduced_struct *); // \
 __attribute__((availability(macosx,strict,introduced=10.6)))
 void uses_not_introduced_struct_same_availability(struct not_yet_introduced_struct *);
 
-// rdar://10535640
-
 enum {
     foo __attribute__((availability(macosx,introduced=8.0,deprecated=9.0)))
 };
@@ -52,7 +50,7 @@ struct __attribute__((availability(macOS,strict,introduced=10.9))) type_info // 
 {
 };
 struct type_info;
-int test2() {
+int test2(void) {
   struct type_info *t; // expected-error{{'type_info' is unavailable: introduced in macOS 10.9}}
   return 0;
 }

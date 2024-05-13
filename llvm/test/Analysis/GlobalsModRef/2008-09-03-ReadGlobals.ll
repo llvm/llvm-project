@@ -1,9 +1,9 @@
-; RUN: opt < %s -globals-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=globals-aa -passes='require<globals-aa>,gvn' -S | FileCheck %s
 
-@g = internal global i32 0		; <i32*> [#uses=2]
+@g = internal global i32 0		; <ptr> [#uses=2]
 
 define i32 @r() {
-	%tmp = load i32, i32* @g		; <i32> [#uses=1]
+	%tmp = load i32, ptr @g		; <i32> [#uses=1]
 	ret i32 %tmp
 }
 
@@ -12,7 +12,7 @@ define i32 @f() {
 ; CHECK: call i32 @e()
 entry:
 	%tmp = call i32 @e( )		; <i32> [#uses=1]
-	store i32 %tmp, i32* @g
+	store i32 %tmp, ptr @g
 	%tmp2 = call i32 @e( )		; <i32> [#uses=1]
 	ret i32 %tmp2
 }

@@ -14,4 +14,4 @@ C::~C() {}
 
 // CHECK: define dso_local dllexport void @"??1C@@UEAA@XZ"
 // This thunk should *not* be dllexport.
-// CHECK: define linkonce_odr dso_local i8* @"??_EC@@W7EAAPEAXI@Z"
+// CHECK: define linkonce_odr dso_local noundef ptr @"??_EC@@W7EAAPEAXI@Z"

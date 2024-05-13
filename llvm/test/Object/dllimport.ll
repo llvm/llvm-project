@@ -12,6 +12,6 @@ declare dllimport void @f()
 
 define void @g() {
   call void @f()
-  store i32 42, i32* @v
+  store i32 42, ptr @v
   ret void
 }

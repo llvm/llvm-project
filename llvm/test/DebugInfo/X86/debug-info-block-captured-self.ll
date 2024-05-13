@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple x86_64-apple-darwin -filetype=obj -o %t.o < %s
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s
 ;
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple x86_64-apple-darwin -filetype=obj -o %t.o < %s
+; RUN: llvm-dwarfdump %t.o | FileCheck %s
+;
 ; Test that DW_AT_location is generated for a captured "self" inside a
 ; block.
 ;
@@ -64,17 +67,15 @@
 %0 = type opaque
 %struct.__block_descriptor = type { i64, i64 }
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-define internal void @"__24-[Main initWithContext:]_block_invoke"(i8* %.block_descriptor, i8* %obj) #0 !dbg !38 {
-  %block = bitcast i8* %.block_descriptor to <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>*, !dbg !84
-  %block.captured-self = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>* %block, i32 0, i32 5, !dbg !84
-  call void @llvm.dbg.declare(metadata <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>* %block, metadata !86, metadata !110), !dbg !87
+define internal void @"__24-[Main initWithContext:]_block_invoke"(ptr %.block_descriptor, ptr %obj) #0 !dbg !38 {
+  %block.captured-self = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %.block_descriptor, i32 0, i32 5, !dbg !84
+  call void @llvm.dbg.declare(metadata ptr %.block_descriptor, metadata !86, metadata !110), !dbg !87
   ret void, !dbg !87
 }
 
-define internal void @"__24-[Main initWithContext:]_block_invoke_2"(i8* %.block_descriptor, i8* %object) #0 !dbg !42 {
-  %block = bitcast i8* %.block_descriptor to <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>*, !dbg !103
-  %block.captured-self = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>* %block, i32 0, i32 5, !dbg !103
-  call void @llvm.dbg.declare(metadata <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>* %block, metadata !105, metadata !109), !dbg !106
+define internal void @"__24-[Main initWithContext:]_block_invoke_2"(ptr %.block_descriptor, ptr %object) #0 !dbg !42 {
+  %block.captured-self = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %.block_descriptor, i32 0, i32 5, !dbg !103
+  call void @llvm.dbg.declare(metadata ptr %.block_descriptor, metadata !105, metadata !109), !dbg !106
   ret void, !dbg !106
 }
 

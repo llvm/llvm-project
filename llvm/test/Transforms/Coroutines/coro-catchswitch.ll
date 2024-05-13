@@ -1,17 +1,16 @@
 ; Verifies that we can insert the spill for a PHI preceding the catchswitch
-; RUN: opt < %s -coro-split -S | FileCheck %s
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc"
 
 ; CHECK-LABEL: define void @f(
-define void @f(i1 %cond) "coroutine.presplit"="1" personality i32 0 {
+define void @f(i1 %cond) presplitcoroutine personality i32 0 {
 entry:
-  %id = call token @llvm.coro.id(i32 8, i8* null, i8* null, i8* null)
+  %id = call token @llvm.coro.id(i32 8, ptr null, ptr null, ptr null)
   %size = call i32 @llvm.coro.size.i32()
-  %alloc = call i8* @malloc(i32 %size)
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* %alloc)
+  %alloc = call ptr @malloc(i32 %size)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
   br i1 %cond, label %if.else, label %if.then
 
 if.then:
@@ -32,15 +31,15 @@ catch.dispatch:                                   ; preds = %if.else, %if.then
 ; CHECK: catch.dispatch:
 ; CHECK:  %val = phi i32 [ 2, %if.else ], [ 1, %if.then ]
 ; CHECK:  %[[Pad:.+]] = cleanuppad within none []
-; CHECK:  %val.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 2
-; CHECK:  store i32 %val, i32* %val.spill.addr
+; CHECK:  %val.spill.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
+; CHECK:  store i32 %val, ptr %val.spill.addr
 ; CHECK:  cleanupret from %[[Pad]] unwind label %[[Switch:.+]]
 
 ; CHECK: [[Switch]]:
 ; CHECK: %switch = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %pad = catchpad within %switch [i8* null, i32 64, i8* null]
+  %pad = catchpad within %switch [ptr null, i32 64, ptr null]
   catchret from %pad to label %suspend
 
 suspend:
@@ -55,7 +54,7 @@ resume:                                   ; preds = %await2.suspend
   br label %coro.ret
 
 coro.ret:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
     ret void
 
 cleanuppad:
@@ -64,26 +63,26 @@ cleanuppad:
 }
 
 ; Function Attrs: argmemonly nounwind readonly
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #1
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
 
 ; Function Attrs: nounwind
 declare i1 @llvm.coro.alloc(token) #2
 
 ; Function Attrs: nobuiltin
 declare i32 @llvm.coro.size.i32() #4
-declare i8* @llvm.coro.begin(token, i8* writeonly) #2
-declare token @llvm.coro.save(i8*)
+declare ptr @llvm.coro.begin(token, ptr writeonly) #2
+declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
 
 declare void @may_throw1()
 declare void @may_throw2()
 declare void @print(i32)
-declare noalias i8* @malloc(i32)
-declare void @free(i8*)
+declare noalias ptr @malloc(i32)
+declare void @free(ptr)
 
-declare i1 @llvm.coro.end(i8*, i1) #2
+declare i1 @llvm.coro.end(ptr, i1, token) #2
 
 ; Function Attrs: nobuiltin nounwind
 
 ; Function Attrs: argmemonly nounwind readonly
-declare i8* @llvm.coro.free(token, i8* nocapture readonly) #1
+declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1

@@ -1,6 +1,9 @@
 ; RUN: llc -mcpu=core2 -mtriple=i686-pc-win32 -o - -O0 -filetype=obj < %s \
 ; RUN:   | llvm-readobj --codeview - | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators -mcpu=core2 -mtriple=i686-pc-win32 -o - -O0 -filetype=obj < %s \
+; RUN:   | llvm-readobj --codeview - | FileCheck %s
+
 ; C++ source to regenerate:
 ; namespace foo {
 ; int bar(int x) { return x * 2; }
@@ -45,9 +48,9 @@ $"??6S@@QAEXH@Z" = comdat any
 define i32 @"\01?bar@foo@@YAHH@Z"(i32 %x) #0 !dbg !6 {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !11, metadata !12), !dbg !13
-  %0 = load i32, i32* %x.addr, align 4, !dbg !14
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !11, metadata !12), !dbg !13
+  %0 = load i32, ptr %x.addr, align 4, !dbg !14
   %mul = mul nsw i32 %0, 2, !dbg !15
   ret i32 %mul, !dbg !16
 }
@@ -62,13 +65,13 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define linkonce_odr void @"??6S@@QAEXH@Z"(%struct.S* nonnull dereferenceable(1) %this, i32 %i) #0 !dbg !31 {
+define linkonce_odr void @"??6S@@QAEXH@Z"(ptr nonnull dereferenceable(1) %this, i32 %i) #0 !dbg !31 {
 entry:
   %i.addr = alloca i32, align 4
-  %this.addr = alloca %struct.S*, align 4
-  store i32 %i, i32* %i.addr, align 4
-  store %struct.S* %this, %struct.S** %this.addr, align 4
-  %this1 = load %struct.S*, %struct.S** %this.addr, align 4
+  %this.addr = alloca ptr, align 4
+  store i32 %i, ptr %i.addr, align 4
+  store ptr %this, ptr %this.addr, align 4
+  %this1 = load ptr, ptr %this.addr, align 4
   ret void, !dbg !32
 }
 
@@ -101,7 +104,7 @@ attributes #1 = { nounwind readnone }
 !19 = !{null}
 !20 = !{!21, !22}
 !21 = !DITemplateTypeParameter(name: "T", type: !10)
-!22 = !DITemplateValueParameter(type: !23, value: i32 (i32)* @"\01?bar@foo@@YAHH@Z")
+!22 = !DITemplateValueParameter(type: !23, value: ptr @"\01?bar@foo@@YAHH@Z")
 !23 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 32, align: 32)
 !24 = !DILocation(line: 4, column: 17, scope: !17)
 !25 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !1, line: 7, size: 8, flags: DIFlagTypePassByValue, elements: !26, identifier: ".?AUS@@")

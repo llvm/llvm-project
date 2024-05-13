@@ -2,6 +2,21 @@
 // RUN: %clang_cc1 -std=c++11 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
 // RUN: %clang_cc1 -std=c++17 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=i386-pc-win32 | FileCheck %s
 // RUN: %clang_cc1 -std=c++17 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
+// RUN: %clang_cc1 -std=c++20 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix CXX20-X64 %s
+
+// Check that array-to-pointer decay is mangled as the underlying declaration.
+extern const char arr[4] = "foo";
+template<const char*> struct Decay1 {};
+// CHECK: "?decay1@@3U?$Decay1@$1?arr@@3QBDB@@A"
+Decay1<arr> decay1;
+#if __cplusplus >= 201702L
+// Note that this mangling approach can lead to collisions.
+template<const void*> struct Decay2 {};
+// CXX20-X64: "?decay2a@@3U?$Decay2@$1?arr@@3QBDB@@A"
+Decay2<(const void*)arr> decay2a;
+// CXX20-X64: "?decay2b@@3U?$Decay2@$1?arr@@3QBDB@@A"
+Decay2<(const void*)&arr> decay2b;
+#endif
 
 template<typename T>
 class Class {
@@ -272,7 +287,7 @@ struct type1 {
 };
 extern const record inst;
 void recref(type1<inst>) {}
-// CHECK: "?recref@@YAXU?$type1@$E?inst@@3Urecord@@B@@@Z"
+// CHECK: "?recref@@YAXU?$type1@$1?inst@@3Urecord@@B@@@Z"
 
 struct _GUID {};
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890aB}")) uuid;
@@ -286,7 +301,7 @@ struct UUIDType2 {};
 void fun(UUIDType1<uuid> a) {}
 // CHECK: "?fun@@YAXU?$UUIDType1@Uuuid@@$1?_GUID_12345678_1234_1234_1234_1234567890ab@@3U__s_GUID@@B@@@Z"
 void fun(UUIDType2<uuid> b) {}
-// CHECK: "?fun@@YAXU?$UUIDType2@Uuuid@@$E?_GUID_12345678_1234_1234_1234_1234567890ab@@3U__s_GUID@@B@@@Z"
+// CHECK: "?fun@@YAXU?$UUIDType2@Uuuid@@$1?_GUID_12345678_1234_1234_1234_1234567890ab@@3U__s_GUID@@B@@@Z"
 
 template <typename T> struct TypeWithFriendDefinition {
   friend void FunctionDefinedWithInjectedName(TypeWithFriendDefinition<T>) {}
@@ -326,4 +341,37 @@ void fun_uint128(UInt128<0>) {}
 void fun_uint128(UInt128<(unsigned __int128)-1>) {}
 // X64: define {{.*}} @"?fun_uint128@@YAXU?$UInt128@$0DPPPPPPPPPPPPPPPAAAAAAAAAAAAAAAB@@@@Z"(
 void fun_uint128(UInt128<(unsigned __int128)9223372036854775807 * (unsigned __int128)9223372036854775807>) {}
+#endif
+
+#if __cplusplus >= 202002L
+
+template<float> struct Float {};
+// CXX20-X64: define {{.*}} @"?f@@YAXU?$Float@$ADPIAAAAA@@@@Z"(
+void f(Float<1.0f>) {}
+template<auto> struct Auto {};
+// CXX20-X64: define {{.*}} @"?f@@YAXU?$Auto@$MMADPIAAAAA@@@@Z"(
+void f(Auto<1.0f>) {}
+
+struct S2 {
+  int arr[2][3];
+  int i;
+  void fn();
+} s2;
+
+template<int&> struct TplSubobjectRef {};
+// CXX20-X64: define {{.*}} @"?f@@YAXU?$TplSubobjectRef@$CC61?s2@@3US2@@Aarr@@00@01@@@@Z"(
+void f(TplSubobjectRef<s2.arr[1][2]>) {}
+template<int*> struct TplSubobjectPtr {};
+// CXX20-X64: define {{.*}} @"?f@@YAXU?$TplSubobjectPtr@$CC61?s2@@3US2@@Aarr@@00@01@@@@Z"(
+void f(TplSubobjectPtr<&s2.arr[1][2]>) {}
+
+struct Derived : S2 {};
+
+template <int Derived::*> struct TplMemberPtr {};
+// CXX20-X64: define {{.*}} @"?f@@YAXU?$TplMemberPtr@$0BI@@@@Z"(
+void f(TplMemberPtr<(int Derived::*)&S2::i>) {}
+template <void (Derived::*)()> struct TplMemberFnPtr {};
+// CXX20-X64: define {{.*}} @"?f@@YAXU?$TplMemberFnPtr@$1?fn@S2@@QEAAXXZ@@@Z"(
+void f(TplMemberFnPtr<(void (Derived::*)())&S2::fn>) {}
+
 #endif

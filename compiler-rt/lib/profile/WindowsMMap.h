@@ -37,6 +37,14 @@
 #define MS_SYNC         0x0010  /* msync synchronously */
 
 /*
+ * madvise() flags
+ */
+
+#define MADV_NORMAL     0   /* no special treatment */
+#define MADV_WILLNEED   3   /* expect access in the near future */
+#define MADV_DONTNEED   4   /* do not expect access in the near future */
+
+/*
  * flock() operations
  */
 #define   LOCK_SH   1    /* shared lock */
@@ -52,12 +60,20 @@
 # define DWORD_LO(x) (x)
 #endif
 
+#define mmap __llvm_profile_mmap
+#define munmap __llvm_profile_munmap
+#define msync __llvm_profile_msync
+#define madvise __llvm_profile_madvise
+#define flock __llvm_profile_flock
+
 void *mmap(void *start, size_t length, int prot, int flags, int fd,
            off_t offset);
 
 void munmap(void *addr, size_t length);
 
 int msync(void *addr, size_t length, int flags);
+
+int madvise(void *addr, size_t length, int advice);
 
 int flock(int fd, int operation);
 

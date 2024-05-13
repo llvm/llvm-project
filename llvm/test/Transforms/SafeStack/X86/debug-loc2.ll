@@ -1,4 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Test llvm.dbg.value for the local variables moved onto the unsafe stack.
 ; SafeStack rewrites them relative to the unsafe stack pointer (base address of
@@ -10,46 +13,44 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: noinline safestack uwtable
 define void @f() #0 !dbg !6 {
 entry:
-; CHECK:   %[[USP:.*]] = load i8*, i8** @__safestack_unsafe_stack_ptr
+; CHECK:   %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
   %x1 = alloca i32, align 4
   %x2 = alloca i32, align 4
-  %0 = bitcast i32* %x1 to i8*, !dbg !13
-  %1 = bitcast i32* %x2 to i8*, !dbg !14
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: call void @llvm.dbg.value(metadata i32* undef, metadata !{{.*}}, metadata !{{.*}})
-  tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !23), !dbg !16
+; CHECK: call void @llvm.dbg.value(metadata ptr undef, metadata !{{.*}}, metadata !{{.*}})
+  tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !23), !dbg !16
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: call void @llvm.dbg.value(metadata i32* undef, metadata !{{.*}}, metadata !{{.*}})
-  tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !24), !dbg !16
+; CHECK: call void @llvm.dbg.value(metadata ptr undef, metadata !{{.*}}, metadata !{{.*}})
+  tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !24), !dbg !16
 
 ; Supported dbg.value: rewritted based on the [[USP]] value.
-; CHECK: call void @llvm.dbg.value(metadata i8* %[[USP]], metadata ![[X1:.*]], metadata !DIExpression(DW_OP_constu, 4, DW_OP_minus, DW_OP_deref, DW_OP_LLVM_fragment, 0, 4))
-  tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !25), !dbg !16
+; CHECK: call void @llvm.dbg.value(metadata ptr %[[USP]], metadata ![[X1:.*]], metadata !DIExpression(DW_OP_constu, 4, DW_OP_minus, DW_OP_deref, DW_OP_LLVM_fragment, 0, 4))
+  tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !25), !dbg !16
 
 ; Supported dbg.value: rewritted based on the [[USP]] value.
-; CHECK: call void @llvm.dbg.value(metadata i8* %[[USP]], metadata ![[X1:.*]], metadata !DIExpression(DW_OP_constu, 4, DW_OP_minus, DW_OP_deref))
-  tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !15), !dbg !16
-  call void @capture(i32* nonnull %x1), !dbg !17
+; CHECK: call void @llvm.dbg.value(metadata ptr %[[USP]], metadata ![[X1:.*]], metadata !DIExpression(DW_OP_constu, 4, DW_OP_minus, DW_OP_deref))
+  tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !15), !dbg !16
+  call void @capture(ptr nonnull %x1), !dbg !17
 
 ; An extra non-dbg.value metadata use of %x2. Replaced with undef.
-; CHECK: call void @llvm.random.metadata.use(metadata i32* undef
-  call void @llvm.random.metadata.use(metadata i32* %x2)
+; CHECK: call void @llvm.random.metadata.use(metadata ptr undef
+  call void @llvm.random.metadata.use(metadata ptr %x2)
 
-; CHECK: call void @llvm.dbg.value(metadata i8* %[[USP]], metadata ![[X2:.*]], metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref))
-  call void @llvm.dbg.value(metadata i32* %x2, metadata !12, metadata !15), !dbg !18
-  call void @capture(i32* nonnull %x2), !dbg !19
+; CHECK: call void @llvm.dbg.value(metadata ptr %[[USP]], metadata ![[X2:.*]], metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref))
+  call void @llvm.dbg.value(metadata ptr %x2, metadata !12, metadata !15), !dbg !18
+  call void @capture(ptr nonnull %x2), !dbg !19
   ret void, !dbg !20
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
-declare void @capture(i32*) #2
+declare void @capture(ptr) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

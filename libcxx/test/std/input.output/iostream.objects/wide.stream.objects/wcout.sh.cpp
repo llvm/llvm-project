@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-stdout
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <iostream>
 
-// istream wcout;
+// wostream wcout;
 
-// FILE_DEPENDENCIES: ../check-stdout.sh
+// UNSUPPORTED: no-wide-characters
+
 // RUN: %{build}
-// RUN: %{exec} bash check-stdout.sh "%t.exe" "1234"
+// RUN: %{exec} %t.exe > %t.actual
+// RUN: echo -n 1234 > %t.expected
+// RUN: diff %t.expected %t.actual
 
 #include <iostream>
 

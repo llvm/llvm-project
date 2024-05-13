@@ -298,7 +298,7 @@ typedef typeArgs15<NSObject *, NSString *> typeArgs16; // expected-error{{type a
 
 typedef typeArgs15<NSObject> typeArgsAndProtocolQuals6;
 
-void testSpecializedTypePrinting() {
+void testSpecializedTypePrinting(void) {
   int *ip;
 
   ip = (typeArgs15*)0; // expected-warning{{'typeArgs15 *' (aka 'PC1<NSObject *,NSString *> *')}}

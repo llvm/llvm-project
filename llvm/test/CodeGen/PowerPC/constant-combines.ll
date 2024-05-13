@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff -o - %s | FileCheck --check-prefix=BE %s
 ; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -o - %s | FileCheck --check-prefix=LE %s
 
-define void @fold_constant_stores_loaddr(i8* %i8_ptr) {
+define void @fold_constant_stores_loaddr(ptr %i8_ptr) {
 ; BE-LABEL: fold_constant_stores_loaddr:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    li 4, 0
@@ -15,19 +15,18 @@ define void @fold_constant_stores_loaddr(i8* %i8_ptr) {
 ; LE-LABEL: fold_constant_stores_loaddr:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    li 4, 0
-; LE-NEXT:    li 5, -86
 ; LE-NEXT:    std 4, 0(3)
-; LE-NEXT:    stb 5, 0(3)
+; LE-NEXT:    li 4, -86
+; LE-NEXT:    stb 4, 0(3)
 ; LE-NEXT:    blr
 entry:
-  %i64_ptr = bitcast i8* %i8_ptr to i64*
-  store i64   0, i64* %i64_ptr, align 8
-  store i8  170,  i8*  %i8_ptr,  align 1
+  store i64   0, ptr %i8_ptr, align 8
+  store i8  170,  ptr  %i8_ptr,  align 1
   ret void
 }
 
 
-define void @fold_constant_stores_hiaddr(i8* %i8_ptr) {
+define void @fold_constant_stores_hiaddr(ptr %i8_ptr) {
 ; BE-LABEL: fold_constant_stores_hiaddr:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    li 4, 0
@@ -39,14 +38,13 @@ define void @fold_constant_stores_hiaddr(i8* %i8_ptr) {
 ; LE-LABEL: fold_constant_stores_hiaddr:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    li 4, 0
-; LE-NEXT:    li 5, -86
 ; LE-NEXT:    std 4, 0(3)
-; LE-NEXT:    stb 5, 0(3)
+; LE-NEXT:    li 4, -86
+; LE-NEXT:    stb 4, 0(3)
 ; LE-NEXT:    blr
 entry:
-  %i64_ptr = bitcast i8* %i8_ptr to i64*
-  store i64   0, i64* %i64_ptr, align 8
-  %i8_ptr2 = getelementptr inbounds i8, i8* %i8_ptr, i64 7
-  store i8  170,  i8*  %i8_ptr,  align 1
+  store i64   0, ptr %i8_ptr, align 8
+  %i8_ptr2 = getelementptr inbounds i8, ptr %i8_ptr, i64 7
+  store i8  170,  ptr  %i8_ptr,  align 1
   ret void
 }

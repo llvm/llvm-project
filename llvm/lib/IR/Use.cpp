@@ -8,8 +8,6 @@
 
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
-#include "llvm/IR/Value.h"
-#include <new>
 
 namespace llvm {
 

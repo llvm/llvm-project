@@ -304,8 +304,15 @@ class value_iter(object):
     def next(self):
         return self.__next__()
 
+    def __eq__(self, other):
+        return not self.__ne__(other)
+
+    def __len__(self):
+        return self.length
+
     def __init__(self,value):
         self.index = 0
+        self.length = 0
         self.sbvalue = value
         if type(self.sbvalue) is value:
             self.sbvalue = self.sbvalue.sbvalue
@@ -546,6 +553,12 @@ class SBSyntheticValueProvider(object):
     def has_children(self):
         return False
 
+    def __len__(self):
+      return self.num_children()
+
+    def __iter__(self):
+      '''Iterate over all children in a lldb.SBSyntheticValueProvider object.'''
+      return lldb_iter(self, 'num_children', 'get_child_at_index')
 
 %}
 
@@ -565,6 +578,7 @@ def is_numeric_type(basic_type):
     if basic_type == eBasicTypeUnsignedWChar: return (True,False)
     if basic_type == eBasicTypeChar16: return (True,False)
     if basic_type == eBasicTypeChar32: return (True,False)
+    if basic_type == eBasicTypeChar8: return (True,False)
     if basic_type == eBasicTypeShort: return (True,True)
     if basic_type == eBasicTypeUnsignedShort: return (True,False)
     if basic_type == eBasicTypeInt: return (True,True)

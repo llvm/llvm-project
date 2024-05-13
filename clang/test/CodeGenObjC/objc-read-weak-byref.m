@@ -7,7 +7,7 @@
 - copy;
 @end
 
-int main() {
+int main(void) {
     NSObject *object = 0;
     __weak __block NSObject* weak_object = object;
     void (^callback) (void) = [^{
@@ -18,5 +18,5 @@ int main() {
     return 0;
 }
 
-// CHECK: call i8* @objc_read_weak
-// CHECK: call i8* @objc_read_weak
+// CHECK: call ptr @objc_read_weak
+// CHECK: call ptr @objc_read_weak

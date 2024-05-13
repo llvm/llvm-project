@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 
 declare i32 @foo(i32) readnone
 

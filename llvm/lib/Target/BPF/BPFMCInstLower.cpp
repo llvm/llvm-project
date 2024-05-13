@@ -47,9 +47,7 @@ MCOperand BPFMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
 void BPFMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
 
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
-
+  for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
     switch (MO.getType()) {
     default:
@@ -75,6 +73,9 @@ void BPFMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       break;
     case MachineOperand::MO_GlobalAddress:
       MCOp = LowerSymbolOperand(MO, GetGlobalAddressSymbol(MO));
+      break;
+    case MachineOperand::MO_ConstantPoolIndex:
+      MCOp = LowerSymbolOperand(MO, Printer.GetCPISymbol(MO.getIndex()));
       break;
     }
 

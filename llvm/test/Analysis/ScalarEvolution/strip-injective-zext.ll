@@ -1,4 +1,3 @@
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
 ; The initial SCEV for the backedge count is
@@ -14,7 +13,7 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
 
-define i32 @f0(i32 %a0, i32 %a1, i32* nocapture %a2) #0 {
+define i32 @f0(i32 %a0, i32 %a1, ptr nocapture %a2) #0 {
 b0:
   %v0 = and i32 %a1, 3
   %v1 = icmp eq i32 %v0, 0
@@ -27,10 +26,9 @@ b1:                                               ; preds = %b0
 
 b2:                                               ; preds = %b2, %b1
   %v4 = phi i32 [ %a1, %b1 ], [ %v9, %b2 ]
-  %v5 = phi i32* [ %a2, %b1 ], [ %v8, %b2 ]
-  %v6 = getelementptr inbounds i32, i32* %v5, i32 0
-  store i32 %v3, i32* %v6, align 4
-  %v8 = getelementptr inbounds i32, i32* %v5, i32 1
+  %v5 = phi ptr [ %a2, %b1 ], [ %v8, %b2 ]
+  store i32 %v3, ptr %v5, align 4
+  %v8 = getelementptr inbounds i32, ptr %v5, i32 1
   %v9 = add nsw i32 %v4, 1
   %v10 = and i32 %v9, 3
   %v11 = icmp eq i32 %v10, 0

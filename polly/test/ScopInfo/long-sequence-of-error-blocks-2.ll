@@ -1,40 +1,40 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.hoge = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [8 x [2 x i32]], [8 x [2 x i32]], [4 x [4 x i32]], i32, i32, i32, i32, [256 x i8], [256 x i8], [256 x i8], [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, [500 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [1024 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, double, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], i32, i32, i32*, i32*, i8*, i32*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, double, double, double, [5 x double], i32, [8 x i32], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [6 x double], [6 x double], [256 x i8], i32, i32, i32, i32, [2 x [5 x i32]], [2 x [5 x i32]], i32, i32, i32, i32, i32, i32, i32, i32, i32, [3 x i32], i32 }
+%struct.hoge = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [8 x [2 x i32]], [8 x [2 x i32]], [4 x [4 x i32]], i32, i32, i32, i32, [256 x i8], [256 x i8], [256 x i8], [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, [500 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [1024 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, double, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], i32, i32, ptr, ptr, ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, double, double, double, [5 x double], i32, [8 x i32], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [6 x double], [6 x double], [256 x i8], i32, i32, i32, i32, [2 x [5 x i32]], [2 x [5 x i32]], i32, i32, i32, i32, i32, i32, i32, i32, i32, [3 x i32], i32 }
 
 ; The execution context of invalid loads in this test case has at some point become very complex and we should bail.
 ; CHECK-NOT: Statements
 
 @global = external global [300 x i8], align 16
-@global1 = external global %struct.hoge*, align 8
+@global1 = external global ptr, align 8
 @global2 = external unnamed_addr constant [79 x i8], align 1
 @global3 = external unnamed_addr constant [57 x i8], align 1
 
 declare void @widget() #0
 
 ; Function Attrs: nounwind
-declare void @quux(i8*, i64, i8*, ...) #1
+declare void @quux(ptr, i64, ptr, ...) #1
 
 ; Function Attrs: nounwind uwtable
-define void @hoge(float* %A) #2 {
+define void @hoge(ptr %A) #2 {
 bb:
   br label %bb15
 
 bb15:                                             ; preds = %bb
-  %tmp = load %struct.hoge*, %struct.hoge** @global1, align 8, !tbaa !1
-  %tmp16 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp, i64 0, i32 153
-  store float 1.0, float* %A
-  %tmp17 = load i32, i32* %tmp16, align 4, !tbaa !5
+  %tmp = load ptr, ptr @global1, align 8, !tbaa !1
+  %tmp16 = getelementptr inbounds %struct.hoge, ptr %tmp, i64 0, i32 153
+  store float 1.0, ptr %A
+  %tmp17 = load i32, ptr %tmp16, align 4, !tbaa !5
   %tmp18 = icmp eq i32 %tmp17, 0
   br i1 %tmp18, label %bb24, label %bb19
 
 bb19:                                             ; preds = %bb15
-  %tmp20 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp, i64 0, i32 50
-  store float 1.0, float* %A
-  %tmp21 = load i32, i32* %tmp20, align 8, !tbaa !9
+  %tmp20 = getelementptr inbounds %struct.hoge, ptr %tmp, i64 0, i32 50
+  store float 1.0, ptr %A
+  %tmp21 = load i32, ptr %tmp20, align 8, !tbaa !9
   %tmp22 = icmp eq i32 %tmp21, 0
   br i1 %tmp22, label %bb24, label %bb23
 
@@ -43,44 +43,43 @@ bb23:                                             ; preds = %bb19
   br label %bb24
 
 bb24:                                             ; preds = %bb23, %bb19, %bb15
-  %tmp25 = load %struct.hoge*, %struct.hoge** @global1, align 8, !tbaa !1
-  store float 1.0, float* %A
-  %tmp26 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp25, i64 0, i32 16
-  %tmp27 = load i32, i32* %tmp26, align 8, !tbaa !10
+  %tmp25 = load ptr, ptr @global1, align 8, !tbaa !1
+  store float 1.0, ptr %A
+  %tmp26 = getelementptr inbounds %struct.hoge, ptr %tmp25, i64 0, i32 16
+  %tmp27 = load i32, ptr %tmp26, align 8, !tbaa !10
   %tmp28 = icmp eq i32 %tmp27, 3
   br i1 %tmp28, label %bb29, label %bb34
 
 bb29:                                             ; preds = %bb24
-  %tmp30 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp25, i64 0, i32 0
-  store float 1.0, float* %A
-  %tmp31 = load i32, i32* %tmp30, align 8, !tbaa !11
+  store float 1.0, ptr %A
+  %tmp31 = load i32, ptr %tmp25, align 8, !tbaa !11
   %tmp32 = icmp slt i32 %tmp31, 144
   br i1 %tmp32, label %bb33, label %bb34
 
 bb33:                                             ; preds = %bb29
-  call void (i8*, i64, i8*, ...) @quux(i8* getelementptr inbounds ([300 x i8], [300 x i8]* @global, i64 0, i64 0), i64 300, i8* getelementptr inbounds ([79 x i8], [79 x i8]* @global2, i64 0, i64 0), i32 144) #3
+  call void (ptr, i64, ptr, ...) @quux(ptr @global, i64 300, ptr @global2, i32 144) #3
   br label %bb34
 
 bb34:                                             ; preds = %bb33, %bb29, %bb24
-  %tmp35 = load %struct.hoge*, %struct.hoge** @global1, align 8, !tbaa !1
-  store float 1.0, float* %A
-  %tmp36 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp35, i64 0, i32 40
-  %tmp37 = load i32, i32* %tmp36, align 8, !tbaa !12
+  %tmp35 = load ptr, ptr @global1, align 8, !tbaa !1
+  store float 1.0, ptr %A
+  %tmp36 = getelementptr inbounds %struct.hoge, ptr %tmp35, i64 0, i32 40
+  %tmp37 = load i32, ptr %tmp36, align 8, !tbaa !12
   %tmp38 = icmp eq i32 %tmp37, 0
   br i1 %tmp38, label %bb49, label %bb39
 
 bb39:                                             ; preds = %bb34
-  %tmp40 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp35, i64 0, i32 46
-  store float 1.0, float* %A
-  %tmp41 = load i32, i32* %tmp40, align 8, !tbaa !13
+  %tmp40 = getelementptr inbounds %struct.hoge, ptr %tmp35, i64 0, i32 46
+  store float 1.0, ptr %A
+  %tmp41 = load i32, ptr %tmp40, align 8, !tbaa !13
   %tmp42 = icmp eq i32 %tmp41, 0
   br i1 %tmp42, label %bb49, label %bb43
 
 bb43:                                             ; preds = %bb39
-  %tmp44 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp35, i64 0, i32 7
-  store float 1.0, float* %A
-  %tmp45 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp35, i64 0, i32 48
-  %tmp46 = load i32, i32* %tmp45, align 8, !tbaa !14
+  %tmp44 = getelementptr inbounds %struct.hoge, ptr %tmp35, i64 0, i32 7
+  store float 1.0, ptr %A
+  %tmp45 = getelementptr inbounds %struct.hoge, ptr %tmp35, i64 0, i32 48
+  %tmp46 = load i32, ptr %tmp45, align 8, !tbaa !14
   %tmp47 = icmp slt i32 0, %tmp46
   br i1 %tmp47, label %bb48, label %bb49
 
@@ -89,29 +88,29 @@ bb48:                                             ; preds = %bb43
   br label %bb49
 
 bb49:                                             ; preds = %bb48, %bb43, %bb39, %bb34
-  store float 1.0, float* %A
-  %tmp50 = load %struct.hoge*, %struct.hoge** @global1, align 8, !tbaa !1
-  %tmp51 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp50, i64 0, i32 198
-  %tmp52 = load i32, i32* %tmp51, align 8, !tbaa !15
+  store float 1.0, ptr %A
+  %tmp50 = load ptr, ptr @global1, align 8, !tbaa !1
+  %tmp51 = getelementptr inbounds %struct.hoge, ptr %tmp50, i64 0, i32 198
+  %tmp52 = load i32, ptr %tmp51, align 8, !tbaa !15
   %tmp53 = icmp eq i32 %tmp52, 0
   br i1 %tmp53, label %bb59, label %bb54
 
 bb54:                                             ; preds = %bb49
-  store float 1.0, float* %A
-  %tmp55 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp50, i64 0, i32 16
-  %tmp56 = load i32, i32* %tmp55, align 8, !tbaa !10
+  store float 1.0, ptr %A
+  %tmp55 = getelementptr inbounds %struct.hoge, ptr %tmp50, i64 0, i32 16
+  %tmp56 = load i32, ptr %tmp55, align 8, !tbaa !10
   %tmp57 = icmp eq i32 %tmp56, 0
   br i1 %tmp57, label %bb58, label %bb59
 
 bb58:                                             ; preds = %bb54
-  call void (i8*, i64, i8*, ...) @quux(i8* getelementptr inbounds ([300 x i8], [300 x i8]* @global, i64 0, i64 0), i64 300, i8* getelementptr inbounds ([57 x i8], [57 x i8]* @global3, i64 0, i64 0)) #3
+  call void (ptr, i64, ptr, ...) @quux(ptr @global, i64 300, ptr @global3) #3
   br label %bb59
 
 bb59:                                             ; preds = %bb58, %bb54, %bb49
-  store float 1.0, float* %A
-  %tmp60 = load %struct.hoge*, %struct.hoge** @global1, align 8, !tbaa !1
-  %tmp61 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp60, i64 0, i32 31
-  %tmp62 = load i32, i32* %tmp61, align 4, !tbaa !16
+  store float 1.0, ptr %A
+  %tmp60 = load ptr, ptr @global1, align 8, !tbaa !1
+  %tmp61 = getelementptr inbounds %struct.hoge, ptr %tmp60, i64 0, i32 31
+  %tmp62 = load i32, ptr %tmp61, align 4, !tbaa !16
   %tmp63 = icmp eq i32 %tmp62, 0
   br i1 %tmp63, label %bb65, label %bb64
 

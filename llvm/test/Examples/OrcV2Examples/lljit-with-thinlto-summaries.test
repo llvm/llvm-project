@@ -1,12 +1,15 @@
-# RUN: opt -module-summary %p/Inputs/main-mod.ll -o main-mod.bc
-# RUN: opt -module-summary %p/Inputs/foo-mod.ll -o foo-mod.bc
-# RUN: opt -module-summary %p/Inputs/bar-mod.ll -o bar-mod.bc
+# RUN: opt -module-summary %p/Inputs/main-mod.ll -o %T/main-mod.bc
+# RUN: opt -module-summary %p/Inputs/foo-mod.ll -o %T/foo-mod.bc
+# RUN: opt -module-summary %p/Inputs/bar-mod.ll -o %T/bar-mod.bc
 
-# RUN: llvm-lto -thinlto -o main-foo-bar main-mod.bc foo-mod.bc bar-mod.bc
+# REQUIRES: default_triple
+# UNSUPPORTED: target=powerpc64{{.*}}
 
-# RUN: LLJITWithThinLTOSummaries main-foo-bar.thinlto.bc 2>&1 | FileCheck %s
+# RUN: llvm-lto -thinlto -o %T/main-foo-bar %T/main-mod.bc %T/foo-mod.bc %T/bar-mod.bc
 
-# CHECK: About to load module: main-mod.bc
-# CHECK: About to load module: foo-mod.bc
-# CHECK: About to load module: bar-mod.bc
+# RUN: LLJITWithThinLTOSummaries %T/main-foo-bar.thinlto.bc 2>&1 | FileCheck %s
+
+# CHECK: About to load module: {{.*}}/main-mod.bc
+# CHECK-DAG: About to load module: {{.*}}/foo-mod.bc
+# CHECK-DAG: About to load module: {{.*}}/bar-mod.bc
 # CHECK: 'main' finished with exit code: 0

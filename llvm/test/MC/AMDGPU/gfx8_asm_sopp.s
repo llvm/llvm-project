@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
 
 s_nop 0x3141
 // CHECK: [0x41,0x31,0x80,0xbf]
@@ -8,6 +8,12 @@ s_nop 0xc1d1
 
 s_endpgm
 // CHECK: [0x00,0x00,0x81,0xbf]
+
+s_endpgm 1
+// CHECK: [0x01,0x00,0x81,0xbf]
+
+s_endpgm 65535
+// CHECK: [0xff,0xff,0x81,0xbf]
 
 s_branch 12609
 // CHECK: [0x41,0x31,0x82,0xbf]

@@ -96,9 +96,12 @@ class FixupLEAPass : public MachineFunctionPass {
   /// Check instructions between LeaI and AluI (exclusively).
   /// Set BaseIndexDef to true if base or index register from LeaI is defined.
   /// Set AluDestRef to true if the dest register of AluI is used or defined.
+  /// *KilledBase is set to the killed base register usage.
+  /// *KilledIndex is set to the killed index register usage.
   void checkRegUsage(MachineBasicBlock::iterator &LeaI,
                      MachineBasicBlock::iterator &AluI, bool &BaseIndexDef,
-                     bool &AluDestRef) const;
+                     bool &AluDestRef, MachineOperand **KilledBase,
+                     MachineOperand **KilledIndex) const;
 
   /// Determine if an instruction references a machine register
   /// and, if so, whether it reads or writes the register.
@@ -183,13 +186,9 @@ FixupLEAPass::postRAConvertToLEA(MachineBasicBlock &MBB,
     // Only convert instructions that we've verified are safe.
     return nullptr;
   case X86::ADD64ri32:
-  case X86::ADD64ri8:
   case X86::ADD64ri32_DB:
-  case X86::ADD64ri8_DB:
   case X86::ADD32ri:
-  case X86::ADD32ri8:
   case X86::ADD32ri_DB:
-  case X86::ADD32ri8_DB:
     if (!MI.getOperand(2).isImm()) {
       // convertToThreeAddress will call getImm()
       // which requires isImm() to be true
@@ -209,8 +208,7 @@ FixupLEAPass::postRAConvertToLEA(MachineBasicBlock &MBB,
     // These instructions are all fine to convert.
     break;
   }
-  MachineFunction::iterator MFI = MBB.getIterator();
-  return TII->convertToThreeAddress(MFI, MI, nullptr);
+  return TII->convertToThreeAddress(MI, nullptr, nullptr);
 }
 
 FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
@@ -227,7 +225,7 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   bool IsSlowLEA = ST.slowLEA();
   bool IsSlow3OpsLEA = ST.slow3OpsLEA();
-  bool LEAUsesAG = ST.LEAusesAG();
+  bool LEAUsesAG = ST.leaUsesAG();
 
   bool OptIncDec = !ST.slowIncDec() || MF.getFunction().hasOptSize();
   bool UseLEAForSP = ST.useLeaForSP();
@@ -276,10 +274,9 @@ FixupLEAPass::usesRegister(MachineOperand &p, MachineBasicBlock::iterator I) {
   RegUsageState RegUsage = RU_NotUsed;
   MachineInstr &MI = *I;
 
-  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
-    MachineOperand &opnd = MI.getOperand(i);
-    if (opnd.isReg() && opnd.getReg() == p.getReg()) {
-      if (opnd.isDef())
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.getReg() == p.getReg()) {
+      if (MO.isDef())
         return RU_Write;
       RegUsage = RU_Read;
     }
@@ -333,8 +330,8 @@ static inline bool isInefficientLEAReg(unsigned Reg) {
          Reg == X86::R13D || Reg == X86::R13;
 }
 
-/// Returns true if this LEA uses base an index registers, and the base register
-/// is known to be inefficient for the subtarget.
+/// Returns true if this LEA uses base and index registers, and the base
+/// register is known to be inefficient for the subtarget.
 // TODO: use a variant scheduling class to model the latency profile
 // of LEA instructions, and implement this logic as a scheduling predicate.
 static inline bool hasInefficientLEABaseReg(const MachineOperand &Base,
@@ -344,7 +341,8 @@ static inline bool hasInefficientLEABaseReg(const MachineOperand &Base,
 }
 
 static inline bool hasLEAOffset(const MachineOperand &Offset) {
-  return (Offset.isImm() && Offset.getImm() != 0) || Offset.isGlobal();
+  return (Offset.isImm() && Offset.getImm() != 0) || Offset.isGlobal() ||
+         Offset.isBlockAddress();
 }
 
 static inline unsigned getADDrrFromLEA(unsigned LEAOpcode) {
@@ -373,15 +371,14 @@ static inline unsigned getSUBrrFromLEA(unsigned LEAOpcode) {
 
 static inline unsigned getADDriFromLEA(unsigned LEAOpcode,
                                        const MachineOperand &Offset) {
-  bool IsInt8 = Offset.isImm() && isInt<8>(Offset.getImm());
   switch (LEAOpcode) {
   default:
     llvm_unreachable("Unexpected LEA instruction");
   case X86::LEA32r:
   case X86::LEA64_32r:
-    return IsInt8 ? X86::ADD32ri8 : X86::ADD32ri;
+    return X86::ADD32ri;
   case X86::LEA64r:
-    return IsInt8 ? X86::ADD64ri8 : X86::ADD64ri32;
+    return X86::ADD64ri32;
   }
 }
 
@@ -418,26 +415,30 @@ FixupLEAPass::searchALUInst(MachineBasicBlock::iterator &I,
     // Check if the lea dest register is used in an add/sub instruction only.
     for (unsigned I = 0, E = CurInst->getNumOperands(); I != E; ++I) {
       MachineOperand &Opnd = CurInst->getOperand(I);
-      if (Opnd.isReg() && Opnd.getReg() == DestReg) {
-        if (Opnd.isDef() || !Opnd.isKill())
-          return MachineBasicBlock::iterator();
+      if (Opnd.isReg()) {
+        if (Opnd.getReg() == DestReg) {
+          if (Opnd.isDef() || !Opnd.isKill())
+            return MachineBasicBlock::iterator();
 
-        unsigned AluOpcode = CurInst->getOpcode();
-        if (AluOpcode != AddOpcode && AluOpcode != SubOpcode)
-          return MachineBasicBlock::iterator();
+          unsigned AluOpcode = CurInst->getOpcode();
+          if (AluOpcode != AddOpcode && AluOpcode != SubOpcode)
+            return MachineBasicBlock::iterator();
 
-        MachineOperand &Opnd2 = CurInst->getOperand(3 - I);
-        MachineOperand AluDest = CurInst->getOperand(0);
-        if (Opnd2.getReg() != AluDest.getReg())
-          return MachineBasicBlock::iterator();
+          MachineOperand &Opnd2 = CurInst->getOperand(3 - I);
+          MachineOperand AluDest = CurInst->getOperand(0);
+          if (Opnd2.getReg() != AluDest.getReg())
+            return MachineBasicBlock::iterator();
 
-        // X - (Y + Z) may generate different flags than (X - Y) - Z when there
-        // is overflow. So we can't change the alu instruction if the flags
-        // register is live.
-        if (!CurInst->registerDefIsDead(X86::EFLAGS, TRI))
-          return MachineBasicBlock::iterator();
+          // X - (Y + Z) may generate different flags than (X - Y) - Z when
+          // there is overflow. So we can't change the alu instruction if the
+          // flags register is live.
+          if (!CurInst->registerDefIsDead(X86::EFLAGS, TRI))
+            return MachineBasicBlock::iterator();
 
-        return CurInst;
+          return CurInst;
+        }
+        if (TRI->regsOverlap(DestReg, Opnd.getReg()))
+          return MachineBasicBlock::iterator();
       }
     }
 
@@ -449,27 +450,35 @@ FixupLEAPass::searchALUInst(MachineBasicBlock::iterator &I,
 
 void FixupLEAPass::checkRegUsage(MachineBasicBlock::iterator &LeaI,
                                  MachineBasicBlock::iterator &AluI,
-                                 bool &BaseIndexDef, bool &AluDestRef) const {
+                                 bool &BaseIndexDef, bool &AluDestRef,
+                                 MachineOperand **KilledBase,
+                                 MachineOperand **KilledIndex) const {
   BaseIndexDef = AluDestRef = false;
+  *KilledBase = *KilledIndex = nullptr;
   Register BaseReg = LeaI->getOperand(1 + X86::AddrBaseReg).getReg();
   Register IndexReg = LeaI->getOperand(1 + X86::AddrIndexReg).getReg();
   Register AluDestReg = AluI->getOperand(0).getReg();
 
-  MachineBasicBlock::iterator CurInst = std::next(LeaI);
-  while (CurInst != AluI) {
-    for (unsigned I = 0, E = CurInst->getNumOperands(); I != E; ++I) {
-      MachineOperand &Opnd = CurInst->getOperand(I);
+  for (MachineInstr &CurInst : llvm::make_range(std::next(LeaI), AluI)) {
+    for (MachineOperand &Opnd : CurInst.operands()) {
       if (!Opnd.isReg())
         continue;
       Register Reg = Opnd.getReg();
       if (TRI->regsOverlap(Reg, AluDestReg))
         AluDestRef = true;
-      if (Opnd.isDef() &&
-          (TRI->regsOverlap(Reg, BaseReg) || TRI->regsOverlap(Reg, IndexReg))) {
-        BaseIndexDef = true;
+      if (TRI->regsOverlap(Reg, BaseReg)) {
+        if (Opnd.isDef())
+          BaseIndexDef = true;
+        else if (Opnd.isKill())
+          *KilledBase = &Opnd;
+      }
+      if (TRI->regsOverlap(Reg, IndexReg)) {
+        if (Opnd.isDef())
+          BaseIndexDef = true;
+        else if (Opnd.isKill())
+          *KilledIndex = &Opnd;
       }
     }
-    ++CurInst;
   }
 }
 
@@ -482,13 +491,15 @@ bool FixupLEAPass::optLEAALU(MachineBasicBlock::iterator &I,
 
   // Check if there are any related register usage between lea and alu.
   bool BaseIndexDef, AluDestRef;
-  checkRegUsage(I, AluI, BaseIndexDef, AluDestRef);
+  MachineOperand *KilledBase, *KilledIndex;
+  checkRegUsage(I, AluI, BaseIndexDef, AluDestRef, &KilledBase, &KilledIndex);
 
   MachineBasicBlock::iterator InsertPos = AluI;
   if (BaseIndexDef) {
     if (AluDestRef)
       return false;
     InsertPos = I;
+    KilledBase = KilledIndex = nullptr;
   }
 
   // Check if there are same registers.
@@ -503,23 +514,31 @@ bool FixupLEAPass::optLEAALU(MachineBasicBlock::iterator &I,
     if (BaseReg == IndexReg)
       return false;
     std::swap(BaseReg, IndexReg);
+    std::swap(KilledBase, KilledIndex);
   }
+  if (BaseReg == IndexReg)
+    KilledBase = nullptr;
 
   // Now it's safe to change instructions.
   MachineInstr *NewMI1, *NewMI2;
   unsigned NewOpcode = AluI->getOpcode();
   NewMI1 = BuildMI(MBB, InsertPos, AluI->getDebugLoc(), TII->get(NewOpcode),
                    AluDestReg)
-               .addReg(AluDestReg)
-               .addReg(BaseReg);
+               .addReg(AluDestReg, RegState::Kill)
+               .addReg(BaseReg, KilledBase ? RegState::Kill : 0);
   NewMI1->addRegisterDead(X86::EFLAGS, TRI);
   NewMI2 = BuildMI(MBB, InsertPos, AluI->getDebugLoc(), TII->get(NewOpcode),
                    AluDestReg)
-               .addReg(AluDestReg)
-               .addReg(IndexReg);
+               .addReg(AluDestReg, RegState::Kill)
+               .addReg(IndexReg, KilledIndex ? RegState::Kill : 0);
   NewMI2->addRegisterDead(X86::EFLAGS, TRI);
 
-  MBB.getParent()->substituteDebugValuesForInst(*AluI, *NewMI1, 1);
+  // Clear the old Kill flags.
+  if (KilledBase)
+    KilledBase->setIsKill(false);
+  if (KilledIndex)
+    KilledIndex->setIsKill(false);
+
   MBB.getParent()->substituteDebugValuesForInst(*AluI, *NewMI2, 1);
   MBB.erase(I);
   MBB.erase(AluI);
@@ -760,12 +779,34 @@ void FixupLEAPass::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
   LLVM_DEBUG(dbgs() << "FixLEA: Replaced by: ";);
 
   MachineInstr *NewMI = nullptr;
+  bool BaseOrIndexIsDst = DestReg == BaseReg || DestReg == IndexReg;
+  // First try and remove the base while sticking with LEA iff base == index and
+  // scale == 1. We can handle:
+  //    1. lea D(%base,%index,1)   -> lea D(,%index,2)
+  //    2. lea D(%r13/%rbp,%index) -> lea D(,%index,2)
+  // Only do this if the LEA would otherwise be split into 2-instruction
+  // (either it has a an Offset or neither base nor index are dst)
+  if (IsScale1 && BaseReg == IndexReg &&
+      (hasLEAOffset(Offset) || (IsInefficientBase && !BaseOrIndexIsDst))) {
+    NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(LEAOpcode))
+                .add(Dest)
+                .addReg(0)
+                .addImm(2)
+                .add(Index)
+                .add(Offset)
+                .add(Segment);
+    LLVM_DEBUG(NewMI->dump(););
 
-  // First try to replace LEA with one or two (for the 3-op LEA case)
-  // add instructions:
-  // 1.lea (%base,%index,1), %base => add %index,%base
-  // 2.lea (%base,%index,1), %index => add %base,%index
-  if (IsScale1 && (DestReg == BaseReg || DestReg == IndexReg)) {
+    MBB.getParent()->substituteDebugValuesForInst(*I, *NewMI, 1);
+    MBB.erase(I);
+    I = NewMI;
+    return;
+  } else if (IsScale1 && BaseOrIndexIsDst) {
+    // Try to replace LEA with one or two (for the 3-op LEA case)
+    // add instructions:
+    // 1.lea (%base,%index,1), %base => add %index,%base
+    // 2.lea (%base,%index,1), %index => add %base,%index
+
     unsigned NewOpc = getADDrrFromLEA(MI.getOpcode());
     if (DestReg != BaseReg)
       std::swap(BaseReg, IndexReg);

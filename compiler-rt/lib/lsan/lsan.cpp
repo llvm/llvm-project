@@ -13,11 +13,12 @@
 
 #include "lsan.h"
 
-#include "sanitizer_common/sanitizer_flags.h"
-#include "sanitizer_common/sanitizer_flag_parser.h"
 #include "lsan_allocator.h"
 #include "lsan_common.h"
 #include "lsan_thread.h"
+#include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 
 bool lsan_inited;
 bool lsan_init_is_running;
@@ -35,7 +36,7 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
     uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
   using namespace __lsan;
   uptr stack_top = 0, stack_bottom = 0;
-  if (ThreadContext *t = CurrentThreadContext()) {
+  if (ThreadContextLsanBase *t = GetCurrentThread()) {
     stack_top = t->stack_end();
     stack_bottom = t->stack_begin();
   }
@@ -96,12 +97,11 @@ extern "C" void __lsan_init() {
   ReplaceSystemMalloc();
   InitTlsSize();
   InitializeInterceptors();
-  InitializeThreadRegistry();
+  InitializeThreads();
   InstallDeadlySignalHandlers(LsanOnDeadlySignal);
   InitializeMainThread();
-
-  if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit)
-    Atexit(DoLeakCheck);
+  InstallAtExitCheckLeaks();
+  InstallAtForkHandler();
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
 

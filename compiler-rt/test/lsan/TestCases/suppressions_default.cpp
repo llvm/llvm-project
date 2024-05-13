@@ -1,6 +1,5 @@
-// RUN: LSAN_BASE="use_registers=0:use_stacks=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=use_registers=0:use_stacks=0 not %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,4 +24,4 @@ int main() {
 }
 // CHECK: Suppressions used:
 // CHECK: 1 666 *LSanTestLeakingFunc*
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
+// CHECK: SUMMARY: {{.*}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)

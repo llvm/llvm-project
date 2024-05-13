@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK:    Invalid Context:
 ; CHECK:        [N] -> {  : N >= 129 }
@@ -8,7 +8,7 @@
 ;        if ((signed char)i < 100)
 ;          A[i] += i;
 ;    }
-define void @foo(float* %A, i64 %N) {
+define void @foo(ptr %A, i64 %N) {
 bb:
   br label %bb1
 
@@ -24,10 +24,10 @@ bb2:                                              ; preds = %bb1
 
 bb5:                                              ; preds = %bb2
   %tmp6 = sitofp i64 %i.0 to float
-  %tmp7 = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp8 = load float, float* %tmp7, align 4
+  %tmp7 = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp8 = load float, ptr %tmp7, align 4
   %tmp9 = fadd float %tmp8, %tmp6
-  store float %tmp9, float* %tmp7, align 4
+  store float %tmp9, ptr %tmp7, align 4
   br label %bb10
 
 bb10:                                             ; preds = %bb5, %bb2

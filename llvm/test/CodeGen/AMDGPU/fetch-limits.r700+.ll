@@ -1,15 +1,15 @@
-; RUN: llc < %s -march=r600 -mcpu=rv710 | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=rv730 | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=rv770 | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=cedar | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=sumo | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=juniper | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=cypress | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=barts | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=turks | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=caicos | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=rv710 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=rv730 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=rv770 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cedar | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=sumo | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=juniper | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=barts | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=turks | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=caicos | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s
 
 ; r700+ supports 16 fetches in a clause
 ; CHECK: {{^}}fetch_limits_r700:
@@ -18,23 +18,23 @@
 
 define amdgpu_ps void @fetch_limits_r700() {
 entry:
-  %0 = load <4 x float>, <4 x float> addrspace(8)* null
-  %1 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 1)
-  %2 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 2)
-  %3 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 3)
-  %4 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 4)
-  %5 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 5)
-  %6 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 6)
-  %7 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 7)
-  %8 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 8)
-  %9 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
-  %10 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 10)
-  %11 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 11)
-  %12 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 12)
-  %13 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 13)
-  %14 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 14)
-  %15 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 15)
-  %16 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 16)
+  %0 = load <4 x float>, ptr addrspace(8) null
+  %1 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 1)
+  %2 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 2)
+  %3 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 3)
+  %4 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 4)
+  %5 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 5)
+  %6 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 6)
+  %7 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 7)
+  %8 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 8)
+  %9 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 9)
+  %10 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 10)
+  %11 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 11)
+  %12 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 12)
+  %13 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 13)
+  %14 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 14)
+  %15 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 15)
+  %16 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 16)
   %17 = shufflevector <4 x float> %0, <4 x float> %0, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %18 = call <4 x float> @llvm.r600.tex(<4 x float> %17, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
   %19 = shufflevector <4 x float> %1, <4 x float> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

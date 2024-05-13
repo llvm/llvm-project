@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -polly-process-unprofitable=false -analyze \
-; RUN:     -polly-allow-nonaffine-loops < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-process-unprofitable=false -polly-allow-nonaffine-loops -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; Even if we allow non-affine loops we can only model the outermost loop, all
 ; other loops are boxed in non-affine regions. However, the inner loops can be
@@ -28,7 +27,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A) {
+define void @f(ptr %A) {
 entry:
   br label %for.cond
 
@@ -57,10 +56,10 @@ for.cond.4:                                       ; preds = %for.inc, %for.body.
   br i1 %exitcond, label %for.body.6, label %for.end
 
 for.body.6:                                       ; preds = %for.cond.4
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv5
-  %tmp11 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv5
+  %tmp11 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %tmp11, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body.6
@@ -93,10 +92,10 @@ for.cond.17:                                      ; preds = %for.inc.23, %for.bo
   br i1 %exitcond3, label %for.body.19, label %for.end.25
 
 for.body.19:                                      ; preds = %for.cond.17
-  %arrayidx21 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv5
-  %tmp14 = load i32, i32* %arrayidx21, align 4
+  %arrayidx21 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv5
+  %tmp14 = load i32, ptr %arrayidx21, align 4
   %inc22 = add nsw i32 %tmp14, 1
-  store i32 %inc22, i32* %arrayidx21, align 4
+  store i32 %inc22, ptr %arrayidx21, align 4
   br label %for.inc.23
 
 for.inc.23:                                       ; preds = %for.body.19
@@ -111,8 +110,8 @@ for.inc.26:                                       ; preds = %for.end.25
   br label %for.cond.12
 
 for.end.28:                                       ; preds = %for.cond.12
-  %arrayidx30 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv5
-  %tmp15 = load i32, i32* %arrayidx30, align 4
+  %arrayidx30 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv5
+  %tmp15 = load i32, ptr %arrayidx30, align 4
   %tobool = icmp eq i32 %tmp15, 0
   br i1 %tobool, label %if.end, label %if.then
 
@@ -134,10 +133,10 @@ for.cond.36:                                      ; preds = %for.inc.43, %for.bo
   br i1 %cmp38, label %for.body.39, label %for.end.45
 
 for.body.39:                                      ; preds = %for.cond.36
-  %arrayidx41 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv5
-  %tmp16 = load i32, i32* %arrayidx41, align 4
+  %arrayidx41 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv5
+  %tmp16 = load i32, ptr %arrayidx41, align 4
   %inc42 = add nsw i32 %tmp16, 1
-  store i32 %inc42, i32* %arrayidx41, align 4
+  store i32 %inc42, ptr %arrayidx41, align 4
   br label %for.inc.43
 
 for.inc.43:                                       ; preds = %for.body.39

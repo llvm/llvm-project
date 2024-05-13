@@ -1,13 +1,13 @@
 # RUN: llc < %s -x mir -march=hexagon -run-pass=modulo-schedule-test -pipeliner-experimental-cg=true | FileCheck %s
 
-# Simple check for this sanity test; ensure all instructions are in stage 0 in
+# Simple check for this basic correctness test; ensure all instructions are in stage 0 in
 # the prolog and stage 3 in the epilog.
 
 # CHECK-NOT: Stage-3
 # CHECK: J2_loop0r
 # CHECK:    intregs = S2_addasl_rrri %{{[0-9]+}}, %{{[0-9]+}}, 1, post-instr-symbol <mcsymbol Stage-0_Cycle-0>
-# CHECK:    intregs = L2_loadruh_io %{{[0-9]+}}, -4, post-instr-symbol <mcsymbol Stage-3_Cycle-0> :: (load 2 from %ir.cgep2, !tbaa !0)
-# CHECK:    intregs = S2_storerh_pi %{{[0-9]+}}, -2, %{{[0-9]+}}, post-instr-symbol <mcsymbol Stage-3_Cycle-0> :: (store 2 into %ir.lsr.iv, !tbaa !0)
+# CHECK:    intregs = L2_loadruh_io %{{[0-9]+}}, -4, post-instr-symbol <mcsymbol Stage-3_Cycle-0> :: (load (s16) from %ir.cgep2, !tbaa !0)
+# CHECK:    intregs = S2_storerh_pi %{{[0-9]+}}, -2, %{{[0-9]+}}, post-instr-symbol <mcsymbol Stage-3_Cycle-0> :: (store (s16) into %ir.lsr.iv, !tbaa !0)
 # CHECK:    intregs = nsw A2_addi %{{[0-9]+}}, -1, post-instr-symbol <mcsymbol Stage-0_Cycle-0>
 # CHECK:    ENDLOOP0 %bb.{{[0-9]+}}, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
 # CHECK-NOT: Stage-0
@@ -16,38 +16,38 @@
   ; ModuleID = '/google/src/cloud/jmolloy/tc/google3/third_party/llvm/llvm/test/CodeGen/Hexagon/swp-phi-start.ll'
   source_filename = "/google/src/cloud/jmolloy/tc/google3/third_party/llvm/llvm/test/CodeGen/Hexagon/swp-phi-start.ll"
   target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
-  
+
   ; Function Attrs: nounwind
-  define void @f0(i32 %a0, i16* nocapture %a1) #0 {
+  define void @f0(i32 %a0, ptr nocapture %a1) #0 {
   b0:
     br i1 undef, label %b1, label %b2.preheader
-  
+
   b1:                                               ; preds = %b0
     br i1 undef, label %b3, label %b2.preheader
-  
+
   b2.preheader:                                     ; preds = %b0, %b1
-    %cgep = getelementptr i16, i16* %a1, i32 undef
+    %cgep = getelementptr i16, ptr %a1, i32 undef
     br label %b2
-  
+
   b2:                                               ; preds = %b2.preheader, %b2
-    %lsr.iv = phi i16* [ %cgep, %b2.preheader ], [ %cgep3, %b2 ]
+    %lsr.iv = phi ptr [ %cgep, %b2.preheader ], [ %cgep3, %b2 ]
     %v1 = phi i32 [ %v7, %b2 ], [ undef, %b2.preheader ]
     %v2 = phi i32 [ %v1, %b2 ], [ %a0, %b2.preheader ]
     %v3 = add nsw i32 %v2, -2
-    %cgep2 = getelementptr inbounds i16, i16* %a1, i32 %v3
-    %v5 = load i16, i16* %cgep2, align 2, !tbaa !0
-    store i16 %v5, i16* %lsr.iv, align 2, !tbaa !0
+    %cgep2 = getelementptr inbounds i16, ptr %a1, i32 %v3
+    %v5 = load i16, ptr %cgep2, align 2, !tbaa !0
+    store i16 %v5, ptr %lsr.iv, align 2, !tbaa !0
     %v7 = add nsw i32 %v1, -1
     %v8 = icmp sgt i32 %v7, 0
-    %cgep3 = getelementptr i16, i16* %lsr.iv, i32 -1
+    %cgep3 = getelementptr i16, ptr %lsr.iv, i32 -1
     br i1 %v8, label %b2, label %b3
-  
+
   b3:                                               ; preds = %b2, %b1
     ret void
   }
-  
+
   attributes #0 = { nounwind "target-cpu"="hexagonv55" }
-  
+
   !0 = !{!1, !1, i64 0}
   !1 = !{!"short", !2, i64 0}
   !2 = !{!"omnipotent char", !3, i64 0}
@@ -111,40 +111,40 @@ body:             |
   bb.0.b0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0, $r1
-  
+
     %7:intregs = COPY $r1
     %6:intregs = COPY $r0
     %8:predregs = IMPLICIT_DEF
     J2_jumpt %8, %bb.2, implicit-def dead $pc
     J2_jump %bb.1, implicit-def dead $pc
-  
+
   bb.1.b1:
     successors: %bb.4(0x40000000), %bb.2(0x40000000)
-  
+
     %9:predregs = IMPLICIT_DEF
     J2_jumpt %9, %bb.4, implicit-def dead $pc
     J2_jump %bb.2, implicit-def dead $pc
-  
+
   bb.2.b2.preheader:
     successors: %bb.3(0x80000000)
-  
+
     %10:intregs = IMPLICIT_DEF
     %14:intregs = COPY %10
     J2_loop0r %bb.3, %14, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
-  
-  bb.3.b2 (address-taken):
+
+  bb.3.b2 (machine-block-address-taken):
     successors: %bb.3(0x7c000000), %bb.4(0x04000000)
-  
+
     %1:intregs = PHI %7, %bb.2, %5, %bb.3, post-instr-symbol <mcsymbol Stage-3_Cycle-0>
     %2:intregs = PHI %10, %bb.2, %4, %bb.3, post-instr-symbol <mcsymbol Stage-0_Cycle-0>
     %3:intregs = PHI %6, %bb.2, %2, %bb.3, post-instr-symbol <mcsymbol Stage-0_Cycle-0>
     %11:intregs = S2_addasl_rrri %7, %3, 1, post-instr-symbol <mcsymbol Stage-0_Cycle-0>
-    %12:intregs = L2_loadruh_io %11, -4, post-instr-symbol <mcsymbol Stage-3_Cycle-0> :: (load 2 from %ir.cgep2, !tbaa !0)
-    %5:intregs = S2_storerh_pi %1, -2, %12, post-instr-symbol <mcsymbol Stage-3_Cycle-0> :: (store 2 into %ir.lsr.iv, !tbaa !0)
+    %12:intregs = L2_loadruh_io %11, -4, post-instr-symbol <mcsymbol Stage-3_Cycle-0> :: (load (s16) from %ir.cgep2, !tbaa !0)
+    %5:intregs = S2_storerh_pi %1, -2, %12, post-instr-symbol <mcsymbol Stage-3_Cycle-0> :: (store (s16) into %ir.lsr.iv, !tbaa !0)
     %4:intregs = nsw A2_addi %2, -1, post-instr-symbol <mcsymbol Stage-0_Cycle-0>
     ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
     J2_jump %bb.4, implicit-def dead $pc
-  
+
   bb.4.b3:
     PS_jmpret $r31, implicit-def dead $pc
 

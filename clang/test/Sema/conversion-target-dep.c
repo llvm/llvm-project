@@ -6,9 +6,9 @@
 
 long double ld;
 double d;
-_Float16 f16; // x86-error {{_Float16 is not supported on this target}}
+_Float16 f16;
 
-int main() {
+int main(void) {
   ld = d; // x86-warning {{implicit conversion increases floating-point precision: 'double' to 'long double'}}
   d = ld; // x86-warning {{implicit conversion loses floating-point precision: 'long double' to 'double'}}
 

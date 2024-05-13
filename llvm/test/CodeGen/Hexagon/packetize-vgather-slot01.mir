@@ -15,8 +15,8 @@ body: |
   bb.0:
     liveins: $r0, $r1, $r2, $r3, $m0, $v0, $v1, $v2
     $v0 = V6_vaslw_acc $v0, killed $v1, $r0
-    V6_vgathermw_pseudo $r1, $r2, $m0, killed $v2
+    V6_vgathermw_pseudo $r1, 0, $r2, $m0, killed $v2
     $r4 = A2_addi $r1, 512
     $r5 = A2_addi $r1, 640
-    V6_vgathermw_pseudo killed $r3, $r2, $m0, killed $v0
+    V6_vgathermw_pseudo killed $r3, 0, $r2, $m0, killed $v0
 ...

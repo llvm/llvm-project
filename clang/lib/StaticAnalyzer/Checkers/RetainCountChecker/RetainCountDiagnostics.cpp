@@ -15,6 +15,7 @@
 #include "RetainCountChecker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -73,11 +74,8 @@ RefCountBug::RefCountBug(CheckerNameRef Checker, RefCountBugKind BT)
 
 static bool isNumericLiteralExpression(const Expr *E) {
   // FIXME: This set of cases was copied from SemaExprObjC.
-  return isa<IntegerLiteral>(E) ||
-         isa<CharacterLiteral>(E) ||
-         isa<FloatingLiteral>(E) ||
-         isa<ObjCBoolLiteralExpr>(E) ||
-         isa<CXXBoolLiteralExpr>(E);
+  return isa<IntegerLiteral, CharacterLiteral, FloatingLiteral,
+             ObjCBoolLiteralExpr, CXXBoolLiteralExpr>(E);
 }
 
 /// If type represents a pointer to CXXRecordDecl,
@@ -168,13 +166,12 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
 
 /// Finds argument index of the out paramter in the call @c S
 /// corresponding to the symbol @c Sym.
-/// If none found, returns None.
-static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
-                                             const LocationContext *LCtx,
-                                             SymbolRef &Sym,
-                                             Optional<CallEventRef<>> CE) {
+/// If none found, returns std::nullopt.
+static std::optional<unsigned>
+findArgIdxOfSymbol(ProgramStateRef CurrSt, const LocationContext *LCtx,
+                   SymbolRef &Sym, std::optional<CallEventRef<>> CE) {
   if (!CE)
-    return None;
+    return std::nullopt;
 
   for (unsigned Idx = 0; Idx < (*CE)->getNumArgs(); Idx++)
     if (const MemRegion *MR = (*CE)->getArgSVal(Idx).getAsRegion())
@@ -182,25 +179,25 @@ static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
         if (CurrSt->getSVal(MR, TR->getValueType()).getAsSymbol() == Sym)
           return Idx;
 
-  return None;
+  return std::nullopt;
 }
 
-static Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
+static std::optional<std::string> findMetaClassAlloc(const Expr *Callee) {
   if (const auto *ME = dyn_cast<MemberExpr>(Callee)) {
     if (ME->getMemberDecl()->getNameAsString() != "alloc")
-      return None;
+      return std::nullopt;
     const Expr *This = ME->getBase()->IgnoreParenImpCasts();
     if (const auto *DRE = dyn_cast<DeclRefExpr>(This)) {
       const ValueDecl *VD = DRE->getDecl();
       if (VD->getNameAsString() != "metaClass")
-        return None;
+        return std::nullopt;
 
       if (const auto *RD = dyn_cast<CXXRecordDecl>(VD->getDeclContext()))
         return RD->getNameAsString();
 
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 static std::string findAllocatedObjectName(const Stmt *S, QualType QT) {
@@ -237,8 +234,8 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     os << "Operator 'new'";
   } else {
     assert(isa<ObjCMessageExpr>(S));
-    CallEventRef<ObjCMethodCall> Call =
-        Mgr.getObjCMethodCall(cast<ObjCMessageExpr>(S), CurrSt, LCtx);
+    CallEventRef<ObjCMethodCall> Call = Mgr.getObjCMethodCall(
+        cast<ObjCMessageExpr>(S), CurrSt, LCtx, {nullptr, 0});
 
     switch (Call->getMessageKind()) {
     case OCM_Message:
@@ -253,7 +250,7 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     }
   }
 
-  Optional<CallEventRef<>> CE = Mgr.getCall(S, CurrSt, LCtx);
+  std::optional<CallEventRef<>> CE = Mgr.getCall(S, CurrSt, LCtx, {nullptr, 0});
   auto Idx = findArgIdxOfSymbol(CurrSt, LCtx, Sym, CE);
 
   // If index is not found, we assume that the symbol was returned.
@@ -264,14 +261,12 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
   }
 
   if (CurrV.getObjKind() == ObjKind::CF) {
-    os << "a Core Foundation object of type '"
-       << Sym->getType().getAsString() << "' with a ";
+    os << "a Core Foundation object of type '" << Sym->getType() << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::OS) {
     os << "an OSObject of type '" << findAllocatedObjectName(S, Sym->getType())
        << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::Generalized) {
-    os << "an object of type '" << Sym->getType().getAsString()
-       << "' with a ";
+    os << "an object of type '" << Sym->getType() << "' with a ";
   } else {
     assert(CurrV.getObjKind() == ObjKind::ObjC);
     QualType T = Sym->getType();
@@ -279,8 +274,7 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
       os << "an Objective-C object with a ";
     } else {
       const ObjCObjectPointerType *PT = cast<ObjCObjectPointerType>(T);
-      os << "an instance of " << PT->getPointeeType().getAsString()
-         << " with a ";
+      os << "an instance of " << PT->getPointeeType() << " with a ";
     }
   }
 
@@ -608,16 +602,17 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   return std::move(P);
 }
 
-static Optional<std::string> describeRegion(const MemRegion *MR) {
+static std::optional<std::string> describeRegion(const MemRegion *MR) {
   if (const auto *VR = dyn_cast_or_null<VarRegion>(MR))
     return std::string(VR->getDecl()->getName());
   // Once we support more storage locations for bindings,
   // this would need to be improved.
-  return None;
+  return std::nullopt;
 }
 
 using Bindings = llvm::SmallVector<std::pair<const MemRegion *, SVal>, 4>;
 
+namespace {
 class VarBindingsCollector : public StoreManager::BindingsHandler {
   SymbolRef Sym;
   Bindings &Result;
@@ -638,6 +633,7 @@ public:
     return true;
   }
 };
+} // namespace
 
 Bindings getAllVarBindingsForSymbol(ProgramStateManager &Manager,
                                     const ExplodedNode *Node, SymbolRef Sym) {
@@ -734,7 +730,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
   const LocationContext *InterestingMethodContext = nullptr;
   if (InitMethodContext) {
     const ProgramPoint AllocPP = AllocationNode->getLocation();
-    if (Optional<StmtPoint> SP = AllocPP.getAs<StmtPoint>())
+    if (std::optional<StmtPoint> SP = AllocPP.getAs<StmtPoint>())
       if (const ObjCMessageExpr *ME = SP->getStmtAs<ObjCMessageExpr>())
         if (ME->getMethodFamily() == OMF_alloc)
           InterestingMethodContext = InitMethodContext;
@@ -777,7 +773,7 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
 
   os << "Object leaked: ";
 
-  Optional<std::string> RegionDescription = describeRegion(LastBinding);
+  std::optional<std::string> RegionDescription = describeRegion(LastBinding);
   if (RegionDescription) {
     os << "object allocated and stored into '" << *RegionDescription << '\'';
   } else {
@@ -790,9 +786,6 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   assert(RV);
 
   if (RV->getKind() == RefVal::ErrorLeakReturned) {
-    // FIXME: Per comments in rdar://6320065, "create" only applies to CF
-    // objects.  Only "copy", "alloc", "retain" and "new" transfer ownership
-    // to the caller for NS objects.
     const Decl *D = &EndN->getCodeDecl();
 
     os << (isa<ObjCMethodDecl>(D) ? " is returned from a method "
@@ -923,7 +916,7 @@ void RefLeakReport::createDescription(CheckerContext &Ctx) {
   llvm::raw_string_ostream os(Description);
   os << "Potential leak of an object";
 
-  Optional<std::string> RegionDescription =
+  std::optional<std::string> RegionDescription =
       describeRegion(AllocBindingToReport);
   if (RegionDescription) {
     os << " stored into '" << *RegionDescription << '\'';
@@ -975,18 +968,17 @@ void RefLeakReport::findBindingToReport(CheckerContext &Ctx,
     // Let's pick one of them at random (if there is something to pick from).
     AllocBindingToReport = AllVarBindings[0].first;
 
-    // Because 'AllocBindingToReport' is not the the same as
+    // Because 'AllocBindingToReport' is not the same as
     // 'AllocFirstBinding', we need to explain how the leaking object
     // got from one to another.
     //
     // NOTE: We use the actual SVal stored in AllocBindingToReport here because
-    //       FindLastStoreBRVisitor compares SVal's and it can get trickier for
+    //       trackStoredValue compares SVal's and it can get trickier for
     //       something like derived regions if we want to construct SVal from
     //       Sym. Instead, we take the value that is definitely stored in that
-    //       region, thus guaranteeing that FindLastStoreBRVisitor will work.
-    addVisitor<FindLastStoreBRVisitor>(
-        AllVarBindings[0].second.castAs<KnownSVal>(), AllocBindingToReport,
-        false, bugreporter::TrackingKind::Thorough);
+    //       region, thus guaranteeing that trackStoredValue will work.
+    bugreporter::trackStoredValue(AllVarBindings[0].second,
+                                  AllocBindingToReport, *this);
   } else {
     AllocBindingToReport = AllocFirstBinding;
   }

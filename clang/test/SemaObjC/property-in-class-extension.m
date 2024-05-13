@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://7766184
 
 @interface Foo @end
 
@@ -7,12 +6,11 @@
   @property (readonly) int bar;
 @end
 
-void FUNC () {
+void FUNC (void) {
     Foo *foo;
     foo.bar = 0; // expected-error {{assignment to readonly property}}
 }
 
-// rdar://8747333
 @class NSObject;
 
 @interface rdar8747333  {

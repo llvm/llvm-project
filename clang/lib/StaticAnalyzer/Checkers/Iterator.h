@@ -63,9 +63,7 @@ public:
     return Cont == X.Cont && Valid == X.Valid && Offset == X.Offset;
   }
 
-  bool operator!=(const IteratorPosition &X) const {
-    return Cont != X.Cont || Valid != X.Valid || Offset != X.Offset;
-  }
+  bool operator!=(const IteratorPosition &X) const { return !(*this == X); }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddPointer(Cont);
@@ -101,9 +99,7 @@ public:
     return Begin == X.Begin && End == X.End;
   }
 
-  bool operator!=(const ContainerData &X) const {
-    return Begin != X.Begin || End != X.End;
-  }
+  bool operator!=(const ContainerData &X) const { return !(*this == X); }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.Add(Begin);
@@ -165,18 +161,15 @@ bool isRandomIncrOrDecrOperator(OverloadedOperatorKind OK);
 bool isRandomIncrOrDecrOperator(BinaryOperatorKind OK);
 const ContainerData *getContainerData(ProgramStateRef State,
                                       const MemRegion *Cont);
-const IteratorPosition *getIteratorPosition(ProgramStateRef State,
-                                            const SVal &Val);
-ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
+const IteratorPosition *getIteratorPosition(ProgramStateRef State, SVal Val);
+ProgramStateRef setIteratorPosition(ProgramStateRef State, SVal Val,
                                     const IteratorPosition &Pos);
-ProgramStateRef createIteratorPosition(ProgramStateRef State, const SVal &Val,
-                                       const MemRegion *Cont, const Stmt* S,
+ProgramStateRef createIteratorPosition(ProgramStateRef State, SVal Val,
+                                       const MemRegion *Cont, const Stmt *S,
                                        const LocationContext *LCtx,
                                        unsigned blockCount);
-ProgramStateRef advancePosition(ProgramStateRef State,
-                                const SVal &Iter,
-                                OverloadedOperatorKind Op,
-                                const SVal &Distance);
+ProgramStateRef advancePosition(ProgramStateRef State, SVal Iter,
+                                OverloadedOperatorKind Op, SVal Distance);
 ProgramStateRef assumeNoOverflow(ProgramStateRef State, SymbolRef Sym,
                                  long Scale);
 bool compare(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2,

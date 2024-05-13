@@ -13,29 +13,26 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
-
-namespace {
-AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
-} // namespace
+namespace clang::tidy::cppcoreguidelines {
 
 void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
+  auto GlobalContext =
+      varDecl(hasGlobalStorage(),
+              hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())));
+
   auto GlobalVariable = varDecl(
-      hasGlobalStorage(),
+      GlobalContext,
       unless(anyOf(
-          isLocalVarDecl(), isConstexpr(), hasType(isConstQualified()),
+          isConstexpr(), hasType(isConstQualified()),
           hasType(referenceType())))); // References can't be changed, only the
                                        // data they reference can be changed.
 
   auto GlobalReferenceToNonConst =
-      varDecl(hasGlobalStorage(), hasType(referenceType()),
+      varDecl(GlobalContext, hasType(referenceType()),
               unless(hasType(references(qualType(isConstQualified())))));
 
-  auto GlobalPointerToNonConst =
-      varDecl(hasGlobalStorage(),
-              hasType(pointerType(pointee(unless(isConstQualified())))));
+  auto GlobalPointerToNonConst = varDecl(
+      GlobalContext, hasType(pointerType(pointee(unless(isConstQualified())))));
 
   Finder->addMatcher(GlobalVariable.bind("non-const_variable"), this);
   Finder->addMatcher(GlobalReferenceToNonConst.bind("indirection_to_non-const"),
@@ -66,6 +63,4 @@ void AvoidNonConstGlobalVariablesCheck::check(
   }
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

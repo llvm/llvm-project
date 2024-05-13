@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/remquof.h"
+#include "src/__support/FPUtil/DivisionAndRemainderOperations.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/DivisionAndRemainderOperations.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, remquof, (float x, float y, int *exp)) {
   return fputil::remquo(x, y, *exp);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

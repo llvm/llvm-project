@@ -2,13 +2,13 @@
 // RUN: %clang_analyze_cc1 -DTEST_NULL_TERM -analyzer-checker=core,unix.Malloc,debug.ExprInspection,alpha.cplusplus.IteratorRange -analyzer-max-loop 4 -analyzer-config widen-loops=true -verify -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(int);
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
 void free(void *);
 
-void loop_which_iterates_limit_times_not_widened() {
+void loop_which_iterates_limit_times_not_widened(void) {
   int i;
   int x = 1;
   // Check loop isn't widened by checking x isn't invalidated
@@ -24,7 +24,7 @@ void loop_which_iterates_limit_times_not_widened() {
 
 int a_global;
 
-void loop_evaluated_before_widening() {
+void loop_evaluated_before_widening(void) {
   int i;
   a_global = 1;
   for (i = 0; i < 10; ++i) {
@@ -36,31 +36,31 @@ void loop_evaluated_before_widening() {
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
-void warnings_after_loop() {
+void warnings_after_loop(void) {
   int i;
   for (i = 0; i < 10; ++i) {}
   char *m = (char*)malloc(12);
 } // expected-warning {{Potential leak of memory pointed to by 'm'}}
 
-void for_loop_exits() {
+void for_loop_exits(void) {
   int i;
   for (i = 0; i < 10; ++i) {}
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
-void while_loop_exits() {
+void while_loop_exits(void) {
   int i = 0;
   while (i < 10) {++i;}
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
-void do_while_loop_exits() {
+void do_while_loop_exits(void) {
   int i = 0;
   do {++i;} while (i < 10);
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
-void loop_body_is_widened() {
+void loop_body_is_widened(void) {
   int i = 0;
   while (i < 100) {
     if (i > 10) {
@@ -71,13 +71,13 @@ void loop_body_is_widened() {
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
-void invariably_infinite_loop() {
+void invariably_infinite_loop(void) {
   int i = 0;
   while (1) { ++i; }
   clang_analyzer_warnIfReached(); // no-warning
 }
 
-void invariably_infinite_break_loop() {
+void invariably_infinite_break_loop(void) {
   int i = 0;
   while (1) {
     ++i;
@@ -87,7 +87,7 @@ void invariably_infinite_break_loop() {
   clang_analyzer_warnIfReached(); // no-warning
 }
 
-void reachable_break_loop() {
+void reachable_break_loop(void) {
   int i = 0;
   while (1) {
     ++i;
@@ -96,7 +96,7 @@ void reachable_break_loop() {
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
-void condition_constrained_true_in_loop() {
+void condition_constrained_true_in_loop(void) {
   int i = 0;
   while (i < 50) {
     clang_analyzer_eval(i < 50); // expected-warning {{TRUE}}
@@ -105,7 +105,7 @@ void condition_constrained_true_in_loop() {
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
-void condition_constrained_false_after_loop() {
+void condition_constrained_false_after_loop(void) {
   int i = 0;
   while (i < 50) {
     ++i;
@@ -114,7 +114,7 @@ void condition_constrained_false_after_loop() {
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
-void multiple_exit_test() {
+void multiple_exit_test(void) {
   int x = 0;
   int i = 0;
   while (i < 50) {
@@ -133,7 +133,7 @@ void multiple_exit_test() {
   if (i > 10 && i < 50) clang_analyzer_warnIfReached(); // no-warning
 }
 
-void pointer_doesnt_leak_from_loop() {
+void pointer_doesnt_leak_from_loop(void) {
   int *h_ptr = (int *) malloc(sizeof(int));
   for (int i = 0; i < 2; ++i) {}
   for (int i = 0; i < 10; ++i) {} // no-warning
@@ -166,7 +166,7 @@ void variable_bound_exiting_loops_widened(int x) {
   clang_analyzer_eval(t == 1); // expected-warning {{TRUE}} // expected-warning {{UNKNOWN}}
 }
 
-void nested_loop_outer_widen() {
+void nested_loop_outer_widen(void) {
   int i = 0, j = 0;
   for (i = 0; i < 10; i++) {
     clang_analyzer_eval(i < 10); // expected-warning {{TRUE}}
@@ -178,7 +178,7 @@ void nested_loop_outer_widen() {
   clang_analyzer_eval(i >= 10); // expected-warning {{TRUE}}
 }
 
-void nested_loop_inner_widen() {
+void nested_loop_inner_widen(void) {
   int i = 0, j = 0;
   for (i = 0; i < 2; i++) {
     clang_analyzer_eval(i < 2); // expected-warning {{TRUE}}

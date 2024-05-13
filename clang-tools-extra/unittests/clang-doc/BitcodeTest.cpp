@@ -35,6 +35,8 @@ std::string writeInfo(Info *I) {
     return writeInfo(*static_cast<EnumInfo *>(I));
   case InfoType::IT_function:
     return writeInfo(*static_cast<FunctionInfo *>(I));
+  case InfoType::IT_typedef:
+    return writeInfo(*static_cast<TypedefInfo *>(I));
   default:
     return "";
   }
@@ -57,11 +59,11 @@ TEST(BitcodeTest, emitNamespaceInfoBitcode) {
   I.Name = "r";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.ChildNamespaces.emplace_back(EmptySID, "ChildNamespace",
-                                 InfoType::IT_namespace);
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
-  I.ChildFunctions.emplace_back();
-  I.ChildEnums.emplace_back();
+  I.Children.Namespaces.emplace_back(EmptySID, "ChildNamespace",
+                                     InfoType::IT_namespace);
+  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+  I.Children.Functions.emplace_back();
+  I.Children.Enums.emplace_back();
 
   std::string WriteResult = writeInfo(&I);
   EXPECT_TRUE(WriteResult.size() > 0);
@@ -78,19 +80,32 @@ TEST(BitcodeTest, emitRecordInfoBitcode) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.Members.emplace_back("int", "X", AccessSpecifier::AS_private);
-  I.TagType = TagTypeKind::TTK_Class;
+  I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
+  I.TagType = TagTypeKind::Class;
   I.IsTypeDef = true;
   I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
                        AccessSpecifier::AS_public, true);
-  I.Bases.back().ChildFunctions.emplace_back();
-  I.Bases.back().Members.emplace_back("int", "X", AccessSpecifier::AS_private);
+  I.Bases.back().Children.Functions.emplace_back();
+  I.Bases.back().Members.emplace_back(TypeInfo("int"), "X",
+                                      AccessSpecifier::AS_private);
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
-  I.ChildFunctions.emplace_back();
-  I.ChildEnums.emplace_back();
+  // Documentation for the data member.
+  CommentInfo TopComment;
+  TopComment.Kind = "FullComment";
+  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
+  CommentInfo *Brief = TopComment.Children.back().get();
+  Brief->Kind = "ParagraphComment";
+  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.back()->Kind = "TextComment";
+  Brief->Children.back()->Name = "ParagraphComment";
+  Brief->Children.back()->Text = "Value of the thing.";
+  I.Bases.back().Members.back().Description.emplace_back(std::move(TopComment));
+
+  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+  I.Children.Functions.emplace_back();
+  I.Children.Enums.emplace_back();
 
   std::string WriteResult = writeInfo(&I);
   EXPECT_TRUE(WriteResult.size() > 0);
@@ -107,8 +122,8 @@ TEST(BitcodeTest, emitFunctionInfoBitcode) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "P");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "P");
 
   I.Access = AccessSpecifier::AS_none;
 
@@ -127,8 +142,8 @@ TEST(BitcodeTest, emitMethodInfoBitcode) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "P");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "P");
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -159,12 +174,50 @@ TEST(BitcodeTest, emitEnumInfoBitcode) {
   CheckEnumInfo(&I, InfoAsEnum(ReadResults[0].get()));
 }
 
+TEST(BitcodeTest, emitTypedefInfoBitcode) {
+  TypedefInfo I;
+  I.Name = "MyInt";
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+
+  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.Underlying = TypeInfo("unsigned");
+  I.IsUsing = true;
+
+  CommentInfo Top;
+  Top.Kind = "FullComment";
+
+  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  CommentInfo *BlankLine = Top.Children.back().get();
+  BlankLine->Kind = "ParagraphComment";
+  BlankLine->Children.emplace_back(std::make_unique<CommentInfo>());
+  BlankLine->Children.back()->Kind = "TextComment";
+
+  I.Description.emplace_back(std::move(Top));
+
+  std::string WriteResult = writeInfo(&I);
+  EXPECT_TRUE(WriteResult.size() > 0);
+  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+
+  CheckTypedefInfo(&I, InfoAsTypedef(ReadResults[0].get()));
+
+  // Check one with no IsUsing set, no description, and no definition location.
+  TypedefInfo I2;
+  I2.Name = "SomethingElse";
+  I2.IsUsing = false;
+  I2.Underlying = TypeInfo("int");
+
+  WriteResult = writeInfo(&I2);
+  EXPECT_TRUE(WriteResult.size() > 0);
+  ReadResults = readInfo(WriteResult, 1);
+  CheckTypedefInfo(&I2, InfoAsTypedef(ReadResults[0].get()));
+}
+
 TEST(SerializeTest, emitInfoWithCommentBitcode) {
   FunctionInfo F;
   F.Name = "F";
-  F.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  F.ReturnType = TypeInfo("void");
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  F.Params.emplace_back("int", "I");
+  F.Params.emplace_back(TypeInfo("int"), "I");
 
   CommentInfo Top;
   Top.Kind = "FullComment";

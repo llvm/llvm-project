@@ -107,7 +107,7 @@ typedef struct __CFError* CFErrorRef;
 
 void foo(CFErrorRef* error) { // expected-warning{{Function accepting CFErrorRef* should have a non-void return value to indicate whether or not an error occurred [osx.coreFoundation.CFError]}}
   // FIXME: This shouldn't be tied to a modeling checker.
-  *error = 0; // expected-warning {{Potential null dereference.  According to coding standards documented in CoreFoundation/CFError.h the parameter may be null [osx.coreFoundation.CFError]}}
+  *error = 0; // expected-warning {{Potential null dereference. According to coding standards documented in CoreFoundation/CFError.h the parameter may be null [osx.coreFoundation.CFError]}}
 }
 
 @interface A
@@ -116,7 +116,7 @@ void foo(CFErrorRef* error) { // expected-warning{{Function accepting CFErrorRef
 
 @implementation A
 - (void)myMethodWhichMayFail:(NSError **)error {                  // expected-warning {{Method accepting NSError** should have a non-void return value to indicate whether or not an error occurred [osx.cocoa.NSError]}}
-  *error = [NSError errorWithDomain:@"domain" code:1 userInfo:0]; // expected-warning {{Potential null dereference.  According to coding standards in 'Creating and Returning NSError Objects' the parameter may be null [osx.cocoa.NSError]}}
+  *error = [NSError errorWithDomain:@"domain" code:1 userInfo:0]; // expected-warning {{Potential null dereference. According to coding standards in 'Creating and Returning NSError Objects' the parameter may be null [osx.cocoa.NSError]}}
 }
 @end
 

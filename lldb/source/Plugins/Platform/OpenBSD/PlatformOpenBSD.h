@@ -25,22 +25,25 @@ public:
   // lldb_private::PluginInterface functions
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
-  static ConstString GetPluginNameStatic(bool is_host);
+  static llvm::StringRef GetPluginNameStatic(bool is_host) {
+    return is_host ? Platform::GetHostPlatformName() : "remote-openbsd";
+  }
 
-  static const char *GetPluginDescriptionStatic(bool is_host);
+  static llvm::StringRef GetPluginDescriptionStatic(bool is_host);
 
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic(IsHost());
+  }
 
   // lldb_private::Platform functions
-  const char *GetDescription() override {
+  llvm::StringRef GetDescription() override {
     return GetPluginDescriptionStatic(IsHost());
   }
 
   void GetStatus(Stream &strm) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
   bool CanDebugProcess() override;
 
@@ -50,6 +53,8 @@ public:
                                   lldb::addr_t length, unsigned prot,
                                   unsigned flags, lldb::addr_t fd,
                                   lldb::addr_t offset) override;
+
+  std::vector<ArchSpec> m_supported_architectures;
 };
 
 } // namespace platform_openbsd

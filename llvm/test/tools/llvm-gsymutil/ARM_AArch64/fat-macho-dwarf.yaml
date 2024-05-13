@@ -14,24 +14,24 @@
 # ARMV7:      Input file: {{.*\.yaml\.tmp}}
 # ARMV7-NEXT: Output file (armv7): {{.*\.yaml\.tmp\.armv7\.gsym}}
 # ARMV7-NEXT: Loaded 1 functions from DWARF.
-# ARMV7-NEXT: Loaded 0 functions from symbol table.
-# ARMV7-NEXT: Pruned 0 functions, ended with 1 total
+# ARMV7-NEXT: Loaded 1 functions from symbol table.
+# ARMV7: Pruned 1 functions, ended with 1 total
 
 # ARM64:      Input file: {{.*\.yaml\.tmp}}
 # ARM64-NEXT: Output file (arm64): {{.*\.yaml\.tmp\.arm64\.gsym}}
 # ARM64-NEXT: Loaded 1 functions from DWARF.
-# ARM64-NEXT: Loaded 0 functions from symbol table.
-# ARM64-NEXT: Pruned 0 functions, ended with 1 total
+# ARM64-NEXT: Loaded 1 functions from symbol table.
+# ARM64: Pruned 1 functions, ended with 1 total
 
 # FAT:      Input file: {{.*\.yaml\.tmp}}
 # FAT-NEXT: Output file (armv7): {{.*\.yaml\.tmp\.gsym\.armv7}}
 # FAT-NEXT: Loaded 1 functions from DWARF.
-# FAT-NEXT: Loaded 0 functions from symbol table.
-# FAT-NEXT: Pruned 0 functions, ended with 1 total
+# FAT-NEXT: Loaded 1 functions from symbol table.
+# FAT: Pruned 1 functions, ended with 1 total
 # FAT-NEXT: Output file (arm64): {{.*\.yaml\.tmp\.gsym\.arm64}}
 # FAT-NEXT: Loaded 1 functions from DWARF.
-# FAT-NEXT: Loaded 0 functions from symbol table.
-# FAT-NEXT: Pruned 0 functions, ended with 1 total
+# FAT-NEXT: Loaded 1 functions from symbol table.
+# FAT: Pruned 1 functions, ended with 1 total
 
 --- !fat-mach-o
 FatHeader:

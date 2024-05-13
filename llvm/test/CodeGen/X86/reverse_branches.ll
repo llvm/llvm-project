@@ -30,27 +30,27 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq ___stack_chk_guard@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq ___stack_chk_guard@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    xorl %r12d, %r12d
+; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %r14
 ; CHECK-NEXT:    movq %rsp, %r15
 ; CHECK-NEXT:    jmp LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_6: ## %for.inc9
 ; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    incl %r12d
+; CHECK-NEXT:    incl %ebx
 ; CHECK-NEXT:  LBB0_1: ## %for.cond
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ## Child Loop BB0_3 Depth 2
-; CHECK-NEXT:    cmpl $999, %r12d ## imm = 0x3E7
+; CHECK-NEXT:    cmpl $999, %ebx ## imm = 0x3E7
 ; CHECK-NEXT:    jg LBB0_7
 ; CHECK-NEXT:  ## %bb.2: ## %for.cond1.preheader
 ; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $-1, %ebp
 ; CHECK-NEXT:    movq %r15, %rdi
-; CHECK-NEXT:    movq %r14, %rbx
+; CHECK-NEXT:    movq %r14, %r12
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_3: ## %for.cond1
 ; CHECK-NEXT:    ## Parent Loop BB0_1 Depth=1
@@ -60,17 +60,17 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    jg LBB0_6
 ; CHECK-NEXT:  ## %bb.4: ## %for.body3
 ; CHECK-NEXT:    ## in Loop: Header=BB0_3 Depth=2
-; CHECK-NEXT:    addq $1002, %rbx ## imm = 0x3EA
+; CHECK-NEXT:    addq $1002, %r12 ## imm = 0x3EA
 ; CHECK-NEXT:    leaq 1001(%rdi), %r13
 ; CHECK-NEXT:    movl $1000, %edx ## imm = 0x3E8
 ; CHECK-NEXT:    movl $120, %esi
 ; CHECK-NEXT:    callq _memchr
-; CHECK-NEXT:    cmpq %rax, %rbx
+; CHECK-NEXT:    cmpq %rax, %r12
 ; CHECK-NEXT:    movq %r13, %rdi
 ; CHECK-NEXT:    je LBB0_3
 ; CHECK-NEXT:    jmp LBB0_5
 ; CHECK-NEXT:  LBB0_7: ## %for.end11
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    leaq L_.str2(%rip), %rdi
 ; CHECK-NEXT:    callq _puts
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rsp, %rcx
@@ -94,11 +94,11 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_14: ## %exit
 ; CHECK-NEXT:    ## in Loop: Header=BB0_10 Depth=2
-; CHECK-NEXT:    addq %rsi, %rbp
+; CHECK-NEXT:    addq %rsi, %r8
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    decq %rsi
 ; CHECK-NEXT:    addq $1001, %rdx ## imm = 0x3E9
-; CHECK-NEXT:    cmpq $-1000, %rbp ## imm = 0xFC18
+; CHECK-NEXT:    cmpq $-1000, %r8 ## imm = 0xFC18
 ; CHECK-NEXT:    jne LBB0_5
 ; CHECK-NEXT:  LBB0_10: ## %for.cond18
 ; CHECK-NEXT:    ## Parent Loop BB0_8 Depth=1
@@ -108,27 +108,27 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    jg LBB0_15
 ; CHECK-NEXT:  ## %bb.11: ## %for.body20
 ; CHECK-NEXT:    ## in Loop: Header=BB0_10 Depth=2
-; CHECK-NEXT:    movq $-1000, %rbp ## imm = 0xFC18
+; CHECK-NEXT:    movq $-1000, %r8 ## imm = 0xFC18
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_12: ## %do.body.i
 ; CHECK-NEXT:    ## Parent Loop BB0_8 Depth=1
 ; CHECK-NEXT:    ## Parent Loop BB0_10 Depth=2
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    cmpb $120, 1000(%rdx,%rbp)
+; CHECK-NEXT:    cmpb $120, 1000(%rdx,%r8)
 ; CHECK-NEXT:    je LBB0_14
 ; CHECK-NEXT:  ## %bb.13: ## %do.cond.i
 ; CHECK-NEXT:    ## in Loop: Header=BB0_12 Depth=3
-; CHECK-NEXT:    incq %rbp
+; CHECK-NEXT:    incq %r8
 ; CHECK-NEXT:    jne LBB0_12
 ; CHECK-NEXT:  LBB0_5: ## %if.then
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    leaq L_str4(%rip), %rdi
 ; CHECK-NEXT:    callq _puts
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq _exit
 ; CHECK-NEXT:  LBB0_16: ## %for.end40
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    leaq L_.str3(%rip), %rdi
 ; CHECK-NEXT:    callq _puts
-; CHECK-NEXT:    movq ___stack_chk_guard@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq ___stack_chk_guard@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    jne LBB0_18
@@ -160,15 +160,15 @@ for.cond1:
   br i1 %cmp2, label %for.body3, label %for.inc9
 
 for.body3:
-  %arraydecay = getelementptr inbounds [1000 x [1001 x i8]], [1000 x [1001 x i8]]* %strs, i64 0, i64 %indvars.iv50, i64 0
-  %call = call i8* @memchr(i8* %arraydecay, i32 120, i64 1000)
-  %add.ptr = getelementptr inbounds [1000 x [1001 x i8]], [1000 x [1001 x i8]]* %strs, i64 0, i64 %indvars.iv50, i64 %indvars.iv50
-  %cmp7 = icmp eq i8* %call, %add.ptr
+  %arraydecay = getelementptr inbounds [1000 x [1001 x i8]], ptr %strs, i64 0, i64 %indvars.iv50, i64 0
+  %call = call ptr @memchr(ptr %arraydecay, i32 120, i64 1000)
+  %add.ptr = getelementptr inbounds [1000 x [1001 x i8]], ptr %strs, i64 0, i64 %indvars.iv50, i64 %indvars.iv50
+  %cmp7 = icmp eq ptr %call, %add.ptr
   %indvars.iv.next51 = add i64 %indvars.iv50, 1
   br i1 %cmp7, label %for.cond1, label %if.then
 
 if.then:
-  %puts = call i32 @puts(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str4, i64 0, i64 0))
+  %puts = call i32 @puts(ptr @str4)
   call void @exit(i32 1) noreturn
   unreachable
 
@@ -177,7 +177,7 @@ for.inc9:
   br label %for.cond
 
 for.end11:
-  %puts42 = call i32 @puts(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str2, i64 0, i64 0))
+  %puts42 = call i32 @puts(ptr @.str2)
   br label %for.cond14
 
 for.cond14:
@@ -192,30 +192,30 @@ for.cond18:
   br i1 %cmp19, label %for.body20, label %for.inc38
 
 for.body20:
-  %arraydecay24 = getelementptr inbounds [1000 x [1001 x i8]], [1000 x [1001 x i8]]* %strs, i64 0, i64 %indvars.iv, i64 0
+  %arraydecay24 = getelementptr inbounds [1000 x [1001 x i8]], ptr %strs, i64 0, i64 %indvars.iv, i64 0
   br label %do.body.i
 
 do.body.i:
   %n.addr.0.i = phi i64 [ %dec.i, %do.cond.i ], [ 1000, %for.body20 ]
-  %p.0.i = phi i8* [ %incdec.ptr.i, %do.cond.i ], [ %arraydecay24, %for.body20 ]
-  %2 = load i8, i8* %p.0.i, align 1
+  %p.0.i = phi ptr [ %incdec.ptr.i, %do.cond.i ], [ %arraydecay24, %for.body20 ]
+  %2 = load i8, ptr %p.0.i, align 1
   %cmp3.i = icmp eq i8 %2, 120
   br i1 %cmp3.i, label %exit, label %do.cond.i
 
 do.cond.i:
-  %incdec.ptr.i = getelementptr inbounds i8, i8* %p.0.i, i64 1
+  %incdec.ptr.i = getelementptr inbounds i8, ptr %p.0.i, i64 1
   %dec.i = add i64 %n.addr.0.i, -1
   %cmp5.i = icmp eq i64 %dec.i, 0
   br i1 %cmp5.i, label %if.then32, label %do.body.i
 
 exit:
-  %add.ptr30 = getelementptr inbounds [1000 x [1001 x i8]], [1000 x [1001 x i8]]* %strs, i64 0, i64 %indvars.iv, i64 %indvars.iv
-  %cmp31 = icmp eq i8* %p.0.i, %add.ptr30
+  %add.ptr30 = getelementptr inbounds [1000 x [1001 x i8]], ptr %strs, i64 0, i64 %indvars.iv, i64 %indvars.iv
+  %cmp31 = icmp eq ptr %p.0.i, %add.ptr30
   %indvars.iv.next = add i64 %indvars.iv, 1
   br i1 %cmp31, label %for.cond18, label %if.then32
 
 if.then32:
-  %puts43 = call i32 @puts(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str4, i64 0, i64 0))
+  %puts43 = call i32 @puts(ptr @str4)
   call void @exit(i32 1) noreturn
   unreachable
 
@@ -224,11 +224,11 @@ for.inc38:
   br label %for.cond14
 
 for.end40:
-  %puts44 = call i32 @puts(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str3, i64 0, i64 0))
+  %puts44 = call i32 @puts(ptr @.str3)
   ret i32 0
 }
 
-declare i8* @memchr(i8*, i32, i64) nounwind readonly
+declare ptr @memchr(ptr, i32, i64) nounwind readonly
 declare void @exit(i32) noreturn
-declare i32 @puts(i8* nocapture) nounwind
+declare i32 @puts(ptr nocapture) nounwind
 

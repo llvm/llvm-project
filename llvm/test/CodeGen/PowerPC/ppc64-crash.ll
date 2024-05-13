@@ -8,7 +8,7 @@ target triple = "powerpc64-unknown-freebsd"
 %struct.pos_T = type { i64 }
 
 ; check that we're not copying stuff between R and X registers
-define internal void @serialize_pos(%struct.pos_T* byval(%struct.pos_T) %pos, %struct.__sFILE* %fp) nounwind {
+define internal void @serialize_pos(ptr byval(%struct.pos_T) %pos, ptr %fp) nounwind {
 entry:
   ret void
 }

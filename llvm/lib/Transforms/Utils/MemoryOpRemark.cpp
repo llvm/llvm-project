@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/MemoryOpRemark.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::ore;
@@ -105,11 +107,11 @@ void MemoryOpRemark::visit(const Instruction *I) {
   visitUnknown(*I);
 }
 
-std::string MemoryOpRemark::explainSource(StringRef Type) {
+std::string MemoryOpRemark::explainSource(StringRef Type) const {
   return (Type + ".").str();
 }
 
-StringRef MemoryOpRemark::remarkName(RemarkKind RK) {
+StringRef MemoryOpRemark::remarkName(RemarkKind RK) const {
   switch (RK) {
   case RK_Store:
     return "MemoryOpStore";
@@ -125,7 +127,7 @@ StringRef MemoryOpRemark::remarkName(RemarkKind RK) {
 
 static void inlineVolatileOrAtomicWithExtraArgs(bool *Inline, bool Volatile,
                                                 bool Atomic,
-                                                OptimizationRemarkMissed &R) {
+                                                DiagnosticInfoIROptimization &R) {
   if (Inline && *Inline)
     R << " Inlined: " << NV("StoreInlined", true) << ".";
   if (Volatile)
@@ -144,10 +146,24 @@ static void inlineVolatileOrAtomicWithExtraArgs(bool *Inline, bool Volatile,
     R << " Atomic: " << NV("StoreAtomic", false) << ".";
 }
 
-static Optional<uint64_t> getSizeInBytes(Optional<uint64_t> SizeInBits) {
+static std::optional<uint64_t>
+getSizeInBytes(std::optional<uint64_t> SizeInBits) {
   if (!SizeInBits || *SizeInBits % 8 != 0)
-    return None;
+    return std::nullopt;
   return *SizeInBits / 8;
+}
+
+template<typename ...Ts>
+std::unique_ptr<DiagnosticInfoIROptimization>
+MemoryOpRemark::makeRemark(Ts... Args) {
+  switch (diagnosticKind()) {
+  case DK_OptimizationRemarkAnalysis:
+    return std::make_unique<OptimizationRemarkAnalysis>(Args...);
+  case DK_OptimizationRemarkMissed:
+    return std::make_unique<OptimizationRemarkMissed>(Args...);
+  default:
+    llvm_unreachable("unexpected DiagnosticKind");
+  }
 }
 
 void MemoryOpRemark::visitStore(const StoreInst &SI) {
@@ -155,18 +171,18 @@ void MemoryOpRemark::visitStore(const StoreInst &SI) {
   bool Atomic = SI.isAtomic();
   int64_t Size = DL.getTypeStoreSize(SI.getOperand(0)->getType());
 
-  OptimizationRemarkMissed R(RemarkPass.data(), remarkName(RK_Store), &SI);
-  R << explainSource("Store") << "\nStore size: " << NV("StoreSize", Size)
-    << " bytes.";
-  visitPtr(SI.getOperand(1), /*IsRead=*/false, R);
-  inlineVolatileOrAtomicWithExtraArgs(nullptr, Volatile, Atomic, R);
-  ORE.emit(R);
+  auto R = makeRemark(RemarkPass.data(), remarkName(RK_Store), &SI);
+  *R << explainSource("Store") << "\nStore size: " << NV("StoreSize", Size)
+     << " bytes.";
+  visitPtr(SI.getOperand(1), /*IsRead=*/false, *R);
+  inlineVolatileOrAtomicWithExtraArgs(nullptr, Volatile, Atomic, *R);
+  ORE.emit(*R);
 }
 
 void MemoryOpRemark::visitUnknown(const Instruction &I) {
-  OptimizationRemarkMissed R(RemarkPass.data(), remarkName(RK_Unknown), &I);
-  R << explainSource("Initialization");
-  ORE.emit(R);
+  auto R = makeRemark(RemarkPass.data(), remarkName(RK_Unknown), &I);
+  *R << explainSource("Initialization");
+  ORE.emit(*R);
 }
 
 void MemoryOpRemark::visitIntrinsicCall(const IntrinsicInst &II) {
@@ -203,10 +219,9 @@ void MemoryOpRemark::visitIntrinsicCall(const IntrinsicInst &II) {
     return visitUnknown(II);
   }
 
-  OptimizationRemarkMissed R(RemarkPass.data(), remarkName(RK_IntrinsicCall),
-                             &II);
-  visitCallee(StringRef(CallTo), /*KnownLibCall=*/true, R);
-  visitSizeOperand(II.getOperand(2), R);
+  auto R = makeRemark(RemarkPass.data(), remarkName(RK_IntrinsicCall), &II);
+  visitCallee(CallTo.str(), /*KnownLibCall=*/true, *R);
+  visitSizeOperand(II.getOperand(2), *R);
 
   auto *CIVolatile = dyn_cast<ConstantInt>(II.getOperand(3));
   // No such thing as a memory intrinsic that is both atomic and volatile.
@@ -216,16 +231,16 @@ void MemoryOpRemark::visitIntrinsicCall(const IntrinsicInst &II) {
   case Intrinsic::memcpy:
   case Intrinsic::memmove:
   case Intrinsic::memcpy_element_unordered_atomic:
-    visitPtr(II.getOperand(1), /*IsRead=*/true, R);
-    visitPtr(II.getOperand(0), /*IsRead=*/false, R);
+    visitPtr(II.getOperand(1), /*IsRead=*/true, *R);
+    visitPtr(II.getOperand(0), /*IsRead=*/false, *R);
     break;
   case Intrinsic::memset:
   case Intrinsic::memset_element_unordered_atomic:
-    visitPtr(II.getOperand(0), /*IsRead=*/false, R);
+    visitPtr(II.getOperand(0), /*IsRead=*/false, *R);
     break;
   }
-  inlineVolatileOrAtomicWithExtraArgs(&Inline, Volatile, Atomic, R);
-  ORE.emit(R);
+  inlineVolatileOrAtomicWithExtraArgs(&Inline, Volatile, Atomic, *R);
+  ORE.emit(*R);
 }
 
 void MemoryOpRemark::visitCall(const CallInst &CI) {
@@ -235,15 +250,15 @@ void MemoryOpRemark::visitCall(const CallInst &CI) {
 
   LibFunc LF;
   bool KnownLibCall = TLI.getLibFunc(*F, LF) && TLI.has(LF);
-  OptimizationRemarkMissed R(RemarkPass.data(), remarkName(RK_Call), &CI);
-  visitCallee(F, KnownLibCall, R);
-  visitKnownLibCall(CI, LF, R);
-  ORE.emit(R);
+  auto R = makeRemark(RemarkPass.data(), remarkName(RK_Call), &CI);
+  visitCallee(F, KnownLibCall, *R);
+  visitKnownLibCall(CI, LF, *R);
+  ORE.emit(*R);
 }
 
 template <typename FTy>
 void MemoryOpRemark::visitCallee(FTy F, bool KnownLibCall,
-                                 OptimizationRemarkMissed &R) {
+                                 DiagnosticInfoIROptimization &R) {
   R << "Call to ";
   if (!KnownLibCall)
     R << NV("UnknownLibCall", "unknown") << " function ";
@@ -251,7 +266,7 @@ void MemoryOpRemark::visitCallee(FTy F, bool KnownLibCall,
 }
 
 void MemoryOpRemark::visitKnownLibCall(const CallInst &CI, LibFunc LF,
-                                       OptimizationRemarkMissed &R) {
+                                       DiagnosticInfoIROptimization &R) {
   switch (LF) {
   default:
     return;
@@ -278,30 +293,47 @@ void MemoryOpRemark::visitKnownLibCall(const CallInst &CI, LibFunc LF,
   }
 }
 
-void MemoryOpRemark::visitSizeOperand(Value *V, OptimizationRemarkMissed &R) {
+void MemoryOpRemark::visitSizeOperand(Value *V, DiagnosticInfoIROptimization &R) {
   if (auto *Len = dyn_cast<ConstantInt>(V)) {
     uint64_t Size = Len->getZExtValue();
     R << " Memory operation size: " << NV("StoreSize", Size) << " bytes.";
   }
 }
 
+static std::optional<StringRef> nameOrNone(const Value *V) {
+  if (V->hasName())
+    return V->getName();
+  return std::nullopt;
+}
+
 void MemoryOpRemark::visitVariable(const Value *V,
                                    SmallVectorImpl<VariableInfo> &Result) {
+  if (auto *GV = dyn_cast<GlobalVariable>(V)) {
+    auto *Ty = GV->getValueType();
+    uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedValue();
+    VariableInfo Var{nameOrNone(GV), Size};
+    if (!Var.isEmpty())
+      Result.push_back(std::move(Var));
+    return;
+  }
+
   // If we find some information in the debug info, take that.
   bool FoundDI = false;
   // Try to get an llvm.dbg.declare, which has a DILocalVariable giving us the
   // real debug info name and size of the variable.
-  for (const DbgVariableIntrinsic *DVI :
-       FindDbgAddrUses(const_cast<Value *>(V))) {
+  auto FindDI = [&](const auto *DVI) {
     if (DILocalVariable *DILV = DVI->getVariable()) {
-      Optional<uint64_t> DISize = getSizeInBytes(DILV->getSizeInBits());
+      std::optional<uint64_t> DISize = getSizeInBytes(DILV->getSizeInBits());
       VariableInfo Var{DILV->getName(), DISize};
       if (!Var.isEmpty()) {
         Result.push_back(std::move(Var));
         FoundDI = true;
       }
     }
-  }
+  };
+  for_each(findDbgDeclares(const_cast<Value *>(V)), FindDI);
+  for_each(findDVRDeclares(const_cast<Value *>(V)), FindDI);
+
   if (FoundDI) {
     assert(!Result.empty());
     return;
@@ -312,17 +344,15 @@ void MemoryOpRemark::visitVariable(const Value *V,
     return;
 
   // If not, get it from the alloca.
-  Optional<StringRef> Name = AI->hasName() ? Optional<StringRef>(AI->getName())
-                                           : Optional<StringRef>(None);
-  Optional<TypeSize> TySize = AI->getAllocationSizeInBits(DL);
-  Optional<uint64_t> Size =
-      TySize ? getSizeInBytes(TySize->getFixedSize()) : None;
-  VariableInfo Var{Name, Size};
+  std::optional<TypeSize> TySize = AI->getAllocationSize(DL);
+  std::optional<uint64_t> Size =
+      TySize ? std::optional(TySize->getFixedValue()) : std::nullopt;
+  VariableInfo Var{nameOrNone(AI), Size};
   if (!Var.isEmpty())
     Result.push_back(std::move(Var));
 }
 
-void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, OptimizationRemarkMissed &R) {
+void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, DiagnosticInfoIROptimization &R) {
   // Find if Ptr is a known variable we can give more information on.
   SmallVector<Value *, 2> Objects;
   getUnderlyingObjectsForCodeGen(Ptr, Objects);
@@ -336,7 +366,7 @@ void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, OptimizationRemarkMissed 
     uint64_t Size = Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
     if (!Size)
       return;
-    VIs.push_back({None, Size});
+    VIs.push_back({std::nullopt, Size});
   }
 
   R << (IsRead ? "\n Read Variables: " : "\n Written Variables: ");
@@ -360,15 +390,16 @@ bool AutoInitRemark::canHandle(const Instruction *I) {
     return false;
   return any_of(I->getMetadata(LLVMContext::MD_annotation)->operands(),
                 [](const MDOperand &Op) {
-                  return cast<MDString>(Op.get())->getString() == "auto-init";
+                  return isa<MDString>(Op.get()) &&
+                         cast<MDString>(Op.get())->getString() == "auto-init";
                 });
 }
 
-std::string AutoInitRemark::explainSource(StringRef Type) {
+std::string AutoInitRemark::explainSource(StringRef Type) const {
   return (Type + " inserted by -ftrivial-auto-var-init.").str();
 }
 
-StringRef AutoInitRemark::remarkName(RemarkKind RK) {
+StringRef AutoInitRemark::remarkName(RemarkKind RK) const {
   switch (RK) {
   case RK_Store:
     return "AutoInitStore";

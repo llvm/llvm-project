@@ -8,11 +8,11 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeEnumSymbols.h"
 
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

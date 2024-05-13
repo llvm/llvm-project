@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define i32 @foo() #0 !dbg !9 {
 entry:
-  %0 = load i32, i32* @a, align 4, !dbg !12
+  %0 = load i32, ptr @a, align 4, !dbg !12
   ret i32 %0, !dbg !13
 }
 
@@ -19,12 +19,12 @@ entry:
 define i32 @main() #0 !dbg !14 {
 entry:
   %retval = alloca i32, align 4
-  %b = alloca i32*, align 8
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata i32** %b, metadata !15, metadata !17), !dbg !18
-  store i32* @a, i32** %b, align 8, !dbg !18
-  %0 = load i32*, i32** %b, align 8, !dbg !19
-  %1 = load i32, i32* %0, align 4, !dbg !20
+  %b = alloca ptr, align 8
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !15, metadata !17), !dbg !18
+  store ptr @a, ptr %b, align 8, !dbg !18
+  %0 = load ptr, ptr %b, align 8, !dbg !19
+  %1 = load i32, ptr %0, align 4, !dbg !20
   %call = call i32 @foo(), !dbg !21
   %add = add nsw i32 %1, %call, !dbg !22
   ret i32 %add, !dbg !23

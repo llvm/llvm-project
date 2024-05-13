@@ -1,11 +1,11 @@
-from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
+
 
 class TestArmRegisterDefinition(GDBRemoteTestBase):
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
@@ -13,11 +13,12 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
         Test lldb's parsing of the <architecture> tag in the target.xml register
         description packet.
         """
-        class MyResponder(MockGDBServerResponder):
 
+        class MyResponder(MockGDBServerResponder):
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                         <target>
                         <architecture>arm</architecture>
@@ -38,6 +39,10 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
                         <reg name="sp" bitsize="32" type="data_ptr" group="general"/>
                         <reg name="lr" bitsize="32" type="uint32" group="general"/>
                         <reg name="pc" bitsize="32" type="code_ptr" group="general"/>
+                        <reg name="SYS0" bitsize="9" regnum="21" type="uint32" group="system"/>
+                        <reg name="SYS1" bitsize="8" regnum="22" type="uint32" group="system"/>
+                        <reg name="SYS2" bitsize="1" regnum="23" type="uint32" group="system"/>
+                        <reg name="SYS3" bitsize="7" regnum="24" type="uint32" group="system"/>
                         <reg name="xpsr" bitsize="32" regnum="25" type="uint32" group="general"/>
                         <reg name="MSP" bitsize="32" regnum="26" type="uint32" group="general"/>
                         <reg name="PSP" bitsize="32" regnum="27" type="uint32" group="general"/>
@@ -79,7 +84,9 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
                         <reg name="s30" bitsize="32" type="float" group="float"/>
                         <reg name="s31" bitsize="32" type="float" group="float"/>
                         </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -87,14 +94,14 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
                 return "E01"
 
             def readRegisters(self):
-                return "20000000f8360020001000002fcb0008f8360020a0360020200c0020000000000000000000000000000000000000000000000000b87f0120b7d100082ed2000800000001b87f01200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                return "20000000f8360020001000002fcb0008f8360020a0360020200c0020000000000000000000000000000000000000000000000000b87f0120b7d100082ed20008addebeafbc00000001b87f01200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
             def haltReason(self):
                 return "S05"
 
             def qfThreadInfo(self):
                 return "mdead"
-            
+
             def qC(self):
                 return ""
 
@@ -110,8 +117,7 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
         self.server.responder = MyResponder()
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                    lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         self.dbg.SetDefaultArchitecture("armv7em")
         target = self.dbg.CreateTargetWithFileAndArch(None, None)
@@ -128,4 +134,16 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
         self.assertEqual(r0_valobj.GetValueAsUnsigned(), 0x20)
 
         pc_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("pc")
-        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800d22e)
+        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800D22E)
+
+        sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS0")
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xDEAD)
+
+        sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS1")
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xBE)
+
+        sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS2")
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xAF)
+
+        sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS3")
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xBC)

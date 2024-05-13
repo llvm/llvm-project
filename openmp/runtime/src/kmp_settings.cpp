@@ -25,6 +25,9 @@
 #include "kmp_str.h"
 #include "kmp_wrapper_getpid.h"
 #include <ctype.h> // toupper()
+#if OMPD_SUPPORT
+#include "ompd-specific.h"
+#endif
 
 static int __kmp_env_toPrint(char const *name, int flag);
 
@@ -146,65 +149,6 @@ static size_t __kmp_round4k(size_t size) {
 } // __kmp_round4k
 #endif
 
-/* Here, multipliers are like __kmp_convert_to_seconds, but floating-point
-   values are allowed, and the return value is in milliseconds.  The default
-   multiplier is milliseconds.  Returns INT_MAX only if the value specified
-   matches "infinit*".  Returns -1 if specified string is invalid. */
-int __kmp_convert_to_milliseconds(char const *data) {
-  int ret, nvalues, factor;
-  char mult, extra;
-  double value;
-
-  if (data == NULL)
-    return (-1);
-  if (__kmp_str_match("infinit", -1, data))
-    return (INT_MAX);
-  value = (double)0.0;
-  mult = '\0';
-  nvalues = KMP_SSCANF(data, "%lf%c%c", &value, &mult, &extra);
-  if (nvalues < 1)
-    return (-1);
-  if (nvalues == 1)
-    mult = '\0';
-  if (nvalues == 3)
-    return (-1);
-
-  if (value < 0)
-    return (-1);
-
-  switch (mult) {
-  case '\0':
-    /*  default is milliseconds  */
-    factor = 1;
-    break;
-  case 's':
-  case 'S':
-    factor = 1000;
-    break;
-  case 'm':
-  case 'M':
-    factor = 1000 * 60;
-    break;
-  case 'h':
-  case 'H':
-    factor = 1000 * 60 * 60;
-    break;
-  case 'd':
-  case 'D':
-    factor = 1000 * 24 * 60 * 60;
-    break;
-  default:
-    return (-1);
-  }
-
-  if (value >= ((INT_MAX - 1) / factor))
-    ret = INT_MAX - 1; /* Don't allow infinite value here */
-  else
-    ret = (int)(value * (double)factor); /* truncate to int  */
-
-  return ret;
-}
-
 static int __kmp_strcasecmp_with_sentinel(char const *a, char const *b,
                                           char sentinel) {
   if (a == NULL)
@@ -274,6 +218,25 @@ static int __kmp_stg_check_rivals( // 0 -- Ok, 1 -- errors found.
     kmp_setting_t **rivals // List of rival settings (must include current one).
 );
 
+// Helper struct that trims heading/trailing white spaces
+struct kmp_trimmed_str_t {
+  kmp_str_buf_t buf;
+  kmp_trimmed_str_t(const char *str) {
+    __kmp_str_buf_init(&buf);
+    size_t len = KMP_STRLEN(str);
+    if (len == 0)
+      return;
+    const char *begin = str;
+    const char *end = str + KMP_STRLEN(str) - 1;
+    SKIP_WS(begin);
+    while (begin < end && *end == ' ')
+      end--;
+    __kmp_str_buf_cat(&buf, begin, end - begin + 1);
+  }
+  ~kmp_trimmed_str_t() { __kmp_str_buf_free(&buf); }
+  const char *get() { return buf.str; }
+};
+
 // -----------------------------------------------------------------------------
 // Helper parse functions.
 
@@ -292,10 +255,15 @@ static void __kmp_stg_parse_bool(char const *name, char const *value,
 // placed here in order to use __kmp_round4k static function
 void __kmp_check_stksize(size_t *val) {
   // if system stack size is too big then limit the size for worker threads
+#if KMP_OS_AIX
+  if (*val > KMP_DEFAULT_STKSIZE * 2) // Use 2 times, 16 is too large for AIX.
+    *val = KMP_DEFAULT_STKSIZE * 2;
+#else
   if (*val > KMP_DEFAULT_STKSIZE * 16) // just a heuristics...
     *val = KMP_DEFAULT_STKSIZE * 16;
-  if (*val < KMP_MIN_STKSIZE)
-    *val = KMP_MIN_STKSIZE;
+#endif
+  if (*val < __kmp_sys_min_stksize)
+    *val = __kmp_sys_min_stksize;
   if (*val > KMP_MAX_STKSIZE)
     *val = KMP_MAX_STKSIZE; // dead code currently, but may work in future
 #if KMP_OS_DARWIN
@@ -423,6 +391,7 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
                                       int *out_range, char *out_routine,
                                       char *out_file, int *out_lb,
                                       int *out_ub) {
+  const char *par_range_value;
   size_t len = KMP_STRLEN(value) + 1;
   par_range_to_print = (char *)KMP_INTERNAL_MALLOC(len + 1);
   KMP_STRNCPY_S(par_range_to_print, len + 1, value, len + 1);
@@ -431,11 +400,14 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
   __kmp_par_range_ub = INT_MAX;
   for (;;) {
     unsigned int len;
-    if (*value == '\0') {
+    if (!value || *value == '\0') {
       break;
     }
     if (!__kmp_strcasecmp_with_sentinel("routine", value, '=')) {
-      value = strchr(value, '=') + 1;
+      par_range_value = strchr(value, '=') + 1;
+      if (!par_range_value)
+        goto par_range_error;
+      value = par_range_value;
       len = __kmp_readstr_with_sentinel(out_routine, value,
                                         KMP_PAR_RANGE_ROUTINE_LEN - 1, ',');
       if (len == 0) {
@@ -448,7 +420,10 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
       continue;
     }
     if (!__kmp_strcasecmp_with_sentinel("filename", value, '=')) {
-      value = strchr(value, '=') + 1;
+      par_range_value = strchr(value, '=') + 1;
+      if (!par_range_value)
+        goto par_range_error;
+      value = par_range_value;
       len = __kmp_readstr_with_sentinel(out_file, value,
                                         KMP_PAR_RANGE_FILENAME_LEN - 1, ',');
       if (len == 0) {
@@ -462,7 +437,10 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
     }
     if ((!__kmp_strcasecmp_with_sentinel("range", value, '=')) ||
         (!__kmp_strcasecmp_with_sentinel("incl_range", value, '='))) {
-      value = strchr(value, '=') + 1;
+      par_range_value = strchr(value, '=') + 1;
+      if (!par_range_value)
+        goto par_range_error;
+      value = par_range_value;
       if (KMP_SSCANF(value, "%d:%d", out_lb, out_ub) != 2) {
         goto par_range_error;
       }
@@ -474,7 +452,10 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
       continue;
     }
     if (!__kmp_strcasecmp_with_sentinel("excl_range", value, '=')) {
-      value = strchr(value, '=') + 1;
+      par_range_value = strchr(value, '=') + 1;
+      if (!par_range_value)
+        goto par_range_error;
+      value = par_range_value;
       if (KMP_SSCANF(value, "%d:%d", out_lb, out_ub) != 2) {
         goto par_range_error;
       }
@@ -691,24 +672,73 @@ static void __kmp_stg_print_use_yield(kmp_str_buf_t *buffer, char const *name,
 
 static void __kmp_stg_parse_blocktime(char const *name, char const *value,
                                       void *data) {
-  __kmp_dflt_blocktime = __kmp_convert_to_milliseconds(value);
-  if (__kmp_dflt_blocktime < 0) {
-    __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
+  const char *buf = value;
+  const char *next;
+  const int ms_mult = 1000;
+  int multiplier = 1;
+  int num;
+
+  // Read integer blocktime value
+  SKIP_WS(buf);
+  if ((*buf >= '0') && (*buf <= '9')) {
+    next = buf;
+    SKIP_DIGITS(next);
+    num = __kmp_basic_str_to_int(buf);
+    KMP_ASSERT(num >= 0);
+    buf = next;
+    SKIP_WS(buf);
+  } else {
+    num = -1;
+  }
+
+  // Read units: note that __kmp_dflt_blocktime units is now us
+  next = buf;
+  if (*buf == '\0' || __kmp_match_str("ms", buf, &next)) {
+    // units are in ms; convert
+    __kmp_dflt_blocktime = ms_mult * num;
+    __kmp_blocktime_units = 'm';
+    multiplier = ms_mult;
+  } else if (__kmp_match_str("us", buf, &next)) {
+    // units are in us
+    __kmp_dflt_blocktime = num;
+    __kmp_blocktime_units = 'u';
+  } else if (__kmp_match_str("infinite", buf, &next) ||
+             __kmp_match_str("infinity", buf, &next)) {
+    // units are in ms
+    __kmp_dflt_blocktime = KMP_MAX_BLOCKTIME;
+    __kmp_blocktime_units = 'm';
+    multiplier = ms_mult;
+  } else {
+    KMP_WARNING(StgInvalidValue, name, value);
+    // default units are in ms
+    __kmp_dflt_blocktime = ms_mult * num;
+    __kmp_blocktime_units = 'm';
+    multiplier = ms_mult;
+  }
+
+  if (num < 0 && __kmp_dflt_blocktime < 0) { // num out of range
+    __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME; // now in us
     __kmp_msg(kmp_ms_warning, KMP_MSG(InvalidValue, name, value),
               __kmp_msg_null);
-    KMP_INFORM(Using_int_Value, name, __kmp_dflt_blocktime);
+    // Inform in appropriate units
+    KMP_INFORM(Using_int_Value, name, __kmp_dflt_blocktime / multiplier);
     __kmp_env_blocktime = FALSE; // Revert to default as if var not set.
+  } else if (num > 0 && __kmp_dflt_blocktime < 0) { // overflow
+    __kmp_dflt_blocktime = KMP_MAX_BLOCKTIME;
+    __kmp_msg(kmp_ms_warning, KMP_MSG(LargeValue, name, value), __kmp_msg_null);
+    KMP_INFORM(MaxValueUsing, name, __kmp_dflt_blocktime / multiplier);
+    __kmp_env_blocktime = TRUE; // KMP_BLOCKTIME was specified.
   } else {
     if (__kmp_dflt_blocktime < KMP_MIN_BLOCKTIME) {
       __kmp_dflt_blocktime = KMP_MIN_BLOCKTIME;
       __kmp_msg(kmp_ms_warning, KMP_MSG(SmallValue, name, value),
                 __kmp_msg_null);
-      KMP_INFORM(MinValueUsing, name, __kmp_dflt_blocktime);
+      KMP_INFORM(MinValueUsing, name, __kmp_dflt_blocktime / multiplier);
     } else if (__kmp_dflt_blocktime > KMP_MAX_BLOCKTIME) {
       __kmp_dflt_blocktime = KMP_MAX_BLOCKTIME;
       __kmp_msg(kmp_ms_warning, KMP_MSG(LargeValue, name, value),
                 __kmp_msg_null);
-      KMP_INFORM(MaxValueUsing, name, __kmp_dflt_blocktime);
+      KMP_INFORM(MaxValueUsing, name, __kmp_dflt_blocktime / multiplier);
     }
     __kmp_env_blocktime = TRUE; // KMP_BLOCKTIME was specified.
   }
@@ -728,7 +758,17 @@ static void __kmp_stg_parse_blocktime(char const *name, char const *value,
 
 static void __kmp_stg_print_blocktime(kmp_str_buf_t *buffer, char const *name,
                                       void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_dflt_blocktime);
+  int num = __kmp_dflt_blocktime;
+  if (__kmp_blocktime_units == 'm') {
+    num = num / 1000;
+  }
+  if (__kmp_env_format) {
+    KMP_STR_BUF_PRINT_NAME_EX(name);
+  } else {
+    __kmp_str_buf_print(buffer, "   %s=", name);
+  }
+  __kmp_str_buf_print(buffer, "%d", num);
+  __kmp_str_buf_print(buffer, "%cs\n", __kmp_blocktime_units);
 } // __kmp_stg_print_blocktime
 
 // -----------------------------------------------------------------------------
@@ -791,6 +831,7 @@ static void __kmp_stg_parse_wait_policy(char const *name, char const *value,
       }
     } else if (__kmp_str_match("PASSIVE", 1, value)) {
       __kmp_library = library_throughput;
+      __kmp_wpolicy_passive = true; /* allow sleep while active tasking */
       if (blocktime_str == NULL) {
         // KMP_BLOCKTIME not specified, so set default to 0.
         __kmp_dflt_blocktime = 0;
@@ -837,6 +878,10 @@ static void __kmp_stg_print_wait_policy(kmp_str_buf_t *buffer, char const *name,
     case library_throughput: {
       value = "PASSIVE";
     } break;
+    case library_none:
+    case library_serial: {
+      value = NULL;
+    } break;
     }
   } else {
     switch (__kmp_library) {
@@ -848,6 +893,9 @@ static void __kmp_stg_print_wait_policy(kmp_str_buf_t *buffer, char const *name,
     } break;
     case library_throughput: {
       value = "throughput";
+    } break;
+    case library_none: {
+      value = NULL;
     } break;
     }
   }
@@ -1014,6 +1062,28 @@ static void __kmp_stg_print_warnings(kmp_str_buf_t *buffer, char const *name,
   // AC: TODO: change to print_int? (needs documentation change)
   __kmp_stg_print_bool(buffer, name, __kmp_generate_warnings);
 } // __kmp_stg_print_warnings
+
+// -----------------------------------------------------------------------------
+// KMP_NESTING_MODE
+
+static void __kmp_stg_parse_nesting_mode(char const *name, char const *value,
+                                         void *data) {
+  __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_nesting_mode);
+#if KMP_AFFINITY_SUPPORTED && KMP_USE_HWLOC
+  if (__kmp_nesting_mode > 0)
+    __kmp_affinity_top_method = affinity_top_method_hwloc;
+#endif
+} // __kmp_stg_parse_nesting_mode
+
+static void __kmp_stg_print_nesting_mode(kmp_str_buf_t *buffer,
+                                         char const *name, void *data) {
+  if (__kmp_env_format) {
+    KMP_STR_BUF_PRINT_NAME;
+  } else {
+    __kmp_str_buf_print(buffer, "   %s", name);
+  }
+  __kmp_str_buf_print(buffer, "=%d\n", __kmp_nesting_mode);
+} // __kmp_stg_print_nesting_mode
 
 // -----------------------------------------------------------------------------
 // OMP_NESTED, OMP_NUM_THREADS
@@ -1194,6 +1264,28 @@ static void __kmp_stg_parse_num_threads(char const *name, char const *value,
   K_DIAG(1, ("__kmp_dflt_team_nth == %d\n", __kmp_dflt_team_nth));
 } // __kmp_stg_parse_num_threads
 
+#if OMPX_TASKGRAPH
+static void __kmp_stg_parse_max_tdgs(char const *name, char const *value,
+                                     void *data) {
+  __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_max_tdgs);
+} // __kmp_stg_parse_max_tdgs
+
+static void __kmp_std_print_max_tdgs(kmp_str_buf_t *buffer, char const *name,
+                                     void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_max_tdgs);
+} // __kmp_std_print_max_tdgs
+
+static void __kmp_stg_parse_tdg_dot(char const *name, char const *value,
+                                   void *data) {
+  __kmp_stg_parse_bool(name, value, &__kmp_tdg_dot);
+} // __kmp_stg_parse_tdg_dot
+
+static void __kmp_stg_print_tdg_dot(kmp_str_buf_t *buffer, char const *name,
+                                   void *data) {
+  __kmp_stg_print_bool(buffer, name, __kmp_tdg_dot);
+} // __kmp_stg_print_tdg_dot
+#endif
+
 static void __kmp_stg_parse_num_hidden_helper_threads(char const *name,
                                                       char const *value,
                                                       void *data) {
@@ -1202,13 +1294,25 @@ static void __kmp_stg_parse_num_hidden_helper_threads(char const *name,
   // task
   if (__kmp_hidden_helper_threads_num == 0) {
     __kmp_enable_hidden_helper = FALSE;
+  } else {
+    // Since the main thread of hidden helper team does not participate
+    // in tasks execution let's increment the number of threads by one
+    // so that requested number of threads do actual job.
+    __kmp_hidden_helper_threads_num++;
   }
 } // __kmp_stg_parse_num_hidden_helper_threads
 
 static void __kmp_stg_print_num_hidden_helper_threads(kmp_str_buf_t *buffer,
                                                       char const *name,
                                                       void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_hidden_helper_threads_num);
+  if (__kmp_hidden_helper_threads_num == 0) {
+    __kmp_stg_print_int(buffer, name, __kmp_hidden_helper_threads_num);
+  } else {
+    KMP_DEBUG_ASSERT(__kmp_hidden_helper_threads_num > 1);
+    // Let's exclude the main thread of hidden helper team and print
+    // number of worker threads those do actual job.
+    __kmp_stg_print_int(buffer, name, __kmp_hidden_helper_threads_num - 1);
+  }
 } // __kmp_stg_print_num_hidden_helper_threads
 
 static void __kmp_stg_parse_use_hidden_helper(char const *name,
@@ -1317,14 +1421,13 @@ static void __kmp_stg_print_default_device(kmp_str_buf_t *buffer,
 // OpenMP 5.0: OMP_TARGET_OFFLOAD
 static void __kmp_stg_parse_target_offload(char const *name, char const *value,
                                            void *data) {
-  const char *next = value;
-  const char *scan = next;
-
+  kmp_trimmed_str_t value_str(value);
+  const char *scan = value_str.get();
   __kmp_target_offload = tgt_default;
-  SKIP_WS(next);
-  if (*next == '\0')
+
+  if (*scan == '\0')
     return;
-  scan = next;
+
   if (!__kmp_strcasecmp_with_sentinel("mandatory", scan, 0)) {
     __kmp_target_offload = tgt_mandatory;
   } else if (!__kmp_strcasecmp_with_sentinel("disabled", scan, 0)) {
@@ -1334,7 +1437,6 @@ static void __kmp_stg_parse_target_offload(char const *name, char const *value,
   } else {
     KMP_WARNING(SyntaxErrorUsing, name, "DEFAULT");
   }
-
 } // __kmp_stg_parse_target_offload
 
 static void __kmp_stg_print_target_offload(kmp_str_buf_t *buffer,
@@ -1372,7 +1474,7 @@ static void __kmp_stg_print_max_task_priority(kmp_str_buf_t *buffer,
 // taskloop threshold to switch from recursive to linear tasks creation
 static void __kmp_stg_parse_taskloop_min_tasks(char const *name,
                                                char const *value, void *data) {
-  int tmp;
+  int tmp = 0;
   __kmp_stg_parse_int(name, value, 0, INT_MAX, &tmp);
   __kmp_taskloop_min_tasks = tmp;
 } // __kmp_stg_parse_taskloop_min_tasks
@@ -1503,7 +1605,7 @@ static void __kmp_stg_parse_debug(char const *name, char const *value,
 static void __kmp_stg_parse_debug_buf(char const *name, char const *value,
                                       void *data) {
   __kmp_stg_parse_bool(name, value, &__kmp_debug_buf);
-  // !!! TODO: Move buffer initialization of of this file! It may works
+  // !!! TODO: Move buffer initialization of this file! It may works
   // incorrectly if KMP_DEBUG_BUF is parsed before KMP_DEBUG_BUF_LINES or
   // KMP_DEBUG_BUF_CHARS.
   if (__kmp_debug_buf) {
@@ -1659,6 +1761,8 @@ static void __kmp_stg_parse_barrier_pattern(char const *name, char const *value,
   const char *var;
   /* ---------- Barrier method control ------------ */
 
+  static int dist_req = 0, non_dist_req = 0;
+  static bool warn = 1;
   for (int i = bs_plain_barrier; i < bs_last_barrier; i++) {
     var = __kmp_barrier_pattern_env_name[i];
 
@@ -1670,6 +1774,11 @@ static void __kmp_stg_parse_barrier_pattern(char const *name, char const *value,
       for (j = bp_linear_bar; j < bp_last_bar; j++) {
         if (__kmp_match_with_sentinel(__kmp_barrier_pattern_name[j], value, 1,
                                       ',')) {
+          if (j == bp_dist_bar) {
+            dist_req++;
+          } else {
+            non_dist_req++;
+          }
           __kmp_barrier_gather_pattern[i] = (kmp_bar_pat_e)j;
           break;
         }
@@ -1684,6 +1793,11 @@ static void __kmp_stg_parse_barrier_pattern(char const *name, char const *value,
       if (comma != NULL) {
         for (j = bp_linear_bar; j < bp_last_bar; j++) {
           if (__kmp_str_match(__kmp_barrier_pattern_name[j], 1, comma + 1)) {
+            if (j == bp_dist_bar) {
+              dist_req++;
+            } else {
+              non_dist_req++;
+            }
             __kmp_barrier_release_pattern[i] = (kmp_bar_pat_e)j;
             break;
           }
@@ -1696,6 +1810,20 @@ static void __kmp_stg_parse_barrier_pattern(char const *name, char const *value,
                      __kmp_barrier_pattern_name[bp_linear_bar]);
         }
       }
+    }
+  }
+  if (dist_req != 0) {
+    // set all barriers to dist
+    if ((non_dist_req != 0) && warn) {
+      KMP_INFORM(BarrierPatternOverride, name,
+                 __kmp_barrier_pattern_name[bp_dist_bar]);
+      warn = 0;
+    }
+    for (int i = bs_plain_barrier; i < bs_last_barrier; i++) {
+      if (__kmp_barrier_release_pattern[i] != bp_dist_bar)
+        __kmp_barrier_release_pattern[i] = bp_dist_bar;
+      if (__kmp_barrier_gather_pattern[i] != bp_dist_bar)
+        __kmp_barrier_gather_pattern[i] = bp_dist_bar;
     }
   }
 } // __kmp_stg_parse_barrier_pattern
@@ -1714,7 +1842,7 @@ static void __kmp_stg_print_barrier_pattern(kmp_str_buf_t *buffer,
         __kmp_str_buf_print(buffer, "   %s='",
                             __kmp_barrier_pattern_env_name[i]);
       }
-      KMP_DEBUG_ASSERT(j < bs_last_barrier && k < bs_last_barrier);
+      KMP_DEBUG_ASSERT(j < bp_last_bar && k < bp_last_bar);
       __kmp_str_buf_print(buffer, "%s,%s'\n", __kmp_barrier_pattern_name[j],
                           __kmp_barrier_pattern_name[k]);
     }
@@ -1883,6 +2011,23 @@ static void __kmp_stg_print_foreign_threads_threadprivate(kmp_str_buf_t *buffer,
 
 // -----------------------------------------------------------------------------
 // KMP_AFFINITY, GOMP_CPU_AFFINITY, KMP_TOPOLOGY_METHOD
+
+static inline const char *
+__kmp_hw_get_core_type_keyword(kmp_hw_core_type_t type) {
+  switch (type) {
+  case KMP_HW_CORE_TYPE_UNKNOWN:
+  case KMP_HW_MAX_NUM_CORE_TYPES:
+    return "unknown";
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+  case KMP_HW_CORE_TYPE_ATOM:
+    return "intel_atom";
+  case KMP_HW_CORE_TYPE_CORE:
+    return "intel_core";
+#endif
+  }
+  KMP_ASSERT2(false, "Unhandled kmp_hw_core_type_t enumeration");
+  KMP_BUILTIN_UNREACHABLE;
+}
 
 #if KMP_AFFINITY_SUPPORTED
 // Parse the proc id list.  Return TRUE if successful, FALSE otherwise.
@@ -2066,12 +2211,7 @@ static int __kmp_parse_affinity_proc_id_list(const char *var, const char *env,
 static kmp_setting_t *__kmp_affinity_notype = NULL;
 
 static void __kmp_parse_affinity_env(char const *name, char const *value,
-                                     enum affinity_type *out_type,
-                                     char **out_proclist, int *out_verbose,
-                                     int *out_warn, int *out_respect,
-                                     kmp_hw_t *out_gran, int *out_gran_levels,
-                                     int *out_dups, int *out_compact,
-                                     int *out_offset) {
+                                     kmp_affinity_t *out_affinity) {
   char *buffer = NULL; // Copy of env var value.
   char *buf = NULL; // Buffer for strtok_r() function.
   char *next = NULL; // end of token / start of next.
@@ -2087,6 +2227,7 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
   int respect = 0;
   int gran = 0;
   int dups = 0;
+  int reset = 0;
   bool set = false;
 
   KMP_ASSERT(value != NULL);
@@ -2136,18 +2277,20 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
     ++_guard;                                                                  \
   }
 
-#define set_type(val) _set_param(type, *out_type, val)
-#define set_verbose(val) _set_param(verbose, *out_verbose, val)
-#define set_warnings(val) _set_param(warnings, *out_warn, val)
-#define set_respect(val) _set_param(respect, *out_respect, val)
-#define set_dups(val) _set_param(dups, *out_dups, val)
-#define set_proclist(val) _set_param(proclist, *out_proclist, val)
+#define set_type(val) _set_param(type, out_affinity->type, val)
+#define set_verbose(val) _set_param(verbose, out_affinity->flags.verbose, val)
+#define set_warnings(val)                                                      \
+  _set_param(warnings, out_affinity->flags.warnings, val)
+#define set_respect(val) _set_param(respect, out_affinity->flags.respect, val)
+#define set_dups(val) _set_param(dups, out_affinity->flags.dups, val)
+#define set_proclist(val) _set_param(proclist, out_affinity->proclist, val)
+#define set_reset(val) _set_param(reset, out_affinity->flags.reset, val)
 
 #define set_gran(val, levels)                                                  \
   {                                                                            \
     if (gran == 0) {                                                           \
-      *out_gran = val;                                                         \
-      *out_gran_levels = levels;                                               \
+      out_affinity->gran = val;                                                \
+      out_affinity->gran_levels = levels;                                      \
     } else {                                                                   \
       EMIT_WARN(FALSE, (AffParamDefined, name, start));                        \
     }                                                                          \
@@ -2211,6 +2354,12 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
     } else if (__kmp_match_str("norespect", buf, CCAST(const char **, &next))) {
       set_respect(FALSE);
       buf = next;
+    } else if (__kmp_match_str("reset", buf, CCAST(const char **, &next))) {
+      set_reset(TRUE);
+      buf = next;
+    } else if (__kmp_match_str("noreset", buf, CCAST(const char **, &next))) {
+      set_reset(FALSE);
+      buf = next;
     } else if (__kmp_match_str("duplicates", buf,
                                CCAST(const char **, &next)) ||
                __kmp_match_str("dups", buf, CCAST(const char **, &next))) {
@@ -2234,14 +2383,32 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
 
       buf = next;
 
-      // Try any hardware topology type for granularity
-      KMP_FOREACH_HW_TYPE(type) {
-        const char *name = __kmp_hw_get_keyword(type);
-        if (__kmp_match_str(name, buf, CCAST(const char **, &next))) {
-          set_gran(type, -1);
-          buf = next;
-          set = true;
-          break;
+      // Have to try core_type and core_efficiency matches first since "core"
+      // will register as core granularity with "extra chars"
+      if (__kmp_match_str("core_type", buf, CCAST(const char **, &next))) {
+        set_gran(KMP_HW_CORE, -1);
+        out_affinity->flags.core_types_gran = 1;
+        buf = next;
+        set = true;
+      } else if (__kmp_match_str("core_efficiency", buf,
+                                 CCAST(const char **, &next)) ||
+                 __kmp_match_str("core_eff", buf,
+                                 CCAST(const char **, &next))) {
+        set_gran(KMP_HW_CORE, -1);
+        out_affinity->flags.core_effs_gran = 1;
+        buf = next;
+        set = true;
+      }
+      if (!set) {
+        // Try any hardware topology type for granularity
+        KMP_FOREACH_HW_TYPE(type) {
+          const char *name = __kmp_hw_get_keyword(type);
+          if (__kmp_match_str(name, buf, CCAST(const char **, &next))) {
+            set_gran(type, -1);
+            buf = next;
+            set = true;
+            break;
+          }
         }
       }
       if (!set) {
@@ -2351,26 +2518,27 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
 #undef set_warnings
 #undef set_respect
 #undef set_granularity
+#undef set_reset
 
   __kmp_str_free(&buffer);
 
   if (proclist) {
     if (!type) {
       KMP_WARNING(AffProcListNoType, name);
-      *out_type = affinity_explicit;
+      out_affinity->type = affinity_explicit;
       __kmp_nested_proc_bind.bind_types[0] = proc_bind_intel;
-    } else if (*out_type != affinity_explicit) {
+    } else if (out_affinity->type != affinity_explicit) {
       KMP_WARNING(AffProcListNotExplicit, name);
-      KMP_ASSERT(*out_proclist != NULL);
-      KMP_INTERNAL_FREE(*out_proclist);
-      *out_proclist = NULL;
+      KMP_ASSERT(out_affinity->proclist != NULL);
+      KMP_INTERNAL_FREE(out_affinity->proclist);
+      out_affinity->proclist = NULL;
     }
   }
-  switch (*out_type) {
+  switch (out_affinity->type) {
   case affinity_logical:
   case affinity_physical: {
     if (count > 0) {
-      *out_offset = number[0];
+      out_affinity->offset = number[0];
     }
     if (count > 1) {
       KMP_WARNING(AffManyParamsForLogic, name, number[1]);
@@ -2378,42 +2546,44 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
   } break;
   case affinity_balanced: {
     if (count > 0) {
-      *out_compact = number[0];
+      out_affinity->compact = number[0];
     }
     if (count > 1) {
-      *out_offset = number[1];
+      out_affinity->offset = number[1];
     }
 
-    if (__kmp_affinity_gran == KMP_HW_UNKNOWN) {
+    if (__kmp_affinity.gran == KMP_HW_UNKNOWN) {
+      int verbose = out_affinity->flags.verbose;
+      int warnings = out_affinity->flags.warnings;
 #if KMP_MIC_SUPPORTED
       if (__kmp_mic_type != non_mic) {
-        if (__kmp_affinity_verbose || __kmp_affinity_warnings) {
-          KMP_WARNING(AffGranUsing, "KMP_AFFINITY", "fine");
+        if (verbose || warnings) {
+          KMP_WARNING(AffGranUsing, out_affinity->env_var, "fine");
         }
-        __kmp_affinity_gran = KMP_HW_THREAD;
+        out_affinity->gran = KMP_HW_THREAD;
       } else
 #endif
       {
-        if (__kmp_affinity_verbose || __kmp_affinity_warnings) {
-          KMP_WARNING(AffGranUsing, "KMP_AFFINITY", "core");
+        if (verbose || warnings) {
+          KMP_WARNING(AffGranUsing, out_affinity->env_var, "core");
         }
-        __kmp_affinity_gran = KMP_HW_CORE;
+        out_affinity->gran = KMP_HW_CORE;
       }
     }
   } break;
   case affinity_scatter:
   case affinity_compact: {
     if (count > 0) {
-      *out_compact = number[0];
+      out_affinity->compact = number[0];
     }
     if (count > 1) {
-      *out_offset = number[1];
+      out_affinity->offset = number[1];
     }
   } break;
   case affinity_explicit: {
-    if (*out_proclist == NULL) {
+    if (out_affinity->proclist == NULL) {
       KMP_WARNING(AffNoProcList, name);
-      __kmp_affinity_type = affinity_none;
+      out_affinity->type = affinity_none;
     }
     if (count > 0) {
       KMP_WARNING(AffNoParam, name, "explicit");
@@ -2450,69 +2620,91 @@ static void __kmp_stg_parse_affinity(char const *name, char const *value,
     return;
   }
 
-  __kmp_parse_affinity_env(name, value, &__kmp_affinity_type,
-                           &__kmp_affinity_proclist, &__kmp_affinity_verbose,
-                           &__kmp_affinity_warnings,
-                           &__kmp_affinity_respect_mask, &__kmp_affinity_gran,
-                           &__kmp_affinity_gran_levels, &__kmp_affinity_dups,
-                           &__kmp_affinity_compact, &__kmp_affinity_offset);
+  __kmp_parse_affinity_env(name, value, &__kmp_affinity);
 
 } // __kmp_stg_parse_affinity
+static void __kmp_stg_parse_hh_affinity(char const *name, char const *value,
+                                        void *data) {
+  __kmp_parse_affinity_env(name, value, &__kmp_hh_affinity);
+  // Warn about unused parts of hidden helper affinity settings if specified.
+  if (__kmp_hh_affinity.flags.reset) {
+    KMP_WARNING(AffInvalidParam, name, "reset");
+  }
+  if (__kmp_hh_affinity.flags.respect != affinity_respect_mask_default) {
+    KMP_WARNING(AffInvalidParam, name, "respect");
+  }
+}
 
-static void __kmp_stg_print_affinity(kmp_str_buf_t *buffer, char const *name,
-                                     void *data) {
+static void __kmp_print_affinity_env(kmp_str_buf_t *buffer, char const *name,
+                                     const kmp_affinity_t &affinity) {
+  bool is_hh_affinity = (&affinity == &__kmp_hh_affinity);
   if (__kmp_env_format) {
     KMP_STR_BUF_PRINT_NAME_EX(name);
   } else {
     __kmp_str_buf_print(buffer, "   %s='", name);
   }
-  if (__kmp_affinity_verbose) {
+  if (affinity.flags.verbose) {
     __kmp_str_buf_print(buffer, "%s,", "verbose");
   } else {
     __kmp_str_buf_print(buffer, "%s,", "noverbose");
   }
-  if (__kmp_affinity_warnings) {
+  if (affinity.flags.warnings) {
     __kmp_str_buf_print(buffer, "%s,", "warnings");
   } else {
     __kmp_str_buf_print(buffer, "%s,", "nowarnings");
   }
   if (KMP_AFFINITY_CAPABLE()) {
-    if (__kmp_affinity_respect_mask) {
-      __kmp_str_buf_print(buffer, "%s,", "respect");
-    } else {
-      __kmp_str_buf_print(buffer, "%s,", "norespect");
+    // Hidden helper affinity does not affect global reset
+    // or respect flags. That is still solely controlled by KMP_AFFINITY.
+    if (!is_hh_affinity) {
+      if (affinity.flags.respect) {
+        __kmp_str_buf_print(buffer, "%s,", "respect");
+      } else {
+        __kmp_str_buf_print(buffer, "%s,", "norespect");
+      }
+      if (affinity.flags.reset) {
+        __kmp_str_buf_print(buffer, "%s,", "reset");
+      } else {
+        __kmp_str_buf_print(buffer, "%s,", "noreset");
+      }
     }
-    __kmp_str_buf_print(buffer, "granularity=%s,",
-                        __kmp_hw_get_keyword(__kmp_affinity_gran, false));
+    __kmp_str_buf_print(buffer, "granularity=");
+    if (affinity.flags.core_types_gran)
+      __kmp_str_buf_print(buffer, "core_type,");
+    else if (affinity.flags.core_effs_gran) {
+      __kmp_str_buf_print(buffer, "core_eff,");
+    } else {
+      __kmp_str_buf_print(
+          buffer, "%s,", __kmp_hw_get_keyword(affinity.gran, /*plural=*/false));
+    }
   }
   if (!KMP_AFFINITY_CAPABLE()) {
     __kmp_str_buf_print(buffer, "%s", "disabled");
-  } else
-    switch (__kmp_affinity_type) {
+  } else {
+    int compact = affinity.compact;
+    int offset = affinity.offset;
+    switch (affinity.type) {
     case affinity_none:
       __kmp_str_buf_print(buffer, "%s", "none");
       break;
     case affinity_physical:
-      __kmp_str_buf_print(buffer, "%s,%d", "physical", __kmp_affinity_offset);
+      __kmp_str_buf_print(buffer, "%s,%d", "physical", offset);
       break;
     case affinity_logical:
-      __kmp_str_buf_print(buffer, "%s,%d", "logical", __kmp_affinity_offset);
+      __kmp_str_buf_print(buffer, "%s,%d", "logical", offset);
       break;
     case affinity_compact:
-      __kmp_str_buf_print(buffer, "%s,%d,%d", "compact", __kmp_affinity_compact,
-                          __kmp_affinity_offset);
+      __kmp_str_buf_print(buffer, "%s,%d,%d", "compact", compact, offset);
       break;
     case affinity_scatter:
-      __kmp_str_buf_print(buffer, "%s,%d,%d", "scatter", __kmp_affinity_compact,
-                          __kmp_affinity_offset);
+      __kmp_str_buf_print(buffer, "%s,%d,%d", "scatter", compact, offset);
       break;
     case affinity_explicit:
-      __kmp_str_buf_print(buffer, "%s=[%s],%s", "proclist",
-                          __kmp_affinity_proclist, "explicit");
+      __kmp_str_buf_print(buffer, "%s=[%s],%s", "proclist", affinity.proclist,
+                          "explicit");
       break;
     case affinity_balanced:
-      __kmp_str_buf_print(buffer, "%s,%d,%d", "balanced",
-                          __kmp_affinity_compact, __kmp_affinity_offset);
+      __kmp_str_buf_print(buffer, "%s,%d,%d", "balanced", compact, offset);
       break;
     case affinity_disabled:
       __kmp_str_buf_print(buffer, "%s", "disabled");
@@ -2524,8 +2716,18 @@ static void __kmp_stg_print_affinity(kmp_str_buf_t *buffer, char const *name,
       __kmp_str_buf_print(buffer, "%s", "<unknown>");
       break;
     }
+  }
   __kmp_str_buf_print(buffer, "'\n");
 } //__kmp_stg_print_affinity
+
+static void __kmp_stg_print_affinity(kmp_str_buf_t *buffer, char const *name,
+                                     void *data) {
+  __kmp_print_affinity_env(buffer, name, __kmp_affinity);
+}
+static void __kmp_stg_print_hh_affinity(kmp_str_buf_t *buffer, char const *name,
+                                        void *data) {
+  __kmp_print_affinity_env(buffer, name, __kmp_hh_affinity);
+}
 
 #ifdef KMP_GOMP_COMPAT
 
@@ -2553,9 +2755,9 @@ static void __kmp_stg_parse_gomp_cpu_affinity(char const *name,
     SKIP_WS(next);
     if (*next == '\0') {
       // GOMP_CPU_AFFINITY => granularity=fine,explicit,proclist=...
-      __kmp_affinity_proclist = temp_proclist;
-      __kmp_affinity_type = affinity_explicit;
-      __kmp_affinity_gran = KMP_HW_THREAD;
+      __kmp_affinity.proclist = temp_proclist;
+      __kmp_affinity.type = affinity_explicit;
+      __kmp_affinity.gran = KMP_HW_THREAD;
       __kmp_nested_proc_bind.bind_types[0] = proc_bind_intel;
     } else {
       KMP_WARNING(AffSyntaxError, name);
@@ -2565,7 +2767,7 @@ static void __kmp_stg_parse_gomp_cpu_affinity(char const *name,
     }
   } else {
     // Warning already emitted
-    __kmp_affinity_type = affinity_none;
+    __kmp_affinity.type = affinity_none;
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
   }
 } // __kmp_stg_parse_gomp_cpu_affinity
@@ -2592,11 +2794,7 @@ signed := + signed
 signed := - signed
 -----------------------------------------------------------------------------*/
 
-// Warning to issue for syntax error during parsing of OMP_PLACES
-static inline void __kmp_omp_places_syntax_warn(const char *var) {
-  KMP_WARNING(SyntaxErrorUsing, var, "\"cores\"");
-}
-
+// Return TRUE if successful parse, FALSE otherwise
 static int __kmp_parse_subplace_list(const char *var, const char **scan) {
   const char *next;
 
@@ -2608,7 +2806,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
     //
     SKIP_WS(*scan);
     if ((**scan < '0') || (**scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = *scan;
@@ -2627,7 +2824,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
       continue;
     }
     if (**scan != ':') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     (*scan)++; // skip ':'
@@ -2635,7 +2831,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
     // Read count parameter
     SKIP_WS(*scan);
     if ((**scan < '0') || (**scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = *scan;
@@ -2654,7 +2849,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
       continue;
     }
     if (**scan != ':') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     (*scan)++; // skip ':'
@@ -2676,7 +2870,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
     }
     SKIP_WS(*scan);
     if ((**scan < '0') || (**scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = *scan;
@@ -2695,13 +2888,12 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
       (*scan)++; // skip ','
       continue;
     }
-
-    __kmp_omp_places_syntax_warn(var);
     return FALSE;
   }
   return TRUE;
 }
 
+// Return TRUE if successful parse, FALSE otherwise
 static int __kmp_parse_place(const char *var, const char **scan) {
   const char *next;
 
@@ -2713,7 +2905,6 @@ static int __kmp_parse_place(const char *var, const char **scan) {
       return FALSE;
     }
     if (**scan != '}') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     (*scan)++; // skip '}'
@@ -2727,12 +2918,12 @@ static int __kmp_parse_place(const char *var, const char **scan) {
     KMP_ASSERT(proc >= 0);
     *scan = next;
   } else {
-    __kmp_omp_places_syntax_warn(var);
     return FALSE;
   }
   return TRUE;
 }
 
+// Return TRUE if successful parse, FALSE otherwise
 static int __kmp_parse_place_list(const char *var, const char *env,
                                   char **place_list) {
   const char *scan = env;
@@ -2755,7 +2946,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
       continue;
     }
     if (*scan != ':') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     scan++; // skip ':'
@@ -2763,7 +2953,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
     // Read count parameter
     SKIP_WS(scan);
     if ((*scan < '0') || (*scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = scan;
@@ -2782,7 +2971,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
       continue;
     }
     if (*scan != ':') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     scan++; // skip ':'
@@ -2804,7 +2992,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
     }
     SKIP_WS(scan);
     if ((*scan < '0') || (*scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = scan;
@@ -2824,7 +3011,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
       continue;
     }
 
-    __kmp_omp_places_syntax_warn(var);
     return FALSE;
   }
 
@@ -2838,6 +3024,22 @@ static int __kmp_parse_place_list(const char *var, const char *env,
   return TRUE;
 }
 
+static inline void __kmp_places_set(enum affinity_type type, kmp_hw_t kind) {
+  __kmp_affinity.type = type;
+  __kmp_affinity.gran = kind;
+  __kmp_affinity.flags.dups = FALSE;
+  __kmp_affinity.flags.omp_places = TRUE;
+}
+
+static void __kmp_places_syntax_error_fallback(char const *name,
+                                               kmp_hw_t kind) {
+  const char *str = __kmp_hw_get_catalog_string(kind, /*plural=*/true);
+  KMP_WARNING(SyntaxErrorUsing, name, str);
+  __kmp_places_set(affinity_compact, kind);
+  if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default)
+    __kmp_nested_proc_bind.bind_types[0] = proc_bind_true;
+}
+
 static void __kmp_stg_parse_places(char const *name, char const *value,
                                    void *data) {
   struct kmp_place_t {
@@ -2848,7 +3050,6 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
   bool set = false;
   const char *scan = value;
   const char *next = scan;
-  const char *kind = "\"threads\"";
   kmp_place_t std_places[] = {{"threads", KMP_HW_THREAD},
                               {"cores", KMP_HW_CORE},
                               {"numa_domains", KMP_HW_NUMA},
@@ -2867,10 +3068,54 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
     const kmp_place_t &place = std_places[i];
     if (__kmp_match_str(place.name, scan, &next)) {
       scan = next;
-      __kmp_affinity_type = affinity_compact;
-      __kmp_affinity_gran = place.type;
-      __kmp_affinity_dups = FALSE;
+      __kmp_places_set(affinity_compact, place.type);
       set = true;
+      // Parse core attribute if it exists
+      if (KMP_HW_MAX_NUM_CORE_TYPES > 1) {
+        SKIP_WS(scan);
+        if (*scan == ':') {
+          if (place.type != KMP_HW_CORE) {
+            __kmp_places_syntax_error_fallback(name, place.type);
+            return;
+          }
+          scan++; // skip ':'
+          SKIP_WS(scan);
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+          if (__kmp_match_str("intel_core", scan, &next)) {
+            __kmp_affinity.core_attr_gran.core_type = KMP_HW_CORE_TYPE_CORE;
+            __kmp_affinity.core_attr_gran.valid = 1;
+            scan = next;
+          } else if (__kmp_match_str("intel_atom", scan, &next)) {
+            __kmp_affinity.core_attr_gran.core_type = KMP_HW_CORE_TYPE_ATOM;
+            __kmp_affinity.core_attr_gran.valid = 1;
+            scan = next;
+          } else
+#endif
+              if (__kmp_match_str("eff", scan, &next)) {
+            int eff;
+            if (!isdigit(*next)) {
+              __kmp_places_syntax_error_fallback(name, place.type);
+              return;
+            }
+            scan = next;
+            SKIP_DIGITS(next);
+            eff = __kmp_str_to_int(scan, *next);
+            if (eff < 0) {
+              __kmp_places_syntax_error_fallback(name, place.type);
+              return;
+            }
+            if (eff >= KMP_HW_MAX_NUM_CORE_EFFS)
+              eff = KMP_HW_MAX_NUM_CORE_EFFS - 1;
+            __kmp_affinity.core_attr_gran.core_eff = eff;
+            __kmp_affinity.core_attr_gran.valid = 1;
+            scan = next;
+          }
+          if (!__kmp_affinity.core_attr_gran.valid) {
+            __kmp_places_syntax_error_fallback(name, place.type);
+            return;
+          }
+        }
+      }
       break;
     }
   }
@@ -2882,36 +3127,56 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
         continue;
       if (__kmp_match_str(name, scan, &next)) {
         scan = next;
-        __kmp_affinity_type = affinity_compact;
-        __kmp_affinity_gran = type;
-        __kmp_affinity_dups = FALSE;
+        __kmp_places_set(affinity_compact, type);
         set = true;
         break;
       }
     }
   }
+  // Implementation choices for OMP_PLACES based on core attributes
   if (!set) {
-    if (__kmp_affinity_proclist != NULL) {
-      KMP_INTERNAL_FREE((void *)__kmp_affinity_proclist);
-      __kmp_affinity_proclist = NULL;
+    if (__kmp_match_str("core_types", scan, &next)) {
+      scan = next;
+      if (*scan != '\0') {
+        KMP_WARNING(ParseExtraCharsWarn, name, scan);
+      }
+      __kmp_places_set(affinity_compact, KMP_HW_CORE);
+      __kmp_affinity.flags.core_types_gran = 1;
+      set = true;
+    } else if (__kmp_match_str("core_effs", scan, &next) ||
+               __kmp_match_str("core_efficiencies", scan, &next)) {
+      scan = next;
+      if (*scan != '\0') {
+        KMP_WARNING(ParseExtraCharsWarn, name, scan);
+      }
+      __kmp_places_set(affinity_compact, KMP_HW_CORE);
+      __kmp_affinity.flags.core_effs_gran = 1;
+      set = true;
     }
-    if (__kmp_parse_place_list(name, value, &__kmp_affinity_proclist)) {
-      __kmp_affinity_type = affinity_explicit;
-      __kmp_affinity_gran = KMP_HW_THREAD;
-      __kmp_affinity_dups = FALSE;
+  }
+  // Explicit place list
+  if (!set) {
+    if (__kmp_affinity.proclist != NULL) {
+      KMP_INTERNAL_FREE((void *)__kmp_affinity.proclist);
+      __kmp_affinity.proclist = NULL;
+    }
+    if (__kmp_parse_place_list(name, value, &__kmp_affinity.proclist)) {
+      __kmp_places_set(affinity_explicit, KMP_HW_THREAD);
     } else {
       // Syntax error fallback
-      __kmp_affinity_type = affinity_compact;
-      __kmp_affinity_gran = KMP_HW_CORE;
-      __kmp_affinity_dups = FALSE;
+      __kmp_places_syntax_error_fallback(name, KMP_HW_CORE);
     }
     if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default) {
       __kmp_nested_proc_bind.bind_types[0] = proc_bind_true;
     }
     return;
   }
-  if (__kmp_affinity_gran != KMP_HW_UNKNOWN) {
-    kind = __kmp_hw_get_keyword(__kmp_affinity_gran);
+
+  kmp_hw_t gran = __kmp_affinity.gran;
+  if (__kmp_affinity.gran != KMP_HW_UNKNOWN) {
+    gran = __kmp_affinity.gran;
+  } else {
+    gran = KMP_HW_CORE;
   }
 
   if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default) {
@@ -2925,7 +3190,7 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
 
   // Parse option count parameter in parentheses
   if (*scan != '(') {
-    KMP_WARNING(SyntaxErrorUsing, name, kind);
+    __kmp_places_syntax_error_fallback(name, gran);
     return;
   }
   scan++; // skip '('
@@ -2939,7 +3204,7 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
 
   SKIP_WS(scan);
   if (*scan != ')') {
-    KMP_WARNING(SyntaxErrorUsing, name, kind);
+    __kmp_places_syntax_error_fallback(name, gran);
     return;
   }
   scan++; // skip ')'
@@ -2953,6 +3218,10 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
 
 static void __kmp_stg_print_places(kmp_str_buf_t *buffer, char const *name,
                                    void *data) {
+  enum affinity_type type = __kmp_affinity.type;
+  const char *proclist = __kmp_affinity.proclist;
+  kmp_hw_t gran = __kmp_affinity.gran;
+
   if (__kmp_env_format) {
     KMP_STR_BUF_PRINT_NAME;
   } else {
@@ -2962,28 +3231,53 @@ static void __kmp_stg_print_places(kmp_str_buf_t *buffer, char const *name,
       (__kmp_nested_proc_bind.bind_types == NULL) ||
       (__kmp_nested_proc_bind.bind_types[0] == proc_bind_false)) {
     __kmp_str_buf_print(buffer, ": %s\n", KMP_I18N_STR(NotDefined));
-  } else if (__kmp_affinity_type == affinity_explicit) {
-    if (__kmp_affinity_proclist != NULL) {
-      __kmp_str_buf_print(buffer, "='%s'\n", __kmp_affinity_proclist);
+  } else if (type == affinity_explicit) {
+    if (proclist != NULL) {
+      __kmp_str_buf_print(buffer, "='%s'\n", proclist);
     } else {
       __kmp_str_buf_print(buffer, ": %s\n", KMP_I18N_STR(NotDefined));
     }
-  } else if (__kmp_affinity_type == affinity_compact) {
+  } else if (type == affinity_compact) {
     int num;
-    if (__kmp_affinity_num_masks > 0) {
-      num = __kmp_affinity_num_masks;
+    if (__kmp_affinity.num_masks > 0) {
+      num = __kmp_affinity.num_masks;
     } else if (__kmp_affinity_num_places > 0) {
       num = __kmp_affinity_num_places;
     } else {
       num = 0;
     }
-    if (__kmp_affinity_gran != KMP_HW_UNKNOWN) {
-      const char *name = __kmp_hw_get_keyword(__kmp_affinity_gran, true);
-      if (num > 0) {
-        __kmp_str_buf_print(buffer, "='%s(%d)'\n", name, num);
-      } else {
-        __kmp_str_buf_print(buffer, "='%s'\n", name);
+    if (gran != KMP_HW_UNKNOWN) {
+      // If core_types or core_effs, just print and return
+      if (__kmp_affinity.flags.core_types_gran) {
+        __kmp_str_buf_print(buffer, "='%s'\n", "core_types");
+        return;
       }
+      if (__kmp_affinity.flags.core_effs_gran) {
+        __kmp_str_buf_print(buffer, "='%s'\n", "core_effs");
+        return;
+      }
+
+      // threads, cores, sockets, cores:<attribute>, etc.
+      const char *name = __kmp_hw_get_keyword(gran, true);
+      __kmp_str_buf_print(buffer, "='%s", name);
+
+      // Add core attributes if it exists
+      if (__kmp_affinity.core_attr_gran.valid) {
+        kmp_hw_core_type_t ct =
+            (kmp_hw_core_type_t)__kmp_affinity.core_attr_gran.core_type;
+        int eff = __kmp_affinity.core_attr_gran.core_eff;
+        if (ct != KMP_HW_CORE_TYPE_UNKNOWN) {
+          const char *ct_name = __kmp_hw_get_core_type_keyword(ct);
+          __kmp_str_buf_print(buffer, ":%s", name, ct_name);
+        } else if (eff >= 0 && eff < KMP_HW_MAX_NUM_CORE_EFFS) {
+          __kmp_str_buf_print(buffer, ":eff%d", name, eff);
+        }
+      }
+
+      // Add the '(#)' part if it exists
+      if (num > 0)
+        __kmp_str_buf_print(buffer, "(%d)", num);
+      __kmp_str_buf_print(buffer, "'\n");
     } else {
       __kmp_str_buf_print(buffer, ": %s\n", KMP_I18N_STR(NotDefined));
     }
@@ -3067,6 +3361,7 @@ static void __kmp_stg_parse_topology_method(char const *name, char const *value,
   }
 #if KMP_GROUP_AFFINITY
   else if (__kmp_str_match("group", 1, value)) {
+    KMP_WARNING(StgDeprecatedValue, name, value, "all");
     __kmp_affinity_top_method = affinity_top_method_group;
   }
 #endif /* KMP_GROUP_AFFINITY */
@@ -3130,6 +3425,47 @@ static void __kmp_stg_print_topology_method(kmp_str_buf_t *buffer,
   }
 } // __kmp_stg_print_topology_method
 
+// KMP_TEAMS_PROC_BIND
+struct kmp_proc_bind_info_t {
+  const char *name;
+  kmp_proc_bind_t proc_bind;
+};
+static kmp_proc_bind_info_t proc_bind_table[] = {
+    {"spread", proc_bind_spread},
+    {"true", proc_bind_spread},
+    {"close", proc_bind_close},
+    // teams-bind = false means "replicate the primary thread's affinity"
+    {"false", proc_bind_primary},
+    {"primary", proc_bind_primary}};
+static void __kmp_stg_parse_teams_proc_bind(char const *name, char const *value,
+                                            void *data) {
+  int valid;
+  const char *end;
+  valid = 0;
+  for (size_t i = 0; i < sizeof(proc_bind_table) / sizeof(proc_bind_table[0]);
+       ++i) {
+    if (__kmp_match_str(proc_bind_table[i].name, value, &end)) {
+      __kmp_teams_proc_bind = proc_bind_table[i].proc_bind;
+      valid = 1;
+      break;
+    }
+  }
+  if (!valid) {
+    KMP_WARNING(StgInvalidValue, name, value);
+  }
+}
+static void __kmp_stg_print_teams_proc_bind(kmp_str_buf_t *buffer,
+                                            char const *name, void *data) {
+  const char *value = KMP_I18N_STR(NotDefined);
+  for (size_t i = 0; i < sizeof(proc_bind_table) / sizeof(proc_bind_table[0]);
+       ++i) {
+    if (__kmp_teams_proc_bind == proc_bind_table[i].proc_bind) {
+      value = proc_bind_table[i].name;
+      break;
+    }
+  }
+  __kmp_stg_print_str(buffer, name, value);
+}
 #endif /* KMP_AFFINITY_SUPPORTED */
 
 // OMP_PROC_BIND / bind-var is functional on all 4.0 builds, including OS X*
@@ -3168,7 +3504,7 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
     buf = next;
     SKIP_WS(buf);
 #if KMP_AFFINITY_SUPPORTED
-    __kmp_affinity_type = affinity_disabled;
+    __kmp_affinity.type = affinity_disabled;
 #endif /* KMP_AFFINITY_SUPPORTED */
     __kmp_nested_proc_bind.used = 1;
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
@@ -3177,7 +3513,7 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
     buf = next;
     SKIP_WS(buf);
 #if KMP_AFFINITY_SUPPORTED
-    __kmp_affinity_type = affinity_none;
+    __kmp_affinity.type = affinity_none;
 #endif /* KMP_AFFINITY_SUPPORTED */
     __kmp_nested_proc_bind.used = 1;
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
@@ -3963,8 +4299,11 @@ static const char *__kmp_parse_single_omp_schedule(const char *name,
   else if (!__kmp_strcasecmp_with_sentinel("static", ptr, *delim))
     sched = kmp_sch_static;
 #if KMP_STATIC_STEAL_ENABLED
-  else if (!__kmp_strcasecmp_with_sentinel("static_steal", ptr, *delim))
-    sched = kmp_sch_static_steal;
+  else if (!__kmp_strcasecmp_with_sentinel("static_steal", ptr, *delim)) {
+    // replace static_steal with dynamic to better cope with ordered loops
+    sched = kmp_sch_dynamic_chunked;
+    sched_modifier = sched_type::kmp_sch_modifier_nonmonotonic;
+  }
 #endif
   else {
     // If there is no proper schedule kind, then this schedule is invalid
@@ -4034,8 +4373,8 @@ static void __kmp_stg_parse_omp_schedule(char const *name, char const *value,
                                          void *data) {
   size_t length;
   const char *ptr = value;
-  SKIP_WS(ptr);
-  if (value) {
+  if (ptr) {
+    SKIP_WS(ptr);
     length = KMP_STRLEN(value);
     if (length) {
       if (value[length - 1] == '"' || value[length - 1] == '\'')
@@ -4103,6 +4442,10 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
     case kmp_sch_auto:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "auto", __kmp_chunk);
       break;
+    default:
+      KMP_ASSERT2(false, "Unhandled sched_type enumeration");
+      KMP_BUILTIN_UNREACHABLE;
+      break;
     }
   } else {
     switch (sched) {
@@ -4127,6 +4470,10 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
       break;
     case kmp_sch_auto:
       __kmp_str_buf_print(buffer, "%s'\n", "auto");
+      break;
+    default:
+      KMP_ASSERT2(false, "Unhandled sched_type enumeration");
+      KMP_BUILTIN_UNREACHABLE;
       break;
     }
   }
@@ -4387,7 +4734,7 @@ static void __kmp_stg_parse_lock_kind(char const *name, char const *value,
   }
 #if KMP_USE_ADAPTIVE_LOCKS
   else if (__kmp_str_match("adaptive", 1, value)) {
-    if (__kmp_cpuinfo.rtm) { // ??? Is cpuinfo available here?
+    if (__kmp_cpuinfo.flags.rtm) { // ??? Is cpuinfo available here?
       __kmp_user_lock_kind = lk_adaptive;
       KMP_STORE_LOCK_SEQ(adaptive);
     } else {
@@ -4399,7 +4746,7 @@ static void __kmp_stg_parse_lock_kind(char const *name, char const *value,
 #endif // KMP_USE_ADAPTIVE_LOCKS
 #if KMP_USE_DYNAMIC_LOCK && KMP_USE_TSX
   else if (__kmp_str_match("rtm_queuing", 1, value)) {
-    if (__kmp_cpuinfo.rtm) {
+    if (__kmp_cpuinfo.flags.rtm) {
       __kmp_user_lock_kind = lk_rtm_queuing;
       KMP_STORE_LOCK_SEQ(rtm_queuing);
     } else {
@@ -4408,7 +4755,7 @@ static void __kmp_stg_parse_lock_kind(char const *name, char const *value,
       KMP_STORE_LOCK_SEQ(queuing);
     }
   } else if (__kmp_str_match("rtm_spin", 1, value)) {
-    if (__kmp_cpuinfo.rtm) {
+    if (__kmp_cpuinfo.flags.rtm) {
       __kmp_user_lock_kind = lk_rtm_spin;
       KMP_STORE_LOCK_SEQ(rtm_spin);
     } else {
@@ -4542,9 +4889,6 @@ static void __kmp_stg_parse_spin_backoff_params(const char *name,
       if (num <= 0) { // The number of retries should be > 0
         msg = KMP_I18N_STR(ValueTooSmall);
         num = 1;
-      } else if (num > KMP_INT_MAX) {
-        msg = KMP_I18N_STR(ValueTooLarge);
-        num = KMP_INT_MAX;
       }
       if (msg != NULL) {
         // Message is not empty. Print warning.
@@ -4641,9 +4985,6 @@ static void __kmp_stg_parse_adaptive_lock_props(const char *name,
       if (num < 0) { // The number of retries should be >= 0
         msg = KMP_I18N_STR(ValueTooSmall);
         num = 1;
-      } else if (num > KMP_INT_MAX) {
-        msg = KMP_I18N_STR(ValueTooLarge);
-        num = KMP_INT_MAX;
       }
       if (msg != NULL) {
         // Message is not empty. Print warning.
@@ -4847,28 +5188,85 @@ static void __kmp_stg_parse_hw_subset(char const *name, char const *value,
 
   // Check each component
   for (int i = 0; i < level; ++i) {
-    int offset = 0;
-    int num = atoi(components[i]); // each component should start with a number
-    if (num <= 0) {
-      goto err; // only positive integers are valid for count
+    int core_level = 0;
+    char *core_components[MAX_T_LEVEL];
+    // Split possible core components by '&' delimiter
+    pos = components[i];
+    core_components[core_level++] = pos;
+    while ((pos = strchr(pos, '&'))) {
+      if (core_level >= MAX_T_LEVEL)
+        goto err; // too many different core types
+      *pos = '\0'; // modify input and avoid more copying
+      core_components[core_level++] = ++pos; // expect something after '&'
     }
-    if ((pos = strchr(components[i], '@'))) {
-      offset = atoi(pos + 1); // save offset
-      *pos = '\0'; // cut the offset from the component
+
+    for (int j = 0; j < core_level; ++j) {
+      char *offset_ptr;
+      char *attr_ptr;
+      int offset = 0;
+      kmp_hw_attr_t attr;
+      int num;
+      // components may begin with an optional count of the number of resources
+      if (isdigit(*core_components[j])) {
+        num = atoi(core_components[j]);
+        if (num <= 0) {
+          goto err; // only positive integers are valid for count
+        }
+        pos = core_components[j] + strspn(core_components[j], digits);
+      } else if (*core_components[j] == '*') {
+        num = kmp_hw_subset_t::USE_ALL;
+        pos = core_components[j] + 1;
+      } else {
+        num = kmp_hw_subset_t::USE_ALL;
+        pos = core_components[j];
+      }
+
+      offset_ptr = strchr(core_components[j], '@');
+      attr_ptr = strchr(core_components[j], ':');
+
+      if (offset_ptr) {
+        offset = atoi(offset_ptr + 1); // save offset
+        *offset_ptr = '\0'; // cut the offset from the component
+      }
+      if (attr_ptr) {
+        attr.clear();
+        // save the attribute
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+        if (__kmp_str_match("intel_core", -1, attr_ptr + 1)) {
+          attr.set_core_type(KMP_HW_CORE_TYPE_CORE);
+        } else if (__kmp_str_match("intel_atom", -1, attr_ptr + 1)) {
+          attr.set_core_type(KMP_HW_CORE_TYPE_ATOM);
+        } else
+#endif
+        if (__kmp_str_match("eff", 3, attr_ptr + 1)) {
+          const char *number = attr_ptr + 1;
+          // skip the eff[iciency] token
+          while (isalpha(*number))
+            number++;
+          if (!isdigit(*number)) {
+            goto err;
+          }
+          int efficiency = atoi(number);
+          attr.set_core_eff(efficiency);
+        } else {
+          goto err;
+        }
+        *attr_ptr = '\0'; // cut the attribute from the component
+      }
+      // detect the component type
+      kmp_hw_t type = __kmp_stg_parse_hw_subset_name(pos);
+      if (type == KMP_HW_UNKNOWN) {
+        goto err;
+      }
+      // Only the core type can have attributes
+      if (attr && type != KMP_HW_CORE)
+        goto err;
+      // Must allow core be specified more than once
+      if (type != KMP_HW_CORE && __kmp_hw_subset->specified(type)) {
+        goto err;
+      }
+      __kmp_hw_subset->push_back(num, type, offset, attr);
     }
-    pos = components[i] + strspn(components[i], digits);
-    if (pos == components[i]) {
-      goto err;
-    }
-    // detect the component type
-    kmp_hw_t type = __kmp_stg_parse_hw_subset_name(pos);
-    if (type == KMP_HW_UNKNOWN) {
-      goto err;
-    }
-    if (__kmp_hw_subset->specified(type)) {
-      goto err;
-    }
-    __kmp_hw_subset->push_back(num, type, offset);
   }
   return;
 err:
@@ -4895,10 +5293,20 @@ static void __kmp_stg_print_hw_subset(kmp_str_buf_t *buffer, char const *name,
   depth = __kmp_hw_subset->get_depth();
   for (int i = 0; i < depth; ++i) {
     const auto &item = __kmp_hw_subset->at(i);
-    __kmp_str_buf_print(&buf, "%s%d%s", (i > 0 ? "," : ""), item.num,
-                        __kmp_hw_get_keyword(item.type));
-    if (item.offset)
-      __kmp_str_buf_print(&buf, "@%d", item.offset);
+    if (i > 0)
+      __kmp_str_buf_print(&buf, "%c", ',');
+    for (int j = 0; j < item.num_attrs; ++j) {
+      __kmp_str_buf_print(&buf, "%s%d%s", (j > 0 ? "&" : ""), item.num[j],
+                          __kmp_hw_get_keyword(item.type));
+      if (item.attr[j].is_core_type_valid())
+        __kmp_str_buf_print(
+            &buf, ":%s",
+            __kmp_hw_get_core_type_keyword(item.attr[j].get_core_type()));
+      if (item.attr[j].is_core_eff_valid())
+        __kmp_str_buf_print(&buf, ":eff%d", item.attr[j].get_core_eff());
+      if (item.offset[j])
+        __kmp_str_buf_print(&buf, "@%d", item.offset[j]);
+    }
   }
   __kmp_str_buf_print(buffer, "%s'\n", buf.str);
   __kmp_str_buf_free(&buf);
@@ -4975,6 +5383,27 @@ static void __kmp_stg_print_mwait_hints(kmp_str_buf_t *buffer, char const *name,
 
 #endif // KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
 
+#if KMP_HAVE_UMWAIT
+// -----------------------------------------------------------------------------
+// KMP_TPAUSE
+// 0 = don't use TPAUSE, 1 = use C0.1 state, 2 = use C0.2 state
+
+static void __kmp_stg_parse_tpause(char const *name, char const *value,
+                                   void *data) {
+  __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_tpause_state);
+  if (__kmp_tpause_state != 0) {
+    // The actual hint passed to tpause is: 0 for C0.2 and 1 for C0.1
+    if (__kmp_tpause_state == 2) // use C0.2
+      __kmp_tpause_hint = 0; // default was set to 1 for C0.1
+  }
+} // __kmp_stg_parse_tpause
+
+static void __kmp_stg_print_tpause(kmp_str_buf_t *buffer, char const *name,
+                                   void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_tpause_state);
+} // __kmp_stg_print_tpause
+#endif // KMP_HAVE_UMWAIT
+
 // -----------------------------------------------------------------------------
 // OMP_DISPLAY_ENV
 
@@ -5011,7 +5440,7 @@ static void __kmp_stg_print_omp_cancellation(kmp_str_buf_t *buffer,
 } // __kmp_stg_print_omp_cancellation
 
 #if OMPT_SUPPORT
-static int __kmp_tool = 1;
+int __kmp_tool = 1;
 
 static void __kmp_stg_parse_omp_tool(char const *name, char const *value,
                                      void *data) {
@@ -5028,7 +5457,7 @@ static void __kmp_stg_print_omp_tool(kmp_str_buf_t *buffer, char const *name,
   }
 } // __kmp_stg_print_omp_tool
 
-static char *__kmp_tool_libraries = NULL;
+char *__kmp_tool_libraries = NULL;
 
 static void __kmp_stg_parse_omp_tool_libraries(char const *name,
                                                char const *value, void *data) {
@@ -5049,7 +5478,7 @@ static void __kmp_stg_print_omp_tool_libraries(kmp_str_buf_t *buffer,
   }
 } // __kmp_stg_print_omp_tool_libraries
 
-static char *__kmp_tool_verbose_init = NULL;
+char *__kmp_tool_verbose_init = NULL;
 
 static void __kmp_stg_parse_omp_tool_verbose_init(char const *name,
                                                   char const *value,
@@ -5106,6 +5535,8 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"KMP_WARNINGS", __kmp_stg_parse_warnings, __kmp_stg_print_warnings, NULL,
      0, 0},
 
+    {"KMP_NESTING_MODE", __kmp_stg_parse_nesting_mode,
+     __kmp_stg_print_nesting_mode, NULL, 0, 0},
     {"OMP_NESTED", __kmp_stg_parse_nested, __kmp_stg_print_nested, NULL, 0, 0},
     {"OMP_NUM_THREADS", __kmp_stg_parse_num_threads,
      __kmp_stg_print_num_threads, NULL, 0, 0},
@@ -5224,12 +5655,16 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if KMP_AFFINITY_SUPPORTED
     {"KMP_AFFINITY", __kmp_stg_parse_affinity, __kmp_stg_print_affinity, NULL,
      0, 0},
+    {"KMP_HIDDEN_HELPER_AFFINITY", __kmp_stg_parse_hh_affinity,
+     __kmp_stg_print_hh_affinity, NULL, 0, 0},
 #ifdef KMP_GOMP_COMPAT
     {"GOMP_CPU_AFFINITY", __kmp_stg_parse_gomp_cpu_affinity, NULL,
      /* no print */ NULL, 0, 0},
 #endif /* KMP_GOMP_COMPAT */
     {"OMP_PROC_BIND", __kmp_stg_parse_proc_bind, __kmp_stg_print_proc_bind,
      NULL, 0, 0},
+    {"KMP_TEAMS_PROC_BIND", __kmp_stg_parse_teams_proc_bind,
+     __kmp_stg_print_teams_proc_bind, NULL, 0, 0},
     {"OMP_PLACES", __kmp_stg_parse_places, __kmp_stg_print_places, NULL, 0, 0},
     {"KMP_TOPOLOGY_METHOD", __kmp_stg_parse_topology_method,
      __kmp_stg_print_topology_method, NULL, 0, 0},
@@ -5320,6 +5755,11 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"LIBOMP_NUM_HIDDEN_HELPER_THREADS",
      __kmp_stg_parse_num_hidden_helper_threads,
      __kmp_stg_print_num_hidden_helper_threads, NULL, 0, 0},
+#if OMPX_TASKGRAPH
+    {"KMP_MAX_TDGS", __kmp_stg_parse_max_tdgs, __kmp_std_print_max_tdgs, NULL,
+     0, 0},
+    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0, 0},
+#endif
 
 #if OMPT_SUPPORT
     {"OMP_TOOL", __kmp_stg_parse_omp_tool, __kmp_stg_print_omp_tool, NULL, 0,
@@ -5335,6 +5775,10 @@ static kmp_setting_t __kmp_stg_table[] = {
      __kmp_stg_print_user_level_mwait, NULL, 0, 0},
     {"KMP_MWAIT_HINTS", __kmp_stg_parse_mwait_hints,
      __kmp_stg_print_mwait_hints, NULL, 0, 0},
+#endif
+
+#if KMP_HAVE_UMWAIT
+    {"KMP_TPAUSE", __kmp_stg_parse_tpause, __kmp_stg_print_tpause, NULL, 0, 0},
 #endif
     {"", NULL, NULL, NULL, 0, 0}}; // settings
 
@@ -5635,6 +6079,22 @@ static int __kmp_env_toPrint(char const *name, int flag) {
   return rc;
 }
 
+#if defined(KMP_DEBUG) && KMP_AFFINITY_SUPPORTED
+static void __kmp_print_affinity_settings(const kmp_affinity_t *affinity) {
+  K_DIAG(1, ("%s:\n", affinity->env_var));
+  K_DIAG(1, ("    type     : %d\n", affinity->type));
+  K_DIAG(1, ("    compact  : %d\n", affinity->compact));
+  K_DIAG(1, ("    offset   : %d\n", affinity->offset));
+  K_DIAG(1, ("    verbose  : %u\n", affinity->flags.verbose));
+  K_DIAG(1, ("    warnings : %u\n", affinity->flags.warnings));
+  K_DIAG(1, ("    respect  : %u\n", affinity->flags.respect));
+  K_DIAG(1, ("    reset    : %u\n", affinity->flags.reset));
+  K_DIAG(1, ("    dups     : %u\n", affinity->flags.dups));
+  K_DIAG(1, ("    gran     : %d\n", (int)affinity->gran));
+  KMP_DEBUG_ASSERT(affinity->type != affinity_default);
+}
+#endif
+
 static void __kmp_aux_env_initialize(kmp_env_blk_t *block) {
 
   char const *value;
@@ -5648,7 +6108,13 @@ static void __kmp_aux_env_initialize(kmp_env_blk_t *block) {
   /* KMP_BLOCKTIME */
   value = __kmp_env_blk_var(block, "KMP_BLOCKTIME");
   if (value) {
-    kmpc_set_blocktime(__kmp_dflt_blocktime);
+    int gtid, tid;
+    kmp_info_t *thread;
+
+    gtid = __kmp_entry_gtid();
+    tid = __kmp_tid_from_gtid(gtid);
+    thread = __kmp_thread_from_gtid(gtid);
+    __kmp_aux_set_blocktime(__kmp_dflt_blocktime, thread, tid);
   }
 
   /* OMP_NESTED */
@@ -5721,9 +6187,9 @@ void __kmp_env_initialize(char const *string) {
     // specifier, even as substrings.
     //
     // I can't find a case-insensitive version of strstr on Windows* OS.
-    // Use the case-sensitive version for now.
+    // Use the case-sensitive version for now. AIX does the same.
 
-#if KMP_OS_WINDOWS
+#if KMP_OS_WINDOWS || KMP_OS_AIX
 #define FIND strstr
 #else
 #define FIND strcasestr
@@ -5742,20 +6208,20 @@ void __kmp_env_initialize(char const *string) {
       // A new affinity type is specified.
       // Reset the affinity flags to their default values,
       // in case this is called from kmp_set_defaults().
-      __kmp_affinity_type = affinity_default;
-      __kmp_affinity_gran = KMP_HW_UNKNOWN;
+      __kmp_affinity.type = affinity_default;
+      __kmp_affinity.gran = KMP_HW_UNKNOWN;
       __kmp_affinity_top_method = affinity_top_method_default;
-      __kmp_affinity_respect_mask = affinity_respect_mask_default;
+      __kmp_affinity.flags.respect = affinity_respect_mask_default;
     }
 #undef FIND
 
     // Also reset the affinity flags if OMP_PROC_BIND is specified.
     aff_str = __kmp_env_blk_var(&block, "OMP_PROC_BIND");
     if (aff_str != NULL) {
-      __kmp_affinity_type = affinity_default;
-      __kmp_affinity_gran = KMP_HW_UNKNOWN;
+      __kmp_affinity.type = affinity_default;
+      __kmp_affinity.gran = KMP_HW_UNKNOWN;
       __kmp_affinity_top_method = affinity_top_method_default;
-      __kmp_affinity_respect_mask = affinity_respect_mask_default;
+      __kmp_affinity.flags.respect = affinity_respect_mask_default;
     }
   }
 
@@ -5831,12 +6297,12 @@ void __kmp_env_initialize(char const *string) {
         __kmp_affinity_top_method == affinity_top_method_default)
       if (__kmp_hw_subset->specified(KMP_HW_NUMA) ||
           __kmp_hw_subset->specified(KMP_HW_TILE) ||
-          __kmp_affinity_gran == KMP_HW_TILE ||
-          __kmp_affinity_gran == KMP_HW_NUMA)
+          __kmp_affinity.gran == KMP_HW_TILE ||
+          __kmp_affinity.gran == KMP_HW_NUMA)
         __kmp_affinity_top_method = affinity_top_method_hwloc;
     // Force using hwloc when tiles or numa nodes requested for OMP_PLACES
-    if (__kmp_affinity_gran == KMP_HW_NUMA ||
-        __kmp_affinity_gran == KMP_HW_TILE)
+    if (__kmp_affinity.gran == KMP_HW_NUMA ||
+        __kmp_affinity.gran == KMP_HW_TILE)
       __kmp_affinity_top_method = affinity_top_method_hwloc;
 #endif
     // Determine if the machine/OS is actually capable of supporting
@@ -5853,25 +6319,25 @@ void __kmp_env_initialize(char const *string) {
       __kmp_affinity_top_method = affinity_top_method_all;
     }
 #endif
-    if (__kmp_affinity_type == affinity_disabled) {
+    if (__kmp_affinity.type == affinity_disabled) {
       KMP_AFFINITY_DISABLE();
     } else if (!KMP_AFFINITY_CAPABLE()) {
       __kmp_affinity_dispatch->determine_capable(var);
       if (!KMP_AFFINITY_CAPABLE()) {
-        if (__kmp_affinity_verbose ||
-            (__kmp_affinity_warnings &&
-             (__kmp_affinity_type != affinity_default) &&
-             (__kmp_affinity_type != affinity_none) &&
-             (__kmp_affinity_type != affinity_disabled))) {
+        if (__kmp_affinity.flags.verbose ||
+            (__kmp_affinity.flags.warnings &&
+             (__kmp_affinity.type != affinity_default) &&
+             (__kmp_affinity.type != affinity_none) &&
+             (__kmp_affinity.type != affinity_disabled))) {
           KMP_WARNING(AffNotSupported, var);
         }
-        __kmp_affinity_type = affinity_disabled;
-        __kmp_affinity_respect_mask = 0;
-        __kmp_affinity_gran = KMP_HW_THREAD;
+        __kmp_affinity.type = affinity_disabled;
+        __kmp_affinity.flags.respect = FALSE;
+        __kmp_affinity.gran = KMP_HW_THREAD;
       }
     }
 
-    if (__kmp_affinity_type == affinity_disabled) {
+    if (__kmp_affinity.type == affinity_disabled) {
       __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
     } else if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_true) {
       // OMP_PROC_BIND=true maps to OMP_PROC_BIND=spread.
@@ -5912,87 +6378,55 @@ void __kmp_env_initialize(char const *string) {
       // Handle the Win 64 group affinity stuff if there are multiple
       // processor groups, or if the user requested it, and OMP 4.0
       // affinity is not in effect.
-      if (((__kmp_num_proc_groups > 1) &&
-           (__kmp_affinity_type == affinity_default) &&
-           (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default)) ||
-          (__kmp_affinity_top_method == affinity_top_method_group)) {
-        if (__kmp_affinity_respect_mask == affinity_respect_mask_default &&
+      if (__kmp_num_proc_groups > 1 &&
+          __kmp_affinity.type == affinity_default &&
+          __kmp_nested_proc_bind.bind_types[0] == proc_bind_default) {
+        // Do not respect the initial processor affinity mask if it is assigned
+        // exactly one Windows Processor Group since this is interpreted as the
+        // default OS assignment. Not respecting the mask allows the runtime to
+        // use all the logical processors in all groups.
+        if (__kmp_affinity.flags.respect == affinity_respect_mask_default &&
             exactly_one_group) {
-          __kmp_affinity_respect_mask = FALSE;
+          __kmp_affinity.flags.respect = FALSE;
         }
-        if (__kmp_affinity_type == affinity_default) {
-          __kmp_affinity_type = affinity_compact;
+        // Use compact affinity with anticipation of pinning to at least the
+        // group granularity since threads can only be bound to one group.
+        if (__kmp_affinity.type == affinity_default) {
+          __kmp_affinity.type = affinity_compact;
           __kmp_nested_proc_bind.bind_types[0] = proc_bind_intel;
         }
-        if (__kmp_affinity_top_method == affinity_top_method_default) {
-          if (__kmp_affinity_gran == KMP_HW_UNKNOWN) {
-            __kmp_affinity_top_method = affinity_top_method_group;
-            __kmp_affinity_gran = KMP_HW_PROC_GROUP;
-          } else if (__kmp_affinity_gran == KMP_HW_PROC_GROUP) {
-            __kmp_affinity_top_method = affinity_top_method_group;
-          } else {
-            __kmp_affinity_top_method = affinity_top_method_all;
-          }
-        } else if (__kmp_affinity_top_method == affinity_top_method_group) {
-          if (__kmp_affinity_gran == KMP_HW_UNKNOWN) {
-            __kmp_affinity_gran = KMP_HW_PROC_GROUP;
-          } else if ((__kmp_affinity_gran != KMP_HW_PROC_GROUP) &&
-                     (__kmp_affinity_gran != KMP_HW_THREAD)) {
-            const char *str = __kmp_hw_get_keyword(__kmp_affinity_gran);
-            KMP_WARNING(AffGranTopGroup, var, str);
-            __kmp_affinity_gran = KMP_HW_THREAD;
-          }
-        } else {
-          if (__kmp_affinity_gran == KMP_HW_UNKNOWN) {
-            __kmp_affinity_gran = KMP_HW_CORE;
-          } else if (__kmp_affinity_gran == KMP_HW_PROC_GROUP) {
-            const char *str = NULL;
-            switch (__kmp_affinity_type) {
-            case affinity_physical:
-              str = "physical";
-              break;
-            case affinity_logical:
-              str = "logical";
-              break;
-            case affinity_compact:
-              str = "compact";
-              break;
-            case affinity_scatter:
-              str = "scatter";
-              break;
-            case affinity_explicit:
-              str = "explicit";
-              break;
-            // No MIC on windows, so no affinity_balanced case
-            default:
-              KMP_DEBUG_ASSERT(0);
-            }
-            KMP_WARNING(AffGranGroupType, var, str);
-            __kmp_affinity_gran = KMP_HW_CORE;
-          }
-        }
+        if (__kmp_hh_affinity.type == affinity_default)
+          __kmp_hh_affinity.type = affinity_compact;
+        if (__kmp_affinity_top_method == affinity_top_method_default)
+          __kmp_affinity_top_method = affinity_top_method_all;
+        if (__kmp_affinity.gran == KMP_HW_UNKNOWN)
+          __kmp_affinity.gran = KMP_HW_PROC_GROUP;
+        if (__kmp_hh_affinity.gran == KMP_HW_UNKNOWN)
+          __kmp_hh_affinity.gran = KMP_HW_PROC_GROUP;
       } else
 
 #endif /* KMP_GROUP_AFFINITY */
 
       {
-        if (__kmp_affinity_respect_mask == affinity_respect_mask_default) {
+        if (__kmp_affinity.flags.respect == affinity_respect_mask_default) {
 #if KMP_GROUP_AFFINITY
           if (__kmp_num_proc_groups > 1 && exactly_one_group) {
-            __kmp_affinity_respect_mask = FALSE;
+            __kmp_affinity.flags.respect = FALSE;
           } else
 #endif /* KMP_GROUP_AFFINITY */
           {
-            __kmp_affinity_respect_mask = TRUE;
+            __kmp_affinity.flags.respect = TRUE;
           }
         }
         if ((__kmp_nested_proc_bind.bind_types[0] != proc_bind_intel) &&
             (__kmp_nested_proc_bind.bind_types[0] != proc_bind_default)) {
-          if (__kmp_affinity_type == affinity_default) {
-            __kmp_affinity_type = affinity_compact;
-            __kmp_affinity_dups = FALSE;
+          if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_false)
+            __kmp_affinity.type = affinity_none;
+          if (__kmp_affinity.type == affinity_default) {
+            __kmp_affinity.type = affinity_compact;
+            __kmp_affinity.flags.dups = FALSE;
           }
-        } else if (__kmp_affinity_type == affinity_default) {
+        } else if (__kmp_affinity.type == affinity_default) {
 #if KMP_MIC_SUPPORTED
           if (__kmp_mic_type != non_mic) {
             __kmp_nested_proc_bind.bind_types[0] = proc_bind_intel;
@@ -6003,50 +6437,62 @@ void __kmp_env_initialize(char const *string) {
           }
 #if KMP_MIC_SUPPORTED
           if (__kmp_mic_type != non_mic) {
-            __kmp_affinity_type = affinity_scatter;
+            __kmp_affinity.type = affinity_scatter;
           } else
 #endif
           {
-            __kmp_affinity_type = affinity_none;
+            __kmp_affinity.type = affinity_none;
           }
         }
-        if ((__kmp_affinity_gran == KMP_HW_UNKNOWN) &&
-            (__kmp_affinity_gran_levels < 0)) {
+        if (__kmp_hh_affinity.type == affinity_default)
+          __kmp_hh_affinity.type = affinity_none;
+        if ((__kmp_affinity.gran == KMP_HW_UNKNOWN) &&
+            (__kmp_affinity.gran_levels < 0)) {
 #if KMP_MIC_SUPPORTED
           if (__kmp_mic_type != non_mic) {
-            __kmp_affinity_gran = KMP_HW_THREAD;
+            __kmp_affinity.gran = KMP_HW_THREAD;
           } else
 #endif
           {
-            __kmp_affinity_gran = KMP_HW_CORE;
+            __kmp_affinity.gran = KMP_HW_CORE;
+          }
+        }
+        if ((__kmp_hh_affinity.gran == KMP_HW_UNKNOWN) &&
+            (__kmp_hh_affinity.gran_levels < 0)) {
+#if KMP_MIC_SUPPORTED
+          if (__kmp_mic_type != non_mic) {
+            __kmp_hh_affinity.gran = KMP_HW_THREAD;
+          } else
+#endif
+          {
+            __kmp_hh_affinity.gran = KMP_HW_CORE;
           }
         }
         if (__kmp_affinity_top_method == affinity_top_method_default) {
           __kmp_affinity_top_method = affinity_top_method_all;
         }
       }
+    } else {
+      // If affinity is disabled, then still need to assign topology method
+      // to attempt machine detection and affinity types
+      if (__kmp_affinity_top_method == affinity_top_method_default)
+        __kmp_affinity_top_method = affinity_top_method_all;
+      if (__kmp_affinity.type == affinity_default)
+        __kmp_affinity.type = affinity_disabled;
+      if (__kmp_hh_affinity.type == affinity_default)
+        __kmp_hh_affinity.type = affinity_disabled;
     }
 
-    K_DIAG(1, ("__kmp_affinity_type         == %d\n", __kmp_affinity_type));
-    K_DIAG(1, ("__kmp_affinity_compact      == %d\n", __kmp_affinity_compact));
-    K_DIAG(1, ("__kmp_affinity_offset       == %d\n", __kmp_affinity_offset));
-    K_DIAG(1, ("__kmp_affinity_verbose      == %d\n", __kmp_affinity_verbose));
-    K_DIAG(1, ("__kmp_affinity_warnings     == %d\n", __kmp_affinity_warnings));
-    K_DIAG(1, ("__kmp_affinity_respect_mask == %d\n",
-               __kmp_affinity_respect_mask));
-    K_DIAG(1, ("__kmp_affinity_gran         == %d\n", __kmp_affinity_gran));
-
-    KMP_DEBUG_ASSERT(__kmp_affinity_type != affinity_default);
+#ifdef KMP_DEBUG
+    for (const kmp_affinity_t *affinity : __kmp_affinities)
+      __kmp_print_affinity_settings(affinity);
     KMP_DEBUG_ASSERT(__kmp_nested_proc_bind.bind_types[0] != proc_bind_default);
     K_DIAG(1, ("__kmp_nested_proc_bind.bind_types[0] == %d\n",
                __kmp_nested_proc_bind.bind_types[0]));
+#endif
   }
 
 #endif /* KMP_AFFINITY_SUPPORTED */
-
-  if (__kmp_version) {
-    __kmp_print_version_1();
-  }
 
   // Post-initialization step: some env. vars need their value's further
   // processing
@@ -6144,5 +6590,48 @@ void __kmp_display_env_impl(int display_env, int display_env_verbose) {
 
   __kmp_printf("\n");
 }
+
+#if OMPD_SUPPORT
+// Dump environment variables for OMPD
+void __kmp_env_dump() {
+
+  kmp_env_blk_t block;
+  kmp_str_buf_t buffer, env, notdefined;
+
+  __kmp_stg_init();
+  __kmp_str_buf_init(&buffer);
+  __kmp_str_buf_init(&env);
+  __kmp_str_buf_init(&notdefined);
+
+  __kmp_env_blk_init(&block, NULL);
+  __kmp_env_blk_sort(&block);
+
+  __kmp_str_buf_print(&notdefined, ": %s", KMP_I18N_STR(NotDefined));
+
+  for (int i = 0; i < __kmp_stg_count; ++i) {
+    if (__kmp_stg_table[i].print == NULL)
+      continue;
+    __kmp_str_buf_clear(&env);
+    __kmp_stg_table[i].print(&env, __kmp_stg_table[i].name,
+                             __kmp_stg_table[i].data);
+    if (env.used < 4) // valid definition must have indents (3) and a new line
+      continue;
+    if (strstr(env.str, notdefined.str))
+      // normalize the string
+      __kmp_str_buf_print(&buffer, "%s=undefined\n", __kmp_stg_table[i].name);
+    else
+      __kmp_str_buf_cat(&buffer, env.str + 3, env.used - 3);
+  }
+
+  ompd_env_block = (char *)__kmp_allocate(buffer.used + 1);
+  KMP_MEMCPY(ompd_env_block, buffer.str, buffer.used + 1);
+  ompd_env_block_size = (ompd_size_t)KMP_STRLEN(ompd_env_block);
+
+  __kmp_env_blk_free(&block);
+  __kmp_str_buf_free(&buffer);
+  __kmp_str_buf_free(&env);
+  __kmp_str_buf_free(&notdefined);
+}
+#endif // OMPD_SUPPORT
 
 // end of file

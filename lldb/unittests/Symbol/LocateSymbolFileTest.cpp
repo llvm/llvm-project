@@ -10,18 +10,17 @@
 
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Reproducer.h"
 
 using namespace lldb_private;
 
 namespace {
 class SymbolsTest : public ::testing::Test {
 public:
-  SubsystemRAII<repro::Reproducer, FileSystem, HostInfo> subsystems;
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
 };
 } // namespace
 
@@ -31,7 +30,7 @@ TEST_F(
   ModuleSpec module_spec;
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec symbol_file_spec =
-      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+      PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
 }
 
@@ -43,6 +42,6 @@ TEST_F(SymbolsTest,
       "4A524676-B24B-4F4E-968A-551D465EBAF1.so", FileSpec::Style::native);
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec symbol_file_spec =
-      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+      PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
 }

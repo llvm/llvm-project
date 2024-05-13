@@ -17,6 +17,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
+#include "llvm/Support/JSON.h"
 
 #include <memory>
 #include <vector>
@@ -89,8 +90,21 @@ public:
 
   void Clear() { m_sections.clear(); }
 
+  /// Get the debug information size from all sections that contain debug
+  /// information. Symbol tables are not considered part of the debug
+  /// information for this call, just known sections that contain debug
+  /// information.
+  uint64_t GetDebugInfoSize() const;
+
 protected:
   collection m_sections;
+};
+
+struct JSONSection {
+  std::string name;
+  std::optional<lldb::SectionType> type;
+  std::optional<uint64_t> address;
+  std::optional<uint64_t> size;
 };
 
 class Section : public std::enable_shared_from_this<Section>,
@@ -236,6 +250,13 @@ public:
 
   void SetIsRelocated(bool b) { m_relocated = b; }
 
+  /// Returns true if this section contains debug information. Symbol tables
+  /// are not considered debug information since some symbols might contain
+  /// debug information (STABS, COFF) but not all symbols do, so to keep this
+  /// fast and simple only sections that contains only debug information should
+  /// return true.
+  bool ContainsOnlyDebugInfo() const;
+
 protected:
   ObjectFile *m_obj_file;   // The object file that data for this section should
                             // be read from
@@ -273,5 +294,17 @@ private:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+namespace json {
+
+bool fromJSON(const llvm::json::Value &value,
+              lldb_private::JSONSection &section, llvm::json::Path path);
+
+bool fromJSON(const llvm::json::Value &value, lldb::SectionType &type,
+              llvm::json::Path path);
+
+} // namespace json
+} // namespace llvm
 
 #endif // LLDB_CORE_SECTION_H

@@ -7,5 +7,5 @@
 # RUN: llvm-dwp %t-a.dwo %t-b.dwo -o %t.dwp
 # RUN: llvm-dwarfdump -debug-tu-index %t.dwp | FileCheck %s
 
-# CHECK_DAG: .debug_tu_index contents:
+# CHECK-DAG: .debug_tu_index contents:
 # CHECK: version = 5, units = 1, slots = 2

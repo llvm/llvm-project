@@ -1,9 +1,9 @@
 ; Make sure the backend generates a single DIE and uses ref_addr.
 ; CHECK: 0x[[BASE:.*]]: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name {{.*}} = "Base"
+; CHECK-NEXT: DW_AT_name {{.*}}"Base"
 ; CHECK-NOT: DW_TAG_structure_type
 ; CHECK: 0x[[INT:.*]]: DW_TAG_base_type
-; CHECK-NEXT: DW_AT_name {{.*}} = "int"
+; CHECK-NEXT: DW_AT_name {{.*}}"int"
 ; CHECK-NOT: DW_TAG_base_type
 
 ; CHECK: DW_TAG_compile_unit
@@ -41,16 +41,16 @@
 ; }
 ; ModuleID = 'foo.cpp'
 
-%struct.Base = type { i32, %struct.Base* }
+%struct.Base = type { i32, ptr }
 
 ; Function Attrs: nounwind ssp uwtable
 define void @_Z1fi(i32 %a) #0 !dbg !12 {
 entry:
   %a.addr = alloca i32, align 4
   %t = alloca %struct.Base, align 8
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !17, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.declare(metadata %struct.Base* %t, metadata !19, metadata !DIExpression()), !dbg !20
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !19, metadata !DIExpression()), !dbg !20
   ret void, !dbg !21
 }
 
@@ -78,7 +78,7 @@ attributes #1 = { nounwind readnone }
 !13 = !DIFile(filename: "foo.cpp", directory: ".")
 !14 = !DISubroutineType(types: !15)
 !15 = !{null, !8}
-!16 = !{i32 2, !"Dwarf Version", i32 2}
+!16 = !{i32 2, !"Dwarf Version", i32 3}
 !17 = !DILocalVariable(name: "a", line: 3, arg: 1, scope: !12, file: !13, type: !8)
 !18 = !DILocation(line: 3, scope: !12)
 !19 = !DILocalVariable(name: "t", line: 4, scope: !12, file: !13, type: !4)

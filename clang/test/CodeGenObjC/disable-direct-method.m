@@ -17,5 +17,5 @@
 void f(X *x) {
   [x m];
 
-  // CHECK: call void bitcast ({{.*}} @objc_msgSend to {{.*}})
+  // CHECK: call void @objc_msgSend
 }

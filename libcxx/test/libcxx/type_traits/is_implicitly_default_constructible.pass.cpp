@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// Before GCC 6, this trait fails. See https://stackoverflow.com/q/41799015/627587.
-// UNSUPPORTED: gcc-5
-
 // <type_traits>
 
 // __is_implicitly_default_constructible<Tp>

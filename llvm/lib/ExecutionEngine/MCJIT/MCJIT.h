@@ -72,8 +72,7 @@ class MCJIT : public ExecutionEngine {
 
   class OwningModuleContainer {
   public:
-    OwningModuleContainer() {
-    }
+    OwningModuleContainer() = default;
     ~OwningModuleContainer() {
       freeModulePtrSet(AddedModules);
       freeModulePtrSet(LoadedModules);
@@ -151,12 +150,8 @@ class MCJIT : public ExecutionEngine {
     }
 
     void markAllLoadedModulesAsFinalized() {
-      for (ModulePtrSet::iterator I = LoadedModules.begin(),
-                                  E = LoadedModules.end();
-           I != E; ++I) {
-        Module *M = *I;
+      for (Module *M : LoadedModules)
         FinalizedModules.insert(M);
-      }
       LoadedModules.clear();
     }
 
@@ -167,10 +162,8 @@ class MCJIT : public ExecutionEngine {
 
     void freeModulePtrSet(ModulePtrSet& MPS) {
       // Go through the module set and delete everything.
-      for (ModulePtrSet::iterator I = MPS.begin(), E = MPS.end(); I != E; ++I) {
-        Module *M = *I;
+      for (Module *M : MPS)
         delete M;
-      }
       MPS.clear();
     }
   };

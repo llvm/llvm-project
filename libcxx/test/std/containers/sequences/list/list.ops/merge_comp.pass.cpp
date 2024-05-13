@@ -9,7 +9,7 @@
 // <list>
 
 // template <class Compare> void merge(list& x, Compare comp);
-// If (&addressof(x) == this) does nothing; otherwise ...
+// If (addressof(x) == this) does nothing; otherwise ...
 
 #include <list>
 #include <functional>

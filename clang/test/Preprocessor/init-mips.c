@@ -10,6 +10,7 @@
 // MIPS32BE:#define _MIPS_ARCH_MIPS32R2 1
 // MIPS32BE:#define _MIPS_FPSET 16
 // MIPS32BE:#define _MIPS_SIM _ABIO32
+// MIPS32BE:#define _MIPS_SPFPSET 16
 // MIPS32BE:#define _MIPS_SZINT 32
 // MIPS32BE:#define _MIPS_SZLONG 32
 // MIPS32BE:#define _MIPS_SZPTR 32
@@ -37,7 +38,6 @@
 // MIPS32BE:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // MIPS32BE:#define __FLT_DIG__ 6
 // MIPS32BE:#define __FLT_EPSILON__ 1.19209290e-7F
-// MIPS32BE:#define __FLT_EVAL_METHOD__ 0
 // MIPS32BE:#define __FLT_HAS_DENORM__ 1
 // MIPS32BE:#define __FLT_HAS_INFINITY__ 1
 // MIPS32BE:#define __FLT_HAS_QUIET_NAN__ 1
@@ -221,6 +221,7 @@
 // MIPS32EL:#define _MIPS_ARCH_MIPS32R2 1
 // MIPS32EL:#define _MIPS_FPSET 16
 // MIPS32EL:#define _MIPS_SIM _ABIO32
+// MIPS32EL:#define _MIPS_SPFPSET 16
 // MIPS32EL:#define _MIPS_SZINT 32
 // MIPS32EL:#define _MIPS_SZLONG 32
 // MIPS32EL:#define _MIPS_SZPTR 32
@@ -247,7 +248,6 @@
 // MIPS32EL:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // MIPS32EL:#define __FLT_DIG__ 6
 // MIPS32EL:#define __FLT_EPSILON__ 1.19209290e-7F
-// MIPS32EL:#define __FLT_EVAL_METHOD__ 0
 // MIPS32EL:#define __FLT_HAS_DENORM__ 1
 // MIPS32EL:#define __FLT_HAS_INFINITY__ 1
 // MIPS32EL:#define __FLT_HAS_QUIET_NAN__ 1
@@ -434,6 +434,7 @@
 // MIPSN32BE: #define _MIPS_FPSET 32
 // MIPSN32BE: #define _MIPS_ISA _MIPS_ISA_MIPS64
 // MIPSN32BE: #define _MIPS_SIM _ABIN32
+// MIPSN32BE: #define _MIPS_SPFPSET 32
 // MIPSN32BE: #define _MIPS_SZINT 32
 // MIPSN32BE: #define _MIPS_SZLONG 32
 // MIPSN32BE: #define _MIPS_SZPTR 32
@@ -467,7 +468,6 @@
 // MIPSN32BE: #define __FLT_DENORM_MIN__ 1.40129846e-45F
 // MIPSN32BE: #define __FLT_DIG__ 6
 // MIPSN32BE: #define __FLT_EPSILON__ 1.19209290e-7F
-// MIPSN32BE: #define __FLT_EVAL_METHOD__ 0
 // MIPSN32BE: #define __FLT_HAS_DENORM__ 1
 // MIPSN32BE: #define __FLT_HAS_INFINITY__ 1
 // MIPSN32BE: #define __FLT_HAS_QUIET_NAN__ 1
@@ -742,6 +742,7 @@
 // MIPSN32EL: #define _MIPS_FPSET 32
 // MIPSN32EL: #define _MIPS_ISA _MIPS_ISA_MIPS64
 // MIPSN32EL: #define _MIPS_SIM _ABIN32
+// MIPSN32EL: #define _MIPS_SPFPSET 32
 // MIPSN32EL: #define _MIPS_SZINT 32
 // MIPSN32EL: #define _MIPS_SZLONG 32
 // MIPSN32EL: #define _MIPS_SZPTR 32
@@ -774,7 +775,6 @@
 // MIPSN32EL: #define __FLT_DENORM_MIN__ 1.40129846e-45F
 // MIPSN32EL: #define __FLT_DIG__ 6
 // MIPSN32EL: #define __FLT_EPSILON__ 1.19209290e-7F
-// MIPSN32EL: #define __FLT_EVAL_METHOD__ 0
 // MIPSN32EL: #define __FLT_HAS_DENORM__ 1
 // MIPSN32EL: #define __FLT_HAS_INFINITY__ 1
 // MIPSN32EL: #define __FLT_HAS_QUIET_NAN__ 1
@@ -1047,6 +1047,7 @@
 // MIPS64BE:#define _MIPS_ARCH_MIPS64R2 1
 // MIPS64BE:#define _MIPS_FPSET 32
 // MIPS64BE:#define _MIPS_SIM _ABI64
+// MIPS64BE:#define _MIPS_SPFPSET 32
 // MIPS64BE:#define _MIPS_SZINT 32
 // MIPS64BE:#define _MIPS_SZLONG 64
 // MIPS64BE:#define _MIPS_SZPTR 64
@@ -1074,7 +1075,6 @@
 // MIPS64BE:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // MIPS64BE:#define __FLT_DIG__ 6
 // MIPS64BE:#define __FLT_EPSILON__ 1.19209290e-7F
-// MIPS64BE:#define __FLT_EVAL_METHOD__ 0
 // MIPS64BE:#define __FLT_HAS_DENORM__ 1
 // MIPS64BE:#define __FLT_HAS_INFINITY__ 1
 // MIPS64BE:#define __FLT_HAS_QUIET_NAN__ 1
@@ -1258,6 +1258,7 @@
 // MIPS64EL:#define _MIPS_ARCH_MIPS64R2 1
 // MIPS64EL:#define _MIPS_FPSET 32
 // MIPS64EL:#define _MIPS_SIM _ABI64
+// MIPS64EL:#define _MIPS_SPFPSET 32
 // MIPS64EL:#define _MIPS_SZINT 32
 // MIPS64EL:#define _MIPS_SZLONG 64
 // MIPS64EL:#define _MIPS_SZPTR 64
@@ -1284,7 +1285,6 @@
 // MIPS64EL:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // MIPS64EL:#define __FLT_DIG__ 6
 // MIPS64EL:#define __FLT_EPSILON__ 1.19209290e-7F
-// MIPS64EL:#define __FLT_EVAL_METHOD__ 0
 // MIPS64EL:#define __FLT_HAS_DENORM__ 1
 // MIPS64EL:#define __FLT_HAS_INFINITY__ 1
 // MIPS64EL:#define __FLT_HAS_QUIET_NAN__ 1
@@ -1512,6 +1512,7 @@
 // MIPS-ARCH-32R6:#define _MIPS_ARCH "mips32r6"
 // MIPS-ARCH-32R6:#define _MIPS_ARCH_MIPS32R6 1
 // MIPS-ARCH-32R6:#define _MIPS_ISA _MIPS_ISA_MIPS32
+// MIPS-ARCH-32R6:#define __mips_fpr 64
 // MIPS-ARCH-32R6:#define __mips_isa_rev 6
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
@@ -1688,14 +1689,28 @@
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-NOFP %s
 // MIPS32-NOFP:#define __mips_fpr 0
 
+// RUN: %clang_cc1  -target-feature -nooddspreg \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-NOFP-ODD %s
+// MIPS32-NOFP-ODD:#define _MIPS_SPFPSET 32
+// MIPS32-NOFP-ODD:#define __mips_fpr 0
+
+// RUN: %clang_cc1  -target-feature +nooddspreg -target-feature -fp64 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-FP64-NOODD %s
+// MIPS32-FP64-NOODD:#define _MIPS_SPFPSET 16
+// MIPS32-FP64-NOODD:#define __mips_fpr 32
+
 // RUN: %clang_cc1 -target-feature +fpxx \
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-MFPXX %s
+// MIPS32-MFPXX:#define _MIPS_SPFPSET 16
 // MIPS32-MFPXX:#define __mips_fpr 0
 
 // RUN: %clang_cc1 -target-cpu mips32r6 -target-feature +fpxx \
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS32R6-MFPXX %s
+// MIPS32R6-MFPXX:#define _MIPS_SPFPSET 16
 // MIPS32R6-MFPXX:#define __mips_fpr 0
 
 // RUN: %clang_cc1  \
@@ -1722,30 +1737,35 @@
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-MFP32 %s
 // MIPS32-MFP32:#define _MIPS_FPSET 16
+// MIPS32-MFP32:#define _MIPS_SPFPSET 32
 // MIPS32-MFP32:#define __mips_fpr 32
 
 // RUN: %clang_cc1 -target-feature +fp64 \
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-MFP64 %s
 // MIPS32-MFP64:#define _MIPS_FPSET 32
+// MIPS32-MFP64:#define _MIPS_SPFPSET 32
 // MIPS32-MFP64:#define __mips_fpr 64
 //
 // RUN: %clang_cc1 -target-feature +single-float \
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-MFP32SF %s
 // MIPS32-MFP32SF:#define _MIPS_FPSET 32
+// MIPS32-MFP32SF:#define _MIPS_SPFPSET 16
 // MIPS32-MFP32SF:#define __mips_fpr 0
 
 // RUN: %clang_cc1 -target-feature +fp64 \
 // RUN:   -E -dM -triple=mips64-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS64-MFP64 %s
 // MIPS64-MFP64:#define _MIPS_FPSET 32
+// MIPS64-MFP64:#define _MIPS_SPFPSET 32
 // MIPS64-MFP64:#define __mips_fpr 64
 
 // RUN: %clang_cc1 -target-feature -fp64 -target-feature +single-float \
 // RUN:   -E -dM -triple=mips64-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS64-NOMFP64 %s
 // MIPS64-NOMFP64:#define _MIPS_FPSET 32
+// MIPS64-NOMFP64:#define _MIPS_SPFPSET 32
 // MIPS64-NOMFP64:#define __mips_fpr 32
 
 // RUN: %clang_cc1 -target-cpu mips32r6 \
@@ -1755,6 +1775,7 @@
 // RUN:   -E -dM -triple=mips64-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS-XXR6 %s
 // MIPS-XXR6:#define _MIPS_FPSET 32
+// MIPS-XXR6:#define _MIPS_SPFPSET 32
 // MIPS-XXR6:#define __mips_fpr 64
 // MIPS-XXR6:#define __mips_nan2008 1
 

@@ -19,6 +19,6 @@ void foo(MyView *(^obj)(void)) ;
 }
 @end
 
-// CHECK-LP64: call i8* @objc_read_weak
-// CHECK-LP32: call i8* @objc_read_weak
+// CHECK-LP64: call ptr @objc_read_weak
+// CHECK-LP32: call ptr @objc_read_weak
 

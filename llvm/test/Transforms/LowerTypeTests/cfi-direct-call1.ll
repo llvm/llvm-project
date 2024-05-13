@@ -1,5 +1,5 @@
-; RUN: opt -lowertypetests -S %s | FileCheck --check-prefix=FULL %s
-; RUN: opt -lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%p/Inputs/cfi-direct-call1.yaml -S %s | FileCheck --check-prefix=THIN %s
+; RUN: opt -passes=lowertypetests -S %s | FileCheck --check-prefix=FULL %s
+; RUN: opt -passes=lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%p/Inputs/cfi-direct-call1.yaml -S %s | FileCheck --check-prefix=THIN %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux"
@@ -20,19 +20,17 @@ entry:
 
 declare !type !3 !type !4 extern_weak i32 @extern_weak()
 declare !type !3 !type !4 i32 @extern_decl()
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 
 define hidden i32 @main(i32 %argc) {
 entry:
   %cmp.i = icmp sgt i32 %argc, 1
-  %fptr1 = select i1 %cmp.i, i32 ()* @local_func1, i32 ()* @local_func2
-  %fptr2 = select i1 %cmp.i, i32 ()* @extern_weak, i32 ()* @extern_decl
-  %0 = bitcast i32 ()* %fptr1 to i8*
-  %1 = tail call i1 @llvm.type.test(i8* nonnull %0, metadata !"_ZTSFivE")
+  %fptr1 = select i1 %cmp.i, ptr @local_func1, ptr @local_func2
+  %fptr2 = select i1 %cmp.i, ptr @extern_weak, ptr @extern_decl
+  %0 = tail call i1 @llvm.type.test(ptr nonnull %fptr1, metadata !"_ZTSFivE")
 
   %call2 = tail call i32 %fptr1()
-  %2 = bitcast i32 ()* %fptr2 to i8*
-  %3 = tail call i1 @llvm.type.test(i8* %2, metadata !"_ZTSFivE")
+  %1 = tail call i1 @llvm.type.test(ptr %fptr2, metadata !"_ZTSFivE")
 
   %call4 = tail call i32 %fptr2()
   %call5 = tail call i32 @extern_decl()
@@ -55,10 +53,11 @@ entry:
 ; FULL: define hidden i32 @local_func3(i32 %i)
 
 ; Indirect references to local_func1 and local_func2 must to through jump table
-; FULL: %fptr1 = select i1 %cmp.i, i32 ()* @local_func1, i32 ()* @local_func2
+; FULL: %fptr1 = select i1 %cmp.i, ptr @local_func1, ptr @local_func2
 
 ; Indirect references to extern_weak and extern_decl must go through jump table
-; FULL: %fptr2 = select i1 %cmp.i, i32 ()* select (i1 icmp ne (i32 ()* @extern_weak, i32 ()* null), i32 ()* bitcast ([8 x i8]* getelementptr inbounds ([4 x [8 x i8]], [4 x [8 x i8]]* bitcast (void ()* @.cfi.jumptable to [4 x [8 x i8]]*), i64 0, i64 2) to i32 ()*), i32 ()* null), i32 ()* bitcast ([8 x i8]* getelementptr inbounds ([4 x [8 x i8]], [4 x [8 x i8]]* bitcast (void ()* @.cfi.jumptable to [4 x [8 x i8]]*), i64 0, i64 3) to i32 ()*)
+; FULL: %0 = select i1 icmp ne (ptr @extern_weak, ptr null), ptr getelementptr inbounds ([4 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 2), ptr null
+; FULL: %fptr2 = select i1 %cmp.i, ptr %0, ptr getelementptr inbounds ([4 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 3)
 
 ; Direct calls to extern_weak and extern_decl should go to original names
 ; FULL: %call5 = tail call i32 @extern_decl()
@@ -81,10 +80,11 @@ entry:
 ; THIN: define hidden i32 @local_func3.cfi(i32 %i){{.*}}
 
 ; Indirect references to local_func1 and local_func2 must to through jump table
-; THIN: %fptr1 = select i1 %cmp.i, i32 ()* @local_func1, i32 ()* @local_func2
+; THIN: %fptr1 = select i1 %cmp.i, ptr @local_func1, ptr @local_func2
 
 ; Indirect references to extern_weak and extern_decl must go through jump table
-; THIN: %fptr2 = select i1 %cmp.i, i32 ()* select (i1 icmp ne (i32 ()* @extern_weak, i32 ()* null), i32 ()* @extern_weak.cfi_jt, i32 ()* null), i32 ()* @extern_decl.cfi_jt
+; THIN: %0 = select i1 icmp ne (ptr @extern_weak, ptr null), ptr @extern_weak.cfi_jt, ptr null
+; THIN: %fptr2 = select i1 %cmp.i, ptr %0, ptr @extern_decl.cfi_jt
 
 ; Direct calls to extern_weak and extern_decl should go to original names
 ; THIN: %call5 = tail call i32 @extern_decl()

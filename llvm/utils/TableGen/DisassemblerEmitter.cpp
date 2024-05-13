@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
+#include "Common/CodeGenTarget.h"
+#include "TableGenBackends.h"
 #include "WebAssemblyDisassemblerEmitter.h"
 #include "X86DisassemblerTables.h"
 #include "X86RecognizableInstr.h"
@@ -93,16 +94,7 @@ using namespace llvm::X86Disassembler;
 /// X86RecognizableInstr.cpp contains the implementation for a single
 ///   instruction.
 
-namespace llvm {
-
-extern void EmitFixedLenDecoder(RecordKeeper &RK, raw_ostream &OS,
-                                const std::string &PredicateNamespace,
-                                const std::string &GPrefix,
-                                const std::string &GPostfix,
-                                const std::string &ROK,
-                                const std::string &RFail, const std::string &L);
-
-void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   CodeGenTarget Target(Records);
   emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
 
@@ -110,8 +102,8 @@ void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   if (Target.getName() == "X86") {
     DisassemblerTables Tables;
 
-    ArrayRef<const CodeGenInstruction*> numberedInstructions =
-      Target.getInstructionsByEnumValue();
+    ArrayRef<const CodeGenInstruction *> numberedInstructions =
+        Target.getInstructionsByEnumValue();
 
     for (unsigned i = 0, e = numberedInstructions.size(); i != e; ++i)
       RecognizableInstr::processInstr(Tables, *numberedInstructions[i], i);
@@ -133,24 +125,13 @@ void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
     return;
   }
 
-  // ARM and Thumb have a CHECK() macro to deal with DecodeStatuses.
-  if (Target.getName() == "ARM" || Target.getName() == "Thumb" ||
-      Target.getName() == "AArch64" || Target.getName() == "ARM64") {
-    std::string PredicateNamespace = std::string(Target.getName());
-    if (PredicateNamespace == "Thumb")
-      PredicateNamespace = "ARM";
-
-    EmitFixedLenDecoder(Records, OS, PredicateNamespace,
-                        "if (!Check(S, ", "))",
-                        "S", "MCDisassembler::Fail",
-                        "  MCDisassembler::DecodeStatus S = "
-                          "MCDisassembler::Success;\n(void)S;");
-    return;
-  }
-
-  EmitFixedLenDecoder(Records, OS, std::string(Target.getName()), "if (",
-                      " == MCDisassembler::Fail)", "MCDisassembler::Success",
-                      "MCDisassembler::Fail", "");
+  std::string PredicateNamespace = std::string(Target.getName());
+  if (PredicateNamespace == "Thumb")
+    PredicateNamespace = "ARM";
+  EmitDecoder(Records, OS, PredicateNamespace);
 }
 
-} // end namespace llvm
+cl::OptionCategory DisassemblerEmitterCat("Options for -gen-disassembler");
+
+static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,
+                                "Generate disassembler");

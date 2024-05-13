@@ -1,15 +1,17 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon \
-// RUN:  -target-feature +sm4 -S -emit-llvm -o - %s \
+// RUN:  -target-feature +sm4 -emit-llvm -o - %s \
 // RUN:  | FileCheck %s
 
-// RUN: not %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon \
-// RUN: -S -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=CHECK-NO-CRYPTO %s
+// RUN: not %clang_cc1 -Wno-error=implicit-function-declaration -triple aarch64-linux-gnu -target-feature +neon \
+// RUN: -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=CHECK-NO-CRYPTO %s
+
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_neon.h>
 
 void test_vsm3partw1(uint32x4_t a, uint32x4_t b, uint32x4_t c) {
   // CHECK-LABEL: @test_vsm3partw1(
-  // CHECK-NO-CRYPTO: warning: implicit declaration of function 'vsm3partw1q_u32' is invalid in C99
+  // CHECK-NO-CRYPTO: error: always_inline function 'vsm3partw1q_u32' requires target feature 'sm4'
   // CHECK: call <4 x i32> @llvm.aarch64.crypto.sm3partw1
   uint32x4_t result = vsm3partw1q_u32(a, b, c);
 }

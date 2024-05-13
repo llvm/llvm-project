@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
 ; CHECK-LABEL: build_tree
 ; CHECK: load
 ; CHECK: load
@@ -14,12 +14,12 @@ entry:
   br label %do.body
 
 do.body:                                          ; preds = %do.body, %entry
-  %tmp9 = load i32, i32* @heap, align 4
+  %tmp9 = load i32, ptr @heap, align 4
   %cmp = call i1 @pqdownheap(i32 %tmp9)
   br i1 %cmp, label %do.body, label %do.end
 
 do.end:                                           ; preds = %do.body
-  %tmp20 = load i32, i32* @heap, align 4
+  %tmp20 = load i32, ptr @heap, align 4
   ret i32 %tmp20
 }
 
@@ -40,29 +40,29 @@ entry:
   br label %for.cond
 
 for.cond:
-  %a3 = load volatile i1, i1* @v
+  %a3 = load volatile i1, ptr @v
   br i1 %a3, label %for.body, label %while.end
 
 for.body:
   br label %if.then
 
 if.then:
-  %tmp4 = load i32, i32* @i, align 4
+  %tmp4 = load i32, ptr @i, align 4
   br label %for.cond
 
 while.end:
   br label %do.body
 
 do.body:
-  %tmp9 = load i32, i32* getelementptr inbounds ([573 x i32], [573 x i32]* @j,
+  %tmp9 = load i32, ptr getelementptr inbounds ([573 x i32], ptr @j,
 i32 0, i32 1), align 4
-  %tmp10 = load i32, i32* @i, align 4
+  %tmp10 = load i32, ptr @i, align 4
   call void @fn()
-  %a1 = load volatile i1, i1* @v
+  %a1 = load volatile i1, ptr @v
   br i1 %a1, label %do.body, label %do.end
 
 do.end:
-  %tmp20 = load i32, i32* getelementptr inbounds ([573 x i32], [573 x i32]* @j,
+  %tmp20 = load i32, ptr getelementptr inbounds ([573 x i32], ptr @j,
 i32 0, i32 1), align 4
   ret i32 %tmp20
 }

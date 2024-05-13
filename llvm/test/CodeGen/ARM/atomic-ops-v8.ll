@@ -10,7 +10,7 @@
 
 define i8 @test_atomic_load_add_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i8:
-   %old = atomicrmw add i8* @var8, i8 %offset seq_cst
+   %old = atomicrmw add ptr @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -33,7 +33,7 @@ define i8 @test_atomic_load_add_i8(i8 %offset) nounwind {
 
 define i16 @test_atomic_load_add_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i16:
-   %old = atomicrmw add i16* @var16, i16 %offset acquire
+   %old = atomicrmw add ptr @var16, i16 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -56,7 +56,7 @@ define i16 @test_atomic_load_add_i16(i16 %offset) nounwind {
 
 define i32 @test_atomic_load_add_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32:
-   %old = atomicrmw add i32* @var32, i32 %offset release
+   %old = atomicrmw add ptr @var32, i32 %offset release
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -79,7 +79,7 @@ define i32 @test_atomic_load_add_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_add_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64:
-   %old = atomicrmw add i64* @var64, i64 %offset monotonic
+   %old = atomicrmw add ptr @var64, i64 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -100,13 +100,13 @@ define void @test_atomic_load_add_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK: strd r[[OLD1]], r[[OLD2]], [r[[ADDR]]]
-  store i64 %old, i64* @var64
+  store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_sub_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i8:
-   %old = atomicrmw sub i8* @var8, i8 %offset monotonic
+   %old = atomicrmw sub ptr @var8, i8 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -129,7 +129,7 @@ define i8 @test_atomic_load_sub_i8(i8 %offset) nounwind {
 
 define i16 @test_atomic_load_sub_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i16:
-   %old = atomicrmw sub i16* @var16, i16 %offset release
+   %old = atomicrmw sub ptr @var16, i16 %offset release
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -152,7 +152,7 @@ define i16 @test_atomic_load_sub_i16(i16 %offset) nounwind {
 
 define i32 @test_atomic_load_sub_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32:
-   %old = atomicrmw sub i32* @var32, i32 %offset acquire
+   %old = atomicrmw sub ptr @var32, i32 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -175,7 +175,7 @@ define i32 @test_atomic_load_sub_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_sub_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64:
-   %old = atomicrmw sub i64* @var64, i64 %offset seq_cst
+   %old = atomicrmw sub ptr @var64, i64 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -196,13 +196,13 @@ define void @test_atomic_load_sub_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK: strd r[[OLD1]], r[[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_and_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i8:
-   %old = atomicrmw and i8* @var8, i8 %offset release
+   %old = atomicrmw and ptr @var8, i8 %offset release
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -225,7 +225,7 @@ define i8 @test_atomic_load_and_i8(i8 %offset) nounwind {
 
 define i16 @test_atomic_load_and_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i16:
-   %old = atomicrmw and i16* @var16, i16 %offset monotonic
+   %old = atomicrmw and ptr @var16, i16 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -248,7 +248,7 @@ define i16 @test_atomic_load_and_i16(i16 %offset) nounwind {
 
 define i32 @test_atomic_load_and_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32:
-   %old = atomicrmw and i32* @var32, i32 %offset seq_cst
+   %old = atomicrmw and ptr @var32, i32 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -271,7 +271,7 @@ define i32 @test_atomic_load_and_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_and_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64:
-   %old = atomicrmw and i64* @var64, i64 %offset acquire
+   %old = atomicrmw and ptr @var64, i64 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -292,13 +292,13 @@ define void @test_atomic_load_and_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK: strd r[[OLD1]], r[[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_or_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i8:
-   %old = atomicrmw or i8* @var8, i8 %offset seq_cst
+   %old = atomicrmw or ptr @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -321,7 +321,7 @@ define i8 @test_atomic_load_or_i8(i8 %offset) nounwind {
 
 define i16 @test_atomic_load_or_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i16:
-   %old = atomicrmw or i16* @var16, i16 %offset monotonic
+   %old = atomicrmw or ptr @var16, i16 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -344,7 +344,7 @@ define i16 @test_atomic_load_or_i16(i16 %offset) nounwind {
 
 define i32 @test_atomic_load_or_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32:
-   %old = atomicrmw or i32* @var32, i32 %offset acquire
+   %old = atomicrmw or ptr @var32, i32 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -367,7 +367,7 @@ define i32 @test_atomic_load_or_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_or_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64:
-   %old = atomicrmw or i64* @var64, i64 %offset release
+   %old = atomicrmw or ptr @var64, i64 %offset release
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -388,13 +388,13 @@ define void @test_atomic_load_or_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK: strd r[[OLD1]], r[[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_xor_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i8:
-   %old = atomicrmw xor i8* @var8, i8 %offset acquire
+   %old = atomicrmw xor ptr @var8, i8 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -417,7 +417,7 @@ define i8 @test_atomic_load_xor_i8(i8 %offset) nounwind {
 
 define i16 @test_atomic_load_xor_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i16:
-   %old = atomicrmw xor i16* @var16, i16 %offset release
+   %old = atomicrmw xor ptr @var16, i16 %offset release
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -440,7 +440,7 @@ define i16 @test_atomic_load_xor_i16(i16 %offset) nounwind {
 
 define i32 @test_atomic_load_xor_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32:
-   %old = atomicrmw xor i32* @var32, i32 %offset seq_cst
+   %old = atomicrmw xor ptr @var32, i32 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -463,7 +463,7 @@ define i32 @test_atomic_load_xor_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_xor_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64:
-   %old = atomicrmw xor i64* @var64, i64 %offset monotonic
+   %old = atomicrmw xor ptr @var64, i64 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -484,13 +484,13 @@ define void @test_atomic_load_xor_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK: strd r[[OLD1]], r[[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_xchg_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i8:
-   %old = atomicrmw xchg i8* @var8, i8 %offset monotonic
+   %old = atomicrmw xchg ptr @var8, i8 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -512,7 +512,7 @@ define i8 @test_atomic_load_xchg_i8(i8 %offset) nounwind {
 
 define i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i16:
-   %old = atomicrmw xchg i16* @var16, i16 %offset seq_cst
+   %old = atomicrmw xchg ptr @var16, i16 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -534,7 +534,7 @@ define i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
 
 define i32 @test_atomic_load_xchg_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32:
-   %old = atomicrmw xchg i32* @var32, i32 %offset release
+   %old = atomicrmw xchg ptr @var32, i32 %offset release
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -556,7 +556,7 @@ define i32 @test_atomic_load_xchg_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_xchg_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64:
-   %old = atomicrmw xchg i64* @var64, i64 %offset acquire
+   %old = atomicrmw xchg ptr @var64, i64 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -573,13 +573,13 @@ define void @test_atomic_load_xchg_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK: strd [[OLD1]], [[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_min_i8(i8 signext %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i8:
-   %old = atomicrmw min i8* @var8, i8 %offset acquire
+   %old = atomicrmw min ptr @var8, i8 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK-DAG: movw [[ADDR:r[0-9]+|lr]], :lower16:var8
@@ -605,7 +605,7 @@ define i8 @test_atomic_load_min_i8(i8 signext %offset) nounwind {
 
 define i16 @test_atomic_load_min_i16(i16 signext %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i16:
-   %old = atomicrmw min i16* @var16, i16 %offset release
+   %old = atomicrmw min ptr @var16, i16 %offset release
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw [[ADDR:r[0-9]+|lr]], :lower16:var16
@@ -631,7 +631,7 @@ define i16 @test_atomic_load_min_i16(i16 signext %offset) nounwind {
 
 define i32 @test_atomic_load_min_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32:
-   %old = atomicrmw min i32* @var32, i32 %offset monotonic
+   %old = atomicrmw min ptr @var32, i32 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -657,7 +657,7 @@ define i32 @test_atomic_load_min_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_min_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64:
-   %old = atomicrmw min i64* @var64, i64 %offset seq_cst
+   %old = atomicrmw min ptr @var64, i64 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -686,13 +686,13 @@ define void @test_atomic_load_min_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK-ARM: strd [[OLD1]], [[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_max_i8(i8 signext %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i8:
-   %old = atomicrmw max i8* @var8, i8 %offset seq_cst
+   %old = atomicrmw max ptr @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw [[ADDR:r[0-9]+|lr]], :lower16:var8
@@ -718,7 +718,7 @@ define i8 @test_atomic_load_max_i8(i8 signext %offset) nounwind {
 
 define i16 @test_atomic_load_max_i16(i16 signext %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i16:
-   %old = atomicrmw max i16* @var16, i16 %offset acquire
+   %old = atomicrmw max ptr @var16, i16 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -744,7 +744,7 @@ define i16 @test_atomic_load_max_i16(i16 signext %offset) nounwind {
 
 define i32 @test_atomic_load_max_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32:
-   %old = atomicrmw max i32* @var32, i32 %offset release
+   %old = atomicrmw max ptr @var32, i32 %offset release
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -770,7 +770,7 @@ define i32 @test_atomic_load_max_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_max_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64:
-   %old = atomicrmw max i64* @var64, i64 %offset monotonic
+   %old = atomicrmw max ptr @var64, i64 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -799,13 +799,13 @@ define void @test_atomic_load_max_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK-ARM: strd [[OLD1]], [[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_umin_i8(i8 zeroext %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8:
-   %old = atomicrmw umin i8* @var8, i8 %offset monotonic
+   %old = atomicrmw umin ptr @var8, i8 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw [[ADDR:r[0-9]+|lr]], :lower16:var8
@@ -831,7 +831,7 @@ define i8 @test_atomic_load_umin_i8(i8 zeroext %offset) nounwind {
 
 define i16 @test_atomic_load_umin_i16(i16 zeroext %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16:
-   %old = atomicrmw umin i16* @var16, i16 %offset acquire
+   %old = atomicrmw umin ptr @var16, i16 %offset acquire
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw [[ADDR:r[0-9]+|lr]], :lower16:var16
@@ -857,7 +857,7 @@ define i16 @test_atomic_load_umin_i16(i16 zeroext %offset) nounwind {
 
 define i32 @test_atomic_load_umin_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32:
-   %old = atomicrmw umin i32* @var32, i32 %offset seq_cst
+   %old = atomicrmw umin ptr @var32, i32 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -883,7 +883,7 @@ define i32 @test_atomic_load_umin_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_umin_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64:
-   %old = atomicrmw umin i64* @var64, i64 %offset seq_cst
+   %old = atomicrmw umin ptr @var64, i64 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -912,13 +912,13 @@ define void @test_atomic_load_umin_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK-ARM: strd [[OLD1]], [[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_umax_i8(i8 zeroext %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8:
-   %old = atomicrmw umax i8* @var8, i8 %offset acq_rel
+   %old = atomicrmw umax ptr @var8, i8 %offset acq_rel
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw [[ADDR:r[0-9]+|lr]], :lower16:var8
@@ -944,7 +944,7 @@ define i8 @test_atomic_load_umax_i8(i8 zeroext %offset) nounwind {
 
 define i16 @test_atomic_load_umax_i16(i16 zeroext %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16:
-   %old = atomicrmw umax i16* @var16, i16 %offset monotonic
+   %old = atomicrmw umax ptr @var16, i16 %offset monotonic
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw [[ADDR:r[0-9]+|lr]], :lower16:var16
@@ -970,7 +970,7 @@ define i16 @test_atomic_load_umax_i16(i16 zeroext %offset) nounwind {
 
 define i32 @test_atomic_load_umax_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32:
-   %old = atomicrmw umax i32* @var32, i32 %offset seq_cst
+   %old = atomicrmw umax ptr @var32, i32 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -996,7 +996,7 @@ define i32 @test_atomic_load_umax_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_umax_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64:
-   %old = atomicrmw umax i64* @var64, i64 %offset seq_cst
+   %old = atomicrmw umax ptr @var64, i64 %offset seq_cst
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -1025,13 +1025,13 @@ define void @test_atomic_load_umax_i64(i64 %offset) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK-ARM: strd [[OLD1]], [[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_cmpxchg_i8(i8 zeroext %wanted, i8 zeroext %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i8:
-   %pair = cmpxchg i8* @var8, i8 %wanted, i8 %new acquire acquire
+   %pair = cmpxchg ptr @var8, i8 %wanted, i8 %new acquire acquire
    %old = extractvalue { i8, i1 } %pair, 0
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
@@ -1045,27 +1045,25 @@ define i8 @test_atomic_cmpxchg_i8(i8 zeroext %wanted, i8 zeroext %new) nounwind 
   ;  function there.
 ; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
 ; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_{{[0-9]}}
 ; CHECK-NEXT: %bb.2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: strexb [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
+; CHECK-ARM-NEXT: bne .LBB{{[0-9]+}}_{{[0-9]}}
+; CHECK-THUMB-NEXT: it eq
+; CHECK-THUMB-NEXT: bxeq lr
 ; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK-ARM: clrex
 ; CHECK: bx lr
-; CHECK-NEXT: .LBB{{[0-9]+}}_4:
-; CHECK-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
-
-; CHECK-ARM: mov r0, r[[OLD]]
-; CHECK-ARM-NEXT: bx lr
    ret i8 %old
 }
 
 define i16 @test_atomic_cmpxchg_i16(i16 zeroext %wanted, i16 zeroext %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i16:
-   %pair = cmpxchg i16* @var16, i16 %wanted, i16 %new seq_cst seq_cst
+   %pair = cmpxchg ptr @var16, i16 %wanted, i16 %new seq_cst seq_cst
    %old = extractvalue { i16, i1 } %pair, 0
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
@@ -1079,16 +1077,18 @@ define i16 @test_atomic_cmpxchg_i16(i16 zeroext %wanted, i16 zeroext %new) nounw
   ;  function there.
 ; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
 ; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_{{[0-9]}}
 ; CHECK-NEXT: %bb.2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: stlexh [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
+; CHECK-ARM-NEXT: bne .LBB{{[0-9]+}}_{{[0-9]}}
+; CHECK-THUMB-NEXT: it eq
+; CHECK-THUMB-NEXT: bxeq lr
 ; CHECK-ARM: mov r0, r[[OLD]]
 ; CHECK: bx lr
-; CHECK-NEXT: .LBB{{[0-9]+}}_4:
-; CHECK-NEXT: clrex
+; CHECK-ARM-NEXT: .LBB{{[0-9]+}}_{{[0-9]}}
+; CHECK-ARM-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 
@@ -1099,9 +1099,9 @@ define i16 @test_atomic_cmpxchg_i16(i16 zeroext %wanted, i16 zeroext %new) nounw
 
 define void @test_atomic_cmpxchg_i32(i32 %wanted, i32 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i32:
-   %pair = cmpxchg i32* @var32, i32 %wanted, i32 %new release monotonic
+   %pair = cmpxchg ptr @var32, i32 %wanted, i32 %new release monotonic
    %old = extractvalue { i32, i1 } %pair, 0
-   store i32 %old, i32* @var32
+   store i32 %old, ptr @var32
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var32
@@ -1132,7 +1132,7 @@ define void @test_atomic_cmpxchg_i32(i32 %wanted, i32 %new) nounwind {
 
 define void @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i64:
-   %pair = cmpxchg i64* @var64, i64 %wanted, i64 %new monotonic monotonic
+   %pair = cmpxchg ptr @var64, i64 %wanted, i64 %new monotonic monotonic
    %old = extractvalue { i64, i1 } %pair, 0
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
@@ -1165,13 +1165,13 @@ define void @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; CHECK-NOT: mcr
 
 ; CHECK-ARM: strd [[OLD1]], [[OLD2]], [r[[ADDR]]]
-   store i64 %old, i64* @var64
+   store i64 %old, ptr @var64
    ret void
 }
 
 define i8 @test_atomic_load_monotonic_i8() nounwind {
 ; CHECK-LABEL: test_atomic_load_monotonic_i8:
-  %val = load atomic i8, i8* @var8 monotonic, align 1
+  %val = load atomic i8, ptr @var8 monotonic, align 1
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -1186,9 +1186,9 @@ define i8 @test_atomic_load_monotonic_i8() nounwind {
 define i8 @test_atomic_load_monotonic_regoff_i8(i64 %base, i64 %off) nounwind {
 ; CHECK-LABEL: test_atomic_load_monotonic_regoff_i8:
   %addr_int = add i64 %base, %off
-  %addr = inttoptr i64 %addr_int to i8*
+  %addr = inttoptr i64 %addr_int to ptr
 
-  %val = load atomic i8, i8* %addr monotonic, align 1
+  %val = load atomic i8, ptr %addr monotonic, align 1
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK-LE: ldrb r0, [r0, r2]
@@ -1201,7 +1201,7 @@ define i8 @test_atomic_load_monotonic_regoff_i8(i64 %base, i64 %off) nounwind {
 
 define i8 @test_atomic_load_acquire_i8() nounwind {
 ; CHECK-LABEL: test_atomic_load_acquire_i8:
-  %val = load atomic i8, i8* @var8 acquire, align 1
+  %val = load atomic i8, ptr @var8 acquire, align 1
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -1218,7 +1218,7 @@ define i8 @test_atomic_load_acquire_i8() nounwind {
 
 define i8 @test_atomic_load_seq_cst_i8() nounwind {
 ; CHECK-LABEL: test_atomic_load_seq_cst_i8:
-  %val = load atomic i8, i8* @var8 seq_cst, align 1
+  %val = load atomic i8, ptr @var8 seq_cst, align 1
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -1235,7 +1235,7 @@ define i8 @test_atomic_load_seq_cst_i8() nounwind {
 
 define i16 @test_atomic_load_monotonic_i16() nounwind {
 ; CHECK-LABEL: test_atomic_load_monotonic_i16:
-  %val = load atomic i16, i16* @var16 monotonic, align 2
+  %val = load atomic i16, ptr @var16 monotonic, align 2
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -1254,9 +1254,9 @@ define i16 @test_atomic_load_monotonic_i16() nounwind {
 define i32 @test_atomic_load_monotonic_regoff_i32(i64 %base, i64 %off) nounwind {
 ; CHECK-LABEL: test_atomic_load_monotonic_regoff_i32:
   %addr_int = add i64 %base, %off
-  %addr = inttoptr i64 %addr_int to i32*
+  %addr = inttoptr i64 %addr_int to ptr
 
-  %val = load atomic i32, i32* %addr monotonic, align 4
+  %val = load atomic i32, ptr %addr monotonic, align 4
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK-LE: ldr r0, [r0, r2]
@@ -1269,7 +1269,7 @@ define i32 @test_atomic_load_monotonic_regoff_i32(i64 %base, i64 %off) nounwind 
 
 define i64 @test_atomic_load_seq_cst_i64() nounwind {
 ; CHECK-LABEL: test_atomic_load_seq_cst_i64:
-  %val = load atomic i64, i64* @var64 seq_cst, align 8
+  %val = load atomic i64, ptr @var64 seq_cst, align 8
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var64
@@ -1286,7 +1286,7 @@ define i64 @test_atomic_load_seq_cst_i64() nounwind {
 
 define void @test_atomic_store_monotonic_i8(i8 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_monotonic_i8:
-  store atomic i8 %val, i8* @var8 monotonic, align 1
+  store atomic i8 %val, ptr @var8 monotonic, align 1
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
 ; CHECK: movt r[[ADDR]], :upper16:var8
 ; CHECK: strb r0, [r[[ADDR]]]
@@ -1298,9 +1298,9 @@ define void @test_atomic_store_monotonic_regoff_i8(i64 %base, i64 %off, i8 %val)
 ; CHECK-LABEL: test_atomic_store_monotonic_regoff_i8:
 
   %addr_int = add i64 %base, %off
-  %addr = inttoptr i64 %addr_int to i8*
+  %addr = inttoptr i64 %addr_int to ptr
 
-  store atomic i8 %val, i8* %addr monotonic, align 1
+  store atomic i8 %val, ptr %addr monotonic, align 1
 ; CHECK-LE: ldr{{b?(\.w)?}} [[VAL:r[0-9]+]], [sp]
 ; CHECK-LE: strb [[VAL]], [r0, r2]
 ; CHECK-BE: ldrb{{(\.w)?}} [[VAL:r[0-9]+]], [sp, #3]
@@ -1311,7 +1311,7 @@ define void @test_atomic_store_monotonic_regoff_i8(i64 %base, i64 %off, i8 %val)
 
 define void @test_atomic_store_release_i8(i8 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_release_i8:
-  store atomic i8 %val, i8* @var8 release, align 1
+  store atomic i8 %val, ptr @var8 release, align 1
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -1328,7 +1328,7 @@ define void @test_atomic_store_release_i8(i8 %val) nounwind {
 
 define void @test_atomic_store_seq_cst_i8(i8 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_seq_cst_i8:
-  store atomic i8 %val, i8* @var8 seq_cst, align 1
+  store atomic i8 %val, ptr @var8 seq_cst, align 1
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var8
@@ -1345,7 +1345,7 @@ define void @test_atomic_store_seq_cst_i8(i8 %val) nounwind {
 
 define void @test_atomic_store_monotonic_i16(i16 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_monotonic_i16:
-  store atomic i16 %val, i16* @var16 monotonic, align 2
+  store atomic i16 %val, ptr @var16 monotonic, align 2
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw r[[ADDR:[0-9]+]], :lower16:var16
@@ -1364,9 +1364,9 @@ define void @test_atomic_store_monotonic_regoff_i32(i64 %base, i64 %off, i32 %va
 ; CHECK-LABEL: test_atomic_store_monotonic_regoff_i32:
 
   %addr_int = add i64 %base, %off
-  %addr = inttoptr i64 %addr_int to i32*
+  %addr = inttoptr i64 %addr_int to ptr
 
-  store atomic i32 %val, i32* %addr monotonic, align 4
+  store atomic i32 %val, ptr %addr monotonic, align 4
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: ldr [[VAL:r[0-9]+]], [sp]
@@ -1382,7 +1382,7 @@ define void @test_atomic_store_monotonic_regoff_i32(i64 %base, i64 %off, i32 %va
 
 define void @test_atomic_store_release_i64(i64 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_release_i64:
-  store atomic i64 %val, i64* @var64 release, align 8
+  store atomic i64 %val, ptr @var64 release, align 8
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 ; CHECK: movw [[ADDR:r[0-9]+|lr]], :lower16:var64
@@ -1400,17 +1400,17 @@ define void @test_atomic_store_release_i64(i64 %val) nounwind {
   ret void
 }
 
-define i32 @not.barriers(i32* %var, i1 %cond) {
+define i32 @not.barriers(ptr %var, i1 %cond) {
 ; CHECK-LABEL: not.barriers:
   br i1 %cond, label %atomic_ver, label %simple_ver
 simple_ver:
-  %oldval = load i32, i32* %var
+  %oldval = load i32, ptr %var
   %newval = add nsw i32 %oldval, -1
-  store i32 %newval, i32* %var
+  store i32 %newval, ptr %var
   br label %somewhere
 atomic_ver:
   fence seq_cst
-  %val = atomicrmw add i32* %var, i32 -1 monotonic
+  %val = atomicrmw add ptr %var, i32 -1 monotonic
   fence seq_cst
   br label %somewhere
 ; CHECK: dmb

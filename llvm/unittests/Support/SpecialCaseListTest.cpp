@@ -10,8 +10,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using testing::HasSubstr;
+using testing::StartsWith;
 using namespace llvm;
 
 namespace {
@@ -19,24 +22,32 @@ namespace {
 class SpecialCaseListTest : public ::testing::Test {
 protected:
   std::unique_ptr<SpecialCaseList> makeSpecialCaseList(StringRef List,
-                                                       std::string &Error) {
-    std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(List);
+                                                       std::string &Error,
+                                                       bool UseGlobs = true) {
+    auto S = List.str();
+    if (!UseGlobs)
+      S = (Twine("#!special-case-list-v1\n") + S).str();
+    std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(S);
     return SpecialCaseList::create(MB.get(), Error);
   }
 
-  std::unique_ptr<SpecialCaseList> makeSpecialCaseList(StringRef List) {
+  std::unique_ptr<SpecialCaseList> makeSpecialCaseList(StringRef List,
+                                                       bool UseGlobs = true) {
     std::string Error;
-    auto SCL = makeSpecialCaseList(List, Error);
+    auto SCL = makeSpecialCaseList(List, Error, UseGlobs);
     assert(SCL);
     assert(Error == "");
     return SCL;
   }
 
-  std::string makeSpecialCaseListFile(StringRef Contents) {
+  std::string makeSpecialCaseListFile(StringRef Contents,
+                                      bool UseGlobs = true) {
     int FD;
     SmallString<64> Path;
     sys::fs::createTemporaryFile("SpecialCaseListTest", "temp", FD, Path);
     raw_fd_ostream OF(FD, true, true);
+    if (!UseGlobs)
+      OF << "#!special-case-list-v1\n";
     OF << Contents;
     OF.close();
     return std::string(Path.str());
@@ -74,31 +85,31 @@ TEST_F(SpecialCaseListTest, CorrectErrorLineNumberWithBlankLine) {
                                          "\n"
                                          "[not valid\n",
                                          Error));
-  EXPECT_TRUE(
-      ((StringRef)Error).startswith("malformed section header on line 3:"));
+  EXPECT_THAT(Error, StartsWith("malformed section header on line 3:"));
 
   EXPECT_EQ(nullptr, makeSpecialCaseList("\n\n\n"
                                          "[not valid\n",
                                          Error));
-  EXPECT_TRUE(
-      ((StringRef)Error).startswith("malformed section header on line 4:"));
+  EXPECT_THAT(Error, StartsWith("malformed section header on line 4:"));
 }
 
-TEST_F(SpecialCaseListTest, SectionRegexErrorHandling) {
+TEST_F(SpecialCaseListTest, SectionGlobErrorHandling) {
   std::string Error;
   EXPECT_EQ(makeSpecialCaseList("[address", Error), nullptr);
-  EXPECT_TRUE(((StringRef)Error).startswith("malformed section header "));
+  EXPECT_THAT(Error, StartsWith("malformed section header "));
 
   EXPECT_EQ(makeSpecialCaseList("[[]", Error), nullptr);
-  EXPECT_TRUE(((StringRef)Error).startswith("malformed regex for section [: "));
+  EXPECT_EQ(
+      Error,
+      "malformed section at line 1: '[': invalid glob pattern, unmatched '['");
 
   EXPECT_EQ(makeSpecialCaseList("src:=", Error), nullptr);
-  EXPECT_TRUE(((StringRef)Error).endswith("Supplied regexp was blank"));
+  EXPECT_THAT(Error, HasSubstr("Supplied glob was blank"));
 }
 
 TEST_F(SpecialCaseListTest, Section) {
   std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("src:global\n"
-                                                             "[sect1|sect2]\n"
+                                                             "[{sect1,sect2}]\n"
                                                              "src:test1\n"
                                                              "[sect3*]\n"
                                                              "src:test2\n");
@@ -154,17 +165,13 @@ TEST_F(SpecialCaseListTest, InvalidSpecialCaseList) {
   EXPECT_EQ(nullptr, makeSpecialCaseList("badline", Error));
   EXPECT_EQ("malformed line 1: 'badline'", Error);
   EXPECT_EQ(nullptr, makeSpecialCaseList("src:bad[a-", Error));
-  EXPECT_EQ("malformed regex in line 1: 'bad[a-': invalid character range",
-            Error);
-  EXPECT_EQ(nullptr, makeSpecialCaseList("src:a.c\n"
-                                   "fun:fun(a\n",
-                                   Error));
-  EXPECT_EQ("malformed regex in line 2: 'fun(a': parentheses not balanced",
-            Error);
+  EXPECT_EQ(
+      "malformed glob in line 1: 'bad[a-': invalid glob pattern, unmatched '['",
+      Error);
   std::vector<std::string> Files(1, "unexisting");
   EXPECT_EQ(nullptr,
             SpecialCaseList::create(Files, *vfs::getRealFileSystem(), Error));
-  EXPECT_EQ(0U, Error.find("can't open file 'unexisting':"));
+  EXPECT_THAT(Error, StartsWith("can't open file 'unexisting':"));
 }
 
 TEST_F(SpecialCaseListTest, EmptySpecialCaseList) {
@@ -191,7 +198,7 @@ TEST_F(SpecialCaseListTest, MultipleExclusions) {
 }
 
 TEST_F(SpecialCaseListTest, NoTrigramsInRules) {
-  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:b.r\n"
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:b?r\n"
                                                              "fun:za*az\n");
   EXPECT_TRUE(SCL->inSection("", "fun", "bar"));
   EXPECT_FALSE(SCL->inSection("", "fun", "baz"));
@@ -245,4 +252,58 @@ TEST_F(SpecialCaseListTest, EscapedSymbols) {
   EXPECT_FALSE(SCL->inSection("", "src", "hello\\\\world"));
 }
 
+TEST_F(SpecialCaseListTest, Version1) {
+  std::unique_ptr<SpecialCaseList> SCL =
+      makeSpecialCaseList("[sect1|sect2]\n"
+                          // Does not match foo!
+                          "fun:foo.*\n"
+                          "fun:abc|def\n"
+                          "fun:b.r\n",
+                          /*UseGlobs=*/false);
+
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "fooz"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "fooz"));
+  EXPECT_FALSE(SCL->inSection("sect3", "fun", "fooz"));
+
+  // `foo.*` does not match `foo` because the pattern is translated to `foo..*`
+  EXPECT_FALSE(SCL->inSection("sect1", "fun", "foo"));
+
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "abc"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "abc"));
+  EXPECT_FALSE(SCL->inSection("sect3", "fun", "abc"));
+
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "def"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "def"));
+  EXPECT_FALSE(SCL->inSection("sect3", "fun", "def"));
+
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "bar"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "bar"));
+  EXPECT_FALSE(SCL->inSection("sect3", "fun", "bar"));
+}
+
+TEST_F(SpecialCaseListTest, Version2) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("[{sect1,sect2}]\n"
+                                                             "fun:foo*\n"
+                                                             "fun:{abc,def}\n"
+                                                             "fun:b?r\n");
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "fooz"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "fooz"));
+  EXPECT_FALSE(SCL->inSection("sect3", "fun", "fooz"));
+
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "foo"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "foo"));
+  EXPECT_FALSE(SCL->inSection("sect3", "fun", "foo"));
+
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "abc"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "abc"));
+  EXPECT_FALSE(SCL->inSection("sect3", "fun", "abc"));
+
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "def"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "def"));
+  EXPECT_FALSE(SCL->inSection("sect3", "fun", "def"));
+
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "bar"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "bar"));
+  EXPECT_FALSE(SCL->inSection("sect3", "fun", "bar"));
+}
 }

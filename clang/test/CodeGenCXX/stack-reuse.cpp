@@ -134,10 +134,9 @@ int large_combiner_test(S_large s) {
 // CHECK-LABEL: define{{.*}} i32 @large_combiner_test
 // CHECK: [[T2:%.*]] = alloca %struct.Combiner
 // CHECK: [[T1:%.*]] = alloca %struct.Combiner
-// CHECK: [[T3:%.*]] = call %struct.Combiner* @_ZN8CombinerC1E7S_large(%struct.Combiner* {{[^,]*}} [[T1]], [9 x i32] %s.coerce)
-// CHECK: call void @_ZN8Combiner1fEv(%struct.Combiner* nonnull sret(%struct.Combiner) align 4 [[T2]], %struct.Combiner* {{[^,]*}} [[T1]])
-// CHECK: [[T4:%.*]] = getelementptr inbounds %struct.Combiner, %struct.Combiner* [[T2]], i32 0, i32 0, i32 0, i32 0
-// CHECK: [[T5:%.*]] = load i32, i32* [[T4]]
+// CHECK: [[T3:%.*]] = call noundef ptr @_ZN8CombinerC1E7S_large(ptr {{[^,]*}} [[T1]], [9 x i32] %s.coerce)
+// CHECK: call void @_ZN8Combiner1fEv(ptr dead_on_unwind nonnull writable sret(%struct.Combiner) align 4 [[T2]], ptr {{[^,]*}} [[T1]])
+// CHECK: [[T5:%.*]] = load i32, ptr [[T2]]
 // CHECK: ret i32 [[T5]]
 
   return Combiner(s).f().a.a[0];

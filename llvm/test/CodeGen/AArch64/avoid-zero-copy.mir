@@ -1,0 +1,40 @@
+# Check that we can remove the redundant save of constant registers such as $wzr
+# RUN: llc -mtriple=aarch64-unknown-linux %s -verify-machineinstrs -start-before=machine-cp -o - | FileCheck %s --check-prefix ASM
+# RUN: llc -mtriple=aarch64-unknown-linux %s -verify-machineinstrs -run-pass=machine-cp -o - | FileCheck %s
+--- |
+  target triple = "aarch64-unknown-linux"
+  declare i32 @bar(i32) nounwind
+  define i32 @foo() nounwind {
+  ; ASM-LABEL: foo:
+  ; ASM:       // %bb.0:
+  ; ASM-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+  ; ASM-NEXT:    mov w0, wzr
+  ; ASM-NEXT:    bl bar
+  ; ASM-NEXT:    mov w0, wzr
+  ; ASM-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+  ; ASM-NEXT:    ret
+    call i32 @bar(i32 0)
+    ret i32 0
+  }
+...
+---
+name: foo
+frameInfo:
+  adjustsStack:    true
+body: |
+  bb.0 (%ir-block.0):
+    ; CHECK-LABEL: name: foo
+    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    ; CHECK-NEXT: $w0 = COPY $wzr
+    ; CHECK-NEXT: BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    ; CHECK-NEXT: $w0 = COPY $wzr
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    renamable $w19 = COPY $wzr
+    $w0 = COPY renamable $w19
+    BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    $w0 = COPY killed renamable $w19
+    RET_ReallyLR implicit $w0
+...

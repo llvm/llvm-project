@@ -15,7 +15,7 @@ loop0:
 
 bb1:
   %mul.0 = mul i32 %c.0, %c.0
-  %gelptr.0 = getelementptr inbounds i16, i16* undef, i32 %mul.0
+  %gelptr.0 = getelementptr inbounds i16, ptr undef, i32 %mul.0
   br label %loop1
 
 loop1:
@@ -25,8 +25,8 @@ loop1:
 
 bb3:
   %add.0 = add i32 undef, %mul.1
-  %gelptr.1 = getelementptr inbounds i16, i16* %gelptr.0, i32 %add.0
-  store i16 undef, i16* %gelptr.1, align 2
+  %gelptr.1 = getelementptr inbounds i16, ptr %gelptr.0, i32 %add.0
+  store i16 undef, ptr %gelptr.1, align 2
   br label %bb4
 
 bb4:

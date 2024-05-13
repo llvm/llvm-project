@@ -1,46 +1,42 @@
-; RUN: opt -instcombine -S %s | FileCheck %s
+; RUN: opt -passes=instcombine -S %s | FileCheck %s
 
 define dso_local void @_Z1fv() {
   %1 = alloca i32, align 4
-  %2 = bitcast i32* %1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %2)
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !16, metadata !DIExpression()), !dbg !19
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !16, metadata !DIExpression()), !dbg !19
 ; CHECK: %[[A:.*]] = alloca i32, align 4
-; CHECK: call void @llvm.dbg.value(metadata i32* %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
+; CHECK: call void @llvm.dbg.value(metadata ptr %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
 ; CHECK: call void @_Z1gPv
-  call void @_Z1gPv(i8* nonnull %2)
-  %3 = bitcast i32* %1 to i8*
+  call void @_Z1gPv(ptr nonnull %1)
 ; CHECK-NOT: call void @llvm.dbg.value
 ; CHECK: call void @_Z1gPv
-  call void @_Z1gPv(i8* nonnull %3)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2)
+  call void @_Z1gPv(ptr nonnull %1)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
   ret void, !dbg !21
 }
 
 define dso_local void @_Z2fv() {
   %1 = alloca i32, align 4
-  %2 = bitcast i32* %1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %2)
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !16, metadata !DIExpression()), !dbg !19
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !16, metadata !DIExpression()), !dbg !19
 ; CHECK: %[[A:.*]] = alloca i32, align 4
-; CHECK: call void @llvm.dbg.value(metadata i32* %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
+; CHECK: call void @llvm.dbg.value(metadata ptr %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
 ; CHECK: call void @_Z1gPv
-  call void @_Z1gPv(i8* nonnull %2)
+  call void @_Z1gPv(ptr nonnull %1)
   br label %block2
 
 block2:
-  %3 = bitcast i32* %1 to i8*
-; CHECK: call void @llvm.dbg.value(metadata i32* %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
+; CHECK: call void @llvm.dbg.value(metadata ptr %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
 ; CHECK: call void @_Z1gPv
-  call void @_Z1gPv(i8* nonnull %3)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2)
+  call void @_Z1gPv(ptr nonnull %1)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
   ret void, !dbg !21
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare dso_local void @_Z1gPv(i8*)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare dso_local void @_Z1gPv(ptr)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9, !10}

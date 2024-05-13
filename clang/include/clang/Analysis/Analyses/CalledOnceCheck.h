@@ -20,7 +20,6 @@ class AnalysisDeclContext;
 class BlockDecl;
 class CFG;
 class Decl;
-class DeclContext;
 class Expr;
 class ParmVarDecl;
 class Stmt;
@@ -29,7 +28,7 @@ class Stmt;
 /// \enum IfThen -- then branch of the if statement has no call.
 /// \enum IfElse -- else branch of the if statement has no call.
 /// \enum Switch -- one of the switch cases doesn't have a call.
-/// \enum SwitchSkipped -- there is no call if none of the cases appies.
+/// \enum SwitchSkipped -- there is no call if none of the cases applies.
 /// \enum LoopEntered -- no call when the loop is entered.
 /// \enum LoopSkipped -- no call when the loop is not entered.
 /// \enum FallbackReason -- fallback case when we were not able to figure out
@@ -80,7 +79,7 @@ public:
   /// the path containing the call and not containing the call.  This helps us
   /// to pinpoint a bad path for the user.
   /// \param Parameter -- parameter that should be called once.
-  /// \param Function -- function declaration where the problem occured.
+  /// \param Function -- function declaration where the problem occurred.
   /// \param Where -- the least common ancestor statement.
   /// \param Reason -- a reason describing the path without a call.
   /// \param IsCalledDirectly -- true, if parameter actually gets called on

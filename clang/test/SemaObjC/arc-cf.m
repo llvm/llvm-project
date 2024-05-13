@@ -13,7 +13,7 @@ extern CFStringRef CFMakeString0(void);
 #pragma clang arc_cf_code_audited begin
 extern CFStringRef CFCreateString0(void);
 #pragma clang arc_cf_code_audited end
-void test0() {
+void test0(void) {
   id x;
   x = (id) CFMakeString0(); // expected-error {{requires a bridged cast}} expected-note {{__bridge to convert directly}} expected-note {{CFBridgingRelease call to transfer}}
   x = (id) CFCreateString0(); // expected-error {{requires a bridged cast}} expected-note {{CFBridgingRelease call to transfer}}
@@ -21,7 +21,7 @@ void test0() {
 
 extern CFStringRef CFMakeString1(void) __attribute__((cf_returns_not_retained));
 extern CFStringRef CFCreateString1(void) __attribute__((cf_returns_retained));
-void test1() {
+void test1(void) {
   id x;
   x = (id) CFMakeString1();
   x = (id) CFCreateString1(); // expected-error {{requires a bridged cast}} expected-note {{CFBridgingRelease call to transfer}}
@@ -38,7 +38,7 @@ extern CFStringRef CFCreateString2(void) CF_RETURNS_NOT_RETAINED;
 extern CFStringRef CFMakeString3(void) CF_RETURNS_RETAINED;
 extern CFStringRef CFCreateString3(void);
 CF_AUDIT_END
-void test2() {
+void test2(void) {
   id x;
   x = (id) CFMakeString2();
   x = (id) CFCreateString2();
@@ -46,14 +46,13 @@ void test2() {
   x = (id) CFCreateString3(); // expected-error {{requires a bridged cast}} expected-note {{CFBridgingRelease call to transfer}}
 }
 
-// rdar://14569171
 @interface NSString @end
 typedef signed int SInt32;
 #pragma clang arc_cf_code_audited begin
 extern SInt32 CFStringGetIntValue(CFStringRef str); // expected-note {{passing argument to parameter 'str' here}}
 #pragma clang arc_cf_code_audited end
 
-void test3() {
+void test3(void) {
     NSString* answer = @"42";
     int ans = CFStringGetIntValue(answer); // expected-error {{incompatible pointer types passing retainable parameter of type 'NSString *__strong'to a CF function expecting 'CFStringRef'}}
 }

@@ -1,5 +1,5 @@
 ; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=false -polly-prune-unprofitable -disable-output -stats < %s 2>&1 | FileCheck -match-full-lines %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=false "-passes=scop(polly-prune-unprofitable)" -disable-output -stats < %s 2>&1 | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=false "-passes=scop(polly-prune-unprofitable)" -disable-output -stats < %s 2>&1 | FileCheck -match-full-lines %s
 ; REQUIRES: asserts
 ;
 ; Skip this SCoP for having scalar dependencies between all statements,
@@ -14,7 +14,7 @@
 ;   }
 ; return x;
 ;
-define double @func(i32 %n, i32 %m, double* noalias nonnull %A, double* noalias nonnull %B) {
+define double @func(i32 %n, i32 %m, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %outer.for
 
@@ -31,8 +31,8 @@ outer.for:
       br i1 %j.cmp, label %body, label %inner.exit
 
         body:
-          store double %inner.phi, double* %B
-          %load = load double, double* %A
+          store double %inner.phi, ptr %B
+          %load = load double, ptr %A
           br label %inner.inc
 
     inner.inc:

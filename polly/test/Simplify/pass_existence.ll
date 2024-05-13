@@ -1,12 +1,12 @@
-; RUN: opt %loadPolly -polly-simplify -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -disable-output "-passes=scop(print<polly-simplify>)" < %s -aa-pipeline=basic-aa < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-simplify -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -disable-output "-passes=scop(print<polly-simplify>)" < %s -aa-pipeline=basic-aa < %s | FileCheck %s
 ;
 ; Simple test for the existence of the Simplify pass.
 ;
 ; for (int j = 0; j < n; j += 1)
 ;   A[0] = 0.0;
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -16,7 +16,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 0.0, double* %A
+      store double 0.0, ptr %A
       br label %inc
 
 inc:

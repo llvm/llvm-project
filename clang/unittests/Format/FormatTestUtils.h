@@ -13,13 +13,21 @@
 #ifndef LLVM_CLANG_UNITTESTS_FORMAT_FORMATTESTUTILS_H
 #define LLVM_CLANG_UNITTESTS_FORMAT_FORMATTESTUTILS_H
 
+#include "clang/Format/Format.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace format {
 namespace test {
 
-inline std::string messUp(llvm::StringRef Code) {
+inline FormatStyle getGoogleStyle() {
+  return getGoogleStyle(FormatStyle::LK_Cpp);
+}
+
+// When HandleHash is false, preprocessor directives starting with hash will not
+// be on separate lines.  This is needed because Verilog uses hash for other
+// purposes.
+inline std::string messUp(llvm::StringRef Code, bool HandleHash = true) {
   std::string MessedUp(Code.str());
   bool InComment = false;
   bool InPreprocessorDirective = false;
@@ -29,7 +37,7 @@ inline std::string messUp(llvm::StringRef Code) {
       if (JustReplacedNewline)
         MessedUp[i - 1] = '\n';
       InComment = true;
-    } else if (MessedUp[i] == '#' &&
+    } else if (HandleHash && MessedUp[i] == '#' &&
                (JustReplacedNewline || i == 0 || MessedUp[i - 1] == '\n')) {
       if (i != 0)
         MessedUp[i - 1] = '\n';
@@ -53,10 +61,9 @@ inline std::string messUp(llvm::StringRef Code) {
   std::string WithoutWhitespace;
   if (MessedUp[0] != ' ')
     WithoutWhitespace.push_back(MessedUp[0]);
-  for (unsigned i = 1, e = MessedUp.size(); i != e; ++i) {
+  for (unsigned i = 1, e = MessedUp.size(); i != e; ++i)
     if (MessedUp[i] != ' ' || MessedUp[i - 1] != ' ')
       WithoutWhitespace.push_back(MessedUp[i]);
-  }
   return WithoutWhitespace;
 }
 

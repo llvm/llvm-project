@@ -15,6 +15,7 @@
 
 namespace llvm {
 
+class MCRegister;
 class raw_ostream;
 
 /// MCParsedAsmOperand - This abstract class represents a source-level assembly
@@ -24,7 +25,7 @@ class raw_ostream;
 class MCParsedAsmOperand {
   /// MCOperandNum - The corresponding MCInst operand number.  Only valid when
   /// parsing MS-style inline assembly.
-  unsigned MCOperandNum;
+  unsigned MCOperandNum = ~0u;
 
   /// Constraint - The constraint on this operand.  Only valid when parsing
   /// MS-style inline assembly.
@@ -57,10 +58,17 @@ public:
   virtual bool isImm() const = 0;
   /// isReg - Is this a register operand?
   virtual bool isReg() const = 0;
-  virtual unsigned getReg() const = 0;
+  virtual MCRegister getReg() const = 0;
 
   /// isMem - Is this a memory operand?
   virtual bool isMem() const = 0;
+
+  /// isMemUseUpRegs - Is memory operand use up regs, for example, intel MS
+  /// inline asm may use ARR[baseReg + IndexReg + ...] which may use up regs
+  /// in [...] expr, so ARR[baseReg + IndexReg + ...] can not use extra reg
+  /// for ARR. For example, calculating ARR address to a reg or use another
+  /// base reg in PIC model.
+  virtual bool isMemUseUpRegs() const { return false; }
 
   /// getStartLoc - Get the location of the first token of this operand.
   virtual SMLoc getStartLoc() const = 0;

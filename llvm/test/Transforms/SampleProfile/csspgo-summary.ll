@@ -1,7 +1,7 @@
 ; Test for CSSPGO's profile summary computation with and without pre-merging context profiles
 
-; RUN: opt < %s -passes=sample-profile,print-profile-summary -sample-profile-file=%S/Inputs/profile-context-tracker.prof -profile-summary-cutoff-hot=999900 -profile-sample-accurate -profile-summary-contextless=0 -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUMMARY-UNMERGED
-; RUN: opt < %s -passes=sample-profile,print-profile-summary -sample-profile-file=%S/Inputs/profile-context-tracker.prof -profile-summary-cutoff-hot=999900 -profile-sample-accurate -profile-summary-contextless=1 -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUMMARY-MERGED
+; RUN: opt < %s -passes=sample-profile,print-profile-summary -sample-profile-use-profi=0 -sample-profile-file=%S/Inputs/profile-context-tracker.prof -profile-summary-cutoff-hot=999900 -profile-sample-accurate -profile-summary-contextless=0 -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUMMARY-UNMERGED
+; RUN: opt < %s -passes=sample-profile,print-profile-summary -sample-profile-use-profi=0 -sample-profile-file=%S/Inputs/profile-context-tracker.prof -profile-summary-cutoff-hot=999900 -profile-sample-accurate -profile-summary-contextless=1 -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUMMARY-MERGED
 
 ; SUMMARY-UNMERGED: main :hot entry
 ; SUMMARY-MERGED-NOT: main :hot entry
@@ -47,7 +47,7 @@ while.cond2.preheader:                            ; preds = %entry
 
 while.body:                                       ; preds = %while.body, %entry
   %x.addr.016 = phi i32 [ %sub, %while.body ], [ %x, %entry ]
-  %tmp = load volatile i32, i32* @factor, align 4, !dbg !64
+  %tmp = load volatile i32, ptr @factor, align 4, !dbg !64
   %call = tail call i32 @_Z3fibi(i32 %tmp), !dbg !67
   %sub = sub nsw i32 %x.addr.016, %call, !dbg !68
   %cmp1 = icmp sgt i32 %sub, 0, !dbg !69
@@ -55,7 +55,7 @@ while.body:                                       ; preds = %while.body, %entry
 
 while.body4:                                      ; preds = %while.body4, %while.cond2.preheader
   %x.addr.114 = phi i32 [ %add, %while.body4 ], [ %x, %while.cond2.preheader ]
-  %tmp1 = load volatile i32, i32* @factor, align 4, !dbg !72
+  %tmp1 = load volatile i32, ptr @factor, align 4, !dbg !72
   %call5 = tail call i32 @_Z3fibi(i32 %tmp1), !dbg !74
   %add = add nsw i32 %call5, %x.addr.114, !dbg !75
   %cmp3 = icmp slt i32 %add, 0, !dbg !60

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
@@ -16,6 +15,10 @@ namespace {
 /// This pass illustrates the IR def-use chains through printing.
 struct TestPrintDefUsePass
     : public PassWrapper<TestPrintDefUsePass, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPrintDefUsePass)
+
+  StringRef getArgument() const final { return "test-print-defuse"; }
+  StringRef getDescription() const final { return "Test various printing."; }
   void runOnOperation() override {
     // Recursively traverse the IR nested under the current operation and print
     // every single operation and their operands and users.
@@ -31,7 +34,7 @@ struct TestPrintDefUsePass
         } else {
           // If there is no defining op, the Value is necessarily a Block
           // argument.
-          auto blockArg = operand.cast<BlockArgument>();
+          auto blockArg = cast<BlockArgument>(operand);
           llvm::outs() << "  - Operand produced by Block argument, number "
                        << blockArg.getArgNumber() << "\n";
         }
@@ -39,7 +42,7 @@ struct TestPrintDefUsePass
 
       // Print information about the user of each of the result.
       llvm::outs() << "Has " << op->getNumResults() << " results:\n";
-      for (auto indexedResult : llvm::enumerate(op->getResults())) {
+      for (const auto &indexedResult : llvm::enumerate(op->getResults())) {
         Value result = indexedResult.value();
         llvm::outs() << "  - Result " << indexedResult.index();
         if (result.use_empty()) {
@@ -61,11 +64,8 @@ struct TestPrintDefUsePass
     });
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
-void registerTestPrintDefUsePass() {
-  PassRegistration<TestPrintDefUsePass>("test-print-defuse",
-                                        "Test various printing.");
-}
+void registerTestPrintDefUsePass() { PassRegistration<TestPrintDefUsePass>(); }
 } // namespace mlir

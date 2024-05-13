@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 
 #include "interception/interception.h"
 #include "lsan.h"
@@ -67,10 +67,9 @@ typedef struct {
 
 ALWAYS_INLINE
 void lsan_register_worker_thread(int parent_tid) {
-  if (GetCurrentThread() == kInvalidTid) {
-    u32 tid = ThreadCreate(parent_tid, 0, true);
+  if (GetCurrentThreadId() == kInvalidTid) {
+    u32 tid = ThreadCreate(parent_tid, true);
     ThreadStart(tid, GetTid());
-    SetCurrentThread(tid);
   }
 }
 
@@ -81,7 +80,7 @@ extern "C" void lsan_dispatch_call_block_and_release(void *block) {
   VReport(2,
           "lsan_dispatch_call_block_and_release(): "
           "context: %p, pthread_self: %p\n",
-          block, pthread_self());
+          block, (void*)pthread_self());
   lsan_register_worker_thread(context->parent_tid);
   // Call the original dispatcher for the block.
   context->func(context->block);
@@ -101,7 +100,7 @@ extern "C" lsan_block_context_t *alloc_lsan_context(void *ctxt,
       (lsan_block_context_t *)lsan_malloc(sizeof(lsan_block_context_t), stack);
   lsan_ctxt->block = ctxt;
   lsan_ctxt->func = func;
-  lsan_ctxt->parent_tid = GetCurrentThread();
+  lsan_ctxt->parent_tid = GetCurrentThreadId();
   return lsan_ctxt;
 }
 
@@ -146,13 +145,13 @@ void dispatch_source_set_event_handler(dispatch_source_t ds,
                                        void (^work)(void));
 }
 
-#define GET_LSAN_BLOCK(work)                 \
-  void (^lsan_block)(void);                  \
-  int parent_tid = GetCurrentThread();       \
-  lsan_block = ^(void) {                     \
-    lsan_register_worker_thread(parent_tid); \
-    work();                                  \
-  }
+#    define GET_LSAN_BLOCK(work)                 \
+      void (^lsan_block)(void);                  \
+      int parent_tid = GetCurrentThreadId();     \
+      lsan_block = ^(void) {                     \
+        lsan_register_worker_thread(parent_tid); \
+        work();                                  \
+      }
 
 INTERCEPTOR(void, dispatch_async, dispatch_queue_t dq, void (^work)(void)) {
   GET_LSAN_BLOCK(work);
@@ -188,4 +187,4 @@ INTERCEPTOR(void, dispatch_source_set_event_handler, dispatch_source_t ds,
 }
 #endif
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

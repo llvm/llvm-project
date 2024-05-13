@@ -12,8 +12,8 @@
 
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -21,17 +21,35 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
-using namespace std::chrono;
 using namespace llvm;
 
-static std::mutex Mu;
-// List of all instances
-static std::vector<TimeTraceProfiler *>
-    ThreadTimeTraceProfilerInstances; // GUARDED_BY(Mu)
+namespace {
+
+using std::chrono::duration;
+using std::chrono::duration_cast;
+using std::chrono::microseconds;
+using std::chrono::steady_clock;
+using std::chrono::system_clock;
+using std::chrono::time_point;
+using std::chrono::time_point_cast;
+
+struct TimeTraceProfilerInstances {
+  std::mutex Lock;
+  std::vector<TimeTraceProfiler *> List;
+};
+
+TimeTraceProfilerInstances &getTimeTraceProfilerInstances() {
+  static TimeTraceProfilerInstances Instances;
+  return Instances;
+}
+
+} // anonymous namespace
+
 // Per Thread instance
 static LLVM_THREAD_LOCAL TimeTraceProfiler *TimeTraceProfilerInstance = nullptr;
 
@@ -39,64 +57,70 @@ TimeTraceProfiler *llvm::getTimeTraceProfilerInstance() {
   return TimeTraceProfilerInstance;
 }
 
-typedef duration<steady_clock::rep, steady_clock::period> DurationType;
-typedef time_point<steady_clock> TimePointType;
-typedef std::pair<size_t, DurationType> CountAndDurationType;
-typedef std::pair<std::string, CountAndDurationType>
-    NameAndCountAndDurationType;
-
 namespace {
-struct Entry {
+
+using ClockType = steady_clock;
+using TimePointType = time_point<ClockType>;
+using DurationType = duration<ClockType::rep, ClockType::period>;
+using CountAndDurationType = std::pair<size_t, DurationType>;
+using NameAndCountAndDurationType =
+    std::pair<std::string, CountAndDurationType>;
+
+} // anonymous namespace
+
+/// Represents an open or completed time section entry to be captured.
+struct llvm::TimeTraceProfilerEntry {
   const TimePointType Start;
   TimePointType End;
   const std::string Name;
   const std::string Detail;
-
-  Entry(TimePointType &&S, TimePointType &&E, std::string &&N, std::string &&Dt)
+  const bool AsyncEvent = false;
+  TimeTraceProfilerEntry(TimePointType &&S, TimePointType &&E, std::string &&N,
+                         std::string &&Dt, bool Ae)
       : Start(std::move(S)), End(std::move(E)), Name(std::move(N)),
-        Detail(std::move(Dt)) {}
+        Detail(std::move(Dt)), AsyncEvent(Ae) {}
 
   // Calculate timings for FlameGraph. Cast time points to microsecond precision
-  // rather than casting duration. This avoid truncation issues causing inner
+  // rather than casting duration. This avoids truncation issues causing inner
   // scopes overruning outer scopes.
-  steady_clock::rep getFlameGraphStartUs(TimePointType StartTime) const {
+  ClockType::rep getFlameGraphStartUs(TimePointType StartTime) const {
     return (time_point_cast<microseconds>(Start) -
             time_point_cast<microseconds>(StartTime))
         .count();
   }
 
-  steady_clock::rep getFlameGraphDurUs() const {
+  ClockType::rep getFlameGraphDurUs() const {
     return (time_point_cast<microseconds>(End) -
             time_point_cast<microseconds>(Start))
         .count();
   }
 };
-} // namespace
 
 struct llvm::TimeTraceProfiler {
   TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "")
-      : BeginningOfTime(system_clock::now()), StartTime(steady_clock::now()),
+      : BeginningOfTime(system_clock::now()), StartTime(ClockType::now()),
         ProcName(ProcName), Pid(sys::Process::getProcessId()),
         Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity) {
     llvm::get_thread_name(ThreadName);
   }
 
-  void begin(std::string Name, llvm::function_ref<std::string()> Detail) {
-    Stack.emplace_back(steady_clock::now(), TimePointType(), std::move(Name),
-                       Detail());
+  TimeTraceProfilerEntry *begin(std::string Name,
+                                llvm::function_ref<std::string()> Detail,
+                                bool AsyncEvent = false) {
+    Stack.emplace_back(std::make_unique<TimeTraceProfilerEntry>(
+        ClockType::now(), TimePointType(), std::move(Name), Detail(),
+        AsyncEvent));
+    return Stack.back().get();
   }
 
   void end() {
     assert(!Stack.empty() && "Must call begin() first");
-    Entry &E = Stack.back();
-    E.End = steady_clock::now();
+    end(*Stack.back().get());
+  }
 
-    // Check that end times monotonically increase.
-    assert((Entries.empty() ||
-            (E.getFlameGraphStartUs(StartTime) + E.getFlameGraphDurUs() >=
-             Entries.back().getFlameGraphStartUs(StartTime) +
-                 Entries.back().getFlameGraphDurUs())) &&
-           "TimeProfiler scope ended earlier than previous scope");
+  void end(TimeTraceProfilerEntry &E) {
+    assert(!Stack.empty() && "Must call begin() first");
+    E.End = ClockType::now();
 
     // Calculate duration at full precision for overall counts.
     DurationType Duration = E.End - E.Start;
@@ -110,25 +134,30 @@ struct llvm::TimeTraceProfiler {
     // templates from within, we only want to add the topmost one. "topmost"
     // happens to be the ones that don't have any currently open entries above
     // itself.
-    if (std::find_if(++Stack.rbegin(), Stack.rend(), [&](const Entry &Val) {
-          return Val.Name == E.Name;
-        }) == Stack.rend()) {
+    if (llvm::none_of(llvm::drop_begin(llvm::reverse(Stack)),
+                      [&](const std::unique_ptr<TimeTraceProfilerEntry> &Val) {
+                        return Val->Name == E.Name;
+                      })) {
       auto &CountAndTotal = CountAndTotalPerName[E.Name];
       CountAndTotal.first++;
       CountAndTotal.second += Duration;
-    }
+    };
 
-    Stack.pop_back();
+    llvm::erase_if(Stack,
+                   [&](const std::unique_ptr<TimeTraceProfilerEntry> &Val) {
+                     return Val.get() == &E;
+                   });
   }
 
   // Write events from this TimeTraceProfilerInstance and
   // ThreadTimeTraceProfilerInstances.
   void write(raw_pwrite_stream &OS) {
     // Acquire Mutex as reading ThreadTimeTraceProfilerInstances.
-    std::lock_guard<std::mutex> Lock(Mu);
+    auto &Instances = getTimeTraceProfilerInstances();
+    std::lock_guard<std::mutex> Lock(Instances.Lock);
     assert(Stack.empty() &&
            "All profiler sections should be ended when calling write");
-    assert(llvm::all_of(ThreadTimeTraceProfilerInstances,
+    assert(llvm::all_of(Instances.List,
                         [](const auto &TTP) { return TTP->Stack.empty(); }) &&
            "All profiler sections should be ended when calling write");
 
@@ -145,26 +174,44 @@ struct llvm::TimeTraceProfiler {
       J.object([&] {
         J.attribute("pid", Pid);
         J.attribute("tid", int64_t(Tid));
-        J.attribute("ph", "X");
         J.attribute("ts", StartUs);
-        J.attribute("dur", DurUs);
+        if (E.AsyncEvent) {
+          J.attribute("cat", E.Name);
+          J.attribute("ph", "b");
+          J.attribute("id", 0);
+        } else {
+          J.attribute("ph", "X");
+          J.attribute("dur", DurUs);
+        }
         J.attribute("name", E.Name);
         if (!E.Detail.empty()) {
           J.attributeObject("args", [&] { J.attribute("detail", E.Detail); });
         }
       });
+
+      if (E.AsyncEvent) {
+        J.object([&] {
+          J.attribute("pid", Pid);
+          J.attribute("tid", int64_t(Tid));
+          J.attribute("ts", StartUs + DurUs);
+          J.attribute("cat", E.Name);
+          J.attribute("ph", "e");
+          J.attribute("id", 0);
+          J.attribute("name", E.Name);
+        });
+      }
     };
-    for (const Entry &E : Entries)
+    for (const TimeTraceProfilerEntry &E : Entries)
       writeEvent(E, this->Tid);
-    for (const TimeTraceProfiler *TTP : ThreadTimeTraceProfilerInstances)
-      for (const Entry &E : TTP->Entries)
+    for (const TimeTraceProfiler *TTP : Instances.List)
+      for (const TimeTraceProfilerEntry &E : TTP->Entries)
         writeEvent(E, TTP->Tid);
 
     // Emit totals by section name as additional "thread" events, sorted from
     // longest one.
     // Find highest used thread id.
     uint64_t MaxTid = this->Tid;
-    for (const TimeTraceProfiler *TTP : ThreadTimeTraceProfilerInstances)
+    for (const TimeTraceProfiler *TTP : Instances.List)
       MaxTid = std::max(MaxTid, TTP->Tid);
 
     // Combine all CountAndTotalPerName from threads into one.
@@ -178,7 +225,7 @@ struct llvm::TimeTraceProfiler {
     };
     for (const auto &Stat : CountAndTotalPerName)
       combineStat(Stat);
-    for (const TimeTraceProfiler *TTP : ThreadTimeTraceProfilerInstances)
+    for (const TimeTraceProfiler *TTP : Instances.List)
       for (const auto &Stat : TTP->CountAndTotalPerName)
         combineStat(Stat);
 
@@ -229,7 +276,7 @@ struct llvm::TimeTraceProfiler {
 
     writeMetadataEvent("process_name", Tid, ProcName);
     writeMetadataEvent("thread_name", Tid, ThreadName);
-    for (const TimeTraceProfiler *TTP : ThreadTimeTraceProfilerInstances)
+    for (const TimeTraceProfiler *TTP : Instances.List)
       writeMetadataEvent("thread_name", TTP->Tid, TTP->ThreadName);
 
     J.arrayEnd();
@@ -246,10 +293,12 @@ struct llvm::TimeTraceProfiler {
     J.objectEnd();
   }
 
-  SmallVector<Entry, 16> Stack;
-  SmallVector<Entry, 128> Entries;
+  SmallVector<std::unique_ptr<TimeTraceProfilerEntry>, 16> Stack;
+  SmallVector<TimeTraceProfilerEntry, 128> Entries;
   StringMap<CountAndDurationType> CountAndTotalPerName;
+  // System clock time when the session was begun.
   const time_point<system_clock> BeginningOfTime;
+  // Profiling clock time when the session was begun.
   const TimePointType StartTime;
   const std::string ProcName;
   const sys::Process::Pid Pid;
@@ -272,17 +321,21 @@ void llvm::timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
 // Called from main thread.
 void llvm::timeTraceProfilerCleanup() {
   delete TimeTraceProfilerInstance;
-  std::lock_guard<std::mutex> Lock(Mu);
-  for (auto TTP : ThreadTimeTraceProfilerInstances)
+  TimeTraceProfilerInstance = nullptr;
+
+  auto &Instances = getTimeTraceProfilerInstances();
+  std::lock_guard<std::mutex> Lock(Instances.Lock);
+  for (auto *TTP : Instances.List)
     delete TTP;
-  ThreadTimeTraceProfilerInstances.clear();
+  Instances.List.clear();
 }
 
 // Finish TimeTraceProfilerInstance on a worker thread.
 // This doesn't remove the instance, just moves the pointer to global vector.
 void llvm::timeTraceProfilerFinishThread() {
-  std::lock_guard<std::mutex> Lock(Mu);
-  ThreadTimeTraceProfilerInstances.push_back(TimeTraceProfilerInstance);
+  auto &Instances = getTimeTraceProfilerInstances();
+  std::lock_guard<std::mutex> Lock(Instances.Lock);
+  Instances.List.push_back(TimeTraceProfilerInstance);
   TimeTraceProfilerInstance = nullptr;
 }
 
@@ -312,19 +365,36 @@ Error llvm::timeTraceProfilerWrite(StringRef PreferredFileName,
   return Error::success();
 }
 
-void llvm::timeTraceProfilerBegin(StringRef Name, StringRef Detail) {
+TimeTraceProfilerEntry *llvm::timeTraceProfilerBegin(StringRef Name,
+                                                     StringRef Detail) {
   if (TimeTraceProfilerInstance != nullptr)
-    TimeTraceProfilerInstance->begin(std::string(Name),
-                                     [&]() { return std::string(Detail); });
+    return TimeTraceProfilerInstance->begin(
+        std::string(Name), [&]() { return std::string(Detail); }, false);
+  return nullptr;
 }
 
-void llvm::timeTraceProfilerBegin(StringRef Name,
-                                  llvm::function_ref<std::string()> Detail) {
+TimeTraceProfilerEntry *
+llvm::timeTraceProfilerBegin(StringRef Name,
+                             llvm::function_ref<std::string()> Detail) {
   if (TimeTraceProfilerInstance != nullptr)
-    TimeTraceProfilerInstance->begin(std::string(Name), Detail);
+    return TimeTraceProfilerInstance->begin(std::string(Name), Detail, false);
+  return nullptr;
+}
+
+TimeTraceProfilerEntry *llvm::timeTraceAsyncProfilerBegin(StringRef Name,
+                                                          StringRef Detail) {
+  if (TimeTraceProfilerInstance != nullptr)
+    return TimeTraceProfilerInstance->begin(
+        std::string(Name), [&]() { return std::string(Detail); }, true);
+  return nullptr;
 }
 
 void llvm::timeTraceProfilerEnd() {
   if (TimeTraceProfilerInstance != nullptr)
     TimeTraceProfilerInstance->end();
+}
+
+void llvm::timeTraceProfilerEnd(TimeTraceProfilerEntry *E) {
+  if (TimeTraceProfilerInstance != nullptr)
+    TimeTraceProfilerInstance->end(*E);
 }

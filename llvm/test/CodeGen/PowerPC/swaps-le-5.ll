@@ -8,40 +8,40 @@
 
 define void @bar0(double %y) {
 entry:
-  %0 = load <2 x double>, <2 x double>* @x, align 16
+  %0 = load <2 x double>, ptr @x, align 16
   %vecins = insertelement <2 x double> %0, double %y, i32 0
-  store <2 x double> %vecins, <2 x double>* @z, align 16
+  store <2 x double> %vecins, ptr @z, align 16
   ret void
 }
 
 ; CHECK-LABEL: @bar0
-; CHECK-DAG: xxswapd 1, 1
+; CHECK-DAG: xxswapd 0, 1
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
-; CHECK: xxmrgld [[REG2:[0-9]+]], 1, [[REG1]]
+; CHECK: xxmrgld [[REG2:[0-9]+]], 0, [[REG1]]
 ; CHECK: stxvd2x [[REG2]]
 ; CHECK-NOT: xxswapd
 
 define void @bar1(double %y) {
 entry:
-  %0 = load <2 x double>, <2 x double>* @x, align 16
+  %0 = load <2 x double>, ptr @x, align 16
   %vecins = insertelement <2 x double> %0, double %y, i32 1
-  store <2 x double> %vecins, <2 x double>* @z, align 16
+  store <2 x double> %vecins, ptr @z, align 16
   ret void
 }
 
 ; CHECK-LABEL: @bar1
-; CHECK-DAG: xxswapd 1, 1
+; CHECK-DAG: xxswapd 0, 1
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
-; CHECK: xxpermdi [[REG2:[0-9]+]], [[REG1]], 1, 1
+; CHECK: xxpermdi [[REG2:[0-9]+]], [[REG1]], 0, 1
 ; CHECK: stxvd2x [[REG2]]
 ; CHECK-NOT: xxswapd
 
 define void @baz0() {
 entry:
-  %0 = load <2 x double>, <2 x double>* @z, align 16
-  %1 = load <2 x double>, <2 x double>* @x, align 16
+  %0 = load <2 x double>, ptr @z, align 16
+  %1 = load <2 x double>, ptr @x, align 16
   %vecins = shufflevector <2 x double> %0, <2 x double> %1, <2 x i32> <i32 0, i32 2>
-  store <2 x double> %vecins, <2 x double>* @z, align 16
+  store <2 x double> %vecins, ptr @z, align 16
   ret void
 }
 
@@ -54,10 +54,10 @@ entry:
 
 define void @baz1() {
 entry:
-  %0 = load <2 x double>, <2 x double>* @z, align 16
-  %1 = load <2 x double>, <2 x double>* @x, align 16
+  %0 = load <2 x double>, ptr @z, align 16
+  %1 = load <2 x double>, ptr @x, align 16
   %vecins = shufflevector <2 x double> %0, <2 x double> %1, <2 x i32> <i32 3, i32 1>
-  store <2 x double> %vecins, <2 x double>* @z, align 16
+  store <2 x double> %vecins, ptr @z, align 16
   ret void
 }
 

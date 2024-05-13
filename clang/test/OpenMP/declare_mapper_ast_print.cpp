@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -21,7 +21,7 @@ public:
 };
 // CHECK: };
 
-// CHECK: class vecchild : public N1::vec {
+// CHECK: class vecchild : public vec {
 class vecchild : public vec {
 public:
   int lenc;
@@ -29,7 +29,7 @@ public:
 // CHECK: };
 
 #pragma omp declare mapper(id: vec v) map(v.len)
-// CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len){{$}}
+// CHECK: #pragma omp declare mapper (id : vec v) map(tofrom: v.len){{$}}
 };
 // CHECK: }
 // CHECK: ;
@@ -49,15 +49,16 @@ public:
 
 // CHECK: template <class T> class dat {
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len){{$}}
-// CHECK: #pragma omp declare mapper (id : dat::datin v) map(tofrom: v.in){{$}}
+// CHECK: #pragma omp declare mapper (id : datin v) map(tofrom: v.in){{$}}
 // CHECK: };
 // CHECK: template<> class dat<double> {
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len){{$}}
-// CHECK: #pragma omp declare mapper (id : dat<double>::datin v) map(tofrom: v.in){{$}}
+// CHECK: #pragma omp declare mapper (id : datin v) map(tofrom: v.in){{$}}
 // CHECK: };
 
-#pragma omp declare mapper(default : N1::vec kk) map(kk.len) map(kk.data[0:2])
-// CHECK: #pragma omp declare mapper (default : N1::vec kk) map(tofrom: kk.len) map(tofrom: kk.data[0:2]){{$}}
+constexpr int N = 2;
+#pragma omp declare mapper(default : N1::vec kk) map(kk.len) map(kk.data[0:N])
+// CHECK: #pragma omp declare mapper (default : N1::vec kk) map(tofrom: kk.len) map(tofrom: kk.data[0:N]){{$}}
 #pragma omp declare mapper(dat<double> d) map(to: d.d)
 // CHECK: #pragma omp declare mapper (default : dat<double> d) map(to: d.d){{$}}
 

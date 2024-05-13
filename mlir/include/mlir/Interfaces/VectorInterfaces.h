@@ -17,18 +17,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 
-namespace mlir {
-namespace vector {
-namespace detail {
-
-/// Given the vector type and the permutation map of a vector transfer op,
-/// compute the expected mask type.
-VectorType transferMaskType(VectorType vecType, AffineMap map);
-
-} // namespace detail
-} // namespace vector
-} // namespace mlir
-
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/VectorInterfaces.h.inc"
 

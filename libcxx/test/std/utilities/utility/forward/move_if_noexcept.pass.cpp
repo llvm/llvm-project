@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03 && !stdlib=libc++
+
 // <utility>
 
 // template <class T>
@@ -17,6 +19,7 @@
 //     >::type
 //     move_if_noexcept(T& x);
 
+#include <type_traits>
 #include <utility>
 
 #include "test_macros.h"
@@ -46,20 +49,11 @@ int main(int, char**)
     A a;
     const A ca;
 
-#if TEST_STD_VER >= 11
     static_assert((std::is_same<decltype(std::move_if_noexcept(i)), int&&>::value), "");
     static_assert((std::is_same<decltype(std::move_if_noexcept(ci)), const int&&>::value), "");
     static_assert((std::is_same<decltype(std::move_if_noexcept(a)), A&&>::value), "");
     static_assert((std::is_same<decltype(std::move_if_noexcept(ca)), const A&&>::value), "");
     static_assert((std::is_same<decltype(std::move_if_noexcept(l)), const legacy&>::value), "");
-#else  // C++ < 11
-    // In C++03 we don't have noexcept so we can never move :-(
-    static_assert((std::is_same<decltype(std::move_if_noexcept(i)), const int&>::value), "");
-    static_assert((std::is_same<decltype(std::move_if_noexcept(ci)), const int&>::value), "");
-    static_assert((std::is_same<decltype(std::move_if_noexcept(a)), const A&>::value), "");
-    static_assert((std::is_same<decltype(std::move_if_noexcept(ca)), const A&>::value), "");
-    static_assert((std::is_same<decltype(std::move_if_noexcept(l)), const legacy&>::value), "");
-#endif
 
 #if TEST_STD_VER > 11
     constexpr int i1 = 23;

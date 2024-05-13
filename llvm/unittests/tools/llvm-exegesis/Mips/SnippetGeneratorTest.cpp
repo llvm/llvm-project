@@ -15,8 +15,6 @@
 #include "SerialSnippetGenerator.h"
 #include "TestBase.h"
 
-#include <unordered_set>
-
 namespace llvm {
 namespace exegesis {
 namespace {
@@ -29,12 +27,10 @@ using testing::SizeIs;
 MATCHER(IsInvalid, "") { return !arg.isValid(); }
 MATCHER(IsReg, "") { return arg.isReg(); }
 
-class MipsSnippetGeneratorTest : public MipsTestBase {};
-
 template <typename SnippetGeneratorT>
-class SnippetGeneratorTest : public MipsSnippetGeneratorTest {
+class MipsSnippetGeneratorTest : public MipsTestBase {
 protected:
-  SnippetGeneratorTest() : Generator(State, SnippetGenerator::Options()) {}
+  MipsSnippetGeneratorTest() : Generator(State, SnippetGenerator::Options()) {}
 
   std::vector<CodeTemplate> checkAndGetCodeTemplates(unsigned Opcode) {
     randomGenerator().seed(0); // Initialize seed.
@@ -48,12 +44,12 @@ protected:
   SnippetGeneratorT Generator;
 };
 
-using SerialSnippetGeneratorTest = SnippetGeneratorTest<SerialSnippetGenerator>;
+using MipsSerialSnippetGeneratorTest = MipsSnippetGeneratorTest<SerialSnippetGenerator>;
 
-using ParallelSnippetGeneratorTest =
-    SnippetGeneratorTest<ParallelSnippetGenerator>;
+using MipsParallelSnippetGeneratorTest =
+    MipsSnippetGeneratorTest<ParallelSnippetGenerator>;
 
-TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
+TEST_F(MipsSerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
   // - ADD
   // - Op0 Explicit Def RegClass(GPR32)
   // - Op1 Explicit Use RegClass(GPR32)
@@ -77,7 +73,7 @@ TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
       << "Op0 is either set to Op1 or to Op2";
 }
 
-TEST_F(SerialSnippetGeneratorTest,
+TEST_F(MipsSerialSnippetGeneratorTest,
        ImplicitSelfDependencyThroughExplicitRegsForbidAll) {
   // - XOR
   // - Op0 Explicit Def RegClass(GPR32)
@@ -97,7 +93,7 @@ TEST_F(SerialSnippetGeneratorTest,
   consumeError(std::move(Error));
 }
 
-TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
+TEST_F(MipsParallelSnippetGeneratorTest, MemoryUse) {
   // LB reads from memory.
   // - LB
   // - Op0 Explicit Def RegClass(GPR32)

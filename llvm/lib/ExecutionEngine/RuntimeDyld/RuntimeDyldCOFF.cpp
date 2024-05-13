@@ -16,9 +16,9 @@
 #include "Targets/RuntimeDyldCOFFThumb.h"
 #include "Targets/RuntimeDyldCOFFX86_64.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -83,7 +83,8 @@ uint64_t RuntimeDyldCOFF::getDLLImportOffset(unsigned SectionID, StubMap &Stubs,
                                              StringRef Name,
                                              bool SetSectionIDMinus1) {
   LLVM_DEBUG(dbgs() << "Getting DLLImport entry for " << Name << "... ");
-  assert(Name.startswith(getImportSymbolPrefix()) && "Not a DLLImport symbol?");
+  assert(Name.starts_with(getImportSymbolPrefix()) &&
+         "Not a DLLImport symbol?");
   RelocationValueRef Reloc;
   Reloc.SymbolName = Name.data();
   auto I = Stubs.find(Reloc);

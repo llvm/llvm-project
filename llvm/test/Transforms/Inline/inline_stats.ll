@@ -1,8 +1,3 @@
-; First with legacy PM
-; RUN: opt -S -inline -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-BASIC,CHECK
-; RUN: opt -S -inline -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes="CHECK-VERBOSE",CHECK
-
-; Do again with new PM
 ; RUN: opt -S -passes=inline -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-BASIC,CHECK
 ; RUN: opt -S -passes=inline -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes="CHECK-VERBOSE",CHECK
 
@@ -49,7 +44,7 @@ define void @internal3() {
 
 declare void @external_decl()
 
-define void @external1() alwaysinline !thinlto_src_module !0 {
+define void @external1() alwaysinline !thinlto_src_module !0 !thinlto_src_file !1 {
     call fastcc void @internal2()
     call fastcc void @external2();
     call void @external_decl();
@@ -92,7 +87,7 @@ define void @external_big() noinline !thinlto_src_module !1 {
 }
 
 ; It should not be imported, but it should not break anything.
-define void @external_notcalled() !thinlto_src_module !0 {
+define void @external_notcalled() !thinlto_src_module !0 !thinlto_src_file !1 {
     call void @external_notcalled()
     ret void
 }

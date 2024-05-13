@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/CFG.h"
 #include "CFGBuildResult.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/Analyses/IntervalPartition.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Tooling/Tooling.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <string>
@@ -68,6 +70,27 @@ TEST(CFG, VariableOfIncompleteType) {
                      "  Undefined u;\n"
                      "}\n";
   EXPECT_EQ(BuildResult::BuiltCFG, BuildCFG(Code).getStatus());
+}
+
+// Constructing a CFG with a dependent base should not crash.
+TEST(CFG, DependantBaseAddImplicitDtors) {
+  const char *Code = R"(
+    template <class T>
+    struct Base {
+      virtual ~Base() {}
+    };
+
+    template <typename T>
+    struct Derived : public Base<T> {
+      virtual ~Derived() {}
+    };
+  )";
+  CFG::BuildOptions Options;
+  Options.AddImplicitDtors = true;
+  Options.setAllAlwaysAdd();
+  EXPECT_EQ(BuildResult::BuiltCFG,
+            BuildCFG(Code, Options, ast_matchers::hasName("~Derived<T>"))
+                .getStatus());
 }
 
 TEST(CFG, IsLinear) {
@@ -223,6 +246,8 @@ TEST(CFG, ElementRefIterator) {
 TEST(CFG, Worklists) {
   const char *Code = "int f(bool cond) {\n"
                      "  int a = 5;\n"
+                     "  while (a < 6)\n"
+                     "    ++a;\n"
                      "  if (cond)\n"
                      "    a += 1;\n"
                      "  return a;\n"
@@ -249,6 +274,22 @@ TEST(CFG, Worklists) {
     EXPECT_EQ(ForwardNodes.size(), ReferenceOrder.size());
     EXPECT_TRUE(std::equal(ReferenceOrder.begin(), ReferenceOrder.end(),
                            ForwardNodes.begin()));
+  }
+
+  {
+    using ::testing::ElementsAreArray;
+    std::optional<WeakTopologicalOrdering> WTO = getIntervalWTO(*CFG);
+    ASSERT_TRUE(WTO);
+    WTOCompare WCmp(*WTO);
+    WTODataflowWorklist WTOWorklist(*CFG, WCmp);
+    for (const auto *B : *CFG)
+      WTOWorklist.enqueueBlock(B);
+
+    std::vector<const CFGBlock *> WTONodes;
+    while (const CFGBlock *B = WTOWorklist.dequeue())
+      WTONodes.push_back(B);
+
+    EXPECT_THAT(WTONodes, ElementsAreArray(*WTO));
   }
 
   std::reverse(ReferenceOrder.begin(), ReferenceOrder.end());

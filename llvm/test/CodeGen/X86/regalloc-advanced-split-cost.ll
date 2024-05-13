@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -regalloc=greedy --debug-only=regalloc 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=i686 -regalloc=greedy --debug-only=regalloc 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 
@@ -26,48 +26,48 @@
 ; CHECK: Split for $ebp
 
 ; Function Attrs: nounwind
-define i32 @foo(i32* %array, i32 %cond1, i32 %val) local_unnamed_addr #0 {
+define i32 @foo(ptr %array, i32 %cond1, i32 %val) local_unnamed_addr #0 {
 entry:
-  %array.addr = alloca i32*, align 4
-  store i32* %array, i32** %array.addr, align 4, !tbaa !3
-  %0 = load i32, i32* %array, align 4, !tbaa !7
-  %arrayidx1 = getelementptr inbounds i32, i32* %array, i32 1
-  %1 = load i32, i32* %arrayidx1, align 4, !tbaa !7
-  %arrayidx2 = getelementptr inbounds i32, i32* %array, i32 2
-  %2 = load i32, i32* %arrayidx2, align 4, !tbaa !7
-  %arrayidx3 = getelementptr inbounds i32, i32* %array, i32 3
-  %3 = load i32, i32* %arrayidx3, align 4, !tbaa !7
-  %arrayidx4 = getelementptr inbounds i32, i32* %array, i32 4
-  %4 = load i32, i32* %arrayidx4, align 4, !tbaa !7
-  %arrayidx6 = getelementptr inbounds i32, i32* %array, i32 %val
-  %5 = load i32, i32* %arrayidx6, align 4, !tbaa !7
+  %array.addr = alloca ptr, align 4
+  store ptr %array, ptr %array.addr, align 4, !tbaa !3
+  %0 = load i32, ptr %array, align 4, !tbaa !7
+  %arrayidx1 = getelementptr inbounds i32, ptr %array, i32 1
+  %1 = load i32, ptr %arrayidx1, align 4, !tbaa !7
+  %arrayidx2 = getelementptr inbounds i32, ptr %array, i32 2
+  %2 = load i32, ptr %arrayidx2, align 4, !tbaa !7
+  %arrayidx3 = getelementptr inbounds i32, ptr %array, i32 3
+  %3 = load i32, ptr %arrayidx3, align 4, !tbaa !7
+  %arrayidx4 = getelementptr inbounds i32, ptr %array, i32 4
+  %4 = load i32, ptr %arrayidx4, align 4, !tbaa !7
+  %arrayidx6 = getelementptr inbounds i32, ptr %array, i32 %val
+  %5 = load i32, ptr %arrayidx6, align 4, !tbaa !7
   %shl = shl i32 %5, 5
   %tobool = icmp eq i32 %cond1, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  %arrayidx7 = getelementptr inbounds i32, i32* %array, i32 6
-  store i32 %shl, i32* %arrayidx7, align 4, !tbaa !7
-  call void asm "nop", "=*m,r,r,r,r,r,*m,~{dirflag},~{fpsr},~{flags}"(i32** nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32** nonnull %array.addr) #1, !srcloc !9
-  %6 = load i32*, i32** %array.addr, align 4, !tbaa !3
-  %arrayidx8 = getelementptr inbounds i32, i32* %6, i32 7
+  %arrayidx7 = getelementptr inbounds i32, ptr %array, i32 6
+  store i32 %shl, ptr %arrayidx7, align 4, !tbaa !7
+  call void asm "nop", "=*m,r,r,r,r,r,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(ptr) nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr elementtype(ptr) nonnull %array.addr) #1, !srcloc !9
+  %6 = load ptr, ptr %array.addr, align 4, !tbaa !3
+  %arrayidx8 = getelementptr inbounds i32, ptr %6, i32 7
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %arrayidx5 = getelementptr inbounds i32, i32* %array, i32 5
-  %7 = load i32, i32* %arrayidx5, align 4, !tbaa !7
-  %arrayidx9 = getelementptr inbounds i32, i32* %array, i32 8
-  store i32 %shl, i32* %arrayidx9, align 4, !tbaa !7
-  call void asm "nop", "=*m,{ax},{bx},{cx},{dx},{di},{si},{ebp},*m,~{dirflag},~{fpsr},~{flags}"(i32** nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %7, i32* undef, i32** nonnull %array.addr) #1, !srcloc !10
-  %8 = load i32*, i32** %array.addr, align 4, !tbaa !3
-  %arrayidx10 = getelementptr inbounds i32, i32* %8, i32 9
+  %arrayidx5 = getelementptr inbounds i32, ptr %array, i32 5
+  %7 = load i32, ptr %arrayidx5, align 4, !tbaa !7
+  %arrayidx9 = getelementptr inbounds i32, ptr %array, i32 8
+  store i32 %shl, ptr %arrayidx9, align 4, !tbaa !7
+  call void asm "nop", "=*m,{ax},{bx},{cx},{dx},{di},{si},{ebp},*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(ptr) nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %7, ptr undef, ptr elementtype(ptr) nonnull %array.addr) #1, !srcloc !10
+  %8 = load ptr, ptr %array.addr, align 4, !tbaa !3
+  %arrayidx10 = getelementptr inbounds i32, ptr %8, i32 9
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %arrayidx10.sink = phi i32* [ %arrayidx10, %if.else ], [ %arrayidx8, %if.then ]
-  %9 = phi i32* [ %8, %if.else ], [ %6, %if.then ]
-  store i32 %shl, i32* %arrayidx10.sink, align 4, !tbaa !7
-  %10 = load i32, i32* %9, align 4, !tbaa !7
+  %arrayidx10.sink = phi ptr [ %arrayidx10, %if.else ], [ %arrayidx8, %if.then ]
+  %9 = phi ptr [ %8, %if.else ], [ %6, %if.then ]
+  store i32 %shl, ptr %arrayidx10.sink, align 4, !tbaa !7
+  %10 = load i32, ptr %9, align 4, !tbaa !7
   %add = add nsw i32 %10, %shl
   ret i32 %add
 }

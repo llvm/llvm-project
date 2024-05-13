@@ -1,8 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=apiModeling.StdCLibraryFunctions -verify %s
-// RUN: %clang_analyze_cc1 -triple i686-unknown-linux -analyzer-checker=apiModeling.StdCLibraryFunctions -verify %s
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -analyzer-checker=apiModeling.StdCLibraryFunctions -verify %s
-// RUN: %clang_analyze_cc1 -triple armv7-a15-linux -analyzer-checker=apiModeling.StdCLibraryFunctions -verify %s
-// RUN: %clang_analyze_cc1 -triple thumbv7-a15-linux -analyzer-checker=apiModeling.StdCLibraryFunctions -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=unix.StdCLibraryFunctions -verify %s
+// RUN: %clang_analyze_cc1 -triple i686-unknown-linux -analyzer-checker=unix.StdCLibraryFunctions -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -analyzer-checker=unix.StdCLibraryFunctions -verify %s
+// RUN: %clang_analyze_cc1 -triple armv7-a15-linux -analyzer-checker=unix.StdCLibraryFunctions -verify %s
+// RUN: %clang_analyze_cc1 -triple thumbv7-a15-linux -analyzer-checker=unix.StdCLibraryFunctions -verify %s
 
 // This test tests crashes that occur when standard functions are available
 // for inlining.

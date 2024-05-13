@@ -51,14 +51,11 @@ struct CodeGenTypeCache {
     llvm::IntegerType *PtrDiffTy;
   };
 
-  /// void* in address space 0
+  /// void*, void** in address space 0
   union {
+    llvm::PointerType *UnqualPtrTy;
     llvm::PointerType *VoidPtrTy;
     llvm::PointerType *Int8PtrTy;
-  };
-
-  /// void** in address space 0
-  union {
     llvm::PointerType *VoidPtrPtrTy;
     llvm::PointerType *Int8PtrPtrTy;
   };
@@ -68,6 +65,15 @@ struct CodeGenTypeCache {
     llvm::PointerType *AllocaVoidPtrTy;
     llvm::PointerType *AllocaInt8PtrTy;
   };
+
+  /// void* in default globals address space
+  union {
+    llvm::PointerType *GlobalsVoidPtrTy;
+    llvm::PointerType *GlobalsInt8PtrTy;
+  };
+
+  /// void* in the address space for constant globals
+  llvm::PointerType *ConstGlobalsPtrTy;
 
   /// The size and alignment of the builtin C type 'int'.  This comes
   /// up enough in various ABI lowering tasks to be worth pre-computing.

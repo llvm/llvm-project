@@ -37,7 +37,7 @@ struct s2 {
 #if __cplusplus <= 201402L && !defined(MS_ABI)
   // expected-error@-2 {{requires an initializer}}
 #else
-  // expected-error@-4 {{default initialization of an object of const}}
+  // expected-error@-4 {{constexpr variable 'mi2' must be initialized by a constant expression}}
 #endif
   mutable constexpr int mi3 = 3; // expected-error-re {{non-static data member cannot be constexpr{{$}}}} expected-error {{'mutable' and 'const' cannot be mixed}}
 };

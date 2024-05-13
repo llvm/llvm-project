@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | not grep 34
+; RUN: opt < %s -passes=instcombine -S | not grep 34
 
 define i32 @test(i32 %X) {
         ; Do not fold into shr X, 34, as this uses undefined behavior!

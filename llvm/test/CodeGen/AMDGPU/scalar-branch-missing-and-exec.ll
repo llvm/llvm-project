@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx802 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx802 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s
 
 ; This checks for a bug where uniform control flow can result in multiple
 ; v_cmp results being combined together with s_and_b64, s_or_b64 and s_xor_b64,
@@ -22,10 +22,10 @@
 
 define amdgpu_cs void @main(i32 inreg %arg) {
 .entry:
-  %tmp44 = load volatile <2 x float>, <2 x float> addrspace(1)* undef
-  %tmp16 = load volatile float, float addrspace(1)* undef
-  %tmp22 = load volatile float, float addrspace(1)* undef
-  %tmp25 = load volatile float, float addrspace(1)* undef
+  %tmp44 = load volatile <2 x float>, ptr addrspace(1) undef
+  %tmp16 = load volatile float, ptr addrspace(1) undef
+  %tmp22 = load volatile float, ptr addrspace(1) undef
+  %tmp25 = load volatile float, ptr addrspace(1) undef
   %tmp31 = fcmp olt float %tmp16, 0x3FA99999A0000000
   br i1 %tmp31, label %bb, label %.exit.thread
 
@@ -45,7 +45,7 @@ bb50:
   br i1 %tmp53, label %.exit3.i, label %.exit.thread
 
 .exit3.i:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   br label %.exit.thread
 
 .exit.thread:

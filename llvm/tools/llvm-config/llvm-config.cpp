@@ -20,13 +20,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
 #include <set>
 #include <unordered_set>
@@ -170,10 +170,8 @@ static std::vector<std::string> ComputeLibsForComponents(
 
   // Build a map of component names to information.
   StringMap<AvailableComponent *> ComponentMap;
-  for (unsigned i = 0; i != array_lengthof(AvailableComponents); ++i) {
-    AvailableComponent *AC = &AvailableComponents[i];
-    ComponentMap[AC->Name] = AC;
-  }
+  for (auto &AC : AvailableComponents)
+    ComponentMap[AC.Name] = &AC;
 
   // Visit the components.
   for (unsigned i = 0, e = Components.size(); i != e; ++i) {
@@ -201,7 +199,7 @@ static std::vector<std::string> ComputeLibsForComponents(
 
 /* *** */
 
-static void usage() {
+static void usage(bool ExitWithFailure = true) {
   errs() << "\
 usage: llvm-config <OPTION>... [<COMPONENT>...]\n\
 \n\
@@ -212,37 +210,38 @@ LLVM.  Typically called from 'configure' scripts.  Examples:\n\
   llvm-config --libs engine bcreader scalaropts\n\
 \n\
 Options:\n\
-  --version         Print LLVM version.\n\
-  --prefix          Print the installation prefix.\n\
-  --src-root        Print the source root LLVM was built from.\n\
-  --obj-root        Print the object root used to build LLVM.\n\
-  --bindir          Directory containing LLVM executables.\n\
-  --includedir      Directory containing LLVM headers.\n\
-  --libdir          Directory containing LLVM libraries.\n\
-  --cmakedir        Directory containing LLVM cmake modules.\n\
-  --cppflags        C preprocessor flags for files that include LLVM headers.\n\
-  --cflags          C compiler flags for files that include LLVM headers.\n\
-  --cxxflags        C++ compiler flags for files that include LLVM headers.\n\
-  --ldflags         Print Linker flags.\n\
-  --system-libs     System Libraries needed to link against LLVM components.\n\
-  --libs            Libraries needed to link against LLVM components.\n\
-  --libnames        Bare library names for in-tree builds.\n\
-  --libfiles        Fully qualified library filenames for makefile depends.\n\
-  --components      List of all possible components.\n\
-  --targets-built   List of all targets currently built.\n\
-  --host-target     Target triple used to configure LLVM.\n\
-  --build-mode      Print build mode of LLVM tree (e.g. Debug or Release).\n\
   --assertion-mode  Print assertion mode of LLVM tree (ON or OFF).\n\
-  --build-system    Print the build system used to build LLVM (always cmake).\n\
+  --bindir          Directory containing LLVM executables.\n\
+  --build-mode      Print build mode of LLVM tree (e.g. Debug or Release).\n\
+  --build-system    Print the build system used to build LLVM (e.g. `cmake` or `gn`).\n\
+  --cflags          C compiler flags for files that include LLVM headers.\n\
+  --cmakedir        Directory containing LLVM CMake modules.\n\
+  --components      List of all possible components.\n\
+  --cppflags        C preprocessor flags for files that include LLVM headers.\n\
+  --cxxflags        C++ compiler flags for files that include LLVM headers.\n\
   --has-rtti        Print whether or not LLVM was built with rtti (YES or NO).\n\
-  --shared-mode     Print how the provided components can be collectively linked (`shared` or `static`).\n\
+  --help            Print a summary of llvm-config arguments.\n\
+  --host-target     Target triple used to configure LLVM.\n\
+  --ignore-libllvm  Ignore libLLVM and link component libraries instead.\n\
+  --includedir      Directory containing LLVM headers.\n\
+  --ldflags         Print Linker flags.\n\
+  --libdir          Directory containing LLVM libraries.\n\
+  --libfiles        Fully qualified library filenames for makefile depends.\n\
+  --libnames        Bare library names for in-tree builds.\n\
+  --libs            Libraries needed to link against LLVM components.\n\
   --link-shared     Link the components as shared libraries.\n\
   --link-static     Link the component libraries statically.\n\
-  --ignore-libllvm  Ignore libLLVM and link component libraries instead.\n\
+  --obj-root        Print the object root used to build LLVM.\n\
+  --prefix          Print the installation prefix.\n\
+  --shared-mode     Print how the provided components can be collectively linked (`shared` or `static`).\n\
+  --system-libs     System Libraries needed to link against LLVM components.\n\
+  --targets-built   List of all targets currently built.\n\
+  --version         Print LLVM version.\n\
 Typical components:\n\
   all               All LLVM libraries (default).\n\
   engine            Either a native JIT or a bitcode interpreter.\n";
-  exit(1);
+  if (ExitWithFailure)
+    exit(1);
 }
 
 /// Compute the path to the main executable.
@@ -357,12 +356,22 @@ int main(int argc, char **argv) {
         ("-I" + ActiveIncludeDir + " " + "-I" + ActiveObjRoot + "/include");
   } else {
     ActivePrefix = CurrentExecPrefix;
-    ActiveIncludeDir = ActivePrefix + "/include";
-    SmallString<256> path(StringRef(LLVM_TOOLS_INSTALL_DIR));
-    sys::fs::make_absolute(ActivePrefix, path);
-    ActiveBinDir = std::string(path.str());
+    {
+      SmallString<256> Path(LLVM_INSTALL_INCLUDEDIR);
+      sys::fs::make_absolute(ActivePrefix, Path);
+      ActiveIncludeDir = std::string(Path);
+    }
+    {
+      SmallString<256> Path(LLVM_TOOLS_INSTALL_DIR);
+      sys::fs::make_absolute(ActivePrefix, Path);
+      ActiveBinDir = std::string(Path);
+    }
     ActiveLibDir = ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX;
-    ActiveCMakeDir = ActiveLibDir + "/cmake/llvm";
+    {
+      SmallString<256> Path(LLVM_INSTALL_PACKAGE_DIR);
+      sys::fs::make_absolute(ActivePrefix, Path);
+      ActiveCMakeDir = std::string(Path);
+    }
     ActiveIncludeOption = "-I" + ActiveIncludeDir;
   }
 
@@ -445,11 +454,11 @@ int main(int argc, char **argv) {
   /// extension. Returns true if Lib is in a recognized format.
   auto GetComponentLibraryNameSlice = [&](const StringRef &Lib,
                                           StringRef &Out) {
-    if (Lib.startswith("lib")) {
+    if (Lib.starts_with("lib")) {
       unsigned FromEnd;
-      if (Lib.endswith(StaticExt)) {
+      if (Lib.ends_with(StaticExt)) {
         FromEnd = StaticExt.size() + 1;
-      } else if (Lib.endswith(SharedExt)) {
+      } else if (Lib.ends_with(SharedExt)) {
         FromEnd = SharedExt.size() + 1;
       } else {
         FromEnd = 0;
@@ -472,7 +481,7 @@ int main(int argc, char **argv) {
         // Treat the DyLibName specially. It is not a component library and
         // already has the necessary prefix and suffix (e.g. `.so`) added so
         // just return it unmodified.
-        assert(Lib.endswith(SharedExt) && "DyLib is missing suffix");
+        assert(Lib.ends_with(SharedExt) && "DyLib is missing suffix");
         LibFileName = std::string(Lib);
       } else {
         LibFileName = (SharedPrefix + Lib + "." + SharedExt).str();
@@ -498,7 +507,7 @@ int main(int argc, char **argv) {
   for (int i = 1; i != argc; ++i) {
     StringRef Arg = argv[i];
 
-    if (Arg.startswith("-")) {
+    if (Arg.starts_with("-")) {
       HasAnyOption = true;
       if (Arg == "--version") {
         OS << PACKAGE_VERSION << '\n';
@@ -534,15 +543,14 @@ int main(int argc, char **argv) {
         /// built, print LLVM_DYLIB_COMPONENTS instead of everything
         /// in the manifest.
         std::vector<std::string> Components;
-        for (unsigned j = 0; j != array_lengthof(AvailableComponents); ++j) {
+        for (const auto &AC : AvailableComponents) {
           // Only include non-installed components when in a development tree.
-          if (!AvailableComponents[j].IsInstalled && !IsInDevelopmentTree)
+          if (!AC.IsInstalled && !IsInDevelopmentTree)
             continue;
 
-          Components.push_back(AvailableComponents[j].Name);
-          if (AvailableComponents[j].Library && !IsInDevelopmentTree) {
-            std::string path(
-                GetComponentLibraryPath(AvailableComponents[j].Library, false));
+          Components.push_back(AC.Name);
+          if (AC.Library && !IsInDevelopmentTree) {
+            std::string path(GetComponentLibraryPath(AC.Library, false));
             if (DirSep == "\\") {
               std::replace(path.begin(), path.end(), '/', '\\');
             }
@@ -583,8 +591,6 @@ int main(int argc, char **argv) {
         PrintSharedMode = true;
       } else if (Arg == "--obj-root") {
         OS << ActivePrefix << '\n';
-      } else if (Arg == "--src-root") {
-        OS << LLVM_SRC_ROOT << '\n';
       } else if (Arg == "--ignore-libllvm") {
         LinkDyLib = false;
         LinkMode = BuiltSharedLibs ? LinkModeShared : LinkModeAuto;
@@ -592,6 +598,8 @@ int main(int argc, char **argv) {
         LinkMode = LinkModeShared;
       } else if (Arg == "--link-static") {
         LinkMode = LinkModeStatic;
+      } else if (Arg == "--help") {
+        usage(false);
       } else {
         usage();
       }
@@ -646,7 +654,7 @@ int main(int argc, char **argv) {
         }
         WithColor::error(errs(), "llvm-config")
             << "component libraries and shared library\n\n";
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case LinkModeStatic:
         for (auto &Lib : MissingLibs)
           WithColor::error(errs(), "llvm-config") << "missing: " << Lib << "\n";

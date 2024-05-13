@@ -16,7 +16,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptrunc_s16_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FCVTHSr:%[0-9]+]]:fpr16 = FCVTHSr [[COPY]]
+    ; CHECK: [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[COPY]]
     ; CHECK: $h0 = COPY [[FCVTHSr]]
     %0(s32) = COPY $s0
     %1(s16) = G_FPTRUNC %0
@@ -38,7 +38,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptrunc_s16_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTHDr:%[0-9]+]]:fpr16 = FCVTHDr [[COPY]]
+    ; CHECK: [[FCVTHDr:%[0-9]+]]:fpr16 = nofpexcept FCVTHDr [[COPY]]
     ; CHECK: $h0 = COPY [[FCVTHDr]]
     %0(s64) = COPY $d0
     %1(s16) = G_FPTRUNC %0
@@ -60,7 +60,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptrunc_s32_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTSDr:%[0-9]+]]:fpr32 = FCVTSDr [[COPY]]
+    ; CHECK: [[FCVTSDr:%[0-9]+]]:fpr32 = nofpexcept FCVTSDr [[COPY]]
     ; CHECK: $s0 = COPY [[FCVTSDr]]
     %0(s64) = COPY $d0
     %1(s32) = G_FPTRUNC %0
@@ -81,7 +81,7 @@ body:             |
     liveins: $d0
     ; CHECK-LABEL: name: fptrunc_v4s16_v4s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FCVTNv4i16_:%[0-9]+]]:fpr64 = FCVTNv4i16 [[COPY]]
+    ; CHECK: [[FCVTNv4i16_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv4i16 [[COPY]]
     ; CHECK: $d0 = COPY [[FCVTNv4i16_]]
     %0(<4 x s32>) = COPY $q0
     %1(<4 x s16>) = G_FPTRUNC %0
@@ -102,7 +102,7 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: fptrunc_v2s32_v2s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = FCVTNv2i32 [[COPY]]
+    ; CHECK: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv2i32 [[COPY]]
     ; CHECK: $d0 = COPY [[FCVTNv2i32_]]
     %0(<2 x s64>) = COPY $q0
     %1(<2 x s32>) = G_FPTRUNC %0
@@ -124,7 +124,7 @@ body:             |
 
     ; CHECK-LABEL: name: fpext_s32_s16_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr16 = COPY $h0
-    ; CHECK: [[FCVTSHr:%[0-9]+]]:fpr32 = FCVTSHr [[COPY]]
+    ; CHECK: [[FCVTSHr:%[0-9]+]]:fpr32 = nofpexcept FCVTSHr [[COPY]]
     ; CHECK: $s0 = COPY [[FCVTSHr]]
     %0(s16) = COPY $h0
     %1(s32) = G_FPEXT %0
@@ -146,7 +146,7 @@ body:             |
 
     ; CHECK-LABEL: name: fpext_s64_s16_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr16 = COPY $h0
-    ; CHECK: [[FCVTDHr:%[0-9]+]]:fpr64 = FCVTDHr [[COPY]]
+    ; CHECK: [[FCVTDHr:%[0-9]+]]:fpr64 = nofpexcept FCVTDHr [[COPY]]
     ; CHECK: $d0 = COPY [[FCVTDHr]]
     %0(s16) = COPY $h0
     %1(s64) = G_FPEXT %0
@@ -168,7 +168,7 @@ body:             |
 
     ; CHECK-LABEL: name: fpext_s64_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FCVTDSr:%[0-9]+]]:fpr64 = FCVTDSr [[COPY]]
+    ; CHECK: [[FCVTDSr:%[0-9]+]]:fpr64 = nofpexcept FCVTDSr [[COPY]]
     ; CHECK: $d0 = COPY [[FCVTDSr]]
     %0(s32) = COPY $s0
     %1(s64) = G_FPEXT %0
@@ -189,7 +189,7 @@ body:             |
     liveins: $d0
     ; CHECK-LABEL: name: fpext_v4s32_v4s16_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTLv4i16_:%[0-9]+]]:fpr128 = FCVTLv4i16 [[COPY]]
+    ; CHECK: [[FCVTLv4i16_:%[0-9]+]]:fpr128 = nofpexcept FCVTLv4i16 [[COPY]]
     ; CHECK: $q0 = COPY [[FCVTLv4i16_]]
     %0(<4 x s16>) = COPY $d0
     %1(<4 x s32>) = G_FPEXT %0
@@ -210,7 +210,7 @@ body:             |
     liveins: $d0
     ; CHECK-LABEL: name: fpext_v2s64_v2s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTLv2i32_:%[0-9]+]]:fpr128 = FCVTLv2i32 [[COPY]]
+    ; CHECK: [[FCVTLv2i32_:%[0-9]+]]:fpr128 = nofpexcept FCVTLv2i32 [[COPY]]
     ; CHECK: $q0 = COPY [[FCVTLv2i32_]]
     %0(<2 x s32>) = COPY $d0
     %1(<2 x s64>) = G_FPEXT %0
@@ -232,7 +232,7 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_s32_s32_fpr_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[SCVTFUWSri:%[0-9]+]]:fpr32 = SCVTFUWSri [[COPY]]
+    ; CHECK: [[SCVTFUWSri:%[0-9]+]]:fpr32 = nofpexcept SCVTFUWSri [[COPY]]
     ; CHECK: $s0 = COPY [[SCVTFUWSri]]
     %0(s32) = COPY $w0
     %1(s32) = G_SITOFP %0
@@ -254,7 +254,7 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_s32_s32_fpr_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[SCVTFv1i32_:%[0-9]+]]:fpr32 = SCVTFv1i32 [[COPY]]
+    ; CHECK: [[SCVTFv1i32_:%[0-9]+]]:fpr32 = nofpexcept SCVTFv1i32 [[COPY]]
     ; CHECK: $s0 = COPY [[SCVTFv1i32_]]
     %0(s32) = COPY $s0
     %1(s32) = G_SITOFP %0
@@ -276,7 +276,7 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_s32_s32_fpr_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[UCVTFv1i32_:%[0-9]+]]:fpr32 = UCVTFv1i32 [[COPY]]
+    ; CHECK: [[UCVTFv1i32_:%[0-9]+]]:fpr32 = nofpexcept UCVTFv1i32 [[COPY]]
     ; CHECK: $s0 = COPY [[UCVTFv1i32_]]
     %0(s32) = COPY $s0
     %1(s32) = G_UITOFP %0
@@ -298,7 +298,7 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_s32_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[SCVTFUXSri:%[0-9]+]]:fpr32 = SCVTFUXSri [[COPY]]
+    ; CHECK: [[SCVTFUXSri:%[0-9]+]]:fpr32 = nofpexcept SCVTFUXSri [[COPY]]
     ; CHECK: $s0 = COPY [[SCVTFUXSri]]
     %0(s64) = COPY $x0
     %1(s32) = G_SITOFP %0
@@ -320,7 +320,7 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_s64_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[SCVTFUWDri:%[0-9]+]]:fpr64 = SCVTFUWDri [[COPY]]
+    ; CHECK: [[SCVTFUWDri:%[0-9]+]]:fpr64 = nofpexcept SCVTFUWDri [[COPY]]
     ; CHECK: $d0 = COPY [[SCVTFUWDri]]
     %0(s32) = COPY $w0
     %1(s64) = G_SITOFP %0
@@ -343,7 +343,7 @@ body:             |
     ; CHECK-LABEL: name: sitofp_s64_s32_fpr_both
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK: [[SCVTFUWDri:%[0-9]+]]:fpr64 = SCVTFUWDri [[COPY1]]
+    ; CHECK: [[SCVTFUWDri:%[0-9]+]]:fpr64 = nofpexcept SCVTFUWDri [[COPY1]]
     ; CHECK: $d0 = COPY [[SCVTFUWDri]]
     %0(s32) = COPY $s0
     %1(s64) = G_SITOFP %0
@@ -365,7 +365,7 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_s64_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[SCVTFUXDri:%[0-9]+]]:fpr64 = SCVTFUXDri [[COPY]]
+    ; CHECK: [[SCVTFUXDri:%[0-9]+]]:fpr64 = nofpexcept SCVTFUXDri [[COPY]]
     ; CHECK: $d0 = COPY [[SCVTFUXDri]]
     %0(s64) = COPY $x0
     %1(s64) = G_SITOFP %0
@@ -387,7 +387,7 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_s32_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[UCVTFUWSri:%[0-9]+]]:fpr32 = UCVTFUWSri [[COPY]]
+    ; CHECK: [[UCVTFUWSri:%[0-9]+]]:fpr32 = nofpexcept UCVTFUWSri [[COPY]]
     ; CHECK: $s0 = COPY [[UCVTFUWSri]]
     %0(s32) = COPY $w0
     %1(s32) = G_UITOFP %0
@@ -409,7 +409,7 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_s32_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[UCVTFUXSri:%[0-9]+]]:fpr32 = UCVTFUXSri [[COPY]]
+    ; CHECK: [[UCVTFUXSri:%[0-9]+]]:fpr32 = nofpexcept UCVTFUXSri [[COPY]]
     ; CHECK: $s0 = COPY [[UCVTFUXSri]]
     %0(s64) = COPY $x0
     %1(s32) = G_UITOFP %0
@@ -431,7 +431,7 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_s64_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[UCVTFUWDri:%[0-9]+]]:fpr64 = UCVTFUWDri [[COPY]]
+    ; CHECK: [[UCVTFUWDri:%[0-9]+]]:fpr64 = nofpexcept UCVTFUWDri [[COPY]]
     ; CHECK: $d0 = COPY [[UCVTFUWDri]]
     %0(s32) = COPY $w0
     %1(s64) = G_UITOFP %0
@@ -453,7 +453,7 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_s64_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[UCVTFUXDri:%[0-9]+]]:fpr64 = UCVTFUXDri [[COPY]]
+    ; CHECK: [[UCVTFUXDri:%[0-9]+]]:fpr64 = nofpexcept UCVTFUXDri [[COPY]]
     ; CHECK: $d0 = COPY [[UCVTFUXDri]]
     %0(s64) = COPY $x0
     %1(s64) = G_UITOFP %0
@@ -475,7 +475,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptosi_s32_s32_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FCVTZSUWSr:%[0-9]+]]:gpr32 = FCVTZSUWSr [[COPY]]
+    ; CHECK: [[FCVTZSUWSr:%[0-9]+]]:gpr32 = nofpexcept FCVTZSUWSr [[COPY]]
     ; CHECK: $w0 = COPY [[FCVTZSUWSr]]
     %0(s32) = COPY $s0
     %1(s32) = G_FPTOSI %0
@@ -497,7 +497,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptosi_s32_s64_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTZSUWDr:%[0-9]+]]:gpr32 = FCVTZSUWDr [[COPY]]
+    ; CHECK: [[FCVTZSUWDr:%[0-9]+]]:gpr32 = nofpexcept FCVTZSUWDr [[COPY]]
     ; CHECK: $w0 = COPY [[FCVTZSUWDr]]
     %0(s64) = COPY $d0
     %1(s32) = G_FPTOSI %0
@@ -519,7 +519,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptosi_s64_s32_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FCVTZSUXSr:%[0-9]+]]:gpr64 = FCVTZSUXSr [[COPY]]
+    ; CHECK: [[FCVTZSUXSr:%[0-9]+]]:gpr64 = nofpexcept FCVTZSUXSr [[COPY]]
     ; CHECK: $x0 = COPY [[FCVTZSUXSr]]
     %0(s32) = COPY $s0
     %1(s64) = G_FPTOSI %0
@@ -541,7 +541,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptosi_s64_s64_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTZSUXDr:%[0-9]+]]:gpr64 = FCVTZSUXDr [[COPY]]
+    ; CHECK: [[FCVTZSUXDr:%[0-9]+]]:gpr64 = nofpexcept FCVTZSUXDr [[COPY]]
     ; CHECK: $x0 = COPY [[FCVTZSUXDr]]
     %0(s64) = COPY $d0
     %1(s64) = G_FPTOSI %0
@@ -563,7 +563,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptoui_s32_s32_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FCVTZUUWSr:%[0-9]+]]:gpr32 = FCVTZUUWSr [[COPY]]
+    ; CHECK: [[FCVTZUUWSr:%[0-9]+]]:gpr32 = nofpexcept FCVTZUUWSr [[COPY]]
     ; CHECK: $w0 = COPY [[FCVTZUUWSr]]
     %0(s32) = COPY $s0
     %1(s32) = G_FPTOUI %0
@@ -585,7 +585,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptoui_s32_s64_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTZUUWDr:%[0-9]+]]:gpr32 = FCVTZUUWDr [[COPY]]
+    ; CHECK: [[FCVTZUUWDr:%[0-9]+]]:gpr32 = nofpexcept FCVTZUUWDr [[COPY]]
     ; CHECK: $w0 = COPY [[FCVTZUUWDr]]
     %0(s64) = COPY $d0
     %1(s32) = G_FPTOUI %0
@@ -607,7 +607,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptoui_s64_s32_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FCVTZUUXSr:%[0-9]+]]:gpr64 = FCVTZUUXSr [[COPY]]
+    ; CHECK: [[FCVTZUUXSr:%[0-9]+]]:gpr64 = nofpexcept FCVTZUUXSr [[COPY]]
     ; CHECK: $x0 = COPY [[FCVTZUUXSr]]
     %0(s32) = COPY $s0
     %1(s64) = G_FPTOUI %0
@@ -629,7 +629,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptoui_s64_s64_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTZUUXDr:%[0-9]+]]:gpr64 = FCVTZUUXDr [[COPY]]
+    ; CHECK: [[FCVTZUUXDr:%[0-9]+]]:gpr64 = nofpexcept FCVTZUUXDr [[COPY]]
     ; CHECK: $x0 = COPY [[FCVTZUUXDr]]
     %0(s64) = COPY $d0
     %1(s64) = G_FPTOUI %0
@@ -648,7 +648,7 @@ body:             |
     ; CHECK-LABEL: name: sitofp_v2s64_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[SSHLLv2i32_shift:%[0-9]+]]:fpr128 = SSHLLv2i32_shift [[COPY]], 0
-    ; CHECK: [[SCVTFv2f64_:%[0-9]+]]:fpr128 = SCVTFv2f64 [[SSHLLv2i32_shift]]
+    ; CHECK: [[SCVTFv2f64_:%[0-9]+]]:fpr128 = nofpexcept SCVTFv2f64 [[SSHLLv2i32_shift]]
     ; CHECK: $q0 = COPY [[SCVTFv2f64_]]
     %0:fpr(<2 x s32>) = COPY $d0
     %1:fpr(<2 x s64>) = G_SITOFP %0
@@ -667,7 +667,7 @@ body:             |
     ; CHECK-LABEL: name: uitofp_v2s64_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[USHLLv2i32_shift:%[0-9]+]]:fpr128 = USHLLv2i32_shift [[COPY]], 0
-    ; CHECK: [[UCVTFv2f64_:%[0-9]+]]:fpr128 = UCVTFv2f64 [[USHLLv2i32_shift]]
+    ; CHECK: [[UCVTFv2f64_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv2f64 [[USHLLv2i32_shift]]
     ; CHECK: $q0 = COPY [[UCVTFv2f64_]]
     %0:fpr(<2 x s32>) = COPY $d0
     %1:fpr(<2 x s64>) = G_UITOFP %0
@@ -685,8 +685,8 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_v2s32_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[SCVTFv2f64_:%[0-9]+]]:fpr128 = SCVTFv2f64 [[COPY]]
-    ; CHECK: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = FCVTNv2i32 [[SCVTFv2f64_]]
+    ; CHECK: [[SCVTFv2f64_:%[0-9]+]]:fpr128 = nofpexcept SCVTFv2f64 [[COPY]]
+    ; CHECK: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv2i32 [[SCVTFv2f64_]]
     ; CHECK: $d0 = COPY [[FCVTNv2i32_]]
     %0:fpr(<2 x s64>) = COPY $q0
     %1:fpr(<2 x s32>) = G_SITOFP %0
@@ -704,8 +704,8 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_v2s32_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[UCVTFv2f64_:%[0-9]+]]:fpr128 = UCVTFv2f64 [[COPY]]
-    ; CHECK: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = FCVTNv2i32 [[UCVTFv2f64_]]
+    ; CHECK: [[UCVTFv2f64_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv2f64 [[COPY]]
+    ; CHECK: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv2i32 [[UCVTFv2f64_]]
     ; CHECK: $d0 = COPY [[FCVTNv2i32_]]
     %0:fpr(<2 x s64>) = COPY $q0
     %1:fpr(<2 x s32>) = G_UITOFP %0
@@ -723,8 +723,8 @@ body:             |
 
     ; CHECK-LABEL: name: fptosi_v2s64_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTLv2i32_:%[0-9]+]]:fpr128 = FCVTLv2i32 [[COPY]]
-    ; CHECK: [[FCVTZSv2f64_:%[0-9]+]]:fpr128 = FCVTZSv2f64 [[FCVTLv2i32_]]
+    ; CHECK: [[FCVTLv2i32_:%[0-9]+]]:fpr128 = nofpexcept FCVTLv2i32 [[COPY]]
+    ; CHECK: [[FCVTZSv2f64_:%[0-9]+]]:fpr128 = nofpexcept FCVTZSv2f64 [[FCVTLv2i32_]]
     ; CHECK: $q0 = COPY [[FCVTZSv2f64_]]
     %0:fpr(<2 x s32>) = COPY $d0
     %1:fpr(<2 x s64>) = G_FPTOSI %0
@@ -742,8 +742,8 @@ body:             |
 
     ; CHECK-LABEL: name: fptoui_v2s64_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FCVTLv2i32_:%[0-9]+]]:fpr128 = FCVTLv2i32 [[COPY]]
-    ; CHECK: [[FCVTZUv2f64_:%[0-9]+]]:fpr128 = FCVTZUv2f64 [[FCVTLv2i32_]]
+    ; CHECK: [[FCVTLv2i32_:%[0-9]+]]:fpr128 = nofpexcept FCVTLv2i32 [[COPY]]
+    ; CHECK: [[FCVTZUv2f64_:%[0-9]+]]:fpr128 = nofpexcept FCVTZUv2f64 [[FCVTLv2i32_]]
     ; CHECK: $q0 = COPY [[FCVTZUv2f64_]]
     %0:fpr(<2 x s32>) = COPY $d0
     %1:fpr(<2 x s64>) = G_FPTOUI %0
@@ -761,7 +761,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptosi_v2s32_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FCVTZSv2f64_:%[0-9]+]]:fpr128 = FCVTZSv2f64 [[COPY]]
+    ; CHECK: [[FCVTZSv2f64_:%[0-9]+]]:fpr128 = nofpexcept FCVTZSv2f64 [[COPY]]
     ; CHECK: [[XTNv2i32_:%[0-9]+]]:fpr64 = XTNv2i32 [[FCVTZSv2f64_]]
     ; CHECK: $d0 = COPY [[XTNv2i32_]]
     %0:fpr(<2 x s64>) = COPY $q0
@@ -780,7 +780,7 @@ body:             |
 
     ; CHECK-LABEL: name: fptoui_v2s32_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FCVTZUv2f64_:%[0-9]+]]:fpr128 = FCVTZUv2f64 [[COPY]]
+    ; CHECK: [[FCVTZUv2f64_:%[0-9]+]]:fpr128 = nofpexcept FCVTZUv2f64 [[COPY]]
     ; CHECK: [[XTNv2i32_:%[0-9]+]]:fpr64 = XTNv2i32 [[FCVTZUv2f64_]]
     ; CHECK: $d0 = COPY [[XTNv2i32_]]
     %0:fpr(<2 x s64>) = COPY $q0

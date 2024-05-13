@@ -10,19 +10,17 @@
 #define TEST_HASH_H
 
 #include <cstddef>
-#include <type_traits>
+#include <utility>
 
-template <class C>
+template <class T>
 class test_hash
-    : private C
 {
     int data_;
 public:
     explicit test_hash(int data = 0) : data_(data) {}
 
-    std::size_t
-    operator()(typename std::add_lvalue_reference<const typename C::argument_type>::type x) const
-        {return C::operator()(x);}
+    std::size_t operator()(const T& x) const
+        {return std::hash<T>()(x);}
 
     bool operator==(const test_hash& c) const
         {return data_ == c.data_;}

@@ -10,12 +10,11 @@
 
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -57,6 +56,7 @@ Error InfoStreamBuilder::finalizeMsfLayout() {
 
 Error InfoStreamBuilder::commit(const msf::MSFLayout &Layout,
                                 WritableBinaryStreamRef Buffer) const {
+  llvm::TimeTraceScope timeScope("Commit info stream");
   auto InfoS = WritableMappedBlockStream::createIndexedStream(
       Layout, Buffer, StreamPDB, Msf.getAllocator());
   BinaryStreamWriter Writer(*InfoS);

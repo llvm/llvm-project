@@ -1,5 +1,8 @@
-// RUN: %clang_cl_asan -Od %s -Fe%t
+// RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: %env_asan_opts=handle_sigfpe=1 not %run %t 2>&1 | FileCheck %s
+
+// FIXME: On MinGW frame #0 does not include the line number?
+// XFAIL: target={{.*-windows-gnu}}
 
 // Test the error output from misaligned SSE2 memory access. This is a READ
 // memory access. Windows appears to always provide an address of -1 for these
@@ -25,4 +28,4 @@ int main() {
 // CHECK: before alignment fault
 // CHECK: ERROR: AddressSanitizer: access-violation on unknown address {{0x[fF]*}}
 // CHECK-NEXT: The signal is caused by a READ memory access.
-// CHECK-NEXT: #0 {{.*}} in test(void) {{.*}}misalignment.cpp:{{.*}}
+// CHECK-NEXT: #0 {{.*}} in test({{(void)?}}) {{.*}}misalignment.cpp:{{.*}}

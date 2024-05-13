@@ -35,7 +35,7 @@ QuantizedType::verify(function_ref<InFlightDiagnostic()> emitError,
   // Verify that the storage type is integral.
   // This restriction may be lifted at some point in favor of using bf16
   // or f16 as exact representations on hardware where that is advantageous.
-  auto intStorageType = storageType.dyn_cast<IntegerType>();
+  auto intStorageType = llvm::dyn_cast<IntegerType>(storageType);
   if (!intStorageType)
     return emitError() << "storage type must be integral";
   unsigned integralWidth = intStorageType.getWidth();
@@ -83,8 +83,8 @@ Type QuantizedType::getExpressedType() const {
 }
 
 bool QuantizedType::isCompatibleExpressedType(Type candidateExpressedType) {
-  if (candidateExpressedType.isa<ShapedType>()) {
-    return candidateExpressedType.cast<ShapedType>().getElementType() ==
+  if (llvm::isa<ShapedType>(candidateExpressedType)) {
+    return llvm::cast<ShapedType>(candidateExpressedType).getElementType() ==
            getExpressedType();
   }
   return candidateExpressedType == getExpressedType();
@@ -92,28 +92,32 @@ bool QuantizedType::isCompatibleExpressedType(Type candidateExpressedType) {
 
 QuantizedType
 QuantizedType::getQuantizedElementType(Type primitiveOrContainerType) {
-  if (primitiveOrContainerType.isa<ShapedType>()) {
+  if (llvm::isa<ShapedType>(primitiveOrContainerType)) {
     Type elementType =
-        primitiveOrContainerType.cast<ShapedType>().getElementType();
-    return elementType.dyn_cast<QuantizedType>();
+        llvm::cast<ShapedType>(primitiveOrContainerType).getElementType();
+    return llvm::dyn_cast<QuantizedType>(elementType);
   }
-  return primitiveOrContainerType.dyn_cast<QuantizedType>();
+  return llvm::dyn_cast<QuantizedType>(primitiveOrContainerType);
 }
 
 Type QuantizedType::castFromStorageType(Type candidateType) {
   if (candidateType == getStorageType()) {
     // i.e. i32 -> quant<"uniform[i8:f32]{1.0}">
     return *this;
-  } else if (candidateType.isa<RankedTensorType>()) {
+  }
+  if (llvm::isa<RankedTensorType>(candidateType)) {
     // i.e. tensor<4xi8> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
     return RankedTensorType::get(
-        candidateType.cast<RankedTensorType>().getShape(), getStorageType());
-  } else if (candidateType.isa<UnrankedTensorType>()) {
+        llvm::cast<RankedTensorType>(candidateType).getShape(),
+        getStorageType());
+  }
+  if (llvm::isa<UnrankedTensorType>(candidateType)) {
     // i.e. tensor<i8> -> tensor<!quant<"uniform[i8:f32]{1.0}">>
     return UnrankedTensorType::get(getStorageType());
-  } else if (candidateType.isa<VectorType>()) {
+  }
+  if (llvm::isa<VectorType>(candidateType)) {
     // i.e. tensor<4xi8> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
-    return VectorType::get(candidateType.cast<VectorType>().getShape(),
+    return VectorType::get(llvm::cast<VectorType>(candidateType).getShape(),
                            getStorageType());
   }
 
@@ -121,22 +125,25 @@ Type QuantizedType::castFromStorageType(Type candidateType) {
 }
 
 Type QuantizedType::castToStorageType(Type quantizedType) {
-  if (quantizedType.isa<QuantizedType>()) {
+  if (llvm::isa<QuantizedType>(quantizedType)) {
     // i.e. quant<"uniform[i8:f32]{1.0}"> -> i8
-    return quantizedType.cast<QuantizedType>().getStorageType();
-  } else if (quantizedType.isa<ShapedType>()) {
+    return llvm::cast<QuantizedType>(quantizedType).getStorageType();
+  }
+  if (llvm::isa<ShapedType>(quantizedType)) {
     // i.e. tensor<4xi8> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
-    ShapedType sType = quantizedType.cast<ShapedType>();
-    if (!sType.getElementType().isa<QuantizedType>()) {
+    ShapedType sType = llvm::cast<ShapedType>(quantizedType);
+    if (!llvm::isa<QuantizedType>(sType.getElementType())) {
       return nullptr;
     }
     Type storageType =
-        sType.getElementType().cast<QuantizedType>().getStorageType();
-    if (quantizedType.isa<RankedTensorType>()) {
+        llvm::cast<QuantizedType>(sType.getElementType()).getStorageType();
+    if (llvm::isa<RankedTensorType>(quantizedType)) {
       return RankedTensorType::get(sType.getShape(), storageType);
-    } else if (quantizedType.isa<UnrankedTensorType>()) {
+    }
+    if (llvm::isa<UnrankedTensorType>(quantizedType)) {
       return UnrankedTensorType::get(storageType);
-    } else if (quantizedType.isa<VectorType>()) {
+    }
+    if (llvm::isa<VectorType>(quantizedType)) {
       return VectorType::get(sType.getShape(), storageType);
     }
   }
@@ -148,19 +155,22 @@ Type QuantizedType::castFromExpressedType(Type candidateType) {
   if (candidateType == getExpressedType()) {
     // i.e. f32 -> quant<"uniform[i8:f32]{1.0}">
     return *this;
-  } else if (candidateType.isa<ShapedType>()) {
-    ShapedType candidateShapedType = candidateType.cast<ShapedType>();
+  }
+  if (llvm::isa<ShapedType>(candidateType)) {
+    ShapedType candidateShapedType = llvm::cast<ShapedType>(candidateType);
     if (candidateShapedType.getElementType() != getExpressedType()) {
       return nullptr;
     }
 
-    if (candidateType.isa<RankedTensorType>()) {
+    if (llvm::isa<RankedTensorType>(candidateType)) {
       // i.e. tensor<4xf32> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
       return RankedTensorType::get(candidateShapedType.getShape(), *this);
-    } else if (candidateType.isa<UnrankedTensorType>()) {
+    }
+    if (llvm::isa<UnrankedTensorType>(candidateType)) {
       // i.e. tensor<xf32> -> tensor<x!quant<"uniform[i8:f32]{1.0}">>
       return UnrankedTensorType::get(*this);
-    } else if (candidateType.isa<VectorType>()) {
+    }
+    if (llvm::isa<VectorType>(candidateType)) {
       // i.e. tensor<4xf32> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
       return VectorType::get(candidateShapedType.getShape(), *this);
     }
@@ -170,22 +180,25 @@ Type QuantizedType::castFromExpressedType(Type candidateType) {
 }
 
 Type QuantizedType::castToExpressedType(Type quantizedType) {
-  if (quantizedType.isa<QuantizedType>()) {
+  if (llvm::isa<QuantizedType>(quantizedType)) {
     // i.e. quant<"uniform[i8:f32]{1.0}"> -> f32
-    return quantizedType.cast<QuantizedType>().getExpressedType();
-  } else if (quantizedType.isa<ShapedType>()) {
+    return llvm::cast<QuantizedType>(quantizedType).getExpressedType();
+  }
+  if (llvm::isa<ShapedType>(quantizedType)) {
     // i.e. tensor<4xi8> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
-    ShapedType sType = quantizedType.cast<ShapedType>();
-    if (!sType.getElementType().isa<QuantizedType>()) {
+    ShapedType sType = llvm::cast<ShapedType>(quantizedType);
+    if (!llvm::isa<QuantizedType>(sType.getElementType())) {
       return nullptr;
     }
     Type expressedType =
-        sType.getElementType().cast<QuantizedType>().getExpressedType();
-    if (quantizedType.isa<RankedTensorType>()) {
+        llvm::cast<QuantizedType>(sType.getElementType()).getExpressedType();
+    if (llvm::isa<RankedTensorType>(quantizedType)) {
       return RankedTensorType::get(sType.getShape(), expressedType);
-    } else if (quantizedType.isa<UnrankedTensorType>()) {
+    }
+    if (llvm::isa<UnrankedTensorType>(quantizedType)) {
       return UnrankedTensorType::get(expressedType);
-    } else if (quantizedType.isa<VectorType>()) {
+    }
+    if (llvm::isa<VectorType>(quantizedType)) {
       return VectorType::get(sType.getShape(), expressedType);
     }
   }
@@ -231,7 +244,7 @@ AnyQuantizedType::verify(function_ref<InFlightDiagnostic()> emitError,
   // Verify that the expressed type is floating point.
   // If this restriction is ever eliminated, the parser/printer must be
   // extended.
-  if (expressedType && !expressedType.isa<FloatType>())
+  if (expressedType && !llvm::isa<FloatType>(expressedType))
     return emitError() << "expressed type must be floating point";
 
   return success();
@@ -272,7 +285,7 @@ LogicalResult UniformQuantizedType::verify(
   // Verify that the expressed type is floating point.
   // If this restriction is ever eliminated, the parser/printer must be
   // extended.
-  if (!expressedType.isa<FloatType>())
+  if (!llvm::isa<FloatType>(expressedType))
     return emitError() << "expressed type must be floating point";
 
   // Verify scale.
@@ -326,7 +339,7 @@ LogicalResult UniformQuantizedPerAxisType::verify(
   // Verify that the expressed type is floating point.
   // If this restriction is ever eliminated, the parser/printer must be
   // extended.
-  if (!expressedType.isa<FloatType>())
+  if (!llvm::isa<FloatType>(expressedType))
     return emitError() << "expressed type must be floating point";
 
   // Ensure that the number of scales and zeroPoints match.
@@ -373,7 +386,7 @@ CalibratedQuantizedType::verify(function_ref<InFlightDiagnostic()> emitError,
   // Verify that the expressed type is floating point.
   // If this restriction is ever eliminated, the parser/printer must be
   // extended.
-  if (!expressedType.isa<FloatType>())
+  if (!llvm::isa<FloatType>(expressedType))
     return emitError() << "expressed type must be floating point";
   if (max <= min)
     return emitError() << "illegal min and max: (" << min << ":" << max << ")";

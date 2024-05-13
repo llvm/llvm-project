@@ -1,5 +1,4 @@
 ; Test -sanitizer-coverage-trace-compares=1
-; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
@@ -14,12 +13,12 @@ entry:
 
 ; compare (const, non-const)
   icmp slt i32 %a, 1
-; CHECK: call void @__sanitizer_cov_trace_const_cmp4(i32 zeroext 1, i32 zeroext %a)
+; CHECK: call void @__sanitizer_cov_trace_const_cmp4(i32 1, i32 %a)
 ; CHECK-NEXT: icmp slt i32 %a, 1
 
 ; compare (non-const, const)
   icmp slt i32 1, %a
-; CHECK: call void @__sanitizer_cov_trace_const_cmp4(i32 zeroext 1, i32 zeroext %a)
+; CHECK: call void @__sanitizer_cov_trace_const_cmp4(i32 1, i32 %a)
 ; CHECK-NEXT: icmp slt i32 1, %a
 
 ; compare (const, const) - should not be instrumented
@@ -31,22 +30,22 @@ entry:
   %x = trunc i32 %a to i8
 
   icmp slt i8 %x, 1
-; CHECK: call void @__sanitizer_cov_trace_const_cmp1(i8 zeroext 1, i8 zeroext %x)
+; CHECK: call void @__sanitizer_cov_trace_const_cmp1(i8 1, i8 %x)
 ; CHECK-NEXT: icmp slt i8 %x, 1
 
   icmp slt i8 1, %x
-; CHECK: call void @__sanitizer_cov_trace_const_cmp1(i8 zeroext 1, i8 zeroext %x)
+; CHECK: call void @__sanitizer_cov_trace_const_cmp1(i8 1, i8 %x)
 ; CHECK-NEXT: icmp slt i8 1, %x
 
 ; compare variables of word size
   %y = trunc i32 %a to i16
 
   icmp slt i16 %y, 1
-; CHECK: call void @__sanitizer_cov_trace_const_cmp2(i16 zeroext 1, i16 zeroext %y)
+; CHECK: call void @__sanitizer_cov_trace_const_cmp2(i16 1, i16 %y)
 ; CHECK-NEXT: icmp slt i16 %y, 1
 
   icmp slt i16 1, %y
-; CHECK: call void @__sanitizer_cov_trace_const_cmp2(i16 zeroext 1, i16 zeroext %y)
+; CHECK: call void @__sanitizer_cov_trace_const_cmp2(i16 1, i16 %y)
 ; CHECK-NEXT: icmp slt i16 1, %y
 
 ; compare variables of qword size

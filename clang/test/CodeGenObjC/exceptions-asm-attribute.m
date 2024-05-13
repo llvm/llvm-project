@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -Wno-objc-root-class -fexceptions -fobjc-exceptions -o %t %s
 // RUN: FileCheck -check-prefix=CHECK-X86_64 < %t %s
 // RUN: FileCheck -check-prefix=CHECK-EHTYPE < %t %s
-// rdar://16462586
 
 // We need exactly 3 of these.
 // CHECK-EHTYPE: @"OBJC_EHTYPE_$_MySecretNamespace.EH3"
@@ -19,7 +18,7 @@
 // CHECK-X86_64: define internal void @"\01-[A im0]"
 // CHECK-X86_64: define internal void @"\01-[A(Cat) im1]"
 
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -Wno-objc-root-class -fobjc-exceptions -fvisibility hidden -emit-llvm -o %t %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -Wno-objc-root-class -fobjc-exceptions -fvisibility=hidden -emit-llvm -o %t %s
 // RUN: FileCheck -check-prefix=CHECK-X86_64-HIDDEN < %t %s
 
 // CHECK-X86_64-HIDDEN: @"OBJC_CLASS_$_MySecretNamespace.A" = hidden global {{.*}}, section "__DATA, __objc_data", align 8
@@ -71,7 +70,7 @@ __attribute__((__objc_exception__))
 @interface EH3
 @end
 
-void f1();
+void f1(void);
 
 void f0(id x) {
   @try {

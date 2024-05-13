@@ -8,12 +8,12 @@
 
 #include "src/string/bzero.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/memset_utils.h"
+#include "src/string/memory_utils/inline_bzero.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, bzero, (void *ptr, size_t count)) {
-  GeneralPurposeMemset(reinterpret_cast<char *>(ptr), 0, count);
+  inline_bzero(reinterpret_cast<char *>(ptr), count);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

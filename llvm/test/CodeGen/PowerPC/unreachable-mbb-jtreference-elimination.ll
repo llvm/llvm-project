@@ -1,9 +1,10 @@
-; RUN: llc -O2 --verify-machineinstrs -stop-before=livevars \
+; RUN: llc -O2 --verify-machineinstrs -stop-before=livevars -ppc-min-jump-table-entries=4 \
 ; RUN:   -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
 
 define dso_local void @foo() #0 {
 ; CHECK-LABEL: fixedStack:
 ; CHECK-NEXT:  stack: []
+; CHECK-NEXT:  entry_values: []
 ; CHECK-NEXT:  callSites: []
 ; CHECK-NEXT:  debugValueSubstitutions: []
 ; CHECK-NEXT:  constants: []

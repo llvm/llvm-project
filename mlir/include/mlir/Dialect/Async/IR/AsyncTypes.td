@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_ASYNC_IR_ASYNCTYPES
 #define MLIR_DIALECT_ASYNC_IR_ASYNCTYPES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/Async/IR/AsyncDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -46,6 +47,7 @@ def Async_ValueType : Async_Type<"Value", "value"> {
       return $_get(valueType.getContext(), valueType);
     }]>
   ];
+  let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
 }
 

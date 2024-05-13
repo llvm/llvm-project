@@ -9,4 +9,4 @@
 // LINUX: !llvm.dependent-libraries = !{![[msvcrt:[0-9]+]]}
 // LINUX: ![[msvcrt]] = !{!"msvcrt"}
 
-int f();
+int f(void);

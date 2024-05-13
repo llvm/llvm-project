@@ -8,9 +8,10 @@
 
 # Semantic Analysis
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 The semantic analysis pass determines if a syntactically correct Fortran

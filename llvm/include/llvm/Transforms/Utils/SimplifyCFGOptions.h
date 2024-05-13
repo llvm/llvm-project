@@ -23,12 +23,13 @@ class AssumptionCache;
 struct SimplifyCFGOptions {
   int BonusInstThreshold = 1;
   bool ForwardSwitchCondToPhi = false;
+  bool ConvertSwitchRangeToICmp = false;
   bool ConvertSwitchToLookupTable = false;
   bool NeedCanonicalLoop = true;
   bool HoistCommonInsts = false;
   bool SinkCommonInsts = false;
   bool SimplifyCondBranch = true;
-  bool FoldTwoEntryPHINode = true;
+  bool SpeculateBlocks = true;
 
   AssumptionCache *AC = nullptr;
 
@@ -39,6 +40,10 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &forwardSwitchCondToPhi(bool B) {
     ForwardSwitchCondToPhi = B;
+    return *this;
+  }
+  SimplifyCFGOptions &convertSwitchRangeToICmp(bool B) {
+    ConvertSwitchRangeToICmp = B;
     return *this;
   }
   SimplifyCFGOptions &convertSwitchToLookupTable(bool B) {
@@ -66,8 +71,8 @@ struct SimplifyCFGOptions {
     return *this;
   }
 
-  SimplifyCFGOptions &setFoldTwoEntryPHINode(bool B) {
-    FoldTwoEntryPHINode = B;
+  SimplifyCFGOptions &speculateBlocks(bool B) {
+    SpeculateBlocks = B;
     return *this;
   }
 };

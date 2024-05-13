@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -mtriple=amdgcn-- -loop-unroll | FileCheck %s
+; RUN: opt < %s -S -mtriple=amdgcn-- -passes=loop-unroll | FileCheck %s
 
 ; Check the handling of amdgpu.loop.unroll.threshold metadata which can be used to
 ; set the default threshold for a loop. This metadata overrides both the AMDGPU
@@ -12,8 +12,8 @@
 ; CHECK: br i1 %cmp
 ; CHECK: ret void
 
-@in = internal unnamed_addr global i32* null, align 8
-@out = internal unnamed_addr global i32* null, align 8
+@in = internal unnamed_addr global ptr null, align 8
+@out = internal unnamed_addr global ptr null, align 8
 
 define void @unroll_default() {
 entry:
@@ -21,8 +21,8 @@ entry:
 
 do.body:                                          ; preds = %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %do.body ]
-  %v1 = load i64, i64* bitcast (i32** @in to i64*), align 8
-  store i64 %v1, i64* bitcast (i32** @out to i64*), align 8
+  %v1 = load i64, ptr @in, align 8
+  store i64 %v1, ptr @out, align 8
   %inc = add nsw i32 %i.0, 1
   %cmp = icmp slt i32 %inc, 100
   br i1 %cmp, label %do.body, label %do.end
@@ -44,8 +44,8 @@ entry:
 
 do.body:                                          ; preds = %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %do.body ]
-  %v1 = load i64, i64* bitcast (i32** @in to i64*), align 8
-  store i64 %v1, i64* bitcast (i32** @out to i64*), align 8
+  %v1 = load i64, ptr @in, align 8
+  store i64 %v1, ptr @out, align 8
   %inc = add nsw i32 %i.0, 1
   %cmp = icmp slt i32 %inc, 100
   br i1 %cmp, label %do.body, label %do.end, !llvm.loop !1
@@ -69,8 +69,8 @@ entry:
 
 do.body:                                          ; preds = %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %do.body ]
-  %v1 = load i64, i64* bitcast (i32** @in to i64*), align 8
-  store i64 %v1, i64* bitcast (i32** @out to i64*), align 8
+  %v1 = load i64, ptr @in, align 8
+  store i64 %v1, ptr @out, align 8
   %inc = add nsw i32 %i.0, 1
   %cmp = icmp slt i32 %inc, 100
   br i1 %cmp, label %do.body, label %do.end, !llvm.loop !3
@@ -94,8 +94,8 @@ entry:
 
 do.body:                                          ; preds = %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %do.body ]
-  %v1 = load i64, i64* bitcast (i32** @in to i64*), align 8
-  store i64 %v1, i64* bitcast (i32** @out to i64*), align 8
+  %v1 = load i64, ptr @in, align 8
+  store i64 %v1, ptr @out, align 8
   %inc = add nsw i32 %i.0, 1
   %cmp = icmp slt i32 %inc, 100
   br i1 %cmp, label %do.body, label %do.end, !llvm.loop !1

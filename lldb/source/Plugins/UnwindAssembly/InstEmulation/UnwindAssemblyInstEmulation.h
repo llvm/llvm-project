@@ -52,13 +52,11 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "inst-emulation"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 private:
   // Call CreateInstance to get an instance of this class
@@ -66,10 +64,10 @@ private:
                               lldb_private::EmulateInstruction *inst_emulator)
       : UnwindAssembly(arch), m_inst_emulator_up(inst_emulator),
         m_range_ptr(nullptr), m_unwind_plan_ptr(nullptr), m_curr_row(),
-        m_cfa_reg_info(), m_fp_is_cfa(false), m_register_values(),
-        m_pushed_regs(), m_curr_row_modified(false),
+        m_initial_sp(0), m_cfa_reg_info(), m_fp_is_cfa(false),
+        m_register_values(), m_pushed_regs(), m_curr_row_modified(false),
         m_forward_branch_offset(0) {
-    if (m_inst_emulator_up.get()) {
+    if (m_inst_emulator_up) {
       m_inst_emulator_up->SetBaton(this);
       m_inst_emulator_up->SetCallbacks(ReadMemory, WriteMemory, ReadRegister,
                                        WriteRegister);

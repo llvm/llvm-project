@@ -2,6 +2,7 @@
 // RUN:   -fsyntax-only -triple=spir64 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -fsyntax-only \
 // RUN:   -triple=amdgcn-amd-amdhsa -fdeclare-opencl-builtins -finclude-default-header
+// TODO: add -cl-std=CL3.0 line when generic and psv are supported.
 
 // Basic parsing/Sema tests for __opencl_atomic_*
 
@@ -18,7 +19,7 @@ int8 i64;
 
 atomic_int gn;
 void f(atomic_int *i, const atomic_int *ci,
-       atomic_intptr_t *p, atomic_float *f, atomic_double *d, atomic_half *h, // expected-error {{unknown type name 'atomic_half'}}
+       atomic_intptr_t *p, atomic_float *f, atomic_double *d, atomic_half *h,
        int *I, const int *CI,
        intptr_t *P, float *D, struct S *s1, struct S *s2,
        global atomic_int *i_g, local atomic_int *i_l, private atomic_int *i_p,
@@ -60,8 +61,10 @@ void f(atomic_int *i, const atomic_int *ci,
 
   __opencl_atomic_fetch_min(i, 1, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_fetch_max(i, 1, memory_order_seq_cst, memory_scope_work_group);
-  __opencl_atomic_fetch_min(f, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
-  __opencl_atomic_fetch_max(f, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
+  __opencl_atomic_fetch_min(f, 1, memory_order_seq_cst, memory_scope_work_group);
+  __opencl_atomic_fetch_max(f, 1, memory_order_seq_cst, memory_scope_work_group);
+  __opencl_atomic_fetch_min(d, 1, memory_order_seq_cst, memory_scope_work_group);
+  __opencl_atomic_fetch_max(d, 1, memory_order_seq_cst, memory_scope_work_group);
 
   bool cmpexch_1 = __opencl_atomic_compare_exchange_strong(i, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
   bool cmpexch_2 = __opencl_atomic_compare_exchange_strong(p, P, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
@@ -81,7 +84,7 @@ void f(atomic_int *i, const atomic_int *ci,
   __opencl_atomic_load(ci, memory_order_acquire, memory_scope_work_group);
 
   __opencl_atomic_init(&gn, 456);
-  __opencl_atomic_init(&gn, (void*)0); // expected-warning{{incompatible pointer to integer conversion passing '__generic void *' to parameter of type 'int'}}
+  __opencl_atomic_init(&gn, (void*)0); // expected-error{{incompatible pointer to integer conversion passing '__generic void *' to parameter of type 'int'}}
 }
 
 void memory_checks(atomic_int *Ap, int *p, int val) {
@@ -161,6 +164,11 @@ void synchscope_checks(atomic_int *Ap, int scope) {
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_work_group);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_device);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_all_svm_devices);
+  (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_all_devices);
+#if __OPENCL_C_VERSION__ < CL_VERSION_3_0
+  // expected-error@-2{{use of undeclared identifier 'memory_scope_all_devices'}}
+  // expected-note@* {{'memory_scope_all_svm_devices' declared here}}
+#endif
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_sub_group);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, scope);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, 10);    //expected-error{{synchronization scope argument to atomic operation is invalid}}

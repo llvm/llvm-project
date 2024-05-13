@@ -1,6 +1,7 @@
 ; RUN: %lli -jit-kind=mcjit -remote-mcjit -disable-lazy-compilation=false -mcjit-remote-process=lli-child-target%exeext %s
-; XFAIL: windows-gnu,windows-msvc
-; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; XFAIL: target={{.*-windows-(gnu|msvc)}}
+; REQUIRES: thread_support
+; UNSUPPORTED: target=powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 
 define i32 @main() nounwind {
@@ -11,28 +12,28 @@ entry:
 
 ; Test PR3043: @test should have the same address before and after
 ; it's JIT-compiled.
-@funcPtr = common global i1 ()* null, align 4
+@funcPtr = common global ptr null, align 4
 @lcaic_failure = internal constant [46 x i8] c"@lazily_compiled_address_is_consistent failed\00"
 
 define void @lazily_compiled_address_is_consistent() nounwind {
 entry:
-	store i1 ()* @test, i1 ()** @funcPtr
+	store ptr @test, ptr @funcPtr
 	%pass = tail call i1 @test()		; <i32> [#uses=1]
 	br i1 %pass, label %pass_block, label %fail_block
 pass_block:
 	ret void
 fail_block:
-	call i32 @puts(i8* getelementptr([46 x i8], [46 x i8]* @lcaic_failure, i32 0, i32 0))
+	call i32 @puts(ptr @lcaic_failure)
 	call void @exit(i32 1)
 	unreachable
 }
 
 define i1 @test() nounwind {
 entry:
-	%tmp = load i1 ()*, i1 ()** @funcPtr
-	%eq = icmp eq i1 ()* %tmp, @test
+	%tmp = load ptr, ptr @funcPtr
+	%eq = icmp eq ptr %tmp, @test
 	ret i1 %eq
 }
 
-declare i32 @puts(i8*) noreturn
+declare i32 @puts(ptr) noreturn
 declare void @exit(i32) noreturn

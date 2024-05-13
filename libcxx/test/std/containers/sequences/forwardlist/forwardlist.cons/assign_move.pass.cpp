@@ -34,7 +34,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A(10));
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == n);
         assert(n == 10);
         assert(c1.get_allocator() == A(10));
@@ -51,7 +51,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A(11));
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == n);
         assert(n == 10);
         assert(c1.get_allocator() == A(11));
@@ -68,7 +68,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A(10));
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == 10+n);
         assert(n == 4);
         assert(c1.get_allocator() == A(10));
@@ -85,7 +85,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A(11));
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == 10+n);
         assert(n == 4);
         assert(c1.get_allocator() == A(11));
@@ -103,7 +103,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A(10));
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == n);
         assert(n == 10);
         assert(c1.get_allocator() == A(10));
@@ -120,7 +120,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A(11));
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == n);
         assert(n == 10);
         assert(c1.get_allocator() == A(10));
@@ -137,7 +137,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A(10));
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == 10+n);
         assert(n == 4);
         assert(c1.get_allocator() == A(10));
@@ -154,7 +154,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A(11));
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == 10+n);
         assert(n == 4);
         assert(c1.get_allocator() == A(10));
@@ -171,7 +171,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A());
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == n);
         assert(n == 10);
         assert(c1.get_allocator() == A());
@@ -188,7 +188,7 @@ int main(int, char**)
         C c1(I(std::begin(t1)), I(std::end(t1)), A());
         c1 = std::move(c0);
         int n = 0;
-        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, ++n)
+        for (C::const_iterator i = c1.cbegin(); i != c1.cend(); ++i, (void) ++n)
             assert(*i == 10+n);
         assert(n == 4);
         assert(c1.get_allocator() == A());

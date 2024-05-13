@@ -75,10 +75,10 @@ struct UserArea {
   (LLVM_EXTENSION offsetof(UserArea, dbg) +                                    \
    LLVM_EXTENSION offsetof(DBG, dr[reg_index]))
 
-// Include RegisterInfos_x86_64 to declare our g_register_infos_x86_64
+// Include RegisterInfos_x86_64 to declare our g_register_infos_x86_64_with_base
 // structure.
 #define DECLARE_REGISTER_INFOS_X86_64_STRUCT
-#include "RegisterInfos_x86_64.h"
+#include "RegisterInfos_x86_64_with_base.h"
 #undef DECLARE_REGISTER_INFOS_X86_64_STRUCT
 
 static std::vector<lldb_private::RegisterInfo> &GetPrivateRegisterInfoVector() {
@@ -103,7 +103,7 @@ GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
 // Include RegisterInfos_x86_64 to update the g_register_infos structure
 //  with x86_64 offsets.
 #define UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
-#include "RegisterInfos_x86_64.h"
+#include "RegisterInfos_x86_64_with_base.h"
 #undef UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
   }
 
@@ -115,7 +115,7 @@ static const RegisterInfo *GetRegisterInfoPtr(const ArchSpec &target_arch) {
   case llvm::Triple::x86:
     return GetRegisterInfo_i386(target_arch);
   case llvm::Triple::x86_64:
-    return g_register_infos_x86_64;
+    return g_register_infos_x86_64_with_base;
   default:
     assert(false && "Unhandled target architecture.");
     return nullptr;
@@ -130,8 +130,8 @@ static uint32_t GetRegisterInfoCount(const ArchSpec &target_arch) {
     return static_cast<uint32_t>(GetPrivateRegisterInfoVector().size());
   }
   case llvm::Triple::x86_64:
-    return static_cast<uint32_t>(sizeof(g_register_infos_x86_64) /
-                                 sizeof(g_register_infos_x86_64[0]));
+    return static_cast<uint32_t>(sizeof(g_register_infos_x86_64_with_base) /
+                                 sizeof(g_register_infos_x86_64_with_base[0]));
   default:
     assert(false && "Unhandled target architecture.");
     return 0;
@@ -143,7 +143,7 @@ static uint32_t GetUserRegisterInfoCount(const ArchSpec &target_arch) {
   case llvm::Triple::x86:
     return static_cast<uint32_t>(k_num_user_registers_i386);
   case llvm::Triple::x86_64:
-    return static_cast<uint32_t>(k_num_user_registers_x86_64);
+    return static_cast<uint32_t>(x86_64_with_base::k_num_user_registers);
   default:
     assert(false && "Unhandled target architecture.");
     return 0;
@@ -152,32 +152,24 @@ static uint32_t GetUserRegisterInfoCount(const ArchSpec &target_arch) {
 
 RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(
     const ArchSpec &target_arch)
-    : lldb_private::RegisterInfoInterface(target_arch),
+    : lldb_private::RegisterContextLinux_x86(
+          target_arch,
+          {"orig_rax",
+           nullptr,
+           sizeof(((GPR *)nullptr)->orig_rax),
+           (LLVM_EXTENSION offsetof(GPR, orig_rax)),
+           eEncodingUint,
+           eFormatHex,
+           {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+            LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+           nullptr,
+           nullptr,
+           nullptr}),
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
       m_register_info_count(GetRegisterInfoCount(target_arch)),
-      m_user_register_count(GetUserRegisterInfoCount(target_arch)) {
-  RegisterInfo orig_ax = {"orig_rax",
-                          nullptr,
-                          sizeof(((GPR *)nullptr)->orig_rax),
-                          (LLVM_EXTENSION offsetof(GPR, orig_rax)),
-                          eEncodingUint,
-                          eFormatHex,
-                          {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-                           LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-                           LLDB_INVALID_REGNUM},
-                          nullptr,
-                          nullptr,
-                          nullptr,
-                          0};
-  d_register_infos.push_back(orig_ax);
-}
+      m_user_register_count(GetUserRegisterInfoCount(target_arch)) {}
 
-size_t RegisterContextLinux_x86_64::GetGPRSize() const { return sizeof(GPR); }
-
-const std::vector<lldb_private::RegisterInfo> *
-RegisterContextLinux_x86_64::GetDynamicRegisterInfoP() const {
-  return &d_register_infos;
-}
+size_t RegisterContextLinux_x86_64::GetGPRSizeStatic() { return sizeof(GPR); }
 
 const RegisterInfo *RegisterContextLinux_x86_64::GetRegisterInfo() const {
   return m_register_info_p;

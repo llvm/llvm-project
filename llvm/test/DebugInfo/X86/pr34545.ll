@@ -1,14 +1,31 @@
-; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 -o - %s -stop-after=livedebugvars | FileCheck %s
+; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 \
+; RUN:    -o - %s -stop-after=livedebugvars \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,VARLOCS
+; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 \
+; RUN:    -o - %s -stop-after=livedebugvars \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
-; CHECK: $eax = MOV32rm
-; CHECK: DBG_VALUE $eax
-; CHECK: $eax = SHL32rCL killed renamable $eax
-; CHECK: DBG_VALUE $eax
-; CHECK: DBG_VALUE $rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
-; CHECK: DBG_VALUE $eax
-; CHECK: $eax = SHL32rCL killed renamable $eax
-; CHECK: DBG_VALUE $eax
-; CHECK: RETQ $eax
+; CHECK:         $eax = MOV32rm
+; INSTRREF-SAME:      debug-instr-number 1
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+; VARLOCS:         DBG_VALUE $eax
+; INSTRREF:        DBG_VALUE_LIST {{.+}} $eax
+; CHECK:         $eax = SHL32rCL killed renamable $eax,
+; INSTRREF-SAME:      debug-instr-number 2
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+; VARLOCS:       DBG_VALUE $eax
+; INSTRREF:      DBG_VALUE_LIST {{.+}} $eax
+; VARLOCS:       DBG_VALUE $rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
+; INSTRREF:      DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 4, DW_OP_minus, DW_OP_deref), $rsp
+; VARLOCS:       DBG_VALUE $eax
+; CHECK:         $eax = SHL32rCL killed renamable $eax,
+; INSTRREF-SAME:      debug-instr-number 3
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
+; VARLOCS:       DBG_VALUE $eax
+; INSTRREF:      DBG_VALUE_LIST {{.+}} $eax
+; CHECK:         RET64 $eax
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -18,17 +35,17 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @main() local_unnamed_addr !dbg !14 {
 entry:
-  %0 = load i32, i32* @var
+  %0 = load i32, ptr @var
   tail call void @llvm.dbg.value(metadata i32 %0, metadata !18, metadata !DIExpression()), !dbg !20
-  %1 = load i32, i32* @sc
+  %1 = load i32, ptr @sc
   %shl = shl i32 %0, %1
   tail call void @llvm.dbg.value(metadata i32 %shl, metadata !18, metadata !DIExpression()), !dbg !20
   tail call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(), !srcloc !25
-  %2 = load i32, i32* @sc
+  %2 = load i32, ptr @sc
   %shl2 = shl i32 %shl, %2
   tail call void @llvm.dbg.value(metadata i32 %shl2, metadata !18, metadata !DIExpression()), !dbg !20
-  store i32 %shl2, i32* @var
-  ret i32 %shl2
+  store i32 %shl2, ptr @var
+  ret i32 %shl2, !dbg !20
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)

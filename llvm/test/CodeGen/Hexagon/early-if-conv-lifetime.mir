@@ -14,21 +14,20 @@
   %s.2 = type { %s.3 }
   %s.3 = type { %s.4 }
   %s.4 = type { %s.5 }
-  %s.5 = type { i32, i32, i8* }
+  %s.5 = type { i32, i32, ptr }
 
-  declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+  declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
 
   define hidden fastcc void @f0() {
   b0:
     %v0 = alloca %s.0, align 4
-    %v1 = load i8, i8* undef, align 1
+    %v1 = load i8, ptr undef, align 1
     %v2 = add i8 %v1, -102
     %v3 = icmp ult i8 %v2, 1
     br i1 %v3, label %b1, label %b2
 
   b1:                                               ; preds = %b0
-    %v4 = bitcast %s.0* %v0 to i8*
-    call void @llvm.lifetime.end.p0i8(i64 12, i8* nonnull %v4)
+    call void @llvm.lifetime.end.p0(i64 12, ptr nonnull %v0)
     br label %b2
 
   b2:                                               ; preds = %b1, %b0
@@ -58,7 +57,7 @@ body:             |
     successors: %bb.1.b1(0x40000000), %bb.2.b2(0x40000000)
 
     %1 = IMPLICIT_DEF
-    %0 = L2_loadrb_io killed %1, 0 :: (load 1 from `i8* undef`)
+    %0 = L2_loadrb_io killed %1, 0 :: (load (s8) from `ptr undef`)
     %2 = C2_cmpeqi killed %0, 102
     %3 = COPY killed %2
     J2_jumpf killed %3, %bb.2.b2, implicit-def dead $pc

@@ -49,14 +49,13 @@ void f2(NSString *s) {
     // expected-note{{use CFBridgingRetain call to make an ARC object available as a +1 'CFStringRef' (aka 'const struct __CFString *')}}
 }
 
-CFStringRef f3() {
+CFStringRef f3(void) {
   return (CFStringRef)[[[NSString alloc] init] autorelease]; // expected-error {{it is not safe to cast to 'CFStringRef' the result of 'autorelease' message; a __bridge cast may result in a pointer to a destroyed object and a __bridge_retained may leak the object}} \
     // expected-note {{remove the cast and change return type of function to 'NSString *' to have the object automatically autoreleased}}
 }
 
 extern void NSLog(NSString *format, ...);
 
-// rdar://13192395
 void f4(NSString *s) {
   NSLog(@"%@", (CFStringRef)s); // expected-error {{cast of Objective-C pointer type 'NSString *' to C pointer type 'CFStringRef' (aka 'const struct __CFString *') requires a bridged cast}} \
     // expected-note{{use __bridge to convert directly (no change in ownership)}} \

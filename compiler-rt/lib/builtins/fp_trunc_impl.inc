@@ -38,95 +38,118 @@
 
 #include "fp_trunc.h"
 
+// The destination type may use a usual IEEE-754 interchange format or Intel
+// 80-bit format. In particular, for the destination type dstSigFracBits may be
+// not equal to dstSigBits. The source type is assumed to be one of IEEE-754
+// standard types.
 static __inline dst_t __truncXfYf2__(src_t a) {
   // Various constants whose values follow from the type parameters.
   // Any reasonable optimizer will fold and propagate all of these.
-  const int srcBits = sizeof(src_t) * CHAR_BIT;
-  const int srcExpBits = srcBits - srcSigBits - 1;
   const int srcInfExp = (1 << srcExpBits) - 1;
   const int srcExpBias = srcInfExp >> 1;
 
-  const src_rep_t srcMinNormal = SRC_REP_C(1) << srcSigBits;
-  const src_rep_t srcSignificandMask = srcMinNormal - 1;
-  const src_rep_t srcInfinity = (src_rep_t)srcInfExp << srcSigBits;
-  const src_rep_t srcSignMask = SRC_REP_C(1) << (srcSigBits + srcExpBits);
-  const src_rep_t srcAbsMask = srcSignMask - 1;
-  const src_rep_t roundMask = (SRC_REP_C(1) << (srcSigBits - dstSigBits)) - 1;
-  const src_rep_t halfway = SRC_REP_C(1) << (srcSigBits - dstSigBits - 1);
-  const src_rep_t srcQNaN = SRC_REP_C(1) << (srcSigBits - 1);
+  const src_rep_t srcMinNormal = SRC_REP_C(1) << srcSigFracBits;
+  const src_rep_t roundMask =
+      (SRC_REP_C(1) << (srcSigFracBits - dstSigFracBits)) - 1;
+  const src_rep_t halfway = SRC_REP_C(1)
+                            << (srcSigFracBits - dstSigFracBits - 1);
+  const src_rep_t srcQNaN = SRC_REP_C(1) << (srcSigFracBits - 1);
   const src_rep_t srcNaNCode = srcQNaN - 1;
 
-  const int dstBits = sizeof(dst_t) * CHAR_BIT;
-  const int dstExpBits = dstBits - dstSigBits - 1;
   const int dstInfExp = (1 << dstExpBits) - 1;
   const int dstExpBias = dstInfExp >> 1;
-
-  const int underflowExponent = srcExpBias + 1 - dstExpBias;
   const int overflowExponent = srcExpBias + dstInfExp - dstExpBias;
-  const src_rep_t underflow = (src_rep_t)underflowExponent << srcSigBits;
-  const src_rep_t overflow = (src_rep_t)overflowExponent << srcSigBits;
 
-  const dst_rep_t dstQNaN = DST_REP_C(1) << (dstSigBits - 1);
+  const dst_rep_t dstQNaN = DST_REP_C(1) << (dstSigFracBits - 1);
   const dst_rep_t dstNaNCode = dstQNaN - 1;
 
-  // Break a into a sign and representation of the absolute value.
   const src_rep_t aRep = srcToRep(a);
-  const src_rep_t aAbs = aRep & srcAbsMask;
-  const src_rep_t sign = aRep & srcSignMask;
-  dst_rep_t absResult;
+  const src_rep_t srcSign = extract_sign_from_src(aRep);
+  const src_rep_t srcExp = extract_exp_from_src(aRep);
+  const src_rep_t srcSigFrac = extract_sig_frac_from_src(aRep);
 
-  if (aAbs - underflow < aAbs - overflow) {
+  dst_rep_t dstSign = srcSign;
+  dst_rep_t dstExp;
+  dst_rep_t dstSigFrac;
+
+  // Same size exponents and a's significand tail is 0.
+  // The significand can be truncated and the exponent can be copied over.
+  const int sigFracTailBits = srcSigFracBits - dstSigFracBits;
+  if (srcExpBits == dstExpBits &&
+      ((aRep >> sigFracTailBits) << sigFracTailBits) == aRep) {
+    dstExp = srcExp;
+    dstSigFrac = (dst_rep_t)(srcSigFrac >> sigFracTailBits);
+    return dstFromRep(construct_dst_rep(dstSign, dstExp, dstSigFrac));
+  }
+
+  const int dstExpCandidate = ((int)srcExp - srcExpBias) + dstExpBias;
+  if (dstExpCandidate >= 1 && dstExpCandidate < dstInfExp) {
     // The exponent of a is within the range of normal numbers in the
-    // destination format.  We can convert by simply right-shifting with
+    // destination format. We can convert by simply right-shifting with
     // rounding and adjusting the exponent.
-    absResult = aAbs >> (srcSigBits - dstSigBits);
-    absResult -= (dst_rep_t)(srcExpBias - dstExpBias) << dstSigBits;
+    dstExp = dstExpCandidate;
+    dstSigFrac = (dst_rep_t)(srcSigFrac >> sigFracTailBits);
 
-    const src_rep_t roundBits = aAbs & roundMask;
+    const src_rep_t roundBits = srcSigFrac & roundMask;
     // Round to nearest.
     if (roundBits > halfway)
-      absResult++;
+      dstSigFrac++;
     // Tie to even.
     else if (roundBits == halfway)
-      absResult += absResult & 1;
-  } else if (aAbs > srcInfinity) {
+      dstSigFrac += dstSigFrac & 1;
+
+    // Rounding has changed the exponent.
+    if (dstSigFrac >= (DST_REP_C(1) << dstSigFracBits)) {
+      dstExp += 1;
+      dstSigFrac ^= (DST_REP_C(1) << dstSigFracBits);
+    }
+  } else if (srcExp == srcInfExp && srcSigFrac) {
     // a is NaN.
     // Conjure the result by beginning with infinity, setting the qNaN
     // bit and inserting the (truncated) trailing NaN field.
-    absResult = (dst_rep_t)dstInfExp << dstSigBits;
-    absResult |= dstQNaN;
-    absResult |=
-        ((aAbs & srcNaNCode) >> (srcSigBits - dstSigBits)) & dstNaNCode;
-  } else if (aAbs >= overflow) {
-    // a overflows to infinity.
-    absResult = (dst_rep_t)dstInfExp << dstSigBits;
+    dstExp = dstInfExp;
+    dstSigFrac = dstQNaN;
+    dstSigFrac |= ((srcSigFrac & srcNaNCode) >> sigFracTailBits) & dstNaNCode;
+  } else if ((int)srcExp >= overflowExponent) {
+    dstExp = dstInfExp;
+    dstSigFrac = 0;
   } else {
     // a underflows on conversion to the destination type or is an exact
     // zero.  The result may be a denormal or zero.  Extract the exponent
     // to get the shift amount for the denormalization.
-    const int aExp = aAbs >> srcSigBits;
-    const int shift = srcExpBias - dstExpBias - aExp + 1;
+    src_rep_t significand = srcSigFrac;
+    int shift = srcExpBias - dstExpBias - srcExp;
 
-    const src_rep_t significand = (aRep & srcSignificandMask) | srcMinNormal;
+    if (srcExp) {
+      // Set the implicit integer bit if the source is a normal number.
+      significand |= srcMinNormal;
+      shift += 1;
+    }
 
     // Right shift by the denormalization amount with sticky.
-    if (shift > srcSigBits) {
-      absResult = 0;
+    if (shift > srcSigFracBits) {
+      dstExp = 0;
+      dstSigFrac = 0;
     } else {
-      const bool sticky = (significand << (srcBits - shift)) != 0;
+      dstExp = 0;
+      const bool sticky = shift && ((significand << (srcBits - shift)) != 0);
       src_rep_t denormalizedSignificand = significand >> shift | sticky;
-      absResult = denormalizedSignificand >> (srcSigBits - dstSigBits);
+      dstSigFrac = denormalizedSignificand >> sigFracTailBits;
       const src_rep_t roundBits = denormalizedSignificand & roundMask;
       // Round to nearest
       if (roundBits > halfway)
-        absResult++;
+        dstSigFrac++;
       // Ties to even
       else if (roundBits == halfway)
-        absResult += absResult & 1;
+        dstSigFrac += dstSigFrac & 1;
+
+      // Rounding has changed the exponent.
+      if (dstSigFrac >= (DST_REP_C(1) << dstSigFracBits)) {
+        dstExp += 1;
+        dstSigFrac ^= (DST_REP_C(1) << dstSigFracBits);
+      }
     }
   }
 
-  // Apply the signbit to the absolute value.
-  const dst_rep_t result = absResult | sign >> (srcBits - dstBits);
-  return dstFromRep(result);
+  return dstFromRep(construct_dst_rep(dstSign, dstExp, dstSigFrac));
 }

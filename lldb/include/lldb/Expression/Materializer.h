@@ -69,6 +69,7 @@ public:
 
   class PersistentVariableDelegate {
   public:
+    PersistentVariableDelegate();
     virtual ~PersistentVariableDelegate();
     virtual ConstString GetName() = 0;
     virtual void DidDematerialize(lldb::ExpressionVariableSP &variable) = 0;
@@ -78,6 +79,28 @@ public:
   AddPersistentVariable(lldb::ExpressionVariableSP &persistent_variable_sp,
                         PersistentVariableDelegate *delegate, Status &err);
   uint32_t AddVariable(lldb::VariableSP &variable_sp, Status &err);
+
+  /// Create entity from supplied ValueObject and count it as a member
+  /// of the materialized struct.
+  ///
+  /// Behaviour is undefined if 'valobj_provider' is empty.
+  ///
+  /// \param[in] name Name of variable to materialize
+  ///
+  /// \param[in] valobj_provider When materializing values multiple
+  ///            times, this callback gets used to fetch a fresh
+  ///            ValueObject corresponding to the supplied frame.
+  ///            This is mainly used for conditional breakpoints
+  ///            that re-apply an expression whatever the frame
+  ///            happens to be when the breakpoint got hit.
+  ///
+  /// \param[out] err Error status that gets set on error.
+  ///
+  /// \returns Offset in bytes of the member we just added to the
+  ///          materialized struct.
+  uint32_t AddValueObject(ConstString name,
+                          ValueObjectProviderTy valobj_provider, Status &err);
+
   uint32_t AddResultVariable(const CompilerType &type, bool is_lvalue,
                              bool keep_in_memory,
                              PersistentVariableDelegate *delegate, Status &err);
@@ -90,7 +113,7 @@ public:
 
   class Entity {
   public:
-    Entity() : m_alignment(1), m_size(0), m_offset(0) {}
+    Entity() = default;
 
     virtual ~Entity() = default;
 
@@ -113,9 +136,9 @@ public:
     void SetOffset(uint32_t offset) { m_offset = offset; }
 
   protected:
-    uint32_t m_alignment;
-    uint32_t m_size;
-    uint32_t m_offset;
+    uint32_t m_alignment = 1;
+    uint32_t m_size = 0;
+    uint32_t m_offset = 0;
   };
 
 private:

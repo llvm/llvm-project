@@ -11,6 +11,6 @@ int main(int argc, char **argv) {
   return __sanitizer_unaligned_load32(p);
   // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
   // CHECK: {{#0 0x.* in main .*unaligned_read_origin.cpp:}}[[@LINE-2]]
-  // CHECK: Uninitialized value was created by an allocation of 'x' in the stack frame of function 'main'
-  // CHECK: {{#0 0x.* in main .*unaligned_read_origin.cpp:}}[[@LINE-7]]
+  // CHECK: Uninitialized value was created by an allocation of 'x' in the stack frame
+  // CHECK: {{#0 0x.* in main .*unaligned_read_origin.cpp:}}[[@LINE-6]]
 }

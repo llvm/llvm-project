@@ -1,4 +1,4 @@
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64 -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK-DAG-LABEL:  DW_AT_name ("negconstant")
 ; CHECK:  DW_AT_const_value (-1)

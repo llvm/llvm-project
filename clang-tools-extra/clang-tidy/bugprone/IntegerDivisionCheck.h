@@ -11,15 +11,13 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Finds cases where integer division in a floating point context is likely to
 /// cause unintended loss of precision.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-integer-division.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/integer-division.html
 class IntegerDivisionCheck : public ClangTidyCheck {
 public:
   IntegerDivisionCheck(StringRef Name, ClangTidyContext *Context)
@@ -28,8 +26,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_INTEGER_DIVISION_H

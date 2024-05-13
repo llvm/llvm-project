@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -verify-scev-maps -S |FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S |FileCheck %s
 
 ; SCEV expansion uses existing value when the SCEV has no AddRec expr.
 ; CHECK-LABEL: @foo(
@@ -22,8 +22,8 @@ for.body.lr.ph:                                   ; preds = %entry
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %total.011 = phi i32 [ 0, %for.body.lr.ph ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds [1000 x i16], [1000 x i16]* @a, i64 0, i64 %indvars.iv
-  %tmp1 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds [1000 x i16], ptr @a, i64 0, i64 %indvars.iv
+  %tmp1 = load i16, ptr %arrayidx, align 2
   %conv = sext i16 %tmp1 to i32
   %add = add nsw i32 %conv, %total.011
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1

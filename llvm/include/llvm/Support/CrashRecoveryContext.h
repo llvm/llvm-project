@@ -9,7 +9,7 @@
 #ifndef LLVM_SUPPORT_CRASHRECOVERYCONTEXT_H
 #define LLVM_SUPPORT_CRASHRECOVERYCONTEXT_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace llvm {
 class CrashRecoveryContextCleanup;
@@ -87,7 +87,7 @@ public:
   /// a protected context which is run in another thread (optionally with a
   /// requested stack size).
   ///
-  /// See RunSafely() and llvm_execute_on_thread().
+  /// See RunSafely().
   ///
   /// On Darwin, if PRIO_DARWIN_BG is set on the calling thread, it will be
   /// propagated to the new thread as well.
@@ -99,8 +99,10 @@ public:
 
   /// Explicitly trigger a crash recovery in the current process, and
   /// return failure from RunSafely(). This function does not return.
-  LLVM_ATTRIBUTE_NORETURN
-  void HandleExit(int RetCode);
+  [[noreturn]] void HandleExit(int RetCode);
+
+  /// Return true if RetCode indicates that a signal or an exception occurred.
+  static bool isCrash(int RetCode);
 
   /// Throw again a signal or an exception, after it was catched once by a
   /// CrashRecoveryContext.

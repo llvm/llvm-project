@@ -1,187 +1,238 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+from mlir.dialects import arith, builtin, func, linalg, tensor
+from mlir.dialects.linalg.opdsl.lang import *
 from mlir.ir import *
-from mlir.dialects import builtin
-from mlir.dialects import linalg
-from mlir.dialects import std
+
 
 def run(f):
-  print("\nTEST:", f.__name__)
-  f()
-  return f
+    print("\nTEST:", f.__name__)
+    f()
+    return f
 
-
-# CHECK-LABEL: TEST: testInitTensor
-@run
-def testInitTensor():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    with InsertionPoint(module.body):
-      # CHECK-LABEL: func @static_sizes
-      # CHECK: %0 = linalg.init_tensor [3, 4] : tensor<3x4xf32>
-      @builtin.FuncOp.from_py_func()
-      def static_sizes():
-        return linalg.InitTensorOp([3, 4], f32)
-
-      # CHECK-LABEL: func @dynamic_sizes
-      # CHECK: %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
-      @builtin.FuncOp.from_py_func(IndexType.get(), IndexType.get())
-      def dynamic_sizes(d0, d1):
-        return linalg.InitTensorOp([d0, d1], f32)
-
-      # CHECK-LABEL: func @zero_d
-      # CHECK: %0 = linalg.init_tensor [] : tensor<f32>
-      @builtin.FuncOp.from_py_func()
-      def zero_d():
-        return linalg.InitTensorOp([], f32)
-
-  print(module)
-
-# CHECK-LABEL: TEST: testInitTensorStaticSizesAttribute
-@run
-def testInitTensorStaticSizesAttribute():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    with InsertionPoint(module.body):
-      op = linalg.InitTensorOp([3, 4], f32)
-      # CHECK: [3, 4]
-      print(op.attributes['static_sizes'])
 
 # CHECK-LABEL: TEST: testFill
 @run
 def testFill():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    with InsertionPoint(module.body):
-      # CHECK-LABEL: func @fill_tensor
-      #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: tensor<12x?xf32>
-      #  CHECK-NEXT: %[[CST:.*]] = constant 0.0{{.*}} : f32
-      #  CHECK-NEXT: %[[RES:.*]] = linalg.fill(%[[OUT]], %[[CST]]) : tensor<12x?xf32>, f32 -> tensor<12x?xf32>
-      #  CHECK-NEXT: return %[[RES]] : tensor<12x?xf32>
-      @builtin.FuncOp.from_py_func(
-          RankedTensorType.get((12, -1), f32))
-      def fill_tensor(out):
-        zero = std.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
-        # TODO: FillOp.result is None. When len(results) == 1 we expect it to
-        # be results[0] as per _linalg_ops_gen.py. This seems like an
-        # orthogonal bug in the generator of _linalg_ops_gen.py.
-        return linalg.FillOp(output=out, value=zero).results[0]
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
+            # CHECK-LABEL: func @fill_tensor
+            #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: tensor<12x?xf32>
+            #  CHECK-NEXT: %[[CST:.*]] = arith.constant 0.0{{.*}} : f32
+            #  CHECK-NEXT: %[[RES:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[OUT]] : tensor<12x?xf32>) -> tensor<12x?xf32>
+            #  CHECK-NEXT: return %[[RES]] : tensor<12x?xf32>
+            @func.FuncOp.from_py_func(
+                RankedTensorType.get((12, ShapedType.get_dynamic_size()), f32)
+            )
+            def fill_tensor(out):
+                zero = arith.ConstantOp(
+                    value=FloatAttr.get(f32, 0.0), result=f32
+                ).result
+                return linalg.fill(zero, outs=[out])
 
-      # CHECK-LABEL: func @fill_buffer
-      #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: memref<12x?xf32>
-      #  CHECK-NEXT: %[[CST:.*]] = constant 0.0{{.*}} : f32
-      #  CHECK-NEXT: linalg.fill(%[[OUT]], %[[CST]]) : memref<12x?xf32>, f32
-      #  CHECK-NEXT: return
-      @builtin.FuncOp.from_py_func(
-          MemRefType.get((12, -1), f32))
-      def fill_buffer(out):
-        zero = std.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
-        linalg.FillOp(output=out, value=zero)
+            # CHECK-LABEL: func @fill_buffer
+            #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: memref<12x?xf32>
+            #  CHECK-NEXT: %[[CST:.*]] = arith.constant 0.0{{.*}} : f32
+            #  CHECK-NEXT: linalg.fill ins(%[[CST]] : f32) outs(%[[OUT]] : memref<12x?xf32>)
+            #  CHECK-NEXT: return
+            @func.FuncOp.from_py_func(
+                MemRefType.get((12, ShapedType.get_dynamic_size()), f32)
+            )
+            def fill_buffer(out):
+                zero = arith.ConstantOp(
+                    value=FloatAttr.get(f32, 0.0), result=f32
+                ).result
+                linalg.fill(zero, outs=[out])
 
-  print(module)
+    print(module)
 
-
-# CHECK-LABEL: TEST: testStructuredOpOnTensors
-@run
-def testStructuredOpOnTensors():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    tensor_type = RankedTensorType.get((2, 3, 4), f32)
-    with InsertionPoint(module.body):
-      func = builtin.FuncOp(name="matmul_test",
-                            type=FunctionType.get(
-                                inputs=[tensor_type, tensor_type],
-                                results=[tensor_type]))
-      with InsertionPoint(func.add_entry_block()):
-        lhs, rhs = func.entry_block.arguments
-        result = linalg.MatmulOp([lhs, rhs], results=[tensor_type]).result
-        std.ReturnOp([result])
-
-  # CHECK: %[[R:.*]] = linalg.matmul ins(%arg0, %arg1 : tensor<2x3x4xf32>, tensor<2x3x4xf32>) -> tensor<2x3x4xf32>
-  print(module)
-
-
-# CHECK-LABEL: TEST: testStructuredOpOnBuffers
-@run
-def testStructuredOpOnBuffers():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    memref_type = MemRefType.get((2, 3, 4), f32)
-    with InsertionPoint(module.body):
-      func = builtin.FuncOp(name="matmul_test",
-                            type=FunctionType.get(
-                                inputs=[memref_type, memref_type, memref_type],
-                                results=[]))
-      with InsertionPoint(func.add_entry_block()):
-        lhs, rhs, result = func.entry_block.arguments
-        # TODO: prperly hook up the region.
-        linalg.MatmulOp([lhs, rhs], outputs=[result])
-        std.ReturnOp([])
-
-  # CHECK: linalg.matmul ins(%arg0, %arg1 : memref<2x3x4xf32>, memref<2x3x4xf32>) outs(%arg2 : memref<2x3x4xf32>)
-  print(module)
 
 # CHECK-LABEL: TEST: testNamedStructuredOpCustomForm
 @run
 def testNamedStructuredOpCustomForm():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    with InsertionPoint(module.body):
-      @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
-                                   RankedTensorType.get((16, 8), f32))
-      def named_form(lhs, rhs):
-        init_result = linalg.InitTensorOp([4, 8], f32)
-        # First check the named form with custom format
-        #      CHECK: linalg.matmul
-        #  CHECK-NOT: linalg.memoized_indexing_maps
-        # CHECK-SAME:    ins(%{{.*}} : tensor<4x16xf32>, tensor<16x8xf32>)
-        # CHECK-SAME:   outs(%{{.*}} : tensor<4x8xf32>)
-        # CHECK-SAME:   -> tensor<4x8xf32>
-        # CHECK-NEXT: return
-        return linalg.matmul(lhs, rhs, outs=[init_result.result])
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
 
-  print(module)
+            @func.FuncOp.from_py_func(
+                RankedTensorType.get((4, 8), f32), RankedTensorType.get((4, 8), f32)
+            )
+            def named_form(lhs, rhs):
+                init_result = tensor.EmptyOp([4, 8], f32)
+                # Check for the named form with custom format
+                #      CHECK: linalg.elemwise_unary
+                # CHECK-SAME:    cast = #linalg.type_fn<cast_signed>
+                # CHECK-SAME:    fun = #linalg.unary_fn<exp>
+                # CHECK-SAME:    ins(%{{.*}} : tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
+                unary_result = linalg.elemwise_unary(lhs, outs=[init_result.result])
+                #      CHECK: linalg.elemwise_binary
+                # CHECK-SAME:    cast = #linalg.type_fn<cast_unsigned>
+                # CHECK-SAME:    fun = #linalg.binary_fn<mul>
+                # CHECK-SAME:    ins(%{{.*}}, %{{.*}} : tensor<4x8xf32>, tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
+                #      CHECK: return
+                binary_result = linalg.elemwise_binary(
+                    lhs,
+                    rhs,
+                    outs=[init_result.result],
+                    fun=BinaryFn.mul,
+                    cast=TypeFn.cast_unsigned,
+                )
+                return unary_result, binary_result
+
+    print(module)
+
 
 # CHECK-LABEL: TEST: testNamedStructuredOpGenericForm
 @run
 def testNamedStructuredOpGenericForm():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    with InsertionPoint(module.body):
-      @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
-                                   RankedTensorType.get((16, 8), f32))
-      def named_form(lhs, rhs):
-        init_result = linalg.InitTensorOp([4, 8], f32)
-        #      CHECK: "linalg.matmul"(%{{.*}})
-        # CHECK-NEXT:  ^bb0(%{{.*}}: f32, %{{.*}}: f32, %{{.*}}: f32):
-        # CHECK-NEXT:    std.mulf{{.*}} (f32, f32) -> f32
-        # CHECK-NEXT:    std.addf{{.*}} (f32, f32) -> f32
-        # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
-        # CHECK-NEXT:    {linalg.memoized_indexing_maps{{.*}}operand_segment_sizes = dense<[2, 1]> : vector<2xi32>} :
-        # CHECK-SAME: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
-        return linalg.matmul(lhs, rhs, outs=[init_result.result])
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
 
-  module.operation.print(print_generic_op_form=True)
+            @func.FuncOp.from_py_func(
+                RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8), f32)
+            )
+            def named_form(lhs, rhs):
+                init_result = tensor.EmptyOp([4, 8], f32)
+                #      CHECK: "linalg.matmul"(%{{.*}})
+                # CHECK-SAME:    cast = #linalg.type_fn<cast_signed>
+                # CHECK-SAME:    operandSegmentSizes = array<i32: 2, 1>
+                # CHECK-NEXT:  ^bb0(%{{.*}}: f32, %{{.*}}: f32, %{{.*}}: f32):
+                # CHECK-NEXT:    arith.mulf{{.*}} (f32, f32) -> f32
+                # CHECK-NEXT:    arith.addf{{.*}} (f32, f32) -> f32
+                # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
+                # CHECK-NEXT: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
+                return linalg.matmul(lhs, rhs, outs=[init_result.result])
+
+    module.operation.print(print_generic_op_form=True)
+
 
 # CHECK-LABEL: TEST: testNamedStructuredAsGenericOp
 @run
 def testNamedStructuredAsGenericOp():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    with InsertionPoint(module.body):
-      @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
-                                   RankedTensorType.get((16, 8), f32))
-      def generic_form(lhs, rhs):
-        init_result = linalg.InitTensorOp([4, 8], f32)
-        # CHECK: linalg.generic
-        return linalg.matmul(lhs, rhs, outs=[init_result.result], emit_generic=True)
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
 
-  print(module)
+            @func.FuncOp.from_py_func(
+                RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8), f32)
+            )
+            def generic_form(lhs, rhs):
+                init_result = tensor.EmptyOp([4, 8], f32)
+                # CHECK: linalg.generic
+                return linalg.matmul(
+                    lhs, rhs, outs=[init_result.result], emit_generic=True
+                )
+
+    print(module)
+
+
+# CHECK-LABEL: TEST: testOpResultFromOtherOp
+@run
+def testOpResultFromOtherOp():
+    with Context(), Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
+
+            @func.FuncOp.from_py_func(
+                RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8), f32)
+            )
+            def pass_an_op_directly(arg0, arg1):
+                one = arith.ConstantOp(F32Type.get(), 1.0)
+                # CHECK: %[[LHS:.*]] = linalg.fill
+                lhs = linalg.fill(one, outs=[arg0])
+                # CHECK: %[[RHS:.*]] = linalg.fill
+                rhs = linalg.fill(one, outs=[arg1])
+                # CHECK: %[[INIT:.*]] = tensor.empty
+                init = tensor.EmptyOp([4, 8], f32)
+                # CHECK: linalg.matmul
+                # CHECK: ins(%[[LHS]], %[[RHS]]
+                # CHECK: outs(%[[INIT]]
+                return linalg.matmul(lhs, rhs, outs=init)
+
+    print(module)
+
+
+# CHECK-LABEL: TEST: testIdentityRegionOps
+@run
+def testIdentityRegionOps():
+    with Context(), Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
+            # CHECK: %[[VAL_0:.*]] = tensor.empty() : tensor<1x13xf32>
+            # CHECK: %[[VAL_1:.*]] = tensor.empty() : tensor<13x1xf32>
+            op1 = tensor.EmptyOp([1, 13], f32)
+            op2 = tensor.EmptyOp([13, 1], f32)
+            # CHECK: %[[VAL_2:.*]] = linalg.transpose ins(%[[VAL_0]] : tensor<1x13xf32>) outs(%[[VAL_1]] : tensor<13x1xf32>) permutation = [1, 0]
+            op3 = linalg.TransposeOp(
+                result=[RankedTensorType.get((13, 1), f32)],
+                input=op1,
+                init=op2,
+                permutation=[1, 0],
+            )
+            linalg.fill_builtin_region(op3.operation)
+
+            # CHECK: %[[VAL_3:.*]] = linalg.transpose ins(%[[VAL_1]] : tensor<13x1xf32>) outs(%[[VAL_0]] : tensor<1x13xf32>) permutation = [1, 0]
+            op4 = linalg.transpose(op2, outs=[op1], permutation=[1, 0])
+
+            # CHECK:         func.func @transpose_op(%[[VAL_4:.*]]: memref<1x13xf32>, %[[VAL_5:.*]]: memref<13x1xf32>)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((1, 13), f32),
+                MemRefType.get((13, 1), f32),
+            )
+            def transpose_op(op1, op2):
+                # CHECK: linalg.transpose ins(%[[VAL_4]] : memref<1x13xf32>) outs(%[[VAL_5]] : memref<13x1xf32>) permutation = [1, 0]
+                op3 = linalg.TransposeOp(
+                    result=[],
+                    input=op1,
+                    init=op2,
+                    permutation=[1, 0],
+                )
+                linalg.fill_builtin_region(op3.operation)
+                # CHECK: linalg.transpose ins(%[[VAL_5]] : memref<13x1xf32>) outs(%[[VAL_4]] : memref<1x13xf32>) permutation = [1, 0]
+                op4 = linalg.transpose(op2, outs=[op1], permutation=[1, 0])
+
+            # CHECK: %[[VAL_6:.*]] = tensor.empty() : tensor<16xf32>
+            # CHECK: %[[VAL_7:.*]] = tensor.empty() : tensor<16x64xf32>
+            op1 = tensor.EmptyOp([16], f32)
+            op2 = tensor.EmptyOp([16, 64], f32)
+            # CHECK: %[[VAL_8:.*]] = linalg.broadcast ins(%[[VAL_6]] : tensor<16xf32>) outs(%[[VAL_7]] : tensor<16x64xf32>) dimensions = [1]
+            op3 = linalg.BroadcastOp(
+                result=[RankedTensorType.get((16, 64), f32)],
+                input=op1,
+                init=op2,
+                dimensions=[1],
+            )
+            linalg.fill_builtin_region(op3.operation)
+
+            # CHECK: %[[VAL_9:.*]] = tensor.empty() : tensor<64xf32>
+            op4 = tensor.EmptyOp([64], f32)
+            # CHECK: %[[VAL_10:.*]] = linalg.broadcast ins(%[[VAL_9]] : tensor<64xf32>) outs(%[[VAL_7]] : tensor<16x64xf32>) dimensions = [0]
+            op5 = linalg.broadcast(op4, outs=[op2], dimensions=[0])
+
+            # CHECK: func.func @broadcast_op(%[[VAL_11:.*]]: memref<16xf32>, %[[VAL_12:.*]]: memref<16x64xf32>, %[[VAL_13:.*]]: memref<64xf32>)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((16,), f32),
+                MemRefType.get((16, 64), f32),
+                MemRefType.get((64,), f32),
+            )
+            def broadcast_op(op1, op2, op3):
+                # CHECK: linalg.broadcast ins(%[[VAL_11]] : memref<16xf32>) outs(%[[VAL_12]] : memref<16x64xf32>) dimensions = [1]
+                op4 = linalg.BroadcastOp(
+                    result=[],
+                    input=op1,
+                    init=op2,
+                    dimensions=[1],
+                )
+                linalg.fill_builtin_region(op4.operation)
+                # CHECK: linalg.broadcast ins(%[[VAL_13]] : memref<64xf32>) outs(%[[VAL_12]] : memref<16x64xf32>) dimensions = [0]
+                op5 = linalg.broadcast(op3, outs=[op2], dimensions=[0])
+
+    print(module)

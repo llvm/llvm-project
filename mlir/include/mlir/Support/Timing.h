@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace mlir {
 
@@ -43,7 +44,7 @@ class DefaultTimingManagerImpl;
 /// This is a POD type with pointer size, so it should be passed around by
 /// value. The underlying data is owned by the `TimingManager`.
 class TimingIdentifier {
-  using EntryType = llvm::StringMapEntry<llvm::NoneType>;
+  using EntryType = llvm::StringMapEntry<std::nullopt_t>;
 
 public:
   TimingIdentifier(const TimingIdentifier &) = default;
@@ -136,11 +137,11 @@ protected:
   //
   // See the corresponding functions in `Timer` for additional details.
 
-  /// Return the root timer. Implementations should return `llvm::None` if the
+  /// Return the root timer. Implementations should return `std::nullopt` if the
   /// collection of timing samples is disabled. This will cause the timers
   /// constructed from the manager to be tombstones which can be skipped
   /// quickly.
-  virtual Optional<void *> rootTimer() = 0;
+  virtual std::optional<void *> rootTimer() = 0;
 
   /// Start the timer with the given handle.
   virtual void startTimer(void *handle) = 0;
@@ -184,8 +185,8 @@ private:
 /// manager implementations.
 class Timer {
 public:
-  Timer() {}
-  Timer(const Timer &other) : tm(other.tm), handle(other.handle) {}
+  Timer() = default;
+  Timer(const Timer &other) = default;
   Timer(Timer &&other) : Timer(other) {
     other.tm = nullptr;
     other.handle = nullptr;
@@ -228,8 +229,7 @@ public:
   ///
   /// The `nameBuilder` function is not guaranteed to be called.
   Timer nest(const void *id, function_ref<std::string()> nameBuilder) {
-    return tm ? Timer(*tm, tm->nestTimer(handle, id, std::move(nameBuilder)))
-              : Timer();
+    return tm ? Timer(*tm, tm->nestTimer(handle, id, nameBuilder)) : Timer();
   }
 
   /// See above.
@@ -271,7 +271,7 @@ private:
 /// started and stopped.
 class TimingScope {
 public:
-  TimingScope() : timer() {}
+  TimingScope() {}
   TimingScope(const Timer &other) : timer(other) {
     if (timer)
       timer.start();
@@ -321,6 +321,53 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// OutputStrategy
+//===----------------------------------------------------------------------===//
+
+/// Simple record class to record timing information.
+struct TimeRecord {
+  TimeRecord(double wall = 0.0, double user = 0.0) : wall(wall), user(user) {}
+
+  TimeRecord &operator+=(const TimeRecord &other) {
+    wall += other.wall;
+    user += other.user;
+    return *this;
+  }
+
+  TimeRecord &operator-=(const TimeRecord &other) {
+    wall -= other.wall;
+    user -= other.user;
+    return *this;
+  }
+
+  double wall, user;
+};
+
+/// Facilities for printing timing reports to various output formats.
+///
+/// This is an abstract class that serves as the foundation for printing.
+/// Users can implement additional output formats by extending this abstract
+/// class.
+class OutputStrategy {
+public:
+  OutputStrategy(raw_ostream &os) : os(os) {}
+  virtual ~OutputStrategy() = default;
+
+  virtual void printHeader(const TimeRecord &total) = 0;
+  virtual void printFooter() = 0;
+  virtual void printTime(const TimeRecord &time, const TimeRecord &total) = 0;
+  virtual void printListEntry(StringRef name, const TimeRecord &time,
+                              const TimeRecord &total,
+                              bool lastEntry = false) = 0;
+  virtual void printTreeEntry(unsigned indent, StringRef name,
+                              const TimeRecord &time,
+                              const TimeRecord &total) = 0;
+  virtual void printTreeEntryEnd(unsigned indent, bool lastEntry = false) = 0;
+
+  raw_ostream &os;
+};
+
+//===----------------------------------------------------------------------===//
 // DefaultTimingManager
 //===----------------------------------------------------------------------===//
 
@@ -351,9 +398,18 @@ public:
     Tree,
   };
 
+  /// The different output formats for printing the timers.
+  enum class OutputFormat {
+    /// In this format the results are displayed in text format.
+    Text,
+
+    /// In this format the results are displayed in JSON format.
+    Json,
+  };
+
   DefaultTimingManager();
   DefaultTimingManager(DefaultTimingManager &&rhs);
-  virtual ~DefaultTimingManager();
+  ~DefaultTimingManager() override;
 
   // Disable copying of the `DefaultTimingManager`.
   DefaultTimingManager(const DefaultTimingManager &rhs) = delete;
@@ -372,10 +428,7 @@ public:
   DisplayMode getDisplayMode() const;
 
   /// Change the stream where the output will be printed to.
-  void setOutput(raw_ostream &os);
-
-  /// Return the current output stream where the output will be printed to.
-  raw_ostream &getOutput() const;
+  void setOutput(std::unique_ptr<OutputStrategy> output);
 
   /// Print and clear the timing results. Only call this when there are no more
   /// references to nested timers around, as printing post-processes and clears
@@ -399,7 +452,7 @@ public:
 
 protected:
   // `TimingManager` callbacks
-  Optional<void *> rootTimer() override;
+  std::optional<void *> rootTimer() override;
   void startTimer(void *handle) override;
   void stopTimer(void *handle) override;
   void *nestTimer(void *handle, const void *id,
@@ -408,6 +461,7 @@ protected:
 
 private:
   const std::unique_ptr<detail::DefaultTimingManagerImpl> impl;
+  std::unique_ptr<OutputStrategy> out;
 };
 
 /// Register a set of useful command-line options that can be used to configure

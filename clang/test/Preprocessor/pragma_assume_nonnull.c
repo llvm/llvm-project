@@ -11,6 +11,6 @@ int bar(int * ip) { return *ip; }
 
 int foo(int * _Nonnull ip) { return *ip; }
 
-int main() {
+int main(void) {
    return bar(0) + foo(0); // expected-warning 2 {{null passed to a callee that requires a non-null argument}}
 }

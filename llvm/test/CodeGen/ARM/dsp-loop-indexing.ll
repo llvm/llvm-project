@@ -35,28 +35,28 @@
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
-define void @test_qadd_2(i32* %a.array, i32* %b.array, i32* %out.array, i32 %N) {
+define void @test_qadd_2(ptr %a.array, ptr %b.array, ptr %out.array, i32 %N) {
 entry:
   br label %loop
 
 loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
   %idx.1 = phi i32 [ 0, %entry ], [ %idx.next, %loop ]
-  %gep.a.1 = getelementptr inbounds i32, i32* %a.array, i32 %idx.1
-  %a.1 = load i32, i32* %gep.a.1
-  %gep.b.1 = getelementptr inbounds i32, i32* %b.array, i32 %idx.1
-  %b.1 = load i32, i32* %gep.b.1
+  %gep.a.1 = getelementptr inbounds i32, ptr %a.array, i32 %idx.1
+  %a.1 = load i32, ptr %gep.a.1
+  %gep.b.1 = getelementptr inbounds i32, ptr %b.array, i32 %idx.1
+  %b.1 = load i32, ptr %gep.b.1
   %qadd.1 = call i32 @llvm.arm.qadd(i32 %a.1, i32 %b.1)
-  %addr.1 = getelementptr inbounds i32, i32* %out.array, i32 %idx.1
-  store i32 %qadd.1, i32* %addr.1
-  %idx.2 = or i32 %idx.1, 1
-  %gep.a.2 = getelementptr inbounds i32, i32* %a.array, i32 %idx.2
-  %a.2 = load i32, i32* %gep.a.2
-  %gep.b.2 = getelementptr inbounds i32, i32* %b.array, i32 %idx.2
-  %b.2 = load i32, i32* %gep.b.2
+  %addr.1 = getelementptr inbounds i32, ptr %out.array, i32 %idx.1
+  store i32 %qadd.1, ptr %addr.1
+  %idx.2 = or disjoint i32 %idx.1, 1
+  %gep.a.2 = getelementptr inbounds i32, ptr %a.array, i32 %idx.2
+  %a.2 = load i32, ptr %gep.a.2
+  %gep.b.2 = getelementptr inbounds i32, ptr %b.array, i32 %idx.2
+  %b.2 = load i32, ptr %gep.b.2
   %qadd.2 = call i32 @llvm.arm.qadd(i32 %a.2, i32 %b.2)
-  %addr.2 = getelementptr inbounds i32, i32* %out.array, i32 %idx.2
-  store i32 %qadd.2, i32* %addr.2
+  %addr.2 = getelementptr inbounds i32, ptr %out.array, i32 %idx.2
+  store i32 %qadd.2, ptr %addr.2
   %i.next = add nsw nuw i32 %i, -2
   %idx.next = add nsw nuw i32 %idx.1, 2
   %cmp = icmp ult i32 %i.next, %N
@@ -90,28 +90,28 @@ exit:
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
-define void @test_qadd_2_backwards(i32* %a.array, i32* %b.array, i32* %out.array, i32 %N) {
+define void @test_qadd_2_backwards(ptr %a.array, ptr %b.array, ptr %out.array, i32 %N) {
 entry:
   br label %loop
 
 loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
   %idx.1 = phi i32 [ %N, %entry ], [ %idx.next, %loop ]
-  %gep.a.1 = getelementptr inbounds i32, i32* %a.array, i32 %idx.1
-  %a.1 = load i32, i32* %gep.a.1
-  %gep.b.1 = getelementptr inbounds i32, i32* %b.array, i32 %idx.1
-  %b.1 = load i32, i32* %gep.b.1
+  %gep.a.1 = getelementptr inbounds i32, ptr %a.array, i32 %idx.1
+  %a.1 = load i32, ptr %gep.a.1
+  %gep.b.1 = getelementptr inbounds i32, ptr %b.array, i32 %idx.1
+  %b.1 = load i32, ptr %gep.b.1
   %qadd.1 = call i32 @llvm.arm.qadd(i32 %a.1, i32 %b.1)
-  %addr.1 = getelementptr inbounds i32, i32* %out.array, i32 %idx.1
-  store i32 %qadd.1, i32* %addr.1
+  %addr.1 = getelementptr inbounds i32, ptr %out.array, i32 %idx.1
+  store i32 %qadd.1, ptr %addr.1
   %idx.2 = sub nsw nuw i32 %idx.1, 1
-  %gep.a.2 = getelementptr inbounds i32, i32* %a.array, i32 %idx.2
-  %a.2 = load i32, i32* %gep.a.2
-  %gep.b.2 = getelementptr inbounds i32, i32* %b.array, i32 %idx.2
-  %b.2 = load i32, i32* %gep.b.2
+  %gep.a.2 = getelementptr inbounds i32, ptr %a.array, i32 %idx.2
+  %a.2 = load i32, ptr %gep.a.2
+  %gep.b.2 = getelementptr inbounds i32, ptr %b.array, i32 %idx.2
+  %b.2 = load i32, ptr %gep.b.2
   %qadd.2 = call i32 @llvm.arm.qadd(i32 %a.2, i32 %b.2)
-  %addr.2 = getelementptr inbounds i32, i32* %out.array, i32 %idx.2
-  store i32 %qadd.2, i32* %addr.2
+  %addr.2 = getelementptr inbounds i32, ptr %out.array, i32 %idx.2
+  store i32 %qadd.2, ptr %addr.2
   %i.next = add nsw nuw i32 %i, -2
   %idx.next = sub nsw nuw i32 %idx.1, 2
   %cmp = icmp ult i32 %i.next, %N
@@ -144,36 +144,36 @@ exit:
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
-define void @test_qadd_3(i32* %a.array, i32* %b.array, i32* %out.array, i32 %N) {
+define void @test_qadd_3(ptr %a.array, ptr %b.array, ptr %out.array, i32 %N) {
 entry:
   br label %loop
 
 loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
   %idx.1 = phi i32 [ 0, %entry ], [ %idx.next, %loop ]
-  %gep.a.1 = getelementptr inbounds i32, i32* %a.array, i32 %idx.1
-  %a.1 = load i32, i32* %gep.a.1
-  %gep.b.1 = getelementptr inbounds i32, i32* %b.array, i32 %idx.1
-  %b.1 = load i32, i32* %gep.b.1
+  %gep.a.1 = getelementptr inbounds i32, ptr %a.array, i32 %idx.1
+  %a.1 = load i32, ptr %gep.a.1
+  %gep.b.1 = getelementptr inbounds i32, ptr %b.array, i32 %idx.1
+  %b.1 = load i32, ptr %gep.b.1
   %qadd.1 = call i32 @llvm.arm.qadd(i32 %a.1, i32 %b.1)
-  %addr.1 = getelementptr inbounds i32, i32* %out.array, i32 %idx.1
-  store i32 %qadd.1, i32* %addr.1
+  %addr.1 = getelementptr inbounds i32, ptr %out.array, i32 %idx.1
+  store i32 %qadd.1, ptr %addr.1
   %idx.2 = add nuw nsw i32 %idx.1, 1
-  %gep.a.2 = getelementptr inbounds i32, i32* %a.array, i32 %idx.2
-  %a.2 = load i32, i32* %gep.a.2
-  %gep.b.2 = getelementptr inbounds i32, i32* %b.array, i32 %idx.2
-  %b.2 = load i32, i32* %gep.b.2
+  %gep.a.2 = getelementptr inbounds i32, ptr %a.array, i32 %idx.2
+  %a.2 = load i32, ptr %gep.a.2
+  %gep.b.2 = getelementptr inbounds i32, ptr %b.array, i32 %idx.2
+  %b.2 = load i32, ptr %gep.b.2
   %qadd.2 = call i32 @llvm.arm.qadd(i32 %a.2, i32 %b.2)
-  %addr.2 = getelementptr inbounds i32, i32* %out.array, i32 %idx.2
-  store i32 %qadd.2, i32* %addr.2
+  %addr.2 = getelementptr inbounds i32, ptr %out.array, i32 %idx.2
+  store i32 %qadd.2, ptr %addr.2
   %idx.3 = add nuw nsw i32 %idx.1, 2
-  %gep.a.3 = getelementptr inbounds i32, i32* %a.array, i32 %idx.3
-  %a.3 = load i32, i32* %gep.a.3
-  %gep.b.3 = getelementptr inbounds i32, i32* %b.array, i32 %idx.3
-  %b.3 = load i32, i32* %gep.b.3
+  %gep.a.3 = getelementptr inbounds i32, ptr %a.array, i32 %idx.3
+  %a.3 = load i32, ptr %gep.a.3
+  %gep.b.3 = getelementptr inbounds i32, ptr %b.array, i32 %idx.3
+  %b.3 = load i32, ptr %gep.b.3
   %qadd.3 = call i32 @llvm.arm.qadd(i32 %a.3, i32 %b.3)
-  %addr.3 = getelementptr inbounds i32, i32* %out.array, i32 %idx.3
-  store i32 %qadd.3, i32* %addr.3
+  %addr.3 = getelementptr inbounds i32, ptr %out.array, i32 %idx.3
+  store i32 %qadd.3, ptr %addr.3
   %i.next = add nsw nuw i32 %i, -3
   %idx.next = add nsw nuw i32 %idx.1, 3
   %cmp = icmp ult i32 %i.next, %N
@@ -214,44 +214,44 @@ exit:
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
-define void @test_qadd_4(i32* %a.array, i32* %b.array, i32* %out.array, i32 %N) {
+define void @test_qadd_4(ptr %a.array, ptr %b.array, ptr %out.array, i32 %N) {
 entry:
   br label %loop
 
 loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
   %idx.1 = phi i32 [ 0, %entry ], [ %idx.next, %loop ]
-  %gep.a.1 = getelementptr inbounds i32, i32* %a.array, i32 %idx.1
-  %a.1 = load i32, i32* %gep.a.1
-  %gep.b.1 = getelementptr inbounds i32, i32* %b.array, i32 %idx.1
-  %b.1 = load i32, i32* %gep.b.1
+  %gep.a.1 = getelementptr inbounds i32, ptr %a.array, i32 %idx.1
+  %a.1 = load i32, ptr %gep.a.1
+  %gep.b.1 = getelementptr inbounds i32, ptr %b.array, i32 %idx.1
+  %b.1 = load i32, ptr %gep.b.1
   %qadd.1 = call i32 @llvm.arm.qadd(i32 %a.1, i32 %b.1)
-  %addr.1 = getelementptr inbounds i32, i32* %out.array, i32 %idx.1
-  store i32 %qadd.1, i32* %addr.1
-  %idx.2 = or i32 %idx.1, 1
-  %gep.a.2 = getelementptr inbounds i32, i32* %a.array, i32 %idx.2
-  %a.2 = load i32, i32* %gep.a.2
-  %gep.b.2 = getelementptr inbounds i32, i32* %b.array, i32 %idx.2
-  %b.2 = load i32, i32* %gep.b.2
+  %addr.1 = getelementptr inbounds i32, ptr %out.array, i32 %idx.1
+  store i32 %qadd.1, ptr %addr.1
+  %idx.2 = or disjoint i32 %idx.1, 1
+  %gep.a.2 = getelementptr inbounds i32, ptr %a.array, i32 %idx.2
+  %a.2 = load i32, ptr %gep.a.2
+  %gep.b.2 = getelementptr inbounds i32, ptr %b.array, i32 %idx.2
+  %b.2 = load i32, ptr %gep.b.2
   %qadd.2 = call i32 @llvm.arm.qadd(i32 %a.2, i32 %b.2)
-  %addr.2 = getelementptr inbounds i32, i32* %out.array, i32 %idx.2
-  store i32 %qadd.2, i32* %addr.2
-  %idx.3 = or i32 %idx.1, 2
-  %gep.a.3 = getelementptr inbounds i32, i32* %a.array, i32 %idx.3
-  %a.3 = load i32, i32* %gep.a.3
-  %gep.b.3 = getelementptr inbounds i32, i32* %b.array, i32 %idx.3
-  %b.3 = load i32, i32* %gep.b.3
+  %addr.2 = getelementptr inbounds i32, ptr %out.array, i32 %idx.2
+  store i32 %qadd.2, ptr %addr.2
+  %idx.3 = or disjoint i32 %idx.1, 2
+  %gep.a.3 = getelementptr inbounds i32, ptr %a.array, i32 %idx.3
+  %a.3 = load i32, ptr %gep.a.3
+  %gep.b.3 = getelementptr inbounds i32, ptr %b.array, i32 %idx.3
+  %b.3 = load i32, ptr %gep.b.3
   %qadd.3 = call i32 @llvm.arm.qadd(i32 %a.3, i32 %b.3)
-  %addr.3 = getelementptr inbounds i32, i32* %out.array, i32 %idx.3
-  store i32 %qadd.3, i32* %addr.3
-  %idx.4 = or i32 %idx.1, 3
-  %gep.a.4 = getelementptr inbounds i32, i32* %a.array, i32 %idx.4
-  %a.4 = load i32, i32* %gep.a.4
-  %gep.b.4 = getelementptr inbounds i32, i32* %b.array, i32 %idx.4
-  %b.4 = load i32, i32* %gep.b.4
+  %addr.3 = getelementptr inbounds i32, ptr %out.array, i32 %idx.3
+  store i32 %qadd.3, ptr %addr.3
+  %idx.4 = or disjoint i32 %idx.1, 3
+  %gep.a.4 = getelementptr inbounds i32, ptr %a.array, i32 %idx.4
+  %a.4 = load i32, ptr %gep.a.4
+  %gep.b.4 = getelementptr inbounds i32, ptr %b.array, i32 %idx.4
+  %b.4 = load i32, ptr %gep.b.4
   %qadd.4 = call i32 @llvm.arm.qadd(i32 %a.4, i32 %b.4)
-  %addr.4 = getelementptr inbounds i32, i32* %out.array, i32 %idx.4
-  store i32 %qadd.4, i32* %addr.4
+  %addr.4 = getelementptr inbounds i32, ptr %out.array, i32 %idx.4
+  store i32 %qadd.4, ptr %addr.4
   %i.next = add nsw nuw i32 %i, -4
   %idx.next = add nsw nuw i32 %idx.1, 4
   %cmp = icmp ult i32 %i.next, %N
@@ -282,32 +282,28 @@ exit:
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
-define void @test_qadd16_2(i16* %a.array, i16* %b.array, i32* %out.array, i32 %N) {
+define void @test_qadd16_2(ptr %a.array, ptr %b.array, ptr %out.array, i32 %N) {
 entry:
   br label %loop
 
 loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
   %idx.1 = phi i32 [ 0, %entry ], [ %idx.next, %loop ]
-  %gep.a.1 = getelementptr inbounds i16, i16* %a.array, i32 %idx.1
-  %cast.a.1 = bitcast i16* %gep.a.1 to i32*
-  %a.1 = load i32, i32* %cast.a.1
-  %gep.b.1 = getelementptr inbounds i16, i16* %b.array, i32 %idx.1
-  %cast.b.1 = bitcast i16* %gep.b.1 to i32*
-  %b.1 = load i32, i32* %cast.b.1
+  %gep.a.1 = getelementptr inbounds i16, ptr %a.array, i32 %idx.1
+  %a.1 = load i32, ptr %gep.a.1
+  %gep.b.1 = getelementptr inbounds i16, ptr %b.array, i32 %idx.1
+  %b.1 = load i32, ptr %gep.b.1
   %qadd.1 = call i32 @llvm.arm.qadd16(i32 %a.1, i32 %b.1)
-  %addr.1 = getelementptr inbounds i32, i32* %out.array, i32 %idx.1
-  store i32 %qadd.1, i32* %addr.1
+  %addr.1 = getelementptr inbounds i32, ptr %out.array, i32 %idx.1
+  store i32 %qadd.1, ptr %addr.1
   %idx.2 = add nsw nuw i32 %idx.1, 2
-  %gep.a.2 = getelementptr inbounds i16, i16* %a.array, i32 %idx.2
-  %cast.a.2 = bitcast i16* %gep.a.2 to i32*
-  %a.2 = load i32, i32* %cast.a.2
-  %gep.b.2 = getelementptr inbounds i16, i16* %b.array, i32 %idx.2
-  %cast.b.2 = bitcast i16* %gep.b.2 to i32*
-  %b.2 = load i32, i32* %cast.b.2
+  %gep.a.2 = getelementptr inbounds i16, ptr %a.array, i32 %idx.2
+  %a.2 = load i32, ptr %gep.a.2
+  %gep.b.2 = getelementptr inbounds i16, ptr %b.array, i32 %idx.2
+  %b.2 = load i32, ptr %gep.b.2
   %qadd.2 = call i32 @llvm.arm.qadd16(i32 %a.2, i32 %b.2)
-  %addr.2 = getelementptr inbounds i32, i32* %out.array, i32 %idx.2
-  store i32 %qadd.2, i32* %addr.2
+  %addr.2 = getelementptr inbounds i32, ptr %out.array, i32 %idx.2
+  store i32 %qadd.2, ptr %addr.2
   %i.next = add nsw nuw i32 %i, -2
   %idx.next = add nsw nuw i32 %idx.1, 4
   %cmp = icmp ult i32 %i.next, %N

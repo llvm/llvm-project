@@ -5,6 +5,8 @@ Symbol Visibility Macros
 .. contents::
    :local:
 
+.. _visibility-macros:
+
 Overview
 ========
 
@@ -12,19 +14,22 @@ Libc++ uses various "visibility" macros in order to provide a stable ABI in
 both the library and the headers. These macros work by changing the
 visibility and inlining characteristics of the symbols they are applied to.
 
+The std namespace also has visibility attributes applied to avoid having to
+add visibility macros in as many places. Namespace std has default
+type_visibility to export RTTI and other type-specific information. Note that
+type_visibility is only supported by Clang, so this doesn't replace
+type-specific attributes. The only exception are enums, which GCC always gives
+default visibility, thus removing the need for any annotations.
+
 Visibility Macros
 =================
 
 **_LIBCPP_HIDDEN**
   Mark a symbol as hidden so it will not be exported from shared libraries.
 
-**_LIBCPP_FUNC_VIS**
-  Mark a symbol as being exported by the libc++ library. This attribute must
-  be applied to the declaration of all functions exported by the libc++ dylib.
-
 **_LIBCPP_EXPORTED_FROM_ABI**
-  Mark a symbol as being exported by the libc++ library. This attribute may
-  only be applied to objects defined in the libc++ runtime library. On Windows,
+  Mark a symbol as being part of our ABI. This includes functions that are part
+  of the libc++ library, type information and other symbols. On Windows,
   this macro applies `dllimport`/`dllexport` to the symbol, and on other
   platforms it gives the symbol default visibility.
 
@@ -59,45 +64,6 @@ Visibility Macros
   ABI, we should create a new _LIBCPP_HIDE_FROM_ABI_AFTER_XXX macro, and we can
   use it to start removing symbols from the ABI after that stable version.
 
-**_LIBCPP_HIDE_FROM_ABI_PER_TU**
-  This macro controls whether symbols hidden from the ABI with `_LIBCPP_HIDE_FROM_ABI`
-  are local to each translation unit in addition to being local to each final
-  linked image. This macro is defined to either 0 or 1. When it is defined to
-  1, translation units compiled with different versions of libc++ can be linked
-  together, since all non ABI-facing functions are local to each translation unit.
-  This allows static archives built with different versions of libc++ to be linked
-  together. This also means that functions marked with `_LIBCPP_HIDE_FROM_ABI`
-  are not guaranteed to have the same address across translation unit boundaries.
-
-  When the macro is defined to 0, there is no guarantee that translation units
-  compiled with different versions of libc++ can interoperate. However, this
-  leads to code size improvements, since non ABI-facing functions can be
-  deduplicated across translation unit boundaries.
-
-  This macro can be defined by users to control the behavior they want from
-  libc++. The default value of this macro (0 or 1) is controlled by whether
-  `_LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT` is defined, which is intended to
-  be used by vendors only (see below).
-
-**_LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT**
-  This macro controls the default value for `_LIBCPP_HIDE_FROM_ABI_PER_TU`.
-  When the macro is defined, per TU ABI insulation is enabled by default, and
-  `_LIBCPP_HIDE_FROM_ABI_PER_TU` is defined to 1 unless overridden by users.
-  Otherwise, per TU ABI insulation is disabled by default, and
-  `_LIBCPP_HIDE_FROM_ABI_PER_TU` is defined to 0 unless overridden by users.
-
-  This macro is intended for vendors to control whether they want to ship
-  libc++ with per TU ABI insulation enabled by default. Users can always
-  control the behavior they want by defining `_LIBCPP_HIDE_FROM_ABI_PER_TU`
-  appropriately.
-
-  By default, this macro is not defined, which means that per TU ABI insulation
-  is not provided unless explicitly overridden by users.
-
-**_LIBCPP_TYPE_VIS**
-  Mark a type's typeinfo, vtable and members as having default visibility.
-  This attribute cannot be used on class templates.
-
 **_LIBCPP_TEMPLATE_VIS**
   Mark a type's typeinfo and vtable as having default visibility.
   This macro has no effect on the visibility of the type's member functions.
@@ -109,22 +75,9 @@ Visibility Macros
   **Windows Behavior**: DLLs do not support dllimport/export on class templates.
   The macro has an empty definition on this platform.
 
-
-**_LIBCPP_ENUM_VIS**
-  Mark the typeinfo of an enum as having default visibility. This attribute
-  should be applied to all enum declarations.
-
-  **Windows Behavior**: DLLs do not support importing or exporting enumeration
-  typeinfo. The macro has an empty definition on this platform.
-
-  **GCC Behavior**: GCC un-hides the typeinfo for enumerations by default, even
-  if `-fvisibility=hidden` is specified. Additionally applying a visibility
-  attribute to an enum class results in a warning. The macro has an empty
-  definition with GCC.
-
 **_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS**
   Mark the member functions, typeinfo, and vtable of the type named in
-  a `_LIBCPP_EXTERN_TEMPLATE` declaration as being exported by the libc++ library.
+  an extern template declaration as being exported by the libc++ library.
   This attribute must be specified on all extern class template declarations.
 
   This macro is used to override the `_LIBCPP_TEMPLATE_VIS` attribute
@@ -180,29 +133,6 @@ Visibility Macros
   `bad-visibility-finder <https://github.com/smeenai/bad-visibility-finder>`_
   against the libc++ headers after making `_LIBCPP_TYPE_VIS` and
   `_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS` expand to default visibility.
-
-**_LIBCPP_EXCEPTION_ABI**
-  Mark the member functions, typeinfo, and vtable of the type as being exported
-  by the libc++ library. This macro must be applied to all *exception types*.
-  Exception types should be defined directly in namespace `std` and not the
-  versioning namespace. This allows throwing and catching some exception types
-  between libc++ and libstdc++.
-
-**_LIBCPP_INTERNAL_LINKAGE**
-  Mark the affected entity as having internal linkage (i.e. the `static`
-  keyword in C). This is only a best effort: when the `internal_linkage`
-  attribute is not available, we fall back to forcing the function to be
-  inlined, which approximates internal linkage since an externally visible
-  symbol is never generated for that function. This is an internal macro
-  used as an implementation detail by other visibility macros. Never mark
-  a function or a class with this macro directly.
-
-**_LIBCPP_ALWAYS_INLINE**
-  Forces inlining of the function it is applied to. For visibility purposes,
-  this macro is used to make sure that an externally visible symbol is never
-  generated in an object file when the `internal_linkage` attribute is not
-  available. This is an internal macro used by other visibility macros, and
-  it should not be used directly.
 
 Links
 =====

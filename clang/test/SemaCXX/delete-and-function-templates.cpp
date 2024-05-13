@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -emit-llvm-only %s
+// RUN: %clang_cc1 -std=c++11 -verify  -emit-llvm-only %s
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fdelayed-template-parsing %s 
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fms-extensions %s 
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fdelayed-template-parsing -fms-extensions %s 
@@ -12,7 +12,7 @@ namespace ns1 {
 template<class T> double f(T) = delete; //expected-note{{candidate}}
 char f(...); //expected-note{{candidate}}
 
-static_assert(is_same<decltype(f(3)),char>::value, ""); //expected-error{{call to deleted function}} expected-error{{static_assert failed}}
+static_assert(is_same<decltype(f(3)),char>::value, ""); //expected-error{{call to deleted function}} expected-error{{static assertion failed}}
 
 template<class T> decltype(f(T{})) g(T); // this one sfinae's out.
 template<class T> int *g(T);

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-simplify -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck %s
 ;
 ; llvm.org/PR33323
 ;
@@ -7,7 +7,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define fastcc void @pr33323([1000 x double]* nocapture %data, [1000 x double]* nocapture %symmat) {
+define fastcc void @pr33323(ptr nocapture %data, ptr nocapture %symmat) {
 entry:
   br label %for.body98
 
@@ -20,15 +20,15 @@ for.body98:
 
 for.body105:
   %indvars.iv = phi i64 [ 0, %for.body98 ], [ %indvars.iv.next, %for.body105 ]
-  %arrayidx109 = getelementptr inbounds [1000 x double], [1000 x double]* %data, i64 %indvars.iv, i64 0
+  %arrayidx109 = getelementptr inbounds [1000 x double], ptr %data, i64 %indvars.iv, i64 0
   %add119 = fadd double undef, undef
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end122, label %for.body105
 
 for.end122:
-  %arrayidx130 = getelementptr inbounds [1000 x double], [1000 x double]* %symmat, i64 %indvars.iv13, i64 0
-  store double %add119, double* %arrayidx130
+  %arrayidx130 = getelementptr inbounds [1000 x double], ptr %symmat, i64 %indvars.iv13, i64 0
+  store double %add119, ptr %arrayidx130
   %indvars.iv.next14 = add nuw nsw i64 %indvars.iv13, 1
   %exitcond15 = icmp eq i64 %indvars.iv.next14, 1000
   br i1 %exitcond15, label %for.cond87.loopexit, label %for.body98

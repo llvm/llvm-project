@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for semantic errors in ALLOCATE statements
 
 module not_iso_fortran_env
@@ -170,4 +170,24 @@ subroutine C948_b()
   allocate(okt2[*], SOURCE=okt2src)
   allocate(team[*], SOURCE=teamsrc)
   allocate(lock[*], SOURCE=locksrc)
+end subroutine
+
+module prot
+  real, pointer, protected :: pp
+  real, allocatable, protected :: pa
+end module
+subroutine prottest
+  use prot
+  !ERROR: Name in ALLOCATE statement is not definable
+  !BECAUSE: 'pp' is protected in this scope
+  allocate(pp)
+  !ERROR: Name in ALLOCATE statement is not definable
+  !BECAUSE: 'pa' is protected in this scope
+  allocate(pa)
+  !ERROR: Name in DEALLOCATE statement is not definable
+  !BECAUSE: 'pp' is protected in this scope
+  deallocate(pp)
+  !ERROR: Name in DEALLOCATE statement is not definable
+  !BECAUSE: 'pa' is protected in this scope
+  deallocate(pa)
 end subroutine

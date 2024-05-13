@@ -11,20 +11,20 @@
 //
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_allocator.h"
-#include "sanitizer_common/sanitizer_allocator_internal.h"
-#include "sanitizer_common/sanitizer_common.h"
-
-#include "sanitizer_test_utils.h"
-#include "sanitizer_pthread_wrappers.h"
-
-#include "gtest/gtest.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <algorithm>
-#include <vector>
 #include <random>
 #include <set>
+#include <vector>
+
+#include "gtest/gtest.h"
+#include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_pthread_wrappers.h"
+#include "sanitizer_test_utils.h"
 
 using namespace __sanitizer;
 
@@ -476,11 +476,18 @@ TEST(SanitizerCommon, SizeClassAllocator32CompactGetBlockBegin) {
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 struct TestMapUnmapCallback {
-  static int map_count, unmap_count;
+  static int map_count, map_secondary_count, unmap_count;
   void OnMap(uptr p, uptr size) const { map_count++; }
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {
+    map_secondary_count++;
+  }
   void OnUnmap(uptr p, uptr size) const { unmap_count++; }
+
+  static void Reset() { map_count = map_secondary_count = unmap_count = 0; }
 };
 int TestMapUnmapCallback::map_count;
+int TestMapUnmapCallback::map_secondary_count;
 int TestMapUnmapCallback::unmap_count;
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
@@ -500,12 +507,12 @@ struct AP64WithCallback {
 };
 
 TEST(SanitizerCommon, SizeClassAllocator64MapUnmapCallback) {
-  TestMapUnmapCallback::map_count = 0;
-  TestMapUnmapCallback::unmap_count = 0;
+  TestMapUnmapCallback::Reset();
   typedef SizeClassAllocator64<AP64WithCallback<>> Allocator64WithCallBack;
   Allocator64WithCallBack *a = new Allocator64WithCallBack;
   a->Init(kReleaseToOSIntervalNever);
   EXPECT_EQ(TestMapUnmapCallback::map_count, 1);  // Allocator state.
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 0);
   typename Allocator64WithCallBack::AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -516,6 +523,7 @@ TEST(SanitizerCommon, SizeClassAllocator64MapUnmapCallback) {
   a->GetFromAllocator(&stats, 30, chunks, kNumChunks);
   // State + alloc + metadata + freearray.
   EXPECT_EQ(TestMapUnmapCallback::map_count, 4);
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 0);
   a->TestOnlyUnmap();
   EXPECT_EQ(TestMapUnmapCallback::unmap_count, 1);  // The whole thing.
   delete a;
@@ -536,12 +544,12 @@ struct AP32WithCallback {
 };
 
 TEST(SanitizerCommon, SizeClassAllocator32MapUnmapCallback) {
-  TestMapUnmapCallback::map_count = 0;
-  TestMapUnmapCallback::unmap_count = 0;
+  TestMapUnmapCallback::Reset();
   typedef SizeClassAllocator32<AP32WithCallback<>> Allocator32WithCallBack;
   Allocator32WithCallBack *a = new Allocator32WithCallBack;
   a->Init(kReleaseToOSIntervalNever);
   EXPECT_EQ(TestMapUnmapCallback::map_count, 0);
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 0);
   Allocator32WithCallBack::AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -549,23 +557,21 @@ TEST(SanitizerCommon, SizeClassAllocator32MapUnmapCallback) {
   stats.Init();
   a->AllocateBatch(&stats, &cache, 32);
   EXPECT_EQ(TestMapUnmapCallback::map_count, 1);
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 0);
   a->TestOnlyUnmap();
   EXPECT_EQ(TestMapUnmapCallback::unmap_count, 1);
   delete a;
-  // fprintf(stderr, "Map: %d Unmap: %d\n",
-  //         TestMapUnmapCallback::map_count,
-  //         TestMapUnmapCallback::unmap_count);
 }
 
 TEST(SanitizerCommon, LargeMmapAllocatorMapUnmapCallback) {
-  TestMapUnmapCallback::map_count = 0;
-  TestMapUnmapCallback::unmap_count = 0;
+  TestMapUnmapCallback::Reset();
   LargeMmapAllocator<TestMapUnmapCallback> a;
   a.Init();
   AllocatorStats stats;
   stats.Init();
   void *x = a.Allocate(&stats, 1 << 20, 1);
-  EXPECT_EQ(TestMapUnmapCallback::map_count, 1);
+  EXPECT_EQ(TestMapUnmapCallback::map_count, 0);
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 1);
   a.Deallocate(&stats, x);
   EXPECT_EQ(TestMapUnmapCallback::unmap_count, 1);
 }
@@ -1088,7 +1094,7 @@ TEST(SanitizerCommon, LargeMmapAllocatorBlockBegin) {
 
 // Don't test OOM conditions on Win64 because it causes other tests on the same
 // machine to OOM.
-#if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64
+#if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64 && !ALLOCATOR64_SMALL_SIZE
 typedef __sanitizer::SizeClassMap<2, 22, 22, 34, 128, 16> SpecialSizeClassMap;
 template <typename AddressSpaceViewTy = LocalAddressSpaceView>
 struct AP64_SpecialSizeClassMap {
@@ -1116,7 +1122,7 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   // ...one man is on a mission to overflow a region with a series of
   // successive allocations.
 
-  const uptr kClassID = ALLOCATOR64_SMALL_SIZE ? 18 : 24;
+  const uptr kClassID = 24;
   const uptr kAllocationSize = SpecialSizeClassMap::Size(kClassID);
   ASSERT_LT(2 * kAllocationSize, kRegionSize);
   ASSERT_GT(3 * kAllocationSize, kRegionSize);
@@ -1124,7 +1130,7 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   EXPECT_NE(cache.Allocate(a, kClassID), nullptr);
   EXPECT_EQ(cache.Allocate(a, kClassID), nullptr);
 
-  const uptr Class2 = ALLOCATOR64_SMALL_SIZE ? 15 : 21;
+  const uptr Class2 = 21;
   const uptr Size2 = SpecialSizeClassMap::Size(Class2);
   ASSERT_EQ(Size2 * 8, kRegionSize);
   char *p[7];
@@ -1149,15 +1155,12 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
 
 class NoMemoryMapper {
  public:
-  uptr last_request_buffer_size;
+  uptr last_request_buffer_size = 0;
 
-  NoMemoryMapper() : last_request_buffer_size(0) {}
-
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
-    last_request_buffer_size = buffer_size;
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    last_request_buffer_size = buffer_size * sizeof(u64);
     return nullptr;
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 };
 
 class RedZoneMemoryMapper {
@@ -1168,19 +1171,17 @@ class RedZoneMemoryMapper {
     MprotectNoAccess(reinterpret_cast<uptr>(buffer), page_size);
     MprotectNoAccess(reinterpret_cast<uptr>(buffer) + page_size * 2, page_size);
   }
-  ~RedZoneMemoryMapper() {
-    UnmapOrDie(buffer, 3 * GetPageSize());
-  }
+  ~RedZoneMemoryMapper() { UnmapOrDie(buffer, 3 * GetPageSize()); }
 
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    buffer_size *= sizeof(u64);
     const auto page_size = GetPageSize();
     CHECK_EQ(buffer_size, page_size);
-    void *p =
-        reinterpret_cast<void *>(reinterpret_cast<uptr>(buffer) + page_size);
+    u64 *p =
+        reinterpret_cast<u64 *>(reinterpret_cast<uptr>(buffer) + page_size);
     memset(p, 0, page_size);
     return p;
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 
  private:
   void *buffer;
@@ -1188,35 +1189,31 @@ class RedZoneMemoryMapper {
 
 TEST(SanitizerCommon, SizeClassAllocator64PackedCounterArray) {
   NoMemoryMapper no_memory_mapper;
-  typedef Allocator64::PackedCounterArray<NoMemoryMapper>
-      NoMemoryPackedCounterArray;
-
   for (int i = 0; i < 64; i++) {
     // Various valid counter's max values packed into one word.
-    NoMemoryPackedCounterArray counters_2n(1, 1ULL << i, &no_memory_mapper);
+    Allocator64::PackedCounterArray counters_2n(1, 1ULL << i,
+                                                &no_memory_mapper);
     EXPECT_EQ(8ULL, no_memory_mapper.last_request_buffer_size);
 
     // Check the "all bit set" values too.
-    NoMemoryPackedCounterArray counters_2n1_1(1, ~0ULL >> i, &no_memory_mapper);
+    Allocator64::PackedCounterArray counters_2n1_1(1, ~0ULL >> i,
+                                                   &no_memory_mapper);
     EXPECT_EQ(8ULL, no_memory_mapper.last_request_buffer_size);
 
     // Verify the packing ratio, the counter is expected to be packed into the
     // closest power of 2 bits.
-    NoMemoryPackedCounterArray counters(64, 1ULL << i, &no_memory_mapper);
+    Allocator64::PackedCounterArray counters(64, 1ULL << i, &no_memory_mapper);
     EXPECT_EQ(8ULL * RoundUpToPowerOfTwo(i + 1),
               no_memory_mapper.last_request_buffer_size);
   }
 
   RedZoneMemoryMapper memory_mapper;
-  typedef Allocator64::PackedCounterArray<RedZoneMemoryMapper>
-      RedZonePackedCounterArray;
   // Go through 1, 2, 4, 8, .. 64 bits per counter.
   for (int i = 0; i < 7; i++) {
     // Make sure counters request one memory page for the buffer.
     const u64 kNumCounters = (GetPageSize() / 8) * (64 >> i);
-    RedZonePackedCounterArray counters(kNumCounters,
-                                       1ULL << ((1 << i) - 1),
-                                       &memory_mapper);
+    Allocator64::PackedCounterArray counters(
+        kNumCounters, 1ULL << ((1 << i) - 1), &memory_mapper);
     counters.Inc(0);
     for (u64 c = 1; c < kNumCounters - 1; c++) {
       ASSERT_EQ(0ULL, counters.Get(c));
@@ -1243,7 +1240,7 @@ class RangeRecorder {
             Log2(GetPageSizeCached() >> Allocator64::kCompactPtrScale)),
         last_page_reported(0) {}
 
-  void ReleasePageRangeToOS(u32 from, u32 to) {
+  void ReleasePageRangeToOS(u32 class_id, u32 from, u32 to) {
     from >>= page_size_scaled_log;
     to >>= page_size_scaled_log;
     ASSERT_LT(from, to);
@@ -1253,6 +1250,7 @@ class RangeRecorder {
     reported_pages.append(to - from, 'x');
     last_page_reported = to;
   }
+
  private:
   const uptr page_size_scaled_log;
   u32 last_page_reported;
@@ -1282,7 +1280,7 @@ TEST(SanitizerCommon, SizeClassAllocator64FreePagesRangeTracker) {
 
   for (auto test_case : test_cases) {
     RangeRecorder range_recorder;
-    RangeTracker tracker(&range_recorder);
+    RangeTracker tracker(&range_recorder, 1);
     for (int i = 0; test_case[i] != 0; i++)
       tracker.NextPage(test_case[i] == 'x');
     tracker.Done();
@@ -1299,16 +1297,14 @@ TEST(SanitizerCommon, SizeClassAllocator64FreePagesRangeTracker) {
 class ReleasedPagesTrackingMemoryMapper {
  public:
   std::set<u32> reported_pages;
+  std::vector<u64> buffer;
 
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
     reported_pages.clear();
-    return calloc(1, buffer_size);
+    buffer.assign(buffer_size, 0);
+    return buffer.data();
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {
-    free(buffer);
-  }
-
-  void ReleasePageRangeToOS(u32 from, u32 to) {
+  void ReleasePageRangeToOS(u32 class_id, u32 from, u32 to) {
     uptr page_size_scaled =
         GetPageSizeCached() >> Allocator64::kCompactPtrScale;
     for (u32 i = from; i < to; i += page_size_scaled)
@@ -1352,7 +1348,7 @@ void TestReleaseFreeMemoryToOS() {
 
     Allocator::ReleaseFreeMemoryToOS(&free_array[0], free_array.size(),
                                      chunk_size, kAllocatedPagesCount,
-                                     &memory_mapper);
+                                     &memory_mapper, class_id);
 
     // Verify that there are no released pages touched by used chunks and all
     // ranges of free chunks big enough to contain the entire memory pages had
@@ -1421,69 +1417,6 @@ TEST(SanitizerCommon, SizeClassAllocator64VeryCompactReleaseFreeMemoryToOS) {
 #endif  // !ALLOCATOR64_SMALL_SIZE
 
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
-
-TEST(SanitizerCommon, TwoLevelByteMap) {
-  const u64 kSize1 = 1 << 6, kSize2 = 1 << 12;
-  const u64 n = kSize1 * kSize2;
-  TwoLevelByteMap<kSize1, kSize2> m;
-  m.Init();
-  for (u64 i = 0; i < n; i += 7) {
-    m.set(i, (i % 100) + 1);
-  }
-  for (u64 j = 0; j < n; j++) {
-    if (j % 7)
-      EXPECT_EQ(m[j], 0);
-    else
-      EXPECT_EQ(m[j], (j % 100) + 1);
-  }
-
-  m.TestOnlyUnmap();
-}
-
-template <typename AddressSpaceView>
-using TestByteMapASVT =
-    TwoLevelByteMap<1 << 12, 1 << 13, AddressSpaceView, TestMapUnmapCallback>;
-using TestByteMap = TestByteMapASVT<LocalAddressSpaceView>;
-
-struct TestByteMapParam {
-  TestByteMap *m;
-  size_t shard;
-  size_t num_shards;
-};
-
-void *TwoLevelByteMapUserThread(void *param) {
-  TestByteMapParam *p = (TestByteMapParam*)param;
-  for (size_t i = p->shard; i < p->m->size(); i += p->num_shards) {
-    size_t val = (i % 100) + 1;
-    p->m->set(i, val);
-    EXPECT_EQ((*p->m)[i], val);
-  }
-  return 0;
-}
-
-TEST(SanitizerCommon, ThreadedTwoLevelByteMap) {
-  TestByteMap m;
-  m.Init();
-  TestMapUnmapCallback::map_count = 0;
-  TestMapUnmapCallback::unmap_count = 0;
-  static const int kNumThreads = 4;
-  pthread_t t[kNumThreads];
-  TestByteMapParam p[kNumThreads];
-  for (int i = 0; i < kNumThreads; i++) {
-    p[i].m = &m;
-    p[i].shard = i;
-    p[i].num_shards = kNumThreads;
-    PTHREAD_CREATE(&t[i], 0, TwoLevelByteMapUserThread, &p[i]);
-  }
-  for (int i = 0; i < kNumThreads; i++) {
-    PTHREAD_JOIN(t[i], 0);
-  }
-  EXPECT_EQ((uptr)TestMapUnmapCallback::map_count, m.size1());
-  EXPECT_EQ((uptr)TestMapUnmapCallback::unmap_count, 0UL);
-  m.TestOnlyUnmap();
-  EXPECT_EQ((uptr)TestMapUnmapCallback::map_count, m.size1());
-  EXPECT_EQ((uptr)TestMapUnmapCallback::unmap_count, m.size1());
-}
 
 TEST(SanitizerCommon, LowLevelAllocatorShouldRoundUpSizeOnAlloc) {
   // When allocating a memory block slightly bigger than a memory page and

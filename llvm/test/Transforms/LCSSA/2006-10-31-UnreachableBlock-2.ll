@@ -1,4 +1,4 @@
-; RUN: opt < %s -lcssa -disable-output -verify-dom-info -verify-loop-info
+; RUN: opt < %s -passes=lcssa -disable-output -verify-dom-info -verify-loop-info
 ; PR977
 ; END.
 declare i32 @opost_block()

@@ -8,7 +8,7 @@ define void @pr38385() {
 ; CHECK-LABEL: pr38385:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:  .L0$pb:
-; CHECK-NEXT:    leaq .L0${{.*}}(%rip), %rax
+; CHECK-NEXT:    leaq .L0$pb(%rip), %rax
 ; CHECK-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L0$pb, %rcx
 ; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    movabsq $.L.str@GOTOFF, %rax
@@ -16,6 +16,6 @@ define void @pr38385() {
 ; CHECK-NEXT:    movb %cl, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    retq
   %p = alloca i8, align 1
-  store i8 ptrtoint ([2 x i8]* @.str to i8), i8* %p, align 1
+  store i8 ptrtoint (ptr @.str to i8), ptr %p, align 1
   ret void
 }

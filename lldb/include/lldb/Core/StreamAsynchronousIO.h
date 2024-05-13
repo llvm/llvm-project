@@ -20,7 +20,7 @@ class Debugger;
 
 class StreamAsynchronousIO : public Stream {
 public:
-  StreamAsynchronousIO(Debugger &debugger, bool for_stdout);
+  StreamAsynchronousIO(Debugger &debugger, bool for_stdout, bool colors);
 
   ~StreamAsynchronousIO() override;
 

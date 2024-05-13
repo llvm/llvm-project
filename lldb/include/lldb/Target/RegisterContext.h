@@ -31,10 +31,6 @@ public:
 
   virtual const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) = 0;
 
-  // Detect the register size dynamically.
-  uint32_t UpdateDynamicRegisterSize(const lldb_private::ArchSpec &arch,
-                                     RegisterInfo *reg_info);
-
   virtual size_t GetRegisterSetCount() = 0;
 
   virtual const RegisterSet *GetRegisterSet(size_t reg_set) = 0;
@@ -47,13 +43,19 @@ public:
   virtual bool WriteRegister(const RegisterInfo *reg_info,
                              const RegisterValue &reg_value) = 0;
 
-  virtual bool ReadAllRegisterValues(lldb::DataBufferSP &data_sp) {
+  virtual bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) {
     return false;
   }
 
   virtual bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) {
     return false;
   }
+
+  virtual bool RegisterWriteCausesReconfigure(const llvm::StringRef name) {
+    return false;
+  }
+
+  virtual bool ReconfigureRegisterInfo() { return false; }
 
   // These two functions are used to implement "push" and "pop" of register
   // states.  They are used primarily for expression evaluation, where we need
@@ -147,6 +149,10 @@ public:
                                       uint32_t reg_num);
 
   uint64_t GetPC(uint64_t fail_value = LLDB_INVALID_ADDRESS);
+
+  // Returns the register value containing thread specific data, like TLS data
+  // and other thread specific stuff.
+  uint64_t GetThreadPointer(uint64_t fail_value = LLDB_INVALID_ADDRESS);
 
   /// Get an address suitable for symbolication.
   /// When symbolicating -- computing line, block, function --

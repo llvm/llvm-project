@@ -1,3 +1,4 @@
+//===- Dialect.h - Dialect class --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,12 +14,14 @@
 #define MLIR_TABLEGEN_DIALECT_H_
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/TableGen/Record.h"
+
 #include <string>
 #include <vector>
 
 namespace llvm {
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -49,13 +52,17 @@ public:
   ArrayRef<StringRef> getDependentDialects() const;
 
   // Returns the dialects extra class declaration code.
-  llvm::Optional<StringRef> getExtraClassDeclaration() const;
+  std::optional<StringRef> getExtraClassDeclaration() const;
 
   /// Returns true if this dialect has a canonicalizer.
   bool hasCanonicalizer() const;
 
-  // Returns true if this dialect has a constant materializer.
+  /// Returns true if this dialect has a constant materializer.
   bool hasConstantMaterializer() const;
+
+  /// Returns true if the destructor definition is provided explicitly or
+  /// false if a default should be generated.
+  bool hasNonDefaultDestructor() const;
 
   /// Returns true if this dialect has an operation attribute verifier.
   bool hasOperationAttrVerify() const;
@@ -68,6 +75,26 @@ public:
 
   /// Returns true if this dialect has fallback interfaces for its operations.
   bool hasOperationInterfaceFallback() const;
+
+  /// Returns true if this dialect should generate the default dispatch for
+  /// attribute printing/parsing.
+  bool useDefaultAttributePrinterParser() const;
+
+  /// Returns true if this dialect should generate the default dispatch for
+  /// type printing/parsing.
+  bool useDefaultTypePrinterParser() const;
+
+  /// Returns true if this dialect can be extended at runtime with new
+  /// operations or types.
+  bool isExtensible() const;
+
+  /// Default to use properties for storing Attributes for operations in this
+  /// dialect.
+  bool usePropertiesForAttributes() const;
+
+  llvm::DagInit *getDiscardableAttributes() const;
+
+  const llvm::Record *getDef() const { return def; }
 
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.
@@ -85,7 +112,7 @@ private:
   const llvm::Record *def;
   std::vector<StringRef> dependentDialects;
 };
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_DIALECT_H_

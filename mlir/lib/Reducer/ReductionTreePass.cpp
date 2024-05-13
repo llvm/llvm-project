@@ -16,7 +16,6 @@
 
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Reducer/PassDetail.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/ReductionNode.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
@@ -28,6 +27,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ManagedStatic.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_REDUCTIONTREE
+#include "mlir/Reducer/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -41,7 +45,7 @@ static void applyPatterns(Region &region,
   std::vector<Operation *> opsNotInRange;
   std::vector<Operation *> opsInRange;
   size_t keepIndex = 0;
-  for (auto op : enumerate(region.getOps())) {
+  for (const auto &op : enumerate(region.getOps())) {
     int index = op.index();
     if (keepIndex < rangeToKeep.size() &&
         index == rangeToKeep[keepIndex].second)
@@ -56,10 +60,13 @@ static void applyPatterns(Region &region,
   // matching in above iteration. Besides, erase op not-in-range may end up in
   // invalid module, so `applyOpPatternsAndFold` should come before that
   // transform.
-  for (Operation *op : opsInRange)
+  for (Operation *op : opsInRange) {
     // `applyOpPatternsAndFold` returns whether the op is convered. Omit it
     // because we don't have expectation this reduction will be success or not.
-    (void)applyOpPatternsAndFold(op, patterns);
+    GreedyRewriteConfig config;
+    config.strictMode = GreedyRewriteStrictness::ExistingOps;
+    (void)applyOpPatternsAndFold(op, patterns, config);
+  }
 
   if (eraseOpNotInRange)
     for (Operation *op : opsNotInRange) {
@@ -76,15 +83,15 @@ static void applyPatterns(Region &region,
 /// alternative way to remove operations, which is using `eraseOpNotInRange` to
 /// erase the operations not in the range specified by ReductionNode.
 template <typename IteratorType>
-static void findOptimal(ModuleOp module, Region &region,
-                        const FrozenRewritePatternSet &patterns,
-                        const Tester &test, bool eraseOpNotInRange) {
+static LogicalResult findOptimal(ModuleOp module, Region &region,
+                                 const FrozenRewritePatternSet &patterns,
+                                 const Tester &test, bool eraseOpNotInRange) {
   std::pair<Tester::Interestingness, size_t> initStatus =
       test.isInteresting(module);
   // While exploring the reduction tree, we always branch from an interesting
   // node. Thus the root node must be interesting.
   if (initStatus.first != Tester::Interestingness::True)
-    return;
+    return module.emitWarning() << "uninterested module will not be reduced";
 
   llvm::SpecificBumpPtrAllocator<ReductionNode> allocator;
 
@@ -92,7 +99,7 @@ static void findOptimal(ModuleOp module, Region &region,
       {0, std::distance(region.op_begin(), region.op_end())}};
 
   ReductionNode *root = allocator.Allocate();
-  new (root) ReductionNode(nullptr, std::move(ranges), allocator);
+  new (root) ReductionNode(nullptr, ranges, allocator);
   // Duplicate the module for root node and locate the region in the copy.
   if (failed(root->initialize(module, region)))
     llvm_unreachable("unexpected initialization failure");
@@ -137,23 +144,25 @@ static void findOptimal(ModuleOp module, Region &region,
   if (test.isInteresting(module).second != smallestNode->getSize())
     llvm::report_fatal_error(
         "Reduced module doesn't have consistent size with smallestNode");
+  return success();
 }
 
 template <typename IteratorType>
-static void findOptimal(ModuleOp module, Region &region,
-                        const FrozenRewritePatternSet &patterns,
-                        const Tester &test) {
+static LogicalResult findOptimal(ModuleOp module, Region &region,
+                                 const FrozenRewritePatternSet &patterns,
+                                 const Tester &test) {
   // We separate the reduction process into 2 steps, the first one is to erase
   // redundant operations and the second one is to apply the reducer patterns.
 
   // In the first phase, we don't apply any patterns so that we only select the
   // range of operations to keep to the module stay interesting.
-  findOptimal<IteratorType>(module, region, /*patterns=*/{}, test,
-                            /*eraseOpNotInRange=*/true);
+  if (failed(findOptimal<IteratorType>(module, region, /*patterns=*/{}, test,
+                                       /*eraseOpNotInRange=*/true)))
+    return failure();
   // In the second phase, we suppose that no operation is redundant, so we try
   // to rewrite the operation into simpler form.
-  findOptimal<IteratorType>(module, region, patterns, test,
-                            /*eraseOpNotInRange=*/false);
+  return findOptimal<IteratorType>(module, region, patterns, test,
+                                   /*eraseOpNotInRange=*/false);
 }
 
 namespace {
@@ -181,7 +190,7 @@ public:
 /// This class defines the Reduction Tree Pass. It provides a framework to
 /// to implement a reduction pass using a tree structure to keep track of the
 /// generated reduced variants.
-class ReductionTreePass : public ReductionTreeBase<ReductionTreePass> {
+class ReductionTreePass : public impl::ReductionTreeBase<ReductionTreePass> {
 public:
   ReductionTreePass() = default;
   ReductionTreePass(const ReductionTreePass &pass) = default;
@@ -192,12 +201,12 @@ public:
   void runOnOperation() override;
 
 private:
-  void reduceOp(ModuleOp module, Region &region);
+  LogicalResult reduceOp(ModuleOp module, Region &region);
 
   FrozenRewritePatternSet reducerPatterns;
 };
 
-} // end anonymous namespace
+} // namespace
 
 LogicalResult ReductionTreePass::initialize(MLIRContext *context) {
   RewritePatternSet patterns(context);
@@ -211,7 +220,12 @@ void ReductionTreePass::runOnOperation() {
   Operation *topOperation = getOperation();
   while (topOperation->getParentOp() != nullptr)
     topOperation = topOperation->getParentOp();
-  ModuleOp module = cast<ModuleOp>(topOperation);
+  ModuleOp module = dyn_cast<ModuleOp>(topOperation);
+  if (!module) {
+    emitError(getOperation()->getLoc())
+        << "top-level op must be 'builtin.module'";
+    return signalPassFailure();
+  }
 
   SmallVector<Operation *, 8> workList;
   workList.push_back(getOperation());
@@ -221,7 +235,8 @@ void ReductionTreePass::runOnOperation() {
 
     for (Region &region : op->getRegions())
       if (!region.empty())
-        reduceOp(module, region);
+        if (failed(reduceOp(module, region)))
+          return signalPassFailure();
 
     for (Region &region : op->getRegions())
       for (Operation &op : region.getOps())
@@ -230,15 +245,14 @@ void ReductionTreePass::runOnOperation() {
   } while (!workList.empty());
 }
 
-void ReductionTreePass::reduceOp(ModuleOp module, Region &region) {
+LogicalResult ReductionTreePass::reduceOp(ModuleOp module, Region &region) {
   Tester test(testerName, testerArgs);
   switch (traversalModeId) {
   case TraversalMode::SinglePath:
-    findOptimal<ReductionNode::iterator<TraversalMode::SinglePath>>(
+    return findOptimal<ReductionNode::iterator<TraversalMode::SinglePath>>(
         module, region, reducerPatterns, test);
-    break;
   default:
-    llvm_unreachable("Unsupported mode");
+    return module.emitError() << "unsupported traversal mode detected";
   }
 }
 

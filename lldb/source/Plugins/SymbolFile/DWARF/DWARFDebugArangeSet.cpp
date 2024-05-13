@@ -13,6 +13,7 @@
 #include <cassert>
 
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 DWARFDebugArangeSet::DWARFDebugArangeSet()
     : m_offset(DW_INVALID_OFFSET), m_next_offset(DW_INVALID_OFFSET) {}
@@ -138,7 +139,7 @@ llvm::Error DWARFDebugArangeSet::extract(const DWARFDataExtractor &data,
     }
   }
   if (num_terminators > 1) {
-    Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
+    Log *log = GetLog(DWARFLog::DebugInfo);
     LLDB_LOG(log,
              "warning: DWARFDebugArangeSet at %#" PRIx64 " contains %u "
              "terminator entries",

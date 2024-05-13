@@ -18,13 +18,14 @@
 #include "PPCRegisterInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstdlib>
 
@@ -36,8 +37,10 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "PPCGenSubtargetInfo.inc"
 
-static cl::opt<bool> UseSubRegLiveness("ppc-track-subreg-liveness",
-cl::desc("Enable subregister liveness tracking for PPC"), cl::Hidden);
+static cl::opt<bool>
+    UseSubRegLiveness("ppc-track-subreg-liveness",
+                      cl::desc("Enable subregister liveness tracking for PPC"),
+                      cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableMachinePipeliner("ppc-enable-pipeliner",
@@ -45,18 +48,20 @@ static cl::opt<bool>
                            cl::init(false), cl::Hidden);
 
 PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
+                                                            StringRef TuneCPU,
                                                             StringRef FS) {
   initializeEnvironment();
-  initSubtargetFeatures(CPU, FS);
+  initSubtargetFeatures(CPU, TuneCPU, FS);
   return *this;
 }
 
 PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
-                           const std::string &FS, const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TargetTriple(TT),
+                           const std::string &TuneCPU, const std::string &FS,
+                           const PPCTargetMachine &TM)
+    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
       IsPPC64(TargetTriple.getArch() == Triple::ppc64 ||
               TargetTriple.getArch() == Triple::ppc64le),
-      TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, FS)),
+      TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
   CallLoweringInfo.reset(new PPCCallLowering(*getTargetLowering()));
   Legalizer.reset(new PPCLegalizerInfo(*this));
@@ -70,78 +75,11 @@ PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
 void PPCSubtarget::initializeEnvironment() {
   StackAlignment = Align(16);
   CPUDirective = PPC::DIR_NONE;
-  HasMFOCRF = false;
-  Has64BitSupport = false;
-  Use64BitRegs = false;
-  UseCRBits = false;
-  HasHardFloat = false;
-  HasAltivec = false;
-  HasSPE = false;
-  HasEFPU2 = false;
-  HasFPU = false;
-  HasVSX = false;
-  NeedsTwoConstNR = false;
-  HasP8Vector = false;
-  HasP8Altivec = false;
-  HasP8Crypto = false;
-  HasP9Vector = false;
-  HasP9Altivec = false;
-  HasMMA = false;
-  HasROPProtect = false;
-  HasPrivileged = false;
-  HasP10Vector = false;
-  HasPrefixInstrs = false;
-  HasPCRelativeMemops = false;
-  HasFCPSGN = false;
-  HasFSQRT = false;
-  HasFRE = false;
-  HasFRES = false;
-  HasFRSQRTE = false;
-  HasFRSQRTES = false;
-  HasRecipPrec = false;
-  HasSTFIWX = false;
-  HasLFIWAX = false;
-  HasFPRND = false;
-  HasFPCVT = false;
-  HasISEL = false;
-  HasBPERMD = false;
-  HasExtDiv = false;
-  HasCMPB = false;
-  HasLDBRX = false;
-  IsBookE = false;
-  HasOnlyMSYNC = false;
-  IsPPC4xx = false;
-  IsPPC6xx = false;
-  IsE500 = false;
-  FeatureMFTB = false;
-  AllowsUnalignedFPAccess = false;
-  DeprecatedDST = false;
-  HasICBT = false;
-  HasInvariantFunctionDescriptors = false;
-  HasPartwordAtomics = false;
-  HasDirectMove = false;
-  HasHTM = false;
-  HasFloat128 = false;
-  HasFusion = false;
-  HasStoreFusion = false;
-  HasAddiLoadFusion = false;
-  HasAddisLoadFusion = false;
-  IsISA3_0 = false;
-  IsISA3_1 = false;
-  UseLongCalls = false;
-  SecurePlt = false;
-  VectorsUseTwoUnits = false;
-  UsePPCPreRASchedStrategy = false;
-  UsePPCPostRASchedStrategy = false;
-  PairedVectorMemops = false;
-  PredictableSelectIsExpensive = false;
-  HasModernAIXAs = false;
-  IsAIX = false;
-
   HasPOPCNTD = POPCNTD_Unavailable;
 }
 
-void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
+void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
+                                         StringRef FS) {
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty() || CPU == "generic") {
@@ -154,21 +92,22 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       CPUName = "generic";
   }
 
+  // Determine the CPU to schedule for.
+  if (TuneCPU.empty()) TuneCPU = CPUName;
+
   // Initialize scheduling itinerary for the specified CPU.
   InstrItins = getInstrItineraryForCPU(CPUName);
 
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+  ParseSubtargetFeatures(CPUName, TuneCPU, FS);
 
   // If the user requested use of 64-bit regs, but the cpu selected doesn't
   // support it, ignore.
   if (IsPPC64 && has64BitSupport())
     Use64BitRegs = true;
 
-  if ((TargetTriple.isOSFreeBSD() && TargetTriple.getOSMajorVersion() >= 13) ||
-      TargetTriple.isOSNetBSD() || TargetTriple.isOSOpenBSD() ||
-      TargetTriple.isMusl())
-    SecurePlt = true;
+  if (TargetTriple.isPPC32SecurePlt())
+    IsSecurePlt = true;
 
   if (HasSPE && IsPPC64)
     report_fatal_error( "SPE is only supported for 32-bit targets.\n", false);
@@ -184,6 +123,29 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   // Determine endianness.
   IsLittleEndian = TM.isLittleEndian();
+
+  if (HasAIXSmallLocalExecTLS || HasAIXSmallLocalDynamicTLS) {
+    if (!TargetTriple.isOSAIX() || !IsPPC64)
+      report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute is "
+                         "only supported on AIX in "
+                         "64-bit mode.\n",
+                         false);
+    // The aix-small-local-[exec|dynamic]-tls attribute should only be used with
+    // -data-sections, as having data sections turned off with this option
+    // is not ideal for performance. Moreover, the
+    // small-local-[exec|dynamic]-tls region is a limited resource, and should
+    // not be used for variables that may be replaced.
+    if (!TM.getDataSections())
+      report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute can "
+                         "only be specified with "
+                         "-data-sections.\n",
+                         false);
+  }
+
+  if (HasAIXShLibTLSModelOpt && (!TargetTriple.isOSAIX() || !IsPPC64))
+    report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
+                       "is only supported on AIX in 64-bit mode.\n",
+                       false);
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
@@ -229,12 +191,61 @@ bool PPCSubtarget::enableSubRegLiveness() const {
 }
 
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
+  if (isAIXABI()) {
+    if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
+      // On AIX the only symbols that aren't indirect are toc-data.
+      return !GVar->hasAttribute("toc-data");
+
+    return true;
+  }
+
   // Large code model always uses the TOC even for local symbols.
   if (TM.getCodeModel() == CodeModel::Large)
     return true;
-  if (TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+
+  if (TM.shouldAssumeDSOLocal(GV))
     return false;
   return true;
+}
+
+CodeModel::Model PPCSubtarget::getCodeModel(const TargetMachine &TM,
+                                            const GlobalValue *GV) const {
+  // If there isn't an attribute to override the module code model
+  // this will be the effective code model.
+  CodeModel::Model ModuleModel = TM.getCodeModel();
+
+  // Initially support per global code model for AIX only.
+  if (!isAIXABI())
+    return ModuleModel;
+
+  // Only GlobalVariables carry an attribute which can override the module code
+  // model.
+  assert(GV && "Unexpected NULL GlobalValue");
+  const GlobalVariable *GlobalVar =
+      [](const GlobalValue *GV) -> const GlobalVariable * {
+    const GlobalVariable *Var = dyn_cast<GlobalVariable>(GV);
+    if (Var)
+      return Var;
+
+    const GlobalAlias *Alias = dyn_cast<GlobalAlias>(GV);
+    if (Alias)
+      return dyn_cast<GlobalVariable>(Alias->getAliaseeObject());
+
+    return nullptr;
+  }(GV);
+
+  if (!GlobalVar)
+    return ModuleModel;
+
+  std::optional<CodeModel::Model> MaybeCodeModel = GlobalVar->getCodeModel();
+  if (MaybeCodeModel) {
+    CodeModel::Model CM = *MaybeCodeModel;
+    assert((CM == CodeModel::Small || CM == CodeModel::Large) &&
+           "invalid code model for AIX");
+    return CM;
+  }
+
+  return ModuleModel;
 }
 
 bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }

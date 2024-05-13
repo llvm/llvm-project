@@ -4,9 +4,9 @@
 ; CHECK-DAG: v[[V00:[0-9]+]] = vmem(r[[B00:[0-9]+]]+#0)
 ; CHECK-DAG: v[[V01:[0-9]+]] = vmem(r[[B00]]+#1)
 ; CHECK: valign(v[[V01]],v[[V00]],r[[B00]])
-define void @test_00(<64 x i8>* %p, <64 x i8>* %q) #0 {
-  %v0 = load <64 x i8>, <64 x i8>* %p, align 1
-  store <64 x i8> %v0, <64 x i8>* %q, align 1
+define void @test_00(ptr %p, ptr %q) #0 {
+  %v0 = load <64 x i8>, ptr %p, align 1
+  store <64 x i8> %v0, ptr %q, align 1
   ret void
 }
 
@@ -17,9 +17,9 @@ define void @test_00(<64 x i8>* %p, <64 x i8>* %q) #0 {
 ; CHECK: }
 ; CHECK-DAG: valign(v[[V11]],v[[V10]],r[[B01]])
 ; CHECK-DAG: valign(v[[V12]],v[[V11]],r[[B01]])
-define void @test_01(<128 x i8>* %p, <128 x i8>* %q) #0 {
-  %v0 = load <128 x i8>, <128 x i8>* %p, align 1
-  store <128 x i8> %v0, <128 x i8>* %q, align 1
+define void @test_01(ptr %p, ptr %q) #0 {
+  %v0 = load <128 x i8>, ptr %p, align 1
+  store <128 x i8> %v0, ptr %q, align 1
   ret void
 }
 

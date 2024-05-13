@@ -57,7 +57,7 @@ nullptr_t f(nullptr_t null)
   o2(nullptr); // expected-error {{ambiguous}}
 
   // nullptr is an rvalue, null is an lvalue
-  (void)&nullptr; // expected-error {{cannot take the address of an rvalue of type 'nullptr_t'}}
+  (void)&nullptr; // expected-error {{cannot take the address of an rvalue of type 'std::nullptr_t'}}
   nullptr_t *pn = &null;
 
   // You can reinterpret_cast nullptr to an integer.

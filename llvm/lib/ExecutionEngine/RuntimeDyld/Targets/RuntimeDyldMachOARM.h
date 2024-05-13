@@ -10,7 +10,6 @@
 #define LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_TARGETS_RUNTIMEDYLDMACHOARM_H
 
 #include "../RuntimeDyldMachO.h"
-#include <string>
 
 #define DEBUG_TYPE "dyld"
 
@@ -31,7 +30,7 @@ public:
 
   unsigned getMaxStubSize() const override { return 8; }
 
-  unsigned getStubAlignment() override { return 4; }
+  Align getStubAlignment() override { return Align(4); }
 
   Expected<JITSymbolFlags> getJITSymbolFlags(const SymbolRef &SR) override {
     auto Flags = RuntimeDyldImpl::getJITSymbolFlags(SR);
@@ -141,7 +140,7 @@ public:
         return ++RelI;
     }
 
-    // Sanity check relocation type.
+    // Validate the relocation type.
     switch (RelType) {
     UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_PAIR);
     UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_SECTDIFF);

@@ -22,14 +22,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include <algorithm>
 #include <cstdint>
 
 using namespace llvm;

@@ -136,7 +136,7 @@ class Scheduler : public HardwareUnit {
   /// Issue an instruction without updating the ready queue.
   void issueInstructionImpl(
       InstRef &IR,
-      SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Pipes);
+      SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Pipes);
 
   // Identify instructions that have finished executing, and remove them from
   // the IssuedSet. References to executed instructions are added to input
@@ -202,7 +202,7 @@ public:
   /// result of this event.
   void issueInstruction(
       InstRef &IR,
-      SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Used,
+      SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Used,
       SmallVectorImpl<InstRef> &Pending,
       SmallVectorImpl<InstRef> &Ready);
 
@@ -264,9 +264,10 @@ public:
   // Update the ready queues.
   void dump() const;
 
-  // This routine performs a sanity check.  This routine should only be called
-  // when we know that 'IR' is not in the scheduler's instruction queues.
-  void sanityCheck(const InstRef &IR) const {
+  // This routine performs a basic correctness check.  This routine should only
+  // be called when we know that 'IR' is not in the scheduler's instruction
+  // queues.
+  void instructionCheck(const InstRef &IR) const {
     assert(!is_contained(WaitSet, IR) && "Already in the wait set!");
     assert(!is_contained(ReadySet, IR) && "Already in the ready set!");
     assert(!is_contained(IssuedSet, IR) && "Already executing!");

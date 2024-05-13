@@ -15,8 +15,14 @@
 #define __AVX512VLVNNIINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS128 __attribute__((__always_inline__, __nodebug__, __target__("avx512vl,avx512vnni"), __min_vector_width__(128)))
-#define __DEFAULT_FN_ATTRS256 __attribute__((__always_inline__, __nodebug__, __target__("avx512vl,avx512vnni"), __min_vector_width__(256)))
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("avx512vl,avx512vnni,no-evex512"),                 \
+                 __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS256                                                  \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("avx512vl,avx512vnni,no-evex512"),                 \
+                 __min_vector_width__(256)))
 
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a A with
 /// corresponding signed 8-bit integers in \a B, producing 4 intermediate signed
@@ -25,7 +31,7 @@
 ///
 /// This intrinsic corresponds to the <c> VPDPBUSD </c> instructions.
 ///
-/// \operation
+/// \code{.operation}
 ///    FOR j := 0 to 7
 ///      tmp1.word := Signed(ZeroExtend16(A.byte[4*j]) * SignExtend16(B.byte[4*j]))
 ///      tmp2.word := Signed(ZeroExtend16(A.byte[4*j+1]) * SignExtend16(B.byte[4*j+1]))
@@ -34,9 +40,9 @@
 ///      DST.dword[j] := S.dword[j] + tmp1 + tmp2 + tmp3 + tmp4
 ///    ENDFOR
 ///    DST[MAX:256] := 0
-/// \endoperation
+/// \endcode
 #define _mm256_dpbusd_epi32(S, A, B) \
-  (__m256i)__builtin_ia32_vpdpbusd256((__v8si)(S), (__v8si)(A), (__v8si)(B))
+  ((__m256i)__builtin_ia32_vpdpbusd256((__v8si)(S), (__v8si)(A), (__v8si)(B)))
 
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a A with
 /// corresponding signed 8-bit integers in \a B, producing 4 intermediate signed
@@ -45,7 +51,7 @@
 ///
 /// This intrinsic corresponds to the <c> VPDPBUSDS </c> instructions.
 ///
-/// \operation
+/// \code{.operation}
 ///    FOR j := 0 to 7
 ///      tmp1.word := Signed(ZeroExtend16(A.byte[4*j]) * SignExtend16(B.byte[4*j]))
 ///      tmp2.word := Signed(ZeroExtend16(A.byte[4*j+1]) * SignExtend16(B.byte[4*j+1]))
@@ -54,9 +60,9 @@
 ///      DST.dword[j] := Saturate32(S.dword[j] + tmp1 + tmp2 + tmp3 + tmp4)
 ///    ENDFOR
 ///    DST[MAX:256] := 0
-/// \endoperation
+/// \endcode
 #define _mm256_dpbusds_epi32(S, A, B) \
-  (__m256i)__builtin_ia32_vpdpbusds256((__v8si)(S), (__v8si)(A), (__v8si)(B))
+  ((__m256i)__builtin_ia32_vpdpbusds256((__v8si)(S), (__v8si)(A), (__v8si)(B)))
 
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a A with
 /// corresponding 16-bit integers in \a B, producing 2 intermediate signed 32-bit
@@ -65,16 +71,16 @@
 ///
 /// This intrinsic corresponds to the <c> VPDPWSSD </c> instructions.
 ///
-/// \operation
+/// \code{.operation}
 ///    FOR j := 0 to 7
 ///      tmp1.dword := SignExtend32(A.word[2*j]) * SignExtend32(B.word[2*j])
 ///      tmp2.dword := SignExtend32(A.word[2*j+1]) * SignExtend32(B.word[2*j+1])
 ///      DST.dword[j] := S.dword[j] + tmp1 + tmp2
 ///    ENDFOR
 ///    DST[MAX:256] := 0
-/// \endoperation
+/// \endcode
 #define _mm256_dpwssd_epi32(S, A, B) \
-  (__m256i)__builtin_ia32_vpdpwssd256((__v8si)(S), (__v8si)(A), (__v8si)(B))
+  ((__m256i)__builtin_ia32_vpdpwssd256((__v8si)(S), (__v8si)(A), (__v8si)(B)))
 
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a A with
 /// corresponding 16-bit integers in \a B, producing 2 intermediate signed 32-bit
@@ -83,16 +89,16 @@
 ///
 /// This intrinsic corresponds to the <c> VPDPWSSDS </c> instructions.
 ///
-/// \operation
+/// \code{.operation}
 ///    FOR j := 0 to 7
 ///      tmp1.dword := SignExtend32(A.word[2*j]) * SignExtend32(B.word[2*j])
 ///      tmp2.dword := SignExtend32(A.word[2*j+1]) * SignExtend32(B.word[2*j+1])
 ///      DST.dword[j] := Saturate32(S.dword[j] + tmp1 + tmp2)
 ///    ENDFOR
 ///    DST[MAX:256] := 0
-/// \endoperation
+/// \endcode
 #define _mm256_dpwssds_epi32(S, A, B) \
-  (__m256i)__builtin_ia32_vpdpwssds256((__v8si)(S), (__v8si)(A), (__v8si)(B))
+  ((__m256i)__builtin_ia32_vpdpwssds256((__v8si)(S), (__v8si)(A), (__v8si)(B)))
 
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a A with
 /// corresponding signed 8-bit integers in \a B, producing 4 intermediate signed
@@ -101,7 +107,7 @@
 ///
 /// This intrinsic corresponds to the <c> VPDPBUSD </c> instructions.
 ///
-/// \operation
+/// \code{.operation}
 ///    FOR j := 0 to 3
 ///      tmp1.word := Signed(ZeroExtend16(A.byte[4*j]) * SignExtend16(B.byte[4*j]))
 ///      tmp2.word := Signed(ZeroExtend16(A.byte[4*j+1]) * SignExtend16(B.byte[4*j+1]))
@@ -110,9 +116,9 @@
 ///      DST.dword[j] := S.dword[j] + tmp1 + tmp2 + tmp3 + tmp4
 ///    ENDFOR
 ///    DST[MAX:128] := 0
-/// \endoperation
+/// \endcode
 #define _mm_dpbusd_epi32(S, A, B) \
-  (__m128i)__builtin_ia32_vpdpbusd128((__v4si)(S), (__v4si)(A), (__v4si)(B))
+  ((__m128i)__builtin_ia32_vpdpbusd128((__v4si)(S), (__v4si)(A), (__v4si)(B)))
 
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a A with
 /// corresponding signed 8-bit integers in \a B, producing 4 intermediate signed
@@ -121,7 +127,7 @@
 ///
 /// This intrinsic corresponds to the <c> VPDPBUSDS </c> instructions.
 ///
-/// \operation
+/// \code{.operation}
 ///    FOR j := 0 to 3
 ///      tmp1.word := Signed(ZeroExtend16(A.byte[4*j]) * SignExtend16(B.byte[4*j]))
 ///      tmp2.word := Signed(ZeroExtend16(A.byte[4*j+1]) * SignExtend16(B.byte[4*j+1]))
@@ -130,9 +136,9 @@
 ///      DST.dword[j] := Saturate32(S.dword[j] + tmp1 + tmp2 + tmp3 + tmp4)
 ///    ENDFOR
 ///    DST[MAX:128] := 0
-/// \endoperation
+/// \endcode
 #define _mm_dpbusds_epi32(S, A, B) \
-  (__m128i)__builtin_ia32_vpdpbusds128((__v4si)(S), (__v4si)(A), (__v4si)(B))
+  ((__m128i)__builtin_ia32_vpdpbusds128((__v4si)(S), (__v4si)(A), (__v4si)(B)))
 
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a A with
 /// corresponding 16-bit integers in \a B, producing 2 intermediate signed 32-bit
@@ -141,16 +147,16 @@
 ///
 /// This intrinsic corresponds to the <c> VPDPWSSD </c> instructions.
 ///
-/// \operation
+/// \code{.operation}
 ///    FOR j := 0 to 3
 ///      tmp1.dword := SignExtend32(A.word[2*j]) * SignExtend32(B.word[2*j])
 ///      tmp2.dword := SignExtend32(A.word[2*j+1]) * SignExtend32(B.word[2*j+1])
 ///      DST.dword[j] := S.dword[j] + tmp1 + tmp2
 ///    ENDFOR
 ///    DST[MAX:128] := 0
-/// \endoperation
+/// \endcode
 #define _mm_dpwssd_epi32(S, A, B) \
-  (__m128i)__builtin_ia32_vpdpwssd128((__v4si)(S), (__v4si)(A), (__v4si)(B))
+  ((__m128i)__builtin_ia32_vpdpwssd128((__v4si)(S), (__v4si)(A), (__v4si)(B)))
 
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a A with
 /// corresponding 16-bit integers in \a B, producing 2 intermediate signed 32-bit
@@ -159,16 +165,16 @@
 ///
 /// This intrinsic corresponds to the <c> VPDPWSSDS </c> instructions.
 ///
-/// \operation
+/// \code{.operation}
 ///    FOR j := 0 to 3
 ///      tmp1.dword := SignExtend32(A.word[2*j]) * SignExtend32(B.word[2*j])
 ///      tmp2.dword := SignExtend32(A.word[2*j+1]) * SignExtend32(B.word[2*j+1])
 ///      DST.dword[j] := Saturate32(S.dword[j] + tmp1 + tmp2)
 ///    ENDFOR
 ///    DST[MAX:128] := 0
-/// \endoperation
+/// \endcode
 #define _mm_dpwssds_epi32(S, A, B) \
-  (__m128i)__builtin_ia32_vpdpwssds128((__v4si)(S), (__v4si)(A), (__v4si)(B))
+  ((__m128i)__builtin_ia32_vpdpwssds128((__v4si)(S), (__v4si)(A), (__v4si)(B)))
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_mask_dpbusd_epi32(__m256i __S, __mmask8 __U, __m256i __A, __m256i __B)

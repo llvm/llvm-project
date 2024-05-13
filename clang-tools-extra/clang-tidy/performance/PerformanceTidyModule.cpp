@@ -9,6 +9,8 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "AvoidEndlCheck.h"
+#include "EnumSizeCheck.h"
 #include "FasterStringFindCheck.h"
 #include "ForRangeCopyCheck.h"
 #include "ImplicitConversionInLoopCheck.h"
@@ -19,19 +21,22 @@
 #include "MoveConstructorInitCheck.h"
 #include "NoAutomaticMoveCheck.h"
 #include "NoIntToPtrCheck.h"
+#include "NoexceptDestructorCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
+#include "NoexceptSwapCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitialization.h"
 #include "UnnecessaryValueParamCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace performance {
 
 class PerformanceModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidEndlCheck>("performance-avoid-endl");
+    CheckFactories.registerCheck<EnumSizeCheck>("performance-enum-size");
     CheckFactories.registerCheck<FasterStringFindCheck>(
         "performance-faster-string-find");
     CheckFactories.registerCheck<ForRangeCopyCheck>(
@@ -51,8 +56,12 @@ public:
     CheckFactories.registerCheck<NoAutomaticMoveCheck>(
         "performance-no-automatic-move");
     CheckFactories.registerCheck<NoIntToPtrCheck>("performance-no-int-to-ptr");
+    CheckFactories.registerCheck<NoexceptDestructorCheck>(
+        "performance-noexcept-destructor");
     CheckFactories.registerCheck<NoexceptMoveConstructorCheck>(
         "performance-noexcept-move-constructor");
+    CheckFactories.registerCheck<NoexceptSwapCheck>(
+        "performance-noexcept-swap");
     CheckFactories.registerCheck<TriviallyDestructibleCheck>(
         "performance-trivially-destructible");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(
@@ -74,5 +83,4 @@ static ClangTidyModuleRegistry::Add<PerformanceModule>
 // and thus register the PerformanceModule.
 volatile int PerformanceModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

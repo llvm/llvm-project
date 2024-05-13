@@ -28,9 +28,6 @@
 
 namespace clang {
 
-class DeclContext;
-class IdentifierInfo;
-
 class PartialDiagnostic : public StreamingDiagnostic {
 private:
   // NOTE: Sema assumes that PartialDiagnostic is location-invariant
@@ -67,8 +64,8 @@ public:
   // It is necessary to limit this to rvalue reference to avoid calling this
   // function with a bitfield lvalue argument since non-const reference to
   // bitfield is not allowed.
-  template <typename T, typename = typename std::enable_if<
-                            !std::is_lvalue_reference<T>::value>::type>
+  template <typename T,
+            typename = std::enable_if_t<!std::is_lvalue_reference<T>::value>>
   const PartialDiagnostic &operator<<(T &&V) const {
     const StreamingDiagnostic &DB = *this;
     DB << std::move(V);

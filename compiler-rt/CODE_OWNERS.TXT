@@ -8,33 +8,49 @@ beautification by scripts. The fields are: name (N), email (E), web-address
 (W), PGP key ID and fingerprint (P), description (D), and snail-mail address
 (S).
 
-N: Peter Collingbourne
-E: peter@pcc.me.uk
+N: Saleem Abdulrasool
+E: compnerd@compnerd.org
+D: builtins library
+
+N: Andrew Browne
+E: browneee@google.com
 D: DataFlowSanitizer
 
-N: Daniel Dunbar
-E: daniel@zuster.org
-D: Makefile build
+N: Vitaly Buka
+E: vitalybuka@google.com
+D: Sanitizers
 
-N: Timur Iskhodzhanov
-E: timurrrr@google.com
-D: AddressSanitizer for Windows
+N: Peter Collingbourne
+E: peter@pcc.me.uk
+D: CFI, SafeStack
 
-N: Howard Hinnant
-E: howard.hinnant@gmail.com
-D: builtins library
+N: Lang Hames
+E: lhames@gmail.com
+D: ORC
+
+N: Petr Hosek
+E: phosek@google.com
+D: CRT, CMake build
+
+N: Teresa Johnson
+E: tejohnson@google.com
+D: MemProf
+
+N: Kostya Kortchinsky
+E: kostya.kortchinsky@gmail.com
+D: SCUDO
+
+N: Mitch Phillips
+E: mitchp@google.com
+D: GWP ASAN
 
 N: Alexander Potapenko
 E: glider@google.com
-D: MacOS/iOS port of sanitizers
-
-N: Alexey Samsonov
-E: samsonov@google.com
-D: CMake build, test suite
+D: Sanitizers
 
 N: Kostya Serebryany
 E: kcc@google.com
-D: AddressSanitizer, sanitizer_common, porting sanitizers to another platforms, LeakSanitizer
+D: AddressSanitizer, sanitizer_common, LeakSanitizer, LibFuzzer
 
 N: Richard Smith
 E: richard-llvm@metafoo.co.uk

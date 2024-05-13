@@ -13,15 +13,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 using namespace llvm;
 
@@ -38,7 +39,7 @@ public:
   R600MCCodeEmitter &operator=(const R600MCCodeEmitter &) = delete;
 
   /// Encode the instruction and write it to the OS.
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
@@ -48,20 +49,14 @@ public:
                              const MCSubtargetInfo &STI) const;
 
 private:
-
-  void Emit(uint32_t value, raw_ostream &OS) const;
-  void Emit(uint64_t value, raw_ostream &OS) const;
+  void emit(uint32_t value, SmallVectorImpl<char> &CB) const;
+  void emit(uint64_t value, SmallVectorImpl<char> &CB) const;
 
   unsigned getHWReg(unsigned regNo) const;
 
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
-
 };
 
 } // end anonymous namespace
@@ -84,17 +79,14 @@ enum FCInstr {
 };
 
 MCCodeEmitter *llvm::createR600MCCodeEmitter(const MCInstrInfo &MCII,
-                                             const MCRegisterInfo &MRI,
                                              MCContext &Ctx) {
-  return new R600MCCodeEmitter(MCII, MRI);
+  return new R600MCCodeEmitter(MCII, *Ctx.getRegisterInfo());
 }
 
-void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
-  verifyInstructionPredicates(MI,
-                              computeAvailableFeatures(STI.getFeatureBits()));
-
+void R600MCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                          SmallVectorImpl<char> &CB,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (MI.getOpcode() == R600::RETURN ||
     MI.getOpcode() == R600::FETCH_CLAUSE ||
@@ -105,13 +97,13 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   } else if (IS_VTX(Desc)) {
     uint64_t InstWord01 = getBinaryCodeForInstr(MI, Fixups, STI);
     uint32_t InstWord2 = MI.getOperand(2).getImm(); // Offset
-    if (!(STI.getFeatureBits()[R600::FeatureCaymanISA])) {
+    if (!(STI.hasFeature(R600::FeatureCaymanISA))) {
       InstWord2 |= 1 << 19; // Mega-Fetch bit
     }
 
-    Emit(InstWord01, OS);
-    Emit(InstWord2, OS);
-    Emit((uint32_t) 0, OS);
+    emit(InstWord01, CB);
+    emit(InstWord2, CB);
+    emit((uint32_t)0, CB);
   } else if (IS_TEX(Desc)) {
       int64_t Sampler = MI.getOperand(14).getImm();
 
@@ -133,28 +125,28 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
           SrcSelect[ELEMENT_W] << 29 | Offsets[0] << 0 | Offsets[1] << 5 |
           Offsets[2] << 10;
 
-      Emit(Word01, OS);
-      Emit(Word2, OS);
-      Emit((uint32_t) 0, OS);
+      emit(Word01, CB);
+      emit(Word2, CB);
+      emit((uint32_t)0, CB);
   } else {
     uint64_t Inst = getBinaryCodeForInstr(MI, Fixups, STI);
-    if ((STI.getFeatureBits()[R600::FeatureR600ALUInst]) &&
+    if ((STI.hasFeature(R600::FeatureR600ALUInst)) &&
        ((Desc.TSFlags & R600_InstFlag::OP1) ||
          Desc.TSFlags & R600_InstFlag::OP2)) {
       uint64_t ISAOpCode = Inst & (0x3FFULL << 39);
       Inst &= ~(0x3FFULL << 39);
       Inst |= ISAOpCode << 1;
     }
-    Emit(Inst, OS);
+    emit(Inst, CB);
   }
 }
 
-void R600MCCodeEmitter::Emit(uint32_t Value, raw_ostream &OS) const {
-  support::endian::write(OS, Value, support::little);
+void R600MCCodeEmitter::emit(uint32_t Value, SmallVectorImpl<char> &CB) const {
+  support::endian::write(CB, Value, llvm::endianness::little);
 }
 
-void R600MCCodeEmitter::Emit(uint64_t Value, raw_ostream &OS) const {
-  support::endian::write(OS, Value, support::little);
+void R600MCCodeEmitter::emit(uint64_t Value, SmallVectorImpl<char> &CB) const {
+  support::endian::write(CB, Value, llvm::endianness::little);
 }
 
 unsigned R600MCCodeEmitter::getHWReg(unsigned RegNo) const {
@@ -187,5 +179,4 @@ uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
   return MO.getImm();
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "R600GenMCCodeEmitter.inc"

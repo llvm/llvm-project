@@ -53,53 +53,52 @@ typedef signed char BOOL;
 + (id)stringWithUTF8String:(const char *)nullTerminatedCString;
 @end
 
-// CHECK: [[V0:%.*]] = type opaque
-// CHECK: [[STRUCT_NSCONSTANT_STRING_TAG:%.*]] = type { i32*, i32, i8*, i64 }
+// CHECK: [[STRUCT_NSCONSTANT_STRING_TAG:%.*]] = type { ptr, i32, ptr, i64 }
 
 // CHECK: [[WithIntMeth:@.*]] = private unnamed_addr constant [15 x i8] c"numberWithInt:\00"
-// CHECK: [[WithIntSEL:@.*]] = internal externally_initialized global i8* getelementptr inbounds ([15 x i8], [15 x i8]* [[WithIntMeth]]
+// CHECK: [[WithIntSEL:@.*]] = internal externally_initialized global ptr [[WithIntMeth]]
 // CHECK: [[WithCharMeth:@.*]] = private unnamed_addr constant [16 x i8] c"numberWithChar:\00"
-// CHECK: [[WithCharSEL:@.*]] = internal externally_initialized global i8* getelementptr inbounds ([16 x i8], [16 x i8]* [[WithCharMeth]]
+// CHECK: [[WithCharSEL:@.*]] = internal externally_initialized global ptr [[WithCharMeth]]
 // CHECK: [[WithBoolMeth:@.*]] = private unnamed_addr constant [16 x i8] c"numberWithBool:\00"
-// CHECK: [[WithBoolSEL:@.*]] = internal externally_initialized global i8* getelementptr inbounds ([16 x i8], [16 x i8]* [[WithBoolMeth]]
+// CHECK: [[WithBoolSEL:@.*]] = internal externally_initialized global ptr [[WithBoolMeth]]
 // CHECK: [[WithIntegerMeth:@.*]] = private unnamed_addr constant [19 x i8] c"numberWithInteger:\00"
-// CHECK: [[WithIntegerSEL:@.*]] = internal externally_initialized global i8* getelementptr inbounds ([19 x i8], [19 x i8]* [[WithIntegerMeth]]
+// CHECK: [[WithIntegerSEL:@.*]] = internal externally_initialized global ptr [[WithIntegerMeth]]
 // CHECK: [[WithUnsignedIntegerMeth:@.*]] = private unnamed_addr constant [27 x i8] c"numberWithUnsignedInteger:\00"
-// CHECK: [[WithUnsignedIntegerSEL:@.*]] = internal externally_initialized global i8* getelementptr inbounds ([27 x i8], [27 x i8]* [[WithUnsignedIntegerMeth]]
+// CHECK: [[WithUnsignedIntegerSEL:@.*]] = internal externally_initialized global ptr [[WithUnsignedIntegerMeth]]
 // CHECK: [[stringWithUTF8StringMeth:@.*]] = private unnamed_addr constant [22 x i8] c"stringWithUTF8String:\00"
-// CHECK: [[stringWithUTF8StringSEL:@.*]] = internal externally_initialized global i8* getelementptr inbounds ([22 x i8], [22 x i8]* [[stringWithUTF8StringMeth]]
+// CHECK: [[stringWithUTF8StringSEL:@.*]] = internal externally_initialized global ptr [[stringWithUTF8StringMeth]]
 // CHECK: [[STR0:.*]] = private unnamed_addr constant [4 x i8] c"abc\00", section "__TEXT,__cstring,cstring_literals", align 1
-// CHECK: [[UNNAMED_CFSTRING:.*]] = private global [[STRUCT_NSCONSTANT_STRING_TAG]] { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([4 x i8], [4 x i8]* [[STR0]], i32 0, i32 0), i64 3 }, section "__DATA,__cfstring", align 8
+// CHECK: [[UNNAMED_CFSTRING:.*]] = private global [[STRUCT_NSCONSTANT_STRING_TAG]] { ptr @__CFConstantStringClassReference, i32 1992, ptr [[STR0]], i64 3 }, section "__DATA,__cfstring", align 8
 
-int main() {
-  // CHECK: [[T:%.*]] = alloca [[V0]]*, align 8
+int main(void) {
+  // CHECK: [[T:%t]] = alloca ptr, align 8
 
-  // CHECK: load i8*, i8** [[WithIntSEL]]
+  // CHECK: load ptr, ptr [[WithIntSEL]]
   int i; @(i);
-  // CHECK: load i8*, i8** [[WithCharSEL]]
+  // CHECK: load ptr, ptr [[WithCharSEL]]
   signed char sc; @(sc);
-  // CHECK: load i8*, i8** [[WithBoolSEL]]
+  // CHECK: load ptr, ptr [[WithBoolSEL]]
   BOOL b; @(b);
-  // CHECK: load i8*, i8** [[WithBoolSEL]]
+  // CHECK: load ptr, ptr [[WithBoolSEL]]
   typeof(b) b2; @(b2);
-  // CHECK: load i8*, i8** [[WithBoolSEL]]
+  // CHECK: load ptr, ptr [[WithBoolSEL]]
   typedef const typeof(b) MyBOOL; MyBOOL b3; @(b3);
-  // CHECK: load i8*, i8** [[WithBoolSEL]]
+  // CHECK: load ptr, ptr [[WithBoolSEL]]
   @((BOOL)i);
-  // CHECK: load i8*, i8** [[WithIntegerSEL]]
+  // CHECK: load ptr, ptr [[WithIntegerSEL]]
   @((NSInteger)i);
-  // CHECK: load i8*, i8** [[WithUnsignedIntegerSEL]]
+  // CHECK: load ptr, ptr [[WithUnsignedIntegerSEL]]
   @((NSUInteger)i);
-  // CHECK: load i8*, i8** [[stringWithUTF8StringSEL]]
+  // CHECK: load ptr, ptr [[stringWithUTF8StringSEL]]
   const char *s; @(s);
 
   typedef enum : NSInteger { Red, Green, Blue } Color;
-  // CHECK: load i8*, i8** [[WithIntegerSEL]]
+  // CHECK: load ptr, ptr [[WithIntegerSEL]]
   @(Red);
   Color col = Red;
-  // CHECK: load i8*, i8** [[WithIntegerSEL]]
+  // CHECK: load ptr, ptr [[WithIntegerSEL]]
   @(col);
 
-  // CHECK: store [[V0]]* bitcast ([[STRUCT_NSCONSTANT_STRING_TAG]]* [[UNNAMED_CFSTRING]] to [[V0]]*), [[V0]]** [[T]], align 8
+  // CHECK: store ptr [[UNNAMED_CFSTRING]], ptr [[T]], align 8
   NSString *t = @("abc");
 }

@@ -1,4 +1,4 @@
-; RUN: llc  -march=mipsel -mcpu=mips32 -relocation-model=static -O3 < %s -mips-mixed-16-32  | FileCheck %s -check-prefix=32
+; RUN: llc  -mtriple=mipsel -mcpu=mips32 -relocation-model=static -O3 < %s -mips-mixed-16-32  | FileCheck %s -check-prefix=32
 
 @x = global float 1.000000e+00, align 4
 @y = global float 0x4007333340000000, align 4
@@ -10,7 +10,7 @@
 
 define void @foo() #0 {
 entry:
-  store i32 10, i32* @i, align 4
+  store i32 10, ptr @i, align 4
   ret void
 }
 
@@ -21,14 +21,14 @@ entry:
 
 define void @nofoo() #1 {
 entry:
-  store i32 20, i32* @i, align 4
-  %0 = load float, float* @x, align 4
-  %1 = load float, float* @y, align 4
+  store i32 20, ptr @i, align 4
+  %0 = load float, ptr @x, align 4
+  %1 = load float, ptr @y, align 4
   %add = fadd float %0, %1
-  store float %add, float* @f, align 4
-  %2 = load float, float* @f, align 4
+  store float %add, ptr @f, align 4
+  %2 = load float, ptr @f, align 4
   %conv = fpext float %2 to double
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0), double %conv)
+  %call = call i32 (ptr, ...) @printf(ptr @.str, double %conv)
   ret void
 }
 
@@ -43,16 +43,16 @@ entry:
 ; 32:	.set	macro
 ; 32:	.set	reorder
 ; 32:	.end	nofoo
-declare i32 @printf(i8*, ...) #2
+declare i32 @printf(ptr, ...) #2
 
 define i32 @main() #3 {
 entry:
   call void @foo()
-  %0 = load i32, i32* @i, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str1, i32 0, i32 0), i32 %0)
+  %0 = load i32, ptr @i, align 4
+  %call = call i32 (ptr, ...) @printf(ptr @.str1, i32 %0)
   call void @nofoo()
-  %1 = load i32, i32* @i, align 4
-  %call1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str2, i32 0, i32 0), i32 %1)
+  %1 = load i32, ptr @i, align 4
+  %call1 = call i32 (ptr, ...) @printf(ptr @.str2, i32 %1)
   ret i32 0
 }
 

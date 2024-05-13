@@ -51,4 +51,3 @@ ror.l	#7, %d1
 ; CHECK:      ror.l  #8, %d1
 ; CHECK-SAME: encoding: [0xe0,0x99]
 ror.l	#8, %d1
-

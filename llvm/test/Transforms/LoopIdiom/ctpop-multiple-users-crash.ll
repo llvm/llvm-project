@@ -1,4 +1,4 @@
-; RUN: opt -loop-idiom -S < %s | FileCheck %s
+; RUN: opt -passes=loop-idiom -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios8.0.0"
@@ -8,12 +8,12 @@ target triple = "arm64-apple-ios8.0.0"
 ; to that should continue to read from the original compare.
 
 ; CHECK: %tobool.5 = icmp ne i32 %num, 0
-; CHECK: store i1 %tobool.5, i1* %ptr
+; CHECK: store i1 %tobool.5, ptr %ptr
 
-define internal fastcc i32 @num_bits_set(i32 %num, i1* %ptr) #1 {
+define internal fastcc i32 @num_bits_set(i32 %num, ptr %ptr) #1 {
 entry:
   %tobool.5 = icmp ne i32 %num, 0
-  store i1 %tobool.5, i1* %ptr
+  store i1 %tobool.5, ptr %ptr
   br i1 %tobool.5, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:                                   ; preds = %entry

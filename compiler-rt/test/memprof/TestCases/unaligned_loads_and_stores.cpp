@@ -1,11 +1,11 @@
-// RUN: %clangxx_memprof -O0 %s -o %t && %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_memprof -O0 %s -o %t && %env_memprof_opts=print_text=true:log_path=stderr %run %t 2>&1 | FileCheck %s
 
 // This is actually:
 //  Memory allocation stack id = STACKID
 //    alloc_count 1, size (ave/min/max) 128.00 / 128 / 128
 // but we need to look for them in the same CHECK to get the correct STACKID.
 // CHECK:      Memory allocation stack id = [[STACKID:[0-9]+]]{{[[:space:]].*}}alloc_count 1, size (ave/min/max) 128.00 / 128 / 128
-// CHECK-NEXT:   access_count (ave/min/max): 7.00 / 7 / 7
+// CHECK-NEXT:   access_count (ave/min/max): 22.00 / 22 / 22
 
 #include <sanitizer/memprof_interface.h>
 

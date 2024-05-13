@@ -10,18 +10,18 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_GLOBALSSTREAM_H
 
 #include "llvm/ADT/iterator.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Native/RawConstants.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
-#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+class BinaryStreamReader;
+namespace msf {
+class MappedBlockStream;
+}
 namespace pdb {
-class DbiStream;
-class PDBFile;
 class SymbolStream;
 
 /// Iterator over hash records producing symbol record offsets. Abstracts away
@@ -81,7 +81,7 @@ private:
   GSIHashTable GlobalsTable;
   std::unique_ptr<msf::MappedBlockStream> Stream;
 };
-}
+} // namespace pdb
 }
 
 #endif

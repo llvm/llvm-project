@@ -1,6 +1,5 @@
 ; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck  \
 ; RUN: %s
-; RUN: opt < %s -msan -msan-check-access-address=0 -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -20,7 +19,7 @@ entry:
 ; CHECK-LABEL: @MulConst(
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_param_tls
 ; CHECK: [[B:%.*]] = mul i64 [[A]], 68719476736
-; CHECK: store i64 [[B]], i64* {{.*}} @__msan_retval_tls
+; CHECK: store i64 [[B]], ptr @__msan_retval_tls
 
 
 define i64 @MulZero(i64 %x) sanitize_memory {
@@ -32,7 +31,7 @@ entry:
 ; CHECK-LABEL: @MulZero(
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_param_tls
 ; CHECK: [[B:%.*]] = mul i64 [[A]], 0{{$}}
-; CHECK: store i64 [[B]], i64* {{.*}} @__msan_retval_tls
+; CHECK: store i64 [[B]], ptr @__msan_retval_tls
 
 
 define i64 @MulNeg(i64 %x) sanitize_memory {
@@ -44,7 +43,7 @@ entry:
 ; CHECK-LABEL: @MulNeg(
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_param_tls
 ; CHECK: [[B:%.*]] = mul i64 [[A]], 16
-; CHECK: store i64 [[B]], i64* {{.*}} @__msan_retval_tls
+; CHECK: store i64 [[B]], ptr @__msan_retval_tls
 
 
 define i64 @MulNeg2(i64 %x) sanitize_memory {
@@ -56,7 +55,7 @@ entry:
 ; CHECK-LABEL: @MulNeg2(
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_param_tls
 ; CHECK: [[B:%.*]] = mul i64 [[A]], 16
-; CHECK: store i64 [[B]], i64* {{.*}} @__msan_retval_tls
+; CHECK: store i64 [[B]], ptr @__msan_retval_tls
 
 
 define i64 @MulOdd(i64 %x) sanitize_memory {
@@ -68,7 +67,7 @@ entry:
 ; CHECK-LABEL: @MulOdd(
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_param_tls
 ; CHECK: [[B:%.*]] = mul i64 [[A]], 1
-; CHECK: store i64 [[B]], i64* {{.*}} @__msan_retval_tls
+; CHECK: store i64 [[B]], ptr @__msan_retval_tls
 
 
 define i64 @MulLarge(i64 %x) sanitize_memory {
@@ -82,7 +81,7 @@ entry:
 ; CHECK-LABEL: @MulLarge(
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_param_tls
 ; CHECK: [[B:%.*]] = mul i64 [[A]], -9223372036854775808
-; CHECK: store i64 [[B]], i64* {{.*}} @__msan_retval_tls
+; CHECK: store i64 [[B]], ptr @__msan_retval_tls
 
 define <4 x i32> @MulVectorConst(<4 x i32> %x) sanitize_memory {
 entry:
@@ -93,13 +92,13 @@ entry:
 ; CHECK-LABEL: @MulVectorConst(
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_param_tls
 ; CHECK: [[B:%.*]] = mul <4 x i32> [[A]], <i32 1024, i32 0, i32 16, i32 16>
-; CHECK: store <4 x i32> [[B]], <4 x i32>* {{.*}} @__msan_retval_tls
+; CHECK: store <4 x i32> [[B]], ptr @__msan_retval_tls
 
 
 ; The constant in multiplication does not have to be a literal integer constant.
-@X = linkonce_odr global i8* null
+@X = linkonce_odr global ptr null
 define i64 @MulNonIntegerConst(i64 %a) sanitize_memory {
-  %mul = mul i64 %a, ptrtoint (i8** @X to i64)
+  %mul = mul i64 %a, ptrtoint (ptr @X to i64)
   ret i64 %mul
 }
 
@@ -109,7 +108,7 @@ define i64 @MulNonIntegerConst(i64 %a) sanitize_memory {
 ; CHECK: store i64 [[B]], {{.*}}@__msan_retval_tls
 
 define <2 x i64> @MulNonIntegerVectorConst(<2 x i64> %a) sanitize_memory {
-  %mul = mul <2 x i64> %a, <i64 3072, i64 ptrtoint (i8** @X to i64)>
+  %mul = mul <2 x i64> %a, <i64 3072, i64 ptrtoint (ptr @X to i64)>
   ret <2 x i64> %mul
 }
 

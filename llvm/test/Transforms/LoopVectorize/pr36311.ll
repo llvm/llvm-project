@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 -S < %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -S < %s
 ;
 ; Cleaned up version of fe_tools.all_dimensions.ll from PR36311.
 ; Forcing VF=2 to trigger vector code gen
@@ -13,7 +13,7 @@ $test = comdat any
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: uwtable
-define dso_local void @test() local_unnamed_addr #0 comdat align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define dso_local void @test() local_unnamed_addr #0 comdat align 2 personality ptr @__gxx_personality_v0 {
 entry:
   br label %for.body51
 
@@ -38,8 +38,8 @@ for.body89:                                       ; preds = %for.body89, %for.bo
   %add93 = add i32 %add92, %mul91
   %inc94 = add i32 %next_index.5174, 1
   %conv95 = zext i32 %next_index.5174 to i64
-  %arrayidx.i160 = getelementptr inbounds i32, i32* undef, i64 %conv95
-  store i32 %add93, i32* %arrayidx.i160, align 4
+  %arrayidx.i160 = getelementptr inbounds i32, ptr undef, i64 %conv95
+  store i32 %add93, ptr %arrayidx.i160, align 4
 ;, !tbaa !1
   %cmp87 = icmp ult i32 %add92, undef
   br i1 %cmp87, label %for.body89, label %for.cond80.loopexit

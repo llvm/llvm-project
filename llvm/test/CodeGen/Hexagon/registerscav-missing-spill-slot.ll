@@ -4,12 +4,12 @@
 
 target triple = "hexagon-unknown-linux-gnu"
 
-%s.0 = type { double, double, double, double, double, double, i32, double, double, double, double, i8*, i8, [9 x i8], double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, [200 x i8*], [32 x i8*], [32 x i8], i32 }
+%s.0 = type { double, double, double, double, double, double, i32, double, double, double, double, ptr, i8, [9 x i8], double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, [200 x ptr], [32 x ptr], [32 x i8], i32 }
 
 ; Function Attrs: nounwind
 define void @f0() #0 {
 b0:
-  %v0 = call i8* @f2()
+  %v0 = call ptr @f2()
   br i1 undef, label %b1, label %b2
 
 b1:                                               ; preds = %b0
@@ -28,7 +28,7 @@ b5:                                               ; preds = %b4
   unreachable
 
 b6:                                               ; preds = %b4
-  %v1 = call i32 bitcast (i32 (...)* @f1 to i32 ()*)() #0
+  %v1 = call i32 @f1() #0
   br i1 undef, label %b7, label %b20
 
 b7:                                               ; preds = %b6
@@ -60,11 +60,10 @@ b13:                                              ; preds = %b7
   unreachable
 
 b14:                                              ; preds = %b7
-  %v2 = call %s.0* bitcast (%s.0* (...)* @f3 to %s.0* (i32)*)(i32 0) #0
+  %v2 = call ptr @f3(i32 0) #0
   br label %b15
 
 b15:                                              ; preds = %b15, %b14
-  %v3 = bitcast i8* undef to double*
   %v4 = fadd double undef, undef
   br i1 undef, label %b16, label %b15
 
@@ -75,18 +74,15 @@ b16:                                              ; preds = %b15
   ]
 
 b17:                                              ; preds = %b16
-  %v5 = getelementptr i8, i8* %v0, i32 0
-  %v6 = bitcast i8* %v5 to double*
   %v7 = or i32 0, 16
-  %v8 = getelementptr i8, i8* %v0, i32 %v7
-  %v9 = bitcast i8* %v8 to double*
-  %v10 = load double, double* undef, align 8, !tbaa !0
+  %v8 = getelementptr i8, ptr %v0, i32 %v7
+  %v10 = load double, ptr undef, align 8, !tbaa !0
   %v11 = fcmp olt double -1.000000e+11, %v10
   %v12 = select i1 %v11, double %v10, double -1.000000e+11
-  %v13 = load double, double* %v6, align 8, !tbaa !0
+  %v13 = load double, ptr %v0, align 8, !tbaa !0
   %v14 = fcmp olt double -1.000000e+11, %v13
   %v15 = select i1 %v14, double %v13, double -1.000000e+11
-  %v16 = load double, double* %v9, align 8, !tbaa !0
+  %v16 = load double, ptr %v8, align 8, !tbaa !0
   %v17 = fcmp olt double -1.000000e+11, %v16
   %v18 = select i1 %v17, double %v16, double -1.000000e+11
   %v19 = fcmp ogt double 1.000000e+11, %v13
@@ -101,11 +97,11 @@ b18:                                              ; preds = %b17, %b16
   %v25 = phi double [ %v20, %b17 ], [ 1.000000e+11, %b16 ]
   %v26 = phi double [ %v18, %b17 ], [ -1.000000e+11, %b16 ]
   %v27 = phi double [ %v22, %b17 ], [ 1.000000e+11, %b16 ]
-  %v28 = load double, double* undef, align 8, !tbaa !0
+  %v28 = load double, ptr undef, align 8, !tbaa !0
   %v29 = select i1 undef, double %v28, double %v23
-  %v30 = load double, double* null, align 8, !tbaa !0
+  %v30 = load double, ptr null, align 8, !tbaa !0
   %v31 = select i1 undef, double %v30, double %v24
-  %v32 = load double, double* undef, align 8, !tbaa !0
+  %v32 = load double, ptr undef, align 8, !tbaa !0
   %v33 = select i1 undef, double %v32, double %v26
   %v34 = select i1 undef, double %v30, double %v25
   %v35 = select i1 undef, double %v32, double %v27
@@ -118,41 +114,39 @@ b19:                                              ; preds = %b19, %b18, %b16
   %v39 = phi double [ %v82, %b19 ], [ 1.000000e+11, %b16 ], [ %v34, %b18 ]
   %v40 = phi double [ %v80, %b19 ], [ -1.000000e+11, %b16 ], [ %v33, %b18 ]
   %v41 = phi double [ %v84, %b19 ], [ 1.000000e+11, %b16 ], [ %v35, %b18 ]
-  %v42 = getelementptr i8, i8* %v0, i32 0
-  %v43 = bitcast i8* %v42 to double*
-  %v44 = load double, double* null, align 8, !tbaa !0
+  %v44 = load double, ptr null, align 8, !tbaa !0
   %v45 = select i1 undef, double %v44, double %v36
-  %v46 = load double, double* %v43, align 8, !tbaa !0
+  %v46 = load double, ptr %v0, align 8, !tbaa !0
   %v47 = select i1 undef, double %v46, double %v38
-  %v48 = load double, double* undef, align 8, !tbaa !0
+  %v48 = load double, ptr undef, align 8, !tbaa !0
   %v49 = select i1 undef, double %v48, double %v40
   %v50 = select i1 undef, double %v44, double %v37
   %v51 = fcmp ogt double %v39, %v46
   %v52 = select i1 %v51, double %v46, double %v39
   %v53 = select i1 undef, double %v48, double %v41
-  %v54 = load double, double* null, align 8, !tbaa !0
+  %v54 = load double, ptr null, align 8, !tbaa !0
   %v55 = select i1 undef, double %v54, double %v45
-  %v56 = load double, double* undef, align 8, !tbaa !0
+  %v56 = load double, ptr undef, align 8, !tbaa !0
   %v57 = select i1 undef, double %v56, double %v47
-  %v58 = load double, double* undef, align 8, !tbaa !0
+  %v58 = load double, ptr undef, align 8, !tbaa !0
   %v59 = select i1 undef, double %v58, double %v49
   %v60 = select i1 undef, double %v54, double %v50
   %v61 = select i1 undef, double %v56, double %v52
   %v62 = select i1 false, double %v58, double %v53
-  %v63 = load double, double* undef, align 8, !tbaa !0
+  %v63 = load double, ptr undef, align 8, !tbaa !0
   %v64 = select i1 undef, double %v63, double %v55
-  %v65 = load double, double* undef, align 8, !tbaa !0
+  %v65 = load double, ptr undef, align 8, !tbaa !0
   %v66 = select i1 undef, double %v65, double %v57
-  %v67 = load double, double* null, align 8, !tbaa !0
+  %v67 = load double, ptr null, align 8, !tbaa !0
   %v68 = select i1 undef, double %v67, double %v59
   %v69 = fcmp ogt double %v60, %v63
   %v70 = select i1 %v69, double %v63, double %v60
   %v71 = select i1 false, double %v65, double %v61
   %v72 = select i1 false, double %v67, double %v62
-  %v73 = load double, double* null, align 8, !tbaa !0
+  %v73 = load double, ptr null, align 8, !tbaa !0
   %v74 = fcmp olt double %v64, %v73
   %v75 = select i1 %v74, double %v73, double %v64
-  %v76 = load double, double* null, align 8, !tbaa !0
+  %v76 = load double, ptr null, align 8, !tbaa !0
   %v77 = fcmp olt double %v66, %v76
   %v78 = select i1 %v77, double %v76, double %v66
   %v79 = fcmp olt double %v68, 0.000000e+00
@@ -170,9 +164,9 @@ b20:                                              ; preds = %b19, %b18, %b6
 declare i32 @f1(...)
 
 ; Function Attrs: nounwind
-declare noalias i8* @f2() #0
+declare noalias ptr @f2() #0
 
-declare %s.0* @f3(...)
+declare ptr @f3(...)
 
 attributes #0 = { nounwind }
 

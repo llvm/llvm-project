@@ -1,5 +1,5 @@
-// RUN: %clang -fplugin=%llvmshlibdir/CallSuperAttr%pluginext -fsyntax-only -Xclang -verify=callsuper %s
-// RUN: %clang -fplugin=%llvmshlibdir/CallSuperAttr%pluginext -DBAD_CALLSUPER -fsyntax-only -Xclang -verify=badcallsuper %s
+// RUN: %clang_cc1 -load %llvmshlibdir/CallSuperAttr%pluginext -fsyntax-only -verify=callsuper %s
+// RUN: %clang_cc1 -load %llvmshlibdir/CallSuperAttr%pluginext -DBAD_CALLSUPER -fsyntax-only -verify=badcallsuper %s
 // REQUIRES: plugins, examples
 
 // callsuper-no-diagnostics

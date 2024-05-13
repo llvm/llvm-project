@@ -15,6 +15,7 @@
 
 #include <cstring>
 #include <limits>
+#include <ostream>
 #include <string>
 
 namespace __orc_rt {
@@ -57,57 +58,6 @@ private:
   size_type Size = 0;
 };
 
-/// A substitue for std::string_view (and llvm::StringRef).
-/// FIXME: Remove in favor of std::string_view once we have c++17.
-class string_view {
-public:
-  typedef char value_type;
-  typedef char *pointer;
-  typedef const char *const_pointer;
-  typedef char &reference;
-  typedef const char &const_reference;
-  typedef std::size_t size_type;
-  typedef std::ptrdiff_t difference_type;
-
-  typedef const_pointer const_iterator;
-  typedef const_iterator iterator;
-
-  constexpr string_view() noexcept = default;
-  constexpr string_view(const char *S, size_type Count)
-      : Data(S), Size(Count) {}
-  string_view(const char *S) : Data(S), Size(strlen(S)) {}
-
-  constexpr const_iterator begin() const noexcept { return Data; }
-  constexpr const_iterator end() const noexcept { return Data + Size; }
-  constexpr const_pointer data() const noexcept { return Data; }
-  constexpr const_reference operator[](size_type idx) { return Data[idx]; }
-  constexpr size_type size() const noexcept { return Size; }
-  constexpr bool empty() const noexcept { return Size == 0; }
-
-  friend bool operator==(const string_view &LHS, const string_view &RHS) {
-    if (LHS.Size != RHS.Size)
-      return false;
-    if (LHS.Data == RHS.Data)
-      return true;
-    for (size_t I = 0; I != LHS.Size; ++I)
-      if (LHS.Data[I] != RHS.Data[I])
-        return false;
-    return true;
-  }
-
-  friend bool operator!=(const string_view &LHS, const string_view &RHS) {
-    return !(LHS == RHS);
-  }
-
-private:
-  const char *Data = nullptr;
-  size_type Size = 0;
-};
-
-inline std::string to_string(string_view SV) {
-  return std::string(SV.data(), SV.size());
-}
-
 } // end namespace __orc_rt
 
-#endif // ORC_RT_COMMON_H
+#endif // ORC_RT_ADT_H

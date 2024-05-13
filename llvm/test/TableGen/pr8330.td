@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen %s | FileCheck %s
+// RUN: llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s
 // XFAIL: vg_leak
 
 class Or4<bits<8> Val> {

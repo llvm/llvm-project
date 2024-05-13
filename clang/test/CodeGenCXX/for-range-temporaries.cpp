@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR %s | opt -instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR %s | opt -instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR -DTEMPLATE %s | opt -instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR -DTEMPLATE %s | opt -instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR -DTEMPLATE -DDEPENDENT %s | opt -instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR -DTEMPLATE -DDEPENDENT %s | opt -instnamer -S | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR -DTEMPLATE %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR -DTEMPLATE %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR -DTEMPLATE -DDEPENDENT %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR -DTEMPLATE -DDEPENDENT %s | FileCheck %s
 
 struct A {
   A();
@@ -115,7 +115,7 @@ template void for_temps<D>();
 
 // CHECK: [[COND]]:
 // CHECK: call void @_ZN1EneERKS_(
-// CHECK: %[[CMP:.*]] = call zeroext i1 @_ZN1HcvbEv(
+// CHECK: %[[CMP:.*]] = call noundef zeroext i1 @_ZN1HcvbEv(
 // CHECK: call void @_ZN1HD1Ev(
 // CHECK: br i1 %[[CMP]], label %[[BODY:.*]], label %[[CLEANUP:.*]]
 

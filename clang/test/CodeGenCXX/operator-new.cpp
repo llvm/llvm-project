@@ -10,11 +10,11 @@ public:
 };
 
 void f1() {
-  // ALL: declare nonnull i8* @_Znwj(
+  // ALL: declare noundef nonnull ptr @_Znwj(
   new teste();
 }
 
-// rdar://5739832 - operator new should check for overflow in multiply.
+// operator new should check for overflow in multiply.
 void *f2(long N) {
   return new int[N];
 
@@ -22,8 +22,8 @@ void *f2(long N) {
   // ALL-NEXT: [[OVER:%.*]] = extractvalue {{.*}} [[UWO]], 1
   // ALL-NEXT: [[SUM:%.*]] = extractvalue {{.*}} [[UWO]], 0
   // ALL-NEXT: [[RESULT:%.*]] = select i1 [[OVER]], i32 -1, i32 [[SUM]]
-  // SANE-NEXT: call noalias nonnull i8* @_Znaj(i32 [[RESULT]])
-  // SANENOT-NEXT: call nonnull i8* @_Znaj(i32 [[RESULT]])
+  // SANE-NEXT: call noalias noundef nonnull ptr @_Znaj(i32 noundef [[RESULT]])
+  // SANENOT-NEXT: call noundef nonnull ptr @_Znaj(i32 noundef [[RESULT]])
 }
 
-// ALL: declare nonnull i8* @_Znaj(
+// ALL: declare noundef nonnull ptr @_Znaj(

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-from __future__ import print_function
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -98,12 +97,12 @@ OUTPUT = """struct AvailableComponent {
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--output', required=True, help='output file')
+    parser.add_argument("-o", "--output", required=True, help="output file")
     args = parser.parse_args()
 
-    with open(args.output, 'w') as f:
+    with open(args.output, "w") as f:
         f.write(OUTPUT)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

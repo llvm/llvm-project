@@ -4,32 +4,31 @@
 
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=16 \
-; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop-mssa(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=16 \
-; RUN:     -passes='loop-mssa(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; When we relax the candidates part of a multiplier formula
 ; (unscaled candidates == 4) we start getting  some unswitches,
 ; which leads to siblings multiplier kicking in.
 ;
-; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
-; RUN:     -unswitch-num-initial-unscaled-candidates=4 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
-; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV1
+; The tests below also run licm, because it is needed to hoist out
+; loop-invariant freeze instructions, which otherwise may block further
+; unswitching.
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=4 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop-mssa(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
+; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV1
 ;
 ; NB: sort -b is essential here and below, otherwise blanks might lead to different
@@ -37,12 +36,7 @@
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=4 -unswitch-siblings-toplevel-div=2 \
-; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
-; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV2
-;
-; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
-; RUN:     -unswitch-num-initial-unscaled-candidates=4 -unswitch-siblings-toplevel-div=2 \
-; RUN:     -passes='loop-mssa(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
+; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV2
 ;
 ; Get
@@ -50,11 +44,7 @@
 ; loop nests when cost multiplier is disabled:
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=false \
-; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
-; RUN:	   sort -b -k 1 | FileCheck %s --check-prefixes=LOOP32
-;
-; RUN: opt < %s -enable-unswitch-cost-multiplier=false \
-; RUN:     -passes='loop-mssa(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
+; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:	   sort -b -k 1 | FileCheck %s --check-prefixes=LOOP32
 ;
 ; Single loop nest, not unswitched
@@ -85,11 +75,10 @@
 
 declare void @bar()
 
-define void @loop_nested3_conds5(i32* %addr, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5) {
+define void @loop_nested3_conds5(ptr %addr, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5) {
 entry:
-  %addr1 = getelementptr i32, i32* %addr, i64 0
-  %addr2 = getelementptr i32, i32* %addr, i64 1
-  %addr3 = getelementptr i32, i32* %addr, i64 2
+  %addr2 = getelementptr i32, ptr %addr, i64 1
+  %addr3 = getelementptr i32, ptr %addr, i64 2
   br label %outer
 outer:
   %iv1 = phi i32 [0, %entry], [%iv1.next, %outer_latch]
@@ -143,15 +132,15 @@ loop_latch_right:
   br label %loop_latch
 
 loop_latch:
-  store volatile i32 0, i32* %addr1
+  store volatile i32 0, ptr %addr
   %test_loop = icmp slt i32 %iv3, 50
   br i1 %test_loop, label %loop, label %middle_latch
 middle_latch:
-  store volatile i32 0, i32* %addr2
+  store volatile i32 0, ptr %addr2
   %test_middle = icmp slt i32 %iv2, 50
   br i1 %test_middle, label %middle, label %outer_latch
 outer_latch:
-  store volatile i32 0, i32* %addr3
+  store volatile i32 0, ptr %addr3
   %test_outer = icmp slt i32 %iv1, 50
   br i1 %test_outer, label %outer, label %exit
 exit:

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops -polly-ignore-aliasing \
+; RUN: opt %loadPolly -disable-output -polly-print-scops -polly-ignore-aliasing \
 ; RUN:    < %s | FileCheck %s
 
 ; CHECK: Assumed Context:
@@ -72,7 +72,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64 %n1_a, i64 %n1_b, i64 %n1_c, i64 %n1_d, i64 %n2_a, i64 %n2_b, i64 %n2_c, i64 %n2_d, i64 %n3_a, i64 %n3_b, i64 %n3_c, i64 %n3_d, i64 %n4_a, i64 %n4_b, i64 %n4_c, i64 %n4_d, i64 %n5_a, i64 %n5_b, i64 %n5_c, i64 %n5_d, i64 %n6_a, i64 %n6_b, i64 %n6_c, i64 %n6_d, i64 %n7_a, i64 %n7_b, i64 %n7_c, i64 %n7_d, i64 %n8_a, i64 %n8_b, i64 %n8_c, i64 %n8_d, i64 %n9_a, i64 %n9_b, i64 %n9_c, i64 %n9_d, i64 %p1_b, i64 %p1_c, i64 %p1_d, i64 %p2_b, i64 %p2_c, i64 %p2_d, i64 %p3_b, i64 %p3_c, i64 %p3_d, i64 %p4_b, i64 %p4_c, i64 %p4_d, i64 %p5_b, i64 %p5_c, i64 %p5_d, i64 %p6_b, i64 %p6_c, i64 %p6_d, i64 %p7_b, i64 %p7_c, i64 %p7_d, i64 %p8_b, i64 %p8_c, i64 %p8_d, i64 %p9_b, i64 %p9_c, i64 %p9_d, float* %A_1, float* %A_2, float* %A_3, float* %A_4, float* %A_5, float* %A_6, float* %A_7, float* %A_8, float* %A_9) {
+define void @foo(i64 %n1_a, i64 %n1_b, i64 %n1_c, i64 %n1_d, i64 %n2_a, i64 %n2_b, i64 %n2_c, i64 %n2_d, i64 %n3_a, i64 %n3_b, i64 %n3_c, i64 %n3_d, i64 %n4_a, i64 %n4_b, i64 %n4_c, i64 %n4_d, i64 %n5_a, i64 %n5_b, i64 %n5_c, i64 %n5_d, i64 %n6_a, i64 %n6_b, i64 %n6_c, i64 %n6_d, i64 %n7_a, i64 %n7_b, i64 %n7_c, i64 %n7_d, i64 %n8_a, i64 %n8_b, i64 %n8_c, i64 %n8_d, i64 %n9_a, i64 %n9_b, i64 %n9_c, i64 %n9_d, i64 %p1_b, i64 %p1_c, i64 %p1_d, i64 %p2_b, i64 %p2_c, i64 %p2_d, i64 %p3_b, i64 %p3_c, i64 %p3_d, i64 %p4_b, i64 %p4_c, i64 %p4_d, i64 %p5_b, i64 %p5_c, i64 %p5_d, i64 %p6_b, i64 %p6_c, i64 %p6_d, i64 %p7_b, i64 %p7_c, i64 %p7_d, i64 %p8_b, i64 %p8_c, i64 %p8_d, i64 %p9_b, i64 %p9_c, i64 %p9_d, ptr %A_1, ptr %A_2, ptr %A_3, ptr %A_4, ptr %A_5, ptr %A_6, ptr %A_7, ptr %A_8, ptr %A_9) {
 bb:
   br label %bb1
 
@@ -113,16 +113,16 @@ bb11:                                             ; preds = %bb9
   %tmp16 = mul nuw i64 %p1_b, %p1_c
   %tmp17 = mul nuw i64 %tmp16, %p1_d
   %tmp18 = mul nsw i64 %i.0, %tmp17
-  %tmp19 = getelementptr inbounds float, float* %A_1, i64 %tmp18
+  %tmp19 = getelementptr inbounds float, ptr %A_1, i64 %tmp18
   %tmp20 = mul nuw i64 %p1_c, %p1_d
   %tmp21 = mul nsw i64 %j.0, %tmp20
-  %tmp22 = getelementptr inbounds float, float* %tmp19, i64 %tmp21
+  %tmp22 = getelementptr inbounds float, ptr %tmp19, i64 %tmp21
   %tmp23 = mul nsw i64 %k.0, %p1_d
-  %tmp24 = getelementptr inbounds float, float* %tmp22, i64 %tmp23
-  %tmp25 = getelementptr inbounds float, float* %tmp24, i64 %l.0
-  %tmp26 = load float, float* %tmp25, align 4
+  %tmp24 = getelementptr inbounds float, ptr %tmp22, i64 %tmp23
+  %tmp25 = getelementptr inbounds float, ptr %tmp24, i64 %l.0
+  %tmp26 = load float, ptr %tmp25, align 4
   %tmp27 = fadd float %tmp26, %tmp15
-  store float %tmp27, float* %tmp25, align 4
+  store float %tmp27, ptr %tmp25, align 4
   br label %bb28
 
 bb28:                                             ; preds = %bb11
@@ -190,16 +190,16 @@ bb51:                                             ; preds = %bb49
   %tmp56 = mul nuw i64 %p2_b, %p2_c
   %tmp57 = mul nuw i64 %tmp56, %p2_d
   %tmp58 = mul nsw i64 %i1.0, %tmp57
-  %tmp59 = getelementptr inbounds float, float* %A_2, i64 %tmp58
+  %tmp59 = getelementptr inbounds float, ptr %A_2, i64 %tmp58
   %tmp60 = mul nuw i64 %p2_c, %p2_d
   %tmp61 = mul nsw i64 %j2.0, %tmp60
-  %tmp62 = getelementptr inbounds float, float* %tmp59, i64 %tmp61
+  %tmp62 = getelementptr inbounds float, ptr %tmp59, i64 %tmp61
   %tmp63 = mul nsw i64 %k3.0, %p2_d
-  %tmp64 = getelementptr inbounds float, float* %tmp62, i64 %tmp63
-  %tmp65 = getelementptr inbounds float, float* %tmp64, i64 %l4.0
-  %tmp66 = load float, float* %tmp65, align 4
+  %tmp64 = getelementptr inbounds float, ptr %tmp62, i64 %tmp63
+  %tmp65 = getelementptr inbounds float, ptr %tmp64, i64 %l4.0
+  %tmp66 = load float, ptr %tmp65, align 4
   %tmp67 = fadd float %tmp66, %tmp55
-  store float %tmp67, float* %tmp65, align 4
+  store float %tmp67, ptr %tmp65, align 4
   br label %bb68
 
 bb68:                                             ; preds = %bb51
@@ -267,16 +267,16 @@ bb91:                                             ; preds = %bb89
   %tmp96 = mul nuw i64 %p3_b, %p3_c
   %tmp97 = mul nuw i64 %tmp96, %p3_d
   %tmp98 = mul nsw i64 %i5.0, %tmp97
-  %tmp99 = getelementptr inbounds float, float* %A_3, i64 %tmp98
+  %tmp99 = getelementptr inbounds float, ptr %A_3, i64 %tmp98
   %tmp100 = mul nuw i64 %p3_c, %p3_d
   %tmp101 = mul nsw i64 %j6.0, %tmp100
-  %tmp102 = getelementptr inbounds float, float* %tmp99, i64 %tmp101
+  %tmp102 = getelementptr inbounds float, ptr %tmp99, i64 %tmp101
   %tmp103 = mul nsw i64 %k7.0, %p3_d
-  %tmp104 = getelementptr inbounds float, float* %tmp102, i64 %tmp103
-  %tmp105 = getelementptr inbounds float, float* %tmp104, i64 %l8.0
-  %tmp106 = load float, float* %tmp105, align 4
+  %tmp104 = getelementptr inbounds float, ptr %tmp102, i64 %tmp103
+  %tmp105 = getelementptr inbounds float, ptr %tmp104, i64 %l8.0
+  %tmp106 = load float, ptr %tmp105, align 4
   %tmp107 = fadd float %tmp106, %tmp95
-  store float %tmp107, float* %tmp105, align 4
+  store float %tmp107, ptr %tmp105, align 4
   br label %bb108
 
 bb108:                                            ; preds = %bb91
@@ -344,16 +344,16 @@ bb131:                                            ; preds = %bb129
   %tmp136 = mul nuw i64 %p4_b, %p4_c
   %tmp137 = mul nuw i64 %tmp136, %p4_d
   %tmp138 = mul nsw i64 %i9.0, %tmp137
-  %tmp139 = getelementptr inbounds float, float* %A_4, i64 %tmp138
+  %tmp139 = getelementptr inbounds float, ptr %A_4, i64 %tmp138
   %tmp140 = mul nuw i64 %p4_c, %p4_d
   %tmp141 = mul nsw i64 %j10.0, %tmp140
-  %tmp142 = getelementptr inbounds float, float* %tmp139, i64 %tmp141
+  %tmp142 = getelementptr inbounds float, ptr %tmp139, i64 %tmp141
   %tmp143 = mul nsw i64 %k11.0, %p4_d
-  %tmp144 = getelementptr inbounds float, float* %tmp142, i64 %tmp143
-  %tmp145 = getelementptr inbounds float, float* %tmp144, i64 %l12.0
-  %tmp146 = load float, float* %tmp145, align 4
+  %tmp144 = getelementptr inbounds float, ptr %tmp142, i64 %tmp143
+  %tmp145 = getelementptr inbounds float, ptr %tmp144, i64 %l12.0
+  %tmp146 = load float, ptr %tmp145, align 4
   %tmp147 = fadd float %tmp146, %tmp135
-  store float %tmp147, float* %tmp145, align 4
+  store float %tmp147, ptr %tmp145, align 4
   br label %bb148
 
 bb148:                                            ; preds = %bb131
@@ -421,16 +421,16 @@ bb171:                                            ; preds = %bb169
   %tmp176 = mul nuw i64 %p5_b, %p5_c
   %tmp177 = mul nuw i64 %tmp176, %p5_d
   %tmp178 = mul nsw i64 %i13.0, %tmp177
-  %tmp179 = getelementptr inbounds float, float* %A_5, i64 %tmp178
+  %tmp179 = getelementptr inbounds float, ptr %A_5, i64 %tmp178
   %tmp180 = mul nuw i64 %p5_c, %p5_d
   %tmp181 = mul nsw i64 %j14.0, %tmp180
-  %tmp182 = getelementptr inbounds float, float* %tmp179, i64 %tmp181
+  %tmp182 = getelementptr inbounds float, ptr %tmp179, i64 %tmp181
   %tmp183 = mul nsw i64 %k15.0, %p5_d
-  %tmp184 = getelementptr inbounds float, float* %tmp182, i64 %tmp183
-  %tmp185 = getelementptr inbounds float, float* %tmp184, i64 %l16.0
-  %tmp186 = load float, float* %tmp185, align 4
+  %tmp184 = getelementptr inbounds float, ptr %tmp182, i64 %tmp183
+  %tmp185 = getelementptr inbounds float, ptr %tmp184, i64 %l16.0
+  %tmp186 = load float, ptr %tmp185, align 4
   %tmp187 = fadd float %tmp186, %tmp175
-  store float %tmp187, float* %tmp185, align 4
+  store float %tmp187, ptr %tmp185, align 4
   br label %bb188
 
 bb188:                                            ; preds = %bb171
@@ -498,16 +498,16 @@ bb211:                                            ; preds = %bb209
   %tmp216 = mul nuw i64 %p6_b, %p6_c
   %tmp217 = mul nuw i64 %tmp216, %p6_d
   %tmp218 = mul nsw i64 %i17.0, %tmp217
-  %tmp219 = getelementptr inbounds float, float* %A_6, i64 %tmp218
+  %tmp219 = getelementptr inbounds float, ptr %A_6, i64 %tmp218
   %tmp220 = mul nuw i64 %p6_c, %p6_d
   %tmp221 = mul nsw i64 %j18.0, %tmp220
-  %tmp222 = getelementptr inbounds float, float* %tmp219, i64 %tmp221
+  %tmp222 = getelementptr inbounds float, ptr %tmp219, i64 %tmp221
   %tmp223 = mul nsw i64 %k19.0, %p6_d
-  %tmp224 = getelementptr inbounds float, float* %tmp222, i64 %tmp223
-  %tmp225 = getelementptr inbounds float, float* %tmp224, i64 %l20.0
-  %tmp226 = load float, float* %tmp225, align 4
+  %tmp224 = getelementptr inbounds float, ptr %tmp222, i64 %tmp223
+  %tmp225 = getelementptr inbounds float, ptr %tmp224, i64 %l20.0
+  %tmp226 = load float, ptr %tmp225, align 4
   %tmp227 = fadd float %tmp226, %tmp215
-  store float %tmp227, float* %tmp225, align 4
+  store float %tmp227, ptr %tmp225, align 4
   br label %bb228
 
 bb228:                                            ; preds = %bb211
@@ -575,16 +575,16 @@ bb251:                                            ; preds = %bb249
   %tmp256 = mul nuw i64 %p7_b, %p7_c
   %tmp257 = mul nuw i64 %tmp256, %p7_d
   %tmp258 = mul nsw i64 %i21.0, %tmp257
-  %tmp259 = getelementptr inbounds float, float* %A_7, i64 %tmp258
+  %tmp259 = getelementptr inbounds float, ptr %A_7, i64 %tmp258
   %tmp260 = mul nuw i64 %p7_c, %p7_d
   %tmp261 = mul nsw i64 %j22.0, %tmp260
-  %tmp262 = getelementptr inbounds float, float* %tmp259, i64 %tmp261
+  %tmp262 = getelementptr inbounds float, ptr %tmp259, i64 %tmp261
   %tmp263 = mul nsw i64 %k23.0, %p7_d
-  %tmp264 = getelementptr inbounds float, float* %tmp262, i64 %tmp263
-  %tmp265 = getelementptr inbounds float, float* %tmp264, i64 %l24.0
-  %tmp266 = load float, float* %tmp265, align 4
+  %tmp264 = getelementptr inbounds float, ptr %tmp262, i64 %tmp263
+  %tmp265 = getelementptr inbounds float, ptr %tmp264, i64 %l24.0
+  %tmp266 = load float, ptr %tmp265, align 4
   %tmp267 = fadd float %tmp266, %tmp255
-  store float %tmp267, float* %tmp265, align 4
+  store float %tmp267, ptr %tmp265, align 4
   br label %bb268
 
 bb268:                                            ; preds = %bb251
@@ -652,16 +652,16 @@ bb291:                                            ; preds = %bb289
   %tmp296 = mul nuw i64 %p8_b, %p8_c
   %tmp297 = mul nuw i64 %tmp296, %p8_d
   %tmp298 = mul nsw i64 %i25.0, %tmp297
-  %tmp299 = getelementptr inbounds float, float* %A_8, i64 %tmp298
+  %tmp299 = getelementptr inbounds float, ptr %A_8, i64 %tmp298
   %tmp300 = mul nuw i64 %p8_c, %p8_d
   %tmp301 = mul nsw i64 %j26.0, %tmp300
-  %tmp302 = getelementptr inbounds float, float* %tmp299, i64 %tmp301
+  %tmp302 = getelementptr inbounds float, ptr %tmp299, i64 %tmp301
   %tmp303 = mul nsw i64 %k27.0, %p8_d
-  %tmp304 = getelementptr inbounds float, float* %tmp302, i64 %tmp303
-  %tmp305 = getelementptr inbounds float, float* %tmp304, i64 %l28.0
-  %tmp306 = load float, float* %tmp305, align 4
+  %tmp304 = getelementptr inbounds float, ptr %tmp302, i64 %tmp303
+  %tmp305 = getelementptr inbounds float, ptr %tmp304, i64 %l28.0
+  %tmp306 = load float, ptr %tmp305, align 4
   %tmp307 = fadd float %tmp306, %tmp295
-  store float %tmp307, float* %tmp305, align 4
+  store float %tmp307, ptr %tmp305, align 4
   br label %bb308
 
 bb308:                                            ; preds = %bb291
@@ -729,16 +729,16 @@ bb331:                                            ; preds = %bb329
   %tmp336 = mul nuw i64 %p9_b, %p9_c
   %tmp337 = mul nuw i64 %tmp336, %p9_d
   %tmp338 = mul nsw i64 %i29.0, %tmp337
-  %tmp339 = getelementptr inbounds float, float* %A_9, i64 %tmp338
+  %tmp339 = getelementptr inbounds float, ptr %A_9, i64 %tmp338
   %tmp340 = mul nuw i64 %p9_c, %p9_d
   %tmp341 = mul nsw i64 %j30.0, %tmp340
-  %tmp342 = getelementptr inbounds float, float* %tmp339, i64 %tmp341
+  %tmp342 = getelementptr inbounds float, ptr %tmp339, i64 %tmp341
   %tmp343 = mul nsw i64 %k31.0, %p9_d
-  %tmp344 = getelementptr inbounds float, float* %tmp342, i64 %tmp343
-  %tmp345 = getelementptr inbounds float, float* %tmp344, i64 %l32.0
-  %tmp346 = load float, float* %tmp345, align 4
+  %tmp344 = getelementptr inbounds float, ptr %tmp342, i64 %tmp343
+  %tmp345 = getelementptr inbounds float, ptr %tmp344, i64 %l32.0
+  %tmp346 = load float, ptr %tmp345, align 4
   %tmp347 = fadd float %tmp346, %tmp335
-  store float %tmp347, float* %tmp345, align 4
+  store float %tmp347, ptr %tmp345, align 4
   br label %bb348
 
 bb348:                                            ; preds = %bb331

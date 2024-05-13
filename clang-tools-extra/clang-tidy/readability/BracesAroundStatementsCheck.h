@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Checks that bodies of `if` statements and loops (`for`, `range-for`,
 /// `do-while`, and `while`) are inside braces
@@ -54,18 +52,15 @@ private:
                  SourceLocation EndLocHint = SourceLocation());
   template <typename IfOrWhileStmt>
   SourceLocation findRParenLoc(const IfOrWhileStmt *S, const SourceManager &SM,
-                               const ASTContext *Context);
-  llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+                               const LangOptions &LangOpts);
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
 
-private:
   std::set<const Stmt *> ForceBracesStmts;
   const unsigned ShortStatementLines;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_BRACESAROUNDSTATEMENTSCHECK_H

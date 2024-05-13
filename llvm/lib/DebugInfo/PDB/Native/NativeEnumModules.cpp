@@ -8,13 +8,10 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeEnumModules.h"
 
-#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
-#include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
-#include "llvm/DebugInfo/PDB/Native/NativeExeSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 
 namespace llvm {
 namespace pdb {

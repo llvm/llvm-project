@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IntelJITEventsWrapper.h"
+#include "IntelJITProfiling/IntelJITEventsWrapper.h"
 #include "ittnotify.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/ADT/DenseMap.h"
@@ -24,6 +24,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/Debug.h"

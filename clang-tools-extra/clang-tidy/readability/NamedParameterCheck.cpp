@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 void NamedParameterCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   Finder->addMatcher(functionDecl().bind("decl"), this);
@@ -30,7 +28,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
   // overriden method.
   const FunctionDecl *Definition = nullptr;
   if ((!Function->isDefined(Definition) || Function->isDefaulted() ||
-       Function->isDeleted()) &&
+       Definition->isDefaulted() || Function->isDeleted()) &&
       (!isa<CXXMethodDecl>(Function) ||
        cast<CXXMethodDecl>(Function)->size_overridden_methods() == 0))
     return;
@@ -71,7 +69,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
     const char *Begin = SM.getCharacterData(Parm->getBeginLoc());
     const char *End = SM.getCharacterData(Parm->getLocation());
     StringRef Data(Begin, End - Begin);
-    if (Data.find("/*") != StringRef::npos)
+    if (Data.contains("/*"))
       continue;
 
     UnnamedParams.push_back(std::make_pair(Function, I));
@@ -117,6 +115,4 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

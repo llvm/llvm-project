@@ -4,19 +4,17 @@
 define i64 @main(i1 %tobool1) nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl $-12, %eax
-; CHECK-NEXT:    movl $-1, %edx
-; CHECK-NEXT:    cmovel %edx, %eax
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    orl $-12, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    addl $-1, %esi
-; CHECK-NEXT:    movl $-1, %esi
-; CHECK-NEXT:    adcl $-1, %esi
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    addl $-1, %edx
+; CHECK-NEXT:    movl $0, %edx
+; CHECK-NEXT:    adcl $-2, %edx
 ; CHECK-NEXT:    cmovsl %ecx, %eax
-; CHECK-NEXT:    cmovsl %ecx, %edx
-; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retl
 entry:
   %0 = zext i1 %tobool1 to i32

@@ -11,11 +11,10 @@
 #include "gtest/gtest.h"
 
 using namespace llvm;
-using object::SectionedAddress;
 
 TEST(DWARFLocationExpression, Equality) {
-  EXPECT_EQ((DWARFLocationExpression{None, {}}),
-            (DWARFLocationExpression{None, {}}));
+  EXPECT_EQ((DWARFLocationExpression{std::nullopt, {}}),
+            (DWARFLocationExpression{std::nullopt, {}}));
   EXPECT_NE((DWARFLocationExpression{DWARFAddressRange{1, 47}, {}}),
             (DWARFLocationExpression{DWARFAddressRange{1, 48}, {}}));
   EXPECT_NE((DWARFLocationExpression{DWARFAddressRange{1, 47}, {}}),
@@ -23,7 +22,8 @@ TEST(DWARFLocationExpression, Equality) {
 }
 
 TEST(DWARFLocationExpression, StreamingOperator) {
-  EXPECT_EQ("None: 1, 2", to_string(DWARFLocationExpression{None, {1, 2}}));
+  EXPECT_EQ("None: 1, 2",
+            to_string(DWARFLocationExpression{std::nullopt, {1, 2}}));
   EXPECT_EQ(
       "[0x0000000000000042, 0x0000000000000047): 1",
       to_string(DWARFLocationExpression{DWARFAddressRange{0x42, 0x47}, {1}}));

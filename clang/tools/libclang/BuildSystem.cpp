@@ -16,6 +16,7 @@
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"

@@ -79,9 +79,6 @@ namespace llvm {
       // Exception handler return. The stack is restored to the first
       // followed by a jump to the second argument.
       EH_RETURN,
-
-      // Memory barrier.
-      MEMBARRIER
     };
   }
 
@@ -184,11 +181,6 @@ namespace llvm {
     SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
-
-    MachineMemOperand::Flags getTargetMMOFlags(
-      const Instruction &I) const override;
 
     // Inline asm support
     std::pair<unsigned, const TargetRegisterClass *>
@@ -222,14 +214,10 @@ namespace llvm {
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
-    bool
-      CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                     bool isVarArg,
-                     const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
-                     LLVMContext &Context) const override;
-    bool shouldInsertFencesForAtomic(const Instruction *I) const override {
-      return true;
-    }
+    bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                        bool isVarArg,
+                        const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
+                        LLVMContext &Context) const override;
   };
 }
 

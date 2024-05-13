@@ -6,9 +6,9 @@
 #include "k.h"
 
 #define GIMME_AN_L
-#include "l.h" // expected-error {{module XG does not depend on a module exporting 'l.h'}}
+#include "l.h" // expected-error {{module XG does not directly depend on a module exporting 'l.h', which is part of indirectly-used module XL}}
 
-#include "m2.h" // expected-error {{module XG does not depend on a module exporting 'm2.h'}}
+#include "m2.h" // expected-error {{module XG does not directly depend on a module exporting 'm2.h', which is part of indirectly-used module XM}}
 const int use_m = m; // expected-error {{undeclared identifier}}
 
 #define GIMME_AN_M

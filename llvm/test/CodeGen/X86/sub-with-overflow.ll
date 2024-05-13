@@ -13,14 +13,14 @@ define i1 @func1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    jno .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %overflow
 ; CHECK-NEXT:    movl $no, (%esp)
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_1: # %normal
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $ok, (%esp)
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
@@ -31,11 +31,11 @@ entry:
   br i1 %obit, label %overflow, label %normal
 
 normal:
-  %t1 = tail call i32 (i8*, ...) @printf( i8* getelementptr ([4 x i8], [4 x i8]* @ok, i32 0, i32 0), i32 %sum ) nounwind
+  %t1 = tail call i32 (ptr, ...) @printf( ptr @ok, i32 %sum ) nounwind
   ret i1 true
 
 overflow:
-  %t2 = tail call i32 (i8*, ...) @printf( i8* getelementptr ([4 x i8], [4 x i8]* @no, i32 0, i32 0) ) nounwind
+  %t2 = tail call i32 (ptr, ...) @printf( ptr @no ) nounwind
   ret i1 false
 
 }
@@ -49,14 +49,14 @@ define i1 @func2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    jae .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %carry
 ; CHECK-NEXT:    movl $no, (%esp)
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB1_1: # %normal
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $ok, (%esp)
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
@@ -67,16 +67,16 @@ entry:
   br i1 %obit, label %carry, label %normal
 
 normal:
-  %t1 = tail call i32 (i8*, ...) @printf( i8* getelementptr ([4 x i8], [4 x i8]* @ok, i32 0, i32 0), i32 %sum ) nounwind
+  %t1 = tail call i32 (ptr, ...) @printf( ptr @ok, i32 %sum ) nounwind
   ret i1 true
 
 carry:
-  %t2 = tail call i32 (i8*, ...) @printf( i8* getelementptr ([4 x i8], [4 x i8]* @no, i32 0, i32 0) ) nounwind
+  %t2 = tail call i32 (ptr, ...) @printf( ptr @no ) nounwind
   ret i1 false
 
 }
 
-declare i32 @printf(i8*, ...) nounwind
+declare i32 @printf(ptr, ...) nounwind
 declare {i32, i1} @llvm.ssub.with.overflow.i32(i32, i32)
 declare {i32, i1} @llvm.usub.with.overflow.i32(i32, i32)
 

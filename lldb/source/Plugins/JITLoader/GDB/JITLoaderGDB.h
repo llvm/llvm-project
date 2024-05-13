@@ -25,9 +25,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "gdb"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb::JITLoaderSP CreateInstance(lldb_private::Process *process,
                                           bool force);
@@ -35,9 +35,7 @@ public:
   static void DebuggerInitialize(lldb_private::Debugger &debugger);
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // JITLoader interface
   void DidAttach() override;

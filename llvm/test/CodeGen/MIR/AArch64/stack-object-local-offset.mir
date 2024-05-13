@@ -2,14 +2,14 @@
 
 --- |
   @var = global i64 0
-  @local_addr = global i64* null
+  @local_addr = global ptr null
 
   define void @stack_local() {
   entry:
     %local_var = alloca i64
-    %val = load i64, i64* @var
-    store i64 %val, i64* %local_var
-    store i64* %local_var, i64** @local_addr
+    %val = load i64, ptr @var
+    store i64 %val, ptr %local_var
+    store ptr %local_var, ptr @local_addr
     ret void
   }
 ...
@@ -34,10 +34,10 @@ stack:
 body: |
   bb.0.entry:
     %0 = ADRP @var
-    %1 = LDRXui killed %0, @var :: (load 8 from @var)
-    STRXui killed %1, %stack.0.local_var, 0 :: (store 8 into %ir.local_var)
+    %1 = LDRXui killed %0, @var :: (load (s64) from @var)
+    STRXui killed %1, %stack.0.local_var, 0 :: (store (s64) into %ir.local_var)
     %2 = ADRP @local_addr
     %3 = ADDXri %stack.0.local_var, 0, 0
-    STRXui killed %3, killed %2, @local_addr :: (store 8 into @local_addr)
+    STRXui killed %3, killed %2, @local_addr :: (store (s64) into @local_addr)
     RET_ReallyLR
 ...

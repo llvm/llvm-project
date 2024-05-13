@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_ANALYSES_OSLOG_H
-#define LLVM_CLANG_ANALYSIS_ANALYSES_OSLOG_H
+#ifndef LLVM_CLANG_AST_OSLOG_H
+#define LLVM_CLANG_AST_OSLOG_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"

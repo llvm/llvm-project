@@ -13,36 +13,56 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
+
+namespace {
+AST_MATCHER(FunctionDecl, hasAnyDefinition) {
+  if (Node.hasBody() || Node.isPureVirtual() || Node.isDefaulted() ||
+      Node.isDeleted())
+    return true;
+
+  if (const FunctionDecl *Definition = Node.getDefinition())
+    if (Definition->hasBody() || Definition->isPureVirtual() ||
+        Definition->isDefaulted() || Definition->isDeleted())
+      return true;
+
+  return false;
+}
+
+AST_MATCHER(Decl, isUsed) { return Node.isUsed(); }
+
+AST_MATCHER(CXXMethodDecl, isSpecialFunction) {
+  if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(&Node))
+    return Constructor->isDefaultConstructor() ||
+           Constructor->isCopyOrMoveConstructor();
+
+  return isa<CXXDestructorDecl>(Node) || Node.isCopyAssignmentOperator() ||
+         Node.isMoveAssignmentOperator();
+}
+} // namespace
 
 static const char SpecialFunction[] = "SpecialFunction";
 static const char DeletedNotPublic[] = "DeletedNotPublic";
+
+UseEqualsDeleteCheck::UseEqualsDeleteCheck(StringRef Name,
+                                           ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
 void UseEqualsDeleteCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void UseEqualsDeleteCheck::registerMatchers(MatchFinder *Finder) {
-  auto PrivateSpecialFn = cxxMethodDecl(
-      isPrivate(),
-      anyOf(cxxConstructorDecl(anyOf(isDefaultConstructor(),
-                                     isCopyConstructor(), isMoveConstructor())),
-            cxxMethodDecl(
-                anyOf(isCopyAssignmentOperator(), isMoveAssignmentOperator())),
-            cxxDestructorDecl()));
+  auto PrivateSpecialFn = cxxMethodDecl(isPrivate(), isSpecialFunction());
 
   Finder->addMatcher(
       cxxMethodDecl(
-          PrivateSpecialFn,
-          unless(anyOf(hasAnyBody(stmt()), isDefaulted(), isDeleted(),
-                       ast_matchers::isTemplateInstantiation(),
-                       // Ensure that all methods except private special member
-                       // functions are defined.
-                       hasParent(cxxRecordDecl(hasMethod(unless(
-                           anyOf(PrivateSpecialFn, hasAnyBody(stmt()), isPure(),
-                                 isDefaulted(), isDeleted()))))))))
+          PrivateSpecialFn, unless(hasAnyDefinition()), unless(isUsed()),
+          // Ensure that all methods except private special member functions are
+          // defined.
+          unless(ofClass(hasMethod(cxxMethodDecl(unless(PrivateSpecialFn),
+                                                 unless(hasAnyDefinition()))))))
           .bind(SpecialFunction),
       this);
 
@@ -57,7 +77,7 @@ void UseEqualsDeleteCheck::check(const MatchFinder::MatchResult &Result) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         Func->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
 
-    if (Func->getLocation().isMacroID() && IgnoreMacros)
+    if (IgnoreMacros && Func->getLocation().isMacroID())
       return;
     // FIXME: Improve FixItHint to make the method public.
     diag(Func->getLocation(),
@@ -68,13 +88,11 @@ void UseEqualsDeleteCheck::check(const MatchFinder::MatchResult &Result) {
     // Ignore this warning in macros, since it's extremely noisy in code using
     // DISALLOW_COPY_AND_ASSIGN-style macros and there's no easy way to
     // automatically fix the warning when macros are in play.
-    if (Func->getLocation().isMacroID() && IgnoreMacros)
+    if (IgnoreMacros && Func->getLocation().isMacroID())
       return;
     // FIXME: Add FixItHint to make the method public.
     diag(Func->getLocation(), "deleted member function should be public");
   }
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

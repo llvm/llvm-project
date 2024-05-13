@@ -1,11 +1,11 @@
-from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
+
 
 class TestNoWatchpointSupportInfo(GDBRemoteTestBase):
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
@@ -13,13 +13,13 @@ class TestNoWatchpointSupportInfo(GDBRemoteTestBase):
         Test lldb's parsing of the <architecture> tag in the target.xml register
         description packet.
         """
-        class MyResponder(MockGDBServerResponder):
 
+        class MyResponder(MockGDBServerResponder):
             def haltReason(self):
                 return "T02thread:1ff0d;thread-pcs:10001bc00;"
 
             def threadStopInfo(self, threadnum):
-                if threadnum == 0x1ff0d:
+                if threadnum == 0x1FF0D:
                     return "T02thread:1ff0d;thread-pcs:10001bc00;"
                 return ""
 
@@ -29,21 +29,23 @@ class TestNoWatchpointSupportInfo(GDBRemoteTestBase):
 
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <target version="1.0">
                           <architecture>i386:x86-64</architecture>
                           <feature name="org.gnu.gdb.i386.core">
                             <reg name="rip" bitsize="64" regnum="0" type="code_ptr" group="general"/>
                           </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
         self.server.responder = MyResponder()
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
         self.dbg.SetDefaultArchitecture("x86_64")
         target = self.dbg.CreateTargetWithFileAndArch(None, None)
 
@@ -55,12 +57,12 @@ class TestNoWatchpointSupportInfo(GDBRemoteTestBase):
             interp.HandleCommand("target list", result)
             print(result.GetOutput())
 
-	
         err = lldb.SBError()
-        wp = target.WatchAddress(0x100, 8, False, True, err)
+        wp_opts = lldb.SBWatchpointOptions()
+        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
+        wp = target.WatchpointCreateByAddress(0x100, 8, wp_opts, err)
         if self.TraceOn() and (err.Fail() or wp.IsValid == False):
             strm = lldb.SBStream()
             err.GetDescription(strm)
             print("watchpoint failed: %s" % strm.GetData())
         self.assertTrue(wp.IsValid())
-

@@ -10,18 +10,11 @@
 //
 // binder2nd
 
-// UNSUPPORTED: clang-4.0
 // UNSUPPORTED: c++03
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
 
 #include <functional>
 
 #include "../test_func.h"
-#include "test_macros.h"
 
-int main(int, char**)
-{
-    typedef std::binder2nd<test_func> B2ND; // expected-warning {{'binder2nd<test_func>' is deprecated}}
-
-    return 0;
-}
+typedef std::binder2nd<test_func> B2ND; // expected-warning {{'binder2nd<test_func>' is deprecated}}

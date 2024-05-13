@@ -7,17 +7,17 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
 # RUN: ld.lld -T %t.script %t.o -o %t
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=future %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
 # RUN: ld.lld -T %t.script %t.o -o %t
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=future %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
 # RUN: ld.lld -T %t.script %t.o -o %t --no-power10-stubs
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=future %t \
+# RUN: llvm-objdump -d --no-show-raw-insn %t \
 # RUN: | FileCheck %s
 
 # The point of this test is to make sure that when a function with TOC access
@@ -29,23 +29,22 @@
 # SYMBOL: 10020020     0 NOTYPE  LOCAL  DEFAULT [<other: 0x60>]   2 caller_14
 # SYMBOL: 10020040     8 FUNC    LOCAL  DEFAULT                   2 __toc_save_callee
 
-# CHECK-LABEL: callee
+# CHECK-LABEL: <callee>:
 # CHECK:       blr
 
-# CHECK-LABEL: caller
-# CHECK:       bl 0x10020040
+# CHECK-LABEL: <caller>:
+# CHECK:       bl 0x10020040 <__toc_save_callee>
 # CHECK-NEXT:  ld 2, 24(1)
 # CHECK-NEXT:  blr
 
-# CHECK-LABEL: caller_14
-# CHECK:       bfl 0, 0x10020040
+# CHECK-LABEL: <caller_14>:
+# CHECK:       bfl 0, 0x10020040 <__toc_save_callee>
 # CHECK-NEXT:  ld 2, 24(1)
 # CHECK-NEXT:  blr
 
-# CHECK-LABEL: __toc_save_callee
+# CHECK-LABEL: <__toc_save_callee>:
 # CHECK-NEXT:  std 2, 24(1)
-# CHECK-NEXT:  b 0x10010000
-
+# CHECK-NEXT:  b 0x10010000 <callee>
 
 .section .text_callee, "ax", %progbits
 callee:

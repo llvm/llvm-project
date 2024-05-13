@@ -1,4 +1,5 @@
-; RUN: opt  -instcombine %s -S | FileCheck %s
+; RUN: opt  -passes=instcombine %s -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators  -passes=instcombine %s -S | FileCheck %s
 ;
 ; Generate me from:
 ; clang -cc1 -triple thumbv7-apple-ios7.0.0 -S -target-abi apcs-gnu -gdwarf-2 -Os test.c -o test.ll -emit-llvm
@@ -23,13 +24,13 @@ entry:
   %conv = fptosi float %r to i32, !dbg !23
   tail call void @llvm.dbg.declare(metadata i32 %conv, metadata !12, metadata !DIExpression()), !dbg !23
   %vla = alloca float, i32 %conv, align 4, !dbg !24
-  tail call void @llvm.dbg.declare(metadata float* %vla, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !24
+  tail call void @llvm.dbg.declare(metadata ptr %vla, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !24
 ; The VLA alloca should be described by a dbg.declare:
-; CHECK: call void @llvm.dbg.declare(metadata float* %vla, metadata ![[VLA:.*]], metadata {{.*}})
+; CHECK: call void @llvm.dbg.declare(metadata ptr %vla, metadata ![[VLA:.*]], metadata {{.*}})
 ; The VLA alloca and following store into the array should not be lowered to like this:
 ; CHECK-NOT:  call void @llvm.dbg.value(metadata float %r, metadata ![[VLA]])
 ; the backend interprets this as "vla has the location of %r".
-  store float %r, float* %vla, align 4, !dbg !25, !tbaa !26
+  store float %r, ptr %vla, align 4, !dbg !25, !tbaa !26
   tail call void @llvm.dbg.value(metadata i32 0, metadata !18, metadata !DIExpression()), !dbg !30
   %cmp8 = icmp sgt i32 %conv, 0, !dbg !30
   br i1 %cmp8, label %for.body, label %for.end, !dbg !30
@@ -37,17 +38,17 @@ entry:
 for.body:                                         ; preds = %entry, %for.body.for.body_crit_edge
   %0 = phi float [ %.pre, %for.body.for.body_crit_edge ], [ %r, %entry ]
   %i.09 = phi i32 [ %inc, %for.body.for.body_crit_edge ], [ 0, %entry ]
-  %arrayidx2 = getelementptr inbounds float, float* %vla, i32 %i.09, !dbg !31
+  %arrayidx2 = getelementptr inbounds float, ptr %vla, i32 %i.09, !dbg !31
   %div = fdiv float %0, %r, !dbg !31
-  store float %div, float* %arrayidx2, align 4, !dbg !31, !tbaa !26
+  store float %div, ptr %arrayidx2, align 4, !dbg !31, !tbaa !26
   %inc = add nsw i32 %i.09, 1, !dbg !30
   tail call void @llvm.dbg.value(metadata i32 %inc, metadata !18, metadata !DIExpression()), !dbg !30
   %exitcond = icmp eq i32 %inc, %conv, !dbg !30
   br i1 %exitcond, label %for.end, label %for.body.for.body_crit_edge, !dbg !30
 
 for.body.for.body_crit_edge:                      ; preds = %for.body
-  %arrayidx2.phi.trans.insert = getelementptr inbounds float, float* %vla, i32 %inc
-  %.pre = load float, float* %arrayidx2.phi.trans.insert, align 4, !dbg !31, !tbaa !26
+  %arrayidx2.phi.trans.insert = getelementptr inbounds float, ptr %vla, i32 %inc
+  %.pre = load float, ptr %arrayidx2.phi.trans.insert, align 4, !dbg !31, !tbaa !26
   br label %for.body, !dbg !30
 
 for.end:                                          ; preds = %for.body, %entry

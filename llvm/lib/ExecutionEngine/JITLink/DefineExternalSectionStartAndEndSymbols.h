@@ -52,13 +52,13 @@ public:
         auto &SR = getSectionRange(*D.Sec);
         if (D.IsStart) {
           if (SR.empty())
-            G.makeAbsolute(*Sym, 0);
+            G.makeAbsolute(*Sym, orc::ExecutorAddr());
           else
             G.makeDefined(*Sym, *SR.getFirstBlock(), 0, 0, Linkage::Strong,
                           Scope::Local, false);
         } else {
           if (SR.empty())
-            G.makeAbsolute(*Sym, 0);
+            G.makeAbsolute(*Sym, orc::ExecutorAddr());
           else
             G.makeDefined(*Sym, *SR.getLastBlock(),
                           SR.getLastBlock()->getSize(), 0, Linkage::Strong,
@@ -106,6 +106,48 @@ createDefineExternalSectionStartAndEndSymbolsPass(
     SymbolIdentifierFunction &&F) {
   return DefineExternalSectionStartAndEndSymbols<SymbolIdentifierFunction>(
       std::forward<SymbolIdentifierFunction>(F));
+}
+
+/// ELF section start/end symbol detection.
+inline SectionRangeSymbolDesc
+identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
+  constexpr StringRef StartSymbolPrefix = "__start_";
+  constexpr StringRef EndSymbolPrefix = "__stop_";
+
+  auto SymName = Sym.getName();
+  if (SymName.starts_with(StartSymbolPrefix)) {
+    if (auto *Sec =
+            G.findSectionByName(SymName.drop_front(StartSymbolPrefix.size())))
+      return {*Sec, true};
+  } else if (SymName.starts_with(EndSymbolPrefix)) {
+    if (auto *Sec =
+            G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
+      return {*Sec, false};
+  }
+  return {};
+}
+
+/// MachO section start/end symbol detection.
+inline SectionRangeSymbolDesc
+identifyMachOSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
+  constexpr StringRef StartSymbolPrefix = "section$start$";
+  constexpr StringRef EndSymbolPrefix = "section$end$";
+
+  auto SymName = Sym.getName();
+  if (SymName.starts_with(StartSymbolPrefix)) {
+    auto [SegName, SecName] =
+      SymName.drop_front(StartSymbolPrefix.size()).split('$');
+    std::string SectionName = (SegName + "," + SecName).str();
+    if (auto *Sec = G.findSectionByName(SectionName))
+      return {*Sec, true};
+  } else if (SymName.starts_with(EndSymbolPrefix)) {
+    auto [SegName, SecName] =
+      SymName.drop_front(EndSymbolPrefix.size()).split('$');
+    std::string SectionName = (SegName + "," + SecName).str();
+    if (auto *Sec = G.findSectionByName(SectionName))
+      return {*Sec, false};
+  }
+  return {};
 }
 
 } // end namespace jitlink

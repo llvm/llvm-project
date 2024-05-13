@@ -1,0 +1,11 @@
+# RUN: yaml2obj %p/Inputs/i386-slice.yaml -o %t-i386.o
+# RUN: yaml2obj %p/Inputs/x86_64-slice.yaml -o %t-x86_64.o
+
+# RUN: llvm-lipo %t-i386.o %t-x86_64.o -create -output %t-universal-32.o
+# RUN: llvm-objdump -m --universal-headers %t-universal-32.o | FileCheck %s -check-prefixes=FAT32
+
+# RUN: llvm-lipo %t-i386.o %t-x86_64.o -create -fat64 -output %t-universal-64.o
+# RUN: llvm-objdump -m --universal-headers %t-universal-64.o | FileCheck %s -check-prefixes=FAT64
+
+FAT32: fat_magic FAT_MAGIC
+FAT64: fat_magic FAT_MAGIC_64

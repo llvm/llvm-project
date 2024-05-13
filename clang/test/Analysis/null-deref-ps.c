@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -Wno-tautological-constant-compare -Wtautological-unsigned-zero-compare -analyzer-checker=core,deadcode,alpha.core -std=gnu99 -analyzer-store=region -analyzer-purge=none -verify %s -Wno-error=return-type
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -Wno-tautological-constant-compare -Wtautological-unsigned-zero-compare -analyzer-checker=core,deadcode,alpha.core -std=gnu99 -analyzer-store=region -verify %s -Wno-error=return-type
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -Wno-int-conversion -Wno-strict-prototypes -Wno-tautological-constant-compare -Wtautological-unsigned-zero-compare -analyzer-checker=core,deadcode,alpha.core -std=gnu99 -analyzer-purge=none -verify %s -Wno-error=return-type
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -Wno-int-conversion -Wno-strict-prototypes -Wno-tautological-constant-compare -Wtautological-unsigned-zero-compare -analyzer-checker=core,deadcode,alpha.core -std=gnu99 -verify %s -Wno-error=return-type
 
 typedef unsigned uintptr_t;
 
@@ -10,7 +10,7 @@ extern void __assert_fail (__const char *__assertion, __const char *__file,
 #define assert(expr) \
   ((expr)  ? (void)(0)  : __assert_fail (#expr, __FILE__, __LINE__, __func__))
 
-void f1(int *p) {  
+void f1(int *p) {
   if (p) *p = 1;
   else *p = 0; // expected-warning{{ereference}}
 }
@@ -20,48 +20,48 @@ struct foo_struct {
 };
 
 int f2(struct foo_struct* p) {
-  
+
   if (p)
     p->x = 1;
-    
+
   return p->x++; // expected-warning{{Access to field 'x' results in a dereference of a null pointer (loaded from variable 'p')}}
 }
 
 int f3(char* x) {
-  
+
   int i = 2;
-  
+
   if (x)
     return x[i - 1];
-  
+
   return x[i+1]; // expected-warning{{Array access (from variable 'x') results in a null pointer dereference}}
 }
 
 int f3_b(char* x) {
-  
+
   int i = 2;
-  
+
   if (x)
     return x[i - 1];
-  
+
   return x[i+1]++; // expected-warning{{Array access (from variable 'x') results in a null pointer dereference}}
 }
 
 int f4(int *p) {
-  
+
   uintptr_t x = (uintptr_t) p;
-  
+
   if (x)
     return 1;
-    
+
   int *q = (int*) x;
   return *q; // expected-warning{{Dereference of null pointer (loaded from variable 'q')}}
 }
 
-int f4_b() {
+int f4_b(void) {
   short array[2];
-  uintptr_t x = array; // expected-warning{{incompatible pointer to integer conversion}}
-  short *p = x; // expected-warning{{incompatible integer to pointer conversion}}
+  uintptr_t x = array;
+  short *p = x;
 
   // The following branch should be infeasible.
   if (!(p == &array[0])) {
@@ -79,22 +79,22 @@ int f4_b() {
   return 0;
 }
 
-int f5() {
-  
+int f5(void) {
+
   char *s = "hello world";
   return s[0]; // no-warning
 }
 
 int bar(int* p, int q) __attribute__((nonnull));
 
-int f6(int *p) { 
+int f6(int *p) {
   return !p ? bar(p, 1) // expected-warning {{Null pointer passed to 1st parameter expecting 'nonnull'}}
          : bar(p, 0);   // no-warning
 }
 
 int bar2(int* p, int q) __attribute__((nonnull(1)));
 
-int f6b(int *p) { 
+int f6b(int *p) {
   return !p ? bar2(p, 1) // expected-warning {{Null pointer passed to 1st parameter expecting 'nonnull'}}
          : bar2(p, 0);   // no-warning
 }
@@ -111,8 +111,8 @@ void f6d(int *p) {
   // At this point, 'p' cannot be null.
   if (!p) {
     int *q = 0;
-    *q = 0xDEADBEEF; // no-warning    
-  }  
+    *q = 0xDEADBEEF; // no-warning
+  }
 }
 
 void f6e(int *p, int offset) {
@@ -123,38 +123,38 @@ void f6e(int *p, int offset) {
 int* qux();
 
 int f7(int x) {
-  
+
   int* p = 0;
-  
+
   if (0 == x)
     p = qux();
-  
+
   if (0 == x)
     *p = 1; // no-warning
-    
+
   return x;
 }
 
 int* f7b(int *x) {
-  
+
   int* p = 0;
-  
+
   if (((void*)0) == x)
     p = qux();
-  
+
   if (((void*)0) == x)
     *p = 1; // no-warning
-    
+
   return x;
 }
 
 int* f7c(int *x) {
-  
+
   int* p = 0;
-  
+
   if (((void*)0) == x)
     p = qux();
-  
+
   if (((void*)0) != x)
     return x;
 
@@ -164,15 +164,15 @@ int* f7c(int *x) {
 }
 
 int* f7c2(int *x) {
-  
+
   int* p = 0;
-  
+
   if (((void*)0) == x)
     p = qux();
-  
+
   if (((void*)0) == x)
     return x;
-    
+
   *p = 1; // expected-warning{{null}}
   return x;
 }
@@ -182,7 +182,7 @@ void f8(int *p, int *q) {
   if (!p)
     if (p)
       *p = 1; // no-warning
-  
+
   if (q)
     if (!q)
       *q = 1; // no-warning
@@ -217,7 +217,7 @@ int* f10(int* p, signed char x, int y) {
   // LHS and RHS have different bitwidths.  The new symbolic value
   // for 'x' should have a bitwidth of 8.
   x &= y;
-  
+
   // This tests that our symbolication worked, and that we correctly test
   // x against 0 (with the same bitwidth).
   if (!x) {
@@ -232,7 +232,6 @@ int* f10(int* p, signed char x, int y) {
   return p;
 }
 
-// Test case from <rdar://problem/6407949>
 void f11(unsigned i) {
   int *x = 0;
   if (i >= 0) { // expected-warning{{always true}}
@@ -270,12 +269,12 @@ void f12(HF12ITEM i, char *q) {
   default:
     return;
   }
-  
+
   *p = 1; // no-warning
 }
 
 // Test handling of translating between integer "pointers" and back.
-void f13() {
+void f13(void) {
   int *x = 0;
   if (((((int) x) << 2) + 1) >> 1) *x = 1;
 }
@@ -284,13 +283,13 @@ void f13() {
 // handling pointer values that were undefined.
 void pr4759_aux(int *p) __attribute__((nonnull));
 
-void pr4759() {
+void pr4759(void) {
   int *p;
   pr4759_aux(p); // expected-warning{{1st function call argument is an uninitialized value}}
 }
 
 // Relax function call arguments invalidation to be aware of const
-// arguments. Test with function pointers. radar://10595327
+// arguments. Test with function pointers.
 void ttt(const int *nptr);
 void ttt2(const int *nptr);
 typedef void (*NoConstType)(int*);
@@ -323,7 +322,7 @@ void test_address_space_condition(int AS_ATTRIBUTE *cpu_data) {
   }
 }
 struct X { int member; };
-int test_address_space_member() {
+int test_address_space_member(void) {
   struct X AS_ATTRIBUTE *data = (struct X AS_ATTRIBUTE *)0UL;
   int ret;
   ret = data->member; // no-warning

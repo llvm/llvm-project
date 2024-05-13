@@ -194,16 +194,14 @@ define <8 x i16> @trunc(<8 x i16> %a, <8 x i16> %b, <8 x i32> %c, <8 x i32> %d) 
 ; AVX1-LABEL: trunc:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm4[1],xmm1[2],xmm4[3],xmm1[4],xmm4[5],xmm1[6],xmm4[7]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],xmm4[1],xmm2[2],xmm4[3],xmm2[4],xmm4[5],xmm2[6],xmm4[7]
-; AVX1-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],xmm4[1],xmm2[2],xmm4[3],xmm2[4],xmm4[5],xmm2[6],xmm4[7]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0],xmm4[1],xmm3[2],xmm4[3],xmm3[4],xmm4[5],xmm3[6],xmm4[7]
-; AVX1-NEXT:    vpackusdw %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-NEXT:    vandps %ymm1, %ymm2, %ymm2
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; AVX1-NEXT:    vpackusdw %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vandps %ymm1, %ymm3, %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -280,28 +278,23 @@ define dso_local void @example25() nounwind {
 ; SSE2-LABEL: example25:
 ; SSE2:       # %bb.0: # %vector.ph
 ; SSE2-NEXT:    movq $-4096, %rax # imm = 0xF000
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
 ; SSE2-NEXT:    .p2align 4, 0x90
 ; SSE2-NEXT:  .LBB5_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movaps da+4112(%rax), %xmm0
 ; SSE2-NEXT:    movaps da+4096(%rax), %xmm1
-; SSE2-NEXT:    movaps da+4112(%rax), %xmm2
-; SSE2-NEXT:    cmpltps db+4112(%rax), %xmm2
 ; SSE2-NEXT:    cmpltps db+4096(%rax), %xmm1
-; SSE2-NEXT:    packssdw %xmm2, %xmm1
-; SSE2-NEXT:    movaps dc+4096(%rax), %xmm2
-; SSE2-NEXT:    movaps dc+4112(%rax), %xmm3
-; SSE2-NEXT:    cmpltps dd+4112(%rax), %xmm3
-; SSE2-NEXT:    cmpltps dd+4096(%rax), %xmm2
-; SSE2-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm1
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pand %xmm0, %xmm2
+; SSE2-NEXT:    cmpltps db+4112(%rax), %xmm0
+; SSE2-NEXT:    movaps dc+4112(%rax), %xmm2
+; SSE2-NEXT:    movaps dc+4096(%rax), %xmm3
+; SSE2-NEXT:    cmpltps dd+4096(%rax), %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    cmpltps dd+4112(%rax), %xmm2
+; SSE2-NEXT:    andps %xmm0, %xmm2
+; SSE2-NEXT:    psrld $31, %xmm3
+; SSE2-NEXT:    psrld $31, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, dj+4112(%rax)
-; SSE2-NEXT:    movdqa %xmm1, dj+4096(%rax)
+; SSE2-NEXT:    movdqa %xmm3, dj+4096(%rax)
 ; SSE2-NEXT:    addq $32, %rax
 ; SSE2-NEXT:    jne .LBB5_1
 ; SSE2-NEXT:  # %bb.2: # %for.end
@@ -310,27 +303,23 @@ define dso_local void @example25() nounwind {
 ; SSE41-LABEL: example25:
 ; SSE41:       # %bb.0: # %vector.ph
 ; SSE41-NEXT:    movq $-4096, %rax # imm = 0xF000
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
 ; SSE41-NEXT:    .p2align 4, 0x90
 ; SSE41-NEXT:  .LBB5_1: # %vector.body
 ; SSE41-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE41-NEXT:    movaps da+4112(%rax), %xmm0
 ; SSE41-NEXT:    movaps da+4096(%rax), %xmm1
-; SSE41-NEXT:    movaps da+4112(%rax), %xmm2
-; SSE41-NEXT:    cmpltps db+4112(%rax), %xmm2
 ; SSE41-NEXT:    cmpltps db+4096(%rax), %xmm1
-; SSE41-NEXT:    packssdw %xmm2, %xmm1
-; SSE41-NEXT:    movaps dc+4096(%rax), %xmm2
-; SSE41-NEXT:    movaps dc+4112(%rax), %xmm3
-; SSE41-NEXT:    cmpltps dd+4112(%rax), %xmm3
-; SSE41-NEXT:    cmpltps dd+4096(%rax), %xmm2
-; SSE41-NEXT:    packssdw %xmm3, %xmm2
-; SSE41-NEXT:    pand %xmm1, %xmm2
-; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SSE41-NEXT:    pand %xmm0, %xmm1
-; SSE41-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
-; SSE41-NEXT:    pand %xmm0, %xmm2
+; SSE41-NEXT:    cmpltps db+4112(%rax), %xmm0
+; SSE41-NEXT:    movaps dc+4112(%rax), %xmm2
+; SSE41-NEXT:    movaps dc+4096(%rax), %xmm3
+; SSE41-NEXT:    cmpltps dd+4096(%rax), %xmm3
+; SSE41-NEXT:    andps %xmm1, %xmm3
+; SSE41-NEXT:    cmpltps dd+4112(%rax), %xmm2
+; SSE41-NEXT:    andps %xmm0, %xmm2
+; SSE41-NEXT:    psrld $31, %xmm3
+; SSE41-NEXT:    psrld $31, %xmm2
 ; SSE41-NEXT:    movdqa %xmm2, dj+4112(%rax)
-; SSE41-NEXT:    movdqa %xmm1, dj+4096(%rax)
+; SSE41-NEXT:    movdqa %xmm3, dj+4096(%rax)
 ; SSE41-NEXT:    addq $32, %rax
 ; SSE41-NEXT:    jne .LBB5_1
 ; SSE41-NEXT:  # %bb.2: # %for.end
@@ -339,7 +328,7 @@ define dso_local void @example25() nounwind {
 ; AVX1-LABEL: example25:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    movq $-4096, %rax # imm = 0xF000
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1,1,1,1,1,1,1,1]
 ; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB5_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -379,28 +368,23 @@ vector.ph:
 
 vector.body:
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds [1024 x float], [1024 x float]* @da, i64 0, i64 %index
-  %1 = bitcast float* %0 to <8 x float>*
-  %2 = load <8 x float>, <8 x float>* %1, align 16
-  %3 = getelementptr inbounds [1024 x float], [1024 x float]* @db, i64 0, i64 %index
-  %4 = bitcast float* %3 to <8 x float>*
-  %5 = load <8 x float>, <8 x float>* %4, align 16
-  %6 = fcmp olt <8 x float> %2, %5
-  %7 = getelementptr inbounds [1024 x float], [1024 x float]* @dc, i64 0, i64 %index
-  %8 = bitcast float* %7 to <8 x float>*
-  %9 = load <8 x float>, <8 x float>* %8, align 16
-  %10 = getelementptr inbounds [1024 x float], [1024 x float]* @dd, i64 0, i64 %index
-  %11 = bitcast float* %10 to <8 x float>*
-  %12 = load <8 x float>, <8 x float>* %11, align 16
-  %13 = fcmp olt <8 x float> %9, %12
-  %14 = and <8 x i1> %6, %13
-  %15 = zext <8 x i1> %14 to <8 x i32>
-  %16 = getelementptr inbounds [1024 x i32], [1024 x i32]* @dj, i64 0, i64 %index
-  %17 = bitcast i32* %16 to <8 x i32>*
-  store <8 x i32> %15, <8 x i32>* %17, align 16
+  %0 = getelementptr inbounds [1024 x float], ptr @da, i64 0, i64 %index
+  %1 = load <8 x float>, ptr %0, align 16
+  %2 = getelementptr inbounds [1024 x float], ptr @db, i64 0, i64 %index
+  %3 = load <8 x float>, ptr %2, align 16
+  %4 = fcmp olt <8 x float> %1, %3
+  %5 = getelementptr inbounds [1024 x float], ptr @dc, i64 0, i64 %index
+  %6 = load <8 x float>, ptr %5, align 16
+  %7 = getelementptr inbounds [1024 x float], ptr @dd, i64 0, i64 %index
+  %8 = load <8 x float>, ptr %7, align 16
+  %9 = fcmp olt <8 x float> %6, %8
+  %10 = and <8 x i1> %4, %9
+  %11 = zext <8 x i1> %10 to <8 x i32>
+  %12 = getelementptr inbounds [1024 x i32], ptr @dj, i64 0, i64 %index
+  store <8 x i32> %11, ptr %12, align 16
   %index.next = add i64 %index, 8
-  %18 = icmp eq i64 %index.next, 1024
-  br i1 %18, label %for.end, label %vector.body
+  %13 = icmp eq i64 %index.next, 1024
+  br i1 %13, label %for.end, label %vector.body
 
 for.end:
   ret void
@@ -531,21 +515,18 @@ vector.ph:
 
 vector.body:
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %2 = getelementptr inbounds [1024 x float], [1024 x float]* @da, i64 0, i64 %index
-  %3 = bitcast float* %2 to <8 x float>*
-  %4 = load <8 x float>, <8 x float>* %3, align 16
-  %5 = getelementptr inbounds [1024 x float], [1024 x float]* @db, i64 0, i64 %index
-  %6 = bitcast float* %5 to <8 x float>*
-  %7 = load <8 x float>, <8 x float>* %6, align 16
-  %8 = fcmp olt <8 x float> %4, %7
-  %9 = select <8 x i1> %8, <8 x i16> %broadcast11, <8 x i16> %broadcast12
-  %10 = sext <8 x i16> %9 to <8 x i32>
-  %11 = getelementptr inbounds [1024 x i32], [1024 x i32]* @dj, i64 0, i64 %index
-  %12 = bitcast i32* %11 to <8 x i32>*
-  store <8 x i32> %10, <8 x i32>* %12, align 16
+  %2 = getelementptr inbounds [1024 x float], ptr @da, i64 0, i64 %index
+  %3 = load <8 x float>, ptr %2, align 16
+  %4 = getelementptr inbounds [1024 x float], ptr @db, i64 0, i64 %index
+  %5 = load <8 x float>, ptr %4, align 16
+  %6 = fcmp olt <8 x float> %3, %5
+  %7 = select <8 x i1> %6, <8 x i16> %broadcast11, <8 x i16> %broadcast12
+  %8 = sext <8 x i16> %7 to <8 x i32>
+  %9 = getelementptr inbounds [1024 x i32], ptr @dj, i64 0, i64 %index
+  store <8 x i32> %8, ptr %9, align 16
   %index.next = add i64 %index, 8
-  %13 = icmp eq i64 %index.next, 1024
-  br i1 %13, label %for.end, label %vector.body
+  %10 = icmp eq i64 %index.next, 1024
+  br i1 %10, label %for.end, label %vector.body
 
 for.end:
   ret void

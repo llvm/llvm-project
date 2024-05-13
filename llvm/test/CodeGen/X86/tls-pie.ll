@@ -22,11 +22,11 @@ define dso_local i32 @f1() {
 ; X64-NEXT:    movl %fs:i@TPOFF, %eax
 ; X64-NEXT:    retq
 entry:
-	%tmp1 = load i32, i32* @i
+	%tmp1 = load i32, ptr @i
 	ret i32 %tmp1
 }
 
-define dso_local i32* @f2() {
+define dso_local ptr @f2() {
 ; X86-LABEL: f2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl %gs:0, %eax
@@ -45,7 +45,7 @@ define dso_local i32* @f2() {
 ; X64-NEXT:    leaq i@TPOFF(%rax), %rax
 ; X64-NEXT:    retq
 entry:
-	ret i32* @i
+	ret ptr @i
 }
 
 define dso_local i32 @f3() {
@@ -64,22 +64,22 @@ define dso_local i32 @f3() {
 ;
 ; X32-LABEL: f3:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movl i2@{{.*}}(%rip), %eax
+; X32-NEXT:    movl i2@GOTTPOFF(%rip), %eax
 ; X32-NEXT:    movl %fs:0, %ecx
 ; X32-NEXT:    movl (%ecx,%eax), %eax
 ; X32-NEXT:    retq
 ;
 ; X64-LABEL: f3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq i2@{{.*}}(%rip), %rax
+; X64-NEXT:    movq i2@GOTTPOFF(%rip), %rax
 ; X64-NEXT:    movl %fs:(%rax), %eax
 ; X64-NEXT:    retq
 entry:
-	%tmp1 = load i32, i32* @i2
+	%tmp1 = load i32, ptr @i2
 	ret i32 %tmp1
 }
 
-define dso_local i32* @f4() {
+define dso_local ptr @f4() {
 ; X86-LABEL: f4:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    calll .L3$pb
@@ -96,16 +96,16 @@ define dso_local i32* @f4() {
 ; X32-LABEL: f4:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl %fs:0, %eax
-; X32-NEXT:    addl i2@{{.*}}(%rip), %eax
+; X32-NEXT:    addl i2@GOTTPOFF(%rip), %eax
 ; X32-NEXT:    retq
 ;
 ; X64-LABEL: f4:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %fs:0, %rax
-; X64-NEXT:    addq i2@{{.*}}(%rip), %rax
+; X64-NEXT:    addq i2@GOTTPOFF(%rip), %rax
 ; X64-NEXT:    retq
 entry:
-	ret i32* @i2
+	ret ptr @i2
 }
 
 !llvm.module.flags = !{!0, !1}

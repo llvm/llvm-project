@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify
 
-int foo() {
+int foo(void) {
         int a;
         // PR3788
         asm("nop" : : "m"((int)(a))); // expected-error {{cast in a inline asm context requiring an lvalue}}

@@ -20,7 +20,7 @@
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
 
-  define dso_local void @test(void (i32)* nocapture %fp, i32 signext %Arg, i32 signext %Len, i32* nocapture %Ptr) {
+  define dso_local void @test(ptr nocapture %fp, i32 signext %Arg, i32 signext %Len, ptr nocapture %Ptr) {
   entry:
     tail call void asm sideeffect "#NOTHING", "~{r2}"()
     %cmp6 = icmp sgt i32 %Len, 0
@@ -35,9 +35,9 @@
 
   for.body:                                         ; preds = %for.inc, %for.body.lr.ph
     %i.07 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-    %0 = load i32, i32* %Ptr, align 4
+    %0 = load i32, ptr %Ptr, align 4
     %1 = add i32 %i.07, %0
-    store i32 %1, i32* %Ptr, align 4
+    store i32 %1, ptr %Ptr, align 4
     br i1 %cmp1, label %if.then, label %for.inc
 
   if.then:                                          ; preds = %for.body
@@ -52,7 +52,7 @@
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
 
   attributes #0 = { nounwind }
 
@@ -145,9 +145,9 @@ body:             |
     successors: %bb.4(0x00000002), %bb.5(0x7ffffffe)
 
     %1:gprc_and_gprc_nor0 = PHI %10, %bb.1, %2, %bb.5
-    %12:gprc = LWZ 0, %6 :: (load 4 from %ir.Ptr)
+    %12:gprc = LWZ 0, %6 :: (load (s32) from %ir.Ptr)
     %13:gprc = ADD4 %1, killed %12
-    STW killed %13, 0, %6 :: (store 4 into %ir.Ptr)
+    STW killed %13, 0, %6 :: (store (s32) into %ir.Ptr)
     BCn %0, %bb.5
     B %bb.4
 
@@ -157,7 +157,7 @@ body:             |
     INLINEASM &"#NOTHING", 1, 12, implicit-def early-clobber $r2
     ADJCALLSTACKDOWN 32, 0, implicit-def dead $r1, implicit $r1
     %14:g8rc = COPY $x2
-    STD %14, 24, $x1 :: (store 8 into stack + 24)
+    STD %14, 24, $x1 :: (store (s64) into stack + 24)
     %15:g8rc = EXTSW_32_64 %7
     $x3 = COPY %15
     $x12 = COPY %3
@@ -179,13 +179,13 @@ body:             |
 #CHECK-LABEL: test
 #CHECK-HOIST: bb.1.for.body.lr.ph:
 #CHECK-HOIST: %14:g8rc = COPY $x2
-#CHECK-HOIST: STD %14, 24, $x1 :: (store 8 into stack + 24)
+#CHECK-HOIST: STD %14, 24, $x1 :: (store (s64) into stack + 24)
 #CHECK-HOIST: %15:g8rc = EXTSW_32_64 %7
 #CHECK-HOIST: B %bb.3
 
 #CHECK-HOIST: bb.4.if.then:
 #CHECK-HOIST-NOT: %14:g8rc = COPY $x2
-#CHECK-HOIST-NOT: STD %14, 24, $x1 :: (store 8 into stack + 24)
+#CHECK-HOIST-NOT: STD %14, 24, $x1 :: (store (s64) into stack + 24)
 #CHECK-HOIST-NOT: %15:g8rc = EXTSW_32_64 %7
 #CHECK-HOIST: bb.5.for.inc:
 
@@ -193,12 +193,12 @@ body:             |
 #CHECK-LABEL: test
 #CHECK-NO-HOIST: bb.1.for.body.lr.ph:
 #CHECK-NO-HOIST-NOT: %14:g8rc = COPY $x2
-#CHECK-NO-HOIST-NOT: STD %14, 24, $x1 :: (store 8 into stack + 24)
+#CHECK-NO-HOIST-NOT: STD %14, 24, $x1 :: (store (s64) into stack + 24)
 #CHECK-NO-HOIST-NOT: %15:g8rc = EXTSW_32_64 %7
 #CHECK-NO-HOIST: B %bb.3
 
 #CHECK-NO-HOIST: bb.4.if.then:
 #CHECK-NO-HOIST: %14:g8rc = COPY $x2
-#CHECK-NO-HOIST: STD %14, 24, $x1 :: (store 8 into stack + 24)
+#CHECK-NO-HOIST: STD %14, 24, $x1 :: (store (s64) into stack + 24)
 #CHECK-NO-HOIST: %15:g8rc = EXTSW_32_64 %7
 #CHECK-NO-HOIST: bb.5.for.inc:

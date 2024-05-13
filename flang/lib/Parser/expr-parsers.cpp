@@ -10,7 +10,6 @@
 
 #include "expr-parsers.h"
 #include "basic-parsers.h"
-#include "debug-parser.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
 #include "token-parsers.h"
@@ -44,6 +43,7 @@ TYPE_PARSER(construct<AcSpec>(maybe(typeSpec / "::"),
 TYPE_PARSER(
     // PGI/Intel extension: accept triplets in array constructors
     extension<LanguageFeature::TripletInArrayConstructor>(
+        "nonstandard usage: triplet in array constructor"_port_en_US,
         construct<AcValue>(construct<AcValue::Triplet>(scalarIntExpr,
             ":" >> scalarIntExpr, maybe(":" >> scalarIntExpr)))) ||
     construct<AcValue>(indirect(expr)) ||
@@ -65,21 +65,24 @@ TYPE_PARSER(construct<AcImpliedDoControl>(
 //         literal-constant | designator | array-constructor |
 //         structure-constructor | function-reference | type-param-inquiry |
 //         type-param-name | ( expr )
-// N.B. type-param-inquiry is parsed as a structure component
+// type-param-inquiry is parsed as a structure component, except for
+// substring%KIND/LEN
 constexpr auto primary{instrumented("primary"_en_US,
     first(construct<Expr>(indirect(Parser<CharLiteralConstantSubstring>{})),
         construct<Expr>(literalConstant),
         construct<Expr>(construct<Expr::Parentheses>(parenthesized(expr))),
-        construct<Expr>(indirect(functionReference) / !"("_tok),
-        construct<Expr>(designator / !"("_tok),
+        construct<Expr>(indirect(functionReference) / !"("_tok / !"%"_tok),
+        construct<Expr>(designator / !"("_tok / !"%"_tok),
+        construct<Expr>(indirect(Parser<SubstringInquiry>{})), // %LEN or %KIND
         construct<Expr>(Parser<StructureConstructor>{}),
         construct<Expr>(Parser<ArrayConstructor>{}),
         // PGI/XLF extension: COMPLEX constructor (x,y)
-        extension<LanguageFeature::ComplexConstructor>(
-            construct<Expr>(parenthesized(
-                construct<Expr::ComplexConstructor>(expr, "," >> expr)))),
-        extension<LanguageFeature::PercentLOC>(construct<Expr>("%LOC" >>
-            parenthesized(construct<Expr::PercentLoc>(indirect(variable)))))))};
+        construct<Expr>(parenthesized(
+            construct<Expr::ComplexConstructor>(expr, "," >> expr))),
+        extension<LanguageFeature::PercentLOC>(
+            "nonstandard usage: %LOC"_port_en_US,
+            construct<Expr>("%LOC" >> parenthesized(construct<Expr::PercentLoc>(
+                                          indirect(variable)))))))};
 
 // R1002 level-1-expr -> [defined-unary-op] primary
 // TODO: Reasonable extension: permit multiple defined-unary-ops
@@ -87,8 +90,10 @@ constexpr auto level1Expr{sourced(
     first(primary, // must come before define op to resolve .TRUE._8 ambiguity
         construct<Expr>(construct<Expr::DefinedUnary>(definedOpName, primary)),
         extension<LanguageFeature::SignedPrimary>(
+            "nonstandard usage: signed primary"_port_en_US,
             construct<Expr>(construct<Expr::UnaryPlus>("+" >> primary))),
         extension<LanguageFeature::SignedPrimary>(
+            "nonstandard usage: signed primary"_port_en_US,
             construct<Expr>(construct<Expr::Negate>("-" >> primary)))))};
 
 // R1004 mult-operand -> level-1-expr [power-op mult-operand]
@@ -244,6 +249,7 @@ struct Level4Expr {
               (".EQ."_tok || "=="_tok) >> applyLambda(eq, level3Expr) ||
               (".NE."_tok || "/="_tok ||
                   extension<LanguageFeature::AlternativeNE>(
+                      "nonstandard usage: <> for /= or .NE."_port_en_US,
                       "<>"_tok /* PGI/Cray extension; Cray also has .LG. */)) >>
                   applyLambda(ne, level3Expr) ||
               (".GE."_tok || ">="_tok) >> applyLambda(ge, level3Expr) ||
@@ -273,6 +279,7 @@ constexpr AndOperand andOperand;
 inline constexpr auto logicalOp(const char *op, const char *abbrev) {
   return TokenStringMatch{op} ||
       extension<LanguageFeature::LogicalAbbreviations>(
+          "nonstandard usage: abbreviated LOGICAL operator"_port_en_US,
           TokenStringMatch{abbrev});
 }
 
@@ -356,6 +363,7 @@ struct Level5Expr {
       auto more{attempt(sourced(".EQV." >> applyLambda(eqv, equivOperand) ||
           (".NEQV."_tok ||
               extension<LanguageFeature::XOROperator>(
+                  "nonstandard usage: .XOR./.X. spelling of .NEQV."_port_en_US,
                   logicalOp(".XOR.", ".X."))) >>
               applyLambda(neqv, equivOperand)))};
       while (std::optional<Expr> next{more.Parse(state)}) {
@@ -397,8 +405,10 @@ template <> std::optional<Expr> Parser<Expr>::Parse(ParseState &state) {
 // and intrinsic operator names; this is handled by attempting their parses
 // first, and by name resolution on their definitions, for best errors.
 // N.B. The name of the operator is captured with the dots around it.
-constexpr auto definedOpNameChar{
-    letter || extension<LanguageFeature::PunctuationInNames>("$@"_ch)};
+constexpr auto definedOpNameChar{letter ||
+    extension<LanguageFeature::PunctuationInNames>(
+        "nonstandard usage: non-alphabetic character in defined operator"_port_en_US,
+        "$@"_ch)};
 TYPE_PARSER(
     space >> construct<DefinedOpName>(sourced("."_ch >>
                  some(definedOpNameChar) >> construct<Name>() / "."_ch)))
@@ -483,8 +493,8 @@ TYPE_CONTEXT_PARSER("ELSEWHERE statement"_en_US,
 
 // R1049 end-where-stmt -> ENDWHERE [where-construct-name]
 TYPE_CONTEXT_PARSER("END WHERE statement"_en_US,
-    construct<EndWhereStmt>(
-        recovery("END WHERE" >> maybe(name), endStmtErrorRecovery)))
+    construct<EndWhereStmt>(recovery(
+        "END WHERE" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R1050 forall-construct ->
 //         forall-construct-stmt [forall-body-construct]... end-forall-stmt
@@ -514,8 +524,8 @@ TYPE_PARSER(construct<ForallAssignmentStmt>(assignmentStmt) ||
 
 // R1054 end-forall-stmt -> END FORALL [forall-construct-name]
 TYPE_CONTEXT_PARSER("END FORALL statement"_en_US,
-    construct<EndForallStmt>(
-        recovery("END FORALL" >> maybe(name), endStmtErrorRecovery)))
+    construct<EndForallStmt>(recovery(
+        "END FORALL" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R1055 forall-stmt -> FORALL concurrent-header forall-assignment-stmt
 TYPE_CONTEXT_PARSER("FORALL statement"_en_US,

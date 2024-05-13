@@ -19,13 +19,13 @@
 ## symbol each entry points to. So we call objdump twice in order to get the
 ## disassembly of __text and the bind tables first, which allow us to check for
 ## matching entries in __stubs.
-# RUN: llvm-objdump -d --no-show-raw-insn --syms --rebase --bind --lazy-bind %t/dylink-lazy-no-pie > %t/objdump-no-pie
-# RUN: llvm-objdump -D --no-show-raw-insn %t/dylink-lazy-no-pie >> %t/objdump-no-pie
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --syms --rebase --bind --lazy-bind %t/dylink-lazy-no-pie > %t/objdump-no-pie
+# RUN: llvm-objdump --no-print-imm-hex -D --no-show-raw-insn %t/dylink-lazy-no-pie >> %t/objdump-no-pie
 # RUN: FileCheck %s --check-prefixes=CHECK,NO-PIE < %t/objdump-no-pie
 
 # RUN: %lld -o %t/dylink-lazy -L%t -lhello -lgoodbye %t/dylink-lazy.o -lSystem
-# RUN: llvm-objdump -d --no-show-raw-insn --syms --rebase --bind --lazy-bind %t/dylink-lazy > %t/objdump
-# RUN: llvm-objdump -D --no-show-raw-insn %t/dylink-lazy >> %t/objdump
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --syms --rebase --bind --lazy-bind %t/dylink-lazy > %t/objdump
+# RUN: llvm-objdump --no-print-imm-hex -D --no-show-raw-insn %t/dylink-lazy >> %t/objdump
 # RUN: FileCheck %s --check-prefixes=CHECK,PIE < %t/objdump
 
 # CHECK-LABEL: SYMBOL TABLE:

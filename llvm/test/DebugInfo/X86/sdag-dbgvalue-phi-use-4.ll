@@ -1,4 +1,13 @@
-; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
+
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:    -experimental-debug-variable-locations=false --try-experimental-debuginfo-iterators \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
 
 ; This is a reproducer based on the test case from PR37321.
 
@@ -8,15 +17,23 @@
 ; fragment with just a few DBG_VALUE instructions).
 
 ; CHECK-LABEL: bb.{{.*}}.if.end36:
-; CHECK:      [[REG1:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG2:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG3:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE [[REG1]], $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE [[REG2]], $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT: DBG_VALUE [[REG3]], $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 64, 16)
-; CHECK-NEXT: DBG_VALUE [[REG1]], $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 10, 32)
-; CHECK-NEXT: DBG_VALUE [[REG2]], $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 42, 13)
-; CHECK-NOT:  DBG_VALUE
+; CHECK:         [[REG1:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 1
+; CHECK-NEXT:    [[REG2:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 2
+; CHECK-NEXT:    [[REG3:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 3
+; INSTRREF-NEXT: DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref(1, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 32, 32), dbg-instr-ref(2, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 16), dbg-instr-ref(3, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 10, 32), dbg-instr-ref(1, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 42, 13), dbg-instr-ref(2, 0)
+; DBGVALUE-NEXT: DBG_VALUE [[REG1]], $noreg,  !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg,  !13, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; DBGVALUE-NEXT: DBG_VALUE [[REG3]], $noreg,  !13, !DIExpression(DW_OP_LLVM_fragment, 64, 16)
+; DBGVALUE-NEXT: DBG_VALUE [[REG1]], $noreg,  !12, !DIExpression(DW_OP_LLVM_fragment, 10, 32)
+; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg,  !12, !DIExpression(DW_OP_LLVM_fragment, 42, 13)
+; CHECK-NOT:  DBG_
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-w64-windows-gnu"

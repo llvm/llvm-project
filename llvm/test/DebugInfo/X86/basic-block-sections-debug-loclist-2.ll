@@ -17,7 +17,7 @@
 ; extern bool b;
 ; extern int x;
 ; void test() {
-;     // i's value is 7 for the first call in in the if block.  With basic
+;     // i's value is 7 for the first call in the if block.  With basic
 ;     // block sections, this would split the range across sections and would
 ;     // result in an extra entry than without sections.
 ;     int i = 7;
@@ -37,7 +37,7 @@ define dso_local void @_Z4testv() local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 7, metadata !11, metadata !DIExpression()), !dbg !13
   tail call void @_Z2f1v(), !dbg !14
-  %0 = load i8, i8* @b, align 1, !dbg !15, !tbaa !17, !range !21
+  %0 = load i8, ptr @b, align 1, !dbg !15, !tbaa !17, !range !21
   %tobool.not = icmp eq i8 %0, 0, !dbg !15
   br i1 %tobool.not, label %if.end, label %if.then, !dbg !22
 

@@ -1,29 +1,29 @@
-; RUN: opt -S -globalsplit %s | FileCheck %s
+; RUN: opt -S -passes=globalsplit %s | FileCheck %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @global =
-@global = constant { [2 x i8* ()*], [1 x i8* ()*] } {
-  [2 x i8* ()*] [i8* ()* @f, i8* ()* @g],
-  [1 x i8* ()*] [i8* ()* @h]
+@global = constant { [2 x ptr], [1 x ptr] } {
+  [2 x ptr] [ptr @f, ptr @g],
+  [1 x ptr] [ptr @h]
 }
 
-define i8* @f() {
-  ret i8* bitcast (i8* ()** getelementptr ({ [2 x i8* ()*], [1 x i8* ()*] }, { [2 x i8* ()*], [1 x i8* ()*] }* @global, i32 0, inrange i32 0, i32 0) to i8*)
+define ptr @f() {
+  ret ptr getelementptr inrange(0, 16) ({ [2 x ptr], [1 x ptr] }, ptr @global, i32 0, i32 0, i32 0)
 }
 
-define i8* @g() {
-  ret i8* null
+define ptr @g() {
+  ret ptr null
 }
 
-define i8* @h() {
-  ret i8* null
+define ptr @h() {
+  ret ptr null
 }
 
 define void @foo() {
-  %p = call i1 @llvm.type.test(i8* null, metadata !"")
+  %p = call i1 @llvm.type.test(ptr null, metadata !"")
   ret void
 }
 
-declare i1 @llvm.type.test(i8*, metadata) nounwind readnone
+declare i1 @llvm.type.test(ptr, metadata) nounwind readnone

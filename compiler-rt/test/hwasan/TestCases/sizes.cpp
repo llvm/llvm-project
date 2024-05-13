@@ -1,6 +1,6 @@
 // This test requires operator new to be intercepted by the hwasan runtime,
 // so we need to avoid linking against libc++.
-// RUN: %clangxx_hwasan %s -nostdlib++ -lstdc++ -o %t
+// RUN: %clangxx_hwasan %s -nostdlib++ -lstdc++ -o %t || %clangxx_hwasan %s -o %t
 // RUN: %env_hwasan_opts=allocator_may_return_null=0 not %run %t malloc 2>&1          | FileCheck %s --check-prefix=CHECK-max
 // RUN: %env_hwasan_opts=allocator_may_return_null=1     %run %t malloc 2>&1
 // RUN: %env_hwasan_opts=allocator_may_return_null=0 not %run %t malloc max 2>&1      | FileCheck %s --check-prefix=CHECK-max
@@ -84,6 +84,6 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-max: {{ERROR: HWAddressSanitizer: requested allocation size .* exceeds maximum supported size}}
-// CHECK-oom: ERROR: HWAddressSanitizer: allocator is out of memory
+// CHECK-oom: ERROR: HWAddressSanitizer: out of memory: allocator is trying to allocate
 // CHECK-calloc: ERROR: HWAddressSanitizer: calloc parameters overflow
 // CHECK-reallocarray: ERROR: HWAddressSanitizer: reallocarray parameters overflow

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-pc-linux-gnu %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -verify -triple x86_64-pc-linux-gnu %s
 
 // CC qualifier can be applied only to functions
 int __attribute__((stdcall)) var1; // expected-warning{{'stdcall' only applies to function types; type here is 'int'}}
@@ -9,7 +9,6 @@ void __attribute__((stdcall, fastcall)) foo3(void); // expected-warning{{'stdcal
 void __attribute__((stdcall)) foo4(); // expected-warning{{'stdcall' calling convention is not supported for this target}}
 void __attribute__((fastcall)) foo4(void); // expected-warning {{'fastcall' calling convention is not supported for this target}}
 
-// rdar://8876096
 void rdar8876096foo1(int i, int j) __attribute__((fastcall, cdecl)); // expected-warning{{'fastcall' calling convention is not supported for this target}}
 void rdar8876096foo2(int i, int j) __attribute__((fastcall, stdcall)); // expected-warning{{'stdcall' calling convention is not supported for this target}} expected-warning {{'fastcall' calling convention is not supported for this target}}
 void rdar8876096foo3(int i, int j) __attribute__((fastcall, regparm(2))); // expected-warning {{'fastcall' calling convention is not supported for this target}}

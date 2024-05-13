@@ -37,7 +37,7 @@ BugDriver::runManyPasses(const std::vector<std::string> &AllPasses) {
 
   std::mt19937 randomness(std::random_device{}());
   unsigned num = 1;
-  while (1) {
+  while (true) {
     //
     // Step 1: Randomize the order of the optimizer passes.
     //

@@ -2,20 +2,22 @@
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK-P9
 
-define i64 @store_disjoint_memory(i64* nocapture %P, i64 %v) {
+define i64 @store_disjoint_memory(ptr nocapture %P, i64 %v) {
 entry:
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: store_disjoint_memory:%bb.0
 ; CHECK:SU([[REG2:[0-9]+]]):   STD renamable $x{{[0-9]+}}, 24, renamable $x[[REG5:[0-9]+]]
-; CHECK-NOT: Successors:
+; CHECK-NOT: Predecessors:
+; CHECK: Successors:
 ; CHECK-NOT:    SU([[REG3]]): Ord  Latency=0 Memory
 ; CHECK:SU([[REG3:[0-9]+]]):   STD renamable $x{{[0-9]+}}, 16, renamable $x[[REG5]]
-; CHECK: Predecessors:
+; CHECK-NOT: Predecessors:
+; CHECK: Successors:
 ; CHECK-NOT:    SU([[REG2]]): Ord  Latency=0 Memory
-  %arrayidx = getelementptr inbounds i64, i64* %P, i64 3
-  store i64 %v, i64* %arrayidx
-  %arrayidx1 = getelementptr inbounds i64, i64* %P, i64 2
-  store i64 %v, i64* %arrayidx1
+  %arrayidx = getelementptr inbounds i64, ptr %P, i64 3
+  store i64 %v, ptr %arrayidx
+  %arrayidx1 = getelementptr inbounds i64, ptr %P, i64 2
+  store i64 %v, ptr %arrayidx1
   ret i64 %v
 }
 
@@ -25,11 +27,11 @@ entry:
 
 define double @test_lxsd_no_barrier(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i, double %j, double %k, double %l, double %m) {
 entry:
-  %0 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 10), align 8
-  %1 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 17), align 8
-  %2 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 87), align 8
-  %3 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 97), align 8
-  %4 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 77), align 8
+  %0 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 10), align 8
+  %1 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 17), align 8
+  %2 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 87), align 8
+  %3 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 97), align 8
+  %4 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 77), align 8
   %add = fadd double %a, %b
   %add1 = fadd double %add, %c
   %add2 = fadd double %add1, %d

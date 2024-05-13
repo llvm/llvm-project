@@ -14,14 +14,14 @@
 #ifndef LLVM_IR_REPLACECONSTANT_H
 #define LLVM_IR_REPLACECONSTANT_H
 
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Instruction.h"
-
 namespace llvm {
 
-/// Create a replacement instruction for constant expression \p CE and insert
-/// it before \p Instr.
-Instruction *createReplacementInstr(ConstantExpr *CE, Instruction *Instr);
+template <typename T> class ArrayRef;
+class Constant;
+
+/// Replace constant expressions users of the given constants with
+/// instructions. Return whether anything was changed.
+bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts);
 
 } // end namespace llvm
 

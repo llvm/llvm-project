@@ -141,15 +141,7 @@ namespace PR45083 {
   using U = float; // expected-error {{different types ('float' vs 'decltype(g<int>())' (aka 'void'))}}
 
   void h(auto a, decltype(g<char>())*) {} // expected-note {{previous}}
-  void h(auto a, void*) {} // expected-error {{redefinition}}
-
-  void i(auto a) {
-    [](auto a, int = ({decltype(a) i; i * 2;})){}(a); // expected-error {{invalid operands to binary expression ('decltype(a)' (aka 'void *') and 'int')}} expected-note {{in instantiation of}}
-  }
-  void use_i() {
-    i(0);
-    i((void*)0); // expected-note {{instantiation of}}
-  }
+  void h(auto a, void *) {}               // expected-error {{redefinition}}
 }
 
 namespace BindingInStmtExpr {
@@ -173,3 +165,18 @@ namespace BindingInStmtExpr {
   using U = decltype(num_bindings<T>()); // expected-note {{previous}}
   using U = N<3>; // expected-error-re {{type alias redefinition with different types ('N<3>' vs {{.*}}N<2>}}
 }
+
+namespace PR65153 {
+struct A{};
+
+template <const A& T>
+const A JoinStringViews = T;
+
+template <int V>
+class Builder {
+public:
+    static constexpr A Equal{};
+    // no crash here
+    static constexpr auto Val = JoinStringViews<Equal>;
+};
+} // namespace PR65153

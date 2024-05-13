@@ -18,9 +18,7 @@
 
 using namespace llvm;
 
-unsigned llvm::getICmpCode(const ICmpInst *ICI, bool InvertPred) {
-  ICmpInst::Predicate Pred = InvertPred ? ICI->getInversePredicate()
-                                        : ICI->getPredicate();
+unsigned llvm::getICmpCode(CmpInst::Predicate Pred) {
   switch (Pred) {
       // False -> 0
     case ICmpInst::ICMP_UGT: return 1;  // 001
@@ -63,13 +61,25 @@ bool llvm::predicatesFoldable(ICmpInst::Predicate P1, ICmpInst::Predicate P2) {
          (CmpInst::isSigned(P2) && ICmpInst::isEquality(P1));
 }
 
+Constant *llvm::getPredForFCmpCode(unsigned Code, Type *OpTy,
+                                   CmpInst::Predicate &Pred) {
+  Pred = static_cast<FCmpInst::Predicate>(Code);
+  assert(FCmpInst::FCMP_FALSE <= Pred && Pred <= FCmpInst::FCMP_TRUE &&
+         "Unexpected FCmp predicate!");
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(OpTy), 0);
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(OpTy), 1);
+  return nullptr;
+}
+
 bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,
                                 CmpInst::Predicate &Pred,
                                 Value *&X, APInt &Mask, bool LookThruTrunc) {
   using namespace PatternMatch;
 
   const APInt *C;
-  if (!match(RHS, m_APInt(C)))
+  if (!match(RHS, m_APIntAllowPoison(C)))
     return false;
 
   switch (Pred) {
@@ -77,28 +87,28 @@ bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,
     return false;
   case ICmpInst::ICMP_SLT:
     // X < 0 is equivalent to (X & SignMask) != 0.
-    if (!C->isNullValue())
+    if (!C->isZero())
       return false;
     Mask = APInt::getSignMask(C->getBitWidth());
     Pred = ICmpInst::ICMP_NE;
     break;
   case ICmpInst::ICMP_SLE:
     // X <= -1 is equivalent to (X & SignMask) != 0.
-    if (!C->isAllOnesValue())
+    if (!C->isAllOnes())
       return false;
     Mask = APInt::getSignMask(C->getBitWidth());
     Pred = ICmpInst::ICMP_NE;
     break;
   case ICmpInst::ICMP_SGT:
     // X > -1 is equivalent to (X & SignMask) == 0.
-    if (!C->isAllOnesValue())
+    if (!C->isAllOnes())
       return false;
     Mask = APInt::getSignMask(C->getBitWidth());
     Pred = ICmpInst::ICMP_EQ;
     break;
   case ICmpInst::ICMP_SGE:
     // X >= 0 is equivalent to (X & SignMask) == 0.
-    if (!C->isNullValue())
+    if (!C->isZero())
       return false;
     Mask = APInt::getSignMask(C->getBitWidth());
     Pred = ICmpInst::ICMP_EQ;

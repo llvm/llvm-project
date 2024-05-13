@@ -30,14 +30,12 @@ namespace {
 /// Typically these are things like static locals, lambdas, or blocks.
 class MicrosoftNumberingContext : public MangleNumberingContext {
   llvm::DenseMap<const Type *, unsigned> ManglingNumbers;
-  unsigned LambdaManglingNumber;
-  unsigned StaticLocalNumber;
-  unsigned StaticThreadlocalNumber;
+  unsigned LambdaManglingNumber = 0;
+  unsigned StaticLocalNumber = 0;
+  unsigned StaticThreadlocalNumber = 0;
 
 public:
-  MicrosoftNumberingContext()
-      : MangleNumberingContext(), LambdaManglingNumber(0),
-        StaticLocalNumber(0), StaticThreadlocalNumber(0) {}
+  MicrosoftNumberingContext() = default;
 
   unsigned getManglingNumber(const CXXMethodDecl *CallOperator) override {
     return ++LambdaManglingNumber;
@@ -69,7 +67,35 @@ class MSHIPNumberingContext : public MicrosoftNumberingContext {
   std::unique_ptr<MangleNumberingContext> DeviceCtx;
 
 public:
+  using MicrosoftNumberingContext::getManglingNumber;
   MSHIPNumberingContext(MangleContext *DeviceMangler) {
+    DeviceCtx = createItaniumNumberingContext(DeviceMangler);
+  }
+
+  unsigned getDeviceManglingNumber(const CXXMethodDecl *CallOperator) override {
+    return DeviceCtx->getManglingNumber(CallOperator);
+  }
+
+  unsigned getManglingNumber(const TagDecl *TD,
+                             unsigned MSLocalManglingNumber) override {
+    unsigned DeviceN = DeviceCtx->getManglingNumber(TD, MSLocalManglingNumber);
+    unsigned HostN =
+        MicrosoftNumberingContext::getManglingNumber(TD, MSLocalManglingNumber);
+    if (DeviceN > 0xFFFF || HostN > 0xFFFF) {
+      DiagnosticsEngine &Diags = TD->getASTContext().getDiagnostics();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error, "Mangling number exceeds limit (65535)");
+      Diags.Report(TD->getLocation(), DiagID);
+    }
+    return (DeviceN << 16) | HostN;
+  }
+};
+
+class MSSYCLNumberingContext : public MicrosoftNumberingContext {
+  std::unique_ptr<MangleNumberingContext> DeviceCtx;
+
+public:
+  MSSYCLNumberingContext(MangleContext *DeviceMangler) {
     DeviceCtx = createItaniumNumberingContext(DeviceMangler);
   }
 
@@ -99,6 +125,10 @@ public:
              "Unexpected combination of C++ ABIs.");
       DeviceMangler.reset(
           Context.createMangleContext(Context.getAuxTargetInfo()));
+    }
+    else if (Context.getLangOpts().isSYCL()) {
+      DeviceMangler.reset(
+          ItaniumMangleContext::create(Context, Context.getDiagnostics()));
     }
   }
 
@@ -162,7 +192,11 @@ public:
     if (Context.getLangOpts().CUDA && Context.getAuxTargetInfo()) {
       assert(DeviceMangler && "Missing device mangler");
       return std::make_unique<MSHIPNumberingContext>(DeviceMangler.get());
+    } else if (Context.getLangOpts().isSYCL()) {
+      assert(DeviceMangler && "Missing device mangler");
+      return std::make_unique<MSSYCLNumberingContext>(DeviceMangler.get());
     }
+
     return std::make_unique<MicrosoftNumberingContext>();
   }
 };
@@ -267,7 +301,7 @@ CXXABI::MemberPointerInfo MicrosoftCXXABI::getMemberPointerInfo(
   // The nominal struct is laid out with pointers followed by ints and aligned
   // to a pointer width if any are present and an int width otherwise.
   const TargetInfo &Target = Context.getTargetInfo();
-  unsigned PtrSize = Target.getPointerWidth(0);
+  unsigned PtrSize = Target.getPointerWidth(LangAS::Default);
   unsigned IntSize = Target.getIntWidth();
 
   unsigned Ptrs, Ints;
@@ -282,7 +316,7 @@ CXXABI::MemberPointerInfo MicrosoftCXXABI::getMemberPointerInfo(
   if (Ptrs + Ints > 1 && Target.getTriple().isArch32Bit())
     MPI.Align = 64;
   else if (Ptrs)
-    MPI.Align = Target.getPointerAlign(0);
+    MPI.Align = Target.getPointerAlign(LangAS::Default);
   else
     MPI.Align = Target.getIntAlign();
 

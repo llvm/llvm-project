@@ -16,13 +16,14 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/PreprocessorLexer.h"
 #include "clang/Lex/Token.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -36,6 +37,7 @@ namespace clang {
 class DiagnosticBuilder;
 class Preprocessor;
 class SourceManager;
+class LangOptions;
 
 /// ConflictMarkerKind - Kinds of conflict marker which the lexer might be
 /// recovering from.
@@ -90,8 +92,18 @@ class Lexer : public PreprocessorLexer {
   // Location for start of file.
   SourceLocation FileLoc;
 
-  // LangOpts enabled by this language (cache).
-  LangOptions LangOpts;
+  // LangOpts enabled by this language.
+  // Storing LangOptions as reference here is important from performance point
+  // of view. Lack of reference means that LangOptions copy constructor would be
+  // called by Lexer(..., const LangOptions &LangOpts,...). Given that local
+  // Lexer objects are created thousands times (in Lexer::getRawToken,
+  // Preprocessor::EnterSourceFile and other places) during single module
+  // processing in frontend it would make std::vector<std::string> copy
+  // constructors surprisingly hot.
+  const LangOptions &LangOpts;
+
+  // True if '//' line comments are enabled.
+  bool LineComment;
 
   // True if lexer for _Pragma handling.
   bool Is_PragmaLexer;
@@ -128,12 +140,22 @@ class Lexer : public PreprocessorLexer {
 
   bool HasLeadingEmptyMacro;
 
+  /// True if this is the first time we're lexing the input file.
+  bool IsFirstTimeLexingFile;
+
   // NewLinePtr - A pointer to new line character '\n' being lexed. For '\r\n',
   // it also points to '\n.'
   const char *NewLinePtr;
 
   // CurrentConflictMarkerState - The kind of conflict marker we are handling.
   ConflictMarkerKind CurrentConflictMarkerState;
+
+  /// Non-empty if this \p Lexer is \p isDependencyDirectivesLexer().
+  ArrayRef<dependency_directives_scan::Directive> DepDirectives;
+
+  /// If this \p Lexer is \p isDependencyDirectivesLexer(), it represents the
+  /// next token to use from the current dependency directive.
+  unsigned NextDepDirectiveTokenIndex = 0;
 
   void InitLexer(const char *BufStart, const char *BufPtr, const char *BufEnd);
 
@@ -142,19 +164,22 @@ public:
   /// with the specified preprocessor managing the lexing process.  This lexer
   /// assumes that the associated file buffer and Preprocessor objects will
   /// outlive it, so it doesn't take ownership of either of them.
-  Lexer(FileID FID, const llvm::MemoryBufferRef &InputFile, Preprocessor &PP);
+  Lexer(FileID FID, const llvm::MemoryBufferRef &InputFile, Preprocessor &PP,
+        bool IsFirstIncludeOfFile = true);
 
   /// Lexer constructor - Create a new raw lexer object.  This object is only
   /// suitable for calls to 'LexFromRawLexer'.  This lexer assumes that the
   /// text range will outlive it, so it doesn't take ownership of it.
   Lexer(SourceLocation FileLoc, const LangOptions &LangOpts,
-        const char *BufStart, const char *BufPtr, const char *BufEnd);
+        const char *BufStart, const char *BufPtr, const char *BufEnd,
+        bool IsFirstIncludeOfFile = true);
 
   /// Lexer constructor - Create a new raw lexer object.  This object is only
   /// suitable for calls to 'LexFromRawLexer'.  This lexer assumes that the
   /// text range will outlive it, so it doesn't take ownership of it.
   Lexer(FileID FID, const llvm::MemoryBufferRef &FromFile,
-        const SourceManager &SM, const LangOptions &LangOpts);
+        const SourceManager &SM, const LangOptions &LangOpts,
+        bool IsFirstIncludeOfFile = true);
 
   Lexer(const Lexer &) = delete;
   Lexer &operator=(const Lexer &) = delete;
@@ -167,20 +192,33 @@ public:
                                    SourceLocation ExpansionLocEnd,
                                    unsigned TokLen, Preprocessor &PP);
 
-  /// getLangOpts - Return the language features currently enabled.
-  /// NOTE: this lexer modifies features as a file is parsed!
-  const LangOptions &getLangOpts() const { return LangOpts; }
-
   /// getFileLoc - Return the File Location for the file we are lexing out of.
   /// The physical location encodes the location where the characters come from,
   /// the virtual location encodes where we should *claim* the characters came
   /// from.  Currently this is only used by _Pragma handling.
   SourceLocation getFileLoc() const { return FileLoc; }
 
-private:
   /// Lex - Return the next token in the file.  If this is the end of file, it
   /// return the tok::eof token.  This implicitly involves the preprocessor.
   bool Lex(Token &Result);
+
+private:
+  /// Called when the preprocessor is in 'dependency scanning lexing mode'.
+  bool LexDependencyDirectiveToken(Token &Result);
+
+  /// Called when the preprocessor is in 'dependency scanning lexing mode' and
+  /// is skipping a conditional block.
+  bool LexDependencyDirectiveTokenWhileSkipping(Token &Result);
+
+  /// True when the preprocessor is in 'dependency scanning lexing mode' and
+  /// created this \p Lexer for lexing a set of dependency directive tokens.
+  bool isDependencyDirectivesLexer() const { return !DepDirectives.empty(); }
+
+  /// Initializes \p Result with data from \p DDTok and advances \p BufferPtr to
+  /// the position just after the token.
+  /// \returns the buffer pointer at the beginning of the token.
+  const char *convertDependencyDirectiveToken(
+      const dependency_directives_scan::Token &DDTok, Token &Result);
 
 public:
   /// isPragmaLexer - Returns true if this Lexer is being used to lex a pragma.
@@ -275,14 +313,8 @@ public:
     return BufferPtr - BufferStart;
   }
 
-  /// Skip over \p NumBytes bytes.
-  ///
-  /// If the skip is successful, the next token will be lexed from the new
-  /// offset. The lexer also assumes that we skipped to the start of the line.
-  ///
-  /// \returns true if the skip failed (new offset would have been past the
-  /// end of the buffer), false otherwise.
-  bool skipOver(unsigned NumBytes);
+  /// Set the lexer's buffer pointer to \p Offset.
+  void seek(unsigned Offset, bool IsAtStartOfLine);
 
   /// Stringify - Convert the specified string into a C string by i) escaping
   /// '\\' and " characters and ii) replacing newline character(s) with "\\n".
@@ -519,10 +551,10 @@ public:
 
   /// Finds the token that comes right after the given location.
   ///
-  /// Returns the next token, or none if the location is inside a macro.
-  static Optional<Token> findNextToken(SourceLocation Loc,
-                                       const SourceManager &SM,
-                                       const LangOptions &LangOpts);
+  /// Returns the next token, or std::nullopt if the location is inside a macro.
+  static std::optional<Token> findNextToken(SourceLocation Loc,
+                                            const SourceManager &SM,
+                                            const LangOptions &LangOpts);
 
   /// Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the
@@ -536,31 +568,39 @@ public:
                                          bool SkipTrailingWhitespaceAndNewLine);
 
   /// Returns true if the given character could appear in an identifier.
-  static bool isIdentifierBodyChar(char c, const LangOptions &LangOpts);
+  static bool isAsciiIdentifierContinueChar(char c,
+                                            const LangOptions &LangOpts);
 
   /// Checks whether new line pointed by Str is preceded by escape
   /// sequence.
   static bool isNewLineEscaped(const char *BufferStart, const char *Str);
 
+  /// Represents a char and the number of bytes parsed to produce it.
+  struct SizedChar {
+    char Char;
+    unsigned Size;
+  };
+
   /// getCharAndSizeNoWarn - Like the getCharAndSize method, but does not ever
   /// emit a warning.
-  static inline char getCharAndSizeNoWarn(const char *Ptr, unsigned &Size,
-                                          const LangOptions &LangOpts) {
+  static inline SizedChar getCharAndSizeNoWarn(const char *Ptr,
+                                               const LangOptions &LangOpts) {
     // If this is not a trigraph and not a UCN or escaped newline, return
     // quickly.
     if (isObviouslySimpleCharacter(Ptr[0])) {
-      Size = 1;
-      return *Ptr;
+      return {*Ptr, 1u};
     }
 
-    Size = 0;
-    return getCharAndSizeSlowNoWarn(Ptr, Size, LangOpts);
+    return getCharAndSizeSlowNoWarn(Ptr, LangOpts);
   }
 
   /// Returns the leading whitespace for line that corresponds to the given
   /// location \p Loc.
   static StringRef getIndentationForLine(SourceLocation Loc,
                                          const SourceManager &SM);
+
+  /// Check if this is the first time we're lexing the input file.
+  bool isFirstTimeLexingFile() const { return IsFirstTimeLexingFile; }
 
 private:
   //===--------------------------------------------------------------------===//
@@ -573,10 +613,7 @@ private:
 
   bool CheckUnicodeWhitespace(Token &Result, uint32_t C, const char *CurPtr);
 
-  /// Given that a token begins with the Unicode character \p C, figure out
-  /// what kind of token it is and dispatch to the appropriate lexing helper
-  /// function.
-  bool LexUnicode(Token &Result, uint32_t C, const char *CurPtr);
+  bool LexUnicodeIdentifierStart(Token &Result, uint32_t C, const char *CurPtr);
 
   /// FormTokenWithChars - When we lex a token, we have identified a span
   /// starting at BufferPtr, going to TokEnd that forms the token.  This method
@@ -632,8 +669,7 @@ private:
     // quickly.
     if (isObviouslySimpleCharacter(Ptr[0])) return *Ptr++;
 
-    unsigned Size = 0;
-    char C = getCharAndSizeSlow(Ptr, Size, &Tok);
+    auto [C, Size] = getCharAndSizeSlow(Ptr, &Tok);
     Ptr += Size;
     return C;
   }
@@ -649,9 +685,7 @@ private:
 
     // Otherwise, re-lex the character with a current token, allowing
     // diagnostics to be emitted and flags to be set.
-    Size = 0;
-    getCharAndSizeSlow(Ptr, Size, &Tok);
-    return Ptr+Size;
+    return Ptr + getCharAndSizeSlow(Ptr, &Tok).Size;
   }
 
   /// getCharAndSize - Peek a single 'character' from the specified buffer,
@@ -666,14 +700,14 @@ private:
       return *Ptr;
     }
 
-    Size = 0;
-    return getCharAndSizeSlow(Ptr, Size);
+    auto CharAndSize = getCharAndSizeSlow(Ptr);
+    Size = CharAndSize.Size;
+    return CharAndSize.Char;
   }
 
   /// getCharAndSizeSlow - Handle the slow/uncommon case of the getCharAndSize
   /// method.
-  char getCharAndSizeSlow(const char *Ptr, unsigned &Size,
-                          Token *Tok = nullptr);
+  SizedChar getCharAndSizeSlow(const char *Ptr, Token *Tok = nullptr);
 
   /// getEscapedNewLineSize - Return the size of the specified escaped newline,
   /// or 0 if it is not an escaped newline. P[-1] is known to be a "\" on entry
@@ -687,8 +721,8 @@ private:
 
   /// getCharAndSizeSlowNoWarn - Same as getCharAndSizeSlow, but never emits a
   /// diagnostic.
-  static char getCharAndSizeSlowNoWarn(const char *Ptr, unsigned &Size,
-                                       const LangOptions &LangOpts);
+  static SizedChar getCharAndSizeSlowNoWarn(const char *Ptr,
+                                            const LangOptions &LangOpts);
 
   //===--------------------------------------------------------------------===//
   // Other lexer functions.
@@ -701,7 +735,11 @@ private:
                           bool IsStringLiteral);
 
   // Helper functions to lex the remainder of a token of the specific type.
-  bool LexIdentifier         (Token &Result, const char *CurPtr);
+
+  // This function handles both ASCII and Unicode identifiers after
+  // the first codepoint of the identifyier has been parsed.
+  bool LexIdentifierContinue(Token &Result, const char *CurPtr);
+
   bool LexNumericConstant    (Token &Result, const char *CurPtr);
   bool LexStringLiteral      (Token &Result, const char *CurPtr,
                               tok::TokenKind Kind);
@@ -732,10 +770,15 @@ private:
   void codeCompleteIncludedFile(const char *PathStart,
                                 const char *CompletionPoint, bool IsAngled);
 
+  std::optional<uint32_t>
+  tryReadNumericUCN(const char *&StartPtr, const char *SlashLoc, Token *Result);
+  std::optional<uint32_t> tryReadNamedUCN(const char *&StartPtr,
+                                          const char *SlashLoc, Token *Result);
+
   /// Read a universal character name.
   ///
   /// \param StartPtr The position in the source buffer after the initial '\'.
-  ///                 If the UCN is syntactically well-formed (but not 
+  ///                 If the UCN is syntactically well-formed (but not
   ///                 necessarily valid), this parameter will be updated to
   ///                 point to the character after the UCN.
   /// \param SlashLoc The position in the source buffer of the '\'.
@@ -763,9 +806,10 @@ private:
   /// Try to consume an identifier character encoded in UTF-8.
   /// \param CurPtr Points to the start of the (potential) UTF-8 code unit
   ///        sequence. On success, updated to point past the end of it.
+  /// \param Result The token being formed.
   /// \return \c true if a UTF-8 sequence mapping to an acceptable identifier
   ///         character was lexed, \c false otherwise.
-  bool tryConsumeIdentifierUTF8Char(const char *&CurPtr);
+  bool tryConsumeIdentifierUTF8Char(const char *&CurPtr, Token &Result);
 };
 
 } // namespace clang

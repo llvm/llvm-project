@@ -58,7 +58,7 @@ namespace test3 {
   template void foo<C>(); //expected-note {{in instantiation}}
 }
 
-// PR9304 and rdar://9045501
+// PR9304
 void click_check_header_sizes() {
   switch (0 == 8) {  // expected-warning {{switch condition has boolean value}}
   case 0: ;
@@ -101,7 +101,6 @@ namespace Conversion {
   template void f(S); // expected-note {{instantiation of}}
 }
 
-// rdar://29230764
 namespace OpaqueEnumWarnings {
 
 enum Opaque : int;
@@ -124,9 +123,25 @@ void test(Opaque o, OpaqueClass oc, Defined d) {
   switch (d) {
   case Defined::a:
     break;
-  case (Defined)2: // expected-warning {{case value not in enumerated type 'OpaqueEnumWarnings::Defined'}}
+  case (Defined)2: // expected-warning {{case value not in enumerated type 'Defined'}}
     break;
   }
 }
 
 }
+
+namespace EmptyEnum {
+
+enum Empty : int {};
+void test(Empty e) {
+  switch (e) {
+  case (Empty)0:
+    break;
+  }
+  switch (e) {
+  default:
+    break;
+  }
+}
+
+} // namespace EmptyEnum

@@ -3,7 +3,7 @@
 
 ; CodeGenPrepare is expected to form overflow intrinsics to improve DAG/isel.
 
-define i1 @usubo_ult_i64(i64 %x, i64 %y, i64* %p) nounwind {
+define i1 @usubo_ult_i64(i64 %x, i64 %y, ptr %p) nounwind {
 ; CHECK-LABEL: usubo_ult_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq %rsi, %rdi
@@ -11,14 +11,14 @@ define i1 @usubo_ult_i64(i64 %x, i64 %y, i64* %p) nounwind {
 ; CHECK-NEXT:    movq %rdi, (%rdx)
 ; CHECK-NEXT:    retq
   %s = sub i64 %x, %y
-  store i64 %s, i64* %p
+  store i64 %s, ptr %p
   %ov = icmp ult i64 %x, %y
   ret i1 %ov
 }
 
 ; Verify insertion point for single-BB. Toggle predicate.
 
-define i1 @usubo_ugt_i32(i32 %x, i32 %y, i32* %p) nounwind {
+define i1 @usubo_ugt_i32(i32 %x, i32 %y, ptr %p) nounwind {
 ; CHECK-LABEL: usubo_ugt_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subl %esi, %edi
@@ -27,13 +27,13 @@ define i1 @usubo_ugt_i32(i32 %x, i32 %y, i32* %p) nounwind {
 ; CHECK-NEXT:    retq
   %ov = icmp ugt i32 %y, %x
   %s = sub i32 %x, %y
-  store i32 %s, i32* %p
+  store i32 %s, ptr %p
   ret i1 %ov
 }
 
 ; Constant operand should match.
 
-define i1 @usubo_ugt_constant_op0_i8(i8 %x, i8* %p) nounwind {
+define i1 @usubo_ugt_constant_op0_i8(i8 %x, ptr %p) nounwind {
 ; CHECK-LABEL: usubo_ugt_constant_op0_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb $42, %cl
@@ -43,13 +43,13 @@ define i1 @usubo_ugt_constant_op0_i8(i8 %x, i8* %p) nounwind {
 ; CHECK-NEXT:    retq
   %s = sub i8 42, %x
   %ov = icmp ugt i8 %x, 42
-  store i8 %s, i8* %p
+  store i8 %s, ptr %p
   ret i1 %ov
 }
 
 ; Compare with constant operand 0 is canonicalized by commuting, but verify match for non-canonical form.
 
-define i1 @usubo_ult_constant_op0_i16(i16 %x, i16* %p) nounwind {
+define i1 @usubo_ult_constant_op0_i16(i16 %x, ptr %p) nounwind {
 ; CHECK-LABEL: usubo_ult_constant_op0_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movw $43, %cx
@@ -59,13 +59,13 @@ define i1 @usubo_ult_constant_op0_i16(i16 %x, i16* %p) nounwind {
 ; CHECK-NEXT:    retq
   %s = sub i16 43, %x
   %ov = icmp ult i16 43, %x
-  store i16 %s, i16* %p
+  store i16 %s, ptr %p
   ret i1 %ov
 }
 
 ; Subtract with constant operand 1 is canonicalized to add.
 
-define i1 @usubo_ult_constant_op1_i16(i16 %x, i16* %p) nounwind {
+define i1 @usubo_ult_constant_op1_i16(i16 %x, ptr %p) nounwind {
 ; CHECK-LABEL: usubo_ult_constant_op1_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subw $44, %di
@@ -74,11 +74,11 @@ define i1 @usubo_ult_constant_op1_i16(i16 %x, i16* %p) nounwind {
 ; CHECK-NEXT:    retq
   %s = add i16 %x, -44
   %ov = icmp ult i16 %x, 44
-  store i16 %s, i16* %p
+  store i16 %s, ptr %p
   ret i1 %ov
 }
 
-define i1 @usubo_ugt_constant_op1_i8(i8 %x, i8* %p) nounwind {
+define i1 @usubo_ugt_constant_op1_i8(i8 %x, ptr %p) nounwind {
 ; CHECK-LABEL: usubo_ugt_constant_op1_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subb $45, %dil
@@ -87,13 +87,13 @@ define i1 @usubo_ugt_constant_op1_i8(i8 %x, i8* %p) nounwind {
 ; CHECK-NEXT:    retq
   %ov = icmp ugt i8 45, %x
   %s = add i8 %x, -45
-  store i8 %s, i8* %p
+  store i8 %s, ptr %p
   ret i1 %ov
 }
 
 ; Special-case: subtract 1 changes the compare predicate and constant.
 
-define i1 @usubo_eq_constant1_op1_i32(i32 %x, i32* %p) nounwind {
+define i1 @usubo_eq_constant1_op1_i32(i32 %x, ptr %p) nounwind {
 ; CHECK-LABEL: usubo_eq_constant1_op1_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subl $1, %edi
@@ -102,13 +102,13 @@ define i1 @usubo_eq_constant1_op1_i32(i32 %x, i32* %p) nounwind {
 ; CHECK-NEXT:    retq
   %s = add i32 %x, -1
   %ov = icmp eq i32 %x, 0
-  store i32 %s, i32* %p
+  store i32 %s, ptr %p
   ret i1 %ov
 }
 
 ; Special-case: subtract from 0 (negate) changes the compare predicate.
 
-define i1 @usubo_ne_constant0_op1_i32(i32 %x, i32* %p) {
+define i1 @usubo_ne_constant0_op1_i32(i32 %x, ptr %p) {
 ; CHECK-LABEL: usubo_ne_constant0_op1_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    negl %edi
@@ -117,7 +117,7 @@ define i1 @usubo_ne_constant0_op1_i32(i32 %x, i32* %p) {
 ; CHECK-NEXT:    retq
   %s = sub i32 0, %x
   %ov = icmp ne i32 %x, 0
-  store i32 %s, i32* %p
+  store i32 %s, ptr %p
   ret i1 %ov
 }
 
@@ -125,7 +125,7 @@ define i1 @usubo_ne_constant0_op1_i32(i32 %x, i32* %p) {
 
 declare void @call(i1)
 
-define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, i64* %p, i1 %cond) nounwind {
+define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwind {
 ; CHECK-LABEL: usubo_ult_sub_dominates_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb $1, %cl
@@ -148,7 +148,7 @@ entry:
 
 t:
   %s = sub i64 %x, %y
-  store i64 %s, i64* %p
+  store i64 %s, ptr %p
   br i1 %cond, label %end, label %f
 
 f:
@@ -159,7 +159,7 @@ end:
   ret i1 %ov
 }
 
-define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, i64* %p, i1 %cond) nounwind {
+define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwind {
 ; CHECK-LABEL: usubo_ult_cmp_dominates_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -171,18 +171,18 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, i64* %p, i1 %cond) nounwi
 ; CHECK-NEXT:    testb $1, %bpl
 ; CHECK-NEXT:    je .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %t
-; CHECK-NEXT:    movq %rdx, %r14
-; CHECK-NEXT:    movq %rsi, %r15
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdx, %rbx
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    cmpq %rsi, %rbx
+; CHECK-NEXT:    cmpq %rsi, %r14
 ; CHECK-NEXT:    setb %dil
-; CHECK-NEXT:    callq call
-; CHECK-NEXT:    subq %r15, %rbx
+; CHECK-NEXT:    movq %rsi, %r15
+; CHECK-NEXT:    callq call@PLT
+; CHECK-NEXT:    subq %r15, %r14
 ; CHECK-NEXT:    jae .LBB9_2
 ; CHECK-NEXT:  # %bb.4: # %end
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    movq %rbx, (%r14)
+; CHECK-NEXT:    movq %r14, (%rbx)
 ; CHECK-NEXT:    jmp .LBB9_3
 ; CHECK-NEXT:  .LBB9_2: # %f
 ; CHECK-NEXT:    movl %ebp, %eax
@@ -206,11 +206,11 @@ f:
 
 end:
   %s = sub i64 %x, %y
-  store i64 %s, i64* %p
+  store i64 %s, ptr %p
   ret i1 %ov
 }
 
-define void @PR41129(i64* %p64) {
+define void @PR41129(ptr %p64) {
 ; CHECK-LABEL: PR41129:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -225,18 +225,18 @@ define void @PR41129(i64* %p64) {
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  %key = load i64, i64* %p64, align 8
+  %key = load i64, ptr %p64, align 8
   %cond17 = icmp eq i64 %key, 0
   br i1 %cond17, label %true, label %false
 
 false:
   %andval = and i64 %key, 7
-  store i64 %andval, i64* %p64
+  store i64 %andval, ptr %p64
   br label %exit
 
 true:
   %svalue = add i64 %key, -1
-  store i64 %svalue, i64* %p64
+  store i64 %svalue, ptr %p64
   br label %exit
 
 exit:

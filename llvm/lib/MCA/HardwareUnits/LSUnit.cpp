@@ -39,7 +39,7 @@ LSUnitBase::LSUnitBase(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
   }
 }
 
-LSUnitBase::~LSUnitBase() {}
+LSUnitBase::~LSUnitBase() = default;
 
 void LSUnitBase::cycleEvent() {
   for (const std::pair<unsigned, std::unique_ptr<MemoryGroup>> &G : Groups)
@@ -67,16 +67,17 @@ void LSUnitBase::dump() const {
 #endif
 
 unsigned LSUnit::dispatch(const InstRef &IR) {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  unsigned IsMemBarrier = Desc.HasSideEffects;
-  assert((Desc.MayLoad || Desc.MayStore) && "Not a memory operation!");
+  const Instruction &IS = *IR.getInstruction();
+  bool IsStoreBarrier = IS.isAStoreBarrier();
+  bool IsLoadBarrier = IS.isALoadBarrier();
+  assert((IS.getMayLoad() || IS.getMayStore()) && "Not a memory operation!");
 
-  if (Desc.MayLoad)
+  if (IS.getMayLoad())
     acquireLQSlot();
-  if (Desc.MayStore)
+  if (IS.getMayStore())
     acquireSQSlot();
 
-  if (Desc.MayStore) {
+  if (IS.getMayStore()) {
     unsigned NewGID = createMemoryGroup();
     MemoryGroup &NewGroup = getGroup(NewGID);
     NewGroup.addInstruction();
@@ -111,19 +112,19 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
 
 
     CurrentStoreGroupID = NewGID;
-    if (IsMemBarrier)
+    if (IsStoreBarrier)
       CurrentStoreBarrierGroupID = NewGID;
 
-    if (Desc.MayLoad) {
+    if (IS.getMayLoad()) {
       CurrentLoadGroupID = NewGID;
-      if (IsMemBarrier)
+      if (IsLoadBarrier)
         CurrentLoadBarrierGroupID = NewGID;
     }
 
     return NewGID;
   }
 
-  assert(Desc.MayLoad && "Expected a load!");
+  assert(IS.getMayLoad() && "Expected a load!");
 
   unsigned ImmediateLoadDominator =
       std::max(CurrentLoadGroupID, CurrentLoadBarrierGroupID);
@@ -141,7 +142,7 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
   //    However that group has already started execution, so we cannot add
   //    this load to it.
   bool ShouldCreateANewGroup =
-      IsMemBarrier || !ImmediateLoadDominator ||
+      IsLoadBarrier || !ImmediateLoadDominator ||
       CurrentLoadBarrierGroupID == ImmediateLoadDominator ||
       ImmediateLoadDominator <= CurrentStoreGroupID ||
       getGroup(ImmediateLoadDominator).isExecuting();
@@ -161,7 +162,7 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
     }
 
     // A load barrier may not pass a previous load or load barrier.
-    if (IsMemBarrier) {
+    if (IsLoadBarrier) {
       if (ImmediateLoadDominator) {
         MemoryGroup &LoadGroup = getGroup(ImmediateLoadDominator);
         LLVM_DEBUG(dbgs() << "[LSUnit]: GROUP DEP: ("
@@ -181,7 +182,7 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
     }
 
     CurrentLoadGroupID = NewGID;
-    if (IsMemBarrier)
+    if (IsLoadBarrier)
       CurrentLoadBarrierGroupID = NewGID;
     return NewGID;
   }
@@ -193,10 +194,10 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
 }
 
 LSUnit::Status LSUnit::isAvailable(const InstRef &IR) const {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  if (Desc.MayLoad && isLQFull())
+  const Instruction &IS = *IR.getInstruction();
+  if (IS.getMayLoad() && isLQFull())
     return LSUnit::LSU_LQUEUE_FULL;
-  if (Desc.MayStore && isSQFull())
+  if (IS.getMayStore() && isSQFull())
     return LSUnit::LSU_SQUEUE_FULL;
   return LSUnit::LSU_AVAILABLE;
 }
@@ -211,9 +212,9 @@ void LSUnitBase::onInstructionExecuted(const InstRef &IR) {
 }
 
 void LSUnitBase::onInstructionRetired(const InstRef &IR) {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  bool IsALoad = Desc.MayLoad;
-  bool IsAStore = Desc.MayStore;
+  const Instruction &IS = *IR.getInstruction();
+  bool IsALoad = IS.getMayLoad();
+  bool IsAStore = IS.getMayStore();
   assert((IsALoad || IsAStore) && "Expected a memory operation!");
 
   if (IsALoad) {

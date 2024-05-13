@@ -253,8 +253,8 @@ XRayLogFlushStatus profilingFlush() XRAY_NEVER_INSTRUMENT {
                        reinterpret_cast<const char *>(B.Data) + B.Size);
           B = profileCollectorService::nextBuffer(B);
         }
+        LogWriter::Close(LW);
       }
-      LogWriter::Close(LW);
     }
   }
 
@@ -402,7 +402,7 @@ profilingLoggingInit(size_t, size_t, void *Options,
       return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
     }
 
-    // If we've succeded, set the global pointer to the initialised storage.
+    // If we've succeeded, set the global pointer to the initialised storage.
     BQ = reinterpret_cast<BufferQueue *>(&BufferQueueStorage);
   } else {
     BQ->finalize();

@@ -1,9 +1,27 @@
+import("//llvm/utils/gn/build/compiled_action.gni")
+
+compiled_action("Confusables.inc") {
+  tool = "ConfusableTable:clang-tidy-confusable-chars-gen"
+  inputs = [ "ConfusableTable/confusables.txt" ]
+  outputs = [ "$target_gen_dir/$target_name" ]
+  args = [
+    rebase_path(inputs[0], root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
 static_library("misc") {
   output_name = "clangTidyMiscModule"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
+  include_dirs = [
+    target_gen_dir,
+    "//clang-tools-extra/include-cleaner/include",
+  ]
   deps = [
+    ":Confusables.inc",
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clang-tidy/utils",
+    "//clang-tools-extra/include-cleaner/lib",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Analysis",
@@ -14,8 +32,15 @@ static_library("misc") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "ConfusableIdentifierCheck.cpp",
+    "ConstCorrectnessCheck.cpp",
+    "CoroutineHostileRAIICheck.cpp",
     "DefinitionsInHeadersCheck.cpp",
+    "HeaderIncludeCycleCheck.cpp",
+    "IncludeCleanerCheck.cpp",
     "MiscTidyModule.cpp",
+    "MisleadingBidirectional.cpp",
+    "MisleadingIdentifier.cpp",
     "MisplacedConstCheck.cpp",
     "NewDeleteOverloadsCheck.cpp",
     "NoRecursionCheck.cpp",
@@ -29,5 +54,6 @@ static_library("misc") {
     "UnusedAliasDeclsCheck.cpp",
     "UnusedParametersCheck.cpp",
     "UnusedUsingDeclsCheck.cpp",
+    "UseAnonymousNamespaceCheck.cpp",
   ]
 }

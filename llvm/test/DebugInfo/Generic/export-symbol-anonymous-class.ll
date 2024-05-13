@@ -1,3 +1,4 @@
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ;
 ; struct A {

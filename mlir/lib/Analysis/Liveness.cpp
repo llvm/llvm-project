@@ -15,6 +15,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -27,7 +28,7 @@ struct BlockInfoBuilder {
   using ValueSetT = Liveness::ValueSetT;
 
   /// Constructs an empty block builder.
-  BlockInfoBuilder() : block(nullptr) {}
+  BlockInfoBuilder() = default;
 
   /// Fills the block builder with initial liveness information.
   BlockInfoBuilder(Block *block) : block(block) {
@@ -63,21 +64,16 @@ struct BlockInfoBuilder {
       for (Value result : operation.getResults())
         gatherOutValues(result);
 
-    // Mark all nested operation results as defined.
+    // Mark all nested operation results as defined, and nested operation
+    // operands as used. All defined value will be removed from the used set
+    // at the end.
     block->walk([&](Operation *op) {
       for (Value result : op->getResults())
         defValues.insert(result);
+      for (Value operand : op->getOperands())
+        useValues.insert(operand);
     });
-
-    // Check all operations for used operands.
-    block->walk([&](Operation *op) {
-      for (Value operand : op->getOperands()) {
-        // If the operand is already defined in the scope of this
-        // block, we can skip the value in the use set.
-        if (!defValues.count(operand))
-          useValues.insert(operand);
-      }
-    });
+    llvm::set_subtract(useValues, defValues);
   }
 
   /// Updates live-in information of the current block. To do so it uses the
@@ -94,22 +90,22 @@ struct BlockInfoBuilder {
     if (newIn.size() == inValues.size())
       return false;
 
-    inValues = newIn;
+    inValues = std::move(newIn);
     return true;
   }
 
   /// Updates live-out information of the current block. It iterates over all
   /// successors and unifies their live-in values with the current live-out
   /// values.
-  template <typename SourceT> void updateLiveOut(SourceT &source) {
+  void updateLiveOut(const DenseMap<Block *, BlockInfoBuilder> &builders) {
     for (Block *succ : block->getSuccessors()) {
-      BlockInfoBuilder &builder = source[succ];
+      const BlockInfoBuilder &builder = builders.find(succ)->second;
       llvm::set_union(outValues, builder.inValues);
     }
   }
 
   /// The current block.
-  Block *block;
+  Block *block{nullptr};
 
   /// The set of all live in values.
   ValueSetT inValues;
@@ -138,7 +134,7 @@ static void buildBlockMapping(Operation *operation,
       toProcess.insert(block->pred_begin(), block->pred_end());
   });
 
-  // Propagate the in and out-value sets (fixpoint iteration)
+  // Propagate the in and out-value sets (fixpoint iteration).
   while (!toProcess.empty()) {
     Block *current = toProcess.pop_back_val();
     BlockInfoBuilder &builder = builders[current];
@@ -162,7 +158,6 @@ Liveness::Liveness(Operation *op) : operation(op) { build(); }
 
 /// Initializes the internal mappings.
 void Liveness::build() {
-
   // Build internal block mapping.
   DenseMap<Block *, BlockInfoBuilder> builders;
   buildBlockMapping(operation, builders);
@@ -189,7 +184,7 @@ Liveness::OperationListT Liveness::resolveLiveness(Value value) const {
   if (Operation *defOp = value.getDefiningOp())
     currentBlock = defOp->getBlock();
   else
-    currentBlock = value.cast<BlockArgument>().getOwner();
+    currentBlock = cast<BlockArgument>(value).getOwner();
   toProcess.push_back(currentBlock);
   visited.insert(currentBlock);
 
@@ -242,9 +237,8 @@ const Liveness::ValueSetT &Liveness::getLiveOut(Block *block) const {
   return getLiveness(block)->out();
 }
 
-/// Returns true if the given operation represent the last use of the given
-/// value.
-bool Liveness::isLastUse(Value value, Operation *operation) const {
+/// Returns true if `value` is not live after `operation`.
+bool Liveness::isDeadAfter(Value value, Operation *operation) const {
   Block *block = operation->getBlock();
   const LivenessBlockInfo *blockInfo = getLiveness(block);
 
@@ -286,7 +280,7 @@ void Liveness::print(raw_ostream &os) const {
     if (value.getDefiningOp())
       os << "val_" << valueIds[value];
     else {
-      auto blockArg = value.cast<BlockArgument>();
+      auto blockArg = cast<BlockArgument>(value);
       os << "arg" << blockArg.getArgNumber() << "@"
          << blockIds[blockArg.getOwner()];
     }
@@ -295,10 +289,9 @@ void Liveness::print(raw_ostream &os) const {
 
   auto printValueRefs = [&](const ValueSetT &values) {
     std::vector<Value> orderedValues(values.begin(), values.end());
-    std::sort(orderedValues.begin(), orderedValues.end(),
-              [&](Value left, Value right) {
-                return valueIds[left] < valueIds[right];
-              });
+    llvm::sort(orderedValues, [&](Value left, Value right) {
+      return valueIds[left] < valueIds[right];
+    });
     for (Value value : orderedValues)
       printValueRef(value);
   };
@@ -314,7 +307,7 @@ void Liveness::print(raw_ostream &os) const {
     os << "\n";
 
     // Print liveness intervals.
-    os << "// --- BeginLiveness";
+    os << "// --- BeginLivenessIntervals";
     for (Operation &op : *block) {
       if (op.getNumResults() < 1)
         continue;
@@ -324,17 +317,30 @@ void Liveness::print(raw_ostream &os) const {
         printValueRef(result);
         os << ":";
         auto liveOperations = resolveLiveness(result);
-        std::sort(liveOperations.begin(), liveOperations.end(),
-                  [&](Operation *left, Operation *right) {
-                    return operationIds[left] < operationIds[right];
-                  });
+        llvm::sort(liveOperations, [&](Operation *left, Operation *right) {
+          return operationIds[left] < operationIds[right];
+        });
         for (Operation *operation : liveOperations) {
           os << "\n//     ";
           operation->print(os);
         }
       }
     }
-    os << "\n// --- EndLiveness\n";
+    os << "\n// --- EndLivenessIntervals\n";
+
+    // Print currently live values.
+    os << "// --- BeginCurrentlyLive\n";
+    for (Operation &op : *block) {
+      auto currentlyLive = liveness->currentlyLiveValues(&op);
+      if (currentlyLive.empty())
+        continue;
+      os << "//     ";
+      op.print(os);
+      os << " [";
+      printValueRefs(currentlyLive);
+      os << "\b]\n";
+    }
+    os << "// --- EndCurrentlyLive\n";
   });
   os << "// -------------------\n";
 }
@@ -383,4 +389,57 @@ Operation *LivenessBlockInfo::getEndOperation(Value value,
       endOperation = useOp;
   }
   return endOperation;
+}
+
+/// Return the values that are currently live as of the given operation.
+LivenessBlockInfo::ValueSetT
+LivenessBlockInfo::currentlyLiveValues(Operation *op) const {
+  ValueSetT liveSet;
+
+  // Given a value, check which ops are within its live range. For each of
+  // those ops, add the value to the set of live values as-of that op.
+  auto addValueToCurrentlyLiveSets = [&](Value value) {
+    // Determine the live range of this value inside this block.
+    Operation *startOfLiveRange = value.getDefiningOp();
+    Operation *endOfLiveRange = nullptr;
+    // If it's a live in or a block argument, then the start is the beginning
+    // of the block.
+    if (isLiveIn(value) || isa<BlockArgument>(value))
+      startOfLiveRange = &block->front();
+    else
+      startOfLiveRange = block->findAncestorOpInBlock(*startOfLiveRange);
+
+    // If it's a live out, then the end is the back of the block.
+    if (isLiveOut(value))
+      endOfLiveRange = &block->back();
+
+    // We must have at least a startOfLiveRange at this point. Given this, we
+    // can use the existing getEndOperation to find the end of the live range.
+    if (startOfLiveRange && !endOfLiveRange)
+      endOfLiveRange = getEndOperation(value, startOfLiveRange);
+
+    assert(endOfLiveRange && "Must have endOfLiveRange at this point!");
+    // If this op is within the live range, insert the value into the set.
+    if (!(op->isBeforeInBlock(startOfLiveRange) ||
+          endOfLiveRange->isBeforeInBlock(op)))
+      liveSet.insert(value);
+  };
+
+  // Handle block arguments if any.
+  for (Value arg : block->getArguments())
+    addValueToCurrentlyLiveSets(arg);
+
+  // Handle live-ins. Between the live ins and all the op results that gives us
+  // every value in the block.
+  for (Value in : inValues)
+    addValueToCurrentlyLiveSets(in);
+
+  // Now walk the block and handle all values used in the block and values
+  // defined by the block.
+  for (Operation &walkOp :
+       llvm::make_range(block->begin(), ++op->getIterator()))
+    for (auto result : walkOp.getResults())
+      addValueToCurrentlyLiveSets(result);
+
+  return liveSet;
 }

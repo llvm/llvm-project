@@ -266,7 +266,7 @@ TEST_F(ImmutableListTest, LongListOrderingTest) {
   ASSERT_EQ(6, i);
 }
 
-static_assert(std::is_trivially_copyable<ImmutableList<Wrapper<long>>>::value,
+static_assert(std::is_trivially_copyable_v<ImmutableList<Wrapper<long>>>,
               "trivially copyable");
 
 } // namespace

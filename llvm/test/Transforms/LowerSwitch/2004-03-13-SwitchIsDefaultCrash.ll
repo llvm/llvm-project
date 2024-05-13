@@ -1,4 +1,4 @@
-; RUN: opt < %s -lowerswitch -disable-output
+; RUN: opt < %s -passes=lower-switch -disable-output
 
 define void @solve() {
 entry:

@@ -45,8 +45,8 @@ define i64 @orv_nxv8i64(<vscale x 8 x i64> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z1.d, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    orv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -112,8 +112,8 @@ define i32 @uaddv_nxv16i32(<vscale x 16 x i32> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add z1.s, z1.s, z3.s
 ; CHECK-NEXT:    add z0.s, z0.s, z2.s
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -127,8 +127,8 @@ define i32 @uaddv_nxv16i32(<vscale x 16 x i32> %a) {
 define i32 @umin_nxv2i32(<vscale x 2 x i32> %a) {
 ; CHECK-LABEL: umin_nxv2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0

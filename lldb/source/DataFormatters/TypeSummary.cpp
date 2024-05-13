@@ -26,8 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-TypeSummaryOptions::TypeSummaryOptions()
-    : m_lang(eLanguageTypeUnknown), m_capping(eTypeSummaryCapped) {}
+TypeSummaryOptions::TypeSummaryOptions() = default;
 
 lldb::LanguageType TypeSummaryOptions::GetLanguage() const { return m_lang; }
 
@@ -81,7 +80,10 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
     sc = frame->GetSymbolContext(lldb::eSymbolContextEverything);
 
   if (IsOneLiner()) {
-    ValueObjectPrinter printer(valobj, &s, DumpValueObjectOptions());
+    // We've already checked the case of a NULL valobj above.  Let's put in an
+    // assert here to make sure someone doesn't take that out:
+    assert(valobj && "Must have a valid ValueObject to summarize");
+    ValueObjectPrinter printer(*valobj, &s, DumpValueObjectOptions());
     printer.PrintChildrenOneLiner(HideNames(valobj));
     retval = std::string(s.GetString());
     return true;

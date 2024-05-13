@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid10_waitcnt:
+.. _amdgpu_synid_gfx10_waitcnt:
 
 waitcnt
-===========================
+=======
 
 Counts of outstanding instructions to wait for.
 
@@ -19,12 +19,12 @@ The bits of this operand have the following meaning:
     ========== ========= ================================================ ============
     15:14      3:0       VM_CNT: vector memory operations count.          0..63
     \-         6:4       EXP_CNT: export count.                           0..7
-    \-         11:8      LGKM_CNT: LDS, GDS, Constant and Message count.  0..15
+    \-         13:8      LGKM_CNT: LDS, GDS, Constant and Message count.  0..63
     ========== ========= ================================================ ============
 
 This operand may be specified as one of the following:
 
-* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..0xFFFF.
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range from 0 to 0xFFFF.
 * A combination of *vmcnt*, *expcnt*, *lgkmcnt* and other values described below.
 
     ====================== ======================================================================
@@ -38,7 +38,8 @@ This operand may be specified as one of the following:
     lgkmcnt_sat(<*N*>)     An LGKM_CNT value computed as min(*N*, the largest LGKM_CNT value).
     ====================== ======================================================================
 
-These values may be specified in any order. Spaces, ampersands and commas may be used as optional separators.
+These values may be specified in any order. Spaces, ampersands, and commas may be used as optional separators.
+If some values are omitted, the corresponding fields will default to their maximum value.
 
 *N* is either an
 :ref:`integer number<amdgpu_synid_integer_number>` or an

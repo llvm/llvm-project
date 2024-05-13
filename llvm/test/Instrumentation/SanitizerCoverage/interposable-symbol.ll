@@ -1,6 +1,4 @@
 ; Test that interposable symbols do not get put in comdats.
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -mtriple x86_64-linux-gnu -S -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,ELF
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -mtriple x86_64-windows-msvc -S -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,COFF
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -mtriple x86_64-linux-gnu -S | FileCheck %s --check-prefixes=CHECK,ELF
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -mtriple x86_64-windows-msvc -S | FileCheck %s --check-prefixes=CHECK,COFF
 
@@ -31,8 +29,8 @@ entry:
   ret void
 }
 
-; CHECK:      $Vanilla = comdat noduplicates
-; ELF:        $LinkOnceOdr = comdat noduplicates
+; CHECK:      $Vanilla = comdat nodeduplicate
+; ELF:        $LinkOnceOdr = comdat nodeduplicate
 ; COFF:       $LinkOnceOdr = comdat any
 ; CHECK:      @__sancov_gen_ = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($Vanilla), align 4{{$}}
 ; CHECK-NEXT: @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section {{.*}}, align 4{{$}}

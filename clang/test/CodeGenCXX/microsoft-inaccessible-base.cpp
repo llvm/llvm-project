@@ -2,19 +2,24 @@
 
 // Make sure we choose the *direct* base path when doing these conversions.
 
-// CHECK: %struct.C = type { %struct.A, %struct.B }
-// CHECK: %struct.D = type { %struct.B, %struct.A }
-
 struct A { int a; };
 struct B : A { int b; };
 
 struct C : A, B { };
 extern "C" A *a_from_c(C *p) { return p; }
-// CHECK-LABEL: define dso_local %struct.A* @a_from_c(%struct.C* %{{.*}})
-// CHECK: bitcast %struct.C* %{{.*}} to %struct.A*
+// CHECK-LABEL: define dso_local ptr @a_from_c(ptr noundef %{{.*}})
+// CHECK: [[P_ADDR:%.*]] = alloca ptr
+// CHECK-NEXT: store ptr [[P:%.*]], ptr [[P_ADDR]]
+// CHECK-NEXT: [[RET:%.*]] = load ptr, ptr [[P_ADDR]]
+// CHECK-NEXT: ret ptr [[RET]]
 
 struct D : B, A { };
 extern "C" A *a_from_d(D *p) { return p; }
-// CHECK-LABEL: define dso_local %struct.A* @a_from_d(%struct.D* %{{.*}})
-// CHECK: %[[p_i8:[^ ]*]] = bitcast %struct.D* %{{.*}} to i8*
-// CHECK: getelementptr inbounds i8, i8* %[[p_i8]], i64 8
+// CHECK-LABEL: define dso_local ptr @a_from_d(ptr noundef %{{.*}})
+// CHECK: [[P_ADDR:%.*]] = alloca ptr
+// CHECK-NEXT: store ptr [[P:%.*]], ptr [[P_ADDR]]
+// CHECK-NEXT: [[P_RELOAD:%.*]] = load ptr, ptr [[P_ADDR]]
+// CHECK-NEXT: [[CMP:%.*]] = icmp eq ptr [[P_RELOAD]], null
+// CHECK: [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P_RELOAD]], i64 8
+// CHECK: [[RET:%.*]] = phi ptr [ [[ADD_PTR]], {{.*}} ], [ null, %entry ]
+// CHECK-NEXT: ret ptr [[RET]]

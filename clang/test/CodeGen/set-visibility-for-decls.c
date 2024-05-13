@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility hidden -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-HIDDEN %s
-// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility protected -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-PROTECTED %s
-// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility default -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-DEFAULT %s
+// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility=hidden -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-HIDDEN %s
+// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility=protected -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-PROTECTED %s
+// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility=default -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-DEFAULT %s
 
 // CHECK-HIDDEN: @var_hidden = external hidden global
 // CHECK-PROTECTED: @var_hidden = external hidden global
@@ -36,7 +36,7 @@ __attribute__((visibility("default"))) int func_default(void);
 // CHECK-DEFAULT: declare i32 @func()
 int func(void);
 
-int use() {
+int use(void) {
   return var_hidden + var_protected + var_default + var +
          func_hidden() + func_protected() + func_default() + func();
 }

@@ -4,32 +4,101 @@
 define <1 x float> @ret_v1f32(<1 x float> %v) {
   ; CHECK-LABEL: name: ret_v1f32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $d0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-  ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[DEF]](s32)
-  ; CHECK:   $d0 = COPY [[BUILD_VECTOR]](<2 x s32>)
-  ; CHECK:   RET_ReallyLR implicit $d0
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[DEF]](s32)
+  ; CHECK-NEXT:   $d0 = COPY [[BUILD_VECTOR]](<2 x s32>)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   ret <1 x float> %v
 }
 
-define <1 x i8*> @ret_v1p0(<1 x i8*> %v) {
+define <1 x ptr> @ret_v1p0(<1 x ptr> %v) {
   ; CHECK-LABEL: name: ret_v1p0
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $d0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $d0
-  ; CHECK:   $d0 = COPY [[COPY]](p0)
-  ; CHECK:   RET_ReallyLR implicit $d0
-  ret <1 x i8*> %v
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $d0
+  ; CHECK-NEXT:   $d0 = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0
+  ret <1 x ptr> %v
 }
 
-define <1 x i8 addrspace(1)*> @ret_v1p1(<1 x i8 addrspace(1)*> %v) {
+define <1 x ptr addrspace(1)> @ret_v1p1(<1 x ptr addrspace(1)> %v) {
   ; CHECK-LABEL: name: ret_v1p1
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $d0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p1) = COPY $d0
-  ; CHECK:   $d0 = COPY [[COPY]](p1)
-  ; CHECK:   RET_ReallyLR implicit $d0
-  ret <1 x i8 addrspace(1)*> %v
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p1) = COPY $d0
+  ; CHECK-NEXT:   $d0 = COPY [[COPY]](p1)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0
+  ret <1 x ptr addrspace(1)> %v
+}
+
+define <1 x i16> @ret_v1i16(<1 x i16> %v) {
+  ; CHECK-LABEL: name: ret_v1i16
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
+  ; CHECK-NEXT:   $d0 = COPY [[BUILD_VECTOR]](<4 x s16>)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0
+  ret <1 x i16> %v
+}
+
+define <1 x i8> @ret_v1i8(<1 x i8> %v) {
+  ; CHECK-LABEL: name: ret_v1i8
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](<8 x s8>)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR [[UV]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
+  ; CHECK-NEXT:   $d0 = COPY [[BUILD_VECTOR]](<8 x s8>)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0
+  ret <1 x i8> %v
+}
+
+define <1 x i32> @ret_v1i32(<1 x i32> %v) {
+  ; CHECK-LABEL: name: ret_v1i32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[DEF]](s32)
+  ; CHECK-NEXT:   $d0 = COPY [[BUILD_VECTOR]](<2 x s32>)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0
+  ret <1 x i32> %v
+}
+
+define <1 x i64> @ret_v1i64(<1 x i64> %v) {
+  ; CHECK-LABEL: name: ret_v1i64
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+  ; CHECK-NEXT:   $d0 = COPY [[COPY]](s64)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0
+  ret <1 x i64> %v
+}
+define <1 x i1> @ret_v1i1(<1 x i1> %v) {
+  ; CHECK-LABEL: name: ret_v1i1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[TRUNC]](s1)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXT]](s8)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  ret <1 x i1> %v
 }

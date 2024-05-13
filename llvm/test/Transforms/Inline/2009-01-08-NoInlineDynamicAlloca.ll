@@ -1,27 +1,27 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 ; Do not inline calls with variable-sized alloca.
 
-@q = common global i8* null
+@q = common global ptr null
 
-define i8* @a(i32 %i) nounwind {
-; CHECK-LABEL: define i8* @a
+define ptr @a(i32 %i) nounwind {
+; CHECK-LABEL: define ptr @a
 entry:
   %i_addr = alloca i32
-  %retval = alloca i8*
-  %p = alloca i8*
+  %retval = alloca ptr
+  %p = alloca ptr
   %"alloca point" = bitcast i32 0 to i32
-  store i32 %i, i32* %i_addr
-  %0 = load i32, i32* %i_addr, align 4
+  store i32 %i, ptr %i_addr
+  %0 = load i32, ptr %i_addr, align 4
   %1 = alloca i8, i32 %0
-  store i8* %1, i8** %p, align 4
-  %2 = load i8*, i8** %p, align 4
-  store i8* %2, i8** @q, align 4
+  store ptr %1, ptr %p, align 4
+  %2 = load ptr, ptr %p, align 4
+  store ptr %2, ptr @q, align 4
   br label %return
 
 return:
-  %retval1 = load i8*, i8** %retval
-  ret i8* %retval1
+  %retval1 = load ptr, ptr %retval
+  ret ptr %retval1
 }
 
 define void @b(i32 %i) nounwind {
@@ -29,10 +29,10 @@ define void @b(i32 %i) nounwind {
 entry:
   %i_addr = alloca i32
   %"alloca point" = bitcast i32 0 to i32
-  store i32 %i, i32* %i_addr
-  %0 = load i32, i32* %i_addr, align 4
-  %1 = call i8* @a(i32 %0) nounwind
-; CHECK: call i8* @a
+  store i32 %i, ptr %i_addr
+  %0 = load i32, ptr %i_addr, align 4
+  %1 = call ptr @a(i32 %0) nounwind
+; CHECK: call ptr @a
   br label %return
 
 return:

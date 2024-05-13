@@ -12,7 +12,7 @@
 ; Function Attrs: nofree norecurse nounwind
 define dso_local void @foo() local_unnamed_addr #0 {
 entry:
-  %0 = cmpxchg volatile i8* @foo.a00, i8 0, i8 1 seq_cst seq_cst
+  %0 = cmpxchg volatile ptr @foo.a00, i8 0, i8 1 seq_cst seq_cst
   ret void
 }
 

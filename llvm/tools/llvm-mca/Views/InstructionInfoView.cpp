@@ -32,17 +32,30 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   TempStream << "\n\nInstruction Info:\n";
   TempStream << "[1]: #uOps\n[2]: Latency\n[3]: RThroughput\n"
              << "[4]: MayLoad\n[5]: MayStore\n[6]: HasSideEffects (U)\n";
+  if (PrintBarriers) {
+    TempStream << "[7]: LoadBarrier\n[8]: StoreBarrier\n";
+  }
   if (PrintEncodings) {
-    TempStream << "[7]: Encoding Size\n";
-    TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    "
-               << "Encodings:                    Instructions:\n";
+    if (PrintBarriers) {
+      TempStream << "[9]: Encoding Size\n";
+      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    "
+                 << "[9]    Encodings:                    Instructions:\n";
+    } else {
+      TempStream << "[7]: Encoding Size\n";
+      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    "
+                 << "Encodings:                    Instructions:\n";
+    }
   } else {
-    TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    Instructions:\n";
+    if (PrintBarriers) {
+      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    "
+                 << "Instructions:\n";
+    } else {
+      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    "
+                 << "Instructions:\n";
+    }
   }
 
-  for (const auto &I : enumerate(zip(IIVD, Source))) {
-    const InstructionInfoViewData &IIVDEntry = std::get<0>(I.value());
-
+  for (const auto &[Index, IIVDEntry, Inst] : enumerate(IIVD, Source)) {
     TempStream << ' ' << IIVDEntry.NumMicroOpcodes << "    ";
     if (IIVDEntry.NumMicroOpcodes < 10)
       TempStream << "  ";
@@ -54,8 +67,8 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     else if (IIVDEntry.Latency < 100)
       TempStream << ' ';
 
-    if (IIVDEntry.RThroughput.hasValue()) {
-      double RT = IIVDEntry.RThroughput.getValue();
+    if (IIVDEntry.RThroughput) {
+      double RT = *IIVDEntry.RThroughput;
       TempStream << format("%.2f", RT) << ' ';
       if (RT < 10.0)
         TempStream << "  ";
@@ -68,8 +81,15 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     TempStream << (IIVDEntry.mayStore ? " *     " : "       ");
     TempStream << (IIVDEntry.hasUnmodeledSideEffects ? " U     " : "       ");
 
+    if (PrintBarriers) {
+      TempStream << (LoweredInsts[Index]->isALoadBarrier() ? " *     "
+                                                           : "       ");
+      TempStream << (LoweredInsts[Index]->isAStoreBarrier() ? " *     "
+                                                            : "       ");
+    }
+
     if (PrintEncodings) {
-      StringRef Encoding(CE.getEncoding(I.index()));
+      StringRef Encoding(CE.getEncoding(Index));
       unsigned EncodingSize = Encoding.size();
       TempStream << " " << EncodingSize
                  << (EncodingSize < 10 ? "     " : "    ");
@@ -81,7 +101,6 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
       FOS.flush();
     }
 
-    const MCInst &Inst = std::get<1>(I.value());
     TempStream << printInstructionString(Inst) << '\n';
   }
 
@@ -98,8 +117,13 @@ void InstructionInfoView::collectData(
     InstructionInfoViewData &IIVDEntry = std::get<1>(I);
     const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
 
-    // Obtain the scheduling class information from the instruction.
-    unsigned SchedClassID = MCDesc.getSchedClass();
+    // Obtain the scheduling class information from the instruction
+    // and instruments.
+    auto IVecIt = InstToInstruments.find(&Inst);
+    unsigned SchedClassID =
+        IVecIt == InstToInstruments.end()
+            ? MCDesc.getSchedClass()
+            : IM.getSchedClassID(MCII, Inst, IVecIt->second);
     unsigned CPUID = SM.getProcessorID();
 
     // Try to solve variant scheduling classes.
@@ -128,7 +152,7 @@ InstructionInfoView::toJSON(const InstructionInfoViewData &IIVD) const {
                    {"mayLoad", IIVD.mayLoad},
                    {"mayStore", IIVD.mayStore},
                    {"hasUnmodeledSideEffects", IIVD.hasUnmodeledSideEffects}});
-  JO.try_emplace("RThroughput", IIVD.RThroughput.getValueOr(0.0));
+  JO.try_emplace("RThroughput", IIVD.RThroughput.value_or(0.0));
   return JO;
 }
 
@@ -147,7 +171,7 @@ json::Value InstructionInfoView::toJSON() const {
     JO.try_emplace("Instruction", (unsigned)I.index());
     InstInfo.push_back(std::move(JO));
   }
-  return json::Value(std::move(InstInfo));
+  return json::Object({{"InstructionList", json::Value(std::move(InstInfo))}});
 }
 } // namespace mca.
 } // namespace llvm

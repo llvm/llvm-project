@@ -1,4 +1,5 @@
-; RUN: opt < %s -loop-predication -S | FileCheck %s
+; RUN: opt < %s -passes=loop-predication -S | FileCheck %s
+; RUN: opt -S -passes='require<scalar-evolution>,loop-mssa(loop-predication)' -verify-memoryssa < %s 2>&1 | FileCheck %s
 
 ;; This is a simplified copy of @unswitch_exit_form test that should trigger loop-predication
 ;; activity and properly bail out when discovering that widenable check does not lead to deopt.
@@ -6,7 +7,7 @@
 ;; Error checking is rather silly here - it should pass compilation successfully,
 ;; in bad case it will just timeout.
 ;;
-define i32 @unswitch_exit_form_with_endless_loop(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
+define i32 @unswitch_exit_form_with_endless_loop(ptr %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-LABEL: @unswitch_exit_form_with_endless_loop
 entry:
   %widenable_cond = call i1 @llvm.experimental.widenable.condition()
@@ -32,9 +33,9 @@ loop:
 
 guarded:
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
-  store i32 0, i32* %array.i.ptr
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
+  store i32 0, ptr %array.i.ptr
   %loop.acc.next = add i32 %loop.acc, %array.i
   %i.next = add nuw i32 %i, 1
   %continue = icmp ult i32 %i.next, %n

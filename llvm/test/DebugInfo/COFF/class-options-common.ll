@@ -2,6 +2,11 @@
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM-INLINE-COMMENTS
 ;
+; Same as above, with experimental debuginfo iterators.
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | FileCheck %s --check-prefix=ASM-INLINE-COMMENTS
+;
 ; Command to generate function-options.ll
 ; $ clang++ class-options-common.cpp -S -emit-llvm -g -gcodeview -o class-options-common.ll
 
@@ -692,15 +697,14 @@ target triple = "x86_64-pc-windows-msvc19.15.26729"
 @"?b@@3UBar@@A" = dso_local global %struct.Bar zeroinitializer, align 4, !dbg !6
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i8 @"?Func_EmptyClass@@YA?AVEmptyClass@@AEAV1@@Z"(%class.EmptyClass* dereferenceable(1) %arg) #0 !dbg !30 {
+define dso_local i8 @"?Func_EmptyClass@@YA?AVEmptyClass@@AEAV1@@Z"(ptr dereferenceable(1) %arg) #0 !dbg !30 {
 entry:
   %retval = alloca %class.EmptyClass, align 1
-  %arg.addr = alloca %class.EmptyClass*, align 8
-  store %class.EmptyClass* %arg, %class.EmptyClass** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.EmptyClass** %arg.addr, metadata !35, metadata !DIExpression()), !dbg !36
-  %0 = load %class.EmptyClass*, %class.EmptyClass** %arg.addr, align 8, !dbg !36
-  %coerce.dive = getelementptr inbounds %class.EmptyClass, %class.EmptyClass* %retval, i32 0, i32 0, !dbg !36
-  %1 = load i8, i8* %coerce.dive, align 1, !dbg !36
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !35, metadata !DIExpression()), !dbg !36
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !36
+  %1 = load i8, ptr %retval, align 1, !dbg !36
   ret i8 %1, !dbg !36
 }
 
@@ -708,98 +712,96 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_ExplicitCtorClass@@YA?AVExplicitCtorClass@@AEAV1@@Z"(%class.ExplicitCtorClass* noalias sret(%class.ExplicitCtorClass) %agg.result, %class.ExplicitCtorClass* dereferenceable(1) %arg) #0 !dbg !37 {
+define dso_local void @"?Func_ExplicitCtorClass@@YA?AVExplicitCtorClass@@AEAV1@@Z"(ptr noalias sret(%class.ExplicitCtorClass) %agg.result, ptr dereferenceable(1) %arg) #0 !dbg !37 {
 entry:
-  %arg.addr = alloca %class.ExplicitCtorClass*, align 8
-  store %class.ExplicitCtorClass* %arg, %class.ExplicitCtorClass** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.ExplicitCtorClass** %arg.addr, metadata !47, metadata !DIExpression()), !dbg !48
-  %0 = load %class.ExplicitCtorClass*, %class.ExplicitCtorClass** %arg.addr, align 8, !dbg !48
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !47, metadata !DIExpression()), !dbg !48
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !48
   ret void, !dbg !48
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_DefaultedCtorClass@@YA?AVDefaultedCtorClass@@AEAV1@@Z"(%class.DefaultedCtorClass* noalias sret(%class.DefaultedCtorClass) %agg.result, %class.DefaultedCtorClass* dereferenceable(1) %arg) #0 !dbg !49 {
+define dso_local void @"?Func_DefaultedCtorClass@@YA?AVDefaultedCtorClass@@AEAV1@@Z"(ptr noalias sret(%class.DefaultedCtorClass) %agg.result, ptr dereferenceable(1) %arg) #0 !dbg !49 {
 entry:
-  %arg.addr = alloca %class.DefaultedCtorClass*, align 8
-  store %class.DefaultedCtorClass* %arg, %class.DefaultedCtorClass** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.DefaultedCtorClass** %arg.addr, metadata !59, metadata !DIExpression()), !dbg !60
-  %0 = load %class.DefaultedCtorClass*, %class.DefaultedCtorClass** %arg.addr, align 8, !dbg !60
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !59, metadata !DIExpression()), !dbg !60
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !60
   ret void, !dbg !60
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_DefaultArgumentCtorClass@@YA?AVDefaultArgumentCtorClass@@AEAV1@@Z"(%class.DefaultArgumentCtorClass* noalias sret(%class.DefaultArgumentCtorClass) %agg.result, %class.DefaultArgumentCtorClass* dereferenceable(1) %arg) #0 !dbg !61 {
+define dso_local void @"?Func_DefaultArgumentCtorClass@@YA?AVDefaultArgumentCtorClass@@AEAV1@@Z"(ptr noalias sret(%class.DefaultArgumentCtorClass) %agg.result, ptr dereferenceable(1) %arg) #0 !dbg !61 {
 entry:
-  %arg.addr = alloca %class.DefaultArgumentCtorClass*, align 8
-  store %class.DefaultArgumentCtorClass* %arg, %class.DefaultArgumentCtorClass** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.DefaultArgumentCtorClass** %arg.addr, metadata !71, metadata !DIExpression()), !dbg !72
-  %0 = load %class.DefaultArgumentCtorClass*, %class.DefaultArgumentCtorClass** %arg.addr, align 8, !dbg !72
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !71, metadata !DIExpression()), !dbg !72
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !72
   ret void, !dbg !72
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_UserDtorClass@@YA?AVUserDtorClass@@AEAV1@@Z"(%class.UserDtorClass* noalias sret(%class.UserDtorClass) %agg.result, %class.UserDtorClass* dereferenceable(1) %arg) #0 !dbg !73 {
+define dso_local void @"?Func_UserDtorClass@@YA?AVUserDtorClass@@AEAV1@@Z"(ptr noalias sret(%class.UserDtorClass) %agg.result, ptr dereferenceable(1) %arg) #0 !dbg !73 {
 entry:
-  %arg.addr = alloca %class.UserDtorClass*, align 8
-  store %class.UserDtorClass* %arg, %class.UserDtorClass** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.UserDtorClass** %arg.addr, metadata !83, metadata !DIExpression()), !dbg !84
-  %0 = load %class.UserDtorClass*, %class.UserDtorClass** %arg.addr, align 8, !dbg !84
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !83, metadata !DIExpression()), !dbg !84
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !84
   ret void, !dbg !84
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_DefaultedDtorClass@@YA?AVDefaultedDtorClass@@AEAV1@@Z"(%class.DefaultedDtorClass* noalias sret(%class.DefaultedDtorClass) %agg.result, %class.DefaultedDtorClass* dereferenceable(1) %arg) #0 !dbg !85 {
+define dso_local void @"?Func_DefaultedDtorClass@@YA?AVDefaultedDtorClass@@AEAV1@@Z"(ptr noalias sret(%class.DefaultedDtorClass) %agg.result, ptr dereferenceable(1) %arg) #0 !dbg !85 {
 entry:
-  %arg.addr = alloca %class.DefaultedDtorClass*, align 8
-  store %class.DefaultedDtorClass* %arg, %class.DefaultedDtorClass** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.DefaultedDtorClass** %arg.addr, metadata !95, metadata !DIExpression()), !dbg !96
-  %0 = load %class.DefaultedDtorClass*, %class.DefaultedDtorClass** %arg.addr, align 8, !dbg !96
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !95, metadata !DIExpression()), !dbg !96
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !96
   ret void, !dbg !96
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_AClass@@YA?AVAClass@@AEAV1@@Z"(%class.AClass* noalias sret(%class.AClass) %agg.result, %class.AClass* dereferenceable(1) %arg) #0 !dbg !97 {
+define dso_local void @"?Func_AClass@@YA?AVAClass@@AEAV1@@Z"(ptr noalias sret(%class.AClass) %agg.result, ptr dereferenceable(1) %arg) #0 !dbg !97 {
 entry:
-  %arg.addr = alloca %class.AClass*, align 8
-  store %class.AClass* %arg, %class.AClass** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.AClass** %arg.addr, metadata !104, metadata !DIExpression()), !dbg !105
-  %0 = load %class.AClass*, %class.AClass** %arg.addr, align 8, !dbg !105
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !104, metadata !DIExpression()), !dbg !105
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !105
   ret void, !dbg !105
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i8 @"?Func_BClass@@YA?AVBClass@@AEAV1@@Z"(%class.BClass* dereferenceable(1) %arg) #0 !dbg !106 {
+define dso_local i8 @"?Func_BClass@@YA?AVBClass@@AEAV1@@Z"(ptr dereferenceable(1) %arg) #0 !dbg !106 {
 entry:
   %retval = alloca %class.BClass, align 1
-  %arg.addr = alloca %class.BClass*, align 8
-  store %class.BClass* %arg, %class.BClass** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.BClass** %arg.addr, metadata !113, metadata !DIExpression()), !dbg !114
-  %0 = load %class.BClass*, %class.BClass** %arg.addr, align 8, !dbg !114
-  %coerce.dive = getelementptr inbounds %class.BClass, %class.BClass* %retval, i32 0, i32 0, !dbg !114
-  %1 = load i8, i8* %coerce.dive, align 1, !dbg !114
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !113, metadata !DIExpression()), !dbg !114
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !114
+  %1 = load i8, ptr %retval, align 1, !dbg !114
   ret i8 %1, !dbg !114
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i8 @"?Func_AStruct@@YA?AUAStruct@@AEAU1@@Z"(%struct.AStruct* dereferenceable(1) %arg) #0 !dbg !115 {
+define dso_local i8 @"?Func_AStruct@@YA?AUAStruct@@AEAU1@@Z"(ptr dereferenceable(1) %arg) #0 !dbg !115 {
 entry:
   %retval = alloca %struct.AStruct, align 1
-  %arg.addr = alloca %struct.AStruct*, align 8
-  store %struct.AStruct* %arg, %struct.AStruct** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.AStruct** %arg.addr, metadata !120, metadata !DIExpression()), !dbg !121
-  %0 = load %struct.AStruct*, %struct.AStruct** %arg.addr, align 8, !dbg !121
-  %coerce.dive = getelementptr inbounds %struct.AStruct, %struct.AStruct* %retval, i32 0, i32 0, !dbg !121
-  %1 = load i8, i8* %coerce.dive, align 1, !dbg !121
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !120, metadata !DIExpression()), !dbg !121
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !121
+  %1 = load i8, ptr %retval, align 1, !dbg !121
   ret i8 %1, !dbg !121
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_BStruct@@YA?AUBStruct@@AEAU1@@Z"(%struct.BStruct* noalias sret(%struct.BStruct) %agg.result, %struct.BStruct* dereferenceable(1) %arg) #0 !dbg !122 {
+define dso_local void @"?Func_BStruct@@YA?AUBStruct@@AEAU1@@Z"(ptr noalias sret(%struct.BStruct) %agg.result, ptr dereferenceable(1) %arg) #0 !dbg !122 {
 entry:
-  %arg.addr = alloca %struct.BStruct*, align 8
-  store %struct.BStruct* %arg, %struct.BStruct** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.BStruct** %arg.addr, metadata !132, metadata !DIExpression()), !dbg !133
-  %0 = load %struct.BStruct*, %struct.BStruct** %arg.addr, align 8, !dbg !133
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !132, metadata !DIExpression()), !dbg !133
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !133
   ret void, !dbg !133
 }
 
@@ -807,30 +809,29 @@ entry:
 define dso_local void @"?S@@YAXXZ"() #0 !dbg !134 {
 entry:
   %s = alloca %struct.ComplexStruct, align 1
-  call void @llvm.dbg.declare(metadata %struct.ComplexStruct* %s, metadata !137, metadata !DIExpression()), !dbg !142
+  call void @llvm.dbg.declare(metadata ptr %s, metadata !137, metadata !DIExpression()), !dbg !142
   ret void, !dbg !143
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i8 @"?Func_AUnion@@YA?ATAUnion@@AEAT1@@Z"(%union.AUnion* dereferenceable(1) %arg) #0 !dbg !144 {
+define dso_local i8 @"?Func_AUnion@@YA?ATAUnion@@AEAT1@@Z"(ptr dereferenceable(1) %arg) #0 !dbg !144 {
 entry:
   %retval = alloca %union.AUnion, align 1
-  %arg.addr = alloca %union.AUnion*, align 8
-  store %union.AUnion* %arg, %union.AUnion** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %union.AUnion** %arg.addr, metadata !149, metadata !DIExpression()), !dbg !150
-  %0 = load %union.AUnion*, %union.AUnion** %arg.addr, align 8, !dbg !150
-  %coerce.dive = getelementptr inbounds %union.AUnion, %union.AUnion* %retval, i32 0, i32 0, !dbg !150
-  %1 = load i8, i8* %coerce.dive, align 1, !dbg !150
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !149, metadata !DIExpression()), !dbg !150
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !150
+  %1 = load i8, ptr %retval, align 1, !dbg !150
   ret i8 %1, !dbg !150
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_BUnion@@YA?ATBUnion@@AEAT1@@Z"(%union.BUnion* noalias sret(%union.BUnion) %agg.result, %union.BUnion* dereferenceable(1) %arg) #0 !dbg !151 {
+define dso_local void @"?Func_BUnion@@YA?ATBUnion@@AEAT1@@Z"(ptr noalias sret(%union.BUnion) %agg.result, ptr dereferenceable(1) %arg) #0 !dbg !151 {
 entry:
-  %arg.addr = alloca %union.BUnion*, align 8
-  store %union.BUnion* %arg, %union.BUnion** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %union.BUnion** %arg.addr, metadata !161, metadata !DIExpression()), !dbg !162
-  %0 = load %union.BUnion*, %union.BUnion** %arg.addr, align 8, !dbg !162
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !161, metadata !DIExpression()), !dbg !162
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !162
   ret void, !dbg !162
 }
 
@@ -838,7 +839,7 @@ entry:
 define dso_local void @"?U@@YAXXZ"() #0 !dbg !163 {
 entry:
   %c = alloca %union.ComplexUnion, align 4
-  call void @llvm.dbg.declare(metadata %union.ComplexUnion* %c, metadata !164, metadata !DIExpression()), !dbg !172
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !164, metadata !DIExpression()), !dbg !172
   ret void, !dbg !173
 }
 

@@ -9,14 +9,13 @@
 
 #import "objc_import.h"
 
-void func() {
+void func(void) {
  TestPCH *xx;
 
  xx = [TestPCH alloc];
  [xx instMethod];
 }
 
-// rdar://14112291
 @class NewID1;
 void foo1(NewID1 *p);
 void bar1(OldID1 *p) {

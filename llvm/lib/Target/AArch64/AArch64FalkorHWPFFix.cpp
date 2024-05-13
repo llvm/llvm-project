@@ -18,8 +18,6 @@
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -48,7 +46,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cassert>
 #include <iterator>
 #include <utility>
 
@@ -138,8 +135,8 @@ bool FalkorMarkStridedAccesses::run() {
   bool MadeChange = false;
 
   for (Loop *L : LI)
-    for (auto LIt = df_begin(L), LE = df_end(L); LIt != LE; ++LIt)
-      MadeChange |= runOnLoop(**LIt);
+    for (Loop *LIt : depth_first(L))
+      MadeChange |= runOnLoop(*LIt);
 
   return MadeChange;
 }
@@ -234,7 +231,7 @@ static unsigned makeTag(unsigned Dest, unsigned Base, unsigned Offset) {
   return (Dest & 0xf) | ((Base & 0xf) << 4) | ((Offset & 0x3f) << 8);
 }
 
-static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
+static std::optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
   int DestRegIdx;
   int BaseRegIdx;
   int OffsetIdx;
@@ -242,7 +239,7 @@ static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
 
   switch (MI.getOpcode()) {
   default:
-    return None;
+    return std::nullopt;
 
   case AArch64::LD1i64:
   case AArch64::LD2i64:
@@ -645,7 +642,7 @@ static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
   // Loads from the stack pointer don't get prefetched.
   Register BaseReg = MI.getOperand(BaseRegIdx).getReg();
   if (BaseReg == AArch64::SP || BaseReg == AArch64::WSP)
-    return None;
+    return std::nullopt;
 
   LoadInfo LI;
   LI.DestReg = DestRegIdx == -1 ? Register() : MI.getOperand(DestRegIdx).getReg();
@@ -656,8 +653,9 @@ static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
   return LI;
 }
 
-static Optional<unsigned> getTag(const TargetRegisterInfo *TRI,
-                                 const MachineInstr &MI, const LoadInfo &LI) {
+static std::optional<unsigned> getTag(const TargetRegisterInfo *TRI,
+                                      const MachineInstr &MI,
+                                      const LoadInfo &LI) {
   unsigned Dest = LI.DestReg ? TRI->getEncodingValue(LI.DestReg) : 0;
   unsigned Base = TRI->getEncodingValue(LI.BaseReg);
   unsigned Off;
@@ -665,7 +663,7 @@ static Optional<unsigned> getTag(const TargetRegisterInfo *TRI,
     Off = 0;
   else if (LI.OffsetOpnd->isGlobal() || LI.OffsetOpnd->isSymbol() ||
            LI.OffsetOpnd->isCPI())
-    return None;
+    return std::nullopt;
   else if (LI.OffsetOpnd->isReg())
     Off = (1 << 5) | TRI->getEncodingValue(LI.OffsetOpnd->getReg());
   else
@@ -679,10 +677,10 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
   TagMap.clear();
   for (MachineBasicBlock *MBB : L.getBlocks())
     for (MachineInstr &MI : *MBB) {
-      Optional<LoadInfo> LInfo = getLoadInfo(MI);
+      std::optional<LoadInfo> LInfo = getLoadInfo(MI);
       if (!LInfo)
         continue;
-      Optional<unsigned> Tag = getTag(TRI, MI, *LInfo);
+      std::optional<unsigned> Tag = getTag(TRI, MI, *LInfo);
       if (!Tag)
         continue;
       TagMap[*Tag].push_back(&MI);
@@ -719,11 +717,11 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
       if (!TII->isStridedAccess(MI))
         continue;
 
-      Optional<LoadInfo> OptLdI = getLoadInfo(MI);
+      std::optional<LoadInfo> OptLdI = getLoadInfo(MI);
       if (!OptLdI)
         continue;
       LoadInfo LdI = *OptLdI;
-      Optional<unsigned> OptOldTag = getTag(TRI, MI, LdI);
+      std::optional<unsigned> OptOldTag = getTag(TRI, MI, LdI);
       if (!OptOldTag)
         continue;
       auto &OldCollisions = TagMap[*OptOldTag];
@@ -813,7 +811,7 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
 }
 
 bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
-  auto &ST = static_cast<const AArch64Subtarget &>(Fn.getSubtarget());
+  auto &ST = Fn.getSubtarget<AArch64Subtarget>();
   if (ST.getProcFamily() != AArch64Subtarget::Falkor)
     return false;
 
@@ -828,10 +826,10 @@ bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
   Modified = false;
 
   for (MachineLoop *I : LI)
-    for (auto L = df_begin(I), LE = df_end(I); L != LE; ++L)
+    for (MachineLoop *L : depth_first(I))
       // Only process inner-loops
       if (L->isInnermost())
-        runOnLoop(**L, Fn);
+        runOnLoop(*L, Fn);
 
   return Modified;
 }

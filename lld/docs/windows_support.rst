@@ -95,3 +95,14 @@ Using Ninja
 1. Check out LLVM and LLD from the LLVM SVN repository (or Git mirror),
 #. run ``cmake -G ninja <llvm-source-dir>`` from VS command prompt,
 #. run ``ninja lld``
+
+Extensions
+==========
+
+LLD flags
+---------
+
+* ``/build-id``: Always generate GUID hash. When PDB is generated, LLD uses PDB
+  content hash for GUID. Otherwise, LLD uses output binary content hash for GUID.
+  LLD also provides ``__buildid`` symbol pointing to the 16 bytes GUID hash if
+  there is a reference to it.

@@ -1,6 +1,7 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-mse>)" -disable-output < %s | FileCheck %s
 ;
-; Verify that the accesses are correctly expanded 
+; Verify that the accesses are correctly expanded
 ;
 ; Original source code :
 ;
@@ -37,7 +38,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @mse(double* %A, double* %B, double* %C, double* %D) {
+define void @mse(ptr %A, ptr %B, ptr %C, ptr %D) {
 entry:
   br label %entry.split
 
@@ -52,29 +53,25 @@ for.body4:                                        ; preds = %for.body, %for.body
   %indvars.iv = phi i64 [ 0, %for.body ], [ %indvars.iv.next, %for.body4 ]
   %0 = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %0 to double
-  %arrayidx = getelementptr inbounds double, double* %B, i64 %indvars.iv
-  store double %conv, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %B, i64 %indvars.iv
+  store double %conv, ptr %arrayidx, align 8
   %1 = trunc i64 %indvars.iv to i32
   %conv5 = sitofp i32 %1 to double
-  %arrayidx7 = getelementptr inbounds double, double* %D, i64 %indvars.iv
-  store double %conv5, double* %arrayidx7, align 8
+  %arrayidx7 = getelementptr inbounds double, ptr %D, i64 %indvars.iv
+  store double %conv5, ptr %arrayidx7, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.body4, label %for.end
 
 for.end:                                          ; preds = %for.body4
-  %arrayidx9 = getelementptr inbounds double, double* %B, i64 %indvars.iv3
-  %2 = bitcast double* %arrayidx9 to i64*
-  %3 = load i64, i64* %2, align 8
-  %arrayidx11 = getelementptr inbounds double, double* %A, i64 %indvars.iv3
-  %4 = bitcast double* %arrayidx11 to i64*
-  store i64 %3, i64* %4, align 8
-  %arrayidx13 = getelementptr inbounds double, double* %D, i64 %indvars.iv3
-  %5 = bitcast double* %arrayidx13 to i64*
-  %6 = load i64, i64* %5, align 8
-  %arrayidx15 = getelementptr inbounds double, double* %C, i64 %indvars.iv3
-  %7 = bitcast double* %arrayidx15 to i64*
-  store i64 %6, i64* %7, align 8
+  %arrayidx9 = getelementptr inbounds double, ptr %B, i64 %indvars.iv3
+  %2 = load i64, ptr %arrayidx9, align 8
+  %arrayidx11 = getelementptr inbounds double, ptr %A, i64 %indvars.iv3
+  store i64 %2, ptr %arrayidx11, align 8
+  %arrayidx13 = getelementptr inbounds double, ptr %D, i64 %indvars.iv3
+  %3 = load i64, ptr %arrayidx13, align 8
+  %arrayidx15 = getelementptr inbounds double, ptr %C, i64 %indvars.iv3
+  store i64 %3, ptr %arrayidx15, align 8
   %indvars.iv.next4 = add nuw nsw i64 %indvars.iv3, 1
   %exitcond5 = icmp ne i64 %indvars.iv.next4, 10000
   br i1 %exitcond5, label %for.body, label %for.end18

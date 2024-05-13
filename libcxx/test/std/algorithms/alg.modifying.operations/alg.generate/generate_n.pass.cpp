@@ -14,17 +14,14 @@
 //   constexpr void      // constexpr after c++17
 //   generate_n(Iter first, Size n, Generator gen);
 
-#include "test_macros.h"
-
-#ifdef TEST_COMPILER_C1XX
-#pragma warning(disable: 4244) // conversion from 'const double' to 'int', possible loss of data
-#endif
-
 #include <algorithm>
 #include <cassert>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "user_defined_integral.h"
+
+TEST_MSVC_DIAGNOSTIC_IGNORED(4244) // conversion from 'const double' to 'int', possible loss of data
 
 struct gen_test
 {
@@ -34,7 +31,7 @@ struct gen_test
 
 #if TEST_STD_VER > 17
 TEST_CONSTEXPR bool test_constexpr() {
-    const size_t N = 5;
+    const std::size_t N = 5;
     int ib[] = {0, 0, 0, 0, 0, 0}; // one bigger than N
 
     auto it = std::generate_n(std::begin(ib), N, gen_test());

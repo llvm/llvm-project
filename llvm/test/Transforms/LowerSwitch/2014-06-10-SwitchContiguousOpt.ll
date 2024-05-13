@@ -1,12 +1,12 @@
-; RUN: opt < %s -lowerswitch -S | FileCheck %s
+; RUN: opt < %s -passes=lower-switch -S | FileCheck %s
 ; CHECK-NOT: icmp eq i32 %0, 1
 
 define i32 @foo(i32 %a) #0 {
 entry:
   %retval = alloca i32, align 4
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  %0 = load i32, i32* %a.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4
   switch i32 %0, label %sw.default [
     i32 0, label %sw.bb
     i32 1, label %sw.bb1

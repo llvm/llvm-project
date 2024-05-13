@@ -1,31 +1,31 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 
-declare i8* @llvm.objc.retain(i8*)
-declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
-declare void @llvm.objc.release(i8*)
-declare i8* @llvm.objc.autorelease(i8*)
-declare i8* @llvm.objc.autoreleaseReturnValue(i8*)
-declare void @llvm.objc.autoreleasePoolPop(i8*)
-declare i8* @llvm.objc.autoreleasePoolPush()
-declare i8* @llvm.objc.retainBlock(i8*)
+declare ptr @llvm.objc.retain(ptr)
+declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
+declare void @llvm.objc.release(ptr)
+declare ptr @llvm.objc.autorelease(ptr)
+declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
+declare void @llvm.objc.autoreleasePoolPop(ptr)
+declare ptr @llvm.objc.autoreleasePoolPush()
+declare ptr @llvm.objc.retainBlock(ptr)
 
-declare i8* @objc_retainedObject(i8*)
-declare i8* @objc_unretainedObject(i8*)
-declare i8* @objc_unretainedPointer(i8*)
+declare ptr @objc_retainedObject(ptr)
+declare ptr @objc_unretainedObject(ptr)
+declare ptr @objc_unretainedPointer(ptr)
 
-declare void @use_pointer(i8*)
+declare void @use_pointer(ptr)
 declare void @callee()
-declare void @callee_fnptr(void ()*)
+declare void @callee_fnptr(ptr)
 declare void @invokee()
-declare i8* @returner()
-declare i8* @returner1()
-declare i8* @returner2()
-declare void @bar(i32 ()*)
-declare void @use_alloca(i8**)
+declare ptr @returner()
+declare ptr @returner1()
+declare ptr @returner2()
+declare void @bar(ptr)
+declare void @use_alloca(ptr)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
-declare i8* @llvm.objc.msgSend(i8*, i8*, ...)
+declare ptr @objc_msgSend(ptr, ptr, ...)
 
 
 ; In the presence of allocas, unconditionally remove retain/release pairs only
@@ -43,159 +43,157 @@ declare i8* @llvm.objc.msgSend(i8*, i8*, ...)
 ;
 ; rdar://13750319
 
-; CHECK: define void @test1a(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
+; CHECK: define void @test1a(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test1a(i8* %x) {
+define void @test1a(ptr %x) {
 entry:
-  %A = alloca i8*
-  tail call i8* @llvm.objc.retain(i8* %x)
-  tail call i8* @llvm.objc.retain(i8* %x)
-  store i8* %x, i8** %A, align 8
-  %y = load i8*, i8** %A
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  %A = alloca ptr
+  tail call ptr @llvm.objc.retain(ptr %x)
+  tail call ptr @llvm.objc.retain(ptr %x)
+  store ptr %x, ptr %A, align 8
+  %y = load ptr, ptr %A
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
   ret void
 }
 
-; CHECK: define void @test1b(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
+; CHECK: define void @test1b(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test1b(i8* %x) {
+define void @test1b(ptr %x) {
 entry:
-  %A = alloca i8*
-  %gep = getelementptr i8*, i8** %A, i32 0
-  tail call i8* @llvm.objc.retain(i8* %x)
-  tail call i8* @llvm.objc.retain(i8* %x)
-  store i8* %x, i8** %gep, align 8
-  %y = load i8*, i8** %A
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
-  ret void
-}
-
-
-; CHECK: define void @test1c(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
-; CHECK: ret void
-; CHECK: }
-define void @test1c(i8* %x) {
-entry:
-  %A = alloca i8*, i32 3
-  %gep = getelementptr i8*, i8** %A, i32 2
-  tail call i8* @llvm.objc.retain(i8* %x)
-  tail call i8* @llvm.objc.retain(i8* %x)
-  store i8* %x, i8** %gep, align 8
-  %y = load i8*, i8** %gep
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  %A = alloca ptr
+  tail call ptr @llvm.objc.retain(ptr %x)
+  tail call ptr @llvm.objc.retain(ptr %x)
+  store ptr %x, ptr %A, align 8
+  %y = load ptr, ptr %A
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
   ret void
 }
 
 
-; CHECK: define void @test1d(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
+; CHECK: define void @test1c(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test1d(i8* %x) {
+define void @test1c(ptr %x) {
+entry:
+  %A = alloca ptr, i32 3
+  %gep = getelementptr ptr, ptr %A, i32 2
+  tail call ptr @llvm.objc.retain(ptr %x)
+  tail call ptr @llvm.objc.retain(ptr %x)
+  store ptr %x, ptr %gep, align 8
+  %y = load ptr, ptr %gep
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
+  ret void
+}
+
+
+; CHECK: define void @test1d(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
+; CHECK: ret void
+; CHECK: }
+define void @test1d(ptr %x) {
 entry:
   br i1 undef, label %use_allocaA, label %use_allocaB
 
 use_allocaA:
-  %allocaA = alloca i8*
+  %allocaA = alloca ptr
   br label %exit
 
 use_allocaB:
-  %allocaB = alloca i8*
+  %allocaB = alloca ptr
   br label %exit
 
 exit:
-  %A = phi i8** [ %allocaA, %use_allocaA ], [ %allocaB, %use_allocaB ]
-  %gep = getelementptr i8*, i8** %A, i32 0
-  tail call i8* @llvm.objc.retain(i8* %x)
-  tail call i8* @llvm.objc.retain(i8* %x)
-  store i8* %x, i8** %gep, align 8
-  %y = load i8*, i8** %gep
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  %A = phi ptr [ %allocaA, %use_allocaA ], [ %allocaB, %use_allocaB ]
+  tail call ptr @llvm.objc.retain(ptr %x)
+  tail call ptr @llvm.objc.retain(ptr %x)
+  store ptr %x, ptr %A, align 8
+  %y = load ptr, ptr %A
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
   ret void
 }
 
-; CHECK: define void @test1e(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
+; CHECK: define void @test1e(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test1e(i8* %x) {
+define void @test1e(ptr %x) {
 entry:
   br i1 undef, label %use_allocaA, label %use_allocaB
 
 use_allocaA:
-  %allocaA = alloca i8*, i32 4
+  %allocaA = alloca ptr, i32 4
   br label %exit
 
 use_allocaB:
-  %allocaB = alloca i8*, i32 4
+  %allocaB = alloca ptr, i32 4
   br label %exit
 
 exit:
-  %A = phi i8** [ %allocaA, %use_allocaA ], [ %allocaB, %use_allocaB ]
-  %gep = getelementptr i8*, i8** %A, i32 2
-  tail call i8* @llvm.objc.retain(i8* %x)
-  tail call i8* @llvm.objc.retain(i8* %x)
-  store i8* %x, i8** %gep, align 8
-  %y = load i8*, i8** %gep
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  %A = phi ptr [ %allocaA, %use_allocaA ], [ %allocaB, %use_allocaB ]
+  %gep = getelementptr ptr, ptr %A, i32 2
+  tail call ptr @llvm.objc.retain(ptr %x)
+  tail call ptr @llvm.objc.retain(ptr %x)
+  store ptr %x, ptr %gep, align 8
+  %y = load ptr, ptr %gep
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
   ret void
 }
 
-; CHECK: define void @test1f(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
+; CHECK: define void @test1f(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test1f(i8* %x) {
+define void @test1f(ptr %x) {
 entry:
-  %allocaOne = alloca i8*
-  %allocaTwo = alloca i8*
-  %A = select i1 undef, i8** %allocaOne, i8** %allocaTwo
-  tail call i8* @llvm.objc.retain(i8* %x)
-  tail call i8* @llvm.objc.retain(i8* %x)
-  store i8* %x, i8** %A, align 8
-  %y = load i8*, i8** %A
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  %allocaOne = alloca ptr
+  %allocaTwo = alloca ptr
+  %A = select i1 undef, ptr %allocaOne, ptr %allocaTwo
+  tail call ptr @llvm.objc.retain(ptr %x)
+  tail call ptr @llvm.objc.retain(ptr %x)
+  store ptr %x, ptr %A, align 8
+  %y = load ptr, ptr %A
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
   ret void
 }
 
@@ -203,18 +201,18 @@ entry:
 ; conservatively.
 
 
-; CHECK: define void @test2a(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
+; CHECK: define void @test2a(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test2a(i8* %x) {
+define void @test2a(ptr %x) {
 entry:
-  %A = alloca i8*
-  store i8* %x, i8** %A, align 8
-  %y = load i8*, i8** %A
+  %A = alloca ptr
+  store ptr %x, ptr %A, align 8
+  %y = load ptr, ptr %A
   br label %bb1
 
 bb1:
@@ -224,29 +222,27 @@ bb2:
   br label %bb3
 
 bb3:
-  tail call i8* @llvm.objc.retain(i8* %x)
-  tail call i8* @llvm.objc.retain(i8* %x)
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  tail call ptr @llvm.objc.retain(ptr %x)
+  tail call ptr @llvm.objc.retain(ptr %x)
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
   ret void
 }
 
-; CHECK: define void @test2b(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
+; CHECK: define void @test2b(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test2b(i8* %x) {
+define void @test2b(ptr %x) {
 entry:
-  %A = alloca i8*
-  %gep1 = getelementptr i8*, i8** %A, i32 0
-  store i8* %x, i8** %gep1, align 8
-  %gep2 = getelementptr i8*, i8** %A, i32 0
-  %y = load i8*, i8** %gep2
+  %A = alloca ptr
+  store ptr %x, ptr %A, align 8
+  %y = load ptr, ptr %A
   br label %bb1
 
 bb1:
@@ -256,30 +252,30 @@ bb2:
   br label %bb3
 
 bb3:
-  tail call i8* @llvm.objc.retain(i8* %x)
-  tail call i8* @llvm.objc.retain(i8* %x)
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  tail call ptr @llvm.objc.retain(ptr %x)
+  tail call ptr @llvm.objc.retain(ptr %x)
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
   ret void
 }
 
-; CHECK: define void @test2c(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
+; CHECK: define void @test2c(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test2c(i8* %x) {
+define void @test2c(ptr %x) {
 entry:
-  %A = alloca i8*, i32 3
-  %gep1 = getelementptr i8*, i8** %A, i32 2
-  store i8* %x, i8** %gep1, align 8
-  %gep2 = getelementptr i8*, i8** %A, i32 2
-  %y = load i8*, i8** %gep2
-  tail call i8* @llvm.objc.retain(i8* %x)
+  %A = alloca ptr, i32 3
+  %gep1 = getelementptr ptr, ptr %A, i32 2
+  store ptr %x, ptr %gep1, align 8
+  %gep2 = getelementptr ptr, ptr %A, i32 2
+  %y = load ptr, ptr %gep2
+  tail call ptr @llvm.objc.retain(ptr %x)
   br label %bb1
 
 bb1:
@@ -289,50 +285,50 @@ bb2:
   br label %bb3
 
 bb3:
-  tail call i8* @llvm.objc.retain(i8* %x)
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  tail call ptr @llvm.objc.retain(ptr %x)
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
   ret void
 }
 
-; CHECK: define void @test2d(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.retain(i8* %x)
-; CHECK: @llvm.objc.release(i8* %y)
-; CHECK: @llvm.objc.release(i8* %x)
+; CHECK: define void @test2d(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.retain(ptr %x)
+; CHECK: @llvm.objc.release(ptr %y)
+; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test2d(i8* %x) {
+define void @test2d(ptr %x) {
 entry:
-  tail call i8* @llvm.objc.retain(i8* %x)
+  tail call ptr @llvm.objc.retain(ptr %x)
   br label %bb1
 
 bb1:
-  %Abb1 = alloca i8*, i32 3
-  %gepbb11 = getelementptr i8*, i8** %Abb1, i32 2
-  store i8* %x, i8** %gepbb11, align 8
-  %gepbb12 = getelementptr i8*, i8** %Abb1, i32 2
-  %ybb1 = load i8*, i8** %gepbb12
+  %Abb1 = alloca ptr, i32 3
+  %gepbb11 = getelementptr ptr, ptr %Abb1, i32 2
+  store ptr %x, ptr %gepbb11, align 8
+  %gepbb12 = getelementptr ptr, ptr %Abb1, i32 2
+  %ybb1 = load ptr, ptr %gepbb12
   br label %bb3
 
 bb2:
-  %Abb2 = alloca i8*, i32 4
-  %gepbb21 = getelementptr i8*, i8** %Abb2, i32 2
-  store i8* %x, i8** %gepbb21, align 8
-  %gepbb22 = getelementptr i8*, i8** %Abb2, i32 2
-  %ybb2 = load i8*, i8** %gepbb22
+  %Abb2 = alloca ptr, i32 4
+  %gepbb21 = getelementptr ptr, ptr %Abb2, i32 2
+  store ptr %x, ptr %gepbb21, align 8
+  %gepbb22 = getelementptr ptr, ptr %Abb2, i32 2
+  %ybb2 = load ptr, ptr %gepbb22
   br label %bb3
 
 bb3:
-  %A = phi i8** [ %Abb1, %bb1 ], [ %Abb2, %bb2 ]
-  %y = phi i8* [ %ybb1, %bb1 ], [ %ybb2, %bb2 ]
-  tail call i8* @llvm.objc.retain(i8* %x)
-  call void @use_alloca(i8** %A)
-  call void @llvm.objc.release(i8* %y), !clang.imprecise_release !0
-  call void @use_pointer(i8* %x)
-  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  %A = phi ptr [ %Abb1, %bb1 ], [ %Abb2, %bb2 ]
+  %y = phi ptr [ %ybb1, %bb1 ], [ %ybb2, %bb2 ]
+  tail call ptr @llvm.objc.retain(ptr %x)
+  call void @use_alloca(ptr %A)
+  call void @llvm.objc.release(ptr %y), !clang.imprecise_release !0
+  call void @use_pointer(ptr %x)
+  call void @llvm.objc.release(ptr %x), !clang.imprecise_release !0
   ret void
 }
 
@@ -363,55 +359,51 @@ bb3:
 ; CHECK: }
 define void @test3a() {
 entry:
-  %keys = alloca [2 x i8*], align 16
-  %objs = alloca [2 x i8*], align 16
+  %keys = alloca [2 x ptr], align 16
+  %objs = alloca [2 x ptr], align 16
   
-  %call1 = call i8* @returner()
-  %tmp0 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call1)
+  %call1 = call ptr @returner()
+  %tmp0 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %call1)
 
-  %objs.begin = getelementptr inbounds [2 x i8*], [2 x i8*]* %objs, i64 0, i64 0
-  tail call i8* @llvm.objc.retain(i8* %call1)
-  store i8* %call1, i8** %objs.begin, align 8
-  %objs.elt = getelementptr inbounds [2 x i8*], [2 x i8*]* %objs, i64 0, i64 1
-  tail call i8* @llvm.objc.retain(i8* %call1)
-  store i8* %call1, i8** %objs.elt
+  tail call ptr @llvm.objc.retain(ptr %call1)
+  store ptr %call1, ptr %objs, align 8
+  %objs.elt = getelementptr inbounds [2 x ptr], ptr %objs, i64 0, i64 1
+  tail call ptr @llvm.objc.retain(ptr %call1)
+  store ptr %call1, ptr %objs.elt
 
-  %call2 = call i8* @returner1()
-  %call3 = call i8* @returner2()
-  %keys.begin = getelementptr inbounds [2 x i8*], [2 x i8*]* %keys, i64 0, i64 0
-  tail call i8* @llvm.objc.retain(i8* %call2)
-  store i8* %call2, i8** %keys.begin, align 8
-  %keys.elt = getelementptr inbounds [2 x i8*], [2 x i8*]* %keys, i64 0, i64 1
-  tail call i8* @llvm.objc.retain(i8* %call3)
-  store i8* %call3, i8** %keys.elt  
+  %call2 = call ptr @returner1()
+  %call3 = call ptr @returner2()
+  tail call ptr @llvm.objc.retain(ptr %call2)
+  store ptr %call2, ptr %keys, align 8
+  %keys.elt = getelementptr inbounds [2 x ptr], ptr %keys, i64 0, i64 1
+  tail call ptr @llvm.objc.retain(ptr %call3)
+  store ptr %call3, ptr %keys.elt  
   
-  %gep = getelementptr inbounds [2 x i8*], [2 x i8*]* %objs, i64 0, i64 2
+  %gep = getelementptr inbounds [2 x ptr], ptr %objs, i64 0, i64 2
   br label %arraydestroy.body
 
 arraydestroy.body:
-  %arraydestroy.elementPast = phi i8** [ %gep, %entry ], [ %arraydestroy.element, %arraydestroy.body ]
-  %arraydestroy.element = getelementptr inbounds i8*, i8** %arraydestroy.elementPast, i64 -1
-  %destroy_tmp = load i8*, i8** %arraydestroy.element, align 8
-  call void @llvm.objc.release(i8* %destroy_tmp), !clang.imprecise_release !0
-  %objs_ptr = getelementptr inbounds [2 x i8*], [2 x i8*]* %objs, i64 0, i64 0
-  %arraydestroy.cmp = icmp eq i8** %arraydestroy.element, %objs_ptr
+  %arraydestroy.elementPast = phi ptr [ %gep, %entry ], [ %arraydestroy.element, %arraydestroy.body ]
+  %arraydestroy.element = getelementptr inbounds ptr, ptr %arraydestroy.elementPast, i64 -1
+  %destroy_tmp = load ptr, ptr %arraydestroy.element, align 8
+  call void @llvm.objc.release(ptr %destroy_tmp), !clang.imprecise_release !0
+  %arraydestroy.cmp = icmp eq ptr %arraydestroy.element, %objs
   br i1 %arraydestroy.cmp, label %arraydestroy.done, label %arraydestroy.body
 
 arraydestroy.done:
-  %gep1 = getelementptr inbounds [2 x i8*], [2 x i8*]* %keys, i64 0, i64 2
+  %gep1 = getelementptr inbounds [2 x ptr], ptr %keys, i64 0, i64 2
   br label %arraydestroy.body1
 
 arraydestroy.body1:
-  %arraydestroy.elementPast1 = phi i8** [ %gep1, %arraydestroy.done ], [ %arraydestroy.element1, %arraydestroy.body1 ]
-  %arraydestroy.element1 = getelementptr inbounds i8*, i8** %arraydestroy.elementPast1, i64 -1
-  %destroy_tmp1 = load i8*, i8** %arraydestroy.element1, align 8
-  call void @llvm.objc.release(i8* %destroy_tmp1), !clang.imprecise_release !0
-  %keys_ptr = getelementptr inbounds [2 x i8*], [2 x i8*]* %keys, i64 0, i64 0
-  %arraydestroy.cmp1 = icmp eq i8** %arraydestroy.element1, %keys_ptr
+  %arraydestroy.elementPast1 = phi ptr [ %gep1, %arraydestroy.done ], [ %arraydestroy.element1, %arraydestroy.body1 ]
+  %arraydestroy.element1 = getelementptr inbounds ptr, ptr %arraydestroy.elementPast1, i64 -1
+  %destroy_tmp1 = load ptr, ptr %arraydestroy.element1, align 8
+  call void @llvm.objc.release(ptr %destroy_tmp1), !clang.imprecise_release !0
+  %arraydestroy.cmp1 = icmp eq ptr %arraydestroy.element1, %keys
   br i1 %arraydestroy.cmp1, label %arraydestroy.done1, label %arraydestroy.body1
 
 arraydestroy.done1:
-  call void @llvm.objc.release(i8* %call1), !clang.imprecise_release !0
+  call void @llvm.objc.release(ptr %call1), !clang.imprecise_release !0
   ret void
 }
 
@@ -441,57 +433,53 @@ arraydestroy.done1:
 ; CHECK: }
 define void @test3b() {
 entry:
-  %keys = alloca [2 x i8*], align 16
-  %objs = alloca [2 x i8*], align 16
+  %keys = alloca [2 x ptr], align 16
+  %objs = alloca [2 x ptr], align 16
   
-  %call1 = call i8* @returner()
-  %tmp0 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call1)
-  %tmp1 = tail call i8* @llvm.objc.retain(i8* %call1)
+  %call1 = call ptr @returner()
+  %tmp0 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %call1)
+  %tmp1 = tail call ptr @llvm.objc.retain(ptr %call1)
 
-  %objs.begin = getelementptr inbounds [2 x i8*], [2 x i8*]* %objs, i64 0, i64 0
-  tail call i8* @llvm.objc.retain(i8* %call1)
-  store i8* %call1, i8** %objs.begin, align 8
-  %objs.elt = getelementptr inbounds [2 x i8*], [2 x i8*]* %objs, i64 0, i64 1
-  tail call i8* @llvm.objc.retain(i8* %call1)
-  store i8* %call1, i8** %objs.elt
+  tail call ptr @llvm.objc.retain(ptr %call1)
+  store ptr %call1, ptr %objs, align 8
+  %objs.elt = getelementptr inbounds [2 x ptr], ptr %objs, i64 0, i64 1
+  tail call ptr @llvm.objc.retain(ptr %call1)
+  store ptr %call1, ptr %objs.elt
 
-  %call2 = call i8* @returner1()
-  %call3 = call i8* @returner2()
-  %keys.begin = getelementptr inbounds [2 x i8*], [2 x i8*]* %keys, i64 0, i64 0
-  tail call i8* @llvm.objc.retain(i8* %call2)
-  store i8* %call2, i8** %keys.begin, align 8
-  %keys.elt = getelementptr inbounds [2 x i8*], [2 x i8*]* %keys, i64 0, i64 1
-  tail call i8* @llvm.objc.retain(i8* %call3)
-  store i8* %call3, i8** %keys.elt  
+  %call2 = call ptr @returner1()
+  %call3 = call ptr @returner2()
+  tail call ptr @llvm.objc.retain(ptr %call2)
+  store ptr %call2, ptr %keys, align 8
+  %keys.elt = getelementptr inbounds [2 x ptr], ptr %keys, i64 0, i64 1
+  tail call ptr @llvm.objc.retain(ptr %call3)
+  store ptr %call3, ptr %keys.elt  
   
-  %gep = getelementptr inbounds [2 x i8*], [2 x i8*]* %objs, i64 0, i64 2
+  %gep = getelementptr inbounds [2 x ptr], ptr %objs, i64 0, i64 2
   br label %arraydestroy.body
 
 arraydestroy.body:
-  %arraydestroy.elementPast = phi i8** [ %gep, %entry ], [ %arraydestroy.element, %arraydestroy.body ]
-  %arraydestroy.element = getelementptr inbounds i8*, i8** %arraydestroy.elementPast, i64 -1
-  %destroy_tmp = load i8*, i8** %arraydestroy.element, align 8
-  call void @llvm.objc.release(i8* %destroy_tmp), !clang.imprecise_release !0
-  %objs_ptr = getelementptr inbounds [2 x i8*], [2 x i8*]* %objs, i64 0, i64 0
-  %arraydestroy.cmp = icmp eq i8** %arraydestroy.element, %objs_ptr
+  %arraydestroy.elementPast = phi ptr [ %gep, %entry ], [ %arraydestroy.element, %arraydestroy.body ]
+  %arraydestroy.element = getelementptr inbounds ptr, ptr %arraydestroy.elementPast, i64 -1
+  %destroy_tmp = load ptr, ptr %arraydestroy.element, align 8
+  call void @llvm.objc.release(ptr %destroy_tmp), !clang.imprecise_release !0
+  %arraydestroy.cmp = icmp eq ptr %arraydestroy.element, %objs
   br i1 %arraydestroy.cmp, label %arraydestroy.done, label %arraydestroy.body
 
 arraydestroy.done:
-  %gep1 = getelementptr inbounds [2 x i8*], [2 x i8*]* %keys, i64 0, i64 2
+  %gep1 = getelementptr inbounds [2 x ptr], ptr %keys, i64 0, i64 2
   br label %arraydestroy.body1
 
 arraydestroy.body1:
-  %arraydestroy.elementPast1 = phi i8** [ %gep1, %arraydestroy.done ], [ %arraydestroy.element1, %arraydestroy.body1 ]
-  %arraydestroy.element1 = getelementptr inbounds i8*, i8** %arraydestroy.elementPast1, i64 -1
-  %destroy_tmp1 = load i8*, i8** %arraydestroy.element1, align 8
-  call void @llvm.objc.release(i8* %destroy_tmp1), !clang.imprecise_release !0
-  %keys_ptr = getelementptr inbounds [2 x i8*], [2 x i8*]* %keys, i64 0, i64 0
-  %arraydestroy.cmp1 = icmp eq i8** %arraydestroy.element1, %keys_ptr
+  %arraydestroy.elementPast1 = phi ptr [ %gep1, %arraydestroy.done ], [ %arraydestroy.element1, %arraydestroy.body1 ]
+  %arraydestroy.element1 = getelementptr inbounds ptr, ptr %arraydestroy.elementPast1, i64 -1
+  %destroy_tmp1 = load ptr, ptr %arraydestroy.element1, align 8
+  call void @llvm.objc.release(ptr %destroy_tmp1), !clang.imprecise_release !0
+  %arraydestroy.cmp1 = icmp eq ptr %arraydestroy.element1, %keys
   br i1 %arraydestroy.cmp1, label %arraydestroy.done1, label %arraydestroy.body1
 
 arraydestroy.done1:
-  call void @llvm.objc.release(i8* %call1), !clang.imprecise_release !0
-  call void @llvm.objc.release(i8* %call1), !clang.imprecise_release !0
+  call void @llvm.objc.release(ptr %call1), !clang.imprecise_release !0
+  call void @llvm.objc.release(ptr %call1), !clang.imprecise_release !0
   ret void
 }
 

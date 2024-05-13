@@ -11,17 +11,16 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @PR29058(i8 %x, i32 %y) {
 ; CHECK-LABEL: PR29058:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    movl $2147483646, %eax # imm = 0x7FFFFFFE
 ; CHECK-NEXT:    cmovnel %esi, %eax
-; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpb $1, %dil
-; CHECK-NEXT:    sbbl %edx, %edx
-; CHECK-NEXT:    orb %dl, %cl
+; CHECK-NEXT:    sbbl %ecx, %ecx
+; CHECK-NEXT:    orb %sil, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, structMember(%rip)
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 entry:
@@ -31,7 +30,7 @@ entry:
   %or_1 = select i1 %bool_1, i32 %y, i32 -1
   %shl_1 = shl i32 %0, %or_1
   %conv = zext i32 %shl_1 to i64
-  store i64 %conv, i64* @structMember, align 8
+  store i64 %conv, ptr @structMember, align 8
   %tmp = select i1 %bool_2, i32 2147483646, i32 %y
   %lnot = icmp eq i8 %x, 0
   %or_2 = select i1 %lnot, i32 -1, i32 %y

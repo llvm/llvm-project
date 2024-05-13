@@ -8,16 +8,15 @@ define i32 @test1(i32 %X) {
 ; CHECK-NEXT:    movl $-2139062143, %edx # imm = 0x80808081
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    imull %edx
-; CHECK-NEXT:    addl %ecx, %edx
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    shrl $31, %eax
-; CHECK-NEXT:    sarl $7, %edx
-; CHECK-NEXT:    addl %eax, %edx
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    subl %eax, %edx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    leal (%edx,%ecx), %eax
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    shrl $31, %edx
+; CHECK-NEXT:    sarl $7, %eax
+; CHECK-NEXT:    addl %edx, %eax
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    shll $8, %edx
+; CHECK-NEXT:    subl %edx, %eax
+; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    retl
   %tmp1 = srem i32 %X, 255
   ret i32 %tmp1

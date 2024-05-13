@@ -14,7 +14,7 @@ struct StructB : virtual StructA {
 
 StructB::StructB() {
   a = 42;
-// CHECK: store i32 42, i32* {{.*}}, !tbaa [[TAG_A_i32:!.*]]
+// CHECK: store i32 42, ptr {{.*}}, !tbaa [[TAG_A_i32:!.*]]
 }
 
 // OLD-PATH: [[TYPE_INT:!.*]] = !{!"int", [[TYPE_CHAR:!.*]], i64 0}

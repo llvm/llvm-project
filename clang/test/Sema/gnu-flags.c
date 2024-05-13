@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DNONE -Wno-gnu
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wgnu 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wgnu
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wno-gnu \
 // RUN:   -Wgnu-alignof-expression -Wgnu-case-range -Wgnu-complex-integer -Wgnu-conditional-omitted-operand \
-// RUN:   -Wgnu-empty-initializer -Wgnu-label-as-value -Wgnu-statement-expression \
+// RUN:   -Wgnu-label-as-value -Wgnu-statement-expression \
 // RUN:   -Wgnu-compound-literal-initializer -Wgnu-flexible-array-initializer \
 // RUN:   -Wgnu-redeclared-enum  -Wgnu-folding-constant -Wgnu-empty-struct \
 // RUN:   -Wgnu-union-cast -Wgnu-variable-sized-type-not-at-end
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DNONE -Wgnu \
 // RUN:   -Wno-gnu-alignof-expression -Wno-gnu-case-range -Wno-gnu-complex-integer -Wno-gnu-conditional-omitted-operand \
-// RUN:   -Wno-gnu-empty-initializer -Wno-gnu-label-as-value -Wno-gnu-statement-expression \
+// RUN:   -Wno-gnu-label-as-value -Wno-gnu-statement-expression \
 // RUN:   -Wno-gnu-compound-literal-initializer -Wno-gnu-flexible-array-initializer \
 // RUN:   -Wno-gnu-redeclared-enum -Wno-gnu-folding-constant -Wno-gnu-empty-struct \
 // RUN:   -Wno-gnu-union-cast -Wno-gnu-variable-sized-type-not-at-end
@@ -17,9 +17,9 @@
 // %clang_cc1 -fsyntax-only -verify %s -DCASERANGE -Wno-gnu -Wgnu-case-range
 // %clang_cc1 -fsyntax-only -verify %s -DCOMPLEXINT -Wno-gnu -Wgnu-complex-integer
 // %clang_cc1 -fsyntax-only -verify %s -DOMITTEDOPERAND -Wno-gnu -Wgnu-conditional-omitted-operand
-// %clang_cc1 -fsyntax-only -verify %s -DEMPTYINIT -Wno-gnu -Wgnu-empty-initializer
 // %clang_cc1 -fsyntax-only -verify %s -DLABELVALUE -Wno-gnu -Wgnu-label-as-value
 // %clang_cc1 -fsyntax-only -verify %s -DSTATEMENTEXP -Wno-gnu -Wgnu-statement-expression
+// %clang_cc1 -fsyntax-only -verify %s -DSTATEMENTEXPMACRO -Wno-gnu -Wgnu-statement-expression-from-macro-expansion
 // %clang_cc1 -fsyntax-only -verify %s -DCOMPOUNDLITERALINITIALIZER -Wno-gnu -Wgnu-compound-literal-initializer
 // %clang_cc1 -fsyntax-only -verify %s -DFLEXIBLEARRAYINITIALIZER -Wno-gnu -Wgnu-flexible-array-initializer
 // %clang_cc1 -fsyntax-only -verify %s -DREDECLAREDENUM -Wno-gnu -Wgnu-redeclared-enum
@@ -66,19 +66,12 @@ _Complex short int complexint;
 static const char* omittedoperand = (const char*)0 ?: "Null";
 
 
-#if ALL || EMPTYINIT
-// expected-warning@+3 {{use of GNU empty initializer extension}}
-#endif
-
-struct { int x; } emptyinit = {};
-
-
 #if ALL || LABELVALUE
 // expected-warning@+6 {{use of GNU address-of-label extension}}
 // expected-warning@+7 {{use of GNU indirect-goto extension}}
 #endif
 
-void labelvalue() {
+void labelvalue(void) {
 	void *ptr;
 	ptr = &&foo;
 foo:
@@ -90,14 +83,22 @@ foo:
 // expected-warning@+5 {{use of GNU statement expression extension}}
 #endif
 
-void statementexp()
+void statementexp(void)
 {
 	int a = ({ 1; });
 }
 
+#if ALL || STATEMENTEXP || STATEMENTEXPMACRO
+// expected-warning@+5 {{use of GNU statement expression extension from macro expansion}}
+#endif
+
+#define STMT_EXPR_MACRO(a) ({ (a); })
+void statementexprmacro(void) {
+  int a = STMT_EXPR_MACRO(1);
+}
 
 #if ALL || COMPOUNDLITERALINITIALIZER
-// expected-warning@+4 {{initialization of an array of type 'int [5]' from a compound literal of type 'int [5]' is a GNU extension}}
+// expected-warning@+4 {{initialization of an array of type 'int[5]' from a compound literal of type 'int[5]' is a GNU extension}}
 #endif
 
 typedef int int5[5];

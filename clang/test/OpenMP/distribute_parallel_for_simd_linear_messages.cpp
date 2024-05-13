@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DOMP52 %s -Wno-openmp-mapping -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -DOMP52 %s -Wno-openmp-mapping -Wuninitialized
 
 extern int omp_default_mem_alloc;
 
@@ -116,7 +118,7 @@ template<int LEN> int test_warn() {
   return ind2;
 }
 
-struct S1; // expected-note 2 {{declared here}} expected-note 2 {{forward declaration of 'S1'}}
+struct S1; // expected-note 2 {{declared here}} expected-note 3 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
@@ -333,6 +335,33 @@ int main(int argc, char **argv) {
     #pragma omp teams
     #pragma omp distribute parallel for simd linear(i : 4)
       for (i = 0; i < argc; ++i) { ++i; i += 4; }
+
+#ifdef OMP52
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute parallel for simd linear(i: step() //omp52-error 2 {{expected expression}} omp52-error{{expected ')'}} omp52-note{{to match this '('}}
+      for (i = 0; i < argc; ++i) ++i;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute parallel for simd linear(i: step(1), step(2)) // omp52-error {{multiple 'step size' found in linear clause}}
+      for (i = 0; i < argc; ++i) ++i;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute parallel for simd linear(i: val, val) // omp52-error {{multiple 'linear modifier' found in linear clause}}
+      for (i = 0; i < argc; ++i) ++i;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute parallel for simd linear(i: step()) // omp52-error 2 {{expected expression}}
+      for (i = 0; i < argc; ++i) ++i;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute parallel for simd linear(i: pval) // omp52-error {{use of undeclared identifier 'pval'}} 
+      for (i = 0; i < argc; ++i) ++i;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute parallel for simd linear(i: val, step(2 // omp52-error {{expected ')' or ',' after 'step expression'}} omp52-error 2 {{expected ')'}}  omp52-note 2 {{to match this '('}}
+      for (i = 0; i < argc; ++i) ++i;
+#endif
   }
 
   foomain<int,char>(argc,argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}

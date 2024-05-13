@@ -16,14 +16,11 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -62,10 +59,11 @@ void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   // The first block in loopinfo.Blocks is guaranteed to be the header.
   assert(Header == *CurLoop->getBlocks().begin() &&
          "First block must be header");
-  for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
-                            BBE = CurLoop->block_end();
-       (BB != BBE) && !MayThrow; ++BB)
-    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(*BB);
+  for (const BasicBlock *BB : llvm::drop_begin(CurLoop->blocks())) {
+    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(BB);
+    if (MayThrow)
+      break;
+  }
 
   computeBlockColors(CurLoop);
 }
@@ -84,7 +82,7 @@ void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   MW.clear();
   MayThrow = false;
   // Figure out the fact that at least one block may throw.
-  for (auto &BB : CurLoop->blocks())
+  for (const auto &BB : CurLoop->blocks())
     if (ICF.hasICF(&*BB)) {
       MayThrow = true;
       break;
@@ -143,7 +141,7 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
     return false;
   auto DL = ExitBlock->getModule()->getDataLayout();
   auto *IVStart = LHS->getIncomingValueForBlock(CurLoop->getLoopPreheader());
-  auto *SimpleValOrNull = SimplifyCmpInst(Cond->getPredicate(),
+  auto *SimpleValOrNull = simplifyCmpInst(Cond->getPredicate(),
                                           IVStart, RHS,
                                           {DL, /*TLI*/ nullptr,
                                               DT, /*AC*/ nullptr, BI});
@@ -167,7 +165,7 @@ static void collectTransitivePredecessors(
   if (BB == CurLoop->getHeader())
     return;
   SmallVector<const BasicBlock *, 4> WorkList;
-  for (auto *Pred : predecessors(BB)) {
+  for (const auto *Pred : predecessors(BB)) {
     Predecessors.insert(Pred);
     WorkList.push_back(Pred);
   }
@@ -183,7 +181,7 @@ static void collectTransitivePredecessors(
     // @nested and @nested_no_throw in test/Analysis/MustExecute/loop-header.ll.
     // We can ignore backedge of all loops containing BB to get a sligtly more
     // optimistic result.
-    for (auto *PredPred : predecessors(Pred))
+    for (const auto *PredPred : predecessors(Pred))
       if (Predecessors.insert(PredPred).second)
         WorkList.push_back(PredPred);
   }
@@ -203,6 +201,15 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   SmallPtrSet<const BasicBlock *, 4> Predecessors;
   collectTransitivePredecessors(CurLoop, BB, Predecessors);
 
+  // Bail out if a latch block is part of the predecessor set. In this case
+  // we may take the backedge to the header and not execute other latch
+  // successors.
+  for (const BasicBlock *Pred : predecessors(CurLoop->getHeader()))
+    // Predecessors only contains loop blocks, so we don't have to worry about
+    // preheader predecessors here.
+    if (Predecessors.contains(Pred))
+      return false;
+
   // Make sure that all successors of, all predecessors of BB which are not
   // dominated by BB, are either:
   // 1) BB,
@@ -210,7 +217,7 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   // 3) Exit blocks which are not taken on 1st iteration.
   // Memoize blocks we've already checked.
   SmallPtrSet<const BasicBlock *, 4> CheckedSuccessors;
-  for (auto *Pred : Predecessors) {
+  for (const auto *Pred : Predecessors) {
     // Predecessor block may throw, so it has a side exit.
     if (blockMayThrow(Pred))
       return false;
@@ -220,7 +227,7 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
     if (DT->dominates(BB, Pred))
       continue;
 
-    for (auto *Succ : successors(Pred))
+    for (const auto *Succ : successors(Pred))
       if (CheckedSuccessors.insert(Succ).second &&
           Succ != BB && !Predecessors.count(Succ))
         // By discharging conditions that are not executed on the 1st iteration,
@@ -288,7 +295,7 @@ bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB,
   collectTransitivePredecessors(CurLoop, BB, Predecessors);
   // Find if there any instruction in either predecessor that could write
   // to memory.
-  for (auto *Pred : Predecessors)
+  for (const auto *Pred : Predecessors)
     if (MW.mayWriteToMemory(Pred))
       return false;
   return true;
@@ -300,101 +307,6 @@ bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const Instruction &I,
   assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
   return !MW.isDominatedByMemoryWriteFromSameBlock(&I) &&
          doesNotWriteMemoryBefore(BB, CurLoop);
-}
-
-namespace {
-struct MustExecutePrinter : public FunctionPass {
-
-  static char ID; // Pass identification, replacement for typeid
-  MustExecutePrinter() : FunctionPass(ID) {
-    initializeMustExecutePrinterPass(*PassRegistry::getPassRegistry());
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-  }
-  bool runOnFunction(Function &F) override;
-};
-struct MustBeExecutedContextPrinter : public ModulePass {
-  static char ID;
-
-  MustBeExecutedContextPrinter() : ModulePass(ID) {
-    initializeMustBeExecutedContextPrinterPass(
-        *PassRegistry::getPassRegistry());
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-  bool runOnModule(Module &M) override;
-};
-}
-
-char MustExecutePrinter::ID = 0;
-INITIALIZE_PASS_BEGIN(MustExecutePrinter, "print-mustexecute",
-                      "Instructions which execute on loop entry", false, true)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(MustExecutePrinter, "print-mustexecute",
-                    "Instructions which execute on loop entry", false, true)
-
-FunctionPass *llvm::createMustExecutePrinter() {
-  return new MustExecutePrinter();
-}
-
-char MustBeExecutedContextPrinter::ID = 0;
-INITIALIZE_PASS_BEGIN(MustBeExecutedContextPrinter,
-                      "print-must-be-executed-contexts",
-                      "print the must-be-executed-context for all instructions",
-                      false, true)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(MustBeExecutedContextPrinter,
-                    "print-must-be-executed-contexts",
-                    "print the must-be-executed-context for all instructions",
-                    false, true)
-
-ModulePass *llvm::createMustBeExecutedContextPrinter() {
-  return new MustBeExecutedContextPrinter();
-}
-
-bool MustBeExecutedContextPrinter::runOnModule(Module &M) {
-  // We provide non-PM analysis here because the old PM doesn't like to query
-  // function passes from a module pass.
-  SmallVector<std::unique_ptr<PostDominatorTree>, 8> PDTs;
-  SmallVector<std::unique_ptr<DominatorTree>, 8> DTs;
-  SmallVector<std::unique_ptr<LoopInfo>, 8> LIs;
-
-  GetterTy<LoopInfo> LIGetter = [&](const Function &F) {
-    DTs.push_back(std::make_unique<DominatorTree>(const_cast<Function &>(F)));
-    LIs.push_back(std::make_unique<LoopInfo>(*DTs.back()));
-    return LIs.back().get();
-  };
-  GetterTy<DominatorTree> DTGetter = [&](const Function &F) {
-    DTs.push_back(std::make_unique<DominatorTree>(const_cast<Function&>(F)));
-    return DTs.back().get();
-  };
-  GetterTy<PostDominatorTree> PDTGetter = [&](const Function &F) {
-    PDTs.push_back(
-        std::make_unique<PostDominatorTree>(const_cast<Function &>(F)));
-    return PDTs.back().get();
-  };
-  MustBeExecutedContextExplorer Explorer(
-      /* ExploreInterBlock */ true,
-      /* ExploreCFGForward */ true,
-      /* ExploreCFGBackward */ true, LIGetter, DTGetter, PDTGetter);
-
-  for (Function &F : M) {
-    for (Instruction &I : instructions(F)) {
-      dbgs() << "-- Explore context of: " << I << "\n";
-      for (const Instruction *CI : Explorer.range(&I))
-        dbgs() << "  [F: " << CI->getFunction()->getName() << "] " << *CI
-               << "\n";
-    }
-  }
-
-  return false;
 }
 
 static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
@@ -416,7 +328,7 @@ class MustExecuteAnnotatedWriter : public AssemblyAnnotationWriter {
 public:
   MustExecuteAnnotatedWriter(const Function &F,
                              DominatorTree &DT, LoopInfo &LI) {
-    for (auto &I: instructions(F)) {
+    for (const auto &I: instructions(F)) {
       Loop *L = LI.getLoopFor(I.getParent());
       while (L) {
         if (isMustExecuteIn(I, L, &DT)) {
@@ -428,8 +340,8 @@ public:
   }
   MustExecuteAnnotatedWriter(const Module &M,
                              DominatorTree &DT, LoopInfo &LI) {
-    for (auto &F : M)
-    for (auto &I: instructions(F)) {
+    for (const auto &F : M)
+    for (const auto &I: instructions(F)) {
       Loop *L = LI.getLoopFor(I.getParent());
       while (L) {
         if (isMustExecuteIn(I, L, &DT)) {
@@ -460,16 +372,6 @@ public:
 };
 } // namespace
 
-bool MustExecutePrinter::runOnFunction(Function &F) {
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-  MustExecuteAnnotatedWriter Writer(F, DT, LI);
-  F.print(dbgs(), &Writer);
-
-  return false;
-}
-
 /// Return true if \p L might be an endless loop.
 static bool maybeEndlessLoop(const Loop &L) {
   if (L.getHeader()->getParent()->hasFnAttribute(Attribute::WillReturn))
@@ -491,12 +393,12 @@ bool llvm::mayContainIrreducibleControl(const Function &F, const LoopInfo *LI) {
 /// Lookup \p Key in \p Map and return the result, potentially after
 /// initializing the optional through \p Fn(\p args).
 template <typename K, typename V, typename FnTy, typename... ArgsTy>
-static V getOrCreateCachedOptional(K Key, DenseMap<K, Optional<V>> &Map,
-                                   FnTy &&Fn, ArgsTy&&... args) {
-  Optional<V> &OptVal = Map[Key];
-  if (!OptVal.hasValue())
+static V getOrCreateCachedOptional(K Key, DenseMap<K, std::optional<V>> &Map,
+                                   FnTy &&Fn, ArgsTy &&...args) {
+  std::optional<V> &OptVal = Map[Key];
+  if (!OptVal)
     OptVal = Fn(std::forward<ArgsTy>(args)...);
-  return OptVal.getValue();
+  return *OptVal;
 }
 
 const BasicBlock *

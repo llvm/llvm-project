@@ -18,17 +18,23 @@
 #include "mlir/Analysis/AliasAnalysis.h"
 
 namespace mlir {
-/// This class implements a location form of aliasing that tries to identify the
-/// underlying values addressed by each value and performs a few basic checks to
-/// see if they alias.
+/// This class implements a local form of alias analysis that tries to identify
+/// the underlying values addressed by each value and performs a few basic
+/// checks to see if they alias.
 class LocalAliasAnalysis {
 public:
+  virtual ~LocalAliasAnalysis() = default;
+
   /// Given two values, return their aliasing behavior.
   AliasResult alias(Value lhs, Value rhs);
 
   /// Return the modify-reference behavior of `op` on `location`.
   ModRefResult getModRef(Operation *op, Value location);
+
+protected:
+  /// Given the two values, return their aliasing behavior.
+  virtual AliasResult aliasImpl(Value lhs, Value rhs);
 };
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_ALIASANALYSIS_LOCALALIASANALYSIS_H_

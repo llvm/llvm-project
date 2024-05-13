@@ -7,4 +7,4 @@ RUN:   %S/Inputs/counter-mismatch-3.proftext \
 RUN:   %S/Inputs/counter-mismatch-4.proftext \
 RUN: 2>&1 | FileCheck %s
 
-CHECK: Function basic block count change detected (counter mismatch)
+CHECK: {{.+}}: foo: function basic block count change detected (counter mismatch)

@@ -18,7 +18,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include <utility>
 
 using namespace llvm;
 
@@ -33,14 +32,7 @@ using namespace llvm;
 static Value *generateSignedRemainderCode(Value *Dividend, Value *Divisor,
                                           IRBuilder<> &Builder) {
   unsigned BitWidth = Dividend->getType()->getIntegerBitWidth();
-  ConstantInt *Shift;
-
-  if (BitWidth == 64) {
-    Shift = Builder.getInt64(63);
-  } else {
-    assert(BitWidth == 32 && "Unexpected bit width");
-    Shift = Builder.getInt32(31);
-  }
+  ConstantInt *Shift = Builder.getIntN(BitWidth, BitWidth - 1);
 
   // Following instructions are generated for both i32 (shift 31) and
   // i64 (shift 63).
@@ -54,6 +46,8 @@ static Value *generateSignedRemainderCode(Value *Dividend, Value *Divisor,
   // ;   %urem         = urem i32 %dividend, %divisor
   // ;   %xored        = xor i32 %urem, %dividend_sgn
   // ;   %srem         = sub i32 %xored, %dividend_sgn
+  Dividend            = Builder.CreateFreeze(Dividend);
+  Divisor             = Builder.CreateFreeze(Divisor);
   Value *DividendSign = Builder.CreateAShr(Dividend, Shift);
   Value *DivisorSign  = Builder.CreateAShr(Divisor, Shift);
   Value *DvdXor       = Builder.CreateXor(Dividend, DividendSign);
@@ -85,6 +79,8 @@ static Value *generatedUnsignedRemainderCode(Value *Dividend, Value *Divisor,
   // ;   %quotient  = udiv i32 %dividend, %divisor
   // ;   %product   = mul i32 %divisor, %quotient
   // ;   %remainder = sub i32 %dividend, %product
+  Dividend         = Builder.CreateFreeze(Dividend);
+  Divisor          = Builder.CreateFreeze(Divisor);
   Value *Quotient  = Builder.CreateUDiv(Dividend, Divisor);
   Value *Product   = Builder.CreateMul(Divisor, Quotient);
   Value *Remainder = Builder.CreateSub(Dividend, Product);
@@ -105,14 +101,7 @@ static Value *generateSignedDivisionCode(Value *Dividend, Value *Divisor,
   // Implementation taken from compiler-rt's __divsi3 and __divdi3
 
   unsigned BitWidth = Dividend->getType()->getIntegerBitWidth();
-  ConstantInt *Shift;
-
-  if (BitWidth == 64) {
-    Shift = Builder.getInt64(63);
-  } else {
-    assert(BitWidth == 32 && "Unexpected bit width");
-    Shift = Builder.getInt32(31);
-  }
+  ConstantInt *Shift = Builder.getIntN(BitWidth, BitWidth - 1);
 
   // Following instructions are generated for both i32 (shift 31) and
   // i64 (shift 63).
@@ -127,6 +116,8 @@ static Value *generateSignedDivisionCode(Value *Dividend, Value *Divisor,
   // ;   %q_mag  = udiv i32 %u_dvnd, %u_dvsr
   // ;   %tmp4   = xor i32 %q_mag, %q_sgn
   // ;   %q      = sub i32 %tmp4, %q_sgn
+  Dividend      = Builder.CreateFreeze(Dividend);
+  Divisor       = Builder.CreateFreeze(Divisor);
   Value *Tmp    = Builder.CreateAShr(Dividend, Shift);
   Value *Tmp1   = Builder.CreateAShr(Divisor, Shift);
   Value *Tmp2   = Builder.CreateXor(Tmp, Dividend);
@@ -157,23 +148,10 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   IntegerType *DivTy = cast<IntegerType>(Dividend->getType());
   unsigned BitWidth = DivTy->getBitWidth();
 
-  ConstantInt *Zero;
-  ConstantInt *One;
-  ConstantInt *NegOne;
-  ConstantInt *MSB;
-
-  if (BitWidth == 64) {
-    Zero      = Builder.getInt64(0);
-    One       = Builder.getInt64(1);
-    NegOne    = ConstantInt::getSigned(DivTy, -1);
-    MSB       = Builder.getInt64(63);
-  } else {
-    assert(BitWidth == 32 && "Unexpected bit width");
-    Zero      = Builder.getInt32(0);
-    One       = Builder.getInt32(1);
-    NegOne    = ConstantInt::getSigned(DivTy, -1);
-    MSB       = Builder.getInt32(31);
-  }
+  ConstantInt *Zero = ConstantInt::get(DivTy, 0);
+  ConstantInt *One = ConstantInt::get(DivTy, 1);
+  ConstantInt *NegOne = ConstantInt::getSigned(DivTy, -1);
+  ConstantInt *MSB = ConstantInt::get(DivTy, BitWidth - 1);
 
   ConstantInt *True = Builder.getTrue();
 
@@ -242,12 +220,14 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   // ;   %tmp1        = tail call i32 @llvm.ctlz.i32(i32 %dividend, i1 true)
   // ;   %sr          = sub nsw i32 %tmp0, %tmp1
   // ;   %ret0_4      = icmp ugt i32 %sr, 31
-  // ;   %ret0        = or i1 %ret0_3, %ret0_4
+  // ;   %ret0        = select i1 %ret0_3, i1 true, i1 %ret0_4
   // ;   %retDividend = icmp eq i32 %sr, 31
   // ;   %retVal      = select i1 %ret0, i32 0, i32 %dividend
-  // ;   %earlyRet    = or i1 %ret0, %retDividend
+  // ;   %earlyRet    = select i1 %ret0, i1 true, %retDividend
   // ;   br i1 %earlyRet, label %end, label %bb1
   Builder.SetInsertPoint(SpecialCases);
+  Divisor            = Builder.CreateFreeze(Divisor);
+  Dividend           = Builder.CreateFreeze(Dividend);
   Value *Ret0_1      = Builder.CreateICmpEQ(Divisor, Zero);
   Value *Ret0_2      = Builder.CreateICmpEQ(Dividend, Zero);
   Value *Ret0_3      = Builder.CreateOr(Ret0_1, Ret0_2);
@@ -255,10 +235,10 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   Value *Tmp1 = Builder.CreateCall(CTLZ, {Dividend, True});
   Value *SR          = Builder.CreateSub(Tmp0, Tmp1);
   Value *Ret0_4      = Builder.CreateICmpUGT(SR, MSB);
-  Value *Ret0        = Builder.CreateOr(Ret0_3, Ret0_4);
+  Value *Ret0        = Builder.CreateLogicalOr(Ret0_3, Ret0_4);
   Value *RetDividend = Builder.CreateICmpEQ(SR, MSB);
   Value *RetVal      = Builder.CreateSelect(Ret0, Zero, Dividend);
-  Value *EarlyRet    = Builder.CreateOr(Ret0, RetDividend);
+  Value *EarlyRet    = Builder.CreateLogicalOr(Ret0, RetDividend);
   Builder.CreateCondBr(EarlyRet, End, BB1);
 
   // ; bb1:                                             ; preds = %special-cases
@@ -368,8 +348,7 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
 /// Generate code to calculate the remainder of two integers, replacing Rem with
 /// the generated code. This currently generates code using the udiv expansion,
 /// but future work includes generating more specialized code, e.g. when more
-/// information about the operands are known. Implements both 32bit and 64bit
-/// scalar division.
+/// information about the operands are known.
 ///
 /// Replace Rem with generated code.
 bool llvm::expandRemainder(BinaryOperator *Rem) {
@@ -380,9 +359,6 @@ bool llvm::expandRemainder(BinaryOperator *Rem) {
   IRBuilder<> Builder(Rem);
 
   assert(!Rem->getType()->isVectorTy() && "Div over vectors not supported");
-  assert((Rem->getType()->getIntegerBitWidth() == 32 ||
-          Rem->getType()->getIntegerBitWidth() == 64) &&
-         "Div of bitwidth other than 32 or 64 not supported");
 
   // First prepare the sign if it's a signed remainder
   if (Rem->getOpcode() == Instruction::SRem) {
@@ -422,12 +398,10 @@ bool llvm::expandRemainder(BinaryOperator *Rem) {
   return true;
 }
 
-
 /// Generate code to divide two integers, replacing Div with the generated
 /// code. This currently generates code similarly to compiler-rt's
 /// implementations, but future work includes generating more specialized code
-/// when more information about the operands are known. Implements both
-/// 32bit and 64bit scalar division.
+/// when more information about the operands are known.
 ///
 /// Replace Div with generated code.
 bool llvm::expandDivision(BinaryOperator *Div) {
@@ -438,9 +412,6 @@ bool llvm::expandDivision(BinaryOperator *Div) {
   IRBuilder<> Builder(Div);
 
   assert(!Div->getType()->isVectorTy() && "Div over vectors not supported");
-  assert((Div->getType()->getIntegerBitWidth() == 32 ||
-          Div->getType()->getIntegerBitWidth() == 64) &&
-         "Div of bitwidth other than 32 or 64 not supported");
 
   // First prepare the sign if it's a signed division
   if (Div->getOpcode() == Instruction::SDiv) {
@@ -541,9 +512,7 @@ bool llvm::expandRemainderUpTo64Bits(BinaryOperator *Rem) {
 
   unsigned RemTyBitWidth = RemTy->getIntegerBitWidth();
 
-  assert(RemTyBitWidth <= 64 && "Div of bitwidth greater than 64 not supported");
-
-  if (RemTyBitWidth == 64)
+  if (RemTyBitWidth >= 64)
     return expandRemainder(Rem);
 
   // If bitwidth smaller than 64 extend inputs, extend output and proceed
@@ -638,10 +607,7 @@ bool llvm::expandDivisionUpTo64Bits(BinaryOperator *Div) {
 
   unsigned DivTyBitWidth = DivTy->getIntegerBitWidth();
 
-  assert(DivTyBitWidth <= 64 &&
-         "Div of bitwidth greater than 64 not supported");
-
-  if (DivTyBitWidth == 64)
+  if (DivTyBitWidth >= 64)
     return expandDivision(Div);
 
   // If bitwidth smaller than 64 extend inputs, extend output and proceed

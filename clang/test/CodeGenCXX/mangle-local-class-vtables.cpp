@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple %itanium_abi_triple -o - | FileCheck %s
 
-// CHECK: @_ZTVZ1GvE1C = {{.*}} @_ZTIZ1GvE1C {{.*}} @_ZZ1GvENK1C1FEv
+// CHECK: @_ZTVZ1GvE1C = {{.*}} @_ZTIZ1GvE1C, {{.*}} @_ZZ1GvENK1C1FEv
 // CHECK: @_ZTIZ1GvE1C = {{.*}} @_ZTSZ1GvE1C
-// CHECK: @_ZTVZ1GvE1C_0 = {{.*}} @_ZTIZ1GvE1C_0 {{.*}} @_ZZ1GvENK1C1FE_0v
+// CHECK: @_ZTVZ1GvE1C_0 = {{.*}} @_ZTIZ1GvE1C_0, {{.*}} @_ZZ1GvENK1C1FE_0v
 // CHECK: @_ZTIZ1GvE1C_0 = {{.*}} @_ZTSZ1GvE1C_0
-// CHECK: @_ZTVZ1GvE1C_1 = {{.*}} @_ZTIZ1GvE1C_1 {{.*}} @_ZZ1GvENK1C1FE_1v
+// CHECK: @_ZTVZ1GvE1C_1 = {{.*}} @_ZTIZ1GvE1C_1, {{.*}} @_ZZ1GvENK1C1FE_1v
 // CHECK: @_ZTIZ1GvE1C_1 = {{.*}} @_ZTSZ1GvE1C_1
-// CHECK: @_ZTVZN1J1KEvE1C = {{.*}} @_ZTIZN1J1KEvE1C {{.*}} @_ZZN1J1KEvENK1C1FEv
+// CHECK: @_ZTVZN1J1KEvE1C = {{.*}} @_ZTIZN1J1KEvE1C, {{.*}} @_ZZN1J1KEvENK1C1FEv
 // CHECK: @_ZTIZN1J1KEvE1C = {{.*}} @_ZTSZN1J1KEvE1C
 
 // CHECK: define {{.*}} @_ZZ1GvEN1CC2Ev(

@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; CHECK: @main
 ; CHECK: %mul.lcssa5 = phi i32 [ %a.promoted4, %entry ], [ %mul.30, %for.body3 ]
@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @main() local_unnamed_addr {
 entry:
-  %a.promoted4 = load i32, i32* @a, align 4
+  %a.promoted4 = load i32, ptr @a, align 4
   br label %for.cond1.preheader
 
 for.cond1.preheader:                              ; preds = %entry, %for.body3
@@ -61,7 +61,7 @@ for.body3:                                        ; preds = %for.cond1.preheader
 for.end6:                                         ; preds = %for.body3
   %mul.lcssa.lcssa = phi i32 [ %mul.30, %for.body3 ]
   %inc.lcssa.lcssa = phi i32 [ 31, %for.body3 ]
-  store i32 %mul.lcssa.lcssa, i32* @a, align 4
-  store i32 %inc.lcssa.lcssa, i32* @b, align 4
+  store i32 %mul.lcssa.lcssa, ptr @a, align 4
+  store i32 %inc.lcssa.lcssa, ptr @b, align 4
   ret i32 0
 }

@@ -1,13 +1,16 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests for duplicate definitions and initializations, mostly of procedures
 module m
   procedure(real), pointer :: p
-  !ERROR: The interface for procedure 'p' has already been declared
+  !ERROR: EXTERNAL attribute was already specified on 'p'
+  !ERROR: POINTER attribute was already specified on 'p'
+  !ERROR: The type of 'p' has already been declared
   procedure(integer), pointer :: p
 end
 
 module m1
     real, dimension(:), pointer :: realArray => null()
+    !ERROR: POINTER attribute was already specified on 'realarray'
     !ERROR: The type of 'realarray' has already been declared
     real, dimension(:), pointer :: realArray => localArray
 end module m1
@@ -19,6 +22,8 @@ module m2
   end interface
 
   procedure(sub), pointer :: p1 => null()
+  !ERROR: EXTERNAL attribute was already specified on 'p1'
+  !ERROR: POINTER attribute was already specified on 'p1'
   !ERROR: The interface for procedure 'p1' has already been declared
   procedure(sub), pointer :: p1 => null()
 
@@ -31,6 +36,8 @@ module m3
   end interface
 
   procedure(fun), pointer :: f1 => null()
+  !ERROR: EXTERNAL attribute was already specified on 'f1'
+  !ERROR: POINTER attribute was already specified on 'f1'
   !ERROR: The interface for procedure 'f1' has already been declared
   procedure(fun), pointer :: f1 => null()
 
@@ -71,6 +78,14 @@ module m8
   integer, target :: jVar = 5
   integer, target :: kVar = 5
   integer, pointer :: pVar => jVar
+  !ERROR: POINTER attribute was already specified on 'pvar'
   !ERROR: The type of 'pvar' has already been declared
   integer, pointer :: pVar => kVar
 end module m8
+
+module m9
+  integer :: p, q
+  procedure() p ! ok
+  !ERROR: The type of 'q' has already been declared
+  procedure(real) q
+end module m9

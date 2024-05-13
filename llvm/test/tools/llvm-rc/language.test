@@ -6,6 +6,8 @@
 ; RUN: llvm-readobj %t.res | FileCheck %s
 ; RUN: llvm-windres --no-preprocess --language 40A %p/Inputs/language.rc %t.res
 ; RUN: llvm-readobj %t.res | FileCheck %s
+; RUN: llvm-windres --no-preprocess -l 0x40A %p/Inputs/language.rc %t.res
+; RUN: llvm-readobj %t.res | FileCheck %s
 
 ; CHECK:      Resource name (int): 1
 ; CHECK-NEXT: Data version:

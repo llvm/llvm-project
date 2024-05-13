@@ -6,8 +6,10 @@
 
 # RUN: mkdir d
 # RUN: echo -n "Fluffle Puff" > d/t.txt
-# RUN: ld.lld -m elf_x86_64 -r -b binary d/t.txt -o ro
+# RUN: ld.lld -m elf_x86_64 -r -b binary d/t.txt -t -o ro | FileCheck %s --check-prefix=RO-TRACE
 # RUN: llvm-readelf -h -S -s -x .data ro | FileCheck --check-prefix=RO %s
+
+# RO-TRACE: d/t.txt
 
 # RO:      Machine: Advanced Micro Devices X86-64
 # RO:      Name         Type     Address          Off    Size   ES Flg Lk Inf Al
@@ -31,14 +33,14 @@
 
 # EXE:      Machine: Advanced Micro Devices X86-64
 # EXE:      [Nr] Name         Type     Address          Off    Size   ES Flg Lk Inf Al
-# EXE:      [ 3] .data        PROGBITS {{.*}}                  00000c 00  WA  0   0  8
+# EXE:      [ 2] .data        PROGBITS {{.*}}                  00000c 00  WA  0   0  8
 # EXE:      Size Type    Bind   Vis      Ndx Name
-# EXE:         0 OBJECT  GLOBAL DEFAULT    3 _binary_d_t_txt_start
-# EXE-NEXT:    0 OBJECT  GLOBAL DEFAULT    3 _binary_d_t_txt_end
+# EXE:         0 OBJECT  GLOBAL DEFAULT    2 _binary_d_t_txt_start
+# EXE-NEXT:    0 OBJECT  GLOBAL DEFAULT    2 _binary_d_t_txt_end
 # EXE-NEXT:    0 OBJECT  GLOBAL DEFAULT  ABS _binary_d_t_txt_size
 
 # RUN: not ld.lld -b foo 2>&1 | FileCheck --check-prefix=ERR %s
-# ERR: error: unknown -format value: foo (supported formats: elf, default, binary)
+# ERR: error: unknown --format value: foo (supported formats: elf, default, binary)
 
 ## Non-isalnum bytes are converted to _. See D37331.
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o d/£.o

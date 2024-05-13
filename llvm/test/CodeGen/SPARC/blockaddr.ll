@@ -1,18 +1,18 @@
-; RUN: llc < %s -march=sparc   -relocation-model=static -code-model=small  | FileCheck --check-prefix=abs32 %s
-; RUN: llc < %s -march=sparcv9 -relocation-model=static -code-model=small  | FileCheck --check-prefix=abs32 %s
-; RUN: llc < %s -march=sparcv9 -relocation-model=static -code-model=medium | FileCheck --check-prefix=abs44 %s
-; RUN: llc < %s -march=sparcv9 -relocation-model=static -code-model=large  | FileCheck --check-prefix=abs64 %s
-; RUN: llc < %s -march=sparc   -relocation-model=pic    -code-model=medium | FileCheck --check-prefix=v8pic32 %s
-; RUN: llc < %s -march=sparcv9 -relocation-model=pic    -code-model=medium | FileCheck --check-prefix=v9pic32 %s
+; RUN: llc < %s -mtriple=sparc   -relocation-model=static -code-model=small  | FileCheck --check-prefix=abs32 %s
+; RUN: llc < %s -mtriple=sparcv9 -relocation-model=static -code-model=small  | FileCheck --check-prefix=abs32 %s
+; RUN: llc < %s -mtriple=sparcv9 -relocation-model=static -code-model=medium | FileCheck --check-prefix=abs44 %s
+; RUN: llc < %s -mtriple=sparcv9 -relocation-model=static -code-model=large  | FileCheck --check-prefix=abs64 %s
+; RUN: llc < %s -mtriple=sparc   -relocation-model=pic    -code-model=medium | FileCheck --check-prefix=v8pic32 %s
+; RUN: llc < %s -mtriple=sparcv9 -relocation-model=pic    -code-model=medium | FileCheck --check-prefix=v9pic32 %s
 
 ;
 ; copied from test/CodeGen/Mips/blockaddr.ll and modified for SPARC
 ;
-@reg = common global i8* null, align 4
+@reg = common global ptr null, align 4
 
-define i8* @dummy(i8* %x) nounwind readnone noinline {
+define ptr @dummy(ptr %x) nounwind readnone noinline {
 entry:
-  ret i8* %x
+  ret ptr %x
 }
 
 ; abs32-LABEL: func_block_addr:
@@ -64,14 +64,14 @@ entry:
 
 define void @func_block_addr() nounwind {
 entry:
-  %call = tail call i8* @dummy(i8* blockaddress(@func_block_addr, %baz))
-  indirectbr i8* %call, [label %baz, label %foo]
+  %call = tail call ptr @dummy(ptr blockaddress(@func_block_addr, %baz))
+  indirectbr ptr %call, [label %baz, label %foo]
 
 foo:                                              ; preds = %foo, %entry
-  store i8* blockaddress(@func_block_addr, %foo), i8** @reg, align 4
+  store ptr blockaddress(@func_block_addr, %foo), ptr @reg, align 4
   br label %foo
 
 baz:                                              ; preds = %entry
-  store i8* null, i8** @reg, align 4
+  store ptr null, ptr @reg, align 4
   ret void
 }

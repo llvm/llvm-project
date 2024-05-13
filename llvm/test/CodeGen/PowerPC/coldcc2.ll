@@ -7,13 +7,13 @@
 define signext i32 @caller(i32 signext %a, i32 signext %b, i32 signext %cold) {
 entry:
 ; COLDCC: bl callee
-; COLDCC: ld 4, 40(1)
-; COLDCC: ld 5, 32(1)
+; COLDCC: ld 4, 32(1)
+; COLDCC: ld 3, 40(1)
   %call = tail call coldcc { i64, i64 } @callee(i32 signext %a, i32 signext %b)
   %0 = extractvalue { i64, i64 } %call, 0
   %1 = extractvalue { i64, i64 } %call, 1
-  store i64 %0, i64* bitcast (%struct.MyStruct* @caller.s to i64*), align 8
-  store i64 %1, i64* bitcast (i32* getelementptr inbounds (%struct.MyStruct, %struct.MyStruct* @caller.s, i64 0, i32 2) to i64*), align 8
+  store i64 %0, ptr @caller.s, align 8
+  store i64 %1, ptr getelementptr inbounds (%struct.MyStruct, ptr @caller.s, i64 0, i32 2), align 8
   %2 = lshr i64 %1, 32
   %3 = trunc i64 %2 to i32
   %sub = sub nsw i32 0, %3

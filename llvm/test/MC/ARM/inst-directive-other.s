@@ -1,15 +1,15 @@
 // RUN: llvm-mc %s -triple=armv7-apple-darwin -filetype=asm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: llvm-mc %s -triple=armv7-apple-darwin -filetype=obj -o - \
-// RUN:   | llvm-objdump --triple=thumbv7 -d - | FileCheck %s --check-prefixes=CHECK-OBJ-CODE
+// RUN:   | llvm-objdump --no-print-imm-hex --triple=thumbv7 -d - | FileCheck %s --check-prefixes=CHECK-OBJ-CODE
 // RUN: llvm-mc %s -triple=thumbv7-win32-gnu -filetype=asm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: llvm-mc %s -triple=thumbv7-win32-gnu -filetype=obj -o - \
-// RUN:   | llvm-objdump -d - | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-CODE
+// RUN:   | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-CODE
 // RUN: llvm-mc %s -triple=armv7-linux-gnueabi -filetype=asm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: llvm-mc %s -triple=armv7-linux-gnueabi -filetype=obj -o - \
-// RUN:   | llvm-objdump -d --triple=thumbv7 - | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-DATA
+// RUN:   | llvm-objdump --no-print-imm-hex -d --triple=thumbv7 - | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-DATA
 
     .text
 
@@ -37,11 +37,11 @@ _func:
 // CHECK-ASM:        .short  42
 // CHECK-ASM:        .inst.w 0xf04f002a
 
-// CHECK-OBJ:        0:       70 47           bx lr
-// CHECK-OBJ-CODE:   2:       70 47           bx lr
+// CHECK-OBJ:        0:       4770            bx lr
+// CHECK-OBJ-CODE:   2:       4770            bx lr
 // CHECK-OBJ-DATA:   2:       70 47           .short 0x4770
-// CHECK-OBJ:        4:       70 47           bx lr
-// CHECK-OBJ:        6:       4f f0 2a 00     mov.w   r0, #42
-// CHECK-OBJ-CODE:   a:       4f f0 2a 00     mov.w   r0, #42
+// CHECK-OBJ:        4:       4770            bx lr
+// CHECK-OBJ:        6:       f04f 002a       mov.w   r0, #42
+// CHECK-OBJ-CODE:   a:       f04f 002a       mov.w   r0, #42
 // CHECK-OBJ-DATA:   a:       4f f0 2a 00     .word 0x002af04f
-// CHECK-OBJ:        e:       4f f0 2a 00     mov.w   r0, #42
+// CHECK-OBJ:        e:       f04f 002a       mov.w   r0, #42

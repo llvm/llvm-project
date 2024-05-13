@@ -19,11 +19,8 @@
 #include <mutex>
 #include <shared_mutex>
 
-// std::shared_timed_mutex is only availble on macOS 10.12 and later.
-#if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
-#if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200
+#if defined(__APPLE__)
 #define LLVM_USE_RW_MUTEX_IMPL
-#endif
 #endif
 
 namespace llvm {
@@ -66,6 +63,10 @@ public:
   /// Unconditionally release the lock in reader mode.
   bool unlock_shared();
 
+  /// Attempts to acquire the lock in reader mode. Returns immediately.
+  /// @returns true on successful lock acquisition, false otherwise.
+  bool try_lock_shared();
+
   /// Attempts to unconditionally acquire the lock in reader mode. If the
   /// lock is held by any readers, this method will wait until it can
   /// acquire the lock.
@@ -77,6 +78,10 @@ public:
   /// @returns false if any kind of error occurs, true otherwise.
   /// Unconditionally release the lock in write mode.
   bool unlock();
+
+  /// Attempts to acquire the lock in writer mode. Returns immediately.
+  /// @returns true on successful lock acquisition, false otherwise.
+  bool try_lock();
 
   //@}
   /// @name Platform Dependent Data
@@ -92,16 +97,10 @@ private:
 /// indicates whether this mutex should become a no-op when we're not
 /// running in multithreaded mode.
 template <bool mt_only> class SmartRWMutex {
-  // shared_mutex (C++17) is more efficient than shared_timed_mutex (C++14)
-  // on Windows and always available on MSVC.
-#if defined(_MSC_VER) || __cplusplus > 201402L
+#if !defined(LLVM_USE_RW_MUTEX_IMPL)
   std::shared_mutex impl;
 #else
-#if !defined(LLVM_USE_RW_MUTEX_IMPL)
-  std::shared_timed_mutex impl;
-#else
   RWMutexImpl impl;
-#endif
 #endif
   unsigned readers = 0;
   unsigned writers = 0;
@@ -114,7 +113,7 @@ public:
     }
 
     // Single-threaded debugging code.  This would be racy in multithreaded
-    // mode, but provides not sanity checks in single threaded mode.
+    // mode, but provides not basic checks in single threaded mode.
     ++readers;
     return true;
   }
@@ -126,11 +125,13 @@ public:
     }
 
     // Single-threaded debugging code.  This would be racy in multithreaded
-    // mode, but provides not sanity checks in single threaded mode.
+    // mode, but provides not basic checks in single threaded mode.
     assert(readers > 0 && "Reader lock not acquired before release!");
     --readers;
     return true;
   }
+
+  bool try_lock_shared() { return impl.try_lock_shared(); }
 
   bool lock() {
     if (!mt_only || llvm_is_multithreaded()) {
@@ -139,7 +140,7 @@ public:
     }
 
     // Single-threaded debugging code.  This would be racy in multithreaded
-    // mode, but provides not sanity checks in single threaded mode.
+    // mode, but provides not basic checks in single threaded mode.
     assert(writers == 0 && "Writer lock already acquired!");
     ++writers;
     return true;
@@ -152,11 +153,13 @@ public:
     }
 
     // Single-threaded debugging code.  This would be racy in multithreaded
-    // mode, but provides not sanity checks in single threaded mode.
+    // mode, but provides not basic checks in single threaded mode.
     assert(writers == 1 && "Writer lock not acquired before release!");
     --writers;
     return true;
   }
+
+  bool try_lock() { return impl.try_lock(); }
 };
 
 typedef SmartRWMutex<false> RWMutex;

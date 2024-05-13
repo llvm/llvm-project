@@ -1,26 +1,46 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-tautological-compare
 
-struct Variant {
-  template <typename T> operator T();
-};
+template <typename T, typename U>
+void f(int i, float f, bool b, int* pi, T* pt, T t) {
+  i %= 3;
+  f %= 3;  // expected-error {{invalid operands}}
+  b %= 3;
+  pi %= 3; // expected-error {{invalid operands}}
+  pt %= 3; // FIXME
+  t %= 3;
 
-Variant getValue();
+  i &= 3;
+  f &= 3;  // expected-error {{invalid operands}}
+  b &= 3;
+  pi &= 3; // expected-error {{invalid operands}}
+  pt &= 3; // FIXME
+  t &= 3;
 
-void testVariant() {
-  bool ret1 = getValue() || getValue(); 
-  bool ret2 = getValue() && getValue(); 
-  bool ret3 = !getValue();
-}
+  i ^= 3;
+  f ^= 3;  // expected-error {{invalid operands}}
+  b ^= 3;
+  pi ^= 3; // expected-error {{invalid operands}}
+  pt ^= 3; // FIXME
+  t ^= 3;
 
-struct ExplicitVariant {
-  template <typename T> explicit operator T();
-};
+  i |= 3;
+  f |= 3;  // expected-error {{invalid operands}}
+  b |= 3;
+  pi |= 3; // expected-error {{invalid operands}}
+  pt |= 3; // FIXME
+  t |= 3;
 
-ExplicitVariant getExplicitValue();
+  i <<= 3;
+  f <<= 3;  // expected-error {{invalid operands}}
+  b <<= 3;
+  pi <<= 3; // expected-error {{invalid operands}}
+  pt <<= 3; // FIXME
+  t <<= 3;
 
-void testExplicitVariant() {
-  bool ret1 = getExplicitValue() || getExplicitValue(); 
-  bool ret2 = getExplicitValue() && getExplicitValue(); 
-  bool ret3 = !getExplicitValue();
+  i >>= 3;
+  f >>= 3;  // expected-error {{invalid operands}}
+  b >>= 3;
+  pi >>= 3; // expected-error {{invalid operands}}
+  pt >>= 3; // FIXME
+  t >>= 3;
 }

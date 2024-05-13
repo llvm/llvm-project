@@ -13,13 +13,16 @@
 
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm-c/ErrorHandling.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Watchdog.h"
 #include "llvm/Support/raw_ostream.h"
+
+#ifdef __APPLE__
+#include "llvm/ADT/SmallString.h"
+#endif
 
 #include <atomic>
 #include <cassert>
@@ -61,8 +64,7 @@ static LLVM_THREAD_LOCAL PrettyStackTraceEntry *PrettyStackTraceHead = nullptr;
 // the current thread". If the user happens to overflow an 'unsigned' with
 // SIGINFO requests, it's possible that some threads will stop responding to it,
 // but the program won't crash.
-static volatile std::atomic<unsigned> GlobalSigInfoGenerationCounter =
-    ATOMIC_VAR_INIT(1);
+static volatile std::atomic<unsigned> GlobalSigInfoGenerationCounter = 1;
 static LLVM_THREAD_LOCAL unsigned ThreadLocalSigInfoGenerationCounter = 0;
 
 namespace llvm {

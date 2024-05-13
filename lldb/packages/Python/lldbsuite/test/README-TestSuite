@@ -33,9 +33,7 @@ to the Python test suite under the current 'test' directory.
 
   ./command_source/TestCommandSource.py provides a simple example of test case
   which overrides lldbtest.TestBase to exercise the lldb's 'command source'
-  command.  The subclass should override the attribute 'mydir' in order for the
-  runtime to locate the individual test cases when running as part of a large
-  test suite or when running each test case as a separate Python invocation.
+  command.
 
   The doc string provides more details about the setup required for running a
   test case on its own.  To run the whole test suite, 'dotest.py' is all you
@@ -69,19 +67,12 @@ to the Python test suite under the current 'test' directory.
   Python test script.  An example of the latter can be found in
   test/lang/objc/radar-9691614/TestObjCMethodReturningBOOL.py, where:
 
-    def test_method_ret_BOOL_with_dsym(self):
+    def test_method_ret_BOOL(self):
         """Test that objective-c method returning BOOL works correctly."""
         d = {'EXE': self.exe_name}
-        self.buildDsym(dictionary=d)
+        self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        self.objc_method_ret_BOOL(self.exe_name)
-
-    def test_method_ret_BOOL_with_dwarf(self):
-        """Test that objective-c method returning BOOL works correctly."""
-        d = {'EXE': self.exe_name}
-        self.buildDwarf(dictionary=d)
-        self.setTearDownCleanup(dictionary=d)
-        self.objc_method_ret_BOOL(self.exe_name)
+        ...
 
     def setUp(self):
         # Call super's setUp().
@@ -99,33 +90,6 @@ to the Python test suite under the current 'test' directory.
 
   Contains platform specific plugin to build binaries with dsym/dwarf debugging
   info.  Other platform specific functionalities may be added in the future.
-
-- unittest2 directory
-
-  Many new features were added to unittest in Python 2.7, including test
-  discovery. unittest2 allows you to use these features with earlier versions of
-  Python.
-
-  It currently has unittest2 0.5.1 from http://pypi.python.org/pypi/unittest2.
-  Version 0.5.1 of unittest2 has feature parity with unittest in Python 2.7
-  final. If you want to ensure that your tests run identically under unittest2
-  and unittest in Python 2.7 you should use unittest2 0.5.1. 
-
-  Later versions of unittest2 include changes in unittest made in Python 3.2 and
-  onwards after the release of Python 2.7.
-
-- dotest.pl
-
-  In case you wonder, there is also a 'dotest.pl' perl script file.  It was
-  created to visit each Python test case under the specified directory and
-  invoke Python's builtin unittest.main() on each test case.
-
-  It does not take advantage of the test runner and test suite functionality
-  provided by Python's unitest framework.  Its existence is because we want a
-  different way of running the whole test suite.  As lldb and the Python test
-  suite become more reliable, we don't expect to be using 'dotest.pl' anymore.
-
-  Note: dotest.pl has been moved to the attic directory.
 
 - Profiling dotest.py runs
 

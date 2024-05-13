@@ -23,6 +23,8 @@
 
 namespace llvm {
 
+class AVRSubtarget;
+
 namespace AVRCC {
 
 /// AVR specific condition codes.
@@ -63,7 +65,7 @@ enum TOF {
 /// Utilities related to the AVR instruction set.
 class AVRInstrInfo : public AVRGenInstrInfo {
 public:
-  explicit AVRInstrInfo();
+  explicit AVRInstrInfo(AVRSubtarget &STI);
 
   const AVRRegisterInfo &getRegisterInfo() const { return RI; }
   const MCInstrDesc &getBrCond(AVRCC::CondCodes CC) const;
@@ -78,14 +80,16 @@ public:
                            MachineBasicBlock::iterator MI, Register SrcReg,
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override;
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, Register DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   // Branch analysis.
@@ -107,13 +111,16 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 
-  unsigned insertIndirectBranch(MachineBasicBlock &MBB,
-                                MachineBasicBlock &NewDestBB,
-                                const DebugLoc &DL,
-                                int64_t BrOffset,
-                                RegScavenger *RS) const override;
+  void insertIndirectBranch(MachineBasicBlock &MBB,
+                            MachineBasicBlock &NewDestBB,
+                            MachineBasicBlock &RestoreBB, const DebugLoc &DL,
+                            int64_t BrOffset, RegScavenger *RS) const override;
+
 private:
   const AVRRegisterInfo RI;
+
+protected:
+  const AVRSubtarget &STI;
 };
 
 } // end namespace llvm

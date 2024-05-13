@@ -55,8 +55,6 @@ void test1(A *a) {
 }
 @end
 
-// rdar://8843638
-
 @interface I
 - (id)retain; // expected-note {{method 'retain' declared here}}
 - (id)autorelease; // expected-note {{method 'autorelease' declared here}}
@@ -82,8 +80,6 @@ void test1(A *a) {
                           // expected-warning {{category is implementing a method which will also be implemented by its primary class}}
 @end
 
-// rdar://8861761
-
 @interface B
 + (id)alloc;
 - (id)initWithInt: (int) i;
@@ -92,7 +88,7 @@ void test1(A *a) {
 
 @end
 
-void rdar8861761() {
+void rdar8861761(void) {
   B *o1 = [[B alloc] initWithInt:0];
   B *o2 = [B alloc];
   [o2 initWithInt:0]; // expected-warning {{expression result unused}}
@@ -100,12 +96,11 @@ void rdar8861761() {
   [[B alloc] myInit]; // expected-warning {{expression result unused}}
 }
 
-// rdar://8925835
 @interface rdar8925835
 - (void)foo:(void (^)(unsigned captureCount, I * const capturedStrings[captureCount]))block;
 @end
 
-void test5() {
+void test5(void) {
   extern void test5_helper(__autoreleasing id *);
   id x;
 
@@ -124,7 +119,6 @@ void test5() {
   test5_helper3(&x); // expected-error {{passing '__strong id *' to parameter of type '__weak id *' changes retain/release properties of pointer}}
 }
 
-// rdar://problem/8937869
 void test6(unsigned cond) {
   switch (cond) {
   case 0:
@@ -286,7 +280,6 @@ void test10(id collection) {
   }
 }
 
-// rdar://problem/9078626
 #define nil ((void*) 0)
 void test11(id op, void *vp) {
   _Bool b;
@@ -328,7 +321,6 @@ void test12(id collection) {
 }
 @end
 
-// <rdar://problem/10274056>
 @interface Test13_B
 - (id) consumesSelf __attribute__((ns_consumes_self));
 @end
@@ -338,9 +330,8 @@ void test12(id collection) {
 }
 @end
 
-// rdar://problem/9172151
 @class Test14A, Test14B;
-void test14() {
+void test14(void) {
   extern void test14_consume(id *);
   extern int test14_cond(void);
   extern float test14_nowriteback(id __autoreleasing const *); // expected-note{{passing argument to parameter here}}
@@ -376,7 +367,7 @@ void test14() {
   test14_nowriteback(wip); // expected-error{{passing '__weak id *' to parameter of type '__autoreleasing id const *' changes retain/release properties of pointer}}
 }
 
-void test15() {
+void test15(void) {
   __block __autoreleasing id x; // expected-error {{__block variables cannot have __autoreleasing ownership}}
 }
 
@@ -444,7 +435,6 @@ void test19(void) {
   // expected-note{{use CFBridgingRelease call to transfer ownership of a +1 'struct Test19 *' into ARC}}
 }
 
-// rdar://problem/8951453
 static __thread id test20_implicit; // expected-error {{thread-local variable has non-trivial ownership: type is '__strong id'}}
 static __thread __strong id test20_strong; // expected-error {{thread-local variable has non-trivial ownership: type is '__strong id'}}
 static __thread __weak id test20_weak; // expected-error {{thread-local variable has non-trivial ownership: type is '__weak id'}}
@@ -458,13 +448,12 @@ void test20(void) {
   static __thread __unsafe_unretained id test20_unsafe;
 }
 
-// rdar://9310049
 _Bool fn(id obj) {
     return (_Bool)obj;
 }
 
 // Check casting w/ ownership qualifiers.
-void test21() {
+void test21(void) {
   __strong id *sip;
   (void)(__weak id *)sip; // expected-error{{casting '__strong id *' to type '__weak id *' changes retain/release properties of pointer}}
   (void)(__weak const id *)sip; // expected-error{{casting '__strong id *' to type '__weak id const *' changes retain/release properties of pointer}}
@@ -472,11 +461,9 @@ void test21() {
   (void)(__autoreleasing const id *)sip; // okay
 }
 
-// rdar://problem/9340462
 void test22(id x[]) { // expected-error {{must explicitly describe intended ownership of an object array parameter}}
 }
 
-// rdar://problem/9400219
 void test23(void) {
   void *ptr;
   ptr = @"foo";
@@ -489,7 +476,6 @@ id test24(void) {
   return test24_helper(), (void*) 0;
 }
 
-// rdar://9400841
 @interface Base
 @property (assign) id content;
 @end
@@ -504,7 +490,6 @@ id test24(void) {
 }
 @end
 
-// <rdar://problem/9398437>
 void test25(Class *classes) {
   Class *other_classes;
   test25(other_classes);
@@ -530,7 +515,6 @@ void test26(id y) {
 }
 @end
 
-// rdar://9525555
 @interface  Test27 {
   __weak id _myProp1;
   id myProp2;
@@ -557,7 +541,6 @@ void test26(id y) {
 -(id)custom_ro { return 0; }
 @end
 
-// rdar://9569264
 @interface Test28
 @property (nonatomic, assign) __strong id a; // expected-error {{unsafe_unretained property 'a' may not also be declared __strong}}
 @end
@@ -571,7 +554,6 @@ void test26(id y) {
 @synthesize b;
 @end
 
-// rdar://9573962
 typedef struct Bark Bark;
 @interface Test29
 @property Bark* P;
@@ -585,7 +567,6 @@ typedef struct Bark Bark;
 }
 @end
 
-// rdar://9495837
 @interface Test30
 + (id) new;
 - (void)Meth;
@@ -603,10 +584,9 @@ typedef struct Bark Bark;
 }
 @end
 
-// rdar://9411838
 @protocol PTest31 @end
 
-int Test31() {
+int Test31(void) {
     Class cls;
     id ids;
     id<PTest31> pids;
@@ -618,7 +598,6 @@ int Test31() {
     return cls->isa ? i : j; // expected-error {{member reference base type 'Class' is not a structure or union}}
 }
 
-// rdar://9612030
 @interface ITest32 {
 @public
  id ivar;
@@ -632,7 +611,6 @@ id Test32(__weak ITest32 *x) {
            : (*x).ivar;  // expected-error {{dereferencing a __weak pointer is not allowed}}
 }
 
-// rdar://9619861
 extern int printf(const char*, ...);
 typedef long intptr_t;
 
@@ -641,7 +619,6 @@ int Test33(id someid) {
   return (int)someid;
 }
 
-// rdar://9636091
 @interface I34
 @property (nonatomic, retain) id newName __attribute__((ns_returns_not_retained)) ;
 
@@ -669,7 +646,6 @@ void test35(void) {
   test36_helper(&x);
   test36_helper(xp); // expected-error {{passing address of non-local object to __autoreleasing parameter for write-back}}
 
-  // rdar://problem/9665710
   __block id y;
   test36_helper(&y);
   ^{ test36_helper(&y); }();
@@ -678,7 +654,6 @@ void test35(void) {
 }
 
 void test36(int first, ...) {
-  // <rdar://problem/9758798>
   __builtin_va_list arglist;
   __builtin_va_start(arglist, first);
   id obj = __builtin_va_arg(arglist, id);
@@ -694,11 +669,10 @@ void test37(Test37 *c) {
   (void)sizeof(id*); // no error.
 }
 
-// rdar://problem/9887979
 @interface Test38
 @property int value;
 @end
-void test38() {
+void test38(void) {
   extern Test38 *test38_helper(void);
   switch (test38_helper().value) {
   case 0:
@@ -707,13 +681,11 @@ void test38() {
   }
 }
 
-// rdar://10186536
 @class NSColor;
 void _NSCalc(NSColor* color, NSColor* bezelColors[]) __attribute__((unavailable("not available in automatic reference counting mode")));
 
 void _NSCalcBeze(NSColor* color, NSColor* bezelColors[]); // expected-error {{must explicitly describe intended ownership of an object array parameter}}
 
-// rdar://9970739
 @interface RestaurantTableViewCell
 - (void) restaurantLocation;
 @end
@@ -729,7 +701,6 @@ void _NSCalcBeze(NSColor* color, NSColor* bezelColors[]); // expected-error {{mu
 }
 @end
 
-// rdar://11814185
 @interface Radar11814185
 @property (nonatomic, weak)  Radar11814185* picker1;
 + alloc;
@@ -750,8 +721,8 @@ void _NSCalcBeze(NSColor* color, NSColor* bezelColors[]); // expected-error {{mu
 - init { return 0; }
 @end
 
-// <rdar://problem/12569201>.  Warn on cases of initializing a weak variable
-// with an Objective-C object literal.
+// Warn on cases of initializing a weak variable with an Objective-C object
+// literal.
 void rdar12569201(id key, id value) {
     // Declarations.
     __weak id x = @"foo"; // no-warning
@@ -775,7 +746,6 @@ void rdar12569201(id key, id value) {
 - (void)method:(id[])objects; // expected-error{{must explicitly describe intended ownership of an object array parameter}}
 @end
 
-// rdar://13752880
 @interface NSMutableArray : NSArray @end
 
 typedef __strong NSMutableArray * PSNS;
@@ -786,7 +756,6 @@ void test(NSArray *x) {
   PSNS y2 = x; // expected-warning {{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
 }
 
-// rdar://15123684
 @class NSString;
 
 void foo(NSArray *array) {
@@ -796,8 +765,7 @@ void foo(NSArray *array) {
   }
 }
 
-// rdar://16627903
-extern void abort();
+extern void abort(void);
 #define TKAssertEqual(a, b) do{\
     __typeof(a) a_res = (a);\
     __typeof(b) b_res = (b);\
@@ -806,7 +774,7 @@ extern void abort();
     }\
 }while(0)
 
-int garf() {
+int garf(void) {
   id object;
   TKAssertEqual(object, nil);
   TKAssertEqual(object, (id)nil);

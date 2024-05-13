@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 # For the shells csh, tcsh:
 #   ( setenv PYTHONPATH /Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Resources/Python ; ./globals.py <path> [<path> ...])
 #
 # For the shells sh, bash:
 #   PYTHONPATH=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Resources/Python ./globals.py <path> [<path> ...]
-#----------------------------------------------------------------------
-from __future__ import print_function
+# ----------------------------------------------------------------------
 
 import lldb
 import optparse
@@ -22,7 +21,8 @@ def get_globals(raw_path, options):
     path = os.path.expanduser(raw_path)
     # Create a target using path + options
     target = lldb.debugger.CreateTarget(
-        path, options.arch, options.platform, False, error)
+        path, options.arch, options.platform, False, error
+    )
     if target:
         # Get the executable module
         module = target.module[target.executable.basename]
@@ -41,58 +41,63 @@ def get_globals(raw_path, options):
                         global_names.append(global_name)
                         # Find all global variables by name
                         global_variable_list = module.FindGlobalVariables(
-                            target, global_name, lldb.UINT32_MAX)
+                            target, global_name, lldb.UINT32_MAX
+                        )
                         if global_variable_list:
                             # Print results for anything that matched
                             for global_variable in global_variable_list:
                                 # returns the global variable name as a string
-                                print('name = %s' % global_variable.name)
+                                print("name = %s" % global_variable.name)
                                 # Returns the variable value as a string
-                                print('value = %s' % global_variable.value)
-                                print('type = %s' % global_variable.type)    # Returns an lldb.SBType object
+                                print("value = %s" % global_variable.value)
+                                print(
+                                    "type = %s" % global_variable.type
+                                )  # Returns an lldb.SBType object
                                 # Returns an lldb.SBAddress (section offset
                                 # address) for this global
-                                print('addr = %s' % global_variable.addr)
+                                print("addr = %s" % global_variable.addr)
                                 # Returns the file virtual address for this
                                 # global
-                                print('file_addr = 0x%x' % global_variable.addr.file_addr)
+                                print(
+                                    "file_addr = 0x%x" % global_variable.addr.file_addr
+                                )
                                 # returns the global variable value as a string
-                                print('location = %s' % global_variable.location)
+                                print("location = %s" % global_variable.location)
                                 # Returns the size in bytes of this global
                                 # variable
-                                print('size = %s' % global_variable.size)
+                                print("size = %s" % global_variable.size)
                                 print()
 
 
 def globals(command_args):
-    '''Extract all globals from any arguments which must be paths to object files.'''
+    """Extract all globals from any arguments which must be paths to object files."""
     usage = "usage: %prog [options] <PATH> [PATH ...]"
-    description = '''This command will find all globals in the specified object file and return an list() of lldb.SBValue objects (which might be empty).'''
-    parser = optparse.OptionParser(
-        description=description,
-        prog='globals',
-        usage=usage)
+    description = """This command will find all globals in the specified object file and return an list() of lldb.SBValue objects (which might be empty)."""
+    parser = optparse.OptionParser(description=description, prog="globals", usage=usage)
     parser.add_option(
-        '-v',
-        '--verbose',
-        action='store_true',
-        dest='verbose',
-        help='display verbose debug info',
-        default=False)
+        "-v",
+        "--verbose",
+        action="store_true",
+        dest="verbose",
+        help="display verbose debug info",
+        default=False,
+    )
     parser.add_option(
-        '-a',
-        '--arch',
-        type='string',
-        metavar='arch',
-        dest='arch',
-        help='Specify an architecture (or triple) to use when extracting from a file.')
+        "-a",
+        "--arch",
+        type="string",
+        metavar="arch",
+        dest="arch",
+        help="Specify an architecture (or triple) to use when extracting from a file.",
+    )
     parser.add_option(
-        '-p',
-        '--platform',
-        type='string',
-        metavar='platform',
-        dest='platform',
-        help='Specify the platform to use when creating the debug target. Valid values include "localhost", "darwin-kernel", "ios-simulator", "remote-freebsd", "remote-macosx", "remote-ios", "remote-linux".')
+        "-p",
+        "--platform",
+        type="string",
+        metavar="platform",
+        dest="platform",
+        help='Specify the platform to use when creating the debug target. Valid values include "localhost", "darwin-kernel", "ios-simulator", "remote-freebsd", "remote-macosx", "remote-ios", "remote-linux".',
+    )
     try:
         (options, args) = parser.parse_args(command_args)
     except:
@@ -101,6 +106,7 @@ def globals(command_args):
     for path in args:
         get_globals(path, options)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     lldb.debugger = lldb.SBDebugger.Create()
     globals(sys.argv[1:])

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - -DWITHDEF %s
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - -DWITHOUTDEF %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c99 -x c -o - -DCTEST %s
 
 #ifdef WITHDEF
 typedef void *omp_interop_t;
@@ -55,13 +56,13 @@ void foo(int *Ap) {
   #pragma omp interop destroy(SVar) destroy(Another)
 
   int a, b;
-  //expected-error@+1 {{expected variable of type 'omp_interop_t'}}
+  //expected-error@+1 {{expected variable or static data member of type 'omp_interop_t'}}
   #pragma omp interop init(target:a+b) init(target:Another)
 
-  //expected-error@+1 {{expected variable of type 'omp_interop_t'}}
+  //expected-error@+1 {{expected variable or static data member of type 'omp_interop_t'}}
   #pragma omp interop use(a+b) use(Another)
 
-  //expected-error@+1 {{expected variable of type 'omp_interop_t'}}
+  //expected-error@+1 {{expected variable or static data member of type 'omp_interop_t'}}
   #pragma omp interop destroy(a+b) destroy(Another)
 
   const omp_interop_t C = (omp_interop_t)5;
@@ -115,6 +116,61 @@ void foo(int *Ap) {
   //expected-error@+1 {{directive '#pragma omp interop' cannot contain more than one 'nowait' clause}}
   #pragma omp interop nowait init(target:InteropVar) nowait
 }
+
+struct S {
+  void foo();
+  omp_interop_t InteropVar;
+  omp_interop_t func();
+  static omp_interop_t sfunc();
+};
+
+struct T {
+  static void static_member_func();
+};
+
+void T::static_member_func() {
+  S s;
+  omp_interop_t o;
+
+  //expected-error@+1 {{expected variable or static data member of type 'omp_interop_t'}}
+  #pragma omp interop init(target:s.InteropVar) init(target:o)
+}
+
+void S::foo() {
+  //expected-error@+1 {{interop variable 'InteropVar' used in multiple action clauses}}
+  #pragma omp interop init(target:InteropVar) init(target:InteropVar)
+
+  //expected-error@+1 {{interop variable 'InteropVar' used in multiple action clauses}}
+  #pragma omp interop use(InteropVar) use(InteropVar)
+
+  //expected-error@+1 {{interop variable 'InteropVar' used in multiple action clauses}}
+  #pragma omp interop destroy(InteropVar) destroy(InteropVar)
+
+  //expected-error@+1 {{interop variable 'InteropVar' used in multiple action clauses}}
+  #pragma omp interop init(target:InteropVar) use(InteropVar)
+
+  //expected-error@+1 {{interop variable 'InteropVar' used in multiple action clauses}}
+  #pragma omp interop init(target:InteropVar) destroy(InteropVar)
+
+  //expected-error@+1 {{interop variable 'InteropVar' used in multiple action clauses}}
+  #pragma omp interop use(InteropVar) destroy(InteropVar)
+
+  //expected-error@+1 {{expected variable, static data member, or non-static data member of current class of type 'omp_interop_t'}}
+  #pragma omp interop init(target:InteropVar) init(target:func())
+
+  //expected-error@+1 {{expected variable, static data member, or non-static data member of current class of type 'omp_interop_t'}}
+  #pragma omp interop init(target:InteropVar) init(target:sfunc())
+}
+
+void foo2() {
+  S s;
+  omp_interop_t another;
+  //expected-error@+1 {{expected variable or static data member of type 'omp_interop_t'}}
+  #pragma omp interop init(target:s.InteropVar) init(target:another)
+
+  //expected-error@+1 {{expected variable or static data member of type 'omp_interop_t'}}
+  #pragma omp interop init(target: S::sfunc()) init(target:another)
+}
 #endif
 #ifdef WITHOUTDEF
 void foo() {
@@ -125,5 +181,22 @@ void foo() {
   #pragma omp interop use(InteropVar) nowait
   //expected-error@+1 {{'omp_interop_t' type not found; include <omp.h>}}
   #pragma omp interop destroy(InteropVar) nowait
+}
+#endif
+#ifdef CTEST
+typedef void *omp_interop_t;
+omp_interop_t bar();
+struct S {
+  omp_interop_t o;
+};
+void foo() {
+  omp_interop_t o;
+  struct S s;
+
+  //expected-error@+1 {{expected variable of type 'omp_interop_t'}}
+  #pragma omp interop init(target:o) init(target:bar())
+
+  //expected-error@+1 {{expected variable of type 'omp_interop_t'}}
+  #pragma omp interop init(target:o) init(target:s.o)
 }
 #endif

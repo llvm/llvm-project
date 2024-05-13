@@ -67,6 +67,10 @@
 // LINK_IOSSIM_3_0-NOT: -lbundle1.o
 // LINK_IOSSIM_3_0: -lSystem
 
+// RUN: %clang -target arm64-apple-darwin -fuse-ld= -mlinker-version=700 -### -arch arm64 -mios-simulator-version-min=15.0 %t.o 2>&1 | FileCheck -check-prefix=LINK_IOSSIM_ARM64 %s
+
+// LINK_IOSSIM_ARM64: "-platform_version" "ios-simulator" "15.0.0" "15.0.0"
+
 // RUN: %clang -target i386-apple-darwin9 -### -fpie %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_EXPLICIT_PIE %s < %t.log
 //
@@ -140,6 +144,13 @@
 // LINK_VERSION_MIN: {{ld(.exe)?"}}
 // LINK_VERSION_MIN: "-macosx_version_min" "10.7.0"
 
+// RUN: %clang -target x86_64-apple-ios13.1-macabi -fuse-ld= -mlinker-version=400 -### %t.o 2>> %t.log
+// RUN: FileCheck -check-prefix=LINK_VERSION_MIN_MACABI %s < %t.log
+// LINK_VERSION_MIN_MACABI: {{ld(.exe)?"}}
+// LINK_VERSION_MIN_MACABI: "-maccatalyst_version_min" "13.1.0"
+// LINK_VERSION_MIN_MACABI-NOT: macosx_version_min
+// LINK_VERSION_MIN_MACABI-NOT: macos_version_min
+
 // RUN: %clang -target x86_64-apple-darwin12 -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_NO_CRT1 %s < %t.log
 // LINK_NO_CRT1-NOT: crt
@@ -178,6 +189,15 @@
 // LINK_TVOS_KEXT: libclang_rt.cc_kext_tvos.a
 // LINK_TVOS_KEXT: libclang_rt.tvos.a
 
+// RUN: %clang -target x86-64-apple-driverkit19.0 -fuse-ld= -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_DRIVERKIT %s < %t.log
+// LINK_DRIVERKIT: {{ld(.exe)?"}}
+// LINK_DRIVERKIT: -driverkit_version_min
+// LINK_DRIVERKIT-NOT: crt
+// LINK_DRIVERKIT-NOT: lgcc_s.1
+// LINK_DRIVERKIT-NOT: lSystem
+// LINK_DRIVERKIT: libclang_rt.driverkit.a
+
 // RUN: %clang -target armv7k-apple-watchos2.0 -fuse-ld= -mlinker-version=400 -mwatchos-version-min=2.0 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_WATCHOS_ARM %s < %t.log
 // LINK_WATCHOS_ARM: {{ld(.exe)?"}}
@@ -203,11 +223,11 @@
 // LINK_PG: -lgcrt1.o
 // LINK_PG: -no_new_main
 
-// RUN: %clang -target i386-apple-darwin13 -pg -### %t.o 2> %t.log
+// RUN: not %clang -target i386-apple-darwin13 -pg -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_PG_NO_SUPPORT_OSX %s < %t.log
 // LINK_PG_NO_SUPPORT_OSX: error: the clang compiler does not support -pg option on versions of OS X
 
-// RUN: %clang -target x86_64-apple-ios5.0 -pg -### %t.o 2> %t.log
+// RUN: not %clang -target x86_64-apple-ios5.0 -pg -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_PG_NO_SUPPORT %s < %t.log
 // LINK_PG_NO_SUPPORT: error: the clang compiler does not support -pg option on Darwin
 
@@ -228,6 +248,9 @@
 
 // RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=137 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_EXPORT_DYNAMIC %s < %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -mlinker-version=100 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_EXPORT_DYNAMIC %s < %t.log
 // LINK_EXPORT_DYNAMIC: {{ld(.exe)?"}}
 // LINK_EXPORT_DYNAMIC: "-export_dynamic"
@@ -292,51 +315,29 @@
 // RUN:   -fuse-ld= -mlinker-version=133.3.0 2>> %t.log
 // RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1 2>> %t.log
-// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN: not %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1.2 2>> %t.log
-// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN: not %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1.2.6 2>> %t.log
-// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN: not %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1.a 2>> %t.log
-// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN: not %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1a 2>> %t.log
 // RUN: FileCheck -check-prefix=LINK_VERSION_DIGITS %s < %t.log
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3'
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0'
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1'
-// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1.2'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2.6'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.a'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1a'
-
-// RUN: %clang -target x86_64-apple-ios6.0 -miphoneos-version-min=6.0 -fprofile-instr-generate -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
-// RUN: %clang -target i386-apple-darwin9 -fprofile-instr-generate -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
-// RUN: %clang -target arm64-apple-ios5.0 -miphoneos-version-min=5.0 -fprofile-instr-generate -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
-// LINK_PROFILE_FIRST: {{ld(.exe)?"}} "{{[^"]+}}libclang_rt.profile_{{[a-z]+}}.a"
 
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=PROFILE_SECTALIGN %s < %t.log
 // RUN: %clang -target arm64-apple-ios12 -fprofile-instr-generate -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=PROFILE_SECTALIGN %s < %t.log
-// PROFILE_SECTALIGN: "-sectalign" "__DATA" "__llvm_prf_cnts" "0x4000" "-sectalign" "__DATA" "__llvm_prf_data" "0x4000"
+// PROFILE_SECTALIGN: "-sectalign" "__DATA" "__llvm_prf_cnts" "0x4000" "-sectalign" "__DATA" "__llvm_prf_bits" "0x4000" "-sectalign" "__DATA" "__llvm_prf_data" "0x4000"
 
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -exported_symbols_list /dev/null -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Wl,-exported_symbols_list,/dev/null -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Wl,-exported_symbol,foo -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Xlinker -exported_symbol -Xlinker foo -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Xlinker -exported_symbols_list -Xlinker /dev/null -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// PROFILE_EXPORT: "-exported_symbol" "___llvm_profile_filename" "-exported_symbol" "___llvm_profile_raw_version"
-//
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate --coverage -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=NO_PROFILE_EXPORT %s < %t.log
 // NO_PROFILE_EXPORT-NOT: "-exported_symbol"
@@ -357,11 +358,31 @@
 // Check that we can pass the outliner down to the linker.
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
 // RUN:   %clang -target arm64-apple-darwin -moutline -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=MOUTLINE %s < %t.log
-// MOUTLINE: {{ld(.exe)?"}}
-// MOUTLINE-SAME: "-mllvm" "-enable-machine-outliner" "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: FileCheck -check-prefix=ARM64-MOUTLINE %s < %t.log
+// ARM64-MOUTLINE: {{ld(.exe)?"}}
+// ARM64-MOUTLINE-SAME: "-mllvm" "-enable-machine-outliner" "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
+// RUN:   %clang -target arm64e-apple-darwin -moutline -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=ARM64E-MOUTLINE %s < %t.log
+// ARM64E-MOUTLINE: {{ld(.exe)?"}}
+// ARM64E-MOUTLINE-SAME: "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
+// RUN:   %clang -target armv7em-apple-darwin -moutline -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=ARMV7EM-MOUTLINE %s < %t.log
+// ARMV7EM-MOUTLINE: {{ld(.exe)?"}}
+// ARMV7EM-MOUTLINE-SAME: "-mllvm" "-enable-linkonceodr-outlining"
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
 // RUN:   %clang -target arm64-apple-darwin -mno-outline -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=MNO_OUTLINE %s < %t.log
-// MNO_OUTLINE: {{ld(.exe)?"}}
-// MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never"
+// RUN: FileCheck -check-prefix=ARM64-MNO_OUTLINE %s < %t.log
+// ARM64-MNO_OUTLINE: {{ld(.exe)?"}}
+// ARM64-MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never" "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
+// RUN:   %clang -target arm64e-apple-darwin -mno-outline -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=ARM64E-MNO_OUTLINE %s < %t.log
+// ARM64E-MNO_OUTLINE: {{ld(.exe)?"}}
+// ARM64E-MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never" "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
+// RUN:   %clang -target armv7em-apple-darwin -mno-outline -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=ARMV7EM-MNO_OUTLINE %s < %t.log
+// ARMV7EM-MNO_OUTLINE: {{ld(.exe)?"}}
+// ARMV7EM-MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never" "-mllvm" "-enable-linkonceodr-outlining"

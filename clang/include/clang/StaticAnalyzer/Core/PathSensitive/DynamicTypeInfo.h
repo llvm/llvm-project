@@ -18,7 +18,7 @@ namespace ento {
 /// of a region in a given state along the analysis path.
 class DynamicTypeInfo {
 public:
-  DynamicTypeInfo() : DynTy(QualType()) {}
+  DynamicTypeInfo() {}
 
   DynamicTypeInfo(QualType Ty, bool CanBeSub = true)
       : DynTy(Ty), CanBeASubClass(CanBeSub) {}

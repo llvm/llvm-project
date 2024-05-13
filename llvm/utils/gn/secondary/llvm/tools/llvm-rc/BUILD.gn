@@ -1,5 +1,6 @@
 import("//llvm/tools/binutils_symlinks.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 tablegen("Opts") {
@@ -33,13 +34,14 @@ group("symlinks") {
   }
 }
 
-executable("llvm-rc") {
+driver_executable("llvm-rc") {
   deps = [
     ":Opts",
     ":WindresOpts",
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ResourceFileWriter.cpp",

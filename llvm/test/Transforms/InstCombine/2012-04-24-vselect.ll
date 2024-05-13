@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 ; CHECK-LABEL: @foo(
 ; CHECK: <i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>

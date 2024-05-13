@@ -1,10 +1,10 @@
-; RUN: llc < %s -stackrealign -stack-alignment=32 -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
+; RUN: llc < %s -stackrealign -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
 ; PR11468
 
 define void @f(i64 %sz) uwtable {
 entry:
   %a = alloca i32, align 32
-  store volatile i32 0, i32* %a, align 32
+  store volatile i32 0, ptr %a, align 32
   ; force to push r14 on stack
   call void asm sideeffect "nop", "~{r14},~{dirflag},~{fpsr},~{flags}"() nounwind, !srcloc !0
   ret void
@@ -29,5 +29,6 @@ entry:
 ; CHECK: popq %rbp
 }
 
+!llvm.module.flags = !{!1}
 !0 = !{i32 125}
-
+!1 = !{i32 2, !"override-stack-alignment", i32 32}

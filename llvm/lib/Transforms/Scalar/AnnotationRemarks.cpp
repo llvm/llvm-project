@@ -16,12 +16,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/MemoryOpRemark.h"
 
 using namespace llvm;
@@ -63,7 +57,12 @@ static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
 
     for (const MDOperand &Op :
          I.getMetadata(LLVMContext::MD_annotation)->operands()) {
-      auto Iter = Mapping.insert({cast<MDString>(Op.get())->getString(), 0});
+      StringRef AnnotationStr =
+          isa<MDString>(Op.get())
+              ? cast<MDString>(Op.get())->getString()
+              : cast<MDString>(cast<MDTuple>(Op.get())->getOperand(0).get())
+                    ->getString();
+      auto Iter = Mapping.insert({AnnotationStr, 0});
       Iter.first->second++;
     }
   }
@@ -83,42 +82,6 @@ static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
 
     tryEmitAutoInitRemark(KV.second, ORE, TLI);
   }
-}
-
-namespace {
-
-struct AnnotationRemarksLegacy : public FunctionPass {
-  static char ID;
-
-  AnnotationRemarksLegacy() : FunctionPass(ID) {
-    initializeAnnotationRemarksLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    const TargetLibraryInfo &TLI =
-        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    runImpl(F, TLI);
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
-
-} // end anonymous namespace
-
-char AnnotationRemarksLegacy::ID = 0;
-
-INITIALIZE_PASS_BEGIN(AnnotationRemarksLegacy, "annotation-remarks",
-                      "Annotation Remarks", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(AnnotationRemarksLegacy, "annotation-remarks",
-                    "Annotation Remarks", false, false)
-
-FunctionPass *llvm::createAnnotationRemarksLegacyPass() {
-  return new AnnotationRemarksLegacy();
 }
 
 PreservedAnalyses AnnotationRemarksPass::run(Function &F,

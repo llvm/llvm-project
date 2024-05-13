@@ -9,46 +9,80 @@
 #include "Symbols.h"
 #include "InputFiles.h"
 #include "SyntheticSections.h"
+#include "llvm/Demangle/Demangle.h"
 
 using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-// Returns a symbol for an error message.
-static std::string demangle(StringRef symName) {
-  if (config->demangle)
-    return demangleItanium(symName);
-  return std::string(symName);
+static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 56,
+              "Try to minimize Symbol's size; we create many instances");
+
+// The Microsoft ABI doesn't support using parent class tail padding for child
+// members, hence the _MSC_VER check.
+#if !defined(_MSC_VER)
+static_assert(sizeof(void *) != 8 || sizeof(Defined) == 88,
+              "Try to minimize Defined's size; we create many instances");
+#endif
+
+static_assert(sizeof(SymbolUnion) == sizeof(Defined),
+              "Defined should be the largest Symbol kind");
+
+// Returns a symbol name for an error message.
+static std::string maybeDemangleSymbol(StringRef symName) {
+  if (config->demangle) {
+    symName.consume_front("_");
+    return demangle(symName);
+  }
+  return symName.str();
 }
 
-std::string lld::toString(const Symbol &sym) { return demangle(sym.getName()); }
+std::string lld::toString(const Symbol &sym) {
+  return maybeDemangleSymbol(sym.getName());
+}
 
 std::string lld::toMachOString(const object::Archive::Symbol &b) {
-  return demangle(b.getName());
+  return maybeDemangleSymbol(b.getName());
 }
 
 uint64_t Symbol::getStubVA() const { return in.stubs->getVA(stubsIndex); }
+uint64_t Symbol::getLazyPtrVA() const {
+  return in.lazyPointers->getVA(stubsIndex);
+}
 uint64_t Symbol::getGotVA() const { return in.got->getVA(gotIndex); }
 uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
 
-bool Symbol::isLive() const {
-  if (isa<DylibSymbol>(this) || isa<Undefined>(this))
-    return used;
-
-  if (auto *d = dyn_cast<Defined>(this)) {
-    // Non-absolute symbols might be alive because their section is
-    // no_dead_strip or live_support. In that case, the section will know
-    // that it's live but `used` might be false. Non-absolute symbols always
-    // have to use the section's `live` bit as source of truth.
-    return d->isAbsolute() ? used : d->isec->live;
+Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
+                 uint64_t value, uint64_t size, bool isWeakDef, bool isExternal,
+                 bool isPrivateExtern, bool includeInSymtab,
+                 bool isReferencedDynamically, bool noDeadStrip,
+                 bool canOverrideWeakDef, bool isWeakDefCanBeHidden,
+                 bool interposable)
+    : Symbol(DefinedKind, name, file), overridesWeakDef(canOverrideWeakDef),
+      privateExtern(isPrivateExtern), includeInSymtab(includeInSymtab),
+      wasIdenticalCodeFolded(false),
+      referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
+      interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
+      weakDef(isWeakDef), external(isExternal), originalIsec(isec),
+      value(value), size(size) {
+  if (isec) {
+    isec->symbols.push_back(this);
+    // Maintain sorted order.
+    for (auto it = isec->symbols.rbegin(), rend = isec->symbols.rend();
+         it != rend; ++it) {
+      auto next = std::next(it);
+      if (next == rend)
+        break;
+      if ((*it)->value < (*next)->value)
+        std::swap(*next, *it);
+      else
+        break;
+    }
   }
+}
 
-  assert(!isa<CommonSymbol>(this) &&
-         "replaceCommonSymbols() runs before dead code stripping, and isLive() "
-         "should only be called after dead code stripping");
-
-  // Assume any other kind of symbol is live.
-  return true;
+bool Defined::isTlv() const {
+  return !isAbsolute() && isThreadLocalVariables(originalIsec->getFlags());
 }
 
 uint64_t Defined::getVA() const {
@@ -57,7 +91,7 @@ uint64_t Defined::getVA() const {
   if (isAbsolute())
     return value;
 
-  if (!isec->isFinal) {
+  if (!isec()->isFinal) {
     // A target arch that does not use thunks ought never ask for
     // the address of a function that has not yet been finalized.
     assert(target->usesThunks());
@@ -68,20 +102,32 @@ uint64_t Defined::getVA() const {
     // expedient to return a contrived out-of-range address.
     return TargetInfo::outOfRangeVA;
   }
-  return isec->getVA() + value;
+  return isec()->getVA(value);
 }
 
-uint64_t Defined::getFileOffset() const {
-  if (isAbsolute()) {
-    error("absolute symbol " + toString(*this) +
-          " does not have a file offset");
-    return 0;
-  }
-  return isec->getFileOffset() + value;
+ObjFile *Defined::getObjectFile() const {
+  return originalIsec ? dyn_cast_or_null<ObjFile>(originalIsec->getFile())
+                      : nullptr;
+}
+
+std::string Defined::getSourceLocation() {
+  if (!originalIsec)
+    return {};
+  return originalIsec->getSourceLocation(value);
+}
+
+// Get the canonical InputSection of the symbol.
+InputSection *Defined::isec() const {
+  return originalIsec ? originalIsec->canonical() : nullptr;
+}
+
+// Get the canonical unwind entry of the symbol.
+ConcatInputSection *Defined::unwindEntry() const {
+  return originalUnwindEntry ? originalUnwindEntry->canonical() : nullptr;
 }
 
 uint64_t DylibSymbol::getVA() const {
   return isInStubs() ? getStubVA() : Symbol::getVA();
 }
 
-void LazySymbol::fetchArchiveMember() { getFile()->fetch(sym); }
+void LazyArchive::fetchArchiveMember() { getFile()->fetch(sym); }

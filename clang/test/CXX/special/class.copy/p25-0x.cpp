@@ -1,6 +1,15 @@
-// RUN: %clang_cc1 -std=c++11 -verify %s
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b -DDEDUCING_THIS -Wno-deprecated-builtins  %s -verify
 
 // expected-no-diagnostics
+
+#if DEDUCING_THIS
+#define EXPLICIT_PARAMETER(...) this __VA_ARGS__,
+#else
+#define EXPLICIT_PARAMETER(Param)
+#endif
+
 
 template<typename T, bool B> struct trivially_assignable_check {
   static_assert(B == __has_trivial_assign(T), "");
@@ -22,16 +31,54 @@ using _ = trivially_assignable<Trivial>;
 
 // A copy/move assignment operator for class X is trivial if it is not user-provided,
 struct UserProvided {
-  UserProvided &operator=(const UserProvided &);
+  UserProvided &operator=(EXPLICIT_PARAMETER(UserProvided&)
+                          const UserProvided &);
 };
 using _ = not_trivially_assignable<UserProvided>;
 
 // its declared parameter type is the same as if it had been implicitly
 // declared,
 struct NonConstCopy {
-  NonConstCopy &operator=(NonConstCopy &) = default;
+  NonConstCopy &operator=(EXPLICIT_PARAMETER(NonConstCopy&) NonConstCopy &) = default;
+#if DEDUCING_THIS
+  NonConstCopy &operator=(EXPLICIT_PARAMETER(NonConstCopy&&) NonConstCopy &) = default;
+#endif
 };
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 14
+// Up until (and including) Clang 14, non-const copy assignment operators were not trivial because
+// of dr2171
 using _ = not_trivially_assignable<NonConstCopy>;
+#else
+// In the latest Clang version, all defaulted assignment operators are trivial, even if non-const,
+// because dr2171 is fixed
+static_assert(__has_trivial_assign(NonConstCopy), "");
+static_assert(__is_trivially_assignable(NonConstCopy &, NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &, const NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &, NonConstCopy), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &, NonConstCopy &&), "");
+static_assert(__is_trivially_assignable(NonConstCopy &&, NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &&, const NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &&, NonConstCopy), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &&, NonConstCopy &&), "");
+
+struct DefaultedSpecialMembers {
+  DefaultedSpecialMembers &operator=(EXPLICIT_PARAMETER(DefaultedSpecialMembers&)
+                                     const DefaultedSpecialMembers &) = default;
+  DefaultedSpecialMembers &operator=(EXPLICIT_PARAMETER(DefaultedSpecialMembers&)
+                                     DefaultedSpecialMembers &) = default;
+  DefaultedSpecialMembers &operator=(EXPLICIT_PARAMETER(DefaultedSpecialMembers&)
+                                     DefaultedSpecialMembers &&) = default;
+#if DEDUCING_THIS
+  DefaultedSpecialMembers &operator=(EXPLICIT_PARAMETER(DefaultedSpecialMembers&&)
+                                     const DefaultedSpecialMembers &) = default;
+  DefaultedSpecialMembers &operator=(EXPLICIT_PARAMETER(DefaultedSpecialMembers&&)
+                                     DefaultedSpecialMembers &) = default;
+  DefaultedSpecialMembers &operator=(EXPLICIT_PARAMETER(DefaultedSpecialMembers&&)
+                                     DefaultedSpecialMembers &&) = default;
+#endif
+};
+using _ = trivially_assignable<DefaultedSpecialMembers>;
+#endif
 
 // class X has no virtual functions
 struct VFn {
@@ -60,11 +107,16 @@ static_assert(__is_trivially_assignable(MutableTemplateCtorMember, MutableTempla
 
 // Both trivial and non-trivial special members.
 struct TNT {
-  TNT &operator=(const TNT &) = default; // trivial
-  TNT &operator=(TNT &); // non-trivial
-
-  TNT &operator=(TNT &&) = default; // trivial
-  TNT &operator=(const TNT &&); // non-trivial
+  TNT &operator=(EXPLICIT_PARAMETER(TNT&) const TNT &) = default; // trivial
+  TNT &operator=(EXPLICIT_PARAMETER(TNT&) TNT &); // non-trivial
+  TNT &operator=(EXPLICIT_PARAMETER(TNT&) TNT &&) = default; // trivial
+  TNT &operator=(EXPLICIT_PARAMETER(TNT&) const TNT &&); // non-trivial
+#if DEDUCING_THIS
+  TNT &operator=(this TNT&&, const TNT &) = default; // trivial
+  TNT &operator=(this TNT&&, TNT &); // non-trivial
+  TNT &operator=(this TNT&&, TNT &&) = default; // trivial
+  TNT &operator=(this TNT&&, const TNT &&); // non-trivial
+#endif
 };
 
 static_assert(!__has_trivial_assign(TNT), "lie deliberately for gcc compatibility");

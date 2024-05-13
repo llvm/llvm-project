@@ -21,8 +21,8 @@
 
 %struct.A = type { [5 x i32] }
 
-define void @foo(i1 zeroext, i32) nounwind {
-; X86-LABEL: foo:
+define void @foo_sext_nsw(i1 zeroext, i32) nounwind {
+; X86-LABEL: foo_sext_nsw:
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB0_1
@@ -35,11 +35,11 @@ define void @foo(i1 zeroext, i32) nounwind {
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal 20(,%eax,4), %eax
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll bar
+; X86-NEXT:    calll bar@PLT
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    jmp .LBB0_2
 ;
-; X64-LABEL: foo:
+; X64-LABEL: foo_sext_nsw:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    testl %edi, %edi
@@ -51,22 +51,260 @@ define void @foo(i1 zeroext, i32) nounwind {
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    incl %eax
 ; X64-NEXT:    cltq
 ; X64-NEXT:    shlq $2, %rax
-; X64-NEXT:    leaq (%rax,%rax,4), %rdi
-; X64-NEXT:    callq bar
+; X64-NEXT:    leaq 20(%rax,%rax,4), %rdi
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:    jmp .LBB0_2
   br i1 %0, label %9, label %3
 
   %4 = phi i32 [ %8, %3 ], [ %1, %2 ]
   %5 = add nsw i32 %4, 1
   %6 = sext i32 %5 to i64
-  %7 = getelementptr inbounds %struct.A, %struct.A* null, i64 %6
-  %8 = tail call i32 @bar(%struct.A* %7)
+  %7 = getelementptr inbounds %struct.A, ptr null, i64 %6
+  %8 = tail call i32 @bar(ptr %7)
   br label %3
 
   ret void
 }
 
-declare i32 @bar(%struct.A*)
+define void @foo_sext_nuw(i1 zeroext, i32) nounwind {
+; X86-LABEL: foo_sext_nuw:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB1_1
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB1_1: # %.preheader
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    leal 20(,%eax,4), %eax
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll bar@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    jmp .LBB1_2
+;
+; X64-LABEL: foo_sext_nuw:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    je .LBB1_1
+; X64-NEXT:  # %bb.3:
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB1_1: # %.preheader
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    incl %eax
+; X64-NEXT:    cltq
+; X64-NEXT:    shlq $2, %rax
+; X64-NEXT:    leaq (%rax,%rax,4), %rdi
+; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    jmp .LBB1_2
+  br i1 %0, label %9, label %3
+
+  %4 = phi i32 [ %8, %3 ], [ %1, %2 ]
+  %5 = add nuw i32 %4, 1
+  %6 = sext i32 %5 to i64
+  %7 = getelementptr inbounds %struct.A, ptr null, i64 %6
+  %8 = tail call i32 @bar(ptr %7)
+  br label %3
+
+  ret void
+}
+
+define void @foo_zext_nsw(i1 zeroext, i32) nounwind {
+; X86-LABEL: foo_zext_nsw:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB2_1
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB2_1: # %.preheader
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    leal 20(,%eax,4), %eax
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll bar@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    jmp .LBB2_2
+;
+; X64-LABEL: foo_zext_nsw:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    je .LBB2_1
+; X64-NEXT:  # %bb.3:
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB2_1: # %.preheader
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    incl %eax
+; X64-NEXT:    shlq $2, %rax
+; X64-NEXT:    leaq (%rax,%rax,4), %rdi
+; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    # kill: def $eax killed $eax def $rax
+; X64-NEXT:    jmp .LBB2_2
+  br i1 %0, label %9, label %3
+
+  %4 = phi i32 [ %8, %3 ], [ %1, %2 ]
+  %5 = add nsw i32 %4, 1
+  %6 = zext i32 %5 to i64
+  %7 = getelementptr inbounds %struct.A, ptr null, i64 %6
+  %8 = tail call i32 @bar(ptr %7)
+  br label %3
+
+  ret void
+}
+
+define void @foo_zext_nuw(i1 zeroext, i32) nounwind {
+; X86-LABEL: foo_zext_nuw:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB3_1
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB3_1: # %.preheader
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  .LBB3_2: # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    leal 20(,%eax,4), %eax
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll bar@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    jmp .LBB3_2
+;
+; X64-LABEL: foo_zext_nuw:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    je .LBB3_1
+; X64-NEXT:  # %bb.3:
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB3_1: # %.preheader
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  .LBB3_2: # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    movl %eax, %eax
+; X64-NEXT:    shlq $2, %rax
+; X64-NEXT:    leaq 20(%rax,%rax,4), %rdi
+; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    jmp .LBB3_2
+  br i1 %0, label %9, label %3
+
+  %4 = phi i32 [ %8, %3 ], [ %1, %2 ]
+  %5 = add nuw i32 %4, 1
+  %6 = zext i32 %5 to i64
+  %7 = getelementptr inbounds %struct.A, ptr null, i64 %6
+  %8 = tail call i32 @bar(ptr %7)
+  br label %3
+
+  ret void
+}
+
+define void @foo_sext(i1 zeroext, i32) nounwind {
+; X86-LABEL: foo_sext:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB4_1
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB4_1: # %.preheader
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  .LBB4_2: # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    leal 20(,%eax,4), %eax
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll bar@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    jmp .LBB4_2
+;
+; X64-LABEL: foo_sext:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    je .LBB4_1
+; X64-NEXT:  # %bb.3:
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB4_1: # %.preheader
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  .LBB4_2: # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    incl %eax
+; X64-NEXT:    cltq
+; X64-NEXT:    shlq $2, %rax
+; X64-NEXT:    leaq (%rax,%rax,4), %rdi
+; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    jmp .LBB4_2
+  br i1 %0, label %9, label %3
+
+  %4 = phi i32 [ %8, %3 ], [ %1, %2 ]
+  %5 = add i32 %4, 1
+  %6 = sext i32 %5 to i64
+  %7 = getelementptr inbounds %struct.A, ptr null, i64 %6
+  %8 = tail call i32 @bar(ptr %7)
+  br label %3
+
+  ret void
+}
+
+define void @foo_zext(i1 zeroext, i32) nounwind {
+; X86-LABEL: foo_zext:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB5_1
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB5_1: # %.preheader
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  .LBB5_2: # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    leal 20(,%eax,4), %eax
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll bar@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    jmp .LBB5_2
+;
+; X64-LABEL: foo_zext:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    je .LBB5_1
+; X64-NEXT:  # %bb.3:
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB5_1: # %.preheader
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  .LBB5_2: # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    incl %eax
+; X64-NEXT:    shlq $2, %rax
+; X64-NEXT:    leaq (%rax,%rax,4), %rdi
+; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    # kill: def $eax killed $eax def $rax
+; X64-NEXT:    jmp .LBB5_2
+  br i1 %0, label %9, label %3
+
+  %4 = phi i32 [ %8, %3 ], [ %1, %2 ]
+  %5 = add i32 %4, 1
+  %6 = zext i32 %5 to i64
+  %7 = getelementptr inbounds %struct.A, ptr null, i64 %6
+  %8 = tail call i32 @bar(ptr %7)
+  br label %3
+
+  ret void
+}
+
+declare i32 @bar(ptr)

@@ -31,13 +31,13 @@ def gi_vop3mods :
     GIComplexOperandMatcher<s32, "selectVOP3Mods">,
     GIComplexPatternEquiv<VOP3Mods>;
 
+def gi_vop3modsnoncanonicalizing :
+    GIComplexOperandMatcher<s32, "selectVOP3ModsNonCanonicalizing">,
+    GIComplexPatternEquiv<VOP3ModsNonCanonicalizing>;
+
 def gi_vop3_no_mods :
     GIComplexOperandMatcher<s32, "selectVOP3NoMods">,
     GIComplexPatternEquiv<VOP3NoMods>;
-
-def gi_vop3mods_nnan :
-    GIComplexOperandMatcher<s32, "selectVOP3Mods_nnan">,
-    GIComplexPatternEquiv<VOP3Mods_nnan>;
 
 def gi_vop3omods :
     GIComplexOperandMatcher<s32, "selectVOP3OMods">,
@@ -47,9 +47,53 @@ def gi_vop3pmods :
     GIComplexOperandMatcher<s32, "selectVOP3PMods">,
     GIComplexPatternEquiv<VOP3PMods>;
 
+def gi_vop3pmodsdot :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
+    GIComplexPatternEquiv<VOP3PModsDOT>;
+
+def gi_vop3pmodsneg :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
+    GIComplexPatternEquiv<VOP3PModsNeg>;
+
+def gi_wmmaopselvop3pmods :
+    GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
+    GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
+
+def gi_wmmavisrc :
+    GIComplexOperandMatcher<s32, "selectWMMAVISrc">,
+    GIComplexPatternEquiv<WMMAVISrc>;
+
+def gi_wmmamods :
+    GIComplexOperandMatcher<s32, "selectWMMAModsF32NegAbs">,
+    GIComplexPatternEquiv<WMMAModsF32NegAbs>;
+
+def gi_wmmamodsf16Neg :
+    GIComplexOperandMatcher<s32, "selectWMMAModsF16Neg">,
+    GIComplexPatternEquiv<WMMAModsF16Neg>;
+
+def gi_wmmamodsf16NegAbs :
+    GIComplexOperandMatcher<s32, "selectWMMAModsF16NegAbs">,
+    GIComplexPatternEquiv<WMMAModsF16NegAbs>;
+
+def gi_swmmacindex8 :
+    GIComplexOperandMatcher<s32, "selectSWMMACIndex8">,
+    GIComplexPatternEquiv<SWMMACIndex8>;
+
+def gi_swmmacindex16 :
+    GIComplexOperandMatcher<s32, "selectSWMMACIndex16">,
+    GIComplexPatternEquiv<SWMMACIndex16>;
+
 def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
     GIComplexPatternEquiv<VOP3OpSelMods>;
+
+def gi_vinterpmods :
+    GIComplexOperandMatcher<s32, "selectVINTERPMods">,
+    GIComplexPatternEquiv<VINTERPMods>;
+
+def gi_vinterpmods_hi :
+    GIComplexOperandMatcher<s32, "selectVINTERPModsHi">,
+    GIComplexPatternEquiv<VINTERPModsHi>;
 
 // FIXME: Why do we have both VOP3OpSel and VOP3OpSelMods?
 def gi_vop3opsel :
@@ -68,6 +112,10 @@ def gi_smrd_sgpr :
     GIComplexOperandMatcher<s64, "selectSmrdSgpr">,
     GIComplexPatternEquiv<SMRDSgpr>;
 
+def gi_smrd_sgpr_imm :
+    GIComplexOperandMatcher<s64, "selectSmrdSgprImm">,
+    GIComplexPatternEquiv<SMRDSgprImm>;
+
 def gi_flat_offset :
     GIComplexOperandMatcher<s64, "selectFlatOffset">,
     GIComplexPatternEquiv<FlatOffset>;
@@ -81,6 +129,11 @@ def gi_global_saddr :
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
     GIComplexPatternEquiv<MUBUFScratchOffset>;
+
+def gi_buf_soffset :
+    GIComplexOperandMatcher<s32, "selectBUFSOffset">,
+    GIComplexPatternEquiv<BUFSOffset>;
+
 def gi_mubuf_scratch_offen :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffen">,
     GIComplexPatternEquiv<MUBUFScratchOffen>;
@@ -92,6 +145,10 @@ def gi_flat_scratch_offset :
 def gi_flat_scratch_saddr :
     GIComplexOperandMatcher<s32, "selectScratchSAddr">,
     GIComplexPatternEquiv<ScratchSAddr>;
+
+def gi_flat_scratch_svaddr :
+    GIComplexOperandMatcher<s32, "selectScratchSVAddr">,
+    GIComplexPatternEquiv<ScratchSVAddr>;
 
 def gi_ds_1addr_1offset :
     GIComplexOperandMatcher<s32, "selectDS1Addr1Offset">,
@@ -121,13 +178,27 @@ def gi_smrd_buffer_imm32 :
     GIComplexOperandMatcher<s64, "selectSMRDBufferImm32">,
     GIComplexPatternEquiv<SMRDBufferImm32>;
 
+def gi_smrd_buffer_sgpr_imm :
+    GIComplexOperandMatcher<s64, "selectSMRDBufferSgprImm">,
+    GIComplexPatternEquiv<SMRDBufferSgprImm>;
+
+def gi_vop3_mad_mix_mods :
+    GIComplexOperandMatcher<s64, "selectVOP3PMadMixMods">,
+    GIComplexPatternEquiv<VOP3PMadMixMods>;
+
+def gi_vop3_mad_mix_mods_ext :
+    GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsExt">,
+    GIComplexPatternEquiv<VOP3PMadMixModsExt>;
+
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
-// directly before before selecting a glue-less load, so hide this
+// directly before selecting a glue-less load, so hide this
 // distinction.
 
 def : GINodeEquiv<G_LOAD, AMDGPUld_glue> {
   let CheckMMOIsNonAtomic = 1;
+  let IfSignExtend = G_SEXTLOAD;
+  let IfZeroExtend = G_ZEXTLOAD;
 }
 
 def : GINodeEquiv<G_STORE, AMDGPUst_glue> {
@@ -157,6 +228,7 @@ def : GINodeEquiv<G_ATOMICRMW_UMAX, atomic_load_umax_glue>;
 def : GINodeEquiv<G_ATOMICRMW_FADD, atomic_load_fadd_glue>;
 
 def : GINodeEquiv<G_AMDGPU_FFBH_U32, AMDGPUffbh_u32_impl>;
+def : GINodeEquiv<G_AMDGPU_FFBL_B32, AMDGPUffbl_b32_impl>;
 def : GINodeEquiv<G_AMDGPU_FMIN_LEGACY, AMDGPUfmin_legacy>;
 def : GINodeEquiv<G_AMDGPU_FMAX_LEGACY, AMDGPUfmax_legacy>;
 def : GINodeEquiv<G_AMDGPU_RCP_IFLAG, AMDGPUrcp_iflag>;
@@ -169,6 +241,8 @@ def : GINodeEquiv<G_AMDGPU_CVT_F32_UBYTE3, AMDGPUcvt_f32_ubyte3>;
 def : GINodeEquiv<G_AMDGPU_CVT_PK_I16_I32, AMDGPUpk_i16_i32_impl>;
 def : GINodeEquiv<G_AMDGPU_SMED3, AMDGPUsmed3>;
 def : GINodeEquiv<G_AMDGPU_UMED3, AMDGPUumed3>;
+def : GINodeEquiv<G_AMDGPU_FMED3, AMDGPUfmed3_impl>;
+def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
 
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD, SIbuffer_load>;
@@ -177,6 +251,7 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_UBYTE, SIbuffer_load_ubyte>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SSHORT, SIbuffer_load_short>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SBYTE, SIbuffer_load_byte>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT, SIbuffer_load_format>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_TFE, SIbuffer_load_format_tfe>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_D16, SIbuffer_load_format_d16>;
 def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT, SItbuffer_load>;
 def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT_D16, SItbuffer_load_d16>;
@@ -189,10 +264,8 @@ def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT, SItbuffer_store>;
 def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT_D16, SItbuffer_store_d16>;
 
 // FIXME: Check MMO is atomic
-def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, SIatomic_inc>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, SIatomic_dec>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, atomic_inc_glue>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, atomic_dec_glue>;
+def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap_glue>;
+def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap_glue>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, SIatomic_fmin>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_FMAX, SIatomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, atomic_load_fmin_glue>;
@@ -212,10 +285,19 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_XOR, SIbuffer_atomic_xor>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_INC, SIbuffer_atomic_inc>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_DEC, SIbuffer_atomic_dec>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FADD, SIbuffer_atomic_fadd>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FADD_BF16, SIbuffer_atomic_fadd_bf16>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMIN, SIbuffer_atomic_fmin>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMAX, SIbuffer_atomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32, SIbuffer_atomic_cond_sub_u32>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD, SIsbuffer_load>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SBYTE, SIsbuffer_load_byte>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_UBYTE, SIsbuffer_load_ubyte>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SSHORT, SIsbuffer_load_short>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_USHORT, SIsbuffer_load_ushort>;
+
+def : GINodeEquiv<G_FPTRUNC_ROUND_UPWARD, SIfptrunc_round_upward>;
+def : GINodeEquiv<G_FPTRUNC_ROUND_DOWNWARD, SIfptrunc_round_downward>;
 
 class GISelSop2Pat <
   SDPatternOperator node,
@@ -327,8 +409,11 @@ def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
 def gi_extract_swz : GICustomOperandRenderer<"renderExtractSWZ">,
   GISDNodeXFormEquiv<extract_swz>;
 
-def gi_set_glc : GICustomOperandRenderer<"renderSetGLC">,
-  GISDNodeXFormEquiv<set_glc>;
+def gi_extract_cpol_set_glc : GICustomOperandRenderer<"renderExtractCpolSetGLC">,
+  GISDNodeXFormEquiv<extract_cpol_set_glc>;
 
 def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
   GISDNodeXFormEquiv<frameindex_to_targetframeindex>;
+
+def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
+  GISDNodeXFormEquiv<FPPow2ToExponentXForm>;

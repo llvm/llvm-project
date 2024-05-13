@@ -4,4 +4,4 @@
 // CHECK: source_filename = "test/foo.c"
 // CHECK: !DIFile(filename: "test/foo.c"
 
-int main() {}
+int main(void) {}

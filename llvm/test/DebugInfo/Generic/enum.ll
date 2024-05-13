@@ -1,6 +1,9 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj < %s > %t
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
+
 ; IR generated from the following code compiled with clang -g:
 ; enum e1 { I, J = 0xffffffffU, K = 0xf000000000000000ULL } a;
 ; enum e2 { X };
@@ -12,24 +15,24 @@
 
 ; CHECK: debug_info contents
 ; CHECK: DW_TAG_enumeration_type
-; CHECK-NEXT: DW_AT_name{{.*}} = "e1"
+; CHECK-NEXT: DW_AT_name {{.*}}"e1"
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_enumerator
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_enumerator
-; CHECK-NEXT: DW_AT_name{{.*}} = "J"
+; CHECK-NEXT: DW_AT_name {{.*}}"J"
 ; CHECK-NEXT: DW_AT_const_value [DW_FORM_sdata]     (4294967295)
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_enumerator
-; CHECK-NEXT: DW_AT_name{{.*}} = "K"
+; CHECK-NEXT: DW_AT_name {{.*}}"K"
 ; CHECK-NEXT: DW_AT_const_value [DW_FORM_sdata]     (-1152921504606846976)
 
 ; Check that we retain enums that aren't referenced by any variables, etc
 ; CHECK: DW_TAG_enumeration_type
-; CHECK-NEXT: DW_AT_name{{.*}} = "e2"
+; CHECK-NEXT: DW_AT_name {{.*}}"e2"
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_enumerator
-; CHECK-NEXT: DW_AT_name{{.*}} = "X"
+; CHECK-NEXT: DW_AT_name {{.*}}"X"
 
 source_filename = "test/DebugInfo/Generic/enum.ll"
 
@@ -39,8 +42,8 @@ source_filename = "test/DebugInfo/Generic/enum.ll"
 define void @_Z4funcv() #0 !dbg !17 {
 entry:
   %b = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %b, metadata !20, metadata !22), !dbg !23
-  store i32 0, i32* %b, align 4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !20, metadata !22), !dbg !23
+  store i32 0, ptr %b, align 4, !dbg !23
   ret void, !dbg !24
 }
 

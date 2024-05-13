@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn--amdpal -run-pass=simple-register-coalescing -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn--amdpal -run-pass=register-coalescer -o - %s | FileCheck %s
 
 # Check that this doesn't crash. Check for some legitimate output.
 # CHECK: S_CBRANCH_SCC1

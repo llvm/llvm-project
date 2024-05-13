@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Synthesizable values defined outside of a loop can be used
 ; inside the loop.
@@ -13,7 +13,7 @@
 ;   }
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -34,7 +34,7 @@ for:
 
 
         bodyB:
-          store double %val, double* %A
+          store double %val, ptr %A
           br label %inner.inc
 
 
@@ -75,6 +75,6 @@ return:
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0, i1] -> MemRef_A[0] };
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   %val = sitofp i32 %j to double
-; CHECK-NEXT:                   store double %val, double* %A, align 8
+; CHECK-NEXT:                   store double %val, ptr %A, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

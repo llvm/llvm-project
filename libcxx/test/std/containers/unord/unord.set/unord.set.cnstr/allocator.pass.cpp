@@ -28,13 +28,13 @@ int main(int, char**)
 {
     {
         typedef std::unordered_set<NotConstructible,
-                                   test_hash<std::hash<NotConstructible> >,
+                                   test_hash<NotConstructible>,
                                    test_equal_to<NotConstructible>,
                                    test_allocator<NotConstructible>
                                    > C;
         C c(test_allocator<NotConstructible>(10));
         LIBCPP_ASSERT(c.bucket_count() == 0);
-        assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
+        assert(c.hash_function() == test_hash<NotConstructible>());
         assert(c.key_eq() == test_equal_to<NotConstructible>());
         assert(c.get_allocator() == test_allocator<NotConstructible>(10));
         assert(c.size() == 0);
@@ -46,13 +46,13 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     {
         typedef std::unordered_set<NotConstructible,
-                                   test_hash<std::hash<NotConstructible> >,
+                                   test_hash<NotConstructible>,
                                    test_equal_to<NotConstructible>,
                                    min_allocator<NotConstructible>
                                    > C;
         C c(min_allocator<NotConstructible>{});
         LIBCPP_ASSERT(c.bucket_count() == 0);
-        assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
+        assert(c.hash_function() == test_hash<NotConstructible>());
         assert(c.key_eq() == test_equal_to<NotConstructible>());
         assert(c.get_allocator() == min_allocator<NotConstructible>());
         assert(c.size() == 0);
@@ -64,7 +64,7 @@ int main(int, char**)
 #if TEST_STD_VER > 11
     {
         typedef NotConstructible T;
-        typedef test_hash<std::hash<T>> HF;
+        typedef test_hash<T> HF;
         typedef test_equal_to<T> Comp;
         typedef test_allocator<T> A;
         typedef std::unordered_set<T, HF, Comp, A> C;
@@ -84,7 +84,7 @@ int main(int, char**)
     }
     {
         typedef NotConstructible T;
-        typedef test_hash<std::hash<T>> HF;
+        typedef test_hash<T> HF;
         typedef test_equal_to<T> Comp;
         typedef test_allocator<T> A;
         typedef std::unordered_set<T, HF, Comp, A> C;

@@ -8,9 +8,10 @@
 
 #include "FS.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/None.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <optional>
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -19,13 +20,14 @@ PreambleFileStatusCache::PreambleFileStatusCache(llvm::StringRef MainFilePath){
   assert(llvm::sys::path::is_absolute(MainFilePath));
   llvm::SmallString<256> MainFileCanonical(MainFilePath);
   llvm::sys::path::remove_dots(MainFileCanonical, /*remove_dot_dot=*/true);
-  this->MainFilePath = std::string(MainFileCanonical.str());
+  this->MainFilePath = std::string(MainFileCanonical);
 }
 
 void PreambleFileStatusCache::update(const llvm::vfs::FileSystem &FS,
-                                     llvm::vfs::Status S) {
+                                     llvm::vfs::Status S,
+                                     llvm::StringRef File) {
   // Canonicalize path for later lookup, which is usually by absolute path.
-  llvm::SmallString<32> PathStore(S.getName());
+  llvm::SmallString<32> PathStore(File);
   if (FS.makeAbsolute(PathStore))
     return;
   llvm::sys::path::remove_dots(PathStore, /*remove_dot_dot=*/true);
@@ -36,7 +38,7 @@ void PreambleFileStatusCache::update(const llvm::vfs::FileSystem &FS,
   StatCache.insert({PathStore, std::move(S)});
 }
 
-llvm::Optional<llvm::vfs::Status>
+std::optional<llvm::vfs::Status>
 PreambleFileStatusCache::lookup(llvm::StringRef File) const {
   // Canonicalize to match the cached form.
   // Lookup tends to be first by absolute path, so no need to make absolute.
@@ -47,7 +49,7 @@ PreambleFileStatusCache::lookup(llvm::StringRef File) const {
   if (I != StatCache.end())
     // Returned Status name should always match the requested File.
     return llvm::vfs::Status::copyWithNewName(I->getValue(), File);
-  return None;
+  return std::nullopt;
 }
 
 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
@@ -72,14 +74,14 @@ PreambleFileStatusCache::getProducingFS(
       // many times (e.g. code completion) and the repeated status call is
       // likely to be cached in the underlying file system anyway.
       if (auto S = File->get()->status())
-        StatCache.update(getUnderlyingFS(), std::move(*S));
+        StatCache.update(getUnderlyingFS(), std::move(*S), Path.str());
       return File;
     }
 
     llvm::ErrorOr<llvm::vfs::Status> status(const llvm::Twine &Path) override {
       auto S = getUnderlyingFS().status(Path);
       if (S)
-        StatCache.update(getUnderlyingFS(), *S);
+        StatCache.update(getUnderlyingFS(), *S, Path.str());
       return S;
     }
 

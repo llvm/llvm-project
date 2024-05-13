@@ -1,5 +1,6 @@
 ; Make sure we don't crash when writing bitcode.
-; RUN: opt < %s -loop-deletion -o /dev/null
+; RUN: opt < %s -passes=loop-deletion -o /dev/null
+; RUN: opt < %s -passes=loop-deletion -o /dev/null --try-experimental-debuginfo-iterators
 
 define void @f() {
   br label %bb1

@@ -56,26 +56,26 @@ the subject that you can get, so it will not be discussed in this document.
 Here are some useful links:
 
 #. `cppreference.com
-   <http://en.cppreference.com/w/>`_ - an excellent
+   <https://en.cppreference.com/w/>`_ - an excellent
    reference for the STL and other parts of the standard C++ library.
+
+#. `cplusplus.com
+   <https://cplusplus.com/reference/>`_ - another excellent
+   reference like the one above.
 
 #. `C++ In a Nutshell <http://www.tempest-sw.com/cpp/>`_ - This is an O'Reilly
    book in the making.  It has a decent Standard Library Reference that rivals
    Dinkumware's, and is unfortunately no longer free since the book has been
    published.
 
-#. `C++ Frequently Asked Questions <http://www.parashift.com/c++-faq-lite/>`_.
-
-#. `SGI's STL Programmer's Guide <http://www.sgi.com/tech/stl/>`_ - Contains a
-   useful `Introduction to the STL
-   <http://www.sgi.com/tech/stl/stl_introduction.html>`_.
+#. `C++ Frequently Asked Questions <https://www.parashift.com/c++-faq-lite/>`_.
 
 #. `Bjarne Stroustrup's C++ Page
-   <http://www.stroustrup.com/C++.html>`_.
+   <https://www.stroustrup.com/C++.html>`_.
 
-#. `Bruce Eckel's Thinking in C++, 2nd ed. Volume 2 Revision 4.0
+#. `Bruce Eckel's Thinking in C++, 2nd ed. Volume 2.
    (even better, get the book)
-   <http://www.mindview.net/Books/TICPP/ThinkingInCPP2e.html>`_.
+   <https://archive.org/details/TICPP2ndEdVolTwo>`_.
 
 You are also encouraged to take a look at the :doc:`LLVM Coding Standards
 <CodingStandards>` guide which focuses on how to write maintainable code more
@@ -214,7 +214,7 @@ character array and a length) and supports the common operations available on
 
 It can be implicitly constructed using a C style null-terminated string, an
 ``std::string``, or explicitly with a character pointer and length.  For
-example, the ``StringRef`` find function is declared as:
+example, the ``StringMap`` find function is declared as:
 
 .. code-block:: c++
 
@@ -285,7 +285,7 @@ to be formatted at compile time, so it does not need a format specifier such as
 strings, especially for platform-specific types like ``size_t`` or pointer types.
 Unlike both ``printf`` and Python, it additionally fails to compile if LLVM does
 not know how to format the type.  These two properties ensure that the function
-is both safer and simpler to use than traditional formatting methods such as 
+is both safer and simpler to use than traditional formatting methods such as
 the ``printf`` family of functions.
 
 Simple formatting
@@ -303,7 +303,7 @@ multiple times, possibly with different style and/or alignment options, in any o
 the value into, and the alignment of the value within the field.  It is specified as
 an optional **alignment style** followed by a positive integral **field width**.  The
 alignment style can be one of the characters ``-`` (left align), ``=`` (center align),
-or ``+`` (right align).  The default is right aligned.  
+or ``+`` (right align).  The default is right aligned.
 
 ``style`` is an optional string consisting of a type specific that controls the
 formatting of the value.  For example, to format a floating point value as a percentage,
@@ -318,7 +318,7 @@ There are two ways to customize the formatting behavior for a type.
    type ``T`` with the appropriate static format method.
 
   .. code-block:: c++
-  
+
     namespace llvm {
       template<>
       struct format_provider<MyFooBar> {
@@ -331,16 +331,16 @@ There are two ways to customize the formatting behavior for a type.
         std::string S = formatv("{0}", X);
       }
     }
-    
+
   This is a useful extensibility mechanism for adding support for formatting your own
   custom types with your own custom Style options.  But it does not help when you want
   to extend the mechanism for formatting a type that the library already knows how to
   format.  For that, we need something else.
-    
+
 2. Provide a **format adapter** inheriting from ``llvm::FormatAdapter<T>``.
 
   .. code-block:: c++
-  
+
     namespace anything {
       struct format_int_custom : public llvm::FormatAdapter<int> {
         explicit format_int_custom(int N) : llvm::FormatAdapter<int>(N) {}
@@ -354,7 +354,7 @@ There are two ways to customize the formatting behavior for a type.
         std::string S = formatv("{0}", anything::format_int_custom(42));
       }
     }
-    
+
   If the type is detected to be derived from ``FormatAdapter<T>``, ``formatv``
   will call the
   ``format`` method on the argument passing in the specified style.  This allows
@@ -369,28 +369,28 @@ doxygen documentation or by looking at the unit test suite.
 
 
 .. code-block:: c++
-  
+
   std::string S;
   // Simple formatting of basic types and implicit string conversion.
   S = formatv("{0} ({1:P})", 7, 0.35);  // S == "7 (35.00%)"
-  
+
   // Out-of-order referencing and multi-referencing
   outs() << formatv("{0} {2} {1} {0}", 1, "test", 3); // prints "1 3 test 1"
-  
+
   // Left, right, and center alignment
   S = formatv("{0,7}",  'a');  // S == "      a";
   S = formatv("{0,-7}", 'a');  // S == "a      ";
   S = formatv("{0,=7}", 'a');  // S == "   a   ";
   S = formatv("{0,+7}", 'a');  // S == "      a";
-  
+
   // Custom styles
   S = formatv("{0:N} - {0:x} - {1:E}", 12345, 123908342); // S == "12,345 - 0x3039 - 1.24E8"
-  
+
   // Adapters
   S = formatv("{0}", fmt_align(42, AlignStyle::Center, 7));  // S == "  42   "
   S = formatv("{0}", fmt_repeat("hi", 3)); // S == "hihihi"
   S = formatv("{0}", fmt_pad("hi", 2, 6)); // S == "  hi      "
-  
+
   // Ranges
   std::vector<int> V = {8, 9, 10};
   S = formatv("{0}", make_range(V.begin(), V.end())); // S == "8, 9, 10"
@@ -567,6 +567,46 @@ rewritten as:
 
 This second form is often more readable for functions that involve multiple
 ``Expected<T>`` values as it limits the indentation required.
+
+If an ``Expected<T>`` value will be moved into an existing variable then the
+``moveInto()`` method avoids the need to name an extra variable.  This is
+useful to enable ``operator->()`` the ``Expected<T>`` value has pointer-like
+semantics.  For example:
+
+.. code-block:: c++
+
+  Expected<std::unique_ptr<MemoryBuffer>> openBuffer(StringRef Path);
+  Error processBuffer(StringRef Buffer);
+
+  Error processBufferAtPath(StringRef Path) {
+    // Try to open a buffer.
+    std::unique_ptr<MemoryBuffer> MB;
+    if (auto Err = openBuffer(Path).moveInto(MB))
+      // On error, return the Error value.
+      return Err;
+    // On success, use MB.
+    return processBuffer(MB->getBuffer());
+  }
+
+This third form works with any type that can be assigned to from ``T&&``. This
+can be useful if the ``Expected<T>`` value needs to be stored an already-declared
+``Optional<T>``. For example:
+
+.. code-block:: c++
+
+  Expected<StringRef> extractClassName(StringRef Definition);
+  struct ClassData {
+    StringRef Definition;
+    Optional<StringRef> LazyName;
+    ...
+    Error initialize() {
+      if (auto Err = extractClassName(Path).moveInto(LazyName))
+        // On error, return the Error value.
+        return Err;
+      // On success, LazyName has been initialized.
+      ...
+    }
+  };
 
 All ``Error`` instances, whether success or failure, must be either checked or
 moved from (via ``std::move`` or a return) before they are destructed.
@@ -1223,7 +1263,7 @@ Define your statistic like this:
 
 .. code-block:: c++
 
-  #define DEBUG_TYPE "mypassname"   // This goes before any #includes.
+  #define DEBUG_TYPE "mypassname"   // This goes after any #includes.
   STATISTIC(NumXForms, "The # of times I did stuff");
 
 The ``STATISTIC`` macro defines a static variable, whose name is specified by
@@ -1585,6 +1625,40 @@ SmallVector has grown a few other minor advantages over std::vector, causing
    and is no longer "private to the implementation". A name like
    ``SmallVectorHeader`` might be more appropriate.
 
+.. _dss_pagedvector:
+
+llvm/ADT/PagedVector.h
+^^^^^^^^^^^^^^^^^^^^^^
+
+``PagedVector<Type, PageSize>`` is a random access container that allocates
+``PageSize`` elements of type ``Type`` when the first element of a page is
+accessed via the ``operator[]``.  This is useful for cases where the number of
+elements is known in advance; their actual initialization is expensive; and
+they are sparsely used. This utility uses page-granular lazy initialization
+when the element is accessed. When the number of used pages is small
+significant memory savings can be achieved.
+
+The main advantage is that a ``PagedVector`` allows to delay the actual
+allocation of the page until it's needed, at the extra cost of one pointer per
+page and one extra indirection when accessing elements with their positional
+index.
+
+In order to minimise the memory footprint of this container, it's important to
+balance the PageSize so that it's not too small (otherwise the overhead of the
+pointer per page might become too high) and not too big (otherwise the memory
+is wasted if the page is not fully used).
+
+Moreover, while retaining the order of the elements based on their insertion
+index, like a vector, iterating over the elements via ``begin()`` and ``end()``
+is not provided in the API, due to the fact accessing the elements in order
+would allocate all the iterated pages, defeating memory savings and the purpose
+of the ``PagedVector``.
+
+Finally a ``materialized_begin()`` and ``materialized_end`` iterators are
+provided to access the elements associated to the accessed pages, which could
+speed up operations that need to iterate over initialized elements in a
+non-ordered manner.
+
 .. _dss_vector:
 
 <vector>
@@ -1665,14 +1739,15 @@ the traits class is informed when an element is inserted or removed from the
 list, and ``ilist``\ s are guaranteed to support a constant-time splice
 operation.
 
+An ``ilist`` and an ``iplist`` are ``using`` aliases to one another and the
+latter only currently exists for historical purposes.
+
 These properties are exactly what we want for things like ``Instruction``\ s and
 basic blocks, which is why these are implemented with ``ilist``\ s.
 
 Related classes of interest are explained in the following subsections:
 
 * :ref:`ilist_traits <dss_ilist_traits>`
-
-* :ref:`iplist <dss_iplist>`
 
 * :ref:`llvm/ADT/ilist_node.h <dss_ilist_node>`
 
@@ -1714,19 +1789,8 @@ For example:
 ilist_traits
 ^^^^^^^^^^^^
 
-``ilist_traits<T>`` is ``ilist<T>``'s customization mechanism. ``iplist<T>``
-(and consequently ``ilist<T>``) publicly derive from this traits class.
-
-.. _dss_iplist:
-
-iplist
-^^^^^^
-
-``iplist<T>`` is ``ilist<T>``'s base and as such supports a slightly narrower
-interface.  Notably, inserters from ``T&`` are absent.
-
-``ilist_traits<T>`` is a public base of this class and can be used for a wide
-variety of customizations.
+``ilist_traits<T>`` is ``ilist<T>``'s customization mechanism. ``ilist<T>``
+publicly derives from this traits class.
 
 .. _dss_ilist_node:
 
@@ -2158,10 +2222,9 @@ membership.
 Other Set-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multiset and the various
-"hash_set" like containers (whether from C++ TR1 or from the SGI library).  We
-never use hash_set and unordered_set because they are generally very expensive
-(each insertion requires a malloc) and very non-portable.
+The STL provides several other options, such as std::multiset and
+std::unordered_set.  We never use containers like unordered_set because
+they are generally very expensive (each insertion requires a malloc).
 
 std::multiset is useful if you're not interested in elimination of duplicates,
 but has all the drawbacks of :ref:`std::set <dss_set>`.  A sorted vector
@@ -2260,6 +2323,10 @@ construct, but cheap to compare against.  The DenseMapInfo is responsible for
 defining the appropriate comparison and hashing methods for each alternate key
 type used.
 
+DenseMap.h also contains a SmallDenseMap variant, that similar to
+:ref:`SmallVector <dss_smallvector>` performs no heap allocation until the
+number of elements in the template parameter N are exceeded.
+
 .. _dss_valuemap:
 
 llvm/IR/ValueMap.h
@@ -2284,6 +2351,18 @@ itself to avoid allocations.
 
 The IntervalMap iterators are quite big, so they should not be passed around as
 STL iterators.  The heavyweight iterators allow a smaller data structure.
+
+.. _dss_intervaltree:
+
+llvm/ADT/IntervalTree.h
+^^^^^^^^^^^^^^^^^^^^^^^
+
+``llvm::IntervalTree`` is a light tree data structure to hold intervals. It
+allows finding all intervals that overlap with any given point. At this time,
+it does not support any deletion or rebalancing operations.
+
+The IntervalTree is designed to be set up once, and then queried without any
+further additions.
 
 .. _dss_map:
 
@@ -2349,10 +2428,9 @@ operations is logarithmic in the size of the original map.
 Other Map-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multimap and the various
-"hash_map" like containers (whether from C++ TR1 or from the SGI library).  We
-never use hash_set and unordered_set because they are generally very expensive
-(each insertion requires a malloc) and very non-portable.
+The STL provides several other options, such as std::multimap and
+std::unordered_map.  We never use containers like unordered_map because
+they are generally very expensive (each insertion requires a malloc).
 
 std::multimap is useful if you want to map a key to multiple values, but has all
 the drawbacks of std::map.  A sorted vector or some other approach is almost
@@ -2360,10 +2438,10 @@ always better.
 
 .. _ds_bit:
 
-Bit storage containers (BitVector, SparseBitVector, CoalescingBitVector)
+Bit storage containers
 ------------------------------------------------------------------------
 
-There are three bit storage containers, and choosing when to use each is
+There are several bit storage containers, and choosing when to use each is
 relatively straightforward.
 
 One additional option is ``std::vector<bool>``: we discourage its use for two
@@ -2429,6 +2507,99 @@ of set bits are large. It's a better choice than SparseBitVector when find()
 operations must have fast, predictable performance. However, it's not a good
 choice for representing sets which have lots of very short ranges. E.g. the set
 `{2*x : x \in [0, n)}` would be a pathological input.
+
+.. _utility_functions:
+
+Useful Utility Functions
+========================
+
+LLVM implements a number of general utility functions used across the
+codebase. You can find the most common ones in ``STLExtras.h``
+(`doxygen <https://llvm.org/doxygen/STLExtras_8h.html>`__). Some of these wrap
+well-known C++ standard library functions, while others are unique to LLVM.
+
+.. _uf_iteration:
+
+Iterating over ranges
+---------------------
+
+Sometimes you may want to iterate over more than range at a time or know the
+index of the index. LLVM provides custom utility functions to make that easier,
+without having to manually manage all iterators and/or indices:
+
+.. _uf_zip:
+
+The ``zip``\ * functions
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``zip``\ * functions allow for iterating over elements from two or more ranges
+at the same time. For example:
+
+.. code-block:: c++
+
+    SmallVector<size_t> Counts = ...;
+    char Letters[26] = ...;
+    for (auto [Letter, Count] : zip_equal(Letters, Counts))
+      errs() << Letter << ": " << Count << "\n";
+
+Note that the elements are provided through a 'reference wrapper' proxy type
+(tuple of references), which combined with the structured bindings declaration
+makes ``Letter`` and ``Count`` references to range elements. Any modification
+to these references will affect the elements of ``Letters`` or ``Counts``.
+
+The ``zip``\ * functions support temporary ranges, for example:
+
+.. code-block:: c++
+
+    for (auto [Letter, Count] : zip(SmallVector<char>{'a', 'b', 'c'}, Counts))
+      errs() << Letter << ": " << Count << "\n";
+
+The difference between the functions in the ``zip`` family is how they behave
+when the supplied ranges have different lengths:
+
+* ``zip_equal`` -- requires all input ranges have the same length.
+* ``zip`` -- iteration stops when the end of the shortest range is reached.
+* ``zip_first`` -- requires the first range is the shortest one.
+* ``zip_longest`` -- iteration continues until the end of the longest range is
+  reached. The non-existent elements of shorter ranges are replaced with
+  ``std::nullopt``.
+
+The length requirements are checked with ``assert``\ s.
+
+As a rule of thumb, prefer to use ``zip_equal`` when you expect all
+ranges to have the same lengths, and consider alternative ``zip`` functions only
+when this is not the case. This is because ``zip_equal`` clearly communicates
+this same-length assumption and has the best (release-mode) runtime performance.
+
+.. _uf_enumerate:
+
+``enumerate``
+^^^^^^^^^^^^^
+
+The ``enumerate`` functions allows to iterate over one or more ranges while
+keeping track of the index of the current loop iteration. For example:
+
+.. code-block:: c++
+
+    for (auto [Idx, BB, Value] : enumerate(Phi->blocks(),
+                                           Phi->incoming_values()))
+      errs() << "#" << Idx << " " << BB->getName() << ": " << *Value << "\n";
+
+The current element index is provided as the first structured bindings element.
+Alternatively, the index and the element value can be obtained with the
+``index()`` and ``value()`` member functions:
+
+.. code-block:: c++
+
+    char Letters[26] = ...;
+    for (auto En : enumerate(Letters))
+      errs() << "#" << En.index() << " " << En.value() << "\n";
+
+Note that ``enumerate`` has ``zip_equal`` semantics and provides elements
+through a 'reference wrapper' proxy, which makes them modifiable when accessed
+through structured bindings or the ``value()`` member function. When two or more
+ranges are passed, ``enumerate`` requires them to have equal lengths (checked
+with an ``assert``).
 
 .. _debugging:
 
@@ -2576,24 +2747,6 @@ pointer from an iterator is very straight-forward.  Assuming that ``i`` is a
   Instruction* pinst = &*i; // Grab pointer to instruction reference
   const Instruction& inst = *j;
 
-However, the iterators you'll be working with in the LLVM framework are special:
-they will automatically convert to a ptr-to-instance type whenever they need to.
-Instead of dereferencing the iterator and then taking the address of the result,
-you can simply assign the iterator to the proper pointer type and you get the
-dereference and address-of operation as a result of the assignment (behind the
-scenes, this is a result of overloading casting mechanisms).  Thus the second
-line of the last example,
-
-.. code-block:: c++
-
-  Instruction *pinst = &*i;
-
-is semantically equivalent to
-
-.. code-block:: c++
-
-  Instruction *pinst = i;
-
 It's also possible to turn a class pointer into the corresponding iterator, and
 this is a constant time operation (very efficient).  The following code snippet
 illustrates use of the conversion constructors provided by LLVM iterators.  By
@@ -2607,18 +2760,6 @@ obtaining it via iteration over some structure:
     ++it; // After this line, it refers to the instruction after *inst
     if (it != inst->getParent()->end()) errs() << *it << "\n";
   }
-
-Unfortunately, these implicit conversions come at a cost; they prevent these
-iterators from conforming to standard iterator conventions, and thus from being
-usable with standard algorithms and containers.  For example, they prevent the
-following code, where ``B`` is a ``BasicBlock``, from compiling:
-
-.. code-block:: c++
-
-  llvm::SmallVector<llvm::Instruction *, 16>(B->begin(), B->end());
-
-Because of this, these implicit conversions may be removed some day, and
-``operator*`` changed to return a pointer instead of a reference.
 
 .. _iterate_complex:
 
@@ -2797,7 +2938,7 @@ which is a pointer to an integer on the run time stack.
 There are essentially three ways to insert an ``Instruction`` into an existing
 sequence of instructions that form a ``BasicBlock``:
 
-* Insertion into an explicit instruction list
+* Insertion into the instruction list of the ``BasicBlock``
 
   Given a ``BasicBlock* pb``, an ``Instruction* pi`` within that ``BasicBlock``,
   and a newly-created instruction we wish to insert before ``*pi``, we do the
@@ -2809,7 +2950,7 @@ sequence of instructions that form a ``BasicBlock``:
       Instruction *pi = ...;
       auto *newInst = new Instruction(...);
 
-      pb->getInstList().insert(pi, newInst); // Inserts newInst before pi in pb
+      newInst->insertBefore(pi); // Inserts newInst before pi
 
   Appending to the end of a ``BasicBlock`` is so common that the ``Instruction``
   class and ``Instruction``-derived classes provide constructors which take a
@@ -2821,7 +2962,7 @@ sequence of instructions that form a ``BasicBlock``:
     BasicBlock *pb = ...;
     auto *newInst = new Instruction(...);
 
-    pb->getInstList().push_back(newInst); // Appends newInst to pb
+    newInst->insertInto(pb, pb->end()); // Appends newInst to pb
 
   becomes:
 
@@ -2832,37 +2973,6 @@ sequence of instructions that form a ``BasicBlock``:
 
   which is much cleaner, especially if you are creating long instruction
   streams.
-
-* Insertion into an implicit instruction list
-
-  ``Instruction`` instances that are already in ``BasicBlock``\ s are implicitly
-  associated with an existing instruction list: the instruction list of the
-  enclosing basic block.  Thus, we could have accomplished the same thing as the
-  above code without being given a ``BasicBlock`` by doing:
-
-  .. code-block:: c++
-
-    Instruction *pi = ...;
-    auto *newInst = new Instruction(...);
-
-    pi->getParent()->getInstList().insert(pi, newInst);
-
-  In fact, this sequence of steps occurs so frequently that the ``Instruction``
-  class and ``Instruction``-derived classes provide constructors which take (as
-  a default parameter) a pointer to an ``Instruction`` which the newly-created
-  ``Instruction`` should precede.  That is, ``Instruction`` constructors are
-  capable of inserting the newly-created instance into the ``BasicBlock`` of a
-  provided instruction, immediately before that instruction.  Using an
-  ``Instruction`` constructor with a ``insertBefore`` (default) parameter, the
-  above code becomes:
-
-  .. code-block:: c++
-
-    Instruction* pi = ...;
-    auto *newInst = new Instruction(..., pi);
-
-  which is much cleaner, especially if you're creating a lot of instructions and
-  adding them to ``BasicBlock``\ s.
 
 * Insertion using an instance of ``IRBuilder``
 
@@ -2947,8 +3057,7 @@ Deleting Instructions
     AllocaInst* instToReplace = ...;
     BasicBlock::iterator ii(instToReplace);
 
-    ReplaceInstWithValue(instToReplace->getParent()->getInstList(), ii,
-                         Constant::getNullValue(PointerType::getUnqual(Type::Int32Ty)));
+    ReplaceInstWithValue(ii, Constant::getNullValue(PointerType::getUnqual(Type::Int32Ty)));
 
 * ``ReplaceInstWithInst``
 
@@ -2963,7 +3072,7 @@ Deleting Instructions
     AllocaInst* instToReplace = ...;
     BasicBlock::iterator ii(instToReplace);
 
-    ReplaceInstWithInst(instToReplace->getParent()->getInstList(), ii,
+    ReplaceInstWithInst(instToReplace->getParent(), ii,
                         new AllocaInst(Type::Int32Ty, 0, "ptrToReplacedInt"));
 
 
@@ -3421,16 +3530,13 @@ Important Public Members of the ``Module`` class
 
 * | ``Module::global_iterator`` - Typedef for global variable list iterator
   | ``Module::const_global_iterator`` - Typedef for const_iterator.
+  | ``Module::insertGlobalVariable()`` - Inserts a global variable to the list.
+  | ``Module::removeGlobalVariable()`` - Removes a global variable from the list.
+  | ``Module::eraseGlobalVariable()`` - Removes a global variable from the list and deletes it.
   | ``global_begin()``, ``global_end()``, ``global_size()``, ``global_empty()``
 
   These are forwarding methods that make it easy to access the contents of a
   ``Module`` object's GlobalVariable_ list.
-
-* ``Module::GlobalListType &getGlobalList()``
-
-  Returns the list of GlobalVariable_\ s.  This is necessary to use when you
-  need to update the list or perform a complex action that doesn't have a
-  forwarding method.
 
 ----------------
 
@@ -3873,16 +3979,11 @@ Important Public Members of the ``Function``
 
 * | ``Function::iterator`` - Typedef for basic block list iterator
   | ``Function::const_iterator`` - Typedef for const_iterator.
-  | ``begin()``, ``end()``, ``size()``, ``empty()``
+  | ``begin()``, ``end()``, ``size()``, ``empty()``, ``insert()``,
+    ``splice()``, ``erase()``
 
   These are forwarding methods that make it easy to access the contents of a
   ``Function`` object's BasicBlock_ list.
-
-* ``Function::BasicBlockListType &getBasicBlockList()``
-
-  Returns the list of BasicBlock_\ s.  This is necessary to use when you need to
-  update the list or perform a complex action that doesn't have a forwarding
-  method.
 
 * | ``Function::arg_iterator`` - Typedef for the argument list iterator
   | ``Function::const_arg_iterator`` - Typedef for const_iterator.
@@ -4018,23 +4119,13 @@ Important Public Members of the ``BasicBlock`` class
 * | ``BasicBlock::iterator`` - Typedef for instruction list iterator
   | ``BasicBlock::const_iterator`` - Typedef for const_iterator.
   | ``begin()``, ``end()``, ``front()``, ``back()``,
-    ``size()``, ``empty()``
+    ``size()``, ``empty()``, ``splice()``
     STL-style functions for accessing the instruction list.
 
   These methods and typedefs are forwarding functions that have the same
   semantics as the standard library methods of the same names.  These methods
   expose the underlying instruction list of a basic block in a way that is easy
-  to manipulate.  To get the full complement of container operations (including
-  operations to update the list), you must use the ``getInstList()`` method.
-
-* ``BasicBlock::InstListType &getInstList()``
-
-  This method is used to get access to the underlying container that actually
-  holds the Instructions.  This method must be used when there isn't a
-  forwarding function in the ``BasicBlock`` class for the operation that you
-  would like to perform.  Because there are no forwarding functions for
-  "updating" operations, you need to use this if you want to update the contents
-  of a ``BasicBlock``.
+  to manipulate.
 
 * ``Function *getParent()``
 
@@ -4055,5 +4146,3 @@ The ``Argument`` class
 This subclass of Value defines the interface for incoming formal arguments to a
 function.  A Function maintains a list of its formal arguments.  An argument has
 a pointer to the parent Function.
-
-

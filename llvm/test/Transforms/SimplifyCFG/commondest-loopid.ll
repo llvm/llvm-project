@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -S | FileCheck %s
 ;
 ; Ensure that the loop metadata is preserved when converting the
 ; conditional branch to an unconditional.

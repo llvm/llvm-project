@@ -1,42 +1,42 @@
 ;; Test we merge non-inlined profile only once with '-sample-profile-merge-inlinee'
 ; RUN: opt < %s -passes='function(callsite-splitting),sample-profile' -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -S | FileCheck %s
 
-%struct.bitmap = type { i32, %struct.bitmap* }
+%struct.bitmap = type { i32, ptr }
 
 ; CHECK-LABEL: @main
-define void @main(i1 %c, %struct.bitmap* %a_elt, %struct.bitmap* %b_elt) #0 !dbg !6 {
+define void @main(i1 %c, ptr %a_elt, ptr %b_elt) #0 !dbg !6 {
 entry:
   br label %Top
 
 Top:
-  %tobool1 = icmp eq %struct.bitmap* %a_elt, null
+  %tobool1 = icmp eq ptr %a_elt, null
   br i1 %tobool1, label %CallSiteBB, label %NextCond
 
 NextCond:
-  %cmp = icmp ne %struct.bitmap* %b_elt, null
+  %cmp = icmp ne ptr %b_elt, null
   br i1 %cmp, label %CallSiteBB, label %End
 
 CallSiteBB:
   %p = phi i1 [0, %Top], [%c, %NextCond]
 ;; The call site is replicated by callsite-splitting pass and they end up share the same sample profile
-; CHECK: call void @_Z3sumii(%struct.bitmap* null, %struct.bitmap* null, %struct.bitmap* %b_elt, i1 false)
-; CHECK: call void @_Z3sumii(%struct.bitmap* nonnull %a_elt, %struct.bitmap* nonnull %a_elt, %struct.bitmap* nonnull %b_elt, i1 %c)
-  call void @_Z3sumii(%struct.bitmap* %a_elt, %struct.bitmap* %a_elt, %struct.bitmap* %b_elt, i1 %p), !dbg !8
+; CHECK: call void @_Z3sumii(ptr null, ptr null, ptr %b_elt, i1 false)
+; CHECK: call void @_Z3sumii(ptr nonnull %a_elt, ptr nonnull %a_elt, ptr nonnull %b_elt, i1 %c)
+  call void @_Z3sumii(ptr %a_elt, ptr %a_elt, ptr %b_elt, i1 %p), !dbg !8
   br label %End
 
 End:
   ret void
 }
 
-define void @_Z3sumii(%struct.bitmap* %dst_elt, %struct.bitmap* %a_elt, %struct.bitmap* %b_elt, i1 %c)  #0 !dbg !12 {
+define void @_Z3sumii(ptr %dst_elt, ptr %a_elt, ptr %b_elt, i1 %c)  #0 !dbg !12 {
 entry:
-  %tobool = icmp ne %struct.bitmap* %a_elt, null
-  %tobool1 = icmp ne %struct.bitmap* %b_elt, null
+  %tobool = icmp ne ptr %a_elt, null
+  %tobool1 = icmp ne ptr %b_elt, null
   %or.cond = and i1 %tobool, %tobool1, !dbg !13
   br i1 %or.cond, label %Cond, label %Big
 
 Cond:
-  %cmp = icmp eq %struct.bitmap*  %dst_elt, %a_elt, !dbg !14
+  %cmp = icmp eq ptr  %dst_elt, %a_elt, !dbg !14
   br i1 %cmp, label %Small, label %Big, !dbg !15
 
 Small:
@@ -73,7 +73,7 @@ attributes #0 = { "use-sample-profile" }
 !15 = !DILocation(line: 6, scope: !12)
 
 
-;; Check the profile of funciton sum is only merged once though the original callsite is replicted.
+;; Check the profile of function sum is only merged once though the original callsite is replicted.
 ; CHECK: name: "sum"
 ; CHECK-NEXT: {!"function_entry_count", i64 46}
 ; CHECK: !{!"branch_weights", i32 11, i32 37}

@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
-
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <string>
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -78,11 +78,10 @@ public:
       : IRMaterializationUnit(ES, MO, std::move(TSM)), Parent(Parent) {}
 
   PartitioningIRMaterializationUnit(
-      ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
-      SymbolStringPtr InitSymbol, SymbolNameToDefinitionMap SymbolToDefinition,
+      ThreadSafeModule TSM, Interface I,
+      SymbolNameToDefinitionMap SymbolToDefinition,
       CompileOnDemandLayer &Parent)
-      : IRMaterializationUnit(std::move(TSM), std::move(SymbolFlags),
-                              std::move(InitSymbol),
+      : IRMaterializationUnit(std::move(TSM), std::move(I),
                               std::move(SymbolToDefinition)),
         Parent(Parent) {}
 
@@ -103,14 +102,14 @@ private:
   CompileOnDemandLayer &Parent;
 };
 
-Optional<CompileOnDemandLayer::GlobalValueSet>
+std::optional<CompileOnDemandLayer::GlobalValueSet>
 CompileOnDemandLayer::compileRequested(GlobalValueSet Requested) {
   return std::move(Requested);
 }
 
-Optional<CompileOnDemandLayer::GlobalValueSet>
+std::optional<CompileOnDemandLayer::GlobalValueSet>
 CompileOnDemandLayer::compileWholeModule(GlobalValueSet Requested) {
-  return None;
+  return std::nullopt;
 }
 
 CompileOnDemandLayer::CompileOnDemandLayer(
@@ -184,6 +183,8 @@ void CompileOnDemandLayer::emit(
 
 CompileOnDemandLayer::PerDylibResources &
 CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
+  std::lock_guard<std::mutex> Lock(CODLayerMutex);
+
   auto I = DylibResources.find(&TargetD);
   if (I == DylibResources.end()) {
     auto &ImplD =
@@ -236,7 +237,7 @@ void CompileOnDemandLayer::expandPartition(GlobalValueSet &Partition) {
   bool ContainsGlobalVariables = false;
   std::vector<const GlobalValue *> GVsToAdd;
 
-  for (auto *GV : Partition)
+  for (const auto *GV : Partition)
     if (isa<GlobalAlias>(GV))
       GVsToAdd.push_back(
           cast<GlobalValue>(cast<GlobalAlias>(GV)->getAliasee()));
@@ -251,7 +252,7 @@ void CompileOnDemandLayer::expandPartition(GlobalValueSet &Partition) {
     for (auto &G : M.globals())
       GVsToAdd.push_back(&G);
 
-  for (auto *GV : GVsToAdd)
+  for (const auto *GV : GVsToAdd)
     Partition.insert(GV);
 }
 
@@ -286,7 +287,7 @@ void CompileOnDemandLayer::emitPartition(
   // Take a 'None' partition to mean the whole module (as opposed to an empty
   // partition, which means "materialize nothing"). Emit the whole module
   // unmodified to the base layer.
-  if (GVsToExtract == None) {
+  if (GVsToExtract == std::nullopt) {
     Defs.clear();
     BaseLayer.emit(std::move(R), std::move(TSM));
     return;
@@ -296,7 +297,9 @@ void CompileOnDemandLayer::emitPartition(
   if (GVsToExtract->empty()) {
     if (auto Err =
             R->replace(std::make_unique<PartitioningIRMaterializationUnit>(
-                std::move(TSM), R->getSymbols(), R->getInitializerSymbol(),
+                std::move(TSM),
+                MaterializationUnit::Interface(R->getSymbols(),
+                                               R->getInitializerSymbol()),
                 std::move(Defs), *this))) {
       getExecutionSession().reportError(std::move(Err));
       R->failMaterialization();
@@ -333,13 +336,13 @@ void CompileOnDemandLayer::emitPartition(
         {
           std::vector<const GlobalValue*> HashGVs;
           HashGVs.reserve(GVsToExtract->size());
-          for (auto *GV : *GVsToExtract)
+          for (const auto *GV : *GVsToExtract)
             HashGVs.push_back(GV);
           llvm::sort(HashGVs, [](const GlobalValue *LHS, const GlobalValue *RHS) {
               return LHS->getName() < RHS->getName();
             });
           hash_code HC(0);
-          for (auto *GV : HashGVs) {
+          for (const auto *GV : HashGVs) {
             assert(GV->hasName() && "All GVs to extract should be named by now");
             auto GVName = GV->getName();
             HC = hash_combine(HC, hash_combine_range(GVName.begin(), GVName.end()));

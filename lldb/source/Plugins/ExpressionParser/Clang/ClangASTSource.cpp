@@ -18,9 +18,9 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/SourceManager.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
@@ -77,14 +77,14 @@ ClangASTSource::~ClangASTSource() {
   // query the deleted ASTContext for additional type information.
   // We unregister from *all* scratch ASTContexts in case a type got exported
   // to a scratch AST that isn't the best fitting scratch ASTContext.
-  TypeSystemClang *scratch_ast = ScratchTypeSystemClang::GetForTarget(
+  lldb::TypeSystemClangSP scratch_ts_sp = ScratchTypeSystemClang::GetForTarget(
       *m_target, ScratchTypeSystemClang::DefaultAST, false);
 
-  if (!scratch_ast)
+  if (!scratch_ts_sp)
     return;
 
   ScratchTypeSystemClang *default_scratch_ast =
-      llvm::cast<ScratchTypeSystemClang>(scratch_ast);
+      llvm::cast<ScratchTypeSystemClang>(scratch_ts_sp.get());
   // Unregister from the default scratch AST (and all sub-ASTs).
   default_scratch_ast->ForgetSource(m_ast_context, *m_ast_importer_sp);
 }
@@ -183,36 +183,34 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
 }
 
 TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (const NamespaceDecl *namespace_context =
           dyn_cast<NamespaceDecl>(decl->getDeclContext())) {
     ClangASTImporter::NamespaceMapSP namespace_map =
         m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
-    LLDB_LOGV(log, "      CTD Inspecting namespace map{0} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
-
     if (!namespace_map)
       return nullptr;
+
+    LLDB_LOGV(log, "      CTD Inspecting namespace map{0} ({1} entries)",
+              namespace_map.get(), namespace_map->size());
 
     for (const ClangASTImporter::NamespaceMapItem &item : *namespace_map) {
       LLDB_LOG(log, "      CTD Searching namespace {0} in module {1}",
                item.second.GetName(), item.first->GetFileSpec().GetFilename());
 
-      TypeList types;
-
       ConstString name(decl->getName());
 
-      item.first->FindTypesInNamespace(name, item.second, UINT32_MAX, types);
+      // Create a type matcher using the CompilerDeclContext for the namespace
+      // as the context (item.second) and search for the name inside of this
+      // context.
+      TypeQuery query(item.second, name);
+      TypeResults results;
+      item.first->FindTypes(query, results);
 
-      for (uint32_t ti = 0, te = types.GetSize(); ti != te; ++ti) {
-        lldb::TypeSP type = types.GetTypeAtIndex(ti);
-
-        if (!type)
-          continue;
-
-        CompilerType clang_type(type->GetFullCompilerType());
+      for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types()) {
+        CompilerType clang_type(type_sp->GetFullCompilerType());
 
         if (!ClangUtil::IsClangType(clang_type))
           continue;
@@ -232,24 +230,15 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
       }
     }
   } else {
-    TypeList types;
-
-    ConstString name(decl->getName());
-
     const ModuleList &module_list = m_target->GetImages();
+    // Create a type matcher using a CompilerDecl. Each TypeSystem class knows
+    // how to fill out a CompilerContext array using a CompilerDecl.
+    TypeQuery query(CompilerDecl(m_clang_ast_context, (void *)decl));
+    TypeResults results;
+    module_list.FindTypes(nullptr, query, results);
+    for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types()) {
 
-    bool exact_match = false;
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    module_list.FindTypes(nullptr, name, exact_match, UINT32_MAX,
-                          searched_symbol_files, types);
-
-    for (uint32_t ti = 0, te = types.GetSize(); ti != te; ++ti) {
-      lldb::TypeSP type = types.GetTypeAtIndex(ti);
-
-      if (!type)
-        continue;
-
-      CompilerType clang_type(type->GetFullCompilerType());
+      CompilerType clang_type(type_sp->GetFullCompilerType());
 
       if (!ClangUtil::IsClangType(clang_type))
         continue;
@@ -262,13 +251,6 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
 
       TagDecl *candidate_tag_decl = const_cast<TagDecl *>(tag_type->getDecl());
 
-      // We have found a type by basename and we need to make sure the decl
-      // contexts are the same before we can try to complete this type with
-      // another
-      if (!TypeSystemClang::DeclsAreEquivalent(const_cast<TagDecl *>(decl),
-                                               candidate_tag_decl))
-        continue;
-
       if (TypeSystemClang::GetCompleteDecl(&candidate_tag_decl->getASTContext(),
                                            candidate_tag_decl))
         return candidate_tag_decl;
@@ -278,7 +260,7 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
 }
 
 void ClangASTSource::CompleteType(TagDecl *tag_decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     LLDB_LOG(log,
@@ -307,7 +289,7 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
 }
 
 void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOG(log,
            "    [CompleteObjCInterfaceDecl] on (ASTContext*){0} '{1}' "
@@ -387,7 +369,7 @@ void ClangASTSource::FindExternalLexicalDecls(
     llvm::function_ref<bool(Decl::Kind)> predicate,
     llvm::SmallVectorImpl<Decl *> &decls) {
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   const Decl *context_decl = dyn_cast<Decl>(decl_context);
 
@@ -404,7 +386,7 @@ void ClangASTSource::FindExternalLexicalDecls(
     if (const NamedDecl *context_named_decl = dyn_cast<NamedDecl>(context_decl))
       LLDB_LOG(log,
                "FindExternalLexicalDecls on (ASTContext*){0} '{1}' in "
-               "'{2}' (%sDecl*){3}",
+               "'{2}' ({3}Decl*){4}",
                m_ast_context, m_clang_ast_context->getDisplayName(),
                context_named_decl->getNameAsString().c_str(),
                context_decl->getDeclKindName(),
@@ -479,7 +461,10 @@ void ClangASTSource::FindExternalLexicalDecls(
                    decl->getDeclKindName(), ast_dump);
       }
 
-      CopyDecl(decl);
+      Decl *copied_decl = CopyDecl(decl);
+
+      if (!copied_decl)
+        continue;
 
       // FIXME: We should add the copied decl to the 'decls' list. This would
       // add the copied Decl into the DeclContext and make sure that we
@@ -489,6 +474,12 @@ void ClangASTSource::FindExternalLexicalDecls(
       // lookup issues later on.
       // We can't just add them for now as the ASTImporter already added the
       // decl into the DeclContext and this would add it twice.
+
+      if (FieldDecl *copied_field = dyn_cast<FieldDecl>(copied_decl)) {
+        QualType copied_field_type = copied_field->getType();
+
+        m_ast_importer_sp->RequireCompleteType(copied_field_type);
+      }
     } else {
       SkippedDecls = true;
     }
@@ -504,8 +495,6 @@ void ClangASTSource::FindExternalLexicalDecls(
     // is consulted again when a clang::DeclContext::lookup is called.
     const_cast<DeclContext *>(decl_context)->setMustBuildLookupTable();
   }
-
-  return;
 }
 
 void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
@@ -513,7 +502,7 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
 
   const ConstString name(context.m_decl_name.getAsString().c_str());
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     if (!context.m_decl_context)
@@ -581,8 +570,8 @@ bool ClangASTSource::IgnoreName(const ConstString name,
 
   // The ClangASTSource is not responsible for finding $-names.
   return name_string_ref.empty() ||
-         (ignore_all_dollar_names && name_string_ref.startswith("$")) ||
-         name_string_ref.startswith("_$");
+         (ignore_all_dollar_names && name_string_ref.starts_with("$")) ||
+         name_string_ref.starts_with("_$");
 }
 
 void ClangASTSource::FindExternalVisibleDecls(
@@ -590,7 +579,7 @@ void ClangASTSource::FindExternalVisibleDecls(
     CompilerDeclContext &namespace_decl) {
   assert(m_ast_context);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   SymbolContextList sc_list;
 
@@ -606,41 +595,40 @@ void ClangASTSource::FindExternalVisibleDecls(
   if (context.m_found_type)
     return;
 
-  TypeList types;
-  const bool exact_match = true;
-  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-  if (module_sp && namespace_decl)
-    module_sp->FindTypesInNamespace(name, namespace_decl, 1, types);
-  else {
-    m_target->GetImages().FindTypes(module_sp.get(), name, exact_match, 1,
-                                    searched_symbol_files, types);
+  lldb::TypeSP type_sp;
+  TypeResults results;
+  if (module_sp && namespace_decl) {
+    // Match the name in the specified decl context.
+    TypeQuery query(namespace_decl, name, TypeQueryOptions::e_find_one);
+    module_sp->FindTypes(query, results);
+    type_sp = results.GetFirstType();
+  } else {
+    // Match the exact name of the type at the root level.
+    TypeQuery query(name.GetStringRef(), TypeQueryOptions::e_exact_match |
+                                             TypeQueryOptions::e_find_one);
+    m_target->GetImages().FindTypes(nullptr, query, results);
+    type_sp = results.GetFirstType();
   }
 
-  if (size_t num_types = types.GetSize()) {
-    for (size_t ti = 0; ti < num_types; ++ti) {
-      lldb::TypeSP type_sp = types.GetTypeAtIndex(ti);
+  if (type_sp) {
+    if (log) {
+      const char *name_string = type_sp->GetName().GetCString();
 
-      if (log) {
-        const char *name_string = type_sp->GetName().GetCString();
+      LLDB_LOG(log, "  CAS::FEVD Matching type found for \"{0}\": {1}", name,
+               (name_string ? name_string : "<anonymous>"));
+    }
 
-        LLDB_LOG(log, "  CAS::FEVD Matching type found for \"{0}\": {1}", name,
-                 (name_string ? name_string : "<anonymous>"));
-      }
+    CompilerType full_type = type_sp->GetFullCompilerType();
 
-      CompilerType full_type = type_sp->GetFullCompilerType();
+    CompilerType copied_clang_type(GuardedCopyType(full_type));
 
-      CompilerType copied_clang_type(GuardedCopyType(full_type));
-
-      if (!copied_clang_type) {
-        LLDB_LOG(log, "  CAS::FEVD - Couldn't export a type");
-
-        continue;
-      }
+    if (!copied_clang_type) {
+      LLDB_LOG(log, "  CAS::FEVD - Couldn't export a type");
+    } else {
 
       context.AddTypeDecl(copied_clang_type);
 
       context.m_found_type = true;
-      break;
     }
   }
 
@@ -661,7 +649,7 @@ void ClangASTSource::FillNamespaceMap(
   if (IgnoreName(name, true))
     return;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (module_sp && namespace_decl) {
     CompilerDeclContext found_namespace_decl;
@@ -692,7 +680,18 @@ void ClangASTSource::FillNamespaceMap(
     if (!symbol_file)
       continue;
 
-    found_namespace_decl = symbol_file->FindNamespace(name, namespace_decl);
+    // If namespace_decl is not valid, 'FindNamespace' would look for
+    // any namespace called 'name' (ignoring parent contexts) and return
+    // the first one it finds. Thus if we're doing a qualified lookup only
+    // consider root namespaces. E.g., in an expression ::A::B::Foo, the
+    // lookup of ::A will result in a qualified lookup. Note, namespace
+    // disambiguation for function calls are handled separately in
+    // SearchFunctionsInSymbolContexts.
+    const bool find_root_namespaces =
+        context.m_decl_context &&
+        context.m_decl_context->shouldUseQualifiedLookup();
+    found_namespace_decl = symbol_file->FindNamespace(
+        name, namespace_decl, /* only root namespaces */ find_root_namespaces);
 
     if (found_namespace_decl) {
       context.m_namespace_map->push_back(
@@ -705,56 +704,6 @@ void ClangASTSource::FillNamespaceMap(
   }
 }
 
-template <class D> class TaggedASTDecl {
-public:
-  TaggedASTDecl() : decl(nullptr) {}
-  TaggedASTDecl(D *_decl) : decl(_decl) {}
-  bool IsValid() const { return (decl != nullptr); }
-  bool IsInvalid() const { return !IsValid(); }
-  D *operator->() const { return decl; }
-  D *decl;
-};
-
-template <class D2, template <class D> class TD, class D1>
-TD<D2> DynCast(TD<D1> source) {
-  return TD<D2>(dyn_cast<D2>(source.decl));
-}
-
-template <class D = Decl> class DeclFromParser;
-template <class D = Decl> class DeclFromUser;
-
-template <class D> class DeclFromParser : public TaggedASTDecl<D> {
-public:
-  DeclFromParser() : TaggedASTDecl<D>() {}
-  DeclFromParser(D *_decl) : TaggedASTDecl<D>(_decl) {}
-
-  DeclFromUser<D> GetOrigin(ClangASTSource &source);
-};
-
-template <class D> class DeclFromUser : public TaggedASTDecl<D> {
-public:
-  DeclFromUser() : TaggedASTDecl<D>() {}
-  DeclFromUser(D *_decl) : TaggedASTDecl<D>(_decl) {}
-
-  DeclFromParser<D> Import(ClangASTSource &source);
-};
-
-template <class D>
-DeclFromUser<D> DeclFromParser<D>::GetOrigin(ClangASTSource &source) {
-  ClangASTImporter::DeclOrigin origin = source.GetDeclOrigin(this->decl);
-  if (!origin.Valid())
-    return DeclFromUser<D>();
-  return DeclFromUser<D>(dyn_cast<D>(origin.decl));
-}
-
-template <class D>
-DeclFromParser<D> DeclFromUser<D>::Import(ClangASTSource &source) {
-  DeclFromParser<> parser_generic_decl(source.CopyDecl(this->decl));
-  if (parser_generic_decl.IsInvalid())
-    return DeclFromParser<D>();
-  return DeclFromParser<D>(dyn_cast<D>(parser_generic_decl.decl));
-}
-
 bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
     NameSearchContext &context, ObjCInterfaceDecl *original_interface_decl,
     const char *log_info) {
@@ -764,17 +713,18 @@ bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
   Selector original_selector;
 
   if (decl_name.isObjCZeroArgSelector()) {
-    IdentifierInfo *ident = &original_ctx->Idents.get(decl_name.getAsString());
+    const IdentifierInfo *ident =
+        &original_ctx->Idents.get(decl_name.getAsString());
     original_selector = original_ctx->Selectors.getSelector(0, &ident);
   } else if (decl_name.isObjCOneArgSelector()) {
     const std::string &decl_name_string = decl_name.getAsString();
     std::string decl_name_string_without_colon(decl_name_string.c_str(),
                                                decl_name_string.length() - 1);
-    IdentifierInfo *ident =
+    const IdentifierInfo *ident =
         &original_ctx->Idents.get(decl_name_string_without_colon);
     original_selector = original_ctx->Selectors.getSelector(1, &ident);
   } else {
-    SmallVector<IdentifierInfo *, 4> idents;
+    SmallVector<const IdentifierInfo *, 4> idents;
 
     clang::Selector sel = decl_name.getObjCSelector();
 
@@ -826,7 +776,7 @@ bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
     if (!copied_method_decl)
       continue;
 
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+    Log *log = GetLog(LLDBLog::Expressions);
 
     LLDB_LOG(log, "  CAS::FOMD found ({0}) {1}", log_info,
              ClangUtil::DumpDecl(copied_method_decl));
@@ -839,7 +789,7 @@ bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
 
 void ClangASTSource::FindDeclInModules(NameSearchContext &context,
                                        ConstString name) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
       GetClangModulesDeclVendor();
@@ -879,7 +829,7 @@ void ClangASTSource::FindDeclInModules(NameSearchContext &context,
 
 void ClangASTSource::FindDeclInObjCRuntime(NameSearchContext &context,
                                            ConstString name) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   lldb::ProcessSP process(m_target->GetProcessSP());
 
@@ -921,7 +871,7 @@ void ClangASTSource::FindDeclInObjCRuntime(NameSearchContext &context,
 }
 
 void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   const DeclarationName &decl_name(context.m_decl_name);
   const DeclContext *decl_ctx(context.m_decl_context);
@@ -974,8 +924,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
            interface_decl->getName(), selector_name);
   SymbolContextList sc_list;
 
-  const bool include_symbols = false;
-  const bool include_inlines = false;
+  ModuleFunctionSearchOptions function_options;
+  function_options.include_symbols = false;
+  function_options.include_inlines = false;
 
   std::string interface_name = interface_decl->getNameAsString();
 
@@ -986,9 +937,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     ConstString instance_method_name(ms.GetString());
 
     sc_list.Clear();
-    m_target->GetImages().FindFunctions(
-        instance_method_name, lldb::eFunctionNameTypeFull, include_symbols,
-        include_inlines, sc_list);
+    m_target->GetImages().FindFunctions(instance_method_name,
+                                        lldb::eFunctionNameTypeFull,
+                                        function_options, sc_list);
 
     if (sc_list.GetSize())
       break;
@@ -999,9 +950,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     ConstString class_method_name(ms.GetString());
 
     sc_list.Clear();
-    m_target->GetImages().FindFunctions(
-        class_method_name, lldb::eFunctionNameTypeFull, include_symbols,
-        include_inlines, sc_list);
+    m_target->GetImages().FindFunctions(class_method_name,
+                                        lldb::eFunctionNameTypeFull,
+                                        function_options, sc_list);
 
     if (sc_list.GetSize())
       break;
@@ -1012,16 +963,11 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 
     SymbolContextList candidate_sc_list;
 
-    m_target->GetImages().FindFunctions(
-        selector_name, lldb::eFunctionNameTypeSelector, include_symbols,
-        include_inlines, candidate_sc_list);
+    m_target->GetImages().FindFunctions(selector_name,
+                                        lldb::eFunctionNameTypeSelector,
+                                        function_options, candidate_sc_list);
 
-    for (uint32_t ci = 0, ce = candidate_sc_list.GetSize(); ci != ce; ++ci) {
-      SymbolContext candidate_sc;
-
-      if (!candidate_sc_list.GetContextAtIndex(ci, candidate_sc))
-        continue;
-
+    for (const SymbolContext &candidate_sc : candidate_sc_list) {
       if (!candidate_sc.function)
         continue;
 
@@ -1054,12 +1000,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
   if (sc_list.GetSize()) {
     // We found a good function symbol.  Use that.
 
-    for (uint32_t i = 0, e = sc_list.GetSize(); i != e; ++i) {
-      SymbolContext sc;
-
-      if (!sc_list.GetContextAtIndex(i, sc))
-        continue;
-
+    for (const SymbolContext &sc : sc_list) {
       if (!sc.function)
         continue;
 
@@ -1197,10 +1138,10 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
   } while (false);
 }
 
-static bool FindObjCPropertyAndIvarDeclsWithOrigin(
-    NameSearchContext &context, ClangASTSource &source,
+bool ClangASTSource::FindObjCPropertyAndIvarDeclsWithOrigin(
+    NameSearchContext &context,
     DeclFromUser<const ObjCInterfaceDecl> &origin_iface_decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (origin_iface_decl.IsInvalid())
     return false;
@@ -1218,7 +1159,7 @@ static bool FindObjCPropertyAndIvarDeclsWithOrigin(
 
   if (origin_property_decl.IsValid()) {
     DeclFromParser<ObjCPropertyDecl> parser_property_decl(
-        origin_property_decl.Import(source));
+        origin_property_decl.Import(m_ast_context, *m_ast_importer_sp));
     if (parser_property_decl.IsValid()) {
       LLDB_LOG(log, "  CAS::FOPD found\n{0}",
                ClangUtil::DumpDecl(parser_property_decl.decl));
@@ -1233,7 +1174,7 @@ static bool FindObjCPropertyAndIvarDeclsWithOrigin(
 
   if (origin_ivar_decl.IsValid()) {
     DeclFromParser<ObjCIvarDecl> parser_ivar_decl(
-        origin_ivar_decl.Import(source));
+        origin_ivar_decl.Import(m_ast_context, *m_ast_importer_sp));
     if (parser_ivar_decl.IsValid()) {
       LLDB_LOG(log, "  CAS::FOPD found\n{0}",
                ClangUtil::DumpDecl(parser_ivar_decl.decl));
@@ -1247,12 +1188,12 @@ static bool FindObjCPropertyAndIvarDeclsWithOrigin(
 }
 
 void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   DeclFromParser<const ObjCInterfaceDecl> parser_iface_decl(
       cast<ObjCInterfaceDecl>(context.m_decl_context));
   DeclFromUser<const ObjCInterfaceDecl> origin_iface_decl(
-      parser_iface_decl.GetOrigin(*this));
+      parser_iface_decl.GetOrigin(*m_ast_importer_sp));
 
   ConstString class_name(parser_iface_decl->getNameAsString().c_str());
 
@@ -1262,7 +1203,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
            m_ast_context, m_clang_ast_context->getDisplayName(),
            parser_iface_decl->getName(), context.m_decl_name.getAsString());
 
-  if (FindObjCPropertyAndIvarDeclsWithOrigin(context, *this, origin_iface_decl))
+  if (FindObjCPropertyAndIvarDeclsWithOrigin(context, origin_iface_decl))
     return;
 
   LLDB_LOG(log,
@@ -1295,7 +1236,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
              "(ObjCInterfaceDecl*){0}/(ASTContext*){1}...",
              complete_iface_decl.decl, &complete_iface_decl->getASTContext());
 
-    FindObjCPropertyAndIvarDeclsWithOrigin(context, *this, complete_iface_decl);
+    FindObjCPropertyAndIvarDeclsWithOrigin(context, complete_iface_decl);
 
     return;
   } while (false);
@@ -1329,7 +1270,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
              interface_decl_from_modules.decl,
              &interface_decl_from_modules->getASTContext());
 
-    if (FindObjCPropertyAndIvarDeclsWithOrigin(context, *this,
+    if (FindObjCPropertyAndIvarDeclsWithOrigin(context,
                                                interface_decl_from_modules))
       return;
   } while (false);
@@ -1373,7 +1314,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
              interface_decl_from_runtime.decl,
              &interface_decl_from_runtime->getASTContext());
 
-    if (FindObjCPropertyAndIvarDeclsWithOrigin(context, *this,
+    if (FindObjCPropertyAndIvarDeclsWithOrigin(context,
                                                interface_decl_from_runtime))
       return;
   } while (false);
@@ -1383,7 +1324,7 @@ void ClangASTSource::LookupInNamespace(NameSearchContext &context) {
   const NamespaceDecl *namespace_context =
       dyn_cast<NamespaceDecl>(context.m_decl_context);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   ClangASTImporter::NamespaceMapSP namespace_map =
       m_ast_importer_sp->GetNamespaceMap(namespace_context);
@@ -1404,213 +1345,23 @@ void ClangASTSource::LookupInNamespace(NameSearchContext &context) {
   }
 }
 
-typedef llvm::DenseMap<const FieldDecl *, uint64_t> FieldOffsetMap;
-typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetMap;
-
-template <class D, class O>
-static bool ImportOffsetMap(llvm::DenseMap<const D *, O> &destination_map,
-                            llvm::DenseMap<const D *, O> &source_map,
-                            ClangASTSource &source) {
-  // When importing fields into a new record, clang has a hard requirement that
-  // fields be imported in field offset order.  Since they are stored in a
-  // DenseMap with a pointer as the key type, this means we cannot simply
-  // iterate over the map, as the order will be non-deterministic.  Instead we
-  // have to sort by the offset and then insert in sorted order.
-  typedef llvm::DenseMap<const D *, O> MapType;
-  typedef typename MapType::value_type PairType;
-  std::vector<PairType> sorted_items;
-  sorted_items.reserve(source_map.size());
-  sorted_items.assign(source_map.begin(), source_map.end());
-  llvm::sort(sorted_items.begin(), sorted_items.end(),
-             [](const PairType &lhs, const PairType &rhs) {
-               return lhs.second < rhs.second;
-             });
-
-  for (const auto &item : sorted_items) {
-    DeclFromUser<D> user_decl(const_cast<D *>(item.first));
-    DeclFromParser<D> parser_decl(user_decl.Import(source));
-    if (parser_decl.IsInvalid())
-      return false;
-    destination_map.insert(
-        std::pair<const D *, O>(parser_decl.decl, item.second));
-  }
-
-  return true;
-}
-
-template <bool IsVirtual>
-bool ExtractBaseOffsets(const ASTRecordLayout &record_layout,
-                        DeclFromUser<const CXXRecordDecl> &record,
-                        BaseOffsetMap &base_offsets) {
-  for (CXXRecordDecl::base_class_const_iterator
-           bi = (IsVirtual ? record->vbases_begin() : record->bases_begin()),
-           be = (IsVirtual ? record->vbases_end() : record->bases_end());
-       bi != be; ++bi) {
-    if (!IsVirtual && bi->isVirtual())
-      continue;
-
-    const clang::Type *origin_base_type = bi->getType().getTypePtr();
-    const clang::RecordType *origin_base_record_type =
-        origin_base_type->getAs<RecordType>();
-
-    if (!origin_base_record_type)
-      return false;
-
-    DeclFromUser<RecordDecl> origin_base_record(
-        origin_base_record_type->getDecl());
-
-    if (origin_base_record.IsInvalid())
-      return false;
-
-    DeclFromUser<CXXRecordDecl> origin_base_cxx_record(
-        DynCast<CXXRecordDecl>(origin_base_record));
-
-    if (origin_base_cxx_record.IsInvalid())
-      return false;
-
-    CharUnits base_offset;
-
-    if (IsVirtual)
-      base_offset =
-          record_layout.getVBaseClassOffset(origin_base_cxx_record.decl);
-    else
-      base_offset =
-          record_layout.getBaseClassOffset(origin_base_cxx_record.decl);
-
-    base_offsets.insert(std::pair<const CXXRecordDecl *, CharUnits>(
-        origin_base_cxx_record.decl, base_offset));
-  }
-
-  return true;
-}
-
-bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
-                                      uint64_t &alignment,
-                                      FieldOffsetMap &field_offsets,
-                                      BaseOffsetMap &base_offsets,
-                                      BaseOffsetMap &virtual_base_offsets) {
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
-  LLDB_LOG(log,
-           "LayoutRecordType on (ASTContext*){0} '{1}' for (RecordDecl*)"
-           "{3} [name = '{4}']",
-           m_ast_context, m_clang_ast_context->getDisplayName(), record,
-           record->getName());
-
-  DeclFromParser<const RecordDecl> parser_record(record);
-  DeclFromUser<const RecordDecl> origin_record(
-      parser_record.GetOrigin(*this));
-
-  if (origin_record.IsInvalid())
-    return false;
-
-  FieldOffsetMap origin_field_offsets;
-  BaseOffsetMap origin_base_offsets;
-  BaseOffsetMap origin_virtual_base_offsets;
-
-  TypeSystemClang::GetCompleteDecl(
-      &origin_record->getASTContext(),
-      const_cast<RecordDecl *>(origin_record.decl));
-
-  clang::RecordDecl *definition = origin_record.decl->getDefinition();
-  if (!definition || !definition->isCompleteDefinition())
-    return false;
-
-  const ASTRecordLayout &record_layout(
-      origin_record->getASTContext().getASTRecordLayout(origin_record.decl));
-
-  int field_idx = 0, field_count = record_layout.getFieldCount();
-
-  for (RecordDecl::field_iterator fi = origin_record->field_begin(),
-                                  fe = origin_record->field_end();
-       fi != fe; ++fi) {
-    if (field_idx >= field_count)
-      return false; // Layout didn't go well.  Bail out.
-
-    uint64_t field_offset = record_layout.getFieldOffset(field_idx);
-
-    origin_field_offsets.insert(
-        std::pair<const FieldDecl *, uint64_t>(*fi, field_offset));
-
-    field_idx++;
-  }
-
-  lldbassert(&record->getASTContext() == m_ast_context);
-
-  DeclFromUser<const CXXRecordDecl> origin_cxx_record(
-      DynCast<const CXXRecordDecl>(origin_record));
-
-  if (origin_cxx_record.IsValid()) {
-    if (!ExtractBaseOffsets<false>(record_layout, origin_cxx_record,
-                                   origin_base_offsets) ||
-        !ExtractBaseOffsets<true>(record_layout, origin_cxx_record,
-                                  origin_virtual_base_offsets))
-      return false;
-  }
-
-  if (!ImportOffsetMap(field_offsets, origin_field_offsets, *this) ||
-      !ImportOffsetMap(base_offsets, origin_base_offsets, *this) ||
-      !ImportOffsetMap(virtual_base_offsets, origin_virtual_base_offsets,
-                       *this))
-    return false;
-
-  size = record_layout.getSize().getQuantity() * m_ast_context->getCharWidth();
-  alignment = record_layout.getAlignment().getQuantity() *
-              m_ast_context->getCharWidth();
-
-  if (log) {
-    LLDB_LOG(log, "LRT returned:");
-    LLDB_LOG(log, "LRT   Original = (RecordDecl*){0}",
-             static_cast<const void *>(origin_record.decl));
-    LLDB_LOG(log, "LRT   Size = {0}", size);
-    LLDB_LOG(log, "LRT   Alignment = {0}", alignment);
-    LLDB_LOG(log, "LRT   Fields:");
-    for (RecordDecl::field_iterator fi = record->field_begin(),
-                                    fe = record->field_end();
-         fi != fe; ++fi) {
-      LLDB_LOG(log,
-               "LRT     (FieldDecl*){0}, Name = '{1}', Offset = {2} bits",
-               *fi, fi->getName(), field_offsets[*fi]);
-    }
-    DeclFromParser<const CXXRecordDecl> parser_cxx_record =
-        DynCast<const CXXRecordDecl>(parser_record);
-    if (parser_cxx_record.IsValid()) {
-      LLDB_LOG(log, "LRT   Bases:");
-      for (CXXRecordDecl::base_class_const_iterator
-               bi = parser_cxx_record->bases_begin(),
-               be = parser_cxx_record->bases_end();
-           bi != be; ++bi) {
-        bool is_virtual = bi->isVirtual();
-
-        QualType base_type = bi->getType();
-        const RecordType *base_record_type = base_type->getAs<RecordType>();
-        DeclFromParser<RecordDecl> base_record(base_record_type->getDecl());
-        DeclFromParser<CXXRecordDecl> base_cxx_record =
-            DynCast<CXXRecordDecl>(base_record);
-
-        LLDB_LOG(log,
-                 "LRT     {0}(CXXRecordDecl*){1}, Name = '{2}', Offset = "
-                 "{3} chars",
-                 (is_virtual ? "Virtual " : ""), base_cxx_record.decl,
-                 base_cxx_record.decl->getName(),
-                 (is_virtual
-                      ? virtual_base_offsets[base_cxx_record.decl].getQuantity()
-                      : base_offsets[base_cxx_record.decl].getQuantity()));
-      }
-    } else {
-      LLDB_LOG(log, "LRD   Not a CXXRecord, so no bases");
-    }
-  }
-
-  return true;
+bool ClangASTSource::layoutRecordType(
+    const RecordDecl *record, uint64_t &size, uint64_t &alignment,
+    llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
+    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+        &base_offsets,
+    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+        &virtual_base_offsets) {
+  return m_ast_importer_sp->importRecordLayoutFromOrigin(
+      record, size, alignment, field_offsets, base_offsets,
+      virtual_base_offsets);
 }
 
 void ClangASTSource::CompleteNamespaceMap(
     ClangASTImporter::NamespaceMapSP &namespace_map, ConstString name,
     ClangASTImporter::NamespaceMapSP &parent_map) const {
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     if (parent_map && parent_map->size())
@@ -1725,10 +1476,10 @@ ClangASTImporter::DeclOrigin ClangASTSource::GetDeclOrigin(const clang::Decl *de
 }
 
 CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
-  TypeSystemClang *src_ast =
-      llvm::dyn_cast_or_null<TypeSystemClang>(src_type.GetTypeSystem());
-  if (src_ast == nullptr)
-    return CompilerType();
+  auto ts = src_type.GetTypeSystem();
+  auto src_ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  if (!src_ast)
+    return {};
 
   QualType copied_qual_type = ClangUtil::GetQualType(
       m_ast_importer_sp->CopyType(*m_clang_ast_context, src_type));
@@ -1737,7 +1488,7 @@ CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
       copied_qual_type->getCanonicalTypeInternal().isNull())
     // this shouldn't happen, but we're hardening because the AST importer
     // seems to be generating bad types on occasion.
-    return CompilerType();
+    return {};
 
   return m_clang_ast_context->GetType(copied_qual_type);
 }

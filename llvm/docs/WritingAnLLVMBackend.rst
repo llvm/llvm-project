@@ -216,7 +216,6 @@ simply return a class member.
       return &InstrInfo.getRegisterInfo();
     }
     virtual const DataLayout *getDataLayout() const { return &DataLayout; }
-    static unsigned getModuleMatchQuality(const Module &M);
 
     // Pass Pipeline Configuration
     virtual bool addInstSelector(PassManagerBase &PM, bool Fast);
@@ -762,7 +761,7 @@ target description file (``IntRegs``).
 
 .. code-block:: text
 
-  def LDrr : F3_1 <3, 0b000000, (outs IntRegs:$dst), (ins MEMrr:$addr),
+  def LDrr : F3_1 <3, 0b000000, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
                    "ld [$addr], $dst",
                    [(set i32:$dst, (load ADDRrr:$addr))]>;
 
@@ -790,9 +789,9 @@ class is defined:
 
 .. code-block:: text
 
-  def LDri : F3_2 <3, 0b000000, (outs IntRegs:$dst), (ins MEMri:$addr),
+  def LDri : F3_2 <3, 0b000000, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
                    "ld [$addr], $dst",
-                   [(set i32:$dst, (load ADDRri:$addr))]>;
+                   [(set i32:$rd, (load ADDRri:$addr))]>;
 
 Writing these definitions for so many similar instructions can involve a lot of
 cut and paste.  In ``.td`` files, the ``multiclass`` directive enables the
@@ -805,13 +804,13 @@ pattern ``F3_12`` is defined to create 2 instruction classes each time
 
   multiclass F3_12 <string OpcStr, bits<6> Op3Val, SDNode OpNode> {
     def rr  : F3_1 <2, Op3Val,
-                   (outs IntRegs:$dst), (ins IntRegs:$b, IntRegs:$c),
-                   !strconcat(OpcStr, " $b, $c, $dst"),
-                   [(set i32:$dst, (OpNode i32:$b, i32:$c))]>;
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs1),
+                   !strconcat(OpcStr, " $rs1, $rs2, $rd"),
+                   [(set i32:$rd, (OpNode i32:$rs1, i32:$rs2))]>;
     def ri  : F3_2 <2, Op3Val,
-                   (outs IntRegs:$dst), (ins IntRegs:$b, i32imm:$c),
-                   !strconcat(OpcStr, " $b, $c, $dst"),
-                   [(set i32:$dst, (OpNode i32:$b, simm13:$c))]>;
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, i32imm:$simm13),
+                   !strconcat(OpcStr, " $rs1, $simm13, $rd"),
+                   [(set i32:$rd, (OpNode i32:$rs1, simm13:$simm13))]>;
   }
 
 So when the ``defm`` directive is used for the ``XOR`` and ``ADD``
@@ -850,17 +849,19 @@ Instruction Operand Mapping
 ---------------------------
 
 The code generator backend maps instruction operands to fields in the
-instruction.  Operands are assigned to unbound fields in the instruction in the
-order they are defined.  Fields are bound when they are assigned a value.  For
-example, the Sparc target defines the ``XNORrr`` instruction as a ``F3_1``
-format instruction having three operands.
+instruction.  Whenever a bit in the instruction encoding ``Inst`` is assigned
+to field without a concrete value, an operand from the ``outs`` or ``ins`` list
+is expected to have a matching name. This operand then populates that undefined
+field. For example, the Sparc target defines the ``XNORrr`` instruction as a
+``F3_1`` format instruction having three operands: the output ``$rd``, and the
+inputs ``$rs1``, and ``$rs2``.
 
 .. code-block:: text
 
   def XNORrr  : F3_1<2, 0b000111,
-                     (outs IntRegs:$dst), (ins IntRegs:$b, IntRegs:$c),
-                     "xnor $b, $c, $dst",
-                     [(set i32:$dst, (not (xor i32:$b, i32:$c)))]>;
+                     (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
+                     "xnor $rs1, $rs2, $rd",
+                     [(set i32:$rd, (not (xor i32:$rs1, i32:$rs2)))]>;
 
 The instruction templates in ``SparcInstrFormats.td`` show the base class for
 ``F3_1`` is ``InstSP``.
@@ -878,7 +879,8 @@ The instruction templates in ``SparcInstrFormats.td`` show the base class for
     let Pattern = pattern;
   }
 
-``InstSP`` leaves the ``op`` field unbound.
+``InstSP`` defines the ``op`` field, and uses it to define bits 30 and 31 of the
+instruction, but does not assign a value to it.
 
 .. code-block:: text
 
@@ -893,9 +895,8 @@ The instruction templates in ``SparcInstrFormats.td`` show the base class for
     let Inst{18-14} = rs1;
   }
 
-``F3`` binds the ``op`` field and defines the ``rd``, ``op3``, and ``rs1``
-fields.  ``F3`` format instructions will bind the operands ``rd``, ``op3``, and
-``rs1`` fields.
+``F3`` defines the ``rd``, ``op3``, and ``rs1`` fields, and uses them in the
+instruction, and again does not assign values.
 
 .. code-block:: text
 
@@ -910,10 +911,42 @@ fields.  ``F3`` format instructions will bind the operands ``rd``, ``op3``, and
     let Inst{4-0}  = rs2;
   }
 
-``F3_1`` binds the ``op3`` field and defines the ``rs2`` fields.  ``F3_1``
-format instructions will bind the operands to the ``rd``, ``rs1``, and ``rs2``
-fields.  This results in the ``XNORrr`` instruction binding ``$dst``, ``$b``,
-and ``$c`` operands to the ``rd``, ``rs1``, and ``rs2`` fields respectively.
+``F3_1`` assigns a value to ``op`` and ``op3`` fields, and defines the ``rs2``
+field.  Therefore, a ``F3_1`` format instruction will require a definition for
+``rd``, ``rs1``, and ``rs2`` in order to fully specify the instruction encoding.
+
+The ``XNORrr`` instruction then provides those three operands in its
+OutOperandList and InOperandList, which bind to the corresponding fields, and
+thus complete the instruction encoding.
+
+For some instructions, a single operand may contain sub-operands. As shown
+earlier, the instruction ``LDrr`` uses an input operand of type ``MEMrr``. This
+operand type contains two register sub-operands, defined by the
+``MIOperandInfo`` value to be ``(ops IntRegs, IntRegs)``.
+
+.. code-block:: text
+
+  def LDrr : F3_1 <3, 0b000000, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
+                   "ld [$addr], $dst",
+                   [(set i32:$dst, (load ADDRrr:$addr))]>;
+
+As this instruction is also the ``F3_1`` format, it will expect operands named
+``rd``, ``rs1``, and ``rs2`` as well. In order to allow this, a complex operand
+can optionally give names to each of its sub-operands. In this example
+``MEMrr``'s first sub-operand is named ``$rs1``, the second ``$rs2``, and the
+operand as a whole is also given the name ``$addr``.
+
+When a particular instruction doesn't use all the operands that the instruction
+format defines, a constant value may instead be bound to one or all. For
+example, the ``RDASR`` instruction only takes a single register operand, so we
+assign a constant zero to ``rs2``:
+
+.. code-block:: text
+
+  let rs2 = 0 in
+    def RDASR : F3_1<2, 0b101000,
+                     (outs IntRegs:$rd), (ins ASRRegs:$rs1),
+                     "rd $rs1, $rd", []>;
 
 Instruction Operand Name Mapping
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -943,7 +976,7 @@ For example:
 
 XXXInstrInfo.cpp:
 
-.. code-block:: c++ 
+.. code-block:: c++
 
   #define GET_INSTRINFO_NAMED_OPS // For getNamedOperandIdx() function
   #include "XXXGenInstrInfo.inc"
@@ -1047,7 +1080,7 @@ exact TableGen command from a build by using:
 
 .. code-block:: shell
 
-  $ VERBOSE=1 make ... 
+  $ VERBOSE=1 make ...
 
 and search for ``llvm-tblgen`` commands in the output.
 
@@ -1283,12 +1316,10 @@ below:
 .. code-block:: text
 
   def store : PatFrag<(ops node:$val, node:$ptr),
-                      (st node:$val, node:$ptr), [{
-    if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N))
-      return !ST->isTruncatingStore() &&
-             ST->getAddressingMode() == ISD::UNINDEXED;
-    return false;
-  }]>;
+                      (unindexedstore node:$val, node:$ptr)> {
+    let IsStore = true;
+    let IsTruncStore = false;
+  }
 
 ``XXXInstrInfo.td`` also generates (in ``XXXGenDAGISel.inc``) the
 ``SelectCode`` method that is used to call the appropriate processing method
@@ -1472,6 +1503,8 @@ non-v9 SPARC implementations.
   if (TM.getSubtarget<SparcSubtarget>().isV9())
     setOperationAction(ISD::CTPOP, MVT::i32, Legal);
 
+.. _backend-calling-convs:
+
 Calling Conventions
 -------------------
 
@@ -1561,6 +1594,18 @@ use, then ``RetCC_X86_32_SSE`` is invoked.
     CCIfCC<"CallingConv::X86_SSECall", CCDelegateTo<RetCC_X86_32_SSE>>,
     CCDelegateTo<RetCC_X86_32_C>
   ]>;
+
+``CCAssignToRegAndStack`` is the same as ``CCAssignToReg``, but also allocates
+a stack slot, when some register is used. Basically, it works like:
+``CCIf<CCAssignToReg<regList>, CCAssignToStack<size, align>>``.
+
+.. code-block:: text
+
+  class CCAssignToRegAndStack<list<Register> regList, int size, int align>
+      : CCAssignToReg<regList> {
+    int Size = size;
+    int Align = align;
+  }
 
 Other calling convention interfaces include:
 
@@ -1717,17 +1762,24 @@ command-line options ``-mcpu=`` and ``-mattr=``.
 TableGen uses definitions in the ``Target.td`` and ``Sparc.td`` files to
 generate code in ``SparcGenSubtarget.inc``.  In ``Target.td``, shown below, the
 ``SubtargetFeature`` interface is defined.  The first 4 string parameters of
-the ``SubtargetFeature`` interface are a feature name, an attribute set by the
-feature, the value of the attribute, and a description of the feature.  (The
-fifth parameter is a list of features whose presence is implied, and its
-default value is an empty array.)
+the ``SubtargetFeature`` interface are a feature name, a XXXSubtarget field set
+by the feature, the value of the XXXSubtarget field, and a description of the
+feature.  (The fifth parameter is a list of features whose presence is implied,
+and its default value is an empty array.)
+
+If the value for the field is the string "true" or "false", the field
+is assumed to be a bool and only one SubtargetFeature should refer to it.
+Otherwise, it is assumed to be an integer. The integer value may be the name
+of an enum constant. If multiple features use the same integer field, the
+field will be set to the maximum value of all enabled features that share
+the field.
 
 .. code-block:: text
 
-  class SubtargetFeature<string n, string a, string v, string d,
+  class SubtargetFeature<string n, string f, string v, string d,
                          list<SubtargetFeature> i = []> {
     string Name = n;
-    string Attribute = a;
+    string FieldName = f;
     string Value = v;
     string Desc = d;
     list<SubtargetFeature> Implies = i;
@@ -1741,7 +1793,7 @@ following features.
   def FeatureV9 : SubtargetFeature<"v9", "IsV9", "true",
                        "Enable SPARC-V9 instructions">;
   def FeatureV8Deprecated : SubtargetFeature<"deprecated-v8",
-                       "V8DeprecatedInsts", "true",
+                       "UseV8DeprecatedInsts", "true",
                        "Enable deprecated V8 instructions in V9 mode">;
   def FeatureVIS : SubtargetFeature<"vis", "IsVIS", "true",
                        "Enable UltraSPARC Visual Instruction Set extensions">;
@@ -1976,4 +2028,3 @@ The callback function initially saves and later restores the callee register
 values, incoming arguments, and frame and return address.  The callback
 function needs low-level access to the registers or stack, so it is typically
 implemented with assembler.
-

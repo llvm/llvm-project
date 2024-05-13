@@ -21,8 +21,6 @@
 #include "kmp_wait_release.h"
 #include "kmp_wrapper_getpid.h"
 
-#include "tsan_annotations.h"
-
 #if KMP_USE_FUTEX
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -98,12 +96,19 @@ __kmp_acquire_tas_lock_timed_template(kmp_tas_lock_t *lck, kmp_int32 gtid) {
   }
 
   kmp_uint32 spins;
+  kmp_uint64 time;
   KMP_FSYNC_PREPARE(lck);
   KMP_INIT_YIELD(spins);
+  KMP_INIT_BACKOFF(time);
   kmp_backoff_t backoff = __kmp_spin_backoff_params;
   do {
+#if !KMP_HAVE_UMWAIT
     __kmp_spin_backoff(&backoff);
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+#else
+    if (!__kmp_tpause_enabled)
+      __kmp_spin_backoff(&backoff);
+#endif
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
   } while (KMP_ATOMIC_LD_RLX(&lck->lk.poll) != tas_free ||
            !__kmp_atomic_compare_store_acq(&lck->lk.poll, tas_free, tas_busy));
   KMP_FSYNC_ACQUIRED(lck);
@@ -112,7 +117,6 @@ __kmp_acquire_tas_lock_timed_template(kmp_tas_lock_t *lck, kmp_int32 gtid) {
 
 int __kmp_acquire_tas_lock(kmp_tas_lock_t *lck, kmp_int32 gtid) {
   int retval = __kmp_acquire_tas_lock_timed_template(lck, gtid);
-  ANNOTATE_TAS_ACQUIRED(lck);
   return retval;
 }
 
@@ -154,7 +158,6 @@ int __kmp_release_tas_lock(kmp_tas_lock_t *lck, kmp_int32 gtid) {
   KMP_MB(); /* Flush all pending memory write invalidates.  */
 
   KMP_FSYNC_RELEASING(lck);
-  ANNOTATE_TAS_RELEASED(lck);
   KMP_ATOMIC_ST_REL(&lck->lk.poll, KMP_LOCK_FREE(tas));
   KMP_MB(); /* Flush all pending memory write invalidates.  */
 
@@ -208,7 +211,6 @@ int __kmp_acquire_nested_tas_lock(kmp_tas_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_tas_lock_timed_template(lck, gtid);
-    ANNOTATE_TAS_ACQUIRED(lck);
     lck->lk.depth_locked = 1;
     return KMP_LOCK_ACQUIRED_FIRST;
   }
@@ -398,7 +400,6 @@ __kmp_acquire_futex_lock_timed_template(kmp_futex_lock_t *lck, kmp_int32 gtid) {
 
 int __kmp_acquire_futex_lock(kmp_futex_lock_t *lck, kmp_int32 gtid) {
   int retval = __kmp_acquire_futex_lock_timed_template(lck, gtid);
-  ANNOTATE_FUTEX_ACQUIRED(lck);
   return retval;
 }
 
@@ -441,7 +442,6 @@ int __kmp_release_futex_lock(kmp_futex_lock_t *lck, kmp_int32 gtid) {
                   lck, lck->lk.poll, gtid));
 
   KMP_FSYNC_RELEASING(lck);
-  ANNOTATE_FUTEX_RELEASED(lck);
 
   kmp_int32 poll_val = KMP_XCHG_FIXED32(&(lck->lk.poll), KMP_LOCK_FREE(futex));
 
@@ -512,7 +512,6 @@ int __kmp_acquire_nested_futex_lock(kmp_futex_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_futex_lock_timed_template(lck, gtid);
-    ANNOTATE_FUTEX_ACQUIRED(lck);
     lck->lk.depth_locked = 1;
     return KMP_LOCK_ACQUIRED_FIRST;
   }
@@ -644,7 +643,6 @@ __kmp_acquire_ticket_lock_timed_template(kmp_ticket_lock_t *lck,
 
 int __kmp_acquire_ticket_lock(kmp_ticket_lock_t *lck, kmp_int32 gtid) {
   int retval = __kmp_acquire_ticket_lock_timed_template(lck, gtid);
-  ANNOTATE_TICKET_ACQUIRED(lck);
   return retval;
 }
 
@@ -719,7 +717,6 @@ int __kmp_release_ticket_lock(kmp_ticket_lock_t *lck, kmp_int32 gtid) {
                         std::atomic_load_explicit(&lck->lk.now_serving,
                                                   std::memory_order_relaxed);
 
-  ANNOTATE_TICKET_RELEASED(lck);
   std::atomic_fetch_add_explicit(&lck->lk.now_serving, 1U,
                                  std::memory_order_release);
 
@@ -814,7 +811,6 @@ int __kmp_acquire_nested_ticket_lock(kmp_ticket_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_ticket_lock_timed_template(lck, gtid);
-    ANNOTATE_TICKET_ACQUIRED(lck);
     std::atomic_store_explicit(&lck->lk.depth_locked, 1,
                                std::memory_order_relaxed);
     std::atomic_store_explicit(&lck->lk.owner_id, gtid + 1,
@@ -1091,7 +1087,6 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
   volatile kmp_int32 *head_id_p = &lck->lk.head_id;
   volatile kmp_int32 *tail_id_p = &lck->lk.tail_id;
   volatile kmp_uint32 *spin_here_p;
-  kmp_int32 need_mf = 1;
 
 #if OMPT_SUPPORT
   ompt_state_t prev_state = ompt_state_undefined;
@@ -1142,7 +1137,6 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
                 if ( t > 0 ) condition in the enqueued case below, which is not
                 necessary for this state transition */
 
-      need_mf = 0;
       /* try (-1,0)->(tid,tid) */
       enqueued = KMP_COMPARE_AND_STORE_ACQ64((volatile kmp_int64 *)tail_id_p,
                                              KMP_PACK_64(-1, 0),
@@ -1164,7 +1158,6 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
       if (tail == 0) {
         enqueued = FALSE;
       } else {
-        need_mf = 0;
         /* try (h,t) or (h,h)->(h,tid) */
         enqueued = KMP_COMPARE_AND_STORE_ACQ32(tail_id_p, tail, gtid + 1);
 
@@ -1285,7 +1278,6 @@ int __kmp_acquire_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
   KMP_DEBUG_ASSERT(gtid >= 0);
 
   int retval = __kmp_acquire_queuing_lock_timed_template<false>(lck, gtid);
-  ANNOTATE_QUEUING_ACQUIRED(lck);
   return retval;
 }
 
@@ -1331,7 +1323,6 @@ int __kmp_test_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
       KA_TRACE(1000,
                ("__kmp_test_queuing_lock: T#%d exiting: holding lock\n", gtid));
       KMP_FSYNC_ACQUIRED(lck);
-      ANNOTATE_QUEUING_ACQUIRED(lck);
       return TRUE;
     }
   }
@@ -1360,14 +1351,15 @@ static int __kmp_test_queuing_lock_with_checks(kmp_queuing_lock_t *lck,
 }
 
 int __kmp_release_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
-  kmp_info_t *this_thr;
   volatile kmp_int32 *head_id_p = &lck->lk.head_id;
   volatile kmp_int32 *tail_id_p = &lck->lk.tail_id;
 
   KA_TRACE(1000,
            ("__kmp_release_queuing_lock: lck:%p, T#%d entering\n", lck, gtid));
   KMP_DEBUG_ASSERT(gtid >= 0);
-  this_thr = __kmp_thread_from_gtid(gtid);
+#if KMP_DEBUG || DEBUG_QUEUING_LOCKS
+  kmp_info_t *this_thr = __kmp_thread_from_gtid(gtid);
+#endif
   KMP_DEBUG_ASSERT(this_thr != NULL);
 #ifdef DEBUG_QUEUING_LOCKS
   TRACE_LOCK(gtid + 1, "rel ent");
@@ -1381,7 +1373,6 @@ int __kmp_release_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
   KMP_DEBUG_ASSERT(this_thr->th.th_next_waiting == 0);
 
   KMP_FSYNC_RELEASING(lck);
-  ANNOTATE_QUEUING_RELEASED(lck);
 
   while (1) {
     kmp_int32 dequeued;
@@ -1570,7 +1561,6 @@ int __kmp_acquire_nested_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_queuing_lock_timed_template<false>(lck, gtid);
-    ANNOTATE_QUEUING_ACQUIRED(lck);
     KMP_MB();
     lck->lk.depth_locked = 1;
     KMP_MB();
@@ -1964,7 +1954,7 @@ static inline bool __kmp_is_unlocked_queuing_lock(kmp_queuing_lock_t *lck) {
 
 // We need a fence here, since we must ensure that no memory operations
 // from later in this thread float above that read.
-#if KMP_COMPILER_ICC
+#if KMP_COMPILER_ICC || KMP_COMPILER_ICX
   _mm_mfence();
 #else
   __sync_synchronize();
@@ -2127,7 +2117,6 @@ static void __kmp_acquire_adaptive_lock(kmp_adaptive_lock_t *lck,
   __kmp_acquire_queuing_lock_timed_template<FALSE>(GET_QLK_PTR(lck), gtid);
   // We have acquired the base lock, so count that.
   KMP_INC_STAT(lck, nonSpeculativeAcquires);
-  ANNOTATE_QUEUING_ACQUIRED(lck);
 }
 
 static void __kmp_acquire_adaptive_lock_with_checks(kmp_adaptive_lock_t *lck,
@@ -2245,10 +2234,12 @@ __kmp_acquire_drdpa_lock_timed_template(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
   // The current implementation of KMP_WAIT doesn't allow for mask
   // and poll to be re-read every spin iteration.
   kmp_uint32 spins;
+  kmp_uint64 time;
   KMP_FSYNC_PREPARE(lck);
   KMP_INIT_YIELD(spins);
+  KMP_INIT_BACKOFF(time);
   while (polls[ticket & mask] < ticket) { // atomic load
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
     // Re-read the mask and the poll pointer from the lock structure.
     //
     // Make certain that "mask" is read before "polls" !!!
@@ -2360,7 +2351,6 @@ __kmp_acquire_drdpa_lock_timed_template(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
 
 int __kmp_acquire_drdpa_lock(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
   int retval = __kmp_acquire_drdpa_lock_timed_template(lck, gtid);
-  ANNOTATE_DRDPA_ACQUIRED(lck);
   return retval;
 }
 
@@ -2437,7 +2427,6 @@ int __kmp_release_drdpa_lock(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
   KA_TRACE(1000, ("__kmp_release_drdpa_lock: ticket #%lld released lock %p\n",
                   ticket - 1, lck));
   KMP_FSYNC_RELEASING(lck);
-  ANNOTATE_DRDPA_RELEASED(lck);
   polls[ticket & mask] = ticket; // atomic store
   return KMP_LOCK_RELEASED;
 }
@@ -2524,7 +2513,6 @@ int __kmp_acquire_nested_drdpa_lock(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_drdpa_lock_timed_template(lck, gtid);
-    ANNOTATE_DRDPA_ACQUIRED(lck);
     KMP_MB();
     lck->lk.depth_locked = 1;
     KMP_MB();
@@ -2680,9 +2668,17 @@ void __kmp_spin_backoff(kmp_backoff_t *boff) {
   kmp_uint32 i;
   for (i = boff->step; i > 0; i--) {
     kmp_uint64 goal = __kmp_tsc() + boff->min_tick;
-    do {
-      KMP_CPU_PAUSE();
-    } while (before(__kmp_tsc(), goal));
+#if KMP_HAVE_UMWAIT
+    if (__kmp_umwait_enabled) {
+      __kmp_tpause(0, boff->min_tick);
+    } else {
+#endif
+      do {
+        KMP_CPU_PAUSE();
+      } while (before(__kmp_tsc(), goal));
+#if KMP_HAVE_UMWAIT
+    }
+#endif
   }
   boff->step = (boff->step << 1 | 1) & (boff->max_backoff - 1);
 }
@@ -2693,7 +2689,7 @@ void __kmp_spin_backoff(kmp_backoff_t *boff) {
 // lock word.
 static void __kmp_init_direct_lock(kmp_dyna_lock_t *lck,
                                    kmp_dyna_lockseq_t seq) {
-  TCW_4(*lck, KMP_GET_D_TAG(seq));
+  TCW_4(((kmp_base_tas_lock_t *)lck)->poll, KMP_GET_D_TAG(seq));
   KA_TRACE(
       20,
       ("__kmp_init_direct_lock: initialized direct lock with type#%d\n", seq));
@@ -3125,7 +3121,7 @@ kmp_indirect_lock_t *__kmp_allocate_indirect_lock(void **user_lock,
                                                   kmp_int32 gtid,
                                                   kmp_indirect_locktag_t tag) {
   kmp_indirect_lock_t *lck;
-  kmp_lock_index_t idx;
+  kmp_lock_index_t idx, table_idx;
 
   __kmp_acquire_lock(&__kmp_global_lock, gtid);
 
@@ -3138,26 +3134,41 @@ kmp_indirect_lock_t *__kmp_allocate_indirect_lock(void **user_lock,
     KA_TRACE(20, ("__kmp_allocate_indirect_lock: reusing an existing lock %p\n",
                   lck));
   } else {
-    idx = __kmp_i_lock_table.next;
-    // Check capacity and double the size if it is full
-    if (idx == __kmp_i_lock_table.size) {
-      // Double up the space for block pointers
-      int row = __kmp_i_lock_table.size / KMP_I_LOCK_CHUNK;
-      kmp_indirect_lock_t **new_table = (kmp_indirect_lock_t **)__kmp_allocate(
-          2 * row * sizeof(kmp_indirect_lock_t *));
-      KMP_MEMCPY(new_table, __kmp_i_lock_table.table,
-                 row * sizeof(kmp_indirect_lock_t *));
-      kmp_indirect_lock_t **old_table = __kmp_i_lock_table.table;
-      __kmp_i_lock_table.table = new_table;
-      __kmp_free(old_table);
-      // Allocate new objects in the new blocks
-      for (int i = row; i < 2 * row; ++i)
-        *(__kmp_i_lock_table.table + i) = (kmp_indirect_lock_t *)__kmp_allocate(
-            KMP_I_LOCK_CHUNK * sizeof(kmp_indirect_lock_t));
-      __kmp_i_lock_table.size = 2 * idx;
+    kmp_uint32 row, col;
+    kmp_indirect_lock_table_t *lock_table = &__kmp_i_lock_table;
+    idx = 0;
+    // Find location in list of lock tables to put new lock
+    while (1) {
+      table_idx = lock_table->next; // index within this table
+      idx += lock_table->next; // global index within list of tables
+      if (table_idx < lock_table->nrow_ptrs * KMP_I_LOCK_CHUNK) {
+        row = table_idx / KMP_I_LOCK_CHUNK;
+        col = table_idx % KMP_I_LOCK_CHUNK;
+        // Allocate a new row of locks if necessary
+        if (!lock_table->table[row]) {
+          lock_table->table[row] = (kmp_indirect_lock_t *)__kmp_allocate(
+              sizeof(kmp_indirect_lock_t) * KMP_I_LOCK_CHUNK);
+        }
+        break;
+      }
+      // Allocate a new lock table if necessary with double the capacity
+      if (!lock_table->next_table) {
+        kmp_indirect_lock_table_t *next_table =
+            (kmp_indirect_lock_table_t *)__kmp_allocate(
+                sizeof(kmp_indirect_lock_table_t));
+        next_table->table = (kmp_indirect_lock_t **)__kmp_allocate(
+            sizeof(kmp_indirect_lock_t *) * 2 * lock_table->nrow_ptrs);
+        next_table->nrow_ptrs = 2 * lock_table->nrow_ptrs;
+        next_table->next = 0;
+        next_table->next_table = nullptr;
+        lock_table->next_table = next_table;
+      }
+      lock_table = lock_table->next_table;
+      KMP_ASSERT(lock_table);
     }
-    __kmp_i_lock_table.next++;
-    lck = KMP_GET_I_LOCK(idx);
+    lock_table->next++;
+
+    lck = &lock_table->table[row][col];
     // Allocate a new base lock object
     lck->lock = (kmp_user_lock_p)__kmp_allocate(__kmp_indirect_lock_size[tag]);
     KA_TRACE(20,
@@ -3169,8 +3180,8 @@ kmp_indirect_lock_t *__kmp_allocate_indirect_lock(void **user_lock,
   lck->type = tag;
 
   if (OMP_LOCK_T_SIZE < sizeof(void *)) {
-    *((kmp_lock_index_t *)user_lock) = idx
-                                       << 1; // indirect lock word must be even
+    *(kmp_lock_index_t *)&(((kmp_base_tas_lock_t *)user_lock)->poll) =
+        idx << 1; // indirect lock word must be even
   } else {
     *((kmp_indirect_lock_t **)user_lock) = lck;
   }
@@ -3188,10 +3199,7 @@ __kmp_lookup_indirect_lock(void **user_lock, const char *func) {
     }
     if (OMP_LOCK_T_SIZE < sizeof(void *)) {
       kmp_lock_index_t idx = KMP_EXTRACT_I_INDEX(user_lock);
-      if (idx >= __kmp_i_lock_table.size) {
-        KMP_FATAL(LockIsUninitialized, func);
-      }
-      lck = KMP_GET_I_LOCK(idx);
+      lck = __kmp_get_i_lock(idx);
     } else {
       lck = *((kmp_indirect_lock_t **)user_lock);
     }
@@ -3201,7 +3209,7 @@ __kmp_lookup_indirect_lock(void **user_lock, const char *func) {
     return lck;
   } else {
     if (OMP_LOCK_T_SIZE < sizeof(void *)) {
-      return KMP_GET_I_LOCK(KMP_EXTRACT_I_INDEX(user_lock));
+      return __kmp_get_i_lock(KMP_EXTRACT_I_INDEX(user_lock));
     } else {
       return *((kmp_indirect_lock_t **)user_lock);
     }
@@ -3211,13 +3219,13 @@ __kmp_lookup_indirect_lock(void **user_lock, const char *func) {
 static void __kmp_init_indirect_lock(kmp_dyna_lock_t *lock,
                                      kmp_dyna_lockseq_t seq) {
 #if KMP_USE_ADAPTIVE_LOCKS
-  if (seq == lockseq_adaptive && !__kmp_cpuinfo.rtm) {
+  if (seq == lockseq_adaptive && !__kmp_cpuinfo.flags.rtm) {
     KMP_WARNING(AdaptiveNotSupported, "kmp_lockseq_t", "adaptive");
     seq = lockseq_queuing;
   }
 #endif
 #if KMP_USE_TSX
-  if (seq == lockseq_rtm_queuing && !__kmp_cpuinfo.rtm) {
+  if (seq == lockseq_rtm_queuing && !__kmp_cpuinfo.flags.rtm) {
     seq = lockseq_queuing;
   }
 #endif
@@ -3344,12 +3352,13 @@ void __kmp_init_dynamic_user_locks() {
     return;
 
   // Initialize lock index table
-  __kmp_i_lock_table.size = KMP_I_LOCK_CHUNK;
-  __kmp_i_lock_table.table =
-      (kmp_indirect_lock_t **)__kmp_allocate(sizeof(kmp_indirect_lock_t *));
+  __kmp_i_lock_table.nrow_ptrs = KMP_I_LOCK_TABLE_INIT_NROW_PTRS;
+  __kmp_i_lock_table.table = (kmp_indirect_lock_t **)__kmp_allocate(
+      sizeof(kmp_indirect_lock_t *) * KMP_I_LOCK_TABLE_INIT_NROW_PTRS);
   *(__kmp_i_lock_table.table) = (kmp_indirect_lock_t *)__kmp_allocate(
       KMP_I_LOCK_CHUNK * sizeof(kmp_indirect_lock_t));
   __kmp_i_lock_table.next = 0;
+  __kmp_i_lock_table.next_table = nullptr;
 
   // Indirect lock size
   __kmp_indirect_lock_size[locktag_ticket] = sizeof(kmp_ticket_lock_t);
@@ -3414,7 +3423,6 @@ void __kmp_init_dynamic_user_locks() {
 
 // Clean up the lock table.
 void __kmp_cleanup_indirect_user_locks() {
-  kmp_lock_index_t i;
   int k;
 
   // Clean up locks in the pools first (they were already destroyed before going
@@ -3432,22 +3440,29 @@ void __kmp_cleanup_indirect_user_locks() {
     __kmp_indirect_lock_pool[k] = NULL;
   }
   // Clean up the remaining undestroyed locks.
-  for (i = 0; i < __kmp_i_lock_table.next; i++) {
-    kmp_indirect_lock_t *l = KMP_GET_I_LOCK(i);
-    if (l->lock != NULL) {
-      // Locks not destroyed explicitly need to be destroyed here.
-      KMP_I_LOCK_FUNC(l, destroy)(l->lock);
-      KA_TRACE(
-          20,
-          ("__kmp_cleanup_indirect_user_locks: destroy/freeing %p from table\n",
-           l));
-      __kmp_free(l->lock);
+  kmp_indirect_lock_table_t *ptr = &__kmp_i_lock_table;
+  while (ptr) {
+    for (kmp_uint32 row = 0; row < ptr->nrow_ptrs; ++row) {
+      if (!ptr->table[row])
+        continue;
+      for (kmp_uint32 col = 0; col < KMP_I_LOCK_CHUNK; ++col) {
+        kmp_indirect_lock_t *l = &ptr->table[row][col];
+        if (l->lock) {
+          // Locks not destroyed explicitly need to be destroyed here.
+          KMP_I_LOCK_FUNC(l, destroy)(l->lock);
+          KA_TRACE(20, ("__kmp_cleanup_indirect_user_locks: destroy/freeing %p "
+                        "from table\n",
+                        l));
+          __kmp_free(l->lock);
+        }
+      }
+      __kmp_free(ptr->table[row]);
     }
+    kmp_indirect_lock_table_t *next_table = ptr->next_table;
+    if (ptr != &__kmp_i_lock_table)
+      __kmp_free(ptr);
+    ptr = next_table;
   }
-  // Free the table
-  for (i = 0; i < __kmp_i_lock_table.size / KMP_I_LOCK_CHUNK; i++)
-    __kmp_free(__kmp_i_lock_table.table[i]);
-  __kmp_free(__kmp_i_lock_table.table);
 
   __kmp_init_user_locks = FALSE;
 }
@@ -3794,7 +3809,7 @@ static kmp_lock_index_t __kmp_lock_table_insert(kmp_user_lock_p lck) {
                sizeof(kmp_user_lock_p) * (__kmp_user_lock_table.used - 1));
     table[0] = (kmp_user_lock_p)__kmp_user_lock_table.table;
     // We cannot free the previous table now, since it may be in use by other
-    // threads. So save the pointer to the previous table in in the first
+    // threads. So save the pointer to the previous table in the first
     // element of the new table. All the tables will be organized into a list,
     // and could be freed when library shutting down.
     __kmp_user_lock_table.table = table;
@@ -3847,15 +3862,11 @@ kmp_user_lock_p __kmp_user_lock_allocate(void **user_lock, kmp_int32 gtid,
   if (__kmp_lock_pool == NULL) {
     // Lock pool is empty. Allocate new memory.
 
-    // ANNOTATION: Found no good way to express the syncronisation
-    // between allocation and usage, so ignore the allocation
-    ANNOTATE_IGNORE_WRITES_BEGIN();
     if (__kmp_num_locks_in_block <= 1) { // Tune this cutoff point.
       lck = (kmp_user_lock_p)__kmp_allocate(__kmp_user_lock_size);
     } else {
       lck = __kmp_lock_block_allocate();
     }
-    ANNOTATE_IGNORE_WRITES_END();
 
     // Insert lock in the table so that it can be freed in __kmp_cleanup,
     // and debugger has info on all allocated locks.

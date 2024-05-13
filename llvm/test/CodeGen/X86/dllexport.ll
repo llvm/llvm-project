@@ -84,6 +84,9 @@ define weak_odr dllexport void @weak1() {
 ; CHECK: .globl "_complex-name"
 @"complex-name" = dllexport global i32 1, align 4
 
+; CHECK: .globl _complex.name
+@"complex.name" = dllexport global i32 1, align 4
+
 
 ; Verify items that should not be exported do not appear in the export table.
 ; We use a separate check prefix to avoid confusion between -NOT and -SAME.
@@ -106,6 +109,7 @@ define weak_odr dllexport void @weak1() {
 ; CHECK-CL: .ascii " /EXPORT:_WeakVar1,DATA"
 ; CHECK-CL: .ascii " /EXPORT:_WeakVar2,DATA"
 ; CHECK-CL: .ascii " /EXPORT:\"_complex-name\",DATA"
+; CHECK-CL: .ascii " /EXPORT:\"_complex.name\",DATA"
 ; CHECK-CL: .ascii " /EXPORT:_alias"
 ; CHECK-CL: .ascii " /EXPORT:_alias2"
 ; CHECK-CL: .ascii " /EXPORT:_alias3"
@@ -124,6 +128,7 @@ define weak_odr dllexport void @weak1() {
 ; CHECK-GCC: .ascii " -export:WeakVar1,data"
 ; CHECK-GCC: .ascii " -export:WeakVar2,data"
 ; CHECK-GCC: .ascii " -export:\"complex-name\",data"
+; CHECK-GCC: .ascii " -export:\"complex.name\",data"
 ; CHECK-GCC: .ascii " -export:alias"
 ; CHECK-GCC: .ascii " -export:alias2"
 ; CHECK-GCC: .ascii " -export:alias3"
@@ -131,16 +136,16 @@ define weak_odr dllexport void @weak1() {
 
 ; CHECK: .globl _alias
 ; CHECK: .set _alias, _notExported
-@alias = dllexport alias void(), void()* @notExported
+@alias = dllexport alias void(), ptr @notExported
 
 ; CHECK: .globl _alias2
 ; CHECK: .set _alias2, _f1
-@alias2 = dllexport alias void(), void()* @f1
+@alias2 = dllexport alias void(), ptr @f1
 
 ; CHECK: .globl _alias3
 ; CHECK: .set _alias3, _notExported
-@alias3 = dllexport alias void(), void()* @notExported
+@alias3 = dllexport alias void(), ptr @notExported
 
 ; CHECK: .weak _weak_alias
 ; CHECK: .set _weak_alias, _f1
-@weak_alias = weak_odr dllexport alias void(), void()* @f1
+@weak_alias = weak_odr dllexport alias void(), ptr @f1

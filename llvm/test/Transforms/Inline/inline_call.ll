@@ -1,14 +1,13 @@
 ; Check the optimizer doesn't crash at inlining the function top and all of its callees are inlined.
 ; RUN: opt < %s -O3 -S | FileCheck %s
 
-define dso_local void (...)* @second(i8** %p) {
+define dso_local ptr @second(ptr %p) {
 entry:
-  %p.addr = alloca i8**, align 8
-  store i8** %p, i8*** %p.addr, align 8
-  %tmp = load i8**, i8*** %p.addr, align 8
-  %tmp1 = load i8*, i8** %tmp, align 8
-  %tmp2 = bitcast i8* %tmp1 to void (...)*
-  ret void (...)* %tmp2
+  %p.addr = alloca ptr, align 8
+  store ptr %p, ptr %p.addr, align 8
+  %tmp = load ptr, ptr %p.addr, align 8
+  %tmp1 = load ptr, ptr %tmp, align 8
+  ret ptr %tmp1
 }
 
 define dso_local void @top()  {
@@ -17,13 +16,13 @@ entry:
   ; CHECK-NOT: {{.*}} = {{.*}} call {{.*}} @third
   ; CHECK-NOT: {{.*}} = {{.*}} call {{.*}} @second
   ; CHECK-NOT: {{.*}} = {{.*}} call {{.*}} @wrapper
-  %q = alloca i8*, align 8
-  store i8* bitcast (void ()* @third to i8*), i8** %q, align 8
-  %tmp = call void (...)* @second(i8** %q)
+  %q = alloca ptr, align 8
+  store ptr @third, ptr %q, align 8
+  %tmp = call ptr @second(ptr %q)
   ; The call to 'wrapper' here is to ensure that its function attributes
   ; i.e., returning its parameter and having no side effect, will be decuded
   ; before the next round of inlining happens to 'top' to expose the bug.
-  %call =  call void (...)* @wrapper(void (...)* %tmp) 
+  %call =  call ptr @wrapper(ptr %tmp) 
   ; The indirect call here is to confuse the alias analyzer so that
   ; an incomplete graph will be built during the first round of inlining.
   ; This allows the current function to be processed before the actual 
@@ -34,38 +33,38 @@ entry:
   ret void
 }
 
-define dso_local void (...)* @gen() {
+define dso_local ptr @gen() {
 entry:
-  %call = call void (...)* (...) @ext()
-  ret void (...)* %call
+  %call = call ptr (...) @ext()
+  ret ptr %call
 }
 
-declare dso_local void (...)* @ext(...) 
+declare dso_local ptr @ext(...) 
 
-define dso_local void (...)* @wrapper(void (...)* %fn) {
+define dso_local ptr @wrapper(ptr %fn) {
 entry:
-  ret void (...)* %fn
+  ret ptr %fn
 }
 
-define dso_local void @run(void (...)* %fn) {
+define dso_local void @run(ptr %fn) {
 entry:
-  %fn.addr = alloca void (...)*, align 8
-  %f = alloca void (...)*, align 8
-  store void (...)* %fn, void (...)** %fn.addr, align 8
-  %tmp = load void (...)*, void (...)** %fn.addr, align 8
-  %call = call void (...)* @wrapper(void (...)* %tmp)
-  store void (...)* %call, void (...)** %f, align 8
-  %tmp1 = load void (...)*, void (...)** %f, align 8
+  %fn.addr = alloca ptr, align 8
+  %f = alloca ptr, align 8
+  store ptr %fn, ptr %fn.addr, align 8
+  %tmp = load ptr, ptr %fn.addr, align 8
+  %call = call ptr @wrapper(ptr %tmp)
+  store ptr %call, ptr %f, align 8
+  %tmp1 = load ptr, ptr %f, align 8
   call void (...) %tmp1()
   ret void
 }
 
 define dso_local void @third() {
 entry:
-  %f = alloca void (...)*, align 8
-  %call = call void (...)* @gen()
-  store void (...)* %call, void (...)** %f, align 8
-  %tmp = load void (...)*, void (...)** %f, align 8
-  call void @run(void (...)* %tmp)
+  %f = alloca ptr, align 8
+  %call = call ptr @gen()
+  store ptr %call, ptr %f, align 8
+  %tmp = load ptr, ptr %f, align 8
+  call void @run(ptr %tmp)
   ret void
 }

@@ -6,14 +6,15 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // <format>
 
 // constexpr begin() const noexcept;
 
 #include <format>
+
 #include <cassert>
+#include <string_view>
 
 #include "test_macros.h"
 
@@ -21,7 +22,7 @@ template <class CharT>
 constexpr void test(const CharT* fmt) {
   {
     std::basic_format_parse_context<CharT> context(fmt);
-    assert(context.begin() == &fmt[0]);
+    assert(std::to_address(context.begin()) == &fmt[0]);
     ASSERT_NOEXCEPT(context.begin());
   }
   {
@@ -34,14 +35,14 @@ constexpr void test(const CharT* fmt) {
 
 constexpr bool test() {
   test("abc");
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test(L"abc");
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#endif
+#ifndef TEST_HAS_NO_CHAR8_T
   test(u8"abc");
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
   test(u"abc");
   test(U"abc");
-#endif
 
   return true;
 }

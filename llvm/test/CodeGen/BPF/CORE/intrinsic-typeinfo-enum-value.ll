@@ -22,10 +22,10 @@ target triple = "bpf"
 ; Function Attrs: nounwind readnone
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !18 {
 entry:
-  %0 = tail call i64 @llvm.bpf.preserve.enum.value(i32 0, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @0, i64 0, i64 0), i64 0), !dbg !23, !llvm.preserve.access.index !3
-  %1 = tail call i64 @llvm.bpf.preserve.enum.value(i32 1, i8* getelementptr inbounds ([16 x i8], [16 x i8]* @1, i64 0, i64 0), i64 1), !dbg !24, !llvm.preserve.access.index !3
+  %0 = tail call i64 @llvm.bpf.preserve.enum.value(i32 0, ptr @0, i64 0), !dbg !23, !llvm.preserve.access.index !3
+  %1 = tail call i64 @llvm.bpf.preserve.enum.value(i32 1, ptr @1, i64 1), !dbg !24, !llvm.preserve.access.index !3
   %add = add i64 %1, %0, !dbg !25
-  %2 = tail call i64 @llvm.bpf.preserve.enum.value(i32 2, i8* getelementptr inbounds ([18 x i8], [18 x i8]* @2, i64 0, i64 0), i64 1), !dbg !26, !llvm.preserve.access.index !13
+  %2 = tail call i64 @llvm.bpf.preserve.enum.value(i32 2, ptr @2, i64 1), !dbg !26, !llvm.preserve.access.index !13
   %add1 = add i64 %add, %2, !dbg !27
   %conv = trunc i64 %add1 to i32, !dbg !23
   ret i32 %conv, !dbg !28
@@ -36,14 +36,33 @@ entry:
 ; CHECK:             r{{[0-9]+}} = -2147483648 ll
 ; CHECK:             exit
 
-; CHECK:             .long   16                              # BTF_KIND_ENUM(id = 4)
-; CHECK:             .long   57                              # BTF_KIND_TYPEDEF(id = 5)
+; CHECK:             .long   16                              # BTF_KIND_ENUM64(id = 4)
+; CHECK-NEXT:        .long   2466250754                      # 0x93000002
+; CHECK-NEXT:        .long   8
+; CHECK-NEXT:        .long   19
+; CHECK-NEXT:        .long   4294967196                      # 0xffffff9c
+; CHECK-NEXT:        .long   4294967295                      # 0xffffffff
+; CHECK-NEXT:        .long   24
+; CHECK-NEXT:        .long   4294934528                      # 0xffff8000
+; CHECK-NEXT:        .long   0                               # 0x0
+; CHECK-NEXT:        .long   57                              # BTF_KIND_TYPEDEF(id = 5)
+; CHECK-NEXT:        .long   134217728                       # 0x8000000
+; CHECK-NEXT:        .long   6
+; CHECK-NEXT:        .long   0                               # BTF_KIND_ENUM64(id = 6)
+; CHECK-NEXT:        .long   318767105                       # 0x13000001
+; CHECK-NEXT:        .long   8
+; CHECK-NEXT:        .long   62
+; CHECK-NEXT:        .long   2147483648                      # 0x80000000
+; CHECK-NEXT:        .long   4294967295                      # 0xffffffff
 
 ; CHECK:             .ascii  ".text"                         # string offset=10
 ; CHECK:             .ascii  "AA"                            # string offset=16
+; CHECK:             .ascii  "VAL1"                          # string offset=19
+; CHECK:             .ascii  "VAL2"                          # string offset=24
 ; CHECK:             .byte   48                              # string offset=29
 ; CHECK:             .byte   49                              # string offset=55
 ; CHECK:             .ascii  "__BB"                          # string offset=57
+; CHECK:             .ascii  "VAL10"                         # string offset=62
 
 ; CHECK:             .long   16                              # FieldReloc
 ; CHECK-NEXT:        .long   10                              # Field reloc section string offset=10
@@ -62,7 +81,7 @@ entry:
 ; CHECK-NEXT:        .long   11
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.bpf.preserve.enum.value(i32, i8*, i64) #1
+declare i64 @llvm.bpf.preserve.enum.value(i32, ptr, i64) #1
 
 attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

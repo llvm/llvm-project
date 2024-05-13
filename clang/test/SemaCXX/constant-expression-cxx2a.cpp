@@ -255,7 +255,7 @@ namespace DynamicCast {
   static_assert(g.f == (void*)(F*)&g);
   static_assert(dynamic_cast<const void*>(static_cast<const D*>(&g)) == &g);
 
-  // expected-note@+1 {{reference dynamic_cast failed: 'DynamicCast::A' is an ambiguous base class of dynamic type 'DynamicCast::G' of operand}}
+  // expected-note@+1 {{reference dynamic_cast failed: 'A' is an ambiguous base class of dynamic type 'DynamicCast::G' of operand}}
   constexpr int d_a = (dynamic_cast<const A&>(static_cast<const D&>(g)), 0); // expected-error {{}}
 
   // Can navigate from A2 to its A...
@@ -263,7 +263,7 @@ namespace DynamicCast {
   // ... and from B to its A ...
   static_assert(&dynamic_cast<A&>((B&)g) == &(A&)(B&)g);
   // ... but not from D.
-  // expected-note@+1 {{reference dynamic_cast failed: 'DynamicCast::A' is an ambiguous base class of dynamic type 'DynamicCast::G' of operand}}
+  // expected-note@+1 {{reference dynamic_cast failed: 'A' is an ambiguous base class of dynamic type 'DynamicCast::G' of operand}}
   static_assert(&dynamic_cast<A&>((D&)g) == &(A&)(B&)g); // expected-error {{}}
 
   // Can cast from A2 to sibling class D.
@@ -274,13 +274,13 @@ namespace DynamicCast {
   constexpr int e_f = (dynamic_cast<F&>((E&)g), 0); // expected-error {{}}
 
   // Cannot cast from B to private sibling E.
-  // expected-note@+1 {{reference dynamic_cast failed: 'DynamicCast::E' is a non-public base class of dynamic type 'DynamicCast::G' of operand}}
+  // expected-note@+1 {{reference dynamic_cast failed: 'E' is a non-public base class of dynamic type 'DynamicCast::G' of operand}}
   constexpr int b_e = (dynamic_cast<E&>((B&)g), 0); // expected-error {{}}
 
   struct Unrelated { virtual void unrelated(); };
-  // expected-note@+1 {{reference dynamic_cast failed: dynamic type 'DynamicCast::G' of operand does not have a base class of type 'DynamicCast::Unrelated'}}
+  // expected-note@+1 {{reference dynamic_cast failed: dynamic type 'DynamicCast::G' of operand does not have a base class of type 'Unrelated'}}
   constexpr int b_unrelated = (dynamic_cast<Unrelated&>((B&)g), 0); // expected-error {{}}
-  // expected-note@+1 {{reference dynamic_cast failed: dynamic type 'DynamicCast::G' of operand does not have a base class of type 'DynamicCast::Unrelated'}}
+  // expected-note@+1 {{reference dynamic_cast failed: dynamic type 'DynamicCast::G' of operand does not have a base class of type 'Unrelated'}}
   constexpr int e_unrelated = (dynamic_cast<Unrelated&>((E&)g), 0); // expected-error {{}}
 }
 
@@ -409,12 +409,12 @@ namespace Union {
     b.a.x = 2;
     return b;
   }
-  constexpr B uninit = return_uninit(); // expected-error {{constant expression}} expected-note {{subobject of type 'int' is not initialized}}
+  constexpr B uninit = return_uninit(); // expected-error {{constant expression}} expected-note {{subobject 'y' is not initialized}}
   static_assert(return_uninit().a.x == 2);
   constexpr A return_uninit_struct() {
     B b = {.b = 1};
     b.a.x = 2;
-    return b.a; // expected-note {{in call to 'A(b.a)'}} expected-note {{subobject of type 'int' is not initialized}}
+    return b.a; // expected-note {{in call to 'A(b.a)'}} expected-note {{subobject 'y' is not initialized}}
   }
   // Note that this is rejected even though return_uninit() is accepted, and
   // return_uninit() copies the same stuff wrapped in a union.
@@ -530,8 +530,8 @@ namespace TwosComplementShifts {
   using int32 = __INT32_TYPE__;
   static_assert(uint32(int32(0x1234) << 16) == 0x12340000);
   static_assert(uint32(int32(0x1234) << 19) == 0x91a00000);
-  static_assert(uint32(int32(0x1234) << 20) == 0x23400000); // expected-warning {{requires 34 bits}}
-  static_assert(uint32(int32(0x1234) << 24) == 0x34000000); // expected-warning {{requires 38 bits}}
+  static_assert(uint32(int32(0x1234) << 20) == 0x23400000);
+  static_assert(uint32(int32(0x1234) << 24) == 0x34000000);
   static_assert(uint32(int32(-1) << 31) == 0x80000000);
 
   static_assert(-1 >> 1 == -1);
@@ -558,7 +558,7 @@ namespace Uninit {
     }
   };
   constinit X x1(true);
-  constinit X x2(false); // expected-error {{constant initializer}} expected-note {{constinit}} expected-note {{subobject of type 'int' is not initialized}}
+  constinit X x2(false); // expected-error {{constant initializer}} expected-note {{constinit}} expected-note {{subobject 'n' is not initialized}}
 
   struct Y {
     struct Z { int n; }; // expected-note {{here}}
@@ -577,7 +577,7 @@ namespace Uninit {
   };
   // FIXME: This is working around clang not implementing DR2026. With that
   // fixed, we should be able to test this without the injected copy.
-  constexpr Y copy(Y y) { return y; } // expected-note {{in call to 'Y(y)'}} expected-note {{subobject of type 'int' is not initialized}}
+  constexpr Y copy(Y y) { return y; } // expected-note {{in call to 'Y(y)'}} expected-note {{subobject 'n' is not initialized}}
   constexpr Y y1 = copy(Y());
   static_assert(y1.z1.n == 1 && y1.z2.n == 2 && y1.z3.n == 3);
 
@@ -745,7 +745,7 @@ namespace dtor {
   // Ensure that we can handle temporary cleanups for array temporaries.
   struct ArrElem { constexpr ~ArrElem() {} };
   using Arr = ArrElem[3];
-  static_assert((Arr{}, true));
+  static_assert(((void)Arr{}, true));
 }
 
 namespace dynamic_alloc {
@@ -816,15 +816,15 @@ namespace dynamic_alloc {
     S *p = new T[3]{&a, &a, &a}; // expected-note 2{{heap allocation}}
     switch (mode) {
     case 0:
-      delete p; // expected-note {{non-array delete used to delete pointer to array object of type 'T [3]'}}
+      delete p; // expected-note {{non-array delete used to delete pointer to array object of type 'T[3]'}}
       break;
     case 1:
       // FIXME: This diagnosic isn't great; we should mention the cast to S*
       // somewhere in here.
-      delete[] p; // expected-note {{delete of pointer to subobject '&{*new T [3]#0}[0]'}}
+      delete[] p; // expected-note {{delete of pointer to subobject '&{*new T[3]#0}[0]'}}
       break;
     case 2:
-      delete (T*)p; // expected-note {{non-array delete used to delete pointer to array object of type 'T [3]'}}
+      delete (T*)p; // expected-note {{non-array delete used to delete pointer to array object of type 'T[3]'}}
       break;
     case 3:
       delete[] (T*)p;
@@ -1031,9 +1031,9 @@ namespace delete_random_things {
   int n; // expected-note {{declared here}}
   static_assert((delete &n, true)); // expected-error {{}} expected-note {{delete of pointer '&n' that does not point to a heap-allocated object}}
   struct A { int n; };
-  static_assert((delete &(new A)->n, true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new delete_random_things::A#0}.n'}}
+  static_assert((delete &(new A)->n, true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new A#0}.n'}}
   static_assert((delete (new int + 1), true)); // expected-error {{}} expected-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}}
-  static_assert((delete[] (new int[3] + 1), true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new int [3]#0}[1]'}}
+  static_assert((delete[] (new int[3] + 1), true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new int[3]#0}[1]'}}
   static_assert((delete &(int&)(int&&)0, true)); // expected-error {{}} expected-note {{delete of pointer '&0' that does not point to a heap-allocated object}} expected-note {{temporary created here}}
 }
 
@@ -1447,3 +1447,54 @@ namespace PR48582 {
   constexpr bool b = [a = S(), b = S()] { return a.p == b.p; }();
   static_assert(!b);
 }
+
+namespace PR45879 {
+  struct A { int n; };
+  struct B { A a; };
+  constexpr A a = (A() = B().a);
+
+  union C {
+    int n;
+    A a;
+  };
+
+  constexpr bool f() {
+    C c = {.n = 1};
+    c.a = B{2}.a;
+    return c.a.n == 2;
+  }
+  static_assert(f());
+
+  // Only syntactic assignments change the active union member.
+  constexpr bool g() { // expected-error {{never produces a constant expression}}
+    C c = {.n = 1};
+    c.a.operator=(B{2}.a); // expected-note 2{{member call on member 'a' of union with active member 'n' is not allowed in a constant expression}}
+    return c.a.n == 2;
+  }
+  static_assert(g()); // expected-error {{constant expression}} expected-note {{in call}}
+}
+
+namespace GH57431 {
+class B {
+  virtual int constexpr f() = 0;
+};
+
+class D : B {
+  virtual int constexpr f() = default; // expected-error {{only special member functions and comparison operators may be defaulted}}
+};
+}
+
+namespace GH57516 {
+class B{
+  virtual constexpr ~B() = 0; // expected-note {{overridden virtual function is here}}
+};
+
+class D : B{}; // expected-error {{deleted function '~D' cannot override a non-deleted function}}
+// expected-note@-1 {{destructor of 'D' is implicitly deleted because base class 'B' has an inaccessible destructor}}
+}
+
+namespace GH67317 {
+  constexpr unsigned char a = // expected-error {{constexpr variable 'a' must be initialized by a constant expression}} \
+                              // expected-note {{subobject of type 'const unsigned char' is not initialized}}
+    __builtin_bit_cast(unsigned char, *new char[3][1]);
+};

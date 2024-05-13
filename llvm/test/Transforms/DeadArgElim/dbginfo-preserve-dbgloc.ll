@@ -1,4 +1,4 @@
-; RUN: opt -deadargelim -S < %s | FileCheck %s
+; RUN: opt -passes=deadargelim -S < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.Channel = type { i32, i32 }
@@ -8,14 +8,14 @@ define void @f2(i32 %m, i32 %n) #0 !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %m, metadata !12, metadata !DIExpression()), !dbg !21
   call void @llvm.dbg.value(metadata i32 %n, metadata !13, metadata !DIExpression()), !dbg !22
-  call void @llvm.dbg.value(metadata %struct.Channel* null, metadata !14, metadata !DIExpression()), !dbg !23
-  %call = call %struct.Channel* (...) @foo(), !dbg !24
-  call void @llvm.dbg.value(metadata %struct.Channel* %call, metadata !14, metadata !DIExpression()), !dbg !23
+  call void @llvm.dbg.value(metadata ptr null, metadata !14, metadata !DIExpression()), !dbg !23
+  %call = call ptr (...) @foo(), !dbg !24
+  call void @llvm.dbg.value(metadata ptr %call, metadata !14, metadata !DIExpression()), !dbg !23
   %cmp = icmp sgt i32 %m, 3, !dbg !25
   br i1 %cmp, label %if.then, label %if.end, !dbg !27
 
 if.then:                                          ; preds = %entry
-  %call1 = call zeroext i1 @f1(i1 zeroext true, %struct.Channel* %call), !dbg !28
+  %call1 = call zeroext i1 @f1(i1 zeroext true, ptr %call), !dbg !28
   br label %if.end, !dbg !28
 
 if.end:                                           ; preds = %if.then, %entry
@@ -23,25 +23,25 @@ if.end:                                           ; preds = %if.then, %entry
   br i1 %cmp2, label %if.then3, label %if.end5, !dbg !31
 
 if.then3:                                         ; preds = %if.end
-  %call4 = call zeroext i1 @f1(i1 zeroext false, %struct.Channel* %call), !dbg !32
+  %call4 = call zeroext i1 @f1(i1 zeroext false, ptr %call), !dbg !32
   br label %if.end5, !dbg !32
 
 if.end5:                                          ; preds = %if.then3, %if.end
   ret void, !dbg !33
 }
 
-declare %struct.Channel* @foo(...) local_unnamed_addr #1
+declare ptr @foo(...) local_unnamed_addr #1
 
 ; Function Attrs: noinline nounwind uwtable
-define internal zeroext i1 @f1(i1 zeroext %is_y, %struct.Channel* %str) #4 !dbg !34 {
+define internal zeroext i1 @f1(i1 zeroext %is_y, ptr %str) #4 !dbg !34 {
 entry:
   %frombool = zext i1 %is_y to i8
 ; CHECK: call void @llvm.dbg.value(metadata i1 %is_y, metadata !39, metadata !DIExpression()), !dbg !42
   call void @llvm.dbg.value(metadata i1 %is_y, metadata !39, metadata !DIExpression()), !dbg !42
-; CHECK: call void @llvm.dbg.value(metadata %struct.Channel* %str, metadata !40, metadata !DIExpression()), !dbg !43
-  call void @llvm.dbg.value(metadata %struct.Channel* %str, metadata !40, metadata !DIExpression()), !dbg !43
-  call void @llvm.dbg.value(metadata %struct.Channel* null, metadata !41, metadata !DIExpression()), !dbg !44
-  %tobool = icmp ne %struct.Channel* %str, null, !dbg !45
+; CHECK: call void @llvm.dbg.value(metadata ptr %str, metadata !40, metadata !DIExpression()), !dbg !43
+  call void @llvm.dbg.value(metadata ptr %str, metadata !40, metadata !DIExpression()), !dbg !43
+  call void @llvm.dbg.value(metadata ptr null, metadata !41, metadata !DIExpression()), !dbg !44
+  %tobool = icmp ne ptr %str, null, !dbg !45
   br i1 %tobool, label %if.end, label %if.then, !dbg !47
 
 if.then:                                          ; preds = %entry
@@ -49,8 +49,8 @@ if.then:                                          ; preds = %entry
   br label %cleanup, !dbg !50
 
 if.end:                                           ; preds = %entry
-  %call = call %struct.Channel* (...) @foo(), !dbg !51
-  call void @llvm.dbg.value(metadata %struct.Channel* %call, metadata !41, metadata !DIExpression()), !dbg !44
+  %call = call ptr (...) @foo(), !dbg !51
+  call void @llvm.dbg.value(metadata ptr %call, metadata !41, metadata !DIExpression()), !dbg !44
   %tobool1 = trunc i8 %frombool to i1, !dbg !52
   br i1 %tobool1, label %if.then2, label %if.end3, !dbg !56
 

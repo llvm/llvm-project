@@ -5,6 +5,8 @@
 
 static unsigned int g_timeout = 100000;
 
+extern int usleep(unsigned int);
+
 int function_to_call() {
 
   errno = 0;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fno-rtti -fcxx-exceptions -fexceptions %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fno-rtti -fcxx-exceptions -fexceptions -Wno-dynamic-exception-spec %s -triple=x86_64-apple-darwin10 -emit-llvm -o - %std_cxx98- | FileCheck %s
 
 // CHECK: @_ZTIN5test11AE = linkonce_odr constant
 // CHECK: @_ZTIN5test11BE = linkonce_odr constant

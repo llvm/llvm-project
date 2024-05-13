@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm -analyze -pass-remarks-missed=polly-delicm < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-print-delicm -pass-remarks-missed=polly-delicm -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void func(double *A) {
 ;      double phi = 0.0;
@@ -7,7 +7,7 @@
 ;      A[0] = phi;
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %reduction.preheader
 
@@ -33,7 +33,7 @@ entry:
     br label %reduction.for
 
   reduction.exit:
-    store double %phi, double* %A
+    store double %phi, ptr %A
     br label %return
 
 

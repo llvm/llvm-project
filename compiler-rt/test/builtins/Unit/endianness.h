@@ -17,7 +17,7 @@
 #define _YUGA_BIG_ENDIAN    0
 #endif /* _BYTE_ORDER */
 
-#endif /* Solaris and AuroraUX. */
+#endif /* Solaris */
 
 /* .. */
 

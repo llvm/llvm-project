@@ -1,0 +1,7 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: mkdir subdir
+; RUN: cp %p/Inputs/icon-new.ico subdir
+; RUN: touch subdir/empty.manifest
+; RUN: llvm-windres --no-preprocess %p/Inputs/split-path.rc %t/split-path.res

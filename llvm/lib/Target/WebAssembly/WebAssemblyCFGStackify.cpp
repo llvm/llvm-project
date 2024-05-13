@@ -22,12 +22,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Utils/WebAssemblyTypeUtilities.h"
-#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySortRegion.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -173,7 +173,7 @@ static bool explicitlyBranchesTo(MachineBasicBlock *Pred,
 // satisfying the restrictions given by BeforeSet and AfterSet. BeforeSet
 // contains instructions that should go before the marker, and AfterSet contains
 // ones that should go after the marker. In this function, AfterSet is only
-// used for sanity checking.
+// used for validation checking.
 template <typename Container>
 static MachineBasicBlock::iterator
 getEarliestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
@@ -182,7 +182,7 @@ getEarliestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
   while (InsertPos != MBB->begin()) {
     if (BeforeSet.count(&*std::prev(InsertPos))) {
 #ifndef NDEBUG
-      // Sanity check
+      // Validation check
       for (auto Pos = InsertPos, E = MBB->begin(); Pos != E; --Pos)
         assert(!AfterSet.count(&*std::prev(Pos)));
 #endif
@@ -197,7 +197,7 @@ getEarliestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
 // satisfying the restrictions given by BeforeSet and AfterSet. BeforeSet
 // contains instructions that should go before the marker, and AfterSet contains
 // ones that should go after the marker. In this function, BeforeSet is only
-// used for sanity checking.
+// used for validation checking.
 template <typename Container>
 static MachineBasicBlock::iterator
 getLatestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
@@ -206,7 +206,7 @@ getLatestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
   while (InsertPos != MBB->end()) {
     if (AfterSet.count(&*InsertPos)) {
 #ifndef NDEBUG
-      // Sanity check
+      // Validation check
       for (auto Pos = InsertPos, E = MBB->end(); Pos != E; ++Pos)
         assert(!BeforeSet.count(&*Pos));
 #endif
@@ -667,7 +667,7 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
 
   // When there is an unconditional branch right before a catch instruction and
   // it branches to the end of end_try marker, we don't need the branch, because
-  // it there is no exception, the control flow transfers to that point anyway.
+  // if there is no exception, the control flow transfers to that point anyway.
   // bb0:
   //   try
   //     ...
@@ -781,25 +781,6 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
   }
 }
 
-// Get the appropriate copy opcode for the given register class.
-static unsigned getCopyOpcode(const TargetRegisterClass *RC) {
-  if (RC == &WebAssembly::I32RegClass)
-    return WebAssembly::COPY_I32;
-  if (RC == &WebAssembly::I64RegClass)
-    return WebAssembly::COPY_I64;
-  if (RC == &WebAssembly::F32RegClass)
-    return WebAssembly::COPY_F32;
-  if (RC == &WebAssembly::F64RegClass)
-    return WebAssembly::COPY_F64;
-  if (RC == &WebAssembly::V128RegClass)
-    return WebAssembly::COPY_V128;
-  if (RC == &WebAssembly::FUNCREFRegClass)
-    return WebAssembly::COPY_FUNCREF;
-  if (RC == &WebAssembly::EXTERNREFRegClass)
-    return WebAssembly::COPY_EXTERNREF;
-  llvm_unreachable("Unexpected register class");
-}
-
 // When MBB is split into MBB and Split, we should unstackify defs in MBB that
 // have their uses in Split.
 static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
@@ -811,7 +792,7 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
 
   for (auto &MI : Split) {
     for (auto &MO : MI.explicit_uses()) {
-      if (!MO.isReg() || Register::isPhysicalRegister(MO.getReg()))
+      if (!MO.isReg() || MO.getReg().isPhysical())
         continue;
       if (MachineInstr *Def = MRI.getUniqueVRegDef(MO.getReg()))
         if (Def->getParent() == &MBB)
@@ -842,8 +823,7 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
   //    INST ..., TeeReg, ...
   //    INST ..., Reg, ...
   //    INST ..., Reg, ...
-  for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
-    MachineInstr &MI = *I++;
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
     if (!WebAssembly::isTee(MI.getOpcode()))
       continue;
     Register TeeReg = MI.getOperand(0).getReg();
@@ -852,7 +832,8 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
     if (!MFI.isVRegStackified(TeeReg)) {
       // Now we are not using TEE anymore, so unstackify DefReg too
       MFI.unstackifyVReg(DefReg);
-      unsigned CopyOpc = getCopyOpcode(MRI.getRegClass(DefReg));
+      unsigned CopyOpc =
+          WebAssembly::getCopyOpcodeForRegClass(MRI.getRegClass(DefReg));
       BuildMI(MBB, &MI, MI.getDebugLoc(), TII.get(CopyOpc), TeeReg)
           .addReg(DefReg);
       BuildMI(MBB, &MI, MI.getDebugLoc(), TII.get(CopyOpc), Reg).addReg(DefReg);
@@ -1310,6 +1291,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   // end_try
 
   const auto *EHInfo = MF.getWasmEHFuncInfo();
+  assert(EHInfo);
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   // For EH pads that have catch unwind mismatches, a map of <EH pad, its
   // correct unwind destination>.
@@ -1520,7 +1502,7 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
             std::next(WebAssembly::findCatch(EHPad)->getReverseIterator());
         if (NextIt != EHPad->rend())
           Worklist.push_back(NextIt);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       }
       case WebAssembly::END_BLOCK:
       case WebAssembly::END_LOOP:
@@ -1671,8 +1653,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
   SmallVector<EndMarkerInfo, 8> Stack;
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   for (auto &MBB : reverse(MF)) {
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
-      MachineInstr &MI = *I;
+    for (MachineInstr &MI : llvm::reverse(MBB)) {
       switch (MI.getOpcode()) {
       case WebAssembly::BLOCK:
       case WebAssembly::TRY:
@@ -1718,7 +1699,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
           // Rewrite MBB operands to be depth immediates.
           SmallVector<MachineOperand, 4> Ops(MI.operands());
           while (MI.getNumOperands() > 0)
-            MI.RemoveOperand(MI.getNumOperands() - 1);
+            MI.removeOperand(MI.getNumOperands() - 1);
           for (auto MO : Ops) {
             if (MO.isMBB()) {
               if (MI.getOpcode() == WebAssembly::DELEGATE)
@@ -1743,7 +1724,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
 
 void WebAssemblyCFGStackify::cleanupFunctionData(MachineFunction &MF) {
   if (FakeCallerBB)
-    MF.DeleteMachineBasicBlock(FakeCallerBB);
+    MF.deleteMachineBasicBlock(FakeCallerBB);
   AppendixBB = FakeCallerBB = nullptr;
 }
 

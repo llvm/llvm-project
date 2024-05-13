@@ -29,7 +29,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -37,7 +36,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <iterator>
 
 #define DEBUG_TYPE "evaluator"
 
@@ -122,132 +120,117 @@ isSimpleEnoughValueToCommit(Constant *C,
   return isSimpleEnoughValueToCommitHelper(C, SimpleConstants, DL);
 }
 
-/// Return true if this constant is simple enough for us to understand.  In
-/// particular, if it is a cast to anything other than from one pointer type to
-/// another pointer type, we punt.  We basically just support direct accesses to
-/// globals and GEP's of globals.  This should be kept up to date with
-/// CommitValueTo.
-static bool isSimpleEnoughPointerToCommit(Constant *C, const DataLayout &DL) {
-  // Conservatively, avoid aggregate types. This is because we don't
-  // want to worry about them partially overlapping other stores.
-  if (!cast<PointerType>(C->getType())->getElementType()->isSingleValueType())
+void Evaluator::MutableValue::clear() {
+  if (auto *Agg = dyn_cast_if_present<MutableAggregate *>(Val))
+    delete Agg;
+  Val = nullptr;
+}
+
+Constant *Evaluator::MutableValue::read(Type *Ty, APInt Offset,
+                                        const DataLayout &DL) const {
+  TypeSize TySize = DL.getTypeStoreSize(Ty);
+  const MutableValue *V = this;
+  while (const auto *Agg = dyn_cast_if_present<MutableAggregate *>(V->Val)) {
+    Type *AggTy = Agg->Ty;
+    std::optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
+    if (!Index || Index->uge(Agg->Elements.size()) ||
+        !TypeSize::isKnownLE(TySize, DL.getTypeStoreSize(AggTy)))
+      return nullptr;
+
+    V = &Agg->Elements[Index->getZExtValue()];
+  }
+
+  return ConstantFoldLoadFromConst(cast<Constant *>(V->Val), Ty, Offset, DL);
+}
+
+bool Evaluator::MutableValue::makeMutable() {
+  Constant *C = cast<Constant *>(Val);
+  Type *Ty = C->getType();
+  unsigned NumElements;
+  if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+    NumElements = VT->getNumElements();
+  } else if (auto *AT = dyn_cast<ArrayType>(Ty))
+    NumElements = AT->getNumElements();
+  else if (auto *ST = dyn_cast<StructType>(Ty))
+    NumElements = ST->getNumElements();
+  else
     return false;
 
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(C))
-    // Do not allow weak/*_odr/linkonce linkage or external globals.
-    return GV->hasUniqueInitializer();
-
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
-    // Handle a constantexpr gep.
-    if (CE->getOpcode() == Instruction::GetElementPtr &&
-        isa<GlobalVariable>(CE->getOperand(0)) &&
-        cast<GEPOperator>(CE)->isInBounds()) {
-      GlobalVariable *GV = cast<GlobalVariable>(CE->getOperand(0));
-      // Do not allow weak/*_odr/linkonce/dllimport/dllexport linkage or
-      // external globals.
-      if (!GV->hasUniqueInitializer())
-        return false;
-
-      // The first index must be zero.
-      ConstantInt *CI = dyn_cast<ConstantInt>(*std::next(CE->op_begin()));
-      if (!CI || !CI->isZero()) return false;
-
-      // The remaining indices must be compile-time known integers within the
-      // notional bounds of the corresponding static array types.
-      if (!CE->isGEPWithNoNotionalOverIndexing())
-        return false;
-
-      return ConstantFoldLoadThroughGEPConstantExpr(
-          GV->getInitializer(), CE,
-          cast<GEPOperator>(CE)->getResultElementType(), DL);
-    } else if (CE->getOpcode() == Instruction::BitCast &&
-               isa<GlobalVariable>(CE->getOperand(0))) {
-      // A constantexpr bitcast from a pointer to another pointer is a no-op,
-      // and we know how to evaluate it by moving the bitcast from the pointer
-      // operand to the value operand.
-      // Do not allow weak/*_odr/linkonce/dllimport/dllexport linkage or
-      // external globals.
-      return cast<GlobalVariable>(CE->getOperand(0))->hasUniqueInitializer();
-    }
-  }
-
-  return false;
+  MutableAggregate *MA = new MutableAggregate(Ty);
+  MA->Elements.reserve(NumElements);
+  for (unsigned I = 0; I < NumElements; ++I)
+    MA->Elements.push_back(C->getAggregateElement(I));
+  Val = MA;
+  return true;
 }
 
-/// Apply 'Func' to Ptr. If this returns nullptr, introspect the pointer's
-/// type and walk down through the initial elements to obtain additional
-/// pointers to try. Returns the first non-null return value from Func, or
-/// nullptr if the type can't be introspected further.
-static Constant *
-evaluateBitcastFromPtr(Constant *Ptr, const DataLayout &DL,
-                       const TargetLibraryInfo *TLI,
-                       std::function<Constant *(Constant *)> Func) {
-  Constant *Val;
-  while (!(Val = Func(Ptr))) {
-    // If Ty is a non-opaque struct, we can convert the pointer to the struct
-    // into a pointer to its first member.
-    // FIXME: This could be extended to support arrays as well.
-    Type *Ty = cast<PointerType>(Ptr->getType())->getElementType();
-    if (!isa<StructType>(Ty) || cast<StructType>(Ty)->isOpaque())
-      break;
+bool Evaluator::MutableValue::write(Constant *V, APInt Offset,
+                                    const DataLayout &DL) {
+  Type *Ty = V->getType();
+  TypeSize TySize = DL.getTypeStoreSize(Ty);
+  MutableValue *MV = this;
+  while (Offset != 0 ||
+         !CastInst::isBitOrNoopPointerCastable(Ty, MV->getType(), DL)) {
+    if (isa<Constant *>(MV->Val) && !MV->makeMutable())
+      return false;
 
-    IntegerType *IdxTy = IntegerType::get(Ty->getContext(), 32);
-    Constant *IdxZero = ConstantInt::get(IdxTy, 0, false);
-    Constant *const IdxList[] = {IdxZero, IdxZero};
+    MutableAggregate *Agg = cast<MutableAggregate *>(MV->Val);
+    Type *AggTy = Agg->Ty;
+    std::optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
+    if (!Index || Index->uge(Agg->Elements.size()) ||
+        !TypeSize::isKnownLE(TySize, DL.getTypeStoreSize(AggTy)))
+      return false;
 
-    Ptr = ConstantExpr::getGetElementPtr(Ty, Ptr, IdxList);
-    Ptr = ConstantFoldConstant(Ptr, DL, TLI);
+    MV = &Agg->Elements[Index->getZExtValue()];
   }
-  return Val;
+
+  Type *MVType = MV->getType();
+  MV->clear();
+  if (Ty->isIntegerTy() && MVType->isPointerTy())
+    MV->Val = ConstantExpr::getIntToPtr(V, MVType);
+  else if (Ty->isPointerTy() && MVType->isIntegerTy())
+    MV->Val = ConstantExpr::getPtrToInt(V, MVType);
+  else if (Ty != MVType)
+    MV->Val = ConstantExpr::getBitCast(V, MVType);
+  else
+    MV->Val = V;
+  return true;
 }
 
-static Constant *getInitializer(Constant *C) {
-  auto *GV = dyn_cast<GlobalVariable>(C);
-  return GV && GV->hasDefinitiveInitializer() ? GV->getInitializer() : nullptr;
+Constant *Evaluator::MutableAggregate::toConstant() const {
+  SmallVector<Constant *, 32> Consts;
+  for (const MutableValue &MV : Elements)
+    Consts.push_back(MV.toConstant());
+
+  if (auto *ST = dyn_cast<StructType>(Ty))
+    return ConstantStruct::get(ST, Consts);
+  if (auto *AT = dyn_cast<ArrayType>(Ty))
+    return ConstantArray::get(AT, Consts);
+  assert(isa<FixedVectorType>(Ty) && "Must be vector");
+  return ConstantVector::get(Consts);
 }
 
 /// Return the value that would be computed by a load from P after the stores
 /// reflected by 'memory' have been performed.  If we can't decide, return null.
 Constant *Evaluator::ComputeLoadResult(Constant *P, Type *Ty) {
-  // If this memory location has been recently stored, use the stored value: it
-  // is the most up-to-date.
-  auto findMemLoc = [this](Constant *Ptr) { return MutatedMemory.lookup(Ptr); };
+  APInt Offset(DL.getIndexTypeSizeInBits(P->getType()), 0);
+  P = cast<Constant>(P->stripAndAccumulateConstantOffsets(
+      DL, Offset, /* AllowNonInbounds */ true));
+  Offset = Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(P->getType()));
+  if (auto *GV = dyn_cast<GlobalVariable>(P))
+    return ComputeLoadResult(GV, Ty, Offset);
+  return nullptr;
+}
 
-  if (Constant *Val = findMemLoc(P))
-    return Val;
+Constant *Evaluator::ComputeLoadResult(GlobalVariable *GV, Type *Ty,
+                                       const APInt &Offset) {
+  auto It = MutatedMemory.find(GV);
+  if (It != MutatedMemory.end())
+    return It->second.read(Ty, Offset, DL);
 
-  // Access it.
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(P)) {
-    if (GV->hasDefinitiveInitializer())
-      return GV->getInitializer();
+  if (!GV->hasDefinitiveInitializer())
     return nullptr;
-  }
-
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(P)) {
-    switch (CE->getOpcode()) {
-    // Handle a constantexpr getelementptr.
-    case Instruction::GetElementPtr:
-      if (auto *I = getInitializer(CE->getOperand(0)))
-        return ConstantFoldLoadThroughGEPConstantExpr(I, CE, Ty, DL);
-      break;
-    // Handle a constantexpr bitcast.
-    case Instruction::BitCast:
-      // We're evaluating a load through a pointer that was bitcast to a
-      // different type. See if the "from" pointer has recently been stored.
-      // If it hasn't, we may still be able to find a stored pointer by
-      // introspecting the type.
-      Constant *Val =
-          evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, findMemLoc);
-      if (!Val)
-        Val = getInitializer(CE->getOperand(0));
-      if (Val)
-        return ConstantFoldLoadThroughBitcast(
-            Val, P->getType()->getPointerElementType(), DL);
-      break;
-    }
-  }
-
-  return nullptr;  // don't know how to evaluate.
+  return ConstantFoldLoadFromConst(GV->getInitializer(), Ty, Offset, DL);
 }
 
 static Function *getFunction(Constant *C) {
@@ -263,17 +246,10 @@ static Function *getFunction(Constant *C) {
 Function *
 Evaluator::getCalleeWithFormalArgs(CallBase &CB,
                                    SmallVectorImpl<Constant *> &Formals) {
-  auto *V = CB.getCalledOperand();
+  auto *V = CB.getCalledOperand()->stripPointerCasts();
   if (auto *Fn = getFunction(getVal(V)))
     return getFormalParams(CB, Fn, Formals) ? Fn : nullptr;
-
-  auto *CE = dyn_cast<ConstantExpr>(V);
-  if (!CE || CE->getOpcode() != Instruction::BitCast ||
-      !getFormalParams(CB, getFunction(CE->getOperand(0)), Formals))
-    return nullptr;
-
-  return dyn_cast<Function>(
-      ConstantFoldLoadThroughBitcast(CE, CE->getOperand(0)->getType(), DL));
+  return nullptr;
 }
 
 bool Evaluator::getFormalParams(CallBase &CB, Function *F,
@@ -282,15 +258,14 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
     return false;
 
   auto *FTy = F->getFunctionType();
-  if (FTy->getNumParams() > CB.getNumArgOperands()) {
+  if (FTy->getNumParams() > CB.arg_size()) {
     LLVM_DEBUG(dbgs() << "Too few arguments for function.\n");
     return false;
   }
 
   auto ArgI = CB.arg_begin();
-  for (auto ParI = FTy->param_begin(), ParE = FTy->param_end(); ParI != ParE;
-       ++ParI) {
-    auto *ArgC = ConstantFoldLoadThroughBitcast(getVal(*ArgI), *ParI, DL);
+  for (Type *PTy : FTy->params()) {
+    auto *ArgC = ConstantFoldLoadThroughBitcast(getVal(*ArgI), PTy, DL);
     if (!ArgC) {
       LLVM_DEBUG(dbgs() << "Can not convert function argument.\n");
       return false;
@@ -303,17 +278,13 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
 
 /// If call expression contains bitcast then we may need to cast
 /// evaluated return value to a type of the call expression.
-Constant *Evaluator::castCallResultIfNeeded(Value *CallExpr, Constant *RV) {
-  ConstantExpr *CE = dyn_cast<ConstantExpr>(CallExpr);
-  if (!RV || !CE || CE->getOpcode() != Instruction::BitCast)
+Constant *Evaluator::castCallResultIfNeeded(Type *ReturnType, Constant *RV) {
+  if (!RV || RV->getType() == ReturnType)
     return RV;
 
-  if (auto *FT =
-          dyn_cast<FunctionType>(CE->getType()->getPointerElementType())) {
-    RV = ConstantFoldLoadThroughBitcast(RV, FT->getReturnType(), DL);
-    if (!RV)
-      LLVM_DEBUG(dbgs() << "Failed to fold bitcast call expr\n");
-  }
+  RV = ConstantFoldLoadThroughBitcast(RV, ReturnType, DL);
+  if (!RV)
+    LLVM_DEBUG(dbgs() << "Failed to fold bitcast call expr\n");
   return RV;
 }
 
@@ -330,9 +301,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
     LLVM_DEBUG(dbgs() << "Evaluating Instruction: " << *CurInst << "\n");
 
     if (StoreInst *SI = dyn_cast<StoreInst>(CurInst)) {
-      if (!SI->isSimple()) {
-        LLVM_DEBUG(dbgs() << "Store is not simple! Can not evaluate.\n");
-        return false;  // no volatile/atomic accesses.
+      if (SI->isVolatile()) {
+        LLVM_DEBUG(dbgs() << "Store is volatile! Can not evaluate.\n");
+        return false;  // no volatile accesses.
       }
       Constant *Ptr = getVal(SI->getOperand(1));
       Constant *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI);
@@ -341,106 +312,35 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         Ptr = FoldedPtr;
         LLVM_DEBUG(dbgs() << "; To: " << *Ptr << "\n");
       }
-      if (!isSimpleEnoughPointerToCommit(Ptr, DL)) {
-        // If this is too complex for us to commit, reject it.
-        LLVM_DEBUG(
-            dbgs() << "Pointer is too complex for us to evaluate store.");
+
+      APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+      Ptr = cast<Constant>(Ptr->stripAndAccumulateConstantOffsets(
+          DL, Offset, /* AllowNonInbounds */ true));
+      Offset = Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()));
+      auto *GV = dyn_cast<GlobalVariable>(Ptr);
+      if (!GV || !GV->hasUniqueInitializer()) {
+        LLVM_DEBUG(dbgs() << "Store is not to global with unique initializer: "
+                          << *Ptr << "\n");
         return false;
       }
 
-      Constant *Val = getVal(SI->getOperand(0));
-
       // If this might be too difficult for the backend to handle (e.g. the addr
       // of one global variable divided by another) then we can't commit it.
+      Constant *Val = getVal(SI->getOperand(0));
       if (!isSimpleEnoughValueToCommit(Val, SimpleConstants, DL)) {
         LLVM_DEBUG(dbgs() << "Store value is too complex to evaluate store. "
                           << *Val << "\n");
         return false;
       }
 
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Ptr)) {
-        if (CE->getOpcode() == Instruction::BitCast) {
-          LLVM_DEBUG(dbgs()
-                     << "Attempting to resolve bitcast on constant ptr.\n");
-          // If we're evaluating a store through a bitcast, then we need
-          // to pull the bitcast off the pointer type and push it onto the
-          // stored value. In order to push the bitcast onto the stored value,
-          // a bitcast from the pointer's element type to Val's type must be
-          // legal. If it's not, we can try introspecting the type to find a
-          // legal conversion.
-
-          auto castValTy = [&](Constant *P) -> Constant * {
-            Type *Ty = cast<PointerType>(P->getType())->getElementType();
-            if (Constant *FV = ConstantFoldLoadThroughBitcast(Val, Ty, DL)) {
-              Ptr = P;
-              return FV;
-            }
-            return nullptr;
-          };
-
-          Constant *NewVal =
-              evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, castValTy);
-          if (!NewVal) {
-            LLVM_DEBUG(dbgs() << "Failed to bitcast constant ptr, can not "
-                                 "evaluate.\n");
-            return false;
-          }
-
-          Val = NewVal;
-          LLVM_DEBUG(dbgs() << "Evaluated bitcast: " << *Val << "\n");
-        }
-      }
-
-      MutatedMemory[Ptr] = Val;
-    } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(CurInst)) {
-      InstResult = ConstantExpr::get(BO->getOpcode(),
-                                     getVal(BO->getOperand(0)),
-                                     getVal(BO->getOperand(1)));
-      LLVM_DEBUG(dbgs() << "Found a BinaryOperator! Simplifying: "
-                        << *InstResult << "\n");
-    } else if (CmpInst *CI = dyn_cast<CmpInst>(CurInst)) {
-      InstResult = ConstantExpr::getCompare(CI->getPredicate(),
-                                            getVal(CI->getOperand(0)),
-                                            getVal(CI->getOperand(1)));
-      LLVM_DEBUG(dbgs() << "Found a CmpInst! Simplifying: " << *InstResult
-                        << "\n");
-    } else if (CastInst *CI = dyn_cast<CastInst>(CurInst)) {
-      InstResult = ConstantExpr::getCast(CI->getOpcode(),
-                                         getVal(CI->getOperand(0)),
-                                         CI->getType());
-      LLVM_DEBUG(dbgs() << "Found a Cast! Simplifying: " << *InstResult
-                        << "\n");
-    } else if (SelectInst *SI = dyn_cast<SelectInst>(CurInst)) {
-      InstResult = ConstantExpr::getSelect(getVal(SI->getOperand(0)),
-                                           getVal(SI->getOperand(1)),
-                                           getVal(SI->getOperand(2)));
-      LLVM_DEBUG(dbgs() << "Found a Select! Simplifying: " << *InstResult
-                        << "\n");
-    } else if (auto *EVI = dyn_cast<ExtractValueInst>(CurInst)) {
-      InstResult = ConstantExpr::getExtractValue(
-          getVal(EVI->getAggregateOperand()), EVI->getIndices());
-      LLVM_DEBUG(dbgs() << "Found an ExtractValueInst! Simplifying: "
-                        << *InstResult << "\n");
-    } else if (auto *IVI = dyn_cast<InsertValueInst>(CurInst)) {
-      InstResult = ConstantExpr::getInsertValue(
-          getVal(IVI->getAggregateOperand()),
-          getVal(IVI->getInsertedValueOperand()), IVI->getIndices());
-      LLVM_DEBUG(dbgs() << "Found an InsertValueInst! Simplifying: "
-                        << *InstResult << "\n");
-    } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(CurInst)) {
-      Constant *P = getVal(GEP->getOperand(0));
-      SmallVector<Constant*, 8> GEPOps;
-      for (Use &Op : llvm::drop_begin(GEP->operands()))
-        GEPOps.push_back(getVal(Op));
-      InstResult =
-          ConstantExpr::getGetElementPtr(GEP->getSourceElementType(), P, GEPOps,
-                                         cast<GEPOperator>(GEP)->isInBounds());
-      LLVM_DEBUG(dbgs() << "Found a GEP! Simplifying: " << *InstResult << "\n");
+      auto Res = MutatedMemory.try_emplace(GV, GV->getInitializer());
+      if (!Res.first->second.write(Val, Offset, DL))
+        return false;
     } else if (LoadInst *LI = dyn_cast<LoadInst>(CurInst)) {
-      if (!LI->isSimple()) {
+      if (LI->isVolatile()) {
         LLVM_DEBUG(
-            dbgs() << "Found a Load! Not a simple load, can not evaluate.\n");
-        return false;  // no volatile/atomic accesses.
+            dbgs() << "Found a Load! Volatile load, can not evaluate.\n");
+        return false;  // no volatile accesses.
       }
 
       Constant *Ptr = getVal(LI->getOperand(0));
@@ -495,16 +395,51 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
                               << "intrinsic.\n");
             return false;
           }
-          Constant *Ptr = getVal(MSI->getDest());
-          Constant *Val = getVal(MSI->getValue());
-          Constant *DestVal =
-              ComputeLoadResult(getVal(Ptr), MSI->getValue()->getType());
-          if (Val->isNullValue() && DestVal && DestVal->isNullValue()) {
-            // This memset is a no-op.
-            LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
-            ++CurInst;
-            continue;
+
+          auto *LenC = dyn_cast<ConstantInt>(getVal(MSI->getLength()));
+          if (!LenC) {
+            LLVM_DEBUG(dbgs() << "Memset with unknown length.\n");
+            return false;
           }
+
+          Constant *Ptr = getVal(MSI->getDest());
+          APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+          Ptr = cast<Constant>(Ptr->stripAndAccumulateConstantOffsets(
+              DL, Offset, /* AllowNonInbounds */ true));
+          auto *GV = dyn_cast<GlobalVariable>(Ptr);
+          if (!GV) {
+            LLVM_DEBUG(dbgs() << "Memset with unknown base.\n");
+            return false;
+          }
+
+          Constant *Val = getVal(MSI->getValue());
+          // Avoid the byte-per-byte scan if we're memseting a zeroinitializer
+          // to zero.
+          if (!Val->isNullValue() || MutatedMemory.contains(GV) ||
+              !GV->hasDefinitiveInitializer() ||
+              !GV->getInitializer()->isNullValue()) {
+            APInt Len = LenC->getValue();
+            if (Len.ugt(64 * 1024)) {
+              LLVM_DEBUG(dbgs() << "Not evaluating large memset of size "
+                                << Len << "\n");
+              return false;
+            }
+
+            while (Len != 0) {
+              Constant *DestVal = ComputeLoadResult(GV, Val->getType(), Offset);
+              if (DestVal != Val) {
+                LLVM_DEBUG(dbgs() << "Memset is not a no-op at offset "
+                                  << Offset << " of " << *GV << ".\n");
+                return false;
+              }
+              ++Offset;
+              --Len;
+            }
+          }
+
+          LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
+          ++CurInst;
+          continue;
         }
 
         if (II->isLifetimeStartOrEnd()) {
@@ -586,7 +521,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         if (Callee->isDeclaration()) {
           // If this is a function we can constant fold, do it.
           if (Constant *C = ConstantFoldCall(&CB, Callee, Formals, TLI)) {
-            InstResult = castCallResultIfNeeded(CB.getCalledOperand(), C);
+            InstResult = castCallResultIfNeeded(CB.getType(), C);
             if (!InstResult)
               return false;
             LLVM_DEBUG(dbgs() << "Constant folded function call. Result: "
@@ -610,7 +545,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
             return false;
           }
           ValueStack.pop_back();
-          InstResult = castCallResultIfNeeded(CB.getCalledOperand(), RetVal);
+          InstResult = castCallResultIfNeeded(CB.getType(), RetVal);
           if (RetVal && !InstResult)
             return false;
 
@@ -659,11 +594,16 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       LLVM_DEBUG(dbgs() << "Successfully evaluated block.\n");
       return true;
     } else {
-      // Did not know how to evaluate this!
-      LLVM_DEBUG(
-          dbgs() << "Failed to evaluate block due to unhandled instruction."
-                    "\n");
-      return false;
+      SmallVector<Constant *> Ops;
+      for (Value *Op : CurInst->operands())
+        Ops.push_back(getVal(Op));
+      InstResult = ConstantFoldInstOperands(&*CurInst, Ops, DL, TLI);
+      if (!InstResult) {
+        LLVM_DEBUG(dbgs() << "Cannot fold instruction: " << *CurInst << "\n");
+        return false;
+      }
+      LLVM_DEBUG(dbgs() << "Folded instruction " << *CurInst << " to "
+                        << *InstResult << "\n");
     }
 
     if (!CurInst->use_empty()) {
@@ -688,6 +628,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
 /// function.
 bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
                                  const SmallVectorImpl<Constant*> &ActualArgs) {
+  assert(ActualArgs.size() == F->arg_size() && "wrong number of arguments");
+
   // Check to see if this function is already executing (recursion).  If so,
   // bail out.  TODO: we might want to accept limited recursion.
   if (is_contained(CallStack, F))
@@ -696,10 +638,8 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
   CallStack.push_back(F);
 
   // Initialize arguments to the incoming values specified.
-  unsigned ArgNo = 0;
-  for (Function::arg_iterator AI = F->arg_begin(), E = F->arg_end(); AI != E;
-       ++AI, ++ArgNo)
-    setVal(&*AI, ActualArgs[ArgNo]);
+  for (const auto &[ArgNo, Arg] : llvm::enumerate(F->args()))
+    setVal(&Arg, ActualArgs[ArgNo]);
 
   // ExecutedBlocks - We only handle non-looping, non-recursive code.  As such,
   // we can only evaluate any one basic block at most once.  This set keeps

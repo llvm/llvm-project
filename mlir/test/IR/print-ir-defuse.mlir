@@ -18,7 +18,7 @@
 // CHECK: Has 0 results:
 // CHECK: Visiting op 'dialect.op3' with 0 operands:
 // CHECK: Has 0 results:
-// CHECK: Visiting op 'module' with 0 operands:
+// CHECK: Visiting op 'builtin.module' with 0 operands:
 // CHECK: Has 0 results:
 
 %results:4 = "dialect.op1"() : () -> (i1, i16, i32, i64)

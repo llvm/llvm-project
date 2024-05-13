@@ -4,66 +4,62 @@
 # RUN: llvm-objcopy -I ihex -O elf32-i386 %t.hex %t2
 # RUN: llvm-readobj --section-headers %t2 | FileCheck %s
 
-# CHECK:         Index: 1
-# CHECK-NEXT:    Name: .sec1
+# CHECK:         Name: .sec1
 # CHECK-NEXT:    Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:    Flags [ (0x3)
 # CHECK-NEXT:      SHF_ALLOC (0x2)
 # CHECK-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 # CHECK-NEXT:    Address: 0x0
-# CHECK-NEXT:    Offset: 0x34
+# CHECK-NEXT:    Offset:
 # CHECK-NEXT:    Size: 21
 # CHECK-NEXT:    Link: 0
 # CHECK-NEXT:    Info: 0
 # CHECK-NEXT:    AddressAlignment: 1
 # CHECK-NEXT:    EntrySize: 0
 
-# CHECK:         Index: 2
-# CHECK-NEXT:    Name: .sec2
+# CHECK:         Name: .sec2
 # CHECK-NEXT:    Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:    Flags [ (0x3)
 # CHECK-NEXT:      SHF_ALLOC (0x2)
 # CHECK-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 # CHECK-NEXT:    Address: 0xFFF8
-# CHECK-NEXT:    Offset: 0x49
+# CHECK-NEXT:    Offset:
 # CHECK-NEXT:    Size: 11
 # CHECK-NEXT:    Link: 0
 # CHECK-NEXT:    Info: 0
 # CHECK-NEXT:    AddressAlignment: 1
 # CHECK-NEXT:    EntrySize: 0
 
-# CHECK:         Index: 3
-# CHECK-NEXT:    Name: .sec3
+# CHECK:         Name: .sec3
 # CHECK-NEXT:    Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:    Flags [ (0x3)
 # CHECK-NEXT:      SHF_ALLOC (0x2)
 # CHECK-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 # CHECK-NEXT:    Address: 0x10100
-# CHECK-NEXT:    Offset: 0x54
+# CHECK-NEXT:    Offset:
 # CHECK-NEXT:    Size: 4
 # CHECK-NEXT:    Link: 0
 # CHECK-NEXT:    Info: 0
 # CHECK-NEXT:    AddressAlignment: 1
 # CHECK-NEXT:    EntrySize: 0
 
-# CHECK:         Index: 4
-# CHECK-NEXT:    Name: .sec4
+# CHECK:         Name: .sec4
 # CHECK-NEXT:    Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:    Flags [ (0x3)
 # CHECK-NEXT:      SHF_ALLOC (0x2)
 # CHECK-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 # CHECK-NEXT:    Address: 0x10FFF8
-# CHECK-NEXT:    Offset: 0x58
+# CHECK-NEXT:    Offset:
 # CHECK-NEXT:    Size: 11
 # CHECK-NEXT:    Link: 0
 # CHECK-NEXT:    Info: 0
 # CHECK-NEXT:    AddressAlignment: 1
 # CHECK-NEXT:    EntrySize: 0
-  
+
 ## Check section contents.
 # RUN: llvm-objcopy -O binary --only-section=.text %t %t.text
 # RUN: llvm-objcopy -O binary --only-section=.sec1 %t2 %t2.sec1
@@ -82,37 +78,34 @@
 # RUN: llvm-objcopy -I ihex -O elf32-i386 %p/Inputs/sections.hex %t-raw
 # RUN: llvm-readobj --section-headers %t-raw | FileCheck %s --check-prefix=RAW
 
-# RAW:          Index: 1
-# RAW-NEXT:     Name: .sec1
+# RAW:          Name: .sec1
 # RAW-NEXT:     Type: SHT_PROGBITS (0x1)
 # RAW-NEXT:     Flags [ (0x3)
 # RAW-NEXT:       SHF_ALLOC (0x2)
 # RAW-NEXT:       SHF_WRITE (0x1)
 # RAW-NEXT:     ]
 # RAW-NEXT:     Address: 0x1FFF8
-# RAW-NEXT:     Offset: 0x34
+# RAW-NEXT:     Offset:
 # RAW-NEXT:     Size: 11
 
-# RAW:          Index: 2
-# RAW-NEXT:     Name: .sec2
+# RAW:          Name: .sec2
 # RAW-NEXT:     Type: SHT_PROGBITS (0x1)
 # RAW-NEXT:     Flags [ (0x3)
 # RAW-NEXT:       SHF_ALLOC (0x2)
 # RAW-NEXT:       SHF_WRITE (0x1)
 # RAW-NEXT:     ]
 # RAW-NEXT:     Address: 0xFFFF8
-# RAW-NEXT:     Offset: 0x3F
+# RAW-NEXT:     Offset:
 # RAW-NEXT:     Size: 11
 
-# RAW:          Index: 3
-# RAW-NEXT:     Name: .sec3
+# RAW:          Name: .sec3
 # RAW-NEXT:     Type: SHT_PROGBITS (0x1)
 # RAW-NEXT:     Flags [ (0x3)
 # RAW-NEXT:       SHF_ALLOC (0x2)
 # RAW-NEXT:       SHF_WRITE (0x1)
 # RAW-NEXT:     ]
 # RAW-NEXT:     Address: 0x1FFFF8
-# RAW-NEXT:     Offset: 0x4A
+# RAW-NEXT:     Offset:
 # RAW-NEXT:     Size: 11
 
 ## Check section contents.

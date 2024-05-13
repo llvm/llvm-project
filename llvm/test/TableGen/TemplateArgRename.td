@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen %s
+// RUN: llvm-tblgen --no-warn-on-unused-template-args %s
 // XFAIL: vg_leak
 
 // Make sure there is no collision between XX and XX.

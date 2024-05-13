@@ -18,6 +18,7 @@
 #include "mlir/IR/Value.h"
 
 namespace mlir {
+namespace affine {
 
 /// An AffineValueMap is an affine map plus its ML value operands and
 /// results for analysis purposes. The structure is still a tree form that is
@@ -35,13 +36,18 @@ class AffineValueMap {
 public:
   // Creates an empty AffineValueMap (users should call 'reset' to reset map
   // and operands).
-  AffineValueMap() {}
+  AffineValueMap() = default;
   AffineValueMap(AffineMap map, ValueRange operands, ValueRange results = {});
 
   ~AffineValueMap();
 
   // Resets this AffineValueMap with 'map', 'operands', and 'results'.
   void reset(AffineMap map, ValueRange operands, ValueRange results = {});
+
+  /// Composes all incoming affine.apply ops and then simplifies and
+  /// canonicalizes the map and operands. This can change the number of
+  /// operands, but the result count remains the same.
+  void composeSimplifyAndCanonicalize();
 
   /// Return the value map that is the difference of value maps 'a' and 'b',
   /// represented as an affine map and its operands. The output map + operands
@@ -89,6 +95,7 @@ private:
   SmallVector<Value, 4> results;
 };
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_IR_AFFINEVALUEMAP_H

@@ -1,16 +1,22 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -DOMP5 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -verify -fopenmp -DOMP51 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp -DOMP51 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
+// RUN: %clang_cc1 -fopenmp -DOMP51 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -verify -fopenmp-simd -DOMP51 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp-simd -DOMP51 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
+// RUN: %clang_cc1 -fopenmp-simd -DOMP51 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -208,15 +214,18 @@ int main (int argc, char **argv) {
 // CHECK: #pragma omp target teams distribute simd simdlen(clen - 1)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
-#ifdef OMP5
+#ifdef OMP51
+#pragma omp target teams distribute simd safelen(clen-1) aligned(arr:N+6) if(simd:argc) nontemporal(argc, c, d) order(unconstrained:concurrent) allocate(omp_low_lat_mem_alloc:e) firstprivate(e) uses_allocators(omp_low_lat_mem_alloc)
+#elif OMP5
 #pragma omp target teams distribute simd safelen(clen-1) aligned(arr:N+6) if(simd:argc) nontemporal(argc, c, d) order(concurrent) allocate(omp_low_lat_mem_alloc:e) firstprivate(e) uses_allocators(omp_low_lat_mem_alloc)
 #else
 #pragma omp target teams distribute simd safelen(clen-1) aligned(arr:N+6)
-#endif // OMP5
+#endif // OMP51
   for (int k = 0; k < 10; ++k)
     e += d + argc + arr[k];
 // OMP45: #pragma omp target teams distribute simd safelen(clen - 1) aligned(arr: N + 6)
 // OMP50: #pragma omp target teams distribute simd safelen(clen - 1) aligned(arr: N + 6) if(simd: argc) nontemporal(argc,c,d) order(concurrent) allocate(omp_low_lat_mem_alloc: e) firstprivate(e) uses_allocators(omp_low_lat_mem_alloc)
+// OMP51: #pragma omp target teams distribute simd safelen(clen - 1) aligned(arr: N + 6) if(simd: argc) nontemporal(argc,c,d) order(unconstrained: concurrent) allocate(omp_low_lat_mem_alloc: e) firstprivate(e) uses_allocators(omp_low_lat_mem_alloc)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc + arr[k];
   return (0);

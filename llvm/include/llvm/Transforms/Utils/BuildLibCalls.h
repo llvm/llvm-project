@@ -22,30 +22,74 @@ namespace llvm {
   class IRBuilderBase;
 
   /// Analyze the name and prototype of the given function and set any
-  /// applicable attributes.
+  /// applicable attributes. Note that this merely helps optimizations on an
+  /// already existing function but does not consider mandatory attributes.
+  ///
   /// If the library function is unavailable, this doesn't modify it.
   ///
   /// Returns true if any attributes were set and false otherwise.
-  bool inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI);
-  bool inferLibFuncAttributes(Module *M, StringRef Name, const TargetLibraryInfo &TLI);
+  bool inferNonMandatoryLibFuncAttrs(Module *M, StringRef Name,
+                                     const TargetLibraryInfo &TLI);
+  bool inferNonMandatoryLibFuncAttrs(Function &F, const TargetLibraryInfo &TLI);
+
+  /// Calls getOrInsertFunction() and then makes sure to add mandatory
+  /// argument attributes.
+  FunctionCallee getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                                    LibFunc TheLibFunc, FunctionType *T,
+                                    AttributeList AttributeList);
+  FunctionCallee getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                                    LibFunc TheLibFunc, FunctionType *T);
+  template <typename... ArgsTy>
+  FunctionCallee getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                               LibFunc TheLibFunc, AttributeList AttributeList,
+                               Type *RetTy, ArgsTy... Args) {
+    SmallVector<Type*, sizeof...(ArgsTy)> ArgTys{Args...};
+    return getOrInsertLibFunc(M, TLI, TheLibFunc,
+                              FunctionType::get(RetTy, ArgTys, false),
+                              AttributeList);
+  }
+  /// Same as above, but without the attributes.
+  template <typename... ArgsTy>
+  FunctionCallee getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                             LibFunc TheLibFunc, Type *RetTy, ArgsTy... Args) {
+    return getOrInsertLibFunc(M, TLI, TheLibFunc, AttributeList{}, RetTy,
+                              Args...);
+  }
+  // Avoid an incorrect ordering that'd otherwise compile incorrectly.
+  template <typename... ArgsTy>
+  FunctionCallee
+  getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                     LibFunc TheLibFunc, AttributeList AttributeList,
+                     FunctionType *Invalid, ArgsTy... Args) = delete;
+
+  // Handle -mregparm for the given function.
+  // Note that this function is a rough approximation that only works for simple
+  // function signatures; it does not apply other relevant attributes for
+  // function signatures, including sign/zero-extension for arguments and return
+  // values.
+  void markRegisterParameterAttributes(Function *F);
+
+  /// Check whether the library function is available on target and also that
+  /// it in the current Module is a Function with the right type.
+  bool isLibFuncEmittable(const Module *M, const TargetLibraryInfo *TLI,
+                          LibFunc TheLibFunc);
+  bool isLibFuncEmittable(const Module *M, const TargetLibraryInfo *TLI,
+                          StringRef Name);
 
   /// Check whether the overloaded floating point function
   /// corresponding to \a Ty is available.
-  bool hasFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
+  bool hasFloatFn(const Module *M, const TargetLibraryInfo *TLI, Type *Ty,
                   LibFunc DoubleFn, LibFunc FloatFn, LibFunc LongDoubleFn);
 
   /// Get the name of the overloaded floating point function
-  /// corresponding to \a Ty.
-  StringRef getFloatFnName(const TargetLibraryInfo *TLI, Type *Ty,
-                           LibFunc DoubleFn, LibFunc FloatFn,
-                           LibFunc LongDoubleFn);
-
-  /// Return V if it is an i8*, otherwise cast it to i8*.
-  Value *castToCStr(Value *V, IRBuilderBase &B);
+  /// corresponding to \a Ty. Return the LibFunc in \a TheLibFunc.
+  StringRef getFloatFn(const Module *M, const TargetLibraryInfo *TLI, Type *Ty,
+                       LibFunc DoubleFn, LibFunc FloatFn, LibFunc LongDoubleFn,
+                       LibFunc &TheLibFunc);
 
   /// Emit a call to the strlen function to the builder, for the specified
   /// pointer. Ptr is required to be some pointer type, and the return value has
-  /// 'intptr_t' type.
+  /// 'size_t' type.
   Value *emitStrLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
                     const TargetLibraryInfo *TLI);
 
@@ -53,12 +97,6 @@ namespace llvm {
   /// pointer. Ptr is required to be some pointer type, and the return value has
   /// 'i8*' type.
   Value *emitStrDup(Value *Ptr, IRBuilderBase &B, const TargetLibraryInfo *TLI);
-
-  /// Emit a call to the strnlen function to the builder, for the specified
-  /// pointer. Ptr is required to be some pointer type, MaxLen must be of size_t
-  /// type, and the return value has 'intptr_t' type.
-  Value *emitStrNLen(Value *Ptr, Value *MaxLen, IRBuilderBase &B,
-                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
   /// Emit a call to the strchr function to the builder, for the specified
   /// pointer and character. Ptr is required to be some pointer type, and the
@@ -91,7 +129,7 @@ namespace llvm {
                      const TargetLibraryInfo *TLI);
 
   /// Emit a call to the __memcpy_chk function to the builder. This expects that
-  /// the Len and ObjSize have type 'intptr_t' and Dst/Src are pointers.
+  /// the Len and ObjSize have type 'size_t' and Dst/Src are pointers.
   Value *emitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
                        IRBuilderBase &B, const DataLayout &DL,
                        const TargetLibraryInfo *TLI);
@@ -101,8 +139,12 @@ namespace llvm {
                      const DataLayout &DL, const TargetLibraryInfo *TLI);
 
   /// Emit a call to the memchr function. This assumes that Ptr is a pointer,
-  /// Val is an i32 value, and Len is an 'intptr_t' value.
+  /// Val is an 'int' value, and Len is an 'size_t' value.
   Value *emitMemChr(Value *Ptr, Value *Val, Value *Len, IRBuilderBase &B,
+                    const DataLayout &DL, const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the memrchr function, analogously to emitMemChr.
+  Value *emitMemRChr(Value *Ptr, Value *Val, Value *Len, IRBuilderBase &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
   /// Emit a call to the memcmp function.
@@ -154,7 +196,8 @@ namespace llvm {
   /// function is known to take a single of type matching 'Op' and returns one
   /// value with the same type. If 'Op' is a long double, 'l' is added as the
   /// suffix of name, if 'Op' is a float, we add a 'f' suffix.
-  Value *emitUnaryFloatFnCall(Value *Op, StringRef Name, IRBuilderBase &B,
+  Value *emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
+                              StringRef Name, IRBuilderBase &B,
                               const AttributeList &Attrs);
 
   /// Emit a call to the unary function DoubleFn, FloatFn or LongDoubleFn,
@@ -168,8 +211,10 @@ namespace llvm {
   /// function is known to take type matching 'Op1' and 'Op2' and return one
   /// value with the same type. If 'Op1/Op2' are long double, 'l' is added as
   /// the suffix of name, if 'Op1/Op2' are float, we add a 'f' suffix.
-  Value *emitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
-                               IRBuilderBase &B, const AttributeList &Attrs);
+  Value *emitBinaryFloatFnCall(Value *Op1, Value *Op2,
+                               const TargetLibraryInfo *TLI,
+                               StringRef Name, IRBuilderBase &B,
+                               const AttributeList &Attrs);
 
   /// Emit a call to the binary function DoubleFn, FloatFn or LongDoubleFn,
   /// depending of the type of Op1.
@@ -178,14 +223,14 @@ namespace llvm {
                                LibFunc FloatFn, LibFunc LongDoubleFn,
                                IRBuilderBase &B, const AttributeList &Attrs);
 
-  /// Emit a call to the putchar function. This assumes that Char is an integer.
+  /// Emit a call to the putchar function. This assumes that Char is an 'int'.
   Value *emitPutChar(Value *Char, IRBuilderBase &B,
                      const TargetLibraryInfo *TLI);
 
   /// Emit a call to the puts function. This assumes that Str is some pointer.
   Value *emitPutS(Value *Str, IRBuilderBase &B, const TargetLibraryInfo *TLI);
 
-  /// Emit a call to the fputc function. This assumes that Char is an i32, and
+  /// Emit a call to the fputc function. This assumes that Char is an 'int', and
   /// File is a pointer to FILE.
   Value *emitFPutC(Value *Char, Value *File, IRBuilderBase &B,
                    const TargetLibraryInfo *TLI);
@@ -196,7 +241,7 @@ namespace llvm {
                    const TargetLibraryInfo *TLI);
 
   /// Emit a call to the fwrite function. This assumes that Ptr is a pointer,
-  /// Size is an 'intptr_t', and File is a pointer to FILE.
+  /// Size is an 'size_t', and File is a pointer to FILE.
   Value *emitFWrite(Value *Ptr, Value *Size, Value *File, IRBuilderBase &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
@@ -205,8 +250,23 @@ namespace llvm {
                     const TargetLibraryInfo *TLI);
 
   /// Emit a call to the calloc function.
-  Value *emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
-                    IRBuilderBase &B, const TargetLibraryInfo &TLI);
+  Value *emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
+                    const TargetLibraryInfo &TLI);
+
+  /// Emit a call to the hot/cold operator new function.
+  Value *emitHotColdNew(Value *Num, IRBuilderBase &B,
+                        const TargetLibraryInfo *TLI, LibFunc NewFunc,
+                        uint8_t HotCold);
+  Value *emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
+                               const TargetLibraryInfo *TLI, LibFunc NewFunc,
+                               uint8_t HotCold);
+  Value *emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
+                               const TargetLibraryInfo *TLI, LibFunc NewFunc,
+                               uint8_t HotCold);
+  Value *emitHotColdNewAlignedNoThrow(Value *Num, Value *Align, Value *NoThrow,
+                                      IRBuilderBase &B,
+                                      const TargetLibraryInfo *TLI,
+                                      LibFunc NewFunc, uint8_t HotCold);
 }
 
 #endif

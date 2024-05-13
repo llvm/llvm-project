@@ -3,7 +3,7 @@
 
 %struct.F = type { [3 x i8], i8 }
 
-@X = common global %struct.F zeroinitializer, align 4 ; <%struct.F*> [#uses=1]
+@X = common global %struct.F zeroinitializer, align 4 ; <ptr> [#uses=1]
 
 define void @f1([1 x i32] %f.coerce0) nounwind {
 ; CHECK-LABEL: f1:
@@ -16,10 +16,10 @@ define void @f1([1 x i32] %f.coerce0) nounwind {
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* bitcast (%struct.F* @X to i32*), align 4 ; <i32> [#uses=1]
+  %0 = load i32, ptr @X, align 4 ; <i32> [#uses=1]
   %1 = and i32 %0, -62914561                      ; <i32> [#uses=1]
   %2 = or i32 %1, 41943040                        ; <i32> [#uses=1]
-  store i32 %2, i32* bitcast (%struct.F* @X to i32*), align 4
+  store i32 %2, ptr @X, align 4
   ret void
 }
 
@@ -216,3 +216,226 @@ define i32 @f13(i32 %x, i32 %y) {
   %sel = select i1 %cmp, i32 %y2, i32 %or
   ret i32 %sel
 }
+
+define i32 @bfi1(i32 %a, i32 %b) {
+; CHECK-LABEL: bfi1:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    and r2, r0, #1
+; CHECK-NEXT:    bic r1, r1, #19
+; CHECK-NEXT:    orr r1, r1, r2
+; CHECK-NEXT:    and r2, r0, #16
+; CHECK-NEXT:    orr r1, r1, r2
+; CHECK-NEXT:    and r0, r0, #2
+; CHECK-NEXT:    orr r0, r1, r0
+; CHECK-NEXT:    bx lr
+  %x1 = and i32 %a, 1
+  %y1 = and i32 %b, 4294967294
+  %z1 = or i32 %y1, %x1
+  %x2 = and i32 %a, 16
+  %y2 = and i32 %z1, 4294967279
+  %z2 = or i32 %y2, %x2
+  %x3 = and i32 %a, 2
+  %y3 = and i32 %z2, 4294967293
+  %z3 = or i32 %y3, %x3
+  ret i32 %z3
+}
+
+define void @bfi1_use(i32 %a, i32 %b) {
+; CHECK-LABEL: bfi1_use:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    mov r2, r1
+; CHECK-NEXT:    lsr r3, r0, #4
+; CHECK-NEXT:    bfi r2, r0, #0, #1
+; CHECK-NEXT:    lsr r0, r0, #1
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    bfi r1, r3, #4, #1
+; CHECK-NEXT:    mov r3, r1
+; CHECK-NEXT:    bfi r3, r0, #1, #1
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r2, r3
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    pop {r11, pc}
+  %x1 = and i32 %a, 1
+  %y1 = and i32 %b, 4294967294
+  %z1 = or i32 %y1, %x1
+  %x2 = and i32 %a, 16
+  %y2 = and i32 %z1, 4294967279
+  %z2 = or i32 %y2, %x2
+  %x3 = and i32 %a, 2
+  %y3 = and i32 %z2, 4294967293
+  %z3 = or i32 %y3, %x3
+  call void @use(i32 %z1, i32 %z2, i32 %z3, i32 %z3)
+  ret void
+}
+
+define i32 @bfi2(i32 %a, i32 %b) {
+; CHECK-LABEL: bfi2:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    movw r2, #65148
+; CHECK-NEXT:    movt r2, #65535
+; CHECK-NEXT:    and r1, r1, r2
+; CHECK-NEXT:    and r2, r0, #1
+; CHECK-NEXT:    orr r1, r1, r2
+; CHECK-NEXT:    and r2, r0, #2
+; CHECK-NEXT:    orr r1, r1, r2
+; CHECK-NEXT:    and r2, r0, #128
+; CHECK-NEXT:    orr r1, r1, r2
+; CHECK-NEXT:    and r0, r0, #256
+; CHECK-NEXT:    orr r0, r1, r0
+; CHECK-NEXT:    bx lr
+  %x1 = and i32 %a, 1
+  %y1 = and i32 %b, 4294967294
+  %z1 = or i32 %y1, %x1
+  %x2 = and i32 %a, 2
+  %y2 = and i32 %z1, 4294967293
+  %z2 = or i32 %y2, %x2
+  %x3 = and i32 %a, 128
+  %y3 = and i32 %z2, 4294967167
+  %z3 = or i32 %y3, %x3
+  %x4 = and i32 %a, 256
+  %y4 = and i32 %z3, 4294967039
+  %z4 = or i32 %y4, %x4
+  ret i32 %z4
+}
+
+define void @bfi2_uses(i32 %a, i32 %b) {
+; CHECK-LABEL: bfi2_uses:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    mov r12, r1
+; CHECK-NEXT:    bfi r1, r0, #0, #2
+; CHECK-NEXT:    bfi r12, r0, #0, #1
+; CHECK-NEXT:    lsr r0, r0, #7
+; CHECK-NEXT:    mov r2, r1
+; CHECK-NEXT:    mov r3, r1
+; CHECK-NEXT:    bfi r2, r0, #7, #1
+; CHECK-NEXT:    bfi r3, r0, #7, #2
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    pop {r11, pc}
+  %x1 = and i32 %a, 1
+  %y1 = and i32 %b, 4294967294
+  %z1 = or i32 %y1, %x1
+  %x2 = and i32 %a, 2
+  %y2 = and i32 %z1, 4294967293
+  %z2 = or i32 %y2, %x2
+  %x3 = and i32 %a, 128
+  %y3 = and i32 %z2, 4294967167
+  %z3 = or i32 %y3, %x3
+  %x4 = and i32 %a, 256
+  %y4 = and i32 %z3, 4294967039
+  %z4 = or i32 %y4, %x4
+  call void @use(i32 %z1, i32 %z2, i32 %z3, i32 %z4)
+  ret void
+}
+
+define i32 @bfi3(i32 %a, i32 %b) {
+; CHECK-LABEL: bfi3:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    movw r2, #65148
+; CHECK-NEXT:    movt r2, #65535
+; CHECK-NEXT:    and r1, r1, r2
+; CHECK-NEXT:    and r2, r0, #1
+; CHECK-NEXT:    orr r1, r1, r2
+; CHECK-NEXT:    and r2, r0, #128
+; CHECK-NEXT:    orr r1, r1, r2
+; CHECK-NEXT:    and r2, r0, #2
+; CHECK-NEXT:    orr r1, r1, r2
+; CHECK-NEXT:    and r0, r0, #256
+; CHECK-NEXT:    orr r0, r1, r0
+; CHECK-NEXT:    bx lr
+  %x1 = and i32 %a, 1
+  %y1 = and i32 %b, 4294967294
+  %z1 = or i32 %y1, %x1
+  %x2 = and i32 %a, 128
+  %y2 = and i32 %z1, 4294967167
+  %z2 = or i32 %y2, %x2
+  %x3 = and i32 %a, 2
+  %y3 = and i32 %z2, 4294967293
+  %z3 = or i32 %y3, %x3
+  %x4 = and i32 %a, 256
+  %y4 = and i32 %z3, 4294967039
+  %z4 = or i32 %y4, %x4
+  ret i32 %z4
+}
+
+define void @bfi3_uses(i32 %a, i32 %b) {
+; CHECK-LABEL: bfi3_uses:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    mov r12, r1
+; CHECK-NEXT:    lsr r2, r0, #7
+; CHECK-NEXT:    bfi r12, r0, #0, #1
+; CHECK-NEXT:    lsr r3, r0, #1
+; CHECK-NEXT:    lsr r0, r0, #8
+; CHECK-NEXT:    mov r1, r12
+; CHECK-NEXT:    bfi r1, r2, #7, #1
+; CHECK-NEXT:    mov r2, r1
+; CHECK-NEXT:    bfi r2, r3, #1, #1
+; CHECK-NEXT:    mov r3, r2
+; CHECK-NEXT:    bfi r3, r0, #8, #1
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    pop {r11, pc}
+  %x1 = and i32 %a, 1
+  %y1 = and i32 %b, 4294967294
+  %z1 = or i32 %y1, %x1
+  %x2 = and i32 %a, 128
+  %y2 = and i32 %z1, 4294967167
+  %z2 = or i32 %y2, %x2
+  %x3 = and i32 %a, 2
+  %y3 = and i32 %z2, 4294967293
+  %z3 = or i32 %y3, %x3
+  %x4 = and i32 %a, 256
+  %y4 = and i32 %z3, 4294967039
+  %z4 = or i32 %y4, %x4
+  call void @use(i32 %z1, i32 %z2, i32 %z3, i32 %z4)
+  ret void
+}
+
+define i32 @bfi4(i32 %A, i2 zeroext %BB, ptr %d) {
+; CHECK-LABEL: bfi4:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    lsr r12, r0, #1
+; CHECK-NEXT:    and r3, r0, #8
+; CHECK-NEXT:    bfi r1, r12, #2, #2
+; CHECK-NEXT:    mov lr, #96
+; CHECK-NEXT:    tst r0, #32
+; CHECK-NEXT:    bfi r1, r12, #9, #2
+; CHECK-NEXT:    movweq lr, #32
+; CHECK-NEXT:    orr r1, r1, r3, lsl #8
+; CHECK-NEXT:    and r3, r0, #64
+; CHECK-NEXT:    and r0, r0, #128
+; CHECK-NEXT:    orr r1, r1, lr
+; CHECK-NEXT:    orr r1, r1, r3, lsl #1
+; CHECK-NEXT:    str r1, [r2]
+; CHECK-NEXT:    pop {r11, pc}
+entry:
+  %B = zext i2 %BB to i32
+  %and = and i32 %A, 2
+  %tobool12.not = icmp eq i32 %and, 0
+  %or17 = or i32 %B, 516
+  %spec.select112 = select i1 %tobool12.not, i32 %B, i32 %or17
+  %and20 = and i32 %A, 4
+  %tobool21.not = icmp eq i32 %and20, 0
+  %or26 = or i32 %spec.select112, 1032
+  %spec.select114 = select i1 %tobool21.not, i32 %spec.select112, i32 %or26
+  store i32 %spec.select114, ptr %d, align 4
+  %and29 = shl i32 %A, 8
+  %l2 = and i32 %and29, 2048
+  %l3 = or i32 %l2, %spec.select114
+  %and38 = and i32 %A, 32
+  %tobool39.not = icmp eq i32 %and38, 0
+  %spec.select.v = select i1 %tobool39.not, i32 32, i32 96
+  %spec.select = or i32 %l3, %spec.select.v
+  %and45 = shl i32 %A, 1
+  %l4 = and i32 %and45, 128
+  %l5 = or i32 %l4, %spec.select
+  store i32 %l5, ptr %d, align 4
+  %and52 = and i32 %A, 128
+  ret i32 %and52
+}
+
+declare void @use(i32, i32, i32, i32)

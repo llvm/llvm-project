@@ -22,7 +22,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -49,6 +49,9 @@ public:
 } // end anonymous namespace
 
 void ARCAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  ARC_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                      getSubtargetInfo().getFeatureBits());
+
   SmallString<128> Str;
   raw_svector_ostream O(Str);
 

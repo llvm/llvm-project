@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/common/NativeRegisterContext.h"
-
-#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "lldb/Host/PosixApi.h"
@@ -22,7 +21,7 @@ NativeRegisterContext::NativeRegisterContext(NativeThreadProtocol &thread)
     : m_thread(thread) {}
 
 // Destructor
-NativeRegisterContext::~NativeRegisterContext() {}
+NativeRegisterContext::~NativeRegisterContext() = default;
 
 // FIXME revisit invalidation, process stop ids, etc.  Right now we don't
 // support caching in NativeRegisterContext.  We can do this later by utilizing
@@ -56,14 +55,26 @@ NativeRegisterContext::GetRegisterInfoByName(llvm::StringRef reg_name,
   if (reg_name.empty())
     return nullptr;
 
+  // Generic register names take precedence over specific register names.
+  // For example, on x86 we want "sp" to refer to the complete RSP/ESP register
+  // rather than the 16-bit SP pseudo-register.
+  uint32_t generic_reg = Args::StringToGenericRegister(reg_name);
+  if (generic_reg != LLDB_INVALID_REGNUM) {
+    const RegisterInfo *reg_info =
+        GetRegisterInfo(eRegisterKindGeneric, generic_reg);
+    if (reg_info)
+      return reg_info;
+  }
+
   const uint32_t num_registers = GetRegisterCount();
   for (uint32_t reg = start_idx; reg < num_registers; ++reg) {
     const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
 
-    if (reg_name.equals_lower(reg_info->name) ||
-        reg_name.equals_lower(reg_info->alt_name))
+    if (reg_name.equals_insensitive(reg_info->name) ||
+        reg_name.equals_insensitive(reg_info->alt_name))
       return reg_info;
   }
+
   return nullptr;
 }
 
@@ -110,19 +121,16 @@ const char *NativeRegisterContext::GetRegisterSetNameForRegisterAtIndex(
 }
 
 lldb::addr_t NativeRegisterContext::GetPC(lldb::addr_t fail_value) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
                                                      LLDB_REGNUM_GENERIC_PC);
-  LLDB_LOGF(log,
-            "NativeRegisterContext::%s using reg index %" PRIu32
-            " (default %" PRIu64 ")",
-            __FUNCTION__, reg, fail_value);
+  LLDB_LOGF(log, "Using reg index %" PRIu32 " (default %" PRIu64 ")", reg,
+            fail_value);
 
   const uint64_t retval = ReadRegisterAsUnsigned(reg, fail_value);
 
-  LLDB_LOGF(log, "NativeRegisterContext::%s " PRIu32 " retval %" PRIu64,
-            __FUNCTION__, retval);
+  LLDB_LOGF(log, PRIu32 " retval %" PRIu64, retval);
 
   return retval;
 }
@@ -185,25 +193,22 @@ NativeRegisterContext::ReadRegisterAsUnsigned(uint32_t reg,
 uint64_t
 NativeRegisterContext::ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
                                               lldb::addr_t fail_value) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   if (reg_info) {
     RegisterValue value;
     Status error = ReadRegister(reg_info, value);
     if (error.Success()) {
       LLDB_LOGF(log,
-                "NativeRegisterContext::%s ReadRegister() succeeded, value "
+                "Read register succeeded: value "
                 "%" PRIu64,
-                __FUNCTION__, value.GetAsUInt64());
+                value.GetAsUInt64());
       return value.GetAsUInt64();
     } else {
-      LLDB_LOGF(log,
-                "NativeRegisterContext::%s ReadRegister() failed, error %s",
-                __FUNCTION__, error.AsCString());
+      LLDB_LOGF(log, "Read register failed: error %s", error.AsCString());
     }
   } else {
-    LLDB_LOGF(log, "NativeRegisterContext::%s ReadRegister() null reg_info",
-              __FUNCTION__);
+    LLDB_LOGF(log, "Read register failed: null reg_info");
   }
   return fail_value;
 }
@@ -211,7 +216,7 @@ NativeRegisterContext::ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
 Status NativeRegisterContext::WriteRegisterFromUnsigned(uint32_t reg,
                                                         uint64_t uval) {
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("NativeRegisterContext::%s (): reg is invalid", __FUNCTION__);
+    return Status("Write register failed: reg is invalid");
   return WriteRegisterFromUnsigned(GetRegisterInfoAtIndex(reg), uval);
 }
 
@@ -326,11 +331,6 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   //   |AABB| Address contents
   //   |AABB0000| Register contents [on little-endian hardware]
   //   |0000AABB| Register contents [on big-endian hardware]
-  if (src_len > RegisterValue::kMaxRegisterByteSize) {
-    error.SetErrorString("register too small to receive memory data");
-    return error;
-  }
-
   const size_t dst_len = reg_info->byte_size;
 
   if (src_len > dst_len) {
@@ -343,11 +343,11 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   }
 
   NativeProcessProtocol &process = m_thread.GetProcess();
-  uint8_t src[RegisterValue::kMaxRegisterByteSize];
+  RegisterValue::BytesContainer src(src_len);
 
   // Read the memory
   size_t bytes_read;
-  error = process.ReadMemory(src_addr, src, src_len, bytes_read);
+  error = process.ReadMemory(src_addr, src.data(), src_len, bytes_read);
   if (error.Fail())
     return error;
 
@@ -365,8 +365,8 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   // TODO: we might need to add a parameter to this function in case the byte
   // order of the memory data doesn't match the process. For now we are
   // assuming they are the same.
-  reg_value.SetFromMemoryData(reg_info, src, src_len, process.GetByteOrder(),
-                              error);
+  reg_value.SetFromMemoryData(*reg_info, src.data(), src_len,
+                              process.GetByteOrder(), error);
 
   return error;
 }
@@ -374,25 +374,28 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
 Status NativeRegisterContext::WriteRegisterValueToMemory(
     const RegisterInfo *reg_info, lldb::addr_t dst_addr, size_t dst_len,
     const RegisterValue &reg_value) {
-
-  uint8_t dst[RegisterValue::kMaxRegisterByteSize];
-
   Status error;
+  if (reg_info == nullptr) {
+    error.SetErrorString("Invalid register info argument.");
+    return error;
+  }
 
+  RegisterValue::BytesContainer dst(dst_len);
   NativeProcessProtocol &process = m_thread.GetProcess();
 
   // TODO: we might need to add a parameter to this function in case the byte
   // order of the memory data doesn't match the process. For now we are
   // assuming they are the same.
   const size_t bytes_copied = reg_value.GetAsMemoryData(
-      reg_info, dst, dst_len, process.GetByteOrder(), error);
+      *reg_info, dst.data(), dst_len, process.GetByteOrder(), error);
 
   if (error.Success()) {
     if (bytes_copied == 0) {
       error.SetErrorString("byte copy failed.");
     } else {
       size_t bytes_written;
-      error = process.WriteMemory(dst_addr, dst, bytes_copied, bytes_written);
+      error = process.WriteMemory(dst_addr, dst.data(), bytes_copied,
+                                  bytes_written);
       if (error.Fail())
         return error;
 

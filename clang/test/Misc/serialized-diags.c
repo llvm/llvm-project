@@ -1,15 +1,15 @@
-void foo() {
+void foo(void) {
   int voodoo;
   voodoo = voodoo + 1;
 }
 
-void bar() {
+void bar(void) {
   int dragon;
   dragon = dragon + 1
 }
 
 // Test handling of FixIts that only remove text.
-int baz();
+int baz(void);
 void qux(int x) {
   if ((x == baz()))
    return;
@@ -18,7 +18,7 @@ void qux(int x) {
 // Test handling of macros.
 void taz(int x, int y);
 #define false 0
-void testMacro() {
+void testMacro(void) {
   taz(0, 0, false);
 }
 
@@ -26,7 +26,7 @@ void testMacro() {
 #include "serialized-diags.h"
 
 // Test handling of warnings that have empty fixits.
-void rdar11040133() {
+void rdar11040133(void) {
   unsigned x;
 }
 
@@ -57,7 +57,7 @@ void rdar11040133() {
 // CHECK: +-{{.*[/\\]}}serialized-diags.c:20:15: note: expanded from macro 'false' []
 // CHECK: +-Range: {{.*[/\\]}}serialized-diags.c:20:15 {{.*[/\\]}}serialized-diags.c:20:16
 // CHECK: +-{{.*[/\\]}}serialized-diags.c:19:6: note: 'taz' declared here []
-// CHECK: {{.*[/\\]}}serialized-diags.h:5:7: warning: incompatible integer to pointer conversion initializing 'char *' with an expression of type 'int' [-Wint-conversion]
+// CHECK: {{.*[/\\]}}serialized-diags.h:5:7: error: incompatible integer to pointer conversion initializing 'char *' with an expression of type 'int' [-Wint-conversion]
 // CHECK: Range: {{.*[/\\]}}serialized-diags.h:5:16 {{.*[/\\]}}serialized-diags.h:5:17
 // CHECK: +-{{.*[/\\]}}serialized-diags.c:26:10: note: in file included from {{.*[/\\]}}serialized-diags.c:26: []
 // CHECK: Number FIXITs = 0

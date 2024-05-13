@@ -13,16 +13,16 @@
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "support/Function.h"
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <chrono>
+#include <memory>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -88,9 +88,38 @@ struct DebouncePolicy {
   static DebouncePolicy fixed(clock::duration);
 };
 
+/// PreambleThrottler controls which preambles can build at any given time.
+/// This can be used to limit overall concurrency, and to prioritize some
+/// preambles over others.
+/// In a distributed environment, a throttler may be able to coordinate resource
+/// use across several clangd instances.
+///
+/// This class is threadsafe.
+class PreambleThrottler {
+public:
+  virtual ~PreambleThrottler() = default;
+
+  using RequestID = unsigned;
+  using Callback = llvm::unique_function<void()>;
+  /// Attempt to acquire resources to build a file's preamble.
+  ///
+  /// Does not block, may eventually invoke the callback to satisfy the request.
+  /// If the callback is invoked, release() must be called afterwards.
+  virtual RequestID acquire(llvm::StringRef Filename, Callback) = 0;
+  /// Abandons the request/releases any resources that have been acquired.
+  ///
+  /// Must be called exactly once after acquire().
+  /// acquire()'s callback will not be invoked after release() returns.
+  virtual void release(RequestID) = 0;
+
+  // FIXME: we may want to be able attach signals to filenames.
+  //        this would allow the throttler to make better scheduling decisions.
+};
+
 enum class PreambleAction {
-  Idle,
+  Queued,
   Building,
+  Idle,
 };
 
 struct ASTAction {
@@ -133,11 +162,9 @@ public:
   /// Called on the AST that was built for emitting the preamble. The built AST
   /// contains only AST nodes from the #include directives at the start of the
   /// file. AST node in the current file should be observed on onMainAST call.
-  virtual void onPreambleAST(PathRef Path, llvm::StringRef Version,
-                             ASTContext &Ctx,
-                             std::shared_ptr<clang::Preprocessor> PP,
-                             const CanonicalIncludes &) {}
-
+  virtual void
+  onPreambleAST(PathRef Path, llvm::StringRef Version, CapturedASTCtx Ctx,
+                std::shared_ptr<const include_cleaner::PragmaIncludes>) {}
   /// The argument function is run under the critical section guarding against
   /// races when closing the files.
   using PublishFn = llvm::function_ref<void(llvm::function_ref<void()>)>;
@@ -201,6 +228,9 @@ public:
 
     /// Determines when to keep idle ASTs in memory for future use.
     ASTRetentionPolicy RetentionPolicy;
+
+    /// This throttler controls which preambles may be built at a given time.
+    clangd::PreambleThrottler *PreambleThrottler = nullptr;
 
     /// Used to create a context that wraps each single operation.
     /// Typically to inject per-file configuration.
@@ -322,7 +352,7 @@ public:
   // FIXME: remove this when there is proper index support via build system
   // integration.
   // FIXME: move to ClangdServer via createProcessingContext.
-  static llvm::Optional<llvm::StringRef> getFileBeingProcessedInContext();
+  static std::optional<llvm::StringRef> getFileBeingProcessedInContext();
 
   void profile(MemoryTree &MT) const;
 
@@ -338,10 +368,10 @@ private:
   llvm::StringMap<std::unique_ptr<FileData>> Files;
   std::unique_ptr<ASTCache> IdleASTs;
   std::unique_ptr<HeaderIncluderCache> HeaderIncluders;
-  // None when running tasks synchronously and non-None when running tasks
-  // asynchronously.
-  llvm::Optional<AsyncTaskRunner> PreambleTasks;
-  llvm::Optional<AsyncTaskRunner> WorkerThreads;
+  // std::nullopt when running tasks synchronously and non-std::nullopt when
+  // running tasks asynchronously.
+  std::optional<AsyncTaskRunner> PreambleTasks;
+  std::optional<AsyncTaskRunner> WorkerThreads;
   // Used to create contexts for operations that are not bound to a particular
   // file (e.g. index queries).
   std::string LastActiveFile;

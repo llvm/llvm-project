@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -16,12 +15,7 @@
 
 #include <regex>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     std::match_results<const char*> c;
     c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    return 0;
 }

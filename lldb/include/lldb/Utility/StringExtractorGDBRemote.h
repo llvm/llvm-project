@@ -13,6 +13,7 @@
 #include "lldb/Utility/StringExtractor.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <optional>
 #include <string>
 
 #include <cstddef>
@@ -23,7 +24,7 @@ public:
   typedef bool (*ResponseValidatorCallback)(
       void *baton, const StringExtractorGDBRemote &response);
 
-  StringExtractorGDBRemote() : StringExtractor(), m_validator(nullptr) {}
+  StringExtractorGDBRemote() = default;
 
   StringExtractorGDBRemote(llvm::StringRef str)
       : StringExtractor(str), m_validator(nullptr) {}
@@ -88,6 +89,7 @@ public:
     eServerPacketType_vFile_mode,
     eServerPacketType_vFile_exists,
     eServerPacketType_vFile_md5,
+    eServerPacketType_vFile_fstat,
     eServerPacketType_vFile_stat,
     eServerPacketType_vFile_symlink,
     eServerPacketType_vFile_unlink,
@@ -135,6 +137,8 @@ public:
     eServerPacketType_vAttachName,
     eServerPacketType_vCont,
     eServerPacketType_vCont_actions, // vCont?
+    eServerPacketType_vKill,
+    eServerPacketType_vRun,
 
     eServerPacketType_stop_reason, // '?'
 
@@ -167,6 +171,16 @@ public:
     eServerPacketType_jLLDBTraceStop,
     eServerPacketType_jLLDBTraceGetState,
     eServerPacketType_jLLDBTraceGetBinaryData,
+
+    eServerPacketType_qMemTags, // read memory tags
+    eServerPacketType_QMemTags, // write memory tags
+
+    eServerPacketType_qLLDBSaveCore,
+    eServerPacketType_QSetIgnoredExceptions,
+    eServerPacketType_QNonStop,
+    eServerPacketType_vStopped,
+    eServerPacketType_vCtrlC,
+    eServerPacketType_vStdio,
   };
 
   ServerPacketType GetServerPacketType() const;
@@ -195,14 +209,14 @@ public:
   static constexpr lldb::tid_t AllThreads = UINT64_MAX;
 
   // Read thread-id from the packet.  If the packet is valid, returns
-  // the pair (PID, TID), otherwise returns llvm::None.  If the packet
+  // the pair (PID, TID), otherwise returns std::nullopt.  If the packet
   // does not list a PID, default_pid is used.
-  llvm::Optional<std::pair<lldb::pid_t, lldb::tid_t>>
+  std::optional<std::pair<lldb::pid_t, lldb::tid_t>>
   GetPidTid(lldb::pid_t default_pid);
 
 protected:
-  ResponseValidatorCallback m_validator;
-  void *m_validator_baton;
+  ResponseValidatorCallback m_validator = nullptr;
+  void *m_validator_baton = nullptr;
 };
 
 #endif // LLDB_UTILITY_STRINGEXTRACTORGDBREMOTE_H

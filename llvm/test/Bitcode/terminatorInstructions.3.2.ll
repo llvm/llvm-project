@@ -27,7 +27,7 @@ entry:
 
 define i32 @indirectbr(i8* %Addr){
 entry:
-; CHECK: indirectbr i8* %Addr, [label %bb1, label %bb2]
+; CHECK: indirectbr ptr %Addr, [label %bb1, label %bb2]
   indirectbr i8* %Addr, [ label %bb1, label %bb2 ]
   
   bb1:

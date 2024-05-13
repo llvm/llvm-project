@@ -10,6 +10,7 @@
 
 // void assign(size_type n, const value_type& v);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -47,7 +48,8 @@ test(C& c1, int size, int v)
     typedef typename C::const_iterator CI;
     c1.assign(size, v);
     assert(c1.size() == static_cast<std::size_t>(size));
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
     for (CI i = c1.begin(); i != c1.end(); ++i)
         assert(*i == v);
 }

@@ -184,7 +184,7 @@ public:
     // this can be a static_assert.
     static_assert(M != CompletionMode::RewriteLine,
                   "Shouldn't rewrite line with this function");
-    if (completion.startswith(GetCursorArgumentPrefix()))
+    if (completion.starts_with(GetCursorArgumentPrefix()))
       AddCompletion(completion, description, M);
   }
 

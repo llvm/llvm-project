@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
@@ -104,4 +105,26 @@ TEST_F(MDBuilderTest, createTBAANode) {
   EXPECT_EQ(mdconst::extract<ConstantInt>(N2->getOperand(2))->getZExtValue(),
             1U);
 }
+TEST_F(MDBuilderTest, createPCSections) {
+  MDBuilder MDHelper(Context);
+  ConstantInt *C1 = ConstantInt::get(Context, APInt(8, 1));
+  ConstantInt *C2 = ConstantInt::get(Context, APInt(8, 2));
+  MDNode *PCS = MDHelper.createPCSections({{"s1", {C1, C2}}, {"s2", {}}});
+  ASSERT_EQ(PCS->getNumOperands(), 3U);
+  const auto *S1 = dyn_cast<MDString>(PCS->getOperand(0));
+  const auto *Aux = dyn_cast<MDNode>(PCS->getOperand(1));
+  const auto *S2 = dyn_cast<MDString>(PCS->getOperand(2));
+  ASSERT_NE(S1, nullptr);
+  ASSERT_NE(Aux, nullptr);
+  ASSERT_NE(S2, nullptr);
+  EXPECT_EQ(S1->getString(), "s1");
+  EXPECT_EQ(S2->getString(), "s2");
+  ASSERT_EQ(Aux->getNumOperands(), 2U);
+  ASSERT_TRUE(isa<ConstantAsMetadata>(Aux->getOperand(0)));
+  ASSERT_TRUE(isa<ConstantAsMetadata>(Aux->getOperand(1)));
+  EXPECT_EQ(mdconst::extract<ConstantInt>(Aux->getOperand(0))->getValue(),
+            C1->getValue());
+  EXPECT_EQ(mdconst::extract<ConstantInt>(Aux->getOperand(1))->getValue(),
+            C2->getValue());
 }
+} // namespace

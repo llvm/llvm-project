@@ -57,7 +57,7 @@ outsb %es:(%esi), %dx
 outsl %es:(%esi), %dx 
 
 // CHECK: outsw %es:(%esi), %dx 
-// CHECK: encoding: [0x66,0x26,0x6f]        
+// CHECK: encoding: [0x26,0x66,0x6f]        
 outsw %es:(%esi), %dx 
 
 // CHECK: popal 
@@ -269,7 +269,7 @@ repne outsb %es:(%esi), %dx
 repne outsl %es:(%esi), %dx 
 
 // CHECK: repne outsw %es:(%esi), %dx 
-// CHECK: encoding: [0xf2,0x66,0x26,0x6f]       
+// CHECK: encoding: [0xf2,0x26,0x66,0x6f]       
 repne outsw %es:(%esi), %dx 
 
 // CHECK: rep outsb %es:(%esi), %dx 
@@ -281,7 +281,7 @@ rep outsb %es:(%esi), %dx
 rep outsl %es:(%esi), %dx 
 
 // CHECK: rep outsw %es:(%esi), %dx 
-// CHECK: encoding: [0xf3,0x66,0x26,0x6f]       
+// CHECK: encoding: [0xf3,0x26,0x66,0x6f]       
 rep outsw %es:(%esi), %dx 
 
 // CHECK: rolb $0, -485498096(%edx,%eax,4) 

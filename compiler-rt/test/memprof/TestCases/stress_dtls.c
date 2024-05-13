@@ -1,28 +1,28 @@
 // REQUIRES: memprof-64-bits
 // Stress test dynamic TLS + dlopen + threads.
 //
-// RUN: %clangxx_memprof -x c -DSO_NAME=f0 %s -shared -o %t-f0.so -fPIC
-// RUN: %clangxx_memprof -x c -DSO_NAME=f1 %s -shared -o %t-f1.so -fPIC
-// RUN: %clangxx_memprof -x c -DSO_NAME=f2 %s -shared -o %t-f2.so -fPIC
-// RUN: %clangxx_memprof %s -ldl -pthread -o %t
+// RUN: %clang_memprof -x c -DSO_NAME=f0 %s -shared -o %t-f0.so -fPIC
+// RUN: %clang_memprof -x c -DSO_NAME=f1 %s -shared -o %t-f1.so -fPIC
+// RUN: %clang_memprof -x c -DSO_NAME=f2 %s -shared -o %t-f2.so -fPIC
+// RUN: %clang_memprof %s -ldl -pthread -o %t
 // RUN: %run %t 0 3
 // RUN: %run %t 2 3
-// RUN: %env_memprof_opts=log_path=stderr:verbosity=2 %run %t 10 2 2>&1 | FileCheck %s
-// RUN: %env_memprof_opts=log_path=stderr:verbosity=2:intercept_tls_get_addr=1 %run %t 10 2 2>&1 | FileCheck %s
-// RUN: %env_memprof_opts=log_path=stderr:verbosity=2:intercept_tls_get_addr=0 %run %t 10 2 2>&1 | FileCheck %s --check-prefix=CHECK0
-// CHECK: __tls_get_addr
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr:verbosity=2 %run %t 10 2 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr:verbosity=2:intercept_tls_get_addr=1 %run %t 10 2 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr:verbosity=2:intercept_tls_get_addr=0 %run %t 10 2 2>&1 | FileCheck %s --check-prefix=CHECK0
+// CHECK: ==__tls_get_addr:
 // CHECK: Creating thread 0
-// CHECK: __tls_get_addr
+// CHECK: ==__tls_get_addr:
 // CHECK: Creating thread 1
-// CHECK: __tls_get_addr
+// CHECK: ==__tls_get_addr:
 // CHECK: Creating thread 2
-// CHECK: __tls_get_addr
+// CHECK: ==__tls_get_addr:
 // CHECK: Creating thread 3
-// CHECK: __tls_get_addr
+// CHECK: ==__tls_get_addr:
 // Make sure that TLS slots don't leak
 // CHECK-NOT: num_live_dtls 5
 //
-// CHECK0-NOT: __tls_get_addr
+// CHECK0-NOT: ==__tls_get_addr:
 /*
 cc=your-compiler
 

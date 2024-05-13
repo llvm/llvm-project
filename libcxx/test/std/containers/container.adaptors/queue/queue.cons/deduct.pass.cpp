@@ -8,25 +8,28 @@
 
 // <queue>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: clang-5, apple-clang-9
-// UNSUPPORTED: libcpp-no-deduction-guides
-// Clang 5 will generate bad implicit deduction guides
-//  Specifically, for the copy constructor.
 
 // template<class Container>
 //   queue(Container) -> queue<typename Container::value_type, Container>;
 //
 // template<class Container, class Allocator>
 //   queue(Container, Allocator) -> queue<typename Container::value_type, Container>;
+//
+// template<ranges::input_range R>
+//   queue(from_range_t, R&&) -> queue<ranges::range_value_t<R>>; // since C++23
+//
+// template<ranges::input_range R, class Allocator>
+//     queue(from_range_t, R&&, Allocator)
+//       -> queue<ranges::range_value_t<R>, deque<ranges::range_value_t<R>, Allocator>>; // since C++23
 
-
+#include <array>
 #include <queue>
 #include <list>
 #include <iterator>
 #include <cassert>
 #include <cstddef>
-#include <climits> // INT_MAX
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "test_allocator.h"
@@ -72,21 +75,101 @@ int main(int, char**)
     }
 
     {
-//  This one is odd - you can pass an allocator in to use, but the allocator
-//  has to match the type of the one used by the underlying container
-    typedef short T;
-    typedef test_allocator<T> Alloc;
-    typedef std::deque<T, Alloc> Container;
+        typedef short T;
+        typedef test_allocator<T> Alloc;
+        typedef std::list<T, Alloc> Cont;
+        typedef test_allocator<int> ConvertibleToAlloc;
+        static_assert(std::uses_allocator_v<Cont, ConvertibleToAlloc> &&
+                      !std::is_same_v<typename Cont::allocator_type, ConvertibleToAlloc>);
 
-    Container c{0,1,2,3};
-    std::queue<T, Container> source(c);
-    std::queue que(source, Alloc(2)); // queue(queue &, allocator)
-    static_assert(std::is_same_v<decltype(que)::value_type, T>, "");
-    static_assert(std::is_same_v<decltype(que)::container_type, Container>, "");
-    assert(que.size() == 4);
-    assert(que.back() == 3);
+        {
+        Cont cont;
+        std::queue que(cont, Alloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        Cont cont;
+        std::queue que(cont, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        Cont cont;
+        std::queue que(std::move(cont), Alloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        Cont cont;
+        std::queue que(std::move(cont), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
     }
 
+    {
+        typedef short T;
+        typedef test_allocator<T> Alloc;
+        typedef std::list<T, Alloc> Cont;
+        typedef test_allocator<int> ConvertibleToAlloc;
+        static_assert(std::uses_allocator_v<Cont, ConvertibleToAlloc> &&
+                      !std::is_same_v<typename Cont::allocator_type, ConvertibleToAlloc>);
 
-  return 0;
+        {
+        std::queue<T, Cont> source;
+        std::queue que(source, Alloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        std::queue<T, Cont> source;
+        std::queue que(source, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        std::queue<T, Cont> source;
+        std::queue que(std::move(source), Alloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        std::queue<T, Cont> source;
+        std::queue que(std::move(source), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+    }
+
+#if TEST_STD_VER >= 23
+    {
+        typedef short T;
+        typedef test_allocator<T> Alloc;
+        std::list<T> a;
+        {
+        std::queue q(a.begin(), a.end());
+        static_assert(std::is_same_v<decltype(q), std::queue<T>>);
+        }
+        {
+        std::queue q(a.begin(), a.end(), Alloc());
+        static_assert(std::is_same_v<decltype(q), std::queue<T, std::deque<T, Alloc>>>);
+        }
+    }
+
+    {
+      {
+        std::queue c(std::from_range, std::array<int, 0>());
+        static_assert(std::is_same_v<decltype(c), std::queue<int>>);
+      }
+
+      {
+        using Alloc = test_allocator<int>;
+        std::queue c(std::from_range, std::array<int, 0>(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::queue<int, std::deque<int, Alloc>>>);
+      }
+    }
+#endif
+
+    ContainerAdaptorDeductionGuidesSfinaeAway<std::queue, std::queue<int>>();
+
+    return 0;
 }

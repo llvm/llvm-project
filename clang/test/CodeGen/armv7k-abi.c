@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple thumbv7k-apple-watchos2.0 -target-abi aapcs16 -target-cpu cortex-a7 %s -o - -emit-llvm | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // Make sure 64 and 128 bit types are naturally aligned by the v7k ABI:
@@ -23,7 +25,7 @@ typedef struct {
 // We don't want any padding type to be included by Clang when using the
 // APCS-VFP ABI, that needs to be handled by LLVM if needed.
 
-// CHECK: void @no_padding(i32 %r0, i32 %r1, i32 %r2, [4 x double] %d0_d3.coerce, [4 x double] %d4_d7.coerce, [4 x double] %sp.coerce, i64 %split)
+// CHECK: void @no_padding(i32 noundef %r0, i32 noundef %r1, i32 noundef %r2, [4 x double] %d0_d3.coerce, [4 x double] %d4_d7.coerce, [4 x double] %sp.coerce, i64 noundef %split)
 void no_padding(int r0, int r1, int r2, BigHFA d0_d3, BigHFA d4_d7, BigHFA sp,
                 long long split) {}
 
@@ -37,10 +39,10 @@ typedef struct {
   double z;
 } BigStruct;
 
-// CHECK: define{{.*}} void @big_struct_indirect(%struct.BigStruct* %b)
+// CHECK: define{{.*}} void @big_struct_indirect(ptr noundef %b)
 void big_struct_indirect(BigStruct b) {}
 
-// CHECK: define{{.*}} void @return_big_struct_indirect(%struct.BigStruct* noalias sret
+// CHECK: define{{.*}} void @return_big_struct_indirect(ptr dead_on_unwind noalias writable sret
 BigStruct return_big_struct_indirect() {}
 
 // Structs smaller than 16 bytes should be passed directly, and coerced to
@@ -82,12 +84,12 @@ typedef struct {
 // CHECK: define{{.*}} [2 x i32] @return_oddly_sized_struct()
 OddlySizedStruct return_oddly_sized_struct() {}
 
-// CHECK: define{{.*}} <4 x float> @test_va_arg_vec(i8* %l)
-// CHECK:   [[ALIGN_TMP:%.*]] = add i32 {{%.*}}, 15
-// CHECK:   [[ALIGNED:%.*]] = and i32 [[ALIGN_TMP]], -16
-// CHECK:   [[ALIGNED_I8:%.*]] = inttoptr i32 [[ALIGNED]] to i8*
-// CHECK:   [[ALIGNED_VEC:%.*]] = bitcast i8* [[ALIGNED_I8]] to <4 x float>
-// CHECK:   load <4 x float>, <4 x float>* [[ALIGNED_VEC]], align 16
+// CHECK: define{{.*}} <4 x float> @test_va_arg_vec(ptr noundef %l)
+
+
+// CHECK: [[GEP_ALIGN:%.+]] = getelementptr inbounds i8, ptr {{%.*}}, i32 15
+// CHECK: [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[GEP_ALIGN]], i32 -16)
+// CHECK:   load <4 x float>, ptr [[ALIGNED]], align 16
 float32x4_t test_va_arg_vec(__builtin_va_list l) {
   return __builtin_va_arg(l, float32x4_t);
 }

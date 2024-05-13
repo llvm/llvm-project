@@ -18,8 +18,8 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -33,11 +33,10 @@ MSP430InstrInfo::MSP430InstrInfo(MSP430Subtarget &STI)
   : MSP430GenInstrInfo(MSP430::ADJCALLSTACKDOWN, MSP430::ADJCALLSTACKUP),
     RI() {}
 
-void MSP430InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MI,
-                                    Register SrcReg, bool isKill, int FrameIdx,
-                                          const TargetRegisterClass *RC,
-                                          const TargetRegisterInfo *TRI) const {
+void MSP430InstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+    bool isKill, int FrameIdx, const TargetRegisterClass *RC,
+    const TargetRegisterInfo *TRI, Register VReg) const {
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
@@ -64,7 +63,8 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MI,
                                            Register DestReg, int FrameIdx,
                                            const TargetRegisterClass *RC,
-                                           const TargetRegisterInfo *TRI) const{
+                                           const TargetRegisterInfo *TRI,
+                                           Register VReg) const {
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
@@ -116,6 +116,7 @@ unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
       continue;
     if (I->getOpcode() != MSP430::JMP &&
         I->getOpcode() != MSP430::JCC &&
+        I->getOpcode() != MSP430::Bi &&
         I->getOpcode() != MSP430::Br &&
         I->getOpcode() != MSP430::Bm)
       break;
@@ -189,15 +190,14 @@ bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       return true;
 
     // Handle unconditional branches.
-    if (I->getOpcode() == MSP430::JMP) {
+    if (I->getOpcode() == MSP430::JMP || I->getOpcode() == MSP430::Bi) {
       if (!AllowModify) {
         TBB = I->getOperand(0).getMBB();
         continue;
       }
 
       // If the block has any instructions after a JMP, delete them.
-      while (std::next(I) != MBB.end())
-        std::next(I)->eraseFromParent();
+      MBB.erase(std::next(I), MBB.end());
       Cond.clear();
       FBB = nullptr;
 

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-arc -verify %s
 // RUN: not %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-arc -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
-// rdar://11913153
 
 typedef const struct __CFString * CFStringRef;
 typedef struct __CFString * CFMutableStringRef;
@@ -26,7 +25,7 @@ id CFBridgingRelease(CFTypeRef __attribute__((cf_consumed)) X);
 
 @interface NSMutableString @end
 
-NSMutableString *test() {
+NSMutableString *test(void) {
   NSDictionary *infoDictionary;
   infoDictionary[kCFBundleNameKey] = 0; // expected-error {{indexing expression is invalid because subscript type 'CFStringRef' (aka 'const struct __CFString *') is not an integral or Objective-C pointer type}}
   return infoDictionary[CFStringCreateMutable(((void*)0), 100)]; // expected-error {{indexing expression is invalid because subscript type 'CFMutableStringRef' (aka 'struct __CFString *') is not an integral or Objective-C pointer type}} \
@@ -35,5 +34,5 @@ NSMutableString *test() {
 					
 }
 
-// CHECK: fix-it:"{{.*}}":{32:25-32:25}:"CFBridgingRelease("
-// CHECK: fix-it:"{{.*}}":{32:63-32:63}:")"
+// CHECK: fix-it:"{{.*}}":{31:25-31:25}:"CFBridgingRelease("
+// CHECK: fix-it:"{{.*}}":{31:63-31:63}:")"

@@ -1,163 +1,169 @@
 #include "../builtins/assembly.h"
+#include "../sanitizer_common/sanitizer_asm.h"
 
-    .text
-    /* The variable containing the handler function pointer */
-    .global _ZN6__xray19XRayPatchedFunctionE
-    /* Word-aligned function entry point */
-    .p2align 2
-    /* Let C/C++ see the symbol */
-    .global __xray_FunctionEntry
-    .hidden __xray_FunctionEntry
-    .type __xray_FunctionEntry, %function
-    /* In C++ it is void extern "C" __xray_FunctionEntry(uint32_t FuncId) with
-         FuncId passed in W0 register. */
-__xray_FunctionEntry:
+.macro SAVE_REGISTERS
+  stp x1, x2, [sp, #-16]!
+  stp x3, x4, [sp, #-16]!
+  stp x5, x6, [sp, #-16]!
+  stp x7, x30, [sp, #-16]!
+  stp q0, q1, [sp, #-32]!
+  stp q2, q3, [sp, #-32]!
+  stp q4, q5, [sp, #-32]!
+  stp q6, q7, [sp, #-32]!
+  // x8 is the indirect result register and needs to be preserved for the body of the function to use.
+  stp x8, x0, [sp, #-16]!
+.endm
+
+.macro RESTORE_REGISTERS
+  ldp x8, x0, [sp], #16
+  ldp q6, q7, [sp], #32
+  ldp q4, q5, [sp], #32
+  ldp q2, q3, [sp], #32
+  ldp q0, q1, [sp], #32
+  ldp x7, x30, [sp], #16
+  ldp x5, x6, [sp], #16
+  ldp x3, x4, [sp], #16
+  ldp x1, x2, [sp], #16
+.endm
+
+.text
+.p2align 2
+.global ASM_SYMBOL(__xray_FunctionEntry)
+ASM_HIDDEN(__xray_FunctionEntry)
+ASM_TYPE_FUNCTION(__xray_FunctionEntry)
+ASM_SYMBOL(__xray_FunctionEntry):
     /* Move the return address beyond the end of sled data. The 12 bytes of
          data are inserted in the code of the runtime patch, between the call
          instruction and the instruction returned into. The data contains 32
          bits of instrumented function ID and 64 bits of the address of
          the current trampoline. */
-    ADD X30, X30, #12
-    /* Push the registers which may be modified by the handler function */
-    STP X1, X2, [SP, #-16]!
-    STP X3, X4, [SP, #-16]!
-    STP X5, X6, [SP, #-16]!
-    STP X7, X30, [SP, #-16]!
-    STP Q0, Q1, [SP, #-32]!
-    STP Q2, Q3, [SP, #-32]!
-    STP Q4, Q5, [SP, #-32]!
-    STP Q6, Q7, [SP, #-32]!
-    /* X8 is the indirect result register and needs to be preserved for the body
-     of the function to use */
-    STP X8, X0, [SP, #-16]!
+  add x30, x30, #12
+  // Push the registers which may be modified by the handler function.
+  SAVE_REGISTERS
 
-    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
-    /* Load the handler function pointer into X2 */
-    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
-    /* Handler address is nullptr if handler is not set */
-    CMP X2, #0
-    BEQ FunctionEntry_restore
-    /* Function ID is already in W0 (the first parameter).
-         X1=0 means that we are tracing an entry event */
-    MOV X1, #0
-    /* Call the handler with 2 parameters in W0 and X1 */
-    BLR X2
-FunctionEntry_restore:
-    /* Pop the saved registers */
-    LDP X8, X0, [SP], #16
-    LDP Q6, Q7, [SP], #32
-    LDP Q4, Q5, [SP], #32
-    LDP Q2, Q3, [SP], #32
-    LDP Q0, Q1, [SP], #32
-    LDP X7, X30, [SP], #16
-    LDP X5, X6, [SP], #16
-    LDP X3, X4, [SP], #16
-    LDP X1, X2, [SP], #16
-    RET
+  // Load the handler function pointer.
+  adrp x2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
+  ldr x2, [x2, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
+  cbz x2, 1f
+  // Set w0 to the function ID (w17). Set x1 to XRayEntryType::ENTRY = 0.
+  mov w0, w17
+  mov x1, #0
+  // Call the handler with 2 parameters.
+  blr x2
+1:
+  RESTORE_REGISTERS
+  ret
+ASM_SIZE(__xray_FunctionEntry)
 
-    /* Word-aligned function entry point */
-    .p2align 2
-    /* Let C/C++ see the symbol */
-    .global __xray_FunctionExit
-    .hidden __xray_FunctionExit
-    .type __xray_FunctionExit, %function
-    /* In C++ it is void extern "C" __xray_FunctionExit(uint32_t FuncId) with
-         FuncId passed in W0 register. */
-__xray_FunctionExit:
+.p2align 2
+.global ASM_SYMBOL(__xray_FunctionExit)
+ASM_HIDDEN(__xray_FunctionExit)
+ASM_TYPE_FUNCTION(__xray_FunctionExit)
+ASM_SYMBOL(__xray_FunctionExit):
     /* Move the return address beyond the end of sled data. The 12 bytes of
          data are inserted in the code of the runtime patch, between the call
          instruction and the instruction returned into. The data contains 32
          bits of instrumented function ID and 64 bits of the address of
          the current trampoline. */
-    ADD X30, X30, #12
-    /* Push the registers which may be modified by the handler function */
-    STP X1, X2, [SP, #-16]!
-    STP X3, X4, [SP, #-16]!
-    STP X5, X6, [SP, #-16]!
-    STP X7, X30, [SP, #-16]!
-    STP Q0, Q1, [SP, #-32]!
-    STP Q2, Q3, [SP, #-32]!
-    STP Q4, Q5, [SP, #-32]!
-    STP Q6, Q7, [SP, #-32]!
-    /* X8 is the indirect result register and needs to be preserved for the body
-     of the function to use */
-    STP X8, X0, [SP, #-16]!
+  add x30, x30, #12
+  SAVE_REGISTERS
 
-    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
-    /* Load the handler function pointer into X2 */
-    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
-    /* Handler address is nullptr if handler is not set */
-    CMP X2, #0
-    BEQ FunctionExit_restore
-    /* Function ID is already in W0 (the first parameter).
-         X1=1 means that we are tracing an exit event */
-    MOV X1, #1
-    /* Call the handler with 2 parameters in W0 and X1 */
-    BLR X2
-FunctionExit_restore:
-    LDP X8, X0, [SP], #16
-    LDP Q6, Q7, [SP], #32
-    LDP Q4, Q5, [SP], #32
-    LDP Q2, Q3, [SP], #32
-    LDP Q0, Q1, [SP], #32
-    LDP X7, X30, [SP], #16
-    LDP X5, X6, [SP], #16
-    LDP X3, X4, [SP], #16
-    LDP X1, X2, [SP], #16
-    RET
+  // Load the handler function pointer into x2.
+  adrp x2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
+  ldr x2, [x2, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
+  cbz x2, 1f
+  // Set w0 to the function ID (w17). Set x1 to XRayEntryType::EXIT = 1.
+  mov w0, w17
+  mov x1, #1
+  // Call the handler with 2 parameters.
+  blr x2
+1:
+  RESTORE_REGISTERS
+  ret
+ASM_SIZE(__xray_FunctionExit)
 
-    /* Word-aligned function entry point */
-    .p2align 2
-    /* Let C/C++ see the symbol */
-    .global __xray_FunctionTailExit
-    .hidden __xray_FunctionTailExit
-    .type __xray_FunctionTailExit, %function
-    /* In C++ it is void extern "C" __xray_FunctionTailExit(uint32_t FuncId)
-         with FuncId passed in W0 register. */
-__xray_FunctionTailExit:
+.p2align 2
+.global ASM_SYMBOL(__xray_FunctionTailExit)
+ASM_HIDDEN(__xray_FunctionTailExit)
+ASM_TYPE_FUNCTION(__xray_FunctionTailExit)
+ASM_SYMBOL(__xray_FunctionTailExit):
     /* Move the return address beyond the end of sled data. The 12 bytes of
          data are inserted in the code of the runtime patch, between the call
          instruction and the instruction returned into. The data contains 32
          bits of instrumented function ID and 64 bits of the address of
          the current trampoline. */
-    ADD X30, X30, #12
-    /* Push the registers which may be modified by the handler function */
-    STP X1, X2, [SP, #-16]!
-    STP X3, X4, [SP, #-16]!
-    STP X5, X6, [SP, #-16]!
-    STP X7, X30, [SP, #-16]!
-    /* Push the parameters of the tail called function */
-    STP Q0, Q1, [SP, #-32]!
-    STP Q2, Q3, [SP, #-32]!
-    STP Q4, Q5, [SP, #-32]!
-    STP Q6, Q7, [SP, #-32]!
-    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
-    /* Load the handler function pointer into X2 */
-    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
-    /* Handler address is nullptr if handler is not set */
-    CMP X2, #0
-    BEQ FunctionTailExit_restore
-    /* Function ID is already in W0 (the first parameter).
-         X1=2 means that we are tracing a tail exit event, but before the
-         logging part of XRay is ready, we pretend that here a normal function
-         exit happens, so we give the handler code 1 */
-    MOV X1, #1
-    /* Call the handler with 2 parameters in W0 and X1 */
-    BLR X2
-FunctionTailExit_restore:
-    /* Pop the parameters of the tail called function */
-    LDP Q6, Q7, [SP], #32
-    LDP Q4, Q5, [SP], #32
-    LDP Q2, Q3, [SP], #32
-    LDP Q0, Q1, [SP], #32
-    /* Pop the registers which may be modified by the handler function */
-    LDP X7, X30, [SP], #16
-    LDP X5, X6, [SP], #16
-    LDP X3, X4, [SP], #16
-    LDP X1, X2, [SP], #16
-    RET
+  add x30, x30, #12
+  // Save the registers which may be modified by the handler function.
+  SAVE_REGISTERS
+  // Load the handler function pointer into x2.
+  adrp x2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
+  ldr x2, [x2, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
+  cbz x2, 1f
+  // Set w0 to the function ID (w17). Set x1 to XRayEntryType::TAIL = 2.
+  mov w0, w17
+  mov x1, #2
+  // Call the handler with 2 parameters.
+  blr x2
+1:
+  RESTORE_REGISTERS
+  ret
+ASM_SIZE(__xray_FunctionTailExit)
+
+.p2align 2
+.global ASM_SYMBOL(__xray_ArgLoggerEntry)
+ASM_HIDDEN(__xray_ArgLoggerEntry)
+ASM_TYPE_FUNCTION(__xray_ArgLoggerEntry)
+ASM_SYMBOL(__xray_ArgLoggerEntry):
+  add x30, x30, #12
+  // Push the registers which may be modified by the handler function.
+  SAVE_REGISTERS
+
+  adrp x8, ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)
+  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)]
+  cbnz x8, 2f
+
+  // Load the handler function pointer.
+  adrp x8, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
+  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
+  cbz x8, 1f
+
+2:
+  mov x2, x0
+  mov x1, #3  // XRayEntryType::LOG_ARGS_ENTRY
+  mov w0, w17
+  blr x8
+
+1:
+  RESTORE_REGISTERS
+  ret
+ASM_SIZE(__xray_ArgLoggerEntry)
+
+// __xray_*Event have default visibility so that they can be referenced by user
+// DSOs that do not link against the runtime.
+.global ASM_SYMBOL(__xray_CustomEvent)
+ASM_TYPE_FUNCTION(__xray_CustomEvent)
+ASM_SYMBOL(__xray_CustomEvent):
+  SAVE_REGISTERS
+  adrp x8, ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)
+  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)]
+  cbz x8, 1f
+  blr x8
+1:
+  RESTORE_REGISTERS
+  ret
+ASM_SIZE(__xray_CustomEvent)
+
+.global ASM_SYMBOL(__xray_TypedEvent)
+ASM_TYPE_FUNCTION(__xray_TypedEvent)
+ASM_SYMBOL(__xray_TypedEvent):
+  SAVE_REGISTERS
+  adrp x8, ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)
+  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)]
+  cbz x8, 1f
+  blr x8
+1:
+  RESTORE_REGISTERS
+  ret
+ASM_SIZE(__xray_TypedEvent)
 
 NO_EXEC_STACK_DIRECTIVE

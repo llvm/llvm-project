@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -O3 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LP64 %s
 // RUN: %clang_cc1 %s -triple=i386-apple-darwin10 -emit-llvm -o - -O3 | FileCheck %s
-// RUN: %clang_cc1 %s -triple=aarch64_be-none-eabi -emit-llvm -o - -O3 | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64_be -emit-llvm -o - -O3 | FileCheck %s
 // RUN: %clang_cc1 %s -triple=thumbv7_be-none-eabi -emit-llvm -o - -O3 | FileCheck %s
 // RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -emit-llvm -o - -O3 -std=c++11 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LP64 %s
 
@@ -103,6 +103,15 @@ int test_trunc_three_bits() {
   return U.i;
 }
 // CHECK: define{{.*}} i32 @test_trunc_three_bits()
+// CHECK: ret i32 -1
+
+int test_trunc_one_bit() {
+  union {
+    int i : 1; // truncated to 0b1 == -1
+  } const U = {1};  // 0b00000001
+  return U.i;
+}
+// CHECK: define{{.*}} i32 @test_trunc_one_bit()
 // CHECK: ret i32 -1
 
 int test_trunc_1() {

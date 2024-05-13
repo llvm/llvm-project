@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid8_msg:
+.. _amdgpu_synid_gfx8_msg:
 
 msg
-===========================
+===
 
 A 16-bit message code. The bits of this operand have the following meaning:
 
@@ -24,8 +24,8 @@ A 16-bit message code. The bits of this operand have the following meaning:
 
 This operand may be specified as one of the following:
 
-* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..0xFFFF.
-* A *sendmsg* value described below.
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range from 0 to 0xFFFF.
+* A *sendmsg* value which is described below.
 
     ==================================== ====================================================
     Sendmsg Value Syntax                 Description
@@ -40,34 +40,35 @@ This operand may be specified as one of the following:
 
 *Op* may be specified using operation *name* or operation *id*.
 
-Stream *id* is an integer in the range 0..3.
+Stream *id* is an integer in the range from 0 to 3.
 
 Numeric values may be specified as positive :ref:`integer numbers<amdgpu_synid_integer_number>`
 or :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
 Each message type supports specific operations:
 
-    ================= ========== ============================== ============ ==========
-    Message name      Message Id Supported Operations           Operation Id Stream Id
-    ================= ========== ============================== ============ ==========
-    MSG_INTERRUPT     1          \-                             \-           \-
-    MSG_GS            2          GS_OP_CUT                      1            Optional
-    \                            GS_OP_EMIT                     2            Optional
-    \                            GS_OP_EMIT_CUT                 3            Optional
-    MSG_GS_DONE       3          GS_OP_NOP                      0            \-
-    \                            GS_OP_CUT                      1            Optional
-    \                            GS_OP_EMIT                     2            Optional
-    \                            GS_OP_EMIT_CUT                 3            Optional
-    MSG_SYSMSG        15         SYSMSG_OP_ECC_ERR_INTERRUPT    1            \-
-    \                            SYSMSG_OP_REG_RD               2            \-
-    \                            SYSMSG_OP_HOST_TRAP_ACK        3            \-
-    \                            SYSMSG_OP_TTRACE_PC            4            \-
-    ================= ========== ============================== ============ ==========
+    ====================== ========== ============================== ============ ==========
+    Message name           Message Id Supported Operations           Operation Id Stream Id
+    ====================== ========== ============================== ============ ==========
+    MSG_INTERRUPT          1          \-                             \-           \-
+    MSG_GS                 2          GS_OP_CUT                      1            Optional
+    \                                 GS_OP_EMIT                     2            Optional
+    \                                 GS_OP_EMIT_CUT                 3            Optional
+    MSG_GS_DONE            3          GS_OP_NOP                      0            \-
+    \                                 GS_OP_CUT                      1            Optional
+    \                                 GS_OP_EMIT                     2            Optional
+    \                                 GS_OP_EMIT_CUT                 3            Optional
+    MSG_SAVEWAVE           4          \-                             \-           \-
+    MSG_SYSMSG             15         SYSMSG_OP_ECC_ERR_INTERRUPT    1            \-
+    \                                 SYSMSG_OP_REG_RD               2            \-
+    \                                 SYSMSG_OP_HOST_TRAP_ACK        3            \-
+    \                                 SYSMSG_OP_TTRACE_PC            4            \-
+    ====================== ========== ============================== ============ ==========
 
 *Sendmsg* arguments are validated depending on how *type* value is specified:
 
 * If message *type* is specified by name, arguments values must satisfy limitations detailed in the table above.
-* If message *type* is specified as a number, each argument must not exceed corresponding value range (see the first table).
+* If message *type* is specified as a number, each argument must not exceed the corresponding value range (see the first table).
 
 Examples:
 
@@ -91,4 +92,3 @@ Examples:
     stream = 1
     s_sendmsg sendmsg(msg, op, stream)
     s_sendmsg sendmsg(2, GS_OP_CUT)
-

@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -msve-vector-bits=128 -flax-vector-conversions=none -fallow-half-arguments-and-returns -ffreestanding -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -msve-vector-bits=256 -flax-vector-conversions=none -fallow-half-arguments-and-returns -ffreestanding -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -msve-vector-bits=512 -flax-vector-conversions=none -fallow-half-arguments-and-returns -ffreestanding -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -msve-vector-bits=1024 -flax-vector-conversions=none -fallow-half-arguments-and-returns -ffreestanding -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -msve-vector-bits=2048 -flax-vector-conversions=none -fallow-half-arguments-and-returns -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=1 -mvscale-max=1 -flax-vector-conversions=none -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=2 -mvscale-max=2 -flax-vector-conversions=none -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=4 -mvscale-max=4 -flax-vector-conversions=none -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=8 -mvscale-max=8 -flax-vector-conversions=none -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=16 -mvscale-max=16 -flax-vector-conversions=none -ffreestanding -fsyntax-only -verify %s
+
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 // expected-no-diagnostics
 
@@ -15,6 +17,7 @@ typedef svfloat32_t fixed_float32_t FIXED_ATTR;
 typedef svfloat64_t fixed_float64_t FIXED_ATTR;
 typedef svint32_t fixed_int32_t FIXED_ATTR;
 typedef svint64_t fixed_int64_t FIXED_ATTR;
+typedef svbool_t fixed_bool_t FIXED_ATTR;
 
 // SVE VLSTs can be cast to SVE VLATs, regardless of lane size.
 // NOTE: the list below is NOT exhaustive for all SVE types.
@@ -47,3 +50,5 @@ TESTCASE(fixed_int64_t, svfloat32_t)
 TESTCASE(fixed_int64_t, svfloat64_t)
 TESTCASE(fixed_int64_t, svint32_t)
 TESTCASE(fixed_int64_t, svint64_t)
+
+TESTCASE(fixed_bool_t, svbool_t)

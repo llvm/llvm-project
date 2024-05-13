@@ -38,7 +38,7 @@ _Bool j;
 // diagnostic is emitted, and it used to affect the entirety of -ast-print, so
 // test only one definition of bool per compilation.
 #if DIAG
-void fn() { 1; } // expected-warning {{expression result unused}}
+void fn(void) { 1; } // expected-warning {{expression result unused}}
 #else
 // expected-no-diagnostics
 #endif

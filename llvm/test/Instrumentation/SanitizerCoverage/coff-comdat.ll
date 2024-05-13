@@ -1,4 +1,3 @@
-; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-inline-8bit-counters=1 -sanitizer-coverage-pc-table=1 -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -sanitizer-coverage-inline-8bit-counters=1 -sanitizer-coverage-pc-table=1 -S | FileCheck %s
 
 ; Make sure we use the right comdat groups for COFF to avoid relocations
@@ -20,23 +19,23 @@
 
 ; Both new comdats should no duplicates on COFF.
 
-; CHECK: $foo = comdat noduplicates
-; CHECK: $bar = comdat noduplicates
+; CHECK: $foo = comdat nodeduplicate
+; CHECK: $bar = comdat nodeduplicate
 
 ; Tables for 'foo' should be in the 'foo' comdat.
 
 ; CHECK: @__sancov_gen_{{.*}} = private global [1 x i8] zeroinitializer, section ".SCOV$CM", comdat($foo), align 1
 
-; CHECK: @__sancov_gen_{{.*}} = private constant [2 x i64*]
-; CHECK-SAME: [i64* bitcast (i32 (i32)* @foo to i64*), i64* inttoptr (i64 1 to i64*)],
+; CHECK: @__sancov_gen_{{.*}} = private constant [2 x ptr]
+; CHECK-SAME: [ptr @foo, ptr inttoptr (i64 1 to ptr)],
 ; CHECK-SAME: section ".SCOVP$M", comdat($foo), align 8
 
 ; Tables for 'bar' should be in the 'bar' comdat.
 
 ; CHECK: @__sancov_gen_{{.*}} = private global [1 x i8] zeroinitializer, section ".SCOV$CM", comdat($bar), align 1
 
-; CHECK: @__sancov_gen_{{.*}} = private constant [2 x i64*]
-; CHECK-SAME: [i64* bitcast (i32 (i32)* @bar to i64*), i64* inttoptr (i64 1 to i64*)],
+; CHECK: @__sancov_gen_{{.*}} = private constant [2 x ptr]
+; CHECK-SAME: [ptr @bar, ptr inttoptr (i64 1 to ptr)],
 ; CHECK-SAME: section ".SCOVP$M", comdat($bar), align 8
 
 ; 'foo' and 'bar' should be in their new comdat groups.

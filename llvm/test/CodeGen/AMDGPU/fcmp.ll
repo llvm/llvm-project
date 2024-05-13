@@ -1,16 +1,16 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ; CHECK: {{^}}fcmp_sext:
 ; CHECK: SETE_DX10  T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-define amdgpu_kernel void @fcmp_sext(i32 addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @fcmp_sext(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 entry:
-  %0 = load float, float addrspace(1)* %in
-  %arrayidx1 = getelementptr inbounds float, float addrspace(1)* %in, i32 1
-  %1 = load float, float addrspace(1)* %arrayidx1
+  %0 = load float, ptr addrspace(1) %in
+  %arrayidx1 = getelementptr inbounds float, ptr addrspace(1) %in, i32 1
+  %1 = load float, ptr addrspace(1) %arrayidx1
   %cmp = fcmp oeq float %0, %1
   %sext = sext i1 %cmp to i32
-  store i32 %sext, i32 addrspace(1)* %out
+  store i32 %sext, ptr addrspace(1) %out
   ret void
 }
 
@@ -22,17 +22,17 @@ entry:
 ; CHECK: SET{{[N]*}}E_DX10 * T{{[0-9]+\.[XYZW],}}
 ; CHECK-NEXT: {{[0-9]+\(5.0}}
 
-define amdgpu_kernel void @fcmp_br(i32 addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @fcmp_br(ptr addrspace(1) %out, float %in) {
 entry:
   %0 = fcmp oeq float %in, 5.0
   br i1 %0, label %IF, label %ENDIF
 
 IF:
-  %1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
-  store i32 0, i32 addrspace(1)* %1
+  %1 = getelementptr i32, ptr addrspace(1) %out, i32 1
+  store i32 0, ptr addrspace(1) %1
   br label %ENDIF
 
 ENDIF:
-  store i32 0, i32 addrspace(1)* %out
+  store i32 0, ptr addrspace(1) %out
   ret void
 }

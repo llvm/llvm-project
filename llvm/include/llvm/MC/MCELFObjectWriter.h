@@ -9,12 +9,12 @@
 #ifndef LLVM_MC_MCELFOBJECTWRITER_H
 #define LLVM_MC_MCELFOBJECTWRITER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <vector>
 
@@ -71,13 +71,13 @@ public:
 
   static uint8_t getOSABI(Triple::OSType OSType) {
     switch (OSType) {
-      case Triple::CloudABI:
-        return ELF::ELFOSABI_CLOUDABI;
       case Triple::HermitCore:
         return ELF::ELFOSABI_STANDALONE;
       case Triple::PS4:
       case Triple::FreeBSD:
         return ELF::ELFOSABI_FREEBSD;
+      case Triple::Solaris:
+        return ELF::ELFOSABI_SOLARIS;
       default:
         return ELF::ELFOSABI_NONE;
     }
@@ -86,7 +86,7 @@ public:
   virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                                 const MCFixup &Fixup, bool IsPCRel) const = 0;
 
-  virtual bool needsRelocateWithSymbol(const MCSymbol &Sym,
+  virtual bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                        unsigned Type) const;
 
   virtual void sortRelocs(const MCAssembler &Asm,
@@ -136,6 +136,14 @@ public:
   }
   unsigned setRSsym(unsigned Value, unsigned Type) const {
     return (Type & R_SSYM_MASK) | ((Value & 0xff) << R_SSYM_SHIFT);
+  }
+
+  // On AArch64, return a new section to be added to the ELF object that
+  // contains relocations used to describe every symbol that should have memory
+  // tags applied. Returns nullptr if no such section is necessary (i.e. there's
+  // no tagged globals).
+  virtual MCSectionELF *getMemtagRelocsSection(MCContext &Ctx) const {
+    return nullptr;
   }
 };
 

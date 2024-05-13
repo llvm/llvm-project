@@ -6,11 +6,19 @@
  *
 \*===----------------------------------------------------------------------===*/
 
-#include <stdlib.h>
+#include "llvm/Support/AutoConvert.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 int main(int argc, char **argv) {
-  unsigned Count, NumLines, NumRead;
+#ifdef __MVS__
+  if (enableAutoConversion(fileno(stdin)) == -1)
+    fprintf(stderr, "Setting conversion on stdin failed\n");
+
+  if (enableAutoConversion(fileno(stderr)) == -1)
+    fprintf(stdout, "Setting conversion on stderr failed\n");
+#endif
+  size_t Count, NumLines, NumRead;
   char Buffer[4096], *End;
 
   if (argc != 2) {
@@ -18,7 +26,7 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  Count = strtol(argv[1], &End, 10);
+  Count = strtoul(argv[1], &End, 10);
   if (*End != '\0' && End != argv[1]) {
     fprintf(stderr, "%s: invalid count argument '%s'\n", argv[0], argv[1]);
     return 2;
@@ -26,7 +34,7 @@ int main(int argc, char **argv) {
 
   NumLines = 0;
   do {
-    unsigned i;
+    size_t i;
 
     NumRead = fread(Buffer, 1, sizeof(Buffer), stdin);
 
@@ -41,7 +49,7 @@ int main(int argc, char **argv) {
   }
 
   if (Count != NumLines) {
-    fprintf(stderr, "Expected %d lines, got %d.\n", Count, NumLines);
+    fprintf(stderr, "Expected %zu lines, got %zu.\n", Count, NumLines);
     return 1;
   }
 

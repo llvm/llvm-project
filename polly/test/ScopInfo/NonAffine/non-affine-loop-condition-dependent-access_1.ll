@@ -1,11 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -polly-scops \
-; RUN:     -polly-allow-nonaffine -polly-allow-nonaffine-branches \
-; RUN:     -polly-allow-nonaffine-loops=true -analyze < %s | FileCheck %s \
-; RUN:     -check-prefix=SCALAR
-; RUN: opt %loadPolly -basic-aa -polly-scops -polly-allow-nonaffine \
-; RUN:     -polly-process-unprofitable=false \
-; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
-; RUN:     -analyze < %s | FileCheck %s -check-prefix=PROFIT
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                   -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCALAR
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -polly-process-unprofitable=false -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=PROFIT
 ;
 ; SCALAR:      Function: f
 ; SCALAR-NEXT: Region: %bb1---%bb13
@@ -56,7 +50,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* noalias %A, i32* noalias %C) {
+define void @f(ptr noalias %A, ptr noalias %C) {
 bb:
   br label %bb1
 
@@ -69,17 +63,17 @@ bb2:                                              ; preds = %bb1
   br label %bb3
 
 bb3:                                              ; preds = %bb6, %bb2
-  %tmp = getelementptr inbounds i32, i32* %C, i64 %indvars.iv
-  %tmp4 = load i32, i32* %tmp, align 4
+  %tmp = getelementptr inbounds i32, ptr %C, i64 %indvars.iv
+  %tmp4 = load i32, ptr %tmp, align 4
   %tmp5 = icmp eq i32 %tmp4, 0
   br i1 %tmp5, label %bb11, label %bb6
 
 bb6:                                              ; preds = %bb3
   %tmp7 = sext i32 %tmp4 to i64
-  %tmp8 = getelementptr inbounds i32, i32* %A, i64 %tmp7
-  %tmp9 = load i32, i32* %tmp8, align 4
+  %tmp8 = getelementptr inbounds i32, ptr %A, i64 %tmp7
+  %tmp9 = load i32, ptr %tmp8, align 4
   %tmp10 = add nsw i32 %tmp9, 1
-  store i32 %tmp10, i32* %tmp8, align 4
+  store i32 %tmp10, ptr %tmp8, align 4
   br i1 true, label %bb11, label %bb3
 
 bb11:                                             ; preds = %bb3

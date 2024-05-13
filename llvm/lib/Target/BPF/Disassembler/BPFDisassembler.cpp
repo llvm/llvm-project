@@ -15,11 +15,12 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
-#include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdint>
 
 using namespace llvm;
@@ -56,8 +57,7 @@ public:
     BPF_ABS = 0x1,
     BPF_IND = 0x2,
     BPF_MEM = 0x3,
-    BPF_LEN = 0x4,
-    BPF_MSH = 0x5,
+    BPF_MEMSX = 0x4,
     BPF_ATOMIC = 0x6
   };
 
@@ -99,7 +99,7 @@ static const unsigned GPRDecoderTable[] = {
 
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t /*Address*/,
-                                           const void * /*Decoder*/) {
+                                           const MCDisassembler * /*Decoder*/) {
   if (RegNo > 11)
     return MCDisassembler::Fail;
 
@@ -112,9 +112,9 @@ static const unsigned GPR32DecoderTable[] = {
     BPF::W0,  BPF::W1,  BPF::W2,  BPF::W3,  BPF::W4,  BPF::W5,
     BPF::W6,  BPF::W7,  BPF::W8,  BPF::W9,  BPF::W10, BPF::W11};
 
-static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
-                                             uint64_t /*Address*/,
-                                             const void * /*Decoder*/) {
+static DecodeStatus
+DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t /*Address*/,
+                         const MCDisassembler * /*Decoder*/) {
   if (RegNo > 11)
     return MCDisassembler::Fail;
 
@@ -124,7 +124,8 @@ static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
 }
 
 static DecodeStatus decodeMemoryOpValue(MCInst &Inst, unsigned Insn,
-                                        uint64_t Address, const void *Decoder) {
+                                        uint64_t Address,
+                                        const MCDisassembler *Decoder) {
   unsigned Register = (Insn >> 16) & 0xf;
   if (Register > 11)
     return MCDisassembler::Fail;
@@ -177,7 +178,7 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   if ((InstClass == BPF_LDX || InstClass == BPF_STX) &&
       getInstSize(Insn) != BPF_DW &&
       (InstMode == BPF_MEM || InstMode == BPF_ATOMIC) &&
-      STI.getFeatureBits()[BPF::ALU32])
+      STI.hasFeature(BPF::ALU32))
     Result = decodeInstruction(DecoderTableBPFALU3264, Instr, Insn, Address,
                                this, STI);
   else
@@ -220,4 +221,4 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 }
 
 typedef DecodeStatus (*DecodeFunc)(MCInst &MI, unsigned insn, uint64_t Address,
-                                   const void *Decoder);
+                                   const MCDisassembler *Decoder);

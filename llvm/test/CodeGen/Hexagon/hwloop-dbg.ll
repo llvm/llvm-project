@@ -7,25 +7,25 @@
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"
 
-define void @f0(i32* nocapture %a0, i32* nocapture %a1) #0 !dbg !4 {
+define void @f0(ptr nocapture %a0, ptr nocapture %a1) #0 !dbg !4 {
 b0:
-  call void @llvm.dbg.value(metadata i32* %a0, metadata !10, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.value(metadata i32* %a1, metadata !11, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.value(metadata ptr %a0, metadata !10, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata ptr %a1, metadata !11, metadata !DIExpression()), !dbg !15
   call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !DIExpression()), !dbg !16
   br label %b1, !dbg !16
 
 b1:                                               ; preds = %b1, %b0
-  %v0 = phi i32* [ %a0, %b0 ], [ %v7, %b1 ]
+  %v0 = phi ptr [ %a0, %b0 ], [ %v7, %b1 ]
   %v1 = phi i32 [ 0, %b0 ], [ %v5, %b1 ]
-  %v2 = phi i32* [ %a1, %b0 ], [ %v3, %b1 ]
-  %v3 = getelementptr inbounds i32, i32* %v2, i32 1, !dbg !18
-  call void @llvm.dbg.value(metadata i32* %v3, metadata !11, metadata !DIExpression()), !dbg !18
-  %v4 = load i32, i32* %v2, align 4, !dbg !18
-  store i32 %v4, i32* %v0, align 4, !dbg !18
+  %v2 = phi ptr [ %a1, %b0 ], [ %v3, %b1 ]
+  %v3 = getelementptr inbounds i32, ptr %v2, i32 1, !dbg !18
+  call void @llvm.dbg.value(metadata ptr %v3, metadata !11, metadata !DIExpression()), !dbg !18
+  %v4 = load i32, ptr %v2, align 4, !dbg !18
+  store i32 %v4, ptr %v0, align 4, !dbg !18
   %v5 = add nsw i32 %v1, 1, !dbg !20
   call void @llvm.dbg.value(metadata i32 %v5, metadata !12, metadata !DIExpression()), !dbg !20
   %v6 = icmp eq i32 %v5, 10, !dbg !16
-  %v7 = getelementptr i32, i32* %v0, i32 1
+  %v7 = getelementptr i32, ptr %v0, i32 1
   br i1 %v6, label %b2, label %b1, !dbg !16
 
 b2:                                               ; preds = %b1

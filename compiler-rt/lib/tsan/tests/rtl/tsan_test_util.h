@@ -13,6 +13,13 @@
 #ifndef TSAN_TEST_UTIL_H
 #define TSAN_TEST_UTIL_H
 
+#include "gtest/gtest.h"
+
+class ThreadSanitizer : public ::testing::Test {
+ protected:
+  void TearDown() override;
+};
+
 void TestMutexBeforeInit();
 
 // A location of memory on which a race may be detected.
@@ -28,7 +35,7 @@ class MemLoc {
   void operator = (const MemLoc&);
 };
 
-class Mutex {
+class UserMutex {
  public:
   enum Type {
     Normal,
@@ -40,8 +47,8 @@ class Mutex {
 #endif
   };
 
-  explicit Mutex(Type type = Normal);
-  ~Mutex();
+  explicit UserMutex(Type type = Normal);
+  ~UserMutex();
 
   void Init();
   void StaticInit();  // Emulates static initialization (tsan invisible).
@@ -59,8 +66,8 @@ class Mutex {
   bool alive_;
   const Type type_;
 
-  Mutex(const Mutex&);
-  void operator = (const Mutex&);
+  UserMutex(const UserMutex &);
+  void operator=(const UserMutex &);
 };
 
 // A thread is started in CTOR and joined in DTOR.
@@ -100,14 +107,14 @@ class ScopedThread {
   void Call(void(*pc)());
   void Return();
 
-  void Create(const Mutex &m);
-  void Destroy(const Mutex &m);
-  void Lock(const Mutex &m);
-  bool TryLock(const Mutex &m);
-  void Unlock(const Mutex &m);
-  void ReadLock(const Mutex &m);
-  bool TryReadLock(const Mutex &m);
-  void ReadUnlock(const Mutex &m);
+  void Create(const UserMutex &m);
+  void Destroy(const UserMutex &m);
+  void Lock(const UserMutex &m);
+  bool TryLock(const UserMutex &m);
+  void Unlock(const UserMutex &m);
+  void ReadLock(const UserMutex &m);
+  bool TryReadLock(const UserMutex &m);
+  void ReadUnlock(const UserMutex &m);
 
   void Memcpy(void *dst, const void *src, int size, bool expect_race = false);
   void Memset(void *dst, int val, int size, bool expect_race = false);

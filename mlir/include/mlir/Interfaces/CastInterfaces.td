@@ -32,7 +32,7 @@ def CastOpInterface : OpInterface<"CastOpInterface"> {
         to cast using this cast operation.
       }],
       "bool", "areCastCompatible",
-      (ins "mlir::TypeRange":$inputs, "mlir::TypeRange":$outputs)
+      (ins "::mlir::TypeRange":$inputs, "::mlir::TypeRange":$outputs)
     >,
   ];
 
@@ -44,7 +44,7 @@ def CastOpInterface : OpInterface<"CastOpInterface"> {
     }
   }];
   let verify = [{
-    return impl::verifyCastInterfaceOp($_op, ConcreteOp::areCastCompatible);
+    return impl::verifyCastInterfaceOp($_op);
   }];
 }
 

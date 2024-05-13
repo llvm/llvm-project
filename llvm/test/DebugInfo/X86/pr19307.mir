@@ -28,54 +28,54 @@
   target triple = "x86_64-unknown-linux-gnu"
   
   %"class.std::basic_string" = type { %"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" }
-  %"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { i8* }
+  %"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { ptr }
   
   @.str = private unnamed_addr constant [7 x i8] c"items=\00", align 1
   
   ; Function Attrs: uwtable
-  define void @_Z11parse_rangeRyS_Ss(i64* %offset, i64* %limit, %"class.std::basic_string"* %range) #0 !dbg !34 {
+  define void @_Z11parse_rangeRyS_Ss(ptr %offset, ptr %limit, ptr %range) #0 !dbg !34 {
   entry:
-    %offset.addr = alloca i64*, align 8
-    %limit.addr = alloca i64*, align 8
-    store i64* %offset, i64** %offset.addr, align 8
-    call void @llvm.dbg.declare(metadata i64** %offset.addr, metadata !41, metadata !DIExpression()), !dbg !42
-    store i64* %limit, i64** %limit.addr, align 8
-    call void @llvm.dbg.declare(metadata i64** %limit.addr, metadata !43, metadata !DIExpression()), !dbg !42
-    call void @llvm.dbg.declare(metadata %"class.std::basic_string"* %range, metadata !44, metadata !DIExpression(DW_OP_deref)), !dbg !45
-    %call = call i32 @_ZNKSs7compareEmmPKc(%"class.std::basic_string"* %range, i64 0, i64 6, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i32 0, i32 0)), !dbg !46
+    %offset.addr = alloca ptr, align 8
+    %limit.addr = alloca ptr, align 8
+    store ptr %offset, ptr %offset.addr, align 8
+    call void @llvm.dbg.declare(metadata ptr %offset.addr, metadata !41, metadata !DIExpression()), !dbg !42
+    store ptr %limit, ptr %limit.addr, align 8
+    call void @llvm.dbg.declare(metadata ptr %limit.addr, metadata !43, metadata !DIExpression()), !dbg !42
+    call void @llvm.dbg.declare(metadata ptr %range, metadata !44, metadata !DIExpression(DW_OP_deref)), !dbg !45
+    %call = call i32 @_ZNKSs7compareEmmPKc(ptr %range, i64 0, i64 6, ptr @.str), !dbg !46
     %cmp = icmp ne i32 %call, 0, !dbg !46
     br i1 %cmp, label %if.then, label %lor.lhs.false, !dbg !46
   
   lor.lhs.false:                                    ; preds = %entry
-    %call1 = call i8* @_ZNSsixEm(%"class.std::basic_string"* %range, i64 6), !dbg !48
-    %0 = load i8, i8* %call1, !dbg !48
+    %call1 = call ptr @_ZNSsixEm(ptr %range, i64 6), !dbg !48
+    %0 = load i8, ptr %call1, !dbg !48
     %conv = sext i8 %0 to i32, !dbg !48
     %cmp2 = icmp eq i32 %conv, 45, !dbg !48
     br i1 %cmp2, label %if.then, label %if.end, !dbg !48
   
   if.then:                                          ; preds = %lor.lhs.false, %entry
-    %1 = load i64*, i64** %offset.addr, align 8, !dbg !50
-    store i64 1, i64* %1, align 8, !dbg !50
+    %1 = load ptr, ptr %offset.addr, align 8, !dbg !50
+    store i64 1, ptr %1, align 8, !dbg !50
     br label %if.end, !dbg !50
   
   if.end:                                           ; preds = %if.then, %lor.lhs.false
-    %call3 = call %"class.std::basic_string"* @_ZNSs5eraseEmm(%"class.std::basic_string"* %range, i64 0, i64 6), !dbg !51
-    %2 = load i64*, i64** %limit.addr, align 8, !dbg !52
-    store i64 2, i64* %2, align 8, !dbg !52
+    %call3 = call ptr @_ZNSs5eraseEmm(ptr %range, i64 0, i64 6), !dbg !51
+    %2 = load ptr, ptr %limit.addr, align 8, !dbg !52
+    store i64 2, ptr %2, align 8, !dbg !52
     ret void, !dbg !53
   }
   
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
   
-  declare i32 @_ZNKSs7compareEmmPKc(%"class.std::basic_string"*, i64, i64, i8*) #2
+  declare i32 @_ZNKSs7compareEmmPKc(ptr, i64, i64, ptr) #2
   
-  declare i8* @_ZNSsixEm(%"class.std::basic_string"*, i64) #2
+  declare ptr @_ZNSsixEm(ptr, i64) #2
   
-  declare %"class.std::basic_string"* @_ZNSs5eraseEmm(%"class.std::basic_string"*, i64, i64) #2
+  declare ptr @_ZNSs5eraseEmm(ptr, i64, i64) #2
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #3
+  declare void @llvm.stackprotector(ptr, ptr) #3
   
   attributes #0 = { uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone speculatable }
@@ -179,13 +179,13 @@ body:             |
     CFI_INSTRUCTION def_cfa_register $rbp
     $rsp = frame-setup SUB64ri8 $rsp, 32, implicit-def dead $eflags
     $eax = XOR32rr undef $eax, undef $eax, implicit-def $eflags, implicit-def $rax
-    MOV64mr $rbp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %ir.offset.addr)
-    MOV64mr $rbp, 1, $noreg, -16, $noreg, killed renamable $rsi :: (store 8 into %ir.limit.addr)
+    MOV64mr $rbp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %ir.offset.addr)
+    MOV64mr $rbp, 1, $noreg, -16, $noreg, killed renamable $rsi :: (store (s64) into %ir.limit.addr)
     DBG_VALUE renamable $rdx, 0, !44, !DIExpression(DW_OP_deref), debug-location !45
     $rdi = MOV64rr $rdx, debug-location !46
     $rsi = MOV64rr killed $rax, debug-location !46
     $eax = MOV32ri 6, implicit-def $rax, debug-location !46
-    MOV64mr $rbp, 1, $noreg, -24, $noreg, killed $rdx :: (store 8 into %stack.2)
+    MOV64mr $rbp, 1, $noreg, -24, $noreg, killed $rdx :: (store (s64) into %stack.2)
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
     $rdx = MOV64rr killed $rax, debug-location !46
     renamable $rcx = MOV64ri @.str, debug-location !46
@@ -195,30 +195,30 @@ body:             |
   
   bb.1.lor.lhs.false:
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
-    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load 8 from %stack.2)
+    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load (s64) from %stack.2)
     $esi = MOV32ri 6, implicit-def $rsi, debug-location !48
     CALL64pcrel32 @_ZNSsixEm, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rax, debug-location !48
-    renamable $ecx = MOVSX32rm8 killed renamable $rax, 1, $noreg, 0, $noreg, debug-location !48 :: (load 1 from %ir.call1)
+    renamable $ecx = MOVSX32rm8 killed renamable $rax, 1, $noreg, 0, $noreg, debug-location !48 :: (load (s8) from %ir.call1)
     CMP32ri8 killed renamable $ecx, 45, implicit-def $eflags, debug-location !48
     JCC_1 %bb.3, 5, implicit $eflags, debug-location !48
   
   bb.2.if.then:
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
-    renamable $rax = MOV64rm $rbp, 1, $noreg, -8, $noreg, debug-location !50 :: (load 8 from %ir.offset.addr)
-    MOV64mi32 killed renamable $rax, 1, $noreg, 0, $noreg, 1, debug-location !50 :: (store 8 into %ir.1)
+    renamable $rax = MOV64rm $rbp, 1, $noreg, -8, $noreg, debug-location !50 :: (load (s64) from %ir.offset.addr)
+    MOV64mi32 killed renamable $rax, 1, $noreg, 0, $noreg, 1, debug-location !50 :: (store (s64) into %ir.1)
   
   bb.3.if.end:
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
     $esi = XOR32rr undef $esi, undef $esi, implicit-def $eflags, implicit-def $rsi
-    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load 8 from %stack.2)
+    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load (s64) from %stack.2)
     $edx = MOV32ri 6, implicit-def $rdx, debug-location !51
     CALL64pcrel32 @_ZNSs5eraseEmm, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit killed $rdx, implicit-def $rax, debug-location !51
-    renamable $rdx = MOV64rm $rbp, 1, $noreg, -16, $noreg, debug-location !52 :: (load 8 from %ir.limit.addr)
-    MOV64mi32 killed renamable $rdx, 1, $noreg, 0, $noreg, 2, debug-location !52 :: (store 8 into %ir.2)
-    MOV64mr $rbp, 1, $noreg, -32, $noreg, killed $rax :: (store 8 into %stack.3)
+    renamable $rdx = MOV64rm $rbp, 1, $noreg, -16, $noreg, debug-location !52 :: (load (s64) from %ir.limit.addr)
+    MOV64mi32 killed renamable $rdx, 1, $noreg, 0, $noreg, 2, debug-location !52 :: (store (s64) into %ir.2)
+    MOV64mr $rbp, 1, $noreg, -32, $noreg, killed $rax :: (store (s64) into %stack.3)
     $rsp = frame-destroy ADD64ri8 $rsp, 32, implicit-def dead $eflags, debug-location !53
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !53
     CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !53
-    RETQ debug-location !53
+    RET64 debug-location !53
 
 ...

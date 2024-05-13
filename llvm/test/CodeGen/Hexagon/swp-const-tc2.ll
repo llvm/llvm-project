@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -rdf-opt=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -march=hexagon -rdf-opt=0 < %s -pipeliner-experimental-cg=true -hoist-const-loads=false | FileCheck %s
 
 ; Test that we fixup a pipelined loop correctly when the number of
 ; stages is greater than the compile-time loop trip count. In this
@@ -9,14 +9,14 @@
 ; CHECK: r{{[0-9]+}} = mpyi
 ; CHECK-NOT: r{{[0-9]+}} = mpyi
 
-define i32 @f0(i32* %a0) {
+define i32 @f0(ptr %a0) {
 b0:
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
   %v0 = phi i32 [ 0, %b0 ], [ %v9, %b1 ]
   %v1 = phi i32 [ 0, %b0 ], [ %v8, %b1 ]
-  %v2 = load i32, i32* %a0, align 4
+  %v2 = load i32, ptr %a0, align 4
   %v3 = add nsw i32 %v1, 1
   %v4 = srem i32 %v2, 3
   %v5 = icmp ne i32 %v4, 0

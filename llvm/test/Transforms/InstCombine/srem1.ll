@@ -1,7 +1,7 @@
-; RUN: opt < %s -instcombine
+; RUN: opt < %s -passes=instcombine
 ; PR2670
 
-@g_127 = external global i32		; <i32*> [#uses=1]
+@g_127 = external global i32		; <ptr> [#uses=1]
 
 define i32 @func_56(i32 %p_58, i32 %p_59, i32 %p_61, i16 signext %p_62) nounwind {
 entry:
@@ -11,7 +11,7 @@ entry:
 	%rem = srem i64 %or, 1		; <i64> [#uses=1]
 	%cmp = icmp eq i64 %rem, 1		; <i1> [#uses=1]
 	%cmp.ext = zext i1 %cmp to i32		; <i32> [#uses=1]
-	store i32 %cmp.ext, i32* @g_127
+	store i32 %cmp.ext, ptr @g_127
 	ret i32 undef
 }
 

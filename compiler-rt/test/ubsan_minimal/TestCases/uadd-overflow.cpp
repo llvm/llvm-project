@@ -6,5 +6,5 @@
 int main() {
   uint32_t k = 0x87654321;
   k += 0xedcba987;
-  // CHECK: add-overflow
+  // CHECK: add-overflow by 0x{{[[:xdigit:]]+$}}
 }

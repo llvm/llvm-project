@@ -3,10 +3,10 @@
 ; Check that copyPhysReg() properly adds impl-use operands of the super
 ; register while lowering a COPY of a GR128 bit reg.
 
-define void @autogen_SD5585(i32*, i64) {
+define void @autogen_SD5585(ptr, i64) {
 ; CHECK: .text
 BB:
-  %L5 = load i1, i1* undef
+  %L5 = load i1, ptr undef
   %I8 = insertelement <8 x i64> undef, i64 %1, i32 3
   %I21 = insertelement <8 x i64> zeroinitializer, i64 475435, i32 5
   br label %CF290
@@ -22,7 +22,7 @@ CF296:                                            ; preds = %CF290
 
 CF302:                                            ; preds = %CF307, %CF296
   %Shuff49 = shufflevector <8 x i64> undef, <8 x i64> zeroinitializer, <8 x i32> <i32 undef, i32 9, i32 11, i32 undef, i32 15, i32 1, i32 3, i32 5>
-  %L69 = load i16, i16* undef
+  %L69 = load i16, ptr undef
   br label %CF307
 
 CF307:                                            ; preds = %CF302
@@ -47,7 +47,7 @@ CF282:                                            ; preds = %CF304, %CF281
   br label %CF289
 
 CF289:                                            ; preds = %CF289, %CF282
-  store i32 %B126, i32* %0
+  store i32 %B126, ptr %0
   %Cmp219 = icmp slt i64 undef, undef
   br i1 %Cmp219, label %CF289, label %CF304
 
@@ -60,7 +60,7 @@ CF283:                                            ; preds = %CF308, %CF283, %CF3
   br i1 undef, label %CF283, label %CF308
 
 CF308:                                            ; preds = %CF283
-  store i1 %Cmp164, i1* undef
+  store i1 %Cmp164, ptr undef
   br i1 undef, label %CF283, label %CF293
 
 CF293:                                            ; preds = %CF308

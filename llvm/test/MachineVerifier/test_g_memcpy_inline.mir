@@ -1,0 +1,49 @@
+#RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            test_memcpy_inline
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(p0) = G_CONSTANT i64 0
+    %1:_(p0) = G_CONSTANT i64 4
+    %2:_(s64) = G_CONSTANT i64 4
+
+    ; CHECK: *** Bad machine code: memcpy/memmove must have 2 memory operands ***
+    G_MEMCPY_INLINE %0, %1, %2
+
+    ; CHECK: *** Bad machine code: memcpy/memmove must have 2 memory operands ***
+    G_MEMCPY_INLINE %0, %1, %2 :: (load 4)
+
+    ; CHECK: *** Bad machine code: memcpy/memmove must have 2 memory operands ***
+    G_MEMCPY_INLINE %0, %1, %2 :: (store 4)
+
+    ; CHECK: *** Bad machine code: wrong memory operand types ***
+    G_MEMCPY_INLINE %0, %1, %2 :: (load 4), (store 4)
+
+    ; CHECK: *** Bad machine code: inconsistent memory operand sizes ***
+    G_MEMCPY_INLINE %0, %1, %2 :: (store 8), (load 4)
+
+    ; CHECK: *** Bad machine code: inconsistent memory operand sizes ***
+    G_MEMCPY_INLINE %0, %1, %2 :: (store unknown-size), (load 4)
+
+    ; CHECK: *** Bad machine code: inconsistent memory operand sizes ***
+    G_MEMCPY_INLINE %0, %1, %2 :: (store 8), (load unknown-size)
+
+    ; CHECK: *** Bad machine code: inconsistent store address space ***
+    G_MEMCPY_INLINE %0, %1, %2 :: (store 4, addrspace 1), (load 4)
+
+    ; CHECK: *** Bad machine code: inconsistent load address space ***
+    G_MEMCPY_INLINE %0, %1, %2 :: (store 4), (load 4, addrspace 1)
+
+    ; CHECK: *** Bad machine code: memory instruction operand must be a pointer ***
+    G_MEMCPY_INLINE %2, %0, %2 :: (store 4), (load 4)
+
+    ; CHECK: *** Bad machine code: memory instruction operand must be a pointer ***
+    G_MEMCPY_INLINE %0, %2, %2 :: (store 4), (load 4)
+...

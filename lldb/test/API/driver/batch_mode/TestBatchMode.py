@@ -3,7 +3,6 @@ Test that the lldb driver's batch mode works correctly.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,10 +11,10 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class DriverBatchModeTest(PExpectTest):
+    source = "main.c"
 
-    mydir = TestBase.compute_mydir(__file__)
-    source = 'main.c'
-
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_run_crash(self):
         """Test that the lldb driver's batch mode works correctly."""
@@ -24,12 +23,18 @@ class DriverBatchModeTest(PExpectTest):
         exe = self.getBuildArtifact("a.out")
 
         # Pass CRASH so the process will crash and stop in batch mode.
-        extra_args = ['-b',
-            '-o', 'break set -n main',
-            '-o', 'run',
-            '-o', 'continue',
-            '-k', 'frame var touch_me_not',
-            '--', 'CRASH',
+        extra_args = [
+            "-b",
+            "-o",
+            "break set -n main",
+            "-o",
+            "run",
+            "-o",
+            "continue",
+            "-k",
+            "frame var touch_me_not",
+            "--",
+            "CRASH",
         ]
         self.launch(executable=exe, extra_args=extra_args)
         child = self.child
@@ -41,11 +46,13 @@ class DriverBatchModeTest(PExpectTest):
         # The App should have crashed:
         child.expect_exact("About to crash")
         # The -k option should have printed the frame variable once:
-        child.expect_exact('(char *) touch_me_not')
+        child.expect_exact("(char *) touch_me_not")
         # Then we should have a live prompt:
         self.expect_prompt()
-        self.expect("frame variable touch_me_not", substrs=['(char *) touch_me_not'])
+        self.expect("frame variable touch_me_not", substrs=["(char *) touch_me_not"])
 
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_run_exit(self):
         """Test that the lldb driver's batch mode works correctly."""
@@ -54,11 +61,16 @@ class DriverBatchModeTest(PExpectTest):
         exe = self.getBuildArtifact("a.out")
 
         # Now do it again, and make sure if we don't crash, we quit:
-        extra_args = ['-b',
-            '-o', 'break set -n main',
-            '-o', 'run',
-            '-o', 'continue',
-            '--', 'NOCRASH',
+        extra_args = [
+            "-b",
+            "-o",
+            "break set -n main",
+            "-o",
+            "run",
+            "-o",
+            "continue",
+            "--",
+            "NOCRASH",
         ]
         self.launch(executable=exe, extra_args=extra_args)
         child = self.child
@@ -73,8 +85,11 @@ class DriverBatchModeTest(PExpectTest):
         # Then lldb should exit.
         child.expect_exact("exited")
         import pexpect
+
         child.expect(pexpect.EOF)
 
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_launch_stop_at_entry(self):
         """Test that the lldb driver's batch mode works correctly for process launch."""
@@ -85,9 +100,12 @@ class DriverBatchModeTest(PExpectTest):
         # Launch with the option '--stop-at-entry' stops with a signal (usually SIGSTOP)
         # that should be suppressed since it doesn't imply a crash and
         # this is not a reason to exit batch mode.
-        extra_args = ['-b',
-            '-o', 'process launch --stop-at-entry',
-            '-o', 'continue',
+        extra_args = [
+            "-b",
+            "-o",
+            "process launch --stop-at-entry",
+            "-o",
+            "continue",
         ]
         self.launch(executable=exe, extra_args=extra_args)
         child = self.child
@@ -102,6 +120,7 @@ class DriverBatchModeTest(PExpectTest):
         # Then lldb should exit.
         child.expect_exact("exited")
         import pexpect
+
         child.expect(pexpect.EOF)
 
     def closeVictim(self):
@@ -109,6 +128,8 @@ class DriverBatchModeTest(PExpectTest):
             self.victim.close()
             self.victim = None
 
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     @expectedFailureNetBSD
     def test_batch_mode_attach_exit(self):
@@ -124,7 +145,8 @@ class DriverBatchModeTest(PExpectTest):
 
         # Start up the process by hand and wait for it to get to the wait loop.
         import pexpect
-        self.victim = pexpect.spawn('%s WAIT' % (exe))
+
+        self.victim = pexpect.spawn("%s WAIT" % (exe))
         if self.victim is None:
             self.fail("Could not spawn ", exe, ".")
 
@@ -136,13 +158,20 @@ class DriverBatchModeTest(PExpectTest):
         self.victim.expect("Waiting")
 
         extra_args = [
-            '-b',
-            '-o', 'process attach -p %d'%victim_pid,
-            '-o', "breakpoint set --file '%s' -p 'Stop here to unset keep_waiting' -N keep_waiting"%self.source,
-            '-o', 'continue',
-            '-o', 'break delete keep_waiting',
-            '-o', 'expr keep_waiting = 0',
-            '-o', 'continue',
+            "-b",
+            "-o",
+            "process attach -p %d" % victim_pid,
+            "-o",
+            "breakpoint set --file '%s' -p 'Stop here to unset keep_waiting' -N keep_waiting"
+            % self.source,
+            "-o",
+            "continue",
+            "-o",
+            "break delete keep_waiting",
+            "-o",
+            "expr keep_waiting = 0",
+            "-o",
+            "continue",
         ]
         self.launch(executable=exe, extra_args=extra_args)
         child = self.child

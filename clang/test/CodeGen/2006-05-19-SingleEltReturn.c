@@ -10,21 +10,21 @@ struct Y {
   struct X x;
 };
 
-struct Y bar();
+struct Y bar(void);
 
 void foo(struct Y *P) {
   *P = bar();
 }
 
-struct Y bar() {
+struct Y bar(void) {
   struct Y a;
   a.x.D = 0;
   return a;
 }
 
 
-// X86_32: define{{.*}} void @foo(%struct.Y* %P)
-// X86_32:   call void @bar(%struct.Y* sret(%struct.Y) align 4 %{{[^),]*}})
+// X86_32: define{{.*}} void @foo(ptr noundef %P)
+// X86_32:   call void @bar(ptr dead_on_unwind writable sret(%struct.Y) align 4 %{{[^),]*}})
 
-// X86_32: define{{.*}} void @bar(%struct.Y* noalias sret(%struct.Y) align 4 %{{[^,)]*}})
+// X86_32: define{{.*}} void @bar(ptr dead_on_unwind noalias writable sret(%struct.Y) align 4 %{{[^,)]*}})
 // X86_32:   ret void

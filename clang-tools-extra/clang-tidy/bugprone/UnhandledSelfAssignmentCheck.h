@@ -11,16 +11,14 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Finds user-defined copy assignment operators which do not protect the code
 /// against self-assignment either by checking self-assignment explicitly or
 /// using the copy-and-swap or the copy-and-move method.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-unhandled-self-assignment.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unhandled-self-assignment.html
 class UnhandledSelfAssignmentCheck : public ClangTidyCheck {
 public:
   UnhandledSelfAssignmentCheck(StringRef Name, ClangTidyContext *Context);
@@ -36,8 +34,6 @@ private:
   const bool WarnOnlyIfThisHasSuspiciousField;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNHANDLEDSELFASSIGNMENTCHECK_H

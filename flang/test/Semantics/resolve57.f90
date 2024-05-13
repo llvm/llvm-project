@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests for the last sentence of C1128:
 !A variable-name that is not permitted to appear in a variable definition
 !context shall not appear in a LOCAL or LOCAL_INIT locality-spec.
@@ -40,6 +40,7 @@ subroutine s4()
 
   ! C857 This is not OK because of the "protected" attribute
 !ERROR: 'prot' may not appear in a locality-spec because it is not definable
+!BECAUSE: 'prot' is protected in this scope
   do concurrent (i=1:5) local(prot)
   end do
 
@@ -59,6 +60,7 @@ subroutine s5()
 
     ! C1101 This is not OK because 'a' is not associated with a variable
 !ERROR: 'a' may not appear in a locality-spec because it is not definable
+!BECAUSE: 'a' is construct associated with an expression
     do concurrent (i=1:5) local(a)
     end do
   end associate
@@ -86,8 +88,16 @@ subroutine s6()
 
   select type ( a => func() )
   type is ( point )
+    ! C1158 This is OK because 'a' is associated with a variable
+    do concurrent (i=1:5) local(a)
+    end do
+  end select
+
+  select type ( a => (func()) )
+  type is ( point )
     ! C1158 This is not OK because 'a' is not associated with a variable
 !ERROR: 'a' may not appear in a locality-spec because it is not definable
+!BECAUSE: 'a' is construct associated with an expression
     do concurrent (i=1:5) local(a)
     end do
   end select
@@ -109,6 +119,7 @@ pure subroutine s7()
 
   ! C1594 This is not OK because we're in a PURE subroutine
 !ERROR: 'var' may not appear in a locality-spec because it is not definable
+!BECAUSE: 'var' may not be defined in pure subprogram 's7' because it is USE-associated
   do concurrent (i=1:5) local(var)
   end do
 end subroutine s7
@@ -117,6 +128,7 @@ subroutine s8()
   integer, parameter :: iconst = 343
 
 !ERROR: 'iconst' may not appear in a locality-spec because it is not definable
+!BECAUSE: 'iconst' is not a variable
   do concurrent (i=1:5) local(iconst)
   end do
 end subroutine s8

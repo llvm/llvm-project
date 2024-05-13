@@ -1,7 +1,6 @@
 ; RUN: llvm-as < %s > %t1
 ; RUN: llvm-as < %p/Inputs/remangle_intrinsics.ll > %t2
 ; RUN: llvm-lto %t1 %t2 | FileCheck %s
-; REQUIRES: default_triple
 
 ; We have "struct.rtx_def" type in both modules being LTOed. Both modules use
 ; an overloaded intrinsic which has this type in its signature/name. When
@@ -11,11 +10,13 @@
 
 ; CHECK: Wrote native object file
 
+target triple = "x86_64-unknown-linux-gnu"
+
 %struct.rtx_def = type { i16 }
 
-define void @foo(%struct.rtx_def* %a, i8 %b, i32 %c) {
-  call void  @llvm.memset.p0struct.rtx_def.i32(%struct.rtx_def* align 4 %a, i8 %b, i32 %c, i1 true)
+define void @foo(ptr %a, i8 %b, i32 %c) {
+  call void  @llvm.memset.p0.rtx_def.i32(ptr align 4 %a, i8 %b, i32 %c, i1 true)
   ret void
 }
 
-declare void @llvm.memset.p0struct.rtx_def.i32(%struct.rtx_def*, i8, i32, i1)
+declare void @llvm.memset.p0.rtx_def.i32(ptr, i8, i32, i1)

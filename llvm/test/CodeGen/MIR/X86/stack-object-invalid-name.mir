@@ -7,8 +7,8 @@
   define i32 @test(i32 %a) {
   entry:
     %b = alloca i32
-    store i32 %a, i32* %b
-    %c = load i32, i32* %b
+    store i32 %a, ptr %b
+    %c = load i32, ptr %b
     ret i32 %c
   }
 
@@ -24,5 +24,5 @@ body: |
   bb.0.entry:
     MOV32mr $rsp, 1, _, -4, _, $edi
     $eax = MOV32rm $rsp, 1, _, -4, _
-    RETQ $eax
+    RET64 $eax
 ...

@@ -1,14 +1,5 @@
-; RUN: opt < %s -inline-threshold=0 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CALL
-;
-; Ensure the threshold has no impact on these decisions.
-; RUN: opt < %s -inline-threshold=20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CALL
-; RUN: opt < %s -inline-threshold=-20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CALL
-;
 ; The new pass manager doesn't re-use any threshold based infrastructure for
-; the always inliner, but test that we get the correct result. The new PM
-; always inliner also doesn't support inlining call-site alwaysinline
-; annotations. It isn't clear that this is a reasonable use case for
-; 'alwaysinline'.
+; the always inliner, but test that we get the correct result.
 ; RUN: opt < %s -inline-threshold=0 -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
 ; RUN: opt < %s -inline-threshold=20000000 -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
 ; RUN: opt < %s -inline-threshold=-20000000 -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
@@ -43,7 +34,6 @@ define void @outer2(i32 %N) {
 ; rdar://6655932
 ;
 ; CHECK-LABEL: @outer2(
-; CHECK-NOT: call void @inner2
 ; CHECK-NOT: call void @inner2
 ; CHECK: ret void
 
@@ -93,10 +83,10 @@ entry:
 }
 
 ; We can't inline this even though it has alwaysinline!
-define internal i32 @inner5(i8* %addr) alwaysinline {
+define internal i32 @inner5(ptr %addr) alwaysinline {
 ; CHECK-LABEL: @inner5(
 entry:
-  indirectbr i8* %addr, [ label %one, label %two ]
+  indirectbr ptr %addr, [ label %one, label %two ]
 
 one:
   ret i32 42
@@ -110,12 +100,12 @@ define i32 @outer5(i32 %x) {
 ; CHECK: ret
 
   %cmp = icmp slt i32 %x, 42
-  %addr = select i1 %cmp, i8* blockaddress(@inner5, %one), i8* blockaddress(@inner5, %two)
-  %call = call i32 @inner5(i8* %addr)
+  %addr = select i1 %cmp, ptr blockaddress(@inner5, %one), ptr blockaddress(@inner5, %two)
+  %call = call i32 @inner5(ptr %addr)
   ret i32 %call
 }
 
-; We alwaysinline a function that call itself recursively.
+; We never inline a function that calls itself recursively.
 define internal void @inner6(i32 %x) alwaysinline {
 ; CHECK-LABEL: @inner6(
 entry:
@@ -146,25 +136,24 @@ define i32 @inner7() {
   ret i32 1
 }
 define i32 @outer7() {
-; CHECK-CALL-LABEL: @outer7(
-; CHECK-CALL-NOT: call
-; CHECK-CALL: ret
-
+; CHECK-LABEL: @outer7(
+; CHECK-NOT: call
+; CHECK: ret
    %r = call i32 @inner7() alwaysinline
    ret i32 %r
 }
 
-define internal float* @inner8(float* nocapture align 128 %a) alwaysinline {
+define internal ptr @inner8(ptr nocapture align 128 %a) alwaysinline {
 ; CHECK-NOT: @inner8(
-  ret float* %a
+  ret ptr %a
 }
-define float @outer8(float* nocapture %a) {
+define float @outer8(ptr nocapture %a) {
 ; CHECK-LABEL: @outer8(
-; CHECK-NOT: call float* @inner8
+; CHECK-NOT: call ptr @inner8
 ; CHECK: ret
 
-  %inner_a = call float* @inner8(float* %a)
-  %f = load float, float* %inner_a, align 4
+  %inner_a = call ptr @inner8(ptr %a)
+  %f = load float, ptr %inner_a, align 4
   ret float %f
 }
 
@@ -199,7 +188,7 @@ entry:
   ; this the function can't be deleted because of the constant expression
   ; usage.
   %sink = alloca i1
-  store volatile i1 icmp eq (i64 ptrtoint (void (i1)* @inner9a to i64), i64 ptrtoint(void (i1)* @dummy9 to i64)), i1* %sink
+  store volatile i1 icmp eq (i64 ptrtoint (ptr @inner9a to i64), i64 ptrtoint(ptr @dummy9 to i64)), ptr %sink
 ; CHECK: store volatile
   call void @inner9a(i1 false)
 ; CHECK-NOT: call void @inner9a
@@ -207,7 +196,7 @@ entry:
   ; Next we call @inner9b passing in a constant expression. This constant
   ; expression will in fact be removed by inlining, so we should also be able
   ; to delete the function.
-  call void @inner9b(i1 icmp eq (i64 ptrtoint (void (i1)* @inner9b to i64), i64 ptrtoint(void (i1)* @dummy9 to i64)))
+  call void @inner9b(i1 icmp eq (i64 ptrtoint (ptr @inner9b to i64), i64 ptrtoint(ptr @dummy9 to i64)))
 ; CHECK-NOT: @inner9b
 
   ret void
@@ -317,4 +306,58 @@ define void @outer14() {
 ; CHECK: call void @inner14
   call void @inner14()
   ret void
+}
+
+define internal i32 @inner15() {
+; CHECK: @inner15(
+  ret i32 1
+}
+
+define i32 @outer15() {
+; CHECK-LABEL: @outer15(
+; CHECK: call
+
+   %r = call i32 @inner15() noinline
+   ret i32 %r
+}
+
+define internal i32 @inner16() alwaysinline {
+; CHECK: @inner16(
+  ret i32 1
+}
+
+define i32 @outer16() {
+; CHECK-LABEL: @outer16(
+; CHECK: call
+
+   %r = call i32 @inner16() noinline
+   ret i32 %r
+}
+
+define i32 @inner17() alwaysinline {
+; CHECK: @inner17(
+  ret i32 1
+}
+
+define i32 @outer17() {
+; CHECK-LABEL: @outer17(
+; CHECK: call
+
+   %r = call i32 @inner17() noinline
+   ret i32 %r
+}
+
+define i32 @inner18() noinline {
+; CHECK: @inner18(
+  ret i32 1
+}
+
+define i32 @outer18() {
+; CHECK-LABEL: @outer18(
+; CHECK-NOT: call
+; CHECK: ret
+
+   %r = call i32 @inner18() alwaysinline
+
+   ret i32 %r
 }

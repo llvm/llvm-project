@@ -4,12 +4,12 @@
 
 %destTy = type { i2, i2 }
 
-define void @crash(i64 %x0, i64 %y0, %destTy* nocapture %dest) nounwind {
+define void @crash(i64 %x0, i64 %y0, ptr nocapture %dest) nounwind {
 ; X86-LABEL: crash:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shlb $2, %dl
 ; X86-NEXT:    andb $3, %cl
 ; X86-NEXT:    orb %dl, %cl
@@ -27,9 +27,8 @@ define void @crash(i64 %x0, i64 %y0, %destTy* nocapture %dest) nounwind {
 ; X64-NEXT:    retq
   %x1 = trunc i64 %x0 to i2
   %y1 = trunc i64 %y0 to i2
-  %1 = bitcast %destTy* %dest to <2 x i2>*
-  %2 = insertelement <2 x i2> undef, i2 %x1, i32 0
-  %3 = insertelement <2 x i2> %2, i2 %y1, i32 1
-  store <2 x i2> %3, <2 x i2>* %1, align 1
+  %1 = insertelement <2 x i2> undef, i2 %x1, i32 0
+  %2 = insertelement <2 x i2> %1, i2 %y1, i32 1
+  store <2 x i2> %2, ptr %dest, align 1
   ret void
 }

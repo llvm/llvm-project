@@ -7,45 +7,44 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
-// ranges::prev(iterator, count, sentinel)
+// ranges::prev(it, n, bound)
 
 #include <iterator>
 
-#include <array>
 #include <cassert>
+#include <concepts>
+#include <utility>
 
-#include "check_round_trip.h"
 #include "test_iterators.h"
 
-template <std::input_or_output_iterator I>
-constexpr void check_iterator_count_sentinel_impl(I first, std::ptrdiff_t const steps, I const last) {
-  auto result = std::ranges::prev(stride_counting_iterator(first), steps, stride_counting_iterator(last));
-  assert(result == last);
-  check_round_trip(result, steps);
+template <typename It>
+constexpr void check(int* first, int* last, std::iter_difference_t<It> n, int* expected) {
+  It it(last);
+  It sent(first); // for std::ranges::prev, the sentinel *must* have the same type as the iterator
+
+  std::same_as<It> auto result = std::ranges::prev(std::move(it), n, std::move(sent));
+  assert(base(result) == expected);
 }
 
-constexpr bool check_iterator_count_sentinel() {
-  constexpr auto range = std::array{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  check_iterator_count_sentinel_impl(bidirectional_iterator(&range[8]), 6, bidirectional_iterator(&range[2]));
-  check_iterator_count_sentinel_impl(random_access_iterator(&range[5]), 2, random_access_iterator(&range[3]));
-  check_iterator_count_sentinel_impl(contiguous_iterator(&range[5]), 5, contiguous_iterator(&range[0]));
+constexpr bool test() {
+  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-  check_iterator_count_sentinel_impl(bidirectional_iterator(&range[2]), 0, bidirectional_iterator(&range[2]));
-  check_iterator_count_sentinel_impl(random_access_iterator(&range[3]), 0, random_access_iterator(&range[3]));
-  check_iterator_count_sentinel_impl(contiguous_iterator(&range[0]), 0, contiguous_iterator(&range[0]));
+  for (int size = 0; size != 10; ++size) {
+    for (int n = 0; n != 20; ++n) {
+      int* expected = n > size ? range : range + size - n;
+      check<bidirectional_iterator<int*>>(range, range+size, n, expected);
+      check<random_access_iterator<int*>>(range, range+size, n, expected);
+      check<contiguous_iterator<int*>>(   range, range+size, n, expected);
+      check<int*>(                        range, range+size, n, expected);
+    }
+  }
 
-  check_iterator_count_sentinel_impl(bidirectional_iterator(&range[5]), -1, bidirectional_iterator(&range[6]));
-  check_iterator_count_sentinel_impl(random_access_iterator(&range[5]), -2, random_access_iterator(&range[7]));
-  check_iterator_count_sentinel_impl(contiguous_iterator(&range[5]), -3, contiguous_iterator(&range[8]));
   return true;
 }
 
 int main(int, char**) {
-  static_assert(check_iterator_count_sentinel());
-  assert(check_iterator_count_sentinel());
-
+  assert(test());
+  static_assert(test());
   return 0;
 }

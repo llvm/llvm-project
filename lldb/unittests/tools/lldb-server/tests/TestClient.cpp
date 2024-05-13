@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestClient.h"
+#include "TestingSupport/Host/SocketTestUtilities.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
@@ -58,10 +59,13 @@ Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log) {
 }
 
 Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log, ArrayRef<StringRef> InferiorArgs) {
-  return launchCustom(Log, {}, InferiorArgs);
+  return launchCustom(Log, false, {}, InferiorArgs);
 }
 
-Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, ArrayRef<StringRef> ServerArgs, ArrayRef<StringRef> InferiorArgs) {
+Expected<std::unique_ptr<TestClient>>
+TestClient::launchCustom(StringRef Log, bool disable_stdio,
+                         ArrayRef<StringRef> ServerArgs,
+                         ArrayRef<StringRef> InferiorArgs) {
   const ArchSpec &arch_spec = HostInfo::GetArchitecture();
   Args args;
   args.AppendArgument(LLDB_SERVER);
@@ -77,14 +81,20 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
       args.AppendArgument("--log-flags=0x800000");
   }
 
+  auto LocalhostIPOrErr = GetLocalhostIP();
+  if (!LocalhostIPOrErr)
+    return LocalhostIPOrErr.takeError();
+  const std::string &LocalhostIP = *LocalhostIPOrErr;
+
   Status status;
   TCPSocket listen_socket(true, false);
-  status = listen_socket.Listen("127.0.0.1:0", 5);
+  status = listen_socket.Listen(LocalhostIP + ":0", 5);
   if (status.Fail())
     return status.ToError();
 
   args.AppendArgument(
-      ("127.0.0.1:" + Twine(listen_socket.GetLocalPortNumber())).str());
+      formatv("{0}:{1}", LocalhostIP, listen_socket.GetLocalPortNumber())
+          .str());
 
   for (StringRef arg : ServerArgs)
     args.AppendArgument(arg);
@@ -102,9 +112,10 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
   // TODO: Use this callback to detect botched launches. If lldb-server does not
   // start, we can print a nice error message here instead of hanging in
   // Accept().
-  Info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback,
-                                 false);
+  Info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback);
 
+  if (disable_stdio)
+    Info.GetFlags().Set(lldb::eLaunchFlagDisableSTDIO);
   status = Host::LaunchProcess(Info);
   if (status.Fail())
     return status.ToError();
@@ -193,7 +204,7 @@ Error TestClient::SendMessage(StringRef message, std::string &response_string,
                               PacketResult expected_result) {
   StringExtractorGDBRemote response;
   GTEST_LOG_(INFO) << "Send Packet: " << message.str();
-  PacketResult result = SendPacketAndWaitForResponse(message, response, false);
+  PacketResult result = SendPacketAndWaitForResponse(message, response);
   response.GetEscapedBinaryData(response_string);
   GTEST_LOG_(INFO) << "Read Packet: " << response_string;
   if (result != expected_result)
@@ -210,7 +221,7 @@ unsigned int TestClient::GetPcRegisterId() {
 }
 
 Error TestClient::qProcessInfo() {
-  m_process_info = None;
+  m_process_info = std::nullopt;
   auto InfoOr = SendMessage<ProcessInfo>("qProcessInfo");
   if (!InfoOr)
     return InfoOr.takeError();
@@ -252,7 +263,7 @@ Error TestClient::queryProcess() {
 }
 
 Error TestClient::Continue(StringRef message) {
-  assert(m_process_info.hasValue());
+  assert(m_process_info);
 
   auto StopReplyOr = SendMessage<StopReply>(
       message, m_process_info->GetEndian(), m_register_infos);

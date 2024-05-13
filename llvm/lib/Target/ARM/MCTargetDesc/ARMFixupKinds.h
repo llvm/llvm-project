@@ -28,7 +28,7 @@ enum Fixups {
   // immediate).
   fixup_arm_pcrel_10,
   // Equivalent to fixup_arm_pcrel_10, accounting for the short-swapped encoding
-  // of Thumb2 instructions.
+  // of Thumb2 instructions. Also used by LDRD in Thumb mode.
   fixup_t2_pcrel_10,
   // 9-bit PC relative relocation for symbol addresses used in VFP instructions
   // where bit 0 not encoded (so it's encoded as an 8-bit immediate).
@@ -98,6 +98,12 @@ enum Fixups {
   fixup_arm_movw_lo16, // :lower16:
   fixup_t2_movt_hi16,  // :upper16:
   fixup_t2_movw_lo16,  // :lower16:
+
+  // Fixup for Thumb movs (enc T1) and adds (enc T2) 8-bit immediate field (7-0)
+  fixup_arm_thumb_upper_8_15, // :upper8_15:
+  fixup_arm_thumb_upper_0_7,  // :upper0_7:
+  fixup_arm_thumb_lower_8_15, // :lower8_15:
+  fixup_arm_thumb_lower_0_7,  // :lower0_7:
 
   // Fixup for mod_imm
   fixup_arm_mod_imm,

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void f(int *A, int c, int N) {
 ;      int tmp;
@@ -34,7 +34,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32 %c, i32 %N) {
+define void @f(ptr %A, i32 %c, i32 %N) {
 bb:
   %tmp = sext i32 %N to i64
   %tmp1 = sext i32 %c to i64
@@ -57,8 +57,8 @@ bb7:                                              ; preds = %bb4
 
 bb8:                                              ; preds = %bb7, %bb6
   %tmp.0 = phi i32 [ 3, %bb6 ], [ 5, %bb7 ]
-  %tmp9 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %tmp.0, i32* %tmp9, align 4
+  %tmp9 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %tmp.0, ptr %tmp9, align 4
   br label %bb10
 
 bb10:                                             ; preds = %bb8

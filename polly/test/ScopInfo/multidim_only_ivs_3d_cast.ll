@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; void foo(int n, int m, int o, double A[n][m][o]) {
 ;
@@ -39,7 +39,7 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-define void @foo(i32 %n, i32 %m, i32 %o, double* %A) {
+define void @foo(i32 %n, i32 %m, i32 %o, ptr %A) {
 entry:
   %m_zext = zext i32 %m to i64
   %n_zext = zext i32 %o to i64
@@ -62,8 +62,8 @@ for.k:
   %tmp.us.us = add i64 %j, %tmp
   %tmp17.us.us = mul i64 %tmp.us.us, %n_zext
   %subscript = add i64 %tmp17.us.us, %k
-  %idx = getelementptr inbounds double, double* %A, i64 %subscript
-  store double 1.0, double* %idx
+  %idx = getelementptr inbounds double, ptr %A, i64 %subscript
+  store double 1.0, ptr %idx
   br label %for.k.inc
 
 for.k.inc:

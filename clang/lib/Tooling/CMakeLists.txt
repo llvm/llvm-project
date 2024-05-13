@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Option
   FrontendOpenMP
   Support
+  TargetParser
   )
 
 add_subdirectory(Core)
@@ -52,6 +53,8 @@ else()
     list(APPEND implicitDirs -I ${implicitDir})
   endforeach()
 
+  include(GetClangResourceDir)
+  get_clang_resource_dir(resource_dir PREFIX ${LLVM_BINARY_DIR})
   add_custom_command(
       COMMENT Generate ASTNodeAPI.json
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
@@ -60,11 +63,11 @@ else()
       $<TARGET_FILE:clang-ast-dump>
         # Skip this in debug mode because parsing AST.h is too slow
         --skip-processing=${skip_expensive_processing}
-        -I ${CMAKE_BINARY_DIR}/lib/clang/${CLANG_VERSION}/include
-        -I ${CMAKE_SOURCE_DIR}/../clang/include
-        -I ${CMAKE_BINARY_DIR}/tools/clang/include
-        -I ${CMAKE_BINARY_DIR}/include
-        -I ${CMAKE_SOURCE_DIR}/include
+        -I ${resource_dir}/include
+        -I ${CLANG_SOURCE_DIR}/include
+        -I ${LLVM_BINARY_DIR}/tools/clang/include
+        -I ${LLVM_BINARY_DIR}/include
+        -I ${LLVM_SOURCE_DIR}/include
         ${implicitDirs}
         --json-output-path ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
   )
@@ -132,4 +135,5 @@ add_clang_library(clangTooling
   clangRewrite
   clangSerialization
   clangToolingCore
+  ${LLVM_PTHREAD_LIB}
   )

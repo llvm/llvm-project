@@ -24,7 +24,7 @@ class CSKYInst<AddrMode am, int sz, dag outs, dag ins, string asmstr,
   let Namespace = "CSKY";
   int Size = sz;
   AddrMode AM = am;
-
+  field bits<32> SoftFail = 0;
   let OutOperandList = outs;
   let InOperandList = ins;
   let AsmString = asmstr;
@@ -44,6 +44,11 @@ class CSKY32Inst<AddrMode am, bits<6> opcode, dag outs, dag ins, string asmstr,
     : CSKYInst<am, 4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
   let Inst{31 - 26} = opcode;
+}
+
+class CSKY16Inst<AddrMode am, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : CSKYInst<am, 2, outs, ins, asmstr, pattern> {
+  field bits<16> Inst;
 }
 
 // CSKY 32-bit instruction
@@ -157,19 +162,7 @@ class I_16_RET<bits<5> sop, bits<5> pcode, string op, list<dag> pattern>
   let isTerminator = 1;
   let isReturn = 1;
   let isBarrier = 1;
-}
-
-// Instructions(1): rte32
-class I_16_RET_I<bits<5> sop, bits<5> pcode, string op, list<dag> pattern>
-    : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins), op, pattern> {
-  let Inst{25 - 21} = sop;
-  let Inst{20 - 16} = pcode;
-  let Inst{15 - 10} = 0x10;
-  let Inst{9 - 5} = 1;
-  let Inst{4 - 0} = 0;
-  let isTerminator = 1;
-  let isReturn = 1;
-  let isBarrier = 1;
+  let Uses = [ R15 ];
 }
 
 // Format< OP[6] | SOP[5] | RX[5] | IMM16[16] >
@@ -227,14 +220,27 @@ class I_LDST<AddrMode am, bits<6> opcode, bits<4> sop, dag outs, dag ins,
   let Inst{11 - 0} = imm12;
 }
 
+class I_PLDR<AddrMode am, bits<6> opcode, bits<4> sop, dag outs, dag ins,
+             string op, list<dag> pattern>
+    : CSKY32Inst<am, opcode, outs, ins, !strconcat(op, "\t($rx, ${imm12})"),
+                 pattern> {
+  bits<5> rx;
+  bits<12> imm12;
+  let Inst{25 - 21} = 0;
+  let Inst{20 - 16} = rx;
+  let Inst{15 - 12} = sop;
+  let Inst{11 - 0} = imm12;
+}
+
+
 // Format< OP[6] | RZ[5] | RX[5] | SOP[4] | OFFSET[12] >
-// Instructions(6): ld32.b, ld32.bs, ld32.h, ld32.hs, ld32.w, ld32.d
+// Instructions(6): ld32.b, ld32.bs, ld32.h, ld32.hs, ld32.w
 class I_LD<AddrMode am, bits<4> sop, string op, Operand operand>
     : I_LDST<am, 0x36, sop,
     (outs GPR:$rz), (ins GPR:$rx, operand:$imm12), op, []>;
 
 // Format< OP[6] | RZ[5] | RX[5] | SOP[4] | OFFSET[12] >
-// Instructions(4): st32.b, st32.h, st32.w, st32.d
+// Instructions(4): st32.b, st32.h, st32.w
 class I_ST<AddrMode am, bits<4> sop, string op, Operand operand>
     : I_LDST<am, 0x37, sop, (outs),
     (ins GPR:$rz, GPR:$rx, operand:$imm12), op, []>;
@@ -249,6 +255,8 @@ class I_12_PP<bits<5> sop, bits<5> pcode, dag outs, dag ins, string op>
   let Inst{20 - 16} = pcode;
   let Inst{15 - 12} = 0;
   let Inst{11 - 0} = regs;
+  let Uses = [R14];
+  let Defs = [R14];
 }
 
 // Format< OP[6] | RZ[5] | RX[5] | SOP[6] | PCODE[5] | IMM[5]>
@@ -256,7 +264,7 @@ class I_12_PP<bits<5> sop, bits<5> pcode, dag outs, dag ins, string op>
 class I_5_ZX<bits<6> sop, bits<5> pcode, string op, ImmLeaf ImmType,
              list<dag> pattern>
     : CSKY32Inst<AddrModeNone, 0x31, (outs GPR:$rz),
-    (ins GPR:$false, GPR:$rx, ImmType:$imm5),
+    (ins CARRY:$cond, GPR:$false, GPR:$rx, ImmType:$imm5),
     !strconcat(op, "\t$rz, $rx, $imm5"), pattern> {
   bits<5> rz;
   bits<5> rx;
@@ -272,9 +280,9 @@ class I_5_ZX<bits<6> sop, bits<5> pcode, string op, ImmLeaf ImmType,
 // Format< OP[6] | IMM[5] | RX[5] | SOP[6] | PCODE[5] | RZ[5]>
 // Instructions(13): decgt32, declt32, decne32, lsli32, lslc32, lsri32
 //                   lsrc32, asri32, asrc32, rotli32, xsr32, bclri32, bseti32
-class I_5_XZ<bits<6> sop, bits<5> pcode, string op, dag ins, dag outs,
+class I_5_XZ<bits<6> sop, bits<5> pcode, string op, dag outs, dag ins,
              list<dag> pattern>
-    : CSKY32Inst<AddrModeNone, 0x31, ins, outs,
+    : CSKY32Inst<AddrModeNone, 0x31, outs, ins,
                  !strconcat(op, "\t$rz, $rx, $imm5"), pattern> {
   bits<5> imm5;
   bits<5> rx;
@@ -286,19 +294,107 @@ class I_5_XZ<bits<6> sop, bits<5> pcode, string op, dag ins, dag outs,
   let Inst{4 - 0} = rz;
 }
 
+// mtcr32, mfcr32
+class I_5_XZ_CR<bits<6> sop, bits<5> pcode, string opStr, dag outs, dag ins,
+             list<dag> pattern>
+    : CSKY32Inst<AddrModeNone, 0x30, outs, ins, opStr, pattern> {
+  bits<5> sel;
+  bits<5> rx;
+  bits<5> cr;
+  let Inst{25 - 21} = sel;
+  let Inst{20 - 16} = rx;
+  let Inst{15 - 10} = sop;
+  let Inst{9 - 5} = pcode;
+  let Inst{4 - 0} = cr;
+}
+
+// sync
+class I_5_XZ_SYNC<bits<6> sop, bits<5> pcode, string opStr, bits<1> S, bits<1> I>
+    : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins), opStr, []> {
+  let Inst{25 - 21} = 0;
+  let Inst{20 - 16} = 0;
+  let Inst{15 - 10} = sop;
+  let Inst{9 - 5} = pcode;
+  let Inst{4 - 0} = 0;
+  let Inst{25} = S;
+  let Inst{21} = I;
+
+}
+
+// Priviledged Instructions
+class I_5_XZ_PRIVI<bits<6> sop, bits<5> pcode, string opStr>
+    : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins), opStr, []> {
+  let Inst{25 - 21} = 0;
+  let Inst{20 - 16} = 0;
+  let Inst{15 - 10} = sop;
+  let Inst{9 - 5} = pcode;
+  let Inst{4 - 0} = 0;
+}
+
+class I_CP<bits<4> sop, dag outs, dag ins, string opStr>
+    : CSKY32Inst<AddrModeNone, 0x3f, outs, ins, opStr, []> {
+  bits<5> cpid;
+  bits<12> usdef;
+  let Inst{25 - 21} = cpid;
+  let Inst{20 - 16} = 0;
+  let Inst{15 - 12} = sop;
+  let Inst{11 - 0} = usdef;
+}
+
+class I_CPOP<dag outs, dag ins, string opStr>
+    : CSKY32Inst<AddrModeNone, 0x3f, outs, ins, opStr, []> {
+  bits<5> cpid;
+  bits<20> usdef;
+  let Inst{25 - 21} = cpid;
+  let Inst{20 - 16} = usdef{19-15};
+  let Inst{15} = 1;
+  let Inst{14 - 0} = usdef{14-0};
+}
+
+class I_CP_Z<bits<4> sop, dag outs, dag ins, string opStr>
+    : CSKY32Inst<AddrModeNone, 0x3f, outs, ins, opStr, []> {
+  bits<5> cpid;
+  bits<12> usdef;
+  bits<5> rz;
+
+  let Inst{25 - 21} = cpid;
+  let Inst{20 - 16} = rz;
+  let Inst{15 - 12} = sop;
+  let Inst{11 - 0} = usdef;
+}
+
+class I_5_CACHE<bits<6> sop, bits<5> pcode, string opStr>
+    : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins), opStr, []> {
+  let Inst{25 - 21} = pcode;
+  let Inst{20 - 16} = 0;
+  let Inst{15 - 10} = sop;
+  let Inst{9 - 5} = 0b00001;
+  let Inst{4 - 0} = 0;
+}
+
+class I_5_X_CACHE<bits<6> sop, bits<5> pcode, string opStr>
+    : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins GPR:$rx), opStr #"\t$rx", []> {
+  bits<5> rx;
+
+  let Inst{25 - 21} = pcode;
+  let Inst{20 - 16} = rx;
+  let Inst{15 - 10} = sop;
+  let Inst{9 - 5} = 0b00001;
+  let Inst{4 - 0} = 0;
+}
+
 // Format< OP[6] | RY[5] | RX[5] | SOP[6] | PCODE[5] | IMM[5]>
 // Instructions(2): ldm32, (ldq32), stm32, (stq32)
-class I_5_YX<bits<6> opcode, dag outs, dag ins, string op, list<dag> pattern,
-             bits<5> imm5>
-    : CSKY32Inst<AddrModeNone, opcode, outs, ins,
-                 op #"\t${ry}, (${rx}), " #!cast<int>(imm5), pattern> {
+class I_5_YX<bits<6> opcode, bits<6> sop, dag outs, dag ins, string opStr, list<dag> pattern>
+    : CSKY32Inst<AddrModeNone, opcode, outs, ins, opStr, pattern> {
+  bits<10> regs;
   bits<5> rx;
-  bits<5> ry;
-  let Inst{25 - 21} = ry; // ry
+
+  let Inst{25 - 21} = regs{9 - 5}; // ry
   let Inst{20 - 16} = rx;
-  let Inst{15 - 10} = 0b000111;
+  let Inst{15 - 10} = sop;
   let Inst{9 - 5} = 0b00001;
-  let Inst{4 - 0} = imm5{4 - 0}; // imm5
+  let Inst{4 - 0} = regs{4 - 0}; // imm5
 }
 
 // Format< OP[6] | LSB[5] | RX[5] | SOP[6] | MSB[5] | RZ[5]>
@@ -317,14 +413,33 @@ class I_5_XZ_U<bits<6> sop, dag outs, dag ins, string op, list<dag> pattern>
   let Inst{4 - 0} = rz;
 }
 
-// sextb, sexth
-class I_5_XZ_US<bits<6> sop, string op, SDNode opnode,
-  ValueType type> : I_5_XZ_U<sop, (outs GPR:$rz), (ins GPR:$rx, uimm5:$msb, uimm5:$lsb), op,
-    [(set GPR:$rz, (opnode GPR:$rx, type))]>;
+class I_5_XZ_INS<bits<6> sop, dag outs, dag ins, string op, list<dag> pattern>
+    : CSKY32Inst<AddrModeNone, 0x31, outs, ins, op #"\t$rz, $rx, $msb, $lsb",
+                 pattern> {
+  bits<5> rx;
+  bits<5> rz;
+  bits<5> msb;
+  bits<5> lsb;
+  let Inst{25 - 21} = rz;
+  let Inst{20 - 16} = rx;
+  let Inst{15 - 10} = sop;
+  let Inst{9 - 5} = msb;
+  let Inst{4 - 0} = lsb;
+}
 
-class I_5_XZ_UZ<bits<6> sop, string op, int v>
-    : I_5_XZ_U<sop, (outs GPR:$rz), (ins GPR:$rx, uimm5:$msb, uimm5:$lsb), op,
-    [(set GPR:$rz, (and GPR:$rx, (i32 v)))]>;
+// Format< OP[6] | LSB[5] | RX[5] | SOP[6] | MSB[5] | RZ[5]>
+// Instructions(6): zext32, zextb32, zexth32, sext32, sextb32, sexth32
+class I_5_XZ_U2<bits<6> sop, bits<5> lsb, bits<5> msb, dag outs, dag ins,
+  string op, list<dag> pattern>
+  : CSKY32Inst<AddrModeNone, 0x31, outs, ins, !strconcat(op, "\t$rz, $rx"), pattern> {
+  bits<5> rx;
+  bits<5> rz;
+  let Inst{25 - 21} = lsb;     // lsb
+  let Inst{20 - 16} = rx;
+  let Inst{15 - 10} = sop;
+  let Inst{9 - 5} = msb;       // msb
+  let Inst{4 - 0} = rz;
+}
 
 // Format< OP[6] | RZ[5] | RX[5] | SOP[6] | SIZE[5] | LSB[5]>
 // Instructions(1): ins32
@@ -340,6 +455,16 @@ class I_5_ZX_U<bits<6> sop, string op, Operand operand, list<dag> pattern>
   let Inst{9 - 5} = size_lsb{9 - 5}; // size
   let Inst{4 - 0} = size_lsb{4 - 0}; // lsb
 }
+
+// sextb, sexth
+class I_5_XZ_US<bits<6> sop, bits<5> lsb, bits<5> msb, string op,
+  SDNode opnode, ValueType type>
+  : I_5_XZ_U2<sop, lsb, msb, (outs GPR:$rz), (ins GPR:$rx), op,
+  [(set GPR:$rz, (opnode GPR:$rx, type))]>;
+
+class I_5_XZ_UZ<bits<6> sop, bits<5> lsb, bits<5> msb, string op, int v>
+  : I_5_XZ_U2<sop, lsb, msb, (outs GPR:$rz), (ins GPR:$rx), op,
+  [(set GPR:$rz, (and GPR:$rx, (i32 v)))]>;
 
 // Format< OP[6] | IMM[5] | RX[5] | SOP[6] | PCODE[5] | 00000 >
 // Instructions(1): btsti32
@@ -371,6 +496,18 @@ class I_5_Z<bits<6> sop, bits<5> pcode, string op, ImmLeaf ImmType,
   let Inst{15 - 10} = sop;
   let Inst{9 - 5} = pcode;
   let Inst{4 - 0} = rz;
+}
+
+class I_5_IMM5<bits<6> opcode, bits<6> sop, bits<5> pcode, string op, ImmLeaf ImmType,
+            list<dag> pattern>
+    : CSKY32Inst<AddrModeNone, opcode, (outs), (ins ImmType:$imm5),
+                 !strconcat(op, "\t$imm5"), pattern> {
+  bits<5> imm5;
+  let Inst{25 - 21} = imm5;
+  let Inst{20 - 16} = 0;
+  let Inst{15 - 10} = sop;
+  let Inst{9 - 5} = pcode;
+  let Inst{4 - 0} = 0;
 }
 
 // Format< OP[6] | RY[5] | RX[5] | SOP[6] | PCODE[5] | RZ[5] >
@@ -493,9 +630,8 @@ class R_ZX<bits<6> sop, bits<5> pcode, string op, list<dag> pattern>
 
 // Format< OP[6] | 00000[5] | RX[5] | SOP[6] | PCODE[5] | 00000[5] >
 // Instructions:(1) tstnbz32
-class R_X<bits<6> sop, bits<5> pcode, string op, list<dag> pattern>
-    : CSKY32Inst<AddrModeNone, 0x31, (outs CARRY:$ca),(ins GPR:$rx),
-                 !strconcat(op, "\t$rx"), pattern> {
+class R_X<bits<6> sop, bits<5> pcode, dag outs, dag ins, string op, list<dag> pattern>
+    : CSKY32Inst<AddrModeNone, 0x31, outs, ins, !strconcat(op, "\t$rx"), pattern> {
   bits<5> rx;
   let Inst{25 - 21} = 0;
   let Inst{20 - 16} = rx;
@@ -519,7 +655,7 @@ class R_Z_1<bits<6> sop, bits<5> pcode, string op>
 
 // Format< OP[6] | RZ[5] | 00000[5] | SOP[6] | PCODE[5] | 00000[5] >
 // Instructions:(2) clrf32, clrt32
-class R_Z_2<bits<6> sop, bits<5> pcode, string op, list<dag> pattern>
+class R_Z_2<bits<6> sop, bits<5> pcode, string op>
     : CSKY32Inst<AddrModeNone, 0x31, (outs GPR:$rz),
     (ins CARRY:$ca, GPR:$false), !strconcat(op, "\t$rz"), []> {
   bits<5> rz;
@@ -529,4 +665,15 @@ class R_Z_2<bits<6> sop, bits<5> pcode, string op, list<dag> pattern>
   let Inst{9 - 5} = pcode;
   let Inst{4 - 0} = 0;
   let Constraints = "$rz = $false";
+}
+
+class BAR<bits<5> sop, string op, bits<1> signed>
+  : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins), op, []> {
+  let Inst{25} = signed;
+  let Inst{24 - 16} = 0;
+  let Inst{15 - 5} = 0x421;
+  let Inst{4 - 0} = sop;
+  let hasSideEffects = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
 }

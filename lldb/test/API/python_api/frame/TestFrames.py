@@ -3,8 +3,7 @@ Use lldb Python SBFrame API to get the argument values of the call stacks.
 And other SBFrame API tests.
 """
 
-from __future__ import print_function
-
+import io
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -13,9 +12,6 @@ from lldbsuite.test import lldbutil
 
 
 class FrameAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_get_arg_vals_for_call_stack(self):
         """Exercise SBFrame.GetVariables() API to get argument vals."""
         self.build()
@@ -26,29 +22,25 @@ class FrameAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName('c', 'a.out')
+        breakpoint = target.BreakpointCreateByName("c", "a.out")
         self.trace("breakpoint:", breakpoint)
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         # Keeps track of the number of times 'a' is called where it is within a
         # depth of 3 of the 'c' leaf function.
         callsOfA = 0
 
-        from six import StringIO as SixStringIO
-        session = SixStringIO()
+        session = io.StringIO()
         while process.GetState() == lldb.eStateStopped:
-            thread = lldbutil.get_stopped_thread(
-                process, lldb.eStopReasonBreakpoint)
+            thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
             self.assertIsNotNone(thread)
             # Inspect at most 3 frames.
             numFrames = min(3, thread.GetNumFrames())
@@ -58,7 +50,7 @@ class FrameAPITestCase(TestBase):
                     print("frame:", frame)
 
                 name = frame.GetFunction().GetName()
-                if name == 'a':
+                if name == "a":
                     callsOfA = callsOfA + 1
 
                 # We'll inspect only the arguments for the current frame:
@@ -70,9 +62,9 @@ class FrameAPITestCase(TestBase):
                 valList = frame.GetVariables(True, False, False, True)
                 argList = []
                 for val in valList:
-                    argList.append("(%s)%s=%s" % (val.GetTypeName(),
-                                                  val.GetName(),
-                                                  val.GetValue()))
+                    argList.append(
+                        "(%s)%s=%s" % (val.GetTypeName(), val.GetName(), val.GetValue())
+                    )
                 print("%s(%s)" % (name, ", ".join(argList)), file=session)
 
                 # Also check the generic pc & stack pointer.  We can't test their absolute values,
@@ -81,43 +73,57 @@ class FrameAPITestCase(TestBase):
                 gpr_reg_set = lldbutil.get_GPRs(frame)
                 pc_value = gpr_reg_set.GetChildMemberWithName("pc")
                 self.assertTrue(pc_value, "We should have a valid PC.")
-                pc_value_int = int(pc_value.GetValue(), 0)
+                               
+    
                 # Make sure on arm targets we dont mismatch PC value on the basis of thumb bit.
                 # Frame PC will not have thumb bit set in case of a thumb
                 # instruction as PC.
-                if self.getArchitecture() in ['arm', 'armv7', 'armv7k']:
+                pc_value_int = int(pc_value.GetValue(), 0)
+                if self.getArchitecture() in ["arm", "armv7", "armv7k"]:
                     pc_value_int &= ~1
                 self.assertEqual(
-                    pc_value_int, frame.GetPC(),
-                    "PC gotten as a value should equal frame's GetPC")
+                    pc_value_int,
+                    frame.GetPC(),
+                    "PC gotten as a value should equal frame's GetPC",
+                )
                 sp_value = gpr_reg_set.GetChildMemberWithName("sp")
-                self.assertTrue(
-                    sp_value, "We should have a valid Stack Pointer.")
+                self.assertTrue(sp_value, "We should have a valid Stack Pointer.")
                 self.assertEqual(
-                    int(sp_value.GetValue(), 0), frame.GetSP(),
-                    "SP gotten as a value should equal frame's GetSP")
-
+                    int(sp_value.GetValue(), 0),
+                    frame.GetSP(),
+                    "SP gotten as a value should equal frame's GetSP",
+                )
+                # Test that the "register" property's flat list matches the list from
+                # the "registers" property that returns register sets:
+                register_regs = set()
+                flattened_regs = set()
+                for reg_set in frame.registers:
+                    for reg in reg_set:
+                        flattened_regs.add(reg.name)
+                for reg in frame.register:
+                    register_regs.add(reg.name)
+                self.assertEqual(register_regs, flattened_regs, "register matches registers")
+                        
             print("---", file=session)
             process.Continue()
 
         # At this point, the inferior process should have exited.
-        self.assertEqual(
-            process.GetState(), lldb.eStateExited,
-            PROCESS_EXITED)
+        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
 
         # Expect to find 'a' on the call stacks two times.
-        self.assertEqual(callsOfA, 2,
-                        "Expect to find 'a' on the call stacks two times")
+        self.assertEqual(callsOfA, 2, "Expect to find 'a' on the call stacks two times")
         # By design, the 'a' call frame has the following arg vals:
         #     o a((int)val=1, (char)ch='A')
         #     o a((int)val=3, (char)ch='A')
         if self.TraceOn():
             print("Full stack traces when stopped on the breakpoint 'c':")
             print(session.getvalue())
-        self.expect(session.getvalue(), "Argument values displayed correctly",
-                    exe=False,
-                    substrs=["a((int)val=1, (char)ch='A')",
-                             "a((int)val=3, (char)ch='A')"])
+        self.expect(
+            session.getvalue(),
+            "Argument values displayed correctly",
+            exe=False,
+            substrs=["a((int)val=1, (char)ch='A')", "a((int)val=3, (char)ch='A')"],
+        )
 
     def test_frame_api_boundary_condition(self):
         """Exercise SBFrame APIs with boundary condition inputs."""
@@ -129,22 +135,19 @@ class FrameAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName('c', 'a.out')
+        breakpoint = target.BreakpointCreateByName("c", "a.out")
         self.trace("breakpoint:", breakpoint)
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
         frame = thread.GetFrameAtIndex(0)
         if self.TraceOn():
@@ -170,22 +173,19 @@ class FrameAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName('c', 'a.out')
+        breakpoint = target.BreakpointCreateByName("c", "a.out")
         self.trace("breakpoint:", breakpoint)
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
         frameEntered = thread.GetFrameAtIndex(0)

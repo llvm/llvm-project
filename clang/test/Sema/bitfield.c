@@ -5,29 +5,27 @@ enum e0; // expected-note{{forward declaration of 'enum e0'}}
 struct a {
   int a : -1; // expected-error{{bit-field 'a' has negative width}}
 
-  // rdar://6081627
-  int b : 33; // expected-error{{width of bit-field 'b' (33 bits) exceeds width of its type (32 bits)}}
+  int b : 33; // expected-error{{width of bit-field 'b' (33 bits) exceeds the width of its type (32 bits)}}
 
   int c : (1 + 0.25); // expected-error{{integer constant expression must have integer type}}
-  int d : (int)(1 + 0.25); 
+  int d : (int)(1 + 0.25);
 
-  // rdar://6138816
   int e : 0;  // expected-error {{bit-field 'e' has zero width}}
 
   float xx : 4;  // expected-error {{bit-field 'xx' has non-integral type}}
 
   // PR3607
   enum e0 f : 1; // expected-error {{field has incomplete type 'enum e0'}}
-  
+
   int g : (_Bool)1;
-  
-  // PR4017  
-  char : 10;      // expected-error {{width of anonymous bit-field (10 bits) exceeds width of its type (8 bits)}}
+
+  // PR4017
+  char : 10;      // expected-error {{width of anonymous bit-field (10 bits) exceeds the width of its type (8 bits)}}
   unsigned : -2;  // expected-error {{anonymous bit-field has negative width (-2)}}
   float : 12;     // expected-error {{anonymous bit-field has non-integral type 'float'}}
 
-  _Bool : 2;   // expected-error {{width of anonymous bit-field (2 bits) exceeds width of its type (1 bit)}}
-  _Bool h : 5; // expected-error {{width of bit-field 'h' (5 bits) exceeds width of its type (1 bit)}}
+  _Bool : 2;   // expected-error {{width of anonymous bit-field (2 bits) exceeds the width of its type (1 bit)}}
+  _Bool h : 5; // expected-error {{width of bit-field 'h' (5 bits) exceeds the width of its type (1 bit)}}
 };
 
 struct b {unsigned x : 2;} x;
@@ -84,5 +82,5 @@ struct Test6 {
 };
 
 struct PR36157 {
-  int n : 1 ? 1 : implicitly_declare_function(); // expected-warning {{invalid in C99}}
+  int n : 1 ? 1 : implicitly_declare_function(); // expected-error {{call to undeclared function 'implicitly_declare_function'; ISO C99 and later do not support implicit function declarations}}
 };

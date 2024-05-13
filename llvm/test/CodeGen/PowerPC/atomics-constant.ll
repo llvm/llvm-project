@@ -3,20 +3,18 @@
 
 target triple = "powerpc64le-unknown-linux-gnu"
 
-@a = dso_local constant i64 zeroinitializer
+@a = dso_local global i64 zeroinitializer
 
 define i64 @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    addis 3, 2, a@toc@ha
 ; CHECK-NEXT:    ld 3, a@toc@l(3)
-; CHECK-NEXT:    cmpd 7, 4, 4
-; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    cmpd 7, 3, 3
 ; CHECK-NEXT:    bne- 7, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    blr
 entry:
-  %value = load atomic i64, i64* @a acquire, align 8
+  %value = load atomic i64, ptr @a acquire, align 8
   ret i64 %value
 }

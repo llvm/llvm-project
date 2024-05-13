@@ -11,14 +11,12 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Finds instances where an integer is assigned to a string.
 ///
 /// For more details see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-string-assignment.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/string-integer-assignment.html
 class StringIntegerAssignmentCheck : public ClangTidyCheck {
 public:
   StringIntegerAssignmentCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,8 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRINGINTEGERASSIGNMENTCHECK_H

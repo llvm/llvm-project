@@ -2,6 +2,7 @@
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/abs.s -o %t/abs.o
 # RUN: llvm-ar rcs %t/foo.a %t/foo.o
 
 # FOO-FIRST: <_bar>:
@@ -101,6 +102,9 @@
 # RUN: %lld -lSystem -o %t/test-alias %t/foo.o %t/test.o -order_file %t/ord-alias
 # RUN: llvm-objdump -d %t/test-alias | FileCheck %s --check-prefix=FOO-FIRST
 
+## Absolute in symbols in order files make no sense. Just ignore them.
+# RUN: %lld -lSystem -dylib -o %t/test-abs %t/abs.o -order_file %t/ord-abs
+
 #--- ord-1
 -[Foo doFoo:andBar:] # just a comment
 _main # another comment
@@ -160,6 +164,9 @@ _bar
 _main
 -[Foo doFoo:andBar:]
 
+#--- ord-abs
+_abs
+
 #--- foo.s
 .globl "-[Foo doFoo:andBar:]"
 "-[Foo doFoo:andBar:]":
@@ -176,3 +183,6 @@ _main:
 .section  __DWARF,__debug_aranges,regular,debug
 ltmp1:
   .byte 0
+
+#--- abs.s
+_abs = 42

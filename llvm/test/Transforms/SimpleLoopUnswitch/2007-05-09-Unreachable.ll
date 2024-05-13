@@ -1,11 +1,10 @@
 ; PR1333
-; RUN: opt < %s -simple-loop-unswitch -disable-output
-; RUN: opt < %s -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output
+; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -disable-output
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"
 target triple = "i686-pc-linux-gnu"
-	%struct.ada__streams__root_stream_type = type { %struct.ada__tags__dispatch_table* }
-	%struct.ada__tags__dispatch_table = type { [1 x i8*] }
+	%struct.ada__streams__root_stream_type = type { ptr }
+	%struct.ada__tags__dispatch_table = type { [1 x ptr] }
 	%struct.quotes__T173s = type { i8, %struct.quotes__T173s__T174s, [2 x [1 x double]], [2 x i16], i64, i8 }
 	%struct.quotes__T173s__T174s = type { i8, i8, i8, i16, i16, [2 x [1 x double]] }
 

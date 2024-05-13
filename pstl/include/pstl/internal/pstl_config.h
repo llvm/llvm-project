@@ -13,12 +13,12 @@
 #include <__pstl_config_site>
 
 // The version is XYYZ, where X is major, YY is minor, and Z is patch (i.e. X.YY.Z)
-#define _PSTL_VERSION 13000
+#define _PSTL_VERSION 17000
 #define _PSTL_VERSION_MAJOR (_PSTL_VERSION / 1000)
 #define _PSTL_VERSION_MINOR ((_PSTL_VERSION % 1000) / 10)
 #define _PSTL_VERSION_PATCH (_PSTL_VERSION % 10)
 
-#if !defined(_PSTL_PAR_BACKEND_SERIAL) && !defined(_PSTL_PAR_BACKEND_TBB)
+#if !defined(_PSTL_PAR_BACKEND_SERIAL) && !defined(_PSTL_PAR_BACKEND_TBB) && !defined(_PSTL_PAR_BACKEND_OPENMP)
 #    error "A parallel backend must be specified"
 #endif
 
@@ -27,7 +27,12 @@
 #    define _PSTL_USAGE_WARNINGS
 #endif
 
-#if !defined(_PSTL_ASSERT)
+#if defined(_LIBCPP_VERSION)
+#    include <__assert>
+#    define _PSTL_ASSERT(pred) _LIBCPP_ASSERT(pred, "")
+#elif defined(__GLIBCXX__)
+#    define _PSTL_ASSERT(pred) __glibcxx_assert(pred)
+#else
 #    include <cassert>
 #    define _PSTL_ASSERT(pred) (assert((pred)))
 #endif
@@ -96,7 +101,8 @@
 #endif
 
 // Should be defined to 1 for environments with a vendor implementation of C++17 execution policies
-#define _PSTL_CPP17_EXECUTION_POLICIES_PRESENT (_MSC_VER >= 1912)
+#define _PSTL_CPP17_EXECUTION_POLICIES_PRESENT (_MSC_VER >= 1912 && _MSVC_LANG >= 201703L) ||                          \
+    (_GLIBCXX_RELEASE >= 9 && __GLIBCXX__ >= 20190503 && __cplusplus >= 201703L)
 
 #if (defined(_MSC_VER) && _MSC_VER >= 1900) || \
     __cplusplus >= 201300L || \

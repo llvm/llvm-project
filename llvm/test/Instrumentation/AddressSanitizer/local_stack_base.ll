@@ -1,5 +1,4 @@
-; RUN: opt -S -asan -enable-new-pm=0 -asan-skip-promotable-allocas=0 %s -o - | FileCheck %s
-; RUN: opt -S -passes='asan-function-pipeline' -asan-skip-promotable-allocas=0 %s -o - | FileCheck %s
+; RUN: opt -S -passes=asan -asan-use-stack-safety=0 -asan-skip-promotable-allocas=0 %s -o - | FileCheck %s
 ; Generated from:
 ; int bar(int y) {
 ;   return y + 2;
@@ -13,15 +12,15 @@ target triple = "x86_64-apple-macosx10.13.0"
 define i32 @foo(i32 %i) #0 !dbg !8 {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !12, metadata !DIExpression()), !dbg !13
+  store i32 %i, ptr %i.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !12, metadata !DIExpression()), !dbg !13
 
   ; CHECK: %asan_local_stack_base = alloca i64
-  ; CHECK: %[[ALLOCA:.*]] = ptrtoint i8* %MyAlloca to i64
+  ; CHECK: %[[ALLOCA:.*]] = ptrtoint ptr %MyAlloca to i64
   ; CHECK: %[[PHI:.*]] = phi i64 {{.*}} %[[ALLOCA]],
-  ; CHECK: store i64 %[[PHI]], i64* %asan_local_stack_base
-; CHECK: call void @llvm.dbg.declare(metadata i64* %asan_local_stack_base, metadata [[VAR_I:![0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)), !dbg [[LOC_I:![0-9]+]]
-  %0 = load i32, i32* %i.addr, align 4, !dbg !14
+  ; CHECK: store i64 %[[PHI]], ptr %asan_local_stack_base
+; CHECK: call void @llvm.dbg.declare(metadata ptr %asan_local_stack_base, metadata [[VAR_I:![0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)), !dbg [[LOC_I:![0-9]+]]
+  %0 = load i32, ptr %i.addr, align 4, !dbg !14
   %add = add nsw i32 %0, 2, !dbg !15
   ret i32 %add, !dbg !16
 }

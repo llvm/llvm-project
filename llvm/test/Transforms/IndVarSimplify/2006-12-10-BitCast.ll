@@ -1,8 +1,8 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 target datalayout = "e-p:32:32"
 target triple = "i686-apple-darwin8"
-	%struct.vorbis_dsp_state = type { i32, %struct.vorbis_info*, float**, float**, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, i8* }
-	%struct.vorbis_info = type { i32, i32, i32, i32, i32, i32, i32, i8* }
+	%struct.vorbis_dsp_state = type { i32, ptr, ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, ptr }
+	%struct.vorbis_info = type { i32, i32, i32, i32, i32, i32, i32, ptr }
 
 define void @_ve_envelope_search() {
 entry:

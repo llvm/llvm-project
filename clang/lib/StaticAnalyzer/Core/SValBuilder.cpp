@@ -19,25 +19,25 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
+#include <optional>
 #include <tuple>
 
 using namespace clang;
@@ -49,9 +49,19 @@ using namespace ento;
 
 void SValBuilder::anchor() {}
 
+SValBuilder::SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
+                         ProgramStateManager &stateMgr)
+    : Context(context), BasicVals(context, alloc),
+      SymMgr(context, BasicVals, alloc), MemMgr(context, alloc),
+      StateMgr(stateMgr),
+      AnOpts(
+          stateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions()),
+      ArrayIndexTy(context.LongLongTy),
+      ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
+
 DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
   if (Loc::isLocType(type))
-    return makeNull();
+    return makeNullWithType(type);
 
   if (type->isIntegralOrEnumerationType())
     return makeIntVal(0, type);
@@ -64,8 +74,10 @@ DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
   return UnknownVal();
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                                const llvm::APSInt& rhs, QualType type) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
+                                          BinaryOperator::Opcode op,
+                                          const llvm::APSInt &rhs,
+                                          QualType type) {
   // The Environment ensures we always get a persistent APSInt in
   // BasicValueFactory, so we don't need to get the APSInt from
   // BasicValueFactory again.
@@ -74,25 +86,35 @@ NonLoc SValBuilder::makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
   return nonloc::SymbolVal(SymMgr.getSymIntExpr(lhs, op, rhs, type));
 }
 
-NonLoc SValBuilder::makeNonLoc(const llvm::APSInt& lhs,
-                               BinaryOperator::Opcode op, const SymExpr *rhs,
-                               QualType type) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const llvm::APSInt &lhs,
+                                          BinaryOperator::Opcode op,
+                                          const SymExpr *rhs, QualType type) {
   assert(rhs);
   assert(!Loc::isLocType(type));
   return nonloc::SymbolVal(SymMgr.getIntSymExpr(lhs, op, rhs, type));
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                               const SymExpr *rhs, QualType type) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
+                                          BinaryOperator::Opcode op,
+                                          const SymExpr *rhs, QualType type) {
   assert(lhs && rhs);
   assert(!Loc::isLocType(type));
   return nonloc::SymbolVal(SymMgr.getSymSymExpr(lhs, op, rhs, type));
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *operand,
-                               QualType fromTy, QualType toTy) {
+NonLoc SValBuilder::makeNonLoc(const SymExpr *operand, UnaryOperator::Opcode op,
+                               QualType type) {
+  assert(operand);
+  assert(!Loc::isLocType(type));
+  return nonloc::SymbolVal(SymMgr.getUnarySymExpr(operand, op, type));
+}
+
+nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *operand,
+                                          QualType fromTy, QualType toTy) {
   assert(operand);
   assert(!Loc::isLocType(toTy));
+  if (fromTy == toTy)
+    return nonloc::SymbolVal(operand);
   return nonloc::SymbolVal(SymMgr.getCastSymbol(operand, fromTy, toTy));
 }
 
@@ -101,7 +123,8 @@ SVal SValBuilder::convertToArrayIndex(SVal val) {
     return val;
 
   // Common case: we have an appropriately sized integer.
-  if (Optional<nonloc::ConcreteInt> CI = val.getAs<nonloc::ConcreteInt>()) {
+  if (std::optional<nonloc::ConcreteInt> CI =
+          val.getAs<nonloc::ConcreteInt>()) {
     const llvm::APSInt& I = CI->getValue();
     if (I.getBitWidth() == ArrayIndexWidth && I.isSigned())
       return val;
@@ -192,13 +215,28 @@ SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
                                       const LocationContext *LCtx,
                                       unsigned VisitCount) {
   QualType T = E->getType();
-  assert(Loc::isLocType(T));
-  assert(SymbolManager::canSymbolicate(T));
-  if (T->isNullPtrType())
-    return makeZeroVal(T);
+  return getConjuredHeapSymbolVal(E, LCtx, T, VisitCount);
+}
 
-  SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, T, VisitCount);
+DefinedOrUnknownSVal
+SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
+                                      const LocationContext *LCtx,
+                                      QualType type, unsigned VisitCount) {
+  assert(Loc::isLocType(type));
+  assert(SymbolManager::canSymbolicate(type));
+  if (type->isNullPtrType())
+    return makeZeroVal(type);
+
+  SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, type, VisitCount);
   return loc::MemRegionVal(MemMgr.getSymbolicHeapRegion(sym));
+}
+
+loc::MemRegionVal SValBuilder::getAllocaRegionVal(const Expr *E,
+                                                  const LocationContext *LCtx,
+                                                  unsigned VisitCount) {
+  const AllocaRegion *R =
+      getRegionManager().getAllocaRegion(E, VisitCount, LCtx);
+  return loc::MemRegionVal(R);
 }
 
 DefinedSVal SValBuilder::getMetadataSymbolVal(const void *symbolTag,
@@ -237,8 +275,7 @@ SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
 }
 
 DefinedSVal SValBuilder::getMemberPointer(const NamedDecl *ND) {
-  assert(!ND || isa<CXXMethodDecl>(ND) || isa<FieldDecl>(ND) ||
-         isa<IndirectFieldDecl>(ND));
+  assert(!ND || (isa<CXXMethodDecl, FieldDecl, IndirectFieldDecl>(ND)));
 
   if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(ND)) {
     // Sema treats pointers to static member functions as have function pointer
@@ -246,7 +283,7 @@ DefinedSVal SValBuilder::getMemberPointer(const NamedDecl *ND) {
     // We don't need to play a similar trick for static member fields
     // because these are represented as plain VarDecls and not FieldDecls
     // in the AST.
-    if (MD->isStatic())
+    if (!MD->isImplicitObjectMemberFunction())
       return getFunctionPointer(MD);
   }
 
@@ -268,6 +305,13 @@ DefinedSVal SValBuilder::getBlockPointer(const BlockDecl *block,
   return loc::MemRegionVal(BD);
 }
 
+std::optional<loc::MemRegionVal>
+SValBuilder::getCastedMemRegionVal(const MemRegion *R, QualType Ty) {
+  if (auto OptR = StateMgr.getStoreManager().castRegion(R, Ty))
+    return loc::MemRegionVal(*OptR);
+  return std::nullopt;
+}
+
 /// Return a memory region for the 'this' object reference.
 loc::MemRegionVal SValBuilder::getCXXThis(const CXXMethodDecl *D,
                                           const StackFrameContext *SFC) {
@@ -283,7 +327,7 @@ loc::MemRegionVal SValBuilder::getCXXThis(const CXXRecordDecl *D,
   return loc::MemRegionVal(getRegionManager().getCXXThisRegion(PT, SFC));
 }
 
-Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
+std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   E = E->IgnoreParens();
 
   switch (E->getStmtClass()) {
@@ -336,7 +380,7 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
     return makeBoolVal(cast<ObjCBoolLiteralExpr>(E));
 
   case Stmt::CXXNullPtrLiteralExprClass:
-    return makeNull();
+    return makeNullWithType(E->getType());
 
   case Stmt::CStyleCastExprClass:
   case Stmt::CXXFunctionalCastExprClass:
@@ -353,21 +397,20 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
     case CK_NoOp:
     case CK_BitCast: {
       const Expr *SE = CE->getSubExpr();
-      Optional<SVal> Val = getConstantVal(SE);
+      std::optional<SVal> Val = getConstantVal(SE);
       if (!Val)
-        return None;
+        return std::nullopt;
       return evalCast(*Val, CE->getType(), SE->getType());
     }
     }
-    // FALLTHROUGH
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
 
   // If we don't have a special case, fall back to the AST's constant evaluator.
   default: {
     // Don't try to come up with a value for materialized temporaries.
     if (E->isGLValue())
-      return None;
+      return std::nullopt;
 
     ASTContext &Ctx = getContext();
     Expr::EvalResult Result;
@@ -376,9 +419,9 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
 
     if (Loc::isLocType(E->getType()))
       if (E->isNullPointerConstant(Ctx, Expr::NPC_ValueDependentIsNotNull))
-        return makeNull();
+        return makeNullWithType(E->getType());
 
-    return None;
+    return std::nullopt;
   }
   }
 }
@@ -391,23 +434,60 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
 
   // TODO: When the Max Complexity is reached, we should conjure a symbol
   // instead of generating an Unknown value and propagate the taint info to it.
-  const unsigned MaxComp = StateMgr.getOwningEngine()
-                               .getAnalysisManager()
-                               .options.MaxSymbolComplexity;
+  const unsigned MaxComp = AnOpts.MaxSymbolComplexity;
 
   if (symLHS && symRHS &&
       (symLHS->computeComplexity() + symRHS->computeComplexity()) <  MaxComp)
     return makeNonLoc(symLHS, Op, symRHS, ResultTy);
 
   if (symLHS && symLHS->computeComplexity() < MaxComp)
-    if (Optional<nonloc::ConcreteInt> rInt = RHS.getAs<nonloc::ConcreteInt>())
+    if (std::optional<nonloc::ConcreteInt> rInt =
+            RHS.getAs<nonloc::ConcreteInt>())
       return makeNonLoc(symLHS, Op, rInt->getValue(), ResultTy);
 
   if (symRHS && symRHS->computeComplexity() < MaxComp)
-    if (Optional<nonloc::ConcreteInt> lInt = LHS.getAs<nonloc::ConcreteInt>())
+    if (std::optional<nonloc::ConcreteInt> lInt =
+            LHS.getAs<nonloc::ConcreteInt>())
       return makeNonLoc(lInt->getValue(), Op, symRHS, ResultTy);
 
   return UnknownVal();
+}
+
+SVal SValBuilder::evalMinus(NonLoc X) {
+  switch (X.getKind()) {
+  case nonloc::ConcreteIntKind:
+    return makeIntVal(-X.castAs<nonloc::ConcreteInt>().getValue());
+  case nonloc::SymbolValKind:
+    return makeNonLoc(X.castAs<nonloc::SymbolVal>().getSymbol(), UO_Minus,
+                      X.getType(Context));
+  default:
+    return UnknownVal();
+  }
+}
+
+SVal SValBuilder::evalComplement(NonLoc X) {
+  switch (X.getKind()) {
+  case nonloc::ConcreteIntKind:
+    return makeIntVal(~X.castAs<nonloc::ConcreteInt>().getValue());
+  case nonloc::SymbolValKind:
+    return makeNonLoc(X.castAs<nonloc::SymbolVal>().getSymbol(), UO_Not,
+                      X.getType(Context));
+  default:
+    return UnknownVal();
+  }
+}
+
+SVal SValBuilder::evalUnaryOp(ProgramStateRef state, UnaryOperator::Opcode opc,
+                 SVal operand, QualType type) {
+  auto OpN = operand.getAs<NonLoc>();
+  if (!OpN)
+    return UnknownVal();
+
+  if (opc == UO_Minus)
+    return evalMinus(*OpN);
+  if (opc == UO_Not)
+    return evalComplement(*OpN);
+  llvm_unreachable("Unexpected unary operator");
 }
 
 SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
@@ -418,8 +498,7 @@ SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
   if (lhs.isUnknown() || rhs.isUnknown())
     return UnknownVal();
 
-  if (lhs.getAs<nonloc::LazyCompoundVal>() ||
-      rhs.getAs<nonloc::LazyCompoundVal>()) {
+  if (isa<nonloc::LazyCompoundVal>(lhs) || isa<nonloc::LazyCompoundVal>(rhs)) {
     return UnknownVal();
   }
 
@@ -431,20 +510,30 @@ SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
     return UnknownVal();
   }
 
-  if (Optional<Loc> LV = lhs.getAs<Loc>()) {
-    if (Optional<Loc> RV = rhs.getAs<Loc>())
+  if (std::optional<Loc> LV = lhs.getAs<Loc>()) {
+    if (std::optional<Loc> RV = rhs.getAs<Loc>())
       return evalBinOpLL(state, op, *LV, *RV, type);
 
     return evalBinOpLN(state, op, *LV, rhs.castAs<NonLoc>(), type);
   }
 
-  if (Optional<Loc> RV = rhs.getAs<Loc>()) {
-    // Support pointer arithmetic where the addend is on the left
-    // and the pointer on the right.
-    assert(op == BO_Add);
+  if (const std::optional<Loc> RV = rhs.getAs<Loc>()) {
+    const auto IsCommutative = [](BinaryOperatorKind Op) {
+      return Op == BO_Mul || Op == BO_Add || Op == BO_And || Op == BO_Xor ||
+             Op == BO_Or;
+    };
 
-    // Commute the operands.
-    return evalBinOpLN(state, op, *RV, lhs.castAs<NonLoc>(), type);
+    if (IsCommutative(op)) {
+      // Swap operands.
+      return evalBinOpLN(state, op, *RV, lhs.castAs<NonLoc>(), type);
+    }
+
+    // If the right operand is a concrete int location then we have nothing
+    // better but to treat it as a simple nonloc.
+    if (auto RV = rhs.getAs<loc::ConcreteInt>()) {
+      const nonloc::ConcreteInt RhsAsLoc = makeIntVal(RV->getValue());
+      return evalBinOpNN(state, op, lhs.castAs<NonLoc>(), RhsAsLoc, type);
+    }
   }
 
   return evalBinOpNN(state, op, lhs.castAs<NonLoc>(), rhs.castAs<NonLoc>(),
@@ -517,11 +606,9 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   APSIntType ToType(getContext().getTypeSize(castTy),
                     castTy->isUnsignedIntegerType());
   llvm::APSInt ToTypeMax = ToType.getMaxValue();
-  NonLoc ToTypeMaxVal =
-      makeIntVal(ToTypeMax.isUnsigned() ? ToTypeMax.getZExtValue()
-                                        : ToTypeMax.getSExtValue(),
-                 castTy)
-          .castAs<NonLoc>();
+
+  NonLoc ToTypeMaxVal = makeIntVal(ToTypeMax);
+
   // Check the range of the symbol being casted against the maximum value of the
   // target type.
   NonLoc FromVal = val.castAs<NonLoc>();
@@ -532,17 +619,476 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   std::tie(IsNotTruncated, IsTruncated) = state->assume(CompVal);
   if (!IsNotTruncated && IsTruncated) {
     // Symbol is truncated so we evaluate it as a cast.
-    NonLoc CastVal = makeNonLoc(se, originalTy, castTy);
-    return CastVal;
+    return makeNonLoc(se, originalTy, castTy);
   }
   return evalCast(val, castTy, originalTy);
 }
 
 //===----------------------------------------------------------------------===//
-// Cast methods.
-// `evalCast` is the main method
-// `evalCastKind` and `evalCastSubKind` are helpers
+// Cast method.
+// `evalCast` and its helper `EvalCastVisitor`
 //===----------------------------------------------------------------------===//
+
+namespace {
+class EvalCastVisitor : public SValVisitor<EvalCastVisitor, SVal> {
+private:
+  SValBuilder &VB;
+  ASTContext &Context;
+  QualType CastTy, OriginalTy;
+
+public:
+  EvalCastVisitor(SValBuilder &VB, QualType CastTy, QualType OriginalTy)
+      : VB(VB), Context(VB.getContext()), CastTy(CastTy),
+        OriginalTy(OriginalTy) {}
+
+  SVal Visit(SVal V) {
+    if (CastTy.isNull())
+      return V;
+
+    CastTy = Context.getCanonicalType(CastTy);
+
+    const bool IsUnknownOriginalType = OriginalTy.isNull();
+    if (!IsUnknownOriginalType) {
+      OriginalTy = Context.getCanonicalType(OriginalTy);
+
+      if (CastTy == OriginalTy)
+        return V;
+
+      // FIXME: Move this check to the most appropriate
+      // evalCastKind/evalCastSubKind function. For const casts, casts to void,
+      // just propagate the value.
+      if (!CastTy->isVariableArrayType() && !OriginalTy->isVariableArrayType())
+        if (shouldBeModeledWithNoOp(Context, Context.getPointerType(CastTy),
+                                    Context.getPointerType(OriginalTy)))
+          return V;
+    }
+    return SValVisitor::Visit(V);
+  }
+  SVal VisitUndefinedVal(UndefinedVal V) { return V; }
+  SVal VisitUnknownVal(UnknownVal V) { return V; }
+  SVal VisitConcreteInt(loc::ConcreteInt V) {
+    // Pointer to bool.
+    if (CastTy->isBooleanType())
+      return VB.makeTruthVal(V.getValue().getBoolValue(), CastTy);
+
+    // Pointer to integer.
+    if (CastTy->isIntegralOrEnumerationType()) {
+      llvm::APSInt Value = V.getValue();
+      VB.getBasicValueFactory().getAPSIntType(CastTy).apply(Value);
+      return VB.makeIntVal(Value);
+    }
+
+    // Pointer to any pointer.
+    if (Loc::isLocType(CastTy)) {
+      llvm::APSInt Value = V.getValue();
+      VB.getBasicValueFactory().getAPSIntType(CastTy).apply(Value);
+      return loc::ConcreteInt(VB.getBasicValueFactory().getValue(Value));
+    }
+
+    // Pointer to whatever else.
+    return UnknownVal();
+  }
+  SVal VisitGotoLabel(loc::GotoLabel V) {
+    // Pointer to bool.
+    if (CastTy->isBooleanType())
+      // Labels are always true.
+      return VB.makeTruthVal(true, CastTy);
+
+    // Pointer to integer.
+    if (CastTy->isIntegralOrEnumerationType()) {
+      const unsigned BitWidth = Context.getIntWidth(CastTy);
+      return VB.makeLocAsInteger(V, BitWidth);
+    }
+
+    const bool IsUnknownOriginalType = OriginalTy.isNull();
+    if (!IsUnknownOriginalType) {
+      // Array to pointer.
+      if (isa<ArrayType>(OriginalTy))
+        if (CastTy->isPointerType() || CastTy->isReferenceType())
+          return UnknownVal();
+    }
+
+    // Pointer to any pointer.
+    if (Loc::isLocType(CastTy))
+      return V;
+
+    // Pointer to whatever else.
+    return UnknownVal();
+  }
+  SVal VisitMemRegionVal(loc::MemRegionVal V) {
+    // Pointer to bool.
+    if (CastTy->isBooleanType()) {
+      const MemRegion *R = V.getRegion();
+      if (const FunctionCodeRegion *FTR = dyn_cast<FunctionCodeRegion>(R))
+        if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(FTR->getDecl()))
+          if (FD->isWeak())
+            // FIXME: Currently we are using an extent symbol here,
+            // because there are no generic region address metadata
+            // symbols to use, only content metadata.
+            return nonloc::SymbolVal(
+                VB.getSymbolManager().getExtentSymbol(FTR));
+
+      if (const SymbolicRegion *SymR = R->getSymbolicBase()) {
+        SymbolRef Sym = SymR->getSymbol();
+        QualType Ty = Sym->getType();
+        // This change is needed for architectures with varying
+        // pointer widths. See the amdgcn opencl reproducer with
+        // this change as an example: solver-sym-simplification-ptr-bool.cl
+        if (!Ty->isReferenceType())
+          return VB.makeNonLoc(
+              Sym, BO_NE, VB.getBasicValueFactory().getZeroWithTypeSize(Ty),
+              CastTy);
+      }
+      // Non-symbolic memory regions are always true.
+      return VB.makeTruthVal(true, CastTy);
+    }
+
+    const bool IsUnknownOriginalType = OriginalTy.isNull();
+    // Try to cast to array
+    const auto *ArrayTy =
+        IsUnknownOriginalType
+            ? nullptr
+            : dyn_cast<ArrayType>(OriginalTy.getCanonicalType());
+
+    // Pointer to integer.
+    if (CastTy->isIntegralOrEnumerationType()) {
+      SVal Val = V;
+      // Array to integer.
+      if (ArrayTy) {
+        // We will always decay to a pointer.
+        QualType ElemTy = ArrayTy->getElementType();
+        Val = VB.getStateManager().ArrayToPointer(V, ElemTy);
+        // FIXME: Keep these here for now in case we decide soon that we
+        // need the original decayed type.
+        //    QualType elemTy = cast<ArrayType>(originalTy)->getElementType();
+        //    QualType pointerTy = C.getPointerType(elemTy);
+      }
+      const unsigned BitWidth = Context.getIntWidth(CastTy);
+      return VB.makeLocAsInteger(Val.castAs<Loc>(), BitWidth);
+    }
+
+    // Pointer to pointer.
+    if (Loc::isLocType(CastTy)) {
+
+      if (IsUnknownOriginalType) {
+        // When retrieving symbolic pointer and expecting a non-void pointer,
+        // wrap them into element regions of the expected type if necessary.
+        // It is necessary to make sure that the retrieved value makes sense,
+        // because there's no other cast in the AST that would tell us to cast
+        // it to the correct pointer type. We might need to do that for non-void
+        // pointers as well.
+        // FIXME: We really need a single good function to perform casts for us
+        // correctly every time we need it.
+        const MemRegion *R = V.getRegion();
+        if (CastTy->isPointerType() && !CastTy->isVoidPointerType()) {
+          if (const auto *SR = dyn_cast<SymbolicRegion>(R)) {
+            QualType SRTy = SR->getSymbol()->getType();
+
+            auto HasSameUnqualifiedPointeeType = [](QualType ty1,
+                                                    QualType ty2) {
+              return ty1->getPointeeType().getCanonicalType().getTypePtr() ==
+                     ty2->getPointeeType().getCanonicalType().getTypePtr();
+            };
+            if (!HasSameUnqualifiedPointeeType(SRTy, CastTy)) {
+              if (auto OptMemRegV = VB.getCastedMemRegionVal(SR, CastTy))
+                return *OptMemRegV;
+            }
+          }
+        }
+        // Next fixes pointer dereference using type different from its initial
+        // one. See PR37503 and PR49007 for details.
+        if (const auto *ER = dyn_cast<ElementRegion>(R)) {
+          if (auto OptMemRegV = VB.getCastedMemRegionVal(ER, CastTy))
+            return *OptMemRegV;
+        }
+
+        return V;
+      }
+
+      if (OriginalTy->isIntegralOrEnumerationType() ||
+          OriginalTy->isBlockPointerType() ||
+          OriginalTy->isFunctionPointerType())
+        return V;
+
+      // Array to pointer.
+      if (ArrayTy) {
+        // Are we casting from an array to a pointer?  If so just pass on
+        // the decayed value.
+        if (CastTy->isPointerType() || CastTy->isReferenceType()) {
+          // We will always decay to a pointer.
+          QualType ElemTy = ArrayTy->getElementType();
+          return VB.getStateManager().ArrayToPointer(V, ElemTy);
+        }
+        // Are we casting from an array to an integer?  If so, cast the decayed
+        // pointer value to an integer.
+        assert(CastTy->isIntegralOrEnumerationType());
+      }
+
+      // Other pointer to pointer.
+      assert(Loc::isLocType(OriginalTy) || OriginalTy->isFunctionType() ||
+             CastTy->isReferenceType());
+
+      // We get a symbolic function pointer for a dereference of a function
+      // pointer, but it is of function type. Example:
+
+      //  struct FPRec {
+      //    void (*my_func)(int * x);
+      //  };
+      //
+      //  int bar(int x);
+      //
+      //  int f1_a(struct FPRec* foo) {
+      //    int x;
+      //    (*foo->my_func)(&x);
+      //    return bar(x)+1; // no-warning
+      //  }
+
+      // Get the result of casting a region to a different type.
+      const MemRegion *R = V.getRegion();
+      if (auto OptMemRegV = VB.getCastedMemRegionVal(R, CastTy))
+        return *OptMemRegV;
+    }
+
+    // Pointer to whatever else.
+    // FIXME: There can be gross cases where one casts the result of a
+    // function (that returns a pointer) to some other value that happens to
+    // fit within that pointer value.  We currently have no good way to model
+    // such operations.  When this happens, the underlying operation is that
+    // the caller is reasoning about bits.  Conceptually we are layering a
+    // "view" of a location on top of those bits.  Perhaps we need to be more
+    // lazy about mutual possible views, even on an SVal?  This may be
+    // necessary for bit-level reasoning as well.
+    return UnknownVal();
+  }
+  SVal VisitCompoundVal(nonloc::CompoundVal V) {
+    // Compound to whatever.
+    return UnknownVal();
+  }
+  SVal VisitConcreteInt(nonloc::ConcreteInt V) {
+    auto CastedValue = [V, this]() {
+      llvm::APSInt Value = V.getValue();
+      VB.getBasicValueFactory().getAPSIntType(CastTy).apply(Value);
+      return Value;
+    };
+
+    // Integer to bool.
+    if (CastTy->isBooleanType())
+      return VB.makeTruthVal(V.getValue().getBoolValue(), CastTy);
+
+    // Integer to pointer.
+    if (CastTy->isIntegralOrEnumerationType())
+      return VB.makeIntVal(CastedValue());
+
+    // Integer to pointer.
+    if (Loc::isLocType(CastTy))
+      return VB.makeIntLocVal(CastedValue());
+
+    // Pointer to whatever else.
+    return UnknownVal();
+  }
+  SVal VisitLazyCompoundVal(nonloc::LazyCompoundVal V) {
+    // LazyCompound to whatever.
+    return UnknownVal();
+  }
+  SVal VisitLocAsInteger(nonloc::LocAsInteger V) {
+    Loc L = V.getLoc();
+
+    // Pointer as integer to bool.
+    if (CastTy->isBooleanType())
+      // Pass to Loc function.
+      return Visit(L);
+
+    const bool IsUnknownOriginalType = OriginalTy.isNull();
+    // Pointer as integer to pointer.
+    if (!IsUnknownOriginalType && Loc::isLocType(CastTy) &&
+        OriginalTy->isIntegralOrEnumerationType()) {
+      if (const MemRegion *R = L.getAsRegion())
+        if (auto OptMemRegV = VB.getCastedMemRegionVal(R, CastTy))
+          return *OptMemRegV;
+      return L;
+    }
+
+    // Pointer as integer with region to integer/pointer.
+    const MemRegion *R = L.getAsRegion();
+    if (!IsUnknownOriginalType && R) {
+      if (CastTy->isIntegralOrEnumerationType())
+        return VisitMemRegionVal(loc::MemRegionVal(R));
+
+      if (Loc::isLocType(CastTy)) {
+        assert(Loc::isLocType(OriginalTy) || OriginalTy->isFunctionType() ||
+               CastTy->isReferenceType());
+        // Delegate to store manager to get the result of casting a region to a
+        // different type. If the MemRegion* returned is NULL, this expression
+        // Evaluates to UnknownVal.
+        if (auto OptMemRegV = VB.getCastedMemRegionVal(R, CastTy))
+          return *OptMemRegV;
+      }
+    } else {
+      if (Loc::isLocType(CastTy)) {
+        if (IsUnknownOriginalType)
+          return VisitMemRegionVal(loc::MemRegionVal(R));
+        return L;
+      }
+
+      SymbolRef SE = nullptr;
+      if (R) {
+        if (const SymbolicRegion *SR =
+                dyn_cast<SymbolicRegion>(R->StripCasts())) {
+          SE = SR->getSymbol();
+        }
+      }
+
+      if (!CastTy->isFloatingType() || !SE || SE->getType()->isFloatingType()) {
+        // FIXME: Correctly support promotions/truncations.
+        const unsigned CastSize = Context.getIntWidth(CastTy);
+        if (CastSize == V.getNumBits())
+          return V;
+
+        return VB.makeLocAsInteger(L, CastSize);
+      }
+    }
+
+    // Pointer as integer to whatever else.
+    return UnknownVal();
+  }
+  SVal VisitSymbolVal(nonloc::SymbolVal V) {
+    SymbolRef SE = V.getSymbol();
+
+    const bool IsUnknownOriginalType = OriginalTy.isNull();
+    // Symbol to bool.
+    if (!IsUnknownOriginalType && CastTy->isBooleanType()) {
+      // Non-float to bool.
+      if (Loc::isLocType(OriginalTy) ||
+          OriginalTy->isIntegralOrEnumerationType() ||
+          OriginalTy->isMemberPointerType()) {
+        BasicValueFactory &BVF = VB.getBasicValueFactory();
+        return VB.makeNonLoc(SE, BO_NE, BVF.getValue(0, SE->getType()), CastTy);
+      }
+    } else {
+      // Symbol to integer, float.
+      QualType T = Context.getCanonicalType(SE->getType());
+
+      // Produce SymbolCast if CastTy and T are different integers.
+      // NOTE: In the end the type of SymbolCast shall be equal to CastTy.
+      if (T->isIntegralOrUnscopedEnumerationType() &&
+          CastTy->isIntegralOrUnscopedEnumerationType()) {
+        AnalyzerOptions &Opts = VB.getStateManager()
+                                    .getOwningEngine()
+                                    .getAnalysisManager()
+                                    .getAnalyzerOptions();
+        // If appropriate option is disabled, ignore the cast.
+        // NOTE: ShouldSupportSymbolicIntegerCasts is `false` by default.
+        if (!Opts.ShouldSupportSymbolicIntegerCasts)
+          return V;
+        return simplifySymbolCast(V, CastTy);
+      }
+      if (!Loc::isLocType(CastTy))
+        if (!IsUnknownOriginalType || !CastTy->isFloatingType() ||
+            T->isFloatingType())
+          return VB.makeNonLoc(SE, T, CastTy);
+    }
+
+    // FIXME: We should be able to cast NonLoc -> Loc
+    // (when Loc::isLocType(CastTy) is true)
+    // But it's hard to do as SymbolicRegions can't refer to SymbolCasts holding
+    // generic SymExprs. Check the commit message for the details.
+
+    // Symbol to pointer and whatever else.
+    return UnknownVal();
+  }
+  SVal VisitPointerToMember(nonloc::PointerToMember V) {
+    // Member pointer to whatever.
+    return V;
+  }
+
+  /// Reduce cast expression by removing redundant intermediate casts.
+  /// E.g.
+  /// - (char)(short)(int x) -> (char)(int x)
+  /// - (int)(int x) -> int x
+  ///
+  /// \param V -- SymbolVal, which pressumably contains SymbolCast or any symbol
+  /// that is applicable for cast operation.
+  /// \param CastTy -- QualType, which `V` shall be cast to.
+  /// \return SVal with simplified cast expression.
+  /// \note: Currently only support integral casts.
+  nonloc::SymbolVal simplifySymbolCast(nonloc::SymbolVal V, QualType CastTy) {
+    // We use seven conditions to recognize a simplification case.
+    // For the clarity let `CastTy` be `C`, SE->getType() - `T`, root type -
+    // `R`, prefix `u` for unsigned, `s` for signed, no prefix - any sign: E.g.
+    // (char)(short)(uint x)
+    //      ( sC )( sT  )( uR  x)
+    //
+    // C === R (the same type)
+    //  (char)(char x) -> (char x)
+    //  (long)(long x) -> (long x)
+    // Note: Comparisons operators below are for bit width.
+    // C == T
+    //  (short)(short)(int x) -> (short)(int x)
+    //  (int)(long)(char x) -> (int)(char x) (sizeof(long) == sizeof(int))
+    //  (long)(ullong)(char x) -> (long)(char x) (sizeof(long) ==
+    //  sizeof(ullong))
+    // C < T
+    //  (short)(int)(char x) -> (short)(char x)
+    //  (char)(int)(short x) -> (char)(short x)
+    //  (short)(int)(short x) -> (short x)
+    // C > T > uR
+    //  (int)(short)(uchar x) -> (int)(uchar x)
+    //  (uint)(short)(uchar x) -> (uint)(uchar x)
+    //  (int)(ushort)(uchar x) -> (int)(uchar x)
+    // C > sT > sR
+    //  (int)(short)(char x) -> (int)(char x)
+    //  (uint)(short)(char x) -> (uint)(char x)
+    // C > sT == sR
+    //  (int)(char)(char x) -> (int)(char x)
+    //  (uint)(short)(short x) -> (uint)(short x)
+    // C > uT == uR
+    //  (int)(uchar)(uchar x) -> (int)(uchar x)
+    //  (uint)(ushort)(ushort x) -> (uint)(ushort x)
+    //  (llong)(ulong)(uint x) -> (llong)(uint x) (sizeof(ulong) ==
+    //  sizeof(uint))
+
+    SymbolRef SE = V.getSymbol();
+    QualType T = Context.getCanonicalType(SE->getType());
+
+    if (T == CastTy)
+      return V;
+
+    if (!isa<SymbolCast>(SE))
+      return VB.makeNonLoc(SE, T, CastTy);
+
+    SymbolRef RootSym = cast<SymbolCast>(SE)->getOperand();
+    QualType RT = RootSym->getType().getCanonicalType();
+
+    // FIXME support simplification from non-integers.
+    if (!RT->isIntegralOrEnumerationType())
+      return VB.makeNonLoc(SE, T, CastTy);
+
+    BasicValueFactory &BVF = VB.getBasicValueFactory();
+    APSIntType CTy = BVF.getAPSIntType(CastTy);
+    APSIntType TTy = BVF.getAPSIntType(T);
+
+    const auto WC = CTy.getBitWidth();
+    const auto WT = TTy.getBitWidth();
+
+    if (WC <= WT) {
+      const bool isSameType = (RT == CastTy);
+      if (isSameType)
+        return nonloc::SymbolVal(RootSym);
+      return VB.makeNonLoc(RootSym, RT, CastTy);
+    }
+
+    APSIntType RTy = BVF.getAPSIntType(RT);
+    const auto WR = RTy.getBitWidth();
+    const bool UT = TTy.isUnsigned();
+    const bool UR = RTy.isUnsigned();
+
+    if (((WT > WR) && (UR || !UT)) || ((WT == WR) && (UT == UR)))
+      return VB.makeNonLoc(RootSym, RT, CastTy);
+
+    return VB.makeNonLoc(SE, T, CastTy);
+  }
+};
+} // end anonymous namespace
 
 /// Cast a given SVal to another SVal using given QualType's.
 /// \param V -- SVal that should be casted.
@@ -556,410 +1102,6 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
 /// FIXME: If `OriginalTy.isNull()` is true, then cast performs based on CastTy
 /// only. This behavior is uncertain and should be improved.
 SVal SValBuilder::evalCast(SVal V, QualType CastTy, QualType OriginalTy) {
-  if (CastTy.isNull())
-    return V;
-
-  CastTy = Context.getCanonicalType(CastTy);
-
-  const bool IsUnknownOriginalType = OriginalTy.isNull();
-  if (!IsUnknownOriginalType) {
-    OriginalTy = Context.getCanonicalType(OriginalTy);
-
-    if (CastTy == OriginalTy)
-      return V;
-
-    // FIXME: Move this check to the most appropriate
-    // evalCastKind/evalCastSubKind function. For const casts, casts to void,
-    // just propagate the value.
-    if (!CastTy->isVariableArrayType() && !OriginalTy->isVariableArrayType())
-      if (shouldBeModeledWithNoOp(Context, Context.getPointerType(CastTy),
-                                  Context.getPointerType(OriginalTy)))
-        return V;
-  }
-
-  // Cast SVal according to kinds.
-  switch (V.getBaseKind()) {
-  case SVal::UndefinedValKind:
-    return evalCastKind(V.castAs<UndefinedVal>(), CastTy, OriginalTy);
-  case SVal::UnknownValKind:
-    return evalCastKind(V.castAs<UnknownVal>(), CastTy, OriginalTy);
-  case SVal::LocKind:
-    return evalCastKind(V.castAs<Loc>(), CastTy, OriginalTy);
-  case SVal::NonLocKind:
-    return evalCastKind(V.castAs<NonLoc>(), CastTy, OriginalTy);
-  }
-
-  llvm_unreachable("Unknown SVal kind");
-}
-
-SVal SValBuilder::evalCastKind(UndefinedVal V, QualType CastTy,
-                               QualType OriginalTy) {
-  return V;
-}
-
-SVal SValBuilder::evalCastKind(UnknownVal V, QualType CastTy,
-                               QualType OriginalTy) {
-  return V;
-}
-
-SVal SValBuilder::evalCastKind(Loc V, QualType CastTy, QualType OriginalTy) {
-  switch (V.getSubKind()) {
-  case loc::ConcreteIntKind:
-    return evalCastSubKind(V.castAs<loc::ConcreteInt>(), CastTy, OriginalTy);
-  case loc::GotoLabelKind:
-    return evalCastSubKind(V.castAs<loc::GotoLabel>(), CastTy, OriginalTy);
-  case loc::MemRegionValKind:
-    return evalCastSubKind(V.castAs<loc::MemRegionVal>(), CastTy, OriginalTy);
-  }
-
-  llvm_unreachable("Unknown SVal kind");
-}
-
-SVal SValBuilder::evalCastKind(NonLoc V, QualType CastTy, QualType OriginalTy) {
-  switch (V.getSubKind()) {
-  case nonloc::CompoundValKind:
-    return evalCastSubKind(V.castAs<nonloc::CompoundVal>(), CastTy, OriginalTy);
-  case nonloc::ConcreteIntKind:
-    return evalCastSubKind(V.castAs<nonloc::ConcreteInt>(), CastTy, OriginalTy);
-  case nonloc::LazyCompoundValKind:
-    return evalCastSubKind(V.castAs<nonloc::LazyCompoundVal>(), CastTy,
-                           OriginalTy);
-  case nonloc::LocAsIntegerKind:
-    return evalCastSubKind(V.castAs<nonloc::LocAsInteger>(), CastTy,
-                           OriginalTy);
-  case nonloc::SymbolValKind:
-    return evalCastSubKind(V.castAs<nonloc::SymbolVal>(), CastTy, OriginalTy);
-  case nonloc::PointerToMemberKind:
-    return evalCastSubKind(V.castAs<nonloc::PointerToMember>(), CastTy,
-                           OriginalTy);
-  }
-
-  llvm_unreachable("Unknown SVal kind");
-}
-
-SVal SValBuilder::evalCastSubKind(loc::ConcreteInt V, QualType CastTy,
-                                  QualType OriginalTy) {
-  // Pointer to bool.
-  if (CastTy->isBooleanType())
-    return makeTruthVal(V.getValue().getBoolValue(), CastTy);
-
-  // Pointer to integer.
-  if (CastTy->isIntegralOrEnumerationType()) {
-    llvm::APSInt Value = V.getValue();
-    BasicVals.getAPSIntType(CastTy).apply(Value);
-    return makeIntVal(Value);
-  }
-
-  // Pointer to any pointer.
-  if (Loc::isLocType(CastTy))
-    return V;
-
-  // Pointer to whatever else.
-  return UnknownVal();
-}
-
-SVal SValBuilder::evalCastSubKind(loc::GotoLabel V, QualType CastTy,
-                                  QualType OriginalTy) {
-  // Pointer to bool.
-  if (CastTy->isBooleanType())
-    // Labels are always true.
-    return makeTruthVal(true, CastTy);
-
-  // Pointer to integer.
-  if (CastTy->isIntegralOrEnumerationType()) {
-    const unsigned BitWidth = Context.getIntWidth(CastTy);
-    return makeLocAsInteger(V, BitWidth);
-  }
-
-  const bool IsUnknownOriginalType = OriginalTy.isNull();
-  if (!IsUnknownOriginalType) {
-    // Array to pointer.
-    if (isa<ArrayType>(OriginalTy))
-      if (CastTy->isPointerType() || CastTy->isReferenceType())
-        return UnknownVal();
-  }
-
-  // Pointer to any pointer.
-  if (Loc::isLocType(CastTy))
-    return V;
-
-  // Pointer to whatever else.
-  return UnknownVal();
-}
-
-static bool hasSameUnqualifiedPointeeType(QualType ty1, QualType ty2) {
-  return ty1->getPointeeType().getCanonicalType().getTypePtr() ==
-         ty2->getPointeeType().getCanonicalType().getTypePtr();
-}
-
-SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
-                                  QualType OriginalTy) {
-  // Pointer to bool.
-  if (CastTy->isBooleanType()) {
-    const MemRegion *R = V.getRegion();
-    if (const FunctionCodeRegion *FTR = dyn_cast<FunctionCodeRegion>(R))
-      if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(FTR->getDecl()))
-        if (FD->isWeak())
-          // FIXME: Currently we are using an extent symbol here,
-          // because there are no generic region address metadata
-          // symbols to use, only content metadata.
-          return nonloc::SymbolVal(SymMgr.getExtentSymbol(FTR));
-
-    if (const SymbolicRegion *SymR = R->getSymbolicBase())
-      return makeNonLoc(SymR->getSymbol(), BO_NE,
-                        BasicVals.getZeroWithPtrWidth(), CastTy);
-    // Non-symbolic memory regions are always true.
-    return makeTruthVal(true, CastTy);
-  }
-
-  const bool IsUnknownOriginalType = OriginalTy.isNull();
-  // Try to cast to array
-  const auto *ArrayTy =
-      IsUnknownOriginalType
-          ? nullptr
-          : dyn_cast<ArrayType>(OriginalTy.getCanonicalType());
-
-  // Pointer to integer.
-  if (CastTy->isIntegralOrEnumerationType()) {
-    SVal Val = V;
-    // Array to integer.
-    if (ArrayTy) {
-      // We will always decay to a pointer.
-      QualType ElemTy = ArrayTy->getElementType();
-      Val = StateMgr.ArrayToPointer(V, ElemTy);
-      // FIXME: Keep these here for now in case we decide soon that we
-      // need the original decayed type.
-      //    QualType elemTy = cast<ArrayType>(originalTy)->getElementType();
-      //    QualType pointerTy = C.getPointerType(elemTy);
-    }
-    const unsigned BitWidth = Context.getIntWidth(CastTy);
-    return makeLocAsInteger(Val.castAs<Loc>(), BitWidth);
-  }
-
-  // Pointer to pointer.
-  if (Loc::isLocType(CastTy)) {
-
-    if (IsUnknownOriginalType) {
-      // When retrieving symbolic pointer and expecting a non-void pointer,
-      // wrap them into element regions of the expected type if necessary.
-      // It is necessary to make sure that the retrieved value makes sense,
-      // because there's no other cast in the AST that would tell us to cast
-      // it to the correct pointer type. We might need to do that for non-void
-      // pointers as well.
-      // FIXME: We really need a single good function to perform casts for us
-      // correctly every time we need it.
-      const MemRegion *R = V.getRegion();
-      if (CastTy->isPointerType() && !CastTy->isVoidPointerType()) {
-        if (const auto *SR = dyn_cast<SymbolicRegion>(R)) {
-          QualType SRTy = SR->getSymbol()->getType();
-          if (!hasSameUnqualifiedPointeeType(SRTy, CastTy)) {
-            if (auto OptR = StateMgr.getStoreManager().castRegion(SR, CastTy))
-              return loc::MemRegionVal(*OptR);
-          }
-        }
-      }
-      // Next fixes pointer dereference using type different from its initial
-      // one. See PR37503 and PR49007 for details.
-      if (const auto *ER = dyn_cast<ElementRegion>(R)) {
-        if (auto OptR = StateMgr.getStoreManager().castRegion(ER, CastTy))
-          return loc::MemRegionVal(*OptR);
-      }
-
-      return V;
-    }
-
-    if (OriginalTy->isIntegralOrEnumerationType() ||
-        OriginalTy->isBlockPointerType() || OriginalTy->isFunctionPointerType())
-      return V;
-
-    // Array to pointer.
-    if (ArrayTy) {
-      // Are we casting from an array to a pointer?  If so just pass on
-      // the decayed value.
-      if (CastTy->isPointerType() || CastTy->isReferenceType()) {
-        // We will always decay to a pointer.
-        QualType ElemTy = ArrayTy->getElementType();
-        return StateMgr.ArrayToPointer(V, ElemTy);
-      }
-      // Are we casting from an array to an integer?  If so, cast the decayed
-      // pointer value to an integer.
-      assert(CastTy->isIntegralOrEnumerationType());
-    }
-
-    // Other pointer to pointer.
-    assert(Loc::isLocType(OriginalTy) || OriginalTy->isFunctionType() ||
-           CastTy->isReferenceType());
-
-    // We get a symbolic function pointer for a dereference of a function
-    // pointer, but it is of function type. Example:
-
-    //  struct FPRec {
-    //    void (*my_func)(int * x);
-    //  };
-    //
-    //  int bar(int x);
-    //
-    //  int f1_a(struct FPRec* foo) {
-    //    int x;
-    //    (*foo->my_func)(&x);
-    //    return bar(x)+1; // no-warning
-    //  }
-
-    // Get the result of casting a region to a different type.
-    const MemRegion *R = V.getRegion();
-    if (auto OptR = StateMgr.getStoreManager().castRegion(R, CastTy))
-      return loc::MemRegionVal(*OptR);
-  }
-
-  // Pointer to whatever else.
-  // FIXME: There can be gross cases where one casts the result of a
-  // function (that returns a pointer) to some other value that happens to
-  // fit within that pointer value.  We currently have no good way to model
-  // such operations.  When this happens, the underlying operation is that
-  // the caller is reasoning about bits.  Conceptually we are layering a
-  // "view" of a location on top of those bits.  Perhaps we need to be more
-  // lazy about mutual possible views, even on an SVal?  This may be
-  // necessary for bit-level reasoning as well.
-  return UnknownVal();
-}
-
-SVal SValBuilder::evalCastSubKind(nonloc::CompoundVal V, QualType CastTy,
-                                  QualType OriginalTy) {
-  // Compound to whatever.
-  return UnknownVal();
-}
-
-SVal SValBuilder::evalCastSubKind(nonloc::ConcreteInt V, QualType CastTy,
-                                  QualType OriginalTy) {
-  auto CastedValue = [V, CastTy, this]() {
-    llvm::APSInt Value = V.getValue();
-    BasicVals.getAPSIntType(CastTy).apply(Value);
-    return Value;
-  };
-
-  // Integer to bool.
-  if (CastTy->isBooleanType())
-    return makeTruthVal(V.getValue().getBoolValue(), CastTy);
-
-  // Integer to pointer.
-  if (CastTy->isIntegralOrEnumerationType())
-    return makeIntVal(CastedValue());
-
-  // Integer to pointer.
-  if (Loc::isLocType(CastTy))
-    return makeIntLocVal(CastedValue());
-
-  // Pointer to whatever else.
-  return UnknownVal();
-}
-
-SVal SValBuilder::evalCastSubKind(nonloc::LazyCompoundVal V, QualType CastTy,
-                                  QualType OriginalTy) {
-  // Compound to whatever.
-  return UnknownVal();
-}
-
-SVal SValBuilder::evalCastSubKind(nonloc::LocAsInteger V, QualType CastTy,
-                                  QualType OriginalTy) {
-  Loc L = V.getLoc();
-
-  // Pointer as integer to bool.
-  if (CastTy->isBooleanType())
-    // Pass to Loc function.
-    return evalCastKind(L, CastTy, OriginalTy);
-
-  const bool IsUnknownOriginalType = OriginalTy.isNull();
-  // Pointer as integer to pointer.
-  if (!IsUnknownOriginalType && Loc::isLocType(CastTy) &&
-      OriginalTy->isIntegralOrEnumerationType()) {
-    if (const MemRegion *R = L.getAsRegion())
-      if (auto OptR = StateMgr.getStoreManager().castRegion(R, CastTy))
-        return loc::MemRegionVal(*OptR);
-    return L;
-  }
-
-  // Pointer as integer with region to integer/pointer.
-  const MemRegion *R = L.getAsRegion();
-  if (!IsUnknownOriginalType && R) {
-    if (CastTy->isIntegralOrEnumerationType())
-      return evalCastSubKind(loc::MemRegionVal(R), CastTy, OriginalTy);
-
-    if (Loc::isLocType(CastTy)) {
-      assert(Loc::isLocType(OriginalTy) || OriginalTy->isFunctionType() ||
-             CastTy->isReferenceType());
-      // Delegate to store manager to get the result of casting a region to a
-      // different type. If the MemRegion* returned is NULL, this expression
-      // Evaluates to UnknownVal.
-      if (auto OptR = StateMgr.getStoreManager().castRegion(R, CastTy))
-        return loc::MemRegionVal(*OptR);
-    }
-  } else {
-    if (Loc::isLocType(CastTy)) {
-      if (IsUnknownOriginalType)
-        return evalCastSubKind(loc::MemRegionVal(R), CastTy, OriginalTy);
-      return L;
-    }
-
-    SymbolRef SE = nullptr;
-    if (R) {
-      if (const SymbolicRegion *SR =
-              dyn_cast<SymbolicRegion>(R->StripCasts())) {
-        SE = SR->getSymbol();
-      }
-    }
-
-    if (!CastTy->isFloatingType() || !SE || SE->getType()->isFloatingType()) {
-      // FIXME: Correctly support promotions/truncations.
-      const unsigned CastSize = Context.getIntWidth(CastTy);
-      if (CastSize == V.getNumBits())
-        return V;
-
-      return makeLocAsInteger(L, CastSize);
-    }
-  }
-
-  // Pointer as integer to whatever else.
-  return UnknownVal();
-}
-
-SVal SValBuilder::evalCastSubKind(nonloc::SymbolVal V, QualType CastTy,
-                                  QualType OriginalTy) {
-  SymbolRef SE = V.getSymbol();
-
-  const bool IsUnknownOriginalType = OriginalTy.isNull();
-  // Symbol to bool.
-  if (!IsUnknownOriginalType && CastTy->isBooleanType()) {
-    // Non-float to bool.
-    if (Loc::isLocType(OriginalTy) ||
-        OriginalTy->isIntegralOrEnumerationType() ||
-        OriginalTy->isMemberPointerType()) {
-      BasicValueFactory &BVF = getBasicValueFactory();
-      return makeNonLoc(SE, BO_NE, BVF.getValue(0, SE->getType()), CastTy);
-    }
-  } else {
-    // Symbol to integer, float.
-    QualType T = Context.getCanonicalType(SE->getType());
-    // If types are the same or both are integers, ignore the cast.
-    // FIXME: Remove this hack when we support symbolic truncation/extension.
-    // HACK: If both castTy and T are integers, ignore the cast.  This is
-    // not a permanent solution.  Eventually we want to precisely handle
-    // extension/truncation of symbolic integers.  This prevents us from losing
-    // precision when we assign 'x = y' and 'y' is symbolic and x and y are
-    // different integer types.
-    if (haveSameType(T, CastTy))
-      return V;
-    if (!Loc::isLocType(CastTy))
-      if (!IsUnknownOriginalType || !CastTy->isFloatingType() ||
-          T->isFloatingType())
-        return makeNonLoc(SE, T, CastTy);
-  }
-
-  // Symbol to pointer and whatever else.
-  return UnknownVal();
-}
-
-SVal SValBuilder::evalCastSubKind(nonloc::PointerToMember V, QualType CastTy,
-                                  QualType OriginalTy) {
-  // Member pointer to whatever.
-  return V;
+  EvalCastVisitor TRV{*this, CastTy, OriginalTy};
+  return TRV.Visit(V);
 }

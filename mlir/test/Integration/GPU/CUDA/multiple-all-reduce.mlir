@@ -1,37 +1,35 @@
 // RUN: mlir-opt %s \
-// RUN:   -gpu-kernel-outlining \
-// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin)' \
-// RUN:   -gpu-to-llvm \
+// RUN: | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-format=%gpu_compilation_format" \
 // RUN: | mlir-cpu-runner \
-// RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
-// RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:   --shared-libs=%mlir_cuda_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %data = memref.alloc() : memref<2x6xf32>
   %sum = memref.alloc() : memref<2xf32>
   %mul = memref.alloc() : memref<2xf32>
-  %cst0 = constant 0.0 : f32
-  %cst1 = constant 1.0 : f32
-  %cst2 = constant 2.0 : f32
-  %cst4 = constant 4.0 : f32
-  %cst8 = constant 8.0 : f32
-  %cst16 = constant 16.0 : f32
+  %cst0 = arith.constant 0.0 : f32
+  %cst1 = arith.constant 1.0 : f32
+  %cst2 = arith.constant 2.0 : f32
+  %cst4 = arith.constant 4.0 : f32
+  %cst8 = arith.constant 8.0 : f32
+  %cst16 = arith.constant 16.0 : f32
 
-  %cst3 = constant 3.0 : f32
-  %cst6 = constant 6.0 : f32
-  %cst7 = constant 7.0 : f32
-  %cst10 = constant 10.0 : f32
-  %cst11 = constant 11.0 : f32
+  %cst3 = arith.constant 3.0 : f32
+  %cst6 = arith.constant 6.0 : f32
+  %cst7 = arith.constant 7.0 : f32
+  %cst10 = arith.constant 10.0 : f32
+  %cst11 = arith.constant 11.0 : f32
 
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c4 = constant 4 : index
-  %c5 = constant 5 : index
-  %c6 = constant 6 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c6 = arith.constant 6 : index
 
   %cast_data = memref.cast %data : memref<2x6xf32> to memref<*xf32>
   gpu.host_register %cast_data : memref<*xf32>
@@ -58,20 +56,20 @@ func @main() {
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c2, %grid_y = %c1, %grid_z = %c1)
              threads(%tx, %ty, %tz) in (%block_x = %c6, %block_y = %c1, %block_z = %c1) {
     %val = memref.load %data[%bx, %tx] : memref<2x6xf32>
-    %reduced0 = "gpu.all_reduce"(%val) ({}) { op = "add" } : (f32) -> (f32)
+    %reduced0 = gpu.all_reduce add %val uniform {} : (f32) -> (f32)
     memref.store %reduced0, %sum[%bx] : memref<2xf32>
-    %reduced1 = "gpu.all_reduce"(%val) ({}) { op = "mul" } : (f32) -> (f32)
+    %reduced1 = gpu.all_reduce mul %val uniform {} : (f32) -> (f32)
     memref.store %reduced1, %mul[%bx] : memref<2xf32>
     gpu.terminator
   }
 
-  call @print_memref_f32(%cast_sum) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%cast_sum) : (memref<*xf32>) -> ()
   // CHECK: [31, 39]
 
-  call @print_memref_f32(%cast_mul) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%cast_mul) : (memref<*xf32>) -> ()
   // CHECK: [0, 27720]
 
   return
 }
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)

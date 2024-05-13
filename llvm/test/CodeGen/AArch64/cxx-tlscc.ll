@@ -12,22 +12,22 @@
 @__tls_guard = internal thread_local unnamed_addr global i1 false
 @sum1 = internal thread_local global i32 0, align 4
 
-declare %struct.S* @_ZN1SC1Ev(%struct.S* returned)
-declare %struct.S* @_ZN1SD1Ev(%struct.S* returned)
-declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
+declare ptr @_ZN1SC1Ev(ptr returned)
+declare ptr @_ZN1SD1Ev(ptr returned)
+declare i32 @_tlv_atexit(ptr, ptr, ptr)
 
-define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind {
-  %.b.i = load i1, i1* @__tls_guard, align 1
+define cxx_fast_tlscc nonnull ptr @_ZTW2sg() nounwind {
+  %.b.i = load i1, ptr @__tls_guard, align 1
   br i1 %.b.i, label %__tls_init.exit, label %init.i
 
 init.i:
-  store i1 true, i1* @__tls_guard, align 1
-  %call.i.i = tail call %struct.S* @_ZN1SC1Ev(%struct.S* nonnull @sg)
-  %1 = tail call i32 @_tlv_atexit(void (i8*)* nonnull bitcast (%struct.S* (%struct.S*)* @_ZN1SD1Ev to void (i8*)*), i8* nonnull getelementptr inbounds (%struct.S, %struct.S* @sg, i64 0, i32 0), i8* nonnull @__dso_handle)
+  store i1 true, ptr @__tls_guard, align 1
+  %call.i.i = tail call ptr @_ZN1SC1Ev(ptr nonnull @sg)
+  %1 = tail call i32 @_tlv_atexit(ptr nonnull @_ZN1SD1Ev, ptr nonnull @sg, ptr nonnull @__dso_handle)
   br label %__tls_init.exit
 
 __tls_init.exit:
-  ret %struct.S* @sg
+  ret ptr @sg
 }
 
 ; CHECK-LABEL: _ZTW2sg
@@ -93,9 +93,9 @@ __tls_init.exit:
 ; CHECK-O0: stp d5, d4
 ; CHECK-O0: stp d3, d2
 ; CHECK-O0: stp d1, d0
-; CHECK-O0: stp x14, x13
-; CHECK-O0: stp x12, x11
-; CHECK-O0: stp x10, x9
+; CHECK-O0: str x14
+; CHECK-O0: stp x13, x12
+; CHECK-O0: stp x11, x10
 ; CHECK-O0: stp x8, x7
 ; CHECK-O0: stp x6, x5
 ; CHECK-O0: stp x4, x3
@@ -110,9 +110,9 @@ __tls_init.exit:
 ; CHECK-O0: ldp x4, x3
 ; CHECK-O0: ldp x6, x5
 ; CHECK-O0: ldp x8, x7
-; CHECK-O0: ldp x10, x9
-; CHECK-O0: ldp x12, x11
-; CHECK-O0: ldp x14, x13
+; CHECK-O0: ldp x11, x10
+; CHECK-O0: ldp x13, x12
+; CHECK-O0: ldr x14
 ; CHECK-O0: ldp d1, d0
 ; CHECK-O0: ldp d3, d2
 ; CHECK-O0: ldp d5, d4
@@ -152,8 +152,8 @@ __tls_init.exit:
 ; CHECK-O0-LABEL: _ZTW4sum1
 ; CHECK-O0-NOT: vstr
 ; CHECK-O0-NOT: vldr
-define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
-  ret i32* @sum1
+define cxx_fast_tlscc nonnull ptr @_ZTW4sum1() nounwind {
+  ret ptr @sum1
 }
 
 ; Make sure at O0, we don't generate spilling/reloading of the CSRs.
@@ -203,22 +203,48 @@ define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
 %class.C = type { i32 }
 @tC = internal thread_local global %class.C zeroinitializer, align 4
 declare cxx_fast_tlscc void @tls_helper()
-define cxx_fast_tlscc %class.C* @tls_test2() #1 {
+define cxx_fast_tlscc ptr @tls_test2() #1 {
   call cxx_fast_tlscc void @tls_helper()
-  ret %class.C* @tC
+  ret ptr @tC
 }
 
 ; Make sure we do not allow tail call when caller and callee have different
 ; calling conventions.
-declare %class.C* @_ZN1CD1Ev(%class.C* readnone returned %this)
+declare ptr @_ZN1CD1Ev(ptr readnone returned %this)
 ; CHECK-LABEL: tls_test
 ; CHECK: bl __tlv_atexit
 define cxx_fast_tlscc void @__tls_test() {
 entry:
-  store i32 0, i32* getelementptr inbounds (%class.C, %class.C* @tC, i64 0, i32 0), align 4
-  %0 = tail call i32 @_tlv_atexit(void (i8*)* bitcast (%class.C* (%class.C*)* @_ZN1CD1Ev to void (i8*)*), i8* bitcast (%class.C* @tC to i8*), i8* nonnull @__dso_handle) #1
+  store i32 0, ptr @tC, align 4
+  %0 = tail call i32 @_tlv_atexit(ptr @_ZN1CD1Ev, ptr @tC, ptr nonnull @__dso_handle) #1
   ret void
 }
+
+define cxx_fast_tlscc void @weird_prologue_regs(i32 %n) #1 {
+; CHECK-LABEL: weird_prologue_regs:
+; CHECK-NOT: str x9
+; CHECK-NOT: stp{{.*}}x9{{.*}}[
+; CHECK-NOT: str x19
+; CHECK-NOT: stp{{.*}}x19{{.*}}[
+
+; CHECK: sub x9, sp, #
+; CHECK: and sp, x9, #0x
+; CHECK: mov x19, sp
+
+; CHECK-NOT: str x9
+; CHECK-NOT: stp{{.*}}x9{{.*}}[
+; CHECK-NOT: str x19
+; CHECK-NOT: stp{{.*}}x19{{.*}}[
+
+  %p0 = alloca i32, i32 200
+  %p1 = alloca i32, align 32
+  %p2 = alloca i32, i32 %n
+  call void @callee(ptr %p0)
+  call void @callee(ptr %p1)
+  call void @callee(ptr %p2)
+  ret void
+}
+declare void @callee(ptr)
 
 attributes #0 = { nounwind "frame-pointer"="all" }
 attributes #1 = { nounwind }

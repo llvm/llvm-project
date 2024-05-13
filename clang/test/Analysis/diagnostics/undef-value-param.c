@@ -43,7 +43,7 @@ int testPassingParentRegionArray(int x) {
                        //expected-note@-1 {{The right operand of '*' is a garbage value}}
 }
 
-double *getValidPtr();
+double *getValidPtr(void);
 struct WithFields {
   double *f1;
 };

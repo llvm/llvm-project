@@ -25,28 +25,40 @@ namespace clang {
 namespace interp {
 class Block;
 class DeadBlock;
-class Context;
 class InterpState;
 class Pointer;
-class Function;
 enum PrimType : unsigned;
 
 /// A memory block, either on the stack or in the heap.
 ///
-/// The storage described by the block immediately follows it in memory.
-class Block {
+/// The storage described by the block is immediately followed by
+/// optional metadata, which is followed by the actual data.
+///
+/// Block*        rawData()                  data()
+/// │               │                         │
+/// │               │                         │
+/// ▼               ▼                         ▼
+/// ┌───────────────┬─────────────────────────┬─────────────────┐
+/// │ Block         │ Metadata                │ Data            │
+/// │ sizeof(Block) │ Desc->getMetadataSize() │ Desc->getSize() │
+/// └───────────────┴─────────────────────────┴─────────────────┘
+///
+/// Desc->getAllocSize() describes the size after the Block, i.e.
+/// the data size and the metadata size.
+///
+class Block final {
 public:
-  // Creates a new block.
-  Block(const llvm::Optional<unsigned> &DeclID, Descriptor *Desc,
+  /// Creates a new block.
+  Block(const std::optional<unsigned> &DeclID, const Descriptor *Desc,
         bool IsStatic = false, bool IsExtern = false)
       : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {}
 
-  Block(Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
+  Block(const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
       : DeclID((unsigned)-1), IsStatic(IsStatic), IsExtern(IsExtern),
         Desc(Desc) {}
 
   /// Returns the block's descriptor.
-  Descriptor *getDescriptor() const { return Desc; }
+  const Descriptor *getDescriptor() const { return Desc; }
   /// Checks if the block has any live pointers.
   bool hasPointers() const { return Pointers; }
   /// Checks if the block is extern.
@@ -56,66 +68,108 @@ public:
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
   /// Returns the size of the block.
-  InterpSize getSize() const { return Desc->getAllocSize(); }
+  unsigned getSize() const { return Desc->getAllocSize(); }
   /// Returns the declaration ID.
-  llvm::Optional<unsigned> getDeclID() const { return DeclID; }
+  std::optional<unsigned> getDeclID() const { return DeclID; }
+  bool isInitialized() const { return IsInitialized; }
 
   /// Returns a pointer to the stored data.
-  char *data() { return reinterpret_cast<char *>(this + 1); }
+  /// You are allowed to read Desc->getSize() bytes from this address.
+  std::byte *data() {
+    // rawData might contain metadata as well.
+    size_t DataOffset = Desc->getMetadataSize();
+    return rawData() + DataOffset;
+  }
+  const std::byte *data() const {
+    // rawData might contain metadata as well.
+    size_t DataOffset = Desc->getMetadataSize();
+    return rawData() + DataOffset;
+  }
+
+  /// Returns a pointer to the raw data, including metadata.
+  /// You are allowed to read Desc->getAllocSize() bytes from this address.
+  std::byte *rawData() {
+    return reinterpret_cast<std::byte *>(this) + sizeof(Block);
+  }
+  const std::byte *rawData() const {
+    return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
+  }
 
   /// Returns a view over the data.
   template <typename T>
   T &deref() { return *reinterpret_cast<T *>(data()); }
+  template <typename T> const T &deref() const {
+    return *reinterpret_cast<const T *>(data());
+  }
 
   /// Invokes the constructor.
   void invokeCtor() {
-    std::memset(data(), 0, getSize());
+    std::memset(rawData(), 0, Desc->getAllocSize());
     if (Desc->CtorFn)
       Desc->CtorFn(this, data(), Desc->IsConst, Desc->IsMutable,
                    /*isActive=*/true, Desc);
+    IsInitialized = true;
   }
+
+  /// Invokes the Destructor.
+  void invokeDtor() {
+    if (Desc->DtorFn)
+      Desc->DtorFn(this, data(), Desc);
+    IsInitialized = false;
+  }
+
+  void dump() const { dump(llvm::errs()); }
+  void dump(llvm::raw_ostream &OS) const;
 
 protected:
   friend class Pointer;
   friend class DeadBlock;
   friend class InterpState;
 
-  Block(Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
-    : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {}
+  Block(const Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
+      : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {}
 
-  // Deletes a dead block at the end of its lifetime.
+  /// Deletes a dead block at the end of its lifetime.
   void cleanup();
 
-  // Pointer chain management.
+  /// Pointer chain management.
   void addPointer(Pointer *P);
   void removePointer(Pointer *P);
-  void movePointer(Pointer *From, Pointer *To);
+  void replacePointer(Pointer *Old, Pointer *New);
+#ifndef NDEBUG
+  bool hasPointer(const Pointer *P) const;
+#endif
 
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;
   /// Unique identifier of the declaration.
-  llvm::Optional<unsigned> DeclID;
+  std::optional<unsigned> DeclID;
   /// Flag indicating if the block has static storage duration.
   bool IsStatic = false;
   /// Flag indicating if the block is an extern.
   bool IsExtern = false;
-  /// Flag indicating if the pointer is dead.
+  /// Flag indicating if the pointer is dead. This is only ever
+  /// set once, when converting the Block to a DeadBlock.
   bool IsDead = false;
+  /// Flag indicating if the block contents have been initialized
+  /// via invokeCtor.
+  bool IsInitialized = false;
   /// Pointer to the stack slot descriptor.
-  Descriptor *Desc;
+  const Descriptor *Desc;
 };
 
 /// Descriptor for a dead block.
 ///
 /// Dead blocks are chained in a double-linked list to deallocate them
 /// whenever pointers become dead.
-class DeadBlock {
+class DeadBlock final {
 public:
   /// Copies the block.
   DeadBlock(DeadBlock *&Root, Block *Blk);
 
   /// Returns a pointer to the stored data.
-  char *data() { return B.data(); }
+  std::byte *data() { return B.data(); }
+  std::byte *rawData() { return B.rawData(); }
 
 private:
   friend class Block;

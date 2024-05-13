@@ -89,7 +89,7 @@ TEST(DISABLED_BENCH, FuncCall) {
 }
 
 TEST(DISABLED_BENCH, MutexLocal) {
-  Mutex m;
+  UserMutex m;
   ScopedThread().Create(m);
   for (int i = 0; i < 50; i++) {
     ScopedThread t;

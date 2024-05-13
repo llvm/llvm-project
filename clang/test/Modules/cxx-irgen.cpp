@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -std=c++11 -fmodules-cache-path=%t -I %S/Inputs -triple %itanium_abi_triple -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -std=c++11 -fmodules-cache-path=%t -I %S/Inputs -triple %itanium_abi_triple -disable-llvm-passes -emit-llvm -debug-info-kind=limited -o - %s | FileCheck %s
@@ -26,14 +27,14 @@ namespace EmitInlineMethods {
   };
 }
 
-// CHECK-DAG: define available_externally hidden {{.*}}{{signext i32|i32}} @_ZN1SIiE1gEv({{.*}} #[[ALWAYS_INLINE:.*]] align
+// CHECK-DAG: define available_externally hidden {{.*}}{{signext i32|i32}} @_ZN1SIiE1gEv({{.*}} #[[#ALWAYS_INLINE:]]
 int a = S<int>::g();
 
 int b = h();
 
 // CHECK-DAG: define linkonce_odr {{.*}}{{signext i32|i32}} @_Z3minIiET_S0_S0_(i32
 int c = min(1, 2);
-// CHECK: define available_externally {{.*}}{{signext i32|i32}} @_ZN1SIiE1fEv({{.*}} #[[ALWAYS_INLINE]] align
+// CHECK: define available_externally {{.*}}{{signext i32|i32}} @_ZN1SIiE1fEv({{.*}} #[[#ALWAYS_INLINE]]
 
 namespace ImplicitSpecialMembers {
   // CHECK-LABEL: define {{.*}} @_ZN22ImplicitSpecialMembers1BC2ERKS0_(
@@ -51,7 +52,7 @@ namespace ImplicitSpecialMembers {
   // CHECK-LABEL: define {{.*}} @_ZN20OperatorDeleteLookup1AD0Ev(
   // CHECK: call {{.*}}void @_ZN20OperatorDeleteLookup1AdlEPv(
 
-  // CHECK-DAG: call {{[a-z\_\d]*[ ]?i32}} @_ZN8CtorInitIiE1fEv(
+  // CHECK-DAG: call {{.*}}i32 @_ZN8CtorInitIiE1fEv(
 
   extern B b1;
   B b2(b1);
@@ -73,4 +74,4 @@ namespace OperatorDeleteLookup {
 }
 
 
-// CHECK: attributes #[[ALWAYS_INLINE]] = {{.*}} alwaysinline
+// CHECK: attributes #[[#ALWAYS_INLINE]] = {{.*}} alwaysinline

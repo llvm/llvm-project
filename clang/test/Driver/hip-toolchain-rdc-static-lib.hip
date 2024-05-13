@@ -1,11 +1,10 @@
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   --emit-static-lib -nogpulib \
-// RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \
+// RUN:   --no-offload-new-driver --emit-static-lib -nogpulib \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s
@@ -81,12 +80,14 @@
 // CHECK-NOT: ".*llc"
 // CHECK: [[LLD]] {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // CHECK-SAME: "-plugin-opt=mcpu=gfx900"
+// CHECK-SAME: "--whole-archive"
 // CHECK-SAME: "-o" "[[IMG_DEV2:.*out]]" [[A_BC2]] [[B_BC2]]
+// CHECK-SAME: "--no-whole-archive"
 
 // combine images generated into hip fat binary object
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
-// CHECK-SAME: "-inputs={{.*}},[[IMG_DEV1]],[[IMG_DEV2]]" "-outputs=[[BUNDLE:.*hipfb]]"
+// CHECK-SAME: "-input=[[IMG_DEV1]]" "-input=[[IMG_DEV2]]" "-output=[[BUNDLE:.*hipfb]]"
 
 // CHECK: [[MC:".*llvm-mc.*"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
 

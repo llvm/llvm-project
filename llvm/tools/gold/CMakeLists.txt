@@ -9,9 +9,10 @@ if( LLVM_ENABLE_PIC AND LLVM_BINUTILS_INCDIR )
      LTO
      BitWriter
      IPO
+     TargetParser
      )
 
-  add_llvm_library(LLVMgold MODULE
+  add_llvm_library(LLVMgold MODULE INSTALL_WITH_TOOLCHAIN
     gold-plugin.cpp
     )
 

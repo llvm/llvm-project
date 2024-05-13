@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; This ends up using all 255 registers and requires register
 ; scavenging which will fail to find an unsued register.
@@ -22,23 +22,21 @@
 ; GFX9-DAG: s_mov_b32 s[[DESC3:[0-9]+]], 0xe00000
 
 ; OFFREG is offset system SGPR
-; GCN: buffer_store_dword {{v[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
-; GCN: buffer_load_dword v{{[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Reload
+; GCN: buffer_store_dword {{v[0-9]+}}, off, s[[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCN: buffer_load_dword v{{[0-9]+}}, off, s[[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Reload
 ; GCN: NumVgprs: 256
-; GCN: ScratchSize: 768
+; GCN: ScratchSize: 640
 
-define amdgpu_vs void @main([9 x <4 x i32>] addrspace(4)* inreg %arg, [17 x <4 x i32>] addrspace(4)* inreg %arg1, [17 x <4 x i32>] addrspace(4)* inreg %arg2, [34 x <8 x i32>] addrspace(4)* inreg %arg3, [16 x <4 x i32>] addrspace(4)* inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
+define amdgpu_vs void @main(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, ptr addrspace(4) inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
 bb:
-  %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg1, i64 0, i64 0
-  %tmp11 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, align 16, !tbaa !0
+  %tmp11 = load <4 x i32>, ptr addrspace(4) %arg1, align 16, !tbaa !0
   %tmp12 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp11, i32 0, i32 0)
   %tmp13 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp11, i32 16, i32 0)
   %tmp14 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp11, i32 32, i32 0)
-  %tmp15 = getelementptr [16 x <4 x i32>], [16 x <4 x i32>] addrspace(4)* %arg4, i64 0, i64 0
-  %tmp16 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp15, align 16, !tbaa !0
+  %tmp16 = load ptr addrspace(8), ptr addrspace(4) %arg4, align 16, !tbaa !0
   %tmp17 = add i32 %arg5, %arg7
-  %tmp16.cast = bitcast <4 x i32> %tmp16 to <4 x i32>
-  %tmp18 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp16.cast, i32 %tmp17, i32 0, i32 0, i32 0)
+  %tmp16.cast = bitcast ptr addrspace(8) %tmp16 to ptr addrspace(8)
+  %tmp18 = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %tmp16.cast, i32 %tmp17, i32 0, i32 0, i32 0)
   %tmp19 = extractelement <4 x float> %tmp18, i32 0
   %tmp20 = extractelement <4 x float> %tmp18, i32 1
   %tmp21 = extractelement <4 x float> %tmp18, i32 2
@@ -489,7 +487,7 @@ declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 
 declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32 immarg) #2
+declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

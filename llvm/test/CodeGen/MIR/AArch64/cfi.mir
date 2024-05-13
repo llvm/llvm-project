@@ -23,6 +23,8 @@ body: |
     frame-setup CFI_INSTRUCTION def_cfa_register $w29
     ; CHECK: CFI_INSTRUCTION def_cfa_offset -8
     frame-setup CFI_INSTRUCTION def_cfa_offset -8
+    ; CHECK: CFI_INSTRUCTION llvm_def_aspace_cfa $w29, 16, 6
+    frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $w29, 16, 6
     ; CHECK: CFI_INSTRUCTION offset $w30, -8
     frame-setup CFI_INSTRUCTION offset $w30, -8
     ; CHECK: CFI_INSTRUCTION rel_offset $w30, -8

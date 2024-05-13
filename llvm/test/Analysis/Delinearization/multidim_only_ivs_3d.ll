@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -delinearize | FileCheck %s
 ; RUN: opt < %s -passes='print<delinearization>' -disable-output 2>&1 | FileCheck %s
 
 ; void foo(long n, long m, long o, double A[n][m][o]) {
@@ -14,7 +13,7 @@
 ; CHECK: ArrayDecl[UnknownSize][%m][%o] with elements of 8 bytes.
 ; CHECK: ArrayRef[{0,+,1}<nuw><nsw><%for.i>][{0,+,1}<nuw><nsw><%for.j>][{0,+,1}<nuw><nsw><%for.k>]
 
-define void @foo(i64 %n, i64 %m, i64 %o, double* %A) {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr %A) {
 entry:
   br label %for.i
 
@@ -32,8 +31,8 @@ for.k:
   %subscript1 = add i64 %j, %subscript0
   %subscript2 = mul i64 %subscript1, %o
   %subscript = add i64 %subscript2, %k
-  %idx = getelementptr inbounds double, double* %A, i64 %subscript
-  store double 1.0, double* %idx
+  %idx = getelementptr inbounds double, ptr %A, i64 %subscript
+  store double 1.0, ptr %idx
   br label %for.k.inc
 
 for.k.inc:

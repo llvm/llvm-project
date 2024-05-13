@@ -12,12 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation.h"
-#include "llvm-c/Initialization.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/PassRegistry.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -83,37 +80,20 @@ Comdat *llvm::getOrCreateFunctionComdat(Function &F, Triple &T) {
   // symbols.
   Comdat *C = M->getOrInsertComdat(F.getName());
   if (T.isOSBinFormatELF() || (T.isOSBinFormatCOFF() && !F.isWeakForLinker()))
-    C->setSelectionKind(Comdat::NoDuplicates);
+    C->setSelectionKind(Comdat::NoDeduplicate);
   F.setComdat(C);
   return C;
 }
 
-/// initializeInstrumentation - Initialize all passes in the TransformUtils
-/// library.
-void llvm::initializeInstrumentation(PassRegistry &Registry) {
-  initializeAddressSanitizerLegacyPassPass(Registry);
-  initializeModuleAddressSanitizerLegacyPassPass(Registry);
-  initializeMemProfilerLegacyPassPass(Registry);
-  initializeModuleMemProfilerLegacyPassPass(Registry);
-  initializeBoundsCheckingLegacyPassPass(Registry);
-  initializeControlHeightReductionLegacyPassPass(Registry);
-  initializeGCOVProfilerLegacyPassPass(Registry);
-  initializePGOInstrumentationGenLegacyPassPass(Registry);
-  initializePGOInstrumentationUseLegacyPassPass(Registry);
-  initializePGOIndirectCallPromotionLegacyPassPass(Registry);
-  initializePGOMemOPSizeOptLegacyPassPass(Registry);
-  initializeCGProfileLegacyPassPass(Registry);
-  initializeInstrOrderFileLegacyPassPass(Registry);
-  initializeInstrProfilingLegacyPassPass(Registry);
-  initializeMemorySanitizerLegacyPassPass(Registry);
-  initializeHWAddressSanitizerLegacyPassPass(Registry);
-  initializeThreadSanitizerLegacyPassPass(Registry);
-  initializeModuleSanitizerCoverageLegacyPassPass(Registry);
-  initializeDataFlowSanitizerLegacyPassPass(Registry);
-}
-
-/// LLVMInitializeInstrumentation - C binding for
-/// initializeInstrumentation.
-void LLVMInitializeInstrumentation(LLVMPassRegistryRef R) {
-  initializeInstrumentation(*unwrap(R));
+void llvm::setGlobalVariableLargeSection(const Triple &TargetTriple,
+                                         GlobalVariable &GV) {
+  // Limit to x86-64 ELF.
+  if (TargetTriple.getArch() != Triple::x86_64 ||
+      TargetTriple.getObjectFormat() != Triple::ELF)
+    return;
+  // Limit to medium/large code models.
+  std::optional<CodeModel::Model> CM = GV.getParent()->getCodeModel();
+  if (!CM || (*CM != CodeModel::Medium && *CM != CodeModel::Large))
+    return;
+  GV.setCodeModel(CodeModel::Large);
 }

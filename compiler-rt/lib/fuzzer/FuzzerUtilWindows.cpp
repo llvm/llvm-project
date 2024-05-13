@@ -21,10 +21,15 @@
 #include <signal.h>
 #include <stdio.h>
 #include <sys/types.h>
+// clang-format off
 #include <windows.h>
-
-// This must be included after windows.h.
+// These must be included after windows.h.
+// archicture need to be set before including
+// libloaderapi
+#include <libloaderapi.h>
+#include <stringapiset.h>
 #include <psapi.h>
+// clang-format on
 
 namespace fuzzer {
 
@@ -204,7 +209,7 @@ const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
 }
 
 std::string DisassembleCmd(const std::string &FileName) {
-  Vector<std::string> command_vector;
+  std::vector<std::string> command_vector;
   command_vector.push_back("dumpbin /summary > nul");
   if (ExecuteCommand(Command(command_vector)) == 0)
     return "dumpbin /disasm " + FileName;
@@ -222,6 +227,32 @@ void DiscardOutput(int Fd) {
     return;
   _dup2(_fileno(Temp), Fd);
   fclose(Temp);
+}
+
+size_t PageSize() {
+  static size_t PageSizeCached = []() -> size_t {
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    return si.dwPageSize;
+  }();
+  return PageSizeCached;
+}
+
+void SetThreadName(std::thread &thread, const std::string &name) {
+  typedef HRESULT(WINAPI * proc)(HANDLE, PCWSTR);
+  HMODULE kbase = GetModuleHandleA("KernelBase.dll");
+  proc ThreadNameProc =
+      reinterpret_cast<proc>(GetProcAddress(kbase, "SetThreadDescription"));
+  if (ThreadNameProc) {
+    std::wstring buf;
+    auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, nullptr, 0);
+    if (sz > 0) {
+      buf.resize(sz);
+      if (MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, &buf[0], sz) > 0) {
+        (void)ThreadNameProc(thread.native_handle(), buf.c_str());
+      }
+    }
+  }
 }
 
 } // namespace fuzzer

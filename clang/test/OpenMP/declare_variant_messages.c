@@ -1,7 +1,8 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=omp51,expected -fopenmp -std=c99 -fms-extensions -Wno-pragma-pack -Wno-strict-prototypes %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=omp51,expected -fopenmp-simd -std=c99 -fms-extensions -Wno-pragma-pack -Wno-strict-prototypes %s
 
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp-simd -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
-
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=omp50,expected -fopenmp -fopenmp-version=50 -std=c99 -fms-extensions -Wno-pragma-pack -Wno-strict-prototypes %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=omp50,expected -fopenmp-simd -fopenmp-version=50 -std=c99 -fms-extensions -Wno-pragma-pack -Wno-strict-prototypes %s
 
 #pragma omp declare // expected-error {{expected an OpenMP directive}}
 
@@ -9,30 +10,30 @@ int foo(void);
 
 #pragma omp declare variant // expected-error {{expected '(' after 'declare variant'}}
 #pragma omp declare variant( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp declare variant(foo // expected-error {{expected ')'}} expected-error {{expected 'match' clause on 'omp declare variant' directive}} expected-note {{to match this '('}}
-#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}} expected-error {{expected 'match' clause on}}
-#pragma omp declare variant(foo) // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
-#pragma omp declare variant(foo) // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
-#pragma omp declare variant(foo) xxx // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+#pragma omp declare variant(foo // expected-error {{expected ')'}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}} expected-note {{to match this '('}}
+#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}} omp50-error {{expected 'match' clause on}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
+#pragma omp declare variant(foo) // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
+#pragma omp declare variant(foo) // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
+#pragma omp declare variant(foo) xxx // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foo) match // expected-error {{expected '(' after 'match'}}
 #pragma omp declare variant(foo) match( // expected-error {{expected ')'}} expected-warning {{expected identifier or string literal describing a context set; set skipped}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}} expected-note {{to match this '('}}
 #pragma omp declare variant(foo) match() // expected-warning {{expected identifier or string literal describing a context set; set skipped}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 #pragma omp declare variant(foo) match(xxx) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 #pragma omp declare variant(foo) match(xxx=) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 #pragma omp declare variant(foo) match(xxx=yyy) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
-#pragma omp declare variant(foo) match(xxx=yyy}) // expected-error {{expected ')'}} expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}} expected-note {{to match this '('}}
+#pragma omp declare variant(foo) match(xxx=yyy}) // expected-error {{expected ')'}} expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}} expected-note {{to match this '('}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foo) match(xxx={) // expected-error {{expected ')'}} expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}} expected-note {{to match this '('}}
 #pragma omp declare variant(foo) match(xxx={}) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 #pragma omp declare variant(foo) match(xxx={vvv, vvv}) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 #pragma omp declare variant(foo) match(xxx={vvv} xxx) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
-#pragma omp declare variant(foo) match(xxx={vvv}) xxx // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
+#pragma omp declare variant(foo) match(xxx={vvv}) xxx // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foo) match(implementation={xxx}) // expected-warning {{'xxx' is not a valid context selector for the context set 'implementation'; selector ignored}} expected-note {{context selector options are: 'vendor' 'extension' 'unified_address' 'unified_shared_memory' 'reverse_offload' 'dynamic_allocators' 'atomic_default_mem_order'}} expected-note {{the ignored selector spans until here}}
 #pragma omp declare variant(foo) match(implementation={vendor}) // expected-warning {{the context selector 'vendor' in context set 'implementation' requires a context property defined in parentheses; selector ignored}} expected-note {{the ignored selector spans until here}}
-#pragma omp declare variant(foo) match(implementation={vendor(}) // expected-error {{expected ')'}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
-#pragma omp declare variant(foo) match(implementation={vendor()}) // expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'pgi' 'ti' 'unknown'}}
+#pragma omp declare variant(foo) match(implementation={vendor(}) // expected-error {{expected ')'}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
+#pragma omp declare variant(foo) match(implementation={vendor()}) // expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}}
 #pragma omp declare variant(foo) match(implementation={vendor(score ibm)}) // expected-error {{expected '(' after 'score'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}}
-#pragma omp declare variant(foo) match(implementation={vendor(score( ibm)}) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
-#pragma omp declare variant(foo) match(implementation={vendor(score(2 ibm)}) // expected-error {{expected ')'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{to match this '('}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
+#pragma omp declare variant(foo) match(implementation={vendor(score( ibm)}) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
+#pragma omp declare variant(foo) match(implementation={vendor(score(2 ibm)}) // expected-error {{expected ')'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{to match this '('}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
 #pragma omp declare variant(foo) match(implementation={vendor(score(foo()) ibm)}) // expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{score expressions in the OpenMP context selector need to be constant; foo() is not and will be ignored}}
 #pragma omp declare variant(foo) match(implementation={vendor(score(5): ibm), vendor(llvm)}) // expected-warning {{the context selector 'vendor' was used already in the same 'omp declare variant' directive; selector ignored}} expected-note {{the previous context selector 'vendor' used here}} expected-note {{the ignored selector spans until here}}
 #pragma omp declare variant(foo) match(implementation={vendor(score(5): ibm), kind(cpu)}) // expected-warning {{the context selector 'kind' is not valid for the context set 'implementation'; selector ignored}} expected-note {{the context selector 'kind' can be nested in the context set 'device'; try 'match(device={kind(property)})'}} expected-note {{the ignored selector spans until here}}
@@ -55,7 +56,13 @@ int bar(void);
 #pragma omp declare variant(foo) match(user = {condition(foo)}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; foo is not}}
 #pragma omp declare variant(foo) match(user = {condition(foo())}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; foo() is not}}
 #pragma omp declare variant(foo) match(user = {condition(<expr>)}) // expected-error {{expected expression}} expected-error {{use of undeclared identifier 'expr'}} expected-error {{expected expression}} expected-note {{the ignored selector spans until here}}
-int score_and_cond_non_const();
+int score_and_cond_non_const(void);
+
+#pragma omp declare variant(foo) match(construct={teams,parallel,for,simd})
+#pragma omp declare variant(foo) match(construct={target teams}) // expected-error {{expected ')'}} expected-warning {{expected '}' after the context selectors for the context set "construct"; '}' assumed}} expected-note {{to match this '('}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
+#pragma omp declare variant(foo) match(construct={parallel for}) // expected-error {{expected ')'}} expected-warning {{expected '}' after the context selectors for the context set "construct"; '}' assumed}} expected-note {{to match this '('}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
+#pragma omp declare variant(foo) match(construct={for simd}) // expected-error {{expected ')'}} expected-warning {{expected '}' after the context selectors for the context set "construct"; '}' assumed}} expected-note {{to match this '('}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
+int construct(void);
 
 #pragma omp declare variant(foo) match(xxx={}) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 int a; // expected-error {{'#pragma omp declare variant' can only be applied to functions}}
@@ -74,14 +81,14 @@ int var;
 #pragma omp declare variant(foo) match(xxx={}) // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma omp declare variant(foo) match(xxx={}) // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma options align=packed
-int main();
+int main(void);
 
 
 
 #pragma omp declare variant(foo) match(implementation={vendor(llvm)}) // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma omp declare variant(foo) match(implementation={vendor(llvm)}) // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma init_seg(compiler)
-int main();
+int main(void);
 
 
 #pragma omp declare variant(foo) match(xxx={}) // expected-error {{single declaration is expected after 'declare variant' directive}} expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
@@ -102,11 +109,20 @@ int diff_proto(double); // expected-error {{conflicting types for 'diff_proto'}}
 int diff_proto1(double);
 
 int after_use_variant(void);
-int after_use();
-int bar() {
+int after_use(void);
+int bar(void) {
   return after_use();
 }
 
+// expected-error@+1 {{variant in '#pragma omp declare variant' is the same as the base function}}
+#pragma omp declare variant (self) \
+  match(construct={dispatch}, device={arch(arm)})
+void self(int n);
+
+void self_test(int n, int d_no) {
+  #pragma omp dispatch device(d_no) nowait
+  self(n);
+}
 
 #pragma omp declare variant(after_use_variant) match(xxx={}) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-warning {{'#pragma omp declare variant' cannot be applied for function after first usage; the original function might be used}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 int after_use(void);
@@ -128,6 +144,29 @@ int diff_ret_variant(void);
 #pragma omp declare variant(diff_ret_variant) match(xxx={}) // expected-error {{variant in '#pragma omp declare variant' with type 'int (void)' is incompatible with type 'void (void)'}} expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 void diff_ret(void);
 
+void incompat_attr_variant(void);
+
+#pragma omp declare variant(incompat_attr_variant) match(implementation={vendor(llvm)})
+__attribute__((cpu_dispatch(generic))) void incompat_attr_cpu_dispatch(void); // expected-error {{'#pragma omp declare variant' is not compatible with any target-specific attributes}}
+
+#pragma omp declare variant(incompat_attr_variant) match(implementation={vendor(llvm)})
+__attribute__((cpu_specific(generic))) void incompat_attr_cpu_specific(void); // expected-error {{'#pragma omp declare variant' is not compatible with any target-specific attributes}}
+
+// 'incompat_attr_target' is not a multiversion function until...
+#pragma omp declare variant(incompat_attr_variant) match(implementation={vendor(llvm)})
+__attribute__((target("mmx"))) void incompat_attr_target(void); // expected-error {{'#pragma omp declare variant' is not compatible with any target-specific attributes}}
+
+// This declaration makes it one.
+#pragma omp declare variant(incompat_attr_variant) match(implementation={vendor(llvm)})
+__attribute__((target("sse"))) void incompat_attr_target(void); // expected-error {{'#pragma omp declare variant' is not compatible with any target-specific attributes}}
+
+// 'incompat_attr_target_default' is always a multiversion function.
+#pragma omp declare variant(incompat_attr_variant) match(implementation={vendor(llvm)})
+__attribute__((target("default"))) void incompat_attr_target_default(void); // expected-error {{'#pragma omp declare variant' is not compatible with any target-specific attributes}}
+
+#pragma omp declare variant(incompat_attr_variant) match(implementation={vendor(llvm)})
+__attribute__((target_clones("sse,default"))) void incompat_attr_target_clones(void); // expected-error {{'#pragma omp declare variant' is not compatible with any target-specific attributes}}
+
 void marked(void);
 void not_marked(void);
 
@@ -144,7 +183,7 @@ int unknown_isa_trait2(void);
 #pragma omp declare variant(foo) match(device = {kind(fpga), isa(bar)})
 int ignored_isa_trait(void);
 
-void caller() {
+void caller(void) {
   unknown_isa_trait();  // expected-warning {{isa trait 'foo' is not known to the current target; verify the spelling or consider restricting the context selector with the 'arch' selector further}}
   unknown_isa_trait2(); // expected-warning {{isa trait 'foo' is not known to the current target; verify the spelling or consider restricting the context selector with the 'arch' selector further}}
   ignored_isa_trait();

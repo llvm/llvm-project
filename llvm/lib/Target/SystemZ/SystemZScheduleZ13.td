@@ -92,7 +92,7 @@ let NumMicroOps = 0 in {
   def : WriteRes<VecMul,  [Z13_VecUnit]>;
   def : WriteRes<VecStr,  [Z13_VecUnit]>;
   def : WriteRes<VecXsPm, [Z13_VecUnit]>;
-  foreach Num = 2-5 in { let ResourceCycles = [Num] in {
+  foreach Num = 2-5 in { let ReleaseAtCycles = [Num] in {
     def : WriteRes<!cast<SchedWrite>("FXa"#Num), [Z13_FXaUnit]>;
     def : WriteRes<!cast<SchedWrite>("FXb"#Num), [Z13_FXbUnit]>;
     def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Z13_LSUnit]>;
@@ -104,7 +104,7 @@ let NumMicroOps = 0 in {
     def : WriteRes<!cast<SchedWrite>("VecXsPm"#Num), [Z13_VecUnit]>;
   }}
 
-  def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let ResourceCycles = [30]; }
+  def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let ReleaseAtCycles = [30]; }
 
   def : WriteRes<VBU,     [Z13_VBUnit]>; // Virtual Branching Unit
 }
@@ -168,12 +168,12 @@ def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "CL(G)?T(Asm.*)?$")>;
 // Call
 def : InstRW<[WLat1, VBU, FXa2, GroupAlone], (instregex "(Call)?BRAS$")>;
 def : InstRW<[WLat1, FXa2, FXb, GroupAlone], (instregex "(Call)?BRASL(_XPLINK64)?$")>;
-def : InstRW<[WLat1, FXa2, FXb, GroupAlone], (instregex "(Call)?BAS(R)?(_XPLINK64)?$")>;
+def : InstRW<[WLat1, FXa2, FXb, GroupAlone], (instregex "(Call)?BAS(R)?(_XPLINK64|_STACKEXT)?$")>;
 def : InstRW<[WLat1, FXa2, FXb, GroupAlone], (instregex "TLS_(G|L)DCALL$")>;
 
 // Return
-def : InstRW<[WLat1, FXb, EndGroup], (instregex "Return$")>;
-def : InstRW<[WLat1, FXb, NormalGr], (instregex "CondReturn$")>;
+def : InstRW<[WLat1, FXb, EndGroup], (instregex "Return(_XPLINK)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CondReturn(_XPLINK)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Move instructions
@@ -784,9 +784,7 @@ def : InstRW<[WLat2, FXb2, GroupAlone], (instregex "LXR$")>;
 
 // Load and Test
 def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BR$")>;
-def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BRCompare$")>;
-def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone],
-             (instregex "LTXBR(Compare)?$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "LTXBR$")>;
 
 // Copy sign
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "CPSDR(d|s)(d|s)$")>;

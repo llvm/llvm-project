@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-use-runtime-alias-checks=false -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-detect -analyze < %s 2>&1| FileCheck %s
+; RUN: opt %loadPolly -polly-use-runtime-alias-checks=false -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -disable-output < %s 2>&1| FileCheck %s
 
 ;void f(int A[], int B[]) {
 ;  for (int i=0; i<42; i++)
@@ -11,22 +11,22 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32* %B) !dbg !4 {
+define void @f(ptr %A, ptr %B) !dbg !4 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  tail call void @llvm.dbg.value(metadata i32* %A, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
-  tail call void @llvm.dbg.value(metadata i32* %B, i64 0, metadata !15, metadata !DIExpression()), !dbg !16
+  tail call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
+  tail call void @llvm.dbg.value(metadata ptr %B, i64 0, metadata !15, metadata !DIExpression()), !dbg !16
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !18, metadata !DIExpression()), !dbg !20
   br label %for.body, !dbg !21
 
 for.body:                                         ; preds = %entry.split, %for.body
   %indvar = phi i64 [ 0, %entry.split ], [ %indvar.next, %for.body ]
-  %arrayidx = getelementptr i32, i32* %B, i64 %indvar, !dbg !22
-  %arrayidx2 = getelementptr i32, i32* %A, i64 %indvar, !dbg !22
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !22
-  store i32 %0, i32* %arrayidx2, align 4, !dbg !22
+  %arrayidx = getelementptr i32, ptr %B, i64 %indvar, !dbg !22
+  %arrayidx2 = getelementptr i32, ptr %A, i64 %indvar, !dbg !22
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !22
+  store i32 %0, ptr %arrayidx2, align 4, !dbg !22
   tail call void @llvm.dbg.value(metadata !{null}, i64 0, metadata !18, metadata !DIExpression()), !dbg !20
   %indvar.next = add i64 %indvar, 1, !dbg !21
   %exitcond = icmp ne i64 %indvar.next, 42, !dbg !21

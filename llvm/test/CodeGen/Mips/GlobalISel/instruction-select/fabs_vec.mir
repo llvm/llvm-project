@@ -2,8 +2,8 @@
 # RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32r5 -mattr=+msa,+fp64,+nan2008 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=P5600
 --- |
 
-  define void @fabs_v4f32(<4 x float>* %a, <4 x float>* %c) { entry: ret void }
-  define void @fabs_v2f64(<2 x double>* %a, <2 x double>* %c) { entry: ret void }
+  define void @fabs_v4f32(ptr %a, ptr %c) { entry: ret void }
+  define void @fabs_v2f64(ptr %a, ptr %c) { entry: ret void }
 
 ...
 ---
@@ -20,15 +20,15 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; P5600: [[LD_W:%[0-9]+]]:msa128w = LD_W [[COPY]], 0 :: (load 16 from %ir.a)
+    ; P5600: [[LD_W:%[0-9]+]]:msa128w = LD_W [[COPY]], 0 :: (load (<4 x s32>) from %ir.a)
     ; P5600: [[FABS_W:%[0-9]+]]:msa128w = FABS_W [[LD_W]]
-    ; P5600: ST_W [[FABS_W]], [[COPY1]], 0 :: (store 16 into %ir.c)
+    ; P5600: ST_W [[FABS_W]], [[COPY1]], 0 :: (store (<4 x s32>) into %ir.c)
     ; P5600: RetRA
     %0:gprb(p0) = COPY $a0
     %1:gprb(p0) = COPY $a1
-    %2:fprb(<4 x s32>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
+    %2:fprb(<4 x s32>) = G_LOAD %0(p0) :: (load (<4 x s32>) from %ir.a)
     %3:fprb(<4 x s32>) = G_FABS %2
-    G_STORE %3(<4 x s32>), %1(p0) :: (store 16 into %ir.c)
+    G_STORE %3(<4 x s32>), %1(p0) :: (store (<4 x s32>) into %ir.c)
     RetRA
 
 ...
@@ -46,15 +46,15 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; P5600: [[LD_D:%[0-9]+]]:msa128d = LD_D [[COPY]], 0 :: (load 16 from %ir.a)
+    ; P5600: [[LD_D:%[0-9]+]]:msa128d = LD_D [[COPY]], 0 :: (load (<2 x s64>) from %ir.a)
     ; P5600: [[FABS_D:%[0-9]+]]:msa128d = FABS_D [[LD_D]]
-    ; P5600: ST_D [[FABS_D]], [[COPY1]], 0 :: (store 16 into %ir.c)
+    ; P5600: ST_D [[FABS_D]], [[COPY1]], 0 :: (store (<2 x s64>) into %ir.c)
     ; P5600: RetRA
     %0:gprb(p0) = COPY $a0
     %1:gprb(p0) = COPY $a1
-    %2:fprb(<2 x s64>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
+    %2:fprb(<2 x s64>) = G_LOAD %0(p0) :: (load (<2 x s64>) from %ir.a)
     %3:fprb(<2 x s64>) = G_FABS %2
-    G_STORE %3(<2 x s64>), %1(p0) :: (store 16 into %ir.c)
+    G_STORE %3(<2 x s64>), %1(p0) :: (store (<2 x s64>) into %ir.c)
     RetRA
 
 ...

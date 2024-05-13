@@ -1,4 +1,4 @@
-//===--------------------- test_fallback_malloc.cpp -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,21 +8,42 @@
 
 #include <cstdio>
 #include <deque>
+#include <cassert>
+#include <inttypes.h>
 
-#include <__threading_support>
+#include <__thread/support.h>
+
+// UNSUPPORTED: c++03
+// UNSUPPORTED: modules-build && no-threads
+
+// Necessary because we include a private source file of libc++abi, which
+// only understands _LIBCXXABI_HAS_NO_THREADS.
+#include "test_macros.h"
+#ifdef TEST_HAS_NO_THREADS
+# define _LIBCXXABI_HAS_NO_THREADS
+#endif
 
 typedef std::deque<void *> container;
+
+TEST_DIAGNOSTIC_PUSH
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
+#define _LIBCXXABI_ASSERT(expr, msg) assert((expr) && (msg))
 
 // #define  DEBUG_FALLBACK_MALLOC
 #define INSTRUMENT_FALLBACK_MALLOC
 #include "../src/fallback_malloc.cpp"
+TEST_DIAGNOSTIC_POP
+
+void assertAlignment(void* ptr) { assert(reinterpret_cast<size_t>(ptr) % alignof(FallbackMaxAlignType) == 0); }
 
 container alloc_series ( size_t sz ) {
     container ptrs;
     void *p;
 
-    while ( NULL != ( p = fallback_malloc ( sz )))
-        ptrs.push_back ( p );
+    while (NULL != (p = fallback_malloc(sz))) {
+      assertAlignment(p);
+      ptrs.push_back(p);
+    }
     return ptrs;
 }
 
@@ -31,8 +52,9 @@ container alloc_series ( size_t sz, float growth ) {
     void *p;
 
     while ( NULL != ( p = fallback_malloc ( sz ))) {
-        ptrs.push_back ( p );
-        sz *= growth;
+      assertAlignment(p);
+      ptrs.push_back(p);
+      sz *= growth;
     }
 
     return ptrs;
@@ -46,6 +68,7 @@ container alloc_series ( const size_t *first, size_t len ) {
     for ( const size_t *iter = first; iter != last; ++iter ) {
         if ( NULL == (p = fallback_malloc ( *iter )))
             break;
+        assertAlignment(p);
         ptrs.push_back ( p );
     }
 
@@ -172,11 +195,11 @@ int main () {
     print_free_list ();
 
     char *p = (char *) fallback_malloc ( 1024 );    // too big!
-    std::printf("fallback_malloc ( 1024 ) --> %lu\n", (unsigned long ) p);
+    std::printf("fallback_malloc ( 1024 ) --> %" PRIuPTR"\n", (uintptr_t) p);
     print_free_list ();
 
     p = (char *) fallback_malloc ( 32 );
-    std::printf("fallback_malloc ( 32 ) --> %lu\n", (unsigned long) (p - heap));
+    std::printf("fallback_malloc ( 32 ) --> %" PRIuPTR"\n", (uintptr_t) (p - heap));
     if ( !is_fallback_ptr ( p ))
         std::printf("### p is not a fallback pointer!!\n");
 

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass post-RA-sched %s -o - | FileCheck -check-prefix=GFX90 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass post-RA-sched %s -o - | FileCheck -check-prefix=GFX90 %s
 
 # This tests that a KILL isn't considered as a valid instruction for a hazard
 # slot (e.g. m0 def followed by V_INTERP for gfx9)
@@ -8,8 +8,8 @@
   define amdgpu_ps void @_amdgpu_ps_main() #0 { ret void }
 ...
 ---
-# CHECK-LABEL: name: _amdgpu_ps_main
-# CHECK-LABEL: bb.0:
+# GFX90-LABEL: name: _amdgpu_ps_main
+# GFX90-LABEL: bb.0:
 # GFX90: $m0 = S_MOV_B32 killed renamable $sgpr4
 # GFX90-NEXT: KILL undef renamable $sgpr2
 # GFX90-NEXT: S_MOV_B32 0

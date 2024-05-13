@@ -4,19 +4,19 @@
 --- |
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main-arm-unknown-eabihf"
-  define dso_local <4 x i32> @foo(<4 x i32>* %src, <4 x i32>* %src2, <4 x i32>* %src3, <4 x i32>* %dest, <4 x i32>* %dest2, <4 x i32>* %dest3, <4 x float> %a1) local_unnamed_addr #0 {
+  define dso_local <4 x i32> @foo(ptr %src, ptr %src2, ptr %src3, ptr %dest, ptr %dest2, ptr %dest3, <4 x float> %a1) local_unnamed_addr #0 {
   entry:
     %c = fcmp one <4 x float> %a1, zeroinitializer
-    %w = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %src, i32 4, <4 x i1> %c, <4 x i32> undef)
-    tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %w, <4 x i32>* %dest, i32 4, <4 x i1> %c)
-    %w2 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %src2, i32 4, <4 x i1> %c, <4 x i32> undef)
-    tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %w2, <4 x i32>* %dest2, i32 4, <4 x i1> %c)
-    %w3 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %src3, i32 4, <4 x i1> %c, <4 x i32> undef)
-    tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %w3, <4 x i32>* %dest3, i32 4, <4 x i1> %c)
+    %w = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %src, i32 4, <4 x i1> %c, <4 x i32> undef)
+    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> %w, ptr %dest, i32 4, <4 x i1> %c)
+    %w2 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %src2, i32 4, <4 x i1> %c, <4 x i32> undef)
+    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> %w2, ptr %dest2, i32 4, <4 x i1> %c)
+    %w3 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %src3, i32 4, <4 x i1> %c, <4 x i32> undef)
+    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> %w3, ptr %dest3, i32 4, <4 x i1> %c)
     ret <4 x i32> %w3
   }
-  declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #2
-  declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #3
+  declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>) #2
+  declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>) #3
 
   attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="128" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+fp-armv8d16sp,+fp16,+fpregs,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone }
@@ -104,20 +104,20 @@ body:             |
     ; CHECK: frame-setup CFI_INSTRUCTION offset $r7, -8
     ; CHECK: $r7 = frame-setup tMOVr killed $sp, 14 /* CC::al */, $noreg
     ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_register $r7
-    ; CHECK: renamable $r12 = t2LDRi12 $r7, 16, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.2)
-    ; CHECK: renamable $lr = t2LDRi12 $r7, 12, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.1)
-    ; CHECK: renamable $r3 = t2LDRi12 $r7, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0)
+    ; CHECK: renamable $r12 = t2LDRi12 $r7, 16, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.2)
+    ; CHECK: renamable $lr = t2LDRi12 $r7, 12, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.1)
+    ; CHECK: renamable $r3 = t2LDRi12 $r7, 8, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0)
     ; CHECK: BUNDLE implicit-def $vpr, implicit-def dead $q0, implicit-def $d0, implicit-def $s0, implicit-def $s1, implicit-def $d1, implicit-def $s2, implicit-def $s3, implicit $q0, implicit $zr, implicit killed $r0, implicit killed $r3, implicit killed $r1, implicit killed $lr {
     ; CHECK:   MVE_VPTv4f32r 1, renamable $q0, $zr, 10, implicit-def $vpr
-    ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r0, 0, 1, internal renamable $vpr :: (load 16 from %ir.src, align 4)
-    ; CHECK:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $r3, 0, 1, internal renamable $vpr :: (store 16 into %ir.dest, align 4)
-    ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 1, internal renamable $vpr :: (load 16 from %ir.src2, align 4)
-    ; CHECK:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $lr, 0, 1, internal renamable $vpr :: (store 16 into %ir.dest2, align 4)
+    ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r0, 0, 1, internal renamable $vpr, $noreg :: (load (s128) from %ir.src, align 4)
+    ; CHECK:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $r3, 0, 1, internal renamable $vpr, $noreg :: (store (s128) into %ir.dest, align 4)
+    ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 1, internal renamable $vpr, $noreg :: (load (s128) from %ir.src2, align 4)
+    ; CHECK:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $lr, 0, 1, internal renamable $vpr, $noreg :: (store (s128) into %ir.dest2, align 4)
     ; CHECK: }
     ; CHECK: BUNDLE implicit-def $q0, implicit-def $d0, implicit-def $s0, implicit-def $s1, implicit-def $d1, implicit-def $s2, implicit-def $s3, implicit killed $vpr, implicit killed $r2, implicit killed $r12 {
     ; CHECK:   MVE_VPST 4, implicit $vpr
-    ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 1, renamable $vpr :: (load 16 from %ir.src3, align 4)
-    ; CHECK:   MVE_VSTRWU32 internal renamable $q0, killed renamable $r12, 0, 1, killed renamable $vpr :: (store 16 into %ir.dest3, align 4)
+    ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 1, renamable $vpr, $noreg :: (load (s128) from %ir.src3, align 4)
+    ; CHECK:   MVE_VSTRWU32 internal renamable $q0, killed renamable $r12, 0, 1, killed renamable $vpr, $noreg :: (store (s128) into %ir.dest3, align 4)
     ; CHECK: }
     ; CHECK: $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc, implicit $q0
     $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
@@ -126,16 +126,16 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r7, -8
     $r7 = frame-setup tMOVr killed $sp, 14, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_register $r7
-    renamable $r12 = t2LDRi12 $r7, 16, 14, $noreg :: (load 4 from %fixed-stack.1)
-    renamable $lr = t2LDRi12 $r7, 12, 14, $noreg :: (load 4 from %fixed-stack.2)
-    renamable $r3 = t2LDRi12 $r7, 8, 14, $noreg :: (load 4 from %fixed-stack.3)
-    renamable $vpr = MVE_VCMPf32r renamable $q0, $zr, 10, 0, $noreg
-    renamable $q0 = MVE_VLDRWU32 killed renamable $r0, 0, 1, renamable $vpr :: (load 16 from %ir.src, align 4)
-    MVE_VSTRWU32 killed renamable $q0, killed renamable $r3, 0, 1, renamable $vpr :: (store 16 into %ir.dest, align 4)
-    renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 1, renamable $vpr :: (load 16 from %ir.src2, align 4)
-    MVE_VSTRWU32 killed renamable $q0, killed renamable $lr, 0, 1, renamable $vpr :: (store 16 into %ir.dest2, align 4)
-    renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 1, renamable $vpr :: (load 16 from %ir.src3, align 4)
-    MVE_VSTRWU32 renamable $q0, killed renamable $r12, 0, 1, killed renamable $vpr :: (store 16 into %ir.dest3, align 4)
+    renamable $r12 = t2LDRi12 $r7, 16, 14, $noreg :: (load (s32) from %fixed-stack.1)
+    renamable $lr = t2LDRi12 $r7, 12, 14, $noreg :: (load (s32) from %fixed-stack.2)
+    renamable $r3 = t2LDRi12 $r7, 8, 14, $noreg :: (load (s32) from %fixed-stack.3)
+    renamable $vpr = MVE_VCMPf32r renamable $q0, $zr, 10, 0, $noreg, $noreg
+    renamable $q0 = MVE_VLDRWU32 killed renamable $r0, 0, 1, renamable $vpr, $noreg :: (load (s128) from %ir.src, align 4)
+    MVE_VSTRWU32 killed renamable $q0, killed renamable $r3, 0, 1, renamable $vpr, $noreg :: (store (s128) into %ir.dest, align 4)
+    renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 1, renamable $vpr, $noreg :: (load (s128) from %ir.src2, align 4)
+    MVE_VSTRWU32 killed renamable $q0, killed renamable $lr, 0, 1, renamable $vpr, $noreg :: (store (s128) into %ir.dest2, align 4)
+    renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 1, renamable $vpr, $noreg :: (load (s128) from %ir.src3, align 4)
+    MVE_VSTRWU32 renamable $q0, killed renamable $r12, 0, 1, killed renamable $vpr, $noreg :: (store (s128) into %ir.dest3, align 4)
     $sp = t2LDMIA_RET $sp, 14, $noreg, def $r7, def $pc, implicit $q0
 
 ...

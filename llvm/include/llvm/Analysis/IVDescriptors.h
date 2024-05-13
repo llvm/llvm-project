@@ -13,43 +13,47 @@
 #ifndef LLVM_ANALYSIS_IVDESCRIPTORS_H
 #define LLVM_ANALYSIS_IVDESCRIPTORS_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Operator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/Casting.h"
 
 namespace llvm {
 
-class DemandedBits;
 class AssumptionCache;
+class DemandedBits;
+class DominatorTree;
+class Instruction;
 class Loop;
 class PredicatedScalarEvolution;
 class ScalarEvolution;
 class SCEV;
-class DominatorTree;
+class StoreInst;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
-  None,   ///< Not a recurrence.
-  Add,    ///< Sum of integers.
-  Mul,    ///< Product of integers.
-  Or,     ///< Bitwise or logical OR of integers.
-  And,    ///< Bitwise or logical AND of integers.
-  Xor,    ///< Bitwise or logical XOR of integers.
-  SMin,   ///< Signed integer min implemented in terms of select(cmp()).
-  SMax,   ///< Signed integer max implemented in terms of select(cmp()).
-  UMin,   ///< Unisgned integer min implemented in terms of select(cmp()).
-  UMax,   ///< Unsigned integer max implemented in terms of select(cmp()).
-  FAdd,   ///< Sum of floats.
-  FMul,   ///< Product of floats.
-  FMin,   ///< FP min implemented in terms of select(cmp()).
-  FMax    ///< FP max implemented in terms of select(cmp()).
+  None,     ///< Not a recurrence.
+  Add,      ///< Sum of integers.
+  Mul,      ///< Product of integers.
+  Or,       ///< Bitwise or logical OR of integers.
+  And,      ///< Bitwise or logical AND of integers.
+  Xor,      ///< Bitwise or logical XOR of integers.
+  SMin,     ///< Signed integer min implemented in terms of select(cmp()).
+  SMax,     ///< Signed integer max implemented in terms of select(cmp()).
+  UMin,     ///< Unsigned integer min implemented in terms of select(cmp()).
+  UMax,     ///< Unsigned integer max implemented in terms of select(cmp()).
+  FAdd,     ///< Sum of floats.
+  FMul,     ///< Product of floats.
+  FMin,     ///< FP min implemented in terms of select(cmp()).
+  FMax,     ///< FP max implemented in terms of select(cmp()).
+  FMinimum, ///< FP min with llvm.minimum semantics
+  FMaximum, ///< FP max with llvm.maximum semantics
+  FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
+  IAnyOf,   ///< Any_of reduction with select(icmp(),x,y) where one of (x,y) is
+            ///< loop invariant, and both x and y are integer type.
+  FAnyOf    ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
+            ///< loop invariant, and both x and y are integer type.
+  // TODO: Any_of reduction need not be restricted to integer type only.
 };
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
@@ -68,13 +72,15 @@ class RecurrenceDescriptor {
 public:
   RecurrenceDescriptor() = default;
 
-  RecurrenceDescriptor(Value *Start, Instruction *Exit, RecurKind K,
-                       FastMathFlags FMF, Instruction *ExactFP, Type *RT,
-                       bool Signed, bool Ordered,
-                       SmallPtrSetImpl<Instruction *> &CI)
-      : StartValue(Start), LoopExitInstr(Exit), Kind(K), FMF(FMF),
-        ExactFPMathInst(ExactFP), RecurrenceType(RT), IsSigned(Signed),
-        IsOrdered(Ordered) {
+  RecurrenceDescriptor(Value *Start, Instruction *Exit, StoreInst *Store,
+                       RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
+                       Type *RT, bool Signed, bool Ordered,
+                       SmallPtrSetImpl<Instruction *> &CI,
+                       unsigned MinWidthCastToRecurTy)
+      : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
+        Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
+        IsSigned(Signed), IsOrdered(Ordered),
+        MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert(CI.begin(), CI.end());
   }
 
@@ -112,12 +118,14 @@ public:
   };
 
   /// Returns a struct describing if the instruction 'I' can be a recurrence
-  /// variable of type 'Kind'. If the recurrence is a min/max pattern of
-  /// select(icmp()) this function advances the instruction pointer 'I' from the
-  /// compare instruction to the select instruction and stores this pointer in
-  /// 'PatternLastInst' member of the returned struct.
-  static InstDesc isRecurrenceInstr(Instruction *I, RecurKind Kind,
-                                    InstDesc &Prev, FastMathFlags FMF);
+  /// variable of type 'Kind' for a Loop \p L and reduction PHI \p Phi.
+  /// If the recurrence is a min/max pattern of select(icmp()) this function
+  /// advances the instruction pointer 'I' from the compare instruction to the
+  /// select instruction and stores this pointer in 'PatternLastInst' member of
+  /// the returned struct.
+  static InstDesc isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I,
+                                    RecurKind Kind, InstDesc &Prev,
+                                    FastMathFlags FuncFMF);
 
   /// Returns true if instruction I has multiple uses in Insts
   static bool hasMultipleUsesOf(Instruction *I,
@@ -127,20 +135,29 @@ public:
   /// Returns true if all uses of the instruction I is within the Set.
   static bool areAllUsesIn(Instruction *I, SmallPtrSetImpl<Instruction *> &Set);
 
-  /// Returns a struct describing if the instruction is a
-  /// Select(ICmp(X, Y), X, Y) instruction pattern corresponding to a min(X, Y)
-  /// or max(X, Y). \p Prev specifies the description of an already processed
-  /// select instruction, so its corresponding cmp can be matched to it.
-  static InstDesc isMinMaxSelectCmpPattern(Instruction *I,
-                                           const InstDesc &Prev);
+  /// Returns a struct describing if the instruction is a llvm.(s/u)(min/max),
+  /// llvm.minnum/maxnum or a Select(ICmp(X, Y), X, Y) pair of instructions
+  /// corresponding to a min(X, Y) or max(X, Y), matching the recurrence kind \p
+  /// Kind. \p Prev specifies the description of an already processed select
+  /// instruction, so its corresponding cmp can be matched to it.
+  static InstDesc isMinMaxPattern(Instruction *I, RecurKind Kind,
+                                  const InstDesc &Prev);
+
+  /// Returns a struct describing whether the instruction is either a
+  ///   Select(ICmp(A, B), X, Y), or
+  ///   Select(FCmp(A, B), X, Y)
+  /// where one of (X, Y) is a loop invariant integer and the other is a PHI
+  /// value. \p Prev specifies the description of an already processed select
+  /// instruction, so its corresponding cmp can be matched to it.
+  static InstDesc isAnyOfPattern(Loop *Loop, PHINode *OrigPhi, Instruction *I,
+                                 InstDesc &Prev);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
   static InstDesc isConditionalRdxPattern(RecurKind Kind, Instruction *I);
 
   /// Returns identity corresponding to the RecurrenceKind.
-  static Constant *getRecurrenceIdentity(RecurKind K, Type *Tp,
-                                         FastMathFlags FMF);
+  Value *getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF) const;
 
   /// Returns the opcode corresponding to the RecurrenceKind.
   static unsigned getOpcode(RecurKind Kind);
@@ -149,34 +166,33 @@ public:
   /// RecurrenceDescriptor. If either \p DB is non-null or \p AC and \p DT are
   /// non-null, the minimal bit width needed to compute the reduction will be
   /// computed.
-  static bool AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
-                              FastMathFlags FMF,
-                              RecurrenceDescriptor &RedDes,
-                              DemandedBits *DB = nullptr,
-                              AssumptionCache *AC = nullptr,
-                              DominatorTree *DT = nullptr);
+  static bool
+  AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
+                  FastMathFlags FuncFMF, RecurrenceDescriptor &RedDes,
+                  DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
+                  DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
 
   /// Returns true if Phi is a reduction in TheLoop. The RecurrenceDescriptor
   /// is returned in RedDes. If either \p DB is non-null or \p AC and \p DT are
   /// non-null, the minimal bit width needed to compute the reduction will be
-  /// computed.
-  static bool isReductionPHI(PHINode *Phi, Loop *TheLoop,
-                             RecurrenceDescriptor &RedDes,
-                             DemandedBits *DB = nullptr,
-                             AssumptionCache *AC = nullptr,
-                             DominatorTree *DT = nullptr);
-
-  /// Returns true if Phi is a first-order recurrence. A first-order recurrence
-  /// is a non-reduction recurrence relation in which the value of the
-  /// recurrence in the current loop iteration equals a value defined in the
-  /// previous iteration. \p SinkAfter includes pairs of instructions where the
-  /// first will be rescheduled to appear after the second if/when the loop is
-  /// vectorized. It may be augmented with additional pairs if needed in order
-  /// to handle Phi as a first-order recurrence.
+  /// computed. If \p SE is non-null, store instructions to loop invariant
+  /// addresses are processed.
   static bool
-  isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                         MapVector<Instruction *, Instruction *> &SinkAfter,
-                         DominatorTree *DT);
+  isReductionPHI(PHINode *Phi, Loop *TheLoop, RecurrenceDescriptor &RedDes,
+                 DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
+                 DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
+
+  /// Returns true if Phi is a fixed-order recurrence. A fixed-order recurrence
+  /// is a non-reduction recurrence relation in which the value of the
+  /// recurrence in the current loop iteration equals a value defined in a
+  /// previous iteration (e.g. if the value is defined in the previous
+  /// iteration, we refer to it as first-order recurrence, if it is defined in
+  /// the iteration before the previous, we refer to it as second-order
+  /// recurrence and so on). Note that this function optimistically assumes that
+  /// uses of the recurrence can be re-ordered if necessary and users need to
+  /// check and perform the re-ordering.
+  static bool isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+                                     DominatorTree *DT);
 
   RecurKind getRecurrenceKind() const { return Kind; }
 
@@ -201,9 +217,6 @@ public:
   /// Returns true if the recurrence kind is a floating point kind.
   static bool isFloatingPointRecurrenceKind(RecurKind Kind);
 
-  /// Returns true if the recurrence kind is an arithmetic kind.
-  static bool isArithmeticRecurrenceKind(RecurKind Kind);
-
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::UMin || Kind == RecurKind::UMax ||
@@ -212,12 +225,19 @@ public:
 
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::FMin || Kind == RecurKind::FMax;
+    return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
+           Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum;
   }
 
   /// Returns true if the recurrence kind is any min/max kind.
   static bool isMinMaxRecurrenceKind(RecurKind Kind) {
     return isIntMinMaxRecurrenceKind(Kind) || isFPMinMaxRecurrenceKind(Kind);
+  }
+
+  /// Returns true if the recurrence kind is of the form
+  ///   select(cmp(),x,y) where one of (x,y) is loop invariant.
+  static bool isAnyOfRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::IAnyOf || Kind == RecurKind::FAnyOf;
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the
@@ -227,6 +247,11 @@ public:
   /// Returns a reference to the instructions used for type-promoting the
   /// recurrence.
   const SmallPtrSet<Instruction *, 8> &getCastInsts() const { return CastInsts; }
+
+  /// Returns the minimum width used by the recurrence in bits.
+  unsigned getMinWidthCastToRecurrenceTypeInBits() const {
+    return MinWidthCastToRecurrenceType;
+  }
 
   /// Returns true if all source operands of the recurrence are SExtInsts.
   bool isSigned() const { return IsSigned; }
@@ -238,6 +263,17 @@ public:
   /// be treated as a set of reductions instructions for in-loop reductions.
   SmallVector<Instruction *, 4> getReductionOpChain(PHINode *Phi,
                                                     Loop *L) const;
+
+  /// Returns true if the instruction is a call to the llvm.fmuladd intrinsic.
+  static bool isFMulAddIntrinsic(Instruction *I) {
+    return isa<IntrinsicInst>(I) &&
+           cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fmuladd;
+  }
+
+  /// Reductions may store temporary or final result to an invariant address.
+  /// If there is such a store in the loop then, after successfull run of
+  /// AddReductionVar method, this field will be assigned the last met store.
+  StoreInst *IntermediateStore = nullptr;
 
 private:
   // The starting value of the recurrence.
@@ -262,6 +298,8 @@ private:
   bool IsOrdered = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
+  // The minimum width used by the recurrence.
+  unsigned MinWidthCastToRecurrenceType;
 };
 
 /// A struct for saving information about induction variables.
@@ -271,7 +309,7 @@ public:
   enum InductionKind {
     IK_NoInduction,  ///< Not an induction variable.
     IK_IntInduction, ///< Integer induction variable. Step = C.
-    IK_PtrInduction, ///< Pointer induction var. Step = C / sizeof(elem).
+    IK_PtrInduction, ///< Pointer induction var. Step = C.
     IK_FpInduction   ///< Floating point induction variable.
   };
 
@@ -287,7 +325,9 @@ public:
 
   /// Returns true if \p Phi is an induction in the loop \p L. If \p Phi is an
   /// induction, the induction descriptor \p D will contain the data describing
-  /// this induction. If by some other means the caller has a better SCEV
+  /// this induction. Since Induction Phis can only be present inside loop
+  /// headers, the function will assert if it is passed a Phi whose parent is
+  /// not the loop header. If by some other means the caller has a better SCEV
   /// expression for \p Phi than the one returned by the ScalarEvolution
   /// analysis, it can be passed through \p Expr. If the def-use chain
   /// associated with the phi includes casts (that we know we can ignore

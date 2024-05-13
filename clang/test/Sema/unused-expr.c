@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-unreachable-code
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-unreachable-code -Wno-strict-prototypes
 
 int foo(int X, int Y);
 
@@ -28,8 +28,8 @@ void bar(volatile int *VP, int *P, int A,
   sqrt(A);  // expected-warning {{ignoring return value of function declared with const attribute}}
 }
 
-extern void t1();
-extern void t2();
+extern void t1(void);
+extern void t2(void);
 void t3(int c) {
   c ? t1() : t2();
 }
@@ -73,18 +73,16 @@ void t4(int a) {
   for (;;b < 1) {} // expected-warning{{relational comparison result unused}}
 }
 
-// rdar://7186119
 int t5f(void) __attribute__((warn_unused_result));
-void t5() {
+void t5(void) {
   t5f();   // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
 }
 
 
-int fn1() __attribute__ ((warn_unused_result));
+int fn1(void) __attribute__ ((warn_unused_result));
 int fn2() __attribute__ ((pure));
 int fn3() __attribute__ ((__const));
-// rdar://6587766
-int t6() {
+int t6(void) {
   if (fn1() < 0 || fn2(2,1) < 0 || fn3(2) < 0)  // no warnings
     return -1;
 
@@ -96,19 +94,18 @@ int t6() {
   return 0;
 }
 
-int t7 __attribute__ ((warn_unused_result)); // expected-warning {{'warn_unused_result' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, and function pointers}}
+int t7 __attribute__ ((warn_unused_result)); // expected-warning {{'warn_unused_result' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, function pointers, and typedefs}}
 
 // PR4010
 int (*fn4)(void) __attribute__ ((warn_unused_result));
-void t8() {
+void t8(void) {
   fn4(); // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
 }
 
-void t9() __attribute__((warn_unused_result)); // expected-warning {{attribute 'warn_unused_result' cannot be applied to functions without return value}}
+void t9(void) __attribute__((warn_unused_result)); // expected-warning {{attribute 'warn_unused_result' cannot be applied to functions without return value}}
 
-// rdar://7410924
 void *some_function(void);
-void t10() {
+void t10(void) {
   (void*) some_function(); //expected-warning {{expression result unused; should this cast be to 'void'?}}
 }
 
@@ -121,7 +118,7 @@ void f(int i, ...) {
 }
 
 // PR8371
-int fn5() __attribute__ ((__const));
+int fn5(void) __attribute__ ((__const));
 
 // Don't warn for unused expressions in macro bodies; however, do warn for
 // unused expressions in macro arguments. Macros below are reduced from code

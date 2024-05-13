@@ -112,7 +112,7 @@ LoadCommands:
   - cmd:             LC_RPATH
     cmdsize:         32
     path:            12
-    PayloadString:   '@executable_a/.'
+    Content:         '@executable_a/.'
   - cmd:             LC_DYLD_INFO_ONLY
     cmdsize:         48
     rebase_off:      0
@@ -143,7 +143,7 @@ LoadCommands:
   - cmd:             LC_LOAD_DYLINKER
     cmdsize:         32
     name:            12
-    PayloadString:   '/usr/lib/dyld'
+    Content:         '/usr/lib/dyld'
     ZeroPadBytes:    7
   - cmd:             LC_UUID
     cmdsize:         24
@@ -175,7 +175,7 @@ LoadCommands:
       timestamp:       2
       current_version: 82115073
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libSystem.B.dylib'
+    Content:         '/usr/lib/libSystem.B.dylib'
     ZeroPadBytes:    6
   - cmd:             LC_DYSYMTAB
     cmdsize:         80

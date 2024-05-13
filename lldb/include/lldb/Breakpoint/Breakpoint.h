@@ -22,6 +22,7 @@
 #include "lldb/Breakpoint/Stoppoint.h"
 #include "lldb/Breakpoint/StoppointHitCounter.h"
 #include "lldb/Core/SearchFilter.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
@@ -79,7 +80,8 @@ namespace lldb_private {
 class Breakpoint : public std::enable_shared_from_this<Breakpoint>,
                    public Stoppoint {
 public:
-  static ConstString GetEventIdentifier();
+  static const char *
+      BreakpointEventTypeAsCString(lldb::BreakpointEventType type);
 
   /// An enum specifying the match style for breakpoint settings.  At present
   /// only used for function name style breakpoints.
@@ -103,13 +105,15 @@ public:
 
     ~BreakpointEventData() override;
 
-    static ConstString GetFlavorString();
+    static llvm::StringRef GetFlavorString();
 
-    ConstString GetFlavor() const override;
+    Log *GetLogChannel() override;
+
+    llvm::StringRef GetFlavor() const override;
 
     lldb::BreakpointEventType GetBreakpointEventType() const;
 
-    lldb::BreakpointSP &GetBreakpoint();
+    lldb::BreakpointSP GetBreakpoint() const;
 
     BreakpointLocationCollection &GetBreakpointLocationCollection() {
       return m_locations;
@@ -325,6 +329,9 @@ public:
   ///     The current hit count for all locations.
   uint32_t GetHitCount() const;
 
+  /// Resets the current hit count for all locations.
+  void ResetHitCount();
+
   /// If \a one_shot is \b true, breakpoint will be deleted on first hit.
   void SetOneShot(bool one_shot);
 
@@ -374,7 +381,10 @@ public:
   /// \param[in] is_synchronous
   ///    If \b true the callback will be run on the private event thread
   ///    before the stop event gets reported.  If false, the callback will get
-  ///    handled on the public event thread after the stop has been posted.
+  ///    handled on the public event thread while the stop event is being
+  ///    pulled off the event queue.
+  ///    Note: synchronous callbacks cannot cause the target to run, in
+  ///    particular, they should not try to run the expression evaluator.
   void SetCallback(BreakpointHitCallback callback, void *baton,
                    bool is_synchronous = false);
 
@@ -481,16 +491,16 @@ public:
   /// Meant to be used by the BreakpointLocation class.
   ///
   /// \return
-  ///     A pointer to this breakpoint's BreakpointOptions.
-  BreakpointOptions *GetOptions();
+  ///     A reference to this breakpoint's BreakpointOptions.
+  BreakpointOptions &GetOptions();
 
   /// Returns the BreakpointOptions structure set at the breakpoint level.
   ///
   /// Meant to be used by the BreakpointLocation class.
   ///
   /// \return
-  ///     A pointer to this breakpoint's BreakpointOptions.
-  const BreakpointOptions *GetOptions() const;
+  ///     A reference to this breakpoint's BreakpointOptions.
+  const BreakpointOptions &GetOptions() const;
 
   /// Invoke the callback action when the breakpoint is hit.
   ///
@@ -513,9 +523,8 @@ public:
 
   lldb::SearchFilterSP GetSearchFilter() { return m_filter_sp; }
 
-private: // The target needs to manage adding & removing names.  It will do the
-         // checking for name validity as well.
-  bool AddName(llvm::StringRef new_name);
+private:
+  void AddName(llvm::StringRef new_name);
 
   void RemoveName(const char *name_to_remove) {
     if (name_to_remove)
@@ -576,6 +585,12 @@ public:
   static lldb::BreakpointSP CopyFromBreakpoint(lldb::TargetSP new_target,
       const Breakpoint &bp_to_copy_from);
 
+  /// Get statistics associated with this breakpoint in JSON format.
+  llvm::json::Value GetStatistics();
+
+  /// Get the time it took to resolve all locations in this breakpoint.
+  StatsDuration::Duration GetResolveTime() const { return m_resolve_time; }
+
 protected:
   friend class Target;
   // Protected Methods
@@ -622,7 +637,6 @@ private:
   Breakpoint(Target &new_target, const Breakpoint &bp_to_copy_from);
 
   // For Breakpoint only
-  bool m_being_created;
   bool
       m_hardware; // If this breakpoint is required to use a hardware breakpoint
   Target &m_target; // The target that holds this breakpoint.
@@ -640,8 +654,7 @@ private:
   // to skip certain breakpoint hits.  For instance, exception breakpoints use
   // this to limit the stop to certain exception classes, while leaving the
   // condition & callback free for user specification.
-  std::unique_ptr<BreakpointOptions>
-      m_options_up; // Settable breakpoint options
+  BreakpointOptions m_options; // Settable breakpoint options
   BreakpointLocationList
       m_locations; // The list of locations currently found for this breakpoint.
   std::string m_kind_description;
@@ -654,9 +667,11 @@ private:
 
   BreakpointName::Permissions m_permissions;
 
+  StatsDuration m_resolve_time;
+
   void SendBreakpointChangedEvent(lldb::BreakpointEventType eventKind);
 
-  void SendBreakpointChangedEvent(BreakpointEventData *data);
+  void SendBreakpointChangedEvent(const lldb::EventDataSP &breakpoint_data_sp);
 
   Breakpoint(const Breakpoint &) = delete;
   const Breakpoint &operator=(const Breakpoint &) = delete;

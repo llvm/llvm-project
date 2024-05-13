@@ -12,10 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -72,9 +73,8 @@ WebAssemblyLateEHPrepare::getMatchingEHPad(MachineInstr *MI) {
   MachineBasicBlock *EHPad = nullptr;
   while (!WL.empty()) {
     MachineBasicBlock *MBB = WL.pop_back_val();
-    if (Visited.count(MBB))
+    if (!Visited.insert(MBB).second)
       continue;
-    Visited.insert(MBB);
     if (MBB->isEHPad()) {
       if (EHPad && EHPad != MBB)
         return nullptr;

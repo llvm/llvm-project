@@ -1,5 +1,5 @@
-; RUN: opt < %s -adce -disable-output
-; RUN: opt < %s -adce -disable-output -adce-remove-loops
+; RUN: opt < %s -passes=adce -disable-output
+; RUN: opt < %s -passes=adce -disable-output -adce-remove-loops
 
 define void @test() {
         br label %BB3

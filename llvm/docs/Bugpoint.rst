@@ -158,9 +158,9 @@ non-obvious ways.  Here are some hints and tips:
   repeat until a bug is found or the user kills ``bugpoint``.
 
 * ``bugpoint`` can produce IR which contains long names. Run ``opt
-  -metarenamer`` over the IR to rename everything using easy-to-read,
-  metasyntactic names. Alternatively, run ``opt -strip -instnamer`` to rename
-  everything with very short (often purely numeric) names.
+  -passes=metarenamer`` over the IR to rename everything using easy-to-read,
+  metasyntactic names. Alternatively, run ``opt -passes=strip,instnamer`` to
+  rename everything with very short (often purely numeric) names.
 
 What to do when bugpoint isn't enough
 =====================================

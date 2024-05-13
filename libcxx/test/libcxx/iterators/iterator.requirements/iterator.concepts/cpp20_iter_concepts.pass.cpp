@@ -21,7 +21,9 @@
 
 #include "test_macros.h"
 
+#include <__type_traits/is_valid_expansion.h>
 #include <iterator>
+
 struct OtherTag : std::input_iterator_tag {};
 struct OtherTagTwo : std::output_iterator_tag {};
 

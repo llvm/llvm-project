@@ -48,7 +48,7 @@ struct Redecl {
   };
 
   int z; // expected-error{{duplicate member 'z'}}
-  void zz(); // expected-error{{duplicate member 'zz'}} 
+  void zz(void); // expected-error{{duplicate member 'zz'}} 
 };
 
 union { // expected-warning{{declaration does not declare anything}}
@@ -61,12 +61,12 @@ static union { // expected-warning{{declaration does not declare anything}}
   float float_val2;
 };
 
-void f() {
+void f(void) {
   int_val2 = 0; // expected-error{{use of undeclared identifier}}
   float_val2 = 0.0; // expected-error{{use of undeclared identifier}}
 }
 
-void g() {
+void g(void) {
   union { // expected-warning{{declaration does not declare anything}}
     int i;
     float f2;
@@ -75,10 +75,8 @@ void g() {
   f2 = 0.0; // expected-error{{use of undeclared identifier}}
 }
 
-// <rdar://problem/6483159>
 struct s0 { union { int f0; }; };
 
-// <rdar://problem/6481130>
 typedef struct { }; // expected-warning{{typedef requires a name}}
 
 // PR3675

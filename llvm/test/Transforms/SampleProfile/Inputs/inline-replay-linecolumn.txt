@@ -1,0 +1,2 @@
+remark: calls.cc:4:0: '_Z3subii' will not be inlined into '_Z3sumii' to match profiling context with (cost=Never) at callsite _Z3sumii:1:0;
+remark: calls.cc:10:0: '_Z3sumii' inlined into 'main' to match profiling context with (cost=45, threshold=337) at callsite main:3:0;

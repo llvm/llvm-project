@@ -7,84 +7,41 @@
 //===----------------------------------------------------------------------===//
 
 #include "SimplifyBooleanExprCheck.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/SaveAndRestore.h"
 
-#include <cassert>
+#include <optional>
 #include <string>
 #include <utility>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 
-StringRef getText(const MatchFinder::MatchResult &Result, SourceRange Range) {
+StringRef getText(const ASTContext &Context, SourceRange Range) {
   return Lexer::getSourceText(CharSourceRange::getTokenRange(Range),
-                              *Result.SourceManager,
-                              Result.Context->getLangOpts());
+                              Context.getSourceManager(),
+                              Context.getLangOpts());
 }
 
-template <typename T>
-StringRef getText(const MatchFinder::MatchResult &Result, T &Node) {
-  return getText(Result, Node.getSourceRange());
+template <typename T> StringRef getText(const ASTContext &Context, T &Node) {
+  return getText(Context, Node.getSourceRange());
 }
 
-const char ConditionThenStmtId[] = "if-bool-yields-then";
-const char ConditionElseStmtId[] = "if-bool-yields-else";
-const char TernaryId[] = "ternary-bool-yields-condition";
-const char TernaryNegatedId[] = "ternary-bool-yields-not-condition";
-const char IfReturnsBoolId[] = "if-return";
-const char IfReturnsNotBoolId[] = "if-not-return";
-const char ThenLiteralId[] = "then-literal";
-const char IfAssignVariableId[] = "if-assign-lvalue";
-const char IfAssignLocId[] = "if-assign-loc";
-const char IfAssignBoolId[] = "if-assign";
-const char IfAssignNotBoolId[] = "if-assign-not";
-const char IfAssignVarId[] = "if-assign-var";
-const char CompoundReturnId[] = "compound-return";
-const char CompoundBoolId[] = "compound-bool";
-const char CompoundNotBoolId[] = "compound-bool-not";
+} // namespace
 
-const char IfStmtId[] = "if";
-
-const char SimplifyOperatorDiagnostic[] =
+static constexpr char SimplifyOperatorDiagnostic[] =
     "redundant boolean literal supplied to boolean operator";
-const char SimplifyConditionDiagnostic[] =
+static constexpr char SimplifyConditionDiagnostic[] =
     "redundant boolean literal in if statement condition";
-const char SimplifyConditionalReturnDiagnostic[] =
+static constexpr char SimplifyConditionalReturnDiagnostic[] =
     "redundant boolean literal in conditional return statement";
 
-const Expr *getBoolLiteral(const MatchFinder::MatchResult &Result,
-                           StringRef Id) {
-  if (const Expr *Literal = Result.Nodes.getNodeAs<CXXBoolLiteralExpr>(Id))
-    return Literal->getBeginLoc().isMacroID() ? nullptr : Literal;
-  if (const auto *Negated = Result.Nodes.getNodeAs<UnaryOperator>(Id)) {
-    if (Negated->getOpcode() == UO_LNot &&
-        isa<CXXBoolLiteralExpr>(Negated->getSubExpr()))
-      return Negated->getBeginLoc().isMacroID() ? nullptr : Negated;
-  }
-  return nullptr;
-}
-
-internal::BindableMatcher<Stmt> literalOrNegatedBool(bool Value) {
-  return expr(
-      anyOf(cxxBoolLiteral(equals(Value)),
-            unaryOperator(hasUnaryOperand(cxxBoolLiteral(equals(!Value))),
-                          hasOperatorName("!"))));
-}
-
-internal::Matcher<Stmt> returnsBool(bool Value, StringRef Id = "ignored") {
-  auto SimpleReturnsBool = returnStmt(has(literalOrNegatedBool(Value).bind(Id)))
-                               .bind("returns-bool");
-  return anyOf(SimpleReturnsBool,
-               compoundStmt(statementCountIs(1), has(SimpleReturnsBool)));
-}
-
-bool needsParensAfterUnaryNegation(const Expr *E) {
+static bool needsParensAfterUnaryNegation(const Expr *E) {
   E = E->IgnoreImpCasts();
   if (isa<BinaryOperator>(E) || isa<ConditionalOperator>(E))
     return true;
@@ -96,39 +53,39 @@ bool needsParensAfterUnaryNegation(const Expr *E) {
   return false;
 }
 
-std::pair<BinaryOperatorKind, BinaryOperatorKind> Opposites[] = {
+static std::pair<BinaryOperatorKind, BinaryOperatorKind> Opposites[] = {
     {BO_LT, BO_GE}, {BO_GT, BO_LE}, {BO_EQ, BO_NE}};
 
-StringRef negatedOperator(const BinaryOperator *BinOp) {
+static StringRef negatedOperator(const BinaryOperator *BinOp) {
   const BinaryOperatorKind Opcode = BinOp->getOpcode();
   for (auto NegatableOp : Opposites) {
     if (Opcode == NegatableOp.first)
-      return BinOp->getOpcodeStr(NegatableOp.second);
+      return BinaryOperator::getOpcodeStr(NegatableOp.second);
     if (Opcode == NegatableOp.second)
-      return BinOp->getOpcodeStr(NegatableOp.first);
+      return BinaryOperator::getOpcodeStr(NegatableOp.first);
   }
-  return StringRef();
+  return {};
 }
 
-std::pair<OverloadedOperatorKind, StringRef> OperatorNames[] = {
+static std::pair<OverloadedOperatorKind, StringRef> OperatorNames[] = {
     {OO_EqualEqual, "=="},   {OO_ExclaimEqual, "!="}, {OO_Less, "<"},
     {OO_GreaterEqual, ">="}, {OO_Greater, ">"},       {OO_LessEqual, "<="}};
 
-StringRef getOperatorName(OverloadedOperatorKind OpKind) {
+static StringRef getOperatorName(OverloadedOperatorKind OpKind) {
   for (auto Name : OperatorNames) {
     if (Name.first == OpKind)
       return Name.second;
   }
 
-  return StringRef();
+  return {};
 }
 
-std::pair<OverloadedOperatorKind, OverloadedOperatorKind> OppositeOverloads[] =
-    {{OO_EqualEqual, OO_ExclaimEqual},
-     {OO_Less, OO_GreaterEqual},
-     {OO_Greater, OO_LessEqual}};
+static std::pair<OverloadedOperatorKind, OverloadedOperatorKind>
+    OppositeOverloads[] = {{OO_EqualEqual, OO_ExclaimEqual},
+                           {OO_Less, OO_GreaterEqual},
+                           {OO_Greater, OO_LessEqual}};
 
-StringRef negatedOperator(const CXXOperatorCallExpr *OpCall) {
+static StringRef negatedOperator(const CXXOperatorCallExpr *OpCall) {
   const OverloadedOperatorKind Opcode = OpCall->getOperator();
   for (auto NegatableOp : OppositeOverloads) {
     if (Opcode == NegatableOp.first)
@@ -136,17 +93,17 @@ StringRef negatedOperator(const CXXOperatorCallExpr *OpCall) {
     if (Opcode == NegatableOp.second)
       return getOperatorName(NegatableOp.first);
   }
-  return StringRef();
+  return {};
 }
 
-std::string asBool(StringRef Text, bool NeedsStaticCast) {
+static std::string asBool(StringRef Text, bool NeedsStaticCast) {
   if (NeedsStaticCast)
     return ("static_cast<bool>(" + Text + ")").str();
 
   return std::string(Text);
 }
 
-bool needsNullPtrComparison(const Expr *E) {
+static bool needsNullPtrComparison(const Expr *E) {
   if (const auto *ImpCast = dyn_cast<ImplicitCastExpr>(E))
     return ImpCast->getCastKind() == CK_PointerToBoolean ||
            ImpCast->getCastKind() == CK_MemberPointerToBoolean;
@@ -154,14 +111,14 @@ bool needsNullPtrComparison(const Expr *E) {
   return false;
 }
 
-bool needsZeroComparison(const Expr *E) {
+static bool needsZeroComparison(const Expr *E) {
   if (const auto *ImpCast = dyn_cast<ImplicitCastExpr>(E))
     return ImpCast->getCastKind() == CK_IntegralToBoolean;
 
   return false;
 }
 
-bool needsStaticCast(const Expr *E) {
+static bool needsStaticCast(const Expr *E) {
   if (const auto *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
     if (ImpCast->getCastKind() == CK_UserDefinedConversion &&
         ImpCast->getSubExpr()->getType()->isBooleanType()) {
@@ -180,31 +137,30 @@ bool needsStaticCast(const Expr *E) {
   return !E->getType()->isBooleanType();
 }
 
-std::string compareExpressionToConstant(const MatchFinder::MatchResult &Result,
-                                        const Expr *E, bool Negated,
-                                        const char *Constant) {
+static std::string compareExpressionToConstant(const ASTContext &Context,
+                                               const Expr *E, bool Negated,
+                                               const char *Constant) {
   E = E->IgnoreImpCasts();
   const std::string ExprText =
-      (isa<BinaryOperator>(E) ? ("(" + getText(Result, *E) + ")")
-                              : getText(Result, *E))
+      (isa<BinaryOperator>(E) ? ("(" + getText(Context, *E) + ")")
+                              : getText(Context, *E))
           .str();
   return ExprText + " " + (Negated ? "!=" : "==") + " " + Constant;
 }
 
-std::string compareExpressionToNullPtr(const MatchFinder::MatchResult &Result,
-                                       const Expr *E, bool Negated) {
-  const char *NullPtr =
-      Result.Context->getLangOpts().CPlusPlus11 ? "nullptr" : "NULL";
-  return compareExpressionToConstant(Result, E, Negated, NullPtr);
+static std::string compareExpressionToNullPtr(const ASTContext &Context,
+                                              const Expr *E, bool Negated) {
+  const char *NullPtr = Context.getLangOpts().CPlusPlus11 ? "nullptr" : "NULL";
+  return compareExpressionToConstant(Context, E, Negated, NullPtr);
 }
 
-std::string compareExpressionToZero(const MatchFinder::MatchResult &Result,
-                                    const Expr *E, bool Negated) {
-  return compareExpressionToConstant(Result, E, Negated, "0");
+static std::string compareExpressionToZero(const ASTContext &Context,
+                                           const Expr *E, bool Negated) {
+  return compareExpressionToConstant(Context, E, Negated, "0");
 }
 
-std::string replacementExpression(const MatchFinder::MatchResult &Result,
-                                  bool Negated, const Expr *E) {
+static std::string replacementExpression(const ASTContext &Context,
+                                         bool Negated, const Expr *E) {
   E = E->IgnoreParenBaseCasts();
   if (const auto *EC = dyn_cast<ExprWithCleanups>(E))
     E = EC->getSubExpr();
@@ -214,20 +170,20 @@ std::string replacementExpression(const MatchFinder::MatchResult &Result,
     if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
       if (UnOp->getOpcode() == UO_LNot) {
         if (needsNullPtrComparison(UnOp->getSubExpr()))
-          return compareExpressionToNullPtr(Result, UnOp->getSubExpr(), true);
+          return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), true);
 
         if (needsZeroComparison(UnOp->getSubExpr()))
-          return compareExpressionToZero(Result, UnOp->getSubExpr(), true);
+          return compareExpressionToZero(Context, UnOp->getSubExpr(), true);
 
-        return replacementExpression(Result, false, UnOp->getSubExpr());
+        return replacementExpression(Context, false, UnOp->getSubExpr());
       }
     }
 
     if (needsNullPtrComparison(E))
-      return compareExpressionToNullPtr(Result, E, false);
+      return compareExpressionToNullPtr(Context, E, false);
 
     if (needsZeroComparison(E))
-      return compareExpressionToZero(Result, E, false);
+      return compareExpressionToZero(Context, E, false);
 
     StringRef NegatedOperator;
     const Expr *LHS = nullptr;
@@ -244,20 +200,20 @@ std::string replacementExpression(const MatchFinder::MatchResult &Result,
       }
     }
     if (!NegatedOperator.empty() && LHS && RHS)
-      return (asBool((getText(Result, *LHS) + " " + NegatedOperator + " " +
-                      getText(Result, *RHS))
+      return (asBool((getText(Context, *LHS) + " " + NegatedOperator + " " +
+                      getText(Context, *RHS))
                          .str(),
                      NeedsStaticCast));
 
-    StringRef Text = getText(Result, *E);
+    StringRef Text = getText(Context, *E);
     if (!NeedsStaticCast && needsParensAfterUnaryNegation(E))
       return ("!(" + Text + ")").str();
 
     if (needsNullPtrComparison(E))
-      return compareExpressionToNullPtr(Result, E, false);
+      return compareExpressionToNullPtr(Context, E, false);
 
     if (needsZeroComparison(E))
-      return compareExpressionToZero(Result, E, false);
+      return compareExpressionToZero(Context, E, false);
 
     return ("!" + asBool(Text, NeedsStaticCast));
   }
@@ -265,65 +221,30 @@ std::string replacementExpression(const MatchFinder::MatchResult &Result,
   if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
     if (UnOp->getOpcode() == UO_LNot) {
       if (needsNullPtrComparison(UnOp->getSubExpr()))
-        return compareExpressionToNullPtr(Result, UnOp->getSubExpr(), false);
+        return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), false);
 
       if (needsZeroComparison(UnOp->getSubExpr()))
-        return compareExpressionToZero(Result, UnOp->getSubExpr(), false);
+        return compareExpressionToZero(Context, UnOp->getSubExpr(), false);
     }
   }
 
   if (needsNullPtrComparison(E))
-    return compareExpressionToNullPtr(Result, E, true);
+    return compareExpressionToNullPtr(Context, E, true);
 
   if (needsZeroComparison(E))
-    return compareExpressionToZero(Result, E, true);
+    return compareExpressionToZero(Context, E, true);
 
-  return asBool(getText(Result, *E), NeedsStaticCast);
+  return asBool(getText(Context, *E), NeedsStaticCast);
 }
 
-const Expr *stmtReturnsBool(const ReturnStmt *Ret, bool Negated) {
-  if (const auto *Bool = dyn_cast<CXXBoolLiteralExpr>(Ret->getRetValue())) {
-    if (Bool->getValue() == !Negated)
-      return Bool;
-  }
-  if (const auto *Unary = dyn_cast<UnaryOperator>(Ret->getRetValue())) {
-    if (Unary->getOpcode() == UO_LNot) {
-      if (const auto *Bool =
-              dyn_cast<CXXBoolLiteralExpr>(Unary->getSubExpr())) {
-        if (Bool->getValue() == Negated)
-          return Bool;
-      }
-    }
-  }
-
-  return nullptr;
-}
-
-const Expr *stmtReturnsBool(const IfStmt *IfRet, bool Negated) {
-  if (IfRet->getElse() != nullptr)
-    return nullptr;
-
-  if (const auto *Ret = dyn_cast<ReturnStmt>(IfRet->getThen()))
-    return stmtReturnsBool(Ret, Negated);
-
-  if (const auto *Compound = dyn_cast<CompoundStmt>(IfRet->getThen())) {
-    if (Compound->size() == 1) {
-      if (const auto *CompoundRet = dyn_cast<ReturnStmt>(Compound->body_back()))
-        return stmtReturnsBool(CompoundRet, Negated);
-    }
-  }
-
-  return nullptr;
-}
-
-bool containsDiscardedTokens(const MatchFinder::MatchResult &Result,
-                             CharSourceRange CharRange) {
+static bool containsDiscardedTokens(const ASTContext &Context,
+                                    CharSourceRange CharRange) {
   std::string ReplacementText =
-      Lexer::getSourceText(CharRange, *Result.SourceManager,
-                           Result.Context->getLangOpts())
+      Lexer::getSourceText(CharRange, Context.getSourceManager(),
+                           Context.getLangOpts())
           .str();
-  Lexer Lex(CharRange.getBegin(), Result.Context->getLangOpts(),
-            ReplacementText.data(), ReplacementText.data(),
+  Lexer Lex(CharRange.getBegin(), Context.getLangOpts(), ReplacementText.data(),
+            ReplacementText.data(),
             ReplacementText.data() + ReplacementText.size());
   Lex.SetCommentRetentionState(true);
 
@@ -336,32 +257,355 @@ bool containsDiscardedTokens(const MatchFinder::MatchResult &Result,
   return false;
 }
 
-} // namespace
-
 class SimplifyBooleanExprCheck::Visitor : public RecursiveASTVisitor<Visitor> {
- public:
-  Visitor(SimplifyBooleanExprCheck *Check,
-          const MatchFinder::MatchResult &Result)
-      : Check(Check), Result(Result) {}
+  using Base = RecursiveASTVisitor<Visitor>;
 
-  bool VisitBinaryOperator(BinaryOperator *Op) {
-    Check->reportBinOp(Result, Op);
+public:
+  Visitor(SimplifyBooleanExprCheck *Check, ASTContext &Context)
+      : Check(Check), Context(Context) {}
+
+  bool traverse() { return TraverseAST(Context); }
+
+  static bool shouldIgnore(Stmt *S) {
+    switch (S->getStmtClass()) {
+    case Stmt::ImplicitCastExprClass:
+    case Stmt::MaterializeTemporaryExprClass:
+    case Stmt::CXXBindTemporaryExprClass:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool dataTraverseStmtPre(Stmt *S) {
+    if (!S) {
+      return true;
+    }
+    if (Check->canBeBypassed(S))
+      return false;
+    if (!shouldIgnore(S))
+      StmtStack.push_back(S);
     return true;
   }
 
- private:
+  bool dataTraverseStmtPost(Stmt *S) {
+    if (S && !shouldIgnore(S)) {
+      assert(StmtStack.back() == S);
+      StmtStack.pop_back();
+    }
+    return true;
+  }
+
+  bool VisitBinaryOperator(const BinaryOperator *Op) const {
+    Check->reportBinOp(Context, Op);
+    return true;
+  }
+
+  // Extracts a bool if an expression is (true|false|!true|!false);
+  static std::optional<bool> getAsBoolLiteral(const Expr *E, bool FilterMacro) {
+    if (const auto *Bool = dyn_cast<CXXBoolLiteralExpr>(E)) {
+      if (FilterMacro && Bool->getBeginLoc().isMacroID())
+        return std::nullopt;
+      return Bool->getValue();
+    }
+    if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E)) {
+      if (FilterMacro && UnaryOp->getBeginLoc().isMacroID())
+        return std::nullopt;
+      if (UnaryOp->getOpcode() == UO_LNot)
+        if (std::optional<bool> Res = getAsBoolLiteral(
+                UnaryOp->getSubExpr()->IgnoreImplicit(), FilterMacro))
+          return !*Res;
+    }
+    return std::nullopt;
+  }
+
+  template <typename Node> struct NodeAndBool {
+    const Node *Item = nullptr;
+    bool Bool = false;
+
+    operator bool() const { return Item != nullptr; }
+  };
+
+  using ExprAndBool = NodeAndBool<Expr>;
+  using DeclAndBool = NodeAndBool<Decl>;
+
+  /// Detect's return (true|false|!true|!false);
+  static ExprAndBool parseReturnLiteralBool(const Stmt *S) {
+    const auto *RS = dyn_cast<ReturnStmt>(S);
+    if (!RS || !RS->getRetValue())
+      return {};
+    if (std::optional<bool> Ret =
+            getAsBoolLiteral(RS->getRetValue()->IgnoreImplicit(), false)) {
+      return {RS->getRetValue(), *Ret};
+    }
+    return {};
+  }
+
+  /// If \p S is not a \c CompoundStmt, applies F on \p S, otherwise if there is
+  /// only 1 statement in the \c CompoundStmt, applies F on that single
+  /// statement.
+  template <typename Functor>
+  static auto checkSingleStatement(Stmt *S, Functor F) -> decltype(F(S)) {
+    if (auto *CS = dyn_cast<CompoundStmt>(S)) {
+      if (CS->size() == 1)
+        return F(CS->body_front());
+      return {};
+    }
+    return F(S);
+  }
+
+  Stmt *parent() const {
+    return StmtStack.size() < 2 ? nullptr : StmtStack[StmtStack.size() - 2];
+  }
+
+  bool VisitIfStmt(IfStmt *If) {
+    // Skip any if's that have a condition var or an init statement, or are
+    // "if consteval" statements.
+    if (If->hasInitStorage() || If->hasVarStorage() || If->isConsteval())
+      return true;
+    /*
+     * if (true) ThenStmt(); -> ThenStmt();
+     * if (false) ThenStmt(); -> <Empty>;
+     * if (false) ThenStmt(); else ElseStmt() -> ElseStmt();
+     */
+    Expr *Cond = If->getCond()->IgnoreImplicit();
+    if (std::optional<bool> Bool = getAsBoolLiteral(Cond, true)) {
+      if (*Bool)
+        Check->replaceWithThenStatement(Context, If, Cond);
+      else
+        Check->replaceWithElseStatement(Context, If, Cond);
+    }
+
+    if (If->getElse()) {
+      /*
+       * if (Cond) return true; else return false; -> return Cond;
+       * if (Cond) return false; else return true; -> return !Cond;
+       */
+      if (ExprAndBool ThenReturnBool =
+              checkSingleStatement(If->getThen(), parseReturnLiteralBool)) {
+        ExprAndBool ElseReturnBool =
+            checkSingleStatement(If->getElse(), parseReturnLiteralBool);
+        if (ElseReturnBool && ThenReturnBool.Bool != ElseReturnBool.Bool) {
+          if (Check->ChainedConditionalReturn ||
+              !isa_and_nonnull<IfStmt>(parent())) {
+            Check->replaceWithReturnCondition(Context, If, ThenReturnBool.Item,
+                                              ElseReturnBool.Bool);
+          }
+        }
+      } else {
+        /*
+         * if (Cond) A = true; else A = false; -> A = Cond;
+         * if (Cond) A = false; else A = true; -> A = !Cond;
+         */
+        Expr *Var = nullptr;
+        SourceLocation Loc;
+        auto VarBoolAssignmentMatcher = [&Var,
+                                         &Loc](const Stmt *S) -> DeclAndBool {
+          const auto *BO = dyn_cast<BinaryOperator>(S);
+          if (!BO || BO->getOpcode() != BO_Assign)
+            return {};
+          std::optional<bool> RightasBool =
+              getAsBoolLiteral(BO->getRHS()->IgnoreImplicit(), false);
+          if (!RightasBool)
+            return {};
+          Expr *IgnImp = BO->getLHS()->IgnoreImplicit();
+          if (!Var) {
+            // We only need to track these for the Then branch.
+            Loc = BO->getRHS()->getBeginLoc();
+            Var = IgnImp;
+          }
+          if (auto *DRE = dyn_cast<DeclRefExpr>(IgnImp))
+            return {DRE->getDecl(), *RightasBool};
+          if (auto *ME = dyn_cast<MemberExpr>(IgnImp))
+            return {ME->getMemberDecl(), *RightasBool};
+          return {};
+        };
+        if (DeclAndBool ThenAssignment =
+                checkSingleStatement(If->getThen(), VarBoolAssignmentMatcher)) {
+          DeclAndBool ElseAssignment =
+              checkSingleStatement(If->getElse(), VarBoolAssignmentMatcher);
+          if (ElseAssignment.Item == ThenAssignment.Item &&
+              ElseAssignment.Bool != ThenAssignment.Bool) {
+            if (Check->ChainedConditionalAssignment ||
+                !isa_and_nonnull<IfStmt>(parent())) {
+              Check->replaceWithAssignment(Context, If, Var, Loc,
+                                           ElseAssignment.Bool);
+            }
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  bool VisitConditionalOperator(ConditionalOperator *Cond) {
+    /*
+     * Condition ? true : false; -> Condition
+     * Condition ? false : true; -> !Condition;
+     */
+    if (std::optional<bool> Then =
+            getAsBoolLiteral(Cond->getTrueExpr()->IgnoreImplicit(), false)) {
+      if (std::optional<bool> Else =
+              getAsBoolLiteral(Cond->getFalseExpr()->IgnoreImplicit(), false)) {
+        if (*Then != *Else)
+          Check->replaceWithCondition(Context, Cond, *Else);
+      }
+    }
+    return true;
+  }
+
+  bool VisitCompoundStmt(CompoundStmt *CS) {
+    if (CS->size() < 2)
+      return true;
+    bool CurIf = false, PrevIf = false;
+    for (auto First = CS->body_begin(), Second = std::next(First),
+              End = CS->body_end();
+         Second != End; ++Second, ++First) {
+      PrevIf = CurIf;
+      CurIf = isa<IfStmt>(*First);
+      ExprAndBool TrailingReturnBool = parseReturnLiteralBool(*Second);
+      if (!TrailingReturnBool)
+        continue;
+
+      if (CurIf) {
+        /*
+         * if (Cond) return true; return false; -> return Cond;
+         * if (Cond) return false; return true; -> return !Cond;
+         */
+        auto *If = cast<IfStmt>(*First);
+        if (!If->hasInitStorage() && !If->hasVarStorage() &&
+            !If->isConsteval()) {
+          ExprAndBool ThenReturnBool =
+              checkSingleStatement(If->getThen(), parseReturnLiteralBool);
+          if (ThenReturnBool &&
+              ThenReturnBool.Bool != TrailingReturnBool.Bool) {
+            if ((Check->ChainedConditionalReturn || !PrevIf) &&
+                If->getElse() == nullptr) {
+              Check->replaceCompoundReturnWithCondition(
+                  Context, cast<ReturnStmt>(*Second), TrailingReturnBool.Bool,
+                  If, ThenReturnBool.Item);
+            }
+          }
+        }
+      } else if (isa<LabelStmt, CaseStmt, DefaultStmt>(*First)) {
+        /*
+         * (case X|label_X|default): if (Cond) return BoolLiteral;
+         *                           return !BoolLiteral
+         */
+        Stmt *SubStmt =
+            isa<LabelStmt>(*First)  ? cast<LabelStmt>(*First)->getSubStmt()
+            : isa<CaseStmt>(*First) ? cast<CaseStmt>(*First)->getSubStmt()
+                                    : cast<DefaultStmt>(*First)->getSubStmt();
+        auto *SubIf = dyn_cast<IfStmt>(SubStmt);
+        if (SubIf && !SubIf->getElse() && !SubIf->hasInitStorage() &&
+            !SubIf->hasVarStorage() && !SubIf->isConsteval()) {
+          ExprAndBool ThenReturnBool =
+              checkSingleStatement(SubIf->getThen(), parseReturnLiteralBool);
+          if (ThenReturnBool &&
+              ThenReturnBool.Bool != TrailingReturnBool.Bool) {
+            Check->replaceCompoundReturnWithCondition(
+                Context, cast<ReturnStmt>(*Second), TrailingReturnBool.Bool,
+                SubIf, ThenReturnBool.Item);
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  bool isExpectedUnaryLNot(const Expr *E) {
+    return !Check->canBeBypassed(E) && isa<UnaryOperator>(E) &&
+           cast<UnaryOperator>(E)->getOpcode() == UO_LNot;
+  }
+
+  bool isExpectedBinaryOp(const Expr *E) {
+    const auto *BinaryOp = dyn_cast<BinaryOperator>(E);
+    return !Check->canBeBypassed(E) && BinaryOp && BinaryOp->isLogicalOp() &&
+           BinaryOp->getType()->isBooleanType();
+  }
+
+  template <typename Functor>
+  static bool checkEitherSide(const BinaryOperator *BO, Functor Func) {
+    return Func(BO->getLHS()) || Func(BO->getRHS());
+  }
+
+  bool nestedDemorgan(const Expr *E, unsigned NestingLevel) {
+    const auto *BO = dyn_cast<BinaryOperator>(E->IgnoreUnlessSpelledInSource());
+    if (!BO)
+      return false;
+    if (!BO->getType()->isBooleanType())
+      return false;
+    switch (BO->getOpcode()) {
+    case BO_LT:
+    case BO_GT:
+    case BO_LE:
+    case BO_GE:
+    case BO_EQ:
+    case BO_NE:
+      return true;
+    case BO_LAnd:
+    case BO_LOr:
+      return checkEitherSide(
+                 BO,
+                 [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
+             (NestingLevel &&
+              checkEitherSide(BO, [this, NestingLevel](const Expr *E) {
+                return nestedDemorgan(E, NestingLevel - 1);
+              }));
+    default:
+      return false;
+    }
+  }
+
+  bool TraverseUnaryOperator(UnaryOperator *Op) {
+    if (!Check->SimplifyDeMorgan || Op->getOpcode() != UO_LNot)
+      return Base::TraverseUnaryOperator(Op);
+    const Expr *SubImp = Op->getSubExpr()->IgnoreImplicit();
+    const auto *Parens = dyn_cast<ParenExpr>(SubImp);
+    const Expr *SubExpr =
+        Parens ? Parens->getSubExpr()->IgnoreImplicit() : SubImp;
+    if (!isExpectedBinaryOp(SubExpr))
+      return Base::TraverseUnaryOperator(Op);
+    const auto *BinaryOp = cast<BinaryOperator>(SubExpr);
+    if (Check->SimplifyDeMorganRelaxed ||
+        checkEitherSide(
+            BinaryOp,
+            [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
+        checkEitherSide(
+            BinaryOp, [this](const Expr *E) { return nestedDemorgan(E, 1); })) {
+      if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
+                                Parens) &&
+          !Check->areDiagsSelfContained()) {
+        llvm::SaveAndRestore RAII(IsProcessing, true);
+        return Base::TraverseUnaryOperator(Op);
+      }
+    }
+    return Base::TraverseUnaryOperator(Op);
+  }
+
+private:
+  bool IsProcessing = false;
   SimplifyBooleanExprCheck *Check;
-  const MatchFinder::MatchResult &Result;
+  SmallVector<Stmt *, 32> StmtStack;
+  ASTContext &Context;
 };
 
 SimplifyBooleanExprCheck::SimplifyBooleanExprCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      IgnoreMacros(Options.get("IgnoreMacros", false)),
       ChainedConditionalReturn(Options.get("ChainedConditionalReturn", false)),
       ChainedConditionalAssignment(
-          Options.get("ChainedConditionalAssignment", false)) {}
+          Options.get("ChainedConditionalAssignment", false)),
+      SimplifyDeMorgan(Options.get("SimplifyDeMorgan", true)),
+      SimplifyDeMorganRelaxed(Options.get("SimplifyDeMorganRelaxed", false)) {
+  if (SimplifyDeMorganRelaxed && !SimplifyDeMorgan)
+    configurationDiag("%0: 'SimplifyDeMorganRelaxed' cannot be enabled "
+                      "without 'SimplifyDeMorgan' enabled")
+        << Name;
+}
 
-bool containsBoolLiteral(const Expr *E) {
+static bool containsBoolLiteral(const Expr *E) {
   if (!E)
     return false;
   E = E->IgnoreParenImpCasts();
@@ -375,16 +619,16 @@ bool containsBoolLiteral(const Expr *E) {
   return false;
 }
 
-void SimplifyBooleanExprCheck::reportBinOp(
-    const MatchFinder::MatchResult &Result, const BinaryOperator *Op) {
+void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
+                                           const BinaryOperator *Op) {
   const auto *LHS = Op->getLHS()->IgnoreParenImpCasts();
   const auto *RHS = Op->getRHS()->IgnoreParenImpCasts();
 
-  const CXXBoolLiteralExpr *Bool;
+  const CXXBoolLiteralExpr *Bool = nullptr;
   const Expr *Other = nullptr;
-  if ((Bool = dyn_cast<CXXBoolLiteralExpr>(LHS)))
+  if ((Bool = dyn_cast<CXXBoolLiteralExpr>(LHS)) != nullptr)
     Other = RHS;
-  else if ((Bool = dyn_cast<CXXBoolLiteralExpr>(RHS)))
+  else if ((Bool = dyn_cast<CXXBoolLiteralExpr>(RHS)) != nullptr)
     Other = LHS;
   else
     return;
@@ -398,288 +642,333 @@ void SimplifyBooleanExprCheck::reportBinOp(
 
   bool BoolValue = Bool->getValue();
 
-  auto ReplaceWithExpression = [this, &Result, LHS, RHS,
+  auto ReplaceWithExpression = [this, &Context, LHS, RHS,
                                 Bool](const Expr *ReplaceWith, bool Negated) {
     std::string Replacement =
-        replacementExpression(Result, Negated, ReplaceWith);
+        replacementExpression(Context, Negated, ReplaceWith);
     SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
-    issueDiag(Result, Bool->getBeginLoc(), SimplifyOperatorDiagnostic, Range,
+    issueDiag(Context, Bool->getBeginLoc(), SimplifyOperatorDiagnostic, Range,
               Replacement);
   };
 
   switch (Op->getOpcode()) {
-    case BO_LAnd:
-      if (BoolValue) {
-        // expr && true -> expr
-        ReplaceWithExpression(Other, /*Negated=*/false);
-      } else {
-        // expr && false -> false
-        ReplaceWithExpression(Bool, /*Negated=*/false);
-      }
-      break;
-    case BO_LOr:
-      if (BoolValue) {
-        // expr || true -> true
-        ReplaceWithExpression(Bool, /*Negated=*/false);
-      } else {
-        // expr || false -> expr
-        ReplaceWithExpression(Other, /*Negated=*/false);
-      }
-      break;
-    case BO_EQ:
-      // expr == true -> expr, expr == false -> !expr
-      ReplaceWithExpression(Other, /*Negated=*/!BoolValue);
-      break;
-    case BO_NE:
-      // expr != true -> !expr, expr != false -> expr
-      ReplaceWithExpression(Other, /*Negated=*/BoolValue);
-      break;
-    default:
-      break;
+  case BO_LAnd:
+    if (BoolValue)
+      // expr && true -> expr
+      ReplaceWithExpression(Other, /*Negated=*/false);
+    else
+      // expr && false -> false
+      ReplaceWithExpression(Bool, /*Negated=*/false);
+    break;
+  case BO_LOr:
+    if (BoolValue)
+      // expr || true -> true
+      ReplaceWithExpression(Bool, /*Negated=*/false);
+    else
+      // expr || false -> expr
+      ReplaceWithExpression(Other, /*Negated=*/false);
+    break;
+  case BO_EQ:
+    // expr == true -> expr, expr == false -> !expr
+    ReplaceWithExpression(Other, /*Negated=*/!BoolValue);
+    break;
+  case BO_NE:
+    // expr != true -> !expr, expr != false -> expr
+    ReplaceWithExpression(Other, /*Negated=*/BoolValue);
+    break;
+  default:
+    break;
   }
 }
 
-void SimplifyBooleanExprCheck::matchBoolCondition(MatchFinder *Finder,
-                                                  bool Value,
-                                                  StringRef BooleanId) {
-  Finder->addMatcher(
-      ifStmt(hasCondition(literalOrNegatedBool(Value).bind(BooleanId)))
-          .bind(IfStmtId),
-      this);
-}
-
-void SimplifyBooleanExprCheck::matchTernaryResult(MatchFinder *Finder,
-                                                  bool Value,
-                                                  StringRef TernaryId) {
-  Finder->addMatcher(
-      conditionalOperator(hasTrueExpression(literalOrNegatedBool(Value)),
-                          hasFalseExpression(literalOrNegatedBool(!Value)))
-          .bind(TernaryId),
-      this);
-}
-
-void SimplifyBooleanExprCheck::matchIfReturnsBool(MatchFinder *Finder,
-                                                  bool Value, StringRef Id) {
-  if (ChainedConditionalReturn)
-    Finder->addMatcher(ifStmt(hasThen(returnsBool(Value, ThenLiteralId)),
-                              hasElse(returnsBool(!Value)))
-                           .bind(Id),
-                       this);
-  else
-    Finder->addMatcher(ifStmt(unless(hasParent(ifStmt())),
-                              hasThen(returnsBool(Value, ThenLiteralId)),
-                              hasElse(returnsBool(!Value)))
-                           .bind(Id),
-                       this);
-}
-
-void SimplifyBooleanExprCheck::matchIfAssignsBool(MatchFinder *Finder,
-                                                  bool Value, StringRef Id) {
-  auto VarAssign = declRefExpr(hasDeclaration(decl().bind(IfAssignVarId)));
-  auto VarRef = declRefExpr(hasDeclaration(equalsBoundNode(IfAssignVarId)));
-  auto MemAssign = memberExpr(hasDeclaration(decl().bind(IfAssignVarId)));
-  auto MemRef = memberExpr(hasDeclaration(equalsBoundNode(IfAssignVarId)));
-  auto SimpleThen =
-      binaryOperator(hasOperatorName("="), hasLHS(anyOf(VarAssign, MemAssign)),
-                     hasLHS(expr().bind(IfAssignVariableId)),
-                     hasRHS(literalOrNegatedBool(Value).bind(IfAssignLocId)));
-  auto Then = anyOf(SimpleThen, compoundStmt(statementCountIs(1),
-                                             hasAnySubstatement(SimpleThen)));
-  auto SimpleElse =
-      binaryOperator(hasOperatorName("="), hasLHS(anyOf(VarRef, MemRef)),
-                     hasRHS(literalOrNegatedBool(!Value)));
-  auto Else = anyOf(SimpleElse, compoundStmt(statementCountIs(1),
-                                             hasAnySubstatement(SimpleElse)));
-  if (ChainedConditionalAssignment)
-    Finder->addMatcher(ifStmt(hasThen(Then), hasElse(Else)).bind(Id), this);
-  else
-    Finder->addMatcher(
-        ifStmt(unless(hasParent(ifStmt())), hasThen(Then), hasElse(Else))
-            .bind(Id),
-        this);
-}
-
-void SimplifyBooleanExprCheck::matchCompoundIfReturnsBool(MatchFinder *Finder,
-                                                          bool Value,
-                                                          StringRef Id) {
-  Finder->addMatcher(
-      compoundStmt(
-          hasAnySubstatement(
-              ifStmt(hasThen(returnsBool(Value)), unless(hasElse(stmt())))),
-          hasAnySubstatement(returnStmt(has(literalOrNegatedBool(!Value)))
-                                 .bind(CompoundReturnId)))
-          .bind(Id),
-      this);
-}
-
 void SimplifyBooleanExprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "ChainedConditionalReturn", ChainedConditionalReturn);
   Options.store(Opts, "ChainedConditionalAssignment",
                 ChainedConditionalAssignment);
+  Options.store(Opts, "SimplifyDeMorgan", SimplifyDeMorgan);
+  Options.store(Opts, "SimplifyDeMorganRelaxed", SimplifyDeMorganRelaxed);
 }
 
 void SimplifyBooleanExprCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(translationUnitDecl().bind("top"), this);
-
-  matchBoolCondition(Finder, true, ConditionThenStmtId);
-  matchBoolCondition(Finder, false, ConditionElseStmtId);
-
-  matchTernaryResult(Finder, true, TernaryId);
-  matchTernaryResult(Finder, false, TernaryNegatedId);
-
-  matchIfReturnsBool(Finder, true, IfReturnsBoolId);
-  matchIfReturnsBool(Finder, false, IfReturnsNotBoolId);
-
-  matchIfAssignsBool(Finder, true, IfAssignBoolId);
-  matchIfAssignsBool(Finder, false, IfAssignNotBoolId);
-
-  matchCompoundIfReturnsBool(Finder, true, CompoundBoolId);
-  matchCompoundIfReturnsBool(Finder, false, CompoundNotBoolId);
+  Finder->addMatcher(translationUnitDecl(), this);
 }
 
 void SimplifyBooleanExprCheck::check(const MatchFinder::MatchResult &Result) {
-  if (Result.Nodes.getNodeAs<TranslationUnitDecl>("top"))
-    Visitor(this, Result).TraverseAST(*Result.Context);
-  else if (const Expr *TrueConditionRemoved =
-               getBoolLiteral(Result, ConditionThenStmtId))
-    replaceWithThenStatement(Result, TrueConditionRemoved);
-  else if (const Expr *FalseConditionRemoved =
-               getBoolLiteral(Result, ConditionElseStmtId))
-    replaceWithElseStatement(Result, FalseConditionRemoved);
-  else if (const auto *Ternary =
-               Result.Nodes.getNodeAs<ConditionalOperator>(TernaryId))
-    replaceWithCondition(Result, Ternary);
-  else if (const auto *TernaryNegated =
-               Result.Nodes.getNodeAs<ConditionalOperator>(TernaryNegatedId))
-    replaceWithCondition(Result, TernaryNegated, true);
-  else if (const auto *If = Result.Nodes.getNodeAs<IfStmt>(IfReturnsBoolId))
-    replaceWithReturnCondition(Result, If);
-  else if (const auto *IfNot =
-               Result.Nodes.getNodeAs<IfStmt>(IfReturnsNotBoolId))
-    replaceWithReturnCondition(Result, IfNot, true);
-  else if (const auto *IfAssign =
-               Result.Nodes.getNodeAs<IfStmt>(IfAssignBoolId))
-    replaceWithAssignment(Result, IfAssign);
-  else if (const auto *IfAssignNot =
-               Result.Nodes.getNodeAs<IfStmt>(IfAssignNotBoolId))
-    replaceWithAssignment(Result, IfAssignNot, true);
-  else if (const auto *Compound =
-               Result.Nodes.getNodeAs<CompoundStmt>(CompoundBoolId))
-    replaceCompoundReturnWithCondition(Result, Compound);
-  else if (const auto *Compound =
-               Result.Nodes.getNodeAs<CompoundStmt>(CompoundNotBoolId))
-    replaceCompoundReturnWithCondition(Result, Compound, true);
+  Visitor(this, *Result.Context).traverse();
 }
 
-void SimplifyBooleanExprCheck::issueDiag(
-    const ast_matchers::MatchFinder::MatchResult &Result, SourceLocation Loc,
-    StringRef Description, SourceRange ReplacementRange,
-    StringRef Replacement) {
+bool SimplifyBooleanExprCheck::canBeBypassed(const Stmt *S) const {
+  return IgnoreMacros && S->getBeginLoc().isMacroID();
+}
+
+void SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,
+                                         SourceLocation Loc,
+                                         StringRef Description,
+                                         SourceRange ReplacementRange,
+                                         StringRef Replacement) {
   CharSourceRange CharRange =
       Lexer::makeFileCharRange(CharSourceRange::getTokenRange(ReplacementRange),
-                               *Result.SourceManager, getLangOpts());
+                               Context.getSourceManager(), getLangOpts());
 
   DiagnosticBuilder Diag = diag(Loc, Description);
-  if (!containsDiscardedTokens(Result, CharRange))
+  if (!containsDiscardedTokens(Context, CharRange))
     Diag << FixItHint::CreateReplacement(CharRange, Replacement);
 }
 
 void SimplifyBooleanExprCheck::replaceWithThenStatement(
-    const MatchFinder::MatchResult &Result, const Expr *TrueConditionRemoved) {
-  const auto *IfStatement = Result.Nodes.getNodeAs<IfStmt>(IfStmtId);
-  issueDiag(Result, TrueConditionRemoved->getBeginLoc(),
-            SimplifyConditionDiagnostic, IfStatement->getSourceRange(),
-            getText(Result, *IfStatement->getThen()));
+    const ASTContext &Context, const IfStmt *IfStatement,
+    const Expr *BoolLiteral) {
+  issueDiag(Context, BoolLiteral->getBeginLoc(), SimplifyConditionDiagnostic,
+            IfStatement->getSourceRange(),
+            getText(Context, *IfStatement->getThen()));
 }
 
 void SimplifyBooleanExprCheck::replaceWithElseStatement(
-    const MatchFinder::MatchResult &Result, const Expr *FalseConditionRemoved) {
-  const auto *IfStatement = Result.Nodes.getNodeAs<IfStmt>(IfStmtId);
+    const ASTContext &Context, const IfStmt *IfStatement,
+    const Expr *BoolLiteral) {
   const Stmt *ElseStatement = IfStatement->getElse();
-  issueDiag(Result, FalseConditionRemoved->getBeginLoc(),
-            SimplifyConditionDiagnostic, IfStatement->getSourceRange(),
-            ElseStatement ? getText(Result, *ElseStatement) : "");
+  issueDiag(Context, BoolLiteral->getBeginLoc(), SimplifyConditionDiagnostic,
+            IfStatement->getSourceRange(),
+            ElseStatement ? getText(Context, *ElseStatement) : "");
 }
 
 void SimplifyBooleanExprCheck::replaceWithCondition(
-    const MatchFinder::MatchResult &Result, const ConditionalOperator *Ternary,
+    const ASTContext &Context, const ConditionalOperator *Ternary,
     bool Negated) {
   std::string Replacement =
-      replacementExpression(Result, Negated, Ternary->getCond());
-  issueDiag(Result, Ternary->getTrueExpr()->getBeginLoc(),
+      replacementExpression(Context, Negated, Ternary->getCond());
+  issueDiag(Context, Ternary->getTrueExpr()->getBeginLoc(),
             "redundant boolean literal in ternary expression result",
             Ternary->getSourceRange(), Replacement);
 }
 
 void SimplifyBooleanExprCheck::replaceWithReturnCondition(
-    const MatchFinder::MatchResult &Result, const IfStmt *If, bool Negated) {
+    const ASTContext &Context, const IfStmt *If, const Expr *BoolLiteral,
+    bool Negated) {
   StringRef Terminator = isa<CompoundStmt>(If->getElse()) ? ";" : "";
-  std::string Condition = replacementExpression(Result, Negated, If->getCond());
+  std::string Condition =
+      replacementExpression(Context, Negated, If->getCond());
   std::string Replacement = ("return " + Condition + Terminator).str();
-  SourceLocation Start =
-      Result.Nodes.getNodeAs<CXXBoolLiteralExpr>(ThenLiteralId)->getBeginLoc();
-  issueDiag(Result, Start, SimplifyConditionalReturnDiagnostic,
+  SourceLocation Start = BoolLiteral->getBeginLoc();
+  issueDiag(Context, Start, SimplifyConditionalReturnDiagnostic,
             If->getSourceRange(), Replacement);
 }
 
 void SimplifyBooleanExprCheck::replaceCompoundReturnWithCondition(
-    const MatchFinder::MatchResult &Result, const CompoundStmt *Compound,
-    bool Negated) {
-  const auto *Ret = Result.Nodes.getNodeAs<ReturnStmt>(CompoundReturnId);
+    const ASTContext &Context, const ReturnStmt *Ret, bool Negated,
+    const IfStmt *If, const Expr *ThenReturn) {
+  const std::string Replacement =
+      "return " + replacementExpression(Context, Negated, If->getCond());
+  issueDiag(Context, ThenReturn->getBeginLoc(),
+            SimplifyConditionalReturnDiagnostic,
+            SourceRange(If->getBeginLoc(), Ret->getEndLoc()), Replacement);
+}
 
-  // The body shouldn't be empty because the matcher ensures that it must
-  // contain at least two statements:
-  // 1) A `return` statement returning a boolean literal `false` or `true`
-  // 2) An `if` statement with no `else` clause that consists of a single
-  //    `return` statement returning the opposite boolean literal `true` or
-  //    `false`.
-  assert(Compound->size() >= 2);
-  const IfStmt *BeforeIf = nullptr;
-  CompoundStmt::const_body_iterator Current = Compound->body_begin();
-  CompoundStmt::const_body_iterator After = Compound->body_begin();
-  for (++After; After != Compound->body_end() && *Current != Ret;
-       ++Current, ++After) {
-    if (const auto *If = dyn_cast<IfStmt>(*Current)) {
-      if (const Expr *Lit = stmtReturnsBool(If, Negated)) {
-        if (*After == Ret) {
-          if (!ChainedConditionalReturn && BeforeIf)
-            continue;
+void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
+                                                     const IfStmt *IfAssign,
+                                                     const Expr *Var,
+                                                     SourceLocation Loc,
+                                                     bool Negated) {
+  SourceRange Range = IfAssign->getSourceRange();
+  StringRef VariableName = getText(Context, *Var);
+  StringRef Terminator = isa<CompoundStmt>(IfAssign->getElse()) ? ";" : "";
+  std::string Condition =
+      replacementExpression(Context, Negated, IfAssign->getCond());
+  std::string Replacement =
+      (VariableName + " = " + Condition + Terminator).str();
+  issueDiag(Context, Loc, "redundant boolean literal in conditional assignment",
+            Range, Replacement);
+}
 
-          const Expr *Condition = If->getCond();
-          std::string Replacement =
-              "return " + replacementExpression(Result, Negated, Condition);
-          issueDiag(
-              Result, Lit->getBeginLoc(), SimplifyConditionalReturnDiagnostic,
-              SourceRange(If->getBeginLoc(), Ret->getEndLoc()), Replacement);
-          return;
+/// Swaps a \c BinaryOperator opcode from `&&` to `||` or vice-versa.
+static bool flipDemorganOperator(llvm::SmallVectorImpl<FixItHint> &Output,
+                                 const BinaryOperator *BO) {
+  assert(BO->isLogicalOp());
+  if (BO->getOperatorLoc().isMacroID())
+    return true;
+  Output.push_back(FixItHint::CreateReplacement(
+      BO->getOperatorLoc(), BO->getOpcode() == BO_LAnd ? "||" : "&&"));
+  return false;
+}
+
+static BinaryOperatorKind getDemorganFlippedOperator(BinaryOperatorKind BO) {
+  assert(BinaryOperator::isLogicalOp(BO));
+  return BO == BO_LAnd ? BO_LOr : BO_LAnd;
+}
+
+static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
+                             const ASTContext &Ctx, const Expr *E,
+                             std::optional<BinaryOperatorKind> OuterBO);
+
+/// Inverts \p BinOp, Removing \p Parens if they exist and are safe to remove.
+/// returns \c true if there is any issue building the Fixes, \c false
+/// otherwise.
+static bool
+flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
+                           const ASTContext &Ctx, const BinaryOperator *BinOp,
+                           std::optional<BinaryOperatorKind> OuterBO,
+                           const ParenExpr *Parens = nullptr) {
+  switch (BinOp->getOpcode()) {
+  case BO_LAnd:
+  case BO_LOr: {
+    // if we have 'a && b' or 'a || b', use demorgan to flip it to '!a || !b'
+    // or '!a && !b'.
+    if (flipDemorganOperator(Fixes, BinOp))
+      return true;
+    auto NewOp = getDemorganFlippedOperator(BinOp->getOpcode());
+    if (OuterBO) {
+      // The inner parens are technically needed in a fix for
+      // `!(!A1 && !(A2 || A3)) -> (A1 || (A2 && A3))`,
+      // however this would trip the LogicalOpParentheses warning.
+      // FIXME: Make this user configurable or detect if that warning is
+      // enabled.
+      constexpr bool LogicalOpParentheses = true;
+      if (((*OuterBO == NewOp) || (!LogicalOpParentheses &&
+                                   (*OuterBO == BO_LOr && NewOp == BO_LAnd))) &&
+          Parens) {
+        if (!Parens->getLParen().isMacroID() &&
+            !Parens->getRParen().isMacroID()) {
+          Fixes.push_back(FixItHint::CreateRemoval(Parens->getLParen()));
+          Fixes.push_back(FixItHint::CreateRemoval(Parens->getRParen()));
         }
-
-        BeforeIf = If;
       }
-    } else {
-      BeforeIf = nullptr;
+      if (*OuterBO == BO_LAnd && NewOp == BO_LOr && !Parens) {
+        Fixes.push_back(FixItHint::CreateInsertion(BinOp->getBeginLoc(), "("));
+        Fixes.push_back(FixItHint::CreateInsertion(
+            Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0,
+                                       Ctx.getSourceManager(),
+                                       Ctx.getLangOpts()),
+            ")"));
+      }
     }
+    if (flipDemorganSide(Fixes, Ctx, BinOp->getLHS(), NewOp) ||
+        flipDemorganSide(Fixes, Ctx, BinOp->getRHS(), NewOp))
+      return true;
+    return false;
+  };
+  case BO_LT:
+  case BO_GT:
+  case BO_LE:
+  case BO_GE:
+  case BO_EQ:
+  case BO_NE:
+    // For comparison operators, just negate the comparison.
+    if (BinOp->getOperatorLoc().isMacroID())
+      return true;
+    Fixes.push_back(FixItHint::CreateReplacement(
+        BinOp->getOperatorLoc(),
+        BinaryOperator::getOpcodeStr(
+            BinaryOperator::negateComparisonOp(BinOp->getOpcode()))));
+    return false;
+  default:
+    // for any other binary operator, just use logical not and wrap in
+    // parens.
+    if (Parens) {
+      if (Parens->getBeginLoc().isMacroID())
+        return true;
+      Fixes.push_back(FixItHint::CreateInsertion(Parens->getBeginLoc(), "!"));
+    } else {
+      if (BinOp->getBeginLoc().isMacroID() || BinOp->getEndLoc().isMacroID())
+        return true;
+      Fixes.append({FixItHint::CreateInsertion(BinOp->getBeginLoc(), "!("),
+                    FixItHint::CreateInsertion(
+                        Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0,
+                                                   Ctx.getSourceManager(),
+                                                   Ctx.getLangOpts()),
+                        ")")});
+    }
+    break;
+  }
+  return false;
+}
+
+static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
+                             const ASTContext &Ctx, const Expr *E,
+                             std::optional<BinaryOperatorKind> OuterBO) {
+  if (isa<UnaryOperator>(E) && cast<UnaryOperator>(E)->getOpcode() == UO_LNot) {
+    //  if we have a not operator, '!a', just remove the '!'.
+    if (cast<UnaryOperator>(E)->getOperatorLoc().isMacroID())
+      return true;
+    Fixes.push_back(
+        FixItHint::CreateRemoval(cast<UnaryOperator>(E)->getOperatorLoc()));
+    return false;
+  }
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+    return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO);
+  }
+  if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr())) {
+      return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
+    }
+  }
+  // Fallback case just insert a logical not operator.
+  if (E->getBeginLoc().isMacroID())
+    return true;
+  Fixes.push_back(FixItHint::CreateInsertion(E->getBeginLoc(), "!"));
+  return false;
+}
+
+static bool shouldRemoveParens(const Stmt *Parent,
+                               BinaryOperatorKind NewOuterBinary,
+                               const ParenExpr *Parens) {
+  if (!Parens)
+    return false;
+  if (!Parent)
+    return true;
+  switch (Parent->getStmtClass()) {
+  case Stmt::BinaryOperatorClass: {
+    const auto *BO = cast<BinaryOperator>(Parent);
+    if (BO->isAssignmentOp())
+      return true;
+    if (BO->isCommaOp())
+      return true;
+    if (BO->getOpcode() == NewOuterBinary)
+      return true;
+    return false;
+  }
+  case Stmt::UnaryOperatorClass:
+  case Stmt::CXXRewrittenBinaryOperatorClass:
+    return false;
+  default:
+    return true;
   }
 }
 
-void SimplifyBooleanExprCheck::replaceWithAssignment(
-    const MatchFinder::MatchResult &Result, const IfStmt *IfAssign,
-    bool Negated) {
-  SourceRange Range = IfAssign->getSourceRange();
-  StringRef VariableName =
-      getText(Result, *Result.Nodes.getNodeAs<Expr>(IfAssignVariableId));
-  StringRef Terminator = isa<CompoundStmt>(IfAssign->getElse()) ? ";" : "";
-  std::string Condition =
-      replacementExpression(Result, Negated, IfAssign->getCond());
-  std::string Replacement =
-      (VariableName + " = " + Condition + Terminator).str();
-  SourceLocation Location =
-      Result.Nodes.getNodeAs<CXXBoolLiteralExpr>(IfAssignLocId)->getBeginLoc();
-  issueDiag(Result, Location,
-            "redundant boolean literal in conditional assignment", Range,
-            Replacement);
-}
+bool SimplifyBooleanExprCheck::reportDeMorgan(const ASTContext &Context,
+                                              const UnaryOperator *Outer,
+                                              const BinaryOperator *Inner,
+                                              bool TryOfferFix,
+                                              const Stmt *Parent,
+                                              const ParenExpr *Parens) {
+  assert(Outer);
+  assert(Inner);
+  assert(Inner->isLogicalOp());
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+  auto Diag =
+      diag(Outer->getBeginLoc(),
+           "boolean expression can be simplified by DeMorgan's theorem");
+  Diag << Outer->getSourceRange();
+  // If we have already fixed this with a previous fix, don't attempt any fixes
+  if (!TryOfferFix)
+    return false;
+  if (Outer->getOperatorLoc().isMacroID())
+    return false;
+  SmallVector<FixItHint> Fixes;
+  auto NewOpcode = getDemorganFlippedOperator(Inner->getOpcode());
+  if (shouldRemoveParens(Parent, NewOpcode, Parens)) {
+    Fixes.push_back(FixItHint::CreateRemoval(
+        SourceRange(Outer->getOperatorLoc(), Parens->getLParen())));
+    Fixes.push_back(FixItHint::CreateRemoval(Parens->getRParen()));
+  } else {
+    Fixes.push_back(FixItHint::CreateRemoval(Outer->getOperatorLoc()));
+  }
+  if (flipDemorganOperator(Fixes, Inner))
+    return false;
+  if (flipDemorganSide(Fixes, Context, Inner->getLHS(), NewOpcode) ||
+      flipDemorganSide(Fixes, Context, Inner->getRHS(), NewOpcode))
+    return false;
+  Diag << Fixes;
+  return true;
+}
+} // namespace clang::tidy::readability

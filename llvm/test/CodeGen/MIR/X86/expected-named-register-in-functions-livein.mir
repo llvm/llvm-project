@@ -22,5 +22,5 @@ body: |
 
     %0 = COPY %edi
     %eax = COPY %0
-    RETQ %eax
+    RET64 %eax
 ...

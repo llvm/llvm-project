@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=200 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=200 | FileCheck %s
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=200 | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -8,18 +8,18 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; Though @unknown_global is initialized with constant values, we can't consider
 ; it as a constant, so we shouldn't unroll the loop.
 ; CHECK-LABEL: @foo
-; CHECK: %array_const_idx = getelementptr inbounds [9 x i32], [9 x i32]* @unknown_global, i64 0, i64 %iv
-define i32 @foo(i32* noalias nocapture readonly %src) {
+; CHECK: %array_const_idx = getelementptr inbounds [9 x i32], ptr @unknown_global, i64 0, i64 %iv
+define i32 @foo(ptr noalias nocapture readonly %src) {
 entry:
   br label %loop
 
 loop:                                                ; preds = %loop, %entry
   %iv = phi i64 [ 0, %entry ], [ %inc, %loop ]
   %r  = phi i32 [ 0, %entry ], [ %add, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %src, i64 %iv
-  %src_element = load i32, i32* %arrayidx, align 4
-  %array_const_idx = getelementptr inbounds [9 x i32], [9 x i32]* @unknown_global, i64 0, i64 %iv
-  %const_array_element = load i32, i32* %array_const_idx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %src, i64 %iv
+  %src_element = load i32, ptr %arrayidx, align 4
+  %array_const_idx = getelementptr inbounds [9 x i32], ptr @unknown_global, i64 0, i64 %iv
+  %const_array_element = load i32, ptr %array_const_idx, align 4
   %mul = mul nsw i32 %src_element, %const_array_element
   %add = add nsw i32 %mul, %r
   %inc = add nuw nsw i64 %iv, 1
@@ -34,18 +34,18 @@ loop.end:                                            ; preds = %loop
 ; Similarly, we can't consider 'weak' symbols as a known constant value, so we
 ; shouldn't unroll the loop.
 ; CHECK-LABEL: @foo2
-; CHECK: %array_const_idx = getelementptr inbounds [9 x i32], [9 x i32]* @weak_constant, i64 0, i64 %iv
-define i32 @foo2(i32* noalias nocapture readonly %src) {
+; CHECK: %array_const_idx = getelementptr inbounds [9 x i32], ptr @weak_constant, i64 0, i64 %iv
+define i32 @foo2(ptr noalias nocapture readonly %src) {
 entry:
   br label %loop
 
 loop:                                                ; preds = %loop, %entry
   %iv = phi i64 [ 0, %entry ], [ %inc, %loop ]
   %r  = phi i32 [ 0, %entry ], [ %add, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %src, i64 %iv
-  %src_element = load i32, i32* %arrayidx, align 4
-  %array_const_idx = getelementptr inbounds [9 x i32], [9 x i32]* @weak_constant, i64 0, i64 %iv
-  %const_array_element = load i32, i32* %array_const_idx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %src, i64 %iv
+  %src_element = load i32, ptr %arrayidx, align 4
+  %array_const_idx = getelementptr inbounds [9 x i32], ptr @weak_constant, i64 0, i64 %iv
+  %const_array_element = load i32, ptr %array_const_idx, align 4
   %mul = mul nsw i32 %src_element, %const_array_element
   %add = add nsw i32 %mul, %r
   %inc = add nuw nsw i64 %iv, 1
@@ -62,15 +62,15 @@ loop.end:                                            ; preds = %loop
 ; clean up almost entire loop. Make sure that we do not unroll such loop.
 ; CHECK-LABEL: @foo3
 ; CHECK: br i1 %exitcond, label %loop.end, label %loop.header
-define i32 @foo3(i32* noalias nocapture readonly %src) {
+define i32 @foo3(ptr noalias nocapture readonly %src) {
 entry:
   br label %loop.header
 
 loop.header:
   %iv = phi i64 [ 0, %entry ], [ %inc, %loop.latch ]
   %r1  = phi i32 [ 0, %entry ], [ %r3, %loop.latch ]
-  %arrayidx = getelementptr inbounds i32, i32* %src, i64 %iv
-  %src_element = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %src, i64 %iv
+  %src_element = load i32, ptr %arrayidx, align 4
   %cmp = icmp eq i32 0, %src_element
   br i1 %cmp, label %loop.if, label %loop.latch
 

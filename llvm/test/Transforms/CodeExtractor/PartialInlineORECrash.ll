@@ -1,42 +1,42 @@
-; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -inline-threshold=0 -disable-output
+; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -inline-threshold=0 -disable-output
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-%0 = type { i32 (...)**, %1, %1, %3, %3, %3, i8, float, %4*, %5*, %5*, i32, i32, i32, i32, float, float, float, i8*, i32, float, float, float, i8, [7 x i8] }
+%0 = type { ptr, %1, %1, %3, %3, %3, i8, float, ptr, ptr, ptr, i32, i32, i32, i32, float, float, float, ptr, i32, float, float, float, i8, [7 x i8] }
 %1 = type { %2, %3 }
 %2 = type { [3 x %3] }
 %3 = type { [4 x float] }
-%4 = type <{ i8*, i16, i16, [4 x i8], i8*, i32, %3, %3, [4 x i8] }>
-%5 = type { i32 (...)**, i32, i8* }
-%6 = type <{ %7, [4 x i8], %19*, %20*, %30, %35, %3, float, i8, i8, i8, i8, %37, i32, [4 x i8] }>
-%7 = type <{ %8, [7 x i8], void (%16*, float)*, void (%16*, float)*, i8*, %17 }>
-%8 = type <{ i32 (...)**, %9, %11*, %12, %13*, %14*, %15*, i8 }>
-%9 = type <{ i8, [3 x i8], i32, i32, [4 x i8], %0**, i8, [7 x i8] }>
-%11 = type { i32 (...)** }
-%12 = type { float, i32, i32, float, i8, %15*, i8, i8, i8, float, i8, float, %13* }
+%4 = type <{ ptr, i16, i16, [4 x i8], ptr, i32, %3, %3, [4 x i8] }>
+%5 = type { ptr, i32, ptr }
+%6 = type <{ %7, [4 x i8], ptr, ptr, %30, %35, %3, float, i8, i8, i8, i8, %37, i32, [4 x i8] }>
+%7 = type <{ %8, [7 x i8], ptr, ptr, ptr, %17 }>
+%8 = type <{ ptr, %9, ptr, %12, ptr, ptr, ptr, i8 }>
+%9 = type <{ i8, [3 x i8], i32, i32, [4 x i8], ptr, i8, [7 x i8] }>
+%11 = type { ptr }
+%12 = type { float, i32, i32, float, i8, ptr, i8, i8, i8, float, i8, float, ptr }
 %13 = type opaque
-%14 = type { i32 (...)** }
-%15 = type { i32 (...)** }
-%16 = type <{ %8, [7 x i8], void (%16*, float)*, void (%16*, float)*, i8*, %17, [4 x i8] }>
+%14 = type { ptr }
+%15 = type { ptr }
+%16 = type <{ %8, [7 x i8], ptr, ptr, ptr, %17, [4 x i8] }>
 %17 = type { %18 }
 %18 = type { float, float, float, float, float, i32, float, float, float, float, float, i32, float, float, float, i32, i32 }
-%19 = type { i32 (...)** }
-%20 = type <{ i32 (...)**, %21, %25, %9, i8, [7 x i8] }>
+%19 = type { ptr }
+%20 = type <{ ptr, %21, %25, %9, i8, [7 x i8] }>
 %21 = type { %22 }
-%22 = type <{ i8, [3 x i8], i32, i32, [4 x i8], %24*, i8, [7 x i8] }>
+%22 = type <{ i8, [3 x i8], i32, i32, [4 x i8], ptr, i8, [7 x i8] }>
 %24 = type { i32, i32 }
-%25 = type <{ i8, [3 x i8], i32, i32, [4 x i8], %27**, i8, [7 x i8] }>
-%27 = type { i32, [4 x i8], [4 x %29], i8*, i8*, i32, float, float, i32 }
-%29 = type <{ %3, %3, %3, %3, %3, float, float, float, i32, i32, i32, i32, [4 x i8], i8*, float, i8, [3 x i8], float, float, i32, %3, %3, [4 x i8] }>
-%30 = type <{ i8, [3 x i8], i32, i32, [4 x i8], %32**, i8, [7 x i8] }>
-%32 = type { i32 (...)**, i32, i32, i32, i8, %33*, %33*, float, float, %3, %3, %3 }
-%33 = type <{ %0, %2, %3, %3, float, %3, %3, %3, %3, %3, %3, %3, float, float, i8, [3 x i8], float, float, float, float, float, float, %34*, %30, i32, i32, i32, [4 x i8] }>
-%34 = type { i32 (...)** }
-%35 = type <{ i8, [3 x i8], i32, i32, [4 x i8], %33**, i8, [7 x i8] }>
-%37 = type <{ i8, [3 x i8], i32, i32, [4 x i8], %39**, i8, [7 x i8] }>
-%39 = type { i32 (...)** }
-%40 = type <{ i32 (...)**, %9, %11*, %12, %13*, %14*, %15*, i8, [7 x i8] }>
+%25 = type <{ i8, [3 x i8], i32, i32, [4 x i8], ptr, i8, [7 x i8] }>
+%27 = type { i32, [4 x i8], [4 x %29], ptr, ptr, i32, float, float, i32 }
+%29 = type <{ %3, %3, %3, %3, %3, float, float, float, i32, i32, i32, i32, [4 x i8], ptr, float, i8, [3 x i8], float, float, i32, %3, %3, [4 x i8] }>
+%30 = type <{ i8, [3 x i8], i32, i32, [4 x i8], ptr, i8, [7 x i8] }>
+%32 = type { ptr, i32, i32, i32, i8, ptr, ptr, float, float, %3, %3, %3 }
+%33 = type <{ %0, %2, %3, %3, float, %3, %3, %3, %3, %3, %3, %3, float, float, i8, [3 x i8], float, float, float, float, float, float, ptr, %30, i32, i32, i32, [4 x i8] }>
+%34 = type { ptr }
+%35 = type <{ i8, [3 x i8], i32, i32, [4 x i8], ptr, i8, [7 x i8] }>
+%37 = type <{ i8, [3 x i8], i32, i32, [4 x i8], ptr, i8, [7 x i8] }>
+%39 = type { ptr }
+%40 = type <{ ptr, %9, ptr, %12, ptr, ptr, ptr, i8, [7 x i8] }>
 
 @gDisableDeactivation = external local_unnamed_addr global i8, align 1
 @0 = external dso_local unnamed_addr constant [29 x i8], align 1
@@ -46,66 +46,66 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 declare void @_ZN15CProfileManager12Stop_ProfileEv() local_unnamed_addr
 
-declare void @_ZN15CProfileManager13Start_ProfileEPKc(i8*) local_unnamed_addr
+declare void @_ZN15CProfileManager13Start_ProfileEPKc(ptr) local_unnamed_addr
 
-declare void @_ZN17btCollisionObject18setActivationStateEi(%0*, i32 signext) local_unnamed_addr
+declare void @_ZN17btCollisionObject18setActivationStateEi(ptr, i32 signext) local_unnamed_addr
 
-declare hidden void @__clang_call_terminate(i8*) local_unnamed_addr
+declare hidden void @__clang_call_terminate(ptr) local_unnamed_addr
 
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #0
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) #0
 
-define void @_ZN23btDiscreteDynamicsWorld28internalSingleStepSimulationEf(%6*, float) unnamed_addr align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !prof !27 {
-  invoke void null(%6* nonnull %0, float %1)
+define void @_ZN23btDiscreteDynamicsWorld28internalSingleStepSimulationEf(ptr, float) unnamed_addr align 2 personality ptr @__gxx_personality_v0 !prof !27 {
+  invoke void null(ptr nonnull %0, float %1)
           to label %5 unwind label %3
 
 ; <label>:3:                                      ; preds = %2
-  %4 = landingpad { i8*, i32 }
+  %4 = landingpad { ptr, i32 }
           cleanup
   br label %16
 
 ; <label>:5:                                      ; preds = %2
-  %6 = invoke %15* null(%40* null)
+  %6 = invoke ptr null(ptr null)
           to label %11 unwind label %13
 
 ; <label>:7:                                      ; preds = %5
-  invoke void null(%40* null)
+  invoke void null(ptr null)
           to label %8 unwind label %13
 
 ; <label>:8:                                      ; preds = %7
-  invoke void null(%6* nonnull %0)
+  invoke void null(ptr nonnull %0)
           to label %9 unwind label %13
 
 ; <label>:9:                                      ; preds = %8
-  invoke void null(%6* nonnull %0, %17* nonnull dereferenceable(68) null)
+  invoke void null(ptr nonnull %0, ptr nonnull dereferenceable(68) null)
           to label %10 unwind label %13
 
 ; <label>:10:                                     ; preds = %9
-  invoke void null(%6* nonnull %0, float %1)
+  invoke void null(ptr nonnull %0, float %1)
           to label %11 unwind label %13
 
 ; <label>:11:
-  invoke void @_ZN23btDiscreteDynamicsWorld21updateActivationStateEf(%6* nonnull %0, float %1)
+  invoke void @_ZN23btDiscreteDynamicsWorld21updateActivationStateEf(ptr nonnull %0, float %1)
           to label %12 unwind label %13
 
 ; <label>:12:
-  ret void  
- 
+  ret void
+
 ; <label>:13:
-  %14 = landingpad { i8*, i32 }
+  %14 = landingpad { ptr, i32 }
           cleanup
-  %15 = extractvalue { i8*, i32 } %14, 0
+  %15 = extractvalue { ptr, i32 } %14, 0
   br label %16
 
 
 ; <label>:16:
   call void @_ZN15CProfileManager12Stop_ProfileEv()
-  resume { i8*, i32 } zeroinitializer
+  resume { ptr, i32 } zeroinitializer
 }
 
-define void @_ZN23btDiscreteDynamicsWorld21updateActivationStateEf(%6* nocapture readonly, float) local_unnamed_addr align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !prof !27 {
+define void @_ZN23btDiscreteDynamicsWorld21updateActivationStateEf(ptr nocapture readonly, float) local_unnamed_addr align 2 personality ptr @__gxx_personality_v0 !prof !27 {
   %3 = icmp sgt i32 0, 0
   br i1 %3, label %4, label %5, !prof !29
 
@@ -116,17 +116,17 @@ define void @_ZN23btDiscreteDynamicsWorld21updateActivationStateEf(%6* nocapture
   ret void
 
 ; <label>:6:                                      ; preds = %4
-  invoke void @_ZN17btCollisionObject18setActivationStateEi(%0* nonnull null, i32 signext 0)
+  invoke void @_ZN17btCollisionObject18setActivationStateEi(ptr nonnull null, i32 signext 0)
           to label %7 unwind label %8
 
 ; <label>:7:                                      ; preds = %6
-  invoke void @_ZN17btCollisionObject18setActivationStateEi(%0* nonnull null, i32 signext 1)
+  invoke void @_ZN17btCollisionObject18setActivationStateEi(ptr nonnull null, i32 signext 1)
           to label %5 unwind label %8
 
 ; <label>:8:                                      ; preds = %7, %6
-  %9 = landingpad { i8*, i32 }
+  %9 = landingpad { ptr, i32 }
           cleanup
-  resume { i8*, i32 } %9
+  resume { ptr, i32 } %9
 }
 
 ; Function Attrs: noreturn nounwind

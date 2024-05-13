@@ -1,4 +1,4 @@
-//===-- RISCVAsmBackend.h - RISCV Assembler Backend -----------------------===//
+//===-- RISCVAsmBackend.h - RISC-V Assembler Backend ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,34 +27,17 @@ class RISCVAsmBackend : public MCAsmBackend {
   bool Is64Bit;
   bool ForceRelocs = false;
   const MCTargetOptions &TargetOptions;
-  RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options)
-      : MCAsmBackend(support::little), STI(STI), OSABI(OSABI), Is64Bit(Is64Bit),
-        TargetOptions(Options) {
-    TargetABI = RISCVABI::computeTargetABI(
-        STI.getTargetTriple(), STI.getFeatureBits(), Options.getABIName());
+      : MCAsmBackend(llvm::endianness::little, RISCV::fixup_riscv_relax),
+        STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
     RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
   }
-  ~RISCVAsmBackend() override {}
+  ~RISCVAsmBackend() override = default;
 
   void setForceRelocs() { ForceRelocs = true; }
-
-  // Returns true if relocations will be forced for shouldForceRelocation by
-  // default. This will be true if relaxation is enabled or had previously
-  // been enabled.
-  bool willForceRelocations() const {
-    return ForceRelocs || STI.getFeatureBits()[RISCV::FeatureRelax];
-  }
-
-  // Generate diff expression relocations if the relax feature is enabled or had
-  // previously been enabled, otherwise it is safe for the assembler to
-  // calculate these internally.
-  bool requiresDiffExpressionRelocations() const override {
-    return willForceRelocations();
-  }
 
   // Return Size with extra Nop Bytes for alignment directive in code section.
   bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
@@ -67,8 +50,12 @@ public:
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
                            const MCFixup &Fixup, const MCFragment *DF,
-                           const MCValue &Target, uint64_t &Value,
-                           bool &WasForced) override;
+                           const MCValue &Target, const MCSubtargetInfo *STI,
+                           uint64_t &Value, bool &WasForced) override;
+
+  bool handleAddSubRelocations(const MCAsmLayout &Layout, const MCFragment &F,
+                               const MCFixup &Fixup, const MCValue &Target,
+                               uint64_t &FixedValue) const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -79,7 +66,8 @@ public:
   createObjectTargetWriter() const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
@@ -97,7 +85,7 @@ public:
     return RISCV::NumTargetFixupKinds;
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
@@ -108,10 +96,17 @@ public:
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF, MCAsmLayout &Layout,
+                          bool &WasRelaxed) const override;
+  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
+                     bool &WasRelaxed) const override;
+  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
+                                    int64_t &Value) const override;
+
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
-  RISCVABI::ABI getTargetABI() const { return TargetABI; }
 };
 }
 

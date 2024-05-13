@@ -24,16 +24,15 @@
 
 void add_one(float *b, int dm)
 {
-  // CK1:     [[BP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to float**
-  // CK1:     store float* [[B_ADDR:%.+]], float** [[CBP]]
+  // CK1:     [[BP:%.+]] = getelementptr inbounds [1 x ptr], ptr %{{.+}}, i32 0, i32 0
+  // CK1:     store ptr [[B_ADDR:%.+]], ptr [[BP]]
   // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE00]]
-  // CK1:     [[VAL:%.+]] = load float*, float** [[CBP]],
-  // CK1-NOT: store float* [[VAL]], float** {{%.+}},
-  // CK1:     store float* [[VAL]], float** [[PVT:%.+]],
-  // CK1:     [[TT:%.+]] = load float*, float** [[PVT]],
-  // CK1:     call i32 @__tgt_target{{.+}}[[MTYPE01]]
-  // CK1:     call i32 @__tgt_target{{.+}}[[MTYPE02]]
+  // CK1:     [[VAL:%.+]] = load ptr, ptr [[BP]],
+  // CK1-NOT: store ptr [[VAL]], ptr {{%.+}},
+  // CK1:     store ptr [[VAL]], ptr [[PVT:%.+]],
+  // CK1:     [[TT:%.+]] = load ptr, ptr [[PVT]],
+  // CK1:     call i32 @__tgt_target{{.+}}
+  // CK1:     call i32 @__tgt_target{{.+}}
   // CK1:     call void @__tgt_target_data_end{{.+}}[[MTYPE00]]
 #pragma omp target data map(tofrom:b[:1]) use_device_ptr(b) if(dm == 0)
   {

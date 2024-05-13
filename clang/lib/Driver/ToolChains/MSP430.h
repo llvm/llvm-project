@@ -10,9 +10,9 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSP430_H
 
 #include "Gnu.h"
-#include "InputInfo.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/StringRef.h"
@@ -37,7 +37,9 @@ public:
                              Action::OffloadKind) const override;
 
   bool isPICDefault() const override { return false; }
-  bool isPIEDefault() const override { return false; }
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return false;
+  }
   bool isPICDefaultForced() const override { return true; }
 
   UnwindLibType
@@ -57,7 +59,7 @@ private:
 namespace tools {
 namespace msp430 {
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("MSP430::Linker", "msp430-elf-ld", TC) {}
   bool hasIntegratedCPP() const override { return false; }

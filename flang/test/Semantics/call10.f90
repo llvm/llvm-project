@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test 15.7 (C1583-C1590, C1592-C1599) constraints and restrictions
 ! for pure procedures.
 ! (C1591 is tested in call11.f90; C1594 in call12.f90.)
@@ -16,6 +16,25 @@ module m
   end type
 
   real, volatile, target :: volatile
+
+  interface
+    ! Ensure no errors for "ignored" declarations in a pure interface.
+    ! These declarations do not contribute to the characteristics of
+    ! the procedure and must not elicit spurious errors about being used
+    ! in a pure procedure.
+    pure subroutine s05a
+      import polyAlloc
+      real, save :: v1
+      real :: v2 = 0.
+      real :: v3
+      data v3/0./
+      real :: v4
+      common /blk/ v4
+      save /blk/
+      type(polyAlloc) :: v5
+      real, volatile :: v6
+    end subroutine
+  end interface
 
  contains
 
@@ -85,19 +104,17 @@ module m
   pure subroutine s05 ! C1589
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
     real, save :: v1
-    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
+    !ERROR: A pure subprogram may not initialize a variable
     real :: v2 = 0.
-    !TODO: once we have DATA: !ERROR: A pure subprogram may not have a variable with the SAVE attribute
+    !ERROR: A pure subprogram may not initialize a variable
     real :: v3
     data v3/0./
-    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
     real :: v4
     common /blk/ v4
-    save /blk/
     block
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
       real, save :: v5
-    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
+    !ERROR: A pure subprogram may not initialize a variable
       real :: v6 = 0.
     end block
   end subroutine
@@ -138,10 +155,12 @@ module m
   end subroutine
   pure subroutine s11(to) ! C1596
     ! Implicit deallocation at the end of the subroutine
-    !ERROR: Deallocation of polymorphic object 'auto%a' is not permitted in a pure subprogram
+    !ERROR: 'auto' may not be a local variable in a pure subprogram
+    !BECAUSE: 'auto' has polymorphic component '%a' in a pure subprogram
     type(polyAlloc) :: auto
     type(polyAlloc), intent(in out) :: to
-    !ERROR: Deallocation of polymorphic non-coarray component '%a' is not permitted in a pure subprogram
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'to' has polymorphic component '%a' in a pure subprogram
     to = auto
   end subroutine
   pure subroutine s12
@@ -184,7 +203,6 @@ module m
   pure subroutine s14
     integer :: img, nimgs, i[*], tmp
                                    ! implicit sync all
-    !ERROR: Procedure 'this_image' referenced in pure subprogram 's14' must be pure too
     img = this_image()
     nimgs = num_images()
     i = img                       ! i is ready to use

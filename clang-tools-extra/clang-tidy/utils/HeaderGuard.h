@@ -12,31 +12,20 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 /// Finds and fixes header guards.
-/// The check supports these options:
-///   - `HeaderFileExtensions`: a semicolon-separated list of filename
-///     extensions of header files (The filename extension should not contain
-///     "." prefix). ";h;hh;hpp;hxx" by default.
-///
-///     For extension-less header files, using an empty string or leaving an
-///     empty string between ";" if there are other filename extensions.
 class HeaderGuardCheck : public ClangTidyCheck {
 public:
   HeaderGuardCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
-            "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
-    utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                               HeaderFileExtensions,
-                               utils::defaultFileExtensionDelimiters());
-  }
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+        HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
+
+  /// Ensure that the provided header guard is a non-reserved identifier.
+  std::string sanitizeHeaderGuard(StringRef Guard);
 
   /// Returns ``true`` if the check should suggest inserting a trailing comment
   /// on the ``#endif`` of the header guard. It will use the same name as
@@ -56,12 +45,9 @@ public:
                                      StringRef OldGuard = StringRef()) = 0;
 
 private:
-  std::string RawStringHeaderFileExtensions;
-  utils::FileExtensionsSet HeaderFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
 };
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_HEADERGUARD_H

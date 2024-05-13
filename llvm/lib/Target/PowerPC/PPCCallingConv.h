@@ -31,6 +31,9 @@ bool RetCC_PPC_Cold(unsigned ValNo, MVT ValVT, MVT LocVT,
 bool CC_PPC32_SVR4(unsigned ValNo, MVT ValVT, MVT LocVT,
                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                    CCState &State);
+bool CC_PPC64_ELF(unsigned ValNo, MVT ValVT, MVT LocVT,
+                  CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                  CCState &State);
 bool CC_PPC64_ELF_FIS(unsigned ValNo, MVT ValVT, MVT LocVT,
                       CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                       CCState &State);

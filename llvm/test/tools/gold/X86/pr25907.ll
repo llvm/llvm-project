@@ -8,7 +8,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@main.L = internal unnamed_addr constant [3 x i8*] [i8* blockaddress(@main, %L1), i8* blockaddress(@main, %L2), i8* null], align 16
+@main.L = internal unnamed_addr constant [3 x ptr] [ptr blockaddress(@main, %L1), ptr blockaddress(@main, %L2), ptr null], align 16
 
 define i32 @main() #0 {
 entry:
@@ -18,9 +18,9 @@ L1:                                               ; preds = %entry, %L1
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %L1 ]
   %inc = add i32 %i.0, 1
   %idxprom = zext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds [3 x i8*], [3 x i8*]* @main.L, i64 0, i64 %idxprom
-  %0 = load i8*, i8** %arrayidx, align 8, !tbaa !1
-  indirectbr i8* %0, [label %L1, label %L2]
+  %arrayidx = getelementptr inbounds [3 x ptr], ptr @main.L, i64 0, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8, !tbaa !1
+  indirectbr ptr %0, [label %L1, label %L2]
 
 L2:                                               ; preds = %L1
   ret i32 0

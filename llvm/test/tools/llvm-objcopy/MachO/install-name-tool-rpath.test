@@ -127,16 +127,16 @@ LoadCommands:
   - cmd:             LC_RPATH
     cmdsize:         32
     path:            12
-    PayloadString:   '@executable_a/.'
+    Content:         '@executable_a/.'
   - cmd:             LC_RPATH
     cmdsize:         40
     path:            12
-    PayloadString:   '@executable_short_test/.'
+    Content:         '@executable_short_test/.'
   - cmd:             LC_RPATH
     cmdsize:         40
     path:            12
-    PayloadString:   '@executable_long_test/.'
+    Content:         '@executable_long_test/.'
   - cmd:             LC_RPATH
     cmdsize:         32
     path:            12
-    PayloadString:   '@executable_d/.'
+    Content:         '@executable_d/.'

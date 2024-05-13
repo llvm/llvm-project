@@ -1,9 +1,5 @@
 // RUN: touch %t.o
 
-// RUN: %clang -target arm64-apple-ios12.3 -fuse-ld=lld.darwinold \
-// RUN:   -isysroot %S/Inputs/iPhoneOS13.0.sdk -mlinker-version=0 \
-// RUN:   -### %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=LINKER-OLD %s
 // RUN: %clang -target arm64-apple-ios12.3 -fuse-ld= \
 // RUN:   -isysroot %S/Inputs/iPhoneOS13.0.sdk -mlinker-version=400 \
 // RUN:   -### %t.o 2>&1 \

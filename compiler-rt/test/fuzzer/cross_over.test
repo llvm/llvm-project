@@ -1,3 +1,5 @@
+# For IOS, we fail to permute the run lines properly (rdar://99889376)
+XFAIL: ios && !iossim
 # Tests CrossOverTest.
 # We want to make sure that the test can find the input
 # ABCDEFGHIJ when given two other inputs in the seed corpus:

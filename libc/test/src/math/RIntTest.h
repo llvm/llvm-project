@@ -9,37 +9,45 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 
-#include "utils/FPUtil/FEnv.h"
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/TestHelpers.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/Test.h"
 
-#include <fenv.h>
-#include <math.h>
+#include "hdr/fenv_macros.h"
+#include "hdr/math_macros.h"
 #include <stdio.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-static constexpr int roundingModes[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
-                                         FE_TONEAREST};
+static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
+                                          FE_TONEAREST};
 
 template <typename T>
-class RIntTestTemplate : public __llvm_libc::testing::Test {
+class RIntTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   typedef T (*RIntFunc)(T);
 
 private:
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
 
-  const T zero = T(FPBits::zero());
-  const T negZero = T(FPBits::negZero());
-  const T inf = T(FPBits::inf());
-  const T negInf = T(FPBits::negInf());
-  const T nan = T(FPBits::buildNaN(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
-  static inline mpfr::RoundingMode toMPFRRoundingMode(int mode) {
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
+
+  static inline mpfr::RoundingMode to_mpfr_rounding_mode(int mode) {
     switch (mode) {
     case FE_UPWARD:
       return mpfr::RoundingMode::Upward;
@@ -56,72 +64,70 @@ private:
 
 public:
   void testSpecialNumbers(RIntFunc func) {
-    for (int mode : roundingModes) {
-      __llvm_libc::fputil::setRound(mode);
+    for (int mode : ROUNDING_MODES) {
+      LIBC_NAMESPACE::fputil::set_round(mode);
       ASSERT_FP_EQ(inf, func(inf));
-      ASSERT_FP_EQ(negInf, func(negInf));
+      ASSERT_FP_EQ(neg_inf, func(neg_inf));
       ASSERT_FP_EQ(nan, func(nan));
       ASSERT_FP_EQ(zero, func(zero));
-      ASSERT_FP_EQ(negZero, func(negZero));
+      ASSERT_FP_EQ(neg_zero, func(neg_zero));
     }
   }
 
   void testRoundNumbers(RIntFunc func) {
-    for (int mode : roundingModes) {
-      __llvm_libc::fputil::setRound(mode);
-      mpfr::RoundingMode mpfrMode = toMPFRRoundingMode(mode);
-      ASSERT_FP_EQ(func(T(1.0)), mpfr::Round(T(1.0), mpfrMode));
-      ASSERT_FP_EQ(func(T(-1.0)), mpfr::Round(T(-1.0), mpfrMode));
-      ASSERT_FP_EQ(func(T(10.0)), mpfr::Round(T(10.0), mpfrMode));
-      ASSERT_FP_EQ(func(T(-10.0)), mpfr::Round(T(-10.0), mpfrMode));
-      ASSERT_FP_EQ(func(T(1234.0)), mpfr::Round(T(1234.0), mpfrMode));
-      ASSERT_FP_EQ(func(T(-1234.0)), mpfr::Round(T(-1234.0), mpfrMode));
+    for (int mode : ROUNDING_MODES) {
+      LIBC_NAMESPACE::fputil::set_round(mode);
+      mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
+      ASSERT_FP_EQ(func(T(1.0)), mpfr::round(T(1.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-1.0)), mpfr::round(T(-1.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(10.0)), mpfr::round(T(10.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-10.0)), mpfr::round(T(-10.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(1234.0)), mpfr::round(T(1234.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-1234.0)), mpfr::round(T(-1234.0), mpfr_mode));
     }
   }
 
   void testFractions(RIntFunc func) {
-    for (int mode : roundingModes) {
-      __llvm_libc::fputil::setRound(mode);
-      mpfr::RoundingMode mpfrMode = toMPFRRoundingMode(mode);
-      ASSERT_FP_EQ(func(T(0.5)), mpfr::Round(T(0.5), mpfrMode));
-      ASSERT_FP_EQ(func(T(-0.5)), mpfr::Round(T(-0.5), mpfrMode));
-      ASSERT_FP_EQ(func(T(0.115)), mpfr::Round(T(0.115), mpfrMode));
-      ASSERT_FP_EQ(func(T(-0.115)), mpfr::Round(T(-0.115), mpfrMode));
-      ASSERT_FP_EQ(func(T(0.715)), mpfr::Round(T(0.715), mpfrMode));
-      ASSERT_FP_EQ(func(T(-0.715)), mpfr::Round(T(-0.715), mpfrMode));
+    for (int mode : ROUNDING_MODES) {
+      LIBC_NAMESPACE::fputil::set_round(mode);
+      mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
+      ASSERT_FP_EQ(func(T(0.5)), mpfr::round(T(0.5), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-0.5)), mpfr::round(T(-0.5), mpfr_mode));
+      ASSERT_FP_EQ(func(T(0.115)), mpfr::round(T(0.115), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-0.115)), mpfr::round(T(-0.115), mpfr_mode));
+      ASSERT_FP_EQ(func(T(0.715)), mpfr::round(T(0.715), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-0.715)), mpfr::round(T(-0.715), mpfr_mode));
     }
   }
 
   void testSubnormalRange(RIntFunc func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step =
-        (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
-    for (UIntType i = FPBits::minSubnormal; i <= FPBits::maxSubnormal;
-         i += step) {
-      T x = T(FPBits(i));
-      for (int mode : roundingModes) {
-        __llvm_libc::fputil::setRound(mode);
-        mpfr::RoundingMode mpfrMode = toMPFRRoundingMode(mode);
-        ASSERT_FP_EQ(func(x), mpfr::Round(x, mpfrMode));
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
+      T x = FPBits(i).get_val();
+      for (int mode : ROUNDING_MODES) {
+        LIBC_NAMESPACE::fputil::set_round(mode);
+        mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
+        ASSERT_FP_EQ(func(x), mpfr::round(x, mpfr_mode));
       }
     }
   }
 
   void testNormalRange(RIntFunc func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
-    for (UIntType i = FPBits::minNormal; i <= FPBits::maxNormal; i += step) {
-      T x = T(FPBits(i));
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (StorageType i = MIN_NORMAL; i <= MAX_NORMAL; i += STEP) {
+      T x = FPBits(i).get_val();
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
       if (isnan(x)) {
         continue;
       }
 
-      for (int mode : roundingModes) {
-        __llvm_libc::fputil::setRound(mode);
-        mpfr::RoundingMode mpfrMode = toMPFRRoundingMode(mode);
-        ASSERT_FP_EQ(func(x), mpfr::Round(x, mpfrMode));
+      for (int mode : ROUNDING_MODES) {
+        LIBC_NAMESPACE::fputil::set_round(mode);
+        mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
+        ASSERT_FP_EQ(func(x), mpfr::round(x, mpfr_mode));
       }
     }
   }

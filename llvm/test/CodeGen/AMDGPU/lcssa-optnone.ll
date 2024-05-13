@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -O0 -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -O0 -o - %s | FileCheck %s
 
 ; CHECK-LABEL: non_uniform_loop
 ; CHECK: s_endpgm
-define amdgpu_kernel void @non_uniform_loop(float addrspace(1)* %array) {
+define amdgpu_kernel void @non_uniform_loop(ptr addrspace(1) %array) {
 entry:
   %w = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %for.cond

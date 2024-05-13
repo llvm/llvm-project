@@ -12,7 +12,7 @@
 define i8 @scalar_i8(i8 %x, i8 %y) nounwind {
 ; X86-LABEL: scalar_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    incb %al
 ; X86-NEXT:    retl

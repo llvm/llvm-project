@@ -13,6 +13,13 @@ let Definition = "interpreter" in {
     Global,
     DefaultFalse,
     Desc<"If true, LLDB will save the session's transcripts before quitting.">;
+  def OpenTranscriptInEditor: Property<"open-transcript-in-editor", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, LLDB will open the saved session's transcripts in the external editor.">;
+  def SaveSessionDirectory: Property<"save-session-directory", "FileSpec">,
+    DefaultStringValue<"">,
+    Desc<"A path where LLDB will save the session's transcripts. This is particularly useful when you can't set the session file, for example when using `save-session-on-quit`.">;
   def StopCmdSourceOnError: Property<"stop-command-source-on-error", "Boolean">,
     Global,
     DefaultTrue,
@@ -33,4 +40,8 @@ let Definition = "interpreter" in {
     Global,
     DefaultTrue,
     Desc<"If true, LLDB will repeat the previous command if no command was passed to the interpreter. If false, LLDB won't repeat the previous command but only return a new prompt.">;
+  def RequireCommandOverwrite: Property<"require-overwrite", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, require --overwrite in 'command script add' before overwriting existing user commands.">;
 }

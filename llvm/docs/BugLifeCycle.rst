@@ -16,9 +16,10 @@ consistency helps reporters, developers and others to gain a better
 understanding of what a particular bug state actually means and what to expect
 might happen next.
 
-At the same time, we aim to not over-specify the life cycle of bugs in the
-`the LLVM Bug Tracking System <https://bugs.llvm.org/enter_bug.cgi>`_, as the
-overall goal is to make it easier to work with and understand the bug reports.
+At the same time, we aim to not over-specify the life cycle of bugs in
+`the LLVM Bug Tracking System <https://github.com/llvm/llvm-project/issues>`_,
+as the overall goal is to make it easier to work with and understand the bug
+reports.
 
 The main parts of the life cycle documented here are:
 
@@ -27,12 +28,10 @@ The main parts of the life cycle documented here are:
 #. `Actively working on fixing`_
 #. `Closing`_
 
-Furthermore, some of the metadata in the bug tracker, such as who to notify on
-newly reported bugs or what the breakdown into products & components is we use,
-needs to be maintained. See the following for details:
+Furthermore, some of the metadata in the bug tracker, such as what labels we
+use, needs to be maintained. See the following for details:
 
-#. `Maintenance of Bug products/component metadata`_
-#. `Maintenance of cc-by-default settings`_
+#. `Maintenance of metadata`_
 
 
 .. _Reporting:
@@ -42,48 +41,56 @@ Reporting bugs
 
 See :doc:`HowToSubmitABug` on further details on how to submit good bug reports.
 
-Make sure that you have one or more people on cc on the bug report that you
-think will react to it. We aim to automatically add specific people on cc for
-most products/components, but may not always succeed in doing so.
-
-If you know the area of LLVM code the root cause of the bug is in, good
-candidates to add as cc may be the same people you'd ask for a code review in
-that area. See :ref:`finding-potential-reviewers` for more details.
-
+You can apply `labels <https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels>`_
+to the bug to provide extra information to make the bug easier to discover, such
+as a label for the part of the project the bug pertains to.
 
 .. _Triaging:
 
 Triaging bugs
 =============
 
-Bugs with status NEW indicate that they still need to be triaged.
-When triage is complete, the status of the bug is moved to CONFIRMED.
+Open bugs that have not been marked with the ``confirmed`` label are bugs that
+still need to be triaged. When triage is complete, the ``confirmed`` label
+should be added along with any other labels that help to classify the report,
+unless the issue is being :ref:`closed<Closing>`.
 
 The goal of triaging a bug is to make sure a newly reported bug ends up in a
-good, actionable, state. Try to answer the following questions while triaging.
+good, actionable state. Try to answer the following questions while triaging:
 
 * Is the reported behavior actually wrong?
 
   * E.g. does a miscompile example depend on undefined behavior?
 
-* Can you easily reproduce the bug?
+* Can you reproduce the bug from the details in the report?
 
-  * If not, are there reasonable excuses why it cannot easily be reproduced?
+  * If not, is there a reasonable explanation why it cannot be reproduced?
 
 * Is it related to an already reported bug?
 
-  * Use the "See also"/"depends on"/"blocks" fields if so.
-  * Close it as a duplicate if so, pointing to the issue it duplicates.
-
 * Are the following fields filled in correctly?
 
-  * Product
-  * Component
   * Title
+  * Description
+  * Labels
 
-* CC others not already cc’ed that you happen to know would be good to pull in.
-* Add the "beginner" keyword if you think this would be a good bug to be fixed
-  by someone new to LLVM.
+* When able to do so, please add the appropriate labels to classify the bug,
+  such as the tool (``clang``, ``clang-format``, ``clang-tidy``, etc) or
+  component (``backend:<name>``, ``compiler-rt:<name>``, ``clang:<name>``, etc).
+
+* If the issue is with a particular revision of the C or C++ standard, please
+  add the appropriate language standard label (``c++20``, ``c99``, etc).
+
+* Please don't use both a general and a specific label. For example, bugs
+  labeled ``c++17`` shouldn't also have ``c++``, and bugs labeled
+  ``clang:codegen`` shouldn't also have ``clang``.
+
+* Add the ``good first issue`` label if you think this would be a good bug to
+  be fixed by someone new to LLVM. This label feeds into `the landing page
+  for new contributors <https://github.com/llvm/llvm-project/contribute>`_.
+
+* If you are unsure of what a label is intended to be used for, please see the
+  `documentation for our labels <https://github.com/llvm/llvm-project/labels>`_.
 
 .. _Actively working on fixing:
 
@@ -92,49 +99,51 @@ Actively working on fixing bugs
 
 Please remember to assign the bug to yourself if you're actively working on
 fixing it and to unassign it when you're no longer actively working on it.  You
-unassign a bug by setting the Assignee field to "unassignedbugs@nondot.org".
+unassign a bug by removing the person from the ``Assignees`` field.
 
 .. _Closing:
 
 Resolving/Closing bugs
 ======================
 
-For simplicity, we only have 1 status for all resolved or closed bugs:
-RESOLVED.
-
 Resolving bugs is good! Make sure to properly record the reason for resolving.
 Examples of reasons for resolving are:
 
-* Revision NNNNNN fixed the bug.
-* The bug cannot be reproduced with revision NNNNNN.
-* The circumstances for the bug don't apply anymore.
-* There is a sound reason for not fixing it (WONTFIX).
-* There is a specific and plausible reason to think that a given bug is
-  otherwise inapplicable or obsolete.
+  * If the issue has been resolved by a particular commit, close the issue with
+    a brief comment mentioning which commit(s) fixed it. If you are authoring
+    the fix yourself, your git commit message may include the phrase
+    ``Fixes #<issue number>`` on a line by itself. GitHub recognizes such commit
+    messages and will automatically close the specified issue with a reference
+    to your commit.
 
-  * One example is an old open bug that doesn't contain enough information to
-    clearly understand the problem being reported (e.g. not reproducible). It is
-    fine to resolve such a bug e.g. with resolution WORKSFORME and leaving a
-    comment to encourage the reporter to reopen the bug with more information
-    if it's still reproducible on their end.
+  * If the reported behavior is not a bug, it is appropriate to close the issue
+    with a comment explaining why you believe it is not a bug, and adding the
+    ``invalid`` tag.
 
-If a bug is resolved, please fill in the revision number it was fixed in in the
-"Fixed by Commit(s)" field.
+  * If the bug duplicates another issue, close it as a duplicate by adding the
+    ``duplicate`` label with a comment pointing to the issue it duplicates.
+
+  * If there is a sound reason for not fixing the issue (difficulty, ABI, open
+    research questions, etc), add the ``wontfix`` label and a comment explaining
+    why no changes are expected.
+
+  * If there is a specific and plausible reason to think that a given bug is
+    otherwise inapplicable or obsolete. One example is an open bug that doesn't
+    contain enough information to clearly understand the problem being reported
+    (e.g. not reproducible). It is fine to close such a bug, adding with the
+    ``worksforme`` label and leaving a comment to encourage the reporter to
+    reopen the bug with more information if it's still reproducible for them.
 
 
-.. _Maintenance of Bug products/component metadata:
+.. _Maintenance of metadata:
 
-Maintenance of products/components metadata
-===========================================
+Maintenance of metadata
+=======================
 
-Please raise a bug against "Bugzilla Admin"/"Products" to request any changes
-to be made to the breakdown of products & components modeled in Bugzilla.
-
-
-.. _Maintenance of cc-by-default settings:
-
-Maintenance of cc-by-default settings
-=====================================
-
-Please raise a bug against "Bugzilla Admin"/"Products" to request any changes
-to be made to the cc-by-default settings for specific components.
+Project member with write access to the project can create new labels, but we
+discourage adding ad hoc labels because we want to control the proliferation of
+labels and avoid single-use labels. If you would like a new label added, please
+open an issue asking to create an issue label and add the ``infrastructure``
+label to the issue. The request should include a description of what the label
+is for. Alternatively, you can ask for the label to be created on the
+``#infrastructure`` channel on the LLVM Discord.

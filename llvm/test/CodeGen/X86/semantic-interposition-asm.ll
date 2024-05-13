@@ -28,7 +28,7 @@ define i64 @test_var() nounwind {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    retq
 entry:
-  %0 = tail call i64 asm "movq $1, $0\0Amovq $2, $0", "=r,*m,*m"(i32* @gv0, i32* @gv1)
+  %0 = tail call i64 asm "movq $1, $0\0Amovq $2, $0", "=r,*m,*m"(ptr elementtype(i32) @gv0, ptr elementtype(i32) @gv1)
   ret i64 %0
 }
 
@@ -51,22 +51,22 @@ entry:
 define i64 @test_fun() nounwind {
 ; STATIC-LABEL: test_fun:
 ; STATIC:       # %bb.0: # %entry
-; STATIC-NEXT:    movq fun1@{{.*}}(%rip), %rax
+; STATIC-NEXT:    movq fun1@GOTPCREL(%rip), %rax
 ; STATIC-NEXT:    #APP
-; STATIC-NEXT:    movq {{.*}}(%rip), %rax
+; STATIC-NEXT:    movq fun0(%rip), %rax
 ; STATIC-NEXT:    movq (%rax), %rax
 ; STATIC-NEXT:    #NO_APP
 ; STATIC-NEXT:    retq
 ;
 ; CHECK-LABEL: test_fun:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq fun1@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq fun1@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    movq .Lfun0${{.*}}(%rip), %rax
+; CHECK-NEXT:    movq .Lfun0$local(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    retq
 entry:
-  %0 = tail call i64 asm "movq $1, $0\0Amovq $2, $0", "=r,*m,*m"(void ()* nonnull @fun0, void ()* nonnull @fun1)
+  %0 = tail call i64 asm "movq $1, $0\0Amovq $2, $0", "=r,*m,*m"(ptr elementtype(void ()) nonnull @fun0, ptr elementtype(void ()) nonnull @fun1)
   ret i64 %0
 }

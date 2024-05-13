@@ -16,42 +16,42 @@ define float @f1(double %d1, double %d2) {
 }
 
 ; Test f128->f32.
-define float @f2(fp128 *%ptr) {
+define float @f2(ptr %ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: lexbr %f0, %f0
 ; CHECK: br %r14
-  %val = load fp128, fp128 *%ptr
+  %val = load fp128, ptr %ptr
   %res = fptrunc fp128 %val to float
   ret float %res
 }
 
 ; Make sure that we don't use %f0 as the destination of LEXBR when %f2
 ; is still live.
-define void @f3(float *%dst, fp128 *%ptr, float %d1, float %d2) {
+define void @f3(ptr %dst, ptr %ptr, float %d1, float %d2) {
 ; CHECK-LABEL: f3:
 ; CHECK: lexbr %f1, %f1
 ; CHECK: aebr %f1, %f2
 ; CHECK: ste %f1, 0(%r2)
 ; CHECK: br %r14
-  %val = load fp128, fp128 *%ptr
+  %val = load fp128, ptr %ptr
   %conv = fptrunc fp128 %val to float
   %res = fadd float %conv, %d2
-  store float %res, float *%dst
+  store float %res, ptr %dst
   ret void
 }
 
 ; Test f128->f64.
-define double @f4(fp128 *%ptr) {
+define double @f4(ptr %ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK: ldxbr %f0, %f0
 ; CHECK: br %r14
-  %val = load fp128, fp128 *%ptr
+  %val = load fp128, ptr %ptr
   %res = fptrunc fp128 %val to double
   ret double %res
 }
 
 ; Like f3, but for f128->f64.
-define void @f5(double *%dst, fp128 *%ptr, double %d1, double %d2) {
+define void @f5(ptr %dst, ptr %ptr, double %d1, double %d2) {
 ; CHECK-LABEL: f5:
 ; CHECK: ldxbr %f1, %f1
 ; CHECK-SCALAR: adbr %f1, %f2
@@ -59,9 +59,9 @@ define void @f5(double *%dst, fp128 *%ptr, double %d1, double %d2) {
 ; CHECK-VECTOR: wfadb [[REG:%f[0-9]+]], %f1, %f2
 ; CHECK-VECTOR: std [[REG]], 0(%r2)
 ; CHECK: br %r14
-  %val = load fp128, fp128 *%ptr
+  %val = load fp128, ptr %ptr
   %conv = fptrunc fp128 %val to double
   %res = fadd double %conv, %d2
-  store double %res, double *%dst
+  store double %res, ptr %dst
   ret void
 }

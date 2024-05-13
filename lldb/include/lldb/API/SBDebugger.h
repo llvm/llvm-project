@@ -14,8 +14,16 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBPlatform.h"
 
+namespace lldb_private {
+class CommandPluginInterfaceImplementation;
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
+#ifndef SWIG
 class LLDB_API SBInputReader {
 public:
   SBInputReader() = default;
@@ -30,16 +38,20 @@ public:
   void SetIsDone(bool);
   bool IsActive() const;
 };
+#endif
 
 class LLDB_API SBDebugger {
 public:
-  FLAGS_ANONYMOUS_ENUM(){eBroadcastBitProgress = (1 << 0)};
-
+  FLAGS_ANONYMOUS_ENUM(){
+      eBroadcastBitProgress = lldb::DebuggerBroadcastBit::eBroadcastBitProgress,
+      eBroadcastBitWarning = lldb::DebuggerBroadcastBit::eBroadcastBitWarning,
+      eBroadcastBitError = lldb::DebuggerBroadcastBit::eBroadcastBitError,
+      eBroadcastBitProgressCategory =
+          lldb::DebuggerBroadcastBit::eBroadcastBitProgressCategory,
+  };
   SBDebugger();
 
   SBDebugger(const lldb::SBDebugger &rhs);
-
-  SBDebugger(const lldb::DebuggerSP &debugger_sp);
 
   ~SBDebugger();
 
@@ -74,10 +86,23 @@ public:
   ///
   /// \return The message for the progress. If the returned value is NULL, then
   ///   \a event was not a eBroadcastBitProgress event.
+#ifdef SWIG
+  static const char *GetProgressFromEvent(const lldb::SBEvent &event,
+                                          uint64_t &OUTPUT,
+                                          uint64_t &OUTPUT, uint64_t &OUTPUT,
+                                          bool &OUTPUT);
+#else
   static const char *GetProgressFromEvent(const lldb::SBEvent &event,
                                           uint64_t &progress_id,
                                           uint64_t &completed, uint64_t &total,
                                           bool &is_debugger_specific);
+#endif
+
+  static lldb::SBStructuredData
+  GetProgressDataFromEvent(const lldb::SBEvent &event);
+
+  static lldb::SBStructuredData
+  GetDiagnosticFromEvent(const lldb::SBEvent &event);
 
   lldb::SBDebugger &operator=(const lldb::SBDebugger &rhs);
 
@@ -85,9 +110,13 @@ public:
 
   static lldb::SBError InitializeWithErrorHandling();
 
+  static void PrintStackTraceOnError();
+
+  static void PrintDiagnosticsOnError();
+
   static void Terminate();
 
-  // Deprecated, use the one that takes a source_init_files bool.
+  LLDB_DEPRECATED_FIXME("Use one of the other Create variants", "Create(bool)")
   static lldb::SBDebugger Create();
 
   static lldb::SBDebugger Create(bool source_init_files);
@@ -106,6 +135,21 @@ public:
 
   void Clear();
 
+  /// Getting a specific setting value into SBStructuredData format.
+  /// Client can specify empty string or null to get all settings.
+  ///
+  /// Example usages:
+  /// lldb::SBStructuredData settings = debugger.GetSetting();
+  /// lldb::SBStructuredData settings = debugger.GetSetting(nullptr);
+  /// lldb::SBStructuredData settings = debugger.GetSetting("");
+  /// lldb::SBStructuredData settings = debugger.GetSetting("target.arg0");
+  /// lldb::SBStructuredData settings = debugger.GetSetting("target");
+  ///
+  /// \param[out] setting
+  ///   Property setting path to retrieve values. e.g "target.source-map"
+  ///
+  lldb::SBStructuredData GetSetting(const char *setting = nullptr);
+
   void SetAsync(bool b);
 
   bool GetAsync();
@@ -114,17 +158,23 @@ public:
 
   void SkipAppInitFiles(bool b);
 
+#ifndef SWIG
   void SetInputFileHandle(FILE *f, bool transfer_ownership);
 
   void SetOutputFileHandle(FILE *f, bool transfer_ownership);
 
   void SetErrorFileHandle(FILE *f, bool transfer_ownership);
+#endif
 
+#ifndef SWIG
   FILE *GetInputFileHandle();
 
   FILE *GetOutputFileHandle();
 
   FILE *GetErrorFileHandle();
+#endif
+
+  SBError SetInputString(const char *data);
 
   SBError SetInputFile(SBFile file);
 
@@ -151,18 +201,33 @@ public:
   lldb::SBCommandInterpreter GetCommandInterpreter();
 
   void HandleCommand(const char *command);
+  
+  void RequestInterrupt();
+  void CancelInterruptRequest();
+  bool InterruptRequested();
 
   lldb::SBListener GetListener();
 
+#ifndef SWIG
+  LLDB_DEPRECATED_FIXME(
+      "Use HandleProcessEvent(const SBProcess &, const SBEvent &, SBFile, "
+      "SBFile) or HandleProcessEvent(const SBProcess &, const SBEvent &, "
+      "FileSP, FileSP)",
+      "HandleProcessEvent(const SBProcess &, const SBEvent &, SBFile, SBFile)")
   void HandleProcessEvent(const lldb::SBProcess &process,
-                          const lldb::SBEvent &event, FILE *out,
-                          FILE *err); // DEPRECATED
+                          const lldb::SBEvent &event, FILE *out, FILE *err);
+#endif
 
   void HandleProcessEvent(const lldb::SBProcess &process,
                           const lldb::SBEvent &event, SBFile out, SBFile err);
 
+#ifdef SWIG
+  void HandleProcessEvent(const lldb::SBProcess &process,
+                          const lldb::SBEvent &event, FileSP BORROWED, FileSP BORROWED);
+#else
   void HandleProcessEvent(const lldb::SBProcess &process,
                           const lldb::SBEvent &event, FileSP out, FileSP err);
+#endif
 
   lldb::SBTarget CreateTarget(const char *filename, const char *target_triple,
                               const char *platform_name,
@@ -185,7 +250,7 @@ public:
 
   uint32_t GetIndexOfTarget(lldb::SBTarget target);
 
-  lldb::SBTarget FindTargetWithProcessID(pid_t pid);
+  lldb::SBTarget FindTargetWithProcessID(lldb::pid_t pid);
 
   lldb::SBTarget FindTargetWithFileAndArch(const char *filename,
                                            const char *arch);
@@ -247,6 +312,8 @@ public:
 
   lldb::ScriptLanguage GetScriptingLanguage(const char *script_language_name);
 
+  SBStructuredData GetScriptInterpreterInfo(ScriptLanguage);
+
   static const char *GetVersionString();
 
   static const char *StateAsCString(lldb::StateType state);
@@ -261,8 +328,14 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
-  // DEPRECATED
+  void SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
+                          void *baton);
+
+#ifndef SWIG
+  LLDB_DEPRECATED_FIXME("Use DispatchInput(const void *, size_t)",
+                        "DispatchInput(const void *, size_t)")
   void DispatchInput(void *baton, const void *data, size_t data_len);
+#endif
 
   void DispatchInput(const void *data, size_t data_len);
 
@@ -270,7 +343,9 @@ public:
 
   void DispatchInputEndOfFile();
 
+#ifndef SWIG
   void PushInputReader(lldb::SBInputReader &reader);
+#endif
 
   const char *GetInstanceName();
 
@@ -302,8 +377,14 @@ public:
 
   void SetScriptLanguage(lldb::ScriptLanguage script_lang);
 
+  lldb::LanguageType GetREPLLanguage() const;
+
+  void SetREPLLanguage(lldb::LanguageType repl_lang);
+
+  LLDB_DEPRECATED("SBDebugger::GetCloseInputOnEOF() is deprecated.")
   bool GetCloseInputOnEOF() const;
 
+  LLDB_DEPRECATED("SBDebugger::SetCloseInputOnEOF() is deprecated.")
   void SetCloseInputOnEOF(bool b);
 
   SBTypeCategory GetCategory(const char *category_name);
@@ -328,6 +409,7 @@ public:
 
   SBTypeSynthetic GetSyntheticForType(SBTypeNameSpecifier);
 
+#ifndef SWIG
   /// Run the command interpreter.
   ///
   /// \param[in] auto_handle_events
@@ -340,6 +422,7 @@ public:
   ///     and overrides the corresponding option in
   ///     SBCommandInterpreterRunOptions.
   void RunCommandInterpreter(bool auto_handle_events, bool spawn_thread);
+#endif
 
   /// Run the command interpreter.
   ///
@@ -364,15 +447,39 @@ public:
   ///
   /// \param[out] stopped_for_crash
   ///     Whether the interpreter stopped for a crash.
+#ifdef SWIG
+  %apply int& INOUT { int& num_errors };
+  %apply bool& INOUT { bool& quit_requested };
+  %apply bool& INOUT { bool& stopped_for_crash };
+#endif
   void RunCommandInterpreter(bool auto_handle_events, bool spawn_thread,
                              SBCommandInterpreterRunOptions &options,
                              int &num_errors, bool &quit_requested,
                              bool &stopped_for_crash);
 
+#ifndef SWIG
   SBCommandInterpreterRunResult
   RunCommandInterpreter(const SBCommandInterpreterRunOptions &options);
+#endif
 
   SBError RunREPL(lldb::LanguageType language, const char *repl_options);
+
+  /// Load a trace from a trace description file and create Targets,
+  /// Processes and Threads based on the contents of such file.
+  ///
+  /// \param[out] error
+  ///   An error if the trace could not be created.
+  ///
+  /// \param[in] trace_description_file
+  ///   The file containing the necessary information to load the trace.
+  SBTrace LoadTraceFromFile(SBError &error,
+                            const SBFileSpec &trace_description_file);
+
+protected:
+  friend class lldb_private::CommandPluginInterfaceImplementation;
+  friend class lldb_private::python::SWIGBridge;
+
+  SBDebugger(const lldb::DebuggerSP &debugger_sp);
 
 private:
   friend class SBCommandInterpreter;
@@ -380,7 +487,10 @@ private:
   friend class SBListener;
   friend class SBProcess;
   friend class SBSourceManager;
+  friend class SBStructuredData;
+  friend class SBPlatform;
   friend class SBTarget;
+  friend class SBTrace;
 
   lldb::SBTarget FindTargetWithLLDBProcess(const lldb::ProcessSP &processSP);
 

@@ -12,7 +12,7 @@ typedef signed char BOOL;
 // CHECK: ![[ID]] = !DIDerivedType(tag: DW_TAG_typedef, name: "id"
 
 typedef BOOL (^SomeKindOfPredicate)(id obj);
-int main()
+int main(void)
 {
   SomeKindOfPredicate p = ^BOOL(id obj) { return obj != nil; };
   // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "__FuncPtr",

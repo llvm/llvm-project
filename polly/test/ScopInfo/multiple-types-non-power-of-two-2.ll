@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
-; RUN: -polly-allow-differing-element-types < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-allow-differing-element-types -disable-output < %s | FileCheck %s
 ;
 ;  void multiple_types(i8 *A) {
 ;    for (long i = 0; i < 100; i++) {
@@ -33,7 +32,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @multiple_types(i8* %A) {
+define void @multiple_types(ptr %A) {
 bb:
   br label %bb1
 
@@ -44,18 +43,16 @@ bb1:                                              ; preds = %bb20, %bb
 
 bb2:                                              ; preds = %bb1
   %load.i128.offset = mul i64 %i.0, 16
-  %load.i128.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i128.offset
-  %load.i128.ptrcast = bitcast i8* %load.i128.ptr to i128*
-  %load.i128.val = load i128, i128* %load.i128.ptrcast
+  %load.i128.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i128.offset
+  %load.i128.val = load i128, ptr %load.i128.ptr
 
   %load.i192.offset = mul i64 %i.0, 24
-  %load.i192.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i192.offset
-  %load.i192.ptrcast = bitcast i8* %load.i192.ptr to i192*
-  %load.i192.val = load i192, i192* %load.i192.ptrcast
+  %load.i192.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i192.offset
+  %load.i192.val = load i192, ptr %load.i192.ptr
   %load.i192.val.trunc = trunc i192 %load.i192.val to i128
 
   %sum = add i128 %load.i128.val, %load.i192.val.trunc
-  store i128 %sum, i128* %load.i128.ptrcast
+  store i128 %sum, ptr %load.i128.ptr
   br label %bb20
 
 bb20:                                             ; preds = %bb2

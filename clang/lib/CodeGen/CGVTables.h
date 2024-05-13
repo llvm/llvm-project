@@ -75,16 +75,6 @@ class CodeGenVTables {
                             bool vtableHasLocalLinkage,
                             bool isCompleteDtor) const;
 
-  /// Create a dso_local stub that will be used for a relative reference in the
-  /// relative vtable layout. This stub will just be a tail call to the original
-  /// function and propagate any function attributes from the original. If the
-  /// original function is already dso_local, the original is returned instead
-  /// and a stub is not created.
-  llvm::Function *
-  getOrCreateRelativeStub(llvm::Function *func,
-                          llvm::GlobalValue::LinkageTypes stubLinkage,
-                          bool isCompleteDtor) const;
-
   bool useRelativeLayout() const;
 
   llvm::Type *getVTableComponentType() const;
@@ -99,6 +89,10 @@ public:
   CodeGenVTables(CodeGenModule &CGM);
 
   ItaniumVTableContext &getItaniumVTableContext() {
+    return *cast<ItaniumVTableContext>(VTContext);
+  }
+
+  const ItaniumVTableContext &getItaniumVTableContext() const {
     return *cast<ItaniumVTableContext>(VTContext);
   }
 
@@ -154,6 +148,9 @@ public:
   /// when a vtable may not be dso_local.
   void GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
                                    llvm::StringRef AliasNameRef);
+
+  /// Specify a global should not be instrumented with hwasan.
+  void RemoveHwasanMetadata(llvm::GlobalValue *GV) const;
 };
 
 } // end namespace CodeGen

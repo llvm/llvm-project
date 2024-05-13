@@ -91,12 +91,12 @@ static rlim_t getlim(int res) {
 
 static void setlim(int res, rlim_t lim) {
   struct rlimit rlim;
-  if (getrlimit(res, const_cast<struct rlimit *>(&rlim))) {
+  if (getrlimit(res, &rlim)) {
     Report("ERROR: %s getrlimit() failed %d\n", SanitizerToolName, errno);
     Die();
   }
   rlim.rlim_cur = lim;
-  if (setrlimit(res, const_cast<struct rlimit *>(&rlim))) {
+  if (setrlimit(res, &rlim)) {
     Report("ERROR: %s setrlimit() failed %d\n", SanitizerToolName, errno);
     Die();
   }
@@ -104,7 +104,27 @@ static void setlim(int res, rlim_t lim) {
 
 void DisableCoreDumperIfNecessary() {
   if (common_flags()->disable_coredump) {
-    setlim(RLIMIT_CORE, 0);
+    rlimit rlim;
+    CHECK_EQ(0, getrlimit(RLIMIT_CORE, &rlim));
+    // On Linux, if the kernel.core_pattern sysctl starts with a '|' (i.e. it
+    // is being piped to a coredump handler such as systemd-coredumpd), the
+    // kernel ignores RLIMIT_CORE (since we aren't creating a file in the file
+    // system) except for the magic value of 1, which disables coredumps when
+    // piping. 1 byte is too small for any kind of valid core dump, so it
+    // also disables coredumps if kernel.core_pattern creates files directly.
+    // While most piped coredump handlers do respect the crashing processes'
+    // RLIMIT_CORE, this is notable not the case for Debian's systemd-coredump
+    // due to a local patch that changes sysctl.d/50-coredump.conf to ignore
+    // the specified limit and instead use RLIM_INFINITY.
+    //
+    // The alternative to using RLIMIT_CORE=1 would be to use prctl() with the
+    // PR_SET_DUMPABLE flag, however that also prevents ptrace(), so makes it
+    // impossible to attach a debugger.
+    //
+    // Note: we use rlim_max in the Min() call here since that is the upper
+    // limit for what can be set without getting an EINVAL error.
+    rlim.rlim_cur = Min<rlim_t>(SANITIZER_LINUX ? 1 : 0, rlim.rlim_max);
+    CHECK_EQ(0, setrlimit(RLIMIT_CORE, &rlim));
   }
 }
 
@@ -126,14 +146,6 @@ bool AddressSpaceIsUnlimited() {
 void SetAddressSpaceUnlimited() {
   setlim(RLIMIT_AS, RLIM_INFINITY);
   CHECK(AddressSpaceIsUnlimited());
-}
-
-void SleepForSeconds(int seconds) {
-  sleep(seconds);
-}
-
-void SleepForMillis(int millis) {
-  usleep(millis * 1000);
 }
 
 void Abort() {
@@ -159,6 +171,8 @@ int Atexit(void (*function)(void)) {
 #endif
 }
 
+bool CreateDir(const char *pathname) { return mkdir(pathname, 0755) == 0; }
+
 bool SupportsColoredOutput(fd_t fd) {
   return isatty(fd) != 0;
 }
@@ -166,9 +180,10 @@ bool SupportsColoredOutput(fd_t fd) {
 #if !SANITIZER_GO
 // TODO(glider): different tools may require different altstack size.
 static uptr GetAltStackSize() {
-  // SIGSTKSZ is not enough.
-  static const uptr kAltStackSize = SIGSTKSZ * 4;
-  return kAltStackSize;
+  // Note: since GLIBC_2.31, SIGSTKSZ may be a function call, so this may be
+  // more costly that you think. However GetAltStackSize is only call 2-3 times
+  // per thread so don't cache the evaluation.
+  return SIGSTKSZ * 4;
 }
 
 void SetAlternateSignalStack() {
@@ -295,7 +310,7 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return result;
 }
 
-void PlatformPrepareForSandboxing(__sanitizer_sandbox_arguments *args) {
+void PlatformPrepareForSandboxing(void *args) {
   // Some kinds of sandboxes may forbid filesystem access, so we won't be able
   // to read the file mappings from /proc/self/maps. Luckily, neither the
   // process will be able to load additional libraries, so it's fine to use the
@@ -388,8 +403,8 @@ SANITIZER_WEAK_ATTRIBUTE int
 real_pthread_attr_getstack(void *attr, void **addr, size_t *size);
 } // extern "C"
 
-int my_pthread_attr_getstack(void *attr, void **addr, uptr *size) {
-#if !SANITIZER_GO && !SANITIZER_MAC
+int internal_pthread_attr_getstack(void *attr, void **addr, uptr *size) {
+#if !SANITIZER_GO && !SANITIZER_APPLE
   if (&real_pthread_attr_getstack)
     return real_pthread_attr_getstack((pthread_attr_t *)attr, addr,
                                       (size_t *)size);
@@ -402,7 +417,7 @@ void AdjustStackSize(void *attr_) {
   pthread_attr_t *attr = (pthread_attr_t *)attr_;
   uptr stackaddr = 0;
   uptr stacksize = 0;
-  my_pthread_attr_getstack(attr, (void**)&stackaddr, &stacksize);
+  internal_pthread_attr_getstack(attr, (void **)&stackaddr, &stacksize);
   // GLibC will return (0 - stacksize) as the stack address in the case when
   // stacksize is set, but stackaddr is not.
   bool stack_set = (stackaddr != 0) && (stackaddr + stacksize != 0);

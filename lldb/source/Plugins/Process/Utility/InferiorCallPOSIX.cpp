@@ -8,12 +8,12 @@
 
 #include "InferiorCallPOSIX.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -41,12 +41,13 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
   if (thread == nullptr)
     return false;
 
-  const bool include_symbols = true;
-  const bool include_inlines = false;
+  ModuleFunctionSearchOptions function_options;
+  function_options.include_symbols = true;
+  function_options.include_inlines = false;
+
   SymbolContextList sc_list;
   process->GetTarget().GetImages().FindFunctions(
-      ConstString("mmap"), eFunctionNameTypeFull, include_symbols,
-      include_inlines, sc_list);
+      ConstString("mmap"), eFunctionNameTypeFull, function_options, sc_list);
   const uint32_t count = sc_list.GetSize();
   if (count > 0) {
     SymbolContext sc;
@@ -86,9 +87,11 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
           llvm::consumeError(type_system_or_err.takeError());
           return false;
         }
+        auto ts = *type_system_or_err;
+        if (!ts)
+          return false;
         CompilerType void_ptr_type =
-            type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid)
-                .GetPointerType();
+            ts->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
         const ArchSpec arch = process->GetTarget().GetArchitecture();
         MmapArgList args =
             process->GetTarget().GetPlatform()->GetMmapArgumentList(
@@ -135,12 +138,13 @@ bool lldb_private::InferiorCallMunmap(Process *process, addr_t addr,
   if (thread == nullptr)
     return false;
 
-  const bool include_symbols = true;
-  const bool include_inlines = false;
+  ModuleFunctionSearchOptions function_options;
+  function_options.include_symbols = true;
+  function_options.include_inlines = false;
+
   SymbolContextList sc_list;
   process->GetTarget().GetImages().FindFunctions(
-      ConstString("munmap"), eFunctionNameTypeFull, include_symbols,
-      include_inlines, sc_list);
+      ConstString("munmap"), eFunctionNameTypeFull, function_options, sc_list);
   const uint32_t count = sc_list.GetSize();
   if (count > 0) {
     SymbolContext sc;

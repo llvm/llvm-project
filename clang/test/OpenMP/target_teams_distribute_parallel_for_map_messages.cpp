@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -fopenmp-version=51 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -fno-openmp-extensions -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp52 -fopenmp -fno-openmp-extensions -fopenmp-version=52 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp-simd -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
 void foo() {
 }
@@ -18,7 +19,7 @@ void xxx(int argc) {
     ;
 }
 
-struct S1; // expected-note 2 {{declared here}}
+struct S1; // expected-note 2 {{declared here}} // expected-note 3 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
@@ -180,8 +181,8 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for map(always: x) // expected-error {{missing map type}}
   for (i = 0; i < argc; ++i) foo();
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target teams distribute parallel for map(tofrom, always: x)
   for (i = 0; i < argc; ++i) foo();
@@ -302,12 +303,14 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for map(always: x) // expected-error {{missing map type}}
   for (i = 0; i < argc; ++i) foo();
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target teams distribute parallel for map(tofrom, always: x)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for map(always, tofrom: always, tofrom, x)
+  for (i = 0; i < argc; ++i) foo();
+#pragma omp target teams distribute parallel for map(always close tofrom: x) // omp52-error 2 {{missing ',' after map type modifier}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();

@@ -24,7 +24,7 @@ void arr() {
 
   // This is array indexing not an array declarator because a comma expression
   // is not syntactically a constant-expression.
-  int(x[1,1]); // expected-warning 2{{unused}}
+  int(x[1,1]); // expected-warning {{left operand of comma operator has no effect}} expected-warning {{unused}}
 
   // This is array indexing not an array declaration because a braced-init-list
   // is not syntactically a constant-expression.
@@ -36,9 +36,17 @@ void arr() {
   int(a[{0}]); // expected-warning {{unused}}
 
   // These are array declarations.
-  int(x[(1,1)]); // expected-error {{redefinition}}
-  int(x[true ? 1,1 : 1]); // expected-error {{redefinition}}
+  int(x[((void)1,1)]); // expected-error {{redefinition}}
+  int(x[true ? 1 : (1,1)]); // expected-error {{redefinition}} // expected-warning {{left operand of comma operator has no effect}}
 
   int (*_Atomic atomic_ptr_to_int);
   *atomic_ptr_to_int = 42;
+}
+
+namespace function_with_trailing {
+struct Foo {
+  Foo(int);
+};
+template <typename T> void bar()
+  { Foo _(T::method()->mem()); }
 }

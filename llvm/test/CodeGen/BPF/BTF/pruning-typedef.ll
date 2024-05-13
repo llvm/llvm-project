@@ -19,23 +19,22 @@
 ; Compilation flags:
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
-%struct.s1 = type { %struct.tt* }
+%struct.s1 = type { ptr }
 %struct.tt = type { i32, i32 }
 %struct.s2 = type { %struct.tt }
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32 @test1(%struct.s1* nocapture readnone %arg) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test1(ptr nocapture readnone %arg) local_unnamed_addr #0 !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.s1* %arg, metadata !23, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !23, metadata !DIExpression()), !dbg !24
   ret i32 0, !dbg !25
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define dso_local i32 @test2(%struct.s2* nocapture readonly %arg) local_unnamed_addr #1 !dbg !26 {
+define dso_local i32 @test2(ptr nocapture readonly %arg) local_unnamed_addr #1 !dbg !26 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.s2* %arg, metadata !34, metadata !DIExpression()), !dbg !35
-  %m1 = getelementptr inbounds %struct.s2, %struct.s2* %arg, i64 0, i32 0, i32 0, !dbg !36
-  %0 = load i32, i32* %m1, align 4, !dbg !36, !tbaa !37
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !34, metadata !DIExpression()), !dbg !35
+  %0 = load i32, ptr %arg, align 4, !dbg !36, !tbaa !37
   ret i32 %0, !dbg !43
 }
 

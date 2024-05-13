@@ -10,15 +10,11 @@
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
@@ -34,7 +30,7 @@ namespace {
 ///   if (foo) { continue; } else { return 10; }
 class SwapIfBranches : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
 
   bool prepare(const Selection &Inputs) override;
   Expected<Effect> apply(const Selection &Inputs) override;

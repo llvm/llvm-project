@@ -30,8 +30,7 @@ template <> struct MappingTraits<clang::tooling::Replacement> {
   /// Helper to (de)serialize a Replacement since we don't have direct
   /// access to its data members.
   struct NormalizedReplacement {
-    NormalizedReplacement(const IO &)
-        : FilePath(""), Offset(0), Length(0), ReplacementText("") {}
+    NormalizedReplacement(const IO &) : Offset(0), Length(0) {}
 
     NormalizedReplacement(const IO &, const clang::tooling::Replacement &R)
         : FilePath(R.getFilePath()), Offset(R.getOffset()),

@@ -5,19 +5,20 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines classes to implement an intrusive doubly linked list class
-// (i.e. each node of the list must contain a next and previous field for the
-// list.
-//
-// The ilist class itself should be a plug in replacement for list.  This list
-// replacement does not provide a constant time size() method, so be careful to
-// use empty() when you really want to know if it's empty.
-//
-// The ilist class is implemented as a circular list.  The list itself contains
-// a sentinel node, whose Next points at begin() and whose Prev points at
-// rbegin().  The sentinel node itself serves as end() and rend().
-//
+///
+/// \file
+/// This file defines classes to implement an intrusive doubly linked list class
+/// (i.e. each node of the list must contain a next and previous field for the
+/// list.
+///
+/// The ilist class itself should be a plug in replacement for list.  This list
+/// replacement does not provide a constant time size() method, so be careful to
+/// use empty() when you really want to know if it's empty.
+///
+/// The ilist class is implemented as a circular list.  The list itself contains
+/// a sentinel node, whose Next points at begin() and whose Prev points at
+/// rbegin().  The sentinel node itself serves as end() and rend().
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_ILIST_H
@@ -91,63 +92,6 @@ struct ilist_traits : public ilist_node_traits<NodeTy> {};
 /// Const traits should never be instantiated.
 template <typename Ty> struct ilist_traits<const Ty> {};
 
-namespace ilist_detail {
-
-template <class T> T &make();
-
-/// Type trait to check for a traits class that has a getNext member (as a
-/// canary for any of the ilist_nextprev_traits API).
-template <class TraitsT, class NodeT> struct HasGetNext {
-  typedef char Yes[1];
-  typedef char No[2];
-  template <size_t N> struct SFINAE {};
-
-  template <class U>
-  static Yes &test(U *I, decltype(I->getNext(&make<NodeT>())) * = 0);
-  template <class> static No &test(...);
-
-public:
-  static const bool value = sizeof(test<TraitsT>(nullptr)) == sizeof(Yes);
-};
-
-/// Type trait to check for a traits class that has a createSentinel member (as
-/// a canary for any of the ilist_sentinel_traits API).
-template <class TraitsT> struct HasCreateSentinel {
-  typedef char Yes[1];
-  typedef char No[2];
-
-  template <class U>
-  static Yes &test(U *I, decltype(I->createSentinel()) * = 0);
-  template <class> static No &test(...);
-
-public:
-  static const bool value = sizeof(test<TraitsT>(nullptr)) == sizeof(Yes);
-};
-
-/// Type trait to check for a traits class that has a createNode member.
-/// Allocation should be managed in a wrapper class, instead of in
-/// ilist_traits.
-template <class TraitsT, class NodeT> struct HasCreateNode {
-  typedef char Yes[1];
-  typedef char No[2];
-  template <size_t N> struct SFINAE {};
-
-  template <class U>
-  static Yes &test(U *I, decltype(I->createNode(make<NodeT>())) * = 0);
-  template <class> static No &test(...);
-
-public:
-  static const bool value = sizeof(test<TraitsT>(nullptr)) == sizeof(Yes);
-};
-
-template <class TraitsT, class NodeT> struct HasObsoleteCustomization {
-  static const bool value = HasGetNext<TraitsT, NodeT>::value ||
-                            HasCreateSentinel<TraitsT>::value ||
-                            HasCreateNode<TraitsT, NodeT>::value;
-};
-
-} // end namespace ilist_detail
-
 //===----------------------------------------------------------------------===//
 //
 /// A wrapper around an intrusive list with callbacks and non-intrusive
@@ -181,13 +125,6 @@ public:
       typename base_list_type::const_reverse_iterator const_reverse_iterator;
 
 private:
-  // TODO: Drop this assertion and the transitive type traits anytime after
-  // v4.0 is branched (i.e,. keep them for one release to help out-of-tree code
-  // update).
-  static_assert(
-      !ilist_detail::HasObsoleteCustomization<TraitsT, value_type>::value,
-      "ilist customization points have changed!");
-
   static bool op_less(const_reference L, const_reference R) { return L < R; }
   static bool op_equal(const_reference L, const_reference R) { return L == R; }
 

@@ -16,20 +16,19 @@ entry:
   %cmp199 = icmp eq i16 %call197, 0
   br i1 %cmp199, label %if.then200, label %if.else201
 
-; CHECK: = add
 ; CHECK-DAG: [[R4:r[0-9]+]] = add
 ; CHECK-DAG: p0 = cmp.eq(r0,#0)
 ; CHECK: if (!p0) [[R3:r[0-9]+]] = add(r{{[0-9]+}},#3)
 ; CHECK-DAG: if (!p0) memh(##t) = [[R3]]
 ; CHECK-DAG: if (p0) memh(##t) = [[R4]]
 if.then200:                                       ; preds = %entry
-  store i16 %x1, i16* getelementptr inbounds (%struct.0, %struct.0* @t, i32 0, i32 0), align 2
-  store i16 %z1, i16* getelementptr inbounds (%struct.0, %struct.0* @t, i32 0, i32 1), align 2
+  store i16 %x1, ptr @t, align 2
+  store i16 %z1, ptr getelementptr inbounds (%struct.0, ptr @t, i32 0, i32 1), align 2
   br label %if.end202
 
 if.else201:                                       ; preds = %entry
   %y1 = add i16 %y, 3
-  store i16 %y1, i16* getelementptr inbounds (%struct.0, %struct.0* @t, i32 0, i32 0), align 2
+  store i16 %y1, ptr @t, align 2
   br label %if.end202
 
 if.end202:                                        ; preds = %if.else201, %if.then200

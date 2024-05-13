@@ -1,30 +1,30 @@
-break set -n main
+break set -f local-variables.cpp -l 17
 run a b c d e f g
-p argc
+expression argc
 step
-p SomeLocal
+expression SomeLocal
 step
-p Param1
-p Param2
+expression Param1
+expression Param2
 step
-p Param1
-p Param2
-p Local1
+expression Param1
+expression Param2
+expression Local1
 step
-p Param1
-p Param2
-p Local1
-p Local2
+expression Param1
+expression Param2
+expression Local1
+expression Local2
 step
-p Param1
-p Param2
-p Local1
-p Local2
+expression Param1
+expression Param2
+expression Local1
+expression Local2
 step
-p Param1
-p Param2
-p Local1
-p Local2
+expression Param1
+expression Param2
+expression Local1
+expression Local2
 continue
 
 target modules dump ast

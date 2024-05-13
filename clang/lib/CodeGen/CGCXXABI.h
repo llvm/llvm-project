@@ -31,7 +31,6 @@ class CXXConstructorDecl;
 class CXXDestructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
-class FieldDecl;
 class MangleContext;
 
 namespace CodeGen {
@@ -42,6 +41,8 @@ struct CatchTypeInfo;
 
 /// Implements C++ ABI-specific code generation functions.
 class CGCXXABI {
+  friend class CodeGenModule;
+
 protected:
   CodeGenModule &CGM;
   std::unique_ptr<MangleContext> MangleCtx;
@@ -56,9 +57,8 @@ protected:
   llvm::Value *getThisValue(CodeGenFunction &CGF) {
     return CGF.CXXABIThisValue;
   }
-  Address getThisAddress(CodeGenFunction &CGF) {
-    return Address(CGF.CXXABIThisValue, CGF.CXXABIThisAlignment);
-  }
+
+  Address getThisAddress(CodeGenFunction &CGF);
 
   /// Issue a diagnostic about unsupported features in the ABI.
   void ErrorUnsupportedABI(CodeGenFunction &CGF, StringRef S);
@@ -80,6 +80,18 @@ protected:
 
   ASTContext &getContext() const { return CGM.getContext(); }
 
+  bool mayNeedDestruction(const VarDecl *VD) const;
+
+  /// Determine whether we will definitely emit this variable with a constant
+  /// initializer, either because the language semantics demand it or because
+  /// we know that the initializer is a constant.
+  // For weak definitions, any initializer available in the current translation
+  // is not necessarily reflective of the initializer used; such initializers
+  // are ignored unless if InspectInitForWeakDef is true.
+  bool
+  isEmittedWithConstantInitializer(const VarDecl *VD,
+                                   bool InspectInitForWeakDef = false) const;
+
   virtual bool requiresArrayCookie(const CXXDeleteExpr *E, QualType eltType);
   virtual bool requiresArrayCookie(const CXXNewExpr *E);
 
@@ -88,6 +100,10 @@ protected:
   /// given function.  Obvious common logic like being defined on a
   /// final class will have been taken care of by the caller.
   virtual bool isThisCompleteObject(GlobalDecl GD) const = 0;
+
+  virtual bool constructorsAndDestructorsReturnThis() const {
+    return CGM.getCodeGenOpts().CtorDtorReturnThis;
+  }
 
 public:
 
@@ -104,7 +120,13 @@ public:
   ///
   /// There currently is no way to indicate if a destructor returns 'this'
   /// when called virtually, and code generation does not support the case.
-  virtual bool HasThisReturn(GlobalDecl GD) const { return false; }
+  virtual bool HasThisReturn(GlobalDecl GD) const {
+    if (isa<CXXConstructorDecl>(GD.getDecl()) ||
+        (isa<CXXDestructorDecl>(GD.getDecl()) &&
+         GD.getDtorType() != Dtor_Deleting))
+      return constructorsAndDestructorsReturnThis();
+    return false;
+  }
 
   virtual bool hasMostDerivedReturn(GlobalDecl GD) const { return false; }
 
@@ -261,16 +283,26 @@ public:
 
   virtual bool shouldDynamicCastCallBeNullChecked(bool SrcIsPtr,
                                                   QualType SrcRecordTy) = 0;
+  virtual bool shouldEmitExactDynamicCast(QualType DestRecordTy) = 0;
 
-  virtual llvm::Value *
-  EmitDynamicCastCall(CodeGenFunction &CGF, Address Value,
-                      QualType SrcRecordTy, QualType DestTy,
-                      QualType DestRecordTy, llvm::BasicBlock *CastEnd) = 0;
+  virtual llvm::Value *emitDynamicCastCall(CodeGenFunction &CGF, Address Value,
+                                           QualType SrcRecordTy,
+                                           QualType DestTy,
+                                           QualType DestRecordTy,
+                                           llvm::BasicBlock *CastEnd) = 0;
 
-  virtual llvm::Value *EmitDynamicCastToVoid(CodeGenFunction &CGF,
+  virtual llvm::Value *emitDynamicCastToVoid(CodeGenFunction &CGF,
                                              Address Value,
-                                             QualType SrcRecordTy,
-                                             QualType DestTy) = 0;
+                                             QualType SrcRecordTy) = 0;
+
+  /// Emit a dynamic_cast from SrcRecordTy to DestRecordTy. The cast fails if
+  /// the dynamic type of Value is not exactly DestRecordTy.
+  virtual llvm::Value *emitExactDynamicCast(CodeGenFunction &CGF, Address Value,
+                                            QualType SrcRecordTy,
+                                            QualType DestTy,
+                                            QualType DestRecordTy,
+                                            llvm::BasicBlock *CastSuccess,
+                                            llvm::BasicBlock *CastFail) = 0;
 
   virtual bool EmitBadCastCall(CodeGenFunction &CGF) = 0;
 
@@ -353,9 +385,8 @@ public:
   /// zero if no specific type is applicable, e.g. if the ABI expects the "this"
   /// parameter to point to some artificial offset in a complete object due to
   /// vbases being reordered.
-  virtual const CXXRecordDecl *
-  getThisArgumentTypeForMethod(const CXXMethodDecl *MD) {
-    return MD->getParent();
+  virtual const CXXRecordDecl *getThisArgumentTypeForMethod(GlobalDecl GD) {
+    return cast<CXXMethodDecl>(GD.getDecl())->getParent();
   }
 
   /// Perform ABI-specific "this" argument adjustment required prior to
@@ -439,12 +470,6 @@ public:
   getVTableAddressPointInStructor(CodeGenFunction &CGF, const CXXRecordDecl *RD,
                                   BaseSubobject Base,
                                   const CXXRecordDecl *NearestVBase) = 0;
-
-  /// Get the address point of the vtable for the given base subobject while
-  /// building a constexpr.
-  virtual llvm::Constant *
-  getVTableAddressPointForConstExpr(BaseSubobject Base,
-                                    const CXXRecordDecl *VTableClass) = 0;
 
   /// Get the address of the vtable for the given record decl which should be
   /// used for the vptr at the given offset in RD.

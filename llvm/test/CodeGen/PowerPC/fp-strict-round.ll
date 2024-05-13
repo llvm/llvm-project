@@ -39,7 +39,7 @@ declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 declare <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float>, metadata)
 declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata)
 
-define float @ceil_f32(float %f1) {
+define float @ceil_f32(float %f1) strictfp {
 ; P8-LABEL: ceil_f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xsrdpip f1, f1
@@ -55,7 +55,7 @@ define float @ceil_f32(float %f1) {
   ret float %res
 }
 
-define double @ceil_f64(double %f1) {
+define double @ceil_f64(double %f1) strictfp {
 ; P8-LABEL: ceil_f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xsrdpip f1, f1
@@ -71,7 +71,7 @@ define double @ceil_f64(double %f1) {
   ret double %res
 }
 
-define <4 x float> @ceil_v4f32(<4 x float> %vf1) {
+define <4 x float> @ceil_v4f32(<4 x float> %vf1) strictfp {
 ; P8-LABEL: ceil_v4f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xvrspip v2, v2
@@ -87,7 +87,7 @@ define <4 x float> @ceil_v4f32(<4 x float> %vf1) {
   ret <4 x float> %res
 }
 
-define <2 x double> @ceil_v2f64(<2 x double> %vf1) {
+define <2 x double> @ceil_v2f64(<2 x double> %vf1) strictfp {
 ; P8-LABEL: ceil_v2f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xvrdpip v2, v2
@@ -103,7 +103,7 @@ define <2 x double> @ceil_v2f64(<2 x double> %vf1) {
   ret <2 x double> %res
 }
 
-define float @floor_f32(float %f1) {
+define float @floor_f32(float %f1) strictfp {
 ; P8-LABEL: floor_f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xsrdpim f1, f1
@@ -119,7 +119,7 @@ define float @floor_f32(float %f1) {
   ret float %res
 }
 
-define double @floor_f64(double %f1) {
+define double @floor_f64(double %f1) strictfp {
 ; P8-LABEL: floor_f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xsrdpim f1, f1
@@ -135,7 +135,7 @@ define double @floor_f64(double %f1) {
   ret double %res;
 }
 
-define <4 x float> @floor_v4f32(<4 x float> %vf1) {
+define <4 x float> @floor_v4f32(<4 x float> %vf1) strictfp {
 ; P8-LABEL: floor_v4f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xvrspim v2, v2
@@ -151,7 +151,7 @@ define <4 x float> @floor_v4f32(<4 x float> %vf1) {
   ret <4 x float> %res;
 }
 
-define <2 x double> @floor_v2f64(<2 x double> %vf1) {
+define <2 x double> @floor_v2f64(<2 x double> %vf1) strictfp {
 ; P8-LABEL: floor_v2f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xvrdpim v2, v2
@@ -167,12 +167,12 @@ define <2 x double> @floor_v2f64(<2 x double> %vf1) {
   ret <2 x double> %res;
 }
 
-define double @nearbyint_f64(double %f1, double %f2) {
+define double @nearbyint_f64(double %f1, double %f2) strictfp {
 ; P8-LABEL: nearbyint_f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    .cfi_def_cfa_offset 112
 ; P8-NEXT:    .cfi_offset lr, 16
 ; P8-NEXT:    bl nearbyint
@@ -185,8 +185,8 @@ define double @nearbyint_f64(double %f1, double %f2) {
 ; P9-LABEL: nearbyint_f64:
 ; P9:       # %bb.0:
 ; P9-NEXT:    mflr r0
-; P9-NEXT:    std r0, 16(r1)
 ; P9-NEXT:    stdu r1, -32(r1)
+; P9-NEXT:    std r0, 48(r1)
 ; P9-NEXT:    .cfi_def_cfa_offset 32
 ; P9-NEXT:    .cfi_offset lr, 16
 ; P9-NEXT:    bl nearbyint
@@ -202,12 +202,12 @@ define double @nearbyint_f64(double %f1, double %f2) {
   ret double %res
 }
 
-define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
+define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) strictfp {
 ; P8-LABEL: nearbyint_v4f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -176(r1)
+; P8-NEXT:    std r0, 192(r1)
 ; P8-NEXT:    .cfi_def_cfa_offset 176
 ; P8-NEXT:    .cfi_offset lr, 16
 ; P8-NEXT:    .cfi_offset v29, -48
@@ -215,11 +215,11 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
 ; P8-NEXT:    .cfi_offset v31, -16
 ; P8-NEXT:    xxsldwi vs0, v2, v2, 3
 ; P8-NEXT:    li r3, 128
+; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    stxvd2x v29, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 144
 ; P8-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 160
-; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    vmr v31, v2
 ; P8-NEXT:    bl nearbyintf
@@ -243,11 +243,11 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
 ; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-NEXT:    xxmrghd vs0, v30, vs1
 ; P8-NEXT:    li r3, 160
+; P8-NEXT:    xvcvdpsp v2, vs0
 ; P8-NEXT:    lxvd2x v31, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 144
 ; P8-NEXT:    lxvd2x v30, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 128
-; P8-NEXT:    xvcvdpsp v2, vs0
 ; P8-NEXT:    vmrgew v2, v2, v29
 ; P8-NEXT:    lxvd2x v29, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    addi r1, r1, 176
@@ -258,8 +258,8 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
 ; P9-LABEL: nearbyint_v4f32:
 ; P9:       # %bb.0:
 ; P9-NEXT:    mflr r0
-; P9-NEXT:    std r0, 16(r1)
 ; P9-NEXT:    stdu r1, -80(r1)
+; P9-NEXT:    std r0, 96(r1)
 ; P9-NEXT:    .cfi_def_cfa_offset 80
 ; P9-NEXT:    .cfi_offset lr, 16
 ; P9-NEXT:    .cfi_offset v29, -48
@@ -307,12 +307,12 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
   ret <4 x float> %res
 }
 
-define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
+define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) strictfp {
 ; P8-LABEL: nearbyint_v2f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -160(r1)
+; P8-NEXT:    std r0, 176(r1)
 ; P8-NEXT:    .cfi_def_cfa_offset 160
 ; P8-NEXT:    .cfi_offset lr, 16
 ; P8-NEXT:    .cfi_offset v30, -32
@@ -344,8 +344,8 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
 ; P9-LABEL: nearbyint_v2f64:
 ; P9:       # %bb.0:
 ; P9-NEXT:    mflr r0
-; P9-NEXT:    std r0, 16(r1)
 ; P9-NEXT:    stdu r1, -64(r1)
+; P9-NEXT:    std r0, 80(r1)
 ; P9-NEXT:    .cfi_def_cfa_offset 64
 ; P9-NEXT:    .cfi_offset lr, 16
 ; P9-NEXT:    .cfi_offset v30, -32
@@ -376,18 +376,18 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
   ret <2 x double> %res
 }
 
-define <4 x double> @fpext_v4f64_v4f32(<4 x float> %vf1) {
+define <4 x double> @fpext_v4f64_v4f32(<4 x float> %vf1) strictfp {
 ; P8-LABEL: fpext_v4f64_v4f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8-NEXT:    xscvspdpn f3, v2
 ; P8-NEXT:    xxsldwi vs1, v2, v2, 3
-; P8-NEXT:    xxswapd vs3, v2
-; P8-NEXT:    xscvspdpn f2, v2
+; P8-NEXT:    xxswapd vs2, v2
 ; P8-NEXT:    xscvspdpn f0, vs0
-; P8-NEXT:    xscvspdpn f1, vs1
-; P8-NEXT:    xscvspdpn f3, vs3
-; P8-NEXT:    xxmrghd v2, vs2, vs0
-; P8-NEXT:    xxmrghd v3, vs3, vs1
+; P8-NEXT:    xxmrghd v2, vs3, vs0
+; P8-NEXT:    xscvspdpn f0, vs1
+; P8-NEXT:    xscvspdpn f1, vs2
+; P8-NEXT:    xxmrghd v3, vs1, vs0
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: fpext_v4f64_v4f32:
@@ -409,7 +409,7 @@ define <4 x double> @fpext_v4f64_v4f32(<4 x float> %vf1) {
   ret <4 x double> %res
 }
 
-define <2 x double> @fpext_v2f64_v2f32(<2 x float> %vf1) {
+define <2 x double> @fpext_v2f64_v2f32(<2 x float> %vf1) strictfp {
 ; P8-LABEL: fpext_v2f64_v2f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xxsldwi vs0, v2, v2, 1
@@ -432,7 +432,7 @@ define <2 x double> @fpext_v2f64_v2f32(<2 x float> %vf1) {
   ret <2 x double> %res
 }
 
-define float @fptrunc_f32_f64(double %f1) {
+define float @fptrunc_f32_f64(double %f1) strictfp {
 ; P8-LABEL: fptrunc_f32_f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xsrsp f1, f1
@@ -449,7 +449,7 @@ define float @fptrunc_f32_f64(double %f1) {
   ret float %res;
 }
 
-define <4 x float> @fptrunc_v4f32_v4f64(<4 x double> %vf1) {
+define <4 x float> @fptrunc_v4f32_v4f64(<4 x double> %vf1) strictfp {
 ; P8-LABEL: fptrunc_v4f32_v4f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xxmrgld vs0, v2, v3
@@ -474,7 +474,7 @@ define <4 x float> @fptrunc_v4f32_v4f64(<4 x double> %vf1) {
   ret <4 x float> %res
 }
 
-define <2 x float> @fptrunc_v2f32_v2f64(<2 x double> %vf1) {
+define <2 x float> @fptrunc_v2f32_v2f64(<2 x double> %vf1) strictfp {
 ; P8-LABEL: fptrunc_v2f32_v2f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xxswapd vs0, v2
@@ -487,12 +487,12 @@ define <2 x float> @fptrunc_v2f32_v2f64(<2 x double> %vf1) {
 ;
 ; P9-LABEL: fptrunc_v2f32_v2f64:
 ; P9:       # %bb.0:
+; P9-NEXT:    xxswapd vs1, v2
 ; P9-NEXT:    xsrsp f0, v2
-; P9-NEXT:    xscvdpspn v3, f0
-; P9-NEXT:    xxswapd vs0, v2
-; P9-NEXT:    xsrsp f0, f0
-; P9-NEXT:    xscvdpspn v2, f0
-; P9-NEXT:    vmrghw v2, v3, v2
+; P9-NEXT:    xsrsp f1, f1
+; P9-NEXT:    xscvdpspn vs0, f0
+; P9-NEXT:    xscvdpspn vs1, f1
+; P9-NEXT:    xxmrghw v2, vs0, vs1
 ; P9-NEXT:    blr
   %res = call <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(
                         <2 x double> %vf1,
@@ -501,7 +501,7 @@ define <2 x float> @fptrunc_v2f32_v2f64(<2 x double> %vf1) {
   ret <2 x float> %res
 }
 
-define float @round_f32(float %f1) {
+define float @round_f32(float %f1) strictfp {
 ; P8-LABEL: round_f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xsrdpi f1, f1
@@ -517,7 +517,7 @@ define float @round_f32(float %f1) {
   ret float %res
 }
 
-define double @round_f64(double %f1) {
+define double @round_f64(double %f1) strictfp {
 ; P8-LABEL: round_f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xsrdpi f1, f1
@@ -533,7 +533,7 @@ define double @round_f64(double %f1) {
   ret double %res
 }
 
-define <4 x float> @round_v4f32(<4 x float> %vf1) {
+define <4 x float> @round_v4f32(<4 x float> %vf1) strictfp {
 ; P8-LABEL: round_v4f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xvrspi v2, v2
@@ -549,7 +549,7 @@ define <4 x float> @round_v4f32(<4 x float> %vf1) {
   ret <4 x float> %res
 }
 
-define <2 x double> @round_v2f64(<2 x double> %vf1) {
+define <2 x double> @round_v2f64(<2 x double> %vf1) strictfp {
 ; P8-LABEL: round_v2f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xvrdpi v2, v2
@@ -565,7 +565,7 @@ define <2 x double> @round_v2f64(<2 x double> %vf1) {
   ret <2 x double> %res
 }
 
-define float @trunc_f32(float %f1) {
+define float @trunc_f32(float %f1) strictfp {
 ; P8-LABEL: trunc_f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xsrdpiz f1, f1
@@ -581,7 +581,7 @@ define float @trunc_f32(float %f1) {
   ret float %res
 }
 
-define double @trunc_f64(double %f1) {
+define double @trunc_f64(double %f1) strictfp {
 ; P8-LABEL: trunc_f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xsrdpiz f1, f1
@@ -597,7 +597,7 @@ define double @trunc_f64(double %f1) {
   ret double %res
 }
 
-define <4 x float> @trunc_v4f32(<4 x float> %vf1) {
+define <4 x float> @trunc_v4f32(<4 x float> %vf1) strictfp {
 ; P8-LABEL: trunc_v4f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xvrspiz v2, v2
@@ -613,7 +613,7 @@ define <4 x float> @trunc_v4f32(<4 x float> %vf1) {
   ret <4 x float> %res
 }
 
-define <2 x double> @trunc_v2f64(<2 x double> %vf1) {
+define <2 x double> @trunc_v2f64(<2 x double> %vf1) strictfp {
 ; P8-LABEL: trunc_v2f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xvrdpiz v2, v2

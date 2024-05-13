@@ -4,7 +4,7 @@
 - (void *)description;
 @end
 
-int main()
+int main(void)
 {
         id<NSObject> eggs;
         void *eggsText= eggs.description;

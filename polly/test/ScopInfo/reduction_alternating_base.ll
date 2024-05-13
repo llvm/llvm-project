@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;
 ;    void f(int *A) {
@@ -13,7 +13,7 @@
 ;
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @f(i32* %A) {
+define void @f(ptr %A) {
 entry:
   br label %for.cond
 
@@ -24,10 +24,10 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %rem = srem i32 %i.0, 2
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %rem
-  %tmp = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %rem
+  %tmp = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %tmp, %i.0
-  store i32 %add, i32* %arrayidx, align 4
+  store i32 %add, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

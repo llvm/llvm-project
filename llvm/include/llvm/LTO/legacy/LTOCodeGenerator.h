@@ -24,6 +24,7 @@
 //   As of this writing, we don't separate IPO and the Post-IPO SOPT. They
 // are intermingled together, and are driven by a single pass manager (see
 // PassManagerBuilder::populateLTOPassManager()).
+//   FIXME: populateLTOPassManager no longer exists.
 //
 //   The "LTOCodeGenerator" is the driver for the IPO and Post-IPO stages.
 // The "CodeGenerator" here is bit confusing. Don't confuse the "CodeGenerator"
@@ -36,7 +37,6 @@
 
 #include "llvm-c/lto.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
@@ -51,9 +51,6 @@
 #include <string>
 #include <vector>
 
-/// Enable global value internalization in LTO.
-extern llvm::cl::opt<bool> EnableLTOInternalization;
-
 namespace llvm {
 template <typename T> class ArrayRef;
   class LLVMContext;
@@ -65,6 +62,9 @@ template <typename T> class ArrayRef;
   class TargetMachine;
   class raw_ostream;
   class raw_pwrite_stream;
+
+/// Enable global value internalization in LTO.
+extern cl::opt<bool> EnableLTOInternalization;
 
 //===----------------------------------------------------------------------===//
 /// C++ class which implements the opaque lto_code_gen_t type.
@@ -88,20 +88,25 @@ struct LTOCodeGenerator {
   void setAsmUndefinedRefs(struct LTOModule *);
   void setTargetOptions(const TargetOptions &Options);
   void setDebugInfo(lto_debug_model);
-  void setCodePICModel(Optional<Reloc::Model> Model) {
+  void setCodePICModel(std::optional<Reloc::Model> Model) {
     Config.RelocModel = Model;
   }
 
   /// Set the file type to be emitted (assembly or object code).
-  /// The default is CGFT_ObjectFile.
+  /// The default is CodeGenFileType::ObjectFile.
   void setFileType(CodeGenFileType FT) { Config.CGFileType = FT; }
 
   void setCpu(StringRef MCpu) { Config.CPU = std::string(MCpu); }
-  void setAttrs(std::vector<std::string> MAttrs) { Config.MAttrs = MAttrs; }
+  void setAttrs(std::vector<std::string> MAttrs) {
+    Config.MAttrs = std::move(MAttrs);
+  }
   void setOptLevel(unsigned OptLevel);
 
   void setShouldInternalize(bool Value) { ShouldInternalize = Value; }
   void setShouldEmbedUselists(bool Value) { ShouldEmbedUselists = Value; }
+  void setSaveIRBeforeOptPath(std::string Value) {
+    SaveIRBeforeOptPath = std::move(Value);
+  }
 
   /// Restore linkage of globals
   ///
@@ -176,7 +181,7 @@ struct LTOCodeGenerator {
   /// created using the \p AddStream callback. Returns true on success.
   ///
   /// Calls \a verifyMergedModuleOnce().
-  bool compileOptimized(lto::AddStreamFn AddStream, unsigned ParallelismLevel);
+  bool compileOptimized(AddStreamFn AddStream, unsigned ParallelismLevel);
 
   /// Enable the Freestanding mode: indicate that the optimizer should not
   /// assume builtins are present on the target.
@@ -184,7 +189,7 @@ struct LTOCodeGenerator {
 
   void setDisableVerify(bool Value) { Config.DisableVerify = Value; }
 
-  void setUseNewPM(bool Value) { Config.UseNewPM = Value; }
+  void setDebugPassManager(bool Enabled) { Config.DebugPassManager = Enabled; }
 
   void setDiagnosticHandler(lto_diagnostic_handler_t, void *);
 
@@ -209,6 +214,9 @@ private:
 
   bool determineTarget();
   std::unique_ptr<TargetMachine> createTargetMachine();
+
+  bool useAIXSystemAssembler();
+  bool runAIXSystemAssembler(SmallString<128> &AssemblyFile);
 
   void emitError(const std::string &ErrMsg);
   void emitWarning(const std::string &ErrMsg);
@@ -237,6 +245,7 @@ private:
   bool ShouldRestoreGlobalsLinkage = false;
   std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
+  std::string SaveIRBeforeOptPath;
 
   lto::Config Config;
 };

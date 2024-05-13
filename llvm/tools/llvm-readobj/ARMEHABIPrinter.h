@@ -91,7 +91,7 @@ inline ArrayRef<OpcodeDecoder::RingEntry> OpcodeDecoder::ring() {
       {0xf8, 0xd0, &OpcodeDecoder::Decode_11010nnn},
       {0xc0, 0xc0, &OpcodeDecoder::Decode_11xxxyyy},
   };
-  return makeArrayRef(Ring);
+  return ArrayRef(Ring);
 }
 
 inline void OpcodeDecoder::Decode_00xxxxxx(const uint8_t *Opcodes,
@@ -158,9 +158,8 @@ inline void OpcodeDecoder::Decode_10110001_0000iiii(const uint8_t *Opcodes,
   uint8_t Opcode0 = Opcodes[OI++ ^ 3];
   uint8_t Opcode1 = Opcodes[OI++ ^ 3];
 
-  SW.startLine()
-    << format("0x%02X 0x%02X ; %s", Opcode0, Opcode1,
-              ((Opcode1 & 0xf0) || Opcode1 == 0x00) ? "spare" : "pop ");
+  SW.startLine() << format("0x%02X 0x%02X ; %s", Opcode0, Opcode1,
+                           (Opcode1 & 0xf0) ? "spare" : "pop ");
   if (((Opcode1 & 0xf0) == 0x00) && Opcode1)
     PrintGPR((Opcode1 & 0x0f));
   OS << '\n';
@@ -195,7 +194,8 @@ inline void OpcodeDecoder::Decode_10110011_sssscccc(const uint8_t *Opcodes,
 inline void OpcodeDecoder::Decode_101101nn(const uint8_t *Opcodes,
                                            unsigned &OI) {
   uint8_t Opcode = Opcodes[OI++ ^ 3];
-  SW.startLine() << format("0x%02X      ; spare\n", Opcode);
+  SW.startLine() << format("0x%02X      ; %s\n", Opcode,
+                           (Opcode == 0xb4) ? "pop ra_auth_code" : "spare");
 }
 inline void OpcodeDecoder::Decode_10111nnn(const uint8_t *Opcodes,
                                            unsigned &OI) {
@@ -341,8 +341,9 @@ class PrinterContext {
     return Location + Place;
   }
 
-  ErrorOr<StringRef> FunctionAtAddress(uint64_t Address,
-                                       Optional<unsigned> SectionIndex) const;
+  ErrorOr<StringRef>
+  FunctionAtAddress(uint64_t Address,
+                    std::optional<unsigned> SectionIndex) const;
   const Elf_Shdr *FindExceptionTable(unsigned IndexTableIndex,
                                      off_t IndexTableOffset) const;
 
@@ -363,9 +364,8 @@ template <typename ET>
 const size_t PrinterContext<ET>::IndexTableEntrySize = 8;
 
 template <typename ET>
-ErrorOr<StringRef>
-PrinterContext<ET>::FunctionAtAddress(uint64_t Address,
-                                      Optional<unsigned> SectionIndex) const {
+ErrorOr<StringRef> PrinterContext<ET>::FunctionAtAddress(
+    uint64_t Address, std::optional<unsigned> SectionIndex) const {
   if (!Symtab)
     return inconvertibleErrorCode();
   auto StrTableOrErr = ELF.getStringTableForSymtab(*Symtab);
@@ -426,7 +426,7 @@ PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
 
       auto Ret = ELF.getSection(*Symbol, SymTab, ShndxTable);
       if (!Ret)
-        report_fatal_error(errorToErrorCode(Ret.takeError()).message());
+        report_fatal_error(Twine(errorToErrorCode(Ret.takeError()).message()));
       return *Ret;
     }
   }
@@ -501,8 +501,8 @@ void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr &EHT,
                            ? PREL31(Word, EHT.sh_addr)
                            : PREL31(Word, EHT.sh_addr + TableEntryOffset);
     SW.printHex("PersonalityRoutineAddress", Address);
-    Optional<unsigned> SecIndex =
-        IsRelocatable ? Optional<unsigned>(EHT.sh_link) : None;
+    std::optional<unsigned> SecIndex =
+        IsRelocatable ? std::optional<unsigned>(EHT.sh_link) : std::nullopt;
     if (ErrorOr<StringRef> Name = FunctionAtAddress(Address, SecIndex))
       SW.printString("PersonalityRoutineName", *Name);
   }
@@ -512,7 +512,7 @@ template <typename ET>
 void PrinterContext<ET>::PrintOpcodes(const uint8_t *Entry,
                                       size_t Length, off_t Offset) const {
   ListScope OCC(SW, "Opcodes");
-  OpcodeDecoder(OCC.W).Decode(Entry, Offset, Length);
+  OpcodeDecoder(SW).Decode(Entry, Offset, Length);
 }
 
 template <typename ET>
@@ -574,8 +574,8 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
     // their code sections via the sh_link field. For a non-relocatable ELF file
     // the sh_link field is not reliable, because we have one .ARM.exidx section
     // normally, but might have many code sections.
-    Optional<unsigned> SecIndex =
-        IsRelocatable ? Optional<unsigned>(IT->sh_link) : None;
+    std::optional<unsigned> SecIndex =
+        IsRelocatable ? std::optional<unsigned>(IT->sh_link) : std::nullopt;
     if (ErrorOr<StringRef> Name = FunctionAtAddress(Address, SecIndex))
       SW.printString("FunctionName", *Name);
 

@@ -4,5 +4,5 @@
 ; frame, covering the locals.
 ; CHECK-LABEL: fn:
 ; CHECK:      adrp [[REG:x[0-9]+]], __stack_chk_guard
-; CHECK-NEXT: ldr [[REG]], {{\[}}[[REG]], :lo12:__stack_chk_guard]
+; CHECK-NEXT: ldr [[REG]], [[[REG]], :lo12:__stack_chk_guard]
 ; CHECK-NEXT: stur [[REG]], [x29, #-8]

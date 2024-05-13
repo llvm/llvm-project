@@ -40,11 +40,7 @@ public:
     if (!Group.diagnostics().empty())
       return false;
 
-    for (const GroupRecord &GR : Group.subgroups())
-      if (!unimplemented(GR))
-        return false;
-
-    return true;
+    return llvm::all_of(Group.subgroups(), unimplemented);
   }
 
   static bool enabledByDefault(const GroupRecord &Group) {
@@ -131,6 +127,9 @@ public:
   void showKey() {
     out << '\n' << Colors::GREEN << "GREEN" << Colors::RESET
         << " = enabled by default";
+    out << '\n'
+        << Colors::YELLOW << "YELLOW" << Colors::RESET
+        << " = disabled by default";
     out << '\n' << Colors::RED << "RED" << Colors::RESET
         << " = unimplemented (accepted for GCC compatibility)\n\n";
   }
@@ -145,7 +144,7 @@ int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
   bool Internal = false;
   if (argc > 0) {
     StringRef FirstArg(*argv);
-    if (FirstArg.equals("--internal")) {
+    if (FirstArg == "--internal") {
       Internal = true;
       --argc;
       ++argv;
@@ -161,8 +160,7 @@ int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
     break;
   case 1:
     RootGroup = argv[0];
-    if (RootGroup.startswith("-W"))
-      RootGroup = RootGroup.substr(2);
+    RootGroup.consume_front("-W");
     if (RootGroup == "everything")
       ShowAll = true;
     // FIXME: Handle other special warning flags, like -pedantic.

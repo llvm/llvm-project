@@ -14,95 +14,79 @@
 #define LLVM_LIB_BITCODE_READER_VALUELIST_H
 
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <utility>
 #include <vector>
 
 namespace llvm {
 
-class Constant;
-class LLVMContext;
+class Error;
 class Type;
 class Value;
 
 class BitcodeReaderValueList {
-  std::vector<WeakTrackingVH> ValuePtrs;
-
-  /// Struct containing fully-specified copies of the type of each
-  /// value. When pointers are opaque, this will be contain non-opaque
-  /// variants so that restructuring instructions can determine their
-  /// type correctly even if being loaded from old bitcode where some
-  /// types are implicit.
-  std::vector<Type *> FullTypes;
-
-  /// As we resolve forward-referenced constants, we add information about them
-  /// to this vector.  This allows us to resolve them in bulk instead of
-  /// resolving each reference at a time.  See the code in
-  /// ResolveConstantForwardRefs for more information about this.
-  ///
-  /// The key of this vector is the placeholder constant, the value is the slot
-  /// number that holds the resolved value.
-  using ResolveConstantsTy = std::vector<std::pair<Constant *, unsigned>>;
-  ResolveConstantsTy ResolveConstants;
-  LLVMContext &Context;
+  /// Maps Value ID to pair of Value* and Type ID.
+  std::vector<std::pair<WeakTrackingVH, unsigned>> ValuePtrs;
 
   /// Maximum number of valid references. Forward references exceeding the
   /// maximum must be invalid.
   unsigned RefsUpperBound;
 
-public:
-  BitcodeReaderValueList(LLVMContext &C, size_t RefsUpperBound)
-      : Context(C),
-        RefsUpperBound(std::min((size_t)std::numeric_limits<unsigned>::max(),
-                                RefsUpperBound)) {}
+  using MaterializeValueFnTy =
+      std::function<Expected<Value *>(unsigned, BasicBlock *)>;
+  MaterializeValueFnTy MaterializeValueFn;
 
-  ~BitcodeReaderValueList() {
-    assert(ResolveConstants.empty() && "Constants not resolved?");
-  }
+public:
+  BitcodeReaderValueList(size_t RefsUpperBound,
+                         MaterializeValueFnTy MaterializeValueFn)
+      : RefsUpperBound(std::min((size_t)std::numeric_limits<unsigned>::max(),
+                                RefsUpperBound)),
+        MaterializeValueFn(MaterializeValueFn) {}
 
   // vector compatibility methods
   unsigned size() const { return ValuePtrs.size(); }
   void resize(unsigned N) {
     ValuePtrs.resize(N);
-    FullTypes.resize(N);
   }
-  void push_back(Value *V, Type *Ty) {
-    ValuePtrs.emplace_back(V);
-    FullTypes.emplace_back(Ty);
+  void push_back(Value *V, unsigned TypeID) {
+    ValuePtrs.emplace_back(V, TypeID);
   }
 
   void clear() {
-    assert(ResolveConstants.empty() && "Constants not resolved?");
     ValuePtrs.clear();
-    FullTypes.clear();
   }
 
   Value *operator[](unsigned i) const {
     assert(i < ValuePtrs.size());
-    return ValuePtrs[i];
+    return ValuePtrs[i].first;
   }
 
-  Value *back() const { return ValuePtrs.back(); }
+  unsigned getTypeID(unsigned ValNo) const {
+    assert(ValNo < ValuePtrs.size());
+    return ValuePtrs[ValNo].second;
+  }
+
+  Value *back() const { return ValuePtrs.back().first; }
   void pop_back() {
     ValuePtrs.pop_back();
-    FullTypes.pop_back();
   }
   bool empty() const { return ValuePtrs.empty(); }
 
   void shrinkTo(unsigned N) {
     assert(N <= size() && "Invalid shrinkTo request!");
     ValuePtrs.resize(N);
-    FullTypes.resize(N);
   }
 
-  Constant *getConstantFwdRef(unsigned Idx, Type *Ty);
-  Value *getValueFwdRef(unsigned Idx, Type *Ty, Type **FullTy = nullptr);
+  void replaceValueWithoutRAUW(unsigned ValNo, Value *NewV) {
+    assert(ValNo < ValuePtrs.size());
+    ValuePtrs[ValNo].first = NewV;
+  }
 
-  void assignValue(Value *V, unsigned Idx, Type *FullTy);
+  Value *getValueFwdRef(unsigned Idx, Type *Ty, unsigned TyID,
+                        BasicBlock *ConstExprInsertBB);
 
-  /// Once all constants are read, this method bulk resolves any forward
-  /// references.
-  void resolveConstantForwardRefs();
+  Error assignValue(unsigned Idx, Value *V, unsigned TypeID);
 };
 
 } // end namespace llvm

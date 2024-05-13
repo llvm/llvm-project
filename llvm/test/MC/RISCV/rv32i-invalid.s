@@ -1,12 +1,12 @@
-# RUN: not llvm-mc -triple riscv32 < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv32 %s 2>&1 | FileCheck %s
 
 # Out of range immediates
 ## fencearg
-fence iorw, iore # CHECK: :[[@LINE]]:13: error: operand must be formed of letters selected in-order from 'iorw'
-fence wr, wr # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
-fence rw, rr # CHECK: :[[@LINE]]:11: error: operand must be formed of letters selected in-order from 'iorw'
-fence 1, rw # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
-fence unknown, unknown # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
+fence iorw, iore # CHECK: :[[@LINE]]:13: error: operand must be formed of letters selected in-order from 'iorw' or be 0
+fence wr, wr # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw' or be 0
+fence rw, rr # CHECK: :[[@LINE]]:11: error: operand must be formed of letters selected in-order from 'iorw' or be 0
+fence 1, rw # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw' or be 0
+fence unknown, unknown # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw' or be 0
 
 ## uimm5
 slli a0, a0, 32 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
@@ -117,7 +117,7 @@ jal gp, %pcrel_hi(c) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple 
 jal gp, %pcrel_lo(4) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
 jal gp, %pcrel_lo(d) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
 
-# Bare symbol names when an operand modifier is required and unsupported 
+# Bare symbol names when an operand modifier is required and unsupported
 # operand modifiers.
 
 lui a0, foo # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi modifier or an integer in the range [0, 1048575]
@@ -151,8 +151,8 @@ slti a10, a2, 0x20 # CHECK: :[[@LINE]]:6: error: invalid operand for instruction
 slt x32, s0, s0 # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
 
 # RV64I mnemonics
-addiw a0, sp, 100 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-sraw t0, s2, zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+addiw a0, sp, 100 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+sraw t0, s2, zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 
 # Invalid operand types
 xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
@@ -169,10 +169,20 @@ ori a0, a1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 xor s2, s2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 
 # Instruction not in the base ISA
-mul a4, ra, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'M' (Integer Multiplication and Division)
-amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions)
-fadd.s ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point)
-fadd.h ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point)
+div a4, ra, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
+amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions) or 'Zaamo' (Atomic Memory Operations){{$}}
+lr.w t0, (t1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions) or 'Zalrsc' (Load-Reserved/Store-Conditional){{$}}
+fadd.s ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}
+fadd.h ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point){{$}}
+fadd.s a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfinx' (Float in Integer){{$}}
+fadd.d a0, a2, a4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}
+fadd.h a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zhinx' (Half Float in Integer){{$}}
+flh ft0, (a0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal){{$}}
+sh1add a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zba' (Address Generation Instructions){{$}}
+clz a0, a1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbb' (Basic Bit-Manipulation){{$}}
+clmul a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbc' (Carry-Less Multiplication) or 'Zbkc' (Carry-less multiply instructions for Cryptography){{$}}
+bset a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbs' (Single-Bit Instructions){{$}}
+pause # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zihintpause' (Pause Hint){{$}}
 
 # Using floating point registers when integer registers are expected
 addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction

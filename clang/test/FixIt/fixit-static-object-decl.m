@@ -7,7 +7,6 @@
 // RUN: cp %s %t
 // RUN: not %clang_cc1 -fixit -x objective-c++ %t -std=c++11
 // RUN: %clang_cc1 -fsyntax-only -Werror -x objective-c++ %t  -std=c++11
-// rdar://9603056
 
 @interface S @end
 
@@ -19,12 +18,12 @@
 + (id) arrayWithObjects;
 @end
 
-NSArray func() {
+NSArray func(void) {
   NSArray P;
   return P;
 }
 
-NSArray (func2)() { return 0; }
+NSArray (func2)(void) { return 0; }
 
 #ifdef __cplusplus
 void test_result_type() {
@@ -32,6 +31,6 @@ void test_result_type() {
 }
 #endif
 
-int main() {
+int main(void) {
   	NSArray pluginNames = [NSArray arrayWithObjects];
 }

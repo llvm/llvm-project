@@ -1,20 +1,20 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func @entry() {
+func.func @entry() {
   // Construct test vector.
-  %f1 = constant 1.5: f32
-  %f2 = constant 2.0: f32
-  %f3 = constant 3.0: f32
-  %f4 = constant 4.0: f32
-  %f5 = constant 5.0: f32
-  %f6 = constant -1.0: f32
-  %f7 = constant -2.0: f32
-  %f8 = constant -4.0: f32
-  %f9 = constant -0.25: f32
-  %f10 = constant -16.0: f32
+  %f1 = arith.constant 1.5: f32
+  %f2 = arith.constant 2.0: f32
+  %f3 = arith.constant 3.0: f32
+  %f4 = arith.constant 4.0: f32
+  %f5 = arith.constant 5.0: f32
+  %f6 = arith.constant -1.0: f32
+  %f7 = arith.constant -2.0: f32
+  %f8 = arith.constant -4.0: f32
+  %f9 = arith.constant -0.25: f32
+  %f10 = arith.constant -16.0: f32
   %v0 = vector.broadcast %f1 : f32 to vector<10xf32>
   %v1 = vector.insert %f2, %v0[1] : f32 into vector<10xf32>
   %v2 = vector.insert %f3, %v1[2] : f32 into vector<10xf32>
@@ -33,17 +33,23 @@ func @entry() {
 
   // Various vector reductions. Not full functional unit tests, but
   // a simple integration test to see if the code runs end-to-end.
-  %0 = vector.reduction "add", %v9 : vector<10xf32> into f32
+  %0 = vector.reduction <add>, %v9 : vector<10xf32> into f32
   vector.print %0 : f32
   // CHECK: -7.75
-  %1 = vector.reduction "mul", %v9 : vector<10xf32> into f32
+  %1 = vector.reduction <mul>, %v9 : vector<10xf32> into f32
   vector.print %1 : f32
   // CHECK: -5760
-  %2 = vector.reduction "min", %v9 : vector<10xf32> into f32
+  %2 = vector.reduction <minimumf>, %v9 : vector<10xf32> into f32
   vector.print %2 : f32
   // CHECK: -16
-  %3 = vector.reduction "max", %v9 : vector<10xf32> into f32
+  %3 = vector.reduction <maximumf>, %v9 : vector<10xf32> into f32
   vector.print %3 : f32
+  // CHECK: 5
+  %4 = vector.reduction <minnumf>, %v9 : vector<10xf32> into f32
+  vector.print %4 : f32
+  // CHECK: -16
+  %5 = vector.reduction <maxnumf>, %v9 : vector<10xf32> into f32
+  vector.print %5 : f32
   // CHECK: 5
 
   return

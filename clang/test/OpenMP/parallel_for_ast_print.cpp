@@ -1,10 +1,23 @@
-// RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -ast-print %s -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP51
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -std=c++11 -include-pch %t -verify %s -ast-print -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -ast-print %s -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP52
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -verify %s -ast-print -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -ast-print %s -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP51
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -std=c++11 -include-pch %t -verify %s -ast-print -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// expected-no-diagnostics
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -ast-print %s -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP52
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=52 -std=c++11 -include-pch %t -verify %s -ast-print -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -70,8 +83,14 @@ T tmain(T argc) {
 // CHECK: static T a;
   static T g;
 #pragma omp threadprivate(g)
+#if defined(OMP51) || defined(OMP52)
+#pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d, e,f) order(reproducible:concurrent)
+#else
 #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d, e,f) order(concurrent)
-  // CHECK: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d,e,f) order(concurrent)
+#endif // OMP51
+  // OMP50: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d,e,f) order(concurrent)
+  // OMP51: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d,e,f) order(reproducible: concurrent)
+  // OMP52: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d,e,f) order(reproducible: concurrent)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
@@ -138,11 +157,15 @@ int main(int argc, char **argv) {
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
+#ifdef OMP52
+#pragma omp parallel for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) schedule(auto) ordered if (argc) num_threads(a) default(shared) shared(e) reduction(+ : h) linear(a: step(-5))
+#else
 #pragma omp parallel for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) schedule(auto) ordered if (argc) num_threads(a) default(shared) shared(e) reduction(+ : h) linear(a:-5)
+#endif
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       foo();
-  // CHECK-NEXT: #pragma omp parallel for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) schedule(auto) ordered if(argc) num_threads(a) default(shared) shared(e) reduction(+: h) linear(a: -5)
+  // CHECK-NEXT: #pragma omp parallel for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) schedule(auto) ordered if(argc) num_threads(a) default(shared) shared(e) reduction(+: h) linear(a: step(-5))
  // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: foo();

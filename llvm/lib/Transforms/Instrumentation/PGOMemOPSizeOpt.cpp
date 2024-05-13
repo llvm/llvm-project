@@ -20,7 +20,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -29,15 +28,11 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/ProfileData/InstrProf.h"
 #define INSTR_PROF_VALUE_PROF_MEMOP_API
 #include "llvm/ProfileData/InstrProfData.inc"
@@ -46,8 +41,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/WithColor.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cassert>
@@ -63,8 +56,7 @@ STATISTIC(NumOfPGOMemOPAnnotate, "Number of memop intrinsics annotated.");
 
 // The minimum call count to optimize memory intrinsic calls.
 static cl::opt<unsigned>
-    MemOPCountThreshold("pgo-memop-count-threshold", cl::Hidden, cl::ZeroOrMore,
-                        cl::init(1000),
+    MemOPCountThreshold("pgo-memop-count-threshold", cl::Hidden, cl::init(1000),
                         cl::desc("The minimum count to optimize memory "
                                  "intrinsic calls"));
 
@@ -76,14 +68,13 @@ static cl::opt<bool> DisableMemOPOPT("disable-memop-opt", cl::init(false),
 // The percent threshold to optimize memory intrinsic calls.
 static cl::opt<unsigned>
     MemOPPercentThreshold("pgo-memop-percent-threshold", cl::init(40),
-                          cl::Hidden, cl::ZeroOrMore,
+                          cl::Hidden,
                           cl::desc("The percentage threshold for the "
                                    "memory intrinsic calls optimization"));
 
 // Maximum number of versions for optimizing memory intrinsic call.
 static cl::opt<unsigned>
     MemOPMaxVersion("pgo-memop-max-version", cl::init(3), cl::Hidden,
-                    cl::ZeroOrMore,
                     cl::desc("The max version for the optimized memory "
                              " intrinsic calls"));
 
@@ -101,43 +92,6 @@ cl::opt<bool>
 static cl::opt<unsigned>
     MemOpMaxOptSize("memop-value-prof-max-opt-size", cl::Hidden, cl::init(128),
                     cl::desc("Optimize the memop size <= this value"));
-
-namespace {
-class PGOMemOPSizeOptLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  PGOMemOPSizeOptLegacyPass() : FunctionPass(ID) {
-    initializePGOMemOPSizeOptLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override { return "PGOMemOPSize"; }
-
-private:
-  bool runOnFunction(Function &F) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
-} // end anonymous namespace
-
-char PGOMemOPSizeOptLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(PGOMemOPSizeOptLegacyPass, "pgo-memop-opt",
-                      "Optimize memory intrinsic using its size value profile",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(PGOMemOPSizeOptLegacyPass, "pgo-memop-opt",
-                    "Optimize memory intrinsic using its size value profile",
-                    false, false)
-
-FunctionPass *llvm::createPGOMemOPSizeOptLegacyPass() {
-  return new PGOMemOPSizeOptLegacyPass();
-}
 
 namespace {
 
@@ -337,9 +291,9 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   uint64_t SavedRemainCount = SavedTotalCount;
   SmallVector<uint64_t, 16> SizeIds;
   SmallVector<uint64_t, 16> CaseCounts;
+  SmallDenseSet<uint64_t, 16> SeenSizeId;
   uint64_t MaxCount = 0;
   unsigned Version = 0;
-  int64_t LastV = -1;
   // Default case is in the front -- save the slot here.
   CaseCounts.push_back(0);
   SmallVector<InstrProfValueData, 24> RemainingVDs;
@@ -362,14 +316,11 @@ bool MemOPSizeOpt::perform(MemOp MO) {
       break;
     }
 
-    if (V == LastV) {
-      LLVM_DEBUG(dbgs() << "Invalid Profile Data in Function " << Func.getName()
-                        << ": Two consecutive, identical values in MemOp value"
-                           "counts.\n");
+    if (!SeenSizeId.insert(V).second) {
+      errs() << "warning: Invalid Profile Data in Function " << Func.getName()
+             << ": Two identical values in MemOp value counts.\n";
       return false;
     }
-
-    LastV = V;
 
     SizeIds.push_back(V);
     CaseCounts.push_back(C);
@@ -427,7 +378,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   assert(It != DefaultBB->end());
   BasicBlock *MergeBB = SplitBlock(DefaultBB, &(*It), DT);
   MergeBB->setName("MemOP.Merge");
-  BFI.setBlockFreq(MergeBB, OrigBBFreq.getFrequency());
+  BFI.setBlockFreq(MergeBB, OrigBBFreq);
   DefaultBB->setName("MemOP.Default");
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
@@ -471,7 +422,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     assert(SizeType && "Expected integer type size argument.");
     ConstantInt *CaseSizeId = ConstantInt::get(SizeType, SizeId);
     NewMO.setLength(CaseSizeId);
-    CaseBB->getInstList().push_back(NewMO.I);
+    NewMO.I->insertInto(CaseBB, CaseBB->end());
     IRBuilder<> IRBCase(CaseBB);
     IRBCase.CreateBr(MergeBB);
     SI->addCase(CaseSizeId, CaseBB);
@@ -486,7 +437,8 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   DTU.applyUpdates(Updates);
   Updates.clear();
 
-  setProfMetadata(Func.getParent(), SI, CaseCounts, MaxCount);
+  if (MaxCount)
+    setProfMetadata(Func.getParent(), SI, CaseCounts, MaxCount);
 
   LLVM_DEBUG(dbgs() << *BB << "\n");
   LLVM_DEBUG(dbgs() << *DefaultBB << "\n");
@@ -517,20 +469,6 @@ static bool PGOMemOPSizeOptImpl(Function &F, BlockFrequencyInfo &BFI,
   return MemOPSizeOpt.isChanged();
 }
 
-bool PGOMemOPSizeOptLegacyPass::runOnFunction(Function &F) {
-  BlockFrequencyInfo &BFI =
-      getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
-  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  TargetLibraryInfo &TLI =
-      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  return PGOMemOPSizeOptImpl(F, BFI, ORE, DT, TLI);
-}
-
-namespace llvm {
-char &PGOMemOPSizeOptID = PGOMemOPSizeOptLegacyPass::ID;
-
 PreservedAnalyses PGOMemOPSizeOpt::run(Function &F,
                                        FunctionAnalysisManager &FAM) {
   auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
@@ -544,4 +482,3 @@ PreservedAnalyses PGOMemOPSizeOpt::run(Function &F,
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
-} // namespace llvm

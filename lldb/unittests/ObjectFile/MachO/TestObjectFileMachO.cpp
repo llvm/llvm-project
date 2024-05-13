@@ -76,4 +76,22 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
   // ... and one from the __DATA segment
   check_symbol("OBJC_CLASS_$_NSObject");
 }
+
+TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
+  SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
+      "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit");
+  ModuleSpec spec(FileSpec(), UUID(), image_info.data_sp);
+  lldb::ModuleSP module = std::make_shared<Module>(spec);
+
+  ObjectFile *OF = module->GetObjectFile();
+  ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
+  EXPECT_TRUE(
+      OF->GetArchitecture().IsCompatibleMatch(HostInfo::GetArchitecture()));
+
+  // Check that we can parse the symbol table several times over without
+  // crashing.
+  Symtab symtab(OF);
+  for (size_t i = 0; i < 10; i++)
+    OF->ParseSymtab(symtab);
+}
 #endif

@@ -1,4 +1,6 @@
 ; RUN: llc -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_const_value [DW_FORM_udata]	(0)
 ; CHECK-NEXT: DW_AT_name {{.*}}"a"
@@ -22,7 +24,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; Function Attrs: nounwind readnone ssp uwtable
 define i32 @mfi_aen_setup() #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.declare(metadata %union.mfi_evt* undef, metadata !16, metadata !21), !dbg !22
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !16, metadata !21), !dbg !22
   tail call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !21), !dbg !22
   ret i32 undef, !dbg !23
 }

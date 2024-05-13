@@ -16,8 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/Archive.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class ArchiveFile;
 class DylibFile;
@@ -39,8 +38,11 @@ class SymbolTable {
 public:
   Defined *addDefined(StringRef name, InputFile *, InputSection *,
                       uint64_t value, uint64_t size, bool isWeakDef,
-                      bool isPrivateExtern, bool isThumb,
-                      bool isReferencedDynamically, bool noDeadStrip);
+                      bool isPrivateExtern, bool isReferencedDynamically,
+                      bool noDeadStrip, bool isWeakDefCanBeHidden);
+
+  Defined *aliasDefined(Defined *src, StringRef target, InputFile *newFile,
+                        bool makePrivateExtern = false);
 
   Symbol *addUndefined(StringRef name, InputFile *, bool isWeakRef);
 
@@ -50,8 +52,9 @@ public:
   Symbol *addDylib(StringRef name, DylibFile *file, bool isWeakDef, bool isTlv);
   Symbol *addDynamicLookup(StringRef name);
 
-  Symbol *addLazy(StringRef name, ArchiveFile *file,
-                  const llvm::object::Archive::Symbol &sym);
+  Symbol *addLazyArchive(StringRef name, ArchiveFile *file,
+                         const llvm::object::Archive::Symbol &sym);
+  Symbol *addLazyObject(StringRef name, InputFile &file);
 
   Defined *addSynthetic(StringRef name, InputSection *, uint64_t value,
                         bool isPrivateExtern, bool includeInSymtab,
@@ -67,11 +70,16 @@ private:
   std::vector<Symbol *> symVector;
 };
 
-void treatUndefinedSymbol(const Undefined &, StringRef source = "");
+void reportPendingUndefinedSymbols();
+void reportPendingDuplicateSymbols();
 
-extern SymbolTable *symtab;
+// Call reportPendingUndefinedSymbols() to emit diagnostics.
+void treatUndefinedSymbol(const Undefined &, StringRef source);
+void treatUndefinedSymbol(const Undefined &, const InputSection *,
+                          uint64_t offset);
 
-} // namespace macho
-} // namespace lld
+extern std::unique_ptr<SymbolTable> symtab;
+
+} // namespace lld::macho
 
 #endif

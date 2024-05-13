@@ -4,7 +4,7 @@
 
 define i32 @c() {
 entry:
-  callbr void asm sideeffect "j d", "X"(i8* blockaddress(@c, %d))
+  callbr void asm sideeffect "j d", "!i"()
           to label %asm.fallthrough [label %d]
 
 asm.fallthrough:               ; preds = %entry

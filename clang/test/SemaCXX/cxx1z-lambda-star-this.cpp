@@ -1,7 +1,12 @@
-// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -emit-llvm-only %s
+// RUN: %clang_cc1 -std=c++1z -verify -fblocks -emit-llvm-only %s
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -DDELAYED_TEMPLATE_PARSING
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fms-extensions %s -DMS_EXTENSIONS
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing -fms-extensions %s -DMS_EXTENSIONS -DDELAYED_TEMPLATE_PARSING
+
+// RUN: %clang_cc1 -std=c++1z -verify -fblocks -emit-llvm-only %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -DDELAYED_TEMPLATE_PARSING -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fms-extensions %s -DMS_EXTENSIONS -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing -fms-extensions %s -DMS_EXTENSIONS -DDELAYED_TEMPLATE_PARSING -fexperimental-new-constant-interpreter
 
 template <class, class>
 constexpr bool is_same = false;
@@ -88,13 +93,11 @@ struct X {
   void foo() const { //expected-note{{const}}
 
     auto L = [*this]() mutable {
-      static_assert(is_same<decltype(this), X *>);
-      ++d;
+      static_assert(is_same<decltype(this), const X *>);
       auto M = [this] {
-        static_assert(is_same<decltype(this), X *>);
-        ++d;
+        static_assert(is_same<decltype(this), const X *>);
         auto N = [] {
-          static_assert(is_same<decltype(this), X *>);
+          static_assert(is_same<decltype(this), const X *>);
         };
       };
     };
@@ -108,9 +111,9 @@ struct X {
         };
       };
       auto M2 = [*this]() mutable {
-        static_assert(is_same<decltype(this), X *>);
+        static_assert(is_same<decltype(this), const X *>);
         auto N = [] {
-          static_assert(is_same<decltype(this), X *>);
+          static_assert(is_same<decltype(this), const X *>);
         };
       };
     };
@@ -126,9 +129,9 @@ struct X {
       };
 
       auto M2 = [*this](auto a) mutable {
-        static_assert(is_same<decltype(this), X *>);
+        static_assert(is_same<decltype(this), const X *>);
         auto N = [](auto b) {
-          static_assert(is_same<decltype(this), X *>);
+          static_assert(is_same<decltype(this), const X *>);
         };
         return N;
       };
@@ -143,13 +146,11 @@ struct X {
       ++d; //expected-error{{cannot assign}}
     };
     auto GL = [*this](auto a) mutable {
-      static_assert(is_same<decltype(this), X *>);
-      ++d;
+      static_assert(is_same<decltype(this), const X *>);
       auto M = [this](auto b) {
-        static_assert(is_same<decltype(this), X *>);
-        ++d;
+        static_assert(is_same<decltype(this), const X *>);
         auto N = [](auto c) {
-          static_assert(is_same<decltype(this), X *>);
+          static_assert(is_same<decltype(this), const X *>);
         };
         N(3.14);
       };
@@ -161,21 +162,21 @@ struct X {
     auto L = [this]() {
       static_assert(is_same<decltype(this), const volatile X *>);
       auto M = [*this]() mutable {
-        static_assert(is_same<decltype(this), X *>);
+        static_assert(is_same<decltype(this), const volatile X *>);
         auto N = [this] {
-          static_assert(is_same<decltype(this), X *>);
+          static_assert(is_same<decltype(this), const volatile X *>);
           auto M = [] {
-            static_assert(is_same<decltype(this), X *>);
+            static_assert(is_same<decltype(this), const volatile X *>);
           };
         };
         auto N2 = [*this] {
-          static_assert(is_same<decltype(this), const X *>);
+          static_assert(is_same<decltype(this), const volatile X *>);
         };
       };
       auto M2 = [*this]() {
-        static_assert(is_same<decltype(this), const X *>);
+        static_assert(is_same<decltype(this), const volatile X *>);
         auto N = [this] {
-          static_assert(is_same<decltype(this), const X *>);
+          static_assert(is_same<decltype(this), const volatile X *>);
         };
       };
     };
@@ -190,14 +191,13 @@ struct X {
     auto L = [*this]() mutable {
       auto M = [=](auto a) {
         auto N = [this] {
-          ++d;
-          static_assert(is_same<decltype(this), X *>);
+          static_assert(is_same<decltype(this), const X *>);
           auto O = [*this] {
             static_assert(is_same<decltype(this), const X *>);
           };
         };
         N();
-        static_assert(is_same<decltype(this), X *>);
+        static_assert(is_same<decltype(this), const X *>);
       };
       return M;
     };
@@ -298,3 +298,32 @@ class A {
 
 } // namespace PR32831
 
+namespace PR45881 {
+struct A {
+    void f();
+};
+int id(A*);
+void A::f() {
+    auto z = [*this](auto z2, decltype(z2(this)) z3){};
+    z(id,3);
+}
+} // namespace PR45881
+
+
+namespace GH50866 {
+struct S;
+
+void f(S *) = delete; // expected-note {{would lose const qualifier}}
+void f(const S *) = delete; // expected-note {{candidate function has been explicitly deleted}}
+
+struct S {
+  void g() const {
+    [*this]() mutable { f(this); }(); // expected-error {{call to deleted function}}
+  }
+};
+
+void g() {
+  S s{};
+  s.g();
+}
+}

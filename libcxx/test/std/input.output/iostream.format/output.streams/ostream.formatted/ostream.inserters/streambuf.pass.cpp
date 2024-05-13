@@ -67,13 +67,17 @@ int main(int, char**)
         os << &sb2;
         assert(sb.str() == "testing...");
     }
-    { // LWG 2221 - nullptr
+#if TEST_STD_VER > 14
+// LWG 2221 - nullptr. This is not backported to older standards modes.
+// See https://reviews.llvm.org/D127033 for more info on the rationale.
+    {
         testbuf<char> sb;
         std::ostream os(&sb);
         os << nullptr;
         assert(sb.str().size() != 0);
         LIBCPP_ASSERT(sb.str() == "nullptr");
     }
+#endif
 
   return 0;
 }

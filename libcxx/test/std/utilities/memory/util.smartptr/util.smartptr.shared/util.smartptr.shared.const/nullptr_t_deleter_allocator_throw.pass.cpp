@@ -30,10 +30,11 @@ int A::count = 0;
 
 int main(int, char**)
 {
+    test_allocator_statistics alloc_stats;
     try
     {
-        test_allocator<A>::throw_after = 0;
-        std::shared_ptr<A> p(nullptr, test_deleter<A>(3), test_allocator<A>(5));
+        alloc_stats.throw_after = 0;
+        std::shared_ptr<A> p(nullptr, test_deleter<A>(3), test_allocator<A>(5, &alloc_stats));
         assert(false);
     }
     catch (std::bad_alloc&)
@@ -41,8 +42,8 @@ int main(int, char**)
         assert(A::count == 0);
         assert(test_deleter<A>::count == 0);
         assert(test_deleter<A>::dealloc_count == 1);
-        assert(test_allocator<A>::count == 0);
-        assert(test_allocator<A>::alloc_count == 0);
+        assert(alloc_stats.count == 0);
+        assert(alloc_stats.alloc_count == 0);
     }
 
   return 0;

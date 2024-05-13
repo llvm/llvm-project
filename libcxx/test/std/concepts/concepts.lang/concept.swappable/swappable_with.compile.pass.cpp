@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class T, class U>
 // concept swappable_with = // see below
@@ -671,7 +670,7 @@ struct Proxy {
 constexpr Proxy proxy(A& a) { return Proxy{a}; }
 } // namespace N
 
-[[nodiscard]] constexpr bool CheckRegression() {
+constexpr bool CheckRegression() {
   int i = 1, j = 2;
   lv_swap(i, j);
   assert(i == 2 && j == 1);

@@ -16,18 +16,18 @@ extern int main; // expected-warning{{variable named 'main' with external linkag
 
 #elif TEST3
 // expected-no-diagnostics
-void x() {
+void x(void) {
   static int main;
 }
 
 #elif TEST4
-void x() {
+void x(void) {
   extern int main; // expected-warning{{variable named 'main' with external linkage has undefined behavior}}
 }
 
 #elif TEST5
 // expected-no-diagnostics
-void x() {
+void x(void) {
   int main;
 }
 
@@ -37,13 +37,13 @@ static int main;
 
 #elif TEST7
 // expected-no-diagnostics
-void x() {
+void x(void) {
   auto int main;
 }
 
 #elif TEST8
 // expected-no-diagnostics
-void x() {
+void x(void) {
   register int main;
 }
 

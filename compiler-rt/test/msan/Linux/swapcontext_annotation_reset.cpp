@@ -1,5 +1,5 @@
-// RUN: %clangxx_msan -fno-sanitize=memory -c %s -o %t-main.o
-// RUN: %clangxx_msan %t-main.o %s -o %t
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fno-sanitize=memory -c %s -o %t-main.o
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval %t-main.o %s -o %t
 // RUN: %run %t
 
 #include <assert.h>

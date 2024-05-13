@@ -34,14 +34,28 @@
 
 #include "Inputs/system-header-simulator-for-nullability.h"
 
+extern void __assert_fail(__const char *__assertion, __const char *__file,
+                          unsigned int __line, __const char *__function)
+    __attribute__((__noreturn__));
+
+#define assert(expr) \
+  ((expr) ? (void)(0) : __assert_fail(#expr, __FILE__, __LINE__, __func__))
+
 @interface TestObject : NSObject
 - (int *_Nonnull)returnsNonnull;
 - (int *_Nullable)returnsNullable;
 - (int *)returnsUnspecified;
 - (void)takesNonnull:(int *_Nonnull)p;
+- (void)takesNonnullBlock:(void (^ _Nonnull)(void))block;
 - (void)takesNullable:(int *_Nullable)p;
 - (void)takesUnspecified:(int *)p;
 @property(readonly, strong) NSString *stuff;
+@property(readonly, nonnull) int *propReturnsNonnull;
+@property(readonly, nonnull) void (^propReturnsNonnullBlock)(void);
+@property(readonly, nullable) void (^propReturnsNullableBlock)(void);
+@property(readonly, nullable) int *propReturnsNullable;
+@property(readonly) int *propReturnsUnspecified;
++ (nullable TestObject *)getNullableObject;
 @end
 
 TestObject * getUnspecifiedTestObject();
@@ -55,6 +69,8 @@ typedef struct Dummy { int val; } Dummy;
 void takesNullable(Dummy *_Nullable);
 void takesNonnull(Dummy *_Nonnull);
 void takesUnspecified(Dummy *);
+void takesNonnullBlock(void (^ _Nonnull)(void));
+void takesNonnullObject(NSObject *_Nonnull);
 
 Dummy *_Nullable returnsNullable();
 Dummy *_Nonnull returnsNonnull();
@@ -131,6 +147,17 @@ void testArgumentTracking(Dummy *_Nonnull nonnull, Dummy *_Nullable nullable) {
   }
 }
 
+void testArgumentTrackingDirectly(Dummy *_Nonnull nonnull, Dummy *_Nullable nullable) {
+  switch(getRandom()) {
+  case 1: testMultiParamChecking(nonnull, nullable, nonnull); break;
+  case 2: testMultiParamChecking(nonnull, nonnull, nonnull); break;
+  case 3: testMultiParamChecking(nonnull, nullable, nullable); break; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 3rd parameter}}
+  case 4: testMultiParamChecking(nullable, nullable, nonnull); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+  case 5: testMultiParamChecking(nullable, nullable, nullable); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+  case 6: testMultiParamChecking((Dummy *_Nonnull)0, nullable, nonnull); break;
+  }
+}
+
 Dummy *_Nonnull testNullableReturn(Dummy *_Nullable a) {
   Dummy *p = a;
   return p; // expected-warning {{Nullable pointer is returned from a function that is expected to return a non-null value}}
@@ -182,6 +209,63 @@ void testObjCMessageResultNullability() {
   }
 }
 
+void testObjCPropertyReadNullability() {
+  TestObject *o = getNonnullTestObject();
+  switch (getRandom()) {
+  case 0:
+    [o takesNonnull:o.propReturnsNonnull]; // no-warning
+    [o takesNonnullBlock:o.propReturnsNonnullBlock]; // no-warning
+    break;
+  case 1:
+    [o takesNonnull:o.propReturnsUnspecified]; // no-warning
+    break;
+  case 2:
+    [o takesNonnull:o.propReturnsNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
+  case 3:
+    // If a property is constrained nonnull, assume it remains nonnull
+    if (o.propReturnsNullable) {
+      [o takesNonnull:o.propReturnsNullable]; // no-warning
+      [o takesNonnull:o.propReturnsNullable]; // no-warning
+    }
+    break;
+  case 4:
+    if (!o.propReturnsNullable) {
+      [o takesNonnull:o.propReturnsNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    }
+    break;
+  case 5:
+    if (!o.propReturnsNullable) {
+      if (o.propReturnsNullable) {
+        // Nonnull constraint from the more recent call wins
+        [o takesNonnull:o.propReturnsNullable]; // no-warning
+      }
+    }
+    break;
+  case 6:
+    // Constraints on property return values are receiver-qualified
+    if (o.propReturnsNullable) {
+      [o takesNonnull:o.propReturnsNullable];                      // no-warning
+      [o takesNonnull:getNonnullTestObject().propReturnsNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    }
+    break;
+  case 7:
+    // Assertions must be effective at suppressing warnings
+    assert(o.propReturnsNullable);
+    [o takesNonnull:o.propReturnsNullable]; // no-warning
+    break;
+  case 8:
+    [o takesNonnullBlock:o.propReturnsNullableBlock]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
+  case 9:
+    [o takesNonnull:getNullableTestObject().propReturnsNonnull]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
+  case 10:
+    [o takesNonnull:[TestObject getNullableObject].propReturnsNonnull]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
+  }
+}
+
 Dummy * _Nonnull testDirectCastNullableToNonnull() {
   Dummy *p = returnsNullable();
   takesNonnull((Dummy * _Nonnull)p);  // no-warning
@@ -197,6 +281,17 @@ Dummy * _Nonnull testIndirectCastNullableToNonnull() {
 Dummy * _Nonnull testDirectCastNilToNonnull() {
   takesNonnull((Dummy * _Nonnull)0);  // no-warning
   return (Dummy * _Nonnull)0;         // no-warning
+}
+
+void testImplicitCastNilToNonnull() {
+  id obj = nil;
+  takesNonnullObject(obj); // expected-warning {{nil passed to a callee that requires a non-null 1st parameter}}
+}
+
+void testImplicitCastNullableArgToNonnull(TestObject *_Nullable obj) {
+  if (!obj) {
+    takesNonnullObject(obj); // expected-warning {{nil passed to a callee that requires a non-null 1st parameter}}
+  }
 }
 
 void testIndirectCastNilToNonnullAndPass() {
@@ -249,6 +344,11 @@ void testDirectCastNilToNonnullAndAssignToParam(Dummy * _Nonnull p) {
 void testIndirectNilPassToNonnull() {
   Dummy *p = 0;
   takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
+}
+
+void testBlockIndirectNilPassToNonnull() {
+  void (^p)(void) = nil;
+  takesNonnullBlock(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
 }
 
 void testConditionalNilPassToNonnull(Dummy *p) {

@@ -15,7 +15,7 @@
 struct CFBundle;
 typedef struct CFBundle *CFBundleRef;
 unsigned CFBundleGetVersionNumber(CFBundleRef bundle);
-// CHECK_CF: declare i32 @CFBundleGetVersionNumber(%struct.CFBundle*)
+// CHECK_CF: declare i32 @CFBundleGetVersionNumber(ptr noundef)
 // CHECK_CF: @__clang_at_available_requires_core_foundation_framework
 // CHECK_CF-NEXT: call {{.*}}@CFBundleGetVersionNumber
 #endif
@@ -24,7 +24,7 @@ unsigned CFBundleGetVersionNumber(CFBundleRef bundle);
 #define CHECK_OS macos 10.12
 #endif
 
-void use_at_available() {
+void use_at_available(void) {
 #ifdef DEF_CF
   CFBundleGetVersionNumber(0);
 #endif
@@ -39,10 +39,10 @@ void use_at_available() {
 
 // CHECK: @llvm.compiler.used{{.*}}@__clang_at_available_requires_core_foundation_framework
 
-// CHECK: declare i32 @CFBundleGetVersionNumber(i8*)
+// CHECK: declare i32 @CFBundleGetVersionNumber(ptr)
 
 // CHECK-LABEL: linkonce hidden void @__clang_at_available_requires_core_foundation_framework
-// CHECK: call i32 @CFBundleGetVersionNumber(i8* null)
+// CHECK: call i32 @CFBundleGetVersionNumber(ptr null)
 // CHECK-NEXT: unreachable
 
 // CHECK_NO_GUARD-NOT: __clang_at_available_requires_core_foundation_framework

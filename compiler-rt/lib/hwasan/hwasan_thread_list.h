@@ -18,7 +18,7 @@
 // * Start of the shadow memory region is aligned to 2**kShadowBaseAlignment.
 // * All stack ring buffers are located within (2**kShadowBaseAlignment)
 // sized region below and adjacent to the shadow region.
-// * Each ring buffer has a size of (2**N)*4096 where N is in [0, 8), and is
+// * Each ring buffer has a size of (2**N)*4096 where N is in [0, 7), and is
 // aligned to twice its size. The value of N can be different for each buffer.
 //
 // These constrains guarantee that, given an address A of any element of the
@@ -47,8 +47,7 @@
 #include "hwasan_allocator.h"
 #include "hwasan_flags.h"
 #include "hwasan_thread.h"
-
-#include "sanitizer_common/sanitizer_placement_new.h"
+#include "sanitizer_common/sanitizer_thread_arg_retval.h"
 
 namespace __hwasan {
 
@@ -56,7 +55,10 @@ static uptr RingBufferSize() {
   uptr desired_bytes = flags()->stack_history_size * sizeof(uptr);
   // FIXME: increase the limit to 8 once this bug is fixed:
   // https://bugs.llvm.org/show_bug.cgi?id=39030
-  for (int shift = 1; shift < 7; ++shift) {
+  // Note that we *cannot* do that on Android, as the runtime will indefinitely
+  // have to support code that is compiled with ashr, which only works with
+  // shifts up to 6.
+  for (int shift = 0; shift < 7; ++shift) {
     uptr size = 4096 * (1ULL << shift);
     if (size >= desired_bytes)
       return size;
@@ -71,7 +73,7 @@ struct ThreadStats {
   uptr total_stack_size;
 };
 
-class HwasanThreadList {
+class SANITIZER_MUTEX HwasanThreadList {
  public:
   HwasanThreadList(uptr storage, uptr size)
       : free_space_(storage), free_space_end_(storage + size) {
@@ -85,7 +87,8 @@ class HwasanThreadList {
         RoundUpTo(ring_buffer_size_ + sizeof(Thread), ring_buffer_size_ * 2);
   }
 
-  Thread *CreateCurrentThread() {
+  Thread *CreateCurrentThread(const Thread::InitState *state = nullptr)
+      SANITIZER_EXCLUDES(free_list_mutex_, live_list_mutex_) {
     Thread *t = nullptr;
     {
       SpinMutexLock l(&free_list_mutex_);
@@ -104,7 +107,7 @@ class HwasanThreadList {
       SpinMutexLock l(&live_list_mutex_);
       live_list_.push_back(t);
     }
-    t->Init((uptr)t - ring_buffer_size_, ring_buffer_size_);
+    t->Init((uptr)t - ring_buffer_size_, ring_buffer_size_, state);
     AddThreadStats(t);
     return t;
   }
@@ -114,7 +117,8 @@ class HwasanThreadList {
     ReleaseMemoryPagesToOS(start, start + thread_alloc_size_);
   }
 
-  void RemoveThreadFromLiveList(Thread *t) {
+  void RemoveThreadFromLiveList(Thread *t)
+      SANITIZER_EXCLUDES(live_list_mutex_) {
     SpinMutexLock l(&live_list_mutex_);
     for (Thread *&t2 : live_list_)
       if (t2 == t) {
@@ -127,11 +131,11 @@ class HwasanThreadList {
     CHECK(0 && "thread not found in live list");
   }
 
-  void ReleaseThread(Thread *t) {
+  void ReleaseThread(Thread *t) SANITIZER_EXCLUDES(free_list_mutex_) {
     RemoveThreadStats(t);
+    RemoveThreadFromLiveList(t);
     t->Destroy();
     DontNeedThread(t);
-    RemoveThreadFromLiveList(t);
     SpinMutexLock l(&free_list_mutex_);
     free_list_.push_back(t);
   }
@@ -149,26 +153,45 @@ class HwasanThreadList {
   }
 
   template <class CB>
-  void VisitAllLiveThreads(CB cb) {
+  void VisitAllLiveThreads(CB cb) SANITIZER_EXCLUDES(live_list_mutex_) {
     SpinMutexLock l(&live_list_mutex_);
     for (Thread *t : live_list_) cb(t);
   }
 
-  void AddThreadStats(Thread *t) {
+  template <class CB>
+  Thread *FindThreadLocked(CB cb) SANITIZER_CHECK_LOCKED(live_list_mutex_) {
+    CheckLocked();
+    for (Thread *t : live_list_)
+      if (cb(t))
+        return t;
+    return nullptr;
+  }
+
+  void AddThreadStats(Thread *t) SANITIZER_EXCLUDES(stats_mutex_) {
     SpinMutexLock l(&stats_mutex_);
     stats_.n_live_threads++;
     stats_.total_stack_size += t->stack_size();
   }
 
-  void RemoveThreadStats(Thread *t) {
+  void RemoveThreadStats(Thread *t) SANITIZER_EXCLUDES(stats_mutex_) {
     SpinMutexLock l(&stats_mutex_);
     stats_.n_live_threads--;
     stats_.total_stack_size -= t->stack_size();
   }
 
-  ThreadStats GetThreadStats() {
+  ThreadStats GetThreadStats() SANITIZER_EXCLUDES(stats_mutex_) {
     SpinMutexLock l(&stats_mutex_);
     return stats_;
+  }
+
+  uptr GetRingBufferSize() const { return ring_buffer_size_; }
+
+  void Lock() SANITIZER_ACQUIRE(live_list_mutex_) { live_list_mutex_.Lock(); }
+  void CheckLocked() const SANITIZER_CHECK_LOCKED(live_list_mutex_) {
+    live_list_mutex_.CheckLocked();
+  }
+  void Unlock() SANITIZER_RELEASE(live_list_mutex_) {
+    live_list_mutex_.Unlock();
   }
 
  private:
@@ -178,7 +201,7 @@ class HwasanThreadList {
     CHECK(IsAligned(free_space_, align));
     Thread *t = (Thread *)(free_space_ + ring_buffer_size_);
     free_space_ += thread_alloc_size_;
-    CHECK(free_space_ <= free_space_end_ && "out of thread memory");
+    CHECK_LE(free_space_, free_space_end_);
     return t;
   }
 
@@ -189,15 +212,18 @@ class HwasanThreadList {
   uptr thread_alloc_size_;
 
   SpinMutex free_list_mutex_;
-  InternalMmapVector<Thread *> free_list_;
+  InternalMmapVector<Thread *> free_list_
+      SANITIZER_GUARDED_BY(free_list_mutex_);
   SpinMutex live_list_mutex_;
-  InternalMmapVector<Thread *> live_list_;
+  InternalMmapVector<Thread *> live_list_
+      SANITIZER_GUARDED_BY(live_list_mutex_);
 
-  ThreadStats stats_;
   SpinMutex stats_mutex_;
+  ThreadStats stats_ SANITIZER_GUARDED_BY(stats_mutex_);
 };
 
 void InitThreadList(uptr storage, uptr size);
 HwasanThreadList &hwasanThreadList();
+ThreadArgRetval &hwasanThreadArgRetval();
 
-} // namespace
+} // namespace __hwasan

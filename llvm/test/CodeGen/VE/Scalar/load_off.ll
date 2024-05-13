@@ -19,7 +19,7 @@ define signext i8 @loadi8s() {
 ; CHECK-NEXT:    ld1b.sx %s0, 2(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @bufi8, i64 0, i64 2), align 1
+  %0 = load i8, ptr getelementptr inbounds ([3 x i8], ptr @bufi8, i64 0, i64 2), align 1
   ret i8 %0
 }
 
@@ -33,7 +33,7 @@ define signext i16 @loadi16s() {
 ; CHECK-NEXT:    ld2b.sx %s0, 4(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([3 x i16], [3 x i16]* @bufi16, i64 0, i64 2), align 2
+  %0 = load i16, ptr getelementptr inbounds ([3 x i16], ptr @bufi16, i64 0, i64 2), align 2
   ret i16 %0
 }
 
@@ -47,7 +47,7 @@ define signext i32 @loadi32s() {
 ; CHECK-NEXT:    ldl.sx %s0, 8(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @bufi32, i64 0, i64 2), align 4
+  %0 = load i32, ptr getelementptr inbounds ([3 x i32], ptr @bufi32, i64 0, i64 2), align 4
   ret i32 %0
 }
 
@@ -61,7 +61,7 @@ define i64 @loadi64s() {
 ; CHECK-NEXT:    ld %s0, 16(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i64, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @bufi64, i64 0, i64 2), align 8
+  %0 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @bufi64, i64 0, i64 2), align 8
   ret i64 %0
 }
 
@@ -76,7 +76,7 @@ define i128 @loadi128s() {
 ; CHECK-NEXT:    ld %s1, 40(, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i128, i128* getelementptr inbounds ([3 x i128], [3 x i128]* @bufi128, i64 0, i64 2), align 16
+  %0 = load i128, ptr getelementptr inbounds ([3 x i128], ptr @bufi128, i64 0, i64 2), align 16
   ret i128 %0
 }
 
@@ -90,7 +90,7 @@ define zeroext i8 @loadi8z() {
 ; CHECK-NEXT:    ld1b.zx %s0, 2(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @bufi8, i64 0, i64 2), align 1
+  %0 = load i8, ptr getelementptr inbounds ([3 x i8], ptr @bufi8, i64 0, i64 2), align 1
   ret i8 %0
 }
 
@@ -104,7 +104,7 @@ define zeroext i16 @loadi16z() {
 ; CHECK-NEXT:    ld2b.zx %s0, 4(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([3 x i16], [3 x i16]* @bufi16, i64 0, i64 2), align 2
+  %0 = load i16, ptr getelementptr inbounds ([3 x i16], ptr @bufi16, i64 0, i64 2), align 2
   ret i16 %0
 }
 
@@ -118,7 +118,7 @@ define zeroext i32 @loadi32z() {
 ; CHECK-NEXT:    ldl.zx %s0, 8(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @bufi32, i64 0, i64 2), align 4
+  %0 = load i32, ptr getelementptr inbounds ([3 x i32], ptr @bufi32, i64 0, i64 2), align 4
   ret i32 %0
 }
 
@@ -132,7 +132,7 @@ define i64 @loadi64z() {
 ; CHECK-NEXT:    ld %s0, 16(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i64, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @bufi64, i64 0, i64 2), align 8
+  %0 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @bufi64, i64 0, i64 2), align 8
   ret i64 %0
 }
 
@@ -147,7 +147,7 @@ define i128 @loadi128z() {
 ; CHECK-NEXT:    ld %s1, 40(, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load i128, i128* getelementptr inbounds ([3 x i128], [3 x i128]* @bufi128, i64 0, i64 2), align 16
+  %0 = load i128, ptr getelementptr inbounds ([3 x i128], ptr @bufi128, i64 0, i64 2), align 16
   ret i128 %0
 }
 
@@ -161,7 +161,7 @@ define float @loadf32() {
 ; CHECK-NEXT:    ldu %s0, 8(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load float, float* getelementptr inbounds ([3 x float], [3 x float]* @buff32, i64 0, i64 2), align 4
+  %0 = load float, ptr getelementptr inbounds ([3 x float], ptr @buff32, i64 0, i64 2), align 4
   ret float %0
 }
 
@@ -175,7 +175,7 @@ define double @loadf64() {
 ; CHECK-NEXT:    ld %s0, 16(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load double, double* getelementptr inbounds ([3 x double], [3 x double]* @buff64, i64 0, i64 2), align 8
+  %0 = load double, ptr getelementptr inbounds ([3 x double], ptr @buff64, i64 0, i64 2), align 8
   ret double %0
 }
 
@@ -190,6 +190,6 @@ define fp128 @loadf128() {
 ; CHECK-NEXT:    ld %s1, 32(, %s2)
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = load fp128, fp128* getelementptr inbounds ([3 x fp128], [3 x fp128]* @buff128, i64 0, i64 2), align 16
+  %0 = load fp128, ptr getelementptr inbounds ([3 x fp128], ptr @buff128, i64 0, i64 2), align 16
   ret fp128 %0
 }

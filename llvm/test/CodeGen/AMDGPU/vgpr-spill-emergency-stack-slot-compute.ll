@@ -1,9 +1,9 @@
 ; XFAIL: *
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
-; RUN: llc -march=amdgcn  -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
-; RUN: llc -march=amdgcn  -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
+; RUN: llc  -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
+; RUN: llc  -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
 
 ; This ends up using all 256 registers and requires register
 ; scavenging which will fail to find an unsued register.
@@ -62,7 +62,7 @@
 ; GCN: ScratchSize: 1536
 
 ; s[0:3] input user SGPRs. s4,s5,s6 = workgroup IDs. s8 scratch offset.
-define amdgpu_kernel void @spill_vgpr_compute(<4 x float> %arg6, float addrspace(1)* %arg, i32 %arg1, i32 %arg2, float %arg3, float %arg4, float %arg5) #0 {
+define amdgpu_kernel void @spill_vgpr_compute(<4 x float> %arg6, ptr addrspace(1) %arg, i32 %arg1, i32 %arg2, float %arg3, float %arg4, float %arg5) #0 {
 bb:
   %tmp = add i32 %arg1, %arg2
   %tmp7 = extractelement <4 x float> %arg6, i32 0
@@ -208,138 +208,138 @@ bb12:                                             ; preds = %bb145, %bb
   br i1 %tmp143, label %bb144, label %bb145
 
 bb144:                                            ; preds = %bb12
-  store volatile float %arg3, float addrspace(1)* %arg
-  store volatile float %tmp91, float addrspace(1)* %arg
-  store volatile float %tmp90, float addrspace(1)* %arg
-  store volatile float %tmp89, float addrspace(1)* %arg
-  store volatile float %tmp87, float addrspace(1)* %arg
-  store volatile float %tmp86, float addrspace(1)* %arg
-  store volatile float %tmp85, float addrspace(1)* %arg
-  store volatile float %tmp83, float addrspace(1)* %arg
-  store volatile float %tmp82, float addrspace(1)* %arg
-  store volatile float %tmp81, float addrspace(1)* %arg
-  store volatile float %tmp79, float addrspace(1)* %arg
-  store volatile float %tmp78, float addrspace(1)* %arg
-  store volatile float %tmp77, float addrspace(1)* %arg
-  store volatile float %tmp75, float addrspace(1)* %arg
-  store volatile float %tmp74, float addrspace(1)* %arg
-  store volatile float %tmp73, float addrspace(1)* %arg
-  store volatile float %tmp71, float addrspace(1)* %arg
-  store volatile float %tmp70, float addrspace(1)* %arg
-  store volatile float %tmp69, float addrspace(1)* %arg
-  store volatile float %tmp67, float addrspace(1)* %arg
-  store volatile float %tmp66, float addrspace(1)* %arg
-  store volatile float %tmp65, float addrspace(1)* %arg
-  store volatile float %tmp63, float addrspace(1)* %arg
-  store volatile float %tmp62, float addrspace(1)* %arg
-  store volatile float %tmp61, float addrspace(1)* %arg
-  store volatile float %tmp59, float addrspace(1)* %arg
-  store volatile float %tmp58, float addrspace(1)* %arg
-  store volatile float %tmp57, float addrspace(1)* %arg
-  store volatile float %tmp55, float addrspace(1)* %arg
-  store volatile float %tmp54, float addrspace(1)* %arg
-  store volatile float %tmp53, float addrspace(1)* %arg
-  store volatile float %tmp51, float addrspace(1)* %arg
-  store volatile float %tmp50, float addrspace(1)* %arg
-  store volatile float %tmp49, float addrspace(1)* %arg
-  store volatile float %tmp47, float addrspace(1)* %arg
-  store volatile float %tmp46, float addrspace(1)* %arg
-  store volatile float %tmp45, float addrspace(1)* %arg
-  store volatile float %tmp43, float addrspace(1)* %arg
-  store volatile float %tmp42, float addrspace(1)* %arg
-  store volatile float %tmp41, float addrspace(1)* %arg
-  store volatile float %tmp39, float addrspace(1)* %arg
-  store volatile float %tmp38, float addrspace(1)* %arg
-  store volatile float %tmp37, float addrspace(1)* %arg
-  store volatile float %tmp35, float addrspace(1)* %arg
-  store volatile float %tmp34, float addrspace(1)* %arg
-  store volatile float %tmp33, float addrspace(1)* %arg
-  store volatile float %tmp31, float addrspace(1)* %arg
-  store volatile float %tmp30, float addrspace(1)* %arg
-  store volatile float %tmp29, float addrspace(1)* %arg
-  store volatile float %tmp27, float addrspace(1)* %arg
-  store volatile float %tmp26, float addrspace(1)* %arg
-  store volatile float %tmp25, float addrspace(1)* %arg
-  store volatile float %tmp23, float addrspace(1)* %arg
-  store volatile float %tmp22, float addrspace(1)* %arg
-  store volatile float %tmp21, float addrspace(1)* %arg
-  store volatile float %tmp19, float addrspace(1)* %arg
-  store volatile float %tmp18, float addrspace(1)* %arg
-  store volatile float %tmp17, float addrspace(1)* %arg
-  store volatile float %tmp15, float addrspace(1)* %arg
-  store volatile float %tmp14, float addrspace(1)* %arg
-  store volatile float %tmp13, float addrspace(1)* %arg
-  store volatile float %tmp16, float addrspace(1)* %arg
-  store volatile float %tmp20, float addrspace(1)* %arg
-  store volatile float %tmp24, float addrspace(1)* %arg
-  store volatile float %tmp28, float addrspace(1)* %arg
-  store volatile float %tmp32, float addrspace(1)* %arg
-  store volatile float %tmp36, float addrspace(1)* %arg
-  store volatile float %tmp40, float addrspace(1)* %arg
-  store volatile float %tmp44, float addrspace(1)* %arg
-  store volatile float %tmp48, float addrspace(1)* %arg
-  store volatile float %tmp52, float addrspace(1)* %arg
-  store volatile float %tmp56, float addrspace(1)* %arg
-  store volatile float %tmp60, float addrspace(1)* %arg
-  store volatile float %tmp64, float addrspace(1)* %arg
-  store volatile float %tmp68, float addrspace(1)* %arg
-  store volatile float %tmp72, float addrspace(1)* %arg
-  store volatile float %tmp76, float addrspace(1)* %arg
-  store volatile float %tmp80, float addrspace(1)* %arg
-  store volatile float %tmp84, float addrspace(1)* %arg
-  store volatile float %tmp88, float addrspace(1)* %arg
-  store volatile float %tmp92, float addrspace(1)* %arg
-  store volatile float %tmp93, float addrspace(1)* %arg
-  store volatile float %tmp94, float addrspace(1)* %arg
-  store volatile float %tmp96, float addrspace(1)* %arg
-  store volatile float %tmp97, float addrspace(1)* %arg
-  store volatile float %tmp98, float addrspace(1)* %arg
-  store volatile float %tmp99, float addrspace(1)* %arg
-  store volatile float %tmp100, float addrspace(1)* %arg
-  store volatile float %tmp101, float addrspace(1)* %arg
-  store volatile float %tmp102, float addrspace(1)* %arg
-  store volatile float %tmp103, float addrspace(1)* %arg
-  store volatile float %tmp104, float addrspace(1)* %arg
-  store volatile float %tmp105, float addrspace(1)* %arg
-  store volatile float %tmp106, float addrspace(1)* %arg
-  store volatile float %tmp107, float addrspace(1)* %arg
-  store volatile float %tmp108, float addrspace(1)* %arg
-  store volatile float %tmp109, float addrspace(1)* %arg
-  store volatile float %tmp110, float addrspace(1)* %arg
-  store volatile float %tmp111, float addrspace(1)* %arg
-  store volatile float %tmp112, float addrspace(1)* %arg
-  store volatile float %tmp113, float addrspace(1)* %arg
-  store volatile float %tmp114, float addrspace(1)* %arg
-  store volatile float %tmp115, float addrspace(1)* %arg
-  store volatile float %tmp116, float addrspace(1)* %arg
-  store volatile float %tmp117, float addrspace(1)* %arg
-  store volatile float %tmp118, float addrspace(1)* %arg
-  store volatile float %tmp119, float addrspace(1)* %arg
-  store volatile float %tmp120, float addrspace(1)* %arg
-  store volatile float %tmp121, float addrspace(1)* %arg
-  store volatile float %tmp122, float addrspace(1)* %arg
-  store volatile float %tmp123, float addrspace(1)* %arg
-  store volatile float %tmp124, float addrspace(1)* %arg
-  store volatile float %tmp125, float addrspace(1)* %arg
-  store volatile float %tmp126, float addrspace(1)* %arg
-  store volatile float %tmp127, float addrspace(1)* %arg
-  store volatile float %tmp128, float addrspace(1)* %arg
-  store volatile float %tmp129, float addrspace(1)* %arg
-  store volatile float %tmp130, float addrspace(1)* %arg
-  store volatile float %tmp131, float addrspace(1)* %arg
-  store volatile float %tmp132, float addrspace(1)* %arg
-  store volatile float %tmp133, float addrspace(1)* %arg
-  store volatile float %tmp134, float addrspace(1)* %arg
-  store volatile float %tmp135, float addrspace(1)* %arg
-  store volatile float %tmp136, float addrspace(1)* %arg
-  store volatile float %tmp137, float addrspace(1)* %arg
-  store volatile float %tmp138, float addrspace(1)* %arg
-  store volatile float %tmp139, float addrspace(1)* %arg
-  store volatile float %arg4, float addrspace(1)* %arg
-  store volatile float %tmp7, float addrspace(1)* %arg
-  store volatile float %tmp8, float addrspace(1)* %arg
-  store volatile float %tmp9, float addrspace(1)* %arg
-  store volatile float %tmp10, float addrspace(1)* %arg
+  store volatile float %arg3, ptr addrspace(1) %arg
+  store volatile float %tmp91, ptr addrspace(1) %arg
+  store volatile float %tmp90, ptr addrspace(1) %arg
+  store volatile float %tmp89, ptr addrspace(1) %arg
+  store volatile float %tmp87, ptr addrspace(1) %arg
+  store volatile float %tmp86, ptr addrspace(1) %arg
+  store volatile float %tmp85, ptr addrspace(1) %arg
+  store volatile float %tmp83, ptr addrspace(1) %arg
+  store volatile float %tmp82, ptr addrspace(1) %arg
+  store volatile float %tmp81, ptr addrspace(1) %arg
+  store volatile float %tmp79, ptr addrspace(1) %arg
+  store volatile float %tmp78, ptr addrspace(1) %arg
+  store volatile float %tmp77, ptr addrspace(1) %arg
+  store volatile float %tmp75, ptr addrspace(1) %arg
+  store volatile float %tmp74, ptr addrspace(1) %arg
+  store volatile float %tmp73, ptr addrspace(1) %arg
+  store volatile float %tmp71, ptr addrspace(1) %arg
+  store volatile float %tmp70, ptr addrspace(1) %arg
+  store volatile float %tmp69, ptr addrspace(1) %arg
+  store volatile float %tmp67, ptr addrspace(1) %arg
+  store volatile float %tmp66, ptr addrspace(1) %arg
+  store volatile float %tmp65, ptr addrspace(1) %arg
+  store volatile float %tmp63, ptr addrspace(1) %arg
+  store volatile float %tmp62, ptr addrspace(1) %arg
+  store volatile float %tmp61, ptr addrspace(1) %arg
+  store volatile float %tmp59, ptr addrspace(1) %arg
+  store volatile float %tmp58, ptr addrspace(1) %arg
+  store volatile float %tmp57, ptr addrspace(1) %arg
+  store volatile float %tmp55, ptr addrspace(1) %arg
+  store volatile float %tmp54, ptr addrspace(1) %arg
+  store volatile float %tmp53, ptr addrspace(1) %arg
+  store volatile float %tmp51, ptr addrspace(1) %arg
+  store volatile float %tmp50, ptr addrspace(1) %arg
+  store volatile float %tmp49, ptr addrspace(1) %arg
+  store volatile float %tmp47, ptr addrspace(1) %arg
+  store volatile float %tmp46, ptr addrspace(1) %arg
+  store volatile float %tmp45, ptr addrspace(1) %arg
+  store volatile float %tmp43, ptr addrspace(1) %arg
+  store volatile float %tmp42, ptr addrspace(1) %arg
+  store volatile float %tmp41, ptr addrspace(1) %arg
+  store volatile float %tmp39, ptr addrspace(1) %arg
+  store volatile float %tmp38, ptr addrspace(1) %arg
+  store volatile float %tmp37, ptr addrspace(1) %arg
+  store volatile float %tmp35, ptr addrspace(1) %arg
+  store volatile float %tmp34, ptr addrspace(1) %arg
+  store volatile float %tmp33, ptr addrspace(1) %arg
+  store volatile float %tmp31, ptr addrspace(1) %arg
+  store volatile float %tmp30, ptr addrspace(1) %arg
+  store volatile float %tmp29, ptr addrspace(1) %arg
+  store volatile float %tmp27, ptr addrspace(1) %arg
+  store volatile float %tmp26, ptr addrspace(1) %arg
+  store volatile float %tmp25, ptr addrspace(1) %arg
+  store volatile float %tmp23, ptr addrspace(1) %arg
+  store volatile float %tmp22, ptr addrspace(1) %arg
+  store volatile float %tmp21, ptr addrspace(1) %arg
+  store volatile float %tmp19, ptr addrspace(1) %arg
+  store volatile float %tmp18, ptr addrspace(1) %arg
+  store volatile float %tmp17, ptr addrspace(1) %arg
+  store volatile float %tmp15, ptr addrspace(1) %arg
+  store volatile float %tmp14, ptr addrspace(1) %arg
+  store volatile float %tmp13, ptr addrspace(1) %arg
+  store volatile float %tmp16, ptr addrspace(1) %arg
+  store volatile float %tmp20, ptr addrspace(1) %arg
+  store volatile float %tmp24, ptr addrspace(1) %arg
+  store volatile float %tmp28, ptr addrspace(1) %arg
+  store volatile float %tmp32, ptr addrspace(1) %arg
+  store volatile float %tmp36, ptr addrspace(1) %arg
+  store volatile float %tmp40, ptr addrspace(1) %arg
+  store volatile float %tmp44, ptr addrspace(1) %arg
+  store volatile float %tmp48, ptr addrspace(1) %arg
+  store volatile float %tmp52, ptr addrspace(1) %arg
+  store volatile float %tmp56, ptr addrspace(1) %arg
+  store volatile float %tmp60, ptr addrspace(1) %arg
+  store volatile float %tmp64, ptr addrspace(1) %arg
+  store volatile float %tmp68, ptr addrspace(1) %arg
+  store volatile float %tmp72, ptr addrspace(1) %arg
+  store volatile float %tmp76, ptr addrspace(1) %arg
+  store volatile float %tmp80, ptr addrspace(1) %arg
+  store volatile float %tmp84, ptr addrspace(1) %arg
+  store volatile float %tmp88, ptr addrspace(1) %arg
+  store volatile float %tmp92, ptr addrspace(1) %arg
+  store volatile float %tmp93, ptr addrspace(1) %arg
+  store volatile float %tmp94, ptr addrspace(1) %arg
+  store volatile float %tmp96, ptr addrspace(1) %arg
+  store volatile float %tmp97, ptr addrspace(1) %arg
+  store volatile float %tmp98, ptr addrspace(1) %arg
+  store volatile float %tmp99, ptr addrspace(1) %arg
+  store volatile float %tmp100, ptr addrspace(1) %arg
+  store volatile float %tmp101, ptr addrspace(1) %arg
+  store volatile float %tmp102, ptr addrspace(1) %arg
+  store volatile float %tmp103, ptr addrspace(1) %arg
+  store volatile float %tmp104, ptr addrspace(1) %arg
+  store volatile float %tmp105, ptr addrspace(1) %arg
+  store volatile float %tmp106, ptr addrspace(1) %arg
+  store volatile float %tmp107, ptr addrspace(1) %arg
+  store volatile float %tmp108, ptr addrspace(1) %arg
+  store volatile float %tmp109, ptr addrspace(1) %arg
+  store volatile float %tmp110, ptr addrspace(1) %arg
+  store volatile float %tmp111, ptr addrspace(1) %arg
+  store volatile float %tmp112, ptr addrspace(1) %arg
+  store volatile float %tmp113, ptr addrspace(1) %arg
+  store volatile float %tmp114, ptr addrspace(1) %arg
+  store volatile float %tmp115, ptr addrspace(1) %arg
+  store volatile float %tmp116, ptr addrspace(1) %arg
+  store volatile float %tmp117, ptr addrspace(1) %arg
+  store volatile float %tmp118, ptr addrspace(1) %arg
+  store volatile float %tmp119, ptr addrspace(1) %arg
+  store volatile float %tmp120, ptr addrspace(1) %arg
+  store volatile float %tmp121, ptr addrspace(1) %arg
+  store volatile float %tmp122, ptr addrspace(1) %arg
+  store volatile float %tmp123, ptr addrspace(1) %arg
+  store volatile float %tmp124, ptr addrspace(1) %arg
+  store volatile float %tmp125, ptr addrspace(1) %arg
+  store volatile float %tmp126, ptr addrspace(1) %arg
+  store volatile float %tmp127, ptr addrspace(1) %arg
+  store volatile float %tmp128, ptr addrspace(1) %arg
+  store volatile float %tmp129, ptr addrspace(1) %arg
+  store volatile float %tmp130, ptr addrspace(1) %arg
+  store volatile float %tmp131, ptr addrspace(1) %arg
+  store volatile float %tmp132, ptr addrspace(1) %arg
+  store volatile float %tmp133, ptr addrspace(1) %arg
+  store volatile float %tmp134, ptr addrspace(1) %arg
+  store volatile float %tmp135, ptr addrspace(1) %arg
+  store volatile float %tmp136, ptr addrspace(1) %arg
+  store volatile float %tmp137, ptr addrspace(1) %arg
+  store volatile float %tmp138, ptr addrspace(1) %arg
+  store volatile float %tmp139, ptr addrspace(1) %arg
+  store volatile float %arg4, ptr addrspace(1) %arg
+  store volatile float %tmp7, ptr addrspace(1) %arg
+  store volatile float %tmp8, ptr addrspace(1) %arg
+  store volatile float %tmp9, ptr addrspace(1) %arg
+  store volatile float %tmp10, ptr addrspace(1) %arg
   ret void
 
 bb145:                                            ; preds = %bb12

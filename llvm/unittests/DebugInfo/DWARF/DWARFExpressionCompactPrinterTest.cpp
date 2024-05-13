@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DwarfGenerator.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include "DwarfGenerator.h"
 
 using namespace llvm;
 using namespace dwarf;
@@ -51,7 +52,7 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
     ArrayRef<uint8_t> ExprData, StringRef Expected) {
   // If we didn't build ARM, do not run the test.
   if (!MRI)
-    return;
+    GTEST_SKIP();
 
   // Print the expression, passing in the subprogram DIE, and check that the
   // result is as expected.
@@ -59,7 +60,17 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
   raw_string_ostream OS(Result);
   DataExtractor DE(ExprData, true, 8);
   DWARFExpression Expr(DE, 8);
-  Expr.printCompact(OS, *MRI);
+
+  auto GetRegName = [&](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
+    if (std::optional<unsigned> LLVMRegNum =
+            this->MRI->getLLVMRegNum(DwarfRegNum, IsEH))
+      if (const char *RegName = this->MRI->getName(*LLVMRegNum))
+        return llvm::StringRef(RegName);
+    OS << "<unknown register " << DwarfRegNum << ">";
+    return {};
+  };
+
+  Expr.printCompact(OS, GetRegName);
   EXPECT_EQ(OS.str(), Expected);
 }
 
@@ -112,4 +123,21 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_entry_value_mem) {
   TestExprPrinter(
       {DW_OP_entry_value, 0x02, DW_OP_breg13, 0x10, DW_OP_stack_value},
       "entry([SP+16])");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_nop) {
+  TestExprPrinter({DW_OP_nop}, "<stack of size 0, expected 1>");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_nop) {
+  TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_nop},
+                  "<stack of size 0, expected 1>");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_nop_OP_reg) {
+  TestExprPrinter({DW_OP_nop, DW_OP_reg0}, "R0");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_nop_OP_reg) {
+  TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_nop, DW_OP_reg0}, "R0");
 }

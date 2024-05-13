@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -triple=powerpc-apple-darwin8 -target-feature +altivec -fsyntax-only -verify=expected,nonaix %s
-// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +altivec -fsyntax-only -verify=expected,nonaix %s
-// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature +altivec -fsyntax-only -verify=expected,nonaix %s
+// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +altivec -target-feature +vsx -fsyntax-only -verify=expected,nonaix %s
+// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature +altivec -target-feature -vsx -fsyntax-only -verify=expected,novsx %s
 // RUN: %clang_cc1 -triple=powerpc-ibm-aix -target-feature +altivec -fsyntax-only -verify=expected,aix %s
-// RUN: %clang_cc1 -triple=powerpc64-ibm-aix -target-feature +altivec -fsyntax-only -verify=expected,aix %s
+// fRUN: %clang_cc1 -triple=powerpc64-ibm-aix -target-feature +altivec -target-feature -vsx -fsyntax-only -verify=expected,aix %s
 
 __vector char vv_c;
 __vector signed char vv_sc;
@@ -25,7 +24,7 @@ __vector __bool short vv___bs;
 __vector __bool int vv___bi;
 __vector __pixel vv_p;
 __vector pixel vv__p;
-__vector int vf__r();
+__vector int vf__r(void);
 void vf__a(__vector int a);
 void vf__a2(int b, __vector int a);
 
@@ -50,7 +49,7 @@ vector __bool short v___bs;
 vector __bool int v___bi;
 vector __pixel v_p;
 vector pixel v__p;
-vector int f__r();
+vector int f__r(void);
 void f_a(vector int a);
 void f_a2(int b, vector int a);
 
@@ -59,44 +58,64 @@ vector int v = (vector int)(-1);
 // These should have errors on AIX and warnings otherwise.
 __vector long vv_l;                 // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 __vector signed long vv_sl;         // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 __vector unsigned long vv_ul;       // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 __vector long int vv_li;            // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 __vector signed long int vv_sli;    // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 __vector unsigned long int vv_uli;  // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 vector long v_l;                    // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 vector signed long v_sl;            // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 vector unsigned long v_ul;          // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 vector long int v_li;               // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 vector signed long int v_sli;       // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 vector unsigned long int v_uli;     // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
+                                    // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 
 // These should have warnings.
 __vector long double  vv_ld;        // expected-error {{cannot use 'long double' with '__vector'}}
 vector long double  v_ld;           // expected-error {{cannot use 'long double' with '__vector'}}
-vector bool v_b;                    // expected-warning {{type specifier missing, defaults to 'int'}}
-vector __bool v___b;                // expected-warning {{type specifier missing, defaults to 'int'}}
+vector bool v_b;                    // expected-error {{type specifier missing, defaults to 'int'}}
+vector __bool v___b;                // expected-error {{type specifier missing, defaults to 'int'}}
 
 // These should have errors.
+#ifndef __VSX__
 __vector double vv_d1;               // expected-error {{use of 'double' with '__vector' requires VSX support to be enabled (available on POWER7 or later)}}
 vector double v_d2;                  // expected-error {{use of 'double' with '__vector' requires VSX support to be enabled (available on POWER7 or later)}}
-__vector bool long long v_bll1;      // expected-error {{use of 'long long' with '__vector bool' requires VSX support (available on POWER7 or later) or extended Altivec support (available on POWER8 or later) to be enabled}}
-__vector __bool long long v_bll2;    // expected-error {{use of 'long long' with '__vector bool' requires VSX support (available on POWER7 or later) or extended Altivec support (available on POWER8 or later) to be enabled}}
-vector bool long long v_bll3;        // expected-error {{use of 'long long' with '__vector bool' requires VSX support (available on POWER7 or later) or extended Altivec support (available on POWER8 or later) to be enabled}}
-vector __bool long long v_bll4;      // expected-error {{use of 'long long' with '__vector bool' requires VSX support (available on POWER7 or later) or extended Altivec support (available on POWER8 or later) to be enabled}}
+__vector bool long long v_bll1;      // expected-error {{use of 'long long' with '__vector' requires VSX support (available on POWER7 or later) to be enabled}}
+__vector __bool long long v_bll2;    // expected-error {{use of 'long long' with '__vector' requires VSX support (available on POWER7 or later) to be enabled}}
+vector bool long long v_bll3;        // expected-error {{use of 'long long' with '__vector' requires VSX support (available on POWER7 or later) to be enabled}}
+vector __bool long long v_bll4;      // expected-error {{use of 'long long' with '__vector' requires VSX support (available on POWER7 or later) to be enabled}}
+#endif
 __vector long double  vv_ld3;        // expected-error {{cannot use 'long double' with '__vector'}}
 vector long double  v_ld4;           // expected-error {{cannot use 'long double' with '__vector'}}
+vector float _Complex v_cf;          // expected-error {{cannot use '_Complex' with '__vector'}}
+vector double _Complex v_cd;         // expected-error {{cannot use '_Complex' with '__vector'}}
+vector long double _Complex v_cld;   // expected-error {{cannot use '_Complex' with '__vector'}}
+__vector float _Complex v_cf2;       // expected-error {{cannot use '_Complex' with '__vector'}}
+__vector double _Complex v_cd2;      // expected-error {{cannot use '_Complex' with '__vector'}}
+__vector long double _Complex v_cld2;// expected-error {{cannot use '_Complex' with '__vector'}}
 vector bool float v_bf;              // expected-error {{cannot use 'float' with '__vector bool'}}
 vector bool double v_bd;             // expected-error {{cannot use 'double' with '__vector bool'}}
 vector bool pixel v_bp;              // expected-error {{cannot use '__pixel' with '__vector bool'}}
@@ -110,10 +129,17 @@ vector __bool signed char v___bsc;   // expected-error {{cannot use 'signed' wit
 vector __bool unsigned int v___bsc2; // expected-error {{cannot use 'unsigned' with '__vector bool'}}
 vector __bool long v___bl;           // expected-error {{cannot use 'long' with '__vector bool'}}
 
+#ifdef __VSX__
 // vector long is deprecated, but vector long long is not.
 vector long long v_ll;
 vector signed long long v_sll;
 vector unsigned long long v_ull;
+#else
+// vector long long is not supported without vsx.
+vector long long v_ll;              //  expected-error {{use of 'long long' with '__vector' requires VSX support (available on POWER7 or later) to be enabled}}
+vector signed long long v_sll;      //  expected-error {{use of 'long long' with '__vector' requires VSX support (available on POWER7 or later) to be enabled}}
+vector unsigned long long v_ull;    //  expected-error {{use of 'long long' with '__vector' requires VSX support (available on POWER7 or later) to be enabled}}
+#endif
 
 typedef char i8;
 typedef short i16;
@@ -125,7 +151,7 @@ struct S {
   vector short i32;
 };
 
-void f() {
+void f(void) {
   __vector unsigned int v = {0,0,0,0};
   __vector int v__cast = (__vector int)v;
   __vector int v_cast = (vector int)v;

@@ -3,16 +3,16 @@
 ; RUN:       -mcpu=pwr9 --ppc-enable-pipeliner 2>&1 | FileCheck %s
 
 %0 = type { double, double, double, i32, i32 }
-declare i8* @malloc() local_unnamed_addr
+declare ptr @malloc() local_unnamed_addr
 
-define void @phi3(i32*) nounwind {
+define void @phi3(ptr) nounwind {
 ; CHECK-LABEL: phi3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    bl malloc
 ; CHECK-NEXT:    nop
@@ -38,7 +38,7 @@ define void @phi3(i32*) nounwind {
 ; CHECK-NEXT:    lwzu 8, 4(7)
 ; CHECK-NEXT:    bdz .LBB0_4
 ; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_3: #
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    add 9, 3, 6
 ; CHECK-NEXT:    extswsli 6, 5, 5
 ; CHECK-NEXT:    add 5, 8, 5
@@ -58,10 +58,10 @@ define void @phi3(i32*) nounwind {
 ; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
-  %2 = tail call noalias i8* @malloc()
-  %3 = bitcast i8* %2 to %0**
-  %4 = tail call noalias i8* @malloc()
-  %5 = bitcast i8* %4 to %0*
+  %2 = tail call noalias ptr @malloc()
+  %3 = bitcast ptr %2 to ptr
+  %4 = tail call noalias ptr @malloc()
+  %5 = bitcast ptr %4 to ptr
   br label %6
 
 6:                                                ; preds = %6, %1
@@ -69,11 +69,11 @@ define void @phi3(i32*) nounwind {
   %8 = phi i32 [ %15, %6 ], [ 0, %1 ]
   %9 = phi i64 [ %17, %6 ], [ undef, %1 ]
   %10 = sext i32 %8 to i64
-  %11 = getelementptr inbounds %0, %0* %5, i64 %10
-  %12 = getelementptr inbounds %0*, %0** %3, i64 %7
-  store %0* %11, %0** %12, align 8
-  %13 = getelementptr inbounds i32, i32* %0, i64 %7
-  %14 = load i32, i32* %13, align 4
+  %11 = getelementptr inbounds %0, ptr %5, i64 %10
+  %12 = getelementptr inbounds ptr, ptr %3, i64 %7
+  store ptr %11, ptr %12, align 8
+  %13 = getelementptr inbounds i32, ptr %0, i64 %7
+  %14 = load i32, ptr %13, align 4
   %15 = add nsw i32 %14, %8
   %16 = add nuw nsw i64 %7, 1
   %17 = add i64 %9, -1

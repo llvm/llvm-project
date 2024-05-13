@@ -31,7 +31,7 @@ public:
     return 8; // 2-byte jmp instruction + 32-bit relative address + 2 byte pad
   }
 
-  unsigned getStubAlignment() override { return 1; }
+  Align getStubAlignment() override { return Align(1); }
 
   Expected<object::relocation_iterator>
   processRelocationRef(unsigned SectionID,
@@ -60,7 +60,7 @@ public:
 
     unsigned TargetSectionID = -1;
     uint64_t TargetOffset = -1;
-    if (TargetName.startswith(getImportSymbolPrefix())) {
+    if (TargetName.starts_with(getImportSymbolPrefix())) {
       TargetSectionID = SectionID;
       TargetOffset = getDLLImportOffset(SectionID, Stubs, TargetName, true);
       TargetName = StringRef();

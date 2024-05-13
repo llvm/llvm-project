@@ -10,6 +10,7 @@
 #define LLDB_TARGET_REMOTEAWAREPLATFORM_H
 
 #include "lldb/Target/Platform.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -57,15 +58,15 @@ public:
   Status SetFilePermissions(const FileSpec &file_spec,
                             uint32_t file_permissions) override;
 
-  bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
-                    uint64_t &high) override;
+  llvm::ErrorOr<llvm::MD5::MD5Result>
+  CalculateMD5(const FileSpec &file_spec) override;
 
   Status GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid,
                          FileSpec &local_file) override;
 
   bool GetRemoteOSVersion() override;
-  bool GetRemoteOSBuildString(std::string &s) override;
-  bool GetRemoteOSKernelDescription(std::string &s) override;
+  std::optional<std::string> GetRemoteOSBuildString() override;
+  std::optional<std::string> GetRemoteOSKernelDescription() override;
   ArchSpec GetRemoteSystemArchitecture() override;
 
   Status RunShellCommand(llvm::StringRef command, const FileSpec &working_dir,

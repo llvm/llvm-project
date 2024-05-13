@@ -68,15 +68,15 @@ define dso_local void @test_ileui_store(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_ileui_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    not r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ule i32 %a, %b
   %sub = zext i1 %cmp to i32
-  store i32 %sub, i32* @glob
+  store i32 %sub, ptr @glob
   ret void
 }
 
@@ -85,15 +85,15 @@ define dso_local void @test_ileui_sext_store(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_ileui_sext_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    addi r3, r3, -1
-; CHECK-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ule i32 %a, %b
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob
+  store i32 %sub, ptr @glob
   ret void
 }
 
@@ -109,7 +109,7 @@ define dso_local void @test_ileui_z_store(i32 zeroext %a) {
 entry:
   %cmp = icmp eq i32 %a, 0
   %sub = zext i1 %cmp to i32
-  store i32 %sub, i32* @glob
+  store i32 %sub, ptr @glob
   ret void
 }
 
@@ -126,7 +126,7 @@ define dso_local void @test_ileui_sext_z_store(i32 zeroext %a) {
 entry:
   %cmp = icmp eq i32 %a, 0
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob
+  store i32 %sub, ptr @glob
   ret void
 }
 

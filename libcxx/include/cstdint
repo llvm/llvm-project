@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===--------------------------- cstdint ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -141,49 +141,58 @@ Types:
 */
 
 #include <__config>
+
 #include <stdint.h>
 
+#ifndef _LIBCPP_STDINT_H
+#   error <cstdint> tried including <stdint.h> but didn't find libc++'s <stdint.h> header. \
+          This usually means that your header search paths are not configured properly. \
+          The header search paths should contain the C++ Standard Library headers before \
+          any C Standard Library, and you are probably using compiler flags that make that \
+          not be the case.
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using::int8_t;
-using::int16_t;
-using::int32_t;
-using::int64_t;
+using ::int8_t _LIBCPP_USING_IF_EXISTS;
+using ::int16_t _LIBCPP_USING_IF_EXISTS;
+using ::int32_t _LIBCPP_USING_IF_EXISTS;
+using ::int64_t _LIBCPP_USING_IF_EXISTS;
 
-using::uint8_t;
-using::uint16_t;
-using::uint32_t;
-using::uint64_t;
+using ::uint8_t _LIBCPP_USING_IF_EXISTS;
+using ::uint16_t _LIBCPP_USING_IF_EXISTS;
+using ::uint32_t _LIBCPP_USING_IF_EXISTS;
+using ::uint64_t _LIBCPP_USING_IF_EXISTS;
 
-using::int_least8_t;
-using::int_least16_t;
-using::int_least32_t;
-using::int_least64_t;
+using ::int_least8_t _LIBCPP_USING_IF_EXISTS;
+using ::int_least16_t _LIBCPP_USING_IF_EXISTS;
+using ::int_least32_t _LIBCPP_USING_IF_EXISTS;
+using ::int_least64_t _LIBCPP_USING_IF_EXISTS;
 
-using::uint_least8_t;
-using::uint_least16_t;
-using::uint_least32_t;
-using::uint_least64_t;
+using ::uint_least8_t _LIBCPP_USING_IF_EXISTS;
+using ::uint_least16_t _LIBCPP_USING_IF_EXISTS;
+using ::uint_least32_t _LIBCPP_USING_IF_EXISTS;
+using ::uint_least64_t _LIBCPP_USING_IF_EXISTS;
 
-using::int_fast8_t;
-using::int_fast16_t;
-using::int_fast32_t;
-using::int_fast64_t;
+using ::int_fast8_t _LIBCPP_USING_IF_EXISTS;
+using ::int_fast16_t _LIBCPP_USING_IF_EXISTS;
+using ::int_fast32_t _LIBCPP_USING_IF_EXISTS;
+using ::int_fast64_t _LIBCPP_USING_IF_EXISTS;
 
-using::uint_fast8_t;
-using::uint_fast16_t;
-using::uint_fast32_t;
-using::uint_fast64_t;
+using ::uint_fast8_t _LIBCPP_USING_IF_EXISTS;
+using ::uint_fast16_t _LIBCPP_USING_IF_EXISTS;
+using ::uint_fast32_t _LIBCPP_USING_IF_EXISTS;
+using ::uint_fast64_t _LIBCPP_USING_IF_EXISTS;
 
-using::intptr_t;
-using::uintptr_t;
+using ::intptr_t _LIBCPP_USING_IF_EXISTS;
+using ::uintptr_t _LIBCPP_USING_IF_EXISTS;
 
-using::intmax_t;
-using::uintmax_t;
+using ::intmax_t _LIBCPP_USING_IF_EXISTS;
+using ::uintmax_t _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 

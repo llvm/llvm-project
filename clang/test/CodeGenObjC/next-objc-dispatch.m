@@ -13,8 +13,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -emit-llvm -o - %s    \
 // RUN:   -fobjc-dispatch-method=mixed | \
 // RUN:   FileCheck -check-prefix CHECK-NONFRAGILE_MIXED %s
-//
-// <rdar://problem/7866951>
 
 // There are basically four ways that we end up doing message dispatch for the
 // NeXT runtime. They are:
@@ -27,25 +25,25 @@
 // they use some different API calls (objc_msgSendSuper vs objc_msgSendSuper2).
 
 // CHECK-FRAGILE_LEGACY: ModuleID
-// CHECK-FRAGILE_LEGACY-NOT: declare i8* @objc_msgSendSuper2_fixup(
-// CHECK-FRAGILE_LEGACY-NOT: declare i8* @objc_msgSend_fixup(
-// CHECK-FRAGILE_LEGACY: declare i8* @objc_msgSendSuper(
-// CHECK-FRAGILE_LEGACY: declare i8* @objc_msgSend(
+// CHECK-FRAGILE_LEGACY-NOT: declare ptr @objc_msgSendSuper2_fixup(
+// CHECK-FRAGILE_LEGACY-NOT: declare ptr @objc_msgSend_fixup(
+// CHECK-FRAGILE_LEGACY: declare ptr @objc_msgSendSuper(
+// CHECK-FRAGILE_LEGACY: declare ptr @objc_msgSend(
 
 // CHECK-NONFRAGILE_LEGACY: ModuleID
-// CHECK-NONFRAGILE_LEGACY-NOT: declare i8* @objc_msgSendSuper2_fixup(
-// CHECK-NONFRAGILE_LEGACY-NOT: declare i8* @objc_msgSend_fixup(
-// CHECK-NONFRAGILE_LEGACY: declare i8* @objc_msgSendSuper2(
-// CHECK-NONFRAGILE_LEGACY: declare i8* @objc_msgSend(
+// CHECK-NONFRAGILE_LEGACY-NOT: declare ptr @objc_msgSendSuper2_fixup(
+// CHECK-NONFRAGILE_LEGACY-NOT: declare ptr @objc_msgSend_fixup(
+// CHECK-NONFRAGILE_LEGACY: declare ptr @objc_msgSendSuper2(
+// CHECK-NONFRAGILE_LEGACY: declare ptr @objc_msgSend(
 
 // CHECK-NONFRAGILE_NONLEGACY: ModuleID
-// CHECK-NONFRAGILE_NONLEGACY: declare i8* @objc_msgSendSuper2_fixup(
-// CHECK-NONFRAGILE_NONLEGACY: declare i8* @objc_msgSend_fixup(
+// CHECK-NONFRAGILE_NONLEGACY: declare ptr @objc_msgSendSuper2_fixup(
+// CHECK-NONFRAGILE_NONLEGACY: declare ptr @objc_msgSend_fixup(
 
-// CHECK-NONFRAGILE_MIXED: declare i8* @objc_msgSendSuper2_fixup(
-// CHECK-NONFRAGILE_MIXED: declare i8* @objc_msgSendSuper2(
-// CHECK-NONFRAGILE_MIXED: declare i8* @objc_msgSend_fixup(
-// CHECK-NONFRAGILE_MIXED: declare i8* @objc_msgSend(
+// CHECK-NONFRAGILE_MIXED: declare ptr @objc_msgSendSuper2_fixup(
+// CHECK-NONFRAGILE_MIXED: declare ptr @objc_msgSendSuper2(
+// CHECK-NONFRAGILE_MIXED: declare ptr @objc_msgSend_fixup(
+// CHECK-NONFRAGILE_MIXED: declare ptr @objc_msgSend(
 
 @interface NSObject
 + (id)alloc;

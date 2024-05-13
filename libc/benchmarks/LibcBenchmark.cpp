@@ -8,14 +8,14 @@
 
 #include "LibcBenchmark.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace llvm {
 namespace libc_benchmarks {
 
 void checkRequirements() {
   const auto &CpuInfo = benchmark::CPUInfo::Get();
-  if (CpuInfo.scaling_enabled)
+  if (CpuInfo.scaling == benchmark::CPUInfo::ENABLED)
     report_fatal_error(
         "CPU scaling is enabled, the benchmark real time measurements may be "
         "noisy and will incur extra overhead.");

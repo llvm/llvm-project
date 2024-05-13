@@ -3,16 +3,16 @@
 ; RUN:     < %s -verify-machineinstrs | FileCheck %s
 
 
-define i32 @foobar(i32*) {
+define i32 @foobar(ptr) {
 bb0:
 ; CHECK-LABEL: foobar:
 ; CHECK:       # %bb.0: # %bb0
 ; CHECK:        lw $[[REG0:[0-9]+]], 0($4)
 ; CHECK-NEXT:   sltiu $[[REG1:[0-9]+]], $[[REG0]], 1
 ; CHECK:        sw $[[REG1]], [[SPILL:[0-9]+]]($sp) # 4-byte Folded Spill
-  %1 = load  i32, i32* %0 , align 4
+  %1 = load  i32, ptr %0 , align 4
   %2 = icmp eq i32 %1, 0
-  store atomic i32 0, i32* %0 monotonic, align 4
+  store atomic i32 0, ptr %0 monotonic, align 4
   br label %bb1
 bb1:
 ; CHECK:       # %bb.1: # %bb1

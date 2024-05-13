@@ -13,7 +13,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Utility/Reproducer.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -24,7 +23,6 @@ namespace {
 class ScriptInterpreterTest : public ::testing::Test {
 public:
   void SetUp() override {
-    llvm::cantFail(Reproducer::Initialize(ReproducerMode::Off, llvm::None));
     FileSystem::Initialize();
     HostInfo::Initialize();
 
@@ -38,7 +36,6 @@ public:
     platform_linux::PlatformLinux::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
-    Reproducer::Terminate();
   }
 };
 } // namespace
@@ -51,6 +48,6 @@ TEST_F(ScriptInterpreterTest, ExecuteOneLine) {
   CommandReturnObject result(/*colors*/ false);
   EXPECT_TRUE(script_interpreter.ExecuteOneLine("foo = 1", &result));
   EXPECT_FALSE(script_interpreter.ExecuteOneLine("nil = foo", &result));
-  EXPECT_TRUE(result.GetErrorData().startswith(
+  EXPECT_TRUE(result.GetErrorData().starts_with(
       "error: lua failed attempting to evaluate 'nil = foo'"));
 }

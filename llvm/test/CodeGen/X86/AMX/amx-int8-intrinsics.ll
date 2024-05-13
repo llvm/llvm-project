@@ -4,17 +4,18 @@
 define void @test_amx() {
 ; CHECK-LABEL: test_amx:
 ; CHECK:       # %bb.0:
-  call void @llvm.x86.tdpbssd(i8 3, i8 4, i8 7)
 ; CHECK-NEXT:    tdpbssd %tmm7, %tmm4, %tmm3
+; CHECK-NEXT:    tdpbsud %tmm7, %tmm4, %tmm3
+; CHECK-NEXT:    tdpbusd %tmm7, %tmm0, %tmm3
+; CHECK-NEXT:    tdpbuud %tmm1, %tmm4, %tmm3
+; CHECK-NEXT:    retq
+  call void @llvm.x86.tdpbssd(i8 3, i8 4, i8 7)
 
   call void @llvm.x86.tdpbsud(i8 3, i8 4, i8 7)
-; CHECK-NEXT:    tdpbsud %tmm7, %tmm4, %tmm3
 
   call void @llvm.x86.tdpbusd(i8 3, i8 0, i8 7)
-; CHECK-NEXT:    tdpbusd %tmm7, %tmm0, %tmm3
 
   call void @llvm.x86.tdpbuud(i8 3, i8 4, i8 1)
-; CHECK-NEXT:    tdpbuud %tmm1, %tmm4, %tmm3
   ret void
 }
 

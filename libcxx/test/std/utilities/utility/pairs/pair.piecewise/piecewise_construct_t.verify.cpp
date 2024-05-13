@@ -1,0 +1,20 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++03
+
+// <utility>
+
+// struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
+// constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
+
+// This test checks for https://wg21.link/LWG2510.
+
+#include <utility>
+
+std::piecewise_construct_t f() { return {}; } // expected-error 1 {{chosen constructor is explicit in copy-initialization}}

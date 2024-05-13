@@ -1,5 +1,5 @@
-; RUN: llc -O0 -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -O0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare void @llvm.amdgcn.s.barrier() nounwind convergent
 
@@ -36,63 +36,63 @@ ENDIF:                                            ; preds = %main_body, %Flow2
   %temp3.0 = phi float [ 0.000000e+00, %main_body ], [ %101, %Flow2 ]
   %15 = extractelement <4 x float> %reg1, i32 1
   %16 = extractelement <4 x float> %reg1, i32 3
-  %17 = load <4 x float>, <4 x float> addrspace(4)* null
+  %17 = load <4 x float>, ptr addrspace(4) null
   %18 = extractelement <4 x float> %17, i32 0
   %19 = fmul float %18, %0
-  %20 = load <4 x float>, <4 x float> addrspace(4)* null
+  %20 = load <4 x float>, ptr addrspace(4) null
   %21 = extractelement <4 x float> %20, i32 1
   %22 = fmul float %21, %0
-  %23 = load <4 x float>, <4 x float> addrspace(4)* null
+  %23 = load <4 x float>, ptr addrspace(4) null
   %24 = extractelement <4 x float> %23, i32 2
   %25 = fmul float %24, %0
-  %26 = load <4 x float>, <4 x float> addrspace(4)* null
+  %26 = load <4 x float>, ptr addrspace(4) null
   %27 = extractelement <4 x float> %26, i32 3
   %28 = fmul float %27, %0
-  %29 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 1)
+  %29 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 1)
   %30 = extractelement <4 x float> %29, i32 0
   %31 = fmul float %30, %15
   %32 = fadd float %31, %19
-  %33 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 1)
+  %33 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 1)
   %34 = extractelement <4 x float> %33, i32 1
   %35 = fmul float %34, %15
   %36 = fadd float %35, %22
-  %37 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 1)
+  %37 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 1)
   %38 = extractelement <4 x float> %37, i32 2
   %39 = fmul float %38, %15
   %40 = fadd float %39, %25
-  %41 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 1)
+  %41 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 1)
   %42 = extractelement <4 x float> %41, i32 3
   %43 = fmul float %42, %15
   %44 = fadd float %43, %28
-  %45 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 2)
+  %45 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 2)
   %46 = extractelement <4 x float> %45, i32 0
   %47 = fmul float %46, %1
   %48 = fadd float %47, %32
-  %49 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 2)
+  %49 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 2)
   %50 = extractelement <4 x float> %49, i32 1
   %51 = fmul float %50, %1
   %52 = fadd float %51, %36
-  %53 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 2)
+  %53 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 2)
   %54 = extractelement <4 x float> %53, i32 2
   %55 = fmul float %54, %1
   %56 = fadd float %55, %40
-  %57 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 2)
+  %57 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 2)
   %58 = extractelement <4 x float> %57, i32 3
   %59 = fmul float %58, %1
   %60 = fadd float %59, %44
-  %61 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 3)
+  %61 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 3)
   %62 = extractelement <4 x float> %61, i32 0
   %63 = fmul float %62, %16
   %64 = fadd float %63, %48
-  %65 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 3)
+  %65 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 3)
   %66 = extractelement <4 x float> %65, i32 1
   %67 = fmul float %66, %16
   %68 = fadd float %67, %52
-  %69 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 3)
+  %69 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 3)
   %70 = extractelement <4 x float> %69, i32 2
   %71 = fmul float %70, %16
   %72 = fadd float %71, %56
-  %73 = load <4 x float>, <4 x float> addrspace(4)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(4)* null, i64 0, i32 3)
+  %73 = load <4 x float>, ptr addrspace(4) getelementptr ([1024 x <4 x float>], ptr addrspace(4) null, i64 0, i32 3)
   %74 = extractelement <4 x float> %73, i32 3
   %75 = fmul float %74, %16
   %76 = fadd float %75, %60

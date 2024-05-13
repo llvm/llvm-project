@@ -9,14 +9,12 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_TYPEREFERENCETRACKER_H
 #define LLVM_TOOLS_LLVMPDBDUMP_TYPEREFERENCETRACKER_H
 
-#include "InputFile.h"
-
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
+#include "llvm/DebugInfo/PDB/Native/InputFile.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

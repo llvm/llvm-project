@@ -1,11 +1,11 @@
-; RUN: opt < %s -globaldce
+; RUN: opt < %s -passes=globaldce
 ;
 define internal void @func() {
         ret void
 }
 
 define void @main() {
-        %X = bitcast void ()* @func to i32*             ; <i32*> [#uses=0]
+        %X = addrspacecast ptr @func to ptr addrspace(1)             ; <i32*> [#uses=0]
         ret void
 }
 

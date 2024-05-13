@@ -13,15 +13,14 @@
 #ifndef LLVM_CLANG_SEMA_ANALYSISBASEDWARNINGS_H
 #define LLVM_CLANG_SEMA_ANALYSISBASEDWARNINGS_H
 
+#include "clang/AST/Decl.h"
 #include "llvm/ADT/DenseMap.h"
 #include <memory>
 
 namespace clang {
 
-class BlockExpr;
 class Decl;
 class FunctionDecl;
-class ObjCMethodDecl;
 class QualType;
 class Sema;
 namespace sema {
@@ -35,9 +34,13 @@ public:
   class Policy {
     friend class AnalysisBasedWarnings;
     // The warnings to run.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned enableCheckFallThrough : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned enableCheckUnreachable : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned enableThreadSafetyAnalysis : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned enableConsumedAnalysis : 1;
   public:
     Policy();
@@ -96,6 +99,9 @@ public:
 
   void IssueWarnings(Policy P, FunctionScopeInfo *fscope,
                      const Decl *D, QualType BlockType);
+
+  // Issue warnings that require whole-translation-unit analysis.
+  void IssueWarnings(TranslationUnitDecl *D);
 
   Policy getDefaultPolicy() { return DefaultPolicy; }
 

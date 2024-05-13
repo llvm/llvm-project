@@ -29,9 +29,9 @@
 namespace polly {
 using llvm::SmallPtrSet;
 
-struct Dependences;
+class Dependences;
 
-class IslAst {
+class IslAst final {
 public:
   IslAst(const IslAst &) = delete;
   IslAst &operator=(const IslAst &) = delete;
@@ -39,9 +39,6 @@ public:
   IslAst &operator=(IslAst &&) = delete;
 
   static IslAst create(Scop &Scop, const Dependences &D);
-
-  /// Print a source code representation of the program.
-  void pprint(raw_ostream &OS);
 
   isl::ast_node getAst();
 
@@ -78,9 +75,6 @@ public:
     /// Construct and initialize the payload.
     IslAstUserPayload() = default;
 
-    /// Cleanup all isl structs on destruction.
-    ~IslAstUserPayload();
-
     /// Does the dependence analysis determine that there are no loop-carried
     /// dependencies?
     bool IsParallel = false;
@@ -101,7 +95,7 @@ public:
     isl::pw_aff MinimalDependenceDistance;
 
     /// The build environment at the time this node was constructed.
-    isl_ast_build *Build = nullptr;
+    isl::ast_build Build;
 
     /// Set of accesses which break reduction dependences.
     MemoryAccessSet BrokenReductions;
@@ -164,12 +158,12 @@ public:
   static MemoryAccessSet *getBrokenReductions(const isl::ast_node &Node);
 
   /// Get the nodes build context or a nullptr if not available.
-  static __isl_give isl_ast_build *getBuild(__isl_keep isl_ast_node *Node);
+  static isl::ast_build getBuild(const isl::ast_node &Node);
 
   ///}
 };
 
-struct IslAstAnalysis : public AnalysisInfoMixin<IslAstAnalysis> {
+struct IslAstAnalysis : AnalysisInfoMixin<IslAstAnalysis> {
   static AnalysisKey Key;
 
   using Result = IslAstInfo;
@@ -178,7 +172,7 @@ struct IslAstAnalysis : public AnalysisInfoMixin<IslAstAnalysis> {
                  ScopStandardAnalysisResults &SAR);
 };
 
-class IslAstInfoWrapperPass : public ScopPass {
+class IslAstInfoWrapperPass final : public ScopPass {
   std::unique_ptr<IslAstInfo> Ast;
 
 public:
@@ -202,7 +196,10 @@ public:
   void printScop(raw_ostream &OS, Scop &S) const override;
 };
 
-struct IslAstPrinterPass : public PassInfoMixin<IslAstPrinterPass> {
+llvm::Pass *createIslAstInfoWrapperPassPass();
+llvm::Pass *createIslAstInfoPrinterLegacyPass(llvm::raw_ostream &OS);
+
+struct IslAstPrinterPass final : PassInfoMixin<IslAstPrinterPass> {
   IslAstPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
@@ -211,5 +208,10 @@ struct IslAstPrinterPass : public PassInfoMixin<IslAstPrinterPass> {
   raw_ostream &OS;
 };
 } // namespace polly
+
+namespace llvm {
+void initializeIslAstInfoWrapperPassPass(llvm::PassRegistry &);
+void initializeIslAstInfoPrinterLegacyPassPass(llvm::PassRegistry &);
+} // namespace llvm
 
 #endif // POLLY_ISLAST_H

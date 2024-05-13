@@ -79,7 +79,7 @@ __attribute__((objc_root_class))
 }
 @end
 
-void test2() {
+void test2(void) {
   (void)@selector(inBase); // strict-warning{{@selector expression formed with potentially direct selector}}
   (void)@selector(inBaseImpl); // strict-warning{{@selector expression formed with potentially direct selector}}
   (void)@selector(inBaseCat); // strict-warning{{@selector expression formed with potentially direct selector}}

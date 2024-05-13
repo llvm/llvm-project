@@ -44,16 +44,13 @@ ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
                           common_flags()->clear_shadow_mmap_threshold);
 #else
   uptr shadow_beg = MEM_TO_SHADOW(aligned_beg);
-  uptr shadow_end = MEM_TO_SHADOW(
-      aligned_beg + aligned_size - SHADOW_GRANULARITY) + 1;
+  uptr shadow_end =
+      MEM_TO_SHADOW(aligned_beg + aligned_size - ASAN_SHADOW_GRANULARITY) + 1;
   // FIXME: Page states are different on Windows, so using the same interface
   // for mapping shadow and zeroing out pages doesn't "just work", so we should
   // probably provide higher-level interface for these operations.
   // For now, just memset on Windows.
   if (value || SANITIZER_WINDOWS == 1 ||
-      // RTEMS doesn't have have pages, let alone a fast way to zero
-      // them, so default to memset.
-      SANITIZER_RTEMS == 1 ||
       shadow_end - shadow_beg < common_flags()->clear_shadow_mmap_threshold) {
     REAL(memset)((void*)shadow_beg, value, shadow_end - shadow_beg);
   } else {
@@ -81,11 +78,12 @@ ALWAYS_INLINE void FastPoisonShadowPartialRightRedzone(
   DCHECK(CanPoisonMemory());
   bool poison_partial = flags()->poison_partial;
   u8 *shadow = (u8*)MEM_TO_SHADOW(aligned_addr);
-  for (uptr i = 0; i < redzone_size; i += SHADOW_GRANULARITY, shadow++) {
-    if (i + SHADOW_GRANULARITY <= size) {
+  for (uptr i = 0; i < redzone_size; i += ASAN_SHADOW_GRANULARITY, shadow++) {
+    if (i + ASAN_SHADOW_GRANULARITY <= size) {
       *shadow = 0;  // fully addressable
     } else if (i >= size) {
-      *shadow = (SHADOW_GRANULARITY == 128) ? 0xff : value;  // unaddressable
+      *shadow =
+          (ASAN_SHADOW_GRANULARITY == 128) ? 0xff : value;  // unaddressable
     } else {
       // first size-i bytes are addressable
       *shadow = poison_partial ? static_cast<u8>(size - i) : 0;

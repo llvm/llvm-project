@@ -9,16 +9,17 @@
 #include "DirectoryScanner.h"
 
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 
 using namespace llvm;
 
-Optional<sys::fs::file_status> getFileStatus(StringRef Path) {
+std::optional<sys::fs::file_status> getFileStatus(StringRef Path) {
   sys::fs::file_status Status;
   std::error_code EC = status(Path, Status);
   if (EC)
-    return None;
+    return std::nullopt;
   return Status;
 }
 
@@ -31,7 +32,7 @@ std::vector<std::string> scanDirectory(StringRef Path) {
             End = fs::directory_iterator();
        !EC && It != End; It.increment(EC)) {
     auto status = getFileStatus(It->path());
-    if (!status.hasValue())
+    if (!status)
       continue;
     Result.emplace_back(sys::path::filename(It->path()));
   }

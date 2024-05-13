@@ -2,94 +2,257 @@
 // Tests for the hvx features and warnings.
 // -----------------------------------------------------------------------------
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv66 -mhvx \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX166 %s
-// CHECKHVX166: "-target-feature" "+hvxv66"
+// No HVX without -mhvx/-mhvx=
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX165 %s
-// CHECKHVX165: "-target-feature" "+hvxv65"
+// CHECK-HVX-ON:      "-target-feature" "+hvx
+// CHECK-HVX-ON-NOT:  "-target-feature" "-hvx
+// CHECK-HVX-OFF-NOT: "-target-feature" "+hvx
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX162 %s
-// CHECKHVX162: "-target-feature" "+hvxv62"
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv5 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv55 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv60 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv62 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv65 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv66 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv67 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv67t \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv68 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv71 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv71t \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv73 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
-// RUN:  -mhvx-length=128B 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
+// Infer HVX version from flag:
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
-// RUN:  -mhvx-length=128B 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
+// CHECK-HVX-V60: "-target-feature" "+hvxv60"
+// CHECK-HVX-V62: "-target-feature" "+hvxv62"
+// CHECK-HVX-V65: "-target-feature" "+hvxv65"
+// CHECK-HVX-V66: "-target-feature" "+hvxv66"
+// CHECK-HVX-V67: "-target-feature" "+hvxv67"
+// CHECK-HVX-V68: "-target-feature" "+hvxv68"
+// CHECK-HVX-V69: "-target-feature" "+hvxv69"
+// CHECK-HVX-V71: "-target-feature" "+hvxv71"
+// CHECK-HVX-V73: "-target-feature" "+hvxv73"
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
-// RUN:  -mhvx-length=128b 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
-// CHECKHVX2-NOT: "-target-feature" "+hvx-length64b"
-// CHECKHVX2: "-target-feature" "+hvx-length128b"
+// Direct version flag:
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v60 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V60 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v62 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V62 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v65 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V65 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v66 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V66 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v67 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V67 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v68 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v69 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v71 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v73 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
+// Infer HVX version from CPU version:
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv60 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V60 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv62 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V62 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv65 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V65 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv66 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V66 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv67 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V67 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv67t -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V67 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv68 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv71 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv73 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 2>&1 \
-// RUN:  | FileCheck -check-prefix=CHECKHVX3 %s
+// Direct version flag with different CPU version:
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v60 -mv62 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V60 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v62 -mv65 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V62 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v65 -mv66 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V65 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v66 -mv67 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V66 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v67 -mv68 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V67 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v68 -mv69 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v69 -mv71 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v71 -mv73 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v73 -mv60 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 2>&1 \
-// RUN:  | FileCheck -check-prefix=CHECKHVX3 %s
-// CHECKHVX3-NOT: "-target-feature" "+hvx
+// Direct version flag with different CPU version and versionless -mhvx:
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v60 -mv62 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V62 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v62 -mv65 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V65 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v65 -mv66 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V66 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v66 -mv67 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V67 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v67 -mv68 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v68 -mv69 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v69 -mv71 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v71 -mv73 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v73 -mv60 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V60 %s
 
-// No hvx target feature must be added if -mno-hvx occurs last
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mno-hvx \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-NOHVX %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx -mno-hvx \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-NOHVX %s
-// CHECK-NOHVX-NOT: "-target-feature" "+hvx
+// Direct version flag with different CPU version, versionless -mhvx
+// and -mno-hvx. The -mno-hvx cancels -mhvx=, versionless -mhvx wins:
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v60 -mno-hvx -mv62 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V62 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v62 -mno-hvx -mv65 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V65 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v65 -mno-hvx -mv66 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V66 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v66 -mno-hvx -mv67 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V67 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v67 -mno-hvx -mv68 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v68 -mno-hvx -mv69 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v69 -mno-hvx -mv71 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v71 -mno-hvx -mv73 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v73 -mno-hvx -mv60 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V60 %s
 
-// Hvx target feature should be added if -mno-hvx doesn't occur last
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mno-hvx -mhvx\
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXFEAT %s
-// CHECK-HVXFEAT: "-target-feature" "+hvxv62"
+// Direct version flag with different CPU version, versionless -mhvx
+// and -mno-hvx. The -mno-hvx cancels versionless -mhvx, -mhvx= wins:
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv62 -mhvx -mno-hvx -mhvx=v60 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V60 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv65 -mhvx -mno-hvx -mhvx=v62 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V62 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv66 -mhvx -mno-hvx -mhvx=v65 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V65 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv67 -mhvx -mno-hvx -mhvx=v66 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V66 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv68 -mhvx -mno-hvx -mhvx=v67 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V67 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mno-hvx -mhvx=v68 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv71 -mhvx -mno-hvx -mhvx=v69 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv73 -mhvx -mno-hvx -mhvx=v71 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv60 -mhvx -mno-hvx -mhvx=v73 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
 
-// With -mhvx, the version of hvx defaults to Cpu
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-DEFAULT %s
-// CHECK-HVX-DEFAULT: "-target-feature" "+hvxv60"
+// Infer HVX length from flag:
 
-// Test -mhvx= flag
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx=v62 \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXEQ %s
-// CHECK-HVXEQ: "-target-feature" "+hvxv62"
+// CHECK-HVX-L64:  "-target-feature" "+hvx-length64b"
+// CHECK-HVX-L64-NOT:  "-target-feature" "+hvx-length128b"
+// CHECK-HVX-L128: "-target-feature" "+hvx-length128b"
+// CHECK-HVX-L128-NOT: "-target-feature" "+hvx-length64b"
 
-// Honor the last occurred -mhvx=, -mhvx flag.
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx=v62 -mhvx\
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXEQ-PRE %s
-// CHECK-HVXEQ-PRE-NOT: "-target-feature" "+hvxv62"
-// CHECK-HVXEQ-PRE: "-target-feature" "+hvxv60"
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx -mhvx=v62\
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXEQ-PRE2 %s
-// CHECK-HVXEQ-PRE2-NOT: "-target-feature" "+hvxv60"
-// CHECK-HVXEQ-PRE2: "-target-feature" "+hvxv62"
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx -mhvx-length=64b \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-L64 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx -mhvx-length=128b \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-L128 %s
 
-// Test -mhvx-length flag
-// The default mode on v60,v62 is 64B.
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-64B %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx \
-// RUN:  -mhvx-length=64b 2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-64B %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx \
-// RUN:  -mhvx-length=64B 2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-64B %s
-// CHECK-HVXLENGTH-64B: "-target-feature" "+hvx{{.*}}" "-target-feature" "+hvx-length64b"
-// The default mode on v66 and future archs is 128B.
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv66 -mhvx \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-128B %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx -mhvx-length=128B\
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-128B %s
-// CHECK-HVXLENGTH-128B: "-target-feature" "+hvx{{.*}}" "-target-feature" "+hvx-length128b"
+// Infer HVX length from HVX version:
 
-// Bail out if -mhvx-length is specified without HVX enabled
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx-length=64B \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-ERROR %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx-length=128B \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-ERROR %s
-// CHECK-HVXLENGTH-ERROR: error: -mhvx-length is not supported without a -mhvx/-mhvx= flag
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v60 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-L64 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v62 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-L64 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v65 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-L64 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v66 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-L128 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v67 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-L128 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v68 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-L128 %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v69 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-L128 %s
 
-// Error out if an unsupported value is passed to -mhvx-length.
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx -mhvx-length=B \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-VALUE-ERROR %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx -mhvx-length=128 \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-VALUE-ERROR %s
-// CHECK-HVXLENGTH-VALUE-ERROR: error: unsupported argument '{{.*}}' to option 'mhvx-length='
+// No HVX with trailing -mno-hvx
+
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v69 -mno-hvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mno-hvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v69 -mhvx-length=128b -mno-hvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mhvx-qfloat -mno-hvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+
+// Float
+
+// CHECK-HVX-QFLOAT-ON:      "-target-feature" "+hvx-qfloat"
+// CHECK-HVX-QFLOAT-OFF-NOT: "-target-feature" "+hvx-qfloat"
+// CHECK-HVX-IEEE-ON:        "-target-feature" "+hvx-ieee-fp"
+// CHECK-HVX-IEEE-OFF-NOT:   "-target-feature" "+hvx-ieee-fp"
+
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mhvx-qfloat \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-QFLOAT-ON %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mno-hvx-qfloat \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-QFLOAT-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mno-hvx-qfloat -mhvx-qfloat \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-QFLOAT-ON %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mhvx-qfloat -mno-hvx-qfloat \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-QFLOAT-OFF %s
+
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mhvx-ieee-fp \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-IEEE-ON %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mno-hvx-ieee-fp \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-IEEE-OFF %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mno-hvx-ieee-fp -mhvx-ieee-fp \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-IEEE-ON %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mhvx-ieee-fp -mno-hvx-ieee-fp \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-IEEE-OFF %s
+
+// HVX flags heed HVX:
+
+// CHECK-NEEDS-HVX: error: {{.*}} requires HVX, use -mhvx/-mhvx= to enable it
+
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv66 -mhvx-length=64b \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-NEEDS-HVX %s
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv66 -mhvx-length=128b \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-NEEDS-HVX %s
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx-qfloat \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-NEEDS-HVX %s
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx-ieee-fp \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-NEEDS-HVX %s
+
+// Invalid HVX length:
+
+// CHECK-HVX-BAD-LENGTH: error: unsupported argument '{{.*}}' to option '-mhvx-length='
+
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mhvx -mhvx-length=B \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-BAD-LENGTH %s
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mhvx -mhvx-length=128 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-BAD-LENGTH %s

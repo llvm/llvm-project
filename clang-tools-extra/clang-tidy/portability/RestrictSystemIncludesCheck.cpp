@@ -16,15 +16,13 @@
 #include "llvm/Support/Path.h"
 #include <cstring>
 
-namespace clang {
-namespace tidy {
-namespace portability {
+namespace clang::tidy::portability {
 
 void RestrictedIncludesPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, const FileEntry *File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   if (!Check.contains(FileName) && SrcMgr::isSystem(FileType)) {
     SmallString<256> FullPath;
     llvm::sys::path::append(FullPath, SearchPath);
@@ -75,6 +73,4 @@ void RestrictSystemIncludesCheck::storeOptions(
   Options.store(Opts, "Includes", AllowedIncludes);
 }
 
-} // namespace portability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::portability

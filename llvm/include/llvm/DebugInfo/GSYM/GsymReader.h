@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_GSYM_GSYMREADER_H
 #define LLVM_DEBUGINFO_GSYM_GSYMREADER_H
 
-
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
@@ -19,11 +18,9 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
-
 #include <inttypes.h>
 #include <memory>
 #include <stdint.h>
-#include <string>
 #include <vector>
 
 namespace llvm {
@@ -50,7 +47,7 @@ class GsymReader {
 
   std::unique_ptr<MemoryBuffer> MemBuffer;
   StringRef GsymBytes;
-  llvm::support::endianness Endian;
+  llvm::endianness Endian;
   const Header *Hdr = nullptr;
   ArrayRef<uint8_t> AddrOffsets;
   ArrayRef<uint32_t> AddrInfoOffsets;
@@ -109,6 +106,15 @@ public:
   /// address.
   llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
 
+  /// Get the full function info given an address index.
+  ///
+  /// \param AddrIdx A address index for an address in the address table.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing get the function
+  /// info object.
+  llvm::Expected<FunctionInfo> getFunctionInfoAtIndex(uint64_t AddrIdx) const;
+
   /// Lookup an address in the a GSYM.
   ///
   /// Lookup just the information needed for a specific address \a Addr. This
@@ -140,11 +146,11 @@ public:
   ///
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
-  /// valid, or llvm::None if the file index is out of bounds,
-  Optional<FileEntry> getFile(uint32_t Index) const {
+  /// valid, or std::nullopt if the file index is out of bounds,
+  std::optional<FileEntry> getFile(uint32_t Index) const {
     if (Index < Files.size())
       return Files[Index];
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// Dump the entire Gsym data contained in this object.
@@ -194,7 +200,7 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param FE The object to dump.
-  void dump(raw_ostream &OS, Optional<FileEntry> FE);
+  void dump(raw_ostream &OS, std::optional<FileEntry> FE);
 
   /// Get the number of addresses in this Gsym file.
   uint32_t getNumAddresses() const {
@@ -207,8 +213,8 @@ public:
   ///
   /// \param Index A index into the address table.
   /// \returns A resolved virtual address for adddress in the address table
-  /// or llvm::None if Index is out of bounds.
-  Optional<uint64_t> getAddress(size_t Index) const;
+  /// or std::nullopt if Index is out of bounds.
+  std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
 
@@ -239,13 +245,13 @@ protected:
   ///
   /// \param Index An index into the AddrOffsets array.
   /// \returns An virtual address that matches the original object file for the
-  /// address as the specified index, or llvm::None if Index is out of bounds.
-  template <class T> Optional<uint64_t>
-  addressForIndex(size_t Index) const {
+  /// address as the specified index, or std::nullopt if Index is out of bounds.
+  template <class T>
+  std::optional<uint64_t> addressForIndex(size_t Index) const {
     ArrayRef<T> AIO = getAddrOffsets<T>();
     if (Index < AIO.size())
       return AIO[Index] + Hdr->BaseAddress;
-    return llvm::None;
+    return std::nullopt;
   }
   /// Lookup an address offset in the AddrOffsets table.
   ///
@@ -257,7 +263,8 @@ protected:
   /// \returns The matching address offset index. This index will be used to
   /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
   template <class T>
-  llvm::Optional<uint64_t> getAddressOffsetIndex(const uint64_t AddrOffset) const {
+  std::optional<uint64_t>
+  getAddressOffsetIndex(const uint64_t AddrOffset) const {
     ArrayRef<T> AIO = getAddrOffsets<T>();
     const auto Begin = AIO.begin();
     const auto End = AIO.end();
@@ -265,9 +272,22 @@ protected:
     // Watch for addresses that fall between the gsym::Header::BaseAddress and
     // the first address offset.
     if (Iter == Begin && AddrOffset < *Begin)
-      return llvm::None;
+      return std::nullopt;
     if (Iter == End || AddrOffset < *Iter)
       --Iter;
+
+    // GSYM files have sorted function infos with the most information (line
+    // table and/or inline info) first in the array of function infos, so
+    // always backup as much as possible as long as the address offset is the
+    // same as the previous entry.
+    while (Iter != Begin) {
+      auto Prev = Iter - 1;
+      if (*Prev == *Iter)
+        Iter = Prev;
+      else
+        break;
+    }
+
     return std::distance(Begin, Iter);
   }
 
@@ -304,7 +324,39 @@ protected:
   /// \param Index An index into the address table.
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
-  Optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+  std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+
+  /// Given an address, find the correct function info data and function
+  /// address.
+  ///
+  /// Binary search the address table and find the matching address info
+  /// and make sure that the function info contains the address. GSYM allows
+  /// functions to overlap, and the most debug info is contained in the first
+  /// entries due to the sorting when GSYM files are created. We can have
+  /// multiple function info that start at the same address only if their
+  /// address range doesn't match. So find the first entry that matches \a Addr
+  /// and iterate forward until we find one that contains the address.
+  ///
+  /// \param[in] Addr A virtual address that matches the original object file
+  /// to lookup.
+  ///
+  /// \param[out] FuncStartAddr A virtual address that is the base address of
+  /// the function that is used for decoding the FunctionInfo.
+  ///
+  /// \returns An valid data extractor on success, or an error if we fail to
+  /// find the address in a function info or corrrectly decode the data
+  llvm::Expected<llvm::DataExtractor>
+  getFunctionInfoDataForAddress(uint64_t Addr, uint64_t &FuncStartAddr) const;
+
+  /// Get the function data and address given an address index.
+  ///
+  /// \param AddrIdx A address index from the address table.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing to lookup the
+  /// address.
+  llvm::Expected<llvm::DataExtractor>
+  getFunctionInfoDataAtIndex(uint64_t AddrIdx, uint64_t &FuncStartAddr) const;
 };
 
 } // namespace gsym

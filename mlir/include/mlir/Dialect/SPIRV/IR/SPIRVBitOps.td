@@ -17,53 +17,57 @@
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class SPV_BitBinaryOp<string mnemonic, list<OpTrait> traits = []> :
-      // All the operands type used in bit instructions are SPV_Integer.
-      SPV_BinaryOp<mnemonic, SPV_Integer, SPV_Integer,
+class SPIRV_BitBinaryOp<string mnemonic, list<Trait> traits = []> :
+      // All the operands type used in bit instructions are SPIRV_Integer.
+      SPIRV_BinaryOp<mnemonic, SPIRV_Integer, SPIRV_Integer,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultType])>;
+                               [Pure, SameOperandsAndResultType])> {
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
 
-class SPV_BitFieldExtractOp<string mnemonic, list<OpTrait> traits = []> :
-      SPV_Op<mnemonic, !listconcat(traits,
-             [NoSideEffect, AllTypesMatch<["base", "result"]>])> {
+class SPIRV_BitFieldExtractOp<string mnemonic, list<Trait> traits = []> :
+      SPIRV_Op<mnemonic, !listconcat(traits,
+             [Pure, AllTypesMatch<["base", "result"]>])> {
   let arguments = (ins
-    SPV_ScalarOrVectorOf<SPV_Integer>:$base,
-    SPV_Integer:$offset,
-    SPV_Integer:$count
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$base,
+    SPIRV_Integer:$offset,
+    SPIRV_Integer:$count
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOf<SPV_Integer>:$result
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
   );
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let assemblyFormat = [{
     operands attr-dict `:` type($base) `,` type($offset) `,` type($count)
   }];
 }
 
-class SPV_BitUnaryOp<string mnemonic, list<OpTrait> traits = []> :
-      SPV_UnaryOp<mnemonic, SPV_Integer, SPV_Integer,
+class SPIRV_BitUnaryOp<string mnemonic, list<Trait> traits = []> :
+      SPIRV_UnaryOp<mnemonic, SPIRV_Integer, SPIRV_Integer,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultType])>;
+                               [Pure, SameOperandsAndResultType])>;
 
-class SPV_ShiftOp<string mnemonic, list<OpTrait> traits = []> :
-      SPV_BinaryOp<mnemonic, SPV_Integer, SPV_Integer,
+class SPIRV_ShiftOp<string mnemonic, list<Trait> traits = []> :
+      SPIRV_BinaryOp<mnemonic, SPIRV_Integer, SPIRV_Integer,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultShape])> {
-  let parser = [{ return ::parseShiftOp(parser, result); }];
-  let printer = [{ ::printShiftOp(this->getOperation(), p); }];
-  let verifier = [{ return ::verifyShiftOp(this->getOperation()); }];
+                               [Pure, SameOperandsAndResultShape,
+                                AllTypesMatch<["operand1", "result"]>])> {
+  let assemblyFormat = [{
+    operands attr-dict `:` type($operand1) `,` type($operand2)
+  }];
+  let hasVerifier = 1;
 }
 
 // -----
 
-def SPV_BitCountOp : SPV_BitUnaryOp<"BitCount", []> {
+def SPIRV_BitCountOp : SPIRV_BitUnaryOp<"BitCount", []> {
   let summary = "Count the number of set bits in an object.";
 
   let description = [{
-     Results are computed per component.
+    Results are computed per component.
 
     Result Type must be a scalar or vector of integer type.  The components
     must be wide enough to hold the unsigned Width of Base as an unsigned
@@ -76,39 +80,30 @@ def SPV_BitCountOp : SPV_BitUnaryOp<"BitCount", []> {
     The result is the unsigned value that is the number of bits in Base that
     are 1.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    bitcount-op ::= ssa-id `=` `spv.BitCount` ssa-use
-                               `:` integer-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
-    %2 = spv.BitCount %0: i32
-    %3 = spv.BitCount %1: vector<4xi32>
+    %2 = spirv.BitCount %0: i32
+    %3 = spirv.BitCount %1: vector<4xi32>
     ```
   }];
 }
 
 // -----
 
-def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
-    [NoSideEffect, AllTypesMatch<["base", "insert", "result"]>]> {
+def SPIRV_BitFieldInsertOp : SPIRV_Op<"BitFieldInsert",
+    [Pure, AllTypesMatch<["base", "insert", "result"]>]> {
   let summary = [{
     Make a copy of an object, with a modified bit field that comes from
     another object.
   }];
 
   let description = [{
-     Results are computed per component.
+    Results are computed per component.
 
     Result Type must be a scalar or vector of integer type.
 
-     The type of Base and Insert must be the same as Result Type.
+    The type of Base and Insert must be the same as Result Type.
 
     Any result bits numbered outside [Offset, Offset + Count -  1]
     (inclusive) will come from the corresponding bits in Base.
@@ -126,43 +121,32 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
     The resulting value is undefined if Count or Offset or their sum is
     greater than the number of bits in the result.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    bitfield-insert-op ::= ssa-id `=` `spv.BitFieldInsert` ssa-use `,` ssa-use
-                                      `,` ssa-use `,` ssa-use
-                                      `:` integer-scalar-vector-type
-                                      `,` integer-type `,` integer-type
-    ```
-
     #### Example:
 
     ```mlir
-    %0 = spv.BitFieldInsert %base, %insert, %offset, %count : vector<3xi32>, i8, i8
+    %0 = spirv.BitFieldInsert %base, %insert, %offset, %count : vector<3xi32>, i8, i8
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Shader]>
+    Capability<[SPIRV_C_BitInstructions, SPIRV_C_Shader]>
   ];
 
   let arguments = (ins
-    SPV_ScalarOrVectorOf<SPV_Integer>:$base,
-    SPV_ScalarOrVectorOf<SPV_Integer>:$insert,
-    SPV_Integer:$offset,
-    SPV_Integer:$count
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$base,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$insert,
+    SPIRV_Integer:$offset,
+    SPIRV_Integer:$count
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOf<SPV_Integer>:$result
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
   );
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let assemblyFormat = [{
     operands attr-dict `:` type($base) `,` type($offset) `,` type($count)
@@ -171,16 +155,16 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
 
 // -----
 
-def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract",
+def SPIRV_BitFieldSExtractOp : SPIRV_BitFieldExtractOp<"BitFieldSExtract",
                                                    [SignedOp]> {
   let summary = "Extract a bit field from an object, with sign extension.";
 
   let description = [{
-     Results are computed per component.
+    Results are computed per component.
 
     Result Type must be a scalar or vector of integer type.
 
-     The type of Base must be the same as Result Type.
+    The type of Base must be the same as Result Type.
 
     If Count is greater than 0: The bits of Base numbered in [Offset, Offset
     + Count -  1] (inclusive) become the bits numbered [0, Count - 1] of the
@@ -198,35 +182,24 @@ def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract",
     The resulting value is undefined if Count or Offset or their sum is
     greater than the number of bits in the result.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    bitfield-extract-s-op ::= ssa-id `=` `spv.BitFieldSExtract` ssa-use
-                                         `,` ssa-use `,` ssa-use
-                                         `:` integer-scalar-vector-type
-                                         `,` integer-type `,` integer-type
-    ```
-
     #### Example:
 
     ```mlir
-    %0 = spv.BitFieldSExtract %base, %offset, %count : vector<3xi32>, i8, i8
+    %0 = spirv.BitFieldSExtract %base, %offset, %count : vector<3xi32>, i8, i8
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Shader]>
+    Capability<[SPIRV_C_BitInstructions, SPIRV_C_Shader]>
   ];
 }
 
 // -----
 
-def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract",
+def SPIRV_BitFieldUExtractOp : SPIRV_BitFieldExtractOp<"BitFieldUExtract",
                                                    [UnsignedOp]> {
   let summary = "Extract a bit field from an object, without sign extension.";
 
@@ -235,75 +208,55 @@ def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract",
     that there is no sign extension. The remaining bits of the result will
     all be 0.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    bitfield-extract-u-op ::= ssa-id `=` `spv.BitFieldUExtract` ssa-use
-                                         `,` ssa-use `,` ssa-use
-                                         `:` integer-scalar-vector-type
-                                         `,` integer-type `,` integer-type
-    ```
-
     #### Example:
 
     ```mlir
-    %0 = spv.BitFieldUExtract %base, %offset, %count : vector<3xi32>, i8, i8
+    %0 = spirv.BitFieldUExtract %base, %offset, %count : vector<3xi32>, i8, i8
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Shader]>
+    Capability<[SPIRV_C_BitInstructions, SPIRV_C_Shader]>
   ];
 }
 
 // -----
 
-def SPV_BitReverseOp : SPV_BitUnaryOp<"BitReverse", []> {
+def SPIRV_BitReverseOp : SPIRV_BitUnaryOp<"BitReverse", []> {
   let summary = "Reverse the bits in an object.";
 
   let description = [{
-     Results are computed per component.
+    Results are computed per component.
 
     Result Type must be a scalar or vector of integer type.
 
-     The type of Base must be the same as Result Type.
+    The type of Base must be the same as Result Type.
 
     The bit-number n of the result will be taken from bit-number Width - 1 -
     n of Base, where Width is the OpTypeInt operand of the Result Type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    bitreverse-op ::= ssa-id `=` `spv.BitReverse` ssa-use
-                                 `:` integer-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
-    %2 = spv.BitReverse %0 : i32
-    %3 = spv.BitReverse %1 : vector<4xi32>
+    %2 = spirv.BitReverse %0 : i32
+    %3 = spirv.BitReverse %1 : vector<4xi32>
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Shader]>
+    Capability<[SPIRV_C_BitInstructions, SPIRV_C_Shader]>
   ];
 }
 
 // -----
 
-def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd",
+def SPIRV_BitwiseAndOp : SPIRV_BitBinaryOp<"BitwiseAnd",
                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = [{
     Result is 1 if both Operand 1 and Operand 2 are 1. Result is 0 if either
@@ -311,34 +264,27 @@ def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd",
   }];
 
   let description = [{
-     Results are computed per component, and within each component, per bit.
+    Results are computed per component, and within each component, per bit.
 
     Result Type must be a scalar or vector of integer type.  The type of
     Operand 1 and Operand 2  must be a scalar or vector of integer type.
     They must have the same number of components as Result Type. They must
     have the same component width as Result Type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    bitwise-and-op ::= ssa-id `=` `spv.BitwiseAnd` ssa-use, ssa-use
-                                  `:` integer-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
-    %2 = spv.BitwiseAnd %0, %1 : i32
-    %2 = spv.BitwiseAnd %0, %1 : vector<4xi32>
+    %2 = spirv.BitwiseAnd %0, %1 : i32
+    %2 = spirv.BitwiseAnd %0, %1 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr",
+def SPIRV_BitwiseOrOp : SPIRV_BitBinaryOp<"BitwiseOr",
                                       [Commutative, UsableInSpecConstantOp]> {
   let summary = [{
     Result is 1 if either Operand 1 or Operand 2 is 1. Result is 0 if both
@@ -353,27 +299,20 @@ def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr",
     They must have the same number of components as Result Type. They must
     have the same component width as Result Type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    bitwise-or-op ::= ssa-id `=` `spv.BitwiseOr` ssa-use, ssa-use
-                                  `:` integer-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
-    %2 = spv.BitwiseOr %0, %1 : i32
-    %2 = spv.BitwiseOr %0, %1 : vector<4xi32>
+    %2 = spirv.BitwiseOr %0, %1 : i32
+    %2 = spirv.BitwiseOr %0, %1 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor",
+def SPIRV_BitwiseXorOp : SPIRV_BitBinaryOp<"BitwiseXor",
                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = [{
     Result is 1 if exactly one of Operand 1 or Operand 2 is 1. Result is 0
@@ -381,34 +320,27 @@ def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor",
   }];
 
   let description = [{
-     Results are computed per component, and within each component, per bit.
+    Results are computed per component, and within each component, per bit.
 
     Result Type must be a scalar or vector of integer type.  The type of
     Operand 1 and Operand 2  must be a scalar or vector of integer type.
     They must have the same number of components as Result Type. They must
     have the same component width as Result Type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    bitwise-xor-op ::= ssa-id `=` `spv.BitwiseXor` ssa-use, ssa-use
-                                  `:` integer-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
-    %2 = spv.BitwiseXor %0, %1 : i32
-    %2 = spv.BitwiseXor %0, %1 : vector<4xi32>
+    %2 = spirv.BitwiseXor %0, %1 : i32
+    %2 = spirv.BitwiseXor %0, %1 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical",
+def SPIRV_ShiftLeftLogicalOp : SPIRV_ShiftOp<"ShiftLeftLogical",
                                          [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base left by the number of bits specified in Shift.
@@ -418,7 +350,7 @@ def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical",
   let description = [{
     Result Type must be a scalar or vector of integer type.
 
-     The type of each Base and Shift must be a scalar or vector of integer
+    The type of each Base and Shift must be a scalar or vector of integer
     type. Base and Shift must have the same number of components.  The
     number of components and bit width of the type of Base must be the same
     as in Result Type.
@@ -429,31 +361,22 @@ def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical",
     The number of components and bit width of Result Type must match those
     Base type. All types must be integer types.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    shift-left-logical-op ::= ssa-id `=` `spv.ShiftLeftLogical`
-                                          ssa-use `,` ssa-use `:`
-                                          integer-scalar-vector-type `,`
-                                          integer-scalar-vector-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.ShiftLeftLogical %0, %1 : i32, i16
-    %5 = spv.ShiftLeftLogical %3, %4 : vector<3xi32>, vector<3xi16>
+    %2 = spirv.ShiftLeftLogical %0, %1 : i32, i16
+    %5 = spirv.ShiftLeftLogical %3, %4 : vector<3xi32>, vector<3xi16>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic",
+def SPIRV_ShiftRightArithmeticOp : SPIRV_ShiftOp<"ShiftRightArithmetic",
                                              [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base right by the number of bits specified in Shift.
@@ -463,7 +386,7 @@ def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic",
   let description = [{
     Result Type must be a scalar or vector of integer type.
 
-     The type of each Base and Shift must be a scalar or vector of integer
+    The type of each Base and Shift must be a scalar or vector of integer
     type. Base and Shift must have the same number of components.  The
     number of components and bit width of the type of Base must be the same
     as in Result Type.
@@ -471,31 +394,22 @@ def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic",
     Shift is treated as unsigned. The result is undefined if Shift is
     greater than or equal to the bit width of the components of Base.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    shift-right-arithmetic-op ::= ssa-id `=` `spv.ShiftRightArithmetic`
-                                              ssa-use `,` ssa-use `:`
-                                              integer-scalar-vector-type `,`
-                                              integer-scalar-vector-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.ShiftRightArithmetic %0, %1 : i32, i16
-    %5 = spv.ShiftRightArithmetic %3, %4 : vector<3xi32>, vector<3xi16>
+    %2 = spirv.ShiftRightArithmetic %0, %1 : i32, i16
+    %5 = spirv.ShiftRightArithmetic %3, %4 : vector<3xi32>, vector<3xi16>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical",
+def SPIRV_ShiftRightLogicalOp : SPIRV_ShiftOp<"ShiftRightLogical",
                                           [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base right by the number of bits specified in Shift.
@@ -505,7 +419,7 @@ def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical",
   let description = [{
     Result Type must be a scalar or vector of integer type.
 
-     The type of each Base and Shift must be a scalar or vector of integer
+    The type of each Base and Shift must be a scalar or vector of integer
     type. Base and Shift must have the same number of components.  The
     number of components and bit width of the type of Base must be the same
     as in Result Type.
@@ -514,35 +428,26 @@ def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical",
     Shift is greater than or equal to the bit width of the components of
     Base.
 
-     Results are computed per component.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    shift-right-logical-op ::= ssa-id `=` `spv.ShiftRightLogical`
-                                           ssa-use `,` ssa-use `:`
-                                           integer-scalar-vector-type `,`
-                                           integer-scalar-vector-type
-    ```
+    Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %2 = spv.ShiftRightLogical %0, %1 : i32, i16
-    %5 = spv.ShiftRightLogical %3, %4 : vector<3xi32>, vector<3xi16>
+    %2 = spirv.ShiftRightLogical %0, %1 : i32, i16
+    %5 = spirv.ShiftRightLogical %3, %4 : vector<3xi32>, vector<3xi16>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
 
-def SPV_NotOp : SPV_BitUnaryOp<"Not", [UsableInSpecConstantOp]> {
+def SPIRV_NotOp : SPIRV_BitUnaryOp<"Not", [UsableInSpecConstantOp]> {
   let summary = "Complement the bits of Operand.";
 
   let description = [{
-     Results are computed per component, and within each component, per bit.
+    Results are computed per component, and within each component, per bit.
 
     Result Type must be a scalar or vector of integer type.
 
@@ -550,21 +455,15 @@ def SPV_NotOp : SPV_BitUnaryOp<"Not", [UsableInSpecConstantOp]> {
     have the same number of components as Result Type.  The component width
     must equal the component width in Result Type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                  `vector<` integer-literal `x` integer-type `>`
-    not-op ::= ssa-id `=` `spv.BitNot` ssa-use `:` integer-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
-    %2 = spv.Not %0 : i32
-    %3 = spv.Not %1 : vector<4xi32>
+    %2 = spirv.Not %0 : i32
+    %3 = spirv.Not %1 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_BIT_OPS

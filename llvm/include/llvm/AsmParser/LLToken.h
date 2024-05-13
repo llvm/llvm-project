@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_ASMPARSER_LLTOKEN_H
-#define LLVM_LIB_ASMPARSER_LLTOKEN_H
+#ifndef LLVM_ASMPARSER_LLTOKEN_H
+#define LLVM_ASMPARSER_LLTOKEN_H
 
 namespace llvm {
 namespace lltok {
@@ -36,6 +36,7 @@ enum Kind {
   exclaim, // !
   bar,     // |
   colon,   // :
+  hash,    // #
 
   kw_vscale,
   kw_x,
@@ -88,7 +89,6 @@ enum Kind {
   kw_triple,
   kw_source_filename,
   kw_unwind,
-  kw_deplibs, // FIXME: Remove in 4.0
   kw_datalayout,
   kw_volatile,
   kw_atomic,
@@ -110,18 +110,19 @@ enum Kind {
   kw_nuw,
   kw_nsw,
   kw_exact,
+  kw_disjoint,
   kw_inbounds,
+  kw_nneg,
   kw_inrange,
-  kw_align,
   kw_addrspace,
   kw_section,
   kw_partition,
+  kw_code_model,
   kw_alias,
   kw_ifunc,
   kw_module,
   kw_asm,
   kw_sideeffect,
-  kw_alignstack,
   kw_inteldialect,
   kw_gc,
   kw_prefix,
@@ -144,6 +145,8 @@ enum Kind {
   kw_arm_aapcs_vfpcc,
   kw_aarch64_vector_pcs,
   kw_aarch64_sve_vector_pcs,
+  kw_aarch64_sme_preservemost_from_x0,
+  kw_aarch64_sme_preservemost_from_x2,
   kw_msp430_intrcc,
   kw_avr_intrcc,
   kw_avr_signalcc,
@@ -153,12 +156,12 @@ enum Kind {
   kw_spir_func,
   kw_x86_64_sysvcc,
   kw_win64cc,
-  kw_webkit_jscc,
   kw_anyregcc,
   kw_swiftcc,
   kw_swifttailcc,
   kw_preserve_mostcc,
   kw_preserve_allcc,
+  kw_preserve_nonecc,
   kw_ghccc,
   kw_x86_intrcc,
   kw_hhvmcc,
@@ -171,85 +174,53 @@ enum Kind {
   kw_amdgpu_gs,
   kw_amdgpu_ps,
   kw_amdgpu_cs,
+  kw_amdgpu_cs_chain,
+  kw_amdgpu_cs_chain_preserve,
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
   kw_tailcc,
+  kw_m68k_rtdcc,
+  kw_graalcc,
+  kw_riscv_vector_cc,
 
   // Attributes:
   kw_attributes,
-  kw_allocsize,
-  kw_alwaysinline,
+  kw_sync,
+  kw_async,
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME) \
+  kw_##DISPLAY_NAME,
+#include "llvm/IR/Attributes.inc"
+
+  // Memory attribute:
+  kw_read,
+  kw_write,
+  kw_readwrite,
+  kw_argmem,
+  kw_inaccessiblemem,
+
+  // Legacy memory attributes:
   kw_argmemonly,
-  kw_sanitize_address,
-  kw_sanitize_hwaddress,
-  kw_sanitize_memtag,
-  kw_builtin,
-  kw_byval,
-  kw_inalloca,
-  kw_cold,
-  kw_convergent,
-  kw_dereferenceable,
-  kw_dereferenceable_or_null,
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
-  kw_inlinehint,
-  kw_inreg,
-  kw_jumptable,
-  kw_minsize,
-  kw_naked,
-  kw_nest,
-  kw_noalias,
-  kw_noundef,
-  kw_nobuiltin,
-  kw_nocallback,
-  kw_nocapture,
-  kw_noduplicate,
-  kw_nofree,
-  kw_noimplicitfloat,
-  kw_noinline,
-  kw_norecurse,
-  kw_nonlazybind,
-  kw_nomerge,
-  kw_nonnull,
-  kw_noprofile,
-  kw_noredzone,
-  kw_noreturn,
-  kw_nosync,
-  kw_nocf_check,
-  kw_nounwind,
-  kw_nosanitize_coverage,
-  kw_null_pointer_is_valid,
-  kw_optforfuzzing,
-  kw_optnone,
-  kw_optsize,
-  kw_preallocated,
-  kw_readnone,
-  kw_readonly,
-  kw_returned,
-  kw_returns_twice,
-  kw_signext,
-  kw_speculatable,
-  kw_ssp,
-  kw_sspreq,
-  kw_sspstrong,
-  kw_safestack,
-  kw_shadowcallstack,
-  kw_sret,
-  kw_sanitize_thread,
-  kw_sanitize_memory,
-  kw_speculative_load_hardening,
-  kw_strictfp,
-  kw_swifterror,
-  kw_swiftself,
-  kw_swiftasync,
-  kw_uwtable,
-  kw_vscale_range,
-  kw_willreturn,
-  kw_writeonly,
-  kw_zeroext,
-  kw_immarg,
-  kw_byref,
-  kw_mustprogress,
+
+  // nofpclass attribute:
+  kw_all,
+  kw_nan,
+  kw_snan,
+  kw_qnan,
+  kw_inf,
+  // kw_ninf, - already an fmf
+  kw_pinf,
+  kw_norm,
+  kw_nnorm,
+  kw_pnorm,
+  // kw_sub,  - already an instruction
+  kw_nsub,
+  kw_psub,
+  kw_zero,
+  kw_nzero,
+  kw_pzero,
 
   kw_type,
   kw_opaque,
@@ -260,7 +231,7 @@ enum Kind {
   kw_any,
   kw_exactmatch,
   kw_largest,
-  kw_noduplicates,
+  kw_nodeduplicate,
   kw_samesize,
 
   kw_eq,
@@ -291,6 +262,10 @@ enum Kind {
   kw_min,
   kw_umax,
   kw_umin,
+  kw_fmax,
+  kw_fmin,
+  kw_uinc_wrap,
+  kw_udec_wrap,
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,
@@ -364,10 +339,12 @@ enum Kind {
   kw_extractelement,
   kw_insertelement,
   kw_shufflevector,
+  kw_splat,
   kw_extractvalue,
   kw_insertvalue,
   kw_blockaddress,
   kw_dso_local_equivalent,
+  kw_no_cfi,
 
   kw_freeze,
 
@@ -393,6 +370,9 @@ enum Kind {
   kw_live,
   kw_dsoLocal,
   kw_canAutoHide,
+  kw_importType,
+  kw_definition,
+  kw_declaration,
   kw_function,
   kw_insts,
   kw_funcFlags,
@@ -402,13 +382,16 @@ enum Kind {
   kw_returnDoesNotAlias,
   kw_noInline,
   kw_alwaysInline,
+  kw_noUnwind,
+  kw_mayThrow,
+  kw_hasUnknownCall,
+  kw_mustBeUnreachable,
   kw_calls,
   kw_callee,
   kw_params,
   kw_param,
   kw_hotness,
   kw_unknown,
-  kw_hot,
   kw_critical,
   kw_relbf,
   kw_variable,
@@ -456,6 +439,24 @@ enum Kind {
   kw_byte,
   kw_bit,
   kw_varFlags,
+  // The following are used by MemProf summary info.
+  kw_callsites,
+  kw_clones,
+  kw_stackIds,
+  kw_allocs,
+  kw_versions,
+  kw_memProf,
+  kw_notcold,
+
+  // GV's with __attribute__((no_sanitize("address"))), or things in
+  // -fsanitize-ignorelist when built with ASan.
+  kw_no_sanitize_address,
+  // GV's with __attribute__((no_sanitize("hwaddress"))), or things in
+  // -fsanitize-ignorelist when built with HWASan.
+  kw_no_sanitize_hwaddress,
+  // GV's where the clang++ frontend (when ASan is used) notes that this is
+  // dynamically initialized, and thus needs ODR detection.
+  kw_sanitize_address_dyninit,
 
   // Unsigned Valued tokens (UIntVal).
   LabelID,    // 42:
@@ -483,6 +484,7 @@ enum Kind {
   DISPFlag,         // DISPFlagFoo
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
+  DbgRecordType,    // dbg_foo
 
   // Type valued tokens (TyVal).
   Type,

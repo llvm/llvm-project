@@ -16,7 +16,6 @@
 
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Utility/IOObject.h"
-#include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 
 #ifdef _WIN32
@@ -48,6 +47,15 @@ public:
     ProtocolUnixAbstract
   };
 
+  struct HostAndPort {
+    std::string hostname;
+    uint16_t port;
+
+    bool operator==(const HostAndPort &R) const {
+      return port == R.port && hostname == R.hostname;
+    }
+  };
+
   static const NativeSocket kInvalidSocketValue;
 
   ~Socket() override;
@@ -68,25 +76,13 @@ public:
   // the socket after it is initialized, but before entering a blocking accept.
   static llvm::Expected<std::unique_ptr<TCPSocket>>
   TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
-            Predicate<uint16_t> *predicate, int backlog = 5);
+            int backlog = 5);
 
   static llvm::Expected<std::unique_ptr<Socket>>
   TcpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);
 
   static llvm::Expected<std::unique_ptr<UDPSocket>>
   UdpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);
-
-  static Status UnixDomainConnect(llvm::StringRef host_and_port,
-                                  bool child_processes_inherit,
-                                  Socket *&socket);
-  static Status UnixDomainAccept(llvm::StringRef host_and_port,
-                                 bool child_processes_inherit, Socket *&socket);
-  static Status UnixAbstractConnect(llvm::StringRef host_and_port,
-                                    bool child_processes_inherit,
-                                    Socket *&socket);
-  static Status UnixAbstractAccept(llvm::StringRef host_and_port,
-                                   bool child_processes_inherit,
-                                   Socket *&socket);
 
   int GetOption(int level, int option_name, int &option_value);
   int SetOption(int level, int option_name, int option_value);
@@ -97,15 +93,13 @@ public:
   Status Read(void *buf, size_t &num_bytes) override;
   Status Write(const void *buf, size_t &num_bytes) override;
 
-  virtual Status PreDisconnect();
   Status Close() override;
 
   bool IsValid() const override { return m_socket != kInvalidSocketValue; }
   WaitableHandle GetWaitableHandle() override;
 
-  static bool DecodeHostAndPort(llvm::StringRef host_and_port,
-                                std::string &host_str, std::string &port_str,
-                                int32_t &port, Status *error_ptr);
+  static llvm::Expected<HostAndPort>
+  DecodeHostAndPort(llvm::StringRef host_and_port);
 
   // If this Socket is connected then return the URI used to connect.
   virtual std::string GetRemoteConnectionURI() const { return ""; };
@@ -129,6 +123,9 @@ protected:
   bool m_child_processes_inherit;
   bool m_should_close_fd;
 };
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const Socket::HostAndPort &HP);
 
 } // namespace lldb_private
 

@@ -11,6 +11,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -22,16 +23,16 @@ namespace {
 struct Header {
   ArchSpec arch;
   UUID uuid;
-  static llvm::Optional<Header> parse(llvm::StringRef text);
+  static std::optional<Header> parse(llvm::StringRef text);
 };
 } // namespace
 
-llvm::Optional<Header> Header::parse(llvm::StringRef text) {
+std::optional<Header> Header::parse(llvm::StringRef text) {
   llvm::StringRef line;
   std::tie(line, text) = text.split('\n');
   auto Module = ModuleRecord::parse(line);
   if (!Module)
-    return llvm::None;
+    return std::nullopt;
 
   llvm::Triple triple;
   triple.setArch(Module->Arch);
@@ -56,13 +57,8 @@ void ObjectFileBreakpad::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString ObjectFileBreakpad::GetPluginNameStatic() {
-  static ConstString g_name("breakpad");
-  return g_name;
-}
-
 ObjectFile *ObjectFileBreakpad::CreateInstance(
-    const ModuleSP &module_sp, DataBufferSP &data_sp, offset_t data_offset,
+    const ModuleSP &module_sp, DataBufferSP data_sp, offset_t data_offset,
     const FileSpec *file, offset_t file_offset, offset_t length) {
   if (!data_sp) {
     data_sp = MapFileData(*file, length, file_offset);
@@ -71,7 +67,7 @@ ObjectFile *ObjectFileBreakpad::CreateInstance(
     data_offset = 0;
   }
   auto text = toStringRef(data_sp->GetData());
-  llvm::Optional<Header> header = Header::parse(text);
+  std::optional<Header> header = Header::parse(text);
   if (!header)
     return nullptr;
 
@@ -89,7 +85,7 @@ ObjectFile *ObjectFileBreakpad::CreateInstance(
 }
 
 ObjectFile *ObjectFileBreakpad::CreateMemoryInstance(
-    const ModuleSP &module_sp, DataBufferSP &data_sp,
+    const ModuleSP &module_sp, WritableDataBufferSP data_sp,
     const ProcessSP &process_sp, addr_t header_addr) {
   return nullptr;
 }
@@ -98,7 +94,7 @@ size_t ObjectFileBreakpad::GetModuleSpecifications(
     const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
     offset_t file_offset, offset_t length, ModuleSpecList &specs) {
   auto text = toStringRef(data_sp->GetData());
-  llvm::Optional<Header> header = Header::parse(text);
+  std::optional<Header> header = Header::parse(text);
   if (!header)
     return 0;
   ModuleSpec spec(file, std::move(header->arch));
@@ -121,9 +117,10 @@ bool ObjectFileBreakpad::ParseHeader() {
   return true;
 }
 
-Symtab *ObjectFileBreakpad::GetSymtab() {
-  // TODO
-  return nullptr;
+void ObjectFileBreakpad::ParseSymtab(Symtab &symtab) {
+  // Nothing to do for breakpad files, all information is parsed as debug info
+  // which means "lldb_private::Function" objects are used, or symbols are added
+  // by the SymbolFileBreakpad::AddSymbols(...) function in the symbol file.
 }
 
 void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
@@ -131,7 +128,7 @@ void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
     return;
   m_sections_up = std::make_unique<SectionList>();
 
-  llvm::Optional<Record::Kind> current_section;
+  std::optional<Record::Kind> current_section;
   offset_t section_start;
   llvm::StringRef text = toStringRef(m_data.GetData());
   uint32_t next_section_id = 1;
@@ -152,10 +149,10 @@ void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
     llvm::StringRef line;
     std::tie(line, text) = text.split('\n');
 
-    llvm::Optional<Record::Kind> next_section = Record::classify(line);
-    if (next_section == Record::Line) {
-      // Line records logically belong to the preceding Func record, so we put
-      // them in the same section.
+    std::optional<Record::Kind> next_section = Record::classify(line);
+    if (next_section == Record::Line || next_section == Record::Inline) {
+      // Line/Inline records logically belong to the preceding Func record, so
+      // we put them in the same section.
       next_section = Record::Func;
     }
     if (next_section == current_section)

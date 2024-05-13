@@ -9,6 +9,6 @@ BB:
   %S79 = icmp eq <2 x i32> %B26, zeroinitializer
   %B269 = urem <2 x i1> zeroinitializer, %S79
   %Se335 = sext <2 x i1> %B269 to <2 x i8>
-  store <2 x i8> %Se335, <2 x i8>* undef
+  store <2 x i8> %Se335, ptr undef
   ret void
 }

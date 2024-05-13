@@ -9,12 +9,14 @@
 define void @foo(i32 %N) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    js .LBB0_1
+; CHECK-NEXT:  # %bb.4: # %return
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB0_1: # %bb.preheader
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jns .LBB0_3
-; CHECK-NEXT:  # %bb.1: # %bb.preheader
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -22,11 +24,11 @@ define void @foo(i32 %N) nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtsi2sd %ebp, %xmm0
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    decl %ebp
 ; CHECK-NEXT:    cmpl %ebp, %ebx
 ; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  .LBB0_3: # %return
+; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp

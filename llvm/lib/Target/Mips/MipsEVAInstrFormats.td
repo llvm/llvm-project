@@ -59,7 +59,7 @@ def OPGROUP_COP0_TLB   : OPGROUP<0b010000>;
 
 class SPECIAL3_EVA_LOAD_STORE_FM<OPCODE6 Operation> : MipsEVAInst {
   bits<21> addr;
-  bits<5> hint;
+  bits<5> rt;
   bits<5> base = addr{20-16};
   bits<9> offset = addr{8-0};
 
@@ -67,7 +67,7 @@ class SPECIAL3_EVA_LOAD_STORE_FM<OPCODE6 Operation> : MipsEVAInst {
 
   let Inst{31-26} = OPGROUP_SPECIAL3.Value;
   let Inst{25-21} = base;
-  let Inst{20-16} = hint;
+  let Inst{20-16} = rt;
   let Inst{15-7}  = offset;
   let Inst{6}     = 0;
   let Inst{5-0}   = Operation.Value;

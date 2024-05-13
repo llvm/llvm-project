@@ -39,10 +39,10 @@ class TargetInstrInfo;
     };
 
   private:
-    MachineRegisterInfo *MRI;
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    MachineFunction *MF;
+    MachineRegisterInfo *MRI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    MachineFunction *MF = nullptr;
 
     /// Virt2PhysMap - This is a virtual to physical register
     /// mapping. Each virtual register is required to have an entry in
@@ -72,8 +72,7 @@ class TargetInstrInfo;
     static char ID;
 
     VirtRegMap()
-        : MachineFunctionPass(ID), MRI(nullptr), TII(nullptr), TRI(nullptr),
-          MF(nullptr), Virt2PhysMap(NO_PHYS_REG),
+        : MachineFunctionPass(ID), Virt2PhysMap(NO_PHYS_REG),
           Virt2StackSlotMap(NO_STACK_SLOT), Virt2SplitMap(0) {}
     VirtRegMap(const VirtRegMap &) = delete;
     VirtRegMap &operator=(const VirtRegMap &) = delete;

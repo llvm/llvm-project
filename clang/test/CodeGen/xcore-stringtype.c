@@ -23,8 +23,7 @@
 
 
 // test BuiltinType
-// CHECK: !{{[0-9]+}} = !{void (i1, i8, i8, i8, i16, i16, i16, i32, i32, i32,
-// CHECK:      i32, i32, i32, i64, i64, i64, float, double, double)*
+// CHECK: !{{[0-9]+}} = !{ptr
 // CHECK:      @builtinType, !"f{0}(b,uc,uc,sc,ss,us,ss,si,ui,si,sl,
 // CHECK:      ul,sl,sll,ull,sll,ft,d,ld)"}
 void builtinType(_Bool B, char C, unsigned char UC, signed char SC, short S,
@@ -36,14 +35,14 @@ double _Complex Complex; // not supported
 
 
 // test FunctionType & Qualifiers
-// CHECK: !{{[0-9]+}} = !{void ()* @gI, !"f{0}()"}
-// CHECK: !{{[0-9]+}} = !{void (...)* @eI, !"f{0}()"}
-// CHECK: !{{[0-9]+}} = !{void ()* @gV, !"f{0}(0)"}
-// CHECK: !{{[0-9]+}} = !{void ()* @eV, !"f{0}(0)"}
-// CHECK: !{{[0-9]+}} = !{void (i32, ...)* @gVA, !"f{0}(si,va)"}
-// CHECK: !{{[0-9]+}} = !{void (i32, ...)* @eVA, !"f{0}(si,va)"}
-// CHECK: !{{[0-9]+}} = !{i32* (i32*)* @gQ, !"f{crv:p(cv:si)}(p(cv:si))"}
-// CHECK: !{{[0-9]+}} = !{i32* (i32*)* @eQ, !"f{crv:p(cv:si)}(p(cv:si))"}
+// CHECK: !{{[0-9]+}} = !{ptr @gI, !"f{0}()"}
+// CHECK: !{{[0-9]+}} = !{ptr @eI, !"f{0}()"}
+// CHECK: !{{[0-9]+}} = !{ptr @gV, !"f{0}(0)"}
+// CHECK: !{{[0-9]+}} = !{ptr @eV, !"f{0}(0)"}
+// CHECK: !{{[0-9]+}} = !{ptr @gVA, !"f{0}(si,va)"}
+// CHECK: !{{[0-9]+}} = !{ptr @eVA, !"f{0}(si,va)"}
+// CHECK: !{{[0-9]+}} = !{ptr @gQ, !"f{crv:p(cv:si)}(p(cv:si))"}
+// CHECK: !{{[0-9]+}} = !{ptr @eQ, !"f{crv:p(cv:si)}(p(cv:si))"}
 extern void eI();
 void gI() {eI();};
 extern void eV(void);
@@ -57,10 +56,10 @@ const volatile int* volatile restrict const
 
 
 // test PointerType
-// CHECK: !{{[0-9]+}} = !{i32* (i32*, i32* (i32*)*)*
+// CHECK: !{{[0-9]+}} = !{ptr
 // CHECK:       @pointerType, !"f{p(si)}(p(si),p(f{p(si)}(p(si))))"}
-// CHECK: !{{[0-9]+}} = !{i32** @EP, !"p(si)"}
-// CHECK: !{{[0-9]+}} = !{i32** @GP, !"p(si)"}
+// CHECK: !{{[0-9]+}} = !{ptr @EP, !"p(si)"}
+// CHECK: !{{[0-9]+}} = !{ptr @GP, !"p(si)"}
 extern int* EP;
 int* GP;
 int* pointerType(int *I, int * (*FP)(int *)) {
@@ -68,19 +67,19 @@ int* pointerType(int *I, int * (*FP)(int *)) {
 }
 
 // test ArrayType
-// CHECK: !{{[0-9]+}} = !{[2 x i32]* (i32*, i32*, [2 x i32]*, [2 x i32]*, i32*)*
+// CHECK: !{{[0-9]+}} = !{ptr
 // CHECK:       @arrayType, !"f{p(a(2:si))}(p(si),p(cv:si),p(a(2:si)),
 // CHECK:       p(a(2:si)),p(si))"}
-// CHECK: !{{[0-9]+}} = !{[0 x i32]* @EA1, !"a(*:cv:si)"}
-// CHECK: !{{[0-9]+}} = !{[2 x i32]* @EA2, !"a(2:si)"}
-// CHECK: !{{[0-9]+}} = !{[0 x [2 x i32]]* @EA3, !"a(*:a(2:si))"}
-// CHECK: !{{[0-9]+}} = !{[3 x [2 x i32]]* @EA4, !"a(3:a(2:si))"}
-// CHECK: !{{[0-9]+}} = !{[2 x i32]* @GA1, !"a(2:cv:si)"}
-// CHECK: !{{[0-9]+}} = !{void ([2 x i32]*)* @arrayTypeVariable1,
+// CHECK: !{{[0-9]+}} = !{ptr @EA1, !"a(*:cv:si)"}
+// CHECK: !{{[0-9]+}} = !{ptr @EA2, !"a(2:si)"}
+// CHECK: !{{[0-9]+}} = !{ptr @EA3, !"a(*:a(2:si))"}
+// CHECK: !{{[0-9]+}} = !{ptr @EA4, !"a(3:a(2:si))"}
+// CHECK: !{{[0-9]+}} = !{ptr @GA1, !"a(2:cv:si)"}
+// CHECK: !{{[0-9]+}} = !{ptr @arrayTypeVariable1,
 // CHECK:       !"f{0}(p(a(2:si)))"}
-// CHECK: !{{[0-9]+}} = !{void (void ([2 x i32]*)*)* @arrayTypeVariable2,
+// CHECK: !{{[0-9]+}} = !{ptr @arrayTypeVariable2,
 // CHECK:       !"f{0}(p(f{0}(p(a(2:si)))))"}
-// CHECK: !{{[0-9]+}} = !{[3 x [2 x i32]]* @GA2, !"a(3:a(2:si))"}
+// CHECK: !{{[0-9]+}} = !{ptr @GA2, !"a(3:a(2:si))"}
 extern int GA2[3][2];
 extern const volatile int EA1[];
 extern int EA2[2];
@@ -108,16 +107,16 @@ RetType* arrayType(int A1[], int const volatile A2[2], int A3[][2],
 
 
 // test StructureType
-// CHECK: !{{[0-9]+}} = !{void (%struct.S1*)* @structureType1,
+// CHECK: !{{[0-9]+}} = !{ptr @structureType1,
 // CHECK:       !"f{0}(s(S1){m(ps2){p(s(S2){m(ps3){p(s(S3){m(s1){s(S1){}}})}})}})"}
-// CHECK: !{{[0-9]+}} = !{void (%struct.S2*)* @structureType2,
+// CHECK: !{{[0-9]+}} = !{ptr @structureType2,
 // CHECK:       !"f{0}(s(S2){m(ps3){p(s(S3){m(s1){s(S1){m(ps2){p(s(S2){})}}}})}})"}
-// CHECK: !{{[0-9]+}} = !{void (%struct.S3*)* @structureType3,
+// CHECK: !{{[0-9]+}} = !{ptr @structureType3,
 // CHECK:       !"f{0}(s(S3){m(s1){s(S1){m(ps2){p(s(S2){m(ps3){p(s(S3){})}})}}}})"}
-// CHECK: !{{[0-9]+}} = !{void (%struct.S4*)* @structureType4,
+// CHECK: !{{[0-9]+}} = !{ptr @structureType4,
 // CHECK:       !"f{0}(s(S4){m(s1){s(S1){m(ps2){p(s(S2){m(ps3){p(s(S3){m(s1){s(S1){}}})}})}}}})"}
-// CHECK: !{{[0-9]+}} = !{%struct.anon* @StructAnon, !"s(){m(A){si}}"}
-// CHECK: !{{[0-9]+}} = !{i32 (%struct.SB*)* @structureTypeB,
+// CHECK: !{{[0-9]+}} = !{ptr @StructAnon, !"s(){m(A){si}}"}
+// CHECK: !{{[0-9]+}} = !{ptr @structureTypeB,
 // CHECK:       !"f{si}(s(SB){m(){b(4:si)},m(){b(2:si)},m(N4){b(4:si)},
 // CHECK:       m(N2){b(2:si)},m(){b(4:ui)},m(){b(4:si)},m(){b(4:c:si)},
 // CHECK:       m(){b(4:c:si)},m(){b(4:cv:si)}})"}
@@ -138,16 +137,16 @@ int structureTypeB(struct SB sb){return StructAnon.A;}
 
 
 // test UnionType
-// CHECK: !{{[0-9]+}} = !{void (%union.U1*)* @unionType1,
+// CHECK: !{{[0-9]+}} = !{ptr @unionType1,
 // CHECK:       !"f{0}(u(U1){m(pu2){p(u(U2){m(pu3){p(u(U3){m(u1){u(U1){}}})}})}})"}
-// CHECK: !{{[0-9]+}} = !{void (%union.U2*)* @unionType2,
+// CHECK: !{{[0-9]+}} = !{ptr @unionType2,
 // CHECK:       !"f{0}(u(U2){m(pu3){p(u(U3){m(u1){u(U1){m(pu2){p(u(U2){})}}}})}})"}
-// CHECK: !{{[0-9]+}} = !{void (%union.U3*)* @unionType3,
+// CHECK: !{{[0-9]+}} = !{ptr @unionType3,
 // CHECK:       !"f{0}(u(U3){m(u1){u(U1){m(pu2){p(u(U2){m(pu3){p(u(U3){})}})}}}})"}
-// CHECK: !{{[0-9]+}} = !{void (%union.U4*)* @unionType4,
+// CHECK: !{{[0-9]+}} = !{ptr @unionType4,
 // CHECK:       !"f{0}(u(U4){m(u1){u(U1){m(pu2){p(u(U2){m(pu3){p(u(U3){m(u1){u(U1){}}})}})}}}})"}
-// CHECK: !{{[0-9]+}} = !{%union.anon* @UnionAnon, !"u(){m(A){si}}"}
-// CHECK: !{{[0-9]+}} = !{i32 (%union.UB*)* @unionTypeB,
+// CHECK: !{{[0-9]+}} = !{ptr @UnionAnon, !"u(){m(A){si}}"}
+// CHECK: !{{[0-9]+}} = !{ptr @unionTypeB,
 // CHECK:       !"f{si}(u(UB){m(N2){b(2:si)},m(N4){b(4:si)},m(){b(2:si)},
 // CHECK:       m(){b(4:c:si)},m(){b(4:c:si)},m(){b(4:cv:si)},m(){b(4:si)},
 // CHECK:       m(){b(4:si)},m(){b(4:ui)}})"}
@@ -168,17 +167,17 @@ int unionTypeB(union UB ub) {return UnionAnon.A;}
 
 
 // test EnumType
-// CHECK: !{{[0-9]+}} = !{i32* @EnumAnon, !"e(){m(EA){3}}"}
-// CHECK: !{{[0-9]+}} = !{i32 (i32)* @enumType,
+// CHECK: !{{[0-9]+}} = !{ptr @EnumAnon, !"e(){m(EA){3}}"}
+// CHECK: !{{[0-9]+}} = !{ptr @enumType,
 // CHECK:       !"f{si}(e(E){m(A){7},m(B){6},m(C){5},m(D){0}})"}
 enum E {D, C=5, B, A};
 enum {EA=3} EnumAnon = EA;
 int enumType(enum E e) {return EnumAnon;}
 
 
-// CHECK: !{{[0-9]+}} = !{i32 ()* @testReDecl, !"f{si}()"}
-// CHECK: !{{[0-9]+}} = !{[10 x i32]* @After, !"a(10:si)"}
-// CHECK: !{{[0-9]+}} = !{[10 x i32]* @Before, !"a(10:si)"}
+// CHECK: !{{[0-9]+}} = !{ptr @testReDecl, !"f{si}()"}
+// CHECK: !{{[0-9]+}} = !{ptr @After, !"a(10:si)"}
+// CHECK: !{{[0-9]+}} = !{ptr @Before, !"a(10:si)"}
 extern int After[];
 extern int Before[10];
 int testReDecl() {return After[0] + Before[0];}

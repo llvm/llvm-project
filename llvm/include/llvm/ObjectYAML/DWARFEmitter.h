@@ -15,8 +15,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Host.h"
 #include <memory>
 
 namespace llvm {
@@ -26,7 +26,6 @@ class raw_ostream;
 namespace DWARFYAML {
 
 struct Data;
-struct PubSection;
 
 Error emitDebugAbbrev(raw_ostream &OS, const Data &DI);
 Error emitDebugStr(raw_ostream &OS, const Data &DI);
@@ -43,6 +42,7 @@ Error emitDebugAddr(raw_ostream &OS, const Data &DI);
 Error emitDebugStrOffsets(raw_ostream &OS, const Data &DI);
 Error emitDebugRnglists(raw_ostream &OS, const Data &DI);
 Error emitDebugLoclists(raw_ostream &OS, const Data &DI);
+Error emitDebugNames(raw_ostream &OS, const Data &DI);
 
 std::function<Error(raw_ostream &, const Data &)>
 getDWARFEmitterByName(StringRef SecName);

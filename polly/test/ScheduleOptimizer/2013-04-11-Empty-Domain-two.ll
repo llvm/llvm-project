@@ -15,7 +15,7 @@ for:
 
 for.inc:
   %indvar.next = add i32 %indvar, 1
-  store double 1.0, double* %A
+  store double 1.0, ptr %A
   br label %for
 
 return:

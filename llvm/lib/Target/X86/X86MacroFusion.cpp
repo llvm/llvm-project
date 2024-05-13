@@ -15,6 +15,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/MacroFusion.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 using namespace llvm;
@@ -66,9 +67,9 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation>
-createX86MacroFusionDAGMutation () {
-  return createBranchMacroFusionDAGMutation(shouldScheduleAdjacent);
+std::unique_ptr<ScheduleDAGMutation> createX86MacroFusionDAGMutation() {
+  return createMacroFusionDAGMutation(shouldScheduleAdjacent,
+                                      /*BranchOnly=*/true);
 }
 
 } // end namespace llvm

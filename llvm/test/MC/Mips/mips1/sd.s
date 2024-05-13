@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple mips   -mcpu=mips1 %s -o - \
-# RUN:   | llvm-objdump -d - | FileCheck %s --check-prefix=MIPS1-EB
+# RUN:   | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=MIPS1-EB
 # RUN: llvm-mc -filetype=obj -triple mipsel -mcpu=mips1 %s -o - \
-# RUN:   | llvm-objdump -d - | FileCheck %s --check-prefix=MIPS1-EL
+# RUN:   | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=MIPS1-EL
 
 # Check if s.d instruction alias is suported on Mips1.
 

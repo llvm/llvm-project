@@ -16,5 +16,5 @@ void baz() {
   zed(a);
 }
 
-// CHECK: declare void @_Z3fooPv(%class.SMLoc* sret(%class.SMLoc) align 4, i8*)
-// CHECK: declare void @_Z3zed5SMLoc(%class.SMLoc*)
+// CHECK: declare void @_Z3fooPv(ptr dead_on_unwind writable sret(%class.SMLoc) align 4, ptr noundef)
+// CHECK: declare void @_Z3zed5SMLoc(ptr noundef)

@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=-fullfp16 | FileCheck %s --check-prefix=CHECK-CVT --check-prefix=CHECK-COMMON
-; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=+fullfp16 | FileCheck %s --check-prefix=CHECK-FP16 --check-prefix=CHECK-COMMON
+; RUN: llc < %s -asm-verbose=false -mtriple=aarch64 -mattr=-fullfp16 | FileCheck %s --check-prefix=CHECK-CVT --check-prefix=CHECK-COMMON
+; RUN: llc < %s -asm-verbose=false -mtriple=aarch64 -mattr=+fullfp16 | FileCheck %s --check-prefix=CHECK-FP16 --check-prefix=CHECK-COMMON
 
 define <4 x half> @add_h(<4 x half> %a, <4 x half> %b) {
 entry:
@@ -74,22 +74,22 @@ entry:
 }
 
 
-define <4 x half> @load_h(<4 x half>* %a) {
+define <4 x half> @load_h(ptr %a) {
 entry:
 ; CHECK-COMMON-LABEL: load_h:
 ; CHECK-COMMON:       ldr d0, [x0]
 ; CHECK-COMMON-NEXT:  ret
-  %0 = load <4 x half>, <4 x half>* %a, align 4
+  %0 = load <4 x half>, ptr %a, align 4
   ret <4 x half> %0
 }
 
 
-define void @store_h(<4 x half>* %a, <4 x half> %b) {
+define void @store_h(ptr %a, <4 x half> %b) {
 entry:
 ; CHECK-COMMON-LABEL: store_h:
 ; CHECK-COMMON:       str d0, [x0]
 ; CHECK-COMMON-NEXT:  ret
-  store <4 x half> %b, <4 x half>* %a, align 4
+  store <4 x half> %b, ptr %a, align 4
   ret void
 }
 
@@ -138,7 +138,7 @@ define <4 x double> @h_to_d(<4 x half> %a) {
 
 define <4 x half> @bitcast_i_to_h(float, <4 x i16> %a) {
 ; CHECK-COMMON-LABEL: bitcast_i_to_h:
-; CHECK-COMMON:       mov v0.16b, v1.16b
+; CHECK-COMMON:       fmov d0, d1
 ; CHECK-COMMON-NEXT:  ret
   %2 = bitcast <4 x i16> %a to <4 x half>
   ret <4 x half> %2
@@ -146,7 +146,7 @@ define <4 x half> @bitcast_i_to_h(float, <4 x i16> %a) {
 
 define <4 x i16> @bitcast_h_to_i(float, <4 x half> %a) {
 ; CHECK-COMMON-LABEL: bitcast_h_to_i:
-; CHECK-COMMON:       mov v0.16b, v1.16b
+; CHECK-COMMON:       fmov d0, d1
 ; CHECK-COMMON-NEXT:  ret
   %2 = bitcast <4 x half> %a to <4 x i16>
   ret <4 x i16> %2
@@ -246,12 +246,12 @@ define <4 x half> @uitofp_i64(<4 x i64> %a) #0 {
   ret <4 x half> %1
 }
 
-define void @test_insert_at_zero(half %a, <4 x half>* %b) #0 {
+define void @test_insert_at_zero(half %a, ptr %b) #0 {
 ; CHECK-COMMON-LABEL: test_insert_at_zero:
 ; CHECK-COMMON-NEXT:  str d0, [x0]
 ; CHECK-COMMON-NEXT:  ret
   %1 = insertelement <4 x half> undef, half %a, i64 0
-  store <4 x half> %1, <4 x half>* %b, align 4
+  store <4 x half> %1, ptr %b, align 4
   ret void
 }
 

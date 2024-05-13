@@ -1,11 +1,8 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-rotate -licm %s -disable-output -enable-mssa-loop-dependency=true -debug-only=licm 2>&1 | FileCheck %s -check-prefix=LICM
-; RUN: opt -loop-rotate -licm %s -disable-output -enable-mssa-loop-dependency=false -debug-only=licm 2>&1 | FileCheck %s -check-prefix=LICM
-; RUN: opt -loop-rotate -licm %s -S -enable-mssa-loop-dependency=true  | FileCheck %s
-; RUN: opt -loop-rotate -licm %s -S -enable-mssa-loop-dependency=false | FileCheck %s
+; RUN: opt -passes='loop-mssa(loop-rotate,licm)' %s -disable-output -debug-only=licm 2>&1 | FileCheck %s -check-prefix=LICM
+; RUN: opt -passes='loop-mssa(loop-rotate,licm)' %s -S  | FileCheck %s
 
-; LICM: Using
-; LICM-NOT: LICM sinking instruction:   %.pre = load i8, i8* %arrayidx.phi.trans.insert
+; LICM-NOT: LICM sinking instruction:   %.pre = load i8, ptr %arrayidx.phi.trans.insert
 
 ; CHECK-LABEL: @fn1
 ; CHECK-LABEL: entry:
@@ -31,19 +28,19 @@ entry:
 for.body:                                         ; preds = %for.body.for.body_crit_edge, %entry
   %0 = phi i64 [ 0, %entry ], [ %phitmp, %for.body.for.body_crit_edge ]
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body.for.body_crit_edge ]
-  %arrayidx = getelementptr inbounds [9 x i8], [9 x i8]* %g, i64 0, i64 %indvars.iv
-  store i8 2, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [9 x i8], ptr %g, i64 0, i64 %indvars.iv
+  store i8 2, ptr %arrayidx, align 1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   br i1 undef, label %for.end18, label %for.body.for.body_crit_edge
 
 for.body.for.body_crit_edge:                      ; preds = %for.body
-  %arrayidx.phi.trans.insert = getelementptr inbounds [9 x i8], [9 x i8]* %g, i64 0, i64 %indvars.iv.next
-  %.pre = load i8, i8* %arrayidx.phi.trans.insert, align 1
+  %arrayidx.phi.trans.insert = getelementptr inbounds [9 x i8], ptr %g, i64 0, i64 %indvars.iv.next
+  %.pre = load i8, ptr %arrayidx.phi.trans.insert, align 1
   %phitmp = zext i8 %.pre to i64
   br label %for.body
 
 for.end18:                                        ; preds = %for.body
-  store i64 %0, i64* undef, align 8
+  store i64 %0, ptr undef, align 8
   ret void
 }
 

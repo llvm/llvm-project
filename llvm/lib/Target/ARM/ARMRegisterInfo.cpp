@@ -15,4 +15,4 @@ using namespace llvm;
 
 void ARMRegisterInfo::anchor() { }
 
-ARMRegisterInfo::ARMRegisterInfo() : ARMBaseRegisterInfo() {}
+ARMRegisterInfo::ARMRegisterInfo() = default;

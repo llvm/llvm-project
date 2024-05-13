@@ -1,34 +1,36 @@
 import lldb
+from intelpt_testcase import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
-class TestTraceLoad(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-    NO_DEBUG_INFO_TESTCASE = True
-
-    def setUp(self):
-        TestBase.setUp(self)
-        if 'intel-pt' not in configuration.enabled_plugins:
-            self.skipTest("The intel-pt test plugin is not enabled")
-
-
+class TestTraceLoad(TraceIntelPTTestCaseBase):
     def testSchema(self):
-        self.expect("trace schema intel-pt", substrs=["trace", "triple", "threads", "traceFile"])
+        self.expect("trace schema intel-pt", substrs=["triple", "threads", "iptTrace"])
 
     def testInvalidPluginSchema(self):
-        self.expect("trace schema invalid-plugin", error=True,
-            substrs=['error: no trace plug-in matches the specified type: "invalid-plugin"'])
+        self.expect(
+            "trace schema invalid-plugin",
+            error=True,
+            substrs=[
+                'error: no trace plug-in matches the specified type: "invalid-plugin"'
+            ],
+        )
 
     def testAllSchemas(self):
-        self.expect("trace schema all", substrs=['''{
-  "trace": {
-    "type": "intel-pt",
-    "cpuInfo": {
-      "vendor": "intel" | "unknown",
-      "family": integer,
-      "model": integer,
-      "stepping": integer
-    }
-  },'''])
+        self.expect(
+            "trace schema all",
+            substrs=[
+                """{
+  "type": "intel-pt",
+  "cpuInfo": {
+    // CPU information gotten from, for example, /proc/cpuinfo.
+
+    "vendor": "GenuineIntel" | "unknown",
+    "family": integer,
+    "model": integer,
+    "stepping": integer
+  },"""
+            ],
+        )

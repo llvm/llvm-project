@@ -1,6 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-store=region -Wno-objc-root-class -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount -Wno-objc-root-class -verify %s
 // expected-no-diagnostics
-
 
 //===----------------------------------------------------------------------===//
 // The following code is reduced using delta-debugging from
@@ -83,7 +82,6 @@ extern void *_NSConstantStringClassReference;
 // Test cases.
 //===----------------------------------------------------------------------===//
 
-//  <rdar://problem/6062730>
 // The analyzer doesn't perform any inter-procedural analysis, so delegates
 // involving [NSObject performSelector...] tend to lead to false positives.
 // For now the analyzer just stops tracking the reference count of the

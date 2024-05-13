@@ -82,11 +82,6 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_XCoreCallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_XCoreCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-def SDT_XCoreMEMBARRIER : SDTypeProfile<0, 0, []>;
-
-def XCoreMemBarrier : SDNode<"XCoreISD::MEMBARRIER", SDT_XCoreMEMBARRIER,
-                             [SDNPHasChain]>;
-
 //===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
@@ -101,7 +96,7 @@ def msksize_xform : SDNodeXForm<imm, [{
   // Transformation function: get the size of a mask
   assert(isMask_32(N->getZExtValue()));
   // look for the first non-zero bit
-  return getI32Imm(32 - countLeadingZeros((uint32_t)N->getZExtValue()),
+  return getI32Imm(llvm::bit_width((uint32_t)N->getZExtValue()),
                    SDLoc(N));
 }]>;
 
@@ -362,10 +357,6 @@ let usesCustomInserter = 1 in {
                               [(set GRRegs:$dst,
                                  (select GRRegs:$cond, GRRegs:$T, GRRegs:$F))]>;
 }
-
-let hasSideEffects = 1 in
-def Int_MemBarrier : PseudoInstXCore<(outs), (ins), "#MEMBARRIER",
-                                     [(XCoreMemBarrier)]>;
 
 //===----------------------------------------------------------------------===//
 // Instructions

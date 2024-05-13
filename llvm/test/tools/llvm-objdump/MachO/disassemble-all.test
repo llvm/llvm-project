@@ -1,39 +1,39 @@
 // RUN: llvm-objdump --macho -d --full-leading-addr --print-imm-hex --no-show-raw-insn %p/Inputs/macho-multiple-text | FileCheck %s --check-prefix=TEXT
 
 TEXT:      (__TEXT,__text) section
-TEXT_NEXT: _main:
-TEXT_NEXT: 0000000100000f60	pushq	%rbp
-TEXT_NEXT: 0000000100000f61	movq	%rsp, %rbp
-TEXT_NEXT: 0000000100000f64	subq	$0x10, %rsp
-TEXT_NEXT: 0000000100000f68	movl	$0x0, -0x4(%rbp)
-TEXT_NEXT: 0000000100000f6f	callq	_hello
-TEXT_NEXT: 0000000100000f74	xorl	%eax, %eax
-TEXT_NEXT: 0000000100000f76	addq	$0x10, %rsp
-TEXT_NEXT: 0000000100000f7a	popq	%rbp
-TEXT_NEXT: 0000000100000f7b	retq
+TEXT-NEXT: _main:
+TEXT-NEXT: 0000000100000f60	pushq	%rbp
+TEXT-NEXT: 0000000100000f61	movq	%rsp, %rbp
+TEXT-NEXT: 0000000100000f64	subq	$0x10, %rsp
+TEXT-NEXT: 0000000100000f68	movl	$0x0, -0x4(%rbp)
+TEXT-NEXT: 0000000100000f6f	callq	_hello
+TEXT-NEXT: 0000000100000f74	xorl	%eax, %eax
+TEXT-NEXT: 0000000100000f76	addq	$0x10, %rsp
+TEXT-NEXT: 0000000100000f7a	popq	%rbp
+TEXT-NEXT: 0000000100000f7b	retq
 
 // RUN: llvm-objdump --macho -D --full-leading-addr --print-imm-hex --no-show-raw-insn %p/Inputs/macho-multiple-text | FileCheck %s --check-prefix=ALL
 
 ALL:      (__TEXT,__text) section
-ALL_NEXT: _main:
-ALL_NEXT: 0000000100000f60	pushq	%rbp
-ALL_NEXT: 0000000100000f61	movq	%rsp, %rbp
-ALL_NEXT: 0000000100000f64	subq	$0x10, %rsp
-ALL_NEXT: 0000000100000f68	movl	$0x0, -0x4(%rbp)
-ALL_NEXT: 0000000100000f6f	callq	_hello
-ALL_NEXT: 0000000100000f74	xorl	%eax, %eax
-ALL_NEXT: 0000000100000f76	addq	$0x10, %rsp
-ALL_NEXT: 0000000100000f7a	popq	%rbp
-ALL_NEXT: 0000000100000f7b	retq
+ALL-NEXT: _main:
+ALL-NEXT: 0000000100000f60	pushq	%rbp
+ALL-NEXT: 0000000100000f61	movq	%rsp, %rbp
+ALL-NEXT: 0000000100000f64	subq	$0x10, %rsp
+ALL-NEXT: 0000000100000f68	movl	$0x0, -0x4(%rbp)
+ALL-NEXT: 0000000100000f6f	callq	_hello
+ALL-NEXT: 0000000100000f74	xorl	%eax, %eax
+ALL-NEXT: 0000000100000f76	addq	$0x10, %rsp
+ALL-NEXT: 0000000100000f7a	popq	%rbp
+ALL-NEXT: 0000000100000f7b	retq
 ALL:      (__TEXT_EXEC,__text) section
-ALL_NEXT: _hello:
-ALL_NEXT: 0000000100001000	pushq	%rbp
-ALL_NEXT: 0000000100001001	movq	%rsp, %rbp
-ALL_NEXT: 0000000100001004	subq	$0x10, %rsp
-ALL_NEXT: 0000000100001008	leaq	-0x71(%rip), %rdi ## literal pool for: "hello, world!\n"
-ALL_NEXT: 000000010000100f	movb	$0x0, %al
-ALL_NEXT: 0000000100001011	callq	0x100000f7c ## symbol stub for: _printf
-ALL_NEXT: 0000000100001016	movl	%eax, -0x4(%rbp)
-ALL_NEXT: 0000000100001019	addq	$0x10, %rsp
-ALL_NEXT: 000000010000101d	popq	%rbp
-ALL_NEXT: 000000010000101e	retq
+ALL-NEXT: _hello:
+ALL-NEXT: 0000000100001000	pushq	%rbp
+ALL-NEXT: 0000000100001001	movq	%rsp, %rbp
+ALL-NEXT: 0000000100001004	subq	$0x10, %rsp
+ALL-NEXT: 0000000100001008	leaq	-0x71(%rip), %rdi ## literal pool for: "hello, world!\n"
+ALL-NEXT: 000000010000100f	movb	$0x0, %al
+ALL-NEXT: 0000000100001011	callq	0x100000f7c ## symbol stub for: _printf
+ALL-NEXT: 0000000100001016	movl	%eax, -0x4(%rbp)
+ALL-NEXT: 0000000100001019	addq	$0x10, %rsp
+ALL-NEXT: 000000010000101d	popq	%rbp
+ALL-NEXT: 000000010000101e	retq

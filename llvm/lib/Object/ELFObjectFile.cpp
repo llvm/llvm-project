@@ -11,27 +11,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInstrAnalysis.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/HexagonAttributeParser.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
-#include <system_error>
 #include <utility>
 
 using namespace llvm;
@@ -73,7 +74,7 @@ ObjectFile::createELFObjectFile(MemoryBufferRef Obj, bool InitContent) {
   std::pair<unsigned char, unsigned char> Ident =
       getElfArchType(Obj.getBuffer());
   std::size_t MaxAlignment =
-      1ULL << countTrailingZeros(
+      1ULL << llvm::countr_zero(
           reinterpret_cast<uintptr_t>(Obj.getBufferStart()));
 
   if (MaxAlignment < 2)
@@ -167,14 +168,14 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
 
   // both ARMv7-M and R have to support thumb hardware div
   bool isV7 = false;
-  Optional<unsigned> Attr =
+  std::optional<unsigned> Attr =
       Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
-  if (Attr.hasValue())
-    isV7 = Attr.getValue() == ARMBuildAttrs::v7;
+  if (Attr)
+    isV7 = *Attr == ARMBuildAttrs::v7;
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (*Attr) {
     case ARMBuildAttrs::ApplicationProfile:
       Features.AddFeature("aclass");
       break;
@@ -192,8 +193,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (*Attr) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -207,8 +208,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::FP_arch);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (*Attr) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -231,8 +232,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::Advanced_SIMD_arch);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (*Attr) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -250,8 +251,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::MVE_arch);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (*Attr) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -269,8 +270,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::DIV_use);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (*Attr) {
     default:
       break;
     case ARMBuildAttrs::DisallowDIV:
@@ -287,63 +288,134 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   return Features;
 }
 
-SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
+static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
+  switch (Attr) {
+  case 5:
+    return "v5";
+  case 55:
+    return "v55";
+  case 60:
+    return "v60";
+  case 62:
+    return "v62";
+  case 65:
+    return "v65";
+  case 67:
+    return "v67";
+  case 68:
+    return "v68";
+  case 69:
+    return "v69";
+  case 71:
+    return "v71";
+  case 73:
+    return "v73";
+  default:
+    return {};
+  }
+}
+
+SubtargetFeatures ELFObjectFileBase::getHexagonFeatures() const {
+  SubtargetFeatures Features;
+  HexagonAttributeParser Parser;
+  if (Error E = getBuildAttributes(Parser)) {
+    // Return no attributes if none can be read.
+    // This behavior is important for backwards compatibility.
+    consumeError(std::move(E));
+    return Features;
+  }
+  std::optional<unsigned> Attr;
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ARCH))) {
+    if (std::optional<std::string> FeatureString =
+            hexagonAttrToFeatureString(*Attr))
+      Features.AddFeature(*FeatureString);
+  }
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXARCH))) {
+    std::optional<std::string> FeatureString =
+        hexagonAttrToFeatureString(*Attr);
+    // There is no corresponding hvx arch for v5 and v55.
+    if (FeatureString && *Attr >= 60)
+      Features.AddFeature("hvx" + *FeatureString);
+  }
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXIEEEFP)))
+    if (*Attr)
+      Features.AddFeature("hvx-ieee-fp");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXQFLOAT)))
+    if (*Attr)
+      Features.AddFeature("hvx-qfloat");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ZREG)))
+    if (*Attr)
+      Features.AddFeature("zreg");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::AUDIO)))
+    if (*Attr)
+      Features.AddFeature("audio");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::CABAC)))
+    if (*Attr)
+      Features.AddFeature("cabac");
+
+  return Features;
+}
+
+Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
   SubtargetFeatures Features;
   unsigned PlatformFlags = getPlatformFlags();
 
   if (PlatformFlags & ELF::EF_RISCV_RVC) {
-    Features.AddFeature("c");
+    Features.AddFeature("zca");
   }
 
-  // Add features according to the ELF attribute section.
-  // If there are any unrecognized features, ignore them.
   RISCVAttributeParser Attributes;
   if (Error E = getBuildAttributes(Attributes)) {
-    // TODO Propagate Error.
-    consumeError(std::move(E));
-    return Features; // Keep "c" feature if there is one in PlatformFlags.
+    return std::move(E);
   }
 
-  Optional<StringRef> Attr = Attributes.getAttributeString(RISCVAttrs::ARCH);
-  if (Attr.hasValue()) {
-    // The Arch pattern is [rv32|rv64][i|e]version(_[m|a|f|d|c]version)*
-    // Version string pattern is (major)p(minor). Major and minor are optional.
-    // For example, a version number could be 2p0, 2, or p92.
-    StringRef Arch = Attr.getValue();
-    if (Arch.consume_front("rv32"))
+  std::optional<StringRef> Attr =
+      Attributes.getAttributeString(RISCVAttrs::ARCH);
+  if (Attr) {
+    auto ParseResult = RISCVISAInfo::parseNormalizedArchString(*Attr);
+    if (!ParseResult)
+      return ParseResult.takeError();
+    auto &ISAInfo = *ParseResult;
+
+    if (ISAInfo->getXLen() == 32)
       Features.AddFeature("64bit", false);
-    else if (Arch.consume_front("rv64"))
+    else if (ISAInfo->getXLen() == 64)
       Features.AddFeature("64bit");
+    else
+      llvm_unreachable("XLEN should be 32 or 64.");
 
-    while (!Arch.empty()) {
-      switch (Arch[0]) {
-      default:
-        break; // Ignore unexpected features.
-      case 'i':
-        Features.AddFeature("e", false);
-        break;
-      case 'd':
-        Features.AddFeature("f"); // D-ext will imply F-ext.
-        LLVM_FALLTHROUGH;
-      case 'e':
-      case 'm':
-      case 'a':
-      case 'f':
-      case 'c':
-        Features.AddFeature(Arch.take_front());
-        break;
-      }
-
-      // FIXME: Handle version numbers.
-      Arch = Arch.drop_until([](char c) { return c == '_' || c == '\0'; });
-      Arch = Arch.drop_while([](char c) { return c == '_'; });
-    }
+    Features.addFeaturesVector(ISAInfo->toFeatures());
   }
 
   return Features;
 }
 
-SubtargetFeatures ELFObjectFileBase::getFeatures() const {
+SubtargetFeatures ELFObjectFileBase::getLoongArchFeatures() const {
+  SubtargetFeatures Features;
+
+  switch (getPlatformFlags() & ELF::EF_LOONGARCH_ABI_MODIFIER_MASK) {
+  case ELF::EF_LOONGARCH_ABI_SOFT_FLOAT:
+    break;
+  case ELF::EF_LOONGARCH_ABI_DOUBLE_FLOAT:
+    Features.AddFeature("d");
+    // D implies F according to LoongArch ISA spec.
+    [[fallthrough]];
+  case ELF::EF_LOONGARCH_ABI_SINGLE_FLOAT:
+    Features.AddFeature("f");
+    break;
+  }
+
+  return Features;
+}
+
+Expected<SubtargetFeatures> ELFObjectFileBase::getFeatures() const {
   switch (getEMachine()) {
   case ELF::EM_MIPS:
     return getMIPSFeatures();
@@ -351,17 +423,26 @@ SubtargetFeatures ELFObjectFileBase::getFeatures() const {
     return getARMFeatures();
   case ELF::EM_RISCV:
     return getRISCVFeatures();
+  case ELF::EM_LOONGARCH:
+    return getLoongArchFeatures();
+  case ELF::EM_HEXAGON:
+    return getHexagonFeatures();
   default:
     return SubtargetFeatures();
   }
 }
 
-Optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
+std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   switch (getEMachine()) {
   case ELF::EM_AMDGPU:
     return getAMDGPUCPUName();
+  case ELF::EM_CUDA:
+    return getNVPTXCPUName();
+  case ELF::EM_PPC:
+  case ELF::EM_PPC64:
+    return StringRef("future");
   default:
-    return None;
+    return std::nullopt;
   }
 }
 
@@ -461,6 +542,12 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx90a";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:
     return "gfx90c";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX940:
+    return "gfx940";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX941:
+    return "gfx941";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:
+    return "gfx942";
 
   // AMDGCN GFX10.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
@@ -469,6 +556,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1011";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012:
     return "gfx1012";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1013:
+    return "gfx1013";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030:
     return "gfx1030";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1031:
@@ -479,8 +568,109 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1033";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1034:
     return "gfx1034";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1035:
+    return "gfx1035";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1036:
+    return "gfx1036";
+
+  // AMDGCN GFX11.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1100:
+    return "gfx1100";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1101:
+    return "gfx1101";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1102:
+    return "gfx1102";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103:
+    return "gfx1103";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150:
+    return "gfx1150";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151:
+    return "gfx1151";
+
+  // AMDGCN GFX12.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:
+    return "gfx1200";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201:
+    return "gfx1201";
+
+  // Generic AMDGCN targets
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:
+    return "gfx9-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:
+    return "gfx10-1-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:
+    return "gfx10-3-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:
+    return "gfx11-generic";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
+  }
+}
+
+StringRef ELFObjectFileBase::getNVPTXCPUName() const {
+  assert(getEMachine() == ELF::EM_CUDA);
+  unsigned SM = getPlatformFlags() & ELF::EF_CUDA_SM;
+
+  switch (SM) {
+  // Fermi architecture.
+  case ELF::EF_CUDA_SM20:
+    return "sm_20";
+  case ELF::EF_CUDA_SM21:
+    return "sm_21";
+
+  // Kepler architecture.
+  case ELF::EF_CUDA_SM30:
+    return "sm_30";
+  case ELF::EF_CUDA_SM32:
+    return "sm_32";
+  case ELF::EF_CUDA_SM35:
+    return "sm_35";
+  case ELF::EF_CUDA_SM37:
+    return "sm_37";
+
+  // Maxwell architecture.
+  case ELF::EF_CUDA_SM50:
+    return "sm_50";
+  case ELF::EF_CUDA_SM52:
+    return "sm_52";
+  case ELF::EF_CUDA_SM53:
+    return "sm_53";
+
+  // Pascal architecture.
+  case ELF::EF_CUDA_SM60:
+    return "sm_60";
+  case ELF::EF_CUDA_SM61:
+    return "sm_61";
+  case ELF::EF_CUDA_SM62:
+    return "sm_62";
+
+  // Volta architecture.
+  case ELF::EF_CUDA_SM70:
+    return "sm_70";
+  case ELF::EF_CUDA_SM72:
+    return "sm_72";
+
+  // Turing architecture.
+  case ELF::EF_CUDA_SM75:
+    return "sm_75";
+
+  // Ampere architecture.
+  case ELF::EF_CUDA_SM80:
+    return "sm_80";
+  case ELF::EF_CUDA_SM86:
+    return "sm_86";
+  case ELF::EF_CUDA_SM87:
+    return "sm_87";
+
+  // Ada architecture.
+  case ELF::EF_CUDA_SM89:
+    return "sm_89";
+
+  // Hopper architecture.
+  case ELF::EF_CUDA_SM90:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_90a" : "sm_90";
+  default:
+    llvm_unreachable("Unknown EF_CUDA_SM value");
   }
 }
 
@@ -503,10 +693,10 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   else
     Triple = "arm";
 
-  Optional<unsigned> Attr =
+  std::optional<unsigned> Attr =
       Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (*Attr) {
     case ARMBuildAttrs::v4:
       Triple += "v4";
       break;
@@ -534,9 +724,16 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     case ARMBuildAttrs::v6K:
       Triple += "v6k";
       break;
-    case ARMBuildAttrs::v7:
-      Triple += "v7";
+    case ARMBuildAttrs::v7: {
+      std::optional<unsigned> ArchProfileAttr =
+          Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
+      if (ArchProfileAttr &&
+          *ArchProfileAttr == ARMBuildAttrs::MicroControllerProfile)
+        Triple += "v7m";
+      else
+        Triple += "v7";
       break;
+    }
     case ARMBuildAttrs::v6_M:
       Triple += "v6m";
       break;
@@ -561,6 +758,9 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     case ARMBuildAttrs::v8_1_M_Main:
       Triple += "v8.1m.main";
       break;
+    case ARMBuildAttrs::v9_A:
+      Triple += "v9a";
+      break;
     }
   }
   if (!isLittleEndian())
@@ -569,20 +769,21 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   TheTriple.setArchName(Triple);
 }
 
-std::vector<std::pair<Optional<DataRefImpl>, uint64_t>>
-ELFObjectFileBase::getPltAddresses() const {
+std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
   std::string Err;
   const auto Triple = makeTriple();
   const auto *T = TargetRegistry::lookupTarget(Triple.str(), Err);
   if (!T)
     return {};
-  uint64_t JumpSlotReloc = 0;
+  uint32_t JumpSlotReloc = 0, GlobDatReloc = 0;
   switch (Triple.getArch()) {
     case Triple::x86:
       JumpSlotReloc = ELF::R_386_JUMP_SLOT;
+      GlobDatReloc = ELF::R_386_GLOB_DAT;
       break;
     case Triple::x86_64:
       JumpSlotReloc = ELF::R_X86_64_JUMP_SLOT;
+      GlobDatReloc = ELF::R_X86_64_GLOB_DAT;
       break;
     case Triple::aarch64:
     case Triple::aarch64_be:
@@ -596,7 +797,9 @@ ELFObjectFileBase::getPltAddresses() const {
       T->createMCInstrAnalysis(MII.get()));
   if (!MIA)
     return {};
-  Optional<SectionRef> Plt = None, RelaPlt = None, GotPlt = None;
+  std::vector<std::pair<uint64_t, uint64_t>> PltEntries;
+  std::optional<SectionRef> RelaPlt, RelaDyn;
+  uint64_t GotBaseVA = 0;
   for (const SectionRef &Section : sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
     if (!NameOrErr) {
@@ -605,41 +808,204 @@ ELFObjectFileBase::getPltAddresses() const {
     }
     StringRef Name = *NameOrErr;
 
-    if (Name == ".plt")
-      Plt = Section;
-    else if (Name == ".rela.plt" || Name == ".rel.plt")
+    if (Name == ".rela.plt" || Name == ".rel.plt") {
       RelaPlt = Section;
-    else if (Name == ".got.plt")
-      GotPlt = Section;
-  }
-  if (!Plt || !RelaPlt || !GotPlt)
-    return {};
-  Expected<StringRef> PltContents = Plt->getContents();
-  if (!PltContents) {
-    consumeError(PltContents.takeError());
-    return {};
-  }
-  auto PltEntries = MIA->findPltEntries(Plt->getAddress(),
-                                        arrayRefFromStringRef(*PltContents),
-                                        GotPlt->getAddress(), Triple);
-  // Build a map from GOT entry virtual address to PLT entry virtual address.
-  DenseMap<uint64_t, uint64_t> GotToPlt;
-  for (const auto &Entry : PltEntries)
-    GotToPlt.insert(std::make_pair(Entry.second, Entry.first));
-  // Find the relocations in the dynamic relocation table that point to
-  // locations in the GOT for which we know the corresponding PLT entry.
-  std::vector<std::pair<Optional<DataRefImpl>, uint64_t>> Result;
-  for (const auto &Relocation : RelaPlt->relocations()) {
-    if (Relocation.getType() != JumpSlotReloc)
-      continue;
-    auto PltEntryIter = GotToPlt.find(Relocation.getOffset());
-    if (PltEntryIter != GotToPlt.end()) {
-      symbol_iterator Sym = Relocation.getSymbol();
-      if (Sym == symbol_end())
-        Result.emplace_back(None, PltEntryIter->second);
-      else
-        Result.emplace_back(Sym->getRawDataRefImpl(), PltEntryIter->second);
+    } else if (Name == ".rela.dyn" || Name == ".rel.dyn") {
+      RelaDyn = Section;
+    } else if (Name == ".got.plt") {
+      GotBaseVA = Section.getAddress();
+    } else if (Name == ".plt" || Name == ".plt.got") {
+      Expected<StringRef> PltContents = Section.getContents();
+      if (!PltContents) {
+        consumeError(PltContents.takeError());
+        return {};
+      }
+      llvm::append_range(
+          PltEntries,
+          MIA->findPltEntries(Section.getAddress(),
+                              arrayRefFromStringRef(*PltContents), Triple));
     }
   }
+
+  // Build a map from GOT entry virtual address to PLT entry virtual address.
+  DenseMap<uint64_t, uint64_t> GotToPlt;
+  for (auto [Plt, GotPlt] : PltEntries) {
+    uint64_t GotPltEntry = GotPlt;
+    // An x86-32 PIC PLT uses jmp DWORD PTR [ebx-offset]. Add
+    // _GLOBAL_OFFSET_TABLE_ (EBX) to get the .got.plt (or .got) entry address.
+    // See X86MCTargetDesc.cpp:findPltEntries for the 1 << 32 bit.
+    if (GotPltEntry & (uint64_t(1) << 32) && getEMachine() == ELF::EM_386)
+      GotPltEntry = static_cast<int32_t>(GotPltEntry) + GotBaseVA;
+    GotToPlt.insert(std::make_pair(GotPltEntry, Plt));
+  }
+
+  // Find the relocations in the dynamic relocation table that point to
+  // locations in the GOT for which we know the corresponding PLT entry.
+  std::vector<ELFPltEntry> Result;
+  auto handleRels = [&](iterator_range<relocation_iterator> Rels,
+                        uint32_t RelType, StringRef PltSec) {
+    for (const auto &R : Rels) {
+      if (R.getType() != RelType)
+        continue;
+      auto PltEntryIter = GotToPlt.find(R.getOffset());
+      if (PltEntryIter != GotToPlt.end()) {
+        symbol_iterator Sym = R.getSymbol();
+        if (Sym == symbol_end())
+          Result.push_back(
+              ELFPltEntry{PltSec, std::nullopt, PltEntryIter->second});
+        else
+          Result.push_back(ELFPltEntry{PltSec, Sym->getRawDataRefImpl(),
+                                       PltEntryIter->second});
+      }
+    }
+  };
+
+  if (RelaPlt)
+    handleRels(RelaPlt->relocations(), JumpSlotReloc, ".plt");
+
+  // If a symbol needing a PLT entry also needs a GLOB_DAT relocation, GNU ld's
+  // x86 port places the PLT entry in the .plt.got section.
+  if (RelaDyn)
+    handleRels(RelaDyn->relocations(), GlobDatReloc, ".plt.got");
+
   return Result;
+}
+
+template <class ELFT>
+Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
+    const ELFFile<ELFT> &EF, std::optional<unsigned> TextSectionIndex,
+    std::vector<PGOAnalysisMap> *PGOAnalyses) {
+  using Elf_Shdr = typename ELFT::Shdr;
+  bool IsRelocatable = EF.getHeader().e_type == ELF::ET_REL;
+  std::vector<BBAddrMap> BBAddrMaps;
+  if (PGOAnalyses)
+    PGOAnalyses->clear();
+
+  const auto &Sections = cantFail(EF.sections());
+  auto IsMatch = [&](const Elf_Shdr &Sec) -> Expected<bool> {
+    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP &&
+        Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP_V0)
+      return false;
+    if (!TextSectionIndex)
+      return true;
+    Expected<const Elf_Shdr *> TextSecOrErr = EF.getSection(Sec.sh_link);
+    if (!TextSecOrErr)
+      return createError("unable to get the linked-to section for " +
+                         describe(EF, Sec) + ": " +
+                         toString(TextSecOrErr.takeError()));
+    assert(*TextSecOrErr >= Sections.begin() &&
+           "Text section pointer outside of bounds");
+    if (*TextSectionIndex !=
+        (unsigned)std::distance(Sections.begin(), *TextSecOrErr))
+      return false;
+    return true;
+  };
+
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> SectionRelocMapOrErr =
+      EF.getSectionAndRelocations(IsMatch);
+  if (!SectionRelocMapOrErr)
+    return SectionRelocMapOrErr.takeError();
+
+  for (auto const &[Sec, RelocSec] : *SectionRelocMapOrErr) {
+    if (IsRelocatable && !RelocSec)
+      return createError("unable to get relocation section for " +
+                         describe(EF, *Sec));
+    Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
+        EF.decodeBBAddrMap(*Sec, RelocSec, PGOAnalyses);
+    if (!BBAddrMapOrErr) {
+      if (PGOAnalyses)
+        PGOAnalyses->clear();
+      return createError("unable to read " + describe(EF, *Sec) + ": " +
+                         toString(BBAddrMapOrErr.takeError()));
+    }
+    std::move(BBAddrMapOrErr->begin(), BBAddrMapOrErr->end(),
+              std::back_inserter(BBAddrMaps));
+  }
+  if (PGOAnalyses)
+    assert(PGOAnalyses->size() == BBAddrMaps.size() &&
+           "The same number of BBAddrMaps and PGOAnalysisMaps should be "
+           "returned when PGO information is requested");
+  return BBAddrMaps;
+}
+
+template <class ELFT>
+static Expected<std::vector<VersionEntry>>
+readDynsymVersionsImpl(const ELFFile<ELFT> &EF,
+                       ELFObjectFileBase::elf_symbol_iterator_range Symbols) {
+  using Elf_Shdr = typename ELFT::Shdr;
+  const Elf_Shdr *VerSec = nullptr;
+  const Elf_Shdr *VerNeedSec = nullptr;
+  const Elf_Shdr *VerDefSec = nullptr;
+  // The user should ensure sections() can't fail here.
+  for (const Elf_Shdr &Sec : cantFail(EF.sections())) {
+    if (Sec.sh_type == ELF::SHT_GNU_versym)
+      VerSec = &Sec;
+    else if (Sec.sh_type == ELF::SHT_GNU_verdef)
+      VerDefSec = &Sec;
+    else if (Sec.sh_type == ELF::SHT_GNU_verneed)
+      VerNeedSec = &Sec;
+  }
+  if (!VerSec)
+    return std::vector<VersionEntry>();
+
+  Expected<SmallVector<std::optional<VersionEntry>, 0>> MapOrErr =
+      EF.loadVersionMap(VerNeedSec, VerDefSec);
+  if (!MapOrErr)
+    return MapOrErr.takeError();
+
+  std::vector<VersionEntry> Ret;
+  size_t I = 0;
+  for (const ELFSymbolRef &Sym : Symbols) {
+    ++I;
+    Expected<const typename ELFT::Versym *> VerEntryOrErr =
+        EF.template getEntry<typename ELFT::Versym>(*VerSec, I);
+    if (!VerEntryOrErr)
+      return createError("unable to read an entry with index " + Twine(I) +
+                         " from " + describe(EF, *VerSec) + ": " +
+                         toString(VerEntryOrErr.takeError()));
+
+    Expected<uint32_t> FlagsOrErr = Sym.getFlags();
+    if (!FlagsOrErr)
+      return createError("unable to read flags for symbol with index " +
+                         Twine(I) + ": " + toString(FlagsOrErr.takeError()));
+
+    bool IsDefault;
+    Expected<StringRef> VerOrErr = EF.getSymbolVersionByIndex(
+        (*VerEntryOrErr)->vs_index, IsDefault, *MapOrErr,
+        (*FlagsOrErr) & SymbolRef::SF_Undefined);
+    if (!VerOrErr)
+      return createError("unable to get a version for entry " + Twine(I) +
+                         " of " + describe(EF, *VerSec) + ": " +
+                         toString(VerOrErr.takeError()));
+
+    Ret.push_back({(*VerOrErr).str(), IsDefault});
+  }
+
+  return Ret;
+}
+
+Expected<std::vector<VersionEntry>>
+ELFObjectFileBase::readDynsymVersions() const {
+  elf_symbol_iterator_range Symbols = getDynamicSymbolIterators();
+  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
+    return readDynsymVersionsImpl(Obj->getELFFile(), Symbols);
+  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
+    return readDynsymVersionsImpl(Obj->getELFFile(), Symbols);
+  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
+    return readDynsymVersionsImpl(Obj->getELFFile(), Symbols);
+  return readDynsymVersionsImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
+                                Symbols);
+}
+
+Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
+    std::optional<unsigned> TextSectionIndex,
+    std::vector<PGOAnalysisMap> *PGOAnalyses) const {
+  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
+  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
+  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
+  return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
+                           TextSectionIndex, PGOAnalyses);
 }

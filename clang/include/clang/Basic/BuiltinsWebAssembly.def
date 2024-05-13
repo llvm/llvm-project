@@ -68,22 +68,6 @@ TARGET_BUILTIN(__builtin_wasm_trunc_saturate_u_i64_f64, "LLid", "nc", "nontrappi
 // SIMD builtins
 TARGET_BUILTIN(__builtin_wasm_swizzle_i8x16, "V16ScV16ScV16Sc", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_extract_lane_s_i8x16, "iV16ScIi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_u_i8x16, "iV16UcIUi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_s_i16x8, "iV8sIi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_u_i16x8, "iV8UsIUi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_i32x4, "iV4iIi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_i64x2, "LLiV2LLiIi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_f32x4, "fV4fIi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_f64x2, "dV2dIi", "nc", "simd128")
-
-TARGET_BUILTIN(__builtin_wasm_replace_lane_i8x16, "V16ScV16ScIii", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_replace_lane_i16x8, "V8sV8sIii", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_replace_lane_i32x4, "V4iV4iIii", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_replace_lane_i64x2, "V2LLiV2LLiIiLLi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_replace_lane_f32x4, "V4fV4fIif", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_replace_lane_f64x2, "V2dV2dIid", "nc", "simd128")
-
 TARGET_BUILTIN(__builtin_wasm_add_sat_s_i8x16, "V16ScV16ScV16Sc", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_add_sat_u_i8x16, "V16UcV16UcV16Uc", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_add_sat_s_i16x8, "V8sV8sV8s", "nc", "simd128")
@@ -119,21 +103,6 @@ TARGET_BUILTIN(__builtin_wasm_popcnt_i8x16, "V16ScV16Sc", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_q15mulr_sat_s_i16x8, "V8sV8sV8s", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_extmul_low_i8x16_s_i16x8, "V8sV16ScV16Sc", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extmul_high_i8x16_s_i16x8, "V8sV16ScV16Sc", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extmul_low_i8x16_u_i16x8, "V8UsV16UcV16Uc", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extmul_high_i8x16_u_i16x8, "V8UsV16UcV16Uc", "nc", "simd128")
-
-TARGET_BUILTIN(__builtin_wasm_extmul_low_i16x8_s_i32x4, "V4iV8sV8s", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extmul_high_i16x8_s_i32x4, "V4iV8sV8s", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extmul_low_i16x8_u_i32x4, "V4UiV8UsV8Us", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extmul_high_i16x8_u_i32x4, "V4UiV8UsV8Us", "nc", "simd128")
-
-TARGET_BUILTIN(__builtin_wasm_extmul_low_i32x4_s_i64x2, "V2LLiV4iV4i", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extmul_high_i32x4_s_i64x2, "V2LLiV4iV4i", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extmul_low_i32x4_u_i64x2, "V2ULLiV4UiV4Ui", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extmul_high_i32x4_u_i64x2, "V2ULLiV4UiV4Ui", "nc", "simd128")
-
 TARGET_BUILTIN(__builtin_wasm_extadd_pairwise_i8x16_s_i16x8, "V8sV16Sc", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_extadd_pairwise_i8x16_u_i16x8, "V8UsV16Uc", "nc", "simd128")
 
@@ -150,10 +119,10 @@ TARGET_BUILTIN(__builtin_wasm_all_true_i16x8, "iV8s", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_all_true_i32x4, "iV4i", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_all_true_i64x2, "iV2LLi", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_bitmask_i8x16, "iV16Sc", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_bitmask_i16x8, "iV8s", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_bitmask_i32x4, "iV4i", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_bitmask_i64x2, "iV2LLi", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_bitmask_i8x16, "UiV16Sc", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_bitmask_i16x8, "UiV8s", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_bitmask_i32x4, "UiV4i", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_bitmask_i64x2, "UiV2LLi", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_abs_f32x4, "V4fV4f", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_abs_f64x2, "V2dV2d", "nc", "simd128")
@@ -189,22 +158,60 @@ TARGET_BUILTIN(__builtin_wasm_narrow_u_i8x16_i16x8, "V16UcV8sV8s", "nc", "simd12
 TARGET_BUILTIN(__builtin_wasm_narrow_s_i16x8_i32x4, "V8sV4iV4i", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_narrow_u_i16x8_i32x4, "V8UsV4iV4i", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_trunc_sat_zero_s_f64x2_i32x4, "V4iV2d", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_trunc_sat_zero_u_f64x2_i32x4, "V4UiV2d", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_demote_zero_f64x2_f32x4, "V4fV2d", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_promote_low_f32x4_f64x2, "V2dV4f", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_trunc_sat_s_zero_f64x2_i32x4, "V4iV2d", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_trunc_sat_u_zero_f64x2_i32x4, "V4UiV2d", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_load32_zero, "V4iiC*", "n", "simd128")
-TARGET_BUILTIN(__builtin_wasm_load64_zero, "V2LLiLLiC*", "n", "simd128")
+// Relaxed SIMD builtins
+TARGET_BUILTIN(__builtin_wasm_relaxed_madd_f32x4, "V4fV4fV4fV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_nmadd_f32x4, "V4fV4fV4fV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_madd_f64x2, "V2dV2dV2dV2d", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_nmadd_f64x2, "V2dV2dV2dV2d", "nc", "relaxed-simd")
 
-TARGET_BUILTIN(__builtin_wasm_load8_lane, "V16ScScC*V16ScIi", "n", "simd128")
-TARGET_BUILTIN(__builtin_wasm_load16_lane, "V8ssC*V8sIi", "n", "simd128")
-TARGET_BUILTIN(__builtin_wasm_load32_lane, "V4iiC*V4iIi", "n", "simd128")
-TARGET_BUILTIN(__builtin_wasm_load64_lane, "V2LLiLLiC*V2LLiIi", "n", "simd128")
-TARGET_BUILTIN(__builtin_wasm_store8_lane, "vSc*V16ScIi", "n", "simd128")
-TARGET_BUILTIN(__builtin_wasm_store16_lane, "vs*V8sIi", "n", "simd128")
-TARGET_BUILTIN(__builtin_wasm_store32_lane, "vi*V4iIi", "n", "simd128")
-TARGET_BUILTIN(__builtin_wasm_store64_lane, "vLLi*V2LLiIi", "n", "simd128")
+TARGET_BUILTIN(__builtin_wasm_relaxed_laneselect_i8x16, "V16ScV16ScV16ScV16Sc", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_laneselect_i16x8, "V8sV8sV8sV8s", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_laneselect_i32x4, "V4iV4iV4iV4i", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_laneselect_i64x2, "V2LLiV2LLiV2LLiV2LLi", "nc", "relaxed-simd")
+
+TARGET_BUILTIN(__builtin_wasm_relaxed_swizzle_i8x16, "V16ScV16ScV16Sc", "nc", "relaxed-simd")
+
+TARGET_BUILTIN(__builtin_wasm_relaxed_min_f32x4, "V4fV4fV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_max_f32x4, "V4fV4fV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_min_f64x2, "V2dV2dV2d", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_max_f64x2, "V2dV2dV2d", "nc", "relaxed-simd")
+
+TARGET_BUILTIN(__builtin_wasm_relaxed_trunc_s_i32x4_f32x4, "V4iV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_trunc_u_i32x4_f32x4, "V4UiV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_trunc_s_zero_i32x4_f64x2, "V4iV2d", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_trunc_u_zero_i32x4_f64x2, "V4UiV2d", "nc", "relaxed-simd")
+
+TARGET_BUILTIN(__builtin_wasm_relaxed_q15mulr_s_i16x8, "V8sV8sV8s", "nc", "relaxed-simd")
+
+TARGET_BUILTIN(__builtin_wasm_relaxed_dot_i8x16_i7x16_s_i16x8, "V8sV16ScV16Sc", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_dot_i8x16_i7x16_add_s_i32x4, "V4iV16ScV16ScV4i", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_dot_bf16x8_add_f32_f32x4, "V4fV8UsV8UsV4f", "nc", "relaxed-simd")
+
+// Half-Precision (fp16)
+TARGET_BUILTIN(__builtin_wasm_loadf16_f32, "fh*", "nU", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_storef16_f32, "vfh*", "n", "half-precision")
+
+// Reference Types builtins
+// Some builtins are custom type-checked - see 't' as part of the third argument,
+// in which case the argument spec (second argument) is unused.
+
+TARGET_BUILTIN(__builtin_wasm_ref_null_extern, "i", "nct", "reference-types")
+
+// A funcref represented as a function pointer with the funcref attribute
+// attached to the type, therefore SemaChecking will check for the right
+// return type.
+TARGET_BUILTIN(__builtin_wasm_ref_null_func, "i", "nct", "reference-types")
+
+// Table builtins
+TARGET_BUILTIN(__builtin_wasm_table_set,  "viii", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_get,  "iii", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_size, "zi", "nt", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_grow, "iiii", "nt", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_fill, "viiii", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_copy, "viiiii", "t", "reference-types")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

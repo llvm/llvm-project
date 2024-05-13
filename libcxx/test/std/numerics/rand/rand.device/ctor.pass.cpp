@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// See bugs.llvm.org/PR20183
-//
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
+// See https://llvm.org/PR20183
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
 
-// UNSUPPORTED: libcpp-has-no-random-device
+// The behavior of std::random_device changed on Apple platforms with
+// https://llvm.org/D116045.
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
+
+// UNSUPPORTED: no-random-device
 
 // <random>
 
@@ -28,6 +29,7 @@
 // throw.
 
 #include <random>
+#include <string>
 #include <system_error>
 #include <cassert>
 
@@ -39,15 +41,6 @@
 #if TEST_STD_VER >= 11
 #include "test_convertible.h"
 #endif
-
-bool is_valid_random_device(const std::string &token) {
-#if defined(_LIBCPP_USING_DEV_RANDOM)
-  // Not an exhaustive list: they're the only tokens that are tested below.
-  return token == "/dev/urandom" || token == "/dev/random";
-#else
-  return token == "/dev/urandom";
-#endif
-}
 
 void check_random_device_valid(const std::string &token) {
   std::random_device r(token);
@@ -68,25 +61,31 @@ void check_random_device_invalid(const std::string &token) {
 int main(int, char**) {
   {
     std::random_device r;
+    (void)r;
   }
+  // Check the validity of various tokens
   {
-    std::string token = "wrong file";
-    check_random_device_invalid(token);
+#if defined(_LIBCPP_USING_ARC4_RANDOM)
+    check_random_device_valid("/dev/urandom");
+    check_random_device_valid("/dev/random");
+    check_random_device_valid("/dev/null");
+    check_random_device_valid("/dev/nonexistent");
+    check_random_device_valid("wrong file");
+#elif defined(_LIBCPP_USING_DEV_RANDOM)
+    check_random_device_valid("/dev/urandom");
+    check_random_device_valid("/dev/random");
+    check_random_device_valid("/dev/null");
+    check_random_device_invalid("/dev/nonexistent");
+    check_random_device_invalid("wrong file");
+#else
+    check_random_device_valid("/dev/urandom");
+    check_random_device_invalid("/dev/random");
+    check_random_device_invalid("/dev/null");
+    check_random_device_invalid("/dev/nonexistent");
+    check_random_device_invalid("wrong file");
+#endif
   }
-  {
-    std::string token = "/dev/urandom";
-    if (is_valid_random_device(token))
-      check_random_device_valid(token);
-    else
-      check_random_device_invalid(token);
-  }
-  {
-    std::string token = "/dev/random";
-    if (is_valid_random_device(token))
-      check_random_device_valid(token);
-    else
-      check_random_device_invalid(token);
-  }
+
 #if !defined(_WIN32)
 // Test that random_device(const string&) properly handles getting
 // a file descriptor with the value '0'. Do this by closing the standard

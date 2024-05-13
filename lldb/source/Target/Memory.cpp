@@ -9,6 +9,7 @@
 #include "lldb/Target/Memory.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/State.h"
@@ -26,7 +27,7 @@ MemoryCache::MemoryCache(Process &process)
       m_L2_cache_line_byte_size(process.GetMemoryCacheLineSize()) {}
 
 // Destructor
-MemoryCache::~MemoryCache() {}
+MemoryCache::~MemoryCache() = default;
 
 void MemoryCache::Clear(bool clear_invalid_ranges) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -122,18 +123,55 @@ bool MemoryCache::RemoveInvalidRange(lldb::addr_t base_addr,
   return false;
 }
 
-size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
-                         Status &error) {
-  size_t bytes_left = dst_len;
-
-  // Check the L1 cache for a range that contain the entire memory read. If we
-  // find a range in the L1 cache that does, we use it. Else we fall back to
-  // reading memory in m_L2_cache_line_byte_size byte sized chunks. The L1
-  // cache contains chunks of memory that are not required to be
-  // m_L2_cache_line_byte_size bytes in size, so we don't try anything tricky
-  // when reading from them (no partial reads from the L1 cache).
+lldb::DataBufferSP MemoryCache::GetL2CacheLine(lldb::addr_t line_base_addr,
+                                               Status &error) {
+  // This function assumes that the address given is aligned correctly.
+  assert((line_base_addr % m_L2_cache_line_byte_size) == 0);
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  auto pos = m_L2_cache.find(line_base_addr);
+  if (pos != m_L2_cache.end())
+    return pos->second;
+
+  auto data_buffer_heap_sp =
+      std::make_shared<DataBufferHeap>(m_L2_cache_line_byte_size, 0);
+  size_t process_bytes_read = m_process.ReadMemoryFromInferior(
+      line_base_addr, data_buffer_heap_sp->GetBytes(),
+      data_buffer_heap_sp->GetByteSize(), error);
+
+  // If we failed a read, not much we can do.
+  if (process_bytes_read == 0)
+    return lldb::DataBufferSP();
+
+  // If we didn't get a complete read, we can still cache what we did get.
+  if (process_bytes_read < m_L2_cache_line_byte_size)
+    data_buffer_heap_sp->SetByteSize(process_bytes_read);
+
+  m_L2_cache[line_base_addr] = data_buffer_heap_sp;
+  return data_buffer_heap_sp;
+}
+
+size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
+                         Status &error) {
+  if (!dst || dst_len == 0)
+    return 0;
+
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  // FIXME: We should do a more thorough check to make sure that we're not
+  // overlapping with any invalid ranges (e.g. Read 0x100 - 0x200 but there's an
+  // invalid range 0x180 - 0x280). `FindEntryThatContains` has an implementation
+  // that takes a range, but it only checks to see if the argument is contained
+  // by an existing invalid range. It cannot check if the argument contains
+  // invalid ranges and cannot check for overlaps.
+  if (m_invalid_ranges.FindEntryThatContains(addr)) {
+    error.SetErrorStringWithFormat("memory read failed for 0x%" PRIx64, addr);
+    return 0;
+  }
+
+  // Check the L1 cache for a range that contains the entire memory read.
+  // L1 cache contains chunks of memory that are not required to be the size of
+  // an L2 cache line. We avoid trying to do partial reads from the L1 cache to
+  // simplify the implementation.
   if (!m_L1_cache.empty()) {
     AddrRange read_range(addr, dst_len);
     BlockMap::iterator pos = m_L1_cache.upper_bound(addr);
@@ -148,105 +186,82 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
     }
   }
 
-  // If this memory read request is larger than the cache line size, then we
-  // (1) try to read as much of it at once as possible, and (2) don't add the
-  // data to the memory cache.  We don't want to split a big read up into more
-  // separate reads than necessary, and with a large memory read request, it is
-  // unlikely that the caller function will ask for the next
-  // 4 bytes after the large memory read - so there's little benefit to saving
-  // it in the cache.
-  if (dst && dst_len > m_L2_cache_line_byte_size) {
+  // If the size of the read is greater than the size of an L2 cache line, we'll
+  // just read from the inferior. If that read is successful, we'll cache what
+  // we read in the L1 cache for future use.
+  if (dst_len > m_L2_cache_line_byte_size) {
     size_t bytes_read =
         m_process.ReadMemoryFromInferior(addr, dst, dst_len, error);
-    // Add this non block sized range to the L1 cache if we actually read
-    // anything
     if (bytes_read > 0)
       AddL1CacheData(addr, dst, bytes_read);
     return bytes_read;
   }
 
-  if (dst && bytes_left > 0) {
-    const uint32_t cache_line_byte_size = m_L2_cache_line_byte_size;
-    uint8_t *dst_buf = (uint8_t *)dst;
-    addr_t curr_addr = addr - (addr % cache_line_byte_size);
-    addr_t cache_offset = addr - curr_addr;
+  // If the size of the read fits inside one L2 cache line, we'll try reading
+  // from the L2 cache. Note that if the range of memory we're reading sits
+  // between two contiguous cache lines, we'll touch two cache lines instead of
+  // just one.
 
-    while (bytes_left > 0) {
-      if (m_invalid_ranges.FindEntryThatContains(curr_addr)) {
-        error.SetErrorStringWithFormat("memory read failed for 0x%" PRIx64,
-                                       curr_addr);
-        return dst_len - bytes_left;
-      }
+  // We're going to have all of our loads and reads be cache line aligned.
+  addr_t cache_line_offset = addr % m_L2_cache_line_byte_size;
+  addr_t cache_line_base_addr = addr - cache_line_offset;
+  DataBufferSP first_cache_line = GetL2CacheLine(cache_line_base_addr, error);
+  // If we get nothing, then the read to the inferior likely failed. Nothing to
+  // do here.
+  if (!first_cache_line)
+    return 0;
 
-      BlockMap::const_iterator pos = m_L2_cache.find(curr_addr);
-      BlockMap::const_iterator end = m_L2_cache.end();
+  // If the cache line was not filled out completely and the offset is greater
+  // than what we have available, we can't do anything further here.
+  if (cache_line_offset >= first_cache_line->GetByteSize())
+    return 0;
 
-      if (pos != end) {
-        size_t curr_read_size = cache_line_byte_size - cache_offset;
-        if (curr_read_size > bytes_left)
-          curr_read_size = bytes_left;
+  uint8_t *dst_buf = (uint8_t *)dst;
+  size_t bytes_left = dst_len;
+  size_t read_size = first_cache_line->GetByteSize() - cache_line_offset;
+  if (read_size > bytes_left)
+    read_size = bytes_left;
 
-        memcpy(dst_buf + dst_len - bytes_left,
-               pos->second->GetBytes() + cache_offset, curr_read_size);
+  memcpy(dst_buf + dst_len - bytes_left,
+         first_cache_line->GetBytes() + cache_line_offset, read_size);
+  bytes_left -= read_size;
 
-        bytes_left -= curr_read_size;
-        curr_addr += curr_read_size + cache_offset;
-        cache_offset = 0;
+  // If the cache line was not filled out completely and we still have data to
+  // read, we can't do anything further.
+  if (first_cache_line->GetByteSize() < m_L2_cache_line_byte_size &&
+      bytes_left > 0)
+    return dst_len - bytes_left;
 
-        if (bytes_left > 0) {
-          // Get sequential cache page hits
-          for (++pos; (pos != end) && (bytes_left > 0); ++pos) {
-            assert((curr_addr % cache_line_byte_size) == 0);
+  // We'll hit this scenario if our read straddles two cache lines.
+  if (bytes_left > 0) {
+    cache_line_base_addr += m_L2_cache_line_byte_size;
 
-            if (pos->first != curr_addr)
-              break;
-
-            curr_read_size = pos->second->GetByteSize();
-            if (curr_read_size > bytes_left)
-              curr_read_size = bytes_left;
-
-            memcpy(dst_buf + dst_len - bytes_left, pos->second->GetBytes(),
-                   curr_read_size);
-
-            bytes_left -= curr_read_size;
-            curr_addr += curr_read_size;
-
-            // We have a cache page that succeeded to read some bytes but not
-            // an entire page. If this happens, we must cap off how much data
-            // we are able to read...
-            if (pos->second->GetByteSize() != cache_line_byte_size)
-              return dst_len - bytes_left;
-          }
-        }
-      }
-
-      // We need to read from the process
-
-      if (bytes_left > 0) {
-        assert((curr_addr % cache_line_byte_size) == 0);
-        std::unique_ptr<DataBufferHeap> data_buffer_heap_up(
-            new DataBufferHeap(cache_line_byte_size, 0));
-        size_t process_bytes_read = m_process.ReadMemoryFromInferior(
-            curr_addr, data_buffer_heap_up->GetBytes(),
-            data_buffer_heap_up->GetByteSize(), error);
-        if (process_bytes_read == 0)
-          return dst_len - bytes_left;
-
-        if (process_bytes_read != cache_line_byte_size) {
-          if (process_bytes_read < data_buffer_heap_up->GetByteSize()) {
-            dst_len -= data_buffer_heap_up->GetByteSize() - process_bytes_read;
-            bytes_left = process_bytes_read;
-          }
-          data_buffer_heap_up->SetByteSize(process_bytes_read);
-        }
-        m_L2_cache[curr_addr] = DataBufferSP(data_buffer_heap_up.release());
-        // We have read data and put it into the cache, continue through the
-        // loop again to get the data out of the cache...
-      }
+    // FIXME: Until we are able to more thoroughly check for invalid ranges, we
+    // will have to check the second line to see if it is in an invalid range as
+    // well. See the check near the beginning of the function for more details.
+    if (m_invalid_ranges.FindEntryThatContains(cache_line_base_addr)) {
+      error.SetErrorStringWithFormat("memory read failed for 0x%" PRIx64,
+                                     cache_line_base_addr);
+      return dst_len - bytes_left;
     }
+
+    DataBufferSP second_cache_line =
+        GetL2CacheLine(cache_line_base_addr, error);
+    if (!second_cache_line)
+      return dst_len - bytes_left;
+
+    read_size = bytes_left;
+    if (read_size > second_cache_line->GetByteSize())
+      read_size = second_cache_line->GetByteSize();
+
+    memcpy(dst_buf + dst_len - bytes_left, second_cache_line->GetBytes(),
+           read_size);
+    bytes_left -= read_size;
+
+    return dst_len - bytes_left;
   }
 
-  return dst_len - bytes_left;
+  return dst_len;
 }
 
 AllocatedBlock::AllocatedBlock(lldb::addr_t addr, uint32_t byte_size,
@@ -259,14 +274,14 @@ AllocatedBlock::AllocatedBlock(lldb::addr_t addr, uint32_t byte_size,
   assert(byte_size > chunk_size);
 }
 
-AllocatedBlock::~AllocatedBlock() {}
+AllocatedBlock::~AllocatedBlock() = default;
 
 lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
   // We must return something valid for zero bytes.
   if (size == 0)
     size = 1;
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  
+  Log *log = GetLog(LLDBLog::Process);
+
   const size_t free_count = m_free_blocks.GetSize();
   for (size_t i=0; i<free_count; ++i)
   {
@@ -321,7 +336,7 @@ bool AllocatedBlock::FreeBlock(addr_t addr) {
     m_reserved_blocks.RemoveEntryAtIndex(entry_idx);
     success = true;
   }
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGV(log, "({0}) (addr = {1:x}) => {2}", this, addr, success);
   return success;
 }
@@ -329,11 +344,11 @@ bool AllocatedBlock::FreeBlock(addr_t addr) {
 AllocatedMemoryCache::AllocatedMemoryCache(Process &process)
     : m_process(process), m_mutex(), m_memory_map() {}
 
-AllocatedMemoryCache::~AllocatedMemoryCache() {}
+AllocatedMemoryCache::~AllocatedMemoryCache() = default;
 
-void AllocatedMemoryCache::Clear() {
+void AllocatedMemoryCache::Clear(bool deallocate_memory) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (m_process.IsAlive()) {
+  if (m_process.IsAlive() && deallocate_memory) {
     PermissionsToBlockMap::iterator pos, end = m_memory_map.end();
     for (pos = m_memory_map.begin(); pos != end; ++pos)
       m_process.DoDeallocateMemory(pos->second->GetBaseAddress());
@@ -351,7 +366,7 @@ AllocatedMemoryCache::AllocatePage(uint32_t byte_size, uint32_t permissions,
 
   addr_t addr = m_process.DoAllocateMemory(page_byte_size, permissions, error);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   if (log) {
     LLDB_LOGF(log,
               "Process::DoAllocateMemory (byte_size = 0x%8.8" PRIx32
@@ -390,7 +405,7 @@ lldb::addr_t AllocatedMemoryCache::AllocateMemory(size_t byte_size,
     if (block_sp)
       addr = block_sp->ReserveBlock(byte_size);
   }
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log,
             "AllocatedMemoryCache::AllocateMemory (byte_size = 0x%8.8" PRIx32
             ", permissions = %s) => 0x%16.16" PRIx64,
@@ -410,7 +425,7 @@ bool AllocatedMemoryCache::DeallocateMemory(lldb::addr_t addr) {
       break;
     }
   }
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log,
             "AllocatedMemoryCache::DeallocateMemory (addr = 0x%16.16" PRIx64
             ") => %i",

@@ -13,14 +13,13 @@
 
 #include "llvm/Support/SHA256.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
 namespace {
 
-static std::string toHex(StringRef Input) {
+static std::string toHex(ArrayRef<uint8_t> Input) {
   static const char *const LUT = "0123456789abcdef";
   size_t Length = Input.size();
 

@@ -10,7 +10,11 @@
 ; CHECK: xor %eax, %eax
 define i32 @main() {
 entry:
-  %foo = load i8, i8* getelementptr ([2 x i8], [2 x i8]* @b, i64 0, i64 sext (i8 or (i8 zext (i1 icmp eq (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @c, i64 0, i64 1), i32* @a) to i8), i8 1) to i64)), align 1
+  %ext = zext i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), ptr @a) to i8
+  %or = or i8 %ext, 1
+  %sext = sext i8 %or to i64
+  %gep = getelementptr [2 x i8], ptr @b, i64 0, i64 %sext
+  %foo = load i8, ptr %gep, align 1
   ret i32 0
 }
 

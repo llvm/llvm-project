@@ -13,4 +13,4 @@
 }
 @end
 
-int main() {}
+int main(void) {}

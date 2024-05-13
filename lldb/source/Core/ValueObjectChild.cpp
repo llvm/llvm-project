@@ -43,16 +43,18 @@ ValueObjectChild::ValueObjectChild(
   SetLanguageFlags(language_flags);
 }
 
-ValueObjectChild::~ValueObjectChild() {}
+ValueObjectChild::~ValueObjectChild() = default;
 
 lldb::ValueType ValueObjectChild::GetValueType() const {
   return m_parent->GetValueType();
 }
 
-size_t ValueObjectChild::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t> ValueObjectChild::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 static void AdjustForBitfieldness(ConstString &name,
@@ -82,8 +84,8 @@ ConstString ValueObjectChild::GetDisplayTypeName() {
 }
 
 LazyBool ValueObjectChild::CanUpdateWithInvalidExecutionContext() {
-  if (m_can_update_with_invalid_exe_ctx.hasValue())
-    return m_can_update_with_invalid_exe_ctx.getValue();
+  if (m_can_update_with_invalid_exe_ctx)
+    return *m_can_update_with_invalid_exe_ctx;
   if (m_parent) {
     ValueObject *opinionated_parent =
         m_parent->FollowParentChain([](ValueObject *valobj) -> bool {
@@ -91,13 +93,11 @@ LazyBool ValueObjectChild::CanUpdateWithInvalidExecutionContext() {
                   eLazyBoolCalculate);
         });
     if (opinionated_parent)
-      return (m_can_update_with_invalid_exe_ctx =
-                  opinionated_parent->CanUpdateWithInvalidExecutionContext())
-          .getValue();
+      return *(m_can_update_with_invalid_exe_ctx =
+                   opinionated_parent->CanUpdateWithInvalidExecutionContext());
   }
-  return (m_can_update_with_invalid_exe_ctx =
-              this->ValueObject::CanUpdateWithInvalidExecutionContext())
-      .getValue();
+  return *(m_can_update_with_invalid_exe_ctx =
+               this->ValueObject::CanUpdateWithInvalidExecutionContext());
 }
 
 bool ValueObjectChild::UpdateValue() {

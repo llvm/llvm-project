@@ -28,9 +28,12 @@
 @ CHECK-ERRORS:         ^
 @ CHECK-ERRORS: note: instruction variant requires Thumb2
 @ CHECK-ERRORS: note: operand must be a register sp
-@ CHECK-ERRORS-V5: error: instruction variant requires ARMv6 or later
+@ CHECK-ERRORS-V5: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS-V5:         mov r2, r3
 @ CHECK-ERRORS-V5:         ^
+@ CHECK-ERRORS-V5: note: instruction requires: arm-mode
+@ CHECK-ERRORS-V5: note: operand must be an immediate in the range [0,255] or a relocatable expression
+@ CHECK-ERRORS-V5: note: instruction variant requires ARMv6 or later
 
 @ Immediates where registers were expected
         adds #0, r1, r2
@@ -195,12 +198,41 @@
 @ CHECK-ERRORS: note: operand must be an immediate in the range [0,31]
 @ CHECK-ERRORS: note: too many operands for instruction
 
+@ Out of range immediates for MOVS/ADDS instruction.
+        movs r3, #-1
+        adds r3, #256
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS-NEXT: movs r3, #-1
+@ CHECK-ERRORS-NEXT: ^
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,255] or a relocatable expression
+@ CHECK-ERRORS-NEXT: movs r3, #-1
+@ CHECK-ERRORS-NEXT:          ^
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r7]
+@ CHECK-ERRORS-NEXT: movs r3, #-1
+@ CHECK-ERRORS-NEXT:          ^
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT: ^
+@ CHECK-ERRORS: note: instruction requires: thumb2
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT: ^
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT:          ^
+@ CHECK-ERRORS-NEXT: note: operand must be an immediate in the range [0,255] or a relocatable expression
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT:          ^
+@ CHECK-ERRORS-NEXT: note: operand must be a register in range [r0, r7]
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT:          ^
+
 @ Mismatched source/destination operands for MUL instruction.
         muls r1, r2, r3
-@ CHECK-ERRORS: error: destination register must match source register
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS:         muls r1, r2, r3
-@ CHECK-ERRORS:              ^
-
+@ CHECK-ERRORS:         ^
+@ CHECK-ERRORS: note: destination register must match a source register
+@ CHECK-ERRORS: note: too many operands for instruction
 
 @ Out of range immediates for STR instruction.
         str r2, [r7, #-1]
@@ -246,16 +278,19 @@
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS: add sp, #-1
 @ CHECK-ERRORS: ^
+@ CHECK-ERRORS: note: instruction requires: thumb2
+@ CHECK-ERRORS: add sp, #-1
+@ CHECK-ERRORS: ^
 @ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
 @ CHECK-ERRORS: add sp, #-1
 @ CHECK-ERRORS:         ^
 @ CHECK-ERRORS: note: invalid operand for instruction
 @ CHECK-ERRORS: add sp, #-1
 @ CHECK-ERRORS:         ^
-@ CHECK-ERRORS: note: instruction requires: thumb2
-@ CHECK-ERRORS: add sp, #-1
-@ CHECK-ERRORS: ^
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: add sp, #3
+@ CHECK-ERRORS: ^
+@ CHECK-ERRORS: note: instruction requires: thumb2
 @ CHECK-ERRORS: add sp, #3
 @ CHECK-ERRORS: ^
 @ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
@@ -264,10 +299,10 @@
 @ CHECK-ERRORS: note: invalid operand for instruction
 @ CHECK-ERRORS: add sp, #3
 @ CHECK-ERRORS:         ^
-@ CHECK-ERRORS: note: instruction requires: thumb2
-@ CHECK-ERRORS: add sp, #3
-@ CHECK-ERRORS: ^
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: add sp, sp, #512
+@ CHECK-ERRORS: ^
+@ CHECK-ERRORS: note: instruction requires: thumb2
 @ CHECK-ERRORS: add sp, sp, #512
 @ CHECK-ERRORS: ^
 @ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
@@ -277,9 +312,6 @@
 @ CHECK-ERRORS: add sp, sp, #512
 @ CHECK-ERRORS:             ^
 @ CHECK-ERRORS: note: instruction requires: thumb2
-@ CHECK-ERRORS: add sp, sp, #512
-@ CHECK-ERRORS: ^
-@ CHECK-ERRORS: error: instruction requires: thumb2
 @ CHECK-ERRORS: add r2, sp, #1024
 @ CHECK-ERRORS: ^
         add r2, sp, ip
@@ -379,7 +411,8 @@
         adds
         adds r0
 @ CHECK-ERRORS: error: too few operands for instruction
-@ CHECK-ERRORS: error: too few operands for instruction
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: too few operands for instruction
 
 @------------------------------------------------------------------------------
 @ Out of range width for SBFX/UBFX

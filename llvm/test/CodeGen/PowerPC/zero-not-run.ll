@@ -3,14 +3,14 @@ target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "powerpc64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind
-define internal i32* @func_65(i32* %p_66) #0 {
+define internal ptr @func_65(ptr %p_66) #0 {
 entry:
   br i1 undef, label %for.body, label %for.end731
 
 for.body:                                         ; preds = %entry
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   %or31 = or i32 %0, 319143828
-  store i32 %or31, i32* undef, align 4
+  store i32 %or31, ptr undef, align 4
   %cmp32 = icmp eq i32 319143828, %or31
   %conv33 = zext i1 %cmp32 to i32
   %conv34 = sext i32 %conv33 to i64
@@ -18,7 +18,7 @@ for.body:                                         ; preds = %entry
   unreachable
 
 for.end731:                                       ; preds = %entry
-  ret i32* undef
+  ret ptr undef
 }
 
 ; Function Attrs: nounwind

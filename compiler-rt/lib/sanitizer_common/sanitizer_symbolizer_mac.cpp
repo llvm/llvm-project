@@ -12,19 +12,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 
-#include "sanitizer_allocator_internal.h"
-#include "sanitizer_mac.h"
-#include "sanitizer_symbolizer_mac.h"
+#  include <dlfcn.h>
+#  include <errno.h>
+#  include <stdlib.h>
+#  include <sys/wait.h>
+#  include <unistd.h>
+#  include <util.h>
 
-#include <dlfcn.h>
-#include <errno.h>
-#include <mach/mach.h>
-#include <stdlib.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <util.h>
+#  include "sanitizer_allocator_internal.h"
+#  include "sanitizer_mac.h"
+#  include "sanitizer_symbolizer_mac.h"
 
 namespace __sanitizer {
 
@@ -43,7 +42,8 @@ bool DlAddrSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   }
 
   const char *demangled = DemangleSwiftAndCXX(info.dli_sname);
-  if (!demangled) return false;
+  if (!demangled)
+    demangled = info.dli_sname;
   stack->info.function = internal_strdup(demangled);
   return true;
 }
@@ -53,17 +53,12 @@ bool DlAddrSymbolizer::SymbolizeData(uptr addr, DataInfo *datainfo) {
   int result = dladdr((const void *)addr, &info);
   if (!result) return false;
   const char *demangled = DemangleSwiftAndCXX(info.dli_sname);
+  if (!demangled)
+    demangled = info.dli_sname;
   datainfo->name = internal_strdup(demangled);
   datainfo->start = (uptr)info.dli_saddr;
   return true;
 }
-
-#define K_ATOS_ENV_VAR "__check_mach_ports_lookup"
-
-// This cannot live in `AtosSymbolizerProcess` because instances of that object
-// are allocated by the internal allocator which under ASan is poisoned with
-// kAsanInternalHeapMagic.
-static char kAtosMachPortEnvEntry[] = K_ATOS_ENV_VAR "=000000000000000";
 
 class AtosSymbolizerProcess final : public SymbolizerProcess {
  public:
@@ -72,51 +67,13 @@ class AtosSymbolizerProcess final : public SymbolizerProcess {
     pid_str_[0] = '\0';
   }
 
-  void LateInitialize() {
-    if (SANITIZER_IOSSIM) {
-      // `putenv()` may call malloc/realloc so it is only safe to do this
-      // during LateInitialize() or later (i.e. we can't do this in the
-      // constructor).  We also can't do this in `StartSymbolizerSubprocess()`
-      // because in TSan we switch allocators when we're symbolizing.
-      // We use `putenv()` rather than `setenv()` so that we can later directly
-      // write into the storage without LibC getting involved to change what the
-      // variable is set to
-      int result = putenv(kAtosMachPortEnvEntry);
-      CHECK_EQ(result, 0);
-    }
-  }
-
  private:
   bool StartSymbolizerSubprocess() override {
-    // Configure sandbox before starting atos process.
-
     // Put the string command line argument in the object so that it outlives
     // the call to GetArgV.
-    internal_snprintf(pid_str_, sizeof(pid_str_), "%d", internal_getpid());
+    internal_snprintf(pid_str_, sizeof(pid_str_), "%d", (int)internal_getpid());
 
-    if (SANITIZER_IOSSIM) {
-      // `atos` in the simulator is restricted in its ability to retrieve the
-      // task port for the target process (us) so we need to do extra work
-      // to pass our task port to it.
-      mach_port_t ports[]{mach_task_self()};
-      kern_return_t ret =
-          mach_ports_register(mach_task_self(), ports, /*count=*/1);
-      CHECK_EQ(ret, KERN_SUCCESS);
-
-      // Set environment variable that signals to `atos` that it should look
-      // for our task port. We can't call `setenv()` here because it might call
-      // malloc/realloc. To avoid that we instead update the
-      // `mach_port_env_var_entry_` variable with our current PID.
-      uptr count = internal_snprintf(kAtosMachPortEnvEntry,
-                                     sizeof(kAtosMachPortEnvEntry),
-                                     K_ATOS_ENV_VAR "=%s", pid_str_);
-      CHECK_GE(count, sizeof(K_ATOS_ENV_VAR) + internal_strlen(pid_str_));
-      // Document our assumption but without calling `getenv()` in normal
-      // builds.
-      DCHECK(getenv(K_ATOS_ENV_VAR));
-      DCHECK_EQ(internal_strcmp(getenv(K_ATOS_ENV_VAR), pid_str_), 0);
-    }
-
+    // Configure sandbox before starting atos process.
     return SymbolizerProcess::StartSymbolizerSubprocess();
   }
 
@@ -137,13 +94,10 @@ class AtosSymbolizerProcess final : public SymbolizerProcess {
       argv[i++] = "-d";
     }
     argv[i++] = nullptr;
+    CHECK_LE(i, kArgVMax);
   }
 
   char pid_str_[16];
-  // Space for `\0` in `K_ATOS_ENV_VAR` is reused for `=`.
-  static_assert(sizeof(kAtosMachPortEnvEntry) ==
-                    (sizeof(K_ATOS_ENV_VAR) + sizeof(pid_str_)),
-                "sizes should match");
 };
 
 #undef K_ATOS_ENV_VAR
@@ -212,7 +166,7 @@ bool AtosSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   uptr start_address = AddressInfo::kUnknown;
   if (!ParseCommandOutput(buf, addr, &stack->info.function, &stack->info.module,
                           &stack->info.file, &line, &start_address)) {
-    process_ = nullptr;
+    Report("WARNING: atos failed to symbolize address \"0x%zx\"\n", addr);
     return false;
   }
   stack->info.line = (int)line;
@@ -249,8 +203,6 @@ bool AtosSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   return true;
 }
 
-void AtosSymbolizer::LateInitialize() { process_->LateInitialize(); }
-
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

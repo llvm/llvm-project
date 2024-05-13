@@ -19,18 +19,32 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
 #include <unordered_map>
 
 namespace llvm {
+class Comdat;
+class Constant;
+class Function;
+class GlobalVariable;
+class Metadata;
+class Module;
+class Value;
 
 /// Pass to remove unused function declarations.
 class GlobalDCEPass : public PassInfoMixin<GlobalDCEPass> {
 public:
+  GlobalDCEPass(bool InLTOPostLink = false) : InLTOPostLink(InLTOPostLink) {}
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+
 private:
+  bool InLTOPostLink = false;
+
   SmallPtrSet<GlobalValue*, 32> AliveGlobals;
 
   /// Global -> Global that uses this global.
@@ -54,7 +68,6 @@ private:
   void UpdateGVDependencies(GlobalValue &GV);
   void MarkLive(GlobalValue &GV,
                 SmallVectorImpl<GlobalValue *> *Updates = nullptr);
-  bool RemoveUnusedGlobalValue(GlobalValue &GV);
 
   // Dead virtual function elimination.
   void AddVirtualFunctionDependencies(Module &M);

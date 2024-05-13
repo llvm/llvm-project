@@ -3,33 +3,33 @@
 
 declare void @free_v()
 
-define void @f(i32* %x, i32 %c32, i32* %y) nounwind {
+define void @f(ptr %x, i32 %c32, ptr %y) nounwind {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rdx, %r14
+; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movl %esi, %ebp
-; CHECK-NEXT:    movl (%rdi), %ebx
-; CHECK-NEXT:    callq free_v
+; CHECK-NEXT:    movl (%rdi), %r14d
+; CHECK-NEXT:    callq free_v@PLT
 ; CHECK-NEXT:    testl %ebp, %ebp
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %left
-; CHECK-NEXT:    movl %ebx, (%r14)
+; CHECK-NEXT:    movl %r14d, (%rbx)
 ; CHECK-NEXT:  .LBB0_2: # %merge
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
  entry:
-  %v = load i32, i32* %x, !invariant.load !0
+  %v = load i32, ptr %x, !invariant.load !0
   call void @free_v()
   %c = icmp ne i32 %c32, 0
   br i1 %c, label %left, label %merge
 
  left:
-  store i32 %v, i32* %y
+  store i32 %v, ptr %y
   br label %merge
 
  merge:

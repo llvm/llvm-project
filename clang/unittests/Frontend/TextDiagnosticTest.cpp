@@ -54,7 +54,7 @@ TEST(TextDiagnostic, ShowLine) {
   llvm::SmallVector<char, 64> buffer;
   buffer.append(main_file_contents.begin(), main_file_contents.end());
   auto file_contents = std::make_unique<llvm::SmallVectorMemoryBuffer>(
-      std::move(buffer), file_path);
+      std::move(buffer), file_path, /*RequiresNullTerminator=*/false);
   SrcMgr.overrideFileContents(fe, std::move(file_contents));
 
   // Create the actual file id and use it as the main file.

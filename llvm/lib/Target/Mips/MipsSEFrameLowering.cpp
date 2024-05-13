@@ -97,7 +97,7 @@ private:
 
 ExpandPseudo::ExpandPseudo(MachineFunction &MF_)
     : MF(MF_), MRI(MF.getRegInfo()),
-      Subtarget(static_cast<const MipsSubtarget &>(MF.getSubtarget())),
+      Subtarget(MF.getSubtarget<MipsSubtarget>()),
       TII(*static_cast<const MipsSEInstrInfo *>(Subtarget.getInstrInfo())),
       RegInfo(*Subtarget.getRegisterInfo()) {}
 
@@ -452,10 +452,9 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Iterate over list of callee-saved registers and emit .cfi_offset
     // directives.
-    for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
-           E = CSI.end(); I != E; ++I) {
-      int64_t Offset = MFI.getObjectOffset(I->getFrameIdx());
-      unsigned Reg = I->getReg();
+    for (const CalleeSavedInfo &I : CSI) {
+      int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
+      Register Reg = I.getReg();
 
       // If Reg is a double precision register, emit two cfa_offsets,
       // one for each of the paired single precision registers.
@@ -509,7 +508,8 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       if (!MBB.isLiveIn(ABI.GetEhDataReg(I)))
         MBB.addLiveIn(ABI.GetEhDataReg(I));
       TII.storeRegToStackSlot(MBB, MBBI, ABI.GetEhDataReg(I), false,
-                              MipsFI->getEhDataRegFI(I), RC, &RegInfo);
+                              MipsFI->getEhDataRegFI(I), RC, &RegInfo,
+                              Register());
     }
 
     // Emit .cfi_offset directives for eh data registers.
@@ -727,7 +727,8 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
     // Insert instructions that restore eh data registers.
     for (int J = 0; J < 4; ++J) {
       TII.loadRegFromStackSlot(MBB, I, ABI.GetEhDataReg(J),
-                               MipsFI->getEhDataRegFI(J), RC, &RegInfo);
+                               MipsFI->getEhDataRegFI(J), RC, &RegInfo,
+                               Register());
     }
   }
 
@@ -760,7 +761,7 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
   // Restore EPC
   STI.getInstrInfo()->loadRegFromStackSlot(MBB, MBBI, Mips::K1,
                                            MipsFI->getISRRegFI(0), PtrRC,
-                                           STI.getRegisterInfo());
+                                           STI.getRegisterInfo(), Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP014)
       .addReg(Mips::K1)
       .addImm(0);
@@ -768,7 +769,7 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
   // Restore Status
   STI.getInstrInfo()->loadRegFromStackSlot(MBB, MBBI, Mips::K1,
                                            MipsFI->getISRRegFI(1), PtrRC,
-                                           STI.getRegisterInfo());
+                                           STI.getRegisterInfo(), Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP012)
       .addReg(Mips::K1)
       .addImm(0);
@@ -796,13 +797,13 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
   MachineFunction *MF = MBB.getParent();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
 
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
+  for (const CalleeSavedInfo &I : CSI) {
     // Add the callee-saved register as live-in. Do not add if the register is
     // RA and return address is taken, because it has already been added in
     // method MipsTargetLowering::lowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
-    unsigned Reg = CSI[i].getReg();
+    Register Reg = I.getReg();
     bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA || Reg == Mips::RA_64)
         && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)
@@ -831,8 +832,8 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
     // Insert the spill to the stack frame.
     bool IsKill = !IsRAAndRetAddrIsTaken;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill,
-                            CSI[i].getFrameIdx(), RC, TRI);
+    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, I.getFrameIdx(), RC, TRI,
+                            Register());
   }
 
   return true;

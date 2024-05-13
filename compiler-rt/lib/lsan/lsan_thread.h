@@ -14,6 +14,7 @@
 #ifndef LSAN_THREAD_H
 #define LSAN_THREAD_H
 
+#include "sanitizer_common/sanitizer_thread_arg_retval.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
 
 namespace __lsan {
@@ -21,6 +22,7 @@ namespace __lsan {
 class ThreadContextLsanBase : public ThreadContextBase {
  public:
   explicit ThreadContextLsanBase(int tid);
+  void OnStarted(void *arg) override;
   void OnFinished() override;
   uptr stack_begin() { return stack_begin_; }
   uptr stack_end() { return stack_end_; }
@@ -42,18 +44,21 @@ class ThreadContextLsanBase : public ThreadContextBase {
 // This subclass of ThreadContextLsanBase is declared in an OS-specific header.
 class ThreadContext;
 
-void InitializeThreadRegistry();
+void InitializeThreads();
 void InitializeMainThread();
 
-u32 ThreadCreate(u32 tid, uptr uid, bool detached, void *arg = nullptr);
-void ThreadFinish();
-void ThreadDetach(u32 tid);
-void ThreadJoin(u32 tid);
-u32 ThreadTid(uptr uid);
+ThreadRegistry *GetLsanThreadRegistryLocked();
+ThreadArgRetval &GetThreadArgRetval();
 
-u32 GetCurrentThread();
-void SetCurrentThread(u32 tid);
-ThreadContext *CurrentThreadContext();
+u32 ThreadCreate(u32 tid, bool detached, void *arg = nullptr);
+void ThreadFinish();
+
+ThreadContextLsanBase *GetCurrentThread();
+inline u32 GetCurrentThreadId() {
+  ThreadContextLsanBase *ctx = GetCurrentThread();
+  return ctx ? ctx->tid : kInvalidTid;
+}
+void SetCurrentThread(ThreadContextLsanBase *tctx);
 void EnsureMainThreadIDIsCorrect();
 
 }  // namespace __lsan

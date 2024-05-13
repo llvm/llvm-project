@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "ret i1 false"
+; RUN: opt < %s -passes=instcombine -S | grep "ret i1 false"
 ; PR2697
 
 define i1 @x(i32 %x) nounwind {

@@ -41,7 +41,7 @@ public:
   constexpr const static llvm::StringLiteral kAttrKeyword = "dl_entry";
 
   /// Returns the entry with the given key and value.
-  static DataLayoutEntryAttr get(Identifier key, Attribute value);
+  static DataLayoutEntryAttr get(StringAttr key, Attribute value);
   static DataLayoutEntryAttr get(Type key, Attribute value);
 
   /// Returns the key of this entry.
@@ -51,10 +51,12 @@ public:
   Attribute getValue() const;
 
   /// Parses an instance of this attribute.
-  static DataLayoutEntryAttr parse(DialectAsmParser &parser);
+  static DataLayoutEntryAttr parse(AsmParser &parser);
 
   /// Prints this attribute.
-  void print(DialectAsmPrinter &os) const;
+  void print(AsmPrinter &os) const;
+
+  static constexpr StringLiteral name = "builtin.data_layout_entry";
 };
 
 //===----------------------------------------------------------------------===//
@@ -98,11 +100,28 @@ public:
   /// Returns the list of entries.
   DataLayoutEntryListRef getEntries() const;
 
+  /// Returns the endiannes identifier.
+  StringAttr getEndiannessIdentifier(MLIRContext *context) const;
+
+  /// Returns the alloca memory space identifier.
+  StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;
+
+  /// Returns the program memory space identifier.
+  StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const;
+
+  /// Returns the global memory space identifier.
+  StringAttr getGlobalMemorySpaceIdentifier(MLIRContext *context) const;
+
+  /// Returns the stack alignment identifier.
+  StringAttr getStackAlignmentIdentifier(MLIRContext *context) const;
+
   /// Parses an instance of this attribute.
-  static DataLayoutSpecAttr parse(DialectAsmParser &parser);
+  static DataLayoutSpecAttr parse(AsmParser &parser);
 
   /// Prints this attribute.
-  void print(DialectAsmPrinter &os) const;
+  void print(AsmPrinter &os) const;
+
+  static constexpr StringLiteral name = "builtin.data_layout_spec";
 };
 
 } // namespace mlir

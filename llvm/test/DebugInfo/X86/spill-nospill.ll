@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck %s
-; RUN: llc < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck %s
+; RUN: llc < %s -filetype=obj -experimental-debug-variable-locations=true | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 ; This test creates two UserValues in LiveDebugVariables with one location
 ; each. x must be spilled, but y will be allocated to a CSR. x's location
@@ -24,7 +24,7 @@
 ; CHECK-LABEL: f: # @f
 ; CHECK: callq   g
 ; CHECK: movl    %eax, [[X_OFFS:[0-9]+]](%rsp)          # 4-byte Spill
-; CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[X_OFFS]]] [$rsp+0]
+; CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[X_OFFS]], DW_OP_deref] $rsp
 ; CHECK: #APP
 ; CHECK: #NO_APP
 ; CHECK: callq   g
@@ -37,13 +37,12 @@
 ; CHECK: movl    %[[CSR]], %ecx
 ; CHECK: callq   g
 ; CHECK: movl    [[X_OFFS]](%rsp), %eax          # 4-byte Reload
-; CHECK: #DEBUG_VALUE: f:x <- $eax
+;; Variable value remains on stack, location left pointing there.
 ; CHECK: addl    %[[CSR]], %eax
 
 ; DWARF:      DW_TAG_variable
 ; DWARF-NEXT:   DW_AT_location        (
-; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg7 RSP+36
-; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_reg0 RAX)
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg7 RSP+36)
 ; DWARF-NEXT:   DW_AT_name    ("x")
 
 ; DWARF:      DW_TAG_variable

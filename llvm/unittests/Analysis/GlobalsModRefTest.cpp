@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -52,7 +52,7 @@ TEST(GlobalsModRef, OptNone) {
 
   auto AAR = GlobalsAAResult::analyzeModule(*M, GetTLI, CG);
 
-  EXPECT_EQ(FMRB_UnknownModRefBehavior, AAR.getModRefBehavior(&F1));
-  EXPECT_EQ(FMRB_DoesNotAccessMemory, AAR.getModRefBehavior(&F2));
-  EXPECT_EQ(FMRB_OnlyReadsMemory, AAR.getModRefBehavior(&F3));
+  EXPECT_EQ(MemoryEffects::unknown(), AAR.getMemoryEffects(&F1));
+  EXPECT_EQ(MemoryEffects::none(), AAR.getMemoryEffects(&F2));
+  EXPECT_EQ(MemoryEffects::readOnly(), AAR.getMemoryEffects(&F3));
 }

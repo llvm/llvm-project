@@ -10,10 +10,8 @@
 
 // move_iterator
 
-// template <RandomAccessIterator Iter1, RandomAccessIterator Iter2>
-//   requires HasLess<Iter1, Iter2>
-//   bool
-//   operator<(const move_iterator<Iter1>& x, const move_iterator<Iter2>& y);
+// template <class Iter1, class Iter2>
+//   bool operator<(const move_iterator<Iter1>& x, const move_iterator<Iter2>& y);
 //
 //  constexpr in C++17
 
@@ -23,36 +21,51 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
+// move_iterator's operator< calls the underlying iterator's operator<
+struct CustomIt {
+  using value_type = int;
+  using difference_type = int;
+  using reference = int&;
+  using pointer = int*;
+  using iterator_category = std::input_iterator_tag;
+  CustomIt() = default;
+  TEST_CONSTEXPR_CXX17 explicit CustomIt(int* p) : p_(p) {}
+  int& operator*() const;
+  CustomIt& operator++();
+  CustomIt operator++(int);
+  TEST_CONSTEXPR_CXX17 friend bool operator<(const CustomIt& a, const CustomIt& b) { return a.p_ < b.p_; }
+  int *p_ = nullptr;
+};
+
 template <class It>
-void
-test(It l, It r, bool x)
+TEST_CONSTEXPR_CXX17 void test_one()
 {
-    const std::move_iterator<It> r1(l);
-    const std::move_iterator<It> r2(r);
-    assert((r1 < r2) == x);
+  int a[] = {3, 1, 4};
+  const std::move_iterator<It> r1 = std::move_iterator<It>(It(a));
+  const std::move_iterator<It> r2 = std::move_iterator<It>(It(a + 2));
+  ASSERT_SAME_TYPE(decltype(r1 < r2), bool);
+  assert(!(r1 < r1));
+  assert( (r1 < r2));
+  assert(!(r2 < r1));
+}
+
+TEST_CONSTEXPR_CXX17 bool test()
+{
+  test_one<CustomIt>();
+  test_one<int*>();
+  test_one<const int*>();
+  test_one<random_access_iterator<int*> >();
+#if TEST_STD_VER > 17
+  test_one<contiguous_iterator<int*>>();
+#endif
+  return true;
 }
 
 int main(int, char**)
 {
-    char s[] = "1234567890";
-    test(random_access_iterator<char*>(s), random_access_iterator<char*>(s), false);
-    test(random_access_iterator<char*>(s), random_access_iterator<char*>(s+1), true);
-    test(random_access_iterator<char*>(s+1), random_access_iterator<char*>(s), false);
-    test(s, s, false);
-    test(s, s+1, true);
-    test(s+1, s, false);
-
+  assert(test());
 #if TEST_STD_VER > 14
-    {
-    constexpr const char *p = "123456789";
-    typedef std::move_iterator<const char *> MI;
-    constexpr MI it1 = std::make_move_iterator(p);
-    constexpr MI it2 = std::make_move_iterator(p + 5);
-    constexpr MI it3 = std::make_move_iterator(p);
-    static_assert( (it1 < it2), "");
-    static_assert(!(it1 < it3), "");
-    static_assert(!(it2 < it3), "");
-    }
+  static_assert(test());
 #endif
 
   return 0;

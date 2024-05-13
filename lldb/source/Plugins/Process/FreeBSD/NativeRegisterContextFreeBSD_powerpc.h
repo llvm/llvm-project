@@ -20,6 +20,7 @@
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 
 #include <array>
+#include <optional>
 
 namespace lldb_private {
 namespace process_freebsd {
@@ -44,7 +45,7 @@ public:
   Status WriteRegister(const RegisterInfo *reg_info,
                        const RegisterValue &reg_value) override;
 
-  Status ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
+  Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
@@ -58,7 +59,7 @@ private:
   };
   std::array<uint8_t, sizeof(reg) + sizeof(fpreg)> m_reg_data;
 
-  llvm::Optional<RegSetKind> GetSetForNativeRegNum(uint32_t reg_num) const;
+  std::optional<RegSetKind> GetSetForNativeRegNum(uint32_t reg_num) const;
 
   Status ReadRegisterSet(RegSetKind set);
   Status WriteRegisterSet(RegSetKind set);

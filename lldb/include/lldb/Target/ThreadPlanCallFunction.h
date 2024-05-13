@@ -68,10 +68,10 @@ public:
   // been cleaned up.
   lldb::addr_t GetFunctionStackPointer() { return m_function_sp; }
 
-  // Classes that derive from FunctionCaller, and implement their own WillPop
+  // Classes that derive from FunctionCaller, and implement their own DidPop
   // methods should call this so that the thread state gets restored if the
   // plan gets discarded.
-  void WillPop() override;
+  void DidPop() override;
 
   // If the thread plan stops mid-course, this will be the stop reason that
   // interrupted us. Once DoTakedown is called, this will be the real stop

@@ -10,7 +10,12 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// Libc++ when built for z/OS doesn't contain the aligned allocation functions,
+// nor does the dynamic library shipped with z/OS.
+// XFAIL: target={{.+}}-zos{{.*}}
+
 #include <new>
+#include <type_traits>
 
 #include "test_macros.h"
 

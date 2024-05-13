@@ -1,62 +1,73 @@
+source_set("llvm-min-tblgen-sources") {
+  sources = [
+    "ARMTargetDefEmitter.cpp",
+    "Attributes.cpp",
+    "DirectiveEmitter.cpp",
+    "IntrinsicEmitter.cpp",
+    "RISCVTargetDefEmitter.cpp",
+    "TableGen.cpp",
+    "VTEmitter.cpp",
+  ]
+  deps = [
+    "Basic",
+    "//llvm/lib/Support",
+  ]
+}
+
+executable("llvm-min-tblgen") {
+  deps = [
+    ":llvm-min-tblgen-sources",
+    "Basic",
+  ]
+}
+
 executable("llvm-tblgen") {
   deps = [
+    ":llvm-min-tblgen-sources",
+    "Basic",
+    "Common",
     "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/CodeGenTypes",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
-    "//llvm/utils/TableGen/GlobalISel",
   ]
+  include_dirs = [ "." ]
   sources = [
     "AsmMatcherEmitter.cpp",
     "AsmWriterEmitter.cpp",
-    "AsmWriterInst.cpp",
-    "Attributes.cpp",
     "CTagsEmitter.cpp",
     "CallingConvEmitter.cpp",
-    "CodeBeadsGen.cpp",
     "CodeEmitterGen.cpp",
-    "CodeGenDAGPatterns.cpp",
-    "CodeGenHwModes.cpp",
-    "CodeGenInstruction.cpp",
     "CodeGenMapTable.cpp",
-    "CodeGenRegisters.cpp",
-    "CodeGenSchedule.cpp",
-    "CodeGenTarget.cpp",
+    "CompressInstEmitter.cpp",
     "DAGISelEmitter.cpp",
-    "DAGISelMatcher.cpp",
     "DAGISelMatcherEmitter.cpp",
     "DAGISelMatcherGen.cpp",
     "DAGISelMatcherOpt.cpp",
     "DFAEmitter.cpp",
     "DFAPacketizerEmitter.cpp",
-    "DirectiveEmitter.cpp",
+    "DXILEmitter.cpp",
+    "DecoderEmitter.cpp",
     "DisassemblerEmitter.cpp",
     "ExegesisEmitter.cpp",
     "FastISelEmitter.cpp",
-    "FixedLenDecoderEmitter.cpp",
-    "GICombinerEmitter.cpp",
+    "GlobalISelCombinerEmitter.cpp",
     "GlobalISelEmitter.cpp",
-    "InfoByHwMode.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",
-    "IntrinsicEmitter.cpp",
-    "OptEmitter.cpp",
+    "MacroFusionPredicatorEmitter.cpp",
     "OptParserEmitter.cpp",
     "OptRSTEmitter.cpp",
-    "PredicateExpander.cpp",
     "PseudoLoweringEmitter.cpp",
-    "RISCVCompressInstEmitter.cpp",
     "RegisterBankEmitter.cpp",
     "RegisterInfoEmitter.cpp",
-    "SDNodeProperties.cpp",
     "SearchableTableEmitter.cpp",
     "SubtargetEmitter.cpp",
-    "SubtargetFeatureInfo.cpp",
-    "TableGen.cpp",
-    "Types.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",
+    "X86CompressEVEXTablesEmitter.cpp",
     "X86DisassemblerTables.cpp",
-    "X86EVEX2VEXTablesEmitter.cpp",
     "X86FoldTablesEmitter.cpp",
+    "X86MnemonicTables.cpp",
     "X86ModRMFilters.cpp",
     "X86RecognizableInstr.cpp",
   ]

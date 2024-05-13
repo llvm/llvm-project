@@ -5,13 +5,21 @@
 ; RUN: llvm-dis %t.lto.o.0.2.internalize.bc >/dev/null 2>%t.dis.stderr || true
 ; RUN: FileCheck -allow-empty %s < %t.dis.stderr
 
+;; Re-run with "new" debug-info mode to ensure the variable location information
+;; is handled gracefully.
+; RUN: llvm-lto2 run -save-temps -o %t.lto.o %t.o \
+; RUN:   -r=%t.o,foo,plx \
+; RUN:   -r=%t.o,get,pl --try-experimental-debuginfo-iterators
+; RUN: llvm-dis %t.lto.o.0.2.internalize.bc >/dev/null 2>%t.dis.stderr || true
+; RUN: FileCheck -allow-empty %s < %t.dis.stderr
+
 ; CHECK-NOT: Global is external, but doesn't have external or weak linkage
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @foo() {
-  call void @llvm.dbg.value(metadata i32 ()* @get, metadata !7, metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.value(metadata ptr @get, metadata !7, metadata !DIExpression()), !dbg !DILocation(scope: !6)
   ret i32 0
 }
 

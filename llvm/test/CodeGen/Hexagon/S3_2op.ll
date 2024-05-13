@@ -1,12 +1,12 @@
-; RUN: llc -march=hexagon -filetype=obj < %s -o - | llvm-objdump -d - | FileCheck %s
+; RUN: llc -mtriple=hexagon -filetype=obj < %s -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; CHECK-LABEL: <f0>:
 ; CHECK: r{{[1-9]}}:{{[0-9]}} = abs(r{{[1-9]}}:{{[0-9]}})
 define double @f0(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.A2.absp(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -20,8 +20,8 @@ declare i64 @llvm.hexagon.A2.absp(i64) #1
 define double @f1(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.A2.negp(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -35,8 +35,8 @@ declare i64 @llvm.hexagon.A2.negp(i64) #1
 define double @f2(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.A2.notp(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -50,8 +50,8 @@ declare i64 @llvm.hexagon.A2.notp(i64) #1
 define double @f3(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.interleave(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -65,8 +65,8 @@ declare i64 @llvm.hexagon.S2.interleave(i64) #1
 define double @f4(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.deinterleave(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -80,8 +80,8 @@ declare i64 @llvm.hexagon.S2.deinterleave(i64) #1
 define double @f5(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.A2.vconj(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -95,8 +95,8 @@ declare i64 @llvm.hexagon.A2.vconj(i64) #1
 define double @f6(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.vsathb.nopack(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -110,8 +110,8 @@ declare i64 @llvm.hexagon.S2.vsathb.nopack(i64) #1
 define double @f7(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.vsathub.nopack(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -125,8 +125,8 @@ declare i64 @llvm.hexagon.S2.vsathub.nopack(i64) #1
 define double @f8(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.vsatwh.nopack(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -140,8 +140,8 @@ declare i64 @llvm.hexagon.S2.vsatwh.nopack(i64) #1
 define double @f9(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.vsatwuh.nopack(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -155,8 +155,8 @@ declare i64 @llvm.hexagon.S2.vsatwuh.nopack(i64) #1
 define double @f10(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.asr.i.p(i64 %v2, i32 1)
   %v4 = sitofp i64 %v3 to double
@@ -170,8 +170,8 @@ declare i64 @llvm.hexagon.S2.asr.i.p(i64, i32) #1
 define double @f11(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.lsr.i.p(i64 %v2, i32 1)
   %v4 = sitofp i64 %v3 to double
@@ -185,8 +185,8 @@ declare i64 @llvm.hexagon.S2.lsr.i.p(i64, i32) #1
 define double @f12(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.asl.i.p(i64 %v2, i32 1)
   %v4 = sitofp i64 %v3 to double
@@ -200,8 +200,8 @@ declare i64 @llvm.hexagon.S2.asl.i.p(i64, i32) #1
 define double @f13(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.A2.vabsh(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -215,8 +215,8 @@ declare i64 @llvm.hexagon.A2.vabsh(i64) #1
 define double @f14(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.A2.vabshsat(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -230,8 +230,8 @@ declare i64 @llvm.hexagon.A2.vabshsat(i64) #1
 define double @f15(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.asr.i.vh(i64 %v2, i32 1)
   %v4 = sitofp i64 %v3 to double
@@ -245,8 +245,8 @@ declare i64 @llvm.hexagon.S2.asr.i.vh(i64, i32) #1
 define double @f16(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.lsr.i.vh(i64 %v2, i32 1)
   %v4 = sitofp i64 %v3 to double
@@ -260,8 +260,8 @@ declare i64 @llvm.hexagon.S2.lsr.i.vh(i64, i32) #1
 define double @f17(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.asl.i.vh(i64 %v2, i32 1)
   %v4 = sitofp i64 %v3 to double
@@ -275,8 +275,8 @@ declare i64 @llvm.hexagon.S2.asl.i.vh(i64, i32) #1
 define double @f18(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.A2.vabsw(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -290,8 +290,8 @@ declare i64 @llvm.hexagon.A2.vabsw(i64) #1
 define double @f19(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.A2.vabswsat(i64 %v2)
   %v4 = sitofp i64 %v3 to double
@@ -305,8 +305,8 @@ declare i64 @llvm.hexagon.A2.vabswsat(i64) #1
 define double @f20(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.asr.i.vw(i64 %v2, i32 1)
   %v4 = sitofp i64 %v3 to double
@@ -320,8 +320,8 @@ declare i64 @llvm.hexagon.S2.asr.i.vw(i64, i32) #1
 define double @f21(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.lsr.i.vw(i64 %v2, i32 1)
   %v4 = sitofp i64 %v3 to double
@@ -335,8 +335,8 @@ declare i64 @llvm.hexagon.S2.lsr.i.vw(i64, i32) #1
 define double @f22(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.asl.i.vw(i64 %v2, i32 1)
   %v4 = sitofp i64 %v3 to double
@@ -350,8 +350,8 @@ declare i64 @llvm.hexagon.S2.asl.i.vw(i64, i32) #1
 define double @f23(double %a0) #0 {
 b0:
   %v0 = alloca double, align 8
-  store double %a0, double* %v0, align 8
-  %v1 = load double, double* %v0, align 8
+  store double %a0, ptr %v0, align 8
+  %v1 = load double, ptr %v0, align 8
   %v2 = fptosi double %v1 to i64
   %v3 = call i64 @llvm.hexagon.S2.brevp(i64 %v2)
   %v4 = sitofp i64 %v3 to double

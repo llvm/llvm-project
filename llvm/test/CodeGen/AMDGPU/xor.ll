@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
 
 ; FUNC-LABEL: {{^}}xor_v2i32:
@@ -10,11 +10,11 @@
 ; SI: v_xor_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ; SI: v_xor_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 
-define amdgpu_kernel void @xor_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in0, <2 x i32> addrspace(1)* %in1) {
-  %a = load <2 x i32>, <2 x i32> addrspace(1) * %in0
-  %b = load <2 x i32>, <2 x i32> addrspace(1) * %in1
+define amdgpu_kernel void @xor_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
+  %a = load <2 x i32>, ptr addrspace(1) %in0
+  %b = load <2 x i32>, ptr addrspace(1) %in1
   %result = xor <2 x i32> %a, %b
-  store <2 x i32> %result, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -29,11 +29,11 @@ define amdgpu_kernel void @xor_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> add
 ; SI: v_xor_b32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 ; SI: v_xor_b32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
-define amdgpu_kernel void @xor_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in0, <4 x i32> addrspace(1)* %in1) {
-  %a = load <4 x i32>, <4 x i32> addrspace(1) * %in0
-  %b = load <4 x i32>, <4 x i32> addrspace(1) * %in1
+define amdgpu_kernel void @xor_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
+  %a = load <4 x i32>, ptr addrspace(1) %in0
+  %b = load <4 x i32>, ptr addrspace(1) %in1
   %result = xor <4 x i32> %a, %b
-  store <4 x i32> %result, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -46,14 +46,14 @@ define amdgpu_kernel void @xor_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> add
 ; SI: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
-define amdgpu_kernel void @xor_i1(float addrspace(1)* %out, float addrspace(1)* %in0, float addrspace(1)* %in1) {
-  %a = load float, float addrspace(1) * %in0
-  %b = load float, float addrspace(1) * %in1
+define amdgpu_kernel void @xor_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
+  %a = load float, ptr addrspace(1) %in0
+  %b = load float, ptr addrspace(1) %in1
   %acmp = fcmp oge float %a, 0.000000e+00
   %bcmp = fcmp oge float %b, 1.000000e+00
   %xor = xor i1 %acmp, %bcmp
   %result = select i1 %xor, float %a, float %b
-  store float %result, float addrspace(1)* %out
+  store float %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -63,47 +63,47 @@ define amdgpu_kernel void @xor_i1(float addrspace(1)* %out, float addrspace(1)* 
 ; SI: v_xor_b32_e32 [[XOR:v[0-9]+]], [[B]], [[A]]
 ; SI: v_and_b32_e32 [[RESULT:v[0-9]+]], 1, [[XOR]]
 ; SI: buffer_store_byte [[RESULT]]
-define amdgpu_kernel void @v_xor_i1(i1 addrspace(1)* %out, i1 addrspace(1)* %in0, i1 addrspace(1)* %in1) {
-  %a = load volatile i1, i1 addrspace(1)* %in0
-  %b = load volatile i1, i1 addrspace(1)* %in1
+define amdgpu_kernel void @v_xor_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
+  %a = load volatile i1, ptr addrspace(1) %in0
+  %b = load volatile i1, ptr addrspace(1) %in1
   %xor = xor i1 %a, %b
-  store i1 %xor, i1 addrspace(1)* %out
+  store i1 %xor, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}vector_xor_i32:
 ; SI: v_xor_b32_e32
-define amdgpu_kernel void @vector_xor_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) {
-  %a = load i32, i32 addrspace(1)* %in0
-  %b = load i32, i32 addrspace(1)* %in1
+define amdgpu_kernel void @vector_xor_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
+  %a = load i32, ptr addrspace(1) %in0
+  %b = load i32, ptr addrspace(1) %in1
   %result = xor i32 %a, %b
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}scalar_xor_i32:
 ; SI: s_xor_b32
-define amdgpu_kernel void @scalar_xor_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
+define amdgpu_kernel void @scalar_xor_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
   %result = xor i32 %a, %b
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}scalar_not_i32:
 ; SI: s_not_b32
-define amdgpu_kernel void @scalar_not_i32(i32 addrspace(1)* %out, i32 %a) {
+define amdgpu_kernel void @scalar_not_i32(ptr addrspace(1) %out, i32 %a) {
   %result = xor i32 %a, -1
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}vector_not_i32:
 ; SI: v_not_b32
-define amdgpu_kernel void @vector_not_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) {
-  %a = load i32, i32 addrspace(1)* %in0
-  %b = load i32, i32 addrspace(1)* %in1
+define amdgpu_kernel void @vector_not_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
+  %a = load i32, ptr addrspace(1) %in0
+  %b = load i32, ptr addrspace(1) %in1
   %result = xor i32 %a, -1
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -111,39 +111,39 @@ define amdgpu_kernel void @vector_not_i32(i32 addrspace(1)* %out, i32 addrspace(
 ; SI: v_xor_b32_e32
 ; SI: v_xor_b32_e32
 ; SI: s_endpgm
-define amdgpu_kernel void @vector_xor_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in0, i64 addrspace(1)* %in1) {
-  %a = load i64, i64 addrspace(1)* %in0
-  %b = load i64, i64 addrspace(1)* %in1
+define amdgpu_kernel void @vector_xor_i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
+  %a = load i64, ptr addrspace(1) %in0
+  %b = load i64, ptr addrspace(1) %in1
   %result = xor i64 %a, %b
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}scalar_xor_i64:
 ; SI: s_xor_b64
 ; SI: s_endpgm
-define amdgpu_kernel void @scalar_xor_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @scalar_xor_i64(ptr addrspace(1) %out, i64 %a, i64 %b) {
   %result = xor i64 %a, %b
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}scalar_not_i64:
 ; SI: s_not_b64
-define amdgpu_kernel void @scalar_not_i64(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @scalar_not_i64(ptr addrspace(1) %out, i64 %a) {
   %result = xor i64 %a, -1
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}vector_not_i64:
 ; SI: v_not_b32
 ; SI: v_not_b32
-define amdgpu_kernel void @vector_not_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in0, i64 addrspace(1)* %in1) {
-  %a = load i64, i64 addrspace(1)* %in0
-  %b = load i64, i64 addrspace(1)* %in1
+define amdgpu_kernel void @vector_not_i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
+  %a = load i64, ptr addrspace(1) %in0
+  %b = load i64, ptr addrspace(1) %in1
   %result = xor i64 %a, -1
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -153,7 +153,7 @@ define amdgpu_kernel void @vector_not_i64(i64 addrspace(1)* %out, i64 addrspace(
 
 ; FUNC-LABEL: {{^}}xor_cf:
 ; SI: s_xor_b64
-define amdgpu_kernel void @xor_cf(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %a, i64 %b) {
+define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %a, i64 %b) {
 entry:
   %0 = icmp eq i64 %a, 0
   br i1 %0, label %if, label %else
@@ -163,46 +163,46 @@ if:
   br label %endif
 
 else:
-  %2 = load i64, i64 addrspace(1)* %in
+  %2 = load i64, ptr addrspace(1) %in
   br label %endif
 
 endif:
   %3 = phi i64 [%1, %if], [%2, %else]
-  store i64 %3, i64 addrspace(1)* %out
+  store i64 %3, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}scalar_xor_literal_i64:
-; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
+; SI: s_load_dwordx2 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
 ; SI-DAG: s_xor_b32 s[[RES_HI:[0-9]+]], s{{[0-9]+}}, 0xf237b
 ; SI-DAG: s_xor_b32 s[[RES_LO:[0-9]+]], s{{[0-9]+}}, 0x3039
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[RES_LO]]
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[RES_HI]]
-define amdgpu_kernel void @scalar_xor_literal_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
+define amdgpu_kernel void @scalar_xor_literal_i64(ptr addrspace(1) %out, [8 x i32], i64 %a) {
   %or = xor i64 %a, 4261135838621753
-  store i64 %or, i64 addrspace(1)* %out
+  store i64 %or, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}scalar_xor_literal_multi_use_i64:
-; SI: s_load_dwordx4 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
+; SI: s_load_dwordx4 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0xf237b
 ; SI-DAG: s_movk_i32 s[[K_LO:[0-9]+]], 0x3039
-; SI: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
+; SI: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s[[[K_LO]]:[[K_HI]]]
 
-; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_LO]]
-; SI: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_HI]]
-define amdgpu_kernel void @scalar_xor_literal_multi_use_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a, i64 %b) {
+; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3039
+; SI: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0xf237b
+define amdgpu_kernel void @scalar_xor_literal_multi_use_i64(ptr addrspace(1) %out, [8 x i32], i64 %a, i64 %b) {
   %or = xor i64 %a, 4261135838621753
-  store i64 %or, i64 addrspace(1)* %out
+  store i64 %or, ptr addrspace(1) %out
 
   %foo = add i64 %b, 4261135838621753
-  store volatile i64 %foo, i64 addrspace(1)* undef
+  store volatile i64 %foo, ptr addrspace(1) undef
   ret void
 }
 
 ; FUNC-LABEL: {{^}}scalar_xor_inline_imm_i64:
-; SI: s_load_dwordx2 s{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
+; SI: s_load_dwordx2 s[[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SI-NOT: xor_b32
 ; SI: s_xor_b32 s[[VAL_LO]], s{{[0-9]+}}, 63
 ; SI-NOT: xor_b32
@@ -210,42 +210,42 @@ define amdgpu_kernel void @scalar_xor_literal_multi_use_i64(i64 addrspace(1)* %o
 ; SI-NOT: xor_b32
 ; SI: v_mov_b32_e32 v[[VHI:[0-9]+]], s{{[0-9]+}}
 ; SI-NOT: xor_b32
-; SI: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
-define amdgpu_kernel void @scalar_xor_inline_imm_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
+; SI: buffer_store_dwordx2 v[[[VLO]]:[[VHI]]]
+define amdgpu_kernel void @scalar_xor_inline_imm_i64(ptr addrspace(1) %out, [8 x i32], i64 %a) {
   %or = xor i64 %a, 63
-  store i64 %or, i64 addrspace(1)* %out
+  store i64 %or, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}scalar_xor_neg_inline_imm_i64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SI: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, -8
-define amdgpu_kernel void @scalar_xor_neg_inline_imm_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
+define amdgpu_kernel void @scalar_xor_neg_inline_imm_i64(ptr addrspace(1) %out, [8 x i32], i64 %a) {
   %or = xor i64 %a, -8
-  store i64 %or, i64 addrspace(1)* %out
+  store i64 %or, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}vector_xor_i64_neg_inline_imm:
-; SI: buffer_load_dwordx2 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}},
+; SI: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
 ; SI: v_xor_b32_e32 {{v[0-9]+}}, -8, v[[LO_VREG]]
 ; SI: v_xor_b32_e32 {{v[0-9]+}}, -1, {{.*}}
 ; SI: s_endpgm
-define amdgpu_kernel void @vector_xor_i64_neg_inline_imm(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
-  %loada = load i64, i64 addrspace(1)* %a, align 8
+define amdgpu_kernel void @vector_xor_i64_neg_inline_imm(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) {
+  %loada = load i64, ptr addrspace(1) %a, align 8
   %or = xor i64 %loada, -8
-  store i64 %or, i64 addrspace(1)* %out
+  store i64 %or, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}vector_xor_literal_i64:
-; SI-DAG: buffer_load_dwordx2 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}},
+; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
 ; SI-DAG: v_xor_b32_e32 {{v[0-9]+}}, 0xdf77987f, v[[LO_VREG]]
 ; SI-DAG: v_xor_b32_e32 {{v[0-9]+}}, 0x146f, v[[HI_VREG]]
 ; SI: s_endpgm
-define amdgpu_kernel void @vector_xor_literal_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
-  %loada = load i64, i64 addrspace(1)* %a, align 8
+define amdgpu_kernel void @vector_xor_literal_i64(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) {
+  %loada = load i64, ptr addrspace(1) %a, align 8
   %or = xor i64 %loada, 22470723082367
-  store i64 %or, i64 addrspace(1)* %out
+  store i64 %or, ptr addrspace(1) %out
   ret void
 }

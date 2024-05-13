@@ -13,6 +13,7 @@
 
 #include <list>
 #include <cassert>
+#include <functional>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -23,12 +24,12 @@ bool g(int x, int y)
 }
 
 struct PredLWG526 {
-    PredLWG526 (int i) : i_(i) {};
-    ~PredLWG526() { i_ = -32767; }
-    bool operator() (const PredLWG526 &lhs, const PredLWG526 &rhs) const { return lhs.i_ == rhs.i_; }
+  PredLWG526(int i) : i_(i) {}
+  ~PredLWG526() { i_ = -32767; }
+  bool operator()(const PredLWG526& lhs, const PredLWG526& rhs) const { return lhs.i_ == rhs.i_; }
 
-    bool operator==(int i) const { return i == i_;}
-    int i_;
+  bool operator==(int i) const { return i == i_; }
+  int i_;
 };
 
 int main(int, char**)
@@ -39,10 +40,10 @@ int main(int, char**)
     typedef std::list<int> L;
     L c(a1, a1+sizeof(a1)/sizeof(a1[0]));
 #if TEST_STD_VER > 17
-	ASSERT_SAME_TYPE(L::size_type, decltype(c.unique(g)));
+    ASSERT_SAME_TYPE(L::size_type, decltype(c.unique(g)));
     assert(c.unique(g) == 5);
 #else
-	ASSERT_SAME_TYPE(void,         decltype(c.unique(g)));
+    ASSERT_SAME_TYPE(void,         decltype(c.unique(g)));
     c.unique(g);
 #endif
     assert(c == std::list<int>(a2, a2+4));
@@ -58,7 +59,7 @@ int main(int, char**)
     c.unique(std::ref(c.front()));
 #endif
     assert(c.size() == 6);
-    for (size_t i = 0; i < c.size(); ++i)
+    for (std::size_t i = 0; i < c.size(); ++i)
     {
         assert(c.front() == a2[i]);
         c.pop_front();

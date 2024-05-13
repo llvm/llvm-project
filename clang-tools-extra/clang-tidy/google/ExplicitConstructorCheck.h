@@ -11,16 +11,14 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace google {
+namespace clang::tidy::google {
 
 /// Checks that all single-argument constructors are explicit.
 ///
 /// See https://google.github.io/styleguide/cppguide.html#Explicit_Constructors
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google-explicit-constructor.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/google/explicit-constructor.html
 class ExplicitConstructorCheck : public ClangTidyCheck {
 public:
   ExplicitConstructorCheck(StringRef Name, ClangTidyContext *Context)
@@ -32,8 +30,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_EXPLICITCONSTRUCTORCHECK_H

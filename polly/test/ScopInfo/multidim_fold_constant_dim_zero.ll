@@ -1,11 +1,11 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -debug -S < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -debug -disable-output < %s 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 
 ; This test case at some point crashed Polly due to a 'division by zero'
 ; when trying to fold the constant dimension into outer dimension.
 ; We verify that this scop is detected without crash. We also test the
-; output to undertand that the scop has been analyzed, but has also been
+; output to understand that the scop has been analyzed, but has also been
 ; invalidated due to the zero size dimension.
 
 ; CHECK: Assumed Context:

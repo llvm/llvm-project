@@ -6,20 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
-#define LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_OPERATIONS_H
+#define LLVM_LIBC_SRC___SUPPORT_INTEGER_OPERATIONS_H
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename T>
-static inline cpp::EnableIfType<cpp::IsIntegral<T>::Value, T> integerAbs(T n) {
-  if (n < 0)
-    return -n;
-  return n;
+LIBC_INLINE static constexpr cpp::enable_if_t<cpp::is_integral_v<T>, T>
+integer_abs(T n) {
+  return (n < 0) ? -n : n;
 }
 
-} // namespace __llvm_libc
+template <typename T>
+LIBC_INLINE static constexpr cpp::enable_if_t<cpp::is_integral_v<T>, void>
+integer_rem_quo(T x, T y, T &quot, T &rem) {
+  quot = x / y;
+  rem = x % y;
+}
 
-#endif // LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
+} // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_OPERATIONS_H

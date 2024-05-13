@@ -36,6 +36,15 @@ class LangOptions;
 /// Copy characters from Input to Buf, expanding any UCNs.
 void expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input);
 
+/// Return true if the token corresponds to a function local predefined macro,
+/// which expands to a string literal, that can be concatenated with other
+/// string literals (only in Microsoft mode).
+bool isFunctionLocalStringLiteralMacro(tok::TokenKind K, const LangOptions &LO);
+
+/// Return true if the token is a string literal, or a function local
+/// predefined macro, which expands to a string literal.
+bool tokenIsLikeStringLiteral(const Token &Tok, const LangOptions &LO);
+
 /// NumericLiteralParser - This performs strict semantic analysis of the content
 /// of a ppnumber, classifying it as either integer, floating, or erroneous,
 /// determines the radix of the value and can convert it to a useful value.
@@ -63,16 +72,18 @@ public:
   bool isUnsigned : 1;
   bool isLong : 1;          // This is *not* set for long long.
   bool isLongLong : 1;
-  bool isSizeT : 1;         // 1z, 1uz (C++2b)
+  bool isSizeT : 1;         // 1z, 1uz (C++23)
   bool isHalf : 1;          // 1.0h
   bool isFloat : 1;         // 1.0f
   bool isImaginary : 1;     // 1.0i
   bool isFloat16 : 1;       // 1.0f16
   bool isFloat128 : 1;      // 1.0q
-  uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
-
   bool isFract : 1;         // 1.0hr/r/lr/uhr/ur/ulr
   bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
+  bool isBitInt : 1;        // 1wb, 1uwb (C23) or 1__wb, 1__uwb (Clang extension in C++
+                            // mode)
+  uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
+
 
   bool isFixedPointLiteral() const {
     return (saw_period || saw_exponent) && saw_fixed_point_suffix;
@@ -119,6 +130,13 @@ public:
   /// occurred when calculating the integral part of the scaled integer or
   /// calculating the digit sequence of the exponent.
   bool GetFixedPointValue(llvm::APInt &StoreVal, unsigned Scale);
+
+  /// Get the digits that comprise the literal. This excludes any prefix or
+  /// suffix associated with the literal.
+  StringRef getLiteralDigits() const {
+    assert(!hadError && "cannot reliably get the literal digits with an error");
+    return StringRef(DigitsBegin, SuffixBegin - DigitsBegin);
+  }
 
 private:
 
@@ -190,7 +208,7 @@ public:
                     tok::TokenKind kind);
 
   bool hadError() const { return HadError; }
-  bool isAscii() const { return Kind == tok::char_constant; }
+  bool isOrdinary() const { return Kind == tok::char_constant; }
   bool isWide() const { return Kind == tok::wide_char_constant; }
   bool isUTF8() const { return Kind == tok::utf8_char_constant; }
   bool isUTF16() const { return Kind == tok::utf16_char_constant; }
@@ -202,6 +220,11 @@ public:
     assert(!UDSuffixBuf.empty() && "no ud-suffix");
     return UDSuffixOffset;
   }
+};
+
+enum class StringLiteralEvalMethod {
+  Evaluated,
+  Unevaluated,
 };
 
 /// StringLiteralParser - This decodes string escape characters and performs
@@ -222,19 +245,22 @@ class StringLiteralParser {
   SmallString<32> UDSuffixBuf;
   unsigned UDSuffixToken;
   unsigned UDSuffixOffset;
+  StringLiteralEvalMethod EvalMethod;
+
 public:
-  StringLiteralParser(ArrayRef<Token> StringToks,
-                      Preprocessor &PP, bool Complain = true);
-  StringLiteralParser(ArrayRef<Token> StringToks,
-                      const SourceManager &sm, const LangOptions &features,
-                      const TargetInfo &target,
+  StringLiteralParser(ArrayRef<Token> StringToks, Preprocessor &PP,
+                      StringLiteralEvalMethod StringMethod =
+                          StringLiteralEvalMethod::Evaluated);
+  StringLiteralParser(ArrayRef<Token> StringToks, const SourceManager &sm,
+                      const LangOptions &features, const TargetInfo &target,
                       DiagnosticsEngine *diags = nullptr)
-    : SM(sm), Features(features), Target(target), Diags(diags),
-      MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
-      ResultPtr(ResultBuf.data()), hadError(false), Pascal(false) {
+      : SM(sm), Features(features), Target(target), Diags(diags),
+        MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
+        ResultPtr(ResultBuf.data()),
+        EvalMethod(StringLiteralEvalMethod::Evaluated), hadError(false),
+        Pascal(false) {
     init(StringToks);
   }
-
 
   bool hadError;
   bool Pascal;
@@ -255,12 +281,15 @@ public:
   /// checking of the string literal and emit errors and warnings.
   unsigned getOffsetOfStringByte(const Token &TheTok, unsigned ByteNo) const;
 
-  bool isAscii() const { return Kind == tok::string_literal; }
+  bool isOrdinary() const { return Kind == tok::string_literal; }
   bool isWide() const { return Kind == tok::wide_string_literal; }
   bool isUTF8() const { return Kind == tok::utf8_string_literal; }
   bool isUTF16() const { return Kind == tok::utf16_string_literal; }
   bool isUTF32() const { return Kind == tok::utf32_string_literal; }
   bool isPascal() const { return Pascal; }
+  bool isUnevaluated() const {
+    return EvalMethod == StringLiteralEvalMethod::Unevaluated;
+  }
 
   StringRef getUDSuffix() const { return UDSuffixBuf; }
 

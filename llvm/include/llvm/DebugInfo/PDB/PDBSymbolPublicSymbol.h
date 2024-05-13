@@ -14,7 +14,6 @@
 
 namespace llvm {
 
-class raw_ostream;
 namespace pdb {
 
 class PDBSymbolPublicSymbol : public PDBSymbol {
@@ -37,7 +36,7 @@ public:
   FORWARD_SYMBOL_METHOD(getUndecoratedName)
 };
 
+} // namespace pdb
 } // namespace llvm
-}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLPUBLICSYMBOL_H

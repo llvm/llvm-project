@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implements a combinartorial exploration of all the different
+/// Implements a combinatorial exploration of all the different
 /// linebreaks unwrapped lines can be formatted in.
 ///
 //===----------------------------------------------------------------------===//
@@ -16,8 +16,6 @@
 #define LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEFORMATTER_H
 
 #include "ContinuationIndenter.h"
-#include "clang/Format/Format.h"
-#include <map>
 
 namespace clang {
 namespace format {
@@ -47,6 +45,7 @@ private:
   /// of the \c UnwrappedLine if there was no structural parsing error.
   void formatFirstToken(const AnnotatedLine &Line,
                         const AnnotatedLine *PreviousLine,
+                        const AnnotatedLine *PrevPrevLine,
                         const SmallVectorImpl<AnnotatedLine *> &Lines,
                         unsigned Indent, unsigned NewlineIndent);
 

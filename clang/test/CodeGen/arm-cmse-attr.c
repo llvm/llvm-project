@@ -20,18 +20,18 @@ void f2(callback2_t *fptr)
     fptr();
 }
 
-void f3() __attribute__((cmse_nonsecure_entry));
-void f3()
+void f3(void) __attribute__((cmse_nonsecure_entry));
+void f3(void)
 {
 }
 
-void f4() __attribute__((cmse_nonsecure_entry))
+void f4(void) __attribute__((cmse_nonsecure_entry))
 {
 }
 
-// CHECK: define{{.*}} void @f1(void ()* nocapture %fptr) {{[^#]*}}#0 {
+// CHECK: define{{.*}} void @f1(ptr nocapture noundef readonly %fptr) {{[^#]*}}#0 {
 // CHECK: call void %fptr() #2
-// CHECK: define{{.*}} void @f2(void ()* nocapture %fptr) {{[^#]*}}#0 {
+// CHECK: define{{.*}} void @f2(ptr nocapture noundef readonly %fptr) {{[^#]*}}#0 {
 // CHECK: call void %fptr() #2
 // CHECK: define{{.*}} void @f3() {{[^#]*}}#1 {
 // CHECK: define{{.*}} void @f4() {{[^#]*}}#1 {

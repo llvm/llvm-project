@@ -1,4 +1,4 @@
-; RUN: opt -licm -S < %s | FileCheck %s
+; RUN: opt -passes=licm -S < %s | FileCheck %s
 
 define void @f(i1 zeroext %p1) {
 ; CHECK-LABEL: @f(
@@ -9,11 +9,11 @@ lbl.loopexit:                                     ; No predecessors!
   br label %lbl
 
 lbl:                                              ; preds = %lbl.loopexit, %entry
-  %phi = phi i32 [ %conv, %lbl.loopexit ], [ undef, %entry ]
-; CHECK: phi i32 [ undef, {{.*}} ], [ undef
+  %phi = phi i32 [ %conv, %lbl.loopexit ], [ poison, %entry ]
+; CHECK: phi i32 [ poison, {{.*}} ], [ poison
   br label %if.then.5
 
 if.then.5:                                        ; preds = %if.then.5, %lbl
-  %conv = zext i1 undef to i32
+  %conv = zext i1 0 to i32
   br label %if.then.5
 }

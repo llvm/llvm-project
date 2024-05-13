@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_ARCHITECTURESET_H
-#define LLVM_TEXTAPI_MACHO_ARCHITECTURESET_H
+#ifndef LLVM_TEXTAPI_ARCHITECTURESET_H
+#define LLVM_TEXTAPI_ARCHITECTURESET_H
 
 #include "llvm/TextAPI/Architecture.h"
 #include <cstddef>
@@ -40,13 +40,18 @@ public:
   ArchitectureSet(Architecture Arch) : ArchitectureSet() { set(Arch); }
   ArchitectureSet(const std::vector<Architecture> &Archs);
 
+  static ArchitectureSet All() { return ArchitectureSet(EndIndexVal); }
+
   void set(Architecture Arch) {
     if (Arch == AK_unknown)
       return;
     ArchSet |= 1U << static_cast<int>(Arch);
   }
 
-  void clear(Architecture Arch) { ArchSet &= ~(1U << static_cast<int>(Arch)); }
+  ArchitectureSet clear(Architecture Arch) {
+    ArchSet &= ~(1U << static_cast<int>(Arch));
+    return ArchSet;
+  }
 
   bool has(Architecture Arch) const {
     return ArchSet & (1U << static_cast<int>(Arch));
@@ -168,4 +173,4 @@ raw_ostream &operator<<(raw_ostream &OS, ArchitectureSet Set);
 } // end namespace MachO.
 } // end namespace llvm.
 
-#endif // LLVM_TEXTAPI_MACHO_ARCHITECTURESET_H
+#endif // LLVM_TEXTAPI_ARCHITECTURESET_H

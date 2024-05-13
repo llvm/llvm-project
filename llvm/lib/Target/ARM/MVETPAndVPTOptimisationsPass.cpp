@@ -40,6 +40,11 @@ MergeEndDec("arm-enable-merge-loopenddec", cl::Hidden,
     cl::desc("Enable merging Loop End and Dec instructions."),
     cl::init(true));
 
+static cl::opt<bool>
+SetLRPredicate("arm-set-lr-predicate", cl::Hidden,
+    cl::desc("Enable setting lr as a predicate in tail predication regions."),
+    cl::init(true));
+
 namespace {
 class MVETPAndVPTOptimisations : public MachineFunctionPass {
 public:
@@ -361,7 +366,7 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
     while (!Worklist.empty()) {
       Register Reg = Worklist.pop_back_val();
       for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
-        if (count(ExpectedUsers, &MI))
+        if (llvm::is_contained(ExpectedUsers, &MI))
           continue;
         if (MI.getOpcode() != TargetOpcode::COPY ||
             !MI.getOperand(0).getReg().isVirtual()) {
@@ -399,6 +404,17 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
     LoopPhi->getOperand(3).setReg(DecReg);
   }
 
+  SmallVector<MachineOperand, 4> Cond;              // For analyzeBranch.
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For analyzeBranch.
+  if (!TII->analyzeBranch(*LoopEnd->getParent(), TBB, FBB, Cond) && !FBB) {
+    // If the LoopEnd falls through, need to insert a t2B to the fall-through
+    // block so that the non-analyzable t2LoopEndDec doesn't fall through.
+    MachineFunction::iterator MBBI = ++LoopEnd->getParent()->getIterator();
+    BuildMI(LoopEnd->getParent(), DebugLoc(), TII->get(ARM::t2B))
+        .addMBB(&*MBBI)
+        .add(predOps(ARMCC::AL));
+  }
+
   // Replace the loop dec and loop end as a single instruction.
   MachineInstrBuilder MI =
       BuildMI(*LoopEnd->getParent(), *LoopEnd, LoopEnd->getDebugLoc(),
@@ -429,14 +445,19 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
   MachineInstr *LoopEnd, *LoopPhi, *LoopStart, *LoopDec;
   if (!findLoopComponents(ML, MRI, LoopStart, LoopPhi, LoopDec, LoopEnd))
     return false;
-  if (LoopDec != LoopEnd || LoopStart->getOpcode() != ARM::t2DoLoopStart)
+  if (LoopDec != LoopEnd || (LoopStart->getOpcode() != ARM::t2DoLoopStart &&
+                             LoopStart->getOpcode() != ARM::t2WhileLoopStartLR))
     return false;
 
   SmallVector<MachineInstr *, 4> VCTPs;
-  for (MachineBasicBlock *BB : ML->blocks())
+  SmallVector<MachineInstr *, 4> MVEInstrs;
+  for (MachineBasicBlock *BB : ML->blocks()) {
     for (MachineInstr &MI : *BB)
       if (isVCTP(&MI))
         VCTPs.push_back(&MI);
+      else if (findFirstVPTPredOperandIdx(MI) != -1)
+        MVEInstrs.push_back(&MI);
+  }
 
   if (VCTPs.empty()) {
     LLVM_DEBUG(dbgs() << "  no VCTPs\n");
@@ -494,16 +515,30 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
       return false;
     }
 
-  MachineInstrBuilder MI = BuildMI(*MBB, InsertPt, LoopStart->getDebugLoc(),
-                                   TII->get(ARM::t2DoLoopStartTP))
-                               .add(LoopStart->getOperand(0))
-                               .add(LoopStart->getOperand(1))
-                               .addReg(CountReg);
-  (void)MI;
+  unsigned NewOpc = LoopStart->getOpcode() == ARM::t2DoLoopStart
+                        ? ARM::t2DoLoopStartTP
+                        : ARM::t2WhileLoopStartTP;
+  MachineInstrBuilder MI =
+      BuildMI(*MBB, InsertPt, LoopStart->getDebugLoc(), TII->get(NewOpc))
+          .add(LoopStart->getOperand(0))
+          .add(LoopStart->getOperand(1))
+          .addReg(CountReg);
+  if (NewOpc == ARM::t2WhileLoopStartTP)
+    MI.add(LoopStart->getOperand(2));
   LLVM_DEBUG(dbgs() << "Replacing " << *LoopStart << "  with "
                     << *MI.getInstr());
   MRI->constrainRegClass(CountReg, &ARM::rGPRRegClass);
   LoopStart->eraseFromParent();
+
+  if (SetLRPredicate) {
+    // Each instruction in the loop needs to be using LR as the predicate from
+    // the Phi as the predicate.
+    Register LR = LoopPhi->getOperand(0).getReg();
+    for (MachineInstr *MI : MVEInstrs) {
+      int Idx = findFirstVPTPredOperandIdx(*MI);
+      MI->getOperand(Idx + 2).setReg(LR);
+    }
+  }
 
   return true;
 }
@@ -632,17 +667,18 @@ static bool MoveVPNOTBeforeFirstUser(MachineBasicBlock &MBB,
   MachineOperand *VPNOTOperandKiller = nullptr;
   for (; Iter != MBB.end(); ++Iter) {
     if (MachineOperand *MO =
-            Iter->findRegisterUseOperand(VPNOTOperand, /*isKill*/ true)) {
+            Iter->findRegisterUseOperand(VPNOTOperand, /*TRI=*/nullptr,
+                                         /*isKill*/ true)) {
       // If we find the operand that kills the VPNOTOperand's result, save it.
       VPNOTOperandKiller = MO;
     }
 
-    if (Iter->findRegisterUseOperandIdx(Reg) != -1) {
+    if (Iter->findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr) != -1) {
       MustMove = true;
       continue;
     }
 
-    if (Iter->findRegisterUseOperandIdx(VPNOTResult) == -1)
+    if (Iter->findRegisterUseOperandIdx(VPNOTResult, /*TRI=*/nullptr) == -1)
       continue;
 
     HasUser = true;
@@ -696,7 +732,7 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
       // If we already have a VCCRValue, and this is a VPNOT on VCCRValue, we've
       // found what we were looking for.
       if (VCCRValue && Iter->getOpcode() == ARM::MVE_VPNOT &&
-          Iter->findRegisterUseOperandIdx(VCCRValue) != -1) {
+          Iter->findRegisterUseOperandIdx(VCCRValue, /*TRI=*/nullptr) != -1) {
         // Move the VPNOT closer to its first user if needed, and ignore if it
         // has no users.
         if (!MoveVPNOTBeforeFirstUser(MBB, Iter, VCCRValue))
@@ -728,7 +764,8 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
     for (; Iter != End; ++Iter) {
       bool IsInteresting = false;
 
-      if (MachineOperand *MO = Iter->findRegisterUseOperand(VCCRValue)) {
+      if (MachineOperand *MO =
+              Iter->findRegisterUseOperand(VCCRValue, /*TRI=*/nullptr)) {
         IsInteresting = true;
 
         // - If the instruction is a VPNOT, it can be removed, and we can just
@@ -759,8 +796,8 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
       } else {
         // If the instr uses OppositeVCCRValue, make it use LastVPNOTResult
         // instead as they contain the same value.
-        if (MachineOperand *MO =
-                Iter->findRegisterUseOperand(OppositeVCCRValue)) {
+        if (MachineOperand *MO = Iter->findRegisterUseOperand(
+                OppositeVCCRValue, /*TRI=*/nullptr)) {
           IsInteresting = true;
 
           // This is pointless if LastVPNOTResult == OppositeVCCRValue.
@@ -820,8 +857,9 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
 
   for (MachineInstr &Instr : MBB.instrs()) {
     if (PrevVCMP) {
-      if (MachineOperand *MO = Instr.findRegisterUseOperand(
-              PrevVCMP->getOperand(0).getReg(), /*isKill*/ true)) {
+      if (MachineOperand *MO =
+              Instr.findRegisterUseOperand(PrevVCMP->getOperand(0).getReg(),
+                                           /*TRI=*/nullptr, /*isKill*/ true)) {
         // If we come accross the instr that kills PrevVCMP's result, record it
         // so we can remove the kill flag later if we need to.
         PrevVCMPResultKiller = MO;
@@ -878,7 +916,7 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
 }
 
 bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
-                                               MachineDominatorTree *DT) {
+                                                    MachineDominatorTree *DT) {
   // Scan through the block, looking for instructions that use constants moves
   // into VPR that are the negative of one another. These are expected to be
   // COPY's to VCCRRegClass, from a t2MOVi or t2MOVi16. The last seen constant
@@ -923,6 +961,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
 
     unsigned NotImm = ~Imm & 0xffff;
     if (LastVPTReg != 0 && LastVPTReg != VPR && LastVPTImm == Imm) {
+      MRI->clearKillFlags(LastVPTReg);
       Instr.getOperand(PIdx + 1).setReg(LastVPTReg);
       if (MRI->use_empty(VPR)) {
         DeadInstructions.insert(Copy);
@@ -930,6 +969,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
           DeadInstructions.insert(MRI->getVRegDef(GPR));
       }
       LLVM_DEBUG(dbgs() << "Reusing predicate: in  " << Instr);
+      VPR = LastVPTReg;
     } else if (LastVPTReg != 0 && LastVPTImm == NotImm) {
       // We have found the not of a previous constant. Create a VPNot of the
       // earlier predicate reg and use it instead of the copy.
@@ -986,6 +1026,7 @@ bool MVETPAndVPTOptimisations::ConvertVPSEL(MachineBasicBlock &MBB) {
             .add(MI.getOperand(1))
             .addImm(ARMVCC::Then)
             .add(MI.getOperand(4))
+            .add(MI.getOperand(5))
             .add(MI.getOperand(2));
     // Silence unused variable warning in release builds.
     (void)MIBuilder;
@@ -1016,8 +1057,7 @@ bool MVETPAndVPTOptimisations::HintDoLoopStartReg(MachineBasicBlock &MBB) {
 }
 
 bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
-  const ARMSubtarget &STI =
-      static_cast<const ARMSubtarget &>(Fn.getSubtarget());
+  const ARMSubtarget &STI = Fn.getSubtarget<ARMSubtarget>();
 
   if (!STI.isThumb2() || !STI.hasLOB())
     return false;

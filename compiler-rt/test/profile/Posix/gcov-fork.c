@@ -2,7 +2,7 @@
 /// fork/exec* so the lines before fork are counted once while succeeding
 /// lines are counted twice.
 // RUN: mkdir -p %t.d && cd %t.d
-// RUN: %clang --coverage %s -o %t
+// RUN: %clang --coverage %s -o %t -dumpdir ./
 // RUN: test -f gcov-fork.gcno
 
 // RUN: rm -f gcov-fork.gcda && %run %t

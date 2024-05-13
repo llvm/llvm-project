@@ -28,7 +28,7 @@ __aeabi_unwind_cpp_pr0:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <g>:
-// CHECK-NEXT:    200ec:        1e ff 2f e1     bx      lr
+// CHECK-NEXT:    200ec:        e12fff1e        bx      lr
 // CHECK: <__aeabi_unwind_cpp_pr0>:
-// CHECK-NEXT:    200f0:        00 f0 20 e3     nop
-// CHECK-NEXT:    200f4:        1e ff 2f e1     bx      lr
+// CHECK-NEXT:    200f0:        e320f000        nop
+// CHECK-NEXT:    200f4:        e12fff1e        bx      lr

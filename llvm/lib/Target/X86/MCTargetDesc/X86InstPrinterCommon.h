@@ -24,6 +24,7 @@ public:
 
   virtual void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) = 0;
   void printCondCode(const MCInst *MI, unsigned Op, raw_ostream &OS);
+  void printCondFlags(const MCInst *MI, unsigned Op, raw_ostream &OS);
   void printSSEAVXCC(const MCInst *MI, unsigned Op, raw_ostream &OS);
   void printVPCOMMnemonic(const MCInst *MI, raw_ostream &OS);
   void printVPCMPMnemonic(const MCInst *MI, raw_ostream &OS);
@@ -33,11 +34,12 @@ public:
                      raw_ostream &O);
 
 protected:
-  void printInstFlags(const MCInst *MI, raw_ostream &O);
+  void printInstFlags(const MCInst *MI, raw_ostream &O,
+                      const MCSubtargetInfo &STI);
   void printOptionalSegReg(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printVKPair(const MCInst *MI, unsigned OpNo, raw_ostream &OS);
 };
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_X86_MCTARGETDESC_X86ATTINSTPRINTER_H
+#endif // LLVM_LIB_TARGET_X86_MCTARGETDESC_X86INSTPRINTERCOMMON_H

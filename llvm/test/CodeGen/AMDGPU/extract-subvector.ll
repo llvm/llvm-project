@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-- -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: extract_2xi16
 ; GCN: buffer_load_ushort
@@ -20,15 +20,15 @@
 ; GCN: v_bfe_i32
 ; GCN: v_bfe_i32
 
-define <2 x i16> @extract_2xi16(<8 x i16> addrspace(1) * %p0, <8 x i16> addrspace(1) * %p1) {
-  br i1 undef, label %T, label %F
+define <2 x i16> @extract_2xi16(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %c0) {
+  br i1 %c0, label %T, label %F
 
 T:
-  %t = load volatile <8 x i16>, <8 x i16> addrspace(1) * %p0
+  %t = load volatile <8 x i16>, ptr addrspace(1) %p0
   br label %exit
 
 F:
-  %f = load volatile <8 x i16>, <8 x i16> addrspace(1) * %p1
+  %f = load volatile <8 x i16>, ptr addrspace(1) %p1
   br label %exit
 
 exit:
@@ -41,15 +41,15 @@ exit:
 
 ; GCN-LABEL: extract_2xi64
 ; GCN-COUNT-2: v_cndmask_b32
-define <2 x i64> @extract_2xi64(<8 x i64> addrspace(1) * %p0, <8 x i64> addrspace(1) * %p1) {
-  br i1 undef, label %T, label %F
+define <2 x i64> @extract_2xi64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %c0) {
+  br i1 %c0, label %T, label %F
 
 T:
-  %t = load volatile <8 x i64>, <8 x i64> addrspace(1) * %p0
+  %t = load volatile <8 x i64>, ptr addrspace(1) %p0
   br label %exit
 
 F:
-  %f = load volatile <8 x i64>, <8 x i64> addrspace(1) * %p1
+  %f = load volatile <8 x i64>, ptr addrspace(1) %p1
   br label %exit
 
 exit:
@@ -62,15 +62,15 @@ exit:
 
 ; GCN-LABEL: extract_4xi64
 ; GCN-COUNT-4: v_cndmask_b32
-define <4 x i64> @extract_4xi64(<8 x i64> addrspace(1) * %p0, <8 x i64> addrspace(1) * %p1) {
-  br i1 undef, label %T, label %F
+define <4 x i64> @extract_4xi64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %c0) {
+  br i1 %c0, label %T, label %F
 
 T:
-  %t = load volatile <8 x i64>, <8 x i64> addrspace(1) * %p0
+  %t = load volatile <8 x i64>, ptr addrspace(1) %p0
   br label %exit
 
 F:
-  %f = load volatile <8 x i64>, <8 x i64> addrspace(1) * %p1
+  %f = load volatile <8 x i64>, ptr addrspace(1) %p1
   br label %exit
 
 exit:
@@ -83,15 +83,15 @@ exit:
 
 ; GCN-LABEL: extract_8xi64
 ; GCN-COUNT-8: v_cndmask_b32
-define <8 x i64> @extract_8xi64(<16 x i64> addrspace(1) * %p0, <16 x i64> addrspace(1) * %p1) {
-  br i1 undef, label %T, label %F
+define <8 x i64> @extract_8xi64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %c0) {
+  br i1 %c0, label %T, label %F
 
 T:
-  %t = load volatile <16 x i64>, <16 x i64> addrspace(1) * %p0
+  %t = load volatile <16 x i64>, ptr addrspace(1) %p0
   br label %exit
 
 F:
-  %f = load volatile <16 x i64>, <16 x i64> addrspace(1) * %p1
+  %f = load volatile <16 x i64>, ptr addrspace(1) %p1
   br label %exit
 
 exit:
@@ -104,15 +104,15 @@ exit:
 
 ; GCN-LABEL: extract_2xf64
 ; GCN-COUNT-2: v_cndmask_b32
-define <2 x double> @extract_2xf64(<8 x double> addrspace(1) * %p0, <8 x double> addrspace(1) * %p1) {
-  br i1 undef, label %T, label %F
+define <2 x double> @extract_2xf64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %c0) {
+  br i1 %c0, label %T, label %F
 
 T:
-  %t = load volatile <8 x double>, <8 x double> addrspace(1) * %p0
+  %t = load volatile <8 x double>, ptr addrspace(1) %p0
   br label %exit
 
 F:
-  %f = load volatile <8 x double>, <8 x double> addrspace(1) * %p1
+  %f = load volatile <8 x double>, ptr addrspace(1) %p1
   br label %exit
 
 exit:
@@ -125,15 +125,15 @@ exit:
 
 ; GCN-LABEL: extract_4xf64
 ; GCN-COUNT-4: v_cndmask_b32
-define <4 x double> @extract_4xf64(<8 x double> addrspace(1) * %p0, <8 x double> addrspace(1) * %p1) {
-  br i1 undef, label %T, label %F
+define <4 x double> @extract_4xf64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %c0) {
+  br i1 %c0, label %T, label %F
 
 T:
-  %t = load volatile <8 x double>, <8 x double> addrspace(1) * %p0
+  %t = load volatile <8 x double>, ptr addrspace(1) %p0
   br label %exit
 
 F:
-  %f = load volatile <8 x double>, <8 x double> addrspace(1) * %p1
+  %f = load volatile <8 x double>, ptr addrspace(1) %p1
   br label %exit
 
 exit:
@@ -146,15 +146,15 @@ exit:
 
 ; GCN-LABEL: extract_8xf64
 ; GCN-COUNT-8: v_cndmask_b32
-define <8 x double> @extract_8xf64(<16 x double> addrspace(1) * %p0, <16 x double> addrspace(1) * %p1) {
-  br i1 undef, label %T, label %F
+define <8 x double> @extract_8xf64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %c0) {
+  br i1 %c0, label %T, label %F
 
 T:
-  %t = load volatile <16 x double>, <16 x double> addrspace(1) * %p0
+  %t = load volatile <16 x double>, ptr addrspace(1) %p0
   br label %exit
 
 F:
-  %f = load volatile <16 x double>, <16 x double> addrspace(1) * %p1
+  %f = load volatile <16 x double>, ptr addrspace(1) %p1
   br label %exit
 
 exit:

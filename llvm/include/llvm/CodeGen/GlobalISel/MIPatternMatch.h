@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
 #define LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/InstrTypes.h"
@@ -21,12 +22,14 @@ namespace llvm {
 namespace MIPatternMatch {
 
 template <typename Reg, typename Pattern>
-bool mi_match(Reg R, const MachineRegisterInfo &MRI, Pattern &&P) {
+[[nodiscard]] bool mi_match(Reg R, const MachineRegisterInfo &MRI,
+                            Pattern &&P) {
   return P.match(MRI, R);
 }
 
 template <typename Pattern>
-bool mi_match(MachineInstr &MI, const MachineRegisterInfo &MRI, Pattern &&P) {
+[[nodiscard]] bool mi_match(MachineInstr &MI, const MachineRegisterInfo &MRI,
+                            Pattern &&P) {
   return P.match(MRI, &MI);
 }
 
@@ -59,11 +62,27 @@ inline OneNonDBGUse_match<SubPat> m_OneNonDBGUse(const SubPat &SP) {
   return SP;
 }
 
-struct ConstantMatch {
-  int64_t &CR;
-  ConstantMatch(int64_t &C) : CR(C) {}
+template <typename ConstT>
+inline std::optional<ConstT> matchConstant(Register,
+                                           const MachineRegisterInfo &);
+
+template <>
+inline std::optional<APInt> matchConstant(Register Reg,
+                                          const MachineRegisterInfo &MRI) {
+  return getIConstantVRegVal(Reg, MRI);
+}
+
+template <>
+inline std::optional<int64_t> matchConstant(Register Reg,
+                                            const MachineRegisterInfo &MRI) {
+  return getIConstantVRegSExtVal(Reg, MRI);
+}
+
+template <typename ConstT> struct ConstantMatch {
+  ConstT &CR;
+  ConstantMatch(ConstT &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    if (auto MaybeCst = getConstantVRegSExtVal(Reg, MRI)) {
+    if (auto MaybeCst = matchConstant<ConstT>(Reg, MRI)) {
       CR = *MaybeCst;
       return true;
     }
@@ -71,23 +90,96 @@ struct ConstantMatch {
   }
 };
 
-inline ConstantMatch m_ICst(int64_t &Cst) { return ConstantMatch(Cst); }
+inline ConstantMatch<APInt> m_ICst(APInt &Cst) {
+  return ConstantMatch<APInt>(Cst);
+}
+inline ConstantMatch<int64_t> m_ICst(int64_t &Cst) {
+  return ConstantMatch<int64_t>(Cst);
+}
 
-struct ICstRegMatch {
-  Register &CR;
-  ICstRegMatch(Register &C) : CR(C) {}
+template <typename ConstT>
+inline std::optional<ConstT> matchConstantSplat(Register,
+                                                const MachineRegisterInfo &);
+
+template <>
+inline std::optional<APInt> matchConstantSplat(Register Reg,
+                                               const MachineRegisterInfo &MRI) {
+  return getIConstantSplatVal(Reg, MRI);
+}
+
+template <>
+inline std::optional<int64_t>
+matchConstantSplat(Register Reg, const MachineRegisterInfo &MRI) {
+  return getIConstantSplatSExtVal(Reg, MRI);
+}
+
+template <typename ConstT> struct ICstOrSplatMatch {
+  ConstT &CR;
+  ICstOrSplatMatch(ConstT &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    if (auto MaybeCst = getConstantVRegValWithLookThrough(
-            Reg, MRI, /*LookThroughInstrs*/ true,
-            /*HandleFConstants*/ false)) {
-      CR = MaybeCst->VReg;
+    if (auto MaybeCst = matchConstant<ConstT>(Reg, MRI)) {
+      CR = *MaybeCst;
       return true;
     }
+
+    if (auto MaybeCstSplat = matchConstantSplat<ConstT>(Reg, MRI)) {
+      CR = *MaybeCstSplat;
+      return true;
+    }
+
     return false;
+  };
+};
+
+inline ICstOrSplatMatch<APInt> m_ICstOrSplat(APInt &Cst) {
+  return ICstOrSplatMatch<APInt>(Cst);
+}
+
+inline ICstOrSplatMatch<int64_t> m_ICstOrSplat(int64_t &Cst) {
+  return ICstOrSplatMatch<int64_t>(Cst);
+}
+
+struct GCstAndRegMatch {
+  std::optional<ValueAndVReg> &ValReg;
+  GCstAndRegMatch(std::optional<ValueAndVReg> &ValReg) : ValReg(ValReg) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    ValReg = getIConstantVRegValWithLookThrough(Reg, MRI);
+    return ValReg ? true : false;
   }
 };
 
-inline ICstRegMatch m_ICst(Register &Reg) { return ICstRegMatch(Reg); }
+inline GCstAndRegMatch m_GCst(std::optional<ValueAndVReg> &ValReg) {
+  return GCstAndRegMatch(ValReg);
+}
+
+struct GFCstAndRegMatch {
+  std::optional<FPValueAndVReg> &FPValReg;
+  GFCstAndRegMatch(std::optional<FPValueAndVReg> &FPValReg)
+      : FPValReg(FPValReg) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    FPValReg = getFConstantVRegValWithLookThrough(Reg, MRI);
+    return FPValReg ? true : false;
+  }
+};
+
+inline GFCstAndRegMatch m_GFCst(std::optional<FPValueAndVReg> &FPValReg) {
+  return GFCstAndRegMatch(FPValReg);
+}
+
+struct GFCstOrSplatGFCstMatch {
+  std::optional<FPValueAndVReg> &FPValReg;
+  GFCstOrSplatGFCstMatch(std::optional<FPValueAndVReg> &FPValReg)
+      : FPValReg(FPValReg) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    return (FPValReg = getFConstantSplat(Reg, MRI)) ||
+           (FPValReg = getFConstantVRegValWithLookThrough(Reg, MRI));
+  };
+};
+
+inline GFCstOrSplatGFCstMatch
+m_GFCstOrSplat(std::optional<FPValueAndVReg> &FPValReg) {
+  return GFCstOrSplatGFCstMatch(FPValReg);
+}
 
 /// Matcher for a specific constant value.
 struct SpecificConstantMatch {
@@ -104,6 +196,43 @@ inline SpecificConstantMatch m_SpecificICst(int64_t RequestedValue) {
   return SpecificConstantMatch(RequestedValue);
 }
 
+/// Matcher for a specific constant splat.
+struct SpecificConstantSplatMatch {
+  int64_t RequestedVal;
+  SpecificConstantSplatMatch(int64_t RequestedVal)
+      : RequestedVal(RequestedVal) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
+                                      /* AllowUndef */ false);
+  }
+};
+
+/// Matches a constant splat of \p RequestedValue.
+inline SpecificConstantSplatMatch m_SpecificICstSplat(int64_t RequestedValue) {
+  return SpecificConstantSplatMatch(RequestedValue);
+}
+
+/// Matcher for a specific constant or constant splat.
+struct SpecificConstantOrSplatMatch {
+  int64_t RequestedVal;
+  SpecificConstantOrSplatMatch(int64_t RequestedVal)
+      : RequestedVal(RequestedVal) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    int64_t MatchedVal;
+    if (mi_match(Reg, MRI, m_ICst(MatchedVal)) && MatchedVal == RequestedVal)
+      return true;
+    return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
+                                      /* AllowUndef */ false);
+  }
+};
+
+/// Matches a \p RequestedValue constant or a constant splat of \p
+/// RequestedValue.
+inline SpecificConstantOrSplatMatch
+m_SpecificICstOrSplat(int64_t RequestedValue) {
+  return SpecificConstantOrSplatMatch(RequestedValue);
+}
+
 ///{
 /// Convenience matchers for specific integer values.
 inline SpecificConstantMatch m_ZeroInt() { return SpecificConstantMatch(0); }
@@ -111,6 +240,20 @@ inline SpecificConstantMatch m_AllOnesInt() {
   return SpecificConstantMatch(-1);
 }
 ///}
+
+/// Matcher for a specific register.
+struct SpecificRegisterMatch {
+  Register RequestedReg;
+  SpecificRegisterMatch(Register RequestedReg) : RequestedReg(RequestedReg) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    return Reg == RequestedReg;
+  }
+};
+
+/// Matches a register only if it is equal to \p RequestedReg.
+inline SpecificRegisterMatch m_SpecificReg(Register RequestedReg) {
+  return SpecificRegisterMatch(RequestedReg);
+}
 
 // TODO: Rework this for different kinds of MachineOperand.
 // Currently assumes the Src for a match is a register.
@@ -229,6 +372,17 @@ inline bind_ty<LLT> m_Type(LLT Ty) { return Ty; }
 inline bind_ty<CmpInst::Predicate> m_Pred(CmpInst::Predicate &P) { return P; }
 inline operand_type_match m_Pred() { return operand_type_match(); }
 
+struct ImplicitDefMatch {
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (mi_match(Reg, MRI, m_MInstr(TmpMI)))
+      return TmpMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
+    return false;
+  }
+};
+
+inline ImplicitDefMatch m_GImplicitDef() { return ImplicitDefMatch(); }
+
 // Helper for matching G_FCONSTANT
 inline bind_ty<const ConstantFP *> m_GFCst(const ConstantFP *&C) { return C; }
 
@@ -299,9 +453,22 @@ m_GAdd(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, true>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_BUILD_VECTOR, false>
+m_GBuildVector(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_BUILD_VECTOR, false>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_BUILD_VECTOR_TRUNC, false>
+m_GBuildVectorTrunc(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_BUILD_VECTOR_TRUNC, false>(L,
+                                                                             R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>
 m_GPtrAdd(const LHS &L, const RHS &R) {
-  return BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, true>(L, R);
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>(L, R);
 }
 
 template <typename LHS, typename RHS>
@@ -464,9 +631,15 @@ inline UnaryOp_match<SrcTy, TargetOpcode::COPY> m_Copy(SrcTy &&Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::COPY>(std::forward<SrcTy>(Src));
 }
 
+template <typename SrcTy>
+inline UnaryOp_match<SrcTy, TargetOpcode::G_FSQRT> m_GFSqrt(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, TargetOpcode::G_FSQRT>(Src);
+}
+
 // General helper for generic MI compares, i.e. G_ICMP and G_FCMP
 // TODO: Allow checking a specific predicate.
-template <typename Pred_P, typename LHS_P, typename RHS_P, unsigned Opcode>
+template <typename Pred_P, typename LHS_P, typename RHS_P, unsigned Opcode,
+          bool Commutable = false>
 struct CompareOp_match {
   Pred_P P;
   LHS_P L;
@@ -485,9 +658,14 @@ struct CompareOp_match {
         static_cast<CmpInst::Predicate>(TmpMI->getOperand(1).getPredicate());
     if (!P.match(MRI, TmpPred))
       return false;
-
-    return L.match(MRI, TmpMI->getOperand(2).getReg()) &&
-           R.match(MRI, TmpMI->getOperand(3).getReg());
+    Register LHS = TmpMI->getOperand(2).getReg();
+    Register RHS = TmpMI->getOperand(3).getReg();
+    if (L.match(MRI, LHS) && R.match(MRI, RHS))
+      return true;
+    if (Commutable && L.match(MRI, RHS) && R.match(MRI, LHS) &&
+        P.match(MRI, CmpInst::getSwappedPredicate(TmpPred)))
+      return true;
+    return false;
   }
 };
 
@@ -501,6 +679,36 @@ template <typename Pred, typename LHS, typename RHS>
 inline CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP>
 m_GFCmp(const Pred &P, const LHS &L, const RHS &R) {
   return CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP>(P, L, R);
+}
+
+/// G_ICMP matcher that also matches commuted compares.
+/// E.g.
+///
+/// m_c_GICmp(m_Pred(...), m_GAdd(...), m_GSub(...))
+///
+/// Could match both of:
+///
+/// icmp ugt (add x, y) (sub a, b)
+/// icmp ult (sub a, b) (add x, y)
+template <typename Pred, typename LHS, typename RHS>
+inline CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_ICMP, true>
+m_c_GICmp(const Pred &P, const LHS &L, const RHS &R) {
+  return CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_ICMP, true>(P, L, R);
+}
+
+/// G_FCMP matcher that also matches commuted compares.
+/// E.g.
+///
+/// m_c_GFCmp(m_Pred(...), m_FAdd(...), m_GFMul(...))
+///
+/// Could match both of:
+///
+/// fcmp ogt (fadd x, y) (fmul a, b)
+/// fcmp olt (fmul a, b) (fadd x, y)
+template <typename Pred, typename LHS, typename RHS>
+inline CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP, true>
+m_c_GFCmp(const Pred &P, const LHS &L, const RHS &R) {
+  return CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP, true>(P, L, R);
 }
 
 // Helper for checking if a Reg is of specific type.

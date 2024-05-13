@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | not grep xor
+; RUN: opt < %s -passes=sccp -S | not grep xor
 
 define i11129 @test1() {
         %B = shl i11129 1, 11128 

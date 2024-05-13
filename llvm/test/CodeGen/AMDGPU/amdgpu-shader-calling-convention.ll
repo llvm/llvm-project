@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 
 ; GCN-LABEL: {{^}}shader_cc:
@@ -17,6 +17,6 @@ define amdgpu_kernel void @kernel_cc(<4 x i32> inreg, <4 x i32> inreg, i32 inreg
   %vi = bitcast float %v to i32
   %x = add i32 %vi, %w
   %xf = bitcast i32 %x to float
-  store float %xf, float addrspace(1)* undef
+  store float %xf, ptr addrspace(1) undef
   ret void
 }

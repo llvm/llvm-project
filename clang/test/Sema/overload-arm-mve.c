@@ -15,6 +15,14 @@ typedef __attribute__((neon_vector_type(8), __clang_arm_mve_strict_polymorphism)
 typedef __attribute__((neon_vector_type(4), __clang_arm_mve_strict_polymorphism)) uint32_t uint32x4_t;
 typedef __attribute__((neon_vector_type(2), __clang_arm_mve_strict_polymorphism)) uint64_t uint64x2_t;
 
+// Verify that we can use the [[]] spelling of the attribute.
+// We intentionally use the same type alias name to check that both versions
+// define the same type.
+typedef int16_t [[clang::neon_vector_type(8), clang::__clang_arm_mve_strict_polymorphism]] int16x8_t;
+
+// Verify that we can use the attribute outside of a typedef.
+void test_param(int16_t [[clang::neon_vector_type(8), clang::__clang_arm_mve_strict_polymorphism]] int16x8);
+
 __attribute__((overloadable))
 int overload(int16x8_t x, int16_t y); // expected-note {{candidate function}}
 __attribute__((overloadable))
@@ -110,6 +118,6 @@ int expect_error(uint64x2_t v) {
 }
 
 typedef __attribute__((__clang_arm_mve_strict_polymorphism)) int i; // expected-error {{'__clang_arm_mve_strict_polymorphism' attribute can only be applied to an MVE/NEON vector type}}
-typedef __attribute__((__clang_arm_mve_strict_polymorphism)) int f(); // expected-error {{'__clang_arm_mve_strict_polymorphism' attribute can only be applied to an MVE/NEON vector type}}
+typedef __attribute__((__clang_arm_mve_strict_polymorphism)) int f(void); // expected-error {{'__clang_arm_mve_strict_polymorphism' attribute can only be applied to an MVE/NEON vector type}}
 typedef __attribute__((__clang_arm_mve_strict_polymorphism)) struct { uint16x8_t v; } s; // expected-error {{'__clang_arm_mve_strict_polymorphism' attribute can only be applied to an MVE/NEON vector type}}
 #endif

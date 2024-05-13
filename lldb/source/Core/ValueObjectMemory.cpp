@@ -20,6 +20,7 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 class ExecutionContextScope;
@@ -83,8 +84,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
     : ValueObject(exe_scope, manager), m_address(address), m_type_sp(),
       m_compiler_type(ast_type) {
   // Do not attempt to construct one of these objects with no variable!
-  assert(m_compiler_type.GetTypeSystem());
-  assert(m_compiler_type.GetOpaqueQualType());
+  assert(m_compiler_type.IsValid());
 
   TargetSP target_sp(GetTargetSP());
 
@@ -106,7 +106,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
   }
 }
 
-ValueObjectMemory::~ValueObjectMemory() {}
+ValueObjectMemory::~ValueObjectMemory() = default;
 
 CompilerType ValueObjectMemory::GetCompilerTypeImpl() {
   if (m_type_sp)
@@ -126,20 +126,24 @@ ConstString ValueObjectMemory::GetDisplayTypeName() {
   return m_compiler_type.GetDisplayTypeName();
 }
 
-size_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t> ValueObjectMemory::CalculateNumChildren(uint32_t max) {
   if (m_type_sp) {
     auto child_count = m_type_sp->GetNumChildren(true);
-    return child_count <= max ? child_count : max;
+    if (!child_count)
+      return child_count;
+    return *child_count <= max ? *child_count : max;
   }
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
   const bool omit_empty_base_classes = true;
   auto child_count =
       m_compiler_type.GetNumChildren(omit_empty_base_classes, &exe_ctx);
-  return child_count <= max ? child_count : max;
+  if (!child_count)
+    return child_count;
+  return *child_count <= max ? *child_count : max;
 }
 
-llvm::Optional<uint64_t> ValueObjectMemory::GetByteSize() {
+std::optional<uint64_t> ValueObjectMemory::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   if (m_type_sp)
     return m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope());

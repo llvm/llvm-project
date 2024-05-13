@@ -1,8 +1,8 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
-; RUN: llc < %s -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s --check-prefix=EG --check-prefix=FUNC
+; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
+; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
@@ -13,7 +13,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; VI: s_mul_{{[iu]}}32
 ; VI: s_add_{{[iu]}}32
 
-define amdgpu_kernel void @u32_mad24(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @u32_mad24(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = shl i32 %a, 8
   %a_24 = lshr i32 %0, 8
@@ -21,7 +21,7 @@ entry:
   %b_24 = lshr i32 %1, 8
   %2 = mul i32 %a_24, %b_24
   %3 = add i32 %2, %c
-  store i32 %3, i32 addrspace(1)* %out
+  store i32 %3, ptr addrspace(1) %out
   ret void
 }
 
@@ -36,12 +36,12 @@ entry:
 ; GCN:	s_add_i32 [[MAD:s[0-9]]], [[MUL]], s{{[0-9]}}
 ; GCN:	s_sext_i32_i16 [[EXT:s[0-9]]], [[MAD]]
 ; GCN:	v_mov_b32_e32 v0, [[EXT]]
-define amdgpu_kernel void @i16_mad24(i32 addrspace(1)* %out, i16 %a, i16 %b, i16 %c) {
+define amdgpu_kernel void @i16_mad24(ptr addrspace(1) %out, i16 %a, i16 %b, i16 %c) {
 entry:
   %0 = mul i16 %a, %b
   %1 = add i16 %0, %c
   %2 = sext i16 %1 to i32
-  store i32 %2, i32 addrspace(1)* %out
+  store i32 %2, ptr addrspace(1) %out
   ret void
 }
 
@@ -56,12 +56,12 @@ entry:
 ; GCN:	s_add_i32 [[MAD:s[0-9]]], [[MUL]], s{{[0-9]}}
 ; GCN:	s_sext_i32_i8 [[EXT:s[0-9]]], [[MAD]]
 ; GCN:	v_mov_b32_e32 v0, [[EXT]]
-define amdgpu_kernel void @i8_mad24(i32 addrspace(1)* %out, i8 %a, i8 %b, i8 %c) {
+define amdgpu_kernel void @i8_mad24(ptr addrspace(1) %out, i8 %a, i8 %b, i8 %c) {
 entry:
   %0 = mul i8 %a, %b
   %1 = add i8 %0, %c
   %2 = sext i8 %1 to i32
-  store i32 %2, i32 addrspace(1)* %out
+  store i32 %2, ptr addrspace(1) %out
   ret void
 }
 
@@ -74,16 +74,16 @@ entry:
 ; Check that the select instruction is not deleted.
 ; FUNC-LABEL: {{^}}i24_i32_i32_mad:
 ; EG: CNDE_INT
-; SI: v_cndmask
+; SI: s_cselect
 ; GCN2: s_cselect
-define amdgpu_kernel void @i24_i32_i32_mad(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) {
+define amdgpu_kernel void @i24_i32_i32_mad(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %d) {
 entry:
   %0 = ashr i32 %a, 8
   %1 = icmp ne i32 %c, 0
   %2 = select i1 %1, i32 %0, i32 34
   %3 = mul i32 %2, %c
   %4 = add i32 %3, %d
-  store i32 %4, i32 addrspace(1)* %out
+  store i32 %4, ptr addrspace(1) %out
   ret void
 }
 
@@ -93,7 +93,7 @@ entry:
 ; SI: s_mul_i32
 ; SI: s_add_i32
 ; SI: s_add_i32
-define amdgpu_kernel void @extra_and(i32 addrspace(1)* %arg, i32 %arg2, i32 %arg3) {
+define amdgpu_kernel void @extra_and(ptr addrspace(1) %arg, i32 %arg2, i32 %arg3) {
 bb:
   br label %bb4
 
@@ -115,7 +115,7 @@ bb4:                                              ; preds = %bb4, %bb
   br i1 %tmp17, label %bb18, label %bb4
 
 bb18:                                             ; preds = %bb4
-  store i32 %tmp16, i32 addrspace(1)* %arg
+  store i32 %tmp16, ptr addrspace(1) %arg
   ret void
 }
 
@@ -125,7 +125,7 @@ bb18:                                             ; preds = %bb4
 ; SI: s_mul_i32
 ; SI: s_add_i32
 ; SI: s_add_i32
-define amdgpu_kernel void @dont_remove_shift(i32 addrspace(1)* %arg, i32 %arg2, i32 %arg3) {
+define amdgpu_kernel void @dont_remove_shift(ptr addrspace(1) %arg, i32 %arg2, i32 %arg3) {
 bb:
   br label %bb4
 
@@ -147,7 +147,7 @@ bb4:                                              ; preds = %bb4, %bb
   br i1 %tmp17, label %bb18, label %bb4
 
 bb18:                                             ; preds = %bb4
-  store i32 %tmp16, i32 addrspace(1)* %arg
+  store i32 %tmp16, ptr addrspace(1) %arg
   ret void
 }
 
@@ -158,18 +158,20 @@ bb18:                                             ; preds = %bb4
 ; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
 ; EG: 8
 ; SI: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; SI: v_bfe_i32 [[EXT:v[0-9]]], [[MAD]], 0, 16
+; SI: v_med3_i32 v{{[0-9]}}, [[EXT]],
 ; VI: v_mad_u16 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; GCN: v_bfe_i32 [[EXT:v[0-9]]], [[MAD]], 0, 16
-; GCN: v_med3_i32 v{{[0-9]}}, [[EXT]],
-define amdgpu_kernel void @i8_mad_sat_16(i8 addrspace(1)* %out, i8 addrspace(1)* %in0, i8 addrspace(1)* %in1, i8 addrspace(1)* %in2, i64 addrspace(5)* %idx) {
+; VI: v_max_i16_e32 [[MAX:v[0-9]]], 0xff80, [[MAD]]
+; VI: v_min_i16_e32 {{v[0-9]}}, 0x7f, [[MAX]]
+define amdgpu_kernel void @i8_mad_sat_16(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr addrspace(1) %in2, ptr addrspace(5) %idx) {
 entry:
-  %retval.0.i = load i64, i64 addrspace(5)* %idx
-  %arrayidx = getelementptr inbounds i8, i8 addrspace(1)* %in0, i64 %retval.0.i
-  %arrayidx2 = getelementptr inbounds i8, i8 addrspace(1)* %in1, i64 %retval.0.i
-  %arrayidx4 = getelementptr inbounds i8, i8 addrspace(1)* %in2, i64 %retval.0.i
-  %l1 = load i8, i8 addrspace(1)* %arrayidx, align 1
-  %l2 = load i8, i8 addrspace(1)* %arrayidx2, align 1
-  %l3 = load i8, i8 addrspace(1)* %arrayidx4, align 1
+  %retval.0.i = load i64, ptr addrspace(5) %idx
+  %arrayidx = getelementptr inbounds i8, ptr addrspace(1) %in0, i64 %retval.0.i
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %in1, i64 %retval.0.i
+  %arrayidx4 = getelementptr inbounds i8, ptr addrspace(1) %in2, i64 %retval.0.i
+  %l1 = load i8, ptr addrspace(1) %arrayidx, align 1
+  %l2 = load i8, ptr addrspace(1) %arrayidx2, align 1
+  %l3 = load i8, ptr addrspace(1) %arrayidx4, align 1
   %conv1.i = sext i8 %l1 to i16
   %conv3.i = sext i8 %l2 to i16
   %conv5.i = sext i8 %l3 to i16
@@ -180,8 +182,8 @@ entry:
   %c5 = icmp slt i16 %cond.i.i, 127
   %cond13.i.i = select i1 %c5, i16 %cond.i.i, i16 127
   %conv8.i = trunc i16 %cond13.i.i to i8
-  %arrayidx7 = getelementptr inbounds i8, i8 addrspace(1)* %out, i64 %retval.0.i
-  store i8 %conv8.i, i8 addrspace(1)* %arrayidx7, align 1
+  %arrayidx7 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 %retval.0.i
+  store i8 %conv8.i, ptr addrspace(1) %arrayidx7, align 1
   ret void
 }
 
@@ -194,22 +196,22 @@ entry:
 ; SI: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; VI: v_mad_u16 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; GCN: v_bfe_i32 [[EXT:v[0-9]]], [[MAD]], 0, 16
-define amdgpu_kernel void @i8_mad_32(i32 addrspace(1)* %out, i8 addrspace(1)* %a, i8 addrspace(1)* %b, i8 addrspace(1)* %c, i64 addrspace(5)* %idx) {
+define amdgpu_kernel void @i8_mad_32(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(5) %idx) {
 entry:
-  %retval.0.i = load i64, i64 addrspace(5)* %idx
-  %arrayidx = getelementptr inbounds i8, i8 addrspace(1)* %a, i64 %retval.0.i
-  %arrayidx2 = getelementptr inbounds i8, i8 addrspace(1)* %b, i64 %retval.0.i
-  %arrayidx4 = getelementptr inbounds i8, i8 addrspace(1)* %c, i64 %retval.0.i
-  %la = load i8, i8 addrspace(1)* %arrayidx, align 1
-  %lb = load i8, i8 addrspace(1)* %arrayidx2, align 1
-  %lc = load i8, i8 addrspace(1)* %arrayidx4, align 1
+  %retval.0.i = load i64, ptr addrspace(5) %idx
+  %arrayidx = getelementptr inbounds i8, ptr addrspace(1) %a, i64 %retval.0.i
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %b, i64 %retval.0.i
+  %arrayidx4 = getelementptr inbounds i8, ptr addrspace(1) %c, i64 %retval.0.i
+  %la = load i8, ptr addrspace(1) %arrayidx, align 1
+  %lb = load i8, ptr addrspace(1) %arrayidx2, align 1
+  %lc = load i8, ptr addrspace(1) %arrayidx4, align 1
   %exta = sext i8 %la to i16
   %extb = sext i8 %lb to i16
   %extc = sext i8 %lc to i16
   %mul = mul i16 %exta, %extb
   %mad = add i16 %mul, %extc
   %mad_ext = sext i16 %mad to i32
-  store i32 %mad_ext, i32 addrspace(1)* %out
+  store i32 %mad_ext, ptr addrspace(1) %out
   ret void
 }
 
@@ -222,22 +224,22 @@ entry:
 ; SI: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; VI: v_mad_u16 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; GCN: v_bfe_i32 [[EXT:v[0-9]]], [[MAD]], 0, 16
-define amdgpu_kernel void @i8_mad_64(i64 addrspace(1)* %out, i8 addrspace(1)* %a, i8 addrspace(1)* %b, i8 addrspace(1)* %c, i64 addrspace(5)* %idx) {
+define amdgpu_kernel void @i8_mad_64(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(5) %idx) {
 entry:
-  %retval.0.i = load i64, i64 addrspace(5)* %idx
-  %arrayidx = getelementptr inbounds i8, i8 addrspace(1)* %a, i64 %retval.0.i
-  %arrayidx2 = getelementptr inbounds i8, i8 addrspace(1)* %b, i64 %retval.0.i
-  %arrayidx4 = getelementptr inbounds i8, i8 addrspace(1)* %c, i64 %retval.0.i
-  %la = load i8, i8 addrspace(1)* %arrayidx, align 1
-  %lb = load i8, i8 addrspace(1)* %arrayidx2, align 1
-  %lc = load i8, i8 addrspace(1)* %arrayidx4, align 1
+  %retval.0.i = load i64, ptr addrspace(5) %idx
+  %arrayidx = getelementptr inbounds i8, ptr addrspace(1) %a, i64 %retval.0.i
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %b, i64 %retval.0.i
+  %arrayidx4 = getelementptr inbounds i8, ptr addrspace(1) %c, i64 %retval.0.i
+  %la = load i8, ptr addrspace(1) %arrayidx, align 1
+  %lb = load i8, ptr addrspace(1) %arrayidx2, align 1
+  %lc = load i8, ptr addrspace(1) %arrayidx4, align 1
   %exta = sext i8 %la to i16
   %extb = sext i8 %lb to i16
   %extc = sext i8 %lc to i16
   %mul = mul i16 %exta, %extb
   %mad = add i16 %mul, %extc
   %mad_ext = sext i16 %mad to i64
-  store i64 %mad_ext, i64 addrspace(1)* %out
+  store i64 %mad_ext, ptr addrspace(1) %out
   ret void
 }
 
@@ -256,7 +258,7 @@ entry:
 ; GCN: v_mad_u32_u24
 ; GCN: v_mad_u32_u24
 ; GCN: v_mad_u32_u24
-define void @mad24_known_bits_destroyed(i32 %arg, <4 x i32> %arg1, <4 x i32> %arg2, <4 x i32> %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 addrspace(1)* %arg7, <4 x i32> addrspace(1)* %arg8) #0 {
+define void @mad24_known_bits_destroyed(i32 %arg, <4 x i32> %arg1, <4 x i32> %arg2, <4 x i32> %arg3, i32 %arg4, i32 %arg5, i32 %arg6, ptr addrspace(1) %arg7, ptr addrspace(1) %arg8) #0 {
 bb:
   %tmp = and i32 %arg4, 16777215
   %tmp9 = extractelement <4 x i32> %arg1, i64 1
@@ -295,7 +297,7 @@ bb19:                                             ; preds = %bb19, %bb
   %tmp38 = and i32 %tmp25, 16777215
   %tmp39 = mul i32 %tmp38, %tmp
   %tmp40 = add i32 %tmp39, %arg5
-  store i32 %tmp40, i32 addrspace(1)* %arg7
+  store i32 %tmp40, ptr addrspace(1) %arg7
   %tmp41 = insertelement <4 x i32> undef, i32 %tmp40, i32 0
   %tmp42 = and i32 %tmp29, 16777215
   %tmp43 = mul i32 %tmp42, %tmp11
@@ -309,7 +311,7 @@ bb19:                                             ; preds = %bb19, %bb
   %tmp51 = mul i32 %tmp50, %tmp17
   %tmp52 = add i32 %tmp51, %tmp16
   %tmp53 = insertelement <4 x i32> %tmp49, i32 %tmp52, i32 3
-  store <4 x i32> %tmp53, <4 x i32> addrspace(1)* %arg8
+  store <4 x i32> %tmp53, ptr addrspace(1) %arg8
   %tmp54 = add nuw nsw i32 %tmp21, 1
   %tmp55 = icmp eq i32 %tmp54, %arg6
   br i1 %tmp55, label %bb18, label %bb19

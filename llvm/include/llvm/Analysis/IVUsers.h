@@ -23,12 +23,9 @@ namespace llvm {
 
 class AssumptionCache;
 class DominatorTree;
-class Instruction;
-class Value;
 class ScalarEvolution;
 class SCEV;
 class IVUsers;
-class DataLayout;
 
 /// IVStrideUse - Keep track of one use of a strided induction variable.
 /// The Expr member keeps track of the expression, User is the actual user
@@ -134,7 +131,8 @@ public:
   /// value of the OperandValToReplace of the given IVStrideUse.
   const SCEV *getReplacementExpr(const IVStrideUse &IU) const;
 
-  /// getExpr - Return the expression for the use.
+  /// getExpr - Return the expression for the use. Returns nullptr if the result
+  /// is not invertible.
   const SCEV *getExpr(const IVStrideUse &IU) const;
 
   const SCEV *getStride(const IVStrideUse &IU, const Loop *L) const;
@@ -157,9 +155,6 @@ public:
 
   /// dump - This method is used for debugging.
   void dump() const;
-
-protected:
-  bool AddUsersImpl(Instruction *I, SmallPtrSetImpl<Loop*> &SimpleLoopNests);
 };
 
 Pass *createIVUsersPass();

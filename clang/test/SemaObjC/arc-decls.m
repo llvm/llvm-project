@@ -1,6 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -fobjc-arc -verify -Wno-objc-root-class %s
-
-// rdar://8843524
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fobjc-arc -verify -Wno-objc-root-class -Wno-strict-prototypes %s
 
 struct A {
   id x[4];
@@ -33,9 +31,9 @@ union u_trivial_c {
 };
 @end
 
-// rdar://10260525
 struct r10260525 {
-  id (^block) ();
+  id (^block1) ();
+  id (^block2) (void);
 };
 
 struct S { 
@@ -43,8 +41,6 @@ struct S {
     void * vp;
     int i1;
 };
-
-// rdar://9046528
 
 @class NSError;
 
@@ -54,16 +50,13 @@ __autoreleasing NSError *E; // expected-error {{global variables cannot have __a
 
 extern id __autoreleasing X1; // expected-error {{global variables cannot have __autoreleasing ownership}}
 
-void func()
+void func(void)
 {
     id X;
     static id __autoreleasing X1; // expected-error {{global variables cannot have __autoreleasing ownership}}
     extern id __autoreleasing E; // expected-error {{global variables cannot have __autoreleasing ownership}}
 
 }
-
-// rdar://9157348
-// rdar://15757510
 
 @interface J
 @property (retain) id newFoo; // expected-error {{property follows Cocoa naming convention for returning 'owned' objects}} expected-note{{explicitly declare getter '-newFoo' with '__attribute__((objc_method_family(none)))' to return an 'unowned' object}}
@@ -111,7 +104,6 @@ void func()
 @end
 
 
-// rdar://10187884
 @interface Super
 - (void)bar:(id)b; // expected-note {{parameter declared here}}
 - (void)bar1:(id) __attribute((ns_consumed)) b;
@@ -128,7 +120,6 @@ void func()
 - (id)ns_non __attribute((ns_returns_not_retained)); // expected-error {{overriding method has mismatched ns_returns_not_retained attributes}}
 - (id)not_ret:(id) b __attribute((ns_returns_retained)); // expected-error {{overriding method has mismatched ns_returns_retained attributes}}
 - (id)both__returns_not_retained:(id) b __attribute((ns_returns_not_retained));
-// rdar://12173491
 @property (copy, nonatomic) __attribute__((ns_returns_retained)) id (^fblock)(void);
 @end
 
@@ -149,7 +140,6 @@ struct __attribute__((objc_ownership(none))) S2 {}; // expected-error {{'objc_ow
     @property __attribute__((objc_ownership(frob))) id i; // expected-warning {{'objc_ownership' attribute argument not supported: 'frob'}}
 @end
 
-// rdar://15304886
 @interface NSObject @end
 
 @interface ControllerClass : NSObject @end
@@ -157,7 +147,6 @@ struct __attribute__((objc_ownership(none))) S2 {}; // expected-error {{'objc_ow
 @interface SomeClassOwnedByController
 @property (readonly) ControllerClass *controller; // expected-note {{property declared here}}
 
-// rdar://15465916
 @property (readonly, weak) ControllerClass *weak_controller;
 @end
 

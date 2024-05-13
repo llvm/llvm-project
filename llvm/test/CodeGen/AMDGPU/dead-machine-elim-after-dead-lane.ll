@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs %s -o - | FileCheck %s
 
 ; CHECK-LABEL: foo
 ; CHECK-NOT: BUFFER_LOAD_DWORDX2_OFFSET
@@ -12,7 +12,7 @@ entry:
   ]
 
 sw.bb4:
-  %x = load i64, i64 addrspace(1)* undef, align 8
+  %x = load i64, ptr addrspace(1) undef, align 8
   %c = sitofp i64 %x to float
   %v = insertelement <2 x float> <float undef, float 0.000000e+00>, float %c, i32 0
   br label %foo.exit
@@ -23,6 +23,6 @@ sw.bb10:
 foo.exit:
   %agg = phi <2 x float> [ %v, %sw.bb4 ], [ zeroinitializer, %entry ]
   %s = extractelement <2 x float> %agg, i32 1
-  store float %s, float addrspace(1)* undef, align 4
+  store float %s, ptr addrspace(1) undef, align 4
   ret void
 }

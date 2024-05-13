@@ -46,11 +46,11 @@ entry:
 ; THUMB-LABEL: t:
 ; THUMB: .inst.n 0xdefe
 
-; ENCODING-NACL: f0 de fe e7 trap
+; ENCODING-NACL: e7fedef0    trap
 
-; ENCODING-ARM: fe de ff e7 trap
+; ENCODING-ARM: e7ffdefe    trap
 
-; ENCODING-THUMB: fe de trap
+; ENCODING-THUMB: defe  trap
 
   call void @llvm.trap()
   unreachable
@@ -73,11 +73,11 @@ entry:
 ; THUMB-LABEL: t2:
 ; THUMB: bkpt #0
 
-; ENCODING-NACL: 70 00 20 e1 bkpt #0
+; ENCODING-NACL: e1200070    bkpt #0
 
-; ENCODING-ARM: 70 00 20 e1 bkpt #0
+; ENCODING-ARM: e1200070    bkpt #0
 
-; ENCODING-THUMB: 00 be bkpt #0
+; ENCODING-THUMB: be00  bkpt #0
 
   call void @llvm.debugtrap()
   unreachable

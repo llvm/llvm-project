@@ -4,8 +4,10 @@ include_directories(..)
 set(HWASAN_RTL_SOURCES
   hwasan.cpp
   hwasan_allocator.cpp
+  hwasan_allocation_functions.cpp
   hwasan_dynamic_shadow.cpp
   hwasan_exceptions.cpp
+  hwasan_fuchsia.cpp
   hwasan_globals.cpp
   hwasan_interceptors.cpp
   hwasan_interceptors_vfork.S
@@ -13,8 +15,11 @@ set(HWASAN_RTL_SOURCES
   hwasan_memintrinsics.cpp
   hwasan_poisoning.cpp
   hwasan_report.cpp
-  hwasan_setjmp.S
+  hwasan_setjmp_aarch64.S
+  hwasan_setjmp_riscv64.S
+  hwasan_setjmp_x86_64.S
   hwasan_tag_mismatch_aarch64.S
+  hwasan_tag_mismatch_riscv64.S
   hwasan_thread.cpp
   hwasan_thread_list.cpp
   hwasan_type_test.cpp
@@ -22,6 +27,10 @@ set(HWASAN_RTL_SOURCES
 
 set(HWASAN_RTL_CXX_SOURCES
   hwasan_new_delete.cpp
+  )
+
+set(HWASAN_RTL_PREINIT_SOURCES
+  hwasan_preinit.cpp
   )
 
 set(HWASAN_RTL_HEADERS
@@ -43,11 +52,19 @@ set(HWASAN_RTL_HEADERS
 set(HWASAN_DEFINITIONS)
 append_list_if(COMPILER_RT_HWASAN_WITH_INTERCEPTORS HWASAN_WITH_INTERCEPTORS=1 HWASAN_DEFINITIONS)
 
+if(FUCHSIA)
+  # Set this explicitly on Fuchsia, otherwise the default value is set to HWASAN_WITH_INTERCEPTORS.
+  list(APPEND HWASAN_DEFINITIONS HWASAN_REPLACE_OPERATORS_NEW_AND_DELETE=1)
+endif()
+
 set(HWASAN_RTL_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF HWASAN_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC HWASAN_RTL_CFLAGS)
 # Prevent clang from generating libc calls.
 append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding HWASAN_RTL_CFLAGS)
+
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format HWASAN_RTL_CFLAGS)
 
 set(HWASAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
@@ -64,7 +81,10 @@ append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec HWASAN_DYNAMIC_CFLAGS)
 append_list_if(MSVC /DEBUG HWASAN_DYNAMIC_LINK_FLAGS)
 
-set(HWASAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
+set(HWASAN_DYNAMIC_LIBS
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
+  ${SANITIZER_CXX_ABI_LIBRARIES}
+  ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl HWASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt HWASAN_DYNAMIC_LIBS)
@@ -91,6 +111,12 @@ add_compiler_rt_object_libraries(RTHwasan_dynamic
   SOURCES ${HWASAN_RTL_SOURCES} ${HWASAN_RTL_CXX_SOURCES}
   ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
   CFLAGS ${HWASAN_DYNAMIC_CFLAGS}
+  DEFS ${HWASAN_DEFINITIONS})
+add_compiler_rt_object_libraries(RTHwasan_preinit
+  ARCHS ${HWASAN_SUPPORTED_ARCH}
+  SOURCES ${HWASAN_RTL_PREINIT_SOURCES}
+  ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
+  CFLAGS ${HWASAN_RTL_CFLAGS}
   DEFS ${HWASAN_DEFINITIONS})
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp "")
@@ -132,11 +158,14 @@ function(add_hwasan_runtimes arch use_aliases)
     STATIC
     ARCHS ${arch}
     OBJECT_LIBS ${hwasan_object_lib}
+                RTHwasan_preinit
                 RTInterception
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
                 RTSanitizerCommonSymbolizer
+                RTSanitizerCommonSymbolizerInternal
+                RTLSanCommon
                 RTUbsan
     CFLAGS ${hwasan_rtl_flags}
     PARENT_TARGET hwasan)
@@ -173,6 +202,8 @@ function(add_hwasan_runtimes arch use_aliases)
             RTSanitizerCommonLibc
             RTSanitizerCommonCoverage
             RTSanitizerCommonSymbolizer
+            RTSanitizerCommonSymbolizerInternal
+            RTLSanCommon
             RTUbsan
             RTUbsan_cxx
             # The only purpose of RTHWAsan_dynamic_version_script_dummy is to
@@ -206,6 +237,13 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
     add_hwasan_runtimes(${arch} TRUE)
   endif()
 endforeach()
+
+add_compiler_rt_runtime(clang_rt.hwasan-preinit
+  STATIC
+  ARCHS ${HWASAN_SUPPORTED_ARCH}
+  OBJECT_LIBS RTHwasan_preinit
+  CFLAGS ${HWASAN_RTL_CFLAGS}
+  PARENT_TARGET hwasan)
 
 add_compiler_rt_resource_file(hwasan_ignorelist hwasan_ignorelist.txt hwasan)
 

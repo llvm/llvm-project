@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_TARGETINFO_H
 
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -23,19 +24,23 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -47,11 +52,33 @@ class DiagnosticsEngine;
 class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
-class QualType;
-class SourceLocation;
-class SourceManager;
+
+/// Contains information gathered from parsing the contents of TargetAttr.
+struct ParsedTargetAttr {
+  std::vector<std::string> Features;
+  StringRef CPU;
+  StringRef Tune;
+  StringRef BranchProtection;
+  StringRef Duplicate;
+  bool operator ==(const ParsedTargetAttr &Other) const {
+    return Duplicate == Other.Duplicate && CPU == Other.CPU &&
+           Tune == Other.Tune && BranchProtection == Other.BranchProtection &&
+           Features == Other.Features;
+  }
+};
 
 namespace Builtin { struct Info; }
+
+enum class FloatModeKind {
+  NoFloat = 0,
+  Half = 1 << 0,
+  Float = 1 << 1,
+  Double = 1 << 2,
+  LongDouble = 1 << 3,
+  Float128 = 1 << 4,
+  Ibm128 = 1 << 5,
+  LLVM_MARK_AS_BITMASK_ENUM(Ibm128)
+};
 
 /// Fields controlling how types are laid out in memory; these may need to
 /// be copied for targets like AMDGPU that base their ABIs on an auxiliary
@@ -64,10 +91,15 @@ struct TransferrableTargetInfo {
   unsigned char BFloat16Width, BFloat16Align;
   unsigned char FloatWidth, FloatAlign;
   unsigned char DoubleWidth, DoubleAlign;
-  unsigned char LongDoubleWidth, LongDoubleAlign, Float128Align;
+  unsigned char LongDoubleWidth, LongDoubleAlign, Float128Align, Ibm128Align;
   unsigned char LargeArrayMinWidth, LargeArrayAlign;
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
+  unsigned char Int128Align;
+
+  // This is an optional parameter for targets that
+  // don't use 'LongLongAlign' for '_BitInt' max alignment
+  std::optional<unsigned> BitIntMaxAlign;
 
   // Fixed point bit widths
   unsigned char ShortAccumWidth, ShortAccumAlign;
@@ -95,16 +127,16 @@ struct TransferrableTargetInfo {
   unsigned char AccumScale;
   unsigned char LongAccumScale;
 
-  unsigned char SuitableAlign;
   unsigned char DefaultAlignForAttributeAligned;
   unsigned char MinGlobalAlign;
 
+  unsigned short SuitableAlign;
   unsigned short NewAlign;
   unsigned MaxVectorAlign;
   unsigned MaxTLSAlign;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
-    *DoubleFormat, *LongDoubleFormat, *Float128Format;
+      *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format;
 
   ///===---- Target Data Type Query Methods -------------------------------===//
   enum IntType {
@@ -121,13 +153,6 @@ struct TransferrableTargetInfo {
     UnsignedLongLong
   };
 
-  enum RealType {
-    NoFloat = 255,
-    Float = 0,
-    Double,
-    LongDouble,
-    Float128
-  };
 protected:
   IntType SizeType, IntMaxType, PtrDiffType, IntPtrType, WCharType, WIntType,
       Char16Type, Char32Type, Int64Type, Int16Type, SigAtomicType,
@@ -137,6 +162,7 @@ protected:
   ///
   /// Otherwise, when this flag is not set, the normal built-in boolean type is
   /// used.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseSignedCharForObjCBool : 1;
 
   /// Control whether the alignment of bit-field types is respected when laying
@@ -144,6 +170,7 @@ protected:
   /// used to (a) impact the alignment of the containing structure, and (b)
   /// ensure that the individual bit-field will not straddle an alignment
   /// boundary.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseBitFieldTypeAlignment : 1;
 
   /// Whether zero length bitfields (e.g., int : 0;) force alignment of
@@ -152,13 +179,16 @@ protected:
   /// If the alignment of the zero length bitfield is greater than the member
   /// that follows it, `bar', `bar' will be aligned as the type of the
   /// zero-length bitfield.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseZeroLengthBitfieldAlignment : 1;
 
   /// Whether zero length bitfield alignment is respected if they are the
   /// leading members.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseLeadingZeroLengthBitfield : 1;
 
   ///  Whether explicit bit field alignment attributes are honored.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseExplicitBitFieldAlignment : 1;
 
   /// If non-zero, specifies a fixed alignment value for bitfields that follow
@@ -184,7 +214,7 @@ enum OpenCLTypeKind : uint8_t {
 
 /// Exposes information about the current target.
 ///
-class TargetInfo : public virtual TransferrableTargetInfo,
+class TargetInfo : public TransferrableTargetInfo,
                    public RefCountedBase<TargetInfo> {
   std::shared_ptr<TargetOptions> TargetOpts;
   llvm::Triple Triple;
@@ -197,43 +227,61 @@ protected:
   bool NoAsmVariants;  // True if {|} are normal characters.
   bool HasLegalHalfType; // True if the backend supports operations on the half
                          // LLVM IR type.
+  bool HalfArgsAndReturns;
   bool HasFloat128;
   bool HasFloat16;
   bool HasBFloat16;
+  bool HasFullBFloat16; // True if the backend supports native bfloat16
+                        // arithmetic. Used to determine excess precision
+                        // support in the frontend.
+  bool HasIbm128;
+  bool HasLongDouble;
+  bool HasFPReturn;
   bool HasStrictFP;
 
   unsigned char MaxAtomicPromoteWidth, MaxAtomicInlineWidth;
-  unsigned short SimdDefaultAlign;
   std::string DataLayoutString;
   const char *UserLabelPrefix;
   const char *MCountName;
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
   const LangASMap *AddrSpaceMap;
-  const unsigned *GridValues =
-      nullptr; // Array of target-specific GPU grid values that must be
-               // consistent between host RTL (plugin), device RTL, and clang.
 
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAlignMac68kSupport : 1;
-  unsigned RealTypeUsesObjCFPRet : 3;
+  LLVM_PREFERRED_TYPE(FloatModeKind)
+  unsigned RealTypeUsesObjCFPRetMask : llvm::BitWidth<FloatModeKind>;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ComplexLongDoubleUsesFP2Ret : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasBuiltinMSVaList : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRenderScriptTarget : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64SVETypes : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasRISCVVTypes : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasUnalignedAccess : 1;
 
   unsigned ARMCDECoprocMask : 8;
 
   unsigned MaxOpenCLWorkGroupSize;
+
+  std::optional<unsigned> MaxBitIntWidth;
+
+  std::optional<llvm::Triple> DarwinTargetVariantTriple;
 
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
@@ -241,6 +289,12 @@ protected:
   // UserLabelPrefix must match DL's getGlobalPrefix() when interpreted
   // as a DataLayout object.
   void resetDataLayout(StringRef DL, const char *UserLabelPrefix = "");
+
+  // Target features that are read-only and should not be disabled/enabled
+  // by command line options. Such features are for emitting predefined
+  // macros or checking availability of builtin functions and can be omitted
+  // in function attributes in IR.
+  llvm::StringSet<> ReadOnlyFeatures;
 
 public:
   /// Construct a target for the given options.
@@ -333,10 +387,11 @@ public:
   IntType getUIntMaxType() const {
     return getCorrespondingUnsignedType(IntMaxType);
   }
-  IntType getPtrDiffType(unsigned AddrSpace) const {
-    return AddrSpace == 0 ? PtrDiffType : getPtrDiffTypeV(AddrSpace);
+  IntType getPtrDiffType(LangAS AddrSpace) const {
+    return AddrSpace == LangAS::Default ? PtrDiffType
+                                        : getPtrDiffTypeV(AddrSpace);
   }
-  IntType getUnsignedPtrDiffType(unsigned AddrSpace) const {
+  IntType getUnsignedPtrDiffType(LangAS AddrSpace) const {
     return getCorrespondingUnsignedType(getPtrDiffType(AddrSpace));
   }
   IntType getIntPtrType() const { return IntPtrType; }
@@ -401,7 +456,8 @@ public:
   /// is represented as one of those two). At this time, there is no support
   /// for an explicit "PPC double-double" type (i.e. __ibm128) so we only
   /// need to differentiate between "long double" and IEEE quad precision.
-  RealType getRealTypeByWidth(unsigned BitWidth, bool ExplicitIEEE) const;
+  FloatModeKind getRealTypeByWidth(unsigned BitWidth,
+                                   FloatModeKind ExplicitType) const;
 
   /// Return the alignment (in bits) of the specified integer type enum.
   ///
@@ -413,11 +469,13 @@ public:
 
   /// Return the width of pointers on this target, for the
   /// specified address space.
-  uint64_t getPointerWidth(unsigned AddrSpace) const {
-    return AddrSpace == 0 ? PointerWidth : getPointerWidthV(AddrSpace);
+  uint64_t getPointerWidth(LangAS AddrSpace) const {
+    return AddrSpace == LangAS::Default ? PointerWidth
+                                        : getPointerWidthV(AddrSpace);
   }
-  uint64_t getPointerAlign(unsigned AddrSpace) const {
-    return AddrSpace == 0 ? PointerAlign : getPointerAlignV(AddrSpace);
+  uint64_t getPointerAlign(LangAS AddrSpace) const {
+    return AddrSpace == LangAS::Default ? PointerAlign
+                                        : getPointerAlignV(AddrSpace);
   }
 
   /// Return the maximum width of pointers on this target.
@@ -460,6 +518,25 @@ public:
   /// 'unsigned long long' for this target, in bits.
   unsigned getLongLongWidth() const { return LongLongWidth; }
   unsigned getLongLongAlign() const { return LongLongAlign; }
+
+  /// getInt128Align() - Returns the alignment of Int128.
+  unsigned getInt128Align() const { return Int128Align; }
+
+  /// getBitIntMaxAlign() - Returns the maximum possible alignment of
+  /// '_BitInt' and 'unsigned _BitInt'.
+  unsigned getBitIntMaxAlign() const {
+    return BitIntMaxAlign.value_or(LongLongAlign);
+  }
+
+  /// getBitIntAlign/Width - Return aligned size of '_BitInt' and
+  /// 'unsigned _BitInt' for this target, in bits.
+  unsigned getBitIntWidth(unsigned NumBits) const {
+    return llvm::alignTo(NumBits, getBitIntAlign(NumBits));
+  }
+  unsigned getBitIntAlign(unsigned NumBits) const {
+    return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
+                                getBitIntMaxAlign());
+  }
 
   /// getShortAccumWidth/Align - Return the size of 'signed short _Accum' and
   /// 'unsigned short _Accum' for this target, in bits.
@@ -576,17 +653,41 @@ public:
 
   /// Determine whether the __int128 type is supported on this target.
   virtual bool hasInt128Type() const {
-    return (getPointerWidth(0) >= 64) || getTargetOpts().ForceEnableInt128;
+    return (getPointerWidth(LangAS::Default) >= 64) ||
+           getTargetOpts().ForceEnableInt128;
   } // FIXME
 
-  /// Determine whether the _ExtInt type is supported on this target. This
+  /// Determine whether the _BitInt type is supported on this target. This
   /// limitation is put into place for ABI reasons.
-  virtual bool hasExtIntType() const {
+  /// FIXME: _BitInt is a required type in C23, so there's not much utility in
+  /// asking whether the target supported it or not; I think this should be
+  /// removed once backends have been alerted to the type and have had the
+  /// chance to do implementation work if needed.
+  virtual bool hasBitIntType() const {
     return false;
+  }
+
+  // Different targets may support a different maximum width for the _BitInt
+  // type, depending on what operations are supported.
+  virtual size_t getMaxBitIntWidth() const {
+    // Consider -fexperimental-max-bitint-width= first.
+    if (MaxBitIntWidth)
+      return std::min<size_t>(*MaxBitIntWidth, llvm::IntegerType::MAX_INT_BITS);
+
+    // FIXME: this value should be llvm::IntegerType::MAX_INT_BITS, which is
+    // maximum bit width that LLVM claims its IR can support. However, most
+    // backends currently have a bug where they only support float to int
+    // conversion (and vice versa) on types that are <= 128 bits and crash
+    // otherwise. We're setting the max supported value to 128 to be
+    // conservative.
+    return 128;
   }
 
   /// Determine whether _Float16 is supported on this target.
   virtual bool hasLegalHalfType() const { return HasLegalHalfType; }
+
+  /// Whether half args and returns are supported.
+  virtual bool allowHalfArgsAndReturns() const { return HalfArgsAndReturns; }
 
   /// Determine whether the __float128 type is supported on this target.
   virtual bool hasFloat128Type() const { return HasFloat128; }
@@ -595,7 +696,23 @@ public:
   virtual bool hasFloat16Type() const { return HasFloat16; }
 
   /// Determine whether the _BFloat16 type is supported on this target.
-  virtual bool hasBFloat16Type() const { return HasBFloat16; }
+  virtual bool hasBFloat16Type() const {
+    return HasBFloat16 || HasFullBFloat16;
+  }
+
+  /// Determine whether the BFloat type is fully supported on this target, i.e
+  /// arithemtic operations.
+  virtual bool hasFullBFloat16Type() const { return HasFullBFloat16; }
+
+  /// Determine whether the __ibm128 type is supported on this target.
+  virtual bool hasIbm128Type() const { return HasIbm128; }
+
+  /// Determine whether the long double type is supported on this target.
+  virtual bool hasLongDoubleType() const { return HasLongDouble; }
+
+  /// Determine whether return of a floating point value is supported
+  /// on this target.
+  virtual bool hasFPReturn() const { return HasFPReturn; }
 
   /// Determine whether constrained floating point is supported on this target.
   virtual bool hasStrictFP() const { return HasStrictFP; }
@@ -612,14 +729,16 @@ public:
   }
 
   /// getMinGlobalAlign - Return the minimum alignment of a global variable,
-  /// unless its alignment is explicitly reduced via attributes.
-  virtual unsigned getMinGlobalAlign (uint64_t) const {
+  /// unless its alignment is explicitly reduced via attributes. If \param
+  /// HasNonWeakDef is true, this concerns a VarDecl which has a definition
+  /// in current translation unit and that is not weak.
+  virtual unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const {
     return MinGlobalAlign;
   }
 
   /// Return the largest alignment for which a suitably-sized allocation with
-  /// '::operator new(size_t)' or 'malloc' is guaranteed to produce a
-  /// correctly-aligned pointer.
+  /// '::operator new(size_t)' is guaranteed to produce a correctly-aligned
+  /// pointer.
   unsigned getNewAlign() const {
     return NewAlign ? NewAlign : std::max(LongDoubleAlign, LongLongAlign);
   }
@@ -675,19 +794,32 @@ public:
     return *Float128Format;
   }
 
+  /// getIbm128Width/Align/Format - Return the size/align/format of
+  /// '__ibm128'.
+  unsigned getIbm128Width() const { return 128; }
+  unsigned getIbm128Align() const { return Ibm128Align; }
+  const llvm::fltSemantics &getIbm128Format() const { return *Ibm128Format; }
+
   /// Return the mangled code of long double.
   virtual const char *getLongDoubleMangling() const { return "e"; }
 
   /// Return the mangled code of __float128.
   virtual const char *getFloat128Mangling() const { return "g"; }
 
-  /// Return the mangled code of bfloat.
-  virtual const char *getBFloat16Mangling() const {
-    llvm_unreachable("bfloat not implemented on this target");
+  /// Return the mangled code of __ibm128.
+  virtual const char *getIbm128Mangling() const {
+    llvm_unreachable("ibm128 not implemented on this target");
   }
 
+  /// Return the mangled code of bfloat.
+  virtual const char *getBFloat16Mangling() const { return "DF16b"; }
+
   /// Return the value for the C99 FLT_EVAL_METHOD macro.
-  virtual unsigned getFloatEvalMethod() const { return 0; }
+  virtual LangOptions::FPEvalMethodKind getFPEvalMethod() const {
+    return LangOptions::FPEvalMethodKind::FEM_Source;
+  }
+
+  virtual bool supportSourceEvalMethod() const { return true; }
 
   // getLargeArrayMinWidth/Align - Return the minimum array size that is
   // 'large' and its alignment.
@@ -715,10 +847,6 @@ public:
 
   /// Return the maximum vector alignment supported for the given target.
   unsigned getMaxVectorAlign() const { return MaxVectorAlign; }
-  /// Return default simd alignment for the given target. Generally, this
-  /// value is type-specific, but this alignment can be used for most of the
-  /// types for the given target.
-  unsigned getSimdDefaultAlign() const { return SimdDefaultAlign; }
 
   unsigned getMaxOpenCLWorkGroupSize() const { return MaxOpenCLWorkGroupSize; }
 
@@ -743,7 +871,9 @@ public:
   }
 
   // Return the size of unwind_word for this target.
-  virtual unsigned getUnwindWordWidth() const { return getPointerWidth(0); }
+  virtual unsigned getUnwindWordWidth() const {
+    return getPointerWidth(LangAS::Default);
+  }
 
   /// Return the "preferred" register width on this target.
   virtual unsigned getRegisterWidth() const {
@@ -751,6 +881,18 @@ public:
     // width, we can introduce a new variable for this if/when some target wants
     // it.
     return PointerWidth;
+  }
+
+  /// Return true iff unaligned accesses are a single instruction (rather than
+  /// a synthesized sequence).
+  bool hasUnalignedAccess() const { return HasUnalignedAccess; }
+
+  /// Return true iff unaligned accesses are cheap. This affects placement and
+  /// size of bitfield loads/stores. (Not the ABI-mandated placement of
+  /// the bitfields themselves.)
+  bool hasCheapUnalignedBitFieldAccess() const {
+    // Simply forward to the unaligned access getter.
+    return hasUnalignedAccess();
   }
 
   /// \brief Returns the default value of the __USER_LABEL_PREFIX__ macro,
@@ -833,8 +975,8 @@ public:
 
   /// Check whether the given real type should use the "fpret" flavor of
   /// Objective-C message passing on this target.
-  bool useObjCFPRetForRealType(RealType T) const {
-    return RealTypeUsesObjCFPRet & (1 << T);
+  bool useObjCFPRetForRealType(FloatModeKind T) const {
+    return (int)((FloatModeKind)RealTypeUsesObjCFPRetMask & T);
   }
 
   /// Check whether _Complex long double should use the "fp2ret" flavor
@@ -870,6 +1012,11 @@ public:
   /// across the current set of primary and secondary targets.
   virtual ArrayRef<Builtin::Info> getTargetBuiltins() const = 0;
 
+  /// Returns target-specific min and max values VScale_Range.
+  virtual std::optional<std::pair<unsigned, unsigned>>
+  getVScaleRange(const LangOptions &LangOpts) const {
+    return std::nullopt;
+  }
   /// The __builtin_clz* and __builtin_ctz* built-in
   /// functions are specified to have undefined results for zero inputs, but
   /// on targets that support these operations in a way that provides
@@ -993,8 +1140,7 @@ public:
     }
     bool isValidAsmImmediate(const llvm::APInt &Value) const {
       if (!ImmSet.empty())
-        return Value.isSignedIntN(32) &&
-               ImmSet.count(Value.getZExtValue()) != 0;
+        return Value.isSignedIntN(32) && ImmSet.contains(Value.getZExtValue());
       return !ImmRange.isConstrained ||
              (Value.sge(ImmRange.Min) && Value.sle(ImmRange.Max));
     }
@@ -1093,12 +1239,12 @@ public:
 
   /// Replace some escaped characters with another string based on
   /// target-specific rules
-  virtual llvm::Optional<std::string> handleAsmEscapedChar(char C) const {
-    return llvm::None;
+  virtual std::optional<std::string> handleAsmEscapedChar(char C) const {
+    return std::nullopt;
   }
 
   /// Returns a string of target-specific clobbers, in LLVM format.
-  virtual const char *getClobbers() const = 0;
+  virtual std::string_view getClobbers() const = 0;
 
   /// Returns true if NaN encoding is IEEE 754-2008.
   /// Only MIPS allows a different encoding.
@@ -1112,7 +1258,9 @@ public:
   }
 
   /// Returns the target ID if supported.
-  virtual llvm::Optional<std::string> getTargetID() const { return llvm::None; }
+  virtual std::optional<std::string> getTargetID() const {
+    return std::nullopt;
+  }
 
   const char *getDataLayoutString() const {
     assert(!DataLayoutString.empty() && "Uninitialized DataLayout!");
@@ -1145,12 +1293,12 @@ public:
   /// Microsoft C++ code using dllimport/export attributes?
   virtual bool shouldDLLImportComdatSymbols() const {
     return getTriple().isWindowsMSVCEnvironment() ||
-           getTriple().isWindowsItaniumEnvironment() || getTriple().isPS4CPU();
+           getTriple().isWindowsItaniumEnvironment() || getTriple().isPS();
   }
 
   // Does this target have PS4 specific dllimport/export handling?
   virtual bool hasPS4DLLImportExport() const {
-    return getTriple().isPS4CPU() ||
+    return getTriple().isPS() ||
            // Windows Itanium support allows for testing the SCEI flavour of
            // dllimport/export handling on a Windows system.
            (getTriple().isWindowsItaniumEnvironment() &&
@@ -1162,11 +1310,7 @@ public:
   /// Apply changes to the target information with respect to certain
   /// language options which change the target configuration and adjust
   /// the language based on the target options where applicable.
-  virtual void adjust(LangOptions &Opts);
-
-  /// Adjust target options based on codegen options.
-  virtual void adjustTargetOptions(const CodeGenOptions &CGOpts,
-                                   TargetOptions &TargetOpts) const {}
+  virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts);
 
   /// Initialize the map with the default set of target features for the
   /// CPU this should include all legal feature strings on the target.
@@ -1199,18 +1343,20 @@ public:
     fillValidCPUList(Values);
   }
 
-  /// brief Determine whether this TargetInfo supports the given CPU name.
+  /// Determine whether this TargetInfo supports the given CPU name.
   virtual bool isValidCPUName(StringRef Name) const {
     return true;
   }
 
-  /// brief Determine whether this TargetInfo supports the given CPU name for
-  // tuning.
+  /// Determine whether this TargetInfo supports the given CPU name for
+  /// tuning.
   virtual bool isValidTuneCPUName(StringRef Name) const {
     return isValidCPUName(Name);
   }
 
-  /// brief Determine whether this TargetInfo supports tune in target attribute.
+  virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
+
+  /// Determine whether this TargetInfo supports tune in target attribute.
   virtual bool supportsTargetAttributeTune() const {
     return false;
   }
@@ -1248,17 +1394,58 @@ public:
     return true;
   }
 
+  /// Returns true if feature has an impact on target code
+  /// generation.
+  virtual bool doesFeatureAffectCodeGen(StringRef Feature) const {
+    return true;
+  }
+
+  /// For given feature return dependent ones.
+  virtual StringRef getFeatureDependencies(StringRef Feature) const {
+    return StringRef();
+  }
+
   struct BranchProtectionInfo {
-    LangOptions::SignReturnAddressScopeKind SignReturnAddr =
-        LangOptions::SignReturnAddressScopeKind::None;
-    LangOptions::SignReturnAddressKeyKind SignKey =
-        LangOptions::SignReturnAddressKeyKind::AKey;
-    bool BranchTargetEnforcement = false;
+    LangOptions::SignReturnAddressScopeKind SignReturnAddr;
+    LangOptions::SignReturnAddressKeyKind SignKey;
+    bool BranchTargetEnforcement;
+    bool BranchProtectionPAuthLR;
+    bool GuardedControlStack;
+
+    BranchProtectionInfo() = default;
+
+    const char *getSignReturnAddrStr() const {
+      switch (SignReturnAddr) {
+      case LangOptions::SignReturnAddressScopeKind::None:
+        return "none";
+      case LangOptions::SignReturnAddressScopeKind::NonLeaf:
+        return "non-leaf";
+      case LangOptions::SignReturnAddressScopeKind::All:
+        return "all";
+      }
+      llvm_unreachable("Unexpected SignReturnAddressScopeKind");
+    }
+
+    const char *getSignKeyStr() const {
+      switch (SignKey) {
+      case LangOptions::SignReturnAddressKeyKind::AKey:
+        return "a_key";
+      case LangOptions::SignReturnAddressKeyKind::BKey:
+        return "b_key";
+      }
+      llvm_unreachable("Unexpected SignReturnAddressKeyKind");
+    }
   };
+
+  /// Determine if the Architecture in this TargetInfo supports branch
+  /// protection
+  virtual bool isBranchProtectionSupportedArch(StringRef Arch) const {
+    return false;
+  }
 
   /// Determine if this TargetInfo supports the given branch protection
   /// specification
-  virtual bool validateBranchProtection(StringRef Spec,
+  virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                         BranchProtectionInfo &BPI,
                                         StringRef &Err) const {
     Err = "";
@@ -1286,12 +1473,31 @@ public:
     return false;
   }
 
+  /// Determine whether the given target feature is read only.
+  bool isReadOnlyFeature(StringRef Feature) const {
+    return ReadOnlyFeatures.count(Feature);
+  }
+
   /// Identify whether this target supports multiversioning of functions,
   /// which requires support for cpu_supports and cpu_is functionality.
-  bool supportsMultiVersioning() const { return getTriple().isX86(); }
+  bool supportsMultiVersioning() const {
+    return getTriple().isX86() || getTriple().isAArch64();
+  }
 
   /// Identify whether this target supports IFuncs.
-  bool supportsIFunc() const { return getTriple().isOSBinFormatELF(); }
+  bool supportsIFunc() const {
+    if (getTriple().isOSBinFormatMachO())
+      return true;
+    return getTriple().isOSBinFormatELF() &&
+           ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
+            getTriple().isOSFreeBSD());
+  }
+
+  // Identify whether this target supports __builtin_cpu_supports and
+  // __builtin_cpu_is.
+  virtual bool supportsCpuSupports() const { return false; }
+  virtual bool supportsCpuIs() const { return false; }
+  virtual bool supportsCpuInit() const { return false; }
 
   // Validate the contents of the __builtin_cpu_supports(const char*)
   // argument.
@@ -1302,6 +1508,10 @@ public:
   virtual unsigned multiVersionSortPriority(StringRef Name) const {
     return 0;
   }
+
+  // Return the target-specific cost for feature
+  // that taken into account in priority sorting.
+  virtual unsigned multiVersionFeatureCost() const { return 0; }
 
   // Validate the contents of the __builtin_cpu_is(const char*)
   // argument.
@@ -1319,6 +1529,13 @@ public:
         "cpu_specific Multiversioning not implemented on this target");
   }
 
+  // Get the value for the 'tune-cpu' flag for a cpu_specific variant with the
+  // programmer-specified 'Name'.
+  virtual StringRef getCPUSpecificTuneName(StringRef Name) const {
+    llvm_unreachable(
+        "cpu_specific Multiversioning not implemented on this target");
+  }
+
   // Get a list of the features that make up the CPU option for
   // cpu_specific/cpu_dispatch so that it can be passed to llvm as optimization
   // options.
@@ -1329,8 +1546,10 @@ public:
   }
 
   // Get the cache line size of a given cpu. This method switches over
-  // the given cpu and returns "None" if the CPU is not found.
-  virtual Optional<unsigned> getCPUCacheLineSize() const { return None; }
+  // the given cpu and returns "std::nullopt" if the CPU is not found.
+  virtual std::optional<unsigned> getCPUCacheLineSize() const {
+    return std::nullopt;
+  }
 
   // Returns maximal number of args passed in registers.
   unsigned getRegParmMax() const {
@@ -1383,6 +1602,16 @@ public:
   }
 
   const LangASMap &getAddressSpaceMap() const { return *AddrSpaceMap; }
+  unsigned getTargetAddressSpace(LangAS AS) const {
+    if (isTargetAddressSpace(AS))
+      return toTargetAddressSpace(AS);
+    return getAddressSpaceMap()[(unsigned)AS];
+  }
+
+  /// Determine whether the given pointer-authentication key is valid.
+  ///
+  /// The value has been coerced to type 'int'.
+  virtual bool validatePointerAuthKey(const llvm::APSInt &value) const;
 
   /// Map from the address space field in builtin description strings to the
   /// language address space.
@@ -1399,15 +1628,15 @@ public:
   /// Return an AST address space which can be used opportunistically
   /// for constant global memory. It must be possible to convert pointers into
   /// this address space to LangAS::Default. If no such address space exists,
-  /// this may return None, and such optimizations will be disabled.
-  virtual llvm::Optional<LangAS> getConstantAddressSpace() const {
+  /// this may return std::nullopt, and such optimizations will be disabled.
+  virtual std::optional<LangAS> getConstantAddressSpace() const {
     return LangAS::Default;
   }
 
-  /// Return a target-specific GPU grid value based on the GVIDX enum \p gv
-  unsigned getGridValue(llvm::omp::GVIDX gv) const {
-    assert(GridValues != nullptr && "GridValues not initialized");
-    return GridValues[gv];
+  // access target-specific GPU grid values that must be consistent between
+  // host RTL (plugin), deviceRTL and clang.
+  virtual const llvm::omp::GV &getGridValue() const {
+    llvm_unreachable("getGridValue not implemented on this target");
   }
 
   /// Retrieve the name of the platform as it is used in the
@@ -1423,6 +1652,9 @@ public:
 
   /// Whether the option -fextend-arguments={32,64} is supported on the target.
   virtual bool supportsExtendIntArgs() const { return false; }
+
+  /// Controls if __arithmetic_fence is supported in the targeted backend.
+  virtual bool checkArithmeticFenceSupported() const { return false; }
 
   /// Gets the default calling convention for the given target and
   /// declaration context.
@@ -1461,6 +1693,14 @@ public:
 
   virtual CallingConvKind getCallingConvKind(bool ClangABICompat4) const;
 
+  /// Controls whether explicitly defaulted (`= default`) special member
+  /// functions disqualify something from being POD-for-the-purposes-of-layout.
+  /// Historically, Clang didn't consider these acceptable for POD, but GCC
+  /// does. So in newer Clang ABIs they are acceptable for POD to be compatible
+  /// with GCC/Itanium ABI, and remains disqualifying for targets that need
+  /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
+  virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
+
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.
   virtual bool hasSjLjLowering() const {
@@ -1471,7 +1711,7 @@ public:
   virtual bool
   checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const;
 
-  /// Check if the target supports CFProtection branch.
+  /// Check if the target supports CFProtection return.
   virtual bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const;
 
@@ -1528,10 +1768,11 @@ public:
   /// space \p AddressSpace to be converted in order to be used, then return the
   /// corresponding target specific DWARF address space.
   ///
-  /// \returns Otherwise return None and no conversion will be emitted in the
-  /// DWARF.
-  virtual Optional<unsigned> getDWARFAddressSpace(unsigned AddressSpace) const {
-    return None;
+  /// \returns Otherwise return std::nullopt and no conversion will be emitted
+  /// in the DWARF.
+  virtual std::optional<unsigned> getDWARFAddressSpace(unsigned AddressSpace)
+      const {
+    return std::nullopt;
   }
 
   /// \returns The version of the SDK which was used during the compilation if
@@ -1555,22 +1796,48 @@ public:
   /// Whether target allows debuginfo types for decl only variables/functions.
   virtual bool allowDebugInfoForExternalRef() const { return false; }
 
+  /// Returns the darwin target variant triple, the variant of the deployment
+  /// target for which the code is being compiled.
+  const llvm::Triple *getDarwinTargetVariantTriple() const {
+    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
+  }
+
+  /// Returns the version of the darwin target variant SDK which was used during
+  /// the compilation if one was specified, or an empty version otherwise.
+  const std::optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
+    return !getTargetOpts().DarwinTargetVariantSDKVersion.empty()
+               ? getTargetOpts().DarwinTargetVariantSDKVersion
+               : std::optional<VersionTuple>();
+  }
+
+  /// Whether to support HIP image/texture API's.
+  virtual bool hasHIPImageSupport() const { return true; }
+
+  /// The first value in the pair is the minimum offset between two objects to
+  /// avoid false sharing (destructive interference). The second value in the
+  /// pair is maximum size of contiguous memory to promote true sharing
+  /// (constructive interference). Neither of these values are considered part
+  /// of the ABI and can be changed by targets at any time.
+  virtual std::pair<unsigned, unsigned> hardwareInterferenceSizes() const {
+    return std::make_pair(64, 64);
+  }
+
 protected:
   /// Copy type and layout related info.
   void copyAuxTarget(const TargetInfo *Aux);
-  virtual uint64_t getPointerWidthV(unsigned AddrSpace) const {
+  virtual uint64_t getPointerWidthV(LangAS AddrSpace) const {
     return PointerWidth;
   }
-  virtual uint64_t getPointerAlignV(unsigned AddrSpace) const {
+  virtual uint64_t getPointerAlignV(LangAS AddrSpace) const {
     return PointerAlign;
   }
-  virtual enum IntType getPtrDiffTypeV(unsigned AddrSpace) const {
+  virtual enum IntType getPtrDiffTypeV(LangAS AddrSpace) const {
     return PtrDiffType;
   }
   virtual ArrayRef<const char *> getGCCRegNames() const = 0;
   virtual ArrayRef<GCCRegAlias> getGCCRegAliases() const = 0;
   virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const {
-    return None;
+    return std::nullopt;
   }
 
  private:

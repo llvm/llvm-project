@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines a CheckNSError, a flow-insenstive check
+//  This file defines a CheckNSError, a flow-insensitive check
 //  that determines if an Objective-C class interface correctly returns
 //  a non-void return type.
 //
@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -38,10 +39,10 @@ static bool IsCFError(QualType T, IdentifierInfo *II);
 namespace {
 class NSErrorMethodChecker
     : public Checker< check::ASTDecl<ObjCMethodDecl> > {
-  mutable IdentifierInfo *II;
+  mutable IdentifierInfo *II = nullptr;
 
 public:
-  NSErrorMethodChecker() : II(nullptr) {}
+  NSErrorMethodChecker() = default;
 
   void checkASTDecl(const ObjCMethodDecl *D,
                     AnalysisManager &mgr, BugReporter &BR) const;
@@ -118,7 +119,7 @@ void CFErrorFunctionChecker::checkASTDecl(const FunctionDecl *D,
     II = &D->getASTContext().Idents.get("CFErrorRef");
 
   bool hasCFError = false;
-  for (auto I : D->parameters())  {
+  for (auto *I : D->parameters())  {
     if (IsCFError(I->getType(), II)) {
       hasCFError = true;
       break;
@@ -166,7 +167,7 @@ class NSOrCFErrorDerefChecker
   mutable std::unique_ptr<NSErrorDerefBug> NSBT;
   mutable std::unique_ptr<CFErrorDerefBug> CFBT;
 public:
-  DefaultBool ShouldCheckNSError, ShouldCheckCFError;
+  bool ShouldCheckNSError = false, ShouldCheckCFError = false;
   CheckerNameRef NSErrorName, CFErrorName;
   NSOrCFErrorDerefChecker() : NSErrorII(nullptr), CFErrorII(nullptr) {}
 
@@ -197,7 +198,7 @@ static void setFlag(ProgramStateRef state, SVal val, CheckerContext &C) {
 
 static QualType parameterTypeFromSVal(SVal val, CheckerContext &C) {
   const StackFrameContext * SFC = C.getStackFrame();
-  if (Optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>()) {
+  if (std::optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>()) {
     const MemRegion* R = X->getRegion();
     if (const VarRegion *VR = R->getAs<VarRegion>())
       if (const StackArgumentsSpaceRegion *
@@ -214,7 +215,7 @@ void NSOrCFErrorDerefChecker::checkLocation(SVal loc, bool isLoad,
                                             CheckerContext &C) const {
   if (!isLoad)
     return;
-  if (loc.isUndef() || !loc.getAs<Loc>())
+  if (loc.isUndef() || !isa<Loc>(loc))
     return;
 
   ASTContext &Ctx = C.getASTContext();
@@ -266,7 +267,7 @@ void NSOrCFErrorDerefChecker::checkEvent(ImplicitNullDerefEvent event) const {
   SmallString<128> Buf;
   llvm::raw_svector_ostream os(Buf);
 
-  os << "Potential null dereference.  According to coding standards ";
+  os << "Potential null dereference. According to coding standards ";
   os << (isNSError
          ? "in 'Creating and Returning NSError Objects' the parameter"
          : "documented in CoreFoundation/CFError.h the parameter");

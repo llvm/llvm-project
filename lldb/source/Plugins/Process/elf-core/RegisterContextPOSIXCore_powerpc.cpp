@@ -39,7 +39,7 @@ RegisterContextCorePOSIX_powerpc::RegisterContextCorePOSIX_powerpc(
   m_vec.SetByteOrder(vregset.GetByteOrder());
 }
 
-RegisterContextCorePOSIX_powerpc::~RegisterContextCorePOSIX_powerpc() {}
+RegisterContextCorePOSIX_powerpc::~RegisterContextCorePOSIX_powerpc() = default;
 
 bool RegisterContextCorePOSIX_powerpc::ReadGPR() { return true; }
 
@@ -92,7 +92,7 @@ bool RegisterContextCorePOSIX_powerpc::ReadRegister(
 }
 
 bool RegisterContextCorePOSIX_powerpc::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 

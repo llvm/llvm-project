@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Iterator.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/ADT/STLExtras.h"
 #include <algorithm>
 #include <cassert>
 #include <numeric>
@@ -34,7 +34,7 @@ public:
     // When children are sorted by the estimateSize(), sync() calls are more
     // effective. Each sync() starts with the first child and makes sure all
     // children point to the same element. If any child is "above" the previous
-    // ones, the algorithm resets and and advances the children to the next
+    // ones, the algorithm resets and advances the children to the next
     // highest element starting from the front. When child iterators in the
     // beginning have smaller estimated size, the sync() will have less restarts
     // and become more effective.
@@ -77,7 +77,7 @@ public:
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(& ";
-    auto Separator = "";
+    auto *Separator = "";
     for (const auto &Child : Children) {
       OS << Separator << *Child;
       Separator = " ";
@@ -104,11 +104,19 @@ private:
         // In this case, just terminate the process.
         if (ReachedEnd)
           return;
+        // Cache the result so that peek() is not called again as it may be
+        // quite expensive in AND with large subtrees.
+        auto Candidate = Child->peek();
         // If any child goes beyond given ID (i.e. ID is not the common item),
         // all children should be advanced to the next common item.
-        if (Child->peek() > SyncID) {
-          SyncID = Child->peek();
+        if (Candidate > SyncID) {
+          SyncID = Candidate;
           NeedsAdvance = true;
+          // Reset and try to sync again. Sync starts with the first child as
+          // this is the cheapest (smallest size estimate). This way advanceTo
+          // is called on the large posting lists once the sync point is very
+          // likely.
+          break;
         }
       }
     } while (NeedsAdvance);
@@ -198,7 +206,7 @@ public:
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(| ";
-    auto Separator = "";
+    auto *Separator = "";
     for (const auto &Child : Children) {
       OS << Separator << *Child;
       Separator = " ";
@@ -207,7 +215,6 @@ private:
     return OS;
   }
 
-  // FIXME(kbobyrev): Would storing Children in min-heap be faster?
   std::vector<std::unique_ptr<Iterator>> Children;
   friend Corpus; // For optimizations.
 };

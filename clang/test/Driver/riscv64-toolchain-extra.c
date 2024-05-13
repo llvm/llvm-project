@@ -18,19 +18,19 @@
 // RUN: ln -s %S/Inputs/basic_riscv64_nogcc_tree/riscv64-unknown-elf %t/riscv64-nogcc/riscv64-unknown-elf
 // RUN: %t/riscv64-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --gcc-toolchain=%t/riscv64-nogcc/invalid \
-// RUN:    -target riscv64-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
+// RUN:    --target=riscv64-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64-NOGCC %s
 
 // RUN: %t/riscv64-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --sysroot=%t/riscv64-nogcc/bin/../riscv64-unknown-elf \
-// RUN:    -target riscv64-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
+// RUN:    --target=riscv64-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64-NOGCC %s
 
 // C-RV64-BAREMETAL-LP64-NOGCC: "-internal-isystem" "{{.*}}/riscv64-nogcc/bin/../riscv64-unknown-elf/include"
 // C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/bin/riscv64-unknown-elf-ld"
 // C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/bin/../riscv64-unknown-elf/lib/crt0.o"
-// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/lib/clang_rt.crtbegin-riscv64.o"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/riscv64-unknown-unknown-elf/clang_rt.crtbegin.o"
 // C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/bin/../riscv64-unknown-elf/lib"
 // C-RV64-BAREMETAL-LP64-NOGCC: "--start-group" "-lc" "-lgloss" "--end-group"
-// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/lib/libclang_rt.builtins-riscv64.a"
-// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/lib/clang_rt.crtend-riscv64.o"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/riscv64-unknown-unknown-elf/libclang_rt.builtins.a"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/riscv64-unknown-unknown-elf/clang_rt.crtend.o"

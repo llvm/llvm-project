@@ -160,8 +160,8 @@
 // RUN: %clang -target mips-linux-gnu -### -fintegrated-as -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=FPXX-DEFAULT %s
 // FPXX-DEFAULT: -cc1as
-// FPXX-DEFAULT-NOT: "-target-feature" "+fpxx"
-// FPXX-DEFAULT-NOT: "-target-feature" "+nooddspreg"
+// FPXX-DEFAULT: "-target-feature" "+fpxx"
+// FPXX-DEFAULT: "-target-feature" "+nooddspreg"
 
 // RUN: %clang -target mips-linux-gnu -### -fintegrated-as -c %s -mfp32 2>&1 | \
 // RUN:   FileCheck -check-prefix=FP32 %s
@@ -182,7 +182,7 @@
 // RUN: %clang -target mips-linux-gnu -### -fintegrated-as -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=ODDSPREG-DEFAULT %s
 // ODDSPREG-DEFAULT: -cc1as
-// ODDSPREG-DEFAULT-NOT: "-target-feature" "{{[+-]}}nooddspreg"
+// ODDSPREG-DEFAULT: "-target-feature" "+nooddspreg"
 
 // RUN: %clang -target mips-linux-gnu -### -fintegrated-as -c %s -modd-spreg 2>&1 | \
 // RUN:   FileCheck -check-prefix=ODDSPREG-ON %s

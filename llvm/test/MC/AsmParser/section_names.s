@@ -1,82 +1,66 @@
 # RUN: llvm-mc -triple i386-pc-linux-gnu -filetype=obj -o %t %s
-# RUN: llvm-readobj -S - < %t | FileCheck %s
+# RUN: llvm-readelf -S %t | FileCheck %s
+
+# CHECK:      Name              Type            {{.*}} Flg Lk Inf Al
+# CHECK:      .note             NOTE            {{.*}}      0   0  1
+# CHECK-NEXT: .note2            NOTE            {{.*}}      0   0  1
+# CHECK-NEXT: .notefoo          NOTE            {{.*}}      0   0  1
+# CHECK-NEXT: .rodata.foo       PROGBITS        {{.*}}   A  0   0  1
+# CHECK-NEXT: .rodatafoo        PROGBITS        {{.*}}      0   0  1
+# CHECK-NEXT: .rodata1          PROGBITS        {{.*}}   A  0   0  1
+# CHECK-NEXT: .tdata.foo        PROGBITS        {{.*}} WAT  0   0  1
+# CHECK-NEXT: .tbss             NOBITS          {{.*}} WAT  0   0  1
+# CHECK-NEXT: .tbss.foo         NOBITS          {{.*}} WAT  0   0  1
+# CHECK-NEXT: .init_array       INIT_ARRAY      {{.*}}  WA  0   0  1
+# CHECK-NEXT: .init_array.42    INIT_ARRAY      {{.*}}  WA  0   0  1
+# CHECK-NEXT: .init_array2      PROGBITS        {{.*}}      0   0  1
+# CHECK-NEXT: .init_arrayfoo    PROGBITS        {{.*}}      0   0  1
+# CHECK-NEXT: .fini_array       FINI_ARRAY      {{.*}}  WA  0   0  1
+# CHECK-NEXT: .fini_array2      PROGBITS        {{.*}}      0   0  1
+# CHECK-NEXT: .fini_arrayfoo    PROGBITS        {{.*}}      0   0  1
+# CHECK-NEXT: .preinit_array    PREINIT_ARRAY   {{.*}}  WA  0   0  1
+# CHECK-NEXT: .preinit_array2   PROGBITS        {{.*}}      0   0  1
+# CHECK-NEXT: .preinit_array.x  PREINIT_ARRAY   {{.*}}  WA  0   0  1
+# CHECK-NEXT: .data.foo         PROGBITS        {{.*}}  WA  0   0  1
+# CHECK-NEXT: .data1            PROGBITS        {{.*}}  WA  0   0  1
+# CHECK-NEXT: .data2            PROGBITS        {{.*}}      0   0  1
+# CHECK-NEXT: .bss              NOBITS          {{.*}}  WA  0   0  1
+# CHECK-NEXT: .bss.foo          NOBITS          {{.*}}  WA  0   0  1
+# CHECK-NEXT: .nobits           PROGBITS        {{.*}}      0   0  1
+# CHECK-NEXT: .nobits2          PROGBITS        {{.*}}      0   0  1
+# CHECK-NEXT: .nobitsfoo        PROGBITS        {{.*}}      0   0  1
+
+
+.section .note
+.section .note2
+.section .notefoo
+
+.section .rodata.foo
+.section .rodatafoo
+.section .rodata1
+
+.section .tdata.foo
+.section .tbss
+.section .tbss.foo
+
+.section .init_array
+.section .init_array.42
+.section .init_array2
+.section .init_arrayfoo
+.section .fini_array
+.section .fini_array2
+.section .fini_arrayfoo
+.section .preinit_array
+.section .preinit_array2
+.section .preinit_array.x
+
+.section .data.foo
+.section .data1
+.section .data2
+.section .bss
+.section .bss.foo
+
 .section .nobits
-.byte 1
 .section .nobits2
-.byte 1
 .section .nobitsfoo
 .byte 1
-.section .init_array
-.byte 1
-.section .init_array.42
-.byte 1
-.section .init_array2
-.byte 1
-.section .init_arrayfoo
-.byte 1
-.section .fini_array
-.byte 1
-.section .fini_array2
-.byte 1
-.section .fini_arrayfoo
-.byte 1
-.section .preinit_array
-.byte 1
-.section .preinit_array2
-.byte 1
-.section .preinit_arrayfoo
-.byte 1
-.section .note
-.byte 1
-.section .note2
-.byte 1
-.section .notefoo
-.byte 1
-.section .bss
-.space 1
-.section .bss.foo
-.space 1
-.section .tbss
-.space 1
-.section .tbss.foo
-.space 1
-# CHECK:        Name: .nobits
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK:        Name: .nobits2
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK:        Name: .nobitsfoo
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK:        Name: .init_array
-# CHECK-NEXT:   Type:  SHT_INIT_ARRAY
-# CHECK:        Name: .init_array.42
-# CHECK-NEXT:   Type:  SHT_INIT_ARRAY
-# CHECK:        Name: .init_array2
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK:        Name: .init_arrayfoo
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK:        Name: .fini_array
-# CHECK-NEXT:   Type: SHT_FINI_ARRAY
-# CHECK:        Name: .fini_array2
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK:        Name: .fini_arrayfoo
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK:        Name: .preinit_array
-# CHECK-NEXT:   Type: SHT_PREINIT_ARRAY
-# CHECK:        Name: .preinit_array2
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK:        Name: .preinit_arrayfoo
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK:        Name: .note
-# CHECK-NEXT:   Type: SHT_NOTE
-# CHECK:        Name: .note2
-# CHECK-NEXT:   Type: SHT_NOTE
-# CHECK:        Name: .notefoo
-# CHECK-NEXT:   Type: SHT_NOTE
-# CHECK:        Name: .bss
-# CHECK-NEXT:   Type: SHT_NOBITS
-# CHECK:        Name: .bss.foo
-# CHECK-NEXT:   Type: SHT_NOBITS
-# CHECK:        Name: .tbss
-# CHECK-NEXT:   Type: SHT_NOBITS
-# CHECK:        Name: .tbss.foo
-# CHECK-NEXT:   Type: SHT_NOBITS

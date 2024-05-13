@@ -3,26 +3,26 @@
 
 --- |
 
-  define i32 @widen_load_range0_tbaa(i24 addrspace(1)* %ptr) {
-    %load = load i24, i24 addrspace(1)* %ptr, !range !0, !tbaa !1
+  define i32 @widen_load_range0_tbaa(ptr addrspace(1) %ptr) {
+    %load = load i24, ptr addrspace(1) %ptr, !range !0, !tbaa !1
     %zext = zext i24 %load to i32
     ret i32 %zext
   }
 
-  define i32 @widen_load_range1_tbaa(i24 addrspace(1)* %ptr) {
-    %load = load i24, i24 addrspace(1)* %ptr, !range !0, !tbaa !1
+  define i32 @widen_load_range1_tbaa(ptr addrspace(1) %ptr) {
+    %load = load i24, ptr addrspace(1) %ptr, !range !0, !tbaa !1
     %zext = zext i24 %load to i32
     ret i32 %zext
   }
 
-  define i32 @widen_load_tbaa0(i24 addrspace(1)* %ptr) {
-    %load = load i24, i24 addrspace(1)* %ptr, !tbaa !1
+  define i32 @widen_load_tbaa0(ptr addrspace(1) %ptr) {
+    %load = load i24, ptr addrspace(1) %ptr, !tbaa !1
     %zext = zext i24 %load to i32
     ret i32 %zext
   }
 
-  define i32 @widen_load_tbaa1(i24 addrspace(1)* %ptr) {
-    %load = load i24, i24 addrspace(1)* %ptr, !tbaa !1
+  define i32 @widen_load_tbaa1(ptr addrspace(1) %ptr) {
+    %load = load i24, ptr addrspace(1) %ptr, !tbaa !1
     %zext = zext i24 %load to i32
     ret i32 %zext
   }
@@ -40,14 +40,15 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; SI-LABEL: name: widen_load_range0_tbaa
-    ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 4, !tbaa !1, addrspace 1)
-    ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; SI: $vgpr0 = COPY [[AND]](s32)
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
+    ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
+    ; SI-NEXT: $vgpr0 = COPY [[AND]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s24) = G_LOAD %0 :: (load 3, align 4, addrspace 1, !range !0, !tbaa !1)
+    %1:_(s24) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !range !0, !tbaa !1)
     %2:_(s32) = G_ZEXT %1
     $vgpr0 = COPY %2
 
@@ -60,11 +61,13 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; SI-LABEL: name: widen_load_range1_tbaa
-    ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 4, !tbaa !1, addrspace 1)
-    ; SI: $vgpr0 = COPY [[LOAD]](s32)
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load 3, align 4, addrspace 1, !range !0, !tbaa !1)
+    %1:_(s32) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !range !0, !tbaa !1)
     $vgpr0 = COPY %1
 
 ...
@@ -74,14 +77,15 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; SI-LABEL: name: widen_load_tbaa0
-    ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 4, !tbaa !1, addrspace 1)
-    ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; SI: $vgpr0 = COPY [[AND]](s32)
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
+    ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
+    ; SI-NEXT: $vgpr0 = COPY [[AND]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s24) = G_LOAD %0 :: (load 3, align 4, addrspace 1, !tbaa !1)
+    %1:_(s24) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !tbaa !1)
     %2:_(s32) = G_ZEXT %1
     $vgpr0 = COPY %2
 
@@ -94,11 +98,13 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; SI-LABEL: name: widen_load_tbaa1
-    ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 4, !tbaa !1, addrspace 1)
-    ; SI: $vgpr0 = COPY [[LOAD]](s32)
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load 3, align 4, addrspace 1, !tbaa !1)
+    %1:_(s32) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !tbaa !1)
     $vgpr0 = COPY %1
 
 ...

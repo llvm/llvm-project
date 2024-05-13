@@ -45,7 +45,7 @@ protected:
   std::vector<PtrT> TestPtrs;
 
   TinyPtrVectorTest() {
-    for (size_t i = 0, e = array_lengthof(TestValues); i != e; ++i)
+    for (size_t i = 0, e = std::size(TestValues); i != e; ++i)
       TestPtrs.push_back(PtrT(&TestValues[i]));
 
     std::shuffle(TestPtrs.begin(), TestPtrs.end(), std::mt19937{});
@@ -53,9 +53,7 @@ protected:
 
   PtrT makePtr(ValueT *V) { return PtrT(V); }
 
-  ArrayRef<PtrT> testArray(size_t N) {
-    return makeArrayRef(&TestPtrs[0], N);
-  }
+  ArrayRef<PtrT> testArray(size_t N) { return ArrayRef(&TestPtrs[0], N); }
 
   void appendValues(VectorT &V, ArrayRef<PtrT> Values) {
     for (size_t i = 0, e = Values.size(); i != e; ++i)

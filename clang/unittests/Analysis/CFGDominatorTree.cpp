@@ -33,7 +33,7 @@ TEST(CFGDominatorTree, DomTree) {
 
   CFG *cfg = Result.getCFG();
 
-  // Sanity checks.
+  // Basic correctness checks.
   EXPECT_EQ(cfg->size(), 4u);
 
   CFGBlock *ExitBlock = *cfg->begin();
@@ -122,7 +122,7 @@ TEST(CFGDominatorTree, ControlDependency) {
 
   CFG *cfg = Result.getCFG();
 
-  // Sanity checks.
+  // Basic correctness checks.
   EXPECT_EQ(cfg->size(), 6u);
 
   CFGBlock *ExitBlock = *cfg->begin();

@@ -57,7 +57,7 @@ typedef struct {
 
 @end
 
-int main() {
+int main(void) {
 #define SWAP(T,a,b) { T a_tmp = a; a = b; b = a_tmp; }
   A *a = [[A alloc] init];
   A *b = [[A alloc] init];

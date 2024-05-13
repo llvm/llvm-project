@@ -20,9 +20,9 @@ define i32 @foo_noprotect() local_unnamed_addr {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
   %a = alloca i32, i64 100, align 65536
-  %b = getelementptr inbounds i32, i32* %a, i64 98
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 98
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -40,7 +40,7 @@ define i32 @foo_protect() local_unnamed_addr #0 {
 ; CHECK-NEXT:    je .LBB1_4
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    subq $4096, %rsp # imm = 0x1000
-; CHECK-NEXT:    cmpq %rsp, %r11
+; CHECK-NEXT:    cmpq %r11, %rsp
 ; CHECK-NEXT:    jb .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq $0, (%rsp)
@@ -66,9 +66,9 @@ define i32 @foo_protect() local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
   %a = alloca i32, i64 100, align 65536
-  %b = getelementptr inbounds i32, i32* %a, i64 98
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 98
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 

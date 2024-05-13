@@ -44,8 +44,8 @@ void guard_variables(int a) {
 // CHECK: icmp eq i8 [[GUARDBIT]], 0
 
   // As guards are 64-bit, these helpers should take 64-bit pointers.
-// CHECK: call i32 @__cxa_guard_acquire(i64*
-// CHECK: call void @__cxa_guard_release(i64*
+// CHECK: call i32 @__cxa_guard_acquire(ptr
+// CHECK: call void @__cxa_guard_release(ptr
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -4,7 +4,7 @@
 
 ; CHECK-LABEL: @test_i128_align
 define dso_local i128 @test_i128_align(i32, i128 %arg, i32 %after) {
-  store i32 %after, i32* @var, align 4
+  store i32 %after, ptr @var, align 4
 ; CHECK-DAG: str w4, [{{x[0-9]+}}, :lo12:var]
 
   ret i128 %arg
@@ -14,7 +14,7 @@ define dso_local i128 @test_i128_align(i32, i128 %arg, i32 %after) {
 
 ; CHECK-LABEL: @test_i64x2_align
 define [2 x i64] @test_i64x2_align(i32, [2 x i64] %arg, i32 %after) {
-  store i32 %after, i32* @var, align 4
+  store i32 %after, ptr @var, align 4
 ; CHECK-DAG: str w3, [{{x[0-9]+}}, :lo12:var]
 
   ret [2 x i64] %arg
@@ -33,25 +33,24 @@ define dso_local void @test_stack_slots([8 x i64], i1 %bool, i8 %char, i16 %shor
 ; CHECK-DAG: ldrb w[[ext3:[0-9]+]], [sp, #8]
 ; CHECK-DAG: ldr x[[ext4:[0-9]+]], [sp, #32]
 ; CHECK-DAG: ldrb w[[ext5:[0-9]+]], [sp]
-; CHECK-DAG: and x[[ext5]], x[[ext5]], #0x1
 
   %ext_bool = zext i1 %bool to i64
-  store volatile i64 %ext_bool, i64* @var64, align 8
+  store volatile i64 %ext_bool, ptr @var64, align 8
 ; CHECK: str x[[ext5]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_char = zext i8 %char to i64
-  store volatile i64 %ext_char, i64* @var64, align 8
+  store volatile i64 %ext_char, ptr @var64, align 8
 ; CHECK: str x[[ext3]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_short = zext i16 %short to i64
-  store volatile i64 %ext_short, i64* @var64, align 8
+  store volatile i64 %ext_short, ptr @var64, align 8
 ; CHECK: str x[[ext2]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_int = zext i32 %int to i64
-  store volatile i64 %ext_int, i64* @var64, align 8
+  store volatile i64 %ext_int, ptr @var64, align 8
 ; CHECK: str x[[ext1]], [{{x[0-9]+}}, :lo12:var64]
 
-  store volatile i64 %long, i64* @var64, align 8
+  store volatile i64 %long, ptr @var64, align 8
 ; CHECK: str x[[ext4]], [{{x[0-9]+}}, :lo12:var64]
 
   ret void
@@ -62,22 +61,22 @@ define dso_local void @test_stack_slots([8 x i64], i1 %bool, i8 %char, i16 %shor
 
 define dso_local void @test_extension(i1 %bool, i8 %char, i16 %short, i32 %int) {
   %ext_bool = zext i1 %bool to i64
-  store volatile i64 %ext_bool, i64* @var64
+  store volatile i64 %ext_bool, ptr @var64
 ; CHECK: and [[EXT:x[0-9]+]], x0, #0x1
 ; CHECK: str [[EXT]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_char = sext i8 %char to i64
-  store volatile i64 %ext_char, i64* @var64
+  store volatile i64 %ext_char, ptr @var64
 ; CHECK: sxtb [[EXT:x[0-9]+]], w1
 ; CHECK: str [[EXT]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_short = zext i16 %short to i64
-  store volatile i64 %ext_short, i64* @var64
+  store volatile i64 %ext_short, ptr @var64
 ; CHECK: and [[EXT:x[0-9]+]], x2, #0xffff
 ; CHECK: str [[EXT]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_int = zext i32 %int to i64
-  store volatile i64 %ext_int, i64* @var64
+  store volatile i64 %ext_int, ptr @var64
 ; CHECK: mov w[[EXT:[0-9]+]], w3
 ; CHECK: str x[[EXT]], [{{x[0-9]+}}, :lo12:var64]
 
@@ -124,7 +123,7 @@ entry:
 ; Check that f16 can be passed and returned (ACLE 2.0 extension)
 define half @test_half(float, half %arg) {
 ; CHECK-LABEL: test_half:
-; CHECK: mov v0.16b, v1.16b
+; CHECK: fmov s0, s1
   ret half %arg;
 }
 
@@ -138,7 +137,7 @@ define half @test_half_const() {
 ; Check that v4f16 can be passed and returned in registers
 define dso_local <4 x half> @test_v4_half_register(float, <4 x half> %arg) {
 ; CHECK-LABEL: test_v4_half_register:
-; CHECK: mov v0.16b, v1.16b
+; CHECK: fmov d0, d1
   ret <4 x half> %arg;
 }
 

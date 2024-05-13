@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "TweakTesting.h"
-#include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
 
 using ::testing::AllOf;
-using ::testing::HasSubstr;
 using ::testing::StartsWith;
 
 namespace clang {

@@ -6,7 +6,7 @@
 ; RUN: wasm-ld %t.bc %t.o -o %t.wasm
 ; RUN: wasm-ld %t.o %t.bc -o %t.wasm
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 $foo = comdat any

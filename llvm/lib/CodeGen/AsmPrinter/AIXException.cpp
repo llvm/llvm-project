@@ -21,7 +21,7 @@
 
 namespace llvm {
 
-AIXException::AIXException(AsmPrinter *A) : DwarfCFIExceptionBase(A) {}
+AIXException::AIXException(AsmPrinter *A) : EHStreamer(A) {}
 
 void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
                                           const MCSymbol *PerSym) {
@@ -36,8 +36,19 @@ void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
   //   unsigned long personality;  /* Pointer to the personality routine */
   //   }
 
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getCompactUnwindSection());
+  auto *EHInfo =
+      cast<MCSectionXCOFF>(Asm->getObjFileLowering().getCompactUnwindSection());
+  if (Asm->TM.getFunctionSections()) {
+    // If option -ffunction-sections is on, append the function name to the
+    // name of EH Info Table csect so that each function has its own EH Info
+    // Table csect. This helps the linker to garbage-collect EH info of unused
+    // functions.
+    SmallString<128> NameStr = EHInfo->getName();
+    raw_svector_ostream(NameStr) << '.' << Asm->MF->getFunction().getName();
+    EHInfo = Asm->OutContext.getXCOFFSection(NameStr, EHInfo->getKind(),
+                                             EHInfo->getCsectProp());
+  }
+  Asm->OutStreamer->switchSection(EHInfo);
   MCSymbol *EHInfoLabel =
       TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(Asm->MF);
   Asm->OutStreamer->emitLabel(EHInfoLabel);
@@ -49,7 +60,7 @@ void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
   const unsigned PointerSize = DL.getPointerSize();
 
   // Add necessary paddings in 64 bit mode.
-  Asm->OutStreamer->emitValueToAlignment(PointerSize);
+  Asm->OutStreamer->emitValueToAlignment(Align(PointerSize));
 
   // LSDA location.
   Asm->OutStreamer->emitValue(MCSymbolRefExpr::create(LSDA, Asm->OutContext),
@@ -61,6 +72,9 @@ void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
 }
 
 void AIXException::endFunction(const MachineFunction *MF) {
+  // There is no easy way to access register information in `AIXException`
+  // class. when ShouldEmitEHBlock is false and VRs are saved, A dumy eh info
+  // table are emitted in PPCAIXAsmPrinter::emitFunctionBodyEnd.
   if (!TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(MF))
     return;
 
@@ -69,8 +83,8 @@ void AIXException::endFunction(const MachineFunction *MF) {
   const Function &F = MF->getFunction();
   assert(F.hasPersonalityFn() &&
          "Landingpads are presented, but no personality routine is found.");
-  const GlobalValue *Per =
-      dyn_cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
+  const auto *Per =
+      cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
   const MCSymbol *PerSym = Asm->TM.getSymbol(Per);
 
   emitExceptionInfoTable(LSDALabel, PerSym);

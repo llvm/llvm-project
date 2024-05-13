@@ -35,6 +35,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 
 using namespace llvm;
 
@@ -43,10 +44,33 @@ using namespace llvm;
 namespace {
 
 enum HardClauseType {
+  // For GFX10:
+
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
   // Flat (not global or scratch) memory instructions.
   HARDCLAUSE_FLAT,
+
+  // For GFX11:
+
+  // Texture memory instructions.
+  HARDCLAUSE_MIMG_LOAD,
+  HARDCLAUSE_MIMG_STORE,
+  HARDCLAUSE_MIMG_ATOMIC,
+  HARDCLAUSE_MIMG_SAMPLE,
+  // Buffer, global or scratch memory instructions.
+  HARDCLAUSE_VMEM_LOAD,
+  HARDCLAUSE_VMEM_STORE,
+  HARDCLAUSE_VMEM_ATOMIC,
+  // Flat (not global or scratch) memory instructions.
+  HARDCLAUSE_FLAT_LOAD,
+  HARDCLAUSE_FLAT_STORE,
+  HARDCLAUSE_FLAT_ATOMIC,
+  // BVH instructions.
+  HARDCLAUSE_BVH,
+
+  // Common:
+
   // Instructions that access LDS.
   HARDCLAUSE_LDS,
   // Scalar memory instructions.
@@ -58,6 +82,8 @@ enum HardClauseType {
   // Internal instructions, which are allowed in the middle of a hard clause,
   // except for s_waitcnt.
   HARDCLAUSE_INTERNAL,
+  // Meta instructions that do not result in any ISA like KILL.
+  HARDCLAUSE_IGNORE,
   // Instructions that are not allowed in a hard clause: SALU, export, branch,
   // message, GDS, s_waitcnt and anything else not mentioned above.
   HARDCLAUSE_ILLEGAL,
@@ -76,19 +102,43 @@ public:
   }
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
-
-    // On current architectures we only get a benefit from clausing loads.
-    if (MI.mayLoad()) {
-      if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
-        if (ST->hasNSAClauseBug()) {
-          const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
-          if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
-            return HARDCLAUSE_ILLEGAL;
+    if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
+      if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
+        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+          if (ST->hasNSAClauseBug()) {
+            const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+            if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
+              return HARDCLAUSE_ILLEGAL;
+          }
+          return HARDCLAUSE_VMEM;
         }
-        return HARDCLAUSE_VMEM;
+        if (SIInstrInfo::isFLAT(MI))
+          return HARDCLAUSE_FLAT;
+      } else {
+        assert(ST->getGeneration() >= AMDGPUSubtarget::GFX11);
+        if (SIInstrInfo::isMIMG(MI)) {
+          const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+          const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+              AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+          if (BaseInfo->BVH)
+            return HARDCLAUSE_BVH;
+          if (BaseInfo->Sampler)
+            return HARDCLAUSE_MIMG_SAMPLE;
+          return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_MIMG_ATOMIC
+                                              : HARDCLAUSE_MIMG_LOAD
+                              : HARDCLAUSE_MIMG_STORE;
+        }
+        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+          return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_VMEM_ATOMIC
+                                              : HARDCLAUSE_VMEM_LOAD
+                              : HARDCLAUSE_VMEM_STORE;
+        }
+        if (SIInstrInfo::isFLAT(MI)) {
+          return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_FLAT_ATOMIC
+                                              : HARDCLAUSE_FLAT_LOAD
+                              : HARDCLAUSE_FLAT_STORE;
+        }
       }
-      if (SIInstrInfo::isFLAT(MI))
-        return HARDCLAUSE_FLAT;
       // TODO: LDS
       if (SIInstrInfo::isSMRD(MI))
         return HARDCLAUSE_SMEM;
@@ -100,6 +150,8 @@ public:
     // It's safe to treat the rest as illegal.
     if (MI.getOpcode() == AMDGPU::S_NOP)
       return HARDCLAUSE_INTERNAL;
+    if (MI.isMetaInstruction())
+      return HARDCLAUSE_IGNORE;
     return HARDCLAUSE_ILLEGAL;
   }
 
@@ -112,25 +164,26 @@ public:
     // The last non-internal instruction in the clause.
     MachineInstr *Last = nullptr;
     // The length of the clause including any internal instructions in the
-    // middle or after the end of the clause.
+    // middle (but not at the end) of the clause.
     unsigned Length = 0;
+    // Internal instructions at the and of a clause should not be included in
+    // the clause. Count them in TrailingInternalLength until a new memory
+    // instruction is added.
+    unsigned TrailingInternalLength = 0;
     // The base operands of *Last.
     SmallVector<const MachineOperand *, 4> BaseOps;
   };
 
   bool emitClause(const ClauseInfo &CI, const SIInstrInfo *SII) {
-    // Get the size of the clause excluding any internal instructions at the
-    // end.
-    unsigned Size =
-        std::distance(CI.First->getIterator(), CI.Last->getIterator()) + 1;
-    if (Size < 2)
+    if (CI.First == CI.Last)
       return false;
-    assert(Size <= 64 && "Hard clause is too long!");
+    assert(CI.Length <= ST->maxHardClauseLength() &&
+           "Hard clause is too long!");
 
     auto &MBB = *CI.First->getParent();
     auto ClauseMI =
         BuildMI(MBB, *CI.First, DebugLoc(), SII->get(AMDGPU::S_CLAUSE))
-            .addImm(Size - 1);
+            .addImm(CI.Length - 1);
     finalizeBundle(MBB, ClauseMI->getIterator(),
                    std::next(CI.Last->getIterator()));
     return true;
@@ -155,7 +208,7 @@ public:
 
         int64_t Dummy1;
         bool Dummy2;
-        unsigned Dummy3;
+        LocationSize Dummy3 = 0;
         SmallVector<const MachineOperand *, 4> BaseOps;
         if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           if (!SII->getMemOperandsWithOffsetWidth(MI, BaseOps, Dummy1, Dummy2,
@@ -166,15 +219,19 @@ public:
           }
         }
 
-        if (CI.Length == 64 ||
+        if (CI.Length == ST->maxHardClauseLength() ||
             (CI.Length && Type != HARDCLAUSE_INTERNAL &&
+             Type != HARDCLAUSE_IGNORE &&
              (Type != CI.Type ||
               // Note that we lie to shouldClusterMemOps about the size of the
               // cluster. When shouldClusterMemOps is called from the machine
               // scheduler it limits the size of the cluster to avoid increasing
               // register pressure too much, but this pass runs after register
               // allocation so there is no need for that kind of limit.
-              !SII->shouldClusterMemOps(CI.BaseOps, BaseOps, 2, 2)))) {
+              // We also lie about the Offset and OffsetIsScalable parameters,
+              // as they aren't used in the SIInstrInfo implementation.
+              !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
+                                        2, 2)))) {
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();
@@ -182,14 +239,20 @@ public:
 
         if (CI.Length) {
           // Extend the current clause.
-          ++CI.Length;
-          if (Type != HARDCLAUSE_INTERNAL) {
-            CI.Last = &MI;
-            CI.BaseOps = std::move(BaseOps);
+          if (Type != HARDCLAUSE_IGNORE) {
+            if (Type == HARDCLAUSE_INTERNAL) {
+              ++CI.TrailingInternalLength;
+            } else {
+              ++CI.Length;
+              CI.Length += CI.TrailingInternalLength;
+              CI.TrailingInternalLength = 0;
+              CI.Last = &MI;
+              CI.BaseOps = std::move(BaseOps);
+            }
           }
         } else if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           // Start a new clause.
-          CI = ClauseInfo{Type, &MI, &MI, 1, std::move(BaseOps)};
+          CI = ClauseInfo{Type, &MI, &MI, 1, 0, std::move(BaseOps)};
         }
       }
 

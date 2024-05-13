@@ -59,7 +59,7 @@ struct TypedefInit {
   typedef int A = 0; // expected-error {{illegal initializer}}
 };
 
-// PR10578 / <rdar://problem/9877267>
+// PR10578
 namespace PR10578 {
   template<typename T>
   struct X { 
@@ -87,7 +87,7 @@ namespace PR14838 {
   struct thing {};
   struct another {
     another() : r(thing()) {} // expected-error {{binds to a temporary object}}
-    // expected-error@-1 {{temporary of type 'PR14838::function' has private destructor}}
+    // expected-error@-1 {{temporary of type 'function' has private destructor}}
     const function &r; // expected-note {{reference member declared here}}
   } af;
 }
@@ -98,7 +98,7 @@ namespace rdar14084171 {
     double y;
   };
   struct Sprite {
-    Point location = Point(0,0); // expected-error {{no matching constructor for initialization of 'rdar14084171::Point'}}
+    Point location = Point(0,0); // expected-error {{no matching constructor for initialization of 'Point'}}
   };
   void f(Sprite& x) { x = x; } // expected-warning {{explicitly assigning value of variable}}
 }
@@ -164,11 +164,11 @@ struct A {
 
 namespace explicit_instantiation {
 template<typename T> struct X {
-  X(); // expected-note {{in instantiation of default member initializer 'explicit_instantiation::X<float>::n' requested here}}
+  X();
   int n = T::error; // expected-error {{type 'float' cannot be used prior to '::' because it has no members}}
 };
 template struct X<int>; // ok
-template<typename T> X<T>::X() {}
+template<typename T> X<T>::X() {} // expected-note {{in instantiation of default member initializer 'explicit_instantiation::X<float>::n' requested here}}
 template struct X<float>; // expected-note {{in instantiation of member function 'explicit_instantiation::X<float>::X' requested here}}
 }
 
@@ -196,4 +196,16 @@ void foo(T v) {
   };
 }
 template void foo(int);
+}
+
+namespace GH26057 {
+template<typename T>
+struct S {
+  S();
+  int dm = T::error; // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+};
+template<typename T>
+S<T>::S() = default; // expected-note {{in instantiation of default member initializer 'GH26057::S<int>::dm' requested here}} \
+                     // expected-note {{in evaluation of exception specification for 'GH26057::S<int>::S' needed here}}
+template struct S<int>; // expected-note {{in instantiation of member function 'GH26057::S<int>::S' requested here}}
 }

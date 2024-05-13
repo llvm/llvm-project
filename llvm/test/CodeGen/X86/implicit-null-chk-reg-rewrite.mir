@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=x86_64 -run-pass=implicit-null-checks %s -o - | FileCheck %s
 --- |
 
-  define i32 @reg-rewrite(i32* %x) {
+  define i32 @reg-rewrite(ptr %x) {
   entry:
     br i1 undef, label %is_null, label %not_null, !make.implicit !0
 
@@ -41,9 +41,9 @@ body:             |
     liveins: $rdi, $rsi
     
     $rax = MOV64rm renamable $rdi, 1, $noreg, 4, $noreg
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = MOV32ri 200
-    RETQ $eax
+    RET64 $eax
 ...

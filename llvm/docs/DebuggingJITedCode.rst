@@ -10,7 +10,7 @@ quite painful.  Debuggers generally read debug information from object files on
 disk, but for JITed code there is no such file to look for.
 
 In order to hand over the necessary debug info, `GDB established an
-interface <https://sourceware.org/gdb/current/onlinedocs/gdb/JIT-Interface.html>`_
+interface <https://sourceware.org/gdb/onlinedocs/gdb/JIT-Interface.html>`_
 for registering JITed code with debuggers. LLDB implements it in the
 JITLoaderGDB plugin.  On the JIT side, LLVM MCJIT does implement the interface
 for ELF object files.
@@ -132,7 +132,7 @@ code via ``lli`` inside LLDB:
       7            f *= n;
       8        return f;
    -> 9    }
-      10  
+      10
       11   int main(int argc, char** argv)
       12   {
    (lldb) p f
@@ -156,7 +156,7 @@ code via ``lli`` inside LLDB:
       14           return -1;
       15       char firstletter = argv[1][0];
    -> 16       int result = compute_factorial(firstletter - '0');
-      17  
+      17
       18       // Returned result is clipped at 255...
       19       return result;
    (lldb) p result
@@ -166,7 +166,7 @@ code via ``lli`` inside LLDB:
    * thread #1, name = 'lli', stop reason = step over
       frame #0: 0x00007ffff7fd0098 JIT(0x45c2cb0)`main(argc=2, argv=0x00000000046122f0) at showdebug.c:19:12
       16       int result = compute_factorial(firstletter - '0');
-      17  
+      17
       18       // Returned result is clipped at 255...
    -> 19       return result;
       20   }

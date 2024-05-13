@@ -7,22 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
-#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
-#include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/CRC.h"
-#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
+
+#include <ctime>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -30,11 +36,15 @@ using namespace llvm::msf;
 using namespace llvm::pdb;
 using namespace llvm::support;
 
+namespace llvm {
+class WritableBinaryStream;
+}
+
 PDBFileBuilder::PDBFileBuilder(BumpPtrAllocator &Allocator)
     : Allocator(Allocator), InjectedSourceHashTraits(Strings),
       InjectedSourceTable(2) {}
 
-PDBFileBuilder::~PDBFileBuilder() {}
+PDBFileBuilder::~PDBFileBuilder() = default;
 
 Error PDBFileBuilder::initialize(uint32_t BlockSize) {
   auto ExpectedMsf = MSFBuilder::create(Allocator, BlockSize);
@@ -103,7 +113,7 @@ void PDBFileBuilder::addInjectedSource(StringRef Name,
   // table and the hash value is dependent on the exact contents of the string.
   // link.exe lowercases a path and converts / to \, so we must do the same.
   SmallString<64> VName;
-  sys::path::native(Name.lower(), VName);
+  sys::path::native(Name.lower(), VName, sys::path::Style::windows_backslash);
 
   uint32_t NI = getStringTableBuilder().insert(Name);
   uint32_t VNI = getStringTableBuilder().insert(VName);
@@ -120,6 +130,7 @@ void PDBFileBuilder::addInjectedSource(StringRef Name,
 }
 
 Error PDBFileBuilder::finalizeMsfLayout() {
+  llvm::TimeTraceScope timeScope("MSF layout");
 
   if (Ipi && Ipi->getRecordCount() > 0) {
     // In theory newer PDBs always have an ID stream, but by saying that we're
@@ -245,6 +256,7 @@ void PDBFileBuilder::commitInjectedSources(WritableBinaryStream &MsfBuffer,
   if (InjectedSourceTable.empty())
     return;
 
+  llvm::TimeTraceScope timeScope("Commit injected sources");
   commitSrcHeaderBlock(MsfBuffer, Layout);
 
   for (const auto &IS : InjectedSources) {
@@ -281,15 +293,18 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
   if (auto EC = Strings.commit(NSWriter))
     return EC;
 
-  for (const auto &NSE : NamedStreamData) {
-    if (NSE.second.empty())
-      continue;
+  {
+    llvm::TimeTraceScope timeScope("Named stream data");
+    for (const auto &NSE : NamedStreamData) {
+      if (NSE.second.empty())
+        continue;
 
-    auto NS = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, NSE.first, Allocator);
-    BinaryStreamWriter NSW(*NS);
-    if (auto EC = NSW.writeBytes(arrayRefFromStringRef(NSE.second)))
-      return EC;
+      auto NS = WritableMappedBlockStream::createIndexedStream(
+          Layout, Buffer, NSE.first, Allocator);
+      BinaryStreamWriter NSW(*NS);
+      if (auto EC = NSW.writeBytes(arrayRefFromStringRef(NSE.second)))
+        return EC;
+    }
   }
 
   if (Info) {
@@ -329,9 +344,11 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
   // Set the build id at the very end, after every other byte of the PDB
   // has been written.
   if (Info->hashPDBContentsToGUID()) {
+    llvm::TimeTraceScope timeScope("Compute build ID");
+
     // Compute a hash of all sections of the output file.
     uint64_t Digest =
-        xxHash64({Buffer.getBufferStart(), Buffer.getBufferEnd()});
+        xxh3_64bits({Buffer.getBufferStart(), Buffer.getBufferEnd()});
 
     H->Age = 1;
 
@@ -347,8 +364,8 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
   } else {
     H->Age = Info->getAge();
     H->Guid = Info->getGuid();
-    Optional<uint32_t> Sig = Info->getSignature();
-    H->Signature = Sig.hasValue() ? *Sig : time(nullptr);
+    std::optional<uint32_t> Sig = Info->getSignature();
+    H->Signature = Sig ? *Sig : time(nullptr);
   }
 
   return Buffer.commit();

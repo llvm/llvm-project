@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
 ; CHECK: extractu(r1,#31,#0)
 
 ; In the IR this was an extract of 31 bits starting at position 32 in r1:0.
@@ -9,13 +9,13 @@ target triple = "hexagon"
 
 @g0 = global double zeroinitializer, align 8
 
-define hidden i32 @fred([101 x double]* %a0, i32 %a1, i32* %a2, i32* %a3) #0 {
+define hidden i32 @fred(ptr %a0, i32 %a1, ptr %a2, ptr %a3) #0 {
 b4:
   br label %b5
 
 b5:                                               ; preds = %b5, %b4
   %v6 = call double @fabs(double undef) #1
-  store double %v6, double* @g0, align 8
+  store double %v6, ptr @g0, align 8
   br label %b5
 }
 

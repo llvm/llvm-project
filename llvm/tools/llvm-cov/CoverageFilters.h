@@ -67,13 +67,13 @@ public:
 };
 
 /// Matches functions whose name appears in a SpecialCaseList in the
-/// whitelist_fun section.
-class NameWhitelistCoverageFilter : public CoverageFilter {
-  const SpecialCaseList &Whitelist;
+/// allowlist_fun section.
+class NameAllowlistCoverageFilter : public CoverageFilter {
+  const SpecialCaseList &Allowlist;
 
 public:
-  NameWhitelistCoverageFilter(const SpecialCaseList &Whitelist)
-      : Whitelist(Whitelist) {}
+  NameAllowlistCoverageFilter(const SpecialCaseList &Allowlist)
+      : Allowlist(Allowlist) {}
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function) const override;

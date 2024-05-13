@@ -8,13 +8,14 @@
 // RUN: %clang -Wx-typoed-warning -Wall -fsyntax-only --serialize-diagnostics %t.diag %s
 // RUN: c-index-test -read-diagnostics %t.diag 2>&1 | FileCheck %s
 
-// CHECK: warning: unknown warning option '-Wx-typoed-warning' [-Wunknown-warning-option] []
+// CHECK: warning: unknown warning option '-Wx-typoed-warning'
+// CHECK-SAME: [-Wunknown-warning-option] []
 
 // CHECK: warning: variable 'voodoo' is uninitialized when used here [-Wuninitialized]
 // CHECK: note: initialize the variable 'voodoo' to silence this warning []
 // CHECK: Number of diagnostics: 2
 
-void foo() {
+void foo(void) {
   int voodoo;
   voodoo = voodoo + 1;
 }

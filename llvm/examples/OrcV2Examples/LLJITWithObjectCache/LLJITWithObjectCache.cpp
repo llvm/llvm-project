@@ -69,8 +69,8 @@ void runJITWithCache(ObjectCache &ObjCache) {
   ExitOnErr(J->addIRModule(std::move(M)));
 
   // Look up the JIT'd function, cast it to a function pointer, then call it.
-  auto Add1Sym = ExitOnErr(J->lookup("add1"));
-  int (*Add1)(int) = (int (*)(int))Add1Sym.getAddress();
+  auto Add1Addr = ExitOnErr(J->lookup("add1"));
+  int (*Add1)(int) = Add1Addr.toPtr<int(int)>();
 
   int Result = Add1(42);
   outs() << "add1(42) = " << Result << "\n";

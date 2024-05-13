@@ -15,14 +15,14 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPCONTEXT_H
 #define LLVM_FRONTEND_OPENMP_OMPCONTEXT_H
 
-#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 namespace llvm {
+class Triple;
 namespace omp {
 
 /// OpenMP Context related IDs and helpers

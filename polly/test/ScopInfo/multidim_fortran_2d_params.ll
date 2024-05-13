@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
+; RUN: opt %loadPolly -polly-print-scops -disable-output \
 ; RUN: -polly-precise-fold-accesses \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
@@ -26,16 +26,16 @@ target triple = "x86_64-unknown-linux-gnu"
 module asm "\09.ident\09\22GCC: (GNU) 4.6.4 LLVM: 3.3.1\22"
 
 ; Function Attrs: nounwind uwtable
-define void @blam(i64* noalias %arg, i64* noalias %nj, i64* noalias %arg2, i64* noalias %arg3, [0 x double]* noalias %a) unnamed_addr #0 {
+define void @blam(ptr noalias %arg, ptr noalias %nj, ptr noalias %arg2, ptr noalias %arg3, ptr noalias %a) unnamed_addr #0 {
 bb:
   br label %bb5
 
 bb5:                                              ; preds = %bb
-  %nj_loaded = load i64, i64* %nj, align 8
+  %nj_loaded = load i64, ptr %nj, align 8
   %tmp6 = icmp slt i64 %nj_loaded, 0
   %tmp7 = select i1 %tmp6, i64 0, i64 %nj_loaded
   %tmp8 = xor i64 %tmp7, -1
-  %tmp9 = load i64, i64* %arg, align 8
+  %tmp9 = load i64, ptr %arg, align 8
   %tmp10 = icmp sgt i64 %tmp9, 0
   br i1 %tmp10, label %bb11, label %bb36
 
@@ -44,7 +44,7 @@ bb11:                                             ; preds = %bb5
 
 bb12:                                             ; preds = %bb32, %bb11
   %tmp13 = phi i64 [ %tmp34, %bb32 ], [ 1, %bb11 ]
-  %nj_loaded2 = load i64, i64* %nj, align 8
+  %nj_loaded2 = load i64, ptr %nj, align 8
   %tmp15 = icmp sgt i64 %nj_loaded2, 0
   br i1 %tmp15, label %bb16, label %bb32
 
@@ -53,8 +53,8 @@ bb16:                                             ; preds = %bb12
 
 bb17:                                             ; preds = %bb17, %bb16
   %tmp18 = phi i64 [ %tmp30, %bb17 ], [ 1, %bb16 ]
-  %tmp19 = load i64, i64* %arg2, align 8
-  %tmp20 = load i64, i64* %arg3, align 8
+  %tmp19 = load i64, ptr %arg2, align 8
+  %tmp20 = load i64, ptr %arg3, align 8
   %tmp21 = add i64 %tmp20, %tmp13
   %tmp22 = mul i64 %tmp21, %tmp7
   %tmp23 = add i64 %tmp18, %tmp8
@@ -62,8 +62,8 @@ bb17:                                             ; preds = %bb17, %bb16
   %tmp25 = add i64 %tmp24, %tmp22
   %tmp26 = add i64 %tmp18, %tmp13
   %tmp27 = sitofp i64 %tmp26 to double
-  %tmp28 = getelementptr [0 x double], [0 x double]* %a, i64 0, i64 %tmp25
-  store double %tmp27, double* %tmp28, align 8
+  %tmp28 = getelementptr [0 x double], ptr %a, i64 0, i64 %tmp25
+  store double %tmp27, ptr %tmp28, align 8
   %tmp29 = icmp eq i64 %tmp18, %nj_loaded2
   %tmp30 = add i64 %tmp18, 1
   br i1 %tmp29, label %bb31, label %bb17

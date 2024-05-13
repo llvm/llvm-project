@@ -208,7 +208,7 @@ following CMakeLists.txt to link it:
 
     add_clang_executable(find-class-decls FindClassDecls.cpp)
 
-    target_link_libraries(find-class-decls 
+    target_link_libraries(find-class-decls
       PRIVATE
       clangAST
       clangBasic
@@ -224,4 +224,3 @@ declarations of a class n::m::C it found:
 
       $ ./bin/find-class-decls "namespace n { namespace m { class C {}; } }"
       Found declaration at 1:29
-

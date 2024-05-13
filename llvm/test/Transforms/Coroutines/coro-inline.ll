@@ -1,21 +1,19 @@
-; RUN: opt < %s -always-inline -barrier -coro-split -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='always-inline,cgscc(coro-split)' -S | FileCheck %s
-; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -sample-profile -coro-split -disable-inlining=true -S | FileCheck %s
-; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -passes='sample-profile,cgscc(coro-split)' -disable-inlining=true -S | FileCheck %s
+; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -passes='sample-profile,cgscc(coro-split)' -S | FileCheck %s
 
 ; Function Attrs: alwaysinline ssp uwtable
 define void @ff() #0 {
 entry:
-  %id = call token @llvm.coro.id(i32 16, i8* null, i8* null, i8* null)
-  %begin = call i8* @llvm.coro.begin(token %id, i8* null)
+  %id = call token @llvm.coro.id(i32 16, ptr null, ptr null, ptr null)
+  %begin = call ptr @llvm.coro.begin(token %id, ptr null)
   ret void
 }
 
 ; Function Attrs: alwaysinline ssp uwtable
 define void @foo() #0 {
 entry:
-  %id1 = call token @llvm.coro.id(i32 16, i8* null, i8* null, i8* null)
-  %begin = call i8* @llvm.coro.begin(token %id1, i8* null)
+  %id1 = call token @llvm.coro.id(i32 16, ptr null, ptr null, ptr null)
+  %begin = call ptr @llvm.coro.begin(token %id1, ptr null)
   call void @ff()
   ret void
 }
@@ -23,10 +21,10 @@ entry:
 ; CHECK:         call void @ff()
 
 
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
-declare i8* @llvm.coro.begin(token, i8* writeonly)
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
+declare ptr @llvm.coro.begin(token, ptr writeonly)
 
-attributes #0 = { alwaysinline ssp uwtable "coroutine.presplit"="1" "use-sample-profile" }
+attributes #0 = { alwaysinline ssp uwtable presplitcoroutine "use-sample-profile" }
 
 !llvm.dbg.cu = !{}
 !llvm.module.flags = !{!1, !2, !3, !4}

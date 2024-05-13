@@ -17,7 +17,9 @@
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -54,6 +56,11 @@ private:
   void writeNameList(raw_ostream &OS);
   void writeStringTable(raw_ostream &OS);
   void writeExportTrie(raw_ostream &OS);
+  void writeDynamicSymbolTable(raw_ostream &OS);
+  void writeFunctionStarts(raw_ostream &OS);
+  void writeChainedFixups(raw_ostream &OS);
+  void writeDyldExportsTrie(raw_ostream &OS);
+  void writeDataInCode(raw_ostream &OS);
 
   void dumpExportEntry(raw_ostream &OS, MachOYAML::ExportEntry &Entry);
   void ZeroToOffset(raw_ostream &OS, size_t offset);
@@ -99,7 +106,7 @@ void MachOWriter::writeHeader(raw_ostream &OS) {
 }
 
 template <typename SectionType>
-SectionType constructSection(MachOYAML::Section Sec) {
+SectionType constructSection(const MachOYAML::Section &Sec) {
   SectionType TempSec;
   memcpy(reinterpret_cast<void *>(&TempSec.sectname[0]), &Sec.sectname[0], 16);
   memcpy(reinterpret_cast<void *>(&TempSec.segname[0]), &Sec.segname[0], 16);
@@ -155,9 +162,9 @@ size_t writeLoadCommandData<MachO::segment_command_64>(
 
 size_t writePayloadString(MachOYAML::LoadCommand &LC, raw_ostream &OS) {
   size_t BytesWritten = 0;
-  if (!LC.PayloadString.empty()) {
-    OS.write(LC.PayloadString.c_str(), LC.PayloadString.length());
-    BytesWritten = LC.PayloadString.length();
+  if (!LC.Content.empty()) {
+    OS.write(LC.Content.c_str(), LC.Content.length());
+    BytesWritten = LC.Content.length();
   }
   return BytesWritten;
 }
@@ -180,6 +187,30 @@ template <>
 size_t writeLoadCommandData<MachO::rpath_command>(MachOYAML::LoadCommand &LC,
                                                   raw_ostream &OS,
                                                   bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_framework_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_umbrella_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_client_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_library_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
   return writePayloadString(LC, OS);
 }
 
@@ -264,6 +295,7 @@ void MachOWriter::writeLoadCommands(raw_ostream &OS) {
 }
 
 Error MachOWriter::writeSectionData(raw_ostream &OS) {
+  uint64_t LinkEditOff = 0;
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
     case MachO::LC_SEGMENT:
@@ -273,6 +305,9 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
       if (0 ==
           strncmp(&LC.Data.segment_command_data.segname[0], "__LINKEDIT", 16)) {
         FoundLinkEditSeg = true;
+        LinkEditOff = segOff;
+        if (Obj.RawLinkEditSegment)
+          continue;
         writeLinkEditData(OS);
       }
       for (auto &Sec : LC.Sections) {
@@ -282,7 +317,12 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
         if (OS.tell() - fileStart > Sec.offset && Sec.offset != (uint32_t)0)
           return createStringError(
               errc::invalid_argument,
-              "wrote too much data somewhere, section offsets don't line up");
+              llvm::formatv(
+                  "wrote too much data somewhere, section offsets in "
+                  "section {0} for segment {1} don't line up: "
+                  "[cursor={2:x}], [fileStart={3:x}], [sectionOffset={4:x}]",
+                  Sec.sectname, Sec.segname, OS.tell(), fileStart,
+                  Sec.offset.value));
 
         StringRef SectName(Sec.sectname,
                            strnlen(Sec.sectname, sizeof(Sec.sectname)));
@@ -320,6 +360,13 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
     }
   }
 
+  if (Obj.RawLinkEditSegment) {
+    ZeroToOffset(OS, LinkEditOff);
+    if (OS.tell() - fileStart > LinkEditOff || !LinkEditOff)
+      return createStringError(errc::invalid_argument,
+                               "section offsets don't line up");
+    Obj.RawLinkEditSegment->writeAsBinary(OS);
+  }
   return Error::success();
 }
 
@@ -380,7 +427,7 @@ void MachOWriter::writeRelocations(raw_ostream &OS) {
 void MachOWriter::writeBindOpcodes(
     raw_ostream &OS, std::vector<MachOYAML::BindOpcode> &BindOpcodes) {
 
-  for (auto Opcode : BindOpcodes) {
+  for (const auto &Opcode : BindOpcodes) {
     uint8_t OpByte = Opcode.Opcode | Opcode.Imm;
     OS.write(reinterpret_cast<char *>(&OpByte), 1);
     for (auto Data : Opcode.ULEBExtraData) {
@@ -398,24 +445,24 @@ void MachOWriter::writeBindOpcodes(
 
 void MachOWriter::dumpExportEntry(raw_ostream &OS,
                                   MachOYAML::ExportEntry &Entry) {
-  encodeSLEB128(Entry.TerminalSize, OS);
+  encodeULEB128(Entry.TerminalSize, OS);
   if (Entry.TerminalSize > 0) {
-    encodeSLEB128(Entry.Flags, OS);
+    encodeULEB128(Entry.Flags, OS);
     if (Entry.Flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT) {
-      encodeSLEB128(Entry.Other, OS);
+      encodeULEB128(Entry.Other, OS);
       OS << Entry.ImportName;
       OS.write('\0');
     } else {
-      encodeSLEB128(Entry.Address, OS);
+      encodeULEB128(Entry.Address, OS);
       if (Entry.Flags & MachO::EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER)
-        encodeSLEB128(Entry.Other, OS);
+        encodeULEB128(Entry.Other, OS);
     }
   }
   OS.write(static_cast<uint8_t>(Entry.Children.size()));
-  for (auto EE : Entry.Children) {
+  for (const auto &EE : Entry.Children) {
     OS << EE.Name;
     OS.write('\0');
-    encodeSLEB128(EE.NodeOffset, OS);
+    encodeULEB128(EE.NodeOffset, OS);
   }
   for (auto EE : Entry.Children)
     dumpExportEntry(OS, EE);
@@ -445,8 +492,13 @@ void MachOWriter::writeLinkEditData(raw_ostream &OS) {
   typedef std::pair<uint64_t, writeHandler> writeOperation;
   std::vector<writeOperation> WriteQueue;
 
-  MachO::dyld_info_command *DyldInfoOnlyCmd = 0;
-  MachO::symtab_command *SymtabCmd = 0;
+  MachO::dyld_info_command *DyldInfoOnlyCmd = nullptr;
+  MachO::symtab_command *SymtabCmd = nullptr;
+  MachO::dysymtab_command *DSymtabCmd = nullptr;
+  MachO::linkedit_data_command *FunctionStartsCmd = nullptr;
+  MachO::linkedit_data_command *ChainedFixupsCmd = nullptr;
+  MachO::linkedit_data_command *DyldExportsTrieCmd = nullptr;
+  MachO::linkedit_data_command *DataInCodeCmd = nullptr;
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
     case MachO::LC_SYMTAB:
@@ -469,12 +521,35 @@ void MachOWriter::writeLinkEditData(raw_ostream &OS) {
       WriteQueue.push_back(std::make_pair(DyldInfoOnlyCmd->export_off,
                                           &MachOWriter::writeExportTrie));
       break;
+    case MachO::LC_DYSYMTAB:
+      DSymtabCmd = &LC.Data.dysymtab_command_data;
+      WriteQueue.push_back(std::make_pair(
+          DSymtabCmd->indirectsymoff, &MachOWriter::writeDynamicSymbolTable));
+      break;
+    case MachO::LC_FUNCTION_STARTS:
+      FunctionStartsCmd = &LC.Data.linkedit_data_command_data;
+      WriteQueue.push_back(std::make_pair(FunctionStartsCmd->dataoff,
+                                          &MachOWriter::writeFunctionStarts));
+      break;
+    case MachO::LC_DYLD_CHAINED_FIXUPS:
+      ChainedFixupsCmd = &LC.Data.linkedit_data_command_data;
+      WriteQueue.push_back(std::make_pair(ChainedFixupsCmd->dataoff,
+                                          &MachOWriter::writeChainedFixups));
+      break;
+    case MachO::LC_DYLD_EXPORTS_TRIE:
+      DyldExportsTrieCmd = &LC.Data.linkedit_data_command_data;
+      WriteQueue.push_back(std::make_pair(DyldExportsTrieCmd->dataoff,
+                                          &MachOWriter::writeDyldExportsTrie));
+      break;
+    case MachO::LC_DATA_IN_CODE:
+      DataInCodeCmd = &LC.Data.linkedit_data_command_data;
+      WriteQueue.push_back(std::make_pair(DataInCodeCmd->dataoff,
+                                          &MachOWriter::writeDataInCode));
+      break;
     }
   }
 
-  llvm::sort(WriteQueue, [](const writeOperation &a, const writeOperation &b) {
-    return a.first < b.first;
-  });
+  llvm::sort(WriteQueue, llvm::less_first());
 
   for (auto writeOp : WriteQueue) {
     ZeroToOffset(OS, writeOp.first);
@@ -485,7 +560,7 @@ void MachOWriter::writeLinkEditData(raw_ostream &OS) {
 void MachOWriter::writeRebaseOpcodes(raw_ostream &OS) {
   MachOYAML::LinkEditData &LinkEdit = Obj.LinkEdit;
 
-  for (auto Opcode : LinkEdit.RebaseOpcodes) {
+  for (const auto &Opcode : LinkEdit.RebaseOpcodes) {
     uint8_t OpByte = Opcode.Opcode | Opcode.Imm;
     OS.write(reinterpret_cast<char *>(&OpByte), 1);
     for (auto Data : Opcode.ExtraData)
@@ -519,6 +594,43 @@ void MachOWriter::writeStringTable(raw_ostream &OS) {
     OS.write(Str.data(), Str.size());
     OS.write('\0');
   }
+}
+
+void MachOWriter::writeDynamicSymbolTable(raw_ostream &OS) {
+  for (auto Data : Obj.LinkEdit.IndirectSymbols)
+    OS.write(reinterpret_cast<const char *>(&Data),
+             sizeof(yaml::Hex32::BaseType));
+}
+
+void MachOWriter::writeFunctionStarts(raw_ostream &OS) {
+  uint64_t Addr = 0;
+  for (uint64_t NextAddr : Obj.LinkEdit.FunctionStarts) {
+    uint64_t Delta = NextAddr - Addr;
+    encodeULEB128(Delta, OS);
+    Addr = NextAddr;
+  }
+
+  OS.write('\0');
+}
+
+void MachOWriter::writeDataInCode(raw_ostream &OS) {
+  for (const auto &Entry : Obj.LinkEdit.DataInCode) {
+    MachO::data_in_code_entry DICE{Entry.Offset, Entry.Length, Entry.Kind};
+    if (Obj.IsLittleEndian != sys::IsLittleEndianHost)
+      MachO::swapStruct(DICE);
+    OS.write(reinterpret_cast<const char *>(&DICE),
+             sizeof(MachO::data_in_code_entry));
+  }
+}
+
+void MachOWriter::writeChainedFixups(raw_ostream &OS) {
+  if (Obj.LinkEdit.ChainedFixups.size() > 0)
+    OS.write(reinterpret_cast<const char *>(Obj.LinkEdit.ChainedFixups.data()),
+             Obj.LinkEdit.ChainedFixups.size());
+}
+
+void MachOWriter::writeDyldExportsTrie(raw_ostream &OS) {
+  dumpExportEntry(OS, Obj.LinkEdit.ExportTrie);
 }
 
 class UniversalWriter {

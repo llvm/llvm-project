@@ -14,7 +14,7 @@ if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
 endif()
 
 macro(get_bits_for_arch arch bits)
-  if (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|arm64|mips64|mips64el|s390x|sparcv9|riscv64")
+  if (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|arm64|mips64|mips64el|s390x|sparcv9|riscv64|loongarch64")
     set(${bits} 64)
   elseif (${arch} MATCHES "i386|arm|mips|mipsel|sparc")
     set(${bits} 32)
@@ -24,9 +24,9 @@ macro(get_bits_for_arch arch bits)
 endmacro()
 
 set(ASAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
+list(APPEND ASAN_TEST_DEPS asan)
 if(NOT COMPILER_RT_STANDALONE_BUILD)
-  list(APPEND ASAN_TEST_DEPS asan)
-  if(NOT APPLE AND COMPILER_RT_HAS_LLD AND TARGET lld)
+  if(NOT APPLE AND COMPILER_RT_HAS_LLD AND "lld" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND ASAN_TEST_DEPS lld)
   endif()
 endif()
@@ -55,11 +55,15 @@ foreach(arch ${ASAN_TEST_ARCH})
   endif()
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
   set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py
-    )
-  list(APPEND ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
+  if(NOT MINGW)
+    # MinGW environments don't provide a statically linked CRT, so only the
+    # dynamic asan test configuration can be expected to work.
+    configure_lit_site_cfg(
+      ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py
+      )
+    list(APPEND ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
+  endif()
 
   if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
     string(TOLOWER "-${arch}-${OS_NAME}-dynamic" ASAN_TEST_CONFIG_SUFFIX)
@@ -127,25 +131,37 @@ endif()
 
 # Add unit tests.
 if(COMPILER_RT_INCLUDE_TESTS)
-  set(ASAN_TEST_DYNAMIC False)
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
-  if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
-    set(ASAN_TEST_DYNAMIC True)
-    configure_lit_site_cfg(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-      ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic/lit.site.cfg.py)
-  endif()
-  # FIXME: support unit test in the android test runner
-  if (NOT ANDROID)
-    list(APPEND ASAN_TEST_DEPS AsanUnitTests)
-    list(APPEND ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
-    if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
-      list(APPEND ASAN_DYNAMIC_TEST_DEPS AsanDynamicUnitTests)
-      list(APPEND ASAN_DYNAMIC_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic)
+  foreach(arch ${ASAN_TEST_ARCH})
+    string(TOUPPER ${arch} ARCH_UPPER_CASE)
+    set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
+    set(CONFIG_NAME_DYNAMIC ${ARCH_UPPER_CASE}${OS_NAME}DynamicConfig)
+
+    if(NOT MINGW)
+      # MinGW environments don't provide a statically linked CRT, so only the
+      # dynamic asan test configuration can be expected to work.
+      set(ASAN_TEST_DYNAMIC False)
+      configure_lit_site_cfg(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+        ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME}/lit.site.cfg.py)
     endif()
-  endif()
+    if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
+      set(ASAN_TEST_DYNAMIC True)
+      configure_lit_site_cfg(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+        ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME_DYNAMIC}/lit.site.cfg.py)
+    endif()
+    # FIXME: support unit test in the android test runner
+    if (NOT ANDROID)
+      if (NOT MINGW)
+        list(APPEND ASAN_TEST_DEPS AsanUnitTests)
+        list(APPEND ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME})
+      endif()
+      if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
+        list(APPEND ASAN_DYNAMIC_TEST_DEPS AsanDynamicUnitTests)
+        list(APPEND ASAN_DYNAMIC_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME_DYNAMIC})
+      endif()
+    endif()
+  endforeach()
 endif()
 
 if (SHADOW_MAPPING_UNRELIABLE)

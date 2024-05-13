@@ -11,14 +11,13 @@ target triple = "thumbv6-apple-darwin10"
 
 %0 = type opaque
 
-declare i8* (i8*, i8*, ...)* @f1(i8*, i8*) optsize
-declare i8* @f2(i8*, i8*, ...)
+declare ptr @f1(ptr, ptr) optsize
+declare ptr @f2(ptr, ptr, ...)
 
-define internal void @f(i8* %self, i8* %_cmd, %0* %inObjects, %0* %inIndexes) optsize ssp {
+define internal void @f(ptr %self, ptr %_cmd, ptr %inObjects, ptr %inIndexes) optsize ssp {
 entry:
-  %call14 = tail call i8* (i8*, i8*, ...)* (i8*, i8*) @f1(i8* undef, i8* %_cmd) optsize
-  %0 = bitcast i8* (i8*, i8*, ...)* %call14 to void (i8*, i8*, %0*, %0*)*
-  tail call void %0(i8* %self, i8* %_cmd, %0* %inObjects, %0* %inIndexes) optsize
-  tail call void bitcast (i8* (i8*, i8*, ...)* @f2 to void (i8*, i8*, i32, %0*, %0*)*)(i8* %self, i8* undef, i32 2, %0* %inIndexes, %0* undef) optsize
+  %call14 = tail call ptr (ptr, ptr) @f1(ptr undef, ptr %_cmd) optsize
+  tail call void %call14(ptr %self, ptr %_cmd, ptr %inObjects, ptr %inIndexes) optsize
+  tail call void @f2(ptr %self, ptr undef, i32 2, ptr %inIndexes, ptr undef) optsize
   ret void
 }

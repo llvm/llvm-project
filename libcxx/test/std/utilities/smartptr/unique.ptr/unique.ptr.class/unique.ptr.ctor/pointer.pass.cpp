@@ -37,7 +37,7 @@
 // unique_ptr(pointer) ctor should only require default Deleter ctor
 
 template <bool IsArray>
-void test_pointer() {
+TEST_CONSTEXPR_CXX23 void test_pointer() {
   typedef typename std::conditional<!IsArray, A, A[]>::type ValueT;
   const int expect_alive = IsArray ? 5 : 1;
 #if TEST_STD_VER >= 11
@@ -56,41 +56,66 @@ void test_pointer() {
 #endif
   {
     A* p = newValue<ValueT>(expect_alive);
-    assert(A::count == expect_alive);
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      assert(A::count == expect_alive);
+
     std::unique_ptr<ValueT> s(p);
     assert(s.get() == p);
   }
-  assert(A::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(A::count == 0);
   {
     A* p = newValue<ValueT>(expect_alive);
-    assert(A::count == expect_alive);
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      assert(A::count == expect_alive);
+
     std::unique_ptr<ValueT, NCDeleter<ValueT> > s(p);
     assert(s.get() == p);
     assert(s.get_deleter().state() == 0);
   }
-  assert(A::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(A::count == 0);
+  {
+    A* p = newValue<ValueT>(expect_alive);
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      assert(A::count == expect_alive);
+
+    std::unique_ptr<ValueT, DefaultCtorDeleter<ValueT> > s(p);
+    assert(s.get() == p);
+    assert(s.get_deleter().state() == 0);
+  }
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(A::count == 0);
 }
 
-void test_derived() {
+TEST_CONSTEXPR_CXX23 void test_derived() {
   {
     B* p = new B;
-    assert(A::count == 1);
-    assert(B::count == 1);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(A::count == 1);
+      assert(B::count == 1);
+    }
     std::unique_ptr<A> s(p);
     assert(s.get() == p);
   }
-  assert(A::count == 0);
-  assert(B::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(A::count == 0);
+    assert(B::count == 0);
+  }
   {
     B* p = new B;
-    assert(A::count == 1);
-    assert(B::count == 1);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(A::count == 1);
+      assert(B::count == 1);
+    }
     std::unique_ptr<A, NCDeleter<A> > s(p);
     assert(s.get() == p);
     assert(s.get_deleter().state() == 0);
   }
-  assert(A::count == 0);
-  assert(B::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(A::count == 0);
+    assert(B::count == 0);
+  }
 }
 
 #if TEST_STD_VER >= 11
@@ -105,7 +130,7 @@ struct GenericDeleter {
 #endif
 
 template <class T>
-void test_sfinae() {
+void TEST_CONSTEXPR_CXX23 test_sfinae() {
 #if TEST_STD_VER >= 11
   { // the constructor does not participate in overload resolution when
     // the deleter is a pointer type
@@ -125,7 +150,7 @@ void test_sfinae() {
 #endif
 }
 
-static void test_sfinae_runtime() {
+static TEST_CONSTEXPR_CXX23 void test_sfinae_runtime() {
 #if TEST_STD_VER >= 11
   { // the constructor does not participate in overload resolution when
     // a base <-> derived conversion would occur.
@@ -156,7 +181,7 @@ DEFINE_AND_RUN_IS_INCOMPLETE_TEST({
   checkNumIncompleteTypeAlive(0);
 })
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
   {
     test_pointer</*IsArray*/ false>();
     test_derived();
@@ -167,6 +192,15 @@ int main(int, char**) {
     test_sfinae<int[]>();
     test_sfinae_runtime();
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
 
   return 0;
 }

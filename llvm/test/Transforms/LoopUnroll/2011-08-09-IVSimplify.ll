@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -loop-unroll -unroll-count=4 | FileCheck %s
+; RUN: opt -S < %s -passes=loop-unroll -unroll-count=4 | FileCheck %s
 ;
 ; Test induction variable simplify after loop unrolling. It should
 ; expose nice opportunities for GVN.
@@ -12,12 +12,12 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: while.body:
 ; CHECK-NOT: while.body.1:
 ; CHECK: %shr.1 = lshr i32 %bit_addr.addr.01, 5
-; CHECK: %arrayidx.1 = getelementptr inbounds i32, i32* %bitmap, i32 %shr.1
+; CHECK: %arrayidx.1 = getelementptr inbounds i32, ptr %bitmap, i32 %shr.1
 ; CHECK: %shr.2 = lshr i32 %bit_addr.addr.01, 5
-; CHECK: %arrayidx.2 = getelementptr inbounds i32, i32* %bitmap, i32 %shr.2
+; CHECK: %arrayidx.2 = getelementptr inbounds i32, ptr %bitmap, i32 %shr.2
 ; CHECK: %shr.3 = lshr i32 %bit_addr.addr.01, 5
-; CHECK: %arrayidx.3 = getelementptr inbounds i32, i32* %bitmap, i32 %shr.3
-define void @FlipBit(i32* nocapture %bitmap, i32 %bit_addr, i32 %nbits) nounwind {
+; CHECK: %arrayidx.3 = getelementptr inbounds i32, ptr %bitmap, i32 %shr.3
+define void @FlipBit(ptr nocapture %bitmap, i32 %bit_addr, i32 %nbits) nounwind {
 entry:
   br label %while.body
 
@@ -28,10 +28,10 @@ while.body:
   %shr = lshr i32 %bit_addr.addr.01, 5
   %rem = and i32 %bit_addr.addr.01, 31
   %shl = shl i32 1, %rem
-  %arrayidx = getelementptr inbounds i32, i32* %bitmap, i32 %shr
-  %tmp6 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %bitmap, i32 %shr
+  %tmp6 = load i32, ptr %arrayidx, align 4
   %xor = xor i32 %tmp6, %shl
-  store i32 %xor, i32* %arrayidx, align 4
+  store i32 %xor, ptr %arrayidx, align 4
   %inc = add i32 %bit_addr.addr.01, 1
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %while.end, label %while.body

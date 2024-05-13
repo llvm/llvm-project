@@ -6,8 +6,8 @@ define i8 @test_i8(i8 %a) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    sxtb r1, r0
 ; CHECK-NEXT:    asrs r1, r1, #7
-; CHECK-NEXT:    adds r0, r0, r1
 ; CHECK-NEXT:    eors r0, r1
+; CHECK-NEXT:    subs r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %tmp1neg = sub i8 0, %a
   %b = icmp sgt i8 %a, -1
@@ -20,8 +20,8 @@ define i16 @test_i16(i16 %a) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    sxth r1, r0
 ; CHECK-NEXT:    asrs r1, r1, #15
-; CHECK-NEXT:    adds r0, r0, r1
 ; CHECK-NEXT:    eors r0, r1
+; CHECK-NEXT:    subs r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %tmp1neg = sub i16 0, %a
   %b = icmp sgt i16 %a, -1
@@ -33,8 +33,8 @@ define i32 @test_i32(i32 %a) nounwind {
 ; CHECK-LABEL: test_i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    asrs r1, r0, #31
-; CHECK-NEXT:    adds r0, r0, r1
 ; CHECK-NEXT:    eors r0, r1
+; CHECK-NEXT:    subs r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %tmp1neg = sub i32 0, %a
   %b = icmp sgt i32 %a, -1
@@ -46,10 +46,10 @@ define i64 @test_i64(i64 %a) nounwind {
 ; CHECK-LABEL: test_i64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    asrs r2, r1, #31
-; CHECK-NEXT:    adds r0, r0, r2
-; CHECK-NEXT:    adcs r1, r2
-; CHECK-NEXT:    eors r0, r2
 ; CHECK-NEXT:    eors r1, r2
+; CHECK-NEXT:    eors r0, r2
+; CHECK-NEXT:    subs r0, r0, r2
+; CHECK-NEXT:    sbcs r1, r2
 ; CHECK-NEXT:    bx lr
   %tmp1neg = sub i64 0, %a
   %b = icmp sgt i64 %a, -1

@@ -282,8 +282,12 @@ NaryReassociatePass::matchAndReassociateMinOrMax(Instruction *I,
           m_Value(LHS), m_Value(RHS));
   if (match(I, MinMaxMatcher)) {
     OrigSCEV = SE->getSCEV(I);
-    return dyn_cast_or_null<Instruction>(
-        tryReassociateMinOrMax(I, MinMaxMatcher, LHS, RHS));
+    if (auto *NewMinMax = dyn_cast_or_null<Instruction>(
+            tryReassociateMinOrMax(I, MinMaxMatcher, LHS, RHS)))
+      return NewMinMax;
+    if (auto *NewMinMax = dyn_cast_or_null<Instruction>(
+            tryReassociateMinOrMax(I, MinMaxMatcher, RHS, LHS)))
+      return NewMinMax;
   }
   return nullptr;
 }
@@ -347,20 +351,21 @@ Instruction *NaryReassociatePass::tryReassociateGEP(GetElementPtrInst *GEP) {
 
 bool NaryReassociatePass::requiresSignExtension(Value *Index,
                                                 GetElementPtrInst *GEP) {
-  unsigned PointerSizeInBits =
-      DL->getPointerSizeInBits(GEP->getType()->getPointerAddressSpace());
-  return cast<IntegerType>(Index->getType())->getBitWidth() < PointerSizeInBits;
+  unsigned IndexSizeInBits =
+      DL->getIndexSizeInBits(GEP->getType()->getPointerAddressSpace());
+  return cast<IntegerType>(Index->getType())->getBitWidth() < IndexSizeInBits;
 }
 
 GetElementPtrInst *
 NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
                                               unsigned I, Type *IndexedType) {
+  SimplifyQuery SQ(*DL, DT, AC, GEP);
   Value *IndexToSplit = GEP->getOperand(I + 1);
   if (SExtInst *SExt = dyn_cast<SExtInst>(IndexToSplit)) {
     IndexToSplit = SExt->getOperand(0);
   } else if (ZExtInst *ZExt = dyn_cast<ZExtInst>(IndexToSplit)) {
     // zext can be treated as sext if the source is non-negative.
-    if (isKnownNonNegative(ZExt->getOperand(0), *DL, 0, AC, GEP, DT))
+    if (isKnownNonNegative(ZExt->getOperand(0), SQ))
       IndexToSplit = ZExt->getOperand(0);
   }
 
@@ -369,8 +374,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // nsw, we cannot split the add because
     //   sext(LHS + RHS) != sext(LHS) + sext(RHS).
     if (requiresSignExtension(IndexToSplit, GEP) &&
-        computeOverflowForSignedAdd(AO, *DL, AC, GEP, DT) !=
-            OverflowResult::NeverOverflows)
+        computeOverflowForSignedAdd(AO, SQ) != OverflowResult::NeverOverflows)
       return nullptr;
 
     Value *LHS = AO->getOperand(0), *RHS = AO->getOperand(1);
@@ -398,9 +402,10 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     IndexExprs.push_back(SE->getSCEV(Index));
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
-  if (isKnownNonNegative(LHS, *DL, 0, AC, GEP, DT) &&
-      DL->getTypeSizeInBits(LHS->getType()).getFixedSize() <
-          DL->getTypeSizeInBits(GEP->getOperand(I)->getType()).getFixedSize()) {
+  if (isKnownNonNegative(LHS, SimplifyQuery(*DL, DT, AC, GEP)) &&
+      DL->getTypeSizeInBits(LHS->getType()).getFixedValue() <
+          DL->getTypeSizeInBits(GEP->getOperand(I)->getType())
+              .getFixedValue()) {
     // Zero-extend LHS if it is non-negative. InstCombine canonicalizes sext to
     // zext if the source operand is proved non-negative. We should do that
     // consistently so that CandidateExpr more likely appears before. See
@@ -444,12 +449,12 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     return nullptr;
 
   // NewGEP = &Candidate[RHS * (sizeof(IndexedType) / sizeof(Candidate[0])));
-  Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
-  if (RHS->getType() != IntPtrTy)
-    RHS = Builder.CreateSExtOrTrunc(RHS, IntPtrTy);
+  Type *PtrIdxTy = DL->getIndexType(GEP->getType());
+  if (RHS->getType() != PtrIdxTy)
+    RHS = Builder.CreateSExtOrTrunc(RHS, PtrIdxTy);
   if (IndexedSize != ElementSize) {
     RHS = Builder.CreateMul(
-        RHS, ConstantInt::get(IntPtrTy, IndexedSize / ElementSize));
+        RHS, ConstantInt::get(PtrIdxTy, IndexedSize / ElementSize));
   }
   GetElementPtrInst *NewGEP = cast<GetElementPtrInst>(
       Builder.CreateGEP(GEP->getResultElementType(), Candidate, RHS));
@@ -506,10 +511,10 @@ Instruction *NaryReassociatePass::tryReassociatedBinaryOp(const SCEV *LHSExpr,
   Instruction *NewI = nullptr;
   switch (I->getOpcode()) {
   case Instruction::Add:
-    NewI = BinaryOperator::CreateAdd(LHS, RHS, "", I);
+    NewI = BinaryOperator::CreateAdd(LHS, RHS, "", I->getIterator());
     break;
   case Instruction::Mul:
-    NewI = BinaryOperator::CreateMul(LHS, RHS, "", I);
+    NewI = BinaryOperator::CreateMul(LHS, RHS, "", I->getIterator());
     break;
   default:
     llvm_unreachable("Unexpected instruction.");
@@ -572,13 +577,13 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
 }
 
 template <typename MaxMinT> static SCEVTypes convertToSCEVype(MaxMinT &MM) {
-  if (std::is_same<smax_pred_ty, typename MaxMinT::PredType>::value)
+  if (std::is_same_v<smax_pred_ty, typename MaxMinT::PredType>)
     return scSMaxExpr;
-  else if (std::is_same<umax_pred_ty, typename MaxMinT::PredType>::value)
+  else if (std::is_same_v<umax_pred_ty, typename MaxMinT::PredType>)
     return scUMaxExpr;
-  else if (std::is_same<smin_pred_ty, typename MaxMinT::PredType>::value)
+  else if (std::is_same_v<smin_pred_ty, typename MaxMinT::PredType>)
     return scSMinExpr;
-  else if (std::is_same<umin_pred_ty, typename MaxMinT::PredType>::value)
+  else if (std::is_same_v<umin_pred_ty, typename MaxMinT::PredType>)
     return scUMinExpr;
 
   llvm_unreachable("Can't convert MinMax pattern to SCEV type");
@@ -596,58 +601,60 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
                                                    Value *LHS, Value *RHS) {
   Value *A = nullptr, *B = nullptr;
   MaxMinT m_MaxMin(m_Value(A), m_Value(B));
-  for (unsigned int i = 0; i < 2; ++i) {
-    if (!LHS->hasNUsesOrMore(3) && match(LHS, m_MaxMin)) {
-      const SCEV *AExpr = SE->getSCEV(A), *BExpr = SE->getSCEV(B);
-      const SCEV *RHSExpr = SE->getSCEV(RHS);
-      for (unsigned int j = 0; j < 2; ++j) {
-        if (j == 0) {
-          if (BExpr == RHSExpr)
-            continue;
-          // Transform 'I = (A op B) op RHS' to 'I = (A op RHS) op B' on the
-          // first iteration.
-          std::swap(BExpr, RHSExpr);
-        } else {
-          if (AExpr == RHSExpr)
-            continue;
-          // Transform 'I = (A op RHS) op B' 'I = (B op RHS) op A' on the second
-          // iteration.
-          std::swap(AExpr, RHSExpr);
-        }
 
-        // The optimization is profitable only if LHS can be removed in the end.
-        // In other words LHS should be used (directly or indirectly) by I only.
-        if (llvm::any_of(LHS->users(), [&](auto *U) {
-              return U != I && !(U->hasOneUser() && *U->users().begin() == I);
-            }))
-          continue;
+  if (LHS->hasNUsesOrMore(3) ||
+      // The optimization is profitable only if LHS can be removed in the end.
+      // In other words LHS should be used (directly or indirectly) by I only.
+      llvm::any_of(LHS->users(),
+                    [&](auto *U) {
+                      return U != I &&
+                             !(U->hasOneUser() && *U->users().begin() == I);
+                    }) ||
+      !match(LHS, m_MaxMin))
+    return nullptr;
 
-        SCEVExpander Expander(*SE, *DL, "nary-reassociate");
-        SmallVector<const SCEV *, 2> Ops1{ BExpr, AExpr };
-        const SCEVTypes SCEVType = convertToSCEVype(m_MaxMin);
-        const SCEV *R1Expr = SE->getMinMaxExpr(SCEVType, Ops1);
+  auto tryCombination = [&](Value *A, const SCEV *AExpr, Value *B,
+                            const SCEV *BExpr, Value *C,
+                            const SCEV *CExpr) -> Value * {
+    SmallVector<const SCEV *, 2> Ops1{BExpr, AExpr};
+    const SCEVTypes SCEVType = convertToSCEVype(m_MaxMin);
+    const SCEV *R1Expr = SE->getMinMaxExpr(SCEVType, Ops1);
 
-        Instruction *R1MinMax = findClosestMatchingDominator(R1Expr, I);
+    Instruction *R1MinMax = findClosestMatchingDominator(R1Expr, I);
 
-        if (!R1MinMax)
-          continue;
+    if (!R1MinMax)
+      return nullptr;
 
-        LLVM_DEBUG(dbgs() << "NARY: Found common sub-expr: " << *R1MinMax
-                          << "\n");
+    LLVM_DEBUG(dbgs() << "NARY: Found common sub-expr: " << *R1MinMax << "\n");
 
-        R1Expr = SE->getUnknown(R1MinMax);
-        SmallVector<const SCEV *, 2> Ops2{ RHSExpr, R1Expr };
-        const SCEV *R2Expr = SE->getMinMaxExpr(SCEVType, Ops2);
+    SmallVector<const SCEV *, 2> Ops2{SE->getUnknown(C),
+                                      SE->getUnknown(R1MinMax)};
+    const SCEV *R2Expr = SE->getMinMaxExpr(SCEVType, Ops2);
 
-        Value *NewMinMax = Expander.expandCodeFor(R2Expr, I->getType(), I);
-        NewMinMax->setName(Twine(I->getName()).concat(".nary"));
+    SCEVExpander Expander(*SE, *DL, "nary-reassociate");
+    Value *NewMinMax = Expander.expandCodeFor(R2Expr, I->getType(), I);
+    NewMinMax->setName(Twine(I->getName()).concat(".nary"));
 
-        LLVM_DEBUG(dbgs() << "NARY: Deleting:  " << *I << "\n"
-                          << "NARY: Inserting: " << *NewMinMax << "\n");
-        return NewMinMax;
-      }
-    }
-    std::swap(LHS, RHS);
+    LLVM_DEBUG(dbgs() << "NARY: Deleting:  " << *I << "\n"
+                      << "NARY: Inserting: " << *NewMinMax << "\n");
+    return NewMinMax;
+  };
+
+  const SCEV *AExpr = SE->getSCEV(A);
+  const SCEV *BExpr = SE->getSCEV(B);
+  const SCEV *RHSExpr = SE->getSCEV(RHS);
+
+  if (BExpr != RHSExpr) {
+    // Try (A op RHS) op B
+    if (auto *NewMinMax = tryCombination(A, AExpr, RHS, RHSExpr, B, BExpr))
+      return NewMinMax;
   }
+
+  if (AExpr != RHSExpr) {
+    // Try (RHS op B) op A
+    if (auto *NewMinMax = tryCombination(RHS, RHSExpr, B, BExpr, A, AExpr))
+      return NewMinMax;
+  }
+
   return nullptr;
 }

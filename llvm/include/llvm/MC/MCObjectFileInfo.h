@@ -13,11 +13,13 @@
 #ifndef LLVM_MC_MCOBJECTFILEINFO_H
 #define LLVM_MC_MCOBJECTFILEINFO_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/CodeGen.h"
+#include "llvm/BinaryFormat/Swift.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/Triple.h"
+
+#include <array>
+#include <optional>
 
 namespace llvm {
 class MCContext;
@@ -25,10 +27,6 @@ class MCSection;
 
 class MCObjectFileInfo {
 protected:
-  /// True if .comm supports alignment.  This is a hack for as long as we
-  /// support 10.4 Tiger, whose assembler doesn't support alignment on comm.
-  bool CommDirectiveSupportsAlignment = false;
-
   /// True if target object file supports a weak_definition of constant 0 for an
   /// omitted EH frame.
   bool SupportsWeakOmittedEHFrame = false;
@@ -178,6 +176,9 @@ protected:
   MCSection *PseudoProbeSection = nullptr;
   MCSection *PseudoProbeDescSection = nullptr;
 
+  // Section for metadata of llvm statistics.
+  MCSection *LLVMStatsSection = nullptr;
+
   // ELF specific sections.
   MCSection *DataRelROSection = nullptr;
   MCSection *MergeableConst4Section = nullptr;
@@ -212,6 +213,7 @@ protected:
   MCSection *LazySymbolPointerSection = nullptr;
   MCSection *NonLazySymbolPointerSection = nullptr;
   MCSection *ThreadLocalPointerSection = nullptr;
+  MCSection *AddrSigSection = nullptr;
 
   /// COFF specific sections.
   MCSection *DrectveSection = nullptr;
@@ -223,12 +225,26 @@ protected:
   MCSection *GIATsSection = nullptr;
   MCSection *GLJMPSection = nullptr;
 
+  // GOFF specific sections.
+  MCSection *PPA1Section = nullptr;
+  MCSection *PPA2Section = nullptr;
+  MCSection *PPA2ListSection = nullptr;
+  MCSection *ADASection = nullptr;
+  MCSection *IDRLSection = nullptr;
+
   // XCOFF specific sections
   MCSection *TOCBaseSection = nullptr;
+  MCSection *ReadOnly8Section = nullptr;
+  MCSection *ReadOnly16Section = nullptr;
+
+  // Swift5 Reflection Data Sections
+  std::array<MCSection *, binaryformat::Swift5ReflectionSectionKind::last>
+      Swift5ReflectionSections = {};
 
 public:
   void initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
                             bool LargeCodeModel = false);
+  virtual ~MCObjectFileInfo();
   MCContext &getContext() const { return *Ctx; }
 
   bool getSupportsWeakOmittedEHFrame() const {
@@ -241,20 +257,18 @@ public:
     return OmitDwarfIfHaveCompactUnwind;
   }
 
-  bool getCommDirectiveSupportsAlignment() const {
-    return CommDirectiveSupportsAlignment;
-  }
-
   unsigned getFDEEncoding() const { return FDECFIEncoding; }
 
   unsigned getCompactUnwindDwarfEHFrameOnly() const {
     return CompactUnwindDwarfEHFrameOnly;
   }
 
+  virtual unsigned getTextSectionAlignment() const { return 4; }
   MCSection *getTextSection() const { return TextSection; }
   MCSection *getDataSection() const { return DataSection; }
   MCSection *getBSSSection() const { return BSSSection; }
   MCSection *getReadOnlySection() const { return ReadOnlySection; }
+  MCSection *getLSDASection() const { return LSDASection; }
   MCSection *getCompactUnwindSection() const { return CompactUnwindSection; }
   MCSection *getDwarfAbbrevSection() const { return DwarfAbbrevSection; }
   MCSection *getDwarfInfoSection() const { return DwarfInfoSection; }
@@ -345,9 +359,15 @@ public:
 
   MCSection *getBBAddrMapSection(const MCSection &TextSec) const;
 
-  MCSection *getPseudoProbeSection(const MCSection *TextSec) const;
+  MCSection *getKCFITrapSection(const MCSection &TextSec) const;
+
+  MCSection *getPseudoProbeSection(const MCSection &TextSec) const;
 
   MCSection *getPseudoProbeDescSection(StringRef FuncName) const;
+
+  MCSection *getLLVMStatsSection() const;
+
+  MCSection *getPCSection(StringRef Name, const MCSection *TextSec) const;
 
   // ELF specific sections.
   MCSection *getDataRelROSection() const { return DataRelROSection; }
@@ -400,6 +420,7 @@ public:
   MCSection *getThreadLocalPointerSection() const {
     return ThreadLocalPointerSection;
   }
+  MCSection *getAddrSigSection() const { return AddrSigSection; }
 
   // COFF specific sections.
   MCSection *getDrectveSection() const { return DrectveSection; }
@@ -411,6 +432,13 @@ public:
   MCSection *getGIATsSection() const { return GIATsSection; }
   MCSection *getGLJMPSection() const { return GLJMPSection; }
 
+  // GOFF specific sections.
+  MCSection *getPPA1Section() const { return PPA1Section; }
+  MCSection *getPPA2Section() const { return PPA2Section; }
+  MCSection *getPPA2ListSection() const { return PPA2ListSection; }
+  MCSection *getADASection() const { return ADASection; }
+  MCSection *getIDRLSection() const { return IDRLSection; }
+
   // XCOFF specific sections
   MCSection *getTOCBaseSection() const { return TOCBaseSection; }
 
@@ -418,16 +446,30 @@ public:
 
   bool isPositionIndependent() const { return PositionIndependent; }
 
+  // Swift5 Reflection Data Sections
+  MCSection *getSwift5ReflectionSection(
+      llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind) {
+    return ReflSectionKind !=
+                   llvm::binaryformat::Swift5ReflectionSectionKind::unknown
+               ? Swift5ReflectionSections[ReflSectionKind]
+               : nullptr;
+  }
+
 private:
   bool PositionIndependent = false;
   MCContext *Ctx = nullptr;
   VersionTuple SDKVersion;
+  std::optional<Triple> DarwinTargetVariantTriple;
+  VersionTuple DarwinTargetVariantSDKVersion;
 
   void initMachOMCObjectFileInfo(const Triple &T);
   void initELFMCObjectFileInfo(const Triple &T, bool Large);
+  void initGOFFMCObjectFileInfo(const Triple &T);
   void initCOFFMCObjectFileInfo(const Triple &T);
+  void initSPIRVMCObjectFileInfo(const Triple &T);
   void initWasmMCObjectFileInfo(const Triple &T);
   void initXCOFFMCObjectFileInfo(const Triple &T);
+  void initDXContainerObjectFileInfo(const Triple &T);
   MCSection *getDwarfComdatSection(const char *Name, uint64_t Hash) const;
 
 public:
@@ -436,6 +478,22 @@ public:
   }
 
   const VersionTuple &getSDKVersion() const { return SDKVersion; }
+
+  void setDarwinTargetVariantTriple(const Triple &T) {
+    DarwinTargetVariantTriple = T;
+  }
+
+  const Triple *getDarwinTargetVariantTriple() const {
+    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
+  }
+
+  void setDarwinTargetVariantSDKVersion(const VersionTuple &TheSDKVersion) {
+    DarwinTargetVariantSDKVersion = TheSDKVersion;
+  }
+
+  const VersionTuple &getDarwinTargetVariantSDKVersion() const {
+    return DarwinTargetVariantSDKVersion;
+  }
 };
 
 } // end namespace llvm

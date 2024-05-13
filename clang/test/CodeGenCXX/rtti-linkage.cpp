@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-BOTH
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -fvisibility hidden -emit-llvm -o - | FileCheck -check-prefix=CHECK-WITH-HIDDEN -check-prefix=CHECK-BOTH %s
+// RUN: %clang_cc1 %std_cxx98- %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -Wno-dynamic-exception-spec -o - | FileCheck %s -check-prefixes=CHECK,CHECK-BOTH
+// RUN: %clang_cc1 %std_cxx98- %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -Wno-dynamic-exception-spec -fvisibility=hidden -o - | FileCheck %s --check-prefixes=CHECK-WITH-HIDDEN,CHECK-BOTH
 
 #include <typeinfo>
 
@@ -71,7 +71,7 @@
 // CHECK: _ZTIZ2t7vE1A = linkonce_odr constant
 // CHECK: _ZTIPZ2t7vE1A = linkonce_odr constant
 
-// CHECK: _ZTIN12_GLOBAL__N_11DE to
+// CHECK: _ZTIN12_GLOBAL__N_11DE
 
 // A has no key function, so its RTTI data should be linkonce_odr.
 struct A { };
@@ -152,13 +152,11 @@ void t3() {
   (void) typeid(T<2>);
 }
 
-// rdar://problem/8778973
 struct T4 {};
 void t4(const T4 *ptr) {
   const void *value = &typeid(ptr);
 }
 
-// rdar://16265084
 void t5() {
   struct A {};
   const void *value = &typeid(A);

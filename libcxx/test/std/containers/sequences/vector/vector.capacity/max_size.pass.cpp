@@ -19,7 +19,7 @@
 #include "test_macros.h"
 
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef limited_allocator<int, 10> A;
     typedef std::vector<int, A> C;
@@ -28,7 +28,7 @@ int main(int, char**) {
     LIBCPP_ASSERT(c.max_size() == 10);
   }
   {
-    typedef limited_allocator<int, (size_t)-1> A;
+    typedef limited_allocator<int, (std::size_t)-1> A;
     typedef std::vector<int, A> C;
     const C::size_type max_dist =
         static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
@@ -44,6 +44,16 @@ int main(int, char**) {
     assert(c.max_size() <= max_dist);
     assert(c.max_size() <= alloc_max_size(c.get_allocator()));
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
 
   return 0;
 }

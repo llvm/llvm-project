@@ -39,23 +39,18 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; X86-LABEL: func2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    seto %bl
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    testb %bl, %bl
-; X86-NEXT:    cmovel %ecx, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    testl %esi, %esi
-; X86-NEXT:    setns %dl
-; X86-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    addl $-2147483648, %edx # imm = 0x80000000
 ; X86-NEXT:    testb %bl, %bl
-; X86-NEXT:    cmovel %esi, %edx
-; X86-NEXT:    popl %esi
+; X86-NEXT:    cmovel %ecx, %edx
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
@@ -104,8 +99,8 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; X86-LABEL: func8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    cmpb %dl, %al
 ; X86-NEXT:    setns %cl
@@ -134,15 +129,15 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movzbl %al, %ecx
 ; X86-NEXT:    cmpb $7, %al
 ; X86-NEXT:    movl $7, %eax
 ; X86-NEXT:    cmovll %ecx, %eax
-; X86-NEXT:    cmpb $-8, %al
+; X86-NEXT:    cmpb $-7, %al
 ; X86-NEXT:    movl $248, %ecx
-; X86-NEXT:    cmovgl %eax, %ecx
+; X86-NEXT:    cmovgel %eax, %ecx
 ; X86-NEXT:    movsbl %cl, %eax
 ; X86-NEXT:    retl
 ;
@@ -153,9 +148,9 @@ define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; X64-NEXT:    cmpb $7, %al
 ; X64-NEXT:    movl $7, %ecx
 ; X64-NEXT:    cmovll %eax, %ecx
-; X64-NEXT:    cmpb $-8, %cl
+; X64-NEXT:    cmpb $-7, %cl
 ; X64-NEXT:    movl $248, %eax
-; X64-NEXT:    cmovgl %ecx, %eax
+; X64-NEXT:    cmovgel %ecx, %eax
 ; X64-NEXT:    movsbl %al, %eax
 ; X64-NEXT:    retq
   %tmp = call i4 @llvm.ssub.sat.i4(i4 %x, i4 %y)
@@ -218,13 +213,11 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    pcmpgtd %xmm2, %xmm1
 ; X64-NEXT:    pcmpgtd %xmm3, %xmm0
 ; X64-NEXT:    pxor %xmm1, %xmm0
-; X64-NEXT:    movdqa %xmm3, %xmm1
-; X64-NEXT:    pandn {{.*}}(%rip), %xmm1
-; X64-NEXT:    pcmpgtd %xmm3, %xmm2
-; X64-NEXT:    psrld $1, %xmm2
-; X64-NEXT:    por %xmm2, %xmm1
-; X64-NEXT:    pand %xmm0, %xmm1
-; X64-NEXT:    pandn %xmm3, %xmm0
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    pandn %xmm3, %xmm1
+; X64-NEXT:    psrad $31, %xmm3
+; X64-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; X64-NEXT:    pand %xmm3, %xmm0
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    retq
   %tmp = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %x, <4 x i32> %y)

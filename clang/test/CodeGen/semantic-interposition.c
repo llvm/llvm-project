@@ -10,13 +10,13 @@
 
 // CHECK: @var = global i32 0, align 4
 // CHECK: @ext_var = external global i32, align 4
-// CHECK: @ifunc = ifunc i32 (), bitcast (i8* ()* @ifunc_resolver to i32 ()*)
+// CHECK: @ifunc = ifunc i32 (), ptr @ifunc_resolver
 // CHECK: define dso_local i32 @func()
 // CHECK: declare i32 @ext()
 
 // PREEMPT: @var = global i32 0, align 4
 // PREEMPT: @ext_var = external global i32, align 4
-// PREEMPT: @ifunc = ifunc i32 (), bitcast (i8* ()* @ifunc_resolver to i32 ()*)
+// PREEMPT: @ifunc = ifunc i32 (), ptr @ifunc_resolver
 // PREEMPT: define i32 @func()
 // PREEMPT: declare i32 @ext()
 
@@ -31,8 +31,8 @@ int ifunc(void) __attribute__((ifunc("ifunc_resolver")));
 int func(void) { return 0; }
 int ext(void);
 
-static void *ifunc_resolver() { return func; }
+static void *ifunc_resolver(void) { return func; }
 
-int foo() {
+int foo(void) {
   return var + ext_var + ifunc() + func() + ext();
 }

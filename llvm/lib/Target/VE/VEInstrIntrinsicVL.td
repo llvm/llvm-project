@@ -2,9 +2,6 @@
 
 /// Intrinsic patterns written by hand.
 
-// SVOB pattern.
-def : Pat<(int_ve_vl_svob), (SVOB)>;
-
 // Pack patterns.
 def : Pat<(i64 (int_ve_vl_pack_f32p ADDRrii:$addr0, ADDRrii:$addr1)),
           (ORrr (f2l (LDUrii MEMrii:$addr0)),

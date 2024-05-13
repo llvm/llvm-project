@@ -12,15 +12,15 @@ define i32 @func_59(i32 %p_60) nounwind  {
 ; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    pushl %ecx
-; CHECK-NEXT:    calll func_15
+; CHECK-NEXT:    calll func_15@PLT
 entry:
-	%l_108 = alloca i32		; <i32*> [#uses=2]
-	%tmp15 = load i32, i32* null, align 4		; <i32> [#uses=1]
-	%tmp16 = load i32, i32* %l_108, align 4		; <i32> [#uses=1]
+	%l_108 = alloca i32		; <ptr> [#uses=2]
+	%tmp15 = load i32, ptr null, align 4		; <i32> [#uses=1]
+	%tmp16 = load i32, ptr %l_108, align 4		; <i32> [#uses=1]
 	%tmp17 = icmp eq i32 %tmp15, %tmp16		; <i1> [#uses=1]
 	%tmp1718 = zext i1 %tmp17 to i8		; <i8> [#uses=1]
-	%tmp19 = load i32, i32* null, align 4		; <i32> [#uses=1]
-	%tmp20 = load i32, i32* %l_108, align 4		; <i32> [#uses=1]
+	%tmp19 = load i32, ptr null, align 4		; <i32> [#uses=1]
+	%tmp20 = load i32, ptr %l_108, align 4		; <i32> [#uses=1]
 	%tmp21 = icmp ule i32 %tmp19, %tmp20		; <i1> [#uses=1]
 	%tmp2122 = zext i1 %tmp21 to i8		; <i8> [#uses=1]
 	%toBool23 = icmp ne i8 %tmp1718, 0		; <i1> [#uses=1]

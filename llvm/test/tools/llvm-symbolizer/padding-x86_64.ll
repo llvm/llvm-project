@@ -2,9 +2,9 @@
 ; Checks if symbolizer can correctly symbolize address in the padding between
 ; functions.
 ; RUN: llc  -o %t.o -filetype=obj -mtriple=x86_64-pc-linux  %s
-; RUN: llvm-symbolizer 0x5 -obj=%t.o | FileCheck %s --check-prefix=FOO
-; RUN: llvm-symbolizer 0xd -obj=%t.o | FileCheck %s --check-prefix=PADDING
-; RUN: llvm-symbolizer 0x10 -obj=%t.o | FileCheck %s --check-prefix=MAIN
+; RUN: llvm-symbolizer 0x5 --obj=%t.o | FileCheck %s --check-prefix=FOO
+; RUN: llvm-symbolizer 0xd --obj=%t.o | FileCheck %s --check-prefix=PADDING
+; RUN: llvm-symbolizer 0x10 --obj=%t.o | FileCheck %s --check-prefix=MAIN
 
 ;FOO: foo
 ;PADDING: ??
@@ -14,7 +14,7 @@
 
 define i32 @foo() !dbg !9 {
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   ret i32 %0
 }
 

@@ -8,6 +8,8 @@
 
 // <codecvt>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT
+
 // template <class Elem, unsigned long Maxcode = 0x10ffff,
 //           codecvt_mode Mode = (codecvt_mode)0>
 // class codecvt_utf16
@@ -15,6 +17,8 @@
 // {
 //     // unspecified
 // };
+
+// XFAIL: no-wide-characters
 
 // Not a portable test
 

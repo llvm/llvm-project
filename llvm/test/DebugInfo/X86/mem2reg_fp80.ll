@@ -1,4 +1,5 @@
-; RUN: opt < %s -mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=mem2reg -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -6,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local x86_fp80 @powixf2() !dbg !1 {
 entry:
   %r = alloca x86_fp80, align 16
-  call void @llvm.dbg.declare(metadata x86_fp80* %r, metadata !14, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.declare(metadata ptr %r, metadata !14, metadata !DIExpression()), !dbg !15
   br i1 undef, label %if.then, label %if.end, !dbg !16
 
 if.then:                                          ; preds = %entry
@@ -14,14 +15,14 @@ if.then:                                          ; preds = %entry
 ; CHECK: %mul = fmul x86_fp80
 ; CHECK: call void @llvm.dbg.value(metadata x86_fp80 %mul, metadata {{.*}}, metadata !DIExpression())
   %mul = fmul x86_fp80 undef, undef, !dbg !18
-  store x86_fp80 %mul, x86_fp80* %r, align 16, !dbg !18
+  store x86_fp80 %mul, ptr %r, align 16, !dbg !18
   br label %if.end, !dbg !20
 
 if.end:                                           ; preds = %if.then, %entry
 ; CHECK-LABEL: if.end:
 ; CHECK: %r.0 = phi x86_fp80
 ; CHECK: call void @llvm.dbg.value(metadata x86_fp80 %r.0, metadata {{.*}}, metadata !DIExpression())
-  %out = load x86_fp80, x86_fp80* %r, align 16, !dbg !21
+  %out = load x86_fp80, ptr %r, align 16, !dbg !21
   ret x86_fp80 %out, !dbg !22
 }
 

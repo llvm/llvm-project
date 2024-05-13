@@ -7,36 +7,27 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 
+
 class BasicGuiCommandTest(PExpectTest):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfCursesSupportMissing
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_gui(self):
         self.build()
 
-        self.launch(executable=self.getBuildArtifact("a.out"), dimensions=(100,500))
-        self.expect('br set -f main.c -p "// Break here"', substrs=["Breakpoint 1", "address ="])
+        self.launch(executable=self.getBuildArtifact("a.out"), dimensions=(100, 500))
+        self.expect(
+            'br set -f main.c -p "// Break here"', substrs=["Breakpoint 1", "address ="]
+        )
         self.expect("run", substrs=["stop reason ="])
-
 
         escape_key = chr(27).encode()
 
-        # Start the GUI for the first time and check for the welcome window.
+        # Start the GUI.
         self.child.sendline("gui")
-        self.child.expect_exact("Welcome to the LLDB curses GUI.")
 
-        # Press escape to quit the welcome screen
-        self.child.send(escape_key)
-        # Press escape again to quit the gui
-        self.child.send(escape_key)
-        self.expect_prompt()
-
-        # Start the GUI a second time, this time we should have the normal GUI.
-        self.child.sendline("gui")
         # Check for GUI elements in the menu bar.
         self.child.expect_exact("Target")
         self.child.expect_exact("Process")

@@ -5,8 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// UNSUPPORTED: no-threads
 
 // <memory>
 
@@ -14,11 +16,13 @@
 
 // template <class T>
 // shared_ptr<T>
-// atomic_load_explicit(const shared_ptr<T>* p, memory_order mo)
+// atomic_load_explicit(const shared_ptr<T>* p, memory_order mo)     // Deprecated in C++20, removed in C++26
 
 // UNSUPPORTED: c++03
 
 #include <memory>
+
+#include <atomic>
 #include <cassert>
 
 #include "test_macros.h"

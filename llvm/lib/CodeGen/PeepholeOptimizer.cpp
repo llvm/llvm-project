@@ -66,7 +66,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -90,7 +89,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -151,12 +149,13 @@ namespace {
   class ValueTrackerResult;
   class RecurrenceInstr;
 
-  class PeepholeOptimizer : public MachineFunctionPass {
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    MachineRegisterInfo *MRI;
-    MachineDominatorTree *DT;  // Machine dominator tree
-    MachineLoopInfo *MLI;
+  class PeepholeOptimizer : public MachineFunctionPass,
+                            private MachineFunction::Delegate {
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    MachineDominatorTree *DT = nullptr; // Machine dominator tree
+    MachineLoopInfo *MLI = nullptr;
 
   public:
     static char ID; // Pass identification
@@ -204,7 +203,8 @@ namespace {
     bool isMoveImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
                          DenseMap<Register, MachineInstr *> &ImmDefMIs);
     bool foldImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
-                       DenseMap<Register, MachineInstr *> &ImmDefMIs);
+                       DenseMap<Register, MachineInstr *> &ImmDefMIs,
+                       bool &Deleted);
 
     /// Finds recurrence cycles, but only ones that formulated around
     /// a def operand and a use operand that are tied. If there is a use
@@ -214,12 +214,12 @@ namespace {
                               const SmallSet<Register, 2> &TargetReg,
                               RecurrenceCycle &RC);
 
-    /// If copy instruction \p MI is a virtual register copy, track it in
-    /// the set \p CopyMIs. If this virtual register was previously seen as a
+    /// If copy instruction \p MI is a virtual register copy or a copy of a
+    /// constant physical register to a virtual register, track it in the
+    /// set CopySrcMIs. If this virtual register was previously seen as a
     /// copy, replace the uses of this copy with the previously seen copy's
     /// destination register.
-    bool foldRedundantCopy(MachineInstr &MI,
-                           DenseMap<RegSubRegPair, MachineInstr *> &CopyMIs);
+    bool foldRedundantCopy(MachineInstr &MI);
 
     /// Is the register \p Reg a non-allocatable physical register?
     bool isNAPhysCopy(Register Reg);
@@ -256,6 +256,49 @@ namespace {
 
     MachineInstr &rewriteSource(MachineInstr &CopyLike,
                                 RegSubRegPair Def, RewriteMapTy &RewriteMap);
+
+    // Set of copies to virtual registers keyed by source register.  Never
+    // holds any physreg which requires def tracking.
+    DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
+
+    // MachineFunction::Delegate implementation. Used to maintain CopySrcMIs.
+    void MF_HandleInsertion(MachineInstr &MI) override {
+      return;
+    }
+
+    bool getCopySrc(MachineInstr &MI, RegSubRegPair &SrcPair) {
+      if (!MI.isCopy())
+        return false;
+
+      Register SrcReg = MI.getOperand(1).getReg();
+      unsigned SrcSubReg = MI.getOperand(1).getSubReg();
+      if (!SrcReg.isVirtual() && !MRI->isConstantPhysReg(SrcReg))
+        return false;
+
+      SrcPair = RegSubRegPair(SrcReg, SrcSubReg);
+      return true;
+    }
+
+    // If a COPY instruction is to be deleted or changed, we should also remove
+    // it from CopySrcMIs.
+    void deleteChangedCopy(MachineInstr &MI) {
+      RegSubRegPair SrcPair;
+      if (!getCopySrc(MI, SrcPair))
+        return;
+
+      auto It = CopySrcMIs.find(SrcPair);
+      if (It != CopySrcMIs.end() && It->second == &MI)
+        CopySrcMIs.erase(It);
+    }
+
+    void MF_HandleRemoval(MachineInstr &MI) override {
+      deleteChangedCopy(MI);
+    }
+
+    void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) override
+    {
+      deleteChangedCopy(MI);
+    }
   };
 
   /// Helper class to hold instructions that are inside recurrence cycles.
@@ -273,11 +316,11 @@ namespace {
       : MI(MI), CommutePair(std::make_pair(Idx1, Idx2)) {}
 
     MachineInstr *getMI() const { return MI; }
-    Optional<IndexPair> getCommutePair() const { return CommutePair; }
+    std::optional<IndexPair> getCommutePair() const { return CommutePair; }
 
   private:
     MachineInstr *MI;
-    Optional<IndexPair> CommutePair;
+    std::optional<IndexPair> CommutePair;
   };
 
   /// Helper class to hold a reply for ValueTracker queries.
@@ -585,15 +628,30 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
         MRI->constrainRegClass(DstReg, DstRC);
       }
 
+      // SubReg defs are illegal in machine SSA phase,
+      // we should not generate SubReg defs.
+      //
+      // For example, for the instructions:
+      //
+      // %1:g8rc_and_g8rc_nox0 = EXTSW %0:g8rc
+      // %3:gprc_and_gprc_nor0 = COPY %0.sub_32:g8rc
+      //
+      // We should generate:
+      //
+      // %1:g8rc_and_g8rc_nox0 = EXTSW %0:g8rc
+      // %6:gprc_and_gprc_nor0 = COPY %1.sub_32:g8rc_and_g8rc_nox0
+      // %3:gprc_and_gprc_nor0 = COPY %6:gprc_and_gprc_nor0
+      //
+      if (UseSrcSubIdx)
+        RC = MRI->getRegClass(UseMI->getOperand(0).getReg());
+
       Register NewVR = MRI->createVirtualRegister(RC);
-      MachineInstr *Copy = BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
-                                   TII->get(TargetOpcode::COPY), NewVR)
+      BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
+              TII->get(TargetOpcode::COPY), NewVR)
         .addReg(DstReg, 0, SubIdx);
-      // SubIdx applies to both SrcReg and DstReg when UseSrcSubIdx is set.
-      if (UseSrcSubIdx) {
-        Copy->getOperand(0).setSubReg(SubIdx);
-        Copy->getOperand(0).setIsUndef();
-      }
+      if (UseSrcSubIdx)
+        UseMO->setSubReg(0);
+
       UseMO->setReg(NewVR);
       ++NumReuse;
       Changed = true;
@@ -611,7 +669,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
   // If this instruction is a comparison against zero and isn't comparing a
   // physical register, we can try to optimize it.
   Register SrcReg, SrcReg2;
-  int CmpMask, CmpValue;
+  int64_t CmpMask, CmpValue;
   if (!TII->analyzeCompare(MI, SrcReg, SrcReg2, CmpMask, CmpValue) ||
       SrcReg.isPhysical() || SrcReg2.isPhysical())
     return false;
@@ -681,7 +739,7 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
   do {
     CurSrcPair = SrcToLook.pop_back_val();
     // As explained above, do not handle physical registers
-    if (Register::isPhysicalRegister(CurSrcPair.Reg))
+    if (CurSrcPair.Reg.isPhysical())
       return false;
 
     ValueTracker ValTracker(CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
@@ -729,7 +787,7 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
       // constraints to the register allocator. Moreover, if we want to extend
       // the live-range of a physical register, unlike SSA virtual register,
       // we will have to check that they aren't redefine before the related use.
-      if (Register::isPhysicalRegister(CurSrcPair.Reg))
+      if (CurSrcPair.Reg.isPhysical())
         return false;
 
       // Keep following the chain if the value isn't any better yet.
@@ -795,7 +853,7 @@ protected:
   unsigned CurrentSrcIdx = 0;   ///< The index of the source being rewritten.
 public:
   Rewriter(MachineInstr &CopyLike) : CopyLike(CopyLike) {}
-  virtual ~Rewriter() {}
+  virtual ~Rewriter() = default;
 
   /// Get the next rewritable source (SrcReg, SrcSubReg) and
   /// the related value that it affects (DstReg, DstSubReg).
@@ -1007,7 +1065,7 @@ public:
       CurrentSrcIdx = -1;
       // Rewrite the operation as a COPY.
       // Get rid of the sub-register index.
-      CopyLike.RemoveOperand(2);
+      CopyLike.removeOperand(2);
       // Morph the operation into a COPY.
       CopyLike.setDesc(TII.get(TargetOpcode::COPY));
       return true;
@@ -1176,7 +1234,7 @@ bool PeepholeOptimizer::optimizeCoalescableCopy(MachineInstr &MI) {
          "Coalescer can understand multiple defs?!");
   const MachineOperand &MODef = MI.getOperand(0);
   // Do not rewrite physical definitions.
-  if (Register::isPhysicalRegister(MODef.getReg()))
+  if (MODef.getReg().isPhysical())
     return false;
 
   bool Changed = false;
@@ -1227,8 +1285,7 @@ bool PeepholeOptimizer::optimizeCoalescableCopy(MachineInstr &MI) {
 MachineInstr &
 PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
                                  RegSubRegPair Def, RewriteMapTy &RewriteMap) {
-  assert(!Register::isPhysicalRegister(Def.Reg) &&
-         "We do not rewrite physical registers");
+  assert(!Def.Reg.isPhysical() && "We do not rewrite physical registers");
 
   // Find the new source to use in the COPY rewrite.
   RegSubRegPair NewSrc = getNewSource(MRI, TII, Def, RewriteMap);
@@ -1286,7 +1343,7 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
   while (CpyRewriter.getNextRewritableSource(Src, Def)) {
     // If a physical register is here, this is probably for a good reason.
     // Do not rewrite that.
-    if (Register::isPhysicalRegister(Def.Reg))
+    if (Def.Reg.isPhysical())
       return false;
 
     // If we do not know how to rewrite this definition, there is no point
@@ -1338,18 +1395,19 @@ bool PeepholeOptimizer::isMoveImmediate(
     MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
     DenseMap<Register, MachineInstr *> &ImmDefMIs) {
   const MCInstrDesc &MCID = MI.getDesc();
-  if (!MI.isMoveImmediate())
-    return false;
-  if (MCID.getNumDefs() != 1)
+  if (MCID.getNumDefs() != 1 || !MI.getOperand(0).isReg())
     return false;
   Register Reg = MI.getOperand(0).getReg();
-  if (Reg.isVirtual()) {
-    ImmDefMIs.insert(std::make_pair(Reg, &MI));
-    ImmDefRegs.insert(Reg);
-    return true;
-  }
+  if (!Reg.isVirtual())
+    return false;
 
-  return false;
+  int64_t ImmVal;
+  if (!MI.isMoveImmediate() && !TII->getConstValDefinedInReg(MI, Reg, ImmVal))
+    return false;
+
+  ImmDefMIs.insert(std::make_pair(Reg, &MI));
+  ImmDefRegs.insert(Reg);
+  return true;
 }
 
 /// Try folding register operands that are defined by move immediate
@@ -1357,7 +1415,8 @@ bool PeepholeOptimizer::isMoveImmediate(
 /// and only if the def and use are in the same BB.
 bool PeepholeOptimizer::foldImmediate(
     MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
-    DenseMap<Register, MachineInstr *> &ImmDefMIs) {
+    DenseMap<Register, MachineInstr *> &ImmDefMIs, bool &Deleted) {
+  Deleted = false;
   for (unsigned i = 0, e = MI.getDesc().getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || MO.isDef())
@@ -1369,8 +1428,21 @@ bool PeepholeOptimizer::foldImmediate(
       continue;
     DenseMap<Register, MachineInstr *>::iterator II = ImmDefMIs.find(Reg);
     assert(II != ImmDefMIs.end() && "couldn't find immediate definition");
-    if (TII->FoldImmediate(MI, *II->second, Reg, MRI)) {
+    if (TII->foldImmediate(MI, *II->second, Reg, MRI)) {
       ++NumImmFold;
+      // foldImmediate can delete ImmDefMI if MI was its only user. If ImmDefMI
+      // is not deleted, and we happened to get a same MI, we can delete MI and
+      // replace its users.
+      if (MRI->getVRegDef(Reg) &&
+          MI.isIdenticalTo(*II->second, MachineInstr::IgnoreVRegDefs)) {
+        Register DstReg = MI.getOperand(0).getReg();
+        if (DstReg.isVirtual() &&
+            MRI->getRegClass(DstReg) == MRI->getRegClass(Reg)) {
+          MRI->replaceRegWith(DstReg, Reg);
+          MI.eraseFromParent();
+          Deleted = true;
+        }
+      }
       return true;
     }
   }
@@ -1391,29 +1463,25 @@ bool PeepholeOptimizer::foldImmediate(
 // %2 = COPY %0:sub1
 //
 // Should replace %2 uses with %1:sub1
-bool PeepholeOptimizer::foldRedundantCopy(
-    MachineInstr &MI, DenseMap<RegSubRegPair, MachineInstr *> &CopyMIs) {
+bool PeepholeOptimizer::foldRedundantCopy(MachineInstr &MI) {
   assert(MI.isCopy() && "expected a COPY machine instruction");
 
-  Register SrcReg = MI.getOperand(1).getReg();
-  unsigned SrcSubReg = MI.getOperand(1).getSubReg();
-  if (!SrcReg.isVirtual())
+  RegSubRegPair SrcPair;
+  if (!getCopySrc(MI, SrcPair))
     return false;
 
   Register DstReg = MI.getOperand(0).getReg();
   if (!DstReg.isVirtual())
     return false;
 
-  RegSubRegPair SrcPair(SrcReg, SrcSubReg);
-
-  if (CopyMIs.insert(std::make_pair(SrcPair, &MI)).second) {
+  if (CopySrcMIs.insert(std::make_pair(SrcPair, &MI)).second) {
     // First copy of this reg seen.
     return false;
   }
 
-  MachineInstr *PrevCopy = CopyMIs.find(SrcPair)->second;
+  MachineInstr *PrevCopy = CopySrcMIs.find(SrcPair)->second;
 
-  assert(SrcSubReg == PrevCopy->getOperand(1).getSubReg() &&
+  assert(SrcPair.SubReg == PrevCopy->getOperand(1).getSubReg() &&
          "Unexpected mismatching subreg!");
 
   Register PrevDstReg = PrevCopy->getOperand(0).getReg();
@@ -1445,7 +1513,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
 
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
-  if (isNAPhysCopy(SrcReg) && Register::isVirtualRegister(DstReg)) {
+  if (isNAPhysCopy(SrcReg) && DstReg.isVirtual()) {
     // %vreg = COPY $physreg
     // Avoid using a datastructure which can track multiple live non-allocatable
     // phys->virt copies since LLVM doesn't seem to do this.
@@ -1509,7 +1577,7 @@ bool PeepholeOptimizer::findTargetRecurrence(
     return false;
 
   MachineInstr &MI = *(MRI->use_instr_nodbg_begin(Reg));
-  unsigned Idx = MI.findRegisterUseOperandIdx(Reg);
+  unsigned Idx = MI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr);
 
   // Only interested in recurrences whose instructions have only one def, which
   // is a virtual register.
@@ -1604,6 +1672,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   DT  = Aggressive ? &getAnalysis<MachineDominatorTree>() : nullptr;
   MLI = &getAnalysis<MachineLoopInfo>();
+  MF.setDelegate(this);
 
   bool Changed = false;
 
@@ -1628,9 +1697,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
     // without any intervening re-definition of $physreg.
     DenseMap<Register, MachineInstr *> NAPhysToVirtMIs;
 
-    // Set of pairs of virtual registers and their subregs that are copied
-    // from.
-    DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
+    CopySrcMIs.clear();
 
     bool IsLoopHeader = MLI->isLoopHeader(&MBB);
 
@@ -1719,7 +1786,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      if (MI->isCopy() && (foldRedundantCopy(*MI, CopySrcMIs) ||
+      if (MI->isCopy() && (foldRedundantCopy(*MI) ||
                            foldRedundantNAPhysCopy(*MI, NAPhysToVirtMIs))) {
         LocalMIs.erase(MI);
         LLVM_DEBUG(dbgs() << "Deleting redundant copy: " << *MI << "\n");
@@ -1737,8 +1804,14 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         // next iteration sees the new instructions.
         MII = MI;
         ++MII;
-        if (SeenMoveImm)
-          Changed |= foldImmediate(*MI, ImmDefRegs, ImmDefMIs);
+        if (SeenMoveImm) {
+          bool Deleted;
+          Changed |= foldImmediate(*MI, ImmDefRegs, ImmDefMIs, Deleted);
+          if (Deleted) {
+            LocalMIs.erase(MI);
+            continue;
+          }
+        }
       }
 
       // Check whether MI is a load candidate for folding into a later
@@ -1802,6 +1875,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  MF.resetDelegate(this);
   return Changed;
 }
 
@@ -2095,7 +2169,7 @@ ValueTrackerResult ValueTracker::getNextSource() {
 
     // If we can still move up in the use-def chain, move to the next
     // definition.
-    if (!Register::isPhysicalRegister(Reg) && OneRegSrc) {
+    if (!Reg.isPhysical() && OneRegSrc) {
       MachineRegisterInfo::def_iterator DI = MRI.def_begin(Reg);
       if (DI != MRI.def_end()) {
         Def = DI->getParent();

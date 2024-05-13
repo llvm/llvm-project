@@ -29,8 +29,8 @@ typedef _Unwind_Reason_Code PersonalityFn(int version, _Unwind_Action actions,
 // is statically linked and the sanitizer runtime and the program are linked
 // against different unwinders. The _Unwind_Context data structure is opaque so
 // it may be incompatible between unwinders.
-typedef _Unwind_Word GetGRFn(_Unwind_Context* context, int index);
-typedef _Unwind_Word GetCFAFn(_Unwind_Context* context);
+typedef uintptr_t GetGRFn(_Unwind_Context* context, int index);
+typedef uintptr_t GetCFAFn(_Unwind_Context* context);
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE _Unwind_Reason_Code
 __hwasan_personality_wrapper(int version, _Unwind_Action actions,
@@ -56,11 +56,14 @@ __hwasan_personality_wrapper(int version, _Unwind_Action actions,
     uptr fp = get_gr(context, 6); // rbp
 #elif defined(__aarch64__)
     uptr fp = get_gr(context, 29); // x29
+#elif SANITIZER_RISCV64
+    uptr fp = get_gr(context, 8);  // x8
 #else
 #error Unsupported architecture
 #endif
     uptr sp = get_cfa(context);
-    TagMemory(sp, fp - sp, 0);
+    TagMemory(UntagAddr(sp), UntagAddr(fp) - UntagAddr(sp),
+              GetTagFromPointer(sp));
   }
 
   return rc;

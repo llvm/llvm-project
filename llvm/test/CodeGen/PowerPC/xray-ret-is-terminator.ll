@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -o - -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 define void @ILLBeBack() #0 {
 ; CHECK-LABEL: @ILLBeBack
@@ -9,12 +9,12 @@ bb:
   br i1 undef, label %bb1, label %bb8
 
 bb1:
-  %tmp = tail call i64 asm sideeffect "", "=&r,=*m,b,r,*m,~{cc}"(i64* nonnull undef, i64* nonnull undef, i64 1, i64* nonnull undef)
+  %tmp = tail call i64 asm sideeffect "", "=&r,=*m,b,r,*m,~{cc}"(ptr elementtype(i64) nonnull undef, ptr nonnull undef, i64 1, ptr elementtype(i64) nonnull undef)
   %tmp2 = icmp eq i64 %tmp, 0
   br i1 %tmp2, label %bb3, label %bb8
 
 bb3:
-  %tmp4 = tail call i64 asm sideeffect "", "=&r,=*m,b,r,r,*m,~{cc}"(i64* undef, i64* undef, i64 0, i64 undef, i64* undef)
+  %tmp4 = tail call i64 asm sideeffect "", "=&r,=*m,b,r,r,*m,~{cc}"(ptr elementtype(i64) undef, ptr undef, i64 0, i64 undef, ptr elementtype(i64) undef)
   %tmp5 = icmp eq i64 0, %tmp4
   br i1 %tmp5, label %bb6, label %bb3
 

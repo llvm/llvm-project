@@ -95,13 +95,20 @@ catch_mach_exception_raise(mach_port_t exc_port, mach_port_t thread_port,
                            mach_exception_data_t exc_data,
                            mach_msg_type_number_t exc_data_count) {
   if (DNBLogCheckLogBit(LOG_EXCEPTIONS)) {
+    std::vector<uint64_t> exc_datas;
+    uint64_t tmp;
+    for (unsigned i = 0; i < exc_data_count; ++i) {
+      // Perform an unaligned copy.
+      memcpy(&tmp, &exc_data[i], sizeof(uint64_t));
+      exc_datas.push_back(tmp);
+    }
     DNBLogThreaded("::%s ( exc_port = 0x%4.4x, thd_port = 0x%4.4x, tsk_port = "
                    "0x%4.4x, exc_type = %d ( %s ), exc_data[%d] = { 0x%llx, "
                    "0x%llx })",
                    __FUNCTION__, exc_port, thread_port, task_port, exc_type,
                    MachException::Name(exc_type), exc_data_count,
-                   (uint64_t)(exc_data_count > 0 ? exc_data[0] : 0xBADDBADD),
-                   (uint64_t)(exc_data_count > 1 ? exc_data[1] : 0xBADDBADD));
+                   (uint64_t)(exc_data_count > 0 ? exc_datas[0] : 0xBADDBADD),
+                   (uint64_t)(exc_data_count > 1 ? exc_datas[1] : 0xBADDBADD));
   }
   g_message->exc_type = 0;
   g_message->exc_data.clear();
@@ -157,6 +164,19 @@ bool MachException::Data::GetStopInfo(
     stop_info->reason = eStopTypeInvalid;
     return true;
   }
+
+#if defined(__arm64__) || defined(__aarch64__)
+  if (exc_type == EXC_BREAKPOINT && exc_data[0] == EXC_ARM_DA_DEBUG &&
+      exc_data.size() > 1) {
+    stop_info->reason = eStopTypeWatchpoint;
+    stop_info->details.watchpoint.mach_exception_addr = exc_data[1];
+    stop_info->details.watchpoint.addr = INVALID_NUB_ADDRESS;
+    if (exc_data.size() > 2) {
+      stop_info->details.watchpoint.hw_idx = exc_data[2];
+    }
+    return true;
+  }
+#endif
 
   // We always stop with a mach exceptions
   stop_info->reason = eStopTypeException;
@@ -227,7 +247,7 @@ kern_return_t MachException::Message::Receive(mach_port_t port,
   DNBError err;
   const bool log_exceptions = DNBLogCheckLogBit(LOG_EXCEPTIONS);
   mach_msg_timeout_t mach_msg_timeout =
-      options & MACH_RCV_TIMEOUT ? timeout : 0;
+      (options & MACH_RCV_TIMEOUT) ? timeout : 0;
   if (log_exceptions && ((options & MACH_RCV_TIMEOUT) == 0)) {
     // Dump this log message if we have no timeout in case it never returns
     DNBLogThreaded("::mach_msg ( msg->{bits = %#x, size = %u remote_port = "
@@ -511,4 +531,51 @@ const char *MachException::Name(exception_type_t exc_type) {
     break;
   }
   return NULL;
+}
+
+// Returns the exception mask for a given exception name.  
+// 0 is not a legit mask, so we return that in the case of an error.
+exception_mask_t MachException::ExceptionMask(const char *name) {
+  static const char *exception_prefix = "EXC_";
+  static const int prefix_len = strlen(exception_prefix);
+
+  // All mach exceptions start with this prefix:
+  if (strstr(name, exception_prefix) != name)
+    return 0;
+
+  name += prefix_len;
+  std::string name_str = name;
+  if (name_str == "BAD_ACCESS")
+    return EXC_MASK_BAD_ACCESS;
+  if (name_str == "BAD_INSTRUCTION")
+    return EXC_MASK_BAD_INSTRUCTION;
+  if (name_str == "ARITHMETIC")
+    return EXC_MASK_ARITHMETIC;
+  if (name_str == "EMULATION")
+    return EXC_MASK_EMULATION;
+  if (name_str == "SOFTWARE")
+    return EXC_MASK_SOFTWARE;
+  if (name_str == "BREAKPOINT")
+    return EXC_MASK_BREAKPOINT;
+  if (name_str == "SYSCALL")
+    return EXC_MASK_SYSCALL;
+  if (name_str == "MACH_SYSCALL")
+    return EXC_MASK_MACH_SYSCALL;
+  if (name_str == "RPC_ALERT")
+    return EXC_MASK_RPC_ALERT;
+#ifdef EXC_CRASH
+  if (name_str == "CRASH")
+    return EXC_MASK_CRASH;
+#endif
+  if (name_str == "RESOURCE")
+    return EXC_MASK_RESOURCE;
+#ifdef EXC_GUARD
+  if (name_str == "GUARD")
+    return EXC_MASK_GUARD;
+#endif
+#ifdef EXC_CORPSE_NOTIFY
+  if (name_str == "CORPSE_NOTIFY")
+    return EXC_MASK_CORPSE_NOTIFY;
+#endif
+  return 0;
 }

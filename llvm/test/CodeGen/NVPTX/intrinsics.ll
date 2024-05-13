@@ -1,5 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: llc < %s -march=nvptx -mcpu=sm_60 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 | FileCheck %s
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_60 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_60 | %ptxas-verify %}
 
 ; CHECK-LABEL: test_fabsf(
 define float @test_fabsf(float %f) {
@@ -73,12 +75,12 @@ define i32 @test_popc64_trunc(i64 %a) {
 ; llvm.ctpop.i16 is implemenented by converting to i32, running popc.b32, and
 ; then converting back to i16.
 ; CHECK-LABEL: test_popc16
-define void @test_popc16(i16 %a, i16* %b) {
+define void @test_popc16(i16 %a, ptr %b) {
 ; CHECK: cvt.u32.u16
 ; CHECK: popc.b32
 ; CHECK: cvt.u16.u32
   %val = call i16 @llvm.ctpop.i16(i16 %a)
-  store i16 %val, i16* %b
+  store i16 %val, ptr %b
   ret void
 }
 
@@ -131,6 +133,46 @@ define i64 @test_clock64() {
   ret i64 %ret
 }
 
+; CHECK-LABEL: test_exit
+define void @test_exit() {
+; CHECK: exit;
+  call void @llvm.nvvm.exit()
+  ret void
+}
+
+; CHECK-LABEL: test_globaltimer
+define i64 @test_globaltimer() {
+; CHECK: mov.u64         %r{{.*}}, %globaltimer;
+  %a = tail call i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
+; CHECK: mov.u64         %r{{.*}}, %globaltimer;
+  %b = tail call i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
+  %ret = add i64 %a, %b
+; CHECK: ret
+  ret i64 %ret
+}
+
+; CHECK-LABEL: test_cyclecounter
+define i64 @test_cyclecounter() {
+; CHECK: mov.u64         %r{{.*}}, %clock64;
+  %a = tail call i64 @llvm.readcyclecounter()
+; CHECK: mov.u64         %r{{.*}}, %clock64;
+  %b = tail call i64 @llvm.readcyclecounter()
+  %ret = add i64 %a, %b
+; CHECK: ret
+  ret i64 %ret
+}
+
+; CHECK-LABEL: test_steadycounter
+define i64 @test_steadycounter() {
+; CHECK: mov.u64         %r{{.*}}, %globaltimer;
+  %a = tail call i64 @llvm.readsteadycounter()
+; CHECK: mov.u64         %r{{.*}}, %globaltimer;
+  %b = tail call i64 @llvm.readsteadycounter()
+  %ret = add i64 %a, %b
+; CHECK: ret
+  ret i64 %ret
+}
+
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare float @llvm.nvvm.sqrt.f(float)
@@ -144,3 +186,7 @@ declare i64 @llvm.ctpop.i64(i64)
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.clock()
 declare i64 @llvm.nvvm.read.ptx.sreg.clock64()
+declare void @llvm.nvvm.exit()
+declare i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
+declare i64 @llvm.readcyclecounter()
+declare i64 @llvm.readsteadycounter()

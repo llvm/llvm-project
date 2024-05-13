@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -358,10 +359,8 @@ namespace llvm {
     struct CustomOptPassGate : public OptPassGate {
       bool Skip;
       CustomOptPassGate(bool Skip) : Skip(Skip) { }
-      bool shouldRunPass(const Pass *P, StringRef IRDescription) override {
-        if (P->getPassKind() == PT_Module)
-          return !Skip;
-        return OptPassGate::shouldRunPass(P, IRDescription);
+      bool shouldRunPass(const StringRef PassName, StringRef IRDescription) override {
+        return !Skip;
       }
       bool isEnabled() const override { return true; }
     };

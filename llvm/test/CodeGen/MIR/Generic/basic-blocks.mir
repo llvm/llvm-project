@@ -31,19 +31,19 @@ body: |
 # CHECK-LABEL: name: bar
 # CHECK: body:
 # CHECK-NEXT: bb.0.start (align 4):
-# CHECK:      bb.1 (address-taken):
+# CHECK:      bb.1 (machine-block-address-taken):
 name:            bar
 body: |
   bb.0.start (align 4):
-  bb.1 (address-taken):
+  bb.1 (machine-block-address-taken):
 ...
 ---
 # CHECK-LABEL: name: test
 # CHECK: body:
-# CHECK-NEXT: bb.0.start (address-taken, align 4):
-# CHECK:      bb.1 (address-taken, align 4):
+# CHECK-NEXT: bb.0.start (machine-block-address-taken, align 4):
+# CHECK:      bb.1 (machine-block-address-taken, align 4):
 name:            test
 body: |
-  bb.0.start (align 4, address-taken):
-  bb.1 (address-taken, align 4):
+  bb.0.start (align 4, machine-block-address-taken):
+  bb.1 (machine-block-address-taken, align 4):
 ...

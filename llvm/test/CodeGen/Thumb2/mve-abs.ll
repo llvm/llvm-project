@@ -41,17 +41,17 @@ define arm_aapcs_vfpcc <2 x i64> @abs_v2i64(<2 x i64> %s1) {
 ; CHECK-LABEL: abs_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r3, r2, d0
-; CHECK-NEXT:    adds.w r0, r0, r1, asr #31
-; CHECK-NEXT:    adc.w r12, r1, r1, asr #31
-; CHECK-NEXT:    adds.w r3, r3, r2, asr #31
 ; CHECK-NEXT:    eor.w r0, r0, r1, asr #31
-; CHECK-NEXT:    eor.w r3, r3, r2, asr #31
-; CHECK-NEXT:    vmov q0[2], q0[0], r3, r0
-; CHECK-NEXT:    eor.w r0, r12, r1, asr #31
-; CHECK-NEXT:    adc.w r1, r2, r2, asr #31
-; CHECK-NEXT:    eor.w r1, r1, r2, asr #31
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    eor.w r2, r1, r1, asr #31
+; CHECK-NEXT:    subs.w r0, r0, r1, asr #31
+; CHECK-NEXT:    sbc.w r1, r2, r1, asr #31
+; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    eor.w r2, r2, r3, asr #31
+; CHECK-NEXT:    subs.w r2, r2, r3, asr #31
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
+; CHECK-NEXT:    eor.w r0, r3, r3, asr #31
+; CHECK-NEXT:    sbc.w r0, r0, r3, asr #31
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp slt <2 x i64> %s1, zeroinitializer

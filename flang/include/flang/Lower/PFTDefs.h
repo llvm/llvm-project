@@ -42,6 +42,7 @@ class Reference;
 namespace lower {
 
 bool definedInCommonBlock(const semantics::Symbol &sym);
+bool symbolIsGlobal(const semantics::Symbol &sym);
 bool defaultRecursiveFunctionSetting();
 
 namespace pft {

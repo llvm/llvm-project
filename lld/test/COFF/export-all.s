@@ -7,8 +7,8 @@
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s --check-prefix=CHECK-RVA
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
 
-# CHECK: Name:
-# CHECK-NEXT: Name: comdatFunc
+# CHECK:      Name:
+# CHECK-SAME:       comdatFunc
 # CHECK-NEXT: Name: dataSym
 # CHECK-NEXT: Name: foobar
 # CHECK-EMPTY:
@@ -59,6 +59,10 @@ __imp__unexported:
 #
 # RUN: lld-link -safeseh:no -out:%t.dll -dll %t.obj -lldmingw -export-all-symbols -output-def:%t.def
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=CHECK2 %s
+# RUN: cat %t.def | FileCheck -check-prefix=CHECK2-DEF %s
+
+# RUN: lld-link -safeseh:no -out:%t.exe %t.obj -lldmingw -export-all-symbols -output-def:%t.def -entry:_DllMainCRTStartup
+# RUN: llvm-readobj --coff-exports %t.exe | FileCheck -check-prefix=CHECK2 %s
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK2-DEF %s
 
 # Note, this will actually export _DllMainCRTStartup as well, since

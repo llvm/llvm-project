@@ -2,6 +2,7 @@
 # RUN: llvm-mc -triple=aarch64 -mattr=+v8.5a -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=aarch64 -mcpu=cortex-a76 -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=aarch64 -mcpu=cortex-a76ae -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8r -disassemble < %s | FileCheck %s --check-prefix=NOSPECID
 # RUN: llvm-mc -triple=aarch64 -mattr=-ssbs  -disassemble < %s | FileCheck %s --check-prefix=NOSPECID
 
 [0x3f 0x41 0x03 0xd5]

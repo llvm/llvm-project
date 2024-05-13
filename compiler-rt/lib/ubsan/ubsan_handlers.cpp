@@ -76,7 +76,7 @@ enum TypeCheckKind {
   TCK_DynamicOperation
 };
 
-const char *TypeCheckKinds[] = {
+extern const char *const TypeCheckKinds[] = {
     "load of", "store to", "reference binding to", "member access within",
     "member call on", "constructor call on", "downcast of", "downcast of",
     "upcast of", "cast to virtual base of", "_Nonnull binding to",
@@ -555,13 +555,11 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
                                      ReportOptions Opts, ValueHandle Src,
                                      ValueHandle Dst) {
   SourceLocation Loc = Data->Loc.acquire();
-  ErrorType ET = ErrorType::GenericUB;
-
   const TypeDescriptor &SrcTy = Data->FromType;
   const TypeDescriptor &DstTy = Data->ToType;
-
   bool SrcSigned = SrcTy.isSignedIntegerTy();
   bool DstSigned = DstTy.isSignedIntegerTy();
+  ErrorType ET = ErrorType::GenericUB;
 
   switch (Data->Kind) {
   case ICCK_IntegerTruncation: { // Legacy, no longer used.
@@ -594,14 +592,23 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
 
   ScopedReport R(Opts, Loc, ET);
 
+  // In the case we have a bitfield, we want to explicitly say so in the
+  // error message.
   // FIXME: is it possible to dump the values as hex with fixed width?
-
-  Diag(Loc, DL_Error, ET,
-       "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
-       "type %4 changed the value to %5 (%6-bit, %7signed)")
-      << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
-      << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
-      << DstTy.getIntegerBitWidth() << (DstSigned ? "" : "un");
+  if (Data->BitfieldBits)
+    Diag(Loc, DL_Error, ET,
+         "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
+         "type %4 changed the value to %5 (%6-bit bitfield, %7signed)")
+        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+        << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
+        << Data->BitfieldBits << (DstSigned ? "" : "un");
+  else
+    Diag(Loc, DL_Error, ET,
+         "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
+         "type %4 changed the value to %5 (%6-bit, %7signed)")
+        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+        << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
+        << DstTy.getIntegerBitWidth() << (DstSigned ? "" : "un");
 }
 
 void __ubsan::__ubsan_handle_implicit_conversion(ImplicitConversionData *Data,
@@ -913,6 +920,41 @@ void __ubsan::__ubsan_handle_cfi_check_fail_abort(CFICheckFailData *Data,
   else
     __ubsan_handle_cfi_bad_type(Data, Value, ValidVtable, Opts);
   Die();
+}
+
+static bool handleFunctionTypeMismatch(FunctionTypeMismatchData *Data,
+                                       ValueHandle Function,
+                                       ReportOptions Opts) {
+  SourceLocation CallLoc = Data->Loc.acquire();
+  ErrorType ET = ErrorType::FunctionTypeMismatch;
+  if (ignoreReport(CallLoc, Opts, ET))
+    return true;
+
+  ScopedReport R(Opts, CallLoc, ET);
+
+  SymbolizedStackHolder FLoc(getSymbolizedLocation(Function));
+  const char *FName = FLoc.get()->info.function;
+  if (!FName)
+    FName = "(unknown)";
+
+  Diag(CallLoc, DL_Error, ET,
+       "call to function %0 through pointer to incorrect function type %1")
+      << FName << Data->Type;
+  Diag(FLoc, DL_Note, ET, "%0 defined here") << FName;
+  return true;
+}
+
+void __ubsan::__ubsan_handle_function_type_mismatch(
+    FunctionTypeMismatchData *Data, ValueHandle Function) {
+  GET_REPORT_OPTIONS(false);
+  handleFunctionTypeMismatch(Data, Function, Opts);
+}
+
+void __ubsan::__ubsan_handle_function_type_mismatch_abort(
+    FunctionTypeMismatchData *Data, ValueHandle Function) {
+  GET_REPORT_OPTIONS(true);
+  if (handleFunctionTypeMismatch(Data, Function, Opts))
+    Die();
 }
 
 #endif  // CAN_SANITIZE_UB

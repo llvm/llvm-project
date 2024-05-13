@@ -16,16 +16,16 @@
 - (void)compilerTestAgainst;
 @end
 
-int LOOP();
-int INNERLOOP();
-void END_LOOP();
+int LOOP(void);
+int INNERLOOP(void);
+void END_LOOP(void);
 @implementation MyList (BasicTest)
 - (void)compilerTestAgainst {
   id el;
         for (el in self) 
 	  { LOOP(); 
             for (id el1 in self) 
-	       INNER_LOOP();
+	       INNERLOOP();
 
 	    END_LOOP();
 	  }

@@ -20,7 +20,7 @@ public:
 
   uint32_t getRecordCount() const override;
   std::string getName() const override;
-  llvm::Optional<RecordType> getItemAtIndex(uint32_t Index) const override;
+  std::optional<RecordType> getItemAtIndex(uint32_t Index) const override;
   bool getNext(RecordType &Record) override;
   void reset() override;
 

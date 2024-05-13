@@ -42,7 +42,7 @@ int main(int, char**)
             f.get(cpp17_input_iterator<const char*>(str),
                   cpp17_input_iterator<const char*>(str+sizeof(str)),
                   ios, err, p);
-        assert(iter.base() == str+sizeof(str)-1);
+        assert(base(iter) == str+sizeof(str)-1);
         assert(err == ios.goodbit);
         assert(p == 0);
     }
@@ -54,7 +54,7 @@ int main(int, char**)
             f.get(cpp17_input_iterator<const char*>(str),
                   cpp17_input_iterator<const char*>(str+sizeof(str)),
                   ios, err, p);
-        assert(iter.base() == str+sizeof(str)-1);
+        assert(base(iter) == str+sizeof(str)-1);
         assert(err == ios.goodbit);
         assert(p == (void*)0x73);
     }

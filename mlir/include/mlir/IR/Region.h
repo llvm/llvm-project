@@ -19,7 +19,7 @@ namespace mlir {
 class TypeRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
-class BlockAndValueMapping;
+class IRMapping;
 
 /// This class contains a list of basic blocks and a link to the parent
 /// operation it is attached to.
@@ -82,6 +82,7 @@ public:
     return empty() ? BlockArgListType() : front().getArguments();
   }
 
+  /// Returns the argument types of the first block within the region.
   ValueTypeRange<BlockArgListType> getArgumentTypes();
 
   using args_iterator = BlockArgListType::iterator;
@@ -94,21 +95,26 @@ public:
   bool args_empty() { return getArguments().empty(); }
 
   /// Add one value to the argument list.
-  BlockArgument addArgument(Type type) { return front().addArgument(type); }
+  BlockArgument addArgument(Type type, Location loc) {
+    return front().addArgument(type, loc);
+  }
 
   /// Insert one value to the position in the argument list indicated by the
   /// given iterator. The existing arguments are shifted. The block is expected
   /// not to have predecessors.
-  BlockArgument insertArgument(args_iterator it, Type type) {
-    return front().insertArgument(it, type);
+  BlockArgument insertArgument(args_iterator it, Type type, Location loc) {
+    return front().insertArgument(it, type, loc);
   }
 
   /// Add one argument to the argument list for each type specified in the list.
-  iterator_range<args_iterator> addArguments(TypeRange types);
+  /// `locs` contains the locations for each of the new arguments, and must be
+  /// of equal size to `types`.
+  iterator_range<args_iterator> addArguments(TypeRange types,
+                                             ArrayRef<Location> locs);
 
   /// Add one value to the argument list at the specified position.
-  BlockArgument insertArgument(unsigned index, Type type) {
-    return front().insertArgument(index, type);
+  BlockArgument insertArgument(unsigned index, Type type, Location loc) {
+    return front().insertArgument(index, type, loc);
   }
 
   /// Erase the argument at 'index' and remove it from the argument list.
@@ -191,7 +197,7 @@ public:
   Region *getParentRegion();
 
   /// Return the parent operation this region is attached to.
-  Operation *getParentOp();
+  Operation *getParentOp() { return container; }
 
   /// Find the first parent operation of the given type, or nullptr if there is
   /// no ancestor operation.
@@ -221,14 +227,19 @@ public:
   /// cloned blocks are appended to the back of dest. If the mapper
   /// contains entries for block arguments, these arguments are not included
   /// in the respective cloned block.
-  void cloneInto(Region *dest, BlockAndValueMapping &mapper);
+  ///
+  /// Calling this method from multiple threads is generally safe if through the
+  /// process of cloning, no new uses of 'Value's from outside the region are
+  /// created. Using the mapper, it is possible to avoid adding uses to outside
+  /// operands by remapping them to 'Value's owned by the caller thread.
+  void cloneInto(Region *dest, IRMapping &mapper);
   /// Clone this region into 'dest' before the given position in 'dest'.
-  void cloneInto(Region *dest, Region::iterator destPos,
-                 BlockAndValueMapping &mapper);
+  void cloneInto(Region *dest, Region::iterator destPos, IRMapping &mapper);
 
   /// Takes body of another region (that region will have no body after this
   /// operation completes).  The current body of this region is cleared.
   void takeBody(Region &other) {
+    dropAllReferences();
     blocks.clear();
     blocks.splice(blocks.end(), other.getBlocks());
   }
@@ -249,45 +260,60 @@ public:
   void dropAllReferences();
 
   //===--------------------------------------------------------------------===//
-  // Operation Walkers
+  // Walkers
   //===--------------------------------------------------------------------===//
 
-  /// Walk the operations in this region. The callback method is called for each
-  /// nested region, block or operation, depending on the callback provided.
-  /// Regions, blocks and operations at the same nesting level are visited in
-  /// lexicographical order. The walk order for enclosing regions, blocks and
-  /// operations with respect to their nested ones is specified by 'Order'
-  /// (post-order by default). This method is invoked for void-returning
-  /// callbacks. A callback on a block or operation is allowed to erase that
-  /// block or operation only if the walk is in post-order. See non-void method
-  /// for pre-order erasure. See Operation::walk for more details.
-  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
-            typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<std::is_same<RetT, void>::value, RetT>::type
-  walk(FnT &&callback) {
-    for (auto &block : *this)
-      block.walk<Order>(callback);
-  }
-
-  /// Walk the operations in this region. The callback method is called for each
-  /// nested region, block or operation, depending on the callback provided.
-  /// Regions, blocks and operations at the same nesting level are visited in
-  /// lexicographical order. The walk order for enclosing regions, blocks and
-  /// operations with respect to their nested ones is specified by 'Order'
-  /// (post-order by default). This method is invoked for skippable or
-  /// interruptible callbacks. A callback on a block or operation is allowed to
-  /// erase that block or operation if either:
-  ///   * the walk is in post-order,
-  ///   * or the walk is in pre-order and the walk is skipped after the erasure.
+  /// Walk all nested operations, blocks or regions (including this region),
+  /// depending on the type of callback.
+  ///
+  /// The order in which operations, blocks or regions at the same nesting
+  /// level are visited (e.g., lexicographical or reverse lexicographical order)
+  /// is determined by `Iterator`. The walk order for enclosing operations,
+  /// blocks or regions with respect to their nested ones is specified by
+  /// `Order` (post-order by default).
+  ///
+  /// A callback on a operation or block is allowed to erase that operation or
+  /// block if either:
+  ///   * the walk is in post-order, or
+  ///   * the walk is in pre-order and the walk is skipped after the erasure.
+  ///
   /// See Operation::walk for more details.
-  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+  template <WalkOrder Order = WalkOrder::PostOrder,
+            typename Iterator = ForwardIterator, typename FnT,
+            typename ArgT = detail::first_argument<FnT>,
             typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<std::is_same<RetT, WalkResult>::value, RetT>::type
-  walk(FnT &&callback) {
-    for (auto &block : *this)
-      if (block.walk<Order>(callback).wasInterrupted())
-        return WalkResult::interrupt();
-    return WalkResult::advance();
+  RetT walk(FnT &&callback) {
+    if constexpr (std::is_same<ArgT, Region *>::value &&
+                  Order == WalkOrder::PreOrder) {
+      // Pre-order walk on regions: invoke the callback on this region.
+      if constexpr (std::is_same<RetT, void>::value) {
+        callback(this);
+      } else {
+        RetT result = callback(this);
+        if (result.wasSkipped())
+          return WalkResult::advance();
+        if (result.wasInterrupted())
+          return WalkResult::interrupt();
+      }
+    }
+
+    // Walk nested operations, blocks or regions.
+    for (auto &block : *this) {
+      if constexpr (std::is_same<RetT, void>::value) {
+        block.walk<Order, Iterator>(callback);
+      } else {
+        if (block.walk<Order, Iterator>(callback).wasInterrupted())
+          return WalkResult::interrupt();
+      }
+    }
+
+    if constexpr (std::is_same<ArgT, Region *>::value &&
+                  Order == WalkOrder::PostOrder) {
+      // Post-order walk on regions: invoke the callback on this block.
+      return callback(this);
+    }
+    if constexpr (!std::is_same<RetT, void>::value)
+      return WalkResult::advance();
   }
 
   //===--------------------------------------------------------------------===//
@@ -296,7 +322,7 @@ public:
 
   /// Displays the CFG in a window. This is for use from the debugger and
   /// depends on Graphviz to generate the graph.
-  /// This function is defined in ViewRegionGraph and only works with that
+  /// This function is defined in ViewOpGraph.cpp and only works with that
   /// target linked.
   void viewGraph(const Twine &regionName);
   void viewGraph();
@@ -315,24 +341,33 @@ private:
 /// parameter.
 class RegionRange
     : public llvm::detail::indexed_accessor_range_base<
-          RegionRange, PointerUnion<Region *, const std::unique_ptr<Region> *>,
+          RegionRange,
+          PointerUnion<Region *, const std::unique_ptr<Region> *, Region **>,
           Region *, Region *, Region *> {
-  /// The type representing the owner of this range. This is either a list of
-  /// values, operands, or results.
-  using OwnerT = PointerUnion<Region *, const std::unique_ptr<Region> *>;
+  /// The type representing the owner of this range. This is either an owning
+  /// list of regions, a list of region unique pointers, or a list of region
+  /// pointers.
+  using OwnerT =
+      PointerUnion<Region *, const std::unique_ptr<Region> *, Region **>;
 
 public:
   using RangeBaseT::RangeBaseT;
 
-  RegionRange(MutableArrayRef<Region> regions = llvm::None);
+  RegionRange(MutableArrayRef<Region> regions = std::nullopt);
 
-  template <typename Arg,
-            typename = typename std::enable_if_t<std::is_constructible<
-                ArrayRef<std::unique_ptr<Region>>, Arg>::value>>
+  template <typename Arg, typename = std::enable_if_t<std::is_constructible<
+                              ArrayRef<std::unique_ptr<Region>>, Arg>::value>>
   RegionRange(Arg &&arg)
       : RegionRange(ArrayRef<std::unique_ptr<Region>>(std::forward<Arg>(arg))) {
   }
+  template <typename Arg>
+  RegionRange(
+      Arg &&arg,
+      std::enable_if_t<std::is_constructible<ArrayRef<Region *>, Arg>::value>
+          * = nullptr)
+      : RegionRange(ArrayRef<Region *>(std::forward<Arg>(arg))) {}
   RegionRange(ArrayRef<std::unique_ptr<Region>> regions);
+  RegionRange(ArrayRef<Region *> regions);
 
 private:
   /// See `llvm::detail::indexed_accessor_range_base` for details.
@@ -344,6 +379,6 @@ private:
   friend RangeBaseT;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_REGION_H

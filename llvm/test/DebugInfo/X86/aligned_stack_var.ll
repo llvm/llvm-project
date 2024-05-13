@@ -1,6 +1,9 @@
 ; RUN: llc %s -mtriple=x86_64-pc-linux-gnu -O0 -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators %s -mtriple=x86_64-pc-linux-gnu -O0 -filetype=obj -o %t
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+
 ; If stack is realigned, we shouldn't describe locations of local
 ; variables by giving offset from the frame pointer (%rbp):
 ; push %rpb
@@ -18,7 +21,7 @@
 define void @_Z3runv() nounwind uwtable !dbg !5 {
 entry:
   %x = alloca i32, align 32
-  call void @llvm.dbg.declare(metadata i32* %x, metadata !9, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.declare(metadata ptr %x, metadata !9, metadata !DIExpression()), !dbg !12
   ret void, !dbg !13
 }
 

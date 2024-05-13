@@ -17,19 +17,27 @@
 #ifndef LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 #define LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 
-#include "llvm/IR/Module.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include <functional>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
 class Function;
+class LLVMContext;
+class MemoryBuffer;
+class Module;
 class MIRParserImpl;
 class MachineModuleInfo;
 class SMDiagnostic;
 class StringRef;
 
-typedef llvm::function_ref<Optional<std::string>(StringRef)>
+template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
+using ModuleAnalysisManager = AnalysisManager<Module>;
+
+typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
     DataLayoutCallbackTy;
 
 /// This class initializes machine functions by applying the state loaded from
@@ -46,14 +54,24 @@ public:
   ///
   /// A new, empty module is created if the LLVM IR isn't present.
   /// \returns nullptr if a parsing error occurred.
-  std::unique_ptr<Module> parseIRModule(
-      DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+  std::unique_ptr<Module>
+  parseIRModule(DataLayoutCallbackTy DataLayoutCallback =
+                    [](StringRef, StringRef) { return std::nullopt; });
 
   /// Parses MachineFunctions in the MIR file and add them to the given
   /// MachineModuleInfo \p MMI.
   ///
   /// \returns true if an error occurred.
   bool parseMachineFunctions(Module &M, MachineModuleInfo &MMI);
+
+  /// Parses MachineFunctions in the MIR file and add them as the result
+  /// of MachineFunctionAnalysis in ModulePassManager \p MAM.
+  /// User should register at least MachineFunctionAnalysis,
+  /// MachineModuleAnalysis, FunctionAnalysisManagerModuleProxy and
+  /// PassInstrumentationAnalysis in \p MAM before parsing MIR.
+  ///
+  /// \returns true if an error occurred.
+  bool parseMachineFunctions(Module &M, ModuleAnalysisManager &MAM);
 };
 
 /// This function is the main interface to the MIR serialization format parser.

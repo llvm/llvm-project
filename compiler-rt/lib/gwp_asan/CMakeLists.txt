@@ -36,9 +36,10 @@ set(GWP_ASAN_HEADERS
 set(GWP_ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS} -fno-rtti -fno-exceptions
     -nostdinc++ -pthread -fno-omit-frame-pointer)
 append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC GWP_ASAN_CFLAGS)
+# append_list_if(COMPILER_RT_HAS_SANITIZER_COMMON ${SANITIZER_COMMON_CFLAGS} GWP_ASAN_CFLAGS)
 
 # Remove -stdlib= which is unused when passing -nostdinc++.
-string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Options parsing support is optional. This is an optional library that can be
 # used by an allocator to automatically parse GwpAsan options from the

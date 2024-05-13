@@ -254,9 +254,9 @@ LoadCommands:
   - cmd:             LC_SYMTAB
     cmdsize:         24
     symoff:          2136
-    nsyms:           3
-    stroff:          2184
-    strsize:         20
+    nsyms:           4
+    stroff:          2204
+    strsize:         40
   - cmd:             LC_DYSYMTAB
     cmdsize:         80
     ilocalsym:       0
@@ -279,23 +279,31 @@ LoadCommands:
     nlocrel:         0
 LinkEditData:
   NameList:
-    - n_strx:          1
+    - n_strx:          21
       n_type:          0x0E
       n_sect:          2
       n_desc:          0
       n_value:         36
-    - n_strx:          11
+    - n_strx:          31
       n_type:          0x0F
       n_sect:          1
       n_desc:          0
       n_value:         0
-    - n_strx:          6
+    ## __mh_execute_header
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      ## ReferencedDynamically (0x10)
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          26
       n_type:          0x01
       n_sect:          0
       n_desc:          512
       n_value:         4
   StringTable:
     - ''
+    - __mh_execute_header
     - _bar
     - _foo
     - _main

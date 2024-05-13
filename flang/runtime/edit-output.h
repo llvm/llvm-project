@@ -29,31 +29,21 @@ namespace Fortran::runtime::io {
 // The DataEdit reference is const here (and elsewhere in this header) so that
 // one edit descriptor with a repeat factor may safely serve to edit
 // multiple elements of an array.
-template <typename INT = std::int64_t, typename UINT = std::uint64_t>
-bool EditIntegerOutput(IoStatementState &, const DataEdit &, INT);
+template <int KIND>
+RT_API_ATTRS bool EditIntegerOutput(
+    IoStatementState &, const DataEdit &, common::HostSignedIntType<8 * KIND>);
 
 // Encapsulates the state of a REAL output conversion.
 class RealOutputEditingBase {
 protected:
-  explicit RealOutputEditingBase(IoStatementState &io) : io_{io} {}
+  explicit RT_API_ATTRS RealOutputEditingBase(IoStatementState &io) : io_{io} {}
 
-  static bool IsInfOrNaN(const decimal::ConversionToDecimalResult &res) {
-    const char *p{res.str};
-    if (!p || res.length < 1) {
-      return false;
-    }
-    if (*p == '-' || *p == '+') {
-      if (res.length == 1) {
-        return false;
-      }
-      ++p;
-    }
-    return *p < '0' || *p > '9';
-  }
-
-  const char *FormatExponent(int, const DataEdit &edit, int &length);
-  bool EmitPrefix(const DataEdit &, std::size_t length, std::size_t width);
-  bool EmitSuffix(const DataEdit &);
+  // Returns null when the exponent overflows a fixed-size output field.
+  RT_API_ATTRS const char *FormatExponent(
+      int, const DataEdit &edit, int &length);
+  RT_API_ATTRS bool EmitPrefix(
+      const DataEdit &, std::size_t length, std::size_t width);
+  RT_API_ATTRS bool EmitSuffix(const DataEdit &);
 
   IoStatementState &io_;
   int trailingBlanks_{0}; // created when Gw editing maps to Fw
@@ -62,46 +52,82 @@ protected:
 
 template <int KIND> class RealOutputEditing : public RealOutputEditingBase {
 public:
+  RT_VAR_GROUP_BEGIN
   static constexpr int binaryPrecision{common::PrecisionOfRealKind(KIND)};
+  RT_VAR_GROUP_END
   using BinaryFloatingPoint =
       decimal::BinaryFloatingPointNumber<binaryPrecision>;
   template <typename A>
-  RealOutputEditing(IoStatementState &io, A x)
+  RT_API_ATTRS RealOutputEditing(IoStatementState &io, A x)
       : RealOutputEditingBase{io}, x_{x} {}
-  bool Edit(const DataEdit &);
+  RT_API_ATTRS bool Edit(const DataEdit &);
 
 private:
   // The DataEdit arguments here are const references or copies so that
   // the original DataEdit can safely serve multiple array elements when
   // it has a repeat count.
-  bool EditEorDOutput(const DataEdit &);
-  bool EditFOutput(const DataEdit &);
-  DataEdit EditForGOutput(DataEdit); // returns an E or F edit
-  bool EditEXOutput(const DataEdit &);
-  bool EditListDirectedOutput(const DataEdit &);
+  RT_API_ATTRS bool EditEorDOutput(const DataEdit &);
+  RT_API_ATTRS bool EditFOutput(const DataEdit &);
+  RT_API_ATTRS DataEdit EditForGOutput(DataEdit); // returns an E or F edit
+  RT_API_ATTRS bool EditEXOutput(const DataEdit &);
+  RT_API_ATTRS bool EditListDirectedOutput(const DataEdit &);
 
-  bool IsZero() const { return x_.IsZero(); }
+  RT_API_ATTRS bool IsZero() const { return x_.IsZero(); }
 
-  decimal::ConversionToDecimalResult Convert(
-      int significantDigits, const DataEdit &, int flags = 0);
+  RT_API_ATTRS decimal::ConversionToDecimalResult ConvertToDecimal(
+      int significantDigits, enum decimal::FortranRounding, int flags = 0);
+
+  struct ConvertToHexadecimalResult {
+    const char *str;
+    int length;
+    int exponent;
+  };
+  RT_API_ATTRS ConvertToHexadecimalResult ConvertToHexadecimal(
+      int significantDigits, enum decimal::FortranRounding, int flags = 0);
 
   BinaryFloatingPoint x_;
   char buffer_[BinaryFloatingPoint::maxDecimalConversionDigits +
       EXTRA_DECIMAL_CONVERSION_SPACE];
 };
 
-bool ListDirectedLogicalOutput(
+RT_API_ATTRS bool ListDirectedLogicalOutput(
     IoStatementState &, ListDirectedStatementState<Direction::Output> &, bool);
-bool EditLogicalOutput(IoStatementState &, const DataEdit &, bool);
-bool ListDirectedDefaultCharacterOutput(IoStatementState &,
-    ListDirectedStatementState<Direction::Output> &, const char *, std::size_t);
-bool EditDefaultCharacterOutput(
-    IoStatementState &, const DataEdit &, const char *, std::size_t);
+RT_API_ATTRS bool EditLogicalOutput(IoStatementState &, const DataEdit &, bool);
 
-extern template bool EditIntegerOutput<std::int64_t, std::uint64_t>(
+template <typename CHAR>
+RT_API_ATTRS bool ListDirectedCharacterOutput(IoStatementState &,
+    ListDirectedStatementState<Direction::Output> &, const CHAR *,
+    std::size_t chars);
+extern template RT_API_ATTRS bool ListDirectedCharacterOutput(
+    IoStatementState &, ListDirectedStatementState<Direction::Output> &,
+    const char *, std::size_t chars);
+extern template RT_API_ATTRS bool ListDirectedCharacterOutput(
+    IoStatementState &, ListDirectedStatementState<Direction::Output> &,
+    const char16_t *, std::size_t chars);
+extern template RT_API_ATTRS bool ListDirectedCharacterOutput(
+    IoStatementState &, ListDirectedStatementState<Direction::Output> &,
+    const char32_t *, std::size_t chars);
+
+template <typename CHAR>
+RT_API_ATTRS bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const CHAR *, std::size_t chars);
+extern template RT_API_ATTRS bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const char *, std::size_t chars);
+extern template RT_API_ATTRS bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const char16_t *, std::size_t chars);
+extern template RT_API_ATTRS bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const char32_t *, std::size_t chars);
+
+extern template RT_API_ATTRS bool EditIntegerOutput<1>(
+    IoStatementState &, const DataEdit &, std::int8_t);
+extern template RT_API_ATTRS bool EditIntegerOutput<2>(
+    IoStatementState &, const DataEdit &, std::int16_t);
+extern template RT_API_ATTRS bool EditIntegerOutput<4>(
+    IoStatementState &, const DataEdit &, std::int32_t);
+extern template RT_API_ATTRS bool EditIntegerOutput<8>(
     IoStatementState &, const DataEdit &, std::int64_t);
-extern template bool EditIntegerOutput<common::uint128_t, common::uint128_t>(
-    IoStatementState &, const DataEdit &, common::uint128_t);
+extern template RT_API_ATTRS bool EditIntegerOutput<16>(
+    IoStatementState &, const DataEdit &, common::int128_t);
 
 extern template class RealOutputEditing<2>;
 extern template class RealOutputEditing<3>;

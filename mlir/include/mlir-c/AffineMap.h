@@ -100,7 +100,7 @@ mlirAffineMapMinorIdentityGet(MlirContext ctx, intptr_t dims, intptr_t results);
 /// context. The permutation expression is a non-empty vector of integers.
 /// The elements of the permutation vector must be continuous from 0 and cannot
 /// be repeated (i.e. `[1,2,0]` is a valid permutation. `[2,0]` or `[1,1,2]` is
-/// an invalid invalid permutation.) The affine map is owned by the context.
+/// an invalid permutation.) The affine map is owned by the context.
 MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapPermutationGet(
     MlirContext ctx, intptr_t size, unsigned *permutation);
 
@@ -168,6 +168,13 @@ mlirAffineMapGetMajorSubMap(MlirAffineMap affineMap, intptr_t numResults);
 /// results of the given affine map.
 MLIR_CAPI_EXPORTED MlirAffineMap
 mlirAffineMapGetMinorSubMap(MlirAffineMap affineMap, intptr_t numResults);
+
+/// Apply AffineExpr::replace(`map`) to each of the results and return a new
+/// new AffineMap with the new results and the specified number of dims and
+/// symbols.
+MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapReplace(
+    MlirAffineMap affineMap, MlirAffineExpr expression,
+    MlirAffineExpr replacement, intptr_t numResultDims, intptr_t numResultSyms);
 
 /// Returns the simplified affine map resulting from dropping the symbols that
 /// do not appear in any of the individual maps in `affineMaps`.

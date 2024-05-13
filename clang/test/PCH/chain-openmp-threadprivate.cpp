@@ -8,6 +8,7 @@
 // with PCH
 // RUN: %clang_cc1 -fopenmp -emit-llvm -chain-include %s -chain-include %s %s -o - | FileCheck %s -check-prefix=CHECK-TLS-1
 // RUN: %clang_cc1 -fopenmp -emit-llvm -chain-include %s -chain-include %s %s -o - | FileCheck %s -check-prefix=CHECK-TLS-2
+// // UNSUPPORTED: target={{.*}}-zos{{.*}}
 
 #if !defined(PASS1)
 #define PASS1
@@ -23,7 +24,7 @@ int *a = malloc(20);
 #else
 
 // CHECK: call {{.*}} @__kmpc_threadprivate_register(
-// CHECK-TLS-1: @{{a|\"\?a@@3PE?AHE?A\"}} = {{.*}}thread_local {{.*}}global {{.*}}i32*
+// CHECK-TLS-1: @{{a|\"\?a@@3PE?AHE?A\"}} = {{.*}}thread_local {{.*}}global {{.*}}ptr
 
 // CHECK-LABEL: foo
 // CHECK-TLS-LABEL: foo

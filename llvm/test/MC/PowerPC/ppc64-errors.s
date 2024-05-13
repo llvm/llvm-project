@@ -53,8 +53,8 @@
               wait 4
 
 # CHECK: error: invalid operand for instruction
-# CHECK-NEXT: sync 4
-              sync 4
+# CHECK-NEXT: sync 8
+              sync 8
 
 # Unsigned 3-bit immediate operands
 
@@ -139,3 +139,7 @@
 # CHECK: error: invalid modifier 'got' (no symbols present)
          addi 4, 3, 123@got
 # CHECK-NEXT: addi 4, 3, 123@got
+
+# CHECK: error: invalid operand for instruction
+# CHECK-NEXT: lwarx 1, 2, 3, a
+              lwarx 1, 2, 3, a

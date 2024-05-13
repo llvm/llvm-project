@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 ; void foo(long n, long m, long o, double A[n][m][o]) {
@@ -21,7 +21,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:   [o, m, n] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[3 + i0, 10 + i1, 7 + i2] };
 ; CHECK:   [o, m, n] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[13 + i0, i1, 17 + i2] };
 
-define void @foo(i64 %n, i64 %m, i64 %o, double* %A) {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr %A) {
 entry:
   br label %for.i
 
@@ -43,8 +43,8 @@ for.k:
   %subscript2 = mul i64 %subscript1, %o
   %offset2 = add nsw i64 %k, 7
   %subscript3 = add i64 %subscript2, %offset2
-  %idx = getelementptr inbounds double, double* %A, i64 %subscript3
-  store double 1.0, double* %idx
+  %idx = getelementptr inbounds double, ptr %A, i64 %subscript3
+  store double 1.0, ptr %idx
 
   %offset3 = add nsw i64 %i, 13
   %subscript4 = mul i64 %offset3, %m
@@ -53,8 +53,8 @@ for.k:
   %subscript6 = mul i64 %subscript5, %o
   %offset5 = add nsw i64 %k, 17
   %subscript7 = add i64 %subscript6, %offset5
-  %idx1 = getelementptr inbounds double, double* %A, i64 %subscript7
-  store double 11.0, double* %idx1
+  %idx1 = getelementptr inbounds double, ptr %A, i64 %subscript7
+  store double 11.0, ptr %idx1
 
   br label %for.k.inc
 

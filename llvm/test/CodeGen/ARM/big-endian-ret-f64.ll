@@ -6,7 +6,7 @@ define double @fn() {
 ; CHECK: ldr r0, [sp]
 ; CHECK: ldr r1, [sp, #4]
   %r = alloca double, align 8
-  %1 = load double, double* %r, align 8
+  %1 = load double, ptr %r, align 8
   ret double %1
 }
 

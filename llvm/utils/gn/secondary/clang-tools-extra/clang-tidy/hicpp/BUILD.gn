@@ -21,6 +21,7 @@ static_library("hicpp") {
   sources = [
     "ExceptionBaseclassCheck.cpp",
     "HICPPTidyModule.cpp",
+    "IgnoredRemoveResultCheck.cpp",
     "MultiwayPathsCoveredCheck.cpp",
     "NoAssemblerCheck.cpp",
     "SignedBitwiseCheck.cpp",

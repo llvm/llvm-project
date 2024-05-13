@@ -1,5 +1,4 @@
-; RUN: opt < %s -lowerswitch -S | FileCheck %s
-; RUN: opt < %s -passes=lowerswitch -S | FileCheck %s
+; RUN: opt < %s -passes=lower-switch -S | FileCheck %s
 
 ; We have switch on input.
 ; On output we should got binary comparison tree. Check that all is fine.
@@ -25,7 +24,7 @@
 
 ;CHECK:     LeafBlock11:                                      ; preds = %NodeBlock13
 ;CHECK-NEXT:  %SwitchLeaf12 = icmp eq i32 %tmp158, 15
-;CHECK-NEXT:  br i1 %SwitchLeaf12, label %bb334, label %NewDefault
+;CHECK-NEXT:  br i1 %SwitchLeaf12, label %bb334, label %bb336
 
 ;CHECK:     NodeBlock9:                                       ; preds = %NodeBlock17
 ;CHECK-NEXT:  %Pivot10 = icmp slt i32 %tmp158, 11
@@ -54,7 +53,7 @@
 ;CHECK:     LeafBlock:                                        ; preds = %NodeBlock
 ;CHECK-NEXT:  %tmp158.off = add i32 %tmp158, 6
 ;CHECK-NEXT:  %SwitchLeaf = icmp ule i32 %tmp158.off, 4
-;CHECK-NEXT:  br i1 %SwitchLeaf, label %bb338, label %NewDefault
+;CHECK-NEXT:  br i1 %SwitchLeaf, label %bb338, label %bb336
 
 define i32 @main(i32 %tmp158) {
 entry:

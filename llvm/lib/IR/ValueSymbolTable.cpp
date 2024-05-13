@@ -12,7 +12,6 @@
 
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
@@ -22,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <utility>
 
@@ -61,7 +61,7 @@ ValueName *ValueSymbolTable::makeUniqueName(Value *V,
     S << ++LastUnique;
 
     // Try insert the vmap entry with this suffix.
-    auto IterBool = vmap.insert(std::make_pair(UniqueName, V));
+    auto IterBool = vmap.insert(std::make_pair(UniqueName.str(), V));
     if (IterBool.second)
       return &*IterBool.first;
   }

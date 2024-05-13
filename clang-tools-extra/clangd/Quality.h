@@ -27,15 +27,13 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 
-#include "ExpectedTypes.h"
 #include "FileDistance.h"
-#include "TUScheduler.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include <algorithm>
 #include <functional>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -46,7 +44,7 @@ namespace clang {
 class CodeCompletionResult;
 
 namespace clangd {
-
+struct ASTSignals;
 struct Symbol;
 class URIDistance;
 
@@ -108,7 +106,7 @@ struct SymbolRelevanceSignals {
 
   // Scope proximity is only considered (both index and sema) when this is set.
   ScopeDistance *ScopeProximityMatch = nullptr;
-  llvm::Optional<llvm::StringRef> SymbolScope;
+  std::optional<llvm::StringRef> SymbolScope;
   // A symbol from sema should be accessible from the current scope.
   bool SemaSaysInScope = false;
 

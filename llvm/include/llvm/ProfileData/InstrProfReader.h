@@ -17,10 +17,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/SwapByteOrder.h"
@@ -37,26 +41,41 @@ namespace llvm {
 
 class InstrProfReader;
 
+namespace vfs {
+class FileSystem;
+} // namespace vfs
+
 /// A file format agnostic iterator over profiling data.
+template <class record_type = NamedInstrProfRecord,
+          class reader_type = InstrProfReader>
 class InstrProfIterator {
 public:
   using iterator_category = std::input_iterator_tag;
-  using value_type = NamedInstrProfRecord;
+  using value_type = record_type;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;
   using reference = value_type &;
 
 private:
-  InstrProfReader *Reader = nullptr;
+  reader_type *Reader = nullptr;
   value_type Record;
 
-  void Increment();
+  void increment() {
+    if (Error E = Reader->readNextRecord(Record)) {
+      // Handle errors in the reader.
+      InstrProfError::take(std::move(E));
+      *this = InstrProfIterator();
+    }
+  }
 
 public:
   InstrProfIterator() = default;
-  InstrProfIterator(InstrProfReader *Reader) : Reader(Reader) { Increment(); }
+  InstrProfIterator(reader_type *Reader) : Reader(Reader) { increment(); }
 
-  InstrProfIterator &operator++() { Increment(); return *this; }
+  InstrProfIterator &operator++() {
+    increment();
+    return *this;
+  }
   bool operator==(const InstrProfIterator &RHS) const {
     return Reader == RHS.Reader;
   }
@@ -71,6 +90,7 @@ public:
 /// format. Provides an iterator over NamedInstrProfRecords.
 class InstrProfReader {
   instrprof_error LastError = instrprof_error::success;
+  std::string LastErrorMsg;
 
 public:
   InstrProfReader() = default;
@@ -82,15 +102,42 @@ public:
   /// Read a single record.
   virtual Error readNextRecord(NamedInstrProfRecord &Record) = 0;
 
+  /// Read a list of binary ids.
+  virtual Error readBinaryIds(std::vector<llvm::object::BuildID> &BinaryIds) {
+    return success();
+  }
+
+  /// Print binary ids.
+  virtual Error printBinaryIds(raw_ostream &OS) { return success(); };
+
   /// Iterator over profile data.
-  InstrProfIterator begin() { return InstrProfIterator(this); }
-  InstrProfIterator end() { return InstrProfIterator(); }
+  InstrProfIterator<> begin() { return InstrProfIterator<>(this); }
+  InstrProfIterator<> end() { return InstrProfIterator<>(); }
+
+  /// Return the profile version.
+  virtual uint64_t getVersion() const = 0;
 
   virtual bool isIRLevelProfile() const = 0;
 
   virtual bool hasCSIRLevelProfile() const = 0;
 
   virtual bool instrEntryBBEnabled() const = 0;
+
+  /// Return true if the profile has single byte counters representing coverage.
+  virtual bool hasSingleByteCoverage() const = 0;
+
+  /// Return true if the profile only instruments function entries.
+  virtual bool functionEntryOnly() const = 0;
+
+  /// Return true if profile includes a memory profile.
+  virtual bool hasMemoryProfile() const = 0;
+
+  /// Return true if this has a temporal profile.
+  virtual bool hasTemporalProfile() const = 0;
+
+  /// Returns a BitsetEnum describing the attributes of the profile. To check
+  /// individual attributes prefer using the helpers above.
+  virtual InstrProfKind getProfileKind() const = 0;
 
   /// Return the PGO symtab. There are three different readers:
   /// Raw, Text, and Indexed profile readers. The first two types
@@ -109,16 +156,27 @@ public:
 
 protected:
   std::unique_ptr<InstrProfSymtab> Symtab;
+  /// A list of temporal profile traces.
+  SmallVector<TemporalProfTraceTy> TemporalProfTraces;
+  /// The total number of temporal profile traces seen.
+  uint64_t TemporalProfTraceStreamSize = 0;
 
   /// Set the current error and return same.
-  Error error(instrprof_error Err) {
+  Error error(instrprof_error Err, const std::string &ErrMsg = "") {
     LastError = Err;
+    LastErrorMsg = ErrMsg;
     if (Err == instrprof_error::success)
       return Error::success();
-    return make_error<InstrProfError>(Err);
+    return make_error<InstrProfError>(Err, ErrMsg);
   }
 
-  Error error(Error &&E) { return error(InstrProfError::take(std::move(E))); }
+  Error error(Error &&E) {
+    handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
+      LastError = IPE.get();
+      LastErrorMsg = IPE.getMessage();
+    });
+    return make_error<InstrProfError>(LastError, LastErrorMsg);
+  }
 
   /// Clear the current error and return a successful one.
   Error success() { return error(instrprof_error::success); }
@@ -133,16 +191,35 @@ public:
   /// Get the current error.
   Error getError() {
     if (hasError())
-      return make_error<InstrProfError>(LastError);
+      return make_error<InstrProfError>(LastError, LastErrorMsg);
     return Error::success();
   }
 
   /// Factory method to create an appropriately typed reader for the given
   /// instrprof file.
-  static Expected<std::unique_ptr<InstrProfReader>> create(const Twine &Path);
+  static Expected<std::unique_ptr<InstrProfReader>>
+  create(const Twine &Path, vfs::FileSystem &FS,
+         const InstrProfCorrelator *Correlator = nullptr,
+         std::function<void(Error)> Warn = nullptr);
 
   static Expected<std::unique_ptr<InstrProfReader>>
-  create(std::unique_ptr<MemoryBuffer> Buffer);
+  create(std::unique_ptr<MemoryBuffer> Buffer,
+         const InstrProfCorrelator *Correlator = nullptr,
+         std::function<void(Error)> Warn = nullptr);
+
+  /// \param Weight for raw profiles use this as the temporal profile trace
+  ///               weight
+  /// \returns a list of temporal profile traces.
+  virtual SmallVector<TemporalProfTraceTy> &
+  getTemporalProfTraces(std::optional<uint64_t> Weight = {}) {
+    // For non-raw profiles we ignore the input weight and instead use the
+    // weights already in the traces.
+    return TemporalProfTraces;
+  }
+  /// \returns the total number of temporal profile traces seen.
+  uint64_t getTemporalProfTraceStreamSize() {
+    return TemporalProfTraceStreamSize;
+  }
 };
 
 /// Reader for the simple text based instrprof format.
@@ -159,11 +236,12 @@ private:
   std::unique_ptr<MemoryBuffer> DataBuffer;
   /// Iterator over the profile data.
   line_iterator Line;
-  bool IsIRLevelProfile = false;
-  bool HasCSIRLevelProfile = false;
-  bool InstrEntryBBEnabled = false;
+  /// The attributes of the current profile.
+  InstrProfKind ProfileKind = InstrProfKind::Unknown;
 
   Error readValueProfileData(InstrProfRecord &Record);
+
+  Error readTemporalProfTraceData();
 
 public:
   TextInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer_)
@@ -174,11 +252,40 @@ public:
   /// Return true if the given buffer is in text instrprof format.
   static bool hasFormat(const MemoryBuffer &Buffer);
 
-  bool isIRLevelProfile() const override { return IsIRLevelProfile; }
+  // Text format does not have version, so return 0.
+  uint64_t getVersion() const override { return 0; }
 
-  bool hasCSIRLevelProfile() const override { return HasCSIRLevelProfile; }
+  bool isIRLevelProfile() const override {
+    return static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation);
+  }
 
-  bool instrEntryBBEnabled() const override { return InstrEntryBBEnabled; }
+  bool hasCSIRLevelProfile() const override {
+    return static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive);
+  }
+
+  bool instrEntryBBEnabled() const override {
+    return static_cast<bool>(ProfileKind &
+                             InstrProfKind::FunctionEntryInstrumentation);
+  }
+
+  bool hasSingleByteCoverage() const override {
+    return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
+  }
+
+  bool functionEntryOnly() const override {
+    return static_cast<bool>(ProfileKind & InstrProfKind::FunctionEntryOnly);
+  }
+
+  bool hasMemoryProfile() const override {
+    // TODO: Add support for text format memory profiles.
+    return false;
+  }
+
+  bool hasTemporalProfile() const override {
+    return static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile);
+  }
+
+  InstrProfKind getProfileKind() const override { return ProfileKind; }
 
   /// Read the header.
   Error readHeader() override;
@@ -187,14 +294,14 @@ public:
   Error readNextRecord(NamedInstrProfRecord &Record) override;
 
   InstrProfSymtab &getSymtab() override {
-    assert(Symtab.get());
-    return *Symtab.get();
+    assert(Symtab);
+    return *Symtab;
   }
 };
 
 /// Reader for the raw instrprof binary format from runtime.
 ///
-/// This format is a raw memory dump of the instrumentation-baed profiling data
+/// This format is a raw memory dump of the instrumentation-based profiling data
 /// from the runtime.  It has no index.
 ///
 /// Templated on the unsigned type whose size matches pointers on the platform
@@ -204,33 +311,61 @@ class RawInstrProfReader : public InstrProfReader {
 private:
   /// The profile data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;
+  /// If available, this hold the ProfileData array used to correlate raw
+  /// instrumentation data to their functions.
+  const InstrProfCorrelatorImpl<IntPtrT> *Correlator;
+  /// A list of timestamps paired with a function name reference.
+  std::vector<std::pair<uint64_t, uint64_t>> TemporalProfTimestamps;
   bool ShouldSwapBytes;
-  // The value of the version field of the raw profile data header. The lower 56
-  // bits specifies the format version and the most significant 8 bits specify
+  // The value of the version field of the raw profile data header. The lower 32
+  // bits specifies the format version and the most significant 32 bits specify
   // the variant types of the profile.
   uint64_t Version;
   uint64_t CountersDelta;
+  uint64_t BitmapDelta;
   uint64_t NamesDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
-  const uint64_t *CountersStart;
+  const RawInstrProf::VTableProfileData<IntPtrT> *VTableBegin = nullptr;
+  const RawInstrProf::VTableProfileData<IntPtrT> *VTableEnd = nullptr;
+  const char *CountersStart;
+  const char *CountersEnd;
+  const char *BitmapStart;
+  const char *BitmapEnd;
   const char *NamesStart;
-  uint64_t NamesSize;
+  const char *NamesEnd;
+  const char *VNamesStart = nullptr;
+  const char *VNamesEnd = nullptr;
   // After value profile is all read, this pointer points to
   // the header of next profile data (if exists)
   const uint8_t *ValueDataStart;
   uint32_t ValueKindLast;
   uint32_t CurValueDataSize;
+  std::vector<llvm::object::BuildID> BinaryIds;
+
+  std::function<void(Error)> Warn;
+
+  /// Maxium counter value 2^56.
+  static const uint64_t MaxCounterValue = (1ULL << 56);
 
 public:
-  RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer)
-      : DataBuffer(std::move(DataBuffer)) {}
+  RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
+                     const InstrProfCorrelator *Correlator,
+                     std::function<void(Error)> Warn)
+      : DataBuffer(std::move(DataBuffer)),
+        Correlator(dyn_cast_or_null<const InstrProfCorrelatorImpl<IntPtrT>>(
+            Correlator)),
+        Warn(Warn) {}
   RawInstrProfReader(const RawInstrProfReader &) = delete;
   RawInstrProfReader &operator=(const RawInstrProfReader &) = delete;
 
   static bool hasFormat(const MemoryBuffer &DataBuffer);
   Error readHeader() override;
   Error readNextRecord(NamedInstrProfRecord &Record) override;
+  Error readBinaryIds(std::vector<llvm::object::BuildID> &BinaryIds) override;
+  Error printBinaryIds(raw_ostream &OS) override;
+
+  uint64_t getVersion() const override { return Version; }
 
   bool isIRLevelProfile() const override {
     return (Version & VARIANT_MASK_IR_PROF) != 0;
@@ -244,10 +379,34 @@ public:
     return (Version & VARIANT_MASK_INSTR_ENTRY) != 0;
   }
 
+  bool hasSingleByteCoverage() const override {
+    return (Version & VARIANT_MASK_BYTE_COVERAGE) != 0;
+  }
+
+  bool functionEntryOnly() const override {
+    return (Version & VARIANT_MASK_FUNCTION_ENTRY_ONLY) != 0;
+  }
+
+  bool hasMemoryProfile() const override {
+    // Memory profiles have a separate raw format, so this should never be set.
+    assert(!(Version & VARIANT_MASK_MEMPROF));
+    return false;
+  }
+
+  bool hasTemporalProfile() const override {
+    return (Version & VARIANT_MASK_TEMPORAL_PROF) != 0;
+  }
+
+  /// Returns a BitsetEnum describing the attributes of the raw instr profile.
+  InstrProfKind getProfileKind() const override;
+
   InstrProfSymtab &getSymtab() override {
     assert(Symtab.get());
     return *Symtab.get();
   }
+
+  SmallVector<TemporalProfTraceTy> &
+  getTemporalProfTraces(std::optional<uint64_t> Weight = {}) override;
 
 private:
   Error createSymtab(InstrProfSymtab &Symtab);
@@ -255,17 +414,16 @@ private:
   Error readHeader(const RawInstrProf::Header &Header);
 
   template <class IntT> IntT swap(IntT Int) const {
-    return ShouldSwapBytes ? sys::getSwappedBytes(Int) : Int;
+    return ShouldSwapBytes ? llvm::byteswap(Int) : Int;
   }
 
-  support::endianness getDataEndianness() const {
-    support::endianness HostEndian = getHostEndianness();
+  llvm::endianness getDataEndianness() const {
     if (!ShouldSwapBytes)
-      return HostEndian;
-    if (HostEndian == support::little)
-      return support::big;
+      return llvm::endianness::native;
+    if (llvm::endianness::native == llvm::endianness::little)
+      return llvm::endianness::big;
     else
-      return support::little;
+      return llvm::endianness::little;
   }
 
   inline uint8_t getNumPaddingBytes(uint64_t SizeInBytes) {
@@ -275,10 +433,21 @@ private:
   Error readName(NamedInstrProfRecord &Record);
   Error readFuncHash(NamedInstrProfRecord &Record);
   Error readRawCounts(InstrProfRecord &Record);
+  Error readRawBitmapBytes(InstrProfRecord &Record);
   Error readValueProfilingData(InstrProfRecord &Record);
   bool atEnd() const { return Data == DataEnd; }
 
   void advanceData() {
+    // `CountersDelta` is a constant zero when using debug info correlation.
+    if (!Correlator) {
+      // The initial CountersDelta is the in-memory address difference between
+      // the data and counts sections:
+      // start(__llvm_prf_cnts) - start(__llvm_prf_data)
+      // As we advance to the next record, we maintain the correct CountersDelta
+      // with respect to the next record.
+      CountersDelta -= sizeof(*Data);
+      BitmapDelta -= sizeof(*Data);
+    }
     Data++;
     ValueDataStart += CurValueDataSize;
   }
@@ -288,19 +457,12 @@ private:
       return (const char *)ValueDataStart;
   }
 
-  /// Get the offset of \p CounterPtr from the start of the counters section of
-  /// the profile. The offset has units of "number of counters", i.e. increasing
-  /// the offset by 1 corresponds to an increase in the *byte offset* by 8.
-  ptrdiff_t getCounterOffset(IntPtrT CounterPtr) const {
-    return (swap(CounterPtr) - CountersDelta) / sizeof(uint64_t);
-  }
-
-  const uint64_t *getCounter(ptrdiff_t Offset) const {
-    return CountersStart + Offset;
-  }
-
   StringRef getName(uint64_t NameRef) const {
-    return Symtab->getFuncName(swap(NameRef));
+    return Symtab->getFuncOrVarName(swap(NameRef));
+  }
+
+  int getCounterTypeSize() const {
+    return hasSingleByteCoverage() ? sizeof(uint8_t) : sizeof(uint64_t);
   }
 };
 
@@ -322,7 +484,7 @@ class InstrProfLookupTrait {
   // Endianness of the input value profile data.
   // It should be LE by default, but can be changed
   // for testing purpose.
-  support::endianness ValueProfDataEndianness = support::little;
+  llvm::endianness ValueProfDataEndianness = llvm::endianness::little;
 
 public:
   InstrProfLookupTrait(IndexedInstrProf::HashT HashType, unsigned FormatVersion)
@@ -345,8 +507,10 @@ public:
   ReadKeyDataLength(const unsigned char *&D) {
     using namespace support;
 
-    offset_type KeyLen = endian::readNext<offset_type, little, unaligned>(D);
-    offset_type DataLen = endian::readNext<offset_type, little, unaligned>(D);
+    offset_type KeyLen =
+        endian::readNext<offset_type, llvm::endianness::little>(D);
+    offset_type DataLen =
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -359,7 +523,7 @@ public:
   data_type ReadData(StringRef K, const unsigned char *D, offset_type N);
 
   // Used for testing purpose only.
-  void setValueProfDataEndianness(support::endianness Endianness) {
+  void setValueProfDataEndianness(llvm::endianness Endianness) {
     ValueProfDataEndianness = Endianness;
   }
 };
@@ -376,16 +540,28 @@ struct InstrProfReaderIndexBase {
                                      ArrayRef<NamedInstrProfRecord> &Data) = 0;
   virtual void advanceToNextKey() = 0;
   virtual bool atEnd() const = 0;
-  virtual void setValueProfDataEndianness(support::endianness Endianness) = 0;
+  virtual void setValueProfDataEndianness(llvm::endianness Endianness) = 0;
   virtual uint64_t getVersion() const = 0;
   virtual bool isIRLevelProfile() const = 0;
   virtual bool hasCSIRLevelProfile() const = 0;
   virtual bool instrEntryBBEnabled() const = 0;
+  virtual bool hasSingleByteCoverage() const = 0;
+  virtual bool functionEntryOnly() const = 0;
+  virtual bool hasMemoryProfile() const = 0;
+  virtual bool hasTemporalProfile() const = 0;
+  virtual InstrProfKind getProfileKind() const = 0;
   virtual Error populateSymtab(InstrProfSymtab &) = 0;
 };
 
 using OnDiskHashTableImplV3 =
     OnDiskIterableChainedHashTable<InstrProfLookupTrait>;
+
+using MemProfRecordHashTable =
+    OnDiskIterableChainedHashTable<memprof::RecordLookupTrait>;
+using MemProfFrameHashTable =
+    OnDiskIterableChainedHashTable<memprof::FrameLookupTrait>;
+using MemProfCallStackHashTable =
+    OnDiskIterableChainedHashTable<memprof::CallStackLookupTrait>;
 
 template <typename HashTableImpl>
 class InstrProfReaderItaniumRemapper;
@@ -415,7 +591,7 @@ public:
     return RecordIterator == HashTable->data_end();
   }
 
-  void setValueProfDataEndianness(support::endianness Endianness) override {
+  void setValueProfDataEndianness(llvm::endianness Endianness) override {
     HashTable->getInfoObj().setValueProfDataEndianness(Endianness);
   }
 
@@ -433,7 +609,31 @@ public:
     return (FormatVersion & VARIANT_MASK_INSTR_ENTRY) != 0;
   }
 
+  bool hasSingleByteCoverage() const override {
+    return (FormatVersion & VARIANT_MASK_BYTE_COVERAGE) != 0;
+  }
+
+  bool functionEntryOnly() const override {
+    return (FormatVersion & VARIANT_MASK_FUNCTION_ENTRY_ONLY) != 0;
+  }
+
+  bool hasMemoryProfile() const override {
+    return (FormatVersion & VARIANT_MASK_MEMPROF) != 0;
+  }
+
+  bool hasTemporalProfile() const override {
+    return (FormatVersion & VARIANT_MASK_TEMPORAL_PROF) != 0;
+  }
+
+  InstrProfKind getProfileKind() const override;
+
   Error populateSymtab(InstrProfSymtab &Symtab) override {
+    // FIXME: the create method calls 'finalizeSymtab' and sorts a bunch of
+    // arrays/maps. Since there are other data sources other than 'HashTable' to
+    // populate a symtab, it might make sense to have something like this
+    // 1. Let each data source populate Symtab and init the arrays/maps without
+    // calling 'finalizeSymtab'
+    // 2. Call 'finalizeSymtab' once to get all arrays/maps sorted if needed.
     return Symtab.create(HashTable->keys());
   }
 };
@@ -441,10 +641,30 @@ public:
 /// Name matcher supporting fuzzy matching of symbol names to names in profiles.
 class InstrProfReaderRemapper {
 public:
-  virtual ~InstrProfReaderRemapper() {}
+  virtual ~InstrProfReaderRemapper() = default;
   virtual Error populateRemappings() { return Error::success(); }
   virtual Error getRecords(StringRef FuncName,
                            ArrayRef<NamedInstrProfRecord> &Data) = 0;
+};
+
+class IndexedMemProfReader {
+private:
+  /// MemProf profile schema (if available).
+  memprof::MemProfSchema Schema;
+  /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
+  std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
+  /// MemProf frame profile data on-disk indexed via frame id.
+  std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
+  /// MemProf call stack data on-disk indexed via call stack id.
+  std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
+
+public:
+  IndexedMemProfReader() = default;
+
+  Error deserialize(const unsigned char *Start, uint64_t MemProfOffset);
+
+  Expected<memprof::MemProfRecord>
+  getMemProfRecord(const uint64_t FuncNameHash) const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -462,6 +682,21 @@ private:
   std::unique_ptr<ProfileSummary> Summary;
   /// Context sensitive profile summary data.
   std::unique_ptr<ProfileSummary> CS_Summary;
+  IndexedMemProfReader MemProfReader;
+  /// VTableNamePtr points to the beginning of compressed vtable names.
+  /// When a symtab is constructed from profiles by llvm-profdata, the list of
+  /// names could be decompressed based on `VTableNamePtr` and
+  /// `CompressedVTableNamesLen`.
+  /// A compiler that reads indexed profiles could construct symtab from module
+  /// IR so it doesn't need the decompressed names.
+  const char *VTableNamePtr = nullptr;
+  /// The length of compressed vtable names.
+  uint64_t CompressedVTableNamesLen = 0;
+  /// Total size of binary ids.
+  uint64_t BinaryIdsSize{0};
+  /// Start address of binary id length and data pairs.
+  const uint8_t *BinaryIdsStart = nullptr;
+
   // Index to the current record in the record array.
   unsigned RecordIndex;
 
@@ -481,7 +716,7 @@ public:
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
 
   /// Return the profile version.
-  uint64_t getVersion() const { return Index->getVersion(); }
+  uint64_t getVersion() const override { return Index->getVersion(); }
   bool isIRLevelProfile() const override { return Index->isIRLevelProfile(); }
   bool hasCSIRLevelProfile() const override {
     return Index->hasCSIRLevelProfile();
@@ -489,6 +724,24 @@ public:
 
   bool instrEntryBBEnabled() const override {
     return Index->instrEntryBBEnabled();
+  }
+
+  bool hasSingleByteCoverage() const override {
+    return Index->hasSingleByteCoverage();
+  }
+
+  bool functionEntryOnly() const override { return Index->functionEntryOnly(); }
+
+  bool hasMemoryProfile() const override { return Index->hasMemoryProfile(); }
+
+  bool hasTemporalProfile() const override {
+    return Index->hasTemporalProfile();
+  }
+
+  /// Returns a BitsetEnum describing the attributes of the indexed instr
+  /// profile.
+  InstrProfKind getProfileKind() const override {
+    return Index->getProfileKind();
   }
 
   /// Return true if the given buffer is in an indexed instrprof format.
@@ -499,13 +752,31 @@ public:
   /// Read a single record.
   Error readNextRecord(NamedInstrProfRecord &Record) override;
 
-  /// Return the NamedInstrProfRecord associated with FuncName and FuncHash
-  Expected<InstrProfRecord> getInstrProfRecord(StringRef FuncName,
-                                               uint64_t FuncHash);
+  /// Return the NamedInstrProfRecord associated with FuncName and FuncHash.
+  /// When return a hash_mismatch error and MismatchedFuncSum is not nullptr,
+  /// the sum of all counters in the mismatched function will be set to
+  /// MismatchedFuncSum. If there are multiple instances of mismatched
+  /// functions, MismatchedFuncSum returns the maximum. If \c FuncName is not
+  /// found, try to lookup \c DeprecatedFuncName to handle profiles built by
+  /// older compilers.
+  Expected<InstrProfRecord>
+  getInstrProfRecord(StringRef FuncName, uint64_t FuncHash,
+                     StringRef DeprecatedFuncName = "",
+                     uint64_t *MismatchedFuncSum = nullptr);
+
+  /// Return the memprof record for the function identified by
+  /// llvm::md5(Name).
+  Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash) {
+    return MemProfReader.getMemProfRecord(FuncNameHash);
+  }
 
   /// Fill Counts with the profile data for the given function name.
   Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
                           std::vector<uint64_t> &Counts);
+
+  /// Fill Bitmap with the profile data for the given function name.
+  Error getFunctionBitmap(StringRef FuncName, uint64_t FuncHash,
+                          BitVector &Bitmap);
 
   /// Return the maximum of all known function counts.
   /// \c UseCS indicates whether to use the context-sensitive count.
@@ -521,14 +792,15 @@ public:
 
   /// Factory method to create an indexed reader.
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
-  create(const Twine &Path, const Twine &RemappingPath = "");
+  create(const Twine &Path, vfs::FileSystem &FS,
+         const Twine &RemappingPath = "");
 
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,
          std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr);
 
   // Used for testing purpose only.
-  void setValueProfDataEndianness(support::endianness Endianness) {
+  void setValueProfDataEndianness(llvm::endianness Endianness) {
     Index->setValueProfDataEndianness(Endianness);
   }
 
@@ -542,12 +814,15 @@ public:
   ProfileSummary &getSummary(bool UseCS) {
     if (UseCS) {
       assert(CS_Summary && "No context sensitive summary");
-      return *(CS_Summary.get());
+      return *CS_Summary;
     } else {
       assert(Summary && "No profile summary");
-      return *(Summary.get());
+      return *Summary;
     }
   }
+
+  Error readBinaryIds(std::vector<llvm::object::BuildID> &BinaryIds) override;
+  Error printBinaryIds(raw_ostream &OS) override;
 };
 
 } // end namespace llvm

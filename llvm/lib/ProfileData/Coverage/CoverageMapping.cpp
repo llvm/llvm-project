@@ -14,26 +14,29 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -123,13 +126,15 @@ Counter CounterExpressionBuilder::simplify(Counter ExpressionTree) {
   return C;
 }
 
-Counter CounterExpressionBuilder::add(Counter LHS, Counter RHS) {
-  return simplify(get(CounterExpression(CounterExpression::Add, LHS, RHS)));
+Counter CounterExpressionBuilder::add(Counter LHS, Counter RHS, bool Simplify) {
+  auto Cnt = get(CounterExpression(CounterExpression::Add, LHS, RHS));
+  return Simplify ? simplify(Cnt) : Cnt;
 }
 
-Counter CounterExpressionBuilder::subtract(Counter LHS, Counter RHS) {
-  return simplify(
-      get(CounterExpression(CounterExpression::Subtract, LHS, RHS)));
+Counter CounterExpressionBuilder::subtract(Counter LHS, Counter RHS,
+                                           bool Simplify) {
+  auto Cnt = get(CounterExpression(CounterExpression::Subtract, LHS, RHS));
+  return Simplify ? simplify(Cnt) : Cnt;
 }
 
 void CounterMappingContext::dump(const Counter &C, raw_ostream &OS) const {
@@ -163,43 +168,419 @@ void CounterMappingContext::dump(const Counter &C, raw_ostream &OS) const {
 }
 
 Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
-  switch (C.getKind()) {
-  case Counter::Zero:
-    return 0;
-  case Counter::CounterValueReference:
-    if (C.getCounterID() >= CounterValues.size())
-      return errorCodeToError(errc::argument_out_of_domain);
-    return CounterValues[C.getCounterID()];
-  case Counter::Expression: {
-    if (C.getExpressionID() >= Expressions.size())
-      return errorCodeToError(errc::argument_out_of_domain);
-    const auto &E = Expressions[C.getExpressionID()];
-    Expected<int64_t> LHS = evaluate(E.LHS);
-    if (!LHS)
-      return LHS;
-    Expected<int64_t> RHS = evaluate(E.RHS);
-    if (!RHS)
-      return RHS;
-    return E.Kind == CounterExpression::Subtract ? *LHS - *RHS : *LHS + *RHS;
+  struct StackElem {
+    Counter ICounter;
+    int64_t LHS = 0;
+    enum {
+      KNeverVisited = 0,
+      KVisitedOnce = 1,
+      KVisitedTwice = 2,
+    } VisitCount = KNeverVisited;
+  };
+
+  std::stack<StackElem> CounterStack;
+  CounterStack.push({C});
+
+  int64_t LastPoppedValue;
+
+  while (!CounterStack.empty()) {
+    StackElem &Current = CounterStack.top();
+
+    switch (Current.ICounter.getKind()) {
+    case Counter::Zero:
+      LastPoppedValue = 0;
+      CounterStack.pop();
+      break;
+    case Counter::CounterValueReference:
+      if (Current.ICounter.getCounterID() >= CounterValues.size())
+        return errorCodeToError(errc::argument_out_of_domain);
+      LastPoppedValue = CounterValues[Current.ICounter.getCounterID()];
+      CounterStack.pop();
+      break;
+    case Counter::Expression: {
+      if (Current.ICounter.getExpressionID() >= Expressions.size())
+        return errorCodeToError(errc::argument_out_of_domain);
+      const auto &E = Expressions[Current.ICounter.getExpressionID()];
+      if (Current.VisitCount == StackElem::KNeverVisited) {
+        CounterStack.push(StackElem{E.LHS});
+        Current.VisitCount = StackElem::KVisitedOnce;
+      } else if (Current.VisitCount == StackElem::KVisitedOnce) {
+        Current.LHS = LastPoppedValue;
+        CounterStack.push(StackElem{E.RHS});
+        Current.VisitCount = StackElem::KVisitedTwice;
+      } else {
+        int64_t LHS = Current.LHS;
+        int64_t RHS = LastPoppedValue;
+        LastPoppedValue =
+            E.Kind == CounterExpression::Subtract ? LHS - RHS : LHS + RHS;
+        CounterStack.pop();
+      }
+      break;
+    }
+    }
   }
+
+  return LastPoppedValue;
+}
+
+mcdc::TVIdxBuilder::TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs,
+                                 int Offset)
+    : Indices(NextIDs.size()) {
+  // Construct Nodes and set up each InCount
+  auto N = NextIDs.size();
+  SmallVector<MCDCNode> Nodes(N);
+  for (unsigned ID = 0; ID < N; ++ID) {
+    for (unsigned C = 0; C < 2; ++C) {
+#ifndef NDEBUG
+      Indices[ID][C] = INT_MIN;
+#endif
+      auto NextID = NextIDs[ID][C];
+      Nodes[ID].NextIDs[C] = NextID;
+      if (NextID >= 0)
+        ++Nodes[NextID].InCount;
+    }
   }
-  llvm_unreachable("Unhandled CounterKind");
+
+  // Sort key ordered by <-Width, Ord>
+  SmallVector<std::tuple<int,      /// -Width
+                         unsigned, /// Ord
+                         int,      /// ID
+                         unsigned  /// Cond (0 or 1)
+                         >>
+      Decisions;
+
+  // Traverse Nodes to assign Idx
+  SmallVector<int> Q;
+  assert(Nodes[0].InCount == 0);
+  Nodes[0].Width = 1;
+  Q.push_back(0);
+
+  unsigned Ord = 0;
+  while (!Q.empty()) {
+    auto IID = Q.begin();
+    int ID = *IID;
+    Q.erase(IID);
+    auto &Node = Nodes[ID];
+    assert(Node.Width > 0);
+
+    for (unsigned I = 0; I < 2; ++I) {
+      auto NextID = Node.NextIDs[I];
+      assert(NextID != 0 && "NextID should not point to the top");
+      if (NextID < 0) {
+        // Decision
+        Decisions.emplace_back(-Node.Width, Ord++, ID, I);
+        assert(Ord == Decisions.size());
+        continue;
+      }
+
+      // Inter Node
+      auto &NextNode = Nodes[NextID];
+      assert(NextNode.InCount > 0);
+
+      // Assign Idx
+      assert(Indices[ID][I] == INT_MIN);
+      Indices[ID][I] = NextNode.Width;
+      auto NextWidth = int64_t(NextNode.Width) + Node.Width;
+      if (NextWidth > HardMaxTVs) {
+        NumTestVectors = HardMaxTVs; // Overflow
+        return;
+      }
+      NextNode.Width = NextWidth;
+
+      // Ready if all incomings are processed.
+      // Or NextNode.Width hasn't been confirmed yet.
+      if (--NextNode.InCount == 0)
+        Q.push_back(NextID);
+    }
+  }
+
+  llvm::sort(Decisions);
+
+  // Assign TestVector Indices in Decision Nodes
+  int64_t CurIdx = 0;
+  for (auto [NegWidth, Ord, ID, C] : Decisions) {
+    int Width = -NegWidth;
+    assert(Nodes[ID].Width == Width);
+    assert(Nodes[ID].NextIDs[C] < 0);
+    assert(Indices[ID][C] == INT_MIN);
+    Indices[ID][C] = Offset + CurIdx;
+    CurIdx += Width;
+    if (CurIdx > HardMaxTVs) {
+      NumTestVectors = HardMaxTVs; // Overflow
+      return;
+    }
+  }
+
+  assert(CurIdx < HardMaxTVs);
+  NumTestVectors = CurIdx;
+
+#ifndef NDEBUG
+  for (const auto &Idxs : Indices)
+    for (auto Idx : Idxs)
+      assert(Idx != INT_MIN);
+  SavedNodes = std::move(Nodes);
+#endif
+}
+
+namespace {
+
+/// Construct this->NextIDs with Branches for TVIdxBuilder to use it
+/// before MCDCRecordProcessor().
+class NextIDsBuilder {
+protected:
+  SmallVector<mcdc::ConditionIDs> NextIDs;
+
+public:
+  NextIDsBuilder(const ArrayRef<const CounterMappingRegion *> Branches)
+      : NextIDs(Branches.size()) {
+#ifndef NDEBUG
+    DenseSet<mcdc::ConditionID> SeenIDs;
+#endif
+    for (const auto *Branch : Branches) {
+      const auto &BranchParams = Branch->getBranchParams();
+      assert(SeenIDs.insert(BranchParams.ID).second && "Duplicate CondID");
+      NextIDs[BranchParams.ID] = BranchParams.Conds;
+    }
+    assert(SeenIDs.size() == Branches.size());
+  }
+};
+
+class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
+  /// A bitmap representing the executed test vectors for a boolean expression.
+  /// Each index of the bitmap corresponds to a possible test vector. An index
+  /// with a bit value of '1' indicates that the corresponding Test Vector
+  /// identified by that index was executed.
+  const BitVector &Bitmap;
+
+  /// Decision Region to which the ExecutedTestVectorBitmap applies.
+  const CounterMappingRegion &Region;
+  const mcdc::DecisionParameters &DecisionParams;
+
+  /// Array of branch regions corresponding each conditions in the boolean
+  /// expression.
+  ArrayRef<const CounterMappingRegion *> Branches;
+
+  /// Total number of conditions in the boolean expression.
+  unsigned NumConditions;
+
+  /// Vector used to track whether a condition is constant folded.
+  MCDCRecord::BoolVector Folded;
+
+  /// Mapping of calculated MC/DC Independence Pairs for each condition.
+  MCDCRecord::TVPairMap IndependencePairs;
+
+  /// Storage for ExecVectors
+  /// ExecVectors is the alias of its 0th element.
+  std::array<MCDCRecord::TestVectors, 2> ExecVectorsByCond;
+
+  /// Actual executed Test Vectors for the boolean expression, based on
+  /// ExecutedTestVectorBitmap.
+  MCDCRecord::TestVectors &ExecVectors;
+
+  /// Number of False items in ExecVectors
+  unsigned NumExecVectorsF;
+
+#ifndef NDEBUG
+  DenseSet<unsigned> TVIdxs;
+#endif
+
+public:
+  MCDCRecordProcessor(const BitVector &Bitmap,
+                      const CounterMappingRegion &Region,
+                      ArrayRef<const CounterMappingRegion *> Branches)
+      : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
+        Region(Region), DecisionParams(Region.getDecisionParams()),
+        Branches(Branches), NumConditions(DecisionParams.NumConditions),
+        Folded(NumConditions, false), IndependencePairs(NumConditions),
+        ExecVectors(ExecVectorsByCond[false]) {}
+
+private:
+  // Walk the binary decision diagram and try assigning both false and true to
+  // each node. When a terminal node (ID == 0) is reached, fill in the value in
+  // the truth table.
+  void buildTestVector(MCDCRecord::TestVector &TV, mcdc::ConditionID ID,
+                       int TVIdx) {
+    for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
+      static_assert(MCDCRecord::MCDC_False == 0);
+      static_assert(MCDCRecord::MCDC_True == 1);
+      TV.set(ID, MCDCCond);
+      auto NextID = NextIDs[ID][MCDCCond];
+      auto NextTVIdx = TVIdx + Indices[ID][MCDCCond];
+      assert(NextID == SavedNodes[ID].NextIDs[MCDCCond]);
+      if (NextID >= 0) {
+        buildTestVector(TV, NextID, NextTVIdx);
+        continue;
+      }
+
+      assert(TVIdx < SavedNodes[ID].Width);
+      assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
+
+      if (!Bitmap[DecisionParams.BitmapIdx * CHAR_BIT + TV.getIndex()])
+        continue;
+
+      // Copy the completed test vector to the vector of testvectors.
+      // The final value (T,F) is equal to the last non-dontcare state on the
+      // path (in a short-circuiting system).
+      ExecVectorsByCond[MCDCCond].push_back({TV, MCDCCond});
+    }
+
+    // Reset back to DontCare.
+    TV.set(ID, MCDCRecord::MCDC_DontCare);
+  }
+
+  /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
+  /// vector at the corresponding index was executed during a test run.
+  void findExecutedTestVectors() {
+    // Walk the binary decision diagram to enumerate all possible test vectors.
+    // We start at the root node (ID == 0) with all values being DontCare.
+    // `TVIdx` starts with 0 and is in the traversal.
+    // `Index` encodes the bitmask of true values and is initially 0.
+    MCDCRecord::TestVector TV(NumConditions);
+    buildTestVector(TV, 0, 0);
+    assert(TVIdxs.size() == unsigned(NumTestVectors) &&
+           "TVIdxs wasn't fulfilled");
+
+    // Fill ExecVectors order by False items and True items.
+    // ExecVectors is the alias of ExecVectorsByCond[false], so
+    // Append ExecVectorsByCond[true] on it.
+    NumExecVectorsF = ExecVectors.size();
+    auto &ExecVectorsT = ExecVectorsByCond[true];
+    ExecVectors.append(std::make_move_iterator(ExecVectorsT.begin()),
+                       std::make_move_iterator(ExecVectorsT.end()));
+  }
+
+  // Find an independence pair for each condition:
+  // - The condition is true in one test and false in the other.
+  // - The decision outcome is true one test and false in the other.
+  // - All other conditions' values must be equal or marked as "don't care".
+  void findIndependencePairs() {
+    unsigned NumTVs = ExecVectors.size();
+    for (unsigned I = NumExecVectorsF; I < NumTVs; ++I) {
+      const auto &[A, ACond] = ExecVectors[I];
+      assert(ACond == MCDCRecord::MCDC_True);
+      for (unsigned J = 0; J < NumExecVectorsF; ++J) {
+        const auto &[B, BCond] = ExecVectors[J];
+        assert(BCond == MCDCRecord::MCDC_False);
+        // If the two vectors differ in exactly one condition, ignoring DontCare
+        // conditions, we have found an independence pair.
+        auto AB = A.getDifferences(B);
+        if (AB.count() == 1)
+          IndependencePairs.insert(
+              {AB.find_first(), std::make_pair(J + 1, I + 1)});
+      }
+    }
+  }
+
+public:
+  /// Process the MC/DC Record in order to produce a result for a boolean
+  /// expression. This process includes tracking the conditions that comprise
+  /// the decision region, calculating the list of all possible test vectors,
+  /// marking the executed test vectors, and then finding an Independence Pair
+  /// out of the executed test vectors for each condition in the boolean
+  /// expression. A condition is tracked to ensure that its ID can be mapped to
+  /// its ordinal position in the boolean expression. The condition's source
+  /// location is also tracked, as well as whether it is constant folded (in
+  /// which case it is excuded from the metric).
+  MCDCRecord processMCDCRecord() {
+    unsigned I = 0;
+    MCDCRecord::CondIDMap PosToID;
+    MCDCRecord::LineColPairMap CondLoc;
+
+    // Walk the Record's BranchRegions (representing Conditions) in order to:
+    // - Hash the condition based on its corresponding ID. This will be used to
+    //   calculate the test vectors.
+    // - Keep a map of the condition's ordinal position (1, 2, 3, 4) to its
+    //   actual ID.  This will be used to visualize the conditions in the
+    //   correct order.
+    // - Keep track of the condition source location. This will be used to
+    //   visualize where the condition is.
+    // - Record whether the condition is constant folded so that we exclude it
+    //   from being measured.
+    for (const auto *B : Branches) {
+      const auto &BranchParams = B->getBranchParams();
+      PosToID[I] = BranchParams.ID;
+      CondLoc[I] = B->startLoc();
+      Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
+    }
+
+    // Using Profile Bitmap from runtime, mark the executed test vectors.
+    findExecutedTestVectors();
+
+    // Compare executed test vectors against each other to find an independence
+    // pairs for each condition.  This processing takes the most time.
+    findIndependencePairs();
+
+    // Record Test vectors, executed vectors, and independence pairs.
+    return MCDCRecord(Region, std::move(ExecVectors),
+                      std::move(IndependencePairs), std::move(Folded),
+                      std::move(PosToID), std::move(CondLoc));
+  }
+};
+
+} // namespace
+
+Expected<MCDCRecord> CounterMappingContext::evaluateMCDCRegion(
+    const CounterMappingRegion &Region,
+    ArrayRef<const CounterMappingRegion *> Branches) {
+
+  MCDCRecordProcessor MCDCProcessor(Bitmap, Region, Branches);
+  return MCDCProcessor.processMCDCRecord();
 }
 
 unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
-  switch (C.getKind()) {
-  case Counter::Zero:
-    return 0;
-  case Counter::CounterValueReference:
-    return C.getCounterID();
-  case Counter::Expression: {
-    if (C.getExpressionID() >= Expressions.size())
-      return 0;
-    const auto &E = Expressions[C.getExpressionID()];
-    return std::max(getMaxCounterID(E.LHS), getMaxCounterID(E.RHS));
+  struct StackElem {
+    Counter ICounter;
+    int64_t LHS = 0;
+    enum {
+      KNeverVisited = 0,
+      KVisitedOnce = 1,
+      KVisitedTwice = 2,
+    } VisitCount = KNeverVisited;
+  };
+
+  std::stack<StackElem> CounterStack;
+  CounterStack.push({C});
+
+  int64_t LastPoppedValue;
+
+  while (!CounterStack.empty()) {
+    StackElem &Current = CounterStack.top();
+
+    switch (Current.ICounter.getKind()) {
+    case Counter::Zero:
+      LastPoppedValue = 0;
+      CounterStack.pop();
+      break;
+    case Counter::CounterValueReference:
+      LastPoppedValue = Current.ICounter.getCounterID();
+      CounterStack.pop();
+      break;
+    case Counter::Expression: {
+      if (Current.ICounter.getExpressionID() >= Expressions.size()) {
+        LastPoppedValue = 0;
+        CounterStack.pop();
+      } else {
+        const auto &E = Expressions[Current.ICounter.getExpressionID()];
+        if (Current.VisitCount == StackElem::KNeverVisited) {
+          CounterStack.push(StackElem{E.LHS});
+          Current.VisitCount = StackElem::KVisitedOnce;
+        } else if (Current.VisitCount == StackElem::KVisitedOnce) {
+          Current.LHS = LastPoppedValue;
+          CounterStack.push(StackElem{E.RHS});
+          Current.VisitCount = StackElem::KVisitedTwice;
+        } else {
+          int64_t LHS = Current.LHS;
+          int64_t RHS = LastPoppedValue;
+          LastPoppedValue = std::max(LHS, RHS);
+          CounterStack.pop();
+        }
+      }
+      break;
+    }
+    }
   }
-  }
-  llvm_unreachable("Unhandled CounterKind");
+
+  return LastPoppedValue;
 }
 
 void FunctionRecordIterator::skipOtherFiles() {
@@ -228,12 +609,189 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
   return MaxCounterID;
 }
 
+/// Returns the bit count
+static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
+                                 const CoverageMappingRecord &Record) {
+  unsigned MaxBitmapIdx = 0;
+  unsigned NumConditions = 0;
+  // Scan max(BitmapIdx).
+  // Note that `<=` is used insted of `<`, because `BitmapIdx == 0` is valid
+  // and `MaxBitmapIdx is `unsigned`. `BitmapIdx` is unique in the record.
+  for (const auto &Region : reverse(Record.MappingRegions)) {
+    if (Region.Kind != CounterMappingRegion::MCDCDecisionRegion)
+      continue;
+    const auto &DecisionParams = Region.getDecisionParams();
+    if (MaxBitmapIdx <= DecisionParams.BitmapIdx) {
+      MaxBitmapIdx = DecisionParams.BitmapIdx;
+      NumConditions = DecisionParams.NumConditions;
+    }
+  }
+  unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
+  return MaxBitmapIdx * CHAR_BIT + SizeInBits;
+}
+
+namespace {
+
+/// Collect Decisions, Branchs, and Expansions and associate them.
+class MCDCDecisionRecorder {
+private:
+  /// This holds the DecisionRegion and MCDCBranches under it.
+  /// Also traverses Expansion(s).
+  /// The Decision has the number of MCDCBranches and will complete
+  /// when it is filled with unique ConditionID of MCDCBranches.
+  struct DecisionRecord {
+    const CounterMappingRegion *DecisionRegion;
+
+    /// They are reflected from DecisionRegion for convenience.
+    mcdc::DecisionParameters DecisionParams;
+    LineColPair DecisionStartLoc;
+    LineColPair DecisionEndLoc;
+
+    /// This is passed to `MCDCRecordProcessor`, so this should be compatible
+    /// to`ArrayRef<const CounterMappingRegion *>`.
+    SmallVector<const CounterMappingRegion *> MCDCBranches;
+
+    /// IDs that are stored in MCDCBranches
+    /// Complete when all IDs (1 to NumConditions) are met.
+    DenseSet<mcdc::ConditionID> ConditionIDs;
+
+    /// Set of IDs of Expansion(s) that are relevant to DecisionRegion
+    /// and its children (via expansions).
+    /// FileID  pointed by ExpandedFileID is dedicated to the expansion, so
+    /// the location in the expansion doesn't matter.
+    DenseSet<unsigned> ExpandedFileIDs;
+
+    DecisionRecord(const CounterMappingRegion &Decision)
+        : DecisionRegion(&Decision),
+          DecisionParams(Decision.getDecisionParams()),
+          DecisionStartLoc(Decision.startLoc()),
+          DecisionEndLoc(Decision.endLoc()) {
+      assert(Decision.Kind == CounterMappingRegion::MCDCDecisionRegion);
+    }
+
+    /// Determine whether DecisionRecord dominates `R`.
+    bool dominates(const CounterMappingRegion &R) const {
+      // Determine whether `R` is included in `DecisionRegion`.
+      if (R.FileID == DecisionRegion->FileID &&
+          R.startLoc() >= DecisionStartLoc && R.endLoc() <= DecisionEndLoc)
+        return true;
+
+      // Determine whether `R` is pointed by any of Expansions.
+      return ExpandedFileIDs.contains(R.FileID);
+    }
+
+    enum Result {
+      NotProcessed = 0, /// Irrelevant to this Decision
+      Processed,        /// Added to this Decision
+      Completed,        /// Added and filled this Decision
+    };
+
+    /// Add Branch into the Decision
+    /// \param Branch expects MCDCBranchRegion
+    /// \returns NotProcessed/Processed/Completed
+    Result addBranch(const CounterMappingRegion &Branch) {
+      assert(Branch.Kind == CounterMappingRegion::MCDCBranchRegion);
+
+      auto ConditionID = Branch.getBranchParams().ID;
+
+      if (ConditionIDs.contains(ConditionID) ||
+          ConditionID >= DecisionParams.NumConditions)
+        return NotProcessed;
+
+      if (!this->dominates(Branch))
+        return NotProcessed;
+
+      assert(MCDCBranches.size() < DecisionParams.NumConditions);
+
+      // Put `ID=0` in front of `MCDCBranches` for convenience
+      // even if `MCDCBranches` is not topological.
+      if (ConditionID == 0)
+        MCDCBranches.insert(MCDCBranches.begin(), &Branch);
+      else
+        MCDCBranches.push_back(&Branch);
+
+      // Mark `ID` as `assigned`.
+      ConditionIDs.insert(ConditionID);
+
+      // `Completed` when `MCDCBranches` is full
+      return (MCDCBranches.size() == DecisionParams.NumConditions ? Completed
+                                                                  : Processed);
+    }
+
+    /// Record Expansion if it is relevant to this Decision.
+    /// Each `Expansion` may nest.
+    /// \returns true if recorded.
+    bool recordExpansion(const CounterMappingRegion &Expansion) {
+      if (!this->dominates(Expansion))
+        return false;
+
+      ExpandedFileIDs.insert(Expansion.ExpandedFileID);
+      return true;
+    }
+  };
+
+private:
+  /// Decisions in progress
+  /// DecisionRecord is added for each MCDCDecisionRegion.
+  /// DecisionRecord is removed when Decision is completed.
+  SmallVector<DecisionRecord> Decisions;
+
+public:
+  ~MCDCDecisionRecorder() {
+    assert(Decisions.empty() && "All Decisions have not been resolved");
+  }
+
+  /// Register Region and start recording.
+  void registerDecision(const CounterMappingRegion &Decision) {
+    Decisions.emplace_back(Decision);
+  }
+
+  void recordExpansion(const CounterMappingRegion &Expansion) {
+    any_of(Decisions, [&Expansion](auto &Decision) {
+      return Decision.recordExpansion(Expansion);
+    });
+  }
+
+  using DecisionAndBranches =
+      std::pair<const CounterMappingRegion *,             /// Decision
+                SmallVector<const CounterMappingRegion *> /// Branches
+                >;
+
+  /// Add MCDCBranchRegion to DecisionRecord.
+  /// \param Branch to be processed
+  /// \returns DecisionsAndBranches if DecisionRecord completed.
+  ///     Or returns nullopt.
+  std::optional<DecisionAndBranches>
+  processBranch(const CounterMappingRegion &Branch) {
+    // Seek each Decision and apply Region to it.
+    for (auto DecisionIter = Decisions.begin(), DecisionEnd = Decisions.end();
+         DecisionIter != DecisionEnd; ++DecisionIter)
+      switch (DecisionIter->addBranch(Branch)) {
+      case DecisionRecord::NotProcessed:
+        continue;
+      case DecisionRecord::Processed:
+        return std::nullopt;
+      case DecisionRecord::Completed:
+        DecisionAndBranches Result =
+            std::make_pair(DecisionIter->DecisionRegion,
+                           std::move(DecisionIter->MCDCBranches));
+        Decisions.erase(DecisionIter); // No longer used.
+        return Result;
+      }
+
+    llvm_unreachable("Branch not found in Decisions");
+  }
+};
+
+} // namespace
+
 Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
     IndexedInstrProfReader &ProfileReader) {
   StringRef OrigFuncName = Record.FunctionName;
   if (OrigFuncName.empty())
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "record function name is empty");
 
   if (Record.Filenames.empty())
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName);
@@ -245,16 +803,32 @@ Error CoverageMapping::loadFunctionRecord(
   std::vector<uint64_t> Counts;
   if (Error E = ProfileReader.getFunctionCounts(Record.FunctionName,
                                                 Record.FunctionHash, Counts)) {
-    instrprof_error IPE = InstrProfError::take(std::move(E));
+    instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
     if (IPE == instrprof_error::hash_mismatch) {
       FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
                                       Record.FunctionHash);
       return Error::success();
-    } else if (IPE != instrprof_error::unknown_function)
+    }
+    if (IPE != instrprof_error::unknown_function)
       return make_error<InstrProfError>(IPE);
     Counts.assign(getMaxCounterID(Ctx, Record) + 1, 0);
   }
   Ctx.setCounts(Counts);
+
+  BitVector Bitmap;
+  if (Error E = ProfileReader.getFunctionBitmap(Record.FunctionName,
+                                                Record.FunctionHash, Bitmap)) {
+    instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
+    if (IPE == instrprof_error::hash_mismatch) {
+      FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
+                                      Record.FunctionHash);
+      return Error::success();
+    }
+    if (IPE != instrprof_error::unknown_function)
+      return make_error<InstrProfError>(IPE);
+    Bitmap = BitVector(getMaxBitmapSize(Ctx, Record));
+  }
+  Ctx.setBitmap(std::move(Bitmap));
 
   assert(!Record.MappingRegions.empty() && "Function has no regions");
 
@@ -267,8 +841,15 @@ Error CoverageMapping::loadFunctionRecord(
       Record.MappingRegions[0].Count.isZero() && Counts[0] > 0)
     return Error::success();
 
+  MCDCDecisionRecorder MCDCDecisions;
   FunctionRecord Function(OrigFuncName, Record.Filenames);
   for (const auto &Region : Record.MappingRegions) {
+    // MCDCDecisionRegion should be handled first since it overlaps with
+    // others inside.
+    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion) {
+      MCDCDecisions.registerDecision(Region);
+      continue;
+    }
     Expected<int64_t> ExecutionCount = Ctx.evaluate(Region.Count);
     if (auto E = ExecutionCount.takeError()) {
       consumeError(std::move(E));
@@ -279,7 +860,38 @@ Error CoverageMapping::loadFunctionRecord(
       consumeError(std::move(E));
       return Error::success();
     }
-    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount);
+    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount,
+                        ProfileReader.hasSingleByteCoverage());
+
+    // Record ExpansionRegion.
+    if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
+      MCDCDecisions.recordExpansion(Region);
+      continue;
+    }
+
+    // Do nothing unless MCDCBranchRegion.
+    if (Region.Kind != CounterMappingRegion::MCDCBranchRegion)
+      continue;
+
+    auto Result = MCDCDecisions.processBranch(Region);
+    if (!Result) // Any Decision doesn't complete.
+      continue;
+
+    auto MCDCDecision = Result->first;
+    auto &MCDCBranches = Result->second;
+
+    // Since the bitmap identifies the executed test vectors for an MC/DC
+    // DecisionRegion, all of the information is now available to process.
+    // This is where the bulk of the MC/DC progressing takes place.
+    Expected<MCDCRecord> Record =
+        Ctx.evaluateMCDCRegion(*MCDCDecision, MCDCBranches);
+    if (auto E = Record.takeError()) {
+      consumeError(std::move(E));
+      return Error::success();
+    }
+
+    // Save the MC/DC Record so that it can be visualized later.
+    Function.pushMCDCRecord(std::move(*Record));
   }
 
   // Don't create records for (filenames, function) pairs we've already seen.
@@ -338,51 +950,115 @@ static Error handleMaybeNoDataFoundError(Error E) {
       std::move(E), [](const CoverageMapError &CME) {
         if (CME.get() == coveragemap_error::no_data_found)
           return static_cast<Error>(Error::success());
-        return make_error<CoverageMapError>(CME.get());
+        return make_error<CoverageMapError>(CME.get(), CME.getMessage());
       });
 }
 
-Expected<std::unique_ptr<CoverageMapping>>
-CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
-                      StringRef ProfileFilename, ArrayRef<StringRef> Arches,
-                      StringRef CompilationDir) {
-  auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename);
+Error CoverageMapping::loadFromFile(
+    StringRef Filename, StringRef Arch, StringRef CompilationDir,
+    IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
+    bool &DataFound, SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
+  auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
+      Filename, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+  if (std::error_code EC = CovMappingBufOrErr.getError())
+    return createFileError(Filename, errorCodeToError(EC));
+  MemoryBufferRef CovMappingBufRef =
+      CovMappingBufOrErr.get()->getMemBufferRef();
+  SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
+
+  SmallVector<object::BuildIDRef> BinaryIDs;
+  auto CoverageReadersOrErr = BinaryCoverageReader::create(
+      CovMappingBufRef, Arch, Buffers, CompilationDir,
+      FoundBinaryIDs ? &BinaryIDs : nullptr);
+  if (Error E = CoverageReadersOrErr.takeError()) {
+    E = handleMaybeNoDataFoundError(std::move(E));
+    if (E)
+      return createFileError(Filename, std::move(E));
+    return E;
+  }
+
+  SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
+  for (auto &Reader : CoverageReadersOrErr.get())
+    Readers.push_back(std::move(Reader));
+  if (FoundBinaryIDs && !Readers.empty()) {
+    llvm::append_range(*FoundBinaryIDs,
+                       llvm::map_range(BinaryIDs, [](object::BuildIDRef BID) {
+                         return object::BuildID(BID);
+                       }));
+  }
+  DataFound |= !Readers.empty();
+  if (Error E = loadFromReaders(Readers, ProfileReader, Coverage))
+    return createFileError(Filename, std::move(E));
+  return Error::success();
+}
+
+Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
+    ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
+    vfs::FileSystem &FS, ArrayRef<StringRef> Arches, StringRef CompilationDir,
+    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
+  auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS);
   if (Error E = ProfileReaderOrErr.takeError())
-    return std::move(E);
+    return createFileError(ProfileFilename, std::move(E));
   auto ProfileReader = std::move(ProfileReaderOrErr.get());
   auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
   bool DataFound = false;
 
-  for (const auto &File : llvm::enumerate(ObjectFilenames)) {
-    auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
-        File.value(), /*IsText=*/false, /*RequiresNullTerminator=*/false);
-    if (std::error_code EC = CovMappingBufOrErr.getError())
-      return errorCodeToError(EC);
-    StringRef Arch = Arches.empty() ? StringRef() : Arches[File.index()];
-    MemoryBufferRef CovMappingBufRef =
-        CovMappingBufOrErr.get()->getMemBufferRef();
-    SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
-    auto CoverageReadersOrErr = BinaryCoverageReader::create(
-        CovMappingBufRef, Arch, Buffers, CompilationDir);
-    if (Error E = CoverageReadersOrErr.takeError()) {
-      E = handleMaybeNoDataFoundError(std::move(E));
-      if (E)
-        return std::move(E);
-      // E == success (originally a no_data_found error).
-      continue;
-    }
+  auto GetArch = [&](size_t Idx) {
+    if (Arches.empty())
+      return StringRef();
+    if (Arches.size() == 1)
+      return Arches.front();
+    return Arches[Idx];
+  };
 
-    SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
-    for (auto &Reader : CoverageReadersOrErr.get())
-      Readers.push_back(std::move(Reader));
-    DataFound |= !Readers.empty();
-    if (Error E = loadFromReaders(Readers, *ProfileReader, *Coverage))
+  SmallVector<object::BuildID> FoundBinaryIDs;
+  for (const auto &File : llvm::enumerate(ObjectFilenames)) {
+    if (Error E =
+            loadFromFile(File.value(), GetArch(File.index()), CompilationDir,
+                         *ProfileReader, *Coverage, DataFound, &FoundBinaryIDs))
       return std::move(E);
   }
-  // If no readers were created, either no objects were provided or none of them
-  // had coverage data. Return an error in the latter case.
-  if (!DataFound && !ObjectFilenames.empty())
-    return make_error<CoverageMapError>(coveragemap_error::no_data_found);
+
+  if (BIDFetcher) {
+    std::vector<object::BuildID> ProfileBinaryIDs;
+    if (Error E = ProfileReader->readBinaryIds(ProfileBinaryIDs))
+      return createFileError(ProfileFilename, std::move(E));
+
+    SmallVector<object::BuildIDRef> BinaryIDsToFetch;
+    if (!ProfileBinaryIDs.empty()) {
+      const auto &Compare = [](object::BuildIDRef A, object::BuildIDRef B) {
+        return std::lexicographical_compare(A.begin(), A.end(), B.begin(),
+                                            B.end());
+      };
+      llvm::sort(FoundBinaryIDs, Compare);
+      std::set_difference(
+          ProfileBinaryIDs.begin(), ProfileBinaryIDs.end(),
+          FoundBinaryIDs.begin(), FoundBinaryIDs.end(),
+          std::inserter(BinaryIDsToFetch, BinaryIDsToFetch.end()), Compare);
+    }
+
+    for (object::BuildIDRef BinaryID : BinaryIDsToFetch) {
+      std::optional<std::string> PathOpt = BIDFetcher->fetch(BinaryID);
+      if (PathOpt) {
+        std::string Path = std::move(*PathOpt);
+        StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
+        if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
+                                  *Coverage, DataFound))
+          return std::move(E);
+      } else if (CheckBinaryIDs) {
+        return createFileError(
+            ProfileFilename,
+            createStringError(errc::no_such_file_or_directory,
+                              "Missing binary ID: " +
+                                  llvm::toHex(BinaryID, /*LowerCase=*/true)));
+      }
+    }
+  }
+
+  if (!DataFound)
+    return createFileError(
+        join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "),
+        make_error<CoverageMapError>(coveragemap_error::no_data_found));
   return std::move(Coverage);
 }
 
@@ -452,10 +1128,10 @@ class SegmentBuilder {
 
   /// Emit segments for active regions which end before \p Loc.
   ///
-  /// \p Loc: The start location of the next region. If None, all active
+  /// \p Loc: The start location of the next region. If std::nullopt, all active
   /// regions are completed.
   /// \p FirstCompletedRegion: Index of the first completed region.
-  void completeRegionsUntil(Optional<LineColPair> Loc,
+  void completeRegionsUntil(std::optional<LineColPair> Loc,
                             unsigned FirstCompletedRegion) {
     // Sort the completed regions by end location. This makes it simple to
     // emit closing segments in sorted order.
@@ -554,7 +1230,7 @@ class SegmentBuilder {
 
     // Complete any remaining active regions.
     if (!ActiveRegions.empty())
-      completeRegionsUntil(None, 0);
+      completeRegionsUntil(std::nullopt, 0);
   }
 
   /// Sort a nested sequence of regions from a single file.
@@ -607,8 +1283,14 @@ class SegmentBuilder {
       // value for that area.
       // We add counts of the regions of the same kind as the active region
       // to handle the both situations.
-      if (I->Kind == Active->Kind)
-        Active->ExecutionCount += I->ExecutionCount;
+      if (I->Kind == Active->Kind) {
+        assert(I->HasSingleByteCoverage == Active->HasSingleByteCoverage &&
+               "Regions are generated in different coverage modes");
+        if (I->HasSingleByteCoverage)
+          Active->ExecutionCount = Active->ExecutionCount || I->ExecutionCount;
+        else
+          Active->ExecutionCount += I->ExecutionCount;
+      }
     }
     return Regions.drop_back(std::distance(++Active, End));
   }
@@ -673,25 +1355,27 @@ static SmallBitVector gatherFileIDs(StringRef SourceFile,
 }
 
 /// Return the ID of the file where the definition of the function is located.
-static Optional<unsigned> findMainViewFileID(const FunctionRecord &Function) {
+static std::optional<unsigned>
+findMainViewFileID(const FunctionRecord &Function) {
   SmallBitVector IsNotExpandedFile(Function.Filenames.size(), true);
   for (const auto &CR : Function.CountedRegions)
     if (CR.Kind == CounterMappingRegion::ExpansionRegion)
       IsNotExpandedFile[CR.ExpandedFileID] = false;
   int I = IsNotExpandedFile.find_first();
   if (I == -1)
-    return None;
+    return std::nullopt;
   return I;
 }
 
 /// Check if SourceFile is the file that contains the definition of
-/// the Function. Return the ID of the file in that case or None otherwise.
-static Optional<unsigned> findMainViewFileID(StringRef SourceFile,
-                                             const FunctionRecord &Function) {
-  Optional<unsigned> I = findMainViewFileID(Function);
+/// the Function. Return the ID of the file in that case or std::nullopt
+/// otherwise.
+static std::optional<unsigned>
+findMainViewFileID(StringRef SourceFile, const FunctionRecord &Function) {
+  std::optional<unsigned> I = findMainViewFileID(Function);
   if (I && SourceFile == Function.Filenames[*I])
     return I;
-  return None;
+  return std::nullopt;
 }
 
 static bool isExpansion(const CountedRegion &R, unsigned FileID) {
@@ -720,6 +1404,10 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
     for (const auto &CR : Function.CountedBranchRegions)
       if (FileIDs.test(CR.FileID) && (CR.FileID == CR.ExpandedFileID))
         FileCoverage.BranchRegions.push_back(CR);
+    // Capture MCDC records specific to the function.
+    for (const auto &MR : Function.MCDCRecords)
+      if (FileIDs.test(MR.getDecisionRegion().FileID))
+        FileCoverage.MCDCRecords.push_back(MR);
   }
 
   LLVM_DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
@@ -771,6 +1459,11 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
   for (const auto &CR : Function.CountedBranchRegions)
     if (CR.FileID == *MainFileID)
       FunctionCoverage.BranchRegions.push_back(CR);
+
+  // Capture MCDC records specific to the function.
+  for (const auto &MR : Function.MCDCRecords)
+    if (MR.getDecisionRegion().FileID == *MainFileID)
+      FunctionCoverage.MCDCRecords.push_back(MR);
 
   LLVM_DEBUG(dbgs() << "Emitting segments for function: " << Function.Name
                     << "\n");
@@ -825,8 +1518,15 @@ LineCoverageStats::LineCoverageStats(
       !StartOfSkippedRegion &&
       ((WrappedSegment && WrappedSegment->HasCount) || (MinRegionCount > 0));
 
-  if (!Mapped)
+  // if there is any starting segment at this line with a counter, it must be
+  // mapped
+  Mapped |= std::any_of(
+      LineSegments.begin(), LineSegments.end(),
+      [](const auto *Seq) { return Seq->IsRegionEntry && Seq->HasCount; });
+
+  if (!Mapped) {
     return;
+  }
 
   // Pick the max count from the non-gap, region entry segments and the
   // wrapped count.
@@ -855,26 +1555,43 @@ LineCoverageIterator &LineCoverageIterator::operator++() {
   return *this;
 }
 
-static std::string getCoverageMapErrString(coveragemap_error Err) {
+static std::string getCoverageMapErrString(coveragemap_error Err,
+                                           const std::string &ErrMsg = "") {
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+
   switch (Err) {
   case coveragemap_error::success:
-    return "Success";
+    OS << "success";
+    break;
   case coveragemap_error::eof:
-    return "End of File";
+    OS << "end of File";
+    break;
   case coveragemap_error::no_data_found:
-    return "No coverage data found";
+    OS << "no coverage data found";
+    break;
   case coveragemap_error::unsupported_version:
-    return "Unsupported coverage format version";
+    OS << "unsupported coverage format version";
+    break;
   case coveragemap_error::truncated:
-    return "Truncated coverage data";
+    OS << "truncated coverage data";
+    break;
   case coveragemap_error::malformed:
-    return "Malformed coverage data";
+    OS << "malformed coverage data";
+    break;
   case coveragemap_error::decompression_failed:
-    return "Failed to decompress coverage data (zlib)";
+    OS << "failed to decompress coverage data (zlib)";
+    break;
   case coveragemap_error::invalid_or_missing_arch_specifier:
-    return "`-arch` specifier is invalid or missing for universal binary";
+    OS << "`-arch` specifier is invalid or missing for universal binary";
+    break;
   }
-  llvm_unreachable("A value of coveragemap_error has no message.");
+
+  // If optional error message is not empty, append it to the message.
+  if (!ErrMsg.empty())
+    OS << ": " << ErrMsg;
+
+  return Msg;
 }
 
 namespace {
@@ -892,13 +1609,12 @@ class CoverageMappingErrorCategoryType : public std::error_category {
 } // end anonymous namespace
 
 std::string CoverageMapError::message() const {
-  return getCoverageMapErrString(Err);
+  return getCoverageMapErrString(Err, Msg);
 }
 
-static ManagedStatic<CoverageMappingErrorCategoryType> ErrorCategory;
-
 const std::error_category &llvm::coverage::coveragemap_category() {
-  return *ErrorCategory;
+  static CoverageMappingErrorCategoryType ErrorCategory;
+  return ErrorCategory;
 }
 
 char CoverageMapError::ID = 0;

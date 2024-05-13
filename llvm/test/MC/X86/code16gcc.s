@@ -11,13 +11,13 @@
 	lodsb (%esi), %al
 	//CHECK:	lodsb	(%esi), %al             # encoding: [0x67,0xac]
 	lodsl %gs:(%esi)
-	//CHECK:	lodsl	%gs:(%esi), %eax        # encoding: [0x66,0x65,0x67,0xad]
+	//CHECK:	lodsl	%gs:(%esi), %eax        # encoding: [0x67,0x65,0x66,0xad]
 	lods (%esi), %ax
 	//CHECK:	lodsw	(%esi), %ax             # encoding: [0x67,0xad]
 	stosw
 	//CHECK:	stosw	%ax, %es:(%edi)         # encoding: [0x67,0xab]
 	stos %eax, (%edi)
-	//CHECK:	stosl	%eax, %es:(%edi)        # encoding: [0x66,0x67,0xab]
+	//CHECK:	stosl	%eax, %es:(%edi)        # encoding: [0x67,0x66,0xab]
 	stosb %al, %es:(%edi)
 	//CHECK:	stosb	%al, %es:(%edi)         # encoding: [0x67,0xaa]
 	scas %es:(%edi), %al
@@ -29,15 +29,15 @@
 	cmpsw (%edi), (%esi)
 	//CHECK:	cmpsw	%es:(%edi), (%esi)      # encoding: [0x67,0xa7]
 	cmpsl %es:(%edi), %ss:(%esi)
-	//CHECK:	cmpsl	%es:(%edi), %ss:(%esi)  # encoding: [0x66,0x36,0x67,0xa7]
+	//CHECK:	cmpsl	%es:(%edi), %ss:(%esi)  # encoding: [0x67,0x36,0x66,0xa7]
 	movsb (%esi), (%edi)
 	//CHECK:	movsb	(%esi), %es:(%edi)      # encoding: [0x67,0xa4]
 	movsl %gs:(%esi), (%edi)
-	//CHECK:	movsl	%gs:(%esi), %es:(%edi)  # encoding: [0x66,0x65,0x67,0xa5]
+	//CHECK:	movsl	%gs:(%esi), %es:(%edi)  # encoding: [0x67,0x65,0x66,0xa5]
 	outsb
 	//CHECK:	outsb	(%esi), %dx             # encoding: [0x67,0x6e]
 	outsw %fs:(%esi), %dx
-	//CHECK:	outsw	%fs:(%esi), %dx         # encoding: [0x64,0x67,0x6f]
+	//CHECK:	outsw	%fs:(%esi), %dx         # encoding: [0x67,0x64,0x6f]
 	insw %dx, (%di)
 	//CHECK:	insw	%dx, %es:(%di)          # encoding: [0x6d]
 	call $0x7ace,$0x7ace

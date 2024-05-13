@@ -7,7 +7,7 @@
 
 ; The offset must be loaded from the constant pool.  It doesn't really
 ; matter whether we use LARL/AG or LGRL/AGR for the last part.
-define dso_local i32 *@foo() {
+define dso_local ptr@foo() {
 ; CHECK-CP: .LCP{{.*}}:
 ; CHECK-CP: .quad x@NTPOFF
 ;
@@ -18,5 +18,5 @@ define dso_local i32 *@foo() {
 ; CHECK-MAIN-DAG: larl %r1, .LCP{{.*}}
 ; CHECK-MAIN: ag %r2, 0(%r1)
 ; CHECK-MAIN: br %r14
-  ret i32 *@x
+  ret ptr@x
 }

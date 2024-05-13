@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -verify -Wno-null-dereference -Wno-tautological-undefined-compare -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -Wno-null-dereference -Wno-tautological-undefined-compare -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(bool);
 
@@ -24,14 +24,14 @@ char t1 () {
   return '0';
 }
 
-// just a sanity test, the same behavior as t1()
+// just a basic correctness test, the same behavior as t1()
 char t2 () {
   *ptr() = 'c';
   return '0';
 }
 
 // Each of the tests below is repeated with pointers as well as references.
-// This is mostly a sanity check, but then again, both should work!
+// This is mostly a basic correctness check, but then again, both should work!
 char t3 () {
   char& r = ref();
   r = 'c'; // no-warning
@@ -59,7 +59,7 @@ char t6 (char* p) {
 }
 
 
-// PR13440 / <rdar://problem/11977113>
+// PR13440
 // Test that the array-to-pointer decay works for array references as well.
 // More generally, when we want an lvalue for a reference field, we still need
 // to do one level of load.

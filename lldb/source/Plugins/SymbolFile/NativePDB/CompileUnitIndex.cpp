@@ -43,7 +43,7 @@ static bool IsMainFile(llvm::StringRef main, llvm::StringRef other) {
 
   llvm::SmallString<64> normalized(other);
   llvm::sys::path::native(normalized);
-  return main.equals_lower(normalized);
+  return main.equals_insensitive(normalized);
 }
 
 static void ParseCompile3(const CVSymbol &sym, CompilandIndexItem &cci) {
@@ -66,7 +66,7 @@ static void ParseBuildInfo(PdbIndex &index, const CVSymbol &sym,
   // S_BUILDINFO just points to an LF_BUILDINFO in the IPI stream.  Let's do
   // a little extra work to pull out the LF_BUILDINFO.
   LazyRandomTypeCollection &types = index.ipi().typeCollection();
-  llvm::Optional<CVType> cvt = types.tryGetType(bis.BuildId);
+  std::optional<CVType> cvt = types.tryGetType(bis.BuildId);
 
   if (!cvt || cvt->kind() != LF_BUILDINFO)
     return;
@@ -106,6 +106,24 @@ static void ParseExtendedInfo(PdbIndex &index, CompilandIndexItem &item) {
   }
 }
 
+static void ParseInlineeLineTableForCompileUnit(CompilandIndexItem &item) {
+  for (const auto &ss : item.m_debug_stream.getSubsectionsArray()) {
+    if (ss.kind() != DebugSubsectionKind::InlineeLines)
+      continue;
+
+    DebugInlineeLinesSubsectionRef inlinee_lines;
+    llvm::BinaryStreamReader reader(ss.getRecordData());
+    if (llvm::Error error = inlinee_lines.initialize(reader)) {
+      consumeError(std::move(error));
+      continue;
+    }
+
+    for (const InlineeSourceLine &Line : inlinee_lines) {
+      item.m_inline_map[Line.Header->Inlinee] = Line;
+    }
+  }
+}
+
 CompilandIndexItem::CompilandIndexItem(
     PdbCompilandId id, llvm::pdb::ModuleDebugStreamRef debug_stream,
     llvm::pdb::DbiModuleDescriptor descriptor)
@@ -142,10 +160,15 @@ CompilandIndexItem &CompileUnitIndex::GetOrCreateCompiland(uint16_t modi) {
   cci = std::make_unique<CompilandIndexItem>(
       PdbCompilandId{modi}, std::move(debug_stream), std::move(descriptor));
   ParseExtendedInfo(m_index, *cci);
+  ParseInlineeLineTableForCompileUnit(*cci);
 
-  cci->m_strings.initialize(debug_stream.getSubsectionsArray());
-  PDBStringTable &strings = cantFail(m_index.pdb().getStringTable());
-  cci->m_strings.setStrings(strings.getStringTable());
+  auto strings = m_index.pdb().getStringTable();
+  if (strings) {
+    cci->m_strings.initialize(cci->m_debug_stream.getSubsectionsArray());
+    cci->m_strings.setStrings(strings->getStringTable());
+  } else {
+    consumeError(strings.takeError());
+  }
 
   // We want the main source file to always comes first.  Note that we can't
   // just push_back the main file onto the front because `GetMainSourceFile`
@@ -213,7 +236,7 @@ CompileUnitIndex::GetMainSourceFile(const CompilandIndexItem &item) const {
   llvm::cantFail(
       TypeDeserializer::deserializeAs<StringIdRecord>(file_cvt, file_name));
 
-  llvm::sys::path::Style style = working_dir.String.startswith("/")
+  llvm::sys::path::Style style = working_dir.String.starts_with("/")
                                      ? llvm::sys::path::Style::posix
                                      : llvm::sys::path::Style::windows;
   if (llvm::sys::path::is_absolute(file_name.String, style))

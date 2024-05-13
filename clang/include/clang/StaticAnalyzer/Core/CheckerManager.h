@@ -28,7 +28,6 @@ namespace clang {
 
 class AnalyzerOptions;
 class CallExpr;
-class CXXNewExpr;
 class Decl;
 class LocationContext;
 class Stmt;
@@ -50,7 +49,7 @@ class ExplodedNodeSet;
 class ExprEngine;
 struct EvalCallOptions;
 class MemRegion;
-struct NodeBuilderContext;
+class NodeBuilderContext;
 class ObjCMethodCall;
 class RegionAndSymbolInvalidationTraits;
 class SVal;
@@ -154,7 +153,7 @@ public:
 
   /// Constructs a CheckerManager without requiring an AST. No checker
   /// registration will take place. Only useful when one needs to print the
-  /// help flags through CheckerRegistryData, and the AST is unavalaible.
+  /// help flags through CheckerRegistryData, and the AST is unavailable.
   CheckerManager(AnalyzerOptions &AOptions, const LangOptions &LangOpts,
                  DiagnosticsEngine &Diags, ArrayRef<std::string> plugins);
 
@@ -489,13 +488,11 @@ public:
   using CheckCallFunc =
       CheckerFn<void (const CallEvent &, CheckerContext &)>;
 
-  using CheckLocationFunc =
-      CheckerFn<void (const SVal &location, bool isLoad, const Stmt *S,
-                      CheckerContext &)>;
+  using CheckLocationFunc = CheckerFn<void(SVal location, bool isLoad,
+                                           const Stmt *S, CheckerContext &)>;
 
   using CheckBindFunc =
-      CheckerFn<void (const SVal &location, const SVal &val, const Stmt *S,
-                      CheckerContext &)>;
+      CheckerFn<void(SVal location, SVal val, const Stmt *S, CheckerContext &)>;
 
   using CheckEndAnalysisFunc =
       CheckerFn<void (ExplodedGraph &, BugReporter &, ExprEngine &)>;
@@ -531,8 +528,7 @@ public:
                                  RegionAndSymbolInvalidationTraits *ITraits)>;
 
   using EvalAssumeFunc =
-      CheckerFn<ProgramStateRef (ProgramStateRef, const SVal &cond,
-                                 bool assumption)>;
+      CheckerFn<ProgramStateRef(ProgramStateRef, SVal cond, bool assumption)>;
 
   using EvalCallFunc = CheckerFn<bool (const CallEvent &, CheckerContext &)>;
 

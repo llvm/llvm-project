@@ -1,23 +1,23 @@
 // RUN: %clang_cc1 -verify=expected,omp4 -fopenmp -fopenmp-version=45 -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp -fopenmp-version=50 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp -o - -std=c++11 %s -Wuninitialized
 
 // RUN: not %clang_cc1 -fopenmp -std=c++11 -fopenmp-targets=aaa-bbb-ccc-ddd -o - %s 2>&1 | FileCheck %s
 
 // RUN: %clang_cc1 -verify=expected,omp4 -fopenmp-simd -fopenmp-version=45 -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-simd -fopenmp-version=50 -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-simd -std=c++11 -o - %s
 // CHECK: error: OpenMP target is invalid: 'aaa-bbb-ccc-ddd'
 // RUN: not %clang_cc1 -fopenmp -std=c++11 -triple nvptx64-nvidia-cuda -o - %s 2>&1 | FileCheck --check-prefix CHECK-UNSUPPORTED-HOST-TARGET %s
 // RUN: not %clang_cc1 -fopenmp -std=c++11 -triple nvptx-nvidia-cuda -o - %s 2>&1 | FileCheck --check-prefix CHECK-UNSUPPORTED-HOST-TARGET %s
-// CHECK-UNSUPPORTED-HOST-TARGET: error: The target '{{nvptx64-nvidia-cuda|nvptx-nvidia-cuda}}' is not a supported OpenMP host target.
+// CHECK-UNSUPPORTED-HOST-TARGET: error: target '{{nvptx64-nvidia-cuda|nvptx-nvidia-cuda}}' is not a supported OpenMP host target
 // RUN: not %clang_cc1 -fopenmp -std=c++11 -fopenmp-targets=hexagon-linux-gnu -o - %s 2>&1 | FileCheck --check-prefix CHECK-UNSUPPORTED-DEVICE-TARGET %s
 // CHECK-UNSUPPORTED-DEVICE-TARGET: OpenMP target is invalid: 'hexagon-linux-gnu'
 
-// RUN: not %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path 1111.bc -o - 2>&1 | FileCheck --check-prefix NO-HOST-BC %s
-// NO-HOST-BC: The provided host compiler IR file '1111.bc' is required to generate code for OpenMP target regions but cannot be found.
+// RUN: not %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path 1111.bc -o - 2>&1 | FileCheck --check-prefix NO-HOST-BC %s
+// NO-HOST-BC: provided host compiler IR file '1111.bc' is required to generate code for OpenMP target regions but cannot be found
 
 // RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -DREGION_HOST
-// RUN: not %clang_cc1 -verify=expected,omp4 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DREGION_DEVICE 2>&1
-// RUN: not %clang_cc1 -verify=expected,omp5 -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DREGION_DEVICE 2>&1
+// RUN: not %clang_cc1 -verify=expected,omp4 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DREGION_DEVICE 2>&1
+// RUN: not %clang_cc1 -verify=expected,omp5 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DREGION_DEVICE 2>&1
 
 #if defined(REGION_HOST) || defined(REGION_DEVICE)
 void foo() {

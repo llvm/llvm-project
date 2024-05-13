@@ -11,22 +11,21 @@ id TestCompoundLiteral(id a) {
 // CHECK:  "kind": "ExprWithCleanups",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 202,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "col": 10,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 218,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "col": 26,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "desugaredQualType": "id",
 // CHECK-NEXT:   "qualType": "id",
 // CHECK-NEXT:   "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "valueCategory": "rvalue",
+// CHECK-NEXT:  "valueCategory": "prvalue",
 // CHECK-NEXT:  "cleanupsHaveSideEffects": true,
 // CHECK-NEXT:  "cleanups": [
 // CHECK-NEXT:   {

@@ -13,9 +13,7 @@
 #ifndef LLVM_TOOLS_LLVM_XRAY_XRAY_ACCOUNT_H
 #define LLVM_TOOLS_LLVM_XRAY_XRAY_ACCOUNT_H
 
-#include <map>
 #include <utility>
-#include <vector>
 
 #include "func-id-helper.h"
 #include "llvm/ADT/Bitfields.h"
@@ -45,7 +43,7 @@ public:
       RecursionStatus &operator--();
       bool isRecursive() const;
     };
-    Optional<llvm::DenseMap<int32_t, RecursionStatus>> RecursionDepth;
+    std::optional<llvm::DenseMap<int32_t, RecursionStatus>> RecursionDepth;
   };
   typedef llvm::DenseMap<uint32_t, FunctionStack> PerThreadFunctionStackMap;
 

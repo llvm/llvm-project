@@ -1,4 +1,5 @@
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators %s -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump -v - | FileCheck %s
 ;
 ;    // Compile with -O1
 ;    typedef struct {
@@ -17,12 +18,11 @@
 ;
 ; CHECK: DW_TAG_formal_parameter [3]
 ; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        (
-; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000007): DW_OP_reg5 RDI, DW_OP_piece 0x8, DW_OP_piece 0x4, DW_OP_reg4 RSI, DW_OP_piece 0x4
-; CHECK-NEXT:     [0x0000000000000007, 0x0000000000000009): DW_OP_reg5 RDI, DW_OP_piece 0x8
+; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000009): DW_OP_reg5 RDI, DW_OP_piece 0x8, DW_OP_piece 0x4, DW_OP_reg4 RSI, DW_OP_piece 0x4
 ; CHECK-NEXT:   DW_AT_name {{.*}}"outer"
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        (0x00000044
-; CHECK-NEXT:     [0x0000000000000007, 0x0000000000000009): DW_OP_reg0 RAX, DW_OP_piece 0x4)
+; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        (0x0000002a
+; CHECK-NEXT:     [0x0000000000000007, 0x0000000000000009): DW_OP_reg4 RSI, DW_OP_piece 0x4)
 ; CHECK-NEXT:   "i1"
 
 ; ModuleID = '/Volumes/Data/llvm/test/DebugInfo/X86/sroasplit-2.ll'
@@ -50,7 +50,7 @@ define i32 @foo(i64 %outer.coerce0, i64 %outer.coerce1) #0 !dbg !4 {
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #2
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

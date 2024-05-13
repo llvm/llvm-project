@@ -16,7 +16,7 @@ public:
   // Constructors and Destructors
   CFCMutableDictionary(CFMutableDictionaryRef s = NULL);
   CFCMutableDictionary(const CFCMutableDictionary &rhs);
-  virtual ~CFCMutableDictionary();
+  ~CFCMutableDictionary() override;
 
   // Operators
   const CFCMutableDictionary &operator=(const CFCMutableDictionary &rhs);

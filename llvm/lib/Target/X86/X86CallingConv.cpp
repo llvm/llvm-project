@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 
@@ -68,23 +69,23 @@ static ArrayRef<MCPhysReg> CC_X86_VectorCallGetSSEs(const MVT &ValVT) {
   if (ValVT.is512BitVector()) {
     static const MCPhysReg RegListZMM[] = {X86::ZMM0, X86::ZMM1, X86::ZMM2,
                                            X86::ZMM3, X86::ZMM4, X86::ZMM5};
-    return makeArrayRef(std::begin(RegListZMM), std::end(RegListZMM));
+    return ArrayRef(std::begin(RegListZMM), std::end(RegListZMM));
   }
 
   if (ValVT.is256BitVector()) {
     static const MCPhysReg RegListYMM[] = {X86::YMM0, X86::YMM1, X86::YMM2,
                                            X86::YMM3, X86::YMM4, X86::YMM5};
-    return makeArrayRef(std::begin(RegListYMM), std::end(RegListYMM));
+    return ArrayRef(std::begin(RegListYMM), std::end(RegListYMM));
   }
 
   static const MCPhysReg RegListXMM[] = {X86::XMM0, X86::XMM1, X86::XMM2,
                                          X86::XMM3, X86::XMM4, X86::XMM5};
-  return makeArrayRef(std::begin(RegListXMM), std::end(RegListXMM));
+  return ArrayRef(std::begin(RegListXMM), std::end(RegListXMM));
 }
 
 static ArrayRef<MCPhysReg> CC_X86_64_VectorCallGetGPRs() {
   static const MCPhysReg RegListGPR[] = {X86::RCX, X86::RDX, X86::R8, X86::R9};
-  return makeArrayRef(std::begin(RegListGPR), std::end(RegListGPR));
+  return ArrayRef(std::begin(RegListGPR), std::end(RegListGPR));
 }
 
 static bool CC_X86_VectorCallAssignRegister(unsigned &ValNo, MVT &ValVT,
@@ -240,7 +241,7 @@ static bool CC_X86_32_MCUInReg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // This is similar to CCAssignToReg<[EAX, EDX, ECX]>, but makes sure
   // not to split i64 and double between a register and stack
   static const MCPhysReg RegList[] = {X86::EAX, X86::EDX, X86::ECX};
-  static const unsigned NumRegs = sizeof(RegList) / sizeof(RegList[0]);
+  static const unsigned NumRegs = std::size(RegList);
 
   SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
 
@@ -299,7 +300,7 @@ static bool CC_X86_Intr(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                         ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   const MachineFunction &MF = State.getMachineFunction();
   size_t ArgCount = State.getMachineFunction().getFunction().arg_size();
-  bool Is64Bit = static_cast<const X86Subtarget &>(MF.getSubtarget()).is64Bit();
+  bool Is64Bit = MF.getSubtarget<X86Subtarget>().is64Bit();
   unsigned SlotSize = Is64Bit ? 8 : 4;
   unsigned Offset;
   if (ArgCount == 1 && ValNo == 0) {

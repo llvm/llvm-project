@@ -12,7 +12,6 @@
 
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -23,6 +22,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GraphWriter.h"
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -75,7 +75,7 @@ static cl::opt<bool> PrintMachineBlockFreq(
 
 // Command line option to specify the name of the function for block frequency
 // dump. Defined in Analysis/BlockFrequencyInfo.cpp.
-extern cl::opt<std::string> PrintBlockFreqFuncName;
+extern cl::opt<std::string> PrintBFIFuncName;
 } // namespace llvm
 
 static GVDAGType getGVDT() {
@@ -198,13 +198,11 @@ void MachineBlockFrequencyInfo::calculate(
     MBFI.reset(new ImplType);
   MBFI->calculate(F, MBPI, MLI);
   if (ViewMachineBlockFreqPropagationDAG != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       F.getName().equals(ViewBlockFreqFuncName))) {
+      (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
     view("MachineBlockFrequencyDAGS." + F.getName());
   }
   if (PrintMachineBlockFreq &&
-      (PrintBlockFreqFuncName.empty() ||
-       F.getName().equals(PrintBlockFreqFuncName))) {
+      (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
     MBFI->print(dbgs());
   }
 }
@@ -228,22 +226,22 @@ void MachineBlockFrequencyInfo::view(const Twine &Name, bool isSimple) const {
 
 BlockFrequency
 MachineBlockFrequencyInfo::getBlockFreq(const MachineBasicBlock *MBB) const {
-  return MBFI ? MBFI->getBlockFreq(MBB) : 0;
+  return MBFI ? MBFI->getBlockFreq(MBB) : BlockFrequency(0);
 }
 
-Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
+std::optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
     const MachineBasicBlock *MBB) const {
   if (!MBFI)
-    return None;
+    return std::nullopt;
 
   const Function &F = MBFI->getFunction()->getFunction();
   return MBFI->getBlockProfileCount(F, MBB);
 }
 
-Optional<uint64_t>
-MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
+std::optional<uint64_t>
+MachineBlockFrequencyInfo::getProfileCountFromFreq(BlockFrequency Freq) const {
   if (!MBFI)
-    return None;
+    return std::nullopt;
 
   const Function &F = MBFI->getFunction()->getFunction();
   return MBFI->getProfileCountFromFreq(F, Freq);
@@ -263,7 +261,7 @@ void MachineBlockFrequencyInfo::onEdgeSplit(
   auto NewSuccFreq = MBFI->getBlockFreq(&NewPredecessor) *
                      MBPI.getEdgeProbability(&NewPredecessor, &NewSuccessor);
 
-  MBFI->setBlockFreq(&NewSuccessor, NewSuccFreq.getFrequency());
+  MBFI->setBlockFreq(&NewSuccessor, NewSuccFreq);
 }
 
 const MachineFunction *MachineBlockFrequencyInfo::getFunction() const {
@@ -274,18 +272,18 @@ const MachineBranchProbabilityInfo *MachineBlockFrequencyInfo::getMBPI() const {
   return MBFI ? &MBFI->getBPI() : nullptr;
 }
 
-raw_ostream &
-MachineBlockFrequencyInfo::printBlockFreq(raw_ostream &OS,
-                                          const BlockFrequency Freq) const {
-  return MBFI ? MBFI->printBlockFreq(OS, Freq) : OS;
+BlockFrequency MachineBlockFrequencyInfo::getEntryFreq() const {
+  return MBFI ? MBFI->getEntryFreq() : BlockFrequency(0);
 }
 
-raw_ostream &
-MachineBlockFrequencyInfo::printBlockFreq(raw_ostream &OS,
-                                          const MachineBasicBlock *MBB) const {
-  return MBFI ? MBFI->printBlockFreq(OS, MBB) : OS;
+Printable llvm::printBlockFreq(const MachineBlockFrequencyInfo &MBFI,
+                               BlockFrequency Freq) {
+  return Printable([&MBFI, Freq](raw_ostream &OS) {
+    printRelativeBlockFreq(OS, MBFI.getEntryFreq(), Freq);
+  });
 }
 
-uint64_t MachineBlockFrequencyInfo::getEntryFreq() const {
-  return MBFI ? MBFI->getEntryFreq() : 0;
+Printable llvm::printBlockFreq(const MachineBlockFrequencyInfo &MBFI,
+                               const MachineBasicBlock &MBB) {
+  return printBlockFreq(MBFI, MBFI.getBlockFreq(&MBB));
 }

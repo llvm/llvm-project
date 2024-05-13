@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Verfy that we do not use the GetElementPtr information to delinearize A
 ; because of the cast in-between. Use the single-dimensional modeling instead.
@@ -10,7 +10,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f([2 x i16]* %A) {
+define void @f(ptr %A) {
 entry:
   br label %for.cond
 
@@ -21,9 +21,8 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %tmp = shl nsw i64 %indvars.iv, 2
-  %arrayidx1 = getelementptr inbounds [2 x i16], [2 x i16]* %A, i64 %tmp, i64 0
-  %tmp2 = bitcast i16* %arrayidx1 to i64*
-  store i64 0, i64* %tmp2, align 8
+  %arrayidx1 = getelementptr inbounds [2 x i16], ptr %A, i64 %tmp, i64 0
+  store i64 0, ptr %arrayidx1, align 8
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

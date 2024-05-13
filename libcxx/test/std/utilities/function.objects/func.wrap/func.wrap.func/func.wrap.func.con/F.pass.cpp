@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 // <functional>
 
 // class function<R(ArgTypes...)>
 
 // function(F);
-
-// This test runs in C++03, but we have deprecated using std::function in C++03.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <functional>
 #include <cassert>
@@ -70,7 +69,7 @@ int main(int, char**)
     {
     std::function<int(int)> f = A();
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(f.target<A>());
     RTTI_ASSERT(f.target<int(*)(int)>() == 0);
     }

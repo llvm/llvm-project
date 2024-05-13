@@ -25,7 +25,7 @@ entry:
 ; PPC970: lfd
 ; PPC970: fcfid
 ; PPC970: frsp
-  store float %conv, float* %b.addr, align 4
+  store float %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -44,7 +44,7 @@ entry:
 ; PPC970: fcfid
 ; PPC970: frsp
 ; SPE: efscfsi
-  store float %conv, float* %b.addr, align 4
+  store float %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -65,7 +65,7 @@ entry:
 ; PPC970: frsp
 ; SPE: extsh
 ; SPE: efscfsi
-  store float %conv, float* %b.addr, align 4
+  store float %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -86,7 +86,7 @@ entry:
 ; PPC970: frsp
 ; SPE: extsb
 ; SPE: efscfsi
-  store float %conv, float* %b.addr, align 4
+  store float %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -106,7 +106,7 @@ entry:
 ; PPC970: lfd
 ; PPC970: fcfid
 ; SPE: efdcfsi
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -122,7 +122,7 @@ entry:
 ; PPC970: std
 ; PPC970: lfd
 ; PPC970: fcfid
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -142,7 +142,7 @@ entry:
 ; PPC970: fcfid
 ; SPE: extsh
 ; SPE: efdcfsi
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -162,7 +162,7 @@ entry:
 ; PPC970: fcfid
 ; SPE: extsb
 ; SPE: efdcfsi
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -178,7 +178,7 @@ entry:
 ; CHECK: lfd
 ; CHECK: fcfidus
 ; PPC970-NOT: fcfidus
-  store float %conv, float* %b.addr, align 4
+  store float %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -197,7 +197,7 @@ entry:
 ; PPC970-NOT: lfiwzx
 ; PPC970-NOT: fcfidus
 ; SPE: efscfui
-  store float %conv, float* %b.addr, align 4
+  store float %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -218,7 +218,7 @@ entry:
 ; PPC970: frsp
 ; SPE: clrlwi {{[0-9]+}}, {{[0-9]+}}, 16
 ; SPE: efscfui
-  store float %conv, float* %b.addr, align 4
+  store float %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -239,7 +239,7 @@ entry:
 ; PPC970: frsp
 ; SPE: clrlwi {{[0-9]+}}, {{[0-9]+}}, 24
 ; SPE: efscfui
-  store float %conv, float* %b.addr, align 4
+  store float %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -253,7 +253,7 @@ entry:
 ; CHECK: lfd
 ; CHECK: fcfidu
 ; PPC970-NOT: fcfidu
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -267,11 +267,10 @@ entry:
 ; CHECK-NEXT: li
 ; CHECK-NEXT: lfiwzx
 ; CHECK-NEXT: fcfidu
-; CHECKLE: fcfidu
 ; PPC970-NOT: lfiwzx
 ; PPC970-NOT: fcfidu
 ; SPE: efdcfui
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -291,7 +290,7 @@ entry:
 ; PPC970: fcfid
 ; SPE: clrlwi {{[0-9]+}}, {{[0-9]+}}, 16
 ; SPE: efdcfui
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -311,7 +310,7 @@ entry:
 ; PPC970: fcfid
 ; SPE: clrlwi {{[0-9]+}}, {{[0-9]+}}, 24
 ; SPE: efdcfui
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -330,7 +329,7 @@ entry:
 ; PPC970: stfd
 ; PPC970: lwa
 ; SPE: efsctsi
-  store i32 %conv, i32* %b.addr, align 4
+  store i32 %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -346,7 +345,7 @@ entry:
 ; PPC970: fctidz
 ; PPC970: stfd
 ; PPC970: ld
-  store i64 %conv, i64* %b.addr, align 4
+  store i64 %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -363,7 +362,7 @@ entry:
 ; PPC970: stfd
 ; PPC970: lwa
 ; SPE: efdctsi
-  store i32 %conv, i32* %b.addr, align 8
+  store i32 %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -379,7 +378,7 @@ entry:
 ; PPC970: fctidz
 ; PPC970: stfd
 ; PPC970: ld
-  store i64 %conv, i64* %b.addr, align 8
+  store i64 %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -398,7 +397,7 @@ entry:
 ; PPC970: stfd
 ; PPC970: lwz
 ; SPE: efsctui
-  store i32 %conv, i32* %b.addr, align 4
+  store i32 %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -412,7 +411,7 @@ entry:
 ; CHECK: stfd
 ; CHECK: ld
 ; PPC970-NOT: fctiduz
-  store i64 %conv, i64* %b.addr, align 4
+  store i64 %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -429,7 +428,7 @@ entry:
 ; PPC970: stfd
 ; PPC970: lwz
 ; SPE: efdctui
-  store i32 %conv, i32* %b.addr, align 8
+  store i32 %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -443,6 +442,6 @@ entry:
 ; CHECK: stfd
 ; CHECK: ld
 ; PPC970-NOT: fctiduz
-  store i64 %conv, i64* %b.addr, align 8
+  store i64 %conv, ptr %b.addr, align 8
   ret void
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "sdiv i8 \%a, 9"
+; RUN: opt < %s -passes=instcombine -S | grep "sdiv i8 \%a, 9"
 ; PR2048
 
 define i8 @i(i8 %a) {

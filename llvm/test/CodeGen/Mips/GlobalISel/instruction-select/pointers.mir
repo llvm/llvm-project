@@ -2,9 +2,9 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @ptr_arg_in_regs(i32* %p) {entry: ret void}
-  define void @ptr_arg_on_stack(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i32* %p) {entry: ret void}
-  define void @ret_ptr(i8* %p) {entry: ret void}
+  define void @ptr_arg_in_regs(ptr %p) {entry: ret void}
+  define void @ptr_arg_on_stack(i32 %x1, i32 %x2, i32 %x3, i32 %x4, ptr %p) {entry: ret void}
+  define void @ret_ptr(ptr %p) {entry: ret void}
 
 ...
 ---
@@ -20,11 +20,11 @@ body:             |
     ; MIPS32-LABEL: name: ptr_arg_in_regs
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (load 4 from %ir.p)
+    ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (load (s32) from %ir.p)
     ; MIPS32: $v0 = COPY [[LW]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
-    %1:gprb(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p)
+    %1:gprb(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p)
     $v0 = COPY %1(s32)
     RetRA implicit $v0
 
@@ -44,8 +44,8 @@ body:             |
     ; MIPS32-LABEL: name: ptr_arg_on_stack
     ; MIPS32: liveins: $a0, $a1, $a2, $a3
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
-    ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load 4 from %fixed-stack.0, align 8)
-    ; MIPS32: [[LW1:%[0-9]+]]:gpr32 = LW [[LW]], 0 :: (load 4 from %ir.p)
+    ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (p0) from %fixed-stack.0, align 8)
+    ; MIPS32: [[LW1:%[0-9]+]]:gpr32 = LW [[LW]], 0 :: (load (s32) from %ir.p)
     ; MIPS32: $v0 = COPY [[LW1]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(s32) = COPY $a0
@@ -53,8 +53,8 @@ body:             |
     %2:gprb(s32) = COPY $a2
     %3:gprb(s32) = COPY $a3
     %5:gprb(p0) = G_FRAME_INDEX %fixed-stack.0
-    %4:gprb(p0) = G_LOAD %5(p0) :: (load 4 from %fixed-stack.0, align 8)
-    %6:gprb(s32) = G_LOAD %4(p0) :: (load 4 from %ir.p)
+    %4:gprb(p0) = G_LOAD %5(p0) :: (load (p0) from %fixed-stack.0, align 8)
+    %6:gprb(s32) = G_LOAD %4(p0) :: (load (s32) from %ir.p)
     $v0 = COPY %6(s32)
     RetRA implicit $v0
 

@@ -18,7 +18,7 @@ extern int (*const d)(int);
 
 // A variable declaration which uses the constexpr specifier shall have an
 // initializer and shall be initialized by a constant expression.
-constexpr int ni1; // expected-error {{default initialization of an object of const type 'const int'}}
+constexpr int ni1; // expected-error {{constexpr variable 'ni1' must be initialized by a constant expression}}
 constexpr struct C { C(); } ni2; // expected-error {{cannot have non-literal type 'const struct C'}} expected-note 3{{has no constexpr constructors}}
 constexpr double &ni3; // expected-error {{declaration of reference variable 'ni3' requires an initializer}}
 
@@ -42,12 +42,30 @@ struct A {
   bool ok;
   constexpr A(bool ok) : ok(ok) {}
   constexpr ~A() noexcept(false) {
-    void oops(); // expected-note 2{{declared here}}
-    if (!ok) oops(); // expected-note 2{{non-constexpr function}}
+    void oops(); // expected-note 6{{declared here}}
+    if (!ok) oops(); // expected-note 6{{non-constexpr function}}
   }
 };
 
+struct B {
+  A a[2];
+  constexpr B(bool ok) : a{A(!ok), A(ok)}{}
+};
+
+struct Cons {
+  bool val[2];
+  constexpr Cons() : val{true, false} {}
+};
+
 constexpr A const_dtor(true);
+static_assert(B(false).a[1].ok); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                    expected-note {{in call to 'B(false).a[1].~A()'}} expected-note {{in call to 'B(false).~B()'}}
+static_assert(B(true).a[1].ok); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                   expected-note {{in call to 'B(true).a[0].~A()'}} expected-note {{in call to 'B(true).~B()'}}
+static_assert(B(Cons().val[1]).a[1].ok); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                            expected-note {{in call to 'B(Cons().val[1]).a[1].~A()'}} expected-note {{in call to 'B(Cons().val[1]).~B()'}}
+static_assert(B((new Cons)->val[0]).a[1].ok); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                                 expected-note {{in call to 'B((new Cons)->val[0]).a[0].~A()'}} expected-note {{in call to 'B((new Cons)->val[0]).~B()'}}
 constexpr A non_const_dtor(false); // expected-error {{must have constant destruction}} expected-note {{in call}}
-constexpr A arr_dtor[5] = {true, true, true, false, true}; // expected-error {{must have constant destruction}} expected-note {{in call to '&arr_dtor[3]->~A()'}}
+constexpr A arr_dtor[5] = {true, true, true, false, true}; // expected-error {{must have constant destruction}} expected-note {{in call to 'arr_dtor[3].~A()'}}
 #endif

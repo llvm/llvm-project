@@ -2,7 +2,7 @@
 --- |
   target triple = "thumbv8m.main-arm-none-eabi"
 
-  define hidden void @foo(void ()* nocapture %baz) local_unnamed_addr #0 {
+  define hidden void @foo(ptr nocapture %baz) local_unnamed_addr #0 {
   entry:
     %call = call i32 @bar() #0
     %tobool = icmp eq i32 %call, 0
@@ -60,9 +60,9 @@ body:             |
     $sp = t2STMDB_UPD $sp, 14, $noreg, $r4, killed $r5, killed $r6, killed $r7, killed $r8, killed $r9, killed $r10, killed $r11
     $r4 = t2BICri $r4, 1, 14, $noreg, $noreg
     $sp = tSUBspi $sp, 34, 14, $noreg
-    VLSTM $sp, 14, $noreg
-    tBLXNSr 14, $noreg, killed $r4, csr_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp
-    VLLDM $sp, 14, $noreg, implicit-def $q0, implicit-def $q1, implicit-def $q2, implicit-def $q3, implicit-def $q4, implicit-def $q5, implicit-def $q6, implicit-def $q7, implicit-def $vpr, implicit-def $fpscr, implicit-def $fpscr_nzcv
+    VLSTM $sp, 14 /* CC::al */, $noreg, 0, implicit-def $vpr, implicit-def $fpscr, implicit-def $fpscr_nzcv, implicit undef $vpr, implicit undef $fpscr, implicit undef $fpscr_nzcv, implicit undef $d0, implicit undef $d1, implicit undef $d2, implicit undef $d3, implicit undef $d4, implicit undef $d5, implicit undef $d6, implicit undef $d7, implicit $d8, implicit $d9, implicit $d10, implicit $d11, implicit $d12, implicit $d13, implicit $d14, implicit $d15
+    tBLXNSr 14, $noreg, killed $r4, csr_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $q0, implicit-def $q1, implicit-def $q2, implicit-def $q3, implicit-def $q4, implicit-def $q5, implicit-def $q6, implicit-def $q7
+    VLLDM $sp, 14 /* CC::al */, $noreg, 0, implicit-def $vpr, implicit-def $fpscr, implicit-def $fpscr_nzcv, implicit-def $d0, implicit-def $d1, implicit-def $d2, implicit-def $d3, implicit-def $d4, implicit-def $d5, implicit-def $d6, implicit-def $d7, implicit-def $d8, implicit-def $d9, implicit-def $d10, implicit-def $d11, implicit-def $d12, implicit-def $d13, implicit-def $d14, implicit-def $d15
     $sp = tADDspi $sp, 34, 14, $noreg
     $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11
     $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc

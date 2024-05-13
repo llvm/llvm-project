@@ -12,15 +12,12 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestExprLookupAnonStructTypedef(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(
-        oslist=['linux'],
-        archs=['arm'],
-        bugnumber="llvm.org/pr27868")
+class TestExprLookupAnonStructTypedef(TestBase):
     def test(self):
         """Test typedeffed untagged struct arguments for function call expressions"""
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
         self.expect_expr("multiply(&s)", result_type="double", result_value="1")

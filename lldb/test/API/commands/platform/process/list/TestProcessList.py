@@ -12,26 +12,19 @@ from lldbsuite.test import lldbutil
 
 
 class ProcessListTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows  # https://bugs.llvm.org/show_bug.cgi?id=43702
-    @skipIfRemote   # rdar://problem/66542336
+    @skipIfRemote  # rdar://problem/66542336
     def test_process_list_with_args(self):
         """Test process list show process args"""
         self.build()
         exe = self.getBuildArtifact("TestProcess")
 
         # Spawn a new process
-        popen = self.spawnSubprocess(exe, args=["arg1", "--arg2", "arg3"])
+        sync_file = lldbutil.append_to_process_working_directory(self, "ready.txt")
+        popen = self.spawnSubprocess(exe, args=[sync_file, "arg1", "--arg2", "arg3"])
+        lldbutil.wait_for_file_on_target(self, sync_file)
 
-        substrs = [str(popen.pid), "TestProcess arg1 --arg2 arg3"]
-
-        # Because LLDB isn't the one spawning the subprocess, the PID will be
-        # different during replay.
-        if configuration.is_reproducer_replay():
-            substrs.pop(0)
-
+        substrs = [str(popen.pid), "TestProcess", "arg1 --arg2 arg3"]
         self.expect("platform process list -v", substrs=substrs)

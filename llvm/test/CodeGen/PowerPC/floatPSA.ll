@@ -23,21 +23,21 @@ entry:
   %l.addr = alloca float, align 4
   %m.addr = alloca float, align 4
   %n.addr = alloca float, align 4
-  store float %a, float* %a.addr, align 4
-  store float %b, float* %b.addr, align 4
-  store float %c, float* %c.addr, align 4
-  store float %d, float* %d.addr, align 4
-  store float %e, float* %e.addr, align 4
-  store float %f, float* %f.addr, align 4
-  store float %g, float* %g.addr, align 4
-  store float %h, float* %h.addr, align 4
-  store float %i, float* %i.addr, align 4
-  store float %j, float* %j.addr, align 4
-  store float %k, float* %k.addr, align 4
-  store float %l, float* %l.addr, align 4
-  store float %m, float* %m.addr, align 4
-  store float %n, float* %n.addr, align 4
-  %0 = load float, float* %n.addr, align 4
+  store float %a, ptr %a.addr, align 4
+  store float %b, ptr %b.addr, align 4
+  store float %c, ptr %c.addr, align 4
+  store float %d, ptr %d.addr, align 4
+  store float %e, ptr %e.addr, align 4
+  store float %f, ptr %f.addr, align 4
+  store float %g, ptr %g.addr, align 4
+  store float %h, ptr %h.addr, align 4
+  store float %i, ptr %i.addr, align 4
+  store float %j, ptr %j.addr, align 4
+  store float %k, ptr %k.addr, align 4
+  store float %l, ptr %l.addr, align 4
+  store float %m, ptr %m.addr, align 4
+  store float %n, ptr %n.addr, align 4
+  %0 = load float, ptr %n.addr, align 4
   ret float %0
 }
 
@@ -59,34 +59,34 @@ entry:
   %l = alloca float, align 4
   %m = alloca float, align 4
   %n = alloca float, align 4
-  store float 1.000000e+00, float* %a, align 4
-  store float 2.000000e+00, float* %b, align 4
-  store float 3.000000e+00, float* %c, align 4
-  store float 4.000000e+00, float* %d, align 4
-  store float 5.000000e+00, float* %e, align 4
-  store float 6.000000e+00, float* %f, align 4
-  store float 7.000000e+00, float* %g, align 4
-  store float 8.000000e+00, float* %h, align 4
-  store float 9.000000e+00, float* %i, align 4
-  store float 1.000000e+01, float* %j, align 4
-  store float 1.100000e+01, float* %k, align 4
-  store float 1.200000e+01, float* %l, align 4
-  store float 1.300000e+01, float* %m, align 4
-  store float 1.400000e+01, float* %n, align 4
-  %0 = load float, float* %a, align 4
-  %1 = load float, float* %b, align 4
-  %2 = load float, float* %c, align 4
-  %3 = load float, float* %d, align 4
-  %4 = load float, float* %e, align 4
-  %5 = load float, float* %f, align 4
-  %6 = load float, float* %g, align 4
-  %7 = load float, float* %h, align 4
-  %8 = load float, float* %i, align 4
-  %9 = load float, float* %j, align 4
-  %10 = load float, float* %k, align 4
-  %11 = load float, float* %l, align 4
-  %12 = load float, float* %m, align 4
-  %13 = load float, float* %n, align 4
+  store float 1.000000e+00, ptr %a, align 4
+  store float 2.000000e+00, ptr %b, align 4
+  store float 3.000000e+00, ptr %c, align 4
+  store float 4.000000e+00, ptr %d, align 4
+  store float 5.000000e+00, ptr %e, align 4
+  store float 6.000000e+00, ptr %f, align 4
+  store float 7.000000e+00, ptr %g, align 4
+  store float 8.000000e+00, ptr %h, align 4
+  store float 9.000000e+00, ptr %i, align 4
+  store float 1.000000e+01, ptr %j, align 4
+  store float 1.100000e+01, ptr %k, align 4
+  store float 1.200000e+01, ptr %l, align 4
+  store float 1.300000e+01, ptr %m, align 4
+  store float 1.400000e+01, ptr %n, align 4
+  %0 = load float, ptr %a, align 4
+  %1 = load float, ptr %b, align 4
+  %2 = load float, ptr %c, align 4
+  %3 = load float, ptr %d, align 4
+  %4 = load float, ptr %e, align 4
+  %5 = load float, ptr %f, align 4
+  %6 = load float, ptr %g, align 4
+  %7 = load float, ptr %h, align 4
+  %8 = load float, ptr %i, align 4
+  %9 = load float, ptr %j, align 4
+  %10 = load float, ptr %k, align 4
+  %11 = load float, ptr %l, align 4
+  %12 = load float, ptr %m, align 4
+  %13 = load float, ptr %n, align 4
   %call = call float @bar(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7, float %8, float %9, float %10, float %11, float %12, float %13)
   ret float %call
 }

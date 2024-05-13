@@ -1,19 +1,19 @@
 // ParamTLS has limited size. Everything that does not fit is considered fully
 // initialized.
 
-// RUN: %clangxx_msan -O0 %s -o %t && %run %t
-// RUN: %clangxx_msan -fsanitize-memory-track-origins -O0 %s -o %t && %run %t
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -O0 %s -o %t && %run %t
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -O0 %s -o %t && %run %t
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins -O0 %s -o %t && %run %t
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=2 -O0 %s -o %t && %run %t
 //
-// AArch64 fails with:
+// AArch64 and LoongArch64 fail with:
 // void f801(S<801>): Assertion `__msan_test_shadow(&s, sizeof(s)) == -1' failed
-// XFAIL: aarch64
+// XFAIL: target={{(aarch64|loongarch64).*}}
 // When passing huge structs by value, SystemZ uses pointers, therefore this
 // test in its present form is unfortunately not applicable.
 // ABI says: "A struct or union of any other size <snip>. Replace such an
 // argument by a pointer to the object, or to a copy where necessary to enforce
 // call-by-value semantics."
-// XFAIL: s390x
+// XFAIL: target=s390x{{.*}}
 
 #include <sanitizer/msan_interface.h>
 #include <assert.h>
@@ -27,7 +27,7 @@
 #define NO_OVERFLOW(x) assert(__msan_test_shadow(&x, sizeof(x)) == 0)
 
 #if defined(__x86_64__)
-// In x86_64, if argument is partially outside tls, it is considered completly
+// In x86_64, if argument is partially outside tls, it is considered completely
 // unpoisoned
 #define PARTIAL_OVERFLOW(x) OVERFLOW(x)
 #else

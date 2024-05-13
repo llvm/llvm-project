@@ -11,7 +11,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define void @foo() #0 {
 entry:
-  call void @llvm.eh.sjlj.longjmp(i8* bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8*))
+  call void @llvm.eh.sjlj.longjmp(ptr @env_sigill)
   unreachable
 
 ; CHECK: @foo
@@ -29,22 +29,22 @@ return:                                           ; No predecessors!
   ret void
 }
 
-declare void @llvm.eh.sjlj.longjmp(i8*) #1
+declare void @llvm.eh.sjlj.longjmp(ptr) #1
 
 define signext i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = call i8* @llvm.frameaddress(i32 0)
-  store i8* %0, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8**)
-  %1 = call i8* @llvm.stacksave()
-  store i8* %1, i8** getelementptr (i8*, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8**), i32 2)
-  %2 = call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8*))
+  store i32 0, ptr %retval
+  %0 = call ptr @llvm.frameaddress(i32 0)
+  store ptr %0, ptr @env_sigill
+  %1 = call ptr @llvm.stacksave()
+  store ptr %1, ptr getelementptr (ptr, ptr @env_sigill, i32 2)
+  %2 = call i32 @llvm.eh.sjlj.setjmp(ptr @env_sigill)
   %tobool = icmp ne i32 %2, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* %retval
+  store i32 1, ptr %retval
   br label %return
 
 if.else:                                          ; preds = %entry
@@ -52,11 +52,11 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %3 = load i32, i32* %retval
+  %3 = load i32, ptr %retval
   ret i32 %3
 
 
@@ -80,8 +80,8 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: # %bb.1:
 
 ; CHECK: .LBB1_3:
-; CHECK: ld [[REG2:[0-9]+]], [[OFF]](31)                   # 8-byte Folded Reload
 ; CHECK: mflr [[REGL:[0-9]+]]
+; CHECK: ld [[REG2:[0-9]+]], [[OFF]](31)                   # 8-byte Folded Reload
 ; CHECK: std [[REGL]], 8([[REG2]])
 ; CHECK: li 3, 0
 
@@ -104,19 +104,19 @@ return:                                           ; preds = %if.end, %if.then
 define signext i32 @main2() #0 {
 entry:
   %a = alloca i8, align 64
-  call void @bar(i8* %a)
+  call void @bar(ptr %a)
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = call i8* @llvm.frameaddress(i32 0)
-  store i8* %0, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8**)
-  %1 = call i8* @llvm.stacksave()
-  store i8* %1, i8** getelementptr (i8*, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8**), i32 2)
-  %2 = call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8*))
+  store i32 0, ptr %retval
+  %0 = call ptr @llvm.frameaddress(i32 0)
+  store ptr %0, ptr @env_sigill
+  %1 = call ptr @llvm.stacksave()
+  store ptr %1, ptr getelementptr (ptr, ptr @env_sigill, i32 2)
+  %2 = call i32 @llvm.eh.sjlj.setjmp(ptr @env_sigill)
   %tobool = icmp ne i32 %2, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* %retval
+  store i32 1, ptr %retval
   br label %return
 
 if.else:                                          ; preds = %entry
@@ -124,11 +124,11 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %3 = load i32, i32* %retval
+  %3 = load i32, ptr %retval
   ret i32 %3
 
 ; CHECK-LABEL: main2:
@@ -147,12 +147,12 @@ return:                                           ; preds = %if.end, %if.then
 
 define void @test_sjlj_setjmp() #0 {
 entry:
-  %0 = load i8, i8* @cond, align 1
+  %0 = load i8, ptr @cond, align 1
   %tobool = trunc i8 %0 to i1
   br i1 %tobool, label %return, label %end
 
 end:
-  %1 = call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8*))
+  %1 = call i32 @llvm.eh.sjlj.setjmp(ptr @env_sigill)
   br label %return
 
 return:
@@ -163,13 +163,13 @@ return:
 ; CHECK-NOT: bl _setjmp
 }
 
-declare void @bar(i8*) #3
+declare void @bar(ptr) #3
 
-declare i8* @llvm.frameaddress(i32) #2
+declare ptr @llvm.frameaddress(i32) #2
 
-declare i8* @llvm.stacksave() #3
+declare ptr @llvm.stacksave() #3
 
-declare i32 @llvm.eh.sjlj.setjmp(i8*) #3
+declare i32 @llvm.eh.sjlj.setjmp(ptr) #3
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { noreturn nounwind }

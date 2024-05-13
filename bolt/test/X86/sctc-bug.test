@@ -1,0 +1,10 @@
+# Check that we don't accidentally optimize out a tail call.
+
+RUN: %clang %cflags %S/Inputs/sctc_bug.s -o %t
+RUN: llvm-bolt %t -o %t.null --funcs=main --print-after-lowering \
+RUN:   2>&1 | FileCheck %s
+
+CHECK:   jp      .L{{.*}}
+CHECK:   je      foo # TAILCALL
+CHECK:   xorl    %eax, %eax
+CHECK:   retq

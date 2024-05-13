@@ -8,11 +8,25 @@
 
 #include "AST.h"
 #include "Config.h"
-#include "FindTarget.h"
+#include "SourceCode.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
+#include <tuple>
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -46,8 +60,12 @@ private:
   // All of the following are set by prepare().
   // The qualifier to remove.
   NestedNameSpecifierLoc QualifierToRemove;
-  // The name following QualifierToRemove.
-  llvm::StringRef Name;
+  // Qualified name to use when spelling the using declaration. This might be
+  // different than SpelledQualifier in presence of error correction.
+  std::string QualifierToSpell;
+  // The name and qualifier as spelled in the code.
+  llvm::StringRef SpelledQualifier;
+  llvm::StringRef SpelledName;
   // If valid, the insertion point for "using" statement must come after this.
   // This is relevant when the type is defined in the main file, to make sure
   // the type/function is already defined at the point where "using" is added.
@@ -57,7 +75,7 @@ REGISTER_TWEAK(AddUsing)
 
 std::string AddUsing::title() const {
   return std::string(llvm::formatv(
-      "Add using-declaration for {0} and remove qualifier", Name));
+      "Add using-declaration for {0} and remove qualifier", SpelledName));
 }
 
 // Locates all "using" statements relevant to SelectionDeclContext.
@@ -79,10 +97,13 @@ public:
   }
 
   bool TraverseDecl(Decl *Node) {
+    if (!Node)
+      return true;
     // There is no need to go deeper into nodes that do not enclose selection,
     // since "using" there will not affect selection, nor would it make a good
     // insertion point.
-    if (Node->getDeclContext()->Encloses(SelectionDeclContext)) {
+    if (!Node->getDeclContext() ||
+        Node->getDeclContext()->Encloses(SelectionDeclContext)) {
       return RecursiveASTVisitor<UsingFinder>::TraverseDecl(Node);
     }
     return true;
@@ -186,7 +207,7 @@ findInsertionPoint(const Tweak::Selection &Inputs,
       return Tok.kind() == tok::l_brace;
     });
     if (Tok == Toks.end() || Tok->endLocation().isInvalid()) {
-      return error("Namespace with no {");
+      return error("Namespace with no {{");
     }
     if (!Tok->endLocation().isMacroID() && IsValidPoint(Tok->endLocation())) {
       InsertionPointData Out;
@@ -235,7 +256,7 @@ bool AddUsing::prepare(const Selection &Inputs) {
   const auto &TB = Inputs.AST->getTokens();
 
   // Do not suggest "using" in header files. That way madness lies.
-  if (isHeaderFile(SM.getFileEntryForID(SM.getMainFileID())->getName(),
+  if (isHeaderFile(SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
                    Inputs.AST->getLangOpts()))
     return false;
 
@@ -249,11 +270,13 @@ bool AddUsing::prepare(const Selection &Inputs) {
   for (; Node->Parent; Node = Node->Parent) {
     if (Node->ASTNode.get<NestedNameSpecifierLoc>()) {
       continue;
-    } else if (auto *T = Node->ASTNode.get<TypeLoc>()) {
+    }
+    if (auto *T = Node->ASTNode.get<TypeLoc>()) {
       if (T->getAs<ElaboratedTypeLoc>()) {
         break;
-      } else if (Node->Parent->ASTNode.get<TypeLoc>() ||
-                 Node->Parent->ASTNode.get<NestedNameSpecifierLoc>()) {
+      }
+      if (Node->Parent->ASTNode.get<TypeLoc>() ||
+          Node->Parent->ASTNode.get<NestedNameSpecifierLoc>()) {
         // Node is TypeLoc, but it's parent is either TypeLoc or
         // NestedNameSpecifier. In both cases, we want to go up, to find
         // the outermost TypeLoc.
@@ -265,30 +288,29 @@ bool AddUsing::prepare(const Selection &Inputs) {
   if (Node == nullptr)
     return false;
 
+  // Closed range for the fully qualified name as spelled in source code.
+  SourceRange SpelledNameRange;
   if (auto *D = Node->ASTNode.get<DeclRefExpr>()) {
-    if (auto *II = D->getDecl()->getIdentifier()) {
+    if (D->getDecl()->getIdentifier()) {
       QualifierToRemove = D->getQualifierLoc();
-      Name = II->getName();
+      // Use the name range rather than expr, as the latter can contain template
+      // arguments in the range.
+      SpelledNameRange = D->getSourceRange();
+      // Remove the template arguments from the name, as they shouldn't be
+      // spelled in the using declaration.
+      if (auto AngleLoc = D->getLAngleLoc(); AngleLoc.isValid())
+        SpelledNameRange.setEnd(AngleLoc.getLocWithOffset(-1));
       MustInsertAfterLoc = D->getDecl()->getBeginLoc();
     }
   } else if (auto *T = Node->ASTNode.get<TypeLoc>()) {
     if (auto E = T->getAs<ElaboratedTypeLoc>()) {
       QualifierToRemove = E.getQualifierLoc();
-      if (!QualifierToRemove)
-        return false;
 
-      auto SpelledTokens =
-          TB.spelledForExpanded(TB.expandedTokens(E.getSourceRange()));
-      if (!SpelledTokens)
-        return false;
-      auto SpelledRange = syntax::Token::range(SM, SpelledTokens->front(),
-                                               SpelledTokens->back());
-      Name = SpelledRange.text(SM);
-
-      std::string QualifierToRemoveStr = getNNSLAsString(
-          QualifierToRemove, Inputs.AST->getASTContext().getPrintingPolicy());
-      if (!Name.consume_front(QualifierToRemoveStr))
-        return false; // What's spelled doesn't match the qualifier.
+      SpelledNameRange = E.getSourceRange();
+      if (auto T = E.getNamedTypeLoc().getAs<TemplateSpecializationTypeLoc>()) {
+        // Remove the template arguments from the name.
+        SpelledNameRange.setEnd(T.getLAngleLoc().getLocWithOffset(-1));
+      }
 
       if (const auto *ET = E.getTypePtr()) {
         if (const auto *TDT =
@@ -300,19 +322,14 @@ bool AddUsing::prepare(const Selection &Inputs) {
       }
     }
   }
-
-  // FIXME: This only supports removing qualifiers that are made up of just
-  // namespace names. If qualifier contains a type, we could take the longest
-  // namespace prefix and remove that.
-  if (!QualifierToRemove.hasQualifier() ||
+  if (!QualifierToRemove ||
+      // FIXME: This only supports removing qualifiers that are made up of just
+      // namespace names. If qualifier contains a type, we could take the
+      // longest namespace prefix and remove that.
       !QualifierToRemove.getNestedNameSpecifier()->getAsNamespace() ||
-      Name.empty()) {
+      // Respect user config.
+      isNamespaceForbidden(Inputs, *QualifierToRemove.getNestedNameSpecifier()))
     return false;
-  }
-
-  if (isNamespaceForbidden(Inputs, *QualifierToRemove.getNestedNameSpecifier()))
-    return false;
-
   // Macros are difficult. We only want to offer code action when what's spelled
   // under the cursor is a namespace qualifier. If it's a macro that expands to
   // a qualifier, user would not know what code action will actually change.
@@ -324,23 +341,35 @@ bool AddUsing::prepare(const Selection &Inputs) {
     return false;
   }
 
+  auto SpelledTokens =
+      TB.spelledForExpanded(TB.expandedTokens(SpelledNameRange));
+  if (!SpelledTokens)
+    return false;
+  auto SpelledRange =
+      syntax::Token::range(SM, SpelledTokens->front(), SpelledTokens->back());
+  // We only drop qualifiers that're namespaces, so this is safe.
+  std::tie(SpelledQualifier, SpelledName) =
+      splitQualifiedName(SpelledRange.text(SM));
+  QualifierToSpell = getNNSLAsString(
+      QualifierToRemove, Inputs.AST->getASTContext().getPrintingPolicy());
+  if (!llvm::StringRef(QualifierToSpell).ends_with(SpelledQualifier) ||
+      SpelledName.empty())
+    return false; // What's spelled doesn't match the qualifier.
   return true;
 }
 
 Expected<Tweak::Effect> AddUsing::apply(const Selection &Inputs) {
   auto &SM = Inputs.AST->getSourceManager();
 
-  std::string QualifierToRemoveStr = getNNSLAsString(
-      QualifierToRemove, Inputs.AST->getASTContext().getPrintingPolicy());
   tooling::Replacements R;
   if (auto Err = R.add(tooling::Replacement(
           SM, SM.getSpellingLoc(QualifierToRemove.getBeginLoc()),
-          QualifierToRemoveStr.length(), ""))) {
+          SpelledQualifier.size(), ""))) {
     return std::move(Err);
   }
 
-  auto InsertionPoint =
-      findInsertionPoint(Inputs, QualifierToRemove, Name, MustInsertAfterLoc);
+  auto InsertionPoint = findInsertionPoint(Inputs, QualifierToRemove,
+                                           SpelledName, MustInsertAfterLoc);
   if (!InsertionPoint) {
     return InsertionPoint.takeError();
   }
@@ -353,7 +382,7 @@ Expected<Tweak::Effect> AddUsing::apply(const Selection &Inputs) {
     if (InsertionPoint->AlwaysFullyQualify &&
         !isFullyQualified(QualifierToRemove.getNestedNameSpecifier()))
       UsingTextStream << "::";
-    UsingTextStream << QualifierToRemoveStr << Name << ";"
+    UsingTextStream << QualifierToSpell << SpelledName << ";"
                     << InsertionPoint->Suffix;
 
     assert(SM.getFileID(InsertionPoint->Loc) == SM.getMainFileID());

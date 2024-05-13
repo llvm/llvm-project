@@ -10,21 +10,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
+
+#include "mlir/Dialect/Async/IR/Async.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_ASYNCRUNTIMEREFCOUNTINGOPT
+#include "mlir/Dialect/Async/Passes.h.inc"
+} // namespace mlir
+
+#define DEBUG_TYPE "async-ref-counting"
 
 using namespace mlir;
 using namespace mlir::async;
 
-#define DEBUG_TYPE "async-ref-counting"
-
 namespace {
 
 class AsyncRuntimeRefCountingOptPass
-    : public AsyncRuntimeRefCountingOptBase<AsyncRuntimeRefCountingOptPass> {
+    : public impl::AsyncRuntimeRefCountingOptBase<
+          AsyncRuntimeRefCountingOptPass> {
 public:
   AsyncRuntimeRefCountingOptPass() = default;
   void runOnOperation() override;
@@ -105,8 +112,60 @@ LogicalResult AsyncRuntimeRefCountingOptPass::optimizeReferenceCounting(
     for (RuntimeAddRefOp addRef : info.addRefs) {
       for (RuntimeDropRefOp dropRef : info.dropRefs) {
         // `drop_ref` operation after the `add_ref` with matching count.
-        if (dropRef.count() != addRef.count() ||
+        if (dropRef.getCount() != addRef.getCount() ||
             dropRef->isBeforeInBlock(addRef.getOperation()))
+          continue;
+
+        // When reference counted value passed to a function as an argument,
+        // function takes ownership of +1 reference and it will drop it before
+        // returning.
+        //
+        // Example:
+        //
+        //   %token = ... : !async.token
+        //
+        //   async.runtime.add_ref %token {count = 1 : i64} : !async.token
+        //   call @pass_token(%token: !async.token, ...)
+        //
+        //   async.await %token : !async.token
+        //   async.runtime.drop_ref %token {count = 1 : i64} : !async.token
+        //
+        // In this example if we'll cancel a pair of reference counting
+        // operations we might end up with a deallocated token when we'll
+        // reach `async.await` operation.
+        Operation *firstFunctionCallUser = nullptr;
+        Operation *lastNonFunctionCallUser = nullptr;
+
+        for (Operation *user : info.users) {
+          // `user` operation lies after `addRef` ...
+          if (user == addRef || user->isBeforeInBlock(addRef))
+            continue;
+          // ... and before `dropRef`.
+          if (user == dropRef || dropRef->isBeforeInBlock(user))
+            break;
+
+          // Find the first function call user of the reference counted value.
+          Operation *functionCall = dyn_cast<func::CallOp>(user);
+          if (functionCall &&
+              (!firstFunctionCallUser ||
+               functionCall->isBeforeInBlock(firstFunctionCallUser))) {
+            firstFunctionCallUser = functionCall;
+            continue;
+          }
+
+          // Find the last regular user of the reference counted value.
+          if (!functionCall &&
+              (!lastNonFunctionCallUser ||
+               lastNonFunctionCallUser->isBeforeInBlock(user))) {
+            lastNonFunctionCallUser = user;
+            continue;
+          }
+        }
+
+        // Non function call user after the function call user of the reference
+        // counted value.
+        if (firstFunctionCallUser && lastNonFunctionCallUser &&
+            firstFunctionCallUser->isBeforeInBlock(lastNonFunctionCallUser))
           continue;
 
         // Try to cancel the pair of `add_ref` and `drop_ref` operations.

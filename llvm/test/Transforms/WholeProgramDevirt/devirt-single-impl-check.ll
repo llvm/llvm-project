@@ -1,34 +1,32 @@
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: remark: <unknown>:0:0: single-impl: devirtualized a call to vf
+; CHECK: remark: <unknown>:0:0: single-impl: devirtualized a call to vf
 ; CHECK: remark: <unknown>:0:0: devirtualized vf
 ; CHECK-NOT: devirtualized
 
-@vt1 = constant [1 x i8*] [i8* bitcast (void (i8*)* @vf to i8*)], !type !0
-@vt2 = constant [1 x i8*] [i8* bitcast (void (i8*)* @vf to i8*)], !type !0
+@vt1 = constant [1 x ptr] [ptr @vf], !type !0
+@vt2 = constant [1 x ptr] [ptr @vf], !type !0
 
-define void @vf(i8* %this) {
+define void @vf(ptr %this) {
   ret void
 }
 
 ; CHECK: define void @call
-define void @call(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %pair = call {i8*, i1} @llvm.type.checked.load(i8* %vtablei8, i32 0, metadata !"typeid")
-  %fptr = extractvalue {i8*, i1} %pair, 0
-  %p = extractvalue {i8*, i1} %pair, 1
+define void @call(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 0, metadata !"typeid")
+  %fptr = extractvalue {ptr, i1} %pair, 0
+  %p = extractvalue {ptr, i1} %pair, 1
   ; CHECK: br i1 true,
   br i1 %p, label %cont, label %trap
 
 cont:
-  %fptr_casted = bitcast i8* %fptr to void (i8*)*
   ; CHECK: call void @vf(
-  call void %fptr_casted(i8* %obj)
+  call void %fptr(ptr %obj)
   ret void
 
 trap:
@@ -36,7 +34,31 @@ trap:
   unreachable
 }
 
-declare {i8*, i1} @llvm.type.checked.load(i8*, i32, metadata)
+@vt3 = private unnamed_addr constant [1 x i32] [
+  i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf to i64), i64 ptrtoint (ptr @vt3 to i64)) to i32)
+], align 4, !type !1
+
+; CHECK: define void @call2
+define void @call2(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 0, metadata !"typeid2")
+  %fptr = extractvalue {ptr, i1} %pair, 0
+  %p = extractvalue {ptr, i1} %pair, 1
+  ; CHECK: br i1 true,
+  br i1 %p, label %cont, label %trap
+
+cont:
+  ; CHECK: call void @vf(
+  call void %fptr(ptr %obj)
+  ret void
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}
+
+declare {ptr, i1} @llvm.type.checked.load(ptr, i32, metadata)
 declare void @llvm.trap()
 
 !0 = !{i32 0, !"typeid"}
+!1 = !{i32 0, !"typeid2"}

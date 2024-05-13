@@ -7,20 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // template<class I>
 // unspecified iter_move;
 
-#include <iterator>
-
-#include <array>
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <iterator>
+#include <type_traits>
 #include <utility>
 
 #include "../unqualified_lookup_wrapper.h"
+
+using IterMoveT = decltype(std::ranges::iter_move);
 
 // Wrapper around an iterator for testing `iter_move` when an unqualified call to `iter_move` isn't
 // possible.
@@ -32,10 +32,10 @@ public:
   constexpr explicit iterator_wrapper(I i) noexcept : base_(std::move(i)) {}
 
   // `noexcept(false)` is used to check that this operator is called.
-  [[nodiscard]] constexpr decltype(auto) operator*() const& noexcept(false) { return *base_; }
+  constexpr decltype(auto) operator*() const& noexcept(false) { return *base_; }
 
   // `noexcept` is used to check that this operator is called.
-  [[nodiscard]] constexpr auto&& operator*() && noexcept { return std::move(*base_); }
+  constexpr auto&& operator*() && noexcept { return std::move(*base_); }
 
   constexpr iterator_wrapper& operator++() noexcept {
     ++base_;
@@ -44,35 +44,17 @@ public:
 
   constexpr void operator++(int) noexcept { ++base_; }
 
-  [[nodiscard]] constexpr bool operator==(iterator_wrapper const& other) const noexcept { return base_ == other.base_; }
+  constexpr bool operator==(iterator_wrapper const& other) const noexcept { return base_ == other.base_; }
 
 private:
   I base_ = I{};
 };
 
-class move_tracker {
-public:
-  move_tracker() = default;
+template <class I>
+iterator_wrapper(I) -> iterator_wrapper<I>;
 
-  constexpr move_tracker(move_tracker&& other) noexcept : moves_{other.moves_ + 1} { other.moves_ = 0; }
-
-  constexpr move_tracker& operator=(move_tracker&& other) noexcept {
-    moves_ = other.moves_ + 1;
-    other.moves_ = 0;
-    return *this;
-  }
-
-  constexpr move_tracker(move_tracker const& other) = delete;
-  constexpr move_tracker& operator=(move_tracker const& other) = delete;
-
-  [[nodiscard]] constexpr int moves() const noexcept { return moves_; }
-
-private:
-  int moves_ = 0;
-};
-
-template <typename I>
-constexpr void unqualified_lookup_move(I first_, I last_, I result_first_, I result_last_) {
+template <typename It, typename Out>
+constexpr void unqualified_lookup_move(It first_, It last_, Out result_first_, Out result_last_) {
   auto first = ::check_unqualified_lookup::unqualified_lookup_wrapper{std::move(first_)};
   auto last = ::check_unqualified_lookup::unqualified_lookup_wrapper{std::move(last_)};
   auto result_first = ::check_unqualified_lookup::unqualified_lookup_wrapper{std::move(result_first_)};
@@ -85,8 +67,8 @@ constexpr void unqualified_lookup_move(I first_, I last_, I result_first_, I res
   }
 }
 
-template <typename I>
-constexpr void lvalue_move(I first_, I last_, I result_first_, I result_last_) {
+template <typename It, typename Out>
+constexpr void lvalue_move(It first_, It last_, Out result_first_, Out result_last_) {
   auto first = iterator_wrapper{std::move(first_)};
   auto last = ::iterator_wrapper{std::move(last_)};
   auto result_first = iterator_wrapper{std::move(result_first_)};
@@ -100,8 +82,8 @@ constexpr void lvalue_move(I first_, I last_, I result_first_, I result_last_) {
   }
 }
 
-template <typename I>
-constexpr void rvalue_move(I first_, I last_, I result_first_, I result_last_) {
+template <typename It, typename Out>
+constexpr void rvalue_move(It first_, It last_, Out result_first_, Out result_last_) {
   auto first = iterator_wrapper{std::move(first_)};
   auto last = iterator_wrapper{std::move(last_)};
   auto result_first = iterator_wrapper{std::move(result_first_)};
@@ -135,7 +117,7 @@ struct WithoutADL {
   constexpr bool operator==(WithoutADL const&) const;
 };
 
-constexpr bool check_iter_move() {
+constexpr bool test() {
   constexpr int full_size = 100;
   constexpr int half_size = full_size / 2;
   constexpr int reset = 0;
@@ -176,15 +158,15 @@ constexpr bool check_iter_move() {
 
   auto unscoped = check_unqualified_lookup::unscoped_enum::a;
   assert(std::ranges::iter_move(unscoped) == check_unqualified_lookup::unscoped_enum::a);
-  assert(!noexcept(std::ranges::iter_move(unscoped)));
+  static_assert(!noexcept(std::ranges::iter_move(unscoped)));
 
   auto scoped = check_unqualified_lookup::scoped_enum::a;
   assert(std::ranges::iter_move(scoped) == nullptr);
-  assert(noexcept(std::ranges::iter_move(scoped)));
+  static_assert(noexcept(std::ranges::iter_move(scoped)));
 
   auto some_union = check_unqualified_lookup::some_union{0};
   assert(std::ranges::iter_move(some_union) == 0);
-  assert(!noexcept(std::ranges::iter_move(some_union)));
+  static_assert(!noexcept(std::ranges::iter_move(some_union)));
 
   // Check noexcept-correctness
   static_assert(noexcept(std::ranges::iter_move(std::declval<WithADL<true>>())));
@@ -195,18 +177,19 @@ constexpr bool check_iter_move() {
   return true;
 }
 
-template <typename T>
-concept can_iter_move = requires (T t) { std::ranges::iter_move(t); };
+static_assert(!std::is_invocable_v<IterMoveT, int*, int*>); // too many arguments
+static_assert(!std::is_invocable_v<IterMoveT, int>);
 
-int main(int, char**) {
-  static_assert(check_iter_move());
-  check_iter_move();
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(std::is_invocable_v<IterMoveT, Holder<Incomplete>**>);
+static_assert(std::is_invocable_v<IterMoveT, Holder<Incomplete>**&>);
 
-  // Make sure that `iter_move` SFINAEs away when the type can't be iter_move'd
-  {
-    struct NoIterMove { };
-    static_assert(!can_iter_move<NoIterMove>);
-  }
+int main(int, char**)
+{
+  test();
+  static_assert(test());
 
   return 0;
 }

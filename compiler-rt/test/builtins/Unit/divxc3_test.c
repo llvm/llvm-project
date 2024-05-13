@@ -1,8 +1,8 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
 // REQUIRES: librt_has_divxc3
 // REQUIRES: x86-target-arch
-// UNSUPPORTED: powerpc64
-// UNSUPPORTED: mips
+// UNSUPPORTED: target=powerpc64{{.*}}
+// UNSUPPORTED: target=mips{{.*}}
 // REQUIRES: c99-complex
 
 #if !_ARCH_PPC

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-threads
-
 // <atomic>
 
 // std::atomic
@@ -16,8 +14,7 @@
 
 #include <atomic>
 
-int main(int, char**)
-{
+void f() {
     volatile std::atomic<int*> obj1;
     std::atomic<int*> obj2;
     obj1 = obj2; // expected-error {{overload resolution selected deleted operator '='}}

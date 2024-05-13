@@ -5,30 +5,30 @@
   target triple = "powerpc64-unknown-linux-gnu"
 
   @d = global i32 15, align 4
-  @b = global i32* @d, align 8
+  @b = global ptr @d, align 8
   @a = common global i32 0, align 4
 
   ; Function Attrs: nounwind
   define signext i32 @main() #0 {
   entry:
-    %0 = load i32*, i32** @b, align 8
-    %1 = load i32, i32* @a, align 4
+    %0 = load ptr, ptr @b, align 8
+    %1 = load i32, ptr @a, align 4
     %lnot = icmp eq i32 %1, 0
     %lnot.ext = zext i1 %lnot to i32
     %shr.i = lshr i32 2072, %lnot.ext
     %call.lobit = lshr i32 %shr.i, 7
     %2 = and i32 %call.lobit, 1
-    %3 = load i32, i32* %0, align 4
+    %3 = load i32, ptr %0, align 4
     %or = or i32 %2, %3
-    store i32 %or, i32* %0, align 4
-    %4 = load i32, i32* @a, align 4
+    store i32 %or, ptr %0, align 4
+    %4 = load i32, ptr @a, align 4
     %lnot.1 = icmp eq i32 %4, 0
     %lnot.ext.1 = zext i1 %lnot.1 to i32
     %shr.i.1 = lshr i32 2072, %lnot.ext.1
     %call.lobit.1 = lshr i32 %shr.i.1, 7
     %5 = and i32 %call.lobit.1, 1
     %or.1 = or i32 %5, %or
-    store i32 %or.1, i32* %0, align 4
+    store i32 %or.1, ptr %0, align 4
     ret i32 %or.1
   }
 
@@ -71,8 +71,8 @@ body:             |
     liveins: $x2
 
     %0 = ADDIStocHA8 $x2, @b
-    %1 = LD target-flags(ppc-toc-lo) @b, killed %0 :: (load 8 from @b)
-    %2 = LWZ 0, %1 :: (load 4 from %ir.0)
+    %1 = LD target-flags(ppc-toc-lo) @b, killed %0 :: (load (s64) from @b)
+    %2 = LWZ 0, %1 :: (load (s32) from %ir.0)
     %3 = LI 0
     %4 = RLWIMI %3, killed %2, 0, 0, 31
     ; CHECK-LABEL: name: main
@@ -80,9 +80,9 @@ body:             |
     ; CHECK: %[[REG2:[0-9]+]]:gprc = COPY %[[REG1]]
     ; CHECK: %[[REG2]]:gprc = RLWIMI %[[REG2]], killed %2, 0, 0, 31
     %8 = RLWIMI %3, %4, 0, 0, 31
-    STW %4, 0, %1 :: (store 4 into %ir.0)
+    STW %4, 0, %1 :: (store (s32) into %ir.0)
     %10 = EXTSW_32_64 %8
-    STW %8, 0, %1 :: (store 4 into %ir.0)
+    STW %8, 0, %1 :: (store (s32) into %ir.0)
     $x3 = COPY %10
     BLR8 implicit $x3, implicit $lr8, implicit $rm
 

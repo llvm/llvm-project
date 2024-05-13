@@ -3,15 +3,15 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "arm64-apple-ios13.0.0"
 
-  define void @test_memset_debug(i8* %ptr, i32 %c, i32 %len) local_unnamed_addr!dbg !9 {
+  define void @test_memset_debug(ptr %ptr, i32 %c, i32 %len) local_unnamed_addr!dbg !9 {
   entry:
     %conv = zext i32 %len to i64, !dbg !11
     %0 = trunc i32 %c to i8, !dbg !11
-    call void @llvm.memset.p0i8.i64(i8* align 1 %ptr, i8 %0, i64 %conv, i1 false) #3, !dbg !11
+    call void @llvm.memset.p0.i64(ptr align 1 %ptr, i8 %0, i64 %conv, i1 false) #3, !dbg !11
     ret void, !dbg !12
   }
 
-  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+  declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
   attributes #1 = { argmemonly nounwind willreturn writeonly }
 
   !llvm.module.flags = !{!0, !1, !2, !3, !4}
@@ -47,14 +47,14 @@ body:             |
 
     ; We're checking that the BL call has the debug loc of the original intrinsic call.
     ; CHECK-LABEL: name: test_memset_debug
-    ; CHECK: BL &memset, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2, debug-location !11
+    ; CHECK: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2, debug-location !11
     ; CHECK: RET_ReallyLR debug-location !12
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
     %3:_(s64) = G_ZEXT %2(s32), debug-location !11
     %4:_(s8) = G_TRUNC %1(s32), debug-location !11
-    G_MEMSET %0(p0), %4(s8), %3(s64), 0, debug-location !11 :: (store 1 into %ir.ptr)
+    G_MEMSET %0(p0), %4(s8), %3(s64), 0, debug-location !11 :: (store (s8) into %ir.ptr)
     RET_ReallyLR debug-location !12
 
 ...

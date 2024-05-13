@@ -6,10 +6,9 @@ define i32 @func_f(i32 %X) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    jns .LBB0_2
+; CHECK-NEXT:    jns baz@PLT # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %cond_true
 ; CHECK-NEXT:    calll bar@PLT
-; CHECK-NEXT:  .LBB0_2: # %cond_next
 ; CHECK-NEXT:    jmp baz@PLT # TAILCALL
 entry:
 	%tmp1 = add i32 %X, 1
@@ -130,20 +129,20 @@ define i32 @func_m(i32 %a, i32 %b) nounwind {
   ret i32 %cond
 }
 
-; If EFLAGS is live-out, we can't remove cmp if there exists
-; a swapped sub.
+; (This used to test that an unsafe removal of cmp in bb.0 is not happening,
+;  but now we can do so safely).
 define i32 @func_l2(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_l2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    subl %edx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    jne .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    cmpl %ecx, %edx
-; CHECK-NEXT:    cmovlel %ecx, %eax
+; CHECK-NEXT:    cmovll %ecx, %eax
+; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB8_2: # %if.else
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    retl
   %cmp = icmp eq i32 %b, %a
   %sub = sub nsw i32 %a, %b
@@ -249,7 +248,7 @@ define void @func_o() nounwind uwtable {
 ; CHECK-NEXT:  .LBB12_9: # %if.then.i103
 ; CHECK-NEXT:  .LBB12_7: # %if.else.i97
 entry:
-  %0 = load i16, i16* undef, align 2
+  %0 = load i16, ptr undef, align 2
   br i1 undef, label %if.then.i, label %if.end.i
 
 if.then.i:                                        ; preds = %entry
@@ -309,6 +308,7 @@ define i32 @func_q(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: func_q:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    sbbl %ecx, %ecx
 ; CHECK-NEXT:    negl %eax
@@ -322,7 +322,7 @@ define i32 @func_q(i32 %a0, i32 %a1, i32 %a2) {
 }
 
 ; rdar://11873276
-define i8* @func_r(i8* %base, i32* nocapture %offset, i32 %size) nounwind {
+define ptr @func_r(ptr %base, ptr nocapture %offset, i32 %size) nounwind {
 ; CHECK-LABEL: func_r:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -337,19 +337,19 @@ define i8* @func_r(i8* %base, i32* nocapture %offset, i32 %size) nounwind {
 ; CHECK-NEXT:  .LBB15_2: # %return
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load i32, i32* %offset, align 8
+  %0 = load i32, ptr %offset, align 8
   %cmp = icmp slt i32 %0, %size
   br i1 %cmp, label %return, label %if.end
 
 if.end:
   %sub = sub nsw i32 %0, %size
-  store i32 %sub, i32* %offset, align 8
-  %add.ptr = getelementptr inbounds i8, i8* %base, i32 %sub
+  store i32 %sub, ptr %offset, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %base, i32 %sub
   br label %return
 
 return:
-  %retval.0 = phi i8* [ %add.ptr, %if.end ], [ null, %entry ]
-  ret i8* %retval.0
+  %retval.0 = phi ptr [ %add.ptr, %if.end ], [ null, %entry ]
+  ret ptr %retval.0
 }
 
 ; Test optimizations of dec/inc.
@@ -400,10 +400,10 @@ define i32 @func_test1(i32 %p1) nounwind uwtable {
 ; CHECK-NEXT:  .LBB18_2: # %if.end
 ; CHECK-NEXT:    retl
 entry:
-  %t0 = load i32, i32* @b, align 4
+  %t0 = load i32, ptr @b, align 4
   %cmp = icmp ult i32 %t0, %p1
   %conv = zext i1 %cmp to i32
-  %t1 = load i32, i32* @a, align 4
+  %t1 = load i32, ptr @a, align 4
   %and = and i32 %conv, %t1
   %conv1 = trunc i32 %and to i8
   %t2 = urem i8 %conv1, 3
@@ -412,7 +412,7 @@ entry:
 
 if.then:
   %dec = add nsw i32 %t1, -1
-  store i32 %dec, i32* @a, align 4
+  store i32 %dec, ptr @a, align 4
   br label %if.end
 
 if.end:

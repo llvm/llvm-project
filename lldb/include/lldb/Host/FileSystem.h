@@ -10,19 +10,20 @@
 #define LLDB_HOST_FILESYSTEM_H
 
 #include "lldb/Host/File.h"
-#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/TildeExpressionResolver.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Chrono.h"
-#include "llvm/Support/FileCollector.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include "lldb/lldb-types.h"
 
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 #include <sys/stat.h>
 
 namespace lldb_private {
@@ -32,25 +33,24 @@ public:
   static const char *PATH_CONVERSION_ERROR;
 
   FileSystem()
-      : m_fs(llvm::vfs::getRealFileSystem()), m_collector(nullptr),
-        m_home_directory(), m_mapped(false) {}
-  FileSystem(std::shared_ptr<llvm::FileCollectorBase> collector)
-      : m_fs(llvm::vfs::getRealFileSystem()), m_collector(std::move(collector)),
-        m_home_directory(), m_mapped(false) {}
-  FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
-             bool mapped = false)
-      : m_fs(std::move(fs)), m_collector(nullptr), m_home_directory(),
-        m_mapped(mapped) {}
+      : m_fs(llvm::vfs::getRealFileSystem()),
+        m_tilde_resolver(std::make_unique<StandardTildeExpressionResolver>()) {}
+  FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs)
+      : m_fs(std::move(fs)),
+        m_tilde_resolver(std::make_unique<StandardTildeExpressionResolver>()) {}
+  FileSystem(std::unique_ptr<TildeExpressionResolver> tilde_resolver)
+      : m_fs(llvm::vfs::getRealFileSystem()),
+        m_tilde_resolver(std::move(tilde_resolver)) {}
 
   FileSystem(const FileSystem &fs) = delete;
   FileSystem &operator=(const FileSystem &fs) = delete;
 
   static FileSystem &Instance();
 
-  static void Initialize();
-  static void Initialize(std::shared_ptr<llvm::FileCollectorBase> collector);
-  static llvm::Error Initialize(const FileSpec &mapping);
-  static void Initialize(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
+  template <class... T> static void Initialize(T &&...t) {
+    lldbassert(!InstanceImpl() && "Already initialized.");
+    InstanceImpl().emplace(std::forward<T>(t)...);
+  }
   static void Terminate();
 
   Status Symlink(const FileSpec &src, const FileSpec &dst);
@@ -62,7 +62,7 @@ public:
   FILE *Fopen(const char *path, const char *mode);
 
   /// Wraps ::open in a platform-independent way.
-  int Open(const char *path, int flags, int mode);
+  int Open(const char *path, int flags, int mode = 0600);
 
   llvm::Expected<std::unique_ptr<File>>
   Open(const FileSpec &file_spec, File::OpenOptions options,
@@ -142,14 +142,28 @@ public:
   void Resolve(FileSpec &file_spec);
   /// \}
 
+  /// Remove a single file.
+  ///
+  /// The path must specify a file and not a directory.
+  /// \{
+  Status RemoveFile(const FileSpec &file_spec);
+  Status RemoveFile(const llvm::Twine &path);
+  /// \}
+
   //// Create memory buffer from path.
   /// \{
-  std::shared_ptr<DataBufferLLVM> CreateDataBuffer(const llvm::Twine &path,
-                                                   uint64_t size = 0,
-                                                   uint64_t offset = 0);
-  std::shared_ptr<DataBufferLLVM> CreateDataBuffer(const FileSpec &file_spec,
-                                                   uint64_t size = 0,
-                                                   uint64_t offset = 0);
+  std::shared_ptr<DataBuffer> CreateDataBuffer(const llvm::Twine &path,
+                                               uint64_t size = 0,
+                                               uint64_t offset = 0);
+  std::shared_ptr<DataBuffer> CreateDataBuffer(const FileSpec &file_spec,
+                                               uint64_t size = 0,
+                                               uint64_t offset = 0);
+  std::shared_ptr<WritableDataBuffer>
+  CreateWritableDataBuffer(const llvm::Twine &path, uint64_t size = 0,
+                           uint64_t offset = 0);
+  std::shared_ptr<WritableDataBuffer>
+  CreateWritableDataBuffer(const FileSpec &file_spec, uint64_t size = 0,
+                           uint64_t offset = 0);
   /// \}
 
   /// Call into the Host to see if it can help find the file.
@@ -184,24 +198,17 @@ public:
   std::error_code GetRealPath(const llvm::Twine &path,
                               llvm::SmallVectorImpl<char> &output) const;
 
-  llvm::ErrorOr<std::string> GetExternalPath(const llvm::Twine &path);
-  llvm::ErrorOr<std::string> GetExternalPath(const FileSpec &file_spec);
-
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> GetVirtualFileSystem() {
     return m_fs;
   }
 
-  void Collect(const FileSpec &file_spec);
-  void Collect(const llvm::Twine &file);
-
   void SetHomeDirectory(std::string home_directory);
 
 private:
-  static llvm::Optional<FileSystem> &InstanceImpl();
+  static std::optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
-  std::shared_ptr<llvm::FileCollectorBase> m_collector;
+  std::unique_ptr<TildeExpressionResolver> m_tilde_resolver;
   std::string m_home_directory;
-  bool m_mapped;
 };
 } // namespace lldb_private
 

@@ -9,7 +9,7 @@
 // However, not all of them should result in the check.
 // So here, we *only* check which should and which should not result in checks.
 
-// CHECK-DAG: @[[LINE_500_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 500, i32 10 }, {{.*}}, {{.*}}, i8 1 }
+// CHECK-DAG: @[[LINE_500_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 500, i32 10 }, {{.*}}, {{.*}}, i8 1, i32 0 }
 
 // CHECK-LABEL: @convert_unsigned_int_to_unsigned_int
 unsigned int convert_unsigned_int_to_unsigned_int(unsigned int x) {
@@ -37,7 +37,7 @@ signed char convert_signed_char_to_signed_char(signed char x) {
 
 // CHECK-LABEL: @convert_unsigned_int_to_unsigned_char
 unsigned char convert_unsigned_int_to_unsigned_char(unsigned int x) {
-  // CHECK: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_500_UNSIGNED_TRUNCATION]] to i8*)
+  // CHECK: call void @__ubsan_handle_implicit_conversion(ptr @[[LINE_500_UNSIGNED_TRUNCATION]]
 #line 500
   return x;
 }

@@ -68,5 +68,5 @@ parent-umbrella:
     umbrella:     System
 exports:
   - targets:      [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
-    symbols:      [ ___nan ]
+    symbols:      [ ___nan, ___isnan, ___inf, ___isinf ]
 ...

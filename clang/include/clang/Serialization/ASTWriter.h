@@ -18,12 +18,14 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/PCHContainerOperations.h"
+#include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -43,26 +45,13 @@
 #include <utility>
 #include <vector>
 
-namespace llvm {
-
-class APFloat;
-class APInt;
-class APSInt;
-
-} // namespace llvm
-
 namespace clang {
 
 class ASTContext;
 class ASTReader;
-class ASTUnresolvedSet;
 class Attr;
-class CXXBaseSpecifier;
-class CXXCtorInitializer;
 class CXXRecordDecl;
-class CXXTemporary;
 class FileEntry;
-class FPOptions;
 class FPOptionsOverride;
 class FunctionDecl;
 class HeaderSearch;
@@ -79,16 +68,17 @@ class NamedDecl;
 class ObjCInterfaceDecl;
 class PreprocessingRecord;
 class Preprocessor;
-struct QualifierInfo;
 class RecordDecl;
 class Sema;
 class SourceManager;
 class Stmt;
 class StoredDeclsList;
 class SwitchCase;
-class TemplateParameterList;
 class Token;
-class TypeSourceInfo;
+
+namespace SrcMgr {
+class FileInfo;
+} // namespace SrcMgr
 
 /// Writes an AST file containing the contents of a translation unit.
 ///
@@ -119,6 +109,8 @@ private:
   using TypeIdxMap = llvm::DenseMap<QualType, serialization::TypeIdx,
                                     serialization::UnsafeQualTypeDenseMapInfo>;
 
+  using LocSeq = SourceLocationSequence;
+
   /// The bitstream writer used to emit this precompiled header.
   llvm::BitstreamWriter &Stream;
 
@@ -140,10 +132,17 @@ private:
   /// The module we're currently writing, if any.
   Module *WritingModule = nullptr;
 
-  /// The offset of the first bit inside the AST_BLOCK.
+  /// The byte range representing all the UNHASHED_CONTROL_BLOCK.
+  std::pair<uint64_t, uint64_t> UnhashedControlBlockRange;
+  /// The bit offset of the AST block hash blob.
+  uint64_t ASTBlockHashOffset = 0;
+  /// The bit offset of the signature blob.
+  uint64_t SignatureOffset = 0;
+
+  /// The bit offset of the first bit inside the AST_BLOCK.
   uint64_t ASTBlockStartOffset = 0;
 
-  /// The range representing all the AST_BLOCK.
+  /// The byte range representing all the AST_BLOCK.
   std::pair<uint64_t, uint64_t> ASTBlockRange;
 
   /// The base directory for any relative paths we emit.
@@ -155,6 +154,11 @@ private:
   /// file is up to date, but not otherwise.
   bool IncludeTimestamps;
 
+  /// Indicates whether the AST file being written is an implicit module.
+  /// If that's the case, we may be able to skip writing some information that
+  /// are guaranteed to be the same in the importer by the context hash.
+  bool BuildingImplicitModule = false;
+
   /// Indicates when the AST writing is actively performing
   /// serialization, rather than just queueing updates.
   bool WritingAST = false;
@@ -165,6 +169,10 @@ private:
 
   /// Indicates that the AST contained compiler errors.
   bool ASTHasCompilerErrors = false;
+
+  /// Indicates that we're going to generate the reduced BMI for C++20
+  /// named modules.
+  bool GeneratingReducedBMI = false;
 
   /// Mapping from input file entries to the index into the
   /// offset table where information about that input file is stored.
@@ -197,11 +205,21 @@ private:
   /// The declarations and types to emit.
   std::queue<DeclOrType> DeclTypesToEmit;
 
+  /// The delayed namespace to emit. Only meaningful for reduced BMI.
+  ///
+  /// In reduced BMI, we want to elide the unreachable declarations in
+  /// the global module fragment. However, in ASTWriterDecl, when we see
+  /// a namespace, all the declarations in the namespace would be emitted.
+  /// So the optimization become meaningless. To solve the issue, we
+  /// delay recording all the declarations until we emit all the declarations.
+  /// Then we can safely record the reached declarations only.
+  llvm::SmallVector<NamespaceDecl *, 16> DelayedNamespace;
+
   /// The first ID number we can use for our own declarations.
-  serialization::DeclID FirstDeclID = serialization::NUM_PREDEF_DECL_IDS;
+  LocalDeclID FirstDeclID = LocalDeclID(clang::NUM_PREDEF_DECL_IDS);
 
   /// The decl ID that will be assigned to the next new decl.
-  serialization::DeclID NextDeclID = FirstDeclID;
+  LocalDeclID NextDeclID = FirstDeclID;
 
   /// Map that provides the ID numbers of each declaration within
   /// the output stream, as well as those deserialized from a chained PCH.
@@ -209,7 +227,7 @@ private:
   /// The ID numbers of declarations are consecutive (in order of
   /// discovery) and start at 2. 1 is reserved for the translation
   /// unit, while 0 is reserved for NULL.
-  llvm::DenseMap<const Decl *, serialization::DeclID> DeclIDs;
+  llvm::DenseMap<const Decl *, LocalDeclID> DeclIDs;
 
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
@@ -219,9 +237,8 @@ private:
   /// are relative to this value.
   uint64_t DeclTypesBlockStartOffset = 0;
 
-  /// Sorted (by file offset) vector of pairs of file offset/DeclID.
-  using LocDeclIDsTy =
-      SmallVector<std::pair<unsigned, serialization::DeclID>, 64>;
+  /// Sorted (by file offset) vector of pairs of file offset/LocalDeclID.
+  using LocDeclIDsTy = SmallVector<std::pair<unsigned, LocalDeclID>, 64>;
   struct DeclIDInFileInfo {
     LocDeclIDsTy DeclIDs;
 
@@ -236,7 +253,7 @@ private:
   /// that it contains.
   FileDeclIDsTy FileDeclIDs;
 
-  void associateDeclWithFile(const Decl *D, serialization::DeclID);
+  void associateDeclWithFile(const Decl *D, LocalDeclID);
 
   /// The first ID number we can use for our own types.
   serialization::TypeID FirstTypeID = serialization::NUM_PREDEF_TYPE_IDS;
@@ -257,13 +274,13 @@ private:
 
   /// Offset of each type in the bitstream, indexed by
   /// the type's ID.
-  std::vector<serialization::UnderalignedInt64> TypeOffsets;
+  std::vector<serialization::UnalignedUInt64> TypeOffsets;
 
   /// The first ID number we can use for our own identifiers.
-  serialization::IdentID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
+  serialization::IdentifierID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
 
   /// The identifier ID that will be assigned to the next new identifier.
-  serialization::IdentID NextIdentID = FirstIdentID;
+  serialization::IdentifierID NextIdentID = FirstIdentID;
 
   /// Map that provides the ID numbers of each identifier in
   /// the output stream.
@@ -271,7 +288,7 @@ private:
   /// The ID numbers for identifiers are consecutive (in order of
   /// discovery), starting at 1. An ID of zero refers to a NULL
   /// IdentifierInfo.
-  llvm::MapVector<const IdentifierInfo *, serialization::IdentID> IdentifierIDs;
+  llvm::MapVector<const IdentifierInfo *, serialization::IdentifierID> IdentifierIDs;
 
   /// The first ID number we can use for our own macros.
   serialization::MacroID FirstMacroID = serialization::NUM_PREDEF_MACRO_IDS;
@@ -340,6 +357,13 @@ private:
   /// contexts.
   llvm::DenseMap<const Decl *, unsigned> AnonymousDeclarationNumbers;
 
+  /// The external top level module during the writing process. Used to
+  /// generate signature for the module file being written.
+  ///
+  /// Only meaningful for standard C++ named modules. See the comments in
+  /// createSignatureForNamedModule() for details.
+  llvm::DenseSet<Module *> TouchedTopLevelModules;
+
   /// An update to a Decl.
   class DeclUpdate {
     /// A DeclUpdateKind.
@@ -347,7 +371,7 @@ private:
     union {
       const Decl *Dcl;
       void *Type;
-      unsigned Loc;
+      SourceLocation::UIntTy Loc;
       unsigned Val;
       Module *Mod;
       const Attr *Attribute;
@@ -385,6 +409,11 @@ private:
   /// record containing modifications to them.
   DeclUpdateMap DeclUpdates;
 
+  /// DeclUpdates added during parsing the GMF. We split these from
+  /// DeclUpdates since we want to add these updates in GMF on need.
+  /// Only meaningful for reduced BMI.
+  DeclUpdateMap DeclUpdatesFromGMF;
+
   using FirstLatestDeclMap = llvm::DenseMap<Decl *, Decl *>;
 
   /// Map of first declarations from a chained PCH that point to the
@@ -402,8 +431,8 @@ private:
   /// headers. The declarations themselves are stored as declaration
   /// IDs, since they will be written out to an EAGERLY_DESERIALIZED_DECLS
   /// record.
-  SmallVector<serialization::DeclID, 16> EagerlyDeserializedDecls;
-  SmallVector<serialization::DeclID, 16> ModularCodegenDecls;
+  RecordData EagerlyDeserializedDecls;
+  RecordData ModularCodegenDecls;
 
   /// DeclContexts that have received extensions since their serialized
   /// form.
@@ -450,11 +479,51 @@ private:
 
   /// A mapping from each known submodule to its ID number, which will
   /// be a positive integer.
-  llvm::DenseMap<Module *, unsigned> SubmoduleIDs;
+  llvm::DenseMap<const Module *, unsigned> SubmoduleIDs;
 
   /// A list of the module file extension writers.
   std::vector<std::unique_ptr<ModuleFileExtensionWriter>>
       ModuleFileExtensionWriters;
+
+  /// Mapping from a source location entry to whether it is affecting or not.
+  llvm::BitVector IsSLocAffecting;
+
+  /// Mapping from \c FileID to an index into the FileID adjustment table.
+  std::vector<FileID> NonAffectingFileIDs;
+  std::vector<unsigned> NonAffectingFileIDAdjustments;
+
+  /// Mapping from an offset to an index into the offset adjustment table.
+  std::vector<SourceRange> NonAffectingRanges;
+  std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
+
+  /// Computes input files that didn't affect compilation of the current module,
+  /// and initializes data structures necessary for leaving those files out
+  /// during \c SourceManager serialization.
+  void computeNonAffectingInputFiles();
+
+  /// Some affecting files can be included from files that are not affecting.
+  /// This function erases source locations pointing into such files.
+  SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,
+                                        const SrcMgr::FileInfo &File);
+
+  /// Returns an adjusted \c FileID, accounting for any non-affecting input
+  /// files.
+  FileID getAdjustedFileID(FileID FID) const;
+  /// Returns an adjusted number of \c FileIDs created within the specified \c
+  /// FileID, accounting for any non-affecting input files.
+  unsigned getAdjustedNumCreatedFIDs(FileID FID) const;
+  /// Returns an adjusted \c SourceLocation, accounting for any non-affecting
+  /// input files.
+  SourceLocation getAdjustedLocation(SourceLocation Loc) const;
+  /// Returns an adjusted \c SourceRange, accounting for any non-affecting input
+  /// files.
+  SourceRange getAdjustedRange(SourceRange Range) const;
+  /// Returns an adjusted \c SourceLocation offset, accounting for any
+  /// non-affecting input files.
+  SourceLocation::UIntTy getAdjustedOffset(SourceLocation::UIntTy Offset) const;
+  /// Returns an adjustment for offset into SourceManager, accounting for any
+  /// non-affecting input files.
+  SourceLocation::UIntTy getAdjustment(SourceLocation::UIntTy Offset) const;
 
   /// Retrieve or create a submodule ID for this module.
   unsigned getSubmoduleID(Module *Mod);
@@ -464,18 +533,17 @@ private:
 
   void WriteBlockInfoBlock();
   void WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                         StringRef isysroot, const std::string &OutputFile);
+                         StringRef isysroot);
 
   /// Write out the signature and diagnostic options, and return the signature.
-  ASTFileSignature writeUnhashedControlBlock(Preprocessor &PP,
-                                             ASTContext &Context);
+  void writeUnhashedControlBlock(Preprocessor &PP, ASTContext &Context);
+  ASTFileSignature backpatchSignature();
 
   /// Calculate hash of the pcm content.
-  static std::pair<ASTFileSignature, ASTFileSignature>
-  createSignature(StringRef AllBytes, StringRef ASTBlockBytes);
+  std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
+  ASTFileSignature createSignatureForNamedModule() const;
 
-  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
-                       bool Modules);
+  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
                                const Preprocessor &PP);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
@@ -488,12 +556,12 @@ private:
                                      bool isModule);
 
   unsigned TypeExtQualAbbrev = 0;
-  unsigned TypeFunctionProtoAbbrev = 0;
   void WriteTypeAbbrevs();
   void WriteType(QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-  bool isLookupResultEntirelyExternal(StoredDeclsList &Result, DeclContext *DC);
+  bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
+                                                   DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
@@ -506,6 +574,9 @@ private:
   void WriteReferencedSelectorsPool(Sema &SemaRef);
   void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
                             bool IsModule);
+  void WriteDeclAndTypes(ASTContext &Context);
+  void PrepareWritingSpecialDecls(Sema &SemaRef);
+  void WriteSpecialDeclRecords(Sema &SemaRef);
   void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
@@ -532,17 +603,30 @@ private:
   unsigned DeclEnumAbbrev = 0;
   unsigned DeclObjCIvarAbbrev = 0;
   unsigned DeclCXXMethodAbbrev = 0;
+  unsigned DeclDependentNonTemplateCXXMethodAbbrev = 0;
+  unsigned DeclTemplateCXXMethodAbbrev = 0;
+  unsigned DeclMemberSpecializedCXXMethodAbbrev = 0;
+  unsigned DeclTemplateSpecializedCXXMethodAbbrev = 0;
+  unsigned DeclDependentSpecializationCXXMethodAbbrev = 0;
+  unsigned DeclTemplateTypeParmAbbrev = 0;
+  unsigned DeclUsingShadowAbbrev = 0;
 
   unsigned DeclRefExprAbbrev = 0;
   unsigned CharacterLiteralAbbrev = 0;
   unsigned IntegerLiteralAbbrev = 0;
   unsigned ExprImplicitCastAbbrev = 0;
+  unsigned BinaryOperatorAbbrev = 0;
+  unsigned CompoundAssignOperatorAbbrev = 0;
+  unsigned CallExprAbbrev = 0;
+  unsigned CXXOperatorCallExprAbbrev = 0;
+  unsigned CXXMemberCallExprAbbrev = 0;
+
+  unsigned CompoundStmtAbbrev = 0;
 
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
 
   ASTFileSignature WriteASTCore(Sema &SemaRef, StringRef isysroot,
-                                const std::string &OutputFile,
                                 Module *WritingModule);
 
 public:
@@ -551,7 +635,8 @@ public:
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
             InMemoryModuleCache &ModuleCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-            bool IncludeTimestamps = true);
+            bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
+            bool GeneratingReducedBMI = false);
   ~ASTWriter() override;
 
   ASTContext &getASTContext() const {
@@ -580,9 +665,8 @@ public:
   ///
   /// \return the module signature, which eventually will be a hash of
   /// the module but currently is merely a random 32-bit number.
-  ASTFileSignature WriteAST(Sema &SemaRef, const std::string &OutputFile,
+  ASTFileSignature WriteAST(Sema &SemaRef, StringRef OutputFile,
                             Module *WritingModule, StringRef isysroot,
-                            bool hasErrors = false,
                             bool ShouldCacheASTInMemory = false);
 
   /// Emit a token.
@@ -592,11 +676,20 @@ public:
   void AddAlignPackInfo(const Sema::AlignPackInfo &Info,
                         RecordDataImpl &Record);
 
+  /// Emit a FileID.
+  void AddFileID(FileID FID, RecordDataImpl &Record);
+
   /// Emit a source location.
-  void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
+  void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
+                         LocSeq *Seq = nullptr);
+
+  /// Return the raw encodings for source locations.
+  SourceLocationEncoding::RawLocEncoding
+  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
 
   /// Emit a source range.
-  void AddSourceRange(SourceRange Range, RecordDataImpl &Record);
+  void AddSourceRange(SourceRange Range, RecordDataImpl &Record,
+                      LocSeq *Seq = nullptr);
 
   /// Emit a reference to an identifier.
   void AddIdentifierRef(const IdentifierInfo *II, RecordDataImpl &Record);
@@ -605,7 +698,7 @@ public:
   serialization::SelectorID getSelectorRef(Selector Sel);
 
   /// Get the unique number used to refer to the given identifier.
-  serialization::IdentID getIdentifierRef(const IdentifierInfo *II);
+  serialization::IdentifierID getIdentifierRef(const IdentifierInfo *II);
 
   /// Get the unique number used to refer to the given macro.
   serialization::MacroID getMacroRef(MacroInfo *MI, const IdentifierInfo *Name);
@@ -636,18 +729,30 @@ public:
       return false;
     auto I = DeclIDs.find(D);
     return (I == DeclIDs.end() ||
-            I->second >= serialization::NUM_PREDEF_DECL_IDS);
+            I->second.get() >= clang::NUM_PREDEF_DECL_IDS);
   };
 
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
+  // Emit a reference to a declaration if the declaration was emitted.
+  void AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record);
 
-  /// Force a declaration to be emitted and get its ID.
-  serialization::DeclID GetDeclRef(const Decl *D);
+  /// Force a declaration to be emitted and get its local ID to the module file
+  /// been writing.
+  LocalDeclID GetDeclRef(const Decl *D);
 
-  /// Determine the declaration ID of an already-emitted
+  /// Determine the local declaration ID of an already-emitted
   /// declaration.
-  serialization::DeclID getDeclID(const Decl *D);
+  LocalDeclID getDeclID(const Decl *D);
+
+  /// Whether or not the declaration got emitted. If not, it wouldn't be
+  /// emitted.
+  ///
+  /// This may only be called after we've done the job to write the
+  /// declarations (marked by DoneWritingDeclsAndTypes).
+  ///
+  /// A declaration may only be omitted in reduced BMI.
+  bool wasDeclEmitted(const Decl *D) const;
 
   unsigned getAnonymousDeclarationNumber(const NamedDecl *D);
 
@@ -671,7 +776,7 @@ public:
   /// Retrieve or create a submodule ID for this module, or return 0 if
   /// the submodule is neither local (a submodle of the currently-written module)
   /// nor from an imported module.
-  unsigned getLocalOrImportedSubmoduleID(Module *Mod);
+  unsigned getLocalOrImportedSubmoduleID(const Module *Mod);
 
   /// Note that the identifier II occurs at the given offset
   /// within the identifier table.
@@ -693,10 +798,6 @@ public:
     return TypeExtQualAbbrev;
   }
 
-  unsigned getTypeFunctionProtoAbbrev() const {
-    return TypeFunctionProtoAbbrev;
-  }
-
   unsigned getDeclParmVarAbbrev() const { return DeclParmVarAbbrev; }
   unsigned getDeclRecordAbbrev() const { return DeclRecordAbbrev; }
   unsigned getDeclTypedefAbbrev() const { return DeclTypedefAbbrev; }
@@ -704,20 +805,57 @@ public:
   unsigned getDeclFieldAbbrev() const { return DeclFieldAbbrev; }
   unsigned getDeclEnumAbbrev() const { return DeclEnumAbbrev; }
   unsigned getDeclObjCIvarAbbrev() const { return DeclObjCIvarAbbrev; }
-  unsigned getDeclCXXMethodAbbrev() const { return DeclCXXMethodAbbrev; }
+  unsigned getDeclCXXMethodAbbrev(FunctionDecl::TemplatedKind Kind) const {
+    switch (Kind) {
+    case FunctionDecl::TK_NonTemplate:
+      return DeclCXXMethodAbbrev;
+    case FunctionDecl::TK_FunctionTemplate:
+      return DeclTemplateCXXMethodAbbrev;
+    case FunctionDecl::TK_MemberSpecialization:
+      return DeclMemberSpecializedCXXMethodAbbrev;
+    case FunctionDecl::TK_FunctionTemplateSpecialization:
+      return DeclTemplateSpecializedCXXMethodAbbrev;
+    case FunctionDecl::TK_DependentNonTemplate:
+      return DeclDependentNonTemplateCXXMethodAbbrev;
+    case FunctionDecl::TK_DependentFunctionTemplateSpecialization:
+      return DeclDependentSpecializationCXXMethodAbbrev;
+    }
+    llvm_unreachable("Unknwon Template Kind!");
+  }
+  unsigned getDeclTemplateTypeParmAbbrev() const {
+    return DeclTemplateTypeParmAbbrev;
+  }
+  unsigned getDeclUsingShadowAbbrev() const { return DeclUsingShadowAbbrev; }
 
   unsigned getDeclRefExprAbbrev() const { return DeclRefExprAbbrev; }
   unsigned getCharacterLiteralAbbrev() const { return CharacterLiteralAbbrev; }
   unsigned getIntegerLiteralAbbrev() const { return IntegerLiteralAbbrev; }
   unsigned getExprImplicitCastAbbrev() const { return ExprImplicitCastAbbrev; }
+  unsigned getBinaryOperatorAbbrev() const { return BinaryOperatorAbbrev; }
+  unsigned getCompoundAssignOperatorAbbrev() const {
+    return CompoundAssignOperatorAbbrev;
+  }
+  unsigned getCallExprAbbrev() const { return CallExprAbbrev; }
+  unsigned getCXXOperatorCallExprAbbrev() { return CXXOperatorCallExprAbbrev; }
+  unsigned getCXXMemberCallExprAbbrev() { return CXXMemberCallExprAbbrev; }
+
+  unsigned getCompoundStmtAbbrev() const { return CompoundStmtAbbrev; }
 
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
+  bool isWritingStdCXXNamedModules() const {
+    return WritingModule && WritingModule->isNamedModule();
+  }
+
+  bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }
+
+  bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
+
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
-  void IdentifierRead(serialization::IdentID ID, IdentifierInfo *II) override;
+  void IdentifierRead(serialization::IdentifierID ID, IdentifierInfo *II) override;
   void MacroRead(serialization::MacroID ID, MacroInfo *MI) override;
   void TypeRead(serialization::TypeIdx Idx, QualType T) override;
   void SelectorRead(serialization::SelectorID ID, Selector Sel) override;
@@ -758,12 +896,19 @@ private:
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
+  void EnteringModulePurview() override;
+  void AddedManglingNumber(const Decl *D, unsigned) override;
+  void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
+  void AddedAnonymousNamespace(const TranslationUnitDecl *,
+                               NamespaceDecl *AnonNamespace) override;
 };
 
 /// AST and semantic-analysis consumer that generates a
 /// precompiled header from the parsed source code.
 class PCHGenerator : public SemaConsumer {
-  const Preprocessor &PP;
+  void anchor() override;
+
+  Preprocessor &PP;
   std::string OutputFile;
   std::string isysroot;
   Sema *SemaPtr;
@@ -778,13 +923,25 @@ protected:
   const ASTWriter &getWriter() const { return Writer; }
   SmallVectorImpl<char> &getPCH() const { return Buffer->Data; }
 
+  bool isComplete() const { return Buffer->IsComplete; }
+  PCHBuffer *getBufferPtr() { return Buffer.get(); }
+  StringRef getOutputFile() const { return OutputFile; }
+  DiagnosticsEngine &getDiagnostics() const {
+    return SemaPtr->getDiagnostics();
+  }
+  Preprocessor &getPreprocessor() { return PP; }
+
+  virtual Module *getEmittingModule(ASTContext &Ctx);
+
 public:
-  PCHGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  PCHGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                StringRef OutputFile, StringRef isysroot,
                std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
-               bool ShouldCacheASTInMemory = false);
+               bool BuildingImplicitModule = false,
+               bool ShouldCacheASTInMemory = false,
+               bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 
   void InitializeSema(Sema &S) override { SemaPtr = &S; }
@@ -792,6 +949,80 @@ public:
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
+};
+
+class CXX20ModulesGenerator : public PCHGenerator {
+  void anchor() override;
+
+protected:
+  virtual Module *getEmittingModule(ASTContext &Ctx) override;
+
+  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                        StringRef OutputFile, bool GeneratingReducedBMI);
+
+public:
+  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                        StringRef OutputFile)
+      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+                              /*GeneratingReducedBMI=*/false) {}
+
+  void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+
+class ReducedBMIGenerator : public CXX20ModulesGenerator {
+  void anchor() override;
+
+public:
+  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                      StringRef OutputFile)
+      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+                              /*GeneratingReducedBMI=*/true) {}
+};
+
+/// If we can elide the definition of \param D in reduced BMI.
+///
+/// Generally, we can elide the definition of a declaration if it won't affect
+/// the ABI. e.g., the non-inline function bodies.
+bool CanElideDeclDef(const Decl *D);
+
+/// A simple helper class to pack several bits in order into (a) 32 bit
+/// integer(s).
+class BitsPacker {
+  constexpr static uint32_t BitIndexUpbound = 32u;
+
+public:
+  BitsPacker() = default;
+  BitsPacker(const BitsPacker &) = delete;
+  BitsPacker(BitsPacker &&) = delete;
+  BitsPacker operator=(const BitsPacker &) = delete;
+  BitsPacker operator=(BitsPacker &&) = delete;
+  ~BitsPacker() = default;
+
+  bool canWriteNextNBits(uint32_t BitsWidth) const {
+    return CurrentBitIndex + BitsWidth < BitIndexUpbound;
+  }
+
+  void reset(uint32_t Value) {
+    UnderlyingValue = Value;
+    CurrentBitIndex = 0;
+  }
+
+  void addBit(bool Value) { addBits(Value, 1); }
+  void addBits(uint32_t Value, uint32_t BitsWidth) {
+    assert(BitsWidth < BitIndexUpbound);
+    assert((Value < (1u << BitsWidth)) && "Passing narrower bit width!");
+    assert(canWriteNextNBits(BitsWidth) &&
+           "Inserting too much bits into a value!");
+
+    UnderlyingValue |= Value << CurrentBitIndex;
+    CurrentBitIndex += BitsWidth;
+  }
+
+  operator uint32_t() { return UnderlyingValue; }
+
+private:
+  uint32_t UnderlyingValue = 0;
+  uint32_t CurrentBitIndex = 0;
 };
 
 } // namespace clang

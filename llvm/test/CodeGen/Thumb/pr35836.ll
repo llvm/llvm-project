@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv5e-none-linux-gnueabi"
 
 ; Function Attrs: norecurse nounwind optsize
-define void @f(i32,i32,i32,i32,i32* %x4p, i32* %x5p, i32* %x6p) {
+define void @f(i32,i32,i32,i32,ptr %x4p, ptr %x5p, ptr %x6p) {
 if.end:
   br label %while.body
 
@@ -23,11 +23,11 @@ while.body:
   %add19 = add nuw nsw i64 %conv18, %conv16
   %add20 = add nuw nsw i64 %add19, %shr14
   %conv21 = trunc i64 %add20 to i32
-  store i32 %conv21, i32* %x6p, align 4
+  store i32 %conv21, ptr %x6p, align 4
   %shr23 = lshr i64 %add20, 32
-  %x4 = load i32, i32* %x4p, align 4
+  %x4 = load i32, ptr %x4p, align 4
   %conv25 = zext i32 %x4 to i64
-  %x5 = load i32, i32* %x5p, align 4
+  %x5 = load i32, ptr %x5p, align 4
   %conv27 = zext i32 %x5 to i64
   %add28 = add nuw nsw i64 %conv27, %conv25
   %add29 = add nuw nsw i64 %add28, %shr23
@@ -35,18 +35,18 @@ while.body:
   br label %while.body
 }
 ; CHECK: adds	r3, r0, r1
-; CHECK: push	{r5}
-; CHECK: pop	{r1}
+; CHECK: mov	r12, r5
+; CHECK: mov	r1, r12
 ; CHECK: adcs	r1, r5
 ; CHECK: ldr	r0, [sp, #12]           @ 4-byte Reload
 ; CHECK: ldr	r2, [sp, #8]            @ 4-byte Reload
 ; CHECK: adds	r2, r0, r2
-; CHECK: push	{r5}
-; CHECK: pop	{r4}
+; CHECK: mov	r12, r5
+; CHECK: mov	r4, r12
 ; CHECK: adcs	r4, r5
 ; CHECK: adds	r0, r2, r5
-; CHECK: push	{r3}
-; CHECK: pop	{r0}
+; CHECK: mov	r12, r3
+; CHECK: mov	r0, r12
 ; CHECK: adcs	r0, r4
 ; CHECK: ldr	r6, [sp, #4]            @ 4-byte Reload
 ; CHECK: str	r0, [r6]

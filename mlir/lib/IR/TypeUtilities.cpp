@@ -11,18 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/TypeUtilities.h"
-
-#include <numeric>
-
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/SmallVectorExtras.h"
+#include <numeric>
 
 using namespace mlir;
 
 Type mlir::getElementTypeOrSelf(Type type) {
-  if (auto st = type.dyn_cast<ShapedType>())
+  if (auto st = llvm::dyn_cast<ShapedType>(type))
     return st.getElementType();
   return type;
 }
@@ -32,7 +31,9 @@ Type mlir::getElementTypeOrSelf(Value val) {
 }
 
 Type mlir::getElementTypeOrSelf(Attribute attr) {
-  return getElementTypeOrSelf(attr.getType());
+  if (auto typedAttr = llvm::dyn_cast<TypedAttr>(attr))
+    return getElementTypeOrSelf(typedAttr.getType());
+  return {};
 }
 
 SmallVector<Type, 10> mlir::getFlattenedTypes(TupleType t) {
@@ -45,7 +46,7 @@ SmallVector<Type, 10> mlir::getFlattenedTypes(TupleType t) {
 /// dialect and typeData.
 bool mlir::isOpaqueTypeWithName(Type type, StringRef dialect,
                                 StringRef typeData) {
-  if (auto opaque = type.dyn_cast<mlir::OpaqueType>())
+  if (auto opaque = llvm::dyn_cast<mlir::OpaqueType>(type))
     return opaque.getDialectNamespace() == dialect &&
            opaque.getTypeData() == typeData;
   return false;
@@ -74,8 +75,8 @@ LogicalResult mlir::verifyCompatibleShape(ArrayRef<int64_t> shape1,
 /// compatible if at least one is dynamic or both are equal. The element type
 /// does not matter.
 LogicalResult mlir::verifyCompatibleShape(Type type1, Type type2) {
-  auto sType1 = type1.dyn_cast<ShapedType>();
-  auto sType2 = type2.dyn_cast<ShapedType>();
+  auto sType1 = llvm::dyn_cast<ShapedType>(type1);
+  auto sType2 = llvm::dyn_cast<ShapedType>(type2);
 
   // Either both or neither type should be shaped.
   if (!sType1)
@@ -117,14 +118,27 @@ LogicalResult mlir::verifyCompatibleDims(ArrayRef<int64_t> dims) {
 /// have compatible dimensions. Dimensions are compatible if all non-dynamic
 /// dims are equal. The element type does not matter.
 LogicalResult mlir::verifyCompatibleShapes(TypeRange types) {
-  auto shapedTypes = llvm::to_vector<8>(llvm::map_range(
-      types, [](auto type) { return type.template dyn_cast<ShapedType>(); }));
+  auto shapedTypes = llvm::map_to_vector<8>(
+      types, [](auto type) { return llvm::dyn_cast<ShapedType>(type); });
   // Return failure if some, but not all are not shaped. Return early if none
   // are shaped also.
   if (llvm::none_of(shapedTypes, [](auto t) { return t; }))
     return success();
   if (!llvm::all_of(shapedTypes, [](auto t) { return t; }))
     return failure();
+
+  // Return failure if some, but not all, are scalable vectors.
+  bool hasScalableVecTypes = false;
+  bool hasNonScalableVecTypes = false;
+  for (Type t : types) {
+    auto vType = llvm::dyn_cast<VectorType>(t);
+    if (vType && vType.isScalable())
+      hasScalableVecTypes = true;
+    else
+      hasNonScalableVecTypes = true;
+    if (hasScalableVecTypes && hasNonScalableVecTypes)
+      return failure();
+  }
 
   // Remove all unranked shapes
   auto shapes = llvm::to_vector<8>(llvm::make_filter_range(
@@ -140,10 +154,10 @@ LogicalResult mlir::verifyCompatibleShapes(TypeRange types) {
 
   for (unsigned i = 0; i < firstRank; ++i) {
     // Retrieve all ranked dimensions
-    auto dims = llvm::to_vector<8>(llvm::map_range(
+    auto dims = llvm::map_to_vector<8>(
         llvm::make_filter_range(
             shapes, [&](auto shape) { return shape.getRank() >= i; }),
-        [&](auto shape) { return shape.getDimSize(i); }));
+        [&](auto shape) { return shape.getDimSize(i); });
     if (verifyCompatibleDims(dims).failed())
       return failure();
   }
@@ -151,20 +165,40 @@ LogicalResult mlir::verifyCompatibleShapes(TypeRange types) {
   return success();
 }
 
-OperandElementTypeIterator::OperandElementTypeIterator(
-    Operation::operand_iterator it)
-    : llvm::mapped_iterator<Operation::operand_iterator, Type (*)(Value)>(
-          it, &unwrap) {}
-
-Type OperandElementTypeIterator::unwrap(Value value) {
-  return value.getType().cast<ShapedType>().getElementType();
+Type OperandElementTypeIterator::mapElement(Value value) const {
+  return llvm::cast<ShapedType>(value.getType()).getElementType();
 }
 
-ResultElementTypeIterator::ResultElementTypeIterator(
-    Operation::result_iterator it)
-    : llvm::mapped_iterator<Operation::result_iterator, Type (*)(Value)>(
-          it, &unwrap) {}
+Type ResultElementTypeIterator::mapElement(Value value) const {
+  return llvm::cast<ShapedType>(value.getType()).getElementType();
+}
 
-Type ResultElementTypeIterator::unwrap(Value value) {
-  return value.getType().cast<ShapedType>().getElementType();
+TypeRange mlir::insertTypesInto(TypeRange oldTypes, ArrayRef<unsigned> indices,
+                                TypeRange newTypes,
+                                SmallVectorImpl<Type> &storage) {
+  assert(indices.size() == newTypes.size() &&
+         "mismatch between indice and type count");
+  if (indices.empty())
+    return oldTypes;
+
+  auto fromIt = oldTypes.begin();
+  for (auto it : llvm::zip(indices, newTypes)) {
+    const auto toIt = oldTypes.begin() + std::get<0>(it);
+    storage.append(fromIt, toIt);
+    storage.push_back(std::get<1>(it));
+    fromIt = toIt;
+  }
+  storage.append(fromIt, oldTypes.end());
+  return storage;
+}
+
+TypeRange mlir::filterTypesOut(TypeRange types, const BitVector &indices,
+                               SmallVectorImpl<Type> &storage) {
+  if (indices.none())
+    return types;
+
+  for (unsigned i = 0, e = types.size(); i < e; ++i)
+    if (!indices[i])
+      storage.emplace_back(types[i]);
+  return storage;
 }

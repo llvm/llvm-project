@@ -6,3 +6,11 @@ Layout: <ASTRecordLayout
   Size:64
   Alignment:64
   FieldOffsets: []>
+
+*** Dumping AST Record Layout
+Type: struct S5
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:64
+  FieldOffsets: []>

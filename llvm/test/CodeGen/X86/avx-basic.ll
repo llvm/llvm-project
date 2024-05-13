@@ -9,10 +9,10 @@ define void @zero128() nounwind ssp {
 ; CHECK-LABEL: zero128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    movq _z@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _z@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    vmovaps %xmm0, (%rax)
 ; CHECK-NEXT:    retq
-  store <4 x float> zeroinitializer, <4 x float>* @z, align 16
+  store <4 x float> zeroinitializer, ptr @z, align 16
   ret void
 }
 
@@ -20,18 +20,18 @@ define void @zero256() nounwind ssp {
 ; CHECK-LABEL: zero256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    movq _x@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _x@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
-; CHECK-NEXT:    movq _y@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _y@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  store <8 x float> zeroinitializer, <8 x float>* @x, align 32
-  store <4 x double> zeroinitializer, <4 x double>* @y, align 32
+  store <8 x float> zeroinitializer, ptr @x, align 32
+  store <4 x double> zeroinitializer, ptr @y, align 32
   ret void
 }
 
-define void @ones([0 x float]* nocapture %RET, [0 x float]* nocapture %aFOO) nounwind {
+define void @ones(ptr nocapture %RET, ptr nocapture %aFOO) nounwind {
 ; CHECK-LABEL: ones:
 ; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
@@ -40,15 +40,13 @@ define void @ones([0 x float]* nocapture %RET, [0 x float]* nocapture %aFOO) nou
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 allocas:
-  %ptr2vec615 = bitcast [0 x float]* %RET to <8 x float>*
   store <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float
 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float
-0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, <8 x
-float>* %ptr2vec615, align 32
+0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, ptr %RET, align 32
   ret void
 }
 
-define void @ones2([0 x i32]* nocapture %RET, [0 x i32]* nocapture %aFOO) nounwind {
+define void @ones2(ptr nocapture %RET, ptr nocapture %aFOO) nounwind {
 ; CHECK-LABEL: ones2:
 ; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
@@ -57,8 +55,7 @@ define void @ones2([0 x i32]* nocapture %RET, [0 x i32]* nocapture %aFOO) nounwi
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 allocas:
-  %ptr2vec615 = bitcast [0 x i32]* %RET to <8 x i32>*
-  store <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <8 x i32>* %ptr2vec615, align 32
+  store <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, ptr %RET, align 32
   ret void
 }
 
@@ -73,16 +70,14 @@ define <4 x i64> @ISelCrash(<4 x i64> %a) nounwind uwtable readnone ssp {
 }
 
 ;;; Don't crash on movd
-define <8 x i32> @VMOVZQI2PQI([0 x float]* nocapture %aFOO) nounwind {
+define <8 x i32> @VMOVZQI2PQI(ptr nocapture %aFOO) nounwind {
 ; CHECK-LABEL: VMOVZQI2PQI:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %ptrcast.i33.i = bitcast [0 x float]* %aFOO to i32*
-  %val.i34.i = load i32, i32* %ptrcast.i33.i, align 4
-  %ptroffset.i22.i992 = getelementptr [0 x float], [0 x float]* %aFOO, i64 0, i64 1
-  %ptrcast.i23.i = bitcast float* %ptroffset.i22.i992 to i32*
-  %val.i24.i = load i32, i32* %ptrcast.i23.i, align 4
+  %val.i34.i = load i32, ptr %aFOO, align 4
+  %ptroffset.i22.i992 = getelementptr [0 x float], ptr %aFOO, i64 0, i64 1
+  %val.i24.i = load i32, ptr %ptroffset.i22.i992, align 4
   %updatedret.i30.i = insertelement <8 x i32> undef, i32 %val.i34.i, i32 1
   ret <8 x i32> %updatedret.i30.i
 }
@@ -92,7 +87,7 @@ define <8 x i32> @VMOVZQI2PQI([0 x float]* nocapture %aFOO) nounwind {
 define <16 x float> @fneg(<16 x float> %a) nounwind {
 ; CHECK-LABEL: fneg:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %ymm2, %ymm1, %ymm1
 ; CHECK-NEXT:    retq
@@ -123,12 +118,12 @@ define i64 @VMOVPQIto64rr(<2 x i64> %a) {
 }
 
 ; PR22685
-define <8 x float> @mov00_8f32(float* %ptr) {
+define <8 x float> @mov00_8f32(ptr %ptr) {
 ; CHECK-LABEL: mov00_8f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
-  %val = load float, float* %ptr
+  %val = load float, ptr %ptr
   %vec = insertelement <8 x float> zeroinitializer, float %val, i32 0
   ret <8 x float> %vec
 }

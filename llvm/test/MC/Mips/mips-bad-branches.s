@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -triple=mipsel-unknown-linux -mcpu=mips32r2 -arch=mips 2>&1 | FileCheck %s
+# RUN: not llvm-mc %s -triple=mipsel-unknown-linux -mcpu=mips32r2 -triple=mips 2>&1 | FileCheck %s
 #
 # CHECK: error: branch to misaligned address
 # CHECK:        b -131069

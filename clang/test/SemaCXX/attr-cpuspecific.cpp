@@ -34,8 +34,18 @@ int __attribute__((cpu_specific(sandybridge))) foo2(void);
 constexpr int __attribute__((cpu_specific(ivybridge))) foo2(void);
 
 static int __attribute__((cpu_specific(sandybridge))) bar(void);
-//expected-error@+1 {{multiversioned function declaration has a different storage class}}
+//expected-error@+1 {{multiversioned function declaration has a different linkage}}
 int __attribute__((cpu_dispatch(ivybridge))) bar(void) {}
+
+// OK
+extern int __attribute__((cpu_specific(sandybridge))) bar2(void);
+int __attribute__((cpu_dispatch(ivybridge))) bar2(void) {}
+
+namespace {
+int __attribute__((cpu_specific(sandybridge))) bar3(void);
+static int __attribute__((cpu_dispatch(ivybridge))) bar3(void) {}
+}
+
 
 inline int __attribute__((cpu_specific(sandybridge))) baz(void);
 //expected-error@+1 {{multiversioned function declaration has a different inline specification}}
@@ -74,7 +84,7 @@ struct S {
 extern "C" {
 int __attribute__((cpu_specific(atom))) diff_mangle(void) { return 0; }
 }
-//expected-error@+1 {{multiversioned function declaration has a different linkage}}
+//expected-error@+1 {{multiversioned function declaration has a different language linkage}}
 int __attribute__((cpu_specific(sandybridge))) diff_mangle(void) { return 0; }
 
 __attribute__((cpu_specific(atom))) void DiffDecl();

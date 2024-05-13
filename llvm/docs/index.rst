@@ -24,6 +24,12 @@ Several introductory papers and presentations.
    FAQ
    Lexicon
 
+:doc:`FAQ`
+  Frequently asked questions.
+
+:doc:`Lexicon`
+  Glossary.
+
 `Introduction to the LLVM Compiler`__
   Presentation providing a users introduction to LLVM.
 
@@ -57,6 +63,7 @@ Getting Started, How-tos, Developer Guides, and Tutorials.
    GettingStartedTutorials
    Reference
    UserGuides
+   DiscourseMigrationGuide
 
 :doc:`GettingStartedTutorials`
   For those new to the LLVM system.
@@ -66,6 +73,9 @@ Getting Started, How-tos, Developer Guides, and Tutorials.
 
 :doc:`Reference`
   LLVM and API reference documentation.
+
+:doc:`DiscourseMigrationGuide`
+  Guide for users to migrate to Discourse
 
 Community
 =========
@@ -79,7 +89,7 @@ LLVM welcomes contributions of all kinds. To learn more, see the following artic
 
 * :doc:`GettingInvolved`
 * :ref:`development-process`
-* :ref:`mailing-lists`
+* :ref:`lists-forums`
 * :ref:`meetups-social-events`
 * :ref:`community-proposals`
 

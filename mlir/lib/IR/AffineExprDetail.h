@@ -92,6 +92,6 @@ struct AffineConstantExprStorage : public AffineExprStorage {
   int64_t constant;
 };
 
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 #endif // MLIR_IR_AFFINEEXPRDETAIL_H_

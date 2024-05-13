@@ -157,8 +157,8 @@ void PrintFatalError(const RecordVal *RecVal, const Twine &Msg) {
 // Check an assertion: Obtain the condition value and be sure it is true.
 // If not, print a nonfatal error along with the message.
 void CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
-  auto *CondValue = dyn_cast_or_null<IntInit>(
-                        Condition->convertInitializerTo(IntRecTy::get()));
+  auto *CondValue = dyn_cast_or_null<IntInit>(Condition->convertInitializerTo(
+      IntRecTy::get(Condition->getRecordKeeper())));
   if (!CondValue)
     PrintError(Loc, "assert condition must of type bit, bits, or int.");
   else if (!CondValue->getValue()) {
@@ -168,6 +168,13 @@ void CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
     else
       PrintNote("(assert message is not a string)");
   }
+}
+
+// Dump a message to stderr.
+void dumpMessage(SMLoc Loc, Init *Message) {
+  auto *MessageInit = dyn_cast<StringInit>(Message);
+  assert(MessageInit && "no debug message to print");
+  PrintNote(Loc, MessageInit->getValue());
 }
 
 } // end namespace llvm

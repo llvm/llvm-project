@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 !Tests for RESHAPE
 program reshaper
@@ -35,6 +35,8 @@ program reshaper
   integer, parameter :: array16(1) = RESHAPE([(n,n=1,8)],[1], [0], array15)
   integer, parameter, dimension(3,4) :: array17 = 3
   integer, parameter, dimension(3,4) :: array18 = RESHAPE(array17, [3,4])
+  integer, parameter, dimension(2,2) :: bad_order = reshape([1, 2, 3, 4], [2,2])
+  real :: array20(2,3)
   ! Implicit reshape of array of components
   type :: dType
     integer :: field(2)
@@ -42,9 +44,21 @@ program reshaper
   type(dType), parameter :: array19(*) = [dType::dType(field=[1,2])]
   logical, parameter :: lVar = all(array19(:)%field(1) == [2])
 
+  ! RESHAPE on array with maximum valid upper bound
+  integer(8), parameter :: I64_MAX = INT(z'7fffffffffffffff', kind=8)
+  integer, parameter :: array21(I64_MAX - 2 : I64_MAX) = [1, 2, 3]
+  integer, parameter :: array22(2) = RESHAPE(array21, [2])
+
+  integer(8), parameter :: huge_shape(2) = [I64_MAX, I64_MAX]
+  !ERROR: 'shape=' argument has too many elements
+  integer :: array23(I64_MAX, I64_MAX) = RESHAPE([1, 2, 3], huge_shape)
+
   !ERROR: Size of 'shape=' argument must not be greater than 15
   CALL ext_sub(RESHAPE([(n, n=1,20)], &
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
+  !ERROR: Reference to the procedure 'ext_sub' has an implicit interface that is distinct from another reference: incompatible dummy argument #1: incompatible dummy data object shapes
   !ERROR: 'shape=' argument must not have a negative extent
   CALL ext_sub(RESHAPE([(n, n=1,20)], [1, -5, 3]))
+  !ERROR: 'order=' argument has unacceptable rank 2
+  array20 = RESHAPE([(n, n = 1, 4)], [2, 3], order = bad_order)
 end program reshaper

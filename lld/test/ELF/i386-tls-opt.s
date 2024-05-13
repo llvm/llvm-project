@@ -1,8 +1,8 @@
 // REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=i686 %s -o %t.o
 // RUN: ld.lld %t.o -o %t1
 // RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=NORELOC %s
-// RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
 
 // NORELOC:      Relocations [
 // NORELOC-NEXT: ]
@@ -11,25 +11,28 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: <_start>:
 // LD -> LE:
-// DISASM-NEXT: 4010f4: 65 a1 00 00 00 00 movl %gs:0, %eax
-// DISASM-NEXT: 4010fa: 90                nop
-// DISASM-NEXT: 4010fb: 8d 74 26 00       leal (%esi,%eiz), %esi
-// DISASM-NEXT: 4010ff: 8d 90 f8 ff ff ff leal -8(%eax), %edx
-// DISASM-NEXT: 401105: 65 a1 00 00 00 00 movl %gs:0, %eax
-// DISASM-NEXT: 40110b: 90                nop
-// DISASM-NEXT: 40110c: 8d 74 26 00       leal (%esi,%eiz), %esi
-// DISASM-NEXT: 401110: 8d 90 fc ff ff ff leal -4(%eax), %edx
+// DISASM-NEXT:   movl %gs:0, %eax
+// DISASM-NEXT:   nop
+// DISASM-NEXT:   leal (%esi,%eiz), %esi
+// DISASM-NEXT:   leal -8(%eax), %edx
+// DISASM-NEXT:   movl %gs:0, %eax
+// DISASM-NEXT:   nop
+// DISASM-NEXT:   leal (%esi,%eiz), %esi
+// DISASM-NEXT:   leal -4(%eax), %edx
+// DISASM-NEXT:   movl %gs:0, %eax
+// DISASM-NEXT:   leal (%esi), %esi
+// DISASM-NEXT:   movl -4(%eax), %edx
 // IE -> LE:
 // 4294967288 == 0xFFFFFFF8
 // 4294967292 == 0xFFFFFFFC
-// DISASM-NEXT: 401116: 65 a1 00 00 00 00  movl %gs:0, %eax
-// DISASM-NEXT: 40111c: c7 c0 f8 ff ff ff  movl $4294967288, %eax
-// DISASM-NEXT: 401122: 65 a1 00 00 00 00  movl %gs:0, %eax
-// DISASM-NEXT: 401128: c7 c0 fc ff ff ff  movl $4294967292, %eax
-// DISASM-NEXT: 40112e: 65 a1 00 00 00 00  movl %gs:0, %eax
-// DISASM-NEXT: 401134: 8d 80 f8 ff ff ff  leal -8(%eax), %eax
-// DISASM-NEXT: 40113a: 65 a1 00 00 00 00  movl %gs:0, %eax
-// DISASM-NEXT: 401140: 8d 80 fc ff ff ff  leal -4(%eax), %eax
+// DISASM-NEXT:   movl %gs:0, %eax
+// DISASM-NEXT:   movl $4294967288, %eax
+// DISASM-NEXT:   movl %gs:0, %eax
+// DISASM-NEXT:   movl $4294967292, %eax
+// DISASM-NEXT:   movl %gs:0, %eax
+// DISASM-NEXT:   leal -8(%eax), %eax
+// DISASM-NEXT:   movl %gs:0, %eax
+// DISASM-NEXT:   leal -4(%eax), %eax
 .type tls0,@object
 .section .tbss,"awT",@nobits
 .globl tls0
@@ -60,6 +63,10 @@ leal tls0@dtpoff(%eax),%edx
 leal tls1@tlsldm(%ebx),%eax
 call ___tls_get_addr@plt
 leal tls1@dtpoff(%eax),%edx
+// -fno-plt LD -> LE
+leal tls1@tlsldm(%edx),%eax
+call *___tls_get_addr@GOT(%edx)
+movl tls1@dtpoff(%eax), %edx
 //IE -> LE:
 movl %gs:0,%eax
 movl tls0@gotntpoff(%ebx),%eax

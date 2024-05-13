@@ -10,11 +10,16 @@
 #ifndef __PMMINTRIN_H
 #define __PMMINTRIN_H
 
+#if !defined(__i386__) && !defined(__x86_64__)
+#error "This header is only meant to be used on x86 and x64 architecture"
+#endif
+
 #include <emmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS \
-  __attribute__((__always_inline__, __nodebug__, __target__("sse3"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("sse3,no-evex512"), __min_vector_width__(128)))
 
 /// Loads data from an unaligned memory location to elements in a 128-bit
 ///    vector.
@@ -31,7 +36,7 @@
 ///    A pointer to a 128-bit integer vector containing integer values.
 /// \returns A 128-bit vector containing the moved values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_lddqu_si128(__m128i const *__p)
+_mm_lddqu_si128(__m128i_u const *__p)
 {
   return (__m128i)__builtin_ia32_lddqu((char const *)__p);
 }
@@ -249,9 +254,12 @@ _mm_movedup_pd(__m128d __a)
 ///    the processor in the monitor event pending state. Data stored in the
 ///    monitored address range causes the processor to exit the pending state.
 ///
+/// The \c MONITOR instruction can be used in kernel mode, and in other modes
+/// if MSR <c> C001_0015h[MonMwaitUserEn] </c> is set.
+///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> MONITOR </c> instruction.
+/// This intrinsic corresponds to the \c MONITOR instruction.
 ///
 /// \param __p
 ///    The memory range to be monitored. The size of the range is determined by
@@ -266,19 +274,22 @@ _mm_monitor(void const *__p, unsigned __extensions, unsigned __hints)
   __builtin_ia32_monitor(__p, __extensions, __hints);
 }
 
-/// Used with the MONITOR instruction to wait while the processor is in
+/// Used with the \c MONITOR instruction to wait while the processor is in
 ///    the monitor event pending state. Data stored in the monitored address
-///    range causes the processor to exit the pending state.
+///    range, or an interrupt, causes the processor to exit the pending state.
+///
+/// The \c MWAIT instruction can be used in kernel mode, and in other modes if
+/// MSR <c> C001_0015h[MonMwaitUserEn] </c> is set.
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> MWAIT </c> instruction.
+/// This intrinsic corresponds to the \c MWAIT instruction.
 ///
 /// \param __extensions
-///    Optional extensions for the monitoring state, which may vary by
+///    Optional extensions for the monitoring state, which can vary by
 ///    processor.
 /// \param __hints
-///    Optional hints for the monitoring state, which may vary by processor.
+///    Optional hints for the monitoring state, which can vary by processor.
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_mwait(unsigned __extensions, unsigned __hints)
 {

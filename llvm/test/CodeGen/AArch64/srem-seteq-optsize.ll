@@ -4,13 +4,13 @@
 define i32 @test_minsize(i32 %X) optsize minsize nounwind readnone {
 ; CHECK-LABEL: test_minsize:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    mov w8, #5 // =0x5
+; CHECK-NEXT:    mov w9, #42 // =0x2a
 ; CHECK-NEXT:    sdiv w8, w0, w8
 ; CHECK-NEXT:    add w8, w8, w8, lsl #2
-; CHECK-NEXT:    mov w9, #-10
 ; CHECK-NEXT:    cmp w0, w8
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    mov w8, #-10 // =0xfffffff6
+; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %rem = srem i32 %X, 5
   %cmp = icmp eq i32 %rem, 0
@@ -21,16 +21,16 @@ define i32 @test_minsize(i32 %X) optsize minsize nounwind readnone {
 define i32 @test_optsize(i32 %X) optsize nounwind readnone {
 ; CHECK-LABEL: test_optsize:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #52429
-; CHECK-NEXT:    mov w9, #39321
+; CHECK-NEXT:    mov w8, #52429 // =0xcccd
+; CHECK-NEXT:    mov w9, #39321 // =0x9999
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    movk w9, #6553, lsl #16
-; CHECK-NEXT:    mov w10, #858993459
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w11, #-10
-; CHECK-NEXT:    cmp w8, w10
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    csel w0, w8, w11, lo
+; CHECK-NEXT:    mov w9, #858993459 // =0x33333333
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    mov w8, #-10 // =0xfffffff6
+; CHECK-NEXT:    mov w9, #42 // =0x2a
+; CHECK-NEXT:    csel w0, w9, w8, lo
 ; CHECK-NEXT:    ret
   %rem = srem i32 %X, 5
   %cmp = icmp eq i32 %rem, 0

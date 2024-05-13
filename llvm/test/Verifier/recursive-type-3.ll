@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o /dev/null 2>&1
 
-%rt2 = type { i32, { i8, %rt2*, i8 }, i32 }
+%rt2 = type { i32, { i8, ptr, i8 }, i32 }
 
 define i32 @main() nounwind {
 entry:

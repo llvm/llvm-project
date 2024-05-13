@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple %itanium_abi_triple -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-store=region -analyzer-max-loop 6 -verify %s
+// RUN: %clang_analyze_cc1 -triple %itanium_abi_triple -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-max-loop 6 -verify %s
 
 //===----------------------------------------------------------------------===//
 // The following code is reduced using delta-debugging from
@@ -104,7 +104,7 @@ struct foo {
 // temporarily "escape" retain counted objects stored to structs very eagerly
 // until we can properly tell whether they have escaped via a return value
 // or not.
-CFAbsoluteTime f4() {
+CFAbsoluteTime f4(void) {
   struct foo x;
   
   CFAbsoluteTime t = CFAbsoluteTimeGetCurrent();
@@ -135,10 +135,10 @@ CFAbsoluteTime f4() {
 }
 @end
 
-//===------------------------------------------------------------------------------------------===//
-// <rdar://problem/7257223> (also <rdar://problem/7283470>) - False positive due to not invalidating
-//  the reference count of a tracked region that was itself invalidated.
-//===------------------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+// False positive due to not invalidating the reference count of a tracked
+// region that was itself invalidated.
+//===----------------------------------------------------------------------===//
 
 typedef struct __rdar_7257223 { CFDateRef x; } RDar7257223;
 void rdar_7257223_aux(RDar7257223 *p);
@@ -229,7 +229,7 @@ void pr6699(int x) {
   }
 }
 
-// <rdar://problem/8261992> Idempotent operation checker false positive with ObjC ivars
+// Idempotent operation checker false positive with ObjC ivars
 @interface R8261992 : NSObject {
   @package int myIvar;
 }

@@ -15,7 +15,7 @@ kernel void foo(global long *arg) {
 
   my_st *tmp = 0;
   arg[3] = (long)(&tmp->v);
-//CHECK: store i64 8, i64 addrspace(1)*
+//CHECK: store i64 8, ptr addrspace(1)
   arg[4] = (long)(&tmp->v2);
-//CHECK: store i64 16, i64 addrspace(1)*
+//CHECK: store i64 16, ptr addrspace(1)
 }

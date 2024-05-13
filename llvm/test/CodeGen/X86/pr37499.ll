@@ -4,7 +4,7 @@
 define <2 x i64> @undef_tval() {
 ; CHECK-LABEL: undef_tval:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpmovqw %zmm0, %xmm0 {%k1}
@@ -18,7 +18,7 @@ define <2 x i64> @undef_tval() {
 define <2 x i64> @foo(<8 x i64> %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpmovqw %zmm0, %xmm1 {%k1}
@@ -33,7 +33,7 @@ define <2 x i64> @foo(<8 x i64> %x) {
 define <4 x i64> @goo(<16 x i32> %x) {
 ; CHECK-LABEL: goo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    movw $1, %ax
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpmovdw %zmm0, %ymm1 {%k1}

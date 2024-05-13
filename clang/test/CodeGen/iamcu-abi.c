@@ -10,28 +10,28 @@ void foold(long double *ld);
 
 // CHECK-LABEL: define{{.*}} void @testdouble()
 // CHECK: alloca double, align 4
-void testdouble() {
+void testdouble(void) {
   double d = 2.0;
   food(&d);
 }
 
 // CHECK-LABEL: define{{.*}} void @testlonglong()
 // CHECK: alloca i64, align 4
-void testlonglong() {
+void testlonglong(void) {
   long long ll = 2;
   fooll(&ll);
 }
 
 // CHECK-LABEL: define{{.*}} void @testunsignedlonglong()
 // CHECK: alloca i64, align 4
-void testunsignedlonglong() {
+void testunsignedlonglong(void) {
   unsigned long long ull = 2;
   fooull(&ull);	
 }
 
 // CHECK-LABEL: define{{.*}} void @testlongdouble()
 // CHECK: alloca double, align 4
-void testlongdouble() {
+void testlongdouble(void) {
   long double ld = 2.0;
   foold(&ld);
 }

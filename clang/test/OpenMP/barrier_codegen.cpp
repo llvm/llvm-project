@@ -18,9 +18,9 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, i8* }
-// CHECK-DAG: [[EXPLICIT_BARRIER_LOC:@.+]] = {{.+}} [[IDENT_T]] { i32 0, i32 34, i32 0, i32 0, i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @{{.+}}, i32 0, i32 0) }
-// CHECK-DAG: [[LOC:@.+]] = {{.+}} [[IDENT_T]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @{{.+}}, i32 0, i32 0) }
+// CHECK: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, ptr }
+// CHECK-DAG: [[EXPLICIT_BARRIER_LOC:@.+]] = {{.+}} [[IDENT_T]] { i32 0, i32 34, i32 0, i32 {{[0-9]+}}, ptr @{{.+}} }
+// CHECK-DAG: [[LOC:@.+]] = {{.+}} [[IDENT_T]] { i32 0, i32 2, i32 0, i32 {{[0-9]+}}, ptr @{{.+}} }
 
 void foo() {}
 
@@ -35,25 +35,25 @@ T tmain(T argc) {
 int main(int argc, char **argv) {
   static int a;
 #pragma omp barrier
-  // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T]]* [[LOC]])
-  // CHECK: call void @__kmpc_barrier([[IDENT_T]]* [[EXPLICIT_BARRIER_LOC]], i32 [[GTID]])
+  // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr [[LOC]])
+  // CHECK: call void @__kmpc_barrier(ptr [[EXPLICIT_BARRIER_LOC]], i32 [[GTID]])
   // CHECK: call {{.+}} [[TMAIN_INT:@.+]](i{{[0-9][0-9]}}
   // CHECK: call {{.+}} [[TMAIN_CHAR:@.+]](i{{[0-9]}}
   return tmain(argc) + tmain(argv[0][0]) + a;
 }
 
-// CLANGCG:            declare i32 @__kmpc_global_thread_num(%struct.ident_t*)
+// CLANGCG:            declare i32 @__kmpc_global_thread_num(ptr)
 // IRBUILDER:          ; Function Attrs: nounwind
-// IRBUILDER-NEXT:     declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #
-// IRBUILDER_OPT:      ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
-// IRBUILDER_OPT-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t* nocapture nofree readonly) #
+// IRBUILDER-NEXT:     declare i32 @__kmpc_global_thread_num(ptr) #
+// IRBUILDER_OPT:      ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: read, inaccessiblemem: read)
+// IRBUILDER_OPT-NEXT: declare i32 @__kmpc_global_thread_num(ptr nocapture nofree readonly) #
 
 // CHECK: define {{.+}} [[TMAIN_INT]](
-// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T]]* [[LOC]])
-// CHECK: call void @__kmpc_barrier([[IDENT_T]]* [[EXPLICIT_BARRIER_LOC]], i32 [[GTID]])
+// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr [[LOC]])
+// CHECK: call void @__kmpc_barrier(ptr [[EXPLICIT_BARRIER_LOC]], i32 [[GTID]])
 
 // CHECK: define {{.+}} [[TMAIN_CHAR]](
-// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T]]* [[LOC]])
-// CHECK: call void @__kmpc_barrier([[IDENT_T]]* [[EXPLICIT_BARRIER_LOC]], i32 [[GTID]])
+// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr [[LOC]])
+// CHECK: call void @__kmpc_barrier(ptr [[EXPLICIT_BARRIER_LOC]], i32 [[GTID]])
 
 #endif

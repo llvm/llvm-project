@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_PARSING_H_
-#define LLVM_CLANG_TOOLING_REFACTOR_PARSING_H_
+#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_PARSING_H
+#define LLVM_CLANG_TOOLING_TRANSFORMER_PARSING_H
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
@@ -37,4 +37,4 @@ llvm::Expected<RangeSelector> parseRangeSelector(llvm::StringRef Input);
 } // namespace transformer
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_PARSING_H_
+#endif // LLVM_CLANG_TOOLING_TRANSFORMER_PARSING_H

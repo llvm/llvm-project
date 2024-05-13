@@ -5,8 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// UNSUPPORTED: no-threads
 
 // <memory>
 
@@ -14,7 +16,7 @@
 
 // template<class T>
 // bool
-// atomic_is_lock_free(const shared_ptr<T>* p);
+// atomic_is_lock_free(const shared_ptr<T>* p);    // Deprecated in C++20, removed in C++26
 
 // UNSUPPORTED: c++03
 

@@ -29,7 +29,7 @@
 //   __wasm_lpad_context.lpad_index = index;
 //   __wasm_lpad_context.lsda = wasm.lsda();
 //   _Unwind_CallPersonality(exn);
-//   selector = __wasm.landingpad_context.selector;
+//   selector = __wasm_lpad_context.selector;
 //   ...
 //
 //
@@ -77,28 +77,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
-#include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "wasmehprepare"
+#define DEBUG_TYPE "wasm-eh-prepare"
 
 namespace {
-class WasmEHPrepare : public FunctionPass {
+class WasmEHPrepareImpl {
+  friend class WasmEHPrepare;
+
   Type *LPadContextTy = nullptr; // type of 'struct _Unwind_LandingPadContext'
   GlobalVariable *LPadContextGV = nullptr; // __wasm_lpad_context
 
@@ -121,37 +117,53 @@ class WasmEHPrepare : public FunctionPass {
   void prepareEHPad(BasicBlock *BB, bool NeedPersonality, unsigned Index = 0);
 
 public:
+  WasmEHPrepareImpl() = default;
+  WasmEHPrepareImpl(Type *LPadContextTy_) : LPadContextTy(LPadContextTy_) {}
+  bool runOnFunction(Function &F);
+};
+
+class WasmEHPrepare : public FunctionPass {
+  WasmEHPrepareImpl P;
+
+public:
   static char ID; // Pass identification, replacement for typeid
 
   WasmEHPrepare() : FunctionPass(ID) {}
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &F) override;
+  bool runOnFunction(Function &F) override { return P.runOnFunction(F); }
 
   StringRef getPassName() const override {
     return "WebAssembly Exception handling preparation";
   }
 };
+
 } // end anonymous namespace
+
+PreservedAnalyses WasmEHPreparePass::run(Function &F,
+                                         FunctionAnalysisManager &) {
+  auto &Context = F.getContext();
+  auto *I32Ty = Type::getInt32Ty(Context);
+  auto *PtrTy = PointerType::get(Context, 0);
+  auto *LPadContextTy =
+      StructType::get(I32Ty /*lpad_index*/, PtrTy /*lsda*/, I32Ty /*selector*/);
+  WasmEHPrepareImpl P(LPadContextTy);
+  bool Changed = P.runOnFunction(F);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses ::all();
+}
 
 char WasmEHPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(WasmEHPrepare, DEBUG_TYPE,
                       "Prepare WebAssembly exceptions", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(WasmEHPrepare, DEBUG_TYPE, "Prepare WebAssembly exceptions",
                     false, false)
 
 FunctionPass *llvm::createWasmEHPass() { return new WasmEHPrepare(); }
 
-void WasmEHPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<DominatorTreeWrapperPass>();
-}
-
 bool WasmEHPrepare::doInitialization(Module &M) {
   IRBuilder<> IRB(M.getContext());
-  LPadContextTy = StructType::get(IRB.getInt32Ty(),   // lpad_index
-                                  IRB.getInt8PtrTy(), // lsda
-                                  IRB.getInt32Ty()    // selector
+  P.LPadContextTy = StructType::get(IRB.getInt32Ty(), // lpad_index
+                                    IRB.getPtrTy(),   // lsda
+                                    IRB.getInt32Ty()  // selector
   );
   return false;
 }
@@ -159,28 +171,25 @@ bool WasmEHPrepare::doInitialization(Module &M) {
 // Erase the specified BBs if the BB does not have any remaining predecessors,
 // and also all its dead children.
 template <typename Container>
-static void eraseDeadBBsAndChildren(const Container &BBs, DomTreeUpdater *DTU) {
+static void eraseDeadBBsAndChildren(const Container &BBs) {
   SmallVector<BasicBlock *, 8> WL(BBs.begin(), BBs.end());
   while (!WL.empty()) {
     auto *BB = WL.pop_back_val();
     if (!pred_empty(BB))
       continue;
     WL.append(succ_begin(BB), succ_end(BB));
-    DeleteDeadBlock(BB, DTU);
+    DeleteDeadBlock(BB);
   }
 }
 
-bool WasmEHPrepare::runOnFunction(Function &F) {
+bool WasmEHPrepareImpl::runOnFunction(Function &F) {
   bool Changed = false;
   Changed |= prepareThrows(F);
   Changed |= prepareEHPads(F);
   return Changed;
 }
 
-bool WasmEHPrepare::prepareThrows(Function &F) {
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  DomTreeUpdater DTU(&DT, /*PostDominatorTree*/ nullptr,
-                     DomTreeUpdater::UpdateStrategy::Eager);
+bool WasmEHPrepareImpl::prepareThrows(Function &F) {
   Module &M = *F.getParent();
   IRBuilder<> IRB(F.getContext());
   bool Changed = false;
@@ -199,17 +208,16 @@ bool WasmEHPrepare::prepareThrows(Function &F) {
     Changed = true;
     auto *BB = ThrowI->getParent();
     SmallVector<BasicBlock *, 4> Succs(successors(BB));
-    auto &InstList = BB->getInstList();
-    InstList.erase(std::next(BasicBlock::iterator(ThrowI)), InstList.end());
+    BB->erase(std::next(BasicBlock::iterator(ThrowI)), BB->end());
     IRB.SetInsertPoint(BB);
     IRB.CreateUnreachable();
-    eraseDeadBBsAndChildren(Succs, &DTU);
+    eraseDeadBBsAndChildren(Succs);
   }
 
   return Changed;
 }
 
-bool WasmEHPrepare::prepareEHPads(Function &F) {
+bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   Module &M = *F.getParent();
   IRBuilder<> IRB(F.getContext());
 
@@ -227,11 +235,23 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
   if (CatchPads.empty() && CleanupPads.empty())
     return false;
 
+  if (!F.hasPersonalityFn() ||
+      !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn()))) {
+    report_fatal_error("Function '" + F.getName() +
+                       "' does not have a correct Wasm personality function "
+                       "'__gxx_wasm_personality_v0'");
+  }
   assert(F.hasPersonalityFn() && "Personality function not found");
 
-  // __wasm_lpad_context global variable
+  // __wasm_lpad_context global variable.
+  // This variable should be thread local. If the target does not support TLS,
+  // we depend on CoalesceFeaturesAndStripAtomics to downgrade it to
+  // non-thread-local ones, in which case we don't allow this object to be
+  // linked with other objects using shared memory.
   LPadContextGV = cast<GlobalVariable>(
       M.getOrInsertGlobal("__wasm_lpad_context", LPadContextTy));
+  LPadContextGV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
+
   LPadIndexField = IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 0,
                                           "lpad_index_gep");
   LSDAField =
@@ -254,8 +274,8 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
   CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
 
   // _Unwind_CallPersonality() wrapper function, which calls the personality
-  CallPersonalityF = M.getOrInsertFunction(
-      "_Unwind_CallPersonality", IRB.getInt32Ty(), IRB.getInt8PtrTy());
+  CallPersonalityF = M.getOrInsertFunction("_Unwind_CallPersonality",
+                                           IRB.getInt32Ty(), IRB.getPtrTy());
   if (Function *F = dyn_cast<Function>(CallPersonalityF.getCallee()))
     F->setDoesNotThrow();
 
@@ -264,7 +284,7 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
     auto *CPI = cast<CatchPadInst>(BB->getFirstNonPHI());
     // In case of a single catch (...), we don't need to emit a personalify
     // function call
-    if (CPI->getNumArgOperands() == 1 &&
+    if (CPI->arg_size() == 1 &&
         cast<Constant>(CPI->getArgOperand(0))->isNullValue())
       prepareEHPad(BB, false);
     else
@@ -280,11 +300,11 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
 
 // Prepare an EH pad for Wasm EH handling. If NeedPersonality is false, Index is
 // ignored.
-void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
-                                 unsigned Index) {
+void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
+                                     unsigned Index) {
   assert(BB->isEHPad() && "BB is not an EHPad!");
   IRBuilder<> IRB(BB->getContext());
-  IRB.SetInsertPoint(&*BB->getFirstInsertionPt());
+  IRB.SetInsertPoint(BB, BB->getFirstInsertionPt());
 
   auto *FPI = cast<FuncletPadInst>(BB->getFirstNonPHI());
   Instruction *GetExnCI = nullptr, *GetSelectorCI = nullptr;
@@ -346,7 +366,7 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
                                     OperandBundleDef("funclet", CPI));
   PersCI->setDoesNotThrow();
 
-  // Pseudocode: int selector = __wasm.landingpad_context.selector;
+  // Pseudocode: int selector = __wasm_lpad_context.selector;
   Instruction *Selector =
       IRB.CreateLoad(IRB.getInt32Ty(), SelectorField, "selector");
 

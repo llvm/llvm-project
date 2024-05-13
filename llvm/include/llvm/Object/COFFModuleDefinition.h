@@ -18,7 +18,7 @@
 #ifndef LLVM_OBJECT_COFFMODULEDEFINITION_H
 #define LLVM_OBJECT_COFFMODULEDEFINITION_H
 
-#include "llvm/Object/COFF.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 
 namespace llvm {
@@ -39,12 +39,9 @@ struct COFFModuleDefinition {
   uint32_t MinorOSVersion = 0;
 };
 
-// mingw and wine def files do not mangle _ for x86 which
-// is a consequence of legacy binutils' dlltool functionality.
-// This MingwDef flag should be removed once mingw stops this pratice.
 Expected<COFFModuleDefinition>
 parseCOFFModuleDefinition(MemoryBufferRef MB, COFF::MachineTypes Machine,
-                          bool MingwDef = false);
+                          bool MingwDef = false, bool AddUnderscores = true);
 
 } // End namespace object.
 } // End namespace llvm.

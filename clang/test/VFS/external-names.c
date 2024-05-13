@@ -21,7 +21,7 @@
 // Diagnostics:
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.external.yaml -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-DIAG-EXTERNAL %s
-// CHECK-DIAG-EXTERNAL: {{.*}}Inputs{{..?}}external-names.h:{{[0-9]*:[0-9]*}}: warning: incompatible pointer
+// CHECK-DIAG-EXTERNAL: {{.*}}Inputs{{..?}}external-names.h:{{[0-9]*:[0-9]*}}: warning: initializing 'const char **'
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.yaml -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-DIAG %s
 // CHECK-DIAG-NOT: Inputs
@@ -30,8 +30,8 @@
 // Debug info
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.external.yaml -triple %itanium_abi_triple -debug-info-kind=limited -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-DEBUG-EXTERNAL %s
-// CHECK-DEBUG-EXTERNAL: !DISubprogram({{.*}}file: ![[Num:[0-9]+]]
-// CHECK-DEBUG-EXTERNAL: ![[Num]] = !DIFile(filename: "{{[^"]*}}Inputs{{..?}}external-names.h"
+// CHECK-DEBUG-EXTERNAL: ![[Num:[0-9]+]] = !DIFile(filename: "{{[^"]*}}Inputs{{..?}}external-names.h"
+// CHECK-DEBUG-EXTERNAL: !DISubprogram({{.*}}file: ![[Num]]
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.yaml -triple %itanium_abi_triple -debug-info-kind=limited -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-DEBUG %s
 // CHECK-DEBUG-NOT: Inputs

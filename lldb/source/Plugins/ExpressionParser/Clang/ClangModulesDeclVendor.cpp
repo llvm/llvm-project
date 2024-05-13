@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -15,29 +17,25 @@
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 
 #include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
-#include "ModuleDependencyCollector.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ModuleList.h"
-#include "lldb/Host/Host.h"
-#include "lldb/Host/HostInfo.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/ReproducerProvider.h"
-#include "lldb/Utility/StreamString.h"
 
 #include <memory>
-#include <mutex>
 
 using namespace lldb_private;
 
@@ -61,17 +59,22 @@ public:
   void EndSourceFile() override;
 
 private:
+  bool HandleModuleRemark(const clang::Diagnostic &info);
+  void SetCurrentModuleProgress(std::string module_name);
+
   typedef std::pair<clang::DiagnosticsEngine::Level, std::string>
       IDAndDiagnostic;
   std::vector<IDAndDiagnostic> m_diagnostics;
   /// The DiagnosticPrinter used for creating the full diagnostic messages
   /// that are stored in m_diagnostics.
-  std::shared_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
+  std::unique_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
   /// Output stream of m_diag_printer.
-  std::shared_ptr<llvm::raw_string_ostream> m_os;
+  std::unique_ptr<llvm::raw_string_ostream> m_os;
   /// Output string filled by m_os. Will be reused for different diagnostics.
   std::string m_output;
-  Log *m_log;
+  /// A Progress with explicitly managed lifetime.
+  std::unique_ptr<Progress> m_current_progress_up;
+  std::vector<std::string> m_module_build_stack;
 };
 
 /// The private implementation of our ClangModulesDeclVendor.  Contains all the
@@ -125,21 +128,22 @@ private:
   ImportedModuleSet m_user_imported_modules;
   // We assume that every ASTContext has an TypeSystemClang, so we also store
   // a custom TypeSystemClang for our internal ASTContext.
-  std::unique_ptr<TypeSystemClang> m_ast_context;
+  std::shared_ptr<TypeSystemClang> m_ast_context;
 };
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
-  m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-
-  clang::DiagnosticOptions *m_options = new clang::DiagnosticOptions();
-  m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
+  auto *options = new clang::DiagnosticOptions();
+  m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
   m_diag_printer =
-      std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
+      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, options);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
     clang::DiagnosticsEngine::Level DiagLevel, const clang::Diagnostic &info) {
+  if (HandleModuleRemark(info))
+    return;
+
   // Print the diagnostic to m_output.
   m_output.clear();
   m_diag_printer->HandleDiagnostic(DiagLevel, info);
@@ -170,13 +174,58 @@ void StoringDiagnosticConsumer::BeginSourceFile(
 }
 
 void StoringDiagnosticConsumer::EndSourceFile() {
+  m_current_progress_up = nullptr;
   m_diag_printer->EndSourceFile();
+}
+
+bool StoringDiagnosticConsumer::HandleModuleRemark(
+    const clang::Diagnostic &info) {
+  Log *log = GetLog(LLDBLog::Types | LLDBLog::Expressions);
+  switch (info.getID()) {
+  case clang::diag::remark_module_build: {
+    const auto &module_name = info.getArgStdStr(0);
+    SetCurrentModuleProgress(module_name);
+    m_module_build_stack.push_back(module_name);
+
+    const auto &module_path = info.getArgStdStr(1);
+    LLDB_LOG(log, "Building Clang module {0} as {1}", module_name, module_path);
+    return true;
+  }
+  case clang::diag::remark_module_build_done: {
+    // The current module is done.
+    m_module_build_stack.pop_back();
+    if (m_module_build_stack.empty()) {
+      m_current_progress_up = nullptr;
+    } else {
+      // When the just completed module began building, a module that depends on
+      // it ("module A") was effectively paused. Update the progress to re-show
+      // "module A" as continuing to be built.
+      const auto &resumed_module_name = m_module_build_stack.back();
+      SetCurrentModuleProgress(resumed_module_name);
+    }
+
+    const auto &module_name = info.getArgStdStr(0);
+    LLDB_LOG(log, "Finished building Clang module {0}", module_name);
+    return true;
+  }
+  default:
+    return false;
+  }
+}
+
+void StoringDiagnosticConsumer::SetCurrentModuleProgress(
+    std::string module_name) {
+  if (!m_current_progress_up)
+    m_current_progress_up =
+        std::make_unique<Progress>("Building Clang modules");
+
+  m_current_progress_up->Increment(1, std::move(module_name));
 }
 
 ClangModulesDeclVendor::ClangModulesDeclVendor()
     : ClangDeclVendor(eClangModuleDeclVendor) {}
 
-ClangModulesDeclVendor::~ClangModulesDeclVendor() {}
+ClangModulesDeclVendor::~ClangModulesDeclVendor() = default;
 
 ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
     llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine,
@@ -190,7 +239,7 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
 
   // Initialize our TypeSystemClang.
   m_ast_context =
-      std::make_unique<TypeSystemClang>("ClangModulesDeclVendor ASTContext",
+      std::make_shared<TypeSystemClang>("ClangModulesDeclVendor ASTContext",
                                         m_compiler_instance->getASTContext());
 }
 
@@ -269,14 +318,14 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
 
       bool is_system = true;
       bool is_framework = false;
-      auto dir =
-          HS.getFileMgr().getDirectory(module.search_path.GetStringRef());
+      auto dir = HS.getFileMgr().getOptionalDirectoryRef(
+          module.search_path.GetStringRef());
       if (!dir)
         return error();
-      auto *file = HS.lookupModuleMapFile(*dir, is_framework);
+      auto file = HS.lookupModuleMapFile(*dir, is_framework);
       if (!file)
         return error();
-      if (!HS.loadModuleMapFile(file, is_system))
+      if (!HS.loadModuleMapFile(*file, is_system))
         return error();
     }
   }
@@ -517,8 +566,9 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
 
         bool first_token = true;
 
-        for (clang::MacroInfo::tokens_iterator ti = macro_info->tokens_begin(),
-                                               te = macro_info->tokens_end();
+        for (clang::MacroInfo::const_tokens_iterator
+                 ti = macro_info->tokens_begin(),
+                 te = macro_info->tokens_end();
              ti != te; ++ti) {
           if (!first_token)
             macro_expansion.append(" ");
@@ -608,7 +658,9 @@ ClangModulesDeclVendor::Create(Target &target) {
       "-target",
       arch.GetTriple().str(),
       "-fmodules-validate-system-headers",
-      "-Werror=non-modular-include-in-framework-module"};
+      "-Werror=non-modular-include-in-framework-module",
+      "-Xclang=-fincremental-extensions",
+      "-Rmodule-build"};
 
   target.GetPlatform()->AddClangModuleCompilationOptions(
       &target, compiler_invocation_arguments);
@@ -646,24 +698,28 @@ ClangModulesDeclVendor::Create(Target &target) {
     }
   }
 
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine =
-      clang::CompilerInstance::createDiagnostics(new clang::DiagnosticOptions,
-                                                 new StoringDiagnosticConsumer);
-
   std::vector<const char *> compiler_invocation_argument_cstrs;
   compiler_invocation_argument_cstrs.reserve(
       compiler_invocation_arguments.size());
   for (const std::string &arg : compiler_invocation_arguments)
     compiler_invocation_argument_cstrs.push_back(arg.c_str());
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  auto diag_options_up =
+      clang::CreateAndPopulateDiagOpts(compiler_invocation_argument_cstrs);
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine =
+      clang::CompilerInstance::createDiagnostics(diag_options_up.release(),
+                                                 new StoringDiagnosticConsumer);
+
+  Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "ClangModulesDeclVendor's compiler flags {0:$[ ]}",
            llvm::make_range(compiler_invocation_arguments.begin(),
                             compiler_invocation_arguments.end()));
 
+  clang::CreateInvocationOptions CIOpts;
+  CIOpts.Diags = diagnostics_engine;
   std::shared_ptr<clang::CompilerInvocation> invocation =
-      clang::createInvocationFromCommandLine(compiler_invocation_argument_cstrs,
-                                             diagnostics_engine);
+      clang::createInvocation(compiler_invocation_argument_cstrs,
+                              std::move(CIOpts));
 
   if (!invocation)
     return nullptr;
@@ -679,18 +735,6 @@ ClangModulesDeclVendor::Create(Target &target) {
   std::unique_ptr<clang::CompilerInstance> instance(
       new clang::CompilerInstance);
 
-  // When capturing a reproducer, hook up the file collector with clang to
-  // collector modules and headers.
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-    instance->setModuleDepCollector(
-        std::make_shared<ModuleDependencyCollectorAdaptor>(
-            fp.GetFileCollector()));
-    clang::DependencyOutputOptions &opts = instance->getDependencyOutputOpts();
-    opts.IncludeSystemHeaders = true;
-    opts.IncludeModuleFiles = true;
-  }
-
   // Make sure clang uses the same VFS as LLDB.
   instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
   instance->setDiagnostics(diagnostics_engine.get());
@@ -704,13 +748,11 @@ ClangModulesDeclVendor::Create(Target &target) {
   if (!instance->hasTarget())
     return nullptr;
 
-  instance->getTarget().adjust(instance->getLangOpts());
+  instance->getTarget().adjust(*diagnostics_engine, instance->getLangOpts());
 
   if (!action->BeginSourceFile(*instance,
                                instance->getFrontendOpts().Inputs[0]))
     return nullptr;
-
-  instance->getPreprocessor().enableIncrementalProcessing();
 
   instance->createASTReader();
 
@@ -724,8 +766,8 @@ ClangModulesDeclVendor::Create(Target &target) {
   parser->Initialize();
 
   clang::Parser::DeclGroupPtrTy parsed;
-
-  while (!parser->ParseTopLevelDecl(parsed))
+  auto ImportState = clang::Sema::ModuleImportState::NotACXX20Module;
+  while (!parser->ParseTopLevelDecl(parsed, ImportState))
     ;
 
   return new ClangModulesDeclVendorImpl(std::move(diagnostics_engine),

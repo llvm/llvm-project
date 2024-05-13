@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-store=region -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount -verify -Wno-objc-root-class %s
 
 typedef signed char BOOL;
 typedef unsigned int NSUInteger;
@@ -24,7 +24,6 @@ typedef unsigned int NSUInteger;
 
 @implementation Test
 
-// <rdar://problem/6946338> for subscripting
 - (id)storeDoesNotRetain {
   Test *cell = [[[Test alloc] init] autorelease];
 
@@ -36,7 +35,6 @@ typedef unsigned int NSUInteger;
   return cell;
 }
 
-// <rdar://problem/8824416> for subscripting
 - (id)getDoesNotRetain:(BOOL)keyed {
   if (keyed)
     return [self[self] autorelease]; // expected-warning{{Object autoreleased too many times}}
@@ -44,7 +42,6 @@ typedef unsigned int NSUInteger;
     return [self[0] autorelease]; // expected-warning{{Object autoreleased too many times}}
 }
 
-// <rdar://problem/9241180> for subscripting
 - (id)testUninitializedObject:(BOOL)keyed {
   Test *o;
   if (keyed) {

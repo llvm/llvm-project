@@ -21,6 +21,8 @@ if (current_os == "mac") {
 }
 
 unwind_sources = [
+  "../include/unwind_arm_ehabi.h",
+  "../include/unwind_itanium.h",
   "AddressSpace.hpp",
   "CompactUnwinder.hpp",
   "DwarfInstructions.hpp",
@@ -31,19 +33,21 @@ unwind_sources = [
   "Unwind-EHABI.h",
   "Unwind-seh.cpp",
   "Unwind-sjlj.c",
+  "Unwind-wasm.c",
   "UnwindCursor.hpp",
   "UnwindLevel1-gcc-ext.c",
   "UnwindLevel1.c",
   "UnwindRegistersRestore.S",
   "UnwindRegistersSave.S",
   "assembly.h",
+  "cet_unwind.h",
   "config.h",
   "dwarf2.h",
   "libunwind.cpp",
   "libunwind_ext.h",
 ]
-if (current_os == "mac") {
-  unwind_sources += [ "Unwind_AppleExtras.cpp" ]
+if (current_os == "aix") {
+  unwind_sources += [ "Unwind_AIXExtras.cpp" ]
 }
 
 if (current_os == "android") {
@@ -51,6 +55,10 @@ if (current_os == "android") {
     unwind_output_dir = "$crt_current_out_dir/aarch64"
   } else if (current_cpu == "arm") {
     unwind_output_dir = "$crt_current_out_dir/arm"
+  } else if (current_cpu == "x64") {
+    unwind_output_dir = "$crt_current_out_dir/x86_64"
+  } else if (current_cpu == "x86") {
+    unwind_output_dir = "$crt_current_out_dir/i386"
   }
 } else {
   unwind_output_dir = runtimes_dir
@@ -70,7 +78,7 @@ config("unwind_config") {
   }
 }
 
-if (libunwind_enable_shared) {
+if (libunwind_enable_shared && current_os != "android") {
   shared_library("unwind_shared") {
     output_dir = unwind_output_dir
     output_name = "unwind"
@@ -83,6 +91,7 @@ if (libunwind_enable_shared) {
       ]
     }
     if (current_os == "mac") {
+      cflags += [ "-fno-stack-protector" ]
       ldflags += [
         "-Wl,-compatibility_version,1",
         "-Wl,-install_name,/usr/lib/libunwind.1.dylib",
@@ -134,7 +143,7 @@ if (libunwind_enable_static) {
 
 group("src") {
   deps = []
-  if (libunwind_enable_shared) {
+  if (libunwind_enable_shared && current_os != "android") {
     deps += [ ":unwind_shared" ]
   }
   if (libunwind_enable_static) {

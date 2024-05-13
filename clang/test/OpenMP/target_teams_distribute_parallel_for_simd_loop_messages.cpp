@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp45 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp50 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,omp50 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,omp51 %s -Wno-openmp-mapping -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp45 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp50 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,omp50 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,omp51 %s -Wno-openmp-mapping -Wuninitialized
 
 class S {
   int a;
@@ -95,18 +97,18 @@ int test_iteration_spaces() {
     c[ii] = a[ii];
 
 #pragma omp target teams distribute parallel for simd
-// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}} omp50-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'i'}}
+// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}} omp5-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'i'}}
   for (int i = 0; i; i++)
     c[i] = a[i];
 
 #pragma omp target teams distribute parallel for simd
-// omp45-error@+2 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}} omp50-error@+2 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'i'}}
+// omp45-error@+2 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}} omp5-error@+2 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'i'}}
 // expected-error@+1 {{increment clause of OpenMP for loop must perform simple addition or subtraction on loop variable 'i'}}
   for (int i = 0; jj < kk; ii++)
     c[i] = a[i];
 
 #pragma omp target teams distribute parallel for simd
-// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}} omp50-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'i'}}
+// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}} omp5-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'i'}}
   for (int i = 0; !!i; i++)
     c[i] = a[i];
 
@@ -116,7 +118,7 @@ int test_iteration_spaces() {
     c[i] = a[i];
 
 #pragma omp target teams distribute parallel for simd
-// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}} omp50-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'i'}}
+// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}} omp5-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'i'}}
   for (int i = 0;; i++)
     c[i] = a[i];
 
@@ -406,15 +408,15 @@ int test_with_random_access_iterator() {
   for (begin = end; begin < end; ++begin)
     ++begin;
 #pragma omp target teams distribute parallel for simd
-// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'I'}} omp50-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'I'}}
+// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'I'}} omp5-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'I'}}
   for (GoodIter I = begin; I - I; ++I)
     ++I;
 #pragma omp target teams distribute parallel for simd
-// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'I'}} omp50-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'I'}}
+// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'I'}} omp5-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'I'}}
   for (GoodIter I = begin; begin < end; ++I)
     ++I;
 #pragma omp target teams distribute parallel for simd
-// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'I'}} omp50-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'I'}}
+// omp45-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'I'}} omp5-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'I'}}
   for (GoodIter I = begin; !I; ++I)
     ++I;
 #pragma omp target teams distribute parallel for simd
@@ -631,16 +633,31 @@ void test_nowait() {
 #pragma omp target teams distribute parallel for simd order // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} expected-error {{expected '(' after 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp target teams distribute parallel for simd order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp target teams distribute parallel for simd order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp5-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp target teams distribute parallel for simd order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp target teams distribute parallel for simd order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp5-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp target teams distribute parallel for simd order(concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp target teams distribute parallel for simd order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute parallel for simd order(unconstrained:) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} omp5-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute parallel for simd order(reproducible:concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute parallel for simd order(reproducible:concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute parallel for simd order(unconstrained:concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp target teams distribute parallel for simd order(concurrent) order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for simd'}} omp51-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'order' clause}}
   for (int i = 0; i < 10; ++i)
     ;
 }

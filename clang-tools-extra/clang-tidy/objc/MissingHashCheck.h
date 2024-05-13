@@ -11,15 +11,13 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace objc {
+namespace clang::tidy::objc {
 
 /// Finds Objective-C implementations that implement -isEqual: without also
 /// appropriately implementing -hash.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc-missing-hash.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/objc/missing-hash.html
 class MissingHashCheck : public ClangTidyCheck {
 public:
   MissingHashCheck(StringRef Name, ClangTidyContext *Context)
@@ -31,8 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace objc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::objc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_MISSINGHASHCHECK_H

@@ -46,7 +46,7 @@ entry:
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  call void @llvm.va_start(i8* null)
+  call void @llvm.va_start(ptr null)
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
@@ -54,4 +54,4 @@ if.end:                                           ; preds = %entry, %if.then
   ret i32 %hasflag
 }
 
-declare void @llvm.va_start(i8*) nounwind
+declare void @llvm.va_start(ptr) nounwind

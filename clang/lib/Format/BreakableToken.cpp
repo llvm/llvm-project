@@ -49,13 +49,13 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
   if (Style.Language == FormatStyle::LK_TextProto)
     KnownPrefixes = KnownTextProtoPrefixes;
 
-  assert(std::is_sorted(KnownPrefixes.begin(), KnownPrefixes.end(),
-                        [](StringRef Lhs, StringRef Rhs) noexcept {
-                          return Lhs.size() > Rhs.size();
-                        }));
+  assert(
+      llvm::is_sorted(KnownPrefixes, [](StringRef Lhs, StringRef Rhs) noexcept {
+        return Lhs.size() > Rhs.size();
+      }));
 
   for (StringRef KnownPrefix : KnownPrefixes) {
-    if (Comment.startswith(KnownPrefix)) {
+    if (Comment.starts_with(KnownPrefix)) {
       const auto PrefixLength =
           Comment.find_first_not_of(' ', KnownPrefix.size());
       return Comment.substr(0, PrefixLength);
@@ -82,16 +82,16 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
        NumChars < MaxSplit && MaxSplitBytes < Text.size();) {
     unsigned BytesInChar =
         encoding::getCodePointNumBytes(Text[MaxSplitBytes], Encoding);
-    NumChars +=
-        encoding::columnWidthWithTabs(Text.substr(MaxSplitBytes, BytesInChar),
-                                      ContentStartColumn, TabWidth, Encoding);
+    NumChars += encoding::columnWidthWithTabs(
+        Text.substr(MaxSplitBytes, BytesInChar), ContentStartColumn + NumChars,
+        TabWidth, Encoding);
     MaxSplitBytes += BytesInChar;
   }
 
   // In JavaScript, some @tags can be followed by {, and machinery that parses
   // these comments will fail to understand the comment if followed by a line
   // break. So avoid ever breaking before a {.
-  if (Style.Language == FormatStyle::LK_JavaScript) {
+  if (Style.isJavaScript()) {
     StringRef::size_type SpaceOffset =
         Text.find_first_of(Blanks, MaxSplitBytes);
     if (SpaceOffset != StringRef::npos && SpaceOffset + 1 < Text.size() &&
@@ -127,8 +127,7 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
     }
 
     // Avoid ever breaking before a @tag or a { in JavaScript.
-    if (Style.Language == FormatStyle::LK_JavaScript &&
-        SpaceOffset + 1 < Text.size() &&
+    if (Style.isJavaScript() && SpaceOffset + 1 < Text.size() &&
         (Text[SpaceOffset + 1] == '{' || Text[SpaceOffset + 1] == '@')) {
       SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
       continue;
@@ -143,9 +142,10 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
     // Make sure that we don't break at leading whitespace that
     // reaches past MaxSplit.
     StringRef::size_type FirstNonWhitespace = Text.find_first_not_of(Blanks);
-    if (FirstNonWhitespace == StringRef::npos)
+    if (FirstNonWhitespace == StringRef::npos) {
       // If the comment is only whitespace, we cannot split.
       return BreakableToken::Split(StringRef::npos, 0);
+    }
     SpaceOffset = Text.find_first_of(
         Blanks, std::max<unsigned>(MaxSplitBytes, FirstNonWhitespace));
   }
@@ -220,8 +220,8 @@ bool switchesFormatting(const FormatToken &Token) {
   assert((Token.is(TT_BlockComment) || Token.is(TT_LineComment)) &&
          "formatting regions are switched by comment tokens");
   StringRef Content = Token.TokenText.substr(2).ltrim();
-  return Content.startswith("clang-format on") ||
-         Content.startswith("clang-format off");
+  return Content.starts_with("clang-format on") ||
+         Content.starts_with("clang-format off");
 }
 
 unsigned
@@ -255,8 +255,8 @@ unsigned
 BreakableStringLiteral::getRemainingLength(unsigned LineIndex, unsigned Offset,
                                            unsigned StartColumn) const {
   return UnbreakableTailLength + Postfix.size() +
-         encoding::columnWidthWithTabs(Line.substr(Offset, StringRef::npos),
-                                       StartColumn, Style.TabWidth, Encoding);
+         encoding::columnWidthWithTabs(Line.substr(Offset), StartColumn,
+                                       Style.TabWidth, Encoding);
 }
 
 unsigned BreakableStringLiteral::getContentStartColumn(unsigned LineIndex,
@@ -271,7 +271,7 @@ BreakableStringLiteral::BreakableStringLiteral(
     : BreakableToken(Tok, InPPDirective, Encoding, Style),
       StartColumn(StartColumn), Prefix(Prefix), Postfix(Postfix),
       UnbreakableTailLength(UnbreakableTailLength) {
-  assert(Tok.TokenText.startswith(Prefix) && Tok.TokenText.endswith(Postfix));
+  assert(Tok.TokenText.starts_with(Prefix) && Tok.TokenText.ends_with(Postfix));
   Line = Tok.TokenText.substr(
       Prefix.size(), Tok.TokenText.size() - Prefix.size() - Postfix.size());
 }
@@ -290,6 +290,120 @@ void BreakableStringLiteral::insertBreak(unsigned LineIndex,
   Whitespaces.replaceWhitespaceInToken(
       Tok, Prefix.size() + TailOffset + Split.first, Split.second, Postfix,
       Prefix, InPPDirective, 1, StartColumn);
+}
+
+BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
+    const FormatToken &Tok, QuoteStyleType QuoteStyle, bool UnindentPlus,
+    unsigned StartColumn, unsigned UnbreakableTailLength, bool InPPDirective,
+    encoding::Encoding Encoding, const FormatStyle &Style)
+    : BreakableStringLiteral(
+          Tok, StartColumn, /*Prefix=*/QuoteStyle == SingleQuotes ? "'"
+                            : QuoteStyle == AtDoubleQuotes        ? "@\""
+                                                                  : "\"",
+          /*Postfix=*/QuoteStyle == SingleQuotes ? "'" : "\"",
+          UnbreakableTailLength, InPPDirective, Encoding, Style),
+      BracesNeeded(Tok.isNot(TT_StringInConcatenation)),
+      QuoteStyle(QuoteStyle) {
+  // Find the replacement text for inserting braces and quotes and line breaks.
+  // We don't create an allocated string concatenated from parts here because it
+  // has to outlive the BreakableStringliteral object.  The brace replacements
+  // include a quote so that WhitespaceManager can tell it apart from whitespace
+  // replacements between the string and surrounding tokens.
+
+  // The option is not implemented in JavaScript.
+  bool SignOnNewLine =
+      !Style.isJavaScript() &&
+      Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None;
+
+  if (Style.isVerilog()) {
+    // In Verilog, all strings are quoted by double quotes, joined by commas,
+    // and wrapped in braces.  The comma is always before the newline.
+    assert(QuoteStyle == DoubleQuotes);
+    LeftBraceQuote = Style.Cpp11BracedListStyle ? "{\"" : "{ \"";
+    RightBraceQuote = Style.Cpp11BracedListStyle ? "\"}" : "\" }";
+    Postfix = "\",";
+    Prefix = "\"";
+  } else {
+    // The plus sign may be on either line.  And also C# and JavaScript have
+    // several quoting styles.
+    if (QuoteStyle == SingleQuotes) {
+      LeftBraceQuote = Style.SpacesInParensOptions.Other ? "( '" : "('";
+      RightBraceQuote = Style.SpacesInParensOptions.Other ? "' )" : "')";
+      Postfix = SignOnNewLine ? "'" : "' +";
+      Prefix = SignOnNewLine ? "+ '" : "'";
+    } else {
+      if (QuoteStyle == AtDoubleQuotes) {
+        LeftBraceQuote = Style.SpacesInParensOptions.Other ? "( @" : "(@";
+        Prefix = SignOnNewLine ? "+ @\"" : "@\"";
+      } else {
+        LeftBraceQuote = Style.SpacesInParensOptions.Other ? "( \"" : "(\"";
+        Prefix = SignOnNewLine ? "+ \"" : "\"";
+      }
+      RightBraceQuote = Style.SpacesInParensOptions.Other ? "\" )" : "\")";
+      Postfix = SignOnNewLine ? "\"" : "\" +";
+    }
+  }
+
+  // Following lines are indented by the width of the brace and space if any.
+  ContinuationIndent = BracesNeeded ? LeftBraceQuote.size() - 1 : 0;
+  // The plus sign may need to be unindented depending on the style.
+  // FIXME: Add support for DontAlign.
+  if (!Style.isVerilog() && SignOnNewLine && !BracesNeeded && UnindentPlus &&
+      Style.AlignOperands == FormatStyle::OAS_AlignAfterOperator) {
+    ContinuationIndent -= 2;
+  }
+}
+
+unsigned BreakableStringLiteralUsingOperators::getRemainingLength(
+    unsigned LineIndex, unsigned Offset, unsigned StartColumn) const {
+  return UnbreakableTailLength + (BracesNeeded ? RightBraceQuote.size() : 1) +
+         encoding::columnWidthWithTabs(Line.substr(Offset), StartColumn,
+                                       Style.TabWidth, Encoding);
+}
+
+unsigned
+BreakableStringLiteralUsingOperators::getContentStartColumn(unsigned LineIndex,
+                                                            bool Break) const {
+  return std::max(
+      0,
+      static_cast<int>(StartColumn) +
+          (Break ? ContinuationIndent + static_cast<int>(Prefix.size())
+                 : (BracesNeeded ? static_cast<int>(LeftBraceQuote.size()) - 1
+                                 : 0) +
+                       (QuoteStyle == AtDoubleQuotes ? 2 : 1)));
+}
+
+void BreakableStringLiteralUsingOperators::insertBreak(
+    unsigned LineIndex, unsigned TailOffset, Split Split,
+    unsigned ContentIndent, WhitespaceManager &Whitespaces) const {
+  Whitespaces.replaceWhitespaceInToken(
+      Tok, /*Offset=*/(QuoteStyle == AtDoubleQuotes ? 2 : 1) + TailOffset +
+               Split.first,
+      /*ReplaceChars=*/Split.second, /*PreviousPostfix=*/Postfix,
+      /*CurrentPrefix=*/Prefix, InPPDirective, /*NewLines=*/1,
+      /*Spaces=*/
+      std::max(0, static_cast<int>(StartColumn) + ContinuationIndent));
+}
+
+void BreakableStringLiteralUsingOperators::updateAfterBroken(
+    WhitespaceManager &Whitespaces) const {
+  // Add the braces required for breaking the token if they are needed.
+  if (!BracesNeeded)
+    return;
+
+  // To add a brace or parenthesis, we replace the quote (or the at sign) with a
+  // brace and another quote.  This is because the rest of the program requires
+  // one replacement for each source range.  If we replace the empty strings
+  // around the string, it may conflict with whitespace replacements between the
+  // string and adjacent tokens.
+  Whitespaces.replaceWhitespaceInToken(
+      Tok, /*Offset=*/0, /*ReplaceChars=*/1, /*PreviousPostfix=*/"",
+      /*CurrentPrefix=*/LeftBraceQuote, InPPDirective, /*NewLines=*/0,
+      /*Spaces=*/0);
+  Whitespaces.replaceWhitespaceInToken(
+      Tok, /*Offset=*/Tok.TokenText.size() - 1, /*ReplaceChars=*/1,
+      /*PreviousPostfix=*/RightBraceQuote,
+      /*CurrentPrefix=*/"", InPPDirective, /*NewLines=*/0, /*Spaces=*/0);
 }
 
 BreakableComment::BreakableComment(const FormatToken &Token,
@@ -335,12 +449,12 @@ const FormatToken &BreakableComment::tokenAt(unsigned LineIndex) const {
 
 static bool mayReflowContent(StringRef Content) {
   Content = Content.trim(Blanks);
-  // Lines starting with '@' commonly have special meaning.
+  // Lines starting with '@' or '\' commonly have special meaning.
   // Lines starting with '-', '-#', '+' or '*' are bulleted/numbered lists.
   bool hasSpecialMeaningPrefix = false;
   for (StringRef Prefix :
-       {"@", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "}) {
-    if (Content.startswith(Prefix)) {
+       {"@", "\\", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "}) {
+    if (Content.starts_with(Prefix)) {
       hasSpecialMeaningPrefix = true;
       break;
     }
@@ -357,7 +471,7 @@ static bool mayReflowContent(StringRef Content) {
   // characters and either the first or second character must be
   // non-punctuation.
   return Content.size() >= 2 && !hasSpecialMeaningPrefix &&
-         !Content.endswith("\\") &&
+         !Content.ends_with("\\") &&
          // Note that this is UTF-8 safe, since if isPunctuation(Content[0]) is
          // true, then the first code point must be 1 byte long.
          (!isPunctuation(Content[0]) || !isPunctuation(Content[1]));
@@ -374,7 +488,7 @@ BreakableBlockComment::BreakableBlockComment(
          "block comment section must start with a block comment");
 
   StringRef TokenText(Tok.TokenText);
-  assert(TokenText.startswith("/*") && TokenText.endswith("*/"));
+  assert(TokenText.starts_with("/*") && TokenText.ends_with("*/"));
   TokenText.substr(2, TokenText.size() - 4)
       .split(Lines, UseCRLF ? "\r\n" : "\n");
 
@@ -397,7 +511,7 @@ BreakableBlockComment::BreakableBlockComment(
   // /*
   // ** blah blah blah
   // */
-  if (Lines.size() >= 2 && Content[1].startswith("**") &&
+  if (Lines.size() >= 2 && Content[1].starts_with("**") &&
       static_cast<unsigned>(ContentColumn[1]) == StartColumn) {
     DecorationColumn = StartColumn;
   }
@@ -411,14 +525,17 @@ BreakableBlockComment::BreakableBlockComment(
     // now we just wrap them without stars.
     Decoration = "";
   }
-  for (size_t i = 1, e = Lines.size(); i < e && !Decoration.empty(); ++i) {
-    // If the last line is empty, the closing "*/" will have a star.
-    if (i + 1 == e && Content[i].empty())
-      break;
-    if (!Content[i].empty() && i + 1 != e && Decoration.startswith(Content[i]))
+  for (size_t i = 1, e = Content.size(); i < e && !Decoration.empty(); ++i) {
+    const StringRef &Text = Content[i];
+    if (i + 1 == e) {
+      // If the last line is empty, the closing "*/" will have a star.
+      if (Text.empty())
+        break;
+    } else if (!Text.empty() && Decoration.starts_with(Text)) {
       continue;
-    while (!Content[i].startswith(Decoration))
-      Decoration = Decoration.substr(0, Decoration.size() - 1);
+    }
+    while (!Text.starts_with(Decoration))
+      Decoration = Decoration.drop_back(1);
   }
 
   LastLineNeedsDecoration = true;
@@ -431,9 +548,8 @@ BreakableBlockComment::BreakableBlockComment(
         // correctly indented.
         LastLineNeedsDecoration = false;
         // Align the star in the last '*/' with the stars on the previous lines.
-        if (e >= 2 && !Decoration.empty()) {
+        if (e >= 2 && !Decoration.empty())
           ContentColumn[i] = DecorationColumn;
-        }
       } else if (Decoration.empty()) {
         // For all other lines, set the start column to 0 if they're empty, so
         // we do not insert trailing whitespace anywhere.
@@ -446,26 +562,25 @@ BreakableBlockComment::BreakableBlockComment(
     // The last line excludes the star if LastLineNeedsDecoration is false.
     // For all other lines, adjust the line to exclude the star and
     // (optionally) the first whitespace.
-    unsigned DecorationSize = Decoration.startswith(Content[i])
+    unsigned DecorationSize = Decoration.starts_with(Content[i])
                                   ? Content[i].size()
                                   : Decoration.size();
-    if (DecorationSize) {
+    if (DecorationSize)
       ContentColumn[i] = DecorationColumn + DecorationSize;
-    }
     Content[i] = Content[i].substr(DecorationSize);
-    if (!Decoration.startswith(Content[i]))
+    if (!Decoration.starts_with(Content[i])) {
       IndentAtLineBreak =
           std::min<int>(IndentAtLineBreak, std::max(0, ContentColumn[i]));
+    }
   }
   IndentAtLineBreak = std::max<unsigned>(IndentAtLineBreak, Decoration.size());
 
   // Detect a multiline jsdoc comment and set DelimitersOnNewline in that case.
-  if (Style.Language == FormatStyle::LK_JavaScript ||
-      Style.Language == FormatStyle::LK_Java) {
-    if ((Lines[0] == "*" || Lines[0].startswith("* ")) && Lines.size() > 1) {
+  if (Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) {
+    if ((Lines[0] == "*" || Lines[0].starts_with("* ")) && Lines.size() > 1) {
       // This is a multiline jsdoc comment.
       DelimitersOnNewline = true;
-    } else if (Lines[0].startswith("* ") && Lines.size() == 1) {
+    } else if (Lines[0].starts_with("* ") && Lines.size() == 1) {
       // Detect a long single-line comment, like:
       // /** long long long */
       // Below, '2' is the width of '*/'.
@@ -497,7 +612,7 @@ BreakableToken::Split BreakableBlockComment::getSplit(
     return Split(StringRef::npos, 0);
   return getCommentSplit(Content[LineIndex].substr(TailOffset),
                          ContentStartColumn, ColumnLimit, Style.TabWidth,
-                         Encoding, Style, Decoration.endswith("*"));
+                         Encoding, Style, Decoration.ends_with("*"));
 }
 
 void BreakableBlockComment::adjustWhitespace(unsigned LineIndex,
@@ -508,7 +623,7 @@ void BreakableBlockComment::adjustWhitespace(unsigned LineIndex,
   // trimming the trailing whitespace. The backslash will be re-added later when
   // inserting a line break.
   size_t EndOfPreviousLine = Lines[LineIndex - 1].size();
-  if (InPPDirective && Lines[LineIndex - 1].endswith("\\"))
+  if (InPPDirective && Lines[LineIndex - 1].ends_with("\\"))
     --EndOfPreviousLine;
 
   // Calculate the end of the non-whitespace text in the previous line.
@@ -541,29 +656,28 @@ unsigned BreakableBlockComment::getRangeLength(unsigned LineIndex,
                                                unsigned Offset,
                                                StringRef::size_type Length,
                                                unsigned StartColumn) const {
-  unsigned LineLength =
-      encoding::columnWidthWithTabs(Content[LineIndex].substr(Offset, Length),
-                                    StartColumn, Style.TabWidth, Encoding);
-  // FIXME: This should go into getRemainingLength instead, but we currently
-  // break tests when putting it there. Investigate how to fix those tests.
-  // The last line gets a "*/" postfix.
-  if (LineIndex + 1 == Lines.size()) {
-    LineLength += 2;
-    // We never need a decoration when breaking just the trailing "*/" postfix.
-    // Note that checking that Length == 0 is not enough, since Length could
-    // also be StringRef::npos.
-    if (Content[LineIndex].substr(Offset, StringRef::npos).empty()) {
-      LineLength -= Decoration.size();
-    }
-  }
-  return LineLength;
+  return encoding::columnWidthWithTabs(
+      Content[LineIndex].substr(Offset, Length), StartColumn, Style.TabWidth,
+      Encoding);
 }
 
 unsigned BreakableBlockComment::getRemainingLength(unsigned LineIndex,
                                                    unsigned Offset,
                                                    unsigned StartColumn) const {
-  return UnbreakableTailLength +
-         getRangeLength(LineIndex, Offset, StringRef::npos, StartColumn);
+  unsigned LineLength =
+      UnbreakableTailLength +
+      getRangeLength(LineIndex, Offset, StringRef::npos, StartColumn);
+  if (LineIndex + 1 == Lines.size()) {
+    LineLength += 2;
+    // We never need a decoration when breaking just the trailing "*/" postfix.
+    bool HasRemainingText = Offset < Content[LineIndex].size();
+    if (!HasRemainingText) {
+      bool HasDecoration = Lines[LineIndex].ltrim().starts_with(Decoration);
+      if (HasDecoration)
+        LineLength -= Decoration.size();
+    }
+  }
+  return LineLength;
 }
 
 unsigned BreakableBlockComment::getContentStartColumn(unsigned LineIndex,
@@ -580,20 +694,17 @@ const llvm::StringSet<>
 };
 
 unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
-  if (Style.Language != FormatStyle::LK_Java &&
-      Style.Language != FormatStyle::LK_JavaScript)
+  if (Style.Language != FormatStyle::LK_Java && !Style.isJavaScript())
     return 0;
   // The content at LineIndex 0 of a comment like:
   // /** line 0 */
   // is "* line 0", so we need to skip over the decoration in that case.
   StringRef ContentWithNoDecoration = Content[LineIndex];
-  if (LineIndex == 0 && ContentWithNoDecoration.startswith("*")) {
+  if (LineIndex == 0 && ContentWithNoDecoration.starts_with("*"))
     ContentWithNoDecoration = ContentWithNoDecoration.substr(1).ltrim(Blanks);
-  }
   StringRef FirstWord = ContentWithNoDecoration.substr(
       0, ContentWithNoDecoration.find_first_of(Blanks));
-  if (ContentIndentingJavadocAnnotations.find(FirstWord) !=
-      ContentIndentingJavadocAnnotations.end())
+  if (ContentIndentingJavadocAnnotations.contains(FirstWord))
     return Style.ContinuationIndentWidth;
   return 0;
 }
@@ -640,8 +751,9 @@ BreakableToken::Split BreakableBlockComment::getReflowSplit(
   if (LineIndex) {
     unsigned PreviousContentIndent = getContentIndent(LineIndex - 1);
     if (PreviousContentIndent && Trimmed != StringRef::npos &&
-        Trimmed != PreviousContentIndent)
+        Trimmed != PreviousContentIndent) {
       return Split(StringRef::npos, 0);
+    }
   }
 
   return Split(0, Trimmed != StringRef::npos ? Trimmed : 0);
@@ -683,9 +795,10 @@ void BreakableBlockComment::adaptStartOfLine(
       // Note: this works because getCommentSplit is careful never to split at
       // the beginning of a line.
       size_t BreakLength = Lines[0].substr(1).find_first_not_of(Blanks);
-      if (BreakLength != StringRef::npos)
+      if (BreakLength != StringRef::npos) {
         insertBreak(LineIndex, 0, Split(1, BreakLength), /*ContentIndent=*/0,
                     Whitespaces);
+      }
     }
     return;
   }
@@ -704,11 +817,9 @@ void BreakableBlockComment::adaptStartOfLine(
       // contain a trailing whitespace.
       Prefix = Prefix.substr(0, 1);
     }
-  } else {
-    if (ContentColumn[LineIndex] == 1) {
-      // This line starts immediately after the decorating *.
-      Prefix = Prefix.substr(0, 1);
-    }
+  } else if (ContentColumn[LineIndex] == 1) {
+    // This line starts immediately after the decorating *.
+    Prefix = Prefix.substr(0, 1);
   }
   // This is the offset of the end of the last line relative to the start of the
   // token text in the token.
@@ -742,9 +853,8 @@ bool BreakableBlockComment::mayReflow(
   // Content[LineIndex] may exclude the indent after the '*' decoration. In that
   // case, we compute the start of the comment pragma manually.
   StringRef IndentContent = Content[LineIndex];
-  if (Lines[LineIndex].ltrim(Blanks).startswith("*")) {
+  if (Lines[LineIndex].ltrim(Blanks).starts_with("*"))
     IndentContent = Lines[LineIndex].ltrim(Blanks).substr(1);
-  }
   return LineIndex > 0 && !CommentPragmasRegex.match(IndentContent) &&
          mayReflowContent(Content[LineIndex]) && !Tok.Finalized &&
          !switchesFormatting(tokenAt(LineIndex));
@@ -757,6 +867,7 @@ BreakableLineCommentSection::BreakableLineCommentSection(
   assert(Tok.is(TT_LineComment) &&
          "line comment section must start with a line comment");
   FormatToken *LineTok = nullptr;
+  const int Minimum = Style.SpacesInLineCommentPrefix.Minimum;
   // How many spaces we changed in the first line of the section, this will be
   // applied in all following lines
   int FirstLineSpaceChange = 0;
@@ -765,7 +876,7 @@ BreakableLineCommentSection::BreakableLineCommentSection(
        CurrentTok = CurrentTok->Next) {
     LastLineTok = LineTok;
     StringRef TokenText(CurrentTok->TokenText);
-    assert((TokenText.startswith("//") || TokenText.startswith("#")) &&
+    assert((TokenText.starts_with("//") || TokenText.starts_with("#")) &&
            "unsupported line comment prefix, '//' and '#' are supported");
     size_t FirstLineIndex = Lines.size();
     TokenText.split(Lines, "\n");
@@ -779,8 +890,34 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       Lines[i] = Lines[i].ltrim(Blanks);
       StringRef IndentPrefix = getLineCommentIndentPrefix(Lines[i], Style);
       OriginalPrefix[i] = IndentPrefix;
-      const unsigned SpacesInPrefix =
-          std::count(IndentPrefix.begin(), IndentPrefix.end(), ' ');
+      const int SpacesInPrefix = llvm::count(IndentPrefix, ' ');
+
+      // This lambda also considers multibyte character that is not handled in
+      // functions like isPunctuation provided by CharInfo.
+      const auto NoSpaceBeforeFirstCommentChar = [&]() {
+        assert(Lines[i].size() > IndentPrefix.size());
+        const char FirstCommentChar = Lines[i][IndentPrefix.size()];
+        const unsigned FirstCharByteSize =
+            encoding::getCodePointNumBytes(FirstCommentChar, Encoding);
+        if (encoding::columnWidth(
+                Lines[i].substr(IndentPrefix.size(), FirstCharByteSize),
+                Encoding) != 1) {
+          return false;
+        }
+        // In C-like comments, add a space before #. For example this is useful
+        // to preserve the relative indentation when commenting out code with
+        // #includes.
+        //
+        // In languages using # as the comment leader such as proto, don't
+        // add a space to support patterns like:
+        // #########
+        // # section
+        // #########
+        if (FirstCommentChar == '#' && !TokenText.starts_with("#"))
+          return false;
+        return FirstCommentChar == '\\' || isPunctuation(FirstCommentChar) ||
+               isHorizontalWhitespace(FirstCommentChar);
+      };
 
       // On the first line of the comment section we calculate how many spaces
       // are to be added or removed, all lines after that just get only the
@@ -789,12 +926,11 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       // e.g. from "///" to "//".
       if (i == 0 || OriginalPrefix[i].rtrim(Blanks) !=
                         OriginalPrefix[i - 1].rtrim(Blanks)) {
-        if (SpacesInPrefix < Style.SpacesInLineCommentPrefix.Minimum &&
-            Lines[i].size() > IndentPrefix.size() &&
-            isAlphanumeric(Lines[i][IndentPrefix.size()])) {
-          FirstLineSpaceChange =
-              Style.SpacesInLineCommentPrefix.Minimum - SpacesInPrefix;
-        } else if (SpacesInPrefix > Style.SpacesInLineCommentPrefix.Maximum) {
+        if (SpacesInPrefix < Minimum && Lines[i].size() > IndentPrefix.size() &&
+            !NoSpaceBeforeFirstCommentChar()) {
+          FirstLineSpaceChange = Minimum - SpacesInPrefix;
+        } else if (static_cast<unsigned>(SpacesInPrefix) >
+                   Style.SpacesInLineCommentPrefix.Maximum) {
           FirstLineSpaceChange =
               Style.SpacesInLineCommentPrefix.Maximum - SpacesInPrefix;
         } else {
@@ -805,18 +941,20 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       if (Lines[i].size() != IndentPrefix.size()) {
         PrefixSpaceChange[i] = FirstLineSpaceChange;
 
-        if (SpacesInPrefix + PrefixSpaceChange[i] <
-            Style.SpacesInLineCommentPrefix.Minimum) {
-          PrefixSpaceChange[i] += Style.SpacesInLineCommentPrefix.Minimum -
-                                  (SpacesInPrefix + PrefixSpaceChange[i]);
+        if (SpacesInPrefix + PrefixSpaceChange[i] < Minimum) {
+          PrefixSpaceChange[i] +=
+              Minimum - (SpacesInPrefix + PrefixSpaceChange[i]);
         }
 
         assert(Lines[i].size() > IndentPrefix.size());
         const auto FirstNonSpace = Lines[i][IndentPrefix.size()];
-        const auto AllowsSpaceChange =
-            SpacesInPrefix != 0 ||
-            (isAlphanumeric(FirstNonSpace) ||
-             (FirstNonSpace == '}' && FirstLineSpaceChange != 0));
+        const bool IsFormatComment = LineTok && switchesFormatting(*LineTok);
+        const bool LineRequiresLeadingSpace =
+            !NoSpaceBeforeFirstCommentChar() ||
+            (FirstNonSpace == '}' && FirstLineSpaceChange != 0);
+        const bool AllowsSpaceChange =
+            !IsFormatComment &&
+            (SpacesInPrefix != 0 || LineRequiresLeadingSpace);
 
         if (PrefixSpaceChange[i] > 0 && AllowsSpaceChange) {
           Prefix[i] = IndentPrefix.str();
@@ -1005,9 +1143,8 @@ void BreakableLineCommentSection::adaptStartOfLine(
 }
 
 void BreakableLineCommentSection::updateNextToken(LineState &State) const {
-  if (LastLineTok) {
+  if (LastLineTok)
     State.NextToken = LastLineTok->Next;
-  }
 }
 
 bool BreakableLineCommentSection::mayReflow(
@@ -1015,9 +1152,8 @@ bool BreakableLineCommentSection::mayReflow(
   // Line comments have the indent as part of the prefix, so we need to
   // recompute the start of the line.
   StringRef IndentContent = Content[LineIndex];
-  if (Lines[LineIndex].startswith("//")) {
+  if (Lines[LineIndex].starts_with("//"))
     IndentContent = Lines[LineIndex].substr(2);
-  }
   // FIXME: Decide whether we want to reflow non-regular indents:
   // Currently, we only reflow when the OriginalPrefix[LineIndex] matches the
   // OriginalPrefix[LineIndex-1]. That means we don't reflow

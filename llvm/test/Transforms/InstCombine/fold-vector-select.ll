@@ -1,23 +1,23 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; CHECK-NOT: select
 
-define void @foo(<4 x i32> *%A, <4 x i32> *%B, <4 x i32> *%C, <4 x i32> *%D,
-                 <4 x i32> *%E, <4 x i32> *%F, <4 x i32> *%G, <4 x i32> *%H,
-                 <4 x i32> *%I, <4 x i32> *%J, <4 x i32> *%K, <4 x i32> *%L,
-                 <4 x i32> *%M, <4 x i32> *%N, <4 x i32> *%O, <4 x i32> *%P,
-                 <4 x i32> *%Q, <4 x i32> *%R, <4 x i32> *%S, <4 x i32> *%T,
-                 <4 x i32> *%U, <4 x i32> *%V, <4 x i32> *%W, <4 x i32> *%X,
-                 <4 x i32> *%Y, <4 x i32> *%Z, <4 x i32> *%BA, <4 x i32> *%BB,
-                 <4 x i32> *%BC, <4 x i32> *%BD, <4 x i32> *%BE, <4 x i32> *%BF,
-                 <4 x i32> *%BG, <4 x i32> *%BH, <4 x i32> *%BI, <4 x i32> *%BJ,
-                 <4 x i32> *%BK, <4 x i32> *%BL, <4 x i32> *%BM, <4 x i32> *%BN,
-                 <4 x i32> *%BO, <4 x i32> *%BP, <4 x i32> *%BQ, <4 x i32> *%BR,
-                 <4 x i32> *%BS, <4 x i32> *%BT, <4 x i32> *%BU, <4 x i32> *%BV,
-                 <4 x i32> *%BW, <4 x i32> *%BX, <4 x i32> *%BY, <4 x i32> *%BZ,
-                 <4 x i32> *%CA, <4 x i32> *%CB, <4 x i32> *%CC, <4 x i32> *%CD,
-                 <4 x i32> *%CE, <4 x i32> *%CF, <4 x i32> *%CG, <4 x i32> *%CH,
-                 <4 x i32> *%CI, <4 x i32> *%CJ, <4 x i32> *%CK, <4 x i32> *%CL) {
+define void @foo(ptr %A, ptr %B, ptr %C, ptr %D,
+                 ptr %E, ptr %F, ptr %G, ptr %H,
+                 ptr %I, ptr %J, ptr %K, ptr %L,
+                 ptr %M, ptr %N, ptr %O, ptr %P,
+                 ptr %Q, ptr %R, ptr %S, ptr %T,
+                 ptr %U, ptr %V, ptr %W, ptr %X,
+                 ptr %Y, ptr %Z, ptr %BA, ptr %BB,
+                 ptr %BC, ptr %BD, ptr %BE, ptr %BF,
+                 ptr %BG, ptr %BH, ptr %BI, ptr %BJ,
+                 ptr %BK, ptr %BL, ptr %BM, ptr %BN,
+                 ptr %BO, ptr %BP, ptr %BQ, ptr %BR,
+                 ptr %BS, ptr %BT, ptr %BU, ptr %BV,
+                 ptr %BW, ptr %BX, ptr %BY, ptr %BZ,
+                 ptr %CA, ptr %CB, ptr %CC, ptr %CD,
+                 ptr %CE, ptr %CF, ptr %CG, ptr %CH,
+                 ptr %CI, ptr %CJ, ptr %CK, ptr %CL) {
  %a = select <4 x i1> <i1 false, i1 false, i1 false, i1 false>, <4 x i32> zeroinitializer, <4 x i32> <i32 9, i32 87, i32 57, i32 8>
  %b = select <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i32> zeroinitializer, <4 x i32> <i32 44, i32 99, i32 49, i32 29>
  %c = select <4 x i1> <i1 false, i1 true, i1 false, i1 false>, <4 x i32> zeroinitializer, <4 x i32> <i32 15, i32 18, i32 53, i32 84>
@@ -82,69 +82,69 @@ define void @foo(<4 x i32> *%A, <4 x i32> *%B, <4 x i32> *%C, <4 x i32> *%D,
  %cj = select <4 x i1> <i1 true, i1 false, i1 true, i1 true>, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
  %ck = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
  %cl = select <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
- store <4 x i32> %a, <4 x i32>* %A
- store <4 x i32> %b, <4 x i32>* %B
- store <4 x i32> %c, <4 x i32>* %C
- store <4 x i32> %d, <4 x i32>* %D
- store <4 x i32> %e, <4 x i32>* %E
- store <4 x i32> %f, <4 x i32>* %F
- store <4 x i32> %g, <4 x i32>* %G
- store <4 x i32> %h, <4 x i32>* %H
- store <4 x i32> %i, <4 x i32>* %I
- store <4 x i32> %j, <4 x i32>* %J
- store <4 x i32> %k, <4 x i32>* %K
- store <4 x i32> %l, <4 x i32>* %L
- store <4 x i32> %m, <4 x i32>* %M
- store <4 x i32> %n, <4 x i32>* %N
- store <4 x i32> %o, <4 x i32>* %O
- store <4 x i32> %p, <4 x i32>* %P
- store <4 x i32> %q, <4 x i32>* %Q
- store <4 x i32> %r, <4 x i32>* %R
- store <4 x i32> %s, <4 x i32>* %S
- store <4 x i32> %t, <4 x i32>* %T
- store <4 x i32> %u, <4 x i32>* %U
- store <4 x i32> %v, <4 x i32>* %V
- store <4 x i32> %w, <4 x i32>* %W
- store <4 x i32> %x, <4 x i32>* %X
- store <4 x i32> %y, <4 x i32>* %Y
- store <4 x i32> %z, <4 x i32>* %Z
- store <4 x i32> %ba, <4 x i32>* %BA
- store <4 x i32> %bb, <4 x i32>* %BB
- store <4 x i32> %bc, <4 x i32>* %BC
- store <4 x i32> %bd, <4 x i32>* %BD
- store <4 x i32> %be, <4 x i32>* %BE
- store <4 x i32> %bf, <4 x i32>* %BF
- store <4 x i32> %bg, <4 x i32>* %BG
- store <4 x i32> %bh, <4 x i32>* %BH
- store <4 x i32> %bi, <4 x i32>* %BI
- store <4 x i32> %bj, <4 x i32>* %BJ
- store <4 x i32> %bk, <4 x i32>* %BK
- store <4 x i32> %bl, <4 x i32>* %BL
- store <4 x i32> %bm, <4 x i32>* %BM
- store <4 x i32> %bn, <4 x i32>* %BN
- store <4 x i32> %bo, <4 x i32>* %BO
- store <4 x i32> %bp, <4 x i32>* %BP
- store <4 x i32> %bq, <4 x i32>* %BQ
- store <4 x i32> %br, <4 x i32>* %BR
- store <4 x i32> %bs, <4 x i32>* %BS
- store <4 x i32> %bt, <4 x i32>* %BT
- store <4 x i32> %bu, <4 x i32>* %BU
- store <4 x i32> %bv, <4 x i32>* %BV
- store <4 x i32> %bw, <4 x i32>* %BW
- store <4 x i32> %bx, <4 x i32>* %BX
- store <4 x i32> %by, <4 x i32>* %BY
- store <4 x i32> %bz, <4 x i32>* %BZ
- store <4 x i32> %ca, <4 x i32>* %CA
- store <4 x i32> %cb, <4 x i32>* %CB
- store <4 x i32> %cc, <4 x i32>* %CC
- store <4 x i32> %cd, <4 x i32>* %CD
- store <4 x i32> %ce, <4 x i32>* %CE
- store <4 x i32> %cf, <4 x i32>* %CF
- store <4 x i32> %cg, <4 x i32>* %CG
- store <4 x i32> %ch, <4 x i32>* %CH
- store <4 x i32> %ci, <4 x i32>* %CI
- store <4 x i32> %cj, <4 x i32>* %CJ
- store <4 x i32> %ck, <4 x i32>* %CK
- store <4 x i32> %cl, <4 x i32>* %CL
+ store <4 x i32> %a, ptr %A
+ store <4 x i32> %b, ptr %B
+ store <4 x i32> %c, ptr %C
+ store <4 x i32> %d, ptr %D
+ store <4 x i32> %e, ptr %E
+ store <4 x i32> %f, ptr %F
+ store <4 x i32> %g, ptr %G
+ store <4 x i32> %h, ptr %H
+ store <4 x i32> %i, ptr %I
+ store <4 x i32> %j, ptr %J
+ store <4 x i32> %k, ptr %K
+ store <4 x i32> %l, ptr %L
+ store <4 x i32> %m, ptr %M
+ store <4 x i32> %n, ptr %N
+ store <4 x i32> %o, ptr %O
+ store <4 x i32> %p, ptr %P
+ store <4 x i32> %q, ptr %Q
+ store <4 x i32> %r, ptr %R
+ store <4 x i32> %s, ptr %S
+ store <4 x i32> %t, ptr %T
+ store <4 x i32> %u, ptr %U
+ store <4 x i32> %v, ptr %V
+ store <4 x i32> %w, ptr %W
+ store <4 x i32> %x, ptr %X
+ store <4 x i32> %y, ptr %Y
+ store <4 x i32> %z, ptr %Z
+ store <4 x i32> %ba, ptr %BA
+ store <4 x i32> %bb, ptr %BB
+ store <4 x i32> %bc, ptr %BC
+ store <4 x i32> %bd, ptr %BD
+ store <4 x i32> %be, ptr %BE
+ store <4 x i32> %bf, ptr %BF
+ store <4 x i32> %bg, ptr %BG
+ store <4 x i32> %bh, ptr %BH
+ store <4 x i32> %bi, ptr %BI
+ store <4 x i32> %bj, ptr %BJ
+ store <4 x i32> %bk, ptr %BK
+ store <4 x i32> %bl, ptr %BL
+ store <4 x i32> %bm, ptr %BM
+ store <4 x i32> %bn, ptr %BN
+ store <4 x i32> %bo, ptr %BO
+ store <4 x i32> %bp, ptr %BP
+ store <4 x i32> %bq, ptr %BQ
+ store <4 x i32> %br, ptr %BR
+ store <4 x i32> %bs, ptr %BS
+ store <4 x i32> %bt, ptr %BT
+ store <4 x i32> %bu, ptr %BU
+ store <4 x i32> %bv, ptr %BV
+ store <4 x i32> %bw, ptr %BW
+ store <4 x i32> %bx, ptr %BX
+ store <4 x i32> %by, ptr %BY
+ store <4 x i32> %bz, ptr %BZ
+ store <4 x i32> %ca, ptr %CA
+ store <4 x i32> %cb, ptr %CB
+ store <4 x i32> %cc, ptr %CC
+ store <4 x i32> %cd, ptr %CD
+ store <4 x i32> %ce, ptr %CE
+ store <4 x i32> %cf, ptr %CF
+ store <4 x i32> %cg, ptr %CG
+ store <4 x i32> %ch, ptr %CH
+ store <4 x i32> %ci, ptr %CI
+ store <4 x i32> %cj, ptr %CJ
+ store <4 x i32> %ck, ptr %CK
+ store <4 x i32> %cl, ptr %CL
  ret void
 }

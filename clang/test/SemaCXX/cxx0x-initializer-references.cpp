@@ -76,7 +76,7 @@ namespace reference {
   void edge_cases() {
     int const &b({0}); // expected-error {{cannot initialize reference type 'const int &' with a parenthesized initializer list}}
     const int (&arr)[3] ({1, 2, 3}); // expected-error {{cannot initialize reference type 'const int (&)[3]' with a parenthesized initializer list}}
-    const X &x({}); // expected-error {{cannot initialize reference type 'const reference::X &' with a parenthesized initializer list}}
+    const X &x({}); // expected-error {{cannot initialize reference type 'const X &' with a parenthesized initializer list}}
   }
 
   template<typename T> void dependent_edge_cases() {
@@ -112,7 +112,7 @@ namespace b7891773 {
 namespace inner_init {
   struct A { int n; };
   struct B { A &&r; };
-  B b1 { 0 }; // expected-error {{reference to type 'inner_init::A' could not bind to an rvalue of type 'int'}}
+  B b1 { 0 }; // expected-error {{reference to type 'A' could not bind to an rvalue of type 'int'}}
   B b2 { { 0 } };
   B b3 { { { 0 } } }; // expected-warning {{braces around scalar init}}
 
@@ -122,7 +122,7 @@ namespace inner_init {
   D d1 { 0 }; // ok, 0 implicitly converts to C
   D d2 { { 0 } }; // ok, { 0 } calls C(0)
   D d3 { { { 0 } } }; // ok, { { 0 } } calls C({ 0 }), expected-warning {{braces around scalar init}}
-  D d4 { { { { 0 } } } }; // expected-error {{no matching constructor for initialization of 'inner_init::C &&'}}
+  D d4 { { { { 0 } } } }; // expected-error {{no matching constructor for initialization of 'C &&'}}
 
   struct E { explicit E(int); }; // expected-note 2{{here}}
   struct F { E &&r; };
@@ -134,9 +134,27 @@ namespace inner_init {
 namespace PR20844 {
   struct A {};
   struct B { operator A&(); } b;
-  A &a{b}; // expected-error {{excess elements}} expected-note {{in initialization of temporary of type 'PR20844::A'}}
+  A &a{b}; // expected-error {{excess elements}} expected-note {{in initialization of temporary of type 'A'}}
 }
 
 namespace PR21834 {
 const int &a = (const int &){0}; // expected-error {{cannot bind to an initializer list}}
+}
+
+namespace GH59100 {
+class v {};
+
+template <typename T>
+class V : public v {};
+
+using T = const V<int> &;
+
+template <class D>
+void f() {
+  auto t = T{};
+}
+
+void z()  {
+    f<int>();
+}
 }

@@ -85,7 +85,6 @@ struct G {
 
 G::~G() { }
 
-// <rdar://problem/6841210>
 struct H {
   ~H(void) { } 
 };
@@ -439,8 +438,8 @@ namespace PR7900 {
   void foo() {
     B b;
     b.~B();
-    b.~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'PR7900::B' of the object being destroyed}}
-    (&b)->~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'PR7900::B' of the object being destroyed}}
+    b.~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
+    (&b)->~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
   }
 }
 
@@ -549,5 +548,33 @@ namespace PR44978 {
   // We still diagnose if the unqualified lookup is dependent, though.
   template<typename T> void f(T *p) { p->~U(); } // expected-error {{ambiguous}}
 }
+
+namespace crash_on_invalid_base_dtor {
+struct Test {
+  virtual ~Test();
+};
+struct Baz : public Test { // expected-warning {{non-virtual destructor}}
+  Baz() {}
+  ~Baz() = defaul; // expected-error {{undeclared identifier 'defaul'}} \
+                   // expected-error {{initializer on function}} \
+                   // expected-note {{overridden virtual function is here}}
+};
+struct Foo : public Baz { // expected-error {{cannot override a non-deleted function}} \
+                          // expected-note {{destructor of 'Foo' is implicitly deleted}}
+  Foo() {}
+};
+}
+
+namespace GH89544 {
+class Foo {
+  ~Foo() = {}
+  // expected-error@-1 {{initializer on function does not look like a pure-specifier}}
+  // expected-error@-2 {{expected ';' at end of declaration list}}
+};
+
+static_assert(!__is_trivially_constructible(Foo), "");
+static_assert(!__is_trivially_constructible(Foo, const Foo &), "");
+static_assert(!__is_trivially_constructible(Foo, Foo &&), "");
+} // namespace GH89544
 
 #endif // BE_THE_HEADER

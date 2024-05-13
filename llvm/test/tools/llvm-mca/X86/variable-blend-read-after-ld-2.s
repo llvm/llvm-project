@@ -9,6 +9,8 @@
 
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
 
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
+
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefixes=ALL,BDVER2
 
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefixes=ALL,BTVER2
@@ -53,7 +55,7 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 # BDVER2:       Dispatch Width:    4
 # BDVER2-NEXT:  uOps Per Cycle:    0.20
 # BDVER2-NEXT:  IPC:               0.20
-# BDVER2-NEXT:  Block RThroughput: 2.0
+# BDVER2-NEXT:  Block RThroughput: 1.5
 
 # BDWELL:       Dispatch Width:    4
 # BDWELL-NEXT:  uOps Per Cycle:    0.40
@@ -88,12 +90,12 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 # ZNVER1:       Dispatch Width:    4
 # ZNVER1-NEXT:  uOps Per Cycle:    0.18
 # ZNVER1-NEXT:  IPC:               0.18
-# ZNVER1-NEXT:  Block RThroughput: 1.0
+# ZNVER1-NEXT:  Block RThroughput: 0.5
 
 # ZNVER2:       Dispatch Width:    4
 # ZNVER2-NEXT:  uOps Per Cycle:    0.18
 # ZNVER2-NEXT:  IPC:               0.18
-# ZNVER2-NEXT:  Block RThroughput: 1.0
+# ZNVER2-NEXT:  Block RThroughput: 0.5
 
 # BDVER2:       Timeline view:
 # BDVER2-NEXT:  Index     0123456789

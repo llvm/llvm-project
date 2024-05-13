@@ -26,7 +26,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -144,8 +144,8 @@ INITIALIZE_PASS(HexagonGenMux, "hexagon-gen-mux",
   "Hexagon generate mux instructions", false, false)
 
 void HexagonGenMux::getSubRegs(unsigned Reg, BitVector &SRs) const {
-  for (MCSubRegIterator I(Reg, HRI); I.isValid(); ++I)
-    SRs[*I] = true;
+  for (MCPhysReg I : HRI->subregs(Reg))
+    SRs[I] = true;
 }
 
 void HexagonGenMux::expandReg(unsigned Reg, BitVector &Set) const {
@@ -160,12 +160,10 @@ void HexagonGenMux::getDefsUses(const MachineInstr *MI, BitVector &Defs,
   // First, get the implicit defs and uses for this instruction.
   unsigned Opc = MI->getOpcode();
   const MCInstrDesc &D = HII->get(Opc);
-  if (const MCPhysReg *R = D.ImplicitDefs)
-    while (*R)
-      expandReg(*R++, Defs);
-  if (const MCPhysReg *R = D.ImplicitUses)
-    while (*R)
-      expandReg(*R++, Uses);
+  for (MCPhysReg R : D.implicit_defs())
+    expandReg(R, Defs);
+  for (MCPhysReg R : D.implicit_uses())
+    expandReg(R, Uses);
 
   // Look over all operands, and collect explicit defs and uses.
   for (const MachineOperand &MO : MI->operands()) {
@@ -183,12 +181,11 @@ void HexagonGenMux::buildMaps(MachineBasicBlock &B, InstrIndexMap &I2X,
   unsigned NR = HRI->getNumRegs();
   BitVector Defs(NR), Uses(NR);
 
-  for (MachineBasicBlock::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-    MachineInstr *MI = &*I;
-    I2X.insert(std::make_pair(MI, Index));
+  for (MachineInstr &MI : B) {
+    I2X.insert(std::make_pair(&MI, Index));
     Defs.reset();
     Uses.reset();
-    getDefsUses(MI, Defs, Uses);
+    getDefsUses(&MI, Defs, Uses);
     DUM.insert(std::make_pair(Index, DefUseInfo(Defs, Uses)));
     Index++;
   }
@@ -232,22 +229,19 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
   CondsetMap CM;
   MuxInfoList ML;
 
-  MachineBasicBlock::iterator NextI, End = B.end();
-  for (MachineBasicBlock::iterator I = B.begin(); I != End; I = NextI) {
-    MachineInstr *MI = &*I;
-    NextI = std::next(I);
-    unsigned Opc = MI->getOpcode();
+  for (MachineInstr &MI : llvm::make_early_inc_range(B)) {
+    unsigned Opc = MI.getOpcode();
     if (!isCondTransfer(Opc))
       continue;
-    Register DR = MI->getOperand(0).getReg();
+    Register DR = MI.getOperand(0).getReg();
     if (isRegPair(DR))
       continue;
-    MachineOperand &PredOp = MI->getOperand(1);
+    MachineOperand &PredOp = MI.getOperand(1);
     if (PredOp.isUndef())
       continue;
 
     Register PR = PredOp.getReg();
-    unsigned Idx = I2X.lookup(MI);
+    unsigned Idx = I2X.lookup(&MI);
     CondsetMap::iterator F = CM.find(DR);
     bool IfTrue = HII->isPredicatedTrue(Opc);
 
@@ -332,7 +326,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     unsigned MxOpc = getMuxOpcode(*MX.SrcT, *MX.SrcF);
     if (!MxOpc)
       continue;
-    // Basic sanity check: since we are deleting instructions, validate the
+    // Basic correctness check: since we are deleting instructions, validate the
     // iterators. There is a possibility that one of Def1 or Def2 is translated
     // to "mux" and being considered for other "mux" instructions.
     if (!MX.At->getParent() || !MX.Def1->getParent() || !MX.Def2->getParent())
@@ -352,29 +346,23 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 
   // Fix up kill flags.
 
-  LivePhysRegs LPR(*HRI);
+  LiveRegUnits LPR(*HRI);
   LPR.addLiveOuts(B);
-  auto IsLive = [&LPR,this] (unsigned Reg) -> bool {
-    for (MCSubRegIterator S(Reg, HRI, true); S.isValid(); ++S)
-      if (LPR.contains(*S))
-        return true;
-    return false;
-  };
-  for (auto I = B.rbegin(), E = B.rend(); I != E; ++I) {
-    if (I->isDebugInstr())
+  for (MachineInstr &I : llvm::reverse(B)) {
+    if (I.isDebugInstr())
       continue;
     // This isn't 100% accurate, but it's safe.
     // It won't detect (as a kill) a case like this
     //   r0 = add r0, 1    <-- r0 should be "killed"
     //   ... = r0
-    for (MachineOperand &Op : I->operands()) {
+    for (MachineOperand &Op : I.operands()) {
       if (!Op.isReg() || !Op.isUse())
         continue;
       assert(Op.getSubReg() == 0 && "Should have physical registers only");
-      bool Live = IsLive(Op.getReg());
+      bool Live = !LPR.available(Op.getReg());
       Op.setIsKill(!Live);
     }
-    LPR.stepBackward(*I);
+    LPR.stepBackward(I);
   }
 
   return Changed;

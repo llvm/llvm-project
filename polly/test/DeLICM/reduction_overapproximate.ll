@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm-partial-writes=false -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm-partial-writes=false  -polly-delicm -analyze < %s | FileCheck %s --check-prefix=EXACT
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-partial-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=PARTIAL
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm-partial-writes=false -polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=APPROX
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm-partial-writes=false  -polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=EXACT
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-partial-writes=true -polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=PARTIAL
 ;
 ;    void func(double *A {
 ;      for (int j = -1; j < 3; j += 1) { /* outer */
@@ -12,7 +12,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -53,8 +53,8 @@ outer.for:
 
     reduction.exit:
       %val = phi double [%add, %reduction.inc], [0.0, %reduction.checkloop]
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %val, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %val, ptr %A_idx
       br label %outer.inc
 
 

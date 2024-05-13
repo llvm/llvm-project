@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | \
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | \
 ; RUN:     FileCheck %s -check-prefix=NONAFFINE
-; RUN: opt %loadPolly -polly-scops -analyze \
+; RUN: opt %loadPolly -polly-print-scops -disable-output \
 ; RUN:     -polly-allow-nonaffine-branches=false < %s | \
 ; RUN:     FileCheck %s -check-prefix=NO-NONEAFFINE
 
@@ -28,7 +28,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
 
-define void @f(i16 %event, float* %A) {
+define void @f(i16 %event, ptr %A) {
 entry:
   br label %loop
 
@@ -42,7 +42,7 @@ branch:
   br i1 %cmp, label %end, label %then
 
 then:
-  store float 1.0, float* %A
+  store float 1.0, ptr %A
   br label %end
 
 end:

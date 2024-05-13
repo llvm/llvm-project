@@ -18,19 +18,18 @@
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
+#include <optional>
 #include <string>
 #include <utility>
 
 namespace clang {
 
 class AnalysisDeclContext;
-class FunctionDecl;
 class LocationContext;
 
 /// ProgramPoints can be "tagged" as representing points specific to a given
@@ -96,35 +95,33 @@ private:
 
   llvm::PointerIntPair<const ProgramPointTag *, 2, unsigned> Tag;
 
+  CFGBlock::ConstCFGElementRef ElemRef = {nullptr, 0};
+
 protected:
   ProgramPoint() = default;
-  ProgramPoint(const void *P,
-               Kind k,
-               const LocationContext *l,
-               const ProgramPointTag *tag = nullptr)
-    : Data1(P),
-      Data2(nullptr, (((unsigned) k) >> 0) & 0x3),
-      L(l, (((unsigned) k) >> 2) & 0x3),
-      Tag(tag, (((unsigned) k) >> 4) & 0x3) {
-        assert(getKind() == k);
-        assert(getLocationContext() == l);
-        assert(getData1() == P);
-      }
+  ProgramPoint(const void *P, Kind k, const LocationContext *l,
+               const ProgramPointTag *tag = nullptr,
+               CFGBlock::ConstCFGElementRef ElemRef = {nullptr, 0})
+      : Data1(P), Data2(nullptr, (((unsigned)k) >> 0) & 0x3),
+        L(l, (((unsigned)k) >> 2) & 0x3), Tag(tag, (((unsigned)k) >> 4) & 0x3),
+        ElemRef(ElemRef) {
+    assert(getKind() == k);
+    assert(getLocationContext() == l);
+    assert(getData1() == P);
+  }
 
-  ProgramPoint(const void *P1,
-               const void *P2,
-               Kind k,
-               const LocationContext *l,
-               const ProgramPointTag *tag = nullptr)
-    : Data1(P1),
-      Data2(P2, (((unsigned) k) >> 0) & 0x3),
-      L(l, (((unsigned) k) >> 2) & 0x3),
-      Tag(tag, (((unsigned) k) >> 4) & 0x3) {}
+  ProgramPoint(const void *P1, const void *P2, Kind k, const LocationContext *l,
+               const ProgramPointTag *tag = nullptr,
+               CFGBlock::ConstCFGElementRef ElemRef = {nullptr, 0})
+      : Data1(P1), Data2(P2, (((unsigned)k) >> 0) & 0x3),
+        L(l, (((unsigned)k) >> 2) & 0x3), Tag(tag, (((unsigned)k) >> 4) & 0x3),
+        ElemRef(ElemRef) {}
 
 protected:
   const void *getData1() const { return Data1; }
   const void *getData2() const { return Data2.getPointer(); }
   void setData2(const void *d) { Data2.setPointer(d); }
+  CFGBlock::ConstCFGElementRef getElementRef() const { return ElemRef; }
 
 public:
   /// Create a new ProgramPoint object that is the same as the original
@@ -145,12 +142,11 @@ public:
     return t;
   }
 
-  /// Convert to the specified ProgramPoint type, returning None if this
+  /// Convert to the specified ProgramPoint type, returning std::nullopt if this
   /// ProgramPoint is not of the desired type.
-  template<typename T>
-  Optional<T> getAs() const {
+  template <typename T> std::optional<T> getAs() const {
     if (!T::isKind(*this))
-      return None;
+      return std::nullopt;
     T t;
     ProgramPoint& PP = t;
     PP = *this;
@@ -192,17 +188,13 @@ public:
   }
 
   bool operator==(const ProgramPoint & RHS) const {
-    return Data1 == RHS.Data1 &&
-           Data2 == RHS.Data2 &&
-           L == RHS.L &&
-           Tag == RHS.Tag;
+    return Data1 == RHS.Data1 && Data2 == RHS.Data2 && L == RHS.L &&
+           Tag == RHS.Tag && ElemRef == RHS.ElemRef;
   }
 
   bool operator!=(const ProgramPoint &RHS) const {
-    return Data1 != RHS.Data1 ||
-           Data2 != RHS.Data2 ||
-           L != RHS.L ||
-           Tag != RHS.Tag;
+    return Data1 != RHS.Data1 || Data2 != RHS.Data2 || L != RHS.L ||
+           Tag != RHS.Tag || ElemRef != RHS.ElemRef;
   }
 
   void Profile(llvm::FoldingSetNodeID& ID) const {
@@ -211,6 +203,8 @@ public:
     ID.AddPointer(getData2());
     ID.AddPointer(getLocationContext());
     ID.AddPointer(getTag());
+    ID.AddPointer(ElemRef.getParent());
+    ID.AddInteger(ElemRef.getIndexInBlock());
   }
 
   void printJson(llvm::raw_ostream &Out, const char *NL = "\n") const;
@@ -234,9 +228,9 @@ public:
     return reinterpret_cast<const CFGBlock*>(getData1());
   }
 
-  Optional<CFGElement> getFirstElement() const {
+  std::optional<CFGElement> getFirstElement() const {
     const CFGBlock *B = getBlock();
-    return B->empty() ? Optional<CFGElement>() : B->front();
+    return B->empty() ? std::optional<CFGElement>() : B->front();
   }
 
 private:
@@ -268,6 +262,7 @@ private:
   }
 };
 
+// FIXME: Eventually we want to take a CFGElementRef as parameter here too.
 class StmtPoint : public ProgramPoint {
 public:
   StmtPoint(const Stmt *S, const void *p2, Kind k, const LocationContext *L,
@@ -559,8 +554,9 @@ private:
 class ImplicitCallPoint : public ProgramPoint {
 public:
   ImplicitCallPoint(const Decl *D, SourceLocation Loc, Kind K,
-                    const LocationContext *L, const ProgramPointTag *Tag)
-    : ProgramPoint(Loc.getPtrEncoding(), D, K, L, Tag) {}
+                    const LocationContext *L, const ProgramPointTag *Tag,
+                    CFGBlock::ConstCFGElementRef ElemRef)
+      : ProgramPoint(Loc.getPtrEncoding(), D, K, L, Tag, ElemRef) {}
 
   const Decl *getDecl() const { return static_cast<const Decl *>(getData2()); }
   SourceLocation getLocation() const {
@@ -583,8 +579,9 @@ private:
 class PreImplicitCall : public ImplicitCallPoint {
 public:
   PreImplicitCall(const Decl *D, SourceLocation Loc, const LocationContext *L,
+                  CFGBlock::ConstCFGElementRef ElemRef,
                   const ProgramPointTag *Tag = nullptr)
-    : ImplicitCallPoint(D, Loc, PreImplicitCallKind, L, Tag) {}
+      : ImplicitCallPoint(D, Loc, PreImplicitCallKind, L, Tag, ElemRef) {}
 
 private:
   friend class ProgramPoint;
@@ -600,8 +597,9 @@ private:
 class PostImplicitCall : public ImplicitCallPoint {
 public:
   PostImplicitCall(const Decl *D, SourceLocation Loc, const LocationContext *L,
+                   CFGBlock::ConstCFGElementRef ElemRef,
                    const ProgramPointTag *Tag = nullptr)
-    : ImplicitCallPoint(D, Loc, PostImplicitCallKind, L, Tag) {}
+      : ImplicitCallPoint(D, Loc, PostImplicitCallKind, L, Tag, ElemRef) {}
 
 private:
   friend class ProgramPoint;

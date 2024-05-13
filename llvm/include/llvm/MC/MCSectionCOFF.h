@@ -61,7 +61,7 @@ private:
 public:
   /// Decides whether a '.section' directive should be printed before the
   /// section name
-  bool ShouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
+  bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
 
   unsigned getCharacteristics() const { return Characteristics; }
   MCSymbol *getCOMDATSymbol() const { return COMDATSymbol; }
@@ -69,10 +69,10 @@ public:
 
   void setSelection(int Selection) const;
 
-  void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             const MCExpr *Subsection) const override;
-  bool UseCodeAlign() const override;
+  bool useCodeAlign() const override;
   bool isVirtualSection() const override;
   StringRef getVirtualSectionKind() const override;
 
@@ -83,7 +83,7 @@ public:
   }
 
   static bool isImplicitlyDiscardable(StringRef Name) {
-    return Name.startswith(".debug");
+    return Name.starts_with(".debug");
   }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_COFF; }

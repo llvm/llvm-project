@@ -1,4 +1,5 @@
-; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; This isn't a very pretty test case - I imagine there might be other ways to
 ; tickle the optimizers into producing the desired code, but I haven't found
@@ -8,7 +9,7 @@
 ; accidentally overwrote the concrete argument and was lost.
 
 ; IR generated from the following source compiled with clang -g:
-; void fn1(void *);
+; void fn1(ptr);
 ; void fn2(int, int, int, int);
 ; void fn3();
 ; void fn8();
@@ -38,20 +39,20 @@
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK: [[M_FN2_DECL:.*]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "m_fn2"
+; CHECK:     DW_AT_name ("m_fn2")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:     DW_TAG_formal_parameter
 
 ; The abstract definition of C::m_fn2
 ; CHECK: [[M_FN2_ABS_DEF:.*]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_specification {{.*}} {[[M_FN2_DECL]]}
+; CHECK:   DW_AT_specification {{.*}}[[M_FN2_DECL]]
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_AT_inline
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK: [[M_FN2_THIS_ABS_DEF:.*]]:   DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "this"
+; CHECK:     DW_AT_name ("this")
 
 ; Skip some other functions
 ; CHECK: DW_TAG_subprogram
@@ -61,11 +62,11 @@
 ; The concrete definition of C::m_fn2
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_abstract_origin {{.*}} {[[M_FN2_ABS_DEF]]}
+; CHECK:   DW_AT_abstract_origin {{.*}}[[M_FN2_ABS_DEF]]
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_abstract_origin {{.*}} {[[M_FN2_THIS_ABS_DEF]]}
+; CHECK:     DW_AT_abstract_origin {{.*}}[[M_FN2_THIS_ABS_DEF]]
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; Inlined fn3:
 ; CHECK:     DW_TAG_inlined_subroutine
@@ -76,27 +77,26 @@
 ; Inlined C::m_fn2:
 ; CHECK:         DW_TAG_inlined_subroutine
 ; CHECK-NOT: DW_TAG
-; CHECK:           DW_AT_abstract_origin {{.*}} {[[M_FN2_ABS_DEF]]}
+; CHECK:           DW_AT_abstract_origin {{.*}}[[M_FN2_ABS_DEF]]
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:           DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:              DW_AT_abstract_origin {{.*}} {[[M_FN2_THIS_ABS_DEF]]}
+; CHECK:              DW_AT_abstract_origin {{.*}}[[M_FN2_THIS_ABS_DEF]]
 
 source_filename = "test/DebugInfo/Generic/recursive_inlining.ll"
 
 %struct.C = type { i32 }
 
-@x = global %struct.C* null, align 8, !dbg !0
+@x = global ptr null, align 8, !dbg !0
 
 ; Function Attrs: nounwind
 define void @_Z3fn6v() #0 !dbg !20 {
 entry:
   tail call void @_Z3fn8v() #3, !dbg !23
-  %0 = load %struct.C*, %struct.C** @x, align 8, !dbg !24, !tbaa !25
-  tail call void @llvm.dbg.value(metadata %struct.C* %0, metadata !29, metadata !32) #3, !dbg !33
+  %0 = load ptr, ptr @x, align 8, !dbg !24, !tbaa !25
+  tail call void @llvm.dbg.value(metadata ptr %0, metadata !29, metadata !32) #3, !dbg !33
   tail call void @_Z3fn8v() #3, !dbg !34
-  %b.i = getelementptr inbounds %struct.C, %struct.C* %0, i64 0, i32 0, !dbg !35
-  %1 = load i32, i32* %b.i, align 4, !dbg !35, !tbaa !37
+  %1 = load i32, ptr %0, align 4, !dbg !35, !tbaa !37
   %tobool.i = icmp eq i32 %1, 0, !dbg !35
   br i1 %tobool.i, label %_ZN1C5m_fn2Ev.exit, label %if.then.i, !dbg !35
 
@@ -113,12 +113,11 @@ declare void @_Z3fn8v() #1
 
 ; Function Attrs: nounwind
 
-define linkonce_odr void @_ZN1C5m_fn2Ev(%struct.C* nocapture readonly %this) #0 align 2 !dbg !30 {
+define linkonce_odr void @_ZN1C5m_fn2Ev(ptr nocapture readonly %this) #0 align 2 !dbg !30 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.C* %this, metadata !29, metadata !32), !dbg !44
+  tail call void @llvm.dbg.value(metadata ptr %this, metadata !29, metadata !32), !dbg !44
   tail call void @_Z3fn8v() #3, !dbg !45
-  %b = getelementptr inbounds %struct.C, %struct.C* %this, i64 0, i32 0, !dbg !46
-  %0 = load i32, i32* %b, align 4, !dbg !46, !tbaa !37
+  %0 = load i32, ptr %this, align 4, !dbg !46, !tbaa !37
   %tobool = icmp eq i32 %0, 0, !dbg !46
   br i1 %tobool, label %if.end, label %if.then, !dbg !46
 
@@ -128,11 +127,10 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.then, %entry
   tail call void @_Z3fn8v() #3, !dbg !48
-  %1 = load %struct.C*, %struct.C** @x, align 8, !dbg !52, !tbaa !25
-  tail call void @llvm.dbg.value(metadata %struct.C* %1, metadata !29, metadata !32) #3, !dbg !53
+  %1 = load ptr, ptr @x, align 8, !dbg !52, !tbaa !25
+  tail call void @llvm.dbg.value(metadata ptr %1, metadata !29, metadata !32) #3, !dbg !53
   tail call void @_Z3fn8v() #3, !dbg !54
-  %b.i.i = getelementptr inbounds %struct.C, %struct.C* %1, i64 0, i32 0, !dbg !55
-  %2 = load i32, i32* %b.i.i, align 4, !dbg !55, !tbaa !37
+  %2 = load i32, ptr %1, align 4, !dbg !55, !tbaa !37
   %tobool.i.i = icmp eq i32 %2, 0, !dbg !55
   br i1 %tobool.i.i, label %_Z3fn6v.exit, label %if.then.i.i, !dbg !55
 
@@ -153,11 +151,10 @@ entry:
 
 tailrecurse:                                      ; preds = %tailrecurse.backedge, %entry
   tail call void @_Z3fn8v() #3, !dbg !59
-  %0 = load %struct.C*, %struct.C** @x, align 8, !dbg !61, !tbaa !25
-  tail call void @llvm.dbg.value(metadata %struct.C* %0, metadata !29, metadata !32) #3, !dbg !62
+  %0 = load ptr, ptr @x, align 8, !dbg !61, !tbaa !25
+  tail call void @llvm.dbg.value(metadata ptr %0, metadata !29, metadata !32) #3, !dbg !62
   tail call void @_Z3fn8v() #3, !dbg !63
-  %b.i.i = getelementptr inbounds %struct.C, %struct.C* %0, i64 0, i32 0, !dbg !64
-  %1 = load i32, i32* %b.i.i, align 4, !dbg !64, !tbaa !37
+  %1 = load i32, ptr %0, align 4, !dbg !64, !tbaa !37
   %tobool.i.i = icmp eq i32 %1, 0, !dbg !64
   br i1 %tobool.i.i, label %tailrecurse.backedge, label %if.then.i.i, !dbg !64
 
@@ -172,16 +169,16 @@ if.then.i.i:                                      ; preds = %tailrecurse
 ; Function Attrs: nounwind
 define void @_Z3fn4v() #0 !dbg !66 {
 entry:
-  %0 = load %struct.C*, %struct.C** @x, align 8, !dbg !67, !tbaa !25
-  tail call void @_ZN1C5m_fn2Ev(%struct.C* %0), !dbg !67
+  %0 = load ptr, ptr @x, align 8, !dbg !67, !tbaa !25
+  tail call void @_ZN1C5m_fn2Ev(ptr %0), !dbg !67
   ret void, !dbg !67
 }
 
 ; Function Attrs: nounwind
 define void @_Z3fn5v() #0 !dbg !68 {
 entry:
-  %0 = load %struct.C*, %struct.C** @x, align 8, !dbg !69, !tbaa !25
-  tail call void @_ZN1C5m_fn2Ev(%struct.C* %0), !dbg !69
+  %0 = load ptr, ptr @x, align 8, !dbg !69, !tbaa !25
+  tail call void @_ZN1C5m_fn2Ev(ptr %0), !dbg !69
   ret void, !dbg !69
 }
 

@@ -12,6 +12,7 @@ subroutine subr(x1,x2,x3,x4,x5)
   !CHECK: error: Must be a constant value
   parameter p2 = x2
   !CHECK: error: Whole assumed-size array 'x3' may not appear here without subscripts
+  !CHECK: error: Must be a constant value
   parameter p3 = x3
   !CHECK: error: Must be a constant value
   parameter p4 = x4

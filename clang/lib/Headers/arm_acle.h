@@ -4,6 +4,13 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * The Arm C Language Extensions specifications can be found in the following
+ * link: https://github.com/ARM-software/acle/releases
+ *
+ * The ACLE section numbers are subject to change. When consulting the
+ * specifications, it is recommended to search using section titles if
+ * the section numbers look outdated.
+ *
  *===-----------------------------------------------------------------------===
  */
 
@@ -20,8 +27,8 @@
 extern "C" {
 #endif
 
-/* 8 SYNCHRONIZATION, BARRIER AND HINT INTRINSICS */
-/* 8.3 Memory barriers */
+/* 7 SYNCHRONIZATION, BARRIER AND HINT INTRINSICS */
+/* 7.3 Memory barriers */
 #if !__has_builtin(__dmb)
 #define __dmb(i) __builtin_arm_dmb(i)
 #endif
@@ -32,7 +39,7 @@ extern "C" {
 #define __isb(i) __builtin_arm_isb(i)
 #endif
 
-/* 8.4 Hints */
+/* 7.4 Hints */
 
 #if !__has_builtin(__wfi)
 static __inline__ void __attribute__((__always_inline__, __nodebug__)) __wfi(void) {
@@ -64,11 +71,11 @@ static __inline__ void __attribute__((__always_inline__, __nodebug__)) __yield(v
 }
 #endif
 
-#if __ARM_32BIT_STATE
+#if defined(__ARM_32BIT_STATE) && __ARM_32BIT_STATE
 #define __dbg(t) __builtin_arm_dbg(t)
 #endif
 
-/* 8.5 Swap */
+/* 7.5 Swap */
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __swp(uint32_t __x, volatile uint32_t *__p) {
   uint32_t v;
@@ -78,11 +85,11 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
   return v;
 }
 
-/* 8.6 Memory prefetch intrinsics */
-/* 8.6.1 Data prefetch */
+/* 7.6 Memory prefetch intrinsics */
+/* 7.6.1 Data prefetch */
 #define __pld(addr) __pldx(0, 0, 0, addr)
 
-#if __ARM_32BIT_STATE
+#if defined(__ARM_32BIT_STATE) && __ARM_32BIT_STATE
 #define __pldx(access_kind, cache_level, retention_policy, addr) \
   __builtin_arm_prefetch(addr, access_kind, 1)
 #else
@@ -90,10 +97,10 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
   __builtin_arm_prefetch(addr, access_kind, cache_level, retention_policy, 1)
 #endif
 
-/* 8.6.2 Instruction prefetch */
+/* 7.6.2 Instruction prefetch */
 #define __pli(addr) __plix(0, 0, addr)
 
-#if __ARM_32BIT_STATE
+#if defined(__ARM_32BIT_STATE) && __ARM_32BIT_STATE
 #define __plix(cache_level, retention_policy, addr) \
   __builtin_arm_prefetch(addr, 0, 0)
 #else
@@ -101,15 +108,15 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
   __builtin_arm_prefetch(addr, 0, cache_level, retention_policy, 0)
 #endif
 
-/* 8.7 NOP */
-#if !defined(_MSC_VER) || !defined(__aarch64__)
+/* 7.7 NOP */
+#if !defined(_MSC_VER) || (!defined(__aarch64__) && !defined(__arm64ec__))
 static __inline__ void __attribute__((__always_inline__, __nodebug__)) __nop(void) {
   __builtin_arm_nop();
 }
 #endif
 
-/* 9 DATA-PROCESSING INTRINSICS */
-/* 9.2 Miscellaneous data-processing intrinsics */
+/* 8 DATA-PROCESSING INTRINSICS */
+/* 8.2 Miscellaneous data-processing intrinsics */
 /* ROR */
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __ror(uint32_t __x, uint32_t __y) {
@@ -138,28 +145,32 @@ __rorl(unsigned long __x, uint32_t __y) {
 
 
 /* CLZ */
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clz(uint32_t __t) {
-  return __builtin_clz(__t);
+  return __builtin_arm_clz(__t);
 }
 
-static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clzl(unsigned long __t) {
-  return __builtin_clzl(__t);
+#if __SIZEOF_LONG__ == 4
+  return __builtin_arm_clz(__t);
+#else
+  return __builtin_arm_clz64(__t);
+#endif
 }
 
-static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clzll(uint64_t __t) {
-  return __builtin_clzll(__t);
+  return __builtin_arm_clz64(__t);
 }
 
 /* CLS */
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __cls(uint32_t __t) {
   return __builtin_arm_cls(__t);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clsl(unsigned long __t) {
 #if __SIZEOF_LONG__ == 4
   return __builtin_arm_cls(__t);
@@ -168,7 +179,7 @@ __clsl(unsigned long __t) {
 #endif
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clsll(uint64_t __t) {
   return __builtin_arm_cls64(__t);
 }
@@ -201,7 +212,7 @@ __rev16(uint32_t __t) {
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __rev16ll(uint64_t __t) {
-  return (((uint64_t)__rev16(__t >> 32)) << 32) | __rev16(__t);
+  return (((uint64_t)__rev16(__t >> 32)) << 32) | (uint64_t)__rev16((uint32_t)__t);
 }
 
 static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))
@@ -216,7 +227,7 @@ __rev16l(unsigned long __t) {
 /* REVSH */
 static __inline__ int16_t __attribute__((__always_inline__, __nodebug__))
 __revsh(int16_t __t) {
-  return __builtin_bswap16(__t);
+  return (int16_t)__builtin_bswap16((uint16_t)__t);
 }
 
 /* RBIT */
@@ -227,7 +238,7 @@ __rbit(uint32_t __t) {
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __rbitll(uint64_t __t) {
-#if __ARM_32BIT_STATE
+#if defined(__ARM_32BIT_STATE) && __ARM_32BIT_STATE
   return (((uint64_t)__builtin_arm_rbit(__t)) << 32) |
          __builtin_arm_rbit(__t >> 32);
 #else
@@ -244,10 +255,8 @@ __rbitl(unsigned long __t) {
 #endif
 }
 
-/*
- * 9.3 16-bit multiplications
- */
-#if __ARM_FEATURE_DSP
+/* 8.3 16-bit multiplications */
+#if defined(__ARM_FEATURE_DSP) && __ARM_FEATURE_DSP
 static __inline__ int32_t __attribute__((__always_inline__,__nodebug__))
 __smulbb(int32_t __a, int32_t __b) {
   return __builtin_arm_smulbb(__a, __b);
@@ -275,19 +284,19 @@ __smulwt(int32_t __a, int32_t __b) {
 #endif
 
 /*
- * 9.4 Saturating intrinsics
+ * 8.4 Saturating intrinsics
  *
- * FIXME: Change guard to their corrosponding __ARM_FEATURE flag when Q flag
+ * FIXME: Change guard to their corresponding __ARM_FEATURE flag when Q flag
  * intrinsics are implemented and the flag is enabled.
  */
-/* 9.4.1 Width-specified saturation intrinsics */
-#if __ARM_FEATURE_SAT
+/* 8.4.1 Width-specified saturation intrinsics */
+#if defined(__ARM_FEATURE_SAT) && __ARM_FEATURE_SAT
 #define __ssat(x, y) __builtin_arm_ssat(x, y)
 #define __usat(x, y) __builtin_arm_usat(x, y)
 #endif
 
-/* 9.4.2 Saturating addition and subtraction intrinsics */
-#if __ARM_FEATURE_DSP
+/* 8.4.2 Saturating addition and subtraction intrinsics */
+#if defined(__ARM_FEATURE_DSP) && __ARM_FEATURE_DSP
 static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
 __qadd(int32_t __t, int32_t __v) {
   return __builtin_arm_qadd(__t, __v);
@@ -304,8 +313,8 @@ __qdbl(int32_t __t) {
 }
 #endif
 
-/* 9.4.3 Accumultating multiplications */
-#if __ARM_FEATURE_DSP
+/* 8.4.3 Accumulating multiplications */
+#if defined(__ARM_FEATURE_DSP) && __ARM_FEATURE_DSP
 static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
 __smlabb(int32_t __a, int32_t __b, int32_t __c) {
   return __builtin_arm_smlabb(__a, __b, __c);
@@ -333,14 +342,14 @@ __smlawt(int32_t __a, int32_t __b, int32_t __c) {
 #endif
 
 
-/* 9.5.4 Parallel 16-bit saturation */
-#if __ARM_FEATURE_SIMD32
+/* 8.5.4 Parallel 16-bit saturation */
+#if defined(__ARM_FEATURE_SIMD32) && __ARM_FEATURE_SIMD32
 #define __ssat16(x, y) __builtin_arm_ssat16(x, y)
 #define __usat16(x, y) __builtin_arm_usat16(x, y)
 #endif
 
-/* 9.5.5 Packing and unpacking */
-#if __ARM_FEATURE_SIMD32
+/* 8.5.5 Packing and unpacking */
+#if defined(__ARM_FEATURE_SIMD32) && __ARM_FEATURE_SIMD32
 typedef int32_t int8x4_t;
 typedef int32_t int16x2_t;
 typedef uint32_t uint8x4_t;
@@ -364,16 +373,16 @@ __uxtb16(int8x4_t __a) {
 }
 #endif
 
-/* 9.5.6 Parallel selection */
-#if __ARM_FEATURE_SIMD32
+/* 8.5.6 Parallel selection */
+#if defined(__ARM_FEATURE_SIMD32) && __ARM_FEATURE_SIMD32
 static __inline__ uint8x4_t __attribute__((__always_inline__, __nodebug__))
 __sel(uint8x4_t __a, uint8x4_t __b) {
   return __builtin_arm_sel(__a, __b);
 }
 #endif
 
-/* 9.5.7 Parallel 8-bit addition and subtraction */
-#if __ARM_FEATURE_SIMD32
+/* 8.5.7 Parallel 8-bit addition and subtraction */
+#if defined(__ARM_FEATURE_SIMD32) && __ARM_FEATURE_SIMD32
 static __inline__ int8x4_t __attribute__((__always_inline__, __nodebug__))
 __qadd8(int8x4_t __a, int8x4_t __b) {
   return __builtin_arm_qadd8(__a, __b);
@@ -424,8 +433,8 @@ __usub8(uint8x4_t __a, uint8x4_t __b) {
 }
 #endif
 
-/* 9.5.8 Sum of 8-bit absolute differences */
-#if __ARM_FEATURE_SIMD32
+/* 8.5.8 Sum of 8-bit absolute differences */
+#if defined(__ARM_FEATURE_SIMD32) && __ARM_FEATURE_SIMD32
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __usad8(uint8x4_t __a, uint8x4_t __b) {
   return __builtin_arm_usad8(__a, __b);
@@ -436,8 +445,8 @@ __usada8(uint8x4_t __a, uint8x4_t __b, uint32_t __c) {
 }
 #endif
 
-/* 9.5.9 Parallel 16-bit addition and subtraction */
-#if __ARM_FEATURE_SIMD32
+/* 8.5.9 Parallel 16-bit addition and subtraction */
+#if defined(__ARM_FEATURE_SIMD32) && __ARM_FEATURE_SIMD32
 static __inline__ int16x2_t __attribute__((__always_inline__, __nodebug__))
 __qadd16(int16x2_t __a, int16x2_t __b) {
   return __builtin_arm_qadd16(__a, __b);
@@ -536,8 +545,8 @@ __usub16(uint16x2_t __a, uint16x2_t __b) {
 }
 #endif
 
-/* 9.5.10 Parallel 16-bit multiplications */
-#if __ARM_FEATURE_SIMD32
+/* 8.5.10 Parallel 16-bit multiplication */
+#if defined(__ARM_FEATURE_SIMD32) && __ARM_FEATURE_SIMD32
 static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
 __smlad(int16x2_t __a, int16x2_t __b, int32_t __c) {
   return __builtin_arm_smlad(__a, __b, __c);
@@ -588,150 +597,232 @@ __smusdx(int16x2_t __a, int16x2_t __b) {
 }
 #endif
 
-/* 9.7 CRC32 intrinsics */
-#if __ARM_FEATURE_CRC32
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+/* 8.6 Floating-point data-processing intrinsics */
+#if (defined(__ARM_FEATURE_DIRECTED_ROUNDING)    &&                         \
+  (__ARM_FEATURE_DIRECTED_ROUNDING))             &&                         \
+  (defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE)
+static __inline__ double __attribute__((__always_inline__, __nodebug__))
+__rintn(double __a) {
+  return __builtin_roundeven(__a);
+}
+
+static __inline__ float __attribute__((__always_inline__, __nodebug__))
+__rintnf(float __a) {
+  return __builtin_roundevenf(__a);
+}
+#endif
+
+/* 8.8 CRC32 intrinsics */
+#if (defined(__ARM_FEATURE_CRC32) && __ARM_FEATURE_CRC32) ||                   \
+    (defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE)
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32b(uint32_t __a, uint8_t __b) {
   return __builtin_arm_crc32b(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32h(uint32_t __a, uint16_t __b) {
   return __builtin_arm_crc32h(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32w(uint32_t __a, uint32_t __b) {
   return __builtin_arm_crc32w(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32d(uint32_t __a, uint64_t __b) {
   return __builtin_arm_crc32d(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32cb(uint32_t __a, uint8_t __b) {
   return __builtin_arm_crc32cb(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32ch(uint32_t __a, uint16_t __b) {
   return __builtin_arm_crc32ch(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32cw(uint32_t __a, uint32_t __b) {
   return __builtin_arm_crc32cw(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32cd(uint32_t __a, uint64_t __b) {
   return __builtin_arm_crc32cd(__a, __b);
 }
 #endif
 
+/* 8.6 Floating-point data-processing intrinsics */
 /* Armv8.3-A Javascript conversion intrinsic */
-#if __ARM_64BIT_STATE && defined(__ARM_FEATURE_JCVT)
-static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__, target("v8.3a")))
 __jcvt(double __a) {
   return __builtin_arm_jcvt(__a);
 }
 #endif
 
 /* Armv8.5-A FP rounding intrinsics */
-#if __ARM_64BIT_STATE && defined(__ARM_FEATURE_FRINT)
-static __inline__ float __attribute__((__always_inline__, __nodebug__))
-__frint32zf(float __a) {
-  return __builtin_arm_frint32zf(__a);
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+static __inline__ float __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
+__rint32zf(float __a) {
+  return __builtin_arm_rint32zf(__a);
 }
 
-static __inline__ double __attribute__((__always_inline__, __nodebug__))
-__frint32z(double __a) {
-  return __builtin_arm_frint32z(__a);
+static __inline__ double __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
+__rint32z(double __a) {
+  return __builtin_arm_rint32z(__a);
 }
 
-static __inline__ float __attribute__((__always_inline__, __nodebug__))
-__frint64zf(float __a) {
-  return __builtin_arm_frint64zf(__a);
+static __inline__ float __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
+__rint64zf(float __a) {
+  return __builtin_arm_rint64zf(__a);
 }
 
-static __inline__ double __attribute__((__always_inline__, __nodebug__))
-__frint64z(double __a) {
-  return __builtin_arm_frint64z(__a);
+static __inline__ double __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
+__rint64z(double __a) {
+  return __builtin_arm_rint64z(__a);
 }
 
-static __inline__ float __attribute__((__always_inline__, __nodebug__))
-__frint32xf(float __a) {
-  return __builtin_arm_frint32xf(__a);
+static __inline__ float __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
+__rint32xf(float __a) {
+  return __builtin_arm_rint32xf(__a);
 }
 
-static __inline__ double __attribute__((__always_inline__, __nodebug__))
-__frint32x(double __a) {
-  return __builtin_arm_frint32x(__a);
+static __inline__ double __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
+__rint32x(double __a) {
+  return __builtin_arm_rint32x(__a);
 }
 
-static __inline__ float __attribute__((__always_inline__, __nodebug__))
-__frint64xf(float __a) {
-  return __builtin_arm_frint64xf(__a);
+static __inline__ float __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
+__rint64xf(float __a) {
+  return __builtin_arm_rint64xf(__a);
 }
 
-static __inline__ double __attribute__((__always_inline__, __nodebug__))
-__frint64x(double __a) {
-  return __builtin_arm_frint64x(__a);
+static __inline__ double __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
+__rint64x(double __a) {
+  return __builtin_arm_rint64x(__a);
 }
 #endif
 
-/* Armv8.7-A load/store 64-byte intrinsics */
-#if __ARM_64BIT_STATE && defined(__ARM_FEATURE_LS64)
+/* 8.9 Armv8.7-A load/store 64-byte intrinsics */
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
 typedef struct {
     uint64_t val[8];
 } data512_t;
 
-static __inline__ data512_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ data512_t __attribute__((__always_inline__, __nodebug__, target("ls64")))
 __arm_ld64b(const void *__addr) {
-    data512_t __value;
-    __builtin_arm_ld64b(__addr, __value.val);
-    return __value;
+  data512_t __value;
+  __builtin_arm_ld64b(__addr, __value.val);
+  return __value;
 }
-static __inline__ void __attribute__((__always_inline__, __nodebug__))
+static __inline__ void __attribute__((__always_inline__, __nodebug__, target("ls64")))
 __arm_st64b(void *__addr, data512_t __value) {
-    __builtin_arm_st64b(__addr, __value.val);
+  __builtin_arm_st64b(__addr, __value.val);
 }
-static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__, target("ls64")))
 __arm_st64bv(void *__addr, data512_t __value) {
-    return __builtin_arm_st64bv(__addr, __value.val);
+  return __builtin_arm_st64bv(__addr, __value.val);
 }
-static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__, target("ls64")))
 __arm_st64bv0(void *__addr, data512_t __value) {
-    return __builtin_arm_st64bv0(__addr, __value.val);
+  return __builtin_arm_st64bv0(__addr, __value.val);
 }
 #endif
 
-/* 10.1 Special register intrinsics */
+/* 11.1 Special register intrinsics */
 #define __arm_rsr(sysreg) __builtin_arm_rsr(sysreg)
 #define __arm_rsr64(sysreg) __builtin_arm_rsr64(sysreg)
+#define __arm_rsr128(sysreg) __builtin_arm_rsr128(sysreg)
 #define __arm_rsrp(sysreg) __builtin_arm_rsrp(sysreg)
 #define __arm_rsrf(sysreg) __builtin_bit_cast(float, __arm_rsr(sysreg))
 #define __arm_rsrf64(sysreg) __builtin_bit_cast(double, __arm_rsr64(sysreg))
 #define __arm_wsr(sysreg, v) __builtin_arm_wsr(sysreg, v)
 #define __arm_wsr64(sysreg, v) __builtin_arm_wsr64(sysreg, v)
+#define __arm_wsr128(sysreg, v) __builtin_arm_wsr128(sysreg, v)
 #define __arm_wsrp(sysreg, v) __builtin_arm_wsrp(sysreg, v)
 #define __arm_wsrf(sysreg, v) __arm_wsr(sysreg, __builtin_bit_cast(uint32_t, v))
 #define __arm_wsrf64(sysreg, v) __arm_wsr64(sysreg, __builtin_bit_cast(uint64_t, v))
 
-/* Memory Tagging Extensions (MTE) Intrinsics */
-#if __ARM_FEATURE_MEMORY_TAGGING
+/* 10.3 MTE intrinsics */
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
 #define __arm_mte_create_random_tag(__ptr, __mask)  __builtin_arm_irg(__ptr, __mask)
 #define __arm_mte_increment_tag(__ptr, __tag_offset)  __builtin_arm_addg(__ptr, __tag_offset)
 #define __arm_mte_exclude_tag(__ptr, __excluded)  __builtin_arm_gmi(__ptr, __excluded)
 #define __arm_mte_get_tag(__ptr) __builtin_arm_ldg(__ptr)
 #define __arm_mte_set_tag(__ptr) __builtin_arm_stg(__ptr)
 #define __arm_mte_ptrdiff(__ptra, __ptrb) __builtin_arm_subp(__ptra, __ptrb)
+
+/* 18 memcpy family of operations intrinsics - MOPS */
+#define __arm_mops_memset_tag(__tagged_address, __value, __size)    \
+  __builtin_arm_mops_memset_tag(__tagged_address, __value, __size)
 #endif
 
-/* Transactional Memory Extension (TME) Intrinsics */
-#if __ARM_FEATURE_TME
+/* 11.3 Coprocessor Intrinsics */
+#if defined(__ARM_FEATURE_COPROC)
+
+#if (__ARM_FEATURE_COPROC & 0x1)
+
+#if (__ARM_ARCH < 8)
+#define __arm_cdp(coproc, opc1, CRd, CRn, CRm, opc2)                           \
+  __builtin_arm_cdp(coproc, opc1, CRd, CRn, CRm, opc2)
+#endif /* __ARM_ARCH < 8 */
+
+#define __arm_ldc(coproc, CRd, p) __builtin_arm_ldc(coproc, CRd, p)
+#define __arm_stc(coproc, CRd, p) __builtin_arm_stc(coproc, CRd, p)
+
+#define __arm_mcr(coproc, opc1, value, CRn, CRm, opc2)                         \
+  __builtin_arm_mcr(coproc, opc1, value, CRn, CRm, opc2)
+#define __arm_mrc(coproc, opc1, CRn, CRm, opc2)                                \
+  __builtin_arm_mrc(coproc, opc1, CRn, CRm, opc2)
+
+#if (__ARM_ARCH != 4) && (__ARM_ARCH < 8)
+#define __arm_ldcl(coproc, CRd, p) __builtin_arm_ldcl(coproc, CRd, p)
+#define __arm_stcl(coproc, CRd, p) __builtin_arm_stcl(coproc, CRd, p)
+#endif /* (__ARM_ARCH != 4) && (__ARM_ARCH != 8) */
+
+#if (__ARM_ARCH_8M_MAIN__) || (__ARM_ARCH_8_1M_MAIN__)
+#define __arm_cdp(coproc, opc1, CRd, CRn, CRm, opc2)                           \
+  __builtin_arm_cdp(coproc, opc1, CRd, CRn, CRm, opc2)
+#define __arm_ldcl(coproc, CRd, p) __builtin_arm_ldcl(coproc, CRd, p)
+#define __arm_stcl(coproc, CRd, p) __builtin_arm_stcl(coproc, CRd, p)
+#endif /* ___ARM_ARCH_8M_MAIN__ */
+
+#endif /* __ARM_FEATURE_COPROC & 0x1 */
+
+#if (__ARM_FEATURE_COPROC & 0x2)
+#define __arm_cdp2(coproc, opc1, CRd, CRn, CRm, opc2)                          \
+  __builtin_arm_cdp2(coproc, opc1, CRd, CRn, CRm, opc2)
+#define __arm_ldc2(coproc, CRd, p) __builtin_arm_ldc2(coproc, CRd, p)
+#define __arm_stc2(coproc, CRd, p) __builtin_arm_stc2(coproc, CRd, p)
+#define __arm_ldc2l(coproc, CRd, p) __builtin_arm_ldc2l(coproc, CRd, p)
+#define __arm_stc2l(coproc, CRd, p) __builtin_arm_stc2l(coproc, CRd, p)
+#define __arm_mcr2(coproc, opc1, value, CRn, CRm, opc2)                        \
+  __builtin_arm_mcr2(coproc, opc1, value, CRn, CRm, opc2)
+#define __arm_mrc2(coproc, opc1, CRn, CRm, opc2)                               \
+  __builtin_arm_mrc2(coproc, opc1, CRn, CRm, opc2)
+#endif
+
+#if (__ARM_FEATURE_COPROC & 0x4)
+#define __arm_mcrr(coproc, opc1, value, CRm)                                   \
+  __builtin_arm_mcrr(coproc, opc1, value, CRm)
+#define __arm_mrrc(coproc, opc1, CRm) __builtin_arm_mrrc(coproc, opc1, CRm)
+#endif
+
+#if (__ARM_FEATURE_COPROC & 0x8)
+#define __arm_mcrr2(coproc, opc1, value, CRm)                                  \
+  __builtin_arm_mcrr2(coproc, opc1, value, CRm)
+#define __arm_mrrc2(coproc, opc1, CRm) __builtin_arm_mrrc2(coproc, opc1, CRm)
+#endif
+
+#endif // __ARM_FEATURE_COPROC
+
+/* 17 Transactional Memory Extension (TME) Intrinsics */
+#if defined(__ARM_FEATURE_TME) && __ARM_FEATURE_TME
 
 #define _TMFAILURE_REASON  0x00007fffu
 #define _TMFAILURE_RTRY    0x00008000u
@@ -752,13 +843,13 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 
 #endif /* __ARM_FEATURE_TME */
 
-/* Armv8.5-A Random number generation intrinsics */
-#if __ARM_64BIT_STATE && defined(__ARM_FEATURE_RNG)
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+/* 8.7 Armv8.5-A Random number generation intrinsics */
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+static __inline__ int __attribute__((__always_inline__, __nodebug__, target("rand")))
 __rndr(uint64_t *__p) {
   return __builtin_arm_rndr(__p);
 }
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+static __inline__ int __attribute__((__always_inline__, __nodebug__, target("rand")))
 __rndrrs(uint64_t *__p) {
   return __builtin_arm_rndrrs(__p);
 }

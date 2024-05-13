@@ -46,15 +46,35 @@ entry:
 ; Padding
 ; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
-; Num LiveOut Entries: 1
-; PATCH-NEXT:   .short  1
-; LiveOut Entry 1: %ymm2 (16 bytes) --> %xmm2
+; Num LiveOut Entries: 6
+; PATCH-NEXT:   .short  6
+; LiveOut Entry 1:
+; PATCH-NEXT:   .short 3
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 2:
+; PATCH-NEXT:   .short 12
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 3:
+; PATCH-NEXT:   .short 13
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 4:
+; PATCH-NEXT:   .short 14
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 5:
+; PATCH-NEXT:   .short 15
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 6: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
 ; Align
 ; PATCH-NEXT:   .p2align  3
-  call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 12, i8* null, i32 0)
+  call anyregcc void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 12, ptr null, i32 0)
   %a2 = call i64 asm sideeffect "", "={r8}"() nounwind
   %a3 = call i8 asm sideeffect "", "={ah}"() nounwind
   %a4 = call <4 x double> asm sideeffect "", "={ymm0}"() nounwind
@@ -79,31 +99,52 @@ entry:
 ; Padding
 ; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
-; Num LiveOut Entries: 5
-; PATCH-NEXT:   .short  5
+; Num LiveOut Entries: 10
+; PATCH-NEXT:   .short 10
+
 ; LiveOut Entry 1: %rax (1 bytes) --> %al or %ah
 ; PATCH-NEXT:   .short  0
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 1
-; LiveOut Entry 2: %r8 (8 bytes)
+; LiveOut Entry 2:
+; PATCH-NEXT:   .short 3
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 3: %r8 (8 bytes)
 ; PATCH-NEXT:   .short  8
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 8
-; LiveOut Entry 3: %ymm0 (32 bytes)
+; LiveOut Entry 4:
+; PATCH-NEXT:   .short 12
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 5:
+; PATCH-NEXT:   .short 13
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 6:
+; PATCH-NEXT:   .short 14
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 7:
+; PATCH-NEXT:   .short 15
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 8: %ymm0 (32 bytes)
 ; PATCH-NEXT:   .short  17
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 32
-; LiveOut Entry 4: %ymm1 (32 bytes)
+; LiveOut Entry 9: %ymm1 (32 bytes)
 ; PATCH-NEXT:   .short  18
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 32
-; LiveOut Entry 5: %ymm2 (16 bytes) --> %xmm2
+; LiveOut Entry 10: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
 ; Align
 ; PATCH-NEXT:   .p2align  3
-  call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 2, i32 12, i8* null, i32 0)
+  call anyregcc void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 2, i32 12, ptr null, i32 0)
   call void asm sideeffect "", "{r8},{ah},{ymm0},{ymm1}"(i64 %a2, i8 %a3, <4 x double> %a4, <4 x double> %a5) nounwind
 
 ; StackMap 3 (no liveness information available)
@@ -125,19 +166,39 @@ entry:
 ; Padding
 ; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
-; Num LiveOut Entries: 2
-; PATCH-NEXT:   .short  2
-; LiveOut Entry 1: %rsp (8 bytes)
+; Num LiveOut Entries: 7
+; PATCH-NEXT:   .short 7
+; LiveOut Entry 1:
+; PATCH-NEXT:   .short 3
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 2: %rsp (8 bytes)
 ; PATCH-NEXT:   .short  7
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 8
-; LiveOut Entry 2: %ymm2 (16 bytes) --> %xmm2
+; LiveOut Entry 3:
+; PATCH-NEXT:   .short 12
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 4:
+; PATCH-NEXT:   .short 13
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 5:
+; PATCH-NEXT:   .short 14
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 6:
+; PATCH-NEXT:   .short 15
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 7: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
 ; Align
 ; PATCH-NEXT:   .p2align  3
-  call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 3, i32 12, i8* null, i32 0)
+  call anyregcc void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 3, i32 12, ptr null, i32 0)
   call void asm sideeffect "", "{xmm2}"(<2 x double> %a1) nounwind
   ret void
 }
@@ -164,23 +225,43 @@ entry:
 ; Padding
 ; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
-; Num LiveOut Entries: 2
-; PATCH-NEXT:   .short  2
-; LiveOut Entry 1: %rsp (8 bytes)
+; Num LiveOut Entries: 7
+; PATCH-NEXT:   .short 7
+; LiveOut Entry 1:
+; PATCH-NEXT:   .short 3
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 2: %rsp (8 bytes)
 ; PATCH-NEXT:   .short  7
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 8
-; LiveOut Entry 2: %ymm2 (16 bytes) --> %xmm2
+; LiveOut Entry 3:
+; PATCH-NEXT:   .short 12
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 4:
+; PATCH-NEXT:   .short 13
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 5:
+; PATCH-NEXT:   .short 14
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 6:
+; PATCH-NEXT:   .short 15
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 7: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
 ; Align
 ; PATCH-NEXT:   .p2align  3
   call void (i64, i32, ...) @llvm.experimental.stackmap(i64 4, i32 5)
-  call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 5, i32 0, i8* null, i32 0)
+  call anyregcc void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 5, i32 0, ptr null, i32 0)
   call void asm sideeffect "", "{xmm2}"(<2 x double> %a1) nounwind
   ret void
 }
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
-declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
+declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)

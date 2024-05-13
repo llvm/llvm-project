@@ -31,12 +31,12 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r1, .LCPI1_0
 ; CHECK-NEXT:    muls r1, r0, r1
-; CHECK-NEXT:    lsls r0, r1, #26
+; CHECK-NEXT:    lsls r0, r1, #31
 ; CHECK-NEXT:    ldr r2, .LCPI1_1
 ; CHECK-NEXT:    ands r2, r1
 ; CHECK-NEXT:    lsrs r1, r2, #1
-; CHECK-NEXT:    adds r0, r1, r0
-; CHECK-NEXT:    lsls r0, r0, #5
+; CHECK-NEXT:    lsls r1, r1, #5
+; CHECK-NEXT:    adds r0, r0, r1
 ; CHECK-NEXT:    ldr r1, .LCPI1_2
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    blo .LBB1_2
@@ -122,32 +122,30 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    cmp r0, #170
-; CHECK-NEXT:    push {r3}
-; CHECK-NEXT:    pop {r0}
+; CHECK-NEXT:    mov r12, r3
+; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    bhi .LBB4_2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    movs r0, r4
 ; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:    subs r1, r1, #1
 ; CHECK-NEXT:    ldr r5, .LCPI4_3
 ; CHECK-NEXT:    muls r5, r1, r5
-; CHECK-NEXT:    ldr r1, .LCPI4_4
-; CHECK-NEXT:    adds r1, r5, r1
-; CHECK-NEXT:    movs r5, #73
-; CHECK-NEXT:    lsls r5, r5, #23
-; CHECK-NEXT:    cmp r1, r5
-; CHECK-NEXT:    push {r3}
-; CHECK-NEXT:    pop {r1}
+; CHECK-NEXT:    movs r1, #73
+; CHECK-NEXT:    lsls r1, r1, #23
+; CHECK-NEXT:    cmp r5, r1
+; CHECK-NEXT:    mov r12, r3
+; CHECK-NEXT:    mov r1, r12
 ; CHECK-NEXT:    bhi .LBB4_4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    movs r1, r4
 ; CHECK-NEXT:  .LBB4_4:
-; CHECK-NEXT:    ldr r5, .LCPI4_5
+; CHECK-NEXT:    subs r2, r2, #2
+; CHECK-NEXT:    ldr r5, .LCPI4_4
 ; CHECK-NEXT:    muls r5, r2, r5
-; CHECK-NEXT:    ldr r2, .LCPI4_6
-; CHECK-NEXT:    adds r2, r5, r2
-; CHECK-NEXT:    ldr r5, .LCPI4_7
-; CHECK-NEXT:    ands r5, r2
-; CHECK-NEXT:    cmp r5, #1
+; CHECK-NEXT:    ldr r2, .LCPI4_5
+; CHECK-NEXT:    ands r2, r5
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    bhi .LBB4_6
 ; CHECK-NEXT:  @ %bb.5:
 ; CHECK-NEXT:    movs r3, r4
@@ -167,12 +165,8 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; CHECK-NEXT:  .LCPI4_3:
 ; CHECK-NEXT:    .long 3068133376 @ 0xb6e00000
 ; CHECK-NEXT:  .LCPI4_4:
-; CHECK-NEXT:    .long 1226833920 @ 0x49200000
-; CHECK-NEXT:  .LCPI4_5:
 ; CHECK-NEXT:    .long 819 @ 0x333
-; CHECK-NEXT:  .LCPI4_6:
-; CHECK-NEXT:    .long 4294965658 @ 0xfffff99a
-; CHECK-NEXT:  .LCPI4_7:
+; CHECK-NEXT:  .LCPI4_5:
 ; CHECK-NEXT:    .long 2047 @ 0x7ff
   %urem = urem <3 x i11> %X, <i11 6, i11 7, i11 -5>
   %cmp = icmp ne <3 x i11> %urem, <i11 0, i11 1, i11 2>

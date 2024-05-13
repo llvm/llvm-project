@@ -8,7 +8,7 @@
 
 # Compiler options comparison
 
-This document catalogs the options processed by F18's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to [notes on Standards conformance](#standards).
+This document catalogs the options processed by F18's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to <a href=#standards">notes on Standards conformance</a>.
 
 **There's also important information in the ___[Appendix section](#appendix)___ near the end of the document on how this data was gathered and what ___is___ and ___is not___ included in this document.**  
 
@@ -846,7 +846,7 @@ fdefault-integer-8
    </td>
   </tr>
   <tr>
-   <td>Enable <a href="https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/types">Cray pointers</a>
+   <td>Enable <a href="https://support.hpe.com/hpesc/public/docDisplay?docId=a00113911en_us&docLocale=en_US&page=Types.html">Cray pointers</a>
    </td>
    <td>default
    </td>
@@ -854,7 +854,7 @@ fdefault-integer-8
    </td>
    <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024776&aid=1#page=432">Default (near equivalent)</a>
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-pointer-integer">Default (near equivalent)</a>
+   <td><a href="https://www.intel.com/content/www/us/en/develop/documentation/fortran-compiler-oneapi-dev-guide-and-reference/top/language-reference/a-to-z-reference/o-to-p/pointer-integer.html">Default (near equivalent)</a>
    </td>
    <td>Mcray
    </td>

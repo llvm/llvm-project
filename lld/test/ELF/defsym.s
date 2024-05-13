@@ -13,7 +13,7 @@
 ## when handling the second --defsym.
 # RUN: not ld.lld -o /dev/null %t.o --defsym ERR+ \
 #        --defsym foo2=foo1 2>&1 | FileCheck %s --check-prefix=ERR
-# ERR: error: -defsym: syntax error: ERR+
+# ERR: error: --defsym: syntax error: ERR+
 
 # CHECK-DAG: 0000000000000123     0 NOTYPE  GLOBAL DEFAULT   ABS foo1
 # CHECK-DAG: 0000000000000123     0 NOTYPE  GLOBAL DEFAULT   ABS foo2
@@ -36,16 +36,16 @@
 # EXPR-DAG: 0000000000000128     0 NOTYPE  GLOBAL DEFAULT   ABS foo2
 
 # RUN: not ld.lld -o /dev/null %t.o --defsym=foo2=und 2>&1 | FileCheck %s -check-prefix=ERR1
-# ERR1: error: -defsym:1: symbol not found: und
+# ERR1: error: --defsym:1: symbol not found: und
 
 # RUN: not ld.lld -o /dev/null %t.o --defsym=xxx=yyy,zzz 2>&1 | FileCheck %s -check-prefix=ERR2
-# ERR2: -defsym:1: EOF expected, but got ,
+# ERR2: error: --defsym:1: EOF expected, but got ,
 
 # RUN: not ld.lld -o /dev/null %t.o --defsym=foo 2>&1 | FileCheck %s -check-prefix=ERR3
-# ERR3: error: -defsym: syntax error: foo
+# ERR3: error: --defsym: syntax error: foo
 
 # RUN: not ld.lld -o /dev/null %t.o --defsym= 2>&1 | FileCheck %s -check-prefix=ERR4
-# ERR4: error: -defsym: syntax error:
+# ERR4: error: --defsym: syntax error:
 
 .globl foo1
  foo1 = 0x123

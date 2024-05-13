@@ -18,7 +18,45 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPV_UndefOp : SPV_Op<"Undef", []> {
+def SPIRV_KHRAssumeTrueOp : SPIRV_KhrVendorOp<"AssumeTrue", []> {
+  let summary = "TBD";
+
+  let description = [{
+
+
+    <!-- End of AutoGen section -->
+
+    ```
+    assumetruekhr-op ::= `spirv.KHR.AssumeTrue` ssa-use
+    ```
+
+    #### Example:
+
+    ```mlir
+    spirv.KHR.AssumeTrue %arg
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_KHR_expect_assume]>,
+    Capability<[SPIRV_C_ExpectAssumeKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_Bool:$condition
+  );
+
+  let results = (outs);
+
+  let hasVerifier = 0;
+  let assemblyFormat = "$condition attr-dict";
+}
+
+// -----
+
+def SPIRV_UndefOp : SPIRV_Op<"Undef", [Pure]> {
   let summary = "Make an intermediate object whose value is undefined.";
 
   let description = [{
@@ -28,27 +66,21 @@ def SPV_UndefOp : SPV_Op<"Undef", []> {
     bit pattern or abstract value resulting in possibly different concrete,
     abstract, or opaque values.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    undef-op ::= `spv.Undef` `:` spirv-type
-    ```
-
     #### Example:
 
     ```mlir
-    %0 = spv.Undef : f32
-    %1 = spv.Undef : !spv.struct<!spv.array<4 x vector<4xi32>>>
+    %0 = spirv.Undef : f32
+    %1 = spirv.Undef : !spirv.struct<!spirv.array<4 x vector<4xi32>>>
     ```
   }];
 
   let arguments = (ins);
 
   let results = (outs
-    SPV_Type:$result
+    SPIRV_Type:$result
   );
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let hasOpcode = 0;
   let autogenSerialization = 0;

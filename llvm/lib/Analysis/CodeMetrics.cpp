@@ -15,7 +15,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"
@@ -34,8 +33,9 @@ appendSpeculatableOperands(const Value *V,
 
   for (const Value *Operand : U->operands())
     if (Visited.insert(Operand).second)
-      if (isSafeToSpeculativelyExecute(Operand))
-        Worklist.push_back(Operand);
+      if (const auto *I = dyn_cast<Instruction>(Operand))
+        if (!I->mayHaveSideEffects() && !I->isTerminator())
+          Worklist.push_back(I);
 }
 
 static void completeEphemeralValues(SmallPtrSetImpl<const Value *> &Visited,
@@ -117,13 +117,6 @@ void CodeMetrics::analyzeBasicBlock(
     const BasicBlock *BB, const TargetTransformInfo &TTI,
     const SmallPtrSetImpl<const Value *> &EphValues, bool PrepareForLTO) {
   ++NumBlocks;
-  // Use a proxy variable for NumInsts of type InstructionCost, so that it can
-  // use InstructionCost's arithmetic properties such as saturation when this
-  // feature is added to InstructionCost.
-  // When storing the value back to NumInsts, we can assume all costs are Valid
-  // because the IR should not contain any nodes that cannot be costed. If that
-  // happens the cost-model is broken.
-  InstructionCost NumInstsProxy = NumInsts;
   InstructionCost NumInstsBeforeThisBB = NumInsts;
   for (const Instruction &I : *BB) {
     // Skip ephemeral values.
@@ -140,7 +133,8 @@ void CodeMetrics::analyzeBasicBlock(
         // When preparing for LTO, liberally consider calls as inline
         // candidates.
         if (!Call->isNoInline() && IsLoweredToCall &&
-            ((F->hasInternalLinkage() && F->hasOneUse()) || PrepareForLTO)) {
+            ((F->hasInternalLinkage() && F->hasOneLiveUse()) ||
+             PrepareForLTO)) {
           ++NumInlineCandidates;
         }
 
@@ -183,8 +177,7 @@ void CodeMetrics::analyzeBasicBlock(
       if (InvI->cannotDuplicate())
         notDuplicatable = true;
 
-    NumInstsProxy += TTI.getUserCost(&I, TargetTransformInfo::TCK_CodeSize);
-    NumInsts = *NumInstsProxy.getValue();
+    NumInsts += TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
   }
 
   if (isa<ReturnInst>(BB->getTerminator()))
@@ -204,6 +197,6 @@ void CodeMetrics::analyzeBasicBlock(
   notDuplicatable |= isa<IndirectBrInst>(BB->getTerminator());
 
   // Remember NumInsts for this BB.
-  InstructionCost NumInstsThisBB = NumInstsProxy - NumInstsBeforeThisBB;
-  NumBBInsts[BB] = *NumInstsThisBB.getValue();
+  InstructionCost NumInstsThisBB = NumInsts - NumInstsBeforeThisBB;
+  NumBBInsts[BB] = NumInstsThisBB;
 }

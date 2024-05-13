@@ -12,6 +12,7 @@
 
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -25,9 +26,10 @@ static cl::opt<cl::boolOrDefault> EnableRemarksSection(
 
 RemarkStreamer::RemarkStreamer(
     std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer,
-    Optional<StringRef> FilenameIn)
-    : PassFilter(), RemarkSerializer(std::move(RemarkSerializer)),
-      Filename(FilenameIn ? Optional<std::string>(FilenameIn->str()) : None) {}
+    std::optional<StringRef> FilenameIn)
+    : RemarkSerializer(std::move(RemarkSerializer)),
+      Filename(FilenameIn ? std::optional<std::string>(FilenameIn->str())
+                          : std::nullopt) {}
 
 Error RemarkStreamer::setFilter(StringRef Filter) {
   Regex R = Regex(Filter);

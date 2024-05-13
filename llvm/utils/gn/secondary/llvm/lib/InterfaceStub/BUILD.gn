@@ -3,11 +3,12 @@ static_library("InterfaceStub") {
   deps = [
     "//llvm/lib/Object",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   sources = [
     "ELFObjHandler.cpp",
-    "ELFStub.cpp",
-    "TBEHandler.cpp",
+    "IFSHandler.cpp",
+    "IFSStub.cpp",
   ]
 }

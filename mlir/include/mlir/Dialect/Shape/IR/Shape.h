@@ -11,17 +11,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_SHAPE_IR_SHAPE_H
-#define MLIR_SHAPE_IR_SHAPE_H
+#ifndef MLIR_DIALECT_SHAPE_IR_SHAPE_H
+#define MLIR_DIALECT_SHAPE_IR_SHAPE_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/CallInterfaces.h"
+#include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/Shape/IR/ShapeOpsTypes.h.inc"
 
 namespace mlir {
 class PatternRewriter;
@@ -30,39 +37,13 @@ namespace shape {
 
 /// Alias type for extent tensors.
 RankedTensorType getExtentTensorType(MLIRContext *ctx,
-                                     int64_t rank = ShapedType::kDynamicSize);
+                                     int64_t rank = ShapedType::kDynamic);
 
 // Check if a type is an extent tensor, e.g., tensor<?xindex>.
 bool isExtentTensorType(Type);
 
 // Given an input shape Value, try to obtain the shape's values.
 LogicalResult getShapeVec(Value input, SmallVectorImpl<int64_t> &shapeValues);
-
-/// The shape descriptor type represents rank and dimension sizes.
-class ShapeType : public Type::TypeBase<ShapeType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The type of a single dimension.
-class SizeType : public Type::TypeBase<SizeType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The ValueShape represents a (potentially unknown) runtime value and shape.
-class ValueShapeType
-    : public Type::TypeBase<ValueShapeType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The Witness represents a runtime constraint, to be used as shape related
-/// preconditions on code execution.
-class WitnessType : public Type::TypeBase<WitnessType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
 
 } // namespace shape
 } // namespace mlir
@@ -72,4 +53,4 @@ public:
 
 #include "mlir/Dialect/Shape/IR/ShapeOpsDialect.h.inc"
 
-#endif // MLIR_SHAPE_IR_SHAPE_H
+#endif // MLIR_DIALECT_SHAPE_IR_SHAPE_H

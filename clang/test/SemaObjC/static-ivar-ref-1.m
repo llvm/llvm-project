@@ -12,7 +12,7 @@
 
 current *pc;
 
-int foo()
+int foo(void)
 {
   return pc->ivar2 + (*pc).ivar + pc->ivar1;
 }
@@ -24,7 +24,7 @@ int foo()
 // CHECK: }
 // CHECK: @end
 // CHECK: current *pc;
-// CHECK: int foo() {
+// CHECK: int foo(void) {
 // CHECK:     return pc->ivar2 + (*pc).ivar + pc->ivar1;
 // CHECK: }
 

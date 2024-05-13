@@ -1,9 +1,6 @@
 Troubleshooting
 ===============
 
-.. contents::
-   :local:
-
 File and Line Breakpoints Are Not Getting Hit
 ---------------------------------------------
 
@@ -18,7 +15,7 @@ files:
 
 ::
 
-   % cat foo.c
+   $ cat foo.c
    #include "bar.c"
    #include "baz.c"
    ...
@@ -32,7 +29,7 @@ search for inlined breakpoint locations by adding the following line to your
 
 ::
 
-   % echo "settings set target.inline-breakpoint-strategy always" >> ~/.lldbinit
+   $ echo "settings set target.inline-breakpoint-strategy always" >> ~/.lldbinit
 
 This tells LLDB to always look in all compile units and search for breakpoint
 locations by file and line even if the implementation file doesn't match.

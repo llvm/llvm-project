@@ -1,5 +1,4 @@
 ; RUN: opt < %s -disable-output -passes="print<da>" 2>&1 | FileCheck %s
-; RUN: opt < %s -da -analyze -enable-new-pm=0 | FileCheck %s
 
 ; Note: exact results can be achived even if
 ; "-da-disable-delinearization-checks" is not used
@@ -16,8 +15,9 @@
 ;;     for (int j = 2; j < M; ++j)
 ;;       a[i][j] = a[i+1][j-2];
 ;; }
-
-define void @t1([2048 x i32]* %a) {
+;;
+;; Note that there is a getelementptr with index 0, make sure we can analyze this case.
+define void @t1(ptr %a) {
 entry:
   br label %for.body
 
@@ -29,10 +29,10 @@ for.body4:                                        ; preds = %for.body, %for.body
   %indvars.iv = phi i64 [ 2, %for.body ], [ %indvars.iv.next, %for.body4 ]
   %0 = add nuw nsw i64 %indvars.iv4, 1
   %1 = add nsw i64 %indvars.iv, -2
-  %arrayidx6 = getelementptr inbounds [2048 x i32], [2048 x i32]* %a, i64 %0, i64 %1
-  %2 = load i32, i32* %arrayidx6, align 4
-  %arrayidx10 = getelementptr inbounds [2048 x i32], [2048 x i32]* %a, i64 %indvars.iv4, i64 %indvars.iv
-  store i32 %2, i32* %arrayidx10, align 4
+  %arrayidx6 = getelementptr inbounds [2048 x i32], ptr %a, i64 %0, i64 %1
+  %2 = load i32, ptr %arrayidx6, align 4
+  %arrayidx10 = getelementptr inbounds [2048 x i32], ptr %a, i64 %indvars.iv4, i64 %indvars.iv
+  store i32 %2, ptr %arrayidx10, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 2048
   br i1 %exitcond, label %for.body4, label %for.inc11
@@ -46,8 +46,45 @@ for.end13:                                        ; preds = %for.inc11
   ret void
 }
 
-
 ; CHECK-LABEL: t2
+; CHECK: da analyze - consistent anti [1 -2]!
+
+;; Similar to @t1 but includes a call with a "returned" arg, make sure we can analyze
+;; this case.
+
+define void @t2(ptr %a) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.inc11
+  %indvars.iv4 = phi i64 [ 0, %entry ], [ %indvars.iv.next5, %for.inc11 ]
+  br label %for.body4
+
+for.body4:                                        ; preds = %for.body, %for.body4
+  %indvars.iv = phi i64 [ 2, %for.body ], [ %indvars.iv.next, %for.body4 ]
+  %0 = add nuw nsw i64 %indvars.iv4, 1
+  %1 = add nsw i64 %indvars.iv, -2
+  %arrayidx6 = getelementptr inbounds [2048 x i32], ptr %a, i64 %0, i64 %1
+  %2 = load i32, ptr %arrayidx6, align 4
+  %call = call ptr @func_with_returned_arg(ptr returned %a)
+  %arrayidx10 = getelementptr inbounds [2048 x i32], ptr %call, i64 %indvars.iv4, i64 %indvars.iv
+  store i32 %2, ptr %arrayidx10, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, 2048
+  br i1 %exitcond, label %for.body4, label %for.inc11
+
+for.inc11:                                        ; preds = %for.body4
+  %indvars.iv.next5 = add nuw nsw i64 %indvars.iv4, 1
+  %exitcond7 = icmp ne i64 %indvars.iv.next5, 1023
+  br i1 %exitcond7, label %for.body, label %for.end13
+
+for.end13:                                        ; preds = %for.inc11
+  ret void
+}
+
+declare ptr @func_with_returned_arg(ptr returned %arg)
+
+; CHECK-LABEL: t3
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent anti [1 -2 0 -3 2]!
 ; CHECK: da analyze - none!
@@ -63,7 +100,7 @@ for.end13:                                        ; preds = %for.inc11
 ;;             a[i1][i2][i3][i4][i5] = a[i1+1][i2-2][i3][i4-3][i5+2];
 ;; }
 
-define void @t2([1024 x [1024 x [1024 x [2048 x i32]]]]* %a) {
+define void @t3(ptr %a) {
 entry:
   br label %for.body
 
@@ -89,10 +126,10 @@ for.body16:                                       ; preds = %for.body12, %for.bo
   %1 = add nsw i64 %indvars.iv14, -2
   %2 = add nsw i64 %indvars.iv7, -3
   %3 = add nuw nsw i64 %indvars.iv, 2
-  %arrayidx26 = getelementptr inbounds [1024 x [1024 x [1024 x [2048 x i32]]]], [1024 x [1024 x [1024 x [2048 x i32]]]]* %a, i64 %0, i64 %1, i64 %indvars.iv11, i64 %2, i64 %3
-  %4 = load i32, i32* %arrayidx26, align 4
-  %arrayidx36 = getelementptr inbounds [1024 x [1024 x [1024 x [2048 x i32]]]], [1024 x [1024 x [1024 x [2048 x i32]]]]* %a, i64 %indvars.iv18, i64 %indvars.iv14, i64 %indvars.iv11, i64 %indvars.iv7, i64 %indvars.iv
-  store i32 %4, i32* %arrayidx36, align 4
+  %arrayidx26 = getelementptr inbounds [1024 x [1024 x [1024 x [2048 x i32]]]], ptr %a, i64 %0, i64 %1, i64 %indvars.iv11, i64 %2, i64 %3
+  %4 = load i32, ptr %arrayidx26, align 4
+  %arrayidx36 = getelementptr inbounds [1024 x [1024 x [1024 x [2048 x i32]]]], ptr %a, i64 %indvars.iv18, i64 %indvars.iv14, i64 %indvars.iv11, i64 %indvars.iv7, i64 %indvars.iv
+  store i32 %4, ptr %arrayidx36, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 2046
   br i1 %exitcond, label %for.body16, label %for.inc37

@@ -15,6 +15,8 @@
 #include "PPCSubtarget.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MacroFusion.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include <optional>
 
 using namespace llvm;
 namespace {
@@ -54,9 +56,9 @@ public:
   bool hasOp1(unsigned Opc) const { return OpSet1.contains(Opc); }
   bool hasOp2(unsigned Opc) const { return OpSet2.contains(Opc); }
   bool isSupported() const { return Supported; }
-  Optional<unsigned> depOpIdx() const {
+  std::optional<unsigned> depOpIdx() const {
     if (DepOpIdx < 0)
-      return None;
+      return std::nullopt;
     return DepOpIdx;
   }
 
@@ -75,6 +77,19 @@ static bool matchingRegOps(const MachineInstr &FirstMI,
   return Op1.getReg() == Op2.getReg();
 }
 
+static bool matchingImmOps(const MachineInstr &MI,
+                           int MIOpIndex,
+                           int64_t Expect,
+                           unsigned ExtendFrom = 64) {
+  const MachineOperand &Op = MI.getOperand(MIOpIndex);
+  if (!Op.isImm())
+    return false;
+  int64_t Imm = Op.getImm();
+  if (ExtendFrom < 64)
+    Imm = SignExtend64(Imm, ExtendFrom);
+  return Imm == Expect;
+}
+
 // Return true if the FirstMI meets the constraints of SecondMI according to
 // fusion specification.
 static bool checkOpConstraints(FusionFeature::FusionKind Kd,
@@ -91,8 +106,8 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
     if (!RA.isReg())
       return true;
 
-    return Register::isVirtualRegister(RA.getReg()) ||
-      (RA.getReg() != PPC::ZERO && RA.getReg() != PPC::ZERO8);
+    return RA.getReg().isVirtual() ||
+           (RA.getReg() != PPC::ZERO && RA.getReg() != PPC::ZERO8);
   }
   // [addis rt,ra,si - ld rt,ds(ra)] etc.
   case FusionFeature::FK_AddisLoad: {
@@ -101,7 +116,7 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
       return true;
 
     // Only check it for non-virtual register.
-    if (!Register::isVirtualRegister(RT.getReg()))
+    if (!RT.getReg().isVirtual())
       // addis(rt) = ld(ra) = ld(rt)
       // ld(rt) cannot be zero
       if (!matchingRegOps(SecondMI, 0, SecondMI, 2) ||
@@ -116,7 +131,7 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
     if (((Imm & 0xFFF0) != 0) && ((Imm & 0xFFF0) != 0xFFF0))
       return false;
 
-    // If si = 1111111111110000 and the msb of the d/ds field of the load equals 
+    // If si = 1111111111110000 and the msb of the d/ds field of the load equals
     // 1, then fusion does not occur.
     if ((Imm & 0xFFF0) == 0xFFF0) {
       const MachineOperand &D = SecondMI.getOperand(1);
@@ -131,6 +146,81 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
       return (D.getImm() & (1ULL << MSB)) == 0;
     }
     return true;
+  }
+
+  case FusionFeature::FK_SldiAdd:
+    return (matchingImmOps(FirstMI, 2, 3) && matchingImmOps(FirstMI, 3, 60)) ||
+           (matchingImmOps(FirstMI, 2, 6) && matchingImmOps(FirstMI, 3, 57));
+
+  // rldicl rx, ra, 1, 0  - xor
+  case FusionFeature::FK_RotateLeftXor:
+    return matchingImmOps(FirstMI, 2, 1) && matchingImmOps(FirstMI, 3, 0);
+
+  // rldicr rx, ra, 1, 63 - xor
+  case FusionFeature::FK_RotateRightXor:
+    return matchingImmOps(FirstMI, 2, 1) && matchingImmOps(FirstMI, 3, 63);
+
+  // We actually use CMPW* and CMPD*, 'l' doesn't exist as an operand in instr.
+
+  // { lbz,lbzx,lhz,lhzx,lwz,lwzx } - cmpi 0,1,rx,{ 0,1,-1 }
+  // { lbz,lbzx,lhz,lhzx,lwz,lwzx } - cmpli 0,L,rx,{ 0,1 }
+  case FusionFeature::FK_LoadCmp1:
+  // { ld,ldx } - cmpi 0,1,rx,{ 0,1,-1 }
+  // { ld,ldx } - cmpli 0,1,rx,{ 0,1 }
+  case FusionFeature::FK_LoadCmp2: {
+    const MachineOperand &BT = SecondMI.getOperand(0);
+    if (!BT.isReg() || (!BT.getReg().isVirtual() && BT.getReg() != PPC::CR0))
+      return false;
+    if (SecondMI.getOpcode() == PPC::CMPDI &&
+        matchingImmOps(SecondMI, 2, -1, 16))
+      return true;
+    return matchingImmOps(SecondMI, 2, 0) || matchingImmOps(SecondMI, 2, 1);
+  }
+
+  // { lha,lhax,lwa,lwax } - cmpi 0,L,rx,{ 0,1,-1 }
+  case FusionFeature::FK_LoadCmp3: {
+    const MachineOperand &BT = SecondMI.getOperand(0);
+    if (!BT.isReg() || (!BT.getReg().isVirtual() && BT.getReg() != PPC::CR0))
+      return false;
+    return matchingImmOps(SecondMI, 2, 0) || matchingImmOps(SecondMI, 2, 1) ||
+           matchingImmOps(SecondMI, 2, -1, 16);
+  }
+
+  // mtctr - { bcctr,bcctrl }
+  case FusionFeature::FK_ZeroMoveCTR:
+    // ( mtctr rx ) is alias of ( mtspr 9, rx )
+    return (FirstMI.getOpcode() != PPC::MTSPR &&
+            FirstMI.getOpcode() != PPC::MTSPR8) ||
+           matchingImmOps(FirstMI, 0, 9);
+
+  // mtlr - { bclr,bclrl }
+  case FusionFeature::FK_ZeroMoveLR:
+    // ( mtlr rx ) is alias of ( mtspr 8, rx )
+    return (FirstMI.getOpcode() != PPC::MTSPR &&
+            FirstMI.getOpcode() != PPC::MTSPR8) ||
+           matchingImmOps(FirstMI, 0, 8);
+
+  // addis rx,ra,si - addi rt,rx,SI, SI >= 0
+  case FusionFeature::FK_AddisAddi: {
+    const MachineOperand &RA = FirstMI.getOperand(1);
+    const MachineOperand &SI = SecondMI.getOperand(2);
+    if (!SI.isImm() || !RA.isReg())
+      return false;
+    if (RA.getReg() == PPC::ZERO || RA.getReg() == PPC::ZERO8)
+      return false;
+    return SignExtend64(SI.getImm(), 16) >= 0;
+  }
+
+  // addi rx,ra,si - addis rt,rx,SI, ra > 0, SI >= 2
+  case FusionFeature::FK_AddiAddis: {
+    const MachineOperand &RA = FirstMI.getOperand(1);
+    const MachineOperand &SI = FirstMI.getOperand(2);
+    if (!SI.isImm() || !RA.isReg())
+      return false;
+    if (RA.getReg() == PPC::ZERO || RA.getReg() == PPC::ZERO8)
+      return false;
+    int64_t ExtendedSI = SignExtend64(SI.getImm(), 16);
+    return ExtendedSI >= 2;
   }
   }
 
@@ -176,13 +266,13 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
         continue;
 
       auto DepOpIdx = Feature.depOpIdx();
-      if (DepOpIdx.hasValue()) {
+      if (DepOpIdx) {
         // Checking if the result of the FirstMI is the desired operand of the
         // SecondMI if the DepOpIdx is set. Otherwise, ignore it.
         if (!matchingRegOps(*FirstMI, 0, SecondMI, *DepOpIdx))
           return false;
       }
-  
+
       // Checking more on the instruction operands.
       if (checkOpConstraints(Feature.getKind(), *FirstMI, SecondMI))
         return true;
@@ -196,7 +286,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation> createPowerPCMacroFusionDAGMutation () {
+std::unique_ptr<ScheduleDAGMutation> createPowerPCMacroFusionDAGMutation() {
   return createMacroFusionDAGMutation(shouldScheduleAdjacent);
 }
 

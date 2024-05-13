@@ -1,8 +1,5 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..
-  ${CMAKE_CURRENT_BINARY_DIR}/..)
-
 set(LLVM_LINK_COMPONENTS
-  FuzzMutate
+  FuzzerCLI
   Support
   )
 
@@ -24,5 +21,6 @@ clang_target_link_libraries(clangd-fuzzer
 target_link_libraries(clangd-fuzzer
   PRIVATE
   clangDaemon
+  clangIncludeCleaner
   clangdSupport
   )

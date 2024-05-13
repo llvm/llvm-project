@@ -38,8 +38,8 @@ void test_null_field(void) {
   *(x.p) = 0xDEADBEEF;
 }
 
-// <rdar://problem/8331641> leak reports should not show paths that end with exit() (but ones that don't end with exit())
-void panic() __attribute__((noreturn));
+// leak reports should not show paths that end with exit() (but ones that don't end with exit())
+void panic(void) __attribute__((noreturn));
 enum { kCFNumberSInt8Type = 1,     kCFNumberSInt16Type = 2,     kCFNumberSInt32Type = 3,     kCFNumberSInt64Type = 4,     kCFNumberFloat32Type = 5,     kCFNumberFloat64Type = 6,      kCFNumberCharType = 7,     kCFNumberShortType = 8,     kCFNumberIntType = 9,     kCFNumberLongType = 10,     kCFNumberLongLongType = 11,     kCFNumberFloatType = 12,     kCFNumberDoubleType = 13,      kCFNumberCFIndexType = 14,      kCFNumberNSIntegerType = 15,     kCFNumberCGFloatType = 16,     kCFNumberMaxType = 16    };
 typedef const struct __CFAllocator * CFAllocatorRef;
 extern const CFAllocatorRef kCFAllocatorDefault;

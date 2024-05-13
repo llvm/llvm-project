@@ -13,19 +13,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Format.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/TableGenBackend.h"
-#include <algorithm>
-#include <set>
+#include <map>
+#include <memory>
 #include <string>
-#include <vector>
+#include <utility>
 
 #define DEBUG_TYPE "detailed-records-backend"
 
@@ -47,7 +46,7 @@ public:
   void printVariables(raw_ostream &OS);
   void printClasses(raw_ostream &OS);
   void printRecords(raw_ostream &OS);
-  void printSectionHeading(std::string Title, int Count, raw_ostream &OS);
+  void printSectionHeading(StringRef Title, int Count, raw_ostream &OS);
   void printDefms(Record *Rec, raw_ostream &OS);
   void printTemplateArgs(Record *Rec, raw_ostream &OS);
   void printSuperclasses(Record *Rec, raw_ostream &OS);
@@ -115,7 +114,7 @@ void DetailedRecordsEmitter::printRecords(raw_ostream &OS) {
 
 // Print a section heading with the name of the section and
 // the item count.
-void DetailedRecordsEmitter::printSectionHeading(std::string Title, int Count,
+void DetailedRecordsEmitter::printSectionHeading(StringRef Title, int Count,
                                                  raw_ostream &OS) {
   OS << formatv("\n{0} {1} ({2}) {0}\n", "--------------------", Title, Count);
 }

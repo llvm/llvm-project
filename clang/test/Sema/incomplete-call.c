@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -verify %s
 
 struct foo; // expected-note 3 {{forward declaration of 'struct foo'}}
 
-struct foo a(); // expected-note {{'a' declared here}}
+struct foo a(void); // expected-note {{'a' declared here}}
 void b(struct foo);
 void c();
 

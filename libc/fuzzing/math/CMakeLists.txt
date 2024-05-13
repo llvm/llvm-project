@@ -8,6 +8,7 @@ add_libc_fuzzer(
     SingleInputSingleOutputDiff.h
     TwoInputSingleOutputDiff.h
   DEPENDS
+    libc.hdr.math_macros
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -45,8 +46,8 @@ add_libc_fuzzer(
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
-    libc.utils.FPUtil.fputil
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.type_traits
 )
 
 add_libc_fuzzer(

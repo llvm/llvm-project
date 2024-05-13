@@ -55,6 +55,78 @@ TEST(MangledTest, EmptyForInvalidName) {
   EXPECT_STREQ("", TheDemangled.GetCString());
 }
 
+TEST(MangledTest, ResultForValidRustV0Name) {
+  ConstString mangled_name("_RNvC1a4main");
+  Mangled the_mangled(mangled_name);
+  ConstString the_demangled = the_mangled.GetDemangledName();
+
+  ConstString expected_result("a::main");
+  EXPECT_STREQ(expected_result.GetCString(), the_demangled.GetCString());
+}
+
+TEST(MangledTest, EmptyForInvalidRustV0Name) {
+  ConstString mangled_name("_RRR");
+  Mangled the_mangled(mangled_name);
+  ConstString the_demangled = the_mangled.GetDemangledName();
+
+  EXPECT_STREQ("", the_demangled.GetCString());
+}
+
+TEST(MangledTest, ResultForValidDLangName) {
+  ConstString mangled_name("_Dmain");
+  Mangled the_mangled(mangled_name);
+  ConstString the_demangled = the_mangled.GetDemangledName();
+
+  ConstString expected_result("D main");
+  EXPECT_STREQ(expected_result.GetCString(), the_demangled.GetCString());
+}
+
+TEST(MangledTest, EmptyForInvalidDLangName) {
+  ConstString mangled_name("_DDD");
+  Mangled the_mangled(mangled_name);
+  ConstString the_demangled = the_mangled.GetDemangledName();
+
+  EXPECT_STREQ("", the_demangled.GetCString());
+}
+
+TEST(MangledTest, RecognizeSwiftMangledNames) {
+  llvm::StringRef valid_swift_mangled_names[] = {
+      "_TtC4main7MyClass",   // Mangled objc class name
+      "_TtP4main3Foo_",      // Mangld objc protocol name
+      "$s4main3BarCACycfC",  // Mangled name
+      "_$s4main3BarCACycfC", // Mangled name with leading underscore
+      "$S4main3BarCACycfC",  // Older swift mangled name
+      "_$S4main3BarCACycfC", // Older swift mangled name
+                             // with leading underscore
+      // Mangled swift filename
+      "@__swiftmacro_4main16FunVariableNames9OptionSetfMm_.swift",
+  };
+
+  for (llvm::StringRef mangled : valid_swift_mangled_names)
+    EXPECT_EQ(Mangled::GetManglingScheme(mangled),
+              Mangled::eManglingSchemeSwift);
+}
+
+TEST(MangledTest, BoolConversionOperator) {
+  {
+    ConstString MangledName("_ZN1a1b1cIiiiEEvm");
+    Mangled TheMangled(MangledName);
+    EXPECT_EQ(true, bool(TheMangled));
+    EXPECT_EQ(false, !TheMangled);
+  }
+  {
+    ConstString UnmangledName("puts");
+    Mangled TheMangled(UnmangledName);
+    EXPECT_EQ(true, bool(TheMangled));
+    EXPECT_EQ(false, !TheMangled);
+  }
+  {
+    Mangled TheMangled{};
+    EXPECT_EQ(false, bool(TheMangled));
+    EXPECT_EQ(true, !TheMangled);
+  }
+}
+
 TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
   SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
       subsystems;

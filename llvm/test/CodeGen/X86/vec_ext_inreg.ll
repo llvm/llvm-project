@@ -69,7 +69,7 @@ define <8 x i32> @d(<8 x i32> %a) nounwind {
 ;
 ; AVX1-LABEL: d:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: d:
@@ -85,7 +85,7 @@ define <8 x i32> @d(<8 x i32> %a) nounwind {
 define <3 x i32> @e(<3 x i32> %a) nounwind {
 ; SSE-LABEL: e:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: e:

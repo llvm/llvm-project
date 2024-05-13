@@ -1,7 +1,7 @@
 ; This testcase consists of alias relations on 128-bit pointers that
 ; should be completely resolvable by basicaa.
 
-; RUN: opt < %s -basic-aa -aa-eval -print-no-aliases -print-may-aliases -print-must-aliases -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-no-aliases -print-may-aliases -print-must-aliases -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128-p100:128:64:64-p101:128:64:64"
 
@@ -12,12 +12,15 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i1
 
 ; CHECK:     Function: test0
 ; CHECK-NOT:   MayAlias:
-define void @test0(%T addrspace(100)* %P) {
-  %A = getelementptr %T, %T addrspace(100)* %P, i64 0
-  %B = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 0
-  %C = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 1
-  %D = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 1, i64 0
-  %E = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 1, i64 5
+define void @test0(ptr addrspace(100) %P) {
+  %C = getelementptr %T, ptr addrspace(100) %P, i64 0, i32 1
+  %D = getelementptr %T, ptr addrspace(100) %P, i64 0, i32 1, i64 0
+  %E = getelementptr %T, ptr addrspace(100) %P, i64 0, i32 1, i64 5
+  load %T, ptr addrspace(100) %P
+  load i32, ptr addrspace(100) %P
+  load [10 x i8], ptr addrspace(100) %C
+  load i8, ptr addrspace(100) %D
+  load i8, ptr addrspace(100) %E
   ret void
 }
 
@@ -30,13 +33,15 @@ define void @test0(%T addrspace(100)* %P) {
 ; CHECK:       NoAlias:
 ; CHECK-SAME:  %A
 ; CHECK-SAME:  %B
-define void @test1(double addrspace(100)* %P, i128 %i) {
+define void @test1(ptr addrspace(100) %P, i128 %i) {
   ; 1180591620717411303424 is 2**70
   ;  590295810358705651712 is 2**69
   %i70 = add i128 %i, 1180591620717411303424 
   %i69 = add i128 %i, 590295810358705651712
-  %A = getelementptr double, double addrspace(100)* %P, i128 %i70
-  %B = getelementptr double, double addrspace(100)* %P, i128 %i69
+  %A = getelementptr double, ptr addrspace(100) %P, i128 %i70
+  %B = getelementptr double, ptr addrspace(100) %P, i128 %i69
+  load double, ptr addrspace(100) %A
+  load double, ptr addrspace(100) %B
   ret void
 }
 
@@ -48,13 +53,15 @@ define void @test1(double addrspace(100)* %P, i128 %i) {
 ; CHECK: MustAlias:
 ; CHECK-SAME: %A
 ; CHECK-SAME: %C
-define void @test2(double addrspace(100)* %P, i128 %i) {
+define void @test2(ptr addrspace(100) %P, i128 %i) {
   ; 1180591620717411303424 is 2**70
   ;  590295810358705651712 is 2**69
   %i70 = add i128 %i, 1180591620717411303424 
   %i69 = add i128 %i, 590295810358705651712
   %j70 = add i128 %i69, 590295810358705651712 
-  %A = getelementptr double, double addrspace(100)* %P, i128 %i70
-  %C = getelementptr double, double addrspace(100)* %P, i128 %j70
+  %A = getelementptr double, ptr addrspace(100) %P, i128 %i70
+  %C = getelementptr double, ptr addrspace(100) %P, i128 %j70
+  load double, ptr addrspace(100) %A
+  load double, ptr addrspace(100) %C
   ret void
 }

@@ -11,7 +11,7 @@ target triple = "x86_64-pc-linux-gnu"
 ; is incorrect.
 
 declare void @foo()
-define void @can_realign(<8 x i32>* %p) {
+define void @can_realign(ptr %p) {
 ; CHECK-LABEL: can_realign:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -24,18 +24,18 @@ define void @can_realign(<8 x i32>* %p) {
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
-  %val = load <8 x i32>, <8 x i32>* %p, align 32
+  %val = load <8 x i32>, ptr %p, align 32
   call void @foo() ["deopt" (<8 x i32> %val)]
   ret void
 }
 
-define void @no_realign(<8 x i32>* %p) "no-realign-stack" {
+define void @no_realign(ptr %p) "no-realign-stack" {
 ; CHECK-LABEL: no_realign:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $40, %rsp
@@ -43,12 +43,12 @@ define void @no_realign(<8 x i32>* %p) "no-realign-stack" {
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %val = load <8 x i32>, <8 x i32>* %p, align 32
+  %val = load <8 x i32>, ptr %p, align 32
   call void @foo() ["deopt" (<8 x i32> %val)]
   ret void
 }
@@ -56,7 +56,7 @@ define void @no_realign(<8 x i32>* %p) "no-realign-stack" {
 ;; Next batch are similiar to the above, but require a reload of the
 ;; spilled value as well.
 
-define <4 x i8 addrspace(1)*> @spillfill_can_realign(<4 x i8 addrspace(1)*> %obj) gc "statepoint-example" {
+define <4 x ptr addrspace(1)> @spillfill_can_realign(<4 x ptr addrspace(1)> %obj) gc "statepoint-example" {
 ; CHECK-LABEL: spillfill_can_realign:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -68,7 +68,7 @@ define <4 x i8 addrspace(1)*> @spillfill_can_realign(<4 x i8 addrspace(1)*> %obj
 ; CHECK-NEXT:    subq $64, %rsp
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq do_safepoint
+; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    vmovaps (%rsp), %ymm0
 ; CHECK-NEXT:    movq %rbp, %rsp
@@ -76,32 +76,32 @@ define <4 x i8 addrspace(1)*> @spillfill_can_realign(<4 x i8 addrspace(1)*> %obj
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<4 x i8 addrspace(1)*> %obj)]
-  %obj.relocated = call coldcc <4 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v4p1i8(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
-  ret <4 x i8 addrspace(1)*> %obj.relocated
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<4 x ptr addrspace(1)> %obj)]
+  %obj.relocated = call coldcc <4 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v4p1(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
+  ret <4 x ptr addrspace(1)> %obj.relocated
 }
 
-define <4 x i8 addrspace(1)*> @spillfill_no_realign(<4 x i8 addrspace(1)*> %obj) "no-realign-stack" gc "statepoint-example" {
+define <4 x ptr addrspace(1)> @spillfill_no_realign(<4 x ptr addrspace(1)> %obj) "no-realign-stack" gc "statepoint-example" {
 ; CHECK-LABEL: spillfill_no_realign:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq do_safepoint
+; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    vmovups (%rsp), %ymm0
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<4 x i8 addrspace(1)*> %obj)]
-  %obj.relocated = call coldcc <4 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v4p1i8(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
-  ret <4 x i8 addrspace(1)*> %obj.relocated
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<4 x ptr addrspace(1)> %obj)]
+  %obj.relocated = call coldcc <4 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v4p1(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
+  ret <4 x ptr addrspace(1)> %obj.relocated
 }
 
 declare void @do_safepoint()
 
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
-declare <4 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v4p1i8(token, i32, i32)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)
+declare <4 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v4p1(token, i32, i32)

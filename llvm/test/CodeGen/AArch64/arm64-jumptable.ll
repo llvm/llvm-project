@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=arm64-apple-ios < %s | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu < %s | FileCheck %s --check-prefix=CHECK-LINUX
+; RUN: llc -mtriple=arm64-apple-ios -aarch64-min-jump-table-entries=4 < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-linux-gnu -aarch64-min-jump-table-entries=4 < %s | FileCheck %s --check-prefix=CHECK-LINUX
 ; <rdar://11417675>
 
-define void @sum(i32 %a, i32* %to, i32 %c) {
+define void @sum(i32 %a, ptr %to, i32 %c) {
 entry:
   switch i32 %a, label %exit [
     i32 1, label %bb1
@@ -19,7 +19,7 @@ bb4:
   br label %exit.sink.split
 exit.sink.split:
   %.sink = phi i32 [ 5, %bb4 ], [ %b, %bb1 ], [ 3, %bb3 ], [ %a, %entry ]
-  store i32 %.sink, i32* %to
+  store i32 %.sink, ptr %to
   br label %exit
 exit:
   ret void

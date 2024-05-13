@@ -134,129 +134,109 @@
 
 @.str = private unnamed_addr constant [3 x i8] c"01\00", align 1
 
-declare void @varArgF_SmallStruct(i8* %c, ...) 
+declare void @varArgF_SmallStruct(ptr %c, ...) 
 
-define void @smallStruct_1b(%struct.SmallStruct_1b* %ss) #0 {
+define void @smallStruct_1b(ptr %ss) #0 {
 entry:
-  %ss.addr = alloca %struct.SmallStruct_1b*, align 8
-  store %struct.SmallStruct_1b* %ss, %struct.SmallStruct_1b** %ss.addr, align 8
-  %0 = load %struct.SmallStruct_1b*, %struct.SmallStruct_1b** %ss.addr, align 8
-  %1 = bitcast %struct.SmallStruct_1b* %0 to { i8 }*
-  %2 = getelementptr { i8 }, { i8 }* %1, i32 0, i32 0
-  %3 = load i8, i8* %2, align 1
-  call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i8 inreg %3)
+  %ss.addr = alloca ptr, align 8
+  store ptr %ss, ptr %ss.addr, align 8
+  %0 = load ptr, ptr %ss.addr, align 8
+  %1 = load i8, ptr %0, align 1
+  call void (ptr, ...) @varArgF_SmallStruct(ptr @.str, i8 inreg %1)
   ret void
  ; CHECK-LABEL: smallStruct_1b: 
  ; CHECK: dsll $[[R1:[0-9]+]], $[[R2:[0-9]+]], 56
 }
 
-define void @smallStruct_2b(%struct.SmallStruct_2b* %ss) #0 {
+define void @smallStruct_2b(ptr %ss) #0 {
 entry:
-  %ss.addr = alloca %struct.SmallStruct_2b*, align 8
-  store %struct.SmallStruct_2b* %ss, %struct.SmallStruct_2b** %ss.addr, align 8
-  %0 = load %struct.SmallStruct_2b*, %struct.SmallStruct_2b** %ss.addr, align 8
-  %1 = bitcast %struct.SmallStruct_2b* %0 to { i16 }*
-  %2 = getelementptr { i16 }, { i16 }* %1, i32 0, i32 0
-  %3 = load i16, i16* %2, align 1
-  call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i16 inreg %3)
+  %ss.addr = alloca ptr, align 8
+  store ptr %ss, ptr %ss.addr, align 8
+  %0 = load ptr, ptr %ss.addr, align 8
+  %1 = load i16, ptr %0, align 1
+  call void (ptr, ...) @varArgF_SmallStruct(ptr @.str, i16 inreg %1)
   ret void
  ; CHECK-LABEL: smallStruct_2b:
  ; CHECK: dsll $[[R1:[0-9]+]], $[[R2:[0-9]+]], 48
 }
 
-define void @smallStruct_3b(%struct.SmallStruct_3b* %ss) #0 {
+define void @smallStruct_3b(ptr %ss) #0 {
 entry:
-  %ss.addr = alloca %struct.SmallStruct_3b*, align 8
+  %ss.addr = alloca ptr, align 8
   %.coerce = alloca { i24 }
-  store %struct.SmallStruct_3b* %ss, %struct.SmallStruct_3b** %ss.addr, align 8
-  %0 = load %struct.SmallStruct_3b*, %struct.SmallStruct_3b** %ss.addr, align 8
-  %1 = bitcast { i24 }* %.coerce to i8*
-  %2 = bitcast %struct.SmallStruct_3b* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 3, i1 false)
-  %3 = getelementptr { i24 }, { i24 }* %.coerce, i32 0, i32 0
-  %4 = load i24, i24* %3, align 1
-  call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i24 inreg %4)
+  store ptr %ss, ptr %ss.addr, align 8
+  %0 = load ptr, ptr %ss.addr, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %.coerce, ptr %0, i64 3, i1 false)
+  %1 = load i24, ptr %.coerce, align 1
+  call void (ptr, ...) @varArgF_SmallStruct(ptr @.str, i24 inreg %1)
   ret void
  ; CHECK-LABEL: smallStruct_3b:
  ; CHECK: dsll $[[R1:[0-9]+]], $[[R2:[0-9]+]], 40
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #1
 
-define void @smallStruct_4b(%struct.SmallStruct_4b* %ss) #0 {
+define void @smallStruct_4b(ptr %ss) #0 {
 entry:
-  %ss.addr = alloca %struct.SmallStruct_4b*, align 8
-  store %struct.SmallStruct_4b* %ss, %struct.SmallStruct_4b** %ss.addr, align 8
-  %0 = load %struct.SmallStruct_4b*, %struct.SmallStruct_4b** %ss.addr, align 8
-  %1 = bitcast %struct.SmallStruct_4b* %0 to { i32 }*
-  %2 = getelementptr { i32 }, { i32 }* %1, i32 0, i32 0
-  %3 = load i32, i32* %2, align 1
-  call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i32 inreg %3)
+  %ss.addr = alloca ptr, align 8
+  store ptr %ss, ptr %ss.addr, align 8
+  %0 = load ptr, ptr %ss.addr, align 8
+  %1 = load i32, ptr %0, align 1
+  call void (ptr, ...) @varArgF_SmallStruct(ptr @.str, i32 inreg %1)
   ret void
  ; CHECK-LABEL: smallStruct_4b:
  ; CHECK: dsll $[[R1:[0-9]+]], $[[R2:[0-9]+]], 32
 }
 
-define void @smallStruct_5b(%struct.SmallStruct_5b* %ss) #0 {
+define void @smallStruct_5b(ptr %ss) #0 {
 entry:
-  %ss.addr = alloca %struct.SmallStruct_5b*, align 8
+  %ss.addr = alloca ptr, align 8
   %.coerce = alloca { i40 }
-  store %struct.SmallStruct_5b* %ss, %struct.SmallStruct_5b** %ss.addr, align 8
-  %0 = load %struct.SmallStruct_5b*, %struct.SmallStruct_5b** %ss.addr, align 8
-  %1 = bitcast { i40 }* %.coerce to i8*
-  %2 = bitcast %struct.SmallStruct_5b* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 5, i1 false)
-  %3 = getelementptr { i40 }, { i40 }* %.coerce, i32 0, i32 0
-  %4 = load i40, i40* %3, align 1
-  call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i40 inreg %4)
+  store ptr %ss, ptr %ss.addr, align 8
+  %0 = load ptr, ptr %ss.addr, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %.coerce, ptr %0, i64 5, i1 false)
+  %1 = load i40, ptr %.coerce, align 1
+  call void (ptr, ...) @varArgF_SmallStruct(ptr @.str, i40 inreg %1)
   ret void
  ; CHECK-LABEL: smallStruct_5b:
  ; CHECK: dsll $[[R1:[0-9]+]], $[[R2:[0-9]+]], 24
 }
 
-define void @smallStruct_6b(%struct.SmallStruct_6b* %ss) #0 {
+define void @smallStruct_6b(ptr %ss) #0 {
 entry:
-  %ss.addr = alloca %struct.SmallStruct_6b*, align 8
+  %ss.addr = alloca ptr, align 8
   %.coerce = alloca { i48 }
-  store %struct.SmallStruct_6b* %ss, %struct.SmallStruct_6b** %ss.addr, align 8
-  %0 = load %struct.SmallStruct_6b*, %struct.SmallStruct_6b** %ss.addr, align 8
-  %1 = bitcast { i48 }* %.coerce to i8*
-  %2 = bitcast %struct.SmallStruct_6b* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 6, i1 false)
-  %3 = getelementptr { i48 }, { i48 }* %.coerce, i32 0, i32 0
-  %4 = load i48, i48* %3, align 1
-  call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i48 inreg %4)
+  store ptr %ss, ptr %ss.addr, align 8
+  %0 = load ptr, ptr %ss.addr, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %.coerce, ptr %0, i64 6, i1 false)
+  %1 = load i48, ptr %.coerce, align 1
+  call void (ptr, ...) @varArgF_SmallStruct(ptr @.str, i48 inreg %1)
   ret void
  ; CHECK-LABEL: smallStruct_6b:
  ; CHECK: dsll $[[R1:[0-9]+]], $[[R2:[0-9]+]], 16
 }
 
-define void @smallStruct_7b(%struct.SmallStruct_7b* %ss) #0 {
+define void @smallStruct_7b(ptr %ss) #0 {
 entry:
-  %ss.addr = alloca %struct.SmallStruct_7b*, align 8
+  %ss.addr = alloca ptr, align 8
   %.coerce = alloca { i56 }
-  store %struct.SmallStruct_7b* %ss, %struct.SmallStruct_7b** %ss.addr, align 8
-  %0 = load %struct.SmallStruct_7b*, %struct.SmallStruct_7b** %ss.addr, align 8
-  %1 = bitcast { i56 }* %.coerce to i8*
-  %2 = bitcast %struct.SmallStruct_7b* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 7, i1 false)
-  %3 = getelementptr { i56 }, { i56 }* %.coerce, i32 0, i32 0
-  %4 = load i56, i56* %3, align 1
-  call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i56 inreg %4)
+  store ptr %ss, ptr %ss.addr, align 8
+  %0 = load ptr, ptr %ss.addr, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %.coerce, ptr %0, i64 7, i1 false)
+  %1 = load i56, ptr %.coerce, align 1
+  call void (ptr, ...) @varArgF_SmallStruct(ptr @.str, i56 inreg %1)
   ret void
  ; CHECK-LABEL: smallStruct_7b:
  ; CHECK: dsll $[[R1:[0-9]+]], $[[R2:[0-9]+]], 8
 }
 
-define void @smallStruct_8b(%struct.SmallStruct_8b* %ss) #0 {
+define void @smallStruct_8b(ptr %ss) #0 {
 entry:
-  %ss.addr = alloca %struct.SmallStruct_8b*, align 8
-  store %struct.SmallStruct_8b* %ss, %struct.SmallStruct_8b** %ss.addr, align 8
-  %0 = load %struct.SmallStruct_8b*, %struct.SmallStruct_8b** %ss.addr, align 8
-  %1 = bitcast %struct.SmallStruct_8b* %0 to { i64 }*
-  %2 = getelementptr { i64 }, { i64 }* %1, i32 0, i32 0
-  %3 = load i64, i64* %2, align 1
-  call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i64 inreg %3)
+  %ss.addr = alloca ptr, align 8
+  store ptr %ss, ptr %ss.addr, align 8
+  %0 = load ptr, ptr %ss.addr, align 8
+  %1 = load i64, ptr %0, align 1
+  call void (ptr, ...) @varArgF_SmallStruct(ptr @.str, i64 inreg %1)
   ret void
  ; CHECK-LABEL: smallStruct_8b:
  ; Check that the structure is not shifted before the pointer to str is loaded.
@@ -264,20 +244,18 @@ entry:
  ; CHECK: lui
 }
 
-define void @smallStruct_9b(%struct.SmallStruct_9b* %ss) #0 {
+define void @smallStruct_9b(ptr %ss) #0 {
 entry:
-  %ss.addr = alloca %struct.SmallStruct_9b*, align 8
+  %ss.addr = alloca ptr, align 8
   %.coerce = alloca { i64, i8 }
-  store %struct.SmallStruct_9b* %ss, %struct.SmallStruct_9b** %ss.addr, align 8
-  %0 = load %struct.SmallStruct_9b*, %struct.SmallStruct_9b** %ss.addr, align 8
-  %1 = bitcast { i64, i8 }* %.coerce to i8*
-  %2 = bitcast %struct.SmallStruct_9b* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 9, i1 false)
-  %3 = getelementptr { i64, i8 }, { i64, i8 }* %.coerce, i32 0, i32 0
-  %4 = load i64, i64* %3, align 1
-  %5 = getelementptr { i64, i8 }, { i64, i8 }* %.coerce, i32 0, i32 1
-  %6 = load i8, i8* %5, align 1
-  call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i64 inreg %4, i8 inreg %6)
+  store ptr %ss, ptr %ss.addr, align 8
+  %0 = load ptr, ptr %ss.addr, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %.coerce, ptr %0, i64 9, i1 false)
+  %1 = getelementptr { i64, i8 }, ptr %.coerce, i32 0, i32 0
+  %2 = load i64, ptr %1, align 1
+  %3 = getelementptr { i64, i8 }, ptr %.coerce, i32 0, i32 1
+  %4 = load i8, ptr %3, align 1
+  call void (ptr, ...) @varArgF_SmallStruct(ptr @.str, i64 inreg %2, i8 inreg %4)
   ret void
  ; CHECK-LABEL: smallStruct_9b:
  ; CHECK: dsll $[[R1:[0-9]+]], $[[R2:[0-9]+]], 56

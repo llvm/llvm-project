@@ -13,10 +13,12 @@
 #ifndef MLIR_DIALECT_X86VECTOR_X86VECTORDIALECT_H_
 #define MLIR_DIALECT_X86VECTOR_X86VECTORDIALECT_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h.inc"

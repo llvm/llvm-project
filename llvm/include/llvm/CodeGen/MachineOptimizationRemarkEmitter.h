@@ -15,8 +15,10 @@
 #ifndef LLVM_CODEGEN_MACHINEOPTIMIZATIONREMARKEMITTER_H
 #define LLVM_CODEGEN_MACHINEOPTIMIZATIONREMARKEMITTER_H
 
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
+#include <optional>
 
 namespace llvm {
 class MachineBasicBlock;
@@ -118,6 +120,12 @@ public:
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkAnalysis,
                                       PassName, RemarkName, Loc, MBB) {}
 
+  MachineOptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
+                                    const MachineInstr *MI)
+      : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkAnalysis,
+                                      PassName, RemarkName, MI->getDebugLoc(),
+                                      MI->getParent()) {}
+
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_MachineOptimizationRemarkAnalysis;
   }
@@ -194,7 +202,7 @@ private:
 
   /// Compute hotness from IR value (currently assumed to be a block) if PGO is
   /// available.
-  Optional<uint64_t> computeHotness(const MachineBasicBlock &MBB);
+  std::optional<uint64_t> computeHotness(const MachineBasicBlock &MBB);
 
   /// Similar but use value from \p OptDiag and update hotness there.
   void computeHotness(DiagnosticInfoMIROptimization &Remark);

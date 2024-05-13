@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 
 define i32 @test(i1 %C, i32 %tmp.15) {
         %tmp.16 = select i1 %C, i32 8, i32 1            ; <i32> [#uses=1]

@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFRELOCMAP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
 #include <cstdint>
 
@@ -21,7 +22,7 @@ struct RelocAddrEntry {
   uint64_t SectionIndex;
   object::RelocationRef Reloc;
   uint64_t SymbolValue;
-  Optional<object::RelocationRef> Reloc2;
+  std::optional<object::RelocationRef> Reloc2;
   uint64_t SymbolValue2;
   object::RelocationResolver Resolver;
 };

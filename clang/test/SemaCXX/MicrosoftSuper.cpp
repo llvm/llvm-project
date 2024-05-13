@@ -7,7 +7,7 @@ struct Errors {
   void foo() {
     // expected-note@+4 {{replace parentheses with an initializer to declare a variable}}
     // expected-warning@+3 {{empty parentheses interpreted as a function declaration}}
-    // expected-error@+2 {{C++ requires a type specifier for all declarations}}
+    // expected-error@+2 {{a type specifier is required for all declarations}}
     // expected-error@+1 {{use of '__super' inside a lambda is unsupported}}
     auto lambda = []{ __super::foo(); };
   }
@@ -108,8 +108,8 @@ struct DerivedFromDependentBase : BaseTemplate<T> {
   typename __super::XXX a;
   typedef typename __super::XXX b;
 
-  __super::XXX c;         // expected-error {{missing 'typename'}}
-  typedef __super::XXX d; // expected-error {{missing 'typename'}}
+  __super::XXX c;         // expected-warning {{implicit 'typename' is a C++20 extension}}
+  typedef __super::XXX d; // expected-warning {{implicit 'typename' is a C++20 extension}}
 
   void foo() {
     typename __super::XXX e;
@@ -127,8 +127,8 @@ struct DerivedFromTemplateParameter : T {
   typename __super::XXX a;
   typedef typename __super::XXX b;
 
-  __super::XXX c;         // expected-error {{missing 'typename'}}
-  typedef __super::XXX d; // expected-error {{missing 'typename'}}
+  __super::XXX c;         // expected-warning {{implicit 'typename' is a C++20 extension}}
+  typedef __super::XXX d; // expected-warning {{implicit 'typename' is a C++20 extension}}
 
   void foo() {
     typename __super::XXX e;

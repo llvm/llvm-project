@@ -16,14 +16,10 @@
 #include <locale>
 
 #include "../with_public_dtor.hpp"
-#include "test_macros.h"
 
-int main(int, char **)
-{
+void f() {
     // Don't test for the exact type since the underlying type of
     // std::mbstate_t depends on implementation details.
     with_public_dtor<std::codecvt<char16_t, char, std::mbstate_t>> cvt("", 0); // expected-warning-re {{'codecvt<char16_t, char, {{.*}}>' is deprecated}}
     (void)cvt;
-
-    return 0;
 }

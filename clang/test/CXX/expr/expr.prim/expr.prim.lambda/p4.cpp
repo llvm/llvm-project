@@ -43,10 +43,23 @@ X infer_X_return_type_2(X x) {
   }(5);
 }
 
-struct Incomplete; // expected-note{{forward declaration of 'Incomplete'}}
-void test_result_type(int N) {
+struct Incomplete; // expected-note 2{{forward declaration of 'Incomplete'}}
+void test_result_type(int N) {  // expected-note {{declared here}}
   auto l1 = [] () -> Incomplete { }; // expected-error{{incomplete result type 'Incomplete' in lambda expression}}
 
-  typedef int vla[N];
-  auto l2 = [] () -> vla { }; // expected-error{{function cannot return array type 'vla' (aka 'int [N]')}}
+  typedef int vla[N]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                         expected-note {{function parameter 'N' with unknown value cannot be used in a constant expression}}
+  auto l2 = [] () -> vla { }; // expected-error{{function cannot return array type 'vla' (aka 'int[N]')}}
+}
+
+template <typename T>
+void test_result_type_tpl(int N) { // expected-note 2{{declared here}}
+  auto l1 = []() -> T {}; // expected-error{{incomplete result type 'Incomplete' in lambda expression}}
+  typedef int vla[N]; // expected-warning 2{{variable length arrays in C++ are a Clang extension}} \
+                         expected-note 2{{function parameter 'N' with unknown value cannot be used in a constant expression}}
+  auto l2 = []() -> vla {}; // expected-error{{function cannot return array type 'vla' (aka 'int[N]')}}
+}
+
+void test_result_type_call() {
+  test_result_type_tpl<Incomplete>(10); // expected-note {{requested here}}
 }

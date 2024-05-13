@@ -19,6 +19,11 @@ template <typename T>
 struct Foo {
   // CHECK:      TemplateTypeParmDecl {{.*}} referenced Concept {{.*}} 'binary_concept'
   // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:13, col:31> 'bool' Concept {{.*}} 'binary_concept'
+  // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:13:9> col:9
+  // CHECK-NEXT:   | |-TemplateArgument type 'type-parameter-1-0'  
+  // CHECK-NEXT:   | | `-TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent {{.*}}depth 1 index 0
+  // CHECK-NEXT:   | `-TemplateArgument type 'int'
+  // CHECK-NEXT:   |   `-BuiltinType {{.*}} 'int'
   // CHECK-NEXT:   |-TemplateArgument {{.*}} type 'R'
   // CHECK-NEXT:   | `-TemplateTypeParmType {{.*}} 'R'
   // CHECK-NEXT:   |   `-TemplateTypeParm {{.*}} 'R'
@@ -29,6 +34,9 @@ struct Foo {
 
   // CHECK:      TemplateTypeParmDecl {{.*}} referenced Concept {{.*}} 'unary_concept'
   // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:13> 'bool'
+  // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:10:9> col:9
+  // CHECK-NEXT:   | `-TemplateArgument type 'type-parameter-1-0'
+  // CHECK-NEXT:   |   `-TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent {{.*}}depth 1 index 0
   template <unary_concept R>
   Foo(R);
 
@@ -49,3 +57,53 @@ struct Foo {
   template <variadic_concept<int>... Ts>
   Foo();
 };
+
+namespace GH82628 {
+namespace ns {
+
+template <typename T>
+concept C = true;
+
+} // namespace ns
+
+using ns::C;
+
+// CHECK:     ConceptDecl {{.*}} Foo
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
+// CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} UsingShadow {{.*}} 'C'
+template <typename T>
+concept Foo = C<T>;
+
+// CHECK: TemplateTypeParmDecl {{.*}} Concept {{.*}} 'C' (UsingShadow {{.*}} 'C')
+template <C T>
+constexpr bool FooVar = false;
+
+// CHECK: ConceptSpecializationExpr {{.*}} UsingShadow {{.*}} 'C'
+template <typename T> requires C<T>
+constexpr bool FooVar2 = true;
+
+// CHECK: SimpleRequirement
+// CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} UsingShadow {{.*}} 'C'
+template <typename T> requires requires (T) { C<T>; }
+constexpr bool FooVar3 = true;
+
+// CHECK: NonTypeTemplateParmDecl
+// CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} UsingShadow {{.*}} 'C'
+template <C auto T>
+constexpr bool FooVar4 = bool(T());
+
+// CHECK: FunctionTemplateDecl
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} Concept {{.*}} 'C' (UsingShadow {{.*}} 'C') depth 0 index 0 ... T
+// CHECK: NonTypeTemplateParmDecl {{.*}} depth 0 index 1 U
+// CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} UsingShadow {{.*}} 'C'
+// CHECK: |-TemplateTypeParmDecl {{.*}} Concept {{.*}} 'C' (UsingShadow {{.*}} 'C') depth 0 index 2 V:auto
+
+template <C... T, C auto U>
+auto FooFunc(C auto V) -> C decltype(auto) {
+  // FIXME: TypeLocs inside of the function body cannot be dumped via -ast-dump for now.
+  // See clang-tools-extra/clangd/unittests/SelectionTests.cpp:SelectionTest.UsingConcepts for their checkings.
+  C auto W = V;
+  return W;
+}
+
+}

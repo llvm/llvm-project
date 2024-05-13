@@ -6,21 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/Tooling.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/TextDiagnosticBuffer.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <string>
@@ -193,8 +197,8 @@ TEST(ToolInvocation, TestMapVirtualFile) {
 
 TEST(ToolInvocation, TestVirtualModulesCompilation) {
   // FIXME: Currently, this only tests that we don't exit with an error if a
-  // mapped module.map is found on the include path. In the future, expand this
-  // test to run a full modules enabled compilation, so we make sure we can
+  // mapped module.modulemap is found on the include path. In the future, expand
+  // this test to run a full modules enabled compilation, so we make sure we can
   // rerun modules compilations with a virtual file system.
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
       new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
@@ -214,11 +218,75 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
       "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("#include <abc>\n"));
   InMemoryFileSystem->addFile("def/abc", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
-  // Add a module.map file in the include directory of our header, so we trigger
-  // the module.map header search logic.
-  InMemoryFileSystem->addFile("def/module.map", 0,
+  // Add a module.modulemap file in the include directory of our header, so we
+  // trigger the module.modulemap header search logic.
+  InMemoryFileSystem->addFile("def/module.modulemap", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
   EXPECT_TRUE(Invocation.run());
+}
+
+TEST(ToolInvocation, DiagnosticsEngineProperlyInitializedForCC1Construction) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), OverlayFileSystem));
+
+  std::vector<std::string> Args;
+  Args.push_back("tool-executable");
+  // Unknown warning option will result in a warning.
+  Args.push_back("-fexpensive-optimizations");
+  // Argument that will suppress the warning above.
+  Args.push_back("-Wno-ignored-optimization-argument");
+  Args.push_back("-E");
+  Args.push_back("test.cpp");
+
+  clang::tooling::ToolInvocation Invocation(
+      Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
+  InMemoryFileSystem->addFile("test.cpp", 0,
+                              llvm::MemoryBuffer::getMemBuffer(""));
+  TextDiagnosticBuffer Consumer;
+  Invocation.setDiagnosticConsumer(&Consumer);
+  EXPECT_TRUE(Invocation.run());
+  // Check that the warning was ignored due to the '-Wno-xxx' argument.
+  EXPECT_EQ(std::distance(Consumer.warn_begin(), Consumer.warn_end()), 0u);
+}
+
+TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), OverlayFileSystem));
+
+  std::vector<std::string> Args;
+  Args.push_back("tool-executable");
+  // Unknown warning option will result in a warning.
+  Args.push_back("-fexpensive-optimizations");
+  // Argument that will suppress the warning above.
+  Args.push_back("-Wno-ignored-optimization-argument");
+  Args.push_back("-E");
+  Args.push_back("test.cpp");
+
+  clang::tooling::ToolInvocation Invocation(
+      Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
+  InMemoryFileSystem->addFile("test.cpp", 0,
+                              llvm::MemoryBuffer::getMemBuffer(""));
+  TextDiagnosticBuffer Consumer;
+  Invocation.setDiagnosticConsumer(&Consumer);
+
+  // Inject custom `DiagnosticOptions` for command-line parsing.
+  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  Invocation.setDiagnosticOptions(&*DiagOpts);
+
+  EXPECT_TRUE(Invocation.run());
+  // Check that the warning was issued during command-line parsing due to the
+  // custom `DiagnosticOptions` without '-Wno-xxx'.
+  EXPECT_EQ(std::distance(Consumer.warn_begin(), Consumer.warn_end()), 1u);
 }
 
 struct DiagnosticConsumerExpectingSourceManager : public DiagnosticConsumer {
@@ -256,6 +324,152 @@ TEST(ToolInvocation, DiagConsumerExpectingSourceManager) {
 
   EXPECT_TRUE(Invocation.run());
   EXPECT_TRUE(Consumer.SawSourceManager);
+}
+
+TEST(ToolInvocation, CC1Args) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  std::vector<std::string> Args;
+  Args.push_back("tool-executable");
+  Args.push_back("-cc1");
+  Args.push_back("-fsyntax-only");
+  Args.push_back("test.cpp");
+  clang::tooling::ToolInvocation Invocation(
+      Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
+  InMemoryFileSystem->addFile(
+      "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("void foo(void);\n"));
+  EXPECT_TRUE(Invocation.run());
+}
+
+TEST(ToolInvocation, CC1ArgsInvalid) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  std::vector<std::string> Args;
+  Args.push_back("tool-executable");
+  Args.push_back("-cc1");
+  Args.push_back("-invalid-arg");
+  Args.push_back("test.cpp");
+  clang::tooling::ToolInvocation Invocation(
+      Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
+  InMemoryFileSystem->addFile(
+      "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("void foo(void);\n"));
+  EXPECT_FALSE(Invocation.run());
+}
+
+namespace {
+/// Overlays the real filesystem with the given VFS and returns the result.
+llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>
+overlayRealFS(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+  auto RFS = llvm::vfs::getRealFileSystem();
+  auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(RFS);
+  OverlayFS->pushOverlay(VFS);
+  return OverlayFS;
+}
+
+struct CommandLineExtractorTest : public ::testing::Test {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
+  driver::Driver Driver;
+
+public:
+  CommandLineExtractorTest()
+      : InMemoryFS(new llvm::vfs::InMemoryFileSystem),
+        Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions)),
+        Driver("clang", llvm::sys::getDefaultTargetTriple(), *Diags,
+               "clang LLVM compiler", overlayRealFS(InMemoryFS)) {}
+
+  void addFile(StringRef Name, StringRef Content) {
+    InMemoryFS->addFile(Name, 0, llvm::MemoryBuffer::getMemBuffer(Content));
+  }
+
+  const llvm::opt::ArgStringList *
+  extractCC1Arguments(llvm::ArrayRef<const char *> Argv) {
+    const std::unique_ptr<driver::Compilation> Compilation(
+        Driver.BuildCompilation(llvm::ArrayRef(Argv)));
+
+    return getCC1Arguments(Diags.get(), Compilation.get());
+  }
+};
+} // namespace
+
+TEST_F(CommandLineExtractorTest, AcceptOffloading) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang",     "-target",  "arm64-apple-macosx11.0.0",
+                        "-x",        "hip",      "test.c",
+                        "-nogpulib", "-nogpuinc"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptOffloadingCompile) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang",  "-target",   "arm64-apple-macosx11.0.0",
+                        "-c",     "-x",        "hip",
+                        "test.c", "-nogpulib", "-nogpuinc"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptOffloadingSyntaxOnly) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {
+      "clang",         "-target",   "arm64-apple-macosx11.0.0",
+      "-fsyntax-only", "-x",        "hip",
+      "test.c",        "-nogpulib", "-nogpuinc"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptExternalAssembler) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {
+      "clang", "-target", "arm64-apple-macosx11.0.0", "-fno-integrated-as",
+      "-c",    "test.c"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptEmbedBitcode) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang", "-target",         "arm64-apple-macosx11.0.0",
+                        "-c",    "-fembed-bitcode", "test.c"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptSaveTemps) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang", "-target",     "arm64-apple-macosx11.0.0",
+                        "-c",    "-save-temps", "test.c"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptPreprocessedInputFile) {
+  addFile("test.i", "int main() {}\n");
+  const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0", "-c",
+                        "test.i"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, RejectMultipleArchitectures) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0",
+                        "-arch", "x86_64",  "-arch",
+                        "arm64", "-c",      "test.c"};
+  EXPECT_EQ(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, RejectMultipleInputFiles) {
+  addFile("one.c", "void one() {}\n");
+  addFile("two.c", "void two() {}\n");
+  const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0",
+                        "-c",    "one.c",   "two.c"};
+  EXPECT_EQ(extractCC1Arguments(Args), nullptr);
 }
 
 struct VerifyEndCallback : public SourceFileCallbacks {
@@ -664,28 +878,10 @@ TEST(ClangToolTest, StripPluginsAdjuster) {
   EXPECT_FALSE(HasFlag("-random-plugin"));
 }
 
-namespace {
-/// Find a target name such that looking for it in TargetRegistry by that name
-/// returns the same target. We expect that there is at least one target
-/// configured with this property.
-std::string getAnyTarget() {
-  llvm::InitializeAllTargets();
-  for (const auto &Target : llvm::TargetRegistry::targets()) {
-    std::string Error;
-    StringRef TargetName(Target.getName());
-    if (TargetName == "x86-64")
-      TargetName = "x86_64";
-    if (llvm::TargetRegistry::lookupTarget(std::string(TargetName), Error) ==
-        &Target) {
-      return std::string(TargetName);
-    }
-  }
-  return "";
-}
-}
-
 TEST(addTargetAndModeForProgramName, AddsTargetAndMode) {
-  std::string Target = getAnyTarget();
+  llvm::InitializeAllTargets();
+
+  std::string Target = getAnyTargetForTesting();
   ASSERT_FALSE(Target.empty());
 
   std::vector<std::string> Args = {"clang", "-foo"};
@@ -698,7 +894,8 @@ TEST(addTargetAndModeForProgramName, AddsTargetAndMode) {
 }
 
 TEST(addTargetAndModeForProgramName, PathIgnored) {
-  std::string Target = getAnyTarget();
+  llvm::InitializeAllTargets();
+  std::string Target = getAnyTargetForTesting();
   ASSERT_FALSE(Target.empty());
 
   SmallString<32> ToolPath;
@@ -712,7 +909,8 @@ TEST(addTargetAndModeForProgramName, PathIgnored) {
 }
 
 TEST(addTargetAndModeForProgramName, IgnoresExistingTarget) {
-  std::string Target = getAnyTarget();
+  llvm::InitializeAllTargets();
+  std::string Target = getAnyTargetForTesting();
   ASSERT_FALSE(Target.empty());
 
   std::vector<std::string> Args = {"clang", "-foo", "-target", "something"};
@@ -729,7 +927,8 @@ TEST(addTargetAndModeForProgramName, IgnoresExistingTarget) {
 }
 
 TEST(addTargetAndModeForProgramName, IgnoresExistingMode) {
-  std::string Target = getAnyTarget();
+  llvm::InitializeAllTargets();
+  std::string Target = getAnyTargetForTesting();
   ASSERT_FALSE(Target.empty());
 
   std::vector<std::string> Args = {"clang", "-foo", "--driver-mode=abc"};

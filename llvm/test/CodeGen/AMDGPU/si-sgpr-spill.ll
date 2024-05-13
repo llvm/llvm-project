@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=TOVGPR %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=TOVGPR %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; These tests check that the compiler won't crash when it needs to spill
 ; SGPRs.
@@ -31,11 +31,10 @@
 ; GCN: s_endpgm
 
 ; TOVGPR: ScratchSize: 0{{$}}
-define amdgpu_ps void @main([17 x <4 x i32>] addrspace(4)* inreg %arg, [32 x <4 x i32>] addrspace(4)* inreg %arg1, [16 x <8 x i32>] addrspace(4)* inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) {
+define amdgpu_ps void @main(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) {
 main_body:
-  %lds = inttoptr i32 0 to [64 x i32] addrspace(3)*
-  %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg, i64 0, i32 0
-  %tmp21 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0
+  %lds = inttoptr i32 0 to ptr addrspace(3)
+  %tmp21 = load <4 x i32>, ptr addrspace(4) %arg, !tbaa !0
   %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 96, i32 0)
   %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 100, i32 0)
   %tmp24 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 104, i32 0)
@@ -74,39 +73,37 @@ main_body:
   %tmp57 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 372, i32 0)
   %tmp58 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 376, i32 0)
   %tmp59 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 384, i32 0)
-  %tmp60 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 0
-  %tmp61 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp60, !tbaa !0
-  %tmp62 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 0
-  %tmp63 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp62, !tbaa !0
+  %tmp61 = load <8 x i32>, ptr addrspace(4) %arg2, !tbaa !0
+  %tmp63 = load <4 x i32>, ptr addrspace(4) %arg1, !tbaa !0
   %tmp63.bc = bitcast <4 x i32> %tmp63 to <4 x i32>
-  %tmp64 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 1
-  %tmp65 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp64, !tbaa !0
-  %tmp66 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 1
-  %tmp67 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp66, !tbaa !0
-  %tmp68 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 2
-  %tmp69 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp68, !tbaa !0
-  %tmp70 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 2
-  %tmp71 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp70, !tbaa !0
-  %tmp72 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 3
-  %tmp73 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp72, !tbaa !0
-  %tmp74 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 3
-  %tmp75 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp74, !tbaa !0
-  %tmp76 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 4
-  %tmp77 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp76, !tbaa !0
-  %tmp78 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 4
-  %tmp79 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp78, !tbaa !0
-  %tmp80 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 5
-  %tmp81 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp80, !tbaa !0
-  %tmp82 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 5
-  %tmp83 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp82, !tbaa !0
-  %tmp84 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 6
-  %tmp85 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp84, !tbaa !0
-  %tmp86 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 6
-  %tmp87 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp86, !tbaa !0
-  %tmp88 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 7
-  %tmp89 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp88, !tbaa !0
-  %tmp90 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 7
-  %tmp91 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp90, !tbaa !0
+  %tmp64 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 1
+  %tmp65 = load <8 x i32>, ptr addrspace(4) %tmp64, !tbaa !0
+  %tmp66 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 1
+  %tmp67 = load <4 x i32>, ptr addrspace(4) %tmp66, !tbaa !0
+  %tmp68 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 2
+  %tmp69 = load <8 x i32>, ptr addrspace(4) %tmp68, !tbaa !0
+  %tmp70 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 2
+  %tmp71 = load <4 x i32>, ptr addrspace(4) %tmp70, !tbaa !0
+  %tmp72 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 3
+  %tmp73 = load <8 x i32>, ptr addrspace(4) %tmp72, !tbaa !0
+  %tmp74 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 3
+  %tmp75 = load <4 x i32>, ptr addrspace(4) %tmp74, !tbaa !0
+  %tmp76 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 4
+  %tmp77 = load <8 x i32>, ptr addrspace(4) %tmp76, !tbaa !0
+  %tmp78 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 4
+  %tmp79 = load <4 x i32>, ptr addrspace(4) %tmp78, !tbaa !0
+  %tmp80 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 5
+  %tmp81 = load <8 x i32>, ptr addrspace(4) %tmp80, !tbaa !0
+  %tmp82 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 5
+  %tmp83 = load <4 x i32>, ptr addrspace(4) %tmp82, !tbaa !0
+  %tmp84 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 6
+  %tmp85 = load <8 x i32>, ptr addrspace(4) %tmp84, !tbaa !0
+  %tmp86 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 6
+  %tmp87 = load <4 x i32>, ptr addrspace(4) %tmp86, !tbaa !0
+  %tmp88 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 7
+  %tmp89 = load <8 x i32>, ptr addrspace(4) %tmp88, !tbaa !0
+  %tmp90 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 7
+  %tmp91 = load <4 x i32>, ptr addrspace(4) %tmp90, !tbaa !0
   %i.i = extractelement <2 x i32> %arg6, i32 0
   %j.i = extractelement <2 x i32> %arg6, i32 1
   %i.f.i = bitcast i32 %i.i to float
@@ -211,30 +208,30 @@ main_body:
   %p2.i6 = call float @llvm.amdgcn.interp.p2(float %p1.i5, float %j.f.i4, i32 2, i32 5, i32 %arg4) #0
   %mbcnt.lo.0 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp109 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.0)
-  %tmp110 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp109
+  %tmp110 = getelementptr [64 x i32], ptr addrspace(3) %lds, i32 0, i32 %tmp109
   %tmp111 = bitcast float %p2.i to i32
-  store i32 %tmp111, i32 addrspace(3)* %tmp110
+  store i32 %tmp111, ptr addrspace(3) %tmp110
   %tmp112 = bitcast float %p2.i96 to i32
-  store i32 %tmp112, i32 addrspace(3)* %tmp110
+  store i32 %tmp112, ptr addrspace(3) %tmp110
   %mbcnt.lo.1 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp113 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.1)
-  %tmp114 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp113
+  %tmp114 = getelementptr [64 x i32], ptr addrspace(3) %lds, i32 0, i32 %tmp113
   %tmp115 = and i32 %tmp113, -4
-  %tmp116 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp115
+  %tmp116 = getelementptr [64 x i32], ptr addrspace(3) %lds, i32 0, i32 %tmp115
   %tmp117 = add i32 %tmp115, 1
-  %tmp118 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp117
+  %tmp118 = getelementptr [64 x i32], ptr addrspace(3) %lds, i32 0, i32 %tmp117
   %tmp119 = bitcast float %p2.i to i32
-  store i32 %tmp119, i32 addrspace(3)* %tmp114
-  %tmp120 = load i32, i32 addrspace(3)* %tmp116
+  store i32 %tmp119, ptr addrspace(3) %tmp114
+  %tmp120 = load i32, ptr addrspace(3) %tmp116
   %tmp121 = bitcast i32 %tmp120 to float
-  %tmp122 = load i32, i32 addrspace(3)* %tmp118
+  %tmp122 = load i32, ptr addrspace(3) %tmp118
   %tmp123 = bitcast i32 %tmp122 to float
   %tmp124 = fsub float %tmp123, %tmp121
   %tmp125 = bitcast float %p2.i96 to i32
-  store i32 %tmp125, i32 addrspace(3)* %tmp114
-  %tmp126 = load i32, i32 addrspace(3)* %tmp116
+  store i32 %tmp125, ptr addrspace(3) %tmp114
+  %tmp126 = load i32, ptr addrspace(3) %tmp116
   %tmp127 = bitcast i32 %tmp126 to float
-  %tmp128 = load i32, i32 addrspace(3)* %tmp118
+  %tmp128 = load i32, ptr addrspace(3) %tmp118
   %tmp129 = bitcast i32 %tmp128 to float
   %tmp130 = fsub float %tmp129, %tmp127
   %tmp131 = insertelement <4 x float> undef, float %tmp124, i32 0
@@ -249,48 +246,48 @@ main_body:
   %tmp140 = fmul float %tmp59, %p2.i96
   %mbcnt.lo.2 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp141 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.2)
-  %tmp142 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp141
+  %tmp142 = getelementptr [64 x i32], ptr addrspace(3) %lds, i32 0, i32 %tmp141
   %tmp143 = bitcast float %tmp137 to i32
-  store i32 %tmp143, i32 addrspace(3)* %tmp142
+  store i32 %tmp143, ptr addrspace(3) %tmp142
   %tmp144 = bitcast float %tmp138 to i32
-  store i32 %tmp144, i32 addrspace(3)* %tmp142
+  store i32 %tmp144, ptr addrspace(3) %tmp142
   %tmp145 = bitcast float %tmp139 to i32
-  store i32 %tmp145, i32 addrspace(3)* %tmp142
+  store i32 %tmp145, ptr addrspace(3) %tmp142
   %tmp146 = bitcast float %tmp140 to i32
-  store i32 %tmp146, i32 addrspace(3)* %tmp142
+  store i32 %tmp146, ptr addrspace(3) %tmp142
   %mbcnt.lo.3 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp147 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.3)
-  %tmp148 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp147
+  %tmp148 = getelementptr [64 x i32], ptr addrspace(3) %lds, i32 0, i32 %tmp147
   %tmp149 = and i32 %tmp147, -4
-  %tmp150 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp149
+  %tmp150 = getelementptr [64 x i32], ptr addrspace(3) %lds, i32 0, i32 %tmp149
   %tmp151 = add i32 %tmp149, 2
-  %tmp152 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp151
+  %tmp152 = getelementptr [64 x i32], ptr addrspace(3) %lds, i32 0, i32 %tmp151
   %tmp153 = bitcast float %tmp137 to i32
-  store i32 %tmp153, i32 addrspace(3)* %tmp148
-  %tmp154 = load i32, i32 addrspace(3)* %tmp150
+  store i32 %tmp153, ptr addrspace(3) %tmp148
+  %tmp154 = load i32, ptr addrspace(3) %tmp150
   %tmp155 = bitcast i32 %tmp154 to float
-  %tmp156 = load i32, i32 addrspace(3)* %tmp152
+  %tmp156 = load i32, ptr addrspace(3) %tmp152
   %tmp157 = bitcast i32 %tmp156 to float
   %tmp158 = fsub float %tmp157, %tmp155
   %tmp159 = bitcast float %tmp138 to i32
-  store i32 %tmp159, i32 addrspace(3)* %tmp148
-  %tmp160 = load i32, i32 addrspace(3)* %tmp150
+  store i32 %tmp159, ptr addrspace(3) %tmp148
+  %tmp160 = load i32, ptr addrspace(3) %tmp150
   %tmp161 = bitcast i32 %tmp160 to float
-  %tmp162 = load i32, i32 addrspace(3)* %tmp152
+  %tmp162 = load i32, ptr addrspace(3) %tmp152
   %tmp163 = bitcast i32 %tmp162 to float
   %tmp164 = fsub float %tmp163, %tmp161
   %tmp165 = bitcast float %tmp139 to i32
-  store i32 %tmp165, i32 addrspace(3)* %tmp148
-  %tmp166 = load i32, i32 addrspace(3)* %tmp150
+  store i32 %tmp165, ptr addrspace(3) %tmp148
+  %tmp166 = load i32, ptr addrspace(3) %tmp150
   %tmp167 = bitcast i32 %tmp166 to float
-  %tmp168 = load i32, i32 addrspace(3)* %tmp152
+  %tmp168 = load i32, ptr addrspace(3) %tmp152
   %tmp169 = bitcast i32 %tmp168 to float
   %tmp170 = fsub float %tmp169, %tmp167
   %tmp171 = bitcast float %tmp140 to i32
-  store i32 %tmp171, i32 addrspace(3)* %tmp148
-  %tmp172 = load i32, i32 addrspace(3)* %tmp150
+  store i32 %tmp171, ptr addrspace(3) %tmp148
+  %tmp172 = load i32, ptr addrspace(3) %tmp150
   %tmp173 = bitcast i32 %tmp172 to float
-  %tmp174 = load i32, i32 addrspace(3)* %tmp152
+  %tmp174 = load i32, ptr addrspace(3) %tmp152
   %tmp175 = bitcast i32 %tmp174 to float
   %tmp176 = fsub float %tmp175, %tmp173
   %tmp177 = insertelement <4 x float> undef, float %tmp158, i32 0
@@ -651,10 +648,9 @@ ENDIF66:                                          ; preds = %LOOP65
 ; GCN-LABEL: {{^}}main1:
 ; GCN: s_endpgm
 ; TOVGPR: ScratchSize: 0{{$}}
-define amdgpu_ps void @main1([17 x <4 x i32>] addrspace(4)* inreg %arg, [32 x <4 x i32>] addrspace(4)* inreg %arg1, [16 x <8 x i32>] addrspace(4)* inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
+define amdgpu_ps void @main1(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
 main_body:
-  %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg, i64 0, i32 0
-  %tmp21 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0
+  %tmp21 = load <4 x i32>, ptr addrspace(4) %arg, !tbaa !0
   %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 0, i32 0)
   %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 4, i32 0)
   %tmp24 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 8, i32 0)
@@ -758,42 +754,40 @@ main_body:
   %tmp122 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 716, i32 0)
   %tmp123 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 864, i32 0)
   %tmp124 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 868, i32 0)
-  %tmp125 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 0
-  %tmp126 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp125, !tbaa !0
-  %tmp127 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 0
-  %tmp128 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp127, !tbaa !0
-  %tmp129 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 1
-  %tmp130 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp129, !tbaa !0
-  %tmp131 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 1
-  %tmp132 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp131, !tbaa !0
-  %tmp133 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 2
-  %tmp134 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp133, !tbaa !0
-  %tmp135 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 2
-  %tmp136 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp135, !tbaa !0
-  %tmp137 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 3
-  %tmp138 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp137, !tbaa !0
-  %tmp139 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 3
-  %tmp140 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp139, !tbaa !0
-  %tmp141 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 4
-  %tmp142 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp141, !tbaa !0
-  %tmp143 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 4
-  %tmp144 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp143, !tbaa !0
-  %tmp145 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 5
-  %tmp146 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp145, !tbaa !0
-  %tmp147 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 5
-  %tmp148 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp147, !tbaa !0
-  %tmp149 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 6
-  %tmp150 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp149, !tbaa !0
-  %tmp151 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 6
-  %tmp152 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp151, !tbaa !0
-  %tmp153 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 7
-  %tmp154 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp153, !tbaa !0
-  %tmp155 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 7
-  %tmp156 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp155, !tbaa !0
-  %tmp157 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 8
-  %tmp158 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp157, !tbaa !0
-  %tmp159 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 8
-  %tmp160 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp159, !tbaa !0
+  %tmp126 = load <8 x i32>, ptr addrspace(4) %arg2, !tbaa !0
+  %tmp128 = load <4 x i32>, ptr addrspace(4) %arg1, !tbaa !0
+  %tmp129 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 1
+  %tmp130 = load <8 x i32>, ptr addrspace(4) %tmp129, !tbaa !0
+  %tmp131 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 1
+  %tmp132 = load <4 x i32>, ptr addrspace(4) %tmp131, !tbaa !0
+  %tmp133 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 2
+  %tmp134 = load <8 x i32>, ptr addrspace(4) %tmp133, !tbaa !0
+  %tmp135 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 2
+  %tmp136 = load <4 x i32>, ptr addrspace(4) %tmp135, !tbaa !0
+  %tmp137 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 3
+  %tmp138 = load <8 x i32>, ptr addrspace(4) %tmp137, !tbaa !0
+  %tmp139 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 3
+  %tmp140 = load <4 x i32>, ptr addrspace(4) %tmp139, !tbaa !0
+  %tmp141 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 4
+  %tmp142 = load <8 x i32>, ptr addrspace(4) %tmp141, !tbaa !0
+  %tmp143 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 4
+  %tmp144 = load <4 x i32>, ptr addrspace(4) %tmp143, !tbaa !0
+  %tmp145 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 5
+  %tmp146 = load <8 x i32>, ptr addrspace(4) %tmp145, !tbaa !0
+  %tmp147 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 5
+  %tmp148 = load <4 x i32>, ptr addrspace(4) %tmp147, !tbaa !0
+  %tmp149 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 6
+  %tmp150 = load <8 x i32>, ptr addrspace(4) %tmp149, !tbaa !0
+  %tmp151 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 6
+  %tmp152 = load <4 x i32>, ptr addrspace(4) %tmp151, !tbaa !0
+  %tmp153 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 7
+  %tmp154 = load <8 x i32>, ptr addrspace(4) %tmp153, !tbaa !0
+  %tmp155 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 7
+  %tmp156 = load <4 x i32>, ptr addrspace(4) %tmp155, !tbaa !0
+  %tmp157 = getelementptr [16 x <8 x i32>], ptr addrspace(4) %arg2, i64 0, i32 8
+  %tmp158 = load <8 x i32>, ptr addrspace(4) %tmp157, !tbaa !0
+  %tmp159 = getelementptr [32 x <4 x i32>], ptr addrspace(4) %arg1, i64 0, i32 8
+  %tmp160 = load <4 x i32>, ptr addrspace(4) %tmp159, !tbaa !0
   %tmp161 = fcmp ugt float %arg17, 0.000000e+00
   %tmp162 = select i1 %tmp161, float 1.000000e+00, float 0.000000e+00
   %i.i = extractelement <2 x i32> %arg6, i32 0

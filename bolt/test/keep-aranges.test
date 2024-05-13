@@ -1,0 +1,11 @@
+# Check that BOLT generates .debug_aranges section for an input
+# where it was removed when .gdb_index was generated.
+
+REQUIRES: system-linux
+
+RUN: %clang %cflags %S/Inputs/icf_baz.c %S/Inputs/icf_main.c -Wl,--icf=all,--gdb-index \
+RUN:   -g -o %t.exe -fuse-ld=lld
+RUN: llvm-bolt %t.exe -o %t --update-debug-sections --keep-aranges
+RUN: llvm-dwarfdump -debug-aranges %t | FileCheck %s
+
+CHECK: Address Range Header: length = {{.*}}, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00

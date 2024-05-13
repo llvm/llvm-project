@@ -20,8 +20,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
-#include <cassert>
+#include "llvm/MC/MCRegister.h"
 #include <cstdint>
 #include <memory>
 
@@ -39,7 +38,7 @@ class RegisterClassInfo {
     RCInfo() = default;
 
     operator ArrayRef<MCPhysReg>() const {
-      return makeArrayRef(Order.get(), NumRegs);
+      return ArrayRef(Order.get(), NumRegs);
     }
   };
 
@@ -53,13 +52,16 @@ class RegisterClassInfo {
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
-  // Callee saved registers of last MF. Assumed to be valid until the next
-  // runOnFunction() call.
-  // Used only to determine if an update was made to CalleeSavedAliases.
-  const MCPhysReg *CalleeSavedRegs = nullptr;
+  // Callee saved registers of last MF.
+  // Used only to determine if an update for CalleeSavedAliases is necessary.
+  SmallVector<MCPhysReg, 16> LastCalleeSavedRegs;
 
-  // Map register alias to the callee saved Register.
-  SmallVector<MCPhysReg, 4> CalleeSavedAliases;
+  // Map regunit to the callee saved Register.
+  SmallVector<MCPhysReg> CalleeSavedAliases;
+
+  // Indicate if a specified callee saved register be in the allocation order
+  // exactly as written in the tablegen descriptions or listed later.
+  BitVector IgnoreCSRForAllocOrder;
 
   // Reserved registers in the current MF.
   BitVector Reserved;
@@ -111,12 +113,16 @@ public:
   }
 
   /// getLastCalleeSavedAlias - Returns the last callee saved register that
-  /// overlaps PhysReg, or NoRegister if Reg doesn't overlap a
+  /// overlaps PhysReg, or NoRegister if PhysReg doesn't overlap a
   /// CalleeSavedAliases.
   MCRegister getLastCalleeSavedAlias(MCRegister PhysReg) const {
-    if (PhysReg.id() < CalleeSavedAliases.size())
-      return CalleeSavedAliases[PhysReg];
-    return MCRegister::NoRegister;
+    MCRegister CSR;
+    for (MCRegUnitIterator UI(PhysReg, TRI); UI.isValid(); ++UI) {
+      CSR = CalleeSavedAliases[*UI];
+      if (CSR)
+        break;
+    }
+    return CSR;
   }
 
   /// Get the minimum register cost in RC's allocation order.

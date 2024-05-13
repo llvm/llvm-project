@@ -36,6 +36,7 @@ add_llvm_target(SystemZCodeGen
   SystemZShortenInst.cpp
   SystemZSubtarget.cpp
   SystemZTargetMachine.cpp
+  SystemZTargetObjectFile.cpp
   SystemZTargetTransformInfo.cpp
   SystemZTDC.cpp
 
@@ -43,6 +44,7 @@ add_llvm_target(SystemZCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   MC
   Scalar
@@ -51,6 +53,8 @@ add_llvm_target(SystemZCodeGen
   SystemZDesc
   SystemZInfo
   Target
+  TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   SystemZ

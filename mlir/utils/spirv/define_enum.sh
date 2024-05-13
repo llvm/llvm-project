@@ -12,7 +12,7 @@
 # The 'operand_kinds' dict of spirv.core.grammar.json contains all supported
 # SPIR-V enum classes.
 #
-# If <enum-name> is missing, this script updates existing ones.
+# If <enum-class-name> is missing, this script updates existing ones.
 
 set -e
 
@@ -22,5 +22,5 @@ current_file="$(readlink -f "$0")"
 current_dir="$(dirname "$current_file")"
 
 python3 ${current_dir}/gen_spirv_dialect.py \
-  --base-td-path ${current_dir}/../../include/mlir/Dialect/SPIRV/SPIRVBase.td \
+  --base-td-path ${current_dir}/../../include/mlir/Dialect/SPIRV/IR/SPIRVBase.td \
   --new-enum "${new_enum}"

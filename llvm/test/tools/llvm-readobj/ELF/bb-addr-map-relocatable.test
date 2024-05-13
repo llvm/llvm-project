@@ -1,0 +1,230 @@
+## This test checks how we handle the --bb-addr-map option on relocatable
+## object files.
+
+# RUN: yaml2obj %s -o %t1.o
+# RUN: llvm-readobj %t1.o --bb-addr-map | FileCheck %s
+
+# CHECK:      BBAddrMap [
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: 0x0
+# CHECK-NEXT:     Name: <?>
+# CHECK-NEXT:     BB Ranges [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Base Address: 0x0
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 0
+# CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Size: 0xF
+# CHECK-NEXT:             HasReturn: Yes
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: 0x10
+# CHECK-NEXT:     Name: <?>
+# CHECK-NEXT:     BB Ranges [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Base Address: 0x10
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 0
+# CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Size: 0x11
+# CHECK-NEXT:             HasReturn: No
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: Yes
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:    .llvm_bb_addr_map
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Link:    .text
+    Entries:
+      - Version: 2
+        BBRanges:
+          - BBEntries:
+            - ID:              0
+              AddressOffset:   0x0
+              Size:            0xF
+              Metadata:        0x1
+      - Version: 2
+        BBRanges:
+          - BBEntries:
+             - ID:              0
+               AddressOffset:   0x0
+               Size:            0x11
+               Metadata:        0x8
+  - Name:  .rela.llvm_bb_addr_map
+    Type:  SHT_RELA
+    Flags: [ SHF_INFO_LINK ]
+    Link:  .symtab
+    Info:  .llvm_bb_addr_map
+    Relocations:
+      - Offset: 0x2
+        Symbol: .text
+        Type:   R_X86_64_64
+      - Offset: 0x11
+        Symbol: .text
+        Type:   R_X86_64_64
+        Addend: 16
+Symbols:
+  - Name:    a
+    Section: .text
+    Value:   0x0
+  - Name:    c
+    Section: .text
+    Value:   0x10
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text
+
+## Check that if we have a relocatable file and no relocation section for
+## a SHT_LLVM_BB_ADDR_MAP section, we give the appropriate warnings.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:    .llvm_bb_addr_map
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Link:    .text
+
+# RUN: yaml2obj %s --docnum=2 -o %t2.o
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck %s --check-prefix=NO-RELA -DFILE=%t2.o
+
+# NO-RELA: warning: '[[FILE]]': unable to get relocation section for SHT_LLVM_BB_ADDR_MAP section with index 2
+
+## Check that we get a warning if we expect a relocation and it is not present.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:    .llvm_bb_addr_map
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Link:    .text
+    Entries:
+      - Version: 2
+        BBRanges:
+        - BBEntries:
+          - ID:              0
+            AddressOffset:   0x0
+            Size:            0xF
+            Metadata:        0x1
+  - Name:  .rela.llvm_bb_addr_map
+    Type:  SHT_RELA
+    Flags: [ SHF_INFO_LINK ]
+    Info:  .llvm_bb_addr_map
+
+# RUN: yaml2obj %s --docnum=3 -o %t3.o
+# RUN: llvm-readobj %t3.o --bb-addr-map 2>&1 | FileCheck %s --check-prefix=MISSING-RELOCATION -DFILE=%t3.o
+
+# MISSING-RELOCATION: warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 2: failed to get relocation data for offset: 2 in section SHT_LLVM_BB_ADDR_MAP section with index 2
+
+## Check that if we have a missing relocated section, we fail and give the
+## appropriate warning.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:  .rela.llvm_bb_addr_map
+    Type:  SHT_RELA
+    Flags: [ SHF_INFO_LINK ]
+    Info:  0xFF
+
+# RUN: yaml2obj %s --docnum=4 -o %t4.o
+# RUN: llvm-readobj %t4.o --bb-addr-map 2>&1 | FileCheck %s --check-prefix=NO-RELOCATED-SECTION -DFILE=%t4.o
+
+# NO-RELOCATED-SECTION: warning: '[[FILE]]': failed to get SHT_LLVM_BB_ADDR_MAP section(s): SHT_RELA section with index 1: failed to get a relocated section: invalid section index: 255
+
+## Check that if we have an ET_DYN file with a .rela.dyn section, we don't get
+## a warning about a missing relocation section and can get the baddrmap data.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+  - Name:            .llvm_bb_addr_map
+    Type:            SHT_LLVM_BB_ADDR_MAP
+    Flags:           [ SHF_LINK_ORDER ]
+    Entries:
+      - Version:         2
+        BBRanges:
+          - BaseAddress:         0xF
+            BBEntries:
+             - ID:              0
+               AddressOffset:   0x0
+               Size:            0xF
+               Metadata:        0x1
+
+# RUN: yaml2obj %s --docnum=5 -o %t5.o
+# RUN: llvm-readobj %t5.o --bb-addr-map 2>&1 | FileCheck %s --check-prefix=ET-DYN-NO-WARNING -DFILE=%t5.o
+
+# ET-DYN-NO-WARNING: BBAddrMap [
+# ET-DYN-NO-WARNING:   Function {
+# ET-DYN-NO-WARNING:     At: 0xF
+# ET-DYN-NO-WARNING:     Name: <?>
+# ET-DYN-NO-WARNING:     BB Ranges [
+# ET-DYN-NO-WARNING:       {
+# ET-DYN-NO-WARNING:         Base Address: 0xF
+# ET-DYN-NO-WARNING:         BB Entries [
+# ET-DYN-NO-WARNING:           {
+# ET-DYN-NO-WARNING:             ID: 0
+# ET-DYN-NO-WARNING:             Offset: 0x0
+# ET-DYN-NO-WARNING:             Size: 0xF
+# ET-DYN-NO-WARNING:             HasReturn: Yes
+# ET-DYN-NO-WARNING:             HasTailCall: No
+# ET-DYN-NO-WARNING:             IsEHPad: No
+# ET-DYN-NO-WARNING:             CanFallThrough: No
+# ET-DYN-NO-WARNING:             HasIndirectBranch: No
+# ET-DYN-NO-WARNING:           }
+# ET-DYN-NO-WARNING:         ]
+# ET-DYN-NO-WARNING:       }
+# ET-DYN-NO-WARNING:     ]
+# ET-DYN-NO-WARNING:   }
+# ET-DYN-NO-WARNING: ]

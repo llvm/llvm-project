@@ -6,8 +6,8 @@ typedef int A::*param_t;
 struct {
   const char *name;
   param_t par;
-} *ptr;
+} ptr;
 void test_ptr() { (void) ptr; } // forced use
 
-// GLOBAL-LP64: type { i8*, i64 }
-// GLOBAL-LP32: type { i8*, i32 }
+// GLOBAL-LP64: type { ptr, i64 }
+// GLOBAL-LP32: type { ptr, i32 }

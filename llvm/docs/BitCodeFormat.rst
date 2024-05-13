@@ -104,11 +104,11 @@ value (0 through 7) is encoded directly, with the high bit set to zero.  Values
 larger than N-1 bits emit their bits in a series of N-1 bit chunks, where all
 but the last set the high bit.
 
-For example, the value 27 (0x1B) is encoded as 1011 0011 when emitted as a vbr4
-value.  The first set of four bits indicates the value 3 (011) with a
-continuation piece (indicated by a high bit of 1).  The next word indicates a
-value of 24 (011 << 3) with no continuation.  The sum (3+24) yields the value
-27.
+For example, the value 30 (0x1E) is encoded as 62 (0b0011'1110) when emitted as
+a vbr4 value.  The first set of four bits starting from the least significant
+indicates the value 6 (110) with a continuation piece (indicated by a high bit
+of 1).  The next set of four bits indicates a value of 24 (011 << 3) with no
+continuation.  The sum (6+24) yields the value 30.
 
 .. _char6-encoded value:
 
@@ -470,12 +470,18 @@ Native Object File Wrapper Format
 
 Bitcode files for LLVM IR may also be wrapped in a native object file
 (i.e. ELF, COFF, Mach-O).  The bitcode must be stored in a section of the object
-file named ``__LLVM,__bitcode`` for MachO and ``.llvmbc`` for the other object
-formats.  This wrapper format is useful for accommodating LTO in compilation
-pipelines where intermediate objects must be native object files which contain
-metadata in other sections.
+file named ``__LLVM,__bitcode`` for MachO or ``.llvmbc`` for the other object
+formats. ELF objects additionally support a ``.llvm.lto`` section for
+:doc:`FatLTO`, which contains bitcode suitable for LTO compilation (i.e. bitcode
+that has gone through a pre-link LTO pipeline).  The ``.llvmbc`` section
+predates FatLTO support in LLVM, and may not always contain bitcode that is
+suitable for LTO (i.e. from ``-fembed-bitcode``).  The wrapper format is useful
+for accommodating LTO in compilation pipelines where intermediate objects must
+be native object files which contain metadata in other sections. 
 
-Not all tools support this format.
+Not all tools support this format.  For example, lld and the gold plugin will
+ignore the ``.llvmbc`` section when linking object files, but can use
+``.llvm.lto`` sections when passed the correct command line options.
 
 .. _encoding of LLVM IR:
 
@@ -557,9 +563,10 @@ MODULE_BLOCK Contents
 ---------------------
 
 The ``MODULE_BLOCK`` block (id 8) is the top-level block for LLVM bitcode files,
-and each bitcode file must contain exactly one. In addition to records
-(described below) containing information about the module, a ``MODULE_BLOCK``
-block may contain the following sub-blocks:
+and each module in a bitcode file must contain exactly one. A bitcode file with
+multi-module bitcode is valid. In addition to records (described below)
+containing information about the module, a ``MODULE_BLOCK`` block may contain
+the following sub-blocks:
 
 * `BLOCKINFO`_
 * `PARAMATTR_BLOCK`_
@@ -788,7 +795,6 @@ function. The operand fields are:
   * ``ccc``: code 0
   * ``fastcc``: code 8
   * ``coldcc``: code 9
-  * ``webkit_jscc``: code 12
   * ``anyregcc``: code 13
   * ``preserve_mostcc``: code 14
   * ``preserve_allcc``: code 15
@@ -840,7 +846,7 @@ function. The operand fields are:
   plus 1.
 
 * *preemptionspecifier*: If present, an encoding of the :ref:`runtime preemption specifier<bcpreemptionspecifier>`  of this function.
- 
+
 MODULE_CODE_ALIAS Record
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1013,7 +1019,7 @@ The integer codes are mapped to well-known attributes as follows.
 * code 9: ``noalias``
 * code 10: ``nobuiltin``
 * code 11: ``nocapture``
-* code 12: ``noduplicates``
+* code 12: ``nodeduplicate``
 * code 13: ``noimplicitfloat``
 * code 14: ``noinline``
 * code 15: ``nonlazybind``
@@ -1075,6 +1081,18 @@ The integer codes are mapped to well-known attributes as follows.
 * code 74: ``vscale_range(<Min>[, <Max>])``
 * code 75: ``swiftasync``
 * code 76: ``nosanitize_coverage``
+* code 77: ``elementtype``
+* code 78: ``disable_sanitizer_instrumentation``
+* code 79: ``nosanitize_bounds``
+* code 80: ``allocalign``
+* code 81: ``allocptr``
+* code 82: ``allockind``
+* code 83: ``presplitcoroutine``
+* code 84: ``fn_ret_thunk_extern``
+* code 85: ``skipprofile``
+* code 86: ``memory``
+* code 87: ``nofpclass``
+* code 88: ``optdebug``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
@@ -1332,6 +1350,21 @@ TYPE_CODE_X86_AMX Record
 ``[X86_AMX]``
 
 The ``X86_AMX`` record (code 24) adds an ``x86_amx`` type to the type table.
+
+TYPE_CODE_TARGET_TYPE Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[TARGET_TYPE, num_tys, ...ty_params..., ...int_params... ]``
+
+The ``TARGET_TYPE`` record (code 26) adds a target extension type to the type
+table, with a name defined by a previously encountered ``STRUCT_NAME`` record.
+The operand fields are
+
+* *num_tys*: The number of parameters that are types (as opposed to integers)
+
+* *ty_params*: Type indices that represent type parameters
+
+* *int_params*: Numbers that correspond to the integer parameters.
 
 .. _CONSTANTS_BLOCK:
 

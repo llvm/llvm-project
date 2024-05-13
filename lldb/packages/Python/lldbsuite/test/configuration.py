@@ -7,29 +7,26 @@ Provides the configuration class, which holds all information related to
 how this invocation of the test suite should be run.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-
 # System modules
 import os
 
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB Modules
 import lldbsuite
 
 
 # The test suite.
-suite = unittest2.TestSuite()
+suite = unittest.TestSuite()
 
 # The list of categories we said we care about
 categories_list = None
 # set to true if we are going to use categories for cherry-picking test cases
 use_categories = False
 # Categories we want to skip
-skip_categories = ["darwin-log"]
+skip_categories = []
 # Categories we expect to fail
 xfail_categories = []
 # use this to track per-category failures
@@ -51,8 +48,7 @@ sdkroot = None
 dwarf_version = 0
 
 # Any overridden settings.
-# Always disable default dynamic types for testing purposes.
-settings = [('target.prefer-dynamic-value', 'no-dynamic-values')]
+settings = []
 
 # Path to the FileCheck testing tool. Not optional.
 filecheck = None
@@ -63,7 +59,7 @@ yaml2obj = None
 # The arch might dictate some specific CFLAGS to be passed to the toolchain to build
 # the inferior programs.  The global variable cflags_extras provides a hook to do
 # just that.
-cflags_extras = ''
+cflags_extras = ""
 
 # The filters (testclass.testmethod) used to admit tests into our test suite.
 filters = []
@@ -79,7 +75,7 @@ xfail_tests = None
 # Set this flag if there is any session info dumped during the test run.
 sdir_has_content = False
 # svn_info stores the output from 'svn info lldb.base.dir'.
-svn_info = ''
+svn_info = ""
 
 # Default verbosity is 0.
 verbose = 0
@@ -94,7 +90,7 @@ testdirs = [lldbsuite.lldb_test_root]
 test_src_root = lldbsuite.lldb_test_root
 
 # Separator string.
-separator = '-' * 70
+separator = "-" * 70
 
 failed = False
 
@@ -117,16 +113,17 @@ clang_module_cache_dir = None
 # Test results handling globals
 test_result = None
 
-# Reproducers
-capture_path = None
-replay_path = None
-
 # The names of all tests. Used to assert we don't have two tests with the
 # same base name.
 all_tests = set()
 
 # LLDB library directory.
 lldb_libs_dir = None
+lldb_obj_root = None
+
+libcxx_include_dir = None
+libcxx_include_target_dir = None
+libcxx_library_dir = None
 
 # A plugin whose tests will be enabled, like intel-pt.
 enabled_plugins = []
@@ -134,8 +131,10 @@ enabled_plugins = []
 
 def shouldSkipBecauseOfCategories(test_categories):
     if use_categories:
-        if len(test_categories) == 0 or len(
-                categories_list & set(test_categories)) == 0:
+        if (
+            len(test_categories) == 0
+            or len(categories_list & set(test_categories)) == 0
+        ):
             return True
 
     for category in skip_categories:
@@ -152,24 +151,10 @@ def get_filecheck_path():
     if filecheck and os.path.lexists(filecheck):
         return filecheck
 
+
 def get_yaml2obj_path():
     """
     Get the path to the yaml2obj tool.
     """
     if yaml2obj and os.path.lexists(yaml2obj):
         return yaml2obj
-
-def is_reproducer_replay():
-    """
-    Returns true when dotest is being replayed from a reproducer. Never use
-    this method to guard SB API calls as it will cause a divergence between
-    capture and replay.
-    """
-    return replay_path is not None
-
-def is_reproducer():
-    """
-    Returns true when dotest is capturing a reproducer or is being replayed
-    from a reproducer. Use this method to guard SB API calls.
-    """
-    return capture_path or replay_path

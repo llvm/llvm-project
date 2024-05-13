@@ -12,15 +12,13 @@
 #include "../ClangTidyCheck.h"
 #include "clang/Basic/LangStandard.h"
 
-namespace clang {
-namespace tidy {
-namespace objc {
+namespace clang::tidy::objc {
 
 /// Finds calls to NSInvocation methods under ARC that don't have proper
 /// argument object lifetimes.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc-nsinvocation-argument-lifetime.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/objc/nsinvocation-argument-lifetime.html
 class NSInvocationArgumentLifetimeCheck : public ClangTidyCheck {
 public:
   NSInvocationArgumentLifetimeCheck(StringRef Name, ClangTidyContext *Context)
@@ -32,8 +30,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace objc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::objc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_NSINVOCATIONARGUMENTLIFETIMECHECK_H

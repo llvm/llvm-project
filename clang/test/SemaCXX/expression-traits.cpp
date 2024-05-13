@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify -fcxx-exceptions %s
+// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify -fcxx-exceptions %s -fexperimental-new-constant-interpreter
 
 //
 // Tests for "expression traits" intrinsics such as __is_lvalue_expr.
@@ -583,10 +584,10 @@ void expr_comma(int x)
 
     // Can't use the ASSERT_XXXX macros without adding parens around
     // the comma expression.
-    static_assert(__is_lvalue_expr(x,x), "expected an lvalue");
-    static_assert(__is_rvalue_expr(x,1), "expected an rvalue");
-    static_assert(__is_lvalue_expr(1,x), "expected an lvalue");
-    static_assert(__is_rvalue_expr(1,1), "expected an rvalue");
+    static_assert(__is_lvalue_expr((void)x,x), "expected an lvalue");
+    static_assert(__is_rvalue_expr((void)x,1), "expected an rvalue");
+    static_assert(__is_lvalue_expr((void)1,x), "expected an lvalue");
+    static_assert(__is_rvalue_expr((void)1,1), "expected an rvalue");
 }
 
 #if 0

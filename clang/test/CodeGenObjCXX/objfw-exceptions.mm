@@ -5,13 +5,13 @@
 void opaque();
 
 // CHECK: define{{.*}} void @_Z3foov()
-// CHECK-DWARF-SAME: personality i8* bitcast (i32 (...)* @__gnu_objc_personality_v0 to i8*)
-// CHECK-SJLJ-SAME: personality i8* bitcast (i32 (...)* @__gnu_objc_personality_sj0 to i8*)
+// CHECK-DWARF-SAME: personality ptr @__gnu_objc_personality_v0
+// CHECK-SJLJ-SAME: personality ptr @__gnu_objc_personality_sj0
 void foo() {
 try {
 // CHECK: invoke void @_Z6opaquev
 opaque();
 } catch (OCType *T) {
-// CHECK:      landingpad { i8*, i32 }
+// CHECK:      landingpad { ptr, i32 }
 }
 }

@@ -4,7 +4,7 @@
 // CHECK: @b ={{.*}} global i32 0,
 
 // CHECK: define {{.*}}void @{{.*}}test{{.*}}_block_invoke(
-// CHECK: store i32 2, i32* @b,
+// CHECK: store i32 2, ptr @b,
 // CHECK: ret void
 
 int b;

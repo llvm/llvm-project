@@ -1,5 +1,3 @@
-; RUN: not --crash llc -O0 -global-isel -global-isel-abort=1 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
-; RUN: llc -O0 -global-isel -global-isel-abort=0 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=FALLBACK
 ; RUN: llc -O0 -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o %t.out 2> %t.err
 ; RUN: FileCheck %s --check-prefix=FALLBACK-WITH-REPORT-OUT < %t.out
 ; RUN: FileCheck %s --check-prefix=FALLBACK-WITH-REPORT-ERR < %t.err
@@ -15,41 +13,6 @@ target triple = "aarch64--"
 
 ; BIG-ENDIAN: unable to translate in big endian mode
 
-; We use __fixunstfti as the common denominator for __fixunstfti on Linux and
-; ___fixunstfti on iOS
-; ERROR: unable to translate instruction: ret
-; FALLBACK: ldr q0,
-; FALLBACK-NEXT: bl __fixunstfti
-;
-; FALLBACK-WITH-REPORT-ERR: unable to translate instruction: ret
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for ABIi128
-; FALLBACK-WITH-REPORT-OUT-LABEL: ABIi128:
-; FALLBACK-WITH-REPORT-OUT: ldr q0,
-; FALLBACK-WITH-REPORT-OUT-NEXT: bl __fixunstfti
-define i128 @ABIi128(i128 %arg1) {
-  %farg1 =       bitcast i128 %arg1 to fp128
-  %res = fptoui fp128 %farg1 to i128
-  ret i128 %res
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %3:_(<3 x s32>), %4:_(p0) :: (store 12 into %ir.addr + 16, align 16, basealign 32) (in function: odd_vector)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for odd_vector
-; FALLBACK-WITH-REPORT-OUT-LABEL: odd_vector:
-define void @odd_vector(<7 x i32>* %addr) {
-  %vec = load <7 x i32>, <7 x i32>* %addr
-  store <7 x i32> %vec, <7 x i32>* %addr
-  ret void
-}
-
-  ; AArch64 was asserting instead of returning an invalid mapping for unknown
-  ; sizes.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: ret: '  ret i128 undef' (in function: sequence_sizes)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for sequence_sizes
-; FALLBACK-WITH-REPORT-LABEL: sequence_sizes:
-define i128 @sequence_sizes([8 x i8] %in) {
-  ret i128 undef
-}
-
 ; Make sure we don't mess up metadata arguments.
 declare void @llvm.write_register.i64(metadata, i64)
 
@@ -61,76 +24,14 @@ define void @test_write_register_intrin() {
   ret void
 }
 
-@_ZTIi = external global i8*
+@_ZTIi = external global ptr
 declare i32 @__gxx_personality_v0(...)
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %2:_(<2 x p0>) = G_INSERT_VECTOR_ELT %0:_, %{{[0-9]+}}:_(p0), %{{[0-9]+}}:_(s32) (in function: vector_of_pointers_insertelement)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for vector_of_pointers_insertelement
-; FALLBACK-WITH-REPORT-OUT-LABEL: vector_of_pointers_insertelement:
-define void @vector_of_pointers_insertelement() {
-  br label %end
-
-block:
-  %dummy = insertelement <2 x i16*> %vec, i16* null, i32 0
-  store <2 x i16*> %dummy, <2 x i16*>* undef
-  ret void
-
-end:
-  %vec = load <2 x i16*>, <2 x i16*>* undef
-  br label %block
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(s96) = G_ADD %{{[0-9]+}}:_, %{{[0-9]+}}:_ (in function: nonpow2_add_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_add_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_add_narrowing:
-define void @nonpow2_add_narrowing(i128 %x, i128 %y) {
-  %a = add i128 %x, %y
-  %b = trunc i128 %a to i96
-  %dummy = add i96 %b, %b
-  store i96 %dummy, i96* undef
-  ret void
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(s96) = G_INSERT %{{[0-9]+}}:_, %{{[0-9]+}}:_(s32), 64 (in function: nonpow2_or_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_or_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_or_narrowing:
-define void @nonpow2_or_narrowing() {
-  %a = add i128 undef, undef
-  %b = trunc i128 %a to i96
-  %a2 = add i128 undef, undef
-  %b2 = trunc i128 %a2 to i96
-  %dummy = or i96 %b, %b2
-  store i96 %dummy, i96* undef
-  ret void
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %0:_(s96) = G_INSERT %10:_, %8:_(s32), 64 (in function: nonpow2_load_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_load_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_load_narrowing:
-define void @nonpow2_load_narrowing() {
-  %dummy = load i96, i96* undef
-  store i96 %dummy, i96* undef
-  ret void
-}
-
-; Currently can't handle vector lengths that aren't an exact multiple of
-; natively supported vector lengths. Test that the fall-back works for those.
-; FALLBACK-WITH-REPORT-ERR-G_IMPLICIT_DEF-LEGALIZABLE: (FIXME: this is what is expected once we can legalize non-pow-of-2 G_IMPLICIT_DEF) remark: <unknown>:0:0: unable to legalize instruction: %1:_(<7 x s64>) = G_ADD %0, %0 (in function: nonpow2_vector_add_fewerelements
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %47:_(<14 x s64>) = G_CONCAT_VECTORS %41:_(<2 x s64>), %42:_(<2 x s64>), %43:_(<2 x s64>), %44:_(<2 x s64>), %29:_(<2 x s64>), %29:_(<2 x s64>), %29:_(<2 x s64>) (in function: nonpow2_vector_add_fewerelements)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_vector_add_fewerelements
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_vector_add_fewerelements:
-define void @nonpow2_vector_add_fewerelements() {
-  %dummy = add <7 x i64> undef, undef
-  %ex = extractelement <7 x i64> %dummy, i64 0
-  store i64 %ex, i64* undef
-  ret void
-}
 
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: RET_ReallyLR implicit $x0 (in function: strict_align_feature)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for strict_align_feature
 ; FALLBACK-WITH-REPORT-OUT-LABEL: strict_align_feature
-define i64 @strict_align_feature(i64* %p) #0 {
-  %x = load i64, i64* %p, align 1
+define i64 @strict_align_feature(ptr %p) #0 {
+  %x = load i64, ptr %p, align 1
   ret i64 %x
 }
 
@@ -147,24 +48,24 @@ entry:
 
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower function{{.*}}scalable_arg
 ; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_arg
-define <vscale x 16 x i8> @scalable_arg(<vscale x 16 x i1> %pred, i8* %addr) #1 {
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, i8* %addr)
+define <vscale x 16 x i8> @scalable_arg(<vscale x 16 x i1> %pred, ptr %addr) #1 {
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, ptr %addr)
   ret <vscale x 16 x i8> %res
 }
 
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower function{{.*}}scalable_ret
 ; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_ret
-define <vscale x 16 x i8> @scalable_ret(i8* %addr) #1 {
+define <vscale x 16 x i8> @scalable_ret(ptr %addr) #1 {
   %pred = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 0)
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, i8* %addr)
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, ptr %addr)
   ret <vscale x 16 x i8> %res
 }
 
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction{{.*}}scalable_call
 ; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_call
-define i8 @scalable_call(i8* %addr) #1 {
+define i8 @scalable_call(ptr %addr) #1 {
   %pred = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 0)
-  %vec = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, i8* %addr)
+  %vec = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, ptr %addr)
   %res = extractelement <vscale x 16 x i8> %vec, i32 0
   ret i8 %res
 }
@@ -173,7 +74,7 @@ define i8 @scalable_call(i8* %addr) #1 {
 ; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_alloca
 define void @scalable_alloca() #1 {
   %local0 = alloca <vscale x 16 x i8>
-  load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %local0
+  load volatile <vscale x 16 x i8>, ptr %local0
   ret void
 }
 
@@ -181,13 +82,78 @@ define void @scalable_alloca() #1 {
 ; FALLBACK-WITH-REPORT-OUT-LABEL: asm_indirect_output
 define void @asm_indirect_output() {
 entry:
-  %ap = alloca i8*, align 8
-  %0 = load i8*, i8** %ap, align 8
-  call void asm sideeffect "", "=*r|m,0,~{memory}"(i8** %ap, i8* %0)
+  %ap = alloca ptr, align 8
+  %0 = load ptr, ptr %ap, align 8
+  call void asm sideeffect "", "=*r|m,0,~{memory}"(ptr elementtype(ptr) %ap, ptr %0)
   ret void
 }
 
+%struct.foo = type { [8 x i64] }
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction:{{.*}}ld64b{{.*}}asm_output_ls64
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for asm_output_ls64
+; FALLBACK-WITH-REPORT-OUT-LABEL: asm_output_ls64
+define void @asm_output_ls64(ptr %output, ptr %addr) #2 {
+entry:
+  %val = call i512 asm sideeffect "ld64b $0,[$1]", "=r,r,~{memory}"(ptr %addr)
+  store i512 %val, ptr %output, align 8
+  ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction:{{.*}}st64b{{.*}}asm_input_ls64
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for asm_input_ls64
+; FALLBACK-WITH-REPORT-OUT-LABEL: asm_input_ls64
+define void @asm_input_ls64(ptr %input, ptr %addr) #2 {
+entry:
+  %val = load i512, ptr %input, align 8
+  call void asm sideeffect "st64b $0,[$1]", "r,r,~{memory}"(i512 %val, ptr %addr)
+  ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %4:_(s128), %5:_(s1) = G_UMULO %0:_, %6:_ (in function: umul_s128)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for umul_s128
+; FALLBACK-WITH-REPORT-OUT-LABEL: umul_s128
+declare {i128, i1} @llvm.umul.with.overflow.i128(i128, i128) nounwind readnone
+define zeroext i1 @umul_s128(i128 %v1, ptr %res) {
+entry:
+  %t = call {i128, i1} @llvm.umul.with.overflow.i128(i128 %v1, i128 2)
+  %val = extractvalue {i128, i1} %t, 0
+  %obit = extractvalue {i128, i1} %t, 1
+  store i128 %val, ptr %res
+  ret i1 %obit
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: {{.*}}llvm.experimental.gc.statepoint{{.*}} (in function: gc_intr)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for gc_intr
+; FALLBACK-WITH-REPORT-OUT-LABEL: gc_intr
+
+declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
+declare i32 @llvm.experimental.gc.result(token)
+
+declare i32 @extern_returning_i32()
+
+define i32 @gc_intr() gc "statepoint-example" {
+   %statepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i32 ()) @extern_returning_i32, i32 0, i32 0, i32 0, i32 0) [ "deopt"() ]
+   %ret = call i32 (token) @llvm.experimental.gc.result(token %statepoint_token)
+   ret i32 %ret
+}
+
+declare void @llvm.assume(i1)
+
+; FALLBACK-WITH-REPORT-ERR: <unknown>:0:0: unable to translate instruction: call: '  %0 = tail call { i64, i32 } asm "subs $0, $0, #3", "=r,={@cchi},0,~{dirflag},~{fpsr},~{flags}"(i64 %a)' (in function: inline_asm_with_output_constraint)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for inline_asm_with_output_constraint
+; FALLBACK-WITH-REPORT-OUT-LABEL: inline_asm_with_output_constraint
+define i32 @inline_asm_with_output_constraint(i64 %a) {
+entry:
+  %0 = tail call { i64, i32 } asm "subs $0, $0, #3", "=r,={@cchi},0,~{dirflag},~{fpsr},~{flags}"(i64 %a)
+  %asmresult1 = extractvalue { i64, i32 } %0, 1
+  %1 = icmp ult i32 %asmresult1, 2
+  tail call void @llvm.assume(i1 %1)
+  ret i32 %asmresult1
+}
+
 attributes #1 = { "target-features"="+sve" }
+attributes #2 = { "target-features"="+ls64" }
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 %pattern)
-declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1>, i8*)
+declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1>, ptr)

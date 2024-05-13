@@ -1,4 +1,4 @@
-; REQUIRES: default_triple, object-emission
+; REQUIRES: object-emission
 ;
 ; RUN: llvm-link %s %p/type-unique-type-array-b.ll -S -o - | %llc_dwarf -filetype=obj -O0 | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ;
@@ -21,20 +21,20 @@
 ;
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_class_type
-; CHECK-NEXT:   DW_AT_name {{.*}} "A"
+; CHECK-NEXT:   DW_AT_name {{.*}}"A"
 ; CHECK: DW_TAG_subprogram
-; CHECK: DW_AT_name {{.*}} "testA"
+; CHECK: DW_AT_name {{.*}}"testA"
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[STRUCT:.*]]}
 ; CHECK: 0x[[STRUCT]]: DW_TAG_structure_type
-; CHECK-NEXT:   DW_AT_name {{.*}} "SA"
+; CHECK-NEXT:   DW_AT_name {{.*}}"SA"
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_class_type
-; CHECK-NEXT:   DW_AT_name {{.*}} "B"
+; CHECK-NEXT:   DW_AT_name {{.*}}"B"
 ; CHECK: DW_TAG_subprogram
-; CHECK:   DW_AT_name {{.*}} "testB"
+; CHECK:   DW_AT_name {{.*}}"testB"
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[STRUCT]]
@@ -43,23 +43,19 @@
 %struct.SA = type { i32 }
 
 ; Function Attrs: ssp uwtable
-define void @_Z4topAP1A2SA(%class.A* %a, i32 %sa.coerce) #0 !dbg !15 {
+define void @_Z4topAP1A2SA(ptr %a, i32 %sa.coerce) #0 !dbg !15 {
 entry:
   %sa = alloca %struct.SA, align 4
-  %a.addr = alloca %class.A*, align 8
+  %a.addr = alloca ptr, align 8
   %agg.tmp = alloca %struct.SA, align 4
-  %coerce.dive = getelementptr %struct.SA, %struct.SA* %sa, i32 0, i32 0
-  store i32 %sa.coerce, i32* %coerce.dive
-  store %class.A* %a, %class.A** %a.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %a.addr, metadata !24, metadata !DIExpression()), !dbg !25
-  call void @llvm.dbg.declare(metadata %struct.SA* %sa, metadata !26, metadata !DIExpression()), !dbg !27
-  %0 = load %class.A*, %class.A** %a.addr, align 8, !dbg !28
-  %1 = bitcast %struct.SA* %agg.tmp to i8*, !dbg !28
-  %2 = bitcast %struct.SA* %sa to i8*, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %2, i64 4, i1 false), !dbg !28
-  %coerce.dive1 = getelementptr %struct.SA, %struct.SA* %agg.tmp, i32 0, i32 0, !dbg !28
-  %3 = load i32, i32* %coerce.dive1, !dbg !28
-  call void @_ZN1A5testAE2SA(%class.A* %0, i32 %3), !dbg !28
+  store i32 %sa.coerce, ptr %sa
+  store ptr %a, ptr %a.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !24, metadata !DIExpression()), !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %sa, metadata !26, metadata !DIExpression()), !dbg !27
+  %0 = load ptr, ptr %a.addr, align 8, !dbg !28
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %sa, i64 4, i1 false), !dbg !28
+  %1 = load i32, ptr %agg.tmp, !dbg !28
+  call void @_ZN1A5testAE2SA(ptr %0, i32 %1), !dbg !28
   ret void, !dbg !29
 }
 
@@ -67,21 +63,20 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind ssp uwtable
-define linkonce_odr void @_ZN1A5testAE2SA(%class.A* %this, i32 %a.coerce) #2 align 2 !dbg !20 {
+define linkonce_odr void @_ZN1A5testAE2SA(ptr %this, i32 %a.coerce) #2 align 2 !dbg !20 {
 entry:
   %a = alloca %struct.SA, align 4
-  %this.addr = alloca %class.A*, align 8
-  %coerce.dive = getelementptr %struct.SA, %struct.SA* %a, i32 0, i32 0
-  store i32 %a.coerce, i32* %coerce.dive
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !30, metadata !DIExpression()), !dbg !31
-  call void @llvm.dbg.declare(metadata %struct.SA* %a, metadata !32, metadata !DIExpression()), !dbg !33
-  %this1 = load %class.A*, %class.A** %this.addr
+  %this.addr = alloca ptr, align 8
+  store i32 %a.coerce, ptr %a
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !30, metadata !DIExpression()), !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !32, metadata !DIExpression()), !dbg !33
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !34
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #3
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #3
 
 attributes #0 = { ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
@@ -112,7 +107,7 @@ attributes #3 = { nounwind }
 !18 = !{null, !19, !10}
 !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4)
 !20 = distinct !DISubprogram(name: "testA", linkageName: "_ZN1A5testAE2SA", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !4, type: !7, declaration: !6, retainedNodes: !2)
-!21 = !{i32 2, !"Dwarf Version", i32 2}
+!21 = !{i32 2, !"Dwarf Version", i32 3}
 !22 = !{i32 2, !"Debug Info Version", i32 3}
 !23 = !{!"clang version 3.5.0 (trunk 214102:214113M) (llvm/trunk 214102:214115M)"}
 !24 = !DILocalVariable(name: "a", line: 11, arg: 1, scope: !15, file: !16, type: !19)

@@ -10,9 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_ASAN_INSTRUMENTATIONRUNTIMEASAN_H
 
 #include "lldb/Target/InstrumentationRuntime.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Utility/StructuredData.h"
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -27,17 +24,13 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "AddressSanitizer"; }
 
   static lldb::InstrumentationRuntimeType GetTypeStatic();
 
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   virtual lldb::InstrumentationRuntimeType GetType() { return GetTypeStatic(); }
-
-  uint32_t GetPluginVersion() override { return 1; }
 
 private:
   InstrumentationRuntimeASan(const lldb::ProcessSP &process_sp)
@@ -55,10 +48,6 @@ private:
                                   StoppointCallbackContext *context,
                                   lldb::user_id_t break_id,
                                   lldb::user_id_t break_loc_id);
-
-  StructuredData::ObjectSP RetrieveReportData();
-
-  std::string FormatDescription(StructuredData::ObjectSP report);
 };
 
 } // namespace lldb_private

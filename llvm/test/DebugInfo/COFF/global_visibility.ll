@@ -1,4 +1,5 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ;
 ; This test verifies global variables are emitted within the correct scope.
 ;
@@ -53,12 +54,12 @@
 ; CHECK:     }
 ; CHECK:     DataSym {
 ; CHECK:       Kind: S_LDATA32 (0x110C)
-; CHECK:       DisplayName: foo::local_int
+; CHECK:       DisplayName: local_int
 ; CHECK:       LinkageName: ?local_int@?1??foo@@YAXXZ@4HA
 ; CHECK:     }
 ; CHECK:     DataSym {
 ; CHECK:       Kind: S_LDATA32 (0x110C)
-; CHECK:       DisplayName: foo::nested_int
+; CHECK:       DisplayName: nested_int
 ; CHECK:       LinkageName: ?nested_int@?1??foo@@YAXXZ@4HA
 ; CHECK:     }
 ; CHECK:     ProcEnd {
@@ -74,12 +75,12 @@
 ; CHECK:     }
 ; CHECK:     DataSym {
 ; CHECK:       Kind: S_LDATA32 (0x110C)
-; CHECK:       DisplayName: bar::local_int
+; CHECK:       DisplayName: local_int
 ; CHECK:       LinkageName: ?local_int@?1??bar@@YAXXZ@4HA
 ; CHECK:     }
 ; CHECK:     DataSym {
 ; CHECK:       Kind: S_LDATA32 (0x110C)
-; CHECK:       DisplayName: bar::nested_int
+; CHECK:       DisplayName: nested_int
 ; CHECK:       LinkageName: ?nested_int@?1??bar@@YAXXZ@4HA
 ; CHECK:     }
 ; CHECK:     ProcEnd {
@@ -143,10 +144,10 @@ $"?comdat_int@?$A@I@@2IA" = comdat any
 ; Function Attrs: noinline optnone uwtable
 define dso_local void @"?foo@@YAXXZ"() #0 !dbg !8 {
 entry:
-  %0 = load i32, i32* @"?nested_int@?1??foo@@YAXXZ@4HA", align 4, !dbg !45
-  store i32 %0, i32* @"?local_int@?1??foo@@YAXXZ@4HA", align 4, !dbg !45
+  %0 = load i32, ptr @"?nested_int@?1??foo@@YAXXZ@4HA", align 4, !dbg !45
+  store i32 %0, ptr @"?local_int@?1??foo@@YAXXZ@4HA", align 4, !dbg !45
   %call = call i32 @"?set@?$A@H@@SAHH@Z"(i32 42), !dbg !47
-  store i32 %call, i32* @"?local_int@?1??foo@@YAXXZ@4HA", align 4, !dbg !47
+  store i32 %call, ptr @"?local_int@?1??foo@@YAXXZ@4HA", align 4, !dbg !47
   ret void, !dbg !48
 }
 
@@ -155,24 +156,24 @@ define linkonce_odr dso_local i32 @"?set@?$A@H@@SAHH@Z"(i32 %value) #1 comdat al
 entry:
   %value.addr = alloca i32, align 4
   %r = alloca i32, align 4
-  store i32 %value, i32* %value.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %value.addr, metadata !50, metadata !DIExpression()), !dbg !51
-  call void @llvm.dbg.declare(metadata i32* %r, metadata !52, metadata !DIExpression()), !dbg !53
-  %0 = load i32, i32* @"?comdat_int@?$A@H@@2HA", align 4, !dbg !53
-  store i32 %0, i32* %r, align 4, !dbg !53
-  %1 = load i32, i32* %value.addr, align 4, !dbg !54
-  store i32 %1, i32* @"?comdat_int@?$A@H@@2HA", align 4, !dbg !54
-  %2 = load i32, i32* %r, align 4, !dbg !55
+  store i32 %value, ptr %value.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %value.addr, metadata !50, metadata !DIExpression()), !dbg !51
+  call void @llvm.dbg.declare(metadata ptr %r, metadata !52, metadata !DIExpression()), !dbg !53
+  %0 = load i32, ptr @"?comdat_int@?$A@H@@2HA", align 4, !dbg !53
+  store i32 %0, ptr %r, align 4, !dbg !53
+  %1 = load i32, ptr %value.addr, align 4, !dbg !54
+  store i32 %1, ptr @"?comdat_int@?$A@H@@2HA", align 4, !dbg !54
+  %2 = load i32, ptr %r, align 4, !dbg !55
   ret i32 %2, !dbg !55
 }
 
 ; Function Attrs: noinline optnone uwtable
 define dso_local void @"?bar@@YAXXZ"() #0 !dbg !16 {
 entry:
-  %0 = load i32, i32* @"?nested_int@?1??bar@@YAXXZ@4HA", align 4, !dbg !56
-  store i32 %0, i32* @"?local_int@?1??bar@@YAXXZ@4HA", align 4, !dbg !56
+  %0 = load i32, ptr @"?nested_int@?1??bar@@YAXXZ@4HA", align 4, !dbg !56
+  store i32 %0, ptr @"?local_int@?1??bar@@YAXXZ@4HA", align 4, !dbg !56
   %call = call i32 @"?set@?$A@I@@SAII@Z"(i32 42), !dbg !58
-  store i32 %call, i32* @"?local_int@?1??bar@@YAXXZ@4HA", align 4, !dbg !58
+  store i32 %call, ptr @"?local_int@?1??bar@@YAXXZ@4HA", align 4, !dbg !58
   ret void, !dbg !59
 }
 
@@ -181,14 +182,14 @@ define linkonce_odr dso_local i32 @"?set@?$A@I@@SAII@Z"(i32 %value) #1 comdat al
 entry:
   %value.addr = alloca i32, align 4
   %r = alloca i32, align 4
-  store i32 %value, i32* %value.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %value.addr, metadata !61, metadata !DIExpression()), !dbg !62
-  call void @llvm.dbg.declare(metadata i32* %r, metadata !63, metadata !DIExpression()), !dbg !64
-  %0 = load i32, i32* @"?comdat_int@?$A@I@@2IA", align 4, !dbg !64
-  store i32 %0, i32* %r, align 4, !dbg !64
-  %1 = load i32, i32* %value.addr, align 4, !dbg !65
-  store i32 %1, i32* @"?comdat_int@?$A@I@@2IA", align 4, !dbg !65
-  %2 = load i32, i32* %r, align 4, !dbg !66
+  store i32 %value, ptr %value.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %value.addr, metadata !61, metadata !DIExpression()), !dbg !62
+  call void @llvm.dbg.declare(metadata ptr %r, metadata !63, metadata !DIExpression()), !dbg !64
+  %0 = load i32, ptr @"?comdat_int@?$A@I@@2IA", align 4, !dbg !64
+  store i32 %0, ptr %r, align 4, !dbg !64
+  %1 = load i32, ptr %value.addr, align 4, !dbg !65
+  store i32 %1, ptr @"?comdat_int@?$A@I@@2IA", align 4, !dbg !65
+  %2 = load i32, ptr %r, align 4, !dbg !66
   ret i32 %2, !dbg !66
 }
 

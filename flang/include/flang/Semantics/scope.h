@@ -41,6 +41,8 @@ struct EquivalenceObject {
       std::optional<ConstantSubscript> substringStart, parser::CharBlock source)
       : symbol{symbol}, subscripts{subscripts},
         substringStart{substringStart}, source{source} {}
+  explicit EquivalenceObject(Symbol &symbol)
+      : symbol{symbol}, source{symbol.name()} {}
 
   bool operator==(const EquivalenceObject &) const;
   bool operator<(const EquivalenceObject &) const;
@@ -57,15 +59,16 @@ class Scope {
   using mapType = std::map<SourceName, MutableSymbolRef>;
 
 public:
-  ENUM_CLASS(Kind, Global, Module, MainProgram, Subprogram, BlockData,
-      DerivedType, Block, Forall, ImpliedDos)
+  ENUM_CLASS(Kind, Global, IntrinsicModules, Module, MainProgram, Subprogram,
+      BlockData, DerivedType, BlockConstruct, Forall, OtherConstruct,
+      OpenACCConstruct, ImpliedDos)
   using ImportKind = common::ImportKind;
 
   // Create the Global scope -- the root of the scope tree
   explicit Scope(SemanticsContext &context)
       : Scope{*this, Kind::Global, nullptr, context} {}
   Scope(Scope &parent, Kind kind, Symbol *symbol, SemanticsContext &context)
-      : parent_{parent}, kind_{kind}, symbol_{symbol}, context_{context} {
+      : parent_{&parent}, kind_{kind}, symbol_{symbol}, context_{context} {
     if (symbol) {
       symbol->set_scope(this);
     }
@@ -76,15 +79,19 @@ public:
   bool operator!=(const Scope &that) const { return this != &that; }
 
   Scope &parent() {
-    CHECK(&parent_ != this);
-    return parent_;
+    CHECK(parent_ != this);
+    return *parent_;
   }
   const Scope &parent() const {
-    CHECK(&parent_ != this);
-    return parent_;
+    CHECK(parent_ != this);
+    return *parent_;
   }
   Kind kind() const { return kind_; }
   bool IsGlobal() const { return kind_ == Kind::Global; }
+  bool IsIntrinsicModules() const { return kind_ == Kind::IntrinsicModules; }
+  bool IsTopLevel() const {
+    return kind_ == Kind::Global || kind_ == Kind::IntrinsicModules;
+  }
   bool IsModule() const {
     return kind_ == Kind::Module &&
         !symbol_->get<ModuleDetails>().isSubmodule();
@@ -98,6 +105,10 @@ public:
   bool IsParameterizedDerivedTypeInstantiation() const {
     return kind_ == Kind::DerivedType && !symbol_;
   }
+  /// Does this derived type have at least one kind parameter ?
+  bool IsDerivedTypeWithKindParameter() const;
+  /// Does this derived type have at least one length parameter ?
+  bool IsDerivedTypeWithLengthParameter() const;
   Symbol *symbol() { return symbol_; }
   const Symbol *symbol() const { return symbol_; }
   SemanticsContext &context() const { return context_; }
@@ -106,9 +117,11 @@ public:
   const Scope *GetDerivedTypeParent() const;
   const Scope &GetDerivedTypeBase() const;
   inline std::optional<SourceName> GetName() const;
+  // Returns true if this scope contains, or is, another scope.
   bool Contains(const Scope &) const;
   /// Make a scope nested in this one
   Scope &MakeScope(Kind kind, Symbol *symbol = nullptr);
+
   SemanticsContext &GetMutableSemanticsContext() const {
     return const_cast<SemanticsContext &>(context());
   }
@@ -235,10 +248,7 @@ public:
 
   // The range of the source of this and nested scopes.
   const parser::CharBlock &sourceRange() const { return sourceRange_; }
-  void AddSourceRange(const parser::CharBlock &);
-  // Find the smallest scope under this one that contains source
-  const Scope *FindScope(parser::CharBlock) const;
-  Scope *FindScope(parser::CharBlock);
+  void AddSourceRange(parser::CharBlock);
 
   // Attempts to find a match for a derived type instance
   const DeclTypeSpec *FindInstantiatedDerivedType(const DerivedTypeSpec &,
@@ -259,11 +269,13 @@ public:
   }
 
 private:
-  Scope &parent_; // this is enclosing scope, not extended derived type base
+  Scope *parent_{
+      nullptr}; // this is enclosing scope, not extended derived type base
   const Kind kind_;
   std::size_t size_{0}; // size in bytes
   std::optional<std::size_t> alignment_; // required alignment in bytes
   parser::CharBlock sourceRange_;
+  const parser::CookedSource *cookedSource_{nullptr};
   Symbol *const symbol_; // if not null, symbol_->scope() == this
   std::list<Scope> children_;
   mapType symbols_;

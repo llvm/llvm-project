@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -27,6 +26,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <numeric>
 
 using namespace llvm;
 
@@ -36,28 +36,16 @@ static cl::opt<bool> EnableSchedModel("schedmodel", cl::Hidden, cl::init(true),
 static cl::opt<bool> EnableSchedItins("scheditins", cl::Hidden, cl::init(true),
   cl::desc("Use InstrItineraryData for latency lookup"));
 
+static cl::opt<bool> ForceEnableIntervals(
+    "sched-model-force-enable-intervals", cl::Hidden, cl::init(false),
+    cl::desc("Force the use of resource intervals in the schedule model"));
+
 bool TargetSchedModel::hasInstrSchedModel() const {
   return EnableSchedModel && SchedModel.hasInstrSchedModel();
 }
 
 bool TargetSchedModel::hasInstrItineraries() const {
   return EnableSchedItins && !InstrItins.isEmpty();
-}
-
-static unsigned gcd(unsigned Dividend, unsigned Divisor) {
-  // Dividend and Divisor will be naturally swapped as needed.
-  while (Divisor) {
-    unsigned Rem = Dividend % Divisor;
-    Dividend = Divisor;
-    Divisor = Rem;
-  };
-  return Dividend;
-}
-
-static unsigned lcm(unsigned A, unsigned B) {
-  unsigned LCM = (uint64_t(A) * B) / gcd(A, B);
-  assert((LCM >= A && LCM >= B) && "LCM overflow");
-  return LCM;
 }
 
 void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo) {
@@ -72,7 +60,7 @@ void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo) {
   for (unsigned Idx = 0; Idx < NumRes; ++Idx) {
     unsigned NumUnits = SchedModel.getProcResource(Idx)->NumUnits;
     if (NumUnits > 0)
-      ResourceLCM = lcm(ResourceLCM, NumUnits);
+      ResourceLCM = std::lcm(ResourceLCM, NumUnits);
   }
   MicroOpFactor = ResourceLCM / SchedModel.IssueWidth;
   for (unsigned Idx = 0; Idx < NumRes; ++Idx) {
@@ -180,16 +168,20 @@ static unsigned findUseIdx(const MachineInstr *MI, unsigned UseOperIdx) {
   return UseIdx;
 }
 
-// Top-level API for clients that know the operand indices.
+// Top-level API for clients that know the operand indices. This doesn't need to
+// return std::optional<unsigned>, as it always returns a valid latency.
 unsigned TargetSchedModel::computeOperandLatency(
   const MachineInstr *DefMI, unsigned DefOperIdx,
   const MachineInstr *UseMI, unsigned UseOperIdx) const {
 
+  const unsigned InstrLatency = computeInstrLatency(DefMI);
+  const unsigned DefaultDefLatency = TII->defaultDefLatency(SchedModel, *DefMI);
+
   if (!hasInstrSchedModel() && !hasInstrItineraries())
-    return TII->defaultDefLatency(SchedModel, *DefMI);
+    return DefaultDefLatency;
 
   if (hasInstrItineraries()) {
-    int OperLatency = 0;
+    std::optional<unsigned> OperLatency;
     if (UseMI) {
       OperLatency = TII->getOperandLatency(&InstrItins, *DefMI, DefOperIdx,
                                            *UseMI, UseOperIdx);
@@ -198,21 +190,13 @@ unsigned TargetSchedModel::computeOperandLatency(
       unsigned DefClass = DefMI->getDesc().getSchedClass();
       OperLatency = InstrItins.getOperandCycle(DefClass, DefOperIdx);
     }
-    if (OperLatency >= 0)
-      return OperLatency;
 
-    // No operand latency was found.
-    unsigned InstrLatency = TII->getInstrLatency(&InstrItins, *DefMI);
-
-    // Expected latency is the max of the stage latency and itinerary props.
-    // Rather than directly querying InstrItins stage latency, we call a TII
-    // hook to allow subtargets to specialize latency. This hook is only
-    // applicable to the InstrItins model. InstrSchedModel should model all
-    // special cases without TII hooks.
-    InstrLatency =
-        std::max(InstrLatency, TII->defaultDefLatency(SchedModel, *DefMI));
-    return InstrLatency;
+    // Expected latency is the max of InstrLatency and DefaultDefLatency, if we
+    // didn't find an operand latency.
+    return OperLatency ? *OperLatency
+                       : std::max(InstrLatency, DefaultDefLatency);
   }
+
   // hasInstrSchedModel()
   const MCSchedClassDesc *SCDesc = resolveSchedClass(DefMI);
   unsigned DefIdx = findDefIdx(DefMI, DefOperIdx);
@@ -238,9 +222,9 @@ unsigned TargetSchedModel::computeOperandLatency(
   // If DefIdx does not exist in the model (e.g. implicit defs), then return
   // unit latency (defaultDefLatency may be too conservative).
 #ifndef NDEBUG
-  if (SCDesc->isValid() && !DefMI->getOperand(DefOperIdx).isImplicit()
-      && !DefMI->getDesc().OpInfo[DefOperIdx].isOptionalDef()
-      && SchedModel.isComplete()) {
+  if (SCDesc->isValid() && !DefMI->getOperand(DefOperIdx).isImplicit() &&
+      !DefMI->getDesc().operands()[DefOperIdx].isOptionalDef() &&
+      SchedModel.isComplete()) {
     errs() << "DefIdx " << DefIdx << " exceeds machine model writes for "
            << *DefMI << " (Try with MCSchedModel.CompleteModel set to false)";
     llvm_unreachable("incomplete machine model");
@@ -249,7 +233,7 @@ unsigned TargetSchedModel::computeOperandLatency(
   // FIXME: Automatically giving all implicit defs defaultDefLatency is
   // undesirable. We should only do it for defs that are known to the MC
   // desc like flags. Truly implicit defs should get 1 cycle latency.
-  return DefMI->isTransient() ? 0 : TII->defaultDefLatency(SchedModel, *DefMI);
+  return DefMI->isTransient() ? 0 : DefaultDefLatency;
 }
 
 unsigned
@@ -357,3 +341,9 @@ TargetSchedModel::computeReciprocalThroughput(const MCInst &MI) const {
   return computeReciprocalThroughput(MI.getOpcode());
 }
 
+bool TargetSchedModel::enableIntervals() const {
+  if (ForceEnableIntervals)
+    return true;
+
+  return SchedModel.EnableIntervals;
+}

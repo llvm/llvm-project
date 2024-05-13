@@ -4,9 +4,59 @@ import("//llvm/utils/gn/build/buildflags.gni")
 declare_args() {
   # Skip the atomic builtin (should normally be provided by a shared library).
   compiler_rt_exclude_atomic_builtin = true
+}
 
-  # Compile builtins for baremetal.
-  compiler_rt_baremetal_build = false
+lse_targets = []
+
+if (current_cpu == "x86" || current_cpu == "x64") {
+  # long double is not 80 bits on Android or MSVC.
+  long_double_is_80_bits = current_os != "android" && current_os != "win"
+}
+
+if (current_cpu == "arm64") {
+  foreach(pat,
+          [
+            "cas",
+            "swp",
+            "ldadd",
+            "ldclr",
+            "ldeor",
+            "ldset",
+          ]) {
+    foreach(size,
+            [
+              "1",
+              "2",
+              "4",
+              "8",
+              "16",
+            ]) {
+      foreach(model,
+              [
+                "1",
+                "2",
+                "3",
+                "4",
+              ]) {
+        if (pat == "cas" || size != "16") {
+          source_set("lse_${pat}_${size}_${model}") {
+            # Assign to sources like this to hide from
+            # sync_source_lists_from_cmake.py which won't find the source file
+            # on the CMake side.
+            lse_file = "aarch64/lse.S"
+            sources = [ lse_file ]
+            include_dirs = [ "." ]
+            defines = [
+              "L_$pat",
+              "SIZE=$size",
+              "MODEL=$model",
+            ]
+          }
+          lse_targets += [ ":lse_${pat}_${size}_${model}" ]
+        }
+      }
+    }
+  }
 }
 
 static_library("builtins") {
@@ -24,17 +74,20 @@ static_library("builtins") {
   complete_static_lib = true
   configs -= [ "//llvm/utils/gn/build:thin_archive" ]
 
-  cflags = [
-    "-fPIC",
-    "-fno-builtin",
-  ]
-  if (current_os != "android") {
-    cflags += [ "-fvisibility=hidden" ]
+  cflags = []
+  if (current_os != "win") {
+    cflags = [
+      "-fPIC",
+      "-fno-builtin",
+    ]
+    if (current_os != "android") {
+      cflags += [ "-fvisibility=hidden" ]
+    }
+    if (!is_debug) {
+      cflags += [ "-fomit-frame-pointer" ]
+    }
+    cflags_c = [ "-std=c11" ]
   }
-  if (!is_debug) {
-    cflags += [ "-fomit-frame-pointer" ]
-  }
-  cflags_c = [ "-std=c11" ]
 
   sources = [
     "absvdi2.c",
@@ -170,15 +223,15 @@ static_library("builtins") {
   ]
 
   if (current_os != "fuchsia") {
+    sources += [ "clear_cache.c" ]
+  }
+
+  if (current_os != "fuchsia" && current_os != "baremetal") {
     sources += [
       "emutls.c",
       "enable_execute_stack.c",
       "eprintf.c",
     ]
-  }
-
-  if (current_os != "fuchsia" && !compiler_rt_baremetal_build) {
-    sources += [ "clear_cache.c" ]
   }
 
   if (current_os == "mac" || current_os == "ios") {
@@ -221,21 +274,30 @@ static_library("builtins") {
   if (current_cpu == "x86" || current_cpu == "x64") {
     sources -= [ "fp_mode.c" ]
     sources += [
-      "cpu_model.c",
-      "divxc3.c",
-      "fixunsxfdi.c",
-      "fixunsxfsi.c",
-      "fixunsxfti.c",
-      "fixxfdi.c",
-      "fixxfti.c",
-      "floatdixf.c",
-      "floattixf.c",
-      "floatundixf.c",
-      "floatuntixf.c",
+      "cpu_model/x86.c",
       "i386/fp_mode.c",
-      "mulxc3.c",
-      "powixf2.c",
+      "extendbfsf2.c",
+      "truncdfbf2.c",
+      "truncsfbf2.c",
     ]
+    if (long_double_is_80_bits) {
+      sources += [
+        "divxc3.c",
+        "extendxftf2.c",
+        "fixunsxfdi.c",
+        "fixunsxfsi.c",
+        "fixunsxfti.c",
+        "fixxfdi.c",
+        "fixxfti.c",
+        "floatdixf.c",
+        "floattixf.c",
+        "floatundixf.c",
+        "floatuntixf.c",
+        "mulxc3.c",
+        "powixf2.c",
+        "trunctfxf2.c",
+      ]
+    }
   }
   if (current_cpu == "x86") {
     sources -= [
@@ -244,10 +306,8 @@ static_library("builtins") {
       "divdi3.c",
       "floatdidf.c",
       "floatdisf.c",
-      "floatdixf.c",
       "floatundidf.c",
       "floatundisf.c",
-      "floatundixf.c",
       "lshrdi3.c",
       "moddi3.c",
       "muldi3.c",
@@ -260,44 +320,52 @@ static_library("builtins") {
       "i386/divdi3.S",
       "i386/floatdidf.S",
       "i386/floatdisf.S",
-      "i386/floatdixf.S",
       "i386/floatundidf.S",
       "i386/floatundisf.S",
-      "i386/floatundixf.S",
       "i386/lshrdi3.S",
       "i386/moddi3.S",
       "i386/muldi3.S",
       "i386/udivdi3.S",
       "i386/umoddi3.S",
     ]
-    if (current_os == "win") {
-      sources += [
-        "i386/chkstk.S",
-        "i386/chkstk2.S",
+    if (long_double_is_80_bits) {
+      sources -= [
+        "floatdixf.c",
+        "floatundixf.c",
       ]
+      sources += [
+        "i386/floatdixf.S",
+        "i386/floatundixf.S",
+      ]
+    }
+    if (current_os == "win") {
+      sources += [ "i386/chkstk.S" ]
     }
   } else if (current_cpu == "x64") {
     sources -= [
       "floatdidf.c",
       "floatdisf.c",
-      "floatdixf.c",
       "floatundidf.c",
       "floatundisf.c",
-      "floatundixf.c",
     ]
     sources += [
       "x86_64/floatdidf.c",
       "x86_64/floatdisf.c",
-      "x86_64/floatdixf.c",
       "x86_64/floatundidf.S",
       "x86_64/floatundisf.S",
-      "x86_64/floatundixf.S",
     ]
-    if (current_os == "win") {
-      sources += [
-        "x86_64/chkstk.S",
-        "x86_64/chkstk2.S",
+    if (long_double_is_80_bits) {
+      sources -= [
+        "floatdixf.c",
+        "floatundixf.c",
       ]
+      sources += [
+        "x86_64/floatdixf.c",
+        "x86_64/floatundixf.S",
+      ]
+    }
+    if (current_os == "win") {
+      sources += [ "x86_64/chkstk.S" ]
     }
   }
 
@@ -421,7 +489,6 @@ static_library("builtins") {
         "arm/aeabi_uidivmod.S",
         "arm/aeabi_uldivmod.S",
         "arm/chkstk.S",
-        "mingw_fixfloat.c",
       ]
     }
   }
@@ -430,11 +497,23 @@ static_library("builtins") {
     sources -= [ "fp_mode.c" ]
     sources += [
       "aarch64/fp_mode.c",
-      "cpu_model.c",
+      "cpu_model/aarch64.c",
     ]
     if (current_os == "mingw") {
       sources += [ "aarch64/chkstk.S" ]
     }
+  }
+
+  if (current_cpu == "avr") {
+    sources += [
+      "avr/divmodhi4.S",
+      "avr/divmodqi4.S",
+      "avr/exit.S",
+      "avr/mulhi3.S",
+      "avr/mulqi3.S",
+      "avr/udivmodhi4.S",
+      "avr/udivmodqi4.S",
+    ]
   }
 
   if (current_cpu == "hexagon") {
@@ -467,6 +546,10 @@ static_library("builtins") {
       "hexagon/umodsi3.S",
     ]
   }
+  if (current_cpu == "loongarch" || current_cpu == "loongarch64") {
+    sources -= [ "fp_mode.c" ]
+    sources += [ "loongarch/fp_mode.c" ]
+  }
 
   if (current_cpu == "ppc64") {
     sources += [
@@ -488,6 +571,7 @@ static_library("builtins") {
 
   if (current_cpu == "riscv" || current_cpu == "riscv64") {
     sources += [
+      "riscv/fp_mode.c",
       "riscv/restore.S",
       "riscv/save.S",
     ]
@@ -510,6 +594,8 @@ static_library("builtins") {
   if (!compiler_rt_exclude_atomic_builtin) {
     sources += [ "atomic.c" ]
   }
+
+  deps = lse_targets
 }
 
 # Currently unused but necessary to make sync_source_lists_from_cmake.py happy.

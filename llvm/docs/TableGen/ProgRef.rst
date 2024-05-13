@@ -202,13 +202,15 @@ TableGen has the following reserved keywords, which cannot be used as
 identifiers::
 
    assert     bit           bits          class         code
-   dag        def           else          false         foreach
-   defm       defset        defvar        field         if
-   in         include       int           let           list
-   multiclass string        then          true
+   dag        def           dump          else          false
+   foreach    defm          defset        defvar        field
+   if         in            include       int           let
+   list       multiclass    string        then          true
 
 .. warning::
-  The ``field`` reserved word is deprecated.
+  The ``field`` reserved word is deprecated, except when used with the
+  CodeEmitterGen backend where it's used to distinguish normal record
+  fields from encoding fields.
 
 Bang operators
 --------------
@@ -217,14 +219,16 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add        !and         !cast        !con         !dag 
-               : !empty      !eq          !filter      !find        !foldl
-               : !foreach    !ge          !getdagop    !gt          !head
-               : !if         !interleave  !isa         !le          !listconcat
-               : !listsplat  !lt          !mul         !ne          !not
-               : !or         !setdagop    !shl         !size        !sra
-               : !srl        !strconcat   !sub         !subst       !substr
-               : !tail       !xor
+               : !add         !and         !cast        !con         !dag
+               : !div         !empty       !eq          !exists      !filter
+               : !find        !foldl       !foreach     !ge          !getdagarg
+               : !getdagname  !getdagop    !gt          !head        !if
+               : !interleave  !isa         !le          !listconcat  !listremove
+               : !listsplat   !logtwo      !lt          !mul         !ne
+               : !not         !or          !range       !repr        !setdagarg
+               : !setdagname  !setdagop    !shl         !size        !sra
+               : !srl         !strconcat   !sub         !subst       !substr
+               : !tail        !tolower     !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -330,21 +334,27 @@ to an entity of type ``bits<4>``.
 
 .. productionlist::
    Value: `SimpleValue` `ValueSuffix`*
-        :| `Value` "#" `Value`
+        :| `Value` "#" [`Value`]
    ValueSuffix: "{" `RangeList` "}"
-              :| "[" `RangeList` "]"
+              :| "[" `SliceElements` "]"
               :| "." `TokIdentifier`
    RangeList: `RangePiece` ("," `RangePiece`)*
    RangePiece: `TokInteger`
              :| `TokInteger` "..." `TokInteger`
              :| `TokInteger` "-" `TokInteger`
              :| `TokInteger` `TokInteger`
+   SliceElements: (`SliceElement` ",")* `SliceElement` ","?
+   SliceElement: `Value`
+               :| `Value` "..." `Value`
+               :| `Value` "-" `Value`
+               :| `Value` `TokInteger`
 
 .. warning::
-  The peculiar last form of :token:`RangePiece` is due to the fact that the
-  "``-``" is included in the :token:`TokInteger`, hence ``1-5`` gets lexed as
-  two consecutive tokens, with values ``1`` and ``-5``, instead of "1", "-",
-  and "5". The use of hyphen as the range punctuation is deprecated.
+  The peculiar last form of :token:`RangePiece` and :token:`SliceElement` is
+  due to the fact that the "``-``" is included in the :token:`TokInteger`,
+  hence ``1-5`` gets lexed as two consecutive tokens, with values ``1`` and
+  ``-5``, instead of "1", "-", and "5".
+  The use of hyphen as the range punctuation is deprecated.
 
 Simple values
 -------------
@@ -465,7 +475,7 @@ sense after reading the remainder of this guide.
        def Foo#i;
 
 .. productionlist::
-   SimpleValue8: `ClassID` "<" `ValueListNE` ">"
+   SimpleValue8: `ClassID` "<" `ArgValueList` ">"
 
 This form creates a new anonymous record definition (as would be created by an
 unnamed ``def`` inheriting from the given class with the given template
@@ -502,16 +512,25 @@ primary value. Here are the possible suffixes for some primary *value*.
     The final value is bits 8--15 of the integer *value*. The order of the
     bits can be reversed by specifying ``{15...8}``.
 
-*value*\ ``[4]``
-    The final value is element 4 of the list *value* (note the brackets).
+*value*\ ``[i]``
+    The final value is element `i` of the list *value* (note the brackets).
     In other words, the brackets act as a subscripting operator on the list.
     This is the case only when a single element is specified.
+
+*value*\ ``[i,]``
+    The final value is a list that contains a single element `i` of the list.
+    In short, a list slice with a single element.
 
 *value*\ ``[4...7,17,2...3,4]``
     The final value is a new list that is a slice of the list *value*.
     The new list contains elements 4, 5, 6, 7, 17, 2, 3, and 4.
     Elements may be included multiple times and in any order. This is the result
     only when more than one element is specified.
+
+    *value*\ ``[i,m...n,j,ls]``
+        Each element may be an expression (variables, bang operators).
+        The type of `m` and `n` should be `int`.
+        The type of `i`, `j`, and `ls` should be either `int` or `list<int>`.
 
 *value*\ ``.``\ *field*
     The final value is the value of the specified *field* in the specified
@@ -536,6 +555,9 @@ previous case, if the *right-hand-side* operand is an undefined name or a
 global name, it is treated as a verbatim string of characters. The
 left-hand-side operand is treated normally.
 
+Values can have a trailing paste operator, in which case the left-hand-side 
+operand is concatenated to an empty string.
+
 `Appendix B: Paste Operator Examples`_ presents examples of the behavior of
 the paste operator.
 
@@ -546,18 +568,19 @@ The following statements may appear at the top level of TableGen source
 files.
 
 .. productionlist::
-   TableGenFile: `Statement`*
-   Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Defvar`
-            :| `Foreach` | `If` | `Let` | `MultiClass`
+   TableGenFile: (`Statement` | `IncludeDirective`
+            :| `PreprocessorDirective`)*
+   Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Deftype`
+            :| `Defvar` | `Dump`  | `Foreach` | `If` | `Let` | `MultiClass`
 
-The following sections describe each of these top-level statements. 
+The following sections describe each of these top-level statements.
 
 
 ``class`` --- define an abstract record class
 ---------------------------------------------
 
 A ``class`` statement defines an abstract record class from which other
-classes and records can inherit. 
+classes and records can inherit.
 
 .. productionlist::
    Class: "class" `ClassID` [`TemplateArgList`] `RecordBody`
@@ -619,11 +642,30 @@ of the fields of the class or record.
    RecordBody: `ParentClassList` `Body`
    ParentClassList: [":" `ParentClassListNE`]
    ParentClassListNE: `ClassRef` ("," `ClassRef`)*
-   ClassRef: (`ClassID` | `MultiClassID`) ["<" [`ValueList`] ">"]
+   ClassRef: (`ClassID` | `MultiClassID`) ["<" [`ArgValueList`] ">"]
+   ArgValueList: `PostionalArgValueList` [","] `NamedArgValueList`
+   PostionalArgValueList: [`Value` {"," `Value`}*]
+   NamedArgValueList: [`NameValue` "=" `Value` {"," `NameValue` "=" `Value`}*]
 
 A :token:`ParentClassList` containing a :token:`MultiClassID` is valid only
 in the class list of a ``defm`` statement. In that case, the ID must be the
 name of a multiclass.
+
+The argument values can be specified in two forms:
+
+* Positional argument (``value``). The value is assigned to the argument in the
+  corresponding position. For ``Foo<a0, a1>``, ``a0`` will be assigned to first
+  argument and ``a1`` will be assigned to second argument.
+* Named argument (``name=value``). The value is assigned to the argument with
+  the specified name. For ``Foo<a=a0, b=a1>``, ``a0`` will be assigned to the
+  argument with name ``a`` and ``a1`` will be assigned to the argument with
+  name ``b``.
+
+Required arguments can also be specified as named argument.
+
+Note that the argument can only be specified once regardless of the way (named
+or positional) to specify and positional arguments should be put before named
+arguments.
 
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
@@ -694,7 +736,7 @@ to that record's parent classes. For example:
     dag the_dag = d;
   }
 
-  def rec1 : A<(ops rec1)>
+  def rec1 : A<(ops rec1)>;
 
 The DAG ``(ops rec1)`` is passed as a template argument to class ``A``. Notice
 that the DAG includes ``rec1``, the record being defined.
@@ -846,7 +888,7 @@ their parent classes. So the ``let`` acts to override inherited field
 values. A ``let`` cannot override the value of a template argument.
 
 Top-level ``let`` statements are often useful when a few fields need to be
-overriden in several records. Here are two examples. Note that ``let``
+overridden in several records. Here are two examples. Note that ``let``
 statements can be nested.
 
 .. code-block:: text
@@ -886,9 +928,8 @@ template that expands into multiple records.
 
 .. productionlist::
    MultiClass: "multiclass" `TokIdentifier` [`TemplateArgList`]
-             : [":" `ParentMultiClassList`]
+             : `ParentClassList`
              : "{" `MultiClassStatement`+ "}"
-   ParentMultiClassList: `MultiClassID` ("," `MultiClassID`)*
    MultiClassID: `TokIdentifier`
    MultiClassStatement: `Assert` | `Def` | `Defm` | `Defvar` | `Foreach` | `If` | `Let`
 
@@ -924,7 +965,7 @@ See `Examples: multiclasses and defms`_ for examples.
 
 Once multiclasses have been defined, you use the ``defm`` statement to
 "invoke" them and process the multiple record definitions in those
-multiclasses. Those record definitions are specified by ``def`` 
+multiclasses. Those record definitions are specified by ``def``
 statements in the multiclasses, and indirectly by ``defm`` statements.
 
 .. productionlist::
@@ -1174,6 +1215,20 @@ set.
 Anonymous records created inside initialization expressions using the
 ``ClassID<...>`` syntax are not collected in the set.
 
+``deftype`` --- define a type
+--------------------------------
+
+A ``deftype`` statement defines a type. The type can be used throughout the
+statements that follow the definition.
+
+.. productionlist::
+   Deftype: "deftype" `TokIdentifier` "=" `Type` ";"
+
+The identifier on the left of the ``=`` is defined to be a type name
+whose actual type is given by the type expression on the right of the ``=``.
+
+Currently, only primitive types and type aliases are supported to be the source
+type and `deftype` statements can only appear at the top level.
 
 ``defvar`` --- define a variable
 --------------------------------
@@ -1194,7 +1249,7 @@ Variables defined in a top-level ``foreach`` go out of scope at the end of
 each loop iteration, so their value in one iteration is not available in
 the next iteration.  The following ``defvar`` will not work::
 
-  defvar i = !add(i, 1)
+  defvar i = !add(i, 1);
 
 Variables can also be defined with ``defvar`` in a record body. See
 `Defvar in a Record Body`_ for more details.
@@ -1221,8 +1276,6 @@ The statement list establishes an inner scope. Variables local to a
 values do not carry over from one iteration to the next. Foreach loops may
 be nested.
 
-The ``foreach`` statement can also be used in a record :token:`Body`.
-
 .. Note that the productions involving RangeList and RangePiece have precedence
    over the more generic value parsing based on the first token.
 
@@ -1235,6 +1288,29 @@ The ``foreach`` statement can also be used in a record :token:`Body`.
 
 This loop defines records named ``R0``, ``R1``, ``R2``, and ``R3``, along
 with ``F0``, ``F1``, ``F2``, and ``F3``.
+
+``dump`` --- print messages to stderr
+-------------------------------------
+
+A ``dump`` statement prints the input string to standard error
+output. It is intended for debugging purpose.
+
+* At top level, the message is printed immediately.
+
+* Within a record/class/multiclass, `dump` gets evaluated at each
+  instantiation point of the containing record.
+
+.. productionlist::
+   Dump: "dump"  `string` ";"
+
+For example, it can be used in combination with `!repr` to investigate
+the values passed to a multiclass:
+
+.. code-block:: text
+
+  multiclass MC<dag s> {
+    dump "s = " # !repr(s);
+  }
 
 
 ``if`` --- select statements based on a test
@@ -1324,7 +1400,7 @@ A directed acyclic graph can be represented directly in TableGen using the
 ``dag`` datatype. A DAG node consists of an operator and zero or more
 arguments (or operands). Each argument can be of any desired type. By using
 another DAG node as an argument, an arbitrary graph of DAG nodes can be
-built. 
+built.
 
 The syntax of a ``dag`` instance is:
 
@@ -1332,7 +1408,7 @@ The syntax of a ``dag`` instance is:
 
 The operator must be present and must be a record. There can be zero or more
 arguments, separated by commas. The operator and arguments can have three
-formats. 
+formats.
 
 ====================== =============================================
 Format                 Meaning
@@ -1349,22 +1425,31 @@ or to associate an argument in one DAG with a like-named argument in another
 DAG.
 
 The following bang operators are useful for working with DAGs:
-``!con``, ``!dag``, ``!empty``, ``!foreach``, ``!getdagop``, ``!setdagop``, ``!size``.
+``!con``, ``!dag``, ``!empty``, ``!foreach``, ``!getdagarg``, ``!getdagname``,
+``!getdagop``, ``!setdagarg``, ``!setdagname``, ``!setdagop``, ``!size``.
 
 Defvar in a record body
 -----------------------
 
 In addition to defining global variables, the ``defvar`` statement can
 be used inside the :token:`Body` of a class or record definition to define
-local variables. The scope of the variable extends from the ``defvar``
-statement to the end of the body. It cannot be set to a different value
-within its scope. The ``defvar`` statement can also be used in the statement
+local variables. Template arguments of ``class`` or ``multiclass`` can be
+used in the value expression. The scope of the variable extends from the
+``defvar`` statement to the end of the body. It cannot be set to a different
+value within its scope. The ``defvar`` statement can also be used in the statement
 list of a ``foreach``, which establishes a scope.
 
 A variable named ``V`` in an inner scope shadows (hides) any variables ``V``
-in outer scopes. In particular, ``V`` in a record body shadows a global
-``V``, and ``V`` in a ``foreach`` statement list shadows any ``V`` in
-surrounding record or global scopes.
+in outer scopes. In particular, there are several cases:
+
+* ``V`` in a record body shadows a global ``V``.
+
+* ``V`` in a record body shadows template argument ``V``.
+
+* ``V`` in template arguments shadows a global ``V``.
+
+* ``V`` in a ``foreach`` statement list shadows any ``V`` in surrounding record or
+  global scopes.
 
 Variables defined in a ``foreach`` go out of scope at the end of
 each loop iteration, so their value in one iteration is not available in
@@ -1398,7 +1483,7 @@ abstract records and so go through the same steps.
 
 5. Make a pass over all the fields to resolve any inter-field references.
 
-6. Add the record to the master record list.
+6. Add the record to the final record list.
 
 Because references between fields are resolved (step 5) after ``let`` bindings are
 applied (step 3), the ``let`` statement has unusual power. For example:
@@ -1619,14 +1704,22 @@ and non-0 as true.
     Example: ``!dag(op, [a1, a2, ?], ["name1", "name2", "name3"])`` results in
     ``(op a1-value:$name1, a2-value:$name2, ?:$name3)``.
 
+``!div(``\ *a*\ ``,`` *b*\ ``)``
+    This operator performs signed division of *a* by *b*, and produces the quotient.
+    Division by 0 produces an error. Division of INT64_MIN by -1 produces an error.
+
 ``!empty(``\ *a*\ ``)``
     This operator produces 1 if the string, list, or DAG *a* is empty; 0 otherwise.
     A dag is empty if it has no arguments; the operator does not count.
 
 ``!eq(`` *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``bits``, ``int``, ``string``, or 
+    The arguments must be ``bit``, ``bits``, ``int``, ``string``, or
     record values. Use ``!cast<string>`` to compare other types of objects.
+
+``!exists<``\ *type*\ ``>(``\ *name*\ ``)``
+    This operator produces 1 if a record of the given *type* whose name is *name*
+    exists; 0 otherwise. *name* should be of type *string*.
 
 ``!filter(``\ *var*\ ``,`` *list*\ ``,`` *predicate*\ ``)``
 
@@ -1675,6 +1768,16 @@ and non-0 as true.
 ``!ge(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is greater than or equal to *b*; 0 otherwise.
     The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
+
+``!getdagarg<``\ *type*\ ``>(``\ *dag*\ ``,``\ *key*\ ``)``
+    This operator retrieves the argument from the given *dag* node by the
+    specified *key*, which is either an integer index or a string name. If that
+    argument is not convertible to the specified *type*, ``?`` is returned.
+
+``!getdagname(``\ *dag*\ ``,``\ *index*\ ``)``
+    This operator retrieves the argument name from the given *dag* node by the
+    specified *index*. If that argument has no name associated, ``?`` is
+    returned.
 
 ``!getdagop(``\ *dag*\ ``)`` --or-- ``!getdagop<``\ *type*\ ``>(``\ *dag*\ ``)``
     This operator produces the operator of the given *dag* node.
@@ -1729,10 +1832,19 @@ and non-0 as true.
     This operator concatenates the list arguments *list1*, *list2*, etc., and
     produces the resulting list. The lists must have the same element type.
 
+``!listremove(``\ *list1*\ ``,`` *list2*\ ``)``
+    This operator returns a copy of *list1* removing all elements that also occur in
+    *list2*. The lists must have the same element type.
+
 ``!listsplat(``\ *value*\ ``,`` *count*\ ``)``
     This operator produces a list of length *count* whose elements are all
     equal to the *value*. For example, ``!listsplat(42, 3)`` results in
     ``[42, 42, 42]``.
+
+``!logtwo(``\ *a*\ ``)``
+    This operator produces the base 2 log of *a* and produces the integer
+    result. The log of 0 or a negative number produces an error. This
+    is a flooring operation.
 
 ``!lt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is less than *b*; 0 otherwise.
@@ -1755,6 +1867,39 @@ and non-0 as true.
     This operator does a bitwise OR on *a*, *b*, etc., and produces the
     result. A logical OR can be performed if all the arguments are either
     0 or 1.
+
+``!range([``\ *start*\ ``,]`` *end*\ ``[, ``\ *step*\ ``])``
+    This operator produces half-open range sequence ``[start : end : step)`` as
+    ``list<int>``. *start* is ``0`` and *step* is ``1`` by default. *step* can
+    be negative and cannot be 0. If *start* ``<`` *end* and *step* is negative,
+    or *start* ``>`` *end* and *step* is positive, the result is an empty list
+    ``[]<list<int>>``.
+
+    For example:
+
+    * ``!range(4)`` is equivalent to ``!range(0, 4, 1)`` and the result is
+      `[0, 1, 2, 3]`.
+    * ``!range(1, 4)`` is equivalent to ``!range(1, 4, 1)`` and the result is
+      `[1, 2, 3]`.
+    * The result of ``!range(0, 4, 2)`` is `[0, 2]`.
+    * The results of ``!range(0, 4, -1)`` and ``!range(4, 0, 1)`` are empty.
+
+``!range(``\ *list*\ ``)``
+    Equivalent to ``!range(0, !size(list))``.
+
+``!repr(``\ *value*\ ``)``
+    Represents *value* as a string. String format for the value is not
+    guaranteed to be stable. Intended for debugging purposes only.
+
+``!setdagarg(``\ *dag*\ ``,``\ *key*\ ``,``\ *arg*\ ``)``
+    This operator produces a DAG node with the same operator and arguments as
+    *dag*, but replacing the value of the argument specified by the *key* with
+    *arg*. That *key* could be either an integer index or a string name.
+
+``!setdagname(``\ *dag*\ ``,``\ *key*\ ``,``\ *name*\ ``)``
+    This operator produces a DAG node with the same operator and arguments as
+    *dag*, but replacing the name of the argument specified by the *key* with
+    *name*. That *key* could be either an integer index or a string name.
 
 ``!setdagop(``\ *dag*\ ``,`` *op*\ ``)``
     This operator produces a DAG node with the same arguments as *dag*, but with its
@@ -1807,6 +1952,12 @@ and non-0 as true.
 ``!tail(``\ *a*\ ``)``
     This operator produces a new list with all the elements
     of the list *a* except for the zeroth one. (See also ``!head``.)
+
+``!tolower(``\ *a*\ ``)``
+  This operator converts a string input *a* to lower case.
+
+``!toupper(``\ *a*\ ``)``
+  This operator converts a string input *a* to upper case.
 
 ``!xor(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise EXCLUSIVE OR on *a*, *b*, etc., and produces

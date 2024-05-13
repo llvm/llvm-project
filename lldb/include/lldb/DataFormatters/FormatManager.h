@@ -57,7 +57,7 @@ public:
 
   void EnableCategory(ConstString category_name,
                       TypeCategoryMap::Position pos, lldb::LanguageType lang) {
-    TypeCategoryMap::ValueSP category_sp;
+    lldb::TypeCategoryImplSP category_sp;
     if (m_categories_map.Get(category_name, category_sp) && category_sp) {
       m_categories_map.Enable(category_sp, pos);
       category_sp->AddLanguage(lang);
@@ -128,17 +128,17 @@ public:
   GetSyntheticChildren(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
 
   bool
-  AnyMatches(ConstString type_name,
+  AnyMatches(const FormattersMatchCandidate &candidate_type,
              TypeCategoryImpl::FormatCategoryItems items =
                  TypeCategoryImpl::ALL_ITEM_TYPES,
              bool only_enabled = true, const char **matching_category = nullptr,
              TypeCategoryImpl::FormatCategoryItems *matching_type = nullptr) {
-    return m_categories_map.AnyMatches(type_name, items, only_enabled,
+    return m_categories_map.AnyMatches(candidate_type, items, only_enabled,
                                        matching_category, matching_type);
   }
 
   static bool GetFormatFromCString(const char *format_cstr,
-                                   bool partial_match_ok, lldb::Format &format);
+                                   lldb::Format &format);
 
   static char GetFormatAsFormatChar(lldb::Format format);
 
@@ -162,8 +162,8 @@ public:
   static FormattersMatchVector
   GetPossibleMatches(ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
     FormattersMatchVector matches;
-    GetPossibleMatches(valobj, valobj.GetCompilerType(),
-                       use_dynamic, matches, false, false, false, true);
+    GetPossibleMatches(valobj, valobj.GetCompilerType(), use_dynamic, matches,
+                       FormattersMatchCandidate::Flags(), true);
     return matches;
   }
 
@@ -179,8 +179,7 @@ private:
                                  CompilerType compiler_type,
                                  lldb::DynamicValueType use_dynamic,
                                  FormattersMatchVector &entries,
-                                 bool did_strip_ptr, bool did_strip_ref,
-                                 bool did_strip_typedef,
+                                 FormattersMatchCandidate::Flags current_flags,
                                  bool root_level = false);
 
   std::atomic<uint32_t> m_last_revision;

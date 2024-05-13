@@ -6,14 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
-
-// dylib support for shared_mutex was added in macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
-
 // ALLOW_RETRIES: 2
 
 // <shared_mutex>
@@ -22,11 +16,14 @@
 
 // void lock();
 
+#include <cassert>
+#include <chrono>
+#include <cstdlib>
+#include <mutex>
 #include <shared_mutex>
+#include <system_error>
 #include <thread>
 #include <vector>
-#include <cstdlib>
-#include <cassert>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
@@ -44,7 +41,7 @@ ms WaitTime = ms(250);
 // Thread sanitizer causes more overhead and will sometimes cause this test
 // to fail. To prevent this we give Thread sanitizer more time to complete the
 // test.
-#if !defined(TEST_HAS_SANITIZERS)
+#if !defined(TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT)
 ms Tolerance = ms(25);
 #else
 ms Tolerance = ms(25 * 5);

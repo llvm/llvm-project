@@ -15,7 +15,7 @@
 // end of the structure.
 //
 // CHECK-I386-LABEL: define{{.*}} i32 @f0(
-// CHECK-I386:   [[t0_0:%.*]] = load i8, i8* {{.*}}, align 1
+// CHECK-I386:   [[t0_0:%.*]] = load i8, ptr {{.*}}, align 1
 // CHECK-I386:   lshr i8 [[t0_0]], 7
 // CHECK-I386: }
 int f0(I0 *a) {
@@ -26,8 +26,7 @@ int f0(I0 *a) {
 //
 // CHECK-ARM-LABEL: define{{.*}} i32 @f1(
 // CHECK-ARM:    [[t1_ptr:%.*]] = getelementptr
-// CHECK-ARM:    [[t1_base:%.*]] = bitcast i8* [[t1_ptr]] to i40*
-// CHECK-ARM:    [[t1_0:%.*]] = load i40, i40* [[t1_base]], align 1
+// CHECK-ARM:    [[t1_0:%.*]] = load i40, ptr [[t1_ptr]], align 1
 // CHECK-ARM:    [[t1_1:%.*]] = lshr i40 [[t1_0]], 1
 // CHECK-ARM:    [[t1_2:%.*]] = and i40 [[t1_1]],
 // CHECK-ARM:                   trunc i40 [[t1_2]] to i32

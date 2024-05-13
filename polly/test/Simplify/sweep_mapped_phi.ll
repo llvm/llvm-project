@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Map %phi to A[j], so the scalar write in Stmt_for_bodyA can be removed.
 ;
@@ -12,7 +12,7 @@
 ; }
 ;
 
-define void @sweep_mapped_phi(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @sweep_mapped_phi(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -23,14 +23,14 @@ for:
 
     bodyA:
       %val = fadd double 21.0, 21.0
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %val, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %val, ptr %A_idx
       br label %bodyB
 
     bodyB:
       %phi = phi double [%val, %bodyA]
-      %B_idx = getelementptr inbounds double, double* %B, i32 %j
-      store double %phi, double* %B_idx
+      %B_idx = getelementptr inbounds double, ptr %B, i32 %j
+      store double %phi, ptr %B_idx
       br label %inc
 
 inc:

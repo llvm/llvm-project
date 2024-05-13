@@ -16,7 +16,8 @@
 #include "ResourceScriptToken.h"
 #include "ResourceVisitor.h"
 
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace llvm {
 namespace rc {
@@ -138,14 +139,14 @@ private:
 
 public:
   IntOrString() : IntOrString(RCInt(0)) {}
-  IntOrString(uint32_t Value) : Data(Value), IsInt(1) {}
-  IntOrString(RCInt Value) : Data(Value), IsInt(1) {}
-  IntOrString(StringRef Value) : Data(Value), IsInt(0) {}
+  IntOrString(uint32_t Value) : Data(Value), IsInt(true) {}
+  IntOrString(RCInt Value) : Data(Value), IsInt(true) {}
+  IntOrString(StringRef Value) : Data(Value), IsInt(false) {}
   IntOrString(const RCToken &Token)
       : Data(Token), IsInt(Token.kind() == RCToken::Kind::Int) {}
 
   bool equalsLower(const char *Str) {
-    return !IsInt && Data.String.equals_lower(Str);
+    return !IsInt && Data.String.equals_insensitive(Str);
   }
 
   bool isInt() const { return IsInt; }
@@ -535,6 +536,23 @@ public:
   }
 };
 
+class MenuExItem : public MenuDefinition {
+public:
+  StringRef Name;
+  uint32_t Id;
+  uint32_t Type;
+  uint32_t State;
+
+  MenuExItem(StringRef Caption, uint32_t ItemId, uint32_t Type, uint32_t State)
+      : Name(Caption), Id(ItemId), Type(Type), State(State) {}
+  raw_ostream &log(raw_ostream &) const override;
+
+  MenuDefKind getKind() const override { return MkMenuItem; }
+  static bool classof(const MenuDefinition *D) {
+    return D->getKind() == MkMenuItem;
+  }
+};
+
 // POPUP statement definition.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381030(v=vs.85).aspx
@@ -549,9 +567,30 @@ public:
       : Name(Caption), Flags(ItemFlags), SubItems(std::move(SubItemsList)) {}
   raw_ostream &log(raw_ostream &) const override;
 
-  // This has an additional (0x10) flag. It doesn't match with documented
-  // 0x01 flag, though.
+  // This has an additional MF_POPUP (0x10) flag.
   uint16_t getResFlags() const override { return Flags | 0x10; }
+  MenuDefKind getKind() const override { return MkPopup; }
+  static bool classof(const MenuDefinition *D) {
+    return D->getKind() == MkPopup;
+  }
+};
+
+class PopupExItem : public MenuDefinition {
+public:
+  StringRef Name;
+  uint32_t Id;
+  uint32_t Type;
+  uint32_t State;
+  uint32_t HelpId;
+  MenuDefinitionList SubItems;
+
+  PopupExItem(StringRef Caption, uint32_t Id, uint32_t Type, uint32_t State,
+              uint32_t HelpId, MenuDefinitionList &&SubItemsList)
+      : Name(Caption), Id(Id), Type(Type), State(State), HelpId(HelpId),
+        SubItems(std::move(SubItemsList)) {}
+  raw_ostream &log(raw_ostream &) const override;
+
+  uint16_t getResFlags() const override { return 0x01; }
   MenuDefKind getKind() const override { return MkPopup; }
   static bool classof(const MenuDefinition *D) {
     return D->getKind() == MkPopup;
@@ -572,6 +611,25 @@ public:
   IntOrString getResourceType() const override { return RkMenu; }
   Twine getResourceTypeName() const override { return "MENU"; }
   Error visit(Visitor *V) const override { return V->visitMenuResource(this); }
+  ResourceKind getKind() const override { return RkMenu; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkMenu;
+  }
+};
+
+class MenuExResource : public OptStatementsRCResource {
+public:
+  MenuDefinitionList Elements;
+
+  MenuExResource(MenuDefinitionList &&Items, uint16_t Flags)
+      : OptStatementsRCResource({}, Flags), Elements(std::move(Items)) {}
+  raw_ostream &log(raw_ostream &) const override;
+
+  IntOrString getResourceType() const override { return RkMenu; }
+  Twine getResourceTypeName() const override { return "MENUEX"; }
+  Error visit(Visitor *V) const override {
+    return V->visitMenuExResource(this);
+  }
   ResourceKind getKind() const override { return RkMenu; }
   static bool classof(const RCResource *Res) {
     return Res->getKind() == RkMenu;
@@ -610,8 +668,8 @@ public:
   StringRef Type;
   IntOrString Title;
   uint32_t ID, X, Y, Width, Height;
-  Optional<IntWithNotMask> Style;
-  Optional<uint32_t> ExtStyle, HelpID;
+  std::optional<IntWithNotMask> Style;
+  std::optional<uint32_t> ExtStyle, HelpID;
   IntOrString Class;
 
   // Control classes as described in DLGITEMTEMPLATEEX documentation.
@@ -635,8 +693,9 @@ public:
 
   Control(StringRef CtlType, IntOrString CtlTitle, uint32_t CtlID,
           uint32_t PosX, uint32_t PosY, uint32_t ItemWidth, uint32_t ItemHeight,
-          Optional<IntWithNotMask> ItemStyle, Optional<uint32_t> ExtItemStyle,
-          Optional<uint32_t> CtlHelpID, IntOrString CtlClass)
+          std::optional<IntWithNotMask> ItemStyle,
+          std::optional<uint32_t> ExtItemStyle,
+          std::optional<uint32_t> CtlHelpID, IntOrString CtlClass)
       : Type(CtlType), Title(CtlTitle), ID(CtlID), X(PosX), Y(PosY),
         Width(ItemWidth), Height(ItemHeight), Style(ItemStyle),
         ExtStyle(ExtItemStyle), HelpID(CtlHelpID), Class(CtlClass) {}
@@ -768,10 +827,10 @@ class VersionInfoValue : public VersionInfoStmt {
 public:
   StringRef Key;
   std::vector<IntOrString> Values;
-  std::vector<bool> HasPrecedingComma;
+  BitVector HasPrecedingComma;
 
   VersionInfoValue(StringRef InfoKey, std::vector<IntOrString> &&Vals,
-                   std::vector<bool> &&CommasBeforeVals)
+                   BitVector &&CommasBeforeVals)
       : Key(InfoKey), Values(std::move(Vals)),
         HasPrecedingComma(std::move(CommasBeforeVals)) {}
   raw_ostream &log(raw_ostream &) const override;
@@ -932,6 +991,19 @@ public:
   raw_ostream &log(raw_ostream &) const override;
   Twine getResourceTypeName() const override { return "EXSTYLE"; }
   Error visit(Visitor *V) const override { return V->visitExStyleStmt(this); }
+};
+
+// MENU optional statement.
+//
+// Ref: https://learn.microsoft.com/en-us/windows/win32/menurc/menu-statement
+class MenuStmt : public OptionalStmt {
+public:
+  IntOrString Value;
+
+  MenuStmt(IntOrString NameOrId) : Value(NameOrId) {}
+  raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "MENU"; }
+  Error visit(Visitor *V) const override { return V->visitMenuStmt(this); }
 };
 
 // CLASS optional statement.

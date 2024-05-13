@@ -20,6 +20,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
@@ -40,7 +41,7 @@ static uint32_t g_initialize_count = 0;
 
 
 PlatformSP PlatformOpenBSD::CreateInstance(bool force, const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log, "force = {0}, arch=({1}, {2})", force,
            arch ? arch->GetArchitectureName() : "<null>",
            arch ? arch->GetTriple().getTriple() : "<null>");
@@ -71,25 +72,10 @@ PlatformSP PlatformOpenBSD::CreateInstance(bool force, const ArchSpec *arch) {
   return PlatformSP();
 }
 
-ConstString PlatformOpenBSD::GetPluginNameStatic(bool is_host) {
-  if (is_host) {
-    static ConstString g_host_name(Platform::GetHostPlatformName());
-    return g_host_name;
-  } else {
-    static ConstString g_remote_name("remote-openbsd");
-    return g_remote_name;
-  }
-}
-
-const char *PlatformOpenBSD::GetPluginDescriptionStatic(bool is_host) {
+llvm::StringRef PlatformOpenBSD::GetPluginDescriptionStatic(bool is_host) {
   if (is_host)
     return "Local OpenBSD user platform plug-in.";
-  else
-    return "Remote OpenBSD user platform plug-in.";
-}
-
-ConstString PlatformOpenBSD::GetPluginName() {
-  return GetPluginNameStatic(IsHost());
+  return "Remote OpenBSD user platform plug-in.";
 }
 
 void PlatformOpenBSD::Initialize() {
@@ -121,53 +107,22 @@ void PlatformOpenBSD::Terminate() {
 /// Default Constructor
 PlatformOpenBSD::PlatformOpenBSD(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
-{}
-
-bool PlatformOpenBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                      ArchSpec &arch) {
-  if (IsHost()) {
-    ArchSpec hostArch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-    if (hostArch.GetTriple().isOSOpenBSD()) {
-      if (idx == 0) {
-        arch = hostArch;
-        return arch.IsValid();
-      }
-    }
+{
+  if (is_host) {
+    m_supported_architectures.push_back(HostInfo::GetArchitecture());
   } else {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetSupportedArchitectureAtIndex(idx, arch);
-
-    llvm::Triple triple;
-    // Set the OS to OpenBSD
-    triple.setOS(llvm::Triple::OpenBSD);
-    // Set the architecture
-    switch (idx) {
-    case 0:
-      triple.setArchName("x86_64");
-      break;
-    case 1:
-      triple.setArchName("i386");
-      break;
-    case 2:
-      triple.setArchName("aarch64");
-      break;
-    case 3:
-      triple.setArchName("arm");
-      break;
-    default:
-      return false;
-    }
-    // Leave the vendor as "llvm::Triple:UnknownVendor" and don't specify the
-    // vendor by calling triple.SetVendorName("unknown") so that it is a
-    // "unspecified unknown". This means when someone calls
-    // triple.GetVendorName() it will return an empty string which indicates
-    // that the vendor can be set when two architectures are merged
-
-    // Now set the triple into "arch" and return true
-    arch.SetTriple(triple);
-    return true;
+    m_supported_architectures =
+        CreateArchList({llvm::Triple::x86_64, llvm::Triple::x86,
+                        llvm::Triple::aarch64, llvm::Triple::arm},
+                       llvm::Triple::OpenBSD);
   }
-  return false;
+}
+
+std::vector<ArchSpec>
+PlatformOpenBSD::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->GetSupportedArchitectures(process_host_arch);
+  return m_supported_architectures;
 }
 
 void PlatformOpenBSD::GetStatus(Stream &strm) {

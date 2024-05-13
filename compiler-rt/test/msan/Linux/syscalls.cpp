@@ -9,6 +9,7 @@
 
 #include <linux/aio_abi.h>
 #include <signal.h>
+#include <sys/epoll.h>
 #include <sys/ptrace.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
@@ -127,6 +128,27 @@ int main(int argc, char *argv[]) {
   __msan_poison(buf, sizeof(buf));
   __sanitizer_syscall_post_sigaltstack(0, nullptr, (stack_t *)buf);
   assert(__msan_test_shadow(buf, sizeof(buf)) == sizeof(stack_t));
+
+  __msan_poison(buf, sizeof(buf));
+  long max_events = sizeof(buf) / sizeof(epoll_event);
+  __sanitizer_syscall_pre_epoll_wait(0, buf, max_events, 0);
+  __sanitizer_syscall_post_epoll_wait(max_events, 0, buf, max_events, 0);
+  assert(__msan_test_shadow(buf, sizeof(buf)) == max_events * sizeof(epoll_event));
+
+  __msan_poison(buf, sizeof(buf));
+  sigset_t sigset = {};
+  __sanitizer_syscall_pre_epoll_pwait(0, buf, max_events, 0, &sigset, sizeof(sigset));
+  __sanitizer_syscall_post_epoll_pwait(max_events, 0, buf, max_events, 0, &sigset, sizeof(sigset));
+  assert(__msan_test_shadow(buf, sizeof(buf)) == max_events * sizeof(epoll_event));
+
+  __msan_poison(buf, sizeof(buf));
+  sigset = {};
+  timespec timespec = {};
+  __sanitizer_syscall_pre_epoll_pwait2(0, buf, max_events, &timespec,
+                                       &sigset, sizeof(sigset));
+  __sanitizer_syscall_post_epoll_pwait2(max_events, 0, buf, max_events,
+                                        &timespec, &sigset, sizeof(sigset));
+  assert(__msan_test_shadow(buf, sizeof(buf)) == max_events * sizeof(epoll_event));
 
   return 0;
 }

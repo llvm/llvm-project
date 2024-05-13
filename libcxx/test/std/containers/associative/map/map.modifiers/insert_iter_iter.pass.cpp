@@ -42,10 +42,10 @@ int main(int, char**)
         assert(m.size() == 3);
         assert(m.begin()->first == 1);
         assert(m.begin()->second == 1);
-        assert(next(m.begin())->first == 2);
-        assert(next(m.begin())->second == 1);
-        assert(next(m.begin(), 2)->first == 3);
-        assert(next(m.begin(), 2)->second == 1);
+        assert(std::next(m.begin())->first == 2);
+        assert(std::next(m.begin())->second == 1);
+        assert(std::next(m.begin(), 2)->first == 3);
+        assert(std::next(m.begin(), 2)->second == 1);
     }
 #if TEST_STD_VER >= 11
     {
@@ -68,10 +68,10 @@ int main(int, char**)
         assert(m.size() == 3);
         assert(m.begin()->first == 1);
         assert(m.begin()->second == 1);
-        assert(next(m.begin())->first == 2);
-        assert(next(m.begin())->second == 1);
-        assert(next(m.begin(), 2)->first == 3);
-        assert(next(m.begin(), 2)->second == 1);
+        assert(std::next(m.begin())->first == 2);
+        assert(std::next(m.begin())->second == 1);
+        assert(std::next(m.begin(), 2)->first == 3);
+        assert(std::next(m.begin(), 2)->second == 1);
     }
 #endif
 

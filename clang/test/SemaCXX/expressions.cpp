@@ -10,7 +10,7 @@ void test() {
   int i = choice(!1);
 }
 
-// rdar://8018252
+#if __cplusplus < 201703L
 void f0() {
   extern void f0_1(int*);
   register int x;
@@ -19,6 +19,7 @@ void f0() {
 #endif
   f0_1(&x);
 }
+#endif
 
 namespace test1 {
   template <class T> void bar(T &x) { T::fail(); }

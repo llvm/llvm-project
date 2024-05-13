@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-gc-only -fblocks  -emit-llvm -o - %s | FileCheck %s
-// rdar://10150823
 
 @interface Test {
 @package
@@ -7,7 +6,7 @@
 }
 @end
 
-id newObject();
+id newObject(void);
 void runWithBlock(void(^)(int i));
 
 @implementation Test
@@ -20,6 +19,6 @@ void runWithBlock(void(^)(int i));
 }
 
 @end
-// CHECK: call i8* @objc_assign_strongCast
-// CHECK: call i8* @objc_assign_strongCast
+// CHECK: call ptr @objc_assign_strongCast
+// CHECK: call ptr @objc_assign_strongCast
 

@@ -1,0 +1,165 @@
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test symbols %t | FileCheck %s --check-prefix=TEST
+# RUN: %lldb %t -o "image dump line-table a.c" -o "image lookup -n _start" -o "image lookup -n f" -o exit | FileCheck %s
+
+# TEST: Compile units:
+# TEST-NEXT: CompileUnit{0x00000000}, language = "c", file = 'a.c'
+# TEST-NEXT: Function{0x00000043}, demangled = _start, type_uid = 0x00000043
+# TEST-NEXT:     Block{0x00000043}, ranges = [0x00000080-0x00000086)
+# TEST-EMPTY:
+# TEST-EMPTY:
+# TEST-NEXT: Symtab
+
+
+# CHECK-LABEL: image dump line-table a.c
+# CHECK-NEXT: Line table for a.c
+# CHECK-NEXT: 0x0000000000000080: a.c:1
+# CHECK-NEXT: 0x0000000000000084: a.c:1
+# CHECK-NEXT: 0x0000000000000086: a.c:1
+# CHECK-EMPTY:
+# CHECK-NEXT: image lookup -n _start
+# CHECK-NEXT: 1 match found
+# CHECK-LABEL: image lookup -n f
+# CHECK-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    Offset:          0x0000
+    FirstSec:        .text
+    LastSec:         .text
+    Align:           0x1000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x80
+    AddressAlign:    0x10
+    Content:         554889E55DC3
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+DWARF:
+  debug_ranges:
+    - Offset:          0x0
+      AddrSize:        0x8
+      Entries:
+        - LowOffset:       0x0
+          HighOffset:      0x6
+        - LowOffset:       0x80
+          HighOffset:      0x86
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x0000000000000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+        - Code:            0x0000000000000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+  debug_info:
+    - Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0000000000000000
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - CStr:            Hand-written DWARF
+            - Value:           2
+            - CStr:            a.c
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000006
+            - CStr:            f
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000080
+            - Value:           0x0000000000000006
+            - CStr:            _start
+        - AbbrCode:        0x00000000
+  debug_line:
+    - Version:         4
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:     []
+      Files:
+        - Name:            a.c
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x4a
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            2
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            0x000080
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x4a
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            2
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+...

@@ -16,14 +16,18 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/HashBuilder.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <cassert>
 #include <cstdint>
 
 namespace llvm {
 class hash_code;
+class Triple;
+namespace opt {
+class ArgList;
 }
+} // namespace llvm
 
 namespace clang {
 
@@ -60,12 +64,7 @@ public:
     return SanitizerMask(mask1, mask2);
   }
 
-  unsigned countPopulation() const {
-    unsigned total = 0;
-    for (const auto &Val : maskLoToHigh)
-      total += llvm::countPopulation(Val);
-    return total;
-  }
+  unsigned countPopulation() const;
 
   void flipAllBits() {
     for (auto &Val : maskLoToHigh)
@@ -77,6 +76,12 @@ public:
   }
 
   llvm::hash_code hash_value() const;
+
+  template <typename HasherT, llvm::endianness Endianness>
+  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
+                      const SanitizerMask &SM) {
+    HBuilder.addRange(&SM.maskLoToHigh[0], &SM.maskLoToHigh[kNumElem]);
+  }
 
   constexpr explicit operator bool() const {
     return maskLoToHigh[0] || maskLoToHigh[1];
@@ -165,6 +170,8 @@ struct SanitizerSet {
     Mask = Value ? (Mask | K) : (Mask & ~K);
   }
 
+  void set(SanitizerMask K) { Mask = K; }
+
   /// Disable the sanitizers specified in \p K.
   void clear(SanitizerMask K = SanitizerKind::All) { Mask &= ~K; }
 
@@ -197,6 +204,12 @@ inline SanitizerMask getPPTransparentSanitizers() {
 StringRef AsanDtorKindToString(llvm::AsanDtorKind kind);
 
 llvm::AsanDtorKind AsanDtorKindFromString(StringRef kind);
+
+StringRef AsanDetectStackUseAfterReturnModeToString(
+    llvm::AsanDetectStackUseAfterReturnMode mode);
+
+llvm::AsanDetectStackUseAfterReturnMode
+AsanDetectStackUseAfterReturnModeFromString(StringRef modeStr);
 
 } // namespace clang
 

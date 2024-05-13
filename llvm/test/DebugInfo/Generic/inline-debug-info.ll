@@ -1,4 +1,4 @@
-; RUN: opt -inline -S < %s | FileCheck %s
+; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 
 ; Created from source
 ;
@@ -38,7 +38,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-darwin12.0.0"
 
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 @global_var = external global i32
 
 define i32 @_Z4testi(i32 %k)  !dbg !4 {
@@ -46,27 +46,27 @@ entry:
   %retval = alloca i32, align 4
   %k.addr = alloca i32, align 4
   %k2 = alloca i32, align 4
-  store i32 %k, i32* %k.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %k.addr, metadata !13, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.declare(metadata i32* %k2, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* %k.addr, align 4, !dbg !16
+  store i32 %k, ptr %k.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %k.addr, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %k2, metadata !15, metadata !DIExpression()), !dbg !16
+  %0 = load i32, ptr %k.addr, align 4, !dbg !16
   %call = call i32 @_Z8test_exti(i32 %0), !dbg !16
-  store i32 %call, i32* %k2, align 4, !dbg !16
-  %1 = load i32, i32* %k2, align 4, !dbg !17
+  store i32 %call, ptr %k2, align 4, !dbg !16
+  %1 = load i32, ptr %k2, align 4, !dbg !17
   %cmp = icmp sgt i32 %1, 100, !dbg !17
   br i1 %cmp, label %if.then, label %if.end, !dbg !17
 
 if.then:                                          ; preds = %entry
-  %2 = load i32, i32* %k2, align 4, !dbg !18
-  store i32 %2, i32* %retval, !dbg !18
+  %2 = load i32, ptr %k2, align 4, !dbg !18
+  store i32 %2, ptr %retval, !dbg !18
   br label %return, !dbg !18
 
 if.end:                                           ; preds = %entry
-  store i32 0, i32* %retval, !dbg !19
+  store i32 0, ptr %retval, !dbg !19
   br label %return, !dbg !19
 
 return:                                           ; preds = %if.end, %if.then
-  %3 = load i32, i32* %retval, !dbg !20
+  %3 = load i32, ptr %retval, !dbg !20
   ret i32 %3, !dbg !20
 }
 
@@ -75,12 +75,12 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 declare i32 @_Z8test_exti(i32)
 
-define i32 @_Z5test2v() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !10 {
+define i32 @_Z5test2v() personality ptr @__gxx_personality_v0 !dbg !10 {
 entry:
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
   %e = alloca i32, align 4
-  %0 = load i32, i32* @global_var, align 4, !dbg !21
+  %0 = load i32, ptr @global_var, align 4, !dbg !21
   %call = invoke i32 @_Z4testi(i32 %0)
           to label %invoke.cont unwind label %lpad, !dbg !21
 
@@ -88,49 +88,48 @@ invoke.cont:                                      ; preds = %entry
   br label %try.cont, !dbg !23
 
 lpad:                                             ; preds = %entry
-  %1 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIi to i8*), !dbg !21
-  %2 = extractvalue { i8*, i32 } %1, 0, !dbg !21
-  store i8* %2, i8** %exn.slot, !dbg !21
-  %3 = extractvalue { i8*, i32 } %1, 1, !dbg !21
-  store i32 %3, i32* %ehselector.slot, !dbg !21
+  %1 = landingpad { ptr, i32 }
+          catch ptr @_ZTIi, !dbg !21
+  %2 = extractvalue { ptr, i32 } %1, 0, !dbg !21
+  store ptr %2, ptr %exn.slot, !dbg !21
+  %3 = extractvalue { ptr, i32 } %1, 1, !dbg !21
+  store i32 %3, ptr %ehselector.slot, !dbg !21
   br label %catch.dispatch, !dbg !21
 
 catch.dispatch:                                   ; preds = %lpad
-  %sel = load i32, i32* %ehselector.slot, !dbg !23
-  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #2, !dbg !23
+  %sel = load i32, ptr %ehselector.slot, !dbg !23
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #2, !dbg !23
   %matches = icmp eq i32 %sel, %4, !dbg !23
   br i1 %matches, label %catch, label %eh.resume, !dbg !23
 
 catch:                                            ; preds = %catch.dispatch
-  call void @llvm.dbg.declare(metadata i32* %e, metadata !24, metadata !DIExpression()), !dbg !25
-  %exn = load i8*, i8** %exn.slot, !dbg !23
-  %5 = call i8* @__cxa_begin_catch(i8* %exn) #2, !dbg !23
-  %6 = bitcast i8* %5 to i32*, !dbg !23
-  %7 = load i32, i32* %6, align 4, !dbg !23
-  store i32 %7, i32* %e, align 4, !dbg !23
-  store i32 0, i32* @global_var, align 4, !dbg !26
+  call void @llvm.dbg.declare(metadata ptr %e, metadata !24, metadata !DIExpression()), !dbg !25
+  %exn = load ptr, ptr %exn.slot, !dbg !23
+  %5 = call ptr @__cxa_begin_catch(ptr %exn) #2, !dbg !23
+  %6 = load i32, ptr %5, align 4, !dbg !23
+  store i32 %6, ptr %e, align 4, !dbg !23
+  store i32 0, ptr @global_var, align 4, !dbg !26
   call void @__cxa_end_catch() #2, !dbg !28
   br label %try.cont, !dbg !28
 
 try.cont:                                         ; preds = %catch, %invoke.cont
-  store i32 1, i32* @global_var, align 4, !dbg !29
+  store i32 1, ptr @global_var, align 4, !dbg !29
   ret i32 0, !dbg !30
 
 eh.resume:                                        ; preds = %catch.dispatch
-  %exn1 = load i8*, i8** %exn.slot, !dbg !23
-  %sel2 = load i32, i32* %ehselector.slot, !dbg !23
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn1, 0, !dbg !23
-  %lpad.val3 = insertvalue { i8*, i32 } %lpad.val, i32 %sel2, 1, !dbg !23
-  resume { i8*, i32 } %lpad.val3, !dbg !23
+  %exn1 = load ptr, ptr %exn.slot, !dbg !23
+  %sel2 = load i32, ptr %ehselector.slot, !dbg !23
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn1, 0, !dbg !23
+  %lpad.val3 = insertvalue { ptr, i32 } %lpad.val, i32 %sel2, 1, !dbg !23
+  resume { ptr, i32 } %lpad.val3, !dbg !23
 }
 
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.eh.typeid.for(i8*) #1
+declare i32 @llvm.eh.typeid.for(ptr) #1
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 

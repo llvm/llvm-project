@@ -13,18 +13,17 @@
 
 #include "ReduceAliases.h"
 #include "Delta.h"
+#include "Utils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
 /// Removes all aliases aren't inside any of the
 /// desired Chunks.
-static void extractAliasesFromModule(const std::vector<Chunk> &ChunksToKeep,
-                                     Module *Program) {
-  Oracle O(ChunksToKeep);
-
-  for (auto &GA : make_early_inc_range(Program->aliases())) {
+static void extractAliasesFromModule(Oracle &O, ReducerWorkItem &Program) {
+  for (auto &GA : make_early_inc_range(Program.getModule().aliases())) {
     if (!O.shouldKeep()) {
       GA.replaceAllUsesWith(GA.getAliasee());
       GA.eraseFromParent();
@@ -32,22 +31,23 @@ static void extractAliasesFromModule(const std::vector<Chunk> &ChunksToKeep,
   }
 }
 
-/// Counts the amount of aliases and prints their respective name & index.
-static int countAliases(Module *Program) {
-  // TODO: Silence index with --quiet flag
-  errs() << "----------------------------\n";
-  errs() << "Aliases Index Reference:\n";
-  int Count = 0;
-  for (auto &GA : Program->aliases())
-    errs() << "\t" << ++Count << ": " << GA.getName() << "\n";
+static void extractIFuncsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Mod = WorkItem.getModule();
 
-  errs() << "----------------------------\n";
-  return Count;
+  std::vector<GlobalIFunc *> IFuncs;
+  for (GlobalIFunc &GI : Mod.ifuncs()) {
+    if (!O.shouldKeep())
+      IFuncs.push_back(&GI);
+  }
+
+  if (!IFuncs.empty())
+    lowerGlobalIFuncUsersAsGlobalCtor(Mod, IFuncs);
 }
 
 void llvm::reduceAliasesDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Aliases ...\n";
-  int Functions = countAliases(Test.getProgram());
-  runDeltaPass(Test, Functions, extractAliasesFromModule);
-  errs() << "----------------------------\n";
+  runDeltaPass(Test, extractAliasesFromModule, "Reducing Aliases");
+}
+
+void llvm::reduceIFuncsDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, extractIFuncsFromModule, "Reducing Ifuncs");
 }

@@ -20,7 +20,6 @@ void test_foo(short* sp) {
 }
 
 namespace radar9046492 {
-// rdar://9046492
 #define FOO __attribute__((unavailable("not available - replaced")))
 
 void foo() FOO; // expected-note{{'foo' has been explicitly marked unavailable here}}
@@ -40,20 +39,19 @@ void unavail(short* sp) {
 
 // Show that delayed processing of 'unavailable' is the same
 // delayed process for 'deprecated'.
-// <rdar://problem/12241361> and <rdar://problem/15584219>
 enum DeprecatedEnum { DE_A, DE_B } __attribute__((deprecated)); // expected-note {{'DeprecatedEnum' has been explicitly marked deprecated here}}
-__attribute__((deprecated)) typedef enum DeprecatedEnum DeprecatedEnum;
 typedef enum DeprecatedEnum AnotherDeprecatedEnum; // expected-warning {{'DeprecatedEnum' is deprecated}}
 
+__attribute__((deprecated)) typedef enum DeprecatedEnum DeprecatedEnum;
 __attribute__((deprecated))
 DeprecatedEnum testDeprecated(DeprecatedEnum X) { return X; }
 
 
 enum UnavailableEnum { UE_A, UE_B } __attribute__((unavailable)); // expected-note {{'UnavailableEnum' has been explicitly marked unavailable here}}
-__attribute__((unavailable)) typedef enum UnavailableEnum UnavailableEnum;
 typedef enum UnavailableEnum AnotherUnavailableEnum; // expected-error {{'UnavailableEnum' is unavailable}}
+                                                     //
 
-
+__attribute__((unavailable)) typedef enum UnavailableEnum UnavailableEnum;
 __attribute__((unavailable))
 UnavailableEnum testUnavailable(UnavailableEnum X) { return X; }
 
@@ -172,3 +170,13 @@ int phase_one_unavailable(int x = unavailable_int()) {}
 
 template <class T>
 int phase_one_unavailable2(int x = unavailable_int()) __attribute__((unavailable)) {}
+
+namespace GH61815 {
+template <class _ValueType = int>
+class __attribute__((unavailable)) polymorphic_allocator {}; // expected-note 2 {{'polymorphic_allocator<void>' has been explicitly marked unavailable here}}
+
+void f() {
+  polymorphic_allocator<void> a; // expected-error {{'polymorphic_allocator<void>' is unavailable}}
+  polymorphic_allocator<void> b; // expected-error {{'polymorphic_allocator<void>' is unavailable}}
+}
+}

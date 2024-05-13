@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
 
 ; The generation of a constant vector in the selection step resulted in
 ; a VSPLAT, which, deeper in the expression tree had an unrelated BITCAST.
@@ -15,7 +15,7 @@ target triple = "hexagon"
 
 define i32 @fred() #0 {
 b0:
-  %v1 = load <8 x i16>, <8 x i16>* @g0, align 2
+  %v1 = load <8 x i16>, ptr @g0, align 2
   %v2 = icmp sgt <8 x i16> %v1, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
   %v3 = zext <8 x i1> %v2 to <8 x i32>
   %v4 = add nuw nsw <8 x i32> zeroinitializer, %v3

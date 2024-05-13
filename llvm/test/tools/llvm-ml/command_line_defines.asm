@@ -1,4 +1,4 @@
-; RUN: llvm-ml -filetype=s %s /Fo - /DT1=test1 /D T2=test2 | FileCheck %s
+; RUN: llvm-ml -filetype=s %s /Fo - /DT1=test1 /D T2=test2 /Dtest5=def /Dtest6 | FileCheck %s
 
 .code
 
@@ -33,6 +33,31 @@ endif
 ; CHECK-LABEL: t4:
 ; CHECK-NOT: xor eax, eax
 ; CHECK: xor ebx, ebx
+; CHECK: ret
+
+% t5_original BYTE "&test5"
+; CHECK-LABEL: t5_original:
+; CHECK-NEXT: .byte 100
+; CHECK-NEXT: .byte 101
+; CHECK-NEXT: .byte 102
+
+test5 textequ <redef>
+
+% t5_changed BYTE "&test5"
+; CHECK-LABEL: t5_changed:
+; CHECK-NEXT: .byte 114
+; CHECK-NEXT: .byte 101
+; CHECK-NEXT: .byte 100
+; CHECK-NEXT: .byte 101
+; CHECK-NEXT: .byte 102
+
+t6:
+ifdef test6
+  xor eax, eax
+endif
+  ret
+; CHECK-LABEL: t6:
+; CHECK: xor eax, eax
 ; CHECK: ret
 
 end

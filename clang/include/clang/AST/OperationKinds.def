@@ -80,6 +80,7 @@ CAST_OPERATION(LValueToRValue)
 /// (possibly) adding qualifiers or removing noexcept.
 ///   int    -> int
 ///   char** -> const char * const *
+///   int[1] -> int[]
 ///   void () noexcept -> void ()
 CAST_OPERATION(NoOp)
 
@@ -360,10 +361,16 @@ CAST_OPERATION(AddressSpaceConversion)
 // Convert an integer initializer to an OpenCL sampler.
 CAST_OPERATION(IntToOCLSampler)
 
+// Truncate a vector type by dropping elements from the end (HLSL only).
+CAST_OPERATION(HLSLVectorTruncation)
+
+// Non-decaying array RValue cast (HLSL only).
+CAST_OPERATION(HLSLArrayRValue)
+
 //===- Binary Operations  -------------------------------------------------===//
 // Operators listed in order of precedence.
-// Note that additions to this should also update the StmtVisitor class and
-// BinaryOperator::getOverloadedOperator.
+// Note that additions to this should also update the StmtVisitor class,
+// BinaryOperator::getOverloadedOperator and CXBinaryOperatorKind enum.
 
 // [C++ 5.5] Pointer-to-member operators.
 BINARY_OPERATION(PtrMemD, ".*")
@@ -415,8 +422,8 @@ BINARY_OPERATION(Comma, ",")
 
 
 //===- Unary Operations ---------------------------------------------------===//
-// Note that additions to this should also update the StmtVisitor class and
-// UnaryOperator::getOverloadedOperator.
+// Note that additions to this should also update the StmtVisitor class,
+// UnaryOperator::getOverloadedOperator and CXUnaryOperatorKind enum.
 
 // [C99 6.5.2.4] Postfix increment and decrement
 UNARY_OPERATION(PostInc, "++")

@@ -28,6 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MapFile.h"
+#include "COFFLinkerContext.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
@@ -35,17 +36,13 @@
 #include "lld/Common/Timer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::object;
 using namespace lld;
 using namespace lld::coff;
-
-static Timer totalMapTimer("MAP emission (Cumulative)", Timer::root());
-static Timer symbolGatherTimer("Gather symbols", totalMapTimer);
-static Timer symbolStringsTimer("Build symbol strings", totalMapTimer);
-static Timer writeTimer("Write to file", totalMapTimer);
 
 // Print out the first two columns of a line.
 static void writeHeader(raw_ostream &os, uint32_t sec, uint64_t addr) {
@@ -67,7 +64,8 @@ static void writeFormattedTimestamp(raw_ostream &os, time_t tds) {
                time->tm_sec, time->tm_year + 1900);
 }
 
-static void sortUniqueSymbols(std::vector<Defined *> &syms) {
+static void sortUniqueSymbols(std::vector<Defined *> &syms,
+                              uint64_t imageBase) {
   // Build helper vector
   using SortEntry = std::pair<Defined *, size_t>;
   std::vector<SortEntry> v;
@@ -84,11 +82,11 @@ static void sortUniqueSymbols(std::vector<Defined *> &syms) {
   v.erase(end, v.end());
 
   // Sort by RVA then original order
-  parallelSort(v, [](const SortEntry &a, const SortEntry &b) {
-    // Add config->imageBase to avoid comparing "negative" RVAs.
+  parallelSort(v, [imageBase](const SortEntry &a, const SortEntry &b) {
+    // Add config.imageBase to avoid comparing "negative" RVAs.
     // This can happen with symbols of Absolute kind
-    uint64_t rvaa = config->imageBase + a.first->getRVA();
-    uint64_t rvab = config->imageBase + b.first->getRVA();
+    uint64_t rvaa = imageBase + a.first->getRVA();
+    uint64_t rvab = imageBase + b.first->getRVA();
     return rvaa < rvab || (rvaa == rvab && a.second < b.second);
   });
 
@@ -98,10 +96,11 @@ static void sortUniqueSymbols(std::vector<Defined *> &syms) {
 }
 
 // Returns the lists of all symbols that we want to print out.
-static void getSymbols(std::vector<Defined *> &syms,
+static void getSymbols(const COFFLinkerContext &ctx,
+                       std::vector<Defined *> &syms,
                        std::vector<Defined *> &staticSyms) {
 
-  for (ObjFile *file : ObjFile::instances)
+  for (ObjFile *file : ctx.objFileInstances)
     for (Symbol *b : file->getSymbols()) {
       if (!b || !b->isLive())
         continue;
@@ -119,7 +118,7 @@ static void getSymbols(std::vector<Defined *> &syms,
       }
     }
 
-  for (ImportFile *file : ImportFile::instances) {
+  for (ImportFile *file : ctx.importFileInstances) {
     if (!file->live)
       continue;
 
@@ -136,15 +135,15 @@ static void getSymbols(std::vector<Defined *> &syms,
       syms.push_back(impSym);
   }
 
-  sortUniqueSymbols(syms);
-  sortUniqueSymbols(staticSyms);
+  sortUniqueSymbols(syms, ctx.config.imageBase);
+  sortUniqueSymbols(staticSyms, ctx.config.imageBase);
 }
 
 // Construct a map from symbols to their stringified representations.
 static DenseMap<Defined *, std::string>
-getSymbolStrings(ArrayRef<Defined *> syms) {
+getSymbolStrings(const COFFLinkerContext &ctx, ArrayRef<Defined *> syms) {
   std::vector<std::string> str(syms.size());
-  parallelForEachN((size_t)0, syms.size(), [&](size_t i) {
+  parallelFor((size_t)0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
     Defined *sym = syms[i];
 
@@ -161,7 +160,7 @@ getSymbolStrings(ArrayRef<Defined *> syms) {
       fileDescr = "<common>";
     } else if (Chunk *chunk = sym->getChunk()) {
       address = sym->getRVA();
-      if (OutputSection *sec = chunk->getOutputSection())
+      if (OutputSection *sec = ctx.getOutputSection(chunk))
         address -= sec->header.VirtualAddress;
 
       sectionIdx = chunk->getOutputSectionIdx();
@@ -187,7 +186,7 @@ getSymbolStrings(ArrayRef<Defined *> syms) {
     os << "       ";
     os << left_justify(sym->getName(), 26);
     os << " ";
-    os << format_hex_no_prefix((config->imageBase + sym->getRVA()), 16);
+    os << format_hex_no_prefix((ctx.config.imageBase + sym->getRVA()), 16);
     if (!fileDescr.empty()) {
       os << "     "; // FIXME : Handle "f" and "i" flags sometimes generated
                      // by link.exe in those spaces
@@ -201,54 +200,57 @@ getSymbolStrings(ArrayRef<Defined *> syms) {
   return ret;
 }
 
-void lld::coff::writeMapFile(ArrayRef<OutputSection *> outputSections) {
-  if (config->mapFile.empty())
+void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
+  if (ctx.config.mapFile.empty())
     return;
 
+  llvm::TimeTraceScope timeScope("Map file");
   std::error_code ec;
-  raw_fd_ostream os(config->mapFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os(ctx.config.mapFile, ec, sys::fs::OF_None);
   if (ec)
-    fatal("cannot open " + config->mapFile + ": " + ec.message());
+    fatal("cannot open " + ctx.config.mapFile + ": " + ec.message());
 
-  ScopedTimer t1(totalMapTimer);
+  ScopedTimer t1(ctx.totalMapTimer);
 
   // Collect symbol info that we want to print out.
-  ScopedTimer t2(symbolGatherTimer);
+  ScopedTimer t2(ctx.symbolGatherTimer);
   std::vector<Defined *> syms;
   std::vector<Defined *> staticSyms;
-  getSymbols(syms, staticSyms);
+  getSymbols(ctx, syms, staticSyms);
   t2.stop();
 
-  ScopedTimer t3(symbolStringsTimer);
-  DenseMap<Defined *, std::string> symStr = getSymbolStrings(syms);
-  DenseMap<Defined *, std::string> staticSymStr = getSymbolStrings(staticSyms);
+  ScopedTimer t3(ctx.symbolStringsTimer);
+  DenseMap<Defined *, std::string> symStr = getSymbolStrings(ctx, syms);
+  DenseMap<Defined *, std::string> staticSymStr =
+      getSymbolStrings(ctx, staticSyms);
   t3.stop();
 
-  ScopedTimer t4(writeTimer);
-  SmallString<128> AppName = sys::path::filename(config->outputFile);
+  ScopedTimer t4(ctx.writeTimer);
+  SmallString<128> AppName = sys::path::filename(ctx.config.outputFile);
   sys::path::replace_extension(AppName, "");
 
   // Print out the file header
   os << " " << AppName << "\n";
   os << "\n";
 
-  os << " Timestamp is " << format_hex_no_prefix(config->timestamp, 8) << " (";
-  if (config->repro) {
+  os << " Timestamp is " << format_hex_no_prefix(ctx.config.timestamp, 8)
+     << " (";
+  if (ctx.config.repro) {
     os << "Repro mode";
   } else {
-    writeFormattedTimestamp(os, config->timestamp);
+    writeFormattedTimestamp(os, ctx.config.timestamp);
   }
   os << ")\n";
 
   os << "\n";
   os << " Preferred load address is "
-     << format_hex_no_prefix(config->imageBase, 16) << "\n";
+     << format_hex_no_prefix(ctx.config.imageBase, 16) << "\n";
   os << "\n";
 
   // Print out section table.
   os << " Start         Length     Name                   Class\n";
 
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     // Merge display of chunks with same sectionName
     std::vector<std::pair<SectionChunk *, SectionChunk *>> ChunkRanges;
     for (Chunk *c : sec->chunks) {
@@ -297,13 +299,13 @@ void lld::coff::writeMapFile(ArrayRef<OutputSection *> outputSections) {
   uint16_t entrySecIndex = 0;
   uint64_t entryAddress = 0;
 
-  if (!config->noEntry) {
-    Defined *entry = dyn_cast_or_null<Defined>(config->entry);
+  if (!ctx.config.noEntry) {
+    Defined *entry = dyn_cast_or_null<Defined>(ctx.config.entry);
     if (entry) {
       Chunk *chunk = entry->getChunk();
       entrySecIndex = chunk->getOutputSectionIdx();
       entryAddress =
-          entry->getRVA() - chunk->getOutputSection()->header.VirtualAddress;
+          entry->getRVA() - ctx.getOutputSection(chunk)->header.VirtualAddress;
     }
   }
   os << " entry point at         ";
@@ -316,6 +318,19 @@ void lld::coff::writeMapFile(ArrayRef<OutputSection *> outputSections) {
   os << "\n";
   for (Defined *sym : staticSyms)
     os << staticSymStr[sym] << '\n';
+
+  // Print out the exported functions
+  if (ctx.config.mapInfo) {
+    os << "\n";
+    os << " Exports\n";
+    os << "\n";
+    os << "  ordinal    name\n\n";
+    for (Export &e : ctx.config.exports) {
+      os << format("  %7d", e.ordinal) << "    " << e.name << "\n";
+      if (!e.extName.empty() && e.extName != e.name)
+        os << "               exported name: " << e.extName << "\n";
+    }
+  }
 
   t4.stop();
   t1.stop();

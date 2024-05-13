@@ -5,7 +5,7 @@ entry:
   ret void
 }
 
-@analias = alias void (...), bitcast (void ()* @aliasee to void (...)*)
+@analias = alias void (...), ptr @aliasee
 define void @aliasee() {
 entry:
   ret void

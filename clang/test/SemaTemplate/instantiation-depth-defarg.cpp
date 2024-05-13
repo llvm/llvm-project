@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -ftemplate-depth 128 -ftemplate-backtrace-limit 4 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -ftemplate-depth=128 -ftemplate-backtrace-limit=4 %s
 
 template<int N> struct S {
   typedef typename S<N-1>::type type;

@@ -37,9 +37,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s32_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s32)
-    ; CHECK: $w0 = COPY [[SITOFP]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[SITOFP]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_SITOFP %0
     $w0 = COPY %1
@@ -51,9 +53,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s32_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s32)
-    ; CHECK: $w0 = COPY [[UITOFP]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[UITOFP]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_UITOFP %0
     $w0 = COPY %1
@@ -65,9 +69,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_sitofp_s32_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s64)
-    ; CHECK: $w0 = COPY [[SITOFP]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[SITOFP]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s32) = G_SITOFP %0
     $w0 = COPY %1
@@ -79,9 +85,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_uitofp_s32_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s64)
-    ; CHECK: $w0 = COPY [[UITOFP]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[UITOFP]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s32) = G_UITOFP %0
     $w0 = COPY %1
@@ -93,9 +101,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s64_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s32)
-    ; CHECK: $x0 = COPY [[SITOFP]](s64)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[SITOFP]](s64)
     %0:_(s32) = COPY $w0
     %1:_(s64) = G_SITOFP %0
     $x0 = COPY %1
@@ -107,9 +117,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s64_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[COPY]](s32)
-    ; CHECK: $x0 = COPY [[UITOFP]](s64)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[COPY]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[UITOFP]](s64)
     %0:_(s32) = COPY $w0
     %1:_(s64) = G_UITOFP %0
     $x0 = COPY %1
@@ -121,9 +133,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_sitofp_s64_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[SITOFP]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[SITOFP]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = G_SITOFP %0
     $x0 = COPY %1
@@ -135,9 +149,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_uitofp_s64_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[UITOFP]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[UITOFP]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = G_UITOFP %0
     $x0 = COPY %1
@@ -150,11 +166,12 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s32_s1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 1
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s32)
-    ; CHECK: $w0 = COPY [[SITOFP]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[SITOFP]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s1) = G_TRUNC %0
     %2:_(s32) = G_SITOFP %1
@@ -167,12 +184,13 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s32_s1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
-    ; CHECK: $w0 = COPY [[UITOFP]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[UITOFP]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s1) = G_TRUNC %0
     %2:_(s32) = G_UITOFP %1
@@ -185,11 +203,12 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s64_s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[SEXT_INREG]](s32)
-    ; CHECK: $x0 = COPY [[SITOFP]](s64)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[SEXT_INREG]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[SITOFP]](s64)
     %0:_(s32) = COPY $w0
     %1:_(s8) = G_TRUNC %0
     %2:_(s64) = G_SITOFP %1
@@ -202,12 +221,13 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s64_s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s32)
-    ; CHECK: $x0 = COPY [[UITOFP]](s64)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[UITOFP]](s64)
     %0:_(s32) = COPY $w0
     %1:_(s8) = G_TRUNC %0
     %2:_(s64) = G_UITOFP %1
@@ -220,9 +240,11 @@ body: |
   bb.0:
     liveins: $q0
     ; CHECK-LABEL: name: test_sitofp_v4s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(<4 x s32>) = G_SITOFP [[SITOFP]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[SITOFP]](<4 x s32>)
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(<4 x s32>) = G_SITOFP [[SITOFP]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[SITOFP]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = G_SITOFP %1
     $q0 = COPY %1
@@ -234,9 +256,11 @@ body: |
   bb.0:
     liveins: $q0
     ; CHECK-LABEL: name: test_uitofp_v4s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(<4 x s32>) = G_UITOFP [[UITOFP]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[UITOFP]](<4 x s32>)
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(<4 x s32>) = G_UITOFP [[UITOFP]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[UITOFP]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = G_UITOFP %1
     $q0 = COPY %1
@@ -248,11 +272,14 @@ body: |
   bb.0:
     liveins: $q0
     ; CHECK-LABEL: name: test_uitofp_v2s64_v2i1
-    ; CHECK: [[DEF:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s1>) = G_BUILD_VECTOR [[DEF]](s1), [[DEF]](s1)
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[BUILD_VECTOR]](<2 x s1>)
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(<2 x s64>) = G_UITOFP [[ZEXT]](<2 x s64>)
-    ; CHECK: $q0 = COPY [[UITOFP]](<2 x s64>)
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(<2 x s64>) = G_UITOFP [[AND]](<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[UITOFP]](<2 x s64>)
     %0:_(<2 x s1>) = G_IMPLICIT_DEF
     %1:_(<2 x s64>) = G_UITOFP %0
     $q0 = COPY %1
@@ -264,11 +291,12 @@ body: |
   bb.0:
     liveins: $q0
     ; CHECK-LABEL: name: test_sitofp_v2s64_v2i1
-    ; CHECK: [[DEF:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s1>) = G_BUILD_VECTOR [[DEF]](s1), [[DEF]](s1)
-    ; CHECK: [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[BUILD_VECTOR]](<2 x s1>)
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(<2 x s64>) = G_SITOFP [[SEXT]](<2 x s64>)
-    ; CHECK: $q0 = COPY [[SITOFP]](<2 x s64>)
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(<2 x s64>) = G_SEXT_INREG [[DEF]], 1
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(<2 x s64>) = G_SITOFP [[SEXT_INREG]](<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[SITOFP]](<2 x s64>)
     %0:_(<2 x s1>) = G_IMPLICIT_DEF
     %1:_(<2 x s64>) = G_SITOFP %0
     $q0 = COPY %1
@@ -280,11 +308,12 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s32_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s32)
-    ; CHECK: $w0 = COPY [[SITOFP]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[SITOFP]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s16) = G_TRUNC %0
     %2:_(s32) = G_SITOFP %1
@@ -297,12 +326,13 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s32_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
-    ; CHECK: $w0 = COPY [[UITOFP]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[UITOFP]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s16) = G_TRUNC %0
     %2:_(s32) = G_UITOFP %1

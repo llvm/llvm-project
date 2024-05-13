@@ -1,4 +1,4 @@
-//===-- SBBreakpointName.h ------------------------------------------*- C++ -*-===//
+//===-- SBBreakpointName.h --------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -81,7 +81,9 @@ public:
 
   const char *GetQueueName() const;
 
+#ifndef SWIG
   void SetCallback(SBBreakpointHitCallback callback, void *baton);
+#endif
 
   void SetScriptCallbackFunction(const char *callback_function_name);
 

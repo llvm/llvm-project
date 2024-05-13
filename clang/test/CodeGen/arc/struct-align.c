@@ -10,7 +10,7 @@ typedef struct {
 
 // CHECK: define{{.*}} i32 @f1
 // CHECK: ret i32 12
-int f1() {
+int f1(void) {
   return sizeof(s1);
 }
 
@@ -20,7 +20,7 @@ typedef struct {
 } s2;
 // CHECK: define{{.*}} i32 @f2
 // CHECK: ret i32 12
-int f2() {
+int f2(void) {
   return sizeof(s2);
 }
 

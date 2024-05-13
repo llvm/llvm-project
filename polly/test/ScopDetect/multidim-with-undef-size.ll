@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK: Valid Region for Scop: bb14 => bb17
@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; Make sure we do not detect the larger region bb14->bb19 that contains
 ; a multi-dimensional memory access with a size of 'undef * undef'.
 
-define void @hoge(i8* %arg) {
+define void @hoge(ptr %arg) {
 bb:
   br label %bb6
 
@@ -16,9 +16,9 @@ bb6:                                              ; preds = %bb
   %tmp8 = add i64 %tmp7, 0
   %tmp9 = add i64 %tmp8, 8
   %tmp10 = sub i64 %tmp9, undef
-  %tmp11 = getelementptr i8, i8* %arg, i64 %tmp10
-  %tmp12 = getelementptr inbounds i8, i8* %tmp11, i64 4
-  %tmp13 = getelementptr inbounds i8, i8* %tmp12, i64 20
+  %tmp11 = getelementptr i8, ptr %arg, i64 %tmp10
+  %tmp12 = getelementptr inbounds i8, ptr %tmp11, i64 4
+  %tmp13 = getelementptr inbounds i8, ptr %tmp12, i64 20
   br label %bb14
 
 bb14:                                             ; preds = %bb14, %bb6
@@ -27,8 +27,7 @@ bb14:                                             ; preds = %bb14, %bb6
   br i1 false, label %bb14, label %bb17
 
 bb17:                                             ; preds = %bb14
-  %tmp18 = bitcast i8* %tmp13 to i32*
-  store i32 undef, i32* %tmp18, align 4
+  store i32 undef, ptr %tmp13, align 4
   br label %bb19
 
 bb19:                                             ; preds = %bb17

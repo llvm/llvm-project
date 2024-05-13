@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: cp %s %t
-// RUN: not %clang_cc1 -fsyntax-only -fixit -x objective-c %t
+// RUN: not %clang_cc1 -fixit -x objective-c %t
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Werror -x objective-c %t
 
 typedef unsigned char BOOL;
@@ -35,7 +35,7 @@ typedef unsigned char BOOL;
 @interface NSString : NSObject
 @end
 
-void fixes() {
+void fixes(void) {
   id arr = @[
     17, // expected-error{{numeric literal must be prefixed by '@' in a collection}}
     'a', // expected-error{{character literal must be prefixed by '@'}}

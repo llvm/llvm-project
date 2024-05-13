@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=GCN --check-prefix=FUNC
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=GCN --check-prefix=FUNC
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=CM --check-prefix=FUNC
+; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=GCN --check-prefix=FUNC
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=GCN --check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s --check-prefix=CM --check-prefix=FUNC
 
 ; FUNC-LABEL: {{^}}i32_mad24:
 ; Signed 24-bit multiply is not supported on pre-Cayman GPUs.
@@ -11,7 +11,7 @@
 ; GCN: s_bfe_i32
 ; GCN: s_mul_i32
 ; GCN: s_add_i32
-define amdgpu_kernel void @i32_mad24(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @i32_mad24(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = shl i32 %a, 8
   %a_24 = ashr i32 %0, 8
@@ -19,7 +19,7 @@ entry:
   %b_24 = ashr i32 %1, 8
   %2 = mul i32 %a_24, %b_24
   %3 = add i32 %2, %c
-  store i32 %3, i32 addrspace(1)* %out
+  store i32 %3, ptr addrspace(1) %out
   ret void
 }
 
@@ -83,7 +83,7 @@ define i32 @mad24_intrin_known_bits_destroyed(i32 %a, i32 %b, i32 %c) {
 ; GCN-NOT: v_bfe
 ; GCN: v_mad_i32_i24
 ; GCN-NOT: v_bfe
-define void @mad24_destroyed_knownbits_2(i32 %arg, i32 %arg1, i32 %arg2, i32 addrspace(1)* %arg3) {
+define void @mad24_destroyed_knownbits_2(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(1) %arg3) {
 bb:
   br label %bb6
 
@@ -112,7 +112,7 @@ bb6:                                              ; preds = %bb6, %bb
   %tmp24 = ashr exact i32 %tmp23, 8
   %tmp25 = mul nsw i32 %tmp24, %tmp20
   %tmp26 = add nsw i32 %tmp25, %tmp22
-  store i32 %tmp26, i32 addrspace(1)* %arg3
+  store i32 %tmp26, ptr addrspace(1) %arg3
   %tmp27 = add nuw i32 %tmp, 1
   %tmp28 = icmp eq i32 %tmp27, %arg1
   br i1 %tmp28, label %bb5, label %bb6

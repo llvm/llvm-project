@@ -28,7 +28,7 @@ bool SaveMiniDump(const lldb::ProcessSP &process_sp,
 #ifdef _WIN32
   HANDLE process_handle = ::OpenProcess(
       PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, process_sp->GetID());
-  const std::string file_name = outfile.GetCString();
+  const std::string file_name = outfile.GetPath();
   std::wstring wide_name;
   wide_name.resize(file_name.size() + 1);
   char *result_ptr = reinterpret_cast<char *>(&wide_name[0]);

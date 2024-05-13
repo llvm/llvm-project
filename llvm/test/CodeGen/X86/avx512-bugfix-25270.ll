@@ -3,11 +3,11 @@
 
 declare void @Print__512(<16 x i32>) #0
 
-define void @bar__512(<16 x i32>* %var) #0 {
+define void @bar__512(ptr %var) #0 {
 ; CHECK-LABEL: bar__512:
 ; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $112, %rsp
+; CHECK-NEXT:    subq $64, %rsp
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    vmovups (%rdi), %zmm0
 ; CHECK-NEXT:    vmovups %zmm0, (%rsp) ## 64-byte Spill
@@ -18,16 +18,16 @@ define void @bar__512(<16 x i32>* %var) #0 {
 ; CHECK-NEXT:    callq _Print__512
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
 ; CHECK-NEXT:    vmovaps %zmm0, (%rbx)
-; CHECK-NEXT:    addq $112, %rsp
+; CHECK-NEXT:    addq $64, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 allocas:
-  %var_load_load = load <16 x i32>, <16 x i32>* %var, align 1
-  store <16 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>, <16 x i32>* %var, align 64
+  %var_load_load = load <16 x i32>, ptr %var, align 1
+  store <16 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>, ptr %var, align 64
   call void @Print__512(<16 x i32> %var_load_load)
  ; %var_load_load value should be reloaded
   call void @Print__512(<16 x i32> %var_load_load)
-  store <16 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>, <16 x i32>* %var, align 64
+  store <16 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>, ptr %var, align 64
   ret void
 }
 

@@ -4,6 +4,13 @@
 ; RUN: llvm-dwarfdump -verbose %t >> %t2
 ; RUN: cat %t2 | FileCheck %s
 
+; Repeat the test with experimental debuginfo iterators.
+; RUN: rm -rf %t %t2
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj < %s > %t
+; RUN: llvm-dwarfdump -name=vla_expr %t > %t2
+; RUN: llvm-dwarfdump -verbose %t >> %t2
+; RUN: cat %t2 | FileCheck %s
+
 ; This test runs llvm-dwarfdump twice:
 ; - First to get the debug entry for 'vla_expr'.
 ; - Second to check that this is the entry referenced in DW_AT_count.
@@ -11,7 +18,7 @@
 ; are emitted.
 
 ; CHECK:       [[NODE:[0-9a-zA-Zx]+]]: DW_TAG_variable [4]
-; CHECK-NEXT:  DW_AT_name {{.*}} "vla_expr"
+; CHECK-NEXT:  DW_AT_name {{.*}}"vla_expr"
 ; CHECK:       DW_AT_count [DW_FORM_ref4]  (cu + {{.*}} => {[[NODE]]})
 
 define void @foo(i32 %n) !dbg !7 {

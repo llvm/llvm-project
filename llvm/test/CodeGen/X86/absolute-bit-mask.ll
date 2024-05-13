@@ -10,10 +10,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @f()
 
-define void @foo8(i8* %ptr) {
-  %load = load i8, i8* %ptr
+define void @foo8(ptr %ptr) {
+  %load = load i8, ptr %ptr
   ; CHECK: testb $bit_mask8, (%rdi)
-  %and = and i8 %load, ptrtoint (i8* @bit_mask8 to i8)
+  %and = and i8 %load, ptrtoint (ptr @bit_mask8 to i8)
   %icmp = icmp eq i8 %and, 0
   br i1 %icmp, label %t, label %f
 
@@ -25,10 +25,10 @@ f:
   ret void
 }
 
-define void @foo32(i32* %ptr) {
-  %load = load i32, i32* %ptr
+define void @foo32(ptr %ptr) {
+  %load = load i32, ptr %ptr
   ; CHECK: testl $bit_mask32, (%rdi)
-  %and = and i32 %load, ptrtoint (i8* @bit_mask32 to i32)
+  %and = and i32 %load, ptrtoint (ptr @bit_mask32 to i32)
   %icmp = icmp eq i32 %and, 0
   br i1 %icmp, label %t, label %f
 
@@ -40,11 +40,11 @@ f:
   ret void
 }
 
-define void @foo64(i64* %ptr) {
-  %load = load i64, i64* %ptr
+define void @foo64(ptr %ptr) {
+  %load = load i64, ptr %ptr
   ; CHECK: movabsq $bit_mask64, %rax
   ; CHECK: testq %rax, (%rdi)
-  %and = and i64 %load, ptrtoint (i8* @bit_mask64 to i64)
+  %and = and i64 %load, ptrtoint (ptr @bit_mask64 to i64)
   %icmp = icmp eq i64 %and, 0
   br i1 %icmp, label %t, label %f
 

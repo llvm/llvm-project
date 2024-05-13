@@ -7,19 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBMemoryRegionInfo.h"
-#include "SBReproducerPrivate.h"
 #include "Utils.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
 
 SBMemoryRegionInfo::SBMemoryRegionInfo() : m_opaque_up(new MemoryRegionInfo()) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBMemoryRegionInfo);
+  LLDB_INSTRUMENT_VA(this);
+}
+
+SBMemoryRegionInfo::SBMemoryRegionInfo(const char *name, lldb::addr_t begin,
+                                       lldb::addr_t end, uint32_t permissions,
+                                       bool mapped, bool stack_memory)
+    : SBMemoryRegionInfo() {
+  LLDB_INSTRUMENT_VA(this, name, begin, end, permissions, mapped, stack_memory);
+  m_opaque_up->SetName(name);
+  m_opaque_up->GetRange().SetRangeBase(begin);
+  m_opaque_up->GetRange().SetRangeEnd(end);
+  m_opaque_up->SetLLDBPermissions(permissions);
+  m_opaque_up->SetMapped(mapped ? MemoryRegionInfo::eYes
+                                : MemoryRegionInfo::eNo);
+  m_opaque_up->SetIsStackMemory(stack_memory ? MemoryRegionInfo::eYes
+                                             : MemoryRegionInfo::eNo);
 }
 
 SBMemoryRegionInfo::SBMemoryRegionInfo(const MemoryRegionInfo *lldb_object_ptr)
@@ -28,44 +44,36 @@ SBMemoryRegionInfo::SBMemoryRegionInfo(const MemoryRegionInfo *lldb_object_ptr)
     ref() = *lldb_object_ptr;
 }
 
-SBMemoryRegionInfo::SBMemoryRegionInfo(const SBMemoryRegionInfo &rhs)
-    : m_opaque_up() {
-  LLDB_RECORD_CONSTRUCTOR(SBMemoryRegionInfo,
-                          (const lldb::SBMemoryRegionInfo &), rhs);
+SBMemoryRegionInfo::SBMemoryRegionInfo(const SBMemoryRegionInfo &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 const SBMemoryRegionInfo &SBMemoryRegionInfo::
 operator=(const SBMemoryRegionInfo &rhs) {
-  LLDB_RECORD_METHOD(
-      const lldb::SBMemoryRegionInfo &,
-      SBMemoryRegionInfo, operator=,(const lldb::SBMemoryRegionInfo &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBMemoryRegionInfo::~SBMemoryRegionInfo() = default;
 
 void SBMemoryRegionInfo::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBMemoryRegionInfo, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_opaque_up->Clear();
 }
 
 bool SBMemoryRegionInfo::operator==(const SBMemoryRegionInfo &rhs) const {
-  LLDB_RECORD_METHOD_CONST(
-      bool, SBMemoryRegionInfo, operator==,(const lldb::SBMemoryRegionInfo &),
-      rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return ref() == rhs.ref();
 }
 
 bool SBMemoryRegionInfo::operator!=(const SBMemoryRegionInfo &rhs) const {
-  LLDB_RECORD_METHOD_CONST(
-      bool, SBMemoryRegionInfo, operator!=,(const lldb::SBMemoryRegionInfo &),
-      rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return ref() != rhs.ref();
 }
@@ -75,50 +83,85 @@ MemoryRegionInfo &SBMemoryRegionInfo::ref() { return *m_opaque_up; }
 const MemoryRegionInfo &SBMemoryRegionInfo::ref() const { return *m_opaque_up; }
 
 lldb::addr_t SBMemoryRegionInfo::GetRegionBase() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::addr_t, SBMemoryRegionInfo, GetRegionBase);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetRange().GetRangeBase();
 }
 
 lldb::addr_t SBMemoryRegionInfo::GetRegionEnd() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::addr_t, SBMemoryRegionInfo, GetRegionEnd);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetRange().GetRangeEnd();
 }
 
 bool SBMemoryRegionInfo::IsReadable() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBMemoryRegionInfo, IsReadable);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetReadable() == MemoryRegionInfo::eYes;
 }
 
 bool SBMemoryRegionInfo::IsWritable() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBMemoryRegionInfo, IsWritable);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetWritable() == MemoryRegionInfo::eYes;
 }
 
 bool SBMemoryRegionInfo::IsExecutable() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBMemoryRegionInfo, IsExecutable);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetExecutable() == MemoryRegionInfo::eYes;
 }
 
 bool SBMemoryRegionInfo::IsMapped() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBMemoryRegionInfo, IsMapped);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetMapped() == MemoryRegionInfo::eYes;
 }
 
 const char *SBMemoryRegionInfo::GetName() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBMemoryRegionInfo, GetName);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetName().AsCString();
 }
 
+bool SBMemoryRegionInfo::HasDirtyMemoryPageList() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetDirtyPageList().has_value();
+}
+
+uint32_t SBMemoryRegionInfo::GetNumDirtyPages() {
+  LLDB_INSTRUMENT_VA(this);
+
+  uint32_t num_dirty_pages = 0;
+  const std::optional<std::vector<addr_t>> &dirty_page_list =
+      m_opaque_up->GetDirtyPageList();
+  if (dirty_page_list)
+    num_dirty_pages = dirty_page_list->size();
+
+  return num_dirty_pages;
+}
+
+addr_t SBMemoryRegionInfo::GetDirtyPageAddressAtIndex(uint32_t idx) {
+  LLDB_INSTRUMENT_VA(this, idx);
+
+  addr_t dirty_page_addr = LLDB_INVALID_ADDRESS;
+  const std::optional<std::vector<addr_t>> &dirty_page_list =
+      m_opaque_up->GetDirtyPageList();
+  if (dirty_page_list && idx < dirty_page_list->size())
+    dirty_page_addr = (*dirty_page_list)[idx];
+
+  return dirty_page_addr;
+}
+
+int SBMemoryRegionInfo::GetPageSize() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetPageSize();
+}
+
 bool SBMemoryRegionInfo::GetDescription(SBStream &description) {
-  LLDB_RECORD_METHOD(bool, SBMemoryRegionInfo, GetDescription,
-                     (lldb::SBStream &), description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   Stream &strm = description.ref();
   const addr_t load_addr = m_opaque_up->GetRange().base;
@@ -131,36 +174,4 @@ bool SBMemoryRegionInfo::GetDescription(SBStream &description) {
   strm.Printf("]");
 
   return true;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBMemoryRegionInfo>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfo, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfo,
-                            (const lldb::SBMemoryRegionInfo &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBMemoryRegionInfo &,
-      SBMemoryRegionInfo, operator=,(const lldb::SBMemoryRegionInfo &));
-  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfo, Clear, ());
-  LLDB_REGISTER_METHOD_CONST(
-      bool,
-      SBMemoryRegionInfo, operator==,(const lldb::SBMemoryRegionInfo &));
-  LLDB_REGISTER_METHOD_CONST(
-      bool,
-      SBMemoryRegionInfo, operator!=,(const lldb::SBMemoryRegionInfo &));
-  LLDB_REGISTER_METHOD(lldb::addr_t, SBMemoryRegionInfo, GetRegionBase, ());
-  LLDB_REGISTER_METHOD(lldb::addr_t, SBMemoryRegionInfo, GetRegionEnd, ());
-  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfo, IsReadable, ());
-  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfo, IsWritable, ());
-  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfo, IsExecutable, ());
-  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfo, IsMapped, ());
-  LLDB_REGISTER_METHOD(const char *, SBMemoryRegionInfo, GetName, ());
-  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfo, GetDescription,
-                       (lldb::SBStream &));
-}
-
-}
 }

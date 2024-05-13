@@ -34,14 +34,19 @@ typedef unsigned unwind_word __attribute((mode(unwind_word)));
 
 int **__attribute((mode(QI)))* i32;  // expected-error{{mode attribute}}
 
-__attribute__((mode(QI))) int invalid_func() { return 1; } // expected-error{{'mode' attribute only applies to variables, enums, typedefs, and non-static data members}}
+__attribute__((mode(QI))) int invalid_func(void) { return 1; } // expected-error{{'mode' attribute only applies to variables, enums, typedefs, and non-static data members}}
 enum invalid_enum { A1 __attribute__((mode(QI))) }; // expected-error{{'mode' attribute only applies to}}
+
+typedef _Complex float c16a __attribute((mode(HC)));
+int c16a_test[sizeof(c16a) == 4 ? 1 : -1];
+typedef _Complex double c16b __attribute((mode(HC)));
+int c16b_test[sizeof(c16b) == 4 ? 1 : -1];
 
 typedef _Complex double c32 __attribute((mode(SC)));
 int c32_test[sizeof(c32) == 8 ? 1 : -1];
 typedef _Complex float c64 __attribute((mode(DC)));
 
-#if !defined(__ppc__) && !defined(__mips__) // Note, 'XC' mode is illegal for PPC64 and MIPS machines.
+#if !defined(__powerpc__) && !defined(__mips__) // Note, 'XC' mode is illegal for PPC64 and MIPS machines.
 typedef _Complex float c80 __attribute((mode(XC)));
 #endif
 
@@ -92,6 +97,12 @@ void f_ft128_arg(long double *x);
 void f_ft128_complex_arg(_Complex long double *x);
 void test_TFtype(f128ibm *a) { f_ft128_arg (a); }
 void test_TCtype(c128ibm *a) { f_ft128_complex_arg (a); }
+typedef float w128ibm __attribute__((mode(IF)));
+typedef _Complex float cw128ibm __attribute__((mode(IC)));
+void f_ibm128_arg(__ibm128 *x);
+void f_ibm128_complex_arg(_Complex __ibm128 *x);
+void test_IFtype(w128ibm *a) { f_ibm128_arg(a); }
+void test_ICtype(cw128ibm *a) { f_ibm128_complex_arg(a); }
 #elif TEST_F128_PPC64
 typedef int invalid_7 __attribute((mode(KF))); // expected-error{{type of machine mode does not match type of base type}}
 typedef int invalid_8 __attribute((mode(KI))); // expected-error{{unknown machine mode}}

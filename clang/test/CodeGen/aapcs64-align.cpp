@@ -1,7 +1,7 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -triple aarch64-none-none-eabi \
+// RUN: %clang_cc1 -triple aarch64-none-elf \
 // RUN:   -O2 \
-// RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN:   -emit-llvm -fexperimental-max-bitint-width=1024 -o - %s | FileCheck %s
 
 extern "C" {
 
@@ -18,10 +18,10 @@ void g0() {
   f0m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define{{.*}} void @g0
-// CHECK: call void @f0(i64 1, [2 x i64] [i64 6, i64 7]
+// CHECK: call void @f0(i64 noundef 1, [2 x i64] [i64 6, i64 7]
 // CHECK: call void @f0m{{.*}}[2 x i64] [i64 6, i64 7]
-// CHECK: declare void @f0(i64, [2 x i64])
-// CHECK: declare void @f0m(i64, i64, i64, i64, i64, [2 x i64])
+// CHECK: declare void @f0(i64 noundef, [2 x i64])
+// CHECK: declare void @f0m(i64 noundef, i64 noundef, i64 noundef, i64 noundef, i64 noundef, [2 x i64])
 
 // Aligned struct, passed according to its natural alignment.
 struct __attribute__((aligned(16))) S16 {
@@ -38,8 +38,8 @@ void g1() {
 // CHECK: define{{.*}} void @g1
 // CHECK: call void @f1{{.*}}[2 x i64] [i64 6, i64 7]
 // CHECK: call void @f1m{{.*}}[2 x i64] [i64 6, i64 7]
-// CHECK: declare void @f1(i64, [2 x i64])
-// CHECK: declare void @f1m(i64, i64, i64, i64, i64, [2 x i64])
+// CHECK: declare void @f1(i64 noundef, [2 x i64])
+// CHECK: declare void @f1m(i64 noundef, i64 noundef, i64 noundef, i64 noundef, i64 noundef, [2 x i64])
 
 // Increased natural alignment.
 struct SF16 {
@@ -55,10 +55,10 @@ void g3() {
   f3m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define{{.*}} void @g3
-// CHECK: call void @f3(i64 1, i128 129127208515966861318)
-// CHECK: call void @f3m(i64 1, i64 2, i64 3, i64 4, i64 5, i128 129127208515966861318)
-// CHECK: declare void @f3(i64, i128)
-// CHECK: declare void @f3m(i64, i64, i64, i64, i64, i128)
+// CHECK: call void @f3(i64 noundef 1, i128 129127208515966861318)
+// CHECK: call void @f3m(i64 noundef 1, i64 noundef 2, i64 noundef 3, i64 noundef 4, i64 noundef 5, i128 129127208515966861318)
+// CHECK: declare void @f3(i64 noundef, i128)
+// CHECK: declare void @f3m(i64 noundef, i64 noundef, i64 noundef, i64 noundef, i64 noundef, i128)
 
 
 // Packed structure.
@@ -75,10 +75,10 @@ void g4() {
   f4m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define{{.*}} void @g4()
-// CHECK: call void @f4(i32 1, [2 x i64] [i64 30064771078, i64 0])
-// CHECK: void @f4m(i32 1, i32 2, i32 3, i32 4, i32 5, [2 x i64] [i64 30064771078, i64 0])
-// CHECK: declare void @f4(i32, [2 x i64])
-// CHECK: declare void @f4m(i32, i32, i32, i32, i32, [2 x i64])
+// CHECK: call void @f4(i32 noundef 1, [2 x i64] [i64 30064771078, i64 0])
+// CHECK: void @f4m(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, [2 x i64] [i64 30064771078, i64 0])
+// CHECK: declare void @f4(i32 noundef, [2 x i64])
+// CHECK: declare void @f4m(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, [2 x i64])
 
 
 // Packed structure, overaligned, same as above.
@@ -95,9 +95,71 @@ void f5m(int, int, int, int, int, P16);
     f5m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define{{.*}} void @g5()
-// CHECK: call void @f5(i32 1, [2 x i64] [i64 30064771078, i64 0])
-// CHECK: void @f5m(i32 1, i32 2, i32 3, i32 4, i32 5, [2 x i64] [i64 30064771078, i64 0])
-// CHECK: declare void @f5(i32, [2 x i64])
-// CHECK: declare void @f5m(i32, i32, i32, i32, i32, [2 x i64])
+// CHECK: call void @f5(i32 noundef 1, [2 x i64] [i64 30064771078, i64 0])
+// CHECK: void @f5m(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, [2 x i64] [i64 30064771078, i64 0])
+// CHECK: declare void @f5(i32 noundef, [2 x i64])
+// CHECK: declare void @f5m(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, [2 x i64])
+
+//BitInt alignment
+struct BITINT129 {
+    char ch;
+    unsigned _BitInt(129) v;
+};
+
+int test_bitint129(){
+  return __builtin_offsetof(struct BITINT129, v);
+}
+// CHECK:  ret i32 16 
+
+struct BITINT127 {
+    char ch;
+    _BitInt(127) v;
+};
+
+int test_bitint127(){
+  return __builtin_offsetof(struct BITINT127, v);
+}
+// CHECK:  ret i32 16 
+
+struct BITINT63 {
+    char ch;
+    _BitInt(63) v;
+};
+
+int test_bitint63(){
+  return __builtin_offsetof(struct BITINT63, v);
+}
+// CHECK:  ret i32 8 
+
+struct BITINT32 {
+    char ch;
+    unsigned _BitInt(32) v;
+};
+
+int test_bitint32(){
+  return __builtin_offsetof(struct BITINT32, v);
+}
+// CHECK:  ret i32 4
+
+struct BITINT9 {
+    char ch;
+    unsigned _BitInt(9) v;
+};
+
+int test_bitint9(){
+  return __builtin_offsetof(struct BITINT9, v);
+}
+// CHECK:  ret i32 2
+
+struct BITINT8 {
+    char ch;
+    unsigned _BitInt(8) v;
+};
+
+int test_bitint8(){
+  return __builtin_offsetof(struct BITINT8, v);
+}
+// CHECK:  ret i32 1
 
 }
+

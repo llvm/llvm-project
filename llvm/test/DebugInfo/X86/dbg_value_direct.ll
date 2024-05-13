@@ -1,4 +1,5 @@
 ; RUN: llc -filetype=obj -O0 < %s
+; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj -O0 < %s
 ; Test that we handle DBG_VALUEs in a register without crashing.
 ;
 ; Generated from clang with -fsanitize=address:
@@ -19,41 +20,41 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @__asan_mapping_offset = linkonce_odr constant i64 2147450880
 @__asan_mapping_scale = linkonce_odr constant i64 3
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_ctor, ptr null }]
 @___asan_gen_ = private unnamed_addr constant [16 x i8] c"1 32 4 5 .addr \00", align 1
 
 ; Function Attrs: sanitize_address uwtable
-define void @_Z4funci(%struct.A* noalias sret(%struct.A) %agg.result, i32) #0 "stack-protector-buffer-size"="1" !dbg !4 {
+define void @_Z4funci(ptr noalias sret(%struct.A) %agg.result, i32) #0 "stack-protector-buffer-size"="1" !dbg !4 {
 entry:
   %MyAlloca = alloca [96 x i8], align 32
-  %1 = ptrtoint [96 x i8]* %MyAlloca to i64
+  %1 = ptrtoint ptr %MyAlloca to i64
   %2 = add i64 %1, 32
-  %3 = inttoptr i64 %2 to i32*
-  %4 = inttoptr i64 %1 to i64*
-  store i64 1102416563, i64* %4
+  %3 = inttoptr i64 %2 to ptr
+  %4 = inttoptr i64 %1 to ptr
+  store i64 1102416563, ptr %4
   %5 = add i64 %1, 8
-  %6 = inttoptr i64 %5 to i64*
-  store i64 ptrtoint ([16 x i8]* @___asan_gen_ to i64), i64* %6
+  %6 = inttoptr i64 %5 to ptr
+  store i64 ptrtoint (ptr @___asan_gen_ to i64), ptr %6
   %7 = add i64 %1, 16
-  %8 = inttoptr i64 %7 to i64*
-  store i64 ptrtoint (void (%struct.A*, i32)* @_Z4funci to i64), i64* %8
+  %8 = inttoptr i64 %7 to ptr
+  store i64 ptrtoint (ptr @_Z4funci to i64), ptr %8
   %9 = lshr i64 %1, 3
   %10 = add i64 %9, 2147450880
-  %11 = inttoptr i64 %10 to i32*
-  store i32 -235802127, i32* %11
+  %11 = inttoptr i64 %10 to ptr
+  store i32 -235802127, ptr %11
   %12 = add i64 %10, 4
-  %13 = inttoptr i64 %12 to i32*
-  store i32 -185273340, i32* %13
+  %13 = inttoptr i64 %12 to ptr
+  store i32 -185273340, ptr %13
   %14 = add i64 %10, 8
-  %15 = inttoptr i64 %14 to i32*
-  store i32 -202116109, i32* %15
-  %16 = ptrtoint i32* %3 to i64
+  %15 = inttoptr i64 %14 to ptr
+  store i32 -202116109, ptr %15
+  %16 = ptrtoint ptr %3 to i64
   %17 = lshr i64 %16, 3
   %18 = add i64 %17, 2147450880
-  %19 = inttoptr i64 %18 to i8*
-  %20 = load i8, i8* %19
+  %19 = inttoptr i64 %18 to ptr
+  %20 = load i8, ptr %19
   %21 = icmp ne i8 %20, 0
-  call void @llvm.dbg.declare(metadata i32* %3, metadata !23, metadata !28), !dbg !DILocation(scope: !4)
+  call void @llvm.dbg.declare(metadata ptr %3, metadata !23, metadata !28), !dbg !DILocation(scope: !4)
   br i1 %21, label %22, label %28
 
 ; <label>:22                                      ; preds = %entry
@@ -69,30 +70,30 @@ entry:
   unreachable
 
 ; <label>:28                                      ; preds = %22, %entry
-  store i32 %0, i32* %3, align 4
-  call void @llvm.dbg.declare(metadata %struct.A* %agg.result, metadata !24, metadata !DIExpression()), !dbg !25
-  call void @_ZN1AC1Ev(%struct.A* %agg.result), !dbg !25
-  store i64 1172321806, i64* %4, !dbg !26
-  %29 = inttoptr i64 %10 to i32*, !dbg !26
-  store i32 0, i32* %29, !dbg !26
+  store i32 %0, ptr %3, align 4
+  call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !24, metadata !DIExpression()), !dbg !25
+  call void @_ZN1AC1Ev(ptr %agg.result), !dbg !25
+  store i64 1172321806, ptr %4, !dbg !26
+  %29 = inttoptr i64 %10 to ptr, !dbg !26
+  store i32 0, ptr %29, !dbg !26
   %30 = add i64 %10, 4, !dbg !26
-  %31 = inttoptr i64 %30 to i32*, !dbg !26
-  store i32 0, i32* %31, !dbg !26
+  %31 = inttoptr i64 %30 to ptr, !dbg !26
+  store i32 0, ptr %31, !dbg !26
   %32 = add i64 %10, 8, !dbg !26
-  %33 = inttoptr i64 %32 to i32*, !dbg !26
-  store i32 0, i32* %33, !dbg !26
+  %33 = inttoptr i64 %32 to ptr, !dbg !26
+  store i32 0, ptr %33, !dbg !26
   ret void, !dbg !26
 }
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @_ZN1AC1Ev(%struct.A*) #2
+declare void @_ZN1AC1Ev(ptr) #2
 
 define internal void @asan.module_ctor()  "stack-protector-buffer-size"="1" {
   call void @__asan_init_v3()
-  %1 = load volatile i64, i64* @__asan_mapping_offset
-  %2 = load volatile i64, i64* @__asan_mapping_scale
+  %1 = load volatile i64, ptr @__asan_mapping_offset
+  %2 = load volatile i64, ptr @__asan_mapping_scale
   ret void
 }
 

@@ -13,16 +13,11 @@ import lldb.runtime.objc.objc_runtime
 import lldb.formatters.metrics
 import lldb.formatters.Logger
 
-try:
-    basestring
-except NameError:
-    basestring = str
-
 statistics = lldb.formatters.metrics.Metrics()
-statistics.add_metric('invalid_isa')
-statistics.add_metric('invalid_pointer')
-statistics.add_metric('unknown_class')
-statistics.add_metric('code_notrun')
+statistics.add_metric("invalid_isa")
+statistics.add_metric("invalid_pointer")
+statistics.add_metric("unknown_class")
+statistics.add_metric("code_notrun")
 
 # despite the similary to synthetic children providers, these classes are not
 # trying to provide anything but the count of values for an NSIndexSet, so they need not
@@ -30,7 +25,6 @@ statistics.add_metric('code_notrun')
 
 
 class NSIndexSetClass_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -38,20 +32,25 @@ class NSIndexSetClass_SummaryProvider:
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.sys_params = params
-        if not(self.sys_params.types_cache.NSUInteger):
+        if not (self.sys_params.types_cache.NSUInteger):
             if self.sys_params.is_64_bit:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedLong)
-                self.sys_params.types_cache.uint32 = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedLong)
+                )
+                self.sys_params.types_cache.uint32 = self.valobj.GetType().GetBasicType(
+                    lldb.eBasicTypeUnsignedInt
+                )
             else:
-                self.sys_params.types_cache.NSUInteger = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
-                self.sys_params.types_cache.uint32 = self.valobj.GetType(
-                ).GetBasicType(lldb.eBasicTypeUnsignedInt)
-        if not(self.sys_params.types_cache.uint32):
-            self.sys_params.types_cache.uint32 = self.valobj.GetType(
-            ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+                self.sys_params.types_cache.NSUInteger = (
+                    self.valobj.GetType().GetBasicType(lldb.eBasicTypeUnsignedInt)
+                )
+                self.sys_params.types_cache.uint32 = self.valobj.GetType().GetBasicType(
+                    lldb.eBasicTypeUnsignedInt
+                )
+        if not (self.sys_params.types_cache.uint32):
+            self.sys_params.types_cache.uint32 = self.valobj.GetType().GetBasicType(
+                lldb.eBasicTypeUnsignedInt
+            )
         self.update()
 
     def update(self):
@@ -69,7 +68,8 @@ class NSIndexSetClass_SummaryProvider:
         mode_chooser_vo = self.valobj.CreateChildAtOffset(
             "mode_chooser",
             self.sys_params.pointer_size,
-            self.sys_params.types_cache.uint32)
+            self.sys_params.types_cache.uint32,
+        )
         mode_chooser = mode_chooser_vo.GetValueAsUnsigned(0)
         if self.sys_params.is_64_bit:
             mode_chooser = mode_chooser & 0x00000000FFFFFFFF
@@ -86,23 +86,23 @@ class NSIndexSetClass_SummaryProvider:
             count_vo = self.valobj.CreateChildAtOffset(
                 "count",
                 3 * self.sys_params.pointer_size,
-                self.sys_params.types_cache.NSUInteger)
+                self.sys_params.types_cache.NSUInteger,
+            )
         else:
             count_ptr = self.valobj.CreateChildAtOffset(
                 "count_ptr",
                 2 * self.sys_params.pointer_size,
-                self.sys_params.types_cache.NSUInteger)
+                self.sys_params.types_cache.NSUInteger,
+            )
             count_vo = self.valobj.CreateValueFromAddress(
                 "count",
-                count_ptr.GetValueAsUnsigned() +
-                2 *
-                self.sys_params.pointer_size,
-                self.sys_params.types_cache.NSUInteger)
+                count_ptr.GetValueAsUnsigned() + 2 * self.sys_params.pointer_size,
+                self.sys_params.types_cache.NSUInteger,
+            )
         return count_vo.GetValueAsUnsigned(0)
 
 
 class NSIndexSetUnknown_SummaryProvider:
-
     def adjust_for_architecture(self):
         pass
 
@@ -124,32 +124,32 @@ class NSIndexSetUnknown_SummaryProvider:
         num_children_vo = self.valobj.CreateValueFromExpression("count", expr)
         if num_children_vo.IsValid():
             return num_children_vo.GetValueAsUnsigned(0)
-        return '<variable is not NSIndexSet>'
+        return "<variable is not NSIndexSet>"
 
 
 def GetSummary_Impl(valobj):
     logger = lldb.formatters.Logger.Logger()
     global statistics
-    class_data, wrapper = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
-        valobj, statistics)
+    (
+        class_data,
+        wrapper,
+    ) = lldb.runtime.objc.objc_runtime.Utilities.prepare_class_detection(
+        valobj, statistics
+    )
     if wrapper:
         return wrapper
 
     name_string = class_data.class_name()
     logger >> "class name is: " + str(name_string)
 
-    if name_string == 'NSIndexSet' or name_string == 'NSMutableIndexSet':
-        wrapper = NSIndexSetClass_SummaryProvider(
-            valobj, class_data.sys_params)
-        statistics.metric_hit('code_notrun', valobj)
+    if name_string == "NSIndexSet" or name_string == "NSMutableIndexSet":
+        wrapper = NSIndexSetClass_SummaryProvider(valobj, class_data.sys_params)
+        statistics.metric_hit("code_notrun", valobj)
     else:
-        wrapper = NSIndexSetUnknown_SummaryProvider(
-            valobj, class_data.sys_params)
+        wrapper = NSIndexSetUnknown_SummaryProvider(valobj, class_data.sys_params)
         statistics.metric_hit(
-            'unknown_class',
-            valobj.GetName() +
-            " seen as " +
-            name_string)
+            "unknown_class", valobj.GetName() + " seen as " + name_string
+        )
     return wrapper
 
 
@@ -158,8 +158,8 @@ def NSIndexSet_SummaryProvider(valobj, dict):
     provider = GetSummary_Impl(valobj)
     if provider is not None:
         if isinstance(
-                provider,
-                lldb.runtime.objc.objc_runtime.SpecialSituation_Description):
+            provider, lldb.runtime.objc.objc_runtime.SpecialSituation_Description
+        ):
             return provider.message()
         try:
             summary = provider.count()
@@ -167,15 +167,16 @@ def NSIndexSet_SummaryProvider(valobj, dict):
             summary = None
         logger >> "got summary " + str(summary)
         if summary is None:
-            summary = '<variable is not NSIndexSet>'
-        if isinstance(summary, basestring):
+            summary = "<variable is not NSIndexSet>"
+        if isinstance(summary, str):
             return summary
         else:
-            summary = str(summary) + (' indexes' if summary != 1 else ' index')
+            summary = str(summary) + (" indexes" if summary != 1 else " index")
         return summary
-    return 'Summary Unavailable'
+    return "Summary Unavailable"
 
 
 def __lldb_init_module(debugger, dict):
     debugger.HandleCommand(
-        "type summary add -F NSIndexSet.NSIndexSet_SummaryProvider NSIndexSet NSMutableIndexSet")
+        "type summary add -F NSIndexSet.NSIndexSet_SummaryProvider NSIndexSet NSMutableIndexSet"
+    )

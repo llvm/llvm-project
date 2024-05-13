@@ -1,14 +1,14 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_dont_clobber_scc:
 
 ; GCN: ; %entry
 ; GCN:      s_cmp_eq_u32    s0, 0
-; GCN:      s_cbranch_scc1  [[EXIT:BB[0-9_]+]]
+; GCN:      s_cbranch_scc1  [[EXIT:.LBB[0-9_]+]]
 
 ; GCN: ; %blocka
 ; GCN:      s_cmp_eq_u32    s1, 0
-; GCN:      s_cbranch_scc1  [[PREEXIT:BB[0-9_]+]]
+; GCN:      s_cbranch_scc1  [[PREEXIT:.LBB[0-9_]+]]
 
 ; GCN: [[PREEXIT]]:
 ; GCN: [[EXIT]]:

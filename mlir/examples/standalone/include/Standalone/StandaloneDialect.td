@@ -24,13 +24,18 @@ def Standalone_Dialect : Dialect {
         working inside of the LLVM source tree.
     }];
     let cppNamespace = "::mlir::standalone";
+
+    let useDefaultTypePrinterParser = 1;
+    let extraClassDeclaration = [{
+        void registerTypes();
+    }];
 }
 
 //===----------------------------------------------------------------------===//
 // Base standalone operation definition.
 //===----------------------------------------------------------------------===//
 
-class Standalone_Op<string mnemonic, list<OpTrait> traits = []> :
+class Standalone_Op<string mnemonic, list<Trait> traits = []> :
         Op<Standalone_Dialect, mnemonic, traits>;
 
 #endif // STANDALONE_DIALECT

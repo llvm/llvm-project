@@ -208,26 +208,31 @@ public:
   constexpr WithMessageParser(MessageFixedText t, PA p)
       : text_{t}, parser_{p} {}
   std::optional<resultType> Parse(ParseState &state) const {
+    if (state.deferMessages()) { // fast path
+      std::optional<resultType> result{parser_.Parse(state)};
+      if (!result) {
+        state.set_anyDeferredMessages();
+      }
+      return result;
+    }
     Messages messages{std::move(state.messages())};
-    ParseState backtrack{state};
+    bool hadAnyTokenMatched{state.anyTokenMatched()};
     state.set_anyTokenMatched(false);
     std::optional<resultType> result{parser_.Parse(state)};
     bool emitMessage{false};
     if (result) {
       messages.Annex(std::move(state.messages()));
-      if (backtrack.anyTokenMatched()) {
+      if (hadAnyTokenMatched) {
         state.set_anyTokenMatched();
       }
     } else if (state.anyTokenMatched()) {
       emitMessage = state.messages().empty();
       messages.Annex(std::move(state.messages()));
-      backtrack.set_anyTokenMatched();
-      if (state.anyDeferredMessages()) {
-        backtrack.set_anyDeferredMessages(true);
-      }
-      state = std::move(backtrack);
     } else {
       emitMessage = true;
+      if (hadAnyTokenMatched) {
+        state.set_anyTokenMatched();
+      }
     }
     state.messages() = std::move(messages);
     if (emitMessage) {
@@ -351,7 +356,7 @@ public:
   using resultType = typename PA::resultType;
   static_assert(std::is_same_v<resultType, typename PB::resultType>);
   constexpr RecoveryParser(const RecoveryParser &) = default;
-  constexpr RecoveryParser(PA pa, PB pb) : pa_{pa}, pb3_{pb} {}
+  constexpr RecoveryParser(PA pa, PB pb) : pa_{pa}, pb_{pb} {}
   std::optional<resultType> Parse(ParseState &state) const {
     bool originallyDeferred{state.deferMessages()};
     ParseState backtrack{state};
@@ -379,7 +384,7 @@ public:
     bool anyTokenMatched{state.anyTokenMatched()};
     state = std::move(backtrack);
     state.set_deferMessages(true);
-    std::optional<resultType> bx{pb3_.Parse(state)};
+    std::optional<resultType> bx{pb_.Parse(state)};
     state.messages() = std::move(messages);
     state.set_deferMessages(originallyDeferred);
     if (anyTokenMatched) {
@@ -398,7 +403,7 @@ public:
 
 private:
   const PA pa_;
-  const PB pb3_;
+  const PB pb_;
 };
 
 template <typename PA, typename PB>
@@ -845,6 +850,8 @@ template <LanguageFeature LF, typename PA> class NonstandardParser {
 public:
   using resultType = typename PA::resultType;
   constexpr NonstandardParser(const NonstandardParser &) = default;
+  constexpr NonstandardParser(PA parser, MessageFixedText msg)
+      : parser_{parser}, message_{msg} {}
   constexpr NonstandardParser(PA parser) : parser_{parser} {}
   std::optional<resultType> Parse(ParseState &state) const {
     if (UserState * ustate{state.userState()}) {
@@ -854,16 +861,22 @@ public:
     }
     auto at{state.GetLocation()};
     auto result{parser_.Parse(state)};
-    if (result) {
+    if (result && !message_.empty()) {
       state.Nonstandard(
-          CharBlock{at, state.GetLocation()}, LF, "nonstandard usage"_en_US);
+          CharBlock{at, std::max(state.GetLocation(), at + 1)}, LF, message_);
     }
     return result;
   }
 
 private:
   const PA parser_;
+  const MessageFixedText message_;
 };
+
+template <LanguageFeature LF, typename PA>
+inline constexpr auto extension(MessageFixedText feature, PA parser) {
+  return NonstandardParser<LF, PA>(parser, feature);
+}
 
 template <LanguageFeature LF, typename PA>
 inline constexpr auto extension(PA parser) {
@@ -887,8 +900,8 @@ public:
     auto at{state.GetLocation()};
     auto result{parser_.Parse(state)};
     if (result) {
-      state.Nonstandard(
-          CharBlock{at, state.GetLocation()}, LF, "deprecated usage"_en_US);
+      state.Nonstandard(CharBlock{at, state.GetLocation()}, LF,
+          "deprecated usage"_port_en_US);
     }
     return result;
   }

@@ -1,11 +1,12 @@
 // RUN: mlir-tblgen -gen-rewriters -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/PatternBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
 }
-class NS_Op<string mnemonic, list<OpTrait> traits> :
+class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
 
 def AOp : NS_Op<"a_op", []> {
@@ -85,3 +86,18 @@ def NativeBuilder :
 // CHECK: nativeCall(rewriter, odsLoc, (*v1.begin()), (*v2.begin()), (*v3.begin()), (*v4.begin()), (*v5.begin()), (*v6.begin()), (*v7.begin()), (*v8.begin()), (*v9.begin()), (*v10.begin()))
 def test4 : Pat<(DOp $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10),
                 (NativeBuilder $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10)>;
+
+// CHECK: struct test5 : public ::mlir::RewritePattern {
+// CHECK: foo(rewriter, (*v4.begin()), (*v5.begin()), (*v6.begin()), (*v7.begin()), (*v8.begin()), (*v9.begin()), (*v10.begin()))
+def test5 : Pat<(DOp $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10),
+                (NativeCodeCall<[{ foo($_builder, $3...) }]> $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10)>;
+
+// Check Pattern with return type builder.
+def SameTypeAs : NativeCodeCall<"$0.getType()">;
+// CHECK: struct test6 : public ::mlir::RewritePattern {
+// CHECK: tblgen_types.push_back((*v2.begin()).getType())
+// CHECK: tblgen_types.push_back(rewriter.getI32Type())
+// CHECK: nativeVar_1 = doSomething((*v3.begin()))
+// CHECK: tblgen_types.push_back(nativeVar_1)
+def test6 : Pat<(DOp $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10),
+                (AOp (AOp $v1, (returnType $v2, "$_builder.getI32Type()", (NativeCodeCall<"doSomething($0)"> $v3))))>;

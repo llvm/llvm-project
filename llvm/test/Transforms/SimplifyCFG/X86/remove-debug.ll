@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -hoist-common-insts=true | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -hoist-common-insts=true | FileCheck %s
 
 ; TODO: Track the acutal DebugLoc of the hoisted instruction when no-line
 ; DebugLoc is supported (https://reviews.llvm.org/D24180)
@@ -26,25 +26,25 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: uwtable
 define void @_Z3fooi(i32) #0 !dbg !6 {
-; CHECK: load i32, i32* %2, align 4, !dbg ![[LOAD:[0-9]+]], !tbaa
-; CHECK: store i32 %5, i32* @x, align 4, !dbg ![[BAR:[0-9]+]], !tbaa
+; CHECK: load i32, ptr %2, align 4, !dbg ![[LOAD:[0-9]+]], !tbaa
+; CHECK: store i32 %5, ptr @x, align 4, !dbg ![[BAR:[0-9]+]], !tbaa
 ; CHECK: call void @_Z3barv(), !dbg ![[BAR]]
 ; CHECK: call void @_Z3bazv(), !dbg ![[BAZ:[0-9]+]]
   %2 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4, !tbaa !8
-  %3 = load i32, i32* %2, align 4, !dbg !12, !tbaa !8
+  store i32 %0, ptr %2, align 4, !tbaa !8
+  %3 = load i32, ptr %2, align 4, !dbg !12, !tbaa !8
   %4 = icmp eq i32 %3, 0, !dbg !13
   br i1 %4, label %5, label %7, !dbg !12
 
 ; <label>:5:
-  %6 = load i32, i32* %2, align 4, !dbg !14, !tbaa !8
-  store i32 %6, i32* @x, align 4, !dbg !15, !tbaa !8
+  %6 = load i32, ptr %2, align 4, !dbg !14, !tbaa !8
+  store i32 %6, ptr @x, align 4, !dbg !15, !tbaa !8
   call void @_Z3barv(), !dbg !16
   br label %9, !dbg !17
 
 ; <label>:7:
-  %8 = load i32, i32* %2, align 4, !dbg !18, !tbaa !8
-  store i32 %8, i32* @x, align 4, !dbg !19, !tbaa !8
+  %8 = load i32, ptr %2, align 4, !dbg !18, !tbaa !8
+  store i32 %8, ptr @x, align 4, !dbg !19, !tbaa !8
   call void @_Z3barv(), !dbg !20
   call void @_Z3bazv(), !dbg !21
   br label %9

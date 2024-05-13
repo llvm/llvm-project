@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Dialect.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
@@ -31,13 +32,13 @@ StringRef Dialect::getCppNamespace() const {
 std::string Dialect::getCppClassName() const {
   // Simply use the name and remove any '_' tokens.
   std::string cppName = def->getName().str();
-  llvm::erase_if(cppName, [](char c) { return c == '_'; });
+  llvm::erase(cppName, '_');
   return cppName;
 }
 
 static StringRef getAsStringOrEmpty(const llvm::Record &record,
                                     StringRef fieldName) {
-  if (auto valueInit = record.getValueInit(fieldName)) {
+  if (auto *valueInit = record.getValueInit(fieldName)) {
     if (llvm::isa<llvm::StringInit>(valueInit))
       return record.getValueAsString(fieldName);
   }
@@ -56,9 +57,9 @@ ArrayRef<StringRef> Dialect::getDependentDialects() const {
   return dependentDialects;
 }
 
-llvm::Optional<StringRef> Dialect::getExtraClassDeclaration() const {
+std::optional<StringRef> Dialect::getExtraClassDeclaration() const {
   auto value = def->getValueAsString("extraClassDeclaration");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 bool Dialect::hasCanonicalizer() const {
@@ -67,6 +68,10 @@ bool Dialect::hasCanonicalizer() const {
 
 bool Dialect::hasConstantMaterializer() const {
   return def->getValueAsBit("hasConstantMaterializer");
+}
+
+bool Dialect::hasNonDefaultDestructor() const {
+  return def->getValueAsBit("hasNonDefaultDestructor");
 }
 
 bool Dialect::hasOperationAttrVerify() const {
@@ -83,6 +88,26 @@ bool Dialect::hasRegionResultAttrVerify() const {
 
 bool Dialect::hasOperationInterfaceFallback() const {
   return def->getValueAsBit("hasOperationInterfaceFallback");
+}
+
+bool Dialect::useDefaultAttributePrinterParser() const {
+  return def->getValueAsBit("useDefaultAttributePrinterParser");
+}
+
+bool Dialect::useDefaultTypePrinterParser() const {
+  return def->getValueAsBit("useDefaultTypePrinterParser");
+}
+
+bool Dialect::isExtensible() const {
+  return def->getValueAsBit("isExtensible");
+}
+
+bool Dialect::usePropertiesForAttributes() const {
+  return def->getValueAsBit("usePropertiesForAttributes");
+}
+
+llvm::DagInit *Dialect::getDiscardableAttributes() const {
+  return def->getValueAsDag("discardableAttrs");
 }
 
 bool Dialect::operator==(const Dialect &other) const {

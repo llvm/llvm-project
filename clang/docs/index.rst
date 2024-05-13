@@ -25,6 +25,7 @@ Using Clang as a Compiler
    CrossCompilation
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
+   DataFlowAnalysisIntro
    AddressSanitizer
    ThreadSanitizer
    MemorySanitizer
@@ -34,18 +35,26 @@ Using Clang as a Compiler
    SanitizerCoverage
    SanitizerStats
    SanitizerSpecialCaseList
+   BoundsSafety
+   BoundsSafetyImplPlans
    ControlFlowIntegrity
    LTOVisibility
    SafeStack
    ShadowCallStack
    SourceBasedCodeCoverage
+   StandardCPlusPlusModules
    Modules
    MSVCCompatibility
+   MisExpect
    OpenCLSupport
    OpenMPSupport
    SYCLSupport
+   HIPSupport
+   HLSL/HLSLDocs
    ThinLTO
    APINotes
+   DebuggingCoroutines
+   AMDGPUSupport
    CommandGuide/index
    FAQ
 
@@ -59,11 +68,13 @@ Using Clang as a Library
    ExternalClangExamples
    IntroductionToTheClangAST
    LibTooling
+   LibClang
    LibFormat
    ClangPlugins
    RAVFrontendAction
    LibASTMatchersTutorial
    LibASTMatchers
+   ClangTransformerTutorial
    LibASTImporter
    HowToSetupToolingForLLVM
    JSONCompilationDatabase
@@ -80,7 +91,10 @@ Using Clang Tools
    ClangFormat
    ClangFormatStyleOptions
    ClangFormattedStatus
+   ClangLinkerWrapper
    ClangOffloadBundler
+   ClangOffloadPackager
+   ClangRepl
 
 Design Documents
 ================
@@ -88,8 +102,11 @@ Design Documents
 .. toctree::
    :maxdepth: 1
 
+   CodeOwners
    InternalsManual
    DriverInternals
+   Multilib
+   OffloadingDesign
    PCHInternals
    ItaniumMangleAbiTags
    HardwareAssistedAddressSanitizerDesign.rst
@@ -100,6 +117,5 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 

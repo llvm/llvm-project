@@ -1,15 +1,15 @@
-; RUN: llc -verify-machineinstrs -mtriple=x86_64 < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=x86_64 -relocation-model=pic < %s | FileCheck %s --check-prefix=PIC
+; RUN: llc -mtriple=x86_64 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64 -relocation-model=pic < %s | FileCheck %s --check-prefix=PIC
 
 ; RUN: llc -mtriple=x86_64 -filetype=obj %s -o %t
 ; RUN: llvm-dwarfdump %t | FileCheck %s --check-prefix=DBG
 
 define i32 @customevent() nounwind "function-instrument"="xray-always" !dbg !1 {
     %eventptr = alloca i8
-    %eventsize = alloca i32
-    store i32 3, i32* %eventsize
-    %val = load i32, i32* %eventsize
-    call void @llvm.xray.customevent(i8* %eventptr, i32 %val), !dbg !8
+    %eventsize = alloca i64
+    store i64 3, ptr %eventsize
+    %val = load i64, ptr %eventsize
+    call void @llvm.xray.customevent(ptr %eventptr, i64 %val), !dbg !8
     ; CHECK-LABEL: Lxray_event_sled_0:
     ; CHECK:       .byte 0xeb, 0x0f
     ; CHECK-NEXT:  pushq %rdi
@@ -37,13 +37,13 @@ define i32 @customevent() nounwind "function-instrument"="xray-always" !dbg !1 {
 
 define i32 @typedevent() nounwind "function-instrument"="xray-always" !dbg !2 {
     %eventptr = alloca i8
-    %eventsize = alloca i32
-    %eventtype = alloca i16
-    store i16 6, i16* %eventtype
-    %type = load i16, i16* %eventtype
-    store i32 3, i32* %eventsize
-    %val = load i32, i32* %eventsize
-    call void @llvm.xray.typedevent(i16 %type, i8* %eventptr, i32 %val), !dbg !9
+    %eventsize = alloca i64
+    %eventtype = alloca i64
+    store i64 6, ptr %eventtype
+    %type = load i64, ptr %eventtype
+    store i64 3, ptr %eventsize
+    %val = load i64, ptr %eventsize
+    call void @llvm.xray.typedevent(i64 %type, ptr %eventptr, i64 %val), !dbg !9
     ; CHECK-LABEL: Lxray_typed_event_sled_0:
     ; CHECK:       .byte 0xeb, 0x14
     ; CHECK-NEXT:  pushq %rdi
@@ -75,8 +75,8 @@ define i32 @typedevent() nounwind "function-instrument"="xray-always" !dbg !2 {
 ; CHECK-LABEL: Lxray_sleds_start1:
 ; CHECK:       .quad {{.*}}xray_typed_event_sled_0
 
-declare void @llvm.xray.customevent(i8*, i32)
-declare void @llvm.xray.typedevent(i16, i8*, i32)
+declare void @llvm.xray.customevent(ptr, i64)
+declare void @llvm.xray.typedevent(i64, ptr, i64)
 
 ;; Construct call site entries for PATCHABLE_EVENT_CALL.
 ; DBG:     DW_TAG_subprogram

@@ -15,20 +15,14 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_ANALYSIS_H
 
 #include "Clustering.h"
+#include "DisassemblerHelper.h"
 #include "SchedClassResolution.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
-#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
-#include <set>
-#include <string>
-#include <unordered_map>
 
 namespace llvm {
 namespace exegesis {
@@ -36,11 +30,10 @@ namespace exegesis {
 // A helper class to analyze benchmark results for a target.
 class Analysis {
 public:
-  Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
-           const InstructionBenchmarkClustering &Clustering,
+  Analysis(const LLVMState &State,
+           const BenchmarkClustering &Clustering,
            double AnalysisInconsistencyEpsilon,
-           bool AnalysisDisplayUnstableOpcodes,
-           const std::string &ForceCpuName = "");
+           bool AnalysisDisplayUnstableOpcodes);
 
   // Prints a csv of instructions for each cluster.
   struct PrintClusters {};
@@ -50,19 +43,19 @@ public:
   template <typename Pass> Error run(raw_ostream &OS) const;
 
 private:
-  using ClusterId = InstructionBenchmarkClustering::ClusterId;
+  using ClusterId = BenchmarkClustering::ClusterId;
 
   // Represents the intersection of a sched class and a cluster.
   class SchedClassCluster {
   public:
-    const InstructionBenchmarkClustering::ClusterId &id() const {
+    const BenchmarkClustering::ClusterId &id() const {
       return ClusterId;
     }
 
     const std::vector<size_t> &getPointIds() const { return PointIds; }
 
     void addPoint(size_t PointId,
-                  const InstructionBenchmarkClustering &Clustering);
+                  const BenchmarkClustering &Clustering);
 
     // Return the cluster centroid.
     const SchedClassClusterCentroid &getCentroid() const { return Centroid; }
@@ -70,11 +63,11 @@ private:
     // Returns true if the cluster representative measurements match that of SC.
     bool
     measurementsMatch(const MCSubtargetInfo &STI, const ResolvedSchedClass &SC,
-                      const InstructionBenchmarkClustering &Clustering,
+                      const BenchmarkClustering &Clustering,
                       const double AnalysisInconsistencyEpsilonSquared_) const;
 
   private:
-    InstructionBenchmarkClustering::ClusterId ClusterId;
+    BenchmarkClustering::ClusterId ClusterId;
     std::vector<size_t> PointIds;
     // Measurement stats for the points in the SchedClassCluster.
     SchedClassClusterCentroid Centroid;
@@ -82,11 +75,10 @@ private:
 
   void printInstructionRowCsv(size_t PointId, raw_ostream &OS) const;
 
-  void printClusterRawHtml(const InstructionBenchmarkClustering::ClusterId &Id,
-                           StringRef display_name, llvm::raw_ostream &OS) const;
+  void printClusterRawHtml(const BenchmarkClustering::ClusterId &Id,
+                           StringRef display_name, raw_ostream &OS) const;
 
-  void printPointHtml(const InstructionBenchmark &Point,
-                      llvm::raw_ostream &OS) const;
+  void printPointHtml(const Benchmark &Point, raw_ostream &OS) const;
 
   void
   printSchedClassClustersHtml(const std::vector<SchedClassCluster> &Clusters,
@@ -111,14 +103,9 @@ private:
   void writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
                     const char *Separator) const;
 
-  const InstructionBenchmarkClustering &Clustering_;
-  std::unique_ptr<MCContext> Context_;
-  std::unique_ptr<MCSubtargetInfo> SubtargetInfo_;
-  std::unique_ptr<MCInstrInfo> InstrInfo_;
-  std::unique_ptr<MCRegisterInfo> RegInfo_;
-  std::unique_ptr<MCAsmInfo> AsmInfo_;
-  std::unique_ptr<MCInstPrinter> InstPrinter_;
-  std::unique_ptr<MCDisassembler> Disasm_;
+  const BenchmarkClustering &Clustering_;
+  const LLVMState &State_;
+  std::unique_ptr<DisassemblerHelper> DisasmHelper_;
   const double AnalysisInconsistencyEpsilonSquared_;
   const bool AnalysisDisplayUnstableOpcodes_;
 };

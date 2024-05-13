@@ -1,0 +1,66 @@
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx1030 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+---
+name:            f1
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: MachineUniformityInfo for function: f1
+  bb.1:
+    %3:_(s32) = G_CONSTANT i32 0
+    %25:_(s32) = G_IMPLICIT_DEF
+  
+  bb.2:
+    %0:_(s32) = G_PHI %22(s32), %bb.5, %3(s32), %bb.1
+    %1:_(s32) = G_PHI %3(s32), %bb.1, %20(s32), %bb.5
+    %2:_(s32) = G_PHI %3(s32), %bb.1, %19(s32), %bb.5
+    %36:_(s32) = G_CONSTANT i32 0
+    %4:_(s1) = G_ICMP intpred(slt), %1(s32), %36
+  
+  bb.3:
+    successors: %bb.4(0x04000000), %bb.3(0x7c000000)
+  
+    %5:_(s32) = G_PHI %38(s32), %bb.3, %1(s32), %bb.2
+    %38:_(s32) = G_CONSTANT i32 0
+    G_BRCOND %4(s1), %bb.3
+    G_BR %bb.4
+  
+  bb.4:
+    successors: %bb.7, %bb.5
+  
+    %6:_(s32) = G_PHI %5(s32), %bb.3
+    %33:_(s1) = G_CONSTANT i1 true
+    %7:_(s64) = G_SEXT %2(s32)
+    %39:_(s32) = G_CONSTANT i32 2
+    %10:_(s64) = G_SHL %7, %39(s32)
+    %11:_(p0) = G_INTTOPTR %10(s64)
+    %13:_(s32) = G_LOAD %11(p0) :: (load (s32))
+    %37:_(s32) = G_CONSTANT i32 0
+    %14:sreg_32_xm0_xexec(s1) = G_ICMP intpred(slt), %13(s32), %37
+    %16:sreg_32_xm0_xexec(s32) = SI_IF %14(s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.7
+  
+  bb.5:
+    successors: %bb.6(0x04000000), %bb.2(0x7c000000)
+    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_PHI
+    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_PHI
+    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_PHI
+    ; CHECK-NOT: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break)
+    %19:_(s32) = G_PHI %18(s32), %bb.7, %25(s32), %bb.4
+    %20:_(s32) = G_PHI %6(s32), %bb.7, %25(s32), %bb.4
+    %21:_(s1) = G_PHI %34(s1), %bb.7, %33(s1), %bb.4
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %16(s32)
+    %22:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %21(s1), %0(s32)
+    SI_LOOP %22(s32), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.6
+  
+  bb.6:
+    %24:_(s32) = G_PHI %22(s32), %bb.5
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %24(s32)
+    SI_RETURN
+  
+  bb.7:
+    %34:_(s1) = G_CONSTANT i1 false
+    %35:_(s32) = G_CONSTANT i32 1
+    %18:_(s32) = G_OR %2, %35
+    G_BR %bb.5
+
+...

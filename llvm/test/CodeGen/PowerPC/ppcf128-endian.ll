@@ -11,16 +11,16 @@ define void @callee(ppc_fp128 %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
 ; CHECK-NEXT:    stfd 2, -8(1)
-; CHECK-NEXT:    stfd 1, -16(1)
 ; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
+; CHECK-NEXT:    stfd 1, -16(1)
 ; CHECK-NEXT:    stfd 2, 8(3)
 ; CHECK-NEXT:    stfd 1, 0(3)
 ; CHECK-NEXT:    blr
 entry:
   %x.addr = alloca ppc_fp128, align 16
-  store ppc_fp128 %x, ppc_fp128* %x.addr, align 16
-  %0 = load ppc_fp128, ppc_fp128* %x.addr, align 16
-  store ppc_fp128 %0, ppc_fp128* @g, align 16
+  store ppc_fp128 %x, ptr %x.addr, align 16
+  %0 = load ppc_fp128, ptr %x.addr, align 16
+  store ppc_fp128 %0, ptr @g, align 16
   ret void
 }
 
@@ -28,8 +28,8 @@ define void @caller() {
 ; CHECK-LABEL: caller:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
@@ -43,7 +43,7 @@ define void @caller() {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load ppc_fp128, ppc_fp128* @g, align 16
+  %0 = load ppc_fp128, ptr @g, align 16
   call void @test(ppc_fp128 %0)
   ret void
 }
@@ -54,14 +54,14 @@ define void @caller_const() {
 ; CHECK-LABEL: caller_const:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LCPI2_1@toc@ha
 ; CHECK-NEXT:    lfs 1, .LCPI2_0@toc@l(3)
-; CHECK-NEXT:    lfs 2, .LCPI2_1@toc@l(4)
+; CHECK-NEXT:    addis 3, 2, .LCPI2_1@toc@ha
+; CHECK-NEXT:    lfs 2, .LCPI2_1@toc@l(3)
 ; CHECK-NEXT:    bl test
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 1, 1, 32
@@ -82,7 +82,7 @@ define ppc_fp128 @result() {
 ; CHECK-NEXT:    lfd 2, 8(3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load ppc_fp128, ppc_fp128* @g, align 16
+  %0 = load ppc_fp128, ptr @g, align 16
   ret ppc_fp128 %0
 }
 
@@ -90,8 +90,8 @@ define void @use_result() {
 ; CHECK-LABEL: use_result:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl test_result
@@ -106,7 +106,7 @@ define void @use_result() {
 ; CHECK-NEXT:    blr
 entry:
   %call = tail call ppc_fp128 @test_result() #3
-  store ppc_fp128 %call, ppc_fp128* @g, align 16
+  store ppc_fp128 %call, ptr @g, align 16
   ret void
 }
 
@@ -116,8 +116,8 @@ define void @caller_result() {
 ; CHECK-LABEL: caller_result:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl test_result
@@ -167,8 +167,8 @@ define ppc_fp128 @convert_to2(i128 %x) {
 ; CHECK-NEXT:    sldi 3, 3, 1
 ; CHECK-NEXT:    rldimi 5, 4, 1, 0
 ; CHECK-NEXT:    std 3, -16(1)
-; CHECK-NEXT:    std 5, -8(1)
 ; CHECK-NEXT:    lfd 1, -16(1)
+; CHECK-NEXT:    std 5, -8(1)
 ; CHECK-NEXT:    lfd 2, -8(1)
 ; CHECK-NEXT:    blr
 entry:
@@ -191,20 +191,20 @@ entry:
   ret double %conv
 }
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 
 define double @vararg(i32 %a, ...) {
 ; CHECK-LABEL: vararg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi 3, 1, 55
 ; CHECK-NEXT:    std 4, 40(1)
-; CHECK-NEXT:    rldicr 3, 3, 0, 59
 ; CHECK-NEXT:    std 5, 48(1)
-; CHECK-NEXT:    ori 4, 3, 8
 ; CHECK-NEXT:    std 6, 56(1)
+; CHECK-NEXT:    rldicr 3, 3, 0, 59
 ; CHECK-NEXT:    std 7, 64(1)
 ; CHECK-NEXT:    std 8, 72(1)
 ; CHECK-NEXT:    std 9, 80(1)
+; CHECK-NEXT:    ori 4, 3, 8
 ; CHECK-NEXT:    std 10, 88(1)
 ; CHECK-NEXT:    std 4, -8(1)
 ; CHECK-NEXT:    lfd 1, 0(3)
@@ -212,10 +212,9 @@ define double @vararg(i32 %a, ...) {
 ; CHECK-NEXT:    std 3, -8(1)
 ; CHECK-NEXT:    blr
 entry:
-  %va = alloca i8*, align 8
-  %va1 = bitcast i8** %va to i8*
-  call void @llvm.va_start(i8* %va1)
-  %arg = va_arg i8** %va, ppc_fp128
+  %va = alloca ptr, align 8
+  call void @llvm.va_start(ptr %va)
+  %arg = va_arg ptr %va, ppc_fp128
   %conv = fptrunc ppc_fp128 %arg to double
   ret double %conv
 }

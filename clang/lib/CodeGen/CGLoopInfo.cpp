@@ -17,6 +17,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
+#include <optional>
 using namespace clang::CodeGen;
 using namespace llvm;
 
@@ -37,7 +38,7 @@ MDNode *LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
                                            bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
-  Optional<bool> Enabled;
+  std::optional<bool> Enabled;
   if (Attrs.PipelineDisabled)
     Enabled = false;
   else if (Attrs.PipelineInitiationInterval != 0)
@@ -82,11 +83,11 @@ LoopInfo::createPartialUnrollMetadata(const LoopAttributes &Attrs,
                                       bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
-  Optional<bool> Enabled;
+  std::optional<bool> Enabled;
   if (Attrs.UnrollEnable == LoopAttributes::Disable)
     Enabled = false;
   else if (Attrs.UnrollEnable == LoopAttributes::Full)
-    Enabled = None;
+    Enabled = std::nullopt;
   else if (Attrs.UnrollEnable != LoopAttributes::Unspecified ||
            Attrs.UnrollCount != 0)
     Enabled = true;
@@ -144,7 +145,7 @@ LoopInfo::createUnrollAndJamMetadata(const LoopAttributes &Attrs,
                                      bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
-  Optional<bool> Enabled;
+  std::optional<bool> Enabled;
   if (Attrs.UnrollAndJamEnable == LoopAttributes::Disable)
     Enabled = false;
   else if (Attrs.UnrollAndJamEnable == LoopAttributes::Enable ||
@@ -212,7 +213,7 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
                                       bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
-  Optional<bool> Enabled;
+  std::optional<bool> Enabled;
   if (Attrs.VectorizeEnable == LoopAttributes::Disable)
     Enabled = false;
   else if (Attrs.VectorizeEnable != LoopAttributes::Unspecified ||
@@ -330,7 +331,7 @@ LoopInfo::createLoopDistributeMetadata(const LoopAttributes &Attrs,
                                        bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
-  Optional<bool> Enabled;
+  std::optional<bool> Enabled;
   if (Attrs.DistributeEnable == LoopAttributes::Disable)
     Enabled = false;
   if (Attrs.DistributeEnable == LoopAttributes::Enable)
@@ -380,7 +381,7 @@ MDNode *LoopInfo::createFullUnrollMetadata(const LoopAttributes &Attrs,
                                            bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
-  Optional<bool> Enabled;
+  std::optional<bool> Enabled;
   if (Attrs.UnrollEnable == LoopAttributes::Disable)
     Enabled = false;
   else if (Attrs.UnrollEnable == LoopAttributes::Full)
@@ -439,6 +440,14 @@ MDNode *LoopInfo::createMetadata(
         Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccGroup}));
   }
 
+  // Setting clang::code_align attribute.
+  if (Attrs.CodeAlign > 0) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.align"),
+                        ConstantAsMetadata::get(ConstantInt::get(
+                            llvm::Type::getInt32Ty(Ctx), Attrs.CodeAlign))};
+    LoopProperties.push_back(MDNode::get(Ctx, Vals));
+  }
+
   LoopProperties.insert(LoopProperties.end(), AdditionalLoopProperties.begin(),
                         AdditionalLoopProperties.end());
   return createFullUnrollMetadata(Attrs, LoopProperties, HasUserTransforms);
@@ -452,7 +461,7 @@ LoopAttributes::LoopAttributes(bool IsParallel)
       VectorizeScalable(LoopAttributes::Unspecified), InterleaveCount(0),
       UnrollCount(0), UnrollAndJamCount(0),
       DistributeEnable(LoopAttributes::Unspecified), PipelineDisabled(false),
-      PipelineInitiationInterval(0), MustProgress(false) {}
+      PipelineInitiationInterval(0), CodeAlign(0), MustProgress(false) {}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -468,6 +477,7 @@ void LoopAttributes::clear() {
   DistributeEnable = LoopAttributes::Unspecified;
   PipelineDisabled = false;
   PipelineInitiationInterval = 0;
+  CodeAlign = 0;
   MustProgress = false;
 }
 
@@ -492,11 +502,11 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollAndJamEnable == LoopAttributes::Unspecified &&
-      Attrs.DistributeEnable == LoopAttributes::Unspecified && !StartLoc &&
-      !EndLoc && !Attrs.MustProgress)
+      Attrs.DistributeEnable == LoopAttributes::Unspecified &&
+      Attrs.CodeAlign == 0 && !StartLoc && !EndLoc && !Attrs.MustProgress)
     return;
 
-  TempLoopID = MDNode::getTemporary(Header->getContext(), None);
+  TempLoopID = MDNode::getTemporary(Header->getContext(), std::nullopt);
 }
 
 void LoopInfo::finish() {
@@ -785,6 +795,15 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       }
       break;
     }
+  }
+
+  // Identify loop attribute 'code_align' from Attrs.
+  // For attribute code_align:
+  // n - 'llvm.loop.align i32 n' metadata will be emitted.
+  if (const auto *CodeAlign = getSpecificAttr<const CodeAlignAttr>(Attrs)) {
+    const auto *CE = cast<ConstantExpr>(CodeAlign->getAlignment());
+    llvm::APSInt ArgVal = CE->getResultAsAPSInt();
+    setCodeAlign(ArgVal.getSExtValue());
   }
 
   setMustProgress(MustProgress);

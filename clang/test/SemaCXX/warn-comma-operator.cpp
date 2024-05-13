@@ -7,10 +7,10 @@
 // RUN: %clang_cc1 -fsyntax-only -Wcomma -x c -std=c17 -verify %s
 
 // int returning function
-int return_four() { return 5; }
+int return_four(void) { return 5; }
 
 // Test builtin operators
-void test_builtin() {
+void test_builtin(void) {
   int x = 0, y = 0;
   for (; y < 10; x++, y++) {}
   for (; y < 10; ++x, y++) {}
@@ -32,7 +32,7 @@ void test_builtin() {
 }
 
 // Test nested comma operators
-void test_nested() {
+void test_nested(void) {
   int x1, x2, x3;
   int y1, *y2 = 0, y3 = 5;
 
@@ -42,7 +42,7 @@ void test_nested() {
 }
 
 // Confusing "," for "=="
-void test_compare() {
+void test_compare(void) {
   if (return_four(), 5) {}
   // expected-warning@-1{{comma operator}}
   // expected-note@-2{{cast expression to void}}
@@ -53,7 +53,7 @@ void test_compare() {
 }
 
 // Confusing "," for "+"
-int test_plus() {
+int test_plus(void) {
   return return_four(), return_four();
   // expected-warning@-1{{comma operator}}
   // expected-note@-2{{cast expression to void}}
@@ -64,7 +64,7 @@ int test_plus() {
 }
 
 // Be sure to look through parentheses
-void test_parentheses() {
+void test_parentheses(void) {
   int x, y;
   for (x = 0; return_four(), x;) {}
   // expected-warning@-1{{comma operator}}
@@ -79,7 +79,7 @@ void test_parentheses() {
   // CHECK: fix-it:{{.*}}:{[[@LINE-4]]:30-[[@LINE-4]]:30}:")"
 }
 
-void test_increment() {
+void test_increment(void) {
   int x, y;
   ++x, ++y;
   // expected-warning@-1{{comma operator}}
@@ -128,7 +128,7 @@ void test_conditions(int x) {
 }
 
 // Nested comma operator with fix-its.
-void test_nested_fixits() {
+void test_nested_fixits(void) {
   return_four(), return_four(), return_four(), return_four();
   // expected-warning@-1 3{{comma operator}}
   // expected-note@-2 3{{cast expression to void}}
@@ -138,6 +138,27 @@ void test_nested_fixits() {
   // CHECK: fix-it:{{.*}}:{[[@LINE-6]]:31-[[@LINE-6]]:31}:")"
   // CHECK: fix-it:{{.*}}:{[[@LINE-7]]:33-[[@LINE-7]]:33}:"static_cast<void>("
   // CHECK: fix-it:{{.*}}:{[[@LINE-8]]:46-[[@LINE-8]]:46}:")"
+}
+
+
+void void_func();
+int int_func() { return 0; }
+
+void void_function_comma(){
+  void_func(), int_func(); // expected no -Wcomma because of the returning type `void` 
+  // Reported by https://github.com/llvm/llvm-project/issues/57151
+  // Descriptions about -Wcomma: https://reviews.llvm.org/D3976
+}
+
+typedef void Void;
+Void typedef_func();
+
+void whatever() {
+  // We don't get confused about type aliases.
+  typedef_func(), int_func();
+  // Even function pointers don't confuse us.
+  void (*fp)() = void_func;
+  fp(), int_func();
 }
 
 #ifdef __cplusplus
@@ -242,8 +263,8 @@ struct bool_seq;
 
 template <typename... xs>
 class Foo {
-  typedef bool_seq<(xs::value, true)...> all_true;
-  typedef bool_seq<(xs::value, false)...> all_false;
+  typedef bool_seq<((void)xs::value, true)...> all_true;
+  typedef bool_seq<((void)xs::value, false)...> all_false;
   typedef bool_seq<xs::value...> seq;
 };
 
@@ -296,4 +317,23 @@ void test_dependent_cast() {
   (void)T{}, 0;
   static_cast<void>(T{}), 0;
 }
+
+namespace {
+
+// issue #57151
+
+struct S {
+  void mem() {}
+};
+
+void whatever() {
+  struct S s;
+  // Member function calls also work as expected.
+  s.mem(), int_func();
+  // As do lambda calls.
+  []() { return; }(), int_func();
+}
+
+} // namespace
+
 #endif  // ifdef __cplusplus

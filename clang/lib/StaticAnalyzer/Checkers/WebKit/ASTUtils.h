@@ -13,14 +13,11 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/Casting.h"
 
+#include <functional>
 #include <string>
 #include <utility>
 
 namespace clang {
-class CXXRecordDecl;
-class CXXBaseSpecifier;
-class FunctionDecl;
-class CXXMethodDecl;
 class Expr;
 
 /// This function de-facto defines a set of transformations that we consider
@@ -29,7 +26,7 @@ class Expr;
 /// values).
 ///
 /// For more context see Static Analyzer checkers documentation - specifically
-/// webkit.UncountedCallArgsChecker checker. Whitelist of transformations:
+/// webkit.UncountedCallArgsChecker checker. Allowed list of transformations:
 /// - constructors of ref-counted types (including factory methods)
 /// - getters of ref-counted types
 /// - member overloaded operators
@@ -52,10 +49,12 @@ class Expr;
 /// represents ref-counted object during the traversal we return relevant
 /// sub-expression and true.
 ///
-/// \returns subexpression that we traversed to and if \p
-/// StopAtFirstRefCountedObj is true we also return whether we stopped early.
-std::pair<const clang::Expr *, bool>
-tryToFindPtrOrigin(const clang::Expr *E, bool StopAtFirstRefCountedObj);
+/// Calls \p callback with the subexpression that we traversed to and if \p
+/// StopAtFirstRefCountedObj is true we also specify whether we stopped early.
+/// Returns false if any of calls to callbacks returned false. Otherwise true.
+bool tryToFindPtrOrigin(
+    const clang::Expr *E, bool StopAtFirstRefCountedObj,
+    std::function<bool(const clang::Expr *, bool)> callback);
 
 /// For \p E referring to a ref-countable/-counted pointer/reference we return
 /// whether it's a safe call argument. Examples: function parameter or

@@ -34,13 +34,11 @@ namespace objcarc {
 /// TODO: This class could be generalized to know about other ObjC-specific
 /// tricks. Such as knowing that ivars in the non-fragile ABI are non-aliasing
 /// even though their offsets are dynamic.
-class ObjCARCAAResult : public AAResultBase<ObjCARCAAResult> {
-  friend AAResultBase<ObjCARCAAResult>;
-
+class ObjCARCAAResult : public AAResultBase {
   const DataLayout &DL;
 
 public:
-  explicit ObjCARCAAResult(const DataLayout &DL) : AAResultBase(), DL(DL) {}
+  explicit ObjCARCAAResult(const DataLayout &DL) : DL(DL) {}
   ObjCARCAAResult(ObjCARCAAResult &&Arg)
       : AAResultBase(std::move(Arg)), DL(Arg.DL) {}
 
@@ -53,12 +51,12 @@ public:
   }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI);
-  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                              bool OrLocal);
+                    AAQueryInfo &AAQI, const Instruction *CtxI);
+  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                               bool IgnoreLocals);
 
-  using AAResultBase::getModRefBehavior;
-  FunctionModRefBehavior getModRefBehavior(const Function *F);
+  using AAResultBase::getMemoryEffects;
+  MemoryEffects getMemoryEffects(const Function *F);
 
   using AAResultBase::getModRefInfo;
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
@@ -74,23 +72,6 @@ public:
   typedef ObjCARCAAResult Result;
 
   ObjCARCAAResult run(Function &F, FunctionAnalysisManager &AM);
-};
-
-/// Legacy wrapper pass to provide the ObjCARCAAResult object.
-class ObjCARCAAWrapperPass : public ImmutablePass {
-  std::unique_ptr<ObjCARCAAResult> Result;
-
-public:
-  static char ID;
-
-  ObjCARCAAWrapperPass();
-
-  ObjCARCAAResult &getResult() { return *Result; }
-  const ObjCARCAAResult &getResult() const { return *Result; }
-
-  bool doInitialization(Module &M) override;
-  bool doFinalization(Module &M) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
 } // namespace objcarc

@@ -25,6 +25,7 @@
   }
 
 #include <cassert>
+#include <cstddef> // for size_t
 #include <cstdint>
 #include <dlfcn.h> // for dlsym()
 

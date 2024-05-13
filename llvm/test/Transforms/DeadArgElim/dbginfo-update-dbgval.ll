@@ -1,4 +1,4 @@
-; RUN: opt -deadargelim -S < %s | FileCheck %s
+; RUN: opt -passes=deadargelim -S < %s | FileCheck %s
 ;test.c
 ;int s;
 ;
@@ -24,19 +24,19 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @f2(i32 %k) local_unnamed_addr !dbg !11 {
 entry:
-; CHECK: call void @llvm.dbg.value(metadata i32 undef, metadata !15, metadata !DIExpression()), !dbg !16
+; CHECK: call void @llvm.dbg.value(metadata i32 poison, metadata !15, metadata !DIExpression()), !dbg !16
   call void @llvm.dbg.value(metadata i32 %k, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* @s, align 4, !dbg !17
+  %0 = load i32, ptr @s, align 4, !dbg !17
   %inc = add nsw i32 %0, 1, !dbg !17
-  store i32 %inc, i32* @s, align 4, !dbg !17
-  call void @llvm.dbg.value(metadata i32* @s, metadata !15, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  store i32 %inc, ptr @s, align 4, !dbg !17
+  call void @llvm.dbg.value(metadata ptr @s, metadata !15, metadata !DIExpression(DW_OP_deref)), !dbg !16
   ret void, !dbg !18
 }
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @f() local_unnamed_addr !dbg !19 {
 entry:
-; CHECK: tail call void @f2(i32 undef), !dbg !22
+; CHECK: tail call void @f2(i32 poison), !dbg !22
   tail call void @f2(i32 4), !dbg !22
   ret void, !dbg !23
 }

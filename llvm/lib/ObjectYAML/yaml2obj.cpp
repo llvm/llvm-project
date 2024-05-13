@@ -38,12 +38,20 @@ bool convertYAML(yaml::Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
       return yaml2elf(*Doc.Elf, Out, ErrHandler, MaxSize);
     if (Doc.Coff)
       return yaml2coff(*Doc.Coff, Out, ErrHandler);
+    if (Doc.Goff)
+      return yaml2goff(*Doc.Goff, Out, ErrHandler);
     if (Doc.MachO || Doc.FatMachO)
       return yaml2macho(Doc, Out, ErrHandler);
     if (Doc.Minidump)
       return yaml2minidump(*Doc.Minidump, Out, ErrHandler);
+    if (Doc.Offload)
+      return yaml2offload(*Doc.Offload, Out, ErrHandler);
     if (Doc.Wasm)
       return yaml2wasm(*Doc.Wasm, Out, ErrHandler);
+    if (Doc.Xcoff)
+      return yaml2xcoff(*Doc.Xcoff, Out, ErrHandler);
+    if (Doc.DXContainer)
+      return yaml2dxcontainer(*Doc.DXContainer, Out, ErrHandler);
 
     ErrHandler("unknown document type");
     return false;

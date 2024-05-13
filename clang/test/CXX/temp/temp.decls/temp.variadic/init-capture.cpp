@@ -40,8 +40,10 @@ template<typename ...T> void f(T ...t) {
 
 template<int ...a> constexpr auto x = [...z = a] (auto F) { return F(z...); };
 static_assert(x<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 123);
-static_assert(x<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 124); // expected-error {{failed}}
+static_assert(x<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 124); // expected-error {{failed}} \
+                                                                                          // expected-note {{evaluates to '123 == 124'}}
 
 template<int ...a> constexpr auto y = [z = a...] (auto F) { return F(z...); }; // expected-error {{must appear before the name of the capture}}
 static_assert(y<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 123);
-static_assert(y<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 124); // expected-error {{failed}}
+static_assert(y<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 124); // expected-error {{failed}} \
+                                                                                          // expected-note {{evaluates to '123 == 124'}}

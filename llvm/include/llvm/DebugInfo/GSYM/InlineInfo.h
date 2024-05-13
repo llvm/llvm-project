@@ -9,14 +9,12 @@
 #ifndef LLVM_DEBUGINFO_GSYM_INLINEINFO_H
 #define LLVM_DEBUGINFO_GSYM_INLINEINFO_H
 
-#include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
-#include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/Support/Error.h"
 #include <stdint.h>
 #include <vector>
-
 
 namespace llvm {
 class raw_ostream;
@@ -92,7 +90,7 @@ struct InlineInfo {
   /// exists for \a Addr, then \a SrcLocs will be left untouched. If there is
   /// inline information for \a Addr, then \a SrcLocs will be modifiied to
   /// contain the deepest most inline function's SourceLocation at index zero
-  /// in the array and proceed up the the concrete function source file and
+  /// in the array and proceed up the concrete function source file and
   /// line at the end of the array.
   ///
   /// \param GR The GSYM reader that contains the string and file table that
@@ -134,7 +132,7 @@ struct InlineInfo {
   ///
   /// \returns optional vector of InlineInfo objects that describe the
   /// inline call stack for a given address, false otherwise.
-  llvm::Optional<InlineArray> getInlineStack(uint64_t Addr) const;
+  std::optional<InlineArray> getInlineStack(uint64_t Addr) const;
 
   /// Decode an InlineInfo object from a binary data stream.
   ///
@@ -166,6 +164,17 @@ struct InlineInfo {
   /// \returns An error object that indicates success or failure or the
   /// encoding process.
   llvm::Error encode(FileWriter &O, uint64_t BaseAddr) const;
+
+  /// Compare InlineInfo objects.
+  ///
+  /// When comparing InlineInfo objects the item with the most inline functions
+  /// wins. If we have two FunctionInfo objects that both have the same address
+  /// range and both have valid InlineInfo objects, we want the one with the
+  /// most inline functions to win so we save the most information possible
+  /// to the GSYM file. We have seen cases where LTO messes up the inline
+  /// function information for the same address range, so this helps ensure we
+  /// get the most descriptive information we can for an address range.
+  bool operator<(const InlineInfo &RHS) const;
 };
 
 inline bool operator==(const InlineInfo &LHS, const InlineInfo &RHS) {

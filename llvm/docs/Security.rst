@@ -22,7 +22,7 @@ How to report a security issue?
 
 To report a security issue in the LLVM Project, please `open a new issue`_ in the LLVM project page, on the chromium issue tracker.  Be sure to use the "Security bug report" template.
 
-We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by sending a message to the `llvm-dev mailing list`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
+We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by posting on the `Discourse forums`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
 
 
 Group Composition
@@ -31,24 +31,31 @@ Group Composition
 Security Group Members
 ----------------------
 
-The members of the group represent a wide cross-section of the community, and meet the criteria for inclusion below.
+The members of the group represent a wide cross-section of the community, and
+meet the criteria for inclusion below. The list is in the format
+`* ${full_name} (${affiliation}) [${github_username}]`. If a github
+username for an individual isn't available, the brackets will be empty.
 
-* Ahmed Bougacha (Apple)
-* Artur Pilipenko (Azul Systems Inc)
-* Dimitry Andric (individual; FreeBSD)
-* Ed Maste (individual; FreeBSD)
-* George Burgess IV (Google)
-* Josh Eads (Sony)
-* Kate McInnes (Apple)
-* Kristof Beyls (ARM)
-* Matthew Riley (Google)
-* Oliver Hunt (Apple)
-* Paul Robinson (Sony)
-* Peter Smith (ARM)
-* Pietro Albini (individual; Rust)
-* Serge Guelton (RedHat)
-* Shayne Hiet-Block (Microsoft)
-* Steve Klabnik (Oxide Computer Company; Rust)
+* Ahmed Bougacha (Apple) [@ahmedbougacha]
+* Andy Kaylor (Intel) [@andykaylor]
+* Artur Pilipenko (Azul Systems Inc) []
+* Boovaragavan Dasarathan (Nvidia) [@mrragava]
+* Dimitry Andric (individual; FreeBSD) [@DimitryAndric]
+* Ed Maste (individual; FreeBSD) [@emaste]
+* George Burgess IV (Google) [@gburgessiv]
+* Josh Stone (Red Hat; Rust) [@cuviper]
+* Kate McInnes (Apple) []
+* Kristof Beyls (ARM) [@kbeyls]
+* Matthew Riley (Google) [@mmdriley]
+* Nikhil Gupta (Nvidia) []
+* Oliver Hunt (Apple) [@ojhunt]
+* Paul Robinson (Sony) [@pogo59]
+* Peter Smith (ARM) [@smithp35]
+* Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
+* Serge Guelton (Mozilla) [@serge-sans-paille]
+* Shayne Hiet-Block (Microsoft) [@GreatKeeper]
+* Tim Penge (Sony) []
+* Will Huhn (Intel) [@wphuhn-intel]
 
 Criteria
 --------
@@ -85,8 +92,9 @@ Nomination process
 
 Anyone who feels they meet these criteria can nominate themselves, or may be nominated by a third party such as an existing LLVM Security Group member. The nomination should state whether the nominee is nominated as an individual, researcher, or as a vendor contact. It should clearly describe the grounds for nomination.
 
-*FUTURE*: where nomination occurs (mailing list, GitHub, etc), can be decided later. See `Discussion Medium`_ below.
+For the moment, nominations are generally proposed, discussed, and voted on using Phabricator. An `example nomination is available here`_. The use of Phabricator helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may `open a new issue`_, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
 
+Our recommended method of nomination may change as our `Discussion Medium`_ story evolves over time.
 
 Choosing new members
 --------------------
@@ -111,6 +119,8 @@ Transparency Report
 -------------------
 
 Every year, the LLVM Security Group must publish a transparency report. The intent of this report is to keep the community informed by summarizing the disclosures that have been made public in the last year. It shall contain a list of all public disclosures, as well as statistics on time to fix issues, length of embargo periods, and so on.
+
+The transparency reports are published at :doc:`SecurityTransparencyReports`.
 
 
 Privileges and Responsibilities of LLVM Security Group Members
@@ -171,7 +181,7 @@ We also occasionally need to discuss logistics of the LLVM Security Group itself
 * Propose member removal.
 * Suggest policy changes.
 
-We often have these discussions publicly, in our :ref:`monthly public sync-up call <online-sync-ups>` and on public LLVM mailing lists.  For internal or confidential discussions, we also use a private mailing list.
+We often have these discussions publicly, in our :ref:`monthly public sync-up call <online-sync-ups>` and on the Discourse forums.  For internal or confidential discussions, we also use a private mailing list.
 
 Process
 =======
@@ -201,28 +211,49 @@ The LLVM Security Policy may be changed by majority vote of the LLVM Security Gr
 What is considered a security issue?
 ====================================
 
-*FUTURE*: this section will be expanded once the Security Group is formed, and it agrees on an initial security surface area.
+The LLVM Project has a significant amount of code, and not all of it is
+considered security-sensitive. This is particularly true because LLVM is used in
+a wide variety of circumstances: there are different threat models, untrusted
+inputs differ, and the environment LLVM runs in is varied. Therefore, what the
+LLVM Project considers a security issue is what its members have signed up to
+maintain securely.
 
-The LLVM Project has a significant amount of code, and not all of it is considered security-sensitive. This is particularly true because LLVM is used in a wide variety of circumstances: there are different threat models, untrusted inputs differ, and the environment LLVM runs in is varied. Therefore, what the LLVM Project considers a security issue is what its members have signed up to maintain securely.
+As this security process matures, members of the LLVM community can propose that
+a part of the codebase be designated as security-sensitive (or no longer
+security-sensitive). This requires a rationale, and buy-in from the LLVM
+community as for any RFC. In some cases, parts of the codebase could be handled
+as security-sensitive but need significant work to get to the stage where that's
+manageable. The LLVM community will need to decide whether it wants to invest in
+making these parts of the code securable, and maintain these security
+properties over time. In all cases the LLVM Security Group should be consulted,
+since they'll be responding to security issues filed against these parts of the
+codebase.
 
-As this security process matures, members of the LLVM community can propose that a part of the codebase be designated as security-sensitive (or no longer security-sensitive). This requires a rationale, and buy-in from the LLVM community as for any RFC. In some cases, parts of the codebase could be handled as security-sensitive but need significant work to get to the stage where that's manageable. The LLVM community will need to decide whether it wants to invest in making these parts of the code secure-able, and maintain these security properties over time. In all cases the LLVM Security Group should be consulted, since they'll be responding to security issues filed against these parts of the codebase.
+If you're not sure whether an issue is in-scope for this security process or
+not, err towards assuming that it is. The Security Group might agree or disagree
+and will explain its rationale in the report, as well as update this document
+through the above process.
 
-If you're not sure whether an issue is in-scope for this security process or not, err towards assuming that it is. The Security Group might agree or disagree and will explain its rationale in the report, as well as  update this document through the above process.
+The security-sensitive parts of the LLVM Project currently are the following.
+Note that this list can change over time.
 
-The security-sensitive parts of the LLVM Project currently are:
+* None are currently defined. Please don't let this stop you from reporting
+  issues to the security group that you believe are security-sensitive.
 
-* None (this process is new, the list hasn't been populated yet)
-* *FUTURE*: this section will be expanded.
+The parts of the LLVM Project which are currently treated as non-security
+sensitive are the following. Note that this list can change over time.
 
-The parts of the LLVM Project which are currently treated as non-security sensitive are:
-
-* Language front-ends, such as clang, for which a malicious input file can cause undesirable behavior. For example, a maliciously-crafter C or Rust source file can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been hardened, and compiling untrusted code usually also includes running utilities such as `make` which can more readily perform malicious things.
-* *FUTURE*: this section will be expanded.
+* Language front-ends, such as clang, for which a malicious input file can cause
+  undesirable behavior. For example, a maliciously crafted C or Rust source file
+  can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been
+  hardened, and compiling untrusted code usually also includes running utilities
+  such as `make` which can more readily perform malicious things.
 
 
 .. _CVE process: https://cve.mitre.org
 .. _open a new issue: https://bugs.chromium.org/p/llvm/issues/entry
 .. _chromium issue tracker: https://crbug.com
 .. _GitHub security: https://help.github.com/en/articles/about-maintainer-security-advisories
-.. _llvm-dev mailing list: https://lists.llvm.org/mailman/listinfo/llvm-dev
+.. _Discourse forums: https://discourse.llvm.org
 .. _MITRE: https://cve.mitre.org
+.. _example nomination is available here: https://reviews.llvm.org/D99232

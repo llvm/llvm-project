@@ -2,7 +2,7 @@
 # RUN: %lldb %t -o "image lookup -v -s lookup_loclists" -o exit | FileCheck %s
 
 # CHECK-LABEL: image lookup -v -s lookup_loclists
-# CHECK: Variable: {{.*}}, name = "x0", type = "int", location = DW_OP_reg0 RAX,
+# CHECK: Variable: {{.*}}, name = "x0", type = "int", valid ranges = <block>, location = [0x0000000000000000, 0x0000000000000003) -> DW_OP_reg0 RAX,
 # CHECK-NOT: Variable:
 
 loclists:

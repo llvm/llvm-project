@@ -30,18 +30,25 @@ struct Metadata {
 
 struct DFsanMapUnmapCallback {
   void OnMap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {
+    OnMap(p, size);
+  }
   void OnUnmap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
 };
 
-static const uptr kMaxAllowedMallocSize = 8UL << 30;
+// Note: to ensure that the allocator is compatible with the application memory
+// layout (especially with high-entropy ASLR), kSpaceBeg and kSpaceSize must be
+// duplicated as MappingDesc::ALLOCATOR in dfsan_platform.h.
+#if defined(__aarch64__)
+const uptr kAllocatorSpace = 0xE00000000000ULL;
+#else
+const uptr kAllocatorSpace = 0x700000000000ULL;
+#endif
+const uptr kMaxAllowedMallocSize = 8UL << 30;
 
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
-  // TODO: DFSan assumes application memory starts from 0x700000008000. For
-  // unknown reason, the sanitizer allocator does not support any start address
-  // between 0x701000000000 and 0x700000008000. After switching to fast8labels
-  // mode, DFSan memory layout will be changed to the same to MSan's. Then we
-  // set the start address to 0x700000000000 as MSan.
-  static const uptr kSpaceBeg = 0x701000000000ULL;
+  static const uptr kSpaceBeg = kAllocatorSpace;
   static const uptr kSpaceSize = 0x40000000000;  // 4T.
   static const uptr kMetadataSize = sizeof(Metadata);
   typedef DefaultSizeClassMap SizeClassMap;
@@ -90,6 +97,12 @@ static void *DFsanAllocate(uptr size, uptr alignment, bool zeroise) {
     }
     BufferedStackTrace stack;
     ReportAllocationSizeTooBig(size, max_malloc_size, &stack);
+  }
+  if (UNLIKELY(IsRssLimitExceeded())) {
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    BufferedStackTrace stack;
+    ReportRssLimitExceeded(&stack);
   }
   DFsanThread *t = GetCurrentThread();
   void *allocated;
@@ -168,6 +181,20 @@ void *DFsanCalloc(uptr nmemb, uptr size) {
   return DFsanAllocate(nmemb * size, sizeof(u64), true /*zeroise*/);
 }
 
+static const void *AllocationBegin(const void *p) {
+  if (!p)
+    return nullptr;
+  void *beg = allocator.GetBlockBegin(p);
+  if (!beg)
+    return nullptr;
+  Metadata *b = (Metadata *)allocator.GetMetaData(beg);
+  if (!b)
+    return nullptr;
+  if (b->requested_size == 0)
+    return nullptr;
+  return (const void *)beg;
+}
+
 static uptr AllocationSize(const void *p) {
   if (!p)
     return 0;
@@ -176,6 +203,10 @@ static uptr AllocationSize(const void *p) {
     return 0;
   Metadata *b = (Metadata *)allocator.GetMetaData(p);
   return b->requested_size;
+}
+
+static uptr AllocationSizeFast(const void *p) {
+  return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
 }
 
 void *dfsan_malloc(uptr size) {
@@ -288,4 +319,15 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) { return AllocationSize(p) != 0; }
 
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return AllocationBegin(p);
+}
+
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = AllocationSizeFast(p);
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
+}

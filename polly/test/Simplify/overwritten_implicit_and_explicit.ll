@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-simplify -analyze < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ; Remove a store that is overwritten by another store in the same statement.
 ; Check that this works even if one of the writes is a scalar MemoryKind.
@@ -12,7 +12,7 @@
 ;   A[0] = val;
 ; }
 ;
-define void @overwritten_implicit_and_explicit(i32 %n, double* noalias nonnull %A, double* noalias nonnull %C) {
+define void @overwritten_implicit_and_explicit(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %C) {
 entry:
   br label %for
 
@@ -23,11 +23,11 @@ for:
 
     body:
       %val = fadd double 21.0, 21.0
-      store double %val, double* %A
+      store double %val, ptr %A
       br label %user
 
     user:
-      store double %val, double* %C
+      store double %val, ptr %C
       br label %inc
 
 inc:

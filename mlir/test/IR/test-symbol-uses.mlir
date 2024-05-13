@@ -4,26 +4,28 @@
 // its table.
 // expected-remark@below {{symbol_removable function successfully erased}}
 module attributes {sym.outside_use = @symbol_foo } {
-  // expected-remark@+1 {{symbol has 2 uses}}
-  func private @symbol_foo()
+  // expected-remark@+1 {{symbol has 3 uses}}
+  func.func private @symbol_foo()
 
   // expected-remark@below {{symbol has no uses}}
   // expected-remark@below {{found use of symbol : @symbol_foo}}
-  // expected-remark@below {{symbol contains 2 nested references}}
-  func @symbol_bar() attributes {sym.use = @symbol_foo} {
+  // expected-remark@below {{symbol contains 3 nested references}}
+  func.func @symbol_bar() attributes {sym.use = @symbol_foo} {
     // expected-remark@+1 {{found use of symbol : @symbol_foo}}
     "foo.op"() {
       non_symbol_attr,
-      use = [{ nested_symbol = [@symbol_foo]}],
+      use = [{nested_symbol = [@symbol_foo]}],
       z_other_non_symbol_attr
     } : () -> ()
+    // expected-remark@+1 {{found use of symbol : @symbol_foo}}
+    "foo.op"() { use = distinct[0]<@symbol_foo> } : () -> ()
   }
 
   // expected-remark@below {{symbol has no uses}}
-  func private @symbol_removable()
+  func.func private @symbol_removable()
 
   // expected-remark@+1 {{symbol has 1 use}}
-  func private @symbol_baz()
+  func.func private @symbol_baz()
 
   // expected-remark@+1 {{found use of symbol : @symbol_baz}}
   module attributes {test.reference = @symbol_baz} {
@@ -40,13 +42,13 @@ module {
     // expected-remark@+1 {{symbol has 1 uses}}
     module @module_c {
       // expected-remark@+1 {{symbol has 1 uses}}
-      func nested @foo()
+      func.func nested @foo()
     }
   }
 
   // expected-remark@below {{symbol has no uses}}
   // expected-remark@below {{symbol contains 2 nested references}}
-  func @symbol_bar() {
+  func.func @symbol_bar() {
     // expected-remark@below {{found use of symbol : @module_b::@module_c::@foo : "foo"}}
     // expected-remark@below {{found use of symbol : @module_b::@module_c::@foo : "module_c"}}
     // expected-remark@below {{found use of symbol : @module_b::@module_c::@foo : "module_b"}}
@@ -62,7 +64,7 @@ module {
 // -----
 
 // expected-remark@+1 {{contains an unknown nested operation that 'may' define a new symbol table}}
-func @symbol_bar() {
+func.func @symbol_bar() {
   "foo.possibly_unknown_symbol_table"() ({
   }) : () -> ()
 }

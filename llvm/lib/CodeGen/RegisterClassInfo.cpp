@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -44,35 +43,69 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   bool Update = false;
   MF = &mf;
 
+  auto &STI = MF->getSubtarget();
+
   // Allocate new array the first time we see a new target.
-  if (MF->getSubtarget().getRegisterInfo() != TRI) {
-    TRI = MF->getSubtarget().getRegisterInfo();
+  if (STI.getRegisterInfo() != TRI) {
+    TRI = STI.getRegisterInfo();
     RegClass.reset(new RCInfo[TRI->getNumRegClasses()]);
     Update = true;
   }
 
-  // Does this MF have different CSRs?
-  assert(TRI && "no register info set");
+  // Test if CSRs have changed from the previous function.
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  const MCPhysReg *CSR = MRI.getCalleeSavedRegs();
+  bool CSRChanged = true;
+  if (!Update) {
+    CSRChanged = false;
+    size_t LastSize = LastCalleeSavedRegs.size();
+    for (unsigned I = 0;; ++I) {
+      if (CSR[I] == 0) {
+        CSRChanged = I != LastSize;
+        break;
+      }
+      if (I >= LastSize) {
+        CSRChanged = true;
+        break;
+      }
+      if (CSR[I] != LastCalleeSavedRegs[I]) {
+        CSRChanged = true;
+        break;
+      }
+    }
+  }
 
   // Get the callee saved registers.
-  const MCPhysReg *CSR = MF->getRegInfo().getCalleeSavedRegs();
-  if (Update || CSR != CalleeSavedRegs) {
+  if (CSRChanged) {
+    LastCalleeSavedRegs.clear();
     // Build a CSRAlias map. Every CSR alias saves the last
     // overlapping CSR.
-    CalleeSavedAliases.assign(TRI->getNumRegs(), 0);
-    for (const MCPhysReg *I = CSR; *I; ++I)
-      for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
-        CalleeSavedAliases[*AI] = *I;
+    CalleeSavedAliases.assign(TRI->getNumRegUnits(), 0);
+    for (const MCPhysReg *I = CSR; *I; ++I) {
+      for (MCRegUnit U : TRI->regunits(*I))
+        CalleeSavedAliases[U] = *I;
+      LastCalleeSavedRegs.push_back(*I);
+    }
 
     Update = true;
   }
-  CalleeSavedRegs = CSR;
+
+  // Even if CSR list is same, we could have had a different allocation order
+  // if ignoreCSRForAllocationOrder is evaluated differently.
+  BitVector CSRHintsForAllocOrder(TRI->getNumRegs());
+  for (const MCPhysReg *I = CSR; *I; ++I)
+    for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
+      CSRHintsForAllocOrder[*AI] = STI.ignoreCSRForAllocationOrder(mf, *AI);
+  if (IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
+    Update = true;
+    IgnoreCSRForAllocOrder = CSRHintsForAllocOrder;
+  }
 
   RegCosts = TRI->getRegisterCosts(*MF);
 
   // Different reserved registers?
   const BitVector &RR = MF->getRegInfo().getReservedRegs();
-  if (Reserved.size() != RR.size() || RR != Reserved) {
+  if (RR != Reserved) {
     Update = true;
     Reserved = RR;
   }
@@ -109,15 +142,14 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   // FIXME: Once targets reserve registers instead of removing them from the
   // allocation order, we can simply use begin/end here.
   ArrayRef<MCPhysReg> RawOrder = RC->getRawAllocationOrder(*MF);
-  for (unsigned i = 0; i != RawOrder.size(); ++i) {
-    unsigned PhysReg = RawOrder[i];
+  for (unsigned PhysReg : RawOrder) {
     // Remove reserved registers from the allocation order.
     if (Reserved.test(PhysReg))
       continue;
     uint8_t Cost = RegCosts[PhysReg];
     MinCost = std::min(MinCost, Cost);
 
-    if (CalleeSavedAliases[PhysReg] &&
+    if (getLastCalleeSavedAlias(PhysReg) &&
         !STI.ignoreCSRForAllocationOrder(*MF, PhysReg))
       // PhysReg aliases a CSR, save it for later.
       CSRAlias.push_back(PhysReg);
@@ -132,8 +164,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   assert(RCI.NumRegs <= NumRegs && "Allocation order larger than regclass");
 
   // CSR aliases go after the volatile registers, preserve the target's order.
-  for (unsigned i = 0, e = CSRAlias.size(); i != e; ++i) {
-    unsigned PhysReg = CSRAlias[i];
+  for (unsigned PhysReg : CSRAlias) {
     uint8_t Cost = RegCosts[PhysReg];
     if (Cost != LastCost)
       LastCostChange = N;

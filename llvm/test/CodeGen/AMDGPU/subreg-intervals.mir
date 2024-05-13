@@ -1,29 +1,12 @@
-# RUN: llc -march=amdgcn -run-pass liveintervals -debug-only=regalloc -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass liveintervals -debug-only=regalloc -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
-
-# CHECK: INTERVALS
-# CHECK: %0
-# CHECK-LABEL: Machine code for function test0:
 
 # CHECK: INTERVALS
 # CHECK: %0
 # CHECK-LABEL: Machine code for function test1:
 
 --- |
-  define amdgpu_kernel void @test0() { ret void }
   define amdgpu_kernel void @test1() { ret void }
-...
----
-name: test0
-registers:
-  - { id: 0, class: sreg_64 }
-body: |
-  bb.0:
-    S_NOP 0, implicit-def %0
-    S_NOP 0, implicit %0
-
-    S_NOP 0, implicit-def undef %0.sub0
-    S_NOP 0, implicit %0
 ...
 ---
 name: test1

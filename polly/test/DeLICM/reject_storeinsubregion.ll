@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm -analyze -pass-remarks-missed=polly-delicm < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-print-delicm -pass-remarks-missed=polly-delicm -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
@@ -13,7 +13,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -39,16 +39,16 @@ outer.for:
 
         body:
           %add = fadd double %phi, 4.2
-          %A_idxp = getelementptr inbounds double, double* %A, i32 %j
+          %A_idxp = getelementptr inbounds double, ptr %A, i32 %j
           %add.cmp = fcmp ogt double %add, 42.0
           br i1 %add.cmp , label %body_true, label %body_false
 
         body_true:
-          %dummy = load double, double* %A_idxp
+          %dummy = load double, ptr %A_idxp
           br label %reduction.inc
 
         body_false:
-          store double 0.0, double* %A_idxp
+          store double 0.0, ptr %A_idxp
           br label %reduction.inc
 
 
@@ -58,8 +58,8 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %phi, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

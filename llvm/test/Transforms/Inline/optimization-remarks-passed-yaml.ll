@@ -1,17 +1,24 @@
-; RUN: opt < %s -S -inline -pass-remarks-output=%t -pass-remarks=inline \
+; RUN: opt < %s -S -passes=inline -pass-remarks-output=%t -pass-remarks=inline \
 ; RUN:    -pass-remarks-missed=inline -pass-remarks-analysis=inline \
 ; RUN:    -pass-remarks-with-hotness 2>&1 | FileCheck %s
-; RUN: cat %t | FileCheck -check-prefix=YAML %s
+; RUN: cat %t | FileCheck -check-prefixes=YAML,YAML-NO-ANNOTATE %s
 
 ; RUN: opt < %s -S -passes=inline -pass-remarks-output=%t -pass-remarks=inline \
 ; RUN:    -pass-remarks-missed=inline -pass-remarks-analysis=inline \
 ; RUN:    -pass-remarks-with-hotness 2>&1 | FileCheck %s
-; RUN: cat %t | FileCheck -check-prefix=YAML %s
+; RUN: cat %t | FileCheck -check-prefixes=YAML,YAML-NO-ANNOTATE %s
 
 ; RUN: opt < %s -S -passes=inliner-wrapper -pass-remarks-output=%t -pass-remarks=inline \
 ; RUN:    -pass-remarks-missed=inline -pass-remarks-analysis=inline \
+; RUN:    -annotate-inline-phase=false \
 ; RUN:    -pass-remarks-with-hotness 2>&1 | FileCheck %s
-; RUN: cat %t | FileCheck -check-prefix=YAML %s
+; RUN: cat %t | FileCheck -check-prefixes=YAML,YAML-NO-ANNOTATE %s
+
+; RUN: opt < %s -S -passes=inliner-wrapper -pass-remarks-output=%t -pass-remarks=inline \
+; RUN:    -pass-remarks-missed=inline -pass-remarks-analysis=inline \
+; RUN:    -annotate-inline-phase \
+; RUN:    -pass-remarks-with-hotness 2>&1 | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefixes=YAML,YAML-ANNOTATE %s
 
 ; Check the YAML file for inliner-generated passed and analysis remarks.  This
 ; is the input:
@@ -22,20 +29,23 @@
 ;  4       return foo();
 ;  5     }
 
-; CHECK: remark: /tmp/s.c:4:10: foo inlined into bar with (cost={{[0-9\-]+}}, threshold={{[0-9]+}}) at callsite bar:1:10; (hotness: 30)
+; CHECK: remark: /tmp/s.c:4:10: 'foo' inlined into 'bar' with (cost={{[0-9\-]+}}, threshold={{[0-9]+}}) at callsite bar:1:10; (hotness: 30)
 
 ; YAML:      --- !Passed
-; YAML-NEXT: Pass:            inline
+; YAML-NO-ANNOTATE-NEXT: Pass:            inline
+; YAML-ANNOTATE-NEXT: Pass:            main-always-inline
 ; YAML-NEXT: Name:            Inlined
 ; YAML-NEXT: DebugLoc:        { File: '/tmp/s.c', Line: 4, Column: 10 }
 ; YAML-NEXT: Function:        bar
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
+; YAML-NEXT:   - String: ''''
 ; YAML-NEXT:   - Callee: foo
 ; YAML-NEXT:     DebugLoc:        { File: '/tmp/s.c', Line: 1, Column: 0 }
-; YAML-NEXT:   - String: ' inlined into '
+; YAML-NEXT:   - String: ''' inlined into '''
 ; YAML-NEXT:   - Caller: bar
 ; YAML-NEXT:     DebugLoc:        { File: '/tmp/s.c', Line: 3, Column: 0 }
+; YAML-NEXT:   - String: ''''
 ; YAML-NEXT:   - String: ' with '
 ; YAML-NEXT:   - String: '(cost='
 ; YAML-NEXT:   - Cost: '{{[0-9\-]+}}'

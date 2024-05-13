@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -Wno-strict-prototypes -verify %s
 
 /* This test checks the introduction of struct and union types based
    on a type specifier of the form "struct-or-union identifier" when they
@@ -41,12 +41,11 @@ struct S6 {
         enum { BAR } e;
 };
 
-void test_S6() {
+void test_S6(void) {
         struct S6 a;
         a.e = BAR;
 }
 
-// <rdar://problem/6487669>
 typedef struct z_foo_s {
   struct bar_baz *baz;
 } z_foo;

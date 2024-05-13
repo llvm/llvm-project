@@ -1,9 +1,8 @@
 //===--- CurrentSourceLocExprScope.h ----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -12,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_CURRENT_SOURCE_LOC_EXPR_SCOPE_H
-#define LLVM_CLANG_AST_CURRENT_SOURCE_LOC_EXPR_SCOPE_H
+#ifndef LLVM_CLANG_AST_CURRENTSOURCELOCEXPRSCOPE_H
+#define LLVM_CLANG_AST_CURRENTSOURCELOCEXPRSCOPE_H
 
 #include <cassert>
 
@@ -72,4 +71,4 @@ private:
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_AST_CURRENT_SOURCE_LOC_EXPR_SCOPE_H
+#endif // LLVM_CLANG_AST_CURRENTSOURCELOCEXPRSCOPE_H

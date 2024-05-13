@@ -6,10 +6,10 @@
 define i32 @get_a() {
 ; CHECK-LABEL: get_a:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq a@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq a@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl (%rax), %eax
 ; CHECK-NEXT:    retq
 entry:
-	%tmp1 = load i32, i32* @a, align 4
+	%tmp1 = load i32, ptr @a, align 4
 	ret i32 %tmp1
 }

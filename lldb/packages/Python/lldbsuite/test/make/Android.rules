@@ -24,14 +24,6 @@ else ifeq "$(ARCH)" "i386"
 	SYSROOT_ARCH := x86
 	STL_ARCH := x86
 	TRIPLE := i686-none-linux-android
-else ifeq "$(ARCH)" "mips64r6"
-	SYSROOT_ARCH := mips64
-	STL_ARCH := mips64
-	TRIPLE := mips64el-none-linux-android
-else ifeq "$(ARCH)" "mips32"
-	SYSROOT_ARCH := mips
-	STL_ARCH := mips
-	TRIPLE := mipsel-none-linux-android
 else
 	SYSROOT_ARCH := $(ARCH)
 	STL_ARCH := $(ARCH)
@@ -66,8 +58,8 @@ OBJCOPY ?= $(GCC_TOOLCHAIN)/bin/$(TOOL_PREFIX)-objcopy
 ARCHIVER ?= $(GCC_TOOLCHAIN)/bin/$(TOOL_PREFIX)-ar
 
 ifeq "$(findstring clang,$(CC))" "clang"
-	ARCH_CFLAGS += -target $(TRIPLE) -gcc-toolchain $(GCC_TOOLCHAIN)
-	ARCH_LDFLAGS += -target $(TRIPLE) -gcc-toolchain $(GCC_TOOLCHAIN)
+	ARCH_CFLAGS += -target $(TRIPLE) --gcc-toolchain=$(GCC_TOOLCHAIN)
+	ARCH_LDFLAGS += -target $(TRIPLE) --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
 
 ARCH_CFLAGS += --sysroot=$(NDK_ROOT)/sysroot \

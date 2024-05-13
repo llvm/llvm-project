@@ -1,4 +1,4 @@
-//===-- HostInfoNetBSD.h ---------------------------------------*- C++ -*-===//
+//===-- HostInfoNetBSD.h ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,14 +12,14 @@
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/VersionTuple.h"
+#include <optional>
 
 namespace lldb_private {
 
 class HostInfoNetBSD : public HostInfoPosix {
 public:
   static llvm::VersionTuple GetOSVersion();
-  static bool GetOSBuildString(std::string &s);
-  static bool GetOSKernelDescription(std::string &s);
+  static std::optional<std::string> GetOSBuildString();
   static FileSpec GetProgramFileSpec();
 };
 }

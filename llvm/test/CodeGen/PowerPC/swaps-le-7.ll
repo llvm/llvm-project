@@ -10,12 +10,12 @@
 
 ; CHECK-LABEL: @zg
 ; CHECK: lxvdsx
-; CHECK-NEXT: lxvdsx
+; CHECK: xxswapd
 ; CHECK-NEXT: xvmuldp
+; CHECK-NEXT: lxvdsx
 ; CHECK-DAG: xvmuldp
 ; CHECK-DAG: xvsubdp
 ; CHECK-DAG: xvadddp
-; CHECK-DAG: xxswapd
 ; CHECK-DAG: xxpermdi
 ; CHECK-DAG: xvsubdp
 ; CHECK: xxswapd
@@ -23,17 +23,14 @@
 ; CHECK: blr
 
 ; Function Attrs: noinline
-define void @zg(i8* %.G0011_640.0, i8* %.G0012_642.0, <2 x double>* %JJ, <2 x double>* %.ka0000_391, double %.unpack, double %.unpack66) #0 {
+define void @zg(ptr %.G0011_640.0, ptr %.G0012_642.0, ptr %JJ, ptr %.ka0000_391, double %.unpack, double %.unpack66) #0 {
 L.JA291:
-  %Z.L.JA291.2 = load <2 x double>, <2 x double>* %.ka0000_391, align 16
-  store <2 x double> %Z.L.JA291.2, <2 x double>* %JJ, align 8
-  %Z.L.JA291.3 = bitcast i8* %.G0012_642.0 to <2 x double>*
-  %Z.L.JA291.4 = load <2 x double>, <2 x double>* %Z.L.JA291.3, align 1
-  %.elt136 = bitcast i8* %.G0011_640.0 to double*
-  %.unpack137 = load double, double* %.elt136, align 1
-  %.elt138 = getelementptr inbounds i8, i8* %.G0011_640.0, i64 8
-  %Z.L.JA291.5 = bitcast i8* %.elt138 to double*
-  %.unpack139 = load double, double* %Z.L.JA291.5, align 1
+  %Z.L.JA291.2 = load <2 x double>, ptr %.ka0000_391, align 16
+  store <2 x double> %Z.L.JA291.2, ptr %JJ, align 8
+  %Z.L.JA291.4 = load <2 x double>, ptr %.G0012_642.0, align 1
+  %.unpack137 = load double, ptr %.G0011_640.0, align 1
+  %.elt138 = getelementptr inbounds i8, ptr %.G0011_640.0, i64 8
+  %.unpack139 = load double, ptr %.elt138, align 1
   %Z.L.JA291.6 = insertelement <2 x double> undef, double %.unpack137, i32 0
   %Z.L.JA291.7 = insertelement <2 x double> %Z.L.JA291.6, double %.unpack137, i32 1
   %Z.L.JA291.8 = fmul <2 x double> %Z.L.JA291.2, %Z.L.JA291.7
@@ -45,10 +42,8 @@ L.JA291:
   %Z.L.JA291.14 = fadd <2 x double> %Z.L.JA291.8, %Z.L.JA291.12
   %Z.L.JA291.15 = shufflevector <2 x double> %Z.L.JA291.13, <2 x double> %Z.L.JA291.14, <2 x i32> <i32 0, i32 3>
   %Z.L.JA291.16 = fsub <2 x double> %Z.L.JA291.4, %Z.L.JA291.15
-  %Z.L.JA291.17 = bitcast i8* %.G0012_642.0 to <2 x double>*
-  store <2 x double> %Z.L.JA291.16, <2 x double>* %Z.L.JA291.17, align 8
-  %.. = bitcast <2 x double>* %JJ to i32*
-  %.pre = load i32, i32* %.., align 32
+  store <2 x double> %Z.L.JA291.16, ptr %.G0012_642.0, align 8
+  %.pre = load i32, ptr %JJ, align 32
   ret void
 }
 

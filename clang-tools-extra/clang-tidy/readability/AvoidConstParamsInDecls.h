@@ -11,26 +11,27 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 // Detect function declarations that have const value parameters and discourage
 // them.
 class AvoidConstParamsInDecls : public ClangTidyCheck {
 public:
   AvoidConstParamsInDecls(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  const bool IgnoreMacros;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOID_CONST_PARAMS_IN_DECLS_H

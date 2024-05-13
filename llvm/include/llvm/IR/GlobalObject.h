@@ -22,7 +22,6 @@
 namespace llvm {
 
 class Comdat;
-class MDNode;
 class Metadata;
 
 class GlobalObject : public GlobalValue {
@@ -44,14 +43,15 @@ protected:
   GlobalObject(Type *Ty, ValueTy VTy, Use *Ops, unsigned NumOps,
                LinkageTypes Linkage, const Twine &Name,
                unsigned AddressSpace = 0)
-      : GlobalValue(Ty, VTy, Ops, NumOps, Linkage, Name, AddressSpace),
-        ObjComdat(nullptr) {
+      : GlobalValue(Ty, VTy, Ops, NumOps, Linkage, Name, AddressSpace) {
     setGlobalValueSubClassData(0);
   }
+  ~GlobalObject();
 
-  Comdat *ObjComdat;
+  Comdat *ObjComdat = nullptr;
   enum {
-    LastAlignmentBit = 4,
+    LastAlignmentBit = 5,
+    LastCodeModelBit = 8,
     HasSectionHashEntryBit,
 
     GlobalObjectBits,
@@ -68,7 +68,7 @@ public:
   GlobalObject(const GlobalObject &) = delete;
 
   /// FIXME: Remove this function once transition to Align is over.
-  unsigned getAlignment() const {
+  uint64_t getAlignment() const {
     MaybeAlign Align = getAlign();
     return Align ? Align->value() : 0;
   }
@@ -83,6 +83,12 @@ public:
     return decodeMaybeAlign(AlignmentData);
   }
 
+  /// Sets the alignment attribute of the GlobalObject.
+  void setAlignment(Align Align);
+
+  /// Sets the alignment attribute of the GlobalObject.
+  /// This method will be deprecated as the alignment property should always be
+  /// defined.
   void setAlignment(MaybeAlign Align);
 
   unsigned getGlobalObjectSubClassData() const {
@@ -122,11 +128,12 @@ public:
   bool hasComdat() const { return getComdat() != nullptr; }
   const Comdat *getComdat() const { return ObjComdat; }
   Comdat *getComdat() { return ObjComdat; }
-  void setComdat(Comdat *C) { ObjComdat = C; }
+  void setComdat(Comdat *C);
 
   using Value::addMetadata;
   using Value::clearMetadata;
   using Value::eraseMetadata;
+  using Value::eraseMetadataIf;
   using Value::getAllMetadata;
   using Value::getMetadata;
   using Value::hasMetadata;
@@ -153,7 +160,8 @@ public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == Value::FunctionVal ||
-           V->getValueID() == Value::GlobalVariableVal;
+           V->getValueID() == Value::GlobalVariableVal ||
+           V->getValueID() == Value::GlobalIFuncVal;
   }
 
 private:

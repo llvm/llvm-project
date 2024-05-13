@@ -4,7 +4,7 @@
 # RUN: ld.lld %t.o -o %t1.exe -Ttext=0x10000
 
 # RUN: ld.lld -just-symbols=%t1.exe -o %t2.exe
-# RUN: llvm-readelf -symbols %t2.exe | FileCheck %s
+# RUN: llvm-readelf -s %t2.exe | FileCheck %s
 
 # CHECK: 0000000000010000     0 NOTYPE  GLOBAL DEFAULT  ABS foo
 # CHECK: 0000000000011001    40 OBJECT  GLOBAL DEFAULT  ABS bar

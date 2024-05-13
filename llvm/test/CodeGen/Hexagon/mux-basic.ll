@@ -6,7 +6,7 @@ target triple = "hexagon"
 
 %struct.struct_t = type { i32, i32, i32 }
 
-define void @foo(%struct.struct_t* nocapture %p, i32 %x, i32 %y, i32 %z) nounwind {
+define void @foo(ptr nocapture %p, i32 %x, i32 %y, i32 %z) nounwind {
 entry:
   %cmp = icmp slt i32 %x, 4660
   %add = add nsw i32 %x, 1
@@ -14,12 +14,11 @@ entry:
   %x.add.y = select i1 %cmp, i32 %x, i32 %y
   %. = zext i1 %cmp to i32
   %b.0 = add nsw i32 %x.add.y, %z
-  %a3 = getelementptr inbounds %struct.struct_t, %struct.struct_t* %p, i32 0, i32 0
-  store i32 %add.y, i32* %a3, align 4, !tbaa !0
-  %b4 = getelementptr inbounds %struct.struct_t, %struct.struct_t* %p, i32 0, i32 1
-  store i32 %b.0, i32* %b4, align 4, !tbaa !0
-  %c5 = getelementptr inbounds %struct.struct_t, %struct.struct_t* %p, i32 0, i32 2
-  store i32 %., i32* %c5, align 4, !tbaa !0
+  store i32 %add.y, ptr %p, align 4, !tbaa !0
+  %b4 = getelementptr inbounds %struct.struct_t, ptr %p, i32 0, i32 1
+  store i32 %b.0, ptr %b4, align 4, !tbaa !0
+  %c5 = getelementptr inbounds %struct.struct_t, ptr %p, i32 0, i32 2
+  store i32 %., ptr %c5, align 4, !tbaa !0
   ret void
 }
 

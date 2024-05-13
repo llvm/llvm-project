@@ -18,8 +18,8 @@ define i32 @test1(i32 %x, i64 %y) {
 define i64 @test2(i32 %x, i64 %y) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg w[[REG:[0-9]+]], w0
-; CHECK-NEXT:    asr x0, x1, x[[REG]]
+; CHECK-NEXT:    neg w8, w0
+; CHECK-NEXT:    asr x0, x1, x8
 ; CHECK-NEXT:    ret
   %sub9 = sub nsw i32 64, %x
   %sh_prom12.i = zext i32 %sub9 to i64
@@ -78,7 +78,7 @@ entry:
 define i64 @ashr_add_shl_i32(i64 %r) {
 ; CHECK-LABEL: ashr_add_shl_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #1 // =1
+; CHECK-NEXT:    add w8, w0, #1
 ; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
   %conv = shl i64 %r, 32
@@ -90,7 +90,7 @@ define i64 @ashr_add_shl_i32(i64 %r) {
 define i64 @ashr_add_shl_i8(i64 %r) {
 ; CHECK-LABEL: ashr_add_shl_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #1 // =1
+; CHECK-NEXT:    add w8, w0, #1
 ; CHECK-NEXT:    sxtb x0, w8
 ; CHECK-NEXT:    ret
   %conv = shl i64 %r, 56
@@ -102,8 +102,8 @@ define i64 @ashr_add_shl_i8(i64 %r) {
 define <4 x i32> @ashr_add_shl_v4i8(<4 x i32> %r) {
 ; CHECK-LABEL: ashr_add_shl_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v0.4s, v0.4s, #24
 ; CHECK-NEXT:    movi v1.4s, #1, lsl #24
+; CHECK-NEXT:    shl v0.4s, v0.4s, #24
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    sshr v0.4s, v0.4s, #24
 ; CHECK-NEXT:    ret

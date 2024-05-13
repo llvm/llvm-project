@@ -40,8 +40,8 @@ private:
   struct NameAndAttributes {
     StringRef name;
     uint32_t           attributes = 0;
-    bool               isFunction = 0;
-    const GlobalValue *symbol = 0;
+    bool               isFunction = false;
+    const GlobalValue *symbol = nullptr;
   };
 
   std::unique_ptr<LLVMContext> OwnedContext;
@@ -166,6 +166,10 @@ public:
   Expected<uint32_t> getMachOCPUType() const;
 
   Expected<uint32_t> getMachOCPUSubType() const;
+
+  /// Returns true if the module has either the @llvm.global_ctors or the
+  /// @llvm.global_dtors symbol. Otherwise returns false.
+  bool hasCtorDtor() const;
 
 private:
   /// Parse metadata from the module

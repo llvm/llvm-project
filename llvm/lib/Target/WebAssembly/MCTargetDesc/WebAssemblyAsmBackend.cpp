@@ -35,7 +35,7 @@ class WebAssemblyAsmBackend final : public MCAsmBackend {
 
 public:
   explicit WebAssemblyAsmBackend(bool Is64Bit, bool IsEmscripten)
-      : MCAsmBackend(support::little), Is64Bit(Is64Bit),
+      : MCAsmBackend(llvm::endianness::little), Is64Bit(Is64Bit),
         IsEmscripten(IsEmscripten) {}
 
   unsigned getNumFixupKinds() const override {
@@ -59,7 +59,8 @@ public:
     return false;
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 };
 
 const MCFixupKindInfo &
@@ -83,8 +84,8 @@ WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS,
-                                         uint64_t Count) const {
+bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                         const MCSubtargetInfo *STI) const {
   for (uint64_t I = 0; I < Count; ++I)
     OS << char(WebAssembly::Nop);
 

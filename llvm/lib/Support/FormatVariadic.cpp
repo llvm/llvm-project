@@ -7,10 +7,11 @@
 
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
+#include <optional>
 
 using namespace llvm;
 
-static Optional<AlignStyle> translateLocChar(char C) {
+static std::optional<AlignStyle> translateLocChar(char C) {
   switch (C) {
   case '-':
     return AlignStyle::Left;
@@ -19,7 +20,7 @@ static Optional<AlignStyle> translateLocChar(char C) {
   case '+':
     return AlignStyle::Right;
   default:
-    return None;
+    return std::nullopt;
   }
   LLVM_BUILTIN_UNREACHABLE;
 }
@@ -54,7 +55,7 @@ bool formatv_object_base::consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
   return !Failed;
 }
 
-Optional<ReplacementItem>
+std::optional<ReplacementItem>
 formatv_object_base::parseReplacementItem(StringRef Spec) {
   StringRef RepString = Spec.trim("{}");
 
@@ -71,14 +72,13 @@ formatv_object_base::parseReplacementItem(StringRef Spec) {
     return ReplacementItem{};
   }
   RepString = RepString.trim();
-  if (!RepString.empty() && RepString.front() == ',') {
-    RepString = RepString.drop_front();
+  if (RepString.consume_front(",")) {
     if (!consumeFieldLayout(RepString, Where, Align, Pad))
       assert(false && "Invalid replacement field layout specification!");
   }
   RepString = RepString.trim();
-  if (!RepString.empty() && RepString.front() == ':') {
-    Options = RepString.drop_front().trim();
+  if (RepString.consume_front(":")) {
+    Options = RepString.trim();
     RepString = StringRef();
   }
   RepString = RepString.trim();
@@ -130,7 +130,7 @@ formatv_object_base::splitLiteralAndReplacement(StringRef Fmt) {
     StringRef Right = Fmt.substr(BC + 1);
 
     auto RI = parseReplacementItem(Spec);
-    if (RI.hasValue())
+    if (RI)
       return std::make_pair(*RI, Right);
 
     // If there was an error parsing the replacement item, treat it as an
@@ -152,4 +152,4 @@ formatv_object_base::parseFormatString(StringRef Fmt) {
   return Replacements;
 }
 
-void detail::format_adapter::anchor() { }
+void support::detail::format_adapter::anchor() {}

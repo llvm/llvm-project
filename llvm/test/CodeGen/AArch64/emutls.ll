@@ -6,22 +6,22 @@
 ; Copied from X86/emutls.ll
 
 ; Use my_emutls_get_address like __emutls_get_address.
-@my_emutls_v_xyz = external global i8*, align 4
-declare i8* @my_emutls_get_address(i8*)
+@my_emutls_v_xyz = external global ptr, align 4
+declare ptr @my_emutls_get_address(ptr)
 
-define i32 @my_get_xyz() {
+define i32 @my_get_xyz() uwtable {
 ; ARM64-LABEL: my_get_xyz:
 ; ARM64:        adrp x0, :got:my_emutls_v_xyz
 ; ARM64-NEXT:   ldr x0, [x0, :got_lo12:my_emutls_v_xyz]
 ; ARM64-NEXT:   bl my_emutls_get_address
 ; ARM64-NEXT:   ldr  w0, [x0]
+; ARM64-NEXT: 	.cfi_def_cfa wsp, 16
 ; ARM64-NEXT:   ldp x29, x30, [sp]
 
 entry:
-  %call = call i8* @my_emutls_get_address(i8* bitcast (i8** @my_emutls_v_xyz to i8*))
-  %0 = bitcast i8* %call to i32*
-  %1 = load i32, i32* %0, align 4
-  ret i32 %1
+  %call = call ptr @my_emutls_get_address(ptr @my_emutls_v_xyz)
+  %0 = load i32, ptr %call, align 4
+  ret i32 %0
 }
 
 @i1 = thread_local global i32 15
@@ -32,28 +32,30 @@ entry:
 @s1 = thread_local global i16 15
 @b1 = thread_local global i8 0
 
-define i32 @f1() {
+define i32 @f1() uwtable {
 ; ARM64-LABEL: f1:
 ; ARM64:        adrp x0, :got:__emutls_v.i1
 ; ARM64-NEXT:   ldr x0, [x0, :got_lo12:__emutls_v.i1]
 ; ARM64-NEXT:   bl __emutls_get_address
 ; ARM64-NEXT:   ldr  w0, [x0]
+; ARM64-NEXT: 	.cfi_def_cfa wsp, 16
 ; ARM64-NEXT:   ldp x29, x30, [sp]
 
 entry:
-  %tmp1 = load i32, i32* @i1
+  %tmp1 = load i32, ptr @i1
   ret i32 %tmp1
 }
 
-define i32* @f2() {
+define ptr @f2() uwtable {
 ; ARM64-LABEL: f2:
 ; ARM64:        adrp x0, :got:__emutls_v.i1
 ; ARM64-NEXT:   ldr x0, [x0, :got_lo12:__emutls_v.i1]
 ; ARM64-NEXT:   bl __emutls_get_address
+; ARM64-NEXT: 	.cfi_def_cfa wsp, 16
 ; ARM64-NEXT:   ldp x29, x30, [sp]
 
 entry:
-  ret i32* @i1
+  ret ptr @i1
 }
 
 define i32 @f5() nounwind {
@@ -64,19 +66,20 @@ define i32 @f5() nounwind {
 ; ARM64-NEXT:   ldr w0, [x0]
 
 entry:
-  %tmp1 = load i32, i32* @i3
+  %tmp1 = load i32, ptr @i3
   ret i32 %tmp1
 }
 
-define i32* @f6() {
+define ptr @f6() uwtable {
 ; ARM64-LABEL: f6:
 ; ARM64:        adrp x0, __emutls_v.i3
 ; ARM64:        add x0, x0, :lo12:__emutls_v.i3
 ; ARM64-NEXT:   bl __emutls_get_address
+; ARM64-NEXT: 	.cfi_def_cfa wsp, 16
 ; ARM64-NEXT:   ldp x29, x30, [sp]
 
 entry:
-  ret i32* @i3
+  ret ptr @i3
 }
 
 ; Simple test of comdat __thread variables.
@@ -95,14 +98,14 @@ define i32 @_Z7getIntXv() {
 ; ARM64:        adrp x0, :got:__emutls_v._ZN1AIiE1xE
 ; ARM64:        ldr x0, [x0, :got_lo12:__emutls_v._ZN1AIiE1xE]
 ; ARM64-NEXT:   bl __emutls_get_address
-; ARM64-NEXT:   ldr {{.*}}, [x0]
+; ARM64:        ldr {{.*}}, [x0]
 ; ARM64:        add
-; ARM64:        str {{.*}}, [x0]
+; ARM64:        str {{.*}}, [x8]
 
 entry:
-  %0 = load i32, i32* @_ZN1AIiE1xE, align 4
+  %0 = load i32, ptr @_ZN1AIiE1xE, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @_ZN1AIiE1xE, align 4
+  store i32 %inc, ptr @_ZN1AIiE1xE, align 4
   ret i32 %0
 }
 
@@ -111,14 +114,14 @@ define float @_Z9getFloatXv() {
 ; ARM64:        adrp x0, :got:__emutls_v._ZN1AIfE1xE
 ; ARM64:        ldr x0, [x0, :got_lo12:__emutls_v._ZN1AIfE1xE]
 ; ARM64-NEXT:   bl __emutls_get_address
-; ARM64-NEXT:   ldr {{.*}}, [x0]
+; ARM64:        ldr {{.*}}, [x0]
 ; ARM64:        fadd s{{.*}}, s
 ; ARM64:        str s{{.*}}, [x0]
 
 entry:
-  %0 = load float, float* @_ZN1AIfE1xE, align 4
+  %0 = load float, ptr @_ZN1AIfE1xE, align 4
   %inc = fadd float %0, 1.000000e+00
-  store float %inc, float* @_ZN1AIfE1xE, align 4
+  store float %inc, ptr @_ZN1AIfE1xE, align 4
   ret float %0
 }
 

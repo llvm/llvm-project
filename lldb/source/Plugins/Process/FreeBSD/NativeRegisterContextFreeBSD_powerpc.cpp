@@ -24,6 +24,7 @@
 #include <sys/ptrace.h>
 #include <sys/types.h>
 // clang-format on
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -106,7 +107,7 @@ NativeRegisterContextFreeBSD_powerpc::GetRegisterSet(uint32_t set_index) const {
   }
 }
 
-llvm::Optional<NativeRegisterContextFreeBSD_powerpc::RegSetKind>
+std::optional<NativeRegisterContextFreeBSD_powerpc::RegSetKind>
 NativeRegisterContextFreeBSD_powerpc::GetSetForNativeRegNum(
     uint32_t reg_num) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
@@ -171,7 +172,7 @@ NativeRegisterContextFreeBSD_powerpc::ReadRegister(const RegisterInfo *reg_info,
                                                ? reg_info->name
                                                : "<unknown register>");
 
-  llvm::Optional<RegSetKind> opt_set = GetSetForNativeRegNum(reg);
+  std::optional<RegSetKind> opt_set = GetSetForNativeRegNum(reg);
   if (!opt_set) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
@@ -180,7 +181,7 @@ NativeRegisterContextFreeBSD_powerpc::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  RegSetKind set = opt_set.getValue();
+  RegSetKind set = *opt_set;
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
@@ -205,7 +206,7 @@ Status NativeRegisterContextFreeBSD_powerpc::WriteRegister(
                                                ? reg_info->name
                                                : "<unknown register>");
 
-  llvm::Optional<RegSetKind> opt_set = GetSetForNativeRegNum(reg);
+  std::optional<RegSetKind> opt_set = GetSetForNativeRegNum(reg);
   if (!opt_set) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
@@ -214,7 +215,7 @@ Status NativeRegisterContextFreeBSD_powerpc::WriteRegister(
     return error;
   }
 
-  RegSetKind set = opt_set.getValue();
+  RegSetKind set = *opt_set;
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
@@ -227,7 +228,7 @@ Status NativeRegisterContextFreeBSD_powerpc::WriteRegister(
 }
 
 Status NativeRegisterContextFreeBSD_powerpc::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   error = ReadRegisterSet(GPRegSet);
@@ -264,7 +265,7 @@ Status NativeRegisterContextFreeBSD_powerpc::WriteAllRegisterValues(
     return error;
   }
 
-  uint8_t *src = data_sp->GetBytes();
+  const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
     error.SetErrorStringWithFormat("NativeRegisterContextFreeBSD_powerpc::%s "
                                    "DataBuffer::GetBytes() returned a null "

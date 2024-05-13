@@ -19,8 +19,10 @@
 #include <cstdlib>
 #include <grp.h>
 #include <mutex>
+#include <optional>
 #include <pwd.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 
 using namespace lldb_private;
@@ -37,6 +39,14 @@ bool HostInfoPosix::GetHostname(std::string &s) {
   return false;
 }
 
+std::optional<std::string> HostInfoPosix::GetOSKernelDescription() {
+  struct utsname un;
+  if (uname(&un) < 0)
+    return std::nullopt;
+
+  return std::string(un.version);
+}
+
 #ifdef __ANDROID__
 #include <android/api-level.h>
 #endif
@@ -47,8 +57,8 @@ bool HostInfoPosix::GetHostname(std::string &s) {
 namespace {
 class PosixUserIDResolver : public UserIDResolver {
 protected:
-  llvm::Optional<std::string> DoGetUserName(id_t uid) override;
-  llvm::Optional<std::string> DoGetGroupName(id_t gid) override;
+  std::optional<std::string> DoGetUserName(id_t uid) override;
+  std::optional<std::string> DoGetGroupName(id_t gid) override;
 };
 } // namespace
 
@@ -57,7 +67,7 @@ struct PasswdEntry {
   std::string shell;
 };
 
-static llvm::Optional<PasswdEntry> GetPassword(id_t uid) {
+static std::optional<PasswdEntry> GetPassword(id_t uid) {
 #ifdef USE_GETPWUID
   // getpwuid_r is missing from android-9
   // The caller should provide some thread safety by making sure no one calls
@@ -76,16 +86,16 @@ static llvm::Optional<PasswdEntry> GetPassword(id_t uid) {
     return PasswdEntry{user_info_ptr->pw_name, user_info_ptr->pw_shell};
   }
 #endif
-  return llvm::None;
+  return std::nullopt;
 }
 
-llvm::Optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
-  if (llvm::Optional<PasswdEntry> password = GetPassword(uid))
+std::optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
+  if (std::optional<PasswdEntry> password = GetPassword(uid))
     return password->username;
-  return llvm::None;
+  return std::nullopt;
 }
 
-llvm::Optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
+std::optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
 #ifndef __ANDROID__
   char group_buffer[PATH_MAX];
   size_t group_buffer_size = sizeof(group_buffer);
@@ -104,7 +114,7 @@ llvm::Optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
       return std::string(group_info_ptr->gr_name);
   }
 #endif
-  return llvm::None;
+  return std::nullopt;
 }
 
 static llvm::ManagedStatic<PosixUserIDResolver> g_user_id_resolver;
@@ -124,7 +134,7 @@ uint32_t HostInfoPosix::GetEffectiveGroupID() { return getegid(); }
 FileSpec HostInfoPosix::GetDefaultShell() {
   if (const char *v = ::getenv("SHELL"))
     return FileSpec(v);
-  if (llvm::Optional<PasswdEntry> password = GetPassword(::geteuid()))
+  if (std::optional<PasswdEntry> password = GetPassword(::geteuid()))
     return FileSpec(password->shell);
   return FileSpec("/bin/sh");
 }
@@ -135,7 +145,7 @@ bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
 
 bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {
   FileSpec temp_file("/opt/local/include/lldb");
-  file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
+  file_spec.SetDirectory(temp_file.GetPath());
   return true;
 }
 

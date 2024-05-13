@@ -18,6 +18,13 @@
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
 
+/**
+ * @defgroup LLVMCCoreNewPM New Pass Manager
+ * @ingroup LLVMCCore
+ *
+ * @{
+ */
+
 LLVM_C_EXTERN_C_BEGIN
 
 /**
@@ -50,7 +57,7 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
  * responsible for it. The client should call LLVMDisposePassBuilderOptions
  * to free the pass builder options.
  */
-LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions();
+LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions(void);
 
 /**
  * Toggle adding the VerifierPass for the PassBuilder, ensuring all functions
@@ -80,9 +87,6 @@ void LLVMPassBuilderOptionsSetLoopUnrolling(LLVMPassBuilderOptionsRef Options,
 void LLVMPassBuilderOptionsSetForgetAllSCEVInLoopUnroll(
     LLVMPassBuilderOptionsRef Options, LLVMBool ForgetAllSCEVInLoopUnroll);
 
-void LLVMPassBuilderOptionsSetCoroutines(LLVMPassBuilderOptionsRef Options,
-                                         LLVMBool Coroutines);
-
 void LLVMPassBuilderOptionsSetLicmMssaOptCap(LLVMPassBuilderOptionsRef Options,
                                              unsigned LicmMssaOptCap);
 
@@ -95,10 +99,17 @@ void LLVMPassBuilderOptionsSetCallGraphProfile(
 void LLVMPassBuilderOptionsSetMergeFunctions(LLVMPassBuilderOptionsRef Options,
                                              LLVMBool MergeFunctions);
 
+void LLVMPassBuilderOptionsSetInlinerThreshold(
+    LLVMPassBuilderOptionsRef Options, int Threshold);
+
 /**
  * Dispose of a heap-allocated PassBuilderOptions instance
  */
 void LLVMDisposePassBuilderOptions(LLVMPassBuilderOptionsRef Options);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 

@@ -1,0 +1,69 @@
+# RUN: yaml2obj %s -o %t
+
+## When targetting non-x86_64, the "large" flag is not allowed:
+# RUN: not llvm-objcopy -O elf64-tradbigmips --set-section-flags=.foo=large %t %t.mips.large 2>&1 | FileCheck %s --check-prefixes=BAD-LARGE
+# BAD-LARGE: error: {{.*}}: section flag SHF_X86_64_LARGE can only be used with x86_64 architecture
+
+## Converting x86_64 to non-x86_64 preserves the flag equivalent to SHF_X86_64_LARGE.
+## (This is not a deliberate feature, but it reflects how preservation/setting of flags
+## works for arch-specific flags.)
+# RUN: llvm-objcopy -O elf64-tradbigmips --set-section-flags=.foo=alloc --set-section-flags=.bar=alloc %t %t.mips
+# RUN: llvm-readobj --sections %t.mips | FileCheck %s --check-prefixes=CHECK,REINTERPRET-GPREL
+
+## Converting non-x86_64 to x86_64 clears the flag equivalent to SHF_X86_64_LARGE,
+## and SHF_X86_64_LARGE is set according to the presence of the "large" flag,
+## as long as --set-section-flags is used. If --set-section-flag is _not_ used, then
+## the section flag is retained. (This latter behaviour is also not deliberate.)
+# RUN: llvm-objcopy -O elf64-x86-64 --set-section-flags=.foo=alloc --set-section-flags=.bar=alloc %t.mips %t.x86_64.no-large
+# RUN: llvm-readobj --sections %t.x86_64.no-large | FileCheck %s --check-prefixes=CHECK,REINTERPRET-LARGE
+# RUN: llvm-objcopy -O elf64-x86-64 --set-section-flags=.foo=alloc,large --set-section-flags=.bar=alloc,large %t.mips %t.x86_64.large
+# RUN: llvm-readobj --sections %t.x86_64.large | FileCheck %s --check-prefixes=CHECK,LARGE,REINTERPRET-LARGE
+
+!ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:   .foo
+    Type:   SHT_PROGBITS
+    Flags:  [ ]
+  - Name:   .bar
+    Type:   SHT_PROGBITS
+    Flags:  [ SHF_X86_64_LARGE ]
+  - Name:   .untouched
+    Type:   SHT_PROGBITS
+    Flags:  [ ]
+  - Name:   .untouched_large
+    Type:   SHT_PROGBITS
+    Flags:  [ SHF_X86_64_LARGE ]
+
+# CHECK:         Name: .foo
+# CHECK-NEXT:    Type: SHT_PROGBITS
+# CHECK-NEXT:    Flags [
+# CHECK-NEXT:      SHF_ALLOC (0x2)
+# CHECK-NEXT:      SHF_WRITE (0x1)
+# LARGE-NEXT:      SHF_X86_64_LARGE (0x10000000)
+# CHECK-NEXT:    ]
+
+# CHECK:         Name: .bar
+# CHECK-NEXT:    Type: SHT_PROGBITS
+# CHECK-NEXT:    Flags [
+# CHECK-NEXT:      SHF_ALLOC (0x2)
+# REINTERPRET-GPREL-NEXT: SHF_MIPS_GPREL (0x10000000)
+# CHECK-NEXT:      SHF_WRITE (0x1)
+# LARGE-NEXT:      SHF_X86_64_LARGE (0x10000000)
+# CHECK-NEXT:    ]
+
+# CHECK:         Name: .untouched
+# CHECK-NEXT:    Type: SHT_PROGBITS
+# CHECK-NEXT:    Flags [
+# CHECK-NEXT:    ]
+
+# CHECK:         Name: .untouched_large
+# CHECK-NEXT:    Type: SHT_PROGBITS
+# CHECK-NEXT:    Flags [
+# REINTERPRET-GPREL-NEXT: SHF_MIPS_GPREL (0x10000000)
+# REINTERPRET-LARGE-NEXT: SHF_X86_64_LARGE (0x10000000)
+# CHECK-NEXT:    ]

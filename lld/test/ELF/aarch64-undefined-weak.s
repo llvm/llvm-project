@@ -10,6 +10,9 @@
 // is not generated.
  .weak target
 
+.weak undefweak2
+.hidden undefweak2
+
  .text
  .global _start
 _start:
@@ -36,6 +39,9 @@ _start:
 // R_AARCH64_PLT32
  .word target@PLT - .
 
+bl_undefweak2:
+ bl undefweak2
+
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: 0000000010010120 <_start>:
@@ -43,7 +49,7 @@ _start:
 // CHECK-NEXT: 10010124: bl      0x10010128
 // CHECK-NEXT: 10010128: b.eq    0x1001012c
 // CHECK-NEXT: 1001012c: cbz     x1, 0x10010130
-// CHECK-NEXT: 10010130: adr     x0, #0
+// CHECK-NEXT: 10010130: adr     x0, 0x10010130
 // CHECK-NEXT: 10010134: adrp    x0, 0x10010000
 // CHECK-NEXT: 10010138: ldr     x8, 0x10010138
 // CHECK:      1001013c: 00 00 00 00     .word   0x00000000
@@ -51,3 +57,5 @@ _start:
 // CHECK-NEXT: 10010144: 00 00 00 00     .word   0x00000000
 // CHECK-NEXT: 10010148: 00 00 00 00     .word   0x00000000
 // CHECK-NEXT: 1001014c: 00 00           .short  0x0000
+// CHECK-LABEL: <bl_undefweak2>:
+// CHECK-NEXT:    bl {{.*}} <bl_undefweak2+0x4>

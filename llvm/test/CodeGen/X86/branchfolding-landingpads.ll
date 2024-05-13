@@ -18,22 +18,22 @@ declare void @_throw()
 ; CHECK-LABEL: @main
 ; CHECK: %unreachable
 
-define i32 @main(i8* %cleanup) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @main(ptr %cleanup) personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_throw() #0
           to label %unreachable unwind label %catch.dispatch9
 
 catch.dispatch9:                                  ; preds = %entry
-  %tmp13 = landingpad { i8*, i32 }
+  %tmp13 = landingpad { ptr, i32 }
           cleanup
-          catch i8* null
+          catch ptr null
   invoke void @_throw() #0
           to label %unreachable unwind label %lpad31
 
 lpad31:                                           ; preds = %catch.dispatch9
-  %tmp20 = landingpad { i8*, i32 }
+  %tmp20 = landingpad { ptr, i32 }
           cleanup
-          catch i8* null
+          catch ptr null
   call void @foo()
   unreachable
 

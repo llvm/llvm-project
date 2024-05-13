@@ -52,6 +52,7 @@
 #include <cassert>
 #include <cstdlib>
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-ast"
 
 using namespace llvm;
@@ -62,27 +63,24 @@ using IslAstUserPayload = IslAstInfo::IslAstUserPayload;
 static cl::opt<bool>
     PollyParallel("polly-parallel",
                   cl::desc("Generate thread parallel code (isl codegen only)"),
-                  cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+                  cl::cat(PollyCategory));
 
 static cl::opt<bool> PrintAccesses("polly-ast-print-accesses",
                                    cl::desc("Print memory access functions"),
-                                   cl::init(false), cl::ZeroOrMore,
                                    cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyParallelForce(
     "polly-parallel-force",
     cl::desc(
         "Force generation of thread parallel code ignoring any cost model"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<bool> UseContext("polly-ast-use-context",
                                 cl::desc("Use context"), cl::Hidden,
-                                cl::init(true), cl::ZeroOrMore,
-                                cl::cat(PollyCategory));
+                                cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<bool> DetectParallel("polly-ast-detect-parallel",
                                     cl::desc("Detect parallelism"), cl::Hidden,
-                                    cl::init(false), cl::ZeroOrMore,
                                     cl::cat(PollyCategory));
 
 STATISTIC(ScopsProcessed, "Number of SCoPs processed");
@@ -122,10 +120,6 @@ struct AstBuildUserInfo {
 /// Free an IslAstUserPayload object pointed to by @p Ptr.
 static void freeIslAstUserPayload(void *Ptr) {
   delete ((IslAstInfo::IslAstUserPayload *)Ptr);
-}
-
-IslAstInfo::IslAstUserPayload::~IslAstUserPayload() {
-  isl_ast_build_free(Build);
 }
 
 /// Print a string @p str in a single line using @p Printer.
@@ -286,8 +280,8 @@ astBuildAfterFor(__isl_take isl_ast_node *Node, __isl_keep isl_ast_build *Build,
   assert(Payload && "Post order visit assumes annotated for nodes");
 
   AstBuildUserInfo *BuildInfo = (AstBuildUserInfo *)User;
-  assert(!Payload->Build && "Build environment already set");
-  Payload->Build = isl_ast_build_copy(Build);
+  assert(Payload->Build.is_null() && "Build environment already set");
+  Payload->Build = isl::manage_copy(Build);
   Payload->IsInnermost = (Id == BuildInfo->LastForNodeId);
 
   Payload->IsInnermostParallel =
@@ -333,7 +327,7 @@ static __isl_give isl_ast_node *AtEachDomain(__isl_take isl_ast_node *Node,
   isl_id *Id = isl_id_alloc(isl_ast_build_get_ctx(Build), "", Payload);
   Id = isl_id_set_free_user(Id, freeIslAstUserPayload);
 
-  Payload->Build = isl_ast_build_copy(Build);
+  Payload->Build = isl::manage_copy(Build);
 
   return isl_ast_node_set_annotation(Node, Id);
 }
@@ -352,9 +346,9 @@ static isl::ast_expr buildCondition(Scop &S, isl::ast_build Build,
   isl::id Right = BFirst.get_tuple_id(isl::dim::set);
 
   isl::ast_expr True =
-      isl::ast_expr::from_val(isl::val::int_from_ui(Build.get_ctx(), 1));
+      isl::ast_expr::from_val(isl::val::int_from_ui(Build.ctx(), 1));
   isl::ast_expr False =
-      isl::ast_expr::from_val(isl::val::int_from_ui(Build.get_ctx(), 0));
+      isl::ast_expr::from_val(isl::val::int_from_ui(Build.ctx(), 0));
 
   const ScopArrayInfo *BaseLeft =
       ScopArrayInfo::getFromId(Left)->getBasePtrOriginSAI();
@@ -408,7 +402,7 @@ isl::ast_expr IslAst::buildRunCondition(Scop &S, const isl::ast_build &Build) {
   if (S.hasTrivialInvalidContext()) {
     RunCondition = std::move(PosCond);
   } else {
-    auto ZeroV = isl::val::zero(Build.get_ctx());
+    auto ZeroV = isl::val::zero(Build.ctx());
     auto NegCond = Build.expr_from(S.getInvalidContext());
     auto NotNegCond =
         isl::ast_expr::from_val(std::move(ZeroV)).eq(std::move(NegCond));
@@ -570,7 +564,7 @@ isl::ast_expr IslAstInfo::getRunCondition() { return Ast.getRunCondition(); }
 
 IslAstUserPayload *IslAstInfo::getNodePayload(const isl::ast_node &Node) {
   isl::id Id = Node.get_annotation();
-  if (!Id)
+  if (Id.is_null())
     return nullptr;
   IslAstUserPayload *Payload = (IslAstUserPayload *)Id.get_user();
   return Payload;
@@ -622,17 +616,13 @@ bool IslAstInfo::isExecutedInParallel(const isl::ast_node &Node) {
 
 isl::union_map IslAstInfo::getSchedule(const isl::ast_node &Node) {
   IslAstUserPayload *Payload = getNodePayload(Node);
-  if (!Payload)
-    return nullptr;
-
-  isl::ast_build Build = isl::manage_copy(Payload->Build);
-  return Build.get_schedule();
+  return Payload ? Payload->Build.get_schedule() : isl::union_map();
 }
 
 isl::pw_aff
 IslAstInfo::getMinimalDependenceDistance(const isl::ast_node &Node) {
   IslAstUserPayload *Payload = getNodePayload(Node);
-  return Payload ? Payload->MinimalDependenceDistance : nullptr;
+  return Payload ? Payload->MinimalDependenceDistance : isl::pw_aff();
 }
 
 IslAstInfo::MemoryAccessSet *
@@ -641,31 +631,27 @@ IslAstInfo::getBrokenReductions(const isl::ast_node &Node) {
   return Payload ? &Payload->BrokenReductions : nullptr;
 }
 
-isl_ast_build *IslAstInfo::getBuild(__isl_keep isl_ast_node *Node) {
-  IslAstUserPayload *Payload = getNodePayload(isl::manage_copy(Node));
-  return Payload ? Payload->Build : nullptr;
+isl::ast_build IslAstInfo::getBuild(const isl::ast_node &Node) {
+  IslAstUserPayload *Payload = getNodePayload(Node);
+  return Payload ? Payload->Build : isl::ast_build();
 }
 
 static std::unique_ptr<IslAstInfo> runIslAst(
     Scop &Scop,
     function_ref<const Dependences &(Dependences::AnalysisLevel)> GetDeps) {
-  // Skip SCoPs in case they're already handled by PPCGCodeGeneration.
-  if (Scop.isToBeSkipped())
-    return {};
-
   ScopsProcessed++;
 
   const Dependences &D = GetDeps(Dependences::AL_Statement);
 
   if (D.getSharedIslCtx() != Scop.getSharedIslCtx()) {
-    LLVM_DEBUG(
+    POLLY_DEBUG(
         dbgs() << "Got dependence analysis for different SCoP/isl_ctx\n");
     return {};
   }
 
   std::unique_ptr<IslAstInfo> Ast = std::make_unique<IslAstInfo>(Scop, D);
 
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     if (Ast)
       Ast->print(dbgs());
   });
@@ -679,15 +665,15 @@ IslAstInfo IslAstAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
     return SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(Lvl);
   };
 
-  return std::move(*runIslAst(S, GetDeps).release());
+  return std::move(*runIslAst(S, GetDeps));
 }
 
 static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
                                            __isl_take isl_ast_print_options *O,
                                            __isl_keep isl_ast_node *Node,
                                            void *User) {
-  isl::ast_node AstNode = isl::manage_copy(Node);
-  isl::ast_expr NodeExpr = AstNode.user_get_expr();
+  isl::ast_node_user AstNode = isl::manage_copy(Node).as<isl::ast_node_user>();
+  isl::ast_expr NodeExpr = AstNode.expr();
   isl::ast_expr CallExpr = NodeExpr.get_op_arg(0);
   isl::id CallExprId = CallExpr.get_id();
   ScopStmt *AccessStmt = (ScopStmt *)CallExprId.get_user();
@@ -706,7 +692,7 @@ static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
     else
       P = isl_printer_print_str(P, "/* write */  ");
 
-    isl::ast_build Build = isl::manage_copy(IslAstInfo::getBuild(Node));
+    isl::ast_build Build = IslAstInfo::getBuild(isl::manage_copy(Node));
     if (MemAcc->isAffine()) {
       isl_pw_multi_aff *PwmaPtr =
           MemAcc->applyScheduleToAccessRelation(Build.get_schedule()).release();
@@ -766,11 +752,9 @@ void IslAstInfo::print(raw_ostream &OS) {
   P = isl_ast_node_print(RootNode.get(), P, Options);
   AstStr = isl_printer_get_str(P);
 
-  auto *Schedule = S.getScheduleTree().release();
-
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     dbgs() << S.getContextStr() << "\n";
-    dbgs() << stringFromIslObj(Schedule);
+    dbgs() << stringFromIslObj(S.getScheduleTree(), "null");
   });
   OS << "\nif (" << RtCStr << ")\n\n";
   OS << AstStr << "\n";
@@ -780,7 +764,6 @@ void IslAstInfo::print(raw_ostream &OS) {
   free(RtCStr);
   free(AstStr);
 
-  isl_schedule_free(Schedule);
   isl_printer_free(P);
 }
 
@@ -834,3 +817,49 @@ INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
 INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
 INITIALIZE_PASS_END(IslAstInfoWrapperPass, "polly-ast",
                     "Polly - Generate an AST from the SCoP (isl)", false, false)
+
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Print result from IslAstInfoWrapperPass.
+class IslAstInfoPrinterLegacyPass final : public ScopPass {
+public:
+  static char ID;
+
+  IslAstInfoPrinterLegacyPass() : IslAstInfoPrinterLegacyPass(outs()) {}
+  explicit IslAstInfoPrinterLegacyPass(llvm::raw_ostream &OS)
+      : ScopPass(ID), OS(OS) {}
+
+  bool runOnScop(Scop &S) override {
+    IslAstInfoWrapperPass &P = getAnalysis<IslAstInfoWrapperPass>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
+       << S.getRegion().getNameStr() << "' in function '"
+       << S.getFunction().getName() << "':\n";
+    P.printScop(OS, S);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+    AU.addRequired<IslAstInfoWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char IslAstInfoPrinterLegacyPass::ID = 0;
+} // namespace
+
+Pass *polly::createIslAstInfoPrinterLegacyPass(raw_ostream &OS) {
+  return new IslAstInfoPrinterLegacyPass(OS);
+}
+
+INITIALIZE_PASS_BEGIN(IslAstInfoPrinterLegacyPass, "polly-print-ast",
+                      "Polly - Print the AST from a SCoP (isl)", false, false);
+INITIALIZE_PASS_DEPENDENCY(IslAstInfoWrapperPass);
+INITIALIZE_PASS_END(IslAstInfoPrinterLegacyPass, "polly-print-ast",
+                    "Polly - Print the AST from a SCoP (isl)", false, false)

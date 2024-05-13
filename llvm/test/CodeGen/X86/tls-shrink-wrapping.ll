@@ -20,14 +20,14 @@ target triple = "x86_64-unknown-freebsd11.0"
 
 define i32 @g() #0 {
 entry:
-  %tmp = load i32, i32* @i, align 4
+  %tmp = load i32, ptr @i, align 4
   %tobool = icmp eq i32 %tmp, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* @i, align 4
+  store i32 0, ptr @i, align 4
   tail call void (...) @f() #2
-  %.pre = load i32, i32* @i, align 4
+  %.pre = load i32, ptr @i, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

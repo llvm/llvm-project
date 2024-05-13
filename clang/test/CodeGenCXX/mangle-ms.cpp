@@ -28,8 +28,8 @@ int _c(void) {return N::anonymous + c;}
 // X64-DAG:   @"?_c@@YAHXZ"
 
 const int &NeedsReferenceTemporary = 2;
-// CHECK-DAG: @"?NeedsReferenceTemporary@@3ABHB" = dso_local constant i32* @"?$RT1@NeedsReferenceTemporary@@3ABHB"
-// X64-DAG: @"?NeedsReferenceTemporary@@3AEBHEB" = dso_local constant i32* @"?$RT1@NeedsReferenceTemporary@@3AEBHEB"
+// CHECK-DAG: @"?NeedsReferenceTemporary@@3ABHB" = dso_local constant ptr @"?$RT1@NeedsReferenceTemporary@@3ABHB"
+// X64-DAG: @"?NeedsReferenceTemporary@@3AEBHEB" = dso_local constant ptr @"?$RT1@NeedsReferenceTemporary@@3AEBHEB"
 
 class foo {
   static const short d;
@@ -434,7 +434,7 @@ void f(S::T6) {}
 
 // X64-DAG: @"?f@UnnamedType@@YAXQEAPEAU<unnamed-type-T1>@S@1@@Z"
 // X64-DAG: @"?f@UnnamedType@@YAXUT2@S@1@@Z"
-// X64-DAG: @"?f@UnnamedType@@YAXPEAUT4@S@1@@Z"(%"struct.UnnamedType::S::T4"
+// X64-DAG: @"?f@UnnamedType@@YAXPEAUT4@S@1@@Z"(ptr
 // X64-DAG: @"?f@UnnamedType@@YAXUT4@S@1@@Z"
 // X64-DAG: @"?f@UnnamedType@@YAXUT5@S@1@@Z"
 // X64-DAG: @"?f@UnnamedType@@YAXPEAU<unnamed-type-T6>@S@1@@Z"
@@ -447,21 +447,21 @@ namespace PassObjectSize {
 // size param P, where N is the Type of the pass_object_size attribute on P.
 //
 // e.g. we want to mangle:
-//   void foo(void *const __attribute__((pass_object_size(0))));
+//   void foo(ptr const __attribute__((pass_object_size(0))));
 // as if it were
 //   namespace __clang { enum __pass_object_size0 : size_t {}; }
-//   void foo(void *const, __clang::__pass_object_size0);
+//   void foo(ptr const, __clang::__pass_object_size0);
 // where __clang is a top-level namespace.
 
-// CHECK-DAG: define dso_local i32 @"?foo@PassObjectSize@@YAHQAHW4__pass_object_size0@__clang@@@Z"
+// CHECK-DAG: define dso_local noundef i32 @"?foo@PassObjectSize@@YAHQAHW4__pass_object_size0@__clang@@@Z"
 int foo(int *const i __attribute__((pass_object_size(0)))) { return 0; }
-// CHECK-DAG: define dso_local i32 @"?bar@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@@Z"
+// CHECK-DAG: define dso_local noundef i32 @"?bar@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@@Z"
 int bar(int *const i __attribute__((pass_object_size(1)))) { return 0; }
-// CHECK-DAG: define dso_local i32 @"?qux@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@0W4__pass_object_size0@3@@Z"
+// CHECK-DAG: define dso_local noundef i32 @"?qux@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@0W4__pass_object_size0@3@@Z"
 int qux(int *const i __attribute__((pass_object_size(1))), int *const j __attribute__((pass_object_size(0)))) { return 0; }
-// CHECK-DAG: define dso_local i32 @"?zot@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@01@Z"
+// CHECK-DAG: define dso_local noundef i32 @"?zot@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@01@Z"
 int zot(int *const i __attribute__((pass_object_size(1))), int *const j __attribute__((pass_object_size(1)))) { return 0; }
-// CHECK-DAG: define dso_local i32 @"?silly_word@PassObjectSize@@YAHQAHW4__pass_dynamic_object_size1@__clang@@@Z"
+// CHECK-DAG: define dso_local noundef i32 @"?silly_word@PassObjectSize@@YAHQAHW4__pass_dynamic_object_size1@__clang@@@Z"
 int silly_word(int *const i __attribute__((pass_dynamic_object_size(1)))) { return 0; }
 }
 

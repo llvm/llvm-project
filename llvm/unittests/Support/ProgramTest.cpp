@@ -12,6 +12,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Signals.h"
 #include "gtest/gtest.h"
 #include <stdlib.h>
 #include <thread>
@@ -94,7 +95,9 @@ protected:
     };
 
     while (*EnvP != nullptr) {
-      EnvTable.emplace_back(prepareEnvVar(*EnvP));
+      auto S = prepareEnvVar(*EnvP);
+      if (!StringRef(S).starts_with("GTEST_"))
+        EnvTable.emplace_back(S);
       ++EnvP;
     }
   }
@@ -110,17 +113,26 @@ protected:
 };
 
 #ifdef _WIN32
+void checkSeparators(StringRef Path) {
+  char UndesiredSeparator = sys::path::get_separator()[0] == '/' ? '\\' : '/';
+  ASSERT_EQ(Path.find(UndesiredSeparator), StringRef::npos);
+}
+
 TEST_F(ProgramEnvTest, CreateProcessLongPath) {
   if (getenv("LLVM_PROGRAM_TEST_LONG_PATH"))
     exit(0);
 
   // getMainExecutable returns an absolute path; prepend the long-path prefix.
-  std::string MyAbsExe =
-      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  SmallString<128> MyAbsExe(
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1));
+  checkSeparators(MyAbsExe);
+  // Force a path with backslashes, when we are going to prepend the \\?\
+  // prefix.
+  sys::path::native(MyAbsExe, sys::path::Style::windows_backslash);
   std::string MyExe;
-  if (!StringRef(MyAbsExe).startswith("\\\\?\\"))
+  if (!StringRef(MyAbsExe).starts_with("\\\\?\\"))
     MyExe.append("\\\\?\\");
-  MyExe.append(MyAbsExe);
+  MyExe.append(std::string(MyAbsExe.begin(), MyAbsExe.end()));
 
   StringRef ArgV[] = {MyExe,
                       "--gtest_filter=ProgramEnvTest.CreateProcessLongPath"};
@@ -139,7 +151,8 @@ TEST_F(ProgramEnvTest, CreateProcessLongPath) {
 
   std::string Error;
   bool ExecutionFailed;
-  Optional<StringRef> Redirects[] = {None, LongPath.str(), None};
+  std::optional<StringRef> Redirects[] = {std::nullopt, LongPath.str(),
+                                          std::nullopt};
   int RC = ExecuteAndWait(MyExe, ArgV, getEnviron(), Redirects,
     /*secondsToWait=*/ 10, /*memoryLimit=*/ 0, &Error,
     &ExecutionFailed);
@@ -182,7 +195,7 @@ TEST_F(ProgramEnvTest, CreateProcessTrailingSlash) {
 #else
   StringRef nul("/dev/null");
 #endif
-  Optional<StringRef> redirects[] = { nul, nul, None };
+  std::optional<StringRef> redirects[] = {nul, nul, std::nullopt};
   int rc = ExecuteAndWait(my_exe, argv, getEnviron(), redirects,
                           /*secondsToWait=*/ 10, /*memoryLimit=*/ 0, &error,
                           &ExecutionFailed);
@@ -215,11 +228,12 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
 
   unsigned LoopCount = 0;
 
-  // Test that Wait() with WaitUntilTerminates=true works. In this case,
+  // Test that Wait() with SecondsToWait=std::nullopt works. In this case,
   // LoopCount should only be incremented once.
   while (true) {
     ++LoopCount;
-    ProcessInfo WaitResult = llvm::sys::Wait(PI1, 0, true, &Error);
+    ProcessInfo WaitResult =
+        llvm::sys::Wait(PI1, /*SecondsToWait=*/std::nullopt, &Error);
     ASSERT_TRUE(Error.empty());
     if (WaitResult.Pid == PI1.Pid)
       break;
@@ -227,22 +241,113 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
 
   EXPECT_EQ(LoopCount, 1u) << "LoopCount should be 1";
 
-  ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(), {}, 0, &Error,
+  ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(),
+                                  /*Redirects*/ {}, /*MemoryLimit*/ 0, &Error,
                                   &ExecutionFailed);
   ASSERT_FALSE(ExecutionFailed) << Error;
   ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
 
   // Test that Wait() with SecondsToWait=0 performs a non-blocking wait. In this
-  // cse, LoopCount should be greater than 1 (more than one increment occurs).
+  // case, LoopCount should be greater than 1 (more than one increment occurs).
   while (true) {
     ++LoopCount;
-    ProcessInfo WaitResult = llvm::sys::Wait(PI2, 0, false, &Error);
+    ProcessInfo WaitResult = llvm::sys::Wait(PI2, /*SecondsToWait=*/0, &Error);
     ASSERT_TRUE(Error.empty());
     if (WaitResult.Pid == PI2.Pid)
       break;
   }
 
   ASSERT_GT(LoopCount, 1u) << "LoopCount should be >1";
+}
+
+TEST_F(ProgramEnvTest, TestExecuteNoWaitDetached) {
+  using namespace llvm::sys;
+
+  if (getenv("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED")) {
+    sleep_for(/*seconds=*/5);
+    char *Detached = getenv("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_TRUE");
+#if _WIN32
+    HANDLE StdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (Detached && (StdHandle == INVALID_HANDLE_VALUE || StdHandle == NULL))
+      exit(100);
+    if (!Detached && (StdHandle != INVALID_HANDLE_VALUE && StdHandle != NULL))
+      exit(200);
+#else
+    int ParentSID = std::stoi(
+        std::string(getenv("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_SID")));
+
+    pid_t ChildSID = ::getsid(0);
+    if (ChildSID == -1) {
+      llvm::errs() << "Could not get process SID: " << strerror(errno) << '\n';
+      exit(1);
+    }
+
+    if (Detached && (ChildSID != ParentSID))
+      exit(100);
+    if (!Detached && (ChildSID == ParentSID))
+      exit(200);
+#endif
+    exit(0);
+  }
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable, "--gtest_filter=ProgramEnvTest.TestExecuteNoWaitDetached"};
+  addEnvVar("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED=1");
+
+#if _WIN32
+  // Depending on how the test is run it may already be detached from a
+  // console. Temporarily allocate a new console. If a console already
+  // exists AllocConsole will harmlessly fail and return false
+  BOOL AllocConsoleSuccess = AllocConsole();
+
+  // Confirm existence of console
+  HANDLE StdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+  ASSERT_TRUE(StdHandle != INVALID_HANDLE_VALUE && StdHandle != NULL);
+#else
+  pid_t SID = ::getsid(0);
+  ASSERT_NE(SID, -1);
+  std::string SIDEnvVar =
+      "LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_SID=" + std::to_string(SID);
+  addEnvVar(SIDEnvVar);
+#endif
+
+  // DetachProcess = true
+  {
+    std::string Error;
+    bool ExecutionFailed;
+    std::vector<llvm::StringRef> Env = getEnviron();
+    Env.emplace_back("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_TRUE=1");
+    ProcessInfo PI1 =
+        ExecuteNoWait(Executable, argv, Env, {}, 0, &Error, &ExecutionFailed,
+                      nullptr, /*DetachProcess=*/true);
+    ASSERT_FALSE(ExecutionFailed) << Error;
+    ASSERT_NE(PI1.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+    ProcessInfo WaitResult = Wait(PI1, std::nullopt, &Error);
+    ASSERT_EQ(WaitResult.ReturnCode, 100);
+  }
+
+  // DetachProcess = false
+  {
+    std::string Error;
+    bool ExecutionFailed;
+    ProcessInfo PI2 =
+        ExecuteNoWait(Executable, argv, getEnviron(), {}, 0, &Error,
+                      &ExecutionFailed, nullptr, /*DetachProcess=*/false);
+    ASSERT_FALSE(ExecutionFailed) << Error;
+    ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+    ProcessInfo WaitResult = Wait(PI2, std::nullopt, &Error);
+    ASSERT_EQ(WaitResult.ReturnCode, 200);
+  }
+#if _WIN32
+  // If console was allocated then free the console
+  if (AllocConsoleSuccess) {
+    BOOL FreeConsoleSuccess = FreeConsole();
+    ASSERT_NE(FreeConsoleSuccess, 0);
+  }
+#endif
 }
 
 TEST_F(ProgramEnvTest, TestExecuteAndWaitTimeout) {
@@ -264,9 +369,48 @@ TEST_F(ProgramEnvTest, TestExecuteAndWaitTimeout) {
   std::string Error;
   bool ExecutionFailed;
   int RetCode =
-      ExecuteAndWait(Executable, argv, getEnviron(), {}, /*secondsToWait=*/1, 0,
-                     &Error, &ExecutionFailed);
+      ExecuteAndWait(Executable, argv, getEnviron(), {}, /*SecondsToWait=*/1,
+                     /*MemoryLimit*/ 0, &Error, &ExecutionFailed);
   ASSERT_EQ(-2, RetCode);
+}
+
+TEST_F(ProgramEnvTest, TestExecuteNoWaitTimeoutPolling) {
+  using namespace llvm::sys;
+
+  if (getenv("LLVM_PROGRAM_TEST_TIMEOUT")) {
+    sleep_for(/*seconds*/ 5);
+    exit(0);
+  }
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable,
+      "--gtest_filter=ProgramEnvTest.TestExecuteNoWaitTimeoutPolling"};
+
+  // Add LLVM_PROGRAM_TEST_TIMEOUT to the environment of the child.
+  addEnvVar("LLVM_PROGRAM_TEST_TIMEOUT=1");
+
+  std::string Error;
+  bool ExecutionFailed;
+  ProcessInfo PI0 = ExecuteNoWait(Executable, argv, getEnviron(),
+                                  /*Redirects=*/{}, /*MemoryLimit=*/0, &Error,
+                                  &ExecutionFailed);
+  ASSERT_FALSE(ExecutionFailed) << Error;
+  ASSERT_NE(PI0.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+
+  // Check that we don't kill the process with a non-0 SecondsToWait if Polling.
+  unsigned LoopCount = 0;
+  ProcessInfo WaitResult;
+  do {
+    ++LoopCount;
+    WaitResult = llvm::sys::Wait(PI0, /*SecondsToWait=*/1, &Error,
+                                 /*ProcStats=*/nullptr,
+                                 /*Polling=*/true);
+    ASSERT_TRUE(Error.empty()) << Error;
+  } while (WaitResult.Pid != PI0.Pid);
+
+  ASSERT_GT(LoopCount, 1u) << "LoopCount should be >1";
 }
 
 TEST(ProgramTest, TestExecuteNegative) {
@@ -276,10 +420,10 @@ TEST(ProgramTest, TestExecuteNegative) {
   {
     std::string Error;
     bool ExecutionFailed;
-    int RetCode = ExecuteAndWait(Executable, argv, llvm::None, {}, 0, 0, &Error,
-                                 &ExecutionFailed);
-    ASSERT_TRUE(RetCode < 0) << "On error ExecuteAndWait should return 0 or "
-                                "positive value indicating the result code";
+    int RetCode = ExecuteAndWait(Executable, argv, std::nullopt, {}, 0, 0,
+                                 &Error, &ExecutionFailed);
+    ASSERT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
+                             "positive value indicating the result code";
     ASSERT_TRUE(ExecutionFailed);
     ASSERT_FALSE(Error.empty());
   }
@@ -287,8 +431,8 @@ TEST(ProgramTest, TestExecuteNegative) {
   {
     std::string Error;
     bool ExecutionFailed;
-    ProcessInfo PI = ExecuteNoWait(Executable, argv, llvm::None, {}, 0, &Error,
-                                   &ExecutionFailed);
+    ProcessInfo PI = ExecuteNoWait(Executable, argv, std::nullopt, {}, 0,
+                                   &Error, &ExecutionFailed);
     ASSERT_EQ(PI.Pid, ProcessInfo::InvalidPid)
         << "On error ExecuteNoWait should return an invalid ProcessInfo";
     ASSERT_TRUE(ExecutionFailed);
@@ -355,7 +499,7 @@ TEST_F(ProgramEnvTest, TestExecuteAndWaitStatistics) {
 
   std::string Error;
   bool ExecutionFailed;
-  Optional<ProcessStatistics> ProcStat;
+  std::optional<ProcessStatistics> ProcStat;
   int RetCode = ExecuteAndWait(Executable, argv, getEnviron(), {}, 0, 0, &Error,
                                &ExecutionFailed, &ProcStat);
   ASSERT_EQ(0, RetCode);
@@ -410,11 +554,35 @@ TEST_F(ProgramEnvTest, TestLockFile) {
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   ASSERT_NO_ERROR(fs::unlockFile(FD1));
-  ProcessInfo WaitResult = llvm::sys::Wait(PI2, 5 /* seconds */, true, &Error);
+  ProcessInfo WaitResult = llvm::sys::Wait(PI2, /*SecondsToWait=*/5, &Error);
   ASSERT_TRUE(Error.empty());
   ASSERT_EQ(0, WaitResult.ReturnCode);
   ASSERT_EQ(WaitResult.Pid, PI2.Pid);
   sys::fs::remove(LockedFile);
+}
+
+TEST_F(ProgramEnvTest, TestExecuteWithNoStacktraceHandler) {
+  using namespace llvm::sys;
+
+  if (getenv("LLVM_PROGRAM_TEST_NO_STACKTRACE_HANDLER")) {
+    sys::PrintStackTrace(errs());
+    exit(0);
+  }
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable,
+      "--gtest_filter=ProgramEnvTest.TestExecuteWithNoStacktraceHandler"};
+
+  addEnvVar("LLVM_PROGRAM_TEST_NO_STACKTRACE_HANDLER=1");
+
+  std::string Error;
+  bool ExecutionFailed;
+  int RetCode = ExecuteAndWait(Executable, argv, getEnviron(), {}, 0, 0, &Error,
+                               &ExecutionFailed);
+  EXPECT_FALSE(ExecutionFailed) << Error;
+  ASSERT_EQ(0, RetCode);
 }
 
 } // end anonymous namespace

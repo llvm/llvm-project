@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -basic-aa -polly-scops -analyze -polly-allow-modref-calls \
-; RUN: < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-scops -polly-allow-modref-calls \
+; RUN:     -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -basic-aa -polly-codegen -disable-output \
-; RUN: -polly-allow-modref-calls < %s
+; RUN:     -polly-allow-modref-calls < %s
 ;
 ; Check that the call to func will "read" not only the A array but also the
 ; B array. The reason is the readonly annotation of func.
@@ -30,19 +30,19 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* noalias %A, i32* noalias %B) {
+define void @jd(ptr noalias %A, ptr noalias %B) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.inc
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
-  %call = call i32 @func(i32* %A)
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %i
-  %tmp = load i32, i32* %arrayidx, align 4
+  %call = call i32 @func(ptr %A)
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %i
+  %tmp = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %call, %tmp
   %tmp1 = add nsw i64 %i, 2
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %tmp1
-  store i32 %add, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %tmp1
+  store i32 %add, ptr %arrayidx1, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -54,6 +54,6 @@ for.end:                                          ; preds = %for.inc
   ret void
 }
 
-declare i32 @func(i32*) #0
+declare i32 @func(ptr) #0
 
 attributes #0 = { nounwind readonly }

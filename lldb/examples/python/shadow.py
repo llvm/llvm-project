@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from __future__ import print_function
 
 import lldb
 import shlex
@@ -7,12 +6,15 @@ import shlex
 
 @lldb.command("shadow")
 def check_shadow_command(debugger, command, exe_ctx, result, dict):
-    '''Check the currently selected stack frame for shadowed variables'''
+    """Check the currently selected stack frame for shadowed variables"""
     process = exe_ctx.GetProcess()
     state = process.GetState()
     if state != lldb.eStateStopped:
-        print("process must be stopped, state is %s" % lldb.SBDebugger.StateAsCString(
-            state), file=result)
+        print(
+            "process must be stopped, state is %s"
+            % lldb.SBDebugger.StateAsCString(state),
+            file=result,
+        )
         return
     frame = exe_ctx.GetFrame()
     if not frame:
@@ -56,4 +58,4 @@ def check_shadow_command(debugger, command, exe_ctx, result, dict):
                 for shadow_var in shadow_vars:
                     print(str(shadow_var.GetDeclaration()), file=result)
     if num_shadowed_variables == 0:
-        print('no variables are shadowed', file=result)
+        print("no variables are shadowed", file=result)

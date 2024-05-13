@@ -18,15 +18,15 @@
 #include "asan_testing.h"
 
 struct Nasty {
-    Nasty() : i_(0) {}
-    Nasty(int i) : i_(i) {}
-    ~Nasty() {}
+    TEST_CONSTEXPR Nasty() : i_(0) {}
+    TEST_CONSTEXPR Nasty(int i) : i_(i) {}
+    TEST_CONSTEXPR_CXX20 ~Nasty() {}
 
     Nasty * operator&() const { assert(false); return nullptr; }
     int i_;
-    };
+};
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
     {
         std::vector<int> v;
@@ -59,7 +59,31 @@ int main(int, char**)
         assert(v.data() == std::addressof(v.front()));
         assert(is_contiguous_container_asan_correct(v));
     }
+    {
+      std::vector<int, safe_allocator<int>> v;
+      assert(v.data() == 0);
+      assert(is_contiguous_container_asan_correct(v));
+    }
+    {
+      std::vector<int, safe_allocator<int>> v(100);
+      assert(v.data() == std::addressof(v.front()));
+      assert(is_contiguous_container_asan_correct(v));
+    }
+    {
+      std::vector<Nasty, safe_allocator<Nasty>> v(100);
+      assert(v.data() == std::addressof(v.front()));
+      assert(is_contiguous_container_asan_correct(v));
+    }
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-objdump -d - | FileCheck --check-prefix=CHECK %s
-; RUN: llc -march=bpfeb -filetype=obj -o - %s | llvm-objdump -d - | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=bpfeb -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=CHECK %s
 
 ; src:
 ;   static volatile long a = 2;
@@ -10,10 +10,10 @@
 
 ; Function Attrs: norecurse nounwind
 define dso_local i32 @test() local_unnamed_addr #0 {
-  %1 = load volatile i64, i64* @a, align 8, !tbaa !2
+  %1 = load volatile i64, ptr @a, align 8, !tbaa !2
 ; CHECK: r1 = 0 ll
 ; CHECK: r1 = *(u64 *)(r1 + 0)
-  %2 = load volatile i32, i32* @b, align 4, !tbaa !6
+  %2 = load volatile i32, ptr @b, align 4, !tbaa !6
 ; CHECK: r2 = 8 ll
 ; CHECK: r0 = *(u32 *)(r2 + 0)
   %3 = trunc i64 %1 to i32

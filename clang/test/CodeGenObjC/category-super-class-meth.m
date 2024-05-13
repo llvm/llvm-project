@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
-// rdar://12459358
 @interface NSObject 
 -(id)copy;
 +(id)copy;
@@ -21,9 +20,8 @@
 +(id)copy { return [super copy]; }  // BAD: class method in category
 @end
 
-// CHECK: define internal i8* @"\01+[Sub2(Category) copy]
-// CHECK: [[ONE:%.*]] = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_SUP_REFS_$_.3"
-// CHECK: [[TWO:%.*]] = bitcast %struct._class_t* [[ONE]] to i8*
-// CHECK: [[THREE:%.*]] = getelementptr inbounds %struct._objc_super, %struct._objc_super* [[OBJC_SUPER:%.*]], i32 0, i32 1
-// CHECK: store i8* [[TWO]], i8** [[THREE]]
-// CHECK: [[FOUR:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
+// CHECK: define internal ptr @"\01+[Sub2(Category) copy]
+// CHECK: [[ONE:%.*]] = load ptr, ptr @"OBJC_CLASSLIST_SUP_REFS_$_.3"
+// CHECK: [[THREE:%.*]] = getelementptr inbounds %struct._objc_super, ptr [[OBJC_SUPER:%.*]], i32 0, i32 1
+// CHECK: store ptr [[ONE]], ptr [[THREE]]
+// CHECK: [[FOUR:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_

@@ -21,7 +21,6 @@
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
-#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -89,12 +88,15 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
               BasicBlock *PredBB = PN->getIncomingBlock(I);
               if (PredBB->getTerminator()->getNumSuccessors() > 1)
                 PredBB = SplitEdge(PredBB, PN->getParent());
-              Instruction *InsertPos = PredBB->getTerminator();
-              Instruction *NewInst = createReplacementInstr(CE, InsertPos);
+              BasicBlock::iterator InsertPos =
+                  PredBB->getTerminator()->getIterator();
+              Instruction *NewInst = CE->getAsInstruction();
+              NewInst->insertBefore(*PredBB, InsertPos);
               PN->setOperand(I, NewInst);
             }
         } else if (Instruction *Instr = dyn_cast<Instruction>(WU)) {
-          Instruction *NewInst = createReplacementInstr(CE, Instr);
+          Instruction *NewInst = CE->getAsInstruction();
+          NewInst->insertBefore(*Instr->getParent(), Instr->getIterator());
           Instr->replaceUsesOfWith(CE, NewInst);
         } else {
           ConstantExpr *CExpr = dyn_cast<ConstantExpr>(WU);
@@ -103,7 +105,7 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
         }
       }
   } while (CE->hasNUsesOrMore(1)); // We need to check because a recursive
-  // sibling may have used 'CE' when createReplacementInstr was called.
+  // sibling may have used 'CE' when getAsInstruction was called.
   CE->destroyConstant();
   return true;
 }

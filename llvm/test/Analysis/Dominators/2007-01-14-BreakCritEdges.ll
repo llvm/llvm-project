@@ -1,17 +1,16 @@
-; RUN: opt < %s -domtree -break-crit-edges -disable-output
 ; RUN: opt < %s -passes='require<domtree>,break-crit-edges' -disable-output
 ; PR1110
 
-	%struct.OggVorbis_File = type { i8*, i32, i64, i64, %struct.ogg_sync_state, i32, i64*, i64*, i32*, i64*, %struct.vorbis_info*, %struct.vorbis_comment*, i64, i32, i32, i32, double, double, %struct.ogg_stream_state, %struct.vorbis_dsp_state, %struct.vorbis_block, %struct.ov_callbacks }
-	%struct.alloc_chain = type { i8*, %struct.alloc_chain* }
-	%struct.ogg_stream_state = type { i8*, i32, i32, i32, i32*, i64*, i32, i32, i32, i32, [282 x i8], i32, i32, i32, i32, i32, i64, i64 }
-	%struct.ogg_sync_state = type { i8*, i32, i32, i32, i32, i32, i32 }
-	%struct.oggpack_buffer = type { i32, i32, i8*, i8*, i32 }
-	%struct.ov_callbacks = type { i32 (i8*, i32, i32, i8*)*, i32 (i8*, i64, i32)*, i32 (i8*)*, i32 (i8*)* }
-	%struct.vorbis_block = type { float**, %struct.oggpack_buffer, i32, i32, i32, i32, i32, i32, i64, i64, %struct.vorbis_dsp_state*, i8*, i32, i32, i32, %struct.alloc_chain*, i32, i32, i32, i32, i8* }
-	%struct.vorbis_comment = type { i8**, i32*, i32, i8* }
-	%struct.vorbis_dsp_state = type { i32, %struct.vorbis_info*, float**, float**, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, i8* }
-	%struct.vorbis_info = type { i32, i32, i32, i32, i32, i32, i32, i8* }
+	%struct.OggVorbis_File = type { ptr, i32, i64, i64, %struct.ogg_sync_state, i32, ptr, ptr, ptr, ptr, ptr, ptr, i64, i32, i32, i32, double, double, %struct.ogg_stream_state, %struct.vorbis_dsp_state, %struct.vorbis_block, %struct.ov_callbacks }
+	%struct.alloc_chain = type { ptr, ptr }
+	%struct.ogg_stream_state = type { ptr, i32, i32, i32, ptr, ptr, i32, i32, i32, i32, [282 x i8], i32, i32, i32, i32, i32, i64, i64 }
+	%struct.ogg_sync_state = type { ptr, i32, i32, i32, i32, i32, i32 }
+	%struct.oggpack_buffer = type { i32, i32, ptr, ptr, i32 }
+	%struct.ov_callbacks = type { ptr, ptr, ptr, ptr }
+	%struct.vorbis_block = type { ptr, %struct.oggpack_buffer, i32, i32, i32, i32, i32, i32, i64, i64, ptr, ptr, i32, i32, i32, ptr, i32, i32, i32, i32, ptr }
+	%struct.vorbis_comment = type { ptr, ptr, i32, ptr }
+	%struct.vorbis_dsp_state = type { i32, ptr, ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, ptr }
+	%struct.vorbis_info = type { i32, i32, i32, i32, i32, i32, i32, ptr }
 
 
 define void @ov_read() {

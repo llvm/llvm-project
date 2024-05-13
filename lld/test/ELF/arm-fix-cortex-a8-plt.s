@@ -6,8 +6,8 @@
 // RUN:       }" > %t.script
 
 // RUN: ld.lld --script %t.script --fix-cortex-a8 --shared -verbose %t.o -o %t2
-// RUN: llvm-objdump -d --start-address=0x2020 --stop-address=0x202c --no-show-raw-insn %t2 | FileCheck --check-prefix=CHECK-PLT %s
-// RUN: llvm-objdump -d --start-address=0x2ffa --stop-address=0x3008 --no-show-raw-insn %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --start-address=0x2020 --stop-address=0x202c --no-show-raw-insn %t2 | FileCheck --check-prefix=CHECK-PLT %s
+// RUN: llvm-objdump --no-print-imm-hex -d --start-address=0x2ffa --stop-address=0x3008 --no-show-raw-insn %t2 | FileCheck %s
 
 /// If we patch a branch instruction that is indirected via the PLT then we
 /// must make sure the patch goes via the PLT
@@ -34,6 +34,6 @@ source:
 
 // CHECK:      00002ffa <source>:
 // CHECK-NEXT:     2ffa:        nop.w
-// CHECK-NEXT:     2ffe:        blx     #4
+// CHECK-NEXT:     2ffe:        blx     0x3004 <__CortexA8657417_2FFE>
 // CHECK:      00003004 <__CortexA8657417_2FFE>:
-// CHECK-NEXT:     3004:        b       #-4076
+// CHECK-NEXT:     3004:        b       0x2020

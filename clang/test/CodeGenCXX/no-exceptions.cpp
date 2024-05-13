@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %std_cxx11- -Wno-dynamic-exception-spec %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 void g();
 
@@ -11,4 +11,4 @@ void f() throw (int) {
   // CHECK: ret void
 }
 
-// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { mustprogress noinline nounwind{{.*}} }

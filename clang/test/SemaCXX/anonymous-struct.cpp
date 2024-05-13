@@ -49,7 +49,7 @@ typedef struct // expected-warning {{anonymous non-C-compatible type given name 
 : B { // expected-note {{type is not C-compatible due to this base class}}
 } C; // expected-note {{type is given name 'C' for linkage purposes by this typedef declaration}}
 
-#if __cplusplus > 201703L
+#if __cplusplus > 201703L && __cplusplus < 202002L
 typedef struct { // expected-warning {{anonymous non-C-compatible type given name for linkage purposes by typedef declaration; add a tag name here}}
   static_assert([]{ return true; }()); // expected-note {{type is not C-compatible due to this lambda expression}}
 } Lambda1; // expected-note {{type is given name 'Lambda1' for linkage purposes by this typedef declaration}}
@@ -133,6 +133,7 @@ namespace ValidButUnsupported {
     int arr[&f<X> ? 1 : 2];
 #if __cplusplus < 201103L
     // expected-warning@-2 {{folded to constant}}
+    // expected-warning@-3 {{variable length arrays in C++ are a Clang extension}}
 #endif
   } C; // expected-note {{by this typedef}}
 }
@@ -183,3 +184,26 @@ namespace BuiltinName {
     void memcpy(); // expected-note {{due to this member}}
   } A; // expected-note {{given name 'A' for linkage purposes by this typedef}}
 }
+namespace inline_defined_static_member {
+typedef struct { // expected-warning {{anonymous non-C-compatible type}}
+  static void f() { // expected-note {{due to this member}}
+  }
+} A; // expected-note {{given name 'A' for linkage purposes by this typedef}}
+}
+
+#if __cplusplus > 201103L
+namespace GH58800 {
+struct A {
+  union {
+    struct {
+      float red = 0.0f;
+    };
+  };
+};
+
+A GetA() {
+  A result{};
+  return result;
+}
+}
+#endif

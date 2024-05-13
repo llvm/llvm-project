@@ -4,21 +4,21 @@
 // _PROMOTE_: Promote warning to error.
 // _IGNORE_: Drop backend warning.
 //
-// RUN: not %clang_cc1 %s -mllvm -warn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin 2> %t.err
+// RUN: not %clang_cc1 %s -fwarn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin 2> %t.err
 // RUN: FileCheck < %t.err %s --check-prefix=REGULAR --check-prefix=ASM
-// RUN: not %clang_cc1 %s -mllvm -warn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin -Werror=frame-larger-than= 2> %t.err
+// RUN: not %clang_cc1 %s -fwarn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin -Werror=frame-larger-than 2> %t.err
 // RUN: FileCheck < %t.err %s --check-prefix=PROMOTE --check-prefix=ASM
-// RUN: not %clang_cc1 %s -mllvm -warn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin -Wno-frame-larger-than= 2> %t.err
+// RUN: not %clang_cc1 %s -fwarn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin -Wno-frame-larger-than 2> %t.err
 // RUN: FileCheck < %t.err %s --check-prefix=IGNORE --check-prefix=ASM
 //
 // RUN: %clang_cc1 %s -S -o - -triple=i386-apple-darwin -verify -no-integrated-as
 
 extern void doIt(char *);
 
-// REGULAR: warning: stack frame size of {{[0-9]+}} bytes in function 'stackSizeWarning'
-// PROMOTE: error: stack frame size of {{[0-9]+}} bytes in function 'stackSizeWarning'
-// IGNORE-NOT: stack frame size of {{[0-9]+}} bytes in function 'stackSizeWarning'
-void stackSizeWarning() {
+// REGULAR: warning: stack frame size ([[#]]) exceeds limit ([[#]]) in 'stackSizeWarning'
+// PROMOTE: error: stack frame size ([[#]]) exceeds limit ([[#]]) in 'stackSizeWarning'
+// IGNORE-NOT: stack frame size ([[#]]) exceeds limit ([[#]]) in 'stackSizeWarning'
+void stackSizeWarning(void) {
   char buffer[80];
   doIt(buffer);
 }

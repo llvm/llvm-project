@@ -70,7 +70,7 @@ static raw_ostream &operator <<(raw_ostream &os, const indent &in) {
 /// Pretty print a tag by replacing tag:yaml.org,2002: with !!.
 static std::string prettyTag(yaml::Node *N) {
   std::string Tag = N->getVerbatimTag();
-  if (StringRef(Tag).startswith("tag:yaml.org,2002:")) {
+  if (StringRef(Tag).starts_with("tag:yaml.org,2002:")) {
     std::string Ret = "!!";
     Ret += StringRef(Tag).substr(18);
     return Ret;
@@ -184,12 +184,10 @@ static std::string createJSONText(size_t MemoryMB, unsigned ValueSize) {
            << "  \"key2\": \"" << std::string(ValueSize, '*') << "\",\n"
            << "  \"key3\": \"" << std::string(ValueSize, '*') << "\"\n"
            << " }";
-    Stream.flush();
     if (JSONText.size() < MemoryBytes) Stream << ",";
     Stream << "\n";
   }
   Stream << "]\n";
-  Stream.flush();
   return JSONText;
 }
 

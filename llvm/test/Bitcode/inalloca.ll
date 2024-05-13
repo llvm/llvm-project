@@ -6,14 +6,14 @@
 define void @foo(i32* inalloca(i32) %args) {
   ret void
 }
-; CHECK-LABEL: define void @foo(i32* inalloca(i32) %args)
+; CHECK-LABEL: define void @foo(ptr inalloca(i32) %args)
 
 define void @bar() {
   ; Use the maximum alignment, since we stuff our bit with alignment.
-  %args = alloca inalloca i32, align 536870912
+  %args = alloca inalloca i32, align 4294967296
   call void @foo(i32* inalloca(i32) %args)
   ret void
 }
 ; CHECK-LABEL: define void @bar() {
-; CHECK: %args = alloca inalloca i32, align 536870912
-; CHECK: call void @foo(i32* inalloca(i32) %args)
+; CHECK: %args = alloca inalloca i32, align 4294967296
+; CHECK: call void @foo(ptr inalloca(i32) %args)

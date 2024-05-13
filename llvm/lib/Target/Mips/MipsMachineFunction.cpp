@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -22,6 +23,13 @@ static cl::opt<bool>
 FixGlobalBaseReg("mips-fix-global-base-reg", cl::Hidden, cl::init(true),
                  cl::desc("Always use $gp as the global base register."));
 
+MachineFunctionInfo *
+MipsFunctionInfo::clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+                        const DenseMap<MachineBasicBlock *, MachineBasicBlock *>
+                            &Src2DstMBB) const {
+  return DestMF.cloneInfo<MipsFunctionInfo>(*this);
+}
+
 MipsFunctionInfo::~MipsFunctionInfo() = default;
 
 bool MipsFunctionInfo::globalBaseRegSet() const {
@@ -29,7 +37,7 @@ bool MipsFunctionInfo::globalBaseRegSet() const {
 }
 
 static const TargetRegisterClass &getGlobalBaseRegClass(MachineFunction &MF) {
-  auto &STI = static_cast<const MipsSubtarget &>(MF.getSubtarget());
+  auto &STI = MF.getSubtarget<MipsSubtarget>();
   auto &TM = static_cast<const MipsTargetMachine &>(MF.getTarget());
 
   if (STI.inMips16Mode())
@@ -148,14 +156,14 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
 
 void MipsFunctionInfo::createEhDataRegsFI(MachineFunction &MF) {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-  for (int I = 0; I < 4; ++I) {
+  for (int &I : EhDataRegFI) {
     const TargetRegisterClass &RC =
         static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI().IsN64()
             ? Mips::GPR64RegClass
             : Mips::GPR32RegClass;
 
-    EhDataRegFI[I] = MF.getFrameInfo().CreateStackObject(
-        TRI.getSpillSize(RC), TRI.getSpillAlign(RC), false);
+    I = MF.getFrameInfo().CreateStackObject(TRI.getSpillSize(RC),
+                                            TRI.getSpillAlign(RC), false);
   }
 }
 
@@ -167,9 +175,9 @@ void MipsFunctionInfo::createISRRegFI(MachineFunction &MF) {
   const TargetRegisterClass &RC = Mips::GPR32RegClass;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
-  for (int I = 0; I < 2; ++I)
-    ISRDataRegFI[I] = MF.getFrameInfo().CreateStackObject(
-        TRI.getSpillSize(RC), TRI.getSpillAlign(RC), false);
+  for (int &I : ISRDataRegFI)
+    I = MF.getFrameInfo().CreateStackObject(TRI.getSpillSize(RC),
+                                            TRI.getSpillAlign(RC), false);
 }
 
 bool MipsFunctionInfo::isEhDataRegFI(int FI) const {

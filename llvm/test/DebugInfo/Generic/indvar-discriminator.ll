@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 ;
 ; When the induction variable is widened by indvars, check that the debug loc
 ; associated with the loop increment is correctly propagated.
@@ -36,7 +36,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @bar(i32 %X, i32* %A) !dbg !5 {
+define i32 @bar(i32 %X, ptr %A) !dbg !5 {
 entry:
   %cmp5 = icmp sgt i32 %X, 0, !dbg !7
   br i1 %cmp5, label %for.body.lr.ph, label %for.end, !dbg !9
@@ -48,8 +48,8 @@ for.body:
   %i.06 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
   %call = call i32 @foo(i32 %i.06), !dbg !10
   %idxprom = sext i32 %i.06 to i64, !dbg !11
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom, !dbg !11
-  store i32 %call, i32* %arrayidx, align 4, !dbg !12
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom, !dbg !11
+  store i32 %call, ptr %arrayidx, align 4, !dbg !12
   br label %for.inc, !dbg !11
 
 for.inc:
@@ -61,7 +61,7 @@ for.cond.for.end_crit_edge:
   br label %for.end, !dbg !9
 
 for.end:
-  %0 = load i32, i32* %A, align 4, !dbg !17
+  %0 = load i32, ptr %A, align 4, !dbg !17
   ret i32 %0, !dbg !18
 }
 

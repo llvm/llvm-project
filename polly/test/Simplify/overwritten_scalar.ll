@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-simplify -analyze < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ; Remove identical writes
 ; (two stores in the same statement that write the same value to the same
@@ -14,7 +14,7 @@
 ;   A[0] = A[1];
 ; }
 ;
-define void @overwritten_scalar(i32 %n, double* noalias nonnull %A) {
+define void @overwritten_scalar(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -30,7 +30,7 @@ for:
     user:
       %phi = phi double [%val, %body]
       %add = fadd double %val, %phi
-      store double %add, double* %A
+      store double %add, ptr %A
       br label %inc
 
 inc:

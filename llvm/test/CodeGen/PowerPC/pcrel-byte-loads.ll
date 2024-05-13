@@ -21,7 +21,7 @@ define i1 @i64_ExtLoad_i1() {
 ; CHECK-BE-NEXT:    lbz r3, GlobLd1@toc@l(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load i1, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobLd1, i64 0, i64 0), align 1
+  %0 = load i1, ptr @GlobLd1, align 1
   ret i1 %0
 }
 
@@ -37,7 +37,7 @@ define zeroext i1 @i64_ZextLoad_i1() {
 ; CHECK-BE-NEXT:    lbz r3, GlobLd1@toc@l(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load i1, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobLd1, i64 0, i64 0), align 1
+  %0 = load i1, ptr @GlobLd1, align 1
   ret i1 %0
 }
 
@@ -45,6 +45,7 @@ define void @i32_ZextLoad_i1() {
 ; CHECK-LE-LABEL: i32_ZextLoad_i1:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    plbz r3, GlobLd1@PCREL(0), 1
+; CHECK-LE-NEXT:    clrldi r3, r3, 63
 ; CHECK-LE-NEXT:    pstb r3, GlobSt1@PCREL(0), 1
 ; CHECK-LE-NEXT:    blr
 ;
@@ -53,18 +54,19 @@ define void @i32_ZextLoad_i1() {
 ; CHECK-BE-NEXT:    addis r3, r2, GlobLd1@toc@ha
 ; CHECK-BE-NEXT:    addis r4, r2, GlobSt1@toc@ha
 ; CHECK-BE-NEXT:    lbz r3, GlobLd1@toc@l(r3)
+; CHECK-BE-NEXT:    clrldi r3, r3, 63
 ; CHECK-BE-NEXT:    stb r3, GlobSt1@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load i1, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobLd1, i64 0, i64 0), align 1
-  store i1 %0, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobSt1, i64 0, i64 0), align 1
+  %0 = load i1, ptr @GlobLd1, align 1
+  store i1 %0, ptr @GlobSt1, align 1
   ret void
 }
 
 %1 = type { i64 }
 @Glob1 = external dso_local global %1, align 8
 @Glob2 = external dso_local unnamed_addr constant [11 x i8], align 1
-declare i32 @Decl(%1*, i8*) local_unnamed_addr #0
+declare i32 @Decl(ptr, ptr) local_unnamed_addr #0
 
 define dso_local i1 @i32_ExtLoad_i1() local_unnamed_addr #0 {
 ; CHECK-LE-LABEL: i32_ExtLoad_i1:
@@ -77,11 +79,11 @@ define dso_local i1 @i32_ExtLoad_i1() local_unnamed_addr #0 {
 ; CHECK-LE-NEXT:    paddi r3, 0, Glob1@PCREL, 1
 ; CHECK-LE-NEXT:    paddi r4, 0, Glob2@PCREL, 1
 ; CHECK-LE-NEXT:    bl Decl@notoc
-; CHECK-LE-NEXT:    plbz r4, GlobLd1@PCREL(0), 1
-; CHECK-LE-NEXT:    cmplwi r3, 0
-; CHECK-LE-NEXT:    li r3, 1
-; CHECK-LE-NEXT:    iseleq r3, 0, r3
-; CHECK-LE-NEXT:    and r3, r3, r4
+; CHECK-LE-NEXT:    cmpwi cr1, r3, 0
+; CHECK-LE-NEXT:    plbz r3, GlobLd1@PCREL(0), 1
+; CHECK-LE-NEXT:    andi. r3, r3, 1
+; CHECK-LE-NEXT:    crandc 4*cr5+lt, gt, 4*cr1+eq
+; CHECK-LE-NEXT:    setbc r3, 4*cr5+lt
 ; CHECK-LE-NEXT:    addi r1, r1, 32
 ; CHECK-LE-NEXT:    ld r0, 16(r1)
 ; CHECK-LE-NEXT:    mtlr r0
@@ -100,20 +102,20 @@ define dso_local i1 @i32_ExtLoad_i1() local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    addi r4, r4, Glob2@toc@l
 ; CHECK-BE-NEXT:    bl Decl
 ; CHECK-BE-NEXT:    nop
-; CHECK-BE-NEXT:    addis r4, r2, GlobLd1@toc@ha
-; CHECK-BE-NEXT:    cmplwi r3, 0
-; CHECK-BE-NEXT:    li r3, 1
-; CHECK-BE-NEXT:    lbz r4, GlobLd1@toc@l(r4)
-; CHECK-BE-NEXT:    iseleq r3, 0, r3
-; CHECK-BE-NEXT:    and r3, r3, r4
+; CHECK-BE-NEXT:    cmpwi cr1, r3, 0
+; CHECK-BE-NEXT:    addis r3, r2, GlobLd1@toc@ha
+; CHECK-BE-NEXT:    lbz r3, GlobLd1@toc@l(r3)
+; CHECK-BE-NEXT:    andi. r3, r3, 1
+; CHECK-BE-NEXT:    crandc 4*cr5+lt, gt, 4*cr1+eq
+; CHECK-BE-NEXT:    setbc r3, 4*cr5+lt
 ; CHECK-BE-NEXT:    addi r1, r1, 112
 ; CHECK-BE-NEXT:    ld r0, 16(r1)
 ; CHECK-BE-NEXT:    mtlr r0
 ; CHECK-BE-NEXT:    blr
 bb:
-  %i = call signext i32 @Decl(%1* nonnull dereferenceable(32) @Glob1, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @Glob2, i64 0, i64 0)) #1
+  %i = call signext i32 @Decl(ptr nonnull dereferenceable(32) @Glob1, ptr @Glob2) #1
   %i1 = icmp eq i32 %i, 0
-  %i2 = load i1, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobLd1, i64 0, i64 0), align 1
+  %i2 = load i1, ptr @GlobLd1, align 1
   %i3 = select i1 %i1, i1 false, i1 %i2
   ret i1 %i3
 }

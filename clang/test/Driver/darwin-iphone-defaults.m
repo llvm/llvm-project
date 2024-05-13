@@ -1,4 +1,4 @@
-// RUN: %clang -target i386-apple-darwin9 -miphoneos-version-min=3.0 -arch armv7 -stdlib=platform -flto -S -o - %s | FileCheck %s
+// RUN: %clang -target i386-apple-darwin -miphoneos-version-min=5.0 -arch armv7 -stdlib=platform -flto -S -o - %s | FileCheck %s
 
 // CHECK: @f0() [[F0:#[0-9]+]]
 // CHECK: @__f0_block_invoke
@@ -6,8 +6,8 @@
 // CHECK-NOT: msgSend_fixup_alloc
 // CHECK: OBJC_SELECTOR_REFERENCES
 
-int f0() {
-  return ^(){ return 0; }();
+int f0(void) {
+  return ^(void){ return 0; }();
 }
 
 @interface I0
@@ -22,7 +22,7 @@ int f0() {
 +(id) alloc;
 @end
 
-void f1() {
+void f1(void) {
   [I1 alloc];
 }
 

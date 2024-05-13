@@ -53,7 +53,7 @@ dispatch_resume(dispatch_object_t object);
 - (Foo *)getFooPtr;
 @end
 
-Foo *retNil() {
+Foo *retNil(void) {
   return 0;
 }
 

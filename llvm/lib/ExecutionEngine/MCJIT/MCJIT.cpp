@@ -19,6 +19,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -170,8 +171,8 @@ std::unique_ptr<MemoryBuffer> MCJIT::emitObject(Module *M) {
   PM.run(*M);
   // Flush the output buffer to get the generated code into memory
 
-  std::unique_ptr<MemoryBuffer> CompiledObjBuffer(
-      new SmallVectorMemoryBuffer(std::move(ObjBufferSV)));
+  auto CompiledObjBuffer = std::make_unique<SmallVectorMemoryBuffer>(
+      std::move(ObjBufferSV), /*RequiresNullTerminator=*/false);
 
   // If we have an object cache, tell it about the new object.
   // Note that we're using the compiled image, not the loaded image (as below).
@@ -218,8 +219,7 @@ void MCJIT::generateCodeForModule(Module *M) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     logAllUnhandledErrors(LoadedObject.takeError(), OS);
-    OS.flush();
-    report_fatal_error(Buf);
+    report_fatal_error(Twine(OS.str()));
   }
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo> L =
     Dyld.loadObject(*LoadedObject.get());
@@ -261,10 +261,10 @@ void MCJIT::finalizeObject() {
   // Generate code for module is going to move objects out of the 'added' list,
   // so we need to copy that out before using it:
   SmallVector<Module*, 16> ModsToAdd;
-  for (auto M : OwnedModules.added())
+  for (auto *M : OwnedModules.added())
     ModsToAdd.push_back(M);
 
-  for (auto M : ModsToAdd)
+  for (auto *M : ModsToAdd)
     generateCodeForModule(M);
 
   finalizeLoadedModules();
@@ -659,9 +659,8 @@ void MCJIT::notifyObjectLoaded(const object::ObjectFile &Obj,
       static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Obj.getData().data()));
   std::lock_guard<sys::Mutex> locked(lock);
   MemMgr->notifyObjectLoaded(this, Obj);
-  for (unsigned I = 0, S = EventListeners.size(); I < S; ++I) {
-    EventListeners[I]->notifyObjectLoaded(Key, Obj, L);
-  }
+  for (JITEventListener *EL : EventListeners)
+    EL->notifyObjectLoaded(Key, Obj, L);
 }
 
 void MCJIT::notifyFreeingObject(const object::ObjectFile &Obj) {

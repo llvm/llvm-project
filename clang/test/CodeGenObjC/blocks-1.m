@@ -12,13 +12,13 @@
 
 // OBJC-LABEL: define{{.*}} void @foo(
 // OBJCXX-LABEL: define{{.*}} void @_Z3foov(
-// CHECK: call i8* @objc_read_weak(
-// CHECK: call i8* @objc_assign_weak(
+// CHECK: call ptr @objc_read_weak(
+// CHECK: call ptr @objc_assign_weak(
 // CHECK: call void @_Block_object_dispose(
 
 // OBJC-LABEL: define{{.*}} void @test2(
 // OBJCXX-LABEL: define{{.*}} void @_Z5test2v(
-// CHECK: call i8* @objc_assign_weak(
+// CHECK: call ptr @objc_assign_weak(
 // CHECK: call void @_Block_object_dispose(
 
 // CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_
@@ -36,7 +36,7 @@ void test1(NSDictionary * dict) {
 @interface D
 @end
 
-void foo() {
+void foo(void) {
   __block __weak D *weakSelf;
   ^{ (void)weakSelf; };
   D *l;
@@ -46,7 +46,7 @@ void foo() {
 
 void (^__weak b)(void);
 
-void test2() {
+void test2(void) {
   __block int i = 0;
   b = ^ {  ++i; };
 }

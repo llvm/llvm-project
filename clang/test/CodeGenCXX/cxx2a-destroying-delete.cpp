@@ -21,14 +21,14 @@ struct A {
 void delete_A(A *a) { delete a; }
 // CHECK-LABEL: define {{.*}}delete_A
 // CHECK: %[[a:.*]] = load
-// CHECK: icmp eq %{{.*}} %[[a]], null
+// CHECK: icmp eq ptr %[[a]], null
 // CHECK: br i1
 //
 // Ensure that we call the destroying delete and not the destructor.
 // CHECK-NOT: call
-// CHECK-ITANIUM: call void @_ZN1AdlEPS_St19destroying_delete_t(%{{.*}}* %[[a]])
-// CHECK-MSABI64: call void @"??3A@@SAXPEAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* %[[a]], i8
-// CHECK-MSABI32: call void @"??3A@@SAXPAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* %[[a]], %{{.*}}* byval(%{{.*}}) align 4 %{{.*}})
+// CHECK-ITANIUM: call void @_ZN1AdlEPS_St19destroying_delete_t(ptr noundef %[[a]])
+// CHECK-MSABI64: call void @"??3A@@SAXPEAU0@Udestroying_delete_t@std@@@Z"(ptr noundef %[[a]], i8
+// CHECK-MSABI32: call void @"??3A@@SAXPAU0@Udestroying_delete_t@std@@@Z"(ptr noundef %[[a]], ptr noundef byval(%{{.*}}) align 4 %{{.*}})
 // CHECK-NOT: call
 // CHECK: }
 
@@ -39,15 +39,15 @@ struct B {
 void delete_B(B *b) { delete b; }
 // CHECK-LABEL: define {{.*}}delete_B
 // CHECK: %[[b:.*]] = load
-// CHECK: icmp eq %{{.*}} %[[b]], null
+// CHECK: icmp eq ptr %[[b]], null
 // CHECK: br i1
 //
 // Ensure that we call the virtual destructor and not the operator delete.
 // CHECK-NOT: call
 // CHECK: %[[VTABLE:.*]] = load
 // CHECK: %[[DTOR:.*]] = load
-// CHECK: call {{void|i8\*|x86_thiscallcc i8\*}} %[[DTOR]](%{{.*}}* {{[^,]*}} %[[b]]
-// CHECK-MSABI-SAME: , i32 1)
+// CHECK: call {{void|noundef ptr|x86_thiscallcc noundef ptr}} %[[DTOR]](ptr {{[^,]*}} %[[b]]
+// CHECK-MSABI-SAME: , i32 noundef 1)
 // CHECK-NOT: call
 // CHECK: }
 
@@ -60,21 +60,20 @@ void delete_C(C *c) { delete c; }
 // Check that we perform a derived-to-base conversion on the parameter to 'operator delete'.
 // CHECK-LABEL: define {{.*}}delete_C
 // CHECK: %[[c:.*]] = load
-// CHECK: icmp eq %{{.*}} %[[c]], null
+// CHECK: icmp eq ptr %[[c]], null
 // CHECK: br i1
 //
 // CHECK-64BIT: %[[base:.*]] = getelementptr {{.*}}, i64 8
 // CHECK-32BIT: %[[base:.*]] = getelementptr {{.*}}, i32 4
-// CHECK: %[[castbase:.*]] = bitcast {{.*}} %[[base]]
 //
-// CHECK: %[[a:.*]] = phi {{.*}} %[[castbase]]
-// CHECK: icmp eq %{{.*}} %[[a]], null
+// CHECK: %[[a:.*]] = phi {{.*}} %[[base]]
+// CHECK: icmp eq ptr %[[a]], null
 // CHECK: br i1
 //
 // CHECK-NOT: call
-// CHECK-ITANIUM: call void @_ZN1AdlEPS_St19destroying_delete_t(%{{.*}}* %[[a]])
-// CHECK-MSABI64: call void @"??3A@@SAXPEAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* %[[a]], i8
-// CHECK-MSABI32: call void @"??3A@@SAXPAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* %[[a]], %{{.*}}* byval(%{{.*}}) align 4 %{{.*}})
+// CHECK-ITANIUM: call void @_ZN1AdlEPS_St19destroying_delete_t(ptr noundef %[[a]])
+// CHECK-MSABI64: call void @"??3A@@SAXPEAU0@Udestroying_delete_t@std@@@Z"(ptr noundef %[[a]], i8
+// CHECK-MSABI32: call void @"??3A@@SAXPAU0@Udestroying_delete_t@std@@@Z"(ptr noundef %[[a]], ptr noundef byval(%{{.*}}) align 4 %{{.*}})
 // CHECK-NOT: call
 // CHECK: }
 
@@ -83,22 +82,20 @@ struct D : Padding, VDel, B {};
 void delete_D(D *d) { delete d; }
 // CHECK-LABEL: define {{.*}}delete_D
 // CHECK: %[[d:.*]] = load
-// CHECK: icmp eq %{{.*}} %[[d]], null
+// CHECK: icmp eq ptr %[[d]], null
 // CHECK: br i1
 //
 // CHECK-NOT: call
 // For MS, we don't add a new vtable slot to the primary vtable for the virtual
 // destructor. Instead we cast to the VDel base class.
-// CHECK-MSABI: bitcast {{.*}} %[[d]]
-// CHECK-MSABI64-NEXT: getelementptr {{.*}}, i64 8
-// CHECK-MSABI32-NEXT: getelementptr {{.*}}, i32 4
-// CHECK-MSABI-NEXT: %[[d:.*]] = bitcast i8*
+// CHECK-MSABI64: %[[d:.*]] = getelementptr {{.*}}, i64 8
+// CHECK-MSABI32: %[[d:.*]] = getelementptr {{.*}}, i32 4
 //
 // CHECK: %[[VTABLE:.*]] = load
 // CHECK: %[[DTOR:.*]] = load
 //
-// CHECK: call {{void|i8\*|x86_thiscallcc i8\*}} %[[DTOR]](%{{.*}}* {{[^,]*}} %[[d]]
-// CHECK-MSABI-SAME: , i32 1)
+// CHECK: call {{void|noundef ptr|x86_thiscallcc noundef ptr}} %[[DTOR]](ptr{{[^,]*}} %[[d]]
+// CHECK-MSABI-SAME: , i32 noundef 1)
 // CHECK-NOT: call
 // CHECK: }
 
@@ -144,9 +141,9 @@ struct alignas(16) G : E, F { void *data; };
 void delete_G(G *g) { delete g; }
 // CHECK-LABEL: define {{.*}}delete_G
 // CHECK-NOT: call
-// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t(%{{.*}}* %[[a]], i64 32, i64 16)
-// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"(%{{.*}}* %[[a]], i8 {{[^,]*}}, i64 32, i64 16)
-// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"(%{{.*}}* %[[a]], %{{.*}}* byval(%{{.*}}) align 4 %{{.*}}, i32 16, i32 16)
+// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t(ptr noundef %[[a]], i64 noundef 32, i64 noundef 16)
+// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"(ptr noundef %[[a]], i8 {{[^,]*}}, i64 noundef 32, i64 noundef 16)
+// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"(ptr noundef %[[a]], ptr noundef byval(%{{.*}}) align 4 %{{.*}}, i32 noundef 16, i32 noundef 16)
 // CHECK-NOT: call
 // CHECK: }
 
@@ -158,7 +155,7 @@ H::~H() { call_in_dtor(); }
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: getelementptr {{.*}}, i64 24
 // CHECK-ITANIUM-NOT: call
-// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t({{.*}}, i64 48, i64 16)
+// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t({{.*}}, i64 noundef 48, i64 noundef 16)
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: }
 
@@ -173,8 +170,8 @@ H::~H() { call_in_dtor(); }
 // CHECK-MSABI64: getelementptr {{.*}}, i64 24
 // CHECK-MSABI32: getelementptr {{.*}}, i32 20
 // CHECK-MSABI-NOT: call{{ }}
-// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 48, i64 16)
-// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"({{.*}}, i32 32, i32 16)
+// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 noundef 48, i64 noundef 16)
+// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"({{.*}}, i32 noundef 32, i32 noundef 16)
 // CHECK-MSABI: br label %[[RETURN:.*]]
 //
 // CHECK-MSABI64: call void @"??1H@@UEAA@XZ"(
@@ -189,7 +186,7 @@ I::~I() { call_in_dtor(); }
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: getelementptr {{.*}}, i64 24
 // CHECK-ITANIUM-NOT: call
-// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t({{.*}}, i64 96, i64 32)
+// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t({{.*}}, i64 noundef 96, i64 noundef 32)
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: }
 
@@ -204,8 +201,8 @@ I::~I() { call_in_dtor(); }
 // CHECK-MSABI64: getelementptr {{.*}}, i64 24
 // CHECK-MSABI32: getelementptr {{.*}}, i32 20
 // CHECK-MSABI-NOT: call{{ }}
-// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 96, i64 32)
-// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"({{.*}}, i32 64, i32 32)
+// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 noundef 96, i64 noundef 32)
+// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"({{.*}}, i32 noundef 64, i32 noundef 32)
 // CHECK-MSABI: br label %[[RETURN:.*]]
 //
 // CHECK-MSABI64: call void @"??1I@@UEAA@XZ"(

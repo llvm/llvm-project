@@ -15,11 +15,13 @@
 #define LLVM_LIB_TARGET_XCORE_XCORE_H
 
 #include "MCTargetDesc/XCoreMCTargetDesc.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
   class FunctionPass;
   class ModulePass;
+  class PassRegistry;
   class TargetMachine;
   class XCoreTargetMachine;
 
@@ -27,8 +29,9 @@ namespace llvm {
 
   FunctionPass *createXCoreFrameToArgsOffsetEliminationPass();
   FunctionPass *createXCoreISelDag(XCoreTargetMachine &TM,
-                                   CodeGenOpt::Level OptLevel);
+                                   CodeGenOptLevel OptLevel);
   ModulePass *createXCoreLowerThreadLocalPass();
+  void initializeXCoreDAGToDAGISelPass(PassRegistry &);
 
 } // end namespace llvm;
 

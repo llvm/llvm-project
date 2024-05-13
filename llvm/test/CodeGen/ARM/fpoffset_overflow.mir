@@ -41,10 +41,10 @@ body: |
     ; CHECK: $r11 = IMPLICIT_DEF
     ; CHECK: $r12 = IMPLICIT_DEF
     ; CHECK: $lr = IMPLICIT_DEF
-    ; CHECK: t2STRi12 killed $r0, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
+    ; CHECK: t2STRi12 killed $r0, $sp, 0, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
     ; CHECK: $r0 = t2ADDri killed $sp, 4096, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $sp = t2LDRi12 killed $r0, 40, 14 /* CC::al */, $noreg :: (load 4)
-    ; CHECK: $r0 = t2LDRi12 $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.0)
+    ; CHECK: $sp = t2LDRi12 killed $r0, 40, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK: $r0 = t2LDRi12 $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.0)
     ; CHECK: KILL $r0
     ; CHECK: KILL $r1
     ; CHECK: KILL $r2
@@ -74,7 +74,7 @@ body: |
     $r12 = IMPLICIT_DEF
     $lr = IMPLICIT_DEF
 
-    $sp = t2LDRi12 %fixed-stack.0, 0, 14, $noreg :: (load 4)
+    $sp = t2LDRi12 %fixed-stack.0, 0, 14, $noreg :: (load (s32))
 
     KILL $r0
     KILL $r1
@@ -129,7 +129,7 @@ body: |
     ; CHECK: $r11 = IMPLICIT_DEF
     ; CHECK: $r12 = IMPLICIT_DEF
     ; CHECK: $lr = IMPLICIT_DEF
-    ; CHECK: $r11 = t2LDRi12 $sp, 4092, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: $r11 = t2LDRi12 $sp, 4092, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK: KILL $r0
     ; CHECK: KILL $r1
     ; CHECK: KILL $r2
@@ -157,7 +157,7 @@ body: |
     $r12 = IMPLICIT_DEF
     $lr = IMPLICIT_DEF
 
-    $r11 = t2LDRi12 %fixed-stack.0, 0, 14, $noreg :: (load 4)
+    $r11 = t2LDRi12 %fixed-stack.0, 0, 14, $noreg :: (load (s32))
 
     KILL $r0
     KILL $r1

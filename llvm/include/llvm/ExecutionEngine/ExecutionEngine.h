@@ -16,12 +16,10 @@
 
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/OrcV1Deprecation.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Object/Binary.h"
@@ -36,6 +34,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -88,7 +87,7 @@ public:
 
   /// Erase an entry from the mapping table.
   ///
-  /// \returns The address that \p ToUnmap was happed to.
+  /// \returns The address that \p ToUnmap was mapped to.
   uint64_t RemoveMapping(StringRef Name);
 };
 
@@ -262,7 +261,7 @@ public:
   /// locally can use the getFunctionAddress call, which will generate code
   /// and apply final preparations all in one step.
   ///
-  /// This method has no effect for the interpeter.
+  /// This method has no effect for the interpreter.
   virtual void generateCodeForModule(Module *M) {}
 
   /// finalizeObject - ensure the module is fully processed and is usable.
@@ -271,7 +270,7 @@ public:
   /// object usable for execution.  It should be called after sections within an
   /// object have been relocated using mapSectionAddress.  When this method is
   /// called the MCJIT execution engine will reapply relocations for a loaded
-  /// object.  This method has no effect for the interpeter.
+  /// object.  This method has no effect for the interpreter.
   ///
   /// Returns true on success, false on failure. Error messages can be retrieved
   /// by calling getError();
@@ -537,12 +536,12 @@ private:
   std::unique_ptr<Module> M;
   EngineKind::Kind WhichEngine;
   std::string *ErrorStr;
-  CodeGenOpt::Level OptLevel;
+  CodeGenOptLevel OptLevel;
   std::shared_ptr<MCJITMemoryManager> MemMgr;
   std::shared_ptr<LegacyJITSymbolResolver> Resolver;
   TargetOptions Options;
-  Optional<Reloc::Model> RelocModel;
-  Optional<CodeModel::Model> CMModel;
+  std::optional<Reloc::Model> RelocModel;
+  std::optional<CodeModel::Model> CMModel;
   std::string MArch;
   std::string MCPU;
   SmallVector<std::string, 4> MAttrs;
@@ -587,8 +586,8 @@ public:
   }
 
   /// setOptLevel - Set the optimization level for the JIT.  This option
-  /// defaults to CodeGenOpt::Default.
-  EngineBuilder &setOptLevel(CodeGenOpt::Level l) {
+  /// defaults to CodeGenOptLevel::Default.
+  EngineBuilder &setOptLevel(CodeGenOptLevel l) {
     OptLevel = l;
     return *this;
   }

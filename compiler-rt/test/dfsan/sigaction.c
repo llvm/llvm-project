@@ -1,8 +1,5 @@
-// RUN: %clang_dfsan -DUSE_SIGNAL_ACTION -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// RUN:     %run %t
-// RUN: %clang_dfsan -mllvm -dfsan-fast-16-labels=true %s -o %t && %run %t
-//
-// REQUIRES: x86_64-target-arch
+// RUN: %clang_dfsan -DUSE_SIGNAL_ACTION -Wno-error=int-conversion %s -o %t && %run %t
+// RUN: %clang_dfsan -Wno-error=int-conversion %s -o %t && %run %t
 
 #include <sanitizer/dfsan_interface.h>
 

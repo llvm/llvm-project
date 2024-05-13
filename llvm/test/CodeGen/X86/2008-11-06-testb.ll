@@ -7,19 +7,18 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 target triple = "i386-apple-darwin9.5"
 	%struct.x = type <{ i8, i8, i16 }>
 
-define i32 @foo(%struct.x* %p) nounwind {
+define i32 @foo(ptr %p) nounwind {
 entry:
-	%0 = getelementptr %struct.x, %struct.x* %p, i32 0, i32 0		; <i8*> [#uses=1]
-	store i8 55, i8* %0, align 1
-	%1 = bitcast %struct.x* %p to i32*		; <i32*> [#uses=1]
-	%2 = load i32, i32* %1, align 1		; <i32> [#uses=1]
-	%3 = and i32 %2, 512		; <i32> [#uses=1]
-	%4 = icmp eq i32 %3, 0		; <i1> [#uses=1]
-	br i1 %4, label %bb5, label %bb
+	%0 = getelementptr %struct.x, ptr %p, i32 0, i32 0		; <ptr> [#uses=1]
+	store i8 55, ptr %0, align 1
+	%1 = load i32, ptr %p, align 1		; <i32> [#uses=1]
+	%2 = and i32 %1, 512		; <i32> [#uses=1]
+	%3 = icmp eq i32 %2, 0		; <i1> [#uses=1]
+	br i1 %3, label %bb5, label %bb
 
 bb:		; preds = %entry
-	%5 = tail call i32 (...) @xx() nounwind		; <i32> [#uses=1]
-	ret i32 %5
+	%4 = tail call i32 (...) @xx() nounwind		; <i32> [#uses=1]
+	ret i32 %4
 
 bb5:		; preds = %entry
 	ret i32 0

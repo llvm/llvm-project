@@ -1,5 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 %struct.nest = type { %struct.pair, %struct.pair }
 %struct.pair = type { i32, i32 }
@@ -16,11 +18,10 @@ define void @foo() nounwind uwtable safestack {
 entry:
   ; CHECK-NOT: __safestack_unsafe_stack_ptr
   %c = alloca %struct.nest, align 4
-  %b = getelementptr inbounds %struct.nest, %struct.nest* %c, i32 0, i32 1
-  %_a = getelementptr inbounds %struct.pair, %struct.pair* %b, i32 0, i32 0
-  %0 = load i32, i32* %_a, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %0)
+  %b = getelementptr inbounds %struct.nest, ptr %c, i32 0, i32 1
+  %0 = load i32, ptr %b, align 4
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 %0)
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

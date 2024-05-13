@@ -11,9 +11,9 @@
 #include "polly/CodeGen/PerfMonitor.h"
 #include "polly/CodeGen/RuntimeDebugBuilder.h"
 #include "polly/ScopInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace polly;
@@ -24,8 +24,8 @@ Function *PerfMonitor::getAtExit() {
 
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
-    FunctionType *Ty = FunctionType::get(Builder.getInt32Ty(),
-                                         {Builder.getInt8PtrTy()}, false);
+    FunctionType *Ty =
+        FunctionType::get(Builder.getInt32Ty(), {Builder.getPtrTy()}, false);
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
@@ -44,12 +44,12 @@ void PerfMonitor::addToGlobalConstructors(Function *Fn) {
     GV->eraseFromParent();
   }
 
-  StructType *ST = StructType::get(Builder.getInt32Ty(), Fn->getType(),
-                                   Builder.getInt8PtrTy());
+  StructType *ST =
+      StructType::get(Builder.getInt32Ty(), Fn->getType(), Builder.getPtrTy());
 
   V.push_back(
       ConstantStruct::get(ST, Builder.getInt32(10), Fn,
-                          ConstantPointerNull::get(Builder.getInt8PtrTy())));
+                          ConstantPointerNull::get(Builder.getPtrTy())));
   ArrayType *Ty = ArrayType::get(ST, V.size());
 
   GV = new GlobalVariable(*M, Ty, true, GlobalValue::AppendingLinkage,
@@ -103,7 +103,7 @@ void PerfMonitor::addGlobalVariables() {
   TryRegisterGlobal(M, "__polly_perf_cycles_total_start", Builder.getInt64(0),
                     &CyclesTotalStartPtr);
 
-  TryRegisterGlobal(M, "__polly_perf_initialized", Builder.getInt1(0),
+  TryRegisterGlobal(M, "__polly_perf_initialized", Builder.getInt1(false),
                     &AlreadyInitializedPtr);
 
   TryRegisterGlobal(M, "__polly_perf_cycles_in_scops", Builder.getInt64(0),
@@ -246,7 +246,7 @@ Function *PerfMonitor::insertInitFunction(Function *FinalReporting) {
 
   // Register the final reporting function with atexit().
   Value *FinalReportingPtr =
-      Builder.CreatePointerCast(FinalReporting, Builder.getInt8PtrTy());
+      Builder.CreatePointerCast(FinalReporting, Builder.getPtrTy());
   Function *AtExitFn = getAtExit();
   Builder.CreateCall(AtExitFn, {FinalReportingPtr});
 

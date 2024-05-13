@@ -16,7 +16,7 @@ struct test {
 
 void foo(struct test *);
 
-void test_zeroed() {
+void test_zeroed(void) {
   struct test **list, *t;
   int i;
 
@@ -31,7 +31,7 @@ void test_zeroed() {
   kfree(list); // no-warning
 }
 
-void test_nonzero() {
+void test_nonzero(void) {
   struct test **list, *t;
   int i;
 
@@ -126,12 +126,12 @@ void test_3arg_malloc_leak(struct malloc_type *mtp, int flags) {
 // if a block of size 0 is requested
 #define ZERO_SIZE_PTR ((void *)16)
 
-void test_kfree_ZERO_SIZE_PTR() {
+void test_kfree_ZERO_SIZE_PTR(void) {
   void *ptr = ZERO_SIZE_PTR;
   kfree(ptr); // no warning about freeing this value
 }
 
-void test_kfree_other_constant_value() {
+void test_kfree_other_constant_value(void) {
   void *ptr = (void *)1;
   kfree(ptr); // expected-warning{{Argument to kfree() is a constant address (1)}}
 }

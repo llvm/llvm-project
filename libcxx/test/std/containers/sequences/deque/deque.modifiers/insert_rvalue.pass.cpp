@@ -12,6 +12,7 @@
 
 // UNSUPPORTED: c++03
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -52,13 +53,14 @@ test(int P, C& c1, int x)
     CI i = c1.insert(c1.begin() + P, MoveOnly(x));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + 1);
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
     i = c1.begin();
-    for (int j = 0; j < P; ++j, ++i)
+    for (int j = 0; j < P; ++j, (void) ++i)
         assert(*i == MoveOnly(j));
     assert(*i == MoveOnly(x));
     ++i;
-    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, ++i)
+    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, (void) ++i)
         assert(*i == MoveOnly(j));
 }
 
@@ -107,6 +109,13 @@ int main(int, char**)
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < N; ++j)
             testN<std::deque<MoveOnly, min_allocator<MoveOnly>> >(rng[i], rng[j]);
+    }
+    {
+    int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+    const int N = sizeof(rng)/sizeof(rng[0]);
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+            testN<std::deque<MoveOnly, safe_allocator<MoveOnly>> >(rng[i], rng[j]);
     }
 
   return 0;

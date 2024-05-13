@@ -67,16 +67,16 @@ entry:
 define void @test_igtuc_store(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: test_igtuc_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r4, r3
-; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-NEXT:    stb r3, 0(r5)
+; CHECK-NEXT:    stb r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ugt i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @glob, align 1
+  store i8 %conv3, ptr @glob, align 1
   ret void
 }
 
@@ -84,16 +84,16 @@ entry:
 define void @test_igtuc_sext_store(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: test_igtuc_sext_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r4, r3
-; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    sradi r3, r3, 63
-; CHECK-NEXT:    stb r3, 0(r5)
+; CHECK-NEXT:    stb r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ugt i8 %a, %b
   %conv3 = sext i1 %cmp to i8
-  store i8 %conv3, i8* @glob, align 1
+  store i8 %conv3, ptr @glob, align 1
   ret void
 }
 
@@ -101,8 +101,8 @@ entry:
 define void @test_igtuc_z_store(i8 zeroext %a) {
 ; CHECK-LABEL: test_igtuc_z_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -111,7 +111,7 @@ define void @test_igtuc_z_store(i8 zeroext %a) {
 entry:
   %cmp = icmp ne i8 %a, 0
   %conv2 = zext i1 %cmp to i8
-  store i8 %conv2, i8* @glob, align 1
+  store i8 %conv2, ptr @glob, align 1
   ret void
 }
 
@@ -119,10 +119,10 @@ entry:
 define void @test_igtuc_sext_z_store(i8 zeroext %a) {
 ; CHECK-LABEL: test_igtuc_sext_z_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
-; CHECK-NEXT:    srwi r3, r3, 5
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    neg r3, r3
 ; CHECK-NEXT:    stb r3, 0(r4)
@@ -130,6 +130,6 @@ define void @test_igtuc_sext_z_store(i8 zeroext %a) {
 entry:
   %cmp = icmp ne i8 %a, 0
   %conv2 = sext i1 %cmp to i8
-  store i8 %conv2, i8* @glob, align 1
+  store i8 %conv2, ptr @glob, align 1
   ret void
 }

@@ -124,9 +124,9 @@ void foo(const int **a) {
   decltype(u) tmp;
 }
 
-// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1x {{.*}}@[[DEVNAMEX]]
-// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1y {{.*}}@[[DEVNAMEY]]
-// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1w {{.*}}@[[DEVNAMEW]]
+// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1x, {{.*}}@[[DEVNAMEX]]
+// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1y, {{.*}}@[[DEVNAMEY]]
+// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1w, {{.*}}@[[DEVNAMEW]]
 // HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZL1u
 // HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZZ6kernelPiPPKiE1w
 // HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZZ6devfunPPKiE1p

@@ -9,12 +9,12 @@
 # CHECK: 0x{{[0-9a-f]+}} ffff0080 ffffffff 00000080
 
 # RUN: not ld.lld %t.o %t255.o -o /dev/null 2>&1 | FileCheck --check-prefix=OVERFLOW1 %s
-# OVERFLOW1: relocation R_PPC64_ADDR16 out of range: -32769 is not in [-32768, 65535]; references foo
-# OVERFLOW1: relocation R_PPC64_ADDR32 out of range: -2147483649 is not in [-2147483648, 4294967295]; references foo
+# OVERFLOW1: relocation R_PPC64_ADDR16 out of range: -32769 is not in [-32768, 65535]; references 'foo'
+# OVERFLOW1: relocation R_PPC64_ADDR32 out of range: -2147483649 is not in [-2147483648, 4294967295]; references 'foo'
 
 # RUN: not ld.lld %t.o %t257.o -o /dev/null 2>&1 | FileCheck --check-prefix=OVERFLOW2 %s
-# OVERFLOW2: relocation R_PPC64_ADDR16 out of range: 65536 is not in [-32768, 65535]; references foo
-# OVERFLOW2: relocation R_PPC64_ADDR32 out of range: 4294967296 is not in [-2147483648, 4294967295]; references foo
+# OVERFLOW2: relocation R_PPC64_ADDR16 out of range: 65536 is not in [-32768, 65535]; references 'foo'
+# OVERFLOW2: relocation R_PPC64_ADDR32 out of range: 4294967296 is not in [-2147483648, 4294967295]; references 'foo'
 
 .globl _start
 _start:

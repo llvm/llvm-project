@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 
-define void @foo(i32 %a, i32 *%b, i1 %c) nounwind {
+define void @foo(i32 %a, ptr %b, i1 %c) nounwind {
 ; RV32I-LABEL: foo:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a3, 0(a1)
@@ -35,9 +35,9 @@ define void @foo(i32 %a, i32 *%b, i1 %c) nounwind {
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    bgeu a0, a3, .LBB0_14
 ; RV32I-NEXT:  # %bb.10: # %test11
-; RV32I-NEXT:    lw a0, 0(a1)
-; RV32I-NEXT:    andi a0, a2, 1
-; RV32I-NEXT:    bnez a0, .LBB0_14
+; RV32I-NEXT:    lw zero, 0(a1)
+; RV32I-NEXT:    andi a2, a2, 1
+; RV32I-NEXT:    bnez a2, .LBB0_14
 ; RV32I-NEXT:  # %bb.11: # %test12
 ; RV32I-NEXT:    lw a0, 0(a1)
 ; RV32I-NEXT:    bgez a0, .LBB0_14
@@ -45,57 +45,57 @@ define void @foo(i32 %a, i32 *%b, i1 %c) nounwind {
 ; RV32I-NEXT:    lw a0, 0(a1)
 ; RV32I-NEXT:    blez a0, .LBB0_14
 ; RV32I-NEXT:  # %bb.13: # %test14
-; RV32I-NEXT:    lw a0, 0(a1)
+; RV32I-NEXT:    lw zero, 0(a1)
 ; RV32I-NEXT:  .LBB0_14: # %end
 ; RV32I-NEXT:    ret
-  %val1 = load volatile i32, i32* %b
+  %val1 = load volatile i32, ptr %b
   %tst1 = icmp eq i32 %val1, %a
   br i1 %tst1, label %end, label %test2
 
 test2:
-  %val2 = load volatile i32, i32* %b
+  %val2 = load volatile i32, ptr %b
   %tst2 = icmp ne i32 %val2, %a
   br i1 %tst2, label %end, label %test3
 
 test3:
-  %val3 = load volatile i32, i32* %b
+  %val3 = load volatile i32, ptr %b
   %tst3 = icmp slt i32 %val3, %a
   br i1 %tst3, label %end, label %test4
 
 test4:
-  %val4 = load volatile i32, i32* %b
+  %val4 = load volatile i32, ptr %b
   %tst4 = icmp sge i32 %val4, %a
   br i1 %tst4, label %end, label %test5
 
 test5:
-  %val5 = load volatile i32, i32* %b
+  %val5 = load volatile i32, ptr %b
   %tst5 = icmp ult i32 %val5, %a
   br i1 %tst5, label %end, label %test6
 
 test6:
-  %val6 = load volatile i32, i32* %b
+  %val6 = load volatile i32, ptr %b
   %tst6 = icmp uge i32 %val6, %a
   br i1 %tst6, label %end, label %test7
 
 ; Check for condition codes that don't have a matching instruction
 
 test7:
-  %val7 = load volatile i32, i32* %b
+  %val7 = load volatile i32, ptr %b
   %tst7 = icmp sgt i32 %val7, %a
   br i1 %tst7, label %end, label %test8
 
 test8:
-  %val8 = load volatile i32, i32* %b
+  %val8 = load volatile i32, ptr %b
   %tst8 = icmp sle i32 %val8, %a
   br i1 %tst8, label %end, label %test9
 
 test9:
-  %val9 = load volatile i32, i32* %b
+  %val9 = load volatile i32, ptr %b
   %tst9 = icmp ugt i32 %val9, %a
   br i1 %tst9, label %end, label %test10
 
 test10:
-  %val10 = load volatile i32, i32* %b
+  %val10 = load volatile i32, ptr %b
   %tst10 = icmp ule i32 %val10, %a
   br i1 %tst10, label %end, label %test11
 
@@ -103,25 +103,25 @@ test10:
 ; function
 
 test11:
-  %val11 = load volatile i32, i32* %b
+  %val11 = load volatile i32, ptr %b
   br i1 %c, label %end, label %test12
 
 ; Check that we use bgez for X > -1 which is the canonical form.
 
 test12:
-  %val12 = load volatile i32, i32* %b
+  %val12 = load volatile i32, ptr %b
   %tst12 = icmp sgt i32 %val12, -1
   br i1 %tst12, label %end, label %test13
 
 ; Check that we use blez (X <= 0) for (X < 1)
 
 test13:
-  %val13 = load volatile i32, i32* %b
+  %val13 = load volatile i32, ptr %b
   %tst13 = icmp slt i32 %val13, 1
   br i1 %tst13, label %end, label %test14
 
 test14:
-  %val14 = load volatile i32, i32* %b
+  %val14 = load volatile i32, ptr %b
   br label %end
 
 end:

@@ -13,8 +13,10 @@
 #define FORTRAN_RUNTIME_UNIT_MAP_H_
 
 #include "lock.h"
-#include "memory.h"
 #include "unit.h"
+#include "flang/Common/fast-int-set.h"
+#include "flang/Runtime/memory.h"
+#include <cstdint>
 #include <cstdlib>
 
 namespace Fortran::runtime::io {
@@ -26,24 +28,25 @@ public:
     return Find(n);
   }
 
-  ExternalFileUnit &LookUpOrCreate(
+  ExternalFileUnit *LookUpOrCreate(
       int n, const Terminator &terminator, bool &wasExtant) {
     CriticalSection critical{lock_};
-    auto *p{Find(n)};
-    wasExtant = p != nullptr;
-    return p ? *p : Create(n, terminator);
+    if (auto *p{Find(n)}) {
+      wasExtant = true;
+      return p;
+    } else {
+      wasExtant = false;
+      return n >= 0 ? &Create(n, terminator) : nullptr;
+    }
   }
 
   // Unit look-up by name is needed for INQUIRE(FILE="...")
-  ExternalFileUnit *LookUp(const char *path) {
+  ExternalFileUnit *LookUp(const char *path, std::size_t pathLen) {
     CriticalSection critical{lock_};
-    return Find(path);
+    return Find(path, pathLen);
   }
 
-  ExternalFileUnit &NewUnit(const Terminator &terminator) {
-    CriticalSection critical{lock_};
-    return Create(nextNewUnit_--, terminator);
-  }
+  ExternalFileUnit &NewUnit(const Terminator &);
 
   // To prevent races, the unit is removed from the map if it exists,
   // and put on the closing_ list until DestroyClosed() is called.
@@ -61,7 +64,14 @@ private:
   };
 
   static constexpr int buckets_{1031}; // must be prime
+
+  // The pool of recyclable new unit numbers uses the range that
+  // works even with INTEGER(kind=1).  0 and -1 are never used.
+  static constexpr int maxNewUnits_{129}; // [ -128 .. 0 ]
+
   int Hash(int n) { return std::abs(n) % buckets_; }
+
+  void Initialize();
 
   ExternalFileUnit *Find(int n) {
     Chain *previous{nullptr};
@@ -78,14 +88,16 @@ private:
     }
     return nullptr;
   }
-  ExternalFileUnit *Find(const char *path);
+  ExternalFileUnit *Find(const char *path, std::size_t pathLen);
 
   ExternalFileUnit &Create(int, const Terminator &);
 
   Lock lock_;
+  bool isInitialized_{false};
   OwningPtr<Chain> bucket_[buckets_]{}; // all owned by *this
-  int nextNewUnit_{-1000}; // see 12.5.6.12 in Fortran 2018
   OwningPtr<Chain> closing_{nullptr}; // units during CLOSE statement
+  common::FastIntSet<maxNewUnits_> freeNewUnits_;
+  int emergencyNewUnit_{maxNewUnits_}; // not recycled
 };
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_UNIT_MAP_H_

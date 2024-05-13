@@ -2,20 +2,15 @@
 Test that 'stty -a' displays the same output before and after running the lldb command.
 """
 
-from __future__ import print_function
-
-
 import lldb
-import six
+import io
+import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
 class TestSTTYBeforeAndAfter(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @classmethod
     def classCleanup(cls):
         """Cleanup the test byproducts."""
@@ -24,16 +19,15 @@ class TestSTTYBeforeAndAfter(TestBase):
         cls.RemoveTempFile("child_send2.txt")
         cls.RemoveTempFile("child_read2.txt")
 
-    @expectedFailureAll(
-        hostoslist=["windows"],
-        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @add_test_categories(["pexpect"])
     @no_debug_info_test
     def test_stty_dash_a_before_and_afetr_invoking_lldb_command(self):
         """Test that 'stty -a' displays the same output before and after running the lldb command."""
         import pexpect
-        if not which('expect'):
-            self.skipTest(
-                "The 'expect' program cannot be located, skip the test")
+
+        if not which("expect"):
+            self.skipTest("The 'expect' program cannot be located, skip the test")
 
         # The expect prompt.
         expect_prompt = "expect[0-9.]+> "
@@ -41,11 +35,7 @@ class TestSTTYBeforeAndAfter(TestBase):
         lldb_prompt = "(lldb) "
 
         # So that the child gets torn down after the test.
-        import sys
-        if sys.version_info.major == 3:
-          self.child = pexpect.spawnu('expect')
-        else:
-          self.child = pexpect.spawn('expect')
+        self.child = pexpect.spawn("expect", encoding="utf-8")
         child = self.child
 
         child.expect(expect_prompt)
@@ -54,17 +44,17 @@ class TestSTTYBeforeAndAfter(TestBase):
             child.logfile = sys.stdout
 
         if self.platformIsDarwin():
-            child.sendline('set env(TERM) xterm')
+            child.sendline("set env(TERM) xterm")
         else:
-            child.sendline('set env(TERM) vt100')
+            child.sendline("set env(TERM) vt100")
         child.expect(expect_prompt)
-        child.sendline('puts $env(TERM)')
+        child.sendline("puts $env(TERM)")
         child.expect(expect_prompt)
 
         # Turn on loggings for input/output to/from the child.
-        child.logfile_send = child_send1 = six.StringIO()
-        child.logfile_read = child_read1 = six.StringIO()
-        child.sendline('stty -a')
+        child.logfile_send = child_send1 = io.StringIO()
+        child.logfile_read = child_read1 = io.StringIO()
+        child.sendline("stty -a")
         child.expect(expect_prompt)
 
         # Now that the stage1 logging is done, restore logfile to None to
@@ -77,15 +67,15 @@ class TestSTTYBeforeAndAfter(TestBase):
         child.expect_exact(lldb_prompt)
 
         # Immediately quit.
-        child.sendline('quit')
+        child.sendline("quit")
         child.expect(expect_prompt)
 
-        child.logfile_send = child_send2 = six.StringIO()
-        child.logfile_read = child_read2 = six.StringIO()
-        child.sendline('stty -a')
+        child.logfile_send = child_send2 = io.StringIO()
+        child.logfile_read = child_read2 = io.StringIO()
+        child.sendline("stty -a")
         child.expect(expect_prompt)
 
-        child.sendline('exit')
+        child.sendline("exit")
 
         # Now that the stage2 logging is done, restore logfile to None to
         # stop further logging.

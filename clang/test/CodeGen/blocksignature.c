@@ -2,19 +2,16 @@
 // RUN: %clang_cc1 -fblocks -triple i686-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X32
 
 // X64: @.str = private unnamed_addr constant [6 x i8] c"v8@?0\00" 
-// X64: @__block_literal_global = internal constant {{.*}} { i8** @_NSConcreteGlobalBlock, i32 1342177280,
+// X64: @__block_literal_global = internal constant {{.*}} { ptr @_NSConcreteGlobalBlock, i32 1342177280,
 // X64: @.str.1 = private unnamed_addr constant [12 x i8] c"i16@?0c8f12\00"
-// X64:   store i32 1073741824, i32*
+// X64:   store i32 1073741824, ptr
 
 // X32: [[STR1:@.*]] = private unnamed_addr constant [6 x i8] c"v4@?0\00" 
-// X32: @__block_descriptor_tmp = internal constant [[FULL_DESCRIPTOR_T:.*]] { i32 0, i32 20, i8* getelementptr inbounds ([6 x i8], [6 x i8]* [[STR1]], i32 0, i32 0), i8* null }
-// X32: @__block_literal_global = internal constant [[GLOBAL_LITERAL_T:.*]] { i8** @_NSConcreteGlobalBlock, i32 1342177280, i32 0, i8* bitcast (void (i8*)* @global_block_invoke{{.*}} to i8*), [[DESCRIPTOR_T:%.*]]* bitcast ([[FULL_DESCRIPTOR_T]]* @__block_descriptor_tmp to {{%.*}}*) }
+// X32: @__block_descriptor_tmp = internal constant [[FULL_DESCRIPTOR_T:.*]] { i32 0, i32 20, ptr [[STR1]], ptr null }
+// X32: @__block_literal_global = internal constant [[GLOBAL_LITERAL_T:.*]] { ptr @_NSConcreteGlobalBlock, i32 1342177280, i32 0, ptr @global_block_invoke{{.*}}, ptr @__block_descriptor_tmp }
 // X32: [[STR2:@.*]] = private unnamed_addr constant [11 x i8] c"i12@?0c4f8\00"
-// X32: @__block_descriptor_tmp{{.*}} = internal constant [[FULL_DESCRIPTOR_T]] { i32 0, i32 24, i8* getelementptr inbounds ([11 x i8], [11 x i8]* [[STR2]], i32 0, i32 0), i8* null }
-// X32:   store i32 1073741824, i32*
-
-// rdar://7635294
-
+// X32: @__block_descriptor_tmp{{.*}} = internal constant [[FULL_DESCRIPTOR_T]] { i32 0, i32 24, ptr [[STR2]], ptr null }
+// X32:   store i32 1073741824, ptr
 
 int globalInt;
 void (^global)(void) = ^{ ++globalInt; };

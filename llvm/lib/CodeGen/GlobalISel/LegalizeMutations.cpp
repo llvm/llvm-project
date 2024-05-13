@@ -43,6 +43,27 @@ LegalizeMutation LegalizeMutations::changeElementTo(unsigned TypeIdx,
   };
 }
 
+LegalizeMutation LegalizeMutations::changeElementCountTo(unsigned TypeIdx,
+                                                         unsigned FromTypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT OldTy = Query.Types[TypeIdx];
+    const LLT NewTy = Query.Types[FromTypeIdx];
+    ElementCount NewEltCount =
+        NewTy.isVector() ? NewTy.getElementCount() : ElementCount::getFixed(1);
+    return std::make_pair(TypeIdx, OldTy.changeElementCount(NewEltCount));
+  };
+}
+
+LegalizeMutation LegalizeMutations::changeElementCountTo(unsigned TypeIdx,
+                                                         LLT NewEltTy) {
+  return [=](const LegalityQuery &Query) {
+    const LLT OldTy = Query.Types[TypeIdx];
+    ElementCount NewEltCount = NewEltTy.isVector() ? NewEltTy.getElementCount()
+                                                   : ElementCount::getFixed(1);
+    return std::make_pair(TypeIdx, OldTy.changeElementCount(NewEltCount));
+  };
+}
+
 LegalizeMutation LegalizeMutations::changeElementSizeTo(unsigned TypeIdx,
                                                         unsigned FromTypeIdx) {
   return [=](const LegalityQuery &Query) {
@@ -63,14 +84,24 @@ LegalizeMutation LegalizeMutations::widenScalarOrEltToNextPow2(unsigned TypeIdx,
   };
 }
 
+LegalizeMutation
+LegalizeMutations::widenScalarOrEltToNextMultipleOf(unsigned TypeIdx,
+                                                    unsigned Size) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    unsigned NewEltSizeInBits = alignTo(Ty.getScalarSizeInBits(), Size);
+    return std::make_pair(TypeIdx, Ty.changeElementSize(NewEltSizeInBits));
+  };
+}
+
 LegalizeMutation LegalizeMutations::moreElementsToNextPow2(unsigned TypeIdx,
                                                            unsigned Min) {
   return [=](const LegalityQuery &Query) {
     const LLT VecTy = Query.Types[TypeIdx];
     unsigned NewNumElements =
         std::max(1u << Log2_32_Ceil(VecTy.getNumElements()), Min);
-    return std::make_pair(TypeIdx,
-                          LLT::vector(NewNumElements, VecTy.getElementType()));
+    return std::make_pair(
+        TypeIdx, LLT::fixed_vector(NewNumElements, VecTy.getElementType()));
   };
 }
 

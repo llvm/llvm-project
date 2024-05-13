@@ -13,6 +13,7 @@
 #include "SymbolInfo.h"
 #include "SymbolReporter.h"
 #include "clang/Lex/PPCallbacks.h"
+#include <optional>
 
 namespace clang {
 class MacroInfo;
@@ -44,8 +45,8 @@ public:
   void EndOfMainFile() override;
 
 private:
-  llvm::Optional<SymbolInfo> CreateMacroSymbol(const Token &MacroNameTok,
-                                               const MacroInfo *MD);
+  std::optional<SymbolInfo> CreateMacroSymbol(const Token &MacroNameTok,
+                                              const MacroInfo *MD);
   // Not a callback, just a common path for all usage types.
   void MacroUsed(const Token &Name, const MacroDefinition &MD);
 

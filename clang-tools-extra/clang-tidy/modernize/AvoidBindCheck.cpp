@@ -29,9 +29,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -98,6 +96,7 @@ struct CallableInfo {
   std::string UsageIdentifier;
   StringRef CaptureInitializer;
   const FunctionDecl *Decl = nullptr;
+  bool DoesReturn = false;
 };
 
 struct LambdaProperties {
@@ -334,7 +333,7 @@ static void addPlaceholderArgs(const LambdaProperties &LP,
 
   ArrayRef<BindArgument> Args = LP.BindArguments;
 
-  auto MaxPlaceholderIt =
+  const auto *MaxPlaceholderIt =
       std::max_element(Args.begin(), Args.end(),
                        [](const BindArgument &B1, const BindArgument &B2) {
                          return B1.PlaceHolderIndex < B2.PlaceHolderIndex;
@@ -366,9 +365,7 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
                                 llvm::raw_ostream &Stream) {
   StringRef Delimiter = "";
 
-  for (int I = 0, Size = Args.size(); I < Size; ++I) {
-    const BindArgument &B = Args[I];
-
+  for (const BindArgument &B : Args) {
     Stream << Delimiter;
 
     if (B.Kind == BK_Placeholder) {
@@ -548,17 +545,20 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
   LambdaProperties LP;
 
   const auto *Bind = Result.Nodes.getNodeAs<CallExpr>("bind");
-  const auto *Decl = dyn_cast<FunctionDecl>(Bind->getCalleeDecl());
-  const auto *NS =
-      dyn_cast<NamespaceDecl>(Decl->getEnclosingNamespaceContext());
+  const auto *Decl = cast<FunctionDecl>(Bind->getCalleeDecl());
+  const auto *NS = cast<NamespaceDecl>(Decl->getEnclosingNamespaceContext());
   while (NS->isInlineNamespace())
-    NS = dyn_cast<NamespaceDecl>(NS->getDeclContext());
+    NS = cast<NamespaceDecl>(NS->getDeclContext());
   LP.BindNamespace = NS->getName();
 
   LP.Callable.Type = getCallableType(Result);
   LP.Callable.Materialization = getCallableMaterialization(Result);
   LP.Callable.Decl =
       getCallMethodDecl(Result, LP.Callable.Type, LP.Callable.Materialization);
+  if (LP.Callable.Decl)
+    if (const Type *ReturnType =
+            LP.Callable.Decl->getReturnType().getCanonicalType().getTypePtr())
+      LP.Callable.DoesReturn = !ReturnType->isVoidType();
   LP.Callable.SourceTokens = getSourceTextForExpr(Result, CalleeExpr);
   if (LP.Callable.Materialization == CMK_VariableRef) {
     LP.Callable.CE = CE_Var;
@@ -628,7 +628,7 @@ static void emitCaptureList(const LambdaProperties &LP,
 
 static ArrayRef<BindArgument>
 getForwardedArgumentList(const LambdaProperties &P) {
-  ArrayRef<BindArgument> Args = makeArrayRef(P.BindArguments);
+  ArrayRef<BindArgument> Args = ArrayRef(P.BindArguments);
   if (P.Callable.Type != CT_MemberFunction)
     return Args;
 
@@ -673,34 +673,41 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   emitCaptureList(LP, Result, Stream);
   Stream << "]";
 
-  ArrayRef<BindArgument> FunctionCallArgs = makeArrayRef(LP.BindArguments);
+  ArrayRef<BindArgument> FunctionCallArgs = ArrayRef(LP.BindArguments);
 
   addPlaceholderArgs(LP, Stream, PermissiveParameterList);
+
+  Stream << " { ";
+
+  if (LP.Callable.DoesReturn) {
+    Stream << "return ";
+  }
 
   if (LP.Callable.Type == CT_Function) {
     StringRef SourceTokens = LP.Callable.SourceTokens;
     SourceTokens.consume_front("&");
-    Stream << " { return " << SourceTokens;
+    Stream << SourceTokens;
   } else if (LP.Callable.Type == CT_MemberFunction) {
     const auto *MethodDecl = dyn_cast<CXXMethodDecl>(LP.Callable.Decl);
     const BindArgument &ObjPtr = FunctionCallArgs.front();
 
-    Stream << " { ";
-    if (!isa<CXXThisExpr>(ignoreTemporariesAndPointers(ObjPtr.E))) {
-      Stream << ObjPtr.UsageIdentifier;
-      Stream << "->";
+    if (MethodDecl->getOverloadedOperator() == OO_Call) {
+      Stream << "(*" << ObjPtr.UsageIdentifier << ')';
+    } else {
+      if (!isa<CXXThisExpr>(ignoreTemporariesAndPointers(ObjPtr.E))) {
+        Stream << ObjPtr.UsageIdentifier;
+        Stream << "->";
+      }
+      Stream << MethodDecl->getNameAsString();
     }
-
-    Stream << MethodDecl->getName();
   } else {
-    Stream << " { return ";
     switch (LP.Callable.CE) {
     case CE_Var:
       if (LP.Callable.UsageIdentifier != LP.Callable.CaptureIdentifier) {
         Stream << "(" << LP.Callable.UsageIdentifier << ")";
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case CE_InitExpression:
       Stream << LP.Callable.UsageIdentifier;
       break;
@@ -718,6 +725,4 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
                                        Stream.str());
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

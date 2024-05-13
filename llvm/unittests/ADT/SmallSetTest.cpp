@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -20,11 +21,17 @@ TEST(SmallSetTest, Insert) {
 
   SmallSet<int, 4> s1;
 
-  for (int i = 0; i < 4; i++)
-    s1.insert(i);
+  for (int i = 0; i < 4; i++) {
+    auto InsertResult = s1.insert(i);
+    EXPECT_EQ(*InsertResult.first, i);
+    EXPECT_EQ(InsertResult.second, true);
+  }
 
-  for (int i = 0; i < 4; i++)
-    s1.insert(i);
+  for (int i = 0; i < 4; i++) {
+    auto InsertResult = s1.insert(i);
+    EXPECT_EQ(*InsertResult.first, i);
+    EXPECT_EQ(InsertResult.second, false);
+  }
 
   EXPECT_EQ(4u, s1.size());
 
@@ -37,8 +44,17 @@ TEST(SmallSetTest, Insert) {
 TEST(SmallSetTest, Grow) {
   SmallSet<int, 4> s1;
 
-  for (int i = 0; i < 8; i++)
-    s1.insert(i);
+  for (int i = 0; i < 8; i++) {
+    auto InsertResult = s1.insert(i);
+    EXPECT_EQ(*InsertResult.first, i);
+    EXPECT_EQ(InsertResult.second, true);
+  }
+
+  for (int i = 0; i < 8; i++) {
+    auto InsertResult = s1.insert(i);
+    EXPECT_EQ(*InsertResult.first, i);
+    EXPECT_EQ(InsertResult.second, false);
+  }
 
   EXPECT_EQ(8u, s1.size());
 
@@ -78,7 +94,7 @@ TEST(SmallSetTest, IteratorInt) {
 
   std::vector<int> V(s1.begin(), s1.end());
   // Make sure the elements are in the expected order.
-  std::sort(V.begin(), V.end());
+  llvm::sort(V);
   for (int i = 0; i < 3; i++)
     EXPECT_EQ(i, V[i]);
 
@@ -89,7 +105,7 @@ TEST(SmallSetTest, IteratorInt) {
 
   V.assign(s1.begin(), s1.end());
   // Make sure the elements are in the expected order.
-  std::sort(V.begin(), V.end());
+  llvm::sort(V);
   for (int i = 0; i < 6; i++)
     EXPECT_EQ(i, V[i]);
 }
@@ -104,7 +120,7 @@ TEST(SmallSetTest, IteratorString) {
   s1.insert("str 1");
 
   std::vector<std::string> V(s1.begin(), s1.end());
-  std::sort(V.begin(), V.end());
+  llvm::sort(V);
   EXPECT_EQ(2u, s1.size());
   EXPECT_EQ("str 1", V[0]);
   EXPECT_EQ("str 2", V[1]);
@@ -115,7 +131,7 @@ TEST(SmallSetTest, IteratorString) {
 
   V.assign(s1.begin(), s1.end());
   // Make sure the elements are in the expected order.
-  std::sort(V.begin(), V.end());
+  llvm::sort(V);
   EXPECT_EQ(4u, s1.size());
   EXPECT_EQ("str 0", V[0]);
   EXPECT_EQ("str 1", V[1]);

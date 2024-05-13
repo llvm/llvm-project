@@ -18,8 +18,8 @@
 
 #pragma OPENCL EXTENSION my_ext : enable
 #ifndef IMPLICIT_INCLUDE
-// expected-warning@-2 {{unknown OpenCL extension 'my_ext' - ignoring}}
-// expected-warning@+2 {{unknown OpenCL extension 'my_ext' - ignoring}}
+// expected-warning@-2 {{OpenCL extension 'my_ext' unknown or does not require pragma - ignoring}}
+// expected-warning@+2 {{OpenCL extension 'my_ext' unknown or does not require pragma - ignoring}}
 #endif // IMPLICIT_INCLUDE
 #pragma OPENCL EXTENSION my_ext : disable
 

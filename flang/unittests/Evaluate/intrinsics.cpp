@@ -2,6 +2,7 @@
 #include "testing.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/target.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/provenance.h"
 #include "llvm/Support/raw_ostream.h"
@@ -103,7 +104,10 @@ struct TestCall {
     llvm::outs().flush();
     CallCharacteristics call{fName.ToString()};
     auto messages{strings.Messages(buffer)};
-    FoldingContext context{messages, defaults, table};
+    TargetCharacteristics targetCharacteristics;
+    common::LanguageFeatureControl languageFeatures;
+    FoldingContext context{messages, defaults, table, targetCharacteristics,
+        languageFeatures, tempNames};
     std::optional<SpecificCall> si{table.Probe(call, args, context)};
     if (resultType.has_value()) {
       TEST(si.has_value());
@@ -138,6 +142,7 @@ struct TestCall {
   ActualArguments args;
   std::string name;
   std::vector<std::string> keywords;
+  std::set<std::string> tempNames;
 };
 
 void TestIntrinsics() {
@@ -237,7 +242,6 @@ void TestIntrinsics() {
   TestCall{defaults, table, "conjg"}
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
-  TestCall{defaults, table, "dconjg"}.Push(Const(Scalar<Complex4>{})).DoCall();
   TestCall{defaults, table, "dconjg"}
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
@@ -289,6 +293,34 @@ void TestIntrinsics() {
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(); // bad type
   TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Real4>{}))
+      .DoCall(); // bad type
+
+  // This test temporarily removed because it requires access to
+  // the ISO_FORTRAN_ENV intrinsic module. This module should to
+  // be loaded (somehow) and the following test reinstated.
+  // TestCall{defaults, table, "team_number"}.DoCall(Int4::GetType());
+
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Int4>{}))
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(); // too many args
+  TestCall{defaults, table, "team_number"}
+      .Push(Named("bad", Const(Scalar<Int4>{})))
+      .DoCall(); // bad keyword
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Char>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Log4>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Complex8>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
       .Push(Const(Scalar<Real4>{}))
       .DoCall(); // bad type
 

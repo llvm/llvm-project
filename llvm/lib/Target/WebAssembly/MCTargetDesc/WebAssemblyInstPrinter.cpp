@@ -13,18 +13,18 @@
 
 #include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "Utils/WebAssemblyTypeUtilities.h"
-#include "Utils/WebAssemblyUtilities.h"
+#include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "WebAssembly.h"
-#include "WebAssemblyMachineFunctionInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 using namespace llvm;
@@ -39,10 +39,10 @@ WebAssemblyInstPrinter::WebAssemblyInstPrinter(const MCAsmInfo &MAI,
     : MCInstPrinter(MAI, MII, MRI) {}
 
 void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
-                                          unsigned RegNo) const {
-  assert(RegNo != WebAssemblyFunctionInfo::UnusedReg);
+                                          MCRegister Reg) const {
+  assert(Reg.id() != WebAssembly::UnusedReg);
   // Note that there's an implicit local.get/local.set here!
-  OS << "$" << RegNo;
+  OS << "$" << Reg.id();
 }
 
 void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -240,7 +240,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       // See if this operand denotes a basic block target.
       if (I < NumFixedOperands) {
         // A non-variable_ops operand, check its type.
-        if (Desc.OpInfo[I].OperandType != WebAssembly::OPERAND_BASIC_BLOCK)
+        if (Desc.operands()[I].OperandType != WebAssembly::OPERAND_BASIC_BLOCK)
           continue;
       } else {
         // A variable_ops operand, which currently can be immediates (used in
@@ -298,9 +298,9 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (int(WAReg) >= 0)
       printRegName(O, WAReg);
     else if (OpNo >= Desc.getNumDefs() && !IsVariadicDef)
-      O << "$pop" << WebAssemblyFunctionInfo::getWARegStackId(WAReg);
-    else if (WAReg != WebAssemblyFunctionInfo::UnusedReg)
-      O << "$push" << WebAssemblyFunctionInfo::getWARegStackId(WAReg);
+      O << "$pop" << WebAssembly::getWARegStackId(WAReg);
+    else if (WAReg != WebAssembly::UnusedReg)
+      O << "$push" << WebAssembly::getWARegStackId(WAReg);
     else
       O << "$drop";
     // Add a '=' suffix if this is a def.
@@ -364,28 +364,5 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
       // Disassembler does not currently produce a signature
       O << "unknown_type";
     }
-  }
-}
-
-void WebAssemblyInstPrinter::printWebAssemblyHeapTypeOperand(const MCInst *MI,
-                                                             unsigned OpNo,
-                                                             raw_ostream &O) {
-  const MCOperand &Op = MI->getOperand(OpNo);
-  if (Op.isImm()) {
-    switch (Op.getImm()) {
-    case long(wasm::ValType::EXTERNREF):
-      O << "extern";
-      break;
-    case long(wasm::ValType::FUNCREF):
-      O << "func";
-      break;
-    default:
-      O << "unsupported_heap_type_value";
-      break;
-    }
-  } else {
-    // Typed function references and other subtypes of funcref and externref
-    // currently unimplemented.
-    O << "unsupported_heap_type_operand";
   }
 }

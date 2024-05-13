@@ -45,7 +45,7 @@ build_qemu() {
   # Checkout source code
   check_dir_exists "qemu.git"
   if [ ! -d "qemu.git" ]; then
-    git clone --depth 1 git://git.qemu.org/qemu.git qemu.git
+    git clone --depth 1 https://gitlab.com/qemu-project/qemu.git qemu.git
   fi
 
   cd qemu.git

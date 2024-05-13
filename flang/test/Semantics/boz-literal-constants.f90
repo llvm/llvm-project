@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Confirm enforcement of constraints and restrictions in 7.7
 ! C7107, C7108, C7109
 
@@ -8,6 +8,13 @@ subroutine bozchecks
   logical :: resbit
   complex :: rescmplx
   real :: dbl, e
+  interface
+    subroutine explicit(n, x, c)
+      integer :: n
+      real :: x
+      character :: c
+    end subroutine
+  end interface
   ! C7107
   !ERROR: Invalid digit ('a') in BOZ literal 'b"110a"'
   integer, parameter :: a = B"110A"
@@ -29,6 +36,7 @@ subroutine bozchecks
   !    B) Argument to intrinsics listed from 16.9 below
   !       BGE, BGT, BLE, BLT, CMPLX, DBLE, DSHIFTL,
   !       DSHIFTR, IAND, IEOR, INT, IOR, MERGE_BITS, REAL
+  !       and legacy aliases AND, OR, XOR
 
   ! part A
   data f / Z"AA" / ! OK
@@ -43,6 +51,7 @@ subroutine bozchecks
   res = CMPLX (realpart, img, 4)
   res = CMPLX (B"0101", B"1111", 4)
 
+  !WARNING: underflow on REAL(8) to REAL(4) conversion
   dbl = DBLE(B"1111")
   dbl = DBLE(realpart)
 
@@ -56,16 +65,25 @@ subroutine bozchecks
   !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
   resint = IAND(B"0001", B"0011")
   resint = IAND(B"0001", 3)
+  !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
+  resint = AND(B"0001", B"0011")
+  resint = AND(B"0001", 3)
 
   !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
   resint = IEOR(B"0001", B"0011")
   resint = IEOR(B"0001", 3)
+  !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
+  resint = XOR(B"0001", B"0011")
+  resint = XOR(B"0001", 3)
 
   resint = INT(B"1010")
 
   !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
   res = IOR(B"0101", B"0011")
   res = IOR(B"0101", 3)
+  !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
+  res = OR(B"0101", B"0011")
+  res = OR(B"0101", 3)
 
   res = MERGE_BITS(13,3,11)
   res = MERGE_BITS(B"1101",3,11)
@@ -75,5 +93,20 @@ subroutine bozchecks
   res = MERGE_BITS(B"1101",B"0011",B"1011")
   res = MERGE_BITS(B"1101",3,B"1011")
 
+  !ERROR: Typeless (BOZ) not allowed for 'x=' argument
+  res = KIND(z'feedface')
+
   res = REAL(B"1101")
+
+  !Ok
+  call explicit(z'deadbeef', o'666', 'a')
+
+  !ERROR: Actual argument 'z'55'' associated with dummy argument 'c=' is not a variable or typed expression
+  call explicit(z'deadbeef', o'666', b'01010101')
+
+  !ERROR: BOZ argument requires an explicit interface
+  call implictSub(Z'12345')
+
+  !ERROR: Output item must not be a BOZ literal constant
+  print "(Z18)", Z"76543210"
 end subroutine

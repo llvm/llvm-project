@@ -24,7 +24,7 @@
 ; RUN: llc %s -o - -mtriple=thumbebv8.1m.main -mattr=mve | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-81M-SOFTFP
 
-define i32 @ns_entry(i32 (i32)* nocapture %fptr) #0 {
+define i32 @ns_entry(ptr nocapture %fptr) #0 {
 ; CHECK-8B-LABEL: ns_entry:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}
@@ -124,7 +124,7 @@ attributes #0 = { "cmse_nonsecure_entry" nounwind }
 attributes #1 = { nounwind }
 
 
-define i32 @ns_call(i32 (i32)* nocapture %fptr) #2 {
+define i32 @ns_call(ptr nocapture %fptr) #2 {
 ; CHECK-8B-LABEL: ns_call:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}
@@ -166,7 +166,8 @@ define i32 @ns_call(i32 (i32)* nocapture %fptr) #2 {
 ; CHECK-8M-SOFT-NEXT:    movs r0, #10
 ; CHECK-8M-SOFT-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-SOFT-NEXT:    bic r1, r1, #1
-; CHECK-8M-SOFT-NEXT:    msr apsr_nzcvqg, r1
+; CHECK-8M-SOFT-NEXT:    sub sp, #136
+; CHECK-8M-SOFT-NEXT:    vlstm sp
 ; CHECK-8M-SOFT-NEXT:    mov r2, r1
 ; CHECK-8M-SOFT-NEXT:    mov r3, r1
 ; CHECK-8M-SOFT-NEXT:    mov r4, r1
@@ -178,7 +179,10 @@ define i32 @ns_call(i32 (i32)* nocapture %fptr) #2 {
 ; CHECK-8M-SOFT-NEXT:    mov r10, r1
 ; CHECK-8M-SOFT-NEXT:    mov r11, r1
 ; CHECK-8M-SOFT-NEXT:    mov r12, r1
+; CHECK-8M-SOFT-NEXT:    msr apsr_nzcvqg, r1
 ; CHECK-8M-SOFT-NEXT:    blxns r1
+; CHECK-8M-SOFT-NEXT:    vlldm sp
+; CHECK-8M-SOFT-NEXT:    add sp, #136
 ; CHECK-8M-SOFT-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-SOFT-NEXT:    pop {r7, pc}
 ;
@@ -249,7 +253,7 @@ attributes #2 = { nounwind }
 attributes #3 = { "cmse_nonsecure_call" nounwind }
 
 
-define i32 @ns_tail_call(i32 (i32)* nocapture %fptr) #4 {
+define i32 @ns_tail_call(ptr nocapture %fptr) #4 {
 ; CHECK-8B-LABEL: ns_tail_call:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}
@@ -291,7 +295,8 @@ define i32 @ns_tail_call(i32 (i32)* nocapture %fptr) #4 {
 ; CHECK-8M-SOFT-NEXT:    movs r0, #10
 ; CHECK-8M-SOFT-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-SOFT-NEXT:    bic r1, r1, #1
-; CHECK-8M-SOFT-NEXT:    msr apsr_nzcvqg, r1
+; CHECK-8M-SOFT-NEXT:    sub sp, #136
+; CHECK-8M-SOFT-NEXT:    vlstm sp
 ; CHECK-8M-SOFT-NEXT:    mov r2, r1
 ; CHECK-8M-SOFT-NEXT:    mov r3, r1
 ; CHECK-8M-SOFT-NEXT:    mov r4, r1
@@ -303,7 +308,10 @@ define i32 @ns_tail_call(i32 (i32)* nocapture %fptr) #4 {
 ; CHECK-8M-SOFT-NEXT:    mov r10, r1
 ; CHECK-8M-SOFT-NEXT:    mov r11, r1
 ; CHECK-8M-SOFT-NEXT:    mov r12, r1
+; CHECK-8M-SOFT-NEXT:    msr apsr_nzcvqg, r1
 ; CHECK-8M-SOFT-NEXT:    blxns r1
+; CHECK-8M-SOFT-NEXT:    vlldm sp
+; CHECK-8M-SOFT-NEXT:    add sp, #136
 ; CHECK-8M-SOFT-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-SOFT-NEXT:    pop {r7, pc}
 ;
@@ -374,7 +382,7 @@ attributes #4 = { nounwind }
 attributes #5 = { "cmse_nonsecure_call" nounwind }
 
 
-define void (i32, i32, i32, i32)* @ns_tail_call_many_args(void (i32, i32, i32, i32)* %f, i32 %a, i32 %b, i32 %c, i32 %d) #6 {
+define ptr @ns_tail_call_many_args(ptr %f, i32 %a, i32 %b, i32 %c, i32 %d) #6 {
 ; CHECK-8B-LABEL: ns_tail_call_many_args:
 ; CHECK-8B:       @ %bb.0:
 ; CHECK-8B-NEXT:    push {r4, r5, r7, lr}
@@ -423,7 +431,8 @@ define void (i32, i32, i32, i32)* @ns_tail_call_many_args(void (i32, i32, i32, i
 ; CHECK-8M-SOFT-NEXT:    mov r2, r12
 ; CHECK-8M-SOFT-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-SOFT-NEXT:    bic r4, r4, #1
-; CHECK-8M-SOFT-NEXT:    msr apsr_nzcvqg, r4
+; CHECK-8M-SOFT-NEXT:    sub sp, #136
+; CHECK-8M-SOFT-NEXT:    vlstm sp
 ; CHECK-8M-SOFT-NEXT:    mov r5, r4
 ; CHECK-8M-SOFT-NEXT:    mov r6, r4
 ; CHECK-8M-SOFT-NEXT:    mov r7, r4
@@ -432,7 +441,10 @@ define void (i32, i32, i32, i32)* @ns_tail_call_many_args(void (i32, i32, i32, i
 ; CHECK-8M-SOFT-NEXT:    mov r10, r4
 ; CHECK-8M-SOFT-NEXT:    mov r11, r4
 ; CHECK-8M-SOFT-NEXT:    mov r12, r4
+; CHECK-8M-SOFT-NEXT:    msr apsr_nzcvqg, r4
 ; CHECK-8M-SOFT-NEXT:    blxns r4
+; CHECK-8M-SOFT-NEXT:    vlldm sp
+; CHECK-8M-SOFT-NEXT:    add sp, #136
 ; CHECK-8M-SOFT-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-SOFT-NEXT:    mov r0, r4
 ; CHECK-8M-SOFT-NEXT:    pop {r4, pc}
@@ -508,14 +520,14 @@ define void (i32, i32, i32, i32)* @ns_tail_call_many_args(void (i32, i32, i32, i
 ; CHECK-81M-SOFTFP-NEXT:    mov r0, r4
 ; CHECK-81M-SOFTFP-NEXT:    pop {r4, pc}
   tail call void %f(i32 %a, i32 %b, i32 %c, i32 %d) #7
-  ret void (i32, i32, i32, i32)* %f
+  ret ptr %f
 }
 
 attributes #6 = { nounwind }
 attributes #7 = { "cmse_nonsecure_call" nounwind }
 
 
-define i32 @ns_call_void(i32 %reg0, i32 ()* nocapture %fptr) #8 {
+define i32 @ns_call_void(i32 %reg0, ptr nocapture %fptr) #8 {
 ; CHECK-8B-LABEL: ns_call_void:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}
@@ -554,7 +566,8 @@ define i32 @ns_call_void(i32 %reg0, i32 ()* nocapture %fptr) #8 {
 ; CHECK-8M-SOFT-NEXT:    push {r7, lr}
 ; CHECK-8M-SOFT-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-SOFT-NEXT:    bic r1, r1, #1
-; CHECK-8M-SOFT-NEXT:    msr apsr_nzcvqg, r1
+; CHECK-8M-SOFT-NEXT:    sub sp, #136
+; CHECK-8M-SOFT-NEXT:    vlstm sp
 ; CHECK-8M-SOFT-NEXT:    mov r0, r1
 ; CHECK-8M-SOFT-NEXT:    mov r2, r1
 ; CHECK-8M-SOFT-NEXT:    mov r3, r1
@@ -567,7 +580,10 @@ define i32 @ns_call_void(i32 %reg0, i32 ()* nocapture %fptr) #8 {
 ; CHECK-8M-SOFT-NEXT:    mov r10, r1
 ; CHECK-8M-SOFT-NEXT:    mov r11, r1
 ; CHECK-8M-SOFT-NEXT:    mov r12, r1
+; CHECK-8M-SOFT-NEXT:    msr apsr_nzcvqg, r1
 ; CHECK-8M-SOFT-NEXT:    blxns r1
+; CHECK-8M-SOFT-NEXT:    vlldm sp
+; CHECK-8M-SOFT-NEXT:    add sp, #136
 ; CHECK-8M-SOFT-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-SOFT-NEXT:    pop {r7, pc}
 ;

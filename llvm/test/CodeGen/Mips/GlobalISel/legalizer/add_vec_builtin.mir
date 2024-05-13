@@ -3,28 +3,28 @@
 --- |
 
   declare <16 x i8> @llvm.mips.addv.b(<16 x i8>, <16 x i8>)
-  define void @add_v16i8_builtin(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
+  define void @add_v16i8_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <8 x i16> @llvm.mips.addv.h(<8 x i16>, <8 x i16>)
-  define void @add_v8i16_builtin(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
+  define void @add_v8i16_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <4 x i32> @llvm.mips.addv.w(<4 x i32>, <4 x i32>)
-  define void @add_v4i32_builtin(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
+  define void @add_v4i32_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <2 x i64> @llvm.mips.addv.d(<2 x i64>, <2 x i64>)
-  define void @add_v2i64_builtin(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @add_v2i64_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <16 x i8> @llvm.mips.addvi.b(<16 x i8>, i32 immarg)
-  define void @add_v16i8_builtin_imm(<16 x i8>* %a, <16 x i8>* %c) { entry: ret void }
+  define void @add_v16i8_builtin_imm(ptr %a, ptr %c) { entry: ret void }
 
   declare <8 x i16> @llvm.mips.addvi.h(<8 x i16>, i32 immarg)
-  define void @add_v8i16_builtin_imm(<8 x i16>* %a, <8 x i16>* %c) { entry: ret void }
+  define void @add_v8i16_builtin_imm(ptr %a, ptr %c) { entry: ret void }
 
   declare <4 x i32> @llvm.mips.addvi.w(<4 x i32>, i32 immarg)
-  define void @add_v4i32_builtin_imm(<4 x i32>* %a, <4 x i32>* %c) { entry: ret void }
+  define void @add_v4i32_builtin_imm(ptr %a, ptr %c) { entry: ret void }
 
   declare <2 x i64> @llvm.mips.addvi.d(<2 x i64>, i32 immarg)
-  define void @add_v2i64_builtin_imm(<2 x i64>* %a, <2 x i64>* %c) { entry: ret void }
+  define void @add_v2i64_builtin_imm(ptr %a, ptr %c) { entry: ret void }
 
 ...
 ---
@@ -40,18 +40,18 @@ body:             |
     ; P5600: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
     ; P5600: [[COPY2:%[0-9]+]]:_(p0) = COPY $a2
-    ; P5600: [[LOAD:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.a)
-    ; P5600: [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
+    ; P5600: [[LOAD:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<16 x s8>) from %ir.a)
+    ; P5600: [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[COPY1]](p0) :: (load (<16 x s8>) from %ir.b)
     ; P5600: [[ADD:%[0-9]+]]:_(<16 x s8>) = G_ADD [[LOAD]], [[LOAD1]]
-    ; P5600: G_STORE [[ADD]](<16 x s8>), [[COPY2]](p0) :: (store 16 into %ir.c)
+    ; P5600: G_STORE [[ADD]](<16 x s8>), [[COPY2]](p0) :: (store (<16 x s8>) into %ir.c)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
     %2:_(p0) = COPY $a2
-    %3:_(<16 x s8>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
-    %4:_(<16 x s8>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
+    %3:_(<16 x s8>) = G_LOAD %0(p0) :: (load (<16 x s8>) from %ir.a)
+    %4:_(<16 x s8>) = G_LOAD %1(p0) :: (load (<16 x s8>) from %ir.b)
     %5:_(<16 x s8>) = G_INTRINSIC intrinsic(@llvm.mips.addv.b), %3(<16 x s8>), %4(<16 x s8>)
-    G_STORE %5(<16 x s8>), %2(p0) :: (store 16 into %ir.c)
+    G_STORE %5(<16 x s8>), %2(p0) :: (store (<16 x s8>) into %ir.c)
     RetRA
 
 ...
@@ -68,18 +68,18 @@ body:             |
     ; P5600: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
     ; P5600: [[COPY2:%[0-9]+]]:_(p0) = COPY $a2
-    ; P5600: [[LOAD:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.a)
-    ; P5600: [[LOAD1:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
+    ; P5600: [[LOAD:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[COPY]](p0) :: (load (<8 x s16>) from %ir.a)
+    ; P5600: [[LOAD1:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[COPY1]](p0) :: (load (<8 x s16>) from %ir.b)
     ; P5600: [[ADD:%[0-9]+]]:_(<8 x s16>) = G_ADD [[LOAD]], [[LOAD1]]
-    ; P5600: G_STORE [[ADD]](<8 x s16>), [[COPY2]](p0) :: (store 16 into %ir.c)
+    ; P5600: G_STORE [[ADD]](<8 x s16>), [[COPY2]](p0) :: (store (<8 x s16>) into %ir.c)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
     %2:_(p0) = COPY $a2
-    %3:_(<8 x s16>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
-    %4:_(<8 x s16>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
+    %3:_(<8 x s16>) = G_LOAD %0(p0) :: (load (<8 x s16>) from %ir.a)
+    %4:_(<8 x s16>) = G_LOAD %1(p0) :: (load (<8 x s16>) from %ir.b)
     %5:_(<8 x s16>) = G_INTRINSIC intrinsic(@llvm.mips.addv.h), %3(<8 x s16>), %4(<8 x s16>)
-    G_STORE %5(<8 x s16>), %2(p0) :: (store 16 into %ir.c)
+    G_STORE %5(<8 x s16>), %2(p0) :: (store (<8 x s16>) into %ir.c)
     RetRA
 
 ...
@@ -96,18 +96,18 @@ body:             |
     ; P5600: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
     ; P5600: [[COPY2:%[0-9]+]]:_(p0) = COPY $a2
-    ; P5600: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.a)
-    ; P5600: [[LOAD1:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
+    ; P5600: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<4 x s32>) from %ir.a)
+    ; P5600: [[LOAD1:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY1]](p0) :: (load (<4 x s32>) from %ir.b)
     ; P5600: [[ADD:%[0-9]+]]:_(<4 x s32>) = G_ADD [[LOAD]], [[LOAD1]]
-    ; P5600: G_STORE [[ADD]](<4 x s32>), [[COPY2]](p0) :: (store 16 into %ir.c)
+    ; P5600: G_STORE [[ADD]](<4 x s32>), [[COPY2]](p0) :: (store (<4 x s32>) into %ir.c)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
     %2:_(p0) = COPY $a2
-    %3:_(<4 x s32>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
-    %4:_(<4 x s32>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
+    %3:_(<4 x s32>) = G_LOAD %0(p0) :: (load (<4 x s32>) from %ir.a)
+    %4:_(<4 x s32>) = G_LOAD %1(p0) :: (load (<4 x s32>) from %ir.b)
     %5:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.mips.addv.w), %3(<4 x s32>), %4(<4 x s32>)
-    G_STORE %5(<4 x s32>), %2(p0) :: (store 16 into %ir.c)
+    G_STORE %5(<4 x s32>), %2(p0) :: (store (<4 x s32>) into %ir.c)
     RetRA
 
 ...
@@ -124,18 +124,18 @@ body:             |
     ; P5600: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
     ; P5600: [[COPY2:%[0-9]+]]:_(p0) = COPY $a2
-    ; P5600: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.a)
-    ; P5600: [[LOAD1:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
+    ; P5600: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<2 x s64>) from %ir.a)
+    ; P5600: [[LOAD1:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY1]](p0) :: (load (<2 x s64>) from %ir.b)
     ; P5600: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[LOAD]], [[LOAD1]]
-    ; P5600: G_STORE [[ADD]](<2 x s64>), [[COPY2]](p0) :: (store 16 into %ir.c)
+    ; P5600: G_STORE [[ADD]](<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>) into %ir.c)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
     %2:_(p0) = COPY $a2
-    %3:_(<2 x s64>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
-    %4:_(<2 x s64>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
+    %3:_(<2 x s64>) = G_LOAD %0(p0) :: (load (<2 x s64>) from %ir.a)
+    %4:_(<2 x s64>) = G_LOAD %1(p0) :: (load (<2 x s64>) from %ir.b)
     %5:_(<2 x s64>) = G_INTRINSIC intrinsic(@llvm.mips.addv.d), %3(<2 x s64>), %4(<2 x s64>)
-    G_STORE %5(<2 x s64>), %2(p0) :: (store 16 into %ir.c)
+    G_STORE %5(<2 x s64>), %2(p0) :: (store (<2 x s64>) into %ir.c)
     RetRA
 
 ...
@@ -151,15 +151,15 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:msa128b(<16 x s8>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:msa128b(<16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<16 x s8>) from %ir.a)
     ; P5600: [[ADDVI_B:%[0-9]+]]:msa128b(<16 x s8>) = ADDVI_B [[LOAD]](<16 x s8>), 3
-    ; P5600: G_STORE [[ADDVI_B]](<16 x s8>), [[COPY1]](p0) :: (store 16 into %ir.c)
+    ; P5600: G_STORE [[ADDVI_B]](<16 x s8>), [[COPY1]](p0) :: (store (<16 x s8>) into %ir.c)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<16 x s8>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
+    %2:_(<16 x s8>) = G_LOAD %0(p0) :: (load (<16 x s8>) from %ir.a)
     %3:_(<16 x s8>) = G_INTRINSIC intrinsic(@llvm.mips.addvi.b), %2(<16 x s8>), 3
-    G_STORE %3(<16 x s8>), %1(p0) :: (store 16 into %ir.c)
+    G_STORE %3(<16 x s8>), %1(p0) :: (store (<16 x s8>) into %ir.c)
     RetRA
 
 ...
@@ -175,15 +175,15 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:msa128h(<8 x s16>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:msa128h(<8 x s16>) = G_LOAD [[COPY]](p0) :: (load (<8 x s16>) from %ir.a)
     ; P5600: [[ADDVI_H:%[0-9]+]]:msa128h(<8 x s16>) = ADDVI_H [[LOAD]](<8 x s16>), 18
-    ; P5600: G_STORE [[ADDVI_H]](<8 x s16>), [[COPY1]](p0) :: (store 16 into %ir.c)
+    ; P5600: G_STORE [[ADDVI_H]](<8 x s16>), [[COPY1]](p0) :: (store (<8 x s16>) into %ir.c)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<8 x s16>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
+    %2:_(<8 x s16>) = G_LOAD %0(p0) :: (load (<8 x s16>) from %ir.a)
     %3:_(<8 x s16>) = G_INTRINSIC intrinsic(@llvm.mips.addvi.h), %2(<8 x s16>), 18
-    G_STORE %3(<8 x s16>), %1(p0) :: (store 16 into %ir.c)
+    G_STORE %3(<8 x s16>), %1(p0) :: (store (<8 x s16>) into %ir.c)
     RetRA
 
 ...
@@ -199,15 +199,15 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:msa128w(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:msa128w(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<4 x s32>) from %ir.a)
     ; P5600: [[ADDVI_W:%[0-9]+]]:msa128w(<4 x s32>) = ADDVI_W [[LOAD]](<4 x s32>), 25
-    ; P5600: G_STORE [[ADDVI_W]](<4 x s32>), [[COPY1]](p0) :: (store 16 into %ir.c)
+    ; P5600: G_STORE [[ADDVI_W]](<4 x s32>), [[COPY1]](p0) :: (store (<4 x s32>) into %ir.c)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<4 x s32>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
+    %2:_(<4 x s32>) = G_LOAD %0(p0) :: (load (<4 x s32>) from %ir.a)
     %3:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.mips.addvi.w), %2(<4 x s32>), 25
-    G_STORE %3(<4 x s32>), %1(p0) :: (store 16 into %ir.c)
+    G_STORE %3(<4 x s32>), %1(p0) :: (store (<4 x s32>) into %ir.c)
     RetRA
 
 ...
@@ -223,15 +223,15 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:msa128d(<2 x s64>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:msa128d(<2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<2 x s64>) from %ir.a)
     ; P5600: [[ADDVI_D:%[0-9]+]]:msa128d(<2 x s64>) = ADDVI_D [[LOAD]](<2 x s64>), 31
-    ; P5600: G_STORE [[ADDVI_D]](<2 x s64>), [[COPY1]](p0) :: (store 16 into %ir.c)
+    ; P5600: G_STORE [[ADDVI_D]](<2 x s64>), [[COPY1]](p0) :: (store (<2 x s64>) into %ir.c)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<2 x s64>) = G_LOAD %0(p0) :: (load 16 from %ir.a)
+    %2:_(<2 x s64>) = G_LOAD %0(p0) :: (load (<2 x s64>) from %ir.a)
     %3:_(<2 x s64>) = G_INTRINSIC intrinsic(@llvm.mips.addvi.d), %2(<2 x s64>), 31
-    G_STORE %3(<2 x s64>), %1(p0) :: (store 16 into %ir.c)
+    G_STORE %3(<2 x s64>), %1(p0) :: (store (<2 x s64>) into %ir.c)
     RetRA
 
 ...

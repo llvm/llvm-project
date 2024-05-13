@@ -40,7 +40,7 @@ int a __reloc__; // expected-error {{'preserve_access_index' attribute only appl
 struct s *p __reloc__; // expected-error {{'preserve_access_index' attribute only applies to structs, unions, and classes}}
 
 void invalid1(const int __reloc__ *arg) {} // expected-error {{'preserve_access_index' attribute only applies to structs, unions, and classes}}
-void invalid2() { const int __reloc__ *arg; } // expected-error {{'preserve_access_index' attribute only applies to structs, unions, and classes}}
+void invalid2(void) { const int __reloc__ *arg; } // expected-error {{'preserve_access_index' attribute only applies to structs, unions, and classes}}
 int valid3(struct t4 *arg) { return arg->a + arg->b[3] + arg->c + arg->d; }
 int valid4(void *arg) {
   struct local_t { int a; int b; } __reloc__;

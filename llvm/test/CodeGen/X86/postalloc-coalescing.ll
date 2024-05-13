@@ -15,7 +15,6 @@ define fastcc i32 @_Z18yy_get_next_bufferv() nounwind {
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: # %bb158
 ; CHECK-NEXT:    movb %al, 0
-; CHECK-NEXT:    cmpl $-1, %eax
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
 entry:
@@ -23,7 +22,7 @@ entry:
 
 bb116:		; preds = %bb131
 	%tmp125126 = trunc i32 %c.1 to i8		; <i8> [#uses=1]
-	store i8 %tmp125126, i8* null, align 1
+	store i8 %tmp125126, ptr null, align 1
 	br label %bb131
 
 bb131:		; preds = %bb116, %entry
@@ -37,7 +36,7 @@ bb158:		; preds = %bb131
 
 cond_true163:		; preds = %bb158
 	%tmp172173 = trunc i32 %c.1 to i8		; <i8> [#uses=1]
-	store i8 %tmp172173, i8* null, align 1
+	store i8 %tmp172173, ptr null, align 1
 	br label %cond_next178
 
 cond_next178:		; preds = %cond_true163, %bb158

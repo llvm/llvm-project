@@ -1,8 +1,8 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests valid and invalid ENTRY statements
 
 module m1
-  !ERROR: ENTRY may appear only in a subroutine or function
+  !ERROR: ENTRY 'badentryinmodule' may appear only in a subroutine or function
   entry badentryinmodule
   interface
     module subroutine separate
@@ -30,18 +30,18 @@ end module
 submodule(m1) m1s1
  contains
   module procedure separate
-    !ERROR: ENTRY may not appear in a separate module procedure
+    !ERROR: ENTRY 'badentryinsmp' may not appear in a separate module procedure
     entry badentryinsmp ! 1571
   end procedure
 end submodule
 
 program main
-  !ERROR: ENTRY may appear only in a subroutine or function
+  !ERROR: ENTRY 'badentryinprogram' may appear only in a subroutine or function
   entry badentryinprogram ! C1571
 end program
 
 block data bd1
-  !ERROR: ENTRY may appear only in a subroutine or function
+  !ERROR: ENTRY 'badentryinbd' may appear only in a subroutine or function
   entry badentryinbd ! C1571
 end block data
 
@@ -55,13 +55,12 @@ subroutine subr(goodarg1)
   common /badarg3/ x
   namelist /badarg4/ x
   !ERROR: A dummy argument must not be initialized
-  !ERROR: A dummy argument may not have the SAVE attribute
   integer :: badarg5 = 2
   entry okargs(goodarg1, goodarg2)
   !ERROR: RESULT(br1) may appear only in a function
   entry badresult() result(br1) ! C1572
-  !ERROR: ENTRY dummy argument 'badarg2' is previously declared as an item that may not be used as a dummy argument
-  !ERROR: ENTRY dummy argument 'badarg4' is previously declared as an item that may not be used as a dummy argument
+  !ERROR: 'badarg2' is already declared in this scoping unit
+  !ERROR: 'badarg4' is already declared in this scoping unit
   entry badargs(badarg1,badarg2,badarg3,badarg4,badarg5)
 end subroutine
 
@@ -81,18 +80,20 @@ function ifunc()
   integer, allocatable :: alloc
   integer, pointer :: ptr
   entry iok1()
-  !ERROR: ENTRY name 'ibad1' may not be declared when RESULT() is present
+  !ERROR: 'ibad1' is already declared in this scoping unit
   entry ibad1() result(ibad1res) ! C1570
-  !ERROR: 'ibad2' was previously declared as an item that may not be used as a function result
+  !ERROR: 'ibad2' is already declared in this scoping unit
   entry ibad2()
   !ERROR: ENTRY in a function may not have an alternate return dummy argument
   entry ibadalt(*) ! C1573
-  !ERROR: RESULT(ifunc) may not have the same name as the function
+  !ERROR: ENTRY cannot have RESULT(ifunc) that is not a variable
   entry isameres() result(ifunc) ! C1574
   entry iok()
-  !ERROR: RESULT(iok) may not have the same name as an ENTRY in the function
+  !ERROR: Explicit RESULT('iok') of function 'isameres2' cannot have the same name as a distinct ENTRY into the same scope
   entry isameres2() result(iok) ! C1574
+  !ERROR: Explicit RESULT('iok2') of function 'isameres3' cannot have the same name as a distinct ENTRY into the same scope
   entry isameres3() result(iok2) ! C1574
+  !ERROR: 'iok2' is already declared in this scoping unit
   entry iok2()
   !These cases are all acceptably incompatible
   entry iok3() result(weird1)
@@ -109,12 +110,14 @@ function ifunc()
   entry ibadt4() result(alloc)
   !ERROR: Result of ENTRY is not compatible with result of containing function
   entry ibadt5() result(ptr)
+  !ERROR: Cannot call function 'isubr' like a subroutine
   call isubr
-  !ERROR: 'isubr' was previously called as a subroutine
   entry isubr()
   continue ! force transition to execution part
   entry implicit()
   implicit = 666 ! ok, just ensure that it works
+  !ERROR: Cannot call function 'implicit' like a subroutine
+  call implicit
 end function
 
 function chfunc() result(chr)
@@ -134,17 +137,19 @@ subroutine externals
   !ERROR: 'iok1' is already defined as a global identifier
   entry iok1
   integer :: ix
+  !ERROR: Cannot call subroutine 'iproc' like a function
+  !ERROR: Function result characteristics are not known
   ix = iproc()
-  !ERROR: 'iproc' was previously called as a function
   entry iproc
 end subroutine
 
 module m2
+  !ERROR: EXTERNAL attribute not allowed on 'm2entry2'
   external m2entry2
  contains
   subroutine m2subr1
     entry m2entry1 ! ok
-    entry m2entry2 ! ok
+    entry m2entry2 ! NOT ok
     entry m2entry3 ! ok
   end subroutine
 end module
@@ -174,6 +179,27 @@ module m3
   end subroutine
 end module
 
+module m4
+  interface generic1
+    module procedure m4entry1
+  end interface
+  interface generic2
+    module procedure m4entry2
+  end interface
+  interface generic3
+    module procedure m4entry3
+  end interface
+ contains
+  subroutine m4subr1
+    entry m4entry1 ! in implicit part
+    integer :: n = 0
+    entry m4entry2 ! in specification part
+    n = 123
+    entry m4entry3 ! in executable part
+    print *, n
+  end subroutine
+end module
+
 function inone
   implicit none
   integer :: inone
@@ -182,4 +208,61 @@ function inone
   inone = 0 ! force transition to execution part
   !ERROR: No explicit type declared for 'implicitbad2'
   entry implicitbad2
+end
+
+module m5
+ contains
+  real function setBefore
+    ent = 1.0
+    entry ent
+  end function
+end module
+
+module m6
+ contains
+  recursive subroutine passSubr
+    call foo(passSubr)
+    call foo(ent1)
+    entry ent1
+    call foo(ent1)
+  end subroutine
+  recursive function passFunc1
+    !ERROR: Actual argument associated with procedure dummy argument 'e=' is not a procedure
+    call foo(passFunc1)
+    !ERROR: Actual argument associated with procedure dummy argument 'e=' is not a procedure
+    call foo(ent2)
+    entry ent2
+    !ERROR: Actual argument associated with procedure dummy argument 'e=' is not a procedure
+    call foo(ent2)
+  end function
+  recursive function passFunc2() result(res)
+    call foo(passFunc2)
+    call foo(ent3)
+    entry ent3() result(res)
+    call foo(ent3)
+  end function
+  subroutine foo(e)
+    external e
+  end subroutine
+end module
+
+!ERROR: 'q' appears more than once as a dummy argument name in this subprogram
+subroutine s7(q,q)
+  !ERROR: Dummy argument 'x' may not be used before its ENTRY statement
+  call x
+  entry foo(x)
+  !ERROR: 's7' may not appear as a dummy argument name in this ENTRY statement
+  entry bar(s7)
+  !ERROR: 'z' appears more than once as a dummy argument name in this ENTRY statement
+  entry baz(z,z)
+end
+
+!ERROR: Explicit RESULT('f8e1') of function 'f8' cannot have the same name as a distinct ENTRY into the same scope
+function f8() result(f8e1)
+  entry f8e1()
+  entry f8e2() result(f8e2) ! ok
+  !ERROR: Explicit RESULT('f8e1') of function 'f8e3' cannot have the same name as a distinct ENTRY into the same scope
+  entry f8e3() result(f8e1)
+  !ERROR: ENTRY cannot have RESULT(f8) that is not a variable
+  entry f8e4() result(f8)
 end

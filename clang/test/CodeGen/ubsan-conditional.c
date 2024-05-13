@@ -2,7 +2,7 @@
 
 _Bool b;
 // CHECK: @f(
-double f() {
+double f(void) {
   // CHECK: %[[B:.*]] = load {{.*}} @b
   // CHECK: %[[COND:.*]] = trunc {{.*}} %[[B]] to i1
   // CHECK: br i1 %[[COND]]

@@ -31,9 +31,9 @@ define dso_local i32 @main() !dbg !7 {
 entry:
   %retval = alloca i32, align 4
   %var = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata i32* %var, metadata !11, metadata !DIExpression(DW_OP_push_object_address)), !dbg !12
-  %0 = load i32, i32* %var, align 4, !dbg !13
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %var, metadata !11, metadata !DIExpression(DW_OP_push_object_address)), !dbg !12
+  %0 = load i32, ptr %var, align 4, !dbg !13
   ret i32 %0, !dbg !14
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -indvars -loop-unroll | FileCheck %s
+; RUN: opt < %s -S -passes='loop(indvars),loop-unroll' | FileCheck %s
 ;
 ; loop-unroll fully unrolls the inner loop, creating an interesting
 ; chain of multiplication. indvars forces SCEV to run again on the
@@ -18,7 +18,7 @@ declare void @use(i8 %x)
 ; CHECK: br label %for.body
 
 ; CHECK: for.body:
-; CHECK: %inc.9 = add i8 %inc.8, 1
+; CHECK: %inc.9 = add i8 %inc1, 10
 ; CHECK: %0 = add i8 %inc1, 10
 ; CHECK: br label %for.cond
 

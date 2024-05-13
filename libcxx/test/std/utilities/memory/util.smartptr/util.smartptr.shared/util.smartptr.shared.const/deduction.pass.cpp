@@ -8,7 +8,6 @@
 
 // <memory>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 // template<class T> class shared_ptr
 
@@ -17,13 +16,14 @@
 
 #include <memory>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 
 struct A {};
 
 struct D {
-  void operator()(A* ptr) const
+  void operator()(A const* ptr) const
   {
     delete ptr;
   }
@@ -41,18 +41,45 @@ int main(int, char**)
     assert(s0.get() == s.get());
   }
   {
+    std::shared_ptr<A const> s0(new A);
+    std::weak_ptr<A const> w = s0;
+    auto s = std::shared_ptr(w);
+    ASSERT_SAME_TYPE(decltype(s), std::shared_ptr<A const>);
+    assert(s0.use_count() == 2);
+    assert(s.use_count() == 2);
+    assert(s0.get() == s.get());
+  }
+
+  {
     std::unique_ptr<A> u(new A);
-    A* const uPointee = u.get();
+    A* uPointee = u.get();
     std::shared_ptr s = std::move(u);
     ASSERT_SAME_TYPE(decltype(s), std::shared_ptr<A>);
     assert(u == nullptr);
     assert(s.get() == uPointee);
   }
   {
+    std::unique_ptr<A const> u(new A);
+    A const* uPointee = u.get();
+    std::shared_ptr s = std::move(u);
+    ASSERT_SAME_TYPE(decltype(s), std::shared_ptr<A const>);
+    assert(u == nullptr);
+    assert(s.get() == uPointee);
+  }
+
+  {
     std::unique_ptr<A, D> u(new A, D{});
-    A* const uPointee = u.get();
+    A* uPointee = u.get();
     std::shared_ptr s(std::move(u));
     ASSERT_SAME_TYPE(decltype(s), std::shared_ptr<A>);
+    assert(u == nullptr);
+    assert(s.get() == uPointee);
+  }
+  {
+    std::unique_ptr<A const, D> u(new A, D{});
+    A const* uPointee = u.get();
+    std::shared_ptr s(std::move(u));
+    ASSERT_SAME_TYPE(decltype(s), std::shared_ptr<A const>);
     assert(u == nullptr);
     assert(s.get() == uPointee);
   }

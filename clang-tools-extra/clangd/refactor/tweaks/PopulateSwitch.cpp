@@ -33,7 +33,6 @@
 #include "AST.h"
 #include "Selection.h"
 #include "refactor/Tweak.h"
-#include "support/Logger.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
@@ -88,47 +87,40 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
   if (!CA)
     return false;
 
-  const Stmt *CAStmt = CA->ASTNode.get<Stmt>();
-  if (!CAStmt)
-    return false;
-
-  // Go up a level if we see a compound statement.
-  // switch (value) {}
-  //                ^^
-  if (isa<CompoundStmt>(CAStmt)) {
-    CA = CA->Parent;
-    if (!CA)
-      return false;
-
-    CAStmt = CA->ASTNode.get<Stmt>();
-    if (!CAStmt)
+  // Support targeting
+  //  - the switch statement itself (keyword, parens)
+  //  - the whole expression (possibly wrapped in implicit casts)
+  //  - the outer body (typically CompoundStmt)
+  // Selections *within* the expression or body don't trigger.
+  // direct child (the 
+  Switch = CA->ASTNode.get<SwitchStmt>();
+  if (!Switch) {
+    if (const SelectionTree::Node *Parent = CA->outerImplicit().Parent)
+      Switch = Parent->ASTNode.get<SwitchStmt>();
+    if (!Switch)
       return false;
   }
-
-  DeclCtx = &CA->getDeclContext();
-  Switch = dyn_cast<SwitchStmt>(CAStmt);
-  if (!Switch)
-    return false;
-
-  Body = dyn_cast<CompoundStmt>(Switch->getBody());
+  // Body need not be a CompoundStmt! But that's all we support editing.
+  Body = llvm::dyn_cast_or_null<CompoundStmt>(Switch->getBody());
   if (!Body)
     return false;
+  DeclCtx = &CA->getDeclContext();
 
+  // Examine the condition of the switch statement to see if it's an enum.
   const Expr *Cond = Switch->getCond();
   if (!Cond)
     return false;
-
   // Ignore implicit casts, since enums implicitly cast to integer types.
   Cond = Cond->IgnoreParenImpCasts();
-
-  EnumT = Cond->getType()->getAsAdjusted<EnumType>();
+  // Get the canonical type to handle typedefs.
+  EnumT = Cond->getType().getCanonicalType()->getAsAdjusted<EnumType>();
   if (!EnumT)
     return false;
-
   EnumD = EnumT->getDecl();
   if (!EnumD || EnumD->isDependentType())
     return false;
 
+  // Finally, check which cases exist and which are covered.
   // We trigger if there are any values in the enum that aren't covered by the
   // switch.
 
@@ -160,15 +152,31 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
     if (CS->caseStmtIsGNURange())
       return false;
 
+    // Support for direct references to enum constants. This is required to
+    // support C and ObjC which don't contain values in their ConstantExprs.
+    // The general way to get the value of a case is EvaluateAsRValue, but we'd
+    // rather not deal with that in case the AST is broken.
+    if (auto *DRE = dyn_cast<DeclRefExpr>(CS->getLHS()->IgnoreParenCasts())) {
+      if (auto *Enumerator = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
+        auto Iter = ExpectedCases.find(Normalize(Enumerator->getInitVal()));
+        if (Iter != ExpectedCases.end())
+          Iter->second.setCovered();
+        continue;
+      }
+    }
+
+    // ConstantExprs with values are expected for C++, otherwise the storage
+    // kind will be None.
+
     // Case expression is not a constant expression or is value-dependent,
     // so we may not be able to work out which cases are covered.
     const ConstantExpr *CE = dyn_cast<ConstantExpr>(CS->getLHS());
     if (!CE || CE->isValueDependent())
       return false;
 
-    // Unsure if this case could ever come up, but prevents an unreachable
-    // executing in getResultAsAPSInt.
-    if (CE->getResultStorageKind() == ConstantExpr::RSK_None)
+    // We need a stored value in order to continue; currently both C and ObjC
+    // enums won't have one.
+    if (CE->getResultStorageKind() == ConstantResultStorageKind::None)
       return false;
     auto Iter = ExpectedCases.find(Normalize(CE->getResultAsAPSInt()));
     if (Iter != ExpectedCases.end())

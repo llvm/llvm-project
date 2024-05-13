@@ -60,7 +60,7 @@ public:
     if (const auto *F = Init->getAnyMember()) {
       OS << " '" << F->getNameAsString() << "'";
     } else if (auto const *TSI = Init->getTypeSourceInfo()) {
-      OS << " '" << TSI->getType().getAsString() << "'";
+      OS << " '" << TSI->getType() << "'";
     }
   }
 
@@ -81,7 +81,7 @@ public:
     OS << "TemplateArgument";
     switch (A.getKind()) {
     case TemplateArgument::Type: {
-      OS << " type " << A.getAsType().getAsString();
+      OS << " type " << A.getAsType();
       break;
     }
     default:
@@ -111,7 +111,7 @@ template <typename... NodeType> std::string dumpASTString(NodeType &&... N) {
 
   Dumper.Visit(std::forward<NodeType &&>(N)...);
 
-  return OS.str();
+  return Buffer;
 }
 
 template <typename... NodeType>
@@ -126,7 +126,7 @@ std::string dumpASTString(TraversalKind TK, NodeType &&... N) {
 
   Dumper.Visit(std::forward<NodeType &&>(N)...);
 
-  return OS.str();
+  return Buffer;
 }
 
 const FunctionDecl *getFunctionNode(clang::ASTUnit *AST,
@@ -280,7 +280,7 @@ TemplateArgument type int
 
 TEST(Traverse, IgnoreUnlessSpelledInSourceVars) {
 
-  auto AST = buildASTFromCode(R"cpp(
+  auto AST = buildASTFromCodeWithArgs(R"cpp(
 
 struct String
 {
@@ -346,7 +346,7 @@ void varDeclCtors() {
   }
 }
 
-)cpp");
+)cpp", {"-std=c++14"});
 
   {
     auto FN =
@@ -368,6 +368,8 @@ FunctionDecl 'stringConstruct'
   |             |-ImplicitCastExpr
   |             | `-StringLiteral
   |             `-CXXDefaultArgExpr
+  |               `-UnaryOperator
+  |                 `-IntegerLiteral
   `-ExprWithCleanups
     `-CXXOperatorCallExpr
       |-ImplicitCastExpr
@@ -378,6 +380,8 @@ FunctionDecl 'stringConstruct'
           |-ImplicitCastExpr
           | `-StringLiteral
           `-CXXDefaultArgExpr
+            `-UnaryOperator
+              `-IntegerLiteral
 )cpp");
 
     EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
@@ -415,6 +419,8 @@ FunctionDecl 'overloadCall'
   |             |-ImplicitCastExpr
   |             | `-StringLiteral
   |             `-CXXDefaultArgExpr
+  |               `-UnaryOperator
+  |                 `-IntegerLiteral
   `-CXXMemberCallExpr
     `-MemberExpr
       `-ParenExpr
@@ -715,7 +721,7 @@ FunctionDecl 'foo'
 
 TEST(Traverse, IgnoreUnlessSpelledInSourceReturns) {
 
-  auto AST = buildASTFromCode(R"cpp(
+  auto AST = buildASTFromCodeWithArgs(R"cpp(
 
 struct A
 {
@@ -784,7 +790,7 @@ B func12() {
   return c;
 }
 
-)cpp");
+)cpp", {"-std=c++14"});
 
   auto getFunctionNode = [&AST](const std::string &name) {
     auto BN = ast_matchers::match(functionDecl(hasName(name)).bind("fn"),
@@ -1011,7 +1017,7 @@ LambdaExpr
 | |-FieldDecl ''
 | |-FieldDecl ''
 | |-FieldDecl ''
-| `-CXXDestructorDecl '~'
+| `-CXXDestructorDecl '~(lambda at input.cc:9:3)'
 |-ImplicitCastExpr
 | `-DeclRefExpr 'a'
 |-DeclRefExpr 'b'
@@ -1157,6 +1163,46 @@ void decomposition()
     f = 42;
 }
 
+typedef __typeof(sizeof(int)) size_t;
+
+struct Pair
+{
+    int x, y;
+};
+
+// Note: these utilities are required to force binding to tuple like structure
+namespace std
+{
+    template <typename E>
+    struct tuple_size
+    {
+    };
+
+    template <>
+    struct tuple_size<Pair>
+    {
+        static constexpr size_t value = 2;
+    };
+
+    template <size_t I, class T>
+    struct tuple_element
+    {
+        using type = int;
+    };
+
+};
+
+template <size_t I>
+int &&get(Pair &&p);
+
+void decompTuple()
+{
+    Pair p{1, 2};
+    auto [a, b] = p;
+
+    a = 3;
+}
+
 )cpp",
                                        {"-std=c++20"});
 
@@ -1171,14 +1217,15 @@ void decomposition()
 CXXRecordDecl 'Record'
 |-CXXRecordDecl 'Record'
 |-CXXConstructorDecl 'Record'
-| |-CXXCtorInitializer 'struct Simple'
+| |-CXXCtorInitializer 'Simple'
 | | `-CXXConstructExpr
-| |-CXXCtorInitializer 'struct Other'
+| |-CXXCtorInitializer 'Other'
 | | `-CXXConstructExpr
 | |-CXXCtorInitializer 'm_i'
 | | `-IntegerLiteral
 | |-CXXCtorInitializer 'm_i2'
 | | `-CXXDefaultInitExpr
+| |   `-IntegerLiteral
 | |-CXXCtorInitializer 'm_s'
 | | `-CXXConstructExpr
 | `-CompoundStmt
@@ -1194,7 +1241,7 @@ CXXRecordDecl 'Record'
               R"cpp(
 CXXRecordDecl 'Record'
 |-CXXConstructorDecl 'Record'
-| |-CXXCtorInitializer 'struct Simple'
+| |-CXXCtorInitializer 'Simple'
 | | `-CXXConstructExpr
 | |-CXXCtorInitializer 'm_i'
 | | `-IntegerLiteral
@@ -1445,6 +1492,7 @@ CallExpr
 | `-DeclRefExpr 'hasDefaultArg'
 |-IntegerLiteral
 `-CXXDefaultArgExpr
+  `-IntegerLiteral
 )cpp");
     EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
                             BN[0].getNodeAs<CallExpr>("funcCall")),
@@ -1492,6 +1540,48 @@ DecompositionDecl ''
 |-BindingDecl 'f'
 |-BindingDecl 's'
 `-BindingDecl 't'
+)cpp");
+  }
+
+  {
+    auto FN = ast_matchers::match(
+        functionDecl(hasName("decompTuple"),
+                     hasDescendant(decompositionDecl().bind("decomp"))),
+        AST2->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(
+        dumpASTString(TK_AsIs, FN[0].getNodeAs<DecompositionDecl>("decomp")),
+        R"cpp(
+DecompositionDecl ''
+|-CXXConstructExpr
+| `-ImplicitCastExpr
+|   `-DeclRefExpr 'p'
+|-BindingDecl 'a'
+| |-VarDecl 'a'
+| | `-CallExpr
+| |   |-ImplicitCastExpr
+| |   | `-DeclRefExpr 'get'
+| |   `-ImplicitCastExpr
+| |     `-DeclRefExpr ''
+| `-DeclRefExpr 'a'
+`-BindingDecl 'b'
+  |-VarDecl 'b'
+  | `-CallExpr
+  |   |-ImplicitCastExpr
+  |   | `-DeclRefExpr 'get'
+  |   `-ImplicitCastExpr
+  |     `-DeclRefExpr ''
+  `-DeclRefExpr 'b'
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[0].getNodeAs<DecompositionDecl>("decomp")),
+              R"cpp(
+DecompositionDecl ''
+|-DeclRefExpr 'p'
+|-BindingDecl 'a'
+`-BindingDecl 'b'
 )cpp");
   }
 }

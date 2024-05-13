@@ -16,16 +16,16 @@
 
 // PGOGEN-LABEL: @_Z6throwsv()
 // PGOUSE-LABEL: @_Z6throwsv()
-// PGOGEN: store {{.*}} @[[THC]], i64 0, i64 0
+// PGOGEN: store {{.*}} @[[THC]]
 void throws() {
-  // PGOGEN: store {{.*}} @[[THC]], i64 0, i64 1
+  // PGOGEN: store {{.*}} @[[THC]], i32 0, i32 1
   // PGOUSE: br {{.*}} !prof ![[TH1:[0-9]+]]
   for (int i = 0; i < 100; ++i) {
     try {
-      // PGOGEN: store {{.*}} @[[THC]], i64 0, i64 3
+      // PGOGEN: store {{.*}} @[[THC]], i32 0, i32 3
       // PGOUSE: br {{.*}} !prof ![[TH2:[0-9]+]]
       if (i % 3) {
-        // PGOGEN: store {{.*}} @[[THC]], i64 0, i64 4
+        // PGOGEN: store {{.*}} @[[THC]], i32 0, i32 4
         // PGOUSE: br {{.*}} !prof ![[TH3:[0-9]+]]
         if (i < 50)
           throw 1;
@@ -36,7 +36,7 @@ void throws() {
         // PGOUSE: if.else{{.*}}:
         // PGOGEN: if.else{{.*}}:
 
-        // PGOGEN: store {{.*}} @[[THC]], i64 0, i64 5
+        // PGOGEN: store {{.*}} @[[THC]], i32 0, i32 5
         // PGOUSE: br {{.*}} !prof ![[TH4:[0-9]+]]
         if (i >= 50)
           throw 0;
@@ -45,14 +45,14 @@ void throws() {
       // PGOUSE-EXC: catch{{.*}}:
       // PGOGEN-EXC: catch{{.*}}:
 
-      // PGOGEN-EXC: store {{.*}} @[[THC]], i64 0, i64 6
-      // PGOGEN-EXC: store {{.*}} @[[THC]], i64 0, i64 7
+      // PGOGEN-EXC: store {{.*}} @[[THC]], i32 0, i32 6
+      // PGOGEN-EXC: store {{.*}} @[[THC]], i32 0, i32 7
       // PGOUSE-EXC: br {{.*}} !prof ![[TH5:[0-9]+]]
       if (e) {}
     }
-    // PGOGEN: store {{.*}} @[[THC]], i64 0, i64 2
+    // PGOGEN: store {{.*}} @[[THC]], i32 0, i32 2
 
-    // PGOGEN: store {{.*}} @[[THC]], i64 0, i64 8
+    // PGOGEN: store {{.*}} @[[THC]], i32 0, i32 8
     // PGOUSE: br {{.*}} !prof ![[TH6:[0-9]+]]
     if (i < 100) {}
   }
@@ -63,14 +63,14 @@ void throws() {
 
 // PGOGEN-LABEL: @_Z11unreachablei(i32
 // PGOUSE-LABEL: @_Z11unreachablei(i32
-// PGOGEN: store {{.*}} @[[UNC]], i64 0, i64 0
+// PGOGEN: store {{.*}} @[[UNC]]
 void unreachable(int i) {
-  // PGOGEN: store {{.*}} @[[UNC]], i64 0, i64 1
+  // PGOGEN: store {{.*}} @[[UNC]], i32 0, i32 1
   // PGOUSE: br {{.*}} !prof ![[UN1:[0-9]+]]
   if (i)
     throw i;
 
-  // PGOGEN: store {{.*}} @[[UNC]], i64 0, i64 2
+  // PGOGEN: store {{.*}} @[[UNC]], i32 0, i32 2
   // Since we never reach here, the weights should all be zero (and skipped)
   // PGOUSE-NOT: br {{.*}} !prof !{{.*}}
   if (i) {}

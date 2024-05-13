@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 @args = hidden local_unnamed_addr global [32 x i32] zeroinitializer, align 16
@@ -21,8 +20,8 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: i32.const $push{{[0-9]+}}=, args+128
 ; CHECK: i32.add   $push[[L1:[0-9]+]]=,
 ; CHECK: i32.store 0($pop[[L1]])
-  %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @args, i32 0, i32 %i.04
-  store i32 1, i32* %arrayidx, align 4, !tbaa !1
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @args, i32 0, i32 %i.04
+  store i32 1, ptr %arrayidx, align 4, !tbaa !1
   %inc = add nuw nsw i32 %i.04, 1
   %exitcond = icmp eq i32 %inc, 32
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !5

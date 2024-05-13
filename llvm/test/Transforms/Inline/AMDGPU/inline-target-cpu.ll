@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -inline < %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=inline < %s | FileCheck %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes='cgscc(inline)' < %s | FileCheck %s
 
 ; CHECK-LABEL: @func_no_target_cpu(

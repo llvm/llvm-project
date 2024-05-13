@@ -7,41 +7,38 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @maybe_throws()
 declare void @use1(i1)
 
-define void @is_not_null(i8* %baseptr) local_unnamed_addr align 2 personality i8* undef {
+define void @is_not_null(ptr %baseptr) local_unnamed_addr align 2 personality ptr undef {
 ; CHECK-LABEL: @is_not_null(
 ; CHECK-NEXT:  preheader:
-; CHECK-NEXT:    [[BASEPTR1:%.*]] = ptrtoint i8* [[BASEPTR:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[BASEPTR1]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* null, i64 [[TMP0]]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i8* [ [[SCEVGEP2:%.*]], [[LATCH:%.*]] ], [ [[SCEVGEP]], [[PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[INCPTR:%.*]], [[LATCH:%.*]] ], [ [[BASEPTR:%.*]], [[PREHEADER:%.*]] ]
 ; CHECK-NEXT:    invoke void @maybe_throws()
 ; CHECK-NEXT:    to label [[LATCH]] unwind label [[LPAD:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    catch i8* null
-; CHECK-NEXT:    [[PTR_IS_NOT_NULL:%.*]] = icmp ne i8* [[LSR_IV]], null
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:    [[PTR_IS_NOT_NULL:%.*]] = icmp ne ptr [[PTR]], null
 ; CHECK-NEXT:    call void @use1(i1 [[PTR_IS_NOT_NULL]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       latch:
-; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, i8* [[LSR_IV]], i64 -1
+; CHECK-NEXT:    [[INCPTR]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
 ; CHECK-NEXT:    br label [[HEADER]]
 ;
 preheader:
   br label %header
 
 header:
-  %ptr = phi i8* [ %incptr, %latch ], [ %baseptr, %preheader ]
+  %ptr = phi ptr [ %incptr, %latch ], [ %baseptr, %preheader ]
   invoke void @maybe_throws() to label %latch unwind label %lpad
 
 lpad:
-  landingpad { i8*, i32 } catch i8* null
-  %ptr_is_not_null = icmp ne i8* %ptr, null
+  landingpad { ptr, i32 } catch ptr null
+  %ptr_is_not_null = icmp ne ptr %ptr, null
   call void @use1(i1 %ptr_is_not_null)
   ret void
 
 latch:
-  %incptr = getelementptr inbounds i8, i8* %ptr, i64 1
+  %incptr = getelementptr inbounds i8, ptr %ptr, i64 1
   br label %header
 }

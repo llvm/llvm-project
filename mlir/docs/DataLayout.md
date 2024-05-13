@@ -21,6 +21,8 @@ Built-in types are handled specially to decrease the overall query cost.
 Similarly, built-in `ModuleOp` supports data layouts without going through the
 interface.
 
+[TOC]
+
 ## Usage
 
 ### Scoping
@@ -71,10 +73,11 @@ class DataLayout {
 public:
   explicit DataLayout(DataLayoutOpInterface scope);
 
-  unsigned getTypeSize(Type type) const;
-  unsigned getTypeSizeInBits(Type type) const;
-  unsigned getTypeABIAlignment(Type type) const;
-  unsigned getTypePreferredAlignment(Type type) const;
+  llvm::TypeSize getTypeSize(Type type) const;
+  llvm::TypeSize getTypeSizeInBits(Type type) const;
+  uint64_t getTypeABIAlignment(Type type) const;
+  uint64_t getTypePreferredAlignment(Type type) const;
+  std::optional<uint64_t> getTypeIndexBitwidth(Type type) const;
 };
 ```
 
@@ -102,7 +105,7 @@ conceptually a collection of key-value pairs called data layout specification
 _entries_. Data layout specification attributes implement the
 `DataLayoutSpecInterface`, described below. Each entry is itself an attribute
 that implements the `DataLayoutEntryInterface`. Entries have a key, either a
-`Type` or an `Identifier`, and a value. Keys are used to associate entries with
+`Type` or a `StringAttr`, and a value. Keys are used to associate entries with
 specific types or dialects: when handling a data layout properties request, a
 type or a dialect can only see the specification entries relevant to them and
 must go through the supplied `DataLayout` object for any recursive query. This
@@ -113,7 +116,7 @@ specific to the type.
 For example, a data layout specification may be an actual list of pairs with
 simple custom syntax resembling the following:
 
-```
+```mlir
 #my_dialect.layout_spec<
   #my_dialect.layout_entry<!my_dialect.type, size=42>,
   #my_dialect.layout_entry<"my_dialect.endianness", "little">,
@@ -259,13 +262,14 @@ Index type is an integer type used for target-specific size information in,
 e.g., `memref` operations. Its data layout is parameterized by a single integer
 data layout entry that specifies its bitwidth. For example,
 
-```
+```mlir
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<index, 32>
 >} {}
 ```
 
-specifies that `index` has 32 bits. All other layout properties of `index` match
+specifies that `index` has 32 bits and index computations should be performed
+using 32-bit precision as well. All other layout properties of `index` match
 those of the integer type with the same bitwidth defined above.
 
 In absence of the corresponding entry, `index` is assumed to be a 64-bit
@@ -285,8 +289,8 @@ The default data layout assumes 8-bit bytes.
 
 ### DLTI Dialect
 
-The [DLTI](Dialects/DLTI.md) dialect provides the attributes implementing
+The [DLTI](../Dialects/DLTIDialect/) dialect provides the attributes implementing
 `DataLayoutSpecInterface` and `DataLayoutEntryInterface`, as well as a dialect
 attribute that can be used to attach the specification to a given operation. The
 verifier of this attribute triggers those of the specification and checks the
-compatiblity of nested specifications.
+compatibility of nested specifications.

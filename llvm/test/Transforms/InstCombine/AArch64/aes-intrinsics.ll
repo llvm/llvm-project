@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 ; ARM64 AES intrinsic variants
 
 define <16 x i8> @combineXorAeseZeroARM64(<16 x i8> %data, <16 x i8> %key) {

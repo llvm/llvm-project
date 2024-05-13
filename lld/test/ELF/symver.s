@@ -75,9 +75,9 @@
 # DIS3-COUNT-3: int3
 # DIS3-NEXT:    callq 0x1390 <foo@plt>
 # DIS3-LABEL: <foo@plt>:
-# DIS3-NEXT:    jmpq *{{.*}}(%rip) # 34a8
+# DIS3-NEXT:    jmpq *{{.*}}(%rip) # 0x34a8
 # DIS3-LABEL: <foo@plt>:
-# DIS3-NEXT:    jmpq *{{.*}}(%rip) # 34b0
+# DIS3-NEXT:    jmpq *{{.*}}(%rip) # 0x34b0
 
 ## Then, test the interaction with versioned definitions in shared objects.
 
@@ -105,8 +105,8 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t.w1 | FileCheck %s --check-prefix=W1DIS
 
 # W1REL:      .rela.plt {
-# W1REL-NEXT:   R_X86_64_JUMP_SLOT __wrap_foo 0x0
 # W1REL-NEXT:   R_X86_64_JUMP_SLOT foo@@v1 0x0
+# W1REL-NEXT:   R_X86_64_JUMP_SLOT __wrap_foo 0x0
 # W1REL-NEXT: }
 
 # W1DIS-LABEL: <.text>:
@@ -121,8 +121,8 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t.w2 | FileCheck %s --check-prefix=W2DIS
 
 # W2REL:      .rela.plt {
-# W2REL-NEXT:   R_X86_64_JUMP_SLOT __wrap_foo 0x0
 # W2REL-NEXT:   R_X86_64_JUMP_SLOT foo@v1 0x0
+# W2REL-NEXT:   R_X86_64_JUMP_SLOT __wrap_foo 0x0
 # W2REL-NEXT: }
 
 # W2DIS-LABEL: <.text>:

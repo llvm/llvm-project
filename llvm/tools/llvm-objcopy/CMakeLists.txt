@@ -1,8 +1,11 @@
 set(LLVM_LINK_COMPONENTS
   Object
+  ObjCopy
   Option
   Support
+  TargetParser
   MC
+  BinaryFormat
   )
 
 set(LLVM_TARGET_DEFINITIONS ObjcopyOpts.td)
@@ -22,27 +25,13 @@ tablegen(LLVM StripOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(StripOptsTableGen)
 
 add_llvm_tool(llvm-objcopy
-  ConfigManager.cpp
+  ObjcopyOptions.cpp
   llvm-objcopy.cpp
-  COFF/COFFObjcopy.cpp
-  COFF/Object.cpp
-  COFF/Reader.cpp
-  COFF/Writer.cpp
-  ELF/ELFObjcopy.cpp
-  ELF/Object.cpp
-  MachO/MachOObjcopy.cpp
-  MachO/MachOReader.cpp
-  MachO/MachOWriter.cpp
-  MachO/MachOLayoutBuilder.cpp
-  MachO/Object.cpp
-  wasm/Object.cpp
-  wasm/Reader.cpp
-  wasm/Writer.cpp
-  wasm/WasmObjcopy.cpp
   DEPENDS
   ObjcopyOptsTableGen
   InstallNameToolOptsTableGen
   StripOptsTableGen
+  GENERATE_DRIVER
   )
 
 add_llvm_tool_symlink(llvm-install-name-tool llvm-objcopy)

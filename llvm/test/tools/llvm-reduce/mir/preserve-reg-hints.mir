@@ -1,0 +1,34 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -abort-on-invalid-reduction -mtriple=amdgcn-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS: S_NOP 0
+
+# Make sure that register hints are preserved in the cloned function.
+
+# RESULT: registers:
+# RESULT-NEXT: - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
+# RESULT-NEXT: - { id: 1, class: vgpr_32, preferred-register: '' }
+# RESULT-NEXT: - { id: 2, class: vgpr_32, preferred-register: '%1' }
+# RESULT-NEXT: - { id: 3, class: vgpr_32, preferred-register: '%4' }
+# RESULT-NEXT: - { id: 4, class: vgpr_32, preferred-register: '%3' }
+---
+name: register_hints
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
+  - { id: 1, class: vgpr_32, preferred-register: '' }
+  - { id: 2, class: vgpr_32, preferred-register: '%1' }
+  - { id: 3, class: vgpr_32, preferred-register: '%4' }
+  - { id: 4, class: vgpr_32, preferred-register: '%3' }
+body:             |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %3:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %4:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    S_NOP 0
+    S_ENDPGM 0, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4
+
+...

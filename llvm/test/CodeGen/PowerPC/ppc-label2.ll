@@ -9,7 +9,7 @@ entry:
   br label %__here
 
 __here:                                           ; preds = %entry
-  ret i64 ptrtoint (i8* blockaddress(@foo, %__here) to i64)
+  ret i64 ptrtoint (ptr blockaddress(@foo, %__here) to i64)
 }
 
 ; CHECK-PIC32:           lwz {{r[0-9]+}}, .LC0-.LTOC(r30)

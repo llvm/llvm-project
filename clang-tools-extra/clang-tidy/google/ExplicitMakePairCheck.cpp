@@ -20,9 +20,7 @@ AST_MATCHER(DeclRefExpr, hasExplicitTemplateArgs) {
 }
 } // namespace
 
-namespace tidy {
-namespace google {
-namespace build {
+namespace tidy::google::build {
 
 void ExplicitMakePairCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
@@ -66,7 +64,5 @@ void ExplicitMakePairCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace build
-} // namespace google
-} // namespace tidy
+} // namespace tidy::google::build
 } // namespace clang

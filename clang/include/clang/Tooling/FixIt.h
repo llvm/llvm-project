@@ -76,4 +76,4 @@ FixItHint createReplacement(const D &Destination, StringRef Source) {
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_FIXINT_H
+#endif // LLVM_CLANG_TOOLING_FIXIT_H

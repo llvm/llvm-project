@@ -3,6 +3,6 @@
 
 #include "plist-multi-file.h"
 
-void bar() {
+void bar(void) {
   foo(0);
 }

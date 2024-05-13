@@ -7,34 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ScriptInterpreter/Lua/Lua.h"
+#include "Plugins/ScriptInterpreter/Lua/SWIGLuaBridge.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
 
 extern "C" int luaopen_lldb(lua_State *L) { return 0; }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
-
-// Disable warning C4190: 'LLDBSwigPythonBreakpointCallbackFunction' has
-// C-linkage specified, but returns UDT 'llvm::Expected<bool>' which is
-// incompatible with C
-#if _MSC_VER
-#pragma warning (push)
-#pragma warning (disable : 4190)
-#endif
-
-extern "C" llvm::Expected<bool> LLDBSwigLuaBreakpointCallbackFunction(
+llvm::Expected<bool>
+lldb_private::lua::SWIGBridge::LLDBSwigLuaBreakpointCallbackFunction(
     lua_State *L, lldb::StackFrameSP stop_frame_sp,
-    lldb::BreakpointLocationSP bp_loc_sp, StructuredDataImpl *extra_args_impl) {
+    lldb::BreakpointLocationSP bp_loc_sp,
+    const StructuredDataImpl &extra_args_impl) {
   return false;
 }
 
-#if _MSC_VER
-#pragma warning (pop)
-#endif
-
-#pragma clang diagnostic pop
+llvm::Expected<bool>
+lldb_private::lua::SWIGBridge::LLDBSwigLuaWatchpointCallbackFunction(
+    lua_State *L, lldb::StackFrameSP stop_frame_sp, lldb::WatchpointSP wp_sp) {
+  return false;
+}
 
 TEST(LuaTest, RunValid) {
   Lua lua;

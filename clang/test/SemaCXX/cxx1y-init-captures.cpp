@@ -23,7 +23,7 @@ namespace variadic_expansion {
                 };                 
     auto N2 = [x = y, //expected-note3{{begins here}} expected-note 6 {{default capture by}}
                 &z = y, n = f(t...), 
-                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...)](T& ... s) { // expected-note 6 {{capture 't' by}}
+                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...)](T& ... s) { // expected-note 6 {{capture 't' by}} expected-note {{substituting into a lambda}}
                 fv([&a(t)]()->decltype(auto) { //expected-error 3{{captured}}
                     return a;
                   }() ...);
@@ -31,7 +31,7 @@ namespace variadic_expansion {
 
   }
 
-  void h(int i, char c) { g(i, c); } //expected-note{{in instantiation}}
+  void h(int i, char c) { g(i, c); } // expected-note {{requested here}}
 }
 
 namespace odr_use_within_init_capture {
@@ -117,7 +117,7 @@ int test(T t = T{}) {
   }
   { // will need to capture x in outer lambda
     const T x = 10; //expected-note {{declared}}
-    auto L = [z = x](char a) { //expected-note {{begins}} expected-note 2 {{capture 'x' by}} expected-note 2 {{default capture by}}
+    auto L = [z = x](char a) { //expected-note {{begins}} expected-note 2 {{capture 'x' by}} expected-note 2 {{default capture by}} expected-note {{substituting into a lambda}}
       auto M = [&y = x](T b) { //expected-error {{cannot be implicitly captured}}
         return y;
       };
@@ -145,7 +145,7 @@ int test(T t = T{}) {
   }
   { // will need to capture x in outer lambda
     const int x = 10; //expected-note {{declared}}
-    auto L = [z = x](char a) { //expected-note {{begins}} expected-note 2 {{capture 'x' by}} expected-note 2 {{default capture by}}
+    auto L = [z = x](char a) { //expected-note {{begins}} expected-note 2 {{capture 'x' by}} expected-note 2 {{default capture by}} expected-note {{substituting into a lambda}}
       auto M = [&y = x](T b) { //expected-error {{cannot be implicitly captured}}
         return y;
       };
@@ -164,7 +164,7 @@ int test(T t = T{}) {
   return 0;
 }
 
-int run = test(); //expected-note {{instantiation}}
+int run = test(); //expected-note 2 {{instantiation}}
 
 }
 

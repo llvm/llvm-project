@@ -9,19 +9,34 @@
 #ifndef LLD_WASM_CONFIG_H
 #define LLD_WASM_CONFIG_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/CachePruning.h"
+#include <optional>
 
-namespace lld {
-namespace wasm {
+namespace llvm {
+enum class CodeGenOptLevel;
+} // namespace llvm
+
+namespace lld::wasm {
+
+class InputFile;
+class StubFile;
+class ObjFile;
+class SharedFile;
+class BitcodeFile;
+class InputTable;
+class InputGlobal;
+class InputFunction;
+class Symbol;
 
 // For --unresolved-symbols.
-// The `ImportFuncs` mode is an additional mode that corresponds to the
-// --allow-undefined flag which turns undefined functions in imports
-// as opposed ed to Ignore or Warn which turn them into unreachables.
-enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportFuncs };
+enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportDynamic };
+
+// For --build-id.
+enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
 
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
@@ -38,12 +53,16 @@ struct Configuration {
   bool exportAll;
   bool exportDynamic;
   bool exportTable;
+  bool extendedConst;
   bool growableTable;
   bool gcSections;
-  bool importMemory;
+  llvm::StringSet<> keepSections;
+  std::optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
+  std::optional<llvm::StringRef> memoryExport;
   bool sharedMemory;
   bool importTable;
-  llvm::Optional<bool> is64;
+  bool importUndefined;
+  std::optional<bool> is64;
   bool mergeDataSegments;
   bool pie;
   bool printGcSections;
@@ -53,52 +72,79 @@ struct Configuration {
   bool stripAll;
   bool stripDebug;
   bool stackFirst;
+  bool isStatic = false;
   bool trace;
   uint64_t globalBase;
+  uint64_t initialHeap;
   uint64_t initialMemory;
   uint64_t maxMemory;
-  uint64_t zStackSize;
-  unsigned ltoPartitions;
-  unsigned ltoo;
-  unsigned optimize;
-  llvm::StringRef thinLTOJobs;
-  bool ltoNewPassManager;
-  bool ltoDebugPassManager;
-  UnresolvedPolicy unresolvedSymbols;
-
-  llvm::StringRef entry;
-  llvm::StringRef mapFile;
-  llvm::StringRef outputFile;
-  llvm::StringRef thinLTOCacheDir;
-
-  llvm::StringSet<> allowUndefinedSymbols;
-  llvm::StringSet<> exportedSymbols;
-  std::vector<llvm::StringRef> requiredExports;
-  std::vector<llvm::StringRef> searchPaths;
-  llvm::CachePruningPolicy thinLTOCachePolicy;
-  llvm::Optional<std::vector<std::string>> features;
-
-  // The following config options do not directly correspond to any
-  // particualr command line options.
-
-  // True if we are creating position-independent code.
-  bool isPic;
-
-  // True if we have an MVP input that uses __indirect_function_table and which
-  // requires it to be allocated to table number 0.
-  bool legacyFunctionTable = false;
-
+  bool noGrowableMemory;
   // The table offset at which to place function addresses.  We reserve zero
   // for the null function pointer.  This gets set to 1 for executables and 0
   // for shared libraries (since they always added to a dynamic offset at
   // runtime).
-  uint32_t tableBase = 0;
+  uint64_t tableBase;
+  uint64_t zStackSize;
+  unsigned ltoPartitions;
+  unsigned ltoo;
+  llvm::CodeGenOptLevel ltoCgo;
+  unsigned optimize;
+  llvm::StringRef thinLTOJobs;
+  bool ltoDebugPassManager;
+  UnresolvedPolicy unresolvedSymbols;
+  BuildIdKind buildId = BuildIdKind::None;
+
+  llvm::StringRef entry;
+  llvm::StringRef mapFile;
+  llvm::StringRef outputFile;
+  llvm::StringRef soName;
+  llvm::StringRef thinLTOCacheDir;
+  llvm::StringRef whyExtract;
+
+  llvm::StringSet<> allowUndefinedSymbols;
+  llvm::StringSet<> exportedSymbols;
+  std::vector<llvm::StringRef> requiredExports;
+  llvm::SmallVector<llvm::StringRef, 0> searchPaths;
+  llvm::CachePruningPolicy thinLTOCachePolicy;
+  std::optional<std::vector<std::string>> features;
+  std::optional<std::vector<std::string>> extraFeatures;
+  llvm::SmallVector<uint8_t, 0> buildIdVector;
 };
 
 // The only instance of Configuration struct.
 extern Configuration *config;
 
-} // namespace wasm
-} // namespace lld
+// The Ctx object hold all other (non-configuration) global state.
+struct Ctx {
+  llvm::SmallVector<ObjFile *, 0> objectFiles;
+  llvm::SmallVector<StubFile *, 0> stubFiles;
+  llvm::SmallVector<SharedFile *, 0> sharedFiles;
+  llvm::SmallVector<BitcodeFile *, 0> bitcodeFiles;
+  llvm::SmallVector<InputFunction *, 0> syntheticFunctions;
+  llvm::SmallVector<InputGlobal *, 0> syntheticGlobals;
+  llvm::SmallVector<InputTable *, 0> syntheticTables;
+
+  // True if we are creating position-independent code.
+  bool isPic = false;
+
+  // True if we have an MVP input that uses __indirect_function_table and which
+  // requires it to be allocated to table number 0.
+  bool legacyFunctionTable = false;
+
+  // Will be set to true if bss data segments should be emitted. In most cases
+  // this is not necessary.
+  bool emitBssSegments = false;
+
+  // A tuple of (reference, extractedFile, sym). Used by --why-extract=.
+  llvm::SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>,
+                    0>
+      whyExtractRecords;
+
+  void reset();
+};
+
+extern Ctx ctx;
+
+} // namespace lld::wasm
 
 #endif

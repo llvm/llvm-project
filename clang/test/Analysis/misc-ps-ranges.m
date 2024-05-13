@@ -1,6 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify -fblocks %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify -fblocks %s
 
-// <rdar://problem/6776949>
 // main's 'argc' argument is always > 0
 int main(int argc, char* argv[]) {
   int *p = 0;

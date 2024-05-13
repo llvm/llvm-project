@@ -11,12 +11,15 @@ using FourIntsVecSize __attribute__((vector_size(16))) = int;
 using FourLongLongsVecSize __attribute__((vector_size(32))) = long long;
 using FourFloatsVecSize __attribute__((vector_size(16))) = float;
 using FourDoublesVecSize __attribute__((vector_size(32))) = double;
+using FourI128VecSize __attribute__((vector_size(64))) = __int128;
 
 using FourCharsExtVec __attribute__((ext_vector_type(4))) = char;
 using FourIntsExtVec __attribute__((ext_vector_type(4))) = int;
 using FourLongLongsExtVec __attribute__((ext_vector_type(4))) = long long;
 using FourFloatsExtVec __attribute__((ext_vector_type(4))) = float;
 using FourDoublesExtVec __attribute__((ext_vector_type(4))) = double;
+using FourI128ExtVec __attribute__((ext_vector_type(4))) = __int128;
+
 
 // Next a series of tests to make sure these operations are usable in
 // constexpr functions. Template instantiations don't emit Winvalid-constexpr,
@@ -204,35 +207,35 @@ void CharUsage() {
 
   constexpr auto w = FourCharsVecSize{1, 2, 3, 4} <
                      FourCharsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 0>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 0>
   constexpr auto x = FourCharsVecSize{1, 2, 3, 4} >
                      FourCharsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 1>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
   constexpr auto y = FourCharsVecSize{1, 2, 3, 4} <=
                      FourCharsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 1, i8 0>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 -1, i8 0>
   constexpr auto z = FourCharsVecSize{1, 2, 3, 4} >=
                      FourCharsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 1>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
   constexpr auto A = FourCharsVecSize{1, 2, 3, 4} ==
                      FourCharsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 0>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 0>
   constexpr auto B = FourCharsVecSize{1, 2, 3, 4} !=
                      FourCharsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 1>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 -1>
 
   constexpr auto C = FourCharsVecSize{1, 2, 3, 4} < 3;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 0>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 0>
   constexpr auto D = FourCharsVecSize{1, 2, 3, 4} > 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 0, i8 1>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 0, i8 -1>
   constexpr auto E = FourCharsVecSize{1, 2, 3, 4} <= 3;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 1, i8 0>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 -1, i8 0>
   constexpr auto F = FourCharsVecSize{1, 2, 3, 4} >= 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 1>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
   constexpr auto G = FourCharsVecSize{1, 2, 3, 4} == 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 0>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 0>
   constexpr auto H = FourCharsVecSize{1, 2, 3, 4} != 3;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 1>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 -1>
 
   constexpr auto I = FourCharsVecSize{1, 2, 3, 4} &
                      FourCharsVecSize{4, 3, 2, 1};
@@ -277,10 +280,12 @@ void CharUsage() {
   constexpr auto Y = CmpSub(a, b);
   // CHECK: store <4 x i8> <i8 12, i8 17, i8 -1, i8 -1>
 
-  constexpr auto Z = CmpLSH(a, H);
+  constexpr auto InvH = -H;
+  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 1>
+  constexpr auto Z = CmpLSH(a, InvH);
   // CHECK: store <4 x i8> <i8 36, i8 36, i8 7, i8 16>
 
-  constexpr auto aa = CmpRSH(a, H);
+  constexpr auto aa = CmpRSH(a, InvH);
   // CHECK: store <4 x i8> <i8 9, i8 9, i8 7, i8 4>
 
   constexpr auto ab = CmpBinAnd(a, b);
@@ -291,6 +296,12 @@ void CharUsage() {
 
   constexpr auto ad = CmpBinOr(a, b);
   // CHECK: store <4 x i8> <i8 22, i8 19, i8 15, i8 9>
+
+  constexpr auto ae = ~FourCharsVecSize{1, 2, 10, 20};
+  // CHECK: store <4 x i8> <i8 -2, i8 -3, i8 -11, i8 -21>
+
+  constexpr auto af = !FourCharsVecSize{0, 1, 8, -1};
+  // CHECK: store <4 x i8> <i8 -1, i8 0, i8 0, i8 0>
 }
 
 void CharExtVecUsage() {
@@ -348,35 +359,35 @@ void CharExtVecUsage() {
 
   constexpr auto w = FourCharsExtVec{1, 2, 3, 4} <
                      FourCharsExtVec{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 0>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 0>
   constexpr auto x = FourCharsExtVec{1, 2, 3, 4} >
                      FourCharsExtVec{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 1>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
   constexpr auto y = FourCharsExtVec{1, 2, 3, 4} <=
                      FourCharsExtVec{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 1, i8 0>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 -1, i8 0>
   constexpr auto z = FourCharsExtVec{1, 2, 3, 4} >=
                      FourCharsExtVec{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 1>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
   constexpr auto A = FourCharsExtVec{1, 2, 3, 4} ==
                      FourCharsExtVec{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 0>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 0>
   constexpr auto B = FourCharsExtVec{1, 2, 3, 4} !=
                      FourCharsExtVec{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 1>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 -1>
 
   constexpr auto C = FourCharsExtVec{1, 2, 3, 4} < 3;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 0>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 0>
   constexpr auto D = FourCharsExtVec{1, 2, 3, 4} > 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 0, i8 1>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 0, i8 -1>
   constexpr auto E = FourCharsExtVec{1, 2, 3, 4} <= 3;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 1, i8 0>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 -1, i8 0>
   constexpr auto F = FourCharsExtVec{1, 2, 3, 4} >= 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 1>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
   constexpr auto G = FourCharsExtVec{1, 2, 3, 4} == 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 1, i8 0>
+  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 0>
   constexpr auto H = FourCharsExtVec{1, 2, 3, 4} != 3;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 1>
+  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 -1>
 
   constexpr auto I = FourCharsExtVec{1, 2, 3, 4} &
                      FourCharsExtVec{4, 3, 2, 1};
@@ -421,10 +432,13 @@ void CharExtVecUsage() {
   constexpr auto Y = CmpSub(a, b);
   // CHECK: store <4 x i8> <i8 12, i8 17, i8 -1, i8 -1>
 
-  constexpr auto Z = CmpLSH(a, H);
+  constexpr auto InvH = -H;
+  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 1>
+
+  constexpr auto Z = CmpLSH(a, InvH);
   // CHECK: store <4 x i8> <i8 36, i8 36, i8 7, i8 16>
 
-  constexpr auto aa = CmpRSH(a, H);
+  constexpr auto aa = CmpRSH(a, InvH);
   // CHECK: store <4 x i8> <i8 9, i8 9, i8 7, i8 4>
 
   constexpr auto ab = CmpBinAnd(a, b);
@@ -435,6 +449,12 @@ void CharExtVecUsage() {
 
   constexpr auto ad = CmpBinOr(a, b);
   // CHECK: store <4 x i8> <i8 22, i8 19, i8 15, i8 9>
+
+  constexpr auto ae = ~FourCharsExtVec{1, 2, 10, 20};
+  // CHECK: store <4 x i8> <i8 -2, i8 -3, i8 -11, i8 -21>
+
+  constexpr auto af = !FourCharsExtVec{0, 1, 8, -1};
+  // CHECK: store <4 x i8> <i8 -1, i8 0, i8 0, i8 0>
 }
 
 void FloatUsage() {
@@ -471,35 +491,35 @@ void FloatUsage() {
 
   constexpr auto w = FourFloatsVecSize{1, 2, 3, 4} <
                      FourFloatsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 0, i32 0>
   constexpr auto x = FourFloatsVecSize{1, 2, 3, 4} >
                      FourFloatsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 -1>
   constexpr auto y = FourFloatsVecSize{1, 2, 3, 4} <=
                      FourFloatsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 1, i32 0>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 -1, i32 0>
   constexpr auto z = FourFloatsVecSize{1, 2, 3, 4} >=
                      FourFloatsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 -1>
   constexpr auto A = FourFloatsVecSize{1, 2, 3, 4} ==
                      FourFloatsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 0>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 0>
   constexpr auto B = FourFloatsVecSize{1, 2, 3, 4} !=
                      FourFloatsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 0, i32 1>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 0, i32 -1>
 
   constexpr auto C = FourFloatsVecSize{1, 2, 3, 4} < 3;
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 0, i32 0>
   constexpr auto D = FourFloatsVecSize{1, 2, 3, 4} > 3;
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 0, i32 -1>
   constexpr auto E = FourFloatsVecSize{1, 2, 3, 4} <= 3;
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 1, i32 0>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 -1, i32 0>
   constexpr auto F = FourFloatsVecSize{1, 2, 3, 4} >= 3;
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 -1>
   constexpr auto G = FourFloatsVecSize{1, 2, 3, 4} == 3;
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 0>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 0>
   constexpr auto H = FourFloatsVecSize{1, 2, 3, 4} != 3;
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 0, i32 1>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 0, i32 -1>
 
   constexpr auto O = FourFloatsVecSize{5, 0, 6, 0} &&
                      FourFloatsVecSize{5, 5, 0, 0};
@@ -524,6 +544,13 @@ void FloatUsage() {
 
   constexpr auto Y = CmpSub(a, b);
   // CHECK: store <4 x float> <float 1.200000e+01, float 1.700000e+01, float -1.000000e+00, float -1.000000e+00>
+
+  constexpr auto Z = -Y;
+  // CHECK: store <4 x float> <float -1.200000e+01, float -1.700000e+01, float 1.000000e+00, float 1.000000e+00>
+
+  // Operator ~ is illegal on floats, so no test for that.
+  constexpr auto af = !FourFloatsVecSize{0, 1, 8, -1};
+  // CHECK: store <4 x i32> <i32 -1, i32 0, i32 0, i32 0>
 }
 
 void FloatVecUsage() {
@@ -560,35 +587,35 @@ void FloatVecUsage() {
 
   constexpr auto w = FourFloatsVecSize{1, 2, 3, 4} <
                      FourFloatsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 0, i32 0>
   constexpr auto x = FourFloatsVecSize{1, 2, 3, 4} >
                      FourFloatsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 -1>
   constexpr auto y = FourFloatsVecSize{1, 2, 3, 4} <=
                      FourFloatsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 1, i32 0>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 -1, i32 0>
   constexpr auto z = FourFloatsVecSize{1, 2, 3, 4} >=
                      FourFloatsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 -1>
   constexpr auto A = FourFloatsVecSize{1, 2, 3, 4} ==
                      FourFloatsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 0>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 0>
   constexpr auto B = FourFloatsVecSize{1, 2, 3, 4} !=
                      FourFloatsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 0, i32 1>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 0, i32 -1>
 
   constexpr auto C = FourFloatsVecSize{1, 2, 3, 4} < 3;
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 0, i32 0>
   constexpr auto D = FourFloatsVecSize{1, 2, 3, 4} > 3;
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 0, i32 -1>
   constexpr auto E = FourFloatsVecSize{1, 2, 3, 4} <= 3;
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 1, i32 0>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 -1, i32 0>
   constexpr auto F = FourFloatsVecSize{1, 2, 3, 4} >= 3;
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 -1>
   constexpr auto G = FourFloatsVecSize{1, 2, 3, 4} == 3;
-  // CHECK: store <4 x i32> <i32 0, i32 0, i32 1, i32 0>
+  // CHECK: store <4 x i32> <i32 0, i32 0, i32 -1, i32 0>
   constexpr auto H = FourFloatsVecSize{1, 2, 3, 4} != 3;
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 0, i32 1>
+  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 0, i32 -1>
 
   constexpr auto O = FourFloatsVecSize{5, 0, 6, 0} &&
                      FourFloatsVecSize{5, 5, 0, 0};
@@ -613,4 +640,74 @@ void FloatVecUsage() {
 
   constexpr auto Y = CmpSub(a, b);
   // CHECK: store <4 x float> <float 1.200000e+01, float 1.700000e+01, float -1.000000e+00, float -1.000000e+00>
+
+  constexpr auto Z = -Y;
+  // CHECK: store <4 x float> <float -1.200000e+01, float -1.700000e+01, float 1.000000e+00, float 1.000000e+00>
+
+  // Operator ~ is illegal on floats, so no test for that.
+  constexpr auto af = !FourFloatsVecSize{0, 1, 8, -1};
+  // CHECK: store <4 x i32> <i32 -1, i32 0, i32 0, i32 0>
+}
+
+void I128Usage() {
+  constexpr auto a = FourI128VecSize{1, 2, 3, 4};
+  // CHECK: store <4 x i128> <i128 1, i128 2, i128 3, i128 4>
+  constexpr auto b = a < 3;
+  // CHECK: store <4 x i128> <i128 -1, i128 -1, i128 0, i128 0>
+
+  // Operator ~ is illegal on floats, so no test for that.
+  constexpr auto c = ~FourI128VecSize{1, 2, 10, 20};
+  // CHECK: store <4 x i128> <i128 -2, i128 -3, i128 -11, i128 -21>
+
+  constexpr auto d = !FourI128VecSize{0, 1, 8, -1};
+  // CHECK: store <4 x i128> <i128 -1, i128 0, i128 0, i128 0>
+}
+
+void I128VecUsage() {
+  constexpr auto a = FourI128ExtVec{1, 2, 3, 4};
+  // CHECK: store <4 x i128> <i128 1, i128 2, i128 3, i128 4>
+  constexpr auto b = a < 3;
+  // CHECK: store <4 x i128> <i128 -1, i128 -1, i128 0, i128 0>
+
+  // Operator ~ is illegal on floats, so no test for that.
+  constexpr auto c = ~FourI128ExtVec{1, 2, 10, 20};
+  // CHECK: store <4 x i128>  <i128 -2, i128 -3, i128 -11, i128 -21>
+
+  constexpr auto d = !FourI128ExtVec{0, 1, 8, -1};
+  // CHECK: store <4 x i128>  <i128 -1, i128 0, i128 0, i128 0>
+}
+
+using FourBoolsExtVec __attribute__((ext_vector_type(4))) = bool;
+void BoolVecUsage() {
+  constexpr auto a = FourBoolsExtVec{true, false, true, false} <
+                     FourBoolsExtVec{false, false, true, true};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %a, align 1
+  constexpr auto b = FourBoolsExtVec{true, false, true, false} <=
+                     FourBoolsExtVec{false, false, true, true};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 true, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %b, align 1
+  constexpr auto c = FourBoolsExtVec{true, false, true, false} ==
+                     FourBoolsExtVec{false, false, true, true};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %c, align 1
+  constexpr auto d = FourBoolsExtVec{true, false, true, false} !=
+                     FourBoolsExtVec{false, false, true, true};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %d, align 1
+  constexpr auto e = FourBoolsExtVec{true, false, true, false} >=
+                     FourBoolsExtVec{false, false, true, true};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %e, align 1
+  constexpr auto f = FourBoolsExtVec{true, false, true, false} >
+                     FourBoolsExtVec{false, false, true, true};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %f, align 1
+  constexpr auto g = FourBoolsExtVec{true, false, true, false} &
+                     FourBoolsExtVec{false, false, true, true};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 false, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %g, align 1
+  constexpr auto h = FourBoolsExtVec{true, false, true, false} |
+                     FourBoolsExtVec{false, false, true, true};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 true, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %h, align 1
+  constexpr auto i = FourBoolsExtVec{true, false, true, false} ^
+                     FourBoolsExtVec { false, false, true, true };
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %i, align 1
+  constexpr auto j = !FourBoolsExtVec{true, false, true, false};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %j, align 1
+  constexpr auto k = ~FourBoolsExtVec{true, false, true, false};
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %k, align 1
 }

@@ -1,12 +1,5 @@
 ; Check that BFI is not computed when -pass-remarks-with-hotness is off
 
-; RUN: opt -loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
-; RUN:     -debug-only=block-freq,branch-prob -pass-remarks-with-hotness \
-; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
-; RUN: opt -loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
-; RUN:     -debug-only=block-freq,branch-prob \
-; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
-
 ; RUN: opt -passes='require<aa>,loop-distribute' -S -pass-remarks-missed=loop-distribute \
 ; RUN:     -debug-only=block-freq,branch-prob -pass-remarks-with-hotness \
 ; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
@@ -26,7 +19,7 @@
 ;     1	void forced (char *A, char *B, char *C, int N) {
 ;     2	#pragma clang loop distribute(enable)
 ;     3	  for(int i = 0; i < N; i++) {
-;     4	    A[i] = B[i] * C[i];
+;     4	    A[i] = Bptr C[i];
 ;     5	  }
 ;     6	}
 
@@ -34,7 +27,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
 
-define void @forced(i8* %A, i8* %B, i8* %C, i32 %N) !dbg !7 !prof !22 {
+define void @forced(ptr %A, ptr %B, ptr %C, i32 %N) !dbg !7 !prof !22 {
 entry:
   %cmp12 = icmp sgt i32 %N, 0, !dbg !9
   br i1 %cmp12, label %ph, label %for.cond.cleanup, !dbg !10, !prof !23
@@ -44,13 +37,13 @@ ph:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
-  %arrayidx = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !12
-  %0 = load i8, i8* %arrayidx, align 1, !dbg !12, !tbaa !13
-  %arrayidx2 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !16
-  %1 = load i8, i8* %arrayidx2, align 1, !dbg !16, !tbaa !13
+  %arrayidx = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !12
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !12, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !16
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !16, !tbaa !13
   %mul = mul i8 %1, %0, !dbg !17
-  %arrayidx6 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !18
-  store i8 %mul, i8* %arrayidx6, align 1, !dbg !19, !tbaa !13
+  %arrayidx6 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !18
+  store i8 %mul, ptr %arrayidx6, align 1, !dbg !19, !tbaa !13
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !10
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !10
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !10

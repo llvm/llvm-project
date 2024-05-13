@@ -21,10 +21,6 @@
 #include "test_macros.h"
 #include "type_id.h"
 
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
-
 template <class Tuple>
 struct ConstexprConstructibleFromTuple {
   template <class ...Args>
@@ -47,7 +43,7 @@ struct ConstructibleFromTuple<Tuple<Types...>> {
   TypeID const* arg_types;
 };
 
-template <class Tp, size_t N>
+template <class Tp, std::size_t N>
 struct ConstructibleFromTuple<std::array<Tp, N>> {
 template <class ...Args>
   explicit ConstructibleFromTuple(Args&&... xargs)
@@ -63,12 +59,6 @@ constexpr bool do_constexpr_test(Tuple&& tup) {
     using RawTuple = std::decay_t<Tuple>;
     using Tp = ConstexprConstructibleFromTuple<RawTuple>;
     return std::make_from_tuple<Tp>(std::forward<Tuple>(tup)).args == tup;
-}
-
-// Needed by do_forwarding_test() since it compares pairs of different types.
-template <class T1, class T2, class U1, class U2>
-inline bool operator==(const std::pair<T1, T2>& lhs, const std::pair<U1, U2>& rhs) {
-    return lhs.first == rhs.first && lhs.second == rhs.second;
 }
 
 template <class ...ExpectTypes, class Tuple>
@@ -204,6 +194,94 @@ void test_noexcept() {
         LIBCPP_ASSERT_NOEXCEPT(std::make_from_tuple<TestType>(tup));
     }
 }
+
+namespace LWG3528 {
+template <class T, class Tuple>
+auto test_make_from_tuple(T&&, Tuple&& t) -> decltype(std::make_from_tuple<T>(t), uint8_t()) {
+  return 0;
+}
+template <class T, class Tuple>
+uint32_t test_make_from_tuple(...) {
+  return 0;
+}
+
+template <class T, class Tuple>
+static constexpr bool can_make_from_tuple =
+    std::is_same_v<decltype(test_make_from_tuple<T, Tuple>(T{}, Tuple{})), uint8_t>;
+
+template <class T, class Tuple>
+auto test_make_from_tuple_impl(T&&, Tuple&& t)
+    -> decltype(std::__make_from_tuple_impl<T>(
+                    t, typename std::__make_tuple_indices< std::tuple_size_v<std::remove_reference_t<Tuple>>>::type{}),
+                uint8_t()) {
+  return 0;
+}
+template <class T, class Tuple>
+uint32_t test_make_from_tuple_impl(...) {
+  return 0;
+}
+
+template <class T, class Tuple>
+static constexpr bool can_make_from_tuple_impl =
+    std::is_same_v<decltype(test_make_from_tuple_impl<T, Tuple>(T{}, Tuple{})), uint8_t>;
+
+struct A {
+  int a;
+};
+struct B : public A {};
+
+struct C {
+  C(const B&) {}
+};
+
+enum class D {
+  ONE,
+  TWO,
+};
+
+// Test std::make_from_tuple constraints.
+
+// reinterpret_cast
+static_assert(!can_make_from_tuple<int*, std::tuple<A*>>);
+static_assert(can_make_from_tuple<A*, std::tuple<A*>>);
+
+// const_cast
+static_assert(!can_make_from_tuple<char*, std::tuple<const char*>>);
+static_assert(!can_make_from_tuple<volatile char*, std::tuple<const volatile char*>>);
+static_assert(can_make_from_tuple<volatile char*, std::tuple<volatile char*>>);
+static_assert(can_make_from_tuple<char*, std::tuple<char*>>);
+static_assert(can_make_from_tuple<const char*, std::tuple<char*>>);
+static_assert(can_make_from_tuple<const volatile char*, std::tuple<volatile char*>>);
+
+// static_cast
+static_assert(!can_make_from_tuple<int, std::tuple<D>>);
+static_assert(!can_make_from_tuple<D, std::tuple<int>>);
+static_assert(can_make_from_tuple<long, std::tuple<int>>);
+static_assert(can_make_from_tuple<double, std::tuple<float>>);
+static_assert(can_make_from_tuple<float, std::tuple<double>>);
+
+// Test std::__make_from_tuple_impl constraints.
+
+// reinterpret_cast
+static_assert(!can_make_from_tuple_impl<int*, std::tuple<A*>>);
+static_assert(can_make_from_tuple_impl<A*, std::tuple<A*>>);
+
+// const_cast
+static_assert(!can_make_from_tuple_impl<char*, std::tuple<const char*>>);
+static_assert(!can_make_from_tuple_impl<volatile char*, std::tuple<const volatile char*>>);
+static_assert(can_make_from_tuple_impl<volatile char*, std::tuple<volatile char*>>);
+static_assert(can_make_from_tuple_impl<char*, std::tuple<char*>>);
+static_assert(can_make_from_tuple_impl<const char*, std::tuple<char*>>);
+static_assert(can_make_from_tuple_impl<const volatile char*, std::tuple<volatile char*>>);
+
+// static_cast
+static_assert(!can_make_from_tuple_impl<int, std::tuple<D>>);
+static_assert(!can_make_from_tuple_impl<D, std::tuple<int>>);
+static_assert(can_make_from_tuple_impl<long, std::tuple<int>>);
+static_assert(can_make_from_tuple_impl<double, std::tuple<float>>);
+static_assert(can_make_from_tuple_impl<float, std::tuple<double>>);
+
+} // namespace LWG3528
 
 int main(int, char**)
 {

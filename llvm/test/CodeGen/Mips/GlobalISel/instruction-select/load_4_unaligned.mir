@@ -8,19 +8,19 @@
 
   define float @load_float_align1() {
   entry:
-    %0 = load float, float* @float_align1, align 1
+    %0 = load float, ptr @float_align1, align 1
     ret float %0
   }
 
   define float @load_float_align4() {
   entry:
-    %0 = load float, float* @float_align4, align 4
+    %0 = load float, ptr @float_align4, align 4
     ret float %0
   }
 
   define i32 @load_i32_align8() {
   entry:
-    %0 = load i32, i32* @i32_align8, align 8
+    %0 = load i32, ptr @i32_align8, align 8
     ret i32 %0
   }
 
@@ -37,12 +37,12 @@ body:             |
     ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @float_align1
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @float_align1
     ; MIPS32: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; MIPS32: [[LWL:%[0-9]+]]:gpr32 = LWL [[ADDiu]], 3, [[DEF]] :: (dereferenceable load 4 from @float_align1, align 1)
-    ; MIPS32: [[LWR:%[0-9]+]]:gpr32 = LWR [[ADDiu]], 0, [[LWL]] :: (dereferenceable load 4 from @float_align1, align 1)
+    ; MIPS32: [[LWL:%[0-9]+]]:gpr32 = LWL [[ADDiu]], 3, [[DEF]] :: (dereferenceable load (s32) from @float_align1, align 1)
+    ; MIPS32: [[LWR:%[0-9]+]]:gpr32 = LWR [[ADDiu]], 0, [[LWL]] :: (dereferenceable load (s32) from @float_align1, align 1)
     ; MIPS32: $f0 = COPY [[LWR]]
     ; MIPS32: RetRA implicit $f0
     %1:gprb(p0) = G_GLOBAL_VALUE @float_align1
-    %0:gprb(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @float_align1, align 1)
+    %0:gprb(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @float_align1, align 1)
     $f0 = COPY %0(s32)
     RetRA implicit $f0
 
@@ -58,11 +58,11 @@ body:             |
     ; MIPS32-LABEL: name: load_float_align4
     ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @float_align4
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @float_align4
-    ; MIPS32: [[LWC1_:%[0-9]+]]:fgr32 = LWC1 [[ADDiu]], 0 :: (dereferenceable load 4 from @float_align4)
+    ; MIPS32: [[LWC1_:%[0-9]+]]:fgr32 = LWC1 [[ADDiu]], 0 :: (dereferenceable load (s32) from @float_align4)
     ; MIPS32: $f0 = COPY [[LWC1_]]
     ; MIPS32: RetRA implicit $f0
     %1:gprb(p0) = G_GLOBAL_VALUE @float_align4
-    %0:fprb(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @float_align4)
+    %0:fprb(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @float_align4)
     $f0 = COPY %0(s32)
     RetRA implicit $f0
 
@@ -78,11 +78,11 @@ body:             |
     ; MIPS32-LABEL: name: load_i32_align8
     ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @i32_align8
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @i32_align8
-    ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (dereferenceable load 4 from @i32_align8, align 8)
+    ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (dereferenceable load (s32) from @i32_align8, align 8)
     ; MIPS32: $v0 = COPY [[LW]]
     ; MIPS32: RetRA implicit $v0
     %1:gprb(p0) = G_GLOBAL_VALUE @i32_align8
-    %0:gprb(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @i32_align8, align 8)
+    %0:gprb(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @i32_align8, align 8)
     $v0 = COPY %0(s32)
     RetRA implicit $v0
 

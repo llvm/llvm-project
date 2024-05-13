@@ -4,7 +4,7 @@
 ; RUN:   -no-integrated-as -disable-block-placement | FileCheck %s
 
 ; Test a loop that should be converted into dbr form and then use BRCTH.
-define void @f2(i32 *%src, i32 *%dest) {
+define void @f2(ptr %src, ptr %dest) {
 ; CHECK-LABEL: f2:
 ; CHECK: blah [[REG:%r[0-5]]]
 ; CHECK: [[LABEL:\.[^:]*]]:{{.*}} %loop
@@ -19,13 +19,13 @@ entry:
 loop:
   %count = phi i32 [ 0, %entry ], [ %next, %loop.next ]
   %next = add i32 %count, 1
-  %val = load volatile i32, i32 *%src
+  %val = load volatile i32, ptr %src
   %cmp = icmp eq i32 %val, 0
   br i1 %cmp, label %loop.next, label %loop.store
 
 loop.store:
   %add = add i32 %val, 1
-  store volatile i32 %add, i32 *%dest
+  store volatile i32 %add, ptr %dest
   br label %loop.next
 
 loop.next:

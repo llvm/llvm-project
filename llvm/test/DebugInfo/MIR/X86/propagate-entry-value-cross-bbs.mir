@@ -1,4 +1,5 @@
 # RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
 #
 #extern void fn1 (int, int, int);
 #__attribute__((noinline))
@@ -170,6 +171,6 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 16, debug-location !34
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !34
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !34
-    RETQ killed $eax, debug-location !34
+    RET64 killed $eax, debug-location !34
 
 ...

@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/modfl.h"
+#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/ManipulationFunctions.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long double, modfl, (long double x, long double *iptr)) {
   return fputil::modf(x, *iptr);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -34,7 +34,8 @@ namespace llvm {
 
 namespace clang {
 namespace CodeGen {
-  class CodeGenFunction;
+class CGFunctionInfo;
+class CodeGenFunction;
 }
 
   class FieldDecl;
@@ -337,6 +338,23 @@ public:
   MessageSendInfo getMessageSendInfo(const ObjCMethodDecl *method,
                                      QualType resultType,
                                      CallArgList &callArgs);
+  bool canMessageReceiverBeNull(CodeGenFunction &CGF,
+                                const ObjCMethodDecl *method,
+                                bool isSuper,
+                                const ObjCInterfaceDecl *classReceiver,
+                                llvm::Value *receiver);
+  static bool isWeakLinkedClass(const ObjCInterfaceDecl *cls);
+
+  /// Destroy the callee-destroyed arguments of the given method,
+  /// if it has any.  Used for nil-receiver paths in message sends.
+  /// Never does anything if the method does not satisfy
+  /// hasParamDestroyedInCallee().
+  ///
+  /// \param callArgs - just the formal arguments, not including implicit
+  ///   arguments such as self and cmd
+  static void destroyCalleeDestroyedArguments(CodeGenFunction &CGF,
+                                              const ObjCMethodDecl *method,
+                                              const CallArgList &callArgs);
 
   // FIXME: This probably shouldn't be here, but the code to compute
   // it is here.

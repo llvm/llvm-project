@@ -3,7 +3,7 @@ find_first_existing_vc_file("${LLVM_MAIN_SRC_DIR}" llvm_vc)
 # The VC revision include that we want to generate.
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSRevision.h")
 
-set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")
+set(generate_vcs_version_script "${LLVM_CMAKE_DIR}/GenerateVersionFromVCS.cmake")
 
 if(LLVM_APPEND_VC_REV)
   set(llvm_source_dir ${LLVM_MAIN_SRC_DIR})
@@ -28,6 +28,8 @@ if (fake_version_inc)
     COMMAND ${CMAKE_COMMAND} "-DNAMES=LLVM"
                              "-DLLVM_SOURCE_DIR=${llvm_source_dir}"
                              "-DHEADER_FILE=${version_inc}"
+                             "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
+                             "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
                              -P "${generate_vcs_version_script}")
 else()
   add_custom_command(OUTPUT "${version_inc}"
@@ -35,6 +37,8 @@ else()
     COMMAND ${CMAKE_COMMAND} "-DNAMES=LLVM"
                              "-DLLVM_SOURCE_DIR=${llvm_source_dir}"
                              "-DHEADER_FILE=${version_inc}"
+                             "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
+                             "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
                              -P "${generate_vcs_version_script}")
 endif()
 

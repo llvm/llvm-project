@@ -17,14 +17,10 @@
 #include <utility>
 #include <cassert>
 
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
 #include "test_macros.h"
-#include "disable_missing_braces_warning.h"
 
 int main(int, char**)
 {
-
     {
         typedef std::unique_ptr<double> T;
         typedef std::array<T, 1> C;

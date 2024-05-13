@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class F, class... Args>
 // concept equivalence_relation;
@@ -27,55 +26,51 @@ struct R {
 // clang-format off
 template<class F, class T, class U>
 requires std::relation<F, T, U>
-[[nodiscard]] constexpr bool check_equivalence_relation_subsumes_relation() {
+constexpr bool check_equivalence_relation_subsumes_relation() {
   return false;
 }
 
 template<class F, class T, class U>
 requires std::equivalence_relation<F, T, U> && true
-[[nodiscard]] constexpr bool check_equivalence_relation_subsumes_relation() {
+constexpr bool check_equivalence_relation_subsumes_relation() {
   return true;
 }
 // clang-format on
 
-static_assert(check_equivalence_relation_subsumes_relation<int (*)(int, int),
-                                                           int, int>());
-static_assert(check_equivalence_relation_subsumes_relation<int (*)(int, double),
-                                                           int, double>());
+static_assert(check_equivalence_relation_subsumes_relation<int (*)(int, int), int, int>());
+static_assert(check_equivalence_relation_subsumes_relation<int (*)(int, double), int, double>());
 static_assert(check_equivalence_relation_subsumes_relation<R, S1, S1>());
 static_assert(check_equivalence_relation_subsumes_relation<R, S1, S2>());
 
 // clang-format off
 template<class F, class T, class U>
 requires std::relation<F, T, U> && true
-[[nodiscard]] constexpr bool check_relation_subsumes_equivalence_relation() {
+constexpr bool check_relation_subsumes_equivalence_relation() {
   return true;
 }
 
 template<class F, class T, class U>
 requires std::equivalence_relation<F, T, U>
-[[nodiscard]] constexpr bool check_relation_subsumes_equivalence_relation() {
+constexpr bool check_relation_subsumes_equivalence_relation() {
   return false;
 }
 // clang-format on
 
-static_assert(check_relation_subsumes_equivalence_relation<int (*)(int, int),
-                                                           int, int>());
-static_assert(check_relation_subsumes_equivalence_relation<int (*)(int, double),
-                                                           int, double>());
+static_assert(check_relation_subsumes_equivalence_relation<int (*)(int, int), int, int>());
+static_assert(check_relation_subsumes_equivalence_relation<int (*)(int, double), int, double>());
 static_assert(check_relation_subsumes_equivalence_relation<R, S1, S1>());
 static_assert(check_relation_subsumes_equivalence_relation<R, S1, S2>());
 
 // clang-format off
 template<class F, class T, class U>
 requires std::equivalence_relation<F, T, T> && std::equivalence_relation<F, U, U>
-[[nodiscard]] constexpr bool check_equivalence_relation_subsumes_itself() {
+constexpr bool check_equivalence_relation_subsumes_itself() {
   return false;
 }
 
 template<class F, class T, class U>
 requires std::equivalence_relation<F, T, U>
-[[nodiscard]] constexpr bool check_equivalence_relation_subsumes_itself() {
+constexpr bool check_equivalence_relation_subsumes_itself() {
   return true;
 }
 // clang-format on

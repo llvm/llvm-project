@@ -11,14 +11,12 @@
 
 #include "clang/AST/AST.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 // Returns the (closest) Function declaration surrounding |Statement| or NULL.
 const FunctionDecl *getSurroundingFunction(ASTContext &Context,
                                            const Stmt &Statement);
 // Determine whether Expr is a Binary or Ternary expression.
-bool IsBinaryOrTernary(const Expr *E);
+bool isBinaryOrTernary(const Expr *E);
 
 /// Checks whether a macro flag is present in the given argument. Only considers
 /// cases of single match or match in a binary OR expression. For example,
@@ -38,8 +36,15 @@ bool rangeContainsMacroExpansion(SourceRange Range, const SourceManager *SM);
 // FIXME: false-negative if the entire range is fully expanded from a macro.
 bool rangeCanBeFixed(SourceRange Range, const SourceManager *SM);
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+// Check if statements are same
+bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
+                            const ASTContext &Context, bool Canonical = false);
+
+// Given a field of an anonymous record, find its corresponding
+// IndirectFieldDecl in the outermost possible scope.
+const IndirectFieldDecl *
+findOutermostIndirectFieldDeclForField(const FieldDecl *FD);
+
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ASTUTILS_H

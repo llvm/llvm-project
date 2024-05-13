@@ -2,13 +2,13 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=MS %s
 // RUN: %clang_cc1 -triple i686-windows-gnu    -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=GNU %s
 // RUN: %clang_cc1 -triple x86_64-windows-gnu  -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=GNU %s
-// RUN: %clang_cc1 -triple i686-windows-msvc   -fms-extensions -emit-llvm -std=c11 -O1 -fno-experimental-new-pass-manager -o - %s | FileCheck --check-prefix=O1 --check-prefix=MO1 %s
-// RUN: %clang_cc1 -triple i686-windows-gnu    -fms-extensions -emit-llvm -std=c11 -O1 -fno-experimental-new-pass-manager -o - %s | FileCheck --check-prefix=O1 --check-prefix=GO1 %s
+// RUN: %clang_cc1 -triple i686-windows-msvc   -fms-extensions -emit-llvm -std=c11 -O1 -fno-inline -o - %s | FileCheck --check-prefix=O1 --check-prefix=MO1 %s
+// RUN: %clang_cc1 -triple i686-windows-gnu    -fms-extensions -emit-llvm -std=c11 -O1 -fno-inline -o - %s | FileCheck --check-prefix=O1 --check-prefix=GO1 %s
 
 #define JOIN2(x, y) x##y
 #define JOIN(x, y) JOIN2(x, y)
-#define USEVAR(var) int JOIN(use, __LINE__)() { return var; }
-#define USE(func) void JOIN(use, __LINE__)() { func(); }
+#define USEVAR(var) int JOIN(use, __LINE__)(void) { return var; }
+#define USE(func) void JOIN(use, __LINE__)(void) { func(); }
 
 
 
@@ -61,7 +61,7 @@ USEVAR(GlobalRedecl5)
 // Redeclaration in local context.
 // CHECK: @GlobalRedecl6 = external dllimport global i32
 __declspec(dllimport) int GlobalRedecl6;
-int functionScope() {
+int functionScope(void) {
   extern int GlobalRedecl6; // still dllimport
   return GlobalRedecl6;
 }
@@ -77,22 +77,22 @@ int functionScope() {
 __declspec(dllimport) void decl(void);
 
 // Initialize use_decl with the address of the thunk.
-// CHECK-DAG: @use_decl = dso_local global void ()* @decl
+// CHECK-DAG: @use_decl = dso_local global ptr @decl
 void (*use_decl)(void) = &decl;
 
 // Import inline function.
 // MS-DAG: declare dllimport void @inlineFunc()
-// MO1-DAG: define available_externally dllimport void @inlineFunc()
+// MO1-DAG: declare dllimport void @inlineFunc()
 // GNU-DAG: declare dso_local void @inlineFunc()
-// GO1-DAG: define available_externally dso_local void @inlineFunc()
+// GO1-DAG: declare dso_local void @inlineFunc()
 __declspec(dllimport) inline void inlineFunc(void) {}
 USE(inlineFunc)
 
 // inline attributes
 // MS-DAG: declare dllimport void @noinline()
-// MO1-DAG: define available_externally dllimport void @noinline()
+// MO1-DAG: declare dllimport void @noinline()
 // GNU-DAG: declare dso_local void @noinline()
-// GO1-DAG: define available_externally dso_local void @noinline()
+// GO1-DAG: declare dso_local void @noinline()
 // CHECK-NOT: @alwaysInline()
 // O1-NOT: @alwaysInline()
 __declspec(dllimport) __attribute__((noinline)) inline void noinline(void) {}

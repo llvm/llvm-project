@@ -40,13 +40,13 @@ void Test() {
 
   constexpr U0 u0b{3.1415f};
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u0b 'const U0' constexpr listinit
-  // CHECK-NEXT:  |   |-value: Union . Union .f Float 3.141500e+00
+  // CHECK-NEXT:  |   |-value: Union .U0::(anonymous union at {{.*}}) Union .f Float 3.141500e+00
 
   constexpr U1 u1a{};
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u1a 'const U1' constexpr listinit
-  // CHECK-NEXT:  |   |-value: Union . Union .f Float 0.000000e+00
+  // CHECK-NEXT:  |   |-value: Union .U1::(anonymous union at {{.*}}) Union .f Float 0.000000e+00
 
   constexpr U1 u1b{3.1415f};
   // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u1b 'const U1' constexpr listinit
-  // CHECK-NEXT:      |-value: Union . Union .f Float 3.141500e+00
+  // CHECK-NEXT:      |-value: Union .U1::(anonymous union at {{.*}}) Union .f Float 3.141500e+00
 }

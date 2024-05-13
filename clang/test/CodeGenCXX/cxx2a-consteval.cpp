@@ -2,7 +2,8 @@
 // RUN: %clang_cc1 -emit-llvm %s -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck -check-prefix=EVAL -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=EVAL-STATIC -input-file=%t.ll %s
-// RUN: %clang_cc1 -emit-llvm %s -std=c++2a -triple x86_64-unknown-linux-gnu -o - | FileCheck -check-prefix=EVAL-FN %s
+// RUN: FileCheck -check-prefix=EVAL-FN -input-file=%t.ll %s
+//
 // RUN: %clang_cc1 -emit-llvm %s -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck -check-prefix=EXPR -input-file=%t.ll %s
 
@@ -20,8 +21,8 @@ consteval int ret7() {
 // EVAL-FN-LABEL: @_Z9test_ret7v(
 // EVAL-FN-NEXT:  entry:
 // EVAL-FN-NEXT:    [[I:%.*]] = alloca i32, align 4
-// EVAL-FN-NEXT:    store i32 7, i32* [[I]], align 4
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I]], align 4
+// EVAL-FN-NEXT:    store i32 7, ptr [[I]], align 4
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4
 // EVAL-FN-NEXT:    ret i32 [[TMP0]]
 //
 int test_ret7() {
@@ -41,7 +42,7 @@ consteval const int &retI() {
 
 // EVAL-FN-LABEL: @_Z12test_retRefIv(
 // EVAL-FN-NEXT:  entry:
-// EVAL-FN-NEXT:    ret i32* @_ZL7i_const
+// EVAL-FN-NEXT:    ret ptr @_ZL7i_const
 //
 const int &test_retRefI() {
   return retI();
@@ -49,7 +50,7 @@ const int &test_retRefI() {
 
 // EVAL-FN-LABEL: @_Z9test_retIv(
 // EVAL-FN-NEXT:  entry:
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, i32* @_ZL7i_const, align 4
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZL7i_const, align 4
 // EVAL-FN-NEXT:    ret i32 [[TMP0]]
 //
 int test_retI() {
@@ -64,7 +65,7 @@ consteval const int *retIPtr() {
 
 // EVAL-FN-LABEL: @_Z12test_retIPtrv(
 // EVAL-FN-NEXT:  entry:
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, i32* @_ZL7i_const, align 4
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZL7i_const, align 4
 // EVAL-FN-NEXT:    ret i32 [[TMP0]]
 //
 int test_retIPtr() {
@@ -73,7 +74,7 @@ int test_retIPtr() {
 
 // EVAL-FN-LABEL: @_Z13test_retPIPtrv(
 // EVAL-FN-NEXT:  entry:
-// EVAL-FN-NEXT:    ret i32* @_ZL7i_const
+// EVAL-FN-NEXT:    ret ptr @_ZL7i_const
 //
 const int *test_retPIPtr() {
   return retIPtr();
@@ -87,7 +88,7 @@ consteval const int &&retIRRef() {
 
 // EVAL-FN-LABEL: @_Z13test_retIRRefv(
 // EVAL-FN-NEXT:  entry:
-// EVAL-FN-NEXT:    ret i32* @_ZL7i_const
+// EVAL-FN-NEXT:    ret ptr @_ZL7i_const
 //
 const int &&test_retIRRef() {
   return static_cast<const int &&>(retIRRef());
@@ -95,7 +96,7 @@ const int &&test_retIRRef() {
 
 // EVAL-FN-LABEL: @_Z14test_retIRRefIv(
 // EVAL-FN-NEXT:  entry:
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, i32* @_ZL7i_const, align 4
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZL7i_const, align 4
 // EVAL-FN-NEXT:    ret i32 [[TMP0]]
 //
 int test_retIRRefI() {
@@ -117,12 +118,12 @@ consteval Agg retAgg() {
 // EVAL-FN-NEXT:  entry:
 // EVAL-FN-NEXT:    [[B:%.*]] = alloca i64, align 8
 // EVAL-FN-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_AGG:%.*]], align 8
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGG]], %struct.Agg* [[REF_TMP]], i32 0, i32 0
-// EVAL-FN-NEXT:    store i32 13, i32* [[TMP0]], align 8
-// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGG]], %struct.Agg* [[REF_TMP]], i32 0, i32 1
-// EVAL-FN-NEXT:    store i64 17, i64* [[TMP1]], align 8
-// EVAL-FN-NEXT:    store i64 17, i64* [[B]], align 8
-// EVAL-FN-NEXT:    [[TMP2:%.*]] = load i64, i64* [[B]], align 8
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 0
+// EVAL-FN-NEXT:    store i32 13, ptr [[TMP0]], align 8
+// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 1
+// EVAL-FN-NEXT:    store i64 17, ptr [[TMP1]], align 8
+// EVAL-FN-NEXT:    store i64 17, ptr [[B]], align 8
+// EVAL-FN-NEXT:    [[TMP2:%.*]] = load i64, ptr [[B]], align 8
 // EVAL-FN-NEXT:    ret i64 [[TMP2]]
 //
 long test_retAgg() {
@@ -144,12 +145,12 @@ consteval const Agg &retRefAgg() {
 // EVAL-FN-NEXT:  entry:
 // EVAL-FN-NEXT:    [[B:%.*]] = alloca i64, align 8
 // EVAL-FN-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_AGG:%.*]], align 8
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGG]], %struct.Agg* [[REF_TMP]], i32 0, i32 0
-// EVAL-FN-NEXT:    store i32 13, i32* [[TMP0]], align 8
-// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGG]], %struct.Agg* [[REF_TMP]], i32 0, i32 1
-// EVAL-FN-NEXT:    store i64 17, i64* [[TMP1]], align 8
-// EVAL-FN-NEXT:    store i64 17, i64* [[B]], align 8
-// EVAL-FN-NEXT:    [[TMP2:%.*]] = load i64, i64* [[B]], align 8
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 0
+// EVAL-FN-NEXT:    store i32 13, ptr [[TMP0]], align 8
+// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 1
+// EVAL-FN-NEXT:    store i64 17, ptr [[TMP1]], align 8
+// EVAL-FN-NEXT:    store i64 17, ptr [[B]], align 8
+// EVAL-FN-NEXT:    [[TMP2:%.*]] = load i64, ptr [[B]], align 8
 // EVAL-FN-NEXT:    ret i64 [[TMP2]]
 //
 long test_retRefAgg() {
@@ -167,12 +168,12 @@ consteval Agg is_const() {
 // EVAL-FN-NEXT:  entry:
 // EVAL-FN-NEXT:    [[B:%.*]] = alloca i64, align 8
 // EVAL-FN-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_AGG:%.*]], align 8
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGG]], %struct.Agg* [[REF_TMP]], i32 0, i32 0
-// EVAL-FN-NEXT:    store i32 5, i32* [[TMP0]], align 8
-// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGG]], %struct.Agg* [[REF_TMP]], i32 0, i32 1
-// EVAL-FN-NEXT:    store i64 19, i64* [[TMP1]], align 8
-// EVAL-FN-NEXT:    store i64 19, i64* [[B]], align 8
-// EVAL-FN-NEXT:    [[TMP2:%.*]] = load i64, i64* [[B]], align 8
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 0
+// EVAL-FN-NEXT:    store i32 5, ptr [[TMP0]], align 8
+// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 1
+// EVAL-FN-NEXT:    store i64 19, ptr [[TMP1]], align 8
+// EVAL-FN-NEXT:    store i64 19, ptr [[B]], align 8
+// EVAL-FN-NEXT:    [[TMP2:%.*]] = load i64, ptr [[B]], align 8
 // EVAL-FN-NEXT:    ret i64 [[TMP2]]
 //
 long test_is_const() {
@@ -192,16 +193,16 @@ struct AggCtor {
 // EVAL-FN-NEXT:  entry:
 // EVAL-FN-NEXT:    [[I:%.*]] = alloca i32, align 4
 // EVAL-FN-NEXT:    [[C:%.*]] = alloca [[STRUCT_AGGCTOR:%.*]], align 8
-// EVAL-FN-NEXT:    store i32 2, i32* [[I]], align 4
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], %struct.AggCtor* [[C]], i32 0, i32 0
-// EVAL-FN-NEXT:    store i32 4, i32* [[TMP0]], align 8
-// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], %struct.AggCtor* [[C]], i32 0, i32 1
-// EVAL-FN-NEXT:    store i64 10, i64* [[TMP1]], align 8
-// EVAL-FN-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], %struct.AggCtor* [[C]], i32 0, i32 0
-// EVAL-FN-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A]], align 8
+// EVAL-FN-NEXT:    store i32 2, ptr [[I]], align 4
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 0
+// EVAL-FN-NEXT:    store i32 4, ptr [[TMP0]], align 8
+// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 1
+// EVAL-FN-NEXT:    store i64 10, ptr [[TMP1]], align 8
+// EVAL-FN-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 0
+// EVAL-FN-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 8
 // EVAL-FN-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
-// EVAL-FN-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], %struct.AggCtor* [[C]], i32 0, i32 1
-// EVAL-FN-NEXT:    [[TMP3:%.*]] = load i64, i64* [[B]], align 8
+// EVAL-FN-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 1
+// EVAL-FN-NEXT:    [[TMP3:%.*]] = load i64, ptr [[B]], align 8
 // EVAL-FN-NEXT:    [[ADD:%.*]] = add nsw i64 [[CONV]], [[TMP3]]
 // EVAL-FN-NEXT:    ret i64 [[ADD]]
 //
@@ -209,4 +210,68 @@ long test_AggCtor() {
   const int i = 2;
   AggCtor C(i);
   return C.a + C.b;
+}
+
+struct UserConv {
+  consteval operator int() const noexcept { return 42; }
+};
+
+// EVAL-FN-LABEL: @_Z13test_UserConvv(
+// EVAL-FN-NEXT:  entry:
+// EVAL-FN-NEXT:    ret i32 42
+//
+int test_UserConv() {
+  return UserConv();
+}
+
+// EVAL-FN-LABEL: @_Z28test_UserConvOverload_helperi(
+// EVAL-FN-NEXT:  entry:
+// EVAL-FN-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// EVAL-FN-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// EVAL-FN-NEXT:    ret i32 [[TMP0]]
+//
+int test_UserConvOverload_helper(int a) { return a; }
+
+// EVAL-FN-LABEL: @_Z21test_UserConvOverloadv(
+// EVAL-FN-NEXT:  entry:
+// EVAL-FN-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z28test_UserConvOverload_helperi(i32 noundef 42)
+// EVAL-FN-NEXT:    ret i32 [[CALL]]
+//
+int test_UserConvOverload() {
+  return test_UserConvOverload_helper(UserConv());
+}
+
+consteval int test_UserConvOverload_helper_ceval(int a) { return a; }
+
+// EVAL-FN-LABEL: @_Z27test_UserConvOverload_cevalv(
+// EVAL-FN-NEXT:  entry:
+// EVAL-FN-NEXT:    ret i32 42
+//
+int test_UserConvOverload_ceval() {
+  return test_UserConvOverload_helper_ceval(UserConv());
+}
+
+consteval void void_test() {}
+void void_call() { // EVAL-FN-LABEL: define {{.*}} @_Z9void_call
+  // EVAL-FN-NOT: call
+  void_test();
+  // EVAL-FN: {{^}}}
+}
+
+
+namespace GH82154 {
+struct S1 { consteval S1(int) {} };
+struct S3 { constexpr S3(int) {} };
+
+void f() {
+    struct S2 {
+        S1 s = 0;
+        S3 s2 = 0;
+    };
+    S2 s;
+    // EVAL-FN-LABEL: define {{.*}} void @_ZZN7GH821541fEvEN2S2C2Ev
+    // EVAL-FN-NOT: call void @_ZN7GH821542S1C2Ei
+    // EVAL-FN:     call void @_ZN7GH821542S3C2Ei
+}
 }

@@ -16,8 +16,12 @@
 namespace llvm {
   class BitcodeModule;
   template <typename T> class Expected;
+  template <typename T> class IntrusiveRefCntPtr;
   class Module;
   class MemoryBufferRef;
+  namespace vfs {
+  class FileSystem;
+  } // namespace vfs
 }
 
 namespace clang {
@@ -26,6 +30,7 @@ namespace clang {
   class CodeGenOptions;
   class TargetOptions;
   class LangOptions;
+  class BackendConsumer;
 
   enum BackendAction {
     Backend_EmitAssembly,  ///< Emit native assembly files
@@ -40,10 +45,15 @@ namespace clang {
                          const CodeGenOptions &CGOpts,
                          const TargetOptions &TOpts, const LangOptions &LOpts,
                          StringRef TDesc, llvm::Module *M, BackendAction Action,
-                         std::unique_ptr<raw_pwrite_stream> OS);
+                         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                         std::unique_ptr<raw_pwrite_stream> OS,
+                         BackendConsumer *BC = nullptr);
 
   void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
                     llvm::MemoryBufferRef Buf);
+
+  void EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
+                   DiagnosticsEngine &Diags);
 }
 
 #endif

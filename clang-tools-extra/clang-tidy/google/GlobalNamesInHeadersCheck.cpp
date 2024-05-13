@@ -14,28 +14,12 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace readability {
+namespace clang::tidy::google::readability {
 
 GlobalNamesInHeadersCheck::GlobalNamesInHeadersCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
-          "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
-  if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                  HeaderFileExtensions,
-                                  utils::defaultFileExtensionDelimiters())) {
-    this->configurationDiag("Invalid header file extension: '%0'")
-        << RawStringHeaderFileExtensions;
-  }
-}
-
-void GlobalNamesInHeadersCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
-}
+      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void GlobalNamesInHeadersCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
@@ -74,7 +58,4 @@ void GlobalNamesInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
        "using declarations in the global namespace in headers are prohibited");
 }
 
-} // namespace readability
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::readability

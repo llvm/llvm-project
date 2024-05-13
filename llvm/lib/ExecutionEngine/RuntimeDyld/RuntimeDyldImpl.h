@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
@@ -23,9 +22,10 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <deque>
 #include <map>
 #include <system_error>
@@ -116,22 +116,22 @@ public:
 /// linker.
 class RelocationEntry {
 public:
-  /// SectionID - the section this relocation points to.
-  unsigned SectionID;
-
   /// Offset - offset into the section.
   uint64_t Offset;
-
-  /// RelType - relocation type.
-  uint32_t RelType;
 
   /// Addend - the relocation addend encoded in the instruction itself.  Also
   /// used to make a relocation section relative instead of symbol relative.
   int64_t Addend;
 
+  /// SectionID - the section this relocation points to.
+  unsigned SectionID;
+
+  /// RelType - relocation type.
+  uint32_t RelType;
+
   struct SectionPair {
-      uint32_t SectionA;
-      uint32_t SectionB;
+    uint32_t SectionA;
+    uint32_t SectionB;
   };
 
   /// SymOffset - Section offset of the relocation entry's symbol (used for GOT
@@ -141,36 +141,36 @@ public:
     SectionPair Sections;
   };
 
-  /// True if this is a PCRel relocation (MachO specific).
-  bool IsPCRel;
-
   /// The size of this relocation (MachO specific).
   unsigned Size;
 
+  /// True if this is a PCRel relocation (MachO specific).
+  bool IsPCRel : 1;
+
   // ARM (MachO and COFF) specific.
-  bool IsTargetThumbFunc = false;
+  bool IsTargetThumbFunc : 1;
 
   RelocationEntry(unsigned id, uint64_t offset, uint32_t type, int64_t addend)
-      : SectionID(id), Offset(offset), RelType(type), Addend(addend),
-        SymOffset(0), IsPCRel(false), Size(0), IsTargetThumbFunc(false) {}
+      : Offset(offset), Addend(addend), SectionID(id), RelType(type),
+        SymOffset(0), Size(0), IsPCRel(false), IsTargetThumbFunc(false) {}
 
   RelocationEntry(unsigned id, uint64_t offset, uint32_t type, int64_t addend,
                   uint64_t symoffset)
-      : SectionID(id), Offset(offset), RelType(type), Addend(addend),
-        SymOffset(symoffset), IsPCRel(false), Size(0),
+      : Offset(offset), Addend(addend), SectionID(id), RelType(type),
+        SymOffset(symoffset), Size(0), IsPCRel(false),
         IsTargetThumbFunc(false) {}
 
   RelocationEntry(unsigned id, uint64_t offset, uint32_t type, int64_t addend,
                   bool IsPCRel, unsigned Size)
-      : SectionID(id), Offset(offset), RelType(type), Addend(addend),
-        SymOffset(0), IsPCRel(IsPCRel), Size(Size), IsTargetThumbFunc(false) {}
+      : Offset(offset), Addend(addend), SectionID(id), RelType(type),
+        SymOffset(0), Size(Size), IsPCRel(IsPCRel), IsTargetThumbFunc(false) {}
 
   RelocationEntry(unsigned id, uint64_t offset, uint32_t type, int64_t addend,
                   unsigned SectionA, uint64_t SectionAOffset, unsigned SectionB,
                   uint64_t SectionBOffset, bool IsPCRel, unsigned Size)
-      : SectionID(id), Offset(offset), RelType(type),
-        Addend(SectionAOffset - SectionBOffset + addend), IsPCRel(IsPCRel),
-        Size(Size), IsTargetThumbFunc(false) {
+      : Offset(offset), Addend(SectionAOffset - SectionBOffset + addend),
+        SectionID(id), RelType(type), Size(Size), IsPCRel(IsPCRel),
+        IsTargetThumbFunc(false) {
     Sections.SectionA = SectionA;
     Sections.SectionB = SectionB;
   }
@@ -179,9 +179,9 @@ public:
                   unsigned SectionA, uint64_t SectionAOffset, unsigned SectionB,
                   uint64_t SectionBOffset, bool IsPCRel, unsigned Size,
                   bool IsTargetThumbFunc)
-      : SectionID(id), Offset(offset), RelType(type),
-        Addend(SectionAOffset - SectionBOffset + addend), IsPCRel(IsPCRel),
-        Size(Size), IsTargetThumbFunc(IsTargetThumbFunc) {
+      : Offset(offset), Addend(SectionAOffset - SectionBOffset + addend),
+        SectionID(id), RelType(type), Size(Size), IsPCRel(IsPCRel),
+        IsTargetThumbFunc(IsTargetThumbFunc) {
     Sections.SectionA = SectionA;
     Sections.SectionB = SectionB;
   }
@@ -301,7 +301,7 @@ protected:
   // won't be interleaved between modules.  It is also used in mapSectionAddress
   // and resolveRelocations to protect write access to internal data structures.
   //
-  // loadObject may be called on the same thread during the handling of of
+  // loadObject may be called on the same thread during the handling of
   // processRelocations, and that's OK.  The handling of the relocation lists
   // is written in such a way as to work correctly if new elements are added to
   // the end of the list while the list is being processed.
@@ -312,24 +312,30 @@ protected:
   NotifyStubEmittedFunction NotifyStubEmitted;
 
   virtual unsigned getMaxStubSize() const = 0;
-  virtual unsigned getStubAlignment() = 0;
+  virtual Align getStubAlignment() = 0;
 
   bool HasError;
   std::string ErrorStr;
 
   void writeInt16BE(uint8_t *Addr, uint16_t Value) {
-    llvm::support::endian::write<uint16_t, llvm::support::unaligned>(
-        Addr, Value, IsTargetLittleEndian ? support::little : support::big);
+    llvm::support::endian::write<uint16_t>(Addr, Value,
+                                           IsTargetLittleEndian
+                                               ? llvm::endianness::little
+                                               : llvm::endianness::big);
   }
 
   void writeInt32BE(uint8_t *Addr, uint32_t Value) {
-    llvm::support::endian::write<uint32_t, llvm::support::unaligned>(
-        Addr, Value, IsTargetLittleEndian ? support::little : support::big);
+    llvm::support::endian::write<uint32_t>(Addr, Value,
+                                           IsTargetLittleEndian
+                                               ? llvm::endianness::little
+                                               : llvm::endianness::big);
   }
 
   void writeInt64BE(uint8_t *Addr, uint64_t Value) {
-    llvm::support::endian::write<uint64_t, llvm::support::unaligned>(
-        Addr, Value, IsTargetLittleEndian ? support::little : support::big);
+    llvm::support::endian::write<uint64_t>(Addr, Value,
+                                           IsTargetLittleEndian
+                                               ? llvm::endianness::little
+                                               : llvm::endianness::big);
   }
 
   virtual void setMipsABI(const ObjectFile &Obj) {
@@ -417,10 +423,10 @@ protected:
 
   // Compute an upper bound of the memory that is required to load all
   // sections
-  Error computeTotalAllocSize(const ObjectFile &Obj,
-                              uint64_t &CodeSize, uint32_t &CodeAlign,
-                              uint64_t &RODataSize, uint32_t &RODataAlign,
-                              uint64_t &RWDataSize, uint32_t &RWDataAlign);
+  Error computeTotalAllocSize(const ObjectFile &Obj, uint64_t &CodeSize,
+                              Align &CodeAlign, uint64_t &RODataSize,
+                              Align &RODataAlign, uint64_t &RWDataSize,
+                              Align &RWDataAlign);
 
   // Compute GOT size
   unsigned computeGOTSize(const ObjectFile &Obj);
@@ -434,6 +440,10 @@ protected:
 
   // Return size of Global Offset Table (GOT) entry
   virtual size_t getGOTEntrySize() { return 0; }
+
+  // Hook for the subclasses to do further processing when a symbol is added to
+  // the global symbol table. This function may modify the symbol table entry.
+  virtual void processNewSymbol(const SymbolRef &ObjSymbol, SymbolTableEntry& Entry) {}
 
   // Return true if the relocation R may require allocating a GOT entry.
   virtual bool relocationNeedsGot(const RelocationRef &R) const {
@@ -527,7 +537,7 @@ public:
   std::map<StringRef, JITEvaluatedSymbol> getSymbolTable() const {
     std::map<StringRef, JITEvaluatedSymbol> Result;
 
-    for (auto &KV : GlobalSymbolTable) {
+    for (const auto &KV : GlobalSymbolTable) {
       auto SectionID = KV.second.getSectionID();
       uint64_t SectionAddr = getSectionLoadAddress(SectionID);
       Result[KV.first()] =

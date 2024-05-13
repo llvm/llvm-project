@@ -6,30 +6,23 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: no-exceptions
-
-// This test requires the dylib support introduced in D92214.
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.14
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
 
 // <format>
 
 // constexpr size_t next_arg_id();
 
 #include <format>
+
 #include <cassert>
+#include <cstring>
+#include <string_view>
 
 #include "test_macros.h"
 
 constexpr bool test() {
-  std::format_parse_context context("");
-  for (size_t i = 0; i < 10; ++i)
+  std::format_parse_context context("", 10);
+  for (std::size_t i = 0; i < 10; ++i)
     assert(i == context.next_arg_id());
 
   return true;
@@ -40,11 +33,10 @@ void test_exception() {
   context.check_arg_id(0);
 
   try {
-    context.next_arg_id();
+    TEST_IGNORE_NODISCARD context.next_arg_id();
     assert(false);
-  } catch (const std::format_error& e) {
-    assert(strcmp(e.what(), "Using automatic argument numbering in manual "
-                            "argument numbering mode") == 0);
+  } catch ([[maybe_unused]] const std::format_error& e) {
+    LIBCPP_ASSERT(std::strcmp(e.what(), "Using automatic argument numbering in manual argument numbering mode") == 0);
     return;
   }
   assert(false);

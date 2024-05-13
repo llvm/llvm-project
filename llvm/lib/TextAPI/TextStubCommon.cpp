@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implememts common Text Stub YAML mappings.
+// Implements common Text Stub YAML mappings.
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,8 +49,8 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
   assert((!Ctx || Ctx->FileKind != FileType::Invalid) &&
          "File type is not set in context");
 
-  if (Ctx && Ctx->FileKind == TBD_V3 && Values.count(PlatformKind::macOS) &&
-      Values.count(PlatformKind::macCatalyst)) {
+  if (Ctx && Ctx->FileKind == TBD_V3 && Values.count(PLATFORM_MACOS) &&
+      Values.count(PLATFORM_MACCATALYST)) {
     OS << "zippered";
     return;
   }
@@ -60,31 +60,31 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
   default:
     llvm_unreachable("unexpected platform");
     break;
-  case PlatformKind::macOS:
+  case PLATFORM_MACOS:
     OS << "macosx";
     break;
-  case PlatformKind::iOSSimulator:
-    LLVM_FALLTHROUGH;
-  case PlatformKind::iOS:
+  case PLATFORM_IOSSIMULATOR:
+    [[fallthrough]];
+  case PLATFORM_IOS:
     OS << "ios";
     break;
-  case PlatformKind::watchOSSimulator:
-    LLVM_FALLTHROUGH;
-  case PlatformKind::watchOS:
+  case PLATFORM_WATCHOSSIMULATOR:
+    [[fallthrough]];
+  case PLATFORM_WATCHOS:
     OS << "watchos";
     break;
-  case PlatformKind::tvOSSimulator:
-    LLVM_FALLTHROUGH;
-  case PlatformKind::tvOS:
+  case PLATFORM_TVOSSIMULATOR:
+    [[fallthrough]];
+  case PLATFORM_TVOS:
     OS << "tvos";
     break;
-  case PlatformKind::bridgeOS:
+  case PLATFORM_BRIDGEOS:
     OS << "bridgeos";
     break;
-  case PlatformKind::macCatalyst:
-    OS << "iosmac";
+  case PLATFORM_MACCATALYST:
+    OS << "maccatalyst";
     break;
-  case PlatformKind::driverKit:
+  case PLATFORM_DRIVERKIT:
     OS << "driverkit";
     break;
   }
@@ -98,28 +98,29 @@ StringRef ScalarTraits<PlatformSet>::input(StringRef Scalar, void *IO,
 
   if (Scalar == "zippered") {
     if (Ctx && Ctx->FileKind == FileType::TBD_V3) {
-      Values.insert(PlatformKind::macOS);
-      Values.insert(PlatformKind::macCatalyst);
+      Values.insert(PLATFORM_MACOS);
+      Values.insert(PLATFORM_MACCATALYST);
       return {};
     }
     return "invalid platform";
   }
 
-  auto Platform = StringSwitch<PlatformKind>(Scalar)
-                      .Case("unknown", PlatformKind::unknown)
-                      .Case("macosx", PlatformKind::macOS)
-                      .Case("ios", PlatformKind::iOS)
-                      .Case("watchos", PlatformKind::watchOS)
-                      .Case("tvos", PlatformKind::tvOS)
-                      .Case("bridgeos", PlatformKind::bridgeOS)
-                      .Case("iosmac", PlatformKind::macCatalyst)
-                      .Default(PlatformKind::unknown);
+  auto Platform = StringSwitch<PlatformType>(Scalar)
+                      .Case("macosx", PLATFORM_MACOS)
+                      .Case("ios", PLATFORM_IOS)
+                      .Case("watchos", PLATFORM_WATCHOS)
+                      .Case("tvos", PLATFORM_TVOS)
+                      .Case("bridgeos", PLATFORM_BRIDGEOS)
+                      .Case("iosmac", PLATFORM_MACCATALYST)
+                      .Case("maccatalyst", PLATFORM_MACCATALYST)
+                      .Case("driverkit", PLATFORM_DRIVERKIT)
+                      .Default(PLATFORM_UNKNOWN);
 
-  if (Platform == PlatformKind::macCatalyst)
+  if (Platform == PLATFORM_MACCATALYST)
     if (Ctx && Ctx->FileKind != FileType::TBD_V3)
       return "invalid platform";
 
-  if (Platform == PlatformKind::unknown)
+  if (Platform == PLATFORM_UNKNOWN)
     return "unknown platform";
 
   Values.insert(Platform);
@@ -216,17 +217,10 @@ QuotingType ScalarTraits<SwiftVersion>::mustQuote(StringRef) {
   return QuotingType::None;
 }
 
-void ScalarTraits<UUID>::output(const UUID &Value, void *, raw_ostream &OS) {
-  OS << Value.first << ": " << Value.second;
-}
+void ScalarTraits<UUID>::output(const UUID &Value, void *, raw_ostream &OS) {}
+
 StringRef ScalarTraits<UUID>::input(StringRef Scalar, void *, UUID &Value) {
-  auto Split = Scalar.split(':');
-  auto Arch = Split.first.trim();
-  auto UUID = Split.second.trim();
-  if (UUID.empty())
-    return "invalid uuid string pair";
-  Value.second = std::string(UUID);
-  Value.first = Target{getArchitectureFromName(Arch), PlatformKind::unknown};
+  Value = {};
   return {};
 }
 

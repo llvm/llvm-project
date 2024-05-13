@@ -41,9 +41,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "kdp-remote"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   // Constructors and Destructors
   ProcessKDP(lldb::TargetSP target_sp, lldb::ListenerSP listener);
@@ -56,17 +56,17 @@ public:
   lldb_private::CommandObject *GetPluginCommandObject() override;
 
   // Creating a new process, or attaching to an existing one
-  lldb_private::Status WillLaunch(lldb_private::Module *module) override;
+  lldb_private::Status DoWillLaunch(lldb_private::Module *module) override;
 
   lldb_private::Status
   DoLaunch(lldb_private::Module *exe_module,
            lldb_private::ProcessLaunchInfo &launch_info) override;
 
-  lldb_private::Status WillAttachToProcessWithID(lldb::pid_t pid) override;
+  lldb_private::Status DoWillAttachToProcessWithID(lldb::pid_t pid) override;
 
   lldb_private::Status
-  WillAttachToProcessWithName(const char *process_name,
-                              bool wait_for_launch) override;
+  DoWillAttachToProcessWithName(const char *process_name,
+                                bool wait_for_launch) override;
 
   lldb_private::Status DoConnectRemote(llvm::StringRef remote_url) override;
 
@@ -85,9 +85,7 @@ public:
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // Process Control
   lldb_private::Status WillResume() override;
@@ -125,13 +123,6 @@ public:
 
   lldb_private::Status
   DisableBreakpointSite(lldb_private::BreakpointSite *bp_site) override;
-
-  // Process Watchpoints
-  lldb_private::Status EnableWatchpoint(lldb_private::Watchpoint *wp,
-                                        bool notify = true) override;
-
-  lldb_private::Status DisableWatchpoint(lldb_private::Watchpoint *wp,
-                                         bool notify = true) override;
 
   CommunicationKDP &GetCommunication() { return m_comm; }
 
@@ -172,7 +163,7 @@ protected:
   CommunicationKDP m_comm;
   lldb_private::Broadcaster m_async_broadcaster;
   lldb_private::HostThread m_async_thread;
-  lldb_private::ConstString m_dyld_plugin_name;
+  llvm::StringRef m_dyld_plugin_name;
   lldb::addr_t m_kernel_load_addr;
   lldb::CommandObjectSP m_command_sp;
   lldb::ThreadWP m_kernel_thread_wp;
@@ -181,7 +172,7 @@ protected:
 
   void StopAsyncThread();
 
-  static void *AsyncThread(void *arg);
+  void *AsyncThread();
 
 private:
   // For ProcessKDP only

@@ -1,11 +1,10 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,GFX89 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; GCN-LABEL: {{^}}v_mul_i16:
-; SI: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
-; SI: v_and_b32_e32 v{{[0-9]+}}, [[K]]
-; SI: v_and_b32_e32 v{{[0-9]+}}, [[K]]
+; SI: v_and_b32_e32 v{{[0-9]+}}, 0xffff, v{{[0-9]+}}
+; SI: v_and_b32_e32 v{{[0-9]+}}, 0xffff, v{{[0-9]+}}
 ; SI: v_mul_u32_u24
 
 ; GFX89: v_mul_lo_u16_e32 v0, v0, v1
@@ -18,7 +17,7 @@ define i16 @v_mul_i16(i16 %a, i16 %b) {
 ; GCN: s_mul_i16
 define amdgpu_kernel void @s_mul_i16(i16 %a, i16 %b) {
   %r.val = mul i16 %a, %b
-  store volatile i16 %r.val, i16 addrspace(1)* null
+  store volatile i16 %r.val, ptr addrspace(1) null
   ret void
 }
 
@@ -26,14 +25,14 @@ define amdgpu_kernel void @s_mul_i16(i16 %a, i16 %b) {
 ; GCN-LABEL: {{^}}v_mul_i16_uniform_load:
 ; GCN: v_mul_lo_u32
 define amdgpu_kernel void @v_mul_i16_uniform_load(
-    i16 addrspace(1)* %r,
-    i16 addrspace(1)* %a,
-    i16 addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
 entry:
-  %a.val = load i16, i16 addrspace(1)* %a
-  %b.val = load i16, i16 addrspace(1)* %b
+  %a.val = load i16, ptr addrspace(1) %a
+  %b.val = load i16, ptr addrspace(1) %b
   %r.val = mul i16 %a.val, %b.val
-  store i16 %r.val, i16 addrspace(1)* %r
+  store i16 %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -80,8 +79,8 @@ define <3 x i16> @v_mul_v3i16(<3 x i16> %a, <3 x i16> %b) {
 ; SI: v_mul_u32_u24
 
 ; VI: v_mul_lo_u16_sdwa
-; VI: v_mul_lo_u16_e32
 ; VI: v_mul_lo_u16_sdwa
+; VI: v_mul_lo_u16_e32
 ; VI: v_mul_lo_u16_e32
 ; VI: v_or_b32_e32
 ; VI: v_or_b32_e32

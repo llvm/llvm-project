@@ -1,3 +1,5 @@
+// XFAIL: system-aix
+
 // REQUIRES: zlib
 
 // RUN: %clang -### -fintegrated-as -Wa,-compress-debug-sections -c %s 2>&1 | FileCheck -check-prefix CHECK-_COMPRESS_DEBUG_SECTIONS %s
@@ -26,14 +28,10 @@
 // RUN: %clang -### -target x86_64-unknown-linux-gnu -gz=zlib -x assembler %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
 // RUN: %clang -### -target x86_64-unknown-linux-gnu -gz=zlib %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
 // RUN: %clang -### -target x86_64-unknown-freebsd -gz=zlib %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
+// RUN: %clang -### -target x86_64-unknown-fuchsia -gz=zlib %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
 // CHECK-OPT_GZ_EQ_ZLIB: {{.* "-cc1(as)?".* "--compress-debug-sections=zlib"}}
 // CHECK-OPT_GZ_EQ_ZLIB: "--compress-debug-sections=zlib"
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu -gz=zlib-gnu -x assembler %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB_GNU %s
-// RUN: %clang -### -target x86_64-unknown-linux-gnu -gz=zlib-gnu %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB_GNU %s
-// CHECK-OPT_GZ_EQ_ZLIB_GNU: {{.* "-cc1(as)?".* "--compress-debug-sections=zlib-gnu"}}
-// CHECK-OPT_GZ_EQ_ZLIB_GNU: "--compress-debug-sections=zlib-gnu"
-
-// RUN: %clang -### -fintegrated-as -gz=invalid -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
-// RUN: %clang -### -fintegrated-as -gz=invalid -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
-// CHECK-OPT_GZ_EQ_INVALID: error: unsupported argument 'invalid' to option 'gz='
+// RUN: not %clang -### -fintegrated-as -gz=invalid -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
+// RUN: not %clang -### -fintegrated-as -gz=invalid -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
+// CHECK-OPT_GZ_EQ_INVALID: error: unsupported argument 'invalid' to option '-gz='

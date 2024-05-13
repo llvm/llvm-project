@@ -64,19 +64,30 @@ public:
 
   const Address &GetAddress() const { return m_address; }
 
-  const char *GetMnemonic(const ExecutionContext *exe_ctx) {
+  const char *GetMnemonic(const ExecutionContext *exe_ctx,
+                          bool markup = false) {
     CalculateMnemonicOperandsAndCommentIfNeeded(exe_ctx);
-    return m_opcode_name.c_str();
+    return markup ? m_markup_opcode_name.c_str() : m_opcode_name.c_str();
   }
 
-  const char *GetOperands(const ExecutionContext *exe_ctx) {
+  const char *GetOperands(const ExecutionContext *exe_ctx,
+                          bool markup = false) {
     CalculateMnemonicOperandsAndCommentIfNeeded(exe_ctx);
-    return m_mnemonics.c_str();
+    return markup ? m_markup_mnemonics.c_str() : m_mnemonics.c_str();
   }
 
   const char *GetComment(const ExecutionContext *exe_ctx) {
     CalculateMnemonicOperandsAndCommentIfNeeded(exe_ctx);
     return m_comment.c_str();
+  }
+
+  /// \return
+  ///    The control flow kind of this instruction, or
+  ///    eInstructionControlFlowKindUnknown if the instruction
+  ///    can't be classified.
+  virtual lldb::InstructionControlFlowKind
+  GetControlFlowKind(const ExecutionContext *exe_ctx) {
+    return lldb::eInstructionControlFlowKindUnknown;
   }
 
   virtual void
@@ -104,6 +115,9 @@ public:
   ///
   /// \param[in] show_bytes
   ///     Whether the bytes of the assembly instruction should be printed.
+  ///
+  /// \param[in] show_control_flow_kind
+  ///     Whether the control flow kind of the instruction should be printed.
   ///
   /// \param[in] max_opcode_byte_size
   ///     The size (in bytes) of the largest instruction in the list that
@@ -140,7 +154,8 @@ public:
   ///     so this method can properly align the instruction opcodes.
   ///     May be 0 to indicate no indentation/alignment of the opcodes.
   virtual void Dump(Stream *s, uint32_t max_opcode_byte_size, bool show_address,
-                    bool show_bytes, const ExecutionContext *exe_ctx,
+                    bool show_bytes, bool show_control_flow_kind,
+                    const ExecutionContext *exe_ctx,
                     const SymbolContext *sym_ctx,
                     const SymbolContext *prev_sym_ctx,
                     const FormatEntity::Entry *disassembly_addr_format,
@@ -149,6 +164,10 @@ public:
   virtual bool DoesBranch() = 0;
 
   virtual bool HasDelaySlot();
+
+  virtual bool IsLoad() = 0;
+
+  virtual bool IsAuthenticated() = 0;
 
   bool CanSetBreakpoint ();
 
@@ -159,14 +178,14 @@ public:
   virtual void SetDescription(llvm::StringRef) {
   } // May be overridden in sub-classes that have descriptions.
 
-  lldb::OptionValueSP ReadArray(FILE *in_file, Stream *out_stream,
+  lldb::OptionValueSP ReadArray(FILE *in_file, Stream &out_stream,
                                 OptionValue::Type data_type);
 
-  lldb::OptionValueSP ReadDictionary(FILE *in_file, Stream *out_stream);
+  lldb::OptionValueSP ReadDictionary(FILE *in_file, Stream &out_stream);
 
   bool DumpEmulation(const ArchSpec &arch);
 
-  virtual bool TestEmulation(Stream *stream, const char *test_file_name);
+  virtual bool TestEmulation(Stream &stream, const char *test_file_name);
 
   bool Emulate(const ArchSpec &arch, uint32_t evaluate_options, void *baton,
                EmulateInstruction::ReadMemoryCallback read_mem_callback,
@@ -209,6 +228,9 @@ public:
 
   virtual bool IsCall() { return false; }
 
+  static const char *GetNameForInstructionControlFlowKind(
+      lldb::InstructionControlFlowKind instruction_control_flow_kind);
+
 protected:
   Address m_address; // The section offset address of this instruction
                      // We include an address class in the Instruction class to
@@ -224,7 +246,9 @@ private:
 protected:
   Opcode m_opcode; // The opcode for this instruction
   std::string m_opcode_name;
+  std::string m_markup_opcode_name;
   std::string m_mnemonics;
+  std::string m_markup_mnemonics;
   std::string m_comment;
   bool m_calculated_strings;
 
@@ -316,7 +340,7 @@ public:
   void Append(lldb::InstructionSP &inst_sp);
 
   void Dump(Stream *s, bool show_address, bool show_bytes,
-            const ExecutionContext *exe_ctx);
+            bool show_control_flow_kind, const ExecutionContext *exe_ctx);
 
 private:
   typedef std::vector<lldb::InstructionSP> collection;
@@ -335,6 +359,10 @@ public:
   bool DoesBranch() override;
 
   bool HasDelaySlot() override;
+
+  bool IsLoad() override;
+
+  bool IsAuthenticated() override;
 
   void CalculateMnemonicOperandsAndComment(
       const ExecutionContext *exe_ctx) override {
@@ -367,7 +395,8 @@ public:
     eOptionMarkPCSourceLine = (1u << 2), // Mark the source line that contains
                                          // the current PC (mixed mode only)
     eOptionMarkPCAddress =
-        (1u << 3) // Mark the disassembly line the contains the PC
+        (1u << 3), // Mark the disassembly line the contains the PC
+    eOptionShowControlFlowKind = (1u << 4),
   };
 
   enum HexImmediateStyle {
@@ -454,10 +483,10 @@ protected:
 
   struct SourceLine {
     FileSpec file;
-    uint32_t line;
-    uint32_t column;
+    uint32_t line = LLDB_INVALID_LINE_NUMBER;
+    uint32_t column = 0;
 
-    SourceLine() : file(), line(LLDB_INVALID_LINE_NUMBER), column(0) {}
+    SourceLine() = default;
 
     bool operator==(const SourceLine &rhs) const {
       return file == rhs.file && line == rhs.line && rhs.column == column;
@@ -476,14 +505,12 @@ protected:
     // index of the "current" source line, if we want to highlight that when
     // displaying the source lines.  (as opposed to the surrounding source
     // lines provided to give context)
-    size_t current_source_line;
+    size_t current_source_line = -1;
 
     // Whether to print a blank line at the end of the source lines.
-    bool print_source_context_end_eol;
+    bool print_source_context_end_eol = true;
 
-    SourceLinesToDisplay()
-        : lines(), current_source_line(-1), print_source_context_end_eol(true) {
-    }
+    SourceLinesToDisplay() = default;
   };
 
   // Get the function's declaration line number, hopefully a line number
@@ -511,7 +538,7 @@ protected:
   ElideMixedSourceAndDisassemblyLine(const ExecutionContext &exe_ctx,
                                      const SymbolContext &sc, LineEntry &line) {
     SourceLine sl;
-    sl.file = line.file;
+    sl.file = line.GetFile();
     sl.line = line.line;
     sl.column = line.column;
     return ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, sl);
@@ -520,7 +547,6 @@ protected:
   // Classes that inherit from Disassembler can see and modify these
   ArchSpec m_arch;
   InstructionList m_instruction_list;
-  lldb::addr_t m_base_addr;
   std::string m_flavor;
 
 private:

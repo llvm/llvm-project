@@ -10,9 +10,8 @@
 #include "BenchmarkResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MCA/Support.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <limits>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -45,7 +44,7 @@ namespace exegesis {
 //
 // Note that in this case, P016 does not contribute any cycles, so it would
 // be removed by this function.
-// FIXME: Move this to MCSubtargetInfo and use it in llvm-mca.
+// FIXME: Merge this with the equivalent in llvm-mca.
 static SmallVector<MCWriteProcResEntry, 8>
 getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
                             const MCSubtargetInfo &STI) {
@@ -53,22 +52,49 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
   const auto &SM = STI.getSchedModel();
   const unsigned NumProcRes = SM.getNumProcResourceKinds();
 
-  // This assumes that the ProcResDescs are sorted in topological order, which
-  // is guaranteed by the tablegen backend.
-  SmallVector<float, 32> ProcResUnitUsage(NumProcRes);
+  // Collect resource masks.
+  SmallVector<uint64_t> ProcResourceMasks(NumProcRes);
+  mca::computeProcResourceMasks(SM, ProcResourceMasks);
+
+  // Sort entries by smaller resources for (basic) topological ordering.
+  using ResourceMaskAndEntry = std::pair<uint64_t, const MCWriteProcResEntry *>;
+  SmallVector<ResourceMaskAndEntry, 8> ResourceMaskAndEntries;
   for (const auto *WPR = STI.getWriteProcResBegin(&SCDesc),
                   *const WPREnd = STI.getWriteProcResEnd(&SCDesc);
        WPR != WPREnd; ++WPR) {
+    uint64_t Mask = ProcResourceMasks[WPR->ProcResourceIdx];
+    ResourceMaskAndEntries.push_back({Mask, WPR});
+  }
+  sort(ResourceMaskAndEntries,
+       [](const ResourceMaskAndEntry &A, const ResourceMaskAndEntry &B) {
+         unsigned popcntA = popcount(A.first);
+         unsigned popcntB = popcount(B.first);
+         if (popcntA < popcntB)
+           return true;
+         if (popcntA > popcntB)
+           return false;
+         return A.first < B.first;
+       });
+
+  SmallVector<float, 32> ProcResUnitUsage(NumProcRes);
+  for (const ResourceMaskAndEntry &Entry : ResourceMaskAndEntries) {
+    const MCWriteProcResEntry *WPR = Entry.second;
     const MCProcResourceDesc *const ProcResDesc =
         SM.getProcResource(WPR->ProcResourceIdx);
+    // TODO: Handle AcquireAtAtCycle in llvm-exegesis and llvm-mca. See
+    // https://github.com/llvm/llvm-project/issues/62680 and
+    // https://github.com/llvm/llvm-project/issues/62681
+    assert(WPR->AcquireAtCycle == 0 &&
+           "`llvm-exegesis` does not handle AcquireAtCycle > 0");
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
-      Result.push_back({WPR->ProcResourceIdx, WPR->Cycles});
-      ProcResUnitUsage[WPR->ProcResourceIdx] += WPR->Cycles;
+      Result.push_back(
+          {WPR->ProcResourceIdx, WPR->ReleaseAtCycle, WPR->AcquireAtCycle});
+      ProcResUnitUsage[WPR->ProcResourceIdx] += WPR->ReleaseAtCycle;
     } else {
       // This is a ProcResGroup. First see if it contributes any cycles or if
       // it has cycles just from subunits.
-      float RemainingCycles = WPR->Cycles;
+      float RemainingCycles = WPR->ReleaseAtCycle;
       for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
            SubResIdx != ProcResDesc->SubUnitsIdxBegin + ProcResDesc->NumUnits;
            ++SubResIdx) {
@@ -80,7 +106,8 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
       }
       // The ProcResGroup contributes `RemainingCycles` cycles of its own.
       Result.push_back({WPR->ProcResourceIdx,
-                        static_cast<uint16_t>(std::round(RemainingCycles))});
+                        static_cast<uint16_t>(std::round(RemainingCycles)),
+                        WPR->AcquireAtCycle});
       // Spread the remaining cycles over all subunits.
       for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
            SubResIdx != ProcResDesc->SubUnitsIdxBegin + ProcResDesc->NumUnits;
@@ -185,13 +212,13 @@ computeIdealizedProcResPressure(const MCSchedModel &SM,
         SM.getProcResource(WPR.ProcResourceIdx);
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
-      DensePressure[WPR.ProcResourceIdx] += WPR.Cycles;
+      DensePressure[WPR.ProcResourceIdx] += WPR.ReleaseAtCycle;
     } else {
       // This is a ProcResGroup.
       SmallVector<uint16_t, 32> Subunits(ProcResDesc->SubUnitsIdxBegin,
                                          ProcResDesc->SubUnitsIdxBegin +
                                              ProcResDesc->NumUnits);
-      distributePressure(WPR.Cycles, Subunits, DensePressure);
+      distributePressure(WPR.ReleaseAtCycle, Subunits, DensePressure);
     }
   }
   // Turn dense pressure into sparse pressure by removing zero entries.
@@ -258,13 +285,13 @@ static unsigned findProcResIdx(const MCSubtargetInfo &STI,
 }
 
 std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
-    InstructionBenchmark::ModeE Mode, const MCSubtargetInfo &STI,
+    Benchmark::ModeE Mode, const MCSubtargetInfo &STI,
     ArrayRef<PerInstructionStats> Representative) const {
   const size_t NumMeasurements = Representative.size();
 
   std::vector<BenchmarkMeasure> SchedClassPoint(NumMeasurements);
 
-  if (Mode == InstructionBenchmark::Latency) {
+  if (Mode == Benchmark::Latency) {
     assert(NumMeasurements == 1 && "Latency is a single measure.");
     BenchmarkMeasure &LatencyMeasure = SchedClassPoint[0];
 
@@ -277,7 +304,7 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
       LatencyMeasure.PerInstructionValue =
           std::max<double>(LatencyMeasure.PerInstructionValue, WLE->Cycles);
     }
-  } else if (Mode == InstructionBenchmark::Uops) {
+  } else if (Mode == Benchmark::Uops) {
     for (auto I : zip(SchedClassPoint, Representative)) {
       BenchmarkMeasure &Measure = std::get<0>(I);
       const PerInstructionStats &Stats = std::get<1>(I);
@@ -287,10 +314,10 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
       if (ProcResIdx > 0) {
         // Find the pressure on ProcResIdx `Key`.
         const auto ProcResPressureIt =
-            llvm::find_if(IdealizedProcResPressure,
-                          [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
-                            return WPR.first == ProcResIdx;
-                          });
+            find_if(IdealizedProcResPressure,
+                    [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
+                      return WPR.first == ProcResIdx;
+                    });
         Measure.PerInstructionValue =
             ProcResPressureIt == IdealizedProcResPressure.end()
                 ? 0.0
@@ -304,7 +331,7 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
         return {};
       }
     }
-  } else if (Mode == InstructionBenchmark::InverseThroughput) {
+  } else if (Mode == Benchmark::InverseThroughput) {
     assert(NumMeasurements == 1 && "Inverse Throughput is a single measure.");
     BenchmarkMeasure &RThroughputMeasure = SchedClassPoint[0];
 

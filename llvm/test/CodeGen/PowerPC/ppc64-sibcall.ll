@@ -11,12 +11,12 @@
 %S_32 = type { [7 x i32], i32 }
 
 ; Function Attrs: noinline nounwind
-define dso_local void @callee_56_copy([7 x i64] %a, %S_56* %b) #0 { ret void }
-define dso_local void @callee_64_copy([8 x i64] %a, %S_64* %b) #0 { ret void }
+define dso_local void @callee_56_copy([7 x i64] %a, ptr %b) #0 { ret void }
+define dso_local void @callee_64_copy([8 x i64] %a, ptr %b) #0 { ret void }
 
 ; Function Attrs: nounwind
-define dso_local void @caller_56_reorder_copy(%S_56* %b, [7 x i64] %a) #1 {
-  tail call void @callee_56_copy([7 x i64] %a, %S_56* %b)
+define dso_local void @caller_56_reorder_copy(ptr %b, [7 x i64] %a) #1 {
+  tail call void @callee_56_copy([7 x i64] %a, ptr %b)
   ret void
 
 ; CHECK-SCO-LABEL: caller_56_reorder_copy:
@@ -24,8 +24,8 @@ define dso_local void @caller_56_reorder_copy(%S_56* %b, [7 x i64] %a) #1 {
 ; CHECK-SCO: TC_RETURNd8 callee_56_copy
 }
 
-define dso_local void @caller_64_reorder_copy(%S_64* %b, [8 x i64] %a) #1 {
-  tail call void @callee_64_copy([8 x i64] %a, %S_64* %b)
+define dso_local void @caller_64_reorder_copy(ptr %b, [8 x i64] %a) #1 {
+  tail call void @callee_64_copy([8 x i64] %a, ptr %b)
   ret void
 
 ; CHECK-SCO-LABEL: caller_64_reorder_copy:
@@ -67,17 +67,17 @@ define dso_local void @caller_64_64_undef_copy([8 x i64] %a, [8 x i64] %b) #1 {
 }
 
 define dso_local void @arg8_callee(
-  float %a, i32 signext %b, float %c, i32* %d,
-  i8 zeroext %e, float %f, i32* %g, i32 signext %h)
+  float %a, i32 signext %b, float %c, ptr %d,
+  i8 zeroext %e, float %f, ptr %g, i32 signext %h)
 {
   ret void
 }
 
-define dso_local void @arg8_caller(float %a, i32 signext %b, i8 zeroext %c, i32* %d) {
+define dso_local void @arg8_caller(float %a, i32 signext %b, i8 zeroext %c, ptr %d) {
 entry:
   tail call void @arg8_callee(float undef, i32 signext undef, float undef,
-                              i32* %d, i8 zeroext undef, float undef,
-                              i32* undef, i32 signext undef)
+                              ptr %d, i8 zeroext undef, float undef,
+                              ptr undef, i32 signext undef)
   ret void
 
 ; CHECK-SCO-LABEL: arg8_caller:
@@ -87,15 +87,14 @@ entry:
 ; Struct return test
 
 ; Function Attrs: noinline nounwind
-define dso_local void @callee_sret_56(%S_56* noalias sret(%S_56) %agg.result) #0 { ret void }
-define dso_local void @callee_sret_32(%S_32* noalias sret(%S_32) %agg.result) #0 { ret void }
+define dso_local void @callee_sret_56(ptr noalias sret(%S_56) %agg.result) #0 { ret void }
+define dso_local void @callee_sret_32(ptr noalias sret(%S_32) %agg.result) #0 { ret void }
 
 ; Function Attrs: nounwind
-define dso_local void @caller_do_something_sret_32(%S_32* noalias sret(%S_32) %agg.result) #1 {
+define dso_local void @caller_do_something_sret_32(ptr noalias sret(%S_32) %agg.result) #1 {
   %1 = alloca %S_56, align 4
-  %2 = bitcast %S_56* %1 to i8*
-  call void @callee_sret_56(%S_56* nonnull sret(%S_56) %1)
-  tail call void @callee_sret_32(%S_32* sret(%S_32) %agg.result)
+  call void @callee_sret_56(ptr nonnull sret(%S_56) %1)
+  tail call void @callee_sret_32(ptr sret(%S_32) %agg.result)
   ret void
 
 ; CHECK-SCO-LABEL: caller_do_something_sret_32:
@@ -105,9 +104,9 @@ define dso_local void @caller_do_something_sret_32(%S_32* noalias sret(%S_32) %a
 ; CHECK-SCO: TC_RETURNd8 callee_sret_32
 }
 
-define dso_local void @caller_local_sret_32(%S_32* %a) #1 {
+define dso_local void @caller_local_sret_32(ptr %a) #1 {
   %tmp = alloca %S_32, align 4
-  tail call void @callee_sret_32(%S_32* nonnull sret(%S_32) %tmp)
+  tail call void @callee_sret_32(ptr nonnull sret(%S_32) %tmp)
   ret void
 
 ; CHECK-SCO-LABEL: caller_local_sret_32:
@@ -117,9 +116,9 @@ define dso_local void @caller_local_sret_32(%S_32* %a) #1 {
 attributes #0 = { noinline nounwind  }
 attributes #1 = { nounwind }
 
-define dso_local void @f128_callee(i32* %ptr, ppc_fp128 %a, ppc_fp128 %b) { ret void }
-define dso_local void @f128_caller(i32* %ptr, ppc_fp128 %a, ppc_fp128 %b) {
-  tail call void @f128_callee(i32* %ptr, ppc_fp128 %a, ppc_fp128 %b)
+define dso_local void @f128_callee(ptr %ptr, ppc_fp128 %a, ppc_fp128 %b) { ret void }
+define dso_local void @f128_caller(ptr %ptr, ppc_fp128 %a, ppc_fp128 %b) {
+  tail call void @f128_callee(ptr %ptr, ppc_fp128 %a, ppc_fp128 %b)
   ret void
 
 ; CHECK-SCO-LABEL: f128_caller:
@@ -129,9 +128,9 @@ define dso_local void @f128_caller(i32* %ptr, ppc_fp128 %a, ppc_fp128 %b) {
 ; weak linkage test
 %class.T = type { [2 x i8] }
 
-define weak_odr hidden void @wo_hcallee(%class.T* %this, i8* %c) { ret void }
-define dso_local void @wo_hcaller(%class.T* %this, i8* %c) {
-  tail call void @wo_hcallee(%class.T* %this, i8* %c)
+define weak_odr hidden void @wo_hcallee(ptr %this, ptr %c) { ret void }
+define dso_local void @wo_hcaller(ptr %this, ptr %c) {
+  tail call void @wo_hcallee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-SCO-LABEL: wo_hcaller:
@@ -141,9 +140,9 @@ define dso_local void @wo_hcaller(%class.T* %this, i8* %c) {
 ; SCM:       bl wo_hcallee
 }
 
-define weak_odr protected void @wo_pcallee(%class.T* %this, i8* %c) { ret void }
-define dso_local void @wo_pcaller(%class.T* %this, i8* %c) {
-  tail call void @wo_pcallee(%class.T* %this, i8* %c)
+define weak_odr protected void @wo_pcallee(ptr %this, ptr %c) { ret void }
+define dso_local void @wo_pcaller(ptr %this, ptr %c) {
+  tail call void @wo_pcallee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-SCO-LABEL: wo_pcaller:
@@ -153,9 +152,9 @@ define dso_local void @wo_pcaller(%class.T* %this, i8* %c) {
 ; SCM:       bl wo_pcallee
 }
 
-define weak_odr void @wo_callee(%class.T* %this, i8* %c) { ret void }
-define dso_local void @wo_caller(%class.T* %this, i8* %c) {
-  tail call void @wo_callee(%class.T* %this, i8* %c)
+define weak_odr void @wo_callee(ptr %this, ptr %c) { ret void }
+define dso_local void @wo_caller(ptr %this, ptr %c) {
+  tail call void @wo_callee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-SCO-LABEL: wo_caller:
@@ -165,9 +164,9 @@ define dso_local void @wo_caller(%class.T* %this, i8* %c) {
 ; SCM:       bl wo_callee
 }
 
-define weak protected void @w_pcallee(i8* %ptr) { ret void }
-define dso_local void @w_pcaller(i8* %ptr) {
-  tail call void @w_pcallee(i8* %ptr)
+define weak protected void @w_pcallee(ptr %ptr) { ret void }
+define dso_local void @w_pcaller(ptr %ptr) {
+  tail call void @w_pcallee(ptr %ptr)
   ret void
 
 ; CHECK-SCO-LABEL: w_pcaller:
@@ -177,9 +176,9 @@ define dso_local void @w_pcaller(i8* %ptr) {
 ; SCM:       bl w_pcallee
 }
 
-define weak hidden void @w_hcallee(i8* %ptr) { ret void }
-define dso_local void @w_hcaller(i8* %ptr) {
-  tail call void @w_hcallee(i8* %ptr)
+define weak hidden void @w_hcallee(ptr %ptr) { ret void }
+define dso_local void @w_hcaller(ptr %ptr) {
+  tail call void @w_hcallee(ptr %ptr)
   ret void
 
 ; CHECK-SCO-LABEL: w_hcaller:
@@ -189,9 +188,9 @@ define dso_local void @w_hcaller(i8* %ptr) {
 ; SCM:       bl w_hcallee
 }
 
-define weak void @w_callee(i8* %ptr) { ret void }
-define dso_local void @w_caller(i8* %ptr) {
-  tail call void @w_callee(i8* %ptr)
+define weak void @w_callee(ptr %ptr) { ret void }
+define dso_local void @w_caller(ptr %ptr) {
+  tail call void @w_callee(ptr %ptr)
   ret void
 
 ; CHECK-SCO-LABEL: w_caller:
@@ -204,9 +203,9 @@ define dso_local void @w_caller(i8* %ptr) {
 %struct.byvalTest = type { [8 x i8] }
 @byval = common global %struct.byvalTest zeroinitializer
 
-define dso_local void @byval_callee(%struct.byvalTest* byval(%struct.byvalTest) %ptr) { ret void }
+define dso_local void @byval_callee(ptr byval(%struct.byvalTest) %ptr) { ret void }
 define dso_local void @byval_caller() {
-  tail call void @byval_callee(%struct.byvalTest* byval(%struct.byvalTest) @byval)
+  tail call void @byval_callee(ptr byval(%struct.byvalTest) @byval)
   ret void
 
 ; CHECK-SCO-LABEL: bl byval_callee

@@ -1,8 +1,7 @@
 // A benchmark that executes malloc/free pairs in parallel.
 // Usage: ./a.out number_of_threads total_number_of_allocations
-// RUN: LSAN_BASE="use_ld_allocations=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE %run %t 5 1000000 2>&1
+// RUN: %env_lsan_opts=use_ld_allocations=0 %run %t 5 1000000 2>&1
 #include <assert.h>
 #include <pthread.h>
 #include <stdlib.h>

@@ -24,10 +24,18 @@
 ; RUN:     -exported-symbol foo -exported-symbol _foo \
 ; RUN:     %t-stripped.bc -disable-verify 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty -check-prefix=CHECK-WARN
+; ---- Thin LTO (optimize, don't strip imported file)
+; RUN: llvm-lto -thinlto-action=thinlink -o %t.index.bc %t-stripped.bc %t2.bc
+; RUN: llvm-lto -thinlto -thinlto-action=import -disable-auto-upgrade-debug-info \
+; RUN:     -thinlto-index=%t.index.bc \
+; RUN:     -exported-symbol foo -exported-symbol _foo \
+; RUN:     %t-stripped.bc -disable-verify 2>&1 | \
+; RUN:     FileCheck %s -allow-empty -check-prefix=CHECK-NO-WARN
 
 ; CHECK-WARN: warning{{.*}} ignoring invalid debug info
 ; CHECK-WARN-NOT: Broken module found
 ; CHECK: foo
+; CHECK-NO-WARN-NOT: ignoring invalid debug info
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12"
 

@@ -20,26 +20,26 @@ using namespace object;
 
 namespace {
 
-static const EnumEntry<unsigned> WasmSymbolTypes[] = {
+const EnumEntry<unsigned> WasmSymbolTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SYMBOL_TYPE_##X }
-    ENUM_ENTRY(FUNCTION), ENUM_ENTRY(DATA),  ENUM_ENTRY(GLOBAL),
-    ENUM_ENTRY(SECTION),  ENUM_ENTRY(EVENT), ENUM_ENTRY(TABLE),
+    ENUM_ENTRY(FUNCTION), ENUM_ENTRY(DATA), ENUM_ENTRY(GLOBAL),
+    ENUM_ENTRY(SECTION),  ENUM_ENTRY(TAG),  ENUM_ENTRY(TABLE),
 #undef ENUM_ENTRY
 };
 
-static const EnumEntry<uint32_t> WasmSectionTypes[] = {
+const EnumEntry<uint32_t> WasmSectionTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SEC_##X }
     ENUM_ENTRY(CUSTOM),   ENUM_ENTRY(TYPE),      ENUM_ENTRY(IMPORT),
     ENUM_ENTRY(FUNCTION), ENUM_ENTRY(TABLE),     ENUM_ENTRY(MEMORY),
-    ENUM_ENTRY(GLOBAL),   ENUM_ENTRY(EVENT),     ENUM_ENTRY(EXPORT),
+    ENUM_ENTRY(GLOBAL),   ENUM_ENTRY(TAG),       ENUM_ENTRY(EXPORT),
     ENUM_ENTRY(START),    ENUM_ENTRY(ELEM),      ENUM_ENTRY(CODE),
     ENUM_ENTRY(DATA),     ENUM_ENTRY(DATACOUNT),
 #undef ENUM_ENTRY
 };
 
-static const EnumEntry<unsigned> WasmSymbolFlags[] = {
+const EnumEntry<unsigned> WasmSymbolFlags[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SYMBOL_##X }
   ENUM_ENTRY(BINDING_GLOBAL),
@@ -70,7 +70,7 @@ protected:
   void printRelocation(const SectionRef &Section, const RelocationRef &Reloc);
 
 private:
-  void printSymbols() override;
+  void printSymbols(bool ExtraSymInfo) override;
   void printDynamicSymbols() override { llvm_unreachable("unimplemented"); }
 
   const WasmObjectFile *Obj;
@@ -144,7 +144,7 @@ void WasmDumper::printRelocations() {
   }
 }
 
-void WasmDumper::printSymbols() {
+void WasmDumper::printSymbols(bool /*ExtraSymInfo*/) {
   ListScope Group(W, "Symbols");
 
   for (const SymbolRef &Symbol : Obj->symbols())
@@ -156,7 +156,7 @@ void WasmDumper::printSectionHeaders() {
   for (const SectionRef &Section : Obj->sections()) {
     const WasmSection &WasmSec = Obj->getWasmSection(Section);
     DictScope SectionD(W, "Section");
-    W.printEnum("Type", WasmSec.Type, makeArrayRef(WasmSectionTypes));
+    W.printEnum("Type", WasmSec.Type, ArrayRef(WasmSectionTypes));
     W.printNumber("Size", static_cast<uint64_t>(WasmSec.Content.size()));
     W.printNumber("Offset", WasmSec.Offset);
     switch (WasmSec.Type) {
@@ -179,11 +179,16 @@ void WasmDumper::printSectionHeaders() {
         if (!Seg.Name.empty())
           W.printString("Name", Seg.Name);
         W.printNumber("Size", static_cast<uint64_t>(Seg.Content.size()));
-        if (Seg.Offset.Opcode == wasm::WASM_OPCODE_I32_CONST)
-          W.printNumber("Offset", Seg.Offset.Value.Int32);
-        else if (Seg.Offset.Opcode == wasm::WASM_OPCODE_I64_CONST)
-          W.printNumber("Offset", Seg.Offset.Value.Int64);
-        else
+        if (Seg.Offset.Extended)
+          llvm_unreachable("extended const exprs not supported");
+        else if (Seg.Offset.Inst.Opcode == wasm::WASM_OPCODE_I32_CONST)
+          W.printNumber("Offset", Seg.Offset.Inst.Value.Int32);
+        else if (Seg.Offset.Inst.Opcode == wasm::WASM_OPCODE_I64_CONST)
+          W.printNumber("Offset", Seg.Offset.Inst.Value.Int64);
+        else if (Seg.Offset.Inst.Opcode == wasm::WASM_OPCODE_GLOBAL_GET) {
+          ListScope Group(W, "Offset");
+          W.printNumber("Global", Seg.Offset.Inst.Value.Global);
+        } else
           llvm_unreachable("unknown init expr opcode");
       }
       break;
@@ -216,8 +221,8 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   DictScope D(W, "Symbol");
   WasmSymbol Symbol = Obj->getWasmSymbol(Sym.getRawDataRefImpl());
   W.printString("Name", Symbol.Info.Name);
-  W.printEnum("Type", Symbol.Info.Kind, makeArrayRef(WasmSymbolTypes));
-  W.printFlags("Flags", Symbol.Info.Flags, makeArrayRef(WasmSymbolFlags));
+  W.printEnum("Type", Symbol.Info.Kind, ArrayRef(WasmSymbolTypes));
+  W.printFlags("Flags", Symbol.Info.Flags, ArrayRef(WasmSymbolFlags));
 
   if (Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) {
     if (Symbol.Info.ImportName) {

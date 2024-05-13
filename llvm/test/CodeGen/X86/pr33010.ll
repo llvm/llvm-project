@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; We can't create a select of two TargetFrameIndices since the rest
 ; of the backend doesn't know how to handle such a construct.
-define i32 addrspace(1)* @test(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %which) gc "statepoint-example" {
+define ptr addrspace(1) @test(ptr addrspace(1) %a, ptr addrspace(1) %b, i1 %which) gc "statepoint-example" {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
@@ -16,7 +16,7 @@ define i32 addrspace(1)* @test(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %w
 ; CHECK-NEXT:    movl %edx, %ebx
 ; CHECK-NEXT:    movq %rdi, (%rsp)
 ; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq f
+; CHECK-NEXT:    callq f@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    je .LBB0_1
@@ -32,14 +32,13 @@ define i32 addrspace(1)* @test(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %w
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %tok = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %a, i32 addrspace(1)* %b)]
-  %a.r = tail call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok, i32 0, i32 0) ; (%a, %a)
-  %b.r = tail call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok, i32 1, i32 1) ; (%b, %b)
-  %cond.v = select i1 %which, i8 addrspace(1)* %a.r, i8 addrspace(1)* %b.r
-  %cond = bitcast i8 addrspace(1)* %cond.v to i32 addrspace(1)*
-  ret i32 addrspace(1)* %cond
+  %tok = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @f, i32 0, i32 0, i32 0, i32 0) ["gc-live"(ptr addrspace(1) %a, ptr addrspace(1) %b)]
+  %a.r = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 0, i32 0) ; (%a, %a)
+  %b.r = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 1, i32 1) ; (%b, %b)
+  %cond.v = select i1 %which, ptr addrspace(1) %a.r, ptr addrspace(1) %b.r
+  ret ptr addrspace(1) %cond.v
 }
 
 declare void @f()
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)

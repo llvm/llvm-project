@@ -1,9 +1,8 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -fblocks
-// rdar://10466373
 
 typedef short SHORT;
 
-void f0() {
+void f0(void) {
   (void) ^{
     if (1)
       return (float)1.0;

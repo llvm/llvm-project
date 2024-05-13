@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -145,6 +144,27 @@ public:
   uint32_t RecordOffset = 0;
 };
 
+class JumpTableSym : public SymbolRecord {
+public:
+  explicit JumpTableSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
+  JumpTableSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::JumpTableSym),
+        RecordOffset(RecordOffset) {}
+
+  uint32_t BaseOffset = 0;
+  uint16_t BaseSegment = 0;
+
+  JumpTableEntrySize SwitchType;
+  uint32_t BranchOffset = 0;
+  uint32_t TableOffset = 0;
+  uint16_t BranchSegment = 0;
+  uint16_t TableSegment = 0;
+
+  uint32_t EntriesCount = 0;
+
+  uint32_t RecordOffset = 0;
+};
+
 class CallerSym : public SymbolRecord {
 public:
   explicit CallerSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
@@ -196,7 +216,7 @@ struct BinaryAnnotationIterator
 
   const DecodedAnnotation &operator*() {
     ParseCurrentAnnotation();
-    return Current.getValue();
+    return *Current;
   }
 
 private:
@@ -249,7 +269,7 @@ private:
   }
 
   bool ParseCurrentAnnotation() {
-    if (Current.hasValue())
+    if (Current)
       return true;
 
     Next = Data;
@@ -324,7 +344,7 @@ private:
     return true;
   }
 
-  Optional<DecodedAnnotation> Current;
+  std::optional<DecodedAnnotation> Current;
   ArrayRef<uint8_t> Data;
   ArrayRef<uint8_t> Next;
 };

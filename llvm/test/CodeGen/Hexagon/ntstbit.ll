@@ -7,7 +7,7 @@ define i32 @f0(i32 %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = !tstbit(r1,r2)
-; CHECK-NEXT:     r17:16 = combine(r0,r1)
+; CHECK-NEXT:     r17:16 = combine(r1,r0)
 ; CHECK-NEXT:     memd(r29+#-16) = r17:16
 ; CHECK-NEXT:     allocframe(#8)
 ; CHECK-NEXT:    } // 8-byte Folded Spill
@@ -28,8 +28,8 @@ define i32 @f0(i32 %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:  .LBB0_3: // %b3
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     call f3
-; CHECK-NEXT:     r1 = add(r16,#2)
-; CHECK-NEXT:     r0 = r17
+; CHECK-NEXT:     r1 = add(r17,#2)
+; CHECK-NEXT:     r0 = r16
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = #0
@@ -43,16 +43,16 @@ b0:
   br i1 %v2, label %b2, label %b1
 
 b1:                                               ; preds = %b0
-  tail call void bitcast (void (...)* @f1 to void ()*)() #0
+  tail call void @f1() #0
   br label %b3
 
 b2:                                               ; preds = %b0
-  %v3 = tail call i32 bitcast (i32 (...)* @f2 to i32 ()*)() #0
+  %v3 = tail call i32 @f2() #0
   br label %b3
 
 b3:                                               ; preds = %b2, %b1
   %v4 = add nsw i32 %a1, 2
-  %v5 = tail call i32 bitcast (i32 (...)* @f3 to i32 (i32, i32)*)(i32 %a0, i32 %v4) #0
+  %v5 = tail call i32 @f3(i32 %a0, i32 %v4) #0
   ret i32 0
 }
 

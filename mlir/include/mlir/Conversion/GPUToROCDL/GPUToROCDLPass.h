@@ -8,14 +8,14 @@
 #ifndef MLIR_CONVERSION_GPUTOROCDL_GPUTOROCDLPASS_H_
 #define MLIR_CONVERSION_GPUTOROCDL_GPUTOROCDLPASS_H_
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/GPUToROCDL/Runtimes.h"
+#include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include <memory>
 
 namespace mlir {
 class LLVMTypeConverter;
 class ConversionTarget;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 template <typename OpT>
 class OperationPass;
@@ -24,9 +24,15 @@ namespace gpu {
 class GPUModuleOp;
 } // namespace gpu
 
+#define GEN_PASS_DECL_CONVERTGPUOPSTOROCDLOPS
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Collect a set of patterns to convert from the GPU dialect to ROCDL.
+/// If `runtime` is Unknown, gpu.printf will not be lowered
+/// The resulting pattern set should be run over a gpu.module op
 void populateGpuToROCDLConversionPatterns(LLVMTypeConverter &converter,
-                                          RewritePatternSet &patterns);
+                                          RewritePatternSet &patterns,
+                                          gpu::amd::Runtime runtime);
 
 /// Configure target to convert from the GPU dialect to ROCDL.
 void configureGpuToROCDLConversionLegality(ConversionTarget &target);
@@ -36,7 +42,10 @@ void configureGpuToROCDLConversionLegality(ConversionTarget &target);
 /// is configurable.
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
 createLowerGpuOpsToROCDLOpsPass(
-    unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout);
+    const std::string &chipset = "gfx900",
+    unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout,
+    bool useBarePtrCallConv = false,
+    gpu::amd::Runtime runtime = gpu::amd::Runtime::Unknown);
 
 } // namespace mlir
 

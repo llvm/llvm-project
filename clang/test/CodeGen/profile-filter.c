@@ -36,12 +36,12 @@ unsigned i;
 // SECTION: @test1
 // EXCLUDE: noprofile
 // EXCLUDE: @test1
-unsigned test1() {
-  // CHECK: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
-  // FUNC: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
-  // FILE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
-  // SECTION-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
-  // EXCLUDE-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
+unsigned test1(void) {
+  // CHECK: %pgocount = load i64, ptr @__profc_{{_?}}test1
+  // FUNC: %pgocount = load i64, ptr @__profc_{{_?}}test1
+  // FILE: %pgocount = load i64, ptr @__profc_{{_?}}test1
+  // SECTION-NOT: %pgocount = load i64, ptr @__profc_{{_?}}test1
+  // EXCLUDE-NOT: %pgocount = load i64, ptr @__profc_{{_?}}test1
   return i + 1;
 }
 
@@ -55,11 +55,11 @@ unsigned test1() {
 // SECTION: @test2
 // EXCLUDE-NOT: noprofile
 // EXCLUDE: @test2
-unsigned test2() {
-  // CHECK: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
-  // FUNC-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
-  // FILE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
-  // SECTION: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
-  // EXCLUDE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
+unsigned test2(void) {
+  // CHECK: %pgocount = load i64, ptr @__profc_{{_?}}test2
+  // FUNC-NOT: %pgocount = load i64, ptr @__profc_{{_?}}test2
+  // FILE: %pgocount = load i64, ptr @__profc_{{_?}}test2
+  // SECTION: %pgocount = load i64, ptr @__profc_{{_?}}test2
+  // EXCLUDE: %pgocount = load i64, ptr @__profc_{{_?}}test2
   return i - 1;
 }

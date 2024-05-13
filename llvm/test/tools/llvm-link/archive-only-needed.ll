@@ -11,5 +11,5 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-@i = external global i8*
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i8** @i to i8*)], section "llvm.metadata"
+@i = external global ptr
+@llvm.used = appending global [1 x ptr] [ptr @i], section "llvm.metadata"

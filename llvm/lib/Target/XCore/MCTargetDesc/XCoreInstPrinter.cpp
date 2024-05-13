@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -26,8 +27,8 @@ using namespace llvm;
 
 #include "XCoreGenAsmWriter.inc"
 
-void XCoreInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << StringRef(getRegisterName(RegNo)).lower();
+void XCoreInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << StringRef(getRegisterName(Reg)).lower();
 }
 
 void XCoreInstPrinter::printInst(const MCInst *MI, uint64_t Address,

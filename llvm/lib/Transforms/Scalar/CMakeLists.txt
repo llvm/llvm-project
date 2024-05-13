@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMScalarOpts
   CorrelatedValuePropagation.cpp
   DCE.cpp
   DeadStoreElimination.cpp
+  DFAJumpThreading.cpp
   DivRemPairs.cpp
   EarlyCSE.cpp
   FlattenCFGPass.cpp
@@ -21,10 +22,13 @@ add_llvm_component_library(LLVMScalarOpts
   InductiveRangeCheckElimination.cpp
   IndVarSimplify.cpp
   InferAddressSpaces.cpp
+  InferAlignment.cpp
   InstSimplifyPass.cpp
   JumpThreading.cpp
+  JumpTableToSwitch.cpp
   LICM.cpp
   LoopAccessAnalysisPrinter.cpp
+  LoopBoundSplit.cpp
   LoopSink.cpp
   LoopDeletion.cpp
   LoopDataPrefetch.cpp
@@ -37,15 +41,13 @@ add_llvm_component_library(LLVMScalarOpts
   LoopLoadElimination.cpp
   LoopPassManager.cpp
   LoopPredication.cpp
-  LoopRerollPass.cpp
   LoopRotation.cpp
   LoopSimplifyCFG.cpp
   LoopStrengthReduce.cpp
   LoopUnrollPass.cpp
   LoopUnrollAndJamPass.cpp
-  LoopUnswitch.cpp
   LoopVersioningLICM.cpp
-  LowerAtomic.cpp
+  LowerAtomicPass.cpp
   LowerConstantIntrinsics.cpp
   LowerExpectIntrinsic.cpp
   LowerGuardIntrinsic.cpp
@@ -72,10 +74,10 @@ add_llvm_component_library(LLVMScalarOpts
   SimplifyCFGPass.cpp
   Sink.cpp
   SpeculativeExecution.cpp
-  SpeculateAroundPHIs.cpp
   StraightLineStrengthReduce.cpp
   StructurizeCFG.cpp
   TailRecursionElimination.cpp
+  TLSVariableHoist.cpp
   WarnMissedTransforms.cpp
 
   ADDITIONAL_HEADER_DIRS

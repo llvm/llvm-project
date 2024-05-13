@@ -1,4 +1,4 @@
-//===--------------------------- libunwind.cpp ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,16 +11,22 @@
 
 #include <libunwind.h>
 
-#include "libunwind_ext.h"
 #include "config.h"
+#include "libunwind_ext.h"
 
 #include <stdlib.h>
 
-#if __has_feature(address_sanitizer)
+// Define the __has_feature extension for compilers that do not support it so
+// that we can later check for the presence of ASan in a compiler-neutral way.
+#if !defined(__has_feature)
+#define __has_feature(feature) 0
+#endif
+
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
 #include <sanitizer/asan_interface.h>
 #endif
 
-#if !defined(__USING_SJLJ_EXCEPTIONS__)
+#if !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__USING_WASM_EXCEPTIONS__)
 #include "AddressSpace.hpp"
 #include "UnwindCursor.hpp"
 
@@ -45,7 +51,7 @@ _LIBUNWIND_HIDDEN int __unw_init_local(unw_cursor_t *cursor,
 # define REGISTER_KIND Registers_x86_64
 #elif defined(__powerpc64__)
 # define REGISTER_KIND Registers_ppc64
-#elif defined(__ppc__)
+#elif defined(__powerpc__)
 # define REGISTER_KIND Registers_ppc
 #elif defined(__aarch64__)
 # define REGISTER_KIND Registers_arm64
@@ -61,12 +67,18 @@ _LIBUNWIND_HIDDEN int __unw_init_local(unw_cursor_t *cursor,
 # define REGISTER_KIND Registers_mips_newabi
 #elif defined(__mips__)
 # warning The MIPS architecture is not supported with this ABI and environment!
+#elif defined(__sparc__) && defined(__arch64__)
+#define REGISTER_KIND Registers_sparc64
 #elif defined(__sparc__)
 # define REGISTER_KIND Registers_sparc
 #elif defined(__riscv)
 # define REGISTER_KIND Registers_riscv
 #elif defined(__ve__)
 # define REGISTER_KIND Registers_ve
+#elif defined(__s390x__)
+# define REGISTER_KIND Registers_s390x
+#elif defined(__loongarch__) && __loongarch_grlen == 64
+#define REGISTER_KIND Registers_loongarch
 #else
 # error Architecture not supported
 #endif
@@ -107,7 +119,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   if (co->validReg(regNum)) {
     co->setReg(regNum, (pint_t)value);
-    // specical case altering IP to re-find info (being called by personality
+    // special case altering IP to re-find info (being called by personality
     // function)
     if (regNum == UNW_REG_IP) {
       unw_proc_info_t info;
@@ -171,6 +183,15 @@ _LIBUNWIND_HIDDEN int __unw_step(unw_cursor_t *cursor) {
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_step, unw_step)
 
+// Move cursor to next frame and for stage2 of unwinding.
+// This resets MTE tags of tagged frames to zero.
+extern "C" _LIBUNWIND_HIDDEN int __unw_step_stage2(unw_cursor_t *cursor) {
+  _LIBUNWIND_TRACE_API("__unw_step_stage2(cursor=%p)",
+                       static_cast<void *>(cursor));
+  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  return co->step(true);
+}
+
 /// Get unwind info at cursor position in stack frame.
 _LIBUNWIND_HIDDEN int __unw_get_proc_info(unw_cursor_t *cursor,
                                           unw_proc_info_t *info) {
@@ -187,7 +208,7 @@ _LIBUNWIND_WEAK_ALIAS(__unw_get_proc_info, unw_get_proc_info)
 /// Resume execution at cursor position (aka longjump).
 _LIBUNWIND_HIDDEN int __unw_resume(unw_cursor_t *cursor) {
   _LIBUNWIND_TRACE_API("__unw_resume(cursor=%p)", static_cast<void *>(cursor));
-#if __has_feature(address_sanitizer)
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
   // Inform the ASan runtime that now might be a good time to clean stuff up.
   __asan_handle_no_return();
 #endif
@@ -239,6 +260,16 @@ _LIBUNWIND_HIDDEN int __unw_is_signal_frame(unw_cursor_t *cursor) {
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_is_signal_frame, unw_is_signal_frame)
 
+#ifdef _AIX
+_LIBUNWIND_EXPORT uintptr_t __unw_get_data_rel_base(unw_cursor_t *cursor) {
+  _LIBUNWIND_TRACE_API("unw_get_data_rel_base(cursor=%p)",
+                       static_cast<void *>(cursor));
+  AbstractUnwindCursor *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
+  return co->getDataRelBase();
+}
+_LIBUNWIND_WEAK_ALIAS(__unw_get_data_rel_base, unw_get_data_rel_base)
+#endif
+
 #ifdef __arm__
 // Save VFP registers d0-d15 using FSTMIADX instead of FSTMIADD
 _LIBUNWIND_HIDDEN void __unw_save_vfp_as_X(unw_cursor_t *cursor) {
@@ -286,10 +317,120 @@ void __unw_remove_dynamic_fde(unw_word_t fde) {
   // fde is own mh_group
   DwarfFDECache<LocalAddressSpace>::removeAllIn((LocalAddressSpace::pint_t)fde);
 }
+
+void __unw_add_dynamic_eh_frame_section(unw_word_t eh_frame_start) {
+  // The eh_frame section start serves as the mh_group
+  unw_word_t mh_group = eh_frame_start;
+  CFI_Parser<LocalAddressSpace>::CIE_Info cieInfo;
+  CFI_Parser<LocalAddressSpace>::FDE_Info fdeInfo;
+  auto p = (LocalAddressSpace::pint_t)eh_frame_start;
+  while (LocalAddressSpace::sThisAddressSpace.get32(p)) {
+    if (CFI_Parser<LocalAddressSpace>::decodeFDE(
+            LocalAddressSpace::sThisAddressSpace, p, &fdeInfo, &cieInfo,
+            true) == NULL) {
+      DwarfFDECache<LocalAddressSpace>::add((LocalAddressSpace::pint_t)mh_group,
+                                            fdeInfo.pcStart, fdeInfo.pcEnd,
+                                            fdeInfo.fdeStart);
+      p += fdeInfo.fdeLength;
+    } else if (CFI_Parser<LocalAddressSpace>::parseCIE(
+                   LocalAddressSpace::sThisAddressSpace, p, &cieInfo) == NULL) {
+      p += cieInfo.cieLength;
+    } else
+      return;
+  }
+}
+
+void __unw_remove_dynamic_eh_frame_section(unw_word_t eh_frame_start) {
+  // The eh_frame section start serves as the mh_group
+  DwarfFDECache<LocalAddressSpace>::removeAllIn(
+      (LocalAddressSpace::pint_t)eh_frame_start);
+}
+
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
-#endif // !defined(__USING_SJLJ_EXCEPTIONS__)
+#endif // !defined(__USING_SJLJ_EXCEPTIONS__) &&
+       // !defined(__USING_WASM_EXCEPTIONS__)
 
+#ifdef __APPLE__
 
+namespace libunwind {
+
+static constexpr size_t MAX_DYNAMIC_UNWIND_SECTIONS_FINDERS = 8;
+
+static RWMutex findDynamicUnwindSectionsLock;
+static size_t numDynamicUnwindSectionsFinders = 0;
+static unw_find_dynamic_unwind_sections
+    dynamicUnwindSectionsFinders[MAX_DYNAMIC_UNWIND_SECTIONS_FINDERS] = {0};
+
+bool findDynamicUnwindSections(void *addr, unw_dynamic_unwind_sections *info) {
+  bool found = false;
+  findDynamicUnwindSectionsLock.lock_shared();
+  for (size_t i = 0; i != numDynamicUnwindSectionsFinders; ++i) {
+    if (dynamicUnwindSectionsFinders[i]((unw_word_t)addr, info)) {
+      found = true;
+      break;
+    }
+  }
+  findDynamicUnwindSectionsLock.unlock_shared();
+  return found;
+}
+
+} // namespace libunwind
+
+int __unw_add_find_dynamic_unwind_sections(
+    unw_find_dynamic_unwind_sections find_dynamic_unwind_sections) {
+  findDynamicUnwindSectionsLock.lock();
+
+  // Check that we have enough space...
+  if (numDynamicUnwindSectionsFinders == MAX_DYNAMIC_UNWIND_SECTIONS_FINDERS) {
+    findDynamicUnwindSectionsLock.unlock();
+    return UNW_ENOMEM;
+  }
+
+  // Check for value already present...
+  for (size_t i = 0; i != numDynamicUnwindSectionsFinders; ++i) {
+    if (dynamicUnwindSectionsFinders[i] == find_dynamic_unwind_sections) {
+      findDynamicUnwindSectionsLock.unlock();
+      return UNW_EINVAL;
+    }
+  }
+
+  // Success -- add callback entry.
+  dynamicUnwindSectionsFinders[numDynamicUnwindSectionsFinders++] =
+    find_dynamic_unwind_sections;
+  findDynamicUnwindSectionsLock.unlock();
+
+  return UNW_ESUCCESS;
+}
+
+int __unw_remove_find_dynamic_unwind_sections(
+    unw_find_dynamic_unwind_sections find_dynamic_unwind_sections) {
+  findDynamicUnwindSectionsLock.lock();
+
+  // Find index to remove.
+  size_t finderIdx = numDynamicUnwindSectionsFinders;
+  for (size_t i = 0; i != numDynamicUnwindSectionsFinders; ++i) {
+    if (dynamicUnwindSectionsFinders[i] == find_dynamic_unwind_sections) {
+      finderIdx = i;
+      break;
+    }
+  }
+
+  // If no such registration is present then error out.
+  if (finderIdx == numDynamicUnwindSectionsFinders) {
+    findDynamicUnwindSectionsLock.unlock();
+    return UNW_EINVAL;
+  }
+
+  // Remove entry.
+  for (size_t i = finderIdx; i != numDynamicUnwindSectionsFinders - 1; ++i)
+    dynamicUnwindSectionsFinders[i] = dynamicUnwindSectionsFinders[i + 1];
+  dynamicUnwindSectionsFinders[--numDynamicUnwindSectionsFinders] = nullptr;
+
+  findDynamicUnwindSectionsLock.unlock();
+  return UNW_ESUCCESS;
+}
+
+#endif // __APPLE__
 
 // Add logging hooks in Debug builds only
 #ifndef NDEBUG

@@ -23,7 +23,7 @@ namespace {
 ///   void /* entity.name.function.cpp */ f() { int /* variable.cpp */ abc; }
 class AnnotateHighlightings : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
 
   bool prepare(const Selection &Inputs) override { return true; }
   Expected<Effect> apply(const Selection &Inputs) override;
@@ -38,7 +38,7 @@ REGISTER_TWEAK(AnnotateHighlightings)
 
 Expected<Tweak::Effect> AnnotateHighlightings::apply(const Selection &Inputs) {
   const Decl *CommonDecl = nullptr;
-  for (auto N = Inputs.ASTSelection.commonAncestor(); N && !CommonDecl;
+  for (auto *N = Inputs.ASTSelection.commonAncestor(); N && !CommonDecl;
        N = N->Parent)
     CommonDecl = N->ASTNode.get<Decl>();
 
@@ -47,14 +47,16 @@ Expected<Tweak::Effect> AnnotateHighlightings::apply(const Selection &Inputs) {
     // Now we hit the TUDecl case where commonAncestor() returns null
     // intendedly. We only annotate tokens in the main file, so use the default
     // traversal scope (which is the top level decls of the main file).
-    HighlightingTokens = getSemanticHighlightings(*Inputs.AST);
+    HighlightingTokens = getSemanticHighlightings(
+        *Inputs.AST, /*IncludeInactiveRegionTokens=*/true);
   } else {
     // Store the existing scopes.
     const auto &BackupScopes = Inputs.AST->getASTContext().getTraversalScope();
     // Narrow the traversal scope to the selected node.
     Inputs.AST->getASTContext().setTraversalScope(
         {const_cast<Decl *>(CommonDecl)});
-    HighlightingTokens = getSemanticHighlightings(*Inputs.AST);
+    HighlightingTokens = getSemanticHighlightings(
+        *Inputs.AST, /*IncludeInactiveRegionTokens=*/true);
     // Restore the traversal scope.
     Inputs.AST->getASTContext().setTraversalScope(BackupScopes);
   }

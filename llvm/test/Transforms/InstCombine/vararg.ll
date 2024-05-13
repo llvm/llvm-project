@@ -1,30 +1,28 @@
-; RUN: opt < %s -instcombine -instcombine-infinite-loop-threshold=3 -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-%struct.__va_list = type { i8*, i8*, i8*, i32, i32 }
+%struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
-declare void @llvm.va_copy(i8*, i8*)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)
+declare void @llvm.va_copy(ptr, ptr)
 
-define i32 @func(i8* nocapture readnone %fmt, ...) {
+define i32 @func(ptr nocapture readnone %fmt, ...) {
 ; CHECK-LABEL: @func(
 ; CHECK: entry:
 ; CHECK-NEXT: ret i32 0
 entry:
   %va0 = alloca %struct.__va_list, align 8
   %va1 = alloca %struct.__va_list, align 8
-  %0 = bitcast %struct.__va_list* %va0 to i8*
-  %1 = bitcast %struct.__va_list* %va1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* %0)
-  call void @llvm.va_start(i8* %0)
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* %1)
-  call void @llvm.va_copy(i8* %1, i8* %0)
-  call void @llvm.va_end(i8* %1)
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* %1)
-  call void @llvm.va_end(i8* %0)
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* %0)
+  call void @llvm.lifetime.start.p0(i64 32, ptr %va0)
+  call void @llvm.va_start(ptr %va0)
+  call void @llvm.lifetime.start.p0(i64 32, ptr %va1)
+  call void @llvm.va_copy(ptr %va1, ptr %va0)
+  call void @llvm.va_end(ptr %va1)
+  call void @llvm.lifetime.end.p0(i64 32, ptr %va1)
+  call void @llvm.va_end(ptr %va0)
+  call void @llvm.lifetime.end.p0(i64 32, ptr %va0)
   ret i32 0
 }
 

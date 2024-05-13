@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-function-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-function-scops -disable-output < %s | FileCheck %s
 
 ;    void foo(float A[][20][30], long n, long m, long p) {
 ;      for (long i = 0; i < n; i++)
@@ -25,7 +25,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo([20 x [30 x float]]* %A, i64 %n, i64 %m, i64 %p) {
+define void @foo(ptr %A, i64 %n, i64 %m, i64 %p) {
 entry:
   br label %for.cond
 
@@ -54,8 +54,8 @@ for.body6:                                        ; preds = %for.cond4
   %add = add nsw i64 %i.0, %j.0
   %add7 = add nsw i64 %add, %k.0
   %conv = sitofp i64 %add7 to float
-  %arrayidx9 = getelementptr inbounds [20 x [30 x float]], [20 x [30 x float]]* %A, i64 %i.0, i64 %j.0, i64 %k.0
-  store float %conv, float* %arrayidx9, align 4
+  %arrayidx9 = getelementptr inbounds [20 x [30 x float]], ptr %A, i64 %i.0, i64 %j.0, i64 %k.0
+  store float %conv, ptr %arrayidx9, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body6

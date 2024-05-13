@@ -18,7 +18,6 @@
 #ifndef LLVM_ANALYSIS_CFGPRINTER_H
 #define LLVM_ANALYSIS_CFGPRINTER_H
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/HeatUtils.h"
@@ -27,28 +26,34 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/GraphWriter.h"
 
 namespace llvm {
+template <class GraphType> struct GraphTraits;
 class CFGViewerPass : public PassInfoMixin<CFGViewerPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 class CFGOnlyViewerPass : public PassInfoMixin<CFGOnlyViewerPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 class CFGPrinterPass : public PassInfoMixin<CFGPrinterPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 class CFGOnlyPrinterPass : public PassInfoMixin<CFGOnlyPrinterPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 class DOTFuncInfo {
@@ -119,81 +124,103 @@ struct GraphTraits<DOTFuncInfo *> : public GraphTraits<const BasicBlock *> {
   }
 };
 
+template <typename BasicBlockT>
+std::string SimpleNodeLabelString(const BasicBlockT *Node) {
+  if (!Node->getName().empty())
+    return Node->getName().str();
+
+  std::string Str;
+  raw_string_ostream OS(Str);
+
+  Node->printAsOperand(OS, false);
+  return OS.str();
+}
+
+template <typename BasicBlockT>
+std::string CompleteNodeLabelString(
+    const BasicBlockT *Node,
+    function_ref<void(raw_string_ostream &, const BasicBlockT &)>
+        HandleBasicBlock,
+    function_ref<void(std::string &, unsigned &, unsigned)>
+        HandleComment) {
+
+  enum { MaxColumns = 80 };
+  std::string Str;
+  raw_string_ostream OS(Str);
+  HandleBasicBlock(OS, *Node);
+  std::string OutStr = OS.str();
+  // Remove "%" from BB name
+  if (OutStr[0] == '%') {
+    OutStr.erase(OutStr.begin());
+  }
+  // Place | after BB name to separate it into header
+  OutStr.insert(OutStr.find_first_of('\n') + 1, "\\|");
+
+  unsigned ColNum = 0;
+  unsigned LastSpace = 0;
+  for (unsigned i = 0; i != OutStr.length(); ++i) {
+    if (OutStr[i] == '\n') { // Left justify
+      OutStr[i] = '\\';
+      OutStr.insert(OutStr.begin() + i + 1, 'l');
+      ColNum = 0;
+      LastSpace = 0;
+    } else if (OutStr[i] == ';') {             // Delete comments!
+      unsigned Idx = OutStr.find('\n', i + 1); // Find end of line
+      HandleComment(OutStr, i, Idx);
+    } else if (ColNum == MaxColumns) { // Wrap lines.
+      // Wrap very long names even though we can't find a space.
+      if (!LastSpace)
+        LastSpace = i;
+      OutStr.insert(LastSpace, "\\l...");
+      ColNum = i - LastSpace;
+      LastSpace = 0;
+      i += 3; // The loop will advance 'i' again.
+    } else
+      ++ColNum;
+    if (OutStr[i] == ' ')
+      LastSpace = i;
+  }
+  return OutStr;
+}
+
 template <>
 struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
   // Cache for is hidden property
-  llvm::DenseMap<const BasicBlock *, bool> isOnDeoptOrUnreachablePath;
+  DenseMap<const BasicBlock *, bool> isOnDeoptOrUnreachablePath;
 
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
-
-  static std::string getGraphName(DOTFuncInfo *CFGInfo) {
-    return "CFG for '" + CFGInfo->getFunction()->getName().str() + "' function";
-  }
-
-  static std::string getSimpleNodeLabel(const BasicBlock *Node, DOTFuncInfo *) {
-    if (!Node->getName().empty())
-      return Node->getName().str();
-
-    std::string Str;
-    raw_string_ostream OS(Str);
-
-    Node->printAsOperand(OS, false);
-    return OS.str();
-  }
 
   static void eraseComment(std::string &OutStr, unsigned &I, unsigned Idx) {
     OutStr.erase(OutStr.begin() + I, OutStr.begin() + Idx);
     --I;
   }
 
+  static std::string getGraphName(DOTFuncInfo *CFGInfo) {
+    return "CFG for '" + CFGInfo->getFunction()->getName().str() + "' function";
+  }
+
+  static std::string getSimpleNodeLabel(const BasicBlock *Node, DOTFuncInfo *) {
+    return SimpleNodeLabelString(Node);
+  }
+
+  static void printBasicBlock(raw_string_ostream &OS, const BasicBlock &Node) {
+    // Prepend label name
+    Node.printAsOperand(OS, false);
+    OS << ":\n";
+    for (auto J = Node.begin(), JE = Node.end(); J != JE; ++J) {
+      const Instruction *Inst = &*J;
+      OS << *Inst << "\n";
+    }
+  }
+
   static std::string getCompleteNodeLabel(
       const BasicBlock *Node, DOTFuncInfo *,
-      llvm::function_ref<void(raw_string_ostream &, const BasicBlock &)>
-          HandleBasicBlock = [](raw_string_ostream &OS,
-                                const BasicBlock &Node) -> void { OS << Node; },
-      llvm::function_ref<void(std::string &, unsigned &, unsigned)>
+      function_ref<void(raw_string_ostream &, const BasicBlock &)>
+          HandleBasicBlock = printBasicBlock,
+      function_ref<void(std::string &, unsigned &, unsigned)>
           HandleComment = eraseComment) {
-    enum { MaxColumns = 80 };
-    std::string Str;
-    raw_string_ostream OS(Str);
-
-    if (Node->getName().empty()) {
-      Node->printAsOperand(OS, false);
-      OS << ":";
-    }
-
-    HandleBasicBlock(OS, *Node);
-    std::string OutStr = OS.str();
-    if (OutStr[0] == '\n')
-      OutStr.erase(OutStr.begin());
-
-    // Process string output to make it nicer...
-    unsigned ColNum = 0;
-    unsigned LastSpace = 0;
-    for (unsigned i = 0; i != OutStr.length(); ++i) {
-      if (OutStr[i] == '\n') { // Left justify
-        OutStr[i] = '\\';
-        OutStr.insert(OutStr.begin() + i + 1, 'l');
-        ColNum = 0;
-        LastSpace = 0;
-      } else if (OutStr[i] == ';') {             // Delete comments!
-        unsigned Idx = OutStr.find('\n', i + 1); // Find end of line
-        HandleComment(OutStr, i, Idx);
-      } else if (ColNum == MaxColumns) { // Wrap lines.
-        // Wrap very long names even though we can't find a space.
-        if (!LastSpace)
-          LastSpace = i;
-        OutStr.insert(LastSpace, "\\l...");
-        ColNum = i - LastSpace;
-        LastSpace = 0;
-        i += 3; // The loop will advance 'i' again.
-      } else
-        ++ColNum;
-      if (OutStr[i] == ' ')
-        LastSpace = i;
-    }
-    return OutStr;
+    return CompleteNodeLabelString(Node, HandleBasicBlock, HandleComment);
   }
 
   std::string getNodeLabel(const BasicBlock *Node, DOTFuncInfo *CFGInfo) {
@@ -227,56 +254,70 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     return "";
   }
 
+  static std::string getBBName(const BasicBlock *Node) {
+    std::string NodeName = Node->getName().str();
+    if (NodeName.empty()) {
+      raw_string_ostream NodeOS(NodeName);
+      Node->printAsOperand(NodeOS, false);
+      NodeName = NodeOS.str();
+      // Removing %
+      NodeName.erase(NodeName.begin());
+    }
+    return NodeName;
+  }
+
   /// Display the raw branch weights from PGO.
   std::string getEdgeAttributes(const BasicBlock *Node, const_succ_iterator I,
                                 DOTFuncInfo *CFGInfo) {
-    if (!CFGInfo->showEdgeWeights())
-      return "";
-
-    const Instruction *TI = Node->getTerminator();
-    if (TI->getNumSuccessors() == 1)
-      return "penwidth=2";
-
     unsigned OpNo = I.getSuccessorIndex();
-
-    if (OpNo >= TI->getNumSuccessors())
-      return "";
-
+    const Instruction *TI = Node->getTerminator();
     BasicBlock *SuccBB = TI->getSuccessor(OpNo);
     auto BranchProb = CFGInfo->getBPI()->getEdgeProbability(Node, SuccBB);
     double WeightPercent = ((double)BranchProb.getNumerator()) /
                            ((double)BranchProb.getDenominator());
+
+    std::string TTAttr =
+        formatv("tooltip=\"{0} -> {1}\\nProbability {2:P}\" ", getBBName(Node),
+                getBBName(SuccBB), WeightPercent);
+    if (!CFGInfo->showEdgeWeights())
+      return TTAttr;
+
+    if (TI->getNumSuccessors() == 1)
+      return TTAttr + "penwidth=2";
+
+    if (OpNo >= TI->getNumSuccessors())
+      return TTAttr;
+
     double Width = 1 + WeightPercent;
 
     if (!CFGInfo->useRawEdgeWeights())
-      return formatv("label=\"{0:P}\" penwidth={1}", WeightPercent, Width)
-          .str();
+      return TTAttr +
+             formatv("label=\"{0:P}\" penwidth={1}", WeightPercent, Width)
+                 .str();
 
     // Prepend a 'W' to indicate that this is a weight rather than the actual
     // profile count (due to scaling).
 
     uint64_t Freq = CFGInfo->getFreq(Node);
-    std::string Attrs = formatv("label=\"W:{0}\" penwidth={1}",
-                                (uint64_t)(Freq * WeightPercent), Width);
+    std::string Attrs =
+        TTAttr + formatv("label=\"W:{0}\" penwidth={1}",
+                         (uint64_t)(Freq * WeightPercent), Width)
+                     .str();
     if (Attrs.size())
       return Attrs;
 
-    MDNode *WeightsNode = TI->getMetadata(LLVMContext::MD_prof);
+    MDNode *WeightsNode = getBranchWeightMDNode(*TI);
     if (!WeightsNode)
-      return "";
-
-    MDString *MDName = cast<MDString>(WeightsNode->getOperand(0));
-    if (MDName->getString() != "branch_weights")
-      return "";
+      return TTAttr;
 
     OpNo = I.getSuccessorIndex() + 1;
     if (OpNo >= WeightsNode->getNumOperands())
-      return "";
+      return TTAttr;
     ConstantInt *Weight =
         mdconst::dyn_extract<ConstantInt>(WeightsNode->getOperand(OpNo));
     if (!Weight)
-      return "";
-    return ("label=\"W:" + std::to_string(Weight->getZExtValue()) +
+      return TTAttr;
+    return (TTAttr + "label=\"W:" + std::to_string(Weight->getZExtValue()) +
             "\" penwidth=" + std::to_string(Width));
   }
 
@@ -292,18 +333,13 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
                                 : (getHeatColor(1));
 
     std::string Attrs = "color=\"" + EdgeColor + "ff\", style=filled," +
-                        " fillcolor=\"" + Color + "70\"";
+                        " fillcolor=\"" + Color + "70\"" +
+                        " fontname=\"Courier\"";
     return Attrs;
   }
   bool isNodeHidden(const BasicBlock *Node, const DOTFuncInfo *CFGInfo);
   void computeDeoptOrUnreachablePaths(const Function *F);
 };
-} // End llvm namespace
-
-namespace llvm {
-class FunctionPass;
-FunctionPass *createCFGPrinterLegacyPassPass();
-FunctionPass *createCFGOnlyPrinterLegacyPassPass();
 } // End llvm namespace
 
 #endif

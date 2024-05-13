@@ -26,8 +26,7 @@ namespace llvm {
       fixup_sparc_br19,
 
       /// fixup_sparc_bpr  - 16-bit fixup for bpr
-      fixup_sparc_br16_2,
-      fixup_sparc_br16_14,
+      fixup_sparc_br16,
 
       /// fixup_sparc_13 - 13-bit fixup
       fixup_sparc_13,
@@ -94,6 +93,18 @@ namespace llvm {
       fixup_sparc_tls_ie_add,
       fixup_sparc_tls_le_hix22,
       fixup_sparc_tls_le_lox10,
+
+      /// 22-bit fixup corresponding to %hix(foo)
+      fixup_sparc_hix22,
+      /// 13-bit fixup corresponding to %lox(foo)
+      fixup_sparc_lox10,
+
+      /// 22-bit fixup corresponding to %gdop_hix22(foo)
+      fixup_sparc_gotdata_hix22,
+      /// 13-bit fixup corresponding to %gdop_lox10(foo)
+      fixup_sparc_gotdata_lox10,
+      /// 32-bit fixup corresponding to %gdop(foo)
+      fixup_sparc_gotdata_op,
 
       // Marker
       LastTargetFixupKind,

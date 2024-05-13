@@ -1,11 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// rdar://7634850
 
 @interface Foo
 - (void)foo:(Class)class; // expected-note{{passing argument to parameter 'class' here}}
 @end
 
-void FUNC() {
+void FUNC(void) {
     Class c, c1;
     SEL s1, s2;
     id i, i1;

@@ -9,8 +9,8 @@
 # RUN: ld.lld --shared %t1.o -o %t1.so
 # RUN: ld.lld -T %t.script %t1.so %t2.o -o %t2
 # RUN: ld.lld -T %t.script %t1.so %t3.o -o %t3
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t2 | FileCheck %s --check-prefix=T2
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t3 | FileCheck %s --check-prefix=T3
+# RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck %s --check-prefix=T2
+# RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck %s --check-prefix=T3
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s --defsym T1=1 -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s --defsym T2=1 -o %t2.o
@@ -18,8 +18,8 @@
 # RUN: ld.lld --shared %t1.o -o %t1.so
 # RUN: ld.lld -T %t.script %t1.so %t2.o -o %t2
 # RUN: ld.lld -T %t.script %t1.so %t3.o -o %t3
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t2 | FileCheck %s --check-prefix=T2
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t3 | FileCheck %s --check-prefix=T3
+# RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck %s --check-prefix=T2
+# RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck %s --check-prefix=T3
 
 .ifdef T1
 .globl callee
@@ -29,9 +29,9 @@ callee:
 
 # T2-LABEL: <p9codegen>:
 # T2-NEXT:    10010300: addis 2, 12, 1
-# T2-NEXT:    10010304: addi 2, 2, -32368
+# T2-NEXT:    10010304: addi 2, 2, -32352
 # T2-NEXT:    10010308: addis 4, 2, -1
-# T2-NEXT:    1001030c: lwa 3, 32412(4)
+# T2-NEXT:    1001030c: lwa 3, 32396(4)
 # T2-NEXT:    10010310: bl 0x10010330
 # T2-NEXT:    10010314: ld 2, 24(1)
 # T2-NEXT:    10010318: blr
@@ -49,7 +49,7 @@ callee:
 # T2-NEXT:    10010340: bctr
 
 # T2-LABEL: <__plt_pcrel_callee>:
-# T2-NEXT:    10010350: pld 12, 344(0), 1
+# T2-NEXT:    10010350: pld 12, 360(0), 1
 # T2-NEXT:    10010358: mtctr 12
 # T2-NEXT:    1001035c: bctr
 .ifdef T2
@@ -83,15 +83,15 @@ Global:
 
 # T3-LABEL: <p9codegen>:
 # T3-NEXT:    10010310: addis 2, 12, 1
-# T3-NEXT:    10010314: addi 2, 2, -32392
+# T3-NEXT:    10010314: addi 2, 2, -32376
 # T3-NEXT:    10010318: addis 4, 2, -1
-# T3-NEXT:    1001031c: lwa 3, 32420(4)
+# T3-NEXT:    1001031c: lwa 3, 32404(4)
 # T3-NEXT:    10010320: bl 0x10010350
 # T3-NEXT:    10010324: ld 2, 24(1)
 # T3-NEXT:    10010328: blr
 
 # T3-LABEL: <__plt_pcrel_callee>:
-# T3-NEXT:    10010330: pld 12, 368(0), 1
+# T3-NEXT:    10010330: pld 12, 384(0), 1
 # T3-NEXT:    10010338: mtctr 12
 # T3-NEXT:    1001033c: bctr
 

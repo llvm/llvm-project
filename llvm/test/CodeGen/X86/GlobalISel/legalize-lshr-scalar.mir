@@ -30,8 +30,6 @@ body:             |
 
     ; CHECK-LABEL: name: test_lshr
     ; CHECK: liveins: $rdi, $rsi
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
     ; CHECK: RET 0
     %0(s64) = COPY $rdi
     %1(s64) = COPY $rsi
@@ -70,8 +68,6 @@ body:             |
 
     ; CHECK-LABEL: name: test_lshr_i1
     ; CHECK: liveins: $rdi, $rsi
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
     ; CHECK: RET 0
     %0(s64) = COPY $rdi
     %1(s64) = COPY $rsi

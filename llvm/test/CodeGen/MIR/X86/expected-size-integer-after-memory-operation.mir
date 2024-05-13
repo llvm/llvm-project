@@ -2,9 +2,9 @@
 
 --- |
 
-  define i32 @test(i32* %a) {
+  define i32 @test(ptr %a) {
   entry:
-    %b = load i32, i32* %a
+    %b = load i32, ptr %a
     ret i32 %b
   }
 
@@ -19,6 +19,6 @@ body: |
     liveins: $rdi
   ; CHECK: [[@LINE+1]]:53: expected an atomic scope, ordering or a size specification
     $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load from %ir.a)
-    RETQ $eax
+    RET64 $eax
 ...
 

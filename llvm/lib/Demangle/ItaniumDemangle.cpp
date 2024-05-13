@@ -18,10 +18,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <functional>
-#include <numeric>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::itanium_demangle;
@@ -80,8 +79,8 @@ struct DumpVisitor {
   }
 
   void printStr(const char *S) { fprintf(stderr, "%s", S); }
-  void print(StringView SV) {
-    fprintf(stderr, "\"%.*s\"", (int)SV.size(), SV.begin());
+  void print(std::string_view SV) {
+    fprintf(stderr, "\"%.*s\"", (int)SV.size(), SV.data());
   }
   void print(const Node *N) {
     if (N)
@@ -172,6 +171,50 @@ struct DumpVisitor {
       return printStr("TemplateParamKind::NonType");
     case TemplateParamKind::Template:
       return printStr("TemplateParamKind::Template");
+    }
+  }
+  void print(Node::Prec P) {
+    switch (P) {
+    case Node::Prec::Primary:
+      return printStr("Node::Prec::Primary");
+    case Node::Prec::Postfix:
+      return printStr("Node::Prec::Postfix");
+    case Node::Prec::Unary:
+      return printStr("Node::Prec::Unary");
+    case Node::Prec::Cast:
+      return printStr("Node::Prec::Cast");
+    case Node::Prec::PtrMem:
+      return printStr("Node::Prec::PtrMem");
+    case Node::Prec::Multiplicative:
+      return printStr("Node::Prec::Multiplicative");
+    case Node::Prec::Additive:
+      return printStr("Node::Prec::Additive");
+    case Node::Prec::Shift:
+      return printStr("Node::Prec::Shift");
+    case Node::Prec::Spaceship:
+      return printStr("Node::Prec::Spaceship");
+    case Node::Prec::Relational:
+      return printStr("Node::Prec::Relational");
+    case Node::Prec::Equality:
+      return printStr("Node::Prec::Equality");
+    case Node::Prec::And:
+      return printStr("Node::Prec::And");
+    case Node::Prec::Xor:
+      return printStr("Node::Prec::Xor");
+    case Node::Prec::Ior:
+      return printStr("Node::Prec::Ior");
+    case Node::Prec::AndIf:
+      return printStr("Node::Prec::AndIf");
+    case Node::Prec::OrIf:
+      return printStr("Node::Prec::OrIf");
+    case Node::Prec::Conditional:
+      return printStr("Node::Prec::Conditional");
+    case Node::Prec::Assign:
+      return printStr("Node::Prec::Assign");
+    case Node::Prec::Comma:
+      return printStr("Node::Prec::Comma");
+    case Node::Prec::Default:
+      return printStr("Node::Prec::Default");
     }
   }
 
@@ -323,36 +366,21 @@ public:
 
 using Demangler = itanium_demangle::ManglingParser<DefaultAllocator>;
 
-char *llvm::itaniumDemangle(const char *MangledName, char *Buf,
-                            size_t *N, int *Status) {
-  if (MangledName == nullptr || (Buf != nullptr && N == nullptr)) {
-    if (Status)
-      *Status = demangle_invalid_args;
+char *llvm::itaniumDemangle(std::string_view MangledName, bool ParseParams) {
+  if (MangledName.empty())
     return nullptr;
-  }
 
-  int InternalStatus = demangle_success;
-  Demangler Parser(MangledName, MangledName + std::strlen(MangledName));
-  OutputStream S;
+  Demangler Parser(MangledName.data(),
+                   MangledName.data() + MangledName.length());
+  Node *AST = Parser.parse(ParseParams);
+  if (!AST)
+    return nullptr;
 
-  Node *AST = Parser.parse();
-
-  if (AST == nullptr)
-    InternalStatus = demangle_invalid_mangled_name;
-  else if (!initializeOutputStream(Buf, N, S, 1024))
-    InternalStatus = demangle_memory_alloc_failure;
-  else {
-    assert(Parser.ForwardTemplateRefs.empty());
-    AST->print(S);
-    S += '\0';
-    if (N != nullptr)
-      *N = S.getCurrentPosition();
-    Buf = S.getBuffer();
-  }
-
-  if (Status)
-    *Status = InternalStatus;
-  return InternalStatus == demangle_success ? Buf : nullptr;
+  OutputBuffer OB;
+  assert(Parser.ForwardTemplateRefs.empty());
+  AST->print(OB);
+  OB += '\0';
+  return OB.getBuffer();
 }
 
 ItaniumPartialDemangler::ItaniumPartialDemangler()
@@ -385,14 +413,12 @@ bool ItaniumPartialDemangler::partialDemangle(const char *MangledName) {
 }
 
 static char *printNode(const Node *RootNode, char *Buf, size_t *N) {
-  OutputStream S;
-  if (!initializeOutputStream(Buf, N, S, 128))
-    return nullptr;
-  RootNode->print(S);
-  S += '\0';
+  OutputBuffer OB(Buf, N);
+  RootNode->print(OB);
+  OB += '\0';
   if (N != nullptr)
-    *N = S.getCurrentPosition();
-  return S.getBuffer();
+    *N = OB.getCurrentPosition();
+  return OB.getBuffer();
 }
 
 char *ItaniumPartialDemangler::getFunctionBaseName(char *Buf, size_t *N) const {
@@ -406,8 +432,8 @@ char *ItaniumPartialDemangler::getFunctionBaseName(char *Buf, size_t *N) const {
     case Node::KAbiTagAttr:
       Name = static_cast<const AbiTagAttr *>(Name)->Base;
       continue;
-    case Node::KStdQualifiedName:
-      Name = static_cast<const StdQualifiedName *>(Name)->Child;
+    case Node::KModuleEntity:
+      Name = static_cast<const ModuleEntity *>(Name)->Name;
       continue;
     case Node::KNestedName:
       Name = static_cast<const NestedName *>(Name)->Name;
@@ -430,9 +456,7 @@ char *ItaniumPartialDemangler::getFunctionDeclContextName(char *Buf,
     return nullptr;
   const Node *Name = static_cast<const FunctionEncoding *>(RootNode)->getName();
 
-  OutputStream S;
-  if (!initializeOutputStream(Buf, N, S, 128))
-    return nullptr;
+  OutputBuffer OB(Buf, N);
 
  KeepGoingLocalFunction:
   while (true) {
@@ -447,27 +471,27 @@ char *ItaniumPartialDemangler::getFunctionDeclContextName(char *Buf,
     break;
   }
 
+  if (Name->getKind() == Node::KModuleEntity)
+    Name = static_cast<const ModuleEntity *>(Name)->Name;
+
   switch (Name->getKind()) {
-  case Node::KStdQualifiedName:
-    S += "std";
-    break;
   case Node::KNestedName:
-    static_cast<const NestedName *>(Name)->Qual->print(S);
+    static_cast<const NestedName *>(Name)->Qual->print(OB);
     break;
   case Node::KLocalName: {
     auto *LN = static_cast<const LocalName *>(Name);
-    LN->Encoding->print(S);
-    S += "::";
+    LN->Encoding->print(OB);
+    OB += "::";
     Name = LN->Entity;
     goto KeepGoingLocalFunction;
   }
   default:
     break;
   }
-  S += '\0';
+  OB += '\0';
   if (N != nullptr)
-    *N = S.getCurrentPosition();
-  return S.getBuffer();
+    *N = OB.getCurrentPosition();
+  return OB.getBuffer();
 }
 
 char *ItaniumPartialDemangler::getFunctionName(char *Buf, size_t *N) const {
@@ -483,17 +507,15 @@ char *ItaniumPartialDemangler::getFunctionParameters(char *Buf,
     return nullptr;
   NodeArray Params = static_cast<FunctionEncoding *>(RootNode)->getParams();
 
-  OutputStream S;
-  if (!initializeOutputStream(Buf, N, S, 128))
-    return nullptr;
+  OutputBuffer OB(Buf, N);
 
-  S += '(';
-  Params.printWithComma(S);
-  S += ')';
-  S += '\0';
+  OB += '(';
+  Params.printWithComma(OB);
+  OB += ')';
+  OB += '\0';
   if (N != nullptr)
-    *N = S.getCurrentPosition();
-  return S.getBuffer();
+    *N = OB.getCurrentPosition();
+  return OB.getBuffer();
 }
 
 char *ItaniumPartialDemangler::getFunctionReturnType(
@@ -501,18 +523,16 @@ char *ItaniumPartialDemangler::getFunctionReturnType(
   if (!isFunction())
     return nullptr;
 
-  OutputStream S;
-  if (!initializeOutputStream(Buf, N, S, 128))
-    return nullptr;
+  OutputBuffer OB(Buf, N);
 
   if (const Node *Ret =
           static_cast<const FunctionEncoding *>(RootNode)->getReturnType())
-    Ret->print(S);
+    Ret->print(OB);
 
-  S += '\0';
+  OB += '\0';
   if (N != nullptr)
-    *N = S.getCurrentPosition();
-  return S.getBuffer();
+    *N = OB.getCurrentPosition();
+  return OB.getBuffer();
 }
 
 char *ItaniumPartialDemangler::finishDemangle(char *Buf, size_t *N) const {
@@ -552,8 +572,8 @@ bool ItaniumPartialDemangler::isCtorOrDtor() const {
     case Node::KNestedName:
       N = static_cast<const NestedName *>(N)->Name;
       break;
-    case Node::KStdQualifiedName:
-      N = static_cast<const StdQualifiedName *>(N)->Child;
+    case Node::KModuleEntity:
+      N = static_cast<const ModuleEntity *>(N)->Name;
       break;
     }
   }

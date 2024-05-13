@@ -19,7 +19,6 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -43,7 +42,7 @@ static StringRef getDIEStringAttr(const DIE &Die, uint16_t Attr) {
 void DIEHash::addString(StringRef Str) {
   LLVM_DEBUG(dbgs() << "Adding string " << Str << " to hash.\n");
   Hash.update(Str);
-  Hash.update(makeArrayRef((uint8_t)'\0'));
+  Hash.update(ArrayRef((uint8_t)'\0'));
 }
 
 // FIXME: The LEB128 routines are copied and only slightly modified out of
@@ -93,19 +92,15 @@ void DIEHash::addParentContext(const DIE &Parent) {
 
   // Reverse iterate over our list to go from the outermost construct to the
   // innermost.
-  for (SmallVectorImpl<const DIE *>::reverse_iterator I = Parents.rbegin(),
-                                                      E = Parents.rend();
-       I != E; ++I) {
-    const DIE &Die = **I;
-
+  for (const DIE *Die : llvm::reverse(Parents)) {
     // ... Append the letter "C" to the sequence...
     addULEB128('C');
 
     // ... Followed by the DWARF tag of the construct...
-    addULEB128(Die.getTag());
+    addULEB128(Die->getTag());
 
     // ... Then the name, taken from the DW_AT_name attribute.
-    StringRef Name = getDIEStringAttr(Die, dwarf::DW_AT_name);
+    StringRef Name = getDIEStringAttr(*Die, dwarf::DW_AT_name);
     LLVM_DEBUG(dbgs() << "... adding context: " << Name << "\n");
     if (!Name.empty())
       addString(Name);
@@ -211,6 +206,18 @@ void DIEHash::hashDIEEntry(dwarf::Attribute Attribute, dwarf::Tag Tag,
   computeHash(Entry);
 }
 
+void DIEHash::hashRawTypeReference(const DIE &Entry) {
+  unsigned &DieNumber = Numbering[&Entry];
+  if (DieNumber) {
+    addULEB128('R');
+    addULEB128(DieNumber);
+    return;
+  }
+  DieNumber = Numbering.size();
+  addULEB128('T');
+  computeHash(Entry);
+}
+
 // Hash all of the values in a block like set of values. This assumes that
 // all of the data is going to be added as integers.
 void DIEHash::hashBlockData(const DIE::const_value_range &Values) {
@@ -302,10 +309,10 @@ void DIEHash::hashAttribute(const DIEValue &Value, dwarf::Tag Tag) {
     addULEB128(Attribute);
     addULEB128(dwarf::DW_FORM_block);
     if (Value.getType() == DIEValue::isBlock) {
-      addULEB128(Value.getDIEBlock().ComputeSize(AP));
+      addULEB128(Value.getDIEBlock().computeSize(AP->getDwarfFormParams()));
       hashBlockData(Value.getDIEBlock().values());
     } else if (Value.getType() == DIEValue::isLoc) {
-      addULEB128(Value.getDIELoc().ComputeSize(AP));
+      addULEB128(Value.getDIELoc().computeSize(AP->getDwarfFormParams()));
       hashBlockData(Value.getDIELoc().values());
     } else {
       // We could add the block length, but that would take
@@ -367,7 +374,7 @@ void DIEHash::computeHash(const DIE &Die) {
   addAttributes(Die);
 
   // Then hash each of the children of the DIE.
-  for (auto &C : Die.children()) {
+  for (const auto &C : Die.children()) {
     // 7.27 Step 7
     // If C is a nested type entry or a member function entry, ...
     if (isType(C.getTag()) || (C.getTag() == dwarf::DW_TAG_subprogram && isType(C.getParent()->getTag()))) {
@@ -382,7 +389,7 @@ void DIEHash::computeHash(const DIE &Die) {
   }
 
   // Following the last (or if there are no children), append a zero byte.
-  Hash.update(makeArrayRef((uint8_t)'\0'));
+  Hash.update(ArrayRef((uint8_t)'\0'));
 }
 
 /// This is based on the type signature computation given in section 7.27 of the

@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
 ; Check that we convert
@@ -28,8 +27,8 @@ define i8 @trunc_of_add(i32 %a) {
 ; Check that we truncate to zero values assumed to have at least as many
 ; trailing zeros as the target type.
 ; CHECK-LABEL: @trunc_to_assumed_zeros
-define i8 @trunc_to_assumed_zeros(i32* %p) {
-  %a = load i32, i32* %p
+define i8 @trunc_to_assumed_zeros(ptr %p) {
+  %a = load i32, ptr %p
   %and = and i32 %a, 255
   %cmp = icmp eq i32 %and, 0
   tail call void @llvm.assume(i1 %cmp)

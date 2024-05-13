@@ -8,14 +8,18 @@
 
 #include "clang/Driver/Multilib.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Version.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/YAMLParser.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -25,56 +29,17 @@ using namespace clang;
 using namespace driver;
 using namespace llvm::sys;
 
-/// normalize Segment to "/foo/bar" or "".
-static void normalizePathSegment(std::string &Segment) {
-  StringRef seg = Segment;
-
-  // Prune trailing "/" or "./"
-  while (true) {
-    StringRef last = path::filename(seg);
-    if (last != ".")
-      break;
-    seg = path::parent_path(seg);
-  }
-
-  if (seg.empty() || seg == "/") {
-    Segment.clear();
-    return;
-  }
-
-  // Add leading '/'
-  if (seg.front() != '/') {
-    Segment = "/" + seg.str();
-  } else {
-    Segment = std::string(seg);
-  }
-}
-
 Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
-                   StringRef IncludeSuffix, int Priority)
+                   StringRef IncludeSuffix, const flags_list &Flags,
+                   StringRef ExclusiveGroup)
     : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix),
-      Priority(Priority) {
-  normalizePathSegment(this->GCCSuffix);
-  normalizePathSegment(this->OSSuffix);
-  normalizePathSegment(this->IncludeSuffix);
-}
-
-Multilib &Multilib::gccSuffix(StringRef S) {
-  GCCSuffix = std::string(S);
-  normalizePathSegment(GCCSuffix);
-  return *this;
-}
-
-Multilib &Multilib::osSuffix(StringRef S) {
-  OSSuffix = std::string(S);
-  normalizePathSegment(OSSuffix);
-  return *this;
-}
-
-Multilib &Multilib::includeSuffix(StringRef S) {
-  IncludeSuffix = std::string(S);
-  normalizePathSegment(IncludeSuffix);
-  return *this;
+      Flags(Flags), ExclusiveGroup(ExclusiveGroup) {
+  assert(GCCSuffix.empty() ||
+         (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
+  assert(OSSuffix.empty() ||
+         (StringRef(OSSuffix).front() == '/' && OSSuffix.size() > 1));
+  assert(IncludeSuffix.empty() ||
+         (StringRef(IncludeSuffix).front() == '/' && IncludeSuffix.size() > 1));
 }
 
 LLVM_DUMP_METHOD void Multilib::dump() const {
@@ -82,7 +47,6 @@ LLVM_DUMP_METHOD void Multilib::dump() const {
 }
 
 void Multilib::print(raw_ostream &OS) const {
-  assert(GCCSuffix.empty() || (StringRef(GCCSuffix).front() == '/'));
   if (GCCSuffix.empty())
     OS << ".";
   else {
@@ -90,25 +54,9 @@ void Multilib::print(raw_ostream &OS) const {
   }
   OS << ";";
   for (StringRef Flag : Flags) {
-    if (Flag.front() == '+')
+    if (Flag.front() == '-')
       OS << "@" << Flag.substr(1);
   }
-}
-
-bool Multilib::isValid() const {
-  llvm::StringMap<int> FlagSet;
-  for (unsigned I = 0, N = Flags.size(); I != N; ++I) {
-    StringRef Flag(Flags[I]);
-    llvm::StringMap<int>::iterator SI = FlagSet.find(Flag.substr(1));
-
-    assert(StringRef(Flag).front() == '+' || StringRef(Flag).front() == '-');
-
-    if (SI == FlagSet.end())
-      FlagSet[Flag.substr(1)] = I;
-    else if (Flags[I] != Flags[SI->getValue()])
-      return false;
-  }
-  return true;
 }
 
 bool Multilib::operator==(const Multilib &Other) const {
@@ -119,7 +67,7 @@ bool Multilib::operator==(const Multilib &Other) const {
     MyFlags.insert(Flag);
 
   for (const auto &Flag : Other.Flags)
-    if (MyFlags.find(Flag) == MyFlags.end())
+    if (!MyFlags.contains(Flag))
       return false;
 
   if (osSuffix() != Other.osSuffix())
@@ -139,147 +87,225 @@ raw_ostream &clang::driver::operator<<(raw_ostream &OS, const Multilib &M) {
   return OS;
 }
 
-MultilibSet &MultilibSet::Maybe(const Multilib &M) {
-  Multilib Opposite;
-  // Negate any '+' flags
-  for (StringRef Flag : M.flags()) {
-    if (Flag.front() == '+')
-      Opposite.flags().push_back(("-" + Flag.substr(1)).str());
-  }
-  return Either(M, Opposite);
-}
-
-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2) {
-  return Either({M1, M2});
-}
-
-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2,
-                                 const Multilib &M3) {
-  return Either({M1, M2, M3});
-}
-
-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2,
-                                 const Multilib &M3, const Multilib &M4) {
-  return Either({M1, M2, M3, M4});
-}
-
-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2,
-                                 const Multilib &M3, const Multilib &M4,
-                                 const Multilib &M5) {
-  return Either({M1, M2, M3, M4, M5});
-}
-
-static Multilib compose(const Multilib &Base, const Multilib &New) {
-  SmallString<128> GCCSuffix;
-  llvm::sys::path::append(GCCSuffix, "/", Base.gccSuffix(), New.gccSuffix());
-  SmallString<128> OSSuffix;
-  llvm::sys::path::append(OSSuffix, "/", Base.osSuffix(), New.osSuffix());
-  SmallString<128> IncludeSuffix;
-  llvm::sys::path::append(IncludeSuffix, "/", Base.includeSuffix(),
-                          New.includeSuffix());
-
-  Multilib Composed(GCCSuffix, OSSuffix, IncludeSuffix);
-
-  Multilib::flags_list &Flags = Composed.flags();
-
-  Flags.insert(Flags.end(), Base.flags().begin(), Base.flags().end());
-  Flags.insert(Flags.end(), New.flags().begin(), New.flags().end());
-
-  return Composed;
-}
-
-MultilibSet &MultilibSet::Either(ArrayRef<Multilib> MultilibSegments) {
-  multilib_list Composed;
-
-  if (Multilibs.empty())
-    Multilibs.insert(Multilibs.end(), MultilibSegments.begin(),
-                     MultilibSegments.end());
-  else {
-    for (const auto &New : MultilibSegments) {
-      for (const auto &Base : *this) {
-        Multilib MO = compose(Base, New);
-        if (MO.isValid())
-          Composed.push_back(MO);
-      }
-    }
-
-    Multilibs = Composed;
-  }
-
-  return *this;
-}
-
 MultilibSet &MultilibSet::FilterOut(FilterCallback F) {
-  filterInPlace(F, Multilibs);
-  return *this;
-}
-
-MultilibSet &MultilibSet::FilterOut(const char *Regex) {
-  llvm::Regex R(Regex);
-#ifndef NDEBUG
-  std::string Error;
-  if (!R.isValid(Error)) {
-    llvm::errs() << Error;
-    llvm_unreachable("Invalid regex!");
-  }
-#endif
-
-  filterInPlace([&R](const Multilib &M) { return R.match(M.gccSuffix()); },
-                Multilibs);
+  llvm::erase_if(Multilibs, F);
   return *this;
 }
 
 void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
-void MultilibSet::combineWith(const MultilibSet &Other) {
-  Multilibs.insert(Multilibs.end(), Other.begin(), Other.end());
-}
+bool MultilibSet::select(const Multilib::flags_list &Flags,
+                         llvm::SmallVectorImpl<Multilib> &Selected) const {
+  llvm::StringSet<> FlagSet(expandFlags(Flags));
+  Selected.clear();
 
-static bool isFlagEnabled(StringRef Flag) {
-  char Indicator = Flag.front();
-  assert(Indicator == '+' || Indicator == '-');
-  return Indicator == '+';
-}
+  // Decide which multilibs we're going to select at all.
+  llvm::DenseSet<StringRef> ExclusiveGroupsSelected;
+  for (const Multilib &M : llvm::reverse(Multilibs)) {
+    // If this multilib doesn't match all our flags, don't select it.
+    if (!llvm::all_of(M.flags(), [&FlagSet](const std::string &F) {
+          return FlagSet.contains(F);
+        }))
+      continue;
 
-bool MultilibSet::select(const Multilib::flags_list &Flags, Multilib &M) const {
-  llvm::StringMap<bool> FlagSet;
-
-  // Stuff all of the flags into the FlagSet such that a true mappend indicates
-  // the flag was enabled, and a false mappend indicates the flag was disabled.
-  for (StringRef Flag : Flags)
-    FlagSet[Flag.substr(1)] = isFlagEnabled(Flag);
-
-  multilib_list Filtered = filterCopy([&FlagSet](const Multilib &M) {
-    for (StringRef Flag : M.flags()) {
-      llvm::StringMap<bool>::const_iterator SI = FlagSet.find(Flag.substr(1));
-      if (SI != FlagSet.end())
-        if (SI->getValue() != isFlagEnabled(Flag))
-          return true;
+    const std::string &group = M.exclusiveGroup();
+    if (!group.empty()) {
+      // If this multilib has the same ExclusiveGroup as one we've already
+      // selected, skip it. We're iterating in reverse order, so the group
+      // member we've selected already is preferred.
+      //
+      // Otherwise, add the group name to the set of groups we've already
+      // selected a member of.
+      auto [It, Inserted] = ExclusiveGroupsSelected.insert(group);
+      if (!Inserted)
+        continue;
     }
-    return false;
-  }, Multilibs);
 
-  if (Filtered.empty())
-    return false;
-  if (Filtered.size() == 1) {
-    M = Filtered[0];
-    return true;
+    // Select this multilib.
+    Selected.push_back(M);
   }
 
-  // Sort multilibs by priority and select the one with the highest priority.
-  llvm::sort(Filtered.begin(), Filtered.end(),
-             [](const Multilib &a, const Multilib &b) -> bool {
-               return a.priority() > b.priority();
-             });
+  // We iterated in reverse order, so now put Selected back the right way
+  // round.
+  std::reverse(Selected.begin(), Selected.end());
 
-  if (Filtered[0].priority() > Filtered[1].priority()) {
-    M = Filtered[0];
-    return true;
+  return !Selected.empty();
+}
+
+llvm::StringSet<>
+MultilibSet::expandFlags(const Multilib::flags_list &InFlags) const {
+  llvm::StringSet<> Result;
+  for (const auto &F : InFlags)
+    Result.insert(F);
+  for (const FlagMatcher &M : FlagMatchers) {
+    std::string RegexString(M.Match);
+
+    // Make the regular expression match the whole string.
+    if (!StringRef(M.Match).starts_with("^"))
+      RegexString.insert(RegexString.begin(), '^');
+    if (!StringRef(M.Match).ends_with("$"))
+      RegexString.push_back('$');
+
+    const llvm::Regex Regex(RegexString);
+    assert(Regex.isValid());
+    if (llvm::any_of(InFlags,
+                     [&Regex](StringRef F) { return Regex.match(F); })) {
+      Result.insert(M.Flags.begin(), M.Flags.end());
+    }
+  }
+  return Result;
+}
+
+namespace {
+
+// When updating this also update MULTILIB_VERSION in MultilibTest.cpp
+static const VersionTuple MultilibVersionCurrent(1, 0);
+
+struct MultilibSerialization {
+  std::string Dir;
+  std::vector<std::string> Flags;
+  std::string Group;
+};
+
+enum class MultilibGroupType {
+  /*
+   * The only group type currently supported is 'Exclusive', which indicates a
+   * group of multilibs of which at most one may be selected.
+   */
+  Exclusive,
+
+  /*
+   * Future possibility: a second group type indicating a set of library
+   * directories that are mutually _dependent_ rather than mutually exclusive:
+   * if you include one you must include them all.
+   *
+   * It might also be useful to allow groups to be members of other groups, so
+   * that a mutually exclusive group could contain a mutually dependent set of
+   * library directories, or vice versa.
+   *
+   * These additional features would need changes in the implementation, but
+   * the YAML schema is set up so they can be added without requiring changes
+   * in existing users' multilib.yaml files.
+   */
+};
+
+struct MultilibGroupSerialization {
+  std::string Name;
+  MultilibGroupType Type;
+};
+
+struct MultilibSetSerialization {
+  llvm::VersionTuple MultilibVersion;
+  std::vector<MultilibGroupSerialization> Groups;
+  std::vector<MultilibSerialization> Multilibs;
+  std::vector<MultilibSet::FlagMatcher> FlagMatchers;
+};
+
+} // end anonymous namespace
+
+template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
+  static void mapping(llvm::yaml::IO &io, MultilibSerialization &V) {
+    io.mapRequired("Dir", V.Dir);
+    io.mapRequired("Flags", V.Flags);
+    io.mapOptional("Group", V.Group);
+  }
+  static std::string validate(IO &io, MultilibSerialization &V) {
+    if (StringRef(V.Dir).starts_with("/"))
+      return "paths must be relative but \"" + V.Dir + "\" starts with \"/\"";
+    return std::string{};
+  }
+};
+
+template <> struct llvm::yaml::ScalarEnumerationTraits<MultilibGroupType> {
+  static void enumeration(IO &io, MultilibGroupType &Val) {
+    io.enumCase(Val, "Exclusive", MultilibGroupType::Exclusive);
+  }
+};
+
+template <> struct llvm::yaml::MappingTraits<MultilibGroupSerialization> {
+  static void mapping(llvm::yaml::IO &io, MultilibGroupSerialization &V) {
+    io.mapRequired("Name", V.Name);
+    io.mapRequired("Type", V.Type);
+  }
+};
+
+template <> struct llvm::yaml::MappingTraits<MultilibSet::FlagMatcher> {
+  static void mapping(llvm::yaml::IO &io, MultilibSet::FlagMatcher &M) {
+    io.mapRequired("Match", M.Match);
+    io.mapRequired("Flags", M.Flags);
+  }
+  static std::string validate(IO &io, MultilibSet::FlagMatcher &M) {
+    llvm::Regex Regex(M.Match);
+    std::string RegexError;
+    if (!Regex.isValid(RegexError))
+      return RegexError;
+    if (M.Flags.empty())
+      return "value required for 'Flags'";
+    return std::string{};
+  }
+};
+
+template <> struct llvm::yaml::MappingTraits<MultilibSetSerialization> {
+  static void mapping(llvm::yaml::IO &io, MultilibSetSerialization &M) {
+    io.mapRequired("MultilibVersion", M.MultilibVersion);
+    io.mapRequired("Variants", M.Multilibs);
+    io.mapOptional("Groups", M.Groups);
+    io.mapOptional("Mappings", M.FlagMatchers);
+  }
+  static std::string validate(IO &io, MultilibSetSerialization &M) {
+    if (M.MultilibVersion.empty())
+      return "missing required key 'MultilibVersion'";
+    if (M.MultilibVersion.getMajor() != MultilibVersionCurrent.getMajor())
+      return "multilib version " + M.MultilibVersion.getAsString() +
+             " is unsupported";
+    if (M.MultilibVersion.getMinor() > MultilibVersionCurrent.getMinor())
+      return "multilib version " + M.MultilibVersion.getAsString() +
+             " is unsupported";
+    for (const MultilibSerialization &Lib : M.Multilibs) {
+      if (!Lib.Group.empty()) {
+        bool Found = false;
+        for (const MultilibGroupSerialization &Group : M.Groups)
+          if (Group.Name == Lib.Group) {
+            Found = true;
+            break;
+          }
+        if (!Found)
+          return "multilib \"" + Lib.Dir +
+                 "\" specifies undefined group name \"" + Lib.Group + "\"";
+      }
+    }
+    return std::string{};
+  }
+};
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibSerialization)
+LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibGroupSerialization)
+LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibSet::FlagMatcher)
+
+llvm::ErrorOr<MultilibSet>
+MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
+                       llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                       void *DiagHandlerCtxt) {
+  MultilibSetSerialization MS;
+  llvm::yaml::Input YamlInput(Input, nullptr, DiagHandler, DiagHandlerCtxt);
+  YamlInput >> MS;
+  if (YamlInput.error())
+    return YamlInput.error();
+
+  multilib_list Multilibs;
+  Multilibs.reserve(MS.Multilibs.size());
+  for (const auto &M : MS.Multilibs) {
+    std::string Dir;
+    if (M.Dir != ".")
+      Dir = "/" + M.Dir;
+    // We transfer M.Group straight into the ExclusiveGroup parameter for the
+    // Multilib constructor. If we later support more than one type of group,
+    // we'll have to look up the group name in MS.Groups, check its type, and
+    // decide what to do here.
+    Multilibs.emplace_back(Dir, Dir, Dir, M.Flags, M.Group);
   }
 
-  // TODO: We should consider returning llvm::Error rather than aborting.
-  assert(false && "More than one multilib with the same priority");
-  return false;
+  return MultilibSet(std::move(Multilibs), std::move(MS.FlagMatchers));
 }
 
 LLVM_DUMP_METHOD void MultilibSet::dump() const {
@@ -289,17 +315,6 @@ LLVM_DUMP_METHOD void MultilibSet::dump() const {
 void MultilibSet::print(raw_ostream &OS) const {
   for (const auto &M : *this)
     OS << M << "\n";
-}
-
-MultilibSet::multilib_list MultilibSet::filterCopy(FilterCallback F,
-                                                   const multilib_list &Ms) {
-  multilib_list Copy(Ms);
-  filterInPlace(F, Copy);
-  return Copy;
-}
-
-void MultilibSet::filterInPlace(FilterCallback F, multilib_list &Ms) {
-  Ms.erase(std::remove_if(Ms.begin(), Ms.end(), F), Ms.end());
 }
 
 raw_ostream &clang::driver::operator<<(raw_ostream &OS, const MultilibSet &MS) {

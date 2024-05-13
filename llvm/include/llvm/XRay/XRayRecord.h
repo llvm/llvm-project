@@ -34,10 +34,10 @@ struct XRayFileHeader {
 
   /// Whether the CPU that produced the timestamp counters (TSC) move at a
   /// constant rate.
-  bool ConstantTSC;
+  bool ConstantTSC = false;
 
   /// Whether the CPU that produced the timestamp counters (TSC) do not stop.
-  bool NonstopTSC;
+  bool NonstopTSC = false;
 
   /// The number of cycles per second for the CPU that produced the timestamp
   /// counter (TSC) values. Useful for estimating the amount of time that
@@ -47,7 +47,7 @@ struct XRayFileHeader {
   // This is different depending on the type of xray record. The naive format
   // stores a Wallclock timespec. FDR logging stores the size of a thread
   // buffer.
-  char FreeFormData[16];
+  char FreeFormData[16] = {};
 };
 
 /// Determines the supported types of records that could be seen in XRay traces.

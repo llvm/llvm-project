@@ -26,7 +26,7 @@ void frameSizeWarning(int, int) {}
 
 void frameSizeWarning();
 
-void frameSizeWarning() { // expected-warning-re {{stack frame size of {{[0-9]+}} bytes in function 'frameSizeWarning'}}
+void frameSizeWarning() { // expected-warning-re {{stack frame size ({{[0-9]+}}) exceeds limit ({{[0-9]+}}) in 'frameSizeWarning()'}}
   char buffer[80];
   doIt(buffer);
 }
@@ -36,23 +36,16 @@ void frameSizeWarning();
 void frameSizeWarning(int) {}
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wframe-larger-than="
+#pragma GCC diagnostic ignored "-Wframe-larger-than"
 void frameSizeWarningIgnored() {
   char buffer[80];
   doIt(buffer);
 }
 #pragma GCC diagnostic pop
 
-#pragma GCC diagnostic push
-#ifndef IS_SYSHEADER
-// expected-warning@+2 {{unknown warning group '-Wframe-larger-than'}}
-#endif
-#pragma GCC diagnostic ignored "-Wframe-larger-than"
-#pragma GCC diagnostic pop
-
 void frameSizeLocalClassWarning() {
   struct S {
-    S() { // expected-warning-re {{stack frame size of {{[0-9]+}} bytes in function 'frameSizeLocalClassWarning()::S::S'}}
+    S() { // expected-warning-re {{stack frame size ({{[0-9]+}}) exceeds limit ({{[0-9]+}}) in 'frameSizeLocalClassWarning()::S::S()'}}
       char buffer[80];
       doIt(buffer);
     }
@@ -62,7 +55,7 @@ void frameSizeLocalClassWarning() {
 
 void frameSizeLambdaWarning() {
   auto fn =
-      []() { // expected-warning-re {{stack frame size of {{[0-9]+}} bytes in lambda expression}}
+      []() { // expected-warning-re {{stack frame size ({{[0-9]+}}) exceeds limit ({{[0-9]+}}) in 'frameSizeLambdaWarning()::$_0::operator()() const'}}
     char buffer[80];
     doIt(buffer);
   };
@@ -71,7 +64,7 @@ void frameSizeLambdaWarning() {
 
 void frameSizeBlocksWarning() {
   auto fn =
-      ^() { // expected-warning-re {{stack frame size of {{[0-9]+}} bytes in block literal}}
+      ^() { // expected-warning-re {{stack frame size ({{[0-9]+}}) exceeds limit ({{[0-9]+}}) in 'invocation function for block in frameSizeBlocksWarning()'}}
     char buffer[80];
     doIt(buffer);
   };

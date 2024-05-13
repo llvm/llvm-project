@@ -13,6 +13,7 @@
 namespace clang {
 namespace ento {
 namespace categories {
+extern const char *const AppleAPIMisuse;
 extern const char *const CoreFoundationObjectiveC;
 extern const char *const LogicError;
 extern const char *const MemoryRefCount;
@@ -22,6 +23,7 @@ extern const char *const CXXObjectLifecycle;
 extern const char *const CXXMoveSemantics;
 extern const char *const SecurityError;
 extern const char *const UnusedCode;
+extern const char *const TaintedData;
 } // namespace categories
 } // namespace ento
 } // namespace clang

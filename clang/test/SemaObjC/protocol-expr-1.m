@@ -8,7 +8,7 @@
 
 @class cl;
 
-int main()
+int main(void)
 {
 	Protocol *proto = @protocol(p1);
         Protocol *fproto = @protocol(fproto);

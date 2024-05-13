@@ -10,6 +10,8 @@
 
 // typedef regex_token_iterator<wstring::const_iterator>   wsregex_token_iterator;
 
+// XFAIL: no-wide-characters
+
 #include <regex>
 #include <type_traits>
 #include "test_macros.h"

@@ -42,7 +42,7 @@ enum class ARCRuntimeEntryPointKind {
   Autorelease,
   StoreStrong,
   RetainRV,
-  ClaimRV,
+  UnsafeClaimRV,
   RetainAutorelease,
   RetainAutoreleaseRV,
 };
@@ -62,7 +62,7 @@ public:
     Autorelease = nullptr;
     StoreStrong = nullptr;
     RetainRV = nullptr;
-    ClaimRV = nullptr;
+    UnsafeClaimRV = nullptr;
     RetainAutorelease = nullptr;
     RetainAutoreleaseRV = nullptr;
   }
@@ -87,9 +87,9 @@ public:
     case ARCRuntimeEntryPointKind::RetainRV:
       return getIntrinsicEntryPoint(RetainRV,
                                 Intrinsic::objc_retainAutoreleasedReturnValue);
-    case ARCRuntimeEntryPointKind::ClaimRV:
+    case ARCRuntimeEntryPointKind::UnsafeClaimRV:
       return getIntrinsicEntryPoint(
-          ClaimRV, Intrinsic::objc_unsafeClaimAutoreleasedReturnValue);
+          UnsafeClaimRV, Intrinsic::objc_unsafeClaimAutoreleasedReturnValue);
     case ARCRuntimeEntryPointKind::RetainAutorelease:
       return getIntrinsicEntryPoint(RetainAutorelease,
                                     Intrinsic::objc_retainAutorelease);
@@ -127,7 +127,7 @@ private:
   Function *RetainRV = nullptr;
 
   /// Declaration for objc_unsafeClaimAutoreleasedReturnValue().
-  Function *ClaimRV = nullptr;
+  Function *UnsafeClaimRV = nullptr;
 
   /// Declaration for objc_retainAutorelease().
   Function *RetainAutorelease = nullptr;

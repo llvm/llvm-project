@@ -1,4 +1,5 @@
-; RUN: opt -S < %s -mem2reg -verify | FileCheck %s
+; RUN: opt -S < %s -passes='function(mem2reg),require<verify>' | FileCheck %s
+; RUN: opt -S < %s -passes='function(mem2reg),require<verify>' --try-experimental-debuginfo-iterators | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"
@@ -15,47 +16,47 @@ target triple = "x86_64-apple-macosx10.13.0"
 ;   }
 
 define i32 @get1() !dbg !8 {
-  %1 = call i32* (...) @getp(), !dbg !12
-  %2 = load i32, i32* %1, align 4, !dbg !13
+  %1 = call ptr (...) @getp(), !dbg !12
+  %2 = load i32, ptr %1, align 4, !dbg !13
   ret i32 %2, !dbg !14
 }
 
-declare i32* @getp(...)
+declare ptr @getp(...)
 
-define i32 @get2(i32*) !dbg !15 {
-  %2 = alloca i32*, align 8
-  store i32* %0, i32** %2, align 8
-  call void @llvm.dbg.declare(metadata i32** %2, metadata !19, metadata !DIExpression()), !dbg !20
-  %3 = load i32*, i32** %2, align 8, !dbg !21
-  %4 = load i32, i32* %3, align 4, !dbg !22
+define i32 @get2(ptr) !dbg !15 {
+  %2 = alloca ptr, align 8
+  store ptr %0, ptr %2, align 8
+  call void @llvm.dbg.declare(metadata ptr %2, metadata !19, metadata !DIExpression()), !dbg !20
+  %3 = load ptr, ptr %2, align 8, !dbg !21
+  %4 = load i32, ptr %3, align 4, !dbg !22
   ret i32 %4, !dbg !23
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; CHECK-LABEL: define i32 @bug
-define i32 @bug(i32*) !dbg !24 {
+define i32 @bug(ptr) !dbg !24 {
   %2 = alloca i32, align 4
-  %3 = alloca i32*, align 8
-  store i32* %0, i32** %3, align 8
-  call void @llvm.dbg.declare(metadata i32** %3, metadata !25, metadata !DIExpression()), !dbg !26
+  %3 = alloca ptr, align 8
+  store ptr %0, ptr %3, align 8
+  call void @llvm.dbg.declare(metadata ptr %3, metadata !25, metadata !DIExpression()), !dbg !26
   %4 = call i32 (...) @cond(), !dbg !27
   %5 = icmp ne i32 %4, 0, !dbg !27
   br i1 %5, label %6, label %8, !dbg !29
 
 ; <label>:6:                                      ; preds = %1
   %7 = call i32 @get1(), !dbg !30
-  store i32 %7, i32* %2, align 4, !dbg !31
+  store i32 %7, ptr %2, align 4, !dbg !31
   br label %11, !dbg !31
 
 ; <label>:8:                                      ; preds = %1
-  %9 = load i32*, i32** %3, align 8, !dbg !32
-  %10 = call i32 @get2(i32* %9), !dbg !33
-  store i32 %10, i32* %2, align 4, !dbg !34
+  %9 = load ptr, ptr %3, align 8, !dbg !32
+  %10 = call i32 @get2(ptr %9), !dbg !33
+  store i32 %10, ptr %2, align 4, !dbg !34
   br label %11, !dbg !34
 
 ; <label>:11:                                     ; preds = %8, %6
-  %12 = load i32, i32* %2, align 4, !dbg !35
+  %12 = load i32, ptr %2, align 4, !dbg !35
   ret i32 %12, !dbg !35
 
   ; CHECK: [[phi:%.*]] = phi i32 [ {{.*}} ], [ {{.*}} ], !dbg [[mergedLoc:![0-9]+]]

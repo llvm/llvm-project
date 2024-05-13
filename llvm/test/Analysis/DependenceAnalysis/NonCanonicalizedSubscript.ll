@@ -1,6 +1,5 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
 ; RUN: | FileCheck %s -check-prefix=DELIN
-; RUN: opt < %s -analyze -enable-new-pm=0 -basic-aa -da | FileCheck %s -check-prefix=DELIN
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.6.0"
@@ -13,7 +12,7 @@ target triple = "x86_64-apple-macosx10.6.0"
 ; The subscript 5 in a[i][5] is deliberately an i32, mismatching the types of
 ; other subscript. DependenceAnalysis before the fix crashed due to this
 ; mismatch.
-define void @i32_subscript([100 x [100 x i32]]* %a, i32* %b) {
+define void @i32_subscript(ptr %a, ptr %b) {
 ; DELIN-LABEL: 'Dependence Analysis' for function 'i32_subscript'
 entry:
   br label %for.body
@@ -23,11 +22,11 @@ for.body:
 ; DELIN: da analyze - anti [=|<]!
 ; DELIN: da analyze - none!
   %i = phi i64 [ 0, %entry ], [ %i.inc, %for.body ]
-  %a.addr = getelementptr [100 x [100 x i32]], [100 x [100 x i32]]* %a, i64 0, i64 %i, i64 %i
-  %a.addr.2 = getelementptr [100 x [100 x i32]], [100 x [100 x i32]]* %a, i64 0, i64 %i, i32 5
-  %0 = load i32, i32* %a.addr, align 4
+  %a.addr = getelementptr [100 x [100 x i32]], ptr %a, i64 0, i64 %i, i64 %i
+  %a.addr.2 = getelementptr [100 x [100 x i32]], ptr %a, i64 0, i64 %i, i32 5
+  %0 = load i32, ptr %a.addr, align 4
   %1 = add i32 %0, 1
-  store i32 %1, i32* %a.addr.2, align 4
+  store i32 %1, ptr %a.addr.2, align 4
   %i.inc = add nsw i64 %i, 1
   %exitcond = icmp ne i64 %i.inc, 100
   br i1 %exitcond, label %for.body, label %for.end
@@ -53,8 +52,8 @@ define void @coupled_miv_type_mismatch(i32 %n) #0 {
 entry:
   br label %for.cond
 
-; DELIN: da analyze - input [* *]!
-; DELIN: da analyze - anti [* *|<]!
+; DELIN: da analyze - none!
+; DELIN: da analyze - consistent anti [1 -2]!
 ; DELIN: da analyze - none!
 for.cond:                                         ; preds = %for.inc11, %entry
   %indvars.iv11 = phi i64 [ %indvars.iv.next12, %for.inc11 ], [ 1, %entry ]
@@ -76,11 +75,11 @@ for.body3:                                        ; preds = %for.cond1
   %sub = add nsw i32 %j.0, -1
   %idxprom = zext i32 %sub to i64
   %1 = add nuw nsw i64 %indvars.iv11, 1
-  %arrayidx5 = getelementptr inbounds [10004 x [10004 x i32]], [10004 x [10004 x i32]]* @a, i64 0, i64 %1, i64 %idxprom
-  %2 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds [10004 x [10004 x i32]], ptr @a, i64 0, i64 %1, i64 %idxprom
+  %2 = load i32, ptr %arrayidx5, align 4
   %add6 = add nsw i32 %2, 2
-  %arrayidx10 = getelementptr inbounds [10004 x [10004 x i32]], [10004 x [10004 x i32]]* @a, i64 0, i64 %indvars.iv11, i64 %indvars.iv8
-  store i32 %add6, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds [10004 x [10004 x i32]], ptr @a, i64 0, i64 %indvars.iv11, i64 %indvars.iv8
+  store i32 %add6, ptr %arrayidx10, align 4
   %indvars.iv.next9 = add nuw nsw i64 %indvars.iv8, 1
   %inc = add nuw nsw i32 %j.0, 1
   br label %for.cond1

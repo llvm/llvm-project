@@ -1,7 +1,7 @@
 ; Check that @callee1 gets inlined while @callee2 is not, because of
 ; SemanticInterposition.
 
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 
 define internal i32 @callee1(i32 %A) {
   ret i32 %A

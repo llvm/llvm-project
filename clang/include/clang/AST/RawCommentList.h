@@ -115,6 +115,17 @@ public:
     return extractBriefText(Context);
   }
 
+  bool hasUnsupportedSplice(const SourceManager &SourceMgr) const {
+    if (!isInvalid())
+      return false;
+    StringRef Text = getRawText(SourceMgr);
+    if (Text.size() < 6 || Text[0] != '/')
+      return false;
+    if (Text[1] == '*')
+      return Text[Text.size() - 1] != '/' || Text[Text.size() - 2] != '*';
+    return Text[1] != '/';
+  }
+
   /// Returns sanitized comment text, suitable for presentation in editor UIs.
   /// E.g. will transform:
   ///     // This is a long multiline comment.
@@ -139,6 +150,21 @@ public:
   std::string getFormattedText(const SourceManager &SourceMgr,
                                DiagnosticsEngine &Diags) const;
 
+  struct CommentLine {
+    std::string Text;
+    PresumedLoc Begin;
+    PresumedLoc End;
+
+    CommentLine(StringRef Text, PresumedLoc Begin, PresumedLoc End)
+        : Text(Text), Begin(Begin), End(End) {}
+  };
+
+  /// Returns sanitized comment text as separated lines with locations in
+  /// source, suitable for further processing and rendering requiring source
+  /// locations.
+  std::vector<CommentLine> getFormattedLines(const SourceManager &SourceMgr,
+                                             DiagnosticsEngine &Diags) const;
+
   /// Parse the comment, assuming it is attached to decl \c D.
   comments::FullComment *parse(const ASTContext &Context,
                                const Preprocessor *PP, const Decl *D) const;
@@ -147,18 +173,24 @@ private:
   SourceRange Range;
 
   mutable StringRef RawText;
-  mutable const char *BriefText;
+  mutable const char *BriefText = nullptr;
 
-  mutable bool RawTextValid : 1;   ///< True if RawText is valid
-  mutable bool BriefTextValid : 1; ///< True if BriefText is valid
+  LLVM_PREFERRED_TYPE(bool)
+  mutable unsigned RawTextValid : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  mutable unsigned BriefTextValid : 1;
 
+  LLVM_PREFERRED_TYPE(CommentKind)
   unsigned Kind : 3;
 
   /// True if comment is attached to a declaration in ASTContext.
-  bool IsAttached : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsAttached : 1;
 
-  bool IsTrailingComment : 1;
-  bool IsAlmostTrailingComment : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsTrailingComment : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsAlmostTrailingComment : 1;
 
   /// Constructor for AST deserialization.
   RawComment(SourceRange SR, CommentKind K, bool IsTrailingComment,

@@ -10,7 +10,7 @@
 # RUN: echo "{ global: main; local: *; };" > %t.script
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o %t.so -o %t -version-script %t.script
+# RUN: ld.lld %t.o %t.so -o %t -version-script %t.script --undefined-version
 # RUN: llvm-readelf -r --symbols %t | FileCheck %s
 
 # CHECK:      Relocation section '.rela.plt' at offset {{.*}} contains 1 entries:

@@ -51,12 +51,14 @@
 
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
+#include <optional>
 
 namespace llvm {
+class Module;
+
 namespace IRSimilarity {
 
 struct IRInstructionDataList;
@@ -110,7 +112,8 @@ enum InstrType { Legal, Illegal, Invisible };
 /// by \ref isSameOperationAs.
 /// TODO: Handle GetElementPtrInsts, as some of the operands have to be the
 /// exact same, and some do not.
-struct IRInstructionData : ilist_node<IRInstructionData> {
+struct IRInstructionData
+    : ilist_node<IRInstructionData, ilist_sentinel_tracking<true>> {
 
   /// The source Instruction that is being wrapped.
   Instruction *Inst = nullptr;
@@ -120,12 +123,46 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   /// and is used when checking when two instructions are considered similar.
   /// If either instruction is not legal, the instructions are automatically not
   /// considered similar.
-  bool Legal;
+  bool Legal = false;
 
   /// This is only relevant if we are wrapping a CmpInst where we needed to
   /// change the predicate of a compare instruction from a greater than form
-  /// to a less than form.  It is None otherwise.
-  Optional<CmpInst::Predicate> RevisedPredicate;
+  /// to a less than form.  It is std::nullopt otherwise.
+  std::optional<CmpInst::Predicate> RevisedPredicate;
+
+  /// This is only relevant if we are wrapping a CallInst. If we are requiring
+  /// that the function calls have matching names as well as types, and the
+  /// call is not an indirect call, this will hold the name of the function.  If
+  /// it is an indirect string, it will be the empty string.  However, if this
+  /// requirement is not in place it will be the empty string regardless of the
+  /// function call type.  The value held here is used to create the hash of the
+  /// instruction, and check to make sure two instructions are close to one
+  /// another.
+  std::optional<std::string> CalleeName;
+
+  /// This structure holds the distances of how far "ahead of" or "behind" the
+  /// target blocks of a branch, or the incoming blocks of a phi nodes are.
+  /// If the value is negative, it means that the block was registered before
+  /// the block of this instruction in terms of blocks in the function.
+  /// Code Example:
+  /// \code
+  /// block_1:
+  ///   br i1 %0, label %block_2, label %block_3
+  /// block_2:
+  ///   br i1 %1, label %block_1, label %block_2
+  /// block_3:
+  ///   br i1 %2, label %block_2, label %block_1
+  /// ; Replacing the labels with relative values, this becomes:
+  /// block_1:
+  ///   br i1 %0, distance 1, distance 2
+  /// block_2:
+  ///   br i1 %1, distance -1, distance 0
+  /// block_3:
+  ///   br i1 %2, distance -1, distance -2
+  /// \endcode
+  /// Taking block_2 as our example, block_1 is "behind" block_2, and block_2 is
+  /// "ahead" of block_2.
+  SmallVector<int, 4> RelativeBlockLocations;
 
   /// Gather the information that is difficult to gather for an Instruction, or
   /// is changed. i.e. the operands of an Instruction and the Types of those
@@ -133,10 +170,19 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   /// assertions that allow for more flexibility when checking for whether an
   /// Instruction performs the same operation.
   IRInstructionData(Instruction &I, bool Legality, IRInstructionDataList &IDL);
+  IRInstructionData(IRInstructionDataList &IDL);
+
+  /// Fills data stuctures for IRInstructionData when it is constructed from a
+  // reference or a pointer.
+  void initializeInstruction();
 
   /// Get the predicate that the compare instruction is using for hashing the
   /// instruction. the IRInstructionData must be wrapping a CmpInst.
   CmpInst::Predicate getPredicate() const;
+
+  /// Get the callee name that the call instruction is using for hashing the
+  /// instruction. The IRInstructionData must be wrapping a CallInst.
+  StringRef getCalleeName() const;
 
   /// A function that swaps the predicates to their less than form if they are
   /// in a greater than form. Otherwise, the predicate is unchanged.
@@ -144,6 +190,46 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   /// \param CI - The comparison operation to find a consistent preidcate for.
   /// \return the consistent comparison predicate. 
   static CmpInst::Predicate predicateForConsistency(CmpInst *CI);
+
+  /// For an IRInstructionData containing a branch, finds the
+  /// relative distances from the source basic block to the target by taking
+  /// the difference of the number assigned to the current basic block and the
+  /// target basic block of the branch.
+  ///
+  /// \param BasicBlockToInteger - The mapping of basic blocks to their location
+  /// in the module.
+  void
+  setBranchSuccessors(DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger);
+
+  /// For an IRInstructionData containing a CallInst, set the function name
+  /// appropriately.  This will be an empty string if it is an indirect call,
+  /// or we are not matching by name of the called function.  It will be the
+  /// name of the function if \p MatchByName is true and it is not an indirect
+  /// call.  We may decide not to match by name in order to expand the
+  /// size of the regions we can match.  If a function name has the same type
+  /// signature, but the different name, the region of code is still almost the
+  /// same.  Since function names can be treated as constants, the name itself
+  /// could be extrapolated away.  However, matching by name provides a
+  /// specificity and more "identical" code than not matching by name.
+  ///
+  /// \param MatchByName - A flag to mark whether we are using the called
+  /// function name as a differentiating parameter.
+  void setCalleeName(bool MatchByName = true);
+
+  /// For an IRInstructionData containing a PHINode, finds the
+  /// relative distances from the incoming basic block to the current block by
+  /// taking the difference of the number assigned to the current basic block
+  /// and the incoming basic block of the branch.
+  ///
+  /// \param BasicBlockToInteger - The mapping of basic blocks to their location
+  /// in the module.
+  void
+  setPHIPredecessors(DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger);
+
+  /// Get the BasicBlock based operands for PHINodes and BranchInsts.
+  ///
+  /// \returns A list of relevant BasicBlocks.
+  ArrayRef<Value *> getBlockOperVals();
 
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
@@ -183,12 +269,28 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
           llvm::hash_value(ID.Inst->getType()),
           llvm::hash_value(ID.getPredicate()),
           llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
-    else if (CallInst *CI = dyn_cast<CallInst>(ID.Inst))
+
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(ID.Inst)) {
+      // To hash intrinsics, we use the opcode, and types like the other
+      // instructions, but also, the Intrinsic ID, and the Name of the
+      // intrinsic.
+      Intrinsic::ID IntrinsicID = II->getIntrinsicID();
+      return llvm::hash_combine(
+          llvm::hash_value(ID.Inst->getOpcode()),
+          llvm::hash_value(ID.Inst->getType()), llvm::hash_value(IntrinsicID),
+          llvm::hash_value(*ID.CalleeName),
+          llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
+    }
+
+    if (isa<CallInst>(ID.Inst)) {
+      std::string FunctionName = *ID.CalleeName;
       return llvm::hash_combine(
           llvm::hash_value(ID.Inst->getOpcode()),
           llvm::hash_value(ID.Inst->getType()),
-          llvm::hash_value(CI->getCalledFunction()->getName().str()),
+          llvm::hash_value(ID.Inst->getType()), llvm::hash_value(FunctionName),
           llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
+    }
+
     return llvm::hash_combine(
         llvm::hash_value(ID.Inst->getOpcode()),
         llvm::hash_value(ID.Inst->getType()),
@@ -198,7 +300,8 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   IRInstructionDataList *IDL = nullptr;
 };
 
-struct IRInstructionDataList : simple_ilist<IRInstructionData> {};
+struct IRInstructionDataList
+    : simple_ilist<IRInstructionData, ilist_sentinel_tracking<true>> {};
 
 /// Compare one IRInstructionData class to another IRInstructionData class for
 /// whether they are performing a the same operation, and can mapped to the
@@ -288,6 +391,10 @@ struct IRInstructionMapper {
   DenseMap<IRInstructionData *, unsigned, IRInstructionDataTraits>
       InstructionIntegerMap;
 
+  /// A mapping for a basic block in a module to its assigned number/location
+  /// in the module.
+  DenseMap<BasicBlock *, unsigned> BasicBlockToInteger;
+
   /// Set if we added an illegal number in the previous step.
   /// Since each illegal number is unique, we only need one of them between
   /// each range of legal numbers. This lets us make sure we don't add more
@@ -300,6 +407,10 @@ struct IRInstructionMapper {
   /// Marks whether we have found a set of instructions that is long enough
   /// to be considered for similarity.
   bool HaveLegalRange = false;
+
+  /// Marks whether we should use exact function names, as well as types to
+  /// find similarity between calls.
+  bool EnableMatchCallsByName = false;
 
   /// This allocator pointer is in charge of holding on to the IRInstructionData
   /// so it is not deallocated until whatever external tool is using it is done
@@ -322,12 +433,38 @@ struct IRInstructionMapper {
   IRInstructionData *allocateIRInstructionData(Instruction &I, bool Legality,
                                                IRInstructionDataList &IDL);
 
+  /// Get an empty allocated IRInstructionData struct using the
+  /// InstDataAllocator.
+  ///
+  /// \param IDL - The InstructionDataList that the IRInstructionData is
+  /// inserted into.
+  /// \returns An allocated IRInstructionData struct.
+  IRInstructionData *allocateIRInstructionData(IRInstructionDataList &IDL);
+
   /// Get an allocated IRInstructionDataList object using the IDLAllocator.
   ///
   /// \returns An allocated IRInstructionDataList object.
   IRInstructionDataList *allocateIRInstructionDataList();
 
   IRInstructionDataList *IDL = nullptr;
+
+  /// Assigns values to all the basic blocks in function \p F starting from
+  /// integer \p BBNumber.
+  ///
+  /// \param F - The function containing the basic blocks to assign numbers to.
+  /// \param BBNumber - The number to start from.
+  void initializeForBBs(Function &F, unsigned &BBNumber) {
+    for (BasicBlock &BB : F)
+      BasicBlockToInteger.insert(std::make_pair(&BB, BBNumber++));
+  }
+
+  /// Assigns values to all the basic blocks in Module \p M.
+  /// \param M - The module containing the basic blocks to assign numbers to.
+  void initializeForBBs(Module &M) {
+    unsigned BBNumber = 0;
+    for (Function &F : M)
+      initializeForBBs(F, BBNumber);
+  }
 
   /// Maps the Instructions in a BasicBlock \p BB to legal or illegal integers
   /// determined by \p InstrType. Two Instructions are mapped to the same value
@@ -383,12 +520,19 @@ struct IRInstructionMapper {
   /// be analyzed for similarity.
   struct InstructionClassification
       : public InstVisitor<InstructionClassification, InstrType> {
-    InstructionClassification() {}
+    InstructionClassification() = default;
 
     // TODO: Determine a scheme to resolve when the label is similar enough.
-    InstrType visitBranchInst(BranchInst &BI) { return Illegal; }
-    // TODO: Determine a scheme to resolve when the labels are similar enough.
-    InstrType visitPHINode(PHINode &PN) { return Illegal; }
+    InstrType visitBranchInst(BranchInst &BI) {
+      if (EnableBranches)
+        return Legal;
+      return Illegal;
+    }
+    InstrType visitPHINode(PHINode &PN) { 
+      if (EnableBranches)
+        return Legal;
+      return Illegal;
+    }
     // TODO: Handle allocas.
     InstrType visitAllocaInst(AllocaInst &AI) { return Illegal; }
     // We exclude variable argument instructions since variable arguments
@@ -402,13 +546,37 @@ struct IRInstructionMapper {
     // analyzed for similarity as it has no bearing on the outcome of the
     // program.
     InstrType visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return Invisible; }
-    // TODO: Handle specific intrinsics.
-    InstrType visitIntrinsicInst(IntrinsicInst &II) { return Illegal; }
+    InstrType visitIntrinsicInst(IntrinsicInst &II) {
+      // These are disabled due to complications in the CodeExtractor when
+      // outlining these instructions.  For instance, It is unclear what we
+      // should do when moving only the start or end lifetime instruction into
+      // an outlined function. Also, assume-like intrinsics could be removed
+      // from the region, removing arguments, causing discrepencies in the
+      // number of inputs between different regions.
+      if (II.isAssumeLikeIntrinsic())
+        return Illegal;
+      return EnableIntrinsics ? Legal : Illegal;
+    }
     // We only allow call instructions where the function has a name and
     // is not an indirect call.
     InstrType visitCallInst(CallInst &CI) {
       Function *F = CI.getCalledFunction();
-      if (!F || CI.isIndirectCall() || !F->hasName())
+      bool IsIndirectCall = CI.isIndirectCall();
+      if (IsIndirectCall && !EnableIndirectCalls)
+        return Illegal;
+      if (!F && !IsIndirectCall)
+        return Illegal;
+      // Functions marked with the swifttailcc and tailcc calling conventions
+      // require special handling when outlining musttail functions.  The
+      // calling convention must be passed down to the outlined function as
+      // well. Further, there is special handling for musttail calls as well,
+      // requiring a return call directly after.  For now, the outliner does not
+      // support this, so we do not handle matching this case either.
+      if ((CI.getCallingConv() == CallingConv::SwiftTail ||
+           CI.getCallingConv() == CallingConv::Tail) &&
+          !EnableMustTailCalls)
+        return Illegal;
+      if (CI.isMustTailCall() && !EnableMustTailCalls)
         return Illegal;
       return Legal;
     }
@@ -419,6 +587,22 @@ struct IRInstructionMapper {
     // TODO: Handle interblock similarity.
     InstrType visitTerminator(Instruction &I) { return Illegal; }
     InstrType visitInstruction(Instruction &I) { return Legal; }
+
+    // The flag variable that lets the classifier know whether we should
+    // allow branches to be checked for similarity.
+    bool EnableBranches = false;
+
+    // The flag variable that lets the classifier know whether we should
+    // allow indirect calls to be considered legal instructions.
+    bool EnableIndirectCalls = false;
+
+    // Flag that lets the classifier know whether we should allow intrinsics to
+    // be checked for similarity.
+    bool EnableIntrinsics = false;
+  
+    // Flag that lets the classifier know whether we should allow tail calls to
+    // be checked for similarity.
+    bool EnableMustTailCalls = false;
   };
 
   /// Maps an Instruction to a member of InstrType.
@@ -488,6 +672,12 @@ private:
   DenseMap<Value *, unsigned> ValueToNumber;
   /// Stores the mapping of the number to the value assigned this number.
   DenseMap<unsigned, Value *> NumberToValue;
+  /// Stores the mapping of a value's number to canonical numbering in the
+  /// candidate's respective similarity group.
+  DenseMap<unsigned, unsigned> NumberToCanonNum;
+  /// Stores the mapping of canonical number in the candidate's respective
+  /// similarity group to a value number.
+  DenseMap<unsigned, unsigned> CanonNumToNumber;
   /// @}
 
 public:
@@ -506,12 +696,26 @@ public:
   static bool isSimilar(const IRSimilarityCandidate &A,
                         const IRSimilarityCandidate &B);
 
-  /// \param A - The first IRInstructionCandidate to compare.
-  /// \param B - The second IRInstructionCandidate to compare.
+  /// \param [in] A - The first IRInstructionCandidate to compare.
+  /// \param [in] B - The second IRInstructionCandidate to compare.
   /// \returns True when every IRInstructionData in \p A is structurally similar
   /// to \p B.
   static bool compareStructure(const IRSimilarityCandidate &A,
                                const IRSimilarityCandidate &B);
+
+  /// \param [in] A - The first IRInstructionCandidate to compare.
+  /// \param [in] B - The second IRInstructionCandidate to compare.
+  /// \param [in,out] ValueNumberMappingA - A mapping of value numbers from
+  /// candidate \p A to candidate \B.
+  /// \param [in,out] ValueNumberMappingB - A mapping of value numbers from
+  /// candidate \p B to candidate \A.
+  /// \returns True when every IRInstructionData in \p A is structurally similar
+  /// to \p B.
+  static bool
+  compareStructure(const IRSimilarityCandidate &A,
+                   const IRSimilarityCandidate &B,
+                   DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingA,
+                   DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingB);
 
   struct OperandMapping {
     /// The IRSimilarityCandidate that holds the instruction the OperVals were
@@ -524,6 +728,21 @@ public:
     /// The current mapping of global value numbers from one IRSimilarityCandidate
     /// to another IRSimilarityCandidate.
     DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMapping;
+  };
+
+  /// A helper struct to hold the candidate, for a branch instruction, the
+  /// relative location of a label, and the label itself.  This is mostly to
+  /// group the values together before passing them as a bundle to a function.
+  struct RelativeLocMapping {
+    /// The IRSimilarityCandidate that holds the instruction the relative
+    /// location was pulled from.
+    const IRSimilarityCandidate &IRSC;
+
+    /// The relative location to be analyzed.
+    int RelativeLocation;
+
+    /// The corresponding value.
+    Value *OperVal;
   };
 
   /// Compare the operands in \p A and \p B and check that the current mapping
@@ -548,6 +767,151 @@ public:
   /// \returns true if the IRSimilarityCandidates operands are compatible.
   static bool compareCommutativeOperandMapping(OperandMapping A,
                                                OperandMapping B);
+
+  /// Compare the GVN of the assignment value in corresponding instructions in
+  /// IRSimilarityCandidates \p A and \p B and check that there exists a mapping
+  /// between the values and replaces the mapping with a one-to-one value if
+  /// needed.
+  ///
+  /// \param InstValA - The assignment GVN from the first IRSimilarityCandidate.
+  /// \param InstValB - The assignment GVN from the second
+  /// IRSimilarityCandidate.
+  /// \param [in,out] ValueNumberMappingA - A mapping of value numbers from 
+  /// candidate \p A to candidate \B.
+  /// \param [in,out] ValueNumberMappingB - A mapping of value numbers from 
+  /// candidate \p B to candidate \A.
+  /// \returns true if the IRSimilarityCandidates assignments are compatible.
+  static bool compareAssignmentMapping(
+      const unsigned InstValA, const unsigned &InstValB,
+      DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingA,
+      DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingB);
+
+  /// Compare the relative locations in \p A and \p B and check that the
+  /// distances match if both locations are contained in the region, and that
+  /// the branches both point outside the region if they do not.
+  /// Example Region:
+  /// \code
+  /// entry:
+  ///   br i1 %0, label %block_1, label %block_3
+  /// block_0:
+  ///   br i1 %0, label %block_1, label %block_2
+  /// block_1:
+  ///   br i1 %0, label %block_2, label %block_3
+  /// block_2:
+  ///   br i1 %1, label %block_1, label %block_4
+  /// block_3:
+  ///   br i1 %2, label %block_2, label %block_5
+  /// \endcode
+  /// If we compare the branches in block_0 and block_1 the relative values are
+  /// 1 and 2 for both, so we consider this a match.
+  ///
+  /// If we compare the branches in entry and block_0 the relative values are
+  /// 2 and 3, and 1 and 2 respectively.  Since these are not the same we do not
+  /// consider them a match.
+  ///
+  /// If we compare the branches in block_1 and block_2 the relative values are
+  /// 1 and 2, and -1 and None respectively.  As a result we do not consider
+  /// these to be the same
+  ///
+  /// If we compare the branches in block_2 and block_3 the relative values are
+  /// -1 and None for both.  We do consider these to be a match.
+  ///
+  /// \param A - The first IRInstructionCandidate, relative location value,
+  /// and incoming block.
+  /// \param B - The second IRInstructionCandidate, relative location value,
+  /// and incoming block.
+  /// \returns true if the relative locations match.
+  static bool checkRelativeLocations(RelativeLocMapping A,
+                                     RelativeLocMapping B);
+
+  /// Create a mapping from the value numbering to a different separate set of
+  /// numbers. This will serve as a guide for relating one candidate to another.
+  /// The canonical number gives use the ability identify which global value
+  /// number in one candidate relates to the global value number in the other.
+  ///
+  /// \param [in, out] CurrCand - The IRSimilarityCandidate to create a
+  /// canonical numbering for.
+  static void createCanonicalMappingFor(IRSimilarityCandidate &CurrCand);
+
+  /// Create a mapping for the value numbering of the calling
+  /// IRSimilarityCandidate, to a different separate set of numbers, based on
+  /// the canonical ordering in \p SourceCand. These are defined based on the
+  /// found mappings in \p ToSourceMapping and \p FromSourceMapping.  Both of
+  /// these relationships should have the same information, just in opposite
+  /// directions.
+  ///
+  /// \param [in, out] SourceCand - The IRSimilarityCandidate to create a
+  /// canonical numbering from.
+  /// \param ToSourceMapping - The mapping of value numbers from this candidate
+  /// to \p SourceCand.
+  /// \param FromSourceMapping - The mapping of value numbers from \p SoureCand
+  /// to this candidate.
+  void createCanonicalRelationFrom(
+      IRSimilarityCandidate &SourceCand,
+      DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
+      DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
+  
+  /// Create a mapping for the value numbering of the calling
+  /// IRSimilarityCandidate, to a different separate set of numbers, based on
+  /// the canonical ordering in \p SourceCand. These are defined based on the
+  /// found mappings in \p ToSourceMapping and \p FromSourceMapping.  Both of
+  /// these relationships should have the same information, just in opposite
+  /// directions.  Uses the \p OneToOne mapping from target candidate to \p
+  /// SourceCand GVNs to determine the mapping first for values with multiple
+  /// mappings.  This mapping is created by the ordering of operands in the
+  /// instruction they are first seen in the candidates.
+  ///
+  /// \param [in, out] SourceCand - The IRSimilarityCandidate to create a
+  /// canonical numbering from.
+  /// \param [in,out] OneToOne - A mapping of value numbers from candidate
+  /// \p A to candidate \B using the structure of the original instructions.
+  /// \param ToSourceMapping - The mapping of value numbers from this candidate
+  /// to \p SourceCand.
+  /// \param FromSourceMapping - The mapping of value numbers from \p SoureCand
+  /// to this candidate.
+  void createCanonicalRelationFrom(
+      IRSimilarityCandidate &SourceCand,
+      DenseMap<unsigned, unsigned> &OneToOne,
+      DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
+      DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
+  
+  /// Create a mapping for the value numbering of the calling
+  /// IRSimilarityCandidate, to a different separate set of numbers, based on
+  /// the canonical ordering in \p SourceCand. These are defined based on the
+  /// canonical mapping defined between \p SoureCandLarge and
+  /// \p TargetCandLarge.  These IRSimilarityCandidates are already structurally
+  /// similar, and fully encapsulate the IRSimilarityCandidates in question.
+  /// These are used as a "bridge" from the \p SourceCand to the target.
+  ///
+  /// \param [in, out] SourceCand - The IRSimilarityCandidate to create a
+  /// canonical numbering from.
+  /// \param SoureCandLarge - The IRSimilarityCandidate fully containing
+  /// \p SourceCand.
+  /// \param TargetCandLarge -  The IRSimilarityCandidate fully containing
+  /// this Candidate.
+  void createCanonicalRelationFrom(
+      IRSimilarityCandidate &SourceCand,
+      IRSimilarityCandidate &SourceCandLarge,
+      IRSimilarityCandidate &TargetCandLarge);
+
+  /// \param [in,out] BBSet - The set to track the basic blocks.
+  void getBasicBlocks(DenseSet<BasicBlock *> &BBSet) const {
+    for (IRInstructionData &ID : *this) {
+      BasicBlock *BB = ID.Inst->getParent();
+      BBSet.insert(BB);
+    }
+  }
+
+  /// \param [in,out] BBSet - The set to track the basic blocks.
+  /// \param [in,out] BBList - A list in order of use to track the basic blocks.
+  void getBasicBlocks(DenseSet<BasicBlock *> &BBSet,
+                      SmallVector<BasicBlock *> &BBList) const {
+    for (IRInstructionData &ID : *this) {
+      BasicBlock *BB = ID.Inst->getParent();
+      if (BBSet.insert(BB).second)
+        BBList.push_back(BB);
+    }
+  }
 
   /// Compare the start and end indices of the two IRSimilarityCandidates for
   /// whether they overlap. If the start instruction of one
@@ -590,25 +954,51 @@ public:
   /// Finds the positive number associated with \p V if it has been mapped.
   /// \param [in] V - the Value to find.
   /// \returns The positive number corresponding to the value.
-  /// \returns None if not present.
-  Optional<unsigned> getGVN(Value *V) {
+  /// \returns std::nullopt if not present.
+  std::optional<unsigned> getGVN(Value *V) {
     assert(V != nullptr && "Value is a nullptr?");
     DenseMap<Value *, unsigned>::iterator VNIt = ValueToNumber.find(V);
     if (VNIt == ValueToNumber.end())
-      return None;
+      return std::nullopt;
     return VNIt->second;
   }
 
   /// Finds the Value associate with \p Num if it exists.
   /// \param [in] Num - the number to find.
   /// \returns The Value associated with the number.
-  /// \returns None if not present.
-  Optional<Value *> fromGVN(unsigned Num) {
+  /// \returns std::nullopt if not present.
+  std::optional<Value *> fromGVN(unsigned Num) {
     DenseMap<unsigned, Value *>::iterator VNIt = NumberToValue.find(Num);
     if (VNIt == NumberToValue.end())
-      return None;
+      return std::nullopt;
     assert(VNIt->second != nullptr && "Found value is a nullptr!");
     return VNIt->second;
+  }
+
+  /// Find the canonical number from the global value number \p N stored in the
+  /// candidate.
+  ///
+  /// \param N - The global value number to find the canonical number for.
+  /// \returns An optional containing the value, and std::nullopt if it could
+  /// not be found.
+  std::optional<unsigned> getCanonicalNum(unsigned N) {
+    DenseMap<unsigned, unsigned>::iterator NCIt = NumberToCanonNum.find(N);
+    if (NCIt == NumberToCanonNum.end())
+      return std::nullopt;
+    return NCIt->second;
+  }
+
+  /// Find the global value number from the canonical number \p N stored in the
+  /// candidate.
+  ///
+  /// \param N - The canonical number to find the global vlaue number for.
+  /// \returns An optional containing the value, and std::nullopt if it could
+  /// not be found.
+  std::optional<unsigned> fromCanonicalNum(unsigned N) {
+    DenseMap<unsigned, unsigned>::iterator CNIt = CanonNumToNumber.find(N);
+    if (CNIt == CanonNumToNumber.end())
+      return std::nullopt;
+    return CNIt->second;
   }
 
   /// \param RHS -The IRSimilarityCandidate to compare against
@@ -623,6 +1013,9 @@ public:
   iterator end() const { return std::next(iterator(back())); }
 };
 
+typedef DenseMap<IRSimilarityCandidate *,
+                 DenseMap<unsigned, DenseSet<unsigned>>>
+    CandidateGVNMapping;
 typedef std::vector<IRSimilarityCandidate> SimilarityGroup;
 typedef std::vector<SimilarityGroup> SimilarityGroupList;
 
@@ -651,14 +1044,16 @@ typedef std::vector<SimilarityGroup> SimilarityGroupList;
 /// analyzing the module.
 class IRSimilarityIdentifier {
 public:
-  IRSimilarityIdentifier()
-      : Mapper(&InstDataAllocator, &InstDataListAllocator) {}
-
-  /// \param M the module to find similarity in.
-  explicit IRSimilarityIdentifier(Module &M)
-      : Mapper(&InstDataAllocator, &InstDataListAllocator) {
-    findSimilarity(M);
-  }
+  IRSimilarityIdentifier(bool MatchBranches = true,
+                         bool MatchIndirectCalls = true,
+                         bool MatchCallsWithName = false,
+                         bool MatchIntrinsics = true,
+                         bool MatchMustTailCalls = true)
+      : Mapper(&InstDataAllocator, &InstDataListAllocator),
+        EnableBranches(MatchBranches), EnableIndirectCalls(MatchIndirectCalls),
+        EnableMatchingCallsByName(MatchCallsWithName),
+        EnableIntrinsics(MatchIntrinsics),
+        EnableMustTailCalls(MatchMustTailCalls) {}
 
 private:
   /// Map the instructions in the module to unsigned integers, using mapping
@@ -711,7 +1106,7 @@ public:
     // If we've already analyzed a Module or set of Modules, so we must clear
     // the SimilarityCandidates to make sure we do not have only old values
     // hanging around.
-    if (SimilarityCandidates.hasValue())
+    if (SimilarityCandidates)
       SimilarityCandidates->clear();
     else
       SimilarityCandidates = SimilarityGroupList();
@@ -719,7 +1114,7 @@ public:
 
   // \returns The groups of similarity ranges found in the most recently passed
   // set of modules.
-  Optional<SimilarityGroupList> &getSimilarity() {
+  std::optional<SimilarityGroupList> &getSimilarity() {
     return SimilarityCandidates;
   }
 
@@ -734,9 +1129,30 @@ private:
   /// instance of IRInstructionData.
   IRInstructionMapper Mapper;
 
+  /// The flag variable that marks whether we should check branches for
+  /// similarity, or only look within basic blocks.
+  bool EnableBranches = true;
+
+  /// The flag variable that marks whether we allow indirect calls to be checked
+  /// for similarity, or exclude them as a legal instruction.
+  bool EnableIndirectCalls = true;
+
+  /// The flag variable that marks whether we allow calls to be marked as
+  /// similar if they do not have the same name, only the same calling
+  /// convention, attributes and type signature.
+  bool EnableMatchingCallsByName = true;
+
+  /// The flag variable that marks whether we should check intrinsics for
+  /// similarity.
+  bool EnableIntrinsics = true;
+
+  // The flag variable that marks whether we should allow tailcalls
+  // to be checked for similarity.
+  bool EnableMustTailCalls = false;
+
   /// The SimilarityGroups found with the most recent run of \ref
-  /// findSimilarity. None if there is no recent run.
-  Optional<SimilarityGroupList> SimilarityCandidates;
+  /// findSimilarity. std::nullopt if there is no recent run.
+  std::optional<SimilarityGroupList> SimilarityCandidates;
 };
 
 } // end namespace IRSimilarity
@@ -782,6 +1198,7 @@ class IRSimilarityAnalysisPrinterPass
 public:
   explicit IRSimilarityAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

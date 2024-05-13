@@ -20,7 +20,7 @@ using namespace llvm;
 
 char SlotIndexes::ID = 0;
 
-SlotIndexes::SlotIndexes() : MachineFunctionPass(ID), mf(nullptr) {
+SlotIndexes::SlotIndexes() : MachineFunctionPass(ID) {
   initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
 }
 
@@ -62,7 +62,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
 
   mf = &fn;
 
-  // Check that the list contains only the sentinal.
+  // Check that the list contains only the sentinel.
   assert(indexList.empty() && "Index list non-empty at initial numbering?");
   assert(idx2MBBMap.empty() &&
          "Index -> MBB mapping non-empty at initial numbering?");
@@ -179,21 +179,12 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
                                        MachineBasicBlock::iterator Begin,
                                        MachineBasicBlock::iterator End) {
-  // FIXME: Is this really necessary? The only caller repairIntervalsForRange()
-  // does the same thing.
-  // Find anchor points, which are at the beginning/end of blocks or at
-  // instructions that already have indexes.
-  while (Begin != MBB->begin() && !hasIndex(*Begin))
-    --Begin;
-  while (End != MBB->end() && !hasIndex(*End))
-    ++End;
-
   bool includeStart = (Begin == MBB->begin());
   SlotIndex startIdx;
   if (includeStart)
     startIdx = getMBBStartIdx(MBB);
   else
-    startIdx = getInstructionIndex(*Begin);
+    startIdx = getInstructionIndex(*--Begin);
 
   SlotIndex endIdx;
   if (End == MBB->end())
@@ -224,7 +215,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
         --MBBI;
       else
         pastStart = true;
-    } else if (MI && mi2iMap.find(MI) == mi2iMap.end()) {
+    } else if (MI && !mi2iMap.contains(MI)) {
       if (MBBI != Begin)
         --MBBI;
       else
@@ -241,9 +232,14 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
     MachineInstr &MI = *I;
-    if (!MI.isDebugOrPseudoInstr() && mi2iMap.find(&MI) == mi2iMap.end())
+    if (!MI.isDebugOrPseudoInstr() && !mi2iMap.contains(&MI))
       insertMachineInstrInMaps(MI);
   }
+}
+
+void SlotIndexes::packIndexes() {
+  for (auto [Index, Entry] : enumerate(indexList))
+    Entry.setIndex(Index * SlotIndex::InstrDist);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -19,10 +19,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <system_error>
@@ -31,15 +28,21 @@ using namespace llvm;
 using namespace sampleprof;
 
 static cl::opt<uint64_t> ProfileSymbolListCutOff(
-    "profile-symbol-list-cutoff", cl::Hidden, cl::init(-1), cl::ZeroOrMore,
+    "profile-symbol-list-cutoff", cl::Hidden, cl::init(-1),
     cl::desc("Cutoff value about how many symbols in profile symbol list "
              "will be used. This is very useful for performance debugging"));
 
+static cl::opt<bool> GenerateMergedBaseProfiles(
+    "generate-merged-base-profiles",
+    cl::desc("When generating nested context-sensitive profiles, always "
+             "generate extra base profile for function with all its context "
+             "profiles merged into it."));
+
 namespace llvm {
 namespace sampleprof {
-SampleProfileFormat FunctionSamples::Format;
 bool FunctionSamples::ProfileIsProbeBased = false;
 bool FunctionSamples::ProfileIsCS = false;
+bool FunctionSamples::ProfileIsPreInlined = false;
 bool FunctionSamples::UseMD5 = false;
 bool FunctionSamples::HasUniqSuffix = true;
 bool FunctionSamples::ProfileIsFS = false;
@@ -81,8 +84,6 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Counter overflow";
     case sampleprof_error::ostream_seek_unsupported:
       return "Ostream does not support seek";
-    case sampleprof_error::compress_failed:
-      return "Compress failure";
     case sampleprof_error::uncompress_failed:
       return "Uncompress failure";
     case sampleprof_error::zlib_unavailable:
@@ -96,10 +97,9 @@ class SampleProfErrorCategoryType : public std::error_category {
 
 } // end anonymous namespace
 
-static ManagedStatic<SampleProfErrorCategoryType> ErrorCategory;
-
 const std::error_category &llvm::sampleprof_category() {
-  return *ErrorCategory;
+  static SampleProfErrorCategoryType ErrorCategory;
+  return ErrorCategory;
 }
 
 void LineLocation::print(raw_ostream &OS) const {
@@ -119,18 +119,9 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
 sampleprof_error SampleRecord::merge(const SampleRecord &Other,
                                      uint64_t Weight) {
   sampleprof_error Result;
-  // With pseudo probes, merge a dangling sample with a non-dangling sample
-  // should result in a dangling sample.
-  if (FunctionSamples::ProfileIsProbeBased &&
-      (getSamples() == FunctionSamples::InvalidProbeCount ||
-       Other.getSamples() == FunctionSamples::InvalidProbeCount)) {
-    NumSamples = FunctionSamples::InvalidProbeCount;
-    Result = sampleprof_error::success;
-  } else {
-    Result = addSamples(Other.getSamples(), Weight);
-  }
+  Result = addSamples(Other.getSamples(), Weight);
   for (const auto &I : Other.getCallTargets()) {
-    MergeResult(Result, addCalledTarget(I.first(), I.second, Weight));
+    MergeResult(Result, addCalledTarget(I.first, I.second, Weight));
   }
   return Result;
 }
@@ -190,7 +181,8 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     for (const auto &CS : SortedCallsiteSamples.get()) {
       for (const auto &FS : CS->second) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FS.second.getName() << ": ";
+        OS << CS->first << ": inlined callee: " << FS.second.getFunction()
+           << ": ";
         FS.second.print(OS, Indent + 4);
       }
     }
@@ -207,13 +199,28 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
+void sampleprof::sortFuncProfiles(
+    const SampleProfileMap &ProfileMap,
+    std::vector<NameFunctionSamples> &SortedProfiles) {
+  for (const auto &I : ProfileMap) {
+    SortedProfiles.push_back(std::make_pair(I.first, &I.second));
+  }
+  llvm::stable_sort(SortedProfiles, [](const NameFunctionSamples &A,
+                                       const NameFunctionSamples &B) {
+    if (A.second->getTotalSamples() == B.second->getTotalSamples())
+      return A.second->getContext() < B.second->getContext();
+    return A.second->getTotalSamples() > B.second->getTotalSamples();
+  });
+}
+
 unsigned FunctionSamples::getOffset(const DILocation *DIL) {
   return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
       0xffff;
 }
 
-LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL) {
-  if (FunctionSamples::ProfileIsProbeBased)
+LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
+                                                    bool ProfileIsFS) {
+  if (FunctionSamples::ProfileIsProbeBased) {
     // In a pseudo-probe based profile, a callsite is simply represented by the
     // ID of the probe associated with the call instruction. The probe ID is
     // encoded in the Discriminator field of the call instruction's debug
@@ -221,9 +228,11 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL) {
     return LineLocation(PseudoProbeDwarfDiscriminator::extractProbeIndex(
                             DIL->getDiscriminator()),
                         0);
-  else
-    return LineLocation(FunctionSamples::getOffset(DIL),
-                        DIL->getBaseDiscriminator());
+  } else {
+    unsigned Discriminator =
+        ProfileIsFS ? DIL->getDiscriminator() : DIL->getBaseDiscriminator();
+    return LineLocation(FunctionSamples::getOffset(DIL), Discriminator);
+  }
 }
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(
@@ -233,17 +242,16 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
 
   const DILocation *PrevDIL = DIL;
   for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
-    unsigned Discriminator;
-    if (ProfileIsFS)
-      Discriminator = DIL->getDiscriminator();
-    else
-      Discriminator = DIL->getBaseDiscriminator();
-
-    S.push_back(
-        std::make_pair(LineLocation(getOffset(DIL), Discriminator),
-                       PrevDIL->getScope()->getSubprogram()->getLinkageName()));
+    // Use C++ linkage name if possible.
+    StringRef Name = PrevDIL->getScope()->getSubprogram()->getLinkageName();
+    if (Name.empty())
+      Name = PrevDIL->getScope()->getSubprogram()->getName();
+    S.emplace_back(FunctionSamples::getCallSiteIdentifier(
+                       DIL, FunctionSamples::ProfileIsFS),
+                   Name);
     PrevDIL = DIL;
   }
+
   if (S.size() == 0)
     return this;
   const FunctionSamples *FS = this;
@@ -253,11 +261,11 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
   return FS;
 }
 
-void FunctionSamples::findAllNames(DenseSet<StringRef> &NameSet) const {
-  NameSet.insert(Name);
+void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
+  NameSet.insert(getFunction());
   for (const auto &BS : BodySamples)
     for (const auto &TS : BS.second.getCallTargets())
-      NameSet.insert(TS.getKey());
+      NameSet.insert(TS.first);
 
   for (const auto &CS : CallsiteSamples) {
     for (const auto &NameFS : CS.second) {
@@ -272,18 +280,15 @@ const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     SampleProfileReaderItaniumRemapper *Remapper) const {
   CalleeName = getCanonicalFnName(CalleeName);
 
-  std::string CalleeGUID;
-  CalleeName = getRepInFormat(CalleeName, UseMD5, CalleeGUID);
-
-  auto iter = CallsiteSamples.find(Loc);
+  auto iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
   if (iter == CallsiteSamples.end())
     return nullptr;
-  auto FS = iter->second.find(CalleeName);
+  auto FS = iter->second.find(getRepInFormat(CalleeName));
   if (FS != iter->second.end())
     return &FS->second;
   if (Remapper) {
     if (auto NameInProfile = Remapper->lookUpNameInProfile(CalleeName)) {
-      auto FS = iter->second.find(*NameInProfile);
+      auto FS = iter->second.find(getRepInFormat(*NameInProfile));
       if (FS != iter->second.end())
         return &FS->second;
     }
@@ -324,7 +329,8 @@ std::error_code ProfileSymbolList::read(const uint8_t *Data,
 }
 
 void SampleContextTrimmer::trimAndMergeColdContextProfiles(
-    uint64_t ColdCountThreshold, bool TrimColdContext, bool MergeColdContext) {
+    uint64_t ColdCountThreshold, bool TrimColdContext, bool MergeColdContext,
+    uint32_t ColdContextFrameLength, bool TrimBaseProfileOnly) {
   if (!TrimColdContext && !MergeColdContext)
     return;
 
@@ -332,73 +338,50 @@ void SampleContextTrimmer::trimAndMergeColdContextProfiles(
   if (ColdCountThreshold == 0)
     return;
 
+  // Trimming base profiles only is mainly to honor the preinliner decsion. When
+  // MergeColdContext is true preinliner decsion is not honored anyway so turn
+  // off TrimBaseProfileOnly.
+  if (MergeColdContext)
+    TrimBaseProfileOnly = false;
+
   // Filter the cold profiles from ProfileMap and move them into a tmp
   // container
-  std::vector<std::pair<StringRef, const FunctionSamples *>> ColdProfiles;
+  std::vector<std::pair<hash_code, const FunctionSamples *>> ColdProfiles;
   for (const auto &I : ProfileMap) {
+    const SampleContext &Context = I.second.getContext();
     const FunctionSamples &FunctionProfile = I.second;
-    if (FunctionProfile.getTotalSamples() >= ColdCountThreshold)
-      continue;
-    ColdProfiles.emplace_back(I.getKey(), &I.second);
+    if (FunctionProfile.getTotalSamples() < ColdCountThreshold &&
+        (!TrimBaseProfileOnly || Context.isBaseContext()))
+      ColdProfiles.emplace_back(I.first, &I.second);
   }
 
-  // Remove the cold profile from ProfileMap and merge them into BaseProileMap
-  StringMap<FunctionSamples> BaseProfileMap;
+  // Remove the cold profile from ProfileMap and merge them into
+  // MergedProfileMap by the last K frames of context
+  SampleProfileMap MergedProfileMap;
   for (const auto &I : ColdProfiles) {
     if (MergeColdContext) {
-      auto Ret = BaseProfileMap.try_emplace(
-          I.second->getContext().getNameWithoutContext(), FunctionSamples());
-      FunctionSamples &BaseProfile = Ret.first->second;
-      BaseProfile.merge(*I.second);
+      auto MergedContext = I.second->getContext().getContextFrames();
+      if (ColdContextFrameLength < MergedContext.size())
+        MergedContext = MergedContext.take_back(ColdContextFrameLength);
+      // Need to set MergedProfile's context here otherwise it will be lost.
+      FunctionSamples &MergedProfile = MergedProfileMap.Create(MergedContext);
+      MergedProfile.merge(*I.second);
     }
     ProfileMap.erase(I.first);
   }
 
-  // Merge the base profiles into ProfileMap;
-  for (const auto &I : BaseProfileMap) {
-    // Filter the cold base profile
+  // Move the merged profiles into ProfileMap;
+  for (const auto &I : MergedProfileMap) {
+    // Filter the cold merged profile
     if (TrimColdContext && I.second.getTotalSamples() < ColdCountThreshold &&
-        ProfileMap.find(I.getKey()) == ProfileMap.end())
+        ProfileMap.find(I.second.getContext()) == ProfileMap.end())
       continue;
     // Merge the profile if the original profile exists, otherwise just insert
-    // as a new profile
-    auto Ret = ProfileMap.try_emplace(I.getKey(), FunctionSamples());
-    if (Ret.second) {
-      SampleContext FContext(Ret.first->first(), RawContext);
-      FunctionSamples &FProfile = Ret.first->second;
-      FProfile.setContext(FContext);
-      FProfile.setName(FContext.getNameWithoutContext());
-    }
+    // as a new profile. If inserted as a new profile from MergedProfileMap, it
+    // already has the right context.
+    auto Ret = ProfileMap.emplace(I.second.getContext(), FunctionSamples());
     FunctionSamples &OrigProfile = Ret.first->second;
     OrigProfile.merge(I.second);
-  }
-}
-
-void SampleContextTrimmer::canonicalizeContextProfiles() {
-  StringSet<> ProfilesToBeRemoved;
-  // Note that StringMap order is guaranteed to be top-down order,
-  // this makes sure we make room for promoted/merged context in the
-  // map, before we move profiles in the map.
-  for (auto &I : ProfileMap) {
-    FunctionSamples &FProfile = I.second;
-    StringRef ContextStr = FProfile.getNameWithContext();
-    if (I.first() == ContextStr)
-      continue;
-
-    // Use the context string from FunctionSamples to update the keys of
-    // ProfileMap. They can get out of sync after context profile promotion
-    // through pre-inliner.
-    auto Ret = ProfileMap.try_emplace(ContextStr, FProfile);
-    assert(Ret.second && "Conext conflict during canonicalization");
-    FProfile = Ret.first->second;
-
-    // Track the context profile to remove
-    ProfilesToBeRemoved.erase(ContextStr);
-    ProfilesToBeRemoved.insert(I.first());
-  }
-
-  for (auto &I : ProfilesToBeRemoved) {
-    ProfileMap.erase(I.first());
   }
 }
 
@@ -426,3 +409,95 @@ void ProfileSymbolList::dump(raw_ostream &OS) const {
   for (auto &Sym : SortedList)
     OS << Sym << "\n";
 }
+
+ProfileConverter::FrameNode *
+ProfileConverter::FrameNode::getOrCreateChildFrame(const LineLocation &CallSite,
+                                                   FunctionId CalleeName) {
+  uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
+  auto It = AllChildFrames.find(Hash);
+  if (It != AllChildFrames.end()) {
+    assert(It->second.FuncName == CalleeName &&
+           "Hash collision for child context node");
+    return &It->second;
+  }
+
+  AllChildFrames[Hash] = FrameNode(CalleeName, nullptr, CallSite);
+  return &AllChildFrames[Hash];
+}
+
+ProfileConverter::ProfileConverter(SampleProfileMap &Profiles)
+    : ProfileMap(Profiles) {
+  for (auto &FuncSample : Profiles) {
+    FunctionSamples *FSamples = &FuncSample.second;
+    auto *NewNode = getOrCreateContextPath(FSamples->getContext());
+    assert(!NewNode->FuncSamples && "New node cannot have sample profile");
+    NewNode->FuncSamples = FSamples;
+  }
+}
+
+ProfileConverter::FrameNode *
+ProfileConverter::getOrCreateContextPath(const SampleContext &Context) {
+  auto Node = &RootFrame;
+  LineLocation CallSiteLoc(0, 0);
+  for (auto &Callsite : Context.getContextFrames()) {
+    Node = Node->getOrCreateChildFrame(CallSiteLoc, Callsite.Func);
+    CallSiteLoc = Callsite.Location;
+  }
+  return Node;
+}
+
+void ProfileConverter::convertCSProfiles(ProfileConverter::FrameNode &Node) {
+  // Process each child profile. Add each child profile to callsite profile map
+  // of the current node `Node` if `Node` comes with a profile. Otherwise
+  // promote the child profile to a standalone profile.
+  auto *NodeProfile = Node.FuncSamples;
+  for (auto &It : Node.AllChildFrames) {
+    auto &ChildNode = It.second;
+    convertCSProfiles(ChildNode);
+    auto *ChildProfile = ChildNode.FuncSamples;
+    if (!ChildProfile)
+      continue;
+    SampleContext OrigChildContext = ChildProfile->getContext();
+    uint64_t OrigChildContextHash = OrigChildContext.getHashCode();
+    // Reset the child context to be contextless.
+    ChildProfile->getContext().setFunction(OrigChildContext.getFunction());
+    if (NodeProfile) {
+      // Add child profile to the callsite profile map.
+      auto &SamplesMap = NodeProfile->functionSamplesAt(ChildNode.CallSiteLoc);
+      SamplesMap.emplace(OrigChildContext.getFunction(), *ChildProfile);
+      NodeProfile->addTotalSamples(ChildProfile->getTotalSamples());
+      // Remove the corresponding body sample for the callsite and update the
+      // total weight.
+      auto Count = NodeProfile->removeCalledTargetAndBodySample(
+          ChildNode.CallSiteLoc.LineOffset, ChildNode.CallSiteLoc.Discriminator,
+          OrigChildContext.getFunction());
+      NodeProfile->removeTotalSamples(Count);
+    }
+
+    uint64_t NewChildProfileHash = 0;
+    // Separate child profile to be a standalone profile, if the current parent
+    // profile doesn't exist. This is a duplicating operation when the child
+    // profile is already incorporated into the parent which is still useful and
+    // thus done optionally. It is seen that duplicating context profiles into
+    // base profiles improves the code quality for thinlto build by allowing a
+    // profile in the prelink phase for to-be-fully-inlined functions.
+    if (!NodeProfile) {
+      ProfileMap[ChildProfile->getContext()].merge(*ChildProfile);
+      NewChildProfileHash = ChildProfile->getContext().getHashCode();
+    } else if (GenerateMergedBaseProfiles) {
+      ProfileMap[ChildProfile->getContext()].merge(*ChildProfile);
+      NewChildProfileHash = ChildProfile->getContext().getHashCode();
+      auto &SamplesMap = NodeProfile->functionSamplesAt(ChildNode.CallSiteLoc);
+      SamplesMap[ChildProfile->getFunction()].getContext().setAttribute(
+          ContextDuplicatedIntoBase);
+    }
+
+    // Remove the original child profile. Check if MD5 of new child profile
+    // collides with old profile, in this case the [] operator already
+    // overwritten it without the need of erase.
+    if (NewChildProfileHash != OrigChildContextHash)
+      ProfileMap.erase(OrigChildContextHash);
+  }
+}
+
+void ProfileConverter::convertCSProfiles() { convertCSProfiles(RootFrame); }

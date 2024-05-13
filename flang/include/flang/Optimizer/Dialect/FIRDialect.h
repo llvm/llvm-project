@@ -15,30 +15,13 @@
 
 #include "mlir/IR/Dialect.h"
 
+#include "flang/Optimizer/Dialect/FIRDialect.h.inc"
+
+namespace mlir {
+class IRMapping;
+} // namespace mlir
+
 namespace fir {
-
-/// FIR dialect
-class FIROpsDialect final : public mlir::Dialect {
-public:
-  explicit FIROpsDialect(mlir::MLIRContext *ctx);
-  virtual ~FIROpsDialect();
-
-  static llvm::StringRef getDialectNamespace() { return "fir"; }
-
-  mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
-  void printType(mlir::Type ty, mlir::DialectAsmPrinter &p) const override;
-
-  mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
-                                 mlir::Type type) const override;
-  void printAttribute(mlir::Attribute attr,
-                      mlir::DialectAsmPrinter &p) const override;
-
-private:
-  // Register the Attributes of this dialect.
-  void registerAttributes();
-  // Register the Types of this dialect.
-  void registerTypes();
-};
 
 /// The FIR codegen dialect is a dialect containing a small set of transient
 /// operations used exclusively during code generation.
@@ -49,6 +32,17 @@ public:
 
   static llvm::StringRef getDialectNamespace() { return "fircg"; }
 };
+
+/// Support for inlining on FIR.
+bool canLegallyInline(mlir::Operation *op, mlir::Region *reg, bool,
+                      mlir::IRMapping &map);
+bool canLegallyInline(mlir::Operation *, mlir::Operation *, bool);
+
+// Register the FIRInlinerInterface to FIROpsDialect
+void addFIRInlinerExtension(mlir::DialectRegistry &registry);
+
+// Register implementation of LLVMTranslationDialectInterface.
+void addFIRToLLVMIRExtension(mlir::DialectRegistry &registry);
 
 } // namespace fir
 

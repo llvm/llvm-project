@@ -1,4 +1,4 @@
-//===- AssumeBundleQueries.h - utilities to query assume bundles *- C++ -*-===//
+//===- AssumeBundleQueries.h - utilis to query assume bundles ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,15 +14,14 @@
 #ifndef LLVM_ANALYSIS_ASSUMEBUNDLEQUERIES_H
 #define LLVM_ANALYSIS_ASSUMEBUNDLEQUERIES_H
 
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 namespace llvm {
-class IntrinsicInst;
 class AssumptionCache;
 class DominatorTree;
+class Instruction;
+class Value;
 
 /// Index of elements in the operand bundle.
 /// If the element exist it is guaranteed to be what is specified in this enum
@@ -70,15 +69,15 @@ template<> struct DenseMapInfo<Attribute::AttrKind> {
 using RetainedKnowledgeKey = std::pair<Value *, Attribute::AttrKind>;
 
 struct MinMax {
-  unsigned Min;
-  unsigned Max;
+  uint64_t Min;
+  uint64_t Max;
 };
 
 /// A mapping from intrinsics (=`llvm.assume` calls) to a value range
 /// (=knowledge) that is encoded in them. How the value range is interpreted
 /// depends on the RetainedKnowledgeKey that was used to get this out of the
 /// RetainedKnowledgeMap.
-using Assume2KnowledgeMap = DenseMap<IntrinsicInst *, MinMax>;
+using Assume2KnowledgeMap = DenseMap<AssumeInst *, MinMax>;
 
 using RetainedKnowledgeMap =
     DenseMap<RetainedKnowledgeKey, Assume2KnowledgeMap>;
@@ -100,7 +99,7 @@ void fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result);
 ///  - ArgValue will be 4.
 struct RetainedKnowledge {
   Attribute::AttrKind AttrKind = Attribute::None;
-  unsigned ArgValue = 0;
+  uint64_t ArgValue = 0;
   Value *WasOn = nullptr;
   bool operator==(RetainedKnowledge Other) const {
     return AttrKind == Other.AttrKind && WasOn == Other.WasOn &&
@@ -143,7 +142,7 @@ constexpr StringRef IgnoreBundleTag = "ignore";
 ///
 /// the argument to the call of llvm.assume may still be useful even if the
 /// function returned true.
-bool isAssumeWithEmptyBundle(AssumeInst &Assume);
+bool isAssumeWithEmptyBundle(const AssumeInst &Assume);
 
 /// Return a valid Knowledge associated to the Use U if its Attribute kind is
 /// in AttrKinds.

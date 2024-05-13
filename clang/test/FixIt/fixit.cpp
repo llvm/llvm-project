@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++98 %s
+// RUN: %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++98 -Wno-c++14-extensions %s
 // RUN: cp %s %t-98
-// RUN: not %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++98 %t-98
-// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Wno-unused-but-set-variable -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++98 %t-98
-// RUN: not %clang_cc1 -fsyntax-only -pedantic -fdiagnostics-parseable-fixits -x c++ -std=c++11 %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++11 %s
+// RUN: not %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++98 -Wno-c++14-extensions %t-98
+// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Wno-unused-but-set-variable -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++98 -Wno-c++14-extensions %t-98
+// RUN: not %clang_cc1 -fsyntax-only -pedantic -fdiagnostics-parseable-fixits -x c++ -std=c++11 -Wno-c++14-extensions %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++11 -Wno-c++14-extensions %s
 // RUN: cp %s %t-11
-// RUN: not %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++11 %t-11
-// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Wno-unused-but-set-variable -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++11 %t-11
+// RUN: not %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++11 -Wno-c++14-extensions %t-11
+// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Wno-unused-but-set-variable -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++11 -Wno-c++14-extensions %t-11
 
 /* This is a test of the various code modification hints that are
    provided as part of warning or extension diagnostics. All of the
@@ -166,7 +166,7 @@ void f(){
   typename F1<T>:: /*template*/ Iterator<0> Mypos; // expected-error {{use 'template' keyword to treat 'Iterator' as a dependent template name}}
 }
 
-// Tests for &/* fixits radar 7113438.
+// Tests for &/* fixits
 class AD {};
 class BD: public AD {};
 
@@ -211,7 +211,7 @@ public:
 template<class T> struct Mystery;
 template<class T> typedef Mystery<T>::type getMysteriousThing() { // \
   expected-error {{function definition declared 'typedef'}} \
-  expected-error {{missing 'typename' prior to dependent}}
+  expected-warning {{implicit 'typename' is a C++20 extension}}
   return Mystery<T>::get();
 }
 
@@ -292,21 +292,21 @@ namespace greatergreater {
 
   template<template<typename>> struct TemplateTemplateParam; // expected-error {{requires 'class'}}
 
-  template<typename T> void t();
+  template <typename T> int t = 0;
   void g() {
-    void (*p)() = &t<int>;
-    (void)(&t<int>==p); // expected-error {{use '> ='}}
-    (void)(&t<int>>=p); // expected-error {{use '> >'}}
+    int p = 0;
+    (void)(t<int>==p); // expected-error {{use '> ='}}
+    (void)(t<int>>=p); // expected-error {{use '> >'}}
 #if __cplusplus < 201103L
-    (void)(&t<S<int>>>=p); // expected-error {{use '> >'}}
-    (Shr)&t<S<int>>>>=p; // expected-error {{use '> >'}}
+    (void)(t<S<int>>>=p); // expected-error {{use '> >'}}
+    (Shr)t<S<int>>>>=p; // expected-error {{use '> >'}}
 #endif
 
-    // FIXME: We correct this to '&t<int> > >= p;' not '&t<int> >>= p;'
-    //(Shr)&t<int>>>=p;
+    // FIXME: We correct this to 't<int> > >= p;' not 't<int> >>= p;'
+    //(Shr)t<int>>>=p;
 
     // FIXME: The fix-its here overlap.
-    //(void)(&t<S<int>>==p);
+    //(void)(t<S<int>>==p);
   }
 }
 
@@ -384,7 +384,7 @@ namespace PR15045 {
 
   int f() {
     Cl0 c;
-    return c->a;  // expected-error {{member reference type 'PR15045::Cl0' is not a pointer; did you mean to use '.'?}}
+    return c->a;  // expected-error {{member reference type 'Cl0' is not a pointer; did you mean to use '.'?}}
   }
 }
 
@@ -442,7 +442,7 @@ struct Bar {
 };
 
 void bar(Bar *o) {
-  o.~Bar(); // expected-error {{member reference type 'dotPointerDestructor::Bar *' is a pointer; did you mean to use '->'}}
+  o.~Bar(); // expected-error {{member reference type 'Bar *' is a pointer; did you mean to use '->'}}
 }  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:5}:"->"
 
 }

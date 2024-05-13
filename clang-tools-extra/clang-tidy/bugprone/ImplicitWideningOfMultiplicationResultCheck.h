@@ -11,21 +11,20 @@
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Diagnoses instances of an implicit widening of multiplication result.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-implicit-widening-of-multiplication-result.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result.html
 class ImplicitWideningOfMultiplicationResultCheck : public ClangTidyCheck {
   const ast_matchers::MatchFinder::MatchResult *Result;
   bool ShouldUseCXXStaticCast;
   bool ShouldUseCXXHeader;
 
-  llvm::Optional<FixItHint> includeStddefHeader(SourceLocation File);
+  std::optional<FixItHint> includeStddefHeader(SourceLocation File);
 
   void handleImplicitCastExpr(const ImplicitCastExpr *ICE);
   void handlePointerOffsetting(const Expr *E);
@@ -45,8 +44,6 @@ private:
   utils::IncludeInserter IncludeInserter;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_IMPLICITWIDENINGOFMULTIPLICATIONRESULTCHECK_H

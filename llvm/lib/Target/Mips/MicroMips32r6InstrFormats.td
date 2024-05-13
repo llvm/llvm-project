@@ -733,14 +733,15 @@ class POOL16C_NOT16_FM_MMR6 {
 }
 
 class POOL16C_MOVEP16_FM_MMR6 {
-  bits<3> dst_regs;
   bits<3> rt;
   bits<3> rs;
 
   bits<16> Inst;
 
   let Inst{15-10} = 0b010001;
-  let Inst{9-7}   = dst_regs;
+  // bits 7-9 are populated by MipsMCCodeEmitter::encodeInstruction, with a
+  // special encoding of both rd1 and rd2.
+  let Inst{9-7}   = ?;
   let Inst{6-4}   = rt;
   let Inst{3}     = rs{2};
   let Inst{2}     = 0b1;
@@ -958,7 +959,7 @@ class POOL32A_DVPEVP_FM_MMR6<string instr_asm, bits<10> funct>
   let Inst{5-0}   = 0b111100;
 }
 
-class CMP_BRANCH_OFF21_FM_MMR6<string opstr, bits<6> funct> : MipsR6Inst {
+class CMP_BRANCH_OFF21_FM_MMR6<bits<6> funct> : MipsR6Inst {
   bits<5> rs;
   bits<21> offset;
 

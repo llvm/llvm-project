@@ -33,12 +33,10 @@ define i16 @fshl_i16(i16 %x, i16 %y, i16 %z) {
 define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshl_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi $1, $6, 31
-; CHECK-NEXT:    sllv $1, $4, $1
-; CHECK-NEXT:    srl $2, $5, 1
-; CHECK-NEXT:    not $3, $6
-; CHECK-NEXT:    andi $3, $3, 31
-; CHECK-NEXT:    srlv $2, $2, $3
+; CHECK-NEXT:    sllv $1, $4, $6
+; CHECK-NEXT:    not $2, $6
+; CHECK-NEXT:    srl $3, $5, 1
+; CHECK-NEXT:    srlv $2, $3, $2
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    or $2, $1, $2
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %z)
@@ -66,43 +64,30 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-BE-NEXT:    move $17, $6
 ; CHECK-BE-NEXT:    move $18, $5
 ; CHECK-BE-NEXT:    move $19, $4
-; CHECK-BE-NEXT:    lw $4, 56($sp)
+; CHECK-BE-NEXT:    lw $1, 56($sp)
+; CHECK-BE-NEXT:    andi $4, $1, 31
 ; CHECK-BE-NEXT:    lw $5, 60($sp)
 ; CHECK-BE-NEXT:    addiu $6, $zero, 0
 ; CHECK-BE-NEXT:    jal __umoddi3
 ; CHECK-BE-NEXT:    addiu $7, $zero, 37
-; CHECK-BE-NEXT:    not $1, $3
-; CHECK-BE-NEXT:    andi $2, $3, 63
-; CHECK-BE-NEXT:    not $4, $2
-; CHECK-BE-NEXT:    srl $5, $18, 1
-; CHECK-BE-NEXT:    sllv $6, $19, $2
-; CHECK-BE-NEXT:    srlv $4, $5, $4
-; CHECK-BE-NEXT:    andi $5, $1, 63
-; CHECK-BE-NEXT:    srl $7, $16, 5
-; CHECK-BE-NEXT:    sll $8, $17, 27
-; CHECK-BE-NEXT:    or $7, $8, $7
-; CHECK-BE-NEXT:    srl $8, $7, 1
-; CHECK-BE-NEXT:    srlv $9, $8, $5
-; CHECK-BE-NEXT:    andi $1, $1, 32
-; CHECK-BE-NEXT:    move $10, $9
-; CHECK-BE-NEXT:    movn $10, $zero, $1
-; CHECK-BE-NEXT:    or $4, $6, $4
-; CHECK-BE-NEXT:    sllv $6, $18, $2
-; CHECK-BE-NEXT:    andi $3, $3, 32
-; CHECK-BE-NEXT:    movn $4, $6, $3
-; CHECK-BE-NEXT:    sll $7, $7, 31
-; CHECK-BE-NEXT:    sll $2, $16, 27
-; CHECK-BE-NEXT:    srl $11, $2, 1
-; CHECK-BE-NEXT:    or $2, $4, $10
-; CHECK-BE-NEXT:    movn $6, $zero, $3
-; CHECK-BE-NEXT:    or $3, $11, $7
-; CHECK-BE-NEXT:    srlv $3, $3, $5
-; CHECK-BE-NEXT:    not $4, $5
-; CHECK-BE-NEXT:    sll $5, $8, 1
-; CHECK-BE-NEXT:    sllv $4, $5, $4
-; CHECK-BE-NEXT:    or $3, $4, $3
-; CHECK-BE-NEXT:    movn $3, $9, $1
-; CHECK-BE-NEXT:    or $3, $6, $3
+; CHECK-BE-NEXT:    srl $1, $3, 5
+; CHECK-BE-NEXT:    andi $1, $1, 1
+; CHECK-BE-NEXT:    movn $19, $18, $1
+; CHECK-BE-NEXT:    sllv $2, $19, $3
+; CHECK-BE-NEXT:    not $4, $3
+; CHECK-BE-NEXT:    srl $5, $16, 5
+; CHECK-BE-NEXT:    sll $6, $17, 27
+; CHECK-BE-NEXT:    or $5, $6, $5
+; CHECK-BE-NEXT:    movn $18, $5, $1
+; CHECK-BE-NEXT:    srl $6, $18, 1
+; CHECK-BE-NEXT:    srlv $6, $6, $4
+; CHECK-BE-NEXT:    or $2, $2, $6
+; CHECK-BE-NEXT:    sllv $3, $18, $3
+; CHECK-BE-NEXT:    sll $6, $16, 27
+; CHECK-BE-NEXT:    movn $5, $6, $1
+; CHECK-BE-NEXT:    srl $1, $5, 1
+; CHECK-BE-NEXT:    srlv $1, $1, $4
+; CHECK-BE-NEXT:    or $3, $3, $1
 ; CHECK-BE-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
 ; CHECK-BE-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
 ; CHECK-BE-NEXT:    lw $18, 28($sp) # 4-byte Folded Reload
@@ -129,43 +114,32 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LE-NEXT:    move $17, $6
 ; CHECK-LE-NEXT:    move $18, $5
 ; CHECK-LE-NEXT:    move $19, $4
+; CHECK-LE-NEXT:    lw $1, 60($sp)
+; CHECK-LE-NEXT:    andi $5, $1, 31
 ; CHECK-LE-NEXT:    lw $4, 56($sp)
-; CHECK-LE-NEXT:    lw $5, 60($sp)
 ; CHECK-LE-NEXT:    addiu $6, $zero, 37
 ; CHECK-LE-NEXT:    jal __umoddi3
 ; CHECK-LE-NEXT:    addiu $7, $zero, 0
-; CHECK-LE-NEXT:    not $1, $2
-; CHECK-LE-NEXT:    andi $3, $2, 63
-; CHECK-LE-NEXT:    not $4, $3
-; CHECK-LE-NEXT:    srl $5, $19, 1
-; CHECK-LE-NEXT:    sllv $6, $18, $3
-; CHECK-LE-NEXT:    srlv $4, $5, $4
-; CHECK-LE-NEXT:    andi $5, $1, 63
-; CHECK-LE-NEXT:    srl $7, $17, 5
-; CHECK-LE-NEXT:    sll $8, $16, 27
-; CHECK-LE-NEXT:    or $7, $8, $7
-; CHECK-LE-NEXT:    srl $8, $7, 1
-; CHECK-LE-NEXT:    srlv $9, $8, $5
-; CHECK-LE-NEXT:    andi $1, $1, 32
-; CHECK-LE-NEXT:    move $10, $9
-; CHECK-LE-NEXT:    movn $10, $zero, $1
-; CHECK-LE-NEXT:    or $4, $6, $4
-; CHECK-LE-NEXT:    sllv $6, $19, $3
-; CHECK-LE-NEXT:    andi $2, $2, 32
-; CHECK-LE-NEXT:    movn $4, $6, $2
-; CHECK-LE-NEXT:    sll $7, $7, 31
-; CHECK-LE-NEXT:    sll $3, $17, 27
-; CHECK-LE-NEXT:    srl $11, $3, 1
-; CHECK-LE-NEXT:    or $3, $4, $10
-; CHECK-LE-NEXT:    movn $6, $zero, $2
-; CHECK-LE-NEXT:    or $2, $11, $7
-; CHECK-LE-NEXT:    srlv $2, $2, $5
-; CHECK-LE-NEXT:    not $4, $5
-; CHECK-LE-NEXT:    sll $5, $8, 1
-; CHECK-LE-NEXT:    sllv $4, $5, $4
-; CHECK-LE-NEXT:    or $2, $4, $2
-; CHECK-LE-NEXT:    movn $2, $9, $1
-; CHECK-LE-NEXT:    or $2, $6, $2
+; CHECK-LE-NEXT:    srl $1, $2, 5
+; CHECK-LE-NEXT:    andi $3, $1, 1
+; CHECK-LE-NEXT:    srl $1, $17, 5
+; CHECK-LE-NEXT:    sll $4, $16, 27
+; CHECK-LE-NEXT:    or $1, $4, $1
+; CHECK-LE-NEXT:    move $4, $19
+; CHECK-LE-NEXT:    movn $4, $1, $3
+; CHECK-LE-NEXT:    sllv $5, $4, $2
+; CHECK-LE-NEXT:    not $6, $2
+; CHECK-LE-NEXT:    sll $7, $17, 27
+; CHECK-LE-NEXT:    movn $1, $7, $3
+; CHECK-LE-NEXT:    srl $1, $1, 1
+; CHECK-LE-NEXT:    srlv $1, $1, $6
+; CHECK-LE-NEXT:    or $1, $5, $1
+; CHECK-LE-NEXT:    movn $18, $19, $3
+; CHECK-LE-NEXT:    sllv $2, $18, $2
+; CHECK-LE-NEXT:    srl $3, $4, 1
+; CHECK-LE-NEXT:    srlv $3, $3, $6
+; CHECK-LE-NEXT:    or $3, $2, $3
+; CHECK-LE-NEXT:    move $2, $1
 ; CHECK-LE-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
 ; CHECK-LE-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
 ; CHECK-LE-NEXT:    lw $18, 28($sp) # 4-byte Folded Reload
@@ -250,15 +224,15 @@ define i64 @fshl_i64_const_overshift(i64 %x, i64 %y) {
 ; CHECK-BE-NEXT:    srl $1, $6, 23
 ; CHECK-BE-NEXT:    sll $2, $5, 9
 ; CHECK-BE-NEXT:    or $2, $2, $1
-; CHECK-BE-NEXT:    sll $1, $6, 9
-; CHECK-BE-NEXT:    srl $3, $7, 23
+; CHECK-BE-NEXT:    srl $1, $7, 23
+; CHECK-BE-NEXT:    sll $3, $6, 9
 ; CHECK-BE-NEXT:    jr $ra
 ; CHECK-BE-NEXT:    or $3, $3, $1
 ;
 ; CHECK-LE-LABEL: fshl_i64_const_overshift:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    sll $1, $7, 9
-; CHECK-LE-NEXT:    srl $2, $6, 23
+; CHECK-LE-NEXT:    srl $1, $6, 23
+; CHECK-LE-NEXT:    sll $2, $7, 9
 ; CHECK-LE-NEXT:    or $2, $2, $1
 ; CHECK-LE-NEXT:    srl $1, $7, 23
 ; CHECK-LE-NEXT:    sll $3, $4, 9
@@ -299,12 +273,10 @@ define i16 @fshr_i16(i16 %x, i16 %y, i16 %z) {
 define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshr_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi $1, $6, 31
-; CHECK-NEXT:    srlv $1, $5, $1
-; CHECK-NEXT:    sll $2, $4, 1
-; CHECK-NEXT:    not $3, $6
-; CHECK-NEXT:    andi $3, $3, 31
-; CHECK-NEXT:    sllv $2, $2, $3
+; CHECK-NEXT:    srlv $1, $5, $6
+; CHECK-NEXT:    not $2, $6
+; CHECK-NEXT:    sll $3, $4, 1
+; CHECK-NEXT:    sllv $2, $3, $2
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    or $2, $2, $1
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %z)
@@ -332,46 +304,30 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-BE-NEXT:    move $17, $6
 ; CHECK-BE-NEXT:    move $18, $5
 ; CHECK-BE-NEXT:    move $19, $4
-; CHECK-BE-NEXT:    lw $4, 56($sp)
+; CHECK-BE-NEXT:    lw $1, 56($sp)
+; CHECK-BE-NEXT:    andi $4, $1, 31
 ; CHECK-BE-NEXT:    lw $5, 60($sp)
 ; CHECK-BE-NEXT:    addiu $6, $zero, 0
 ; CHECK-BE-NEXT:    jal __umoddi3
 ; CHECK-BE-NEXT:    addiu $7, $zero, 37
 ; CHECK-BE-NEXT:    addiu $1, $3, 27
-; CHECK-BE-NEXT:    andi $2, $1, 63
-; CHECK-BE-NEXT:    not $3, $2
-; CHECK-BE-NEXT:    srl $4, $16, 5
-; CHECK-BE-NEXT:    sll $5, $17, 27
-; CHECK-BE-NEXT:    or $4, $5, $4
-; CHECK-BE-NEXT:    sll $5, $4, 1
-; CHECK-BE-NEXT:    sll $6, $16, 27
-; CHECK-BE-NEXT:    srlv $6, $6, $2
-; CHECK-BE-NEXT:    sllv $3, $5, $3
+; CHECK-BE-NEXT:    andi $3, $1, 32
+; CHECK-BE-NEXT:    srl $2, $16, 5
+; CHECK-BE-NEXT:    sll $4, $17, 27
+; CHECK-BE-NEXT:    or $4, $4, $2
+; CHECK-BE-NEXT:    movz $19, $18, $3
+; CHECK-BE-NEXT:    movz $18, $4, $3
+; CHECK-BE-NEXT:    srlv $2, $18, $1
 ; CHECK-BE-NEXT:    not $5, $1
-; CHECK-BE-NEXT:    andi $7, $5, 63
-; CHECK-BE-NEXT:    sll $8, $18, 1
-; CHECK-BE-NEXT:    sllv $8, $8, $7
-; CHECK-BE-NEXT:    andi $5, $5, 32
-; CHECK-BE-NEXT:    move $9, $8
-; CHECK-BE-NEXT:    movn $9, $zero, $5
-; CHECK-BE-NEXT:    or $3, $3, $6
-; CHECK-BE-NEXT:    srlv $2, $4, $2
-; CHECK-BE-NEXT:    andi $1, $1, 32
-; CHECK-BE-NEXT:    movn $3, $2, $1
-; CHECK-BE-NEXT:    srl $4, $18, 31
 ; CHECK-BE-NEXT:    sll $6, $19, 1
-; CHECK-BE-NEXT:    or $4, $6, $4
-; CHECK-BE-NEXT:    or $3, $9, $3
-; CHECK-BE-NEXT:    movn $2, $zero, $1
-; CHECK-BE-NEXT:    sllv $1, $4, $7
-; CHECK-BE-NEXT:    not $4, $7
-; CHECK-BE-NEXT:    lui $6, 32767
-; CHECK-BE-NEXT:    ori $6, $6, 65535
-; CHECK-BE-NEXT:    and $6, $18, $6
-; CHECK-BE-NEXT:    srlv $4, $6, $4
-; CHECK-BE-NEXT:    or $1, $1, $4
-; CHECK-BE-NEXT:    movn $1, $8, $5
-; CHECK-BE-NEXT:    or $2, $1, $2
+; CHECK-BE-NEXT:    sllv $6, $6, $5
+; CHECK-BE-NEXT:    sll $7, $16, 27
+; CHECK-BE-NEXT:    or $2, $6, $2
+; CHECK-BE-NEXT:    movz $4, $7, $3
+; CHECK-BE-NEXT:    srlv $1, $4, $1
+; CHECK-BE-NEXT:    sll $3, $18, 1
+; CHECK-BE-NEXT:    sllv $3, $3, $5
+; CHECK-BE-NEXT:    or $3, $3, $1
 ; CHECK-BE-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
 ; CHECK-BE-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
 ; CHECK-BE-NEXT:    lw $18, 28($sp) # 4-byte Folded Reload
@@ -398,46 +354,31 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LE-NEXT:    move $17, $6
 ; CHECK-LE-NEXT:    move $18, $5
 ; CHECK-LE-NEXT:    move $19, $4
+; CHECK-LE-NEXT:    lw $1, 60($sp)
+; CHECK-LE-NEXT:    andi $5, $1, 31
 ; CHECK-LE-NEXT:    lw $4, 56($sp)
-; CHECK-LE-NEXT:    lw $5, 60($sp)
 ; CHECK-LE-NEXT:    addiu $6, $zero, 37
 ; CHECK-LE-NEXT:    jal __umoddi3
 ; CHECK-LE-NEXT:    addiu $7, $zero, 0
 ; CHECK-LE-NEXT:    addiu $1, $2, 27
-; CHECK-LE-NEXT:    andi $2, $1, 63
-; CHECK-LE-NEXT:    not $3, $2
-; CHECK-LE-NEXT:    srl $4, $17, 5
-; CHECK-LE-NEXT:    sll $5, $16, 27
-; CHECK-LE-NEXT:    or $4, $5, $4
-; CHECK-LE-NEXT:    sll $5, $4, 1
-; CHECK-LE-NEXT:    sll $6, $17, 27
-; CHECK-LE-NEXT:    srlv $6, $6, $2
-; CHECK-LE-NEXT:    sllv $3, $5, $3
-; CHECK-LE-NEXT:    not $5, $1
-; CHECK-LE-NEXT:    andi $7, $5, 63
-; CHECK-LE-NEXT:    sll $8, $19, 1
-; CHECK-LE-NEXT:    sllv $8, $8, $7
-; CHECK-LE-NEXT:    andi $5, $5, 32
-; CHECK-LE-NEXT:    move $9, $8
-; CHECK-LE-NEXT:    movn $9, $zero, $5
-; CHECK-LE-NEXT:    or $3, $3, $6
-; CHECK-LE-NEXT:    srlv $4, $4, $2
-; CHECK-LE-NEXT:    andi $1, $1, 32
-; CHECK-LE-NEXT:    movn $3, $4, $1
-; CHECK-LE-NEXT:    srl $2, $19, 31
-; CHECK-LE-NEXT:    sll $6, $18, 1
-; CHECK-LE-NEXT:    or $6, $6, $2
-; CHECK-LE-NEXT:    or $2, $9, $3
-; CHECK-LE-NEXT:    movn $4, $zero, $1
-; CHECK-LE-NEXT:    sllv $1, $6, $7
-; CHECK-LE-NEXT:    not $3, $7
-; CHECK-LE-NEXT:    lui $6, 32767
-; CHECK-LE-NEXT:    ori $6, $6, 65535
-; CHECK-LE-NEXT:    and $6, $19, $6
-; CHECK-LE-NEXT:    srlv $3, $6, $3
-; CHECK-LE-NEXT:    or $1, $1, $3
-; CHECK-LE-NEXT:    movn $1, $8, $5
-; CHECK-LE-NEXT:    or $3, $1, $4
+; CHECK-LE-NEXT:    andi $3, $1, 32
+; CHECK-LE-NEXT:    srl $2, $17, 5
+; CHECK-LE-NEXT:    sll $4, $16, 27
+; CHECK-LE-NEXT:    or $2, $4, $2
+; CHECK-LE-NEXT:    sll $4, $17, 27
+; CHECK-LE-NEXT:    move $5, $19
+; CHECK-LE-NEXT:    movz $5, $2, $3
+; CHECK-LE-NEXT:    movz $2, $4, $3
+; CHECK-LE-NEXT:    srlv $2, $2, $1
+; CHECK-LE-NEXT:    not $4, $1
+; CHECK-LE-NEXT:    sll $6, $5, 1
+; CHECK-LE-NEXT:    sllv $6, $6, $4
+; CHECK-LE-NEXT:    or $2, $6, $2
+; CHECK-LE-NEXT:    srlv $1, $5, $1
+; CHECK-LE-NEXT:    movz $18, $19, $3
+; CHECK-LE-NEXT:    sll $3, $18, 1
+; CHECK-LE-NEXT:    sllv $3, $3, $4
+; CHECK-LE-NEXT:    or $3, $3, $1
 ; CHECK-LE-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
 ; CHECK-LE-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
 ; CHECK-LE-NEXT:    lw $18, 28($sp) # 4-byte Folded Reload

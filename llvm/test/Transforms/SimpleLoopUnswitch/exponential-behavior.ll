@@ -1,7 +1,6 @@
-; RUN: opt -simple-loop-unswitch -S < %s | FileCheck %s
-; RUN: opt -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes=simple-loop-unswitch -verify-memoryssa -S < %s | FileCheck %s
 
-define void @f(i32 %n, i32* %ptr) {
+define void @f(i32 %n, ptr %ptr) {
 ; CHECK-LABEL: @f(
 entry:
   br label %loop
@@ -43,7 +42,7 @@ loop:
   br i1 %us.29, label %leave, label %be
 
 be:
-  store volatile i32 0, i32* %ptr
+  store volatile i32 0, ptr %ptr
   %becond = icmp ult i32 %iv.inc, %n
   br i1 %becond, label %leave, label %loop
 

@@ -17,7 +17,7 @@ add_lldb_library(lldbPluginDynamicLoaderDarwinKernel PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginPlatformMacOSX
+    lldbPluginObjectFileMachO
   )
 
 add_dependencies(lldbPluginDynamicLoaderDarwinKernel

@@ -14,8 +14,8 @@
 // GOTREL-NEXT:     SHF_ALLOC
 // GOTREL-NEXT:     SHF_WRITE
 // GOTREL-NEXT:   ]
-// GOTREL-NEXT:   Address:  0x402258
-// GOTREL-NEXT:   Offset: 0x258
+// GOTREL-NEXT:   Address:  0x402250
+// GOTREL-NEXT:   Offset: 0x250
 // GOTREL-NEXT:   Size: 8
 // GOTREL-NEXT:   Link: 0
 // GOTREL-NEXT:   Info: 0
@@ -24,8 +24,8 @@
 // GOTREL-NEXT: }
 // GOTREL:      Relocations [
 // GOTREL-NEXT: Section ({{.*}}) .rel.dyn {
-// GOTREL-NEXT:   0x402258 R_386_TLS_TPOFF tlsshared0
-// GOTREL-NEXT:   0x40225C R_386_TLS_TPOFF tlsshared1
+// GOTREL-NEXT:   0x402250 R_386_TLS_TPOFF tlsshared0
+// GOTREL-NEXT:   0x402254 R_386_TLS_TPOFF tlsshared1
 // GOTREL-NEXT:  }
 // GOTREL-NEXT: ]
 
@@ -45,10 +45,10 @@
 // DISASM-NEXT:               addl $0xfffffffc, %ecx
 // DISASM-NEXT:               movl %gs:(%ecx), %eax
 /// &.got[0]
-// DISASM-NEXT:               movl 0x402258, %ecx
+// DISASM-NEXT:               movl 0x402250, %ecx
 // DISASM-NEXT:               movl %gs:(%ecx), %eax
 /// &.got[1]
-// DISASM-NEXT:               addl 0x40225c, %ecx
+// DISASM-NEXT:               addl 0x402254, %ecx
 // DISASM-NEXT:               movl %gs:(%ecx), %eax
 
 .type tlslocal0,@object

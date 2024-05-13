@@ -68,4 +68,42 @@ constexpr int test9(int x) {
 }
 
 constexpr int test10() { return undef(); } // expected-error {{use of undeclared identifier 'undef'}}
-static_assert(test10() <= 1, "should not crash"); // expected-error {{static_assert expression is not an integral constant expression}}
+static_assert(test10() <= 1, "should not crash"); // expected-error {{static assertion expression is not an integral constant expression}}
+
+struct X {} array[] = {undef()}; // expected-error {{use of undeclared identifier 'undef'}}
+constexpr void test11() {
+  for (X& e : array) {}
+}
+
+constexpr int test12() { return "wrong"; } // expected-error {{cannot initialize return object of type 'int'}}
+constexpr int force12 = test12();          // expected-error {{must be initialized by a constant}}
+
+#define TEST_EVALUATE(Name, X)         \
+  constexpr int testEvaluate##Name() { \
+    X return 0;                        \
+  }                                    \
+  constexpr int forceEvaluate##Name = testEvaluate##Name()
+// Check that a variety of broken loops don't crash constant evaluation.
+// We're not checking specific recovery here so don't assert diagnostics.
+TEST_EVALUATE(Switch, switch (!!){});              // expected-error + {{}}
+TEST_EVALUATE(SwitchInit, switch (auto x = !!){}); // expected-error + {{}}
+TEST_EVALUATE(SwitchCondValDep, switch (invalid_value) { default: break; });    // expected-error + {{}}
+TEST_EVALUATE(For, for (!!){}); // expected-error + {{}}
+                                // FIXME: should bail out instead of looping.
+                                // expected-note@-2 + {{infinite loop}}
+                                // expected-note@-3 {{in call}}
+TEST_EVALUATE(ForRange, for (auto x : !!){}); // expected-error + {{}}
+TEST_EVALUATE(While, while (!!){});           // expected-error + {{}}
+TEST_EVALUATE(DoWhile, do {} while (!!););    // expected-error + {{}}
+TEST_EVALUATE(DoWhileCond, do {} while (some_cond < 10););    // expected-error {{use of undeclared identifier}}  \
+                                                              // expected-error {{constexpr variable 'forceEvaluateDoWhileCond' must be initialized by a constant expression}}
+TEST_EVALUATE(If, if (!!){};);                // expected-error + {{}}
+TEST_EVALUATE(IfInit, if (auto x = !!; 1){};);// expected-error + {{}}
+TEST_EVALUATE(ForInit, for (!!;;){};);// expected-error + {{}}
+                                      // expected-note@-1 + {{infinite loop}}
+                                      // expected-note@-2 {{in call}}
+TEST_EVALUATE(ForCond, for (; !!;){};);// expected-error + {{}}
+TEST_EVALUATE(ForInc, for (;; !!){};);// expected-error + {{}}
+                                      // expected-note@-1 + {{infinite loop}}
+                                      // expected-note@-2 {{in call}}
+TEST_EVALUATE(ForCondUnDef, for (;some_cond;){};);        // expected-error + {{}}

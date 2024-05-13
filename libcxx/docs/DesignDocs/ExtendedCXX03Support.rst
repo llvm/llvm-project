@@ -27,12 +27,12 @@ libc++ expects Clang  to provide are:
 * Alias templates
 * defaulted and deleted Functions.
 * reference qualified Functions
+* ``auto``
 
 There are also features that Clang *does not* provide as an extension in C++03
 mode. These include:
 
 * ``constexpr`` and ``noexcept``
-* ``auto``
 *  Trailing return types.
 * ``>>`` without a space.
 
@@ -88,10 +88,10 @@ in the function parameter list, and in the return type. For example:
   template <class _Tp>
   enable_if_t</*...*/> baz(_Tp); // # 3
 
-Using default template parameters for SFINAE (#1) should always be prefered.
+Using default template parameters for SFINAE (#1) should always be preferred.
 
 Option #2 has two problems. First, users can observe and accidentally pass values to the SFINAE
-function argument. Second, the default arguement creates a live variable, which causes debug
+function argument. Second, the default argument creates a live variable, which causes debug
 information to be emitted containing the text of the SFINAE.
 
 Option #3 can also cause more debug information to be emitted than is needed, because the function

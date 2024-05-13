@@ -9,7 +9,7 @@
 
   define i32 @tls_func() local_unnamed_addr {
   entry:
-    %0 = load i32, i32* @tls_var
+    %0 = load i32, ptr @tls_var
     ret i32 %0
   }
 
@@ -53,7 +53,7 @@ body:             |
     liveins: $x2
     %0 = ADDIStlsgdHA $x2, @tls_var
     %1 = ADDItlsgdLADDR killed %0, @tls_var, @tls_var, implicit-def dead $x0, implicit-def dead $x3, implicit-def dead $x4, implicit-def dead $x5, implicit-def dead $x6, implicit-def dead $x7, implicit-def dead $x8, implicit-def dead $x9, implicit-def dead $x10, implicit-def dead $x11, implicit-def dead $x12, implicit-def dead $lr8, implicit-def dead $ctr8, implicit-def dead $cr0, implicit-def dead $cr1, implicit-def dead $cr5, implicit-def dead $cr6, implicit-def dead $cr7
-    %2 = LWZ8 0, killed %1 :: (dereferenceable load 4 from @tls_var)
+    %2 = LWZ8 0, killed %1 :: (dereferenceable load (s32) from @tls_var)
     $x3 = COPY %2
     BLR8 implicit $lr8, implicit $rm, implicit $x3
     ; CHECK-LABEL: bb.0.entry

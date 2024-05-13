@@ -1,4 +1,4 @@
-//===-- M68kRegisterInfo.cpp - CPU0 Register Information -----*- C++ -*--===//
+//===-- M68kRegisterInfo.cpp - CPU0 Register Information --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,6 +19,7 @@
 
 #include "MCTargetDesc/M68kMCTargetDesc.h"
 
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
@@ -74,9 +75,9 @@ M68kRegisterInfo::getRegsForTailCall(const MachineFunction &MF) const {
 unsigned
 M68kRegisterInfo::getMatchingMegaReg(unsigned Reg,
                                      const TargetRegisterClass *RC) const {
-  for (MCSuperRegIterator Super(Reg, this); Super.isValid(); ++Super)
-    if (RC->contains(*Super))
-      return *Super;
+  for (MCPhysReg Super : superregs(Reg))
+    if (RC->contains(Super))
+      return Super;
   return 0;
 }
 
@@ -128,8 +129,8 @@ BitVector M68kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     for (MCRegAliasIterator I(Reg, this, /* self */ true); I.isValid(); ++I) {
       Reserved.set(*I);
     }
-    for (MCSubRegIterator I(Reg, this, /* self */ true); I.isValid(); ++I) {
-      Reserved.set(*I);
+    for (MCPhysReg I : subregs_inclusive(Reg)) {
+      Reserved.set(I);
     }
   };
 
@@ -161,7 +162,7 @@ BitVector M68kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-void M68kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool M68kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                            int SPAdj, unsigned FIOperandNum,
                                            RegScavenger *RS) const {
   MachineInstr &MI = *II;
@@ -207,11 +208,12 @@ void M68kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     FIOffset += SPAdj;
 
   Disp.ChangeToImmediate(FIOffset + Imm);
+  return false;
 }
 
 bool M68kRegisterInfo::requiresRegisterScavenging(
     const MachineFunction &MF) const {
-  return true;
+  return false;
 }
 
 bool M68kRegisterInfo::trackLivenessAfterRegAlloc(

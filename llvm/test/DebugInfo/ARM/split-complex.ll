@@ -1,7 +1,8 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -o %t.o %s
-; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
-target datalayout = "e-m:o-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv7-apple-unknown-macho"
+; RUN: llc -mtriple=thumbv7-apple-unknown-macho -O0 -filetype=obj -o - %s \
+; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
+
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=thumbv7-apple-unknown-macho -O0 -filetype=obj -o - %s \
+; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; generated from (-triple thumbv7-apple-unknown-macho -Os):
 ;   void f(_Complex double c) { c = 0; }
@@ -9,7 +10,7 @@ target triple = "thumbv7-apple-unknown-macho"
 ; Function Attrs: nounwind readnone
 define arm_aapcscc void @f([2 x i64] %c.coerce) #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.declare(metadata { double, double }* undef, metadata !14, metadata !15), !dbg !16
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !14, metadata !15), !dbg !16
   ; The target has no native double type.
   ; SROA split the complex value into two i64 values.
   ; CHECK: DW_TAG_formal_parameter

@@ -7,7 +7,7 @@
 ; We need to save and restore 8 of the 16 FPRs, so the frame size
 ; should be exactly 8 * 8 = 64.  The CFA offset is 160
 ; (the caller-allocated part of the frame) + 64.
-define void @f1(fp128 *%ptr) {
+define void @f1(ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: aghi %r15, -64
 ; CHECK: .cfi_def_cfa_offset 224
@@ -38,14 +38,14 @@ define void @f1(fp128 *%ptr) {
 ; CHECK: ld %f15, 0(%r15)
 ; CHECK: aghi %r15, 64
 ; CHECK: br %r14
-  %l0 = load volatile fp128, fp128 *%ptr
-  %l1 = load volatile fp128, fp128 *%ptr
-  %l4 = load volatile fp128, fp128 *%ptr
-  %l5 = load volatile fp128, fp128 *%ptr
-  %l8 = load volatile fp128, fp128 *%ptr
-  %l9 = load volatile fp128, fp128 *%ptr
-  %l12 = load volatile fp128, fp128 *%ptr
-  %l13 = load volatile fp128, fp128 *%ptr
+  %l0 = load volatile fp128, ptr %ptr
+  %l1 = load volatile fp128, ptr %ptr
+  %l4 = load volatile fp128, ptr %ptr
+  %l5 = load volatile fp128, ptr %ptr
+  %l8 = load volatile fp128, ptr %ptr
+  %l9 = load volatile fp128, ptr %ptr
+  %l12 = load volatile fp128, ptr %ptr
+  %l13 = load volatile fp128, ptr %ptr
   %add0 = fadd fp128 %l0, %l0
   %add1 = fadd fp128 %l1, %add0
   %add4 = fadd fp128 %l4, %add1
@@ -54,20 +54,20 @@ define void @f1(fp128 *%ptr) {
   %add9 = fadd fp128 %l9, %add8
   %add12 = fadd fp128 %l12, %add9
   %add13 = fadd fp128 %l13, %add12
-  store volatile fp128 %add0, fp128 *%ptr
-  store volatile fp128 %add1, fp128 *%ptr
-  store volatile fp128 %add4, fp128 *%ptr
-  store volatile fp128 %add5, fp128 *%ptr
-  store volatile fp128 %add8, fp128 *%ptr
-  store volatile fp128 %add9, fp128 *%ptr
-  store volatile fp128 %add12, fp128 *%ptr
-  store volatile fp128 %add13, fp128 *%ptr
+  store volatile fp128 %add0, ptr %ptr
+  store volatile fp128 %add1, ptr %ptr
+  store volatile fp128 %add4, ptr %ptr
+  store volatile fp128 %add5, ptr %ptr
+  store volatile fp128 %add8, ptr %ptr
+  store volatile fp128 %add9, ptr %ptr
+  store volatile fp128 %add12, ptr %ptr
+  store volatile fp128 %add13, ptr %ptr
   ret void
 }
 
 ; Like f1, but requires one fewer FPR pair.  We allocate in numerical order,
 ; so %f13+%f15 is the pair that gets dropped.
-define void @f2(fp128 *%ptr) {
+define void @f2(ptr %ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: aghi %r15, -48
 ; CHECK: .cfi_def_cfa_offset 208
@@ -94,13 +94,13 @@ define void @f2(fp128 *%ptr) {
 ; CHECK: ld %f14, 0(%r15)
 ; CHECK: aghi %r15, 48
 ; CHECK: br %r14
-  %l0 = load volatile fp128, fp128 *%ptr
-  %l1 = load volatile fp128, fp128 *%ptr
-  %l4 = load volatile fp128, fp128 *%ptr
-  %l5 = load volatile fp128, fp128 *%ptr
-  %l8 = load volatile fp128, fp128 *%ptr
-  %l9 = load volatile fp128, fp128 *%ptr
-  %l12 = load volatile fp128, fp128 *%ptr
+  %l0 = load volatile fp128, ptr %ptr
+  %l1 = load volatile fp128, ptr %ptr
+  %l4 = load volatile fp128, ptr %ptr
+  %l5 = load volatile fp128, ptr %ptr
+  %l8 = load volatile fp128, ptr %ptr
+  %l9 = load volatile fp128, ptr %ptr
+  %l12 = load volatile fp128, ptr %ptr
   %add0 = fadd fp128 %l0, %l0
   %add1 = fadd fp128 %l1, %add0
   %add4 = fadd fp128 %l4, %add1
@@ -108,19 +108,19 @@ define void @f2(fp128 *%ptr) {
   %add8 = fadd fp128 %l8, %add5
   %add9 = fadd fp128 %l9, %add8
   %add12 = fadd fp128 %l12, %add9
-  store volatile fp128 %add0, fp128 *%ptr
-  store volatile fp128 %add1, fp128 *%ptr
-  store volatile fp128 %add4, fp128 *%ptr
-  store volatile fp128 %add5, fp128 *%ptr
-  store volatile fp128 %add8, fp128 *%ptr
-  store volatile fp128 %add9, fp128 *%ptr
-  store volatile fp128 %add12, fp128 *%ptr
+  store volatile fp128 %add0, ptr %ptr
+  store volatile fp128 %add1, ptr %ptr
+  store volatile fp128 %add4, ptr %ptr
+  store volatile fp128 %add5, ptr %ptr
+  store volatile fp128 %add8, ptr %ptr
+  store volatile fp128 %add9, ptr %ptr
+  store volatile fp128 %add12, ptr %ptr
   ret void
 }
 
 ; Like f1, but requires only one call-saved FPR pair.  We allocate in
 ; numerical order so the pair should be %f8+%f10.
-define void @f3(fp128 *%ptr) {
+define void @f3(ptr %ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK: aghi %r15, -16
 ; CHECK: .cfi_def_cfa_offset 176
@@ -139,27 +139,27 @@ define void @f3(fp128 *%ptr) {
 ; CHECK: ld %f10, 0(%r15)
 ; CHECK: aghi %r15, 16
 ; CHECK: br %r14
-  %l0 = load volatile fp128, fp128 *%ptr
-  %l1 = load volatile fp128, fp128 *%ptr
-  %l4 = load volatile fp128, fp128 *%ptr
-  %l5 = load volatile fp128, fp128 *%ptr
-  %l8 = load volatile fp128, fp128 *%ptr
+  %l0 = load volatile fp128, ptr %ptr
+  %l1 = load volatile fp128, ptr %ptr
+  %l4 = load volatile fp128, ptr %ptr
+  %l5 = load volatile fp128, ptr %ptr
+  %l8 = load volatile fp128, ptr %ptr
   %add0 = fadd fp128 %l0, %l0
   %add1 = fadd fp128 %l1, %add0
   %add4 = fadd fp128 %l4, %add1
   %add5 = fadd fp128 %l5, %add4
   %add8 = fadd fp128 %l8, %add5
-  store volatile fp128 %add0, fp128 *%ptr
-  store volatile fp128 %add1, fp128 *%ptr
-  store volatile fp128 %add4, fp128 *%ptr
-  store volatile fp128 %add5, fp128 *%ptr
-  store volatile fp128 %add8, fp128 *%ptr
+  store volatile fp128 %add0, ptr %ptr
+  store volatile fp128 %add1, ptr %ptr
+  store volatile fp128 %add4, ptr %ptr
+  store volatile fp128 %add5, ptr %ptr
+  store volatile fp128 %add8, ptr %ptr
   ret void
 }
 
 ; This function should use all call-clobbered FPRs but no call-saved ones.
 ; It shouldn't need to create a frame.
-define void @f4(fp128 *%ptr) {
+define void @f4(ptr %ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: %r15
 ; CHECK-NOT: %f8
@@ -171,17 +171,17 @@ define void @f4(fp128 *%ptr) {
 ; CHECK-NOT: %f14
 ; CHECK-NOT: %f15
 ; CHECK: br %r14
-  %l0 = load volatile fp128, fp128 *%ptr
-  %l1 = load volatile fp128, fp128 *%ptr
-  %l4 = load volatile fp128, fp128 *%ptr
-  %l5 = load volatile fp128, fp128 *%ptr
+  %l0 = load volatile fp128, ptr %ptr
+  %l1 = load volatile fp128, ptr %ptr
+  %l4 = load volatile fp128, ptr %ptr
+  %l5 = load volatile fp128, ptr %ptr
   %add0 = fadd fp128 %l0, %l0
   %add1 = fadd fp128 %l1, %add0
   %add4 = fadd fp128 %l4, %add1
   %add5 = fadd fp128 %l5, %add4
-  store volatile fp128 %add0, fp128 *%ptr
-  store volatile fp128 %add1, fp128 *%ptr
-  store volatile fp128 %add4, fp128 *%ptr
-  store volatile fp128 %add5, fp128 *%ptr
+  store volatile fp128 %add0, ptr %ptr
+  store volatile fp128 %add1, ptr %ptr
+  store volatile fp128 %add4, ptr %ptr
+  store volatile fp128 %add5, ptr %ptr
   ret void
 }

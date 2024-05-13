@@ -13,15 +13,14 @@
 #ifndef LLVM_CODEGEN_MACHINEOPERAND_H
 #define LLVM_CODEGEN_MACHINEOPERAND_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/Support/DataTypes.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include <cassert>
 
 namespace llvm {
 
+class LLT;
 class BlockAddress;
 class Constant;
 class ConstantFP;
@@ -69,7 +68,8 @@ public:
     MO_IntrinsicID,       ///< Intrinsic ID for ISel
     MO_Predicate,         ///< Generic predicate for ISel
     MO_ShuffleMask,       ///< Other IR Constant for ISel (shuffle masks)
-    MO_Last = MO_ShuffleMask
+    MO_DbgInstrRef, ///< Integer indices referring to an instruction+operand
+    MO_Last = MO_DbgInstrRef
   };
 
 private:
@@ -162,7 +162,7 @@ private:
 
   /// ParentMI - This is the instruction that this operand is embedded into.
   /// This is valid for all operand types, when the operand is in an instr.
-  MachineInstr *ParentMI;
+  MachineInstr *ParentMI = nullptr;
 
   /// Contents union - This contains the payload for the various operand types.
   union ContentsUnion {
@@ -185,6 +185,11 @@ private:
       MachineOperand *Next;
     } Reg;
 
+    struct { // For MO_DbgInstrRef.
+      unsigned InstrIdx;
+      unsigned OpIdx;
+    } InstrRef;
+
     /// OffsetedInfo - This struct contains the offset and an object identifier.
     /// this represent the object as with an optional offset from it.
     struct {
@@ -200,7 +205,7 @@ private:
   } Contents;
 
   explicit MachineOperand(MachineOperandType K)
-    : OpKind(K), SubReg_TargetFlags(0), ParentMI(nullptr) {
+      : OpKind(K), SubReg_TargetFlags(0) {
     // Assert that the layout is what we expect. It's easy to grow this object.
     static_assert(alignof(MachineOperand) <= alignof(int64_t),
                   "MachineOperand shouldn't be more than 8 byte aligned");
@@ -248,6 +253,9 @@ public:
   ///
   void clearParent() { ParentMI = nullptr; }
 
+  /// Returns the index of this operand in the instruction that it belongs to.
+  unsigned getOperandNo() const;
+
   /// Print a subreg index operand.
   /// MO_Immediate operands can also be subreg idices. If it's the case, the
   /// subreg index name will be printed. MachineInstr::isOperandSubregIdx can be
@@ -282,8 +290,8 @@ public:
   /// \param TypeToPrint specifies the generic type to be printed on uses and
   /// defs. It can be determined using MachineInstr::getTypeToPrint.
   /// \param OpIdx - specifies the index of the operand in machine instruction.
-  /// This will be used by target dependent MIR formatter. Could be None if the
-  /// index is unknown, e.g. called by dump().
+  /// This will be used by target dependent MIR formatter. Could be std::nullopt
+  /// if the index is unknown, e.g. called by dump().
   /// \param PrintDef - whether we want to print `def` on an operand which
   /// isDef. Sometimes, if the operand is printed before '=', we don't print
   /// `def`.
@@ -300,7 +308,7 @@ public:
   /// information from it's parent.
   /// \param IntrinsicInfo - same as \p TRI.
   void print(raw_ostream &os, ModuleSlotTracker &MST, LLT TypeToPrint,
-             Optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
+             std::optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
              bool ShouldPrintRegisterTies, unsigned TiedOperandIdx,
              const TargetRegisterInfo *TRI,
              const TargetIntrinsicInfo *IntrinsicInfo) const;
@@ -348,6 +356,7 @@ public:
   /// isMetadata - Tests if this is a MO_Metadata operand.
   bool isMetadata() const { return OpKind == MO_Metadata; }
   bool isMCSymbol() const { return OpKind == MO_MCSymbol; }
+  bool isDbgInstrRef() const { return OpKind == MO_DbgInstrRef; }
   bool isCFIIndex() const { return OpKind == MO_CFIIndex; }
   bool isIntrinsicID() const { return OpKind == MO_IntrinsicID; }
   bool isPredicate() const { return OpKind == MO_Predicate; }
@@ -458,6 +467,16 @@ public:
   bool readsReg() const {
     assert(isReg() && "Wrong MachineOperand accessor");
     return !isUndef() && !isInternalRead() && (isUse() || getSubReg());
+  }
+
+  /// Return true if this operand can validly be appended to an arbitrary
+  /// operand list. i.e. this behaves like an implicit operand.
+  bool isValidExcessOperand() const {
+    if ((isReg() && isImplicit()) || isRegMask())
+      return true;
+
+    // Debug operands
+    return isMetadata() || isMCSymbol();
   }
 
   //===--------------------------------------------------------------------===//
@@ -575,6 +594,16 @@ public:
     return Contents.Sym;
   }
 
+  unsigned getInstrRefInstrIndex() const {
+    assert(isDbgInstrRef() && "Wrong MachineOperand accessor");
+    return Contents.InstrRef.InstrIdx;
+  }
+
+  unsigned getInstrRefOpIndex() const {
+    assert(isDbgInstrRef() && "Wrong MachineOperand accessor");
+    return Contents.InstrRef.OpIdx;
+  }
+
   unsigned getCFIIndex() const {
     assert(isCFIIndex() && "Wrong MachineOperand accessor");
     return Contents.CFIIndex;
@@ -686,6 +715,15 @@ public:
     Contents.MD = MD;
   }
 
+  void setInstrRefInstrIndex(unsigned InstrIdx) {
+    assert(isDbgInstrRef() && "Wrong MachineOperand mutator");
+    Contents.InstrRef.InstrIdx = InstrIdx;
+  }
+  void setInstrRefOpIndex(unsigned OpIdx) {
+    assert(isDbgInstrRef() && "Wrong MachineOperand mutator");
+    Contents.InstrRef.OpIdx = OpIdx;
+  }
+
   void setMBB(MachineBasicBlock *MBB) {
     assert(isMBB() && "Wrong MachineOperand mutator");
     Contents.MBB = MBB;
@@ -744,6 +782,10 @@ public:
   void ChangeToGA(const GlobalValue *GV, int64_t Offset,
                   unsigned TargetFlags = 0);
 
+  /// ChangeToBA - Replace this operand with a new block address operand.
+  void ChangeToBA(const BlockAddress *BA, int64_t Offset,
+                  unsigned TargetFlags = 0);
+
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
   void ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags = 0);
 
@@ -752,6 +794,10 @@ public:
 
   /// Replace this operand with a target index.
   void ChangeToTargetIndex(unsigned Idx, int64_t Offset,
+                           unsigned TargetFlags = 0);
+
+  /// Replace this operand with an Instruction Reference.
+  void ChangeToDbgInstrRef(unsigned InstrIdx, unsigned OpIdx,
                            unsigned TargetFlags = 0);
 
   /// ChangeToRegister - Replace this operand with a new register operand of
@@ -907,6 +953,13 @@ public:
     Op.Contents.Sym = Sym;
     Op.setOffset(0);
     Op.setTargetFlags(TargetFlags);
+    return Op;
+  }
+
+  static MachineOperand CreateDbgInstrRef(unsigned InstrIdx, unsigned OpIdx) {
+    MachineOperand Op(MachineOperand::MO_DbgInstrRef);
+    Op.Contents.InstrRef.InstrIdx = InstrIdx;
+    Op.Contents.InstrRef.OpIdx = OpIdx;
     return Op;
   }
 

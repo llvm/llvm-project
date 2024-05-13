@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep nounwind
+; RUN: opt < %s -passes=instcombine -S | grep nounwind
 
 define void @bar() {
 entry:

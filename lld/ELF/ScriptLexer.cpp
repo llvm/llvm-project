@@ -34,6 +34,8 @@
 #include "ScriptLexer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
 
 using namespace llvm;
 using namespace lld;
@@ -56,7 +58,25 @@ size_t ScriptLexer::getLineNumber() {
     return 1;
   StringRef s = getCurrentMB().getBuffer();
   StringRef tok = tokens[pos - 1];
-  return s.substr(0, tok.data() - s.data()).count('\n') + 1;
+  const size_t tokOffset = tok.data() - s.data();
+
+  // For the first token, or when going backwards, start from the beginning of
+  // the buffer. If this token is after the previous token, start from the
+  // previous token.
+  size_t line = 1;
+  size_t start = 0;
+  if (lastLineNumberOffset > 0 && tokOffset >= lastLineNumberOffset) {
+    start = lastLineNumberOffset;
+    line = lastLineNumber;
+  }
+
+  line += s.substr(start, tokOffset - start).count('\n');
+
+  // Store the line number of this token for reuse.
+  lastLineNumberOffset = tokOffset;
+  lastLineNumber = line;
+
+  return line;
 }
 
 // Returns 0-based column number of the current token.
@@ -100,7 +120,7 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
     // because, in a glob match context, only unquoted tokens are interpreted
     // as glob patterns. Double-quoted tokens are literal patterns in that
     // context.
-    if (s.startswith("\"")) {
+    if (s.starts_with("\"")) {
       size_t e = s.find("\"", 1);
       if (e == StringRef::npos) {
         StringRef filename = mb.getBufferIdentifier();
@@ -114,10 +134,14 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
       continue;
     }
 
-    // ">foo" is parsed to ">" and "foo", but ">>" is parsed to ">>".
-    // "|", "||", "&" and "&&" are different operators.
-    if (s.startswith("<<") || s.startswith("<=") || s.startswith(">>") ||
-        s.startswith(">=") || s.startswith("||") || s.startswith("&&")) {
+    // Some operators form separate tokens.
+    if (s.starts_with("<<=") || s.starts_with(">>=")) {
+      vec.push_back(s.substr(0, 3));
+      s = s.substr(3);
+      continue;
+    }
+    if (s.size() > 1 && ((s[1] == '=' && strchr("*/+-<>&^|", s[0])) ||
+                         (s[0] == s[1] && strchr("<>&|", s[0])))) {
       vec.push_back(s.substr(0, 2));
       s = s.substr(2);
       continue;
@@ -143,7 +167,7 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
 // Skip leading whitespace characters or comments.
 StringRef ScriptLexer::skipSpace(StringRef s) {
   for (;;) {
-    if (s.startswith("/*")) {
+    if (s.starts_with("/*")) {
       size_t e = s.find("*/", 2);
       if (e == StringRef::npos) {
         setError("unclosed comment in a linker script");
@@ -152,7 +176,7 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
       s = s.substr(e + 2);
       continue;
     }
-    if (s.startswith("#")) {
+    if (s.starts_with("#")) {
       size_t e = s.find('\n', 1);
       if (e == StringRef::npos)
         e = s.size() - 1;
@@ -172,10 +196,10 @@ bool ScriptLexer::atEOF() { return errorCount() || tokens.size() == pos; }
 // Split a given string as an expression.
 // This function returns "3", "*" and "5" for "3*5" for example.
 static std::vector<StringRef> tokenizeExpr(StringRef s) {
-  StringRef ops = "+-*/:!~=<>"; // List of operators
+  StringRef ops = "!~*/+-<>?^:="; // List of operators
 
   // Quoted strings are literal strings, so we don't want to split it.
-  if (s.startswith("\""))
+  if (s.starts_with("\""))
     return {s};
 
   // Split S with operators as separators.
@@ -195,9 +219,9 @@ static std::vector<StringRef> tokenizeExpr(StringRef s) {
 
     // Get the operator as a token.
     // Keep !=, ==, >=, <=, << and >> operators as a single tokens.
-    if (s.substr(e).startswith("!=") || s.substr(e).startswith("==") ||
-        s.substr(e).startswith(">=") || s.substr(e).startswith("<=") ||
-        s.substr(e).startswith("<<") || s.substr(e).startswith(">>")) {
+    if (s.substr(e).starts_with("!=") || s.substr(e).starts_with("==") ||
+        s.substr(e).starts_with(">=") || s.substr(e).starts_with("<=") ||
+        s.substr(e).starts_with("<<") || s.substr(e).starts_with(">>")) {
       ret.push_back(s.substr(e, 2));
       s = s.substr(e + 2);
     } else {

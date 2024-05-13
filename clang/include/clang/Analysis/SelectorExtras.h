@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_ANALYSIS_SELECTOREXTRAS_H
-#define LLVM_CLANG_LIB_ANALYSIS_SELECTOREXTRAS_H
+#ifndef LLVM_CLANG_ANALYSIS_SELECTOREXTRAS_H
+#define LLVM_CLANG_ANALYSIS_SELECTOREXTRAS_H
 
 #include "clang/AST/ASTContext.h"
 
@@ -15,10 +15,10 @@ namespace clang {
 
 template <typename... IdentifierInfos>
 static inline Selector getKeywordSelector(ASTContext &Ctx,
-                                          IdentifierInfos *... IIs) {
-  static_assert(sizeof...(IdentifierInfos),
+                                          const IdentifierInfos *...IIs) {
+  static_assert(sizeof...(IdentifierInfos) > 0,
                 "keyword selectors must have at least one argument");
-  SmallVector<IdentifierInfo *, 10> II({&Ctx.Idents.get(IIs)...});
+  SmallVector<const IdentifierInfo *, 10> II({&Ctx.Idents.get(IIs)...});
 
   return Ctx.Selectors.getSelector(II.size(), &II[0]);
 }

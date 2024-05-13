@@ -1,34 +1,34 @@
-; RUN: opt -S -instsimplify -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instsimplify,instcombine < %s | FileCheck %s
 
 ; CHECK-LABEL: define void @checkNonnullLaunder()
 define void @checkNonnullLaunder() {
-; CHECK:   %[[p:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nonnull %0)
-; CHECK:   call void @use(i8* nonnull %[[p]])
+; CHECK:   %[[p:.*]] = call ptr @llvm.launder.invariant.group.p0(ptr nonnull %0)
+; CHECK:   call void @use(ptr nonnull %[[p]])
 entry:
   %0 = alloca i8, align 8
 
-  %p = call i8* @llvm.launder.invariant.group.p0i8(i8* %0)
-  %p2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
-  call void @use(i8* %p2)
+  %p = call ptr @llvm.launder.invariant.group.p0(ptr %0)
+  %p2 = call ptr @llvm.launder.invariant.group.p0(ptr %p)
+  call void @use(ptr %p2)
 
   ret void
 }
 
 ; CHECK-LABEL: define void @checkNonnullStrip()
 define void @checkNonnullStrip() {
-; CHECK:   %[[p:.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* nonnull %0)
-; CHECK:   call void @use(i8* nonnull %[[p]])
+; CHECK:   %[[p:.*]] = call ptr @llvm.strip.invariant.group.p0(ptr nonnull %0)
+; CHECK:   call void @use(ptr nonnull %[[p]])
 entry:
   %0 = alloca i8, align 8
 
-  %p = call i8* @llvm.strip.invariant.group.p0i8(i8* %0)
-  %p2 = call i8* @llvm.strip.invariant.group.p0i8(i8* %p)
-  call void @use(i8* %p2)
+  %p = call ptr @llvm.strip.invariant.group.p0(ptr %0)
+  %p2 = call ptr @llvm.strip.invariant.group.p0(ptr %p)
+  call void @use(ptr %p2)
 
   ret void
 }
 
-declare i8* @llvm.launder.invariant.group.p0i8(i8*)
-declare i8* @llvm.strip.invariant.group.p0i8(i8*)
+declare ptr @llvm.launder.invariant.group.p0(ptr)
+declare ptr @llvm.strip.invariant.group.p0(ptr)
 
-declare void @use(i8*)
+declare void @use(ptr)

@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=SICI
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
+;RUN: llc < %s -mtriple=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=SICI
+;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0
@@ -117,12 +117,12 @@ main_body:
 ; CHECK-LABEL: buffer_load_mmo:
 ; VI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; VI: ds_write2_b32 v{{[0-9]+}}, [[ZERO]], [[ZERO]] offset1:4
-define amdgpu_ps float @buffer_load_mmo(<4 x i32> inreg %rsrc, float addrspace(3)* %lds) {
+define amdgpu_ps float @buffer_load_mmo(<4 x i32> inreg %rsrc, ptr addrspace(3) %lds) {
 entry:
-  store float 0.0, float addrspace(3)* %lds
+  store float 0.0, ptr addrspace(3) %lds
   %val = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> %rsrc, i32 0, i32 0, i1 0, i1 0)
-  %tmp2 = getelementptr float, float addrspace(3)* %lds, i32 4
-  store float 0.0, float addrspace(3)* %tmp2
+  %tmp2 = getelementptr float, ptr addrspace(3) %lds, i32 4
+  store float 0.0, ptr addrspace(3) %tmp2
   ret float %val
 }
 
@@ -440,27 +440,27 @@ main_body:
   ret float %val
 }
 
-; Make sure a frame index folding doessn't crash on a MUBUF not used
+; Make sure a frame index folding doesn't crash on a MUBUF not used
 ; for stack access.
 
 ; CHECK-LABEL: {{^}}no_fold_fi_imm_soffset:
-; CHECK: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}
+; CHECK: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
 ; CHECK-NEXT: buffer_load_dword v0, [[FI]], s{{\[[0-9]+:[0-9]+\]}}, 0 idxen
 define amdgpu_ps float @no_fold_fi_imm_soffset(<4 x i32> inreg %rsrc) {
   %alloca = alloca i32, addrspace(5)
-  %alloca.cast = ptrtoint i32 addrspace(5)* %alloca to i32
+  %alloca.cast = ptrtoint ptr addrspace(5) %alloca to i32
 
   %ret.val = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> %rsrc, i32 %alloca.cast, i32 0, i1 false, i1 false)
   ret float %ret.val
 }
 
 ; CHECK-LABEL: {{^}}no_fold_fi_reg_soffset:
-; CHECK-DAG: v_mov_b32_e32 v[[FI:[0-9]+]], 4{{$}}
+; CHECK-DAG: v_mov_b32_e32 v[[FI:[0-9]+]], 0{{$}}
 ; CHECK-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s
-; CHECK: buffer_load_dword v0, v{{\[}}[[FI]]:[[HI]]
+; CHECK: buffer_load_dword v0, v[[[FI]]:[[HI]]
 define amdgpu_ps float @no_fold_fi_reg_soffset(<4 x i32> inreg %rsrc, i32 inreg %soffset) {
   %alloca = alloca i32, addrspace(5)
-  %alloca.cast = ptrtoint i32 addrspace(5)* %alloca to i32
+  %alloca.cast = ptrtoint ptr addrspace(5) %alloca to i32
 
   %ret.val = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> %rsrc, i32 %alloca.cast, i32 %soffset, i1 false, i1 false)
   ret float %ret.val

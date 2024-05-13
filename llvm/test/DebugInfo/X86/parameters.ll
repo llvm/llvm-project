@@ -1,5 +1,6 @@
 ;
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O0 -filetype=obj %s -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-unknown-linux-gnu -O0 -filetype=obj %s -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; Test case derived from compiling the following source with clang -g:
 ;
@@ -12,7 +13,7 @@
 ;   return f; // reference 'f' for now because otherwise we hit another bug
 ; }
 ;
-; void sink(void*);
+; void sink(ptr);
 ;
 ; void func2(bool b, foo g) {
 ;   if (b)
@@ -46,40 +47,39 @@
 %"struct.pr14763::foo" = type { i8 }
 
 ; Function Attrs: uwtable
-define void @_ZN7pr147634funcENS_3fooE(%"struct.pr14763::foo"* noalias sret(%"struct.pr14763::foo") %agg.result, %"struct.pr14763::foo"* %f) #0 !dbg !4 {
+define void @_ZN7pr147634funcENS_3fooE(ptr noalias sret(%"struct.pr14763::foo") %agg.result, ptr %f) #0 !dbg !4 {
 entry:
-  call void @llvm.dbg.declare(metadata %"struct.pr14763::foo"* %f, metadata !22, metadata !DIExpression(DW_OP_deref)), !dbg !24
-  call void @_ZN7pr147633fooC1ERKS0_(%"struct.pr14763::foo"* %agg.result, %"struct.pr14763::foo"* %f), !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %f, metadata !22, metadata !DIExpression(DW_OP_deref)), !dbg !24
+  call void @_ZN7pr147633fooC1ERKS0_(ptr %agg.result, ptr %f), !dbg !25
   ret void, !dbg !25
 }
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @_ZN7pr147633fooC1ERKS0_(%"struct.pr14763::foo"*, %"struct.pr14763::foo"*) #2
+declare void @_ZN7pr147633fooC1ERKS0_(ptr, ptr) #2
 
 ; Function Attrs: uwtable
-define void @_ZN7pr147635func2EbNS_3fooE(i1 zeroext %b, %"struct.pr14763::foo"* %g) #0 !dbg !17 {
+define void @_ZN7pr147635func2EbNS_3fooE(i1 zeroext %b, ptr %g) #0 !dbg !17 {
 entry:
   %b.addr = alloca i8, align 1
   %frombool = zext i1 %b to i8
-  store i8 %frombool, i8* %b.addr, align 1
-  call void @llvm.dbg.declare(metadata i8* %b.addr, metadata !26, metadata !DIExpression()), !dbg !27
-  call void @llvm.dbg.declare(metadata %"struct.pr14763::foo"* %g, metadata !28, metadata !DIExpression(DW_OP_deref)), !dbg !27
-  %0 = load i8, i8* %b.addr, align 1, !dbg !29
+  store i8 %frombool, ptr %b.addr, align 1
+  call void @llvm.dbg.declare(metadata ptr %b.addr, metadata !26, metadata !DIExpression()), !dbg !27
+  call void @llvm.dbg.declare(metadata ptr %g, metadata !28, metadata !DIExpression(DW_OP_deref)), !dbg !27
+  %0 = load i8, ptr %b.addr, align 1, !dbg !29
   %tobool = trunc i8 %0 to i1, !dbg !29
   br i1 %tobool, label %if.then, label %if.end, !dbg !29
 
 if.then:                                          ; preds = %entry
-  %1 = bitcast %"struct.pr14763::foo"* %g to i8*, !dbg !31
-  call void @_ZN7pr147634sinkEPv(i8* %1), !dbg !31
+  call void @_ZN7pr147634sinkEPv(ptr %g), !dbg !31
   br label %if.end, !dbg !31
 
 if.end:                                           ; preds = %if.then, %entry
   ret void, !dbg !32
 }
 
-declare void @_ZN7pr147634sinkEPv(i8*)
+declare void @_ZN7pr147634sinkEPv(ptr)
 
 attributes #0 = { uwtable }
 attributes #1 = { nounwind readnone }

@@ -2,7 +2,6 @@
 
 ; Test irreducible CFG handling.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; A simple loop with two entries.
@@ -11,14 +10,14 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK: f64.load
 ; CHECK: i32.const $[[REG:[^,]+]]=
 ; CHECK: br_table  $[[REG]],
-define void @test0(double* %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
+define void @test0(ptr %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
 bb:
   %tmp = icmp eq i32 %arg2, 0
   br i1 %tmp, label %bb6, label %bb3
 
 bb3:                                              ; preds = %bb
-  %tmp4 = getelementptr double, double* %arg, i32 %arg3
-  %tmp5 = load double, double* %tmp4, align 4
+  %tmp4 = getelementptr double, ptr %arg, i32 %arg3
+  %tmp5 = load double, ptr %tmp4, align 4
   br label %bb13
 
 bb6:                                              ; preds = %bb13, %bb
@@ -27,18 +26,18 @@ bb6:                                              ; preds = %bb13, %bb
   br i1 %tmp8, label %bb9, label %bb19
 
 bb9:                                              ; preds = %bb6
-  %tmp10 = getelementptr double, double* %arg, i32 %tmp7
-  %tmp11 = load double, double* %tmp10, align 4
+  %tmp10 = getelementptr double, ptr %arg, i32 %tmp7
+  %tmp11 = load double, ptr %tmp10, align 4
   %tmp12 = fmul double %tmp11, 2.300000e+00
-  store double %tmp12, double* %tmp10, align 4
+  store double %tmp12, ptr %tmp10, align 4
   br label %bb13
 
 bb13:                                             ; preds = %bb9, %bb3
   %tmp14 = phi double [ %tmp5, %bb3 ], [ %tmp12, %bb9 ]
   %tmp15 = phi i32 [ undef, %bb3 ], [ %tmp7, %bb9 ]
-  %tmp16 = getelementptr double, double* %arg, i32 %tmp15
+  %tmp16 = getelementptr double, ptr %arg, i32 %tmp15
   %tmp17 = fadd double %tmp14, 1.300000e+00
-  store double %tmp17, double* %tmp16, align 4
+  store double %tmp17, ptr %tmp16, align 4
   %tmp18 = add nsw i32 %tmp15, 1
   br label %bb6
 
@@ -52,14 +51,14 @@ bb19:                                             ; preds = %bb6
 ; CHECK: f64.load
 ; CHECK: i32.const $[[REG:[^,]+]]=
 ; CHECK: br_table  $[[REG]],
-define void @test1(double* %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
+define void @test1(ptr %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
 bb:
   %tmp = icmp eq i32 %arg2, 0
   br i1 %tmp, label %bb6, label %bb3
 
 bb3:                                              ; preds = %bb
-  %tmp4 = getelementptr double, double* %arg, i32 %arg3
-  %tmp5 = load double, double* %tmp4, align 4
+  %tmp4 = getelementptr double, ptr %arg, i32 %arg3
+  %tmp5 = load double, ptr %tmp4, align 4
   br label %bb13
 
 bb6:                                              ; preds = %bb13, %bb
@@ -68,10 +67,10 @@ bb6:                                              ; preds = %bb13, %bb
   br i1 %tmp8, label %bb9, label %bb19
 
 bb9:                                              ; preds = %bb6
-  %tmp10 = getelementptr double, double* %arg, i32 %tmp7
-  %tmp11 = load double, double* %tmp10, align 4
+  %tmp10 = getelementptr double, ptr %arg, i32 %tmp7
+  %tmp11 = load double, ptr %tmp10, align 4
   %tmp12 = fmul double %tmp11, 2.300000e+00
-  store double %tmp12, double* %tmp10, align 4
+  store double %tmp12, ptr %tmp10, align 4
   br label %bb10
 
 bb10:                                             ; preds = %bb10, %bb9
@@ -83,9 +82,9 @@ bb10:                                             ; preds = %bb10, %bb9
 bb13:                                             ; preds = %bb10, %bb3
   %tmp14 = phi double [ %tmp5, %bb3 ], [ %tmp12, %bb10 ]
   %tmp15 = phi i32 [ undef, %bb3 ], [ %tmp7, %bb10 ]
-  %tmp16 = getelementptr double, double* %arg, i32 %tmp15
+  %tmp16 = getelementptr double, ptr %arg, i32 %tmp15
   %tmp17 = fadd double %tmp14, 1.300000e+00
-  store double %tmp17, double* %tmp16, align 4
+  store double %tmp17, ptr %tmp16, align 4
   %tmp18 = add nsw i32 %tmp15, 1
   br label %bb6
 
@@ -132,8 +131,8 @@ A2:                                               ; preds = %A2, %A1, %A0
 define void @test3(i32 %ws) {
 entry:
   %ws.addr = alloca i32, align 4
-  store volatile i32 %ws, i32* %ws.addr, align 4
-  %0 = load volatile i32, i32* %ws.addr, align 4
+  store volatile i32 %ws, ptr %ws.addr, align 4
+  %0 = load volatile i32, ptr %ws.addr, align 4
   %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %if.then, label %if.end
 
@@ -141,7 +140,7 @@ if.then:                                          ; preds = %entry
   br label %wynn
 
 if.end:                                           ; preds = %entry
-  %1 = load volatile i32, i32* %ws.addr, align 4
+  %1 = load volatile i32, ptr %ws.addr, align 4
   %tobool1 = icmp ne i32 %1, 0
   br i1 %tobool1, label %if.end9, label %if.then2
 
@@ -149,7 +148,7 @@ if.then2:                                         ; preds = %if.end
   br label %for.cond
 
 for.cond:                                         ; preds = %wynn, %if.then7, %if.then2
-  %2 = load volatile i32, i32* %ws.addr, align 4
+  %2 = load volatile i32, ptr %ws.addr, align 4
   %tobool3 = icmp ne i32 %2, 0
   br i1 %tobool3, label %if.then4, label %if.end5
 
@@ -157,7 +156,7 @@ if.then4:                                         ; preds = %for.cond
   br label %if.end5
 
 if.end5:                                          ; preds = %if.then4, %for.cond
-  %3 = load volatile i32, i32* %ws.addr, align 4
+  %3 = load volatile i32, ptr %ws.addr, align 4
   %tobool6 = icmp ne i32 %3, 0
   br i1 %tobool6, label %if.then7, label %if.end8
 
@@ -192,7 +191,7 @@ if.else.i52:                                      ; preds = %sw.bb5
   br label %for.cond57.i
 
 for.cond57.i:                                     ; preds = %for.inc205.i, %if.else.i52
-  store i32 0, i32* undef, align 4
+  store i32 0, ptr undef, align 4
   br label %for.cond65.i
 
 for.cond65.i:                                     ; preds = %for.inc201.i, %for.cond57.i
@@ -237,7 +236,7 @@ for.body:                                         ; preds = %psh
   br label %do.body
 
 do.body:                                          ; preds = %do.cond, %for.body
-  %cmp118 = icmp eq i32* undef, undef
+  %cmp118 = icmp eq ptr undef, undef
   br i1 %cmp118, label %Skip, label %do.cond
 
 do.cond:                                          ; preds = %do.body
@@ -260,7 +259,7 @@ Skip:                                             ; preds = %for.body39, %do.bod
 ; misinterpreted as irreducible control flow.
 ; CHECK: fannkuch_worker
 ; CHECK-NOT: br_table
-define i32 @fannkuch_worker(i8* %_arg) {
+define i32 @fannkuch_worker(ptr %_arg) {
 for.cond:
   br label %do.body
 

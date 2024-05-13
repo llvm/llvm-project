@@ -11,33 +11,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Matchers.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LogicalResult.h"
 #include "toy/Dialect.h"
-#include <numeric>
+#include "llvm/Support/Casting.h"
+#include <cstddef>
 using namespace mlir;
 using namespace toy;
 
 namespace {
 /// Include the patterns defined in the Declarative Rewrite framework.
 #include "ToyCombine.inc"
-} // end anonymous namespace
+} // namespace
 
 /// Fold constants.
-OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) { return value(); }
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 /// Fold struct constants.
-OpFoldResult StructConstantOp::fold(ArrayRef<Attribute> operands) {
-  return value();
-}
+OpFoldResult StructConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 /// Fold simple struct access operations that access into a constant.
-OpFoldResult StructAccessOp::fold(ArrayRef<Attribute> operands) {
-  auto structAttr = operands.front().dyn_cast_or_null<mlir::ArrayAttr>();
+OpFoldResult StructAccessOp::fold(FoldAdaptor adaptor) {
+  auto structAttr =
+      llvm::dyn_cast_if_present<mlir::ArrayAttr>(adaptor.getInput());
   if (!structAttr)
     return nullptr;
 
-  size_t elementIndex = index();
+  size_t elementIndex = getIndex();
   return structAttr[elementIndex];
 }
 

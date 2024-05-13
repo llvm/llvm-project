@@ -20,7 +20,7 @@ constexpr int f2(S &) { return 0; }
 
 struct BeingDefined;
 extern BeingDefined beingdefined;
-struct BeingDefined { 
+struct BeingDefined {
   static constexpr BeingDefined& t = beingdefined;
 };
 
@@ -32,7 +32,7 @@ struct Incomplete; // expected-note 2{{forward declaration of 'Incomplete'}}
 template<class T> struct ClassTemp {};
 
 constexpr Incomplete incomplete = {}; // expected-error {{constexpr variable cannot have non-literal type 'const Incomplete'}} expected-note {{incomplete type 'const Incomplete' is not a literal type}}
-constexpr Incomplete incomplete2[] = {}; // expected-error {{constexpr variable cannot have non-literal type 'Incomplete const[]'}} expected-note {{incomplete type 'Incomplete const[]' is not a literal type}}
+constexpr Incomplete incomplete2[] = {}; // expected-error {{constexpr variable cannot have non-literal type 'const Incomplete[]'}} expected-note {{incomplete type 'const Incomplete[]' is not a literal type}}
 constexpr ClassTemp<int> classtemplate = {};
 constexpr ClassTemp<int> classtemplate2[] = {};
 
@@ -132,15 +132,19 @@ struct ArrGood {
 constexpr int f(ArrGood) { return 0; }
 
 struct ArrBad {
-  S s[3]; // expected-note {{data member 's' of non-literal type 'S [3]'}}
+  S s[3]; // expected-note {{data member 's' of non-literal type 'S[3]'}}
 };
 constexpr int f(ArrBad) { return 0; } // expected-error {{1st parameter type 'ArrBad' is not a literal type}}
 
-constexpr int arb(int n) {
-  int a[n]; // expected-error {{variable of non-literal type 'int [n]' cannot be defined in a constexpr function}}
+constexpr int arb(int n) { // expected-note {{declared here}}
+  int a[n]; // expected-error {{variable of non-literal type 'int[n]' cannot be defined in a constexpr function}} \
+               expected-warning {{variable length arrays in C++ are a Clang extension}} \
+               expected-note {{function parameter 'n' with unknown value cannot be used in a constant expression}}
 }
-// expected-warning@+1 {{variable length array folded to constant array as an extension}}
-constexpr long Overflow[(1 << 30) << 2]{}; // expected-warning {{requires 34 bits to represent}}
+constexpr long Overflow[(1 << 30) << 2]{}; // expected-warning {{requires 34 bits to represent}} \
+                                              expected-warning {{variable length array folded to constant array as an extension}} \
+                                              expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                              expected-note {{signed left shift discards bits}}
 
 namespace inherited_ctor {
   struct A { constexpr A(int); };

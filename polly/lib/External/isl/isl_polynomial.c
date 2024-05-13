@@ -3108,13 +3108,18 @@ static __isl_give isl_qpolynomial *isl_qpolynomial_zero_in_space(
 #define DEFAULT_IS_ZERO 1
 
 #include <isl_pw_templ.c>
+#include <isl_pw_un_op_templ.c>
+#include <isl_pw_add_disjoint_templ.c>
 #include <isl_pw_eval.c>
+#include <isl_pw_fix_templ.c>
+#include <isl_pw_from_range_templ.c>
 #include <isl_pw_insert_dims_templ.c>
 #include <isl_pw_lift_templ.c>
 #include <isl_pw_morph_templ.c>
 #include <isl_pw_move_dims_templ.c>
 #include <isl_pw_neg_templ.c>
 #include <isl_pw_opt_templ.c>
+#include <isl_pw_split_dims_templ.c>
 #include <isl_pw_sub_templ.c>
 
 #undef BASE
@@ -3123,6 +3128,7 @@ static __isl_give isl_qpolynomial *isl_qpolynomial_zero_in_space(
 #include <isl_union_single.c>
 #include <isl_union_eval.c>
 #include <isl_union_neg.c>
+#include <isl_union_sub_templ.c>
 
 int isl_pw_qpolynomial_is_one(__isl_keep isl_pw_qpolynomial *pwqp)
 {
@@ -4486,20 +4492,17 @@ error:
 __isl_give isl_qpolynomial *isl_qpolynomial_align_params(
 	__isl_take isl_qpolynomial *qp, __isl_take isl_space *model)
 {
+	isl_space *domain_space;
 	isl_bool equal_params;
 
-	if (!qp || !model)
-		goto error;
-
-	equal_params = isl_space_has_equal_params(qp->dim, model);
+	domain_space = isl_qpolynomial_peek_domain_space(qp);
+	equal_params = isl_space_has_equal_params(domain_space, model);
 	if (equal_params < 0)
 		goto error;
 	if (!equal_params) {
 		isl_reordering *exp;
 
-		exp = isl_parameter_alignment_reordering(qp->dim, model);
-		exp = isl_reordering_extend_space(exp,
-					isl_qpolynomial_get_domain_space(qp));
+		exp = isl_parameter_alignment_reordering(domain_space, model);
 		qp = isl_qpolynomial_realign_domain(qp, exp);
 	}
 
@@ -4773,6 +4776,33 @@ struct isl_multiplicative_call_data_pw_qpolynomial {
 	isl_pw_qpolynomial *pwqp;
 };
 
+/* Call "fn" on "bset" and return the result,
+ * but first check if "bset" has any redundant constraints or
+ * implicit equality constraints.
+ * If so, there may be further opportunities for detecting factors or
+ * removing equality constraints, so recursively call
+ * the top-level isl_basic_set_multiplicative_call.
+ */
+static __isl_give isl_pw_qpolynomial *multiplicative_call_base(
+	__isl_take isl_basic_set *bset,
+	__isl_give isl_pw_qpolynomial *(*fn)(__isl_take isl_basic_set *bset))
+{
+	isl_size n1, n2, n_eq;
+
+	n1 = isl_basic_set_n_constraint(bset);
+	if (n1 < 0)
+		bset = isl_basic_set_free(bset);
+	bset = isl_basic_set_remove_redundancies(bset);
+	bset = isl_basic_set_detect_equalities(bset);
+	n2 = isl_basic_set_n_constraint(bset);
+	n_eq = isl_basic_set_n_equality(bset);
+	if (n2 < 0 || n_eq < 0)
+		bset = isl_basic_set_free(bset);
+	else if (n2 < n1 || n_eq > 0)
+		return isl_basic_set_multiplicative_call(bset, fn);
+	return fn(bset);
+}
+
 /* isl_factorizer_every_factor_basic_set callback that applies
  * data->fn to the factor "bset" and multiplies in the result
  * in data->pwqp.
@@ -4781,9 +4811,11 @@ static isl_bool multiplicative_call_factor_pw_qpolynomial(
 	__isl_keep isl_basic_set *bset, void *user)
 {
 	struct isl_multiplicative_call_data_pw_qpolynomial *data = user;
+	isl_pw_qpolynomial *res;
 
 	bset = isl_basic_set_copy(bset);
-	data->pwqp = isl_pw_qpolynomial_mul(data->pwqp, data->fn(bset));
+	res = multiplicative_call_base(bset, data->fn);
+	data->pwqp = isl_pw_qpolynomial_mul(data->pwqp, res);
 	if (!data->pwqp)
 		return isl_bool_error;
 
@@ -4812,7 +4844,7 @@ static __isl_give isl_pw_qpolynomial *compressed_multiplicative_call(
 		goto error;
 	if (f->n_group == 0) {
 		isl_factorizer_free(f);
-		return fn(bset);
+		return multiplicative_call_base(bset, fn);
 	}
 
 	space = isl_basic_set_get_space(bset);

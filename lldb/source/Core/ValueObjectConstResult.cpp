@@ -17,6 +17,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
+#include <optional>
 
 namespace lldb_private {
 class Module;
@@ -193,7 +194,7 @@ ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
   m_error = m_value.GetValueAsData(&exe_ctx, m_data, module);
 }
 
-ValueObjectConstResult::~ValueObjectConstResult() {}
+ValueObjectConstResult::~ValueObjectConstResult() = default;
 
 CompilerType ValueObjectConstResult::GetCompilerTypeImpl() {
   return m_value.GetCompilerType();
@@ -203,7 +204,7 @@ lldb::ValueType ValueObjectConstResult::GetValueType() const {
   return eValueTypeConstResult;
 }
 
-llvm::Optional<uint64_t> ValueObjectConstResult::GetByteSize() {
+std::optional<uint64_t> ValueObjectConstResult::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   if (!m_byte_size) {
     if (auto size =
@@ -215,10 +216,13 @@ llvm::Optional<uint64_t> ValueObjectConstResult::GetByteSize() {
 
 void ValueObjectConstResult::SetByteSize(size_t size) { m_byte_size = size; }
 
-size_t ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 ConstString ValueObjectConstResult::GetTypeName() {
@@ -286,14 +290,14 @@ ValueObjectConstResult::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
       if (process && process->IsPossibleDynamicValue(*this))
         m_dynamic_value = new ValueObjectDynamicValue(*this, use_dynamic);
     }
-    if (m_dynamic_value)
+    if (m_dynamic_value && m_dynamic_value->GetError().Success())
       return m_dynamic_value->GetSP();
   }
   return ValueObjectSP();
 }
 
 lldb::ValueObjectSP
-ValueObjectConstResult::Cast(const CompilerType &compiler_type) {
+ValueObjectConstResult::DoCast(const CompilerType &compiler_type) {
   return m_impl.Cast(compiler_type);
 }
 

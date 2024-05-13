@@ -272,23 +272,21 @@ entry:
 define hidden i32 @NOT_SMMLA(i32 %a, i32 %b, i32 %c) local_unnamed_addr {
 ; DSP-LABEL: NOT_SMMLA:
 ; DSP:       @ %bb.0: @ %entry
-; DSP-NEXT:    smmul r1, r2, r1
-; DSP-NEXT:    eor r1, r1, #-2147483648
-; DSP-NEXT:    add r0, r1
+; DSP-NEXT:    smmla r0, r1, r2, r0
+; DSP-NEXT:    add.w r0, r0, #-2147483648
 ; DSP-NEXT:    bx lr
 ;
 ; ARM7-LABEL: NOT_SMMLA:
 ; ARM7:       @ %bb.0: @ %entry
-; ARM7-NEXT:    smmul r1, r2, r1
-; ARM7-NEXT:    eor r1, r1, #-2147483648
-; ARM7-NEXT:    add r0, r1, r0
+; ARM7-NEXT:    smmla r0, r2, r1, r0
+; ARM7-NEXT:    add r0, r0, #-2147483648
 ; ARM7-NEXT:    bx lr
 ;
 ; NODSP-LABEL: NOT_SMMLA:
 ; NODSP:       @ %bb.0: @ %entry
 ; NODSP-NEXT:    smull r1, r2, r2, r1
-; NODSP-NEXT:    eor r1, r2, #-2147483648
-; NODSP-NEXT:    add r0, r1
+; NODSP-NEXT:    add r0, r2
+; NODSP-NEXT:    add.w r0, r0, #-2147483648
 ; NODSP-NEXT:    bx lr
 entry:
   %conv = sext i32 %b to i64

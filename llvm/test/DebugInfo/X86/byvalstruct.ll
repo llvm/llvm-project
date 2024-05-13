@@ -1,5 +1,7 @@
 ; RUN: llc  -mtriple=x86_64-apple-macosx10.8.0 -O0 -filetype=obj -o %t %s
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: llc  --try-experimental-debuginfo-iterators -mtriple=x86_64-apple-macosx10.8.0 -O0 -filetype=obj -o %t %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 ; Test that we generate debug info for by-value struct args that are not used.
 ;
 ; CHECK: DW_TAG_formal_parameter
@@ -32,50 +34,50 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 %0 = type opaque
 %struct._objc_cache = type opaque
-%struct._class_t = type { %struct._class_t*, %struct._class_t*, %struct._objc_cache*, i8* (i8*, i8*)**, %struct._class_ro_t* }
-%struct._class_ro_t = type { i32, i32, i32, i8*, i8*, %struct.__method_list_t*, %struct._objc_protocol_list*, %struct._ivar_list_t*, i8*, %struct._prop_list_t* }
+%struct._class_t = type { ptr, ptr, ptr, ptr, ptr }
+%struct._class_ro_t = type { i32, i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
 %struct.__method_list_t = type { i32, i32, [0 x %struct._objc_method] }
-%struct._objc_method = type { i8*, i8*, i8* }
-%struct._objc_protocol_list = type { i64, [0 x %struct._protocol_t*] }
-%struct._protocol_t = type { i8*, i8*, %struct._objc_protocol_list*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct._prop_list_t*, i32, i32, i8** }
+%struct._objc_method = type { ptr, ptr, ptr }
+%struct._objc_protocol_list = type { i64, [0 x ptr] }
+%struct._protocol_t = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, ptr }
 %struct._prop_list_t = type { i32, i32, [0 x %struct._prop_t] }
-%struct._prop_t = type { i8*, i8* }
+%struct._prop_t = type { ptr, ptr }
 %struct._ivar_list_t = type { i32, i32, [0 x %struct._ivar_t] }
-%struct._ivar_t = type { i64*, i8*, i8*, i32, i32 }
+%struct._ivar_t = type { ptr, ptr, ptr, i32, i32 }
 %struct.ImageInfo = type { i64, i64, double }
 
 @_objc_empty_cache = external global %struct._objc_cache
-@_objc_empty_vtable = external global i8* (i8*, i8*)*
-@"OBJC_CLASS_$_Bitmap" = global %struct._class_t { %struct._class_t* @"OBJC_METACLASS_$_Bitmap", %struct._class_t* null, %struct._objc_cache* @_objc_empty_cache, i8* (i8*, i8*)** @_objc_empty_vtable, %struct._class_ro_t* @"\01l_OBJC_CLASS_RO_$_Bitmap" }, section "__DATA, __objc_data", align 8
-@"OBJC_METACLASS_$_Bitmap" = global %struct._class_t { %struct._class_t* @"OBJC_METACLASS_$_Bitmap", %struct._class_t* @"OBJC_CLASS_$_Bitmap", %struct._objc_cache* @_objc_empty_cache, i8* (i8*, i8*)** @_objc_empty_vtable, %struct._class_ro_t* @"\01l_OBJC_METACLASS_RO_$_Bitmap" }, section "__DATA, __objc_data", align 8
+@_objc_empty_vtable = external global ptr
+@"OBJC_CLASS_$_Bitmap" = global %struct._class_t { ptr @"OBJC_METACLASS_$_Bitmap", ptr null, ptr @_objc_empty_cache, ptr @_objc_empty_vtable, ptr @"\01l_OBJC_CLASS_RO_$_Bitmap" }, section "__DATA, __objc_data", align 8
+@"OBJC_METACLASS_$_Bitmap" = global %struct._class_t { ptr @"OBJC_METACLASS_$_Bitmap", ptr @"OBJC_CLASS_$_Bitmap", ptr @_objc_empty_cache, ptr @_objc_empty_vtable, ptr @"\01l_OBJC_METACLASS_RO_$_Bitmap" }, section "__DATA, __objc_data", align 8
 @"\01L_OBJC_CLASS_NAME_" = internal global [7 x i8] c"Bitmap\00", section "__TEXT,__objc_classname,cstring_literals", align 1
-@"\01l_OBJC_METACLASS_RO_$_Bitmap" = internal global %struct._class_ro_t { i32 3, i32 40, i32 40, i8* null, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_CLASS_NAME_", i32 0, i32 0), %struct.__method_list_t* null, %struct._objc_protocol_list* null, %struct._ivar_list_t* null, i8* null, %struct._prop_list_t* null }, section "__DATA, __objc_const", align 8
+@"\01l_OBJC_METACLASS_RO_$_Bitmap" = internal global %struct._class_ro_t { i32 3, i32 40, i32 40, ptr null, ptr @"\01L_OBJC_CLASS_NAME_", ptr null, ptr null, ptr null, ptr null, ptr null }, section "__DATA, __objc_const", align 8
 @"\01L_OBJC_METH_VAR_NAME_" = internal global [32 x i8] c"initWithCopy:andInfo:andLength:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 @"\01L_OBJC_METH_VAR_TYPE_" = internal global [23 x i8] c"@56@0:8@16{?=QQd}24Q48\00", section "__TEXT,__objc_methtype,cstring_literals", align 1
-@"\01l_OBJC_$_INSTANCE_METHODS_Bitmap" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { i8* getelementptr inbounds ([32 x i8], [32 x i8]* @"\01L_OBJC_METH_VAR_NAME_", i32 0, i32 0), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @"\01L_OBJC_METH_VAR_TYPE_", i32 0, i32 0), i8* bitcast (i8* (%0*, i8*, %0*, %struct.ImageInfo*, i64)* @"\01-[Bitmap initWithCopy:andInfo:andLength:]" to i8*) }] }, section "__DATA, __objc_const", align 8
-@"\01l_OBJC_CLASS_RO_$_Bitmap" = internal global %struct._class_ro_t { i32 2, i32 0, i32 0, i8* null, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_CLASS_NAME_", i32 0, i32 0), %struct.__method_list_t* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_INSTANCE_METHODS_Bitmap" to %struct.__method_list_t*), %struct._objc_protocol_list* null, %struct._ivar_list_t* null, i8* null, %struct._prop_list_t* null }, section "__DATA, __objc_const", align 8
-@"\01L_OBJC_LABEL_CLASS_$" = internal global [1 x i8*] [i8* bitcast (%struct._class_t* @"OBJC_CLASS_$_Bitmap" to i8*)], section "__DATA, __objc_classlist, regular, no_dead_strip", align 8
-@llvm.used = appending global [5 x i8*] [i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_CLASS_NAME_", i32 0, i32 0), i8* getelementptr inbounds ([32 x i8], [32 x i8]* @"\01L_OBJC_METH_VAR_NAME_", i32 0, i32 0), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @"\01L_OBJC_METH_VAR_TYPE_", i32 0, i32 0), i8* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_INSTANCE_METHODS_Bitmap" to i8*), i8* bitcast ([1 x i8*]* @"\01L_OBJC_LABEL_CLASS_$" to i8*)], section "llvm.metadata"
+@"\01l_OBJC_$_INSTANCE_METHODS_Bitmap" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @"\01L_OBJC_METH_VAR_NAME_", ptr @"\01L_OBJC_METH_VAR_TYPE_", ptr @"\01-[Bitmap initWithCopy:andInfo:andLength:]" }] }, section "__DATA, __objc_const", align 8
+@"\01l_OBJC_CLASS_RO_$_Bitmap" = internal global %struct._class_ro_t { i32 2, i32 0, i32 0, ptr null, ptr @"\01L_OBJC_CLASS_NAME_", ptr @"\01l_OBJC_$_INSTANCE_METHODS_Bitmap", ptr null, ptr null, ptr null, ptr null }, section "__DATA, __objc_const", align 8
+@"\01L_OBJC_LABEL_CLASS_$" = internal global [1 x ptr] [ptr @"OBJC_CLASS_$_Bitmap"], section "__DATA, __objc_classlist, regular, no_dead_strip", align 8
+@llvm.used = appending global [5 x ptr] [ptr @"\01L_OBJC_CLASS_NAME_", ptr @"\01L_OBJC_METH_VAR_NAME_", ptr @"\01L_OBJC_METH_VAR_TYPE_", ptr @"\01l_OBJC_$_INSTANCE_METHODS_Bitmap", ptr @"\01L_OBJC_LABEL_CLASS_$"], section "llvm.metadata"
 
 ; Function Attrs: ssp uwtable
-define internal i8* @"\01-[Bitmap initWithCopy:andInfo:andLength:]"(%0* %self, i8* %_cmd, %0* %otherBitmap, %struct.ImageInfo* byval(%struct.ImageInfo) align 8 %info, i64 %length) #0 !dbg !7 {
+define internal ptr @"\01-[Bitmap initWithCopy:andInfo:andLength:]"(ptr %self, ptr %_cmd, ptr %otherBitmap, ptr byval(%struct.ImageInfo) align 8 %info, i64 %length) #0 !dbg !7 {
 entry:
-  %retval = alloca i8*, align 8
-  %self.addr = alloca %0*, align 8
-  %_cmd.addr = alloca i8*, align 8
-  %otherBitmap.addr = alloca %0*, align 8
+  %retval = alloca ptr, align 8
+  %self.addr = alloca ptr, align 8
+  %_cmd.addr = alloca ptr, align 8
+  %otherBitmap.addr = alloca ptr, align 8
   %length.addr = alloca i64, align 8
-  store %0* %self, %0** %self.addr, align 8
-  call void @llvm.dbg.declare(metadata %0** %self.addr, metadata !28, metadata !DIExpression()), !dbg !29
-  store i8* %_cmd, i8** %_cmd.addr, align 8
-  call void @llvm.dbg.declare(metadata i8** %_cmd.addr, metadata !30, metadata !DIExpression()), !dbg !29
-  store %0* %otherBitmap, %0** %otherBitmap.addr, align 8
-  call void @llvm.dbg.declare(metadata %0** %otherBitmap.addr, metadata !32, metadata !DIExpression()), !dbg !29
-  call void @llvm.dbg.declare(metadata %struct.ImageInfo* %info, metadata !33, metadata !DIExpression()), !dbg !34
-  store i64 %length, i64* %length.addr, align 8
-  call void @llvm.dbg.declare(metadata i64* %length.addr, metadata !35, metadata !DIExpression()), !dbg !36
-  %0 = load i8*, i8** %retval, !dbg !37
-  ret i8* %0, !dbg !37
+  store ptr %self, ptr %self.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %self.addr, metadata !28, metadata !DIExpression()), !dbg !29
+  store ptr %_cmd, ptr %_cmd.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %_cmd.addr, metadata !30, metadata !DIExpression()), !dbg !29
+  store ptr %otherBitmap, ptr %otherBitmap.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %otherBitmap.addr, metadata !32, metadata !DIExpression()), !dbg !29
+  call void @llvm.dbg.declare(metadata ptr %info, metadata !33, metadata !DIExpression()), !dbg !34
+  store i64 %length, ptr %length.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %length.addr, metadata !35, metadata !DIExpression()), !dbg !36
+  %0 = load ptr, ptr %retval, !dbg !37
+  ret ptr %0, !dbg !37
 }
 
 ; Function Attrs: nounwind readnone

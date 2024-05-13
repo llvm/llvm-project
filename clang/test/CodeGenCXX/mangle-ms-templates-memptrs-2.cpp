@@ -57,4 +57,4 @@ template struct ClassTemplate<&MostGeneral::h>;
 
 // Test that we mangle in the vbptr offset, which is 12 here.
 //
-// CHECK: define weak_odr dso_local x86_thiscallcc %struct.ClassTemplate* @"??0?$ClassTemplate@$J??_9MostGeneral@@$BA@AEA@M@3@@QAE@XZ"
+// CHECK: define weak_odr dso_local x86_thiscallcc noundef ptr @"??0?$ClassTemplate@$J??_9MostGeneral@@$BA@AEA@M@3@@QAE@XZ"

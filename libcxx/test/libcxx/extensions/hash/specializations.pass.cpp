@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// NOTE: Undefined __DEPRECATED to prevent this test from failing with -Werror
-#undef __DEPRECATED
+// UNSUPPORTED: clang-modules-build
+
+// Prevent <ext/hash_set> from generating deprecated warnings for this test.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
 #include <assert.h>
 #include <ext/hash_map>
 #include <string>

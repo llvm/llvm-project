@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("SemaTests") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
@@ -11,11 +11,14 @@ unittest("SemaTests") {
     "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
     "CodeCompleteTest.cpp",
     "ExternalSemaSourceTest.cpp",
     "GslOwnerPointerInference.cpp",
+    "SemaLookupTest.cpp",
+    "SemaNoloadLookupTest.cpp",
   ]
 }

@@ -5,10 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the PointerUnion class, which is a discriminated union of
-// pointer types.
-//
+///
+/// \file
+/// This file defines the PointerUnion class, which is a discriminated union of
+/// pointer types.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_POINTERUNION_H
@@ -16,42 +17,15 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 
 namespace llvm {
-
-template <typename T> struct PointerUnionTypeSelectorReturn {
-  using Return = T;
-};
-
-/// Get a type based on whether two types are the same or not.
-///
-/// For:
-///
-/// \code
-///   using Ret = typename PointerUnionTypeSelector<T1, T2, EQ, NE>::Return;
-/// \endcode
-///
-/// Ret will be EQ type if T1 is same as T2 or NE type otherwise.
-template <typename T1, typename T2, typename RET_EQ, typename RET_NE>
-struct PointerUnionTypeSelector {
-  using Return = typename PointerUnionTypeSelectorReturn<RET_NE>::Return;
-};
-
-template <typename T, typename RET_EQ, typename RET_NE>
-struct PointerUnionTypeSelector<T, T, RET_EQ, RET_NE> {
-  using Return = typename PointerUnionTypeSelectorReturn<RET_EQ>::Return;
-};
-
-template <typename T1, typename T2, typename RET_EQ, typename RET_NE>
-struct PointerUnionTypeSelectorReturn<
-    PointerUnionTypeSelector<T1, T2, RET_EQ, RET_NE>> {
-  using Return =
-      typename PointerUnionTypeSelector<T1, T2, RET_EQ, RET_NE>::Return;
-};
 
 namespace pointer_union_detail {
   /// Determine the number of bits required to store integers with values < n.
@@ -63,21 +37,6 @@ namespace pointer_union_detail {
   template <typename... Ts> constexpr int lowBitsAvailable() {
     return std::min<int>({PointerLikeTypeTraits<Ts>::NumLowBitsAvailable...});
   }
-
-  /// Find the index of a type in a list of types. TypeIndex<T, Us...>::Index
-  /// is the index of T in Us, or sizeof...(Us) if T does not appear in the
-  /// list.
-  template <typename T, typename ...Us> struct TypeIndex;
-  template <typename T, typename ...Us> struct TypeIndex<T, T, Us...> {
-    static constexpr int Index = 0;
-  };
-  template <typename T, typename U, typename... Us>
-  struct TypeIndex<T, U, Us...> {
-    static constexpr int Index = 1 + TypeIndex<T, Us...>::Index;
-  };
-  template <typename T> struct TypeIndex<T> {
-    static constexpr int Index = 0;
-  };
 
   /// Find the first type in a list of types.
   template <typename T, typename...> struct GetFirstType {
@@ -129,6 +88,9 @@ namespace pointer_union_detail {
   };
 }
 
+// This is a forward declaration of CastInfoPointerUnionImpl
+// Refer to its definition below for further details
+template <typename... PTs> struct CastInfoPointerUnionImpl;
 /// A discriminated union of two or more pointer types, with the discriminator
 /// in the low bit of the pointer.
 ///
@@ -145,6 +107,7 @@ namespace pointer_union_detail {
 ///    P = (float*)0;
 ///    Y = P.get<float*>();   // ok.
 ///    X = P.get<int*>();     // runtime assertion failure.
+///    PointerUnion<int*, int*> Q; // compile time failure.
 template <typename... PTs>
 class PointerUnion
     : public pointer_union_detail::PointerUnionMembers<
@@ -153,13 +116,20 @@ class PointerUnion
               void *, pointer_union_detail::bitsRequired(sizeof...(PTs)), int,
               pointer_union_detail::PointerUnionUIntTraits<PTs...>>,
           0, PTs...> {
+  static_assert(TypesAreDistinct<PTs...>::value,
+                "PointerUnion alternative types cannot be repeated");
   // The first type is special because we want to directly cast a pointer to a
   // default-initialized union to a pointer to the first type. But we don't
   // want PointerUnion to be a 'template <typename First, typename ...Rest>'
   // because it's much more convenient to have a name for the whole pack. So
   // split off the first type here.
-  using First = typename pointer_union_detail::GetFirstType<PTs...>::type;
+  using First = TypeAtIndex<0, PTs...>;
   using Base = typename PointerUnion::PointerUnionMembers;
+
+  /// This is needed to give the CastInfo implementation below access
+  /// to protected members.
+  /// Refer to its definition for further details.
+  friend struct CastInfoPointerUnionImpl<PTs...>;
 
 public:
   PointerUnion() = default;
@@ -173,28 +143,24 @@ public:
 
   explicit operator bool() const { return !isNull(); }
 
+  // FIXME: Replace the uses of is(), get() and dyn_cast() with
+  //        isa<T>, cast<T> and the llvm::dyn_cast<T>
+
   /// Test if the Union currently holds the type matching T.
-  template <typename T> bool is() const {
-    constexpr int Index = pointer_union_detail::TypeIndex<T, PTs...>::Index;
-    static_assert(Index < sizeof...(PTs),
-                  "PointerUnion::is<T> given type not in the union");
-    return this->Val.getInt() == Index;
-  }
+  template <typename T> inline bool is() const { return isa<T>(*this); }
 
   /// Returns the value of the specified pointer type.
   ///
   /// If the specified pointer type is incorrect, assert.
-  template <typename T> T get() const {
-    assert(is<T>() && "Invalid accessor called");
-    return PointerLikeTypeTraits<T>::getFromVoidPointer(this->Val.getPointer());
+  template <typename T> inline T get() const {
+    assert(isa<T>(*this) && "Invalid accessor called");
+    return cast<T>(*this);
   }
 
   /// Returns the current pointer if it is of the specified pointer type,
   /// otherwise returns null.
-  template <typename T> T dyn_cast() const {
-    if (is<T>())
-      return get<T>();
-    return T();
+  template <typename T> inline T dyn_cast() const {
+    return llvm::dyn_cast_if_present<T>(*this);
   }
 
   /// If the union is set to the first pointer type get an address pointing to
@@ -206,9 +172,9 @@ public:
   /// If the union is set to the first pointer type get an address pointing to
   /// it.
   First *getAddrOfPtr1() {
-    assert(is<First>() && "Val is not the first pointer");
+    assert(isa<First>(*this) && "Val is not the first pointer");
     assert(
-        PointerLikeTypeTraits<First>::getAsVoidPointer(get<First>()) ==
+        PointerLikeTypeTraits<First>::getAsVoidPointer(cast<First>(*this)) ==
             this->Val.getPointer() &&
         "Can't get the address because PointerLikeTypeTraits changes the ptr");
     return const_cast<First *>(
@@ -246,6 +212,52 @@ template <typename ...PTs>
 bool operator<(PointerUnion<PTs...> lhs, PointerUnion<PTs...> rhs) {
   return lhs.getOpaqueValue() < rhs.getOpaqueValue();
 }
+
+/// We can't (at least, at this moment with C++14) declare CastInfo
+/// as a friend of PointerUnion like this:
+/// ```
+///   template<typename To>
+///   friend struct CastInfo<To, PointerUnion<PTs...>>;
+/// ```
+/// The compiler complains 'Partial specialization cannot be declared as a
+/// friend'.
+/// So we define this struct to be a bridge between CastInfo and
+/// PointerUnion.
+template <typename... PTs> struct CastInfoPointerUnionImpl {
+  using From = PointerUnion<PTs...>;
+
+  template <typename To> static inline bool isPossible(From &F) {
+    return F.Val.getInt() == FirstIndexOfType<To, PTs...>::value;
+  }
+
+  template <typename To> static To doCast(From &F) {
+    assert(isPossible<To>(F) && "cast to an incompatible type!");
+    return PointerLikeTypeTraits<To>::getFromVoidPointer(F.Val.getPointer());
+  }
+};
+
+// Specialization of CastInfo for PointerUnion
+template <typename To, typename... PTs>
+struct CastInfo<To, PointerUnion<PTs...>>
+    : public DefaultDoCastIfPossible<To, PointerUnion<PTs...>,
+                                     CastInfo<To, PointerUnion<PTs...>>> {
+  using From = PointerUnion<PTs...>;
+  using Impl = CastInfoPointerUnionImpl<PTs...>;
+
+  static inline bool isPossible(From &f) {
+    return Impl::template isPossible<To>(f);
+  }
+
+  static To doCast(From &f) { return Impl::template doCast<To>(f); }
+
+  static inline To castFailed() { return To(); }
+};
+
+template <typename To, typename... PTs>
+struct CastInfo<To, const PointerUnion<PTs...>>
+    : public ConstStrippingForwardingCast<To, const PointerUnion<PTs...>,
+                                          CastInfo<To, PointerUnion<PTs...>>> {
+};
 
 // Teach SmallPtrSet that PointerUnion is "basically a pointer", that has
 // # low bits available = min(PT1bits,PT2bits)-1.

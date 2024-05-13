@@ -138,6 +138,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
     (instregex "SUBF(E|ME|ZE)?(8)?(O)?(_rec)?$"),
     (instregex "NEG(8)?(O)?(_rec)?$"),
     (instregex "POPCNTB$"),
+    (instregex "POPCNTB8$"),
     (instregex "ADD(I|IS)?(8)?$"),
     (instregex "LI(S)?(8)?$"),
     (instregex "(X)?OR(I|IS)?(8)?(_rec)?$"),
@@ -150,10 +151,12 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
     (instregex "ADD(4|8)(TLS)?(_)?$"),
     (instregex "NEG(8)?(O)?$"),
     (instregex "ADDI(S)?toc(HA|L)(8)?$"),
+    (instregex "LA(8)?$"),
     COPY,
     MCRF,
     MCRXRX,
     XSNABSDP,
+    XSNABSDPs,
     XSXEXPDP,
     XSABSDP,
     XSNEGDP,
@@ -164,7 +167,6 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
     SRADI_32,
     RLDIC,
     RFEBB,
-    LA,
     TBEGIN,
     TRECHKPT,
     NOP,
@@ -193,6 +195,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_3SLOTS_1C],
     XSIEXPDP,
     FMR,
     CREQV,
+    CRNOT,
     CRXOR,
     TRECLAIM,
     TSR,
@@ -623,7 +626,9 @@ def : InstRW<[P9_PM_3C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C],
     BCDS_rec,
     BCDTRUNC_rec,
     BCDUS_rec,
-    BCDUTRUNC_rec
+    BCDUTRUNC_rec,
+    BCDADD_rec,
+    BCDSUB_rec
 )>;
 
 // 12 Cycle DFU operation. Only one DFU unit per CPU so we use a whole
@@ -760,6 +765,7 @@ def : InstRW<[P9_LS_4C, IP_AGEN_1C, DISP_3SLOTS_1C],
       (instrs
     LFIWZX,
     LFDX,
+    (instregex "LFDXTLS?(_)?$"),
     LFD
 )>;
 
@@ -804,23 +810,15 @@ def : InstRW<[P9_StoreAndALUOp_3C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
     (instregex "ST(B|H|W|D)CX$")
 )>;
 
-// Cracked Load Instruction.
-// Two consecutive load operations for a total of 8 cycles.
-def : InstRW<[P9_LoadAndLoadOp_8C, IP_AGEN_1C, IP_AGEN_1C,
-              DISP_1C, DISP_1C],
-      (instrs
-    LDMX
-)>;
-
 // Cracked Load instruction.
 // Requires consecutive Load and ALU pieces totaling 6 cycles. The Load and ALU
 // operations cannot be done at the same time and so their latencies are added.
 def : InstRW<[P9_LoadAndALUOp_6C, IP_EXEC_1C, IP_AGEN_1C,
               DISP_1C, DISP_1C],
       (instrs
-    (instregex "LHA(X)?(8)?$"),
+    (instregex "LHA(X)?(TLS)?(8)?(_32)?(_)?$"),
     (instregex "CP_PASTE(8)?_rec$"),
-    (instregex "LWA(X)?(_32)?$"),
+    (instregex "LWA(X)?(TLS)?(_32)?(_)?$"),
     TCHECK
 )>;
 
@@ -853,6 +851,7 @@ def : InstRW<[P9_LoadAndALU2Op_7C, IP_AGEN_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_3SLOTS_1C],
       (instrs
     LFSX,
+    (instregex "LFSXTLS?(_)?$"),
     LFS
 )>;
 
@@ -894,7 +893,7 @@ def : InstRW<[P9_LoadAndPMOp_8C, IP_AGEN_1C, IP_EXECE_1C, IP_EXECO_1C,
 // all three dispatches for the superslice.
 def : InstRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_3SLOTS_1C],
       (instrs
-    (instregex "STF(S|D|IWX|SX|DX)$"),
+    (instregex "STF(S|D|IWX|SX|DX|SXTLS|DXTLS|SXTLS_|DXTLS_)$"),
     (instregex "STXS(D|DX|SPX|IWX|IBX|IHX|SP)(v)?$"),
     (instregex "STW(8)?$"),
     (instregex "(D|X)FSTORE(f32|f64)$"),
@@ -937,6 +936,7 @@ def : InstRW<[P9_DIV_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_EVEN_1C],
     (instregex "M(T|F)TB(8)?$"),
     (instregex "MF(SPR|CTR|LR)(8)?$"),
     (instregex "M(T|F)MSR(D)?$"),
+    (instregex "M(T|F)(U)?DSCR$"),
     (instregex "MTSPR(8)?$")
 )>;
 
@@ -1078,7 +1078,8 @@ def : InstRW<[P9_ALU_3C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_3SLOTS_1C],
       (instrs
     (instregex "MTFSF(b|_rec)?$"),
-    (instregex "MTFSFI(_rec)?$")
+    (instregex "MTFSFI(_rec)?$"),
+    MTFSFIb
 )>;
 
 // Cracked instruction made of two ALU ops.
@@ -1300,15 +1301,15 @@ def : InstRW<[P9_BR_2C, DISP_BR_1C],
   (instregex "BCCTR(L)?(8)?(n)?$"),
   (instregex "BD(N)?Z(8|A|Am|Ap|m|p)?$"),
   (instregex "BD(N)?ZL(A|Am|Ap|R|R8|RL|RLm|RLp|Rm|Rp|m|p)?$"),
-  (instregex "BL(_TLS|_NOP)?$"),
-  (instregex "BL8(_TLS|_NOP|_NOP_TLS|_TLS_)?$"),
-  (instregex "BLA(8|8_NOP)?$"),
+  (instregex "BL(_TLS|_NOP)?(_RM)?$"),
+  (instregex "BL8(_TLS|_NOP|_NOP_TLS|_TLS_)?(_RM)?$"),
+  (instregex "BLA(8|8_NOP)?(_RM)?$"),
   (instregex "BLR(8|L)?$"),
   (instregex "TAILB(A)?(8)?$"),
   (instregex "TAILBCTR(8)?$"),
   (instregex "gBC(A|Aat|CTR|CTRL|L|LA|LAat|LR|LRL|Lat|at)?$"),
   (instregex "BCLR(L)?(n)?$"),
-  (instregex "BCTR(L)?(8)?$"),
+  (instregex "BCTR(L)?(8)?(_RM)?$"),
   B,
   BA,
   BC,
@@ -1319,6 +1320,8 @@ def : InstRW<[P9_BR_2C, DISP_BR_1C],
   BCLn,
   BCTRL8_LDinto_toc,
   BCTRL_LWZinto_toc,
+  BCTRL8_LDinto_toc_RM,
+  BCTRL_LWZinto_toc_RM,
   BCn,
   CTRL_DEP
 )>;
@@ -1409,7 +1412,7 @@ def : InstRW<[],
   (instregex "NOP_GT_PWR(6|7)$"),
   (instregex "TLB(IA|IVAX|SX|SX2|SX2D|LD|LI|RE|RE2|WE|WE2)$"),
   (instregex "WRTEE(I)?$"),
-  (instregex "HASH(ST|STP|CHK|CHKP)$"),
+  (instregex "HASH(ST|STP|CHK|CHKP)(8)?$"),
   ATTN,
   CLRBHRB,
   MFBHRBE,
@@ -1427,5 +1430,10 @@ def : InstRW<[],
   DCBA,
   DCBI,
   DCCCI,
-  ICCCI
+  ICCCI,
+  ADDEX,
+  ADDEX8,
+  CDTBCD, CDTBCD8,
+  CBCDTD, CBCDTD8,
+  ADDG6S, ADDG6S8
 )> { let Unsupported = 1; }

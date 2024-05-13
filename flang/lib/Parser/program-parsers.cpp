@@ -9,7 +9,6 @@
 // Per-type parsers for program units
 
 #include "basic-parsers.h"
-#include "debug-parser.h"
 #include "expr-parsers.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
@@ -31,10 +30,10 @@ namespace Fortran::parser {
 // statement without an otherwise empty list of dummy arguments.  That
 // MODULE prefix is disallowed by a constraint (C1547) in this context,
 // so the standard language is not ambiguous, but disabling its misrecognition
-// here would require context-sensitive keyword recognition or (or via)
-// variant parsers for several productions; giving the "module" production
-// priority here is a cleaner solution, though regrettably subtle.  Enforcing
-// C1547 is done in semantics.
+// here would require context-sensitive keyword recognition or variant parsers
+// for several productions; giving the "module" production priority here is a
+// cleaner solution, though regrettably subtle.
+// Enforcing C1547 is done in semantics.
 static constexpr auto programUnit{
     construct<ProgramUnit>(indirect(Parser<Module>{})) ||
     construct<ProgramUnit>(indirect(functionSubprogram)) ||
@@ -47,6 +46,10 @@ static constexpr auto normalProgramUnit{StartNewSubprogram{} >> programUnit /
 static constexpr auto globalCompilerDirective{
     construct<ProgramUnit>(indirect(compilerDirective))};
 
+static constexpr auto globalOpenACCCompilerDirective{
+    construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{}))};
+
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
 // F'2018 6.3.1 defines a program unit as a sequence of one or more lines,
@@ -54,11 +57,14 @@ static constexpr auto globalCompilerDirective{
 // Consequently, a program unit END statement should be the last statement
 // on its line.  We parse those END statements via unterminatedStatement()
 // and then skip over the end of the line here.
-TYPE_PARSER(construct<Program>(
-    extension<LanguageFeature::EmptySourceFile>(skipStuffBeforeStatement >>
-        !nextCh >> pure<std::list<ProgramUnit>>()) ||
-    some(globalCompilerDirective || normalProgramUnit) /
-        skipStuffBeforeStatement))
+TYPE_PARSER(
+    construct<Program>(extension<LanguageFeature::EmptySourceFile>(
+                           "nonstandard usage: empty source file"_port_en_US,
+                           skipStuffBeforeStatement >> !nextCh >>
+                               pure<std::list<ProgramUnit>>()) ||
+        some(globalCompilerDirective || globalOpenACCCompilerDirective ||
+            normalProgramUnit) /
+            skipStuffBeforeStatement))
 
 // R504 specification-part ->
 //         [use-stmt]... [import-stmt]... [implicit-part]
@@ -80,10 +86,10 @@ TYPE_CONTEXT_PARSER("specification part"_en_US,
 // are in contexts that impose constraints on the kinds of statements that
 // are allowed, and so we have a variant production for declaration-construct
 // that implements those constraints.
-constexpr auto execPartLookAhead{
-    first(actionStmt >> ok, openaccConstruct >> ok, openmpConstruct >> ok,
-        "ASSOCIATE ("_tok, "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok,
-        "CRITICAL"_tok, "DO"_tok, "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok)};
+constexpr auto execPartLookAhead{first(actionStmt >> ok, openaccConstruct >> ok,
+    openmpConstruct >> ok, "ASSOCIATE ("_tok, "BLOCK"_tok, "SELECT"_tok,
+    "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok, "IF ("_tok, "WHERE ("_tok,
+    "FORALL ("_tok, "!$CUF"_tok)};
 constexpr auto declErrorRecovery{
     stmtErrorRecoveryStart >> !execPartLookAhead >> skipStmtErrorRecovery};
 constexpr auto misplacedSpecificationStmt{Parser<UseStmt>{} >>
@@ -167,7 +173,8 @@ TYPE_CONTEXT_PARSER("specification construct"_en_US,
 //        codimension-stmt | contiguous-stmt | dimension-stmt | external-stmt |
 //        intent-stmt | intrinsic-stmt | namelist-stmt | optional-stmt |
 //        pointer-stmt | protected-stmt | save-stmt | target-stmt |
-//        volatile-stmt | value-stmt | common-stmt | equivalence-stmt
+//        volatile-stmt | value-stmt | common-stmt | equivalence-stmt |
+// (CUDA) CUDA-attributes-stmt
 TYPE_PARSER(first(
     construct<OtherSpecificationStmt>(indirect(Parser<AccessStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<AllocatableStmt>{})),
@@ -189,7 +196,8 @@ TYPE_PARSER(first(
     construct<OtherSpecificationStmt>(indirect(Parser<VolatileStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<CommonStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<EquivalenceStmt>{})),
-    construct<OtherSpecificationStmt>(indirect(Parser<BasedPointerStmt>{}))))
+    construct<OtherSpecificationStmt>(indirect(Parser<BasedPointerStmt>{})),
+    construct<OtherSpecificationStmt>(indirect(Parser<CUDAAttributesStmt>{}))))
 
 // R1401 main-program ->
 //         [program-stmt] [specification-part] [execution-part]
@@ -204,6 +212,7 @@ TYPE_CONTEXT_PARSER("main program"_en_US,
 TYPE_CONTEXT_PARSER("PROGRAM statement"_en_US,
     construct<ProgramStmt>("PROGRAM" >> name /
             maybe(extension<LanguageFeature::ProgramParentheses>(
+                "nonstandard usage: parentheses in PROGRAM statement"_port_en_US,
                 parenthesized(ok)))))
 
 // R1403 end-program-stmt -> END [PROGRAM [program-name]]
@@ -238,7 +247,8 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 //         separate-module-subprogram
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
-    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})))
+    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
+    construct<ModuleSubprogram>(indirect(compilerDirective)))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
@@ -326,7 +336,9 @@ TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
     construct<InterfaceStmt>(construct<Abstract>("ABSTRACT INTERFACE"_sptok)))
 
 // R1504 end-interface-stmt -> END INTERFACE [generic-spec]
-TYPE_PARSER(construct<EndInterfaceStmt>("END INTERFACE" >> maybe(genericSpec)))
+TYPE_PARSER(
+    construct<EndInterfaceStmt>(recovery("END INTERFACE" >> maybe(genericSpec),
+        constructEndStmtErrorRecovery >> pure<std::optional<GenericSpec>>())))
 
 // R1505 interface-body ->
 //         function-stmt [specification-part] end-function-stmt |
@@ -418,16 +430,25 @@ TYPE_PARSER(
 TYPE_PARSER(
     "INTRINSIC" >> maybe("::"_tok) >> construct<IntrinsicStmt>(listOfNames))
 
-// R1520 function-reference -> procedure-designator ( [actual-arg-spec-list] )
+// R1520 function-reference -> procedure-designator
+//                               ( [actual-arg-spec-list] )
 TYPE_CONTEXT_PARSER("function reference"_en_US,
-    construct<FunctionReference>(
-        sourced(construct<Call>(Parser<ProcedureDesignator>{},
+    sourced(construct<FunctionReference>(
+        construct<Call>(Parser<ProcedureDesignator>{},
             parenthesized(optionalList(actualArgSpec))))) /
         !"["_tok)
 
-// R1521 call-stmt -> CALL procedure-designator [( [actual-arg-spec-list] )]
+// R1521 call-stmt -> CALL procedure-designator [chevrons]
+///                          [( [actual-arg-spec-list] )]
+// (CUDA) chevrons -> <<< scalar-expr, scalar-expr [, scalar-int-expr
+//                      [, scalar-int-expr ] ] >>>
+TYPE_PARSER(extension<LanguageFeature::CUDA>(
+    "<<<" >> construct<CallStmt::Chevrons>(scalarExpr, "," >> scalarExpr,
+                 maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
+        ">>>"))
 TYPE_PARSER(construct<CallStmt>(
-    sourced(construct<Call>("CALL" >> Parser<ProcedureDesignator>{},
+    sourced(construct<CallStmt>("CALL" >> Parser<ProcedureDesignator>{},
+        maybe(Parser<CallStmt::Chevrons>{}),
         defaulted(parenthesized(optionalList(actualArgSpec)))))))
 
 // R1522 procedure-designator ->
@@ -449,17 +470,27 @@ TYPE_PARSER(construct<ActualArgSpec>(
 // Semantics sorts it all out later.
 TYPE_PARSER(construct<ActualArg>(expr) ||
     construct<ActualArg>(Parser<AltReturnSpec>{}) ||
-    extension<LanguageFeature::PercentRefAndVal>(construct<ActualArg>(
-        construct<ActualArg::PercentRef>("%REF" >> parenthesized(variable)))) ||
-    extension<LanguageFeature::PercentRefAndVal>(construct<ActualArg>(
-        construct<ActualArg::PercentVal>("%VAL" >> parenthesized(expr)))))
+    extension<LanguageFeature::PercentRefAndVal>(
+        "nonstandard usage: %REF"_port_en_US,
+        construct<ActualArg>(construct<ActualArg::PercentRef>(
+            "%REF" >> parenthesized(variable)))) ||
+    extension<LanguageFeature::PercentRefAndVal>(
+        "nonstandard usage: %VAL"_port_en_US,
+        construct<ActualArg>(
+            construct<ActualArg::PercentVal>("%VAL" >> parenthesized(expr)))))
 
 // R1525 alt-return-spec -> * label
 TYPE_PARSER(construct<AltReturnSpec>(star >> label))
 
 // R1527 prefix-spec ->
 //         declaration-type-spec | ELEMENTAL | IMPURE | MODULE |
-//         NON_RECURSIVE | PURE | RECURSIVE
+//         NON_RECURSIVE | PURE | RECURSIVE |
+// (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... ) |
+//         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
+TYPE_PARSER(first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
+    "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
+    "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
+    "HOST" >> pure(common::CUDASubprogramAttrs::Host)))
 TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(construct<PrefixSpec::Elemental>("ELEMENTAL"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Impure>("IMPURE"_tok)),
@@ -467,7 +498,19 @@ TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(
         construct<PrefixSpec::Non_Recursive>("NON_RECURSIVE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Pure>("PURE"_tok)),
-    construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok))))
+    construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok)),
+    extension<LanguageFeature::CUDA>(
+        construct<PrefixSpec>(construct<PrefixSpec::Attributes>("ATTRIBUTES" >>
+            parenthesized(
+                optionalList(Parser<common::CUDASubprogramAttrs>{}))))),
+    extension<LanguageFeature::CUDA>(construct<PrefixSpec>(
+        construct<PrefixSpec::Launch_Bounds>("LAUNCH_BOUNDS" >>
+            parenthesized(nonemptyList(
+                "expected launch bounds"_err_en_US, scalarIntConstantExpr))))),
+    extension<LanguageFeature::CUDA>(construct<PrefixSpec>(
+        construct<PrefixSpec::Cluster_Dims>("CLUSTER_DIMS" >>
+            parenthesized(nonemptyList("expected cluster dimensions"_err_en_US,
+                scalarIntConstantExpr)))))))
 
 // R1529 function-subprogram ->
 //         function-stmt [specification-part] [execution-part]
@@ -485,6 +528,7 @@ TYPE_CONTEXT_PARSER("FUNCTION statement"_en_US,
     construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name,
         parenthesized(optionalList(name)), maybe(suffix)) ||
         extension<LanguageFeature::OmitFunctionDummies>(
+            "nonstandard usage: FUNCTION statement without dummy argument list"_port_en_US,
             construct<FunctionStmt>( // PGI & Intel accept "FUNCTION F"
                 many(prefixSpec), "FUNCTION" >> name,
                 construct<std::list<Name>>(),

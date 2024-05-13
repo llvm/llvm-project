@@ -5,7 +5,7 @@
 # RUN: lld-link -dll -noentry %t.obj -out:%t.dll -def:%t-65535.def
 # RUN: env LLD_IN_TEST=1 not lld-link -dll -noentry %t.obj -out:%t.dll -def:%t-65536.def 2>&1 | FileCheck %s
 
-# CHECK: error: too many exported symbols
+# CHECK: error: too many exported symbols (got 65536, max 65535)
 
         .text
         .globl f

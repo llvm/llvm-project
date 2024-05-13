@@ -4,23 +4,24 @@
 # REQUIRES: x86-registered-target
 #
 # CHECK:      debugValueSubstitutions:
-# CHECK-NEXT: - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0 }
+# CHECK-NEXT: - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
 #
 # CHECK:      MOV64rr $rdi, debug-instr-number 2
-# CHECK-NEXT: DBG_INSTR_REF 1, 0
+# CHECK-NEXT: DBG_INSTR_REF dbg-instr-ref(1, 0)
 ---
 name: test
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 debugValueSubstitutions:
-  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0 }
+  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
 body:  |
   bb.0:
   liveins: $rdi, $rax
     $rbp = MOV64rr $rdi, debug-instr-number 2
-    DBG_INSTR_REF 1, 0
+    DBG_INSTR_REF dbg-instr-ref(1, 0)
     dead $rcx = MOV64ri 0
     CMP64ri8 renamable $rax, 1, implicit-def $eflags
-    RETQ $rax
+    RET64 $rax
 ...

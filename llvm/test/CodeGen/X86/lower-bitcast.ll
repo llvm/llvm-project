@@ -8,7 +8,7 @@
 define double @test1(double %A) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %1 = bitcast double %A to <2 x i32>
   %add = add <2 x i32> %1, <i32 3, i32 5>
@@ -32,7 +32,7 @@ define i64 @test3(i64 %A) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %xmm0
-; CHECK-NEXT:    addps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movq %xmm0, %rax
 ; CHECK-NEXT:    retq
   %1 = bitcast i64 %A to <2 x float>
@@ -48,7 +48,7 @@ define i64 @test4(i64 %A) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %xmm0
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movq %xmm0, %rax
 ; CHECK-NEXT:    retq
   %1 = bitcast i64 %A to <2 x i32>
@@ -60,7 +60,7 @@ define i64 @test4(i64 %A) {
 define double @test5(double %A) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %1 = bitcast double %A to <2 x float>
   %add = fadd <2 x float> %1, <float 3.0, float 5.0>
@@ -74,7 +74,7 @@ define double @test5(double %A) {
 define double @test6(double %A) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    paddw {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %1 = bitcast double %A to <4 x i16>
   %add = add <4 x i16> %1, <i16 3, i16 4, i16 5, i16 6>
@@ -101,7 +101,7 @@ define double @test7(double %A, double %B) {
 define double @test8(double %A) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    paddb {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %1 = bitcast double %A to <8 x i8>
   %add = add <8 x i8> %1, <i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10>

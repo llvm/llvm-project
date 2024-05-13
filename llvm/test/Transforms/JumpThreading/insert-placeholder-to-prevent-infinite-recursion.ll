@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S < %s | FileCheck %s
+; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 @a = common dso_local local_unnamed_addr global i16 0, align 2
 
 ; Function Attrs: nofree norecurse nounwind

@@ -10,7 +10,7 @@ enum {
   Z = 1 << 2
 };
 
-void test() {
+void test(void) {
   char c;
 
   c = 0 << 0;
@@ -61,7 +61,7 @@ void test() {
 enum { b = (a << ashift) };
 
 // Don't warn for negative shifts in code that is unreachable.
-void test_pr5544() {
+void test_pr5544(void) {
   (void) (((1) > 63 && (1) < 128 ? (((unsigned long long) 1)<<((1)-64)) : (unsigned long long) 0)); // no-warning
 }
 

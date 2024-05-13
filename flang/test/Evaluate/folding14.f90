@@ -1,12 +1,12 @@
-! RUN: %S/test_folding.sh %s %t %flang_fc1
+! RUN: %python %S/test_folding.py %s %flang_fc1
 ! Test folding of isnan() extension
 module m1
   logical, parameter :: results(*) = isnan([ &
     0., &
     -0., &
-!WARN: division by zero
+!WARN: warning: division by zero
     1./0., &
-!WARN: invalid argument on division
+!WARN: warning: invalid argument on division
     0./0., &
     real(z'7ff80001',kind=4), &
     real(z'fff80001',kind=4), &

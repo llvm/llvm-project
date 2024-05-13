@@ -53,8 +53,12 @@ Cl Expr::ClassifyImpl(ASTContext &Ctx, SourceLocation *Loc) const {
 
   // Enable this assertion for testing.
   switch (kind) {
-  case Cl::CL_LValue: assert(getValueKind() == VK_LValue); break;
-  case Cl::CL_XValue: assert(getValueKind() == VK_XValue); break;
+  case Cl::CL_LValue:
+    assert(isLValue());
+    break;
+  case Cl::CL_XValue:
+    assert(isXValue());
+    break;
   case Cl::CL_Function:
   case Cl::CL_Void:
   case Cl::CL_AddressableVoid:
@@ -64,7 +68,9 @@ Cl Expr::ClassifyImpl(ASTContext &Ctx, SourceLocation *Loc) const {
   case Cl::CL_ClassTemporary:
   case Cl::CL_ArrayTemporary:
   case Cl::CL_ObjCMessageRValue:
-  case Cl::CL_PRValue: assert(getValueKind() == VK_RValue); break;
+  case Cl::CL_PRValue:
+    assert(isPRValue());
+    break;
   }
 
   Cl::ModifiableType modifiable = Cl::CM_Untested;
@@ -89,7 +95,7 @@ static Cl::Kinds ClassifyExprValueKind(const LangOptions &Lang,
                                        const Expr *E,
                                        ExprValueKind Kind) {
   switch (Kind) {
-  case VK_RValue:
+  case VK_PRValue:
     return Lang.CPlusPlus ? ClassifyTemporary(E->getType()) : Cl::CL_PRValue;
   case VK_LValue:
     return Cl::CL_LValue;
@@ -139,7 +145,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::FunctionParmPackExprClass:
   case Expr::MSPropertyRefExprClass:
   case Expr::MSPropertySubscriptExprClass:
-  case Expr::OMPArraySectionExprClass:
+  case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
     return Cl::CL_LValue;
@@ -154,7 +160,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::CXXPseudoDestructorExprClass:
   case Expr::UnaryExprOrTypeTraitExprClass:
   case Expr::CXXNewExprClass:
-  case Expr::CXXThisExprClass:
   case Expr::CXXNullPtrLiteralExprClass:
   case Expr::ImaginaryLiteralClass:
   case Expr::GNUNullExprClass:
@@ -199,6 +204,10 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::RequiresExprClass:
     return Cl::CL_PRValue;
 
+  // Make HLSL this reference-like
+  case Expr::CXXThisExprClass:
+    return Lang.HLSL ? Cl::CL_LValue : Cl::CL_PRValue;
+
   case Expr::ConstantExprClass:
     return ClassifyInternal(Ctx, cast<ConstantExpr>(E)->getSubExpr());
 
@@ -206,6 +215,14 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::SubstNonTypeTemplateParmExprClass:
     return ClassifyInternal(Ctx,
                  cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement());
+
+  case Expr::PackIndexingExprClass: {
+    // A pack-index-expression always expands to an id-expression.
+    // Consider it as an LValue expression.
+    if (cast<PackIndexingExpr>(E)->isInstantiationDependent())
+      return Cl::CL_LValue;
+    return ClassifyInternal(Ctx, cast<PackIndexingExpr>(E)->getSelectedExpr());
+  }
 
     // C, C++98 [expr.sub]p1: The result is an lvalue of type "T".
     // C++11 (DR1213): in the case of an array operand, the result is an lvalue
@@ -424,7 +441,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // contains only one element. In that case, we look at that element
     // for an exact classification. Init list creation takes care of the
     // value kind for us, so we only need to fine-tune.
-    if (E->isRValue())
+    if (E->isPRValue())
       return ClassifyExprValueKind(Lang, E, E->getValueKind());
     assert(cast<InitListExpr>(E)->getNumInits() == 1 &&
            "Only 1-element init lists can be glvalues.");
@@ -436,6 +453,11 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::SYCLUniqueStableNameExprClass:
     return Cl::CL_PRValue;
     break;
+
+  case Expr::CXXParenListInitExprClass:
+    if (isa<ArrayType>(E->getType()))
+      return Cl::CL_ArrayTemporary;
+    return Cl::CL_ClassTemporary;
   }
 
   llvm_unreachable("unhandled expression kind in classification");
@@ -451,22 +473,24 @@ static Cl::Kinds ClassifyDecl(ASTContext &Ctx, const Decl *D) {
   // lvalue unless it's a reference type (C++ [temp.param]p6), so we need to
   // special-case this.
 
-  if (isa<CXXMethodDecl>(D) && cast<CXXMethodDecl>(D)->isInstance())
-    return Cl::CL_MemberFunction;
+  if (const auto *M = dyn_cast<CXXMethodDecl>(D)) {
+    if (M->isImplicitObjectMemberFunction())
+      return Cl::CL_MemberFunction;
+    if (M->isStatic())
+      return Cl::CL_LValue;
+    return Cl::CL_PRValue;
+  }
 
   bool islvalue;
   if (const auto *NTTParm = dyn_cast<NonTypeTemplateParmDecl>(D))
     islvalue = NTTParm->getType()->isReferenceType() ||
                NTTParm->getType()->isRecordType();
   else
-    islvalue = isa<VarDecl>(D) || isa<FieldDecl>(D) ||
-               isa<IndirectFieldDecl>(D) ||
-               isa<BindingDecl>(D) ||
-               isa<MSGuidDecl>(D) ||
-               isa<TemplateParamObjectDecl>(D) ||
-               (Ctx.getLangOpts().CPlusPlus &&
-                (isa<FunctionDecl>(D) || isa<MSPropertyDecl>(D) ||
-                 isa<FunctionTemplateDecl>(D)));
+    islvalue =
+        isa<VarDecl, FieldDecl, IndirectFieldDecl, BindingDecl, MSGuidDecl,
+            UnnamedGlobalConstantDecl, TemplateParamObjectDecl>(D) ||
+        (Ctx.getLangOpts().CPlusPlus &&
+         (isa<FunctionDecl, MSPropertyDecl, FunctionTemplateDecl>(D)));
 
   return islvalue ? Cl::CL_LValue : Cl::CL_PRValue;
 }
@@ -540,8 +564,13 @@ static Cl::Kinds ClassifyMemberExpr(ASTContext &Ctx, const MemberExpr *E) {
   //      -- If it refers to a static member function [...], then E1.E2 is an
   //         lvalue; [...]
   //      -- Otherwise [...] E1.E2 is a prvalue.
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(Member))
-    return Method->isStatic() ? Cl::CL_LValue : Cl::CL_MemberFunction;
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(Member)) {
+    if (Method->isStatic())
+      return Cl::CL_LValue;
+    if (Method->isImplicitObjectMemberFunction())
+      return Cl::CL_MemberFunction;
+    return Cl::CL_PRValue;
+  }
 
   //   -- If E2 is a member enumerator [...], the expression E1.E2 is a prvalue.
   // So is everything else we haven't handled yet.

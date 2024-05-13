@@ -10,9 +10,7 @@ WebAssembly in descending order of completeness. Internally, LLD consists of
 several different linkers. The ELF port is the one that will be described in
 this document. The PE/COFF port is complete, including
 Windows debug info (PDB) support. The WebAssembly port is still a work in
-progress (See :doc:`WebAssembly`).  The Mach-O port is built based on a
-different architecture than the others. For the details about Mach-O, please
-read :doc:`AtomLLD`.
+progress (See :doc:`WebAssembly`).
 
 Features
 --------
@@ -20,23 +18,15 @@ Features
 - LLD is a drop-in replacement for the GNU linkers that accepts the
   same command line arguments and linker scripts as GNU.
 
-  We are currently working closely with the FreeBSD project to make
-  LLD default system linker in future versions of the operating
-  system, so we are serious about addressing compatibility issues. As
-  of February 2017, LLD is able to link the entire FreeBSD/amd64 base
-  system including the kernel. With a few work-in-progress patches it
-  can link approximately 95% of the ports collection on AMD64. For the
-  details, see `FreeBSD quarterly status report
-  <https://www.freebsd.org/news/status/report-2016-10-2016-12.html#Using-LLVM%27s-LLD-Linker-as-FreeBSD%27s-System-Linker>`_.
-
 - LLD is very fast. When you link a large program on a multicore
   machine, you can expect that LLD runs more than twice as fast as the GNU
   gold linker. Your mileage may vary, though.
 
-- It supports various CPUs/ABIs including AArch64, AMDGPU, ARM, Hexagon, MIPS
-  32/64 big/little-endian, PowerPC, PowerPC64, RISC-V, SPARC V9, x86-32 and
-  x86-64. Among these, AArch64, ARM (>= v6), PowerPC, PowerPC64, x86-32 and
-  x86-64 have production quality. MIPS seems decent too.
+- It supports various CPUs/ABIs including AArch64, AMDGPU, ARM, Hexagon,
+  LoongArch, MIPS 32/64 big/little-endian, PowerPC, PowerPC64, RISC-V,
+  SPARC V9, x86-32 and x86-64. Among these, AArch64, ARM (>= v4), LoongArch,
+  PowerPC, PowerPC64, RISC-V, x86-32 and x86-64 have production quality.
+  MIPS seems decent too.
 
 - It is always a cross-linker, meaning that it always supports all the
   above targets however it was built. In fact, we don't provide a
@@ -47,7 +37,7 @@ Features
   external linkers. All you have to do is to construct object files
   and command line arguments just like you would do to invoke an
   external linker and then call the linker's main function,
-  ``lld::elf::link``, from your code.
+  ``lld::lldMain``, from your code.
 
 - It is small. We are using LLVM libObject library to read from object
   files, so it is not a completely fair comparison, but as of February
@@ -170,12 +160,14 @@ document soon.
    :maxdepth: 1
 
    NewLLD
-   AtomLLD
    WebAssembly
    windows_support
    missingkeyfunction
    error_handling_script
    Partitions
    ReleaseNotes
+   ELF/large_sections
    ELF/linker_script
+   ELF/start-stop-gc
    ELF/warn_backrefs
+   MachO/index

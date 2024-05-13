@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -33,17 +34,23 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/SampleProfileInference.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
 
 namespace llvm {
 using namespace sampleprof;
 using namespace sampleprofutil;
 using ProfileCount = Function::ProfileCount;
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 #define DEBUG_TYPE "sample-profile-impl"
 
@@ -56,43 +63,126 @@ template <> struct IRTraits<BasicBlock> {
   using FunctionT = Function;
   using BlockFrequencyInfoT = BlockFrequencyInfo;
   using LoopT = Loop;
-  using LoopInfoT = LoopInfo;
+  using LoopInfoPtrT = std::unique_ptr<LoopInfo>;
+  using DominatorTreePtrT = std::unique_ptr<DominatorTree>;
+  using PostDominatorTreeT = PostDominatorTree;
+  using PostDominatorTreePtrT = std::unique_ptr<PostDominatorTree>;
   using OptRemarkEmitterT = OptimizationRemarkEmitter;
   using OptRemarkAnalysisT = OptimizationRemarkAnalysis;
-  using DominatorTreeT = DominatorTree;
-  using PostDominatorTreeT = PostDominatorTree;
+  using PredRangeT = pred_range;
+  using SuccRangeT = succ_range;
   static Function &getFunction(Function &F) { return F; }
   static const BasicBlock *getEntryBB(const Function *F) {
     return &F->getEntryBlock();
   }
+  static pred_range getPredecessors(BasicBlock *BB) { return predecessors(BB); }
+  static succ_range getSuccessors(BasicBlock *BB) { return successors(BB); }
 };
 
 } // end namespace afdo_detail
 
-extern cl::opt<unsigned> SampleProfileMaxPropagateIterations;
-extern cl::opt<unsigned> SampleProfileRecordCoverage;
-extern cl::opt<unsigned> SampleProfileSampleCoverage;
-extern cl::opt<bool> NoWarnSampleUnused;
+// This class serves sample counts correlation for SampleProfileLoader by
+// analyzing pseudo probes and their function descriptors injected by
+// SampleProfileProber.
+class PseudoProbeManager {
+  DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
 
-template <typename BT> class SampleProfileLoaderBaseImpl {
 public:
-  SampleProfileLoaderBaseImpl(std::string Name) : Filename(Name) {}
+  PseudoProbeManager(const Module &M) {
+    if (NamedMDNode *FuncInfo =
+            M.getNamedMetadata(PseudoProbeDescMetadataName)) {
+      for (const auto *Operand : FuncInfo->operands()) {
+        const auto *MD = cast<MDNode>(Operand);
+        auto GUID = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0))
+                        ->getZExtValue();
+        auto Hash = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))
+                        ->getZExtValue();
+        GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
+      }
+    }
+  }
+
+  const PseudoProbeDescriptor *getDesc(uint64_t GUID) const {
+    auto I = GUIDToProbeDescMap.find(GUID);
+    return I == GUIDToProbeDescMap.end() ? nullptr : &I->second;
+  }
+
+  const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
+    return getDesc(Function::getGUID(FProfileName));
+  }
+
+  const PseudoProbeDescriptor *getDesc(const Function &F) const {
+    return getDesc(Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
+  }
+
+  bool profileIsHashMismatched(const PseudoProbeDescriptor &FuncDesc,
+                               const FunctionSamples &Samples) const {
+    return FuncDesc.getFunctionHash() != Samples.getFunctionHash();
+  }
+
+  bool moduleIsProbed(const Module &M) const {
+    return M.getNamedMetadata(PseudoProbeDescMetadataName);
+  }
+
+  bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
+    const auto *Desc = getDesc(F);
+    bool IsAvailableExternallyLinkage =
+        GlobalValue::isAvailableExternallyLinkage(F.getLinkage());
+    // Always check the function attribute to determine checksum mismatch for
+    // `available_externally` functions even if their desc are available. This
+    // is because the desc is computed based on the original internal function
+    // and it's substituted by the `available_externally` function during link
+    // time. However, when unstable IR or ODR violation issue occurs, the
+    // definitions of the same function across different translation units could
+    // be different and result in different checksums. So we should use the
+    // state from the new (available_externally) function, which is saved in its
+    // attribute.
+    // TODO: If the function's profile only exists as nested inlinee profile in
+    // a different module, we don't have the attr mismatch state(unknown), we
+    // need to fix it later.
+    if (IsAvailableExternallyLinkage || !Desc)
+      return !F.hasFnAttribute("profile-checksum-mismatch");
+
+    return Desc && !profileIsHashMismatched(*Desc, Samples);
+  }
+};
+
+
+
+extern cl::opt<bool> SampleProfileUseProfi;
+
+static inline bool skipProfileForFunction(const Function &F) {
+  return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
+}
+
+template <typename FT> class SampleProfileLoaderBaseImpl {
+public:
+  SampleProfileLoaderBaseImpl(std::string Name, std::string RemapName,
+                              IntrusiveRefCntPtr<vfs::FileSystem> FS)
+      : Filename(Name), RemappingFilename(RemapName), FS(std::move(FS)) {}
   void dump() { Reader->dump(); }
 
+  using NodeRef = typename GraphTraits<FT *>::NodeRef;
+  using BT = std::remove_pointer_t<NodeRef>;
   using InstructionT = typename afdo_detail::IRTraits<BT>::InstructionT;
   using BasicBlockT = typename afdo_detail::IRTraits<BT>::BasicBlockT;
   using BlockFrequencyInfoT =
       typename afdo_detail::IRTraits<BT>::BlockFrequencyInfoT;
   using FunctionT = typename afdo_detail::IRTraits<BT>::FunctionT;
   using LoopT = typename afdo_detail::IRTraits<BT>::LoopT;
-  using LoopInfoT = typename afdo_detail::IRTraits<BT>::LoopInfoT;
+  using LoopInfoPtrT = typename afdo_detail::IRTraits<BT>::LoopInfoPtrT;
+  using DominatorTreePtrT =
+      typename afdo_detail::IRTraits<BT>::DominatorTreePtrT;
+  using PostDominatorTreePtrT =
+      typename afdo_detail::IRTraits<BT>::PostDominatorTreePtrT;
+  using PostDominatorTreeT =
+      typename afdo_detail::IRTraits<BT>::PostDominatorTreeT;
   using OptRemarkEmitterT =
       typename afdo_detail::IRTraits<BT>::OptRemarkEmitterT;
   using OptRemarkAnalysisT =
       typename afdo_detail::IRTraits<BT>::OptRemarkAnalysisT;
-  using DominatorTreeT = typename afdo_detail::IRTraits<BT>::DominatorTreeT;
-  using PostDominatorTreeT =
-      typename afdo_detail::IRTraits<BT>::PostDominatorTreeT;
+  using PredRangeT = typename afdo_detail::IRTraits<BT>::PredRangeT;
+  using SuccRangeT = typename afdo_detail::IRTraits<BT>::SuccRangeT;
 
   using BlockWeightMap = DenseMap<const BasicBlockT *, uint64_t>;
   using EquivalenceClassMap =
@@ -112,10 +202,17 @@ protected:
   const BasicBlockT *getEntryBB(const FunctionT *F) {
     return afdo_detail::IRTraits<BT>::getEntryBB(F);
   }
+  PredRangeT getPredecessors(BasicBlockT *BB) {
+    return afdo_detail::IRTraits<BT>::getPredecessors(BB);
+  }
+  SuccRangeT getSuccessors(BasicBlockT *BB) {
+    return afdo_detail::IRTraits<BT>::getSuccessors(BB);
+  }
 
   unsigned getFunctionLoc(FunctionT &Func);
   virtual ErrorOr<uint64_t> getInstWeight(const InstructionT &Inst);
   ErrorOr<uint64_t> getInstWeightImpl(const InstructionT &Inst);
+  virtual ErrorOr<uint64_t> getProbeWeight(const InstructionT &Inst);
   ErrorOr<uint64_t> getBlockWeight(const BasicBlockT *BB);
   mutable DenseMap<const DILocation *, const FunctionSamples *>
       DILocation2SampleMap;
@@ -129,16 +226,23 @@ protected:
   void findEquivalencesFor(BasicBlockT *BB1,
                            ArrayRef<BasicBlockT *> Descendants,
                            PostDominatorTreeT *DomTree);
-
   void propagateWeights(FunctionT &F);
+  void applyProfi(FunctionT &F, BlockEdgeMap &Successors,
+                  BlockWeightMap &SampleBlockWeights,
+                  BlockWeightMap &BlockWeights, EdgeWeightMap &EdgeWeights);
   uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges, Edge *UnknownEdge);
   void buildEdges(FunctionT &F);
   bool propagateThroughEdges(FunctionT &F, bool UpdateBlockCount);
-  void clearFunctionData();
+  void clearFunctionData(bool ResetDT = true);
   void computeDominanceAndLoopInfo(FunctionT &F);
   bool
   computeAndPropagateWeights(FunctionT &F,
                              const DenseSet<GlobalValue::GUID> &InlinedGUIDs);
+  void initWeightPropagation(FunctionT &F,
+                             const DenseSet<GlobalValue::GUID> &InlinedGUIDs);
+  void
+  finalizeWeightPropagation(FunctionT &F,
+                            const DenseSet<GlobalValue::GUID> &InlinedGUIDs);
   void emitCoverageRemarks(FunctionT &F);
 
   /// Map basic blocks to their computed weights.
@@ -168,9 +272,9 @@ protected:
   EquivalenceClassMap EquivalenceClass;
 
   /// Dominance, post-dominance and loop information.
-  std::unique_ptr<DominatorTreeT> DT;
-  std::unique_ptr<PostDominatorTreeT> PDT;
-  std::unique_ptr<LoopInfoT> LI;
+  DominatorTreePtrT DT;
+  PostDominatorTreePtrT PDT;
+  LoopInfoPtrT LI;
 
   /// Predecessors for each basic block in the CFG.
   BlockEdgeMap Predecessors;
@@ -184,11 +288,25 @@ protected:
   /// Profile reader object.
   std::unique_ptr<SampleProfileReader> Reader;
 
+  /// Synthetic samples created by duplicating the samples of inlined functions
+  /// from the original profile as if they were top level sample profiles.
+  /// Use std::map because insertion may happen while its content is referenced.
+  std::map<SampleContext, FunctionSamples> OutlineFunctionSamples;
+
+  // A pseudo probe helper to correlate the imported sample counts.
+  std::unique_ptr<PseudoProbeManager> ProbeManager;
+
   /// Samples collected for the body of this function.
   FunctionSamples *Samples = nullptr;
 
   /// Name of the profile file to load.
   std::string Filename;
+
+  /// Name of the profile remapping file to load.
+  std::string RemappingFilename;
+
+  /// VirtualFileSystem to load profile files from.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 
   /// Profile Summary Info computed from sample profile.
   ProfileSummaryInfo *PSI = nullptr;
@@ -199,15 +317,17 @@ protected:
 
 /// Clear all the per-function data used to load samples and propagate weights.
 template <typename BT>
-void SampleProfileLoaderBaseImpl<BT>::clearFunctionData() {
+void SampleProfileLoaderBaseImpl<BT>::clearFunctionData(bool ResetDT) {
   BlockWeights.clear();
   EdgeWeights.clear();
   VisitedBlocks.clear();
   VisitedEdges.clear();
   EquivalenceClass.clear();
-  DT = nullptr;
-  PDT = nullptr;
-  LI = nullptr;
+  if (ResetDT) {
+    DT = nullptr;
+    PDT = nullptr;
+    LI = nullptr;
+  }
   Predecessors.clear();
   Successors.clear();
   CoverageTracker.clear();
@@ -263,6 +383,8 @@ void SampleProfileLoaderBaseImpl<BT>::printBlockWeight(
 template <typename BT>
 ErrorOr<uint64_t>
 SampleProfileLoaderBaseImpl<BT>::getInstWeight(const InstructionT &Inst) {
+  if (FunctionSamples::ProfileIsProbeBased)
+    return getProbeWeight(Inst);
   return getInstWeightImpl(Inst);
 }
 
@@ -279,7 +401,12 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
 
   const DILocation *DIL = DLoc;
   uint32_t LineOffset = FunctionSamples::getOffset(DIL);
-  uint32_t Discriminator = DIL->getBaseDiscriminator();
+  uint32_t Discriminator;
+  if (EnableFSDiscriminator)
+    Discriminator = DIL->getDiscriminator();
+  else
+    Discriminator = DIL->getBaseDiscriminator();
+
   ErrorOr<uint64_t> R = FS->findSamplesAt(LineOffset, Discriminator);
   if (R) {
     bool FirstMark =
@@ -298,11 +425,68 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
         return Remark;
       });
     }
-    LLVM_DEBUG(dbgs() << "    " << DLoc.getLine() << "."
-                      << DIL->getBaseDiscriminator() << ":" << Inst
-                      << " (line offset: " << LineOffset << "."
-                      << DIL->getBaseDiscriminator() << " - weight: " << R.get()
-                      << ")\n");
+    LLVM_DEBUG(dbgs() << "    " << DLoc.getLine() << "." << Discriminator << ":"
+                      << Inst << " (line offset: " << LineOffset << "."
+                      << Discriminator << " - weight: " << R.get() << ")\n");
+  }
+  return R;
+}
+
+// Here use error_code to represent: 1) The dangling probe. 2) Ignore the weight
+// of non-probe instruction. So if all instructions of the BB give error_code,
+// tell the inference algorithm to infer the BB weight.
+template <typename BT>
+ErrorOr<uint64_t>
+SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
+  assert(FunctionSamples::ProfileIsProbeBased &&
+         "Profile is not pseudo probe based");
+  std::optional<PseudoProbe> Probe = extractProbe(Inst);
+  // Ignore the non-probe instruction. If none of the instruction in the BB is
+  // probe, we choose to infer the BB's weight.
+  if (!Probe)
+    return std::error_code();
+
+  const FunctionSamples *FS = findFunctionSamples(Inst);
+  // If none of the instruction has FunctionSample, we choose to return zero
+  // value sample to indicate the BB is cold. This could happen when the
+  // instruction is from inlinee and no profile data is found.
+  // FIXME: This should not be affected by the source drift issue as 1) if the
+  // newly added function is top-level inliner, it won't match the CFG checksum
+  // in the function profile or 2) if it's the inlinee, the inlinee should have
+  // a profile, otherwise it wouldn't be inlined. For non-probe based profile,
+  // we can improve it by adding a switch for profile-sample-block-accurate for
+  // block level counts in the future.
+  if (!FS)
+    return 0;
+
+  auto R = FS->findSamplesAt(Probe->Id, Probe->Discriminator);
+  if (R) {
+    uint64_t Samples = R.get() * Probe->Factor;
+    bool FirstMark = CoverageTracker.markSamplesUsed(FS, Probe->Id, 0, Samples);
+    if (FirstMark) {
+      ORE->emit([&]() {
+        OptRemarkAnalysisT Remark(DEBUG_TYPE, "AppliedSamples", &Inst);
+        Remark << "Applied " << ore::NV("NumSamples", Samples);
+        Remark << " samples from profile (ProbeId=";
+        Remark << ore::NV("ProbeId", Probe->Id);
+        if (Probe->Discriminator) {
+          Remark << ".";
+          Remark << ore::NV("Discriminator", Probe->Discriminator);
+        }
+        Remark << ", Factor=";
+        Remark << ore::NV("Factor", Probe->Factor);
+        Remark << ", OriginalSamples=";
+        Remark << ore::NV("OriginalSamples", R.get());
+        Remark << ")";
+        return Remark;
+      });
+    }
+    LLVM_DEBUG({dbgs() << "    " << Probe->Id;
+      if (Probe->Discriminator)
+        dbgs() << "." << Probe->Discriminator;
+      dbgs() << ":" << Inst << " - weight: " << R.get()
+             << " - factor: " << format("%0.2f", Probe->Factor) << ")\n";});
+    return Samples;
   }
   return R;
 }
@@ -472,7 +656,7 @@ void SampleProfileLoaderBaseImpl<BT>::findEquivalenceClasses(FunctionT &F) {
     // class by making BB2's equivalence class be BB1.
     DominatedBBs.clear();
     DT->getDescendants(BB1, DominatedBBs);
-    findEquivalencesFor(BB1, DominatedBBs, PDT.get());
+    findEquivalencesFor(BB1, DominatedBBs, &*PDT);
 
     LLVM_DEBUG(printBlockEquivalence(dbgs(), BB1));
   }
@@ -689,7 +873,7 @@ void SampleProfileLoaderBaseImpl<BT>::buildEdges(FunctionT &F) {
     SmallPtrSet<BasicBlockT *, 16> Visited;
     if (!Predecessors[B1].empty())
       llvm_unreachable("Found a stale predecessors list in a basic block.");
-    for (BasicBlockT *B2 : predecessors(B1))
+    for (auto *B2 : getPredecessors(B1))
       if (Visited.insert(B2).second)
         Predecessors[B1].push_back(B2);
 
@@ -697,7 +881,7 @@ void SampleProfileLoaderBaseImpl<BT>::buildEdges(FunctionT &F) {
     Visited.clear();
     if (!Successors[B1].empty())
       llvm_unreachable("Found a stale successors list in a basic block.");
-    for (BasicBlockT *B2 : successors(B1))
+    for (auto *B2 : getSuccessors(B1))
       if (Visited.insert(B2).second)
         Successors[B1].push_back(B2);
   }
@@ -722,50 +906,65 @@ void SampleProfileLoaderBaseImpl<BT>::buildEdges(FunctionT &F) {
 ///   known).
 template <typename BT>
 void SampleProfileLoaderBaseImpl<BT>::propagateWeights(FunctionT &F) {
-  bool Changed = true;
-  unsigned I = 0;
-
-  // If BB weight is larger than its corresponding loop's header BB weight,
-  // use the BB weight to replace the loop header BB weight.
-  for (auto &BI : F) {
-    BasicBlockT *BB = &BI;
-    LoopT *L = LI->getLoopFor(BB);
-    if (!L) {
-      continue;
+  // Flow-based profile inference is only usable with BasicBlock instantiation
+  // of SampleProfileLoaderBaseImpl.
+  if (SampleProfileUseProfi) {
+    // Prepare block sample counts for inference.
+    BlockWeightMap SampleBlockWeights;
+    for (const auto &BI : F) {
+      ErrorOr<uint64_t> Weight = getBlockWeight(&BI);
+      if (Weight)
+        SampleBlockWeights[&BI] = Weight.get();
     }
-    BasicBlockT *Header = L->getHeader();
-    if (Header && BlockWeights[BB] > BlockWeights[Header]) {
-      BlockWeights[Header] = BlockWeights[BB];
+    // Fill in BlockWeights and EdgeWeights using an inference algorithm.
+    applyProfi(F, Successors, SampleBlockWeights, BlockWeights, EdgeWeights);
+  } else {
+    bool Changed = true;
+    unsigned I = 0;
+
+    // If BB weight is larger than its corresponding loop's header BB weight,
+    // use the BB weight to replace the loop header BB weight.
+    for (auto &BI : F) {
+      BasicBlockT *BB = &BI;
+      LoopT *L = LI->getLoopFor(BB);
+      if (!L) {
+        continue;
+      }
+      BasicBlockT *Header = L->getHeader();
+      if (Header && BlockWeights[BB] > BlockWeights[Header]) {
+        BlockWeights[Header] = BlockWeights[BB];
+      }
+    }
+
+    // Propagate until we converge or we go past the iteration limit.
+    while (Changed && I++ < SampleProfileMaxPropagateIterations) {
+      Changed = propagateThroughEdges(F, false);
+    }
+
+    // The first propagation propagates BB counts from annotated BBs to unknown
+    // BBs. The 2nd propagation pass resets edges weights, and use all BB
+    // weights to propagate edge weights.
+    VisitedEdges.clear();
+    Changed = true;
+    while (Changed && I++ < SampleProfileMaxPropagateIterations) {
+      Changed = propagateThroughEdges(F, false);
+    }
+
+    // The 3rd propagation pass allows adjust annotated BB weights that are
+    // obviously wrong.
+    Changed = true;
+    while (Changed && I++ < SampleProfileMaxPropagateIterations) {
+      Changed = propagateThroughEdges(F, true);
     }
   }
+}
 
-  // Before propagation starts, build, for each block, a list of
-  // unique predecessors and successors. This is necessary to handle
-  // identical edges in multiway branches. Since we visit all blocks and all
-  // edges of the CFG, it is cleaner to build these lists once at the start
-  // of the pass.
-  buildEdges(F);
-
-  // Propagate until we converge or we go past the iteration limit.
-  while (Changed && I++ < SampleProfileMaxPropagateIterations) {
-    Changed = propagateThroughEdges(F, false);
-  }
-
-  // The first propagation propagates BB counts from annotated BBs to unknown
-  // BBs. The 2nd propagation pass resets edges weights, and use all BB weights
-  // to propagate edge weights.
-  VisitedEdges.clear();
-  Changed = true;
-  while (Changed && I++ < SampleProfileMaxPropagateIterations) {
-    Changed = propagateThroughEdges(F, false);
-  }
-
-  // The 3rd propagation pass allows adjust annotated BB weights that are
-  // obviously wrong.
-  Changed = true;
-  while (Changed && I++ < SampleProfileMaxPropagateIterations) {
-    Changed = propagateThroughEdges(F, true);
-  }
+template <typename FT>
+void SampleProfileLoaderBaseImpl<FT>::applyProfi(
+    FunctionT &F, BlockEdgeMap &Successors, BlockWeightMap &SampleBlockWeights,
+    BlockWeightMap &BlockWeights, EdgeWeightMap &EdgeWeights) {
+  auto Infer = SampleProfileInference<FT>(F, Successors, SampleBlockWeights);
+  Infer.apply(BlockWeights, EdgeWeights);
 }
 
 /// Generate branch weight metadata for all branches in \p F.
@@ -823,26 +1022,65 @@ bool SampleProfileLoaderBaseImpl<BT>::computeAndPropagateWeights(
   Changed |= computeBlockWeights(F);
 
   if (Changed) {
-    // Add an entry count to the function using the samples gathered at the
-    // function entry.
-    // Sets the GUIDs that are inlined in the profiled binary. This is used
-    // for ThinLink to make correct liveness analysis, and also make the IR
-    // match the profiled binary before annotation.
-    getFunction(F).setEntryCount(
-        ProfileCount(Samples->getHeadSamples() + 1, Function::PCT_Real),
-        &InlinedGUIDs);
+    // Initialize propagation.
+    initWeightPropagation(F, InlinedGUIDs);
 
+    // Propagate weights to all edges.
+    propagateWeights(F);
+
+    // Post-process propagated weights.
+    finalizeWeightPropagation(F, InlinedGUIDs);
+  }
+
+  return Changed;
+}
+
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::initWeightPropagation(
+    FunctionT &F, const DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
+  // Add an entry count to the function using the samples gathered at the
+  // function entry.
+  // Sets the GUIDs that are inlined in the profiled binary. This is used
+  // for ThinLink to make correct liveness analysis, and also make the IR
+  // match the profiled binary before annotation.
+  getFunction(F).setEntryCount(
+      ProfileCount(Samples->getHeadSamples() + 1, Function::PCT_Real),
+      &InlinedGUIDs);
+
+  if (!SampleProfileUseProfi) {
     // Compute dominance and loop info needed for propagation.
     computeDominanceAndLoopInfo(F);
 
     // Find equivalence classes.
     findEquivalenceClasses(F);
-
-    // Propagate weights to all edges.
-    propagateWeights(F);
   }
 
-  return Changed;
+  // Before propagation starts, build, for each block, a list of
+  // unique predecessors and successors. This is necessary to handle
+  // identical edges in multiway branches. Since we visit all blocks and all
+  // edges of the CFG, it is cleaner to build these lists once at the start
+  // of the pass.
+  buildEdges(F);
+}
+
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::finalizeWeightPropagation(
+    FunctionT &F, const DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
+  // If we utilize a flow-based count inference, then we trust the computed
+  // counts and set the entry count as computed by the algorithm. This is
+  // primarily done to sync the counts produced by profi and BFI inference,
+  // which uses the entry count for mass propagation.
+  // If profi produces a zero-value for the entry count, we fallback to
+  // Samples->getHeadSamples() + 1 to avoid functions with zero count.
+  if (SampleProfileUseProfi) {
+    const BasicBlockT *EntryBB = getEntryBB(&F);
+    ErrorOr<uint64_t> EntryWeight = getBlockWeight(EntryBB);
+    if (BlockWeights[EntryBB] > 0) {
+      getFunction(F).setEntryCount(
+          ProfileCount(BlockWeights[EntryBB], Function::PCT_Real),
+          &InlinedGUIDs);
+    }
+  }
 }
 
 template <typename BT>
@@ -903,18 +1141,6 @@ unsigned SampleProfileLoaderBaseImpl<BT>::getFunctionLoc(FunctionT &F) {
           ": Function profile not used",
       DS_Warning));
   return 0;
-}
-
-template <typename BT>
-void SampleProfileLoaderBaseImpl<BT>::computeDominanceAndLoopInfo(
-    FunctionT &F) {
-  DT.reset(new DominatorTreeT);
-  DT->recalculate(F);
-
-  PDT.reset(new PostDominatorTree(F));
-
-  LI.reset(new LoopInfoT);
-  LI->analyze(*DT);
 }
 
 #undef DEBUG_TYPE

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zfh < %s 2>&1 | \
+# RUN: not llvm-mc -triple riscv32 -mattr=+zfh < %s 2>&1 | \
 # RUN:   FileCheck %s
 
 # Out of range immediates

@@ -2,7 +2,6 @@
 
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wno-objc-root-class %s
 // REQUIRES: LP64
-
 @class NSObject;
 
 NONNULL_ATTR
@@ -23,7 +22,7 @@ __attribute__((nonnull(1,3)));
 extern void func4 (void (^block1)(), void (^block2)()) __attribute__((nonnull(1)))
 __attribute__((nonnull(2)));
 
-void func6();
+void func6(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition}}
 void func7();
 
 void
@@ -42,15 +41,12 @@ foo (int i1, int i2, int i3, void (^cp1)(), void (^cp2)(), void (^cp3)())
   func4(0, cp1); // expected-warning {{null passed to a callee that requires a non-null argument}}
   func4(cp1, 0); // expected-warning {{null passed to a callee that requires a non-null argument}}
   
-  // Shouldn't these emit warnings?  Clang doesn't, and neither does GCC.  It
-  // seems that the checking should handle Objective-C pointers.
-  func6((NSObject*) 0); // no-warning
-  func7((NSObject*) 0); // no-warning
+  func6((NSObject*) 0); // expected-warning {{passing arguments to 'func6' without a prototype is deprecated in all versions of C and is not supported in C23}}
+  func7((NSObject*) 0); // expected-warning {{passing arguments to 'func7' without a prototype is deprecated in all versions of C and is not supported in C23}}
 }
 
 void func5(int) NONNULL_ATTR; //  no warning
 
-// rdar://6857843
 struct dispatch_object_s {
     int x;
 };
@@ -63,12 +59,11 @@ typedef union {
 __attribute__((nonnull))
 void _dispatch_queue_push_list(dispatch_object_t _head); // no warning
 
-void func6(dispatch_object_t _head) {
+void func6(dispatch_object_t _head) { // expected-note {{conflicting prototype is here}}
   _dispatch_queue_push_list(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
   _dispatch_queue_push_list(_head._do);  // no warning
 }
 
-// rdar://9287695
 #define NULL (void*)0
 
 @interface NSObject 

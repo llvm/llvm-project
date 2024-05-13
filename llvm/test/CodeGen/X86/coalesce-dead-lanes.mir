@@ -1,4 +1,4 @@
-# RUN: llc -run-pass simple-register-coalescing -O0 -mtriple x86_64-pc-linux-gnu -o - %s | FileCheck %s
+# RUN: llc -run-pass register-coalescer -O0 -mtriple x86_64-pc-linux-gnu -o - %s | FileCheck %s
 
 ---
 name:            foo
@@ -14,6 +14,6 @@ body:             |
 # This used to hit an assertion:
 #   lib/CodeGen/RegisterCoalescer.cpp:1110: RegisterCoalescer::reMaterializeTrivialDef(...): Assertion `ValNo && "CopyMI input register not live"' failed.
 #
-# CHECK_LABEL: name:            foo
+# CHECK-LABEL: name:            foo
 # CHECK:       bb.0:
 # CHECK-NEXT:    $al = COPY undef %2:gr8

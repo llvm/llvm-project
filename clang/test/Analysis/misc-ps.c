@@ -5,7 +5,7 @@ void clang_analyzer_eval(int);
 int size_rdar9373039 = 1;
 int foo_rdar9373039(const char *);
 
-int rdar93730392() {
+int rdar93730392(void) {
   int x;
   int j = 0;
 
@@ -91,8 +91,8 @@ static int radar10367606(int t) {
 }
 
 /* Caching out on a sink node. */
-extern int fooR10376675();
-extern int* bazR10376675();
+extern int fooR10376675(void);
+extern int* bazR10376675(void);
 extern int nR10376675;
 void barR10376675(int *x) {
   int *pm;
@@ -116,7 +116,7 @@ void RDar10385775(struct rdar10385775* p) {
 
 // Test double loop of array and array literals.  Previously this
 // resulted in a false positive uninitailized value warning.
-void rdar10686586() {
+void rdar10686586(void) {
     int array1[] = { 1, 2, 3, 0 };
     int array2[] = { 1, 2, 3, 0 };
     int *array[] = { array1, array2 };

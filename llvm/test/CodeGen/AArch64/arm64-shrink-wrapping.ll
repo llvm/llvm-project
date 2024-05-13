@@ -12,26 +12,26 @@ define i32 @foo(i32 %a, i32 %b) {
 ; ENABLE-NEXT:    cmp w0, w1
 ; ENABLE-NEXT:    b.ge LBB0_2
 ; ENABLE-NEXT:  ; %bb.1: ; %true
-; ENABLE-NEXT:    sub sp, sp, #32 ; =32
+; ENABLE-NEXT:    sub sp, sp, #32
 ; ENABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; ENABLE-NEXT:    add x29, sp, #16 ; =16
+; ENABLE-NEXT:    add x29, sp, #16
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
 ; ENABLE-NEXT:    stur w0, [x29, #-4]
-; ENABLE-NEXT:    sub x1, x29, #4 ; =4
+; ENABLE-NEXT:    sub x1, x29, #4
 ; ENABLE-NEXT:    mov w0, wzr
 ; ENABLE-NEXT:    bl _doSomething
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; ENABLE-NEXT:    add sp, sp, #32 ; =32
+; ENABLE-NEXT:    add sp, sp, #32
 ; ENABLE-NEXT:  LBB0_2: ; %false
 ; ENABLE-NEXT:    ret
 ;
 ; DISABLE-LABEL: foo:
 ; DISABLE:       ; %bb.0:
-; DISABLE-NEXT:    sub sp, sp, #32 ; =32
+; DISABLE-NEXT:    sub sp, sp, #32
 ; DISABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; DISABLE-NEXT:    add x29, sp, #16 ; =16
+; DISABLE-NEXT:    add x29, sp, #16
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
@@ -39,20 +39,20 @@ define i32 @foo(i32 %a, i32 %b) {
 ; DISABLE-NEXT:    b.ge LBB0_2
 ; DISABLE-NEXT:  ; %bb.1: ; %true
 ; DISABLE-NEXT:    stur w0, [x29, #-4]
-; DISABLE-NEXT:    sub x1, x29, #4 ; =4
+; DISABLE-NEXT:    sub x1, x29, #4
 ; DISABLE-NEXT:    mov w0, wzr
 ; DISABLE-NEXT:    bl _doSomething
 ; DISABLE-NEXT:  LBB0_2: ; %false
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; DISABLE-NEXT:    add sp, sp, #32 ; =32
+; DISABLE-NEXT:    add sp, sp, #32
 ; DISABLE-NEXT:    ret
   %tmp = alloca i32, align 4
   %tmp2 = icmp slt i32 %a, %b
   br i1 %tmp2, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
-  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  store i32 %a, ptr %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, ptr %tmp)
   br label %false
 
 false:
@@ -61,7 +61,7 @@ false:
 }
 
 ; Function Attrs: optsize
-declare i32 @doSomething(i32, i32*)
+declare i32 @doSomething(i32, ptr)
 
 
 ; Check that we do not perform the restore inside the loop whereas the save
@@ -73,18 +73,18 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:  ; %bb.1: ; %for.body.preheader
 ; ENABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; ENABLE-NEXT:    add x29, sp, #16 ; =16
+; ENABLE-NEXT:    add x29, sp, #16
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
 ; ENABLE-NEXT:    .cfi_offset w19, -24
 ; ENABLE-NEXT:    .cfi_offset w20, -32
 ; ENABLE-NEXT:    mov w19, wzr
-; ENABLE-NEXT:    mov w20, #10
+; ENABLE-NEXT:    mov w20, #10 ; =0xa
 ; ENABLE-NEXT:  LBB1_2: ; %for.body
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    bl _something
-; ENABLE-NEXT:    subs w20, w20, #1 ; =1
+; ENABLE-NEXT:    subs w20, w20, #1
 ; ENABLE-NEXT:    add w19, w0, w19
 ; ENABLE-NEXT:    b.ne LBB1_2
 ; ENABLE-NEXT:  ; %bb.3: ; %for.end
@@ -100,7 +100,7 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 ; DISABLE:       ; %bb.0: ; %entry
 ; DISABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; DISABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; DISABLE-NEXT:    add x29, sp, #16 ; =16
+; DISABLE-NEXT:    add x29, sp, #16
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
@@ -109,11 +109,11 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    cbz w0, LBB1_4
 ; DISABLE-NEXT:  ; %bb.1: ; %for.body.preheader
 ; DISABLE-NEXT:    mov w19, wzr
-; DISABLE-NEXT:    mov w20, #10
+; DISABLE-NEXT:    mov w20, #10 ; =0xa
 ; DISABLE-NEXT:  LBB1_2: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    bl _something
-; DISABLE-NEXT:    subs w20, w20, #1 ; =1
+; DISABLE-NEXT:    subs w20, w20, #1
 ; DISABLE-NEXT:    add w19, w0, w19
 ; DISABLE-NEXT:    b.ne LBB1_2
 ; DISABLE-NEXT:  ; %bb.3: ; %for.end
@@ -132,7 +132,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %sum.04 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-  %call = tail call i32 bitcast (i32 (...)* @something to i32 ()*)()
+  %call = tail call i32 @something()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -160,18 +160,18 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
 ; ENABLE:       ; %bb.0: ; %entry
 ; ENABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; ENABLE-NEXT:    add x29, sp, #16 ; =16
+; ENABLE-NEXT:    add x29, sp, #16
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
 ; ENABLE-NEXT:    .cfi_offset w19, -24
 ; ENABLE-NEXT:    .cfi_offset w20, -32
 ; ENABLE-NEXT:    mov w19, wzr
-; ENABLE-NEXT:    mov w20, #10
+; ENABLE-NEXT:    mov w20, #10 ; =0xa
 ; ENABLE-NEXT:  LBB2_1: ; %for.body
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    bl _something
-; ENABLE-NEXT:    subs w20, w20, #1 ; =1
+; ENABLE-NEXT:    subs w20, w20, #1
 ; ENABLE-NEXT:    add w19, w0, w19
 ; ENABLE-NEXT:    b.ne LBB2_1
 ; ENABLE-NEXT:  ; %bb.2: ; %for.end
@@ -184,18 +184,18 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
 ; DISABLE:       ; %bb.0: ; %entry
 ; DISABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; DISABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; DISABLE-NEXT:    add x29, sp, #16 ; =16
+; DISABLE-NEXT:    add x29, sp, #16
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
 ; DISABLE-NEXT:    .cfi_offset w19, -24
 ; DISABLE-NEXT:    .cfi_offset w20, -32
 ; DISABLE-NEXT:    mov w19, wzr
-; DISABLE-NEXT:    mov w20, #10
+; DISABLE-NEXT:    mov w20, #10 ; =0xa
 ; DISABLE-NEXT:  LBB2_1: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    bl _something
-; DISABLE-NEXT:    subs w20, w20, #1 ; =1
+; DISABLE-NEXT:    subs w20, w20, #1
 ; DISABLE-NEXT:    add w19, w0, w19
 ; DISABLE-NEXT:    b.ne LBB2_1
 ; DISABLE-NEXT:  ; %bb.2: ; %for.end
@@ -209,7 +209,7 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %i.04 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %sum.03 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %call = tail call i32 bitcast (i32 (...)* @something to i32 ()*)()
+  %call = tail call i32 @something()
   %add = add nsw i32 %call, %sum.03
   %inc = add nuw nsw i32 %i.04, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -228,18 +228,18 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:  ; %bb.1: ; %for.body.preheader
 ; ENABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; ENABLE-NEXT:    add x29, sp, #16 ; =16
+; ENABLE-NEXT:    add x29, sp, #16
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
 ; ENABLE-NEXT:    .cfi_offset w19, -24
 ; ENABLE-NEXT:    .cfi_offset w20, -32
 ; ENABLE-NEXT:    mov w19, wzr
-; ENABLE-NEXT:    mov w20, #10
+; ENABLE-NEXT:    mov w20, #10 ; =0xa
 ; ENABLE-NEXT:  LBB3_2: ; %for.body
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    bl _something
-; ENABLE-NEXT:    subs w20, w20, #1 ; =1
+; ENABLE-NEXT:    subs w20, w20, #1
 ; ENABLE-NEXT:    add w19, w0, w19
 ; ENABLE-NEXT:    b.ne LBB3_2
 ; ENABLE-NEXT:  ; %bb.3: ; %for.end
@@ -256,7 +256,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 ; DISABLE:       ; %bb.0: ; %entry
 ; DISABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; DISABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; DISABLE-NEXT:    add x29, sp, #16 ; =16
+; DISABLE-NEXT:    add x29, sp, #16
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
@@ -265,11 +265,11 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    cbz w0, LBB3_4
 ; DISABLE-NEXT:  ; %bb.1: ; %for.body.preheader
 ; DISABLE-NEXT:    mov w19, wzr
-; DISABLE-NEXT:    mov w20, #10
+; DISABLE-NEXT:    mov w20, #10 ; =0xa
 ; DISABLE-NEXT:  LBB3_2: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    bl _something
-; DISABLE-NEXT:    subs w20, w20, #1 ; =1
+; DISABLE-NEXT:    subs w20, w20, #1
 ; DISABLE-NEXT:    add w19, w0, w19
 ; DISABLE-NEXT:    b.ne LBB3_2
 ; DISABLE-NEXT:  ; %bb.3: ; %for.end
@@ -289,14 +289,14 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %sum.04 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-  %call = tail call i32 bitcast (i32 (...)* @something to i32 ()*)()
+  %call = tail call i32 @something()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  tail call void bitcast (void (...)* @somethingElse to void ()*)()
+  tail call void @somethingElse()
   %shl = shl i32 %add, 3
   br label %if.end
 
@@ -313,27 +313,39 @@ declare void @somethingElse(...)
 
 ; Check with a more complex case that we do not have restore within the loop and
 ; save outside.
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind uwtable {
 ; ENABLE-LABEL: loopInfoRestoreOutsideLoop:
 ; ENABLE:       ; %bb.0: ; %entry
 ; ENABLE-NEXT:    cbz w0, LBB4_4
 ; ENABLE-NEXT:  ; %bb.1: ; %if.then
 ; ENABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; ENABLE-NEXT:    .cfi_def_cfa_offset 32
 ; ENABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; ENABLE-NEXT:    add x29, sp, #16 ; =16
+; ENABLE-NEXT:    add x29, sp, #16
+; ENABLE-NEXT:    .cfi_def_cfa w29, 16
+; ENABLE-NEXT:    .cfi_offset w30, -8
+; ENABLE-NEXT:    .cfi_offset w29, -16
+; ENABLE-NEXT:    .cfi_offset w19, -24
+; ENABLE-NEXT:    .cfi_offset w20, -32
 ; ENABLE-NEXT:    bl _somethingElse
 ; ENABLE-NEXT:    mov w19, wzr
-; ENABLE-NEXT:    mov w20, #10
+; ENABLE-NEXT:    mov w20, #10 ; =0xa
 ; ENABLE-NEXT:  LBB4_2: ; %for.body
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    bl _something
-; ENABLE-NEXT:    subs w20, w20, #1 ; =1
+; ENABLE-NEXT:    subs w20, w20, #1
 ; ENABLE-NEXT:    add w19, w0, w19
 ; ENABLE-NEXT:    b.ne LBB4_2
 ; ENABLE-NEXT:  ; %bb.3: ; %for.end
 ; ENABLE-NEXT:    lsl w0, w19, #3
+; ENABLE-NEXT:    .cfi_def_cfa wsp, 32
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; ENABLE-NEXT:    .cfi_def_cfa_offset 0
+; ENABLE-NEXT:    .cfi_restore w30
+; ENABLE-NEXT:    .cfi_restore w29
+; ENABLE-NEXT:    .cfi_restore w19
+; ENABLE-NEXT:    .cfi_restore w20
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB4_4: ; %if.else
 ; ENABLE-NEXT:    lsl w0, w1, #1
@@ -342,17 +354,23 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; DISABLE-LABEL: loopInfoRestoreOutsideLoop:
 ; DISABLE:       ; %bb.0: ; %entry
 ; DISABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; DISABLE-NEXT:    .cfi_def_cfa_offset 32
 ; DISABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; DISABLE-NEXT:    add x29, sp, #16 ; =16
+; DISABLE-NEXT:    add x29, sp, #16
+; DISABLE-NEXT:    .cfi_def_cfa w29, 16
+; DISABLE-NEXT:    .cfi_offset w30, -8
+; DISABLE-NEXT:    .cfi_offset w29, -16
+; DISABLE-NEXT:    .cfi_offset w19, -24
+; DISABLE-NEXT:    .cfi_offset w20, -32
 ; DISABLE-NEXT:    cbz w0, LBB4_4
 ; DISABLE-NEXT:  ; %bb.1: ; %if.then
 ; DISABLE-NEXT:    bl _somethingElse
 ; DISABLE-NEXT:    mov w19, wzr
-; DISABLE-NEXT:    mov w20, #10
+; DISABLE-NEXT:    mov w20, #10 ; =0xa
 ; DISABLE-NEXT:  LBB4_2: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    bl _something
-; DISABLE-NEXT:    subs w20, w20, #1 ; =1
+; DISABLE-NEXT:    subs w20, w20, #1
 ; DISABLE-NEXT:    add w19, w0, w19
 ; DISABLE-NEXT:    b.ne LBB4_2
 ; DISABLE-NEXT:  ; %bb.3: ; %for.end
@@ -361,21 +379,27 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; DISABLE-NEXT:  LBB4_4: ; %if.else
 ; DISABLE-NEXT:    lsl w0, w1, #1
 ; DISABLE-NEXT:  LBB4_5: ; %if.end
+; DISABLE-NEXT:    .cfi_def_cfa wsp, 32
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; DISABLE-NEXT:    .cfi_def_cfa_offset 0
+; DISABLE-NEXT:    .cfi_restore w30
+; DISABLE-NEXT:    .cfi_restore w29
+; DISABLE-NEXT:    .cfi_restore w19
+; DISABLE-NEXT:    .cfi_restore w20
 ; DISABLE-NEXT:    ret
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @somethingElse to void ()*)()
+  tail call void @somethingElse()
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %if.then
   %i.05 = phi i32 [ 0, %if.then ], [ %inc, %for.body ]
   %sum.04 = phi i32 [ 0, %if.then ], [ %add, %for.body ]
-  %call = tail call i32 bitcast (i32 (...)* @something to i32 ()*)()
+  %call = tail call i32 @something()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -410,28 +434,30 @@ entry:
 }
 
 ; Check that we handle variadic function correctly.
-define i32 @variadicFunc(i32 %cond, i32 %count, ...) nounwind {
+define i32 @variadicFunc(i32 %cond, i32 %count, ...) nounwind uwtable {
 ; ENABLE-LABEL: variadicFunc:
 ; ENABLE:       ; %bb.0: ; %entry
 ; ENABLE-NEXT:    cbz w0, LBB6_4
 ; ENABLE-NEXT:  ; %bb.1: ; %if.then
-; ENABLE-NEXT:    sub sp, sp, #16 ; =16
-; ENABLE-NEXT:    add x8, sp, #16 ; =16
-; ENABLE-NEXT:    cmp w1, #1 ; =1
+; ENABLE-NEXT:    sub sp, sp, #16
+; ENABLE-NEXT:    .cfi_def_cfa_offset 16
+; ENABLE-NEXT:    add x8, sp, #16
+; ENABLE-NEXT:    cmp w1, #1
 ; ENABLE-NEXT:    str x8, [sp, #8]
 ; ENABLE-NEXT:    mov w0, wzr
 ; ENABLE-NEXT:    b.lt LBB6_3
 ; ENABLE-NEXT:  LBB6_2: ; %for.body
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    ldr x8, [sp, #8]
-; ENABLE-NEXT:    add x9, x8, #8 ; =8
+; ENABLE-NEXT:    add x9, x8, #8
 ; ENABLE-NEXT:    str x9, [sp, #8]
 ; ENABLE-NEXT:    ldr w8, [x8]
-; ENABLE-NEXT:    subs w1, w1, #1 ; =1
+; ENABLE-NEXT:    subs w1, w1, #1
 ; ENABLE-NEXT:    add w0, w0, w8
 ; ENABLE-NEXT:    b.ne LBB6_2
 ; ENABLE-NEXT:  LBB6_3: ; %for.end
-; ENABLE-NEXT:    add sp, sp, #16 ; =16
+; ENABLE-NEXT:    add sp, sp, #16
+; ENABLE-NEXT:    .cfi_def_cfa_offset 0
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB6_4: ; %if.else
 ; ENABLE-NEXT:    lsl w0, w1, #1
@@ -439,45 +465,45 @@ define i32 @variadicFunc(i32 %cond, i32 %count, ...) nounwind {
 ;
 ; DISABLE-LABEL: variadicFunc:
 ; DISABLE:       ; %bb.0: ; %entry
-; DISABLE-NEXT:    sub sp, sp, #16 ; =16
-; DISABLE-NEXT:    cbz w0, LBB6_4
+; DISABLE-NEXT:    sub sp, sp, #16
+; DISABLE-NEXT:    .cfi_def_cfa_offset 16
+; DISABLE-NEXT:    cbz w0, LBB6_3
 ; DISABLE-NEXT:  ; %bb.1: ; %if.then
-; DISABLE-NEXT:    add x8, sp, #16 ; =16
-; DISABLE-NEXT:    cmp w1, #1 ; =1
+; DISABLE-NEXT:    add x8, sp, #16
+; DISABLE-NEXT:    cmp w1, #1
 ; DISABLE-NEXT:    str x8, [sp, #8]
 ; DISABLE-NEXT:    mov w0, wzr
-; DISABLE-NEXT:    b.lt LBB6_3
+; DISABLE-NEXT:    b.lt LBB6_4
 ; DISABLE-NEXT:  LBB6_2: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    ldr x8, [sp, #8]
-; DISABLE-NEXT:    add x9, x8, #8 ; =8
+; DISABLE-NEXT:    add x9, x8, #8
 ; DISABLE-NEXT:    str x9, [sp, #8]
 ; DISABLE-NEXT:    ldr w8, [x8]
-; DISABLE-NEXT:    subs w1, w1, #1 ; =1
+; DISABLE-NEXT:    subs w1, w1, #1
 ; DISABLE-NEXT:    add w0, w0, w8
 ; DISABLE-NEXT:    b.ne LBB6_2
-; DISABLE-NEXT:  LBB6_3: ; %if.end
-; DISABLE-NEXT:    add sp, sp, #16 ; =16
-; DISABLE-NEXT:    ret
-; DISABLE-NEXT:  LBB6_4: ; %if.else
+; DISABLE-NEXT:    b LBB6_4
+; DISABLE-NEXT:  LBB6_3: ; %if.else
 ; DISABLE-NEXT:    lsl w0, w1, #1
-; DISABLE-NEXT:    add sp, sp, #16 ; =16
+; DISABLE-NEXT:  LBB6_4: ; %if.end
+; DISABLE-NEXT:    add sp, sp, #16
+; DISABLE-NEXT:    .cfi_def_cfa_offset 0
 ; DISABLE-NEXT:    ret
 entry:
-  %ap = alloca i8*, align 8
+  %ap = alloca ptr, align 8
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  %ap1 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap1)
+  call void @llvm.va_start(ptr %ap)
   %cmp6 = icmp sgt i32 %count, 0
   br i1 %cmp6, label %for.body, label %for.end
 
 for.body:                                         ; preds = %if.then, %for.body
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %if.then ]
   %sum.07 = phi i32 [ %add, %for.body ], [ 0, %if.then ]
-  %0 = va_arg i8** %ap, i32
+  %0 = va_arg ptr %ap, i32
   %add = add nsw i32 %sum.07, %0
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, %count
@@ -485,7 +511,7 @@ for.body:                                         ; preds = %if.then, %for.body
 
 for.end:                                          ; preds = %for.body, %if.then
   %sum.0.lcssa = phi i32 [ 0, %if.then ], [ %add, %for.body ]
-  call void @llvm.va_end(i8* %ap1)
+  call void @llvm.va_end(ptr %ap)
   br label %if.end
 
 if.else:                                          ; preds = %entry
@@ -497,9 +523,9 @@ if.end:                                           ; preds = %if.else, %for.end
   ret i32 %sum.1
 }
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_end(ptr)
 
 ; Check that we handle inline asm correctly.
 define i32 @inlineAsm(i32 %cond, i32 %N) {
@@ -511,12 +537,12 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    .cfi_def_cfa_offset 16
 ; ENABLE-NEXT:    .cfi_offset w19, -8
 ; ENABLE-NEXT:    .cfi_offset w20, -16
-; ENABLE-NEXT:    mov w8, #10
+; ENABLE-NEXT:    mov w8, #10 ; =0xa
 ; ENABLE-NEXT:  LBB7_2: ; %for.body
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
-; ENABLE-NEXT:    subs w8, w8, #1 ; =1
+; ENABLE-NEXT:    subs w8, w8, #1
 ; ENABLE-NEXT:    ; InlineAsm Start
-; ENABLE-NEXT:    add x19, x19, #1 ; =1
+; ENABLE-NEXT:    add x19, x19, #1
 ; ENABLE-NEXT:    ; InlineAsm End
 ; ENABLE-NEXT:    b.ne LBB7_2
 ; ENABLE-NEXT:  ; %bb.3:
@@ -535,12 +561,12 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    .cfi_offset w20, -16
 ; DISABLE-NEXT:    cbz w0, LBB7_4
 ; DISABLE-NEXT:  ; %bb.1: ; %for.body.preheader
-; DISABLE-NEXT:    mov w8, #10
+; DISABLE-NEXT:    mov w8, #10 ; =0xa
 ; DISABLE-NEXT:  LBB7_2: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
-; DISABLE-NEXT:    subs w8, w8, #1 ; =1
+; DISABLE-NEXT:    subs w8, w8, #1
 ; DISABLE-NEXT:    ; InlineAsm Start
-; DISABLE-NEXT:    add x19, x19, #1 ; =1
+; DISABLE-NEXT:    add x19, x19, #1
 ; DISABLE-NEXT:    ; InlineAsm End
 ; DISABLE-NEXT:    b.ne LBB7_2
 ; DISABLE-NEXT:  ; %bb.3:
@@ -578,9 +604,9 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; ENABLE-NEXT:    cbz w0, LBB8_2
 ; ENABLE-NEXT:  ; %bb.1: ; %if.then
-; ENABLE-NEXT:    sub sp, sp, #64 ; =64
+; ENABLE-NEXT:    sub sp, sp, #64
 ; ENABLE-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
-; ENABLE-NEXT:    add x29, sp, #48 ; =48
+; ENABLE-NEXT:    add x29, sp, #48
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
@@ -591,7 +617,7 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    bl _someVariadicFunc
 ; ENABLE-NEXT:    lsl w0, w0, #3
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
-; ENABLE-NEXT:    add sp, sp, #64 ; =64
+; ENABLE-NEXT:    add sp, sp, #64
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB8_2: ; %if.else
 ; ENABLE-NEXT:    lsl w0, w1, #1
@@ -599,9 +625,9 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) {
 ;
 ; DISABLE-LABEL: callVariadicFunc:
 ; DISABLE:       ; %bb.0: ; %entry
-; DISABLE-NEXT:    sub sp, sp, #64 ; =64
+; DISABLE-NEXT:    sub sp, sp, #64
 ; DISABLE-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
-; DISABLE-NEXT:    add x29, sp, #48 ; =48
+; DISABLE-NEXT:    add x29, sp, #48
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
@@ -619,7 +645,7 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    lsl w0, w1, #1
 ; DISABLE-NEXT:  LBB8_3: ; %if.end
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
-; DISABLE-NEXT:    add sp, sp, #64 ; =64
+; DISABLE-NEXT:    add sp, sp, #64
 ; DISABLE-NEXT:    ret
 entry:
   %tobool = icmp eq i32 %cond, 0
@@ -650,7 +676,7 @@ define i32 @noreturn(i8 signext %bad_thing) {
 ; ENABLE:       ; %bb.0: ; %entry
 ; ENABLE-NEXT:    cbnz w0, LBB9_2
 ; ENABLE-NEXT:  ; %bb.1: ; %if.end
-; ENABLE-NEXT:    mov w0, #42
+; ENABLE-NEXT:    mov w0, #42 ; =0x2a
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB9_2: ; %if.abort
 ; ENABLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -669,7 +695,7 @@ define i32 @noreturn(i8 signext %bad_thing) {
 ; DISABLE-NEXT:    .cfi_offset w29, -16
 ; DISABLE-NEXT:    cbnz w0, LBB9_2
 ; DISABLE-NEXT:  ; %bb.1: ; %if.end
-; DISABLE-NEXT:    mov w0, #42
+; DISABLE-NEXT:    mov w0, #42 ; =0x2a
 ; DISABLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ret
 ; DISABLE-NEXT:  LBB9_2: ; %if.abort
@@ -703,7 +729,7 @@ define void @infiniteloop() {
 ; ENABLE:       ; %bb.0: ; %entry
 ; ENABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; ENABLE-NEXT:    add x29, sp, #16 ; =16
+; ENABLE-NEXT:    add x29, sp, #16
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
@@ -711,7 +737,7 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    .cfi_offset w20, -32
 ; ENABLE-NEXT:    cbnz wzr, LBB10_3
 ; ENABLE-NEXT:  ; %bb.1: ; %if.then
-; ENABLE-NEXT:    sub x19, sp, #16 ; =16
+; ENABLE-NEXT:    sub x19, sp, #16
 ; ENABLE-NEXT:    mov sp, x19
 ; ENABLE-NEXT:    mov w20, wzr
 ; ENABLE-NEXT:  LBB10_2: ; %for.body
@@ -721,7 +747,7 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    str w20, [x19]
 ; ENABLE-NEXT:    b LBB10_2
 ; ENABLE-NEXT:  LBB10_3: ; %if.end
-; ENABLE-NEXT:    sub sp, x29, #16 ; =16
+; ENABLE-NEXT:    sub sp, x29, #16
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ret
@@ -730,7 +756,7 @@ define void @infiniteloop() {
 ; DISABLE:       ; %bb.0: ; %entry
 ; DISABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; DISABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; DISABLE-NEXT:    add x29, sp, #16 ; =16
+; DISABLE-NEXT:    add x29, sp, #16
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
@@ -738,7 +764,7 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    .cfi_offset w20, -32
 ; DISABLE-NEXT:    cbnz wzr, LBB10_3
 ; DISABLE-NEXT:  ; %bb.1: ; %if.then
-; DISABLE-NEXT:    sub x19, sp, #16 ; =16
+; DISABLE-NEXT:    sub x19, sp, #16
 ; DISABLE-NEXT:    mov sp, x19
 ; DISABLE-NEXT:    mov w20, wzr
 ; DISABLE-NEXT:  LBB10_2: ; %for.body
@@ -748,7 +774,7 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    str w20, [x19]
 ; DISABLE-NEXT:    b LBB10_2
 ; DISABLE-NEXT:  LBB10_3: ; %if.end
-; DISABLE-NEXT:    sub sp, x29, #16 ; =16
+; DISABLE-NEXT:    sub sp, x29, #16
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ret
@@ -761,9 +787,9 @@ if.then:
 
 for.body:                                         ; preds = %for.body, %entry
   %sum.03 = phi i32 [ 0, %if.then ], [ %add, %for.body ]
-  %call = tail call i32 bitcast (i32 (...)* @something to i32 ()*)()
+  %call = tail call i32 @something()
   %add = add nsw i32 %call, %sum.03
-  store i32 %add, i32* %ptr
+  store i32 %add, ptr %ptr
   br label %for.body
 
 if.end:
@@ -776,7 +802,7 @@ define void @infiniteloop2() {
 ; ENABLE:       ; %bb.0: ; %entry
 ; ENABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; ENABLE-NEXT:    add x29, sp, #16 ; =16
+; ENABLE-NEXT:    add x29, sp, #16
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
@@ -784,23 +810,23 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    .cfi_offset w20, -32
 ; ENABLE-NEXT:    cbnz wzr, LBB11_3
 ; ENABLE-NEXT:  ; %bb.1: ; %if.then
-; ENABLE-NEXT:    sub x8, sp, #16 ; =16
+; ENABLE-NEXT:    sub x8, sp, #16
 ; ENABLE-NEXT:    mov sp, x8
 ; ENABLE-NEXT:    mov w9, wzr
-; ENABLE-NEXT:    ; InlineAsm Start
-; ENABLE-NEXT:    mov x10, #0
-; ENABLE-NEXT:    ; InlineAsm End
 ; ENABLE-NEXT:  LBB11_2: ; %for.body
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
-; ENABLE-NEXT:    add w9, w10, w9
-; ENABLE-NEXT:    str w9, [x8]
+; ENABLE-NEXT:    ; InlineAsm Start
+; ENABLE-NEXT:    mov x10, #0 ; =0x0
+; ENABLE-NEXT:    ; InlineAsm End
+; ENABLE-NEXT:    add w10, w10, w9
+; ENABLE-NEXT:    mov w9, #1 ; =0x1
+; ENABLE-NEXT:    str w10, [x8]
 ; ENABLE-NEXT:    ; InlineAsm Start
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ; InlineAsm End
-; ENABLE-NEXT:    mov w9, #1
 ; ENABLE-NEXT:    b LBB11_2
 ; ENABLE-NEXT:  LBB11_3: ; %if.end
-; ENABLE-NEXT:    sub sp, x29, #16 ; =16
+; ENABLE-NEXT:    sub sp, x29, #16
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ret
@@ -809,7 +835,7 @@ define void @infiniteloop2() {
 ; DISABLE:       ; %bb.0: ; %entry
 ; DISABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; DISABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; DISABLE-NEXT:    add x29, sp, #16 ; =16
+; DISABLE-NEXT:    add x29, sp, #16
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
@@ -817,23 +843,23 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    .cfi_offset w20, -32
 ; DISABLE-NEXT:    cbnz wzr, LBB11_3
 ; DISABLE-NEXT:  ; %bb.1: ; %if.then
-; DISABLE-NEXT:    sub x8, sp, #16 ; =16
+; DISABLE-NEXT:    sub x8, sp, #16
 ; DISABLE-NEXT:    mov sp, x8
 ; DISABLE-NEXT:    mov w9, wzr
-; DISABLE-NEXT:    ; InlineAsm Start
-; DISABLE-NEXT:    mov x10, #0
-; DISABLE-NEXT:    ; InlineAsm End
 ; DISABLE-NEXT:  LBB11_2: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
-; DISABLE-NEXT:    add w9, w10, w9
-; DISABLE-NEXT:    str w9, [x8]
+; DISABLE-NEXT:    ; InlineAsm Start
+; DISABLE-NEXT:    mov x10, #0 ; =0x0
+; DISABLE-NEXT:    ; InlineAsm End
+; DISABLE-NEXT:    add w10, w10, w9
+; DISABLE-NEXT:    mov w9, #1 ; =0x1
+; DISABLE-NEXT:    str w10, [x8]
 ; DISABLE-NEXT:    ; InlineAsm Start
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    ; InlineAsm End
-; DISABLE-NEXT:    mov w9, #1
 ; DISABLE-NEXT:    b LBB11_2
 ; DISABLE-NEXT:  LBB11_3: ; %if.end
-; DISABLE-NEXT:    sub sp, x29, #16 ; =16
+; DISABLE-NEXT:    sub sp, x29, #16
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ret
@@ -848,7 +874,7 @@ for.body:                                         ; preds = %for.body, %entry
   %sum.03 = phi i32 [ 0, %if.then ], [ %add, %body1 ], [ 1, %body2]
   %call = tail call i32 asm "mov $0, #0", "=r,~{x19}"()
   %add = add nsw i32 %call, %sum.03
-  store i32 %add, i32* %ptr
+  store i32 %add, ptr %ptr
   br i1 undef, label %body1, label %body2
 
 body1:
@@ -919,21 +945,19 @@ body:                                             ; preds = %entry
   br i1 undef, label %loop2a, label %end
 
 loop1:                                            ; preds = %loop2a, %loop2b
-  %var.phi = phi i32* [ %next.phi, %loop2b ], [ %var, %loop2a ]
-  %next.phi = phi i32* [ %next.load, %loop2b ], [ %next.var, %loop2a ]
-  %0 = icmp eq i32* %var, null
-  %next.load = load i32*, i32** undef
+  %var.phi = phi ptr [ %next.phi, %loop2b ], [ %var, %loop2a ]
+  %next.phi = phi ptr [ %next.load, %loop2b ], [ %next.var, %loop2a ]
+  %0 = icmp eq ptr %var, null
+  %next.load = load ptr, ptr undef
   br i1 %0, label %loop2a, label %loop2b
 
 loop2a:                                           ; preds = %loop1, %body, %entry
-  %var = phi i32* [ null, %body ], [ null, %entry ], [ %next.phi, %loop1 ]
-  %next.var = phi i32* [ undef, %body ], [ null, %entry ], [ %next.load, %loop1 ]
+  %var = phi ptr [ null, %body ], [ null, %entry ], [ %next.phi, %loop1 ]
+  %next.var = phi ptr [ undef, %body ], [ null, %entry ], [ %next.load, %loop1 ]
   br label %loop1
 
 loop2b:                                           ; preds = %loop1
-  %gep1 = bitcast i32* %var.phi to i32*
-  %next.ptr = bitcast i32* %gep1 to i32**
-  store i32* %next.phi, i32** %next.ptr
+  store ptr %next.phi, ptr %var.phi
   br label %loop1
 
 end:
@@ -942,47 +966,47 @@ end:
 
 ; Re-aligned stack pointer.  See bug 26642.  Avoid clobbering live
 ; values in the prologue when re-aligning the stack pointer.
-define i32 @stack_realign(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2) {
+define i32 @stack_realign(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2) {
 ; ENABLE-LABEL: stack_realign:
 ; ENABLE:       ; %bb.0:
+; ENABLE-NEXT:    lsl w9, w0, w1
+; ENABLE-NEXT:    lsl w8, w1, w0
+; ENABLE-NEXT:    cmp w0, w1
+; ENABLE-NEXT:    b.ge LBB13_2
+; ENABLE-NEXT:  ; %bb.1: ; %true
 ; ENABLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; ENABLE-NEXT:    mov x29, sp
-; ENABLE-NEXT:    sub x9, sp, #16 ; =16
-; ENABLE-NEXT:    and sp, x9, #0xffffffffffffffe0
+; ENABLE-NEXT:    sub x1, sp, #16
+; ENABLE-NEXT:    and sp, x1, #0xffffffffffffffe0
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
-; ENABLE-NEXT:    lsl w8, w0, w1
-; ENABLE-NEXT:    cmp w0, w1
-; ENABLE-NEXT:    lsl w9, w1, w0
-; ENABLE-NEXT:    b.ge LBB13_2
-; ENABLE-NEXT:  ; %bb.1: ; %true
 ; ENABLE-NEXT:    str w0, [sp]
-; ENABLE-NEXT:  LBB13_2: ; %false
-; ENABLE-NEXT:    str w8, [x2]
-; ENABLE-NEXT:    str w9, [x3]
 ; ENABLE-NEXT:    mov sp, x29
 ; ENABLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; ENABLE-NEXT:  LBB13_2: ; %false
+; ENABLE-NEXT:    str w9, [x2]
+; ENABLE-NEXT:    str w8, [x3]
 ; ENABLE-NEXT:    ret
 ;
 ; DISABLE-LABEL: stack_realign:
 ; DISABLE:       ; %bb.0:
 ; DISABLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; DISABLE-NEXT:    mov x29, sp
-; DISABLE-NEXT:    sub x9, sp, #16 ; =16
+; DISABLE-NEXT:    sub x9, sp, #16
 ; DISABLE-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
-; DISABLE-NEXT:    lsl w8, w0, w1
+; DISABLE-NEXT:    lsl w9, w0, w1
+; DISABLE-NEXT:    lsl w8, w1, w0
 ; DISABLE-NEXT:    cmp w0, w1
-; DISABLE-NEXT:    lsl w9, w1, w0
 ; DISABLE-NEXT:    b.ge LBB13_2
 ; DISABLE-NEXT:  ; %bb.1: ; %true
 ; DISABLE-NEXT:    str w0, [sp]
 ; DISABLE-NEXT:  LBB13_2: ; %false
-; DISABLE-NEXT:    str w8, [x2]
-; DISABLE-NEXT:    str w9, [x3]
+; DISABLE-NEXT:    str w9, [x2]
+; DISABLE-NEXT:    str w8, [x3]
 ; DISABLE-NEXT:    mov sp, x29
 ; DISABLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ret
@@ -993,14 +1017,14 @@ define i32 @stack_realign(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2) {
   br i1 %tmp2, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
-  %tmp4 = load i32, i32* %tmp
+  store i32 %a, ptr %tmp, align 4
+  %tmp4 = load i32, ptr %tmp
   br label %false
 
 false:
   %tmp.0 = phi i32 [ %tmp4, %true ], [ %a, %0 ]
-  store i32 %shl1, i32* %ptr1
-  store i32 %shl2, i32* %ptr2
+  store i32 %shl1, ptr %ptr1
+  store i32 %shl2, ptr %ptr2
   ret i32 %tmp.0
 }
 
@@ -1009,7 +1033,7 @@ false:
 ; ensuring we have a scratch register to re-align the stack pointer is
 ; too complicated.  Output should be the same for both enabled and
 ; disabled shrink wrapping.
-define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, i32* %ptr4, i32* %ptr5, i32* %ptr6) {
+define void @stack_realign2(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5, ptr %ptr6) {
 ; ENABLE-LABEL: stack_realign2:
 ; ENABLE:       ; %bb.0:
 ; ENABLE-NEXT:    stp x28, x27, [sp, #-96]! ; 16-byte Folded Spill
@@ -1018,8 +1042,8 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; ENABLE-NEXT:    stp x22, x21, [sp, #48] ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x20, x19, [sp, #64] ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x29, x30, [sp, #80] ; 16-byte Folded Spill
-; ENABLE-NEXT:    add x29, sp, #80 ; =80
-; ENABLE-NEXT:    sub x9, sp, #32 ; =32
+; ENABLE-NEXT:    add x29, sp, #80
+; ENABLE-NEXT:    sub x9, sp, #32
 ; ENABLE-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
@@ -1034,16 +1058,16 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; ENABLE-NEXT:    .cfi_offset w26, -80
 ; ENABLE-NEXT:    .cfi_offset w27, -88
 ; ENABLE-NEXT:    .cfi_offset w28, -96
-; ENABLE-NEXT:    lsl w8, w0, w1
-; ENABLE-NEXT:    lsl w9, w1, w0
-; ENABLE-NEXT:    lsr w10, w0, w1
-; ENABLE-NEXT:    lsr w12, w1, w0
+; ENABLE-NEXT:    lsl w8, w1, w0
+; ENABLE-NEXT:    lsr w9, w0, w1
+; ENABLE-NEXT:    lsl w14, w0, w1
+; ENABLE-NEXT:    lsr w11, w1, w0
 ; ENABLE-NEXT:    add w15, w1, w0
+; ENABLE-NEXT:    sub w10, w8, w9
 ; ENABLE-NEXT:    subs w17, w1, w0
-; ENABLE-NEXT:    sub w11, w9, w10
-; ENABLE-NEXT:    add w16, w8, w9
-; ENABLE-NEXT:    add w13, w10, w12
-; ENABLE-NEXT:    add w14, w12, w15
+; ENABLE-NEXT:    add w16, w14, w8
+; ENABLE-NEXT:    add w12, w9, w11
+; ENABLE-NEXT:    add w13, w11, w15
 ; ENABLE-NEXT:    b.le LBB14_2
 ; ENABLE-NEXT:  ; %bb.1: ; %true
 ; ENABLE-NEXT:    str w0, [sp]
@@ -1051,16 +1075,16 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ; InlineAsm End
 ; ENABLE-NEXT:  LBB14_2: ; %false
-; ENABLE-NEXT:    str w8, [x2]
-; ENABLE-NEXT:    str w9, [x3]
-; ENABLE-NEXT:    str w10, [x4]
-; ENABLE-NEXT:    str w12, [x5]
+; ENABLE-NEXT:    str w14, [x2]
+; ENABLE-NEXT:    str w8, [x3]
+; ENABLE-NEXT:    str w9, [x4]
+; ENABLE-NEXT:    str w11, [x5]
 ; ENABLE-NEXT:    str w15, [x6]
 ; ENABLE-NEXT:    str w17, [x7]
 ; ENABLE-NEXT:    stp w0, w1, [x2, #4]
-; ENABLE-NEXT:    stp w16, w11, [x2, #12]
-; ENABLE-NEXT:    stp w13, w14, [x2, #20]
-; ENABLE-NEXT:    sub sp, x29, #80 ; =80
+; ENABLE-NEXT:    stp w16, w10, [x2, #12]
+; ENABLE-NEXT:    stp w12, w13, [x2, #20]
+; ENABLE-NEXT:    sub sp, x29, #80
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ldp x20, x19, [sp, #64] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ldp x22, x21, [sp, #48] ; 16-byte Folded Reload
@@ -1077,8 +1101,8 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; DISABLE-NEXT:    stp x22, x21, [sp, #48] ; 16-byte Folded Spill
 ; DISABLE-NEXT:    stp x20, x19, [sp, #64] ; 16-byte Folded Spill
 ; DISABLE-NEXT:    stp x29, x30, [sp, #80] ; 16-byte Folded Spill
-; DISABLE-NEXT:    add x29, sp, #80 ; =80
-; DISABLE-NEXT:    sub x9, sp, #32 ; =32
+; DISABLE-NEXT:    add x29, sp, #80
+; DISABLE-NEXT:    sub x9, sp, #32
 ; DISABLE-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
@@ -1093,16 +1117,16 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; DISABLE-NEXT:    .cfi_offset w26, -80
 ; DISABLE-NEXT:    .cfi_offset w27, -88
 ; DISABLE-NEXT:    .cfi_offset w28, -96
-; DISABLE-NEXT:    lsl w8, w0, w1
-; DISABLE-NEXT:    lsl w9, w1, w0
-; DISABLE-NEXT:    lsr w10, w0, w1
-; DISABLE-NEXT:    lsr w12, w1, w0
+; DISABLE-NEXT:    lsl w8, w1, w0
+; DISABLE-NEXT:    lsr w9, w0, w1
+; DISABLE-NEXT:    lsl w14, w0, w1
+; DISABLE-NEXT:    lsr w11, w1, w0
 ; DISABLE-NEXT:    add w15, w1, w0
+; DISABLE-NEXT:    sub w10, w8, w9
 ; DISABLE-NEXT:    subs w17, w1, w0
-; DISABLE-NEXT:    sub w11, w9, w10
-; DISABLE-NEXT:    add w16, w8, w9
-; DISABLE-NEXT:    add w13, w10, w12
-; DISABLE-NEXT:    add w14, w12, w15
+; DISABLE-NEXT:    add w16, w14, w8
+; DISABLE-NEXT:    add w12, w9, w11
+; DISABLE-NEXT:    add w13, w11, w15
 ; DISABLE-NEXT:    b.le LBB14_2
 ; DISABLE-NEXT:  ; %bb.1: ; %true
 ; DISABLE-NEXT:    str w0, [sp]
@@ -1110,16 +1134,16 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    ; InlineAsm End
 ; DISABLE-NEXT:  LBB14_2: ; %false
-; DISABLE-NEXT:    str w8, [x2]
-; DISABLE-NEXT:    str w9, [x3]
-; DISABLE-NEXT:    str w10, [x4]
-; DISABLE-NEXT:    str w12, [x5]
+; DISABLE-NEXT:    str w14, [x2]
+; DISABLE-NEXT:    str w8, [x3]
+; DISABLE-NEXT:    str w9, [x4]
+; DISABLE-NEXT:    str w11, [x5]
 ; DISABLE-NEXT:    str w15, [x6]
 ; DISABLE-NEXT:    str w17, [x7]
 ; DISABLE-NEXT:    stp w0, w1, [x2, #4]
-; DISABLE-NEXT:    stp w16, w11, [x2, #12]
-; DISABLE-NEXT:    stp w13, w14, [x2, #20]
-; DISABLE-NEXT:    sub sp, x29, #80 ; =80
+; DISABLE-NEXT:    stp w16, w10, [x2, #12]
+; DISABLE-NEXT:    stp w12, w13, [x2, #20]
+; DISABLE-NEXT:    sub sp, x29, #80
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ldp x20, x19, [sp, #64] ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ldp x22, x21, [sp, #48] ; 16-byte Folded Reload
@@ -1142,29 +1166,29 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
   br i1 %cmp, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
+  store i32 %a, ptr %tmp, align 4
   call void asm sideeffect "nop", "~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28}"() nounwind
   br label %false
 
 false:
-  store i32 %tmp1, i32* %ptr1, align 4
-  store i32 %tmp2, i32* %ptr2, align 4
-  store i32 %tmp3, i32* %ptr3, align 4
-  store i32 %tmp4, i32* %ptr4, align 4
-  store i32 %tmp5, i32* %ptr5, align 4
-  store i32 %tmp6, i32* %ptr6, align 4
-  %idx1 = getelementptr inbounds i32, i32* %ptr1, i64 1
-  store i32 %a, i32* %idx1, align 4
-  %idx2 = getelementptr inbounds i32, i32* %ptr1, i64 2
-  store i32 %b, i32* %idx2, align 4
-  %idx3 = getelementptr inbounds i32, i32* %ptr1, i64 3
-  store i32 %tmp7, i32* %idx3, align 4
-  %idx4 = getelementptr inbounds i32, i32* %ptr1, i64 4
-  store i32 %tmp8, i32* %idx4, align 4
-  %idx5 = getelementptr inbounds i32, i32* %ptr1, i64 5
-  store i32 %tmp9, i32* %idx5, align 4
-  %idx6 = getelementptr inbounds i32, i32* %ptr1, i64 6
-  store i32 %tmp10, i32* %idx6, align 4
+  store i32 %tmp1, ptr %ptr1, align 4
+  store i32 %tmp2, ptr %ptr2, align 4
+  store i32 %tmp3, ptr %ptr3, align 4
+  store i32 %tmp4, ptr %ptr4, align 4
+  store i32 %tmp5, ptr %ptr5, align 4
+  store i32 %tmp6, ptr %ptr6, align 4
+  %idx1 = getelementptr inbounds i32, ptr %ptr1, i64 1
+  store i32 %a, ptr %idx1, align 4
+  %idx2 = getelementptr inbounds i32, ptr %ptr1, i64 2
+  store i32 %b, ptr %idx2, align 4
+  %idx3 = getelementptr inbounds i32, ptr %ptr1, i64 3
+  store i32 %tmp7, ptr %idx3, align 4
+  %idx4 = getelementptr inbounds i32, ptr %ptr1, i64 4
+  store i32 %tmp8, ptr %idx4, align 4
+  %idx5 = getelementptr inbounds i32, ptr %ptr1, i64 5
+  store i32 %tmp9, ptr %idx5, align 4
+  %idx6 = getelementptr inbounds i32, ptr %ptr1, i64 6
+  store i32 %tmp10, ptr %idx6, align 4
 
   ret void
 }

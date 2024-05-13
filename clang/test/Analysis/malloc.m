@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -analyzer-store=region -verify -Wno-objc-root-class -fblocks %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -verify -Wno-objc-root-class -fblocks %s
 #include "Inputs/system-header-simulator-objc.h"
 
 @class NSString;
@@ -40,18 +40,18 @@ void rdar10579586(char x);
 }
 @end
 
-void _ArrayCreate() {
+void _ArrayCreate(void) {
   MyArray *array = (MyArray *)malloc(12);
   array = [array init];
   free(array); // no-warning
 }
 
-void testNSDataTruePositiveLeak() {
+void testNSDataTruePositiveLeak(void) {
   char *b = (char *)malloc(12);
   NSData *d = [[NSData alloc] initWithBytes: b length: 12]; // expected-warning {{Potential leak of memory pointed to by 'b'}}
 }
 
-id wrapInNSValue() {
+id wrapInNSValue(void) {
   void *buffer = malloc(4);
   return [NSValue valueWithPointer:buffer]; // no-warning
 }

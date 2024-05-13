@@ -1,7 +1,7 @@
 ; This test checks that the !llvm.loop metadata has been updated after inlining
 ; so that the start and end locations refer to the inlined DILocations.
 
-; RUN: opt -inline -always-inline %s -S 2>&1 | FileCheck %s
+; RUN: opt  -passes='cgscc(inline),always-inline' %s -S 2>&1 | FileCheck %s
 ; CHECK: br i1 %{{.*}}, label %middle.block.i, label %vector.body.i, !dbg !{{[0-9]+}}, !llvm.loop [[VECTOR:![0-9]+]]
 ; CHECK: br i1 %{{.*}}, label %for.cond.cleanup.loopexit.i, label %for.body.i, !dbg !{{[0-9]+}}, !llvm.loop [[SCALAR:![0-9]+]]
 ; CHECK-DAG: [[VECTOR]] = distinct !{[[VECTOR]], [[START:![0-9]+]], [[END:![0-9]+]], [[IS_VECTORIZED:![0-9]+]]}
@@ -31,7 +31,7 @@
 ;   return Bar;
 ; }
 
-@"?Array@@3PEAHEA" = external dso_local local_unnamed_addr global i32*, align 8
+@"?Array@@3PEAHEA" = external dso_local local_unnamed_addr global ptr, align 8
 
 define dso_local i32 @"?foo@@YAHI@Z"(i32 %x) local_unnamed_addr !dbg !8 {
 entry:
@@ -45,7 +45,7 @@ entry:
   br i1 %cmp7, label %for.cond.cleanup, label %for.body.lr.ph, !dbg !13
 
 for.body.lr.ph:                                   ; preds = %entry
-  %0 = load i32*, i32** @"?Array@@3PEAHEA", align 8, !dbg !14, !tbaa !15
+  %0 = load ptr, ptr @"?Array@@3PEAHEA", align 8, !dbg !14, !tbaa !15
   %wide.trip.count = zext i32 %x to i64, !dbg !14
   %min.iters.check = icmp ult i64 %wide.trip.count, 8, !dbg !13
   br i1 %min.iters.check, label %scalar.ph, label %vector.ph, !dbg !13
@@ -70,14 +70,14 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %6 = add i64 %index, 5, !dbg !13
   %7 = add i64 %index, 6, !dbg !13
   %8 = add i64 %index, 7, !dbg !13
-  %9 = getelementptr inbounds i32, i32* %0, i64 %1, !dbg !19
-  %10 = getelementptr inbounds i32, i32* %0, i64 %5, !dbg !19
-  %11 = getelementptr inbounds i32, i32* %9, i32 0, !dbg !19
-  %12 = bitcast i32* %11 to <4 x i32>*, !dbg !19
-  %wide.load = load <4 x i32>, <4 x i32>* %12, align 4, !dbg !19, !tbaa !20
-  %13 = getelementptr inbounds i32, i32* %9, i32 4, !dbg !19
-  %14 = bitcast i32* %13 to <4 x i32>*, !dbg !19
-  %wide.load3 = load <4 x i32>, <4 x i32>* %14, align 4, !dbg !19, !tbaa !20
+  %9 = getelementptr inbounds i32, ptr %0, i64 %1, !dbg !19
+  %10 = getelementptr inbounds i32, ptr %0, i64 %5, !dbg !19
+  %11 = getelementptr inbounds i32, ptr %9, i32 0, !dbg !19
+  %12 = bitcast ptr %11 to ptr, !dbg !19
+  %wide.load = load <4 x i32>, ptr %12, align 4, !dbg !19, !tbaa !20
+  %13 = getelementptr inbounds i32, ptr %9, i32 4, !dbg !19
+  %14 = bitcast ptr %13 to ptr, !dbg !19
+  %wide.load3 = load <4 x i32>, ptr %14, align 4, !dbg !19, !tbaa !20
   %step.add5 = add <4 x i32> %vec.ind4, <i32 4, i32 4, i32 4, i32 4>, !dbg !19
   %15 = mul <4 x i32> %wide.load, %vec.ind4, !dbg !19
   %16 = mul <4 x i32> %wide.load3, %step.add5, !dbg !19
@@ -115,8 +115,8 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 for.body:                                         ; preds = %for.body, %scalar.ph
   %indvars.iv = phi i64 [ %bc.resume.val, %scalar.ph ], [ %indvars.iv.next, %for.body ]
   %Ret.08 = phi i32 [ %bc.merge.rdx, %scalar.ph ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %0, i64 %indvars.iv, !dbg !19
-  %21 = load i32, i32* %arrayidx, align 4, !dbg !19, !tbaa !20
+  %arrayidx = getelementptr inbounds i32, ptr %0, i64 %indvars.iv, !dbg !19
+  %21 = load i32, ptr %arrayidx, align 4, !dbg !19, !tbaa !20
   %22 = trunc i64 %indvars.iv to i32, !dbg !19
   %mul = mul i32 %21, %22, !dbg !19
   %add = add i32 %mul, %Ret.08, !dbg !19

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; void consequences(int *A, int bool_cond, int lhs, int rhs) {
 ;
@@ -216,112 +216,112 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @consequences(i32* %A, i32 %bool_cond, i32 %lhs, i32 %rhs) {
+define void @consequences(ptr %A, i32 %bool_cond, i32 %lhs, i32 %rhs) {
 entry:
   br label %BC
 
 BC:                                               ; preds = %entry
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   %tobool = icmp eq i32 %bool_cond, 0
   br i1 %tobool, label %M_BC, label %S_BC
 
 S_BC:                                             ; preds = %if.then
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %M_BC
 
 M_BC:                                           ; preds = %BC, %S_BC
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %NEG_BC
 
 NEG_BC:                                           ; preds = %if.end
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   %tobool1 = icmp eq i32 %bool_cond, 0
   br i1 %tobool1, label %S_NEG_BC, label %M_NEG_BC
 
 S_NEG_BC:                                         ; preds = %if.then.2
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %M_NEG_BC
 
 M_NEG_BC:                                         ; preds = %NEG_BC, %S_NEG_BC
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %SLT
 
 SLT:                                              ; preds = %if.end.3
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   %cmp = icmp slt i32 %lhs, %rhs
   br i1 %cmp, label %S_SLT, label %M_SLT
 
 S_SLT:                                            ; preds = %if.then.4
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %M_SLT
 
 M_SLT:                                         ; preds = %S_SLT, %SLT
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %SLE
 
 SLE:                                              ; preds = %if.end.5
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   %cmp6 = icmp sgt i32 %lhs, %rhs
   br i1 %cmp6, label %M_SLE, label %S_SLE
 
 S_SLE:                                            ; preds = %if.then.7
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %M_SLE
 
 M_SLE:                                         ; preds = %SLE, %S_SLE
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %SGT
 
 SGT:                                              ; preds = %if.end.8
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   %cmp9 = icmp sgt i32 %lhs, %rhs
   br i1 %cmp9, label %S_SGT, label %M_SGT
 
 S_SGT:                                            ; preds = %if.then.10
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %M_SGT
 
 M_SGT:                                        ; preds = %S_SGT, %SGT
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %SGE
 
 SGE:                                              ; preds = %if.end.11
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   %cmp12 = icmp slt i32 %lhs, %rhs
   br i1 %cmp12, label %M_SGE, label %S_SGE
 
 S_SGE:                                            ; preds = %if.then.13
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %M_SGE
 
 M_SGE:                                        ; preds = %SGE, %S_SGE
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %EQ
 
 EQ:                                               ; preds = %if.end.14
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   %cmp15 = icmp eq i32 %lhs, %rhs
   br i1 %cmp15, label %S_EQ, label %M_EQ
 
 S_EQ:                                             ; preds = %if.then.16
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %M_EQ
 
 M_EQ:                                        ; preds = %S_EQ, %EQ
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %NEQ
 
 NEQ:                                              ; preds = %if.end.17
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   %cmp18 = icmp eq i32 %lhs, %rhs
   br i1 %cmp18, label %M_NEQ, label %S_NEQ
 
 S_NEQ:                                            ; preds = %if.then.19
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %M_NEQ
 
 M_NEQ:                                        ; preds = %NEQ, %S_NEQ
-  store i32 0, i32* %A, align 4
+  store i32 0, ptr %A, align 4
   br label %exit
 
 exit:

@@ -18,10 +18,12 @@ void __kmp_env_initialize(char const *);
 void __kmp_env_print();
 void __kmp_env_print_2();
 void __kmp_display_env_impl(int display_env, int display_env_verbose);
+#if OMPD_SUPPORT
+void __kmp_env_dump();
+#endif
 
 int __kmp_initial_threads_capacity(int req_nproc);
 void __kmp_init_dflt_team_nth();
-int __kmp_convert_to_milliseconds(char const *);
 int __kmp_default_tp_capacity(int, int, int);
 
 #if KMP_MIC

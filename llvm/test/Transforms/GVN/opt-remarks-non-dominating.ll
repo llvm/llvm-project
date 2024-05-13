@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -o /dev/null  -pass-remarks-output=%t -S
+; RUN: opt < %s -passes=gvn -o /dev/null  -pass-remarks-output=%t -S
 ; RUN: cat %t | FileCheck %s
 
 
@@ -24,19 +24,19 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Confirm that the partial redundancy being clobbered by the call to
 ; clobberingFunc() between store and load is identified.
 
-define dso_local void @nonDominating1(i32* %a, i1 %cond, i32 %b) local_unnamed_addr #0 {
+define dso_local void @nonDominating1(ptr %a, i1 %cond, i32 %b) local_unnamed_addr #0 {
 entry:
   br i1 %cond, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 %b, i32* %a, align 4
+  store i32 %b, ptr %a, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
   tail call void @clobberingFunc() #1
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %mul2 = shl nsw i32 %0, 1
-  store i32 %mul2, i32* %a, align 4
+  store i32 %mul2, ptr %a, align 4
   ret void
 }
 
@@ -80,23 +80,23 @@ declare dso_local void @clobberingFunc() local_unnamed_addr #0
 ; %1 is not clobbered by the first call however, and %0 is irrelevant for the
 ; second one since %1 is more recently available.
 
-define dso_local void @nonDominating2(i32* %a, i1 %cond) local_unnamed_addr #0 {
+define dso_local void @nonDominating2(ptr %a, i1 %cond) local_unnamed_addr #0 {
 entry:
   br i1 %cond, label %if.then, label %if.end5
 
 if.then:                                          ; preds = %entry
-  %0 = load i32, i32* %a, align 4, !dbg !14
+  %0 = load i32, ptr %a, align 4, !dbg !14
   %mul = mul nsw i32 %0, 10
   tail call void @clobberingFunc() #1, !dbg !15
-  %1 = load i32, i32* %a, align 4, !dbg !16
+  %1 = load i32, ptr %a, align 4, !dbg !16
   %mul3 = mul nsw i32 %1, 5
   tail call void @clobberingFunc() #1, !dbg !17
   br label %if.end5
 
 if.end5:                                          ; preds = %if.then, %entry
-  %2 = load i32, i32* %a, align 4, !dbg !18
+  %2 = load i32, ptr %a, align 4, !dbg !18
   %mul9 = shl nsw i32 %2, 1
-  store i32 %mul9, i32* %a, align 4
+  store i32 %mul9, ptr %a, align 4
   ret void
 }
 
@@ -117,21 +117,21 @@ if.end5:                                          ; preds = %if.then, %entry
 ; no attempt is made to identify what value could have potentially been reused
 ; otherwise. Just report that the load cannot be eliminated.
 
-define dso_local void @nonDominating3(i32* %a, i32 %b, i32 %c, i1 %cond) local_unnamed_addr #0 {
+define dso_local void @nonDominating3(ptr %a, i32 %b, i32 %c, i1 %cond) local_unnamed_addr #0 {
 entry:
   br i1 %cond, label %if.end5.sink.split, label %if.else
 
 if.else:                                          ; preds = %entry
-  store i32 %b, i32* %a, align 4
+  store i32 %b, ptr %a, align 4
   br label %if.end5
 
 if.end5.sink.split:                               ; preds = %entry
-  store i32 %c, i32* %a, align 4
+  store i32 %c, ptr %a, align 4
   br label %if.end5
 
 if.end5:                                          ; preds = %if.end5.sink.split, %if.else
   tail call void @clobberingFunc() #1
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %mul7 = shl nsw i32 %0, 1
   ret void
 }
@@ -158,14 +158,14 @@ entry:
   br i1 %cond, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 %b, i32* @g, align 4
+  store i32 %b, ptr @g, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
   tail call void @clobberingFunc() #1
-  %0 = load i32, i32* @g, align 4
+  %0 = load i32, ptr @g, align 4
   %mul2 = shl nsw i32 %0, 1
-  store i32 %mul2, i32* @g, align 4
+  store i32 %mul2, ptr @g, align 4
   ret void
 }
 
@@ -173,7 +173,7 @@ if.end:                                           ; preds = %if.then, %entry
 
 define dso_local void @globalUser(i32 %b) local_unnamed_addr #0 {
 entry:
-  store i32 %b, i32* @g, align 4
+  store i32 %b, ptr @g, align 4
   ret void
 }
 

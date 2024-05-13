@@ -186,9 +186,6 @@
         __kmp_omp_debug_struct_info             DATA
     %endif
 
-    # Symbols for MS mutual detection:
-    _You_must_link_with_exactly_one_OpenMP_library    DATA
-    _You_must_link_with_Intel_OpenMP_library          DATA
     __kmp_wait_64
     __kmp_release_64
 
@@ -228,6 +225,7 @@
     __kmpc_for_static_init_4                136
     __kmpc_for_static_init_8                137
     __kmpc_fork_call                        138
+    __kmpc_fork_call_if                     294
     __kmpc_global_num_threads               140
     __kmpc_global_thread_num                141
     __kmpc_in_parallel                      142
@@ -345,6 +343,7 @@ kmpc_set_defaults                           224
         __kmpc_fork_teams                   241
         __kmpc_omp_task_with_deps           242
         __kmpc_omp_wait_deps                243
+        __kmpc_omp_taskwait_deps_51         292
         __kmpc_cancel                       244
         __kmpc_cancellationpoint            245
         __kmpc_cancel_barrier               246
@@ -393,6 +392,18 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_error                        281
         __kmpc_masked                       282
         __kmpc_end_masked                   283
+        __kmpc_scope                        286
+        __kmpc_end_scope                    287
+%endif
+
+%ifndef stub
+        __kmpc_copyprivate_light            288
+        __kmpc_sections_init                289
+        __kmpc_next_section                 290
+        __kmpc_end_sections                 291
+        __kmpc_process_loop_nest_rectang    293
+        __kmpc_calc_original_ivs_rectang    295
+        __kmpc_for_collapsed_init           296
 %endif
 
 # User API entry points that have both lower- and upper- case versions for Fortran.
@@ -507,6 +518,8 @@ kmp_set_warnings_off                        780
         omp_target_memcpy_rect              887
         omp_target_associate_ptr            888
         omp_target_disassociate_ptr         889
+        omp_target_memset                   3000
+        omp_target_memset_async             3001
     %endif
 
 kmp_set_disp_num_buffers                    890
@@ -523,6 +536,7 @@ kmp_set_disp_num_buffers                    890
         __kmpc_set_default_allocator
         __kmpc_get_default_allocator
         __kmpc_alloc
+        __kmpc_aligned_alloc
         __kmpc_calloc
         __kmpc_realloc
         __kmpc_free
@@ -548,6 +562,12 @@ kmp_set_disp_num_buffers                    890
     omp_display_env                         733
     omp_calloc                              776
     omp_realloc                             777
+    omp_aligned_alloc                       778
+    omp_aligned_calloc                      806
+    omp_get_interop_int                     807
+    omp_get_interop_ptr                     808
+    omp_get_interop_str                     809
+    omp_in_explicit_task                    769
 
     omp_null_allocator                     DATA
     omp_default_mem_alloc                  DATA
@@ -558,7 +578,7 @@ kmp_set_disp_num_buffers                    890
     omp_cgroup_mem_alloc                   DATA
     omp_pteam_mem_alloc                    DATA
     omp_thread_mem_alloc                   DATA
-    # Preview of target memory support
+
     llvm_omp_target_host_mem_alloc         DATA
     llvm_omp_target_shared_mem_alloc       DATA
     llvm_omp_target_device_mem_alloc       DATA
@@ -568,7 +588,7 @@ kmp_set_disp_num_buffers                    890
     omp_const_mem_space                    DATA
     omp_high_bw_mem_space                  DATA
     omp_low_lat_mem_space                  DATA
-    # Preview of target memory support
+
     llvm_omp_target_host_mem_space         DATA
     llvm_omp_target_shared_mem_space       DATA
     llvm_omp_target_device_mem_space       DATA
@@ -672,11 +692,12 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_fixed2_eqv               2078
     __kmpc_atomic_fixed4_eqv               2079
     __kmpc_atomic_fixed8_eqv               2080
-
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_float10_add              2081
     __kmpc_atomic_float10_sub              2082
     __kmpc_atomic_float10_mul              2083
     __kmpc_atomic_float10_div              2084
+    %endif
 
     __kmpc_atomic_cmplx4_add               2085
     __kmpc_atomic_cmplx4_sub               2086
@@ -686,10 +707,12 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_cmplx8_sub               2090
     __kmpc_atomic_cmplx8_mul               2091
     __kmpc_atomic_cmplx8_div               2092
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_cmplx10_add              2093
     __kmpc_atomic_cmplx10_sub              2094
     __kmpc_atomic_cmplx10_mul              2095
     __kmpc_atomic_cmplx10_div              2096
+    %endif
     %ifdef HAVE_QUAD
     __kmpc_atomic_cmplx16_add              2097
     __kmpc_atomic_cmplx16_sub              2098
@@ -737,10 +760,12 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_float8_mul_fp            2133
     __kmpc_atomic_float8_div_fp            2134
 
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_float10_add_fp           2135
     __kmpc_atomic_float10_sub_fp           2136
     __kmpc_atomic_float10_mul_fp           2137
     __kmpc_atomic_float10_div_fp           2138
+    %endif
     %endif
 
     __kmpc_atomic_fixed1_mul_float8        2169
@@ -769,9 +794,13 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_2                        2248
    #__kmpc_atomic_4                    # declared above #100
    #__kmpc_atomic_8                    # declared above #101
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_10                       2251
+    %endif
     __kmpc_atomic_16                       2252
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_20                       2253
+    %endif
     __kmpc_atomic_32                       2254
 
     %ifdef arch_32
@@ -792,11 +821,7 @@ kmp_set_disp_num_buffers                    890
 
     %endif
 
-    # These are specific to x86 and x64
-    %ifndef arch_64
-    %ifndef arch_aarch64
-
-        # ATOMIC extensions for OpenMP 3.1 spec (x86 and x64 only)
+        # ATOMIC extensions for OpenMP 3.1 spec
 
         __kmpc_atomic_fixed1_rd                2265
         __kmpc_atomic_fixed2_rd                2266
@@ -1023,6 +1048,9 @@ kmp_set_disp_num_buffers                    890
         __kmpc_atomic_float10_div_cpt_fp
         %endif
 
+            # These are specific to x86 and x64
+            %ifdef IS_IA_ARCH
+
             # ATOMIC extensions for OpenMP 4.0 spec (x86 and x64 only)
 
             __kmpc_atomic_fixed1_swp           2412
@@ -1198,8 +1226,7 @@ kmp_set_disp_num_buffers                    890
             __kmpc_atomic_float10_div_cpt_rev_fp
             %endif
 
-    %endif   # arch_aarch64
-    %endif   # arch_64
+    %endif   # IS_IA_ARCH
 
     %ifdef HAVE_QUAD
     __kmpc_atomic_fixed1u_add_fp
@@ -1216,6 +1243,33 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_fixed8u_mul_fp
     %endif
 
+    # OpenMP 5.1 atomics
+    %ifdef IS_IA_ARCH
+    __kmpc_atomic_float10_max              2139
+    __kmpc_atomic_float10_min              2140
+    __kmpc_atomic_float10_max_cpt          2141
+    __kmpc_atomic_float10_min_cpt          2142
+
+    __kmpc_atomic_bool_1_cas               2143
+    __kmpc_atomic_bool_2_cas               2144
+    __kmpc_atomic_bool_4_cas               2145
+    __kmpc_atomic_bool_8_cas               2146
+    __kmpc_atomic_val_1_cas                2147
+    __kmpc_atomic_val_2_cas                2148
+    __kmpc_atomic_val_4_cas                2149
+    __kmpc_atomic_val_8_cas                2150
+    __kmpc_atomic_bool_1_cas_cpt           2151
+    __kmpc_atomic_bool_2_cas_cpt           2152
+    __kmpc_atomic_bool_4_cas_cpt           2153
+    __kmpc_atomic_bool_8_cas_cpt           2154
+    __kmpc_atomic_val_1_cas_cpt            2155
+    __kmpc_atomic_val_2_cas_cpt            2156
+    __kmpc_atomic_val_4_cas_cpt            2157
+    __kmpc_atomic_val_8_cas_cpt            2158
+    %endif
+
 %endif
+
+__kmpc_set_thread_limit
 
 # end of file #

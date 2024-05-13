@@ -4,9 +4,9 @@ target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-pc-windows-msvc19.21.27702"
 
 %struct.Init = type { %struct.S }
-%struct.S = type { i32 (...)** }
+%struct.S = type { ptr }
 %rtti.CompleteObjectLocator = type { i32, i32, i32, i32, i32, i32 }
-%rtti.TypeDescriptor7 = type { i8**, i8*, [8 x i8] }
+%rtti.TypeDescriptor7 = type { ptr, ptr, [8 x i8] }
 %rtti.ClassHierarchyDescriptor = type { i32, i32, i32, i32 }
 %rtti.BaseClassDescriptor = type { i32, i32, i32, i32, i32, i32, i32 }
 
@@ -23,26 +23,26 @@ $"??_R2S@@8" = comdat any
 $"??_R1A@?0A@EA@S@@8" = comdat any
 
 @"?d@@3UInit@@A" = dso_local local_unnamed_addr global %struct.Init zeroinitializer, align 8
-@anon.bcb2691509de99310dddb690fcdb4cdc.0 = private unnamed_addr constant { [2 x i8*] } { [2 x i8*] [i8* bitcast (%rtti.CompleteObjectLocator* @"??_R4S@@6B@" to i8*), i8* bitcast (void (%struct.S*)* @"?foo@S@@UEAAXXZ" to i8*)] }, comdat($"??_SS@@6B@"), !type !0
-@"??_R4S@@6B@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 1, i32 0, i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.TypeDescriptor7* @"??_R0?AUS@@@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32), i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.ClassHierarchyDescriptor* @"??_R3S@@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32), i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.CompleteObjectLocator* @"??_R4S@@6B@" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32) }, comdat
-@"??_7type_info@@6B@" = external constant i8*
-@"??_R0?AUS@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { i8** @"??_7type_info@@6B@", i8* null, [8 x i8] c".?AUS@@\00" }, comdat
+@anon.bcb2691509de99310dddb690fcdb4cdc.0 = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4S@@6B@", ptr @"?foo@S@@UEAAXXZ"] }, comdat($"??_SS@@6B@"), !type !0
+@"??_R4S@@6B@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 1, i32 0, i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R0?AUS@@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R3S@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R4S@@6B@" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32) }, comdat
+@"??_7type_info@@6B@" = external constant ptr
+@"??_R0?AUS@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { ptr @"??_7type_info@@6B@", ptr null, [8 x i8] c".?AUS@@\00" }, comdat
 @__ImageBase = external dso_local constant i8
-@"??_R3S@@8" = linkonce_odr constant %rtti.ClassHierarchyDescriptor { i32 0, i32 0, i32 1, i32 trunc (i64 sub nuw nsw (i64 ptrtoint ([2 x i32]* @"??_R2S@@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32) }, comdat
-@"??_R2S@@8" = linkonce_odr constant [2 x i32] [i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.BaseClassDescriptor* @"??_R1A@?0A@EA@S@@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32), i32 0], comdat
-@"??_R1A@?0A@EA@S@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.TypeDescriptor7* @"??_R0?AUS@@@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32), i32 0, i32 0, i32 -1, i32 0, i32 64, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.ClassHierarchyDescriptor* @"??_R3S@@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32) }, comdat
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_t.cpp, i8* null }]
+@"??_R3S@@8" = linkonce_odr constant %rtti.ClassHierarchyDescriptor { i32 0, i32 0, i32 1, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R2S@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32) }, comdat
+@"??_R2S@@8" = linkonce_odr constant [2 x i32] [i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R1A@?0A@EA@S@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 0], comdat
+@"??_R1A@?0A@EA@S@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R0?AUS@@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 0, i32 0, i32 -1, i32 0, i32 64, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R3S@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32) }, comdat
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_t.cpp, ptr null }]
 
-@"??_SS@@6B@" = unnamed_addr alias i8*, getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @anon.bcb2691509de99310dddb690fcdb4cdc.0, i32 0, i32 0, i32 1)
+@"??_SS@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr @anon.bcb2691509de99310dddb690fcdb4cdc.0, i32 0, i32 0, i32 1)
 
 declare dso_local void @"?undefined_ref@@YAXXZ"() local_unnamed_addr #0
 
-declare dllimport void @"?foo@S@@UEAAXXZ"(%struct.S*) unnamed_addr #0
+declare dllimport void @"?foo@S@@UEAAXXZ"(ptr) unnamed_addr #0
 
 ; Function Attrs: nounwind sspstrong uwtable
 define internal void @_GLOBAL__sub_I_t.cpp() #1 {
 entry:
-  store i32 (...)** bitcast (i8** @"??_SS@@6B@" to i32 (...)**), i32 (...)*** getelementptr inbounds (%struct.Init, %struct.Init* @"?d@@3UInit@@A", i64 0, i32 0, i32 0), align 8
+  store ptr @"??_SS@@6B@", ptr @"?d@@3UInit@@A", align 8
   tail call void @"?undefined_ref@@YAXXZ"() #2
   ret void
 }

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <regex>
 
 // template <class charT> struct regex_traits;
@@ -150,6 +148,8 @@ int main(int, char**)
         assert(!t.isctype('-', t.lookup_classname(s.begin(), s.end())));
         assert(!t.isctype('@', t.lookup_classname(s.begin(), s.end())));
     }
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::regex_traits<wchar_t> t;
 
@@ -279,6 +279,7 @@ int main(int, char**)
         assert(!t.isctype(L'-', t.lookup_classname(s.begin(), s.end())));
         assert(!t.isctype(L'@', t.lookup_classname(s.begin(), s.end())));
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

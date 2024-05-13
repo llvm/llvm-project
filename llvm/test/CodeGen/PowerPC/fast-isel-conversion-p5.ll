@@ -10,7 +10,7 @@ entry:
 ; ELF64: std {{[0-9]+}}, -[[OFFSET:[0-9]+]](1)
 ; ELF64: lfd {{[0-9]+}}, -[[OFFSET]](1)
 ; ELF64: fcfid
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -22,7 +22,7 @@ entry:
 ; ELF64: std {{[0-9]+}}, -[[OFFSET:[0-9]+]](1)
 ; ELF64: lfd {{[0-9]+}}, -[[OFFSET]](1)
 ; ELF64: fcfid
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -35,7 +35,7 @@ entry:
 ; ELF64: std {{[0-9]+}}, -[[OFFSET:[0-9]+]](1)
 ; ELF64: lfd {{[0-9]+}}, -[[OFFSET]](1)
 ; ELF64: fcfid
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -48,7 +48,7 @@ entry:
 ; ELF64: std {{[0-9]+}}, -[[OFFSET:[0-9]+]](1)
 ; ELF64: lfd {{[0-9]+}}, -[[OFFSET]](1)
 ; ELF64: fcfid
-  store double %conv, double* %b.addr, align 8
+  store double %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -62,7 +62,7 @@ entry:
 ; ELF64: fctiwz
 ; ELF64: stfd
 ; ELF64: lwa
-  store i32 %conv, i32* %b.addr, align 4
+  store i32 %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -74,7 +74,7 @@ entry:
 ; ELF64: fctidz
 ; ELF64: stfd
 ; ELF64: ld
-  store i64 %conv, i64* %b.addr, align 4
+  store i64 %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -86,7 +86,7 @@ entry:
 ; ELF64: fctiwz
 ; ELF64: stfd
 ; ELF64: lwa
-  store i32 %conv, i32* %b.addr, align 8
+  store i32 %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -98,7 +98,7 @@ entry:
 ; ELF64: fctidz
 ; ELF64: stfd
 ; ELF64: ld
-  store i64 %conv, i64* %b.addr, align 8
+  store i64 %conv, ptr %b.addr, align 8
   ret void
 }
 
@@ -112,7 +112,7 @@ entry:
 ; ELF64: fctidz
 ; ELF64: stfd
 ; ELF64: lwz
-  store i32 %conv, i32* %b.addr, align 4
+  store i32 %conv, ptr %b.addr, align 4
   ret void
 }
 
@@ -124,7 +124,7 @@ entry:
 ; ELF64: fctidz
 ; ELF64: stfd
 ; ELF64: lwz
-  store i32 %conv, i32* %b.addr, align 8
+  store i32 %conv, ptr %b.addr, align 8
   ret void
 }
 

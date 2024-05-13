@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclGroup.h"
-#include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/FileMatchTrie.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
@@ -17,12 +14,15 @@
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 
 namespace clang {
 namespace tooling {
 
 using testing::ElementsAre;
 using testing::EndsWith;
+using testing::IsEmpty;
+using testing::UnorderedElementsAreArray;
 
 static void expectFailure(StringRef JSONDatabase, StringRef Explanation) {
   std::string ErrorMessage;
@@ -62,7 +62,9 @@ static std::vector<std::string> getAllFiles(StringRef JSONDatabase,
     ADD_FAILURE() << ErrorMessage;
     return std::vector<std::string>();
   }
-  return Database->getAllFiles();
+  auto Result = Database->getAllFiles();
+  std::sort(Result.begin(), Result.end());
+  return Result;
 }
 
 static std::vector<CompileCommand>
@@ -80,8 +82,8 @@ getAllCompileCommands(JSONCommandLineSyntax Syntax, StringRef JSONDatabase,
 
 TEST(JSONCompilationDatabase, GetAllFiles) {
   std::string ErrorMessage;
-  EXPECT_EQ(std::vector<std::string>(),
-            getAllFiles("[]", ErrorMessage, JSONCommandLineSyntax::Gnu))
+  EXPECT_THAT(getAllFiles("[]", ErrorMessage, JSONCommandLineSyntax::Gnu),
+              IsEmpty())
       << ErrorMessage;
 
   std::vector<std::string> expected_files;
@@ -90,19 +92,35 @@ TEST(JSONCompilationDatabase, GetAllFiles) {
   expected_files.push_back(std::string(PathStorage.str()));
   llvm::sys::path::native("//net/dir/file2", PathStorage);
   expected_files.push_back(std::string(PathStorage.str()));
+  llvm::sys::path::native("//net/dir/file3", PathStorage);
+  expected_files.push_back(std::string(PathStorage.str()));
   llvm::sys::path::native("//net/file1", PathStorage);
   expected_files.push_back(std::string(PathStorage.str()));
-  EXPECT_EQ(expected_files,
-            getAllFiles("[{\"directory\":\"//net/dir\","
-                        "\"command\":\"command\","
-                        "\"file\":\"file1\"},"
-                        " {\"directory\":\"//net/dir\","
-                        "\"command\":\"command\","
-                        "\"file\":\"../file1\"},"
-                        " {\"directory\":\"//net/dir\","
-                        "\"command\":\"command\","
-                        "\"file\":\"file2\"}]",
-                        ErrorMessage, JSONCommandLineSyntax::Gnu))
+  EXPECT_THAT(getAllFiles(R"json(
+            [
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "file1"
+              },
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "../file1"
+              },
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "file2"
+              },
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "//net/dir/foo/../file3"
+              }
+            ])json",
+                          ErrorMessage, JSONCommandLineSyntax::Gnu),
+              UnorderedElementsAreArray(expected_files))
       << ErrorMessage;
 }
 
@@ -210,7 +228,7 @@ TEST(JSONCompilationDatabase, ArgumentsPreferredOverCommand) {
 struct FakeComparator : public PathComparator {
   ~FakeComparator() override {}
   bool equivalent(StringRef FileA, StringRef FileB) const override {
-    return FileA.equals_lower(FileB);
+    return FileA.equals_insensitive(FileB);
   }
 };
 
@@ -531,7 +549,7 @@ TEST(FixedCompilationDatabase, GetAllFiles) {
   CommandLine.push_back("two");
   FixedCompilationDatabase Database(".", CommandLine);
 
-  EXPECT_EQ(0ul, Database.getAllFiles().size());
+  EXPECT_THAT(Database.getAllFiles(), IsEmpty());
 }
 
 TEST(FixedCompilationDatabase, GetAllCompileCommands) {
@@ -623,7 +641,24 @@ TEST(ParseFixedCompilationDatabase, ReturnsEmptyCommandLine) {
 
 TEST(ParseFixedCompilationDatabase, HandlesPositionalArgs) {
   const char *Argv[] = {"1", "2", "--", "-c", "somefile.cpp", "-DDEF3"};
-  int Argc = sizeof(Argv) / sizeof(char*);
+  int Argc = std::size(Argv);
+  std::string ErrorMsg;
+  std::unique_ptr<FixedCompilationDatabase> Database =
+      FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);
+  ASSERT_TRUE((bool)Database);
+  ASSERT_TRUE(ErrorMsg.empty());
+  std::vector<CompileCommand> Result = Database->getCompileCommands("source");
+  ASSERT_EQ(1ul, Result.size());
+  ASSERT_EQ(".", Result[0].Directory);
+  ASSERT_THAT(Result[0].CommandLine,
+              ElementsAre(EndsWith("clang-tool"), "-c", "-DDEF3", "source"));
+  EXPECT_EQ(2, Argc);
+}
+
+TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsHeader) {
+  const char *Argv[] = {"1",  "2",          "--",    "-xc++-header",
+                        "-c", "somefile.h", "-DDEF3"};
+  int Argc = std::size(Argv);
   std::string ErrorMsg;
   std::unique_ptr<FixedCompilationDatabase> Database =
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);
@@ -634,7 +669,8 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgs) {
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
   ASSERT_THAT(Result[0].CommandLine,
-              ElementsAre(EndsWith("clang-tool"), "-c", "-DDEF3", "source"));
+              ElementsAre(EndsWith("clang-tool"), "-xc++-header", "-c",
+                          "-DDEF3", "source"));
   EXPECT_EQ(2, Argc);
 }
 
@@ -642,7 +678,7 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsSyntaxOnly) {
   // Adjust the given command line arguments to ensure that any positional
   // arguments in them are stripped.
   const char *Argv[] = {"--", "somefile.cpp", "-fsyntax-only", "-DDEF3"};
-  int Argc = llvm::array_lengthof(Argv);
+  int Argc = std::size(Argv);
   std::string ErrorMessage;
   std::unique_ptr<CompilationDatabase> Database =
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMessage);
@@ -658,7 +694,7 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsSyntaxOnly) {
 
 TEST(ParseFixedCompilationDatabase, HandlesArgv0) {
   const char *Argv[] = {"1", "2", "--", "mytool", "somefile.cpp"};
-  int Argc = sizeof(Argv) / sizeof(char*);
+  int Argc = std::size(Argv);
   std::string ErrorMsg;
   std::unique_ptr<FixedCompilationDatabase> Database =
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);
@@ -700,6 +736,10 @@ protected:
     SmallVector<StringRef, 8> Argv = {Clang, File, "-D", File};
     llvm::SplitString(Flags, Argv);
 
+    // Trim double quotation from the argumnets if any.
+    for (auto *It = Argv.begin(); It != Argv.end(); ++It)
+      *It = It->trim("\"");
+
     SmallString<32> Dir;
     llvm::sys::path::system_temp_directory(false, Dir);
 
@@ -734,6 +774,9 @@ protected:
     // drop the input file argument, so tests don't have to deal with path().
     EXPECT_EQ(Results[0].CommandLine.back(), MakeNative ? path(F) : F)
         << "Last arg should be the file";
+    Results[0].CommandLine.pop_back();
+    EXPECT_EQ(Results[0].CommandLine.back(), "--")
+        << "Second-last arg should be --";
     Results[0].CommandLine.pop_back();
     return llvm::join(Results[0].CommandLine, " ");
   }
@@ -822,23 +865,19 @@ TEST_F(InterpolateTest, StripDoubleDash) {
   EXPECT_EQ(getCommand("dir/bar.cpp"), "clang -D dir/foo.cpp -Wall -std=c++14");
 }
 
-TEST_F(InterpolateTest, InsertDoubleDash) {
-  add("dir/foo.cpp", "-o foo.o -std=c++14 -Wall");
-  EXPECT_EQ(getCommand("-dir/bar.cpp", false),
-            "clang -D dir/foo.cpp -Wall -std=c++14 --");
-}
-
-TEST_F(InterpolateTest, InsertDoubleDashForClangCL) {
-  add("dir/foo.cpp", "clang-cl", "/std:c++14 /W4");
-  EXPECT_EQ(getCommand("/dir/bar.cpp", false),
-            "clang-cl -D dir/foo.cpp /W4 /std:c++14 --");
-}
-
 TEST_F(InterpolateTest, Case) {
   add("FOO/BAR/BAZ/SHOUT.cc");
   add("foo/bar/baz/quiet.cc");
   // Case mismatches are completely ignored, so we choose the name match.
   EXPECT_EQ(getProxy("foo/bar/baz/shout.C"), "FOO/BAR/BAZ/SHOUT.cc");
+}
+
+TEST_F(InterpolateTest, LanguagePreference) {
+  add("foo/bar/baz/exact.C");
+  add("foo/bar/baz/exact.c");
+  add("other/random/path.cpp");
+  // Proxies for ".H" files are ".C" files, and not ".c files".
+  EXPECT_EQ(getProxy("foo/bar/baz/exact.H"), "foo/bar/baz/exact.C");
 }
 
 TEST_F(InterpolateTest, Aliasing) {
@@ -875,7 +914,7 @@ TEST(TransferCompileCommandTest, Smoke) {
   CompileCommand Transferred = transferCompileCommand(std::move(Cmd), "foo.h");
   EXPECT_EQ(Transferred.Filename, "foo.h");
   EXPECT_THAT(Transferred.CommandLine,
-              ElementsAre("clang", "-Wall", "-x", "c++-header", "foo.h"));
+              ElementsAre("clang", "-Wall", "-x", "c++-header", "--", "foo.h"));
   EXPECT_EQ(Transferred.Directory, "dir");
 }
 
@@ -960,6 +999,13 @@ TEST_F(ExpandResponseFilesTest, ExpandResponseFiles) {
   add("bar.cpp", "clang", "-Dflag");
   EXPECT_EQ(getCommand("foo.cpp"), "clang foo.cpp -D foo.cpp -Dflag");
   EXPECT_EQ(getCommand("bar.cpp"), "clang bar.cpp -D bar.cpp -Dflag");
+}
+
+TEST_F(ExpandResponseFilesTest, ExpandResponseFilesEmptyArgument) {
+  addFile(path(StringRef("rsp1.rsp")), "-Dflag");
+
+  add("foo.cpp", "clang", "@rsp1.rsp \"\"");
+  EXPECT_EQ(getCommand("foo.cpp"), "clang foo.cpp -D foo.cpp -Dflag ");
 }
 
 } // end namespace tooling

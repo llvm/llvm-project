@@ -1,4 +1,4 @@
-; RUN: opt < %s -lowerswitch
+; RUN: opt < %s -passes=lower-switch
 
 define void @child(i32 %ct.1) {
 entry:
@@ -7,7 +7,7 @@ entry:
 		 i32 0, label %return
 	]
 return:		; preds = %entry, %entry
-	%result.0 = phi i32* [ null, %entry ], [ null, %entry ]		; <i32*> [#uses=0]
+	%result.0 = phi ptr [ null, %entry ], [ null, %entry ]		; <ptr> [#uses=0]
 	br label %UnifiedExitNode
 UnifiedExitNode:		; preds = %return, %entry
 	ret void

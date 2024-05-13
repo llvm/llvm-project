@@ -21,8 +21,7 @@ CFBundle::CFBundle(const char *path)
 }
 
 // CFBundle copy constructor
-CFBundle::CFBundle(const CFBundle &rhs)
-    : CFReleaser<CFBundleRef>(rhs), m_bundle_url(rhs.m_bundle_url) {}
+CFBundle::CFBundle(const CFBundle &rhs) = default;
 
 // CFBundle copy constructor
 CFBundle &CFBundle::operator=(const CFBundle &rhs) {
@@ -32,7 +31,7 @@ CFBundle &CFBundle::operator=(const CFBundle &rhs) {
 }
 
 // Destructor
-CFBundle::~CFBundle() {}
+CFBundle::~CFBundle() = default;
 
 // Set the path for a bundle by supplying a
 bool CFBundle::SetPath(const char *path) {

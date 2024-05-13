@@ -1,9 +1,11 @@
 ; Check getShuffleCost for SK_BroadCast with scalable vector
 
-; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=sve  < %s | FileCheck %s
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=sve  < %s | FileCheck %s
+
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void  @broadcast() #0{
-; CHECK-LABEL: 'broadcast':
+; CHECK-LABEL: 'broadcast'
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %zero = shufflevector <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction:   %1 = shufflevector <vscale x 32 x i8> undef, <vscale x 32 x i8> undef, <vscale x 32 x i32> zeroinitializer
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %2 = shufflevector <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer

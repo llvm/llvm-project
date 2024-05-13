@@ -12,18 +12,20 @@
 
 # CHECK-LABEL: Disassembly of section
 # CHECK:      <_main>:
-# CHECK-NEXT:   movl {{.*}}  # [[#S]]
+# CHECK-NEXT:   movl {{.*}}  ## imm =
+# CHECK-NEXT:                ## 0x[[#S]]
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movl {{.*}}  # [[#S + 2]]
+# CHECK-NEXT:   movl {{.*}}  ## 0x[[#S + 2]]
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movb {{.*}}  # [[#S]]
+# CHECK-NEXT:   movb {{.*}}  ## 0x[[#S]]
 # CHECK-NEXT:   callq {{.*}}
 # CHECK:      <__not_text>:
-# CHECK-NEXT:   movl {{.*}}  # [[#FOO + 8]]
+# CHECK-NEXT:   movl {{.*}}  ## imm =
+# CHECK-NEXT:                ## 0x[[#FOO + 8]]
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movl {{.*}}  # [[#FOO + 8 + 2]]
+# CHECK-NEXT:   movl {{.*}}  ## 0x[[#FOO + 8 + 2]]
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movb {{.*}}  # [[#FOO + 8]]
+# CHECK-NEXT:   movb {{.*}}  ## 0x[[#FOO + 8]]
 # CHECK-NEXT:   callq {{.*}}
 
 .section __TEXT,__text

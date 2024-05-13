@@ -8,18 +8,30 @@
 # RUN: %lldb %t -o "image lookup -v -a 0" -o "image lookup -v -a 2" \
 # RUN:   -o "image dump symfile" -o exit | FileCheck %s
 
+# RUN: %lldb %t -o "image lookup -v -a 0 -show-variable-ranges" -o \
+# RUN: "image lookup -v -a 2 -show-variable-ranges" \
+# RUN: -o exit | FileCheck %s --check-prefix=ALL-RANGES
+
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s --defsym LOCLISTS=0 > %t
 # RUN: %lldb %t -o "image lookup -v -a 0" -o "image lookup -v -a 2" \
 # RUN:   -o "image dump symfile" -o exit | FileCheck %s --check-prefix=CHECK --check-prefix=LOCLISTS
 
+# ALL-RANGES-LABEL: image lookup -v -a 0 -show-variable-ranges
+# ALL-RANGES: Variable: id = {{.*}}, name = "x0", type = "int", valid ranges = <block>, location = [0x0000000000000000, 0x0000000000000001) -> DW_OP_reg5 RDI, [0x0000000000000001, 0x0000000000000006) -> DW_OP_reg0 RAX
+# ALL-RANGES: Variable: id = {{.*}}, name = "x1", type = "int", valid ranges = <block>, location = <empty>
+# ALL-RANGES-LABEL: image lookup -v -a 2 -show-variable-ranges
+# ALL-RANGES:  Variable: id = {{.*}}, name = "x0", type = "int", valid ranges = <block>, location = [0x0000000000000000, 0x0000000000000001) -> DW_OP_reg5 RDI, [0x0000000000000001, 0x0000000000000006) -> DW_OP_reg0 RAX
+# ALL-RANGES: Variable: id = {{.*}}, name = "x1", type = "int", valid ranges = <block>, location = <empty>
+# ALL-RANGES: Variable: id = {{.*}}, name = "x3", type = "int", valid ranges = <block>, location = [0x0000000000000002, 0x0000000000000003) -> DW_OP_reg1 RDX
+
 # CHECK-LABEL: image lookup -v -a 0
-# CHECK: Variable: {{.*}}, name = "x0", type = "int", location = DW_OP_reg5 RDI,
-# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = ,
+# CHECK: Variable: {{.*}}, name = "x0", type = "int", valid ranges = <block>, location = [0x0000000000000000, 0x0000000000000001) -> DW_OP_reg5 RDI
+# CHECK: Variable: {{.*}}, name = "x1", type = "int", valid ranges = <block>, location = <empty>,
 
 # CHECK-LABEL: image lookup -v -a 2
-# CHECK: Variable: {{.*}}, name = "x0", type = "int", location = DW_OP_reg0 RAX,
-# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = ,
-# CHECK: Variable: {{.*}}, name = "x3", type = "int", location = DW_OP_reg1 RDX,
+# CHECK: Variable: {{.*}}, name = "x0", type = "int", valid ranges = <block>, location = [0x0000000000000001, 0x0000000000000006) -> DW_OP_reg0 RAX
+# CHECK: Variable: {{.*}}, name = "x1", type = "int", valid ranges = <block>, location = <empty>,
+# CHECK: Variable: {{.*}}, name = "x3", type = "int", valid ranges = <block>, location = [0x0000000000000002, 0x0000000000000003) -> DW_OP_reg1 RDX
 
 # CHECK-LABEL: image dump symfile
 # CHECK: CompileUnit{0x00000000}
@@ -28,11 +40,11 @@
 # CHECK-NEXT:  [0x0000000000000000, 0x0000000000000001): DW_OP_reg5 RDI
 # CHECK-NEXT:  [0x0000000000000001, 0x0000000000000006): DW_OP_reg0 RAX
 # CHECK:     Variable{{.*}}, name = "x1", {{.*}}, scope = parameter
-# CHECK:     Variable{{.*}}, name = "x2", {{.*}}, scope = parameter, location = 0x00000000: error: unexpected end of data
+# CHECK:     Variable{{.*}}, name = "x2", {{.*}}, scope = parameter
 # CHECK:     Variable{{.*}}, name = "x3", {{.*}}, scope = parameter, location =
 # CHECK-NEXT:  [0x0000000000000002, 0x0000000000000003): DW_OP_reg1 RDX
-# LOCLISTS:  Variable{{.*}}, name = "x4", {{.*}}, scope = parameter, location =
-# LOCLISTS-NEXT: DW_LLE_startx_length   (0x000000000000dead, 0x0000000000000001): DW_OP_reg2 RCX
+# LOCLISTS:  Variable{{.*}}, name = "x4", {{.*}}, scope = parameter
+# LOCLISTS-EMPTY:
 
 .ifdef LOC
 .macro OFFSET_PAIR lo hi

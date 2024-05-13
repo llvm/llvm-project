@@ -41,7 +41,7 @@ entry:
 ; condition operand and widening the resulting vselect for the v4f32 result.
 ; PR18036
 
-define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
+define <4 x float> @vselect(ptr%p, <4 x i32> %q) {
 ; X86-LABEL: vselect:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -52,17 +52,17 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jne .LBB1_5
 ; X86-NEXT:  .LBB1_4:
-; X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{.*#+}} xmm2 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jne .LBB1_8
 ; X86-NEXT:  .LBB1_7:
-; X86-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{.*#+}} xmm3 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB1_10
 ; X86-NEXT:    jmp .LBB1_11
 ; X86-NEXT:  .LBB1_1:
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB1_4
 ; X86-NEXT:  .LBB1_5: # %entry
@@ -75,7 +75,7 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jne .LBB1_11
 ; X86-NEXT:  .LBB1_10:
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-NEXT:  .LBB1_11: # %entry
 ; X86-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
@@ -91,17 +91,17 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X64-NEXT:    testl %ecx, %ecx
 ; X64-NEXT:    jne .LBB1_5
 ; X64-NEXT:  .LBB1_4:
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm2 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:    testl %r8d, %r8d
 ; X64-NEXT:    jne .LBB1_8
 ; X64-NEXT:  .LBB1_7:
-; X64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm3 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; X64-NEXT:    testl %esi, %esi
 ; X64-NEXT:    je .LBB1_10
 ; X64-NEXT:    jmp .LBB1_11
 ; X64-NEXT:  .LBB1_1:
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:    testl %ecx, %ecx
 ; X64-NEXT:    je .LBB1_4
 ; X64-NEXT:  .LBB1_5: # %entry
@@ -114,7 +114,7 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X64-NEXT:    testl %esi, %esi
 ; X64-NEXT:    jne .LBB1_11
 ; X64-NEXT:  .LBB1_10:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:  .LBB1_11: # %entry
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
@@ -180,7 +180,7 @@ define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; X86-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; X86-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm2
+; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X86-NEXT:    movaps %xmm2, (%eax)
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    popl %esi
@@ -218,7 +218,7 @@ define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; X64-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; X64-NEXT:    andps {{.*}}(%rip), %xmm2
+; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; X64-NEXT:    movaps %xmm2, (%rax)
 ; X64-NEXT:    retq
   %cmp = icmp eq <4 x i32> %x, %y
@@ -238,12 +238,12 @@ define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <2 x float> @PR31672() #0 {
 ; X86-LABEL: PR31672:
 ; X86:       # %bb.0:
-; X86-NEXT:    sqrtps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    sqrtps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR31672:
 ; X64:       # %bb.0:
-; X64-NEXT:    sqrtps {{.*}}(%rip), %xmm0
+; X64-NEXT:    sqrtps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %t0 = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> <float 42.0, float 3.0>)
   ret <2 x float> %t0

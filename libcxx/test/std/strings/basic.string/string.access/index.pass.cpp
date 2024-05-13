@@ -8,8 +8,8 @@
 
 // <string>
 
-// const_reference operator[](size_type pos) const;
-//       reference operator[](size_type pos);
+// const_reference operator[](size_type pos) const; // constexpr since C++20
+//       reference operator[](size_type pos); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -17,44 +17,58 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-    typedef std::string S;
-    S s("0123456789");
-    const S& cs = s;
-    ASSERT_SAME_TYPE(decltype( s[0]), typename S::reference);
-    ASSERT_SAME_TYPE(decltype(cs[0]), typename S::const_reference);
-    LIBCPP_ASSERT_NOEXCEPT(    s[0]);
-    LIBCPP_ASSERT_NOEXCEPT(   cs[0]);
-    for (S::size_type i = 0; i < cs.size(); ++i)
-    {
-        assert(s[i] == static_cast<char>('0' + i));
-        assert(cs[i] == s[i]);
-    }
-    assert(cs[cs.size()] == '\0');
-    const S s2 = S();
-    assert(s2[0] == '\0');
-    }
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  S s("0123456789");
+  const S& cs = s;
+  ASSERT_SAME_TYPE(decltype(s[0]), typename S::reference);
+  ASSERT_SAME_TYPE(decltype(cs[0]), typename S::const_reference);
+  LIBCPP_ASSERT_NOEXCEPT(s[0]);
+  LIBCPP_ASSERT_NOEXCEPT(cs[0]);
+  for (typename S::size_type i = 0; i < cs.size(); ++i) {
+    assert(s[i] == static_cast<char>('0' + i));
+    assert(cs[i] == s[i]);
+  }
+  assert(cs[cs.size()] == '\0');
+  const S s2 = S();
+  assert(s2[0] == '\0');
+}
+
+// Same, but for the string that doesn't fit into SSO.
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string_long() {
+  S s("0123456789012345678901234567890123456789");
+  const S& cs = s;
+  ASSERT_SAME_TYPE(decltype(s[0]), typename S::reference);
+  ASSERT_SAME_TYPE(decltype(cs[0]), typename S::const_reference);
+  LIBCPP_ASSERT_NOEXCEPT(s[0]);
+  LIBCPP_ASSERT_NOEXCEPT(cs[0]);
+  for (typename S::size_type i = 0; i < cs.size(); ++i) {
+    assert(s[i] == static_cast<char>('0' + (i % 10)));
+    assert(cs[i] == s[i]);
+  }
+  assert(s[33] == static_cast<char>('0' + (33 % 10)));
+  assert(cs[34] == s[34]);
+  assert(cs[cs.size()] == '\0');
+  const S s2 = S();
+  assert(s2[0] == '\0');
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    S s("0123456789");
-    const S& cs = s;
-    ASSERT_SAME_TYPE(decltype( s[0]), typename S::reference);
-    ASSERT_SAME_TYPE(decltype(cs[0]), typename S::const_reference);
-    LIBCPP_ASSERT_NOEXCEPT(    s[0]);
-    LIBCPP_ASSERT_NOEXCEPT(   cs[0]);
-    for (S::size_type i = 0; i < cs.size(); ++i)
-    {
-        assert(s[i] == static_cast<char>('0' + i));
-        assert(cs[i] == s[i]);
-    }
-    assert(cs[cs.size()] == '\0');
-    const S s2 = S();
-    assert(s2[0] == '\0');
-    }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string_long<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
 
-    return 0;
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
+
+  return 0;
 }

@@ -1,5 +1,5 @@
 // RUN: %clangxx_asan -O0 -mllvm -asan-instrument-dynamic-allocas %s -o %t
-// RUN: %run %t 2>&1
+// RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t 2>&1
 //
 // REQUIRES: stable-runtime
 
@@ -24,11 +24,15 @@ void *top, *bot;
 __attribute__((noinline)) void foo(int len) {
   char x;
   top = &x;
-  char array[len];
+  volatile char array[len];
+  if (len)
+    array[0] = 0;
   assert(!(reinterpret_cast<uintptr_t>(array) & 31L));
   alloca(len);
   for (int i = 0; i < 32; ++i) {
-    char array[i];
+    volatile char array[i];
+    if (i)
+      array[0] = 0;
     bot = alloca(i);
     assert(!(reinterpret_cast<uintptr_t>(bot) & 31L));
   }

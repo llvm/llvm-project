@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBDATASTREAM_H
 #define LLVM_DEBUGINFO_PDB_IPDBDATASTREAM_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -28,7 +28,7 @@ public:
 
   virtual uint32_t getRecordCount() const = 0;
   virtual std::string getName() const = 0;
-  virtual Optional<RecordType> getItemAtIndex(uint32_t Index) const = 0;
+  virtual std::optional<RecordType> getItemAtIndex(uint32_t Index) const = 0;
   virtual bool getNext(RecordType &Record) = 0;
   virtual void reset() = 0;
 };

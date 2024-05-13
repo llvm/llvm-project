@@ -47,6 +47,7 @@ void MsanThread::Init() {
   CHECK(MEM_IS_APP(stack_.bottom));
   CHECK(MEM_IS_APP(stack_.top - 1));
   ClearShadowForThreadStackAndTLS();
+  malloc_storage().Init();
 }
 
 void MsanThread::TSDDtor(void *tsd) {
@@ -66,8 +67,6 @@ void MsanThread::Destroy() {
 }
 
 thread_return_t MsanThread::ThreadStart() {
-  Init();
-
   if (!start_routine_) {
     // start_routine_ == 0 if we're on the main thread or on one of the
     // OS X libdispatch worker threads. But nobody is supposed to call

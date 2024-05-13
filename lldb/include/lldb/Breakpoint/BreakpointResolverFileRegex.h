@@ -27,9 +27,8 @@ public:
       const lldb::BreakpointSP &bkpt, RegularExpression regex,
       const std::unordered_set<std::string> &func_name_set, bool exact_match);
 
-  static BreakpointResolver *
-  CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
-                           const StructuredData::Dictionary &options_dict,
+  static lldb::BreakpointResolverSP
+  CreateFromStructuredData(const StructuredData::Dictionary &options_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;

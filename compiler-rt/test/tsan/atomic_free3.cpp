@@ -24,5 +24,4 @@ int main() {
 // CHECK:     #1 main
 
 // CHECK:   Previous atomic write
-// CHECK:     #0 __tsan_atomic32_store
-// CHECK:     #1 Thread
+// CHECK:     #0 Thread

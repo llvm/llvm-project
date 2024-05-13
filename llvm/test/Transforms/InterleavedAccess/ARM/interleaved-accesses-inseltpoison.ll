@@ -2,70 +2,70 @@
 ; RUN: opt < %s -mattr=+neon -interleaved-access -S | FileCheck %s --check-prefix=CHECK-NEON
 ; RUN: opt < %s -mattr=+mve.fp -interleaved-access -S | FileCheck %s --check-prefix=CHECK-MVE
 ; RUN: opt < %s -interleaved-access -S | FileCheck %s --check-prefix=CHECK-NONE
+; RUN: opt < %s -mattr=+neon -passes=interleaved-access -S | FileCheck %s --check-prefix=CHECK-NEON
+; RUN: opt < %s -mattr=+mve.fp -passes=interleaved-access -S | FileCheck %s --check-prefix=CHECK-MVE
+; RUN: opt < %s -passes=interleaved-access -S | FileCheck %s --check-prefix=CHECK-NONE
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 target triple = "arm---eabi"
 
-define void @load_factor2(<16 x i8>* %ptr) {
+define void @load_factor2(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_factor2(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <8 x i8>, <8 x i8> } @llvm.arm.neon.vld2.v8i8.p0i8(i8* [[TMP1]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <8 x i8>, <8 x i8> } @llvm.arm.neon.vld2.v8i8.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <8 x i8>, <8 x i8> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x i8>, <8 x i8> } [[VLDN]], 0
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_factor2(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i8>, <16 x i8>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i8>, ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <16 x i8> [[INTERLEAVED_VEC]], <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <16 x i8> [[INTERLEAVED_VEC]], <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_factor2(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i8>, <16 x i8>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i8>, ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <16 x i8> [[INTERLEAVED_VEC]], <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <16 x i8> [[INTERLEAVED_VEC]], <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <16 x i8>, <16 x i8>* %ptr, align 4
+  %interleaved.vec = load <16 x i8>, ptr %ptr, align 4
   %v0 = shufflevector <16 x i8> %interleaved.vec, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %v1 = shufflevector <16 x i8> %interleaved.vec, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   ret void
 }
 
-define void @load_factor3(<6 x i32>* %ptr) {
+define void @load_factor3(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_factor3(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <6 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld3.v2i32.p0i8(i8* [[TMP1]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld3.v2i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 2
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 0
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_factor3(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <6 x i32>, <6 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <6 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <6 x i32> [[INTERLEAVED_VEC]], <6 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <6 x i32> [[INTERLEAVED_VEC]], <6 x i32> poison, <2 x i32> <i32 1, i32 4>
 ; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <6 x i32> [[INTERLEAVED_VEC]], <6 x i32> poison, <2 x i32> <i32 2, i32 5>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_factor3(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <6 x i32>, <6 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <6 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <6 x i32> [[INTERLEAVED_VEC]], <6 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <6 x i32> [[INTERLEAVED_VEC]], <6 x i32> poison, <2 x i32> <i32 1, i32 4>
 ; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <6 x i32> [[INTERLEAVED_VEC]], <6 x i32> poison, <2 x i32> <i32 2, i32 5>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <6 x i32>, <6 x i32>* %ptr, align 4
+  %interleaved.vec = load <6 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <6 x i32> %interleaved.vec, <6 x i32> poison, <2 x i32> <i32 0, i32 3>
   %v1 = shufflevector <6 x i32> %interleaved.vec, <6 x i32> poison, <2 x i32> <i32 1, i32 4>
   %v2 = shufflevector <6 x i32> %interleaved.vec, <6 x i32> poison, <2 x i32> <i32 2, i32 5>
   ret void
 }
 
-define void @load_factor4(<16 x i32>* %ptr) {
+define void @load_factor4(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_factor4(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0i8(i8* [[TMP1]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 3
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 2
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 1
@@ -73,7 +73,7 @@ define void @load_factor4(<16 x i32>* %ptr) {
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_factor4(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, <16 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
@@ -81,14 +81,14 @@ define void @load_factor4(<16 x i32>* %ptr) {
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_factor4(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, <16 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
 ; CHECK-NONE-NEXT:    [[V3:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <16 x i32>, <16 x i32>* %ptr, align 4
+  %interleaved.vec = load <16 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
   %v1 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
   %v2 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
@@ -96,62 +96,60 @@ define void @load_factor4(<16 x i32>* %ptr) {
   ret void
 }
 
-define void @store_factor2(<16 x i8>* %ptr, <8 x i8> %v0, <8 x i8> %v1) {
+define void @store_factor2(ptr %ptr, <8 x i8> %v0, <8 x i8> %v1) {
 ; CHECK-NEON-LABEL: @store_factor2(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V0:%.*]], <8 x i8> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0i8.v8i8(i8* [[TMP3]], <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0.v8i8(ptr [[PTR:%.*]], <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_factor2(
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i8> [[V0:%.*]], <8 x i8> [[V1:%.*]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-; CHECK-MVE-NEXT:    store <16 x i8> [[INTERLEAVED_VEC]], <16 x i8>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    store <16 x i8> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_factor2(
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i8> [[V0:%.*]], <8 x i8> [[V1:%.*]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-; CHECK-NONE-NEXT:    store <16 x i8> [[INTERLEAVED_VEC]], <16 x i8>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    store <16 x i8> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <8 x i8> %v0, <8 x i8> %v1, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-  store <16 x i8> %interleaved.vec, <16 x i8>* %ptr, align 4
+  store <16 x i8> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_factor3(<12 x i32>* %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
+define void @store_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
 ; CHECK-NEON-LABEL: @store_factor3(
 ; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEON-NEXT:    [[TMP4:%.*]] = bitcast <12 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_factor3(
 ; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_factor3(
 ; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_factor4(<16 x i32>* %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
+define void @store_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
 ; CHECK-NEON-LABEL: @store_factor4(
 ; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -159,280 +157,269 @@ define void @store_factor4(<16 x i32>* %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x 
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = bitcast <16 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v4i32(i8* [[TMP5]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_factor4(
 ; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-MVE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], <16 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_factor4(
 ; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NONE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], <16 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s1 = shufflevector <4 x i32> %v2, <4 x i32> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-  store <16 x i32> %interleaved.vec, <16 x i32>* %ptr, align 4
+  store <16 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @load_ptrvec_factor2(<4 x i32*>* %ptr) {
+define void @load_ptrvec_factor2(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_ptrvec_factor2(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32*>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32> } @llvm.arm.neon.vld2.v2i32.p0i8(i8* [[TMP1]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32> } @llvm.arm.neon.vld2.v2i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i32>, <2 x i32> } [[VLDN]], 0
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = inttoptr <2 x i32> [[TMP2]] to <2 x i32*>
+; CHECK-NEON-NEXT:    [[TMP3:%.*]] = inttoptr <2 x i32> [[TMP2]] to <2 x ptr>
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_ptrvec_factor2(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32*>, <4 x i32*>* [[PTR:%.*]], align 4
-; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <4 x i32*> [[INTERLEAVED_VEC]], <4 x i32*> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x ptr>, ptr [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <4 x ptr> [[INTERLEAVED_VEC]], <4 x ptr> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_ptrvec_factor2(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32*>, <4 x i32*>* [[PTR:%.*]], align 4
-; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <4 x i32*> [[INTERLEAVED_VEC]], <4 x i32*> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x ptr>, ptr [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <4 x ptr> [[INTERLEAVED_VEC]], <4 x ptr> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <4 x i32*>, <4 x i32*>* %ptr, align 4
-  %v0 = shufflevector <4 x i32*> %interleaved.vec, <4 x i32*> poison, <2 x i32> <i32 0, i32 2>
+  %interleaved.vec = load <4 x ptr>, ptr %ptr, align 4
+  %v0 = shufflevector <4 x ptr> %interleaved.vec, <4 x ptr> poison, <2 x i32> <i32 0, i32 2>
   ret void
 }
 
-define void @load_ptrvec_factor3(<6 x i32*>* %ptr) {
+define void @load_ptrvec_factor3(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_ptrvec_factor3(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <6 x i32*>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld3.v2i32.p0i8(i8* [[TMP1]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld3.v2i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 2
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = inttoptr <2 x i32> [[TMP2]] to <2 x i32*>
+; CHECK-NEON-NEXT:    [[TMP3:%.*]] = inttoptr <2 x i32> [[TMP2]] to <2 x ptr>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 1
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = inttoptr <2 x i32> [[TMP4]] to <2 x i32*>
+; CHECK-NEON-NEXT:    [[TMP5:%.*]] = inttoptr <2 x i32> [[TMP4]] to <2 x ptr>
 ; CHECK-NEON-NEXT:    [[TMP6:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 0
-; CHECK-NEON-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i32> [[TMP6]] to <2 x i32*>
+; CHECK-NEON-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i32> [[TMP6]] to <2 x ptr>
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_ptrvec_factor3(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <6 x i32*>, <6 x i32*>* [[PTR:%.*]], align 4
-; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <6 x i32*> [[INTERLEAVED_VEC]], <6 x i32*> poison, <2 x i32> <i32 0, i32 3>
-; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <6 x i32*> [[INTERLEAVED_VEC]], <6 x i32*> poison, <2 x i32> <i32 1, i32 4>
-; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <6 x i32*> [[INTERLEAVED_VEC]], <6 x i32*> poison, <2 x i32> <i32 2, i32 5>
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <6 x ptr>, ptr [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <6 x ptr> [[INTERLEAVED_VEC]], <6 x ptr> poison, <2 x i32> <i32 0, i32 3>
+; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <6 x ptr> [[INTERLEAVED_VEC]], <6 x ptr> poison, <2 x i32> <i32 1, i32 4>
+; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <6 x ptr> [[INTERLEAVED_VEC]], <6 x ptr> poison, <2 x i32> <i32 2, i32 5>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_ptrvec_factor3(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <6 x i32*>, <6 x i32*>* [[PTR:%.*]], align 4
-; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <6 x i32*> [[INTERLEAVED_VEC]], <6 x i32*> poison, <2 x i32> <i32 0, i32 3>
-; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <6 x i32*> [[INTERLEAVED_VEC]], <6 x i32*> poison, <2 x i32> <i32 1, i32 4>
-; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <6 x i32*> [[INTERLEAVED_VEC]], <6 x i32*> poison, <2 x i32> <i32 2, i32 5>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <6 x ptr>, ptr [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <6 x ptr> [[INTERLEAVED_VEC]], <6 x ptr> poison, <2 x i32> <i32 0, i32 3>
+; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <6 x ptr> [[INTERLEAVED_VEC]], <6 x ptr> poison, <2 x i32> <i32 1, i32 4>
+; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <6 x ptr> [[INTERLEAVED_VEC]], <6 x ptr> poison, <2 x i32> <i32 2, i32 5>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <6 x i32*>, <6 x i32*>* %ptr, align 4
-  %v0 = shufflevector <6 x i32*> %interleaved.vec, <6 x i32*> poison, <2 x i32> <i32 0, i32 3>
-  %v1 = shufflevector <6 x i32*> %interleaved.vec, <6 x i32*> poison, <2 x i32> <i32 1, i32 4>
-  %v2 = shufflevector <6 x i32*> %interleaved.vec, <6 x i32*> poison, <2 x i32> <i32 2, i32 5>
+  %interleaved.vec = load <6 x ptr>, ptr %ptr, align 4
+  %v0 = shufflevector <6 x ptr> %interleaved.vec, <6 x ptr> poison, <2 x i32> <i32 0, i32 3>
+  %v1 = shufflevector <6 x ptr> %interleaved.vec, <6 x ptr> poison, <2 x i32> <i32 1, i32 4>
+  %v2 = shufflevector <6 x ptr> %interleaved.vec, <6 x ptr> poison, <2 x i32> <i32 2, i32 5>
   ret void
 }
 
-define void @load_ptrvec_factor4(<8 x i32*>* %ptr) {
+define void @load_ptrvec_factor4(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_ptrvec_factor4(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32*>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld4.v2i32.p0i8(i8* [[TMP1]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld4.v2i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 3
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = inttoptr <2 x i32> [[TMP2]] to <2 x i32*>
+; CHECK-NEON-NEXT:    [[TMP3:%.*]] = inttoptr <2 x i32> [[TMP2]] to <2 x ptr>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 2
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = inttoptr <2 x i32> [[TMP4]] to <2 x i32*>
+; CHECK-NEON-NEXT:    [[TMP5:%.*]] = inttoptr <2 x i32> [[TMP4]] to <2 x ptr>
 ; CHECK-NEON-NEXT:    [[TMP6:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 1
-; CHECK-NEON-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i32> [[TMP6]] to <2 x i32*>
+; CHECK-NEON-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i32> [[TMP6]] to <2 x ptr>
 ; CHECK-NEON-NEXT:    [[TMP8:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 0
-; CHECK-NEON-NEXT:    [[TMP9:%.*]] = inttoptr <2 x i32> [[TMP8]] to <2 x i32*>
+; CHECK-NEON-NEXT:    [[TMP9:%.*]] = inttoptr <2 x i32> [[TMP8]] to <2 x ptr>
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_ptrvec_factor4(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32*>, <8 x i32*>* [[PTR:%.*]], align 4
-; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*> poison, <2 x i32> <i32 0, i32 4>
-; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*> poison, <2 x i32> <i32 1, i32 5>
-; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*> poison, <2 x i32> <i32 2, i32 6>
-; CHECK-MVE-NEXT:    [[V3:%.*]] = shufflevector <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*> poison, <2 x i32> <i32 3, i32 7>
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x ptr>, ptr [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <8 x ptr> [[INTERLEAVED_VEC]], <8 x ptr> poison, <2 x i32> <i32 0, i32 4>
+; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <8 x ptr> [[INTERLEAVED_VEC]], <8 x ptr> poison, <2 x i32> <i32 1, i32 5>
+; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <8 x ptr> [[INTERLEAVED_VEC]], <8 x ptr> poison, <2 x i32> <i32 2, i32 6>
+; CHECK-MVE-NEXT:    [[V3:%.*]] = shufflevector <8 x ptr> [[INTERLEAVED_VEC]], <8 x ptr> poison, <2 x i32> <i32 3, i32 7>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_ptrvec_factor4(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32*>, <8 x i32*>* [[PTR:%.*]], align 4
-; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*> poison, <2 x i32> <i32 0, i32 4>
-; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*> poison, <2 x i32> <i32 1, i32 5>
-; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*> poison, <2 x i32> <i32 2, i32 6>
-; CHECK-NONE-NEXT:    [[V3:%.*]] = shufflevector <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*> poison, <2 x i32> <i32 3, i32 7>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x ptr>, ptr [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <8 x ptr> [[INTERLEAVED_VEC]], <8 x ptr> poison, <2 x i32> <i32 0, i32 4>
+; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <8 x ptr> [[INTERLEAVED_VEC]], <8 x ptr> poison, <2 x i32> <i32 1, i32 5>
+; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <8 x ptr> [[INTERLEAVED_VEC]], <8 x ptr> poison, <2 x i32> <i32 2, i32 6>
+; CHECK-NONE-NEXT:    [[V3:%.*]] = shufflevector <8 x ptr> [[INTERLEAVED_VEC]], <8 x ptr> poison, <2 x i32> <i32 3, i32 7>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <8 x i32*>, <8 x i32*>* %ptr, align 4
-  %v0 = shufflevector <8 x i32*> %interleaved.vec, <8 x i32*> poison, <2 x i32> <i32 0, i32 4>
-  %v1 = shufflevector <8 x i32*> %interleaved.vec, <8 x i32*> poison, <2 x i32> <i32 1, i32 5>
-  %v2 = shufflevector <8 x i32*> %interleaved.vec, <8 x i32*> poison, <2 x i32> <i32 2, i32 6>
-  %v3 = shufflevector <8 x i32*> %interleaved.vec, <8 x i32*> poison, <2 x i32> <i32 3, i32 7>
+  %interleaved.vec = load <8 x ptr>, ptr %ptr, align 4
+  %v0 = shufflevector <8 x ptr> %interleaved.vec, <8 x ptr> poison, <2 x i32> <i32 0, i32 4>
+  %v1 = shufflevector <8 x ptr> %interleaved.vec, <8 x ptr> poison, <2 x i32> <i32 1, i32 5>
+  %v2 = shufflevector <8 x ptr> %interleaved.vec, <8 x ptr> poison, <2 x i32> <i32 2, i32 6>
+  %v3 = shufflevector <8 x ptr> %interleaved.vec, <8 x ptr> poison, <2 x i32> <i32 3, i32 7>
   ret void
 }
 
-define void @store_ptrvec_factor2(<4 x i32*>* %ptr, <2 x i32*> %v0, <2 x i32*> %v1) {
+define void @store_ptrvec_factor2(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1) {
 ; CHECK-NEON-LABEL: @store_ptrvec_factor2(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x i32*> [[V0:%.*]] to <2 x i32>
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x i32*> [[V1:%.*]] to <2 x i32>
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[V0:%.*]] to <2 x i32>
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x ptr> [[V1:%.*]] to <2 x i32>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 2, i32 3>
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32*>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0i8.v2i32(i8* [[TMP5]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0.v2i32(ptr [[PTR:%.*]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_ptrvec_factor2(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <2 x i32*> [[V0:%.*]], <2 x i32*> [[V1:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-MVE-NEXT:    store <4 x i32*> [[INTERLEAVED_VEC]], <4 x i32*>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <2 x ptr> [[V0:%.*]], <2 x ptr> [[V1:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-MVE-NEXT:    store <4 x ptr> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_ptrvec_factor2(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <2 x i32*> [[V0:%.*]], <2 x i32*> [[V1:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NONE-NEXT:    store <4 x i32*> [[INTERLEAVED_VEC]], <4 x i32*>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <2 x ptr> [[V0:%.*]], <2 x ptr> [[V1:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NONE-NEXT:    store <4 x ptr> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = shufflevector <2 x i32*> %v0, <2 x i32*> %v1, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-  store <4 x i32*> %interleaved.vec, <4 x i32*>* %ptr, align 4
+  %interleaved.vec = shufflevector <2 x ptr> %v0, <2 x ptr> %v1, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  store <4 x ptr> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_ptrvec_factor3(<6 x i32*>* %ptr, <2 x i32*> %v0, <2 x i32*> %v1, <2 x i32*> %v2) {
+define void @store_ptrvec_factor3(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1, <2 x ptr> %v2) {
 ; CHECK-NEON-LABEL: @store_ptrvec_factor3(
-; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <2 x i32*> [[V0:%.*]], <2 x i32*> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <2 x i32*> [[V2:%.*]], <2 x i32*> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = ptrtoint <4 x i32*> [[S0]] to <4 x i32>
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = ptrtoint <4 x i32*> [[S1]] to <4 x i32>
+; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <2 x ptr> [[V0:%.*]], <2 x ptr> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <2 x ptr> [[V2:%.*]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = ptrtoint <4 x ptr> [[S0]] to <4 x i32>
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = ptrtoint <4 x ptr> [[S1]] to <4 x i32>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <2 x i32> <i32 4, i32 5>
-; CHECK-NEON-NEXT:    [[TMP6:%.*]] = bitcast <6 x i32*>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v2i32(i8* [[TMP6]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v2i32(ptr [[PTR:%.*]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_ptrvec_factor3(
-; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <2 x i32*> [[V0:%.*]], <2 x i32*> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <2 x i32*> [[V2:%.*]], <2 x i32*> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i32*> [[S0]], <4 x i32*> [[S1]], <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-; CHECK-MVE-NEXT:    store <6 x i32*> [[INTERLEAVED_VEC]], <6 x i32*>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <2 x ptr> [[V0:%.*]], <2 x ptr> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <2 x ptr> [[V2:%.*]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x ptr> [[S0]], <4 x ptr> [[S1]], <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
+; CHECK-MVE-NEXT:    store <6 x ptr> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_ptrvec_factor3(
-; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <2 x i32*> [[V0:%.*]], <2 x i32*> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <2 x i32*> [[V2:%.*]], <2 x i32*> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i32*> [[S0]], <4 x i32*> [[S1]], <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-; CHECK-NONE-NEXT:    store <6 x i32*> [[INTERLEAVED_VEC]], <6 x i32*>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <2 x ptr> [[V0:%.*]], <2 x ptr> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <2 x ptr> [[V2:%.*]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x ptr> [[S0]], <4 x ptr> [[S1]], <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
+; CHECK-NONE-NEXT:    store <6 x ptr> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %s0 = shufflevector <2 x i32*> %v0, <2 x i32*> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %s1 = shufflevector <2 x i32*> %v2, <2 x i32*> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  %interleaved.vec = shufflevector <4 x i32*> %s0, <4 x i32*> %s1, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-  store <6 x i32*> %interleaved.vec, <6 x i32*>* %ptr, align 4
+  %s0 = shufflevector <2 x ptr> %v0, <2 x ptr> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %s1 = shufflevector <2 x ptr> %v2, <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %interleaved.vec = shufflevector <4 x ptr> %s0, <4 x ptr> %s1, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
+  store <6 x ptr> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_ptrvec_factor4(<8 x i32*>* %ptr, <2 x i32*> %v0, <2 x i32*> %v1, <2 x i32*> %v2, <2 x i32*> %v3) {
+define void @store_ptrvec_factor4(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1, <2 x ptr> %v2, <2 x ptr> %v3) {
 ; CHECK-NEON-LABEL: @store_ptrvec_factor4(
-; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <2 x i32*> [[V0:%.*]], <2 x i32*> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <2 x i32*> [[V2:%.*]], <2 x i32*> [[V3:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = ptrtoint <4 x i32*> [[S0]] to <4 x i32>
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = ptrtoint <4 x i32*> [[S1]] to <4 x i32>
+; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <2 x ptr> [[V0:%.*]], <2 x ptr> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <2 x ptr> [[V2:%.*]], <2 x ptr> [[V3:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = ptrtoint <4 x ptr> [[S0]] to <4 x i32>
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = ptrtoint <4 x ptr> [[S1]] to <4 x i32>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <2 x i32> <i32 4, i32 5>
 ; CHECK-NEON-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <2 x i32> <i32 6, i32 7>
-; CHECK-NEON-NEXT:    [[TMP7:%.*]] = bitcast <8 x i32*>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v2i32(i8* [[TMP7]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> [[TMP6]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v2i32(ptr [[PTR:%.*]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> [[TMP6]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_ptrvec_factor4(
-; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <2 x i32*> [[V0:%.*]], <2 x i32*> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <2 x i32*> [[V2:%.*]], <2 x i32*> [[V3:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i32*> [[S0]], <4 x i32*> [[S1]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-; CHECK-MVE-NEXT:    store <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <2 x ptr> [[V0:%.*]], <2 x ptr> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <2 x ptr> [[V2:%.*]], <2 x ptr> [[V3:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x ptr> [[S0]], <4 x ptr> [[S1]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-MVE-NEXT:    store <8 x ptr> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_ptrvec_factor4(
-; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <2 x i32*> [[V0:%.*]], <2 x i32*> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <2 x i32*> [[V2:%.*]], <2 x i32*> [[V3:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i32*> [[S0]], <4 x i32*> [[S1]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-; CHECK-NONE-NEXT:    store <8 x i32*> [[INTERLEAVED_VEC]], <8 x i32*>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <2 x ptr> [[V0:%.*]], <2 x ptr> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <2 x ptr> [[V2:%.*]], <2 x ptr> [[V3:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x ptr> [[S0]], <4 x ptr> [[S1]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-NONE-NEXT:    store <8 x ptr> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %s0 = shufflevector <2 x i32*> %v0, <2 x i32*> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %s1 = shufflevector <2 x i32*> %v2, <2 x i32*> %v3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %interleaved.vec = shufflevector <4 x i32*> %s0, <4 x i32*> %s1, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-  store <8 x i32*> %interleaved.vec, <8 x i32*>* %ptr, align 4
+  %s0 = shufflevector <2 x ptr> %v0, <2 x ptr> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %s1 = shufflevector <2 x ptr> %v2, <2 x ptr> %v3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %interleaved.vec = shufflevector <4 x ptr> %s0, <4 x ptr> %s1, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+  store <8 x ptr> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @load_undef_mask_factor2(<8 x i32>* %ptr) {
+define void @load_undef_mask_factor2(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_undef_mask_factor2(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP1]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_undef_mask_factor2(
-; CHECK-MVE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32>* [[PTR:%.*]] to i32*
-; CHECK-MVE-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[TMP1]])
+; CHECK-MVE-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0(ptr [[PTR:%.*]])
 ; CHECK-MVE-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
 ; CHECK-MVE-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_undef_mask_factor2(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, <8 x i32>* [[PTR:%.*]], align 4
-; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <4 x i32> <i32 undef, i32 2, i32 undef, i32 6>
-; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <4 x i32> <i32 undef, i32 3, i32 undef, i32 7>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, ptr [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <4 x i32> <i32 poison, i32 2, i32 poison, i32 6>
+; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 7>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <8 x i32>, <8 x i32>* %ptr, align 4
+  %interleaved.vec = load <8 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> poison, <4 x i32> <i32 undef, i32 2, i32 undef, i32 6>
   %v1 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> poison, <4 x i32> <i32 undef, i32 3, i32 undef, i32 7>
   ret void
 }
 
-define void @load_undef_mask_factor3(<12 x i32>* %ptr) {
+define void @load_undef_mask_factor3(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_undef_mask_factor3(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <12 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld3.v4i32.p0i8(i8* [[TMP1]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld3.v4i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 2
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 0
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_undef_mask_factor3(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <12 x i32>, <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <12 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <12 x i32> [[INTERLEAVED_VEC]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <12 x i32> [[INTERLEAVED_VEC]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
-; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <12 x i32> [[INTERLEAVED_VEC]], <12 x i32> poison, <4 x i32> <i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <12 x i32> [[INTERLEAVED_VEC]], <12 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_undef_mask_factor3(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <12 x i32>, <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <12 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <12 x i32> [[INTERLEAVED_VEC]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <12 x i32> [[INTERLEAVED_VEC]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
-; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <12 x i32> [[INTERLEAVED_VEC]], <12 x i32> poison, <4 x i32> <i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <12 x i32> [[INTERLEAVED_VEC]], <12 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <12 x i32>, <12 x i32>* %ptr, align 4
+  %interleaved.vec = load <12 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
   %v2 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 undef, i32 undef, i32 undef>
   ret void
 }
 
-define void @load_undef_mask_factor4(<16 x i32>* %ptr) {
+define void @load_undef_mask_factor4(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_undef_mask_factor4(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0i8(i8* [[TMP1]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 3
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 2
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 1
@@ -440,22 +427,22 @@ define void @load_undef_mask_factor4(<16 x i32>* %ptr) {
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_undef_mask_factor4(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, <16 x i32>* [[PTR:%.*]], align 4
-; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 undef, i32 undef>
-; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 undef, i32 undef>
-; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 undef, i32 undef>
-; CHECK-MVE-NEXT:    [[V3:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 undef, i32 undef>
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, ptr [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
+; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 poison, i32 poison>
+; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 poison, i32 poison>
+; CHECK-MVE-NEXT:    [[V3:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 poison, i32 poison>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_undef_mask_factor4(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, <16 x i32>* [[PTR:%.*]], align 4
-; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 undef, i32 undef>
-; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 undef, i32 undef>
-; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 undef, i32 undef>
-; CHECK-NONE-NEXT:    [[V3:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 undef, i32 undef>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, ptr [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
+; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 poison, i32 poison>
+; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 poison, i32 poison>
+; CHECK-NONE-NEXT:    [[V3:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 poison, i32 poison>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <16 x i32>, <16 x i32>* %ptr, align 4
+  %interleaved.vec = load <16 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 undef, i32 undef>
   %v1 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 undef, i32 undef>
   %v2 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 undef, i32 undef>
@@ -463,65 +450,62 @@ define void @load_undef_mask_factor4(<16 x i32>* %ptr) {
   ret void
 }
 
-define void @store_undef_mask_factor2(<8 x i32>* %ptr, <4 x i32> %v0, <4 x i32> %v1) {
+define void @store_undef_mask_factor2(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_undef_mask_factor2(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0i8.v4i32(i8* [[TMP3]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_undef_mask_factor2(
 ; CHECK-MVE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-MVE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-MVE-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32>* [[PTR:%.*]] to i32*
-; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0i32.v4i32(i32* [[TMP3]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], i32 0)
-; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0i32.v4i32(i32* [[TMP3]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], i32 1)
+; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], i32 0)
+; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0.v4i32(ptr [[PTR]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], i32 1)
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_undef_mask_factor2(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 2, i32 6, i32 3, i32 7>
-; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 2, i32 6, i32 3, i32 7>
-  store <8 x i32> %interleaved.vec, <8 x i32>* %ptr, align 4
+  store <8 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_undef_mask_factor3(<12 x i32>* %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
+define void @store_undef_mask_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
 ; CHECK-NEON-LABEL: @store_undef_mask_factor3(
 ; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEON-NEXT:    [[TMP4:%.*]] = bitcast <12 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_undef_mask_factor3(
 ; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <12 x i32> <i32 0, i32 4, i32 undef, i32 1, i32 undef, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <12 x i32> <i32 0, i32 4, i32 poison, i32 1, i32 poison, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_undef_mask_factor3(
 ; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <12 x i32> <i32 0, i32 4, i32 undef, i32 1, i32 undef, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <12 x i32> <i32 0, i32 4, i32 poison, i32 1, i32 poison, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <12 x i32> <i32 0, i32 4, i32 undef, i32 1, i32 undef, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_undef_mask_factor4(<16 x i32>* %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
+define void @store_undef_mask_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
 ; CHECK-NEON-LABEL: @store_undef_mask_factor4(
 ; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -529,477 +513,464 @@ define void @store_undef_mask_factor4(<16 x i32>* %ptr, <4 x i32> %v0, <4 x i32>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = bitcast <16 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v4i32(i8* [[TMP5]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_undef_mask_factor4(
 ; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <16 x i32> <i32 0, i32 4, i32 8, i32 undef, i32 undef, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-MVE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], <16 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <16 x i32> <i32 0, i32 4, i32 8, i32 poison, i32 poison, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-MVE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_undef_mask_factor4(
 ; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <16 x i32> <i32 0, i32 4, i32 8, i32 undef, i32 undef, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NONE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], <16 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <16 x i32> <i32 0, i32 4, i32 8, i32 poison, i32 poison, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-NONE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s1 = shufflevector <4 x i32> %v2, <4 x i32> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <16 x i32> <i32 0, i32 4, i32 8, i32 undef, i32 undef, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-  store <16 x i32> %interleaved.vec, <16 x i32>* %ptr, align 4
+  store <16 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @load_address_space(<8 x i32> addrspace(1)* %ptr) {
+define void @load_address_space(ptr addrspace(1) %ptr) {
 ; CHECK-NEON-LABEL: @load_address_space(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> addrspace(1)* [[PTR:%.*]] to i8 addrspace(1)*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld3.v2i32.p1i8(i8 addrspace(1)* [[TMP1]], i32 32)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld3.v2i32.p1(ptr addrspace(1) [[PTR:%.*]], i32 32)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 2
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 0
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_address_space(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, <8 x i32> addrspace(1)* [[PTR:%.*]], align 32
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, ptr addrspace(1) [[PTR:%.*]], align 32
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <2 x i32> <i32 1, i32 4>
 ; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <2 x i32> <i32 2, i32 5>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_address_space(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, <8 x i32> addrspace(1)* [[PTR:%.*]], align 32
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, ptr addrspace(1) [[PTR:%.*]], align 32
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <2 x i32> <i32 1, i32 4>
 ; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> poison, <2 x i32> <i32 2, i32 5>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <8 x i32>, <8 x i32> addrspace(1)* %ptr
+  %interleaved.vec = load <8 x i32>, ptr addrspace(1) %ptr
   %v0 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> poison, <2 x i32> <i32 0, i32 3>
   %v1 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> poison, <2 x i32> <i32 1, i32 4>
   %v2 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> poison, <2 x i32> <i32 2, i32 5>
   ret void
 }
 
-define void @store_address_space(<4 x i32> addrspace(1)* %ptr, <2 x i32> %v0, <2 x i32> %v1) {
+define void @store_address_space(ptr addrspace(1) %ptr, <2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_address_space(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[V0:%.*]], <2 x i32> [[V1:%.*]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> <i32 2, i32 3>
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> addrspace(1)* [[PTR:%.*]] to i8 addrspace(1)*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p1i8.v2i32(i8 addrspace(1)* [[TMP3]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], i32 8)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p1.v2i32(ptr addrspace(1) [[PTR:%.*]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], i32 8)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_address_space(
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <2 x i32> [[V0:%.*]], <2 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-MVE-NEXT:    store <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> addrspace(1)* [[PTR:%.*]], align 8
+; CHECK-MVE-NEXT:    store <4 x i32> [[INTERLEAVED_VEC]], ptr addrspace(1) [[PTR:%.*]], align 8
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_address_space(
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <2 x i32> [[V0:%.*]], <2 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NONE-NEXT:    store <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> addrspace(1)* [[PTR:%.*]], align 8
+; CHECK-NONE-NEXT:    store <4 x i32> [[INTERLEAVED_VEC]], ptr addrspace(1) [[PTR:%.*]], align 8
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <2 x i32> %v0, <2 x i32> %v1, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-  store <4 x i32> %interleaved.vec, <4 x i32> addrspace(1)* %ptr
+  store <4 x i32> %interleaved.vec, ptr addrspace(1) %ptr
   ret void
 }
 
-define void @load_f16_factor2(<8 x half>* %ptr) {
+define void @load_f16_factor2(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_f16_factor2(
-; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x half>, <8 x half>* [[PTR:%.*]], align 4
+; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x half>, ptr [[PTR:%.*]], align 4
 ; CHECK-NEON-NEXT:    [[V0:%.*]] = shufflevector <8 x half> [[INTERLEAVED_VEC]], <8 x half> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEON-NEXT:    [[V1:%.*]] = shufflevector <8 x half> [[INTERLEAVED_VEC]], <8 x half> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_f16_factor2(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x half>, <8 x half>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x half>, ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <8 x half> [[INTERLEAVED_VEC]], <8 x half> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <8 x half> [[INTERLEAVED_VEC]], <8 x half> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_f16_factor2(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x half>, <8 x half>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x half>, ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <8 x half> [[INTERLEAVED_VEC]], <8 x half> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <8 x half> [[INTERLEAVED_VEC]], <8 x half> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <8 x half>, <8 x half>* %ptr, align 4
+  %interleaved.vec = load <8 x half>, ptr %ptr, align 4
   %v0 = shufflevector <8 x half> %interleaved.vec, <8 x half> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %v1 = shufflevector <8 x half> %interleaved.vec, <8 x half> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   ret void
 }
 
-define void @store_f16_factor2(<8 x half>* %ptr, <4 x half> %v0, <4 x half> %v1) {
+define void @store_f16_factor2(ptr %ptr, <4 x half> %v0, <4 x half> %v1) {
 ; CHECK-NEON-LABEL: @store_f16_factor2(
 ; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x half> [[V0:%.*]], <4 x half> [[V1:%.*]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; CHECK-NEON-NEXT:    store <8 x half> [[INTERLEAVED_VEC]], <8 x half>* [[PTR:%.*]], align 4
+; CHECK-NEON-NEXT:    store <8 x half> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_f16_factor2(
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x half> [[V0:%.*]], <4 x half> [[V1:%.*]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; CHECK-MVE-NEXT:    store <8 x half> [[INTERLEAVED_VEC]], <8 x half>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    store <8 x half> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_f16_factor2(
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x half> [[V0:%.*]], <4 x half> [[V1:%.*]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; CHECK-NONE-NEXT:    store <8 x half> [[INTERLEAVED_VEC]], <8 x half>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    store <8 x half> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <4 x half> %v0, <4 x half> %v1, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-  store <8 x half> %interleaved.vec, <8 x half>* %ptr, align 4
+  store <8 x half> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @load_illegal_factor2(<3 x float>* %ptr) nounwind {
+define void @load_illegal_factor2(ptr %ptr) nounwind {
 ; CHECK-NEON-LABEL: @load_illegal_factor2(
-; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <3 x float>, <3 x float>* [[PTR:%.*]], align 16
-; CHECK-NEON-NEXT:    [[V0:%.*]] = shufflevector <3 x float> [[INTERLEAVED_VEC]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 undef>
+; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <3 x float>, ptr [[PTR:%.*]], align 16
+; CHECK-NEON-NEXT:    [[V0:%.*]] = shufflevector <3 x float> [[INTERLEAVED_VEC]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 poison>
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_illegal_factor2(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <3 x float>, <3 x float>* [[PTR:%.*]], align 16
-; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <3 x float> [[INTERLEAVED_VEC]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 undef>
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <3 x float>, ptr [[PTR:%.*]], align 16
+; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <3 x float> [[INTERLEAVED_VEC]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 poison>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_illegal_factor2(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <3 x float>, <3 x float>* [[PTR:%.*]], align 16
-; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <3 x float> [[INTERLEAVED_VEC]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 undef>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <3 x float>, ptr [[PTR:%.*]], align 16
+; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <3 x float> [[INTERLEAVED_VEC]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 poison>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <3 x float>, <3 x float>* %ptr, align 16
+  %interleaved.vec = load <3 x float>, ptr %ptr, align 16
   %v0 = shufflevector <3 x float> %interleaved.vec, <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 undef>
   ret void
 }
 
-define void @store_illegal_factor2(<3 x float>* %ptr, <3 x float> %v0) nounwind {
+define void @store_illegal_factor2(ptr %ptr, <3 x float> %v0) nounwind {
 ; CHECK-NEON-LABEL: @store_illegal_factor2(
-; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <3 x float> [[V0:%.*]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 undef>
-; CHECK-NEON-NEXT:    store <3 x float> [[INTERLEAVED_VEC]], <3 x float>* [[PTR:%.*]], align 16
+; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <3 x float> [[V0:%.*]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 poison>
+; CHECK-NEON-NEXT:    store <3 x float> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 16
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_illegal_factor2(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <3 x float> [[V0:%.*]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 undef>
-; CHECK-MVE-NEXT:    store <3 x float> [[INTERLEAVED_VEC]], <3 x float>* [[PTR:%.*]], align 16
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <3 x float> [[V0:%.*]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 poison>
+; CHECK-MVE-NEXT:    store <3 x float> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 16
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_illegal_factor2(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <3 x float> [[V0:%.*]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 undef>
-; CHECK-NONE-NEXT:    store <3 x float> [[INTERLEAVED_VEC]], <3 x float>* [[PTR:%.*]], align 16
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <3 x float> [[V0:%.*]], <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 poison>
+; CHECK-NONE-NEXT:    store <3 x float> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 16
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <3 x float> %v0, <3 x float> poison, <3 x i32> <i32 0, i32 2, i32 undef>
-  store <3 x float> %interleaved.vec, <3 x float>* %ptr, align 16
+  store <3 x float> %interleaved.vec, ptr %ptr, align 16
   ret void
 }
 
-define void @store_general_mask_factor4(<8 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor4(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor4(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <2 x i32> <i32 4, i32 5>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 16, i32 17>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 32, i32 33>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 8, i32 9>
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v2i32(i8* [[TMP5]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v2i32(ptr [[PTR:%.*]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor4(
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
-; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor4(
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
-; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
-  store <8 x i32> %interleaved.vec, <8 x i32>* %ptr, align 4
+  store <8 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor4_undefbeg(<8 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor4_undefbeg(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor4_undefbeg(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <2 x i32> <i32 4, i32 5>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 16, i32 17>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 32, i32 33>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 8, i32 9>
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v2i32(i8* [[TMP5]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v2i32(ptr [[PTR:%.*]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor4_undefbeg(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 undef, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
-; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 poison, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
+; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor4_undefbeg(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 undef, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
-; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 poison, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
+; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 undef, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
-  store <8 x i32> %interleaved.vec, <8 x i32>* %ptr, align 4
+  store <8 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor4_undefend(<8 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor4_undefend(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor4_undefend(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <2 x i32> <i32 4, i32 5>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 16, i32 17>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 32, i32 33>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 8, i32 9>
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v2i32(i8* [[TMP5]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v2i32(ptr [[PTR:%.*]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor4_undefend(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 undef>
-; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 poison>
+; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor4_undefend(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 undef>
-; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 poison>
+; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 undef>
-  store <8 x i32> %interleaved.vec, <8 x i32>* %ptr, align 4
+  store <8 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor4_undefmid(<8 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor4_undefmid(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor4_undefmid(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <2 x i32> <i32 4, i32 5>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 16, i32 17>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 32, i32 33>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 8, i32 9>
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v2i32(i8* [[TMP5]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v2i32(ptr [[PTR:%.*]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor4_undefmid(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 undef, i32 32, i32 8, i32 5, i32 17, i32 undef, i32 9>
-; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 poison, i32 32, i32 8, i32 5, i32 17, i32 poison, i32 9>
+; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor4_undefmid(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 undef, i32 32, i32 8, i32 5, i32 17, i32 undef, i32 9>
-; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 poison, i32 32, i32 8, i32 5, i32 17, i32 poison, i32 9>
+; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 4, i32 undef, i32 32, i32 8, i32 5, i32 17, i32 undef, i32 9>
-  store <8 x i32> %interleaved.vec, <8 x i32>* %ptr, align 4
+  store <8 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor4_undefmulti(<8 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor4_undefmulti(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor4_undefmulti(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <2 x i32> <i32 4, i32 5>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <2 x i32> <i32 8, i32 9>
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v2i32(i8* [[TMP5]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v2i32(ptr [[PTR:%.*]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor4_undefmulti(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 undef, i32 undef, i32 8, i32 undef, i32 undef, i32 undef, i32 9>
-; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 poison, i32 poison, i32 8, i32 poison, i32 poison, i32 poison, i32 9>
+; CHECK-MVE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor4_undefmulti(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 undef, i32 undef, i32 8, i32 undef, i32 undef, i32 undef, i32 9>
-; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], <8 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <8 x i32> <i32 4, i32 poison, i32 poison, i32 8, i32 poison, i32 poison, i32 poison, i32 9>
+; CHECK-NONE-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 4, i32 undef, i32 undef, i32 8, i32 undef, i32 undef, i32 undef, i32 9>
-  store <8 x i32> %interleaved.vec, <8 x i32>* %ptr, align 4
+  store <8 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor3(<12 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor3(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor3(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 32, i32 33, i32 34, i32 35>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-; CHECK-NEON-NEXT:    [[TMP4:%.*]] = bitcast <12 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor3(
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 5, i32 33, i32 17, i32 6, i32 34, i32 18, i32 7, i32 35, i32 19>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor3(
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 5, i32 33, i32 17, i32 6, i32 34, i32 18, i32 7, i32 35, i32 19>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 4, i32 32, i32 16, i32 5, i32 33, i32 17, i32 6, i32 34, i32 18, i32 7, i32 35, i32 19>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor3_undefmultimid(<12 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor3_undefmultimid(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor3_undefmultimid(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 32, i32 33, i32 34, i32 35>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-; CHECK-NEON-NEXT:    [[TMP4:%.*]] = bitcast <12 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor3_undefmultimid(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 7, i32 35, i32 19>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 7, i32 35, i32 19>
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor3_undefmultimid(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 7, i32 35, i32 19>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 7, i32 35, i32 19>
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 4, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 7, i32 35, i32 19>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor3_undef_fail(<12 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor3_undef_fail(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor3_undef_fail(
-; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 8, i32 35, i32 19>
-; CHECK-NEON-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 8, i32 35, i32 19>
+; CHECK-NEON-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor3_undef_fail(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 8, i32 35, i32 19>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 8, i32 35, i32 19>
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor3_undef_fail(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 8, i32 35, i32 19>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 4, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 8, i32 35, i32 19>
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 4, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 8, i32 35, i32 19>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor3_undeflane(<12 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor3_undeflane(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor3_undeflane(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 32, i32 33, i32 34, i32 35>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-; CHECK-NEON-NEXT:    [[TMP4:%.*]] = bitcast <12 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor3_undeflane(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 poison, i32 35, i32 19>
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor3_undeflane(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 poison, i32 35, i32 19>
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor3_endstart_fail(<12 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor3_endstart_fail(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor3_endstart_fail(
-; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 2, i32 35, i32 19>
-; CHECK-NEON-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 2, i32 35, i32 19>
+; CHECK-NEON-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor3_endstart_fail(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 2, i32 35, i32 19>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 2, i32 35, i32 19>
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor3_endstart_fail(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 2, i32 35, i32 19>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 2, i32 35, i32 19>
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 2, i32 35, i32 19>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor3_endstart_pass(<12 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor3_endstart_pass(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor3_endstart_pass(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 32, i32 33, i32 34, i32 35>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-; CHECK-NEON-NEXT:    [[TMP4:%.*]] = bitcast <12 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor3_endstart_pass(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 7, i32 35, i32 19>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 7, i32 35, i32 19>
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor3_endstart_pass(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 7, i32 35, i32 19>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 7, i32 35, i32 19>
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 7, i32 35, i32 19>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor3_midstart_fail(<12 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor3_midstart_fail(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor3_midstart_fail(
-; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 0, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-; CHECK-NEON-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 0, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 poison, i32 35, i32 19>
+; CHECK-NEON-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor3_midstart_fail(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 0, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 0, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 poison, i32 35, i32 19>
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor3_midstart_fail(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 0, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 0, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 poison, i32 35, i32 19>
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 undef, i32 32, i32 16, i32 0, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_general_mask_factor3_midstart_pass(<12 x i32>* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+define void @store_general_mask_factor3_midstart_pass(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_general_mask_factor3_midstart_pass(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 32, i32 33, i32 34, i32 35>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[V0]], <32 x i32> [[V1]], <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-; CHECK-NEON-NEXT:    [[TMP4:%.*]] = bitcast <12 x i32>* [[PTR:%.*]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_general_mask_factor3_midstart_pass(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 1, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 1, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 poison, i32 35, i32 19>
+; CHECK-MVE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_general_mask_factor3_midstart_pass(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 undef, i32 32, i32 16, i32 1, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], <12 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[V0:%.*]], <32 x i32> [[V1:%.*]], <12 x i32> <i32 poison, i32 32, i32 16, i32 1, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 poison, i32 35, i32 19>
+; CHECK-NONE-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 undef, i32 32, i32 16, i32 1, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
-  store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
+  store <12 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
@@ -1008,35 +979,32 @@ define void @store_general_mask_factor3_midstart_pass(<12 x i32>* %ptr, <32 x i3
 ; The following does not give a valid interleaved store
 define void @no_interleave(<4 x float> %a0) {
 ; CHECK-NEON-LABEL: @no_interleave(
-; CHECK-NEON-NEXT:    [[V0:%.*]] = shufflevector <4 x float> [[A0:%.*]], <4 x float> [[A0]], <4 x i32> <i32 0, i32 7, i32 1, i32 undef>
-; CHECK-NEON-NEXT:    store <4 x float> [[V0]], <4 x float>* @g, align 16
+; CHECK-NEON-NEXT:    [[V0:%.*]] = shufflevector <4 x float> [[A0:%.*]], <4 x float> [[A0]], <4 x i32> <i32 0, i32 7, i32 1, i32 poison>
+; CHECK-NEON-NEXT:    store <4 x float> [[V0]], ptr @g, align 16
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @no_interleave(
-; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <4 x float> [[A0:%.*]], <4 x float> [[A0]], <4 x i32> <i32 0, i32 7, i32 1, i32 undef>
-; CHECK-MVE-NEXT:    store <4 x float> [[V0]], <4 x float>* @g, align 16
+; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <4 x float> [[A0:%.*]], <4 x float> [[A0]], <4 x i32> <i32 0, i32 7, i32 1, i32 poison>
+; CHECK-MVE-NEXT:    store <4 x float> [[V0]], ptr @g, align 16
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @no_interleave(
-; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <4 x float> [[A0:%.*]], <4 x float> [[A0]], <4 x i32> <i32 0, i32 7, i32 1, i32 undef>
-; CHECK-NONE-NEXT:    store <4 x float> [[V0]], <4 x float>* @g, align 16
+; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <4 x float> [[A0:%.*]], <4 x float> [[A0]], <4 x i32> <i32 0, i32 7, i32 1, i32 poison>
+; CHECK-NONE-NEXT:    store <4 x float> [[V0]], ptr @g, align 16
 ; CHECK-NONE-NEXT:    ret void
 ;
   %v0 = shufflevector <4 x float> %a0, <4 x float> %a0, <4 x i32> <i32 0, i32 7, i32 1, i32 undef>
-  store <4 x float> %v0, <4 x float>* @g, align 16
+  store <4 x float> %v0, ptr @g, align 16
   ret void
 }
 
-define void @load_factor2_wide2(<16 x i32>* %ptr) {
+define void @load_factor2_wide2(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_factor2_wide2(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32>* [[PTR:%.*]] to i32*
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
-; CHECK-NEON-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP6]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[PTR]], i32 8
+; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0(ptr [[TMP5]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP7:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 1
 ; CHECK-NEON-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 0
 ; CHECK-NEON-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1044,12 +1012,11 @@ define void @load_factor2_wide2(<16 x i32>* %ptr) {
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_factor2_wide2(
-; CHECK-MVE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32>* [[PTR:%.*]] to i32*
-; CHECK-MVE-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[TMP1]])
+; CHECK-MVE-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0(ptr [[PTR:%.*]])
 ; CHECK-MVE-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
 ; CHECK-MVE-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
-; CHECK-MVE-NEXT:    [[TMP4:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
-; CHECK-MVE-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[TMP4]])
+; CHECK-MVE-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[PTR]], i32 8
+; CHECK-MVE-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0(ptr [[TMP4]])
 ; CHECK-MVE-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 1
 ; CHECK-MVE-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 0
 ; CHECK-MVE-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1057,86 +1024,78 @@ define void @load_factor2_wide2(<16 x i32>* %ptr) {
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_factor2_wide2(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, <16 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <16 x i32>, <16 x i32>* %ptr, align 4
+  %interleaved.vec = load <16 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %v1 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   ret void
 }
 
-define void @load_factor2_wide3(<24 x i32>* %ptr) {
+define void @load_factor2_wide3(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_factor2_wide3(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <24 x i32>* [[PTR:%.*]] to i32*
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
-; CHECK-NEON-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP6]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[PTR]], i32 8
+; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0(ptr [[TMP5]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP7:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 1
 ; CHECK-NEON-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 0
-; CHECK-NEON-NEXT:    [[TMP9:%.*]] = getelementptr i32, i32* [[TMP5]], i32 8
-; CHECK-NEON-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP9]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN2:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP10]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP5]], i32 8
+; CHECK-NEON-NEXT:    [[VLDN2:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0(ptr [[TMP9]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP11:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN2]], 1
 ; CHECK-NEON-NEXT:    [[TMP12:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN2]], 0
 ; CHECK-NEON-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEON-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEON-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEON-NEXT:    [[TMP15:%.*]] = shufflevector <8 x i32> [[TMP13]], <8 x i32> [[TMP14]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEON-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEON-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i32> [[TMP12]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEON-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i32> [[TMP12]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEON-NEXT:    [[TMP18:%.*]] = shufflevector <8 x i32> [[TMP16]], <8 x i32> [[TMP17]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_factor2_wide3(
-; CHECK-MVE-NEXT:    [[TMP1:%.*]] = bitcast <24 x i32>* [[PTR:%.*]] to i32*
-; CHECK-MVE-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[TMP1]])
+; CHECK-MVE-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0(ptr [[PTR:%.*]])
 ; CHECK-MVE-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
 ; CHECK-MVE-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
-; CHECK-MVE-NEXT:    [[TMP4:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
-; CHECK-MVE-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[TMP4]])
+; CHECK-MVE-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[PTR]], i32 8
+; CHECK-MVE-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0(ptr [[TMP4]])
 ; CHECK-MVE-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 1
 ; CHECK-MVE-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 0
-; CHECK-MVE-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP4]], i32 8
-; CHECK-MVE-NEXT:    [[VLDN2:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[TMP7]])
+; CHECK-MVE-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP4]], i32 8
+; CHECK-MVE-NEXT:    [[VLDN2:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0(ptr [[TMP7]])
 ; CHECK-MVE-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN2]], 1
 ; CHECK-MVE-NEXT:    [[TMP9:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN2]], 0
 ; CHECK-MVE-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-MVE-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-MVE-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-MVE-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> [[TMP11]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-MVE-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-MVE-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-MVE-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-MVE-NEXT:    [[TMP15:%.*]] = shufflevector <8 x i32> [[TMP13]], <8 x i32> [[TMP14]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_factor2_wide3(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <24 x i32>, <24 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <24 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <24 x i32> [[INTERLEAVED_VEC]], <24 x i32> poison, <12 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <24 x i32> [[INTERLEAVED_VEC]], <24 x i32> poison, <12 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <24 x i32>, <24 x i32>* %ptr, align 4
+  %interleaved.vec = load <24 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> poison, <12 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22>
   %v1 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> poison, <12 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23>
   ret void
 }
 
-define void @load_factor3_wide(<24 x i32>* %ptr) {
+define void @load_factor3_wide(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_factor3_wide(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <24 x i32>* [[PTR:%.*]] to i32*
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld3.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld3.v4i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 2
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 0
-; CHECK-NEON-NEXT:    [[TMP6:%.*]] = getelementptr i32, i32* [[TMP1]], i32 12
-; CHECK-NEON-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld3.v4i32.p0i8(i8* [[TMP7]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[PTR]], i32 12
+; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld3.v4i32.p0(ptr [[TMP6]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 2
 ; CHECK-NEON-NEXT:    [[TMP9:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 1
 ; CHECK-NEON-NEXT:    [[TMP10:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 0
@@ -1146,38 +1105,35 @@ define void @load_factor3_wide(<24 x i32>* %ptr) {
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_factor3_wide(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <24 x i32>, <24 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <24 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <24 x i32> [[INTERLEAVED_VEC]], <24 x i32> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <24 x i32> [[INTERLEAVED_VEC]], <24 x i32> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
 ; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <24 x i32> [[INTERLEAVED_VEC]], <24 x i32> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_factor3_wide(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <24 x i32>, <24 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <24 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <24 x i32> [[INTERLEAVED_VEC]], <24 x i32> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <24 x i32> [[INTERLEAVED_VEC]], <24 x i32> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
 ; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <24 x i32> [[INTERLEAVED_VEC]], <24 x i32> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <24 x i32>, <24 x i32>* %ptr, align 4
+  %interleaved.vec = load <24 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
   %v1 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
   %v2 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
   ret void
 }
 
-define void @load_factor4_wide(<32 x i32>* %ptr) {
+define void @load_factor4_wide(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_factor4_wide(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <32 x i32>* [[PTR:%.*]] to i32*
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 3
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 2
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 0
-; CHECK-NEON-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP1]], i32 16
-; CHECK-NEON-NEXT:    [[TMP8:%.*]] = bitcast i32* [[TMP7]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0i8(i8* [[TMP8]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR]], i32 16
+; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0(ptr [[TMP7]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP9:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 3
 ; CHECK-NEON-NEXT:    [[TMP10:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 2
 ; CHECK-NEON-NEXT:    [[TMP11:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 1
@@ -1189,7 +1145,7 @@ define void @load_factor4_wide(<32 x i32>* %ptr) {
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_factor4_wide(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <32 x i32>, <32 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <32 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <32 x i32> [[INTERLEAVED_VEC]], <32 x i32> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <32 x i32> [[INTERLEAVED_VEC]], <32 x i32> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
 ; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <32 x i32> [[INTERLEAVED_VEC]], <32 x i32> poison, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
@@ -1197,14 +1153,14 @@ define void @load_factor4_wide(<32 x i32>* %ptr) {
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_factor4_wide(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <32 x i32>, <32 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <32 x i32>, ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <32 x i32> [[INTERLEAVED_VEC]], <32 x i32> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <32 x i32> [[INTERLEAVED_VEC]], <32 x i32> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
 ; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <32 x i32> [[INTERLEAVED_VEC]], <32 x i32> poison, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
 ; CHECK-NONE-NEXT:    [[V3:%.*]] = shufflevector <32 x i32> [[INTERLEAVED_VEC]], <32 x i32> poison, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <32 x i32>, <32 x i32>* %ptr, align 4
+  %interleaved.vec = load <32 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <32 x i32> %interleaved.vec, <32 x i32> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
   %v1 = shufflevector <32 x i32> %interleaved.vec, <32 x i32> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
   %v2 = shufflevector <32 x i32> %interleaved.vec, <32 x i32> poison, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
@@ -1212,220 +1168,206 @@ define void @load_factor4_wide(<32 x i32>* %ptr) {
   ret void
 }
 
-define void @store_factor2_wide(<16 x i32>* %ptr, <8 x i32> %v0, <8 x i32> %v1) {
+define void @store_factor2_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1) {
 ; CHECK-NEON-LABEL: @store_factor2_wide(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32>* [[PTR:%.*]] to i32*
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[V0]], <8 x i32> [[V1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEON-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0i8.v4i32(i8* [[TMP4]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[PTR]], i32 8
 ; CHECK-NEON-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[V0]], <8 x i32> [[V1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[V0]], <8 x i32> [[V1]], <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEON-NEXT:    [[TMP8:%.*]] = bitcast i32* [[TMP5]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0i8.v4i32(i8* [[TMP8]], <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p0.v4i32(ptr [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_factor2_wide(
-; CHECK-MVE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32>* [[PTR:%.*]] to i32*
 ; CHECK-MVE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-MVE-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[V0]], <8 x i32> [[V1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0i32.v4i32(i32* [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 0)
-; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0i32.v4i32(i32* [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 1)
-; CHECK-MVE-NEXT:    [[TMP4:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
+; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 0)
+; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0.v4i32(ptr [[PTR]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i32 1)
+; CHECK-MVE-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[PTR]], i32 8
 ; CHECK-MVE-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[V0]], <8 x i32> [[V1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-MVE-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[V0]], <8 x i32> [[V1]], <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0i32.v4i32(i32* [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], i32 0)
-; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0i32.v4i32(i32* [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], i32 1)
+; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0.v4i32(ptr [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], i32 0)
+; CHECK-MVE-NEXT:    call void @llvm.arm.mve.vst2q.p0.v4i32(ptr [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], i32 1)
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_factor2_wide(
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-; CHECK-NONE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], <16 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-  store <16 x i32> %interleaved.vec, <16 x i32>* %ptr, align 4
+  store <16 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_factor3_wide(<24 x i32>* %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2) {
+define void @store_factor3_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2) {
 ; CHECK-NEON-LABEL: @store_factor3_wide(
 ; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <24 x i32>* [[PTR:%.*]] to i32*
+; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-; CHECK-NEON-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP5]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], i32 4)
-; CHECK-NEON-NEXT:    [[TMP6:%.*]] = getelementptr i32, i32* [[TMP1]], i32 12
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[PTR]], i32 12
 ; CHECK-NEON-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEON-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEON-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP6]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP10]], <4 x i32> [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst3.p0.v4i32(ptr [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_factor3_wide(
 ; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
-; CHECK-MVE-NEXT:    store <24 x i32> [[INTERLEAVED_VEC]], <24 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    store <24 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_factor3_wide(
 ; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
-; CHECK-NONE-NEXT:    store <24 x i32> [[INTERLEAVED_VEC]], <24 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    store <24 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %s1 = shufflevector <8 x i32> %v2, <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %interleaved.vec = shufflevector <16 x i32> %s0, <16 x i32> %s1, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
-  store <24 x i32> %interleaved.vec, <24 x i32>* %ptr, align 4
+  store <24 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @store_factor4_wide(<32 x i32>* %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2, <8 x i32> %v3) {
+define void @store_factor4_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2, <8 x i32> %v3) {
 ; CHECK-NEON-LABEL: @store_factor4_wide(
 ; CHECK-NEON-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEON-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> [[V3:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <32 x i32>* [[PTR:%.*]] to i32*
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 24, i32 25, i32 26, i32 27>
-; CHECK-NEON-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v4i32(i8* [[TMP6]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], i32 4)
-; CHECK-NEON-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP1]], i32 16
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v4i32(ptr [[PTR:%.*]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR]], i32 16
 ; CHECK-NEON-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEON-NEXT:    [[TMP10:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEON-NEXT:    [[TMP11:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <4 x i32> <i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEON-NEXT:    [[TMP12:%.*]] = bitcast i32* [[TMP7]] to i8*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0i8.v4i32(i8* [[TMP12]], <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], <4 x i32> [[TMP10]], <4 x i32> [[TMP11]], i32 4)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst4.p0.v4i32(ptr [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], <4 x i32> [[TMP10]], <4 x i32> [[TMP11]], i32 4)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_factor4_wide(
 ; CHECK-MVE-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-MVE-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> [[V3:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-MVE-NEXT:    store <32 x i32> [[INTERLEAVED_VEC]], <32 x i32>* [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    store <32 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_factor4_wide(
 ; CHECK-NONE-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NONE-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> [[V3:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NONE-NEXT:    store <32 x i32> [[INTERLEAVED_VEC]], <32 x i32>* [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    store <32 x i32> [[INTERLEAVED_VEC]], ptr [[PTR:%.*]], align 4
 ; CHECK-NONE-NEXT:    ret void
 ;
   %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %s1 = shufflevector <8 x i32> %v2, <8 x i32> %v3, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %interleaved.vec = shufflevector <16 x i32> %s0, <16 x i32> %s1, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-  store <32 x i32> %interleaved.vec, <32 x i32>* %ptr, align 4
+  store <32 x i32> %interleaved.vec, ptr %ptr, align 4
   ret void
 }
 
-define void @load_factor2_fp128(<4 x fp128>* %ptr) {
+define void @load_factor2_fp128(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_factor2_fp128(
-; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x fp128>, <4 x fp128>* [[PTR:%.*]], align 16
+; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x fp128>, ptr [[PTR:%.*]], align 16
 ; CHECK-NEON-NEXT:    [[V0:%.*]] = shufflevector <4 x fp128> [[INTERLEAVED_VEC]], <4 x fp128> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEON-NEXT:    [[V1:%.*]] = shufflevector <4 x fp128> [[INTERLEAVED_VEC]], <4 x fp128> poison, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_factor2_fp128(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x fp128>, <4 x fp128>* [[PTR:%.*]], align 16
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x fp128>, ptr [[PTR:%.*]], align 16
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <4 x fp128> [[INTERLEAVED_VEC]], <4 x fp128> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <4 x fp128> [[INTERLEAVED_VEC]], <4 x fp128> poison, <2 x i32> <i32 1, i32 3>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_factor2_fp128(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x fp128>, <4 x fp128>* [[PTR:%.*]], align 16
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x fp128>, ptr [[PTR:%.*]], align 16
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <4 x fp128> [[INTERLEAVED_VEC]], <4 x fp128> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <4 x fp128> [[INTERLEAVED_VEC]], <4 x fp128> poison, <2 x i32> <i32 1, i32 3>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <4 x fp128>, <4 x fp128>* %ptr, align 16
+  %interleaved.vec = load <4 x fp128>, ptr %ptr, align 16
   %v0 = shufflevector <4 x fp128> %interleaved.vec, <4 x fp128> poison, <2 x i32> <i32 0, i32 2>
   %v1 = shufflevector <4 x fp128> %interleaved.vec, <4 x fp128> poison, <2 x i32> <i32 1, i32 3>
   ret void
 }
 
-define void @load_factor2_wide_pointer(<16 x i32*>* %ptr) {
+define void @load_factor2_wide_pointer(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_factor2_wide_pointer(
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32*>* [[PTR:%.*]] to i32*
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0(ptr [[PTR:%.*]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
-; CHECK-NEON-NEXT:    [[TMP4:%.*]] = inttoptr <4 x i32> [[TMP3]] to <4 x i32*>
+; CHECK-NEON-NEXT:    [[TMP4:%.*]] = inttoptr <4 x i32> [[TMP3]] to <4 x ptr>
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
-; CHECK-NEON-NEXT:    [[TMP6:%.*]] = inttoptr <4 x i32> [[TMP5]] to <4 x i32*>
-; CHECK-NEON-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
-; CHECK-NEON-NEXT:    [[TMP8:%.*]] = bitcast i32* [[TMP7]] to i8*
-; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP8]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP6:%.*]] = inttoptr <4 x i32> [[TMP5]] to <4 x ptr>
+; CHECK-NEON-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR]], i32 8
+; CHECK-NEON-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0(ptr [[TMP7]], i32 4)
 ; CHECK-NEON-NEXT:    [[TMP9:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 1
-; CHECK-NEON-NEXT:    [[TMP10:%.*]] = inttoptr <4 x i32> [[TMP9]] to <4 x i32*>
+; CHECK-NEON-NEXT:    [[TMP10:%.*]] = inttoptr <4 x i32> [[TMP9]] to <4 x ptr>
 ; CHECK-NEON-NEXT:    [[TMP11:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 0
-; CHECK-NEON-NEXT:    [[TMP12:%.*]] = inttoptr <4 x i32> [[TMP11]] to <4 x i32*>
-; CHECK-NEON-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32*> [[TMP4]], <4 x i32*> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEON-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32*> [[TMP6]], <4 x i32*> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEON-NEXT:    [[TMP12:%.*]] = inttoptr <4 x i32> [[TMP11]] to <4 x ptr>
+; CHECK-NEON-NEXT:    [[TMP13:%.*]] = shufflevector <4 x ptr> [[TMP4]], <4 x ptr> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEON-NEXT:    [[TMP14:%.*]] = shufflevector <4 x ptr> [[TMP6]], <4 x ptr> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_factor2_wide_pointer(
-; CHECK-MVE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32*>* [[PTR:%.*]] to i32*
-; CHECK-MVE-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[TMP1]])
+; CHECK-MVE-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0(ptr [[PTR:%.*]])
 ; CHECK-MVE-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
-; CHECK-MVE-NEXT:    [[TMP3:%.*]] = inttoptr <4 x i32> [[TMP2]] to <4 x i32*>
+; CHECK-MVE-NEXT:    [[TMP3:%.*]] = inttoptr <4 x i32> [[TMP2]] to <4 x ptr>
 ; CHECK-MVE-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
-; CHECK-MVE-NEXT:    [[TMP5:%.*]] = inttoptr <4 x i32> [[TMP4]] to <4 x i32*>
-; CHECK-MVE-NEXT:    [[TMP6:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
-; CHECK-MVE-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[TMP6]])
+; CHECK-MVE-NEXT:    [[TMP5:%.*]] = inttoptr <4 x i32> [[TMP4]] to <4 x ptr>
+; CHECK-MVE-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[PTR]], i32 8
+; CHECK-MVE-NEXT:    [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0(ptr [[TMP6]])
 ; CHECK-MVE-NEXT:    [[TMP7:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 1
-; CHECK-MVE-NEXT:    [[TMP8:%.*]] = inttoptr <4 x i32> [[TMP7]] to <4 x i32*>
+; CHECK-MVE-NEXT:    [[TMP8:%.*]] = inttoptr <4 x i32> [[TMP7]] to <4 x ptr>
 ; CHECK-MVE-NEXT:    [[TMP9:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 0
-; CHECK-MVE-NEXT:    [[TMP10:%.*]] = inttoptr <4 x i32> [[TMP9]] to <4 x i32*>
-; CHECK-MVE-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32*> [[TMP3]], <4 x i32*> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-MVE-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32*> [[TMP5]], <4 x i32*> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-MVE-NEXT:    [[TMP10:%.*]] = inttoptr <4 x i32> [[TMP9]] to <4 x ptr>
+; CHECK-MVE-NEXT:    [[TMP11:%.*]] = shufflevector <4 x ptr> [[TMP3]], <4 x ptr> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-MVE-NEXT:    [[TMP12:%.*]] = shufflevector <4 x ptr> [[TMP5]], <4 x ptr> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_factor2_wide_pointer(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32*>, <16 x i32*>* [[PTR:%.*]], align 4
-; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <16 x i32*> [[INTERLEAVED_VEC]], <16 x i32*> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <16 x i32*> [[INTERLEAVED_VEC]], <16 x i32*> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x ptr>, ptr [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <16 x ptr> [[INTERLEAVED_VEC]], <16 x ptr> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <16 x ptr> [[INTERLEAVED_VEC]], <16 x ptr> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <16 x i32*>, <16 x i32*>* %ptr, align 4
-  %v0 = shufflevector <16 x i32*> %interleaved.vec, <16 x i32*> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-  %v1 = shufflevector <16 x i32*> %interleaved.vec, <16 x i32*> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %interleaved.vec = load <16 x ptr>, ptr %ptr, align 4
+  %v0 = shufflevector <16 x ptr> %interleaved.vec, <16 x ptr> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %v1 = shufflevector <16 x ptr> %interleaved.vec, <16 x ptr> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   ret void
 }
 
 ; This would be a candidate for interleaving, except that load doesn't
 ; actually load enough elements to satisfy the shuffle masks. (It would be
 ; possible to produce a vld2.v2i32, but that currently isn't implemented.)
-define void @load_out_of_range(<4 x i32>* %ptr) {
+define void @load_out_of_range(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_out_of_range(
-; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32>, <4 x i32>* [[PTR:%.*]], align 4
-; CHECK-NEON-NEXT:    [[V0:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
-; CHECK-NEON-NEXT:    [[V1:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
+; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
+; CHECK-NEON-NEXT:    [[V0:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+; CHECK-NEON-NEXT:    [[V1:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_out_of_range(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32>, <4 x i32>* [[PTR:%.*]], align 4
-; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
-; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
+; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_out_of_range(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32>, <4 x i32>* [[PTR:%.*]], align 4
-; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
-; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
+; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
 ; CHECK-NONE-NEXT:    ret void
 ;
-  %interleaved.vec = load <4 x i32>, <4 x i32>* %ptr, align 4
+  %interleaved.vec = load <4 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <4 x i32> %interleaved.vec, <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
   %v1 = shufflevector <4 x i32> %interleaved.vec, <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
   ret void

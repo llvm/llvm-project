@@ -9,6 +9,13 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
 
+// BEGIN FIXME
+// This declaration works around a clang module build failure.
+// It should be deleted ASAP.
+#include "llvm/Support/Error.h"
+static llvm::Expected<bool> *g_fcxx_modules_workaround;
+// END
+
 #include "lldb/Host/Config.h"
 
 // Python.h needs to be included before any system headers in order to avoid

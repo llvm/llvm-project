@@ -1,10 +1,10 @@
-//===-- RegisterContextNetBSD_i386.cpp -------------------------*- C++ -*-===//
+//===-- RegisterContextNetBSD_i386.cpp --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "RegisterContextNetBSD_i386.h"
 #include "RegisterContextPOSIX_x86.h"
@@ -80,7 +80,7 @@ RegisterContextNetBSD_i386::RegisterContextNetBSD_i386(
 size_t RegisterContextNetBSD_i386::GetGPRSize() const { return sizeof(GPR); }
 
 const RegisterInfo *RegisterContextNetBSD_i386::GetRegisterInfo() const {
-  switch (m_target_arch.GetMachine()) {
+  switch (GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return g_register_infos_i386;
